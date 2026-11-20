@@ -155,18 +155,19 @@ void macTxNotifyTaskMain(void)
 			if (wlanPsPollTxStatus(connection, status.data, &status) == 1)
 				break;
 			data = status.data;
-			if (connection->interfaceType == 1 && !(TX_DATA_FRAME(data) ? ((uint8_t *)TX_DATA_FRAME(data))[6] & 1 : 0))
+			/* here Sony reads the frame pointer as an aligned word, without a NULL test */
+			if (connection->interfaceType == 1 && !(((struct WlanReplyFrame *)data)->frame[6] & 1))
 				wlanIbssResetPeerCheck(connection);
 			posture = sysIrqDisable();
 			removed = data != NULL && wlanTxInFlightRemove(buffer) != 0;
 			sysIrqRestore(posture);
 			release = 1;
-			frame = (uint8_t *)TX_DATA_FRAME(data);
+			frame = ((struct WlanReplyFrame *)data)->frame;
 			oldMetadata = buffer->poolMetadata;
 			buffer->poolMetadata = (status.retries << 8) | status.result;
 			if (removed) {
 				if (!(frame[6] & 1) && connection->mode == 2 && FC0_TYPE(frame[2]) == FC_TYPE_DATA) {
-					wlanApPsTxDone(connection, data);
+					wlanApPsTxDone(connection, status.data);
 					if (status.result == 0)
 						wlanConnectionUpdateListenInterval(connection);
 				}

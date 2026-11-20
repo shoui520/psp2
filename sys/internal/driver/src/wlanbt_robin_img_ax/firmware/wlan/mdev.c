@@ -191,7 +191,7 @@ int wlanConvertDataFrame(OsaBuffer *buffer, WlanPacketHeader *header,
 
 int wlanPrepareAmsduFrame(OsaBuffer *buffer, WlanPacketHeader *header)
 {
-	int packetOffset;
+	unsigned int packetOffset;
 
 	if (buffer->length <= 96)
 		return 0;

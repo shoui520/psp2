@@ -200,7 +200,7 @@ int hctClockRequirementSet(int selector, uint32_t value)
 }
 
 /* 0x00020044: chooses the coexistence intervals from the state of the ACL links. */
-void hctComputeCoexIntervals(void)
+int hctComputeCoexIntervals(void)
 {
 	uint32_t slow = 4000;
 	uint32_t fast = 4000;
@@ -227,19 +227,17 @@ void hctComputeCoexIntervals(void)
 		}
 	}
 	if (romCoexPrimaryFlag != 0) {
-		slow = 32000;
-		fast = 16000;
+		slow = slow > 32000 ? slow : 32000;
+		fast = fast > 16000 ? fast : 16000;
 	}
 	if (romTargetTable == 2) {
-		interval = 16000;
-		if (slow > 16000)
-			interval = slow;
-		slow = interval;
-		fast = 16000;
+		slow = slow > 16000 ? slow : 16000;
+		fast = fast > 16000 ? fast : 16000;
 	}
 	hctClockRequirementSet(HCT_CLOCK_REFERENCE, 16000);
 	hctClockRequirementSet(HCT_CLOCK_AUX, fast);
 	hctClockRequirementSet(HCT_CLOCK_CORE, slow);
+	return 0;
 }
 
 /* 0x00020112: once per coexistence tick, refreshes the scheduling state. */

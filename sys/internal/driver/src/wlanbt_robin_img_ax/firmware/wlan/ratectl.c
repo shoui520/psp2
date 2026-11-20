@@ -238,11 +238,12 @@ void wlanRateTableHtShortGi(uint8_t *table, int enable, int mode)
  * The word of a rate a block's first entry holds: the rate's word, the
  * parameter the ROM gives it and the retry count of the item.
  */
-static inline uint32_t wlanRateItemWord(unsigned int rate, unsigned int retries)
+static inline uint32_t wlanRateItemWord(unsigned int rate, const uint8_t *item)
 {
 	uint32_t policy = wlanRatePolicy[rate];
 
-	return policy + (wlanRateParameterHook(rate) << 16) + (retries << 24);
+	policy += wlanRateParameterHook(rate) << 16;
+	return policy + (item[2] << 24);	/* the retries, read after the hook */
 }
 
 /*
@@ -281,25 +282,25 @@ void wlanRateBlockBuild(const uint8_t *items, int count, uint8_t *blocks, uint32
 
 		if (rate != 255) {
 			unsigned int itemRate = wlanRateIndexOf(itemClass, itemIndex);
-			uint8_t *entry = blocks + 36 * rate + 4 * i;
 			uint32_t word;
 
+			/* the entry's address is worked out again after the call, as Sony's is */
 			if (count <= 0 || itemRate == 255 || (class == WLAN_RATE_CLASS_HT && itemClass != WLAN_RATE_CLASS_HT))
-				word = __aeabi_uread4(entry);
+				word = __aeabi_uread4(blocks + 36 * rate + 4 * i);
 			else
-				word = wlanRateItemWord(itemRate, item[2]);
-			__aeabi_uwrite4(word, entry + 4);
+				word = wlanRateItemWord(itemRate, item);
+			__aeabi_uwrite4(word, blocks + 36 * rate + 4 * i + 4);
 		}
 		if (rate40 != 255) {
 			unsigned int itemRate = wlanRateIndexHt40(itemClass, itemIndex);
-			uint8_t *entry = blocks + 36 * rate40 + 4 * i;
 			uint32_t word;
 
+			/* the entry's address is worked out again after the call, as Sony's is */
 			if (count <= 0 || itemRate == 255 || (class == WLAN_RATE_CLASS_HT && itemClass != WLAN_RATE_CLASS_HT))
-				word = __aeabi_uread4(entry);
+				word = __aeabi_uread4(blocks + 36 * rate40 + 4 * i);
 			else
-				word = wlanRateItemWord(itemRate, item[2]);
-			__aeabi_uwrite4(word, entry + 4);
+				word = wlanRateItemWord(itemRate, item);
+			__aeabi_uwrite4(word, blocks + 36 * rate40 + 4 * i + 4);
 		}
 	}
 	if (rate != 255) {

@@ -28,6 +28,7 @@ uint8_t *wlanBuildIbssBeacon(const WlanAdHocStart *start, const uint8_t *source,
 			     unsigned int powerManagement, OsaBuffer *buffer)
 {
 	WlanWirelessFrame *frame;
+	unsigned int period;
 	uint8_t *end;
 
 	if (!start || !buffer)
@@ -36,8 +37,9 @@ uint8_t *wlanBuildIbssBeacon(const WlanAdHocStart *start, const uint8_t *source,
 	wlanBuildMgmtHeader(frame, source, wlanBroadcastAddress, bssid, subtype,
 			    powerManagement);
 	/* the timestamp (body 0..7) is the MAC's */
-	frame->body[8] = start->beaconPeriod;
-	frame->body[9] = start->beaconPeriod >> 8;
+	period = start->beaconPeriod;
+	frame->body[8] = period;
+	frame->body[9] = period >> 8;
 	frame->body[10] = ((const uint8_t *)&start->capability)[0];
 	frame->body[11] = ((const uint8_t *)&start->capability)[1];
 	end = frame->body + 12;
@@ -93,7 +95,7 @@ void wlanAdHocJoinToStart(WlanAdHocStart *start, const WlanAdHocBssDesc *join)
 	__aeabi_memclr(start, sizeof(*start));
 	start->beaconPeriod = join->beaconPeriod;
 	start->bssMode = 2;
-	start->capability = join->capability;
+	start->capabilityInfo = join->capabilityInfo;
 	start->dtimPeriod = join->dtimPeriod;
 	start->extraIes = join->extraIes;
 	start->extraIesLength = join->extraIesLength;

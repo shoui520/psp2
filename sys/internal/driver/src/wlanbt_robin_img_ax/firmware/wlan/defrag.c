@@ -72,6 +72,7 @@ OsaBuffer *wlanDefragment(OsaBuffer *rxBuffer, WlanWirelessFrame *frame,
 			  uint8_t *discarding)
 {
 	OsaBuffer *result;
+	OsaBuffer *msdu;
 	WlanWirelessFrame *assembled;
 	uint32_t sequenceNumber, fragmentNumber;
 	uint32_t extra, headroomCopied, copyLength;
@@ -91,6 +92,11 @@ OsaBuffer *wlanDefragment(OsaBuffer *rxBuffer, WlanWirelessFrame *frame,
 	extra = rxBuffer->length > WLAN_DEFRAG_HEADER_SIZE ?
 		(uint16_t)(rxBuffer->length - WLAN_DEFRAG_HEADER_SIZE) : 0;
 
+	if (*discarding == 1 && fragmentNumber != 0) {
+		/* the rest of a broken MSDU */
+		releaseRxBuffer(rxBuffer);
+		return NULL;
+	}
 	if (fragmentNumber == 0) {
 		/* the first fragment: start a new MSDU */
 		*discarding = 0;
@@ -100,16 +106,14 @@ OsaBuffer *wlanDefragment(OsaBuffer *rxBuffer, WlanWirelessFrame *frame,
 		headroomCopied = 0;
 		wlanRomServices.resetBufferDataOffset(*reassembly);
 		wlanDefragReset(context);
-		context->buffer = *reassembly;
-		assembled = (WlanWirelessFrame *)((uint8_t *)*reassembly + (*reassembly)->dataOffset);
+		msdu = *reassembly;
+		context->buffer = msdu;
+		assembled = (WlanWirelessFrame *)((uint8_t *)msdu + msdu->dataOffset);
 		context->writePtr = (uint8_t *)assembled + WLAN_DEFRAG_HEADER_SIZE;
 		wlanRomServices.submitBbpCommand((uint32_t)assembled, (uint32_t)frame,
 						 WLAN_DEFRAG_HEADER_SIZE);
 		context->startTime = SOC_MAC_TIMER + wlanRomServices.timerOffset;
 		(*reassembly)->context = rxBuffer->context;
-	} else if (*discarding == 1) {
-		releaseRxBuffer(rxBuffer);
-		return NULL;
 	} else {
 		if (context->sequenceNumber != sequenceNumber ||
 		    memcmp(frame->address2,
@@ -184,6 +188,7 @@ OsaBuffer *wlanDefragmentWep(OsaBuffer *rxBuffer, const uint8_t *seed, uint8_t i
 			     HostCmd_DS_802_11_GET_LOG *statistics)
 {
 	OsaBuffer *result;
+	OsaBuffer *msdu;
 	struct WlanConnection *connection;
 	WlanWirelessFrame *frame, *assembled;
 	uint32_t sequenceNumber, fragmentNumber, payloadLength;
@@ -205,8 +210,9 @@ OsaBuffer *wlanDefragmentWep(OsaBuffer *rxBuffer, const uint8_t *seed, uint8_t i
 
 		wlanRomServices.resetBufferDataOffset(*reassembly);
 		wlanDefragReset(context);
-		context->buffer = *reassembly;
-		assembled = (WlanWirelessFrame *)((uint8_t *)*reassembly + (*reassembly)->dataOffset);
+		msdu = *reassembly;
+		context->buffer = msdu;
+		assembled = (WlanWirelessFrame *)((uint8_t *)msdu + msdu->dataOffset);
 		context->writePtr = (uint8_t *)assembled + wlanOffloadHeadroom +
 				    WLAN_DEFRAG_HEADER_SIZE;
 		wlanRomServices.submitBbpCommand((uint32_t)assembled, (uint32_t)frame,

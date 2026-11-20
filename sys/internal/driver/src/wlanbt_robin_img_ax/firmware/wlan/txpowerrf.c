@@ -109,7 +109,7 @@ void wlanTxPowerClassApply(unsigned int class)
 	struct WlanCalibrationKey key;
 	struct WlanTxPowerRequest request;
 	uint8_t levels[4];
-	unsigned int path;
+	int path;
 
 	if (class >= WLAN_TX_POWER_CLASSES)
 		return;
@@ -131,24 +131,23 @@ void wlanTxPowerClassApply(unsigned int class)
 	else
 		request.bandwidth = 0;
 	for (path = 0; path < WLAN_TX_POWER_PATHS; path++) {
-		uint8_t *level = &entry->levels[path];
-
+		/* the level's address is worked out at each use, as Sony's is */
 		if (wlanTxPowerLookup(key, request, levels)) {
-			level[0] = levels[2];
-			level[1] = levels[0];
-			level[2] = levels[1];
+			entry->levels[path] = levels[2];
+			entry->levels[path + 1] = levels[0];
+			entry->levels[path + 2] = levels[1];
 		} else if (rfGetBand() == 0) {
-			level[0] = 72;
-			level[1] = 0;
-			level[2] = 0;
+			entry->levels[path] = 72;
+			entry->levels[path + 1] = 0;
+			entry->levels[path + 2] = 0;
 		} else if (rfGetBand() == 1) {
-			level[0] = 59;
-			level[1] = 0;
-			level[2] = 0;
+			entry->levels[path] = 59;
+			entry->levels[path + 1] = 0;
+			entry->levels[path + 2] = 0;
 		}
-		wlanTxPowerLevel0Write(path, class, level[0]);
-		wlanTxPowerLevel1Write(path, class, level[1]);
-		wlanTxPowerLevel2Write(path, class, level[2]);
+		wlanTxPowerLevel0Write(path, class, entry->levels[path]);
+		wlanTxPowerLevel1Write(path, class, entry->levels[path + 1]);
+		wlanTxPowerLevel2Write(path, class, entry->levels[path + 2]);
 	}
 }
 

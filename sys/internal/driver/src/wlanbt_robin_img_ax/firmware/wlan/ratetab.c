@@ -94,7 +94,7 @@ void wlanPsSyncFrame(struct WlanConnection *connection, unsigned int rate, struc
 	uint32_t *plain;
 	uint32_t word;
 	unsigned int used = 0;
-	unsigned int i;
+	int i;
 
 	if (wlanRateEntryRetryGet(*chain) == 15) {
 		word = *chain;
@@ -104,8 +104,9 @@ void wlanPsSyncFrame(struct WlanConnection *connection, unsigned int rate, struc
 		i = 1;
 	} else {
 		if (probing) {
-			group[0] = *chain;
-			word = wlanRateEntryEnableSet(*chain, 1);
+			word = *chain;
+			group[0] = word;
+			word = wlanRateEntryEnableSet(word, 1);
 			group[0] = word;
 			used = 1;
 			group[0] = wlanRateEntryRetrySet(word, 1);
@@ -124,8 +125,9 @@ void wlanPsSyncFrame(struct WlanConnection *connection, unsigned int rate, struc
 			unicast[0] = wlanRateEntryEnableSet(word, 1);
 	} else {
 		if (probing) {
-			unicast[0] = *plain;
-			word = wlanRateEntryEnableSet(*plain, 1);
+			word = *plain;
+			unicast[0] = word;
+			word = wlanRateEntryEnableSet(word, 1);
 			unicast[0] = word;
 			used = 1;
 			unicast[0] = wlanRateEntryRetrySet(word, 1);

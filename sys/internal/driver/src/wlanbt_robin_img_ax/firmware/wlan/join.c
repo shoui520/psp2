@@ -114,32 +114,30 @@ int wlanJoinSendAuth(int shared)
 }
 
 /* 0x11aba: associate, or reassociate when the connection was associated. */
-int wlanJoinSendAssoc(void)
+void wlanJoinSendAssoc(void)
 {
 	struct WlanJoinAssocRequest request;
-	uint8_t *ies;
 	unsigned int i;
-	int result;
+	int error;
 
 	__aeabi_memclr4(&request, sizeof(request));
 	__aeabi_memcpy(request.peer, wlanJoin.bss.bssid, sizeof(request.peer));
 	__aeabi_memcpy(request.ssid, wlanJoin.bss.ssid, wlanJoin.bss.ssidLength);
-	request.capability = wlanJoin.capability[0] | (wlanJoin.capability[1] << 8);
+	((uint8_t *)&request.capability)[0] = wlanJoin.capability[0];	/* copied byte by byte */
+	((uint8_t *)&request.capability)[1] = wlanJoin.capability[1];
 	request.listenInterval = wlanAssocListenInterval;
 	for (i = 0; i < wlanJoin.rateCount; i = (uint8_t)(i + 1))
 		request.rates[i] = wlanJoin.rates[i] & 0x7f;
 	wlanJoin.state = WLAN_JOIN_ASSOC_SENT;
 	wlanJoin.connection->flags2 = (wlanJoin.connection->flags2 & ~WLAN_CONN2_ASSOCIATED) |
 				      ((wlanJoin.reassociation << 4) & 0x1f);
-	request.iesLength = wlanIeBufferGet(&wlanJoin.ieBuffer, &ies);
-	request.ies = ies;
+	request.iesLength = wlanIeBufferGet(&wlanJoin.ieBuffer, (uint8_t **)&request.ies);
 	if ((wlanJoin.connection->flags2 & WLAN_CONN2_ASSOCIATED) || wlanJoin.reassociationRequest)
-		result = macTxNotifySetupFrame(wlanJoin.connection, &request, &wlanJoin.previous);
+		error = macTxNotifySetupFrame(wlanJoin.connection, &request, &wlanJoin.previous);
 	else
-		result = macTxNotifyReleaseFrame(wlanJoin.connection, &request);
-	if (result == 0)
+		error = macTxNotifyReleaseFrame(wlanJoin.connection, &request);
+	if (error == 0)
 		wlanJoin.connection->flags2 |= WLAN_CONN2_ASSOCIATED;
-	return result;
 }
 
 /* 0x11b78 */
@@ -557,7 +555,7 @@ int wlanJoinSetup(HostCmd_DS_802_11_ASSOCIATE *command, unsigned int length)
 			/* fall through */
 		case TLV_TYPE_HT_CAPABILITY_IE:
 			wlanJoinHtCapability[0] = IE_HT_CAPABILITY;
-			wlanJoinHtCapability[1] = tlv[2];
+			wlanJoinHtCapability[1] = ((const struct MrvlIEtypesHeader *)tlv)->length;
 			__aeabi_memcpy(&wlanJoinHtCapability[2], tlv + 4, LE16(tlv + 2));
 			break;
 		case TLV_TYPE_RSN_IE:
@@ -576,8 +574,8 @@ int wlanJoinSetup(HostCmd_DS_802_11_ASSOCIATE *command, unsigned int length)
 			break;
 		case TLV_TYPE_VENDOR_IE:
 			if (wlanWmmElementType(tlv + 4) == WLAN_VENDOR_WMM_INFORMATION) {
-				wlanWmm.joinIe[0] = tlv[0];
-				wlanWmm.joinIe[1] = tlv[2];
+				wlanWmm.joinIe[0] = ((const struct MrvlIEtypesHeader *)tlv)->type;
+				wlanWmm.joinIe[1] = ((const struct MrvlIEtypesHeader *)tlv)->length;
 				__aeabi_memcpy(&wlanWmm.joinIe[2], tlv + 4, LE16(tlv + 2));
 			}
 			if (wlanWpaElementType(tlv + 4) != WLAN_VENDOR_WPA)

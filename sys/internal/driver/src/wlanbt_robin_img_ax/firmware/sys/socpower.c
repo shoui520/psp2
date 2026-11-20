@@ -811,8 +811,9 @@ unsigned int sysPendingEventPolicyIsEnabled(void)
 /* The host command that reads and, with an action of 1, writes the registers of socHostRegisters. */
 unsigned int hostCmd008fResolve(uint8_t *body)
 {
+	unsigned int length = 36;
 	uint8_t *data;
-	unsigned int i;
+	int i;
 	uint32_t value;
 
 	if ((body[0] | (body[1] << 8)) == 1) {
@@ -833,11 +834,15 @@ unsigned int hostCmd008fResolve(uint8_t *body)
 	data = body + 6;
 	for (i = 0; i < 9; i++) {
 		value = *socHostRegisters[i].reg & socHostRegisters[i].mask;
-		__aeabi_uwrite4(value, data);
+		data[0] = value;
+		data[1] = value >> 8;
+		data[2] = value >> 16;
+		data[3] = value >> 24;
 		data += 4;
 	}
-	*(uint16_t *)(body + 4) = 36;
-	return 36;
+	body[4] = length;	/* the body may be unaligned: written byte by byte */
+	body[5] = length >> 8;
+	return length;
 }
 
 int wlanPsSetupEntry(void)

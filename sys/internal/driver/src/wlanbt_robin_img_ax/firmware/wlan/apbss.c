@@ -36,7 +36,6 @@
 #define WLAN_AP_EVENT_PREPARE		41
 #define WLAN_AP_EVENT_RESTART		46
 #define WLAN_AP_EVENT_RESUME		47
-#define WLAN_AP_EVENT_FAILURE		49	/* never expected */
 
 #define WLAN_AP_REPORT_SELECTED		37	/* wlanReportEvent(): the channel is chosen */
 #define WLAN_AP_REPORT_STARTED		29
@@ -311,8 +310,6 @@ const int32_t *macMgmtParseFrame(struct WlanApMachine *machine, const struct Wla
 	case WLAN_AP_EVENT_CHECK:
 		macMgmtCheckFrame(connection);
 		return NULL;
-	case 38: case 39: case 42: case 43: case 44: case 45:
-		return (const int32_t *)event;
 	case 40: case 41: case 46: case 47:
 		return NULL;
 	case 22:
@@ -320,9 +317,6 @@ const int32_t *macMgmtParseFrame(struct WlanApMachine *machine, const struct Wla
 		return NULL;
 	case 23:
 		sysIrqDisable();
-		for (;;)
-			;
-	case WLAN_AP_EVENT_FAILURE:
 		for (;;)
 			;
 	}
@@ -374,8 +368,6 @@ const int32_t *macMgmtBuildFrame(struct WlanApMachine *machine, const struct Wla
 		macMgmtValidateFrame(connection);
 		romHsmTransition(machine, &apStates(machine)->compute);
 		return NULL;
-	case 42: case 43: case 44: case 45:
-		return (const int32_t *)event;
 	case 46:
 		if (macMgmtResetPacket(connection, 1) != 0)
 			return NULL;
@@ -383,9 +375,6 @@ const int32_t *macMgmtBuildFrame(struct WlanApMachine *machine, const struct Wla
 		macMgmtResetBuffer(connection, argument, 32, 0);
 		romHsmTransition(machine, &apStates(machine)->compute);
 		return NULL;
-	case WLAN_AP_EVENT_FAILURE:
-		for (;;)
-			;
 	}
 	return (const int32_t *)event;
 }

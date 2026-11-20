@@ -32,10 +32,10 @@ struct WlanRxStatus {
 _Static_assert(sizeof(struct WlanRxStatus) == 68, "receive status");
 
 
-/* The SDIO receive descriptor the host gets, followed by one more halfword. */
+/* The SDIO receive descriptor the host gets, followed by one more halfword (LE, unaligned). */
 struct WlanHostRxPacket {
 	WlanRxDescriptor descriptor;
-	uint16_t frameCount;
+	uint8_t frameCount[2];
 };
 
 #define WLAN_HOST_RX_FRAME_PLAIN	1

@@ -24,6 +24,6 @@ void macTxNotifyConvertPacket(void);					/* 0x32cc4 */
 void macTxNotifyVerifyPacket(void);					/* 0x32cfa */
 
 unsigned int macTxNotifySelectPacket(void);				/* 0x32d30 */
-int hostCmd008fWrite(void *command, const uint8_t *data);		/* 0x33084 */
+int hostCmd008fWrite(unsigned int length, const uint8_t *data);		/* 0x33084 */
 
 #endif /* ROBIN_RFCAL_H */

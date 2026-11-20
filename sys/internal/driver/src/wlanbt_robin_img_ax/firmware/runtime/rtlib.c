@@ -23,8 +23,10 @@ void __rt_lib_init_noop(void)
 
 /*
  * Not in the original: GCC calls it for the zeroed locals that the original
- * clears with inline stores (OPT -Os in the Makefile).
+ * clears with inline stores (OPT -Os in the Makefile). RVCT does not, so the
+ * RVCT build leaves it out.
  */
+#ifndef __ARMCC_VERSION
 void *memset(void *dest, int value, size_t size)
 {
 	uint8_t *d = dest;
@@ -33,3 +35,4 @@ void *memset(void *dest, int value, size_t size)
 		*d++ = (uint8_t)value;
 	return dest;
 }
+#endif

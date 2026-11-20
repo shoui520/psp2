@@ -777,7 +777,7 @@ static inline __attribute__((always_inline)) void hostCmd008fLoad(struct PhyRegi
 	} while ((int)(group + slot - WLAN_PATCH_GROUP) < (int)count);
 }
 
-int hostCmd008fWrite(void *command, const uint8_t *data)
+int hostCmd008fWrite(unsigned int length, const uint8_t *data)
 {
 	const struct WlanPatchChunk *chunk = (const struct WlanPatchChunk *)data;
 

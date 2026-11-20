@@ -57,20 +57,24 @@ pmkElement_t *pmkCacheNewElement(void)
 
 void pmkCacheUpdateReplacementRank(pmkElement_t *pPMKElement)
 {
+	pmkElement_t *pmkCache;
+	int8_t rankMax;
+	int entries;
 	uint8_t index;
 
 	/* update the replacement rank of an entry that is found */
-	if (pPMKElement && pPMKElement->replacementRank != replacementRankMax) {
+	if (pPMKElement && pPMKElement->replacementRank != (rankMax = replacementRankMax)) {
 		/*
 		 * The entries with a larger rank are adjusted; the given entry
-		 * gets the largest rank.
+		 * gets the largest rank, as it was read on entry.
 		 */
-		for (index = 0; index < ramHook_MAX_PMK_CACHE_ENTRIES; index++) {
-			if (ramHook_pmkCache[index].replacementRank >
-			    pPMKElement->replacementRank)
-				ramHook_pmkCache[index].replacementRank--;
+		pmkCache = ramHook_pmkCache;
+		entries = ramHook_MAX_PMK_CACHE_ENTRIES;
+		for (index = 0; index < entries; index++) {
+			if (pmkCache[index].replacementRank > pPMKElement->replacementRank)
+				pmkCache[index].replacementRank--;
 		}
-		pPMKElement->replacementRank = replacementRankMax;
+		pPMKElement->replacementRank = rankMax;
 	}
 }
 

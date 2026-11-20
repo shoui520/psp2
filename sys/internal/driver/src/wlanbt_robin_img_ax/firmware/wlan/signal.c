@@ -310,7 +310,7 @@ void wlanSignalJoinDone(struct WlanConnection *connection)
 }
 
 /* A frame sent to the peer; acknowledged, it shows the peer is there. */
-void wlanLinkTxDone(struct WlanConnection *connection, int acknowledged)
+void wlanLinkTxDone(struct WlanConnection *connection, int acknowledged, uint8_t attempts)
 {
 	if (acknowledged && connection->interfaceType != 0) {
 		connection->link.frameSeen = 1;

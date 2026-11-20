@@ -781,7 +781,12 @@ int macTxBlockAckWindow(struct WlanConnection *connection, int operation, unsign
 			if (flags & enabled)
 				goto send;
 			if (queue->pending == 0) {
-				wlanBaSlotSetSequence(slot, *(WlanSequenceControl *)(request->frame + 24));
+				WlanSequenceControl sequence;
+
+				/* the frame's field may be unaligned: copied byte by byte */
+				((uint8_t *)&sequence)[0] = request->frame[24];
+				((uint8_t *)&sequence)[1] = request->frame[25];
+				wlanBaSlotSetSequence(slot, sequence);
 				wlanBaSlotApply(slot, request->queue);
 				wlanTxWindowFlags |= enabled;
 				goto send;

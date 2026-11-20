@@ -152,13 +152,15 @@ int wlanWmmQueueStatus(const struct WlanConnection *connection, uint8_t *tlvs)
 			if (wlanAccessCategoryToQueue(0) != queue)
 				tlvs[5] = 1;
 		} else {
-			uint16_t admitted = record->admittedTime;
+			uint16_t admitted;
 
+			/* the record is read again after each store, as Sony's is */
 			tlvs[8] = (record->edca.acm) != 0;	/* flow required */
-			tlvs[9] = admitted != 0;		/* flow created */
+			tlvs[9] = record->admittedTime != 0;	/* flow created */
+			admitted = record->admittedTime;
 			tlvs[6] = admitted;			/* medium time */
 			tlvs[7] = admitted >> 8;
-			if ((record->edca.acm) && admitted == 0)
+			if ((record->edca.acm) && record->admittedTime == 0)
 				tlvs[5] = 1;
 			if (wlanWmm.infoIe[0][WLAN_WMM_IE_QOS_INFO] & (1 << bit))
 				tlvs[10] = 1;

@@ -120,7 +120,7 @@ void hostCmd0010(uint8_t *body, uint16_t *count)
 	const uint8_t *address;
 	uint32_t low;
 	uint32_t high;
-	unsigned int written;
+	int written;
 	unsigned int length;
 	int i;
 
@@ -138,7 +138,7 @@ void hostCmd0010(uint8_t *body, uint16_t *count)
 			i++;
 		}
 		written = LE16(body + 2);
-		if (*count > written) {
+		if (*count > (unsigned int)written) {	/* unsigned here, signed in the loop */
 			while (*count > written) {
 				wlanMacTableWrite(0, 0, index);
 				index = (uint16_t)(index + 1);

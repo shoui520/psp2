@@ -52,7 +52,7 @@ static struct FmEventHandler fmEventHandlers[] __attribute__((section(".itcm.rw"
 
 static uint8_t fmPoolMemory[0x238] __attribute__((section(".itcm.bss")));	/* 0x5a320 */
 static struct MdevDriver fmDriver __attribute__((section(".itcm.bss")));	/* 0x5a558 */
-static uint8_t fmTaskStack[FM_TASK_STACK_SIZE] __attribute__((section(".itcm.bss"))); /* 0x5a588 */
+static uint8_t fmTaskStack[FM_TASK_STACK_SIZE] __attribute__((section(".itcm.bss"), aligned(8))); /* 0x5a588 */
 
 struct FmReply fmReply __attribute__((section(".sqram1.bss")));		/* 0xc0033328 */
 static struct OsaMsgList fmMessages __attribute__((section(".sqram1.bss")));	/* 0xc0033424 */

@@ -52,6 +52,7 @@
 #include "robin/phy.h"
 #include "robin/rf.h"
 #include "robin/rfbus.h"
+#include "robin/rfcal.h"
 #include "robin/signal.h"
 #include "robin/sleep.h"
 #include "robin/soc.h"
@@ -75,7 +76,6 @@
 /* Not converted yet; provisional names. */
 unsigned int clockCurrentRate(void);				/* 0x2761a */
 struct WlanConnection *p2pDirectProcessEntry(unsigned int interfaceType);	/* 0x41250 */
-uint16_t hostCmdRateDefault __attribute__((section(".sqram1.rw"))) = 0x00a0;			/* 0xc0011ba8 */
 uint16_t hostCmdRateSteps[HOSTCMD_RATE_STEPS] __attribute__((section(".sqram1.rw"))) = {	/* 0xc0011b8a */
 	4, 8, 0x0010, 0x0014, 0x0020, 0x0020, 0x0028, 0x0028,
 	0x0040, 0x0050, 0x0050, 0x006a, 0x0080, 0x008e, 0x00a0, 0x00a0,
@@ -296,7 +296,7 @@ void hostCmdRateStepsGet(uint8_t *body, uint16_t *size)
 	unsigned int current = clockCurrentRate() / 1000;
 	unsigned int i;
 
-	PUT16(body + 2, hostCmdRateDefault);
+	PUT16(body + 2, hostCmdRateSteps[HOSTCMD_RATE_STEPS - 1]);
 	for (i = 0; i < HOSTCMD_RATE_STEPS; i++) {
 		if (hostCmdRateSteps[i] >= current) {
 			PUT16(body + 2, hostCmdRateSteps[i]);
@@ -306,10 +306,10 @@ void hostCmdRateStepsGet(uint8_t *body, uint16_t *size)
 	if (HOSTCMD_U16(body + 4) == 0) {
 		body[6] = 8;
 		body[7] = 0;
-		PUT16(body + 8, hostCmdRateDefault);
-		PUT16(body + 10, hostCmdRateDefault);
-		PUT16(body + 12, hostCmdRateDefault);
-		PUT16(body + 14, hostCmdRateDefault);
+		PUT16(body + 8, hostCmdRateSteps[HOSTCMD_RATE_STEPS - 1]);
+		PUT16(body + 10, hostCmdRateSteps[HOSTCMD_RATE_STEPS - 1]);
+		PUT16(body + 12, hostCmdRateSteps[HOSTCMD_RATE_STEPS - 1]);
+		PUT16(body + 14, hostCmdRateSteps[HOSTCMD_RATE_STEPS - 1]);
 		HOSTCMD_RATE_STEP(body + 8, wlanMacDescriptor.hostClockPreset[0]);
 		HOSTCMD_RATE_STEP(body + 10, wlanMacDescriptor.hostClockPreset[1]);
 		HOSTCMD_RATE_STEP(body + 12, wlanMacDescriptor.hostClockPreset[2]);
@@ -435,7 +435,6 @@ void hostCmd0083(unsigned int bssType, unsigned int bssNumber, unsigned int valu
 int hostCmd0084(unsigned int action, uint8_t *data, unsigned int size);	/* 0x4237e */
 void hostCmd008a(uint8_t *body, uint16_t *beaconInterval, uint16_t *wakeBeacons,
 		 uint16_t *wakeDtims, uint16_t *listenBeacons);				/* 0x2cdfc */
-int hostCmd008fWrite(unsigned int length, uint8_t *data);			/* 0x33084 */
 unsigned int hostCmd008fResolve(uint8_t *body);					/* 0x26fdc */
 void hostCmd0096Enable(void);							/* 0x26c58 */
 void hostCmd0096Disable(void);							/* 0x26c5a */
@@ -476,6 +475,8 @@ extern uint16_t wlanRxFrameTypeMask;
 unsigned int bbpReadVersionRegister(unsigned int reg);				/* 0xc308 */
 extern struct OsaBufferPool hostCmdResponsePool;				/* 0x04000e24 */
 extern uint8_t wlanPrimaryEvents;						/* 0x04008828, bit 0: radio on */
+/* What HostCmd_CMD_802_11_RADIO_CONTROL reports (bits 0-2); Sony reads it as a halfword at this odd address. */
+extern uint16_t wlanRadioControlState;						/* 0x04008823 */
 extern uint8_t wlanIbssJoinState[4];						/* 0x040088ce, unaligned */
 extern uint8_t wlanBeaconTimestamp[8];						/* 0x040088d2 */
 struct WlanConnection *wlanAssociateConnection __attribute__((section(".dtcm.bss")));	/* 0x4004e9c */
@@ -553,11 +554,12 @@ int hostCmdProcess(void)
 		uint8_t *body;
 		struct WlanConnection *connection;
 		int (*release)(OsaBuffer *buffer);
+		void *owner;			/* the buffer's context as the host queued it */
+		uint8_t *responseData;		/* the response's data, kept for the replies sent on the command buffer */
 		unsigned int rawCommand;
 		unsigned int command;
 		unsigned int bodyLength;
 		unsigned int lock;
-		unsigned int action;
 		unsigned int a;
 		unsigned int b;
 		unsigned int c;
@@ -582,6 +584,7 @@ int hostCmdProcess(void)
 		release = NULL;
 		buffer = osa_MsgQueueRecv(&wlanDriverQueue1);
 		hdr = (uint8_t *)buffer + buffer->dataOffset;
+		owner = buffer->context;
 		if (!hostCmdIsSleepConfirm(hdr) || wlanRoleMaskIs(0)) {
 			connection = wlanConnectionFind(hdr[5] >> 4, hdr[5] & 15);
 		} else {
@@ -599,15 +602,16 @@ int hostCmdProcess(void)
 			else
 				type = 0;
 			connection = wlanConnectionConfigure(type, hdr[5] >> 4, hdr[5] & 15, NULL, NULL, 0,
-							     buffer->context);
+							     owner);
 		}
 		buffer->context = connection;
 		while ((hostCmdResponse = osa_BufferAlloc(&hostCmdResponsePool, 0x76c, 0)) == NULL)
 			osaTaskSleep(1);
 		hostCmdResponse->dataOffset = 32;
-		hostCmdResponseData = (uint8_t *)hostCmdResponse + 32;
+		responseData = (uint8_t *)hostCmdResponse + 32;
+		hostCmdResponseData = responseData;
 		hostCmdResponse->context = connection;
-		sysIssuePrimaryBbpCommand((uint32_t)hostCmdResponseData, (uint32_t)hdr, HOSTCMD_U16(hdr + 2));
+		sysIssuePrimaryBbpCommand((uint32_t)responseData, (uint32_t)hdr, HOSTCMD_U16(hdr + 2));
 		hostCmdBusy = 1;
 		if (!hostCmdMacAwake && command != 170) {
 			sleepMacResume();
@@ -622,21 +626,22 @@ int hostCmdProcess(void)
 			hdr[0] = command;
 			hdr[1] = (command >> 8) | 0x80;
 			PUT16(hdr + 6, 2);
-			sysIssuePrimaryBbpCommand((uint32_t)hostCmdResponseData, (uint32_t)hdr,
+			sysIssuePrimaryBbpCommand((uint32_t)responseData, (uint32_t)hdr,
 						  HOSTCMD_U16(hdr + 2));
 			osa_BufferFree(buffer);
 			hostCmdRespond(connection, NULL);
 			return 1;
 		}
 		wlanPsCancelPendingTimer();
-		action = HOSTCMD_U16(body);
 
 		switch (command) {
 		case 3:		/* HostCmd_CMD_GET_HW_SPEC */
 		{
-			unsigned int profile = hostCmdAntennaProfile();
+			const struct WlanAntennaProfile *antenna;
+			unsigned int profile;
 
 			__aeabi_memcpy(body + 8, connection->interfaceAddress, 6);
+			profile = hostCmdAntennaProfile();
 			if ((profile & 3) != ((profile >> 2) & 3) || (profile & 2)) {
 				PUT16(body + 16, macGetEventPrimaryPathState() == 7 ? 3 : 2);
 			} else {
@@ -644,11 +649,11 @@ int hostCmdProcess(void)
 			}
 			body[6] = 64;
 			body[7] = 0;
-			body[14] = ((const struct WlanAntennaProfile *)__aeabi_uread4(&wlanAntennaProfile))->regionCode[0];
-			body[15] = ((const struct WlanAntennaProfile *)__aeabi_uread4(&wlanAntennaProfile))->regionCode[1];
+			antenna = (const struct WlanAntennaProfile *)__aeabi_uread4(&wlanAntennaProfile);
+			PUT16(body + 14, antenna->regionCode[0] | antenna->regionCode[1] << 8);
 			__aeabi_uwrite4(hostCmd0003Version(), body + 18);
-			hostCmd0003Fill(body, hostCmd0003Caps(), hostCmdAntennaProfile() & 3,
-					(hostCmdAntennaProfile() >> 2) & 3, 0);
+			profile = hostCmdAntennaProfile();
+			hostCmd0003Fill(body, hostCmd0003Caps(), profile & 3, (profile >> 2) & 3, 0);
 			body[2] = wlanHwInfo.version[0];
 			body[3] = wlanHwInfo.version[1];
 			body[0] = 2;
@@ -670,8 +675,12 @@ int hostCmdProcess(void)
 			goto filtered;
 
 		case 10:	/* HostCmd_CMD_802_11_GET_STAT */
-			hostCmd000a(body, rfGetChannel(), wlanPsFormatPacket(connection), wlanPrimaryEvents & 1);
+		{
+			int psState = wlanPsFormatPacket(connection);
+
+			hostCmd000a(body, rfGetChannel(), psState, wlanPrimaryEvents & 1);
 			goto done;
+		}
 
 		case 11:	/* HostCmd_CMD_802_11_GET_LOG */
 			hdr[2] = 76;
@@ -681,6 +690,9 @@ int hostCmdProcess(void)
 
 		case 16:	/* HostCmd_CMD_MAC_MULTICAST_ADR */
 			hostCmd0010(body, &wlanMulticastCount);
+			goto done;
+
+		case 17:	/* accepted, nothing to do */
 			goto done;
 
 		case 18:	/* HostCmd_CMD_802_11_AUTHENTICATE */
@@ -696,7 +708,7 @@ int hostCmdProcess(void)
 			struct WlanConnection *other;
 			unsigned int oid = HOSTCMD_U16(body + 2);
 
-			if (action == 1) {
+			if (HOSTCMD_U16(body) == 1) {
 				if (oid == 9) {
 					connection->flags2 = (connection->flags2 & ~1) | (body[6] & 1);
 					wlanTxPowerUpdateConnection(connection, wlanOperatingChannel(), 1);
@@ -723,7 +735,7 @@ int hostCmdProcess(void)
 				} while (other != NULL);
 				goto done;
 			}
-			if (action != 0)
+			if (HOSTCMD_U16(body) != 0)
 				goto done;
 			oid = HOSTCMD_U16(body + 2);
 			if (oid == 8) {
@@ -753,7 +765,7 @@ int hostCmdProcess(void)
 			unsigned int reg = HOSTCMD_U16(body + 2);
 			uint32_t value;
 
-			if (action == 1) {
+			if (HOSTCMD_U16(body) == 1) {
 				value = __aeabi_uread4(body + 4);
 				if (reg == 0xc000) {
 					if (value != 0) {
@@ -789,7 +801,7 @@ int hostCmdProcess(void)
 		}
 
 		case 26:	/* HostCmd_CMD_BBP_REG_ACCESS */
-			if (action == 1)
+			if (HOSTCMD_U16(body) == 1)
 				bbpWriteRegister(HOSTCMD_U16(body + 2), body[4]);
 			else
 				body[4] = bbpReadVersionRegister(HOSTCMD_U16(body + 2));
@@ -797,7 +809,7 @@ int hostCmdProcess(void)
 
 		case 27:	/* HostCmd_CMD_RF_REG_ACCESS */
 			rfBusAcquire();
-			if (action == 1)
+			if (HOSTCMD_U16(body) == 1)
 				rfBusWrite(HOSTCMD_U16(body + 2), body[4]);
 			else
 				body[4] = rfBusRead(HOSTCMD_U16(body + 2));
@@ -805,8 +817,8 @@ int hostCmdProcess(void)
 			goto done;
 
 		case 28:	/* HostCmd_CMD_802_11_RADIO_CONTROL */
-			if (action != 1) {
-				PUT16(body + 2, wlanPrimaryEvents & 7);
+			if (HOSTCMD_U16(body) != 1) {
+				PUT16(body + 2, wlanRadioControlState & 7);
 				goto done;
 			}
 			if (HOSTCMD_U16(body + 2) != 0)
@@ -825,7 +837,7 @@ int hostCmdProcess(void)
 			goto done;
 
 		case 30:	/* HostCmd_CMD_802_11_RF_TX_POWER */
-			if (action == 1)
+			if (HOSTCMD_U16(body) == 1)
 				wlanTxPowerSetHostLimit(HOSTCMD_U16(body + 2), 1);
 			if (connection->flags2 & 0x10) {
 				uint8_t channel[2];
@@ -856,9 +868,9 @@ int hostCmdProcess(void)
 			goto failed;
 
 		case 32:	/* HostCmd_CMD_802_11_ANTENNA */
-			if (hostCmd0020(body, action, &result, &wlanRadioConfig->secondaryAntenna))
+			if (hostCmd0020(body, HOSTCMD_U16(body), &result, &wlanRadioConfig->secondaryAntenna))
 				goto done;
-			switch (action) {
+			switch (HOSTCMD_U16(body)) {
 			case 1:
 				if (HOSTCMD_U16(body + 2) == 0xffff) {
 					if (!(((hostCmdAntennaProfile() >> 2) & 3) & 2))
@@ -971,7 +983,7 @@ int hostCmdProcess(void)
 
 		case 60:	/* automatic frequency control */
 			wlanAfcEnabled = body[0];
-			if (action != 0) {
+			if (HOSTCMD_U16(body) != 0) {
 				wlanAfcAuto = body[2];
 				wlanAfcThreshold = body[4];
 			} else {
@@ -1022,22 +1034,22 @@ int hostCmdProcess(void)
 			goto failed;
 
 		case 78:
-			if (action == 1) {
+			if (HOSTCMD_U16(body) == 1) {
 				hostCmd004eSet(body, (uint16_t)(HOSTCMD_U16(hdr + 2) - 8));
 				goto done;
 			}
-			if (action == 0) {
+			if (HOSTCMD_U16(body) == 0) {
 				PUT16(hdr + 2, hostCmd004eGet(body) + 12);
 				goto done;
 			}
 			goto unsupported;
 
 		case 91:	/* HostCmd_CMD_802_11D_DOMAIN_INFO */
-			if (action == 0) {
+			if (HOSTCMD_U16(body) == 0) {
 				PUT16(hdr + 2, hostCmdDomainInfoGet(connection, body + 2) + HOSTCMD_U16(hdr + 2));
 				goto done;
 			}
-			if (action != 1)
+			if (HOSTCMD_U16(body) != 1)
 				goto failed;
 			if (hostCmdDomainInfoSet(connection, body + 2, bodyLength) != 0)
 				goto done;
@@ -1054,7 +1066,7 @@ int hostCmdProcess(void)
 		}
 
 		case 94:
-			if (action == 1) {
+			if (HOSTCMD_U16(body) == 1) {
 				hostCmd005e(connection, body + 2, hdr + HOSTCMD_U16(hdr + 2));
 				wlanBaTablesChangedHandler();
 				if ((uintptr_t)connection->keyBlocks[1] + 28 != 0 && (connection->keyBlocks[1]->key.hdr.keyState & 1)) {
@@ -1064,14 +1076,14 @@ int hostCmdProcess(void)
 					wlanPsStartHostModeTimer(connection);
 				goto done;
 			}
-			if (action == 0) {
+			if (HOSTCMD_U16(body) == 0) {
 				PUT16(hdr + 2, hostCmd005eGet(connection, body + 2) + 10);
 				goto done;
 			}
 			goto unsupported;
 
 		case 102:	/* host sleep parameters */
-			if (action != 1) {
+			if (HOSTCMD_U16(body) != 1) {
 				PUT16(body + 2, sleepHostWakeMargin);
 				PUT16(body + 4, wlanPsWakeAdvance);
 				body[8] = sleepCalibrationHeld + 1;
@@ -1098,11 +1110,12 @@ int hostCmdProcess(void)
 				sleepWakeLatency = HOSTCMD_U16(body + 6);
 			if (HOSTCMD_U16(body + 10) != 0)
 				sleepHostWakeCount = HOSTCMD_U16(body + 10);
-			result = wlanPsRecalibrate();
+			/* Stored where the result goes, then overwritten by the result when the response is sent. */
+			PUT16(hdr + 6, wlanPsRecalibrate());
 			goto done;
 
 		case 103:
-			if (action == 1) {
+			if (HOSTCMD_U16(body) == 1) {
 				wlanPsWakeBeacons = HOSTCMD_U16(body + 2);
 				wlanPsBeaconInterval = 0;
 			}
@@ -1110,7 +1123,7 @@ int hostCmdProcess(void)
 			goto done;
 
 		case 104:
-			if (action != 1) {
+			if (HOSTCMD_U16(body) != 1) {
 				PUT16(body + 2, wlanPsNullSuppressed ? 255 : wlanPsAltModeActive);
 				goto done;
 			}
@@ -1145,7 +1158,7 @@ int hostCmdProcess(void)
 		{
 			UINT posture = sysIrqDisable();
 
-			wlanCalibrationTableUpdate(body + 6, HOSTCMD_U16(body + 2), HOSTCMD_U16(body + 4), action);
+			wlanCalibrationTableUpdate(body + 6, HOSTCMD_U16(body + 2), HOSTCMD_U16(body + 4), HOSTCMD_U16(body));
 			sysIrqRestore(posture);
 			goto done;
 		}
@@ -1176,7 +1189,7 @@ int hostCmdProcess(void)
 		}
 
 		case 116:
-			if (action != 1) {
+			if (HOSTCMD_U16(body) != 1) {
 				PUT16(body + 2, sleepStats.mode);
 				goto done;
 			}
@@ -1194,11 +1207,11 @@ int hostCmdProcess(void)
 			goto failed;
 
 		case 117:	/* HostCmd_CMD_802_11_SUBSCRIBE_EVENT */
-			if (action == 0) {
+			if (HOSTCMD_U16(body) == 0) {
 				PUT16(hdr + 2, wlanSubscribeEventsGet(connection, body) + 12);
 				goto done;
 			}
-			wlanSubscribeEventsConfigure(connection, body, (int16_t)bodyLength, action);
+			wlanSubscribeEventsConfigure(connection, body, (int16_t)bodyLength, HOSTCMD_U16(body));
 			goto done;
 
 		case 120:
@@ -1252,25 +1265,29 @@ int hostCmdProcess(void)
 		}
 
 		case 130:	/* HostCmd_CMD_AUTO_TX */
-			if (action == 1) {
-				if (bodyLength == 2)
+			/* Only the set without a body returns its status as the result; the others store
+			 * theirs where the result goes, and the result (0) overwrites it in the response. */
+			if (HOSTCMD_U16(body) == 1) {
+				if (bodyLength == 2) {
 					result = hostCmdAutoTxSet(NULL);
-				else
-					result = hostCmdAutoTxSet(body);
-			} else if (action == 0) {
-				result = hostCmdAutoTxGet(body);
+					PUT16(hdr + 2, 2);
+					goto done;
+				}
+				PUT16(hdr + 6, hostCmdAutoTxSet(body));
+			} else if (HOSTCMD_U16(body) == 0) {
+				PUT16(hdr + 6, hostCmdAutoTxGet(body));
 				a = HOSTCMD_U16(body + 4);
 				PUT16(hdr + 2, a != 0 ? a + 14 : 2);
 				PUT16(body, 0);
 				goto done;
 			} else {
-				result = 1;
+				PUT16(hdr + 6, 1);
 			}
 			PUT16(hdr + 2, 2);
 			goto done;
 
 		case 131:
-			if (action == 1) {
+			if (HOSTCMD_U16(body) == 1) {
 				if (connection->interfaceType == 1)
 					hostCmd0083(connection->bssType, connection->bssNumber, HOSTCMD_U16(body + 2));
 				goto done;
@@ -1286,11 +1303,11 @@ int hostCmdProcess(void)
 
 		case 132:
 			if (connection->interfaceType == 1)
-				hostCmd0084(action, body + 2, HOSTCMD_U16(hdr + 2));
+				hostCmd0084(HOSTCMD_U16(body), body + 2, HOSTCMD_U16(hdr + 2));
 			goto done;
 
 		case 136:
-			if (action != 1) {
+			if (HOSTCMD_U16(body) != 1) {
 				mdevIoctl(wlanSdioDev, SDIO_IOCTL_HOST_EVENT_QUERY, (uintptr_t)body);
 				goto done;
 			}
@@ -1311,7 +1328,7 @@ int hostCmdProcess(void)
 		case 143:	/* calibration table */
 			switch (HOSTCMD_U16(body + 2)) {
 			case 1:
-				if (action != 1)
+				if (HOSTCMD_U16(body) != 1)
 					goto unsupported;
 				if (hostCmd008fWrite(HOSTCMD_U16(body + 4), body + 6) == 1)
 					goto failed;
@@ -1322,7 +1339,7 @@ int hostCmdProcess(void)
 				unsigned int length;
 				UINT posture;
 
-				if (action == 0) {
+				if (HOSTCMD_U16(body) == 0) {
 					result = wlanCalibrationTableQuery(body + 6, &length);
 					PUT16(body + 4, length);
 					PUT16(hdr, HOSTCMD_U16(hdr) | 0x8000);
@@ -1331,12 +1348,12 @@ int hostCmdProcess(void)
 					goto done;
 				}
 				posture = sysIrqDisable();
-				wlanCalibrationTableUpdate(body + 6, 0xffff, HOSTCMD_U16(body + 4), action);
+				wlanCalibrationTableUpdate(body + 6, 0xffff, HOSTCMD_U16(body + 4), HOSTCMD_U16(body));
 				sysIrqRestore(posture);
 				goto done;
 			}
 			case 3:
-				if (action != 1)
+				if (HOSTCMD_U16(body) != 1)
 					goto unsupported;
 				util_SwapBuffer(body + 6, HOSTCMD_U16(body + 4));
 				result = hostCmd008fApply();
@@ -1344,12 +1361,12 @@ int hostCmdProcess(void)
 			case 4:
 				goto unsupported;
 			case 5:
-				if (action == 1) {
+				if (HOSTCMD_U16(body) == 1) {
 					if (hostCmd008fResolve(body) != 0)
 						goto done;
 					goto failed;
 				}
-				if (action != 0)
+				if (HOSTCMD_U16(body) != 0)
 					goto unsupported;
 				a = hostCmd008fResolve(body);
 				if (a == 0)
@@ -1361,7 +1378,7 @@ int hostCmdProcess(void)
 			}
 
 		case 147:
-			if (action == 1) {
+			if (HOSTCMD_U16(body) == 1) {
 				uint16_t value[4];
 
 				if (bodyLength == 8) {
@@ -1391,7 +1408,7 @@ int hostCmdProcess(void)
 		{
 			uint16_t size;
 
-			if (action == 1) {
+			if (HOSTCMD_U16(body) == 1) {
 				if (hostCmdRateStepsSet(body) == 0)
 					goto unsupported;
 				goto done;
@@ -1403,7 +1420,7 @@ int hostCmdProcess(void)
 		}
 
 		case 150:
-			if (action == 1) {
+			if (HOSTCMD_U16(body) == 1) {
 				if (HOSTCMD_U16(body + 2) != 0) {
 					if (hostCmd0096Tracking != 0)
 						hostCmd0096Track();
@@ -1423,12 +1440,13 @@ int hostCmdProcess(void)
 			goto done;
 
 		case 154:
+			/* As in case 102, the 1 is overwritten by the result when the response is sent. */
 			if (wlanMefConfigure(connection, body) == 0)
-				result = 1;
+				PUT16(hdr + 6, 1);
 			goto done;
 
 		case 164:	/* the averaging windows of the RSSI */
-			if (action == 1) {
+			if (HOSTCMD_U16(body) == 1) {
 				uint16_t beaconShift = connection->beaconRssiShift;
 				uint16_t dataShift = connection->dataRssiShift;
 
@@ -1475,6 +1493,8 @@ int hostCmdProcess(void)
 		case 169:	/* the host resets the firmware */
 		{
 			uint8_t *response;
+			uint8_t sequence = hdr[4];
+			uint8_t interface = hdr[5];
 
 			sysForceEventDispatch = 0;
 			mdevIoctl(wlanSdioDev, SDIO_IOCTL_HOST_EVENT_DONE, 0);
@@ -1496,8 +1516,8 @@ int hostCmdProcess(void)
 			response[1] = (command >> 8) | 0x80;
 			PUT16(response + 2, bodyLength + 8);
 			PUT16(response + 6, result);
-			response[4] = hdr[4];
-			response[5] = hdr[5];
+			response[4] = sequence;
+			response[5] = interface;
 			hostCmdRespond(connection, NULL);
 			continue;
 		}
@@ -1519,7 +1539,7 @@ int hostCmdProcess(void)
 			hdr[0] = command;
 			hdr[1] = (command >> 8) | 0x80;
 			PUT16(hdr + 6, result);
-			sysIssuePrimaryBbpCommand((uint32_t)hostCmdResponseData, (uint32_t)hdr, HOSTCMD_U16(hdr + 2));
+			sysIssuePrimaryBbpCommand((uint32_t)responseData, (uint32_t)hdr, HOSTCMD_U16(hdr + 2));
 			osa_BufferFree(buffer);
 			hostCmdRespond(connection, NULL);
 			respond = 0;
@@ -1535,7 +1555,7 @@ int hostCmdProcess(void)
 		}
 
 		case 173:
-			if (action == 1)
+			if (HOSTCMD_U16(body) == 1)
 				pmicRegWrite(body[2], body[4]);
 			else
 				body[4] = pmicRegRead(body[2]);
@@ -1597,7 +1617,7 @@ int hostCmdProcess(void)
 		{
 			uint16_t length = bodyLength - 4;
 
-			hostCmd00c5(action, body + 4, &length);
+			hostCmd00c5(HOSTCMD_U16(body), body + 4, &length);
 			PUT16(hdr + 2, length + 12);
 			goto done;
 		}
@@ -1609,7 +1629,7 @@ int hostCmdProcess(void)
 			goto done;
 
 		case 205:
-			if (action == 1)
+			if (HOSTCMD_U16(body) == 1)
 				hostCmd00cdSet(connection, body);
 			else
 				hostCmd00cdGet(body);
@@ -1632,7 +1652,7 @@ int hostCmdProcess(void)
 			goto quiet;
 
 		case 209:
-			if (action == 1 && hostCmd00d1Set(connection, body) == 0)
+			if (HOSTCMD_U16(body) == 1 && hostCmd00d1Set(connection, body) == 0)
 				result = 1;
 			PUT16(hdr + 2, hostCmd00d1Get(body) + 16);
 			goto done;
@@ -1644,7 +1664,7 @@ int hostCmdProcess(void)
 			uint8_t *rates2;
 			struct WlanConnection *other;
 
-			if (action == 1) {
+			if (HOSTCMD_U16(body) == 1) {
 				result = hostCmd00d6Parse(body + 4, (uint16_t)(bodyLength - 4), &rates0, &rates1, &rates2);
 				if (result == 1)
 					goto done;
@@ -1664,7 +1684,7 @@ int hostCmdProcess(void)
 		}
 
 		case 217:
-			if (action == 1) {
+			if (HOSTCMD_U16(body) == 1) {
 				wlanTxBufSizeSet((uint16_t *)(body + 2));
 				wlanPsQueryPacket();
 				wlanPsFormatBuffer(connection, wlanRateSelect(&connection->peerLink.rateControl));
@@ -1672,7 +1692,7 @@ int hostCmdProcess(void)
 				wlanTxBaArmTimeouts((uintptr_t)connection, wlanTxBaSessions);
 				body[4] = wlanTxBufferCount;
 				body[5] = 0;
-			} else if (action == 0) {
+			} else if (HOSTCMD_U16(body) == 0) {
 				if (wlanMgmtFrameSize >= 7000)
 					PUT16(body + 2, 7440);
 				else if (wlanMgmtFrameSize >= 3000)
@@ -1690,7 +1710,7 @@ int hostCmdProcess(void)
 			goto done;
 
 		case 223:
-			if (action == 1) {
+			if (HOSTCMD_U16(body) == 1) {
 				wlanRateSelection.amsduEnable = HOSTCMD_U16(body + 2);
 				wlanPsQueryPacket();
 				wlanPsFormatBuffer(connection, wlanRateSelect(&connection->peerLink.rateControl));
@@ -1700,11 +1720,11 @@ int hostCmdProcess(void)
 			goto done;
 
 		case 224:
-			result = hostCmd00e0(action, body + 4, (uint16_t)(bodyLength - 4));
+			result = hostCmd00e0(HOSTCMD_U16(body), body + 4, (uint16_t)(bodyLength - 4));
 			goto done;
 
 		case 228:	/* HostCmd_CMD_802_11_PS_MODE_ENH */
-			switch (action) {
+			switch (HOSTCMD_U16(body)) {
 			case 0:
 				PUT16(body + 2, wlanSessionId);
 				PUT16(hdr + 2, hostCmd00e4(connection, body + 4) + 12);
@@ -1727,7 +1747,7 @@ int hostCmdProcess(void)
 					goto done;
 				hdr[1] |= 0x80;
 				PUT16(hdr + 6, result);
-				sysIssuePrimaryBbpCommand((uint32_t)hostCmdResponseData, (uint32_t)hdr,
+				sysIssuePrimaryBbpCommand((uint32_t)responseData, (uint32_t)hdr,
 							  HOSTCMD_U16(hdr + 2));
 				a = wlanPsEndSession(connection, a);
 				freeCommand = 0;
@@ -1759,7 +1779,7 @@ int hostCmdProcess(void)
 					goto done;
 				hdr[1] |= 0x80;
 				PUT16(hdr + 6, result);
-				sysIssuePrimaryBbpCommand((uint32_t)hostCmdResponseData, (uint32_t)hdr,
+				sysIssuePrimaryBbpCommand((uint32_t)responseData, (uint32_t)hdr,
 							  HOSTCMD_U16(hdr + 2));
 				client = p2pDirectProcessEntry(2);
 				if (client == NULL)
@@ -1779,16 +1799,16 @@ int hostCmdProcess(void)
 			}
 
 		case 229:
-			if (action == 1) {
+			if (HOSTCMD_U16(body) == 1) {
 				if (!wlanCoexUseP2pMode())
 					wlanHostSleepEndOnWake = 1;
 			} else {
-				if (action != 2 || !wlanMefConfig.wakeSignalled || wlanPsAltModeActive != 0)
+				if (HOSTCMD_U16(body) != 2 || !wlanMefConfig.wakeSignalled || wlanPsAltModeActive != 0)
 					goto done;
 				wlanHostSleepActive = &wlanHostSleepSettings;
 				wlanMefConfig.activated = 1;
 			}
-			if (action == 1) {
+			if (HOSTCMD_U16(body) == 1) {
 				if (__aeabi_uread4(body + 2) == 0xffffffff) {
 					__aeabi_uwrite4(-1, &wlanHostSleepSettings);
 					wlanMefConfig.wakeSignalled = 0;
@@ -1822,7 +1842,7 @@ int hostCmdProcess(void)
 
 		case 237:
 			rfRegBegin();
-			if (action == 1)
+			if (HOSTCMD_U16(body) == 1)
 				rfRegWrite(HOSTCMD_U16(body + 2), body[4]);
 			else
 				body[4] = rfRegRead(HOSTCMD_U16(body + 2));
@@ -1832,7 +1852,7 @@ int hostCmdProcess(void)
 		case 242:
 		{
 			uint16_t size = HOSTCMD_U16(hdr + 2);
-			int status = wlanCustomIeCommand(connection, action, body + 2, &size);
+			int status = wlanCustomIeCommand(connection, HOSTCMD_U16(body), body + 2, &size);
 
 			PUT16(hdr + 2, size);
 			if (status == 0)
@@ -1849,7 +1869,7 @@ int hostCmdProcess(void)
 		{
 			uint16_t length = bodyLength - 2;
 
-			result = hostCmd00f5(connection, action, body + 2, &length);
+			result = hostCmd00f5(connection, HOSTCMD_U16(body), body + 2, &length);
 			PUT16(hdr + 2, (int16_t)length + 10);
 			goto done;
 		}
@@ -1862,29 +1882,29 @@ int hostCmdProcess(void)
 		{
 			uint16_t length;
 
-			if (action == 1) {
+			if (HOSTCMD_U16(body) == 1) {
 				length = bodyLength - 4;
-				if (hostCmd00fb(connection, action, body + 4, &length) != 0)
+				if (hostCmd00fb(connection, HOSTCMD_U16(body), body + 4, &length) != 0)
 					goto done;
 				goto failed;
 			}
-			if (action != 0)
+			if (HOSTCMD_U16(body) != 0)
 				goto failed;
-			if (hostCmd00fb(connection, action, body + 4, &length) == 0)
+			if (hostCmd00fb(connection, HOSTCMD_U16(body), body + 4, &length) == 0)
 				result = 1;
 			PUT16(hdr + 2, length + 12);
 			goto done;
 		}
 
 		case 257:
-			if (action == 0)
+			if (HOSTCMD_U16(body) == 0)
 				PUT16(body + 2, hostCmdNode(body));
 			hdr[2] = 12;
 			hdr[3] = 0;
 			goto done;
 
 		case 258:
-			if (action == 1) {
+			if (HOSTCMD_U16(body) == 1) {
 				if (HOSTCMD_U16(body + 2) != 1) {
 					if (wlanConnectionHasPrimary()) {
 						MAC_300_MODE &= ~8u;
@@ -1908,7 +1928,7 @@ int hostCmdProcess(void)
 				MAC_300_MODE |= 8;
 				goto done;
 			}
-			if (action == 0) {
+			if (HOSTCMD_U16(body) == 0) {
 				uint8_t band;
 				uint32_t extra;
 
@@ -1931,7 +1951,7 @@ int hostCmdProcess(void)
 			goto done;
 
 		case 292:
-			if (bbpSetAdjustment(action, body[2]) != 1)
+			if (bbpSetAdjustment(HOSTCMD_U16(body), body[2]) != 1)
 				goto done;
 			goto unsupported;
 
@@ -1964,7 +1984,7 @@ int hostCmdProcess(void)
 		if (respond) {
 			hdr[1] |= 0x80;
 			PUT16(hdr + 6, result);
-			sysIssuePrimaryBbpCommand((uint32_t)hostCmdResponseData, (uint32_t)hdr,
+			sysIssuePrimaryBbpCommand((uint32_t)responseData, (uint32_t)hdr,
 						  HOSTCMD_U16(hdr + 2));
 		}
 	finish:

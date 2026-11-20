@@ -346,7 +346,7 @@ uint8_t *wlanTxBuildFrame(struct MacTxFrameBuild *build, OsaBuffer *buffer, int 
 	}
 	*eapol = wlanTxClassifyPayload(packetType, payload, (uint8_t *)&offset, drop,
 				       &build->payloadLength, snap, &snapLength);
-	if (((!(flags & WLAN_CONN_JOIN_OPEN) ||
+	if (((!(connection->flags & WLAN_CONN_JOIN_OPEN) ||
 	      (*key != NULL && (TX_KEY_STATE(*key) & KEY_STATE_FORCE_EAPOL_UNENCRYPTED) &&
 	       (TX_KEY_STATE(*key) & KEY_STATE_ENABLE)) ||
 	      (connection->hostFlags & WLAN_CONN_HOST_WEP) || macTxBuildOverride != 0)) &&
@@ -360,7 +360,7 @@ uint8_t *wlanTxBuildFrame(struct MacTxFrameBuild *build, OsaBuffer *buffer, int 
 				tkip = 0;
 				*key = NULL;
 			}
-		} else if (!(flags & WLAN_CONN_JOIN_OPEN)) {
+		} else if (!(connection->flags & WLAN_CONN_JOIN_OPEN)) {
 			goto dropped;
 		}
 	}
@@ -386,16 +386,18 @@ uint8_t *wlanTxBuildFrame(struct MacTxFrameBuild *build, OsaBuffer *buffer, int 
 	if (__aeabi_uread4(request->flags) & MAC_TX_FLAG_NO_ACK) {
 		build->fragments = 1;
 	} else {
-		frame = (uint8_t *)__aeabi_uread4(request->frame);
-		frame[3] |= WLAN_TX_FC1_MORE_FRAG;
-		if (((wlanProtection.flags & WLAN_PROTECTION_USE_PROTECTION) ||
-		     (connection->mode == 2 && (info->rateFlags & WLAN_CONN_PROTECTED))) &&
-		    wlanTxRequestRate(request) > 3 && !(wlanTxRateFlags & 0x40)) {
-			unsigned int rate = (8 * bbpTxHook()) & 0x3ff;
+		if (build->fragments > 1) {
+			frame = (uint8_t *)__aeabi_uread4(request->frame);
+			frame[3] |= WLAN_TX_FC1_MORE_FRAG;
+			if (((wlanProtection.flags & WLAN_PROTECTION_USE_PROTECTION) ||
+			     (connection->mode == 2 && (info->rateFlags & WLAN_CONN_PROTECTED))) &&
+			    wlanTxRequestRate(request) > 3 && !(wlanTxRateFlags & 0x40)) {
+				unsigned int rate = (8 * bbpTxHook()) & 0x3ff;
 
-			request->rate = (request->rate & ~MAC_TX_RATE_MASK) | rate;
+				request->rate = (request->rate & ~MAC_TX_RATE_MASK) | rate;
+			}
+			cursor = 4 * (((uintptr_t)data + WLAN_TX_DATA_FRAME) >> 2);
 		}
-		cursor = 4 * (((uintptr_t)data + WLAN_TX_DATA_FRAME) >> 2);
 		if (build->fragments != 1)
 			goto layout;
 	}
@@ -443,7 +445,7 @@ layout:
 			if (requestFlags & MAC_TX_FLAG_RTS)
 				request->duration[1] = wlanFrameDurationMacCall(wlanTxRequestRate(request),
 										requestFlags, (uint16_t)lengths[i],
-										header.duration, 0);
+										header.duration, qos);
 			else if (requestFlags & MAC_TX_FLAG_CTS_TO_SELF)
 				request->duration[1] = romLibCheckState(wlanTxRequestRate(request), requestFlags,
 									(uint16_t)lengths[i], header.duration, qos);
@@ -466,7 +468,7 @@ layout:
 
 					duration = wlanFrameDurationMacCall(wlanTxRequestRate(request),
 									    __aeabi_uread4(request->flags),
-									    (uint16_t)lengths[0], ack, 0);
+									    (uint16_t)lengths[0], ack, qos);
 				} else if (requestFlags & MAC_TX_FLAG_CTS_TO_SELF) {
 					unsigned int ack = wlanConnectionAckTime(connection,
 										 wlanTxRequestRate(request),
@@ -491,7 +493,9 @@ layout:
 			uint8_t keyId = 0;
 			unsigned int length = (uint16_t)lengths[i] - overhead.total;
 
-			*(uint16_t *)fragment = last ? length - 8 : length;
+			*(uint16_t *)fragment = length;
+			if (last)
+				*(uint16_t *)fragment = length - 8;
 			if (connection->mode == 2 && (fragment[6] & 1))
 				keyId = info->grpKeyData.KeyIndex;
 			wlanTxEncryptCcmp(fragment, build->tid, (cipher_key_t *)*key, keyId);

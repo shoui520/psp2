@@ -294,6 +294,7 @@ void rfLoadBandRegisters(int band, int mode)
 {
 	int fiveGhz = band != 0;
 	int column;
+	struct PhyRegisterEntry *bandTable;
 	struct PhyRegisterEntry *modeTable;
 
 	if (mode == 1)
@@ -306,8 +307,9 @@ void rfLoadBandRegisters(int band, int mode)
 		column = 3;
 	else
 		column = -1;
+	bandTable = rfBandRegisters[fiveGhz];
 	modeTable = column == -1 ? NULL : rfModeRegisters[fiveGhz][column];
-	rfBusWriteTable(rfBandRegisters[fiveGhz]);
+	rfBusWriteTable(bandTable);
 	rfBusWriteTable(modeTable);
 	if (sysRefClockProfile() != 6 && sysRefClockProfile() != 9) {
 		rfBusWrite(RF_REG_CALIBRATION0, 0x00);

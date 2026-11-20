@@ -103,13 +103,13 @@ void wlanSubscribeEventsConfigure(struct WlanConnection *connection, const uint8
 	}
 	switch (action) {
 	case HostCmd_ACT_GEN_SET:
-		events->events = requested;
+		events->events = LE16(command + 2);	/* read again after the init */
 		break;
 	case HostCmd_ACT_BITWISE_SET:
-		events->events |= requested;
+		events->events |= LE16(command + 2);
 		break;
 	case HostCmd_ACT_BITWISE_CLR:
-		events->events &= ~requested;
+		events->events &= ~LE16(command + 2);
 		break;
 	}
 

@@ -464,8 +464,8 @@ __attribute__((noinline)) int macMgmtSetupBuffer(uint16_t algorithm, uint16_t se
 }
 
 /* What the frame's authentication algorithm and sequence number must be; the status code for an unacceptable one, 0: acceptable. */
-int macMgmtClearBuffer(const WlanWirelessFrame *frame, unsigned int sequence, unsigned int algorithm,
-		       const uint8_t *request)
+uint16_t macMgmtClearBuffer(const WlanWirelessFrame *frame, unsigned int sequence, unsigned int algorithm,
+			    const uint8_t *request)
 {
 	const uint8_t *body = frame->body;
 	unsigned int number = U16(body + 2);
@@ -488,7 +488,7 @@ int macMgmtClearBuffer(const WlanWirelessFrame *frame, unsigned int sequence, un
 	return 0;
 }
 
-int macMgmtConvertBuffer(OsaBuffer *buffer)
+uint16_t macMgmtConvertBuffer(OsaBuffer *buffer)
 {
 	struct WlanConnection *connection = buffer->context;
 
@@ -498,7 +498,7 @@ int macMgmtConvertBuffer(OsaBuffer *buffer)
 }
 
 /* The challenge came back (third frame of a shared key authentication): it must be the one sent. */
-int macMgmtVerifyBuffer(OsaBuffer *buffer, int status)
+uint16_t macMgmtVerifyBuffer(OsaBuffer *buffer, uint16_t status)
 {
 	struct WlanConnection *connection = buffer->context;
 	const uint8_t *frame = BUFFER_DATA(buffer);
@@ -787,8 +787,8 @@ void macMgmtAdjustBuffer(OsaBuffer *buffer, uintptr_t argument)
 		/* Sony reads the key block again after the store */
 		if (wlanRxDecryptWep(&buffer, status, &connection->keyBlocks[0]->key, 0) == 0)
 			result = 15;
-		frame = (WlanWirelessFrame *)BUFFER_DATA(buffer);
 	}
+	/* the frame found on entry, also after a decryption that gave a new buffer */
 	algorithm = U16(frame->body);
 	sequence = U16(frame->body + 2);
 	if (result == 0)

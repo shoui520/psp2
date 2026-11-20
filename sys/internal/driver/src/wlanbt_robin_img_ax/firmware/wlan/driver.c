@@ -265,6 +265,10 @@ int wlanSubmitControlFrame(struct WlanConnection *context, const void *frame)
 	return 1;
 }
 
+/* A frame from the distribution system to it: four addresses in the header. */
+#define FOUR_ADDRESSES(frame)	(((frame)->frameControl[1] & IEEE80211_FC1_FROMDS) && \
+				 ((frame)->frameControl[1] & IEEE80211_FC1_TODS))
+
 /*
  * Prepares the SDIO receive packet for a received 802.11 frame: the packet
  * type, the kind of header, and the frame's header copied in front of the
@@ -275,12 +279,12 @@ int wlanBuildHostRxPacket(OsaBuffer *buffer, struct WlanHostRxPacket *packet,
 			  const struct WlanRxStatus *status, const WlanWirelessFrame *frame)
 {
 	WlanPacketHeader *header = &packet->descriptor.header;
-	int fourAddresses = (frame->frameControl[1] & IEEE80211_FC1_FROMDS) &&
-			    (frame->frameControl[1] & IEEE80211_FC1_TODS);
 	unsigned int headerLength = 24;
 	uint8_t *data;
 	uint8_t *destination;
 	uint8_t *copied;
+	unsigned int frameCount;
+	unsigned int offset;
 
 	header->wire.packetType[0] = 1;
 	header->wire.packetType[1] = 0;
@@ -290,12 +294,14 @@ int wlanBuildHostRxPacket(OsaBuffer *buffer, struct WlanHostRxPacket *packet,
 		packet->descriptor.reserved = WLAN_HOST_RX_FRAME_PLAIN;
 	data = (uint8_t *)packet + (int16_t)(header->wire.packetOffset[1] << 8 |
 					     header->wire.packetOffset[0]) + 36;
-	if (fourAddresses)
+	if (FOUR_ADDRESSES(frame))
 		headerLength = 30;
 	if (packet->descriptor.reserved == WLAN_HOST_RX_FRAME_QOS)
 		headerLength += 2;
 	destination = data - headerLength;
-	packet->frameCount = 1;
+	frameCount = 1;
+	packet->frameCount[0] = frameCount;
+	packet->frameCount[1] = frameCount >> 8;
 	__aeabi_memcpy(destination, frame->frameControl, headerLength);
 	if (packet->descriptor.reserved == WLAN_HOST_RX_FRAME_QOS) {
 		copied = destination + headerLength - 32;
@@ -304,10 +310,12 @@ int wlanBuildHostRxPacket(OsaBuffer *buffer, struct WlanHostRxPacket *packet,
 		buffer->length += 2;
 	}
 	buffer->length -= 72;
-	if (fourAddresses)
+	/* the frame control is read again here */
+	if (FOUR_ADDRESSES(frame))
 		buffer->length += 6;
-	header->wire.packetOffset[0] = (uint8_t *)destination - (uint8_t *)packet;
-	header->wire.packetOffset[1] = ((uint8_t *)destination - (uint8_t *)packet) >> 8;
+	offset = (uint8_t *)destination - (uint8_t *)packet;
+	header->wire.packetOffset[0] = offset;
+	header->wire.packetOffset[1] = offset >> 8;
 	return 1;
 }
 
@@ -323,6 +331,7 @@ void wlanDeliverRxFrame(OsaBuffer *buffer, struct WlanRxStatus *status)
 	struct WlanHostRxPacket *packet;
 	WlanWirelessFrame frame;
 	unsigned int posture;
+	unsigned int sequence;
 	uint16_t length;
 
 	if (status == NULL)
@@ -339,7 +348,10 @@ void wlanDeliverRxFrame(OsaBuffer *buffer, struct WlanRxStatus *status)
 	buffer->dataOffset = 32;
 	packet->descriptor.header.wire.packetOffset[0] = length;
 	packet->descriptor.header.wire.packetOffset[1] = length >> 8;
-	packet->descriptor.sequence = ((frame.sequenceControl[1] << 8 | frame.sequenceControl[0]) >> 4);
+	/* as in wlanRxIndicate: the sequence control read whole, the descriptor's written byte by byte */
+	sequence = *(const uint16_t *)frame.sequenceControl >> 4;
+	((uint8_t *)&packet->descriptor.sequence)[0] = sequence;
+	((uint8_t *)&packet->descriptor.sequence)[1] = sequence >> 8;
 	packet->descriptor.header.wire.bssType = connection->bssType;
 	packet->descriptor.header.wire.bssNumber = connection->bssNumber;
 	packet->descriptor.snr = wlanClampSnr(connection->snr);

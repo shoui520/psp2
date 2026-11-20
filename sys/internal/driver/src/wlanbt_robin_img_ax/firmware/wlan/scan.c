@@ -39,7 +39,7 @@ struct WlanScanState wlanScanState __attribute__((section(".itcm.bss")));			/* 0
 struct WlanScan wlanCommandScan __attribute__((section(".itcm.bss")));				/* 0x578d4 */
 struct WlanScanResults wlanCommandScanResults __attribute__((section(".itcm.bss")));		/* 0x57adc */
 uint8_t wlanCommandScanWindow[2000] __attribute__((section(".itcm.bss")));			/* 0x57bde */
-uint8_t wlanBackgroundScanWindow[1816] __attribute__((section(".itcm.bss")));			/* 0x583b0 */
+uint8_t wlanBackgroundScanWindow[1816] __attribute__((section(".itcm.bss"), aligned(4)));			/* 0x583b0 */
 struct WlanScanConfig wlanScanSlots[2] __attribute__((section(".itcm.bss")));			/* 0x58ac8 */
 struct WlanBackgroundScanState wlanBackgroundScanState __attribute__((section(".itcm.bss")));	/* 0x58f88 */
 struct WlanScan wlanBackgroundScan __attribute__((section(".itcm.bss")));			/* 0x590a4 */

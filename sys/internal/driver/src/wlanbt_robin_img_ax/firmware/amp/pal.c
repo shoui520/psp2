@@ -544,8 +544,8 @@ static struct OsaPoolConfig ampHciPoolConfig __attribute__((section(".itcm.rw"))
 static struct OsaPoolConfig ampTransmitPoolConfig __attribute__((section(".itcm.rw"))) = { 0, 0x7e8, 3 };
 static uint32_t ampHciPoolControl[6] __attribute__((section(".itcm.bss")));
 static uint32_t ampTransmitPoolControl[6] __attribute__((section(".itcm.bss")));
-static uint8_t ampHciPoolMemory[6 * 0x118] __attribute__((section(".sqram1.bss")));
-static uint8_t ampTransmitPoolMemory[3 * 0x7e8] __attribute__((section(".sqram1.bss")));
+static uint8_t ampHciPoolMemory[6 * 0x118] __attribute__((section(".sqram1.bss"), aligned(4)));
+static uint8_t ampTransmitPoolMemory[3 * 0x7e8] __attribute__((section(".sqram1.bss"), aligned(4)));
 
 struct AmpQueue ampCommandQueue __attribute__((section(".itcm.bss")));
 struct AmpQueue ampEventQueue __attribute__((section(".itcm.bss")));
@@ -553,7 +553,7 @@ struct AmpQueue ampDataQueue __attribute__((section(".itcm.bss")));
 static struct MdevDriver ampPalDriver __attribute__((section(".itcm.bss")));
 static TX_THREAD ampTaskThreadStorage __attribute__((section(".itcm.bss")));
 static uint32_t ampEventFlagsStorage[8] __attribute__((section(".itcm.bss")));
-static uint8_t ampTaskStack[1024] __attribute__((section(".itcm.bss")));
+static uint8_t ampTaskStack[1024] __attribute__((section(".itcm.bss"), aligned(8)));
 
 /* Event flags of the data path the control callback signals (not converted). */
 

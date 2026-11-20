@@ -106,6 +106,7 @@ uint32_t keyApiSta_UpdateKeyMaterial(struct WlanConnection *connPtr, cipher_key_
 		}
 		/* the pairwise key becomes the group's WEP keys */
 		pwkey->hdr.keyState |= KEY_STATE_ENABLE;
+		pwkey->hdr.keyType = KEY_TYPE_WEP;	/* the original clears it first */
 		pwkey->hdr.keyType = keyMgtData_p->keyType;
 		pwkey->hdr.keyDirection = KEY_DIRECTION_RXTX;
 		pwkey->hdr.keyLen = keyMgtData_p->keyLen;

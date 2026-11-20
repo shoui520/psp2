@@ -74,12 +74,12 @@ __scatterload:
  */
 	.global __decompress1
 __decompress1:
-	adr	r12, __decompress1_thumb + 1
+	adr	r12, .Ldecompress1_thumb + 1
 	bx	r12
 
+	/* the Thumb half of the same routine: a label, not a function of its own */
 	.thumb
-	.thumb_func
-__decompress1_thumb:
+.Ldecompress1_thumb:
 	adds	r2, r1, r2
 .Llz_token:
 	ldrb	r3, [r0]

@@ -25,6 +25,7 @@
  * calls main() (Thumb) with the arguments __rt_lib_init returns, and exit() with its result.
  */
 	.global __rt_entry
+	.type	__rt_entry, %function
 __rt_entry:
 	nop
 	bl	__rt_stackheap_init
@@ -49,12 +50,13 @@ __rt_entry:
 	bl	exit
 	.arm
 .Lmain_offset:
-	.word	main - .Lmain_base
+	.word	main - (.Lmain_base + 4)	/* the add reads pc as its own address + 8 */
 
 /*
  * __rt_exit (0x0005252c): runs the library's shutdown and stops with the status in r0.
  */
 	.global __rt_exit
+	.type	__rt_exit, %function
 __rt_exit:
 	push	{r0, lr}
 	nop
@@ -64,12 +66,14 @@ __rt_exit:
 
 /* __rt_exit_error (0x00052540): stops with status -1. */
 	.global __rt_exit_error
+	.type	__rt_exit_error, %function
 __rt_exit_error:
 	mvn	r0, #0
 .Lsys_exit:
 	b	_sys_exit
 
 /* An empty function (0x00052548); a relative word after _sys_exit points to it. */
+	.type	__rt_exit_hook, %function
 __rt_exit_hook:
 	bx	lr
 
@@ -146,6 +150,7 @@ __aeabi_memmove:
  * __aeabi_memmove4 (0x0005254c): memmove of word-aligned buffers (r0=dst, r1=src, r2=len).
  */
 	.global __aeabi_memmove4
+	.type	__aeabi_memmove4, %function
 __aeabi_memmove4:
 	subs	r3, r0, r1
 	cmpcs	r2, r3
@@ -203,6 +208,7 @@ _sys_exit:
  * from __user_initial_stackheap, 1 and 0x480 in its first and third words.
  */
 	.global __rt_stackheap_init
+	.type	__rt_stackheap_init, %function
 __rt_stackheap_init:
 	mov	r4, lr
 	bl	__rt_stackheap_setup
@@ -227,6 +233,7 @@ __rt_stackheap_init:
  * request reaches the stack.
  */
 	.global __rt_heap_extend
+	.type	__rt_heap_extend, %function
 __rt_heap_extend:
 	push	{r4, lr}
 	push	{r0, r1}
@@ -346,6 +353,7 @@ __rt_lib_init:
 	.balign	4
 	.arm
 	.global __rt_lib_DefaultArg
+	.type	__rt_lib_DefaultArg, %function
 __rt_lib_DefaultArg:
 	mvn	r0, #0
 	mvn	r1, #2
@@ -353,6 +361,7 @@ __rt_lib_DefaultArg:
 
 /* __rt_lib_PostInit (0x00052790): nothing to do after the library initialisation. */
 	.global __rt_lib_PostInit
+	.type	__rt_lib_PostInit, %function
 __rt_lib_PostInit:
 	push	{r4, lr}
 	nop
@@ -363,6 +372,7 @@ __rt_lib_PostInit:
  * __rt_stackheap_setup (0x000527a0): runs __user_initial_stackheap on a stack in the library
  * space, clears the first 64 bytes of that space and moves to the initial stack it returned.
  */
+	.type	__rt_stackheap_setup, %function
 __rt_stackheap_setup:
 	mov	r5, lr
 	bl	__rt_get_libspace
@@ -391,18 +401,22 @@ __rt_stackheap_setup:
 
 /* The library space's descriptors: the heap (0x00052800) and the locale (0x00052810). */
 	.global __rt_get_heap_desc
+	.type	__rt_get_heap_desc, %function
 __rt_get_heap_desc:
 	ldr	r0, .Lheap_desc
 	bx	lr
+	.type	__rt_heap_desc_hook, %function
 __rt_heap_desc_hook:
 	bx	lr
 .Lheap_desc:
 	.word	__libspace_start + 0x10
 
 	.global __rt_get_locale_desc
+	.type	__rt_get_locale_desc, %function
 __rt_get_locale_desc:
 	ldr	r0, .Llocale_desc
 	bx	lr
+	.type	__rt_locale_desc_hook, %function
 __rt_locale_desc_hook:
 	bx	lr
 .Llocale_desc:
@@ -451,6 +465,7 @@ __user_initial_stackheap:
 	.arm
 /* The library space (0x00052848) and errno in it (0x00052854). */
 	.global __rt_get_libspace
+	.type	__rt_get_libspace, %function
 __rt_get_libspace:
 	ldr	r0, .Llibspace
 	bx	lr
@@ -458,9 +473,11 @@ __rt_get_libspace:
 	.word	__libspace_start
 
 	.global __rt_get_errno_addr
+	.type	__rt_get_errno_addr, %function
 __rt_get_errno_addr:
 	ldr	r0, .Lerrno
 	bx	lr
+	.type	__rt_errno_hook, %function
 __rt_errno_hook:
 	bx	lr
 .Lerrno:
@@ -468,6 +485,7 @@ __rt_errno_hook:
 
 /* __aeabi_lmul (0x00052864): the low 64 bits of a 64-bit product of 32-bit halves. */
 	.global __aeabi_lmul
+	.type	__aeabi_lmul, %function
 __aeabi_lmul:
 	umull	r3, r2, r1, r0
 	mov	r0, r3
@@ -483,10 +501,13 @@ __aeabi_lmul:
 	.thumb
 	.thumb_func
 	.global _tx_initialize_low_level
+	.type	_tx_initialize_low_level, %function
 _tx_initialize_low_level:
 	add	r0, pc, #0
 	bx	r0
 	.arm
+	.type	_tx_initialize_low_level_arm, %function
+_tx_initialize_low_level_arm:
 	ldr	r1, .Lmode_stacks
 	ldr	r2, .Lundef_stack_size
 	mov	r0, #0xdb		/* Undefined mode, IRQ and FIQ disabled */
@@ -541,6 +562,7 @@ _tx_initialize_low_level:
 
 /* Exception vector targets (0x00052944 .. 0x000529c0). */
 	.global vectorUndefined
+	.type	vectorUndefined, %function
 vectorUndefined:
 	movs	pc, lr
 
@@ -549,6 +571,7 @@ vectorUndefined:
  * patch unit reports (0x800038b0, low 5 bits) and adds the slot's offset to the return address.
  */
 	.global vectorSwi
+	.type	vectorSwi, %function
 vectorSwi:
 	push	{r0-r7, lr}
 	mrs	r0, spsr
@@ -574,18 +597,22 @@ vectorSwi:
 	ldm	sp!, {r0-r7, pc}^
 
 	.global vectorPrefetchAbort
+	.type	vectorPrefetchAbort, %function
 vectorPrefetchAbort:
 	b	vectorPrefetchAbort
 
 	.global vectorDataAbort
+	.type	vectorDataAbort, %function
 vectorDataAbort:
 	b	vectorDataAbort
 
 	.global vectorReserved
+	.type	vectorReserved, %function
 vectorReserved:
 	b	vectorReserved
 
 	.global vectorIrq
+	.type	vectorIrq, %function
 vectorIrq:
 	b	_tx_thread_context_save
 
@@ -611,6 +638,7 @@ vectorFiq:
 	.balign	4
 	.arm
 	.global bootReset
+	.type	bootReset, %function
 bootReset:
 	ldr	r0, .Lsoc_clock
 	ldr	r1, .Lsoc_clock_value
@@ -633,11 +661,13 @@ bootReset:
 
 /* CP15 and power primitives (0x00052a08 .. 0x00052a68). */
 	.global robinCpuWaitForInterrupt
+	.type	robinCpuWaitForInterrupt, %function
 robinCpuWaitForInterrupt:
 	mcr	p15, 0, r0, c7, c0, 4
 	bx	lr
 
 	.global robinSocEnterSleep
+	.type	robinSocEnterSleep, %function
 robinSocEnterSleep:
 	ldr	r0, .Lirq_clear
 	mvn	r1, #0
@@ -657,17 +687,20 @@ robinSocEnterSleep:
 	bx	lr
 
 	.global robinReadCp15Control
+	.type	robinReadCp15Control, %function
 robinReadCp15Control:
 	mrc	p15, 0, r0, c1, c0, 0
 	bx	lr
 
 	.global robinWriteCp15Control
+	.type	robinWriteCp15Control, %function
 robinWriteCp15Control:
 	mcr	p15, 0, r0, c1, c0, 0
 	bx	lr
 
 /* robinDelayLoop (0x00052a5c): r0 turns of a two-instruction loop. */
 	.global robinDelayLoop
+	.type	robinDelayLoop, %function
 robinDelayLoop:
 	subs	r0, r0, #1
 	bne	robinDelayLoop
@@ -679,6 +712,7 @@ robinDelayLoop:
  * _tx_initialize_low_level, tx_application_define and sysIrqHook.
  */
 	.global sysRegisterRomHooks
+	.type	sysRegisterRomHooks, %function
 sysRegisterRomHooks:
 	ldr	r0, .Lhook_guard
 	ldr	r1, .Lhook_area

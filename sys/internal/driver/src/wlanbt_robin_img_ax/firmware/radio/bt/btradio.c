@@ -87,7 +87,7 @@ __bit trackFlagA;		/* X[3C0C] bit 1 (RAM 22.7) */
 __bit trackFlagB;		/* X[3C0C] bit 2 (RAM 23.0) */
 __bit option5c_7;		/* X[3C5C] bit 7 (RAM 23.1) */
 __bit resetPending;		/* RAM 23.2 */
-__bit searchResult;		/* RAM 23.3 */
+__bit searchResult;		/* state 7: the step search failed (RAM 23.3) */
 __bit flag23_4;
 __bit flag23_5;
 __bit flag23_6;
@@ -206,14 +206,14 @@ static uint16_t reciprocal(uint16_t x)
 	uint32_t divisor = x;
 	uint32_t remainder = 0x8000;
 	uint16_t quotient = 0;
-	uint8_t shift = 0;
 	uint8_t i;
 
-	while (shift < 16 && (divisor & 0x8000) == 0) {
+	work2 = 0;	/* the original counts the shift in RAM 2E */
+	while (work2 < 16 && (divisor & 0x8000) == 0) {
 		divisor <<= 1;
-		shift++;
+		work2++;
 	}
-	if (shift == 16) {
+	if (work2 == 16) {
 		timedOut = 1;
 		return 0;
 	}
@@ -226,7 +226,7 @@ static uint16_t reciprocal(uint16_t x)
 			remainder <<= 1;
 		}
 	}
-	return quotient << shift;
+	return quotient << work2;
 }
 
 /* Whether the history of a search is one of the alternating patterns that end it. */
@@ -762,7 +762,8 @@ static __bit offsetMeasure(void)
 				return 1;
 			offsetB++;
 		} else if (windowHigh < reading) {
-			if ((offsetB == 0x80) | dacAtZero)
+			flag24_7 = offsetB == 0x80;
+			if (flag24_7 | dacAtZero)
 				return 1;
 			offsetB--;
 		}
@@ -783,7 +784,7 @@ static void responseEntry(__bit fine)
 	uint16_t reading = xdataRead16(TABULATED + 2 * work);
 	uint16_t base = xdataRead16(fine ? BASE_FINE : BASE_COARSE);
 	uint32_t p;
-	uint16_t d, value;
+	uint16_t d;
 
 	operandB = fine ? 0x4433 : 0x4554;
 	if (reading >= base) {
@@ -799,18 +800,20 @@ static void responseEntry(__bit fine)
 	operandB = capture;
 	p = multiplyOperands();
 	P3_6 = (p & 0x80000000UL) == 0x80000000UL;
-	value = reciprocal((p & 0x7fffffffUL) >> 15) >> 4;
+	operandA = reciprocal((p & 0x7fffffffUL) >> 15) >> 4;
 	if (XB(0x3c76) & 0x80)
-		value -= XB(0x3c76) & 0x7f;
+		xdataWrite16(READINGS + 2 * work, operandA - (XB(0x3c76) & 0x7f));
 	else
-		value += XB(0x3c76) & 0x7f;
-	xdataWrite16(READINGS + 2 * work, value);
+		xdataWrite16(READINGS + 2 * work, operandA + (XB(0x3c76) & 0x7f));
 	MD3 = XB(READINGS + 2 * work);
 	MD4 = XB(READINGS + 2 * work + 1);
 }
 
-/* Two captures of the timer with X[3C6E] at 0x3f and 0, and the product of their difference. */
-static void responseCapture(void)
+/*
+ * Two captures of the timer with X[3C6E] at 0x3f and 0, and the product of
+ * their difference; the fine pass clears P4.7 right after its second capture.
+ */
+static void responseCapture(__bit fine)
 {
 	uint16_t first;
 	uint32_t p;
@@ -826,6 +829,8 @@ static void responseCapture(void)
 	timeoutStart(0xf060);
 	delay(0xffff);
 	captureTimer();
+	if (fine)
+		P4_7 = 0;
 	TR1 = 0;
 	TF1 = 0;
 	if (timedOut)
@@ -1350,19 +1355,19 @@ void main(void)
 			P5_3 = 0;
 			P5_7 = 0;
 			MD1 = XB(0x3c5c) & 0x3f;
-			captureToggle = 0;
+			hostEvent = 0;
 			timedOut = 0;
+			MD0 = 0;
+			stepActive = 0;
+			stepRestart = 0;
+			tableIndex = 0;
 			offsetA = 0;
 			offsetB = 0;
-			trackFlagA = 0;
-			trackPasses = 0;
-			tableIndex = 0;
+			captureToggle = 0;
 			lastCapture = 0;
 			work = 0;
 			work2 = 0;
-			stepCount = 0;
-			stepActive = 0;
-			stepRestart = 0;
+			trackPasses = 1;
 			readingLow = 0;
 			readingHigh = 0;
 			dacAtZero = 0;
@@ -1604,7 +1609,8 @@ void main(void)
 				IRCON_7 = 1;
 				delay(0xfffe);
 				timeoutStart(0xf060);
-				STICKY(dacStepSearch(&XB(0x3c5e)));
+				searchResult = dacStepSearch(&XB(0x3c5e));
+				P3_6 = P3_6 | searchResult;
 				XB(LEVELS + tableIndex) = dacValue;
 				IRCON_7 = 0;
 				P2_5 = 0;
@@ -1656,14 +1662,13 @@ void main(void)
 			SFR_FC = 0x80;
 			P2_1 = 1;
 			CCL1 = XB(0x2e76);
-			responseCapture();
+			responseCapture(0);
 			if (!timedOut) {
 				for (work = 0; work < 0x28; work++)
 					responseEntry(0);
 			}
 			CCL1 = XB(0x2e9e);
-			responseCapture();
-			P4_7 = 0;
+			responseCapture(1);
 			if (!timedOut) {
 				for (work = 0x28; work < 0x51; work++)
 					responseEntry(1);

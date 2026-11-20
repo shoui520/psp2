@@ -47,7 +47,7 @@ void wlanTxStatsCountRate(struct WlanConnection *connection, const struct WlanTx
 	wlanTxRateAttempts(status, attempts);
 	finalRate = status->finalRate;
 	retries = status->retries;
-	wlanLinkTxDone(connection, status->result == 0);
+	wlanLinkTxDone(connection, status->result == 0, retries + 1);	/* the attempts are not read */
 	if (status->result == 0) {
 		if (finalRate < WLAN_TX_RATE_COUNT)
 			wlanTxRateStatistics[finalRate].acknowledged++;

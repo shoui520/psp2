@@ -20,7 +20,10 @@ typedef struct __attribute__((packed)) WlanAdHocStart {
 	uint8_t ssParamSet[8];		/* IBSS parameter set element */
 	uint8_t phyParamSet[7];		/* DS or FH parameter set element */
 	uint16_t reserved1;
-	uint16_t capability;
+	union __attribute__((packed)) {
+		uint16_t capability;
+		struct WlanCapabilityInfo capabilityInfo;
+	};
 	uint8_t dataRate[14];
 	uint8_t reserved2[15];
 	const uint8_t *extraIes;

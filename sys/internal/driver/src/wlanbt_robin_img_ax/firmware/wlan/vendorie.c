@@ -33,12 +33,11 @@ struct WlanVendorIeTable wlanVendorIeTable __attribute__((section(".itcm.bss")))
 void macMgmtTrackTable(struct WlanConnection *connection, unsigned int classes)
 {
 	OsaBuffer *buffer;
-	WlanTxDescriptor *descriptor;
 	uint8_t *data;
 
-	if (wlanTxAllocFrame(&buffer, (struct WlanHostEventFrame **)&descriptor, 0x64, 77) == 0)
+	if (wlanTxAllocFrame(&buffer, (struct WlanHostEventFrame **)&data, 0x64, 77) == 0)
 		return;
-	data = (uint8_t *)descriptor;
+	/* the frame pointer is read again after the copy, as Sony does */
 	__aeabi_memcpy(data + 16, &classes, 4);
 	data[10] = 4;
 	data[11] = 0;
@@ -91,18 +90,18 @@ OsaBuffer *macMgmtSetupTable(void)
 {
 	OsaBuffer *result;
 	unsigned int controlIndex = 0;
-	int created = 0;
+	int created;
 	int i;
 
 	if (wlanVendorIeBlocks[0] == NULL) {
-		while (created < 3) {
+		for (created = 0; created < 3; created++) {
 			OsaBuffer *memory = wlanTxBufferAlloc(&wlanBlockPool28, 0, 0, 3);
 
 			/* Sony's: stored before the NULL test */
 			memory->packetClass = 16;
 			wlanVendorIeBlocks[created] = memory;
 			if (memory == NULL)
-				break;
+				goto undo;
 			if (osa_BlockPoolCreate(&wlanVendorIePools[created], &wlanVendorIePoolConfigs[created],
 						&wlanVendorIePoolControl[controlIndex],
 						(uint8_t *)memory + memory->dataOffset, osaPoolEntryCreate) != 0) {
@@ -110,18 +109,9 @@ OsaBuffer *macMgmtSetupTable(void)
 					osa_BufferFree(wlanVendorIeBlocks[created]);
 					wlanVendorIeBlocks[created] = NULL;
 				}
-				break;
+				goto undo;
 			}
-			created++;
-			controlIndex = (uint8_t)(controlIndex + (uint8_t)wlanVendorIePoolConfigs[created - 1].blockCount);
-		}
-		if (created < 3) {
-			for (i = 0; i < created; i++) {
-				osaRomHandleState(&wlanVendorIePools[i], (int (*)(struct OsaPoolEntry *))osaDeletePoolEntry);
-				osa_BufferFree(wlanVendorIeBlocks[i]);
-				wlanVendorIeBlocks[i] = NULL;
-			}
-			return NULL;
+			controlIndex = (uint8_t)(controlIndex + (uint8_t)wlanVendorIePoolConfigs[created].blockCount);
 		}
 	}
 	result = osa_BufferAlloc(&wlanVendorIePools[0], 300, 0);
@@ -135,6 +125,15 @@ OsaBuffer *macMgmtSetupTable(void)
 	}
 	result->packetClass = 2;
 	return result;
+
+undo:
+	/* the pools made so far go again */
+	for (i = 0; i < created; i++) {
+		osaRomHandleState(&wlanVendorIePools[i], (int (*)(struct OsaPoolEntry *))osaDeletePoolEntry);
+		osa_BufferFree(wlanVendorIeBlocks[i]);
+		wlanVendorIeBlocks[i] = NULL;
+	}
+	return NULL;
 }
 
 /* 0x37bb0: takes an entry out of the table and frees it. */

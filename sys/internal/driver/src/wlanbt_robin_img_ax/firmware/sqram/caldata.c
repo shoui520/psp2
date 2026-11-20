@@ -420,19 +420,6 @@ int calDataLoadAnnex42(int fromHost, unsigned int offset)
 	return 1;
 }
 
-/* Sets the levels of a power for both modes: mode 0 from `second`, mode 1 from `first`, each spread by the delta. */
-static inline __attribute__((always_inline)) void calDataSetLevelPair(struct WlanTxPowerLevels *levels,
-								      unsigned int index, unsigned int power,
-								      int value0, int value1, int delta)
-{
-	levels->first = value0 + delta;
-	levels->second = value0 - delta;
-	wlanCalibLevelsSet(index, 0, power, levels);
-	levels->first = value1 + delta;
-	levels->second = value1 - delta;
-	wlanCalibLevelsSet(index, 1, power, levels);
-}
-
 /*
  * Annex 49: band index 0's frequencies (channels 1 to 14), channels, power
  * ranges (each from one listed level down to the next), context, flags,
@@ -488,9 +475,14 @@ int calDataLoadAnnex49(int fromHost, unsigned int offset)
 	}
 
 	for (i = 0; i < count; i = (uint8_t)(i + 1)) {
+		/* each field is read again at its use, as Sony's are */
 		levels = annex.levels[i];
-		calDataSetLevelPair(&levels, index, annex.levels[i].index, annex.levels[i].second,
-				    annex.levels[i].first, annex.levelDelta);
+		levels.first = annex.levels[i].second + annex.levelDelta;
+		levels.second = annex.levels[i].second - annex.levelDelta;
+		wlanCalibLevelsSet(index, 0, annex.levels[i].index, &levels);
+		levels.first = annex.levels[i].first + annex.levelDelta;
+		levels.second = annex.levels[i].first - annex.levelDelta;
+		wlanCalibLevelsSet(index, 1, annex.levels[i].index, &levels);
 	}
 
 	segments = count - 1;

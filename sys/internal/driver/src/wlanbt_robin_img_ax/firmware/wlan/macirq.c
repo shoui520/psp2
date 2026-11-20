@@ -226,6 +226,7 @@ void wlanMacEvents(int line, uint32_t pending)
 						if (header != NULL &&
 						    wlanConnectionHasLocalAddress(connection, header + 18)) {
 							__aeabi_uwrite4(0, wlanIbssJoinState);
+							(void)MAC_838_ACTIVE_FRAME;	/* read and not used */
 							wlanIbssPsActive = 0;
 							if (wlanPsFilterState == 0 && wlanIbssPsLimit != (uint32_t)-1) {
 								wlanPostConnectionEvent(connection, 1024);
@@ -399,8 +400,13 @@ void wlanMacEvents(int line, uint32_t pending)
 				} else {
 					MAC_2F4_RINGS |= (1u << connection->groupRing) | 0x100;
 					if (connection->mode == 2) {
+						uint32_t cipher, event;
+
 						MAC_648_CONTEXT = connection->groupRing;
-						if (MAC_610_CIPHER == 1 || MAC_620_EVENT == 1)
+						/* both registers are read, then tested */
+						cipher = MAC_610_CIPHER;
+						event = MAC_620_EVENT;
+						if (cipher == 1 || event == 1)
 							wlanApPsSendGroup(connection, 1);
 					}
 				}

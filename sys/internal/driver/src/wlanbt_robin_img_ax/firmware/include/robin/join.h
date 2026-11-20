@@ -203,7 +203,7 @@ extern struct WlanJoin wlanJoin;
 extern uint16_t wlanAssocListenInterval;		/* 0x55a34, not converted yet */
 
 int wlanJoinSendAuth(int shared);
-int wlanJoinSendAssoc(void);
+void wlanJoinSendAssoc(void);
 void wlanJoinClosePort(void);
 uint32_t wlanJoinPortIsOpen(void);
 void keyMgmtControlledPortOpen(void);

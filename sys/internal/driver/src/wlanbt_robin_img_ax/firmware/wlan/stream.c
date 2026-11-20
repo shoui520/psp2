@@ -308,7 +308,7 @@ void wlanWindowFree(unsigned int id, uintptr_t *owners,
 
 	owners[id] = 0;
 	for (i = 0; i < wlanTxBaCount; i = (uint8_t)(i + 1)) {
-		if (pool[i].id == (int)id)
+		if ((uint8_t)pool[i].id == id)	/* compared unsigned here */
 			pool[i].inUse = 0;
 	}
 }

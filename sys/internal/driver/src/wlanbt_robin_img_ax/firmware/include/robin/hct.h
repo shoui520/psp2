@@ -24,7 +24,7 @@ extern void *btSdioActiveHandle;
 extern uint32_t hctChannelMask;
 extern OsaBuffer *hctPending;
 
-void hctComputeCoexIntervals(void);
+int hctComputeCoexIntervals(void);
 void hctCoexTick(void);
 int hctClockCheckRequirements(void);
 int hctClockApply(void);

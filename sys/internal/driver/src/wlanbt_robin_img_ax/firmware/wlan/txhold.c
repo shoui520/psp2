@@ -653,7 +653,7 @@ void wlanPsProcessBuffer(struct WlanTxHoldList *list, struct WlanTxHoldItem *ite
 {
 	struct WlanTxHoldItem *previous;
 	struct WlanTxHoldItem *next;
-	unsigned int i;
+	int i;
 
 	if (list->tail != NULL) {
 		if (item->group != 0) {

@@ -17,6 +17,7 @@ INCLUDE boot/rom_syms.ld
  * members of the block init clears, the WMM bits in the last byte of each
  * copy of the WMM element, and the initial stack's top (__user_initial_stackheap).
  */
+wlanRadioControlState	= wlanDtcmState + 0x37;		/* 0x04008823 */
 wlanPrimaryEvents	= wlanDtcmState + 0x3c;		/* 0x04008828 */
 wlanProtection		= wlanDtcmState + 0x58;		/* 0x04008844 */
 wlanTxRateFlags		= wlanDtcmState + 0xba;		/* 0x040088a6 */

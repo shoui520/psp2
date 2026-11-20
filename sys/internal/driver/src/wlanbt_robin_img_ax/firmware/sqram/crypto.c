@@ -328,12 +328,6 @@ static int wlanWapiRunEngine(int decrypt, int qos, const uint8_t *packetNumber, 
 			     void *source, unsigned int length, const uint8_t *dataKey,
 			     const uint8_t *micKey, void *destination)
 {
-	volatile uint8_t *micKeyRegisters = (volatile uint8_t *)CCM_KEY(0);
-	volatile uint8_t *dataKeyRegisters = (volatile uint8_t *)CCM_KEY2(0);
-	volatile uint8_t *packetNumberRegisters = (volatile uint8_t *)CCM_BLOCK0(0);
-	volatile uint8_t *aad1Registers = (volatile uint8_t *)CCM_BLOCK1(0);
-	volatile uint8_t *aad2Registers = CCM_BLOCK2(0);
-	volatile uint8_t *aad3Registers = CCM_BLOCK3(0);
 	uint32_t mode = 0x40;
 	int i;
 
@@ -342,13 +336,13 @@ static int wlanWapiRunEngine(int decrypt, int qos, const uint8_t *packetNumber, 
 				      destination, &i) != 0)
 		return i;
 	for (i = 0; i < 16; i++) {
-		micKeyRegisters[i] = micKey[i];
-		dataKeyRegisters[i] = dataKey[i];
-		packetNumberRegisters[i] = packetNumber[i];
-		aad1Registers[i] = aad[i];
-		aad2Registers[i] = aad[i + 16];
+		((volatile uint8_t *)CCM_KEY(0))[i] = micKey[i];
+		((volatile uint8_t *)CCM_KEY2(0))[i] = dataKey[i];
+		((volatile uint8_t *)CCM_BLOCK0(0))[i] = packetNumber[i];
+		((volatile uint8_t *)CCM_BLOCK1(0))[i] = aad[i];
+		CCM_BLOCK2(0)[i] = aad[i + 16];
 		if (qos)
-			aad3Registers[i] = aad[i + 32];
+			CCM_BLOCK3(0)[i] = aad[i + 32];
 	}
 	CCM_SOURCE(0) = (uint32_t)(uintptr_t)source;
 	CCM_DESTINATION(0) = (uint32_t)(uintptr_t)destination;

@@ -605,7 +605,7 @@ int wlanPsPollTxStatus(struct WlanConnection *connection, uint8_t *data, struct 
 		return 0;
 	}
 	ring = (volatile uint32_t *)ringBase;
-	last = ring[0xfc / 4];
+	last = *(volatile uint32_t *)(ringBase | 0xfc);
 	__aeabi_memmove((void *)(ringBase | 4), (void *)ringBase, 0xfc);
 	ring[0] = last;
 	++wlanTxRingPending[wlanTxDataRing];

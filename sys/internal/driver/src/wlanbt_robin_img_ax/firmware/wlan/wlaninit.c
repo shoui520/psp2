@@ -97,35 +97,35 @@ POOL(wlanReplyFramePool, 1, 0x7ec, 3);							/* 0x04000e84 */
 POOL(wlanEventPool, 1, 0x3c, 10);							/* 0x04000eac */
 
 /* Control blocks (DTCM) and memory of the pools. */
-uint8_t wlanBlockPool28Control[4 * 28] __attribute__((section(".dtcm.bss")));		/* 0x04004ea0 */
-uint8_t wlanBlockPool28Memory[28 * (0x7f4 + 4)] __attribute__((section(".sqram1.bss")));	/* SQRAM 0xc001b600 */
-uint8_t wlanPacketBufferPoolControl[4 * 4] __attribute__((section(".dtcm.bss")));		/* 0x04004f10 */
+uint8_t wlanBlockPool28Control[4 * 28] __attribute__((section(".dtcm.bss"), aligned(4)));		/* 0x04004ea0 */
+uint8_t wlanBlockPool28Memory[28 * (0x7f4 + 4)] __attribute__((section(".sqram1.bss"), aligned(4)));	/* SQRAM 0xc001b600 */
+uint8_t wlanPacketBufferPoolControl[4 * 4] __attribute__((section(".dtcm.bss"), aligned(4)));		/* 0x04004f10 */
 /*
  * The memory starts with the WLAN radio controller's program (radio/wlan, built
  * with SDCC), which macTxNotifyManagePacket() loads through the serial window
  * before the pool takes the memory over.
  */
-uint8_t wlanPacketBufferPoolMemory[4 * (0x7ec + 4)] __attribute__((section(".sqram1.rw"))) = {	/* SQRAM 0xc000fb20 */
+uint8_t wlanPacketBufferPoolMemory[4 * (0x7ec + 4)] __attribute__((section(".sqram1.rw"), aligned(4))) = {	/* SQRAM 0xc000fb20 */
 #include "wlan_radio.inc"
 };
-uint8_t wlanReplyFramePoolControl[4 * 3] __attribute__((section(".dtcm.bss")));		/* 0x04004f7c */
-uint8_t wlanReplyFramePoolMemory[3 * (0x7ec + 4)] __attribute__((section(".sqram1.bss")));	/* SQRAM 0xc002dfe0 */
-uint8_t wlanMgmtTaskPoolControl[4 * 1] __attribute__((section(".dtcm.bss")));		/* 0x04000f04 */
-uint8_t wlanMgmtTaskPoolMemory[1 * (0x7ec + 4)] __attribute__((section(".sqram1.bss")));	/* SQRAM 0xc002d7e4 */
-uint8_t wlanMgmtFramePoolControl[4 * 4] __attribute__((section(".dtcm.bss")));		/* 0x04004f20 */
-uint8_t wlanMgmtFramePoolMemory[4 * (0x33c + 4)] __attribute__((section(".sqram1.bss")));	/* SQRAM 0xc0029520 */
-uint8_t wlanBlockPool7Control[4 * 3] __attribute__((section(".dtcm.bss")));		/* 0x04004f30 */
-uint8_t wlanBlockPool7Memory[3 * (0x1e0 + 4)] __attribute__((section(".sqram1.bss")));	/* SQRAM 0xc002a220 */
-uint8_t wlanEncrPoolControl[4 * 4] __attribute__((section(".dtcm.bss")));		/* 0x04004f6c */
-uint8_t wlanEncrPoolMemory[4 * (0x210 + 4)] __attribute__((section(".itcm.bss")));	/* 0x0005db94 */
-uint8_t wlanHostBufferPoolControl[4 * 1] __attribute__((section(".dtcm.bss")));		/* 0x04000efc */
-uint8_t wlanHostBufferPoolMemory[1 * (0x7ec + 4)] __attribute__((section(".sqram1.bss")));	/* SQRAM 0xc002b72c */
-uint8_t hostCmdResponsePoolControl[4 * 1] __attribute__((section(".dtcm.bss")));		/* 0x04000f00 */
-uint8_t hostCmdResponsePoolMemory[1 * (0x7ec + 4)] __attribute__((section(".sqram1.bss")));	/* SQRAM 0xc002bf1c */
-uint8_t wlanTxFramePoolControl[4 * 7] __attribute__((section(".dtcm.bss")));		/* 0x04004f4c */
-uint8_t wlanTxFramePoolMemory[7 * (0x1dc + 4)] __attribute__((section(".sqram1.bss")));	/* SQRAM 0xc002c720 */
-uint8_t wlanEventPoolControl[4 * 10] __attribute__((section(".dtcm.bss")));		/* 0x04004fb8 */
-uint8_t wlanEventPoolMemory[10 * (0x3c + 4)] __attribute__((section(".sqram1.bss")));	/* SQRAM 0xc002f7b0 */
+uint8_t wlanReplyFramePoolControl[4 * 3] __attribute__((section(".dtcm.bss"), aligned(4)));		/* 0x04004f7c */
+uint8_t wlanReplyFramePoolMemory[3 * (0x7ec + 4)] __attribute__((section(".sqram1.bss"), aligned(4)));	/* SQRAM 0xc002dfe0 */
+uint8_t wlanMgmtTaskPoolControl[4 * 1] __attribute__((section(".dtcm.bss"), aligned(4)));		/* 0x04000f04 */
+uint8_t wlanMgmtTaskPoolMemory[1 * (0x7ec + 4)] __attribute__((section(".sqram1.bss"), aligned(4)));	/* SQRAM 0xc002d7e4 */
+uint8_t wlanMgmtFramePoolControl[4 * 4] __attribute__((section(".dtcm.bss"), aligned(4)));		/* 0x04004f20 */
+uint8_t wlanMgmtFramePoolMemory[4 * (0x33c + 4)] __attribute__((section(".sqram1.bss"), aligned(4)));	/* SQRAM 0xc0029520 */
+uint8_t wlanBlockPool7Control[4 * 3] __attribute__((section(".dtcm.bss"), aligned(4)));		/* 0x04004f30 */
+uint8_t wlanBlockPool7Memory[3 * (0x1e0 + 4)] __attribute__((section(".sqram1.bss"), aligned(4)));	/* SQRAM 0xc002a220 */
+uint8_t wlanEncrPoolControl[4 * 4] __attribute__((section(".dtcm.bss"), aligned(4)));		/* 0x04004f6c */
+uint8_t wlanEncrPoolMemory[4 * (0x210 + 4)] __attribute__((section(".itcm.bss"), aligned(4)));	/* 0x0005db94 */
+uint8_t wlanHostBufferPoolControl[4 * 1] __attribute__((section(".dtcm.bss"), aligned(4)));		/* 0x04000efc */
+uint8_t wlanHostBufferPoolMemory[1 * (0x7ec + 4)] __attribute__((section(".sqram1.bss"), aligned(4)));	/* SQRAM 0xc002b72c */
+uint8_t hostCmdResponsePoolControl[4 * 1] __attribute__((section(".dtcm.bss"), aligned(4)));		/* 0x04000f00 */
+uint8_t hostCmdResponsePoolMemory[1 * (0x7ec + 4)] __attribute__((section(".sqram1.bss"), aligned(4)));	/* SQRAM 0xc002bf1c */
+uint8_t wlanTxFramePoolControl[4 * 7] __attribute__((section(".dtcm.bss"), aligned(4)));		/* 0x04004f4c */
+uint8_t wlanTxFramePoolMemory[7 * (0x1dc + 4)] __attribute__((section(".sqram1.bss"), aligned(4)));	/* SQRAM 0xc002c720 */
+uint8_t wlanEventPoolControl[4 * 10] __attribute__((section(".dtcm.bss"), aligned(4)));		/* 0x04004fb8 */
+uint8_t wlanEventPoolMemory[10 * (0x3c + 4)] __attribute__((section(".sqram1.bss"), aligned(4)));	/* SQRAM 0xc002f7b0 */
 
 /* The state of the frames the management layer builds (0x04001070), its entry and the buffer. */
 

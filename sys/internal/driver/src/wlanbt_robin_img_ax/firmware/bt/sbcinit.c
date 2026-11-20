@@ -35,7 +35,7 @@ enum {
 
 extern struct SbcTaskHandlers sbcTaskHandlers;					/* SQRAM 0xc0033000 */
 
-static uint8_t sbcTaskStack[SBC_TASK_STACK_SIZE] __attribute__((section(".itcm.bss")));	/* 0x5e8b0 */
+static uint8_t sbcTaskStack[SBC_TASK_STACK_SIZE] __attribute__((section(".itcm.bss"), aligned(8)));	/* 0x5e8b0 */
 
 int btSbcInit(void)
 {

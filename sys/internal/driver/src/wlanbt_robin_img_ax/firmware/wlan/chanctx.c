@@ -465,10 +465,8 @@ void macMgmtReleaseContext(struct WlanConnection *connection, const uint8_t *fra
 			if (opportunistic && window) {
 				wlanPsWakeBeacons = window >> 1;
 				ps->noaMode = 1;
-			} else if (length > 2 && (ps->noaAttribute[6] | ps->noaAttribute[7] |
-						  ps->noaAttribute[8] | ps->noaAttribute[9]) &&
-				   (ps->noaAttribute[10] | ps->noaAttribute[11] |
-				    ps->noaAttribute[12] | ps->noaAttribute[13])) {
+			} else if (length > 2 && __aeabi_uread4(&ps->noaAttribute[10]) != 0 &&
+				   __aeabi_uread4(&ps->noaAttribute[6]) != 0) {
 				ps->noaMode = 2;
 			}
 		}

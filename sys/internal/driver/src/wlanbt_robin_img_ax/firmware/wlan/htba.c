@@ -591,17 +591,18 @@ int wlanBssCoexFrameReceived(struct WlanConnection *connection, const uint8_t *b
 		struct WlanConnection *own = wlanConnectionFindByTypeNumber(connection->interfaceType,
 									   connection->bssNumber);
 		struct WlanConnectionRole *slot = wlanConnectionInfoSlot(own);
-		int low = (int8_t)slot->channel;
-		int high = low;
+		int channel = (int8_t)slot->channel;
+		int low = channel;
+		int high = channel;
 		unsigned int offset = (slot->channelFlags >> 4) & 3;
 
 		/* The span of the 40 MHz channel: the primary channel and the one above or below it. */
 		if (offset == 1) {
-			low = low - 3 > 1 ? low - 3 : 1;
-			high = low + 7 < 11 ? low + 7 : 11;
+			low = channel - 3 > 1 ? channel - 3 : 1;
+			high = channel + 7 < 11 ? channel + 7 : 11;
 		} else if (offset == 3) {
-			low = low - 7 > 1 ? low - 7 : 1;
-			high = low + 3 < 11 ? low + 3 : 11;
+			low = channel - 7 > 1 ? channel - 7 : 1;
+			high = channel + 3 < 11 ? channel + 3 : 11;
 		}
 		while (remaining != 0 && !conflict) {
 			const uint8_t *report = osaFindTlv(cursor, 73, remaining);
@@ -614,9 +615,9 @@ int wlanBssCoexFrameReceived(struct WlanConnection *connection, const uint8_t *b
 			length = (uint8_t)(report[1] + 2);
 			count = report[1] - 1;
 			for (index = 0; count > index; index = (uint8_t)(index + 1)) {
-				int channel = report[index + 3];
+				int reported = report[index + 3];
 
-				if (channel >= low && channel <= high && slot->channel != channel) {
+				if (reported >= low && reported <= high && slot->channel != reported) {
 					conflict = 1;
 					break;
 				}

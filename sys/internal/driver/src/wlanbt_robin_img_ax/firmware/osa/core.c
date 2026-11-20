@@ -273,7 +273,7 @@ static void osaIdleTask(ULONG input)
 }
 
 TX_THREAD osaIdleThread __attribute__((section(".itcm.bss")));
-static uint8_t osaIdleStack[0x1cc] __attribute__((section(".itcm.bss")));
+static uint8_t osaIdleStack[0x1cc] __attribute__((section(".itcm.bss"), aligned(8)));
 
 /* Returns 1 if the idle thread could not be created. */
 int osaCreateIdleThread(void)

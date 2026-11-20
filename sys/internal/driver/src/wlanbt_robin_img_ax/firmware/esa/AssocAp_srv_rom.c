@@ -105,10 +105,10 @@ WL_STATUS assocSrvAp_checkRsnWpa(struct WlanConnection *connPtr, apKeyMgmtInfoSt
 				 IEEEtypes_WPAElement_t *pWpa, int validate4WayHandshakeIE)
 {
 	uint32_t result = WL_STATUS_SUCCESS;
-	Cipher_t apCipher = { 0 };
+	Cipher_t apCipher;
 	Cipher_t pwCipher;
 	Cipher_t grpCipher;
-	SecurityMode_t wpaType = { 0 };
+	SecurityMode_t wpaType;
 	AkmSuite_t akm[AKM_SUITE_MAX];
 	uint8_t minimumRsnLen;
 	union {
@@ -116,12 +116,14 @@ WL_STATUS assocSrvAp_checkRsnWpa(struct WlanConnection *connPtr, apKeyMgmtInfoSt
 		IEEEtypes_RSNCapability_t cfg;
 	} staRsnCap;
 
+	staRsnCap.shortInt = 0xffff;
 	if (assocSrvAp_checkRsnWpa_hook(connPtr, pKeyMgmtInfo, apWpaCipher, apWpa2Cipher,
 					apMcstCipher, apAuthKey, pSecType, pRsn, pWpa,
 					validate4WayHandshakeIE, &result))
 		return result;
 
-	staRsnCap.shortInt = 0xffff;
+	wpaType = (SecurityMode_t){ 0 };
+	apCipher = (Cipher_t){ 0 };
 
 	if (pRsn != NULL && pSecType->wpa2 == 1) {
 		/*

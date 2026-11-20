@@ -144,26 +144,24 @@ void binarySearch(__xdata uint8_t *reg, __xdata uint8_t *status)
 /* One step of the DAC code search; 1 when the comparator is balanced (neither input high). */
 __bit dacStep(void)
 {
-	uint8_t low, high;
-	uint16_t code;
+	uint8_t low;
 
 	delay(stepDelay);
 	P3_2 = 1;
 	P3_2 = 0;
 	P3_2 = 0;
+	/* The 16-bit code in E9 (low) and EA (high), each byte read and written in turn. */
 	if (P1_1) {
 		low = SFR_E9;
-		high = SFR_EA;
-		code = ((high << 8) | low) - dacStepSize;
+		SFR_E9 = low - dacStepSize;
+		SFR_EA = SFR_EA - (low < dacStepSize);
 	} else if (P1_0) {
 		low = SFR_E9;
-		high = SFR_EA;
-		code = ((high << 8) | low) + dacStepSize;
+		SFR_E9 = low + dacStepSize;
+		SFR_EA = SFR_EA + ((uint8_t)(low + dacStepSize) < low);
 	} else {
 		return 1;
 	}
-	SFR_E9 = code;
-	SFR_EA = code >> 8;
 	SFR_ED = SFR_EB;
 	SFR_EE = SFR_EC;
 	dacStepSize >>= 1;

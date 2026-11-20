@@ -143,7 +143,7 @@ uint32_t wlanTxRingPushPublished(const struct WlanMacTxRequest *request, unsigne
 void wlanTxRingFlush(unsigned int ring, uintptr_t owner);
 void wlanTxRingMoveFilled(unsigned int ring, unsigned int target);
 void wlanTxRingRequeueFilled(unsigned int ring, uintptr_t owner);
-void wlanTxRingRouteFilled(unsigned int ring, unsigned int other, unsigned int type, const void *address);
+void wlanTxRingRouteFilled(unsigned int other, unsigned int ring, unsigned int type, const void *address);
 void wlanTxRingRetarget(struct WlanMacTxRequest *request, unsigned int ring);
 void wlanTxRingComplete(struct WlanMacTxRequest *request);
 int wlanTxCheckRing(struct WlanConnection *connection, struct WlanMacTxRequest *request, unsigned int ring);

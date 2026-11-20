@@ -290,7 +290,7 @@ void wlanTxRingRequeueFilled(unsigned int ring, uintptr_t owner)
  * the other ring when its frame is of the given type and addressed to the
  * address, and back on this one otherwise.
  */
-void wlanTxRingRouteFilled(unsigned int ring, unsigned int other, unsigned int type, const void *address)
+void wlanTxRingRouteFilled(unsigned int other, unsigned int ring, unsigned int type, const void *address)
 {
 	unsigned int posture = sysIrqDisable();
 
@@ -546,7 +546,7 @@ int wlanTxCheckRing(struct WlanConnection *connection, struct WlanMacTxRequest *
 		wlanTxPowerSaveCount += wlanFrameSetPowerSave(request, macTxGetPowerSave());
 	readIndex = wlanTxRingReadIndex[ring];
 	writeIndex = wlanTxRingWriteIndex[ring];
-	if (ring < WLAN_TX_RING_SHADOWED && wlanTxRingPending[ring] != 0) {
+	if ((int)ring < WLAN_TX_RING_SHADOWED && wlanTxRingPending[ring] != 0) {	/* a signed compare */
 		if (wlanWindowOwner(ring, wlanWindowOwners) == 1) {
 			while (wlanTxRingPending[ring] != 0)
 				wlanTxRingPublish(ring);

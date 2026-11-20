@@ -286,10 +286,14 @@ const int32_t *wlanStaPsRoot(struct WlanStaPsMachine *machine, const int32_t *ev
 		if (machine->ieeeState != 2 && machine->ieeeState != 1)
 			break;
 		tries = machine->ieeeTries++;
-		if (tries >= 2)
+		if (tries >= 2) {
 			osaEventFlagsSet(macMgmtEventFlags, 0x40, 7);
-		else
-			wlanStaPsSendIeeeNull(connection, machine->ieeeState == 1, 0);
+		} else {
+			/* the slot number first, then the state is read */
+			unsigned int slot = wlanWmmCurrentSlotNumber();
+
+			macTxSendNullFrame(connection, machine->ieeeState == 1, slot, 0, 0, WLAN_NULL_KIND_IEEE);
+		}
 		break;
 	case WLAN_STA_PS_EVENT_IEEE_ENTER:
 		for (;;)

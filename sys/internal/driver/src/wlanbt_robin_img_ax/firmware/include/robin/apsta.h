@@ -37,10 +37,10 @@ void macMgmtAcquireBuffer(struct WlanConnection *connection);				/* 0x38ae0 */
 int macMgmtReleaseBuffer(OsaBuffer *buffer);						/* 0x38b04 */
 int macMgmtSetupBuffer(uint16_t algorithm, uint16_t sequence, uint16_t status,
 		       const void *challenge, struct WlanConnection *connection);	/* 0x38b42 */
-int macMgmtClearBuffer(const WlanWirelessFrame *frame, unsigned int sequence,
-		       unsigned int algorithm, const uint8_t *request);			/* 0x38b8e */
-int macMgmtConvertBuffer(OsaBuffer *buffer);						/* 0x38bec */
-int macMgmtVerifyBuffer(OsaBuffer *buffer, int status);					/* 0x38c00 */
+uint16_t macMgmtClearBuffer(const WlanWirelessFrame *frame, unsigned int sequence,
+			    unsigned int algorithm, const uint8_t *request);		/* 0x38b8e */
+uint16_t macMgmtConvertBuffer(OsaBuffer *buffer);					/* 0x38bec */
+uint16_t macMgmtVerifyBuffer(OsaBuffer *buffer, uint16_t status);			/* 0x38c00 */
 int macMgmtSelectBuffer(struct WlanConnection *connection, uint8_t **text);		/* 0x38c52 */
 void macMgmtAdjustBuffer(OsaBuffer *buffer, uintptr_t argument);		/* 0x38cc4 */
 unsigned int macMgmtRecordBuffer(struct WlanConnection *connection);			/* 0x38db8 */

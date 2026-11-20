@@ -84,7 +84,6 @@ int wlanDirectLinkPoll(struct WlanConnection *connection, uintptr_t *delay)
 		unsigned int duration;
 		unsigned int start;
 		unsigned int rest;
-		uint64_t beacon;
 		uint64_t time;
 
 		if (connection->mode == 3)
@@ -92,11 +91,12 @@ int wlanDirectLinkPoll(struct WlanConnection *connection, uintptr_t *delay)
 		interval = __aeabi_uread4(descriptor + 5);
 		duration = __aeabi_uread4(descriptor + 1);
 		start = __aeabi_uread4(descriptor + 9);
-		beacon = ((const struct WlanBeaconTimestamp *)(const void *)ps->beaconTimestamp)->value;
-		time = romGetTimerTimestamp() - BEACON_TIMER(ps) + beacon;
+		/* the beacon's timestamp is read after the timer, as Sony does */
+		time = romGetTimerTimestamp() - BEACON_TIMER(ps) +
+		       ((const struct WlanBeaconTimestamp *)(const void *)ps->beaconTimestamp)->value;
 		if ((unsigned int)time < start)
 			return 1;
-		rest = ((unsigned int)time - start) % interval;
+		rest = (unsigned int)(time - start) % interval;
 		if (rest < duration || interval - rest <= 150) {
 			wlanDirectLinkAbsences++;
 			if (delay != NULL)

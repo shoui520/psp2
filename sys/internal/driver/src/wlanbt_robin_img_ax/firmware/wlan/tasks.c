@@ -48,21 +48,21 @@ static WlanQueueObject cbProcSmeQueueObject __attribute__((section(".itcm.bss"))
 static WlanQueueObject cbProcQueueObject __attribute__((section(".itcm.bss")));
 static struct TX_THREAD_STRUCT cbProcTaskObject __attribute__((section(".itcm.bss")));
 static WlanSemaphoreObject cbProcSemaphoreObject __attribute__((section(".itcm.bss")));
-static uint8_t cbProcStack[1700] __attribute__((section(".dtcm.bss")));
+static uint8_t cbProcStack[1700] __attribute__((section(".dtcm.bss"), aligned(8)));
 static WlanQueueObject macTxMgmtQueueObject __attribute__((section(".itcm.bss")));
 static WlanQueueObject uapGroupRekeyQueueObject __attribute__((section(".itcm.bss")));
 static WlanEventFlagsObject macTxEventFlagsObject __attribute__((section(".itcm.bss")));
 static struct TX_THREAD_STRUCT macTxTaskObject __attribute__((section(".itcm.bss")));
-static uint8_t macTxStack[1900] __attribute__((section(".dtcm.bss")));
+static uint8_t macTxStack[1900] __attribute__((section(".dtcm.bss"), aligned(8)));
 static WlanEventFlagsObject macTxNotifyEventFlagsObject __attribute__((section(".dtcm.bss")));
 static struct TX_THREAD_STRUCT macTxNotifyTaskObject __attribute__((section(".dtcm.bss")));
-static uint8_t macTxNotifyStack[1200] __attribute__((section(".dtcm.bss")));
+static uint8_t macTxNotifyStack[1200] __attribute__((section(".dtcm.bss"), aligned(8)));
 static WlanQueueObject macMgmt80211QueueObject __attribute__((section(".itcm.bss")));
 static WlanQueueObject macMgmtSmeQueueObject __attribute__((section(".itcm.bss")));
 static WlanQueueObject timerCbQueueObject __attribute__((section(".itcm.bss")));
 static WlanEventFlagsObject macMgmtEventFlagsObject __attribute__((section(".itcm.bss")));
 static struct TX_THREAD_STRUCT macMgmtTaskObject __attribute__((section(".itcm.bss")));
-static uint8_t macMgmtStack[1700] __attribute__((section(".dtcm.bss")));
+static uint8_t macMgmtStack[1700] __attribute__((section(".dtcm.bss"), aligned(8)));
 /*
  * Two single-word queues of the management task, with their 24-byte storage: the connections
  * whose link is to be checked (event 8) and the ones to be looked at for a missing peer (event 0x800).

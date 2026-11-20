@@ -76,8 +76,8 @@ uint8_t *fmCoexAdjustEntry(uint8_t *cursor, const uint8_t *rates, int dsParamete
  */
 uint8_t *fmCoexRecordEntry(uint8_t *tim, unsigned int stations, uint8_t dtimPeriod, uint8_t *copy)
 {
-	unsigned int bytes = stations >> 3;
-	unsigned int i;
+	int bytes = stations >> 3;
+	int i;
 
 	tim[0] = 5;
 	tim[3] = dtimPeriod;
