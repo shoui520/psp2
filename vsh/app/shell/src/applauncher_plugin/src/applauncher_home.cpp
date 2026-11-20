@@ -1233,10 +1233,10 @@ void applauncherHomeCloseAppPage(bool keepFocus)
 	g_applauncherHome->m_indicator->Show(250.0f);
 
 	ApplauncherPage *page = g_applauncherHome->m_appPage;
-	ApplauncherIcon *icon = page->m_focus.get();
+	ApplauncherIcon *icon = applauncherPageAsFolder(page)->m_icon.get();
 
 	if (icon != NULL && icon->m_page != NULL && icon->m_page->m_type == 0)
-		icon->m_page->RestoreIcons(page->m_focus);
+		icon->m_page->RestoreIcons(applauncherPageAsFolder(page)->m_icon);
 
 	ui::Widget *view = g_applauncherHome->m_scroller.m_scrollView;
 
@@ -1248,7 +1248,7 @@ void applauncherHomeCloseAppPage(bool keepFocus)
 	ScePafWidget_FF5BC957(view, NULL, 2, 0.0f, NULL);
 	applauncherIconPoolCloseAppPage(g_applauncherHome->m_appPage);
 	if (keepFocus) {
-		g_applauncherHome->m_appIcon = g_applauncherHome->m_appPage->m_focus;
+		g_applauncherHome->m_appIcon = applauncherPageAsFolder(g_applauncherHome->m_appPage)->m_icon;
 		g_applauncherHome->m_appIconTime = 0.0f;
 	}
 	g_applauncherHome->m_appPage = NULL;
@@ -1604,7 +1604,7 @@ int ApplauncherHome::RemoveApp(const string &titleId)
 			ApplauncherPage *appPage = icon->m_page;
 
 			if (appPage != NULL && appPage->m_type == 2) {
-				folder = appPage->m_focus;
+				folder = applauncherPageAsFolder(appPage)->m_icon;
 				if (appPage->GetIconCount() == 1)
 					whole = true;
 			}
@@ -1646,7 +1646,7 @@ int ApplauncherHome::RemoveApp(const string &titleId)
 				folder->RemoveChild(titleId.c_str());
 			if (whole) {
 				if (g_applauncherHome->m_appPage != NULL &&
-				    g_applauncherHome->m_appPage->m_focus.get() == folder.get())
+				    applauncherPageAsFolder(g_applauncherHome->m_appPage)->m_icon.get() == folder.get())
 					applauncherHomeCloseAppPage(false);
 				applauncherIconRemove(folder, true);
 				applauncherIconDelete(folder, true, false);

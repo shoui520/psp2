@@ -335,7 +335,8 @@ ApplauncherPageView *applauncherPageViewGet(ApplauncherPage *page, bool fast)
 			ui::TextBox *name = view->m_name;
 			wstring text;
 
-			common::Utf8ToUtf16(page->m_focus.get()->m_data.get()->title, &text, 0);
+			common::Utf8ToUtf16(
+				applauncherPageAsFolder(page)->m_icon.get()->m_data.get()->title, &text, 0);
 			name->SetString(text);
 		}
 		if (g_applauncherModeManager->m_modes[APPLAUNCHER_MODE_EDIT] != NULL) {
@@ -565,7 +566,7 @@ static void onNameEditEnd(SceInt32 type, ui::Handler *self, ui::Event *e, void *
 
 	if (page == NULL || page->m_type != APPLAUNCHER_PAGE_TYPE_FOLDER)
 		return;
-	applauncherFolderRename(page->m_focus.get(), name);
+	applauncherFolderRename(applauncherPageAsFolder(page)->m_icon.get(), name);
 	text->SetString(name);
 }
 

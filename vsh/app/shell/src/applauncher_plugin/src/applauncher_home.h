@@ -264,9 +264,18 @@ void *applauncherIconCaptureFolder(const paf::vector<ApplauncherFolderSurface> *
  */
 class ShellSnapListItem {
 public:
-	/* PLACEHOLDER: the applauncher page's focused icon */
-	paf::common::SharedPtr<ApplauncherIcon> m_focus;
-	SceUInt32 reserved0[2];
+	/* its listeners told and freed, its widget destroyed (0x81284A4C) */
+	virtual ~ShellSnapListItem();
+	/* PLACEHOLDER names: the item snapped to by the list, and left (both empty here: the
+	   shell's empty function 0x814098DC) */
+	virtual void OnSnapped(void)
+	{
+	}
+	virtual void OnUnsnapped(void)
+	{
+	}
+
+	SceUInt32 reserved0[3];
 	paf::ui::Widget *m_widget;		/* what the view snaps to */
 	SceUInt32 reserved1[7];
 	int m_index;				/* its place in the list */
@@ -640,6 +649,9 @@ class ApplauncherPage : public ApplauncherPageBase, public ShellSnapListItem {
 public:
 	/* the page made on the plugin, from the parameters (0x810D3BB8) */
 	ApplauncherPage(paf::Plugin *plugin, const LsdbPage *param, int type);
+	/* its widget hidden and destroyed after 200 ms, the wallpapers no page uses deleted
+	   (0x810D2578) */
+	virtual ~ApplauncherPage();
 	/* PLACEHOLDER name: the edit begun on the page: its view refreshed below ten pages, its
 	   icons and view put in the edit, its slots' frames set (0x810B86B4) */
 	void BeginEdit();
@@ -757,7 +769,7 @@ public:
 /*
  * PLACEHOLDER: the page a folder's icon opens over the home, its icons read from the folder's
  * page in the database (160 bytes, vtable 0x8152F2D4). The home keeps it as its ApplauncherPage
- * (m_appPage), whose m_focus is this page's m_icon: in Sony's build both are made on
+ * (m_appPage), its icon read through applauncherPageAsFolder: in Sony's build both are made on
  * ApplauncherPageBase, and the page methods it calls (AddIcon, UpdateFocusLinks, Load,
  * BeginEdit) read only that base.
  */
@@ -792,6 +804,12 @@ public:
 	paf::common::SharedPtr<paf::job::JobItem> m_job;	/* its icons read */
 	paf::math::v4 m_iconPos;		/* where the folder's icon stood */
 };
+
+/* a page of type 2 read as the folder page it is */
+static inline ApplauncherFolderPage *applauncherPageAsFolder(ApplauncherPageBase *page)
+{
+	return static_cast<ApplauncherFolderPage *>(page);
+}
 
 /* PLACEHOLDER: where the slot's icon stands on a folder page, without one (0x810BB24A), and on
    a page of the home, at the home's scale (0x810D3B90, in a file not written yet) */

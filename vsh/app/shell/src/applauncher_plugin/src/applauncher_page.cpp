@@ -191,8 +191,8 @@ void applauncherIconRemove(common::SharedPtr<ApplauncherIcon> icon, bool fromFol
 		if (page->m_slots[i].get() != icon.get())
 			continue;
 
-		if (page->m_type == 2 && fromFolder && page->m_focus.get() != NULL)
-			page->m_focus->RemoveChild(icon->m_data->titleId.c_str());
+		if (page->m_type == 2 && fromFolder && applauncherPageAsFolder(page)->m_icon.get() != NULL)
+			applauncherPageAsFolder(page)->m_icon->RemoveChild(icon->m_data->titleId.c_str());
 		icon->m_page->m_changed = true;
 		icon->m_page->m_slots[i].reset();
 		icon->m_page = NULL;
@@ -311,7 +311,7 @@ bool ApplauncherPage::PutIcon(const common::SharedPtr<ApplauncherIcon> &icon, in
 	if (m_state == 1)
 		SetEmpty(IsEmpty());
 	if (icon->m_page->m_type == 2 && toFolder)
-		icon->m_page->m_focus->AddChild(icon->m_data->titleId.c_str());
+		applauncherPageAsFolder(icon->m_page)->m_icon->AddChild(icon->m_data->titleId.c_str());
 	m_changed = true;
 	return true;
 }
@@ -560,8 +560,8 @@ ApplauncherPage *ApplauncherPage::iconMove(const common::SharedPtr<ApplauncherIc
 			common::SharedPtr<ApplauncherIcon> folder;
 			ApplauncherPage *page = icon->m_page;
 
-			if (page != NULL && page->GetIconCount() == 1 && page->m_focus.get() != NULL) {
-				folder = page->m_focus;
+			if (page != NULL && page->GetIconCount() == 1 && applauncherPageAsFolder(page)->m_icon.get() != NULL) {
+				folder = applauncherPageAsFolder(page)->m_icon;
 				if (folder.get() != NULL) {
 					s_folderPage = folder->m_page->GetIndex();
 					s_folderSlot = folder->m_moveSlot;
@@ -905,7 +905,7 @@ void ApplauncherPage::iconMoveEnd(const common::SharedPtr<ApplauncherIcon> &icon
 					   put in the folder's place */
 					if (from != NULL && from->m_type == 2 &&
 					    from->GetIconCount() == 1) {
-						common::SharedPtr<ApplauncherIcon> folder = from->m_focus;
+						common::SharedPtr<ApplauncherIcon> folder = applauncherPageAsFolder(from)->m_icon;
 
 						if (folder.get() != NULL) {
 							int slot = folder->m_moveSlot;
