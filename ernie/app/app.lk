@@ -415,6 +415,13 @@ AT	0xfe020		IF ERNIE_FW<=0x00090804&&ERNIE_KERNEL==0x00411000
 SEG	@@DATA		main.c
 SEG	@@INITL
 SEG	@@DATAL		cstart.asm
+# DOL-1002: snvs.c's near buffer right after its far data, the modules before it first
+SEG	@@DATAL		version.c rtc.c input.c host.c csi.c command.c uart.c touch.c IF ERNIE_HW==0x00723030
+SEG	@@DATAL		inputreq.c serial.c analog.c nvsreq.c serial1.c updatereq.c powerreq.c IF ERNIE_HW==0x00723030
+SEG	@@DATAL		task5.c serialauth.c nvs.c iica.c powerjob.c elmo.c uart4.c powerled.c IF ERNIE_HW==0x00723030
+SEG	@@DATAL		thermal.c bbmc.c board.c powerseq.c battery.c charge.c cookie.c powerwait.c IF ERNIE_HW==0x00723030
+SEG	@@DATAL		state.c handshake.c config.c configreq.c log.c serialreq.c snvs.c IF ERNIE_HW==0x00723030
+SEG	@@DATA		snvs.c IF ERNIE_HW==0x00723030
 SEG	@@DATAL
 # the short direct area
 AT	0xffe20

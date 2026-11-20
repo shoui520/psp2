@@ -26,9 +26,10 @@
 #define FLASH_BASE		0x1000		/* the data flash's near address */
 
 #if BOARD_USS1001
-/* USS-1002 opens the library once, at the first request, and the NVS closes it at the end of
-   each of its operations (flashClose) */
-#define FLASH_KEEP_OPEN		(SOURCE_0104)
+/* USS-1002's 0x01050031 opens the library once, at the first request, and the NVS closes it at
+   the end of each of its operations (flashClose); 0x01050034 opens and closes it in each request
+   again, as 0x0103 does */
+#define FLASH_KEEP_OPEN		(SOURCE_0104 && !FW_SINCE(0x01050034))
 
 #if FLASH_KEEP_OPEN
 /* opens the library unless it is open (DFLEN set) */

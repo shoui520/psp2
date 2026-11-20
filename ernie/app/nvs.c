@@ -49,8 +49,9 @@
 #define NVS_FREE_MIN		3	/* the free blocks kept */
 #define NVS_COLLECT_MIN		5	/* the data blocks a collection needs */
 #define NVS_ENTRY_VALID		0xaa
-/* USS-1002's operations close the data flash library at their end (flash.c's flashClose) */
-#define NVS_FLASH_CLOSE		(SOURCE_0104)
+/* USS-1002's 0x01050031 operations close the data flash library at their end (flash.c's
+   flashClose) */
+#define NVS_FLASH_CLOSE		(SOURCE_0104 && !FW_SINCE(0x01050034))
 #if FW_SINCE(0x01030511)
 #define NVS_HEADER_MARK		0x42
 #else
