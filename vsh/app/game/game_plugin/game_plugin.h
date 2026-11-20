@@ -40,6 +40,7 @@ enum {
 	GAME_PLUGIN_FUNC_PLUS_APP_STATUS = 44,	/* plusAppListSetStatusAllUsers (0x8102A9AC) */
 	GAME_PLUGIN_FUNC_UMASS_CHECK	= 53,	/* gamePluginUmassCheck (0x8102ED72) */
 	GAME_PLUGIN_FUNC_FTT_READ	= 58,	/* gamePluginFttRead (0x8102F198) */
+	GAME_PLUGIN_FUNC_TITLE_GET_SIZES = 61, /* gamePluginTitleGetSizes (0x8102FDCA) */
 };
 extern GamePluginInterface gamePluginInterface;
 

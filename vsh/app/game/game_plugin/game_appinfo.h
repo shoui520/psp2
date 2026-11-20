@@ -270,6 +270,8 @@ int gameRemoveDirectoryContents(const char *path, GameCancelFunc cancel, void *c
 int gameTitleGetSizes(const char *titleId, unsigned int flags, GameCancelFunc cancel, void *arg,
 		      GameAppSizes *sizes);
 int gameLicenseGetStatus(GameLicenseStatus *status);
+/* the time as the system's text, "-" without an end (0x81343D8E). PLACEHOLDER: its name */
+paf::wstring gameLicenseTimeToText(const SceUInt64 *time);
 
 /* an application deleted (game_lsdb.cpp: 0x8101B058), and a part of it (0x8101B3FC) */
 int gameAppDelete(const char *titleId);

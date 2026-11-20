@@ -99,13 +99,6 @@ using namespace paf;
 #define APPLAUNCHER_DELETE_GRO0_GONE		((int)0x80AF5024)
 #define APPLAUNCHER_DELETE_SAVEDATA_ERROR	((int)0x80800017)
 
-/* PLACEHOLDER: the save data information AppMgr gives (28 bytes) */
-struct ApplauncherSaveDataInfo {
-	SceUInt32 reserved0;
-	SceUInt32 inUse;		/* the save data is in use */
-	SceUInt32 reserved[5];
-};
-
 /* the confirm dialog's page (resource IDs) */
 static const CommonGuiDialogPage s_deletePage = {
 	{ 0x3A918C2C, 0x438C7285, 0xFEA43112 }

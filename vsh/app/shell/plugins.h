@@ -232,4 +232,16 @@ paf::wstring shellFormatText(const wchar_t *format, const wchar_t *text1 = L"",
 			     const wchar_t *text8 = L"", const wchar_t *text9 = L"",
 			     const wchar_t *text10 = L"", const wchar_t *text11 = L"");
 
+/*
+ * PLACEHOLDER name: a size in bytes as the shell shows it, its unit picked by the size
+ * (0x81343594, in the shell's own code)
+ */
+void shellSizeText(paf::wstring *text, SceUInt64 size);
+
+/*
+ * PLACEHOLDER name: count added to the shell's usage counter id, saturating (0x81376BDA, in the
+ * shell's own code)
+ */
+int shellUsageCounterAdd(int id, unsigned int count, int flags);
+
 #endif

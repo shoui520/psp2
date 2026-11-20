@@ -25,9 +25,6 @@ using namespace paf;
 #define GAME_ERROR_LICENSE_NO_EXPIRY	-2146430656	/* 0x80101140 */
 #define GAME_LICENSE_ERROR_NOT_STARTED	-2139095016	/* 0x80800018 */
 
-/* the time as the system's text, "-" without an end (0x81343D8E). PLACEHOLDER: its name */
-wstring gameLicenseTimeToText(const SceUInt64 *time);
-
 GamePspLicense::GamePspLicense()
 {
 	m_valid = false;

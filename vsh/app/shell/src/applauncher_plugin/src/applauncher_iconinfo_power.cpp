@@ -20,15 +20,6 @@ using namespace paf;
 /* PLACEHOLDER: the label of the power icon's item */
 #define APPLAUNCHER_INFO_POWER_LABEL	0x0BB94ACA
 
-/* the text in UTF-16 */
-static inline wstring applauncherIconInfoUtf16(const string &text)
-{
-	wstring utf16;
-
-	common::Utf8ToUtf16(text, &utf16, 0);
-	return utf16;
-}
-
 /* (0x810DAEB0) */
 ApplauncherIconInfoPowerFactory::ApplauncherIconInfoPowerFactory(Plugin *plugin,
 	ui::Widget *view, const common::SharedPtr<ApplauncherIcon> &icon, LsdbAppInfoPtr *appInfo)

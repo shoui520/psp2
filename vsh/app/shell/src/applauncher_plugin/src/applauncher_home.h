@@ -1659,4 +1659,13 @@ enum {
 /* PLACEHOLDER name: a file not there, as paf's LocalFile gives it (value only) */
 #define APPLAUNCHER_ERROR_NOT_FOUND		((int)0x80AF5022)
 
+/* PLACEHOLDER: the save data information AppMgr gives (28 bytes) */
+struct ApplauncherSaveDataInfo {
+	SceUInt32 reserved0;
+	SceUInt32 inUse;		/* the save data is in use */
+	SceUInt32 reserved1[2];
+	SceUInt32 attr;			/* PLACEHOLDER: bit 0 picks the information's text */
+	SceUInt32 reserved2[2];
+};
+
 #endif
