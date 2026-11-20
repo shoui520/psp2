@@ -22,12 +22,16 @@
 #include "command.h"
 #include "config.h"
 #include "downloader.h"
+#if BOARD_USS1001 && SOURCE_0104
+#include "battery.h"
+#include "eventlog.h"
+#endif
 #include "handshake.h"
 #include "host.h"
 #include "kernel.h"
 #include "led.h"
 #include "nvs.h"
-#if BOARD_DOL1002
+#if SOURCE_0104
 #include "power.h"
 #endif
 #include "serial.h"
@@ -67,7 +71,7 @@ static unsigned char updaterSetSegment(unsigned char segment);
 static unsigned char updaterExecProgramming(unsigned long sum);
 static unsigned char updaterExecFinalize(unsigned char *data);
 static unsigned char updaterWriteDlFlags(unsigned char flags);
-#if BOARD_DOL1002
+#if SOURCE_0104
 static void updaterRequestBegin(void);
 static void updaterRequestEnd(void);
 #endif
@@ -149,12 +153,16 @@ static const unsigned char updaterTimeStampDigits[12] = {
 #define UPDATER_STAMP_DIGITS	updaterTimeStampDigits
 #elif SOURCE_0103
 /* the segments run mode 0xc5e7 may program, by the number the host sends (updaterSetSegment
-   maps them to the flash's): 4-47 and 85-245 */
+   maps them to the flash's): 4-47 and 85-245 (USS-1002's 0x0105: 85-212) */
 const unsigned char updaterSegments[0x100 / 8] = {
 	0xf0, 0xff, 0xff, 0xff, 0xff, 0xff, 0x00, 0x00,
 	0x00, 0x00, 0xe0, 0xff, 0xff, 0xff, 0xff, 0xff,
 	0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+#if BOARD_USS1001 && SOURCE_0104
+	0xff, 0xff, 0x1f, 0x00, 0x00, 0x00, 0x00, 0x00,
+#else
 	0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x3f, 0x00,
+#endif
 };
 
 /* the slim's own copy of timeStampDigits (command.c's), for the signature */
@@ -317,7 +325,7 @@ void updaterRequestNotify(void)
 		if (updaterRequest.command == 0x1183 && updater.state == 0x13 &&
 		    updaterRequest.status == 0) {
 			hostIntCancel();
-#if BOARD_DOL1002	/* the downloader's answer sent: part 4 of the power sequence ready */
+#if SOURCE_0104	/* the downloader's answer sent: part 4 of the power sequence ready */
 			powerReady(4);
 #endif
 		}
@@ -407,6 +415,23 @@ void updaterStartDownloader(void)
 #endif
 		DOWNLOADER_START->usbState = chargeUsbState;
 #endif
+#if BOARD_USS1001 && SOURCE_0104
+		DOWNLOADER_START->charge = batteryGauge.charge;
+		DOWNLOADER_START->flags = batteryGauge.flags.word;
+		DOWNLOADER_START->measureTicks = batteryMeasure.ticks;
+		DOWNLOADER_START->remainCap = batteryGauge.remainCap;
+		DOWNLOADER_START->bicTemp = batteryGauge.bicTemp;
+		DOWNLOADER_START->lifePercent = batteryGauge.lifePercent;
+		DOWNLOADER_START->soh = batteryGauge.soh;
+		DOWNLOADER_START->cycleCount = batteryGauge.cycleCount;
+		DOWNLOADER_START->fullCap2 = batteryGauge.fullCap2;
+		DOWNLOADER_START->fullCap = batteryGauge.fullCap;
+		DOWNLOADER_START->tte = batteryGauge.tte;
+		DOWNLOADER_START->info1A = batteryGauge.info1A;
+		DOWNLOADER_START->volt = batteryGauge.volt;
+		DOWNLOADER_START->current = batteryGauge.current;
+		DOWNLOADER_START->temp = batteryGauge.temp;
+#endif
 		if (version >= 0x00002000 && version <= 0x00002600)
 			memset(DOWNLOADER_RAM_20, 0, DOWNLOADER_RAM_20_SIZE);
 #else
@@ -442,7 +467,7 @@ void updaterStartDownloader(void)
 void updaterRequestAnswerOk(void)
 {
 	hostRequestAnswer(&updaterRequest, HOST_REQUEST_ANSWER, 0, 0);
-#if BOARD_DOL1002
+#if SOURCE_0104
 	updaterRequestEnd();
 #endif
 }
@@ -480,7 +505,7 @@ void updaterRequestEvent(FLGPTN ptn)
 
 	if (!(ptn & 0x0040))
 		return;
-#if BOARD_DOL1002
+#if SOURCE_0104
 	updaterRequestBegin();
 #endif
 	if (!handshakeUnlocked11()) {
@@ -529,7 +554,7 @@ void updaterRequestEvent(FLGPTN ptn)
 			result = updaterExecFinalize(updaterRequestData);
 			if (result == 0x81) {
 				task2SetFlag(3, 0x0040);
-#if BOARD_DOL1002
+#if SOURCE_0104
 				return;
 #else
 				break;
@@ -546,7 +571,7 @@ void updaterRequestEvent(FLGPTN ptn)
 #endif
 		break;
 	}
-#if BOARD_DOL1002
+#if SOURCE_0104
 	updaterRequestEnd();
 #endif
 }
@@ -770,7 +795,11 @@ static unsigned char updaterSetSegment(unsigned char segment)
 #if SOURCE_0103 && !BOARD_DOL1001	/* DOL-1001's segments are the flash's */
 	/* the host's segments from 0x40 are the flash's from 0xc0, in a byte */
 	if (segment >= 0x40)
+#if BOARD_USS1001 && SOURCE_0104
+		updater.segment = (UpdaterSegment)segment + 0x80;	/* USS-1002's 0x0105: as a word */
+#else
 		updater.segment = (unsigned char)(segment + 0x80);
+#endif
 	else
 		updater.segment = segment;
 #else
@@ -942,7 +971,58 @@ static unsigned char updaterWriteDlFlags(unsigned char flags)
 }
 #endif
 
-#if BOARD_DOL1002
+#if SOURCE_0104
+#if BOARD_USS1001
+/* USS-1002's hooks around an update command: the event log's records 0x10, 0x11 (the command:
+   its number, length and first two bytes) and 0x10, 0x91 (its answer: the number, the answer's
+   length, its status and first byte); the downloader's 0x1180-0x1182 logged only when
+   refused (and any other command), 0x1183-0x1185 both ways */
+static void updaterRequestBegin(void)
+{
+	switch (updaterRequest.command) {
+	case 0x1180:
+	case 0x1181:
+	case 0x1182:
+		break;
+	case 0x1183:
+	case 0x1184:
+	case 0x1185:
+		eventLogData5[0] = updaterRequest.command & 0xff;
+		eventLogData5[1] = updaterRequest.length;
+		eventLogData5[2] = updaterRequest.data[0];
+		eventLogData5[3] = updaterRequest.data[1];
+		eventLogRecord(0x10, 0x11, eventLogData5, 4);
+		break;
+	}
+}
+
+static void updaterRequestEnd(void)
+{
+	switch (updaterRequest.command) {
+	case 0x1180:
+	case 0x1181:
+	case 0x1182:
+	default:
+		if (updaterRequest.status == 0)
+			break;
+		eventLogData5[0] = updaterRequest.command & 0xff;
+		eventLogData5[1] = updaterRequest.length;
+		eventLogData5[2] = updaterRequest.data[0];
+		eventLogData5[3] = updaterRequest.data[1];
+		eventLogRecord(0x10, 0x11, eventLogData5, 4);
+		/* fall through */
+	case 0x1183:
+	case 0x1184:
+	case 0x1185:
+		eventLogData5[0] = updaterRequest.command & 0xff;
+		eventLogData5[1] = updaterRequest.answerLength;
+		eventLogData5[2] = updaterRequest.status;
+		eventLogData5[3] = updaterRequest.answer[0];
+		eventLogRecord(0x10, 0x91, eventLogData5, 4);
+		break;
+	}
+}
+#else
 /* DOL-1002's hooks around an update command: nothing is left in them */
 static void updaterRequestBegin(void)
 {
@@ -951,4 +1031,5 @@ static void updaterRequestBegin(void)
 static void updaterRequestEnd(void)
 {
 }
+#endif
 #endif

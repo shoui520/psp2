@@ -113,7 +113,7 @@ unsigned char adcStart(const struct AdcRequest *request)
 	if (request->mask == 0)
 		return 2;
 	adcMask = request->mask;
-	memcpy(adcConversions, request->conversions, sizeof(adcConversions));
+	memcpy(adcConversions, &request->conversions[0], sizeof(adcConversions));
 	adcSkip = request->skip;
 	adcDone = 0;
 	adcBit = 1;

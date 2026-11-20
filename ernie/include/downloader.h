@@ -32,6 +32,26 @@ struct DownloaderStart {
 	unsigned int	ledFlags;	/* powerLedFlags.causes (not DOL-1001's) */
 	unsigned char	usbState;	/* chargeUsbState */
 #endif
+#if BOARD_USS1001 && SOURCE_0104
+	/* USS-1002's 0x0105: the battery gauge's state (batteryGauge), for the downloader to go
+	   on from */
+	unsigned char	reserved[3];
+	long		charge;
+	unsigned int	flags;
+	unsigned int	measureTicks;	/* batteryMeasure.ticks */
+	unsigned int	remainCap;
+	unsigned int	bicTemp;
+	unsigned char	lifePercent;
+	unsigned char	soh;
+	unsigned int	cycleCount;
+	unsigned int	fullCap2;
+	unsigned int	fullCap;
+	unsigned int	tte;
+	unsigned int	info1A;
+	unsigned int	volt;
+	int		current;
+	unsigned int	temp;
+#endif
 };
 
 #if SOURCE_0103 && !BOARD_DOL1001

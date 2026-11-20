@@ -7,6 +7,9 @@
 
 #include "ernie.h"
 #include "board.h"
+#if BOARD_USS1001 && SOURCE_0104
+#include "analog.h"
+#endif
 
 /* the slim's 0x0105 (USS-1002): the syscon is the gauge, from the battery's voltage (ANI7), its
    current (ANI8) and its thermistor (ANI9), averaged by the input scan (input.h's
@@ -102,6 +105,7 @@ struct BatteryGauge {
 };
 
 extern struct BatteryGauge batteryGauge;
+extern struct AnalogMeasure batteryMeasure;	/* the input scan's averages, read at each update */
 
 /* the offsets (batteryCalibrate, batteryGetOffsets) */
 struct BatteryOffsets {

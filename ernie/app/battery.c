@@ -72,7 +72,7 @@ struct BatteryFull {
 	unsigned int	current;
 };
 
-static struct AnalogMeasure batteryMeasure;
+struct AnalogMeasure batteryMeasure;
 struct BatteryGauge batteryGauge;
 union BatteryFaults batteryFaults;
 static unsigned char batterySaveResult;

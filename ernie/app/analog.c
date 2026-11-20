@@ -54,9 +54,15 @@ struct AnalogLevelWide {
 /* the slim's multi connector: analog input 0x0010's levels by its whole result, 0xff between
    two */
 const struct AnalogLevelWide analogInput10Levels[12] = {
+#if BOARD_USS1001 && SOURCE_0104	/* USS-1002's 0x0105 */
+	{ 0xe6c0, 0 }, { 0xde40, 1 }, { 0xcd80, 0xff }, { 0xc440, 2 }, { 0xb640, 3 },
+	{ 0xa240, 0xff }, { 0x90c0, 4 }, { 0x87c0, 0xff }, { 0x7b00, 5 }, { 0x0580, 0xff },
+	{ 0x0140, 6 }, { 0x0000, 7 },
+#else
 	{ 0xe900, 0 }, { 0xde40, 1 }, { 0xce00, 0xff }, { 0xc440, 2 }, { 0xb640, 3 },
 	{ 0xa1c0, 0xff }, { 0x9140, 4 }, { 0x8840, 0xff }, { 0x7a80, 5 }, { 0x0580, 0xff },
 	{ 0x0140, 6 }, { 0x0000, 7 },
+#endif
 };
 #else
 #if !BOARD_DOL1001
