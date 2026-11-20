@@ -23,13 +23,13 @@ CommandGetAccountInformation::~CommandGetAccountInformation()
 {
 }
 
-int CommandGetAccountInformation::SetParameter(const SceNpId *npId, void *info)
+int CommandGetAccountInformation::SetParameter(const SceNpId *npId, int *setting)
 {
 	m_npId = npId;
-	m_setting = (int *)info;
-	if (npId == NULL || info == NULL)
+	m_setting = setting;
+	if (npId == NULL || setting == NULL)
 		return NP_ACTIVITY_ERROR_INVALID_ARGUMENT;
-	sceClibMemset(info, 0, ACCOUNT_SETTING_SIZE);
+	sceClibMemset(setting, 0, ACCOUNT_SETTING_SIZE);
 	return 0;
 }
 

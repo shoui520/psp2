@@ -46,8 +46,8 @@ public:
 
 	virtual int OpenConnection(int mode);
 	virtual int CloseConnection();
-	virtual int GetAccountInformation(const SceNpId *npId, void *info);
-	virtual int SetAccountInformation(const SceNpId *npId, const void *info);
+	virtual int GetAccountInformation(const SceNpId *npId, int *setting);
+	virtual int SetAccountInformation(const SceNpId *npId, const int *setting);
 	virtual int CheckStatusUpdate(const SceNpId *npId, const SceUInt64 *since,
 		const char (*titleIds)[NP_ACTIVITY_TITLE_ID_SIZE], SceSize count,
 		NpActivityUpdates *updates);
@@ -62,8 +62,7 @@ public:
 		SceSize count, const char (*titleIds)[NP_ACTIVITY_TITLE_ID_SIZE], int *max,
 		NpActivityStatusList *lists);
 	virtual int GetStatusInfo(const SceNpId *npId, const NpActivityStatusKey *keys, SceSize count,
-		const int *locale, void *work, NpActivityDetailState *state,
-		NpActivityStatusInfo *infos);
+		const int *locale, NpActivityStatusDetail *details, SceSize max, int *numDetails);
 	virtual int GetStatusInfoWithCallback(const SceNpId *npId, const NpActivityStatusKey *keys,
 		SceSize count, const int *locale, void *work, NpActivityDetailState *state,
 		NpActivityStatusDetailCallback callback, void *arg);

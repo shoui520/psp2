@@ -527,18 +527,18 @@ inline int ComponentContext::runCommand(AbstractCommand *command)
 	}									\
 	return runCommand(command)
 
-int ComponentContext::GetAccountInformation(const SceNpId *npId, void *info)
+int ComponentContext::GetAccountInformation(const SceNpId *npId, int *setting)
 {
 #line 477
 	CONTEXT_BEGIN_COMMAND("GetAccountInformation");
-	CONTEXT_RUN_COMMAND(CommandGetAccountInformation, (id, info));
+	CONTEXT_RUN_COMMAND(CommandGetAccountInformation, (id, setting));
 }
 
-int ComponentContext::SetAccountInformation(const SceNpId *npId, const void *info)
+int ComponentContext::SetAccountInformation(const SceNpId *npId, const int *setting)
 {
 #line 568
 	CONTEXT_BEGIN_COMMAND("SetAccountInformation");
-	CONTEXT_RUN_COMMAND(CommandSetAccountInformation, (id, info));
+	CONTEXT_RUN_COMMAND(CommandSetAccountInformation, (id, setting));
 }
 
 int ComponentContext::CheckStatusUpdate(const SceNpId *npId, const SceUInt64 *since,
@@ -587,12 +587,12 @@ int ComponentContext::GetStatusTimelineByAccountAndTitle(const SceNpId *npId,
 }
 
 int ComponentContext::GetStatusInfo(const SceNpId *npId, const NpActivityStatusKey *keys,
-	SceSize count, const int *locale, void *work, NpActivityDetailState *state,
-	NpActivityStatusInfo *infos)
+	SceSize count, const int *locale, NpActivityStatusDetail *details, SceSize max,
+	int *numDetails)
 {
 #line 1135
 	CONTEXT_BEGIN_COMMAND("GetStatusInfo");
-	CONTEXT_RUN_COMMAND(CommandGetStatusInfo, (id, keys, count, locale, work, state, infos));
+	CONTEXT_RUN_COMMAND(CommandGetStatusInfo, (id, keys, count, locale, details, max, numDetails));
 }
 
 int ComponentContext::GetStatusInfoWithCallback(const SceNpId *npId,

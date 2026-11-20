@@ -234,12 +234,12 @@ int SceNpActivityNet_F3586055(int context)
 	CONTEXT_REQUEST(CloseConnection());
 }
 
-int SceNpActivityNet_48B5F8B3(int context, const SceNpId *npId, void *setting)
+int SceNpActivityNet_48B5F8B3(int context, const SceNpId *npId, int *setting)
 {
 	CONTEXT_REQUEST(GetAccountInformation(npId, setting));
 }
 
-int SceNpActivityNet_42CFC0DE(int context, const SceNpId *npId, const void *setting)
+int SceNpActivityNet_42CFC0DE(int context, const SceNpId *npId, const int *setting)
 {
 	CONTEXT_REQUEST(SetAccountInformation(npId, setting));
 }
@@ -290,10 +290,10 @@ int SceNpActivityNet_363CB63A(int context, const SceNpId *npId, const NpActivity
 }
 
 int SceNpActivityNet_AD0B8FDD(int context, const SceNpId *npId, const NpActivityStatusKey *keys,
-	SceSize count, const int *locale, void *work, NpActivityDetailState *state,
-	NpActivityStatusInfo *infos)
+	SceSize count, const int *locale, NpActivityStatusDetail *details, SceSize max,
+	int *numDetails)
 {
-	CONTEXT_REQUEST(GetStatusInfo(npId, keys, count, locale, work, state, infos));
+	CONTEXT_REQUEST(GetStatusInfo(npId, keys, count, locale, details, max, numDetails));
 }
 
 int SceNpActivityNet_7E58E9B9(int context, const SceNpId *npId, const NpActivityStatusKey *keys,

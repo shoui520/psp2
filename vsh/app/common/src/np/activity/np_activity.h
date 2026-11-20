@@ -135,8 +135,8 @@ int SceNpActivityNet_F3586055(int connection);
 int SceNpActivityNet_35B49CA4(int connection);
 
 /* the signed-in user's account setting, or the setting of the user with the NP ID */
-int SceNpActivityNet_48B5F8B3(int connection, const SceNpId *npId, void *setting);
-int SceNpActivityNet_42CFC0DE(int connection, const SceNpId *npId, const void *setting);
+int SceNpActivityNet_48B5F8B3(int connection, const SceNpId *npId, int *setting);
+int SceNpActivityNet_42CFC0DE(int connection, const SceNpId *npId, const int *setting);
 
 /* a user's online ID (size bytes, with its NUL) from their NP ID, and the reverse */
 int SceNpActivityNet_319CB4F4(const SceNpId *npId, char *onlineId, SceSize size);
@@ -230,10 +230,6 @@ typedef struct NpActivityStatusInfo {
 /* NpActivityStatusInfo::type of a status whose action URL names a user (pspr:show?jid=...) */
 #define NP_ACTIVITY_STATUS_TYPE_USER	5
 
-/* reads the details of count statuses into infos */
-int SceNpActivityNet_AD0B8FDD(int connection, const SceNpId *npId, const NpActivityStatusKey *keys,
-	SceSize count, const int *locale, void *work, NpActivityDetailState *state,
-	NpActivityStatusInfo *infos);
 
 /* the online ID of the user a status's action URL names, as SceNpActivityNet_C27E99D3 */
 int SceNpActivityNet_FE7F0822(const NpActivityStatusInfo *info, char *onlineId, SceSize size);
@@ -246,6 +242,11 @@ typedef struct NpActivityStatusDetail {
 
 typedef void (*NpActivityStatusDetailCallback)(const struct NpActivityStatusDetail *detail,
 	void *arg);
+
+/* reads the details of count statuses into details (room for max), *numDetails of them */
+int SceNpActivityNet_AD0B8FDD(int connection, const SceNpId *npId, const NpActivityStatusKey *keys,
+	SceSize count, const int *locale, NpActivityStatusDetail *details, SceSize max,
+	int *numDetails);
 
 /* reads the details of count statuses (at most 50), in the locale, one callback each */
 int SceNpActivityNet_7E58E9B9(int connection, const SceNpId *npId, const NpActivityStatusKey *keys,

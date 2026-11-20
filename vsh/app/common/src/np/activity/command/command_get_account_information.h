@@ -19,7 +19,7 @@ public:
 		ComponentXmlGenerator *xmlGenerator, ComponentUtility *utility);
 	virtual ~CommandGetAccountInformation();
 
-	int SetParameter(const SceNpId *npId, void *info);
+	int SetParameter(const SceNpId *npId, int *setting);
 
 	virtual int SendRequest();
 	virtual int BeginParse();

@@ -40,6 +40,17 @@ psp2_module(${PSP2_TARGET} KIND user COMPILER snc PARTIAL SOURCES
 	command/command_check_status_update.cpp
 	command/command_get_account_information.cpp
 	command/command_get_friend_status_timeline.cpp
+	command/command_get_friend_status_timeline_by_title.cpp
+	command/command_get_static_resource.cpp
+	command/command_get_status_detail.cpp
+	command/command_get_status_info.cpp
+	command/command_get_status_info_with_callback.cpp
+	command/command_get_status_timeline_by_account.cpp
+	command/command_get_status_timeline_by_account_and_title.cpp
+	command/command_remove_comment.cpp
+	command/command_remove_status.cpp
+	command/command_remove_vote_good_job.cpp
+	command/command_set_account_information.cpp
 	common/activity_debug.cpp
 	component/xml_parser/handler/abstract_xml_parser_handler.cpp
 	command/abstract_command.cpp

@@ -45,7 +45,7 @@ int AbstractCommand::ReceiveData(void **data, SceSize *size, int *done)
 	return m_http->ReadData(data, size, done);
 }
 
-int AbstractCommand::ParseData(void *data, SceSize size, int *done)
+int AbstractCommand::ParseStreamData(void *data, SceSize size, int *done)
 {
 	int ret;
 

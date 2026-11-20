@@ -62,12 +62,13 @@ public:
 		SceSize ticketSize, const NpActivityRange *range, char *buffer, SceSize bufferSize,
 		SceSize *size);
 	virtual SceSize GetGetFriendStatusTimelineByTitleRequestSize(SceSize ticketSize,
-		SceSize count);
+		SceSize count, const NpActivityRange *range);
 	virtual int CreateGetFriendStatusTimelineByTitleRequest(const SceNpId *npId,
 		const char *ticket, SceSize ticketSize,
 		const char (*titleIds)[NP_ACTIVITY_TITLE_ID_SIZE], SceSize count,
 		const NpActivityRange *range, char *buffer, SceSize bufferSize, SceSize *size);
-	virtual SceSize GetGetStatusDetailRequestSize(SceSize ticketSize);
+	virtual SceSize GetGetStatusDetailRequestSize(SceSize ticketSize,
+		const NpActivityDetailParam *param);
 	virtual int CreateGetStatusDetailRequest(const SceNpId *npId, const char *ticket,
 		SceSize ticketSize, const NpActivityStatusKey *key, const NpActivityDetailParam *param,
 		char *buffer, SceSize bufferSize, SceSize *size);
@@ -79,7 +80,8 @@ public:
 	virtual int CreateGetStatusInfoRequest(const SceNpId *npId, const char *ticket,
 		SceSize ticketSize, const NpActivityStatusKey *keys, SceSize count, const int *locale,
 		char *buffer, SceSize bufferSize, SceSize *size);
-	virtual SceSize GetGetStatusTimelineByAccountRequestSize(SceSize ticketSize, SceSize count);
+	virtual SceSize GetGetStatusTimelineByAccountRequestSize(SceSize ticketSize, SceSize count,
+		const int *max);
 	virtual int CreateGetStatusTimelineByAccountRequest(const SceNpId *npId, const char *ticket,
 		SceSize ticketSize, const NpActivityOwner *owners, SceSize count, const int *max,
 		char *buffer, SceSize bufferSize, SceSize *size);

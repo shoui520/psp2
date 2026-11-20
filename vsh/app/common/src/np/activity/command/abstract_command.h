@@ -1,8 +1,9 @@
 /*
  * The base of the library's commands, 72 bytes: one request to the activity server, its response
- * read and parsed, run by the command executor (Sony's file: command/abstract_command.cpp, and
- * its getFullTicketAndMalloc and checkChatRestriction checks; the other names are ours). A
- * command observes its reply's result through the parser's subject.
+ * read and parsed, run by the command executor (Sony's file: command/abstract_command.cpp, with
+ * its getFullTicketAndMalloc and checkChatRestriction checks; ParseStreamData from
+ * command_get_static_resource.cpp's check; the other names are ours). A command observes its
+ * reply's result through the parser's subject.
  */
 #ifndef NP_ACTIVITY_COMMAND_ABSTRACT_COMMAND_H
 #define NP_ACTIVITY_COMMAND_ABSTRACT_COMMAND_H
@@ -48,7 +49,7 @@ public:
 	}
 	virtual int ReceiveData(void **data, SceSize *size, int *done);
 	/* *done 1 once the reply's result is in */
-	virtual int ParseData(void *data, SceSize size, int *done);
+	virtual int ParseStreamData(void *data, SceSize size, int *done);
 	virtual int EndParse()
 	{
 		return -1;

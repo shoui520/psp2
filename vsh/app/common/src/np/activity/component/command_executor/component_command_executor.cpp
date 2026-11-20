@@ -42,7 +42,7 @@ __attribute__((noinline)) int ComponentCommandExecutor::receive()
 		if (ret >= 0)
 			done = receiveDone;
 		if (!ACTIVITY_FAILED(ret)) {
-			ret = m_command->ParseData(data, size, &parseDone);
+			ret = m_command->ParseStreamData(data, size, &parseDone);
 			if (ret < 0)
 				done = 1;
 			if (parseDone != 0)

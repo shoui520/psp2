@@ -128,7 +128,7 @@ int ComponentUtility::GetProtocol(int api)
 	case UTILITY_API_GET_ACCOUNT_STATUS:
 	case UTILITY_API_GET_ACCOUNT_STATUS_BY_TITLE:
 	case UTILITY_API_GET_STATUS_INFO:
-	case UTILITY_API_GET_STATUS_INFO_WITH_CALLBACK:
+	case UTILITY_API_GET_STATUS_DETAIL:
 	case UTILITY_API_SET_MULTIPLE_STATUS:
 	case UTILITY_API_DELETE_STATUS:
 	case UTILITY_API_SET_COMMENT:
@@ -152,7 +152,7 @@ int ComponentUtility::GetSecureProtocol(int api)
 	case UTILITY_API_GET_ACCOUNT_STATUS:
 	case UTILITY_API_GET_ACCOUNT_STATUS_BY_TITLE:
 	case UTILITY_API_GET_STATUS_INFO:
-	case UTILITY_API_GET_STATUS_INFO_WITH_CALLBACK:
+	case UTILITY_API_GET_STATUS_DETAIL:
 		return UTILITY_PROTOCOL_HTTP;
 	case UTILITY_API_NONE:
 	case UTILITY_API_GET_ACCOUNT_SETTING:
@@ -236,7 +236,7 @@ const char *ComponentUtility::GetPath(int api)
 		if (IsFunctionServer())
 			return "/activity/func/get_status_info_list";
 		return "/activity/sec/get_status_info_list";
-	case UTILITY_API_GET_STATUS_INFO_WITH_CALLBACK:
+	case UTILITY_API_GET_STATUS_DETAIL:
 		if (IsFunctionServer())
 			return "/activity/func/get_status_info_list";
 		return "/activity/sec/get_status_info_list";

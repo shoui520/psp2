@@ -460,7 +460,7 @@ int ComponentXmlGenerator::CreateGetFriendStatusTimelineRequest(const SceNpId *n
 }
 
 SceSize ComponentXmlGenerator::GetGetFriendStatusTimelineByTitleRequestSize(SceSize ticketSize,
-	SceSize count)
+	SceSize count, const NpActivityRange *range)
 {
 	return ticketSize + count * 128 + 512;
 }
@@ -511,7 +511,8 @@ int ComponentXmlGenerator::CreateGetFriendStatusTimelineByTitleRequest(const Sce
 	return writeFooter(size);
 }
 
-SceSize ComponentXmlGenerator::GetGetStatusDetailRequestSize(SceSize ticketSize)
+SceSize ComponentXmlGenerator::GetGetStatusDetailRequestSize(SceSize ticketSize,
+	const NpActivityDetailParam *param)
 {
 	return ticketSize + 768;
 }
@@ -711,7 +712,7 @@ int ComponentXmlGenerator::CreateGetStatusInfoRequest(const SceNpId *npId, const
 }
 
 SceSize ComponentXmlGenerator::GetGetStatusTimelineByAccountRequestSize(SceSize ticketSize,
-	SceSize count)
+	SceSize count, const int *max)
 {
 	return ticketSize + count * 160 + 512;
 }
