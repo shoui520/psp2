@@ -31,33 +31,87 @@
 #define CONSOLE_INFO_TEMP_DIR		"ur0:temp/ci"
 #define CONSOLE_INFO_PREV_DIR		"ur0:ci/prev"
 
+/* PLACEHOLDER: the file errors the records pass on (paf's) */
+#define CONSOLE_INFO_ERROR_INVALID_INDEX	-44
+#define CONSOLE_INFO_ERROR_NOT_FOUND		-2135994334	/* 0x80AF5022 */
+
+/* the size of an entry's header line and of the record's own buffer */
+#define CONSOLE_INFO_BUFFER_SIZE	1024
+
 /*
- * PLACEHOLDER: a kind's record (1052 bytes, constructor 0x810E623E): its kind, the size of
- * its entries, the file open, its folder and its entries' count.
+ * PLACEHOLDER: a kind's record (1056 bytes, constructor 0x810E623E, vtable 0x8152FE90): its kind,
+ * the size of its entries, the entry file open, the line being written, the entries' count, the
+ * room left in the entry and the lines written to it. An entry is a header of "name=value"
+ * fields joined by '&', then the lines, and its "nd=" count of lines.
  */
 class ConsoleInfoRecord {
 public:
+	/* a header field: its name, the longest value, and the function that writes the value */
+	struct Field {
+		const char *name;
+		int maxLen;
+		int (*format)(const Field *field, char *buf, int *len);
+	};
+
 	ConsoleInfoRecord(int type, int entrySize);
 	virtual ~ConsoleInfoRecord();
 
 	virtual int Write(void *data) = 0;
 	virtual int Commit() = 0;
-	virtual int Update();
-	virtual int Reserved1();
-	virtual int Reserved2();
+	virtual paf::string GetEntryPath(int index);		/* (0x810E73EC) */
+	virtual const Field *GetFields();
+	virtual unsigned int GetFieldCount();
 
+	int GetPrevDir(paf::string *path);			/* (0x810E5DA0) */
+	int GetTempDir(paf::string *path);			/* (0x810E5EDE) */
+	int MakeDirs();						/* (0x810E6148) */
+	int OpenEntryFile(unsigned int index, paf::common::SharedPtr<paf::File> *file,
+			  uint32_t flags);			/* (0x810E62F0) */
 	int ReadEntry(int index, void *buf, int *size);		/* (0x810E646C) */
+	int OpenTimestampFile(paf::common::SharedPtr<paf::File> *file,
+			      uint32_t flags);			/* (0x810E660C) */
 	int WriteTimestamp();					/* (0x810E6842) */
 	int ReadTimestamp(SceUInt64 *tick);			/* (0x810E6998) */
+	int RemoveTempDir();					/* (0x810E6B48) */
+	int OpenNewEntry();					/* (0x810E6B62) */
+	int CloseEntry();					/* (0x810E6BA0) */
+	int WriteHeader();					/* (0x810E6C0C) */
+	int NewEntry();						/* (0x810E6D7A) */
+	int FinishEntry();					/* (0x810E6DDC) */
+	int FinishAndCloseEntry();				/* (0x810E6E90) */
+	int AppendLine(SceSize len, SceUInt8 count);		/* (0x810E6EAC) */
 
 	int m_type;
 	int m_entrySize;
 	paf::common::SharedPtr<paf::File> m_file;
-	char m_reserved[1024];
-	int m_count;
-	int m_reserved2;
-	int m_reserved3;	/* PLACEHOLDER: up to the records' 1056 bytes */
+	char m_line[CONSOLE_INFO_BUFFER_SIZE];	/* the line AppendLine writes */
+	int m_count;				/* the entries made */
+	int m_remaining;			/* the room left in the entry */
+	int m_written;				/* the lines written to it */
 };
+
+/* PLACEHOLDER names: the NP account's IDs read (0x810E5C7C), a folder made (0x810E5D38), a
+   kind's folder name (0x810E5D58), the system software's version (0x810E6F48) */
+int consoleInfoLoadAccountId(void);
+int consoleInfoMakeDir(const char *path);
+const char *consoleInfoTypeName(int type);
+int consoleInfoGetSystemVersion(int *version);
+
+/* PLACEHOLDER names: the header fields' values (0x810E6F80-0x810E73C8) */
+int consoleInfoFormatSystemVersion(const ConsoleInfoRecord::Field *field, char *buf, int *len);
+int consoleInfoFormatPsCode(const ConsoleInfoRecord::Field *field, char *buf, int *len);
+int consoleInfoFormatOpenPsId(const ConsoleInfoRecord::Field *field, char *buf, int *len);
+int consoleInfoFormatPlatform(const ConsoleInfoRecord::Field *field, char *buf, int *len);
+int consoleInfoFormatAccountId(const ConsoleInfoRecord::Field *field, char *buf, int *len);
+int consoleInfoFormatTelephony(const ConsoleInfoRecord::Field *field, char *buf, int *len);
+int consoleInfoFormatConsole(const ConsoleInfoRecord::Field *field, char *buf, int *len);
+int consoleInfoFormatPage(const ConsoleInfoRecord::Field *field, char *buf, int *len);
+int consoleInfoFormatLineCount(const ConsoleInfoRecord::Field *field, char *buf, int *len);
+
+/* PLACEHOLDER names: the console's platform, 2 on a PS TV (0x810F3910), and the telephony
+   plugin's state (0x810E83C8) */
+int consoleInfoGetPlatform(void);
+int consoleInfoGetTelephony(int *active);
 
 /* PLACEHOLDER: a kind's record kept in the console only (no NP account; 0x810E74FC) */
 class ConsoleInfoEntries : public ConsoleInfoRecord {

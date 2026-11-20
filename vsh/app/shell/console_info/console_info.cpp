@@ -11,8 +11,6 @@
 static ConsoleInfoRecord *s_records[CONSOLE_INFO_TYPE_COUNT];
 static bool s_initialized;
 
-int consoleInfoMakeDir(const char *path);
-
 /* a record of the table: 0, or why not */
 static inline int consoleInfoCheck(ConsoleInfoRecord *record)
 {
