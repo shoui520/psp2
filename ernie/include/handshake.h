@@ -22,7 +22,9 @@ extern int handshakeInit(void);
 #endif
 extern unsigned char handshakeSetMode(unsigned char state, unsigned char mode);
 extern unsigned char handshakeCommand(unsigned char *data);
+#if !(BOARD_USS1001 && SOURCE_0104)
 extern unsigned char handshakeState(void);
+#endif
 extern unsigned char handshakeUnlocked11(void);
 #if FW_SINCE(0x00090903)
 extern int handshakeLock11(void);

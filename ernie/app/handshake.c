@@ -516,10 +516,12 @@ unsigned char handshakeCommand(unsigned char *data)
 }
 #endif
 
+#if !(BOARD_USS1001 && SOURCE_0104)	/* USS-1002 drops it */
 unsigned char handshakeState(void)
 {
 	return handshake.state;
 }
+#endif
 
 unsigned char handshakeUnlocked11(void)
 {
