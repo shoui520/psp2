@@ -51,6 +51,31 @@ public:
 			.getAsBool();
 	}
 
+	/* the product, this turn after rhs: worked lane by lane with each axis's signs (inline in
+	   Sony's header, its copies out of line in the callers' modules; name ours) */
+	__attribute__((noinline)) quaternion operator*(quaternion rhs) const
+	{
+		const float32x4_t signX = { 1.0f, -1.0f, 1.0f, -1.0f };
+		const float32x4_t signZ = { -1.0f, 1.0f, 1.0f, -1.0f };
+		float32x4_t a = _impl.get128();
+		float32x4_t b = rhs._impl.get128();
+		float32x4_t swap = vcombine_f32(vget_high_f32(b), vget_low_f32(b));
+		float32x4_t w = vmulq_lane_f32(b, vget_high_f32(a), 1);
+		float32x4_t x = vcombine_f32(vrev64_f32(vget_low_f32(swap)),
+					     vrev64_f32(vget_high_f32(swap)));
+		float32x4_t y = swap;
+		float32x4_t z = vrev64q_f32(b);
+
+		x = vmulq_lane_f32(x, vget_low_f32(a), 0);
+		y = vmulq_lane_f32(y, vget_low_f32(a), 1);
+		z = vmulq_lane_f32(z, vget_high_f32(a), 0);
+		x = vmulq_f32(x, signX);
+		y = vmulq_f32(y, vcombine_f32(vdup_n_f32(1.0f), vdup_n_f32(-1.0f)));
+		z = vmulq_f32(z, signZ);
+		return quaternion(sce::Vectormath::Simd::Aos::Quat(
+			vaddq_f32(vaddq_f32(vaddq_f32(w, x), y), z)));
+	}
+
 	void toAxisAngle(v3 &axis, float &angle);
 	matrix toMatrix(float epsilon) const;
 	quaternion inverse() const;

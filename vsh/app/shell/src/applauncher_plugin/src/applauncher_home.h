@@ -16,6 +16,9 @@
 #include <std/memory>
 #include <math/ngp/v2.h>
 #include <math/ngp/v3.h>
+#include <math/ngp/v4.h>
+#include <math/ngp/quaternion.h>
+#include <math/ngp/matrix.h>
 #include <versatileparam/idparam.h>
 #include <common/shared_ptr.h>
 #include <graphics/surface/surface.h>
@@ -118,22 +121,82 @@ public:
 	int m_effectOn;				/* PLACEHOLDER: its view's effect played */
 };
 
-/* PLACEHOLDER: the effect an icon's view plays (160 bytes; its class at 0x810CC8D0 on, not
-   written yet) */
+/*
+ * PLACEHOLDER: the home's wobble of an icon's view: its widget tipped about a normal that
+ * swings back to upright, pushed by the page's moves and its own spin, and bobbed while the
+ * icon is selected (96 bytes, applauncher_iconeffect.cpp)
+ */
+class ApplauncherIconWobble {
+public:
+	ApplauncherIconWobble()
+	{
+		Reset();
+	}
+
+	/* PLACEHOLDER names: still and upright (0x810CC8D0), and moved on a frame (0x810CCDFE) */
+	void Reset();
+	void Update(ApplauncherIconView *view);
+
+	float m_angle;				/* the turn its swing is pushed with */
+	float m_limit;				/* the most it tips, in degrees over ten */
+	float m_phase;				/* seconds into the selected bob (half a second) */
+	SceUInt32 reserved;
+	paf::math::v4 m_normal;			/* the way it faces */
+	paf::math::v4 m_spin;			/* the normal's speed */
+	paf::math::v4 m_move;			/* the page's move on the last frame */
+	paf::math::v4 m_bob;			/* its sway off its place */
+	paf::math::v4 m_fling;			/* a fast move of the page, dying away */
+};
+
+/*
+ * PLACEHOLDER: the edit's tilt of an icon's view: its widget falls back to the page's plane
+ * and bounces, its tilt turned back with each bounce (56 bytes)
+ */
+class ApplauncherIconTilt {
+public:
+	/* PLACEHOLDER names: moved on a frame (0x810CC946), the widget's pose taken as the
+	   start (0x810CDA8C), and at rest on the plane (0x810CDCBC) */
+	void Update(ApplauncherIconView *view);
+	void Capture(ApplauncherIconView *view);
+	void Begin(ApplauncherIconView *view);
+
+	paf::math::v4 m_pos;
+	paf::math::quaternion m_rot;
+	paf::math::quaternion m_target;		/* the tilt each bounce turns it to */
+	float m_z;
+	float m_speed;				/* falling toward the plane */
+};
+
+/* PLACEHOLDER: an icon's view dropped in from above its slot (4 bytes) */
+class ApplauncherIconDrop {
+public:
+	ApplauncherIconDrop() : m_time(-1.0f)
+	{
+	}
+
+	/* (0x810CDB32) */
+	void Begin(ApplauncherIconView *view);
+
+	float m_time;
+};
+
+/* PLACEHOLDER: the effect an icon's view plays (160 bytes, its functions 0x810CC8D0 on) */
 class ApplauncherIconEffect {
 public:
 	/* PLACEHOLDER names: made (0x810CC914), cleared (0x810CDD04), played
 	   each frame (0x810CDA62), and begun for the view (0x810CDCFA) */
 	ApplauncherIconEffect();
 	void Reset();
-	void Update();
+	void Update(ApplauncherIconView *view);
 	void Begin(ApplauncherIconView *view);
 	/* PLACEHOLDER names: the view's widget's pose taken as the edit's start (0x810CDB28), and
 	   the widget dropped in from above its place (0x810CDCB2) */
 	void Capture(ApplauncherIconView *view);
 	void DropIn(ApplauncherIconView *view);
 
-	SceUInt32 reserved[40];
+	ApplauncherIconWobble m_wobble;
+	ApplauncherIconTilt m_tilt;
+	ApplauncherIconDrop m_drop;
 };
 
 /*
@@ -539,6 +602,20 @@ public:
 	paf::ui::Widget *GetRoot();
 };
 
+/*
+ * PLACEHOLDER: the sway a page gives its icons while the wave fades in: a basis whose normal
+ * circles upright with the eased fade (68 bytes)
+ */
+class ApplauncherPageSway {
+public:
+	/* PLACEHOLDER names: upright (0x810CF2DC), and moved on a frame (0x810CF332) */
+	ApplauncherPageSway();
+	void Update(ApplauncherPage *page);
+
+	paf::math::matrix m_matrix;
+	float m_phase;				/* the normal's angle about upright */
+};
+
 class ApplauncherPage : public ApplauncherPageBase, public ShellSnapListItem {
 public:
 	/* the page made on the plugin, from the parameters (0x810D3BB8) */
@@ -552,7 +629,10 @@ public:
 
 	LsdbPage m_param;		/* what it was made from */
 	paf::ui::Widget *m_noticeText;		/* PLACEHOLDER: the notice page's text */
-	SceUInt32 reserved3[27];		/* PLACEHOLDER: the rest of the page (320 bytes) */
+	SceUInt32 reserved3;
+	ApplauncherPageSway m_sway;		/* PLACEHOLDER: its icons' sway */
+	paf::math::v4 m_prevPos;		/* PLACEHOLDER: its place on the last frame */
+	paf::math::v4 m_pos;			/* PLACEHOLDER: its place on this frame */
 
 	/* an icon in every slot (0x810B4B0C) */
 	bool IsFull();
@@ -844,6 +924,8 @@ extern float g_applauncherIconHoldTime;
 /* PLACEHOLDER: the time an icon moves to its slot in the edit, 750 ms (0x81507478, in a file
    of shared times beside 0x8150746C-0x81507474, not written yet) */
 extern const float g_applauncherEditMoveTime;
+/* PLACEHOLDER: the depth the icons stand at in the edit, -200 (0x81507474, the same file) */
+extern const float g_applauncherEditDepth;
 /* PLACEHOLDER: the icons' tilt effect moved on a frame (0x810CF2AA), and the drag left
    when the dragged widget is in its drag mode (0x810D1DE6) */
 void applauncherIconEffectUpdate(void);
@@ -1391,16 +1473,23 @@ void applauncherPagesOnIconNum(ApplauncherLsdbJob *job, void *arg);
 void applauncherPagesOnTotalPage(ApplauncherLsdbJob *job, void *arg);
 void applauncherPagesOnPageIcons(ApplauncherLsdbJob *job, void *arg);
 void applauncherPagesOnIconInfo(ApplauncherLsdbJob *job, void *arg);
-/* PLACEHOLDER: the home's drag object made and taken down (0x810CDDCA, 0x810CDE64) */
-void applauncherDragCreate(void);
-void applauncherDragDestroy(void);
+/* PLACEHOLDER: the launch effect made and taken down (0x810CDDCA, 0x810CDE64), begun for the
+   icon (0x810CE474), and whether it is not rising (0x810CF2BC) */
+void applauncherLaunchEffectCreate(void);
+void applauncherLaunchEffectDestroy(void);
+void applauncherLaunchEffectBegin(const paf::common::SharedPtr<ApplauncherIcon> &icon);
+bool applauncherLaunchEffectIsNotRising(void);
 
 /* topmenu_plugin's functions the home calls (indexes in its PLACEHOLDER table) */
 enum {
 	TOPMENU_PLUGIN_FUNC_ADD_LAYER		= 0,	/* PLACEHOLDER names */
 	TOPMENU_PLUGIN_FUNC_SET_APP_IMAGE	= 2,
 	TOPMENU_PLUGIN_FUNC_GET_LAYER_ROOT	= 4,
+	TOPMENU_PLUGIN_FUNC_SET_LAUNCH_TITLE	= 12,
 	TOPMENU_PLUGIN_FUNC_GET_JOB_QUEUE	= 13,
+	TOPMENU_PLUGIN_FUNC_LAUNCH_BEGIN	= 20,	/* PLACEHOLDER names: the launch effect's */
+	TOPMENU_PLUGIN_FUNC_LAUNCH_END	= 22,	/* start, end, and its icon launched */
+	TOPMENU_PLUGIN_FUNC_LAUNCH_FIRE	= 23,
 	TOPMENU_PLUGIN_FUNC_SET_LAYER_ENTER	= 25,
 	TOPMENU_PLUGIN_FUNC_SET_LAYER_LEAVE	= 26,
 	TOPMENU_PLUGIN_FUNC_SHOW_HOME		= 27,
@@ -1409,6 +1498,7 @@ enum {
 	TOPMENU_PLUGIN_FUNC_HOME_STARTED	= 32,
 	TOPMENU_PLUGIN_FUNC_SET_SCROLL_VIEW	= 38,
 	TOPMENU_PLUGIN_FUNC_IS_LAYER_ACTIVE	= 41,
+	TOPMENU_PLUGIN_FUNC_IS_WOBBLE_ON	= 49,	/* PLACEHOLDER name */
 	TOPMENU_PLUGIN_FUNC_HOME_READY	= 50,
 	TOPMENU_PLUGIN_FUNC_MODE_ENTER		= 52,	/* PLACEHOLDER names: an applauncher mode */
 	TOPMENU_PLUGIN_FUNC_MODE_LEAVE		= 53,	/* given to topmenu, and taken back */

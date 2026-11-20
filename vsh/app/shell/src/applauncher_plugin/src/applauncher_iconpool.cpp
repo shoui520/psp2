@@ -545,7 +545,7 @@ static void onUpdate(ui::AppIconBase *icon, void *data)
 	ApplauncherIconView *view = (ApplauncherIconView *)data;
 
 	if (view->m_owner.get() != NULL && view->m_owner->m_effectOn != 0)
-		view->m_effect.Update();
+		view->m_effect.Update(view);
 }
 
 /* the view shrunk away: hidden, taken off its page and given back to the pool (0x810BCD6A) */

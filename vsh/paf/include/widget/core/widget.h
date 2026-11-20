@@ -1283,6 +1283,15 @@ public:
 		return m_world_matrix;
 	}
 
+	/* the matrix in its parent's space, made again first where m_update_flag asks for it
+	   (inline in Sony's callers, name ours) */
+	const math::matrix &GetLocalMatrix()
+	{
+		if ((m_update_flag & 7) != 0)
+			UpdateMatrix();
+		return m_local_matrix;
+	}
+
 	/* the world rotation, made again first where m_update_flag asks for it (inline in Sony's
 	   callers, name ours) */
 	const math::quaternion &GetWorldRot()

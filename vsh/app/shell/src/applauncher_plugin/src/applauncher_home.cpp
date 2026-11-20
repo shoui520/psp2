@@ -333,7 +333,7 @@ ApplauncherHome::ApplauncherHome(Plugin *plugin)
 		(m_layer, applauncherHomeOnLayerLeave, this);
 	if (((int (*)(void))m_topmenu->func[TOPMENU_PLUGIN_FUNC_IS_WAVE_SHOWN])())
 		applauncherHomeShowWave();
-	applauncherDragCreate();
+	applauncherLaunchEffectCreate();
 	SceShell_7FE4E732(APPLAUNCHER_HOME_SHELL_EVENT, applauncherHomeOnShellEvent, NULL);
 	if (m_lsdbListener == NULL) {
 		m_lsdbListener = new LsdbEventListener();
@@ -352,7 +352,7 @@ ApplauncherHome::~ApplauncherHome()
 		m_lsdbListener = NULL;
 	}
 	SceShell_D4C7D2B7(APPLAUNCHER_HOME_SHELL_EVENT, applauncherHomeOnShellEvent, NULL);
-	applauncherDragDestroy();
+	applauncherLaunchEffectDestroy();
 	common::MainThreadCallList::Unregister(applauncherHomeOnMainThread, NULL);
 	if (m_indicator != NULL)
 		delete m_indicator;
