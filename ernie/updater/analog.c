@@ -12,6 +12,78 @@
 #include "sleepfactor.h"
 #include "updater.h"
 
+#if BOARD_USS1001
+/*
+ * The slim's (USS-1001): analog input 0x0010's level by its whole result, as the application's
+ * (app/analog.c), read once from each main loop's multi connector check.
+ */
+#include "adc.h"
+
+struct AnalogLevelWide {
+	unsigned int	limit;
+	unsigned int	level;
+};
+
+/* its result, its level, the one before and the one reported (0xfe: none yet) */
+static struct {
+	unsigned int	input;
+	unsigned char	level;		/* of the last reading */
+	unsigned char	previous;	/* of the one before */
+	unsigned char	reported;
+} analogInput10;
+
+/* a reset starts the levels afresh; the application's are kept otherwise */
+void analogInput10Init(void)
+{
+	if (updReset) {
+		analogInput10.reported = 0xfe;
+		analogInput10.level = 0xfe;
+		analogInput10.previous = 0xfe;
+	}
+	analogInput10.input = 0;
+}
+
+/* the level of the first of count levels whose limit the input reaches; 0xff if none */
+static unsigned int analogLevelFindWide(unsigned int input, const struct AnalogLevelWide *levels,
+					unsigned char count)
+{
+	unsigned char i;
+
+	for (i = 0; i < count; i++) {
+		if (levels->limit <= input)
+			return levels->level;
+		levels++;
+	}
+	return 0xff;
+}
+
+/* the level reported: a new one once two readings in a row agree on it, then sleep factor 14
+   and event 0x7a */
+unsigned char analogReadMultiCn(void)
+{
+	struct AnalogLevelWide levels[12] = {
+		{ 0xe900, 0 }, { 0xde40, 1 }, { 0xce00, 0xff }, { 0xc440, 2 }, { 0xb640, 3 },
+		{ 0xa1c0, 0xff }, { 0x9140, 4 }, { 0x8840, 0xff }, { 0x7a80, 5 }, { 0x0580, 0xff },
+		{ 0x0140, 6 }, { 0x0000, 7 },
+	};
+
+	adcOpen();
+	analogInput10.input = adcRead(6);
+	analogInput10.level = analogLevelFindWide(analogInput10.input, levels, 12);
+	if (analogInput10.level == analogInput10.previous &&
+	    analogInput10.level != analogInput10.reported) {
+		analogInput10.reported = analogInput10.level;
+		if (analogInput10.reported == 0)
+			sleepFactorSet14(0);
+		else
+			sleepFactorSet14(1);
+		updEventSet(0x7a);
+	}
+	analogInput10.previous = analogInput10.level;
+	adcClose();
+	return analogInput10.reported;
+}
+#else
 /* the level of the first of count levels whose limit the input reaches; 0xff if none */
 unsigned char analogLevelFind(unsigned char input, const struct AnalogLevel *levels,
 			      unsigned char count)
@@ -84,3 +156,4 @@ unsigned char analogReadMultiCn(void)
 #endif
 	return level;
 }
+#endif

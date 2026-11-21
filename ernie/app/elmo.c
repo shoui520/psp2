@@ -101,8 +101,13 @@ void elmoInit(void)
 /* the PS TV's updater: after a reset written with their initial values, else read back */
 void elmoInitRegs(void)
 {
+#if BOARD_USS1001
+	unsigned int i;
+	unsigned char command[3];
+#else
 	unsigned char command[3];
 	unsigned int i;
+#endif
 
 	if (updReset != 0) {
 		for (i = 0; i < ELMO_TABLE_COUNT; i++) {

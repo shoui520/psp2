@@ -12,9 +12,11 @@
 #include "snvs.h"
 
 static struct Snvs snvs;
-#if BOARD_USS1001 || BOARD_DOL1002 || (defined(ERNIE_UPDATER) && !SOURCE_0103)
+#if (BOARD_USS1001 && !defined(ERNIE_UPDATER)) || BOARD_DOL1002 || (defined(ERNIE_UPDATER) && !SOURCE_0103)
 static __near unsigned char snvsBuffer[0x30];	/* near on the slim source's boards and in the
-						   updaters before the PS TV's */
+						   updaters before the PS TV's and the slim's */
+#elif BOARD_USS1001	/* the slim's updater: far, and 0x40 bytes */
+static unsigned char snvsBuffer[0x40];
 #else
 static unsigned char snvsBuffer[0x30];
 #endif

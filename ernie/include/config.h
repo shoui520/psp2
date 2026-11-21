@@ -19,7 +19,7 @@
 #define CONFIG_VERSION		0x67	/* DOL-1002's layout */
 #elif BOARD_DOL1001
 #define CONFIG_VERSION		0x50	/* DOL-1001's layout */
-#elif SOURCE_0103 && FW_SINCE(0x01030511)
+#elif SOURCE_0103 && APP_SINCE(0x01030511)
 #define CONFIG_VERSION		0x58	/* the slim's layout */
 #elif SOURCE_0103
 #define CONFIG_VERSION		0x4d	/* the slim's 0x01030505 layout */

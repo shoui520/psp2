@@ -97,7 +97,7 @@ int watchdogKick(void)
 	return watchdogStart();
 }
 
-#ifdef ERNIE_UPDATER
+#if (defined(ERNIE_UPDATER)) && !BOARD_EVENT_LOG	/* the slim updater runs the application's */
 /* the updater's: transition 0x32 (0x0100060D's 0x35) */
 static void watchdogExpire(void)
 {

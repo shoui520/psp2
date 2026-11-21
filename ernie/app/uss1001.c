@@ -4,7 +4,9 @@
  * inputs with their pull-ups and back; INTP9, the USB supply's line, wakes task 5
  * (chargeUsbChanged).
  */
+#ifndef ERNIE_UPDATER	/* the updater: boardPortInit, the ports' setup and the keys' pins only */
 #pragma rtos_interrupt INTP9 intp9Interrupt
+#endif
 #pragma sfr
 
 #include "ernie.h"
@@ -13,11 +15,13 @@
 
 void boardPortInitUss1001(void);
 
+#ifndef ERNIE_UPDATER
 /* the USB supply's line changed: task 5's event 0x0400 */
 void intp9Interrupt(void)
 {
 	task5ISetFlag(0x0400);
 }
+#endif
 
 /* the ports at the start (hdwinit) */
 void boardPortInit(void)

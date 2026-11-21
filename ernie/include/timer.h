@@ -32,7 +32,11 @@ struct Timer {
    0x16) put the RTC's at 0x17-0x21.
    0x00090206 counts the clock from timer 0x13 (TIMER(0x11)) on, and has no power LED
    timer 0x1c: its RTC timers 0x14-0x1b are 0x13-0x1a, each one below its number */
-#if defined(ERNIE_UPDATER) && SOURCE_0103
+#if defined(ERNIE_UPDATER) && BOARD_USS1001 && SOURCE_0103
+/* the slim's updater (0x01030511): the RTC's at 0x15-0x1f, at their numbers */
+#define TIMER_RTC_FIRST		0x15
+#define TIMER_RTC(id)		(id)
+#elif defined(ERNIE_UPDATER) && SOURCE_0103
 /* the PS TV's updater (0x01030603): the application's, the RTC's at 0x17-0x21 */
 #define TIMER_RTC_FIRST		0x17
 #define TIMER_RTC(id)		((id) + 2)
@@ -89,7 +93,9 @@ struct Timer {
 #else
 #define TIMER(id)		((id) + 2)
 #endif
-#if defined(ERNIE_UPDATER) && SOURCE_0103
+#if defined(ERNIE_UPDATER) && BOARD_USS1001 && SOURCE_0103
+#define TIMER_COUNT		0x20
+#elif defined(ERNIE_UPDATER) && SOURCE_0103
 #define TIMER_COUNT		0x22
 #elif defined(ERNIE_UPDATER) && FW_SINCE(0x0100060D)
 #define TIMER_COUNT		0x1f

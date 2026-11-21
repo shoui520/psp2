@@ -10,15 +10,25 @@
 	EXTRN	_?R_INIT, _?R_INIS, _?RLINIT, _?DATA, _?DATAL, _?DATS
 	EXTRN	_hdwinit, _startHook, _main, _keepRam
 
-STACKTOP	EQU	0D500H		; the stack grows down from here, to RAMBOTTOM
 SADDRAREA	EQU	0FE20H		; the short direct area
+$_IF (ERNIE_HW>=0x00800000)	; CHIP_RL78: the application's RAM map (app/cstart.asm)
+STACKTOP	EQU	0BB00H		; the stack grows down from here, to RAMBOTTOM
+RAMBOTTOM	EQU	0AF00H		; the stack's bottom (0xfaf00)
+DATASTART	EQU	0BC00H		; the RAM a cold start clears, from the stack's top
+KEEPRAM		EQU	0CC00H		; the kept RAM (keepRam)
+KEEPCLEAR	EQU	0CD90H		; what a warm start clears from
+$ELSE
+STACKTOP	EQU	0D500H		; the stack grows down from here, to RAMBOTTOM
 RAMBOTTOM	EQU	0CF00H		; the RAM's start (0xfcf00)
-KEEPEND		EQU	0D900H + 4 + 0FCH	; the kept RAM's end: its header and the bytes summed
+DATASTART	EQU	0D900H		; the RAM a cold start clears: the kept RAM on
+KEEPRAM		EQU	0D900H		; the kept RAM (keepRam)
 $_IF (ERNIE_FW>=0x0100060D&&ERNIE_FW<0x01030000)
 KEEPCLEAR	EQU	0DA90H		; what a warm start clears from (0x0100060D: past the kept RAM)
 $ELSE
 KEEPCLEAR	EQU	0D500H		; what a warm start clears from
 $ENDIF
+$ENDIF
+KEEPEND		EQU	KEEPRAM + 4 + 0FCH	; the kept RAM's end: its header and the bytes summed
 SADDRSIZE	EQU	0C0H		; its size
 
 ; the starts of the segments copied and cleared (cstartend.asm has their ends): the
@@ -52,9 +62,18 @@ _@MEMTOP:	DS	32
 _cstart:
 	SEL	RB0
 	MOVW	SP, #STACKTOP
+$_IF (ERNIE_HW>=0x00800000)	; CHIP_RL78: the RAM parity check's reset off
+	SET1	!RPECTL.7
+$ENDIF
 	CALL	!!_hdwinit
 	; the short direct area
+$_IF (ERNIE_HW>=0x00800000)	; the RL78 template computes the size
+	MOV	A, #0E0H
+	SUB	A, #20H
+	MOV	B, A
+$ELSE
 	MOV	B, #SADDRSIZE
+$ENDIF
 	CLRW	AX
 ?saddr:
 	DEC	B
@@ -63,7 +82,7 @@ _cstart:
 	BNZ	$?saddr
 	; the stack
 	MOV	ES, #0FH
-	MOVW	AX, #0D900H
+	MOVW	AX, #DATASTART
 	SUBW	AX, #RAMBOTTOM
 	MOVW	BC, AX
 	CLRW	AX
@@ -78,12 +97,12 @@ _cstart:
 	MOVW	AX, ES:!_keepRam
 	CMPW	AX, #0A55AH
 	BNZ	$?cold
-	MOV	B, #KEEPEND - 0D904H
+	MOV	B, #KEEPEND - (KEEPRAM + 4)
 	MOVW	DE, #0
 ?sum:
 	DEC	B
 	CLRW	AX
-	MOV	A, ES:0D904H[B]
+	MOV	A, ES:KEEPRAM + 4[B]
 	XCH	A, X
 	ADDW	AX, DE
 	MOVW	DE, AX
@@ -116,13 +135,13 @@ _cstart:
 ?cold:
 	MOV	ES, #0FH
 	MOVW	AX, #SADDRAREA
-	SUBW	AX, #0D900H
+	SUBW	AX, #DATASTART
 	MOVW	BC, AX
 	CLRW	AX
 ?coldNext:
 	DECW	BC
 	DECW	BC
-	MOVW	ES:0D900H[BC], AX
+	MOVW	ES:DATASTART[BC], AX
 	CMPW	AX, BC
 	BNZ	$?coldNext
 ?data:

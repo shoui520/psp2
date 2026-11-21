@@ -11,8 +11,10 @@
 /* the PS TV's (0x01030603): the resume's and the off's four Elmo mask steps (the application's
    powerseq.c), DOL-1001's ports, and the keys' ports left alone */
 
+#if BOARD_DOL1001
 /* DOL-1001's stand-in for the lines it does not have (the application's board.c's) */
 unsigned char boardDummyPin;
+#endif
 
 unsigned char boardResumeSteps(void)
 {
@@ -24,6 +26,7 @@ unsigned char boardOffSteps(void)
 	return 4;
 }
 
+#if BOARD_DOL1001	/* the slim's: app/uss1001.c's */
 /* the application's (board.c's) DOL-1001 ports */
 void boardPortInit(void)
 {
@@ -66,6 +69,7 @@ void keyPortsEnable(void)
 void keyPortsDisable(void)
 {
 }
+#endif
 #else
 /* the Elmo mask steps of the resume, off and suspend sequences */
 unsigned char boardResumeSteps(void)

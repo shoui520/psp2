@@ -15,7 +15,11 @@ void powerWaitInit(void)
 {
 #if SOURCE_0103
 	/* the PS TV's: started only when it is not running */
+#if CHIP_RL78	/* the slim's reads TE0L first */
+	if (!(TE0L & 0x08))
+#else
 	if (!(0x08 & TE0L))
+#endif
 		TS0L = 0x08;
 #else
 	TS0L = 0x08;

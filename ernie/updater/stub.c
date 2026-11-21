@@ -11,6 +11,7 @@
 
 #include "ernie.h"
 #include "analog.h"
+#include "charge.h"
 #include "keepram.h"
 #include "rtc.h"
 #include "state.h"
@@ -18,6 +19,9 @@
 
 #if SOURCE_0103
 union PowerRequest stateWakeupFactor;	/* the PS TV's: before getClock's return buffer */
+#if BOARD_USS1001
+unsigned char inputPolls;	/* the slim's: inputPoll's count, its event 0x79 every eighth */
+#endif
 #endif
 
 /* the counters at 0 (1 January), the 24-hour clock, an interrupt every 0.5 s */
@@ -171,6 +175,13 @@ int input3Bit0High(void)
 #endif
 #endif /* SOURCE_0103 */
 
+#if CHIP_RL78
+/* the slim's: something on the multi connector, its level read */
+unsigned char input1Bit5Active(void)
+{
+	return updMultiCn != 0 && updMultiCn != 0xfe;
+}
+#else
 #if FW_SINCE(0x0100060D)
 unsigned char input1Bit5Active(void)
 #else
@@ -179,6 +190,7 @@ int input1Bit5Active(void)
 {
 	return updInput.bits.multiCnReported;
 }
+#endif
 
 #if SOURCE_0103
 int intp11Low(void)
@@ -188,7 +200,11 @@ int intp11Low(void)
 
 int chargeVbusCharging(void)
 {
+#if CHIP_RL78	/* the slim's: the USB connected, with VBUS */
+	return chargeVbusActive();
+#else
 	return 0;
+#endif
 }
 
 /* what is on the multi connector, as the updater read it */
@@ -305,7 +321,11 @@ void powerWaitLong(unsigned int ms)
 	powerWaitInit();
 	while (ms != 0) {
 		step = ms < 500 ? ms : 500;
+#if CHIP_RL78	/* the slim's: divided, which Sony's compiler does through @@ludiv */
+		count = (unsigned int)((unsigned long)step * 1000 / 32) << 2;
+#else
 		count = (unsigned int)((unsigned long)step * 1000 >> 5) << 2;
+#endif
 		TMIF03 = 0;
 #if SOURCE_0103	/* the PS TV's: the count loaded before the start */
 		TDR03 = count;

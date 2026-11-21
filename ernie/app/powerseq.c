@@ -39,6 +39,7 @@
    powerSleep2 (powerSleep's name kept from the macro below by the parentheses) */
 #define powerSleep(ms)		powerSleep2(ms)
 #define powerWaitMs(ms)		(powerSleep)(ms)
+extern unsigned char updReset;	/* updater.c's */
 #endif
 
 #if SOURCE_0103
@@ -485,7 +486,12 @@ void powerSeqOn(void)
 		for (i = 0; i < 3; i++) {
 			if (!cookieReadVersion(deviceVersions.cookie)) {
 				cookieInitRegs();
+#ifdef ERNIE_UPDATER	/* the slim updater's: after a reset only */
+				if (updReset)
+					cookieCtrlReg3Bit2(0);
+#else
 				cookieCtrlReg3Bit2(0);
+#endif
 				break;
 			}
 			deviceVersions.cookie[1] = 0xff;
@@ -496,6 +502,9 @@ void powerSeqOn(void)
 		}
 	}
 	if (deviceVersions.cookie[0] == 0x80) {
+#ifdef ERNIE_UPDATER	/* the updater's: no battery faults kept */
+		WDTE = 0xac;
+#else
 		cookieReadStatus1(status.byte);
 		cookieReadStatus2(status2.byte);
 		if (!status.bits.battery) {
@@ -508,14 +517,17 @@ void powerSeqOn(void)
 			eventLogRecord(5, 0x10, batteryFaults.byte, 4);
 #endif
 		}
+#endif
 		for (i = 0; i < 6; i++) {
 			if (!batteryReadInfo(&deviceVersions.battery.id)) {
 				batteryInfoRead();
 				cookieReadStatus1(status.byte);
 				if (status.bits.battery) {
+#ifndef ERNIE_UPDATER
 					batteryFaults.byte[0] |= 0x04;
 #if BOARD_EVENT_LOG
 					eventLogRecord(5, 0x10, batteryFaults.byte, 4);
+#endif
 #endif
 					break;
 				}
@@ -526,6 +538,7 @@ void powerSeqOn(void)
 			if (i == 5)
 				logEvent(0x0d);
 		}
+#ifndef ERNIE_UPDATER
 		if (!batteryReadBicTemp(&batteryFaults.word[2]) &&
 		    !batteryReadTemp(&batteryFaults.word[3])) {
 			batteryFaults.byte[0] |= 0x08;
@@ -534,6 +547,7 @@ void powerSeqOn(void)
 			eventLogRecord(5, 0x10, batteryFaults.byte, 4);
 #endif
 		}
+#endif
 	} else if (deviceVersions.cookie[0] == 0) {
 		for (i = 0; i < 3; i++) {
 			if (!batteryReadInfo(&deviceVersions.battery.id)) {
@@ -542,6 +556,9 @@ void powerSeqOn(void)
 			}
 		}
 	}
+#ifdef ERNIE_UPDATER
+	WDTE = 0xac;
+#endif
 	cookieUpdateBatteryCharge(1);
 	chargeInit();
 }
@@ -569,8 +586,10 @@ unsigned char powerSeqResume(void)
 	}
 	if (mode.bits.mode == 0x0c)
 		powerSdOn();
+#ifndef ERNIE_UPDATER	/* the slim updater's waits nothing */
 	if (elmoStatusMask.reg[0] & 0x10)
 		powerSeqWaitP67();
+#endif
 out:
 	TT0L = 0x08;
 	TMMK03 = 1;
@@ -739,6 +758,7 @@ out:
 /* the WLAN's line (P1.7) low until P12.0 goes low, at most six waits */
 void powerSeqWaitP67(void)
 {
+#ifndef ERNIE_UPDATER	/* the slim updater's: nothing */
 	unsigned char i;
 
 	P1.7 = 0;
@@ -748,6 +768,7 @@ void powerSeqWaitP67(void)
 			break;
 	}
 	P1.7 = 1;
+#endif
 }
 
 /* the lines low, the devices off, then the off sequence's Elmo steps */
@@ -756,8 +777,10 @@ unsigned char powerSeqOff(void)
 	unsigned char result;
 	unsigned char i;
 
+#ifndef ERNIE_UPDATER
 	if (stateGetCause() == 0x31)
 		chargeSetManualMode(0);
+#endif
 	P4.1 = 0;
 	P4.2 = 0;
 #if !(BOARD_USS1001 && SOURCE_0104)	/* USS-1002's 0x0105 has no P6.5 line */
@@ -789,6 +812,7 @@ out:
 	return result;
 }
 
+#ifndef ERNIE_UPDATER	/* the updater does not suspend */
 /* as the off sequence, with the clock output and P0.6 kept while the Elmo's mask 0x10 is set */
 unsigned char powerSeqSuspend(void)
 {
@@ -823,6 +847,7 @@ out:
 	TMMK03 = 1;
 	return result;
 }
+#endif
 #endif
 
 /* no accessory */
@@ -1301,19 +1326,23 @@ void powerCookieRelease(void)
    register 6's bit 3 is clear, the power LED's cause 0x20 shown */
 void powerCookieHold(void)
 {
+#ifndef ERNIE_UPDATER	/* the updater's: nothing */
 	cookieReadReg3();
 	if ((cookieStatus2.byte[0] & 0x0e) == 0x08 && !(cookieRegs[3].byte[0] & 0x08)) {
 		powerLedSetFlags(0x20);
 		cookieCtrlReg3Bit13(1);
 	}
+#endif
 }
 
 /* task 5's, after the hold */
 void powerCookieRelease(void)
 {
+#ifndef ERNIE_UPDATER
 	chargeCookieHeld = 0;
 	powerLedSetFlags(0x20);
 	cookieCtrlCharge(1);
+#endif
 }
 #endif
 

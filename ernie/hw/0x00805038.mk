@@ -10,3 +10,5 @@ CHIP := f1zcrk
 KERNEL := 0x00411000
 # its application's link: the RL78's objects in Sony's order (app/uss1001.lk)
 LINKFILE_app := app/uss1001.lk
+# its updater's link: the RL78's (updater/uss1001.lk)
+LINKFILE_updater := updater/uss1001.lk

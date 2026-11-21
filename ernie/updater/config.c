@@ -32,7 +32,11 @@ struct ConfigRecords {
 #endif
 
 /* the banks, in the updater's part of the flash */
+#if CHIP_RL78
+static const struct ConfigBank *const __far configBanks = (const struct ConfigBank *)0x5f800;
+#else
 static const struct ConfigBank *const __far configBanks = (const struct ConfigBank *)0x3b800;
+#endif
 
 static struct Config config;
 #if FW_SINCE(0x0100060D)

@@ -16,7 +16,11 @@
 	NAME	fsl
 
 	PUBLIC	_FSL_Init, _FSL_Open, _FSL_Close, _FSL_PrepareFunctions, _FSL_PrepareExtFunctions
+$_IF (ERNIE_UPDATER!=1)
 	PUBLIC	_rcopyTable, _fslRamCommands
+$ELSE
+	PUBLIC	_FSL_BlankCheck, _FSL_Erase, _FSL_IVerify, _FSL_Write, _FSL_InvertBootFlag
+$ENDIF
 	PUBLIC	_fslBlockA, _fslBlockB
 	PUBLIC	_PFDL_Open, _PFDL_Execute, _PFDL_Handler, _PFDL_Close
 
@@ -51,6 +55,7 @@ $ENDIF
 ; ?blockA, RAMB + ?tableB - ?blockB
 TABLEA	EQU	RAMA + 0F4H
 TABLEB	EQU	RAMB + 78H
+$_IF (ERNIE_UPDATER!=1)
 ; the commands the program calls, at their RAM addresses (RAMCMD + their place after
 ; _fslRamCommands: the link places code where it is stored, not where it runs); the program
 ; gets them from the link file's SYMBOLs (app/uss1001.lk), the link taking no absolute publics
@@ -60,6 +65,7 @@ _FSL_IVerify	EQU	0F0000H + RAMCMD + 8
 _FSL_Write	EQU	0F0000H + RAMCMD + 0CH
 _FSL_InvertBootFlag EQU	0F0000H + RAMCMD + 42H
 _FSL_SwapBootCluster EQU 0F0000H + RAMCMD + 4AH
+$ENDIF
 
 ; the library's ROM part
 @@FSLCOD	CSEG	BASE
@@ -172,6 +178,71 @@ _FSL_PrepareExtFunctions:
 	MOVW	DE, #RAMB
 	BR	$!?copy
 	NOP
+$_IF (ERNIE_UPDATER==1)
+
+; the updater's (boot cluster 1's): the commands the program calls run where they are, with no
+; boot cluster swap (the updater swaps none)
+_FSL_BlankCheck:
+	MOV	C, #4
+	BR	$?commandU
+_FSL_Erase:
+	MOV	C, #0
+	BR	$?commandU
+_FSL_IVerify:
+	MOV	C, #2
+	BR	$?commandU
+_FSL_Write:
+	MOV	C, #6
+?commandU:
+	CALL	$!?readyCommandU
+	SKNZ
+	BR	!!0F0000H + RAMA
+	MOV	C, #1FH
+	RET
+; Z: the state bits (FSLSTATE under A's mask) are X
+?readyExtU:
+	PUSH	AX
+	MOV	A, #0FFH
+	MOV	X, #0FH
+	BR	$?readyU
+?ready1U:
+	PUSH	AX
+	MOV	A, #47H
+	MOV	X, #7
+	BR	$?readyU
+?ready2U:
+	PUSH	AX
+	MOV	A, #47H
+	MOV	X, #7
+	BR	$?readyU
+?ready3U:
+	PUSH	AX
+	MOV	A, #47H
+	MOV	X, #47H
+	BR	$?readyU
+?readyCommandU:
+	PUSH	AX
+	MOV	A, #0F7H
+	MOV	X, #7
+?readyU:
+	AND	A, !FSLSTATE
+	CMP	A, X
+	POP	AX
+	RET
+_FSL_InvertBootFlag:
+	PUSH	HL
+	MOV	H, #0FEH
+	MOV	C, #0
+	BR	$!?extCommandU
+?extCommandU:
+	CALL	$!?readyExtU
+	SKNZ
+	BR	!!0F0000H + RAMB
+	MOV	C, #1FH
+	POP	HL
+	RET
+	NOP
+$ENDIF
 
 ; the commands, run from RAMA: C the command's index into ?tableA
 ?blockA:
@@ -477,6 +548,7 @@ _PFDL_Close:
 	CLRB	!FSLBUF
 	RET
 
+$_IF (ERNIE_UPDATER!=1)
 ; _rcopy's table: the commands below, copied to RAMCMD
 @@FSLRAM	CSEG	BASE
 _rcopyTable:
@@ -579,5 +651,6 @@ _fslRamCommands:
 	POP	HL
 	RET
 ?ramEnd:
+$ENDIF
 
 	END

@@ -32,7 +32,7 @@
    temperature sensor and a few changes of its own */
 #define BOARD_DOL1002		(BOARD_DOL1001 && FW_SINCE(0x01040000))
 /* that line from the slim's 0x01030511 */
-#define SOURCE_0511		(BOARD_USS1001 && FW_SINCE(0x01030511) || BOARD_DOL1001 && FW_SINCE(0x01040000))
+#define SOURCE_0511		(BOARD_USS1001 && APP_SINCE(0x01030511) || BOARD_DOL1001 && FW_SINCE(0x01040000))
 
 /* 0x00102603: 0x00411000's code (its ERNIE_BOARD) for a board with another Elmo wiring, ports
    and multi-connector switch; 0x00315200 (DEM-3000H) has most of it, its own differences by
@@ -347,6 +347,11 @@ extern unsigned char boardMultiCnIsDebug(void);
 extern void boardInit(void);
 #endif
 extern void boardPortInit(void);
+#if BOARD_USS1001
+extern void boardPortInitUss1001(void);	/* app/uss1001.c */
+extern void inputKeysOpen(void);
+extern void inputKeysClose(void);
+#endif
 #if BOARD_DOL1001
 /* DOL-1001's stand-in for the lines it does not have (the touch panels' selects, presence and
    mode, the sticks' power): written and read as a pin would be */

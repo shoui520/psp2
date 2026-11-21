@@ -416,6 +416,9 @@ unsigned char flashBootClusterSwap(void)
 #if BOARD_USS1001
 /* the self-programming library's settings: the wide voltage mode, 8 MHz, each command to its end */
 const fsl_descriptor_t fslDescriptor = { 1, 8, 1 };
+#ifdef ERNIE_UPDATER
+struct ConfigBank configBuffer;			/* the updater's: the bank configFlashWrite writes */
+#endif
 
 /* erases the block at address and writes the open copy there, three times at most */
 unsigned char configFlashWrite(unsigned long address)
@@ -426,7 +429,9 @@ unsigned char configFlashWrite(unsigned long address)
 	unsigned char tries;
 
 	tries = 3;
+#ifndef ERNIE_UPDATER	/* the updater's library runs where it is */
 	_rcopy(1);
+#endif
 	if ((address & (FSL_BLOCK_SIZE - 1)) != 0)
 		return 5;
 	result = FSL_Init(&fslDescriptor);
@@ -467,6 +472,7 @@ unsigned char configFlashWrite(unsigned long address)
 	return result;
 }
 
+#ifndef ERNIE_UPDATER	/* the updater has no downloader to prepare */
 /* swaps the boot cluster for the downloader, three times at most; 0 when it may start */
 unsigned char updaterFlashPrepare(void)
 {
@@ -488,6 +494,7 @@ unsigned char updaterFlashPrepare(void)
 	FSL_Close();
 	return result;
 }
+#endif
 
 /* inverts the boot flag, with interrupts off, three times at most */
 unsigned char flashInvertBootFlag(void)

@@ -1,0 +1,179 @@
+# USS-1001's (PCH-2000, the slim) updater link (tools/lk78k0r.py), its own: the RL78's objects
+# (the application's flash library, its vector slots), Sony's order for them and its places.
+# Boot cluster 1 (0x1000-0x1fff), the code to 0xbfff and from 0x35400 on, as the other
+# updaters; the application's files in the application's order (app/uss1001.lk).
+
+OBJECT	entry.c
+OBJECT	main.c
+OBJECT	updater.c
+OBJECT	host.c
+OBJECT	command.c
+OBJECT	spidev.c
+OBJECT	analog.c
+OBJECT	../app/sha1.c
+OBJECT	../app/aes.c
+OBJECT	../app/authkeys.c
+OBJECT	../app/iica.c
+OBJECT	stub.c
+OBJECT	../app/util.c
+OBJECT	../app/nvs.c
+OBJECT	../app/elmo.c
+OBJECT	power.c
+OBJECT	board.c
+OBJECT	powerwait.c
+OBJECT	../app/battery.c
+OBJECT	../app/charge.c
+OBJECT	../app/cookie.c
+OBJECT	../app/powerseq.c
+OBJECT	param.c
+OBJECT	uart.c
+OBJECT	uart4.c
+OBJECT	../app/version.c
+OBJECT	scratchpad.c
+OBJECT	../app/serial1.c
+OBJECT	../app/serial.c
+OBJECT	serialevent.c
+OBJECT	../app/serialauth.c
+OBJECT	../app/sleepfactor.c
+OBJECT	timer.c
+OBJECT	../app/board.c
+OBJECT	../app/handshake.c
+OBJECT	config.c
+OBJECT	../app/snvs.c
+OBJECT	../app/flash.c
+OBJECT	../app/adc.c
+OBJECT	../app/spidev.c
+OBJECT	../app/gf.c
+OBJECT	../app/watchdog.c
+OBJECT	../app/debugpin.c
+OBJECT	../app/eventlog.c
+OBJECT	../app/clock.c
+OBJECT	../app/clockout.c
+OBJECT	../app/uss1001.c
+OBJECT	tau.c
+OBJECT	../app/serialline.c
+OBJECT	../app/multicn.c
+OBJECT	../app/chipid.c
+OBJECT	../app/powerled.c
+OBJECT	../app/flashextra.asm
+OBJECT	version.c
+OBJECT	cstart.asm
+OBJECT	vectors_rl78.asm
+# the CA78K0R libraries' modules it uses (the RL78 library's where they differ)
+OBJECT	../lib/rl78/fsl.asm
+OBJECT	../lib/lucom.asm
+OBJECT	../lib/rl78/lmul.asm
+OBJECT	../lib/rl78/cudiv.asm
+OBJECT	../lib/rl78/ludiv.asm
+OBJECT	../lib/rl78/curem.asm
+OBJECT	../lib/luadd.asm
+OBJECT	../lib/lulsh.asm
+OBJECT	../lib/lursh.asm
+OBJECT	../lib/luband.asm
+OBJECT	../lib/lubor.asm
+OBJECT	../lib/lubxor.asm
+OBJECT	../lib/memcpy.asm
+OBJECT	../lib/memcpy_n.asm
+OBJECT	../lib/memcmp.asm
+OBJECT	../lib/memset.asm
+OBJECT	../lib/memset_n.asm
+# the ends of the startup's segments, after everything
+OBJECT	../app/cstartend.asm
+
+# the compiler's runtime registers
+SYMBOL	_@SEGAX		0xffed4
+SYMBOL	_@SEGBC		0xffed5
+SYMBOL	_@SEGDE		0xffed6
+SYMBOL	_@SEGHL		0xffed7
+SYMBOL	_@RTARG0	0xffed8
+SYMBOL	_@RTARG1	0xffed9
+SYMBOL	_@RTARG2	0xffeda
+SYMBOL	_@RTARG3	0xffedb
+SYMBOL	_@RTARG4	0xffedc
+SYMBOL	_@RTARG5	0xffedd
+SYMBOL	_@RTARG6	0xffede
+SYMBOL	_@RTARG7	0xffedf
+# and as the libraries' modules name them
+SYMBOL	@SEGAX		0xffed4
+SYMBOL	@SEGBC		0xffed5
+SYMBOL	@SEGDE		0xffed6
+SYMBOL	@SEGHL		0xffed7
+SYMBOL	@RTARG0		0xffed8
+SYMBOL	@RTARG2		0xffeda
+SYMBOL	@RTARG4		0xffedc
+SYMBOL	@RTARG6		0xffede
+RESERVE	0xffed4		12
+# the application's AES round tables (app/aestable.c) in boot cluster 0
+SYMBOL	_aesSboxMul2	0x00200
+SYMBOL	_aesSboxMul3	0x00300
+SYMBOL	_aesMul9	0x00400
+SYMBOL	_aesMul11	0x00500
+SYMBOL	_aesMul13	0x00600
+SYMBOL	_aesMul14	0x00700
+# the settings' two banks, at the end of its 384 KiB of flash
+SYMBOL	_configBanks	0x5f800
+
+# the interrupts' vectors are vectors_rl78.asm's table, not the compiler's
+DROP	@@VECT??
+
+# boot cluster 1: the vectors, the CALLT table and the option bytes, then the version block
+AT	0x01000
+SEG	@@VECT
+AT	0x01f00
+SEG	@@CNSTL		version.c
+
+# the code below 0xc000: the startup, the runtime, the interrupts, the constants, the flash
+# library, then the code
+AT	0x02000
+SEG	@@CODEL		entry.c
+SEG	@@CSTART
+SEG	@@RTCODE
+SEG	@@LCODE		../lib/rl78/lmul.asm ../lib/rl78/cudiv.asm ../lib/rl78/ludiv.asm ../lib/rl78/curem.asm
+SEG	@@BASE		main.c updater.c uart.c power.c uart4.c
+SEG	@@BASE
+SEG	@@R_INIT
+SEG	@@R_INIS
+SEG	@@RLINIT
+SEG	@@CNSTL		main.c updater.c host.c command.c analog.c ../app/sha1.c ../app/aes.c ../app/util.c
+SEG	@@CNSTL
+SEG	@@FSLCOD
+SEG	@@PFDLCOD
+SEG	@@CODEL		main.c updater.c host.c stub.c ../app/util.c ../app/elmo.c power.c ../app/battery.c param.c uart.c ../app/sleepfactor.c timer.c ../app/serial1.c ../app/serial.c ../app/serialauth.c config.c ../app/debugpin.c ../app/iica.c board.c ../app/snvs.c ../app/uss1001.c ../app/board.c ../app/adc.c ../app/multicn.c ../app/powerled.c ../app/nvs.c ../app/spidev.c ../app/gf.c ../app/flashextra.asm
+
+# the code from 0x35400: the libraries, then the rest
+AT	0x35400
+SEG	@@LCODE
+SEG	@@CODEL		command.c spidev.c analog.c ../app/sha1.c ../app/aes.c powerwait.c ../app/charge.c ../app/cookie.c ../app/powerseq.c ../app/version.c serialevent.c timer.c ../app/handshake.c ../app/watchdog.c version.c ../app/eventlog.c ../app/clock.c ../app/clockout.c ../app/flash.c tau.c uart4.c ../app/serialline.c ../app/chipid.c ../app/multicn.c
+SEG	@@CODEL
+
+# the RAM, as the application's (app/uss1001.lk): the startup's initialised data (none), the
+# event log, the kept block, the heap, the near data, then the far data
+AT	0xfaf00
+SEG	@@INIT
+AT	0xfbc00
+SEG	@@ELOG
+AT	0xfcc00
+SEG	@@DATAL		main.c param.c ../app/watchdog.c
+SEG	@@DATAL		cstart.asm
+AT	0xfcda0
+SEG	@@HEAP
+SEG	@@DATA		cstart.asm ../app/util.c timer.c ../app/serialauth.c ../app/handshake.c version.c ../app/snvs.c ../app/chipid.c
+SEG	@@DATA
+SEG	@@INITL
+SEG	@@INIS
+SEG	@@DATAL		host.c command.c stub.c analog.c ../app/elmo.c power.c
+# gaps where Sony's link has data nothing reads
+AT	0xfde6c
+SEG	@@DATAL		powerwait.c
+AT	0xfde78
+SEG	@@DATAL		../app/battery.c ../app/charge.c
+AT	0xfdf60
+SEG	@@DATAL		../app/cookie.c uart.c ../app/version.c ../app/serial1.c ../app/serial.c ../app/serialauth.c
+SEG	@@DATAL		../app/handshake.c config.c ../app/iica.c ../app/snvs.c ../app/flash.c uart4.c ../app/serialline.c
+SEG	@@DATAL		../app/chipid.c ../app/powerled.c ../app/nvs.c ../app/eventlog.c
+SEG	@@DATAL
+# the short direct area
+AT	0xffe20
+SEG	@@DATS		cstart.asm
+SEG	@@DATS
+SEG	@@BITS

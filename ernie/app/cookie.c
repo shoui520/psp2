@@ -17,6 +17,7 @@
 #include "log.h"
 #include "powerreq.h"
 #include "powerseq.h"
+#include "state.h"
 #include "task.h"
 
 #if UPD_0103
@@ -389,6 +390,9 @@ unsigned char cookieCtrlBatteryCharge(unsigned char on)
 /* register 3's bit 13 set while on */
 unsigned char cookieCtrlReg3Bit13(unsigned char on)
 {
+#ifdef ERNIE_UPDATER	/* the slim's updater: none */
+	return 0;
+#else
 	unsigned char result;
 	unsigned char value;
 
@@ -406,6 +410,7 @@ unsigned char cookieCtrlReg3Bit13(unsigned char on)
 	} else
 		result = 0;
 	return result;
+#endif
 }
 
 /* register 3's bit 12 set while on (the charge's boost), then register 6 read back */
@@ -426,7 +431,11 @@ unsigned char cookieCtrlReg3Bit12(unsigned char on)
 		if (result == 0) {
 			cookieRegs[0].byte[1] = value;
 			cookieReadReg3();
+#ifdef ERNIE_UPDATER
+			updEventSet(0x83);	/* the slim updater's: chargeUsbChanged */
+#else
 			task5SetFlag(4, 0x0400);
+#endif
 		}
 	} else
 		result = 0;

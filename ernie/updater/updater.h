@@ -71,10 +71,17 @@ union UpdEvents {
 		unsigned int	event35:1;
 		unsigned int	event82:1;
 #if SOURCE_0103
+#if BOARD_USS1001
+		/* the slim's: 0x83, 0x96, 0x97, 0x17 and 0x18 */
+		unsigned int	event83:1;
+		unsigned int	reserved1:1;
+		unsigned int	event96:1;
+#else
 		/* the PS TV's: 0x8c, 0x97, 0x17 and 0x18 */
 		unsigned int	reserved1:1;
 		unsigned int	event8c:1;
 		unsigned int	reserved2:1;
+#endif
 		unsigned int	event97:1;
 		unsigned int	event17:1;
 		unsigned int	event18:1;
@@ -333,7 +340,12 @@ extern unsigned int updSegment;
 extern unsigned char updSegment;
 #endif
 extern unsigned char updCipher[0x400];	/* its data as it comes in */
-extern unsigned char updReceived[0x100];	/* the segments programmed */
+#if BOARD_USS1001
+#define UPD_SEGMENTS	0x180	/* the slim's 384 KiB of flash, in segments of 1 KiB */
+#else
+#define UPD_SEGMENTS	0x100
+#endif
+extern unsigned char updReceived[UPD_SEGMENTS];	/* the segments programmed */
 extern unsigned char updProgress;	/* the image check's, in percent */
 extern unsigned char updaterInit(void);
 extern int updaterDecryptInit(void);

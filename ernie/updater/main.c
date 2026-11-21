@@ -32,8 +32,10 @@ void intInit(void);
 /* at 0xfd900 (updater.lk), where the application keeps it too */
 struct KeepRam keepRam;
 
+#if !CHIP_RL78	/* the RL78's flash library keeps no buffer of the caller's */
 /* the flash library's data buffer (FSL_Init's), after the library's own data (updater.lk) */
 __near unsigned char fslDataBuffer[0x100];
+#endif
 
 /* the clocks: the X1 oscillator as the main clock, the internal oscillator stopped */
 void hdwinit(void)
@@ -55,7 +57,7 @@ void hdwinit(void)
 	HIOSTOP = 1;
 	XTSTOP = 0;
 #endif
-	boardPortInit();
+	boardPortInit();	/* the slim's: app/uss1001.c's */
 	intInit();
 	tau0PowerOn();
 	clockOutputStop();

@@ -170,7 +170,11 @@ int flHashCheck(unsigned char *digest);
 int flDecrypt(void);
 int flProg(void);
 void flReboot(void);
-#if SOURCE_0103
+#if BOARD_USS1001
+/* the slim's: the boot flag inverted by the application's flash.c */
+#include "flash.h"
+#define flBootClusterSwap	flashInvertBootFlag
+#elif SOURCE_0103
 /* the PS TV's swap is the application's flash.c's */
 #include "flash.h"
 #define flBootClusterSwap	flashBootClusterSwap
@@ -401,7 +405,7 @@ unsigned char updSegment;
 unsigned char updPlain[0x400];		/* the segment decrypted */
 #endif
 unsigned char updCipher[0x400];
-unsigned char updReceived[0x100];
+unsigned char updReceived[UPD_SEGMENTS];
 SHA1Context updSha;
 unsigned char updHash[SHA1HashSize];
 unsigned long updShaW[SHA1WordsSize];
@@ -447,6 +451,9 @@ unsigned char updaterInit(void)
 int updaterDecryptInit(void)
 {
 	unsigned char result;
+#if CHIP_RL78	/* the slim updater's frame: seven bytes nothing reads */
+	unsigned char unused[7];
+#endif
 
 	memset(updHash, 0, sizeof(updHash));
 	result = (unsigned char)SHA1Reset((SHA1Context __near *)&updSha,
@@ -920,6 +927,9 @@ int updaterExecProgramming(UPD_SLOW_PARAMS)
 /* 0x1184: the image's digest, checked from the main loop (flImageCheck) */
 int updaterExecFinalize(UPD_SLOW_PARAMS)
 {
+#if CHIP_RL78	/* the slim updater's frame: two bytes nothing reads */
+	unsigned int unused;
+#endif
 	unsigned int i;
 	unsigned int count;
 
@@ -929,8 +939,12 @@ int updaterExecFinalize(UPD_SLOW_PARAMS)
 		return 0;
 	}
 	if (slow->state == 0) {
+#if CHIP_RL78	/* the slim updater's: the index cleared first */
+		for (i = 0, count = 0; i < UPD_SEGMENTS; i++)
+#else
 		count = 0;
-		for (i = 0; i < 0x100; i++)
+		for (i = 0; i < UPD_SEGMENTS; i++)
+#endif
 			if (updReceived[i])
 				count++;
 #if FW_SINCE(0x0100060D)
@@ -940,9 +954,17 @@ int updaterExecFinalize(UPD_SLOW_PARAMS)
 			return 0;
 		}
 #endif
+#if CHIP_RL78
+		/* the slim's: written as if segment were a byte (offsets 0, 1 and 2), so the word
+		   segment is 0 and segmentDone takes the count; segmentCount is left as it was */
+		((unsigned char *)&slow->hash)[0] = 0;
+		((unsigned char *)&slow->hash)[1] = 0;
+		((unsigned char *)&slow->hash)[2] = count;
+#else
 		slow->hash.segment = 0;
 		slow->hash.segmentDone = 0;
 		slow->hash.segmentCount = count;
+#endif
 		slow->handler = flImageCheck;
 		slow->state = 1;
 		memcpy(&slow->frame, &hostRx, sizeof(slow->frame));
@@ -1224,9 +1246,15 @@ int hostCommandControlsInfo(void)
 
 	answer = &hostTx;
 	answer->length = 6;
+#if CHIP_RL78	/* the slim's buttons, as buttonPoll reads them */
+	answer->data[0] = P8;
+	answer->data[1] = P7 & 0x5f | 0xa0;
+	answer->data[2] = P5 & 3 | 0xfc;
+#else
 	answer->data[0] = 0xff;
 	answer->data[1] = !P4.6 ? (unsigned char)0xbf : (unsigned char)0xff;
 	answer->data[2] = 0xff;
+#endif
 	answer->data[3] = 0x74;
 	answer->result = 0;
 	return 0;
@@ -1275,8 +1303,29 @@ int hostCommand0130(void)
 	answer = &hostTx;
 	answer->length = 6;
 	answer->data[0] = 0;
+#if CHIP_RL78	/* the slim's: the multi connector's state and output */
+	answer->data[1] = updMultiCn;
+	switch (boardGetMultiCnOutput()) {
+	case 0:
+		answer->data[2] = 0;
+		break;
+	case 1:
+		answer->data[2] = 1;
+		break;
+	case 2:
+		answer->data[2] = 2;
+		break;
+	case 3:
+		answer->data[2] = 3;
+		break;
+	default:
+		answer->data[2] = 0xff;
+		break;
+	}
+#else
 	answer->data[1] = 0;
 	answer->data[2] = 0;
+#endif
 	answer->data[3] = 0;
 	answer->result = 0;
 	return 0;
@@ -1699,6 +1748,46 @@ int UiSetMultiCnPort(struct HostCommandFrame *rx, struct HostSlowCommand *slow)
 	return 0;
 }
 
+#if CHIP_RL78
+/* 0x01b0, the slim's: the multi connector's output, 0 and 1 set, 2 the dongle's lines on (in
+   serial state 0 or 1), 3 off */
+int hostCommand01B0(struct HostCommandFrame *rx, struct HostSlowCommand *slow)
+{
+	if (rx->length == 3) {
+		switch (rx->data[0]) {
+		case 0:
+			boardSetMultiCnOutput(0);
+			slow->answer.result = 0;
+			break;
+		case 1:
+			boardSetMultiCnOutput(1);
+			slow->answer.result = 0;
+			break;
+		case 2:
+			if (boardMultiCnIsDongle()) {
+				if (serialGetState() != 0 && serialGetState() != 1)
+					slow->answer.result = 5;
+				else
+					slow->answer.result = dongleOutputOn();
+			} else
+				slow->answer.result = 4;
+			break;
+		case 3:
+			if (boardMultiCnIsDongle())
+				slow->answer.result = dongleOutputOff();
+			else
+				slow->answer.result = 4;
+			break;
+		default:
+			slow->answer.result = 0x3c;
+			break;
+		}
+	} else
+		slow->answer.result = 0x3b;
+	slow->answer.length = 2;
+	return 0;
+}
+#else
 /* 0x01b0: taken, nothing done */
 int hostCommand01B0(struct HostCommandFrame *rx, struct HostSlowCommand *slow)
 {
@@ -1706,6 +1795,7 @@ int hostCommand01B0(struct HostCommandFrame *rx, struct HostSlowCommand *slow)
 	slow->answer.length = 2;
 	return 0;
 }
+#endif
 #else
 int UiSetMultiCnPort(struct HostCommandFrame *rx, struct HostSlowCommand *slow)
 {
@@ -1750,7 +1840,17 @@ int powerCtrlDeviceReset(struct HostCommandFrame *rx, struct HostSlowCommand *sl
 {
 	if (rx->length == 3) {
 		UPD_LOG((" powerCtrlDeviceReset(%02X,%02X)\r\n", rx->data[0], rx->data[1]));
-#if SOURCE_0103
+#if BOARD_USS1001
+		/* the slim's lines */
+		if (rx->data[1] & 0x02)
+			P6.5 = rx->data[0];
+		if (rx->data[1] & 0x04)
+			P4.2 = rx->data[0];
+		if (rx->data[1] & 0x08)
+			P4.1 = rx->data[0];
+		if (rx->data[1] & 0x10)
+			P0.5 = rx->data[0];
+#elif SOURCE_0103
 		/* the PS TV has none of the three: its stand-in */
 		if (rx->data[1] & 0x02)
 			boardDummyPin = rx->data[0];
@@ -1766,8 +1866,10 @@ int powerCtrlDeviceReset(struct HostCommandFrame *rx, struct HostSlowCommand *sl
 		if (rx->data[1] & 0x08)
 			P0.6 = rx->data[0];
 #endif
+#if !BOARD_USS1001
 		if (rx->data[1] & 0x10)
 			P13.1 = rx->data[0];
+#endif
 		slow->answer.result = 0;
 	} else
 		slow->answer.result = 0x3b;
@@ -1806,7 +1908,10 @@ int ctrlVoltage(struct HostCommandFrame *rx, struct HostSlowCommand *slow)
 			result = 3;
 			goto done;
 		}
-#if SOURCE_0103
+#if BOARD_USS1001
+		/* the slim's, as the application's: 0x3c-0x7b */
+		if (rx->data[1] < 0x3c || rx->data[1] >= 0x7c) {
+#elif SOURCE_0103
 		/* the PS TV's, as the application's: the level tested against a lowest of 0 too */
 		if (rx->data[1] < 0 || rx->data[1] >= 0x40) {
 #else
@@ -1815,7 +1920,7 @@ int ctrlVoltage(struct HostCommandFrame *rx, struct HostSlowCommand *slow)
 			UPD_LOG(("[pwr] ctrlVoltage: error %02x,%02x\r\n", rx->data[0], rx->data[1]));
 			slow->answer.result = 3;
 		} else {
-#if SOURCE_0103
+#if BOARD_DOL1001
 			/* DOL-1001's: the resume's trims */
 			if (regulator == 0x84)
 				trim = configGet()->resumeTrim84;
@@ -1837,7 +1942,50 @@ done:
 }
 
 /* 0x0891 (sceSysconCtrlLED): data[0] 0x40-0x08 the LEDs, 0x80 on */
-#if SOURCE_0103
+#if CHIP_RL78
+/* the slim's: 0x40 the power LED's PWM (its brightness cleared first), then 0x20 the Elmo's LED
+   register 0xa5's bit 14, kept once written */
+int powerCtrlLED(struct HostCommandFrame *rx, struct HostSlowCommand *slow)
+{
+	unsigned char error;
+	unsigned int led;
+
+	slow->answer.result = 0;
+	if (rx->length == 2) {
+		if (rx->data[0] & 0x40) {
+			if (rx->data[0] & 0x80) {
+				powerLedSetBrightness(0);
+				error = powerLedSetPwm(1);
+			} else
+				error = powerLedSetPwm(0);
+			if (error != 0) {
+				slow->answer.result = powerResult(error);
+				goto done;
+			}
+		}
+		if (rx->data[0] & 0x38) {
+			led = elmoLed;
+			if (rx->data[0] & 0x20) {
+				if (rx->data[0] & 0x80)
+					led |= 0x4000;
+				else
+					led &= ~0x4000;
+			}
+			elmoCommand[0] = 0xa5;
+			elmoCommand[1] = ((unsigned char *)&led)[1];
+			elmoCommand[2] = (unsigned char)led;
+			error = elmoWrite(elmoCommand, 3);
+			if (error == 0)
+				elmoLed = led;
+			slow->answer.result = powerResult(error);
+		}
+	} else
+		slow->answer.result = 0x3b;
+done:
+	slow->answer.length = 2;
+	return 0;
+}
+#elif SOURCE_0103
 /* the PS TV's: taken, nothing set */
 int powerCtrlLED(struct HostCommandFrame *rx, struct HostSlowCommand *slow)
 {
@@ -1943,6 +2091,17 @@ int powerCtrlLED(struct HostCommandFrame *rx, struct HostSlowCommand *slow)
 
 #if SOURCE_0103
 /* 0x0886: HDMI CEC's power, data[0] on or off */
+#if CHIP_RL78
+/* the slim's: taken, nothing set */
+int hostCommandCtrlHdmiCecPower(struct HostCommandFrame *rx, struct HostSlowCommand *slow)
+{
+	unsigned char __near *data;
+
+	slow->answer.result = 0;
+	slow->answer.length = 2;
+	return 0;
+}
+#else
 int hostCommandCtrlHdmiCecPower(struct HostCommandFrame *rx, struct HostSlowCommand *slow)
 {
 	unsigned char error;
@@ -1958,6 +2117,7 @@ int hostCommandCtrlHdmiCecPower(struct HostCommandFrame *rx, struct HostSlowComm
 	slow->answer.length = 2;
 	return 0;
 }
+#endif
 #endif
 
 /* 0x0888 (sceSysconCtrlSdPower): data[0] on or off */
@@ -2031,7 +2191,7 @@ int hostCommandCtrlMultiCnPower(struct HostCommandFrame *rx, struct HostSlowComm
 #if FW_SINCE(0x0100060D)
 /* the charge LED through the Cookie's register 3: data[0] 0 off, 1 the Cookie's, 2 on (no
    command of the table runs it) */
-#if SOURCE_0103
+#if SOURCE_0103 && !CHIP_RL78
 /* the PS TV's: taken, nothing set */
 int hostCommandCtrlChargeLed(struct HostCommandFrame *rx, struct HostSlowCommand *slow)
 {
@@ -2094,9 +2254,13 @@ int hostCommand0806(void)
 	answer = &hostTx;
 	value = 0;
 	answer->length = 3;
+#if CHIP_RL78	/* the slim's: no line, refused (0x3f) */
+	answer->result = 0x3f;
+#else
 	if (!P7.4)
 		value |= 1;
 	answer->result = 0;
+#endif
 	answer->data[0] = value;
 	return 0;
 }
@@ -2107,7 +2271,12 @@ int hostCommand0820(void)
 	struct HostAnswerFrame *answer;
 
 	answer = &hostTx;
+#if BOARD_USS1001
+	/* the slim's power LED flags: the host's blink */
+	powerLedClearFlags(POWER_LED_FLAG_HOST_BLINK);
+#else
 	powerLedEndMode(POWER_LED_MODE_HOST_BLINK);
+#endif
 	answer->length = 2;
 	answer->result = 0;
 	return 0;
@@ -2120,7 +2289,11 @@ int hostCommand0821(void)
 
 	answer = &hostTx;
 	powerLedLoadBlink(0);
+#if BOARD_USS1001
+	powerLedSetFlags(POWER_LED_FLAG_HOST_BLINK);
+#else
 	powerLedStartMode(POWER_LED_MODE_HOST_BLINK);
+#endif
 	answer->length = 2;
 	answer->result = 0;
 	return 0;
@@ -2132,28 +2305,52 @@ int hostCommand0822(void)
 
 	answer = &hostTx;
 	powerLedLoadBlink(1);
+#if BOARD_USS1001
+	powerLedSetFlags(POWER_LED_FLAG_HOST_BLINK);
+#else
 	powerLedStartMode(POWER_LED_MODE_HOST_BLINK);
+#endif
 	answer->length = 2;
 	answer->result = 0;
 	return 0;
 }
 
 /* 0x08c5: the USB's power, data[0] on or off (taken with a length of 1) */
+#if CHIP_RL78
+/* the slim's: refused (0x3e) */
+int hostCommand08C5(struct HostCommandFrame *rx, struct HostSlowCommand *slow)
+{
+	unsigned char __near *data;
+
+	slow->answer.result = 0x3e;
+	slow->answer.length = 2;
+	return 0;
+}
+#else
 int hostCommand08C5(struct HostCommandFrame *rx, struct HostSlowCommand *slow)
 {
 	unsigned char error;
 
 	if (rx->length == 1) {
+#if BOARD_USS1001
+		/* the slim's: the SD card's power */
+		if (rx->data[0])
+			error = powerSdOn();
+		else
+			error = powerSdOff();
+#else
 		if (rx->data[0])
 			error = powerUsbOn();
 		else
 			error = powerUsbOff();
+#endif
 		slow->answer.result = powerResult(error);
 	} else
 		slow->answer.result = 0x3b;
 	slow->answer.length = 2;
 	return 0;
 }
+#endif
 #endif
 
 /* 0x0900 (sceSysconGetBatteryRemainCap) */
@@ -2541,6 +2738,17 @@ int flSetSegment(unsigned char segment)
 	if (updImageChecked)
 		return 6;
 #endif
+#if CHIP_RL78
+	/* the slim's: 384 segments, the last two (0xfe, 0xff) the settings' at 0x5f800 */
+	if (segment >= UPD_SEGMENTS)
+		return FL_SEGMENT_ERROR;
+	if (segment < 4)
+		segment += 4;
+	if (segment >= 0xfe)
+		updSegment = (unsigned int)segment + 0x80;
+	else
+		updSegment = segment;
+#else
 	if (segment >= 0x100)
 		return FL_SEGMENT_ERROR;
 	if (segment == 0xe0)
@@ -2554,6 +2762,7 @@ int flSetSegment(unsigned char segment)
 	if (segment < 4)
 		segment += 4;
 	updSegment = segment;
+#endif
 #if SOURCE_0103
 	updReceived[updSegment] = 1;
 	memset(updPlain, 0, 0x400);
@@ -2599,7 +2808,7 @@ void flImageCheck(struct HostSlowCommand *slow)
 
 	count = 2;
 	hash = &slow->hash;
-	for (segment = hash->segment; segment < 0x100; segment++) {
+	for (segment = hash->segment; segment < UPD_SEGMENTS; segment++) {
 		if (updReceived[segment]) {
 			if (count-- == 0) {
 				hash->segment = segment;

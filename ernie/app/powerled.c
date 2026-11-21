@@ -572,7 +572,9 @@ struct PowerLedFlags powerLedFlags;
 static void powerLedFlagsTimer(void);
 static unsigned int powerLedFlagsCharging(void);
 static void powerLedFlagsShow(unsigned char led);
+#ifndef ERNIE_UPDATER
 static void powerLedFlagsStart(unsigned char pattern, unsigned int on, unsigned int off);
+#endif
 
 void powerLedFlagsInit(unsigned char resumed)
 {
@@ -590,7 +592,12 @@ void powerLedFlagsInit(unsigned char resumed)
 	powerLedFlags.hostOff = 0;
 	handler.handler = powerLedFlagsTimer;
 	timerSetHandler(POWER_LED_TIMER, &handler);
+#ifdef ERNIE_UPDATER
+	switch (resumed) {
+	case 0:
+#else
 	if (resumed == 0) {
+#endif
 		powerLedFlags.mode = POWER_LED_MODE_OFF;
 		powerLedFlags.causes.value = 0;
 		powerLedFlagsShow(POWER_LED_SHOW_NONE);
@@ -600,6 +607,13 @@ void powerLedFlagsInit(unsigned char resumed)
 			powerLedFlags.causes.bits.off = 1;
 		if (configGet()->state.bits.chargeLedStateOff)
 			powerLedFlags.causes.bits.stateOff = 1;
+#ifdef ERNIE_UPDATER
+		break;
+	case 1:	/* the slim updater's: resumed, the mode the causes choose at once */
+		powerLedFlags.mode = 0;
+		powerLedFlagsUpdate();
+		break;
+#endif
 	}
 }
 
@@ -615,8 +629,10 @@ void powerLedFlagsUpdate(void)
 	else if (powerLedFlags.mode == POWER_LED_MODE_ALARM && powerLedFlags.causes.bits.alarm)
 		mode = POWER_LED_MODE_ALARM;	/* the alarm's blinks run to their end */
 #endif
+#ifndef ERNIE_UPDATER	/* the slim updater has no host pattern */
 	else if (powerLedFlags.causes.bits.host)
 		mode = POWER_LED_MODE_HOST;
+#endif
 	else if (powerLedFlagsCharging() != 0)
 		mode = POWER_LED_MODE_CHARGING;
 	else if (powerLedFlags.causes.bits.hostBlink &&
@@ -680,6 +696,7 @@ void powerLedFlagsUpdate(void)
 			powerLedFlagsShow(POWER_LED_SHOW_CHARGE);
 			break;
 		case POWER_LED_MODE_HOST:
+#ifndef ERNIE_UPDATER
 			if (mode != powerLedFlags.mode || powerLedFlags.pattern != powerLedFlags.hostPattern ||
 			    powerLedFlags.onTime != powerLedFlags.hostOn || powerLedFlags.offTime != powerLedFlags.hostOff) {
 				timerStop(POWER_LED_TIMER);
@@ -688,6 +705,7 @@ void powerLedFlagsUpdate(void)
 				powerLedFlags.count = POWER_LED_FOREVER;
 				powerLedFlagsStart(powerLedFlags.hostPattern, powerLedFlags.onTime, powerLedFlags.offTime);
 			}
+#endif
 			break;
 		}
 	}
@@ -728,6 +746,7 @@ void powerLedFlagsStep(void)
 		}
 		break;
 	case POWER_LED_MODE_HOST:
+#ifndef ERNIE_UPDATER
 		if (powerLedFlags.phase == 1) {
 			if (powerLedFlags.offTime != 0) {
 				switch (powerLedFlags.pattern) {
@@ -771,6 +790,7 @@ void powerLedFlagsStep(void)
 				time = powerLedFlags.offTime;
 			}
 		}
+#endif
 		break;
 	case POWER_LED_MODE_OFF:
 	case POWER_LED_MODE_ON:
@@ -783,13 +803,27 @@ void powerLedFlagsStep(void)
 		timerStart(POWER_LED_TIMER, POWER_LED_TICKS(time));
 }
 
+#ifdef ERNIE_UPDATER
+/* the slim updater's: its main loop's events 0x96 (powerLedFlagsUpdate) and 0x97
+   (powerLedFlagsStep) */
+#define POWER_LED_UPDATE()	updEventSet(0x96)
+#define POWER_LED_STEP()	updEventSet(0x97)
+#else
+#define POWER_LED_UPDATE()	task5SetFlag(4, 0x0800)
+#if POWER_LED_0105
+#define POWER_LED_STEP()	task5ISetFlag(0x2000)
+#else
+#define POWER_LED_STEP()	task5SetFlag(4, 0x2000)
+#endif
+#endif
+
 /* the causes set or cleared for task 5 (event flag 4's 0x0800) */
 void powerLedSetFlags(unsigned int flags)
 {
 	dis_dsp();
 	powerLedFlags.causes.value |= flags;
 	ena_dsp();
-	task5SetFlag(4, 0x0800);
+	POWER_LED_UPDATE();
 }
 
 void powerLedClearFlags(unsigned int flags)
@@ -797,7 +831,7 @@ void powerLedClearFlags(unsigned int flags)
 	dis_dsp();
 	powerLedFlags.causes.value &= ~flags;
 	ena_dsp();
-	task5SetFlag(4, 0x0800);
+	POWER_LED_UPDATE();
 }
 
 /* and at once */
@@ -845,11 +879,7 @@ void powerLedLoadBlink(unsigned char index)
 
 static void powerLedFlagsTimer(void)
 {
-#if POWER_LED_0105
-	task5ISetFlag(0x2000);
-#else
-	task5SetFlag(4, 0x2000);
-#endif
+	POWER_LED_STEP();
 }
 
 /* the charge LED on: charging, not full, and the USB powered, a resume, or the dongle or
@@ -877,7 +907,7 @@ static unsigned int powerLedFlagsCharging(void)
 	       powerLedFlags.causes.bits.charging && !powerLedFlags.causes.bits.full &&
 	       (usbPower != 0 || powerLedFlags.causes.bits.resumed ||
 		((usbIs1 != 0 || usbDongle != 0 || usbDebug != 0) && (state == 8 || state == 4)));
-#elif FW_SINCE(0x01030511)
+#elif APP_SINCE(0x01030511)
 	usbAdapter = chargeUsbDongle() || chargeUsbDebug();
 #else
 	usbAdapter = chargeUsbDongle();
@@ -909,6 +939,7 @@ static void powerLedFlagsShow(unsigned char led)
 	}
 }
 
+#ifndef ERNIE_UPDATER
 /* host request 0x089f's: the pattern (0 the power LED and off, 1 the charge LED and off, 2 the
    power LED and the charge LED; 0xff none) and its times, in ms */
 void powerLedSetPattern(unsigned char pattern, unsigned int on, unsigned int off)
@@ -975,5 +1006,6 @@ static void powerLedFlagsStart(unsigned char pattern, unsigned int on, unsigned 
 		break;
 	}
 }
+#endif
 #endif
 #endif

@@ -33,6 +33,16 @@
 #define HOST_RESULT_FULL	0x82	/* no free queue entry */
 #define HOST_RESULT_UNKNOWN	0x3f
 
+/* the host link's two output lines: set while a frame is polled, and low until its answer
+   is sent (USS-1001: P9.6 and P1.5) */
+#if CHIP_RL78
+#define HOST_ACTIVE		P9.6
+#define HOST_READY		P1.5
+#else
+#define HOST_ACTIVE		P5.6
+#define HOST_READY		P5.7
+#endif
+
 struct HostCommandFrame hostRx;
 struct HostAnswerFrame hostTx;
 struct HostSlowCommand hostSlowCommands[HOST_SLOW_COMMANDS];
@@ -50,8 +60,8 @@ int hostOpen(void)
 
 int hostClose(void)
 {
-	P5.6 = 0;
-	P5.7 = 0;
+	HOST_ACTIVE = 0;
+	HOST_READY = 0;
 	csiClose();
 	return 0;
 }
@@ -68,9 +78,9 @@ unsigned char hostPoll(void)
 	queued = 0;
 	timeout = 0x1000;
 	slow = NULL;
-	P5.6 = 1;
+	HOST_ACTIVE = 1;
 	P90 = 0;
-	P5.7 = 0;
+	HOST_READY = 0;
 	hostTx.status = sleepFactorSnapshot() | (hostLink.statusBit1 ? HOST_STATUS_CHECKSUM : 0) |
 			0x08 | (hostLink.statusBit5 ? HOST_STATUS_SLOW : 0) | 0x40;
 	hostTx.reserved = 0;
@@ -118,7 +128,7 @@ unsigned char hostPoll(void)
 		size++;
 	csiTransferPoll(hostRx.data, &hostTx.result, size);
 	P90 = 1;
-	P5.7 = 1;
+	HOST_READY = 1;
 	while (P1.6 && timeout--)
 		;
 #if FW_SINCE(0x0100060D)

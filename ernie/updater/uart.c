@@ -3,9 +3,14 @@
  * serial channels, one sending and one receiving, through two ring buffers. UART3 is set up
  * here (uartInit, uart3Open); UART2 is not, and its timeout and UART3's do nothing.
  */
+#if (ERNIE_HW >> 20) == 0x008	/* CHIP_RL78 (#pragma comes first) */
+/* USS-1001 has no UART3; UART1's vectors, one up from the device file's, are in vectors_rl78.asm */
+#define UART1_INTERRUPT	__interrupt
+#else
 #pragma interrupt INTSRE3 uart3ErrorInterrupt
 #pragma interrupt INTSR3 uart3ReceiveInterrupt
 #pragma interrupt INTST3 uart3SendInterrupt
+#endif
 #pragma sfr
 #pragma DI
 #pragma EI
@@ -47,15 +52,32 @@ struct UartBaud {
 
 void uart2Timeout(void);
 void uart3Timeout(void);
+#if CHIP_RL78
+void uart4Timeout(void);
 
+/* USS-1001: UART1 (SAU0's channels 2 and 3) in UART3's place, UART4 the host's link */
+struct UartPort uart1;
+struct UartPort uart2;
+struct UartPort uart4;
+#else
 struct UartPort uart2;
 struct UartPort uart3;
 struct UartPort uart4;
+#endif
 unsigned char uart2Rx[0x20];
 unsigned char uart2Tx[0x20];
 unsigned char uart3Rx[0x80];
 unsigned char uart3Tx[0x80];
 
+#if CHIP_RL78
+static struct UartPort * const __far uartPorts[5] = {
+	NULL, &uart1, &uart2, NULL, &uart4,
+};
+
+static void (* const __far uartTimeoutHandlers[5])(void) = {
+	NULL, NULL, uart2Timeout, uart3Timeout, uart4Timeout,
+};
+#else
 static struct UartPort * const __far uartPorts[5] = {
 	NULL, NULL, &uart2, &uart3, &uart4,
 };
@@ -63,6 +85,7 @@ static struct UartPort * const __far uartPorts[5] = {
 static void (* const __far uartTimeoutHandlers[5])(void) = {
 	NULL, NULL, uart2Timeout, uart3Timeout, NULL,
 };
+#endif
 
 /* port 3's status registers are SAU0's channels 0 and 1, as port 0's (nothing here reads them) */
 static const struct UartRegisters __far uartRegisters[5] = {
@@ -74,8 +97,14 @@ static const struct UartRegisters __far uartRegisters[5] = {
 	  (volatile unsigned int *)0xf0140, (volatile unsigned int *)0xf0142 },
 	{ (volatile unsigned int *)0xfff14, (volatile unsigned int *)0xfff16,
 	  (volatile unsigned int *)0xf0100, (volatile unsigned int *)0xf0102 },
+#if CHIP_RL78
+	/* SAU2 in the RL78's layout */
+	{ (volatile unsigned int *)0xfff78, (volatile unsigned int *)0xfff7a,
+	  (volatile unsigned int *)0xf0280, (volatile unsigned int *)0xf0282 },
+#else
 	{ (volatile unsigned int *)0xfff4c, (volatile unsigned int *)0xfff4e,
 	  (volatile unsigned int *)0xf0200, (volatile unsigned int *)0xf0202 },
+#endif
 };
 
 static const struct UartConfig __far uart2Config = { 4, 0x0c, 0x0097 };
@@ -88,6 +117,7 @@ static const struct UartBaud __far uartBauds[4] = {
 	{ 3, 1, 0x11 },
 };
 
+#if !CHIP_RL78
 /* both ports' buffers, and UART3 at uart3Config's speed */
 int uartInit(void)
 {
@@ -136,6 +166,8 @@ int uartInit(void)
 	return 0;
 }
 
+#endif
+
 /* stops a port's sending channel and its output */
 void uartStopTx(unsigned char port)
 {
@@ -175,6 +207,7 @@ void uartReset(unsigned char port)
 	}
 }
 
+#if !CHIP_RL78
 /* opens UART3 at one of uartBauds' speeds (115200 bit/s when none is baud) */
 unsigned char uart3Open(unsigned char baud)
 {
@@ -227,6 +260,8 @@ unsigned char uart3Open(unsigned char baud)
 	uart3.flags = UART_OPEN;
 	return 0;
 }
+
+#endif
 
 /* takes up to size bytes received; their count */
 unsigned char uartRead(unsigned char port, unsigned char *buf, unsigned char size)
@@ -336,6 +371,12 @@ void uart3Timeout(void)
 {
 }
 
+#if CHIP_RL78
+void uart4Timeout(void)
+{
+}
+#endif
+
 /* UART2 is not used */
 int uart2Open(void)
 {
@@ -347,6 +388,42 @@ int uart2Close(unsigned char keep)
 	return 0;
 }
 
+#if CHIP_RL78
+/* USS-1001: UART1 the link UART4 is on the other boards (uart4.c's): a reception error cleared */
+UART1_INTERRUPT void uart1ErrorInterrupt(void)
+{
+	unsigned char status;
+
+	status = SDR03;	/* the byte in error, dropped */
+	status = SSR03;
+	SIR03 = status & 0x07;
+}
+
+/* a byte received restarts timer SERIAL4_TIMER */
+UART1_INTERRUPT void uart1ReceiveInterrupt(void)
+{
+	unsigned char data;
+
+	data = SDR03;
+	if ((uart1.rxWrite + 1 & uart1.rxMask) != uart1.rxRead) {
+		uart1.rxBuffer[uart1.rxWrite] = data;
+		uart1.rxWrite = uart1.rxWrite + 1 & uart1.rxMask;
+		timerStart(SERIAL4_TIMER, 2);
+	}
+}
+
+/* the next byte queued, or, with none left, event 2 */
+UART1_INTERRUPT void uart1SendInterrupt(void)
+{
+	struct UartPort *p = &uart1;
+
+	if (p->txWrite - p->txRead & p->txMask) {
+		SDR02 = p->txBuffer[p->txRead];
+		p->txRead = p->txRead + 1 & p->txMask;
+	} else
+		updEventSet(2);
+}
+#else
 /* a reception error: cleared, and on an overrun the channel restarts */
 void uart3ErrorInterrupt(void)
 {
@@ -395,3 +472,4 @@ void uart3SendInterrupt(void)
 			updEventSet(0x33);
 	}
 }
+#endif

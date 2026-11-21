@@ -33,7 +33,7 @@
 #define CHARGE_RETAIL_10X	(BOARD_IS(0x00406000) || HW_IS(0x00416000))
 #define CHARGE_AC_DELAY_60	CHARGE_RETAIL_10X	/* the updater's on PDEL too */
 #else
-#define CHARGE_SINCE(version)	FW_SINCE(version)
+#define CHARGE_SINCE(version)	APP_SINCE(version)
 #define CHARGE_RETAIL_10X	FW_RETAIL_10X
 #define CHARGE_AC_DELAY_60	(CHARGE_RETAIL_10X && BOARD_IS(0x00406000))
 #endif
@@ -312,6 +312,10 @@ void chargeInit(void)
 		if (deviceVersions.battery.version[2] != 0)
 			chargeSetBattery();
 	}
+#ifdef ERNIE_UPDATER	/* the slim's updater: no Cookie timer and no timer 0x1f */
+	handler.handler = chargeTimer;
+	timerSetHandler(TIMER_RTC(0x17), &handler);
+#else
 	charge.timer1fPending = 0;
 	handler.handler = chargeTimer;
 	timerSetHandler(TIMER_RTC(0x17), &handler);
@@ -319,6 +323,7 @@ void chargeInit(void)
 	timerSetHandler(TIMER_RTC(0x1e), &handler);
 	handler.handler = chargeTimer1f;
 	timerSetHandler(TIMER_RTC(0x1f), &handler);
+#endif
 	handler.handler = chargeUpdateSoon;
 	timerSetHandler(CHARGE_SOON_TIMER, &handler);
 #else
@@ -472,8 +477,9 @@ void chargeInit(void)
 #endif
 }
 
-#if (BOARD_USS1001 && CHARGE_SINCE(0x01030511)) || CHARGE_0104
-/* the slim's (0x01030511 on) and DOL-1002 call stateTransition themselves */
+#if (BOARD_USS1001 && CHARGE_SINCE(0x01030511) && !(defined(ERNIE_UPDATER))) || CHARGE_0104
+/* the slim's (0x01030511 on) and DOL-1002 call stateTransition themselves (the slim's updater:
+   the event, below) */
 #define chargeTransition(transition)	stateTransition(transition)
 #elif SOURCE_0103 && !defined(ERNIE_UPDATER)	/* and the PS TV's (its updater: the event) */
 /* 0x01030505's: stateTransition with the transition's low byte */
@@ -552,10 +558,12 @@ void chargeUpdate(void)
 	state = stateGet();
 	if (chargeStatus1Last.word != cookieStatus1.word || chargeStatus2Last.word != cookieStatus2.word) {
 		chargeSetPowerStatus();
+#ifndef ERNIE_UPDATER	/* the slim's updater has no input notice */
 		if ((chargeStatus1Last.bits.ac ^ cookieStatus1.bits.ac) ||
 		    (chargeStatus1Last.bits.charging ^ cookieStatus1.bits.charging) ||
 		    (chargeStatus2Last.bits.vbus ^ cookieStatus2.bits.vbus))
 			inputChanged();
+#endif
 		if (cookieStatus1.bits.level)
 			;
 	}
@@ -613,8 +621,10 @@ void chargeUpdate(void)
 		batteryReadRemainCap(&charge.batteryRemainCap);
 		batteryReadVolt(&charge.batteryVolt);
 		batteryReadLifePercent(&charge.batteryLifePercent);
+#ifndef ERNIE_UPDATER	/* the slim's updater: no low battery LED */
 		if (configGet()->batteryLowVolt > charge.batteryVolt)
 			powerLedClearFlags(0x20);
+#endif
 		charge.flagsRead = chargeReadFlags();
 		changed = ~(charge.flagsRead ^ charge.flagsLast) & (charge.flags ^ charge.flagsRead);
 		if (changed != 0) {
@@ -627,10 +637,12 @@ void chargeUpdate(void)
 			eventLogRecord(5, 1, eventLogCharge.byte, 4);
 #endif
 			if (changed & 0x0200) {
+#ifndef ERNIE_UPDATER	/* the slim's updater leaves the WLAN and the BBMC */
 				if ((charge.flags & 0x0200) && (state & 0x0008)) {
 					powerOffWlan();
 					powerBbmcCycle();
 				}
+#endif
 				CHARGE_FACTOR_19 = (charge.flags & 0x0200) ? 1 : 0;
 				sleepFactorSet19(CHARGE_FACTOR_19);
 			}
@@ -646,6 +658,7 @@ void chargeUpdate(void)
 			sleepFactorSet17(CHARGE_FACTOR_17);
 			CHARGE_FACTOR_18 = (charge.flags & 0x0100) ? 1 : 0;
 			sleepFactorSet18(CHARGE_FACTOR_18);
+#ifndef ERNIE_UPDATER	/* the slim's updater has no alarm LED */
 			if (CHARGE_FACTOR_19 && state != STATE_RESUME) {
 				if (input1Bit7Active())
 					;
@@ -653,6 +666,7 @@ void chargeUpdate(void)
 			} else {
 				powerLedSetAlarm(0);
 			}
+#endif
 			if (charge.flags & 0x0020) {
 #if BATTERY_GAUGE
 				if (!(unsigned char)stateGetWakeBit(6) && !(state & 0x8000) &&
@@ -678,11 +692,17 @@ void chargeUpdate(void)
 		if ((charge.flags & 0x0040) && P7.5 && !P13.7)
 			chargeTransition(0x40);
 		if (state & 0x000c) {
+#ifdef ERNIE_UPDATER	/* the slim's updater: the host's request alone */
+			if (chargeControl.0 && CHARGE_TEST(chargeMayStart()) && !CHARGE_TEST(chargeAlarm0On())) {
+#else
 			if (((configGet()->state.bits.offWakeUnmask22 && chargeExternalPower()) ||
 			     chargeControl.0) && CHARGE_TEST(chargeMayStart()) && !CHARGE_TEST(chargeAlarm0On())) {
+#endif
 				chargeTransition(0x16);
 				chargeControl.0 = 0;
+#ifndef ERNIE_UPDATER	/* the slim's updater has no timer 0x1f */
 				chargeTimer1fStop();
+#endif
 			}
 #if BATTERY_GAUGE
 			if (!configGet()->state.bits.chargeHold && chargeUsbIs1() &&
@@ -696,23 +716,29 @@ void chargeUpdate(void)
 			    !powerStatus.bits.cookieLock0 && !powerStatus.bits.cookieLock1)
 				chargeTransition(0x0f);
 		} else if (state & 0x0020) {
+#ifndef ERNIE_UPDATER	/* the slim's updater: nothing */
 			if (configGet()->state.bits.chargeTimer1f) {
 				if (!chargeExternalPower() && !charge.timer1fPending)
 					chargeTimer1fStart();
 				else if (chargeExternalPower() && charge.timer1fPending)
 					chargeTimer1fStop();
 			}
+#endif
 		}
 		if (CHARGE_TEST(chargeBbmcChanged()))
 			chargeSetCurrent();
+#ifndef ERNIE_UPDATER	/* the slim's updater: no temperatures in degrees, no faults record */
 		charge.batteryTempC = charge.batteryTemp - 0x0aac;
 		charge.batteryBicTempC = charge.batteryBicTemp - 0x0aac;
 		if (ticks - charge.tempTicks >= 0x79)
 			charge.tempTicks = ticks;
+#endif
 		if (!chargeStatus1Last.bits.battery) {
+#ifndef ERNIE_UPDATER
 			batteryFaults.byte[0] |= 0x10;
 #if BOARD_EVENT_LOG
 			eventLogRecord(5, 0x10, batteryFaults.byte, 4);
+#endif
 #endif
 			if (cookieStatus1.bits.charging && cookieStatus2.bits.boost) {
 				chargeBoostTicks = ticks;
@@ -723,9 +749,11 @@ void chargeUpdate(void)
 			if (ticks - chargeBoostTicks >= configGet()->chargeBoostTime * 2 ||
 			    charge.batteryVolt >= configGet()->chargeBoostVolt) {
 				cookieCtrlReg3Bit12(1);
+#ifndef ERNIE_UPDATER
 				batteryFaults.byte[0] |= 0x20;
 #if BOARD_EVENT_LOG
 				eventLogRecord(5, 0x10, batteryFaults.byte, 4);
+#endif
 #endif
 				chargeBoost.bits.running = 0;
 				chargeBoost.bits.done = 1;
@@ -736,12 +764,14 @@ void chargeUpdate(void)
 		if (!configGet()->start.bits.batteryNoRetry && !(state & 0x8000) && (state & 0x0028))
 			chargeTransition(0x38);
 		chargeBoost.bits.running = 0;
+#ifndef ERNIE_UPDATER
 		batteryFaults.byte[0] &= ~0x10;
 		batteryFaults.byte[0] &= ~0x20;
 #if BOARD_EVENT_LOG
 		eventLogRecord(5, 0x10, batteryFaults.byte, 4);
 #endif
 		logEvent(0x0e);
+#endif
 	}
 #if CHARGE_SINCE(0x01030511) && !BATTERY_GAUGE
 	cookieReadStatus1(status1.byte);
@@ -1800,7 +1830,7 @@ void chargeUpdateLater(void)
 
 void chargeUpdateSoon(void)
 {
-#if UPD_0103
+#if UPD_0103 && !BOARD_USS1001
 	/* the PS TV's updater: nothing */
 #elif defined(ERNIE_UPDATER)
 	/* the updater's: its event 0x82 */
@@ -1843,9 +1873,11 @@ void chargeUsbChanged(void)
 	cookieStatus2.byte[1] &= 0xb1;
 	cookieStatus1.bits.status1 = 0;
 	chargeSetPowerStatus();
+#ifndef ERNIE_UPDATER
 	inputChanged();
+#endif
 	if (chargeUsbState.0) {
-		stateTransition(0x62);
+		STATE_TRANSITION(0x62);
 #if BOARD_USS1001 && SOURCE_0104
 		chargeUsbWait = 0x13;	/* the slim's 0x0105: the timer in ticks */
 #else
@@ -2463,7 +2495,7 @@ void chargeSetAcDelay(void)
 		break;
 	case 0x0004:
 	case 0x0008:
-#if (BOARD_CHARGE_TIMER1F && !BOARD_DOL1001) || BOARD_IS(0x00411000)
+#if (BOARD_CHARGE_TIMER1F && !BOARD_DOL1001) || BOARD_IS(0x00411000) || (BOARD_USS1001 && (defined(ERNIE_UPDATER)))
 		charge.acDelay = 60;
 #else
 		charge.acDelay = 10;
@@ -2546,12 +2578,14 @@ unsigned char chargeUsbMultiCn2(void)
 	return 0;
 }
 
+#if !UPD_0103	/* not in the slim's updater */
 /* the AC, or a USB charger (2 or 3) */
 unsigned char chargeExternalPower(void)
 {
 	return powerStatus.bits.ac ||
 	       (cookieStatus2.bits.vbus && (powerStatus.bits.usb == 2 || powerStatus.bits.usb == 3));
 }
+#endif
 #endif
 
 /* the updater has neither, the PS TV's usbIs1 */

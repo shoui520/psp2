@@ -52,7 +52,7 @@
 /* USS-1002's 0x01050031 operations close the data flash library at their end (flash.c's
    flashClose) */
 #define NVS_FLASH_CLOSE		(SOURCE_0104 && !FW_SINCE(0x01050034))
-#if FW_SINCE(0x01030511)
+#if APP_SINCE(0x01030511)
 #define NVS_HEADER_MARK		0x42
 #else
 #define NVS_HEADER_MARK		0x41	/* 0x01030505 */
@@ -2183,7 +2183,7 @@ unsigned char nvsClean(unsigned char count)
 			/* cleaned all the same */
 		}
 	}
-#if FW_SINCE(0x01030511)
+#if APP_SINCE(0x01030511)
 	nvs.state = 2;
 #endif
 	retry = 3;
@@ -2206,7 +2206,7 @@ unsigned char nvsClean(unsigned char count)
 	}
 	if (nvs.freeList.count != 0)
 		nvs.state = 1;
-#if FW_SINCE(0x01030511)
+#if APP_SINCE(0x01030511)
 	else
 		nvs.state = 3;
 #endif
@@ -2261,7 +2261,7 @@ unsigned char nvsMount(unsigned char mode)
 			info->role = NVS_BLOCK_ERASED;
 			break;
 		default:
-#if FW_SINCE(0x01030511)
+#if APP_SINCE(0x01030511)
 			if (header->status.bytes[0] == 0xff && header->status.bytes[3] == 0xff)
 				info->role = NVS_BLOCK_USED;
 			else
@@ -2409,7 +2409,7 @@ void nvsPrintBlock(unsigned int block)
 }
 
 /* erases a block and makes it the newest data block */
-#if !FW_SINCE(0x01030511)
+#if !APP_SINCE(0x01030511)
 /* 0x01030505: the block erased (three tries), then its whole header written at once */
 unsigned char nvsMarkData(unsigned char block)
 {

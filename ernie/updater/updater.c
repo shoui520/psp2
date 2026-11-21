@@ -20,6 +20,9 @@
 #include "ernie.h"
 #include "board.h"
 #include "debugpin.h"
+#if BOARD_USS1001
+#include "eventlog.h"
+#endif
 #include "charge.h"
 #include "config.h"
 #include "keepram.h"
@@ -50,6 +53,10 @@ void mainLoop(void);
 
 void main(void)
 {
+#if BOARD_USS1001	/* the slim's: its event log (app/eventlog.c) recording */
+	eventLogInit();
+	eventLogStart();
+#endif
 	rtcInit();
 	sleepFactorInit();
 #if FW_SINCE(0x0100060D)
@@ -69,6 +76,30 @@ void main(void)
 	mainLoop();
 }
 
+#if CHIP_RL78
+/* the slim's: the reset logged, mode 0 after it (the event log started else), then the mode
+   and the wakeup factor logged */
+int updaterInitErnieUpdMode(void)
+{
+	eventLogRecord(9, 0xff, &updReset, 1);
+	if (updReset) {
+		updMode = 0;
+		paramInit();
+		watchdogSet(&configGet()->watchdog);
+		watchdogStop();
+	} else {
+		updMode = 7;
+		eventLogInit();
+		eventLogStart();
+	}
+	eventLogData5[0] = updMode;
+	eventLogData5[1] = 0xff;
+	eventLogData5[2] = stateWakeupFactor.byte[1];
+	eventLogData5[3] = stateWakeupFactor.byte[0];
+	eventLogRecord(9, 1, eventLogData5, 4);
+	return 0;
+}
+#else
 int updaterInitErnieUpdMode(void)
 {
 	if (updReset) {
@@ -97,6 +128,7 @@ int updaterInitErnieUpdMode(void)
 	}
 	return 0;
 }
+#endif
 
 unsigned char updModeGet(void)
 {
@@ -138,6 +170,10 @@ unsigned char updModeChange(unsigned char mode)
 			refused = 0;
 			break;
 		case 3:
+#if CHIP_RL78	/* the slim's: the power LED's full battery flag */
+			if ((unsigned char)chargeBatteryLevel9() && !(unsigned char)chargeAlarm0On())
+				powerLedSetFlags(0x80);
+#endif
 			if ((unsigned char)chargeMayStart() && !(unsigned char)chargeAlarm0On()) {
 				handshakeInit(0);
 				watchdogSetup();
@@ -283,7 +319,16 @@ unsigned char updModeChange(unsigned char mode)
 	}
 	if (!refused) {
 		updMode = mode;
+#if CHIP_RL78	/* the slim's logs the mode, and has its power LED updated in mode 4 */
+		eventLogData5[0] = mode;
+		eventLogData5[1] = mode;
+		eventLogData5[2] = stateWakeupFactor.byte[1];
+		eventLogData5[3] = stateWakeupFactor.byte[0];
+		eventLogRecord(9, 1, eventLogData5, 4);
+		switch (updMode) {	/* the modes' log lines, empty */
+#else
 		switch (mode) {	/* the modes' log lines, empty */
+#endif
 		case 1:
 			break;
 		case 3:
@@ -293,6 +338,13 @@ unsigned char updModeChange(unsigned char mode)
 		}
 		chargeSetAcDelay();
 		updEventSet(0x82);
+#if CHIP_RL78
+		switch (updMode) {
+		case 4:
+			updEventSet(0x96);
+			break;
+		}
+#endif
 		updEventTake(0x66);
 		updEventTake(0x69);
 		updEventTake(0x64);
@@ -582,10 +634,21 @@ unsigned char updEventTake(unsigned char event)
 			updEvents.bits.event82 = 0;
 		break;
 #if SOURCE_0103
+#if BOARD_USS1001
+	case 0x83:
+		if (set = updEvents.bits.event83)
+			updEvents.bits.event83 = 0;
+		break;
+	case 0x96:
+		if (set = updEvents.bits.event96)
+			updEvents.bits.event96 = 0;
+		break;
+#else
 	case 0x8c:
 		if (set = updEvents.bits.event8c)
 			updEvents.bits.event8c = 0;
 		break;
+#endif
 	case 0x97:
 		if (set = updEvents.bits.event97)
 			updEvents.bits.event97 = 0;
@@ -683,9 +746,18 @@ unsigned char updEventSet(unsigned char event)
 		updEvents.bits.event82 = 1;
 		break;
 #if SOURCE_0103
+#if BOARD_USS1001
+	case 0x83:
+		updEvents.bits.event83 = 1;
+		break;
+	case 0x96:
+		updEvents.bits.event96 = 1;
+		break;
+#else
 	case 0x8c:
 		updEvents.bits.event8c = 1;
 		break;
+#endif
 	case 0x97:
 		updEvents.bits.event97 = 1;
 		break;
@@ -712,7 +784,10 @@ unsigned char buttonPoll(void)
 	unsigned char event;
 
 	event = 0;
-#if SOURCE_0103
+#if CHIP_RL78
+	/* the slim's: the power (P7.4) and PS (P7.6) buttons */
+	keys = P7 & 0x5f | 0xa0;
+#elif SOURCE_0103
 	/* the PS TV's: only the PS button (P4.6) */
 	keys = !P4.6 ? (unsigned char)0xbf : (unsigned char)0xff;
 #else
@@ -743,7 +818,32 @@ unsigned char buttonPoll(void)
 	return event;
 }
 
-#if FW_SINCE(0x0100060D)
+#if BOARD_USS1001
+extern unsigned char inputPolls;	/* stub.c's */
+
+/* the slim's: the multi connector read every eighth poll (event 0x79) */
+int inputPoll(void)
+{
+	inputPolls++;
+	if ((inputPolls & 7) == 0)
+		updEventSet(0x79);
+	return 0;
+}
+
+/* events 0x78 and 0x79: what is on the multi connector (analog.c), then event 0x7a */
+int multiCnCheck(void)
+{
+	updMultiCn = analogReadMultiCn();
+	return 0;
+}
+
+/* event 0x7a: the multi connector's output and link set for what is there */
+int multiCnChanged(void)
+{
+	boardMultiCnUpdate();
+	return 0;
+}
+#elif FW_SINCE(0x0100060D)
 /* the multi connector (P2.0) followed: event 0x78, which reads what is there */
 int inputPoll(void)
 {
@@ -887,6 +987,9 @@ void mainLoop(void)
 	unsigned char count;
 
 	serialReset(0);
+#if BOARD_USS1001
+	chipIdInit();
+#endif
 #if SOURCE_0103
 	debugPinInit();
 #endif
@@ -922,6 +1025,9 @@ void mainLoop(void)
 	tm00Start();
 	timerInit();
 	serial1Reset();
+#if BOARD_USS1001
+	analogInput10Init();
+#endif
 	serial4StartTimers();
 #if !UPD_060D_FORMS
 #if BOARD_SERIAL2
@@ -950,6 +1056,10 @@ void mainLoop(void)
 			updModeChange(1);
 			if (updEventTake(0x78))
 				UPD_MULTICN_CHECK();
+#if BOARD_USS1001
+			if (updEventTake(0x79))
+				multiCnCheck();
+#endif
 			if (updEventTake(0x7a))
 				multiCnChanged();
 			break;
@@ -993,11 +1103,21 @@ void mainLoop(void)
 				updModeChange(5);
 			if (updEventTake(0x78))
 				UPD_MULTICN_CHECK();
+#if BOARD_USS1001
+			if (updEventTake(0x79))
+				multiCnCheck();
+#endif
 			if (updEventTake(0x7a))
 				multiCnChanged();
 			if (updEventTake(0x82))
 				chargeUpdate();
 #if SOURCE_0103
+#if BOARD_USS1001
+			if (updEventTake(0x83))
+				chargeUsbChanged();
+			if (updEventTake(0x96))
+				powerLedFlagsUpdate();
+#endif
 			if (updEventTake(0x97))
 				powerLedFlagsStep();
 #endif
@@ -1009,6 +1129,10 @@ void mainLoop(void)
 				updModeChange(5);
 			if (updEventTake(0x82))
 				chargeUpdate();
+#if BOARD_USS1001
+			if (updEventTake(0x83))
+				chargeUsbChanged();
+#endif
 			break;
 		case 3:
 			if (updEventTake(0x66))
@@ -1045,13 +1169,24 @@ void mainLoop(void)
 				updModeChange(5);
 			if (updEventTake(0x78))
 				UPD_MULTICN_CHECK();
+#if BOARD_USS1001
+			if (updEventTake(0x79))
+				multiCnCheck();
+#endif
 			if (updEventTake(0x7a))
 				multiCnChanged();
 			if (updEventTake(0x82))
 				chargeUpdate();
 #if SOURCE_0103
+#if BOARD_DOL1001	/* the slim has no event 0x8c */
 			if (updEventTake(0x8c))
 				powerSleepFactor21();
+#elif BOARD_USS1001
+			if (updEventTake(0x83))
+				chargeUsbChanged();
+			if (updEventTake(0x96))
+				powerLedFlagsUpdate();
+#endif
 			if (updEventTake(0x97))
 				powerLedFlagsStep();
 #endif
@@ -1101,12 +1236,23 @@ void mainLoop(void)
 				UPD_SERIAL_EVENT(0x10);
 			if (updEventTake(0x78))
 				UPD_MULTICN_CHECK();
+#if BOARD_USS1001
+			if (updEventTake(0x79))
+				multiCnCheck();
+#endif
 			if (updEventTake(0x7a))
 				multiCnChanged();
 			if (updEventTake(0x82))
 				chargeUpdate();
+#if BOARD_DOL1001	/* the slim has no event 0x8c */
 			if (updEventTake(0x8c))
 				powerSleepFactor21();
+#elif BOARD_USS1001
+			if (updEventTake(0x83))
+				chargeUsbChanged();
+			if (updEventTake(0x96))
+				powerLedFlagsUpdate();
+#endif
 			if (updEventTake(0x97))
 				powerLedFlagsStep();
 			break;

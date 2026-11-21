@@ -332,6 +332,8 @@ extern __sreg unsigned char chargeCommand0903[2];	/* read by host command 0x0903
 extern __sreg unsigned char chargeSerialMode;	/* chargeSetSerialMode's */
 extern unsigned char chargeSetSerialMode(unsigned char mode);
 #endif
+extern __sreg unsigned char chargeUsbState;	/* the slim's USB supply: 0 connected (P7.5 low), 6 and 7
+						   its checks (chargeUsbChanged) */
 extern __sreg unsigned char chargeUsbWait;	/* the USB's checks left until it settles */
 extern __sreg unsigned char chargeUsbTicks;	/* and the ticks between them */
 #endif
@@ -400,7 +402,7 @@ extern void chargeSetAcDelay(void);
 #if SOURCE_0103
 extern unsigned char chargeUsbPower(void);
 extern unsigned char chargeUsbDongle(void);
-#if FW_SINCE(0x01030511)
+#if APP_SINCE(0x01030511)
 extern unsigned char chargeUsbDebug(void);
 #endif
 extern unsigned char chargeUsbMultiCn2(void);
@@ -422,7 +424,7 @@ extern unsigned char chargeLimitCurrent(unsigned char current);
 #endif
 extern int chargeUsbRequestUpdate(void);
 extern void chargeUsbChanged(void);
-#if FW_SINCE(0x01030511) || CHARGE_0104
+#if APP_SINCE(0x01030511) || CHARGE_0104
 extern unsigned char chargeUsbCurrent(void);
 #endif
 extern char chargeBatteryLevel3(void);

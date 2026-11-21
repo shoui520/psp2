@@ -316,7 +316,7 @@ unsigned char serialCommands1Count(void)
 	return 0x5b;
 #elif BOARD_DOL1001
 	return 0x4e;
-#elif SOURCE_0103 && FW_SINCE(0x01030511)
+#elif SOURCE_0103 && APP_SINCE(0x01030511)
 	return 0x5e;
 #elif SOURCE_0103
 	return 0x59;	/* 0x01030505: no 0x0961-0x0965 */
