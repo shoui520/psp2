@@ -1,8 +1,7 @@
 /*
  * bgdl_api.cpp: the shell's entry points into its background download library (SceBgdl,
  * 0x810FC9E8-0x810FCC30): the task description's constructor and a wrapper per library call.
- * The library itself (0x810FCC30 on) is not written yet: its functions are named by their
- * addresses until it is (PLACEHOLDER).
+ * The library itself is esecron (0x810FCC30 on, esetask.cpp).
  */
 #include <stddef.h>
 #include <scetypes.h>
@@ -11,37 +10,8 @@
 
 #include "bgdl_api.h"
 #include "src/livespace_db/lsdb_keys.h"
-
-/* the library (PLACEHOLDER names: the functions are not written yet) */
-int bgdlManagerCreate(bool clean, const int *quota);		/* 0x811041EC */
-int bgdlManagerStart(void);					/* 0x811042C0 */
-int bgdlManagerRemoveFolders(void);				/* 0x81104346 */
-int bgdlManagerDestroy(void);					/* 0x81104474 */
-int bgdlManagerSetPermission(int arg0, int arg1);		/* 0x81104574 */
-int bgdlManagerNotify(int arg0, int arg1);			/* 0x810FD862 */
-int bgdlCountTitleTasks(const char *titleId, SceUInt32 *count);	/* 0x8110B7E2 */
-int Bgdl_8110BD6E(void);
-int Bgdl_8110BDC0(void);
-int Bgdl_8110BEC2(void);
-int bgdlCountAppTasks(const char *titleId, SceUInt32 *count);		/* 0x8110BFE4 */
-int bgdlDeletePrepare(const char *titleId);			/* 0x8110CD86 */
-int Bgdl_8110E400(void);
-int bgdlGetTaskInfo(const char *titleId, BgdlTaskInfo *info);	/* 0x8110E430 */
-int bgdlGetTaskInfoByName(const char *name, BgdlTaskInfo *info);	/* 0x8110E45E */
-int bgdlAddPspTask(const char *url, int type, int arg2, int arg4, int arg5);	/* 0x8110E48C */
-int bgdlAddTask(const char *url, int type, int arg2, bool arg3, int arg4, int arg5);	/* 0x8110E6DE */
-int bgdlCountTasks(int *count, void *list);			/* 0x8110E884 */
-int Bgdl_8110ED40(int arg);
-int Bgdl_8110ED62(void);
-int Bgdl_8110ED8A(const char *arg0, int arg1, int arg2, int arg3);
-int Bgdl_8110F018(void);
-int Bgdl_8110F03C(void);
-int Bgdl_8110F1DE(void);
-int Bgdl_8110F1F4(bool arg);
-int Bgdl_8110F208(int arg0, int arg1, int arg2);
-int Bgdl_8110F3A2(void);
-int Bgdl_8110F718(void);
-int Bgdl_8110FB04(void);
+#include "src/livespace_db/livespace_db_internal.h"
+#include "src/esecron/include/esetask.hpp"
 
 /* (0x810FC9E8) */
 BgdlTaskInfo::BgdlTaskInfo()
@@ -60,27 +30,27 @@ BgdlTaskInfo::BgdlTaskInfo()
 }
 
 /* (0x810FCA36) */
-int shellBgdlCreate(bool clean, const int *quota)
+void shellBgdlCreate(bool clean, const int *quota)
 {
-	return bgdlManagerCreate(clean, quota);
+	bgdlManagerCreate(clean, quota);
 }
 
 /* (0x810FCA40) */
-int shellBgdlStart(void)
+void shellBgdlStart(void)
 {
-	return bgdlManagerStart();
+	startMng();
 }
 
 /* (0x810FCA48) */
-int shellBgdlDestroy(void)
+void shellBgdlDestroy(void)
 {
-	return bgdlManagerDestroy();
+	bgdlManagerDestroy();
 }
 
 /* (0x810FCA50) */
-int shellBgdlRemoveFolders(void)
+bool shellBgdlRemoveFolders(void)
 {
-	return bgdlManagerRemoveFolders();
+	return bgdlRemoveFolders();
 }
 
 /* (0x810FCA58) */
@@ -90,9 +60,9 @@ int shellBgdlNotify(void)
 }
 
 /* (0x810FCA64) */
-int shellBgdlSetPermission(void)
+void shellBgdlSetPermission(void)
 {
-	return bgdlManagerSetPermission(3, 7);
+	bgdlSetPermission(3, 7);
 }
 
 /* (0x810FCA70) */
@@ -111,47 +81,48 @@ int shellBgdlCountTitleTasks(const char *titleId)
 }
 
 /* (0x810FCAA6) */
-int shellBgdl_8110BD6E(void)
+bool shellBgdlRecordHasTasks(const LsdbAppInfoPtr *record, SceUInt32 flags)
 {
-	return Bgdl_8110BD6E();
+	return bgdlRecordHasTasks(record, flags);
 }
 
 /* (0x810FCAAE) */
-int shellBgdl_8110BDC0(void)
+bool shellBgdlTitleHasTasks(const char *titleId, SceUInt32 flags)
 {
-	return Bgdl_8110BDC0();
+	return bgdlTitleHasTasks(titleId, flags);
 }
 
 /* (0x810FCAB6) */
-int shellBgdl_8110BEC2(void)
+bool shellBgdlTitleHasTasksOfKind(const char *titleId, int type, SceUInt32 flags)
 {
-	return Bgdl_8110BEC2();
+	return bgdlTitleHasTasksOfKind(titleId, type, flags);
 }
 
 /* (0x810FCABE) */
-int shellBgdl_8110E400(void)
+int shellBgdlInstallTitleTasks(const char *titleId, BgdlTaskInfo *failed, bool *patched)
 {
-	return Bgdl_8110E400();
+	return bgdlInstallTitleTasks(titleId, failed, patched);
 }
 
 /* (0x810FCAC6) */
-int shellBgdlGetTaskInfo(const char *titleId, BgdlTaskInfo *info)
+int shellBgdlInstallTitleTasksType1(const char *titleId, BgdlTaskInfo *failed)
 {
-	return bgdlGetTaskInfo(titleId, info);
+	return bgdlInstallTitleTasksType1(titleId, failed);
 }
 
 /* (0x810FCACE) */
-int shellBgdlGetTaskInfoByName(const char *name, BgdlTaskInfo *info)
+int shellBgdlInstallTitleTasksType2(const char *titleId, BgdlTaskInfo *failed)
 {
-	return bgdlGetTaskInfoByName(name, info);
+	return bgdlInstallTitleTasksType2(titleId, failed);
 }
 
-/* (0x810FCAD6) type 3 is a PSP title's task */
-int shellBgdlAddTask(const char *url, int type, int arg2, bool arg3, int arg4, int arg5)
+/* (0x810FCAD6) type 3 is a PSP title's */
+int shellBgdlInstallTitleTasksOfKinds(const char *titleId, int type, SceUInt32 flags, bool dialog,
+				      BgdlTaskInfo *failed, bool *patched)
 {
 	if (type == 3)
-		return bgdlAddPspTask(url, type, arg2, arg4, arg5);
-	return bgdlAddTask(url, type, arg2, arg3, arg4, arg5);
+		return bgdlInstallTitleTasksType3(titleId, type, flags, failed, patched);
+	return bgdlInstallTitleTasksOfKinds(titleId, type, flags, dialog, failed, patched);
 }
 
 /* (0x810FCB02) */
@@ -166,74 +137,75 @@ int shellBgdlCountAppTasks(const char *titleId)
 /* (0x810FCB30) */
 int shellBgdlCountTasks(void)
 {
-	int count = 0;
+	SceUInt32 count = 0;
 
 	bgdlCountTasks(&count, NULL);
 	return count;
 }
 
 /* (0x810FCB60) */
-int shellBgdl_8110ED40(int arg)
+int shellBgdlGetContentTaskInfos(paf::vector<BgdlTaskInfo> *infos)
 {
-	return Bgdl_8110ED40(arg);
+	return bgdlGetContentTaskInfos(infos);
 }
 
 /* (0x810FCB68) */
-int shellBgdl_8110ED62(void)
+int shellBgdlInstallTask(const SceUInt32 *id)
 {
-	return Bgdl_8110ED62();
+	return bgdlInstallTask(id);
 }
 
 /* (0x810FCB70) */
-int shellBgdl_8110ED8A(const char *arg0, int arg1, int arg2, int arg3)
+int shellBgdlGetTitleTaskInfos(const char *titleId, paf::vector<BgdlTaskInfo> *infos,
+			       SceUInt32 flags, int type)
 {
-	return Bgdl_8110ED8A(arg0, arg1, arg2, arg3);
+	return bgdlGetTitleTaskInfos(titleId, infos, flags, type);
 }
 
 /* (0x810FCB78) */
-int shellBgdl_8110F018(void)
+int shellBgdlGetTaskInfo(SceUInt32 id, BgdlTaskInfo *info)
 {
-	return Bgdl_8110F018();
+	return bgdlGetTaskInfo(id, info);
 }
 
 /* (0x810FCB80) */
-int shellBgdl_8110F03C(void)
+int shellBgdlInstallTask2(const SceUInt32 *id)
 {
-	return Bgdl_8110F03C();
+	return bgdlInstallTask2(id);
 }
 
 /* (0x810FCB88) */
-int shellBgdl_8110F1DE(void)
+void shellBgdlHold(void)
 {
-	return Bgdl_8110F1DE();
+	bgdlHold();
 }
 
 /* (0x810FCB90) */
-int shellBgdl_8110F1F4(bool arg)
+void shellBgdlSuspend(bool reserved)
 {
-	return Bgdl_8110F1F4(arg);
+	bgdlSuspend(reserved);
 }
 
 /* (0x810FCB9A) */
-int shellBgdl_8110F208(int arg)
+int shellBgdlAddPsmRuntimeTask(paf::string *iconPath)
 {
-	return Bgdl_8110F208(arg, 0, 0);
+	return bgdlAddPsmRuntimeTask(iconPath, 0, NULL);
 }
 
 /* (0x810FCBA6) */
-int shellBgdl_8110F3A2(void)
+bool shellBgdlGetPsmRuntimeVersion(SceUInt16 *version)
 {
-	return Bgdl_8110F3A2();
+	return bgdlGetPsmRuntimeVersion(version);
 }
 
 /* (0x810FCBAE) */
-int shellBgdl_8110F718(void)
+bool shellBgdlHasPending(void)
 {
-	return Bgdl_8110F718();
+	return bgdlHasPending();
 }
 
 /* (0x810FCBB6) */
-int shellBgdl_8110FB04(void)
+int shellBgdlGetPatchVersion(const char *titleId, SceUInt8 *version)
 {
-	return Bgdl_8110FB04();
+	return bgdlGetPatchVersion(titleId, version);
 }

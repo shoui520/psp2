@@ -9,6 +9,9 @@
 
 #include <scetypes.h>
 #include <std/string>
+#include <std/vector>
+#include <std/map>
+#include <common/shared_ptr.h>
 
 /* a download task as the bgdl library describes it to the shell (0x5C bytes) */
 struct BgdlTaskInfo {
@@ -31,33 +34,39 @@ struct BgdlTaskInfo {
 	bool reserved6;
 };
 
-int shellBgdlCreate(bool clean, const int *quota);		/* (0x810FCA36) */
-int shellBgdlStart(void);					/* (0x810FCA40) */
-int shellBgdlDestroy(void);					/* (0x810FCA48) */
-int shellBgdlRemoveFolders(void);				/* (0x810FCA50) */
+void shellBgdlCreate(bool clean, const int *quota);		/* (0x810FCA36) */
+void shellBgdlStart(void);					/* (0x810FCA40) */
+void shellBgdlDestroy(void);					/* (0x810FCA48) */
+bool shellBgdlRemoveFolders(void);				/* (0x810FCA50) */
 int shellBgdlNotify(void);					/* (0x810FCA58) */
-int shellBgdlSetPermission(void);				/* (0x810FCA64) */
+void shellBgdlSetPermission(void);				/* (0x810FCA64) */
 int gameAppDeletePrepare(const char *titleId);			/* (0x810FCA70) */
 int shellBgdlCountTitleTasks(const char *titleId);		/* (0x810FCA78) */
-int shellBgdl_8110BD6E(void);					/* (0x810FCAA6) */
-int shellBgdl_8110BDC0(void);					/* (0x810FCAAE) */
-int shellBgdl_8110BEC2(void);					/* (0x810FCAB6) */
-int shellBgdl_8110E400(void);					/* (0x810FCABE) */
-int shellBgdlGetTaskInfo(const char *titleId, BgdlTaskInfo *info);	/* (0x810FCAC6) */
-int shellBgdlGetTaskInfoByName(const char *name, BgdlTaskInfo *info);	/* (0x810FCACE) */
-int shellBgdlAddTask(const char *url, int type, int arg2, bool arg3, int arg4, int arg5);	/* (0x810FCAD6) */
+/* (0x810FCAA6) */
+bool shellBgdlRecordHasTasks(const paf::common::SharedPtr<paf::map<unsigned int, struct LsdbValue> > *record,
+			     SceUInt32 flags);
+bool shellBgdlTitleHasTasks(const char *titleId, SceUInt32 flags);	/* (0x810FCAAE) */
+bool shellBgdlTitleHasTasksOfKind(const char *titleId, int type, SceUInt32 flags);	/* (0x810FCAB6) */
+int shellBgdlInstallTitleTasks(const char *titleId, BgdlTaskInfo *failed, bool *patched);	/* (0x810FCABE) */
+int shellBgdlInstallTitleTasksType1(const char *titleId, BgdlTaskInfo *failed);	/* (0x810FCAC6) */
+int shellBgdlInstallTitleTasksType2(const char *titleId, BgdlTaskInfo *failed);	/* (0x810FCACE) */
+/* (0x810FCAD6) */
+int shellBgdlInstallTitleTasksOfKinds(const char *titleId, int type, SceUInt32 flags, bool dialog,
+				      BgdlTaskInfo *failed, bool *patched);
 int shellBgdlCountAppTasks(const char *titleId);		/* (0x810FCB02) */
 int shellBgdlCountTasks(void);					/* (0x810FCB30) */
-int shellBgdl_8110ED40(int arg);				/* (0x810FCB60) */
-int shellBgdl_8110ED62(void);					/* (0x810FCB68) */
-int shellBgdl_8110ED8A(const char *arg0, int arg1, int arg2, int arg3);	/* (0x810FCB70) */
-int shellBgdl_8110F018(void);					/* (0x810FCB78) */
-int shellBgdl_8110F03C(void);					/* (0x810FCB80) */
-int shellBgdl_8110F1DE(void);					/* (0x810FCB88) */
-int shellBgdl_8110F1F4(bool arg);				/* (0x810FCB90) */
-int shellBgdl_8110F208(int arg);				/* (0x810FCB9A) */
-int shellBgdl_8110F3A2(void);					/* (0x810FCBA6) */
-int shellBgdl_8110F718(void);					/* (0x810FCBAE) */
-int shellBgdl_8110FB04(void);					/* (0x810FCBB6) */
+int shellBgdlGetContentTaskInfos(paf::vector<BgdlTaskInfo> *infos);	/* (0x810FCB60) */
+int shellBgdlInstallTask(const SceUInt32 *id);			/* (0x810FCB68) */
+/* (0x810FCB70) */
+int shellBgdlGetTitleTaskInfos(const char *titleId, paf::vector<BgdlTaskInfo> *infos,
+			       SceUInt32 flags, int type);
+int shellBgdlGetTaskInfo(SceUInt32 id, BgdlTaskInfo *info);	/* (0x810FCB78) */
+int shellBgdlInstallTask2(const SceUInt32 *id);			/* (0x810FCB80) */
+void shellBgdlHold(void);					/* (0x810FCB88) */
+void shellBgdlSuspend(bool reserved);				/* (0x810FCB90) */
+int shellBgdlAddPsmRuntimeTask(paf::string *iconPath);		/* (0x810FCB9A) */
+bool shellBgdlGetPsmRuntimeVersion(SceUInt16 *version);		/* (0x810FCBA6) */
+bool shellBgdlHasPending(void);					/* (0x810FCBAE) */
+int shellBgdlGetPatchVersion(const char *titleId, SceUInt8 *version);	/* (0x810FCBB6) */
 
 #endif

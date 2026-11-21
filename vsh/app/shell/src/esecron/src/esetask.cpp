@@ -41,6 +41,7 @@
 PAF_VECTOR_INLINE_DTOR(BgdlTaskEntry)
 PAF_VECTOR_NOINLINE_PUSH_BACK(LsdbValue, paf::allocator<LsdbValue>)
 PAF_VECTOR_NOINLINE_PUSH_BACK(BgdlTaskInfo, paf::allocator<BgdlTaskInfo>)
+PAF_VECTOR_NOINLINE_CLEAR(BgdlTaskInfo, paf::allocator<BgdlTaskInfo>)
 
 using namespace paf;
 
@@ -62,7 +63,14 @@ int Bgdl_811123BA(LsdbQueryCondition *conditions, paf::vector<string> *titleIds)
 int Bgdl_8112816E(const char *titleId);
 int Bgdl_811219B8(EseTask *task);	/* PLACEHOLDER: the task's content installed */
 string Bgdl_81113DE6(const char *titleId);	/* PLACEHOLDER: the title's icon (livespace_db) */
+bool Bgdl_811144CE(const string *titleId);	/* PLACEHOLDER: the game being run is the title */
 /* game_plugin's promote dialog, opened (GAME_PLUGIN_FUNC_DIALOG_OPEN) */
+/* game_plugin's interface function 62: the version in a patch's package file (PLACEHOLDER) */
+#define BGDL_GAME_PLUGIN_FUNC_PATCH_VERSION	62
+typedef void (*BgdlPatchVersionFunc)(const string *file, SceUInt8 *major, SceUInt8 *minor,
+				     SceUInt8 *patch);
+GamePluginInterface *Bgdl_811115BA(void);		/* the next file's: game_plugin's interface */
+string Bgdl_811115D0(string dir, int number);		/* the next file's: dir + "/" + "%04d" */
 typedef int (*BgdlDialogOpenFunc)(const string &title, intrusive_ptr<graph::Surface> icon,
 				  const wstring &text, bool frame, const float *progress, bool second);
 int Bgdl_81113898(const LsdbAppInfoPtr *info, int *kind);	/* PLACEHOLDER: its storage kind */
@@ -3175,7 +3183,7 @@ BgdlManager::BgdlManager()
 	  m_nextInternalId(0x80000000),
 	  m_flags(0),
 	  m_ux0Ready(true),
-	  reserved5(false),
+	  m_hold(false),
 	  m_resumed(false),
 	  m_suspended(false),
 	  m_copyResult(0),
@@ -6337,12 +6345,859 @@ int bgdlInstallTitleTasksType2(const char *titleId, BgdlTaskInfo *failed)
 	return s_manager->InstallTitleTasks(titleId, 2, failed, NULL);
 }
 
-/* (0x8110E48C) PLACEHOLDER name: arg1 and arg2 are not read */
-int bgdlInstallTitleTasksType3(const char *titleId, int arg1, int arg2, BgdlTaskInfo *failed)
+/* (0x8110E48C) PLACEHOLDER name: type, flags and patched are not read */
+int bgdlInstallTitleTasksType3(const char *titleId, int type, SceUInt32 flags, BgdlTaskInfo *failed,
+			       bool *patched)
 {
 	if (s_manager == NULL)
 		return BGDL_ERROR_NOT_STARTED;
 	return s_manager->InstallTitleTasks(titleId, 3, failed, NULL);
+}
+
+/*
+ * (0x8110E4B8) PLACEHOLDER name: InstallTitleTasks for the kinds flags asks for, the promote
+ * dialog only when dialog is set
+ */
+int BgdlManager::InstallTitleTasks(const char *titleId, int type, SceUInt32 flags, bool dialog,
+				   BgdlTaskInfo *failed, bool *patched)
+{
+	vector<BgdlTaskInfo> infos;
+	int ret;
+
+	if (titleId == NULL) {
+		ret = BGDL_ERROR_INVALID_ARGUMENT;
+	} else {
+		ret = GetTitleTaskInfos(titleId, &infos, flags, type);
+		if (ret == 0) {
+			if (infos.size() != 0) {
+				int id = -1;
+				SceUInt32 i;
+
+				for (i = 0; i < infos.size(); i++) {
+					infos[i].reserved1 = true;
+					infos[i].progress = 0;
+					if (dialog == true)
+						id = bgdlOpenTaskDialog(&infos[i]);
+					ret = InstallTask((const SceUInt32 *)&infos[i].taskId);
+					if (dialog == true && id >= 0) {
+						Plugin *game = Plugin::Find("game_plugin");
+
+						if (game != NULL) {
+							GamePluginInterface *iface =
+								(GamePluginInterface *)game->GetInterface(1);
+
+							if (iface != NULL) {
+								thread::RMutex::main_thread_mutex.Lock();
+								((void (*)(int))iface->func[GAME_PLUGIN_FUNC_DIALOG_CLOSE])(
+									id);
+								thread::RMutex::main_thread_mutex.Unlock();
+							}
+						}
+					}
+					if (ret != 0) {
+						if (failed != NULL) {
+							*failed = infos[i];
+							failed->url = infos[i].url;
+							failed->path = infos[i].path;
+							failed->title = infos[i].title;
+							failed->titleId = infos[i].titleId;
+							failed->path = titleId;
+						}
+						break;
+					}
+					if (infos[i].category == 2 && titleId != NULL)
+						Bgdl_812A9954(titleId, 1);
+					if (infos[i].category == 4 && patched != NULL)
+						*patched = true;
+				}
+			} else {
+				ret = 0;
+			}
+		}
+	}
+	return ret;
+}
+
+/* (0x8110E6DE) PLACEHOLDER name */
+int bgdlInstallTitleTasksOfKinds(const char *titleId, int type, SceUInt32 flags, bool dialog,
+				 BgdlTaskInfo *failed, bool *patched)
+{
+	if (s_manager == NULL)
+		return BGDL_ERROR_NOT_STARTED;
+	return s_manager->InstallTitleTasks(titleId, type, flags, dialog, failed, patched);
+}
+
+/* (0x8110E716) PLACEHOLDER name: the title the task is for (its package's) */
+int bgdlGetTaskTitle(SceUInt32 id, string *titleId)
+{
+	EseTask *task;
+
+	if (s_manager == NULL)
+		return BGDL_ERROR_NOT_STARTED;
+	task = s_manager->FindTask(id);
+	if (task == NULL)
+		return BGDL_ERROR_NO_TASK;
+
+	BgdlTaskPackage package;
+
+	s_packageMutex.Lock();
+	package = task->package;
+	s_packageMutex.Unlock();
+	if (package.key220.length() == 0)
+		return BGDL_ERROR_NO_TITLE_ID;
+	*titleId = package.key220.c_str();
+	return 0;
+}
+
+/*
+ * (0x8110E884) PLACEHOLDER name: *count the waiting content tasks (key 107 6 or 12, key 113 set,
+ * no error) that are not being handled, listed in list when it is not NULL
+ */
+int bgdlCountTasks(SceUInt32 *count, vector<BgdlTaskEntry> *list)
+{
+	if (s_manager == NULL)
+		return BGDL_ERROR_NOT_STARTED;
+	*count = 0;
+
+	vector<BgdlTaskEntry> tasks;
+	SceUInt32 i;
+	int ret;
+
+	ret = s_manager->ListTasks(&tasks, 0);
+	if (ret != 0)
+		return ret;
+	for (i = 0; i < tasks.size(); i++) {
+		if (Bgdl_81114524(tasks[i].id) == true)
+			continue;
+		if (!tasks[i].param.key113)
+			continue;
+		if (tasks[i].param.key107 != 6 && tasks[i].param.key107 != 12)
+			continue;
+		if (tasks[i].result == 0) {
+			++*count;
+			if (list != NULL)
+				list->push_back(tasks[i]);
+		}
+	}
+	return 0;
+}
+
+/*
+ * (0x8110E99A) PLACEHOLDER name: a description of each waiting content task (key 107 6 or 12,
+ * key 113 set, not running, no error), but for content of the game being run
+ */
+int BgdlManager::GetContentTaskInfos(vector<BgdlTaskInfo> *infos)
+{
+	vector<BgdlTaskEntry> list;
+	SceUInt32 i;
+	int ret;
+
+	infos->clear();
+	ret = s_manager->ListTasks(&list, 0);
+	if (ret != 0)
+		return ret;
+	for (i = 0; i < list.size(); i++) {
+		EseTask *task = FindTask(list[i].id);
+		EseParamCache param;
+
+		if (task == NULL)
+			continue;
+		if (task->m_ParamCache.runStatus != 0 || task->result != 0 || !task->m_ParamCache.key113)
+			continue;
+		if (list[i].param.key107 != 6 && list[i].param.key107 != 12)
+			continue;
+
+		BgdlTaskPackage package;
+
+		s_packageMutex.Lock();
+		package = task->package;
+		s_packageMutex.Unlock();
+		param = task->m_ParamCache;
+		if (param.key107 == 6 && param.kind == 2 && Bgdl_811144CE(&package.key220) == true)
+			continue;
+
+		BgdlTaskInfo info;
+		bool hasContentId;
+
+		sce_paf_memset(&info, 0, sizeof(info));
+		if (list[i].param.key107 == 12)
+			info.category = 16;
+		else if (list[i].param.key107 == 6)
+			info.category = 8;
+		info.taskId = list[i].id;
+		info.url = package.key220;
+		if (param.kind == 1)
+			info.kind = 1;
+		else if (param.kind == 2)
+			info.kind = 2;
+		else if (param.kind == 3)
+			info.kind = 3;
+		else
+			info.kind = 0;
+		info.reserved0 = false;
+		info.reserved1 = false;
+		info.reserved5 = false;
+		info.path = package.key220;
+		info.title = "";
+		info.titleId = "";
+		hasContentId = false;
+		{
+			EseParam file(info.taskId);
+
+			if (file.open() == 0) {
+				info.contentId = "";
+				file.read(106, &info.title);
+				file.read(105, &info.titleId);
+				file.read(239, &hasContentId, sizeof(hasContentId));
+				if (hasContentId == true)
+					file.read(230, &info.contentId);
+			}
+		}
+		infos->push_back(info);
+	}
+	return 0;
+}
+
+/* (0x8110ED40) PLACEHOLDER name */
+int bgdlGetContentTaskInfos(vector<BgdlTaskInfo> *infos)
+{
+	if (s_manager == NULL)
+		return BGDL_ERROR_NOT_STARTED;
+	return s_manager->GetContentTaskInfos(infos);
+}
+
+/* (0x8110ED62) PLACEHOLDER name */
+int bgdlInstallTask(const SceUInt32 *id)
+{
+	if (s_manager == NULL)
+		return BGDL_ERROR_NOT_STARTED;
+	return s_manager->InstallTask(id);
+}
+
+/* (0x8110ED8A) PLACEHOLDER name */
+int bgdlGetTitleTaskInfos(const char *titleId, vector<BgdlTaskInfo> *infos, SceUInt32 flags, int type)
+{
+	if (s_manager == NULL)
+		return BGDL_ERROR_NOT_STARTED;
+	return s_manager->GetTitleTaskInfos(titleId, infos, flags, type);
+}
+
+/* (0x8110EDBA) PLACEHOLDER name: a description of the task, when it waits to be installed */
+int BgdlManager::GetTaskInfo(SceUInt32 id, BgdlTaskInfo *info)
+{
+	EseTask *task = FindTask(id);
+	EseParamCache param;
+
+	if (task == NULL)
+		return BGDL_ERROR_NO_TASK;
+	if (task->m_ParamCache.runStatus != 0 || !task->m_ParamCache.key113 || task->result != 0)
+		return BGDL_ERROR_NOT_WAITING;
+
+	BgdlTaskPackage package;
+
+	s_packageMutex.Lock();
+	package = task->package;
+	s_packageMutex.Unlock();
+	param = task->m_ParamCache;
+
+	bool hasContentId;
+
+	sce_paf_memset(info, 0, sizeof(*info));
+	info->taskId = id;
+	info->url = package.key220;
+	info->reserved0 = false;
+	info->reserved1 = false;
+	if (param.kind == 1)
+		info->kind = 1;
+	else if (param.kind == 2)
+		info->kind = 2;
+	else if (param.kind == 3)
+		info->kind = 3;
+	else
+		info->kind = 0;
+	if (param.key107 == 7)
+		info->category = 1;
+	else if (param.key107 == 8)
+		info->category = 2;
+	else if (param.key107 == 9)
+		info->category = 4;
+	else
+		info->category = 8;
+	info->reserved5 = false;
+	info->path = package.key220;
+	info->title = "";
+	info->titleId = "";
+	info->contentId = "";
+	hasContentId = false;
+	{
+		EseParam file(info->taskId);
+
+		if (file.open() == 0) {
+			file.read(106, &info->title);
+			file.read(105, &info->titleId);
+			file.read(239, &hasContentId, sizeof(hasContentId));
+			if (hasContentId == true)
+				file.read(230, &info->contentId);
+		}
+	}
+	return 0;
+}
+
+/* (0x8110F018) PLACEHOLDER name */
+int bgdlGetTaskInfo(SceUInt32 id, BgdlTaskInfo *info)
+{
+	if (s_manager == NULL)
+		return BGDL_ERROR_NOT_STARTED;
+	return s_manager->GetTaskInfo(id, info);
+}
+
+/* (0x8110F03C) PLACEHOLDER name: the same as bgdlInstallTask */
+int bgdlInstallTask2(const SceUInt32 *id)
+{
+	if (s_manager == NULL)
+		return BGDL_ERROR_NOT_STARTED;
+	return s_manager->InstallTask(id);
+}
+
+/*
+ * (0x8110F064) PLACEHOLDER name: a waiting task whose install found what it installs already
+ * there is made to wait again: its result cleared in it and its param file
+ */
+int BgdlManager::ResetInstalledTask(SceUInt32 id)
+{
+	int ret = 0;
+	EseTask *task = FindTask(id);
+
+	if (task == NULL)
+		return BGDL_ERROR_NO_TASK;
+	if (task->m_ParamCache.runStatus != 0 || !task->m_ParamCache.key113)
+		return BGDL_ERROR_NO_TASK;
+	switch (task->result) {
+	case 0:
+	case BGDL_ERROR_ALREADY_INSTALLED:
+		break;
+	default:
+		return BGDL_ERROR_NO_TASK;
+	}
+	if (task->result != BGDL_ERROR_ALREADY_INSTALLED)
+		return BGDL_ERROR_NO_TASK;
+	task->result = 0;
+	{
+		EseParam file(id);
+
+		ret = file.openWrite();
+		if (ret == 0) {
+			ret = file.write(104, &ret, sizeof(ret));
+			if (ret == 0)
+				ret = file.commit();
+		}
+	}
+	if (ret == 0) {
+		BgdlEvent event;
+
+		event.type = 3;
+		event.id = id;
+		event.reserved = 0;
+		event.value = 0;
+		event.param = task->m_ParamCache;
+		event.result = task->result;
+		NotifyListeners(&event);
+		UpdateQueueStatus();
+		if (task->m_ParamCache.key107 == 6)
+			shellEventServerSend(1, NULL, 0);
+	}
+	return ret;
+}
+
+/* (0x8110F1B6) PLACEHOLDER name */
+int bgdlResetInstalledTask(SceUInt32 id)
+{
+	if (s_manager == NULL)
+		return BGDL_ERROR_NOT_STARTED;
+	return s_manager->ResetInstalledTask(id);
+}
+
+/* (0x8110F1D8) PLACEHOLDER name */
+void BgdlManager::SetHold(bool hold)
+{
+	m_hold = hold;
+}
+
+/* (0x8110F1DE) PLACEHOLDER name */
+void bgdlHold(void)
+{
+	if (s_manager != NULL)
+		s_manager->m_hold = true;
+}
+
+/* (0x8110F1F4) PLACEHOLDER name */
+void bgdlSuspend(bool reserved)
+{
+	if (s_manager != NULL)
+		s_manager->m_suspended = true;
+}
+
+/* (0x8110F208) PLACEHOLDER name */
+int bgdlAddPsmRuntimeTask(paf::string *iconPath, int arg1, SceUInt64 *needed)
+{
+	if (s_manager == NULL)
+		return BGDL_ERROR_NOT_STARTED;
+	return s_manager->AddPsmRuntimeTask(iconPath, 0, arg1, needed);
+}
+
+/*
+ * (0x8110F238) PLACEHOLDER name: the version (entries 503 and 504) of the PSM runtime's waiting
+ * patch task; true when one is found. Without one, 1.0 when the runtime is installed.
+ */
+bool BgdlManager::GetPsmRuntimeVersion(SceUInt16 *version)
+{
+	bool found = false;
+	vector<BgdlTaskInfo> infos;
+	SceUInt32 i;
+
+	version[0] = 0;
+	version[1] = 0;
+	if (GetTitleTaskInfos("PCSI00011", &infos, 2, 0) == 0) {
+		for (i = 0; i < infos.size(); i++) {
+			if (Bgdl_8112260C(infos[i].taskId, 503, &version[0], sizeof(version[0])) == 0 &&
+			    Bgdl_8112260C(infos[i].taskId, 504, &version[1], sizeof(version[1])) == 0) {
+				found = true;
+				goto out;
+			}
+		}
+	}
+	{
+		LsdbAppInfoPtr app(new LsdbAppInfo());
+
+		if (Bgdl_81123BC0("PCSI00011", &app) == 0) {
+			version[1] = 0;
+			version[0] = 1;
+		}
+	}
+out:
+	return found;
+}
+
+/* (0x8110F3A2) PLACEHOLDER name */
+bool bgdlGetPsmRuntimeVersion(SceUInt16 *version)
+{
+	if (s_manager == NULL)
+		return false;
+	return s_manager->GetPsmRuntimeVersion(version);
+}
+
+/* (0x8110F3BE) PLACEHOLDER name: the task waits to be installed */
+bool bgdlTaskIsWaiting(SceUInt32 id)
+{
+	EseTask *task = NULL;
+
+	if (s_manager != NULL) {
+		task = s_manager->FindTask(id);
+		if (task == NULL || task->m_ParamCache.runStatus != 0 || !task->m_ParamCache.key113 ||
+		    task->result != 0)
+			task = NULL;
+	}
+	return task != NULL;
+}
+
+/*
+ * (0x8110F3FA) PLACEHOLDER name: a task of the query's kind (key 111), not yet done (state below
+ * 3), running or failed, has the query's content id as its entry 234
+ */
+int BgdlManager::HasContentTask(const BgdlContentQuery *query)
+{
+	EseTask **it;
+	int found;
+
+	if (query == NULL)
+		return BGDL_ERROR_NULL_TITLE;
+	m_taskListMutex.Lock();
+
+	string value;
+
+	found = 0;
+	for (it = m_tasks.m_begin; it != m_tasks.m_end; it++) {
+		if (((*it)->m_ParamCache.runStatus != 0 ||
+		     ((*it)->result != 0 && !(*it)->m_ParamCache.key113)) &&
+		    query->kind == (*it)->m_ParamCache.key111 && (*it)->m_ParamCache.state < 3) {
+			value.clear();
+			if (Bgdl_8112278A((*it)->id, 234, &value) == 0 && value.length() != 0 &&
+			    sce_paf_strncmp(value.c_str(), query->contentId, sizeof(query->contentId)) == 0) {
+				found = 1;
+				break;
+			}
+		}
+	}
+	m_taskListMutex.Unlock();
+	return found;
+}
+
+/* (0x8110F4EA) PLACEHOLDER name */
+int bgdlHasContentTask(const BgdlContentQuery *query)
+{
+	if (s_manager == NULL)
+		return BGDL_ERROR_NOT_STARTED;
+	return s_manager->HasContentTask(query);
+}
+
+/*
+ * (0x8110F50C) PLACEHOLDER name: the tasks of the query's kind (key 111; 7: any), not yet done,
+ * running or failed, whose package is the query's content, counted
+ */
+int BgdlManager::CountContentTasks(const BgdlContentQuery *query)
+{
+	EseTask **it;
+	int count;
+
+	if (query == NULL)
+		return BGDL_ERROR_NULL_TITLE;
+	m_taskListMutex.Lock();
+
+	string contentId(query->contentId);
+
+	count = 0;
+	for (it = m_tasks.m_begin; it != m_tasks.m_end; it++) {
+		if (((*it)->m_ParamCache.runStatus != 0 ||
+		     ((*it)->result != 0 && !(*it)->m_ParamCache.key113)) &&
+		    (query->kind == 7 || query->kind == (*it)->m_ParamCache.key111) &&
+		    (*it)->m_ParamCache.state < 3) {
+			BgdlTaskPackage package;
+			EseTask *task = *it;
+
+			s_packageMutex.Lock();
+			package = task->package;
+			s_packageMutex.Unlock();
+			if (package.key220.length() != 0 && package.key217 == contentId)
+				count++;
+		}
+	}
+	m_taskListMutex.Unlock();
+	return count;
+}
+
+/* (0x8110F70C) PLACEHOLDER name: grw0: unmounted */
+int bgdlUnmountGrw0(void)
+{
+	Bgdl_811137F6(false);
+	return 0;
+}
+
+/* (0x8110F718) PLACEHOLDER name */
+bool bgdlHasPending(void)
+{
+	if (s_manager == NULL)
+		return false;
+	return s_manager->m_hasPending;
+}
+
+/* (0x8110F72C) PLACEHOLDER name: the folder the task's title is downloaded into */
+static __attribute__((noinline)) string bgdlTaskTitleFolder(EseTask *task)
+{
+	string dir("");
+	BgdlTaskPath path;
+
+	if (task->GetFolder(&path, true) == 0) {
+		dir = path.m_begin;
+		dir += "/";
+
+		BgdlTaskPackage package;
+
+		s_packageMutex.Lock();
+		package = task->package;
+		s_packageMutex.Unlock();
+		if (package.key220.length() != 0)
+			dir += package.key220.c_str();
+	}
+	return dir;
+}
+
+/*
+ * (0x8110F94A) PLACEHOLDER name: the version game_plugin reads from the last package file of the
+ * title's waiting patch task
+ */
+int BgdlManager::GetPatchVersion(const char *titleId, SceUInt8 *version)
+{
+	vector<BgdlTaskInfo> infos;
+
+	if (version != NULL && GetTitleTaskInfos(titleId, &infos, 2, 0) == 0 && infos.size() != 0) {
+		string dir = bgdlTaskTitleFolder(FindTask(infos[0].taskId));
+
+		if (dir.length() != 0) {
+			int count = 0;
+
+			if (Bgdl_8112260C(infos[0].taskId, 500, &count, sizeof(count)) == 0) {
+				string file = Bgdl_811115D0(dir, count > 0 ? count - 1 : 0);
+
+				if (file.length() != 0) {
+					GamePluginInterface *iface = Bgdl_811115BA();
+
+					if (iface != NULL)
+						((BgdlPatchVersionFunc)iface->func[BGDL_GAME_PLUGIN_FUNC_PATCH_VERSION])(
+							&file, &version[0], &version[1], &version[2]);
+				}
+			}
+		}
+	}
+	return 0;
+}
+
+/* (0x8110FB04) PLACEHOLDER name */
+int bgdlGetPatchVersion(const char *titleId, SceUInt8 *version)
+{
+	if (s_manager == NULL)
+		return BGDL_ERROR_NOT_STARTED;
+	return s_manager->GetPatchVersion(titleId, version);
+}
+
+/* (0x8110FB28) PLACEHOLDER name: what listing the tasks of type 1 returns */
+int bgdlListMtpTasks(void)
+{
+	if (s_manager == NULL)
+		return 0;
+
+	vector<BgdlTaskEntry> list;
+
+	return s_manager->ListTasks(&list, 1);
+}
+
+/* (0x8110FB76) PLACEHOLDER name: an MTP copy may be asked for */
+int BgdlManager::CheckMtpContent(const BgdlMtpContent *content)
+{
+	int ret;
+
+	if (content == NULL)
+		return BGDL_ERROR_NULL_TITLE;
+	ret = bgdlCheckQueue();
+	if (ret != 0)
+		return ret;
+	if (bgdlListMtpTasks() >= 15)
+		return BGDL_ERROR_MTP_QUEUE_FULL;
+	switch (content->kind) {
+	case 0:
+	case 1:
+	case 2:
+	case 3:
+		return 0;
+	}
+	return BGDL_ERROR_NULL_TITLE;
+}
+
+/* (0x8110FC3E) PLACEHOLDER name: reserved is not read */
+int bgdlCheckMtpContent(const BgdlMtpContent *content, int reserved)
+{
+	if (s_manager == NULL)
+		return BGDL_ERROR_MTP_NOT_STARTED;
+	return s_manager->CheckMtpContent(content);
+}
+
+/*
+ * (0x8110FC62) PLACEHOLDER name: an MTP copy made a task of type 1 (key 107 1 to 3 by the
+ * content's kind, else 6), with its mtp_contents.bin made that size first; *id its id
+ */
+int BgdlManager::AddMtpTask(const BgdlMtpRequest *request, SceUInt32 *id)
+{
+	bool key112 = false;
+	bool key102 = false;
+	bool key218 = false;
+	BgdlTaskPath folder;
+	bool key205 = true;
+	int key107 = 0;
+	int key108 = 1;
+	SceUInt32 taskId = (SceUInt32)-1;
+	string path("");
+	int key114 = 0;
+	int ret;
+
+	Bgdl_81113890(1);
+	if (request == NULL) {
+		ret = BGDL_ERROR_NULL_TITLE;
+		goto fail;
+	}
+	ret = CheckMtpContent(&request->content);
+	if (ret != 0)
+		goto fail;
+	if (request->type == 0 || request->type == 1)
+		taskId = (SceUInt32)-1;
+	else if (request->type == 2)
+		taskId = (SceUInt32)-2;
+	else
+		taskId = (SceUInt32)-1;
+	if (taskId == (SceUInt32)-1 && m_ux0Ready != true) {
+		ret = BGDL_ERROR_NO_UX0;
+		goto fail;
+	}
+	{
+		string name("");
+
+		if (request->name[0] != '\0')
+			name = request->name;
+		ret = AddTask(&taskId, 1, request->type, name.c_str(),
+			      (request->flags & BGDL_REQUEST_FLAG_KEY115) != 0,
+			      (request->flags & BGDL_REQUEST_FLAG_KEY116) != 0);
+		if (ret != 0)
+			goto out;
+		ret = folder.initialize(taskId, 20);
+		if (ret != 0)
+			goto out;
+		if (folder.m_begin == NULL) {
+			ret = BGDL_ERROR_NO_MEMORY;
+			goto fail;
+		}
+
+		EseParam param(taskId);
+
+		ret = param.openWrite();
+		if (ret != 0)
+			goto out;
+		if ((request->content.options & BGDL_MTP_OPTION_CONTENTS) != 0 &&
+		    request->content.size != 0) {
+			key112 = true;
+			path = folder.m_begin;
+			path += "/";
+			path += "mtp_contents.bin";
+			Bgdl_8111240E(path.c_str(), request->content.size);
+		}
+		if (request->content.kind == 3) {
+			BgdlGamePluginLock lock(true);
+			string game = Bgdl_81113C72(taskId, true);
+
+			if (game.length() != 0) {
+				ret = param.write(229, game.c_str(), sce_paf_strlen(game.c_str()) + 1);
+				if (ret != 0)
+					goto out;
+			}
+		}
+		ret = param.write(114, &key114, sizeof(key114));
+		if (ret != 0)
+			goto out;
+		if (request->iconPath[0] != '\0') {
+			string icon;
+
+			if (Bgdl_81111CDC(request->iconPath, folder.m_begin, &icon, true) == 0) {
+				ret = param.write(106, icon.c_str(), icon.length() + 1);
+				if (ret != 0)
+					goto out;
+			}
+		}
+		ret = param.write(218, &key218, sizeof(key218));
+		if (ret != 0)
+			goto out;
+		ret = param.write(205, &key205, sizeof(key205));
+		if (ret != 0)
+			goto out;
+		ret = param.write(102, &key102, sizeof(key102));
+		if (ret != 0)
+			goto out;
+		ret = param.write(108, &key108, sizeof(key108));
+		if (ret != 0)
+			goto out;
+		switch (request->content.kind) {
+		case 0:
+			key107 = 1;
+			break;
+		case 1:
+			key107 = 2;
+			break;
+		case 2:
+			key107 = 3;
+			break;
+		default:
+			key107 = 6;
+			break;
+		}
+		ret = param.write(107, &key107, sizeof(key107));
+		if (ret != 0)
+			goto out;
+
+		EseTask *task = FindTask(taskId);
+
+		if (task == NULL) {
+			ret = BGDL_ERROR_NO_TASK;
+			goto fail;
+		}
+		task->m_ParamCache.key107 = key107;
+		task->m_ParamCache.key102 = key102;
+		task->m_ParamCache.key108 = key108;
+		task->m_ParamCache.key112 = key112;
+		ret = param.commit();
+		if (ret != 0)
+			goto out;
+	}
+	if (id != NULL) {
+		sce_paf_memset(id, 0, sizeof(*id));
+		*id = taskId;
+	}
+	if ((request->flags & BGDL_REQUEST_FLAG_NO_START) == 0)
+		ret = ReloadTask(taskId);
+out:
+	if (ret == 0)
+		goto done;
+fail:
+	RemoveTask(taskId);
+done:
+	UpdateQueueStatus();
+	return ret;
+}
+
+/* (0x811103CA) PLACEHOLDER name */
+int bgdlAddMtpTask(const BgdlMtpRequest *request, SceUInt32 *id)
+{
+	if (s_manager == NULL)
+		return 0;
+	return s_manager->AddMtpTask(request, id);
+}
+
+/* (0x811103EA) PLACEHOLDER name: func told of the manager's events, in the first free slot */
+int BgdlManager::AddListener(void (*func)(BgdlEvent *event, void *arg), void *arg)
+{
+	BgdlListener *listener;
+
+	m_listenersMutex.Lock();
+	for (listener = m_listeners; listener != m_listeners + BGDL_LISTENER_MAX; listener++) {
+		if (listener->func == NULL) {
+			listener->func = func;
+			listener->arg = arg;
+			m_listenerCount++;
+			m_listenersMutex.Unlock();
+			return 0;
+		}
+	}
+	m_listenersMutex.Unlock();
+	return BGDL_ERROR_LISTENERS_FULL;
+}
+
+/* (0x81110448) PLACEHOLDER name */
+int BgdlManager::RemoveListener(void (*func)(BgdlEvent *event, void *arg), void *arg)
+{
+	BgdlListener *listener;
+
+	m_listenersMutex.Lock();
+	for (listener = m_listeners; listener != m_listeners + BGDL_LISTENER_MAX; listener++) {
+		if (listener->func == func && listener->arg == arg) {
+			listener->func = NULL;
+			m_listenerCount--;
+			break;
+		}
+	}
+	m_listenersMutex.Unlock();
+	return 0;
+}
+
+/* (0x811104A8) PLACEHOLDER name: a task has the id */
+int BgdlManager::CheckTask(SceUInt32 id)
+{
+	EseTask **pos;
+
+	m_taskListMutex.Lock();
+	pos = bgdlLowerBoundId(m_tasks.m_begin, m_tasks.m_end, id);
+	if (pos != m_tasks.m_end && id < (*pos)->id)
+		pos = m_tasks.m_end;
+	if (pos == m_tasks.m_end) {
+		m_taskListMutex.Unlock();
+		return BGDL_ERROR_NO_TASK;
+	}
+	m_taskListMutex.Unlock();
+	return 0;
 }
 
 /* (0x81110524) */

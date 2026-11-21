@@ -112,6 +112,10 @@ public:
 #define BGDL_ERROR_GAME_PLUGIN		0x80103A47	/* the game plugin returned 0x80010010 */
 #define BGDL_ERROR_NO_TITLE_ID		0x80103A32	/* the request names no title */
 #define BGDL_ERROR_ALREADY_INSTALLED	0x80103A3F	/* PLACEHOLDER name: what the task installs is there */
+#define BGDL_ERROR_NOT_WAITING		0x80103A45	/* PLACEHOLDER name: the task is not waiting to be installed */
+#define BGDL_ERROR_MTP_NOT_STARTED	0x80103A4B	/* PLACEHOLDER name: an MTP copy asked of no manager */
+#define BGDL_ERROR_MTP_QUEUE_FULL	0x80103A50	/* PLACEHOLDER name: 15 tasks of type 1 listed */
+#define BGDL_ERROR_LISTENERS_FULL	0x80103A18	/* PLACEHOLDER name: 16 listeners are set */
 #define BGDL_ERROR_TASK_BUSY		0x80103A46	/* PLACEHOLDER name: the task is being removed */
 #define BGDL_ERROR_GAME_DATA_RESTART	0x80103A53	/* PLACEHOLDER name: game data of key 116 was installed */
 #define BGDL_ERROR_NO_FOLDER		0x80103A29	/* PLACEHOLDER name: a folder a task installs into is not there */

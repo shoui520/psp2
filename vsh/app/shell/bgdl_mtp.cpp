@@ -2,7 +2,7 @@
  * bgdl_mtp.cpp: the background download library and MTP (0x810FCC30-0x810FCD10): the host's
  * functions the shell gives libmtp (they go to the library), and the library's calls into
  * libmtp's background copy. No record names the file or its functions: the names are ours
- * (PLACEHOLDER), and the library's functions are named by their addresses until written.
+ * (PLACEHOLDER).
  */
 #include <stddef.h>
 #include <scetypes.h>
@@ -19,41 +19,34 @@ int SceLibMtp_FC6D4772(void);
 int SceLibMtp_BF311CC8(const MtpBgCopyRunParam *param);
 }
 
-/* the library (PLACEHOLDER names: the functions are not written yet) */
-int Bgdl_8110FC3E(int arg0, int arg1);
-int Bgdl_811103CA(int arg);
-int Bgdl_8110AD6C(int arg);
-int Bgdl_8110AD8E(int arg);
-int Bgdl_8110FB28(int arg);
-
 /* (0x810FCC30) */
-int shellMtpHostFunc0(int arg)
+int shellMtpHostFunc0(const BgdlMtpContent *content)
 {
-	return Bgdl_8110FC3E(arg, 0);
+	return bgdlCheckMtpContent(content, 0);
 }
 
 /* (0x810FCC3A) */
-int shellMtpHostFunc1(int arg)
+int shellMtpHostFunc1(const BgdlMtpRequest *request, SceUInt32 *id)
 {
-	return Bgdl_811103CA(arg);
+	return bgdlAddMtpTask(request, id);
 }
 
 /* (0x810FCC42) */
-int shellMtpHostFunc2(int arg)
+int shellMtpHostFunc2(SceUInt32 id)
 {
-	return Bgdl_8110AD6C(arg);
+	return bgdlRemoveTask(id);
 }
 
 /* (0x810FCC4A) */
-int shellMtpHostFunc3(int arg)
+int shellMtpHostFunc3(SceUInt32 id)
 {
-	return Bgdl_8110AD8E(arg);
+	return bgdlReloadTask(id);
 }
 
 /* (0x810FCC52) */
-int shellMtpHostFunc4(int arg)
+int shellMtpHostFunc4(void)
 {
-	return Bgdl_8110FB28(arg);
+	return bgdlListMtpTasks();
 }
 
 /* (0x810FCC5A) */

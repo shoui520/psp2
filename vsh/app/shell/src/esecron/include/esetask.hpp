@@ -401,6 +401,29 @@ struct LsdbValue;		/* livespace_db_internal.h */
 struct BgdlServerIds;
 struct BgdlContentInfo;
 
+/* what an MTP copy copies (PLACEHOLDER names) */
+struct BgdlMtpContent {
+	SceUInt32 options;		/* BGDL_MTP_OPTION_* */
+	int kind;			/* 0 to 3: key 107 1, 2, 3 or 6 */
+	SceUInt64 size;			/* mtp_contents.bin's */
+};
+#define BGDL_MTP_OPTION_CONTENTS	0x01	/* mtp_contents.bin made (key 112) */
+
+/* an MTP copy asked for (PLACEHOLDER names) */
+struct BgdlMtpRequest {
+	SceUInt32 type;			/* key 111: 0, 1: ux0:; 2: ur0: */
+	SceUInt32 flags;		/* BGDL_REQUEST_FLAG_* */
+	BgdlMtpContent content;
+	char name[257];			/* key 105 */
+	char iconPath[256];		/* key 106: the icon, copied into the task's folder */
+};
+
+/* a content a task is looked for by (PLACEHOLDER names) */
+struct BgdlContentQuery {
+	int kind;			/* key 111; 7 asks for any (0x8110F50C) */
+	char contentId[60];
+};
+
 class BgdlManager {
 public:
 	BgdlManager();							/* (0x8110401E) */
@@ -470,6 +493,25 @@ public:
 			      int type);
 	/* (0x8110E19C) PLACEHOLDER name: the title's waiting tasks installed */
 	int InstallTitleTasks(const char *titleId, int type, struct BgdlTaskInfo *failed, bool *patched);
+	/* (0x8110E99A) PLACEHOLDER name: the waiting content tasks described */
+	int GetContentTaskInfos(paf::vector<struct BgdlTaskInfo> *infos);
+	/* (0x8110E4B8) PLACEHOLDER name: the same for the kinds flags asks for */
+	int InstallTitleTasks(const char *titleId, int type, SceUInt32 flags, bool dialog,
+			      struct BgdlTaskInfo *failed, bool *patched);
+	int GetTaskInfo(SceUInt32 id, struct BgdlTaskInfo *info);	/* (0x8110EDBA) PLACEHOLDER name */
+	int ResetInstalledTask(SceUInt32 id);	/* (0x8110F064) PLACEHOLDER name */
+	void SetHold(bool hold);		/* (0x8110F1D8) PLACEHOLDER name */
+	/* (0x8110F238) PLACEHOLDER name: the PSM runtime's waiting patch's version */
+	bool GetPsmRuntimeVersion(SceUInt16 *version);
+	int HasContentTask(const BgdlContentQuery *query);	/* (0x8110F3FA) PLACEHOLDER name */
+	int CountContentTasks(const BgdlContentQuery *query);	/* (0x8110F50C) PLACEHOLDER name */
+	int GetPatchVersion(const char *titleId, SceUInt8 *version);	/* (0x8110F94A) PLACEHOLDER name */
+	int CheckMtpContent(const BgdlMtpContent *content);	/* (0x8110FB76) PLACEHOLDER name */
+	int AddMtpTask(const BgdlMtpRequest *request, SceUInt32 *id);	/* (0x8110FC62) PLACEHOLDER name */
+	/* (0x811103EA, 0x81110448) PLACEHOLDER names */
+	int AddListener(void (*func)(BgdlEvent *event, void *arg), void *arg);
+	int RemoveListener(void (*func)(BgdlEvent *event, void *arg), void *arg);
+	int CheckTask(SceUInt32 id);		/* (0x811104A8) PLACEHOLDER name */
 	int RemoveTitleTasks(const char *titleId);	/* (0x8110C8B4) PLACEHOLDER name */
 	int RemoveInstalledTitleTasks(const char *titleId);	/* (0x8110CB90) PLACEHOLDER name */
 	int CancelWaitingTask(SceUInt32 id);	/* (0x811078DC) PLACEHOLDER name */
@@ -500,7 +542,7 @@ public:
 	SceUInt32 m_nextInternalId;	/* ur0:'s, from 0x80000000 */
 	SceUInt32 m_flags;		/* what the tasks may do (UpdateFlags) */
 	bool m_ux0Ready;		/* ux0: is there */
-	bool reserved5;			/* PLACEHOLDER: only cleared so far */
+	bool m_hold;			/* PLACEHOLDER name: set by 0x8110F1D8 and 0x8110F1DE, not read yet */
 	bool m_resumed;			/* PLACEHOLDER name: the system resumed (SHELL_EVENT_POWER) */
 	bool m_suspended;		/* PLACEHOLDER name: no task is started while it is set */
 	BgdlTaskStatus m_status;	/* the running task's (60 bytes copied) */
@@ -653,5 +695,41 @@ int bgdlAddDownloadTask(SceUInt32 device, const BgdlDownloadRequest *request,
 int bgdlAddContentTask(const BgdlContentRequest *request, const BgdlContentAccount *account,
 		       const BgdlContentInfo *info, SceUInt32 *id);	/* (0x81106316) PLACEHOLDER name */
 int bgdlCheckQueue(void);					/* (0x81106346) PLACEHOLDER name */
+int bgdlManagerNotify(int value, int mask);			/* (0x810FD862) */
+int bgdlRemoveTask(SceUInt32 id);				/* (0x8110AD6C) PLACEHOLDER name */
+int bgdlReloadTask(SceUInt32 id);				/* (0x8110AD8E) PLACEHOLDER name */
+int bgdlCountTitleTasks(const char *titleId, SceUInt32 *count);	/* (0x8110B7E2) PLACEHOLDER name */
+/* (0x8110BD6E, 0x8110BDC0, 0x8110BEC2) PLACEHOLDER names */
+bool bgdlRecordHasTasks(const paf::common::SharedPtr<paf::map<unsigned int, LsdbValue> > *record,
+			SceUInt32 flags);
+bool bgdlTitleHasTasks(const char *titleId, SceUInt32 flags);
+bool bgdlTitleHasTasksOfKind(const char *titleId, int type, SceUInt32 flags);
+int bgdlCountAppTasks(const char *titleId, SceUInt32 *count);	/* (0x8110BFE4) PLACEHOLDER name */
+int bgdlDeletePrepare(const char *titleId);			/* (0x8110CD86) PLACEHOLDER name */
+/* (0x8110E400 to 0x8110E48C, 0x8110E6DE) PLACEHOLDER names */
+int bgdlInstallTitleTasks(const char *titleId, struct BgdlTaskInfo *failed, bool *patched);
+int bgdlInstallTitleTasksType1(const char *titleId, struct BgdlTaskInfo *failed);
+int bgdlInstallTitleTasksType2(const char *titleId, struct BgdlTaskInfo *failed);
+int bgdlInstallTitleTasksType3(const char *titleId, int type, SceUInt32 flags,
+			       struct BgdlTaskInfo *failed, bool *patched);
+int bgdlInstallTitleTasksOfKinds(const char *titleId, int type, SceUInt32 flags, bool dialog,
+				 struct BgdlTaskInfo *failed, bool *patched);
+int bgdlCountTasks(SceUInt32 *count, paf::vector<BgdlTaskEntry> *list);	/* (0x8110E884) */
+int bgdlGetContentTaskInfos(paf::vector<struct BgdlTaskInfo> *infos);	/* (0x8110ED40) */
+int bgdlInstallTask(const SceUInt32 *id);			/* (0x8110ED62) PLACEHOLDER name */
+int bgdlGetTitleTaskInfos(const char *titleId, paf::vector<struct BgdlTaskInfo> *infos,
+			  SceUInt32 flags, int type);			/* (0x8110ED8A) */
+int bgdlGetTaskInfo(SceUInt32 id, struct BgdlTaskInfo *info);	/* (0x8110F018) PLACEHOLDER name */
+int bgdlInstallTask2(const SceUInt32 *id);			/* (0x8110F03C) PLACEHOLDER name */
+void bgdlHold(void);						/* (0x8110F1DE) PLACEHOLDER name */
+void bgdlSuspend(bool reserved);				/* (0x8110F1F4) PLACEHOLDER name */
+/* (0x8110F208) PLACEHOLDER name */
+int bgdlAddPsmRuntimeTask(paf::string *iconPath, int arg1, SceUInt64 *needed);
+bool bgdlGetPsmRuntimeVersion(SceUInt16 *version);		/* (0x8110F3A2) PLACEHOLDER name */
+bool bgdlHasPending(void);					/* (0x8110F718) PLACEHOLDER name */
+int bgdlGetPatchVersion(const char *titleId, SceUInt8 *version);	/* (0x8110FB04) PLACEHOLDER name */
+int bgdlListMtpTasks(void);					/* (0x8110FB28) PLACEHOLDER name */
+int bgdlCheckMtpContent(const BgdlMtpContent *content, int reserved);	/* (0x8110FC3E) */
+int bgdlAddMtpTask(const BgdlMtpRequest *request, SceUInt32 *id);	/* (0x811103CA) */
 
 #endif
