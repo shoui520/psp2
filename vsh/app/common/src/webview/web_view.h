@@ -138,8 +138,10 @@ public:
 	virtual void OnSlot12();
 	virtual void OnSlot13();
 	virtual void OnSlot14();
-	virtual void OnEvent10(WebView *view, int arg, int arg1, int arg2, int *out0,
-		bool *out1);
+	/* the page asks for a new window at the URL, of the size: the view made for it, and
+	   whether the listener took the request itself (names ours) */
+	virtual void OnCreateWindow(WebView *view, const Url &url, int width, int height,
+		WebView **window, bool *handled);
 	virtual void OnSlot16();
 	virtual void OnEvent11(WebView *view, int arg0, int arg1);
 	virtual void OnEvent12(WebView *view, int arg);
@@ -174,6 +176,8 @@ int CreateRenderTarget(WebViewRenderTarget **target, int width, int height, int 
 int CreateRenderTarget(WebViewRenderTarget **target, int width, int height, int stride,
 	void *base);
 void DestroyRenderTarget(WebViewRenderTarget *target);
+/* runs the drawing the page's process queued for the render target (name ours) */
+int ProcessRenderCommands(WebViewRenderTarget *target);
 
 /* closes the popup menu (NULL: none) */
 void DestroyPopupMenu(WebViewPopupMenu *menu);
@@ -372,8 +376,8 @@ public:
 	int HideLoading();
 	/* the loading plane's delay before it shows (name ours) */
 	int SetLoadingDelay(int delay);
-	/* the IME's longest text (name ours) */
-	int SetImeMaxLength(int length);
+	/* the view's options (name ours) */
+	int SetOptions(int options);
 	/* the inputs the view takes (4: pinch), and the view plane's pinch mode with them (names
 	   ours) */
 	void SetInputMask(int mask);
@@ -426,6 +430,14 @@ public:
 	void ReceiveMessage(const WebIpcPacket *packet);
 	void OnProcessExit();
 	void SetPageHandlesInput(bool on);
+	/* the page asks for a new window (name ours) */
+	void OnCreateWindow(const WebIpcCreatePageWithView *message);
+	/* the cursor moved by the step within the view (name ours) */
+	math::v2 MoveCursorInView(const math::v2 &step, bool ime, bool scroll);
+	/* the page's texture moved past the top padding or the IME (name ours) */
+	void UpdateTexRegion();
+	/* the view's part of the page sent to the page, and the cursor kept in it (name ours) */
+	void UpdateViewport();
 	/* whether the page is a secure one (name ours) */
 	void SetSecure(bool secure);
 	/* an export that does nothing but return 0 (name ours) */
@@ -498,7 +510,7 @@ public:
 	virtual void OnTitleChanged(const string &title);
 	virtual void OnUrlChanged(const char *url);
 	virtual void OnEvent8(int arg);
-	virtual void UpdatePageRect();
+	virtual void UpdatePageRect(const math::v2 &focus);
 	virtual void OnEvent10(int arg);
 	virtual void OnEvent11(int arg0, int arg1);
 	virtual void OnEvent12(int arg);
@@ -584,7 +596,8 @@ public:
 	common::String m_title;			/* 1324 */
 	int m_imeType;				/* 1348 */
 	string m_imeText;			/* 1352 */
-	int m_imeMaxLength;			/* 1364 */
+	/* the view's options (bit 0: a page's new window opens without asking; names ours) */
+	int m_options;				/* 1364 */
 	bool m_imeOpen;				/* 1368 */
 	bool m_imeEnabled;			/* 1369 */
 	math::v2 m_contentSize;		/* 1376 */
@@ -607,16 +620,8 @@ public:
 	datetime::DateTime m_imeMinDate;	/* 1532 */
 	datetime::DateTime m_imeMaxDate;	/* 1556 */
 	common::String m_imeDefault;		/* 1580 */
-	int m_dialogType;			/* 1604 */
-	int m_dialogState;			/* 1608 */
-	int m_dialogButtons;			/* 1612 */
-	int m_dialogResult;			/* 1616 */
-	int m_dialogFlags;			/* 1620 */
-	int m_dialogId;				/* 1624 */
-	common::String m_dialogMessage;		/* 1628 */
-	common::String m_dialogDefault;		/* 1652 */
-	common::String m_dialogInput;		/* 1676 */
-	int m_dialogReply;			/* 1700 */
+	/* the message dialog the page asked for, opened through wutil's listener */
+	MessageDialogParam m_dialogParam;	/* 1604 */
 	vector<int> m_selectIndices;		/* 1704 */
 	int m_selectCount;			/* 1720 */
 	int m_selectFocus;			/* 1724 */

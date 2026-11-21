@@ -25,6 +25,8 @@ enum {
 	WEB_IPC_GO_FORWARD = 0x1018,
 	WEB_IPC_RELOAD = 0x1019,
 	WEB_IPC_STOP = 0x1020,
+	WEB_IPC_RENDER_RECT = 0x1024,
+	WEB_IPC_VIEWPORT = 0x1025,
 	/* the view's settings, sent as a bool (what each sets is not known yet) */
 	WEB_IPC_SELECT_REPLY = 0x1030,
 	WEB_IPC_SETTING_1031 = 0x1031,
@@ -215,6 +217,8 @@ public:
 	WebIpcCreatePageWithView(int width, int height, int viewId, const void *param,
 		int paramSize, bool secure);
 	WebIpcCreatePageWithView(const WebIpcPacket *packet);
+	/* the page's request for a new window, at the URL (type 0x2100, no view yet) */
+	WebIpcCreatePageWithView(const string &url, int width, int height, bool flag);
 	virtual ~WebIpcCreatePageWithView()
 	{
 	}
@@ -258,6 +262,41 @@ public:
 	virtual ~WebIpcRequestData()
 	{
 	}
+};
+
+/* the part of the page the view shows, and whether a tap is under way (0x81025400, type 0x1025;
+   names ours) */
+class WebIpcViewport : public WebIpcMessage {
+public:
+	WebIpcViewport(int x, int y, int width, int height, bool tapping);
+	virtual ~WebIpcViewport()
+	{
+	}
+
+	virtual void Write(WebIpcPacket *packet) const;
+
+	int m_x;
+	int m_y;
+	int m_width;
+	int m_height;
+	bool m_tapping;
+};
+
+/* the same part with the render target's state, a copy of its size bytes (up to 2048;
+   0x81025418, type 0x1024; names ours) */
+class WebIpcRenderRect : public WebIpcMessage {
+public:
+	WebIpcRenderRect(int x, int y, int width, int height, const void *data, int size);
+	virtual ~WebIpcRenderRect();
+
+	virtual void Write(WebIpcPacket *packet) const;
+
+	int m_x;
+	int m_y;
+	int m_width;
+	int m_height;
+	void *m_data;
+	int m_size;
 };
 
 /* the item the select popup chose, and whether it closes (0x81025358, type 0x1030; names

@@ -54,7 +54,7 @@ WebView::WebView(Widget *parent, CreateParam *param)
 	  m_surfaceWidth(0), m_ime(NULL), m_renderTarget(NULL), m_isSecure(false),
 	  m_cursorType(0), m_popupMenu(NULL), m_loadProgress(0), m_loadState(1),
 	  m_canReload(true), m_canGoBack(false), m_canGoForward(false), m_imeType(-1),
-	  m_imeMaxLength(0), m_imeOpen(false), m_imeEnabled(true), m_contentSize(0.0f, 0.0f),
+	  m_options(0), m_imeOpen(false), m_imeEnabled(true), m_contentSize(0.0f, 0.0f),
 	  m_scale(1.0f), m_maxScale(5.0f), m_minScale(0.25f), m_userScalable(true), m_scrollX(0),
 	  m_imeState(0), m_scrollY(0), m_pageRect(0.0f, 0.0f, 0.0f, 0.0f),
 	  m_lastPageRect(0.0f, 0.0f, 0.0f, 0.0f), m_zoomed(true),
@@ -68,16 +68,16 @@ WebView::WebView(Widget *parent, CreateParam *param)
 	  m_cursorOffset(0.0f, 0.0f), m_reserved2008(0.0f, 0.0f), m_keyReady(true)
 {
 	m_ipcData.clear();
-	m_dialogState = 0;
-	m_dialogButtons = 0;
-	m_dialogResult = 0;
-	m_dialogFlags = 0;
-	m_dialogMessage = common::String(L"");
-	m_dialogDefault = common::String(L"");
-	m_dialogType = 0;
-	m_dialogId = 0;
-	m_dialogInput = common::String(L"");
-	m_dialogReply = 0;
+	m_dialogParam.values[0] = 0;
+	m_dialogParam.values[1] = 0;
+	m_dialogParam.values[2] = 0;
+	m_dialogParam.values[3] = 0;
+	m_dialogParam.title = common::String(L"");
+	m_dialogParam.message = common::String(L"");
+	m_dialogParam.owner = NULL;
+	m_dialogParam.values[4] = 0;
+	m_dialogParam.button = common::String(L"");
+	m_dialogParam.user_data = NULL;
 	m_selectIndices.clear();
 	m_selectItems.clear();
 	m_selectEnabled.clear();
@@ -348,9 +348,9 @@ int WebView::SetLoadingDelay(int delay)
 	return 0;
 }
 
-int WebView::SetImeMaxLength(int length)
+int WebView::SetOptions(int options)
 {
-	m_imeMaxLength = length;
+	m_options = options;
 	return 0;
 }
 
@@ -923,6 +923,185 @@ void WebView::SetPageHandlesInput(bool on)
 		plane->SetGestureMask(plane->m_touch_gesture_mask | 2, true);
 	}
 	m_pageHandlesInput = on;
+}
+
+/* the page asks for a new window: the user is asked first unless the view's options say not to,
+   or else the listener makes the window's view, which then makes its page; with no view for it,
+   the request goes back to the page */
+void WebView::OnCreateWindow(const WebIpcCreatePageWithView *message)
+{
+	if (message == NULL) {
+		WebIpcCreatePageWithView reply(0, 0, -1, NULL, 0, false);
+
+		WebIpc::GetInstance()->Post(&reply, m_viewId);
+		return;
+	}
+
+	CloseIme();
+
+	bool ask = message->m_flag & ((m_options & 1) == 0);
+	MessageDialogListener *dialog = wutil::GetMessageDialogListener();
+
+	if (dialog != NULL && ask) {
+		m_dialogParam.values[0] = 1;
+		m_dialogParam.values[1] = 3;
+		m_dialogParam.button = common::String(message->m_url.c_str());
+		m_dialogParam.title = common::String(L"");
+		m_dialogParam.owner = static_cast<WebViewPageClient *>(this);
+		m_dialogParam.user_data = new WebIpcCreatePageWithView(message->m_url.c_str(),
+			message->m_width, message->m_height, message->m_flag);
+
+		Widget *cursor = m_cursorPlane;
+
+		m_cursorHidden = true;
+		if (cursor != NULL) {
+			cursor->m_transition_complete = false;
+			cursor->m_transition = 0xff;
+			cursor->DoTransitionReverse_core(0.0f, true);
+			ScePafWidget_4588699E(cursor, NULL, 2, 0.0f, NULL);
+		}
+		dialog->Method9(&m_dialogParam);
+		return;
+	}
+
+	if (m_listener == NULL)
+		return;
+
+	WebView *window = NULL;
+	bool handled = false;
+
+	m_listener->OnCreateWindow(this, Url(string(message->m_url.c_str())), message->m_width,
+		message->m_height, &window, &handled);
+	if (window == NULL) {
+		WebIpc::GetInstance()->Post(message, m_viewId);
+		return;
+	}
+
+	window->m_startWithParam = true;
+	if (handled || window->m_pageState == 3)
+		return;
+
+	WebViewListener *listener = (WebViewListener *)wutil::GetWebViewListener();
+
+	if (listener != NULL)
+		listener->Initialize(window);
+	if (window->m_pageState == 0) {
+		if (window->m_startWithParam)
+			window->CreatePageForView();
+		else
+			window->CreatePage();
+	}
+}
+
+/* the cursor moved by the step, kept in the view (less the IME's height where it pads the view,
+   with ime): where it would leave the view, the focus moves by the step instead, and with
+   scroll the view follows it */
+math::v2 WebView::MoveCursorInView(const math::v2 &step, bool ime, bool scroll)
+{
+	math::v2 focus = GetViewFocusTarget();
+	math::v2 pos = GetCursorPos(false) + step * math::v2(1.0f, -1.0f);
+	float padding = m_padding.extract_y();
+	float top = padding - m_pageRect.extract_y();
+	float margin = m_loadProgress < 100 ? padding : top;
+
+	if (m_pageRect.extract_y() > 0.0f && m_padding.extract_w() > 0.0f)
+		margin = top;
+
+	const math::v4 *size = GetSize(0);
+	math::rect area(math::v2(0.0f, 0.0f), math::v2(size->extract_x(), size->extract_y()));
+
+	area.set_top(area.top() - margin);
+	area.set_bottom(area.bottom() + m_pageRect.extract_w());
+	if (m_ime_padding && ime)
+		area.set_bottom(area.bottom() - m_ime_height);
+
+	if (!area.is_point_in_rect(pos)) {
+		if (pos.extract_x() < area.left()) {
+			pos.set_x(area.left());
+			focus.set_x(focus.extract_x() + step.extract_x());
+		} else if (area.right() < pos.extract_x()) {
+			pos.set_x(area.right());
+			focus.set_x(focus.extract_x() + step.extract_x());
+		}
+		if (pos.extract_y() < area.bottom()) {
+			pos.set_y(area.bottom());
+			focus.set_y(focus.extract_y() - step.extract_y());
+		} else if (area.top() < pos.extract_y()) {
+			pos.set_y(area.top());
+			focus.set_y(focus.extract_y() - step.extract_y());
+		}
+	}
+	if (scroll)
+		SetViewFocus(focus, NULL, true, true);
+	return pos;
+}
+
+/* the page's texture moved up past the top padding, or, while the IME pads the view, by as much
+   of the view as it covers (up to 30 past its height) */
+void WebView::UpdateTexRegion()
+{
+	graph::PlaneObj *plane = (graph::PlaneObj *)GetDrawObj(0);
+
+	if (plane == NULL || plane->m_size == math::v3(0.0f, 0.0f, 0.0f))
+		return;
+
+	float offset = -((m_padding.extract_y() - m_pageRect.extract_y()) /
+		plane->m_size.extract_y());
+
+	if (m_ime_padding) {
+		math::v2 focus = GetViewFocus();
+		math::v2 box = m_view_box_size;
+		float covered = -(focus + (box - math::v2(GetSize(0)->getImpl().getXY())) *
+			0.5f).extract_y();
+
+		if (covered > 0.0f) {
+			if (covered > m_ime_height + 30.0f)
+				covered = m_ime_height + 30.0f;
+			offset = covered / plane->m_size.extract_y();
+		}
+	}
+	plane->SetTexRegion(math::v4(0.0f, offset, 1.0f, 1.0f));
+}
+
+/* the view moved or zoomed: the page told what part of it the view shows (with the render
+   target's state when it draws into the view's surface), the cursor kept in the view, and a zoom
+   left over from a finished tap dropped */
+void WebView::UpdateViewport()
+{
+	if (!CanZoom() || GetViewParent() == NULL)
+		return;
+
+	UpdatePageRect(GetViewFocus());
+	UpdateTexRegion();
+
+	math::v4 visible = GetVisiblePageRect();
+	int x = (int32_t)visible.extract_x();
+	int y = (int32_t)visible.extract_y();
+	int width = (int32_t)visible.extract_z();
+	int height = (int32_t)visible.extract_w();
+	WebIpcViewport viewport(x, y, width, height, m_tapping);
+
+	WebIpc::GetInstance()->Send(&viewport, m_viewId);
+	if (m_surface.get() != NULL && m_renderTarget != NULL) {
+		WebIpcRenderRect render(x, y, width, height, m_renderTarget, 28);
+
+		WebIpc::GetInstance()->Send(&render, m_viewId);
+		ProcessRenderCommands(m_renderTarget);
+	}
+
+	math::v2 pos = MoveCursorInView(math::v2(0.0f, 0.0f), false, false);
+
+	MoveCursor(&pos, 0.0f);
+	if (m_imeOpen)
+		m_imeOpen = false;
+	else
+		SendCursorPos();
+
+	if (m_zoomAnims.size() != 0 && m_tapAnims.size() == 0) {
+		m_tapping = false;
+		m_zoomAnims.clear();
+		UpdateViewport();
+	}
 }
 
 void WebView::SetSecure(bool secure)

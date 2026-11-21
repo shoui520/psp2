@@ -32,7 +32,8 @@ struct MessageDialogParam {
 	common::String title;
 	common::String message;
 	common::String button;
-	int32_t flags;
+	/* the owner's, given back when the dialog closes */
+	void *user_data;
 };
 
 class MessageDialogListener {
@@ -47,7 +48,8 @@ public:
 	virtual void Method7() = 0;
 	/* whether a dialog is open */
 	virtual bool Method8() = 0;
-	virtual void Method9() = 0;
+	/* opens the dialog asked for */
+	virtual void Method9(MessageDialogParam *param) = 0;
 	virtual void Method10() = 0;
 	virtual void Method11() = 0;
 	virtual void Method12() = 0;
