@@ -1,6 +1,17 @@
-# generated skeleton (T2): stub bodies, original module/export/import tables
-# one Sony build, shipped as vs0:vsh/common/libmarlin and vs0:sys/external/libmln:
-# the target is named from the rel
-psp2_module(${PSP2_TARGET} KIND user SKELETON SOURCES
+# SceLibMarlin, Intertrust's Marlin DRM client, built with GCC in ARM mode, -O2 with the
+# vectorizer (its copy loops are vectorized; -O3 would also peel and unroll them, Sony's are not).
+# No stack protector: the module imports no __stack_chk_guard.
+# One Sony build, shipped as vs0:vsh/common/libmarlin and vs0:sys/external/libmln:
+# the target is named from the rel. No debug records or strings name its files: the
+# file names are ours, one per address range.
+set(MLN_ARM_SOURCES
+	buffer.c
+	memory.c
+	mutex.c
+	api.c
+)
+psp2_module(${PSP2_TARGET} KIND user COMPILER gcc48 PARTIAL SOURCES
+	${MLN_ARM_SOURCES}
 	libmarlin.c
 )
+set_source_files_properties(${MLN_ARM_SOURCES} PROPERTIES COMPILE_OPTIONS "-marm;-O2;-ftree-vectorize;-finline-functions;-fno-stack-protector")
