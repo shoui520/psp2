@@ -46,6 +46,10 @@ _Static_assert(sizeof(SceCtrlActuator) == 8, "SceCtrlActuator");
 
 #include <ctrl/ctrl_sample.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /*
  * A virtual controller driver (SceCtrlForDriver_18823EEA): it
  * takes the place of the built-in pads. The original read callback consumes
@@ -154,3 +158,7 @@ int sceCtrlSetSamplingModeForUser(int mode);
 int sceCtrlSetSamplingModeExt(int mode);
 int sceCtrlSingleControllerMode(int port);
 int sceCtrlUnregisterBdRMCCallback(SceUID callback);
+
+#ifdef __cplusplus
+}
+#endif

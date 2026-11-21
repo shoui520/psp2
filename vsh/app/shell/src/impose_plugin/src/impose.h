@@ -29,6 +29,7 @@
 #include <widget/w_slidebar.h>
 #include <widget/w_check_box.h>
 #include <widget/w_text.h>
+#include <widget/w_composite_drawer.h>
 #include <rtc/rtc.h>
 #include "../../livespace_db/livespace_db_internal.h"
 #include "impose_shell_event.h"
@@ -330,15 +331,30 @@ public:
 	SceUInt8 data[28];
 };
 
-class ImposePart81153A18 {
+/* the menu's controller settings: the vibration, the port's number and battery shown while a
+   controller is on a port, the port given another number, the controller disconnected
+   (impose_psmenu_controller.cpp; PLACEHOLDER names) */
+class ImposePsMenuController {
 public:
-	ImposePart81153A18(paf::Plugin *plugin);
-	~ImposePart81153A18();
-	void Impose_81153A26(paf::ui::Widget *box);
-	void Impose_8115422E();
-	void Impose_81154CD2();
+	ImposePsMenuController(paf::Plugin *plugin);
+	void Open(paf::ui::Widget *box);
+	void Close();
+	void StartBlink();
+	void StopBlink();
+	void UpdateBattery();
+	void Update();
+	void UpdatePortLabels();
+	void Tick();
+	void Blink(paf::ui::CompositeDrawer *battery);
+	void Disconnect();
+	void OpenAssign();
+	void OnVibration(paf::ui::CheckBox *check);
 
-	SceUInt8 data[20];
+	paf::Plugin *m_plugin;
+	paf::ui::Widget *m_box;
+	int m_port;
+	int m_count;		/* the ticks left to wait for a controller */
+	SceUInt8 m_battery;
 };
 
 class ImposePart811558C0 {
@@ -445,7 +461,7 @@ public:
 	bool m_checking;
 	paf::ui::Widget *m_focusButton;
 	ImposePart81158C14 m_part81158C14;
-	ImposePart81153A18 m_part81153A18;
+	ImposePsMenuController m_controller;
 	ImposePart811558C0 m_part811558C0;
 	ImposePsMenuVolume m_volume;
 	ImposePsMenuAccessibility m_accessibility;

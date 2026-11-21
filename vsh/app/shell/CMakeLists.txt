@@ -248,6 +248,7 @@ psp2_module(vs0_vsh_shell_shell KIND user COMPILER snc PARTIAL SOURCES
 	src/impose_plugin/src/impose_zoom.cpp
 	src/impose_plugin/src/impose_psmenu_accessibility.cpp
 	src/impose_plugin/src/impose_psmenu_volume.cpp
+	src/impose_plugin/src/impose_psmenu_controller.cpp
 	shell.c
 )
 target_include_directories(vs0_vsh_shell_shell PRIVATE "${PSP2_SRC}/vsh/paf/include"

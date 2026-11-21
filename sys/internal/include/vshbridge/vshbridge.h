@@ -73,6 +73,10 @@ int vshDisplayGetActualViewportConf(SceUInt32 head, SceUInt32 plane,
 struct SceTouchData;
 int vshTouchSetTouchEmulationData(const struct SceTouchData *front, const struct SceTouchData *back);
 
+/* the controller of a port given another port, and the controllers' vibration on or off */
+int vshCtrlChangePortAssign(SceInt8 port, SceInt8 newPort);
+int vshCtrlSetVibrationSetting(int enable);
+
 /* sceIoMount's data and its 64-bit reserved word, in two halves, and the path's size */
 typedef struct VshIoMountArgs {
 	void *data;

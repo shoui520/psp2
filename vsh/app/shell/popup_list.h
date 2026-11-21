@@ -46,6 +46,17 @@ struct ShellPopupListItem {
 
 PAF_VECTOR_NOINLINE_PUSH_BACK(ShellPopupListItem, paf::allocator<ShellPopupListItem>)
 
+/* the items' destructor out of line, as Sony calls it from every list's caller (0x81412E28) */
+namespace paf {
+template<> inline __attribute__((noinline))
+vector<ShellPopupListItem, allocator<ShellPopupListItem> >::~vector()
+{
+	typedef ShellPopupListItem _Elem;
+
+	PAF_VECTOR_DESTROY_ALL
+}
+}
+
 /* PLACEHOLDER: what is called back: an item chosen (its index), and the list closed (its
    result) */
 typedef void (*ShellPopupListSelectFunc)(int index, int value, void *arg);
@@ -58,17 +69,28 @@ public:
 	virtual ~ShellPopupListCallback();
 };
 
+/* PLACEHOLDER: what the list calls for each item's widget it makes, with the item's index;
+   released by the list (vtable 0x81530E84 for impose_plugin's) */
+class ShellPopupListItemCallback {
+public:
+	virtual ~ShellPopupListItemCallback()
+	{
+	}
+
+	virtual void operator()(paf::ui::Widget *item, int index) = 0;
+};
+
 /* PLACEHOLDER: the list's parameters (224 bytes), filled by its caller and given to
    shellPopupListOpen */
 class ShellPopupListParam {
 public:
 	ShellPopupListParam(int type, paf::Plugin *plugin)
-		: type(type), plugin(plugin), flags(16), selected(0), focus(-1), reserved(0)
+		: type(type), plugin(plugin), flags(16), selected(0), focus(-1), selectCallback(NULL)
 	{
 		callback[0] = NULL;
 		callback[1] = NULL;
 		callback[2] = NULL;
-		callback[3] = NULL;
+		itemCallback = NULL;
 		origin[0] = 0.0f;
 		origin[1] = 0.0f;
 		origin[2] = 0.0f;
@@ -121,9 +143,10 @@ public:
 	int focus;
 	paf::vector<paf::wstring> texts;	/* PLACEHOLDER: one per item, sized to them */
 	paf::vector<ShellPopupListItem> items;
-	ShellPopupListCallback *callback[4];	/* [2] select, [3] close */
-	int reserved;
-	int unused;
+	ShellPopupListCallback *callback[3];	/* PLACEHOLDER: not set by its callers yet */
+	ShellPopupListItemCallback *itemCallback;
+	ShellPopupListCallback *selectCallback;	/* SetSelectCallback's */
+	ShellPopupListCallback *closeCallback;	/* SetCloseCallback's */
 	float origin[4];
 	int margin[2];
 	int columns;
