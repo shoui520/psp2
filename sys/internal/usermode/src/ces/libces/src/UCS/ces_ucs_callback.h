@@ -293,7 +293,24 @@ typedef struct CesUcsCallbacks {
 	void *reserved[11];
 } CesUcsCallbacks;
 
+/* the error callbacks a context's error operations select */
+int sceCesCallbackToUtf16ErrorReplace(const void *srcStr, uint32_t srcMax, uint32_t *srcLen,
+				      uint16_t *utf16buf, uint32_t utf16max, uint32_t *utf16Len,
+				      SceCesState *cbState);
+int sceCesCallbackToUcs2ErrorReplace(const void *srcStr, uint32_t srcMax, uint32_t *srcLen,
+				     uint16_t *ucs2buf, uint32_t ucs2max, uint32_t *ucs2Count,
+				     SceCesState *cbState);
+int sceCesCallbackToUtf8ErrorReplace(const void *srcStr, uint32_t srcMax, uint32_t *srcLen,
+				     uint8_t *utf8buf, uint32_t utf8max, uint32_t *utf8size,
+				     SceCesState *cbState);
+
 const SceCesUtf8ToCopyErrorCallbacks *_sceCesSetupUtf8ToCopyErrorCallbacks(uint32_t operation,
 	SceCesUtf8ToCopyErrorCallbacks *callbacks);
+const SceCesUtf8ToUcs2ErrorCallbacks *_sceCesSetupUtf8ToUcs2ErrorCallbacks(uint32_t operation,
+	SceCesUtf8ToUcs2ErrorCallbacks *callbacks);
+const SceCesUtf8ToUtf16ErrorCallbacks *_sceCesSetupUtf8ToUtf16ErrorCallbacks(uint32_t operation,
+	SceCesUtf8ToUtf16ErrorCallbacks *callbacks);
+const SceCesUtf16ToUtf8ErrorCallbacks *_sceCesSetupUtf16ToUtf8ErrorCallbacks(uint32_t operation,
+	SceCesUtf16ToUtf8ErrorCallbacks *callbacks);
 
 #endif /* _CES_UCS_CALLBACK_H */

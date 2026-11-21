@@ -10,6 +10,9 @@
 #include <ces/libces_ucs.h>
 
 /* a byte that continues a UTF-8 sequence, 0x80 to 0xbf */
+/* the highest code UCS-2 holds */
+#define CES_UCS2_CODE_MAX	0xffff
+
 #define UTF8_IS_TRAIL(c)	((int8_t)(c) < (int8_t)0xc0)
 
 /* a sequence of codeLen bytes that bufsize cuts short: the length up to the first byte that
@@ -202,6 +205,25 @@ int sceCesUtf8ToUcs4(const uint8_t *utf8buf, uint32_t utf8max, uint32_t *convSiz
 	if (ucs4 == NULL) {
 		if (ret == SCE_CES_OK)
 			ret = SCE_CES_ERROR_INVALID_DST_BUFFER;
+	}
+	return ret;
+}
+
+int sceCesUtf8ToUcs2(const uint8_t *utf8buf, uint32_t utf8max, uint32_t *utf8Len, uint16_t *ucs2)
+{
+	uint32_t ucs4;
+	int ret;
+
+	ret = cesUtf8ToUcs4(utf8buf, utf8max, utf8Len, &ucs4);
+	if (ucs4 > CES_UCS2_CODE_MAX) {
+		if (ucs2 != NULL)
+			*ucs2 = 0;
+		if (ret == SCE_CES_OK)
+			ret = SCE_CES_ERROR_OUT_OF_CODE_RANGE;
+	} else if (ucs2 != NULL) {
+		*ucs2 = ucs4;
+	} else if (ret == SCE_CES_OK) {
+		ret = SCE_CES_ERROR_INVALID_DST_BUFFER;
 	}
 	return ret;
 }

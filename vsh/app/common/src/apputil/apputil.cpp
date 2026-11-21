@@ -13,6 +13,7 @@
 #include <apputil/apputil_internal.h>
 #include <appmgr/appmgr.h>
 #include <appmgr/appmgr_savedata.h>
+#include <ces/libces_ucs.h>
 #include "apputil_private.h"
 
 int g_initialized;
@@ -491,28 +492,28 @@ extern "C" SceInt32 sceAppUtilStoreBrowse(SceAppUtilStoreBrowseParam *param)
 extern "C" SceInt32 sceAppUtilLaunchWebBrowser(SceAppUtilWebBrowserParam *param)
 {
 	if (g_initialized != 0)
-		return launchWebBrowser(param);
+		return _sceAppUtilLaunchWebBrowser(param);
 	return SCE_APPUTIL_ERROR_NOT_INITIALIZED;
 }
 
-extern "C" int SceAppUtilWebBrowserCBLimited_3ED8F841(int arg)
+extern "C" int SceAppUtilWebBrowserCBLimited_3ED8F841(const SceAppUtilWebBrowserCBLimitedParam *param)
 {
 	if (g_initialized != 0)
-		return webBrowserCallback(arg);
+		return _sceAppUtilLaunchWebBrowserCBLimited(param);
 	return SCE_APPUTIL_ERROR_NOT_INITIALIZED;
 }
 
 extern "C" SceInt32 sceAppUtilResetCookieWebBrowser(SceAppUtilWebBrowserResetCookieParam *param)
 {
 	if (g_initialized != 0)
-		return resetCookieWebBrowser(param);
+		return _sceAppUtilResetCookieWebBrowser(param);
 	return SCE_APPUTIL_ERROR_NOT_INITIALIZED;
 }
 
 extern "C" SceInt32 sceAppUtilAddCookieWebBrowser(SceAppUtilWebBrowserAddCookieParam *param)
 {
 	if (g_initialized != 0)
-		return addCookieWebBrowser(param);
+		return _sceAppUtilAddCookieWebBrowser(param);
 	return SCE_APPUTIL_ERROR_NOT_INITIALIZED;
 }
 
@@ -539,20 +540,20 @@ extern "C" int SceAppUtilLaunchApp_D2338D13(const SceShellUtilLaunchAppParam *pa
 
 extern "C" int SceAppUtil_7DA34311(const SceChar8 *str, SceSize size)
 {
-	SceUInt32 length;
-	SceUInt32 bom;
-	SceUInt8 last[4];
-	SceUInt8 context[128];
+	uint32_t convSize;
+	uint32_t ucs2Len;
+	uint32_t utf32;
+	SceCesUcsContext ucs;
 
-	if (utf8Scan(str, size, &length, &bom) != 0)
+	if (sceCesUtf8ToUtf32((const uint8_t *)str, size, &convSize, &utf32) != 0)
 		return APPUTIL_ERROR_INVALID_STRING;
 	/* a string of nothing but a byte order mark */
-	if (length == 3 && bom == 0xfeff)
+	if (convSize == 3 && utf32 == 0xfeff)
 		return APPUTIL_ERROR_INVALID_STRING;
-	sceClibMemset(context, 0, sizeof(context));
-	if (utf8DecoderInit(context) != 0)
+	sceClibMemset(&ucs, 0, sizeof(ucs));
+	if (sceCesUcsContextInit(&ucs) != 0)
 		return APPUTIL_ERROR_INVALID_STRING;
-	if (utf8Decode(context, str, size, &length, last) != 0)
+	if (sceCesUtf8StrGetUcs2Len(&ucs, (const uint8_t *)str, size, &convSize, &ucs2Len) != 0)
 		return APPUTIL_ERROR_INVALID_STRING;
 	return 0;
 }

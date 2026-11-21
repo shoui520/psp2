@@ -61,6 +61,22 @@ int SceAppUtil_C0418B1C(int type);
    SceMsgDialogPlugin takes a first one above 0 as a patch found for it */
 int SceAppUtil_B2FE3BB1(SceInt32 *notReady, SceInt32 *ready);
 
+/*
+ * SceAppUtilWebBrowserCBLimited_3ED8F841's parameter (name ours): the web browser opened at wbstr
+ * like sceAppUtilLaunchWebBrowser, told to call the application back with cbstr, and the user
+ * agent it is to use kept in useragent.dat
+ */
+typedef struct SceAppUtilWebBrowserCBLimitedParam {
+	const SceChar8 *wbstr;
+	SceUInt32 wbstrLength;
+	const SceChar8 *cbstr;
+	SceUInt32 cbstrLength;
+	SceUInt32 launchMode;
+	const SceChar8 *userAgent;
+} SceAppUtilWebBrowserCBLimitedParam;
+
+int SceAppUtilWebBrowserCBLimited_3ED8F841(const SceAppUtilWebBrowserCBLimitedParam *param);
+
 #ifdef __cplusplus
 }
 #endif

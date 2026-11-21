@@ -6,6 +6,7 @@
 #define APPUTIL_PRIVATE_H
 
 #include <scetypes.h>
+#include <kernel/threadmgr.h>
 #include <apputil.h>
 #include <apputil/apputil_psp.h>
 #include <apputil/apputil_internal.h>
@@ -56,6 +57,20 @@
 
 /* the stack a launch request needs */
 #define APPUTIL_LAUNCH_STACK_SIZE		3072
+
+/* the calling thread's stack left below this frame, or the error getting its information */
+static inline int getFreeStackSize(void)
+{
+	int here;
+	SceKernelThreadInfo info;
+	int ret;
+
+	info.size = sizeof(info);
+	ret = sceKernelGetThreadInfo(0, &info);
+	if (ret >= 0)
+		ret = (char *)&here - (char *)info.pStack;
+	return ret;
+}
 
 /* SceAppUtil_C3CB128B's and SceAppUtil_C0418B1C's mount: the PSP save data root */
 #define APPUTIL_MOUNT_PSP_SAVEDATA_ROOT		202
@@ -264,15 +279,47 @@ int bookMount(SceAppUtilMountPoint *mountPoint);
 int bookUmount(void);
 int musicMount(void);
 int musicUmount(void);
-int webBrowserCallback(int arg);
-int resetCookieWebBrowser(SceAppUtilWebBrowserResetCookieParam *param);
-int addCookieWebBrowser(SceAppUtilWebBrowserAddCookieParam *param);
-int launchWebBrowser(SceAppUtilWebBrowserParam *param);
+int _sceAppUtilLaunchWebBrowserCBLimited(const SceAppUtilWebBrowserCBLimitedParam *param);
+int _sceAppUtilResetCookieWebBrowser(const SceAppUtilWebBrowserResetCookieParam *param);
+int _sceAppUtilAddCookieWebBrowser(const SceAppUtilWebBrowserAddCookieParam *param);
+int _sceAppUtilLaunchWebBrowser(const SceAppUtilWebBrowserParam *param);
 
-/* UTF-8 */
-int utf8Scan(const SceChar8 *str, SceSize size, SceUInt32 *length, SceUInt32 *bom);
-int utf8DecoderInit(void *context);
-int utf8Decode(void *context, const SceChar8 *str, SceSize size, SceUInt32 *length, SceUInt8 *last);
+/*
+ * The web browser's files in the application's work directory (useragent.dat, cookie.dat): a
+ * header, then the records one after the other
+ */
+#define APPUTIL_MOUNT_ID_WEBBROWSER		206
+#define WEBBROWSER_FILE_MOUNT_WORKDIR		0
+#define WEBBROWSER_URI_SIZE			1024
+#define WEBBROWSER_URI_PART_SIZE		64
+
+typedef struct WebBrowserFileHeader {
+	SceUInt32 headerSize;		/* sizeof(WebBrowserFileHeader) */
+	SceUInt32 recordsSize;		/* the bytes of records after the header */
+	SceUInt32 count;		/* the records */
+	SceUInt32 reserved;
+} WebBrowserFileHeader;
+
+typedef struct WebBrowserFileRecord {
+	char uri[WEBBROWSER_URI_SIZE];	/* the page it is for */
+	char value[4096];		/* the user agent, or the cookie's Set-Cookie string */
+} WebBrowserFileRecord;
+
+/* a file of records: Append adds one, refusing past maxCount (0: no limit) */
+class WebBrowserFile {
+public:
+	WebBrowserFile();
+	int Append(const char *path, WebBrowserFileHeader *header, const WebBrowserFileRecord *record,
+		   SceUInt32 maxCount);
+};
+
+/* the URI a launch request builds: str copied at *cursor, both moved on by its length */
+SceSize webBrowserUriAppend(char **cursor, const char *str, SceSize maxLength);
+void webBrowserUriAdvance(char **cursor, SceSize *length, SceSize n);
+/* the work directory a web browser file is kept in, mounted and unmounted; a file removed */
+int webBrowserFileMount(int type, char *mountPoint);
+int webBrowserFileUmount(const char *mountPoint);
+int webBrowserFileRemove(const char *name);
 
 /* the argument checks the add-on content and background download calls share */
 int checkAddcontMountPoint(const char *mountPoint, int added);

@@ -13,6 +13,8 @@
 
 /* above the highest code point of UTF-16, and so of the Unicode forms a replacement goes into */
 #define CES_UCS_CODE_LIMIT	0x110000
+/* the highest code UCS-2 holds */
+#define CES_UCS2_CODE_MAX	0xffff
 
 int sceCesCallbackToUtf16ErrorReplace(const void *srcStr, uint32_t srcMax, uint32_t *srcLen,
 				      uint16_t *utf16buf, uint32_t utf16max, uint32_t *utf16Len,
@@ -23,6 +25,25 @@ int sceCesCallbackToUtf16ErrorReplace(const void *srcStr, uint32_t srcMax, uint3
 	ucode = cbState->replaceCode;
 	if (ucode != 0 && ucode < CES_UCS_CODE_LIMIT) {
 		sceCesUcs4ToUtf16(ucode, utf16buf, utf16max, utf16Len);
+		cbState->setCharCount = 1;
+	} else {
+		cbState->codeLen = 0;
+	}
+	return SCE_CES_OK;
+}
+
+int sceCesCallbackToUcs2ErrorReplace(const void *srcStr, uint32_t srcMax, uint32_t *srcLen,
+				     uint16_t *ucs2buf, uint32_t ucs2max, uint32_t *ucs2Count,
+				     SceCesState *cbState)
+{
+	uint32_t ucode;
+
+	ucode = cbState->replaceCode;
+	if (ucode != 0 && ucode <= CES_UCS2_CODE_MAX) {
+		if (ucs2Count != NULL)
+			*ucs2Count = 1;
+		if (ucs2buf != NULL && ucs2max != 0)
+			*ucs2buf = ucode;
 		cbState->setCharCount = 1;
 	} else {
 		cbState->codeLen = 0;
@@ -79,6 +100,23 @@ static inline void *cesErrorCallbackToUtf16(uint32_t operation)
 }
 
 /* the callback an error operation (one nibble of a context's errOperation) selects, for a
+   conversion into UCS-2 */
+static inline void *cesErrorCallbackToUcs2(uint32_t operation)
+{
+	void *callback;
+
+	if (operation == SCE_CES_ERR_OPERATION_REPLACE)
+		callback = (void *)sceCesCallbackToUcs2ErrorReplace;
+	else if (operation == SCE_CES_ERR_OPERATION_SKIP)
+		callback = (void *)sceCesCallbackUcsErrorSkip;
+	else if (operation == SCE_CES_ERR_OPERATION_OK)
+		callback = (void *)sceCesCallbackUcsErrorOk;
+	else
+		callback = NULL;
+	return callback;
+}
+
+/* the callback an error operation (one nibble of a context's errOperation) selects, for a
    conversion into UTF-8 */
 static inline void *cesErrorCallbackToUtf8(uint32_t operation)
 {
@@ -105,6 +143,15 @@ const SceCesUtf8ToCopyErrorCallbacks *_sceCesSetupUtf8ToCopyErrorCallbacks(uint3
 {
 	callbacks->InvalidEncode = (SceCesUtf8ToCopyErrorCallback *)cesErrorCallbackToUtf8(CES_ERR_INVALID_ENCODE(operation));
 	callbacks->IllegalCode = (SceCesUtf8ToCopyErrorCallback *)cesErrorCallbackToUtf8(CES_ERR_ILLEGAL_CODE(operation));
+	return callbacks;
+}
+
+const SceCesUtf8ToUcs2ErrorCallbacks *_sceCesSetupUtf8ToUcs2ErrorCallbacks(uint32_t operation,
+	SceCesUtf8ToUcs2ErrorCallbacks *callbacks)
+{
+	callbacks->InvalidEncode = (SceCesUtf8ToUcs2ErrorCallback *)cesErrorCallbackToUcs2(CES_ERR_INVALID_ENCODE(operation));
+	callbacks->IllegalCode = (SceCesUtf8ToUcs2ErrorCallback *)cesErrorCallbackToUcs2(CES_ERR_ILLEGAL_CODE(operation));
+	callbacks->OutOfCodeRange = (SceCesUtf8ToUcs2ErrorCallback *)cesErrorCallbackToUcs2(CES_ERR_OUT_OF_CODE_RANGE(operation));
 	return callbacks;
 }
 

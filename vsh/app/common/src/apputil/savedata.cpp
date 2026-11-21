@@ -24,9 +24,7 @@ char g_pspSaveDataMountPoint[SCE_APPUTIL_MOUNTPOINT_DATA_MAXSIZE];
 /* a launch request through SceShellSvc (SceAppUtilLaunchApp_D2338D13) */
 int launchAppRequest(const SceShellUtilLaunchAppParam *param)
 {
-	char here;
 	SceShellUtilLaunchAppParam request;
-	SceKernelThreadInfo info;
 	int ret;
 
 	if (param == NULL) {
@@ -37,10 +35,7 @@ int launchAppRequest(const SceShellUtilLaunchAppParam *param)
 		paramError(281);
 		return SCE_APPUTIL_ERROR_PARAMETER;
 	}
-	info.size = sizeof(info);
-	ret = sceKernelGetThreadInfo(0, &info);
-	if (ret >= 0)
-		ret = &here - (char *)info.pStack;
+	ret = getFreeStackSize();
 	if (ret < APPUTIL_LAUNCH_STACK_SIZE)
 		return SCE_KERNEL_ERROR_ILLEGAL_STACK_SIZE;
 	sceClibMemsetChk(&request, 0, sizeof(request), sizeof(request));

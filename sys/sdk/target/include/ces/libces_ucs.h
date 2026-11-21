@@ -23,6 +23,11 @@ extern "C" {
 int sceCesUcs2CheckCode(uint16_t ucs2);
 int sceCesUtf8CheckCode(const uint8_t *utf8addr, uint32_t utf8max, uint32_t *utf8Len);
 
+/* one character conversion */
+/* UTF-8 */
+int sceCesUtf8ToUtf32(const uint8_t *utf8buf, uint32_t utf8max, uint32_t *convSize, uint32_t *utf32);
+int sceCesUtf8ToUcs2(const uint8_t *utf8buf, uint32_t utf8max, uint32_t *utf8Len, uint16_t *ucs2);
+
 /* character string conversion */
 /* ================================================== */
 typedef union SceCesUcsContext {
@@ -44,6 +49,9 @@ int sceCesUtf16StrGetUtf8Len(SceCesUcsContext *uctx,
 int sceCesUtf8StrGetUtf16Len(SceCesUcsContext *uctx,
 			     const uint8_t *utf8str, uint32_t utf8max, uint32_t *utf8Len,
 			     uint32_t *utf16Len);
+int sceCesUtf8StrGetUcs2Len(SceCesUcsContext *uctx,
+			    const uint8_t *utf8str, uint32_t utf8max, uint32_t *utf8Len,
+			    uint32_t *ucs2Len);
 
 /* UTF-16 (string) */
 int sceCesUtf16StrToUtf8Str(SceCesUcsContext *uctx,

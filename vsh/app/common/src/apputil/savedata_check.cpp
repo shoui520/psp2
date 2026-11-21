@@ -101,8 +101,9 @@ int checkMountPoint(const char *mountPoint, int kind)
 
 int checkSlotParam(const SceAppUtilSaveDataSlotParam *param)
 {
+	const char *s;
 	SceUInt32 i;
-	int newlines;
+	int newlines, n;
 
 	if (param == NULL) {
 		paramError(37);
@@ -127,10 +128,11 @@ int checkSlotParam(const SceAppUtilSaveDataSlotParam *param)
 	if (g_sdkVersion >= 0x1800000) {
 		/* titles of one line, from SDK 1.80 */
 		newlines = 0;
-		for (i = 0; i < sizeof(param->title); i++) {
-			if (param->title[i] == '\0')
+		s = (const char *)param->title;
+		for (i = 0; i < sizeof(param->title); i++, s++) {
+			if (*s == '\0')
 				break;
-			if (param->title[i] == '\n' || param->title[i] == '\r')
+			if (*s == '\n' || *s == '\r')
 				newlines++;
 		}
 		if (i == sizeof(param->title) || newlines > 0) {
@@ -138,10 +140,11 @@ int checkSlotParam(const SceAppUtilSaveDataSlotParam *param)
 			return 0;
 		}
 		newlines = 0;
-		for (i = 0; i < sizeof(param->subTitle); i++) {
-			if (param->subTitle[i] == '\0')
+		s = (const char *)param->subTitle;
+		for (i = 0; i < sizeof(param->subTitle); i++, s++) {
+			if (*s == '\0')
 				break;
-			if (param->subTitle[i] == '\n' || param->subTitle[i] == '\r')
+			if (*s == '\n' || *s == '\r')
 				newlines++;
 		}
 		if (i == sizeof(param->subTitle) || newlines > 0) {
@@ -161,8 +164,8 @@ int checkSlotParam(const SceAppUtilSaveDataSlotParam *param)
 		paramError(43);
 		return 0;
 	}
-	for (i = 0; i < sizeof(param->iconPath); ) {
-		SceChar8 c = param->iconPath[i];
+	for (n = 0; n < (int)sizeof(param->iconPath); ) {
+		SceChar8 c = param->iconPath[n];
 
 		if (c == '\0')
 			break;
@@ -171,8 +174,8 @@ int checkSlotParam(const SceAppUtilSaveDataSlotParam *param)
 			paramError(45);
 			return 0;
 		}
-		i++;
-		if (i < sizeof(param->iconPath) && c == '.' && param->iconPath[i] == '.') {
+		n++;
+		if (n < (int)sizeof(param->iconPath) && c == '.' && param->iconPath[n] == '.') {
 			paramError(45);
 			return 0;
 		}
@@ -196,6 +199,13 @@ int checkDataSlot(const SceAppUtilSaveDataDataSlot *slot)
 	return 1;
 }
 
+/* more than one save may add to its files: 1 MiB, 10 MiB under PlayStation Now */
+static inline int isSaveSizeOver(const SceSize *size)
+{
+	return (sceAppMgrIsPsNowClient() == 0 && *size > SCE_APPUTIL_SAVEDATA_DATA_SAVE_MAXSIZE) ||
+	       (sceAppMgrIsPsNowClient() != 0 && *size > APPUTIL_SAVEDATA_DATA_SAVE_MAXSIZE_PSNOW);
+}
+
 int checkSaveItem(SceUInt32 index, const SceChar8 *dataPath, const void *buf, SceSize bufSize,
 		  SceOff offset, const SceChar8 *padding, SceSize paddingSize, SceUInt32 mode,
 		  const SceChar8 *reserved, SceSize reservedSize, const char *mountPoint, SceSize *size)
@@ -203,9 +213,10 @@ int checkSaveItem(SceUInt32 index, const SceChar8 *dataPath, const void *buf, Sc
 	char path[SCE_APPUTIL_SAVEDATA_DATA_PATH_MAXSIZE + SCE_APPUTIL_MOUNTPOINT_DATA_MAXSIZE - 6];
 	SceIoStat stat;
 	SceUInt32 i;
-	SceUInt32 lastSlash;
+	int n;
+	int lastSlash;
 	SceUInt32 depth;
-	SceUInt32 lead;
+	int lead;
 
 	if (dataPath == NULL) {
 		dataParamError(54, index);
@@ -219,8 +230,8 @@ int checkSaveItem(SceUInt32 index, const SceChar8 *dataPath, const void *buf, Sc
 	lastSlash = 0;
 	depth = 1;
 	lead = 0;
-	for (i = 0; i < SCE_APPUTIL_SAVEDATA_DATA_PATH_MAXSIZE; i++) {
-		SceChar8 c = dataPath[i];
+	for (n = 0; n < SCE_APPUTIL_SAVEDATA_DATA_PATH_MAXSIZE; n++) {
+		SceChar8 c = dataPath[n];
 
 		if (c == '\0')
 			break;
@@ -229,37 +240,37 @@ int checkSaveItem(SceUInt32 index, const SceChar8 *dataPath, const void *buf, Sc
 			dataParamError(55, index);
 			return 0;
 		}
-		if (i + 1 < SCE_APPUTIL_SAVEDATA_DATA_PATH_MAXSIZE && c == '.' && dataPath[i + 1] == '.') {
+		if (n + 1 < SCE_APPUTIL_SAVEDATA_DATA_PATH_MAXSIZE && c == '.' && dataPath[n + 1] == '.') {
 			dataParamError(55, index);
 			return 0;
 		}
 		if (c == '/' || c == '\\') {
-			if (i == 0)
+			if (n == 0)
 				lead = 1;
-			if (depth == 1) {
-				if (i != 0 && i - lastSlash - lead > APPUTIL_DATA_NAME_MAXLEN) {
+			if (depth != 1) {
+				if (n - lastSlash - 1 > APPUTIL_DATA_NAME_MAXLEN) {
 					dataParamError(56, index);
 					return 0;
 				}
-			} else if (i - lastSlash - 1 > APPUTIL_DATA_NAME_MAXLEN) {
+			} else if (n != 0 && n - lastSlash - lead > APPUTIL_DATA_NAME_MAXLEN) {
 				dataParamError(56, index);
 				return 0;
 			}
-			lastSlash = i;
+			lastSlash = n;
 			if (depth > APPUTIL_DATA_PATH_DEPTH_MAX) {
 				dataParamError(56, index);
 				return 0;
 			}
-			if (i != 0)
+			if (n != 0)
 				depth++;
 		}
 	}
 	if (lastSlash != 0) {
-		if (i - lastSlash - 1 > APPUTIL_DATA_NAME_MAXLEN) {
+		if (n - lastSlash - 1 > APPUTIL_DATA_NAME_MAXLEN) {
 			dataParamError(56, index);
 			return 0;
 		}
-	} else if (i - lastSlash - lead > APPUTIL_DATA_NAME_MAXLEN) {
+	} else if (n - lastSlash - lead > APPUTIL_DATA_NAME_MAXLEN) {
 		dataParamError(56, index);
 		return 0;
 	}
@@ -286,25 +297,31 @@ int checkSaveItem(SceUInt32 index, const SceChar8 *dataPath, const void *buf, Sc
 			return 0;
 		}
 		sceClibMemset(path, 0, sizeof(path));
-		if (mountPoint != NULL) {
-			if (sceClibStrnlen(mountPoint, SCE_APPUTIL_MOUNTPOINT_DATA_MAXSIZE) == 9)
-				sceClibSnprintf(path, sizeof(path), "%s:%s", mountPoint, dataPath);
-			else
-				sceClibSnprintf(path, sizeof(path), "%s%s", mountPoint, dataPath);
-		} else {
+		if (mountPoint == NULL)
 			sceClibSnprintf(path, sizeof(path), "%s%s", SCE_APPUTIL_SAVEDATA_DRIVE_NAME, dataPath);
-		}
-		/* what the save adds to the file */
-		if (sceIoGetstat(path, &stat) != 0)
-			*size = bufSize + offset;
-		else if (offset > stat.st_size)
-			*size = offset - stat.st_size + bufSize;
+		else if (sceClibStrnlen(mountPoint, SCE_APPUTIL_MOUNTPOINT_DATA_MAXSIZE) == 9)
+			sceClibSnprintf(path, sizeof(path), "%s:%s", mountPoint, dataPath);
 		else
+			sceClibSnprintf(path, sizeof(path), "%s%s", mountPoint, dataPath);
+		/* what the save adds to the file */
+		if (sceIoGetstat(path, &stat) != 0) {
+			*size = bufSize + offset;
+			if (isSaveSizeOver(size)) {
+				dataParamError(61, index);
+				return 0;
+			}
+		} else if (offset <= stat.st_size) {
 			*size = bufSize;
-		if ((sceAppMgrIsPsNowClient() == 0 && *size > SCE_APPUTIL_SAVEDATA_DATA_SAVE_MAXSIZE) ||
-		    (sceAppMgrIsPsNowClient() != 0 && *size > APPUTIL_SAVEDATA_DATA_SAVE_MAXSIZE_PSNOW)) {
-			dataParamError(61, index);
-			return 0;
+			if (isSaveSizeOver(size)) {
+				dataParamError(61, index);
+				return 0;
+			}
+		} else {
+			*size = offset - stat.st_size + bufSize;
+			if (isSaveSizeOver(size)) {
+				dataParamError(61, index);
+				return 0;
+			}
 		}
 	}
 	for (i = 0; i < paddingSize; i++) {
@@ -313,7 +330,9 @@ int checkSaveItem(SceUInt32 index, const SceChar8 *dataPath, const void *buf, Sc
 			return 0;
 		}
 	}
-	if (mode > SCE_APPUTIL_SAVEDATA_DATA_SAVE_MODE_DIRECTORY) {
+	if (mode != SCE_APPUTIL_SAVEDATA_DATA_SAVE_MODE_FILE &&
+	    mode != SCE_APPUTIL_SAVEDATA_DATA_SAVE_MODE_FILE_TRUNCATE &&
+	    mode != SCE_APPUTIL_SAVEDATA_DATA_SAVE_MODE_DIRECTORY) {
 		dataParamError(63, index);
 		return 0;
 	}
@@ -345,12 +364,11 @@ int checkSaveItems(const SceAppUtilSaveDataDataSaveItem *data, SceUInt32 dataNum
 	total = 0;
 	for (i = 0; i < dataNum; i++) {
 		size = 0;
-		if (checkSaveItem(i, data->dataPath, data->buf, data->bufSize, data->offset,
-				  data->padding, sizeof(data->padding), data->mode, data->reserved,
-				  sizeof(data->reserved), (const char *)mountPoint, &size) == 0)
+		if (checkSaveItem(i, data[i].dataPath, data[i].buf, data[i].bufSize, data[i].offset,
+				  data[i].padding, sizeof(data[i].padding), data[i].mode, data[i].reserved,
+				  sizeof(data[i].reserved), (const char *)mountPoint, &size) == 0)
 			return 0;
 		total += size;
-		data++;
 	}
 	if ((sceAppMgrIsPsNowClient() == 0 && total > SCE_APPUTIL_SAVEDATA_DATA_SAVE_MAXSIZE) ||
 	    (sceAppMgrIsPsNowClient() != 0 && total > APPUTIL_SAVEDATA_DATA_SAVE_MAXSIZE_PSNOW)) {
@@ -364,6 +382,7 @@ int checkRemoveItem(SceUInt32 index, const SceChar8 *dataPath, SceUInt32 mode,
 		    const SceChar8 *reserved, SceSize reservedSize)
 {
 	SceUInt32 i;
+	int n;
 	SceUInt32 lastSlash;
 	SceUInt32 depth;
 	SceUInt32 name;
@@ -379,8 +398,8 @@ int checkRemoveItem(SceUInt32 index, const SceChar8 *dataPath, SceUInt32 mode,
 	}
 	lastSlash = 0;
 	depth = 1;
-	for (i = 0; i < SCE_APPUTIL_SAVEDATA_DATA_PATH_MAXSIZE; i++) {
-		SceChar8 c = dataPath[i];
+	for (n = 0; n < SCE_APPUTIL_SAVEDATA_DATA_PATH_MAXSIZE; n++) {
+		SceChar8 c = dataPath[n];
 
 		if (c == '\0')
 			break;
@@ -389,30 +408,30 @@ int checkRemoveItem(SceUInt32 index, const SceChar8 *dataPath, SceUInt32 mode,
 			dataParamError(68, index);
 			return 0;
 		}
-		if (i + 1 < SCE_APPUTIL_SAVEDATA_DATA_PATH_MAXSIZE && c == '.' && dataPath[i + 1] == '.') {
+		if (n + 1 < SCE_APPUTIL_SAVEDATA_DATA_PATH_MAXSIZE && c == '.' && dataPath[n + 1] == '.') {
 			dataParamError(68, index);
 			return 0;
 		}
 		if (c == '/' || c == '\\') {
-			lastSlash = i;
+			lastSlash = n;
 			if (depth++ > APPUTIL_DATA_PATH_DEPTH_MAX) {
 				dataParamError(68, index);
 				return 0;
 			}
 		}
 	}
-	if (sceClibStrncmp((const char *)dataPath, "sce_", 4) == 0) {
-		dataParamError(68, index);
-		return 0;
-	}
+	if (sceClibStrncmp((const char *)dataPath, "sce_", 4) == 0)
+		goto bad_path;
 	name = 0;
 	if (lastSlash != 0)
 		name = lastSlash + 1;
 	if (sceClibStrncmp((const char *)&dataPath[name], "sce_", 4) == 0) {
+bad_path:
 		dataParamError(68, index);
 		return 0;
 	}
-	if (mode > SCE_APPUTIL_SAVEDATA_DATA_REMOVE_MODE_KEEP_SLOT) {
+	if (mode != SCE_APPUTIL_SAVEDATA_DATA_REMOVE_MODE_DEFAULT &&
+	    mode != SCE_APPUTIL_SAVEDATA_DATA_REMOVE_MODE_KEEP_SLOT) {
 		dataParamError(70, index);
 		return 0;
 	}
@@ -438,9 +457,8 @@ int checkRemoveItems(const SceAppUtilSaveDataDataRemoveItem *data, SceUInt32 dat
 		return 0;
 	}
 	for (i = 0; i < dataNum; i++) {
-		if (checkRemoveItem(i, data->dataPath, data->mode, data->reserved, sizeof(data->reserved)) == 0)
+		if (checkRemoveItem(i, data[i].dataPath, data[i].mode, data[i].reserved, sizeof(data[i].reserved)) == 0)
 			return 0;
-		data++;
 	}
 	return 1;
 }
@@ -476,23 +494,30 @@ int checkSearch(const SceAppUtilWorkBuffer *workBuf, const SceAppUtilSaveDataSlo
 		paramError(191);
 		return 0;
 	}
-	if (cond->from >= SCE_APPUTIL_SAVEDATA_SLOT_MAX) {
+	if (cond->from == (SceUInt32)-1 || cond->from >= SCE_APPUTIL_SAVEDATA_SLOT_MAX) {
 		paramError(192);
 		return 0;
 	}
 	if (cond->range == 0 || cond->range > SCE_APPUTIL_SAVEDATA_SLOT_MAX ||
-	    cond->from + cond->range - 1 >= SCE_APPUTIL_SAVEDATA_SLOT_MAX) {
+	    cond->range + cond->from - 1 >= SCE_APPUTIL_SAVEDATA_SLOT_MAX) {
 		paramError(193);
 		return 0;
 	}
 	/* an empty slot has nothing to sort by but its ID */
-	if (cond->key > SCE_APPUTIL_SAVEDATA_SLOT_SORT_KEY_MODIFIED_TIME ||
-	    (cond->type == SCE_APPUTIL_SAVEDATA_SLOT_SEARCH_TYPE_EMPTY_SLOT &&
-	     cond->key != SCE_APPUTIL_SAVEDATA_SLOT_SORT_KEY_SLOT_ID)) {
+	if (cond->key != SCE_APPUTIL_SAVEDATA_SLOT_SORT_KEY_SLOT_ID &&
+	    cond->key != SCE_APPUTIL_SAVEDATA_SLOT_SORT_KEY_USER_PARAM &&
+	    cond->key != SCE_APPUTIL_SAVEDATA_SLOT_SORT_KEY_SIZE_KIB &&
+	    cond->key != SCE_APPUTIL_SAVEDATA_SLOT_SORT_KEY_MODIFIED_TIME) {
 		paramError(194);
 		return 0;
 	}
-	if (cond->order > SCE_APPUTIL_SAVEDATA_SLOT_SORT_TYPE_DESCENT) {
+	if (cond->type == SCE_APPUTIL_SAVEDATA_SLOT_SEARCH_TYPE_EMPTY_SLOT &&
+	    cond->key != SCE_APPUTIL_SAVEDATA_SLOT_SORT_KEY_SLOT_ID) {
+		paramError(194);
+		return 0;
+	}
+	if (cond->order != SCE_APPUTIL_SAVEDATA_SLOT_SORT_TYPE_ASCENT &&
+	    cond->order != SCE_APPUTIL_SAVEDATA_SLOT_SORT_TYPE_DESCENT) {
 		paramError(195);
 		return 0;
 	}
@@ -513,8 +538,11 @@ int checkSearch(const SceAppUtilWorkBuffer *workBuf, const SceAppUtilSaveDataSlo
 			entrySize = sizeof(SceAppUtilSaveDataSlot) + sizeof(SceDateTime);
 		else if (cond->key == SCE_APPUTIL_SAVEDATA_SLOT_SORT_KEY_SIZE_KIB)
 			entrySize = sizeof(SceAppUtilSaveDataSlot) + sizeof(SceSize);
-		if (workBuf->bufSize < entrySize * cond->range ||
-		    workBuf->bufSize > entrySize * SCE_APPUTIL_SAVEDATA_SLOT_MAX) {
+		if (workBuf->bufSize < entrySize * cond->range) {
+			paramError(198);
+			return 0;
+		}
+		if (workBuf->bufSize > entrySize * SCE_APPUTIL_SAVEDATA_SLOT_MAX) {
 			paramError(198);
 			return 0;
 		}
@@ -539,15 +567,29 @@ int checkSearch(const SceAppUtilWorkBuffer *workBuf, const SceAppUtilSaveDataSlo
 }
 
 /* a character a PSP file system name may not hold */
-static inline int isPspNameInvalid(SceChar8 c)
+static inline int isPspNameInvalid(int c)
 {
-	return c < ' ' || c == 0x7f || c == '\\' || c == '/' || c == ':' || c == '*' || c == '?' ||
+	return c < ' ' || c > '~' || c == '\\' || c == '/' || c == ':' || c == '*' || c == '?' ||
 	       c == '"' || c == '<' || c == '>' || c == '|';
+}
+
+/* a secure file ID is not all zero */
+static inline int hasSecureFileId(const SceUInt8 *id)
+{
+	SceUInt32 i;
+
+	for (i = 0; i < SCE_APPUTIL_PSP_SAVEDATA_SECUREFILEID_SIZE; i++) {
+		if (id[i] != 0)
+			return 1;
+	}
+	return 0;
 }
 
 int checkPspSaveDataParams(const SceAppUtilPspSaveDataParams *params)
 {
+	const char *name;
 	SceUInt32 i;
+	int n;
 	int base;
 	int ext;
 	int dot;
@@ -557,22 +599,19 @@ int checkPspSaveDataParams(const SceAppUtilPspSaveDataParams *params)
 		return 0;
 	}
 	/* the directory: the game's product code, then any name */
-	for (i = 0; i < 4; i++) {
-		if (params->dirName[i] < 'A' || params->dirName[i] > 'Z') {
-			paramError(233);
-			return 0;
-		}
+	for (n = 0; n < 4; n++) {
+		if (params->dirName[n] < 'A' || params->dirName[n] > 'Z')
+			goto bad_dir;
 	}
-	for (i = 4; i < 9; i++) {
-		if (params->dirName[i] < '0' || params->dirName[i] > '9') {
-			paramError(233);
-			return 0;
-		}
+	for (n = 4; n < 9; n++) {
+		if (params->dirName[n] < '0' || params->dirName[n] > '9')
+			goto bad_dir;
 	}
 	for (i = 9; i < sizeof(params->dirName); i++) {
 		if (params->dirName[i] == '\0')
 			break;
 		if (isPspNameInvalid(params->dirName[i])) {
+bad_dir:
 			paramError(233);
 			return 0;
 		}
@@ -580,34 +619,33 @@ int checkPspSaveDataParams(const SceAppUtilPspSaveDataParams *params)
 	/* the file: an 8.3 name of the system's own characters */
 	if (sceClibStrncmp("_", (const char *)params->fileName, 1) == 0 ||
 	    sceClibStrncmp("sce_", (const char *)params->fileName, 4) == 0 ||
-	    sceClibStrncmp(".", (const char *)params->fileName, 1) == 0) {
-		paramError(235);
-		return 0;
-	}
+	    sceClibStrncmp(".", (const char *)params->fileName, 1) == 0)
+		goto bad_file;
 	base = 0;
 	ext = -1;
 	dot = 0;
-	for (i = 0; i < sizeof(params->fileName) - 1; i++) {
-		SceChar8 c = params->fileName[i];
+	name = (const char *)params->fileName;
+	for (n = 0; n < (int)sizeof(params->fileName) - 1; n++, name++) {
+		SceChar8 c = *name;
 
 		if (c == '\0')
 			break;
-		if (!((c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c == '-' || c == '_' || c == '.')) {
-			paramError(235);
-			return 0;
-		}
+		if (!((c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c == '-' || c == '_' || c == '.'))
+			goto bad_file;
 		if (c == '.')
 			dot = 1;
-		else if (dot)
-			ext++;
-		else
+		else if (!dot)
 			base++;
+		else
+			ext++;
 	}
-	if ((i >= sizeof(params->fileName) - 1 && params->fileName[i] != '\0') || base > 8 || ext > 3) {
+	if ((n >= (int)sizeof(params->fileName) - 1 && params->fileName[n] != '\0') || base > 8 || ext > 3) {
+bad_file:
 		paramError(235);
 		return 0;
 	}
-	if (params->fileType > SCE_APPUTIL_PSP_SAVEDATA_TYPE_NORMALFILE) {
+	if (params->fileType != SCE_APPUTIL_PSP_SAVEDATA_TYPE_SECUREFILE &&
+	    params->fileType != SCE_APPUTIL_PSP_SAVEDATA_TYPE_NORMALFILE) {
 		paramError(236);
 		return 0;
 	}
@@ -617,28 +655,30 @@ int checkPspSaveDataParams(const SceAppUtilPspSaveDataParams *params)
 			return 0;
 		}
 	}
-	if (params->dataVersion > SCE_APPUTIL_PSP_SAVEDATA_VERSION_2) {
+	if (params->dataVersion != SCE_APPUTIL_PSP_SAVEDATA_VERSION_0 &&
+	    params->dataVersion != SCE_APPUTIL_PSP_SAVEDATA_VERSION_1 &&
+	    params->dataVersion != SCE_APPUTIL_PSP_SAVEDATA_VERSION_2) {
 		paramError(237);
 		return 0;
 	}
 	/* a secure file of a version above 0 needs its file ID, nothing else takes one */
-	if (params->fileType != SCE_APPUTIL_PSP_SAVEDATA_TYPE_SECUREFILE) {
-		if (params->secureFileId != NULL) {
-			paramError(239);
-			return 0;
-		}
-	} else if (params->dataVersion != SCE_APPUTIL_PSP_SAVEDATA_VERSION_0) {
-		if (params->secureFileId == NULL) {
-			paramError(238);
-			return 0;
-		}
-		for (i = 0; params->secureFileId[i] == 0; i++) {
-			if (i + 1 >= SCE_APPUTIL_PSP_SAVEDATA_SECUREFILEID_SIZE) {
+	if (params->fileType == SCE_APPUTIL_PSP_SAVEDATA_TYPE_SECUREFILE) {
+		if (params->dataVersion == SCE_APPUTIL_PSP_SAVEDATA_VERSION_0) {
+			if (params->secureFileId != NULL) {
+				paramError(239);
+				return 0;
+			}
+		} else {
+			if (params->secureFileId == NULL) {
+				paramError(238);
+				return 0;
+			}
+			if (!hasSecureFileId(params->secureFileId)) {
 				paramError(240);
 				return 0;
 			}
 		}
-	} else if (params->secureFileId != NULL) {
+	} else if (params->fileType == SCE_APPUTIL_PSP_SAVEDATA_TYPE_NORMALFILE && params->secureFileId != NULL) {
 		paramError(239);
 		return 0;
 	}
@@ -646,10 +686,15 @@ int checkPspSaveDataParams(const SceAppUtilPspSaveDataParams *params)
 		paramError(241);
 		return 0;
 	}
-	if (params->dataBuf != NULL &&
-	    (params->dataBufSize == 0 || params->dataBufSize > SCE_APPUTIL_PSP_SAVEDATA_DATA_BUF_SIZE_MAX)) {
-		paramError(242);
-		return 0;
+	if (params->dataBuf != NULL) {
+		if (params->dataBufSize == 0) {
+			paramError(242);
+			return 0;
+		}
+		if (params->dataBufSize > SCE_APPUTIL_PSP_SAVEDATA_DATA_BUF_SIZE_MAX) {
+			paramError(242);
+			return 0;
+		}
 	}
 	if (g_sdkVersion < 0x2100000)
 		return 1;
@@ -695,8 +740,15 @@ void getModifiedTime(SceDateTime *time)
 {
 	SceDateTime now;
 
-	if (sceRtcGetCurrentClockLocalTime(&now) == 0)
-		*time = now;
+	if (sceRtcGetCurrentClockLocalTime(&now) == 0) {
+		time->year = now.year;
+		time->month = now.month;
+		time->day = now.day;
+		time->hour = now.hour;
+		time->minute = now.minute;
+		time->second = now.second;
+		time->microsecond = now.microsecond;
+	}
 }
 
 void copySlotParamIn(const SceAppUtilSaveDataSlotParam *param, SceAppMgrSaveDataSlotParam *slotParam)

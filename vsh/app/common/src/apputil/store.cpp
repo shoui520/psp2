@@ -37,10 +37,8 @@ static SceInt32 storeBrowseCallback(SceUID notifyId, SceInt32 notifyCount, SceIn
 
 int storeBrowse(SceAppUtilStoreBrowseParam *param)
 {
-	char here;
 	char code[STORE_REDEEM_CODE_GROUPS][STORE_REDEEM_GROUP_SIZE];
 	AppmgrLaunchAppByNameOption option;
-	SceKernelThreadInfo info;
 	const SceChar8 *id;
 	SceUInt32 group, n, i;
 	SceUID callbackId;
@@ -50,10 +48,7 @@ int storeBrowse(SceAppUtilStoreBrowseParam *param)
 		paramError(140);
 		return SCE_APPUTIL_ERROR_PARAMETER;
 	}
-	info.size = sizeof(info);
-	ret = sceKernelGetThreadInfo(0, &info);
-	if (ret >= 0)
-		ret = &here - (char *)info.pStack;
+	ret = getFreeStackSize();
 	if (ret < APPUTIL_LAUNCH_STACK_SIZE)
 		return SCE_KERNEL_ERROR_ILLEGAL_STACK_SIZE;
 	switch (param->type) {

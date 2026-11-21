@@ -89,6 +89,10 @@ int sceCesUtf16StrGetUtf8Len(SceCesUcsContext *ces, const uint16_t *utf16str, ui
 int sceCesUtf16StrToUtf8Str(SceCesUcsContext *ces, const uint16_t *utf16str, uint32_t utf16max,
 			    uint32_t *utf16Len, uint8_t *utf8buf, uint32_t utf8max, uint32_t *utf8Len);
 
+/* UTF-8 strings to UCS-2 */
+int sceCesUtf8StrGetUcs2Len(SceCesUcsContext *ces, const uint8_t *utf8str, uint32_t utf8max,
+			    uint32_t *utf8Len, uint32_t *ucs2Len);
+
 /* UTF-8 strings to UTF-16 */
 int sceCesUtf8StrGetUtf16Len(SceCesUcsContext *ces, const uint8_t *utf8str, uint32_t utf8max,
 			     uint32_t *utf8Size, uint32_t *utf16Len);
