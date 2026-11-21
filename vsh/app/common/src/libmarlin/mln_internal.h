@@ -1856,10 +1856,15 @@ int MlnImpl_810818F0(MlnXmlNode *node, MlnBuffer **id);
 
 /* a node of a DER (ASN.1) tree */
 typedef struct MlnAsn1Node {
-	unsigned char tagClass;
-	unsigned char constructed;
-	unsigned char tag;
-	unsigned char flags;		/* MLN_ASN1_* */
+	union {
+		struct {
+			unsigned char tagClass;
+			unsigned char constructed;
+			unsigned char tag;
+			unsigned char flags;	/* MLN_ASN1_* */
+		};
+		unsigned int header;	/* the four as one word, MLN_ASN1_IDENTIFIER() */
+	};
 	unsigned int length;		/* bytes, or a constructed node's children */
 	union {
 		unsigned char *data;
@@ -1869,6 +1874,14 @@ typedef struct MlnAsn1Node {
 	unsigned int encodingLength;
 } MlnAsn1Node;
 
+/* tagClass, constructed and tag together, compared with MLN_ASN1_ID() */
+#define MLN_ASN1_IDENTIFIER(node)	((node)->header & 0xFFFFFF)
+#define MLN_ASN1_ID(tagClass, constructed, tag) \
+	((unsigned int)(tagClass) | (unsigned int)(constructed) << 8 | (unsigned int)(tag) << 16)
+#define MLN_ASN1_TAG_INTEGER	2
+#define MLN_ASN1_TAG_BIT_STRING	3
+#define MLN_ASN1_TAG_OID	6
+#define MLN_ASN1_TAG_UTF8_STRING	12
 #define MLN_ASN1_TAG_UTC_TIME	23
 #define MLN_ASN1_INDEFINITE	0x01	/* the encoding ends with end-of-contents octets */
 #define MLN_ASN1_CONTENTS	0x02	/* data holds the encoded contents, also a constructed node's */
@@ -1939,6 +1952,93 @@ int MlnImpl_81038484(int heap, int tag, MlnAsn1Node *child, MlnAsn1Node **out);
 int MlnImpl_8103857C(int heap, const MlnAsn1Node *node);
 int MlnImpl_81038600(int heap, const unsigned char *der, unsigned int size, MlnAsn1Node *nodes,
 		     int max, int *count);
+
+/* X.509: the algorithms the certificates name (the table at 0x81088DE8) */
+#define MLN_X509_ALGORITHM_SHA1_RSA	1	/* 1.2.840.113549.1.1.5 */
+#define MLN_X509_ALGORITHM_SHA256_RSA	2	/* 1.2.840.113549.1.1.11 */
+#define MLN_X509_ALGORITHM_RSA		3	/* 1.2.840.113549.1.1.1 */
+
+/* an AlgorithmIdentifier: the algorithm, its OID and its parameters' encoding */
+typedef struct MlnX509Algorithm {
+	int algorithm;			/* MLN_X509_ALGORITHM_*, 0 for another */
+	MlnBuffer oid;
+	MlnBuffer parameters;
+} MlnX509Algorithm;
+
+/* a SubjectPublicKeyInfo: the key's algorithm and its bits */
+typedef struct MlnX509PublicKey {
+	MlnX509Algorithm algorithm;
+	MlnBuffer key;
+} MlnX509PublicKey;
+
+/* the extensions the certificates name (the table at 0x81088E18) */
+#define MLN_X509_EXTENSION_AUTHORITY_KEY_IDENTIFIER	1	/* 2.5.29.35 */
+#define MLN_X509_EXTENSION_SUBJECT_KEY_IDENTIFIER	2	/* 2.5.29.14 */
+#define MLN_X509_EXTENSION_KEY_USAGE			3	/* 2.5.29.15 */
+
+/* an Extension: its OID (and the algorithm table's id for it), criticality and value */
+typedef struct MlnX509Extension {
+	int id;
+	MlnBuffer oid;
+	int critical;
+	MlnBuffer value;
+} MlnX509Extension;
+
+typedef struct MlnX509Extensions {
+	int count;
+	MlnX509Extension **items;
+} MlnX509Extensions;
+
+/* a TBSCertificate; names are kept as their DER encodings */
+typedef struct MlnX509Tbs {
+	MlnBuffer encoding;		/* the signed bytes */
+	int version;			/* 2: v3 */
+	MlnBuffer serialNumber;
+	MlnX509Algorithm signature;
+	MlnBuffer issuer;
+	MlnDateTime notBefore;
+	MlnDateTime notAfter;
+	MlnBuffer subject;
+	MlnX509PublicKey publicKey;
+	MlnX509Extensions *extensions;
+} MlnX509Tbs;
+
+/* a Certificate */
+typedef struct MlnX509Certificate {
+	MlnX509Tbs *tbs;
+	MlnX509Algorithm signatureAlgorithm;
+	MlnBuffer signature;
+} MlnX509Certificate;
+
+/* certificates' DER, room for capacity of them */
+typedef struct MlnX509Chain {
+	int count;
+	int capacity;
+	MlnBuffer **certificates;
+} MlnX509Chain;
+
+/* a certificate with its own copy of the DER it was parsed from */
+typedef struct MlnX509 {
+	MlnBuffer *der;
+	MlnX509Certificate *certificate;
+} MlnX509;
+
+int MlnImpl_81038718(const MlnX509PublicKey *publicKey, MlnBuffer **modulus,
+		     MlnBuffer **exponent);
+int MlnImpl_81038874(const MlnAsn1Node *node, MlnX509PublicKey *publicKey);
+int MlnImpl_81038900(const MlnBuffer *der, MlnX509Certificate **out);
+int MlnImpl_81038DB4(int capacity, MlnX509Chain **out);
+int MlnImpl_81038E90(MlnX509 *x509);
+int MlnImpl_81038EF4(const MlnBuffer *der, MlnX509 **out);
+int MlnImpl_81039000(const MlnBuffer *der, MlnBuffer **modulus, MlnBuffer **exponent);
+int MlnImpl_810390C0(const MlnX509 *x509, MlnBuffer **out);
+int MlnImpl_81039228(const MlnX509 *x509, MlnBuffer **modulus, MlnBuffer **exponent);
+int MlnImpl_81039298(const MlnX509 *x509, MlnBuffer **out);
+int MlnImpl_8103AA04(const MlnAsn1Node *node, MlnX509Algorithm *algorithm);
+int MlnImpl_8103AB18(const MlnAsn1Node *node, MlnDateTime *time);
+int MlnImpl_8103AC08(const MlnAsn1Node *node, MlnBuffer *name);
+int MlnImpl_8103AC34(MlnX509Extensions *extensions);
+int MlnImpl_8103AC98(const MlnAsn1Node *node, MlnX509Extensions **out);
 int MlnImpl_81034D38(const char *usage, int count, MlnBuffer **certificates, char **out);
 int MlnImpl_81035018(int encryptionCount, MlnBuffer **encryptionCertificates, int signingCount,
 		     MlnBuffer **signingCertificates, const MlnBuffer *role,

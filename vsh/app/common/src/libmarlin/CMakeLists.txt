@@ -40,6 +40,7 @@ set(MLN_ENGINE_SOURCES
 	config.c
 	wsse.c
 	asn1.c
+	x509.c
 )
 psp2_module(${PSP2_TARGET} KIND user COMPILER gcc48 PARTIAL SOURCES
 	${MLN_ARM_SOURCES}
