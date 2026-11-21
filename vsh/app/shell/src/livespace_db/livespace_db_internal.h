@@ -1190,6 +1190,8 @@ int SceLsdb_E90B81CD(AppInfoQClient *client);
 int SceLsdb_76B75713(AppInfoQClient *client, LsdbQueryCondition *conditions,
 	paf::vector<paf::string> *titleIds, unsigned int flags);
 int SceLsdb_D239031A(AppInfoQClient *client, const paf::string *titleId, LsdbAppInfoPtr *info);
+int SceLsdb_7AF9008C(AppInfoQClient *client, const paf::string *titleId, LsdbIconPtr *icon,
+	bool theme);
 int SceLsdb_65ECEF39(AppInfoQClient *client, const paf::string *titleId, unsigned int key,
 	LsdbValue *value);
 SceInt64 SceLsdb_61F17FDA(AppInfoQClient *client, int key, SceInt64 defaultValue);

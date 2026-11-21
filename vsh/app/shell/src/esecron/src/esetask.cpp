@@ -27,6 +27,7 @@
 #include "../include/esebase.hpp"
 #include "../include/esetask.hpp"
 #include "../include/eseparam.hpp"
+#include "../include/eseutil.hpp"
 
 #include "shell.h"
 #include "console_info/console_info.h"
@@ -54,44 +55,23 @@ int Bgdl_81122700(SceUInt32 id, int key, BgdlTaskPath *value);		/* read a string
 int bgdlMtpRunCopy(const MtpBgCopyRunParam *param);	/* bgdl_mtp.cpp */
 int bgdlMtpCancelCopy(SceUInt32 id);			/* bgdl_mtp.cpp */
 int bgdlMtpGetCopyProgress(SceUInt32 id, MtpBgCopyProgress *progress);	/* bgdl_mtp.cpp */
-int Bgdl_811120A0(BgdlTaskPath *path, bool recursive);	/* removes a folder (PLACEHOLDER) */
-int Bgdl_81112112(string *path, bool recursive);
 int Bgdl_81123BC0(const char *titleId, LsdbAppInfoPtr *info);	/* PLACEHOLDER: the title's row */
-/* PLACEHOLDER: the titles a query finds (AppInfoQClient) */
-int Bgdl_811123BA(LsdbQueryCondition *conditions, paf::vector<string> *titleIds);
 /* PLACEHOLDER: the title's tasks gone, told (0x8112803E(2, titleId, 0)) */
 int Bgdl_8112816E(const char *titleId);
 int Bgdl_811219B8(EseTask *task);	/* PLACEHOLDER: the task's content installed */
-string Bgdl_81113DE6(const char *titleId);	/* PLACEHOLDER: the title's icon (livespace_db) */
-bool Bgdl_811144CE(const string *titleId);	/* PLACEHOLDER: the game being run is the title */
 /* game_plugin's promote dialog, opened (GAME_PLUGIN_FUNC_DIALOG_OPEN) */
 /* game_plugin's interface function 62: the version in a patch's package file (PLACEHOLDER) */
 #define BGDL_GAME_PLUGIN_FUNC_PATCH_VERSION	62
 typedef void (*BgdlPatchVersionFunc)(const string *file, SceUInt8 *major, SceUInt8 *minor,
 				     SceUInt8 *patch);
-GamePluginInterface *Bgdl_811115BA(void);		/* the next file's: game_plugin's interface */
-string Bgdl_811115D0(string dir, int number);		/* the next file's: dir + "/" + "%04d" */
 typedef int (*BgdlDialogOpenFunc)(const string &title, intrusive_ptr<graph::Surface> icon,
 				  const wstring &text, bool frame, const float *progress, bool second);
-int Bgdl_81113898(const LsdbAppInfoPtr *info, int *kind);	/* PLACEHOLDER: its storage kind */
 /* PLACEHOLDER: whether the record names the title (the game plugin's, next to
  * gameAppRecordNamesTitle) */
 int Game_81372130(const char *titleId, const LsdbAppInfoPtr *record);
-bool Bgdl_81113900(const LsdbAppInfoPtr *info, string *titleId);	/* PLACEHOLDER: its title id */
-int Bgdl_811138CC(const LsdbAppInfoPtr *info, int *kind);	/* PLACEHOLDER: game_plugin's first function */
-int Bgdl_811121FE(const char *path, int mode);
-int Bgdl_8111212C(const char *folder, const char *name);	/* PLACEHOLDER: folder/name removed */
-SceUInt64 Bgdl_81112310(SceUInt64 size, SceUInt32 cluster);	/* size in whole clusters (PLACEHOLDER) */
-int Bgdl_8111234C(const char *device, BgdlStorageInfo *info);	/* the device's space (PLACEHOLDER) */
-int Bgdl_8111240E(const char *path, SceUInt64 size);		/* a file made that size (PLACEHOLDER) */
-int Bgdl_81111724(const char *path, int flag, SceUInt64 reserved);	/* PLACEHOLDER: removes a file */
-int Bgdl_81111CDC(const char *url, const char *folder, string *out, bool flag);	/* PLACEHOLDER */
 int Bgdl_811221E0(const char *src, int max, string *out);	/* a secret stored scrambled (PLACEHOLDER) */
-string Bgdl_81113C72(SceUInt32 id, bool flag);			/* PLACEHOLDER: a game's folder */
-int Bgdl_811137F6(bool mount);					/* PLACEHOLDER: grw0: */
 void Bgdl_81122168(bool clean);					/* PLACEHOLDER */
 extern "C" int sceNpCommonGetNpEnviroment(char *environment);
-void Bgdl_81113890(int value);					/* PLACEHOLDER */
 
 /* the PSP emulator's system software version (sceCompatGetPspSystemSoftwareVersion) */
 extern "C" int SceCompatForVsh_9C107CC9(void);
@@ -183,30 +163,7 @@ public:
 
 int Bgdl_812A9954(const char *titleId, int kind);	/* PLACEHOLDER: another file's */
 
-/* the next file's (0x8111076A): game_plugin held while ux0:pspemu is changed (PLACEHOLDER) */
-class BgdlGamePluginLock {
-public:
-	BgdlGamePluginLock(bool lock);
-	~BgdlGamePluginLock();
-	void Lock(void);		/* (0x8111072E) */
 
-	bool m_locked;
-};
-bool Bgdl_81112284(const char *path);			/* the path is there (LocalFile::Getstat) */
-
-/* the next file's (0x81110808): the Marlin licence folder made while the manager starts */
-class BgdlLicenseFolder {	/* PLACEHOLDER names */
-public:
-	void Bgdl_81110808(void);
-	void Bgdl_8111080E(void);
-	void Bgdl_8111081C(void);
-	/* (0x8111102A) file copied in as ur0:/MLN_ROOT/LICENSE/<contentId>.MNL */
-	int Bgdl_8111102A(const char *file, const char *contentId);
-	/* (0x81111432) the content's licence read, and removed when remove is set */
-	int Bgdl_81111432(const char *contentId, bool remove);
-
-	bool m_active;
-};
 
 /* PLACEHOLDER name: the copy did not complete (libmtp's errors other than its 0x80546600 group) */
 #define BGDL_ERROR_COPY_FAILED		0x80103A24
@@ -319,10 +276,6 @@ struct BgdlContentInfo {
 #define BGDL_ERROR_BAD_NAME		0x80103A0C	/* the file's name not made from key 222 */
 
 /* the next file's (PLACEHOLDER names) */
-int Bgdl_8111296E(const char *folder, int *parts, SceUInt64 size, int first, int *count);	/* split in FAT32 parts */
-int Bgdl_8111322E(const char *file, const char *folder, string *path);	/* copied to sce_sys/package/work.bin */
-int Bgdl_81111B96(const string *name, const string *base, string *out);	/* base with name's extension */
-int Bgdl_8111431C(string *str, const char *from, const char *to);	/* 1: from replaced by to */
 
 /* (0x81415650) PLACEHOLDER name: the kinds that go into a game's own folder */
 __attribute__((noinline)) bool bgdlKindIsGame(int kind)
@@ -346,7 +299,6 @@ __attribute__((noinline)) int bgdlCategoryIsGame(int category)
 }
 
 /* game_plugin's (PLACEHOLDER names: game_plugin.h does not name them yet) */
-int Bgdl_81114092(paf::vector<string> *titles);		/* the game card's titles */
 int Bgdl_81371C70(const char *titleId, int *found);	/* 1: the title has a row */
 
 /* download_plugin's name for the PSM runtime's package (PLACEHOLDER name) */
@@ -373,37 +325,7 @@ static const BgdlKindMap s_kindMap[] = {
 	{ 7, 7 }, { 8, 8 }, { 9, 9 }, { 12, 12 }, { 0, 0 },
 };
 
-/* the next file's (0x81110708): the time a block of code took (PLACEHOLDER names) */
-class BgdlScopeTimer {
-public:
-	BgdlScopeTimer(const char *name) : m_name(name)
-	{
-		m_start = get_time_internal();
-	}
 
-	~BgdlScopeTimer()
-	{
-		m_end = get_time_internal();
-		Report();
-	}
-
-	void Report(void);		/* (0x81110708) the time taken, in milliseconds */
-
-	string m_name;
-	SceUInt64 m_start;
-	SceUInt64 m_end;
-	SceUInt64 m_elapsed;
-};
-
-/* the next file's (0x811107D0, 0x811107F0): the power kept on while it lives (PLACEHOLDER names) */
-class BgdlPowerLock {
-public:
-	BgdlPowerLock(bool lock, int arg);
-	~BgdlPowerLock();
-
-	bool m_locked;
-	int m_arg;			/* PLACEHOLDER: kept, not read */
-};
 
 /* PLACEHOLDER name: a task marked against removal (m_removing) while it lives */
 class BgdlTaskMark {
@@ -2521,7 +2443,24 @@ int BgdlManager::AddPackageTask(const BgdlPackageRequest *request, BgdlPackageRe
 					if (sized) {
 						path += "/";
 						path += fileName;
-						Bgdl_8111240E(path.c_str(), entry.size + extra);
+						ret = Bgdl_8111240E(path.c_str(), entry.size + extra);
+						if (ret != 0) {
+							/* no room for one file: the package in FAT32-sized parts */
+							int parts = 0;
+							LocalFileStat stat;
+
+							ret = LocalFile::Getstat(path.c_str(), &stat);
+							if (ret == 0)
+								ret = LocalFile::RemoveFile(path.c_str());
+							path = dest;
+							path += "/";
+							path += number;
+							ret = Bgdl_8111296E(path.c_str(), entry.size + extra, i, &parts);
+							if (ret == 0)
+								ret = file.write(5006 + k, &parts, 4);
+							if (ret != 0)
+								break;
+						}
 					}
 					if (i == 0)
 						firstSize = entry.size;
@@ -4689,7 +4628,7 @@ int BgdlManager::Bgdl_81107BDE(const BgdlDownloadRequest *request, BgdlContentIn
 					if (LocalFile::Getstat(path.c_str(), &stat) == 0)
 						LocalFile::RemoveFile(path.c_str());
 					parts = 0;
-					if (Bgdl_8111296E(dir, &parts, info->size + 0x2000000, 0, &parts) != 0) {
+					if (Bgdl_8111296E(dir, info->size + 0x2000000, 0, &parts) != 0) {
 						ret = BGDL_ERROR_NO_GAME_FOLDER;
 						goto done;
 					}

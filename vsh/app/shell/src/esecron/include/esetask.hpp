@@ -345,12 +345,11 @@ struct BgdlPackageEntry {
 
 /* a device's space (Bgdl_8111234C; constructor 0x8141523C) PLACEHOLDER names */
 struct BgdlStorageInfo {
-	BgdlStorageInfo() : reserved0(0), reserved1(0), free(0), clusterSize(0), reserved2(0)
+	BgdlStorageInfo() : max(0), free(0), clusterSize(0), reserved2(0)
 	{
 	}
 
-	int reserved0;
-	int reserved1;
+	SceUInt64 max;			/* the device's size */
 	SceUInt64 free;
 	SceUInt32 clusterSize;
 	int reserved2;
@@ -616,7 +615,9 @@ public:
 	paf::string m_contentId;
 };
 
-bool Bgdl_81114524(SceUInt32 id);	/* the next file's */
+/* (0x81114524, eseutil.cpp) 1: the task is a game's, of key 107 6 and kind 2 or 3, and the game
+ * being run is its title */
+bool Bgdl_81114524(SceUInt32 id);
 
 /* a finished game download's event ("Job_EseGDEvent"); the shell is told when it is not handled */
 class Job_EseGDEvent : public paf::job::JobItem {
@@ -696,9 +697,11 @@ int bgdlAddContentTask(const BgdlContentRequest *request, const BgdlContentAccou
 		       const BgdlContentInfo *info, SceUInt32 *id);	/* (0x81106316) PLACEHOLDER name */
 int bgdlCheckQueue(void);					/* (0x81106346) PLACEHOLDER name */
 int bgdlManagerNotify(int value, int mask);			/* (0x810FD862) */
+int bgdlGetTaskParam(SceUInt32 id, EseParamCache *param);	/* (0x8110AD48) PLACEHOLDER name */
 int bgdlRemoveTask(SceUInt32 id);				/* (0x8110AD6C) PLACEHOLDER name */
 int bgdlReloadTask(SceUInt32 id);				/* (0x8110AD8E) PLACEHOLDER name */
 int bgdlCountTitleTasks(const char *titleId, SceUInt32 *count);	/* (0x8110B7E2) PLACEHOLDER name */
+int bgdlGetTaskTitle(SceUInt32 id, paf::string *titleId);	/* (0x8110E716) PLACEHOLDER name */
 /* (0x8110BD6E, 0x8110BDC0, 0x8110BEC2) PLACEHOLDER names */
 bool bgdlRecordHasTasks(const paf::common::SharedPtr<paf::map<unsigned int, LsdbValue> > *record,
 			SceUInt32 flags);
