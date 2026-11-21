@@ -38,6 +38,10 @@ int sceAVConfigSetSystemVol(int volume);
 int sceAVConfigWriteRegSystemVol(int volume);
 int sceAVConfigGetBtVol(int *device, int *volume);
 int sceAVConfigSendVolKey(int key);
+/* the master volume set, read, and written to the registry */
+int sceAVConfigSetMasterVol(unsigned int volume);
+int sceAVConfigGetMasterVol(int *volume);
+int sceAVConfigWriteMasterVol(void);
 int sceAVConfigMuteOn(void);
 int sceAVConfigRegisterCallback(SceUID callback, unsigned int events);
 int sceAVConfigUnRegisterCallback(void);

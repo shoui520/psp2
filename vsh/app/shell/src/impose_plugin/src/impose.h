@@ -17,6 +17,7 @@
 #include <inputdevice/inputdevice.h>
 #include <inputdevice/inputlistener.h>
 #include <widget/core/widget.h>
+#include <widget/core/handler.h>
 #include <widget/w_scene.h>
 #include <widget/w_plane.h>
 #include <graphics/drawobj/draw_obj.h>
@@ -32,6 +33,57 @@
 #include "../../livespace_db/livespace_db_internal.h"
 #include "impose_shell_event.h"
 #include "../../../plugins.h"
+
+/* the events of a slide bar's up and down keys, which no header names (PLACEHOLDER names) */
+#define PSMENU_EVENT_KEY_UP		0x10001
+#define PSMENU_EVENT_KEY_DOWN		0x10003
+
+/* the child, when it is of the type */
+#define PSMENU_FIND(parent, type, id)							\
+	((parent)->FindChild(paf::IDParam(id), 0) != NULL &&					\
+	 (parent)->FindChild(paf::IDParam(id), 0)->IsInherit(type::TypeName()) ?		\
+	 (type *)(parent)->FindChild(paf::IDParam(id), 0) : NULL)
+
+/* PLACEHOLDER names: listeners calling a method of a part of the menu, with an argument or without */
+template<class T>
+class ImposePsMenuListener : public paf::ui::EventListener {
+public:
+	ImposePsMenuListener(T *obj, void (T::*func)()) : m_obj(obj), m_func(func)
+	{
+	}
+
+	virtual int32_t Do(int32_t type, paf::ui::Handler *self, paf::ui::Event *e)
+	{
+		if (m_killed)
+			return 0x80AF4101;
+		(m_obj->*m_func)();
+		return 0;
+	}
+
+	T *m_obj;
+	void (T::*m_func)();
+};
+
+template<class T, class A>
+class ImposePsMenuArgListener : public paf::ui::EventListener {
+public:
+	ImposePsMenuArgListener(T *obj, void (T::*func)(A), A arg)
+		: m_obj(obj), m_func(func), m_arg(arg)
+	{
+	}
+
+	virtual int32_t Do(int32_t type, paf::ui::Handler *self, paf::ui::Event *e)
+	{
+		if (m_killed)
+			return 0x80AF4101;
+		(m_obj->*m_func)(m_arg);
+		return 0;
+	}
+
+	T *m_obj;
+	void (T::*m_func)(A);
+	A m_arg;
+};
 
 /* the plugin's interface and the plugin itself (impose.cpp) */
 void imposeInterfaceRegister(paf::Plugin *plugin);
@@ -301,24 +353,35 @@ public:
 	SceUInt8 data[64];
 };
 
-class ImposePart81152FB8 {
+/* the menu's volume slide bar: the master volume set as it moves and written to the registry by
+   a job when it is let go (impose_psmenu_volume.cpp; PLACEHOLDER names) */
+class ImposePsMenuVolume {
 public:
-	ImposePart81152FB8(paf::Plugin *plugin);
-	~ImposePart81152FB8();
-	void Impose_81152FC4(paf::ui::Widget *box);
-	void Impose_811535D2();
+	ImposePsMenuVolume(paf::Plugin *plugin);
+	void Open(paf::ui::Widget *box);
+	void Save();
+	void Close();
+	void OnChange();
+	void OnRelease();
 
-	SceUInt8 data[16];
+	paf::Plugin *m_plugin;
+	paf::ui::Widget *m_box;
+	paf::ui::SlideBar *m_slider;
+	int m_volume;
 };
 
-class ImposePart811527E0 {
+/* the menu's accessibility settings: inverted colours and the remapped buttons, the latter
+   only with the console's own pad (impose_psmenu_accessibility.cpp; PLACEHOLDER names) */
+class ImposePsMenuAccessibility {
 public:
-	ImposePart811527E0(paf::Plugin *plugin);
-	~ImposePart811527E0();
-	void Impose_811527E8(paf::ui::Widget *box);
-	void Impose_81152E5C();
+	ImposePsMenuAccessibility(paf::Plugin *plugin);
+	void Open(paf::ui::Widget *box);
+	void Close();
+	void OnInvertColor(paf::ui::CheckBox *check);
+	void OnKeyRemap(paf::ui::CheckBox *check);
 
-	SceUInt8 data[8];
+	paf::Plugin *m_plugin;
+	paf::ui::Widget *m_box;
 };
 
 /*
@@ -384,8 +447,8 @@ public:
 	ImposePart81158C14 m_part81158C14;
 	ImposePart81153A18 m_part81153A18;
 	ImposePart811558C0 m_part811558C0;
-	ImposePart81152FB8 m_part81152FB8;
-	ImposePart811527E0 m_part811527E0;
+	ImposePsMenuVolume m_volume;
+	ImposePsMenuAccessibility m_accessibility;
 };
 
 /* the menu (0x81564DC0) */

@@ -43,10 +43,6 @@ using namespace paf;
    kit (value only: no name known) */
 #define SHELL_START_ERROR_NOT_TEST	0x80AF0002
 
-/* the error dialog's types: the error is a blue screen, or another start error */
-#define SHELL_ERROR_DIALOG_BLUE_SCREEN	4
-#define SHELL_ERROR_DIALOG_START	5
-
 /* the common GUI dialog value set after the start (value only) */
 #define SHELL_COMMON_GUI_DIALOG_VALUE	38
 

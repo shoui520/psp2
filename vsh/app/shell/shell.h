@@ -180,6 +180,12 @@ int shellAccessibilityMgrCreate(void);			/* (0x810A7616) */
 int shellHandlerTableCreate(void);			/* (0x81248BB4) */
 int shellUtilServerMgrCreate(void);			/* (0x8124BB02) */
 int shellMainThreadPollerCreate(void);			/* (0x8121CFE2) */
+/* the error dialog's types: the error is a blue screen, or another error */
+#define SHELL_ERROR_DIALOG_BLUE_SCREEN	4
+#define SHELL_ERROR_DIALOG_START	5
+/* the registry manager's errors (0x800Dxxxx), the ones the error dialog is shown for (value
+   only: no name known) */
+#define SHELL_ERROR_FACILITY_REGMGR	0x00D
 void shellErrorDialogShow(int type, int error, const paf::wstring *message, bool loadModule);	/* (0x810FB45E) */
 
 /* a notice request: an ux0 theme whose activation has expired sends (0, -1, NULL)

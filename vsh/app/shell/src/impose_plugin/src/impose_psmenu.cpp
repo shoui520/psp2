@@ -109,10 +109,8 @@ using namespace paf;
 #define PSMENU_DIALOG_CONTENTS		9
 #define PSMENU_DIALOG_PANEL		10
 
-/* the events no header names (PLACEHOLDER names): the text laid out, the slide bar's keys */
+/* the event no header names (PLACEHOLDER name): the text laid out */
 #define PSMENU_EVENT_TEXT_LAYOUT	0x20100004
-#define PSMENU_EVENT_KEY_UP		0x10001
-#define PSMENU_EVENT_KEY_DOWN		0x10003
 
 /* the menu's interval timer */
 #define PSMENU_INTERVAL			100
@@ -151,58 +149,11 @@ static math::v4 s_dimColor(0.5f, 0.5f, 0.5f, 1.0f);
 /* the application menu's checks left before it is given up (0x815496AC) */
 static int s_checkRetries = 60;
 
-/* the child, when it is of the type */
-#define PSMENU_FIND(parent, type, id)							\
-	((parent)->FindChild(IDParam(id), 0) != NULL &&					\
-	 (parent)->FindChild(IDParam(id), 0)->IsInherit(type::TypeName()) ?		\
-	 (type *)(parent)->FindChild(IDParam(id), 0) : NULL)
-
 /* the widget's text object */
 #define PSMENU_TEXT_OBJ(widget)								\
 	((widget) != NULL && (widget)->GetDrawObj(0) != NULL &&				\
 	 (widget)->GetDrawObj(0)->IsInherit(graph::TextObj::DrawObjType()) ?		\
 	 (graph::TextObj *)(widget)->GetDrawObj(0) : NULL)
-
-/* PLACEHOLDER names: listeners calling a method of the menu, with an argument or without */
-template<class T>
-class ImposePsMenuListener : public ui::EventListener {
-public:
-	ImposePsMenuListener(T *obj, void (T::*func)()) : m_obj(obj), m_func(func)
-	{
-	}
-
-	virtual int32_t Do(int32_t type, ui::Handler *self, ui::Event *e)
-	{
-		if (m_killed)
-			return 0x80AF4101;
-		(m_obj->*m_func)();
-		return 0;
-	}
-
-	T *m_obj;
-	void (T::*m_func)();
-};
-
-template<class T, class A>
-class ImposePsMenuArgListener : public ui::EventListener {
-public:
-	ImposePsMenuArgListener(T *obj, void (T::*func)(A), A arg)
-		: m_obj(obj), m_func(func), m_arg(arg)
-	{
-	}
-
-	virtual int32_t Do(int32_t type, ui::Handler *self, ui::Event *e)
-	{
-		if (m_killed)
-			return 0x80AF4101;
-		(m_obj->*m_func)(m_arg);
-		return 0;
-	}
-
-	T *m_obj;
-	void (T::*m_func)(A);
-	A m_arg;
-};
 
 /* the quit dialog's buttons: yes closes the menu (PLACEHOLDER name) */
 class ImposePsMenuQuitHandler : public CommonGuiDialogHandler {
@@ -322,8 +273,8 @@ void ImposePsMenu::Close()
 	m_part81158C14.Impose_811598AA();
 	m_part81153A18.Impose_8115422E();
 	m_part811558C0.Impose_8115756C();
-	m_part81152FB8.Impose_811535D2();
-	m_part811527E0.Impose_81152E5C();
+	m_volume.Close();
+	m_accessibility.Close();
 	m_micMute = NULL;
 	m_voicePriority = NULL;
 	m_focusButton = NULL;
@@ -390,7 +341,7 @@ ImposePsMenu::ImposePsMenu(Plugin *plugin)
 	: m_plugin(plugin), m_page(NULL), m_brightness(NULL), m_micMute(NULL),
 	  m_voicePriority(NULL), m_prioritizeDialog(-1), m_helpDialog(-1), m_quitDialog(-1),
 	  m_checking(false), m_focusButton(NULL), m_part81153A18(plugin), m_part811558C0(plugin),
-	  m_part81152FB8(plugin), m_part811527E0(plugin)
+	  m_volume(plugin), m_accessibility(plugin)
 {
 	int value;
 
@@ -857,7 +808,7 @@ void ImposePsMenu::Open()
 	}
 
 	if (!ScePafMisc_7ED8F03C())
-		m_part81152FB8.Impose_81152FC4(box);
+		m_volume.Open(box);
 	if (!ScePafMisc_B7CFFF5C())
 		m_part81158C14.Impose_81158E12(box);
 
@@ -941,7 +892,7 @@ void ImposePsMenu::Open()
 
 	UpdateAudioButtons();
 	if (imposePsMenuHasShortcut())
-		m_part811527E0.Impose_811527E8(box);
+		m_accessibility.Open(box);
 	ScePafCommon_6CF3A3C8(0.0f, m_page, common::transition::Type_SlideFromBottom4, true,
 			      false);
 }
