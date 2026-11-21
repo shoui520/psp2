@@ -6,6 +6,7 @@
 #include <memory/heap_allocator.h>
 #include <rtc.h>
 #include <widget/core/environment.h>
+#include <widget/factory.h>
 #include <widget/w_button_base.h>
 #include <widget/w_text_box.h>
 #include <versatileparam/resourceparam.h>
@@ -4215,6 +4216,147 @@ WebView::~WebView()
 	m_receiveBuffer = NULL;
 }
 
+const char WebViewStyleParam::m_param_name[] = "style_web_view";
+
+const char *WebViewStyleParam::GetParamName() const
+{
+	return m_param_name;
+}
+
+const char *WebViewStyleParam::ParamName()
+{
+	return m_param_name;
+}
+
+/* the page listener's defaults: it hears nothing */
+WebViewPageListener::WebViewPageListener()
+{
+}
+
+WebViewPageListener::~WebViewPageListener()
+{
+}
+
+void WebViewPageListener::OnPageReset(WebView *view)
+{
+}
+
+void WebViewPageListener::OnLoadFinished(WebView *view, int state)
+{
+}
+
+void WebViewPageListener::OnLoadFailed(WebView *view, int error, const common::String &url)
+{
+}
+
+void WebViewPageListener::OnLoadCommitted(WebView *view)
+{
+}
+
+void WebViewPageListener::OnPageLayout(WebView *view)
+{
+}
+
+void WebViewPageListener::OnLoadProgress(WebView *view)
+{
+}
+
+void WebViewPageListener::OnTitleChanged(WebView *view, const common::String &title)
+{
+}
+
+void WebViewPageListener::OnUrlChanged(WebView *view, const Url &url)
+{
+}
+
+void WebViewPageListener::OnEvent8(WebView *view, int arg)
+{
+}
+
+void WebViewPageListener::OnPagePos(WebView *view, const math::v2 &pos)
+{
+}
+
+void WebViewPageListener::OnPageTop(WebView *view, const float &top)
+{
+}
+
+void WebViewPageListener::OnSlot13()
+{
+}
+
+void WebViewPageListener::OnContextMenu(WebView *view, const ContextMenuInfo &info)
+{
+}
+
+void WebViewPageListener::OnCreateWindow(WebView *view, const Url &url, int width, int height, WebView **window, bool *handled)
+{
+}
+
+void WebViewPageListener::OnSlot16(WebView *view)
+{
+}
+
+void WebViewPageListener::OnEvent11(WebView *view, int arg0, int arg1)
+{
+}
+
+void WebViewPageListener::OnEvent12(WebView *view, const Url &url)
+{
+}
+
+void WebViewPageListener::OnNavigationRequest(WebView *view, const Url &url, int type, bool *allow)
+{
+}
+
+void WebViewPageListener::OnDownloadRequest(WebView *view, const Url &url, const string &mimeType, int64_t length)
+{
+}
+
+void WebViewPageListener::OnCursorKey(WebView *view, int direction, bool up)
+{
+}
+
+void WebViewPageListener::OnEvent15(WebView *view, int arg)
+{
+}
+
+void WebViewPageListener::OnEvent16(WebView *view)
+{
+}
+
+void WebViewPageListener::OnHistoryChanged(WebView *view, bool canGoBack, bool canGoForward)
+{
+}
+
+void WebViewPageListener::OnEvent18(WebView *view, int arg0, int arg1)
+{
+}
+
+void WebViewPageListener::OnImeClosed(WebView *view, int arg0, int arg1)
+{
+}
+
+void WebViewPageListener::OnConfirm(WebView *view, const common::String &text)
+{
+}
+
+WebViewListener::WebViewListener()
+{
+}
+
+WebViewListener::~WebViewListener()
+{
+}
+
+WebViewDataListener::WebViewDataListener()
+{
+}
+
+WebViewDataListener::~WebViewDataListener()
+{
+}
+
 void WebViewAnalogListener::OnUpdate(const inputdevice::Data *data)
 {
 	WebView *view = (WebView *)m_binded_widget[0];
@@ -4223,5 +4365,52 @@ void WebViewAnalogListener::OnUpdate(const inputdevice::Data *data)
 		view->HandleAnalog(data);
 }
 
+/* the web view type's factories, for paf's factory table */
+static Widget *NewWebView(Widget *parent)
+{
+	return new WebView(parent, NULL);
+}
+
+static WidgetParam *NewWebViewParam()
+{
+	return new WebViewParam;
+}
+
+static VersatileParam *NewWebViewLayoutParam()
+{
+	return new WidgetLayoutParam;
+}
+
+static VersatileParam *NewWebViewFocusParam()
+{
+	return new WidgetFocusParam;
+}
+
+static VersatileParam *NewWebViewStyleParam()
+{
+	return new WebViewStyleParam;
+}
+
+static VersatileParam *NewWebViewHandlerParam()
+{
+	return new WidgetHandlerParam;
+}
+
+static VersatileParam *NewWebViewSoundParam()
+{
+	return new WidgetSoundParam;
+}
+
 }
 }
+
+paf::ui::FactoryFuncTable g_factoryWebView = {
+	paf::ui::WebView::TypeName(),
+	paf::ui::NewWebView,
+	paf::ui::NewWebViewParam,
+	paf::ui::NewWebViewLayoutParam,
+	paf::ui::NewWebViewFocusParam,
+	paf::ui::NewWebViewStyleParam,
+	paf::ui::NewWebViewHandlerParam,
+	paf::ui::NewWebViewSoundParam,
+};

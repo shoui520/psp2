@@ -267,18 +267,20 @@ public:
    not seen called are numbered, names ours) */
 class WebViewDataListener {
 public:
+	WebViewDataListener();
 	virtual ~WebViewDataListener();
 	/* the page's select popup opened (name ours) */
-	virtual void OnSelect(WebView *view, const WebViewSelectInfo &info);
-	virtual void OnSlot3(WebView *view);
-	virtual void OnSlot4();
-	virtual void OnData(WebViewDataEvent event, WebView *view);
+	virtual void OnSelect(WebView *view, const WebViewSelectInfo &info) = 0;
+	virtual void OnSlot3(WebView *view) = 0;
+	virtual void OnSlot4() = 0;
+	virtual void OnData(WebViewDataEvent event, WebView *view) = 0;
 };
 
 /* the view's listener, told of its page's events (the class name and the method names are
    ours, after the view's methods that call each; slots not yet seen called are numbered) */
 class WebViewPageListener {
 public:
+	WebViewPageListener();
 	virtual ~WebViewPageListener();
 	/* the page was reset (name ours) */
 	virtual void OnPageReset(WebView *view);
@@ -327,11 +329,16 @@ public:
    name, from its messages; wutil::GetWebViewListener) */
 class WebViewListener {
 public:
+	WebViewListener();
 	virtual ~WebViewListener();
 	/* the view starting ("[WebViewListener] Initialize (by WebView: 0x%p)") */
-	virtual void Initialize(WebView *view);
+	virtual void Initialize(WebView *view) = 0;
 	/* the view going away */
-	virtual void Terminate(WebView *view);
+	virtual void Terminate(WebView *view) = 0;
+	virtual void OnSlot4() = 0;
+	virtual void OnSlot5() = 0;
+	virtual void OnSlot6() = 0;
+	virtual void OnSlot7() = 0;
 };
 
 /* the GXM render target over a surface's memory the page is drawn into (0x8101613a; names ours) */
@@ -553,6 +560,19 @@ private:
 	void FadeIn(float time);
 	void ShowNow();
 	void FadeOut(float time);
+};
+
+/* the web view's style ("style_web_view"): a widget style of its own name */
+class WebViewStyleParam : public WidgetStyleParam {
+public:
+	static const char m_param_name[];
+	static const char *ParamName();
+
+	WebViewStyleParam()
+	{
+	}
+
+	virtual const char *GetParamName() const;
 };
 
 /* the web view's resource parameters: the page it loads first, and the widgets of the page's
