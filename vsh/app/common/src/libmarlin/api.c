@@ -463,44 +463,47 @@ __attribute__((noinline)) int SceMarlin_FB95B259(MlnServiceContext *context, uns
 	return MlnImpl_810160E8(context, size, data);
 }
 
-int SceMarlin_102593F5(void *a0, void *a1, void *a2)
+int SceMarlin_102593F5(MlnServiceContext *context, void *record, int *out)
 {
-	return MlnImpl_8101617C(a0, a1, a2);
+	return MlnImpl_8101617C(context, record, out);
 }
 
-int SceMarlin_49752AFE(void *a0, void *a1)
+int SceMarlin_49752AFE(MlnServiceContext *context, int id)
 {
-	return MlnImpl_81016270(a0, a1);
+	return MlnImpl_81016270(context, id);
 }
 
-__attribute__((noinline)) int SceMarlin_92A6A48F(void *a0, void *a1, void *a2)
+__attribute__((noinline)) int SceMarlin_92A6A48F(MlnServiceContext *context, int value,
+						 MlnRightsInfo **rights)
 {
-	return MlnImpl_810162F4(a0, a1, a2);
+	return MlnImpl_810162F4(context, value, rights);
 }
 
-int SceMarlin_F450D554(void *a0, void *a1, void *a2)
+int SceMarlin_F450D554(MlnServiceContext *context, int value, MlnRightsInfo **rights)
 {
-	return MlnImpl_8101632C(a0, a1, a2);
+	return MlnImpl_8101632C(context, value, rights);
 }
 
-__attribute__((noinline)) int SceMarlin_A2E65A7E(void *a0, void *a1, void *a2)
+__attribute__((noinline)) int SceMarlin_A2E65A7E(MlnServiceContext *context, int value,
+						 MlnRightsInfo **rights)
 {
-	return MlnImpl_81016364(a0, a1, a2);
+	return MlnImpl_81016364(context, value, rights);
 }
 
-__attribute__((noinline)) int MlnApi_810026B8(void *a0, void *a1)
+__attribute__((noinline)) int MlnApi_810026B8(MlnServiceContext *context, MlnBuffer **esb)
 {
-	return MlnImpl_810163A8(a0, a1);
+	return MlnImpl_810163A8(context, esb);
 }
 
-int SceMarlin_778408A7(void *a0, void *a1, void *a2, void *a3)
+int SceMarlin_778408A7(MlnServiceContext *context, void *object, const MlnEvaluationLimit *limit,
+		       MlnRightsInfo **rights)
 {
-	return MlnImpl_810163E4(a0, a1, a2, a3);
+	return MlnImpl_810163E4(context, object, limit, rights);
 }
 
-int MlnApi_810026D0(void *a0, void *a1, void *a2)
+int MlnApi_810026D0(MlnServiceContext *context, MlnBuffer *in, MlnRightsInfo **rights)
 {
-	return MlnImpl_810166AC(a0, a1, a2);
+	return MlnImpl_810166AC(context, in, rights);
 }
 
 int SceMarlin_2FD092BD(MlnRightsInfo *info)
@@ -508,14 +511,16 @@ int SceMarlin_2FD092BD(MlnRightsInfo *info)
 	return MlnConvertResult(MlnRightsInfoFree(MLN_HEAP_SECURE, info));
 }
 
-int SceMarlin_2F1E4047(void *a0, void *a1, void *a2, void *a3, void *a4, void *a5)
+int SceMarlin_2F1E4047(MlnServiceContext *context, int id, unsigned int offset, unsigned int size,
+		       unsigned int *position, unsigned int count)
 {
-	return MlnImpl_81016844(a0, a1, a2, a3, a4, a5);
+	return MlnImpl_81016844(context, id, offset, size, position, count);
 }
 
-int SceMarlin_EB4A1345(void *a0, void *a1, void *a2, void *a3, void *a4, void *a5, void *a6)
+int SceMarlin_EB4A1345(MlnServiceContext *context, int id, int value, unsigned int firstSize,
+		       void *firstData, unsigned int secondSize, void *secondData)
 {
-	return MlnImpl_8101698C(a0, a1, a2, a3, a4, a5, a6);
+	return MlnImpl_8101698C(context, id, value, firstSize, firstData, secondSize, secondData);
 }
 
 #define MLN_OCTOPUS_NAMESPACE	"http://www.octopus-drm.com/profiles/base/1.0"
@@ -723,14 +728,14 @@ void MlnApi_81003248(MlnApiValue *value)
 	MlnApiValueFree(value);
 }
 
-int MlnApi_81003254(void *a0, void *a1, void *a2)
+int MlnApi_81003254(MlnServiceContext *context, int id, MlnBuffer **out)
 {
-	return MlnImpl_81016A5C(a0, a1, a2);
+	return MlnImpl_81016A5C(context, id, out);
 }
 
-int MlnApi_81003260(void *a0, void *a1)
+int MlnApi_81003260(MlnServiceContext *context, int id, unsigned int value, MlnBuffer **out)
 {
-	return MlnImpl_81016B4C(a0, a1);
+	return MlnImpl_81016B4C(context, id, value, out);
 }
 
 /* moves a value's data into a new node at the end of a list */
@@ -1041,7 +1046,7 @@ __attribute__((noinline)) int MlnApi_81003A9C(MlnBuffer *license, MlnRightsSumma
 	ret = SceMarlin_FB95B259(&s_serviceContext, license->size, license->data);
 	if (ret != MLN_OK)
 		goto out;
-	i = SceMarlin_92A6A48F(&s_serviceContext, NULL, &info);
+	i = SceMarlin_92A6A48F(&s_serviceContext, 0, &info);
 	if (info != NULL) {
 		MlnRightsInfoFree(MLN_HEAP_SECURE, info);
 		info = NULL;
@@ -1054,7 +1059,7 @@ __attribute__((noinline)) int MlnApi_81003A9C(MlnBuffer *license, MlnRightsSumma
 		summary = NULL;
 		goto done;
 	}
-	i = SceMarlin_A2E65A7E(&s_serviceContext, NULL, &info);
+	i = SceMarlin_A2E65A7E(&s_serviceContext, 0, &info);
 	if (i != MLN_OK) {
 		ret = i;
 		goto out;

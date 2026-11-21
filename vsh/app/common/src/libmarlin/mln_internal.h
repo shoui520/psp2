@@ -590,12 +590,12 @@ int MlnApi_81003464(MlnBuffer *serviceProvider, MlnBuffer *token, unsigned int *
 		    MlnBuffer ***items);
 int MlnApi_81003A9C(MlnBuffer *license, MlnRightsSummary **summary);
 int MlnApi_810037B0(const int *minutes, MlnApiDate *date);
-int MlnApi_810026B8(void *a0, void *a1);
+int MlnApi_810026B8(MlnServiceContext *context, MlnBuffer **esb);
 int SceMarlin_A43BC777(MlnServiceContext *context);
 int SceMarlin_23838449(MlnServiceContext *context);
 int SceMarlin_FB95B259(MlnServiceContext *context, unsigned int size, void *data);
-int SceMarlin_92A6A48F(void *a0, void *a1, void *a2);
-int SceMarlin_A2E65A7E(void *a0, void *a1, void *a2);
+int SceMarlin_92A6A48F(MlnServiceContext *context, int value, MlnRightsInfo **rights);
+int SceMarlin_A2E65A7E(MlnServiceContext *context, int value, MlnRightsInfo **rights);
 int MlnImpl_8101EE90(void *client, MlnBuffer *license, MlnRightsSummary **summary);
 int MlnImpl_8101F33C(void *client, int *a1);
 int MlnImpl_81081400(void *a, void *b);
@@ -927,9 +927,14 @@ int MlnStateSerialize(MlnBuffer **state);
 int MlnStateRestore(const MlnBuffer *state);
 /* a call into the client's service: typed arguments, a reply and a status */
 #define MLN_SERVICE_ARG_HANDLE		0
-#define MLN_SERVICE_ARG_INTEGER		2	/* the value points to the integer */
+#define MLN_SERVICE_ARG_SIZE		1	/* the value points to a nonzero size */
+#define MLN_SERVICE_ARG_INTEGER		2
+#define MLN_SERVICE_ARG_ID		3	/* the value points to an identifier */	/* the value points to the integer */
+#define MLN_SERVICE_ARG_OFFSET		5	/* the value points to an offset (also given back) */
 #define MLN_SERVICE_ARG_BUFFER		6
-#define MLN_SERVICE_ARG_DATA		11	/* passed as given */
+#define MLN_SERVICE_ARG_OBJECT		9	/* an object led by a buffer (sized at 0x8102766c) */
+#define MLN_SERVICE_ARG_LIST		11	/* a counted list of entries (sized at 0x8102766c) */
+#define MLN_SERVICE_ARG_RECORD		13	/* a record led by a buffer (sized at 0x8102766c) */
 
 #define MLN_SERVICE_SET_STATE		0x411
 #define MLN_SERVICE_CLEAR_STATE		0x412
@@ -998,6 +1003,45 @@ int MlnImpl_81015EA4(MlnServiceContext *context, MlnBuffer *in, MlnBuffer *other
 int MlnImpl_81015F3C(MlnServiceContext *context);
 int MlnImpl_81016034(MlnServiceContext *context);
 int MlnImpl_810160E8(MlnServiceContext *context, unsigned int size, void *data);
+int MlnImpl_8101617C(MlnServiceContext *context, void *record, int *out);
+int MlnImpl_81016270(MlnServiceContext *context, int id);
+int MlnImpl_810162F4(MlnServiceContext *context, int value, MlnRightsInfo **rights);
+int MlnImpl_8101632C(MlnServiceContext *context, int value, MlnRightsInfo **rights);
+int MlnImpl_81016364(MlnServiceContext *context, int value, MlnRightsInfo **rights);
+int MlnImpl_810163A8(MlnServiceContext *context, MlnBuffer **esb);
+
+/* what a rights evaluation (command 0x42f) is limited to: its kind and up to two values */
+typedef struct MlnEvaluationLimit {
+	int kind;
+	unsigned int value;
+	unsigned int first;
+	unsigned int second;
+} MlnEvaluationLimit;
+
+#define MLN_LIMIT_KIND_WORD	5	/* the value as a word, and kind 4's limit */
+#define MLN_LIMIT_KIND_COUNT	4	/* value 4 carries two words */
+
+int MlnImpl_810163E4(MlnServiceContext *context, void *object, const MlnEvaluationLimit *limit,
+		     MlnRightsInfo **rights);
+int MlnImpl_810166AC(MlnServiceContext *context, MlnBuffer *in, MlnRightsInfo **rights);
+int MlnImpl_81016844(MlnServiceContext *context, int id, unsigned int offset, unsigned int size,
+		     unsigned int *position, unsigned int count);
+int MlnImpl_8101698C(MlnServiceContext *context, int id, int value, unsigned int firstSize,
+		     void *firstData, unsigned int secondSize, void *secondData);
+int MlnImpl_81016A5C(MlnServiceContext *context, int id, MlnBuffer **out);
+int MlnImpl_81016B4C(MlnServiceContext *context, int id, unsigned int value, MlnBuffer **out);
+int MlnImpl_81016C70(MlnServiceContext *context);
+int MlnImpl_81016D68(MlnServiceContext *context);
+int MlnImpl_81016E1C(MlnServiceContext *context, MlnBuffer **out);
+int MlnImpl_81016F20(MlnServiceContext *context, MlnBuffer *in, MlnBuffer **out);
+int MlnImpl_81017038(MlnServiceContext *context, MlnBuffer *in);
+int MlnImpl_810170C4(MlnServiceContext *context, unsigned int size, void *data);
+int MlnImpl_81017158(MlnServiceContext *context, unsigned int size, void *data);
+int MlnImpl_810171EC(MlnServiceContext *context, unsigned int size, void *data);
+int MlnImpl_81017280(MlnServiceContext *context, unsigned int size, void *data);
+int MlnImpl_81017314(MlnServiceContext *context, unsigned int size, void *data);
+int MlnImpl_810173A8(MlnServiceContext *context, unsigned int size, void *data);
+int MlnImpl_810270BC(int heap, void *data, unsigned int *out);
 /* not written in C yet */
 int MlnImpl_81026D94(const MlnServiceReply *reply, int type);
 int MlnImpl_81027084(int heap, void *data, int *out);
@@ -1040,8 +1084,6 @@ int MlnImpl_810318D4(void *a0, const MlnBuffer *a1, MlnBlob *first, MlnBlob *sec
 
 int MlnPlatformInit(void);
 int MlnPlatformTerm(void);
-int MlnImpl_81016A5C(void *a0, void *a1, void *a2);
-int MlnImpl_81016B4C(void *a0, void *a1);
 int MlnImpl_81018B8C(MlnServiceContext *context, MlnBuffer *serviceProvider, MlnBuffer *token,
 		     MlnBuffer *ids, unsigned int *count, MlnBuffer ***items);
 int MlnImpl_81020094(void *session, int status, MlnApiValue *value, MlnHttpRequest *request,
@@ -1085,15 +1127,5 @@ int MlnXmlGetAttribute(int heap, MlnXmlNode *node, const char *ns, const char *n
 int MlnXmlGetText(int heap, MlnXmlNode *node, MlnBuffer **text);
 int MlnXmlNodeFree(int heap, MlnXmlNode *node);
 int MlnXmlListFree(int heap, MlnXmlNodeList *list);
-int MlnImpl_8101617C(void *a0, void *a1, void *a2);
-int MlnImpl_81016270(void *a0, void *a1);
-int MlnImpl_810162F4(void *a0, void *a1, void *a2);
-int MlnImpl_8101632C(void *a0, void *a1, void *a2);
-int MlnImpl_81016364(void *a0, void *a1, void *a2);
-int MlnImpl_810163A8(void *a0, void *a1);
-int MlnImpl_810163E4(void *a0, void *a1, void *a2, void *a3);
-int MlnImpl_810166AC(void *a0, void *a1, void *a2);
-int MlnImpl_81016844(void *a0, void *a1, void *a2, void *a3, void *a4, void *a5);
-int MlnImpl_8101698C(void *a0, void *a1, void *a2, void *a3, void *a4, void *a5, void *a6);
 
 #endif /* MLN_INTERNAL_H */
