@@ -9,6 +9,7 @@
 #include <graphics/gutil.h>
 #include <graphics/surface/surface.h>
 #include <std/string>
+#include <common/string_util.h>
 #include <math/ngp/v4.h>
 
 namespace paf {
@@ -24,6 +25,16 @@ class TextBoxEditMenuListener;
 
 /* told when a plugin starts, before its own start function; an abstract class of sixteen
    virtual methods (all but the first named by their slot, ours) */
+/* what a message dialog is asked with: its owner, its texts (names ours) */
+struct MessageDialogParam {
+	void *owner;
+	int32_t values[5];
+	common::String title;
+	common::String message;
+	common::String button;
+	int32_t flags;
+};
+
 class MessageDialogListener {
 public:
 	MessageDialogListener();
@@ -34,7 +45,8 @@ public:
 	virtual void Method5() = 0;
 	virtual void Method6() = 0;
 	virtual void Method7() = 0;
-	virtual void Method8() = 0;
+	/* whether a dialog is open */
+	virtual bool Method8() = 0;
 	virtual void Method9() = 0;
 	virtual void Method10() = 0;
 	virtual void Method11() = 0;
@@ -43,7 +55,8 @@ public:
 	virtual void Method14() = 0;
 	virtual void Method15() = 0;
 	virtual void Method16() = 0;
-	virtual void Method17() = 0;
+	/* the owner's dialog closed */
+	virtual void Method17(MessageDialogParam *param) = 0;
 };
 
 namespace wutil {

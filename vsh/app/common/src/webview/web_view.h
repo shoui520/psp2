@@ -31,6 +31,7 @@
 #include <widget/w_plane.h>
 #include <widget/w_scroll_view_base.h>
 #include "context_menu_info.h"
+#include "web_ipc.h"
 
 namespace paf {
 namespace ui {
@@ -105,11 +106,88 @@ public:
 class WebView;
 class WebViewPopupMenu;
 
+/* the system IME a page's text field opens (0x8100e298; names ours) */
+struct WebViewIme;
+
+/* closes the IME (sceImeVshClose) and frees its text */
+int ImeClose(WebViewIme *ime);
+
+/* the render parameters the page is made with (80 bytes at 0x81026548; names ours) */
+struct WebViewRenderParam {
+	uint32_t m_data[20];
+};
+
+/* the render parameters every page is made with */
+WebViewRenderParam *GetRenderParam();
+
+/* the view's listener, told of its page's events (the class name and the method names are
+   ours, after the view's methods that call each; slots not yet seen called are numbered) */
+class WebViewPageListener {
+public:
+	virtual ~WebViewPageListener();
+	virtual void OnSlot2();
+	virtual void OnLoadFinished(WebView *view, int state);
+	virtual void OnLoadFailed(WebView *view, int error, int arg);
+	virtual void OnLoadCommitted();
+	virtual void OnSlot6();
+	virtual void OnLoadProgress();
+	virtual void OnTitleChanged(WebView *view, int arg);
+	virtual void OnUrlChanged(WebView *view, const char *url);
+	virtual void OnEvent8(WebView *view, int arg);
+	virtual void OnSlot11();
+	virtual void OnSlot12();
+	virtual void OnSlot13();
+	virtual void OnSlot14();
+	virtual void OnEvent10(WebView *view, int arg, int arg1, int arg2, int *out0,
+		bool *out1);
+	virtual void OnSlot16();
+	virtual void OnEvent11(WebView *view, int arg0, int arg1);
+	virtual void OnEvent12(WebView *view, int arg);
+	virtual void OnEvent13(WebView *view, int arg0, int arg1, int arg2);
+	virtual void OnEvent14(WebView *view, int arg0, int arg1, int arg2, int arg3);
+	virtual void OnSlot21();
+	virtual void OnEvent15(WebView *view, int arg);
+	virtual void OnEvent16();
+	virtual void OnHistoryChanged();
+	virtual void OnEvent18(WebView *view, int arg0, int arg1);
+	virtual void OnImeClosed(WebView *view, int arg0, int arg1);
+};
+
+/* the application's web view listener, which starts the WebKit process for the views (Sony's
+   name, from its messages; wutil::GetWebViewListener) */
+class WebViewListener {
+public:
+	virtual ~WebViewListener();
+	/* the view starting ("[WebViewListener] Initialize (by WebView: 0x%p)") */
+	virtual void Initialize(WebView *view);
+	/* the view going away */
+	virtual void Terminate(WebView *view);
+};
+
+/* the GXM render target over a surface's memory the page is drawn into (0x8101613a; names ours) */
+struct WebViewRenderTarget;
+
+/* made for width x height at base (stride bytes a line), with the memory block it owns (-1:
+   none); NULL on an error */
+int CreateRenderTarget(WebViewRenderTarget **target, int width, int height, int stride,
+	void *base, SceUID memblock);
+int CreateRenderTarget(WebViewRenderTarget **target, int width, int height, int stride,
+	void *base);
+void DestroyRenderTarget(WebViewRenderTarget *target);
+
 /* closes the popup menu (NULL: none) */
 void DestroyPopupMenu(WebViewPopupMenu *menu);
 
 /* the error a parameter gives without its widget (name ours) */
 #define WEB_VIEW_ERROR_NO_WIDGET	((int)0x80AF0001)
+/* the view has no size yet, or its surface no memory (names ours) */
+#define WEB_VIEW_ERROR_NO_SIZE		((int)0x80AF0084)
+#define WEB_VIEW_ERROR_NO_MEMORY	((int)0x80AF0022)
+
+/* every key held (names ours) */
+#define WEB_VIEW_KEY_ALL		6
+/* WebCore's cursor type of none */
+#define WEB_VIEW_CURSOR_NONE		37
 
 /* the page's parts the web view fills, the widgets its parameter names (names ours) */
 enum {
@@ -119,39 +197,6 @@ enum {
 	WEB_VIEW_PART_FORWARD = 3,
 	WEB_VIEW_PART_RELOAD = 4,
 	WEB_VIEW_PART_PROGRESS = 5
-};
-
-/* the IPC with the web UI process, one for every web view: each view's slot is its view ID with
-   the process (it holds 16; names ours) */
-class WebIpc {
-public:
-	enum {
-		VIEW_NUM = 16
-	};
-
-	static WebIpc *s_instance;
-
-	static WebIpc *GetInstance()
-	{
-		if (s_instance == NULL)
-			s_instance = new WebIpc();
-		return s_instance;
-	}
-
-	WebIpc();
-	virtual ~WebIpc();
-
-	/* the view's slot, the next free one after the last given */
-	int RegisterView(WebView *view);
-
-	WebView *m_views[VIEW_NUM];
-	thread::RMutex *m_lock;
-	int m_reserved72;
-	int m_lastView;
-	int m_reserved80;
-	int m_reserved84;
-	/* the process ID, in hex */
-	string m_processId;
 };
 
 /* the analog sticks' listener of a web view: it passes their input to the view it is bound to
@@ -225,15 +270,25 @@ public:
 struct WebViewHeldKey {
 	int m_keycode;
 	Widget *m_widget;
-	bool m_repeat;
+	/* the widget was given the key: it is told of the release */
+	bool m_sent;
 };
 
 /* an animation the web view runs on the page (names ours) */
 class WebViewAnim {
 public:
-	virtual ~WebViewAnim();
+	WebViewAnim(const math::v2 &pos, float scale) : m_pos(pos), m_scale(scale), m_state(0)
+	{
+	}
 
-	int m_reserved[5];
+	virtual ~WebViewAnim()
+	{
+	}
+
+	/* where the view moves to, at the scale */
+	math::v2 m_pos;
+	float m_scale;
+	int m_state;
 };
 
 /* a plane the web view lays over the page while it loads: it fades the page out */
@@ -292,6 +347,26 @@ public:
 	void SetPart(Widget *widget, int part, bool attach);
 	/* loads the page at the URL */
 	void LoadUrl(const Url &url);
+
+	/* the surface the page is drawn into, the view's size, and its render target */
+	int CreateSurface();
+
+	/* the page made for the view at its size, with WebKit's view of the page made before
+	   (posted) or a new one (sent, while there is none) */
+	void CreatePageForView();
+	int CreatePage();
+	/* the web view listener told of the view, and its page made if it has none */
+	void Start();
+
+	/* the held key let go (WEB_VIEW_KEY_ALL: every one), its widget told */
+	void ReleaseHeldKey(int keycode);
+	/* the cursor shown where the view has one, unless the page's cursor is none; and so
+	   after it was hidden for the page */
+	void ShowCursor();
+	void UnhideCursor();
+
+	/* the IME closed, the view's padding for it taken away and its zoom put back */
+	void CloseIme();
 
 	/* moves the cursor to pos, its tip at it, over the time */
 	void MoveCursor(math::v2 *pos, float time);
@@ -387,7 +462,7 @@ public:
 	Buffer *m_receiveBuffer;		/* 1100 */
 	int m_viewId;				/* 1104: the page's ID with the WebKit process */
 	int m_pageState;			/* 1108: WEB_VIEW_PAGE_* */
-	void *m_listener;			/* 1112 */
+	WebViewPageListener *m_listener;	/* 1112 */
 	WebViewLoadingPlane *m_loadingPlane;	/* 1116 */
 	void *m_appListener;			/* 1120: wutil's listener */
 	vector<IpcData *> m_ipcData;		/* 1124 */
@@ -396,8 +471,8 @@ public:
 	intrusive_ptr<graph::Surface> m_surface;	/* 1176 */
 	graph::SurfacePool *m_surfacePool;	/* 1180 */
 	int m_surfaceWidth;			/* 1184 */
-	int m_surfaceHeight;			/* 1188 */
-	void *m_tileBackend;			/* 1192 */
+	WebViewIme *m_ime;			/* 1188: the IME the page opened */
+	WebViewRenderTarget *m_renderTarget;	/* 1192 */
 	bool m_isSecure;			/* 1196 */
 	int m_cursorType;			/* 1200: WebCore's cursor type */
 	WebViewPopupMenu *m_popupMenu;		/* 1204 */

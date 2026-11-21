@@ -47,7 +47,7 @@ WebView::WebView(Widget *parent, CreateParam *param)
 	: ScrollView(parent, param), m_receiveBuffer(NULL), m_viewId(-1), m_pageState(0),
 	  m_listener(NULL), m_loadingPlane(NULL), m_appListener(ScePafWidget_E638AA1F()),
 	  m_ipcDataLock("SceWebViewWebIpcData", 0), m_surfacePool(NULL),
-	  m_surfaceWidth(0), m_surfaceHeight(0), m_tileBackend(NULL), m_isSecure(false),
+	  m_surfaceWidth(0), m_ime(NULL), m_renderTarget(NULL), m_isSecure(false),
 	  m_cursorType(0), m_popupMenu(NULL), m_loadProgress(0), m_loadState(1),
 	  m_loadCanceled(true), m_canGoBack(false), m_canGoForward(false), m_imeType(-1),
 	  m_imeMaxLength(0), m_imeOpen(false), m_imeEnabled(true), m_contentScale(0.0f, 0.0f),
@@ -134,6 +134,217 @@ WebView::WebView(Widget *parent, CreateParam *param)
 		m_analogListener = common::SharedPtr<inputdevice::InputListener>();
 	}
 	m_viewId = WebIpc::GetInstance()->RegisterView(this);
+}
+
+void WebView::DestroyWidget()
+{
+	if (m_hold_count > 0)
+		return;
+
+	MessageDialogListener *dialog = wutil::GetMessageDialogListener();
+
+	if (dialog != NULL && dialog->Method8()) {
+		MessageDialogParam param = {};
+
+		param.owner = static_cast<WebViewPageClient *>(this);
+		dialog->Method17(&param);
+	}
+
+	WebViewListener *listener = (WebViewListener *)wutil::GetWebViewListener();
+
+	if (listener != NULL)
+		listener->Terminate(this);
+	inputdevice::DelInputListener(m_keyListener);
+	m_keyListener.reset();
+	inputdevice::DelInputListener(m_analogListener);
+	m_analogListener.reset();
+	if (m_loadingPlane != NULL) {
+		m_loadingPlane->DestroyWidget();
+		m_loadingPlane = NULL;
+	}
+	CloseIme();
+	m_listener = NULL;
+
+	WebIpcMessage message(WEB_IPC_CLOSE_PAGE);
+
+	WebIpc::GetInstance()->Send(&message, m_viewId);
+	WebIpc::GetInstance()->UnregisterView(m_viewId);
+	m_viewId = -1;
+	ReleaseHeldKey(WEB_VIEW_KEY_ALL);
+	m_heldKeys.clear();
+	ScrollViewBase::DestroyWidget();
+	if (m_renderTarget != NULL) {
+		DestroyRenderTarget(m_renderTarget);
+		m_renderTarget = NULL;
+	}
+	m_arrowTexture.clear();
+	m_arrowAltTexture.clear();
+	m_handTexture.clear();
+	m_handAltTexture.clear();
+	m_surface.clear();
+}
+
+int WebView::CreateSurface()
+{
+	if (m_surface.get() != NULL)
+		return 0;
+
+	graph::SurfacePool *pool = m_surfacePool;
+
+	if (pool == NULL)
+		pool = gutil::GetDefaultSurfacePool();
+
+	math::v4 size = *GetSize(0);
+
+	if (size == math::v4(0.0f, 0.0f, 0.0f, 0.0f))
+		return WEB_VIEW_ERROR_NO_SIZE;
+
+	m_surface.clear();
+	m_surface = intrusive_ptr<graph::Surface>(new graph::Surface(pool,
+		(int32_t)size.extract_x(), (int32_t)size.extract_y(), ImageMode_BGRA8888,
+		ImageOrder_Linear, 1, 1, false));
+
+	{
+		intrusive_ptr<graph::Surface> surface = m_surface;
+
+		if (m_renderTarget != NULL) {
+			DestroyRenderTarget(m_renderTarget);
+			m_renderTarget = NULL;
+		}
+		if (surface.get() != NULL) {
+			void *base = surface->Lock(0);
+
+			CreateRenderTarget(&m_renderTarget, surface->GetWidth(),
+				surface->GetHeight(), surface->GetStride(), base);
+			surface->Unlock();
+		}
+	}
+	if (m_surface.get() == NULL || m_surface->GetMemory() == NULL) {
+		sce_paf_printf_dummy();
+		return WEB_VIEW_ERROR_NO_MEMORY;
+	}
+	sce_paf_memset(m_surface->Lock(0), 0xff, m_surface->GetPageSize());
+	m_surface->Unlock();
+	SetTexture(m_surface);
+	return 0;
+}
+
+void WebView::CreatePageForView()
+{
+	if (CreateSurface() != 0)
+		return;
+
+	math::v4 size = *GetSize(0);
+	WebIpcCreatePageWithView message((int32_t)(float)size.getImpl().getX(),
+		(int32_t)(float)size.getImpl().getY(), m_viewId, GetRenderParam(),
+		sizeof(WebViewRenderParam), m_isSecure);
+
+	WebIpc::GetInstance()->Post(&message, m_viewId);
+	m_startWithParam = false;
+	m_pageState = 2;
+}
+
+int WebView::CreatePage()
+{
+	int ret = CreateSurface();
+
+	if (ret != 0 || (m_pageState != 0 && m_pageState != 1))
+		return ret;
+
+	math::v4 size = *GetSize(0);
+	WebIpcCreatePage message((int32_t)(float)size.getImpl().getX(),
+		(int32_t)(float)size.getImpl().getY(), GetRenderParam(),
+		sizeof(WebViewRenderParam), m_isSecure);
+
+	ret = WebIpc::GetInstance()->Send(&message, m_viewId);
+	m_pageState = ret != 0 ? 1 : 2;
+	return ret;
+}
+
+void WebView::Start()
+{
+	if (m_pageState == 3)
+		return;
+
+	WebViewListener *listener = (WebViewListener *)wutil::GetWebViewListener();
+
+	if (listener != NULL)
+		listener->Initialize(this);
+	if (m_pageState == 0) {
+		if (m_startWithParam)
+			CreatePageForView();
+		else
+			CreatePage();
+	}
+}
+
+void WebView::ReleaseHeldKey(int keycode)
+{
+	list<WebViewHeldKey>::iterator it = m_heldKeys.begin();
+
+	if (keycode == WEB_VIEW_KEY_ALL) {
+		for (; it != m_heldKeys.end(); ++it)
+			if (it->m_sent && it->m_widget != NULL)
+				it->m_widget->DestroyWidget();
+		m_heldKeys.clear();
+		return;
+	}
+	for (; it != m_heldKeys.end(); ++it) {
+		if (it->m_keycode == keycode) {
+			if (it->m_sent && it->m_widget != NULL)
+				it->m_widget->DestroyWidget();
+			m_heldKeys.erase(it);
+			return;
+		}
+	}
+}
+
+__attribute__((noinline)) void WebView::ShowCursor()
+{
+	Widget *cursor = m_cursorPlane;
+
+	if (cursor == NULL || m_cursorMode == 0 || m_cursorHidden ||
+	    m_arrowTexture.get() == NULL || m_cursorType == WEB_VIEW_CURSOR_NONE)
+		return;
+	if (!cursor->m_transition_complete) {
+		cursor->m_transition = 0xff;
+		cursor->m_transition_complete = true;
+		cursor->DoTransition_core(0.0f, true);
+	}
+	ScePafWidget_FF5BC957(cursor, NULL, 2, 0.0f, NULL);
+}
+
+void WebView::UnhideCursor()
+{
+	m_cursorHidden = false;
+	ShowCursor();
+}
+
+void WebView::CloseIme()
+{
+	if (m_ime_padding &&
+	    !((m_contentScale.getImpl().getX() == sce::Vectormath::Simd::floatInVec(0.0f)) &
+	      (m_contentScale.getImpl().getY() == sce::Vectormath::Simd::floatInVec(0.0f)))
+		     .getAsBool()) {
+		m_cursorHidden = false;
+		ShowCursor();
+		SetImePadding(false);
+
+		math::v2 target = GetViewFocusTarget();
+		float scale = m_tapScale /
+			(sce::Vectormath::Simd::recipf(m_contentScale.getImpl().getX()) *
+			 m_view_box_size.getImpl().getX()).getAsFloat();
+
+		if (m_tapScale >= 1.75f)
+			scale = 1.0f;
+		m_scrollAnims.push_back(WebViewAnim(target, scale));
+	}
+	if (m_ime != NULL) {
+		if (m_listener != NULL)
+			m_listener->OnImeClosed(this, 1, 0);
+		ImeClose(m_ime);
+		m_ime = NULL;
+	}
 }
 
 WebViewParam::WebViewParam() : m_home_url(NULL)
