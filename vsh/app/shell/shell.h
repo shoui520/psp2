@@ -44,7 +44,8 @@ typedef void (*ShellEventCallback)(int code, const void *data, SceSize size, voi
 
 #ifdef __cplusplus
 #include <std/string>
-namespace paf { class Framework; namespace graph { class SurfacePool; }
+#include <std/memory>
+namespace paf { class Framework; namespace graph { class SurfacePool; class Surface; }
 	namespace memory { class HeapAllocator; } }
 
 /* the framework: made at start (0x81002C1C), then run until the shell ends (0x81002CBA) */
@@ -276,6 +277,11 @@ int shellDbRecoveryNotify(int error, const char *path, unsigned int flags);
 int shellScreenshotCapture(void (*callback)(int *result, void *data), void *data);
 int shellScreenshotSetRequestCallback(void (*callback)(void *data), void *data);
 int shellAppStateMarkForeground(void);		/* flags the foreground application's slot (0x81244B62) */
+/* PLACEHOLDER names: the screenshot service's counterpart of 0x81244B62 on the foreground
+   application's slot (0x81244BB0), and the screen captured into a surface with the flags
+   (0x81244C20; 0x80102FA2 while the service is not up) */
+int Shell_81244BB0(void);
+int shellScreenshotCaptureSurface(paf::intrusive_ptr<paf::graph::Surface> *surface, int flags);
 int shellThemeApplyPending(void);		/* the theme left to apply, /CONFIG/THEME (0x81005834) */
 
 /* the modules loaded at start: libshellsvc, libcdlg and the system modules (0x81002E0C) */

@@ -201,42 +201,42 @@ static void Impose_81141210(const char *name)
 
 static void Impose_81141228(int arg)
 {
-	g_impose->m_part811516E4.Impose_811518CA(arg);
+	g_impose->m_overlay.Open(arg);
 }
 
 static void Impose_81141240(void)
 {
-	g_impose->m_part811516E4.Impose_8115171C();
+	g_impose->m_overlay.Close();
 }
 
 static void imposeZoomBegin(void)
 {
-	g_impose->m_zoom.Impose_81151DC0();
+	g_impose->m_zoom.Begin();
 }
 
 static void imposeZoomEnd(void)
 {
-	g_impose->m_zoom.Impose_81152072();
+	g_impose->m_zoom.End();
 }
 
 static void imposeZoomPrepare(void)
 {
-	g_impose->m_zoom.Impose_81152130();
+	g_impose->m_zoom.Prepare();
 }
 
 static int imposeZoomIsBlocked(void)
 {
-	return g_impose->m_zoom.Impose_81152718();
+	return g_impose->m_zoom.IsBlocked();
 }
 
 static void imposeZoomShow(int x, int y)
 {
-	g_impose->m_zoom.Impose_811521DC(x, y);
+	g_impose->m_zoom.Show(x, y);
 }
 
 static void imposeZoomHide(int x, int y)
 {
-	g_impose->m_zoom.Impose_81152468(x, y);
+	g_impose->m_zoom.Hide(x, y);
 }
 
 static void Impose_811412E2(void)

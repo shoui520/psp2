@@ -446,29 +446,39 @@ public:
 };
 
 /* (0x811516E4, 8 bytes) */
-class ImposePart811516E4 {
+/* the overlay pages: one of three open at a time (impose_overlay.cpp, 8 bytes; PLACEHOLDER
+   names) */
+class ImposeOverlay {
 public:
-	ImposePart811516E4();
-	~ImposePart811516E4();
-	void Impose_811518CA(int arg);
-	void Impose_8115171C();
+	ImposeOverlay();
+	~ImposeOverlay();
+	void Open(int kind);
+	void Close();
 
-	SceUInt8 data[8];
+	paf::ui::Scene *m_page;
+	int m_kind;
 };
 
-/* the accessibility zoom (0x81151B08, 16 bytes) */
-class ImposePart81151B08 {
+/* the screen zoom: the page and the plane the capture is shown on (impose_zoom.cpp, 16 bytes;
+   PLACEHOLDER names) */
+class ImposeZoom {
 public:
-	ImposePart81151B08();
-	~ImposePart81151B08();
-	void Impose_81151DC0();
-	void Impose_81152072();
-	void Impose_81152130();
-	void Impose_811521DC(int x, int y);
-	void Impose_81152468(int x, int y);
-	int Impose_81152718();
+	ImposeZoom();
+	~ImposeZoom();
+	paf::ui::Scene *Acquire();
+	void Release();
+	void Begin();
+	void End();
+	void Prepare();
+	void Finish();
+	void Show(int x, int y);
+	void Hide(int x, int y);
+	int IsBlocked();
 
-	SceUInt8 data[16];
+	paf::ui::Scene *m_page;
+	paf::intrusive_ptr<paf::graph::Surface> m_surface;
+	paf::ui::Widget *m_plane;
+	int m_count;		/* its users */
 };
 
 /*
@@ -599,8 +609,8 @@ public:
 	ImposeActivationWarning m_activationWarning;
 	ImposeBusyScreen m_busyScreen;
 	ImposeZoomRefuse m_zoomRefuse;
-	ImposePart811516E4 m_part811516E4;
-	ImposePart81151B08 m_zoom;
+	ImposeOverlay m_overlay;
+	ImposeZoom m_zoom;
 	ImposeTouchEmulation m_touchEmulation;
 };
 
