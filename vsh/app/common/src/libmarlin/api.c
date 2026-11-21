@@ -353,7 +353,7 @@ int MlnApi_810024F0(MlnServiceContext *context)
 	return MlnImpl_81014DC4(context);
 }
 
-int MlnApi_810024FC(MlnServiceContext *context, MlnBuffer *buffer, void *out)
+int MlnApi_810024FC(MlnServiceContext *context, MlnBuffer *buffer, unsigned int *out)
 {
 	return MlnImpl_81014E28(context, buffer, out);
 }

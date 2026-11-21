@@ -763,9 +763,9 @@ __attribute__((noinline)) int MlnImpl_81014574(MlnServiceContext *context, int c
 			goto out;
 		ret = 1;
 	}
-	if (reply->data == NULL || reply->type != 1)
+	if (reply->values == NULL || reply->count != 1)
 		goto done;
-	ret = MlnImpl_81026F0C(MLN_HEAP_SECURE, reply->data, &block);
+	ret = MlnImpl_81026F0C(MLN_HEAP_SECURE, reply->values, &block);
 	if (ret != MLN_OK)
 		goto failed;
 	if (block == NULL)
@@ -920,7 +920,7 @@ __attribute__((noinline)) int MlnImpl_810148F8(MlnServiceContext *context, MlnBu
 				if (MlnImpl_81026D94(reply, 1) != 0) {
 					ret = MLN_SERVICE_ERROR_REPLY;
 				} else {
-					ret = MlnImpl_81026F0C(MLN_HEAP_SECURE, reply->data, &buffer);
+					ret = MlnImpl_81026F0C(MLN_HEAP_SECURE, reply->values, &buffer);
 					if (ret != MLN_OK) {
 						ret = MlnImpl_810191C4(ret);
 					} else {
@@ -967,7 +967,7 @@ __attribute__((noinline)) int MlnImpl_81014A10(MlnServiceContext *context, MlnSe
 		ret = MLN_SERVICE_ERROR_REPLY;
 		goto out;
 	}
-	ret = MlnImpl_81027084(MLN_HEAP_SECURE, reply->data, &flag);
+	ret = MlnImpl_81027084(MLN_HEAP_SECURE, reply->values, &flag);
 	if (ret != MLN_OK) {
 		ret = MlnImpl_810191C4(ret);
 		goto out;
@@ -1048,7 +1048,7 @@ __attribute__((noinline)) int MlnImpl_81014C20(MlnServiceContext *context, MlnBu
 				if (MlnImpl_81026D94(reply, 1) != 0) {
 					ret = MLN_SERVICE_ERROR_REPLY;
 				} else {
-					ret = MlnImpl_81026F0C(MLN_HEAP_SECURE, reply->data, &buffer);
+					ret = MlnImpl_81026F0C(MLN_HEAP_SECURE, reply->values, &buffer);
 					if (ret != MLN_OK) {
 						ret = MlnImpl_810191C4(ret);
 					} else {
@@ -1111,7 +1111,7 @@ __attribute__((noinline)) int MlnImpl_81014DC4(MlnServiceContext *context)
 
 /* service command 0x406 on a buffer: its type 1 reply (also a partial one) into out */
 __attribute__((noinline)) int MlnImpl_81014E28(MlnServiceContext *context, MlnBuffer *buffer,
-					       void *out)
+					       unsigned int *out)
 {
 	MlnServiceArg item;
 	MlnServiceArgs args = { 0, NULL };
@@ -1134,7 +1134,7 @@ __attribute__((noinline)) int MlnImpl_81014E28(MlnServiceContext *context, MlnBu
 			if (status == MLN_OK || status == MLN_SERVICE_STATUS_MORE) {
 				if (MlnImpl_81026D94(reply, 1) != 0)
 					ret = MLN_SERVICE_ERROR_REPLY;
-				else if (MlnImpl_81026FE4(MLN_HEAP_SECURE, reply->data, out) != 0)
+				else if (MlnImpl_81026FE4(MLN_HEAP_SECURE, reply->values, out) != 0)
 					ret = MlnImpl_810191C4(ret);
 				else
 					ret = status;
@@ -1223,7 +1223,7 @@ __attribute__((noinline)) int MlnImpl_8101503C(MlnServiceContext *context, int v
 				if (MlnImpl_81026D94(reply, 1) != 0) {
 					ret = MLN_SERVICE_ERROR_REPLY;
 				} else {
-					ret = MlnImpl_8102701C(MLN_HEAP_SECURE, reply->data, &id);
+					ret = MlnImpl_8102701C(MLN_HEAP_SECURE, reply->values, &id);
 					if (ret != MLN_OK) {
 						ret = MlnImpl_810191C4(ret);
 					} else if (id < 0) {
@@ -1309,7 +1309,7 @@ __attribute__((noinline)) int MlnImpl_8101521C(MlnServiceContext *context, unsig
 				if (MlnImpl_81026D94(reply, 1) != 0) {
 					ret = MLN_SERVICE_ERROR_REPLY;
 				} else {
-					ret = MlnImpl_81026F0C(MLN_HEAP_SECURE, reply->data, &buffer);
+					ret = MlnImpl_81026F0C(MLN_HEAP_SECURE, reply->values, &buffer);
 					if (ret != MLN_OK) {
 						ret = MlnImpl_810191C4(ret);
 					} else {
@@ -1354,7 +1354,7 @@ __attribute__((noinline)) int MlnImpl_81015374(MlnServiceContext *context, MlnBu
 				if (MlnImpl_81026D94(reply, 1) != 0) {
 					ret = MLN_SERVICE_ERROR_REPLY;
 				} else {
-					ret = MlnImpl_81026F0C(MLN_HEAP_SECURE, reply->data, &buffer);
+					ret = MlnImpl_81026F0C(MLN_HEAP_SECURE, reply->values, &buffer);
 					if (ret != MLN_OK) {
 						ret = MlnImpl_810191C4(ret);
 					} else {
@@ -1414,7 +1414,7 @@ __attribute__((noinline)) int MlnImpl_8101549C(MlnServiceContext *context, unsig
 				if (MlnImpl_81026D94(reply, 1) != 0) {
 					ret = MLN_SERVICE_ERROR_REPLY;
 				} else {
-					ret = MlnImpl_81026F0C(MLN_HEAP_SECURE, reply->data, &buffer);
+					ret = MlnImpl_81026F0C(MLN_HEAP_SECURE, reply->values, &buffer);
 					if (ret != MLN_OK) {
 						ret = MlnImpl_810191C4(ret);
 					} else {
@@ -1462,11 +1462,10 @@ __attribute__((noinline)) int MlnImpl_81015620(MlnServiceContext *context, MlnBu
 				if (MlnImpl_81026D94(reply, 2) != 0) {
 					ret = MLN_SERVICE_ERROR_REPLY;
 				} else {
-					ret = MlnImpl_81026F0C(MLN_HEAP_SECURE, reply->data, &first);
+					ret = MlnImpl_81026F0C(MLN_HEAP_SECURE, reply->values, &first);
 					if (ret == MLN_OK)
 						ret = MlnImpl_81026F0C(MLN_HEAP_SECURE,
-								       (MlnServiceArg *)reply->data + 1,
-								       &second);
+								       &reply->values[1], &second);
 					if (ret != MLN_OK) {
 						ret = MlnImpl_810191C4(ret);
 					} else {
@@ -1525,7 +1524,7 @@ __attribute__((noinline)) int MlnImpl_81015798(MlnServiceContext *context, unsig
 				if (MlnImpl_81026D94(reply, 1) != 0) {
 					ret = MLN_SERVICE_ERROR_REPLY;
 				} else {
-					ret = MlnImpl_81026F0C(MLN_HEAP_SECURE, reply->data, &buffer);
+					ret = MlnImpl_81026F0C(MLN_HEAP_SECURE, reply->values, &buffer);
 					if (ret != MLN_OK) {
 						ret = MlnImpl_810191C4(ret);
 					} else {
@@ -1570,7 +1569,7 @@ __attribute__((noinline)) int MlnImpl_810158FC(MlnServiceContext *context, MlnBu
 				if (MlnImpl_81026D94(reply, 1) != 0) {
 					ret = MLN_SERVICE_ERROR_REPLY;
 				} else {
-					ret = MlnImpl_81026F0C(MLN_HEAP_SECURE, reply->data, &buffer);
+					ret = MlnImpl_81026F0C(MLN_HEAP_SECURE, reply->values, &buffer);
 					if (ret != MLN_OK) {
 						ret = MlnImpl_810191C4(ret);
 					} else {
@@ -1632,7 +1631,7 @@ __attribute__((noinline)) int MlnImpl_81015A24(MlnServiceContext *context, unsig
 				if (MlnImpl_81026D94(reply, 1) != 0) {
 					ret = MLN_SERVICE_ERROR_REPLY;
 				} else {
-					ret = MlnImpl_81026F0C(MLN_HEAP_SECURE, reply->data, &buffer);
+					ret = MlnImpl_81026F0C(MLN_HEAP_SECURE, reply->values, &buffer);
 					if (ret != MLN_OK) {
 						ret = MlnImpl_810191C4(ret);
 					} else {
@@ -1677,7 +1676,7 @@ __attribute__((noinline)) int MlnImpl_81015BB0(MlnServiceContext *context, MlnBu
 				if (MlnImpl_81026D94(reply, 1) != 0) {
 					ret = MLN_SERVICE_ERROR_REPLY;
 				} else {
-					ret = MlnImpl_81026F0C(MLN_HEAP_SECURE, reply->data, &buffer);
+					ret = MlnImpl_81026F0C(MLN_HEAP_SECURE, reply->values, &buffer);
 					if (ret != MLN_OK) {
 						ret = MlnImpl_810191C4(ret);
 					} else {
@@ -1719,7 +1718,7 @@ __attribute__((noinline)) int MlnImpl_81015CD8(MlnServiceContext *context, MlnBu
 				if (MlnImpl_81026D94(reply, 1) != 0) {
 					ret = MLN_SERVICE_ERROR_REPLY;
 				} else {
-					ret = MlnImpl_81026ED0(MLN_HEAP_SECURE, reply->data, &group);
+					ret = MlnImpl_81026ED0(MLN_HEAP_SECURE, reply->values, &group);
 					if (ret != MLN_OK) {
 						ret = MlnImpl_810191C4(ret);
 					} else {
@@ -1827,7 +1826,7 @@ __attribute__((noinline)) int MlnImpl_81015F3C(MlnServiceContext *context)
 				if (MlnImpl_81026D94(reply, 1) != 0) {
 					ret = MLN_SERVICE_ERROR_REPLY;
 				} else {
-					ret = MlnImpl_8102701C(MLN_HEAP_SECURE, reply->data, &id);
+					ret = MlnImpl_8102701C(MLN_HEAP_SECURE, reply->values, &id);
 					if (ret != MLN_OK) {
 						ret = MlnImpl_810191C4(ret);
 					} else if (id < 0) {
@@ -1933,7 +1932,7 @@ __attribute__((noinline)) int MlnImpl_8101617C(MlnServiceContext *context, void 
 				if (MlnImpl_81026D94(reply, 1) != 0) {
 					ret = MLN_SERVICE_ERROR_REPLY;
 				} else {
-					ret = MlnImpl_8102701C(MLN_HEAP_SECURE, reply->data, out);
+					ret = MlnImpl_8102701C(MLN_HEAP_SECURE, reply->values, out);
 					if (ret != MLN_OK)
 						ret = MlnImpl_810191C4(ret);
 				}
@@ -2094,7 +2093,7 @@ __attribute__((noinline)) int MlnImpl_810163E4(MlnServiceContext *context, void 
 		goto out;
 	}
 	if (rights != NULL) {
-		ret = MlnImpl_81026F0C(MLN_HEAP_SECURE, reply->data, &block);
+		ret = MlnImpl_81026F0C(MLN_HEAP_SECURE, reply->values, &block);
 		if (ret == MLN_OK && block != NULL)
 			ret = MlnRightsInfoParse(MLN_HEAP_SECURE, block->size, block->data, &info);
 		if (ret != MLN_OK) {
@@ -2153,7 +2152,7 @@ __attribute__((noinline)) int MlnImpl_810166AC(MlnServiceContext *context, MlnBu
 				if (MlnImpl_81026D94(reply, 1) != 0) {
 					ret = MLN_SERVICE_ERROR_REPLY;
 				} else {
-					ret = MlnImpl_81026F0C(MLN_HEAP_SECURE, reply->data, &block);
+					ret = MlnImpl_81026F0C(MLN_HEAP_SECURE, reply->values, &block);
 					if (ret != MLN_OK) {
 						ret = MlnImpl_810191C4(ret);
 					} else if (block != NULL &&
@@ -2216,7 +2215,7 @@ __attribute__((noinline)) int MlnImpl_81016844(MlnServiceContext *context, int i
 				if (MlnImpl_81026D94(reply, 1) != 0) {
 					ret = MLN_SERVICE_ERROR_REPLY;
 				} else {
-					ret = MlnImpl_810270BC(MLN_HEAP_SECURE, reply->data, position);
+					ret = MlnImpl_810270BC(MLN_HEAP_SECURE, reply->values, position);
 					if (ret != MLN_OK)
 						ret = MlnImpl_810191C4(ret);
 				}
@@ -2294,7 +2293,7 @@ __attribute__((noinline)) int MlnImpl_81016A5C(MlnServiceContext *context, int i
 		ret = MLN_SERVICE_ERROR_REPLY;
 		goto out;
 	}
-	ret = MlnImpl_81026F0C(MLN_HEAP_SECURE, reply->data, out);
+	ret = MlnImpl_81026F0C(MLN_HEAP_SECURE, reply->values, out);
 	if (ret == MLN_OK)
 		goto out;
 invalid:
@@ -2337,7 +2336,7 @@ __attribute__((noinline)) int MlnImpl_81016B4C(MlnServiceContext *context, int i
 				if (MlnImpl_81026D94(reply, 1) != 0) {
 					ret = MLN_SERVICE_ERROR_REPLY;
 				} else {
-					ret = MlnImpl_81026F0C(MLN_HEAP_SECURE, reply->data, &buffer);
+					ret = MlnImpl_81026F0C(MLN_HEAP_SECURE, reply->values, &buffer);
 					if (ret != MLN_OK) {
 						ret = MlnImpl_810191C4(ret);
 					} else {
@@ -2374,7 +2373,7 @@ __attribute__((noinline)) int MlnImpl_81016C70(MlnServiceContext *context)
 				if (MlnImpl_81026D94(reply, 1) != 0) {
 					ret = MLN_SERVICE_ERROR_REPLY;
 				} else {
-					ret = MlnImpl_8102701C(MLN_HEAP_SECURE, reply->data, &id);
+					ret = MlnImpl_8102701C(MLN_HEAP_SECURE, reply->values, &id);
 					if (ret != MLN_OK) {
 						ret = MlnImpl_810191C4(ret);
 					} else if (id < 0) {
@@ -2449,7 +2448,7 @@ __attribute__((noinline)) int MlnImpl_81016E1C(MlnServiceContext *context, MlnBu
 				if (MlnImpl_81026D94(reply, 1) != 0) {
 					ret = MLN_SERVICE_ERROR_REPLY;
 				} else {
-					ret = MlnImpl_81026F0C(MLN_HEAP_SECURE, reply->data, &buffer);
+					ret = MlnImpl_81026F0C(MLN_HEAP_SECURE, reply->values, &buffer);
 					if (ret != MLN_OK) {
 						ret = MlnImpl_810191C4(ret);
 					} else {
@@ -2494,7 +2493,7 @@ __attribute__((noinline)) int MlnImpl_81016F20(MlnServiceContext *context, MlnBu
 				if (MlnImpl_81026D94(reply, 1) != 0) {
 					ret = MLN_SERVICE_ERROR_REPLY;
 				} else {
-					ret = MlnImpl_81026F0C(MLN_HEAP_SECURE, reply->data, &buffer);
+					ret = MlnImpl_81026F0C(MLN_HEAP_SECURE, reply->values, &buffer);
 					if (ret != MLN_OK) {
 						ret = MlnImpl_810191C4(ret);
 					} else {
@@ -2701,5 +2700,323 @@ __attribute__((noinline)) int MlnImpl_810173A8(MlnServiceContext *context, unsig
 			ret = status;
 	}
 	MlnImpl_81027390(MLN_HEAP_SECURE, reply);
+	return ret;
+}
+
+/*
+ * Service command 0x43d with a buffer given as its size and data (the context is not
+ * checked): the buffer of its type 1 reply, when out is given.
+ */
+__attribute__((noinline)) int MlnImpl_8101743C(MlnServiceContext *context, unsigned int size,
+					       void *data, MlnBuffer **out)
+{
+	MlnBuffer buffer;
+	MlnServiceArg item;
+	MlnServiceArgs args = { 0, NULL };
+	MlnServiceReply *reply = NULL;
+	MlnBuffer *result = NULL;
+	int status;
+	int ret;
+
+	buffer.size = size;
+	buffer.data = data;
+	if (size == 0 || data == NULL) {
+		ret = MLN_CORE_ERROR_INVALID;
+	} else {
+		item.type = MLN_SERVICE_ARG_BUFFER;
+		item.value = &buffer;
+		args.count = 1;
+		args.items = &item;
+		ret = MlnServiceCall(context->session, 0x43d, &args, &reply, &status);
+		if (ret == MLN_OK) {
+			ret = status;
+			if (ret == MLN_OK && out != NULL) {
+				if (MlnImpl_81026D94(reply, 1) != 0)
+					ret = MLN_SERVICE_ERROR_REPLY;
+				else if (MlnImpl_81026F0C(MLN_HEAP_SECURE, reply->values, &result) != 0)
+					ret = MLN_CORE_ERROR_INVALID;
+				else
+					*out = result;
+			}
+		}
+	}
+	MlnImpl_81027390(MLN_HEAP_SECURE, reply);
+	return ret;
+}
+
+/* service command 0x43e with two buffers given as their sizes and data */
+__attribute__((noinline)) int MlnImpl_8101753C(MlnServiceContext *context,
+					       unsigned int firstSize, void *firstData,
+					       unsigned int secondSize, void *secondData)
+{
+	MlnBuffer first;
+	MlnBuffer second;
+	MlnServiceArg items[2];
+	MlnServiceArgs args = { 0, NULL };
+	MlnServiceReply *reply = NULL;
+	int status;
+	int ret;
+
+	first.size = firstSize;
+	first.data = firstData;
+	second.size = secondSize;
+	second.data = secondData;
+	if (firstData == NULL || secondSize == 0 || secondData == NULL) {
+		ret = MLN_CORE_ERROR_INVALID;
+	} else {
+		items[0].type = MLN_SERVICE_ARG_BUFFER;
+		items[0].value = &first;
+		items[1].type = MLN_SERVICE_ARG_BUFFER;
+		items[1].value = &second;
+		args.count = 2;
+		args.items = items;
+		ret = MlnServiceCall(context->session, 0x43e, &args, &reply, &status);
+		if (ret == MLN_OK)
+			ret = status;
+	}
+	MlnImpl_81027390(MLN_HEAP_SECURE, reply);
+	return ret;
+}
+
+/* service command 0x43f with a buffer given as its size and data (the context is not checked) */
+__attribute__((noinline)) int MlnImpl_810175FC(MlnServiceContext *context, unsigned int size,
+					       void *data)
+{
+	MlnBuffer buffer;
+	MlnServiceArg item;
+	MlnServiceArgs args = { 0, NULL };
+	MlnServiceReply *reply = NULL;
+	int status;
+	int ret;
+
+	buffer.size = size;
+	buffer.data = data;
+	if (size == 0 || data == NULL) {
+		ret = MLN_CORE_ERROR_INVALID;
+	} else {
+		item.type = MLN_SERVICE_ARG_BUFFER;
+		item.value = &buffer;
+		args.count = 1;
+		args.items = &item;
+		ret = MlnServiceCall(context->session, 0x43f, &args, &reply, &status);
+		if (ret == MLN_OK)
+			ret = status;
+	}
+	MlnImpl_81027390(MLN_HEAP_SECURE, reply);
+	return ret;
+}
+
+/* service command 0x440 with a 28-byte block */
+__attribute__((noinline)) int MlnImpl_81017690(MlnServiceContext *context, void *block)
+{
+	MlnServiceArg item;
+	MlnServiceArgs args = { 0, NULL };
+	MlnServiceReply *reply = NULL;
+	int status;
+	int ret;
+
+	if (block == NULL) {
+		ret = MLN_CORE_ERROR_INVALID;
+	} else {
+		item.type = MLN_SERVICE_ARG_BLOCK28;
+		item.value = block;
+		args.count = 1;
+		args.items = &item;
+		ret = MlnServiceCall(context->session, 0x440, &args, &reply, &status);
+		if (ret == MLN_OK)
+			ret = status;
+	}
+	MlnImpl_81027390(MLN_HEAP_SECURE, reply);
+	return ret;
+}
+
+/* service command 0x441 */
+__attribute__((noinline)) int MlnImpl_81017710(MlnServiceContext *context)
+{
+	MlnServiceArgs args = { 0, NULL };
+	MlnServiceReply *reply = NULL;
+	int status;
+	int ret;
+
+	ret = MlnServiceCall(context->session, 0x441, &args, &reply, &status);
+	if (ret == MLN_OK)
+		ret = status;
+	MlnImpl_81027390(MLN_HEAP_SECURE, reply);
+	return ret;
+}
+
+/* the record in the reply to service command 0x40a (zero when there is none) */
+__attribute__((noinline)) MlnServiceRecord MlnImpl_81017764(MlnServiceContext *context)
+{
+	MlnServiceArgs args = { 0, NULL };
+	MlnServiceReply *reply = NULL;
+	MlnServiceRecord record;
+	int status;
+
+	if (context != NULL) {
+		MlnMemset(&record, 0, sizeof(record));
+		if (MlnServiceCall(context->session, 0x40a, &args, &reply, &status) == MLN_OK &&
+		    MlnImpl_81026D94(reply, 1) == 0)
+			MlnImpl_81026F48(MLN_HEAP_SECURE, reply->values, &record);
+	}
+	MlnImpl_81027390(MLN_HEAP_SECURE, reply);
+	return record;
+}
+
+/* service command 0x409, its result dropped */
+__attribute__((noinline)) void MlnImpl_8101782C(MlnServiceContext *context)
+{
+	MlnServiceArgs args = { 0, NULL };
+	MlnServiceReply *reply = NULL;
+	int status;
+
+	if (context != NULL)
+		MlnServiceCall(context->session, 0x409, &args, &reply, &status);
+	MlnImpl_81027390(MLN_HEAP_SECURE, reply);
+}
+
+/* the number of values in a reply (none without values) */
+#define MLN_REPLY_COUNT(reply)	((reply)->values != NULL ? (reply)->count : 0)
+
+/*
+ * Opens the context's handle with command 0x442 on a list. Its reply holds the handle, a
+ * count and that many buffers, a second count and buffers, and two more buffers; the
+ * buffer arrays are allocated here.
+ */
+__attribute__((noinline)) int MlnImpl_81017880(MlnServiceContext *context, void *list,
+					       unsigned int *firstCount, MlnBuffer ***first,
+					       unsigned int *secondCount, MlnBuffer ***second,
+					       MlnBuffer **third, MlnBuffer **fourth)
+{
+	MlnServiceArg item;
+	MlnServiceArgs args = { 0, NULL };
+	MlnServiceReply *reply = NULL;
+	MlnBuffer **firsts = NULL;
+	MlnBuffer **seconds = NULL;
+	MlnBuffer *thirdBuffer = NULL;
+	MlnBuffer *fourthBuffer = NULL;
+	MlnBuffer *buffer = NULL;
+	unsigned int nFirst, nSecond, i, n;
+	int id = -1;
+	int status;
+	int ret;
+
+	if (context == NULL || context->id != -1 || context->session == NULL) {
+		ret = MLN_ERROR_INVALID_ARGUMENT;
+		goto out;
+	}
+	if (list == NULL || firstCount == NULL || secondCount == NULL ||
+	    second == NULL || third == NULL || fourth == NULL) {
+		ret = MLN_CORE_ERROR_INVALID;
+		goto out;
+	}
+	item.type = MLN_SERVICE_ARG_LIST;
+	item.value = list;
+	args.count = 1;
+	args.items = &item;
+	ret = MlnServiceCall(context->session, 0x442, &args, &reply, &status);
+	if (ret != MLN_OK)
+		goto out;
+	ret = status;
+	if (ret != MLN_OK)
+		goto out;
+	if (reply->values == NULL || reply->count <= 4)
+		goto badreply;
+	ret = MlnImpl_8102701C(MLN_HEAP_SECURE, &reply->values[0], &id);
+	if (ret != MLN_OK)
+		goto converted;
+	if (id < 0) {
+		ret = MLN_ERROR_INVALID_ARGUMENT;
+		goto out;
+	}
+	context->id = id;
+	id = -1;
+	ret = MlnImpl_81026FE4(MLN_HEAP_SECURE, &reply->values[1], &nFirst);
+	if (ret != MLN_OK)
+		goto converted;
+	n = MLN_REPLY_COUNT(reply) - 5;
+	if (nFirst > n || nFirst == 0)
+		goto badreply;
+
+	firsts = MlnAllocate(MLN_HEAP_SECURE, nFirst * sizeof(*firsts));
+	if (firsts == NULL) {
+		ret = MLN_ERROR_NO_MEMORY;
+		goto out;
+	}
+	MlnMemset(firsts, 0, nFirst * sizeof(*firsts));
+	for (i = 0; i < nFirst; i++) {
+		ret = MlnImpl_81026F0C(MLN_HEAP_SECURE, &reply->values[i + 2], &buffer);
+		if (ret != MLN_OK)
+			goto failed;
+		firsts[i] = buffer;
+	}
+	ret = MlnImpl_81026FE4(MLN_HEAP_SECURE, &reply->values[i + 2], &nSecond);
+	if (ret != MLN_OK)
+		goto failed;
+	n = MLN_REPLY_COUNT(reply) - 5;
+	if (n - nFirst < nSecond || nSecond == 0) {
+		ret = MLN_SERVICE_ERROR_REPLY;
+		goto fail;
+	}
+
+	seconds = MlnAllocate(MLN_HEAP_SECURE, nSecond * sizeof(*seconds));
+	if (seconds == NULL) {
+		ret = MLN_ERROR_NO_MEMORY;
+		goto fail;
+	}
+	MlnMemset(seconds, 0, nSecond * sizeof(*seconds));
+	for (i = 0; i < nSecond; i++) {
+		ret = MlnImpl_81026F0C(MLN_HEAP_SECURE, &reply->values[nFirst + 3 + i], &buffer);
+		if (ret != MLN_OK)
+			goto failed;
+		seconds[i] = buffer;
+	}
+	i += nFirst + 3;
+	ret = MlnImpl_81026F0C(MLN_HEAP_SECURE, &reply->values[i], &thirdBuffer);
+	if (ret == MLN_OK)
+		ret = MlnImpl_81026F0C(MLN_HEAP_SECURE, &reply->values[i + 1], &fourthBuffer);
+	if (ret != MLN_OK)
+		goto failed;
+	if (MlnImpl_81026D94(reply, i + 2) != 0) {
+		ret = MLN_SERVICE_ERROR_REPLY;
+		goto fail;
+	}
+	*firstCount = nFirst;
+	*secondCount = nSecond;
+	*first = firsts;
+	*second = seconds;
+	*third = thirdBuffer;
+	thirdBuffer = NULL;
+	*fourth = fourthBuffer;
+	fourthBuffer = NULL;
+	ret = MLN_OK;
+	goto handed;
+
+badreply:
+	ret = MLN_SERVICE_ERROR_REPLY;
+	goto out;
+converted:
+	ret = MlnImpl_810191C4(ret);
+	goto out;
+failed:
+	ret = MlnImpl_810191C4(ret);
+fail:
+	MlnImpl_81027390(MLN_HEAP_SECURE, reply);
+	for (i = 0; i < nFirst; i++)
+		MlnBufferDestroy(MLN_HEAP_SECURE, firsts[i]);
+	if (seconds != NULL)
+		for (i = 0; i < nSecond; i++)
+			MlnBufferDestroy(MLN_HEAP_SECURE, seconds[i]);
+	goto freed;
+handed:
+	firsts = NULL;
+	seconds = NULL;
+out:
+	MlnImpl_81027390(MLN_HEAP_SECURE, reply);
+freed:
+	MlnFree(MLN_HEAP_SECURE, firsts);
+	MlnFree(MLN_HEAP_SECURE, seconds);
+	MlnBufferDestroy(MLN_HEAP_SECURE, thirdBuffer);
+	MlnBufferDestroy(MLN_HEAP_SECURE, fourthBuffer);
 	return ret;
 }

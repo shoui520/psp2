@@ -929,7 +929,8 @@ int MlnStateRestore(const MlnBuffer *state);
 #define MLN_SERVICE_ARG_HANDLE		0
 #define MLN_SERVICE_ARG_SIZE		1	/* the value points to a nonzero size */
 #define MLN_SERVICE_ARG_INTEGER		2
-#define MLN_SERVICE_ARG_ID		3	/* the value points to an identifier */	/* the value points to the integer */
+#define MLN_SERVICE_ARG_ID		3	/* the value points to an identifier */
+#define MLN_SERVICE_ARG_BLOCK28		4	/* the value points to 28 bytes (sized at 0x8102766c) */	/* the value points to the integer */
 #define MLN_SERVICE_ARG_OFFSET		5	/* the value points to an offset (also given back) */
 #define MLN_SERVICE_ARG_BUFFER		6
 #define MLN_SERVICE_ARG_OBJECT		9	/* an object led by a buffer (sized at 0x8102766c) */
@@ -951,9 +952,10 @@ typedef struct MlnServiceArgs {
 	MlnServiceArg *items;
 } MlnServiceArgs;
 
+/* a service reply: its values, each a type and a value like the arguments */
 typedef struct MlnServiceReply {
-	int type;
-	void *data;
+	unsigned int count;
+	MlnServiceArg *values;
 } MlnServiceReply;
 
 int MlnImpl_81014574(MlnServiceContext *context, int command, int value, MlnRightsInfo **rights,
@@ -977,7 +979,7 @@ int MlnImpl_81014B8C(MlnServiceContext *context, MlnBuffer *buffer);
 int MlnImpl_81014C20(MlnServiceContext *context, MlnBuffer *in, MlnBuffer **out);
 int MlnImpl_81014D30(MlnServiceContext *context, MlnBuffer *buffer);
 int MlnImpl_81014DC4(MlnServiceContext *context);
-int MlnImpl_81014E28(MlnServiceContext *context, MlnBuffer *buffer, void *out);
+int MlnImpl_81014E28(MlnServiceContext *context, MlnBuffer *buffer, unsigned int *out);
 int MlnImpl_81014F24(MlnServiceContext *context, MlnBuffer *buffer);
 int MlnImpl_81014FA8(MlnServiceContext *context, MlnBuffer *buffer);
 int MlnImpl_8101503C(MlnServiceContext *context, int value, void *data);
@@ -1041,17 +1043,36 @@ int MlnImpl_810171EC(MlnServiceContext *context, unsigned int size, void *data);
 int MlnImpl_81017280(MlnServiceContext *context, unsigned int size, void *data);
 int MlnImpl_81017314(MlnServiceContext *context, unsigned int size, void *data);
 int MlnImpl_810173A8(MlnServiceContext *context, unsigned int size, void *data);
-int MlnImpl_810270BC(int heap, void *data, unsigned int *out);
+int MlnImpl_8101743C(MlnServiceContext *context, unsigned int size, void *data, MlnBuffer **out);
+int MlnImpl_8101753C(MlnServiceContext *context, unsigned int firstSize, void *firstData,
+		     unsigned int secondSize, void *secondData);
+int MlnImpl_810175FC(MlnServiceContext *context, unsigned int size, void *data);
+int MlnImpl_81017690(MlnServiceContext *context, void *block);
+int MlnImpl_81017710(MlnServiceContext *context);
+
+/* the 21-byte value of a service reply of type 8 */
+typedef struct __attribute__((packed)) MlnServiceRecord {
+	unsigned int words[5];
+	unsigned char flag;
+} MlnServiceRecord;
+
+MlnServiceRecord MlnImpl_81017764(MlnServiceContext *context);
+void MlnImpl_8101782C(MlnServiceContext *context);
+int MlnImpl_81017880(MlnServiceContext *context, void *list, unsigned int *firstCount,
+		     MlnBuffer ***first, unsigned int *secondCount, MlnBuffer ***second,
+		     MlnBuffer **third, MlnBuffer **fourth);
+int MlnImpl_81026F48(int heap, const MlnServiceArg *value, MlnServiceRecord *out);
+int MlnImpl_810270BC(int heap, const MlnServiceArg *value, unsigned int *out);
 /* not written in C yet */
-int MlnImpl_81026D94(const MlnServiceReply *reply, int type);
-int MlnImpl_81027084(int heap, void *data, int *out);
-int MlnImpl_81026FE4(int heap, void *data, void *out);
-int MlnImpl_8102701C(int heap, void *data, int *out);
-int MlnImpl_81026ED0(int heap, void *data, MlnBufferGroup **out);
+int MlnImpl_81026D94(const MlnServiceReply *reply, unsigned int count);
+int MlnImpl_81027084(int heap, const MlnServiceArg *value, int *out);
+int MlnImpl_81026FE4(int heap, const MlnServiceArg *value, unsigned int *out);
+int MlnImpl_8102701C(int heap, const MlnServiceArg *value, int *out);
+int MlnImpl_81026ED0(int heap, const MlnServiceArg *value, MlnBufferGroup **out);
 int MlnServiceCall(void *session, int command, const MlnServiceArgs *args,
 		   MlnServiceReply **reply, int *status);
 void MlnImpl_81027390(int heap, MlnServiceReply *reply);
-int MlnImpl_81026F0C(int heap, void *data, MlnBuffer **out);
+int MlnImpl_81026F0C(int heap, const MlnServiceArg *value, MlnBuffer **out);
 int MlnImpl_810191C4(int ret);
 
 typedef struct MlnFileInfo {
