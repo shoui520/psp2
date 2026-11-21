@@ -576,7 +576,7 @@ out:
 
 /* adds an entry; an existing entry for the identifier is moved first */
 int MlnImpl_8102BDBC(const MlnBuffer *first, const MlnBuffer *second, const MlnBuffer *id,
-		     void *a3, void *a4)
+		     unsigned int *count, MlnBuffer ***entries)
 {
 	MlnBuffer *entry = NULL;
 	MlnCoreRecord *record = NULL;
@@ -585,7 +585,7 @@ int MlnImpl_8102BDBC(const MlnBuffer *first, const MlnBuffer *second, const MlnB
 	int ret, err;
 
 	if (first == NULL || first->size == 0 || first->data == NULL || second == NULL ||
-	    second->size == 0 || second->data == NULL || a3 == NULL || a4 == NULL) {
+	    second->size == 0 || second->data == NULL || count == NULL || entries == NULL) {
 		ret = 4;
 		goto out;
 	}
@@ -621,7 +621,7 @@ int MlnImpl_8102BDBC(const MlnBuffer *first, const MlnBuffer *second, const MlnB
 			}
 		}
 	}
-	ret = MlnImpl_810444DC(first, second, a3, a4);
+	ret = MlnImpl_810444DC(first, second, count, entries);
 	if (ret == 0x230A0003)
 		ret = 0;
 	else if (ret != 0)

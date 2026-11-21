@@ -1422,10 +1422,11 @@ int MlnImpl_8102B950(unsigned int *count, MlnBuffer ***entries, MlnBlob *state);
 unsigned int MlnImpl_8104436C(const MlnBuffer *id, MlnBuffer **entry);
 unsigned int MlnImpl_81044984(MlnBuffer *key, MlnBuffer *value, const MlnBuffer *first,
 			      const MlnBuffer *second);
-unsigned int MlnImpl_810444DC(const MlnBuffer *first, const MlnBuffer *second, void *a2, void *a3);
+unsigned int MlnImpl_810444DC(const MlnBuffer *first, const MlnBuffer *second, unsigned int *count,
+			      MlnBuffer ***entries);
 unsigned int MlnImpl_810458B0(void *context, const MlnBuffer *data);
 int MlnImpl_8102BDBC(const MlnBuffer *first, const MlnBuffer *second, const MlnBuffer *id,
-		     void *a3, void *a4);
+		     unsigned int *count, MlnBuffer ***entries);
 int MlnImpl_8102C08C(void *context, const MlnBuffer *data, MlnBlob *out);
 int MlnImpl_8102C1E8(unsigned char kind, MlnBlob *out);
 int MlnImpl_8102C64C(unsigned int error);
@@ -1547,6 +1548,45 @@ int MlnImpl_81052600(void);
 int MlnImpl_81052608(void);
 int MlnImpl_8102FA24(const MlnServiceReply *reply, MlnServiceArgs **out, int *status);
 int MlnImpl_8102FA70(const MlnServiceReply *reply, MlnServiceArgs **out, int *status);
+unsigned int MlnImpl_81052610(unsigned int second, unsigned int first, MlnBlob *out);
+int MlnImpl_8102FAAC(const MlnServiceReply *reply, MlnServiceArgs **out, int *status);
+unsigned int MlnImpl_8105272C(unsigned int size, const unsigned char *data, int flags,
+			      MlnBlob *out);
+int MlnImpl_8102FC18(const MlnServiceReply *reply, MlnServiceArgs **out, int *status,
+		     MlnBuffer **result);
+int MlnImpl_8102FCCC(const MlnServiceReply *reply, MlnServiceArgs **out, int *status);
+int MlnImpl_8102FDB4(const MlnServiceReply *reply, MlnServiceArgs **out, int *status,
+		     MlnBuffer **result);
+unsigned int MlnImpl_81050778(int *handle, MlnServiceList *list, unsigned int *firstCount,
+			      MlnBuffer ***firsts, unsigned int *secondCount, MlnBuffer ***seconds,
+			      MlnBuffer **third, MlnBuffer **fourth);
+int MlnImpl_810505B8(int handle);
+int MlnImpl_8102FE68(const MlnServiceReply *reply, MlnServiceArgs **out, int *status);
+int MlnImpl_81030648(const MlnServiceReply *reply, MlnServiceArgs **out, int *status);
+unsigned int MlnImpl_81050E58(int handle, const MlnBuffer *data, MlnBlob *out);
+int MlnImpl_810306C8(const MlnServiceReply *reply, MlnServiceArgs **out, int *status);
+unsigned int MlnImpl_81051084(int handle, const MlnBuffer *data, MlnBlob *first, MlnBlob *second);
+int MlnImpl_81030858(const MlnServiceReply *reply, MlnServiceArgs **out, int *status,
+		     MlnBuffer **result);
+unsigned int MlnImpl_8105152C(int handle, const MlnBuffer *data, MlnBlob *first, MlnBlob *second);
+int MlnImpl_81030A24(const MlnServiceReply *reply, MlnServiceArgs **out, int *status,
+		     MlnBuffer **result);
+unsigned int MlnImpl_8105183C(int handle, const MlnBuffer *data, MlnBlob *first, MlnBlob *second);
+int MlnImpl_81030BD0(const MlnServiceReply *reply, MlnServiceArgs **out, int *status,
+		     MlnBuffer **result);
+unsigned int MlnImpl_81051F2C(int handle, const MlnBuffer *data, const MlnBuffer *extra,
+			      MlnBlob *first, MlnBlob *second);
+int MlnImpl_81030D90(const MlnServiceReply *reply, MlnServiceArgs **out, int *status,
+		     MlnBuffer **result);
+unsigned int MlnImpl_8104D018(int handle, const MlnBuffer *data, MlnBuffer **out);
+int MlnImpl_81030FA8(const MlnServiceReply *reply, MlnServiceArgs **out, int *status);
+int MlnImpl_8103110C(const MlnServiceReply *reply, MlnServiceArgs **out, int *status,
+		     MlnBuffer **result);
+int MlnImpl_81031288(const MlnServiceReply *reply, MlnServiceArgs **out, int *status);
+int MlnImpl_8104CA50(const MlnBuffer *first, const MlnBuffer *second, unsigned int *firstValue,
+		     unsigned int *secondValue, MlnBlob *state);
+int MlnImpl_8103149C(const MlnServiceReply *reply, MlnServiceArgs **out, int *status,
+		     MlnBuffer **result);
 int MlnImpl_8102AA38(MlnBlob *blob, MlnBuffer *out);
 int MlnImpl_810318D4(void *a0, const MlnBuffer *a1, MlnBlob *first, MlnBlob *second);
 
