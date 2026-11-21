@@ -980,6 +980,10 @@ public:
 	int Send(WebIpcPacket *packet);
 	int Post(WebIpcPacket *packet);
 
+	/* the receiving thread started, and its loop: connects, packets and disconnects */
+	int StartThread();
+	void Run();
+
 	SceUID m_thread;
 	SceUID m_sendPipe;
 	SceUID m_receivePipe;
