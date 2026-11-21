@@ -211,6 +211,8 @@ psp2_module(vs0_vsh_shell_shell KIND user COMPILER snc PARTIAL SOURCES
 	${PSP2_SRC}/vsh/app/common/src/system_update/system_update_updatelistprocessor.cpp
 	${PSP2_SRC}/vsh/app/common/src/system_update/system_update_mtphttpfile.cpp
 	${PSP2_SRC}/vsh/app/common/src/mtp/mtpr2/mtpr2.cc
+	${PSP2_SRC}/vsh/app/common/src/system_update/system_update_updatelistparser.cpp
+	${PSP2_SRC}/vsh/app/common/src/system_update/system_update_version.cpp
 	${PSP2_SRC}/vsh/app/common/src/mtp/mtpr2/CCondvar.cc
 	${PSP2_SRC}/vsh/app/common/src/mtp/mtpr2/Daemon.cc
 	${PSP2_SRC}/vsh/app/common/src/mtp/mtpr2/FileBuf.cc

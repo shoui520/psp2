@@ -18,22 +18,8 @@
 #include <system_update/system_update_job.h>
 #include <system_update/system_update_updatelistprocessor.h>
 #include <system_update/system_update_mtphttpfile.h>
-
-/* the update list's XML parser (vtable 0x815307A8, PLACEHOLDER names) */
-class UpdateListParser {
-public:
-	UpdateListParser();						/* (0x81135D64) */
-	virtual ~UpdateListParser();					/* (0x81135D78) */
-
-	SystemUpdateResult Bgdl_81135D9C(bXCe::Sax::DocumentHandler *handler);	/* made */
-	void Bgdl_81135E1A(void);					/* ended */
-	SystemUpdateResult Bgdl_81135E32(const char *data, int size);	/* fed */
-
-	bool m_reserved;		/* PLACEHOLDER */
-	bXCe::Sax::Parser *m_parser;
-	bXCe::Sax::DocumentHandler *m_handler;
-};
-
+#include <system_update/system_update_updatelistparser.h>
+#include <system_update/system_update_version.h>
 
 /*
  * a job that downloads the update list (vtable 0x815304C4, PLACEHOLDER names): over HTTP
@@ -104,10 +90,6 @@ public:
 SystemUpdateResult Bgdl_8112FFEA(SystemUpdateData *data, paf::string *url, SceInt64 *size);
 
 /* other files' */
-int Bgdl_81135CA0(bool *ok);
-int Bgdl_81135CA8(int type, bool *ok);
-int Bgdl_81135D24(int type, bool *ok);
-void Bgdl_811363D6(SceInt64 size);
 int Bgdl_8126E2AE(int kind);
 int Bgdl_8137C22E(int type, int *kind);
 int Bgdl_8137C2A6(int type, int *kind);

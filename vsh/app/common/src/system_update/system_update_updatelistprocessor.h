@@ -121,9 +121,4 @@ private:
 	void setRegion(paf::string region);
 };
 
-/* other files' */
-int Bgdl_81135E8C(paf::string version);				/* a version's number, -1 */
-int Bgdl_811361D4(paf::string *region);
-void Bgdl_811363E4(int level, const char *file, int line, const char *fmt, ...);
-
 #endif

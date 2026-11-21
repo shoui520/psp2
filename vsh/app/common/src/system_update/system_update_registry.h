@@ -40,7 +40,6 @@ int Bgdl_811330BA(SceInt64 size);
 int Bgdl_8126E1AE(char *url);
 int Bgdl_8126E216(int kind);
 int Bgdl_8126E252(int kind, SceUInt64 *size);
-int Bgdl_811361D4(paf::string *region);
 int Bgdl_8137C396(SystemUpdateVersionInfo *info);
 
 #endif

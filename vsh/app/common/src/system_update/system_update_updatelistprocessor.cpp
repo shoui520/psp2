@@ -24,6 +24,7 @@
 #include <std/string>
 
 #include "system_update_updatelistprocessor.h"
+#include "system_update_version.h"
 
 using namespace paf;
 

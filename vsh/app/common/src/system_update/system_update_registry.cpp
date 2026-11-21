@@ -17,6 +17,7 @@
 #include <ss_mgr/ss_mgr.h>
 
 #include <system_update/system_update_registry.h>
+#include "system_update_version.h"
 
 using namespace paf;
 
