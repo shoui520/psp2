@@ -917,7 +917,66 @@ int MlnBufferPairCreate(unsigned int firstSize, const void *firstData, unsigned 
 			const void *secondData, unsigned char flag, MlnBufferPair **out);
 int MlnCompositeIdCreate(const MlnBuffer *accountId, const MlnBuffer *entitlementId,
 			 MlnBuffer **out);
+int MlnStateFilePath(unsigned int id, int create, char *path);
+int MlnStateFileRead(unsigned int id, unsigned char *data, unsigned int capacity,
+		     unsigned int *size);
+int MlnStateGroupRead(int group, unsigned char *end, unsigned char *data, unsigned int *size);
+int MlnStateCollect(unsigned int *size, const MlnBuffer *buffer);
+int MlnStateFileWrite(unsigned int id, const void *data, unsigned int size);
+int MlnStateSerialize(MlnBuffer **state);
+int MlnStateRestore(const MlnBuffer *state);
+/* a call into the client's service: typed arguments, a reply and a status */
+#define MLN_SERVICE_ARG_HANDLE		0
+#define MLN_SERVICE_ARG_INTEGER		2	/* the value points to the integer */
+#define MLN_SERVICE_ARG_BUFFER		6
+
+#define MLN_SERVICE_SET_STATE		0x411
+#define MLN_SERVICE_CLEAR_STATE		0x412
+
+#define MLN_SERVICE_STATUS_PARTIAL	29
+
+typedef struct MlnServiceArg {
+	int type;
+	void *value;
+} MlnServiceArg;
+
+typedef struct MlnServiceArgs {
+	unsigned int count;
+	MlnServiceArg *items;
+} MlnServiceArgs;
+
+typedef struct MlnServiceReply {
+	int type;
+	void *data;
+} MlnServiceReply;
+
+int MlnImpl_81014574(MlnServiceContext *context, int command, int value, MlnRightsInfo **rights,
+		     MlnBuffer **esb);
+int MlnServiceSetState(MlnServiceContext *context, MlnBuffer *state);
+int MlnServiceClearState(MlnServiceContext *context);
 /* not written in C yet */
+int MlnServiceCall(void *session, int command, const MlnServiceArgs *args,
+		   MlnServiceReply **reply, int *status);
+void MlnImpl_81027390(int heap, MlnServiceReply *reply);
+int MlnImpl_81026F0C(int heap, void *data, MlnBuffer **out);
+int MlnImpl_810191C4(int ret);
+
+typedef struct MlnFileInfo {
+	unsigned char type;
+	unsigned int size;
+} MlnFileInfo;
+
+int MlnImpl_810262B4(int area, unsigned int *size, char *path);
+int MlnImpl_810256EC(unsigned int *size, char *path, const char *name);
+int MlnImpl_8102619C(int area, const char *path);
+int MlnImpl_81026324(int area, const char *path, MlnFileInfo *info);
+int MlnImpl_810259F8(int area, const char *path, int mode, void **file);
+int MlnImpl_810260E4(int area, void *file, unsigned int *size);
+int MlnImpl_81025C1C(int area, void *file, unsigned int size, unsigned int *read, void *data);
+int MlnImpl_81025BE8(int area, void *file);
+int MlnImpl_8102590C(int area, const char *path);
+int MlnImpl_81025F5C(int area, void *file, unsigned int size, const void *data);
+
 typedef struct MlnSha1Context {
 	unsigned int words[24];
 } MlnSha1Context;
@@ -932,9 +991,6 @@ int MlnImpl_810318D4(void *a0, const MlnBuffer *a1, MlnBlob *first, MlnBlob *sec
 
 int MlnPlatformInit(void);
 int MlnPlatformTerm(void);
-unsigned int MlnStateSerialize(MlnBuffer **state);
-int MlnServiceSetState(MlnServiceContext *context, MlnBuffer *state);
-int MlnServiceClearState(MlnServiceContext *context);
 int MlnImpl_81016A5C(void *a0, void *a1, void *a2);
 int MlnImpl_81016B4C(void *a0, void *a1);
 int MlnImpl_81018B8C(MlnServiceContext *context, MlnBuffer *serviceProvider, MlnBuffer *token,

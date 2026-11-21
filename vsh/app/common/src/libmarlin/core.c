@@ -384,3 +384,457 @@ out:
 	MlnBufferDestroy(MLN_HEAP_SECURE, id);
 	return ret;
 }
+
+/* the file layer's errors */
+#define MLN_FILE_ERROR_SPACE	2
+#define MLN_FILE_ERROR_INVALID	5
+#define MLN_FILE_ERROR_NOT_FOUND	0x11060002
+
+#define MLN_FILE_AREA		1
+#define MLN_PATH_MAX		256
+
+/*
+ * A state slot's file: <root>/sdata/<kind>0000000/<kind>000000<index>.DAT, the kind a letter
+ * for the slot's range and the index its place in it; create makes the slot's folder.
+ */
+__attribute__((noinline)) int MlnStateFilePath(unsigned int id, int create, char *path)
+{
+	unsigned int size = MLN_PATH_MAX;
+	unsigned int index;
+	char name[13];
+	char kind;
+	int ret;
+
+	ret = MlnImpl_810262B4(MLN_FILE_AREA, &size, path);
+	if (ret != MLN_OK)
+		return ret;
+	size = MLN_PATH_MAX;
+	ret = MlnImpl_810256EC(&size, path, "sdata");
+	if (ret != MLN_OK)
+		return ret;
+	if (id <= 15) {
+		kind = 'P';
+		index = id;
+	} else if (id - 128 <= 7) {
+		kind = 'L';
+		index = id - 128;
+	} else if (id - 152 <= 7) {
+		kind = 'N';
+		index = id - 152;
+	} else if (id - 136 <= 7) {
+		kind = 'D';
+		index = id - 136;
+	} else if (id - 144 <= 7) {
+		kind = 'R';
+		index = id - 144;
+	} else if (id == 32) {
+		kind = 'S';
+		index = 0;
+	} else if (id == 33) {
+		kind = 'T';
+		index = 0;
+	} else if (id - 160 <= 7) {
+		kind = 'C';
+		index = id - 160;
+	} else if (id == 34) {
+		kind = 'V';
+		index = 0;
+	} else if (id == 35) {
+		kind = 'I';
+		index = 0;
+	} else {
+		return MLN_FILE_ERROR_INVALID;
+	}
+	size = MLN_PATH_MAX;
+	name[0] = kind;
+	name[1] = '0';
+	name[2] = '0';
+	name[3] = '0';
+	name[4] = '0';
+	name[5] = '0';
+	name[6] = '0';
+	name[7] = '0';
+	name[8] = '\0';
+	ret = MlnImpl_810256EC(&size, path, name);
+	if (ret != MLN_OK)
+		return ret;
+	if (create)
+		MlnImpl_8102619C(MLN_FILE_AREA, path);
+	size = MLN_PATH_MAX;
+	name[0] = kind;
+	name[1] = '0';
+	name[2] = '0';
+	name[3] = '0';
+	name[4] = '0';
+	name[5] = '0';
+	name[6] = '0';
+	name[7] = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ"[index];
+	name[8] = '.';
+	name[9] = 'D';
+	name[10] = 'A';
+	name[11] = 'T';
+	name[12] = '\0';
+	return MlnImpl_810256EC(&size, path, name);
+}
+
+/*
+ * A state slot as a record: the slot ID and the data's size (big-endian words), then the
+ * file's data. Without data, the size such a record needs.
+ */
+__attribute__((noinline)) int MlnStateFileRead(unsigned int id, unsigned char *data,
+					       unsigned int capacity, unsigned int *size)
+{
+	char path[MLN_PATH_MAX];
+	MlnFileInfo info;
+	unsigned int length;
+	unsigned char *p;
+	void *file = NULL;
+	int ret;
+
+	if (size == NULL) {
+		ret = MLN_FILE_ERROR_INVALID;
+		goto out;
+	}
+	ret = MlnStateFilePath(id, 0, path);
+	if (ret != MLN_OK)
+		goto out;
+	if (data == NULL) {
+		ret = MlnImpl_81026324(MLN_FILE_AREA, path, &info);
+		if (ret == MLN_OK)
+			*size = info.size + 8;
+		goto out;
+	}
+	ret = MlnImpl_810259F8(MLN_FILE_AREA, path, 1, &file);
+	if (ret != MLN_OK)
+		goto out;
+	ret = MlnImpl_810260E4(MLN_FILE_AREA, file, &length);
+	if (ret != MLN_OK)
+		goto out;
+	if (length + 8 > capacity) {
+		ret = MLN_FILE_ERROR_SPACE;
+		goto out;
+	}
+	data[0] = id >> 24;
+	data[1] = id >> 16;
+	data[2] = id >> 8;
+	data[3] = id;
+	data[4] = length >> 24;
+	data[5] = length >> 16;
+	data[6] = length >> 8;
+	data[7] = length;
+	p = data + 8;
+	if (length != 0) {
+		ret = MlnImpl_81025C1C(MLN_FILE_AREA, file, length, &length, p);
+		if (ret != MLN_OK)
+			goto out;
+		p += length;
+	}
+	*size = p - data;
+out:
+	if (file != NULL)
+		MlnImpl_81025BE8(MLN_FILE_AREA, file);
+	return ret;
+}
+
+/* the records of a group's eight slots, those with no file left out */
+__attribute__((noinline)) int MlnStateGroupRead(int group, unsigned char *end, unsigned char *data,
+						unsigned int *size)
+{
+	unsigned int length = 0, total;
+	int first, last, id;
+	int ret;
+
+	switch (group) {
+	case 0:
+		first = 128;
+		last = 135;
+		break;
+	case 1:
+		first = 136;
+		last = 143;
+		break;
+	case 2:
+		first = 152;
+		last = 159;
+		break;
+	default:
+		return MLN_FILE_ERROR_INVALID;
+	}
+	total = 0;
+	for (id = first; id <= last; id++) {
+		ret = MlnStateFileRead(id, data, end - data, &length);
+		if (ret != MLN_OK && ret != MLN_FILE_ERROR_NOT_FOUND)
+			return ret;
+		if (ret == MLN_OK) {
+			total += length;
+			if (data != NULL)
+				data += length;
+		}
+	}
+	*size = total;
+	return MLN_OK;
+}
+
+/* one slot's record at p, a missing file skipped */
+#define MLN_STATE_READ(id)							\
+	do {									\
+		ret = MlnStateFileRead((id), p, remaining, &length);		\
+		if (ret != MLN_OK && ret != MLN_FILE_ERROR_NOT_FOUND)		\
+			return ret;						\
+		if (ret == MLN_OK) {						\
+			total += length;					\
+			if (p != NULL)						\
+				p += length;					\
+			remaining = end - p;					\
+		}								\
+	} while (0)
+
+/* one group's records at p */
+#define MLN_STATE_GROUP(group)							\
+	do {									\
+		ret = MlnStateGroupRead((group), end, p, &length);		\
+		if (ret != MLN_OK)						\
+			return ret;						\
+		total += length;						\
+		if (p != NULL)							\
+			p += length;						\
+	} while (0)
+
+/*
+ * The records of every state slot, in Sony's order, into the buffer; without one, the size
+ * they need.
+ */
+__attribute__((noinline)) int MlnStateCollect(unsigned int *size, const MlnBuffer *buffer)
+{
+	unsigned char *p, *end;
+	unsigned int remaining, length = 0, total = 0;
+	int ret;
+
+	if (size == NULL)
+		return MLN_FILE_ERROR_INVALID;
+	if (buffer != NULL) {
+		p = buffer->data;
+		remaining = buffer->size;
+		end = p + remaining;
+	} else {
+		p = NULL;
+		remaining = 0;
+		end = NULL;
+	}
+	MLN_STATE_READ(3);
+	MLN_STATE_READ(4);
+	MLN_STATE_READ(5);
+	MLN_STATE_READ(0);
+	MLN_STATE_READ(1);
+	MLN_STATE_GROUP(0);
+	MLN_STATE_GROUP(2);
+	MLN_STATE_GROUP(1);
+	remaining = end - p;
+	MLN_STATE_READ(144);
+	MLN_STATE_READ(32);
+	MLN_STATE_READ(33);
+	MLN_STATE_READ(34);
+	MLN_STATE_READ(35);
+	MLN_STATE_READ(161);
+	MLN_STATE_READ(162);
+	*size = total;
+	return MLN_OK;
+}
+
+/* a slot's file written with the data, or removed for no data */
+__attribute__((noinline)) int MlnStateFileWrite(unsigned int id, const void *data, unsigned int size)
+{
+	char path[MLN_PATH_MAX];
+	void *file = NULL;
+	int ret;
+
+	ret = MlnStateFilePath(id, 1, path);
+	if (ret != MLN_OK)
+		goto out;
+	if (size == 0) {
+		ret = MlnImpl_8102590C(MLN_FILE_AREA, path);
+		ret = ret == MLN_FILE_ERROR_NOT_FOUND ? MLN_OK : ret;
+		goto out;
+	}
+	ret = MlnImpl_810259F8(MLN_FILE_AREA, path, 2, &file);
+	if (ret != MLN_OK) {
+		MlnImpl_8102590C(MLN_FILE_AREA, path);
+		goto out;
+	}
+	ret = MlnImpl_81025F5C(MLN_FILE_AREA, file, size, data);
+	if (ret != MLN_OK) {
+		MlnImpl_81025BE8(MLN_FILE_AREA, file);
+		file = NULL;
+		MlnImpl_8102590C(MLN_FILE_AREA, path);
+	}
+out:
+	if (file != NULL)
+		MlnImpl_81025BE8(MLN_FILE_AREA, file);
+	return ret;
+}
+
+/* every slot's record in one new buffer */
+__attribute__((noinline)) int MlnStateSerialize(MlnBuffer **state)
+{
+	MlnBuffer *buffer = NULL;
+	unsigned int size;
+	int ret;
+
+	if (state == NULL) {
+		ret = MLN_ERROR_INVALID_ARGUMENT;
+		goto fail;
+	}
+	ret = MlnStateCollect(&size, NULL);
+	if (ret != MLN_OK)
+		goto fail;
+	buffer = MlnBufferCreate(MLN_HEAP_SECURE, size, NULL);
+	if (buffer == NULL) {
+		ret = MLN_ERROR_NO_MEMORY;
+		goto fail;
+	}
+	ret = MlnStateCollect(&size, buffer);
+	if (ret == MLN_OK) {
+		*state = buffer;
+		return MLN_OK;
+	}
+fail:
+	MlnBufferDestroy(MLN_HEAP_SECURE, buffer);
+	return ret;
+}
+
+/* each record of a serialized state written back to its slot's file */
+__attribute__((noinline)) int MlnStateRestore(const MlnBuffer *state)
+{
+	const unsigned char *p, *end, *next;
+	unsigned int id, size;
+	int ret;
+
+	if (state == NULL)
+		return MLN_ERROR_INVALID_ARGUMENT;
+	p = state->data;
+	end = p + state->size;
+	while (p + 8 <= end) {
+		id = (unsigned int)p[0] << 24 | (unsigned int)p[1] << 16 |
+		     (unsigned int)p[2] << 8 | p[3];
+		size = (unsigned int)p[4] << 24 | (unsigned int)p[5] << 16 |
+		       (unsigned int)p[6] << 8 | p[7];
+		next = p + 8 + size;
+		if (next > end)
+			return MLN_FILE_ERROR_INVALID;
+		ret = MlnStateFileWrite(id, p + 8, size);
+		if (ret != MLN_OK)
+			return ret;
+		p = next;
+	}
+	return p == end ? MLN_OK : MLN_FILE_ERROR_INVALID;
+}
+
+/*
+ * A service command on the context's handle and one integer: its status (29, partial, kept),
+ * and from a type 1 reply the status block and, parsed from it, the rights it grants.
+ */
+__attribute__((noinline)) int MlnImpl_81014574(MlnServiceContext *context, int command, int value,
+					       MlnRightsInfo **rights, MlnBuffer **esb)
+{
+	MlnServiceArg items[2];
+	MlnServiceArgs args = { 0, NULL };
+	MlnServiceReply *reply = NULL;
+	MlnBuffer *block = NULL;
+	MlnRightsInfo *info = NULL;
+	int status;
+	int ret;
+
+	if (context == NULL) {
+		ret = MLN_ERROR_INVALID_ARGUMENT;
+		goto out;
+	}
+	items[0].type = MLN_SERVICE_ARG_HANDLE;
+	items[0].value = context;
+	items[1].type = MLN_SERVICE_ARG_INTEGER;
+	items[1].value = &value;
+	args.count = 2;
+	args.items = items;
+	ret = MlnServiceCall(context->session, command, &args, &reply, &status);
+	if (ret != MLN_OK)
+		goto out;
+	ret = status;
+	if (ret != MLN_OK) {
+		if (ret != MLN_SERVICE_STATUS_PARTIAL)
+			goto out;
+		ret = 1;
+	}
+	if (reply->data == NULL || reply->type != 1)
+		goto done;
+	ret = MlnImpl_81026F0C(MLN_HEAP_SECURE, reply->data, &block);
+	if (ret != MLN_OK)
+		goto failed;
+	if (block == NULL)
+		goto done;
+	if (esb != NULL) {
+		*esb = block;
+		block = NULL;
+	}
+	if (rights == NULL)
+		goto done;
+	/* Sony's reads the block it may just have handed over */
+	ret = MlnRightsInfoParse(MLN_HEAP_SECURE, block->size, block->data, &info);
+	if (ret != MLN_OK)
+		goto failed;
+	*rights = info;
+	info = NULL;
+done:
+	ret = ret == 1 ? MLN_SERVICE_STATUS_PARTIAL : MLN_OK;
+	goto out;
+failed:
+	ret = MlnImpl_810191C4(ret);
+out:
+	MlnImpl_81027390(MLN_HEAP_SECURE, reply);
+	MlnBufferDestroy(MLN_HEAP_SECURE, block);
+	MlnRightsInfoFree(MLN_HEAP_SECURE, info);
+	return ret;
+}
+
+__attribute__((noinline)) int MlnServiceSetState(MlnServiceContext *context, MlnBuffer *state)
+{
+	MlnServiceArg item;
+	MlnServiceArgs args = { 0, NULL };
+	MlnServiceReply *reply = NULL;
+	int status;
+	int ret;
+
+	if (context == NULL) {
+		ret = MLN_ERROR_INVALID_ARGUMENT;
+	} else if (state == NULL) {
+		ret = MLN_CORE_ERROR_INVALID;
+	} else {
+		item.type = MLN_SERVICE_ARG_BUFFER;
+		item.value = state;
+		args.count = 1;
+		args.items = &item;
+		ret = MlnServiceCall(context->session, MLN_SERVICE_SET_STATE, &args, &reply,
+				     &status);
+		if (ret == MLN_OK)
+			ret = status;
+	}
+	MlnImpl_81027390(MLN_HEAP_SECURE, reply);
+	return ret;
+}
+
+__attribute__((noinline)) int MlnServiceClearState(MlnServiceContext *context)
+{
+	MlnServiceArgs args = { 0, NULL };
+	MlnServiceReply *reply = NULL;
+	int status;
+	int ret;
+
+	if (context == NULL) {
+		ret = MLN_ERROR_INVALID_ARGUMENT;
+	} else {
+		ret = MlnServiceCall(context->session, MLN_SERVICE_CLEAR_STATE, &args, &reply,
+				     &status);
+		if (ret == MLN_OK)
+			ret = status;
+	}
+	MlnImpl_81027390(MLN_HEAP_SECURE, reply);
+	return ret;
+}
