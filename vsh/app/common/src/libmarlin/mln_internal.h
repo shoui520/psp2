@@ -27,6 +27,7 @@
 #define MLN_ERROR_UNSUPPORTED	0x30000002	/* a value type the library does not know */
 
 /* the XML parser's errors */
+#define MLN_XML_ERROR_NODE		0x10010001	/* a node of a type the call does not take */
 #define MLN_XML_ERROR_SYNTAX		0x10010003
 #define MLN_XML_ERROR_END_TAG		0x10010005	/* an end tag naming another element */
 #define MLN_XML_ERROR_NODE_TYPE		0x10010006	/* an absolute path or axis on the wrong node */
@@ -239,9 +240,13 @@ typedef struct MlnXmlStack {
 	int depth;
 } MlnXmlStack;
 
+/* the parser's state; the writer uses it too, with its flags */
+#define MLN_XML_WRITE_EMPTY_TAGS	1	/* an element without content as <name/> */
+
 typedef struct MlnXmlParser {
 	MlnXmlStack namespaces;
-	unsigned int reserved[4];
+	unsigned int flags;
+	unsigned int reserved[3];
 } MlnXmlParser;
 
 /* a value a call returns, and the list of them a caller keeps */
@@ -824,8 +829,16 @@ int MlnTextBufferSetSize(int heap, MlnTextBuffer *buffer, unsigned int size);
 int MlnTextBufferCompare(int heap, const MlnTextBuffer *a, const MlnTextBuffer *b);
 MlnTextBuffer *MlnTextBufferCreateFilled(int heap, unsigned int size, int value);
 void MlnTextBufferDestroy(int heap, MlnTextBuffer *buffer);
-/* an element node as XML text (not written in C yet) */
-int MlnXmlNodeToText(int heap, MlnXmlNode *node, MlnBuffer **text);
+
+/* xmlwrite.c */
+int MlnXmlWriteText(int heap, const MlnBuffer *text, MlnTextBuffer *out);
+int MlnXmlWriteElement(int heap, MlnXmlParser *writer, const MlnXmlElement *element,
+		       const MlnXmlElement *except, MlnTextBuffer *out);
+int MlnXmlWriteNode(int heap, MlnXmlParser *writer, const MlnXmlNode *node,
+		    const MlnXmlElement *except, MlnBuffer **out);
+int MlnXmlNodeToXml(int heap, const MlnXmlNode *node, MlnBuffer **out);
+/* a node as XML text, an element without content as <name/> */
+int MlnXmlNodeToText(int heap, const MlnXmlNode *node, MlnBuffer **text);
 
 /* esb.c: an extended status block's values */
 #define MLN_VALUE_INTEGER		0
