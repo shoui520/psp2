@@ -7,6 +7,7 @@ set(WEBVIEW ../../app/common/src/webview)
 psp2_module(${PSP2_TARGET} KIND user COMPILER snc PARTIAL SOURCES
 	module.cpp
 	${WEBVIEW}/context_menu_info.cpp
+	${WEBVIEW}/web_view.cpp
 	../../../sys/sdk/target/src/libsnc/unwind_pr0.c
 )
 target_include_directories(${PSP2_TARGET} PRIVATE "${PSP2_SRC}/vsh/paf/include"
