@@ -21,19 +21,6 @@ using dbutil::Statement;
 /* the most events one request lists */
 #define NE_EVENTS_MAX	64
 
-/* the fields an update writes (and compares) */
-#define NE_FIELD_ICON_PATH	0x001
-#define NE_FIELD_ICON		0x002	/* icon_data */
-#define NE_FIELD_MSG		0x004	/* msg_type and msg_arg0 to 8 */
-#define NE_FIELD_ACT_TYPE	0x008
-#define NE_FIELD_TITLE		0x010
-#define NE_FIELD_DESC		0x020
-#define NE_FIELD_EXEC		0x040	/* exec_mode, exec_title_id and exec_arg */
-#define NE_FIELD_NEW_FLAG	0x080
-#define NE_FIELD_TIME_UPDATED	0x100
-#define NE_FIELD_SE		0x200	/* se_id and se_volume */
-#define NE_FIELD_POPUP_NO	0x400
-
 /* an application's notifications (its notifyFlags in bits 1 to 3, bit 0 set), name unknown */
 #define NE_KEY_NOTIFY		0x5142196Bu
 

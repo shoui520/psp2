@@ -9,6 +9,7 @@
 #include <stddef.h>
 #include <scetypes.h>
 #include <plugin.h>
+#include <std/vector>
 
 /* the table given as the plugin's GetInterface(1) (PLACEHOLDER names) */
 struct DownloadPluginInterface {
@@ -63,6 +64,7 @@ public:
 
 	void Bgdl_8112F270(void);
 	void Bgdl_8112F28C(void);
+	void Bgdl_8112F29A(int type, int kind, SceUInt32 id, SceUInt64 rowid);
 
 	int m_words[3];			/* PLACEHOLDER: not read here */
 };
@@ -80,11 +82,16 @@ public:
 	void Bgdl_81123EF8(void);					/* stops it */
 	int Bgdl_81123F7A(int *ids);
 	int Bgdl_811240B6(int *ids);					/* starts it */
+	int Bgdl_81124DE2(struct BgdlEvent *event, bool insert);
+	int Bgdl_81125DD6(paf::vector<struct BgdlTaskEntry> *changed);
 	void Bgdl_81126418(DownloadPluginObject **object, const int *reserved);
+	int Bgdl_81126788(const char *titleId, SceInt64 reserved);
+	int Bgdl_81126A1C(const struct BgdlEvent *task);
+	int Bgdl_81126C2E(const struct BgdlEvent *task, SceUInt64 *rowid);
 
 	BgdlJobQueue *m_queue;
 	NewEventAccessor *m_accessor;	/* the event log's new events */
-	int m_reserved;
+	DownloadPluginObject **m_object;	/* the plugin's object, given when it starts */
 	bool m_clean;
 	bool m_mounted;			/* ux0: was there when it was made */
 };

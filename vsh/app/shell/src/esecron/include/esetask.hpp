@@ -723,6 +723,7 @@ int bgdlRemoveTask(SceUInt32 id);				/* (0x8110AD6C) PLACEHOLDER name */
 int bgdlReloadTask(SceUInt32 id);				/* (0x8110AD8E) PLACEHOLDER name */
 int bgdlCountTitleTasks(const char *titleId, SceUInt32 *count);	/* (0x8110B7E2) PLACEHOLDER name */
 int bgdlGetTaskTitle(SceUInt32 id, paf::string *titleId);	/* (0x8110E716) PLACEHOLDER name */
+int bgdlResetInstalledTask(SceUInt32 id);			/* (0x8110F1B6) PLACEHOLDER name */
 /* (0x8110BD6E, 0x8110BDC0, 0x8110BEC2) PLACEHOLDER names */
 bool bgdlRecordHasTasks(const paf::common::SharedPtr<paf::map<unsigned int, LsdbValue> > *record,
 			SceUInt32 flags);

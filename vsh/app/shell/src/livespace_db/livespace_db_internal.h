@@ -955,6 +955,19 @@ struct LsdbNewEvent : LsdbNewEventKey {
 };
 
 typedef paf::common::SharedPtr<LsdbNewEvent> LsdbNewEventPtr;
+
+/* the fields a new-event update writes (and compares) */
+#define NE_FIELD_ICON_PATH	0x001
+#define NE_FIELD_ICON		0x002	/* icon_data */
+#define NE_FIELD_MSG		0x004	/* msg_type and msg_arg0 to 8 */
+#define NE_FIELD_ACT_TYPE	0x008
+#define NE_FIELD_TITLE		0x010
+#define NE_FIELD_DESC		0x020
+#define NE_FIELD_EXEC		0x040	/* exec_mode, exec_title_id and exec_arg */
+#define NE_FIELD_NEW_FLAG	0x080
+#define NE_FIELD_TIME_UPDATED	0x100
+#define NE_FIELD_SE		0x200	/* se_id and se_volume */
+#define NE_FIELD_POPUP_NO	0x400
 PAF_VECTOR_NOINLINE_PUSH_BACK(LsdbNewEventPtr, paf::allocator<LsdbNewEventPtr>)
 PAF_VECTOR_NOINLINE_CLEAR(LsdbNewEventPtr, paf::allocator<LsdbNewEventPtr>)
 
