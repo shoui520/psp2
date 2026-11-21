@@ -361,8 +361,8 @@ extern "C" SceInt32 sceVideoExportFromFile(const VideoExportInputParam *pItems, 
 	if (pResults != NULL) {
 		pResult = pResults;
 		for (i = count; i != 0; i--) {
-			pResult->reserved0 = -1;
-			pResult->reserved1 = -1;
+			pResult->contentIdLow = -1;
+			pResult->contentIdHigh = -1;
 			sceClibMemset(pResult, 0, VIDEO_EXPORT_MAX_FS_PATH);
 			pResult++;
 		}
@@ -447,8 +447,8 @@ extern "C" SceInt32 SceVideoExportEmpr_8493BF31(const VideoExportEmprInput *pInp
 	videoExportCloseSession(&session);
 	if (result == 0) {
 		sceClibStrncpy(pOutput->path, pResult->path, VIDEO_EXPORT_MAX_FS_PATH);
-		pOutput->reserved0 = pResult->reserved0;
-		pOutput->reserved1 = pResult->reserved1;
+		pOutput->reserved0 = pResult->contentIdLow;
+		pOutput->reserved1 = pResult->contentIdHigh;
 	}
 	return result;
 }

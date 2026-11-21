@@ -15,6 +15,8 @@
 #include <net/socket.h>
 #include <net/inet.h>
 #include <net/resolver.h>
+#include <dir/dir.h>
+#include <file/localfile.h>
 
 #include "../include/esebase.hpp"
 #include "../include/esetask.hpp"
@@ -22,6 +24,7 @@
 #include "../include/eseutil.hpp"
 #include "../include/esehttp.hpp"
 #include "src/livespace_db/livespace_db_internal.h"
+#include "../../applauncher_plugin/src/applauncher.h"
 
 using namespace paf;
 
@@ -486,4 +489,277 @@ int BgdlHttpDownload::InstallContent(void)
 		}
 	}
 	return 0;
+}
+
+/* a name ending in ".mp4" */
+static inline bool isMp4(const char *path)
+{
+	const char *ext = sce_paf_strrchr(path, '.');
+
+	return ext != NULL && sce_paf_strcasecmp(ext, ".mp4") == 0;
+}
+
+/*
+ * (0x8111644E) the downloaded file put in place: a package (type 6, 12) unpacked into its
+ * title's folder, a photo, music or video (types 1-4) given to its export library
+ */
+int BgdlHttpDownload::Complete(void)
+{
+	int type = 0;
+	BgdlTaskPath file;		/* key 203 */
+	BgdlTaskPath titleId;		/* key 220 */
+	BgdlTaskPath key230;
+	BgdlTaskPath key222;
+	BgdlTaskPath contentId;		/* key 217 */
+	int state;
+	int ret;
+
+	Bgdl_81113890(1);
+	ret = m_task->setState(3, &state, false);
+	if (ret != 0)
+		return ret;
+
+	BgdlServerData data;
+
+	sce_paf_memset(&data, 0, sizeof(data));
+
+	paf::string folder;
+	paf::string unused("");		/* PLACEHOLDER: made and never read */
+
+	{
+		BgdlTaskPath path;
+		SceUInt64 exportId = 0;
+		int key111 = 7;
+
+		ret = m_task->GetFolder(&path, true);
+		if (ret != 0)
+			goto end;
+		{
+			EseParam param(m_task->id);
+
+			ret = param.open();
+			if (ret != 0)
+				goto end;
+			ret = param.read(107, &type, sizeof(type));
+			if (ret != 0)
+				goto end;
+			param.read(230, &key230);
+			param.read(111, &key111, sizeof(key111));
+			if (type != 12 && type != 8 && type != 7 && type != 6) {
+				if (type == 4)
+					param.read(222, &key222);
+				ret = param.read(203, &file);
+				if (ret != 0)
+					goto end;
+			} else {
+				if (type == 8) {
+					int count = 0;
+					int index;
+
+					param.read(500, &count, sizeof(count));
+					if (count == 0)
+						return 0;
+					index = -1;
+					param.read(501, &index, sizeof(index));
+					if (index + 1 < count) {
+						ret = 0;
+						goto end;
+					}
+				}
+				ret = param.read(220, &titleId);
+				if (ret != 0)
+					goto end;
+				if (param.read(232, &data, sizeof(data)) != 0) {
+					*m_runStatus = 0;
+					return BGDL_ERROR_NO_TITLE_ID;
+				}
+				param.read(217, &contentId);
+				if (titleId.m_end == titleId.m_begin) {
+					ret = BGDL_ERROR_NO_TITLE_ID;
+					goto end;
+				}
+
+				BgdlAppFolder app(this);
+
+				ret = app.Prepare(false, "p", data.category, path.m_begin);
+				if (ret != 0)
+					goto end;
+
+				paf::string from;
+
+				from = app.GetPath();
+				ret = app.Prepare(false, titleId.m_begin, data.category, path.m_begin);
+				if (ret != 0)
+					goto end;
+				folder = app.GetPath();
+				if (paf::Dir::IsExist(folder.c_str()) == true) {
+					ret = paf::Dir::RemoveRecursive(folder.c_str());
+					if (ret != 0)
+						goto end;
+				}
+				ret = paf::LocalFile::RenameFile(from.c_str(), folder.c_str());
+				if (ret != 0)
+					goto end;
+			}
+		}
+		if (type != 12 && type != 8 && type != 7 && type != 6) {
+			BgdlTaskPath target;
+
+			ret = m_task->getFilePath(&target, true);
+			if (ret != 0)
+				goto end;
+			if (target.m_end == target.m_begin) {
+				ret = BGDL_ERROR_NO_CONTENT;
+				goto end;
+			}
+			{
+				paf::string info(path.m_begin);
+
+				info += "/";
+				info += "av_contents.bin";
+				paf::Dir::Remove(info.c_str());
+			}
+
+			int newType = type;
+			char *exported;
+
+			switch (type) {
+			case 1:
+				if (key111 == 6 && (exported = new char[1024]) != NULL) {
+					sce_paf_memset(exported, 0, 1024);
+					ret = ExportPhoto(type, target.m_begin, exported, 1024);
+					if (ret == 0 && target.m_begin != NULL) {
+						paf::Plugin *plugin = paf::Plugin::Find("applauncher_plugin");
+
+						if (plugin != NULL) {
+							ApplauncherInterface *iface =
+								(ApplauncherInterface *)plugin->GetInterface(1);
+
+							if (iface != NULL)
+								((void (*)(const char *, char *))iface->func[20])(
+									target.m_begin, exported);
+						}
+					}
+					delete[] exported;
+				} else {
+					ret = ExportPhoto(type, target.m_begin, &exportId);
+				}
+				break;
+			case 2:
+				ret = ExportMusic(type, target.m_begin, &exportId);
+				if (ret != 0 && ret != BGDL_ERROR_NO_CONTENT && target.m_begin != NULL &&
+				    isMp4(target.m_begin)) {
+					ret = ExportVideo(type, target.m_begin, &exportId);
+					if (ret == 0)
+						newType = 3;
+				}
+				break;
+			case 3:
+			case 4:
+				ret = ExportVideo(type, target.m_begin, &exportId);
+				if (ret != 0 && ret != BGDL_ERROR_NO_CONTENT && target.m_begin != NULL &&
+				    isMp4(target.m_begin)) {
+					ret = ExportMusic(type, target.m_begin, &exportId);
+					if (ret == 0)
+						newType = 2;
+				}
+				break;
+			case 5: {
+				EseParam param(m_task->id);
+
+				ret = param.openWrite();
+				if (ret == 0) {
+					bool done = true;
+
+					ret = param.write(113, &done, sizeof(done));
+					if (ret == 0) {
+						m_task->m_ParamCache.key113 = done;
+						ret = param.commit();
+					}
+				}
+				break;
+			}
+			default:
+				ret = 0;
+				break;
+			}
+			if (ret == 0) {
+				m_task->value = exportId;
+				Bgdl_811233A4(m_task->id, 233, &exportId, sizeof(exportId));
+				if (newType != type) {
+					type = newType;
+					Bgdl_811233A4(m_task->id, 107, &type, sizeof(type));
+					m_task->m_ParamCache.key107 = type;
+				}
+			}
+		} else if (type == 7) {
+			bool done;
+
+			m_task->m_ParamCache.key113 = 1;
+			done = true;
+			ret = Bgdl_811233A4(m_task->id, 113, &done, sizeof(done));
+			*m_runStatus = 0;
+		} else if (type == 8) {
+			ret = 0;
+		} else {
+			int check = -1;
+
+			switch (data.category) {
+			case 6:
+			case 7:
+			case 14:
+			case 15:
+			case 16:
+				check = Bgdl_81113400(folder.c_str());
+				break;
+			case 21:
+			case 22:
+			case 24:
+			case 29:
+			case 31:
+				break;
+			default:
+				ret = BGDL_ERROR_BAD_STORAGE;
+				goto end;
+			}
+			{
+				EseParam param(m_task->id);
+
+				ret = param.openWrite();
+				if (ret == 0) {
+					bool key102 = false;
+
+					ret = param.write(102, &key102, sizeof(key102));
+					if (ret == 0) {
+						bool done;
+
+						m_task->m_ParamCache.key102 = key102;
+						done = true;
+						ret = param.write(113, &done, sizeof(done));
+						if (ret == 0) {
+							int newType;
+
+							m_task->m_ParamCache.key113 = done;
+							newType = type;
+							if (check == 1 || check == 2)
+								newType = 7;
+							if (newType != type) {
+								type = newType;
+								ret = param.write(107, &type, sizeof(type));
+								if (ret == 0)
+									m_task->m_ParamCache.key107 = type;
+							}
+							if (ret == 0)
+								ret = param.commit();
+						}
+					}
+				}
+			}
+			*m_runStatus = 0;
+		}
+	}
+end:
+	if (ret != 0)
+		*m_runStatus = 0;
+	return ret;
 }

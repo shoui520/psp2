@@ -20,8 +20,9 @@ typedef struct VideoExportInputParam {
 /* what the service answers for an item (sceVideoExportFromFile's output) */
 typedef struct VideoExportOutputParam {
 	char path[VIDEO_EXPORT_MAX_FS_PATH];	/* where the content is */
-	SceInt32 reserved0;
-	SceInt32 reserved1;
+	/* PLACEHOLDER names: the content id the export gave, the shell's key 233 */
+	SceInt32 contentIdLow;
+	SceInt32 contentIdHigh;
 } VideoExportOutputParam;
 
 /* the cancel and progress callbacks of an export; the progress one gets the percent and, in the

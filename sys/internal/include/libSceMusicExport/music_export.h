@@ -19,8 +19,9 @@ typedef struct MusicExportItem {
 /* what the service answers for an item */
 typedef struct MusicExportResult {
 	char path[SCE_MUSIC_EXPORT_MAX_FS_PATH];	/* where the content is */
-	SceInt32 reserved0;
-	SceInt32 reserved1;
+	/* PLACEHOLDER names: the content id the export gave, the shell's key 233 */
+	SceInt32 contentIdLow;
+	SceInt32 contentIdHigh;
 } MusicExportResult;
 
 #ifdef __cplusplus

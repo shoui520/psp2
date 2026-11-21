@@ -375,8 +375,8 @@ extern "C" SceInt32 SceMusicExport_D1011570(const MusicExportItem *pItems, SceUI
 	if (pResults != NULL) {
 		pResult = pResults;
 		for (i = count; i != 0; i--) {
-			pResult->reserved0 = -1;
-			pResult->reserved1 = -1;
+			pResult->contentIdLow = -1;
+			pResult->contentIdHigh = -1;
 			sceClibMemset(pResult, 0, SCE_MUSIC_EXPORT_MAX_FS_PATH);
 			pResult++;
 		}
