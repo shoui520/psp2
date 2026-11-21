@@ -1211,3 +1211,634 @@ out:
 	MlnBufferDestroy(MLN_HEAP_GENERAL, second);
 	return ret;
 }
+
+/* the core's group as the library's: its buffers move over, its entries' list is freed */
+static inline int MlnCoreGroupConvert(MlnCoreGroup *core, MlnBufferGroup **out)
+{
+	MlnBufferGroup *group;
+	MlnBuffer ***entries;
+	MlnCoreGroupEntry *entry;
+	unsigned int count, i;
+
+	group = MlnAllocate(MLN_HEAP_GENERAL, sizeof(*group));
+	if (group == NULL)
+		goto fail;
+	MlnMemset(group, 0, sizeof(*group));
+	group->tag = core->tag;
+	group->first = core->first;
+	core->first = NULL;
+	group->second = core->second;
+	core->second = NULL;
+	if (core->thirdPresent) {
+		group->third = core->third;
+		core->third = NULL;
+	}
+	if (core->entryCount == 0) {
+		count = 0;
+		entries = NULL;
+	} else {
+		entries = MlnAllocate(MLN_HEAP_GENERAL, core->entryCount * sizeof(*entries));
+		if (entries == NULL)
+			goto fail;
+		MlnMemset(entries, 0, core->entryCount * sizeof(*entries));
+		count = core->entryCount;
+		for (i = 0; i < count; i++) {
+			entries[i] = MlnAllocate(MLN_HEAP_GENERAL, 3 * sizeof(**entries));
+			MlnMemset(entries[i], 0, 3 * sizeof(**entries));
+			entry = &core->entries[i];
+			if (entry->firstPresent) {
+				entries[i][0] = entry->first;
+				entry->first = NULL;
+			}
+			if (entry->secondPresent) {
+				entries[i][1] = entry->second;
+				entry->second = NULL;
+			}
+			if (entry->thirdPresent) {
+				entries[i][2] = entry->third;
+				entry->third = NULL;
+			}
+		}
+	}
+	MlnImpl_8102AAD0(core->entries);
+	core->entries = NULL;
+	group->entries = entries;
+	group->entryCount = count;
+	*out = group;
+	group = NULL;
+	MlnImpl_81006D14(MLN_HEAP_GENERAL, group);
+	return 0;
+fail:
+	MlnImpl_81006D14(MLN_HEAP_GENERAL, group);
+	return 2;
+}
+
+/* a reply of the buffer group the core keeps for the handle in the reply's one argument */
+int MlnImpl_8102E8A0(const MlnServiceReply *reply, MlnServiceArgs **out, int *status)
+{
+	MlnServiceArgs *args = NULL;
+	MlnBufferGroup *group = NULL;
+	MlnCoreGroup core;
+	int handle;
+	int err, ret;
+
+	core.first = NULL;
+	core.firstPresent = 0;
+	core.second = NULL;
+	core.secondPresent = 0;
+	core.third = NULL;
+	core.thirdPresent = 0;
+	core.entries = NULL;
+	core.entryCount = 0;
+	if (MlnImpl_81026D94(reply, 1) != 0) {
+		ret = 0x200;
+		goto out;
+	}
+	ret = MlnImpl_8102701C(MLN_HEAP_GENERAL, reply->items, &handle);
+	if (ret != 0) {
+		ret = MlnImpl_8102C64C(ret);
+		goto out;
+	}
+	if (handle < 0) {
+		ret = 3;
+		goto out;
+	}
+	err = MlnImpl_8104F620(handle, &core);
+	if (err == 0) {
+		ret = MlnCoreGroupConvert(&core, &group);
+		if (ret != 0)
+			goto out;
+		ret = MlnImpl_81026E20(MLN_HEAP_GENERAL, 1, &args);
+		if (ret != 0) {
+			ret = MlnImpl_8102C64C(ret);
+			goto out;
+		}
+		args->items[0].type = MLN_SERVICE_ARG_GROUP;
+		args->items[0].value = group;
+	}
+	*out = args;
+	args = NULL;
+	group = NULL;
+	*status = err;
+out:
+	MlnImpl_81006D14(MLN_HEAP_GENERAL, group);
+	MlnImpl_81027390(MLN_HEAP_GENERAL, args);
+	return ret;
+}
+
+/* the buffer the core makes from a handle and the reply's buffer, handed to the caller;
+ * the core may give it with error 10 too */
+int MlnImpl_8102EBD0(const MlnServiceReply *reply, MlnServiceArgs **out, int *status,
+		     MlnBuffer **result)
+{
+	MlnBuffer *data = NULL;
+	MlnBlob blob = { NULL, 0 };
+	int handle;
+	int err, ret;
+
+	if (result == NULL) {
+		ret = 4;
+		goto out;
+	}
+	if (MlnImpl_81026D94(reply, 2) != 0) {
+		ret = 0x200;
+		goto out;
+	}
+	ret = MlnImpl_8102701C(MLN_HEAP_GENERAL, &reply->items[0], &handle);
+	if (ret != 0) {
+		ret = MlnImpl_8102C64C(ret);
+		goto out;
+	}
+	ret = MlnImpl_81026F0C(MLN_HEAP_GENERAL, &reply->items[1], &data);
+	if (ret != 0) {
+		ret = MlnImpl_8102C64C(ret);
+		goto out;
+	}
+	if (handle < 0) {
+		ret = 3;
+		goto out;
+	}
+	if (data == NULL) {
+		err = 4;
+	} else {
+		err = MlnImpl_8104AB18(handle, data->size, data->data, &blob);
+		if (err == 0 || err == 10) {
+			*result = blob.buffer;
+			blob.buffer = NULL;
+		}
+	}
+	*out = NULL;
+	*status = err;
+out:
+	MlnBufferDestroy(MLN_HEAP_GENERAL, data);
+	return ret;
+}
+
+static inline void MlnServiceRecordValueFree(MlnServiceRecordValue *record)
+{
+	if (record == NULL)
+		return;
+	MlnBufferDestroy(MLN_HEAP_GENERAL, record->buffer);
+	MlnFree(MLN_HEAP_GENERAL, record);
+}
+
+/* a reply of the handle the core opens for a handle and the reply's record */
+int MlnImpl_8102ED08(const MlnServiceReply *reply, MlnServiceArgs **out, int *status)
+{
+	MlnServiceArgs *args = NULL;
+	MlnServiceRecordValue *record = NULL;
+	int *value = NULL;
+	int handle;
+	int opened = -1;
+	int err, ret;
+
+	if (MlnImpl_81026D94(reply, 2) != 0) {
+		ret = 0x200;
+		goto out;
+	}
+	ret = MlnImpl_8102701C(MLN_HEAP_GENERAL, &reply->items[0], &handle);
+	if (ret != 0) {
+		ret = MlnImpl_8102C64C(ret);
+		goto out;
+	}
+	ret = MlnImpl_810271F4(MLN_HEAP_GENERAL, &reply->items[1], (void **)&record);
+	if (ret != 0) {
+		ret = MlnImpl_8102C64C(ret);
+		goto out;
+	}
+	if (handle < 0) {
+		ret = 3;
+		goto out;
+	}
+	err = MlnImpl_8104AF48(handle, record, &opened);
+	if (err == 0) {
+		value = MlnAllocate(MLN_HEAP_GENERAL, sizeof(*value));
+		if (value == NULL) {
+			ret = 2;
+			goto fail;
+		}
+		*value = opened;
+		ret = MlnImpl_81026E20(MLN_HEAP_GENERAL, 1, &args);
+		if (ret != 0) {
+			ret = MlnImpl_8102C64C(ret);
+			goto fail;
+		}
+		args->items[0].type = MLN_SERVICE_ARG_HANDLE;
+		args->items[0].value = value;
+		value = NULL;
+	}
+	*out = args;
+	args = NULL;
+	*status = err;
+	goto out;
+fail:
+	if (ret != 0 && opened != -1)
+		MlnImpl_8104B1C8(opened);
+out:
+	MlnImpl_81027390(MLN_HEAP_GENERAL, args);
+	MlnFree(MLN_HEAP_GENERAL, value);
+	MlnServiceRecordValueFree(record);
+	return ret;
+}
+
+/* the handle in the reply's one argument, closed */
+int MlnImpl_8102EED4(const MlnServiceReply *reply, MlnServiceArgs **out, int *status)
+{
+	int handle;
+	int ret;
+
+	if (MlnImpl_81026D94(reply, 1) != 0)
+		return 0x200;
+	ret = MlnImpl_8102701C(MLN_HEAP_GENERAL, reply->items, &handle);
+	if (ret != 0)
+		return MlnImpl_8102C64C(ret);
+	*status = MlnImpl_8104B1C8(handle);
+	*out = NULL;
+	return 0;
+}
+
+/* a reply of the buffer the core makes for a handle and a kind, by the command: 1068,
+ * 1069 (a second buffer goes to the caller) or 1070; the core may give it with error 29 */
+int MlnImpl_8102EF48(int command, const MlnServiceReply *reply, MlnServiceArgs **out, int *status,
+		     MlnBuffer **result)
+{
+	MlnServiceArgs *args = NULL;
+	MlnBuffer *object = NULL;
+	MlnBlob blob = { NULL, 0 };
+	MlnBlob second;
+	int handle, kind;
+	int made, err, ret;
+
+	if (result == NULL) {
+		ret = 4;
+		goto out;
+	}
+	if (MlnImpl_81026D94(reply, 2) != 0) {
+		ret = 0x200;
+		goto out;
+	}
+	ret = MlnImpl_8102701C(MLN_HEAP_GENERAL, &reply->items[0], &handle);
+	if (ret != 0) {
+		ret = MlnImpl_8102C64C(ret);
+		goto out;
+	}
+	ret = MlnImpl_81026FAC(MLN_HEAP_GENERAL, &reply->items[1], &kind);
+	if (ret != 0) {
+		ret = MlnImpl_8102C64C(ret);
+		goto out;
+	}
+	if (handle < 0) {
+		ret = 3;
+		goto out;
+	}
+	switch (command) {
+	case 1069:
+		second.buffer = NULL;
+		second.size = 0;
+		err = MlnImpl_8104B4C4(handle, kind, 0, &blob, &second);
+		made = err == 0 || err == 29;
+		if (made)
+			*result = second.buffer;
+		break;
+	case 1070:
+		err = MlnImpl_8104BFB0(handle, kind, 0, &blob);
+		made = err == 0 || err == 29;
+		break;
+	case 1068:
+		err = MlnImpl_8104B2AC(handle, kind, 0, &blob);
+		made = err == 0 || err == 29;
+		break;
+	default:
+		ret = 4;
+		goto out;
+	}
+	if (made) {
+		object = blob.buffer;
+		blob.buffer = NULL;
+		ret = MlnImpl_81026E20(MLN_HEAP_GENERAL, 1, &args);
+		if (ret != 0) {
+			ret = MlnImpl_8102C64C(ret);
+			goto out;
+		}
+		args->items[0].type = MLN_SERVICE_ARG_BUFFER;
+		args->items[0].value = object;
+	}
+	*out = args;
+	args = NULL;
+	*status = err;
+	object = NULL;
+out:
+	MlnImpl_81027390(MLN_HEAP_GENERAL, args);
+	MlnBufferDestroy(MLN_HEAP_GENERAL, object);
+	return ret;
+}
+
+static inline void MlnServiceObjectFree(MlnServiceObject *object)
+{
+	if (object == NULL)
+		return;
+	MlnBufferDestroy(MLN_HEAP_GENERAL, object->buffer);
+	MlnFree(MLN_HEAP_GENERAL, object);
+}
+
+/* a reply of the first of two buffers the core makes from a handle, an object and a
+ * buffer; the second goes to the caller, and the core may give them with error 29 */
+int MlnImpl_8102F1B0(const MlnServiceReply *reply, MlnServiceArgs **out, int *status,
+		     MlnBuffer **result)
+{
+	MlnServiceArgs *args = NULL;
+	MlnServiceObject *object = NULL;
+	MlnBuffer *data = NULL;
+	MlnBuffer *made = NULL;
+	MlnBlob first = { NULL, 0 };
+	MlnBlob second = { NULL, 0 };
+	int handle;
+	int err, ret;
+
+	if (result == NULL) {
+		ret = 4;
+		goto out;
+	}
+	if (MlnImpl_81026D94(reply, 3) != 0) {
+		ret = 0x200;
+		goto out;
+	}
+	ret = MlnImpl_8102701C(MLN_HEAP_GENERAL, &reply->items[0], &handle);
+	if (ret != 0) {
+		ret = MlnImpl_8102C64C(ret);
+		goto out;
+	}
+	ret = MlnImpl_81027140(MLN_HEAP_GENERAL, &reply->items[1], (void **)&object);
+	if (ret != 0) {
+		ret = MlnImpl_8102C64C(ret);
+		goto out;
+	}
+	ret = MlnImpl_81026F0C(MLN_HEAP_GENERAL, &reply->items[2], &data);
+	if (ret != 0) {
+		ret = MlnImpl_8102C64C(ret);
+		goto out;
+	}
+	if (handle < 0) {
+		ret = 3;
+		goto out;
+	}
+	err = MlnImpl_8104C32C(handle, object, data != NULL ? data->size : 0,
+			       data != NULL ? data->data : NULL, &first, &second);
+	if (err == 0 || err == 29) {
+		made = first.buffer;
+		*result = second.buffer;
+		first.buffer = NULL;
+		second.buffer = NULL;
+		ret = MlnImpl_81026E20(MLN_HEAP_GENERAL, 1, &args);
+		if (ret != 0) {
+			ret = MlnImpl_8102C64C(ret);
+			goto out;
+		}
+		args->items[0].type = MLN_SERVICE_ARG_BUFFER;
+		args->items[0].value = made;
+	}
+	*out = args;
+	args = NULL;
+	*status = err;
+	made = NULL;
+out:
+	MlnImpl_81027390(MLN_HEAP_GENERAL, args);
+	MlnServiceObjectFree(object);
+	MlnBufferDestroy(MLN_HEAP_GENERAL, data);
+	MlnBufferDestroy(MLN_HEAP_GENERAL, made);
+	return ret;
+}
+
+/* a reply of the first of two buffers the core makes from a handle and a buffer; the
+ * second goes to the caller also with error 10, the first only without one */
+int MlnImpl_8102F408(const MlnServiceReply *reply, MlnServiceArgs **out, int *status,
+		     MlnBuffer **result)
+{
+	MlnServiceArgs *args = NULL;
+	MlnBuffer *data = NULL;
+	MlnBuffer *object = NULL;
+	MlnBlob first = { NULL, 0 };
+	MlnBlob second = { NULL, 0 };
+	int handle;
+	int err, ret;
+
+	if (result == NULL) {
+		ret = 4;
+		goto out;
+	}
+	if (MlnImpl_81026D94(reply, 2) != 0) {
+		ret = 0x200;
+		goto out;
+	}
+	ret = MlnImpl_8102701C(MLN_HEAP_GENERAL, &reply->items[0], &handle);
+	if (ret != 0) {
+		ret = MlnImpl_8102C64C(ret);
+		goto out;
+	}
+	ret = MlnImpl_81026F0C(MLN_HEAP_GENERAL, &reply->items[1], &data);
+	if (ret != 0) {
+		ret = MlnImpl_8102C64C(ret);
+		goto out;
+	}
+	if (handle < 0) {
+		ret = 3;
+		goto out;
+	}
+	err = MlnImpl_8104C7B4(handle, data, &first, &second);
+	if (err == 0 || err == 10) {
+		*result = second.buffer;
+		second.buffer = NULL;
+		if (err == 0) {
+			object = first.buffer;
+			first.buffer = NULL;
+			ret = MlnImpl_81026E20(MLN_HEAP_GENERAL, 1, &args);
+			if (ret != 0) {
+				ret = MlnImpl_8102C64C(ret);
+				goto out;
+			}
+			args->items[0].type = MLN_SERVICE_ARG_BUFFER;
+			args->items[0].value = object;
+		}
+	}
+	*out = args;
+	args = NULL;
+	*status = err;
+	object = NULL;
+out:
+	MlnImpl_81027390(MLN_HEAP_GENERAL, args);
+	MlnBufferDestroy(MLN_HEAP_GENERAL, data);
+	MlnBufferDestroy(MLN_HEAP_GENERAL, object);
+	return ret;
+}
+
+/* a reply of the position the core moves a handle to, from an offset and two sizes; the
+ * position asked for is kept within the offset */
+int MlnImpl_8102F5E4(const MlnServiceReply *reply, MlnServiceArgs **out, int *status)
+{
+	MlnServiceArgs *args = NULL;
+	unsigned int *position = NULL;
+	unsigned int offset;
+	unsigned int size = 0;
+	unsigned int limit = 0;
+	int handle;
+	int err, ret;
+
+	if (MlnImpl_81026D94(reply, 5) != 0) {
+		ret = 0x200;
+		goto out;
+	}
+	ret = MlnImpl_8102701C(MLN_HEAP_GENERAL, &reply->items[0], &handle);
+	if (ret != 0) {
+		ret = MlnImpl_8102C64C(ret);
+		goto out;
+	}
+	ret = MlnImpl_810270BC(MLN_HEAP_GENERAL, &reply->items[1], &offset);
+	if (ret != 0) {
+		ret = MlnImpl_8102C64C(ret);
+		goto out;
+	}
+	ret = MlnImpl_8102704C(MLN_HEAP_GENERAL, &reply->items[2], &size);
+	if (ret != 0) {
+		ret = MlnImpl_8102C64C(ret);
+		goto out;
+	}
+	position = MlnAllocate(MLN_HEAP_GENERAL, sizeof(*position));
+	ret = MlnImpl_810270BC(MLN_HEAP_GENERAL, &reply->items[3], position);
+	if (ret != 0) {
+		ret = MlnImpl_8102C64C(ret);
+		goto out;
+	}
+	ret = MlnImpl_8102704C(MLN_HEAP_GENERAL, &reply->items[4], &limit);
+	if (ret != 0) {
+		ret = MlnImpl_8102C64C(ret);
+		goto out;
+	}
+	if (handle < 0) {
+		ret = 3;
+		goto out;
+	}
+	if (size == 0 || limit == 0) {
+		err = 4;
+	} else {
+		if (*position > offset)
+			*position = offset;
+		err = MlnImpl_8104CDA0(handle, offset, size, position, limit);
+		if (err == 0) {
+			ret = MlnImpl_81026E20(MLN_HEAP_GENERAL, 1, &args);
+			if (ret != 0) {
+				ret = MlnImpl_8102C64C(ret);
+				goto out;
+			}
+			args->items[0].type = MLN_SERVICE_ARG_OFFSET;
+			args->items[0].value = position;
+			position = NULL;
+		}
+	}
+	*out = args;
+	args = NULL;
+	*status = err;
+out:
+	MlnImpl_81027390(MLN_HEAP_GENERAL, args);
+	MlnFree(MLN_HEAP_GENERAL, position);
+	return ret;
+}
+
+/* two buffers in the reply given to the core with a handle and a kind */
+int MlnImpl_8102F83C(const MlnServiceReply *reply, MlnServiceArgs **out, int *status)
+{
+	MlnBuffer *first = NULL;
+	MlnBuffer *second = NULL;
+	int handle = -1;
+	int kind;
+	int err, ret;
+
+	if (MlnImpl_81026D94(reply, 4) != 0) {
+		ret = 0x200;
+		goto out;
+	}
+	ret = MlnImpl_8102701C(MLN_HEAP_GENERAL, &reply->items[0], &handle);
+	if (ret != 0) {
+		ret = MlnImpl_8102C64C(ret);
+		goto out;
+	}
+	ret = MlnImpl_81026FAC(MLN_HEAP_GENERAL, &reply->items[1], &kind);
+	if (ret != 0) {
+		ret = MlnImpl_8102C64C(ret);
+		goto out;
+	}
+	ret = MlnImpl_81026F0C(MLN_HEAP_GENERAL, &reply->items[2], &first);
+	if (ret != 0) {
+		ret = MlnImpl_8102C64C(ret);
+		goto out;
+	}
+	ret = MlnImpl_81026F0C(MLN_HEAP_GENERAL, &reply->items[3], &second);
+	if (ret != 0) {
+		ret = MlnImpl_8102C64C(ret);
+		goto out;
+	}
+	if (handle < 0) {
+		ret = 3;
+		goto out;
+	}
+	if (first != NULL && second != NULL)
+		err = MlnImpl_8104CF00(handle, kind, first->size, first->data, second->size,
+				       second->data);
+	else
+		err = 4;
+	*out = NULL;
+	*status = err;
+out:
+	MlnBufferDestroy(MLN_HEAP_GENERAL, first);
+	MlnBufferDestroy(MLN_HEAP_GENERAL, second);
+	return ret;
+}
+
+/* the commands without arguments: 1033, 1039 and 1089 */
+int MlnImpl_8102F9A0(int command, const MlnServiceReply *reply, MlnServiceArgs **out,
+		     int *status)
+{
+	int err;
+
+	if (MlnImpl_81026D94(reply, 0) != 0)
+		return 0x200;
+	switch (command) {
+	case 1039:
+		err = MlnImpl_8102B2E0();
+		break;
+	case 1089:
+		err = MlnImpl_8102A914();
+		break;
+	case 1033:
+		MlnImpl_8102B054();
+		err = 0;
+		break;
+	default:
+		return 7;
+	}
+	*out = NULL;
+	*status = err;
+	return 0;
+}
+
+int MlnImpl_8102FA24(const MlnServiceReply *reply, MlnServiceArgs **out, int *status)
+{
+	int ret;
+
+	if (MlnImpl_81026D94(reply, 0) != 0)
+		return 0x200;
+	ret = MlnImpl_81026D94(reply, 0);
+	if (ret != 0)
+		return 0x200;
+	*status = MlnImpl_81052600();
+	*out = NULL;
+	return ret;
+}
+
+int MlnImpl_8102FA70(const MlnServiceReply *reply, MlnServiceArgs **out, int *status)
+{
+	if (MlnImpl_81026D94(reply, 0) != 0)
+		return 0x200;
+	*status = MlnImpl_81052608();
+	*out = NULL;
+	return 0;
+}

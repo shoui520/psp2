@@ -1489,6 +1489,64 @@ unsigned int MlnImpl_8104FC70(int handle, unsigned int firstSize, const unsigned
 int MlnImpl_8102E628(const MlnServiceReply *reply, MlnServiceArgs **out, int *status);
 unsigned int MlnImpl_81050110(int handle, const MlnBuffer *first, const MlnBuffer *second);
 int MlnImpl_8102E7A8(const MlnServiceReply *reply, MlnServiceArgs **out, int *status);
+
+/* the core's form of a buffer group: each buffer with whether it is present */
+typedef struct MlnCoreGroupEntry {
+	MlnBuffer *first;
+	unsigned int firstPresent;
+	MlnBuffer *second;
+	unsigned int secondPresent;
+	MlnBuffer *third;
+	unsigned int thirdPresent;
+} MlnCoreGroupEntry;
+
+typedef struct MlnCoreGroup {
+	unsigned int tag;
+	MlnBuffer *first;
+	unsigned int firstPresent;
+	MlnBuffer *second;
+	unsigned int secondPresent;
+	MlnBuffer *third;
+	unsigned int thirdPresent;
+	MlnCoreGroupEntry *entries;
+	unsigned int entryCount;
+} MlnCoreGroup;
+
+unsigned int MlnImpl_8104F620(int handle, MlnCoreGroup *group);
+int MlnImpl_8102E8A0(const MlnServiceReply *reply, MlnServiceArgs **out, int *status);
+unsigned int MlnImpl_8104AB18(int handle, unsigned int size, const unsigned char *data,
+			      MlnBlob *out);
+int MlnImpl_8102EBD0(const MlnServiceReply *reply, MlnServiceArgs **out, int *status,
+		     MlnBuffer **result);
+unsigned int MlnImpl_8104AF48(int handle, const MlnServiceRecordValue *record, int *opened);
+int MlnImpl_8104B1C8(int handle);
+int MlnImpl_8102ED08(const MlnServiceReply *reply, MlnServiceArgs **out, int *status);
+int MlnImpl_8102EED4(const MlnServiceReply *reply, MlnServiceArgs **out, int *status);
+unsigned int MlnImpl_8104B2AC(int handle, int kind, int flags, MlnBlob *out);
+unsigned int MlnImpl_8104B4C4(int handle, int kind, int flags, MlnBlob *out, MlnBlob *second);
+unsigned int MlnImpl_8104BFB0(int handle, int kind, int flags, MlnBlob *out);
+int MlnImpl_8102EF48(int command, const MlnServiceReply *reply, MlnServiceArgs **out, int *status,
+		     MlnBuffer **result);
+unsigned int MlnImpl_8104C32C(int handle, const MlnServiceObject *object, unsigned int size,
+			      const unsigned char *data, MlnBlob *first, MlnBlob *second);
+int MlnImpl_8102F1B0(const MlnServiceReply *reply, MlnServiceArgs **out, int *status,
+		     MlnBuffer **result);
+unsigned int MlnImpl_8104C7B4(int handle, const MlnBuffer *data, MlnBlob *first, MlnBlob *second);
+int MlnImpl_8102F408(const MlnServiceReply *reply, MlnServiceArgs **out, int *status,
+		     MlnBuffer **result);
+unsigned int MlnImpl_8104CDA0(int handle, unsigned int offset, unsigned int size,
+			      unsigned int *position, unsigned int limit);
+int MlnImpl_8102F5E4(const MlnServiceReply *reply, MlnServiceArgs **out, int *status);
+unsigned int MlnImpl_8104CF00(int handle, int kind, unsigned int firstSize,
+			      const unsigned char *first, unsigned int secondSize,
+			      const unsigned char *second);
+int MlnImpl_8102F83C(const MlnServiceReply *reply, MlnServiceArgs **out, int *status);
+int MlnImpl_8102F9A0(int command, const MlnServiceReply *reply, MlnServiceArgs **out,
+		     int *status);
+int MlnImpl_81052600(void);
+int MlnImpl_81052608(void);
+int MlnImpl_8102FA24(const MlnServiceReply *reply, MlnServiceArgs **out, int *status);
+int MlnImpl_8102FA70(const MlnServiceReply *reply, MlnServiceArgs **out, int *status);
 int MlnImpl_8102AA38(MlnBlob *blob, MlnBuffer *out);
 int MlnImpl_810318D4(void *a0, const MlnBuffer *a1, MlnBlob *first, MlnBlob *second);
 
