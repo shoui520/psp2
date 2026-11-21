@@ -6,7 +6,7 @@
 struct NpDrmCheckActDataArgs;
 
 int scePsmDrmGetActInfo(int *actType, int *versionFlag, uint64_t *accountId, const struct NpDrmCheckActDataArgs *userArgs);
-int scePsmDrmGetRifName(char *name);
+int scePsmDrmGetRifName(char *name, SceUInt64 accountId);
 int scePsmDrmRemoveActData(uint64_t *accountId);
 
 int scePsmDrmGetRifInfo(const ScePsmDrmLicense *license, char *contentId, uint64_t *accountId, const struct NpDrmCheckActDataArgs *userArgs);

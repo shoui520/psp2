@@ -152,6 +152,14 @@ int sceSblGcAuthMgrMsSaveBBMacUpdate(struct MsSaveBBMacContext *context, const v
 int SceLibKernel_774AE3CB(struct MsSaveBBMacContext *context, void *mac, const void *key);
 
 /*
+ * A PSM activation, by GcAuthMgr (auth_requests.c): the 1024-byte C1 to send to the server made
+ * for a mode, with its 64-byte response context, and the server's R1 checked against it (the
+ * result written to output). No Sony name is known for either.
+ */
+int SceLibKernel_622A81E6(SceUInt mode, void *activation, void *response);
+int SceLibKernel_EB6DA895(const void *activation, const void *response, void *output);
+
+/*
  * The lightweight mutex's lock (without callbacks) and unlock that the SDK's early stubs link
  * (cui_setupper's updater_core, built with the 0.996 SDK); no Sony name is known for either
  */

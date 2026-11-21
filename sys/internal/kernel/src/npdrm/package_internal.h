@@ -152,15 +152,6 @@ struct NpDrmPackageUnwrappedKey {
 	char contentId[48];
 };
 
-struct NpDrmCheckActDataArgs {
-	uint64_t *startTime;
-	uint64_t *expirationTime;
-	uint64_t reserved;
-};
-
-_Static_assert(sizeof(struct NpDrmCheckActDataArgs) == 16,
-	"activation output argument ABI");
-
 int NpDrmCheckActData(int *actType, int *versionFlag, uint64_t *accountId,
 	uint64_t *startTime, uint64_t *expirationTime);
 int NpDrmRemoveActData(uint64_t *accountId);

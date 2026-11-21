@@ -1493,7 +1493,7 @@ int scePsmDrmGetRifInfo(const ScePsmDrmLicense *license, char *contentId,
 	return result;
 }
 
-int scePsmDrmGetRifName(char *name)
+int scePsmDrmGetRifName(char *name, SceUInt64 accountId)
 {
 	int ret;
 

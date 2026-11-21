@@ -41,6 +41,7 @@ static inline void _sceSha256Memcpy32(void *pDst, const void *pSrc, SceUInt32 ui
 	}
 }
 
+__attribute__((noinline))
 SceInt32 sceSha256BlockInit(SceSha256Context *pContext)
 {
 	static const SceUInt32 iv[8] = {

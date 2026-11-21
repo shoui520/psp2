@@ -2,6 +2,7 @@
 
 #include <sysmem/aes.h>
 #include <marlin_hci/rsa.h>
+#include <gcauthmgr/rsa_signature.h>
 
 struct GcAuthAesCbcState {
 	SceAesFullContext aes;
@@ -28,11 +29,3 @@ int GcAuthGenerateRandom20(unsigned char *data);
 int GcAuthAesEncrypt(unsigned char *data, size_t size, const void *key, const unsigned char *iv);
 int GcAuthAesDecrypt(unsigned char *data, size_t size, const void *key, const unsigned char *iv);
 int GcAuthFillRandomBytes(unsigned char *data, int size);
-
-/* rsa_signature.c */
-unsigned int GcAuthRsaSign2048(MarlinRsaData *output,
-			     const MarlinRsaData *digest,
-			     const struct MarlinRsaPrivateKey *key, int algorithm);
-int GcAuthRsaVerify2048(const MarlinRsaData *signature,
-		      const MarlinRsaData *digest,
-		      const MarlinRsaExponentKey *key, int algorithm);

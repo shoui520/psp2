@@ -2683,11 +2683,11 @@ modules:
           SceDrmPsmKdc_7EE0F1BC: 0x7EE0F1BC
           SceDrmPsmKdc_A4B7788D: 0xA4B7788D
           SceDrmPsmKdc_BEDD3A8B: 0xBEDD3A8B
-          SceDrmPsmKdc_C16EDCD9: 0xC16EDCD9
+          scePsmDrmIsActivated: 0xC16EDCD9
           SceDrmPsmKdc_C2889519: 0xC2889519
           SceDrmPsmKdc_D342757C: 0xD342757C
-          SceDrmPsmKdc_E768E9D1: 0xE768E9D1
-          SceDrmPsmKdc_F562D06D: 0xF562D06D
+          scePsmDrmKdcInit: 0xE768E9D1
+          scePsmDrmIsBootable: 0xF562D06D
           SceDrmPsmKdc_FAFA8C6A: 0xFAFA8C6A
           SceDrmPsmKdc_FB75B314: 0xFB75B314
   SceDtcpIp:

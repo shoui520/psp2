@@ -1,8 +1,10 @@
 # 3.65-CEX: vs0:sys/external/psmkdc.suprx (generated)
 set(MODULE_NID 0x3877238F)
+set(MODULE_AUTH_ID 0x280000000002808E)
 set(MODULE_ATTR 0)
 set(MODULE_EXPORTS exports.yml)
 set(MODULE_SDK_VERSION 0x03650011)
+set(MODULE_EXPORT_ORDER 0x00000000 0x36707EDD)
 set(MODULE_IMPORT_LIBS
 	0xE8F15CDE:1:0x0
 	0xCAE9ACE6:5:0x0
@@ -13,75 +15,74 @@ set(MODULE_IMPORT_LIBS
 	0x3F2B0888:1:0x0
 	0x35C5ACD4:1:0x0
 )
-set(MODULE_IMPORT_FUNCS
-	sceHttpsDisableOptionPrivate
-	sceHttpParseResponseHeader
-	sceHttpGetAllResponseHeaders
-	sceHttpUriEscape
-	sceHttpInit
-	sceHttpSetConnectTimeOut
-	sceHttpGetStatusCode
-	sceHttpsGetSslError
-	sceHttpDeleteRequest
-	sceHttpCreateTemplate
-	sceHttpsEnableOptionPrivate
-	sceHttpAddRequestHeader
-	sceHttpReadData
-	sceHttpSetSendTimeOut
-	sceHttpSetRecvTimeOut
-	sceHttpSendRequest
-	sceHttpCreateRequestWithURL
-	sceHttpCreateConnectionWithURL
-	sceHttpAbortRequest
-	sceHttpDeleteTemplate
-	sceHttpDeleteConnection
-	sceHttpGetResponseContentLength
-	sceKernelLockMutex
-	sceClibMemcpy_safe
-	__stack_chk_fail
-	__sce_aeabi_idiv0
-	sceClibTolower
-	sceClibStrchr
-	SceLibKernel_622A81E6
-	sceClibMemset
-	sceClibStrncmp
-	sceIoOpen
-	sceClibSnprintf
-	sceIoMkdir
-	sceIoDread
-	sceClibMemcmp
-	sceIoDopen
-	sceClibStrnlen
-	sceClibToupper
-	sceIoGetstat
-	sceClibStrncpy
-	sceClibLookCtypeTable
-	sceIoRemove
-	sceClibStrstr
-	SceLibKernel_EB6DA895
-	sceKernelCreateMutex
-	sceIoRename
-	__sce_aeabi_ldiv0
-	sceIoWrite
-	sceIoDclose
-	sceIoLseek32
-	sceIoClose
-	sceIoRead
-	sceKernelUnlockMutex
-	sceKernelOpenMutex
-	sceKernelDeleteMutex
-	sceAppMgrSystemParamGetString
-	sceAppMgrUmount
-	sceAppMgrAppDataMountById
-	sceDrmBridgeGetCurrentSecureTick
-	scePsmDrmGetRifNameForInstall
-	scePsmDrmRemoveActData
-	scePsmDrmGetRifKey
-	scePsmDrmGetRifName
-	scePsmDrmGetActInfo
-	scePsmDrmGetRifInfo
-	_vshRtcGetCurrentSecureTick
-)
-set(MODULE_IMPORT_VARS
-	__stack_chk_guard
+set(MODULE_IMPORT_FORMAT 0x34)
+set(MODULE_IMPORT_NIDS
+	0xE8F15CDE:F:0x00659635
+	0xE8F15CDE:F:0x03A6C89E
+	0xE8F15CDE:F:0x11F6C27F
+	0xE8F15CDE:F:0x1DA2A673
+	0xE8F15CDE:F:0x214926D9
+	0xE8F15CDE:F:0x237CA86E
+	0xE8F15CDE:F:0x27071691
+	0xE8F15CDE:F:0x2B79BDE0
+	0xE8F15CDE:F:0x3D3D29AD
+	0xE8F15CDE:F:0x62241DAB
+	0xE8F15CDE:F:0x72CB0741
+	0xE8F15CDE:F:0x7B51B122
+	0xE8F15CDE:F:0x7EDE3979
+	0xE8F15CDE:F:0x8AE3F008
+	0xE8F15CDE:F:0x94BF196E
+	0xE8F15CDE:F:0x9CA58B99
+	0xE8F15CDE:F:0xBD5DA1D0
+	0xE8F15CDE:F:0xC616C200
+	0xE8F15CDE:F:0xEA61662F
+	0xE8F15CDE:F:0xEC85ECFB
+	0xE8F15CDE:F:0xF0F65C15
+	0xE8F15CDE:F:0xF580D304
+	0xCAE9ACE6:F:0x1D8D7945
+	0xCAE9ACE6:F:0x2E3B02A1
+	0xCAE9ACE6:F:0x37691BF8
+	0xCAE9ACE6:F:0x4373B548
+	0xCAE9ACE6:F:0x4C5471BC
+	0xCAE9ACE6:F:0x614076B7
+	0xCAE9ACE6:F:0x622A81E6
+	0xCAE9ACE6:F:0x632980D7
+	0xCAE9ACE6:F:0x660D1F6D
+	0xCAE9ACE6:F:0x6C60AC61
+	0xCAE9ACE6:F:0x8CBA03D5
+	0xCAE9ACE6:F:0x9670D39F
+	0xCAE9ACE6:F:0x9C8B6624
+	0xCAE9ACE6:F:0x9CC2BFDF
+	0xCAE9ACE6:F:0xA9283DD0
+	0xCAE9ACE6:F:0xAC595E68
+	0xCAE9ACE6:F:0xB0335388
+	0xCAE9ACE6:F:0xBCA5B623
+	0xCAE9ACE6:F:0xC458D60A
+	0xCAE9ACE6:F:0xD8EBBB7E
+	0xCAE9ACE6:F:0xE20ED0F3
+	0xCAE9ACE6:F:0xE265498B
+	0xCAE9ACE6:F:0xEB6DA895
+	0xCAE9ACE6:F:0xED53334A
+	0xCAE9ACE6:F:0xF737E369
+	0xCAE9ACE6:F:0xFB235848
+	0xCAE9ACE6:V:0x93B8AA67
+	0xF2FF276E:F:0x34EFD876
+	0xF2FF276E:F:0x422A221A
+	0xF2FF276E:F:0x49252B9B
+	0xF2FF276E:F:0xC70B8886
+	0xF2FF276E:F:0xFDB32293
+	0x859A24B1:F:0x1A372EC8
+	0x859A24B1:F:0x52E17182
+	0x859A24B1:F:0xCB78710D
+	0xA6605D6F:F:0x09899A08
+	0xA6605D6F:F:0x5E375921
+	0xA6605D6F:F:0xE8BD32BD
+	0x91AFEB43:F:0x7C994327
+	0x3F2B0888:F:0x0D6470DA
+	0x3F2B0888:F:0x0E193CBB
+	0x3F2B0888:F:0x207A2C53
+	0x3F2B0888:F:0x3E881391
+	0x3F2B0888:F:0xA89653B3
+	0x3F2B0888:F:0xE31A6220
+	0x35C5ACD4:F:0xAF6A2745
 )

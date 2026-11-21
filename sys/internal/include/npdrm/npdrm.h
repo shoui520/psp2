@@ -91,7 +91,17 @@ typedef struct ScePsmDrmLicense {
 _Static_assert(sizeof(ScePsmDrmLicense) == 0x400, "ScePsmDrmLicense");
 
 struct NpDrmActivationCache;
-struct NpDrmCheckActDataArgs;
+
+/* where an activation or license call writes the times of its validity */
+struct NpDrmCheckActDataArgs {
+	uint64_t *startTime;
+	uint64_t *expirationTime;
+	uint64_t reserved;
+};
+
+_Static_assert(sizeof(struct NpDrmCheckActDataArgs) == 16,
+	"activation output argument ABI");
+
 struct NpDrmGetRifInfoArgs;
 
 int SceNpDrmForDriver_077926F5(void);	/* vitasdk: ksceNpDrmUpdateActData */
