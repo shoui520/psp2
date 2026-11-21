@@ -57,8 +57,8 @@ static void imposeUpdate(void *userdata);
 
 /* the parts made, and the interface's functions given (0x81140D18) */
 Impose::Impose(Plugin *plugin)
-	: m_plugin(plugin), m_page(NULL), m_volume(plugin), m_cacheManager(plugin),
-	  m_part81149A7C(plugin), m_part8115013C(plugin), m_part81150574(plugin),
+	: m_plugin(plugin), m_page(NULL), m_volume(plugin), m_notification(plugin),
+	  m_screenshot(plugin), m_part8115013C(plugin), m_part81150574(plugin),
 	  m_parentalControl(plugin), m_part8114B0DC(plugin), m_part8114F348(plugin),
 	  m_part8114FD14(plugin), m_part8115000C(plugin), m_touchEmulation(plugin)
 {
@@ -122,7 +122,7 @@ void Impose::OpenPages()
 		param.overwrite_draw_priority = 7;
 		m_page2 = m_plugin->PageOpen(IDParam(0xF61972E0), param);
 	}
-	m_part81149A7C.Impose_81149AAC();
+	m_screenshot.Open();
 	m_part8114F348.Impose_8114F4BE();
 }
 
@@ -266,13 +266,13 @@ static void Impose_8114133C(int arg)
 
 static void Impose_81141354(void)
 {
-	g_impose->m_cacheManager.Impose_811499CE();
+	g_impose->m_notification.MakeSpace();
 }
 
 /* each frame on the main thread (0x81141368) */
 static void imposeUpdate(void *userdata)
 {
-	g_impose->m_cacheManager.Impose_811497DA();
+	g_impose->m_notification.Update();
 	g_impose->m_part8114F348.Impose_8114FAC4();
 	g_impose->m_part81150574.Impose_81151192();
 }

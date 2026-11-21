@@ -20,6 +20,9 @@
 #include <widget/w_plane.h>
 #include <graphics/drawobj/draw_obj.h>
 #include <cache/cache_image.h>
+#include <cache/cache_manager.h>
+#include <std/vector>
+#include <versatileparam/idparam.h>
 #include "../../../plugins.h"
 
 /* the plugin's interface and the plugin itself (impose.cpp) */
@@ -101,28 +104,74 @@ public:
 extern ImposeVolume *g_imposeVolume;
 extern ImposeVolumeBar *g_imposeVolumeBar;
 
-/* the cache manager ("impose_plugin_CacheManager"; 0x81148260, 36 bytes) */
-class ImposePart81148260 {
+/* a notice waiting or shown, copied from its ImposeNotice (0x81148088, 116 bytes; PLACEHOLDER
+   names, after ImposeNotice's) */
+class ImposeNotificationItem {
 public:
-	ImposePart81148260(paf::Plugin *plugin);
-	~ImposePart81148260();
-	void Impose_811497A0(ImposeNotice *notice);
-	void Impose_811497DA();
-	void Impose_811499A6();
-	void Impose_811499CE();
+	ImposeNotificationItem(const ImposeNotice &notice);
+	~ImposeNotificationItem();
 
-	SceUInt8 data[36];
+	paf::string m_name;
+	SceInt32 m_priority;
+	SceInt32 m_reserved1;
+	paf::string m_pluginName;
+	paf::IDParam m_icon;
+	paf::string m_iconPath;
+	SceInt32 m_iconMode;
+	paf::wstring m_message;
+	paf::string m_reservedText;		/* never set or read */
+	paf::IDParam m_matchId;			/* never set: compared with the shown one's to tell
+						   a repeat */
+	void (*m_callback)(int result, void *data);
+	void *m_callbackData;
+	SceUInt32 m_flags;
 };
 
-/* (0x81149A7C, 16 bytes) */
-class ImposePart81149A7C {
+/*
+ * the notices shown one at a time at the screen's corner, and the cache manager that loads their
+ * icons ("impose_plugin_CacheManager"; 0x81148260, 36 bytes; PLACEHOLDER names, after its
+ * "notificationPush" and "notificationCancel")
+ */
+class ImposeNotification {
 public:
-	ImposePart81149A7C(paf::Plugin *plugin);
-	~ImposePart81149A7C();
-	void Impose_81149AAC();
+	ImposeNotification(paf::Plugin *plugin);
+	~ImposeNotification();
+	void ShowNext();
+	void Close();
+	void Push(ImposeNotificationItem *item);
+	void Cancel(paf::string *name);
+	void OnTimeout(void *data);
+	int Show(ImposeNotice *notice);
+	void Update();
+	void MakeSpaceIfUsed();
+	void MakeSpace();
 
-	SceUInt8 data[16];
+	paf::Plugin *m_plugin;
+	paf::vector<ImposeNotificationItem *> m_items;
+	ImposeNotificationItem *m_current;
+	paf::ui::Widget *m_widget;
+	SceInt32 m_reserved;			/* zeroed, read by nothing */
+	paf::cache::CacheManager *m_cache;
 };
+
+/* the screenshot: the flash shown while the shell takes it, and its errors told (PLACEHOLDER
+   names; impose_screenshot.cpp) */
+class ImposeScreenshot {
+public:
+	ImposeScreenshot(paf::Plugin *plugin);
+	~ImposeScreenshot();
+	void Open();
+	void ShowResult(int error);
+	void ShowCapturing();
+	void HideCapturing();
+
+	paf::Plugin *m_plugin;
+	paf::ui::Scene *m_page;			/* the plugin's second page, once the flash is made */
+	SceInt32 m_reserved;			/* -1, read by nothing */
+	bool m_capturing;
+};
+
+extern ImposeScreenshot *g_imposeScreenshot;	/* (0x815448E8) */
 
 /* (0x8115013C, 16 bytes) */
 class ImposePart8115013C {
@@ -359,8 +408,8 @@ public:
 	paf::ui::Scene *m_page;
 	paf::ui::Scene *m_page2;
 	ImposeVolume m_volume;
-	ImposePart81148260 m_cacheManager;
-	ImposePart81149A7C m_part81149A7C;
+	ImposeNotification m_notification;
+	ImposeScreenshot m_screenshot;
 	ImposePart8115013C m_part8115013C;
 	ImposePart81150574 m_part81150574;
 	ImposeParentalControl m_parentalControl;
@@ -373,8 +422,8 @@ public:
 	ImposeTouchEmulation m_touchEmulation;
 };
 
-/* the cache manager (0x81564D68) */
-extern ImposePart81148260 *g_imposePart81148260;
+/* the notices (0x81564D68) */
+extern ImposeNotification *g_imposeNotification;
 
 /* PLACEHOLDER: a shader the shell keeps (0x8139303C, in the shell's own code) */
 const paf::common::SharedPtr<paf::graph::Shader> &Shell_8139303C(void);

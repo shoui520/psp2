@@ -317,6 +317,7 @@ int sceAppMgrGetSystemDataFile(SceUInt32 location, void *buffer, SceSize size);
  * data */
 int sceAppMgrSetSystemDataFile(SceUInt32 location, const void *userData, SceSize dataSize);
 int sceAppMgrSendNotificationRequest(const AppmgrNotificationRequest *request, int wait);
+int sceAppMgrReceiveNotificationRequestForShell(void *request);
 int sceAppMgrGetSystemDataFilePlayReady(SceUInt32 location, void *information, void *userData,
 					SceSize dataSize);
 int sceAppMgrSetSystemDataFilePlayReady(SceUInt32 location, const void *information,

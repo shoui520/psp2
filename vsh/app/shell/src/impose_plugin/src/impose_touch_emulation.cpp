@@ -119,7 +119,7 @@ void ImposeTouchPointer::SetState(int state)
 		ScePafWidget_4588699E(this, NULL, 2, 0.0f, NULL);
 	}
 	if (state != 4)
-		g_imposePart81148260->Impose_811499A6();
+		g_imposeNotification->MakeSpaceIfUsed();
 	switch (state) {
 	case 1:
 		m_icon->SetTexture(g_imposePlugin->GetTexture(IDParam(IMPOSE_TOUCH_TEX_ICON1)));

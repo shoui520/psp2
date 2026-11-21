@@ -2915,7 +2915,7 @@ fade:
 						 (double)((float)start / 1000000.0f),
 						 (double)((float)(now - start) / 1000000.0f));
 				notice.message = message;
-				notice.reserved6 = 0;
+				notice.callback = NULL;
 				notice.name = "ShellBootTime";
 				impose->showNotice(&notice);
 			}

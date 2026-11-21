@@ -32,7 +32,7 @@ using namespace paf;
 #define PARENTAL_MESSAGE	0xD1B3DE28
 #define PARENTAL_MSG_LOCKED	0x3C9C49A1
 #define PARENTAL_MSG_WRONG	0x1CFA3ECA	/* the passcode was wrong, with the count */
-#define PARENTAL_NOTICE_TITLE	0x2617A32D
+#define PARENTAL_NOTICE_ICON	0x2617A32D
 
 ImposeParentalControl *g_imposeParentalControl;
 
@@ -200,7 +200,7 @@ void ImposeParentalControl::Close()
 /* the wrong passcode told, with the count (0x81141C16) */
 void ImposeParentalControl::ShowNotice(int count)
 {
-	ImposePart81148260 *notices = g_imposePart81148260;
+	ImposeNotification *notices = g_imposeNotification;
 
 	if (notices == NULL)
 		return;
@@ -209,13 +209,13 @@ void ImposeParentalControl::ShowNotice(int count)
 	wchar_t number[3];
 
 	notice.name = "parental_control_dialog";
-	notice.titleHash = PARENTAL_NOTICE_TITLE;
+	notice.iconHash = PARENTAL_NOTICE_ICON;
 	sce_paf_swprintf(number, 3, L"%d", count);
 
 	wstring text = shellFormatText(m_plugin->GetString(IDParam(PARENTAL_MSG_WRONG)), number);
 
 	notice.message = text.c_str();
-	notices->Impose_811497A0(&notice);
+	notices->Show(&notice);
 }
 
 /* the settings button: the parental control settings launched (0x81141D84) */

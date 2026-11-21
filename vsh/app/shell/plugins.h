@@ -231,24 +231,30 @@ struct TelephonyPluginInterface {
 	TelephonyService *(*getService)(void);
 };
 
-/* a notice impose_plugin shows: its name, the message and fields the shell leaves 0 */
+/*
+ * a notice impose_plugin shows (PLACEHOLDER field names, after impose_plugin's use of them): its
+ * name, its place in the queue (negative: at once), the icon (a texture of the plugin named, or
+ * an image file), the message, and a callback told how it ended
+ */
 struct ImposeNotice {
 	const char *name;
-	int reserved0;
-	int reserved1;
-	int reserved2;
-	paf::string title;
-	SceUInt32 titleHash;			/* PLACEHOLDER name: title and hash are laid out as an IDParam */
-	int reserved4;
-	int reserved5;
+	int priority;
+	int reserved1;				/* copied, read by nothing */
+	const char *pluginName;			/* the plugin with the icon's texture; impose_plugin's
+						   where NULL */
+	paf::string iconId;			/* the icon's texture: name and hash, laid out as an
+						   IDParam */
+	SceUInt32 iconHash;
+	const char *iconPath;			/* an image file loaded for the icon instead */
+	int iconMode;				/* 1: the common frame texture laid over it */
 	const wchar_t *message;
-	int reserved6;
-	int reserved7;
-	int reserved8;
+	void (*callback)(int result, void *data);	/* 0 timed out, 2 taken down, 3 dropped */
+	void *callbackData;
+	SceUInt32 flags;			/* IMPOSE_NOTICE_FLAG_* */
 
-	ImposeNotice() : name(NULL), reserved0(0), reserved1(0), reserved2(0), title(""),
-		titleHash(0), reserved4(0), reserved5(0), message(NULL), reserved6(0),
-		reserved7(0), reserved8(0)
+	ImposeNotice() : name(NULL), priority(0), reserved1(0), pluginName(NULL), iconId(""),
+		iconHash(0), iconPath(NULL), iconMode(0), message(NULL), callback(NULL),
+		callbackData(NULL), flags(0)
 	{
 	}
 
@@ -257,12 +263,18 @@ struct ImposeNotice {
 	}
 };
 
+/* PLACEHOLDER names: the notice ends at its time even with none waiting (4), or stays while
+   others wait (2) */
+#define IMPOSE_NOTICE_FLAG_STAY		0x2
+#define IMPOSE_NOTICE_FLAG_TIMEOUT	0x4
+
 /* impose_plugin's GetInterface(1) */
 struct ImposePluginInterface {
-	void (*showNotice)(ImposeNotice *notice);
-	void (*removeNotice)(const char *name);	/* PLACEHOLDER name: the notice of that name taken down */
+	int (*showNotice)(ImposeNotice *notice);
+	int (*removeNotice)(const char *name);	/* PLACEHOLDER name: the notice of that name taken down */
 	const wchar_t *(*getString)(const paf::IDParam &id);
-	void (*reserved0[4])(void);		/* PLACEHOLDER: no shell file calls them */
+	void (*reserved0[3])(void);		/* PLACEHOLDER: no shell file calls them */
+	void (*screenshot)(void);		/* PLACEHOLDER name: a screenshot taken */
 	/* PLACEHOLDER names, after the accessibility zoom's calls: the zoom refused (a game holds it
 	   off, or the PlayStation TV shows 1080 lines) */
 	void (*zoomRefuse)(void);

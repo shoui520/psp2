@@ -239,6 +239,11 @@ int npFriendListSetAllocator(const NpFriendAllocator *allocator);
 /* PLACEHOLDER name: an SQLite error on a database told to the database recovery, which may ask
    the user to rebuild it (0x81371828) */
 int shellDbRecoveryNotify(int error, const char *path, unsigned int flags);
+/* PLACEHOLDER names: a screenshot taken, the callback given its result (0x81244BFE), and the
+   callback the screenshot requests are given to (0x81244C42); 0x80102FA2 while the shell's
+   screenshot service is not up */
+int shellScreenshotCapture(void (*callback)(int *result, void *data), void *data);
+int shellScreenshotSetRequestCallback(void (*callback)(void *data), void *data);
 int shellAppStateMarkForeground(void);		/* flags the foreground application's slot (0x81244B62) */
 int shellThemeApplyPending(void);		/* the theme left to apply, /CONFIG/THEME (0x81005834) */
 
