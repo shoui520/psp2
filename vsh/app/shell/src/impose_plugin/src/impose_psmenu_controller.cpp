@@ -114,6 +114,11 @@ ImposePsMenuController::ImposePsMenuController(Plugin *plugin)
 {
 }
 
+/* (0x814098DC, the build's one empty function) */
+ImposePsMenuController::~ImposePsMenuController()
+{
+}
+
 static void imposePsMenuControllerOnDraw(const ui::Scene::DrawArg &arg);
 
 /* the settings opened in the menu's box, the vibration from the registry (0x81153A26) */

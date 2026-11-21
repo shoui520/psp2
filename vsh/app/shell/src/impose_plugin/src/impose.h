@@ -27,6 +27,8 @@
 #include <std/vector>
 #include <versatileparam/idparam.h>
 #include <job/job.h>
+#include <thread/thread.h>
+#include <widget/w_button_base.h>
 #include <widget/w_slidebar.h>
 #include <widget/w_check_box.h>
 #include <widget/w_text.h>
@@ -317,19 +319,75 @@ public:
 extern ImposeParentalControl *g_imposeParentalControl;
 
 /*
- * PLACEHOLDER names: the parts of the PS button's menu whose code is in later files, by the
- * address of their constructors (impose_psmenu.cpp opens, updates and closes them)
+ * The flight mode switched as a job ("SceImposeFlightModeJob", Sony's name for it; its
+ * callbacks "SceImposeBtDriverEventCallback", "SceImposeWlanDriverEventCallback"): the job
+ * waits for the Wi-Fi and Bluetooth drivers, with the dialog shown meanwhile. Its code and its
+ * other members are in the file after impose_psmenu_wireless.cpp (0x8115A13A-0x8115A9DE); the
+ * class's and the members' names are ours (PLACEHOLDER).
  */
-class ImposePart81158C14 {
+class ImposeFlightModeJob : public paf::job::JobItem {
 public:
-	ImposePart81158C14();
-	~ImposePart81158C14();
-	void Impose_81158E12(paf::ui::Widget *box);
-	void Impose_811598AA();
-	void Impose_811598BA(bool arg);
+	ImposeFlightModeJob(paf::ui::Scene *scene, char on, SceInt32 dialog);
+	virtual ~ImposeFlightModeJob();
+	virtual int Run();
+	virtual void Finish(int result);
+
+	paf::ui::Scene *m_scene;
+	char m_on;			/* '1' to turn the flight mode on, '0' off */
+	SceInt32 m_dialog;
+	SceUID m_btCallback;
+	SceUID m_wlanCallback;
+	paf::thread::Mutex m_mutex;
+	/* PLACEHOLDER: an object of its own vtable (0x81530F64), read with the job's file */
+	void *m_waiter;
+	paf::thread::Cond m_cond;
+	SceInt32 m_state;
+};
+
+/* PLACEHOLDER names: the job's functions the menu's switches call, in the job's file: */
+bool Impose_8115AA1E(bool on);		/* the flight mode set */
+bool Impose_8115AA80(void);		/* Wi-Fi cannot be switched (its configuration's 0x200) */
+bool Impose_8115AA94(bool on);		/* Wi-Fi set */
+bool Impose_8115AB10(void);		/* the mobile network is there (telephony_plugin) */
+bool Impose_8115AB46(void);		/* the mobile network cannot be switched (0x400) */
+bool Impose_8115AB5A(bool on);		/* the mobile network set */
+bool Impose_8115AC0C(bool on);		/* Bluetooth set */
+bool Impose_8115AC7C(void);		/* the flight mode is on */
+bool Impose_8115ACC2(void);		/* Wi-Fi is on */
+bool Impose_8115ACD6(void);		/* the mobile network is on */
+bool Impose_8115AD9C(void);		/* Bluetooth is on */
+bool Impose_8115ADB0(void);		/* the switches can be used */
+void Impose_8115A080(bool on);		/* the menu's event flag told of Wi-Fi */
+
+/*
+ * The menu's wireless switches (impose_psmenu_wireless.cpp; PLACEHOLDER names): the flight
+ * mode, Wi-Fi, the mobile network and Bluetooth, each a button whose icon and sound show its
+ * state.
+ */
+class ImposePsMenuWireless {
+public:
+	ImposePsMenuWireless(paf::Plugin *plugin);
+	~ImposePsMenuWireless();
+	void SetButtonState(paf::ui::Widget *button, bool on);
+	void UpdateButtons();
+	void Layout(paf::ui::Widget *button, float width);
+	void Open(paf::ui::Widget *box);
+	void Close();
+	void SetEnabled(bool enabled);
+	void OnFlightMode(paf::ui::Widget *button);
+	void OnWlan(paf::ui::Widget *button);
+	void OnMobile(paf::ui::Widget *button);
+	void OnBluetooth(paf::ui::Widget *button);
+	void OnLayout(paf::ui::Widget *button);
 	void Update();
 
-	SceUInt8 data[28];
+	paf::Plugin *m_plugin;
+	paf::ui::Widget *m_box;
+	paf::ui::ButtonBase *m_flightMode;
+	paf::ui::ButtonBase *m_wlan;
+	paf::ui::ButtonBase *m_mobile;
+	paf::ui::ButtonBase *m_bluetooth;
+	bool m_enabled;
 };
 
 /* the menu's controller settings: the vibration, the port's number and battery shown while a
@@ -338,6 +396,7 @@ public:
 class ImposePsMenuController {
 public:
 	ImposePsMenuController(paf::Plugin *plugin);
+	~ImposePsMenuController();
 	void Open(paf::ui::Widget *box);
 	void Close();
 	void StartBlink();
@@ -422,6 +481,7 @@ public:
 class ImposePsMenuVolume {
 public:
 	ImposePsMenuVolume(paf::Plugin *plugin);
+	~ImposePsMenuVolume();
 	void Open(paf::ui::Widget *box);
 	void Save();
 	void Close();
@@ -439,6 +499,7 @@ public:
 class ImposePsMenuAccessibility {
 public:
 	ImposePsMenuAccessibility(paf::Plugin *plugin);
+	~ImposePsMenuAccessibility();
 	void Open(paf::ui::Widget *box);
 	void Close();
 	void OnInvertColor(paf::ui::CheckBox *check);
@@ -508,7 +569,7 @@ public:
 	paf::common::SharedPtr<paf::job::JobItem> m_job;
 	bool m_checking;
 	paf::ui::Widget *m_focusButton;
-	ImposePart81158C14 m_part81158C14;
+	ImposePsMenuWireless m_wireless;
 	ImposePsMenuController m_controller;
 	ImposePsMenuBgm m_bgm;
 	ImposePsMenuVolume m_volume;

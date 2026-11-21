@@ -41,6 +41,11 @@ ImposePsMenuAccessibility::ImposePsMenuAccessibility(Plugin *plugin)
 {
 }
 
+/* (0x814098DC, the build's one empty function) */
+ImposePsMenuAccessibility::~ImposePsMenuAccessibility()
+{
+}
+
 /* the settings opened in the menu's box, from the registry (0x811527E8) */
 void ImposePsMenuAccessibility::Open(ui::Widget *box)
 {

@@ -86,6 +86,11 @@ ImposePsMenuVolume::ImposePsMenuVolume(Plugin *plugin)
 {
 }
 
+/* (0x814098DC, the build's one empty function) */
+ImposePsMenuVolume::~ImposePsMenuVolume()
+{
+}
+
 static void imposePsMenuVolumeOnKey(int32_t type, ui::Handler *self, ui::Event *e, void *data);
 
 /* the bar opened in the menu's box, at the master volume (0x81152FC4) */

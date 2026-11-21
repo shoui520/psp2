@@ -268,7 +268,7 @@ void ImposePsMenu::Close()
 	if (m_job.get() != NULL)
 		m_job->Cancel();
 	m_brightness = NULL;
-	m_part81158C14.Impose_811598AA();
+	m_wireless.Close();
 	m_controller.Close();
 	m_bgm.Close();
 	m_volume.Close();
@@ -338,7 +338,7 @@ int ImposePsMenu::CheckAppMenuReady()
 ImposePsMenu::ImposePsMenu(Plugin *plugin)
 	: m_plugin(plugin), m_page(NULL), m_brightness(NULL), m_micMute(NULL),
 	  m_voicePriority(NULL), m_prioritizeDialog(-1), m_helpDialog(-1), m_quitDialog(-1),
-	  m_checking(false), m_focusButton(NULL), m_controller(plugin), m_bgm(plugin),
+	  m_checking(false), m_focusButton(NULL), m_wireless(plugin), m_controller(plugin), m_bgm(plugin),
 	  m_volume(plugin), m_accessibility(plugin)
 {
 	int value;
@@ -808,7 +808,7 @@ void ImposePsMenu::Open()
 	if (!ScePafMisc_7ED8F03C())
 		m_volume.Open(box);
 	if (!ScePafMisc_B7CFFF5C())
-		m_part81158C14.Impose_81158E12(box);
+		m_wireless.Open(box);
 
 	if (ScePafMisc_7ED8F03C()) {
 		m_plugin->TemplateOpen(box, IDParam(PSMENU_BRIGHTNESS_TEMPLATE),
@@ -913,7 +913,7 @@ static void imposePsMenuOnInterval(int32_t type, ui::Handler *self, ui::Event *e
 {
 	ImposePsMenu *menu = (ImposePsMenu *)data;
 
-	menu->m_part81158C14.Update();
+	menu->m_wireless.Update();
 	menu->m_controller.Update();
 	menu->m_bgm.Update();
 	if (Shell_81232FA6() == 0 || Shell_812327F8() != -1)
@@ -1155,7 +1155,7 @@ void ImposePsMenu::ShowPrioritizeInfo()
 /* (0x8114F232) */
 void ImposePsMenu::Impose_8114F232(bool arg)
 {
-	m_part81158C14.Impose_811598BA(arg);
+	m_wireless.SetEnabled(arg);
 }
 
 /* the application's or the settings' icon, once applauncher has it (0x8114F23E) */
