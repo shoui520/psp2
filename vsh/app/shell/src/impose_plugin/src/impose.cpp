@@ -36,7 +36,7 @@ static int Impose_81141186(void);
 static void Impose_8114119C(bool arg);
 static void Impose_811411B4(bool arg);
 static void Impose_811411CC(void);
-static void Impose_811411E0(int arg1, int arg2);
+static void Impose_811411E0(void (*onShown)(void *data), void *data);
 static void imposeZoomRefuse(void);
 static void Impose_81141210(int arg);
 static void Impose_81141228(int arg);
@@ -59,8 +59,8 @@ static void imposeUpdate(void *userdata);
 Impose::Impose(Plugin *plugin)
 	: m_plugin(plugin), m_page(NULL), m_volume(plugin), m_notification(plugin),
 	  m_screenshot(plugin), m_part8115013C(plugin), m_part81150574(plugin),
-	  m_parentalControl(plugin), m_psMenu(plugin), m_part8114F348(plugin),
-	  m_part8114FD14(plugin), m_part8115000C(plugin), m_touchEmulation(plugin)
+	  m_parentalControl(plugin), m_psMenu(plugin), m_activationWarning(plugin),
+	  m_busyScreen(plugin), m_zoomRefuse(plugin), m_touchEmulation(plugin)
 {
 	g_impose = this;
 
@@ -123,7 +123,7 @@ void Impose::OpenPages()
 		m_page2 = m_plugin->PageOpen(IDParam(0xF61972E0), param);
 	}
 	m_screenshot.Open();
-	m_part8114F348.Impose_8114F4BE();
+	m_activationWarning.Open();
 }
 
 /* (0x811410AE) */
@@ -184,14 +184,14 @@ static void Impose_811411CC(void)
 	g_impose->m_volume.IsFixed();
 }
 
-static void Impose_811411E0(int arg1, int arg2)
+static void Impose_811411E0(void (*onShown)(void *data), void *data)
 {
-	g_impose->m_part8114FD14.Impose_8114FD50(arg1, arg2);
+	g_impose->m_busyScreen.Show(onShown, data);
 }
 
 static void imposeZoomRefuse(void)
 {
-	g_impose->m_part8115000C.Impose_8115002C();
+	g_impose->m_zoomRefuse.ShowRefused();
 }
 
 static void Impose_81141210(int arg)
@@ -273,6 +273,6 @@ static void Impose_81141354(void)
 static void imposeUpdate(void *userdata)
 {
 	g_impose->m_notification.Update();
-	g_impose->m_part8114F348.Impose_8114FAC4();
+	g_impose->m_activationWarning.Update();
 	g_impose->m_part81150574.Impose_81151192();
 }

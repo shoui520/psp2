@@ -288,6 +288,15 @@ public:
 		m_event_enable |= mask;
 	}
 
+	/* the events of the mask no longer taken, the focus events through EnableFocusEvent
+	   (inline in its callers, impose_plugin's 0x8114FD50; name ours) */
+	void DisableEvent(uint32_t mask)
+	{
+		if ((m_event_enable & 0x400) != 0 && (mask & 0x400) != 0)
+			EnableFocusEvent(false);
+		m_event_enable &= ~mask;
+	}
+
 	EventQueue *m_event_queue;
 	uint32_t m_event_enable;
 	map<int32_t, EventListenerList *> m_map_e_listener;

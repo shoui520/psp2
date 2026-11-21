@@ -26,6 +26,8 @@
 #include <job/job.h>
 #include <widget/w_slidebar.h>
 #include <widget/w_check_box.h>
+#include <widget/w_text.h>
+#include <rtc/rtc.h>
 #include "../../livespace_db/livespace_db_internal.h"
 #include "../../../plugins.h"
 
@@ -356,35 +358,53 @@ extern ImposePsMenu *g_imposePsMenu;
 bool imposeIsDolce(void);
 void imposeLayoutText(paf::ui::Widget *parent, const paf::IDParam &id, float width);
 
-/* (0x8114F348, 56 bytes) */
-class ImposePart8114F348 {
+/* the warning line of a development or testing kit not activated or expiring, and the
+   manufacturing mode's (0x8114F348, 56 bytes; PLACEHOLDER names, after its notice's name
+   "ActivationWarning") */
+class ImposeActivationWarning {
 public:
-	ImposePart8114F348(paf::Plugin *plugin);
-	~ImposePart8114F348();
-	void Impose_8114F4BE();
-	void Impose_8114FAC4();
+	ImposeActivationWarning(paf::Plugin *plugin);
+	~ImposeActivationWarning();
+	void SetMessage(const wchar_t *message, const paf::math::v4 &color);
+	void Open();
+	void Update();
 
-	SceUInt8 data[56];
+	paf::Plugin *m_plugin;
+	paf::ui::Widget *m_page;
+	paf::ui::Text *m_text;		/* the line, made the first time */
+	bool m_counting;		/* the activation's time left counted down */
+	SceUInt64 m_timeLeft;		/* in seconds, as last shown */
+	paf::rtc::Tick m_tick;		/* when it was last shown */
+	SceUInt64 m_timeLimit;		/* the time left at the start, in seconds */
+	paf::rtc::Tick m_startTick;	/* the start */
+	SceUInt32 m_isTestingKit;	/* vshSblAimgrIsDEX(): a testing kit, else a development kit */
 };
 
-/* (0x8114FD14, 16 bytes) */
-class ImposePart8114FD14 {
-public:
-	ImposePart8114FD14(paf::Plugin *plugin);
-	~ImposePart8114FD14();
-	void Impose_8114FD50(int arg1, int arg2);
+extern ImposeActivationWarning *g_imposeActivationWarning;
 
-	SceUInt8 data[16];
+/* a black screen faded in over everything with a busy indicator, and a function called when
+   it is black (0x8114FD14, 16 bytes; PLACEHOLDER names) */
+class ImposeBusyScreen {
+public:
+	ImposeBusyScreen(paf::Plugin *plugin);
+	~ImposeBusyScreen();
+	int Show(void (*onShown)(void *data), void *data);
+
+	paf::Plugin *m_plugin;
+	paf::ui::Scene *m_scene;
+	void (*m_onShown)(void *data);
+	void *m_onShownData;
 };
 
-/* (0x8115000C, 4 bytes) */
-class ImposePart8115000C {
+/* the notice that the zoom is not available here (0x8115000C, 4 bytes; PLACEHOLDER names,
+   after the notice's name "ps_insensitive") */
+class ImposeZoomRefuse {
 public:
-	ImposePart8115000C(paf::Plugin *plugin);
-	~ImposePart8115000C();
-	void Impose_8115002C();
+	ImposeZoomRefuse(paf::Plugin *plugin);
+	~ImposeZoomRefuse();
+	void ShowRefused();
 
-	paf::Plugin *plugin;
+	paf::Plugin *m_plugin;
 };
 
 /* (0x811516E4, 8 bytes) */
@@ -538,9 +558,9 @@ public:
 	ImposePart81150574 m_part81150574;
 	ImposeParentalControl m_parentalControl;
 	ImposePsMenu m_psMenu;
-	ImposePart8114F348 m_part8114F348;
-	ImposePart8114FD14 m_part8114FD14;
-	ImposePart8115000C m_part8115000C;
+	ImposeActivationWarning m_activationWarning;
+	ImposeBusyScreen m_busyScreen;
+	ImposeZoomRefuse m_zoomRefuse;
 	ImposePart811516E4 m_part811516E4;
 	ImposePart81151B08 m_zoom;
 	ImposeTouchEmulation m_touchEmulation;
@@ -548,6 +568,9 @@ public:
 
 /* the notices (0x81564D68) */
 extern ImposeNotification *g_imposeNotification;
+
+/* the notice queued for the main thread: the interface's showNotice (0x81149918) */
+int imposeNotificationShowNotice(ImposeNotice *notice);
 extern ImposeTouchEmulation *g_imposeTouchEmulation;
 
 /* PLACEHOLDER: a shader the shell keeps (0x8139303C, in the shell's own code) */

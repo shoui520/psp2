@@ -128,7 +128,6 @@ ImposeNotificationItem::~ImposeNotificationItem()
 {
 }
 
-static int imposeNotificationShowNotice(ImposeNotice *notice);
 static int imposeNotificationRemoveNotice(const char *name);
 static void imposeNotificationOnTimeout(SceInt32 type, ui::Handler *self, ui::Event *e,
 					void *data);
@@ -566,7 +565,7 @@ void ImposeNotification::Update()
 }
 
 /* the interface's showNotice (0x81149918) */
-static int imposeNotificationShowNotice(ImposeNotice *notice)
+int imposeNotificationShowNotice(ImposeNotice *notice)
 {
 	thread::CallQueue::main_thread_callqueue.Enqueue("notificationPush",
 							 imposeNotificationPush,
