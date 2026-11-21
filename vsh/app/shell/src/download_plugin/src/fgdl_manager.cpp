@@ -1442,11 +1442,11 @@ static inline void fgdlDispatcherQueued(SceUInt32 taskId)
 	BgdlDispatcherState state;
 
 	sce_paf_memset(&state, 0, sizeof(state));
-	BgdlJobDispatcher::Bgdl_8113A434()->Bgdl_8113A440(&state, true);
+	DownloadService::Bgdl_8113A434()->Bgdl_8113A440(&state, true);
 	state.state = 1;
 	state.taskId = taskId;
-	BgdlJobDispatcher::Bgdl_8113A434()->Bgdl_8113A440(&state, false);
-	BgdlJobDispatcher::Bgdl_8113A434()->Bgdl_8113A47C(&state, false);
+	DownloadService::Bgdl_8113A434()->Bgdl_8113A440(&state, false);
+	DownloadService::Bgdl_8113A434()->Bgdl_8113A47C(&state, false);
 }
 
 /* the waiting patch's install queued (the interface's Bgdl_811239DC) */
@@ -1601,11 +1601,11 @@ void Fgdl_8112BF7C(BgdlEvent *event, void *arg)
 	int error = context->error;
 	BgdlDispatcherState dispatcher;
 
-	BgdlJobDispatcher::Bgdl_8113A434()->Bgdl_8113A47C(&dispatcher, false);
+	DownloadService::Bgdl_8113A434()->Bgdl_8113A47C(&dispatcher, false);
 	dispatcher.state = 2;
 	dispatcher.value = (int)state;
 	dispatcher.error = error;
-	BgdlJobDispatcher::Bgdl_8113A434()->Bgdl_8113A440(&dispatcher, false);
+	DownloadService::Bgdl_8113A434()->Bgdl_8113A440(&dispatcher, false);
 	context->mutex.Unlock();
 }
 
@@ -1961,17 +1961,17 @@ int FgdlJob::Run()
 void FgdlJob::Finish(int result)
 {
 	if (m_type == 2)
-		BgdlJobDispatcher::Bgdl_8113A434()->Bgdl_8113A4B8(&m_titleResult.reserved);
+		DownloadService::Bgdl_8113A434()->Bgdl_8113A4B8(&m_titleResult.reserved);
 
 	int error = m_result;
 	BgdlDispatcherState state;
 
-	BgdlJobDispatcher::Bgdl_8113A434()->Bgdl_8113A47C(&state, false);
+	DownloadService::Bgdl_8113A434()->Bgdl_8113A47C(&state, false);
 	state.error = error;
 	state.state = 3;
-	BgdlJobDispatcher::Bgdl_8113A434()->Bgdl_8113A440(&state, true);
+	DownloadService::Bgdl_8113A434()->Bgdl_8113A440(&state, true);
 	sce_paf_memset(&state, 0, sizeof(state));
-	BgdlJobDispatcher::Bgdl_8113A434()->Bgdl_8113A440(&state, false);
+	DownloadService::Bgdl_8113A434()->Bgdl_8113A440(&state, false);
 }
 
 /* the manager made (download_plugin's start) */

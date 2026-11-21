@@ -121,42 +121,9 @@ int Bgdl_812A9954(const char *titleId, int kind);	/* PLACEHOLDER: another file's
 
 
 
-#define BGDL_ERROR_CANCELLED		0x80103A1C	/* PLACEHOLDER name */
 
 static BgdlManager *s_manager = NULL;		/* (0x81544788) */
 
-/* PLACEHOLDER names: a content server's request, as 0x811049A4 is given it */
-struct BgdlServerQuery {
-	int handle;			/* the first argument of GetHeaderInfo */
-	BgdlServerParam param;		/* passed as a copy */
-	char url[1];			/* PLACEHOLDER: its length is not known yet */
-};
-
-struct BgdlServerIds {
-	char reserved;
-	char id0[32];
-	char id1[32];
-	char id2[1];			/* PLACEHOLDER: its length is not known yet */
-};
-
-/* the answer as 0x811049A4's caller is given it, 0x2E0 bytes (PLACEHOLDER names) */
-struct BgdlContentInfo {
-	bool flag;
-	int status;
-	int httpStatus;
-	int kind;
-	SceUInt64 value0;
-	SceUInt64 value1;
-	SceUInt64 value2;
-	SceUInt64 value3;
-	SceUInt64 value4;
-	SceUInt64 size;
-	char url[193];
-	char titleId[32];
-	char contentId[64];
-	char message[127];
-	char data[256];
-};
 
 
 /* PLACEHOLDER name: QAF does not allow a fake AC install on grw0: */
@@ -1231,7 +1198,7 @@ void bgdlUnsetAutoDownload(const EseTask *task)
 			new Job_EseUnsetAutoDownload(package.key217.c_str());
 		common::SharedPtr<job::JobItem> job(item);
 
-		BgdlJobDispatcher::Bgdl_8113A434()->Bgdl_8113A4FC(job);
+		DownloadService::Bgdl_8113A434()->Bgdl_8113A4FC(job);
 	}
 }
 
@@ -1282,7 +1249,7 @@ int BgdlManager::finishTask(EseTask *task, int result)
 			Job_EseGDEvent *item = new Job_EseGDEvent(id);
 			common::SharedPtr<job::JobItem> job(item);
 
-			BgdlJobDispatcher::Bgdl_8113A434()->Bgdl_8113A4FC(job);
+			DownloadService::Bgdl_8113A434()->Bgdl_8113A4FC(job);
 		}
 		if (task->m_ParamCache.key107 == 8) {
 			BgdlTaskPackage package;
@@ -2011,7 +1978,7 @@ int bgdlDispatcherIdle(void)
 {
 	BgdlDispatcherState state;
 
-	BgdlJobDispatcher::Bgdl_8113A434()->Bgdl_8113A47C(&state, false);
+	DownloadService::Bgdl_8113A434()->Bgdl_8113A47C(&state, false);
 	if (state.state != 0 || state.state == 3)
 		return BGDL_ERROR_BUSY;
 	return 0;
@@ -2727,7 +2694,7 @@ int bgdlRegistPatchByTitleID(const BgdlTaskPackage *package, const bool *disc)
 	Job_EseRegistPatchByTitleID *item = new Job_EseRegistPatchByTitleID(*package, disc);
 	common::SharedPtr<job::JobItem> job(item);
 
-	BgdlJobDispatcher::Bgdl_8113A434()->Bgdl_8113A4FC(job);
+	DownloadService::Bgdl_8113A434()->Bgdl_8113A4FC(job);
 	return 0;
 }
 
@@ -3963,9 +3930,6 @@ out:
 	return ret;
 }
 
-/* PLACEHOLDER name: the task is not waiting to run */
-#define BGDL_ERROR_NOT_WAITING		0x80103A1D
-
 /* (0x811078DC) a task waiting to run given up */
 int BgdlManager::CancelWaitingTask(SceUInt32 id)
 {
@@ -3996,7 +3960,7 @@ int BgdlManager::CancelWaitingTask(SceUInt32 id)
 	}
 	if ((*first)->m_ParamCache.runStatus != 1) {
 		m_taskListMutex.Unlock();
-		return BGDL_ERROR_NOT_WAITING;
+		return BGDL_ERROR_NOT_QUEUED;
 	}
 	(*first)->setResult(0, BGDL_ERROR_CANCELLED);
 	m_taskListMutex.Unlock();
@@ -4197,7 +4161,7 @@ int BgdlManager::Bgdl_81107BDE(const BgdlDownloadRequest *request, BgdlContentIn
 			BgdlStorageInfo storage;
 			BgdlDispatcherState state;
 
-			BgdlJobDispatcher::Bgdl_8113A434()->Bgdl_8113A47C(&state, false);
+			DownloadService::Bgdl_8113A434()->Bgdl_8113A47C(&state, false);
 			if (state.state != 0) {
 				ret = BGDL_ERROR_BUSY;
 				skipPatch = false;

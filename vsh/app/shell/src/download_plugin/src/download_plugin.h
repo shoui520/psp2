@@ -22,7 +22,7 @@ struct DownloadPluginInterface {
 	int (*Bgdl_811239D4)(const FgdlCaller *caller, int reserved, SceUInt32 taskId);
 	int (*Bgdl_811239DC)(void *reserved, const SceUInt32 *taskId);
 	int (*Terminate)(void);					/* (0x811239EC) */
-	int (*Bgdl_811239E4)(const FgdlTitleRequest *request);
+	int (*Bgdl_811239E4)(const FgdlTitleRequest *request, int reserved);
 	int (*EventLogDownload)(SceInt64 rowid);		/* (0x81123DD0) */
 	int (*Bgdl_81123ACA)(SceUInt32 taskId);
 	int (*Reserved)(void);					/* (0x81409E2C) returns 0 */
@@ -147,6 +147,8 @@ int Fgdl_8112BCEC(const FgdlTitleRequest *request);
 void Fgdl_8112CD1A(void);				/* the manager made */
 void Fgdl_8112CDB2(void);				/* and destroyed */
 int Bgdl_81123DD0(SceInt64 rowid);			/* log_job_manager.cpp's */
+/* log_job_manager.cpp's: a job of the type queued for the key's event */
+int Bgdl_81123C90(int type, const struct LsdbNewEventKey *key, int arg);
 
 paf::Plugin *downloadPluginGet(void);			/* (0x811234F4) PLACEHOLDER name */
 

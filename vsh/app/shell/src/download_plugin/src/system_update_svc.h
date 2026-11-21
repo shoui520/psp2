@@ -23,6 +23,8 @@
 #include <system_update/system_update_file.h>
 #include <system_update/system_update_registry.h>
 
+#include "../../esecron/include/esetask.hpp"
+
 class DownloadPluginObject;
 
 /* a download task's detail, as the bgdl library gives it (PLACEHOLDER names) */
@@ -50,7 +52,7 @@ struct BgdlTaskState {
 /* a task listed by the bgdl library (PLACEHOLDER names) */
 struct BgdlTaskId {
 	SceUInt32 id;
-	int reserved;
+	EseParamCache param;		/* the task's flags */
 };
 
 class SystemUpdateIpmiServer;
@@ -220,11 +222,11 @@ int Bgdl_812A4FBA(const char *key, bool value);
 int Bgdl_812A4FC8(const char *key, bool *value);
 int Bgdl_812A5032(const char *key, void (*func)(bool value, void *arg), void *arg);
 int Bgdl_812A509E(const char *key);
-int Bgdl_81139392(int reserved, int kind, int max, int *count, BgdlTaskId *ids);
-int Bgdl_8113942C(int reserved, int type, SceUInt32 id, BgdlTaskDetail *detail);
-int Bgdl_8113906E(int reserved, SceUInt32 id, BgdlTaskState *state);
-int Bgdl_81139190(int reserved, SceUInt32 id);
-int Bgdl_81138F80(int reserved, int kind, BgdlTaskDetail *detail, SceUInt32 *id);
+int Bgdl_81139392(IPMI::Session *session, int kind, int max, int *count, BgdlTaskId *ids);
+int Bgdl_8113942C(IPMI::Session *session, int type, SceUInt32 id, BgdlTaskDetail *detail);
+int Bgdl_8113906E(IPMI::Session *session, SceUInt32 id, BgdlTaskState *state);
+int Bgdl_81139190(IPMI::Session *session, SceUInt32 id);
+int Bgdl_81138F80(IPMI::Session *session, int kind, BgdlTaskDetail *detail, SceUInt32 *id);
 
 /* system_update_svc.cpp's callbacks */
 void Bgdl_8112ED3C(bool value, void *arg);

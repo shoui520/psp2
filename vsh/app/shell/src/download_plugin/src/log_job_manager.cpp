@@ -110,7 +110,7 @@ int Bgdl_81123C90(int type, const LsdbNewEventKey *key, int arg)
 {
 	common::SharedPtr<job::JobItem> job(new LogEventJob(type, key, arg));
 
-	BgdlJobDispatcher::Bgdl_8113A434()->Bgdl_8113A4FC(job);
+	DownloadService::Bgdl_8113A434()->Bgdl_8113A4FC(job);
 	return 1;
 }
 
@@ -1404,7 +1404,7 @@ int Bgdl_8112803E(int type, const char *text, int arg)
 {
 	common::SharedPtr<job::JobItem> job(new LogEventJob(type, text, arg));
 
-	BgdlJobDispatcher::Bgdl_8113A434()->Bgdl_8113A4FC(job);
+	DownloadService::Bgdl_8113A434()->Bgdl_8113A4FC(job);
 	return 1;
 }
 

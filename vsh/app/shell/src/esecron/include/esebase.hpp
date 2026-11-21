@@ -31,6 +31,8 @@
 #define BGDL_ERROR_NO_TASK		0x80103A14	/* no task has the id */
 #define BGDL_ERROR_NOT_LOADED		0x80103A1A	/* a task's result until its param file is read */
 #define BGDL_ERROR_STOPPED		0x80103A15	/* the manager's thread is stopped or was not made */
+#define BGDL_ERROR_CANCELLED		0x80103A1C	/* PLACEHOLDER name */
+#define BGDL_ERROR_NOT_QUEUED		0x80103A1D	/* PLACEHOLDER name: the task is not waiting to run */
 
 /* the length of a task's folder, "ux0:bgdl/t/%08x" */
 #define BGDL_PATH_FOLDER_LENGTH		19

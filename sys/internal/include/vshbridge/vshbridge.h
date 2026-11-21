@@ -49,6 +49,9 @@ SceUInt32 vshRtcUnregisterCallback(SceUID cb);
 /* through the stub library's wrapper (0x81417C78 in SceShell); NULL clears the alarm */
 struct SceRtcTick;
 SceUInt32 vshRtcSetAlarmTick(const struct SceRtcTick *tick, int flag);
+/* through the stub library's wrapper (0x81417C70 in SceShell) */
+int vshRtcGetCurrentSecureTick(struct SceRtcTick *tick);
+int vshIoFlock(SceUID fd, int flags);
 SceUInt32 vshRtcRegisterSecureAlarmCallback(SceUID cb);
 SceUInt32 vshRtcUnregisterSecureAlarmCallback(SceUID cb);
 SceUInt32 vshAppMgrCheckContentInstallPeriod(SceUID pid);

@@ -41,7 +41,7 @@ static int downloadPluginNotify(void (*func)(void *), void *arg);
 static int downloadPluginSetPermission(void (*func)(void *), void *arg);
 static int downloadPluginBgdl_811239D4(const FgdlCaller *caller, int reserved, SceUInt32 taskId);
 static int downloadPluginBgdl_811239DC(void *reserved, const SceUInt32 *taskId);
-static int downloadPluginBgdl_811239E4(const FgdlTitleRequest *request);
+static int downloadPluginBgdl_811239E4(const FgdlTitleRequest *request, int reserved);
 static int downloadPluginTerminate(void);
 static int downloadPluginBgdl_81123ACA(SceUInt32 taskId);
 int downloadPluginReserved(void);			/* (0x81409E2C) */
@@ -175,7 +175,7 @@ static inline void downloadPluginQueue(int type, void (*func)(void *), void *arg
 {
 	common::SharedPtr<job::JobItem> job(new DownloadPluginApiJob(type, func, arg));
 
-	BgdlJobDispatcher::Bgdl_8113A434()->Bgdl_8113A4FC(job);
+	DownloadService::Bgdl_8113A434()->Bgdl_8113A4FC(job);
 }
 
 static int downloadPluginNotify(void (*func)(void *), void *arg)
@@ -202,7 +202,7 @@ static int downloadPluginBgdl_811239DC(void *reserved, const SceUInt32 *taskId)
 	return Fgdl_8112B9A2(reserved, taskId);
 }
 
-static int downloadPluginBgdl_811239E4(const FgdlTitleRequest *request)
+static int downloadPluginBgdl_811239E4(const FgdlTitleRequest *request, int reserved)
 {
 	return Fgdl_8112BCEC(request);
 }

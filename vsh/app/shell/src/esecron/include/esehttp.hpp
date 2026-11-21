@@ -115,7 +115,7 @@ BgdlManager *bgdlManagerGet(void);		/* (0x810FD8E0) esetask.cpp */
 /* another file's (0x8113B3A0, 0x8113B436; PLACEHOLDER names): a content installed from the
    package at path, and the install stopped */
 int Bgdl_8113B3A0(const char *path, const char *contentId);
-void Bgdl_8113B436(void);
+int Bgdl_8113B436(void);
 
 /* a downloaded file handed to an export library, with its work memory (PLACEHOLDER names) */
 class BgdlExporter {
@@ -753,11 +753,6 @@ struct BgdlServerInfo {
 	int kind;
 	int reserved1;
 	BgdlServerData data;
-};
-
-/* a server query's client timeouts (paf::http::Client::Param's, from m_resolve_timeout on) */
-struct BgdlServerParam {
-	SceUInt32 value[5];
 };
 
 /*

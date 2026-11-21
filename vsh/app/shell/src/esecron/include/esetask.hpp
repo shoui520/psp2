@@ -17,6 +17,8 @@
 #include <job/job.h>
 #include <file/file.h>
 #include <common/shared_ptr.h>
+#include <ipmi/server.h>
+#include <ipmi/session.h>
 
 #include "esebase.hpp"
 #include "shell.h"
@@ -415,10 +417,46 @@ struct BgdlTaskEntry {
 	EseParamCache param;
 	int result;
 };
-struct BgdlServerQuery;
 struct LsdbValue;		/* livespace_db_internal.h */
-struct BgdlServerIds;
-struct BgdlContentInfo;
+
+/* a server query's client timeouts (paf::http::Client::Param's, from m_resolve_timeout on) */
+struct BgdlServerParam {
+	SceUInt32 value[5];
+};
+
+/* PLACEHOLDER names: a content server's request, as 0x811049A4 is given it */
+struct BgdlServerQuery {
+	int handle;			/* the first argument of GetHeaderInfo */
+	BgdlServerParam param;		/* passed as a copy */
+	char url[1];			/* PLACEHOLDER: its length is not known yet */
+};
+
+struct BgdlServerIds {
+	char reserved;
+	char id0[32];
+	char id1[32];
+	char id2[1];			/* PLACEHOLDER: its length is not known yet */
+};
+
+/* the answer as 0x811049A4's caller is given it, 0x2E0 bytes (PLACEHOLDER names) */
+struct BgdlContentInfo {
+	bool flag;
+	int status;
+	int httpStatus;
+	int kind;
+	SceUInt64 value0;
+	SceUInt64 value1;
+	SceUInt64 value2;
+	SceUInt64 value3;
+	SceUInt64 value4;
+	SceUInt64 size;
+	char url[193];
+	char titleId[32];
+	char contentId[64];
+	char message[127];
+	char data[256];
+};
+
 
 /* what an MTP copy copies (PLACEHOLDER names) */
 struct BgdlMtpContent {
@@ -779,25 +817,111 @@ struct BgdlDispatcherState {
 	int error;			/* and the task's result */
 };
 
-/* (0x8113A434..) the job dispatcher, made by download_plugin (PLACEHOLDER names) */
-class BgdlJobDispatcher {
+/* the download service's dispatcher thread (download_service.cpp; PLACEHOLDER names) */
+class DownloadServiceThread : public paf::thread::Thread {
 public:
-	__attribute__((noinline)) BgdlJobDispatcher() : m_queue(NULL), m_reserved(0)
+	DownloadServiceThread()
+		: paf::thread::Thread(0x1000010A, 0x4000, "SceDownloadServiceThread", NULL),
+		  m_arg(NULL), m_func(NULL), m_running(false)
 	{
 	}
 
-	~BgdlJobDispatcher();						/* (0x8113A674) */
-	static BgdlJobDispatcher *Bgdl_8113A434(void);
+	virtual ~DownloadServiceThread()
+	{
+	}
+
+	virtual void EntryFunction()
+	{
+		if (m_func != NULL)
+			m_func(m_arg);
+	}
+
+	/* the thread started first, its function set after */
+	bool Start(int (*func)(void *), void *arg)
+	{
+		if (m_running)
+			return false;
+		paf::thread::Thread::Start();
+		m_arg = arg;
+		m_func = func;
+		m_running = true;
+		return true;
+	}
+
+	void *m_arg;
+	int (*m_func)(void *);
+	bool m_running;
+};
+
+#define DOWNLOAD_SVC_MAX_SESSIONS	8
+
+/* (0x8113A18E..) the "SceDownloadService" IPMI server (download_service.cpp; PLACEHOLDER
+   names): its clients' methods, and the state the foreground installs share through it */
+class DownloadService : public IPMI::Server::EventHandler {
+public:
+	DownloadService()
+		: m_server(NULL), m_serverMemory(NULL), m_thread(NULL),
+		  m_cancelLock("SceDownloadServiceMutexCancel", 0),
+		  m_dataLock("SceDownloadServiceMutexData", 0)
+	{
+	}
+
+	virtual ~DownloadService()
+	{
+	}
+
+	int Init(void);							/* (0x8113A18E) */
+	int Term(void);							/* (0x8113A37E) */
+	static DownloadService *Bgdl_8113A434(void);
 	/* (0x8113A440) the state set, the second one when second is set */
 	void Bgdl_8113A440(const BgdlDispatcherState *state, bool second);
 	void Bgdl_8113A47C(BgdlDispatcherState *state, bool second);
 	void Bgdl_8113A4B8(const int *result);			/* a title install's result kept */
+	void Bgdl_8113A4DA(int *result);			/* and read back */
 	int Bgdl_8113A4FC(paf::common::SharedPtr<paf::job::JobItem> &job);
-	void Bgdl_8113A644(void);					/* stops it */
-	void Bgdl_8113A6A8(void);					/* starts it */
 
-	void *m_queue;
-	int m_reserved;
+	virtual void onSyncMethodDispatch(IPMI::Session *pSession, SceUInt32 methodId,
+					  const IPMI::DataInfo *pInList, SceUInt32 inCount,
+					  IPMI::BufferInfo *pOutList, SceUInt32 outCount);
+	virtual void onAsyncMethodDispatch(IPMI::Session *pSession, SceUInt32 requestId,
+					   SceUInt32 methodId, const IPMI::DataInfo *pInList,
+					   SceUInt32 inCount);
+	virtual int onNewClient(IPMI::Server *pServer, const IPMI::Session::Config *pConfig,
+				const void *pParam, SceSize paramSize);
+	virtual void onSessionClosedByClient(IPMI::Session *pSession);
+	virtual void onSessionKilled(IPMI::Session *pSession)
+	{
+		onSessionClosedByClient(pSession);
+	}
+
+	IPMI::Server *m_server;
+	SceUInt8 *m_serverMemory;
+	IPMI::Session *m_sessions[DOWNLOAD_SVC_MAX_SESSIONS];
+	int m_sessionCount;
+	bool m_stopped;					/* the dispatcher has been shut down */
+	DownloadServiceThread *m_thread;
+	paf::thread::Mutex m_cancelLock;
+	SceUInt8 *m_workBuffer;
+	SceSize m_workBufferSize;
+	paf::thread::Mutex m_dataLock;
+	BgdlDispatcherState m_state[2];
+	int m_result;
+	paf::job::JobQueue *m_jobQueue;
+};
+
+/* the download service as download_plugin keeps it (PLACEHOLDER names) */
+class BgdlJobDispatcher {
+public:
+	__attribute__((noinline)) BgdlJobDispatcher() : m_service(NULL), m_result(0)
+	{
+	}
+
+	~BgdlJobDispatcher();						/* (0x8113A674) */
+	int Bgdl_8113A644(void);					/* stops it */
+	int Bgdl_8113A6A8(void);					/* starts it */
+
+	DownloadService *m_service;
+	int m_result;					/* what the service's Init returned */
 };
 
 /* log_job_manager.cpp's (0x81123E48): the log job manager's job queue (PLACEHOLDER names) */
@@ -813,5 +937,16 @@ public:
 };
 
 int bgdlCancelTask(SceUInt32 id);				/* (0x8110AEC4) */
+int bgdlAddPackageTask(const BgdlPackageRequest *request,
+		       BgdlPackageResult *result);		/* (0x8110255E) PLACEHOLDER name */
+int bgdlPatchFile(paf::string *path, int device);		/* (0x811026A0) PLACEHOLDER name */
+int bgdlRegistPatchByTitleID(const BgdlTaskPackage *package,
+			     const bool *disc);			/* (0x81103154) PLACEHOLDER name */
+int bgdlAddServerTask(const BgdlDownloadRequest *request, BgdlContentInfo *info,
+		      SceUInt32 *id);				/* (0x81109C84) PLACEHOLDER name */
+int bgdlAddPackageFiles(SceUInt32 id, const BgdlPackageRequest *request);	/* (0x8110AA6A) */
+int bgdlCancelWaitingTasks(void);				/* (0x8110B048) PLACEHOLDER name */
+int bgdlRemoveTasks(bool doneOnly);				/* (0x8110B1DE) PLACEHOLDER name */
+int bgdlHasContentTask(const BgdlContentQuery *query);		/* (0x8110F4EA) PLACEHOLDER name */
 
 #endif
