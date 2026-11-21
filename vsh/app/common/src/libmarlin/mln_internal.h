@@ -1252,6 +1252,14 @@ typedef struct MlnMessagePost {
 	MlnBuffer *headers;		/* "Name: value" lines, CR LF after each */
 } MlnMessagePost;
 
+/* type 0x400, the client's account: a token, or none and the account and its secret */
+typedef struct MlnMessageAccount {
+	unsigned short noToken;
+	const MlnBuffer *token;
+	MlnBuffer *account;
+	MlnBuffer *secret;
+} MlnMessageAccount;
+
 typedef struct MlnMessageValue {
 	unsigned short kind;		/* 1 only */
 	void *data;
@@ -1307,8 +1315,8 @@ typedef struct MlnSession {
 
 int MlnImpl_810222A0(const MlnBuffer *address, MlnBuffer **request);
 int MlnImpl_81022A1C(MlnBuffer **request);
-int MlnImpl_81022478(void *a1, void *a2, MlnBuffer **request);
-int MlnImpl_81022570(void *a1, void *a2, MlnBuffer **request);
+int MlnImpl_81022478(MlnBuffer *first, MlnBuffer *second, MlnBuffer **request);
+int MlnImpl_81022570(MlnBuffer *first, MlnBuffer *second, MlnBuffer **request);
 int MlnImpl_81021734(int noToken, const MlnBuffer *token, MlnBuffer *account, MlnBuffer *secret,
 		     MlnBuffer **request);
 int MlnImpl_810217E4(int type, MlnBuffer **request);
@@ -1327,9 +1335,9 @@ int MlnImpl_810231D4(MlnBuffer *token, MlnBuffer **request);
 int MlnImpl_8102371C(const MlnBuffer *reply, MlnMessage *message);
 int MlnImpl_81022C98(int status, MlnBuffer **reply);
 int MlnImpl_81022B3C(int code, int status, void *data, MlnBuffer **reply);
-int MlnImpl_81021CD4(int heap, void *data, MlnBuffer **message, int type);
-int MlnImpl_810223C8(int heap, int reserved, unsigned int flags, MlnBuffer *address,
-		     const MlnBuffer *name, MlnBuffer **message);
+int MlnImpl_81021CD4(int kind, void *data, MlnBuffer **message);
+int MlnImpl_810223C8(int major, int minor, int build, MlnBuffer *name, MlnBuffer *id,
+		     MlnBuffer **message);
 int MlnImpl_81022500(MlnApiReportData *data, MlnBuffer **message);
 int MlnImpl_81021F74(MlnApiReportData *data, MlnBuffer **message);
 int MlnImpl_81021DE8(MlnApiReportData *data, MlnBuffer **message);
@@ -1342,6 +1350,8 @@ void MlnImpl_810233C4(MlnMessage *message);
 void MlnImpl_81020470(unsigned char **cursor, unsigned int count, MlnBuffer **buffers);
 void MlnImpl_810205A4(unsigned char *p, MlnMessagePairs *pairs);
 unsigned int MlnImpl_810206C0(const MlnBufferGroup *group);
+int MlnImpl_81020B20(unsigned char *p, const MlnMessage *message);
+int MlnImpl_81021640(const MlnMessage *message, MlnBuffer **out);
 int MlnImpl_81020784(const MlnMessage *message, unsigned int *size);
 int MlnImpl_8101D5D4(MlnClient *client, MlnApiValue **value);
 int MlnImpl_8101D7C0(MlnMessage *message, MlnApiResult **out);

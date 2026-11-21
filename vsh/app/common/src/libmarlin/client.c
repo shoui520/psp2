@@ -1674,8 +1674,7 @@ __attribute__((noinline)) int MlnImpl_81020094(MlnSession *session, int status, 
 		switch (value->type) {
 		case 4:
 			if (session->mode == 1) {
-				ret = MlnImpl_81021CD4(MLN_HEAP_SECURE, value->data[2], &message,
-						       value->type - 1);
+				ret = MlnImpl_81021CD4(session->mode, value->data[2], &message);
 				if (ret != MLN_OK)
 					goto out;
 				session->allowed = 8;
@@ -1690,8 +1689,7 @@ __attribute__((noinline)) int MlnImpl_81020094(MlnSession *session, int status, 
 				goto out;
 			break;
 		case 6:
-			ret = MlnImpl_810223C8(MLN_HEAP_SECURE, 0, 0xe000, session->address, &name,
-					       &message);
+			ret = MlnImpl_810223C8(1, 0, 0xe000, session->address, &name, &message);
 			if (ret != MLN_OK)
 				goto out;
 			break;
