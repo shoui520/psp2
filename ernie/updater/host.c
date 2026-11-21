@@ -67,6 +67,13 @@ int hostClose(void)
 }
 
 /* a frame, while the host holds P1.6 */
+/* the most an answer's frame holds: the slim's 0x0105 compares it as a byte */
+#if BOARD_USS1001 && SOURCE_0104
+#define HOST_ANSWER_MAX		((unsigned char)(hostLink.frameSize - 3))
+#else
+#define HOST_ANSWER_MAX		(hostLink.frameSize - 3)
+#endif
+
 unsigned char hostPoll(void)
 {
 	unsigned char size;
@@ -81,8 +88,14 @@ unsigned char hostPoll(void)
 	HOST_ACTIVE = 1;
 	P90 = 0;
 	HOST_READY = 0;
+#if BOARD_USS1001 && SOURCE_0104
+	/* the slim's 0x0105: no bit 3 */
+	hostTx.status = sleepFactorSnapshot() | (hostLink.statusBit1 ? HOST_STATUS_CHECKSUM : 0) |
+			(hostLink.statusBit5 ? HOST_STATUS_SLOW : 0) | 0x40;
+#else
 	hostTx.status = sleepFactorSnapshot() | (hostLink.statusBit1 ? HOST_STATUS_CHECKSUM : 0) |
 			0x08 | (hostLink.statusBit5 ? HOST_STATUS_SLOW : 0) | 0x40;
+#endif
 	hostTx.reserved = 0;
 	csiTransferPoll((unsigned char *)&hostRx.command, &hostTx.status, 2);
 	if (hostRx.command & 0x0080 ? 0 : 1) {
@@ -118,12 +131,10 @@ unsigned char hostPoll(void)
 		hostTx.result = HOST_RESULT_FULL;
 	}
 	csiTransferPoll(&hostRx.length, &hostTx.length, 1);
-	size = hostLink.frameSize - 3 > hostTx.length ? hostTx.length : hostLink.frameSize - 3;
+	size = HOST_ANSWER_MAX > hostTx.length ? hostTx.length : HOST_ANSWER_MAX;
 	hostTx.data[size - 2] = hostChecksum(&hostTx.status, size + 2);
-	size = (hostTx.length < hostRx.length ? hostRx.length : hostTx.length) <
-	       hostLink.frameSize - 3 ?
-	       (hostTx.length < hostRx.length ? hostRx.length : hostTx.length) :
-	       hostLink.frameSize - 3;
+	size = (hostTx.length < hostRx.length ? hostRx.length : hostTx.length) < HOST_ANSWER_MAX ?
+	       (hostTx.length < hostRx.length ? hostRx.length : hostTx.length) : HOST_ANSWER_MAX;
 	if (!(size & 1))
 		size++;
 	csiTransferPoll(hostRx.data, &hostTx.result, size);
@@ -164,13 +175,22 @@ int csiTransferPoll(unsigned char *rx, unsigned char *tx, unsigned char count)
 }
 
 /* sends count bytes on UART3, polled */
+/* the slim's 0x0105 writes SAU2's channel 0 (its UART4's) */
+#if BOARD_USS1001 && SOURCE_0104
+#define HOST_POLL_SDR		SDR20
+#define HOST_POLL_SSR		SSR20
+#else
+#define HOST_POLL_SDR		SDR12
+#define HOST_POLL_SSR		SSR12
+#endif
+
 int uart3WritePoll(unsigned char *data, unsigned char count)
 {
 	while (count--) {
-		SDR12 = *data++;
+		HOST_POLL_SDR = *data++;
 		do {
 			NOP();
-		} while (SSR12 & 0x0040);
+		} while (HOST_POLL_SSR & 0x0040);
 	}
 	return 0;
 }
@@ -223,9 +243,16 @@ int timeStampDigits(char *digits, const char *stamp)
 }
 #endif
 
+/* the slow commands' index: the slim's 0x0105 counts in a char */
+#if BOARD_USS1001 && SOURCE_0104
+#define HOST_SLOW_INDEX		unsigned char
+#else
+#define HOST_SLOW_INDEX		int
+#endif
+
 struct HostSlowCommand *hostSlowFind(unsigned int command)
 {
-	int i;
+	HOST_SLOW_INDEX i;
 
 	for (i = 0; i < HOST_SLOW_COMMANDS; i++)
 		if (hostSlowCommands[i].command == command)
@@ -235,7 +262,7 @@ struct HostSlowCommand *hostSlowFind(unsigned int command)
 
 struct HostSlowCommand *hostSlowAlloc(unsigned int command)
 {
-	int i;
+	HOST_SLOW_INDEX i;
 	struct HostSlowCommand *slow;
 
 	for (i = 0; i < HOST_SLOW_COMMANDS; i++) {
@@ -259,7 +286,7 @@ int hostSlowFree(struct HostSlowCommand *slow)
 
 unsigned char hostSlowPending(void)
 {
-	int i;
+	HOST_SLOW_INDEX i;
 
 	for (i = 0; i < HOST_SLOW_COMMANDS; i++)
 		if (hostSlowCommands[i].command)
@@ -270,7 +297,7 @@ unsigned char hostSlowPending(void)
 /* the queued slow commands' handlers run */
 void hostSlowRun(void)
 {
-	int i;
+	HOST_SLOW_INDEX i;
 	struct HostSlowCommand *slow;
 
 	for (i = 0; i < HOST_SLOW_COMMANDS; i++) {

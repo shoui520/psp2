@@ -28,6 +28,11 @@
 #include "keepram.h"
 #include "led.h"
 #include "nvs.h"
+#if BOARD_USS1001 && SOURCE_0104
+#include "analog.h"
+#include "battery.h"
+#include "input.h"
+#endif
 #include "param.h"
 #include "serial.h"
 #include "serial1.h"
@@ -141,9 +146,16 @@ unsigned char updModeGet(void)
 unsigned char updModeChange(unsigned char mode)
 {
 	unsigned char refused;
+#if BOARD_USS1001 && SOURCE_0104
+	unsigned char previous;		/* the slim's 0x0105: the mode left */
+#endif
 
 	refused = 1;
+#if BOARD_USS1001 && SOURCE_0104
+	switch (previous = updMode) {
+#else
 	switch (updMode) {
+#endif
 	case 0:
 		if (mode == 1)
 			refused = 0;
@@ -190,11 +202,17 @@ unsigned char updModeChange(unsigned char mode)
 			break;
 		case 5:
 			refused = 0;
+#if BATTERY_GAUGE
+			batteryPowerOff();
+#endif
 			setResetCause(0x10);
 			resetSystem();
 			break;
 		case 6:
 			refused = 0;
+#if BATTERY_GAUGE
+			batteryPowerOff();
+#endif
 			setResetCause(0x11);
 			resetSystem();
 			break;
@@ -220,6 +238,9 @@ unsigned char updModeChange(unsigned char mode)
 			break;
 		case 6:
 			refused = 0;
+#if BATTERY_GAUGE
+			batteryPowerOff();
+#endif
 			setResetCause(0x10);
 			resetSystem();
 			break;
@@ -252,6 +273,9 @@ unsigned char updModeChange(unsigned char mode)
 			hostClose();
 			powerOff();
 			refused = 0;
+#if BATTERY_GAUGE
+			batteryPowerOff();
+#endif
 			setResetCause(0x10);
 			resetSystem();
 			break;
@@ -263,6 +287,9 @@ unsigned char updModeChange(unsigned char mode)
 			hostClose();
 			powerOff();
 			refused = 0;
+#if BATTERY_GAUGE
+			batteryPowerOff();
+#endif
 			setResetCause(0x11);
 			resetSystem();
 			break;
@@ -274,6 +301,9 @@ unsigned char updModeChange(unsigned char mode)
 			hostClose();
 			powerOff();
 			refused = 0;
+#if BATTERY_GAUGE
+			batteryPowerOff();
+#endif
 			setResetCause(0x10);
 			resetSystem();
 			break;
@@ -281,6 +311,9 @@ unsigned char updModeChange(unsigned char mode)
 			hostClose();
 			powerOff();
 			refused = 0;
+#if BATTERY_GAUGE
+			batteryPowerOff();
+#endif
 			setResetCause(0x11);
 			resetSystem();
 			break;
@@ -318,9 +351,15 @@ unsigned char updModeChange(unsigned char mode)
 		break;
 	}
 	if (!refused) {
+#if BOARD_USS1001 && SOURCE_0104
+		eventLogData5[0] = updMode = mode;
+#else
 		updMode = mode;
+#endif
 #if CHIP_RL78	/* the slim's logs the mode, and has its power LED updated in mode 4 */
+#if !(BOARD_USS1001 && SOURCE_0104)
 		eventLogData5[0] = mode;
+#endif
 		eventLogData5[1] = mode;
 		eventLogData5[2] = stateWakeupFactor.byte[1];
 		eventLogData5[3] = stateWakeupFactor.byte[0];
@@ -348,7 +387,12 @@ unsigned char updModeChange(unsigned char mode)
 		updEventTake(0x66);
 		updEventTake(0x69);
 		updEventTake(0x64);
+#if BOARD_USS1001 && SOURCE_0104
+		if (previous != 0)	/* the slim's 0x0105: kept on the way out of mode 0 */
+			updEventTake(0x67);
+#else
 		updEventTake(0x67);
+#endif
 		updEventTake(0x14);
 		serialAnswer0105();
 	}
@@ -629,6 +673,12 @@ unsigned char updEventTake(unsigned char event)
 		if (set = updEvents.bits.event7a)
 			updEvents.bits.event7a = 0;
 		break;
+#if BOARD_USS1001 && SOURCE_0104
+	case 0x98:
+		if (set = updEvents.bits.event98)
+			updEvents.bits.event98 = 0;
+		break;
+#endif
 	case 0x82:
 		if (set = updEvents.bits.event82)
 			updEvents.bits.event82 = 0;
@@ -742,6 +792,11 @@ unsigned char updEventSet(unsigned char event)
 	case 0x7a:
 		updEvents.bits.event7a = 1;
 		break;
+#if BOARD_USS1001 && SOURCE_0104
+	case 0x98:
+		updEvents.bits.event98 = 1;
+		break;
+#endif
 	case 0x82:
 		updEvents.bits.event82 = 1;
 		break;
@@ -821,12 +876,17 @@ unsigned char buttonPoll(void)
 #if BOARD_USS1001
 extern unsigned char inputPolls;	/* stub.c's */
 
-/* the slim's: the multi connector read every eighth poll (event 0x79) */
+/* the slim's: the multi connector read every eighth poll (event 0x79); the 0x0105's measure
+   ticks every second (event 0x98) */
 int inputPoll(void)
 {
 	inputPolls++;
 	if ((inputPolls & 7) == 0)
 		updEventSet(0x79);
+#if SOURCE_0104
+	if (inputPolls & 1)
+		updEventSet(0x98);
+#endif
 	return 0;
 }
 
@@ -966,6 +1026,45 @@ int p77Changed(void)
 	return 0;
 }
 
+#if BOARD_USS1001 && SOURCE_0104
+/* event 0x98, the slim's 0x0105: five runs of the averaging (analog.c) when the RTC asked and
+   none is going, a run every 25 ticks, each stepping ANI7-ANI9 twice */
+int inputMeasurePoll(void)
+{
+	unsigned char ask5;
+
+	DI();
+	ask5 = inputMeasure.ask5;
+	inputMeasure.ask5 = 0;
+	EI();
+	if (ask5 == 1 && inputMeasure.runs == 0 && inputMeasure.step == 0) {
+		inputMeasure.runs = 5;
+		inputMeasure.wait = 0;
+		inputMeasure.count[0] = 0;
+		inputMeasure.count[1] = 0;
+		inputMeasure.count[2] = 0;
+		inputMeasure.sum[0] = 0;
+		inputMeasure.sum[1] = 0;
+		inputMeasure.sum[2] = 0;
+	}
+	if (inputMeasure.runs != 0) {
+		if (inputMeasure.wait == 0) {
+			inputMeasure.runs--;
+			inputMeasure.step = 2;
+			inputMeasure.wait = 0x19;
+			if (inputMeasure.runs == 0)
+				inputMeasure.done = 1;
+		}
+		inputMeasure.wait--;
+	}
+	if (inputMeasure.step != 0) {
+		inputMeasure.step--;
+		analogMeasureStep();
+	}
+	return 0;
+}
+#endif
+
 #if FW_SINCE(0x0100060D)
 #define UPD_MULTICN_CHECK()	multiCnCheck()
 #else
@@ -986,9 +1085,13 @@ void mainLoop(void)
 	unsigned char result;
 	unsigned char count;
 
+#if BOARD_USS1001 && SOURCE_0104
+	/* the slim's 0x0105: neither the serial reset nor the chip's ID here */
+#else
 	serialReset(0);
 #if BOARD_USS1001
 	chipIdInit();
+#endif
 #endif
 #if SOURCE_0103
 	debugPinInit();
@@ -1062,6 +1165,10 @@ void mainLoop(void)
 #endif
 			if (updEventTake(0x7a))
 				multiCnChanged();
+#if BOARD_USS1001 && SOURCE_0104
+			if (updEventTake(0x98))
+				inputMeasurePoll();
+#endif
 			break;
 #if SOURCE_0103
 		case 7:
@@ -1109,6 +1216,10 @@ void mainLoop(void)
 #endif
 			if (updEventTake(0x7a))
 				multiCnChanged();
+#if BOARD_USS1001 && SOURCE_0104
+			if (updEventTake(0x98))
+				inputMeasurePoll();
+#endif
 			if (updEventTake(0x82))
 				chargeUpdate();
 #if SOURCE_0103
@@ -1175,6 +1286,10 @@ void mainLoop(void)
 #endif
 			if (updEventTake(0x7a))
 				multiCnChanged();
+#if BOARD_USS1001 && SOURCE_0104
+			if (updEventTake(0x98))
+				inputMeasurePoll();
+#endif
 			if (updEventTake(0x82))
 				chargeUpdate();
 #if SOURCE_0103
@@ -1242,6 +1357,10 @@ void mainLoop(void)
 #endif
 			if (updEventTake(0x7a))
 				multiCnChanged();
+#if BOARD_USS1001 && SOURCE_0104
+			if (updEventTake(0x98))
+				inputMeasurePoll();
+#endif
 			if (updEventTake(0x82))
 				chargeUpdate();
 #if BOARD_DOL1001	/* the slim has no event 0x8c */
@@ -1303,7 +1422,11 @@ void tm00Interrupt(void)
    the segment, four zeros, and whether 0x1184 found the image right */
 void updaterGetStatus(unsigned char *out)
 {
+#if BOARD_USS1001 && SOURCE_0104
+	out[0] = (updReset ? (unsigned char)0x80 : (unsigned char)0) | updMode;
+#else
 	out[0] = (updReset ? 0x80 : 0) | updMode;
+#endif
 	out[1] = (unsigned char)(updSegment & 0xff);
 	out[2] = (unsigned char)(updSegment >> 8);
 	out[3] = 0;
@@ -1311,5 +1434,14 @@ void updaterGetStatus(unsigned char *out)
 	out[5] = 0;
 	out[6] = 0;
 	out[7] = updImageChecked;
+}
+#endif
+
+#if BOARD_USS1001 && SOURCE_0104
+/* the slim's 0x0105: whether a reset started the updater, asked by the application's files
+   (elmo.c, cookie.c, powerseq.c) where the PS TV's read updReset */
+unsigned char updResetGet(void)
+{
+	return updReset;
 }
 #endif

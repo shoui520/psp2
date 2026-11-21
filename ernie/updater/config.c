@@ -38,6 +38,14 @@ static const struct ConfigBank *const __far configBanks = (const struct ConfigBa
 static const struct ConfigBank *const __far configBanks = (const struct ConfigBank *)0x3b800;
 #endif
 
+/* the slim's 0x0105: a bank's magic kept beside them, and 9 for banks of the same version */
+#if BOARD_USS1001 && SOURCE_0104
+static const unsigned char __far configMagic[4] = "Conf";
+#define CONFIG_SAME_VERSION	9
+#else
+#define CONFIG_SAME_VERSION	2
+#endif
+
 static struct Config config;
 #if FW_SINCE(0x0100060D)
 static struct ConfigRecords configRecords;
@@ -61,7 +69,7 @@ unsigned char configStorageInit(void)
 	result1 = configCheck(1);
 	if (result0 == 0 && result1 == 0) {
 		newer = configNewerVersion();
-		if (newer == 2)
+		if (newer == CONFIG_SAME_VERSION)
 			config.bank = configNewerCount();
 		else
 			config.bank = newer;
@@ -108,7 +116,9 @@ unsigned char configRead(unsigned int offset, unsigned char size, unsigned char 
    checksum (but for the defaults, count 1) */
 static unsigned char configCheck(unsigned char bank)
 {
+#if !(BOARD_USS1001 && SOURCE_0104)
 	unsigned char magic[4] = "Conf";
+#endif
 	const struct ConfigBank *b;
 	unsigned long sum;
 	unsigned int i;
@@ -118,8 +128,13 @@ static unsigned char configCheck(unsigned char bank)
 	if (bank >= 2)
 		return 1;
 	b = &configBanks[bank];
+#if BOARD_USS1001 && SOURCE_0104
+	if (memcmp(b->magic + 0, configMagic, sizeof(configMagic)) != 0)
+		return 2;
+#else
 	if (memcmp(b->magic + 0, magic, sizeof(magic)) != 0)
 		return 2;
+#endif
 	if (b->size != CONFIG_SIZE)
 		return 3;
 	if (b->version == 0xffff)
@@ -144,11 +159,11 @@ static unsigned char configCheck(unsigned char bank)
 	return 0;
 }
 
-/* the bank with the newer layout, 2 when both have the same */
+/* the bank with the newer layout, CONFIG_SAME_VERSION when both have the same */
 static unsigned char configNewerVersion(void)
 {
 	if (configBanks[0].version == configBanks[1].version)
-		return 2;
+		return CONFIG_SAME_VERSION;
 	if (configBanks[1].version < configBanks[0].version)
 		return 0;
 	return 1;

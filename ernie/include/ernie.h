@@ -46,13 +46,21 @@
 #else
 #define UPD_0103		0
 #endif
-/* the application's revision its files are built from: the slim's updater (0x01030511) carries
-   the application's 0x01030505 revision, every other program its own */
-#if (defined(ERNIE_UPDATER)) && ERNIE_FW == 0x01030511
-#define APP_SINCE(version)	((version) <= 0x01030505)
+/* the application's revision a program's files are built from (its version block gives it):
+   the updaters of 0x01000306, 0x0100060D, 0x01030511 and 0x0105 carry the application's
+   0x00090800, 0x0100010A, 0x01030505 and 0x01050030, every other program its own */
+#if (defined(ERNIE_UPDATER)) && ERNIE_FW == 0x01000306
+#define APP_FW			0x00090800
+#elif (defined(ERNIE_UPDATER)) && ERNIE_FW == 0x0100060D
+#define APP_FW			0x0100010A
+#elif (defined(ERNIE_UPDATER)) && ERNIE_FW == 0x01030511
+#define APP_FW			0x01030505
+#elif (defined(ERNIE_UPDATER)) && ERNIE_FW >= 0x01050000	/* the slim's 0x0105 updater */
+#define APP_FW			0x01050030
 #else
-#define APP_SINCE(version)	FW_SINCE(version)
+#define APP_FW			ERNIE_FW
 #endif
+#define APP_SINCE(version)	((version) <= APP_FW)
 /* the chip: the slim models' RL78/G13 (0x008), else the 78K0R/KG3-L */
 #define CHIP_RL78		(HW_FAMILY == 0x008)
 

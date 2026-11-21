@@ -19,6 +19,11 @@
 #include "tau.h"
 #include "timer.h"
 #include "updater.h"
+#if BOARD_USS1001 && SOURCE_0104
+#include "battery.h"
+#include "input.h"
+#include "state.h"
+#endif
 
 /* UARTs' speeds: SPS's prescaler, SDR's divisor and the channels' SCR */
 struct UartConfig {
@@ -169,6 +174,21 @@ void intInit(void)
 	PR11 = 0xffff;
 	PR02 = 0xffff;
 	PR12 = 0xffff;
+#if BOARD_USS1001 && SOURCE_0104	/* the application's: the UART receptions, the IICA and
+					   SAU2's reception at level 2 */
+	SREPR01 = 0;
+	SREPR11 = 1;
+	IICAPR00 = 0;
+	IICAPR10 = 1;
+	SRPR02 = 0;
+	SRPR12 = 1;
+	SREPR02 = 0;
+	SREPR12 = 1;
+	SRPR04 = 0;
+	SRPR14 = 1;
+	SREPR04 = 0;
+	SREPR14 = 1;
+#endif
 	EGP0 = 0;
 	EGP1 = 0;
 	EGN0 = 0;
@@ -243,6 +263,31 @@ void rtcInterrupt(void)
 				timers[i].handler();
 		}
 	}
+#if BOARD_USS1001 && SOURCE_0104
+	/* once a second the battery's measurement runs (ask5): in state 0x0004 while not
+	   charging only every tenth second, otherwise each */
+	if (keepRam.clock & 1) {
+		switch (stateGet()) {
+		case 0x0004:
+			if (batteryIsCharging()) {
+				inputMeasure.ask5 = 1;
+				inputMeasure.holdOff = 0;
+			} else {
+				if (inputMeasure.holdOff != 0)
+					inputMeasure.holdOff--;
+				if (inputMeasure.holdOff == 0) {
+					inputMeasure.ask5 = 1;
+					inputMeasure.holdOff = 10;
+				}
+			}
+			break;
+		default:
+			inputMeasure.ask5 = 1;
+			inputMeasure.holdOff = 0;
+			break;
+		}
+	}
+#endif
 }
 #else
 void rtcInterrupt(void)

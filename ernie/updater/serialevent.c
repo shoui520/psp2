@@ -47,7 +47,11 @@ unsigned char serial4Event(FLGPTN ptn)
 		}
 	}
 #endif
+#if SERIAL_MODE_BITS	/* serialGetMode gives the mode alone */
+	if ((ptn & 0x001e) && serialGetMode() == 1) {
+#else
 	if ((ptn & 0x001e) && (serialGetMode() & SERIAL_MODE) == 1) {
+#endif
 		if (ptn & 0x0010) {
 			serial.state = SERIAL_SEND;
 		} else if (ptn & 0x0004) {

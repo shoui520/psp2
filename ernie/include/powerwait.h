@@ -12,8 +12,8 @@
 
 /* a power timer's number 4-0xb: since 0x0100060B bits 0 and 3 (timers 4 and 7) have none, and
    the others are one or two earlier */
-#if !defined(ERNIE_UPDATER) && BOARD_USS1001 && SOURCE_0104
-/* the slim's 0x0105: three earlier still (no timers 0-2) */
+#if BOARD_USS1001 && SOURCE_0104
+/* the slim's 0x0105 (its updater too): three earlier still (no timers 0-2) */
 #define POWER_TIMER(id)		((id) < 7 ? (id) - 4 : (id) - 5)
 #elif FW_SINCE(0x0100060B)
 #define POWER_TIMER(id)		((id) < 7 ? (id) - 1 : (id) - 2)
@@ -54,6 +54,11 @@ extern void powerTimersInit(void);
 #if BOARD_DOL1001
 extern void intp9Enable(unsigned char enable);
 extern void intp9Event(void);
+#endif
+
+#ifdef ERNIE_UPDATER
+/* the updater's wait for the kernel's dly_tsk (updater/stub.c) */
+extern void powerWaitLong(unsigned int ms);
 #endif
 
 #endif

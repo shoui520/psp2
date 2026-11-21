@@ -128,6 +128,9 @@ extern void batteryChargeFromLoad(void);
 extern void batteryPowerOff(void);
 extern void batteryUpdate(void);
 extern unsigned char batterySaveRecord(void);
+#ifdef ERNIE_UPDATER
+extern unsigned char batteryLoadRecord(void);
+#endif
 extern unsigned char batteryIsCharging(void);
 extern unsigned char batteryOffsetsValid(void);
 extern void batteryResume(int woken);

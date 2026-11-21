@@ -284,7 +284,7 @@ unsigned char serial1BufferClear(void)
 #endif
 
 /* an input bit's handler: event flag 3's bit 0x0001 */
-#if TASK_FLAG_SETTERS
+#if TASK_FLAG_SETTERS && !(defined(ERNIE_UPDATER))	/* the slim's 0x0105 updater: nothing */
 ER serial1InputHandler(void)
 {
 	return task2SetFlag(3, 0x0001);

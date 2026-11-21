@@ -35,8 +35,12 @@ int watchdogSetup(void)
 	keep = &configGet()->watchdogKeep;
 #if (defined(ERNIE_UPDATER)) && SOURCE_0103
 	/* the PS TV's updater: the config's setting when it started from the reset, the one it
-	   keeps after an update */
+	   keeps after an update (the slim's 0x0105 updater asks updater.c) */
+#if BOARD_USS1001 && SOURCE_0104
+	if (updResetGet()) {
+#else
 	if (updReset) {
+#endif
 		setting = &configGet()->watchdog;
 		watchdogSet(setting);
 	} else

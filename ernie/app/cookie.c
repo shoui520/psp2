@@ -22,6 +22,12 @@
 
 #if UPD_0103
 extern unsigned char updReset;		/* the updater's (updater.h): a reset started it */
+#if (defined(ERNIE_UPDATER)) && BOARD_USS1001 && SOURCE_0104
+extern unsigned char updResetGet(void);	/* the slim's 0x0105 updater asks updater.c */
+#define COOKIE_UPD_RESET	updResetGet()
+#else
+#define COOKIE_UPD_RESET	updReset
+#endif
 #endif
 
 #if SOURCE_0103
@@ -57,8 +63,10 @@ unsigned int cookieAddress(void)
 static unsigned char cookieBusWrite(unsigned char *data, unsigned char length);
 static unsigned char cookieBusRead(unsigned char *reg, unsigned char *data);
 #define COOKIE_INIT_WRITE	cookieBusWrite
+#define COOKIE_INIT_READ	cookieBusRead
 #else
 #define COOKIE_INIT_WRITE	cookieWrite
+#define COOKIE_INIT_READ	cookieRead
 #endif
 
 #if BOARD_DOL1001
@@ -109,7 +117,7 @@ void cookieInitRegs(void)
 
 #if UPD_0103
 	/* the PS TV's updater: the defaults written after a reset only, else the registers read */
-	if (updReset) {
+	if (COOKIE_UPD_RESET) {
 #endif
 	for (i = 0; i < 6; i++) {
 		elmoCommand[0] = regs[i].reg;
@@ -126,7 +134,7 @@ void cookieInitRegs(void)
 #if UPD_0103
 	} else {
 		for (i = 0; i < 6; i++)
-			cookieRead(&regs[i].reg, regs[i].last->byte);
+			COOKIE_INIT_READ(&regs[i].reg, regs[i].last->byte);
 	}
 #endif
 #if BOARD_DOL1002 || BOARD_USS1001 && SOURCE_0104
@@ -188,8 +196,10 @@ unsigned char cookieWrite(unsigned char *data, unsigned char length)
 #endif
 #if COOKIE_GATED
 	if (status) {
+#ifndef ERNIE_UPDATER	/* the application's events; none in the updater */
 		logEvent(0x23);
 		logEventValue(0x24, status);
+#endif
 	}
 #endif
 	return status;
@@ -252,8 +262,10 @@ unsigned char cookieRead(unsigned char *reg, unsigned char *data)
 #endif
 #if COOKIE_GATED
 	if (status) {
+#ifndef ERNIE_UPDATER	/* the application's events; none in the updater */
 		logEvent(0x23);
 		logEventValue(0x24, status);
+#endif
 	}
 #endif
 	return status;

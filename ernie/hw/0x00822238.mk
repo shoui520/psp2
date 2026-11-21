@@ -6,3 +6,4 @@ BOARD := 0x00406000
 CHIP := f1zcrk
 KERNEL := 0x00411000
 LINKFILE_app := app/uss1001.lk
+LINKFILE_updater := updater/uss1001.lk

@@ -12,6 +12,9 @@
 #include "ernie.h"
 #include "analog.h"
 #include "charge.h"
+#if BOARD_USS1001 && SOURCE_0104
+#include "input.h"
+#endif
 #include "keepram.h"
 #include "rtc.h"
 #include "state.h"
@@ -87,6 +90,13 @@ unsigned long stateGetWakeMask(void)
 {
 	return 0;
 }
+
+#if BOARD_USS1001 && SOURCE_0104	/* the slim's 0x0105: charge.c asks it */
+int stateGetWakeBit(unsigned char factor)
+{
+	return 0;
+}
+#endif
 
 union PowerRequest *stateGetWakeupFactor(void)
 {
@@ -212,6 +222,17 @@ unsigned char analogGetMultiCn(void)
 {
 	return updMultiCn;
 }
+
+#if BOARD_USS1001 && SOURCE_0104
+/* the averages and their RTC ticks, as the application's, without its dispatch lock */
+void analogGetMeasure(struct AnalogMeasure *out)
+{
+	out->ani7 = inputMeasure.average[0];
+	out->ani8 = inputMeasure.average[1];
+	out->ani9 = inputMeasure.average[2];
+	out->ticks = inputMeasure.ticks;
+}
+#endif
 #elif UPD_060D_FORMS
 /* nothing calls it in 0x0100060D, nor intp11Low */
 int chargeVbusCharging(void)

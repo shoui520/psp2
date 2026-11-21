@@ -19,6 +19,9 @@
 #include "pfdl.h"
 #include "fsl.h"
 #include "kernel.h"
+#ifdef ERNIE_UPDATER
+#include "powerwait.h"
+#endif
 #endif
 
 #define FLASH_BLOCKS		8
@@ -29,7 +32,8 @@
 /* USS-1002's 0x01050031 opens the library once, at the first request, and the NVS closes it at
    the end of each of its operations (flashClose); 0x01050034 opens and closes it in each request
    again, as 0x0103 does */
-#define FLASH_KEEP_OPEN		(SOURCE_0104 && !FW_SINCE(0x01050034))
+/* the slim's 0x0105 updater keeps 0x0104's */
+#define FLASH_KEEP_OPEN		(SOURCE_0104 && (!FW_SINCE(0x01050034) || (defined(ERNIE_UPDATER))))
 
 #if FLASH_KEEP_OPEN
 /* opens the library unless it is open (DFLEN set) */
@@ -91,7 +95,9 @@ unsigned char nvsErase(unsigned char block)
 			request.index_u16 = block;
 			result = PFDL_Execute(&request);
 			while (result == PFDL_BUSY) {
-#if FLASH_KEEP_OPEN
+#if FLASH_KEEP_OPEN && (defined(ERNIE_UPDATER))
+				powerWaitLong(1);	/* the slim's 0x0105 updater: 1 ms */
+#elif FLASH_KEEP_OPEN
 				dly_tsk(1);
 #else
 				NOP();

@@ -3,6 +3,7 @@
  * until two readings in a row agree on a new level, at most ten times 8 ms apart.
  */
 #pragma sfr
+#pragma nop
 
 #include "ernie.h"
 #include "analog.h"
@@ -11,6 +12,11 @@
 #endif
 #include "sleepfactor.h"
 #include "updater.h"
+#if BOARD_USS1001 && SOURCE_0104
+#include "battery.h"
+#include "input.h"
+#include "timer.h"
+#endif
 
 #if BOARD_USS1001
 /*
@@ -61,14 +67,26 @@ static unsigned int analogLevelFindWide(unsigned int input, const struct AnalogL
    and event 0x7a */
 unsigned char analogReadMultiCn(void)
 {
+#if ADC_AVERAGE	/* the slim's 0x0105: the averaged result's limits */
+	struct AnalogLevelWide levels[12] = {
+		{ 0xe6c0, 0 }, { 0xde40, 1 }, { 0xcd80, 0xff }, { 0xc440, 2 }, { 0xb640, 3 },
+		{ 0xa240, 0xff }, { 0x90c0, 4 }, { 0x87c0, 0xff }, { 0x7b00, 5 }, { 0x0580, 0xff },
+		{ 0x0140, 6 }, { 0x0000, 7 },
+	};
+#else
 	struct AnalogLevelWide levels[12] = {
 		{ 0xe900, 0 }, { 0xde40, 1 }, { 0xce00, 0xff }, { 0xc440, 2 }, { 0xb640, 3 },
 		{ 0xa1c0, 0xff }, { 0x9140, 4 }, { 0x8840, 0xff }, { 0x7a80, 5 }, { 0x0580, 0xff },
 		{ 0x0140, 6 }, { 0x0000, 7 },
 	};
+#endif
 
 	adcOpen();
+#if ADC_AVERAGE
+	analogInput10.input = adcRead(6, 1);
+#else
 	analogInput10.input = adcRead(6);
+#endif
 	analogInput10.level = analogLevelFindWide(analogInput10.input, levels, 12);
 	if (analogInput10.level == analogInput10.previous &&
 	    analogInput10.level != analogInput10.reported) {
@@ -83,6 +101,73 @@ unsigned char analogReadMultiCn(void)
 	adcClose();
 	return analogInput10.reported;
 }
+
+#if ADC_AVERAGE
+/* the slim's 0x0105: the battery's measures, the application's (input.c and analog.c) read
+   polled, ANI7 and ANI8 eight times each on step 1, ANI9 on step 0, with P7.7 high */
+struct InputMeasure inputMeasure;
+
+/* one step of a run; the averages once the last run is in, then the gauge's update */
+void analogMeasureStep(void)
+{
+	unsigned char i;
+
+	P7.7 = 1;
+	for (i = 40; i != 0; i--)
+		NOP();
+	adcOpen();
+	switch (inputMeasure.step) {
+	case 1:
+		inputMeasure.sum[0] += adcRead(7, 8);
+		inputMeasure.count[0]++;
+		inputMeasure.sum[1] += adcRead(8, 8);
+		inputMeasure.count[1]++;
+		break;
+	case 0:
+		inputMeasure.sum[2] += adcRead(9, 8);
+		inputMeasure.count[2]++;
+		break;
+	}
+	adcClose();
+	P7.7 = 0;
+	if (inputMeasure.done && inputMeasure.step == 0) {
+		timerGetRtcTicks(&inputMeasure.ticks);
+		if (inputMeasure.count[0] != 0)
+			inputMeasure.average[0] = inputMeasure.sum[0] / inputMeasure.count[0];
+		if (inputMeasure.count[1] != 0)
+			inputMeasure.average[1] = inputMeasure.sum[1] / inputMeasure.count[1];
+		if (inputMeasure.count[2] != 0)
+			inputMeasure.average[2] = inputMeasure.sum[2] / inputMeasure.count[2];
+		inputMeasure.done = 0;
+		batteryUpdate();
+	}
+}
+
+/* the three averages at once (batteryPowerOn's measure) */
+void analogMeasureNow(void)
+{
+	unsigned char i;
+
+	P7.7 = 1;
+	for (i = 40; i != 0; i--)
+		NOP();
+	adcOpen();
+	inputMeasure.average[0] = adcRead(7, 8);
+	inputMeasure.average[1] = adcRead(8, 8);
+	inputMeasure.average[2] = adcRead(9, 8);
+	adcClose();
+	P7.7 = 0;
+}
+
+/* two functions nothing calls, each taking a 32-bit value (AX and BC) it does not read */
+void analogReserved0(unsigned long value)
+{
+}
+
+void analogReserved1(unsigned long value)
+{
+}
+#endif
 #else
 /* the level of the first of count levels whose limit the input reaches; 0xff if none */
 unsigned char analogLevelFind(unsigned char input, const struct AnalogLevel *levels,

@@ -10,6 +10,9 @@
 #include "authkeys.h"
 #include "board.h"
 
+#define AUTHKEYS_HANDSHAKE_FIRST	(!SOURCE_0103 || BOARD_DOL1001 || \
+				 ((defined(ERNIE_UPDATER)) && BOARD_USS1001 && SOURCE_0104))
+
 /* the keys object with the handshake's keys: the application's since 0x0100060B, the updater's
    since 0x0100060D (the same object) */
 #if !defined(ERNIE_UPDATER) || FW_SINCE(0x0100060D)
@@ -38,7 +41,8 @@ const unsigned char handshakeIv[16] = {
 };
 #endif
 
-#if AUTHKEYS_HANDSHAKE && (!SOURCE_0103 || BOARD_DOL1001)
+/* AUTHKEYS_HANDSHAKE_FIRST: the slim's 0x0105 updater has them before the serial keys too */
+#if AUTHKEYS_HANDSHAKE && AUTHKEYS_HANDSHAKE_FIRST
 #include "handshakekeys.h"
 #endif
 
@@ -165,7 +169,7 @@ const unsigned char serialKey2Second[16] = {
 };
 #endif
 
-#if AUTHKEYS_HANDSHAKE && SOURCE_0103 && !BOARD_DOL1001
+#if AUTHKEYS_HANDSHAKE && !AUTHKEYS_HANDSHAKE_FIRST
 #include "handshakekeys.h"
 #endif
 

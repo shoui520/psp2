@@ -22,6 +22,15 @@
 #include "timer.h"
 #include "updater.h"
 
+/* the slim's 0x0105: the reset asked of updater.c, the charge set up at the power on, Elmo's
+   register 0xaa bit 15 on at the resume and off at the off */
+#define POWER_0105	(BOARD_USS1001 && SOURCE_0104)
+#if POWER_0105
+#define POWER_UPD_RESET		updResetGet()
+#else
+#define POWER_UPD_RESET		updReset
+#endif
+
 /* an Elmo register read back at the power on, and where it goes */
 struct ElmoRegRead {
 	unsigned char	reg;
@@ -37,7 +46,9 @@ static const struct ElmoRegRead __far elmoRegRead[] = {
 	{ 0xa1, &elmoStatusMask.reg[1] },
 	{ 0xa2, &elmoStatusMask.reg[2] },
 	{ 0xa3, &elmoStatusMask.reg[3] },
+#if !POWER_0105	/* the slim's 0x0105: mask 4 not read back */
 	{ 0xa4, &elmoStatusMask.reg[4] },
+#endif
 	{ 0xa5, &elmoLed },
 	{ 0xa6, &elmoRegA6 },
 	{ 0xa7, &elmoRegA7 },
@@ -89,7 +100,8 @@ void powerInit(void)
 	EGN1.1 = 1;
 	IF2L.6 = 0;
 	MK2L.6 = 0;
-	if (updReset || chargeUsbState.0 != (!P7.5 ? 1 : 0) || chargeUsbState.7 || chargeUsbState.6)
+	if (POWER_UPD_RESET || chargeUsbState.0 != (!P7.5 ? 1 : 0) || chargeUsbState.7 ||
+	    chargeUsbState.6)
 		updEventSet(0x83);
 	return;
 #elif SOURCE_0103
@@ -120,6 +132,17 @@ POWER_INTERRUPT void intp8Interrupt(void)
 /* the devices read, and the Elmo's registers read back */
 void powerOn(void)
 {
+#if POWER_0105
+	unsigned char i;
+
+	powerWaitInit();
+	powerSeqOn();
+	chargeInit();
+	powerWaitStop();
+	powerSeqInit();
+	for (i = 0; i < 9; i++)
+		elmoRead(&elmoRegRead[i].reg, (unsigned char *)elmoRegRead[i].value);
+#else
 	unsigned char result;
 	unsigned int i;
 
@@ -129,9 +152,10 @@ void powerOn(void)
 	powerSeqInit();
 	for (i = 0; i < 10; i++)
 		result = elmoRead(&elmoRegRead[i].reg, (unsigned char *)elmoRegRead[i].value);
+#endif
 #if BOARD_USS1001
 	/* the slim's: the charge updated now unless a reset started the updater */
-	if (!updReset)
+	if (!POWER_UPD_RESET)
 		chargeUpdate();
 	timerStart(TIMER_RTC(0x17), 1);
 #elif SOURCE_0103
@@ -186,6 +210,9 @@ void powerCsiOpen(void)
    (P5.6 off, P5.7 on) too; then the host powered (P1.7) */
 void powerResume(unsigned char mode)
 {
+#if POWER_0105
+	powerRegAA15On();
+#endif
 	powerSeqResume();
 	if (mode == 1 || mode == 2) {
 		powerSdOn();
@@ -227,6 +254,9 @@ void powerOff(void)
 	powerBbmcOff();
 	powerSeqOff();
 	powerBbmcOn();
+#if POWER_0105
+	powerRegAA15Off();
+#endif
 	chargeUsbModeUpdate();
 	if (!chargeUsbState.7)
 		updEventSet(0x82);

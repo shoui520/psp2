@@ -191,7 +191,9 @@ extern void intp10Enable(unsigned char enable);
 extern void intp2Enable(unsigned char enable);
 extern void intp7Enable(unsigned char enable);
 #endif
+#ifndef ERNIE_UPDATER	/* the updater's stub (updater.h) */
 extern unsigned char input3Bit0High(void);
+#endif
 #if !FW_SINCE(0x01000104) || BOARD_INPUTS_102603
 extern void pinMonitor3Enable(unsigned char enable);
 #endif

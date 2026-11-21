@@ -220,4 +220,10 @@ extern unsigned char analogLatchIsSet(void);
 extern void analogLatchOn(void);
 extern void analogLatchOff(void);
 
+#if (defined(ERNIE_UPDATER)) && BOARD_USS1001 && SOURCE_0104
+/* the slim's 0x0105 updater (updater/analog.c): the battery's measures, polled */
+extern void analogMeasureStep(void);
+extern void analogMeasureNow(void);
+#endif
+
 #endif

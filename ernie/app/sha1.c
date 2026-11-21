@@ -18,8 +18,9 @@
  * English.
  */
 #include "ernie.h"
+#include "board.h"
 #include "sha1.h"
-#if defined(ERNIE_UPDATER) || !FW_SINCE(0x01000306)
+#if (defined(ERNIE_UPDATER) && !SOURCE_0103) || !FW_SINCE(0x01000306)
 #include "util.h"
 #endif
 
@@ -38,7 +39,7 @@ static const unsigned long K[] = {
 /* Local Function Prototypes */
 void SHA1PadMessage(SHA1Context __near *context);
 void SHA1ProcessMessageBlock(SHA1Context __near *context);
-#if defined(ERNIE_UPDATER) || !FW_SINCE(0x01000306)
+#if (defined(ERNIE_UPDATER) && !SOURCE_0103) || !FW_SINCE(0x01000306)
 void SHA1DebugDump(unsigned long a, unsigned long b, unsigned long c, unsigned long d,
 		   unsigned long e);
 #endif
@@ -180,7 +181,7 @@ void SHA1ProcessMessageBlock(SHA1Context __near *context)
 	context->Message_Block_Index = 0;
 }
 
-#if defined(ERNIE_UPDATER) || !FW_SINCE(0x01000306)
+#if (defined(ERNIE_UPDATER) && !SOURCE_0103) || !FW_SINCE(0x01000306)
 /* a word as big-endian hex, then a pause */
 #define SHA1DumpWord(word) \
 	do { \

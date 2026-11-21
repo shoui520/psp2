@@ -151,6 +151,10 @@ int hostCommand0006(void);
 int hostCommandAlarm(void);
 int hostCommand0015(void);
 int hostCommand0130(void);
+#if SOURCE_0104
+int hostCommand0131(void);
+int hostCommand0903(void);
+#endif
 int hostCommandSetClock(UPD_SLOW_PARAMS);
 int hostCommandSetAlarm(UPD_SLOW_PARAMS);
 int hostCommand01B0(UPD_SLOW_PARAMS);
@@ -240,8 +244,12 @@ struct HostSlowEntry {
 
 #if SOURCE_0103
 /* the PS TV's: the application's commands 0x0006, 0x0012, 0x0015, 0x0130, 0x0806, 0x0820-0x0822,
-   0x0081, 0x0082, 0x01b0, 0x0886 and 0x08c5 too */
+   0x0081, 0x0082, 0x01b0, 0x0886 and 0x08c5 too; the slim's 0x0105 0x0903 and 0x0131 */
+#if SOURCE_0104
+#define HOST_FAST_TABLE	27
+#else
 #define HOST_FAST_TABLE	25
+#endif
 #define HOST_SLOW_TABLE	45
 
 const struct HostFastEntry hostFastTable[HOST_FAST_TABLE] = {
@@ -265,11 +273,17 @@ const struct HostFastEntry hostFastTable[HOST_FAST_TABLE] = {
 	{ 0x0900, 1, hostCommandBatteryRemainCap },
 	{ 0x0901, 1, hostCommandBatteryVolt },
 	{ 0x0902, 1, hostCommandBatteryLifePercent },
+#if SOURCE_0104
+	{ 0x0903, 1, hostCommand0903 },
+#endif
 	{ 0x1100, 0, hostCommandErnieDlVersion },
 	{ 0x1101, 1, hostCommandUpdaterProgress },
 	{ 0x0100, 1, hostCommandControlsInfo },
 	{ 0x0103, 1, hostCommandMultiCnInfo },
 	{ 0x0130, 1, hostCommand0130 },
+#if SOURCE_0104
+	{ 0x0131, 0, hostCommand0131 },
+#endif
 };
 
 const struct HostSlowEntry hostSlowTable[HOST_SLOW_TABLE] = {
@@ -1101,8 +1115,13 @@ int hostCommandSleepFactor(void)
 int hostCommandRequests(void)
 {
 	struct HostAnswerFrame *answer;
+#if BOARD_USS1001 && SOURCE_0104	/* the slim's 0x0105: byte counters, as host.c's */
+	unsigned char i;
+	unsigned char n;
+#else
 	int i;
 	unsigned int n;
+#endif
 	unsigned int command;
 	unsigned long factor;
 
@@ -1327,6 +1346,20 @@ int hostCommand0130(void)
 	answer->data[2] = 0;
 #endif
 	answer->data[3] = 0;
+	answer->result = 0;
+	return 0;
+}
+#endif
+
+#if SOURCE_0104
+/* 0x0131: one zero byte (the application's, inputreq.c) */
+int hostCommand0131(void)
+{
+	struct HostAnswerFrame *answer;
+
+	answer = &hostTx;
+	answer->length = 3;
+	answer->data[0] = 0;
 	answer->result = 0;
 	return 0;
 }
@@ -1842,8 +1875,13 @@ int powerCtrlDeviceReset(struct HostCommandFrame *rx, struct HostSlowCommand *sl
 		UPD_LOG((" powerCtrlDeviceReset(%02X,%02X)\r\n", rx->data[0], rx->data[1]));
 #if BOARD_USS1001
 		/* the slim's lines */
+#if SOURCE_0104	/* 0x0105: none for bit 1 */
+		if (rx->data[1] & 0x02) {
+		}
+#else
 		if (rx->data[1] & 0x02)
 			P6.5 = rx->data[0];
+#endif
 		if (rx->data[1] & 0x04)
 			P4.2 = rx->data[0];
 		if (rx->data[1] & 0x08)
@@ -1928,6 +1966,11 @@ int ctrlVoltage(struct HostCommandFrame *rx, struct HostSlowCommand *slow)
 				trim = configGet()->resumeTrim;
 #else
 			trim = configGet()->voltageTrim;
+#if BOARD_USS1001 && SOURCE_0104
+			/* the slim's 0x0105: DD4 one step above it */
+			if (regulator == 0x84)
+				trim++;
+#endif
 #endif
 			level = levelTrim(rx->data[1], trim);
 			UPD_LOG(("[pwr] Er->El %02x\r\n", level));
@@ -2091,8 +2134,8 @@ int powerCtrlLED(struct HostCommandFrame *rx, struct HostSlowCommand *slow)
 
 #if SOURCE_0103
 /* 0x0886: HDMI CEC's power, data[0] on or off */
-#if CHIP_RL78
-/* the slim's: taken, nothing set */
+#if CHIP_RL78 && !SOURCE_0104
+/* the slim's 0x0103: taken, nothing set */
 int hostCommandCtrlHdmiCecPower(struct HostCommandFrame *rx, struct HostSlowCommand *slow)
 {
 	unsigned char __near *data;
@@ -2227,9 +2270,20 @@ int hostCommandCtrlChargeLed(struct HostCommandFrame *rx, struct HostSlowCommand
 int hostCommandPowerStatus(void)
 {
 	struct HostAnswerFrame *answer;
+#if BOARD_USS1001 && SOURCE_0104
+	union PowerStatus status;
+#endif
 
 	answer = &hostTx;
-#if SOURCE_0103
+#if BOARD_USS1001 && SOURCE_0104
+	/* the slim's 0x0105: from a copy */
+	status.value = powerStatus.value;
+	answer->length = 6;
+	answer->data[0] = status.byte[0];
+	answer->data[1] = status.byte[1];
+	answer->data[2] = status.byte[2];
+	answer->data[3] = status.byte[3];
+#elif SOURCE_0103
 	answer->length = 6;		/* the PS TV's: four bytes */
 	answer->data[0] = powerStatus.byte[0];
 	answer->data[1] = powerStatus.byte[1];
@@ -2392,15 +2446,36 @@ int hostCommandBatteryLifePercent(void)
 	return 0;
 }
 
+#if SOURCE_0104
+/* 0x0903: the battery temperature's settings in force (the application's, powerreq.c) */
+int hostCommand0903(void)
+{
+	struct HostAnswerFrame *answer;
+
+	answer = &hostTx;
+	answer->length = 4;
+	answer->data[0] = chargeCommand0903[0];
+	answer->data[1] = chargeCommand0903[1];
+	answer->result = 0;
+	return 0;
+}
+#endif
+
 /* 0x0982: the battery's register 0x3c */
 int hostCommandBatteryGetFullCap(struct HostCommandFrame *rx, struct HostSlowCommand *slow)
 {
+#if !(BOARD_USS1001 && SOURCE_0104)
 	static const unsigned char reg = 0x3c;
+#endif
 	unsigned char error;
 
 	slow->answer.length = 4;
 	if (rx->length == 1) {
+#if BOARD_USS1001 && SOURCE_0104	/* the slim's 0x0105: battery.c's reader */
+		error = batteryReadFullCap((unsigned int *)slow->answer.data);
+#else
 		error = batteryRead((unsigned char *)&reg, slow->answer.data, 2);
+#endif
 		slow->answer.result = batteryResult(error);
 	} else
 		slow->answer.result = 0x3b;
@@ -2410,12 +2485,18 @@ int hostCommandBatteryGetFullCap(struct HostCommandFrame *rx, struct HostSlowCom
 /* 0x098a: the battery's register 0x12 */
 int hostCommandBatteryGetFullCap2(struct HostCommandFrame *rx, struct HostSlowCommand *slow)
 {
+#if !(BOARD_USS1001 && SOURCE_0104)
 	static const unsigned char reg = 0x12;
+#endif
 	unsigned char error;
 
 	slow->answer.length = 4;
 	if (rx->length == 1) {
+#if BOARD_USS1001 && SOURCE_0104	/* the slim's 0x0105: battery.c's reader */
+		error = batteryReadFullCap2((unsigned int *)slow->answer.data);
+#else
 		error = batteryRead((unsigned char *)&reg, slow->answer.data, 2);
+#endif
 		slow->answer.result = batteryResult(error);
 	} else
 		slow->answer.result = 0x3b;
@@ -2744,7 +2825,11 @@ int flSetSegment(unsigned char segment)
 		return FL_SEGMENT_ERROR;
 	if (segment < 4)
 		segment += 4;
+#if SOURCE_0104	/* 0x0105: from 0xd5 on */
+	if (segment >= 0xd5)
+#else
 	if (segment >= 0xfe)
+#endif
 		updSegment = (unsigned int)segment + 0x80;
 	else
 		updSegment = segment;

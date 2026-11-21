@@ -26,72 +26,68 @@ struct VersionFlags {
 };
 
 /* Subversion's $Date$ of each build, and the version it gives */
-#if defined(ERNIE_UPDATER) && !SOURCE_0103	/* the PS TV's updater gives its own */
-#define APP_VERSION	0x00090800
-#else
-#define APP_VERSION	ERNIE_FW
-#endif
+#define APP_VERSION	APP_FW
 
 /* The source-control timestamp stored in each supported firmware patch. */
-#if ERNIE_FW == 0x00080003
+#if APP_FW == 0x00080003
 #define APP_TIME_STAMP	"$Date:: 2010-07-13 23:53:42 +0900#$"
-#elif ERNIE_FW == 0x00080302
+#elif APP_FW == 0x00080302
 #define APP_TIME_STAMP	"$Date:: 2010-08-31 20:58:01 +0900#$"
-#elif ERNIE_FW == 0x00080307
+#elif APP_FW == 0x00080307
 #define APP_TIME_STAMP	"$Date:: 2010-10-05 12:24:46 +0900#$"
-#elif ERNIE_FW == 0x00080502
+#elif APP_FW == 0x00080502
 #define APP_TIME_STAMP	"$Date:: 2010-11-12 20:53:51 +0900#$"
-#elif ERNIE_FW == 0x00080504
+#elif APP_FW == 0x00080504
 #define APP_TIME_STAMP	"$Date:: 2010-11-30 19:50:00 +0900#$"
-#elif ERNIE_FW == 0x00090006
+#elif APP_FW == 0x00090006
 #define APP_TIME_STAMP	"$Date:: 2011-01-18 10:45:54 +0900#$"
-#elif ERNIE_FW == 0x00090007
+#elif APP_FW == 0x00090007
 #define APP_TIME_STAMP	"$Date:: 2011-01-24 15:58:12 +0900#$"
-#elif ERNIE_FW == 0x00090009
+#elif APP_FW == 0x00090009
 #define APP_TIME_STAMP	"$Date:: 2011-02-14 18:18:16 +0900#$"
-#elif ERNIE_FW == 0x00090203
+#elif APP_FW == 0x00090203
 #define APP_TIME_STAMP	"$Date:: 2011-03-07 11:46:37 +0900#$"
-#elif ERNIE_FW == 0x00090204
+#elif APP_FW == 0x00090204
 #define APP_TIME_STAMP	"$Date:: 2011-03-09 18:36:33 +0900#$"
-#elif ERNIE_FW == 0x00090206
+#elif APP_FW == 0x00090206
 #define APP_TIME_STAMP	"$Date:: 2011-03-24 18:14:50 +0900#$"
-#elif ERNIE_FW == 0x00090502
+#elif APP_FW == 0x00090502
 #define APP_TIME_STAMP	"$Date:: 2011-04-21 21:34:42 +0900#$"
-#elif ERNIE_FW == 0x00090804
+#elif APP_FW == 0x00090804
 #define APP_TIME_STAMP	"$Date:: 2011-05-23 17:11:08 +0900#$"
-#elif ERNIE_FW == 0x00090903
+#elif APP_FW == 0x00090903
 #define APP_TIME_STAMP	"$Date:: 2011-07-05 22:09:22 +0900#$"
-#elif ERNIE_FW == 0x01000104
-#define APP_TIME_STAMP	"$Date:: 2011-08-29 21:22:43 +0900#$"
-#elif ERNIE_FW == 0x01000107
-#define APP_TIME_STAMP	"$Date:: 2011-09-08 07:34:21 +0900#$"
-#elif ERNIE_FW == 0x01000109
-#define APP_TIME_STAMP	"$Date:: 2011-09-26 17:55:05 +0900#$"
-#elif ERNIE_FW == 0x0100010A
-#define APP_TIME_STAMP	"$Date:: 2011-10-20 14:16:06 +0900#$"
-#elif ERNIE_FW == 0x0100010B
-#define APP_TIME_STAMP	"$Date:: 2011-11-29 17:21:05 +0900#$"
-#elif ERNIE_FW == 0x01000306
-#ifdef ERNIE_UPDATER
+#elif APP_FW == 0x00090800
 #define APP_TIME_STAMP	"$Date:: 2011-05-13 13:18:11 +0900#$"
-#else
+#elif APP_FW == 0x01000104
+#define APP_TIME_STAMP	"$Date:: 2011-08-29 21:22:43 +0900#$"
+#elif APP_FW == 0x01000107
+#define APP_TIME_STAMP	"$Date:: 2011-09-08 07:34:21 +0900#$"
+#elif APP_FW == 0x01000109
+#define APP_TIME_STAMP	"$Date:: 2011-09-26 17:55:05 +0900#$"
+#elif APP_FW == 0x0100010A
+#define APP_TIME_STAMP	"$Date:: 2011-10-20 14:16:06 +0900#$"
+#elif APP_FW == 0x0100010B
+#define APP_TIME_STAMP	"$Date:: 2011-11-29 17:21:05 +0900#$"
+#elif APP_FW == 0x01000306
 #define APP_TIME_STAMP	"$Date:: 2012-01-26 14:43:38 +0900#$"
-#endif
-#elif ERNIE_FW == 0x0100060B
+#elif APP_FW == 0x0100060B
 #define APP_TIME_STAMP	"$Date:: 2012-07-31 22:13:45 +0900#$"
-#elif ERNIE_FW == 0x0100060D
+#elif APP_FW == 0x0100060D
 #define APP_TIME_STAMP	"$Date:: 2012-11-08 17:04:38 +0900#$"
-#elif ERNIE_FW == 0x01030505
+#elif APP_FW == 0x01030505
 #define APP_TIME_STAMP	"$Date:: 2013-06-04 15:50:28 +0900#$"
-#elif ERNIE_FW == 0x01030511
+#elif APP_FW == 0x01030511
 #define APP_TIME_STAMP	"$Date:: 2013-12-13 15:52:05 +0900#$"
-#elif ERNIE_FW == 0x01030603
+#elif APP_FW == 0x01030603
 #define APP_TIME_STAMP	"$Date:: 2013-06-04 19:00:23 +0900#$"
-#elif ERNIE_FW == 0x01040301
+#elif APP_FW == 0x01040301
 #define APP_TIME_STAMP	"$Date:: 2014-07-01 14:30:57 +0900#$"
-#elif ERNIE_FW == 0x01050031
+#elif APP_FW == 0x01050030
+#define APP_TIME_STAMP	"$Date:: 2015-02-19 15:40:52 +0900#$"
+#elif APP_FW == 0x01050031
 #define APP_TIME_STAMP	"$Date:: 2015-03-02 17:31:33 +0900#$"
-#elif ERNIE_FW == 0x01050034
+#elif APP_FW == 0x01050034
 #define APP_TIME_STAMP	"$Date:: 2015-03-30 16:51:49 +0900#$"
 #else
 #error Unknown Ernie firmware timestamp
@@ -112,6 +108,10 @@ const char * const appTimeStamp = timeStamp;
 static const unsigned char hardwareInfo2[16] = { 0x00, 0x01 };
 /* the layout of the log's records (app/log.c) */
 const unsigned int logVersion = 0x14;
+#elif BOARD_USS1001 && SOURCE_0104
+static const unsigned char hardwareInfo2[16] = { 0x47, 0x02 };
+/* the layout of the log's records (app/log.c) */
+const unsigned int logVersion = 0x21;
 #elif BOARD_DOL1001
 static const unsigned char hardwareInfo2[16] = { 0x00 };
 /* the layout of the log's records (app/log.c) */

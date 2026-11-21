@@ -358,6 +358,85 @@ out:
 }
 #else
 #if BATTERY_GAUGE
+#ifdef ERNIE_UPDATER
+extern unsigned char updResetGet(void);	/* updater.c's */
+
+/* USS-1002's 0x0105 updater: the versions, the Elmo's and the Cookie's registers set up (the
+   Cookie's register 3 bit 2 cleared after a reset only), the gauge powered on after a reset
+   or its record and offsets loaded, the battery's information read once; the watchdog
+   restarted before the charge goes back on */
+void powerSeqOn(void)
+{
+	unsigned char i;
+	unsigned char unused;		/* the application's locals, unused: Sony's frame keeps them */
+	union CookieStatus1 status;
+	union CookieStatus2 status2;
+
+	deviceVersions.cookie[1] = 0;
+	deviceVersions.cookie[0] = 0;
+	deviceVersions.elmo[1] = 0;
+	deviceVersions.elmo[0] = 0;
+	deviceVersions.battery.version[4] = 0;
+	deviceVersions.battery.version[3] = 0;
+	deviceVersions.battery.version[2] = 0;
+	deviceVersions.battery.version[1] = 0;
+	deviceVersions.battery.version[0] = 0;
+	deviceVersions.battery.id = 0;
+	elmoInit();
+	cookieInit();
+	if (updResetGet())
+		batteryInit();
+	if (iicaInit()) {
+		deviceVersions.elmo[1] = 0xff;
+		deviceVersions.elmo[0] = 0xff;
+		deviceVersions.cookie[1] = 0xff;
+		deviceVersions.cookie[0] = 0xff;
+		deviceVersions.battery.id = deviceVersions.battery.version[0] =
+			deviceVersions.battery.version[1] = deviceVersions.battery.version[2] =
+			deviceVersions.battery.version[3] = deviceVersions.battery.version[4] = 0xffff;
+	} else {
+		for (i = 0; i < 3; i++) {
+			if (!elmoReadVersion(deviceVersions.elmo)) {
+				elmoInitRegs();
+				break;
+			}
+			if (i == 2) {
+				deviceVersions.elmo[1] = 0xff;
+				deviceVersions.elmo[0] = 0xff;
+			}
+		}
+		for (i = 0; i < 3; i++) {
+			if (!cookieReadVersion(deviceVersions.cookie)) {
+				cookieInitRegs();
+				if (updResetGet())
+					cookieCtrlReg3Bit2(0);
+				break;
+			}
+			if (i == 2) {
+				deviceVersions.cookie[1] = 0xff;
+				deviceVersions.cookie[0] = 0xff;
+				deviceVersions.battery.id = deviceVersions.battery.version[0] =
+					deviceVersions.battery.version[1] =
+					deviceVersions.battery.version[2] =
+					deviceVersions.battery.version[3] =
+					deviceVersions.battery.version[4] = 0xffff;
+			}
+		}
+		if (updResetGet()) {
+			batteryPowerOn();
+		} else {
+			batteryLoadRecord();
+			batteryLoadOffsets();
+		}
+	}
+	if (deviceVersions.cookie[0] == 0x80)
+		batteryReadInfo(&deviceVersions.battery.id);
+	else if (deviceVersions.cookie[0] == 0)
+		batteryReadInfo(&deviceVersions.battery.id);
+	WDTE = 0xac;
+	cookieUpdateBatteryCharge(1);
+}
+#else
 /* USS-1002's 0x0105: the versions (0xff and 0xffff where the third try failed), the gauge on;
    the battery's information read once, its faults logged (event log kind 5, codes 0x10 and
    0x11) */
@@ -443,6 +522,7 @@ void powerSeqOn(void)
 	}
 	cookieUpdateBatteryCharge(1);
 }
+#endif
 #else
 /* the versions and the battery's identity (0xff and 0xffff where none answered); the battery's
    faults logged (event log kind 5, codes 0x10 and 0x11) */
@@ -1770,7 +1850,8 @@ void powerGetCutRegs(unsigned char *regs)
 }
 #endif
 
-#if BOARD_DOL1002 || BOARD_USS1001 && SOURCE_0104
+#if (BOARD_DOL1002 || BOARD_USS1001 && SOURCE_0104) && !(defined(ERNIE_UPDATER))
+/* (the updater's 0x088f is its own, command.c) */
 /* 0x088f's work (powerRequestCtrlDeviceReset's before 0x0104): devices' lines held in reset
    (hold 1) or let go; DOL-1001's: the dummy byte, then P13.1 */
 void powerCtrlDeviceReset(unsigned char hold, unsigned char devices)

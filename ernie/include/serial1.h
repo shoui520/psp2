@@ -69,7 +69,7 @@ extern unsigned char serial1BufferWrite(unsigned char offset, unsigned char size
 #if FW_SINCE(0x00090903)
 extern unsigned char serial1BufferClear(void);
 #endif
-#if TASK_FLAG_SETTERS
+#if TASK_FLAG_SETTERS && !(defined(ERNIE_UPDATER))	/* the slim's 0x0105 updater's returns nothing */
 extern ER serial1InputHandler(void);	/* the setter's result, unused */
 #define SERIAL1_INPUT_HANDLER	((void (*)(void))serial1InputHandler)
 #else

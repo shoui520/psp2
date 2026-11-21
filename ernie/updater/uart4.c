@@ -235,10 +235,18 @@ UART4_INTERRUPT void uart4ReceiveInterrupt(void)
 	if ((uart4.rxWrite + 1 & uart4.rxMask) != uart4.rxRead) {
 		uart4.rxBuffer[uart4.rxWrite] = data;
 		uart4.rxWrite = uart4.rxWrite + 1 & uart4.rxMask;
+#if BOARD_USS1001 && SOURCE_0104	/* the slim's 0x0105 asks serial.c */
+		if (serialGetMode() == 3) {
+#else
 		if (serial.mode == 3) {
+#endif
 			if (p->timeout.flgid != 0)
 				timerStart(p->timeout.timer, p->timeout.timeout);
+#if BOARD_USS1001 && SOURCE_0104
+		} else if (serialGetMode() == 1)
+#else
 		} else
+#endif
 			timerStart(SERIAL_TIMER, 2);
 	}
 }
@@ -251,7 +259,11 @@ UART4_INTERRUPT void uart4SendInterrupt(void)
 	if (p->txWrite - p->txRead & p->txMask) {
 		SDR20 = p->txBuffer[p->txRead];
 		p->txRead = p->txRead + 1 & p->txMask;
+#if BOARD_USS1001 && SOURCE_0104	/* the slim's 0x0105: in mode 1 only */
+	} else if (serialGetMode() == 1)
+#else
 	} else
+#endif
 		updEventSet(0x33);
 }
 #else

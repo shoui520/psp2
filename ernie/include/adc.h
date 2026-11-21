@@ -60,7 +60,9 @@ extern __near unsigned int adcResults[ADC_CHANNELS];	/* channel 15 first (the sl
 
 extern void adcOpen(void);
 extern void adcClose(void);
-#ifdef ERNIE_UPDATER
+#if (defined(ERNIE_UPDATER)) && ADC_AVERAGE
+extern unsigned int adcRead(unsigned int channel, unsigned char count);
+#elif defined(ERNIE_UPDATER)
 extern unsigned int adcRead(unsigned int channel);
 #endif
 #if ADC_AVERAGE

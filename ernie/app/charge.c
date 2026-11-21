@@ -683,9 +683,15 @@ void chargeUpdate(void)
 #if BATTERY_GAUGE
 		/* USS-1002: sleep factors 29 and 28 for a battery too low to start (with a USB charger:
 		   either), and the battery's bars for host command 0x0903 */
+#ifdef ERNIE_UPDATER	/* the slim's 0x0105 updater */
+		chargeFactors.bits.factor29 = chargeBatteryReady() ? 0 : 1;
+		sleepFactorSet29(chargeFactors.bits.factor29);
+		chargeFactors.bits.factor28 = chargeBatteryReadyUsb() ? 0 : 1;
+#else
 		chargeFactors.bits.factor29 = (chargeBatteryReady() == 0);
 		sleepFactorSet29(chargeFactors.bits.factor29);
 		chargeFactors.bits.factor28 = (chargeBatteryReadyUsb() == 0);
+#endif
 		sleepFactorSet28(chargeFactors.bits.factor28);
 		chargeGetBatteryBars((struct ChargeBatteryBars *)chargeCommand0903);
 #endif
@@ -2415,10 +2421,16 @@ void chargeTimerSet(unsigned char on)
 {
 	if (on) {
 		timerStart(TIMER_RTC(0x17), charge.acDelay);
+#ifdef ERNIE_UPDATER	/* the slim's 0x0105 updater: its event */
+		updEventSet(0x82);
+#else
 		task5SetFlag(4, 0x20);
+#endif
 	} else {
 		timerStop(TIMER_RTC(0x17));
+#ifndef ERNIE_UPDATER	/* the updater has no event flags */
 		clr_flg(4, ~0x0020);
+#endif
 	}
 }
 #else
@@ -2690,6 +2702,9 @@ unsigned char chargeSetManualMode(unsigned char on)
    the charge again (event 0x20); 0 */
 unsigned char chargeSetSerialMode(unsigned char mode)
 {
+#ifdef ERNIE_UPDATER	/* the slim's 0x0105 updater: none */
+	return 0;
+#else
 	if (chargeSerialMode != mode) {
 		chargeSerialMode = mode;
 		chargeStatus1Last.word = 0;
@@ -2697,6 +2712,7 @@ unsigned char chargeSetSerialMode(unsigned char mode)
 		task5SetFlag(4, 0x20);
 	}
 	return 0;
+#endif
 }
 #endif
 

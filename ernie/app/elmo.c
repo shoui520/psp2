@@ -61,7 +61,7 @@ static const struct ElmoRegInit elmoRegInit[] = {
 	{ 0xa1, &elmoStatusMask.reg[1], 0 },
 	{ 0xa2, &elmoStatusMask.reg[2], 0 },
 	{ 0xa3, &elmoStatusMask.reg[3], 0 },
-#if !BOARD_DOL1002
+#if !ELMO_GATED	/* DOL-1002 and USS-1002's 0x0105: mask 4 not set up */
 	{ 0xa4, &elmoStatusMask.reg[4], 0 },
 #endif
 	{ 0xa5, &elmoLed, 0 },
@@ -101,7 +101,10 @@ void elmoInit(void)
 /* the PS TV's updater: after a reset written with their initial values, else read back */
 void elmoInitRegs(void)
 {
-#if BOARD_USS1001
+#if BOARD_USS1001 && SOURCE_0104
+	unsigned char i;
+	unsigned char command[3];
+#elif BOARD_USS1001
 	unsigned int i;
 	unsigned char command[3];
 #else
@@ -109,17 +112,26 @@ void elmoInitRegs(void)
 	unsigned int i;
 #endif
 
+#if BOARD_USS1001 && SOURCE_0104
+	/* the slim's 0x0105: the reset asked of updater.c, the registers on the bus directly */
+	if (updResetGet()) {
+#else
 	if (updReset != 0) {
+#endif
 		for (i = 0; i < ELMO_TABLE_COUNT; i++) {
 			command[0] = elmoRegInit[i].reg;
 			command[1] = elmoRegInit[i].initial >> 8;
+#if ELMO_GATED
+			command[2] = *(const unsigned char __far *)&elmoRegInit[i].initial;
+#else
 			command[2] = elmoRegInit[i].initial;
-			if (elmoWrite(command, 3) == 0)
+#endif
+			if (elmoInitWrite(command, 3) == 0)
 				*elmoRegInit[i].value = elmoRegInit[i].initial;
 		}
 	} else {
 		for (i = 0; i < ELMO_TABLE_COUNT; i++)
-			elmoRead((unsigned char *)&elmoRegInit[i].reg,
+			elmoVersionRead((unsigned char *)&elmoRegInit[i].reg,
 				 (unsigned char *)elmoRegInit[i].value);
 	}
 }
@@ -218,8 +230,10 @@ unsigned char elmoWrite(unsigned char *data, unsigned char length)
 	struct IicaRequest request;
 	unsigned char status;
 
+#if !ELMO_GATED
 	if (deviceVersions.elmo[0] == 0xff)
 		return 0;
+#endif
 	request.rxData = NULL;
 	request.rxCount = 0;
 	request.txData = data;
@@ -227,6 +241,11 @@ unsigned char elmoWrite(unsigned char *data, unsigned char length)
 	request.address = ELMO_ADDRESS;
 	request.status = &status;
 	iicaTransfer(&request);
+#if ELMO_GATED
+	if (status != 0) {
+		/* the application's events 0x21 and 0x22: none in the updater */
+	}
+#endif
 	return status;
 }
 #else
@@ -294,11 +313,13 @@ unsigned char elmoRead(unsigned char *reg, unsigned char *value)
 	struct IicaRequest request;
 	unsigned char status;
 
+#if !ELMO_GATED
 	if (deviceVersions.elmo[0] == 0xff) {
 		*value++ = 0;
 		*value = 0;
 		return 0;
 	}
+#endif
 	request.rxData = value;
 	request.rxCount = 2;
 	request.txData = reg;
@@ -306,6 +327,11 @@ unsigned char elmoRead(unsigned char *reg, unsigned char *value)
 	request.address = ELMO_ADDRESS;
 	request.status = &status;
 	iicaTransfer(&request);
+#if ELMO_GATED
+	if (status != 0) {
+		/* the application's events 0x21 and 0x22: none in the updater */
+	}
+#endif
 	return status;
 }
 #else

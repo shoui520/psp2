@@ -49,6 +49,9 @@ struct BatteryInfoWords {
 #include "sleepfactor.h"
 #include "state.h"
 #include "timer.h"
+#ifdef ERNIE_UPDATER
+#include "nvs.h"
+#endif
 
 /* the gauge's record in the NVS */
 #define BATTERY_RECORD_OFFSET	0xbc
@@ -139,7 +142,9 @@ static const unsigned int batteryOcvRest[101] = {
 	4159
 };
 
+#ifndef ERNIE_UPDATER	/* the updater's powerSeqOn loads it (powerseq.c) */
 static unsigned char batteryLoadRecord(void);
+#endif
 static void batteryRecordSaved(unsigned char command, unsigned char result);
 static void batteryRecordLoaded(unsigned char command, unsigned char result);
 static unsigned int batteryVolt(unsigned int raw);
@@ -174,6 +179,21 @@ void batteryInit(void)
 	return;
 }
 
+#ifdef ERNIE_UPDATER
+/* the updater's power-on: the record and the offsets, the averages measured at once with the
+   charge stopped, the first update, then register 0xaa bit 15 off */
+void batteryPowerOn(void)
+{
+	batteryLoadRecord();
+	batteryLoadOffsets();
+	cookieUpdateBatteryCharge(0);
+	powerWaitLong(13);
+	analogMeasureNow();
+	batteryUpdate();
+	P14.4 = 1;
+	powerRegAA15Off();
+}
+#else
 /* at the power-on: the record and the offsets, one measure with the charge stopped, the first
    update, then register 0xaa bit 15 off */
 void batteryPowerOn(void)
@@ -269,6 +289,7 @@ done:
 	inputMeasure.only5 = 1;
 	return result;
 }
+#endif
 
 /* the settings' offsets (0x7fff none), each used where it is in range */
 void batteryLoadOffsets(void)
@@ -329,6 +350,17 @@ void batteryUpdate(void)
 	batteryInfoRead();
 }
 
+#ifdef ERNIE_UPDATER
+/* the updater's: written directly */
+unsigned char batterySaveRecord(void)
+{
+	unsigned char result;
+
+	result = nvsWrite(BATTERY_RECORD_OFFSET, sizeof(batteryGauge.record),
+			  (unsigned char *)&batteryGauge.record, 1);
+	return result;
+}
+#else
 unsigned char batterySaveRecord(void)
 {
 	unsigned char result;
@@ -339,12 +371,24 @@ unsigned char batterySaveRecord(void)
 		return result;
 	return batterySaveResult;
 }
+#endif
 
 static void batteryRecordSaved(unsigned char command, unsigned char result)
 {
 	batterySaveResult = result;
 }
 
+#ifdef ERNIE_UPDATER
+/* the updater's: read directly */
+unsigned char batteryLoadRecord(void)
+{
+	unsigned char result;
+
+	result = nvsRead(BATTERY_RECORD_OFFSET, sizeof(batteryGauge.record),
+			 (unsigned char *)&batteryGauge.record, 1);
+	return result;
+}
+#else
 static unsigned char batteryLoadRecord(void)
 {
 	unsigned char result;
@@ -355,6 +399,7 @@ static unsigned char batteryLoadRecord(void)
 		return result;
 	return batteryLoadResult;
 }
+#endif
 
 unsigned char batteryIsCharging(void)
 {
@@ -454,6 +499,7 @@ static unsigned char batteryBand(void)
 	return band;
 }
 
+#ifndef ERNIE_UPDATER	/* the updater's: no resume, no calibration */
 /* at the resume: the rest ends (woken 0: it starts) */
 void batteryResume(int woken)
 {
@@ -477,6 +523,8 @@ void batteryGetOffsets(struct BatteryOffsets *offsets)
 	offsets->volt = batteryGauge.voltOffset;
 	offsets->current = batteryGauge.currentOffset;
 }
+
+#endif
 
 /* 0x0904's: the offsets used and the settings' */
 void batteryGetCalibration(struct BatteryCalibration *calibration)
@@ -531,6 +579,7 @@ static void batteryChargeFromRest(void)
 				10000));
 }
 
+#ifndef ERNIE_UPDATER
 /* the charge from the open circuit's voltage */
 void batteryChargeFromLoad(void)
 {
@@ -538,6 +587,7 @@ void batteryChargeFromLoad(void)
 	batterySetCharge(-(int)((unsigned long)batteryGauge.capacity * (10000 - batteryGauge.socVolt) /
 				10000));
 }
+#endif
 
 static void batteryEstimate(void)
 {
@@ -703,6 +753,11 @@ static void batteryShownReset(void)
 /* discharging: the shown state of charge only down, and only after two updates below it */
 static void batteryShownUpdate(void)
 {
+#ifdef ERNIE_UPDATER
+	/* the updater's: none shown yet (0xffff), the state of charge at once */
+	if (batteryGauge.socShown == 0xffff)
+		batteryGauge.socShown = batteryGauge.soc;
+#endif
 	if (batteryGauge.soc < batteryGauge.socShown && batteryGauge.socBefore < batteryGauge.socShown)
 		batteryGauge.socShown = batteryGauge.soc;
 	batteryGauge.lifePercent = (batteryGauge.socShown + 50) / 100;
@@ -924,6 +979,7 @@ unsigned char batteryReadFlags(unsigned int *value)
 	return 0;
 }
 
+#ifndef ERNIE_UPDATER	/* the updater's: none of the bootloader line's, nor the faults' */
 /* 0x08b0: the bootloader line, now only recorded */
 void batteryBLLineOn(void)
 {
@@ -981,6 +1037,7 @@ void batteryGetFaults(unsigned char *faults)
 {
 	memcpy(faults, batteryFaults.byte, sizeof(batteryFaults));
 }
+#endif
 #else
 
 /* the battery's address on the I2C bus: the Cookie's where the settings move it (DOL-1001 moves

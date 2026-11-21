@@ -83,9 +83,16 @@ union UpdEvents {
 		unsigned int	reserved2:1;
 #endif
 		unsigned int	event97:1;
+#if BOARD_USS1001 && SOURCE_0104
+		unsigned int	event98:1;	/* the slim's 0x0105: the measure tick */
+#endif
 		unsigned int	event17:1;
 		unsigned int	event18:1;
+#if BOARD_USS1001 && SOURCE_0104
+		unsigned int	reserved3:1;
+#else
 		unsigned int	reserved3:2;
+#endif
 #else
 		unsigned int	reserved:8;
 #endif
@@ -97,6 +104,9 @@ extern unsigned char updReset;
 #if SOURCE_0103
 extern unsigned char updImageChecked;
 extern void updaterGetStatus(unsigned char *out);
+#if BOARD_USS1001 && SOURCE_0104
+extern unsigned char updResetGet(void);
+#endif
 #endif
 extern unsigned char updVersion[4];
 extern char updBuild[12];
@@ -123,6 +133,9 @@ extern unsigned char updMultiCn;	/* what is on the multi connector (analogReadMu
 extern int multiCnCheck(void);
 #endif
 extern int multiCnChanged(void);
+#if BOARD_USS1001 && SOURCE_0104
+extern int inputMeasurePoll(void);
+#endif
 extern int p77Changed(void);
 
 /* the host link (host.c) */
@@ -213,7 +226,11 @@ extern int hostClose(void);
 extern unsigned char hostPoll(void);
 /* the serial links' timers (uart4.c and serialevent.c's, uart.c and serial.c's): the PS TV's
    two below the others' */
-#if SOURCE_0103
+#if BOARD_USS1001 && SOURCE_0104
+/* the slim's 0x0105: three below the PS TV's */
+#define SERIAL4_TIMER		0x0a
+#define SERIAL_TIMER		0x0b
+#elif SOURCE_0103
 #define SERIAL4_TIMER		0x0d
 #define SERIAL_TIMER		0x0e
 #else

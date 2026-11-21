@@ -112,7 +112,36 @@ void adcClose(void)
 	ADCEN = 0;
 }
 
-#ifdef ERNIE_UPDATER
+#if (defined(ERNIE_UPDATER)) && ADC_AVERAGE
+/* the slim's 0x0105 updater: one conversion thrown away, then the average of count more (0:
+   none, 0) */
+unsigned int adcRead(unsigned int channel, unsigned char count)
+{
+	unsigned long sum;
+	unsigned char left;
+
+	sum = 0;
+	left = count;
+	if (count == 0)
+		return 0;
+	ADIF = 0;
+	ADS = channel;
+	ADCS = 1;
+	while (!ADIF)
+		;
+	while (left-- != 0) {
+		ADCS = 0;
+		ADIF = 0;
+		ADCS = 1;
+		while (!ADIF)
+			;
+		sum += ADCR;
+	}
+	ADCS = 0;
+	ADIF = 0;
+	return sum / count;
+}
+#elif defined(ERNIE_UPDATER)
 /* converts a channel twice and gives the second conversion (ADCR) */
 unsigned int adcRead(unsigned int channel)
 {
