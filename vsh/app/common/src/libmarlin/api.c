@@ -4,6 +4,7 @@
  */
 #include <pfsmgr/pfsmgr.h>
 #include <appmgr/appmgr.h>
+#include <kernel/openpsid.h>
 #include "mln_internal.h"
 
 /* the result codes of the interface */
@@ -461,7 +462,7 @@ int SceMarlin_49752AFE(void *a0, void *a1)
 	return MlnImpl_81016270(a0, a1);
 }
 
-int SceMarlin_92A6A48F(void *a0, void *a1, void *a2)
+__attribute__((noinline)) int SceMarlin_92A6A48F(void *a0, void *a1, void *a2)
 {
 	return MlnImpl_810162F4(a0, a1, a2);
 }
@@ -471,7 +472,7 @@ int SceMarlin_F450D554(void *a0, void *a1, void *a2)
 	return MlnImpl_8101632C(a0, a1, a2);
 }
 
-int SceMarlin_A2E65A7E(void *a0, void *a1, void *a2)
+__attribute__((noinline)) int SceMarlin_A2E65A7E(void *a0, void *a1, void *a2)
 {
 	return MlnImpl_81016364(a0, a1, a2);
 }
@@ -911,14 +912,21 @@ __attribute__((noinline)) int MlnApi_8100370C(MlnApiObject *object, int status, 
 	return MlnImpl_81020094(object->session, status, value, request, report, response);
 }
 
-__attribute__((noinline)) int MlnApi_810037B0(void *a0, MlnApiInfo *info)
+/* a time in minutes as a date */
+__attribute__((noinline)) int MlnApi_810037B0(const int *minutes, MlnApiDate *date)
 {
-	MlnApiInfo found;
+	MlnDateTime time;
 
-	if (MlnImpl_810072B0(a0, &found) != MLN_OK)
+	if (MlnImpl_810072B0(minutes, &time) != MLN_OK)
 		return MLN_RESULT_INVALID_ARGUMENT;
-	MlnMemset(info, 0, sizeof(*info));
-	*info = found;
+	MlnMemset(date, 0, sizeof(*date));
+	date->year = time.year;
+	date->month = time.month;
+	date->day = time.day;
+	date->hour = time.hour;
+	date->minute = time.minute;
+	date->second = time.second;
+	date->reserved = time.reserved[0];
 	return MLN_OK;
 }
 
@@ -976,6 +984,127 @@ __attribute__((noinline)) int MlnApi_810039A8(MlnApiObject *object, void *a1, vo
 	}
 	if (ret == 0x1f0001)
 		return 82;
+	return ret;
+}
+
+static inline void MlnRightsSummaryFree(MlnRightsSummary *summary)
+{
+	unsigned int i;
+
+	if (summary == NULL)
+		return;
+	if (summary->idCount != 0) {
+		for (i = 0; i < summary->idCount; i++)
+			MlnFree(MLN_HEAP_SECURE, summary->ids[i]);
+		MlnFree(MLN_HEAP_SECURE, summary->ids);
+	}
+	MlnFree(MLN_HEAP_SECURE, summary);
+}
+
+/* the time a license constraint gives, the later or the earlier of two by its kind */
+static inline void *MlnRightsTime(int kind, void *const times[2], int pick)
+{
+	if (kind == 2 && MlnImpl_81081400(times[0], times[1]) == pick)
+		return times[1];
+	return times[0];
+}
+
+/*
+ * Evaluates a license on the library's own session and sums up its rights: the IDs it
+ * names, its validity in minutes, and two further limits.
+ */
+__attribute__((noinline)) int MlnApi_81003A9C(MlnBuffer *license, MlnRightsSummary **out)
+{
+	MlnRightsInfo *info = NULL;
+	MlnRightsSummary *summary;
+	void *time;
+	int ret, i;
+
+	if (license == NULL || license->size == 0 || license->data == NULL) {
+		ret = MLN_RESULT_INVALID_ARGUMENT;
+		goto out;
+	}
+	ret = SceMarlin_A43BC777(&s_serviceContext);
+	if (ret != MLN_OK)
+		goto out;
+	ret = SceMarlin_FB95B259(&s_serviceContext, (void *)license->size, license->data);
+	if (ret != MLN_OK)
+		goto out;
+	i = SceMarlin_92A6A48F(&s_serviceContext, NULL, &info);
+	if (info != NULL) {
+		MlnImpl_81010068(MLN_HEAP_SECURE, info);
+		info = NULL;
+	}
+	if (i != MLN_OK) {
+		if (i != 29) {
+			ret = i;
+			goto out;
+		}
+		summary = NULL;
+		goto done;
+	}
+	i = SceMarlin_A2E65A7E(&s_serviceContext, NULL, &info);
+	if (i != MLN_OK) {
+		ret = i;
+		goto out;
+	}
+	if (info == NULL) {
+		summary = NULL;
+		goto done;
+	}
+	summary = MlnAllocate(MLN_HEAP_SECURE, sizeof(*summary));
+	if (summary == NULL) {
+		ret = MLN_ERROR_NO_MEMORY;
+		goto out;
+	}
+	MlnMemset(summary, 0, sizeof(*summary));
+	summary->notBefore = -1;
+	summary->notAfter = -1;
+	summary->flag10Value = -1;
+	summary->flag8Value = -1;
+	if (info->idFlags & 1) {
+		summary->state = 0;
+		summary->ids = MlnAllocate(MLN_HEAP_SECURE, info->idCount * sizeof(MlnBuffer *));
+		if (summary->ids == NULL)
+			goto nomem;
+		MlnMemset(summary->ids, 0, info->idCount * sizeof(MlnBuffer *));
+		summary->idCount = info->idCount;
+		for (i = 0; i < info->idCount; i++) {
+			summary->ids[i] = MlnBufferCreate(MLN_HEAP_SECURE, info->ids[i]->size,
+							  info->ids[i]->data);
+			if (summary->ids[i] == NULL)
+				goto nomem;
+		}
+	}
+	if (info->constraintFlags & MLN_RIGHTS_NOT_BEFORE) {
+		time = MlnRightsTime(info->notBeforeKind, info->notBefore, -1);
+		if (time == NULL || MlnImpl_81081498(time, &summary->notBefore) != 0)
+			goto invalid;
+	}
+	if (info->constraintFlags & MLN_RIGHTS_NOT_AFTER) {
+		time = MlnRightsTime(info->notAfterKind, info->notAfter, 1);
+		if (time == NULL || MlnImpl_81081498(time, &summary->notAfter) != 0)
+			goto invalid;
+	}
+	if (info->constraintFlags & MLN_RIGHTS_FLAG8)
+		summary->flag8Value = info->flag8Value;
+	if (info->constraintFlags & MLN_RIGHTS_FLAG10)
+		summary->flag10Value = info->flag10Value;
+done:
+	*out = summary;
+out:
+	MlnImpl_81010068(MLN_HEAP_SECURE, info);
+	SceMarlin_23838449(&s_serviceContext);
+	return ret;
+invalid:
+	ret = MLN_RESULT_INVALID_ARGUMENT;
+	goto fail;
+nomem:
+	ret = MLN_ERROR_NO_MEMORY;
+fail:
+	MlnImpl_81010068(MLN_HEAP_SECURE, info);
+	MlnRightsSummaryFree(summary);
+	SceMarlin_23838449(&s_serviceContext);
 	return ret;
 }
 
@@ -1420,7 +1549,7 @@ int SceMarlin_0166ACC1(MlnApiObject *object, MlnBuffer *message, MlnApiNode **re
 	MlnApiResult *step = NULL;
 	MlnBuffer *response = NULL;
 	MlnBuffer *reply = NULL;
-	MlnApiInfo *info = NULL;
+	MlnRightsSummary *rights = NULL;
 	MlnApiReport report;
 	MlnApiRequest request, decoded;
 	MlnServiceContext context;
@@ -1480,7 +1609,7 @@ int SceMarlin_0166ACC1(MlnApiObject *object, MlnBuffer *message, MlnApiNode **re
 					status = MlnImpl_8101A59C(&handle);
 				if (status == MLN_OK) {
 					report.type = 0;
-					report.info.value = handle;
+					report.data.buffer = handle;
 					handle = NULL;
 				} else if (status == 0x1f0001) {
 					status = 82;
@@ -1515,7 +1644,7 @@ int SceMarlin_0166ACC1(MlnApiObject *object, MlnBuffer *message, MlnApiNode **re
 		}
 		report.type = 0;
 		if (step != NULL && step->request != NULL) {
-			report.info.value = step->request->body;
+			report.data.buffer = step->request->body;
 			step->request->body = NULL;
 		}
 		MlnImpl_81013420(step);
@@ -1528,10 +1657,10 @@ int SceMarlin_0166ACC1(MlnApiObject *object, MlnBuffer *message, MlnApiNode **re
 	case 4:
 		report.type = 3;
 		if (status == MLN_OK) {
-			status = MlnApi_81003A9C(request.arg[0], &info);
-			if (info != NULL) {
-				MlnMemcpy(&report.info, info, sizeof(report.info));
-				MlnFree(MLN_HEAP_SECURE, info);
+			status = MlnApi_81003A9C(request.arg[0], &rights);
+			if (rights != NULL) {
+				MlnMemcpy(&report.data.rights, rights, sizeof(report.data.rights));
+				MlnFree(MLN_HEAP_SECURE, rights);
 			}
 		}
 		ret = MlnApi_8100370C(object, status, step, &report, &response);
@@ -1552,7 +1681,8 @@ int SceMarlin_0166ACC1(MlnApiObject *object, MlnBuffer *message, MlnApiNode **re
 		if (status == MLN_OK) {
 			MlnServiceContextInit(&context, session);
 			status = MlnImpl_810188E8(&context, request.arg[0], request.arg[1],
-						  &report.info.value, &report.info.data[0]);
+						  &report.data.times.first,
+						  &report.data.times.second);
 		}
 		ret = MlnApi_8100370C(object, status, NULL, &report, &response);
 		break;
@@ -1560,8 +1690,8 @@ int SceMarlin_0166ACC1(MlnApiObject *object, MlnBuffer *message, MlnApiNode **re
 		report.type = 2;
 		if (status == MLN_OK) {
 			MlnServiceContextInit(&context, session);
-			status = MlnImpl_81018A2C(&context, (unsigned int *)&report.info.value,
-						  (MlnBuffer ***)&report.info.data[0]);
+			status = MlnImpl_81018A2C(&context, &report.data.items.count,
+						  &report.data.items.items);
 		}
 		ret = MlnApi_8100370C(object, status, NULL, &report, &response);
 		break;
@@ -1590,7 +1720,7 @@ int SceMarlin_0166ACC1(MlnApiObject *object, MlnBuffer *message, MlnApiNode **re
 			MlnServiceContextInit(&context, session);
 			status = MlnImpl_81016A5C(&context, request.arg[0], &handle);
 			if (status == MLN_OK) {
-				report.info.value = handle;
+				report.data.buffer = handle;
 				handle = NULL;
 			}
 			SceMarlin_9609E2DF(handle);
@@ -1601,15 +1731,14 @@ int SceMarlin_0166ACC1(MlnApiObject *object, MlnBuffer *message, MlnApiNode **re
 		report.type = 6;
 		if (status == MLN_OK)
 			status = MlnApi_81003464(request.arg[0], request.arg[1],
-						 (unsigned int *)&report.info.value,
-						 (MlnBuffer ***)&report.info.data[0]);
+						 &report.data.items.count, &report.data.items.items);
 		ret = MlnApi_8100370C(object, status, NULL, &report, &response);
 		break;
 	case 12:
 		report.type = 7;
 		if (status == MLN_OK) {
 			MlnServiceContextInit(&context, session);
-			status = MlnImpl_81018D00(&context, &report.info.value);
+			status = MlnImpl_81018D00(&context, &report.data.value);
 		}
 		ret = MlnApi_8100370C(object, status, NULL, &report, &response);
 		break;
@@ -1638,7 +1767,7 @@ int SceMarlin_0166ACC1(MlnApiObject *object, MlnBuffer *message, MlnApiNode **re
 				if (status == MLN_OK)
 					status = MlnApi_810026B8(&s_transferContext, &handle);
 				if (status == MLN_OK) {
-					report.info.value = handle;
+					report.data.buffer = handle;
 					handle = NULL;
 				}
 			} else {
@@ -1837,11 +1966,11 @@ int SceMarlin_CCA99803(MlnApiPair *list)
 }
 
 /* the two infos the engine gives for a request */
-int SceMarlin_3AA04BBF(MlnApiObject *object, void *a1, void *a2, MlnApiInfo *first,
-		       MlnApiInfo *second)
+int SceMarlin_3AA04BBF(MlnApiObject *object, void *a1, void *a2, MlnApiDate *first,
+		       MlnApiDate *second)
 {
-	void *firstFound = NULL;
-	void *secondFound = NULL;
+	int firstFound = 0;
+	int secondFound = 0;
 	MlnServiceContext context;
 	unsigned int session[3];
 	MlnApiKind *kind;
@@ -1871,11 +2000,11 @@ int SceMarlin_3AA04BBF(MlnApiObject *object, void *a1, void *a2, MlnApiInfo *fir
 	if (ret != MLN_OK)
 		return ret;
 found:
-	if (firstFound == NULL)
+	if (firstFound == 0)
 		MlnMemset(first, 0, sizeof(*first));
 	else if (MlnApi_810037B0(&firstFound, first) != MLN_OK)
 		return MLN_RESULT_INVALID_ARGUMENT;
-	if (secondFound == NULL) {
+	if (secondFound == 0) {
 		MlnMemset(second, 0, sizeof(*second));
 		return MLN_OK;
 	}
@@ -1991,18 +2120,23 @@ fail:
 	return ret;
 }
 
-/* frees a set of IDs */
-int SceMarlin_7A7CCFD0(MlnIdSet *set)
+static inline void MlnIdSetFree(MlnIdSet *set)
 {
 	MlnIdSet *next;
 
 	if (set == NULL)
-		return MLN_OK;
+		return;
 	do {
 		next = set->next;
 		SceMarlin_9609E2DF(set->id);
 		MlnFree(MLN_HEAP_SECURE, set);
 	} while ((set = next) != NULL);
+}
+
+/* frees a set of IDs */
+int SceMarlin_7A7CCFD0(MlnIdSet *set)
+{
+	MlnIdSetFree(set);
 	return MLN_OK;
 }
 
@@ -2154,4 +2288,355 @@ out:
 	MlnImpl_81013420(step);
 	SceMarlin_45B29121(list);
 	return ret;
+}
+
+int SceMarlin_E8276179(MlnApiObject *object, void *a1, MlnBuffer **out)
+{
+	MlnBuffer *found = NULL;
+	MlnBuffer *handle;
+	MlnServiceContext context;
+	unsigned int session[3];
+	MlnApiKind *kind;
+	int ret;
+
+	if (object == NULL || (kind = object->kind) == NULL) {
+		ret = 3;
+		goto out;
+	}
+	if (kind->type == 1) {
+		if (!kind->remote) {
+			ret = 3;
+			goto out;
+		}
+		if (out == NULL) {
+			ret = MLN_RESULT_INVALID_ARGUMENT;
+			goto out;
+		}
+	} else {
+		if (out == NULL) {
+			ret = MLN_RESULT_INVALID_ARGUMENT;
+			goto out;
+		}
+		if (kind->type == 0) {
+			handle = NULL;
+			MlnServiceContextInit(&context, session);
+			ret = MlnImpl_81016A5C(&context, a1, &handle);
+			if (ret == MLN_OK) {
+				found = handle;
+				handle = NULL;
+			}
+			SceMarlin_9609E2DF(handle);
+			goto found;
+		}
+		if (kind->type != 1) {
+			ret = 6;
+			goto out;
+		}
+	}
+	ret = MlnImpl_8101F1F0(object->client, a1, &found);
+found:
+	if (ret == MLN_OK) {
+		*out = found;
+		found = NULL;
+		ret = MLN_OK;
+	}
+out:
+	SceMarlin_9609E2DF(found);
+	return ret;
+}
+
+/* the console's ID for the engine: every other byte of its Open PSID */
+int SceMarlin_05CB30D5(MlnApiObject *object, void *a1, MlnBuffer **out)
+{
+	SceKernelOpenPsId openPsId;
+	MlnBuffer *id = NULL;
+	MlnBuffer *buffer;
+	int ret;
+
+	if (object == NULL || object->kind == NULL ||
+	    (object->kind->type == 1 && !object->kind->remote)) {
+		ret = 3;
+	} else if (out == NULL) {
+		ret = MLN_RESULT_INVALID_ARGUMENT;
+	} else if (sceKernelGetOpenPsId(&openPsId) != 0) {
+		ret = MLN_RESULT_FAILED;
+	} else {
+		buffer = MlnBufferCreate(MLN_HEAP_SECURE, 8, NULL);
+		if (buffer == NULL) {
+			ret = MLN_ERROR_NO_MEMORY;
+		} else {
+			buffer->data[0] = openPsId.id[0];
+			buffer->data[1] = openPsId.id[2];
+			buffer->data[2] = openPsId.id[4];
+			buffer->data[3] = openPsId.id[6];
+			buffer->data[4] = openPsId.id[8];
+			buffer->data[5] = openPsId.id[10];
+			buffer->data[6] = openPsId.id[12];
+			buffer->data[7] = openPsId.id[14];
+			*out = buffer;
+			ret = MLN_OK;
+		}
+	}
+	SceMarlin_9609E2DF(id);
+	return ret;
+}
+
+/* the rights a license grants */
+int SceMarlin_CD5AEEF2(MlnApiObject *object, MlnBuffer *license, MlnApiRights **out)
+{
+	MlnRightsSummary *summary = NULL;
+	MlnApiRights *rights = NULL;
+	MlnApiKind *kind;
+	unsigned int i;
+	int ret;
+
+	if (object == NULL || (kind = object->kind) == NULL) {
+		ret = 3;
+		goto out;
+	}
+	if (kind->type == 1) {
+		if (!kind->remote) {
+			ret = 3;
+			goto out;
+		}
+		if (license == NULL || out == NULL) {
+			ret = MLN_RESULT_INVALID_ARGUMENT;
+			goto out;
+		}
+	} else {
+		if (license == NULL || out == NULL) {
+			ret = MLN_RESULT_INVALID_ARGUMENT;
+			goto out;
+		}
+		if (kind->type == 0) {
+			ret = MlnApi_81003A9C(license, &summary);
+			goto summary;
+		}
+		if (kind->type != 1) {
+			ret = 6;
+			goto out;
+		}
+	}
+	ret = MlnImpl_8101EE90(object->client, license, &summary);
+summary:
+	if (ret != MLN_OK)
+		goto fail;
+	if (summary != NULL) {
+		rights = MlnAllocate(MLN_HEAP_SECURE, sizeof(*rights));
+		if (rights == NULL) {
+			ret = MLN_ERROR_NO_MEMORY;
+			goto fail;
+		}
+		MlnMemset(rights, 0, sizeof(*rights));
+		for (i = 0; i < summary->idCount; i++)
+			MlnIdSetAdd(&rights->ids, summary->ids[i]);
+		if (summary->notBefore != -1 &&
+		    MlnApi_810037B0(&summary->notBefore, &rights->notBefore) != MLN_OK) {
+			ret = MLN_RESULT_INVALID_ARGUMENT;
+			goto fail;
+		}
+		if (summary->notAfter != -1 &&
+		    MlnApi_810037B0(&summary->notAfter, &rights->notAfter) != MLN_OK) {
+			ret = MLN_RESULT_INVALID_ARGUMENT;
+			goto fail;
+		}
+		if (summary->flag10Value != -1)
+			rights->flag10Value = summary->flag10Value;
+		if (summary->flag8Value != -1)
+			rights->flag8Value = summary->flag8Value;
+	}
+	*out = rights;
+	rights = NULL;
+	ret = MLN_OK;
+fail:
+	MlnRightsSummaryFree(summary);
+out:
+	MlnFree(MLN_HEAP_SECURE, rights);
+	return ret;
+}
+
+/* frees the rights of a license */
+int SceMarlin_10C0787D(MlnApiRights *rights)
+{
+	if (rights != NULL) {
+		MlnIdSetFree(rights->ids);
+		MlnFree(MLN_HEAP_SECURE, rights);
+	}
+	return MLN_OK;
+}
+
+int SceMarlin_236015FA(MlnApiObject *object)
+{
+	MlnServiceContext context;
+	unsigned int session[3];
+	MlnApiKind *kind;
+	int unused = 0;
+	int ret;
+
+	if (object == NULL || (kind = object->kind) == NULL)
+		return 3;
+	if (kind->type == 1) {
+		if (!kind->remote)
+			return 3;
+	} else if (kind->type == 0) {
+		MlnServiceContextInit(&context, session);
+		ret = MlnImpl_810147D8(&context, 1);
+		if (ret != MLN_OK)
+			return ret;
+		MlnServiceContextInit(&context, session);
+		ret = MlnImpl_810147D8(&context, 2);
+		if (ret != MLN_OK)
+			return ret;
+		MlnServiceContextInit(&context, session);
+		ret = MlnImpl_810147D8(&context, 0);
+		if (ret == 16)
+			return 15;
+		return ret;
+	} else if (kind->type != 1) {
+		return 6;
+	}
+	return MlnImpl_8101F33C(object->client, &unused);
+}
+
+int SceMarlin_C4FF32EF(MlnApiObject *object, void **a1)
+{
+	MlnServiceContext context;
+	unsigned int session[3];
+	MlnApiKind *kind;
+
+	if (object == NULL || (kind = object->kind) == NULL)
+		return 3;
+	if (kind->type == 1) {
+		if (!kind->remote)
+			return 3;
+		if (a1 == NULL)
+			return MLN_RESULT_INVALID_ARGUMENT;
+	} else {
+		if (a1 == NULL)
+			return MLN_RESULT_INVALID_ARGUMENT;
+		if (kind->type == 0) {
+			MlnServiceContextInit(&context, session);
+			return MlnImpl_81018D00(&context, a1);
+		}
+		if (kind->type != 1)
+			return 6;
+	}
+	return MlnImpl_8101F4B0(object->client, a1);
+}
+
+int SceMarlin_14097094(MlnApiObject *object, MlnBuffer *a1)
+{
+	MlnServiceContext context;
+	unsigned int session[3];
+	MlnApiKind *kind;
+
+	if (object == NULL || (kind = object->kind) == NULL)
+		return 3;
+	if (kind->type == 1 && !kind->remote)
+		return 3;
+	if (a1 == NULL || a1->size == 0 || a1->data == NULL)
+		return MLN_RESULT_INVALID_ARGUMENT;
+	if (kind->type == 0) {
+		MlnServiceContextInit(&context, session);
+		return MlnImpl_81018DA0(&context, a1);
+	}
+	if (kind->type == 1)
+		return MlnImpl_8101F5F4(object->client, a1);
+	return 6;
+}
+
+/* the value a token gives, read from the buffer the engine finds for it */
+int SceMarlin_B477D615(MlnApiObject *object, MlnBuffer *token, int *out)
+{
+	MlnBuffer *found = NULL;
+	MlnBuffer *handle;
+	MlnApiKind *kind;
+	unsigned int result;
+	int value = 0;
+	int ret;
+
+	if (object == NULL || (kind = object->kind) == NULL) {
+		ret = 3;
+		goto out;
+	}
+	if (kind->type == 1) {
+		if (!kind->remote) {
+			ret = 3;
+			goto out;
+		}
+		if (token == NULL || out == NULL) {
+			ret = MLN_RESULT_INVALID_ARGUMENT;
+			goto out;
+		}
+	} else {
+		if (token == NULL || out == NULL) {
+			ret = MLN_RESULT_INVALID_ARGUMENT;
+			goto out;
+		}
+		if (kind->type == 0) {
+			handle = NULL;
+			if (token->size != 0 && token->data != NULL) {
+				ret = SceMarlin_A43BC777(&s_transferContext);
+				if (ret == MLN_OK)
+					ret = SceMarlin_FB95B259(&s_transferContext,
+								 (void *)token->size, token->data);
+				if (ret == MLN_OK)
+					ret = MlnApi_810026B8(&s_transferContext, &handle);
+				if (ret == MLN_OK) {
+					found = handle;
+					handle = NULL;
+				}
+			} else {
+				ret = MLN_RESULT_INVALID_ARGUMENT;
+			}
+			SceMarlin_23838449(&s_transferContext);
+			goto found;
+		}
+		if (kind->type != 1) {
+			ret = 6;
+			goto out;
+		}
+	}
+	ret = MlnImpl_8101F724(object->client, token, &found);
+found:
+	if (ret != MLN_OK || found == NULL)
+		goto out;
+	result = MlnImpl_810103D8(MLN_HEAP_SECURE, found->size, found->data, &value);
+	switch (result) {
+	case MLN_OK:
+		*out = value;
+		ret = MLN_OK;
+		break;
+	case 2:
+		ret = 2;
+		break;
+	case 3:
+	case 0x10010003:
+	case 0x10010005:
+	case 0x10010008:
+	case 0x1001000a:
+		ret = MLN_RESULT_INVALID_ARGUMENT;
+		break;
+	case 6:
+		ret = MLN_RESULT_EXPIRED;
+		break;
+	case 0x30000001:
+	case 0x30000002:
+		ret = MLN_RESULT_NETWORK;
+		break;
+	default:
+		ret = MLN_RESULT_FAILED;
+		break;
+	}
+out:
+	MlnBufferDestroy(MLN_HEAP_SECURE, found);
+	return ret;
+}
+
+int SceMarlin_39FF1549(MlnApiObject *object)
+{
+	if (object == NULL || object->kind == NULL || object->kind->type != 1 ||
+	    object->kind->remote)
+		return 3;
+	return MlnImpl_8102045C(object->session);
 }

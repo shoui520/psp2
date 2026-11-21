@@ -194,10 +194,86 @@ typedef struct MlnApiObject {
 	void *session;
 } MlnApiObject;
 
-typedef struct MlnApiInfo {
+struct MlnIdSet;
+
+/* a time broken down, as sceRtcSetTick gives it */
+typedef struct MlnDateTime {
+	int year;
+	int month;
+	int day;
+	int hour;
+	int minute;
+	int second;
+	int reserved[3];
+} MlnDateTime;
+
+/* the part of a time the interface gives */
+typedef struct MlnApiDate {
+	int year;
+	int month;
+	int day;
+	int hour;
+	int minute;
+	int second;
+	int reserved;
+} MlnApiDate;
+
+/* what a license grants, as the engine evaluates it */
+typedef struct MlnRightsInfo {
+	unsigned int reserved0[11];
+	unsigned int idFlags;		/* bit 0: ids are given */
+	int idCount;
+	MlnBuffer **ids;
+	unsigned int reserved1;
+	unsigned int constraintFlags;	/* MLN_RIGHTS_* */
+	int notBeforeKind;		/* 2: two times, the later counts */
+	int notAfterKind;		/* 2: two times, the earlier counts */
+	void *notBefore[2];
+	void *notAfter[2];
+	unsigned int reserved2[2];
+	int flag8Value;
+	int flag10Value;
+} MlnRightsInfo;
+
+#define MLN_RIGHTS_NOT_BEFORE	0x1
+#define MLN_RIGHTS_NOT_AFTER	0x2
+#define MLN_RIGHTS_FLAG8	0x8
+#define MLN_RIGHTS_FLAG10	0x10
+
+/* the summary of a license's rights: times in minutes, -1 when not given */
+typedef struct MlnRightsSummary {
+	unsigned short state;
+	int notBefore;
+	int notAfter;
+	int flag10Value;
+	int flag8Value;
+	unsigned int idCount;
+	MlnBuffer **ids;
+} MlnRightsSummary;
+
+/* the same, for the caller: the IDs as a set, the times as dates */
+typedef struct MlnApiRights {
+	struct MlnIdSet *ids;
+	MlnApiDate notBefore;
+	MlnApiDate notAfter;
+	int flag10Value;
+	int flag8Value;
+} MlnApiRights;
+
+/* what a report carries, by its type */
+typedef union MlnApiReportData {
+	MlnRightsSummary rights;
+	MlnBuffer *buffer;
 	void *value;
-	void *data[6];
-} MlnApiInfo;
+	struct {
+		int first;
+		int second;
+	} times;
+	struct {
+		unsigned int count;
+		MlnBuffer **items;
+	} items;
+} MlnApiReportData;
 
 /* a request the engine has decoded from a message, and its arguments */
 typedef struct MlnApiRequest {
@@ -208,7 +284,7 @@ typedef struct MlnApiRequest {
 /* what processing a request reports back to the engine */
 typedef struct MlnApiReport {
 	int type;
-	MlnApiInfo info;
+	MlnApiReportData data;
 } MlnApiReport;
 
 /* Octopus nodes and the links between them, by node ID */
@@ -298,12 +374,18 @@ int MlnApi_8100370C(MlnApiObject *object, int status, MlnApiResult *result, MlnA
 		    MlnBuffer **response);
 int MlnApi_81003464(MlnBuffer *serviceProvider, MlnBuffer *token, unsigned int *count,
 		    MlnBuffer ***items);
-int MlnApi_81003A9C(void *a0, MlnApiInfo **info);
-int MlnApi_810037B0(void *a0, MlnApiInfo *info);
+int MlnApi_81003A9C(MlnBuffer *license, MlnRightsSummary **summary);
+int MlnApi_810037B0(const int *minutes, MlnApiDate *date);
 int MlnApi_810026B8(void *a0, void *a1);
 int SceMarlin_A43BC777(void *a0);
 int SceMarlin_23838449(void *a0);
 int SceMarlin_FB95B259(void *a0, void *a1, void *a2);
+int SceMarlin_92A6A48F(void *a0, void *a1, void *a2);
+int SceMarlin_A2E65A7E(void *a0, void *a1, void *a2);
+int MlnImpl_8101EE90(void *client, MlnBuffer *license, MlnRightsSummary **summary);
+int MlnImpl_8101F33C(void *client, int *a1);
+int MlnImpl_81081400(void *a, void *b);
+int MlnImpl_81081498(void *time, int *minutes);
 int MlnIdSetAdd(MlnIdSet **set, const MlnBuffer *id);
 int MlnNodesCollectReachable(MlnOctopusNode *nodes, const MlnBuffer *id, MlnIdSet **set);
 
@@ -333,17 +415,23 @@ int MlnImpl_8101F954(void *session, MlnBuffer *message, int status, void *data,
 int MlnImpl_8101A360(void *engine, MlnApiResult **result);
 int MlnImpl_8101A59C(MlnBuffer **handle);
 int MlnImpl_81018E08(MlnServiceContext *context, void *a1, void *a2);
+int MlnImpl_8101F1F0(void *client, void *a1, MlnBuffer **found);
 int MlnImpl_8101F0B8(void *client, void *a1, void *a2);
-int MlnImpl_8101DFA0(void *client, void *a1, void *a2, void **a3, void **a4);
-int MlnImpl_810188E8(MlnServiceContext *context, void *a1, void *a2, void **a3, void **a4);
+int MlnImpl_8101DFA0(void *client, void *a1, void *a2, int *first, int *second);
+int MlnImpl_810188E8(MlnServiceContext *context, void *a1, void *a2, int *first, int *second);
 int MlnImpl_81018A2C(MlnServiceContext *context, unsigned int *count, MlnBuffer ***items);
 int MlnImpl_8101EC08(void *client, unsigned int *count, MlnBuffer ***items);
 int MlnImpl_8101E118(void *client, MlnBuffer *a1, MlnBuffer *a2, unsigned int *count,
 		     MlnBuffer ***items);
 int MlnImpl_81018D00(MlnServiceContext *context, void **a1);
 int MlnImpl_81018DA0(MlnServiceContext *context, MlnBuffer *a1);
+int MlnImpl_8101F4B0(void *client, void **a1);
+int MlnImpl_8101F5F4(void *client, MlnBuffer *a1);
+int MlnImpl_8101F724(void *client, MlnBuffer *token, MlnBuffer **found);
+unsigned int MlnImpl_810103D8(int heap, unsigned int size, const void *data, int *value);
+int MlnImpl_8102045C(void *session);
 int MlnStrcmp(const char *a, const char *b);
-int MlnImpl_810072B0(void *a0, MlnApiInfo *info);
+int MlnImpl_810072B0(const int *minutes, MlnDateTime *time);
 int MlnImpl_8101A020(void *engine);
 int MlnImpl_8101DD24(MlnApiKind *kind, MlnBuffer *address, void **client, MlnApiVersion *version);
 int MlnImpl_8101DF70(void *client);

@@ -5,3 +5,5 @@
 typedef struct SceKernelOpenPsId {
 	SceUChar8 id[16];
 } SceKernelOpenPsId;
+
+int sceKernelGetOpenPsId(SceKernelOpenPsId *id);
