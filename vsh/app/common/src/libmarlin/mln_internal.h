@@ -340,7 +340,7 @@ typedef struct MlnApiObject {
 	void *data;
 	struct MlnEngine *engine;
 	struct MlnClient *client;
-	void *session;
+	struct MlnSession *session;
 } MlnApiObject;
 
 struct MlnIdSet;
@@ -1193,9 +1193,9 @@ int MlnImpl_810318D4(void *a0, const MlnBuffer *a1, MlnBlob *first, MlnBlob *sec
 
 int MlnPlatformInit(void);
 int MlnPlatformTerm(void);
-int MlnImpl_81020094(void *session, int status, MlnApiValue *value, MlnHttpRequest *request,
-		     void *a4, void *a5);
-int MlnImpl_8101F954(void *session, MlnBuffer *message, int status, void *data,
+int MlnImpl_81020094(struct MlnSession *session, int status, MlnApiValue *value,
+		     MlnHttpRequest *request, MlnApiReport *report, MlnBuffer **response);
+int MlnImpl_8101F954(struct MlnSession *session, MlnBuffer *message, int status, void *data,
 		     MlnApiRequest *request);
 int MlnImpl_8101F1F0(struct MlnClient *client, void *a1, MlnBuffer **found);
 int MlnImpl_8101F0B8(struct MlnClient *client, void *a1, void *a2);
@@ -1206,12 +1206,12 @@ int MlnImpl_8101E118(struct MlnClient *client, MlnBuffer *a1, MlnBuffer *a2, uns
 int MlnImpl_8101F4B0(struct MlnClient *client, void **handle);
 int MlnImpl_8101F5F4(struct MlnClient *client, MlnBuffer *a1);
 int MlnImpl_8101F724(struct MlnClient *client, MlnBuffer *token, MlnBuffer **found);
-int MlnImpl_8102045C(void *session);
+int MlnImpl_8102045C(struct MlnSession *session, int mode);
 int MlnImpl_8101DD24(MlnApiKind *kind, MlnBuffer *address, struct MlnClient **client,
 		     MlnApiVersion *version);
-int MlnImpl_8101DF70(struct MlnClient *client);
-int MlnImpl_8101F870(MlnApiKind *kind, MlnBuffer *address, void **session);
-int MlnImpl_8101F92C(void *session);
+void MlnImpl_8101DF70(struct MlnClient *client);
+int MlnImpl_8101F870(MlnApiKind *kind, MlnBuffer *address, struct MlnSession **session);
+void MlnImpl_8101F92C(struct MlnSession *session);
 int MlnImpl_8101E628(struct MlnClient *client);
 int MlnImpl_8101E658(struct MlnClient *client, MlnBuffer **message, MlnApiResult **result);
 int MlnImpl_8101E9EC(struct MlnClient *client, MlnApiResult *step, MlnBuffer **message);
@@ -1291,6 +1291,17 @@ typedef struct MlnClient {
 	MlnMessage pending;		/* the request the client asked for, MLN_MESSAGE_NONE when none */
 } MlnClient;
 
+/*
+ * The other end: the process that runs the engine for a remote client, decoding each of its
+ * messages into a request for the engine.
+ */
+typedef struct MlnSession {
+	MlnApiKind *kind;
+	MlnBuffer *address;
+	int mode;
+	unsigned int allowed;		/* the requests the client may send now, 1 when none */
+} MlnSession;
+
 int MlnImpl_810222A0(const MlnBuffer *address, MlnBuffer **request);
 int MlnImpl_81022A1C(MlnBuffer **request);
 int MlnImpl_81022478(void *a1, void *a2, MlnBuffer **request);
@@ -1311,6 +1322,19 @@ int MlnImpl_81022EFC(MlnBuffer **request);
 int MlnImpl_810230AC(MlnBuffer *a1, MlnBuffer **request);
 int MlnImpl_810231D4(MlnBuffer *token, MlnBuffer **request);
 int MlnImpl_8102371C(const MlnBuffer *reply, MlnMessage *message);
+int MlnImpl_81022C98(int status, MlnBuffer **reply);
+int MlnImpl_81022B3C(int code, int status, void *data, MlnBuffer **reply);
+int MlnImpl_81021CD4(int heap, void *data, MlnBuffer **message, int type);
+int MlnImpl_810223C8(int heap, int reserved, unsigned int flags, MlnBuffer *address,
+		     const MlnBuffer *name, MlnBuffer **message);
+int MlnImpl_81022500(MlnApiReportData *data, MlnBuffer **message);
+int MlnImpl_81021F74(MlnApiReportData *data, MlnBuffer **message);
+int MlnImpl_81021DE8(MlnApiReportData *data, MlnBuffer **message);
+int MlnImpl_8102285C(MlnApiReportData *data, MlnBuffer **message);
+int MlnImpl_81022E7C(MlnApiReportData *data, MlnBuffer **message);
+int MlnImpl_81022608(MlnApiReportData *data, MlnBuffer **message);
+int MlnImpl_8102302C(MlnBuffer *buffer, MlnBuffer **message);
+int MlnImpl_810232FC(MlnApiReportData *data, MlnBuffer **message);
 void MlnImpl_810233C4(MlnMessage *message);
 int MlnImpl_8101D5D4(MlnClient *client, MlnApiValue **value);
 int MlnImpl_8101D7C0(MlnMessage *message, MlnApiResult **out);

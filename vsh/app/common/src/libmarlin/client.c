@@ -395,14 +395,13 @@ fail:
 	return ret;
 }
 
-__attribute__((noinline)) int MlnImpl_8101DF70(MlnClient *client)
+__attribute__((noinline)) void MlnImpl_8101DF70(MlnClient *client)
 {
 	if (client == NULL)
-		return MLN_OK;
+		return;
 	if (client->pending.type != MLN_MESSAGE_NONE)
 		MlnImpl_810233C4(&client->pending);
 	MlnFree(MLN_HEAP_SECURE, client);
-	return MLN_OK;
 }
 
 /* a request of the client's that the reply answers with two values */
@@ -1298,4 +1297,470 @@ free:
 	MlnImpl_810233C4(&decoded);
 	MlnBufferDestroy(MLN_HEAP_SECURE, request);
 	return ret;
+}
+
+/* opens the session that serves a remote client */
+__attribute__((noinline)) int MlnImpl_8101F870(MlnApiKind *kind, MlnBuffer *address,
+					       MlnSession **out)
+{
+	MlnSession *session;
+
+	if (kind == NULL || kind->type != 1 || kind->remote != NULL || out == NULL)
+		return MLN_CORE_ERROR_INVALID;
+	session = MlnAllocate(MLN_HEAP_SECURE, sizeof(*session));
+	if (session == NULL)
+		return MLN_ERROR_NO_MEMORY;
+	MlnMemset(session, 0, sizeof(*session));
+	session->kind = kind;
+	session->mode = 1;
+	session->allowed = 1;
+	if (address != NULL) {
+		session->address = MlnBufferCreate(MLN_HEAP_SECURE, address->size, address->data);
+		if (session->address == NULL) {
+			MlnBufferDestroy(MLN_HEAP_SECURE, NULL);
+			MlnFree(MLN_HEAP_SECURE, session);
+			return MLN_ERROR_NO_MEMORY;
+		}
+	}
+	*out = session;
+	return MLN_OK;
+}
+
+__attribute__((noinline)) void MlnImpl_8101F92C(MlnSession *session)
+{
+	if (session == NULL)
+		return;
+	MlnBufferDestroy(MLN_HEAP_SECURE, session->address);
+	MlnFree(MLN_HEAP_SECURE, session);
+}
+
+/*
+ * A client's message as a request for the engine. The client may send a request or a body
+ * only while the session allows it; a message refused gives a status reply to send back.
+ */
+__attribute__((noinline)) int MlnImpl_8101F954(MlnSession *session, MlnBuffer *message, int status,
+					       void *data, MlnApiRequest *request)
+{
+	MlnBuffer *reply = NULL, *answer;
+	MlnMessage decoded;
+	unsigned int mask;
+	void **payload;
+	int code, ret;
+
+	MlnMemset(&decoded, 0, sizeof(decoded));
+	decoded.type = MLN_MESSAGE_NONE;
+	if (message == NULL || request == NULL) {
+		ret = MLN_CORE_ERROR_INVALID;
+		MlnImpl_810233C4(&decoded);
+		if (request == NULL)
+			goto out;
+		code = 128;
+		goto refuse;
+	}
+	ret = MlnImpl_8102371C(message, &decoded);
+	if (ret != MLN_OK)
+		goto decoded;
+	if (session == NULL) {
+		ret = MLN_CORE_ERROR_INVALID;
+		goto decoded;
+	}
+	switch (decoded.type) {
+	case MLN_MESSAGE_HTTP_GET:
+		mask = 2;
+		goto gated;
+	case MLN_MESSAGE_HTTP_POST:
+		mask = 4;
+		goto gated;
+	case MLN_MESSAGE_HTTP_BODY:
+		mask = 8;
+		goto gated;
+	case 0x603:
+		mask = 32;
+gated:
+		if (session->allowed == 1 || (session->allowed & mask) != mask) {
+			ret = 84;
+			goto decoded;
+		}
+		break;
+	case 0x400:
+	case 0x401:
+	case 0x500:
+	case 0x502:
+	case 0x504:
+	case 0x506:
+	case 0x601:
+	case 0x10a0:
+	case 0x10a2:
+	case 0x10a4:
+	case 0x10a6:
+	case 0x10ae:
+	case 0x10b0:
+		break;
+	default:
+		ret = 84;
+		goto decoded;
+	}
+	payload = decoded.payload;
+	switch (decoded.type) {
+	case 0x400:
+		if (payload == NULL) {
+			ret = 7;
+			break;
+		}
+		if (*(unsigned short *)payload <= 1) {
+			request->type = 0;
+			request->arg[0] = payload[1];
+			request->arg[1] = payload[2];
+			request->arg[2] = payload[3];
+			payload[1] = NULL;
+			payload[2] = NULL;
+			payload[3] = NULL;
+			break;
+		}
+		if (*(unsigned short *)payload != 2) {
+			ret = 84;
+			break;
+		}
+		goto busy;
+	case 0x401:
+		if (payload == NULL) {
+			ret = 7;
+			break;
+		}
+		if (*(unsigned short *)payload <= 1)
+			goto busy;
+		if (*(unsigned short *)payload == 2)
+			request->type = 1;
+		else
+			ret = 84;
+		break;
+busy:
+		ret = MlnImpl_81022C98(17, &reply);
+		if (ret != MLN_OK)
+			break;
+		request->type = 5;
+		request->arg[0] = reply;
+		reply = NULL;
+		break;
+	case MLN_MESSAGE_HTTP_GET:
+		if (payload == NULL) {
+			ret = 7;
+			break;
+		}
+		request->type = 2;
+		request->arg[0] = payload[0];
+		request->arg[1] = NULL;
+		request->arg[2] = NULL;
+		payload[0] = NULL;
+		break;
+	case MLN_MESSAGE_HTTP_POST:
+		if (payload != NULL) {
+			request->type = 2;
+			request->arg[0] = payload[1];
+			request->arg[1] = payload[2];
+			request->arg[2] = payload[3];
+			payload[1] = NULL;
+			payload[2] = NULL;
+			payload[3] = NULL;
+		}
+		break;
+	case MLN_MESSAGE_HTTP_BODY:
+		if (payload == NULL) {
+			ret = 7;
+			break;
+		}
+		request->type = 2;
+		request->arg[0] = NULL;
+		request->arg[2] = NULL;
+		request->arg[1] = payload[0];
+		payload[0] = NULL;
+		break;
+	case 0x500:
+		if (payload == NULL) {
+			ret = 7;
+			break;
+		}
+		request->type = 4;
+		request->arg[0] = payload[0];
+		payload[0] = NULL;
+		break;
+	case 0x502:
+		request->type = 8;
+		break;
+	case 0x504:
+		if (payload == NULL) {
+			ret = 7;
+			break;
+		}
+		request->type = 7;
+		request->arg[0] = payload[0];
+		request->arg[1] = payload[1];
+		payload[0] = NULL;
+		payload[1] = NULL;
+		break;
+	case 0x506:
+		if (payload == NULL) {
+			ret = 7;
+			break;
+		}
+		request->type = 11;
+		request->arg[0] = payload[0];
+		request->arg[1] = payload[1];
+		payload[1] = NULL;
+		payload[0] = NULL;
+		break;
+	case 0x601:
+		request->type = 15;
+		request->arg[0] = payload[0];
+		payload[0] = NULL;
+		break;
+	case 0x603:
+		/* the result the client fetches: a value, the status alone, or nothing yet */
+		if (payload != NULL) {
+			ret = 7;
+			break;
+		}
+		if (data != NULL)
+			code = MLN_RESULT_VALUE;
+		else if (status != MLN_OK)
+			code = MLN_RESULT_NONE;
+		else
+			code = MLN_RESULT_BUSY;
+		ret = MlnImpl_81022B3C(code, status, data, &reply);
+		if (ret != MLN_OK)
+			break;
+		request->type = 5;
+		request->arg[0] = reply;
+		reply = NULL;
+		MlnBufferDestroy(MLN_HEAP_SECURE, NULL);
+		session->allowed = 1;
+		MlnImpl_810233C4(&decoded);
+		goto out;
+	case 0x10a0:
+		if (payload == NULL) {
+			ret = 7;
+			break;
+		}
+		request->type = 12;
+		/* two halves of the first argument */
+		((unsigned short *)request->arg)[0] = ((unsigned short *)payload)[0];
+		((unsigned short *)request->arg)[1] = ((unsigned short *)payload)[1];
+		break;
+	case 0x10a2:
+		if (payload == NULL) {
+			ret = 7;
+			break;
+		}
+		request->type = 13;
+		request->arg[0] = payload[0];
+		payload[0] = NULL;
+		break;
+	case 0x10a4:
+		if (payload == NULL) {
+			ret = 7;
+			break;
+		}
+		request->type = 6;
+		request->arg[0] = payload[0];
+		request->arg[1] = payload[1];
+		payload[0] = NULL;
+		payload[1] = NULL;
+		break;
+	case 0x10a6:
+		request->type = 9;
+		break;
+	case 0x10ae:
+		if (payload == NULL) {
+			ret = 7;
+			break;
+		}
+		request->type = 10;
+		request->arg[0] = payload[0];
+		break;
+	case 0x10b0:
+		if (payload == NULL) {
+			ret = 7;
+			break;
+		}
+		request->type = 14;
+		request->arg[0] = payload[0];
+		payload[0] = NULL;
+		break;
+	}
+	MlnBufferDestroy(MLN_HEAP_SECURE, reply);
+	reply = NULL;
+decoded:
+	MlnImpl_810233C4(&decoded);
+	if (ret == MLN_OK || ret == MLN_ERROR_NO_MEMORY || ret == 84)
+		goto out;
+	code = ret == 6 ? 18 : 128;
+refuse:
+	if (session != NULL) {
+		session->allowed = 32;
+		ret = MlnImpl_81022C98(code, &reply);
+		if (ret != MLN_OK) {
+			answer = NULL;
+		} else {
+			answer = reply;
+			reply = NULL;
+		}
+	} else {
+		ret = MLN_CORE_ERROR_INVALID;
+		answer = NULL;
+	}
+	MlnBufferDestroy(MLN_HEAP_SECURE, reply);
+	request->type = 5;
+	request->arg[0] = answer;
+	reply = NULL;
+out:
+	MlnBufferDestroy(MLN_HEAP_SECURE, reply);
+	return ret;
+}
+
+/* the name a session gives itself */
+#define MLN_SESSION_NAME	"sony.net:1.0;"
+
+/* a status reply */
+static inline __attribute__((always_inline)) int MlnSessionStatus(int code, MlnBuffer **message)
+{
+	MlnBuffer *reply = NULL;
+	int ret;
+
+	ret = MlnImpl_81022C98(code, &reply);
+	if (ret == MLN_OK) {
+		*message = reply;
+		reply = NULL;
+	}
+	MlnBufferDestroy(MLN_HEAP_SECURE, reply);
+	return ret;
+}
+
+/*
+ * The engine's answer to a request, as the message to send the client: the request to send
+ * for it, a value, a report, or the status alone.
+ */
+__attribute__((noinline)) int MlnImpl_81020094(MlnSession *session, int status, MlnApiValue *value,
+					       MlnHttpRequest *request, MlnApiReport *report,
+					       MlnBuffer **response)
+{
+	MlnBuffer name = { sizeof(MLN_SESSION_NAME) - 1, (unsigned char *)MLN_SESSION_NAME };
+	MlnBuffer *message = NULL;
+	int ret;
+
+	if (session == NULL) {
+		ret = 3;
+		goto out;
+	}
+	if (response == NULL) {
+		ret = MLN_CORE_ERROR_INVALID;
+		goto out;
+	}
+	session->allowed = 1;
+	if (status != MLN_OK) {
+		session->allowed = 32;
+		ret = MlnSessionStatus(128, &message);
+		if (ret != MLN_OK)
+			goto out;
+	} else if (request != NULL) {
+		if (request->method == MLN_HTTP_GET)
+			ret = MlnImpl_81021864(request->url, &message);
+		else
+			ret = MlnImpl_8102190C(status, request->url, request->body, &request->headers,
+					       &message);
+		if (ret != MLN_OK)
+			goto out;
+		session->allowed = 8;
+	} else if (value != NULL) {
+		switch (value->type) {
+		case 4:
+			if (session->mode == 1) {
+				ret = MlnImpl_81021CD4(MLN_HEAP_SECURE, value->data[2], &message,
+						       value->type - 1);
+				if (ret != MLN_OK)
+					goto out;
+				session->allowed = 8;
+				break;
+			}
+			/* fall through */
+		case 1:
+		case 2:
+		case 3:
+			ret = MlnSessionStatus(0, &message);
+			if (ret != MLN_OK)
+				goto out;
+			break;
+		case 6:
+			ret = MlnImpl_810223C8(MLN_HEAP_SECURE, 0, 0xe000, session->address, &name,
+					       &message);
+			if (ret != MLN_OK)
+				goto out;
+			break;
+		case 16:
+			session->allowed = 32;
+			ret = MlnSessionStatus(0, &message);
+			if (ret != MLN_OK)
+				goto out;
+			break;
+		default:
+			ret = 7;
+			goto out;
+		}
+	} else if (report != NULL) {
+		switch (report->type) {
+		case 0:
+			ret = MlnImpl_81021BAC(report->data.buffer, &message);
+			if (ret != MLN_OK)
+				goto out;
+			session->allowed = 6;
+			break;
+		case 1:
+			ret = MlnImpl_81022500(&report->data, &message);
+			break;
+		case 2:
+			ret = MlnImpl_81021F74(&report->data, &message);
+			break;
+		case 3:
+			ret = MlnImpl_81021DE8(&report->data, &message);
+			break;
+		case 4:
+			ret = MlnImpl_8102285C(&report->data, &message);
+			break;
+		case 5:
+			ret = MlnImpl_81022E7C(&report->data, &message);
+			break;
+		case 6:
+			ret = MlnImpl_81022608(&report->data, &message);
+			break;
+		case 7:
+			ret = MlnImpl_8102302C(report->data.buffer, &message);
+			break;
+		case 9:
+			ret = MlnImpl_810232FC(&report->data, &message);
+			break;
+		default:
+			ret = 7;
+			goto out;
+		}
+		if (ret != MLN_OK)
+			goto out;
+	} else {
+		ret = MlnSessionStatus(0, &message);
+		if (ret != MLN_OK)
+			goto out;
+	}
+	*response = message;
+	message = NULL;
+	ret = MLN_OK;
+out:
+	MlnBufferDestroy(MLN_HEAP_SECURE, message);
+	MlnBufferDestroy(MLN_HEAP_SECURE, NULL);
+	return ret;
+}
+
+__attribute__((noinline)) int MlnImpl_8102045C(MlnSession *session, int mode)
+{
+	if (session == NULL)
+		return 3;
+	session->mode = mode;
+	return MLN_OK;
 }

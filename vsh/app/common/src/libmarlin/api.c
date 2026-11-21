@@ -2649,10 +2649,10 @@ out:
 	return ret;
 }
 
-int SceMarlin_39FF1549(MlnApiObject *object)
+int SceMarlin_39FF1549(MlnApiObject *object, int mode)
 {
 	if (object == NULL || object->kind == NULL || object->kind->type != 1 ||
 	    object->kind->remote)
 		return 3;
-	return MlnImpl_8102045C(object->session);
+	return MlnImpl_8102045C(object->session, mode);
 }
