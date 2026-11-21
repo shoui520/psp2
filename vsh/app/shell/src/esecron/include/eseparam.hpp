@@ -23,10 +23,17 @@ public:
 	int read(int key, paf::string *value);			/* (0x811225B6) */
 	int commit(void);					/* (0x81122F8E) */
 	int write(int key, const void *value, SceSize size);	/* (0x811231E8) */
+	int write(int key, const BgdlTaskPath *value);		/* (0x81123396) a string */
 
 	SceUInt32 id;
 	int result;			/* 0x80103A11 until it is opened */
 	int reserved[4];		/* PLACEHOLDER: named with eseparam.cpp */
 };
+
+/* a task's param file opened, read or written and closed (PLACEHOLDER names: not written yet) */
+int Bgdl_8112260C(SceUInt32 id, int key, void *value, SceSize size);		/* read */
+int Bgdl_811233A4(SceUInt32 id, int key, const void *value, SceSize size);	/* write */
+int Bgdl_8112278A(SceUInt32 id, int key, paf::string *value);		/* read a string */
+int Bgdl_81122700(SceUInt32 id, int key, BgdlTaskPath *value);		/* read a string into a path */
 
 #endif

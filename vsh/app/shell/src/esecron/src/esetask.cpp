@@ -28,6 +28,7 @@
 #include "../include/esetask.hpp"
 #include "../include/eseparam.hpp"
 #include "../include/eseutil.hpp"
+#include "../include/esehttp.hpp"
 
 #include "shell.h"
 #include "console_info/console_info.h"
@@ -45,12 +46,6 @@ PAF_VECTOR_NOINLINE_PUSH_BACK(BgdlTaskInfo, paf::allocator<BgdlTaskInfo>)
 PAF_VECTOR_NOINLINE_CLEAR(BgdlTaskInfo, paf::allocator<BgdlTaskInfo>)
 
 using namespace paf;
-
-/* the task's param file (eseparam.cpp; PLACEHOLDER names: not written yet) */
-int Bgdl_8112260C(SceUInt32 id, int key, void *value, SceSize size);		/* read */
-int Bgdl_811233A4(SceUInt32 id, int key, const void *value, SceSize size);	/* write */
-int Bgdl_8112278A(SceUInt32 id, int key, string *value);			/* read a string */
-int Bgdl_81122700(SceUInt32 id, int key, BgdlTaskPath *value);		/* read a string into a path */
 
 int bgdlMtpRunCopy(const MtpBgCopyRunParam *param);	/* bgdl_mtp.cpp */
 int bgdlMtpCancelCopy(SceUInt32 id);			/* bgdl_mtp.cpp */
@@ -124,28 +119,6 @@ int Bgdl_812A985C(BgdlUpdateCore *core, SceUInt32 index, BgdlUpdateEntry *entry)
 int Bgdl_812A9708(BgdlUpdateCore *core);
 
 /* a title a patch is looked for (PLACEHOLDER names) */
-/* another file's (constructor 0x81114642): a package file's check (PLACEHOLDER) */
-class BgdlPackageCheck {
-public:
-	BgdlPackageCheck();
-	void Bgdl_81114AFC(int mode, int kind, const char *name, int arg3, int arg4, int arg5,
-			   int arg6, int arg7);
-	int Bgdl_8118FD0C(void);
-	void Bgdl_81115C22(char *digest);
-
-	int reserved0;
-	int reserved1;
-	string reserved2;
-	string reserved3;
-	string reserved4;
-	int reserved5;
-	int reserved6;
-	char reserved7[32];
-	string reserved8;
-	bool reserved9;
-	bool reserved10;
-	string reserved11;
-};		/* makes a folder (PLACEHOLDER) */
 
 /* the next file's (0x8113A434): the object whose job queue runs the library's jobs */
 /* the dispatcher's state, as Bgdl_8113A47C copies it (PLACEHOLDER) */
@@ -198,44 +171,6 @@ struct BgdlServerIds {
 	char id0[32];
 	char id1[32];
 	char id2[1];			/* PLACEHOLDER: its length is not known yet */
-};
-
-/* the server's description of a content (key 232), 120 bytes (PLACEHOLDER names) */
-struct BgdlServerData {
-	int reserved0;
-	int category;			/* 6, 7, 14-16: a game's (key 114 1); 24, 29, 31 */
-	SceUInt32 attribute;		/* 0x10, bit 31: no patch looked for */
-	char reserved1[28];
-	char contentId[48];		/* the package's key 217 */
-	char titleId[32];		/* key 220, the folder it goes to */
-};
-
-/* the next file's (0x81115C58): what the content server answered (PLACEHOLDER names) */
-struct BgdlServerInfo {
-	BgdlServerInfo()
-	{
-		Clear();
-	}
-
-	void Clear(void);		/* (0x81115C58) */
-
-	bool flag;
-	int status;
-	int httpStatus;
-	int reserved0;
-	SceUInt64 size;
-	string url;
-	string titleId;
-	string contentId;
-	string message;			/* the server's, with an HTTP 401 */
-	SceUInt64 value0;
-	SceUInt64 value1;
-	SceUInt64 value2;
-	SceUInt64 value3;
-	SceUInt64 value4;
-	int kind;
-	int reserved1;
-	BgdlServerData data;
 };
 
 /* the answer as 0x811049A4's caller is given it, 0x2E0 bytes (PLACEHOLDER names) */
@@ -2412,12 +2347,12 @@ int BgdlManager::AddPackageTask(const BgdlPackageRequest *request, BgdlPackageRe
 				if (ret != 0)
 					break;
 				{
-					BgdlPackageCheck packageCheck;
+					BgdlHttpRequest packageCheck;
 					char digest[32];
 
-					packageCheck.Bgdl_81114AFC(grw0 ? 5 : 6, 2, entry.name, 0, 0, 0, 1, 0);
+					packageCheck.Setup(grw0 ? 5 : 6, 2, entry.name, 0, 0, 0, 1, 0);
 					check = packageCheck.Bgdl_8118FD0C();
-					packageCheck.Bgdl_81115C22(digest);
+					packageCheck.GetDigest(digest);
 					ret = file.write(5004 + k, &check, 4);
 					if (ret == 0)
 						ret = file.write(5005 + k, digest, 32);
@@ -3469,13 +3404,13 @@ int BgdlManager::AddDownloadTask(SceUInt32 device, const BgdlDownloadRequest *re
 			if (ret != 0)
 				goto out;
 			if (device == 2) {
-				BgdlPackageCheck check;
+				BgdlHttpRequest check;
 				char digest[32];
 				int result = 0;
 
-				check.Bgdl_81114AFC(6, 2, request->url, 0, 0, 0, 1, 0);
+				check.Setup(6, 2, request->url, 0, 0, 0, 1, 0);
 				result = check.Bgdl_8118FD0C();
-				check.Bgdl_81115C22(digest);
+				check.GetDigest(digest);
 				param.write(236, &result, sizeof(result));
 				param.write(237, digest, sizeof(digest));
 			}
@@ -4834,11 +4769,11 @@ int BgdlManager::Bgdl_81107BDE(const BgdlDownloadRequest *request, BgdlContentIn
 				if (ret != 0 || (ret = param.write(237, digest, sizeof(digest))) != 0)
 					goto done;
 			} else if (key107 > 2 && key107 <= 4) {
-				BgdlPackageCheck check;
+				BgdlHttpRequest check;
 
-				check.Bgdl_81114AFC(grw0 ? 5 : 6, 1, request->url, 0, 0, 0, 1, 0);
+				check.Setup(grw0 ? 5 : 6, 1, request->url, 0, 0, 0, 1, 0);
 				checkResult = check.Bgdl_8118FD0C();
-				check.Bgdl_81115C22(digest);
+				check.GetDigest(digest);
 				ret = param.write(236, &checkResult, sizeof(checkResult));
 				if (ret == 0)
 					ret = param.write(237, digest, sizeof(digest));

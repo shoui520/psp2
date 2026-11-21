@@ -43,8 +43,11 @@ public:
 
 	~BgdlTaskPath()
 	{
-		if (m_begin != NULL)
+		if (m_begin != NULL) {
 			delete[] m_begin;
+			m_begin = NULL;
+			m_end = NULL;
+		}
 	}
 
 	/* the buffer made size bytes, the old contents kept */
