@@ -219,7 +219,7 @@ int WebView::LoadData(const string &source, bool flag, const string &type)
 	string data;
 
 	if (source.length() != 0) {
-		ret = WEB_VIEW_ERROR_NO_WIDGET;
+		ret = WEB_VIEW_ERROR_FAILED;
 		{
 			string file("file:///");
 			Url url(source);
@@ -241,7 +241,7 @@ int WebView::LoadData(const string &source, bool flag, const string &type)
 		}
 	} else {
 		m_url = string("about:blank");
-		ret = WEB_VIEW_ERROR_NO_WIDGET;
+		ret = WEB_VIEW_ERROR_FAILED;
 	}
 	return ret;
 }
@@ -382,7 +382,7 @@ int WebView::HideLoading()
 int WebView::SetLoadingDelay(int delay)
 {
 	if (m_loadingPlane == NULL)
-		return WEB_VIEW_ERROR_NO_WIDGET;
+		return WEB_VIEW_ERROR_FAILED;
 	m_loadingPlane->m_delay = delay;
 	return 0;
 }
@@ -622,7 +622,7 @@ int WebView::CloseSelect(int index)
 
 int WebView::ChooseSelect(uint32_t index, bool force, bool close)
 {
-	int ret = WEB_VIEW_ERROR_NO_WIDGET;
+	int ret = WEB_VIEW_ERROR_FAILED;
 	bool choose = force;
 
 	if (!force && !close && m_selectEnabled.at(index))
@@ -677,7 +677,7 @@ int WebView::Request1051()
 
 int WebView::SetScrollY(int y)
 {
-	int ret = WEB_VIEW_ERROR_NO_WIDGET;
+	int ret = WEB_VIEW_ERROR_FAILED;
 
 	if (m_scrollY > 0) {
 		{
@@ -3499,7 +3499,7 @@ int WebView::SetPart(Widget *widget, int part, bool attach)
 	int ret = 0;
 
 	if (widget == NULL)
-		return WEB_VIEW_ERROR_NO_WIDGET;
+		return WEB_VIEW_ERROR_FAILED;
 
 	for (list<WebViewPart>::iterator it = m_parts.begin(); it != m_parts.end(); ++it)
 		if (it->m_part == part)
@@ -3653,7 +3653,7 @@ int32_t WebViewParam::Set()
 	WebView *view = (WebView *)m_widget;
 
 	if (view == NULL)
-		return WEB_VIEW_ERROR_NO_WIDGET;
+		return WEB_VIEW_ERROR_FAILED;
 
 	Widget *root = view;
 

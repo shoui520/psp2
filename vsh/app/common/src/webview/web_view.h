@@ -359,8 +359,6 @@ int ProcessRenderCommands(WebViewRenderTarget *target);
 WebViewGeolocation *CreateGeolocation(WebViewGeolocationClient *client);
 void DestroyGeolocation(WebViewGeolocation *geolocation);
 
-/* the error a parameter gives without its widget (name ours) */
-#define WEB_VIEW_ERROR_NO_WIDGET	((int)0x80AF0001)
 /* the view has no size yet, or its surface no memory (names ours) */
 #define WEB_VIEW_ERROR_NO_SIZE		((int)0x80AF0084)
 #define WEB_VIEW_ERROR_NO_MEMORY	((int)0x80AF0022)

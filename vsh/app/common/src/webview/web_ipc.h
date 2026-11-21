@@ -66,8 +66,23 @@ enum {
 	WEB_IPC_EVENT_2027 = 0x2027,
 	WEB_IPC_EVENT_2033 = 0x2033,
 	WEB_IPC_EVENT_2034 = 0x2034,
-	WEB_IPC_CREATE_PAGE_WITH_VIEW = 0x2100
+	WEB_IPC_CREATE_PAGE_WITH_VIEW = 0x2100,
+	/* received for every view: the WebKit process has ended */
+	WEB_IPC_PROCESS_EXIT = 0x2300
 };
+
+/* a packet's kind: sent and waited on, a request the receiver answers, posted (names ours) */
+enum {
+	WEB_IPC_KIND_SEND = 0,
+	WEB_IPC_KIND_REQUEST = 1,
+	WEB_IPC_KIND_POST = 2
+};
+
+/*
+ * The error a parameter gives without its widget, and a message sent while the WebKit process
+ * is not connected (name ours).
+ */
+#define WEB_VIEW_ERROR_FAILED	((int)0x80AF0001)
 
 /* the size of a packet's texts and of its data */
 enum {
@@ -77,13 +92,24 @@ enum {
 
 /* the packet a message is written into: the view it is for, its type and the type's fields */
 struct WebIpcPacket {
-	int m_reserved;			/* 0: only cleared */
+	WebIpcPacket()
+		: m_kind(WEB_IPC_KIND_SEND), m_viewId(-1), m_type(0), m_reserved2(0), m_dataSize(0)
+	{
+		sce_paf_memset(m_text, 0, sizeof(m_text));
+		sce_paf_memset(m_float, 0, sizeof(m_float));
+		sce_paf_memset(m_int, 0, sizeof(m_int));
+		sce_paf_memset(m_bool, 0, sizeof(m_bool));
+		sce_paf_memset(m_data, 0, sizeof(m_data));
+	}
+
+	SceUInt8 m_kind;		/* WEB_IPC_KIND_*, set by the channel */
 	int m_viewId;
 	unsigned int m_type;
 	char m_text[3][WEB_IPC_TEXT_SIZE];
 	float m_float[4];
 	int m_int[4];
-	SceUInt8 m_reserved2[12];
+	int m_reserved;			/* never written */
+	SceUInt64 m_reserved2;		/* only cleared; 8-byte aligned, as the packet */
 	bool m_bool[2];
 	int m_dataSize;
 	char m_data[WEB_IPC_DATA_SIZE];
@@ -924,7 +950,47 @@ public:
 
 /* the IPC with the web UI process, one for every web view: each view's slot is its view ID with
    the process (it holds 16; names ours) */
-class WebIpc {
+/* what a channel tells its owner: connected, disconnected and the packets it receives */
+class WebIpcListener {
+public:
+	virtual ~WebIpcListener()
+	{
+	}
+
+	virtual void OnConnect() = 0;
+	virtual void OnDisconnect() = 0;
+	/* a posted packet, and a request to answer */
+	virtual void OnPost(WebIpcPacket *packet) = 0;
+	virtual void OnRequest(WebIpcPacket *packet) = 0;
+};
+
+/*
+ * A channel to another process: the message pipe it receives on, made under its name, read by
+ * its thread, and the other process's pipe, opened by name, that it sends on (0x81013a12..).
+ */
+class WebIpcChannel {
+public:
+	WebIpcChannel(const char *name, bool smallStack, WebIpcListener *listener);
+	~WebIpcChannel();
+
+	/* the other process's pipe opened, and closed */
+	int Open(const char *name);
+	int Close();
+	/* a packet sent, waited on (Send) or not (Post) */
+	int Send(WebIpcPacket *packet);
+	int Post(WebIpcPacket *packet);
+
+	SceUID m_thread;
+	SceUID m_sendPipe;
+	SceUID m_receivePipe;
+	string m_name;
+	WebIpcListener *m_listener;
+	bool m_smallStack;
+	WebIpcPacket m_packet;		/* the packet being received */
+	SceUID m_syncEvent;
+};
+
+class WebIpc : public WebIpcListener {
 public:
 	enum {
 		VIEW_NUM = 16
@@ -942,6 +1008,32 @@ public:
 	WebIpc();
 	virtual ~WebIpc();
 
+	virtual void OnConnect();
+	virtual void OnDisconnect();
+	virtual void OnPost(WebIpcPacket *packet);
+	virtual void OnRequest(WebIpcPacket *packet);
+
+	/* the WebKit process's pipe opened (state 1); 0x80010016 when it has no channel */
+	int Connect();
+
+	/* the view in the slot, NULL for none */
+	WebView *GetView(int viewId)
+	{
+		if (viewId >= 0 && viewId < VIEW_NUM)
+			return m_views[viewId];
+		return NULL;
+	}
+
+	int GetConnectionState()
+	{
+		thread::RMutex *lock = m_connectionLock;
+
+		lock->Lock();
+		int state = m_connectionState;
+		lock->Unlock();
+		return state;
+	}
+
 	/* the view's slot, the next free one after the last given */
 	int RegisterView(WebView *view);
 	/* the message sent to the view's page, waiting for its reply (0x810100e0), or not
@@ -956,7 +1048,7 @@ public:
 	/* the connection's lock, its channel and state (1: connected) */
 	thread::RMutex *m_connectionLock;
 	int m_lastView;
-	void *m_channel;
+	WebIpcChannel *m_channel;
 	int m_connectionState;
 	/* the process ID, in hex */
 	string m_processId;

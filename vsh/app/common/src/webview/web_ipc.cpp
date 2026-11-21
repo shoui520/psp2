@@ -6,7 +6,12 @@
 
 #include <stddef.h>
 #include <scetypes.h>
+#include <sceerror.h>
+#include <kernel/threadmgr.h>
+#include <std/stdio.h>
+#include <std/stdlib.h>
 #include "web_ipc.h"
+#include "web_view.h"
 
 namespace paf {
 namespace ui {
@@ -777,6 +782,178 @@ void WebIpcGeolocationPositionMessage::Write(WebIpcPacket *packet) const
 	sce_paf_memcpy(packet->m_data, &m_position, sizeof(m_position));
 	packet->m_dataSize = sizeof(m_position);
 }
+
+int WebIpc::RegisterView(WebView *view)
+{
+	thread::RMutexLock lock(m_lock);
+	int next = ++m_lastView;
+	int slot = next % VIEW_NUM;
+
+	for (int i = 0; i < VIEW_NUM; i++) {
+		if (m_views[slot] == NULL)
+			break;
+		slot = ++next % VIEW_NUM;
+	}
+	m_lastView = slot;
+	m_views[slot] = view;
+	return slot;
+}
+
+void WebIpc::UnregisterView(int viewId)
+{
+	thread::RMutexLock lock(m_lock);
+
+	if (viewId >= 0 && viewId < VIEW_NUM && m_views[viewId] != NULL)
+		m_views[viewId] = NULL;
+}
+
+int WebIpc::Send(const WebIpcMessage *message, int viewId)
+{
+	int ret = WEB_VIEW_ERROR_FAILED;
+
+	if (GetConnectionState() == 1) {
+		WebIpcPacket packet;
+
+		message->Write(&packet);
+		packet.m_viewId = viewId;
+		ret = m_channel->Send(&packet);
+		if (ret != 0)
+			sce_paf_printf_dummy();
+	} else {
+		sce_paf_printf_dummy();
+	}
+	return ret;
+}
+
+int WebIpc::Post(const WebIpcMessage *message, int viewId)
+{
+	int ret = 0;
+
+	if (GetConnectionState() == 1) {
+		WebIpcPacket packet;
+
+		message->Write(&packet);
+		packet.m_viewId = viewId;
+		ret = m_channel->Post(&packet);
+	}
+	return ret;
+}
+
+WebIpc::WebIpc()
+	: m_lock(NULL), m_connectionLock(NULL), m_lastView(-1), m_channel(NULL),
+	  m_connectionState(0)
+{
+	char processId[12];
+
+	sce_paf_memset(m_views, 0, sizeof(m_views));
+	sce_paf_snprintf(processId, 9, "%08x", sceKernelGetProcessId());
+	m_processId = processId;
+
+	string name = "SceWebUIProcess" + m_processId;
+	const char *channelName = name.c_str();
+
+	m_channel = channelName != NULL ? new WebIpcChannel(channelName, true, this) : NULL;
+	m_lock = new thread::RMutex("SceWebProcessProxyVLMutex", 0);
+	m_connectionLock = new thread::RMutex("SceWebProcessProxySTMutex", 0);
+}
+
+WebIpc::~WebIpc()
+{
+	if (m_lock != NULL) {
+		delete m_lock;
+		m_lock = NULL;
+	}
+	if (m_connectionLock != NULL) {
+		delete m_connectionLock;
+		m_connectionLock = NULL;
+	}
+	if (m_channel != NULL) {
+		if (GetConnectionState() == 1)
+			m_channel->Close();
+		delete m_channel;
+		m_channel = NULL;
+	}
+}
+
+int WebIpc::Connect()
+{
+	int ret = 0;
+
+	if (m_channel != NULL)
+		ret = SCE_ERROR_ERRNO_EINVAL;
+	if (GetConnectionState() != 1 && m_channel != NULL) {
+		string name = "SceWebKitProcess" + m_processId;
+
+		ret = m_channel->Open(name.c_str());
+		if (ret == 0) {
+			thread::RMutexLock lock(m_connectionLock);
+
+			m_connectionState = 1;
+		}
+	}
+	return ret;
+}
+
+void WebIpc::OnConnect()
+{
+	Connect();
+
+	thread::RMutexLock lock(m_lock);
+
+	for (int i = 0; i < VIEW_NUM; i++) {
+		if (m_views[i] != NULL)
+			m_views[i]->QueueMessage21();
+	}
+}
+
+void WebIpc::OnDisconnect()
+{
+	m_channel->Close();
+	{
+		thread::RMutexLock lock(m_connectionLock);
+
+		m_connectionState = 0;
+	}
+
+	thread::RMutexLock lock(m_lock);
+
+	for (int i = 0; i < VIEW_NUM; i++) {
+		if (m_views[i] != NULL)
+			m_views[i]->QueueMessage1056();
+	}
+}
+
+void WebIpc::OnPost(WebIpcPacket *packet)
+{
+	thread::RMutexLock lock(m_lock);
+
+	if (packet->m_type == WEB_IPC_PROCESS_EXIT) {
+		thread::RMutexLock views(m_lock);
+
+		for (int i = 0; i < VIEW_NUM; i++) {
+			if (m_views[i] != NULL)
+				m_views[i]->OnProcessExit();
+		}
+	} else {
+		WebView *view = GetView(packet->m_viewId);
+
+		if (view != NULL)
+			view->ReceiveMessage(packet);
+	}
+}
+
+void WebIpc::OnRequest(WebIpcPacket *packet)
+{
+	thread::RMutexLock lock(m_lock);
+	int viewId = packet->m_viewId;
+
+	if (viewId >= 0 && viewId < VIEW_NUM && m_views[viewId] != NULL)
+		GetView(viewId)->ReceiveMessage(packet);
+	else
+		m_channel->Post(packet);
+}
+
+WebIpc *WebIpc::s_instance = NULL;
 
 }
 }
