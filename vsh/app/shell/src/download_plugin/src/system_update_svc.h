@@ -19,45 +19,11 @@
 #include <ipmi/server.h>
 #include <ipmi/session.h>
 #include <system_update/system_update_job.h>
+#include <system_update/system_update_download_updatelist.h>
+#include <system_update/system_update_file.h>
+#include <system_update/system_update_registry.h>
 
 class DownloadPluginObject;
-
-/* the error the service's calls give (PLACEHOLDER name) */
-#define SYSTEM_UPDATE_SVC_ERROR		0x801825FF
-
-/* an update being fetched (PLACEHOLDER names) */
-struct SystemUpdateInfo {
-	SystemUpdateInfo() : offset(0), size(0), count(1), done(false)
-	{
-	}
-
-	char reserved[32];
-	char path[1024];		/* where the update is written */
-	char version[32];
-	SceInt64 offset;		/* what of it is there */
-	SceInt64 size;
-	int count;
-	int reserved2;
-	bool done;
-};
-
-/* an image of an update list entry (PLACEHOLDER names) */
-struct SystemUpdateImage {
-	int reserved[2];
-	paf::string url;
-	int reserved2[3];
-};
-
-PAF_VECTOR_INLINE_DTOR(SystemUpdateImage)
-
-/* an update list entry (PLACEHOLDER names) */
-struct SystemUpdateData {
-	int type;
-	paf::string version;
-	paf::vector<SystemUpdateImage> images;
-};
-
-PAF_VECTOR_NOINLINE_CLEAR(SystemUpdateData, paf::allocator<SystemUpdateData>)
 
 /* a download task's detail, as the bgdl library gives it (PLACEHOLDER names) */
 struct BgdlTaskDetail {
@@ -85,52 +51,6 @@ struct BgdlTaskState {
 struct BgdlTaskId {
 	SceUInt32 id;
 	int reserved;
-};
-
-/* the update's state, as the update's files give it (PLACEHOLDER names) */
-struct SystemUpdateStatus {
-	SystemUpdateStatus() : state(3), value(0)
-	{
-		first.erase(0, paf::string::npos);
-		second.erase(0, paf::string::npos);
-	}
-
-	int state;			/* 0 started, 2 downloaded, 3 none */
-	SceInt64 value;			/* what of it is there */
-	paf::string first;
-	paf::string second;
-};
-
-/* the update's local files (PLACEHOLDER names; 0x81131052..) */
-class SystemUpdateCtrl {
-public:
-	SystemUpdateCtrl(int reserved, const char *infoPath, const char *pupPath);	/* (0x81131052) */
-
-	~SystemUpdateCtrl();						/* (0x81131074) */
-	SystemUpdateResult Bgdl_811310CA(void);				/* removes them */
-	bool Bgdl_81131ABC(void);					/* the update is there */
-	bool Bgdl_81131B54(void);					/* its information is there */
-	/* (0x81131A18) */
-	SystemUpdateResult Bgdl_81131A18(paf::string url, paf::string version, paf::string name,
-					 SceInt64 offset, SceInt64 size, int count,
-					 SystemUpdateInfo *info);
-	/* (0x81131CE6) */
-	SystemUpdateResult Bgdl_81131CE6(int type, SystemUpdateInfo *info, SceInt64 reserved);
-	/* (0x81131280) the update's information written */
-	SystemUpdateResult Bgdl_81131280(SystemUpdateInfo info);
-	/* (0x81132734) the update's state */
-	SystemUpdateResult Bgdl_81132734(SystemUpdateStatus *status);
-	/* (0x8113276C) the update at path checked against its version and size */
-	SystemUpdateResult Bgdl_8113276C(paf::string path, paf::string version, SceInt64 size,
-					 bool *ok);
-
-	int m_reserved;
-	const char *m_infoPath;
-	const char *m_pupPath;
-	paf::string m_string1;
-	paf::string m_string2;
-	paf::string m_string3;
-	int m_reserved2[6];
 };
 
 class SystemUpdateIpmiServer;
@@ -178,12 +98,11 @@ public:
 	paf::thread::RMutex *m_registLock;
 	paf::thread::Mutex *m_seqLock;
 	paf::job::JobItem *m_job;
-	paf::string m_listUrl;
-	paf::vector<SystemUpdateData> m_list;
-	paf::string m_url;
-	paf::string m_version;
+	SystemUpdateList m_updateList;
+	paf::string m_version;		/* the update list's */
+	paf::string m_url;		/* its image's */
 	SceInt64 m_size;
-	paf::string m_name;
+	paf::string m_lastModified;	/* the image's date */
 	bool m_reserved3;
 	bool m_checking;
 	DownloadPluginObject *m_object;
@@ -296,7 +215,6 @@ public:
  */
 void *Bgdl_8137C448(void);
 const char *Bgdl_8137C40C(void *paths);
-const char *Bgdl_8137C484(int reserved);
 int Bgdl_812A4C6C(const char *key);
 int Bgdl_812A4FBA(const char *key, bool value);
 int Bgdl_812A4FC8(const char *key, bool *value);
@@ -306,11 +224,6 @@ int Bgdl_81139392(int reserved, int kind, int max, int *count, BgdlTaskId *ids);
 int Bgdl_8113942C(int reserved, int type, SceUInt32 id, BgdlTaskDetail *detail);
 int Bgdl_8113906E(int reserved, SceUInt32 id, BgdlTaskState *state);
 int Bgdl_81139190(int reserved, SceUInt32 id);
-void Bgdl_81132986(bool value);
-void Bgdl_81132992(void);
-void Bgdl_811329A2(int value);
-SystemUpdateResult Bgdl_81130ECC(const char *id);
-int Bgdl_81130EC4(const char *path);
 int Bgdl_81138F80(int reserved, int kind, BgdlTaskDetail *detail, SceUInt32 *id);
 
 /* system_update_svc.cpp's callbacks */

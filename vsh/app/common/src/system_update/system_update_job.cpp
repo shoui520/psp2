@@ -16,7 +16,7 @@ SystemUpdateJob::SystemUpdateJob(SystemUpdateListener *listener)
 	: paf::common::SlotJobItem("SceSystemUpdateJob", NULL), m_listener(listener), m_cancelled(false)
 {
 	m_result.error = 0;
-	m_result.reserved = 0;
+	m_result.detail = 0;
 }
 
 void SystemUpdateJob::SetResult(SystemUpdateResult result)

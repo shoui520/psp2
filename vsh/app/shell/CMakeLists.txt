@@ -204,7 +204,12 @@ psp2_module(vs0_vsh_shell_shell KIND user COMPILER snc PARTIAL SOURCES
 	src/download_plugin/src/log_job_manager.cpp
 	src/download_plugin/src/fgdl_manager.cpp
 	src/download_plugin/src/system_update_svc.cpp
+	${PSP2_SRC}/vsh/app/common/src/system_update/system_update_download_updatelist.cpp
+	${PSP2_SRC}/vsh/app/common/src/system_update/system_update_file.cpp
 	${PSP2_SRC}/vsh/app/common/src/system_update/system_update_job.cpp
+	${PSP2_SRC}/vsh/app/common/src/system_update/system_update_registry.cpp
+	${PSP2_SRC}/vsh/app/common/src/system_update/system_update_updatelistprocessor.cpp
+	${PSP2_SRC}/vsh/app/common/src/system_update/system_update_mtphttpfile.cpp
 	shell.c
 )
 target_include_directories(vs0_vsh_shell_shell PRIVATE "${PSP2_SRC}/vsh/paf/include"

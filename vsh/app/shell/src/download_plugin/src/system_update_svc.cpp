@@ -34,21 +34,7 @@ using namespace paf;
 
 SystemUpdateSvc *g_systemUpdateSvc;			/* (0x81544898) */
 
-/* the update list's job (another file's, PLACEHOLDER names) */
-class SystemUpdateListJob : public job::JobItem {
-public:
-	/* (0x811303AE) */
-	SystemUpdateListJob(SystemUpdateSvc *svc, string *url, string *version, SceInt64 *size,
-			    string *name, string *listUrl, int reserved);
-	virtual ~SystemUpdateListJob();
-	virtual int Run();
-	virtual void Finish(int result);
-
-	char m_data[60];
-};
-
 /* another file's (PLACEHOLDER names) */
-SystemUpdateResult Bgdl_81132B02(int type, bool *reserved, int flag);
 int Bgdl_81199EC0(common::SharedPtr<job::JobItem> &job);
 
 /* the update's check given back: its job queued */
@@ -56,10 +42,10 @@ int SystemUpdateSvc::Bgdl_8112CFD8(SystemUpdateResult result)
 {
 	SystemUpdateInfo info;
 
-	if (result.error == 0 && m_version.length() != 0 && m_size > 0 && m_name.length() <= 32) {
+	if (result.error == 0 && m_url.length() != 0 && m_size > 0 && m_lastModified.length() <= 32) {
 		SceInt64 offset = 0;
 
-		result = m_ctrl->Bgdl_81131A18(m_url, m_version, m_name, offset, m_size, 1, &info);
+		result = m_ctrl->Bgdl_81131A18(m_version, m_url, m_lastModified, offset, m_size, 1, &info);
 		if (result.error == 0 && !m_busy) {
 			SystemUpdateInfo jobInfo = info;
 			common::SharedPtr<job::JobItem> job(new SystemUpdateSvcJob(this, jobInfo));
@@ -98,12 +84,12 @@ SystemUpdateResult SystemUpdateSvc::Bgdl_8112D450(void)
 	m_server = NULL;
 	m_server = new SystemUpdateIpmiServer();
 	if (m_server == NULL) {
-		result.error = SYSTEM_UPDATE_SVC_ERROR;
-		result.reserved = 0;
+		result.error = SYSTEM_UPDATE_ERROR;
+		result.detail = 0;
 		return result;
 	}
 	if (m_server->Init(this) != 0) {
-		result.error = SYSTEM_UPDATE_SVC_ERROR;
+		result.error = SYSTEM_UPDATE_ERROR;
 	} else {
 		m_server->SetHandler(SYSTEM_UPDATE_METHOD_CANCEL, Bgdl_8112EE04);
 		m_server->SetHandler(SYSTEM_UPDATE_METHOD_RESUME, Bgdl_8112EE58);
@@ -111,7 +97,7 @@ SystemUpdateResult SystemUpdateSvc::Bgdl_8112D450(void)
 		m_server->SetHandler(SYSTEM_UPDATE_METHOD_CHECK, Bgdl_8112EE7C);
 		result.error = 0;
 	}
-	result.reserved = 0;
+	result.detail = 0;
 	return result;
 }
 
@@ -173,7 +159,7 @@ int SystemUpdateSvc::Bgdl_8112D508(Plugin *plugin, DownloadPluginObject *object)
 	Bgdl_8112D450();
 	Bgdl_81132986(false);
 	Bgdl_81132992();
-	Bgdl_811329A2(0);
+	Bgdl_811329A2(NULL);
 	m_started = true;
 	return 1;
 }
@@ -229,9 +215,9 @@ SystemUpdateResult SystemUpdateSvc::Bgdl_8112D88C(SceUInt32 id, BgdlTaskState *s
 	m_hasTask = false;
 	m_registLock->Unlock();
 	if (ret < 0)
-		error = SYSTEM_UPDATE_SVC_ERROR;
+		error = SYSTEM_UPDATE_ERROR;
 	result.error = error;
-	result.reserved = 0;
+	result.detail = 0;
 	return result;
 }
 
@@ -255,11 +241,11 @@ SystemUpdateResult SystemUpdateSvc::Bgdl_8112D9CA(void)
 			SystemUpdateResult ret = Bgdl_8112D88C(id, &state);
 
 			error = ret.error;
-			reserved = ret.reserved;
+			reserved = ret.detail;
 		}
 	}
 	result.error = error;
-	result.reserved = reserved;
+	result.detail = reserved;
 	return result;
 }
 
@@ -284,7 +270,7 @@ SystemUpdateResult SystemUpdateSvc::Bgdl_8112DA94(SystemUpdateInfo *info)
 	if (m_busy) {
 		m_registLock->Unlock();
 		result.error = 0;
-		result.reserved = 0;
+		result.detail = 0;
 		return result;
 	}
 	result = Bgdl_8112D9CA();
@@ -313,7 +299,7 @@ SystemUpdateResult SystemUpdateSvc::Bgdl_8112DA94(SystemUpdateInfo *info)
 
 	ScePafMisc_DCBA2BD4(&title, m_plugin->GetString(IDParam("", 0x7F8F9DBC)), 2);
 	sce_paf_strncat(m_detail.title, ScePafMisc_A7C6AF5C(&title), sizeof(m_detail.title) - 1);
-	sce_paf_strncat(m_detail.path, info->path, sizeof(m_detail.path) - 1);
+	sce_paf_strncat(m_detail.path, info->url, sizeof(m_detail.path) - 1);
 	sce_paf_strncat(m_detail.fileName, "PSP2UPDAT.PUP", sizeof(m_detail.fileName) - 1);
 	sce_paf_strncat(m_detail.dir, "ud0:PSP2UPDATE/", sizeof(m_detail.dir) - 1);
 	sce_paf_strncat(m_detail.type, "SETTINGS", sizeof(m_detail.type) - 1);
@@ -325,8 +311,8 @@ SystemUpdateResult SystemUpdateSvc::Bgdl_8112DA94(SystemUpdateInfo *info)
 		path += m_detail.fileName;
 		file = LocalFile::Open(path.c_str(), SCE_O_RDWR | SCE_O_CREAT | SCE_O_TRUNC, 6, &error);
 		if (file.get() == NULL || error != 0) {
-			result.error = SYSTEM_UPDATE_SVC_ERROR;
-			result.reserved = error;
+			result.error = SYSTEM_UPDATE_ERROR;
+			result.detail = error;
 			goto end;
 		}
 		file->Close();
@@ -345,7 +331,7 @@ SystemUpdateResult SystemUpdateSvc::Bgdl_8112DA94(SystemUpdateInfo *info)
 	m_detail.times[6] = times;
 	m_detail.times[7] = times;
 	if (Bgdl_81138F80(0, SYSTEM_UPDATE_TASK_KIND, &m_detail, &m_taskId) != 0) {
-		result.error = SYSTEM_UPDATE_SVC_ERROR;
+		result.error = SYSTEM_UPDATE_ERROR;
 		goto end;
 	}
 	m_hasTask = true;
@@ -377,7 +363,7 @@ SystemUpdateResult SystemUpdateSvc::Bgdl_8112E7F8(SystemUpdateInfo *info)
 		if (status.state == 2) {
 			bool ok = false;
 
-			result = m_ctrl->Bgdl_8113276C(string(info->path), string(info->version),
+			result = m_ctrl->Bgdl_8113276C(string(info->url), string(info->lastModified),
 						       info->size, &ok);
 			if (result.error == 0 && ok == true)
 				goto end;
@@ -395,22 +381,22 @@ SystemUpdateResult SystemUpdateSvc::Bgdl_8112E7F8(SystemUpdateInfo *info)
 					have = true;
 					sce_paf_memset(&detail, 0, sizeof(detail));
 					if (Bgdl_8113942C(0, 1, id, &detail) != 0)
-						error = SYSTEM_UPDATE_SVC_ERROR;
+						error = SYSTEM_UPDATE_ERROR;
 				} else {
-					error = SYSTEM_UPDATE_SVC_ERROR;
+					error = SYSTEM_UPDATE_ERROR;
 				}
 			} else {
 				have = false;
 				error = 0;
 			}
 			result.error = error;
-			result.reserved = 0;
+			result.detail = 0;
 			if (error != 0)
 				goto end;
 			if (have == true) {
 				bool ok = false;
 
-				result = m_ctrl->Bgdl_8113276C(string(info->path), string(info->version),
+				result = m_ctrl->Bgdl_8113276C(string(info->url), string(info->lastModified),
 							       info->size, &ok);
 				if (result.error == 0 && ok == true) {
 					Bgdl_81139190(0, id);
@@ -418,8 +404,8 @@ SystemUpdateResult SystemUpdateSvc::Bgdl_8112E7F8(SystemUpdateInfo *info)
 				}
 			} else if (status.state == 0) {
 				bool ok = false;
-				SystemUpdateResult check = m_ctrl->Bgdl_8113276C(string(info->path),
-										 string(info->version),
+				SystemUpdateResult check = m_ctrl->Bgdl_8113276C(string(info->url),
+										 string(info->lastModified),
 										 info->size, &ok);
 
 				if (check.error == 0 && ok == true) {
@@ -446,19 +432,18 @@ int SystemUpdateSvc::Bgdl_8112EBB0(void)
 
 		if (sceRegMgrGetKeyInt("/CONFIG/NP2/AUTOUPDATE", "system", &value) == 0 &&
 		    value == 1) {
-			m_list.clear();
+			m_updateList.list.clear();
 
-			bool reserved;
-			SystemUpdateResult result = Bgdl_81132B02(1, &reserved, 1);
+			SystemUpdateResult result = Bgdl_81132B02(1, &value, true);
 
 			if (result.error == 0 && m_checking != true) {
-				m_list.clear();
-				m_url.erase(0, string::npos);
+				m_updateList.list.clear();
 				m_version.erase(0, string::npos);
+				m_url.erase(0, string::npos);
 				m_size = 0;
-				m_name.erase(0, string::npos);
-				m_job = new SystemUpdateListJob(this, &m_url, &m_version, &m_size, &m_name,
-								&m_listUrl, 0);
+				m_lastModified.erase(0, string::npos);
+				m_job = new SystemUpdateListJob(this, &m_version, &m_url, &m_size,
+								&m_lastModified, &m_updateList, 0);
 				if (m_job != NULL) {
 					common::SharedPtr<job::JobItem> job(m_job);
 

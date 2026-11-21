@@ -11,10 +11,13 @@
 #include <job/job.h>
 #include <common/job_slots.h>
 
+/* the error the system update's calls give (PLACEHOLDER name) */
+#define SYSTEM_UPDATE_ERROR		0x801825FF
+
 /* what the system update's calls give back (PLACEHOLDER names) */
 struct SystemUpdateResult {
 	int error;
-	int reserved;
+	int detail;			/* the call's own error behind it */
 };
 
 /* what a job tells when it is done (PLACEHOLDER names) */
@@ -32,7 +35,7 @@ class SystemUpdateJob : public paf::common::SlotJobItem {
 public:
 	SystemUpdateJob(SystemUpdateListener *listener);	/* (0x811329B0) */
 
-	virtual ~SystemUpdateJob()
+	virtual __attribute__((noinline)) ~SystemUpdateJob()
 	{
 	}
 
