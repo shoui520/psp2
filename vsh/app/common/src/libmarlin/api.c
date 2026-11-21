@@ -216,14 +216,14 @@ int MlnConvertResult(unsigned int result)
 int SceMarlin_83B44D33(void *memory, unsigned int memorySize, void *secureMemory,
 		       unsigned int secureMemorySize)
 {
-	unsigned char session[12] = { 0 };
+	MlnServiceSession session = { NULL, NULL, NULL };
 	MlnServiceContext context;
 	MlnBuffer *state = NULL;
 	int ret, first;
 
 	first = s_initCount++ == 0;
 	context.id = -1;
-	context.session = session;
+	context.session = &session;
 	if (!first)
 		return MLN_OK;
 	ret = sceAppMgrAppDataMount(MLN_APPDATA_MOUNT_ID, &s_mountPoint);
@@ -257,12 +257,12 @@ int SceMarlin_83B44D33(void *memory, unsigned int memorySize, void *secureMemory
 /* stops the client on the call that balances the first start */
 int SceMarlin_C76DA6C0(void)
 {
-	unsigned char session[12] = { 0 };
+	MlnServiceSession session = { NULL, NULL, NULL };
 	MlnServiceContext context;
 	int ret;
 
 	context.id = -1;
-	context.session = session;
+	context.session = &session;
 	if (s_initCount == 0)
 		return MLN_RESULT_NOT_INITIALIZED;
 	if (--s_initCount > 0)
@@ -830,7 +830,7 @@ static const MlnBuffer s_sneServiceProvider = {
 int MlnApi_81003464(MlnBuffer *serviceProvider, MlnBuffer *token, unsigned int *count,
 		    MlnBuffer ***items)
 {
-	unsigned char session[12] = { 0 };
+	MlnServiceSession session = { NULL, NULL, NULL };
 	MlnServiceContext context;
 	MlnBuffer sne;
 	MlnBuffer *ids = NULL, *accountId = NULL, *entitlementId = NULL;
@@ -840,7 +840,7 @@ int MlnApi_81003464(MlnBuffer *serviceProvider, MlnBuffer *token, unsigned int *
 	int ret;
 
 	context.id = -1;
-	context.session = session;
+	context.session = &session;
 	if (serviceProvider == NULL || serviceProvider->size == 0 || serviceProvider->data == NULL ||
 	    token == NULL || token->size == 0 || token->data == NULL) {
 		ret = MLN_RESULT_INVALID_ARGUMENT;
@@ -1545,11 +1545,11 @@ static const MlnBuffer s_requestSources[2] = {
 	}
 };
 
-static inline void MlnServiceContextInit(MlnServiceContext *context, unsigned int *session)
+static inline void MlnServiceContextInit(MlnServiceContext *context, MlnServiceSession *session)
 {
-	session[0] = 0;
-	session[1] = 0;
-	session[2] = 0;
+	session->cookie = NULL;
+	session->transact = NULL;
+	session->release = NULL;
 	context->id = -1;
 	context->session = session;
 }
@@ -1569,7 +1569,7 @@ int SceMarlin_0166ACC1(MlnApiObject *object, MlnBuffer *message, MlnApiNode **re
 	MlnApiReport report;
 	MlnApiRequest request, decoded;
 	MlnServiceContext context;
-	unsigned int session[3];
+	MlnServiceSession session;
 	MlnBuffer configurationToken, licenseTransferService;
 	MlnBuffer *handle, *buffer;
 	MlnApiResult *created;
@@ -1687,7 +1687,7 @@ int SceMarlin_0166ACC1(MlnApiObject *object, MlnBuffer *message, MlnApiNode **re
 		goto results;
 	case 6:
 		if (status == MLN_OK) {
-			MlnServiceContextInit(&context, session);
+			MlnServiceContextInit(&context, &session);
 			status = MlnImpl_81018E08(&context, request.arg[0], request.arg[1]);
 		}
 		ret = MlnApi_8100370C(object, status, NULL, NULL, &response);
@@ -1695,7 +1695,7 @@ int SceMarlin_0166ACC1(MlnApiObject *object, MlnBuffer *message, MlnApiNode **re
 	case 7:
 		report.type = 1;
 		if (status == MLN_OK) {
-			MlnServiceContextInit(&context, session);
+			MlnServiceContextInit(&context, &session);
 			status = MlnImpl_810188E8(&context, request.arg[0], request.arg[1],
 						  &report.data.times.first,
 						  &report.data.times.second);
@@ -1705,7 +1705,7 @@ int SceMarlin_0166ACC1(MlnApiObject *object, MlnBuffer *message, MlnApiNode **re
 	case 8:
 		report.type = 2;
 		if (status == MLN_OK) {
-			MlnServiceContextInit(&context, session);
+			MlnServiceContextInit(&context, &session);
 			status = MlnImpl_81018A2C(&context, &report.data.items.count,
 						  &report.data.items.items);
 		}
@@ -1714,13 +1714,13 @@ int SceMarlin_0166ACC1(MlnApiObject *object, MlnBuffer *message, MlnApiNode **re
 	case 9:
 		report.type = 4;
 		if (status == MLN_OK) {
-			MlnServiceContextInit(&context, session);
+			MlnServiceContextInit(&context, &session);
 			status = MlnImpl_810147D8(&context, 1);
 			if (status == MLN_OK) {
-				MlnServiceContextInit(&context, session);
+				MlnServiceContextInit(&context, &session);
 				status = MlnImpl_810147D8(&context, 2);
 				if (status == MLN_OK) {
-					MlnServiceContextInit(&context, session);
+					MlnServiceContextInit(&context, &session);
 					status = MlnImpl_810147D8(&context, 0);
 					if (status == 16)
 						status = 15;
@@ -1733,7 +1733,7 @@ int SceMarlin_0166ACC1(MlnApiObject *object, MlnBuffer *message, MlnApiNode **re
 		report.type = 5;
 		if (status == MLN_OK) {
 			handle = NULL;
-			MlnServiceContextInit(&context, session);
+			MlnServiceContextInit(&context, &session);
 			status = MlnImpl_81016A5C(&context, request.arg[0], &handle);
 			if (status == MLN_OK) {
 				report.data.buffer = handle;
@@ -1753,7 +1753,7 @@ int SceMarlin_0166ACC1(MlnApiObject *object, MlnBuffer *message, MlnApiNode **re
 	case 12:
 		report.type = 7;
 		if (status == MLN_OK) {
-			MlnServiceContextInit(&context, session);
+			MlnServiceContextInit(&context, &session);
 			status = MlnImpl_81018D00(&context, &report.data.value);
 		}
 		ret = MlnApi_8100370C(object, status, NULL, &report, &response);
@@ -1761,7 +1761,7 @@ int SceMarlin_0166ACC1(MlnApiObject *object, MlnBuffer *message, MlnApiNode **re
 	case 13:
 		report.type = 8;
 		if (status == MLN_OK) {
-			MlnServiceContextInit(&context, session);
+			MlnServiceContextInit(&context, &session);
 			buffer = request.arg[0];
 			if (buffer != NULL && buffer->size != 0 && buffer->data != NULL)
 				status = MlnImpl_81018DA0(&context, buffer);
@@ -1903,7 +1903,7 @@ int SceMarlin_08CAD267(MlnApiObject *object, MlnApiPair **out)
 	unsigned int count = 0;
 	MlnApiPair *list = NULL;
 	MlnServiceContext context;
-	unsigned int session[3];
+	MlnServiceSession session;
 	MlnApiKind *kind;
 	int ret;
 
@@ -1918,7 +1918,7 @@ int SceMarlin_08CAD267(MlnApiObject *object, MlnApiPair **out)
 		if (out == NULL)
 			return MLN_RESULT_INVALID_ARGUMENT;
 		if (kind->type == 0) {
-			MlnServiceContextInit(&context, session);
+			MlnServiceContextInit(&context, &session);
 			ret = MlnImpl_81018A2C(&context, &count, &items);
 			goto pairs;
 		}
@@ -1988,7 +1988,7 @@ int SceMarlin_3AA04BBF(MlnApiObject *object, void *a1, void *a2, MlnApiDate *fir
 	int firstFound = 0;
 	int secondFound = 0;
 	MlnServiceContext context;
-	unsigned int session[3];
+	MlnServiceSession session;
 	MlnApiKind *kind;
 	int ret;
 
@@ -2003,7 +2003,7 @@ int SceMarlin_3AA04BBF(MlnApiObject *object, void *a1, void *a2, MlnApiDate *fir
 		if (first == NULL || second == NULL)
 			return MLN_RESULT_INVALID_ARGUMENT;
 		if (kind->type == 0) {
-			MlnServiceContextInit(&context, session);
+			MlnServiceContextInit(&context, &session);
 			ret = MlnImpl_810188E8(&context, a1, a2, &firstFound, &secondFound);
 			if (ret != MLN_OK)
 				return ret;
@@ -2032,7 +2032,7 @@ found:
 int SceMarlin_7E65734B(MlnApiObject *object, void *a1, void *a2)
 {
 	MlnServiceContext context;
-	unsigned int session[3];
+	MlnServiceSession session;
 	MlnApiKind *kind;
 
 	if (object == NULL || (kind = object->kind) == NULL)
@@ -2041,7 +2041,7 @@ int SceMarlin_7E65734B(MlnApiObject *object, void *a1, void *a2)
 		if (!kind->remote)
 			return 3;
 	} else if (kind->type == 0) {
-		MlnServiceContextInit(&context, session);
+		MlnServiceContextInit(&context, &session);
 		return MlnImpl_81018E08(&context, a1, a2);
 	} else if (kind->type != 1) {
 		return 6;
@@ -2311,7 +2311,7 @@ int SceMarlin_E8276179(MlnApiObject *object, void *a1, MlnBuffer **out)
 	MlnBuffer *found = NULL;
 	MlnBuffer *handle;
 	MlnServiceContext context;
-	unsigned int session[3];
+	MlnServiceSession session;
 	MlnApiKind *kind;
 	int ret;
 
@@ -2335,7 +2335,7 @@ int SceMarlin_E8276179(MlnApiObject *object, void *a1, MlnBuffer **out)
 		}
 		if (kind->type == 0) {
 			handle = NULL;
-			MlnServiceContextInit(&context, session);
+			MlnServiceContextInit(&context, &session);
 			ret = MlnImpl_81016A5C(&context, a1, &handle);
 			if (ret == MLN_OK) {
 				found = handle;
@@ -2484,7 +2484,7 @@ int SceMarlin_10C0787D(MlnApiRights *rights)
 int SceMarlin_236015FA(MlnApiObject *object)
 {
 	MlnServiceContext context;
-	unsigned int session[3];
+	MlnServiceSession session;
 	MlnApiKind *kind;
 	int unused = 0;
 	int ret;
@@ -2495,15 +2495,15 @@ int SceMarlin_236015FA(MlnApiObject *object)
 		if (!kind->remote)
 			return 3;
 	} else if (kind->type == 0) {
-		MlnServiceContextInit(&context, session);
+		MlnServiceContextInit(&context, &session);
 		ret = MlnImpl_810147D8(&context, 1);
 		if (ret != MLN_OK)
 			return ret;
-		MlnServiceContextInit(&context, session);
+		MlnServiceContextInit(&context, &session);
 		ret = MlnImpl_810147D8(&context, 2);
 		if (ret != MLN_OK)
 			return ret;
-		MlnServiceContextInit(&context, session);
+		MlnServiceContextInit(&context, &session);
 		ret = MlnImpl_810147D8(&context, 0);
 		if (ret == 16)
 			return 15;
@@ -2517,7 +2517,7 @@ int SceMarlin_236015FA(MlnApiObject *object)
 int SceMarlin_C4FF32EF(MlnApiObject *object, void **a1)
 {
 	MlnServiceContext context;
-	unsigned int session[3];
+	MlnServiceSession session;
 	MlnApiKind *kind;
 
 	if (object == NULL || (kind = object->kind) == NULL)
@@ -2531,7 +2531,7 @@ int SceMarlin_C4FF32EF(MlnApiObject *object, void **a1)
 		if (a1 == NULL)
 			return MLN_RESULT_INVALID_ARGUMENT;
 		if (kind->type == 0) {
-			MlnServiceContextInit(&context, session);
+			MlnServiceContextInit(&context, &session);
 			return MlnImpl_81018D00(&context, a1);
 		}
 		if (kind->type != 1)
@@ -2543,7 +2543,7 @@ int SceMarlin_C4FF32EF(MlnApiObject *object, void **a1)
 int SceMarlin_14097094(MlnApiObject *object, MlnBuffer *a1)
 {
 	MlnServiceContext context;
-	unsigned int session[3];
+	MlnServiceSession session;
 	MlnApiKind *kind;
 
 	if (object == NULL || (kind = object->kind) == NULL)
@@ -2553,7 +2553,7 @@ int SceMarlin_14097094(MlnApiObject *object, MlnBuffer *a1)
 	if (a1 == NULL || a1->size == 0 || a1->data == NULL)
 		return MLN_RESULT_INVALID_ARGUMENT;
 	if (kind->type == 0) {
-		MlnServiceContextInit(&context, session);
+		MlnServiceContextInit(&context, &session);
 		return MlnImpl_81018DA0(&context, a1);
 	}
 	if (kind->type == 1)

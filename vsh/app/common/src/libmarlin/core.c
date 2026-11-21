@@ -3712,7 +3712,7 @@ __attribute__((noinline)) int MlnImpl_81019108(MlnServiceContext *context, MlnBu
 }
 
 /* a value decoder's or encoder's error as the service's */
-__attribute__((noinline)) int MlnImpl_810191C4(int ret)
+static inline __attribute__((always_inline)) int MlnServiceError(int ret)
 {
 	switch ((unsigned int)ret) {
 	case MLN_OK:
@@ -3735,22 +3735,257 @@ __attribute__((noinline)) int MlnImpl_810191C4(int ret)
 	return 7;
 }
 
-/* the attributes of commands 0x42a to 0x451 (none for the others) */
-static const unsigned short s_commandAttributes[40] = {
-	[0x42a - 0x42a] = 0x0203,
-	[0x42b - 0x42a] = 0x0203,
-	[0x42d - 0x42a] = 0x0203,
-	[0x431 - 0x42a] = 0x0203,
-	[0x44f - 0x42a] = 0x0203,
-	[0x450 - 0x42a] = 0x0203,
-	[0x451 - 0x42a] = 0x0203,
+__attribute__((noinline)) int MlnImpl_810191C4(int ret)
+{
+	return MlnServiceError(ret);
+}
+
+/* commands 0x42a to 0x451 a remote session refuses: the error they give (none for the others) */
+static const unsigned short s_remoteCommandErrors[40] = {
+	[0x42a - 0x42a] = MLN_SERVICE_ERROR_UNAVAILABLE,
+	[0x42b - 0x42a] = MLN_SERVICE_ERROR_UNAVAILABLE,
+	[0x42d - 0x42a] = MLN_SERVICE_ERROR_UNAVAILABLE,
+	[0x431 - 0x42a] = MLN_SERVICE_ERROR_UNAVAILABLE,
+	[0x44f - 0x42a] = MLN_SERVICE_ERROR_UNAVAILABLE,
+	[0x450 - 0x42a] = MLN_SERVICE_ERROR_UNAVAILABLE,
+	[0x451 - 0x42a] = MLN_SERVICE_ERROR_UNAVAILABLE,
 };
 
 __attribute__((noinline)) unsigned short MlnImpl_81019274(int command)
 {
 	unsigned int index = command - 0x42a;
 
-	if (index >= sizeof(s_commandAttributes) / sizeof(s_commandAttributes[0]))
+	if (index >= sizeof(s_remoteCommandErrors) / sizeof(s_remoteCommandErrors[0]))
 		return 0;
-	return s_commandAttributes[index];
+	return s_remoteCommandErrors[index];
+}
+
+/* a transport's failure as the service's */
+static inline __attribute__((always_inline)) int MlnTransportError(unsigned int result)
+{
+	switch (result) {
+	case MLN_TRANSPORT_OK:
+		return MLN_OK;
+	case MLN_TRANSPORT_INVALID:
+		return MLN_CORE_ERROR_INVALID;
+	case MLN_TRANSPORT_NO_MEMORY:
+		return MLN_ERROR_NO_MEMORY;
+	default:
+		return MLN_SERVICE_ERROR_TRANSPORT;
+	}
+}
+
+/*
+ * Sends a command with its arguments on a session and gives back the service's reply and
+ * status. The result is the transport's: the command's own outcome is the status.
+ */
+__attribute__((noinline)) int MlnServiceCall(MlnServiceSession *session, int command,
+					     const MlnServiceArgs *args, MlnServiceReply **reply,
+					     int *status)
+{
+	MlnBuffer *request = NULL;
+	MlnBuffer *response = NULL;
+	MlnServiceReply *decoded = NULL;
+	const unsigned char *header;
+	unsigned int result;
+	int ret;
+
+	if (session == NULL || args == NULL || reply == NULL || status == NULL) {
+		ret = MLN_CORE_ERROR_INVALID;
+		goto out;
+	}
+	ret = MlnImpl_81019860(session, command);
+	if (ret != MLN_OK)
+		goto out;
+	ret = MlnImpl_810273C4(MLN_HEAP_SECURE, command, 0, args, &request);
+	if (ret != MLN_OK) {
+		ret = MlnServiceError(ret);
+		goto out;
+	}
+	result = session->transact(session->cookie, request, &response);
+	if (result != MLN_TRANSPORT_OK) {
+		ret = MlnTransportError(result);
+	} else if (response == NULL) {
+		ret = MLN_SERVICE_ERROR_UNAVAILABLE;
+	} else if ((header = response->data) == NULL) {
+		ret = MLN_SERVICE_ERROR_REPLY;
+	} else if (MlnImpl_81026CBC(header) != (unsigned int)command) {
+		ret = MLN_SERVICE_ERROR_COMMAND;
+	} else {
+		ret = MlnImpl_8102752C(MLN_HEAP_SECURE, response, &decoded);
+		if (ret != MLN_OK) {
+			ret = MlnImpl_810191C4(ret);
+		} else {
+			*status = MlnImpl_81026D04(header);
+			*reply = decoded;
+			decoded = NULL;
+		}
+	}
+out:
+	if (session != NULL && session->release != NULL)
+		session->release(response);
+	MlnImpl_81027390(MLN_HEAP_SECURE, decoded);
+	MlnBufferDestroy(MLN_HEAP_SECURE, request);
+	return ret;
+}
+
+/* the local transport's release */
+__attribute__((noinline)) int MlnImpl_810194B4(MlnBuffer *response)
+{
+	MlnBufferDestroy(MLN_HEAP_SECURE, response);
+	return MLN_OK;
+}
+
+/* a 16-byte response that gives the request's command the error */
+static inline __attribute__((always_inline)) int MlnServiceErrorResponse(const MlnBuffer *request,
+									 int error,
+									 MlnBuffer **response)
+{
+	MlnBuffer *header = MlnBufferCreate(MLN_HEAP_SECURE, 16, NULL);
+
+	if (header == NULL)
+		return MLN_ERROR_NO_MEMORY;
+	MlnImpl_81026BFC(header->data, MlnImpl_81026CBC(request->data));
+	MlnImpl_81026C1C(header->data, 16);
+	MlnImpl_81026C3C(header->data, error);
+	MlnImpl_81026C5C(header->data, 0);
+	*response = header;
+	return MLN_OK;
+}
+
+/*
+ * Runs a request in this process and gives its response; a request that fails gets a
+ * response with the error. The state the command leaves behind is restored when its
+ * status says so.
+ */
+__attribute__((noinline)) int MlnImpl_810194CC(const MlnBuffer *request, MlnBuffer **response)
+{
+	MlnBuffer *state = NULL;
+	MlnBuffer *out = NULL;
+	int status;
+	int ret;
+
+	if (request == NULL) {
+		ret = MLN_CORE_ERROR_INVALID;
+		goto done;
+	}
+	if (request->size == 0 || request->data == NULL || request->size < 16) {
+		ret = MLN_CORE_ERROR_INVALID;
+		if (response != NULL)
+			goto fail;
+		goto done;
+	}
+	if (response == NULL) {
+		ret = MLN_CORE_ERROR_INVALID;
+		goto done;
+	}
+	MlnImpl_81026CBC(request->data);
+	ret = MlnImpl_81012F48(NULL, request, &out, &state);
+	if (ret != MLN_OK)
+		goto fail;
+	status = MlnImpl_81026D04(out->data);
+	if (state != NULL) {
+		switch (status) {
+		case MLN_OK:
+		case 9:
+		case 10:
+		case 11:
+		case 15:
+		case 16:
+		case MLN_SERVICE_STATUS_PARTIAL:
+		case MLN_SERVICE_STATUS_MORE:
+			ret = MlnStateRestore(state);
+			if (ret == MLN_OK)
+				break;
+			ret = MlnImpl_810191C4(ret);
+			if (ret != MLN_OK)
+				goto fail;
+			/* Sony's drops the response when the error converts to none */
+			goto done;
+		}
+	}
+	*response = out;
+	out = NULL;
+	goto done;
+fail:
+	ret = MlnServiceErrorResponse(request, ret, response);
+done:
+	MlnBufferDestroy(MLN_HEAP_SECURE, state);
+	/* Sony's frees a buffer here that is never set */
+	MlnBufferDestroy(MLN_HEAP_SECURE, NULL);
+	MlnBufferDestroy(MLN_HEAP_SECURE, out);
+	return ret;
+}
+
+/* the local transport: runs the request in this process */
+__attribute__((noinline)) int MlnImpl_81019760(void *cookie, const MlnBuffer *request,
+					       MlnBuffer **response)
+{
+	switch (MlnImpl_810194CC(request, response)) {
+	case MLN_OK:
+		return MLN_TRANSPORT_OK;
+	case MLN_ERROR_NO_MEMORY:
+		return MLN_TRANSPORT_NO_MEMORY;
+	case MLN_CORE_ERROR_INVALID:
+		return MLN_TRANSPORT_INVALID;
+	default:
+		return MLN_TRANSPORT_FAILED;
+	}
+}
+
+__attribute__((noinline)) int MlnPlatformInit(void)
+{
+	return MLN_OK;
+}
+
+__attribute__((noinline)) int MlnPlatformTerm(void)
+{
+	return MLN_OK;
+}
+
+/*
+ * Runs a request a remote session sent: the commands such a session may not send get
+ * their error, as does a request that fails.
+ */
+__attribute__((noinline)) int MlnImpl_81019798(const MlnBuffer *request, MlnBuffer **response)
+{
+	int ret;
+
+	if (request == NULL)
+		return MLN_CORE_ERROR_INVALID;
+	if (request->size == 0 || request->data == NULL) {
+		ret = MLN_CORE_ERROR_INVALID;
+	} else {
+		ret = MlnImpl_81019274(MlnImpl_81026CBC(request->data));
+		if (ret == MLN_OK) {
+			ret = MlnImpl_810194CC(request, response);
+			if (ret == MLN_OK)
+				return ret;
+		}
+	}
+	if (response == NULL)
+		return ret;
+	return MlnServiceErrorResponse(request, ret, response);
+}
+
+/*
+ * Checks a session before a command: a session with no transport gets the local one; a
+ * remote session may not send every command.
+ */
+__attribute__((noinline)) int MlnImpl_81019860(MlnServiceSession *session, int command)
+{
+	if (session == NULL)
+		return MLN_CORE_ERROR_INVALID;
+	if (session->transact == NULL) {
+		if (session->release != NULL)
+			return MLN_SERVICE_ERROR_UNAVAILABLE;
+		session->transact = MlnImpl_81019760;
+		session->release = MlnImpl_810194B4;
+		return MLN_OK;
+	}
+	if (session->release == NULL)
+		return MLN_SERVICE_ERROR_UNAVAILABLE;
+	if (session->transact == MlnImpl_81019760)
+		return MLN_OK;
+	return MlnImpl_81019274(command);
 }

@@ -94,10 +94,20 @@ typedef struct MlnTrackProtection {
 	MlnTrackAttribute attribute[16];
 } MlnTrackProtection;
 
+/*
+ * The transport to the service: transact sends a request and gives the response, release
+ * frees the response. Both unset: the library's own service, in this process.
+ */
+typedef struct MlnServiceSession {
+	void *cookie;
+	int (*transact)(void *cookie, const MlnBuffer *request, MlnBuffer **response);
+	int (*release)(MlnBuffer *response);
+} MlnServiceSession;
+
 /* a session with the client's service */
 typedef struct MlnServiceContext {
 	int id;
-	void *session;
+	MlnServiceSession *session;
 } MlnServiceContext;
 
 /* an Octopus bundle's protectors: each names its content key and the content it protects */
@@ -930,7 +940,7 @@ int MlnStateRestore(const MlnBuffer *state);
 #define MLN_SERVICE_ARG_SIZE		1	/* the value points to a nonzero size */
 #define MLN_SERVICE_ARG_INTEGER		2
 #define MLN_SERVICE_ARG_ID		3	/* the value points to an identifier */
-#define MLN_SERVICE_ARG_BLOCK28		4	/* the value points to 28 bytes (sized at 0x8102766c) */	/* the value points to the integer */
+#define MLN_SERVICE_ARG_BLOCK28		4	/* the value points to 28 bytes (sized at 0x8102766c) */
 #define MLN_SERVICE_ARG_OFFSET		5	/* the value points to an offset (also given back) */
 #define MLN_SERVICE_ARG_BUFFER		6
 #define MLN_SERVICE_ARG_OBJECT		9	/* an object led by a buffer (sized at 0x8102766c) */
@@ -962,6 +972,15 @@ int MlnServiceClearState(MlnServiceContext *context);
 
 #define MLN_SERVICE_ERROR_REPLY		512	/* a reply of another type */
 #define MLN_SERVICE_STATUS_MORE		68	/* a reply that continues */
+#define MLN_SERVICE_ERROR_COMMAND	513	/* the reply to another command */
+#define MLN_SERVICE_ERROR_UNAVAILABLE	515	/* no reply, or a command a remote session refuses */
+#define MLN_SERVICE_ERROR_TRANSPORT	516
+
+/* what a session's transact gives back */
+#define MLN_TRANSPORT_OK		0
+#define MLN_TRANSPORT_INVALID		1
+#define MLN_TRANSPORT_NO_MEMORY		2
+#define MLN_TRANSPORT_FAILED		3
 
 /* the application's data for a service command, and its release */
 typedef int (*MlnServiceDataGet)(void *cookie, void *arg, void **data, unsigned int *size);
@@ -1089,8 +1108,23 @@ int MlnImpl_81027084(int heap, const MlnServiceArg *value, int *out);
 int MlnImpl_81026FE4(int heap, const MlnServiceArg *value, unsigned int *out);
 int MlnImpl_8102701C(int heap, const MlnServiceArg *value, int *out);
 int MlnImpl_81026ED0(int heap, const MlnServiceArg *value, MlnBufferGroup **out);
-int MlnServiceCall(void *session, int command, const MlnServiceArgs *args,
+int MlnServiceCall(MlnServiceSession *session, int command, const MlnServiceArgs *args,
 		   MlnServiceReply **reply, int *status);
+int MlnImpl_810194B4(MlnBuffer *response);
+int MlnImpl_810194CC(const MlnBuffer *request, MlnBuffer **response);
+int MlnImpl_81019760(void *cookie, const MlnBuffer *request, MlnBuffer **response);
+int MlnImpl_81019798(const MlnBuffer *request, MlnBuffer **response);
+int MlnImpl_81019860(MlnServiceSession *session, int command);
+/* the service message header: four big-endian words */
+void MlnImpl_81026BFC(unsigned char *header, unsigned int command);
+void MlnImpl_81026C1C(unsigned char *header, unsigned int size);
+void MlnImpl_81026C3C(unsigned char *header, unsigned int status);
+void MlnImpl_81026C5C(unsigned char *header, unsigned int value);
+unsigned int MlnImpl_81026CBC(const unsigned char *header);
+int MlnImpl_81026D04(const unsigned char *header);
+int MlnImpl_810273C4(int heap, int command, int value, const MlnServiceArgs *args,
+		     MlnBuffer **request);
+int MlnImpl_8102752C(int heap, const MlnBuffer *response, MlnServiceReply **reply);
 void MlnImpl_81027390(int heap, MlnServiceReply *reply);
 int MlnImpl_81026F0C(int heap, const MlnServiceArg *value, MlnBuffer **out);
 int MlnImpl_81026E20(int heap, unsigned int count, MlnServiceArgs **out);
