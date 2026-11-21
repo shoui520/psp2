@@ -174,9 +174,10 @@
 #define BOARD_NVS_DATA_BLOCKS	(ERNIE_BOARD == 0x00406000 ? 3 : 4)
 
 /* the lowest NVS offset the host may read or write (app/nvsreq.c): PCH-1000 and PDEL keep their
-   first 0x400 bytes from the host (the hardware ID's, not the code's: 0x00405x00 and
-   0x00415200 run their code with 0) */
-#define BOARD_NVS_HOST_OFFSET_MIN	(HW_IS(0x00406000) || HW_IS(0x00416000) || BOARD_USS1001 ? 0x0400 : 0)
+   first 0x400 bytes from the host, and so do the PS TV and the slim (the hardware ID's, not
+   the code's: 0x00405x00 and 0x00415200 run their code with 0) */
+#define BOARD_NVS_HOST_OFFSET_MIN	(HW_IS(0x00406000) || HW_IS(0x00416000) || BOARD_DOL1001 || \
+					 BOARD_USS1001 ? 0x0400 : 0)
 
 /* the RTC's interrupt in state 0x0010 watches input 1's bit 7 (P14.5) once a shutdown is
    marked, and runs transition 0x62 when it settles low (input1Bit7Poll): PCH-1000's; the others

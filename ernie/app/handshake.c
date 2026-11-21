@@ -71,7 +71,7 @@ struct Handshake {
 #endif
 };
 
-#if FW_SINCE(0x00090903)
+#if FW_SINCE(0x00090903) && !(defined(ERNIE_UPDATER) && SOURCE_0103)
 unsigned char handshakeKey[16];	/* mode 0x0f's session key */
 #endif
 
@@ -81,6 +81,9 @@ static __near struct Handshake handshake;
 static unsigned int handshakeUnlocked[HANDSHAKE_MODES];
 #else
 static __near unsigned int handshakeUnlocked[HANDSHAKE_MODES];
+#endif
+#if defined(ERNIE_UPDATER) && SOURCE_0103
+unsigned char handshakeKey[16];	/* the PS TV's updater: after handshakeUnlocked */
 #endif
 #ifdef ERNIE_UPDATER
 /* the updater's (0x0100060D): the exchange's key schedule in place of a block of memory pool

@@ -17,6 +17,9 @@ struct Config {
 	unsigned char	state;			/* the application's; never set here */
 	unsigned char	changed;		/* cleared at the start; nothing sets it */
 #endif
+#if SOURCE_0103
+	unsigned char	reserved[0x2e];		/* the PS TV's: 0x2e bytes nothing reads */
+#endif
 };
 
 #if FW_SINCE(0x0100060D)

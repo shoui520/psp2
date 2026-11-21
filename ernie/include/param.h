@@ -64,6 +64,8 @@ extern int paramInit(void);
 /* none: before 0x01000104 paramInit loads the block itself */
 #elif FW_SINCE(0x0100010B) && !defined(ERNIE_UPDATER)
 extern int paramLoad(void);
+#elif defined(ERNIE_UPDATER) && SOURCE_0103
+extern int paramLoad(void);	/* the PS TV's and the slim's updater: the application's */
 #else
 extern void paramLoad(void);	/* returns nothing before 0x0100010B, nor the updater's */
 #endif

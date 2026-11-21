@@ -39,6 +39,13 @@
 /* the 0x0104 source, DOL-1002's (0x01040301) and the slim's 0x0105: touch.c has one function
    for both panels where 0x0103 has one for each, and knows the controllers with T100 */
 #define SOURCE_0104		FW_SINCE(0x01040000)
+/* the updater built from the 0x0103 source (the PS TV's 0x01030603 on): its application's files
+   with the kernel's tasks and timers left out */
+#ifdef ERNIE_UPDATER
+#define UPD_0103		SOURCE_0103
+#else
+#define UPD_0103		0
+#endif
 /* the chip: the slim models' RL78/G13 (0x008), else the 78K0R/KG3-L */
 #define CHIP_RL78		(HW_FAMILY == 0x008)
 

@@ -9,6 +9,9 @@
 	PUBLIC	_option_bytes, _security_id
 	EXTRN	_cstart, _uart3SendInterrupt, _uart3ReceiveInterrupt, _uart3ErrorInterrupt, _uart4ErrorInterrupt
 	EXTRN	_tm00Interrupt, _rtcInterrupt, _uart4SendInterrupt, _uart4ReceiveInterrupt
+$_IF (ERNIE_FW>=0x01030000)
+	EXTRN	_intp8Interrupt
+$ENDIF
 
 @@VECT	CSEG	BASE
 _vector_RST:
@@ -57,7 +60,11 @@ _vector_INTRTC:
 	DW	0			; 48H
 	DW	0			; 4AH
 	DW	0			; 4CH
+$_IF (ERNIE_FW>=0x01030000)	; the PS TV's INTP8
+	DW	LOWW(_intp8Interrupt)	; 4EH
+$ELSE
 	DW	0			; 4EH
+$ENDIF
 	DW	0			; 50H
 	DW	0			; 52H
 	DW	0			; 54H

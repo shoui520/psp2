@@ -179,13 +179,16 @@ void uart4ErrorInterrupt(void)
 
 void uart4ReceiveInterrupt(void)
 {
+#if SOURCE_0103
+	struct UartPort *p = &uart4;	/* the PS TV's: set, and never read */
+#endif
 	unsigned char data;
 
 	data = SDR21;
 	if ((uart4.rxWrite + 1 & uart4.rxMask) != uart4.rxRead) {
 		uart4.rxBuffer[uart4.rxWrite] = data;
 		uart4.rxWrite = uart4.rxWrite + 1 & uart4.rxMask;
-		timerStart(TIMER(0x11), 2);
+		timerStart(SERIAL4_TIMER, 2);
 	}
 }
 

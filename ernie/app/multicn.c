@@ -7,7 +7,9 @@
  */
 #pragma sfr
 #if (ERNIE_HW >> 20) == 0x007	/* BOARD_DOL1001 (board.h) */
+#ifndef ERNIE_UPDATER
 #pragma rtos_interrupt INTP8 intp8Interrupt
+#endif
 #endif
 
 #include "ernie.h"
@@ -15,6 +17,7 @@
 #include "board.h"
 #include "input.h"
 #include "kernel.h"
+#include "powerseq.h"
 #include "serial.h"
 #include "serial1.h"
 #include "serialline.h"
@@ -237,11 +240,17 @@ void boardMultiCnUpdate(void)
 			serialClose3();
 			serialClose1();
 			boardMultiCnSwitchStop();
+#if UPD_0103	/* the updater's: the multi-connector's power too */
+			boardMultiCnPower(1);
+#endif
 		}
 	} else {
 		serialClose3();
 		serialClose1();
 		boardMultiCnSwitchStop();
+#if UPD_0103
+		boardMultiCnPower(1);
+#endif
 	}
 }
 
@@ -330,6 +339,13 @@ unsigned char boardMultiCnIsUnread(void)
 /* power device job 0x20 (on) or 0x10 (off), then 25 or 10 ticks */
 unsigned char boardMultiCnPower(unsigned char on)
 {
+#if UPD_0103
+	/* the updater's: the sequences themselves, as Sony's has them (0: powerMultiCnOn) */
+	if (on == 0)
+		powerMultiCnOn();
+	else
+		powerMultiCnOff();
+#else
 	if (on == 0) {
 		powerDeviceSetPending(0x10);
 		dly_tsk(10);
@@ -337,10 +353,11 @@ unsigned char boardMultiCnPower(unsigned char on)
 		powerDeviceSetPending(0x20);
 		dly_tsk(25);
 	}
+#endif
 	return 0;
 }
 
-#if BOARD_DOL1001
+#if BOARD_DOL1001 && !UPD_0103
 /* DOL-1001's INTP8 (P7.4's edge): task 5's sleep factor 21 (flag 4, 0x0200) */
 void intp8Interrupt(void)
 {

@@ -6,12 +6,19 @@
  */
 #pragma sfr
 #pragma NOP
+#pragma DI
+#pragma EI
 
 #include "ernie.h"
+#include "analog.h"
 #include "keepram.h"
 #include "rtc.h"
 #include "state.h"
 #include "updater.h"
+
+#if SOURCE_0103
+union PowerRequest stateWakeupFactor;	/* the PS TV's: before getClock's return buffer */
+#endif
 
 /* the counters at 0 (1 January), the 24-hour clock, an interrupt every 0.5 s */
 void rtcInit(void)
@@ -42,7 +49,18 @@ union RtcTick getClock(void)
 	return *(union RtcTick __far *)&keepRam.clock;
 }
 
+#if SOURCE_0103
+void setClock(unsigned long clock)
+{
+	DI();
+	keepRam.clock = clock;
+	EI();
+}
+#endif
+
+#if !SOURCE_0103
 union PowerRequest stateWakeupFactor;
+#endif
 
 /* the state the update's mode stands for */
 unsigned int stateGet(void)
@@ -51,6 +69,10 @@ unsigned int stateGet(void)
 	case 1:
 		return STATE_OFF;
 	case 3:
+#if SOURCE_0103	/* the PS TV's: modes 8 and 9 resume too */
+	case 8:
+	case 9:
+#endif
 		return STATE_RESUME;
 	default:
 		return STATE_CUT;
@@ -66,6 +88,13 @@ union PowerRequest *stateGetWakeupFactor(void)
 {
 	return &stateWakeupFactor;
 }
+
+#if SOURCE_0103
+unsigned char stateGetCause(void)
+{
+	return 0;
+}
+#endif
 
 #if FW_SINCE(0x0100060D)
 unsigned char stateSerialUnlock(void)
@@ -95,6 +124,23 @@ int stateSerialLock(void)
 }
 #endif
 
+#if SOURCE_0103
+/* the PS TV's updater: the inputs read 0 */
+int input2Bit0Get(void)
+{
+	return 0;
+}
+
+int input2Bit1Get(void)
+{
+	return 0;
+}
+
+int input3Bit0High(void)
+{
+	return 0;
+}
+#else
 int input2Bit0Get(void)
 {
 	if (P12.6)
@@ -123,6 +169,7 @@ int input3Bit0High(void)
 	return P7.3 != 0;
 }
 #endif
+#endif /* SOURCE_0103 */
 
 #if FW_SINCE(0x0100060D)
 unsigned char input1Bit5Active(void)
@@ -133,7 +180,23 @@ int input1Bit5Active(void)
 	return updInput.bits.multiCnReported;
 }
 
-#if UPD_060D_FORMS
+#if SOURCE_0103
+int intp11Low(void)
+{
+	return 0;
+}
+
+int chargeVbusCharging(void)
+{
+	return 0;
+}
+
+/* what is on the multi connector, as the updater read it */
+unsigned char analogGetMultiCn(void)
+{
+	return updMultiCn;
+}
+#elif UPD_060D_FORMS
 /* nothing calls it in 0x0100060D, nor intp11Low */
 int chargeVbusCharging(void)
 {
@@ -151,7 +214,7 @@ unsigned char intp11Low(void)
 }
 #endif
 
-#if !UPD_060D_FORMS
+#if !UPD_060D_FORMS && !SOURCE_0103
 int chargeVbusCharging(void)
 {
 	return 1;
@@ -178,11 +241,32 @@ int updStateEvent(unsigned char transition)
 	case 0x34:
 		updEventSet(0x16);
 		break;
+#if SOURCE_0103	/* the PS TV's: the serial unlock's event, and five more */
+	case 0x0c:
+		updEventSet(0x18);
+		break;
+	case 0x00:
+		updEventSet(0x67);
+		break;
+	case 0x35:
+		updEventSet(0x1f);
+		break;
+	case 0x5e:
+		updEventSet(0x1f);
+		break;
+	case 0x5f:
+		updEventSet(0x20);
+		break;
+	case 0x11:
+		updEventSet(0x17);
+		break;
+#else
 	case 0x00:
 		updEventSet(0x67);
 		break;
 	case 0x0c:
 		break;
+#endif
 	}
 	return 0;
 }
@@ -223,8 +307,13 @@ void powerWaitLong(unsigned int ms)
 		step = ms < 500 ? ms : 500;
 		count = (unsigned int)((unsigned long)step * 1000 >> 5) << 2;
 		TMIF03 = 0;
+#if SOURCE_0103	/* the PS TV's: the count loaded before the start */
+		TDR03 = count;
+		TS0L = 0x08;
+#else
 		TS0L = 0x08;
 		TDR03 = count;
+#endif
 		while (!TMIF03)
 			NOP();
 		powerWaitStop();

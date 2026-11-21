@@ -3,6 +3,7 @@
  * (deviceVersions.battery.id not BATTERY_NONE), and its bootloader's commands.
  */
 #pragma sfr
+#pragma NOP
 
 #include <stddef.h>
 #include <string.h>
@@ -1059,8 +1060,13 @@ unsigned char batteryWrite(unsigned char *data, unsigned char length)
 #endif
 {
 	unsigned char status;
+#if !UPD_0103
 	ER ercd;
 	FLGPTN ptn;
+#endif
+#if UPD_0103
+	unsigned char wait;
+#endif
 
 #if !BOARD_DOL1002
 	if (deviceVersions.battery.id == BATTERY_NONE)
@@ -1072,6 +1078,15 @@ unsigned char batteryWrite(unsigned char *data, unsigned char length)
 	batteryIica.txCount = length;
 	batteryIica.address = BATTERY_ADDRESS;
 	batteryIica.status = &status;
+#if UPD_0103	/* the PS TV's updater: no kernel, the transfer waited for in iicaTransfer, then a
+		   short delay */
+	iicaTransfer(&batteryIica);
+	wait = 65;
+	while (wait != 0) {
+		NOP();
+		wait--;
+	}
+#else
 #if FW_SINCE(0x0100060B)
 	clr_flg(4, ~0x10);
 #endif
@@ -1083,6 +1098,7 @@ unsigned char batteryWrite(unsigned char *data, unsigned char length)
 	} else if (ercd == E_TMOUT) {
 		status = 0x10;
 	}
+#endif
 #if BOARD_DOL1002
 	BATTERY_LOG_FAILURE(status)
 #endif
@@ -1103,9 +1119,14 @@ static unsigned char batteryReadBus(unsigned char *reg, unsigned char *data, uns
 unsigned char batteryRead(unsigned char *reg, unsigned char *data, unsigned char length)
 #endif
 {
+#if !UPD_0103
 	ER ercd;
 	FLGPTN ptn;
+#endif
 	unsigned char status;
+#if UPD_0103
+	unsigned char wait;
+#endif
 
 #if !BOARD_DOL1002
 	if (deviceVersions.battery.id == BATTERY_NONE) {
@@ -1120,6 +1141,15 @@ unsigned char batteryRead(unsigned char *reg, unsigned char *data, unsigned char
 	batteryIica.txCount = 1;
 	batteryIica.address = BATTERY_ADDRESS;
 	batteryIica.status = &status;
+#if UPD_0103	/* the PS TV's updater: no kernel, the transfer waited for in iicaTransfer, then a
+		   short delay */
+	iicaTransfer(&batteryIica);
+	wait = 65;
+	while (wait != 0) {
+		NOP();
+		wait--;
+	}
+#else
 #if FW_SINCE(0x0100060B)
 	clr_flg(4, ~0x10);
 #endif
@@ -1131,6 +1161,7 @@ unsigned char batteryRead(unsigned char *reg, unsigned char *data, unsigned char
 	} else if (ercd == E_TMOUT) {
 		status = 0x10;
 	}
+#endif
 #if BOARD_DOL1002
 	BATTERY_LOG_FAILURE(status)
 #endif
@@ -1301,6 +1332,7 @@ unsigned char batteryReadInfo(unsigned int *info)
 		}
 	}
 failed:
+#if !UPD_0103 /* the PS TV's updater: no status read */
 	if (result == 1) {
 		elmoCommand[0] = 0x16;
 		elmoCommand[1] = 0;
@@ -1314,6 +1346,7 @@ failed:
 			BATTERY_INFO(info)->hardware = 0xfffe;
 		}
 	}
+#endif
 	return result;
 }
 #endif /* BOARD_DOL1002 */
@@ -1337,7 +1370,11 @@ unsigned char batteryReadInfo(unsigned int *info)
 					elmoCommand[1] = 0;
 					result = batteryWrite(elmoCommand, 2);
 					if (result == 0) {
+#if UPD_0103	/* the PS TV's updater: no kernel to sleep in */
+						powerWaitMs(4);
+#else
 						powerSleep2(4);
+#endif
 						elmoCommand[0] = 0x40;
 						result = batteryRead(elmoCommand,
 								     (unsigned char *)(info + 3), 2);
@@ -1347,6 +1384,7 @@ unsigned char batteryReadInfo(unsigned int *info)
 		}
 	}
 	if (result == 1) {
+#if !UPD_0103	/* the PS TV's updater: the test kept, with no gauge to ask */
 		elmoCommand[0] = 0x16;
 		elmoCommand[1] = 0;
 		result = batteryReadAt(elmoCommand, &status, 1);
@@ -1356,6 +1394,7 @@ unsigned char batteryReadInfo(unsigned int *info)
 			info[2] = 0xfffe;
 			info[3] = 0xfffe;
 		}
+#endif
 	}
 	return result;
 }
@@ -1419,6 +1458,7 @@ unsigned char batteryReadLifePercent(unsigned int *value)
 }
 #endif
 
+#if !UPD_0103	/* the PS TV's updater: none of the rest */
 #if FW_SINCE(0x00090206)
 #if BOARD_DOL1002
 unsigned char batteryReadAt(unsigned char *packet, unsigned char *data, unsigned char length)
@@ -1436,8 +1476,10 @@ static unsigned char batteryReadAtBus(unsigned char *packet, unsigned char *data
 unsigned char batteryReadAt(unsigned char *packet, unsigned char *data, unsigned char length)
 #endif
 {
+#if !UPD_0103
 	ER ercd;
 	FLGPTN ptn;
+#endif
 	unsigned char status;
 
 #if !BOARD_DOL1002
@@ -1742,4 +1784,5 @@ void batteryGetFaults(unsigned char *faults)
 	memcpy(faults, batteryFaults.byte, sizeof(batteryFaults));
 }
 #endif
+#endif /* !UPD_0103 */
 #endif /* BATTERY_GAUGE */

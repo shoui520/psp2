@@ -350,7 +350,7 @@ void sleepFactorSet28(unsigned char on)
 #endif
 #endif
 
-#if FW_SINCE(0x0100060B) && !defined(ERNIE_UPDATER)	/* the updater has none */
+#if FW_SINCE(0x0100060B) && (!defined(ERNIE_UPDATER) || SOURCE_0103)	/* and the PS TV's updater */
 /* host command 0x0015 and serial command 0x0168: what the settings say of the off state, a
    code for its flags, the flags (bit 3 transition 0x18 blocked, bits 0 and 1 the settings'
    offInfoBit0 and offInfoBit1, bit 2 always) and the settings' offInfo2 and offInfo3 */
@@ -367,6 +367,9 @@ void sleepFactorGetOffInfo(unsigned char *info)
 	flags |= configGet()->offInfo2 != 0 ? 0x01 : 0;
 	flags |= configGet()->offInfo3 != 0 ? 0x02 : 0;
 #endif
+#ifdef ERNIE_UPDATER
+	info[0] = 0x90;		/* the PS TV's updater: one code */
+#else
 	switch (flags) {
 	case 3:
 	case 4:
@@ -385,6 +388,7 @@ void sleepFactorGetOffInfo(unsigned char *info)
 		info[0] = 0x80;
 		break;
 	}
+#endif
 	info[1] = flags;
 	info[2] = configGet()->offInfo2;
 	info[3] = configGet()->offInfo3;

@@ -223,7 +223,11 @@ extern unsigned char fslSetSecurityFlag(void);
 extern unsigned char fslSetSecurityFlagSwap(void);
 extern void FSL_Close(void);
 extern unsigned char fslDataBuffer[];		/* the library's descriptor and write buffer */
+#ifdef ERNIE_UPDATER
+struct ConfigBank configBuffer;			/* the updater's: the bank configFlashWrite writes */
+#else
 extern struct ConfigBank configBuffer;
+#endif
 
 /* the flash library's status */
 #define FLASH_OK		0x00
@@ -269,7 +273,9 @@ unsigned char nvsErase(unsigned char block)
 	}
 	DI();
 	FSL_Close();
+#ifndef ERNIE_UPDATER	/* the updater's leaves the interrupts off */
 	EI();
+#endif
 	return result;
 }
 
@@ -353,6 +359,7 @@ unsigned char configFlashWrite(unsigned long address)
 	return result;
 }
 
+#ifndef ERNIE_UPDATER	/* the updater has no downloader to prepare */
 /* opens the flash library for the downloader and sets its security flag, three times at most;
    0 when it may start */
 unsigned char updaterFlashPrepare(void)
@@ -380,7 +387,10 @@ unsigned char updaterFlashPrepare(void)
 	return result;
 }
 
-/* swaps the boot clusters, three times at most (nothing calls it) */
+#endif
+
+/* swaps the boot clusters, three times at most (nothing in the application calls it; the
+   updater's image check does) */
 unsigned char flashBootClusterSwap(void)
 {
 	unsigned char tries;

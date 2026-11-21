@@ -17,6 +17,9 @@
 #include "state.h"
 #include "task.h"
 #include "timer.h"
+#ifdef ERNIE_UPDATER
+#include "../updater/updater.h"
+#endif
 
 #if BOARD_DOL1001
 /*
@@ -42,11 +45,25 @@ void powerLedFlagsInit(unsigned char resumed)
 {
 	struct TimerHandler handler;
 
+#if UPD_0103
+	/* the PS TV's updater: on in the resume */
+	switch (resumed) {
+	case 0:
+		powerLedSet(0);
+		powerLedFlags.next = POWER_LED_MODE_OFF;
+		powerLedFlags.mode = POWER_LED_MODE_OFF;
+		break;
+	case 1:
+		powerLedStartMode(POWER_LED_MODE_ON);
+		break;
+	}
+#else
 	if (resumed == 0) {
 		powerLedSet(0);
 		powerLedFlags.next = POWER_LED_MODE_OFF;
 		powerLedFlags.mode = POWER_LED_MODE_OFF;
 	}
+#endif
 	powerLedFlags.onTime = 0;
 	powerLedFlags.offTime = 0;
 	powerLedFlags.count = 0;
@@ -82,6 +99,10 @@ void powerLedFlagsStep(void)
 		}
 		break;
 	case POWER_LED_MODE_HOST:
+#if UPD_0103
+		/* the PS TV's updater has no host pattern */
+		break;
+#else
 		if (powerLedFlags.phase == 1) {
 			if (powerLedFlags.offTime != 0) {
 				powerLedSet(0);
@@ -100,6 +121,7 @@ void powerLedFlagsStep(void)
 			}
 		}
 		break;
+#endif
 	case POWER_LED_MODE_OFF:
 	case POWER_LED_MODE_ON:
 	default:
@@ -272,6 +294,33 @@ void powerLedStartMode(unsigned char mode)
 	unsigned int state;
 
 	state = stateGet();
+#if UPD_0103
+	/* the PS TV's updater: on whenever asked, the blink from off in the off state, the host
+	   blink in the resume */
+	switch (mode) {
+	case POWER_LED_MODE_OFF:
+		break;
+	case POWER_LED_MODE_ON:
+		break;
+	case POWER_LED_MODE_BLINK:
+		if (state != STATE_OFF || powerLedFlags.mode != POWER_LED_MODE_OFF)
+			return;
+		break;
+	case POWER_LED_MODE_HOST_BLINK:
+		if (!(state == STATE_RESUME &&
+		      (powerLedFlags.mode == POWER_LED_MODE_ON ||
+		       powerLedFlags.mode == POWER_LED_MODE_BLINK ||
+		       powerLedFlags.mode == POWER_LED_MODE_HOST_BLINK))) {
+			if (powerLedFlags.mode == POWER_LED_MODE_HOST)
+				powerLedFlags.next = mode;
+			return;
+		}
+		break;
+	case POWER_LED_MODE_HOST:
+	default:
+		return;
+	}
+#else
 	switch (mode) {
 	case POWER_LED_MODE_OFF:
 		break;
@@ -325,6 +374,7 @@ void powerLedStartMode(unsigned char mode)
 	default:
 		return;
 	}
+#endif
 	powerLedFlags.mode = mode;
 	powerLedShowMode();
 }
@@ -337,6 +387,7 @@ void powerLedEndMode(unsigned char mode)
 
 	state = stateGet();
 	switch (mode) {
+#if !UPD_0103
 	case POWER_LED_MODE_HOST:
 		if (powerLedFlags.mode == POWER_LED_MODE_HOST) {
 			if ((state & 0x20) != 0x20) {
@@ -347,6 +398,7 @@ void powerLedEndMode(unsigned char mode)
 		} else
 			return;
 		break;
+#endif
 	case POWER_LED_MODE_HOST_BLINK:
 		if (powerLedFlags.mode == POWER_LED_MODE_HOST_BLINK) {
 			if ((state & 0x20) != 0x20) {
@@ -362,6 +414,9 @@ void powerLedEndMode(unsigned char mode)
 			return;
 		}
 		break;
+#if UPD_0103
+	case POWER_LED_MODE_HOST:
+#endif
 	case POWER_LED_MODE_OFF:
 	case POWER_LED_MODE_ON:
 	case POWER_LED_MODE_BLINK:
@@ -403,6 +458,7 @@ static void powerLedShowMode(void)
 		powerLedFlags.phase = 1;
 		timerStart(POWER_LED_TIMER, POWER_LED_TICKS(powerLedFlags.onTime));
 		break;
+#if !UPD_0103
 	case POWER_LED_MODE_HOST:
 		timerStop(POWER_LED_TIMER);
 		powerLedFlags.onTime = powerLedFlags.hostOn;
@@ -424,12 +480,20 @@ static void powerLedShowMode(void)
 		if (time != 0xffff)
 			timerStart(POWER_LED_TIMER, POWER_LED_TICKS(time));
 		break;
+#else
+	case POWER_LED_MODE_HOST:	/* the PS TV's updater: no host pattern */
+		break;
+#endif
 	}
 }
 
 static void powerLedFlagsTimer(void)
 {
+#if UPD_0103
+	updEventSet(0x97);
+#else
 	task5SetFlag(4, 0x2000);
+#endif
 }
 
 /* powerSeqResume's blink: count blinks of on and off ms */
@@ -466,6 +530,7 @@ void powerLedLoadBlink(unsigned char index)
 	}
 }
 
+#if !UPD_0103
 /* host request 0x089f's: the pattern (0 the power LED; others none) and its times, in ms */
 void powerLedSetPattern(unsigned char pattern, unsigned int on, unsigned int off)
 {
@@ -473,6 +538,7 @@ void powerLedSetPattern(unsigned char pattern, unsigned int on, unsigned int off
 	powerLedFlags.hostOn = on;
 	powerLedFlags.hostOff = off;
 }
+#endif
 #else
 /* the slim's 0x0105 (USS-1002) */
 #define POWER_LED_0105		(BOARD_USS1001 && SOURCE_0104)

@@ -70,12 +70,27 @@ union UpdEvents {
 		unsigned int	event20:1;
 		unsigned int	event35:1;
 		unsigned int	event82:1;
+#if SOURCE_0103
+		/* the PS TV's: 0x8c, 0x97, 0x17 and 0x18 */
+		unsigned int	reserved1:1;
+		unsigned int	event8c:1;
+		unsigned int	reserved2:1;
+		unsigned int	event97:1;
+		unsigned int	event17:1;
+		unsigned int	event18:1;
+		unsigned int	reserved3:2;
+#else
 		unsigned int	reserved:8;
+#endif
 	} bits;
 };
 
 extern unsigned char updMode;
 extern unsigned char updReset;
+#if SOURCE_0103
+extern unsigned char updImageChecked;
+extern void updaterGetStatus(unsigned char *out);
+#endif
 extern unsigned char updVersion[4];
 extern char updBuild[12];
 extern union UpdInput updInput;
@@ -121,8 +136,12 @@ struct UpdHostLink {
 #else
 	unsigned int	config;		/* HostLinkConfig's */
 #endif
+#if SOURCE_0103
+	unsigned int	frameSize;	/* the PS TV's: a word, as the application's */
+#else
 	unsigned char	frameSize;
 	unsigned char	reserved;
+#endif
 	unsigned int	resetWait;	/* the rounds a reset waits for the slow commands */
 };
 
@@ -150,7 +169,11 @@ struct HostAnswerFrame {
 
 /* the image check's progress (0x1184's handler) */
 struct HostSlowHash {
+#if SOURCE_0103
+	unsigned int	segment;	/* the next segment to hash (the PS TV's a word) */
+#else
 	unsigned char	segment;	/* the next segment to hash */
+#endif
 	unsigned char	segmentDone;	/* the segments hashed */
 	unsigned char	segmentCount;	/* the segments received */
 };
@@ -161,7 +184,11 @@ struct HostSlowCommand {
 	struct HostAnswerFrame answer;	/* the handler's, sent from its length on */
 	struct HostCommandFrame frame;	/* the command, for the handler */
 	struct HostSlowHash hash;
+#if SOURCE_0103
+	unsigned char	reserved[0x0b];
+#else
 	unsigned char	reserved[0x0c];
+#endif
 	void		(*handler)(struct HostSlowCommand *slow);	/* run from the main loop */
 	signed char	state;		/* HOST_SLOW_* */
 	unsigned char	reserved2;
@@ -177,6 +204,16 @@ extern int hostInit(void);
 extern int hostOpen(void);
 extern int hostClose(void);
 extern unsigned char hostPoll(void);
+/* the serial links' timers (uart4.c and serialevent.c's, uart.c and serial.c's): the PS TV's
+   two below the others' */
+#if SOURCE_0103
+#define SERIAL4_TIMER		0x0d
+#define SERIAL_TIMER		0x0e
+#else
+#define SERIAL4_TIMER		TIMER(0x11)
+#define SERIAL_TIMER		TIMER(0x12)
+#endif
+
 extern int csiTransferPoll(unsigned char *rx, unsigned char *tx, unsigned char count);
 extern int uart3WritePoll(unsigned char *data, unsigned char count);
 extern void logPrintf(const char *format, ...);
@@ -187,7 +224,12 @@ extern void logPrintf(const char *format, ...);
 #define UPD_LOG(args)	logPrintf args
 #endif
 extern unsigned char hostChecksum(unsigned char *data, unsigned char length);
+#if SOURCE_0103
+/* the PS TV's: in version.c, as the application's */
+extern int copyTimeStamp(char *out, const char *stamp);
+#else
 extern int timeStampDigits(char *digits, const char *stamp);
+#endif
 extern struct HostSlowCommand *hostSlowFind(unsigned int command);
 extern struct HostSlowCommand *hostSlowAlloc(unsigned int command);
 extern int hostSlowFree(struct HostSlowCommand *slow);
@@ -233,7 +275,13 @@ extern unsigned char powerCleared[2];
 extern unsigned char levelTrim(unsigned char level, unsigned char trim);
 extern void powerInit(void);
 extern void powerOn(void);
+#if SOURCE_0103
+/* the PS TV's: the SPI device's key exchange on the way from mode 9 to 3 (our name) */
+extern void powerCsiOpen(void);
+extern void powerResume(unsigned char mode);
+#else
 extern void powerResume(void);
+#endif
 extern void powerOff(void);
 extern void powerSuspend(void);
 extern void powerWaitStop(void);
@@ -278,7 +326,12 @@ extern unsigned char handshakeRefuse(void);
 extern void handshakeSetUnlocked(unsigned int unlocked);
 
 /* command.c: the host's commands, and the update's */
-extern unsigned char updSegment;		/* the segment programmed ("block") */
+/* the segment programmed ("block"); the PS TV's a word */
+#if SOURCE_0103
+extern unsigned int updSegment;
+#else
+extern unsigned char updSegment;
+#endif
 extern unsigned char updCipher[0x400];	/* its data as it comes in */
 extern unsigned char updReceived[0x100];	/* the segments programmed */
 extern unsigned char updProgress;	/* the image check's, in percent */

@@ -27,6 +27,10 @@ extern int csiTransferWait(unsigned char *receive, unsigned int receiveLength,
 			   unsigned char *send, unsigned int sendLength);
 extern int csiTransferDma(unsigned char *receive, unsigned char *send, unsigned int length);
 extern int csiTransferDmaWait(unsigned char *receive, unsigned char *send, unsigned int length);
+#ifdef ERNIE_UPDATER
+/* the updater's (updater/main.c): count bytes each way, polled */
+extern int csiTransferPoll(unsigned char *rx, unsigned char *tx, unsigned char count);
+#endif
 extern int csiCancel(void);
 extern void csiStopChannel(void);
 extern void csiClose(void);

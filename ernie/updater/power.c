@@ -5,6 +5,9 @@
  */
 #pragma sfr
 #pragma NOP
+#if ERNIE_FW >= 0x01030000
+#pragma interrupt INTP8 intp8Interrupt
+#endif
 
 #include "ernie.h"
 #include "chip.h"
@@ -42,7 +45,14 @@ unsigned char levelTrim(unsigned char level, unsigned char trim)
 {
 	unsigned char result;
 
+#if SOURCE_0103
+	/* the PS TV's: the application's (serial2.c's), the negated trim added */
+	result = -trim + level;
+	if (result < 0)
+		result = 0;
+#else
 	result = level - trim;
+#endif
 	if (result >= 0x40)
 		result = 0;
 	return result;
@@ -56,7 +66,24 @@ void powerInit(void)
 	TMR03 = 0x8008;
 	TDR03 = 0;
 	TMMK03 = 1;
+#if SOURCE_0103
+	/* the PS TV's: INTP8 on both edges, then event 0x8c */
+	EGP1.0 = 1;
+	EGN1.0 = 1;
+	IF2L.5 = 0;
+	MK2L.5 = 0;
+	updEventSet(0x8c);
+	return;
+#endif
 }
+
+#if SOURCE_0103
+/* INTP8 (the PS TV's): event 0x8c again */
+void intp8Interrupt(void)
+{
+	updEventSet(0x8c);
+}
+#endif
 
 /* the devices read, and the Elmo's registers read back */
 void powerOn(void)
@@ -70,8 +97,75 @@ void powerOn(void)
 	powerSeqInit();
 	for (i = 0; i < 10; i++)
 		result = elmoRead(&elmoRegRead[i].reg, (unsigned char *)elmoRegRead[i].value);
+#if SOURCE_0103
+	timerStart(TIMER_RTC(0x17), 10);
+#else
 	timerStart(TIMER(0x18), 1);
+#endif
 }
+
+#if SOURCE_0103
+/* the PS TV's: CSI00 opened for the host, the most significant bit first (the application's
+   csiOpenMsb without its state), P5.7 low and P1.6 an input */
+void powerCsiOpen(void)
+{
+	SAU0EN = 1;
+	NOP();
+	NOP();
+	NOP();
+	NOP();
+	SPS0L = 0xf0 & SPS0L;
+	SMR00 = 0x0020;
+	SCR00 = 0xf007;
+	SDR00 = 0x0600;
+	SO0 = 0x0e0e;
+	SOE0L.0 = 1;
+	P1.0 = 1;
+	PM1.0 = 0;
+	P1.1 = 1;
+	PM1.1 = 1;
+	P1.2 = 1;
+	PM1.2 = 0;
+	P5.7 = 0;
+	PM5.7 = 0;
+	P1.6 = 0;
+	PM1.6 = 1;
+	P90 = 1;
+	PM90 = 0;
+	SS0L.0 = 1;
+	CSIIF00 = 0;
+}
+
+/* the resume's steps; in modes 1 and 2 the Elmo's bit, the host's CSI and the device's power
+   (P5.6 off, P5.7 on) too; then the host powered (P1.7) */
+void powerResume(unsigned char mode)
+{
+	powerSeqResume();
+	if (mode == 1 || mode == 2) {
+		powerSdOn();
+		powerCsiOpen();
+		P5.6 = 0;
+		P5.7 = 1;
+	}
+	powerWaitInit();
+	P91 = 0;
+	powerDelayMs(1);
+	P1.7 = 1;
+	powerDelayMs(1);
+	powerDelayMs(100);
+	powerWaitStop();
+	powerCleared[0] = 0;
+	powerCleared[1] = 0;
+	keyPortsEnable();
+}
+
+void powerOff(void)
+{
+	P1.7 = 0;
+	powerSeqOff();
+	return;
+}
+#else
 
 /* the resume's steps, then the host powered (P1.7) and the keys' ports inputs */
 void powerResume(void)
@@ -126,12 +220,15 @@ void powerSuspend(void)
 	keyPortsDisable();
 	powerWaitStop();
 }
+#endif /* SOURCE_0103 */
 
 /* TM03 stopped */
 void powerWaitStop(void)
 {
 	TT0L = 0x08;
+#if !SOURCE_0103	/* the PS TV's leaves TM03's interrupt as it is */
 	TMMK03 = 1;
+#endif
 }
 
 /* ms on TM03, which runs */
@@ -144,6 +241,7 @@ void powerDelayMs(unsigned int ms)
 		NOP();
 }
 
+#if !SOURCE_0103	/* the PS TV's: board.c's, empty */
 /* P5.0-3, P8 and P11.2-3 inputs with their pull-ups (the keys) */
 void keyPortsEnable(void)
 {
@@ -165,3 +263,4 @@ void keyPortsDisable(void)
 	P11 = 0xf3 & P11;
 	PM11 = 0xf3 & PM11;
 }
+#endif

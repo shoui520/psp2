@@ -53,6 +53,12 @@
 
 extern unsigned char intp11Low(void);
 
+#ifdef ERNIE_UPDATER
+/* the PS TV's updater's state transitions are its events (updater/stub.c) */
+extern int updStateEvent(unsigned char transition);
+#define stateTransition(transition)	updStateEvent(transition)
+#endif
+
 /* an operation of task 4's already running: status 0x61, answered at once; USS-1002's 0x0105
    answers nothing, and returns the status so far */
 #if BATTERY_GAUGE
@@ -125,6 +131,9 @@ struct HostRequest serialRequest;
 unsigned char serialRequestData[0x1c];		/* the offset, the size, the data; the answer */
 #endif
 
+#ifdef ERNIE_UPDATER
+static unsigned int serial1Key;		/* the PS TV's updater: before serial1Buffer */
+#endif
 unsigned char serial1Buffer[0x28];		/* commands 0x0300 and 0x0301's */
 
 /* the answers' data */
@@ -169,7 +178,7 @@ static union {
 unsigned char serial1State;
 union Serial1Args serial1Args;
 
-#if FW_SINCE(0x00090804)
+#if FW_SINCE(0x00090804) && !(defined(ERNIE_UPDATER))
 static unsigned int serial1Key;		/* SERIAL1_KEY_OPEN or SERIAL1_KEY_CLOSED */
 #endif
 
@@ -223,6 +232,7 @@ unsigned char serialCommand1(unsigned int command, struct SerialBuffer *request,
 				serialSetAnswer(SERIAL_ANSWER);
 				return 0x10;
 			}
+#ifndef ERNIE_UPDATER	/* the PS TV's updater has no key */
 			if ((flags & SERIAL1_KEY) && serial1KeyOpen() == 0) {
 				serialSetAnswer(SERIAL_ANSWER);
 #if SOURCE_0103
@@ -231,6 +241,7 @@ unsigned char serialCommand1(unsigned int command, struct SerialBuffer *request,
 				return 1;
 #endif
 			}
+#endif
 			if ((flags & SERIAL1_NVS_KEY3) && !serialAuthUnlocked14()) {
 				serialSetAnswer(SERIAL_ANSWER);
 				return 0x10;
@@ -281,7 +292,9 @@ ER serial1InputHandler(void)
 #else
 void serial1InputHandler(void)
 {
+#ifndef ERNIE_UPDATER	/* the PS TV's updater: nothing */
 	task2SetFlag(3, 0x0001);
+#endif
 }
 #endif
 
@@ -295,7 +308,9 @@ unsigned int serial1SleepFactor(void)
 #if FW_SINCE(0x01000104)
 unsigned char serialCommands1Count(void)
 {
-#if BATTERY_GAUGE
+#if defined(ERNIE_UPDATER)
+	return 0x15;	/* the PS TV's updater */
+#elif BATTERY_GAUGE
 	return 0x6f;
 #elif BOARD_DOL1002
 	return 0x5b;
@@ -316,7 +331,7 @@ unsigned char serialCommands1Count(void)
 
 unsigned char serialNotifies1Count(void)
 {
-#if FW_SINCE(0x0100060B)
+#if FW_SINCE(0x0100060B) && !(defined(ERNIE_UPDATER))
 	return 4;
 #else
 	return 3;
@@ -597,12 +612,38 @@ static unsigned char serial1Command0105(struct SerialBuffer *request, struct Ser
 			serialSetAnswer(SERIAL_ANSWER);
 		else
 			serialSetAnswer(SERIAL_ANSWER_LATER);
+#ifdef ERNIE_UPDATER
+	/* the PS TV's updater: 0x10 and 0x11 are transitions 0x5e and 0x5f from state 0x20 */
+	} else if (mode == 0x10) {
+		if (state != 0x0020) {
+			serialSetAnswer(SERIAL_ANSWER);
+			return 0x50;
+		}
+		result = stateTransition(0x5e);
+		result = serial1StateResult(result);
+		if (result != 0)
+			serialSetAnswer(SERIAL_ANSWER);
+		else
+			serialSetAnswer(SERIAL_ANSWER_LATER);
+	} else if (mode == 0x11) {
+		if (state != 0x0020) {
+			serialSetAnswer(SERIAL_ANSWER);
+			return 0x50;
+		}
+		result = stateTransition(0x5f);
+		result = serial1StateResult(result);
+		if (result != 0)
+			serialSetAnswer(SERIAL_ANSWER);
+		else
+			serialSetAnswer(SERIAL_ANSWER_LATER);
+#else
 	} else if (mode == 0x10) {
 		serialSetAnswer(SERIAL_ANSWER);
 		return 0x33;
 	} else if (mode == 0x11) {
 		serialSetAnswer(SERIAL_ANSWER);
 		return 0x33;
+#endif
 	} else {
 		serialSetAnswer(SERIAL_ANSWER);
 		return 0x33;
@@ -693,6 +734,9 @@ static unsigned char serial1Command0106(struct SerialBuffer *request, struct Ser
 
 	response->length = 2;
 	state = stateGet();
+#ifdef ERNIE_UPDATER
+	state |= 0x4000;	/* the PS TV's updater: the update's mark */
+#endif
 	memcpy(serial1Data.byte, &state, response->length);
 	response->data = serial1Data.byte;
 	serialSetAnswer(SERIAL_ANSWER);
@@ -749,7 +793,11 @@ static unsigned char serial1Command0120(struct SerialBuffer *request, struct Ser
 	SERIAL1_UNLOCKED_CHECK();
 #endif
 	mode = *stateGetWakeupFactor();
+#ifdef ERNIE_UPDATER
+	if (stateGet() != 0x0020) {	/* the PS TV's updater: in any mode */
+#else
 	if (mode.bits.mode != 0x11 || stateGet() != 0x0020) {
+#endif
 		serialSetAnswer(SERIAL_ANSWER);
 		return 0x40;
 	}
@@ -758,12 +806,18 @@ static unsigned char serial1Command0120(struct SerialBuffer *request, struct Ser
 	send[1] = 0x01;
 	send[2] = 0x20;
 	P90 = 0;
+#ifdef ERNIE_UPDATER	/* the PS TV's updater: a polled transfer, no wait */
+	result = (unsigned char)csiTransferPoll(serial1Data.byte, send, 3 + 0x20);
+#else
 	result = (unsigned char)csiTransfer(serial1Data.byte, 3 + 0x20, send, sizeof(send));
+#endif
 #if SOURCE_0103
 	if (result != 0)
 		result = 0xff;
 #endif
+#ifndef ERNIE_UPDATER
 	dly_tsk(3);
+#endif
 	P90 = 1;
 	response->data = &serial1Data.byte[3];
 	response->length = 0x20;
@@ -784,7 +838,11 @@ static unsigned char serial1Command0121(struct SerialBuffer *request, struct Ser
 	SERIAL1_UNLOCKED_CHECK();
 #endif
 	mode = *stateGetWakeupFactor();
+#ifdef ERNIE_UPDATER
+	if (stateGet() != 0x0020) {	/* the PS TV's updater: in any mode */
+#else
 	if (mode.bits.mode != 0x11 || stateGet() != 0x0020) {
+#endif
 		serialSetAnswer(SERIAL_ANSWER);
 		return 0x40;
 	}
@@ -1118,6 +1176,7 @@ static unsigned char serial1Command01d2(struct SerialBuffer *request, struct Ser
 	return 0;
 }
 
+#ifndef ERNIE_UPDATER	/* not in the PS TV's updater */
 /* 0x0108: a word, 0: task 4's operation 0x1a, answered when it is done; status 0x61 while
    one runs, 0x33 for any other word */
 static unsigned char serial1Command0108(struct SerialBuffer *request, struct SerialBuffer *response)
@@ -1163,9 +1222,10 @@ static unsigned char serial1Command0109(struct SerialBuffer *request, struct Ser
 	serialSetAnswer(SERIAL_ANSWER);
 	return result;
 }
+#endif	/* !ERNIE_UPDATER */
 #endif
 
-#if FW_SINCE(0x00090009)
+#if FW_SINCE(0x00090009) && !(defined(ERNIE_UPDATER))	/* not in the PS TV's updater */
 /* 0x0142: the offset, the size, the data: a write to the open copy (configWrite) */
 static unsigned char serial1Command0142(struct SerialBuffer *request, struct SerialBuffer *response)
 {
@@ -1252,6 +1312,7 @@ static unsigned char serial1Command0146(struct SerialBuffer *request, struct Ser
 	return SERIAL1_CONFIG_RESULT(result);	/* (no serialSetAnswer) */
 }
 #else
+#ifndef ERNIE_UPDATER	/* the PS TV's updater has none of 0x0146-0x0160 */
 /* 0x0146: the position, the size, the data: records for the open copy (configWriteRecords) */
 static unsigned char serial1Command0146(struct SerialBuffer *request, struct SerialBuffer *response)
 {
@@ -1647,6 +1708,8 @@ done:
 	return result;
 }
 
+#endif	/* !ERNIE_UPDATER */
+
 #if FW_SINCE(0x01000104)
 /* 0x0161: the system's reset, at the notification */
 static unsigned char serial1Command0161(struct SerialBuffer *request, struct SerialBuffer *response)
@@ -1684,6 +1747,7 @@ static unsigned char serial1Notify0162(void)
 }
 
 #if FW_SINCE(0x0100060B)
+#ifndef ERNIE_UPDATER	/* not in the PS TV's updater */
 /* 0x0163: 0x5a; the notification raises the battery's bootloader line and, but in the off
    state, runs transition 0x5c */
 static unsigned char serial1Command0163(struct SerialBuffer *request, struct SerialBuffer *response)
@@ -1713,7 +1777,9 @@ static unsigned char serial1Notify0163(void)
 }
 #endif
 #endif
+#endif
 
+#ifndef ERNIE_UPDATER	/* the PS TV's updater: none of the application's other commands */
 #if FW_SINCE(0x00090903)
 /* 0x0180-0x0182: task 4's operations 7-9, answered when they are done; status 0x61 while one
    runs */
@@ -2300,7 +2366,9 @@ static unsigned char serial1Command01d1(struct SerialBuffer *request, struct Ser
 }
 #endif	/* SOURCE_0103 */
 #endif
+#endif	/* !ERNIE_UPDATER */
 #endif
+#ifndef ERNIE_UPDATER
 
 #if FW_SINCE(0x00090804)
 int serial1KeyOpen(void)
@@ -3012,6 +3080,35 @@ done:
 }
 #endif
 
+#endif	/* !ERNIE_UPDATER */
+
+#ifdef ERNIE_UPDATER
+/* the PS TV's updater's (0x01030603): the application's commands that read and write, open
+   the configuration and reset, no others */
+const struct SerialCommand1 serialCommands1[] = {
+	{ 0x0100, serial1Command0100, 0 },
+	{ 0x0101, serial1Command0101, 0 },
+	{ 0x0102, serial1Command0102, 0 },
+	{ 0x0103, serial1Command0103, 0 },
+	{ 0x0104, serial1Command0104, 0 },
+	{ 0x0105, serial1Command0105, SERIAL1_UNLOCKED },
+	{ 0x0106, serial1Command0106, 0 },
+	{ 0x0107, serial1Command0107, 0 },
+	{ 0x0110, serial1Command0110, SERIAL1_UNLOCKED },
+	{ 0x0120, serial1Command0120, SERIAL1_UNLOCKED },
+	{ 0x0121, serial1Command0121, SERIAL1_UNLOCKED },
+	{ 0x0131, serial1Command0131, SERIAL1_UNLOCKED | SERIAL1_NVS_KEY2 },
+	{ 0x0132, serial1Command0132, SERIAL1_UNLOCKED | SERIAL1_NVS_KEY2 },
+	{ 0x0140, serial1Command0140, 0 },
+	{ 0x0141, serial1Command0141, SERIAL1_UNLOCKED | SERIAL1_NVS_KEY3 },
+	{ 0x0161, serial1Command0161, SERIAL1_UNLOCKED | SERIAL1_NVS_KEY3 },
+	{ 0x0162, serial1Command0162, SERIAL1_UNLOCKED | SERIAL1_NVS_KEY3 },
+	{ 0x0168, serial1Command0168, SERIAL1_UNLOCKED },
+	{ 0x01d2, serial1Command01d2, SERIAL1_UNLOCKED },
+	{ 0x0300, serial1Command0300, 0 },
+	{ 0x0301, serial1Command0301, 0 },
+};
+#else
 /* the commands, by number; DOL-1002 drops the NVS key from 0x0900, 0x0901, 0x0930-0x0932 and
    0x0953 */
 #if SOURCE_0103
@@ -3294,6 +3391,7 @@ const struct SerialCommand1 serialCommands1[] = {
 #endif
 };
 #endif
+#endif	/* ERNIE_UPDATER */
 
 const struct SerialNotify serialNotifies1[] = {
 	{ 0x0102, serial1Notify0102 },
@@ -3301,7 +3399,7 @@ const struct SerialNotify serialNotifies1[] = {
 	{ 0x0161, serial1Notify0161 },
 	{ 0x0162, serial1Notify0162 },
 #endif
-#if FW_SINCE(0x0100060B)
+#if FW_SINCE(0x0100060B) && !(defined(ERNIE_UPDATER))
 	{ 0x0163, serial1Notify0163 },
 #endif
 };

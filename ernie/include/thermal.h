@@ -81,6 +81,7 @@ struct ThermalReport {
 };
 
 struct Thermal {
+#ifndef ERNIE_UPDATER	/* the PS TV's updater keeps only the sensor's */
 	signed char	peak;		/* the highest ever, kept in log record 0x1c */
 	signed char	sessionPeak;	/* the highest since the statistics were cleared */
 	unsigned char	mode;		/* THERMAL_MODE_* */
@@ -88,6 +89,7 @@ struct Thermal {
 	unsigned char	period;
 	unsigned int	maxSamples;
 	struct ThermalStats stats[2];
+#endif
 #if !ANALOG_THERMISTOR
 	signed char	temperature;	/* the last read */
 	union ThermalConfig config;	/* as written to the sensor */

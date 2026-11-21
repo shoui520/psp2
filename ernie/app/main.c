@@ -17,6 +17,7 @@
 #include "rtc.h"
 #include "tau.h"
 
+#ifndef ERNIE_UPDATER
 void intInit(void);
 
 /* at 0xfd900 (app.lk), where the updater keeps it too */
@@ -29,6 +30,8 @@ __near unsigned char fslDataBuffer[0x100];
 void kernelInitHook(void)
 {
 }
+
+#endif /* !ERNIE_UPDATER */
 
 #if BOARD_DOL1001
 /* DOL-1001's clocks, set apart from hdwinit: the peripherals' clocks off, then the fat
@@ -73,6 +76,9 @@ void clockOutputStop(void)
 	PM14.0 = 1;
 }
 #endif
+
+/* the PS TV's updater (updater.lk) links the clocks above and nothing else of this file */
+#ifndef ERNIE_UPDATER
 
 /* the clocks: the X1 oscillator as the main clock, the internal oscillator stopped */
 void hdwinit(void)
@@ -221,3 +227,4 @@ void resetChip(void)
 	BR	AX
 #endasm
 }
+#endif /* !ERNIE_UPDATER */

@@ -40,7 +40,11 @@ void downloaderStart(void)
 	hostLink.config = DOWNLOADER_START->link.config;
 	updReset = 0;
 	memcpy(updVersion, IMAGE_VERSION_INFO->version, 4);
+#if SOURCE_0103
+	copyTimeStamp(updBuild, (const char __far *)(IMAGE_VERSION_INFO + 1));
+#else
 	timeStampDigits(updBuild, (const char __far *)(IMAGE_VERSION_INFO + 1));
+#endif
 	MK0 = 0xffff;
 	MK1 = 0xffff;
 	MK2 = 0xffff;

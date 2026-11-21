@@ -38,9 +38,10 @@
 
 static struct IicaRequest iicaRequest;
 
-/* the updater has the application's iicaInit from before 0x0100010A, PDEL's the later one */
+/* the updater has the application's iicaInit from before 0x0100010A, PDEL's and the PS TV's the
+   later one */
 #ifdef ERNIE_UPDATER
-#define IICA_INIT_STOP		(!HW_IS(0x00416000))
+#define IICA_INIT_STOP		(!HW_IS(0x00416000) && !SOURCE_0103)
 #else
 #define IICA_INIT_STOP		(!FW_SINCE(0x0100010A))
 #endif
@@ -149,6 +150,7 @@ ready:
 }
 #endif
 
+#if !UPD_0103	/* the PS TV's updater: only the polled transfer */
 /* starts a transfer; the interrupt runs it */
 int iicaStart(struct IicaRequest *request)
 {
@@ -170,6 +172,7 @@ int iicaNone(void)
 	return 0;
 }
 #endif
+#endif	/* !UPD_0103 */
 
 /* runs a transfer, polling; 1 or 2 when an interrupt did not come */
 int iicaTransfer(struct IicaRequest *request)

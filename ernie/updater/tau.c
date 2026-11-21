@@ -24,6 +24,7 @@ void tau0PowerOff(void)
 	TAU0EN = 0;
 }
 
+#if !SOURCE_0103	/* the PS TV's has no TAU1 */
 void tau1PowerOn(void)
 {
 	if (!TAU1EN) {
@@ -40,6 +41,7 @@ void tau1PowerOff(void)
 {
 	TAU1EN = 0;
 }
+#endif
 
 void tm00Start(void)
 {

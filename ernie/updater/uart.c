@@ -376,7 +376,7 @@ void uart3ReceiveInterrupt(void)
 			if (p->timeout.flgid != 0)
 				timerStart(p->timeout.timer, p->timeout.timeout);
 		} else
-			timerStart(TIMER(0x12), 2);
+			timerStart(SERIAL_TIMER, 2);
 	}
 }
 

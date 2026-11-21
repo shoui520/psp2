@@ -18,6 +18,17 @@
 #include "kernel.h"
 #include "log.h"
 #include "spidev.h"
+#ifdef ERNIE_UPDATER
+#include "../updater/updater.h"
+#endif
+
+/* the PS TV's updater has no kernel: it waits by powerWaitLong, and its host link is not
+   paused around the exchange */
+#ifdef ERNIE_UPDATER
+#define spiDevWait(ms)	powerWaitLong(ms)
+#else
+#define spiDevWait(ms)	dly_tsk(ms)
+#endif
 
 /* the bytes of a word reversed: the device's registers are big-endian */
 #define SWAP32(x)	((((x) << 24) & 0xff000000UL) | (((x) << 8) & 0x00ff0000UL) | \
@@ -63,16 +74,18 @@ unsigned char spiDevAuthenticate(void)
 	unsigned char timeout = 0;
 #endif
 
+#ifndef ERNIE_UPDATER
 	set_flg(1, 0x0080);
-	dly_tsk(3);
+#endif
+	spiDevWait(3);
 	SPIDEV_POWER = 1;
 	SPIDEV_POWER2 = 1;
 	retries = 60;
 	while (!P1.6) {
-#if BOARD_WDT
+#if BOARD_WDT || (defined(ERNIE_UPDATER))
 		WDTE = 0xac;
 #endif
-		dly_tsk(50);
+		spiDevWait(50);
 		if (--retries == 0) {
 #if FW_SINCE(0x00090804)
 			timeout = 1;
@@ -98,10 +111,10 @@ unsigned char spiDevAuthenticate(void)
 	SPIDEV_POWER = 0;
 	retries = 60;
 	while (P1.6) {
-#if BOARD_WDT
+#if BOARD_WDT || (defined(ERNIE_UPDATER))
 		WDTE = 0xac;
 #endif
-		dly_tsk(50);
+		spiDevWait(50);
 		if (--retries == 0) {
 #if FW_SINCE(0x00090804)
 			timeout = 1;
@@ -115,10 +128,33 @@ unsigned char spiDevAuthenticate(void)
 	else
 		logEvent(0x14);
 #endif
+#ifndef ERNIE_UPDATER
 	set_flg(1, 0x0040);
+#endif
 	return result;
 }
 
+#ifdef ERNIE_UPDATER
+/* writes a register's 4 bytes, in a polled transfer of 7 bytes each way (the updater's
+   spidev.c reads) */
+unsigned char spiDevWrite(unsigned char command, unsigned int reg, unsigned char *data)
+{
+	unsigned char result;
+	unsigned char send[3 + 4];
+	unsigned char receive[3 + 4];
+
+	result = 0;
+	send[0] = command;
+	send[1] = reg >> 8;
+	send[2] = reg & 0xff;
+	memcpy(&send[3], data, 4);
+	P90 = 0;
+	result = csiTransferPoll(receive, send, sizeof(send));
+	spiDevWait(3);
+	P90 = 1;
+	return result;
+}
+#else
 /* reads a register's 4 bytes; the transfer's result */
 unsigned char spiDevRead(unsigned char command, unsigned int reg, unsigned char *data)
 {
@@ -188,3 +224,4 @@ unsigned char spiDevPowerOn(void)
 	SPIDEV_POWER2 = 1;
 	return result;
 }
+#endif	/* ERNIE_UPDATER */

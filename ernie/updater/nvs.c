@@ -94,8 +94,14 @@ extern void FSL_Close(void);
 extern unsigned char fslDataBuffer[];		/* the library's data buffer (main.c) */
 
 
+#if SOURCE_0103
+/* the PS TV's are the application's flash.c's, the writes not verified */
+#include "flash.h"
+#define nvsFlashWrite(address, data, words)	nvsFlashWrite(address, data, words, 0)
+#else
 static unsigned char nvsErase(unsigned char block);
 static unsigned char nvsFlashWrite(unsigned char *address, void *data, unsigned char words);
+#endif
 static unsigned char nvsReadRecords(unsigned char *buffer, unsigned int index,
 				    unsigned char count);
 static unsigned char nvsWriteRecords(unsigned char *buffer, unsigned int index,
@@ -186,7 +192,8 @@ unsigned char nvsWrite(unsigned int offset, unsigned int size, unsigned char *da
 }
 
 /* erases a block of the NVS: tried 5 more times while the erase fails */
-#if FW_SINCE(0x0100060D)
+#if SOURCE_0103
+#elif FW_SINCE(0x0100060D)
 /* erases a block of the NVS: tried 3 more times while the erase fails, as the application's
    0x01000104, the watchdog kicked before each try (not on PDEL) */
 static unsigned char nvsErase(unsigned char block)
@@ -248,7 +255,8 @@ static unsigned char nvsErase(unsigned char block)
 #endif
 
 /* writes words of 4 bytes at an address of the NVS */
-#if FW_SINCE(0x0100060D)
+#if SOURCE_0103
+#elif FW_SINCE(0x0100060D)
 /* writes words of 4 bytes: tried 3 more times while the write fails, as the application's
    0x01000104 */
 static unsigned char nvsFlashWrite(unsigned char *address, void *data, unsigned char words)

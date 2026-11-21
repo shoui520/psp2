@@ -19,6 +19,10 @@
 #include "powerseq.h"
 #include "task.h"
 
+#if UPD_0103
+extern unsigned char updReset;		/* the updater's (updater.h): a reset started it */
+#endif
+
 #if SOURCE_0103
 /*
  * The slim's Cookie: with no Cookie (its version 0xff) nothing goes on the bus. Its registers
@@ -102,6 +106,10 @@ void cookieInitRegs(void)
 	regs[4].reg = COOKIE_SLIM_REG(7);
 	regs[5].reg = COOKIE_SLIM_REG(8);
 
+#if UPD_0103
+	/* the PS TV's updater: the defaults written after a reset only, else the registers read */
+	if (updReset) {
+#endif
 	for (i = 0; i < 6; i++) {
 		elmoCommand[0] = regs[i].reg;
 		elmoCommand[1] = (unsigned char)regs[i].value;
@@ -114,6 +122,12 @@ void cookieInitRegs(void)
 #endif
 			regs[i].last->word = regs[i].value;
 	}
+#if UPD_0103
+	} else {
+		for (i = 0; i < 6; i++)
+			cookieRead(&regs[i].reg, regs[i].last->byte);
+	}
+#endif
 #if BOARD_DOL1002 || BOARD_USS1001 && SOURCE_0104
 	/* DOL-1002 (and USS-1002's 0x0105) tests register 3's bit 15 and does nothing with it */
 	if (cookieRegs[0].byte[1] & 0x80)
@@ -140,9 +154,11 @@ unsigned char cookieWrite(unsigned char *data, unsigned char length)
 #endif
 {
 	unsigned char status;
+#if !UPD_0103
 	ER ercd;
 	FLGPTN ptn;
 	unsigned char i;
+#endif
 
 #if !COOKIE_GATED
 	if (deviceVersions.cookie[0] == 0xff)
@@ -154,6 +170,9 @@ unsigned char cookieWrite(unsigned char *data, unsigned char length)
 	cookieIica.txCount = length;
 	cookieIica.address = COOKIE_SLIM_ADDRESS;
 	cookieIica.status = &status;
+#if UPD_0103	/* the PS TV's updater: no kernel, the transfer waited for in iicaTransfer */
+	iicaTransfer(&cookieIica);
+#else
 	for (i = 1; i < length; i++)
 		;
 	clr_flg(4, ~0x10);
@@ -165,6 +184,7 @@ unsigned char cookieWrite(unsigned char *data, unsigned char length)
 	} else if (ercd == E_TMOUT) {
 		status = 0x10;
 	}
+#endif
 #if COOKIE_GATED
 	if (status) {
 		logEvent(0x23);
@@ -198,8 +218,10 @@ unsigned char cookieRead(unsigned char *reg, unsigned char *data)
 #endif
 {
 	unsigned char status;
+#if !UPD_0103
 	ER ercd;
 	FLGPTN ptn;
+#endif
 
 #if !COOKIE_GATED
 	if (deviceVersions.cookie[0] == 0xff) {
@@ -214,6 +236,9 @@ unsigned char cookieRead(unsigned char *reg, unsigned char *data)
 	cookieIica.txCount = 1;
 	cookieIica.address = COOKIE_SLIM_ADDRESS;
 	cookieIica.status = &status;
+#if UPD_0103
+	iicaTransfer(&cookieIica);
+#else
 	clr_flg(4, ~0x10);
 	iicaStart(&cookieIica);
 	ercd = twai_flg(4, 0x10, TWF_ORW, &ptn, 0x4b);
@@ -223,6 +248,7 @@ unsigned char cookieRead(unsigned char *reg, unsigned char *data)
 	} else if (ercd == E_TMOUT) {
 		status = 0x10;
 	}
+#endif
 #if COOKIE_GATED
 	if (status) {
 		logEvent(0x23);
@@ -516,6 +542,7 @@ unsigned char cookieCtrlReg7(unsigned char value)
 	return result;
 }
 
+#if !UPD_0103	/* the PS TV's updater: none of the currents' encodings, nor register 1 */
 /* the currents set, as their registers' bits 4-7 */
 unsigned char cookieGetChargingCurrent(void)
 {
@@ -758,6 +785,7 @@ unsigned char cookieSupplyCurrentDecode(unsigned char *out, unsigned char reg)
 	return result;
 }
 #endif
+#endif	/* !UPD_0103 */
 
 unsigned char cookieReadStatus1(unsigned char *status)
 {
@@ -775,6 +803,7 @@ unsigned char cookieReadStatus2(unsigned char *status)
 	return cookieRead(&reg, status);
 }
 
+#if !UPD_0103
 /* status registers 1 and 2 as the power status has them (0x08c6) */
 unsigned char cookieReadReg1(unsigned char *out)
 {
@@ -817,6 +846,7 @@ unsigned char cookieReadReg1(unsigned char *out)
 done:
 	return result;
 }
+#endif
 
 #if !BOARD_DOL1001
 /* register 3 */
@@ -1009,9 +1039,12 @@ unsigned char cookieCtrlReg3Bit2(unsigned char on)
 	return result;
 }
 
-/* register 3's bit 0 set and bit 2 clear */
+/* register 3's bit 0 set and bit 2 clear (the PS TV's updater: nothing) */
 unsigned char cookieCtrlReg3Bit0(void)
 {
+#if UPD_0103
+	return 0;
+#else
 	unsigned char value;
 	unsigned char result;
 
@@ -1029,6 +1062,7 @@ unsigned char cookieCtrlReg3Bit0(void)
 	} else
 		result = 0;
 	return result;
+#endif
 }
 
 #else

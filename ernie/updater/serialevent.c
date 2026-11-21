@@ -31,7 +31,7 @@ unsigned char serial4Event(FLGPTN ptn)
 		case 0:
 		case SERIAL_RECEIVE:
 		case SERIAL_RECEIVED:
-			timerStop(TIMER(0x11));
+			timerStop(SERIAL4_TIMER);
 			serial4.status = serial4Receive();
 			serial4Dispatch();
 			break;
@@ -63,7 +63,7 @@ unsigned char serial4Event(FLGPTN ptn)
 		case 0:
 		case SERIAL_RECEIVE:
 		case SERIAL_RECEIVED:
-			timerStop(TIMER(0x12));
+			timerStop(SERIAL_TIMER);
 			serial.status = serialReceive();
 			serialDispatch();
 			break;
@@ -102,7 +102,7 @@ void serial4StartTimers(void)
 	struct TimerHandler handler;
 
 	handler.handler = serial4PostTimeout;
-	timerSetHandler(TIMER(0x11), &handler);
+	timerSetHandler(SERIAL4_TIMER, &handler);
 	handler.handler = serial4PostTimeout3;
-	timerSetHandler(TIMER(0x12), &handler);
+	timerSetHandler(SERIAL_TIMER, &handler);
 }

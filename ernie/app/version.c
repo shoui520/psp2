@@ -20,13 +20,13 @@ struct VersionFlags {
 						   report the downloader's version (0x00090804 always
 						   does) */
 #endif
-#if !defined(ERNIE_UPDATER) && SOURCE_0103
+#if SOURCE_0103
 	unsigned char	hardwareInfo2[16];	/* the slim's: the bits of hardwareInfo2 flipped */
 #endif
 };
 
 /* Subversion's $Date$ of each build, and the version it gives */
-#ifdef ERNIE_UPDATER
+#if defined(ERNIE_UPDATER) && !SOURCE_0103	/* the PS TV's updater gives its own */
 #define APP_VERSION	0x00090800
 #else
 #define APP_VERSION	ERNIE_FW
@@ -105,7 +105,7 @@ const struct AppVersionInfo appVersionInfo = {
 };
 static const char timeStamp[] = APP_TIME_STAMP;
 const char * const appTimeStamp = timeStamp;
-#if !defined(ERNIE_UPDATER) && SOURCE_0103
+#if SOURCE_0103
 /* the hardware info 2 (command 0x0006): 128 bits, each this default flipped by its bit
    in versionFlags.hardwareInfo2 */
 #if BOARD_DOL1002
@@ -120,11 +120,114 @@ const unsigned int logVersion = 0x10;
 static const unsigned char hardwareInfo2[16] = { 0x07 };
 const unsigned int logVersion = 9;
 #endif
+#if defined(ERNIE_UPDATER)
+/* the time stamp's digits (the application's command.c has them) */
+const unsigned char timeStampDigits[12] = { 8, 9, 10, 11, 13, 14, 16, 17, 19, 20, 22, 23 };
+#endif
 #endif
 
 struct VersionFlags versionFlags;
 
-#ifdef ERNIE_UPDATER
+#if defined(ERNIE_UPDATER) && SOURCE_0103
+/*
+ * The PS TV's updater: the application's set, the running application's version and build
+ * (updVersion, updBuild) copied at the start
+ */
+void versionInit(void)
+{
+	memcpy(updVersion, APP_VERSION_INFO->version, 4);
+	copyTimeStamp(updBuild, APP_VERSION_INFO->timeStamp);
+	versionFlags.dlFlags = 1;
+	versionFlags.hardwareInfoFlags = 0;
+	memset(versionFlags.hardwareInfo2, 0, sizeof(versionFlags.hardwareInfo2));
+}
+
+void getErnieVersion(unsigned char *buf)
+{
+	memcpy(buf, updVersion, 4);
+}
+
+void getHardwareInfo(unsigned char *buf)
+{
+	memcpy(buf, APP_VERSION_INFO->hardwareInfo, 4);
+	buf[0] |= versionFlags.hardwareInfoFlags;
+}
+
+void getHardwareInfo2(unsigned char *buf)
+{
+	unsigned char i;
+
+	for (i = 0; i < sizeof(hardwareInfo2); i++)
+		*buf++ = hardwareInfo2[i] ^ versionFlags.hardwareInfo2[i];
+}
+
+unsigned char getHardwareInfoFlags(void)
+{
+	return versionFlags.hardwareInfoFlags | appVersionInfo.hardwareInfo[0];
+}
+
+char getHardwareInfo2Bit(unsigned char number)
+{
+	unsigned char byte;
+
+	if (number >= 0x80)
+		return 0;
+	byte = number >> 3;
+	return ((hardwareInfo2[byte] ^ versionFlags.hardwareInfo2[byte]) &
+		(1 << (number & 7))) ? 1 : 0;
+}
+
+void setHardwareInfoFlags(unsigned char flags)
+{
+	versionFlags.hardwareInfoFlags |= flags;
+}
+
+void clearHardwareInfoFlags(unsigned char flags)
+{
+	versionFlags.hardwareInfoFlags &= ~flags;
+}
+
+void setHardwareInfo2Bit(unsigned char number, unsigned char on)
+{
+	unsigned char index;
+	unsigned char mask;
+
+	if (number < 0x80) {
+		index = number >> 3;
+		mask = (unsigned char)1 << (unsigned char)(number & 7);
+		if ((hardwareInfo2[index] & mask) ^ (on ? mask : 0))
+			versionFlags.hardwareInfo2[index] |= mask;
+		else
+			versionFlags.hardwareInfo2[index] &= ~mask;
+	}
+}
+
+void setDlFlags(unsigned char flags)
+{
+	versionFlags.dlFlags = flags;
+}
+
+void getErnieDlVersion(unsigned char *buf)
+{
+	memcpy(buf, APP_VERSION_INFO->dlVersion, 4);
+}
+
+/* command 0x0002: the build's digits */
+void getTimeStamp(unsigned char *out)
+{
+	memcpy(out, updBuild, 12);
+}
+
+/* a time stamp's 12 digits (the image's and the application's, into updBuild) */
+int copyTimeStamp(char *out, const char *stamp)
+{
+	unsigned char i;
+
+	for (i = 0; i < 12; i++)
+		out[i] = stamp[timeStampDigits[i]];
+	return 0;
+}
+#elif defined(ERNIE_UPDATER)
 /*
  * The updater's: the running application's version (updVersion), and the hardware info and
  * the downloader's version from the application's block as the updater's layout reads it

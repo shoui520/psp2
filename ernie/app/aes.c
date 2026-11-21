@@ -4,8 +4,8 @@
  * bytes of the block). The state is the block in RAM, column by column (state[r + 4 * c]); the
  * round keys are the words of the key schedule, byte 0 the first.
  */
-#if !defined(ERNIE_UPDATER) && ERNIE_FW >= 0x0100060B
-/* memcpy expanded in place, as Sony's 0x0100060B build does */
+#if (!defined(ERNIE_UPDATER) && ERNIE_FW >= 0x0100060B) || (defined(ERNIE_UPDATER) && ERNIE_FW >= 0x01030000)
+/* memcpy expanded in place, as Sony's 0x0100060B build does (and the PS TV's updater) */
 #pragma inline
 #endif
 #include <stddef.h>
@@ -14,7 +14,7 @@
 #include "ernie.h"
 #include "aes.h"
 #include "board.h"
-#if !defined(ERNIE_UPDATER) && FW_SINCE(0x0100060B)
+#if (!defined(ERNIE_UPDATER) && FW_SINCE(0x0100060B)) || (defined(ERNIE_UPDATER) && SOURCE_0103)
 #include "aestable.h"
 #else
 #include "gf.h"
@@ -123,7 +123,8 @@ static const char aesRevision[] = "$Rev: 1987 $";
 
 /* 0x0100060B (rev 4488): table-driven rounds (aestable.c), each round one function, the block
    length fixed at 4 words, and only the CBC mode */
-#if !defined(ERNIE_UPDATER) && FW_SINCE(0x0100060B)
+#if (!defined(ERNIE_UPDATER) && FW_SINCE(0x0100060B)) || (defined(ERNIE_UPDATER) && SOURCE_0103)
+/* and the PS TV's updater (0x01030603): the application's rounds, with near null tests */
 #define AES_TABLES	1
 #else
 #define AES_TABLES	0

@@ -19,9 +19,11 @@
 #include "chip.h"
 #include "ernie.h"
 #include "board.h"
+#include "debugpin.h"
 #include "charge.h"
 #include "config.h"
 #include "keepram.h"
+#include "led.h"
 #include "nvs.h"
 #include "param.h"
 #include "serial.h"
@@ -29,6 +31,8 @@
 #include "serial2.h"
 #include "serial4.h"
 #include "sleepfactor.h"
+#include "spidev.h"
+#include "state.h"
 #include "tau.h"
 #include "timer.h"
 #include "version.h"
@@ -55,8 +59,12 @@ void main(void)
 	hostLink.config = 0;
 #endif
 	updReset = 1;
+#if SOURCE_0103	/* the PS TV's: the application's version block (version.c) */
+	versionInit();
+#else
 	memcpy(updVersion, APP_VERSION_INFO->version, 4);
 	timeStampDigits(updBuild, APP_VERSION_INFO->timeStamp);
+#endif
 	boardMultiCnOutputOff();
 	mainLoop();
 }
@@ -71,6 +79,10 @@ int updaterInitErnieUpdMode(void)
 		updInput.bits.multiCnReported = updInput.bits.multiCn = updInput.bits.multiCnLast =
 			!P2.0 ^ 1;
 	} else {
+#if SOURCE_0103
+		/* the PS TV's: mode 7, the host and the keys left as they are */
+		updMode = 7;
+#else
 		updMode = 3;
 		hostOpen();
 		updaterDecryptInit();
@@ -79,6 +91,7 @@ int updaterInitErnieUpdMode(void)
 		snvsReset();
 #endif
 		handshakeSetUnlocked(HANDSHAKE_UNLOCKED);
+#endif
 		updInput.bits.multiCnReported = updInput.bits.multiCn = updInput.bits.multiCnLast =
 			!P2.0;
 	}
@@ -90,6 +103,206 @@ unsigned char updModeGet(void)
 	return updMode;
 }
 
+#if SOURCE_0103
+/* the PS TV's (0x01030603): modes 7, 8 and 9 beside the others; the host's link and keys set
+   up on the way to mode 3, the power resumed in mode 0, 1 or 2 of powerResume */
+unsigned char updModeChange(unsigned char mode)
+{
+	unsigned char refused;
+
+	refused = 1;
+	switch (updMode) {
+	case 0:
+		if (mode == 1)
+			refused = 0;
+		break;
+	case 7:
+		switch (mode) {
+		case 1:
+			refused = 0;
+			break;
+		case 3:
+			refused = 0;
+			hostOpen();
+			updaterDecryptInit();
+			handshakeInit(0);
+			watchdogSetup();
+			snvsReset();
+			handshakeSetUnlocked(HANDSHAKE_UNLOCKED);
+			break;
+		}
+		break;
+	case 1:
+		switch (mode) {
+		case 2:
+			refused = 0;
+			break;
+		case 3:
+			if ((unsigned char)chargeMayStart() && !(unsigned char)chargeAlarm0On()) {
+				handshakeInit(0);
+				watchdogSetup();
+				snvsReset();
+				updaterDecryptInit();
+				powerResume(0);
+				stateWakeupFactor.bits.mode = 0;
+				stateWakeupFactor.bits.notify = 0;
+				stateWakeupFactor.bits.data = 0;
+				hostOpen();
+				hostInit();
+				refused = 0;
+			}
+			break;
+		case 5:
+			refused = 0;
+			setResetCause(0x10);
+			resetSystem();
+			break;
+		case 6:
+			refused = 0;
+			setResetCause(0x11);
+			resetSystem();
+			break;
+		case 8:
+			powerResume(1);
+			refused = 0;
+			break;
+		case 9:
+			handshakeInit(0);
+			watchdogSetup();
+			snvsReset();
+			updaterDecryptInit();
+			powerResume(2);
+			updStateEvent(0x09);
+			refused = 0;
+			break;
+		}
+		break;
+	case 2:
+		switch (mode) {
+		case 1:
+			refused = 0;
+			break;
+		case 6:
+			refused = 0;
+			setResetCause(0x10);
+			resetSystem();
+			break;
+		}
+		break;
+	case 3:
+		switch (mode) {
+		case 4:
+			DI();
+			refused = 0;
+			break;
+		case 2:
+			boardMultiCnOutputOff();
+			powerOff();
+			watchdogStop();
+			refused = 0;
+			break;
+		case 1:
+			hostClose();
+			boardMultiCnUpdate();
+			powerOff();
+			watchdogStop();
+			refused = 0;
+			break;
+		case 5:
+			if (hostSlowPending() && hostLink.resetWait--) {
+				updEventSet(0x1f);
+				break;
+			}
+			hostClose();
+			powerOff();
+			refused = 0;
+			setResetCause(0x10);
+			resetSystem();
+			break;
+		case 6:
+			if (hostSlowPending() && hostLink.resetWait--) {
+				updEventSet(0x20);
+				break;
+			}
+			hostClose();
+			powerOff();
+			refused = 0;
+			setResetCause(0x11);
+			resetSystem();
+			break;
+		}
+		break;
+	case 4:
+		switch (mode) {
+		case 5:
+			hostClose();
+			powerOff();
+			refused = 0;
+			setResetCause(0x10);
+			resetSystem();
+			break;
+		case 6:
+			hostClose();
+			powerOff();
+			refused = 0;
+			setResetCause(0x11);
+			resetSystem();
+			break;
+		}
+		break;
+	case 9:
+		switch (mode) {
+		case 3:
+			spiDevAuthenticate();
+			stateWakeupFactor.bits.mode = 0x0c;
+			stateWakeupFactor.bits.notify = 0;
+			stateWakeupFactor.bits.data = 0;
+			hostClose();
+			hostOpen();
+			hostInit();
+			refused = 0;
+			break;
+		case 1:
+			hostClose();
+			boardMultiCnUpdate();
+			powerOff();
+			watchdogStop();
+			refused = 0;
+			break;
+		}
+		break;
+	case 8:
+		if (mode == 1) {
+			hostClose();
+			boardMultiCnUpdate();
+			powerOff();
+			watchdogStop();
+			refused = 0;
+		}
+		break;
+	}
+	if (!refused) {
+		updMode = mode;
+		switch (mode) {	/* the modes' log lines, empty */
+		case 1:
+			break;
+		case 3:
+			break;
+		case 4:
+			break;
+		}
+		chargeSetAcDelay();
+		updEventSet(0x82);
+		updEventTake(0x66);
+		updEventTake(0x69);
+		updEventTake(0x64);
+		updEventTake(0x67);
+		updEventTake(0x14);
+		serialAnswer0105();
+	}
+	return refused;
+}
+#else
 /* the change to mode, where the mode allows it (some reset the system instead); 1 if refused */
 unsigned char updModeChange(unsigned char mode)
 {
@@ -253,6 +466,7 @@ unsigned char updModeChange(unsigned char mode)
 	}
 	return refused;
 }
+#endif /* SOURCE_0103 */
 
 /* takes an event: 1 if it was set */
 unsigned char updEventTake(unsigned char event)
@@ -289,6 +503,16 @@ unsigned char updEventTake(unsigned char event)
 		if (set = updEvents.bits.event15)
 			updEvents.bits.event15 = 0;
 		break;
+#if SOURCE_0103
+	case 0x17:
+		if (set = updEvents.bits.event17)
+			updEvents.bits.event17 = 0;
+		break;
+	case 0x18:
+		if (set = updEvents.bits.event18)
+			updEvents.bits.event18 = 0;
+		break;
+#endif
 	case 0x16:
 		if (set = updEvents.bits.event16)
 			updEvents.bits.event16 = 0;
@@ -357,6 +581,16 @@ unsigned char updEventTake(unsigned char event)
 		if (set = updEvents.bits.event82)
 			updEvents.bits.event82 = 0;
 		break;
+#if SOURCE_0103
+	case 0x8c:
+		if (set = updEvents.bits.event8c)
+			updEvents.bits.event8c = 0;
+		break;
+	case 0x97:
+		if (set = updEvents.bits.event97)
+			updEvents.bits.event97 = 0;
+		break;
+#endif
 	}
 	return set;
 }
@@ -389,6 +623,14 @@ unsigned char updEventSet(unsigned char event)
 	case 0x15:
 		updEvents.bits.event15 = 1;
 		break;
+#if SOURCE_0103
+	case 0x17:
+		updEvents.bits.event17 = 1;
+		break;
+	case 0x18:
+		updEvents.bits.event18 = 1;
+		break;
+#endif
 	case 0x16:
 		updEvents.bits.event16 = 1;
 		break;
@@ -440,6 +682,14 @@ unsigned char updEventSet(unsigned char event)
 	case 0x82:
 		updEvents.bits.event82 = 1;
 		break;
+#if SOURCE_0103
+	case 0x8c:
+		updEvents.bits.event8c = 1;
+		break;
+	case 0x97:
+		updEvents.bits.event97 = 1;
+		break;
+#endif
 	default:
 		unknown = 1;
 		break;
@@ -462,8 +712,13 @@ unsigned char buttonPoll(void)
 	unsigned char event;
 
 	event = 0;
+#if SOURCE_0103
+	/* the PS TV's: only the PS button (P4.6) */
+	keys = !P4.6 ? (unsigned char)0xbf : (unsigned char)0xff;
+#else
 	keys = (0x0f & P5) | ((!P11.5 ? (unsigned char)0xef : (unsigned char)0xff) &
 			      (!P4.6 ? (unsigned char)0xbf : (unsigned char)0xff) & 0xf0);
+#endif
 	if (keys & 0x10)
 		buttonPowerHeld = 0;
 	else
@@ -526,6 +781,10 @@ int multiCnCheck(void)
 /* event 0x7a: the multi connector's output and link set for what is there */
 int multiCnChanged(void)
 {
+#if SOURCE_0103
+	/* the PS TV's: the board's (board.c) */
+	boardMultiCnUpdate();
+#else
 	switch (updMultiCn) {
 	case 2:
 		powerMultiCnOff();
@@ -551,6 +810,7 @@ int multiCnChanged(void)
 		powerMultiCnOff();
 		break;
 	}
+#endif
 	return 0;
 }
 #else
@@ -612,6 +872,14 @@ int p77Changed(void)
 #define UPD_MULTICN_CHECK()	updEventSet(0x79)
 #endif
 
+/* the serial link's events: the PS TV's (0x01030603) serial4Event takes them too, with the
+   application's serial.c */
+#if SOURCE_0103
+#define UPD_SERIAL_EVENT(ptn)	serial4Event(ptn)
+#else
+#define UPD_SERIAL_EVENT(ptn)	serialEvent(ptn)
+#endif
+
 void mainLoop(void)
 {
 	unsigned char hostResult;
@@ -619,6 +887,9 @@ void mainLoop(void)
 	unsigned char count;
 
 	serialReset(0);
+#if SOURCE_0103
+	debugPinInit();
+#endif
 	resetFlags = RESF;
 	result = configStorageInit();
 	if (result)
@@ -659,8 +930,19 @@ void mainLoop(void)
 	updEventSet(4);
 	serialStartTimer();
 #endif
+#if SOURCE_0103
+	stateWakeupFactor.bits.mode = 0;
+	stateWakeupFactor.bits.notify = 0;
+	stateWakeupFactor.bits.data = 0;
+#endif
 	powerInit();
 	powerOn();
+#if SOURCE_0103
+	if (updReset)
+		powerLedFlagsInit(0);
+	else
+		powerLedFlagsInit(1);
+#endif
 	EI();
 	for (;;) {
 		switch (updModeGet()) {
@@ -671,23 +953,34 @@ void mainLoop(void)
 			if (updEventTake(0x7a))
 				multiCnChanged();
 			break;
+#if SOURCE_0103
+		case 7:
+			updModeChange(3);
+			break;
+#endif
 		case 1:
 			if (updEventTake(0x67))
 				updModeChange(3);
 			if (updEventTake(0x15))
 				updModeChange(3);
+#if SOURCE_0103
+			if (updEventTake(0x17))
+				updModeChange(8);
+			if (updEventTake(0x18))
+				updModeChange(9);
+#endif
 			if (updEventTake(0x66))
 				updModeChange(5);
 			if (updEventTake(0x69))
 				updModeChange(5);
 			if (updEventTake(0x32))
-				serialEvent(4);
+				UPD_SERIAL_EVENT(4);
 			if (updEventTake(0x33))
-				serialEvent(2);
+				UPD_SERIAL_EVENT(2);
 			if (updEventTake(0x34))
-				serialEvent(8);
+				UPD_SERIAL_EVENT(8);
 			if (updEventTake(0x35))
-				serialEvent(0x10);
+				UPD_SERIAL_EVENT(0x10);
 			if (updEventTake(1))
 				serial4Event(0x400);
 			if (updEventTake(2))
@@ -704,6 +997,10 @@ void mainLoop(void)
 				multiCnChanged();
 			if (updEventTake(0x82))
 				chargeUpdate();
+#if SOURCE_0103
+			if (updEventTake(0x97))
+				powerLedFlagsStep();
+#endif
 			break;
 		case 2:
 			if (updEventTake(0x66))
@@ -729,13 +1026,13 @@ void mainLoop(void)
 			if (updEventTake(0x20))
 				updModeChange(6);
 			if (updEventTake(0x32))
-				serialEvent(4);
+				UPD_SERIAL_EVENT(4);
 			if (updEventTake(0x33))
-				serialEvent(2);
+				UPD_SERIAL_EVENT(2);
 			if (updEventTake(0x34))
-				serialEvent(8);
+				UPD_SERIAL_EVENT(8);
 			if (updEventTake(0x35))
-				serialEvent(0x10);
+				UPD_SERIAL_EVENT(0x10);
 			if (updEventTake(1))
 				serial4Event(0x400);
 			if (updEventTake(2))
@@ -752,6 +1049,12 @@ void mainLoop(void)
 				multiCnChanged();
 			if (updEventTake(0x82))
 				chargeUpdate();
+#if SOURCE_0103
+			if (updEventTake(0x8c))
+				powerSleepFactor21();
+			if (updEventTake(0x97))
+				powerLedFlagsStep();
+#endif
 			if (P1.6)
 				hostResult = hostPoll();
 			if ((updLoops & 7) == 0)
@@ -775,6 +1078,39 @@ void mainLoop(void)
 			if ((updLoops & 7) == 0)
 				hostSlowRun();
 			break;
+#if SOURCE_0103
+		case 8:
+		case 9:
+			if (updEventTake(0x15))
+				updModeChange(3);
+			if (updEventTake(0x66))
+				updModeChange(5);
+			if (updEventTake(0x69))
+				updModeChange(5);
+			if (updEventTake(0x14))
+				updModeChange(1);
+			if (updEventTake(0x16))
+				updModeChange(1);
+			if (updEventTake(0x32))
+				UPD_SERIAL_EVENT(4);
+			if (updEventTake(0x33))
+				UPD_SERIAL_EVENT(2);
+			if (updEventTake(0x34))
+				UPD_SERIAL_EVENT(8);
+			if (updEventTake(0x35))
+				UPD_SERIAL_EVENT(0x10);
+			if (updEventTake(0x78))
+				UPD_MULTICN_CHECK();
+			if (updEventTake(0x7a))
+				multiCnChanged();
+			if (updEventTake(0x82))
+				chargeUpdate();
+			if (updEventTake(0x8c))
+				powerSleepFactor21();
+			if (updEventTake(0x97))
+				powerLedFlagsStep();
+			break;
+#endif
 		}
 #if UPD_060D_FORMS
 		WDTE = 0xac;	/* the watchdog kept back */
@@ -786,7 +1122,11 @@ void mainLoop(void)
 /* every 4 ms (TM00): P4.0 toggled, the timers' tick, the inputs, and a button press as its event */
 void tm00Interrupt(void)
 {
+#if SOURCE_0103
+	debugPinSet((unsigned char)(P4.0 ^ 1));	/* the PS TV's: the debug pin's own (app/debugpin.c) */
+#else
 	P40 ^= 1;
+#endif
 	timerTick();
 	inputPoll();
 	switch (buttonPoll()) {
@@ -810,3 +1150,20 @@ void tm00Interrupt(void)
 		break;
 	}
 }
+
+#if SOURCE_0103
+/* the PS TV's: the update's state for serial command 0x01d2 (app/serial1.c), as the
+   application's updaterGetStatus lays it out: the mode (0x80: started from the reset vector),
+   the segment, four zeros, and whether 0x1184 found the image right */
+void updaterGetStatus(unsigned char *out)
+{
+	out[0] = (updReset ? 0x80 : 0) | updMode;
+	out[1] = (unsigned char)(updSegment & 0xff);
+	out[2] = (unsigned char)(updSegment >> 8);
+	out[3] = 0;
+	out[4] = 0;
+	out[5] = 0;
+	out[6] = 0;
+	out[7] = updImageChecked;
+}
+#endif

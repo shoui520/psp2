@@ -4,6 +4,7 @@
 
 OBJECT	entry.c
 OBJECT	main.c
+OBJECT	../app/main.c	IF ERNIE_FW>=0x01030000	# the PS TV's: DOL-1001's clocks
 OBJECT	tau.c
 OBJECT	updater.c
 OBJECT	host.c
@@ -17,26 +18,32 @@ OBJECT	../app/iica.c
 OBJECT	stub.c
 OBJECT	util.c		IF ERNIE_FW<0x0100060D
 OBJECT	../app/util.c	IF ERNIE_FW>=0x0100060D
-OBJECT	nvs.c
-OBJECT	elmo.c
+OBJECT	nvs.c		IF ERNIE_FW<0x01030000
+OBJECT	../app/nvs.c	IF ERNIE_FW>=0x01030000	# the PS TV's: the application's NVS
+OBJECT	elmo.c		IF ERNIE_FW<0x01030000
+OBJECT	../app/elmo.c	IF ERNIE_FW>=0x01030000
 OBJECT	power.c
-OBJECT	powerseq.c
+OBJECT	powerseq.c	IF ERNIE_FW<0x01030000
 OBJECT	board.c
 OBJECT	powerwait.c
-OBJECT	hostint.c
-OBJECT	battery.c
+OBJECT	hostint.c	IF ERNIE_FW<0x01030000
+OBJECT	battery.c	IF ERNIE_FW<0x01030000
+OBJECT	../app/battery.c	IF ERNIE_FW>=0x01030000
 OBJECT	charge.c	IF ERNIE_FW<0x0100060D
 OBJECT	../app/charge.c	IF ERNIE_FW>=0x0100060D
 OBJECT	cookie.c	IF ERNIE_FW<0x0100060D
 OBJECT	../app/cookie.c	IF ERNIE_FW>=0x0100060D
+OBJECT	../app/powerseq.c	IF ERNIE_FW>=0x01030000
 OBJECT	param.c
 OBJECT	uart.c
 OBJECT	uart4.c
-OBJECT	../app/clockout.c
+OBJECT	../app/clockout.c	IF ERNIE_FW<0x01030000	# the PS TV's: in ../app/main.c
 OBJECT	../app/version.c
 OBJECT	scratchpad.c
-OBJECT	serial1.c
-OBJECT	serial.c
+OBJECT	serial1.c	IF ERNIE_FW<0x01030000
+OBJECT	serial.c	IF ERNIE_FW<0x01030000
+OBJECT	../app/serial1.c	IF ERNIE_FW>=0x01030000	# the PS TV's: the application's serial command code
+OBJECT	../app/serial.c	IF ERNIE_FW>=0x01030000
 OBJECT	serialevent.c
 OBJECT	serial2.c	IF ERNIE_BOARD!=0x00406000||ERNIE_HW==0x00601000
 OBJECT	serial4.c	IF ERNIE_BOARD!=0x00406000||ERNIE_HW==0x00601000
@@ -49,8 +56,15 @@ OBJECT	handshake.c	IF ERNIE_FW<0x0100060D
 OBJECT	../app/handshake.c	IF ERNIE_FW>=0x0100060D
 OBJECT	config.c
 OBJECT	../app/snvs.c	IF ERNIE_FW>=0x0100060D
+OBJECT	../app/flash.c	IF ERNIE_FW>=0x01030000	# the PS TV's: the application's flash, A/D and SPI device code
+OBJECT	../app/adc.c	IF ERNIE_FW>=0x01030000
+OBJECT	../app/spidev.c	IF ERNIE_FW>=0x01030000
 OBJECT	../app/gf.c
 OBJECT	../app/watchdog.c
+OBJECT	../app/debugpin.c	IF ERNIE_HW>=0x00700000&&ERNIE_HW<0x00800000	# the PS TV's: the application's
+OBJECT	../app/thermal.c	IF ERNIE_HW>=0x00700000&&ERNIE_HW<0x00800000
+OBJECT	../app/powerled.c	IF ERNIE_HW>=0x00700000&&ERNIE_HW<0x00800000
+OBJECT	../app/multicn.c	IF ERNIE_HW>=0x00700000&&ERNIE_HW<0x00800000
 OBJECT	version.c
 OBJECT	cstart.asm
 OBJECT	vectors.asm
@@ -105,6 +119,14 @@ SYMBOL	@RTARG2		0xffeda
 SYMBOL	@RTARG4		0xffedc
 SYMBOL	@RTARG6		0xffede
 RESERVE	0xffed4		12
+# the PS TV's (0x01030603) AES rounds read the application's tables (app/aestable.c) in boot
+# cluster 0
+SYMBOL	_aesSboxMul2	0x00200	IF ERNIE_FW>=0x01030000
+SYMBOL	_aesSboxMul3	0x00300	IF ERNIE_FW>=0x01030000
+SYMBOL	_aesMul9	0x00400	IF ERNIE_FW>=0x01030000
+SYMBOL	_aesMul11	0x00500	IF ERNIE_FW>=0x01030000
+SYMBOL	_aesMul13	0x00600	IF ERNIE_FW>=0x01030000
+SYMBOL	_aesMul14	0x00700	IF ERNIE_FW>=0x01030000
 
 # the interrupts' vectors are vectors.asm's table, not the compiler's
 DROP	@@VECT??
@@ -120,6 +142,7 @@ AT	0x02000
 SEG	@@CODEL		entry.c
 SEG	@@CSTART
 SEG	@@RTCODE
+SEG	@@BASE		main.c updater.c uart.c uart4.c power.c	IF ERNIE_FW>=0x01030000
 SEG	@@BASE
 SEG	@@FSLCOD
 SEG	@@FSLOPN
@@ -130,11 +153,15 @@ SEG	@@RLINIT
 SEG	@@CNSTL		main.c updater.c host.c command.c ../app/sha1.c ../app/aes.c util.c	IF ERNIE_FW<0x0100060D
 SEG	@@CNSTL		main.c updater.c host.c command.c analog.c ../app/sha1.c ../app/aes.c ../app/util.c	IF ERNIE_FW>=0x0100060D
 SEG	@@FSLCNS
+# the PS TV's (0x01030603): the keys last
+SEG	@@CNSTL		../app/elmo.c power.c ../app/powerseq.c ../app/cookie.c uart.c uart4.c ../app/version.c ../app/serial1.c ../app/serial.c ../app/serialauth.c ../app/handshake.c config.c ../app/authkeys.c	IF ERNIE_FW>=0x01030000
 SEG	@@CNSTL
 SEG	@@CODEL		main.c tau.c updater.c host.c stub.c util.c nvs.c elmo.c power.c board.c powerwait.c hostint.c battery.c charge.c cookie.c param.c uart.c uart4.c scratchpad.c serial1.c serial.c serialevent.c serial2.c serial4.c serialauth.c config.c ../app/gf.c	IF ERNIE_FW<0x0100060D
 # 0x0100060D's: iica.c, sleepfactor.c and timer.c below 0xc000, powerwait.c, hostint.c, uart.c,
 # uart4.c and serialevent.c above
-SEG	@@CODEL		main.c tau.c updater.c host.c stub.c ../app/util.c nvs.c elmo.c power.c ../app/iica.c board.c battery.c ../app/charge.c ../app/cookie.c param.c scratchpad.c ../app/sleepfactor.c timer.c ../app/board.c serial1.c serial.c ../app/serialauth.c config.c ../app/snvs.c ../app/gf.c	IF ERNIE_FW>=0x0100060D
+SEG	@@CODEL		main.c tau.c updater.c host.c stub.c ../app/util.c nvs.c elmo.c power.c ../app/iica.c board.c battery.c ../app/charge.c ../app/cookie.c param.c scratchpad.c ../app/sleepfactor.c timer.c ../app/board.c serial1.c serial.c ../app/serialauth.c config.c ../app/snvs.c ../app/gf.c	IF ERNIE_FW>=0x0100060D&&ERNIE_FW<0x01030000
+# the PS TV's (0x01030603): tau.c and cookie.c above, uart.c below
+SEG	@@CODEL		main.c updater.c host.c stub.c ../app/util.c ../app/nvs.c ../app/elmo.c power.c ../app/iica.c board.c ../app/battery.c ../app/charge.c param.c uart.c scratchpad.c ../app/sleepfactor.c timer.c ../app/board.c ../app/serial1.c ../app/serial.c ../app/serialauth.c config.c ../app/snvs.c ../app/flash.c ../app/adc.c ../app/spidev.c ../app/gf.c	IF ERNIE_FW>=0x01030000
 
 # the code from 0x35400: the libraries, then the rest
 AT	0x35400
@@ -142,25 +169,53 @@ SEG	@@LCODE
 SEG	@@CODEL
 
 # the RAM: the heap, the near data, the flash library's
-AT	0xfd510
-SEG	@@HEAP
-SEG	@@INIT
+AT	0xfd510		IF ERNIE_FW<0x01030000
+SEG	@@HEAP		IF ERNIE_FW<0x01030000
+SEG	@@INIT		IF ERNIE_FW<0x01030000
 SEG	@@DATA		cstart.asm timer.c serialauth.c handshake.c ../app/cstartend.asm	IF ERNIE_FW<0x0100060D
-SEG	@@FSLDAT
+SEG	@@FSLDAT	IF ERNIE_FW<0x01030000
 # the startup's (empty) saddr initialised data, where Sony's link has it
-SEG	@@INIS
+SEG	@@INIS		IF ERNIE_FW<0x01030000
 SEG	@@DATA		IF ERNIE_FW<0x0100060D
-SEG	@@INITL
+SEG	@@INITL		IF ERNIE_FW<0x01030000
 # kept over a warm start
-AT	0xfd900
-SEG	@@DATAL		main.c param.c ../app/watchdog.c
+AT	0xfd900		IF ERNIE_FW<0x01030000
+SEG	@@DATAL		main.c param.c ../app/watchdog.c	IF ERNIE_FW<0x01030000
 # what cstart clears, from its start label to cstartend's
-SEG	@@DATAL		cstart.asm
+SEG	@@DATAL		cstart.asm	IF ERNIE_FW<0x01030000
 # 0x0100060D's near data (its round keys' buffers) follows the kept block
-SEG	@@DATA		IF ERNIE_FW>=0x0100060D
+SEG	@@DATA		IF ERNIE_FW>=0x0100060D&&ERNIE_FW<0x01030000
 # Keep serial1 and the following serial state at their original RAM addresses.
 SEG	@@DATAL		host.c command.c ../app/iica.c stub.c nvs.c elmo.c power.c powerseq.c powerwait.c battery.c charge.c cookie.c uart.c uart4.c ../app/version.c IF ERNIE_HW==0x00415000
 AT	0xfee56		IF ERNIE_HW==0x00415000
+# the PS TV's (0x01030603): main.c's flash library buffer first, the heap and the flash
+# library's data after the kept block, then the near data and the far data as Sony's link has
+# them; a gap where Sony's has data nothing reads
+AT	0xfd510		IF ERNIE_FW>=0x01030000
+SEG	@@DATA		main.c	IF ERNIE_FW>=0x01030000
+SEG	@@INIT		IF ERNIE_FW>=0x01030000
+SEG	@@INIS		IF ERNIE_FW>=0x01030000
+SEG	@@INITL		IF ERNIE_FW>=0x01030000
+AT	0xfd900		IF ERNIE_FW>=0x01030000
+SEG	@@DATAL		main.c param.c ../app/watchdog.c	IF ERNIE_FW>=0x01030000
+SEG	@@DATAL		cstart.asm	IF ERNIE_FW>=0x01030000
+SEG	@@HEAP		IF ERNIE_FW>=0x01030000
+SEG	@@FSLDAT	IF ERNIE_FW>=0x01030000
+SEG	@@DATA		../app/util.c timer.c ../app/serialauth.c ../app/handshake.c version.c ../app/snvs.c	IF ERNIE_FW>=0x01030000
+SEG	@@DATA		IF ERNIE_FW>=0x01030000
+SEG	@@DATAL		host.c command.c stub.c ../app/nvs.c ../app/elmo.c power.c	IF ERNIE_FW>=0x01030000
+AT	0xfeb60		IF ERNIE_FW>=0x01030000
+SEG	@@DATAL		../app/iica.c board.c powerwait.c ../app/battery.c	IF ERNIE_FW>=0x01030000
+AT	0xfec02		IF ERNIE_FW>=0x01030000
+SEG	@@DATAL		../app/charge.c ../app/cookie.c uart.c uart4.c ../app/version.c	IF ERNIE_FW>=0x01030000
+AT	0xfef18		IF ERNIE_FW>=0x01030000
+SEG	@@DATAL		../app/serial1.c	IF ERNIE_FW>=0x01030000
+AT	0xfef94		IF ERNIE_FW>=0x01030000
+SEG	@@DATAL		../app/serial.c ../app/serialauth.c ../app/handshake.c config.c	IF ERNIE_FW>=0x01030000
+AT	0xff10e		IF ERNIE_FW>=0x01030000
+SEG	@@DATAL		../app/snvs.c	IF ERNIE_FW>=0x01030000
+AT	0xff154		IF ERNIE_FW>=0x01030000
+SEG	@@DATAL		../app/flash.c ../app/thermal.c ../app/powerled.c	IF ERNIE_FW>=0x01030000
 SEG	@@DATAL
 # the short direct area
 AT	0xffe20

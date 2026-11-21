@@ -34,6 +34,13 @@
 #include "thermal.h"
 #endif
 
+#ifdef ERNIE_UPDATER
+/* the updater's powerwait.c: the sequences' steps wait in its powerSleep, the devices in its
+   powerSleep2 (powerSleep's name kept from the macro below by the parentheses) */
+#define powerSleep(ms)		powerSleep2(ms)
+#define powerWaitMs(ms)		(powerSleep)(ms)
+#endif
+
 #if SOURCE_0103
 /*
  * The slim's (USS-1001's) power sequences: the masks a step changes set or cleared and written
@@ -45,8 +52,10 @@
 
 extern unsigned char input2Bit0Get(void);
 
+#ifndef ERNIE_UPDATER	/* the updater's are in its power.c */
 struct DeviceVersions deviceVersions;
 unsigned char elmoCommand[12];
+#endif
 
 #if BOARD_DOL1002
 /* DOL-1002's: the RMR (register 0xa1 bit 13) with the resume's first step and the others' last;
@@ -63,12 +72,14 @@ static const struct PowerStep powerOffSteps[4] = {
 	{ { 0x8880, 0x0000, 0x0000, 0x1400, 0x0000, 0x0000 }, 0x5b },
 	{ { 0x0000, 0x4000, 0x0000, 0x0000, 0x0000, 0x0000 }, 0x76 },
 };
+#ifndef ERNIE_UPDATER	/* the updater does not suspend */
 static const struct PowerStep powerSuspendSteps[4] = {
 	{ { 0x0001, 0x2000, 0x0000, 0x0000, 0x0000, 0x0000 }, 1 },
 	{ { 0x7102, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000 }, 0x5b },
 	{ { 0x8000, 0x0000, 0x0000, 0x1400, 0x0000, 0x0000 }, 0x5b },
 	{ { 0x0000, 0x4000, 0x0000, 0x0000, 0xa000, 0x0000 }, 0x76 },
 };
+#endif
 #elif BOARD_DOL1001
 /* the PS TV's (DOL-1001's) */
 static const struct PowerStep powerResumeSteps[4] = {
@@ -83,12 +94,14 @@ static const struct PowerStep powerOffSteps[4] = {
 	{ { 0x8880, 0x0000, 0x0000, 0x1400, 0x0000, 0x0000 }, 0x5c },
 	{ { 0x0004, 0x4000, 0x0000, 0x0000, 0x0000, 0x0000 }, 0x73 },
 };
+#ifndef ERNIE_UPDATER	/* the updater does not suspend */
 static const struct PowerStep powerSuspendSteps[4] = {
 	{ { 0x0001, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000 }, 1 },
 	{ { 0x7102, 0x0000, 0x0200, 0x0000, 0x0000, 0x0000 }, 0x5c },
 	{ { 0x8000, 0x0000, 0x0000, 0x1400, 0x0000, 0x0000 }, 0x5c },
 	{ { 0x0000, 0x4000, 0x0000, 0x0000, 0x0000, 0xa000 }, 0x73 },
 };
+#endif
 #else
 static const struct PowerStep powerResumeSteps[4] = {
 	{ { 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0xa000 }, 6 },
@@ -102,12 +115,14 @@ static const struct PowerStep powerOffSteps[4] = {
 	{ { 0x8000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000 }, 0x5c },
 	{ { 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000 }, 0x7c },
 };
+#ifndef ERNIE_UPDATER	/* the updater does not suspend */
 static const struct PowerStep powerSuspendSteps[4] = {
 	{ { 0x0003, 0x0000, 0x0180, 0x0000, 0x0000, 0x0000 }, 0x5c },
 	{ { 0x7100, 0x0000, 0x0040, 0x1400, 0x0000, 0x0000 }, 0x5c },
 	{ { 0x8000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000 }, 0x5c },
 	{ { 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0xa000 }, 0x7c },
 };
+#endif
 #endif
 
 static unsigned char powerA1On(void);
@@ -217,10 +232,11 @@ void powerSeqOn(void)
 		deviceVersions.elmo[0] = 0xff;
 		deviceVersions.cookie[1] = 0xff;
 		deviceVersions.cookie[0] = 0xff;
-		deviceVersions.thermal[0] = deviceVersions.thermal[1] =
-			deviceVersions.battery.id = deviceVersions.battery.version[0] =
+		deviceVersions.battery.id = deviceVersions.battery.version[0] =
 			deviceVersions.battery.version[1] = deviceVersions.battery.version[2] =
 			deviceVersions.battery.version[3] = deviceVersions.battery.version[4] = 0xffff;
+		deviceVersions.thermal[1] = 0xff;
+		deviceVersions.thermal[0] = 0xff;
 	} else {
 		for (i = 0; i < 3; i++) {
 			if (!elmoReadVersion(deviceVersions.elmo)) {
@@ -252,6 +268,9 @@ void powerSeqOn(void)
 		}
 	}
 	if (deviceVersions.cookie[0] == 0x80) {
+#ifdef ERNIE_UPDATER	/* the updater's: no battery faults kept */
+		WDTE = 0xac;
+#else
 		cookieReadStatus1(status.byte);
 		status2.word = 0;
 		if (!status.bits.battery) {
@@ -261,12 +280,15 @@ void powerSeqOn(void)
 				batteryFaults.byte[0] |= 0x02;
 			}
 		}
+#endif
 		for (i = 0; i < 6; i++) {
 			if (!batteryReadInfo(&deviceVersions.battery.id)) {
 				batteryInfoRead();
 				cookieReadStatus1(status.byte);
 				if (status.bits.battery) {
+#ifndef ERNIE_UPDATER
 					batteryFaults.byte[0] |= 0x04;
+#endif
 					break;
 				}
 			}
@@ -276,9 +298,11 @@ void powerSeqOn(void)
 			if (i == 5)
 				logEvent(0x0d);
 		}
+#ifndef ERNIE_UPDATER
 		if (!batteryReadBicTemp(&batteryFaults.word[2]) &&
 		    !batteryReadTemp(&batteryFaults.word[3]))
 			batteryFaults.byte[0] |= 0x08;
+#endif
 	} else if (deviceVersions.cookie[0] == 0) {
 		for (i = 0; i < 3; i++) {
 			if (!batteryReadInfo(&deviceVersions.battery.id)) {
@@ -287,6 +311,9 @@ void powerSeqOn(void)
 			}
 		}
 	}
+#ifdef ERNIE_UPDATER
+	WDTE = 0xac;
+#endif
 	cookieUpdateBatteryCharge(1);
 	chargeInit();
 }
@@ -319,8 +346,10 @@ unsigned char powerSeqResume(void)
 		powerSdOn();
 	powerP80On();
 	powerUsbOn();
+#ifndef ERNIE_UPDATER
 	if (elmoStatusMask.reg[0] & 0x10)
 		powerSeqWaitP67();
+#endif
 out:
 	TT0L = 0x08;
 	TMMK03 = 1;
@@ -624,9 +653,10 @@ void powerSeqLevels(void)
 #endif
 
 #if BOARD_DOL1001
-/* P3.1 low until P6.5 goes low, at most six waits */
+/* P3.1 low until P6.5 goes low, at most six waits (the updater's: nothing) */
 void powerSeqWaitP67(void)
 {
+#ifndef ERNIE_UPDATER
 	unsigned char i;
 
 	P3.1 = 0;
@@ -636,6 +666,7 @@ void powerSeqWaitP67(void)
 			break;
 	}
 	P3.1 = 1;
+#endif
 }
 
 /* the lines low, the devices off, then the off sequence's Elmo steps */
@@ -644,8 +675,10 @@ unsigned char powerSeqOff(void)
 	unsigned char result;
 	unsigned char i;
 
+#ifndef ERNIE_UPDATER	/* the updater leaves the charge alone */
 	if (stateGetCause() == 0x31)
 		chargeSetManualMode(0);
+#endif
 	P13.1 = 0;
 	P3.1 = 0;
 	clockOutputStop();
@@ -674,6 +707,7 @@ out:
 	return result;
 }
 
+#ifndef ERNIE_UPDATER	/* the updater does not suspend */
 /* as the off sequence, with the lines and the USB's power kept */
 unsigned char powerSeqSuspend(void)
 {
@@ -700,6 +734,7 @@ out:
 	TMMK03 = 1;
 	return result;
 }
+#endif
 #else
 /* the WLAN's line (P1.7) low until P12.0 goes low, at most six waits */
 void powerSeqWaitP67(void)
@@ -1241,6 +1276,7 @@ void powerSeqInit(void)
    while the Cookie's status 1 reads 4 and its register 3's bit 7 is clear */
 void powerCookieHold(void)
 {
+#ifndef ERNIE_UPDATER	/* the updater's: nothing */
 	cookieReadReg3();
 	if ((cookieStatus1.byte[0] & 0xe0) == 0x80 && !(cookieRegs[0].byte[0] & 0x80)) {
 		cookieCtrlCharge(0);
@@ -1249,13 +1285,16 @@ void powerCookieHold(void)
 		return;
 	}
 	chargeCookieHeld = 0;
+#endif
 }
 
 /* task 5's, after timer 0x1e */
 void powerCookieRelease(void)
 {
+#ifndef ERNIE_UPDATER
 	chargeCookieHeld = 0;
 	cookieCtrlCharge(1);
+#endif
 }
 #else
 /* at the off and the suspend: the Cookie's register 3 bit 13 set while its status is 4 and
@@ -1513,6 +1552,7 @@ int powerLedSetPwm(unsigned char on)
 }
 #endif
 
+#ifndef ERNIE_UPDATER	/* the updater has none of the requests' controls */
 /* 0x0884: Elmo register 0xa0's bit 14 or bit 13 set (the second wins when both are asked) */
 unsigned char powerElmoA0Set(unsigned char bit14, unsigned char bit13)
 {
@@ -1691,12 +1731,15 @@ unsigned char powerBbmcStart(void)
 	result = 4;
 	return result;
 }
+#endif	/* ERNIE_UPDATER */
 
+#if !UPD_0103
 /* serial command 0x01b0: the Elmo's registers 0xb0-0xb3 as the last power cut read them */
 void powerGetCutRegs(unsigned char *regs)
 {
 	memcpy(regs, powerCutRegs, 8);
 }
+#endif
 
 #if BOARD_DOL1002 || BOARD_USS1001 && SOURCE_0104
 /* 0x088f's work (powerRequestCtrlDeviceReset's before 0x0104): devices' lines held in reset
@@ -1748,8 +1791,10 @@ void powerCtrlDeviceReset(unsigned char hold, unsigned char devices)
 extern unsigned char input2Bit0Get(void);
 extern unsigned char input2Bit1Get(void);
 
+#ifndef ERNIE_UPDATER	/* the updater's are in its power.c */
 struct DeviceVersions deviceVersions;
 unsigned char elmoCommand[12];
+#endif
 
 /* the HDMI output's status bits (BOARD_HDMI) */
 #if BOARD_HDMI

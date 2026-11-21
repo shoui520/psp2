@@ -3,7 +3,9 @@
  * when INTAD comes (after skip conversions thrown away), into adcResults; at the last it
  * stops and sets event flag 2's bit 0x0004.
  */
+#ifndef ERNIE_UPDATER
 #pragma rtos_interrupt INTAD adcInterrupt
+#endif
 #pragma sfr
 #pragma DI
 #pragma EI
@@ -19,7 +21,9 @@
 #include "task.h"
 
 
-#if ADC_AVERAGE
+#ifdef ERNIE_UPDATER
+/* the PS TV's updater reads the converter polled (adcRead): no conversion state */
+#elif ADC_AVERAGE
 static __near unsigned int adcMask;		/* the channels to convert */
 static __near unsigned int adcBit;		/* the channel being converted, as its mask bit */
 static __near unsigned int adcDone;		/* the channels converted */
@@ -47,11 +51,13 @@ void adcOpen(void)
 #if FW_SINCE(0x0100010B)
 	if (!ADCEN) {
 #endif
+#ifndef ERNIE_UPDATER
 		adcMask = 0;
 		adcBit = 0;
 		adcDone = 0;
 		adcSkip = 0;
 		adcChannel = ADC_FIRST_CHANNEL;
+#endif
 		ADCEN = 1;
 #if ADC_AVERAGE		/* ANI0-ANI10 analog */
 		ADPC = 0x0b;
@@ -81,7 +87,11 @@ void adcOpen(void)
 		ADM = 0x03;
 #endif
 		ADIF = 0;
+#ifdef ERNIE_UPDATER
+		ADMK = 1;	/* polled */
+#else
 		ADMK = 0;
+#endif
 #if FW_SINCE(0x0100010B)
 	}
 #endif
@@ -101,6 +111,24 @@ void adcClose(void)
 #endif
 	ADCEN = 0;
 }
+
+#ifdef ERNIE_UPDATER
+/* converts a channel twice and gives the second conversion (ADCR) */
+unsigned int adcRead(unsigned int channel)
+{
+	ADIF = 0;
+	ADS = channel;
+	ADCS = 1;
+	while (!ADIF)
+		;
+	ADCS = 0;
+	ADIF = 0;
+	ADCS = 1;
+	while (!ADIF)
+		;
+	return ADCR;
+}
+#else
 
 #if ADC_AVERAGE
 /* the slim's 0x0105: converts the channels of the request's mask in turn, each the request's
@@ -362,3 +390,4 @@ void adcInterrupt(void)
 	}
 }
 #endif
+#endif	/* ERNIE_UPDATER */

@@ -84,7 +84,10 @@ struct LogRecord {
 extern void logQueueInit(void);
 extern void logInit(void);
 extern void logUpdate(void);
-#if LOG_VALUES && BOARD_USS1001
+#ifdef ERNIE_UPDATER
+/* the updater keeps no log */
+#define logEvent(event)
+#elif LOG_VALUES && BOARD_USS1001
 /* the slim's 0x0105 queues the events itself (5: the log is stopped or the queue full) */
 extern int logQueuePush(unsigned int event, long value);
 #define logEventValue(event, value)	logQueuePush((event), (value))
@@ -93,9 +96,6 @@ extern int logQueuePush(unsigned int event, long value);
 /* DOL-1001's events give their record a value: counted (0), set or or'ed by the record's kind */
 extern void logEventValue(unsigned int event, long value);
 #define logEvent(event)		logEventValue((event), 0)
-#elif defined(ERNIE_UPDATER)
-/* the updater keeps no log */
-#define logEvent(event)
 #else
 extern void logEvent(unsigned int event);
 #endif

@@ -15,7 +15,7 @@ struct TimerHandler {
 /* a timer: armed (1) until its count of ticks reaches time, then its handler runs */
 struct Timer {
 	unsigned char	state;
-#if !defined(ERNIE_UPDATER) && FW_SINCE(0x0100060B)
+#if FW_SINCE(0x0100060B) && (!defined(ERNIE_UPDATER) || SOURCE_0103)	/* and the PS TV's updater */
 	unsigned char	handlerSet;	/* timerSetHandler gave it one: timerStart arms only then */
 #endif
 	unsigned int	time;
@@ -32,7 +32,11 @@ struct Timer {
    0x16) put the RTC's at 0x17-0x21.
    0x00090206 counts the clock from timer 0x13 (TIMER(0x11)) on, and has no power LED
    timer 0x1c: its RTC timers 0x14-0x1b are 0x13-0x1a, each one below its number */
-#if !defined(ERNIE_UPDATER) && BOARD_USS1001 && SOURCE_0104
+#if defined(ERNIE_UPDATER) && SOURCE_0103
+/* the PS TV's updater (0x01030603): the application's, the RTC's at 0x17-0x21 */
+#define TIMER_RTC_FIRST		0x17
+#define TIMER_RTC(id)		((id) + 2)
+#elif !defined(ERNIE_UPDATER) && BOARD_USS1001 && SOURCE_0104
 /* the slim's 0x0105 (USS-1002): no modem (bbmc.c's timers 1, 0x11, 0x16 and 0x1a of 0x0103)
    and no timers 0-2, so the RTC's are at 0x12-0x1b, four below their numbers, and five from
    0x19 (the modem's) on */
@@ -85,7 +89,9 @@ struct Timer {
 #else
 #define TIMER(id)		((id) + 2)
 #endif
-#if defined(ERNIE_UPDATER) && FW_SINCE(0x0100060D)
+#if defined(ERNIE_UPDATER) && SOURCE_0103
+#define TIMER_COUNT		0x22
+#elif defined(ERNIE_UPDATER) && FW_SINCE(0x0100060D)
 #define TIMER_COUNT		0x1f
 #elif defined(ERNIE_UPDATER)
 #define TIMER_COUNT		0x1e

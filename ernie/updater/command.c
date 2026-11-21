@@ -21,6 +21,9 @@
 #include "cookie.h"
 #include "elmo.h"
 #include "keepram.h"
+#if SOURCE_0103
+#include "led.h"
+#endif
 #include "nvs.h"
 #include "powerseq.h"
 #include "scratchpad.h"
@@ -53,6 +56,19 @@ struct ScratchPadRange {
 	unsigned char	size;
 	unsigned char	data;		/* 0x0091's first byte */
 };
+
+#if SOURCE_0103
+/* the PS TV's 0x0081's data: the clock */
+struct UpdClockData {
+	unsigned long	clock;
+};
+
+/* and 0x0082's: the alarm (only none, 0xffffffff), and its mode */
+struct UpdAlarmData {
+	unsigned long	alarm;
+	unsigned char	mode;
+};
+#endif
 
 /* the handlers' parameters: since 0x0100060D each slow command's handler is called from
    hostSlowCommands with the frame and the queued command */
@@ -129,6 +145,22 @@ int hostCommandSerialWriteOrSend(struct HostCommandFrame *rx, struct HostSlowCom
 int updaterCheckSignature(UPD_SLOW_PARAMS);
 int hostCommandMultiCnInfo(void);
 #endif
+#if SOURCE_0103
+/* the PS TV's */
+int hostCommand0006(void);
+int hostCommandAlarm(void);
+int hostCommand0015(void);
+int hostCommand0130(void);
+int hostCommandSetClock(UPD_SLOW_PARAMS);
+int hostCommandSetAlarm(UPD_SLOW_PARAMS);
+int hostCommand01B0(UPD_SLOW_PARAMS);
+int hostCommandCtrlHdmiCecPower(UPD_SLOW_PARAMS);
+int hostCommand0806(void);
+int hostCommand0820(void);
+int hostCommand0821(void);
+int hostCommand0822(void);
+int hostCommand08C5(UPD_SLOW_PARAMS);
+#endif
 unsigned char powerResult(unsigned char result);
 unsigned char batteryResult(unsigned char result);
 int flSetSegment(unsigned char segment);
@@ -138,13 +170,42 @@ int flHashCheck(unsigned char *digest);
 int flDecrypt(void);
 int flProg(void);
 void flReboot(void);
-#if FW_SINCE(0x0100060D)
+#if SOURCE_0103
+/* the PS TV's swap is the application's flash.c's */
+#include "flash.h"
+#define flBootClusterSwap	flashBootClusterSwap
+#elif FW_SINCE(0x0100060D)
 unsigned char flBootClusterSwap(void);
 #else
 int flBootClusterSwap(void);
 #endif
 
-/* the PS Dev Wiki's "Ernie Update AES128CBC Key 0x10/0x30/0x31/0x40/0x41 (PHAT)" */
+/* the key and IV of the update images: the PS Dev Wiki's "Ernie Update AES128CBC Key" of the
+   board's type (ERNIE_HW's bits 16-23) */
+#if HW_FAMILY == 0x007
+/* "0x70/0x72 (PSTV)" */
+const unsigned char updaterCryptoKey[16] = {
+	0x67, 0xc3, 0x42, 0x53, 0xa7, 0xde, 0x13, 0x51,
+	0x7e, 0xc9, 0x03, 0xfe, 0x11, 0x19, 0xc0, 0x4c,
+};
+
+const unsigned char updaterCryptoIv[AES_BLOCK_SIZE] = {
+	0xdb, 0x30, 0x26, 0x73, 0xd6, 0x9f, 0x0d, 0x51,
+	0x3a, 0x63, 0x5e, 0x68, 0xa4, 0x70, 0xf9, 0xc1,
+};
+#elif HW_FAMILY == 0x008
+/* "0x80/0x82 (PS Vita SLIM)" */
+const unsigned char updaterCryptoKey[16] = {
+	0x52, 0x3b, 0xeb, 0x53, 0xfc, 0xb9, 0x5d, 0xc7,
+	0x72, 0xaa, 0x1b, 0xfb, 0x0a, 0x96, 0xcd, 0x10,
+};
+
+const unsigned char updaterCryptoIv[AES_BLOCK_SIZE] = {
+	0x38, 0x5d, 0x67, 0xe5, 0x0c, 0xe7, 0x66, 0x9e,
+	0xcd, 0x17, 0x1f, 0xe5, 0x76, 0x81, 0x43, 0x43,
+};
+#else
+/* "0x10/0x30/0x31/0x40/0x41 (PHAT)" */
 const unsigned char updaterCryptoKey[16] = {
 	0x12, 0xb5, 0x40, 0x8f, 0xd1, 0x89, 0xe2, 0x23,
 	0xb6, 0x18, 0x90, 0xf4, 0x88, 0x53, 0x60, 0x08,
@@ -154,6 +215,7 @@ const unsigned char updaterCryptoIv[AES_BLOCK_SIZE] = {
 	0x82, 0xd6, 0x52, 0x8a, 0x87, 0xbc, 0x55, 0xb3,
 	0x8e, 0xf2, 0x9a, 0x45, 0x73, 0x0e, 0xf1, 0x30,
 };
+#endif
 
 #if FW_SINCE(0x0100060D)
 /* the lowest NVS offset the host may read or write (0x1082, 0x1083), as the application's */
@@ -172,6 +234,88 @@ struct HostSlowEntry {
 	int		(*handler)(UPD_SLOW_PARAMS);
 };
 
+#if SOURCE_0103
+/* the PS TV's: the application's commands 0x0006, 0x0012, 0x0015, 0x0130, 0x0806, 0x0820-0x0822,
+   0x0081, 0x0082, 0x01b0, 0x0886 and 0x08c5 too */
+#define HOST_FAST_TABLE	25
+#define HOST_SLOW_TABLE	45
+
+const struct HostFastEntry hostFastTable[HOST_FAST_TABLE] = {
+	{ 0x0000, 0, hostCommandNull },
+	{ 0x0001, 0, hostCommandErnieVersion },
+	{ 0x0002, 0, hostCommandTimeStamp },
+	{ 0x0003, 1, hostCommandSleepFactor },
+	{ 0x0004, 0, hostCommandRequests },
+	{ 0x0005, 0, hostCommandHardwareInfo },
+	{ 0x0006, 0, hostCommand0006 },
+	{ 0x0010, 0, hostCommandWakeupFactor },
+	{ 0x0011, 1, hostCommandClock },
+	{ 0x0012, 1, hostCommandAlarm },
+	{ 0x0013, 0, hostCommand0013 },
+	{ 0x0015, 1, hostCommand0015 },
+	{ 0x0800, 1, hostCommandPowerStatus },
+	{ 0x0806, 0, hostCommand0806 },
+	{ 0x0820, 0, hostCommand0820 },
+	{ 0x0821, 0, hostCommand0821 },
+	{ 0x0822, 0, hostCommand0822 },
+	{ 0x0900, 1, hostCommandBatteryRemainCap },
+	{ 0x0901, 1, hostCommandBatteryVolt },
+	{ 0x0902, 1, hostCommandBatteryLifePercent },
+	{ 0x1100, 0, hostCommandErnieDlVersion },
+	{ 0x1101, 1, hostCommandUpdaterProgress },
+	{ 0x0100, 1, hostCommandControlsInfo },
+	{ 0x0103, 1, hostCommandMultiCnInfo },
+	{ 0x0130, 1, hostCommand0130 },
+};
+
+const struct HostSlowEntry hostSlowTable[HOST_SLOW_TABLE] = {
+	{ 0x0080, 0, hostCommandSetLinkConfig },
+	{ 0x0081, 1, hostCommandSetClock },
+	{ 0x0082, 1, hostCommandSetAlarm },
+	{ 0x0083, 0, hostCommandWatchdogStart },
+	{ 0x0084, 0, hostCommandWatchdogStop },
+	{ 0x0085, 0, hostCommandWatchdogKick },
+	{ 0x00c1, 1, hostCommandErnieShutdown },
+	{ 0x0090, 1, hostCommandReadScratchPad },
+	{ 0x0091, 1, hostCommandWriteScratchPad },
+	{ 0x00a0, 0, hostCommandHandshake },
+	{ 0x00b2, 1, hostCommandCtrlHostOutputViaDongle },
+	{ 0x00c0, 0, hostCommandTransition },
+	{ 0x00d0, 1, hostCommandSnvsHandshake },
+	{ 0x00d1, 1, hostCommandSnvs00D1 },
+	{ 0x00d2, 1, hostCommandSnvsRead },
+	{ 0x00d3, 1, hostCommandSnvsWrite },
+	{ 0x0190, 1, UiSetMultiCnPort },
+	{ 0x01b0, 1, hostCommand01B0 },
+	{ 0x0886, 1, hostCommandCtrlHdmiCecPower },
+	{ 0x0888, 1, hostCommandCtrlSdPower },
+	{ 0x0889, 1, hostCommandCtrlAccPower },
+	{ 0x0891, 1, powerCtrlLED },
+	{ 0x088f, 1, powerCtrlDeviceReset },
+	{ 0x088e, 1, ctrlVoltage },
+	{ 0x089b, 1, hostCommandCtrlRMRPower },
+	{ 0x089c, 1, hostCommandCtrlMultiCnPower },
+	{ 0x08c5, 1, hostCommand08C5 },
+	{ 0x0982, 1, hostCommandBatteryGetFullCap },
+	{ 0x098a, 1, hostCommandBatteryGetFullCap2 },
+	{ 0x1080, 1, hostCommandNvs1080 },
+	{ 0x1081, 1, hostCommandNvsFormat },
+	{ 0x1082, 1, hostCommandNvsReadData },
+	{ 0x1083, 1, hostCommandNvsWriteData },
+	{ 0x1180, 1, updaterSetSegment },
+	{ 0x1181, 1, updaterWriteData },
+	{ 0x1182, 1, updaterExecProgramming },
+	{ 0x1183, 1, updaterReboot },
+	{ 0x1184, 1, updaterExecFinalize },
+	{ 0x1185, 1, updaterCheckSignature },
+	{ 0x2080, 1, hostCommandSerialUnlock },
+	{ 0x2081, 1, hostCommandSerialLock },
+	{ 0x2082, 1, hostCommandSerialRestart },
+	{ 0x2083, 1, hostCommandSerialRead },
+	{ 0x2084, 1, hostCommandSerialWrite },
+	{ 0x2085, 1, hostCommandSerialWriteOrSend },
+};
+#else
 #define HOST_FAST_TABLE	17
 #define HOST_SLOW_TABLE	40
 
@@ -238,6 +382,7 @@ const struct HostSlowEntry hostSlowTable[HOST_SLOW_TABLE] = {
 	{ 0x2085, 1, hostCommandSerialWriteOrSend },
 };
 #endif
+#endif
 
 /* the updater's state, in one block as Sony's image has it (updater.lk) */
 unsigned char updMode;		/* updModeChange's */
@@ -246,8 +391,15 @@ unsigned char updVersion[4];	/* the running application's version */
 char updBuild[12];		/* and its build time, digits only */
 unsigned char updImageChecked;		/* 0x1184 found the image's digest right */
 unsigned char updProgrammed;
+#if SOURCE_0103
+/* the PS TV's: the segment decrypted into the application's configuration bank buffer
+   (flash.c's configBuffer), which configFlashWrite programs */
+unsigned int updSegment;
+unsigned char *updPlain;
+#else
 unsigned char updSegment;
 unsigned char updPlain[0x400];		/* the segment decrypted */
+#endif
 unsigned char updCipher[0x400];
 unsigned char updReceived[0x100];
 SHA1Context updSha;
@@ -284,6 +436,9 @@ unsigned char updaterInit(void)
 	updLoops = 0;
 #if FW_SINCE(0x0100060D)
 	updMultiCn = 0xff;
+#endif
+#if SOURCE_0103
+	updPlain = (unsigned char *)&configBuffer;
 #endif
 	return 0;
 }
@@ -670,7 +825,11 @@ int updaterWriteData(UPD_SLOW_PARAMS)
 #if FW_SINCE(0x0100060D)
 	if (updImageChecked)	/* no data once 0x1184 found the image right */
 		slow->answer.result = 6;
+#if SOURCE_0103
+	else if (hostLink.frameSize - 7 < data[2])	/* the PS TV's: two bytes more kept back */
+#else
 	else if (hostLink.frameSize - 5 < data[2])
+#endif
 #else
 	if (hostLink.frameSize - 5 < data[2])
 #endif
@@ -713,7 +872,13 @@ int updaterExecProgramming(UPD_SLOW_PARAMS)
 		if (error)
 			result = 2;
 		else {
+#if SOURCE_0103
+			/* the PS TV's: the application's flash.c programs the block */
+			error = configFlashWrite((unsigned long)updSegment << 10);
+			updProgrammed = 1;
+#else
 			error = flProg();
+#endif
 			switch (error) {
 			case 0x00:
 				result = 0x00;
@@ -825,7 +990,11 @@ int hostCommandErnieDlVersion(void)
 
 	answer = &hostTx;
 	answer->length = 6;
+#if SOURCE_0103
+	getErnieDlVersion(answer->data);
+#else
 	memcpy(answer->data, APP_VERSION_INFO->dlVersion, 4);
+#endif
 	answer->result = 0;
 	return 0;
 }
@@ -863,7 +1032,11 @@ int hostCommandErnieVersion(void)
 
 	answer = &hostTx;
 	answer->length = 6;
+#if SOURCE_0103
+	getErnieVersion(answer->data);
+#else
 	memcpy(answer->data, updVersion, 4);
+#endif
 	answer->result = 0;
 	return 0;
 }
@@ -875,7 +1048,11 @@ int hostCommandTimeStamp(void)
 
 	answer = &hostTx;
 	answer->length = 14;
+#if SOURCE_0103
+	getTimeStamp(answer->data);
+#else
 	memcpy(answer->data, updBuild, 12);
+#endif
 	answer->result = 0;
 	return 0;
 }
@@ -937,13 +1114,31 @@ int hostCommandHardwareInfo(void)
 
 	answer = &hostTx;
 	answer->length = 6;
+#if SOURCE_0103
+	getHardwareInfo(answer->data);
+#else
 	answer->data[0] = APP_VERSION_INFO->hardwareInfo[0];
 	answer->data[1] = APP_VERSION_INFO->hardwareInfo[1];
 	answer->data[2] = APP_VERSION_INFO->hardwareInfo[2];
 	answer->data[3] = APP_VERSION_INFO->hardwareInfo[3];
+#endif
 	answer->result = 0;
 	return 0;
 }
+
+#if SOURCE_0103
+/* 0x0006: the hardware info 2 (version.c) */
+int hostCommand0006(void)
+{
+	struct HostAnswerFrame *answer;
+
+	answer = &hostTx;
+	answer->length = 18;
+	getHardwareInfo2(answer->data);
+	answer->result = 0;
+	return 0;
+}
+#endif
 
 /* 0x0010 (sceSysconGetWakeupFactor): none */
 int hostCommandWakeupFactor(void)
@@ -973,6 +1168,27 @@ int hostCommandClock(void)
 	return 0;
 }
 
+#if SOURCE_0103
+/* 0x0012: the alarm, always none (0xffffffff), and its mode with link level 1 */
+int hostCommandAlarm(void)
+{
+	struct HostAnswerFrame *answer;
+
+	answer = &hostTx;
+	answer->data[0] = 0xff;
+	answer->data[1] = 0xff;
+	answer->data[2] = 0xff;
+	answer->data[3] = 0xff;
+	if (hostLink.config.level == 1) {
+		answer->data[4] = 0;
+		answer->length = 7;
+	} else
+		answer->length = 6;
+	answer->result = 0;
+	return 0;
+}
+#endif
+
 /* 0x0013: the host's watchdog's setting */
 int hostCommand0013(void)
 {
@@ -988,6 +1204,34 @@ int hostCommand0013(void)
 	return 0;
 }
 
+#if SOURCE_0103
+/* 0x0015: what the settings say of the off state (sleepfactor.c) */
+int hostCommand0015(void)
+{
+	struct HostAnswerFrame *answer;
+
+	answer = &hostTx;
+	sleepFactorGetOffInfo(answer->data);
+	answer->length = 6;
+	answer->result = 0;
+	return 0;
+}
+
+/* 0x0100 (sceSysconGetControlsInfo): the PS TV's, only P4.6 */
+int hostCommandControlsInfo(void)
+{
+	struct HostAnswerFrame *answer;
+
+	answer = &hostTx;
+	answer->length = 6;
+	answer->data[0] = 0xff;
+	answer->data[1] = !P4.6 ? (unsigned char)0xbf : (unsigned char)0xff;
+	answer->data[2] = 0xff;
+	answer->data[3] = 0x74;
+	answer->result = 0;
+	return 0;
+}
+#else
 /* 0x0100 (sceSysconGetControlsInfo): the buttons, as controlsReadButtons in the application */
 int hostCommandControlsInfo(void)
 {
@@ -1003,6 +1247,7 @@ int hostCommandControlsInfo(void)
 	answer->result = 0;
 	return 0;
 }
+#endif
 
 #if FW_SINCE(0x0100060D)
 /* 0x0103: the multi connector, what is there (updMultiCn) and its output */
@@ -1015,6 +1260,23 @@ int hostCommandMultiCnInfo(void)
 	answer->data[0] = (unsigned char)(input1Bit5Active() ? 0x80 : 0);
 	answer->data[1] = updMultiCn;
 	answer->data[2] = boardGetMultiCnOutput();
+	answer->data[3] = 0;
+	answer->result = 0;
+	return 0;
+}
+#endif
+
+#if SOURCE_0103
+/* 0x0130: none */
+int hostCommand0130(void)
+{
+	struct HostAnswerFrame *answer;
+
+	answer = &hostTx;
+	answer->length = 6;
+	answer->data[0] = 0;
+	answer->data[1] = 0;
+	answer->data[2] = 0;
 	answer->data[3] = 0;
 	answer->result = 0;
 	return 0;
@@ -1060,6 +1322,49 @@ int hostCommandSetLinkConfig(UPD_SLOW_PARAMS)
 	}
 	return 0;
 }
+
+#if SOURCE_0103
+/* 0x0081 (sceSysconSetClock) */
+int hostCommandSetClock(UPD_SLOW_PARAMS)
+{
+	struct UpdClockData data;
+	struct HostAnswerFrame *answer;
+
+	answer = &slow->answer;
+	data = *(struct UpdClockData *)rx->data;
+	if (hostRx.length == 5) {
+		setClock(data.clock);
+		answer->result = 0;
+	} else
+		answer->result = 0x3b;
+	answer->length = 2;
+	return 0;
+}
+
+/* 0x0082 (the alarm): only none taken */
+int hostCommandSetAlarm(UPD_SLOW_PARAMS)
+{
+	struct UpdAlarmData data;
+	struct HostAnswerFrame *answer;
+
+	answer = &slow->answer;
+	data = *(struct UpdAlarmData *)rx->data;
+	switch (rx->length) {
+	case 5:
+	case 6:
+		if (data.alarm == 0xffffffffUL)
+			answer->result = 0;
+		else
+			answer->result = 0x3c;
+		break;
+	default:
+		answer->result = 0x3b;
+		break;
+	}
+	answer->length = 2;
+	return 0;
+}
+#endif
 #else
 int hostCommandSetLinkConfig(struct HostSlowCommand *slow)
 {
@@ -1193,6 +1498,39 @@ int hostCommandHandshake(struct HostCommandFrame *rx, struct HostSlowCommand *sl
 	return 0;
 }
 
+#if SOURCE_0103
+/* the PS TV's multi connector: the dongle's lines on (2) and off (3), as the application's */
+unsigned char dongleOutputOn(void)
+{
+	return boardSetMultiCnOutput(2);
+}
+
+unsigned char dongleOutputOff(void)
+{
+	return boardSetMultiCnOutput(3);
+}
+
+/* 0x00b2 (sceSysconCtrlHostOutputViaDongle) */
+int hostCommandCtrlHostOutputViaDongle(struct HostCommandFrame *rx, struct HostSlowCommand *slow)
+{
+	struct HostAnswerFrame *answer;
+
+	answer = &slow->answer;
+	if (rx->length == 2) {
+		if (!boardMultiCnIsDongle())
+			answer->result = 4;
+		else if (rx->data[0] == 0)
+			answer->result = dongleOutputOff();
+		else if (serialGetState() != 0 && serialGetState() != 1)
+			answer->result = 5;
+		else
+			answer->result = dongleOutputOn();
+	} else
+		answer->result = 0x3b;
+	answer->length = 2;
+	return 0;
+}
+#else
 /* 0x00b2 (sceSysconCtrlHostOutputViaDongle) */
 int hostCommandCtrlHostOutputViaDongle(struct HostCommandFrame *rx, struct HostSlowCommand *slow)
 {
@@ -1219,6 +1557,7 @@ int hostCommandCtrlHostOutputViaDongle(struct HostCommandFrame *rx, struct HostS
 	answer->length = 2;
 	return 0;
 }
+#endif
 
 /* 0x00c0: a transition; only 0 (event 0x1e) */
 int hostCommandTransition(struct HostCommandFrame *rx, struct HostSlowCommand *slow)
@@ -1332,6 +1671,42 @@ int hostCommandSnvsWrite(struct HostCommandFrame *rx, struct HostSlowCommand *sl
 #endif
 
 /* 0x0190: the multi connector's output */
+#if SOURCE_0103
+/* 0x0190: the PS TV's multi connector, 0 the dongle's lines, 1 the host's, any other off */
+int UiSetMultiCnPort(struct HostCommandFrame *rx, struct HostSlowCommand *slow)
+{
+	unsigned char error;
+
+	if (rx->length == 3) {
+		switch (rx->data[0]) {
+		case 0:
+			error = boardSetMultiCnOutput(3);
+			break;
+		case 1:
+			error = boardSetMultiCnOutput(2);
+			break;
+		default:
+			error = boardSetMultiCnOutput(0xff);
+			break;
+		}
+		if (error)
+			slow->answer.result = 0x3c;
+		else
+			slow->answer.result = 0;
+	} else
+		slow->answer.result = 0x3b;
+	slow->answer.length = 2;
+	return 0;
+}
+
+/* 0x01b0: taken, nothing done */
+int hostCommand01B0(struct HostCommandFrame *rx, struct HostSlowCommand *slow)
+{
+	slow->answer.result = 0;
+	slow->answer.length = 2;
+	return 0;
+}
+#else
 int UiSetMultiCnPort(struct HostCommandFrame *rx, struct HostSlowCommand *slow)
 {
 	unsigned char error;
@@ -1348,6 +1723,7 @@ int UiSetMultiCnPort(struct HostCommandFrame *rx, struct HostSlowCommand *slow)
 	slow->answer.length = 2;
 	return 0;
 }
+#endif
 
 /* 0x088a (sceSysconCtrlWirelessPower), which the dispatch does not take */
 int hostCommandCtrlWirelessPower(struct HostCommandFrame *rx, struct HostSlowCommand *slow)
@@ -1374,12 +1750,22 @@ int powerCtrlDeviceReset(struct HostCommandFrame *rx, struct HostSlowCommand *sl
 {
 	if (rx->length == 3) {
 		UPD_LOG((" powerCtrlDeviceReset(%02X,%02X)\r\n", rx->data[0], rx->data[1]));
+#if SOURCE_0103
+		/* the PS TV has none of the three: its stand-in */
+		if (rx->data[1] & 0x02)
+			boardDummyPin = rx->data[0];
+		if (rx->data[1] & 0x04)
+			boardDummyPin = rx->data[0];
+		if (rx->data[1] & 0x08)
+			boardDummyPin = rx->data[0];
+#else
 		if (rx->data[1] & 0x02)
 			P6.3 = rx->data[0];
 		if (rx->data[1] & 0x04)
 			P0.5 = rx->data[0];
 		if (rx->data[1] & 0x08)
 			P0.6 = rx->data[0];
+#endif
 		if (rx->data[1] & 0x10)
 			P13.1 = rx->data[0];
 		slow->answer.result = 0;
@@ -1420,11 +1806,24 @@ int ctrlVoltage(struct HostCommandFrame *rx, struct HostSlowCommand *slow)
 			result = 3;
 			goto done;
 		}
+#if SOURCE_0103
+		/* the PS TV's, as the application's: the level tested against a lowest of 0 too */
+		if (rx->data[1] < 0 || rx->data[1] >= 0x40) {
+#else
 		if (rx->data[1] >= 0x40) {
+#endif
 			UPD_LOG(("[pwr] ctrlVoltage: error %02x,%02x\r\n", rx->data[0], rx->data[1]));
 			slow->answer.result = 3;
 		} else {
+#if SOURCE_0103
+			/* DOL-1001's: the resume's trims */
+			if (regulator == 0x84)
+				trim = configGet()->resumeTrim84;
+			else
+				trim = configGet()->resumeTrim;
+#else
 			trim = configGet()->voltageTrim;
+#endif
 			level = levelTrim(rx->data[1], trim);
 			UPD_LOG(("[pwr] Er->El %02x\r\n", level));
 			result = powerSetVoltage(regulator, level);
@@ -1438,7 +1837,17 @@ done:
 }
 
 /* 0x0891 (sceSysconCtrlLED): data[0] 0x40-0x08 the LEDs, 0x80 on */
-#if FW_SINCE(0x0100060D)
+#if SOURCE_0103
+/* the PS TV's: taken, nothing set */
+int powerCtrlLED(struct HostCommandFrame *rx, struct HostSlowCommand *slow)
+{
+	unsigned char *data;
+
+	slow->answer.result = 0;
+	slow->answer.length = 2;
+	return 0;
+}
+#elif FW_SINCE(0x0100060D)
 int powerCtrlLED(struct HostCommandFrame *rx, struct HostSlowCommand *slow)
 {
 	unsigned char error;
@@ -1532,6 +1941,25 @@ int powerCtrlLED(struct HostCommandFrame *rx, struct HostSlowCommand *slow)
 }
 #endif
 
+#if SOURCE_0103
+/* 0x0886: HDMI CEC's power, data[0] on or off */
+int hostCommandCtrlHdmiCecPower(struct HostCommandFrame *rx, struct HostSlowCommand *slow)
+{
+	unsigned char error;
+
+	if (rx->length == 2) {
+		if (rx->data[0])
+			error = powerHdmiCecOn();
+		else
+			error = powerHdmiCecOff();
+		slow->answer.result = powerResult(error);
+	} else
+		slow->answer.result = 0x3b;
+	slow->answer.length = 2;
+	return 0;
+}
+#endif
+
 /* 0x0888 (sceSysconCtrlSdPower): data[0] on or off */
 int hostCommandCtrlSdPower(struct HostCommandFrame *rx, struct HostSlowCommand *slow)
 {
@@ -1603,6 +2031,15 @@ int hostCommandCtrlMultiCnPower(struct HostCommandFrame *rx, struct HostSlowComm
 #if FW_SINCE(0x0100060D)
 /* the charge LED through the Cookie's register 3: data[0] 0 off, 1 the Cookie's, 2 on (no
    command of the table runs it) */
+#if SOURCE_0103
+/* the PS TV's: taken, nothing set */
+int hostCommandCtrlChargeLed(struct HostCommandFrame *rx, struct HostSlowCommand *slow)
+{
+	slow->answer.result = 0;
+	slow->answer.length = 2;
+	return 0;
+}
+#else
 int hostCommandCtrlChargeLed(struct HostCommandFrame *rx, struct HostSlowCommand *slow)
 {
 	unsigned char error;
@@ -1624,6 +2061,7 @@ int hostCommandCtrlChargeLed(struct HostCommandFrame *rx, struct HostSlowCommand
 	return 0;
 }
 #endif
+#endif
 
 /* 0x0800 (sceSysconGetPowerStatus) */
 int hostCommandPowerStatus(void)
@@ -1631,12 +2069,92 @@ int hostCommandPowerStatus(void)
 	struct HostAnswerFrame *answer;
 
 	answer = &hostTx;
+#if SOURCE_0103
+	answer->length = 6;		/* the PS TV's: four bytes */
+	answer->data[0] = powerStatus.byte[0];
+	answer->data[1] = powerStatus.byte[1];
+	answer->data[2] = powerStatus.byte[2];
+	answer->data[3] = powerStatus.byte[3];
+#else
 	answer->length = 4;
 	answer->data[0] = powerStatus.byte[0];
 	answer->data[1] = powerStatus.byte[1];
+#endif
 	answer->result = 0;
 	return 0;
 }
+
+#if SOURCE_0103
+/* 0x0806: bit 0 P7.4 low */
+int hostCommand0806(void)
+{
+	struct HostAnswerFrame *answer;
+	unsigned char value;
+
+	answer = &hostTx;
+	value = 0;
+	answer->length = 3;
+	if (!P7.4)
+		value |= 1;
+	answer->result = 0;
+	answer->data[0] = value;
+	return 0;
+}
+
+/* 0x0820: the power LED's host blink ended */
+int hostCommand0820(void)
+{
+	struct HostAnswerFrame *answer;
+
+	answer = &hostTx;
+	powerLedEndMode(POWER_LED_MODE_HOST_BLINK);
+	answer->length = 2;
+	answer->result = 0;
+	return 0;
+}
+
+/* 0x0821 and 0x0822: the power LED's host blink, by blink 0 or 1 */
+int hostCommand0821(void)
+{
+	struct HostAnswerFrame *answer;
+
+	answer = &hostTx;
+	powerLedLoadBlink(0);
+	powerLedStartMode(POWER_LED_MODE_HOST_BLINK);
+	answer->length = 2;
+	answer->result = 0;
+	return 0;
+}
+
+int hostCommand0822(void)
+{
+	struct HostAnswerFrame *answer;
+
+	answer = &hostTx;
+	powerLedLoadBlink(1);
+	powerLedStartMode(POWER_LED_MODE_HOST_BLINK);
+	answer->length = 2;
+	answer->result = 0;
+	return 0;
+}
+
+/* 0x08c5: the USB's power, data[0] on or off (taken with a length of 1) */
+int hostCommand08C5(struct HostCommandFrame *rx, struct HostSlowCommand *slow)
+{
+	unsigned char error;
+
+	if (rx->length == 1) {
+		if (rx->data[0])
+			error = powerUsbOn();
+		else
+			error = powerUsbOff();
+		slow->answer.result = powerResult(error);
+	} else
+		slow->answer.result = 0x3b;
+	slow->answer.length = 2;
+	return 0;
+}
+#endif
 
 /* 0x0900 (sceSysconGetBatteryRemainCap) */
 int hostCommandBatteryRemainCap(void)
@@ -2026,14 +2544,23 @@ int flSetSegment(unsigned char segment)
 	if (segment >= 0x100)
 		return FL_SEGMENT_ERROR;
 	if (segment == 0xe0)
+#if SOURCE_0103
+		segment = 0xd0;		/* the PS TV's */
+#else
 		segment = 0xd4;
+#endif
 	else if (segment > 0xe0 && segment < 0xee)
 		return FL_SEGMENT_ERROR;
 	if (segment < 4)
 		segment += 4;
 	updSegment = segment;
+#if SOURCE_0103
+	updReceived[updSegment] = 1;
+	memset(updPlain, 0, 0x400);
+#else
 	updReceived[segment] = 1;
 	memset(updPlain, 0, sizeof(updPlain));
+#endif
 	memset(updCipher, 0, sizeof(updCipher));
 	UPD_LOG(("Segment: %d\r\n", segment));
 	return 0;
@@ -2097,7 +2624,11 @@ void flImageCheck(struct HostSlowCommand *slow)
 	result = flHashCheck(digest);
 	if (result == 0) {
 		memcpy(updVersion, IMAGE_VERSION_INFO->version, 4);
+#if SOURCE_0103
+		copyTimeStamp(updBuild, (const char __far *)(IMAGE_VERSION_INFO + 1));
+#else
 		timeStampDigits(updBuild, (const char __far *)(IMAGE_VERSION_INFO + 1));
+#endif
 		if (flBootClusterSwap() == 0) {
 			updImageChecked = 1;
 #if FW_SINCE(0x0100060D)
@@ -2148,6 +2679,7 @@ int flDecrypt(void)
 }
 
 /* programs the segment: erased if not blank, written 0x40 words at a time, verified */
+#if !SOURCE_0103
 int flProg(void)
 {
 	unsigned char result;
@@ -2197,6 +2729,7 @@ close:
 		UPD_LOG(("FlProg: Error=%02Xh Block=%02d\r\n", result, updSegment));
 	return result;
 }
+#endif
 
 /* 0x1183's reboot: an illegal instruction resets the chip */
 void flReboot(void)
@@ -2211,6 +2744,7 @@ void flReboot(void)
 		NOP();
 }
 
+#if !SOURCE_0103
 /* swaps the boot clusters, so the image's cluster 1 boots */
 #if FW_SINCE(0x0100060D)
 unsigned char flBootClusterSwap(void)
@@ -2231,3 +2765,4 @@ int flBootClusterSwap(void)
 	UPD_LOG(("Boot Cluster Swap %d %s\r\n", result, result == 0 ? "OK" : "NG"));
 	return result;
 }
+#endif

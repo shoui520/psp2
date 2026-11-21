@@ -6,6 +6,9 @@
 
 #include "ernie.h"
 #include "analog.h"
+#if SOURCE_0103
+#include "adc.h"
+#endif
 #include "sleepfactor.h"
 #include "updater.h"
 
@@ -41,18 +44,26 @@ unsigned char analogReadMultiCn(void)
 	found = 0xff;
 	last = 0xff;
 	input = 0;
+#if SOURCE_0103	/* the PS TV's: the application's adc.c, polled */
+	adcOpen();
+#else
 	ADCEN = 1;
 	ADCE = 1;
 	ADPC = 0x0b;
 	ADM = 0x03;
 	ADMK = 1;
+#endif
 	for (i = 0; i < 10; i++) {
+#if SOURCE_0103
+		input = adcRead(0x0b) >> 8;
+#else
 		ADIF = 0;
 		ADS = 0x0b;
 		ADCS = 1;
 		while (!ADIF)
 			;
 		input = ADCRH;
+#endif
 		found = analogLevelFind(input, levels, 7);
 		if (found == last && found != level) {
 			level = found;
@@ -63,9 +74,13 @@ unsigned char analogReadMultiCn(void)
 		last = found;
 		powerWaitLong(8);
 	}
+#if SOURCE_0103
+	adcClose();
+#else
 	ADCS = 0;
 	ADCE = 0;
 	ADIF = 0;
 	ADCEN = 0;
+#endif
 	return level;
 }

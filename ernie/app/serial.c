@@ -10,18 +10,33 @@
 #include <stddef.h>
 #include <string.h>
 
+#ifndef ERNIE_UPDATER
 #include "kernel.h"
+#endif
 #include "serial.h"
 #include "serial2.h"
+#ifndef ERNIE_UPDATER
 #include "task.h"
+#endif
 #include "timer.h"
 #include "uart.h"
 #include "util.h"
+#ifdef ERNIE_UPDATER
+#include "../updater/updater.h"
+#endif
 #if BOARD_USS1001
 #include "uart4.h"
 #endif
 #if SOURCE_0103
 #include "version.h"
+#endif
+
+/* the PS TV's updater (0x01030603) builds this file too: it has no kernel, so it waits by
+   powerWaitLong and posts the answer and the timeout as its events 0x34 and 0x32 */
+#ifdef ERNIE_UPDATER
+#define serialWait(ticks)	powerWaitLong(ticks)
+#else
+#define serialWait(ticks)	dly_tsk(ticks)
 #endif
 
 /* the slim's 0x0105 logs the mode 1 commands and their answers */
@@ -442,7 +457,7 @@ void serialFlush(int port)
 /* opens the UART again at baud, 13 ticks on */
 unsigned char serialReopen(int baud)
 {
-	dly_tsk(13);
+	serialWait(13);
 	return serialUartOpen(baud);
 }
 
@@ -462,9 +477,9 @@ unsigned char serialOpen1(int baud)
 	if (info[0] & 0x08) {
 		serialWrite(SERIAL_PORT, (unsigned char *)serialSync, 3);
 		WDTE = 0xac;
-		dly_tsk(250);
+		serialWait(250);
 		WDTE = 0xac;
-		dly_tsk(50);
+		serialWait(50);
 		WDTE = 0xac;
 	}
 	return 0;
@@ -639,12 +654,20 @@ void serialSetAnswer(unsigned char state)
 
 void serialPostAnswer(void)
 {
+#ifdef ERNIE_UPDATER
+	updEventSet(0x34);
+#else
 	task2SetFlag(3, 0x0008);
+#endif
 }
 
 void serialPostTimeout(void)
 {
+#ifdef ERNIE_UPDATER
+	updEventSet(0x32);
+#else
 	task2ISetFlag(0x0004);
+#endif
 }
 
 /* never called */

@@ -89,9 +89,11 @@ unsigned char hostPoll(void)
 			hostTx.length = 2;
 			hostTx.result = HOST_RESULT_RUNNING;
 		} else {
+#if !SOURCE_0103	/* the PS TV's has not even the test */
 			if (slow->command != 0x1181)
 				UPD_LOG((" SlowCmd %04X exesta=%d tag=%x\r\n", slow->command,
 					  slow->state, slow->answer.result));
+#endif
 			memcpy(&hostTx.length, &slow->answer.length, sizeof(slow->answer) - 2);
 			hostSlowFree(slow);
 		}
@@ -163,6 +165,7 @@ int uart3WritePoll(unsigned char *data, unsigned char count)
 	return 0;
 }
 
+#if !SOURCE_0103	/* the PS TV's logs nothing */
 /* in serial mode 3 (the log) only: the multi connector switched to the host while it is sent */
 void logPrintf(const char *format, ...)
 {
@@ -185,6 +188,7 @@ void logPrintf(const char *format, ...)
 	EI();
 	boardSetMultiCnOutput(multiCn.output);
 }
+#endif
 
 unsigned char hostChecksum(unsigned char *data, unsigned char length)
 {
@@ -196,6 +200,7 @@ unsigned char hostChecksum(unsigned char *data, unsigned char length)
 	return ~sum;
 }
 
+#if !SOURCE_0103	/* the PS TV's: copyTimeStamp (version.c) */
 /* the digits of a Subversion $Date$, "$Date:: yyyy-mm-dd hh:mm", as yyyymmddhhmm */
 int timeStampDigits(char *digits, const char *stamp)
 {
@@ -206,6 +211,7 @@ int timeStampDigits(char *digits, const char *stamp)
 		digits[i] = stamp[index[i]];
 	return 0;
 }
+#endif
 
 struct HostSlowCommand *hostSlowFind(unsigned int command)
 {

@@ -13,7 +13,13 @@ unsigned int powerTimers;
 
 void powerWaitInit(void)
 {
+#if SOURCE_0103
+	/* the PS TV's: started only when it is not running */
+	if (!(0x08 & TE0L))
+		TS0L = 0x08;
+#else
 	TS0L = 0x08;
+#endif
 	TMIF03 = 0;
 }
 
@@ -25,7 +31,9 @@ void powerWaitMs(unsigned int ms)
 	while (!TMIF03)
 		NOP();
 	TT0L = 0x08;
+#if !SOURCE_0103
 	TMMK03 = 1;
+#endif
 }
 
 void powerSleep(unsigned int ms)
@@ -41,6 +49,7 @@ void powerSleep2(unsigned int ms)
 /* until the power input (P12.6) is low in two samples 8 ms apart */
 void powerWaitInput(unsigned char edges, unsigned int timeout)
 {
+#if !SOURCE_0103	/* the PS TV's: nothing */
 	unsigned char last;
 	unsigned char level;
 
@@ -51,6 +60,7 @@ void powerWaitInput(unsigned char edges, unsigned int timeout)
 		last = level;
 		level = ~P12.6 & 1;
 	}
+#endif
 }
 
 /* until the timers of the bits ran out */

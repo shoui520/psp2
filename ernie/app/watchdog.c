@@ -33,6 +33,15 @@ int watchdogSetup(void)
 	handler.handler = watchdogExpire;
 	timerSetHandler(WATCHDOG_TIMER, &handler);
 	keep = &configGet()->watchdogKeep;
+#if (defined(ERNIE_UPDATER)) && SOURCE_0103
+	/* the PS TV's updater: the config's setting when it started from the reset, the one it
+	   keeps after an update */
+	if (updReset) {
+		setting = &configGet()->watchdog;
+		watchdogSet(setting);
+	} else
+		setting = &watchdog;
+#else
 	if (!factor->bits.notify && keep->bits.keepOff)
 		setting = &watchdog;
 	else if (factor->bits.notify && keep->bits.keepNotify)
@@ -47,6 +56,7 @@ int watchdogSetup(void)
 	else
 		setting = &configGet()->watchdog;
 	watchdogSet(setting);
+#endif
 #endif
 	if (setting->bytes.timeout != 0)
 		return watchdogStart();
@@ -94,11 +104,7 @@ static void watchdogExpire(void)
 #if FW_SINCE(0x0100060D)
 	switch (watchdog.bytes.mode) {
 	case 0:
-#if !FW_SINCE(0x01030000)
-		updStateEvent(0x35);	/* the 0x0100060D updater's */
-#else
-		updStateEvent(0x32);
-#endif
+		updStateEvent(0x35);	/* the 0x0100060D and PS TV updaters' */
 		break;
 	}
 #else

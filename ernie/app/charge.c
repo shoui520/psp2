@@ -26,8 +26,9 @@
 #include "timer.h"
 
 /* the updater's (0x0100060D) is the application's 0x0100010B revision, built with the
-   updater's timers and events */
-#ifdef ERNIE_UPDATER
+   updater's timers and events; the PS TV's and the slim's (0x0103 on) are their applications'
+   revision */
+#if defined(ERNIE_UPDATER) && !SOURCE_0103
 #define CHARGE_SINCE(version)	((version) <= 0x0100010B)
 #define CHARGE_RETAIL_10X	(BOARD_IS(0x00406000) || HW_IS(0x00416000))
 #define CHARGE_AC_DELAY_60	CHARGE_RETAIL_10X	/* the updater's on PDEL too */
@@ -221,6 +222,10 @@ void chargeInit(void)
 		sleepFactorSetStatus3(1);
 		sleepFactorSetStatus4(0);
 	}
+#ifdef ERNIE_UPDATER	/* the updater's: no Cookie timer and no timer 0x1f */
+	handler.handler = chargeTimer;
+	timerSetHandler(TIMER_RTC(0x17), &handler);
+#else
 	charge.timer1fPending = 0;
 	handler.handler = chargeTimer;
 	timerSetHandler(TIMER_RTC(0x17), &handler);
@@ -228,6 +233,7 @@ void chargeInit(void)
 	timerSetHandler(TIMER_RTC(0x1e), &handler);
 	handler.handler = chargeTimer1f;
 	timerSetHandler(TIMER_RTC(0x1f), &handler);
+#endif
 	handler.handler = chargeUpdateSoon;
 	timerSetHandler(CHARGE_SOON_TIMER, &handler);
 #elif SOURCE_0103
@@ -469,7 +475,7 @@ void chargeInit(void)
 #if (BOARD_USS1001 && CHARGE_SINCE(0x01030511)) || CHARGE_0104
 /* the slim's (0x01030511 on) and DOL-1002 call stateTransition themselves */
 #define chargeTransition(transition)	stateTransition(transition)
-#elif SOURCE_0103	/* and the PS TV's */
+#elif SOURCE_0103 && !defined(ERNIE_UPDATER)	/* and the PS TV's (its updater: the event) */
 /* 0x01030505's: stateTransition with the transition's low byte */
 void chargeTransition(int transition)
 {
@@ -1736,7 +1742,7 @@ void chargeAlarmInit(void)
 }
 #endif
 
-#if SOURCE_0103
+#if SOURCE_0103 && !UPD_0103
 /* the slim's: an update, unless the USB is settling */
 int chargeUsbRequestUpdate(void)
 {
@@ -1794,7 +1800,9 @@ void chargeUpdateLater(void)
 
 void chargeUpdateSoon(void)
 {
-#ifdef ERNIE_UPDATER
+#if UPD_0103
+	/* the PS TV's updater: nothing */
+#elif defined(ERNIE_UPDATER)
 	/* the updater's: its event 0x82 */
 	updEventSet(0x82);
 #else
@@ -2384,7 +2392,9 @@ void chargeTimerSet(unsigned char on)
 #else
 void chargeTimerStop(void)
 {
-#if SOURCE_0103
+#if UPD_0103
+	timerStop(TIMER_RTC(0x17));
+#elif SOURCE_0103
 	/* the slim's stops the timer first */
 	timerStop(TIMER_RTC(0x17));
 	clr_flg(4, ~0x0020);
@@ -2487,12 +2497,14 @@ unsigned char chargeUsbMultiCn2(void)
 }
 #endif
 
+#if !UPD_0103	/* not in the PS TV's updater */
 /* the AC, or a USB charger (2 or 3) */
 unsigned char chargeExternalPower(void)
 {
 	return powerStatus.bits.ac ||
 	       (cookieStatus2.bits.vbus && (powerStatus.bits.usb == 2 || powerStatus.bits.usb == 3));
 }
+#endif
 #elif SOURCE_0103
 /* the slim's USB sources: a charger (2, 3, 5 or 6) or the multi-connector's level 2 */
 unsigned char chargeUsbPower(void)
@@ -2542,7 +2554,15 @@ unsigned char chargeExternalPower(void)
 }
 #endif
 
-#if CHARGE_SINCE(0x01000109) && !defined(ERNIE_UPDATER)	/* the updater has neither */
+/* the updater has neither, the PS TV's usbIs1 */
+#if UPD_0103
+#define CHARGE_USB_IS		1
+#elif defined(ERNIE_UPDATER)
+#define CHARGE_USB_IS		0
+#else
+#define CHARGE_USB_IS		CHARGE_SINCE(0x01000109)
+#endif
+#if CHARGE_USB_IS
 #if BOARD_DOL1002
 /* a USB host: status 1 */
 unsigned char chargeUsbIs1(void)
@@ -2577,14 +2597,17 @@ int chargeUsbIs1(void)
 }
 #endif
 
-#if SOURCE_0103
+#if UPD_0103
+#elif SOURCE_0103
 unsigned char chargeUsbIs2(void)
 #else
 int chargeUsbIs2(void)
 #endif
+#if !UPD_0103
 {
 	return cookieStatus2.bits.vbus && powerStatus.bits.usb == 2;
 }
+#endif
 #endif
 
 #if SOURCE_0103
@@ -2600,6 +2623,10 @@ unsigned char chargeSetManualMode(unsigned char on)
 	unsigned char result;
 
 	result = 0;
+#if UPD_0103	/* the PS TV's updater: none */
+	return result;
+}
+#else
 	if (on == 1) {
 		if (!configGet()->charge.bits.manualOffCold ||
 		    (!(1 & charge.alarmsOn.byte) && !powerStatus.bits.cookieLock0)) {
@@ -2622,6 +2649,7 @@ unsigned char chargeSetManualMode(unsigned char on)
 	}
 	return result;
 }
+#endif
 
 #if CHARGE_0104
 /* DOL-1002's serial operation: a new mode drops the last status registers and has task 5 read
@@ -2638,6 +2666,7 @@ unsigned char chargeSetSerialMode(unsigned char mode)
 }
 #endif
 
+#if !UPD_0103
 /* the manual mode's settings */
 unsigned char chargeManualOn(void)
 {
@@ -2705,10 +2734,15 @@ unsigned char chargeManualOff(void)
 	task5SetFlag(4, 0x20);
 	return result;
 }
+#endif
 
 unsigned char chargeGetManualMode(void)
 {
+#if UPD_0103
+	return 0;
+#else
 	return chargeManualMode;
+#endif
 }
 
 #if BOARD_DOL1001

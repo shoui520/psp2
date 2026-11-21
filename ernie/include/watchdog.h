@@ -11,7 +11,7 @@
 /* an RTC timer: its ticks are 0.5 s */
 #if defined(ERNIE_UPDATER) && FW_SINCE(0x0100060D) && !FW_SINCE(0x01030000)
 #define WATCHDOG_TIMER		0x1a	/* the 0x0100060D updater's */
-#elif defined(ERNIE_UPDATER)
+#elif defined(ERNIE_UPDATER) && !SOURCE_0103	/* the PS TV's updater: the application's */
 #define WATCHDOG_TIMER		0x1c
 #else
 #define WATCHDOG_TIMER		TIMER_RTC(0x1b)

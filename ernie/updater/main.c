@@ -11,6 +11,9 @@
 #include "chip.h"
 #include "ernie.h"
 #include "board.h"
+#if SOURCE_0103
+#include "clock.h"
+#endif
 #include "clockout.h"
 #include "keepram.h"
 #include "tau.h"
@@ -35,6 +38,9 @@ __near unsigned char fslDataBuffer[0x100];
 /* the clocks: the X1 oscillator as the main clock, the internal oscillator stopped */
 void hdwinit(void)
 {
+#if SOURCE_0103	/* the PS TV's: the application's (main.c's) */
+	clockInit();
+#else
 	CMC = 0x53;
 	CSC = 0xc0;
 	CKC = 0x09;
@@ -48,6 +54,7 @@ void hdwinit(void)
 		;
 	HIOSTOP = 1;
 	XTSTOP = 0;
+#endif
 	boardPortInit();
 	intInit();
 	tau0PowerOn();
@@ -100,6 +107,7 @@ void csiClose(void)
 	P90 = 0;
 }
 
+#if !SOURCE_0103	/* the PS TV's has none */
 /* UART2 (channels 0 and 1 of SAU1) and UART3 (channels 2 and 3), their interrupts masked */
 int uartsOpen(void)
 {
@@ -137,6 +145,7 @@ int uartsOpen(void)
 	SS1L.3 = 1;
 	return 0;
 }
+#endif
 
 #if !FW_SINCE(0x0100060D)	/* 0x0100060D carries none */
 /* the updater's banner, printed nowhere */
@@ -226,7 +235,10 @@ void rtcInterrupt(void)
 	for (i = TIMER_RTC_FIRST; i < TIMER_COUNT; i++) {
 		if (timers[i].state == 1 && timers[i].time == timerRtcTicks) {
 			timers[i].state = 0;
-			timers[i].handler();
+#if SOURCE_0103	/* the PS TV's: a timer without a handler runs out silently */
+			if (timers[i].handler != 0)
+#endif
+				timers[i].handler();
 		}
 	}
 }

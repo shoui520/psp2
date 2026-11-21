@@ -14,14 +14,18 @@ unsigned char spiDevRead(unsigned char command, unsigned int reg, unsigned char 
 {
 	unsigned char result;
 	unsigned char send[3 + 4];
+#if SOURCE_0103
+	unsigned char receive[3 + 32];	/* the PS TV's: the block read's buffer, 7 bytes used */
+#else
 	unsigned char receive[3 + 4];
+#endif
 
 	result = 0;
 	send[0] = command;
 	send[1] = reg >> 8;
 	send[2] = reg & 0xff;
 	P90 = 0;
-	result = csiTransferPoll(receive, send, sizeof(receive));
+	result = csiTransferPoll(receive, send, sizeof(send));
 	P90 = 1;
 	memcpy(data, &receive[3], 4);
 	return result;

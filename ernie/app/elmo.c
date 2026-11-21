@@ -16,6 +16,9 @@
 #include "powerseq.h"
 #include "powerwait.h"
 #include "state.h"
+#ifdef ERNIE_UPDATER
+#include "../updater/updater.h"
+#endif
 
 /* DOL-1002's and USS-1002's 0x0105: the transfers gated on the version read, failures logged */
 #define ELMO_GATED	(BOARD_DOL1002 || BOARD_USS1001 && SOURCE_0104)
@@ -94,6 +97,28 @@ void elmoInit(void)
 
 /* writes every register of elmoRegInit with its initial value, after the Elmo's version
    answered (powerSeqOn); the copy keeps the value only when the write went through */
+#if UPD_0103
+/* the PS TV's updater: after a reset written with their initial values, else read back */
+void elmoInitRegs(void)
+{
+	unsigned char command[3];
+	unsigned int i;
+
+	if (updReset != 0) {
+		for (i = 0; i < ELMO_TABLE_COUNT; i++) {
+			command[0] = elmoRegInit[i].reg;
+			command[1] = elmoRegInit[i].initial >> 8;
+			command[2] = elmoRegInit[i].initial;
+			if (elmoWrite(command, 3) == 0)
+				*elmoRegInit[i].value = elmoRegInit[i].initial;
+		}
+	} else {
+		for (i = 0; i < ELMO_TABLE_COUNT; i++)
+			elmoRead((unsigned char *)&elmoRegInit[i].reg,
+				 (unsigned char *)elmoRegInit[i].value);
+	}
+}
+#else
 void elmoInitRegs(void)
 {
 #if ELMO_GATED
@@ -128,6 +153,7 @@ void elmoInitRegs(void)
 			*elmoRegInit[i].value = elmoRegInit[i].initial;
 	}
 }
+#endif
 #else
 /* writes every register of elmoRegInit with its initial value */
 void elmoInitRegs(void)
@@ -181,6 +207,24 @@ static unsigned char elmoWriteBus(unsigned char *data, unsigned char length)
 /* writes length bytes, a register number and its value; 0, or the transfer's status */
 unsigned char elmoWrite(unsigned char *data, unsigned char length)
 #endif
+#if UPD_0103
+/* the PS TV's updater: waited for in iicaTransfer, once */
+{
+	struct IicaRequest request;
+	unsigned char status;
+
+	if (deviceVersions.elmo[0] == 0xff)
+		return 0;
+	request.rxData = NULL;
+	request.rxCount = 0;
+	request.txData = data;
+	request.txCount = length;
+	request.address = ELMO_ADDRESS;
+	request.status = &status;
+	iicaTransfer(&request);
+	return status;
+}
+#else
 {
 	ER ercd;
 	FLGPTN ptn;
@@ -221,6 +265,7 @@ unsigned char elmoWrite(unsigned char *data, unsigned char length)
 #endif
 	return status;
 }
+#endif
 
 #if ELMO_GATED
 unsigned char elmoRead(unsigned char *reg, unsigned char *value)
@@ -239,6 +284,26 @@ static unsigned char elmoReadBus(unsigned char *reg, unsigned char *value)
 /* reads the register *reg into value[0-1]; 0, or the transfer's status */
 unsigned char elmoRead(unsigned char *reg, unsigned char *value)
 #endif
+#if UPD_0103
+{
+	struct IicaRequest request;
+	unsigned char status;
+
+	if (deviceVersions.elmo[0] == 0xff) {
+		*value++ = 0;
+		*value = 0;
+		return 0;
+	}
+	request.rxData = value;
+	request.rxCount = 2;
+	request.txData = reg;
+	request.txCount = 1;
+	request.address = ELMO_ADDRESS;
+	request.status = &status;
+	iicaTransfer(&request);
+	return status;
+}
+#else
 {
 	ER ercd;
 	FLGPTN ptn;
@@ -282,6 +347,7 @@ unsigned char elmoRead(unsigned char *reg, unsigned char *value)
 #endif
 	return status;
 }
+#endif
 
 #if SOURCE_0103
 /* the version's two bytes, as the slim's code reaches them */
@@ -339,9 +405,9 @@ unsigned char elmoUpdateMasks(struct ElmoMasks *masks, unsigned char set)
 	if (masks->status0 != 0) {
 		value[0] = set ? ELMO_STATUS->status0 | masks->status0 :
 			~masks->status0 & ELMO_STATUS->status0;
-#if BOARD_DOL1001 && !BOARD_DOL1002
-		/* the PS TV's: a clear keeps bit 2 in system states 8 and 0x8000 while status
-		   mask 2's bit 12 is set */
+#if BOARD_DOL1001 && !BOARD_DOL1002 && !UPD_0103
+		/* the PS TV's (not its updater's): a clear keeps bit 2 in system states 8 and 0x8000
+		   while status mask 2's bit 12 is set */
 		if (!set && (masks->status0 & 0x04) && (stateGet() & 0x8008) &&
 		    (ELMO_STATUS->status2 & 0x1000))
 			value[0] |= 0x04;

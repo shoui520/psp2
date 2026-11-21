@@ -75,7 +75,9 @@ void thermalPoll(void)
 
 	if (deviceVersions.thermal[0] == THERMAL_ID) {
 		thermalReadTemp(&temperature);
+#ifndef ERNIE_UPDATER	/* the updater keeps no statistics */
 		thermalStatsUpdate(temperature);
+#endif
 		chargeSetTemp((int)temperature * 10 + 2732);
 	}
 }
@@ -86,7 +88,9 @@ void thermalInit(void)
 	thermal.temperature = 0;
 	thermal.config.byte = 0x84;
 	thermal.rate = 4;
+#ifndef ERNIE_UPDATER
 	thermalStatsInit();
+#endif
 	return;
 }
 
@@ -95,7 +99,11 @@ void thermalStart(void)
 	signed char temperature;
 
 	thermalSetConfig(thermal.config.byte);
+#if UPD_0103	/* the PS TV's updater: no kernel to sleep in */
+	powerWaitMs(0x40);
+#else
 	powerSleep2(0x40);
+#endif
 	thermalSetRate(thermal.rate);
 	thermalReadTemp(&temperature);
 }
@@ -104,8 +112,10 @@ void thermalStart(void)
 unsigned char thermalWrite(unsigned char *data, unsigned char length)
 {
 	unsigned char status;
+#ifndef ERNIE_UPDATER
 	ER ercd;
 	FLGPTN ptn;
+#endif
 
 	if (deviceVersions.thermal[0] == 0xff)
 		return 0xff;
@@ -115,6 +125,9 @@ unsigned char thermalWrite(unsigned char *data, unsigned char length)
 	thermalIica.txCount = length;
 	thermalIica.address = THERMAL_ADDRESS;
 	thermalIica.status = &status;
+#ifdef ERNIE_UPDATER	/* no kernel: the transfer waited for in iicaTransfer */
+	iicaTransfer(&thermalIica);
+#else
 	clr_flg(4, ~0x10);
 	iicaStart(&thermalIica);
 	ercd = twai_flg(4, 0x10, TWF_ORW, &ptn, 1);
@@ -124,6 +137,7 @@ unsigned char thermalWrite(unsigned char *data, unsigned char length)
 	} else if (ercd == E_TMOUT) {
 		status = 0x10;
 	}
+#endif
 	return status;
 }
 
@@ -131,8 +145,10 @@ unsigned char thermalWrite(unsigned char *data, unsigned char length)
 unsigned char thermalRead(unsigned char *reg, unsigned char *data, unsigned char length)
 {
 	unsigned char status;
+#ifndef ERNIE_UPDATER
 	ER ercd;
 	FLGPTN ptn;
+#endif
 
 	if (deviceVersions.thermal[0] == 0xff) {
 		*data = 0;
@@ -144,6 +160,9 @@ unsigned char thermalRead(unsigned char *reg, unsigned char *data, unsigned char
 	thermalIica.txCount = 1;
 	thermalIica.address = THERMAL_ADDRESS;
 	thermalIica.status = &status;
+#ifdef ERNIE_UPDATER	/* no kernel: the transfer waited for in iicaTransfer */
+	iicaTransfer(&thermalIica);
+#else
 	clr_flg(4, ~0x10);
 	iicaStart(&thermalIica);
 	ercd = twai_flg(4, 0x10, TWF_ORW, &ptn, 1);
@@ -153,6 +172,7 @@ unsigned char thermalRead(unsigned char *reg, unsigned char *data, unsigned char
 	} else if (ercd == E_TMOUT) {
 		status = 0x10;
 	}
+#endif
 	return status;
 }
 
@@ -346,6 +366,7 @@ unsigned char thermalWriteLimit(signed char limit, unsigned char reg)
 
 #endif
 
+#ifndef ERNIE_UPDATER
 /* a temperature read: the peaks, then the mode's statistics in its system states */
 void thermalStatsUpdate(signed char temperature)
 {
@@ -502,3 +523,4 @@ void thermalSetMode(unsigned char mode)
 		thermal.mode = mode;
 	}
 }
+#endif
