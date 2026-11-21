@@ -17,7 +17,7 @@ typedef struct MlnMemoryUse {
 } MlnMemoryUse;
 
 static int s_platformMode;
-static void *s_sharedBuffers[12];
+static MlnShared s_shared;
 MlnMemoryUse s_memoryUse[2];
 
 /* The environments a debug console may name: each selects the developer platform. */
@@ -102,9 +102,9 @@ static __attribute__((noinline)) int MlnPlatformModeInit(void)
 	return ret;
 }
 
-void **MlnImpl_81006EAC(void)
+MlnShared *MlnImpl_81006EAC(void)
 {
-	return s_sharedBuffers;
+	return &s_shared;
 }
 
 int MlnMemoryInit(int heap, void *memory, unsigned int size)
@@ -142,15 +142,15 @@ int MlnMemoryTerm(int heap)
 	if (--use->refCount != 0)
 		return MLN_OK;
 	if (heap == MLN_HEAP_GENERAL) {
-		MlnFree(MLN_HEAP_GENERAL, s_sharedBuffers[0]);
-		MlnFree(MLN_HEAP_GENERAL, s_sharedBuffers[1]);
-		MlnFree(MLN_HEAP_GENERAL, s_sharedBuffers[2]);
-		MlnFree(MLN_HEAP_GENERAL, s_sharedBuffers[3]);
-		MlnFree(MLN_HEAP_GENERAL, s_sharedBuffers[4]);
-		MlnFree(MLN_HEAP_GENERAL, s_sharedBuffers[5]);
-		MlnFree(MLN_HEAP_GENERAL, s_sharedBuffers[6]);
-		MlnFree(MLN_HEAP_GENERAL, s_sharedBuffers[7]);
-		MlnMemset(s_sharedBuffers, 0, sizeof(s_sharedBuffers));
+		MlnFree(MLN_HEAP_GENERAL, s_shared.buffers[0]);
+		MlnFree(MLN_HEAP_GENERAL, s_shared.buffers[1]);
+		MlnFree(MLN_HEAP_GENERAL, s_shared.buffers[2]);
+		MlnFree(MLN_HEAP_GENERAL, s_shared.buffers[3]);
+		MlnFree(MLN_HEAP_GENERAL, s_shared.buffers[4]);
+		MlnFree(MLN_HEAP_GENERAL, s_shared.buffers[5]);
+		MlnFree(MLN_HEAP_GENERAL, s_shared.buffers[6]);
+		MlnFree(MLN_HEAP_GENERAL, s_shared.buffers[7]);
+		MlnMemset(&s_shared, 0, sizeof(s_shared));
 	}
 	MlnHeapTerm(heap);
 	use->ready = 0;

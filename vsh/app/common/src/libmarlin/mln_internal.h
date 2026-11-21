@@ -678,7 +678,14 @@ unsigned int MlnStrspn(const char *s, const char *accept);
 void MlnImpl_81006CD4(int heap, MlnBuffer **buffers);
 void MlnImpl_81006D14(int heap, MlnBufferGroup *group);
 int MlnPlatformMode(void);
-void **MlnImpl_81006EAC(void);
+/* the library's shared state: buffers (the general heap's term frees the first 8) and the
+   core's init count */
+typedef struct MlnShared {
+	void *buffers[11];
+	int coreRefCount;
+} MlnShared;
+
+MlnShared *MlnImpl_81006EAC(void);
 int MlnMemoryInit(int heap, void *memory, unsigned int size);
 int MlnMemoryTerm(int heap);
 
@@ -1323,6 +1330,82 @@ void MlnImpl_810337C4(MlnSha1Context *context, const void *data, unsigned int si
 void MlnImpl_81033864(MlnSha1Context *context, unsigned char *digest);
 int MlnImpl_8102A394(void *memory, unsigned int size);
 int MlnImpl_8102A418(void);
+
+/* octopus.c: the DRM core's calls */
+/* a box: its size with the 8-byte header, its four-character type and its payload */
+typedef struct MlnBox {
+	unsigned int size;
+	unsigned char type[4];
+	const unsigned char *data;
+} MlnBox;
+
+int MlnImpl_8102A228(unsigned int error);
+int MlnImpl_8102A33C(const MlnBox *box, unsigned char *out);
+void MlnImpl_81080BF4(void);
+void MlnImpl_81080BF8(void);
+unsigned int MlnImpl_8103B29C(const MlnBuffer *state);
+unsigned int MlnImpl_81043A78(void);
+unsigned int MlnImpl_81043A6C(const MlnBuffer *state);
+unsigned int MlnImpl_81043A60(int kind, MlnBuffer **out);
+unsigned int MlnImpl_81043C70(int step);
+unsigned int MlnImpl_8104A448(void);		/* the core's lock */
+unsigned int MlnImpl_8104A558(void);		/* the core's unlock */
+unsigned int MlnImpl_81080BFC(void **handle);
+unsigned int MlnImpl_81081374(int full);
+unsigned int MlnImpl_81080C1C(void *handle);
+void MlnImpl_810485B4(void);
+unsigned int MlnImpl_81042A60(void *id, MlnBuffer ***object, int flags);
+void MlnImpl_8103B8F8(MlnBuffer **object);
+int MlnImpl_8102A484(unsigned int mode);
+int MlnImpl_8102A5B0(void *id, MlnBlob *out);
+int MlnImpl_8102A69C(MlnBlob *out);
+int MlnImpl_8102A7F0(const MlnBuffer *state);
+int MlnImpl_8102A914(void);
+int MlnImpl_8102AAD0(void *p);
+unsigned int MlnImpl_8103B190(int *present);
+unsigned int MlnImpl_81043CF0(MlnBuffer **state);
+unsigned int MlnImpl_81043D7C(const MlnBuffer *state);
+
+/* 21 bytes the core reports (0x8103b3ec) */
+typedef struct MlnCoreInfo {
+	unsigned char bytes[21];
+} MlnCoreInfo;
+
+unsigned int MlnImpl_8103B3EC(MlnCoreInfo *info);
+unsigned int MlnImpl_810393D0(int kind, MlnBuffer **out);
+unsigned int MlnImpl_81047DC4(const MlnBuffer *id);
+unsigned int MlnImpl_81047E00(void);
+int MlnImpl_8102AAE8(int *loaded);
+int MlnImpl_8102AE84(const MlnBuffer *state);
+MlnCoreInfo MlnImpl_8102AFBC(void);
+unsigned int MlnImpl_8102B054(void);
+int MlnImpl_8102B064(int unused, MlnBlob *out);
+int MlnImpl_8102B198(const MlnBuffer *id);
+int MlnImpl_8102B2E0(void);
+unsigned int MlnImpl_81048214(unsigned int *flags);
+unsigned int MlnImpl_81047E48(void *id, unsigned int *flags);
+unsigned int MlnImpl_810486D4(const MlnBuffer *id);
+unsigned int MlnImpl_810488A8(const MlnBuffer *id);
+int MlnImpl_8102B404(void *id, unsigned int *flags);
+int MlnImpl_8102B590(const MlnBuffer *id, MlnBlob *out);
+int MlnImpl_8102B718(const MlnBuffer *id, MlnBlob *out);
+
+/* a record the core keeps per entry: two buffers it hands over */
+typedef struct MlnCoreRecord {
+	unsigned int reserved;
+	MlnBuffer *key;
+	MlnBuffer *value;
+} MlnCoreRecord;
+
+unsigned int MlnImpl_81045A84(void);
+unsigned int MlnImpl_8104411C(int *count, void **iterator);
+unsigned int MlnImpl_810442D4(void **iterator, MlnBuffer **entry);
+void MlnImpl_8104435C(void *iterator);
+unsigned int MlnImpl_810422E8(MlnBuffer *entry, MlnCoreRecord **record);
+void MlnImpl_81043F1C(MlnBuffer *entry);
+void MlnImpl_8103BBA0(MlnCoreRecord *record);
+unsigned int MlnImpl_81043B94(MlnBuffer ***base);
+int MlnImpl_8102B950(unsigned int *count, MlnBuffer ***entries, MlnBlob *state);
 int MlnImpl_8102AA38(MlnBlob *blob, MlnBuffer *out);
 int MlnImpl_810318D4(void *a0, const MlnBuffer *a1, MlnBlob *first, MlnBlob *second);
 
