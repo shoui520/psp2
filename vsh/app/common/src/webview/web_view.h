@@ -149,25 +149,25 @@ public:
 	Func m_func;
 };
 
-/* the system IME a page's text field opens (0x8100e298; names ours) */
+/* the system IME a page's text field opens (web_ime.cpp; names ours) */
 struct WebViewIme;
 
 /* the IME, made once (0x8100df60) */
 WebViewIme *ImeGetInstance();
 
-/* the IME's input type and option for a field's type ("password", "number", "tel", "email",
-   "url", "search") */
-void ImeGetInputType(const string &type, int *inputType, int *option);
+/* the IME's input type and enter label for a field's type ("password", "number", "tel",
+   "email", "url", "search") */
+void ImeGetInputType(const string &type, int *inputType, int *enterLabel);
 
 /* opens the IME for the client (sceImeVshOpen), or gives it the new parameters when open */
-int ImeOpen(WebViewIme *ime, WebViewInputClient *client, int inputType, int option,
+int ImeOpen(WebViewIme *ime, WebViewInputClient *client, int inputType, int enterLabel,
 	bool multiline);
 
 /* closes the IME (sceImeVshClose) and frees its text */
 int ImeClose(WebViewIme *ime);
 
-/* the IME told of a change of the field's text (ScePafLowlayer 5CE62E49; the length is not
-   passed on) */
+/* the IME told of a change of the field's text: the length is ScePafLowlayer 5CE62E49's
+   index */
 int ImeTextChanged(WebViewIme *ime, int length);
 
 /* the IME's frame (sceImeVshUpdate), while it is open */

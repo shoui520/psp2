@@ -2364,12 +2364,12 @@ void WebView::ProcessIpcData()
 			}
 
 			int inputType = 0;
-			int option = 0;
+			int enterLabel = 0;
 
-			ImeGetInputType(string(request->m_text[1].c_str()), &inputType, &option);
+			ImeGetInputType(string(request->m_text[1].c_str()), &inputType, &enterLabel);
 			m_imeRect = math::v4((float)request->m_int[0], (float)request->m_int[1],
 				(float)request->m_int[2], (float)request->m_int[3]);
-			ImeOpen(m_ime, static_cast<WebViewInputClient *>(this), inputType, option,
+			ImeOpen(m_ime, static_cast<WebViewInputClient *>(this), inputType, enterLabel,
 				request->m_bool);
 			OnEvent18(1, 0);
 			break;
