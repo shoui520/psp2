@@ -78,7 +78,8 @@ public:
 	virtual void Method13(MessageDialogParam *param, void *texts, int arg) = 0;
 	/* opens the dialog asked for with four texts (the web view's user name and password) */
 	virtual void Method14(MessageDialogParam *param, const MessageDialogTexts &texts) = 0;
-	virtual void Method15() = 0;
+	/* asks whether the origin may have the device's location */
+	virtual void Method15(MessageDialogParam *param, const common::String &origin) = 0;
 	virtual void Method16() = 0;
 	/* the owner's dialog closed */
 	virtual void Method17(MessageDialogParam *param) = 0;

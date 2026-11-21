@@ -6,6 +6,9 @@
 #include <memory/heap_allocator.h>
 #include <rtc.h>
 #include <widget/core/environment.h>
+#include <widget/w_button_base.h>
+#include <widget/w_text_box.h>
+#include <versatileparam/resourceparam.h>
 #include "web_view.h"
 
 /* GetGlobalHeapAllocator, exported by its C name. */
@@ -66,7 +69,7 @@ WebView::WebView(Widget *parent, CreateParam *param)
 	  m_selectMultiple(false), m_startWithParam(false), m_imeRect(0.0f, 0.0f, 0.0f, 0.0f),
 	  m_tapScale(1.0f), m_tapping(false), m_pageHandlesInput(false),
 	  m_inputMask(15), m_dragStart(0.0f, 0.0f), m_cursorMove(0.0f, 0.0f),
-	  m_cursorEnabled(false), m_reserved1920(0), m_reserved1924(0), m_cursorPlane(NULL), m_cursorMode(0), m_cursorHidden(false),
+	  m_cursorEnabled(false), m_analogEdgeTime(0), m_cursorPlane(NULL), m_cursorMode(0), m_cursorHidden(false),
 	  m_cursorOffset(0.0f, 0.0f), m_zoomOffset(0.0f, 0.0f), m_keyReady(true)
 {
 	m_ipcData.clear();
@@ -88,7 +91,7 @@ WebView::WebView(Widget *parent, CreateParam *param)
 	m_zoomAnims.clear();
 	m_tapAnims.clear();
 	m_keyQueue.clear();
-	m_heldKeys.clear();
+	m_parts.clear();
 	for (int i = 0; i < 8; i++)
 		m_cursorPos[i] = math::v2(-1.0f, -1.0f);
 
@@ -176,8 +179,8 @@ void WebView::DestroyWidget()
 	WebIpc::GetInstance()->Send(&message, m_viewId);
 	WebIpc::GetInstance()->UnregisterView(m_viewId);
 	m_viewId = -1;
-	ReleaseHeldKey(WEB_VIEW_KEY_ALL);
-	m_heldKeys.clear();
+	RemovePart(WEB_VIEW_PART_ALL);
+	m_parts.clear();
 	ScrollViewBase::DestroyWidget();
 	if (m_renderTarget != NULL) {
 		DestroyRenderTarget(m_renderTarget);
@@ -3251,6 +3254,456 @@ void WebView::OnImePressClose()
 	WebIpc::GetInstance()->Send(&message, m_viewId);
 }
 
+/* the position sent from the main thread to the view's page (names ours) */
+struct WebViewGeolocationPositionJob {
+	int m_viewId;
+	WebIpcGeolocationPosition m_position;
+};
+
+static void SendGeolocationPosition(void *arg)
+{
+	WebViewGeolocationPositionJob *job = (WebViewGeolocationPositionJob *)arg;
+	WebIpcGeolocationPositionMessage message(job->m_position);
+
+	WebIpc::GetInstance()->Send(&message, job->m_viewId);
+	delete job;
+}
+
+void WebView::OnPosition(WebIpcGeolocationPosition position)
+{
+	WebViewGeolocationPositionJob *job = new WebViewGeolocationPositionJob;
+
+	if (job == NULL)
+		return;
+	job->m_viewId = m_viewId;
+	job->m_position.m_timestamp = position.m_timestamp;
+	job->m_position.m_latitude = position.m_latitude;
+	job->m_position.m_longitude = position.m_longitude;
+	job->m_position.m_accuracy = position.m_accuracy;
+	job->m_position.m_altitude = position.m_altitude;
+	job->m_position.m_altitudeAccuracy = position.m_altitudeAccuracy;
+	job->m_position.m_heading = position.m_heading;
+	job->m_position.m_speed = position.m_speed;
+	job->m_position.m_hasLatitude = position.m_hasLatitude;
+	job->m_position.m_hasLongitude = position.m_hasLongitude;
+	job->m_position.m_hasAccuracy = position.m_hasAccuracy;
+	job->m_position.m_hasAltitude = position.m_hasAltitude;
+	job->m_position.m_hasAltitudeAccuracy = position.m_hasAltitudeAccuracy;
+	job->m_position.m_hasHeading = position.m_hasHeading;
+	job->m_position.m_hasSpeed = position.m_hasSpeed;
+	thread::CallQueue::main_thread_callqueue.Enqueue("sendGeolocationPositionMessage",
+		SendGeolocationPosition, job);
+}
+
+void WebView::CheckGeolocationPermission()
+{
+	if (m_geolocationOrigin.empty())
+		return;
+
+	switch (m_geolocation->GetPermission()) {
+	case 2: {
+		WebIpcGeolocationPermission message(m_geolocationOrigin, false);
+
+		m_geolocationOrigin = (const char *)NULL;
+		WebIpc::GetInstance()->Send(&message, m_viewId);
+		return;
+	}
+	case 0:
+		SetTimerListener(CB_TIMEOUT | 1, 300.0f,
+			new WebViewMemberListener<WebView>(this, &WebView::CheckGeolocationPermission));
+		return;
+	}
+
+	/* the origin's answer of before, else the user's */
+	WebViewGeolocationPermission key(m_geolocationOrigin.c_str());
+	set<WebViewGeolocationPermission>::iterator it = m_geolocationPermissions.find(key);
+
+	if (it != m_geolocationPermissions.end()) {
+		it->m_time = s_geolocationTime++;
+
+		WebIpcGeolocationPermission message(m_geolocationOrigin, it->m_state == 1);
+
+		m_geolocationOrigin = (const char *)NULL;
+		WebIpc::GetInstance()->Send(&message, m_viewId);
+		return;
+	}
+
+	MessageDialogListener *dialog = wutil::GetMessageDialogListener();
+
+	if (dialog == NULL)
+		return;
+	if (dialog->Method8()) {
+		SetTimerListener(CB_TIMEOUT | 1, 300.0f,
+			new WebViewMemberListener<WebView>(this, &WebView::CheckGeolocationPermission));
+		return;
+	}
+	m_dialogParam.values[0] = 0;
+	m_dialogParam.values[1] = 0;
+	m_dialogParam.values[2] = 0;
+	m_dialogParam.values[3] = 0;
+	m_dialogParam.title = common::String(L"");
+	m_dialogParam.message = common::String(L"");
+	m_dialogParam.owner = NULL;
+	m_dialogParam.values[4] = 0;
+	m_dialogParam.button = common::String(L"");
+	m_dialogParam.user_data = NULL;
+	m_dialogParam.owner = static_cast<WebViewDialogClient *>(this);
+	m_dialogParam.values[0] = 7;
+
+	Widget *cursor = m_cursorPlane;
+
+	m_cursorHidden = true;
+	if (cursor != NULL) {
+		cursor->m_transition_complete = false;
+		cursor->m_transition = 0xff;
+		cursor->DoTransitionReverse_core(0.0f, true);
+		ScePafWidget_4588699E(cursor, NULL, 2, 0.0f, NULL);
+	}
+
+	common::String origin = string(m_geolocationOrigin);
+
+	dialog->Method15(&m_dialogParam, origin);
+}
+
+void WebView::SendString1023(const string &value)
+{
+	WebIpcString1023 message(value);
+
+	WebIpc::GetInstance()->Send(&message, m_viewId);
+}
+
+void WebView::UpdateZoomFocus()
+{
+	using namespace sce::Vectormath::Simd;
+
+	if (m_tapAnims.size() == 0)
+		return;
+
+	Widget *plane = GetViewParent()->FindChild(IDParam("view_plane"), 2);
+
+	if (plane == NULL || !CanZoom())
+		return;
+
+	const math::v4 *size = plane->GetSize(0);
+	floatInVec ratio = recipf((m_contentSize * m_scale).getImpl().getX()) *
+		size->getImpl().getX();
+	const WebViewAnim &tap = *m_tapAnims.begin();
+	const WebViewAnim &zoom = *m_zoomAnims.begin();
+	float start = zoom.m_scale;
+	floatInVec step = recipf(floatInVec(tap.m_scale * start - start));
+	math::v2 focus = zoom.m_pos + m_zoomOffset * (ratio.getAsFloat() - start) *
+		math::v2(step.getAsFloat(), step.getAsFloat());
+
+	Widget *internal = GetInternalWidget();
+	Aos::Vector4 to(GetInternalWidget()->GetPos(0, NULL, math::v4(0.0f, 0.0f, 0.0f, 0.0f))
+		.getImpl());
+
+	to.setXY(-focus.getImpl());
+	internal->SetPos(math::v4(to));
+}
+
+void WebView::HandleAnalog(const inputdevice::Data *data)
+{
+	using namespace sce::Vectormath::Simd;
+
+	if (m_cursorPlane == NULL || m_cursorMode == 0 || m_cursorHidden || m_arrowTexture.get() == NULL)
+		return;
+
+	const inputdevice::pad::Data *pad = data->m_pad_data;
+	int lx = pad->lx;
+	int ly = pad->ly;
+	int rx = pad->rx;
+	int ry = pad->ry;
+	int dx = lx - inputdevice::pad::Data::STICK_CENTER;
+	int dy = ly - inputdevice::pad::Data::STICK_CENTER;
+
+	if (sce_paf_abs(dx) < 37 && sce_paf_abs(dy) < 37)
+		return;
+
+	bool rightHeld = false;
+
+	if (sce_paf_abs(rx - inputdevice::pad::Data::STICK_CENTER) > 37 ||
+	    sce_paf_abs(ry - inputdevice::pad::Data::STICK_CENTER) > 37)
+		rightHeld = true;
+
+	/* the cursor moves: the keys waiting are dropped, a held one released */
+	m_keyReady = true;
+	if (m_keyQueue.size() != 0) {
+		const WebViewKeyEvent &key = *m_keyQueue.begin();
+
+		if (!key.m_down)
+			SendKey(key.m_keycode, false);
+	}
+	m_keyQueue.clear();
+
+	int stepX = dx / 37;
+	int stepY = dy / 37;
+	bool edgeX = false;
+	bool edgeY = false;
+
+	if (lx >= 255)
+		edgeX = true;
+	if (lx <= 0)
+		edgeX = true;
+	if (ly >= 255)
+		edgeY = true;
+	if (ly <= 0)
+		edgeY = true;
+
+	SceUInt64 now;
+	float speed = 3.0f;
+
+	rtc::GetCurrentTick(&now);
+	if (edgeX || edgeY) {
+		if (m_analogEdgeTime == 0)
+			m_analogEdgeTime = now;
+		if (now - m_analogEdgeTime > 1200000)
+			speed = 6.0f;
+	} else {
+		m_analogEdgeTime = 0;
+	}
+
+	math::v2 pos = MoveCursorInView(math::v2((float)stepX, (float)stepY) * speed, true,
+		!rightHeld);
+
+	MoveCursor(&pos, 0.0f);
+
+	math::v2 cursor = GetCursorPos(true);
+	Aos::Matrix3 transform = GetPageTransform();
+	Aos::Vector3 page = transform.getCol0() * cursor.getImpl().getX() +
+		transform.getCol1() * cursor.getImpl().getY() +
+		Aos::mulPerElem(transform.getCol2(), Aos::Vector3(1.0f));
+
+	pos = math::v2(page.getX(), page.getY());
+	Tap(pos, 3);
+	SendCursorPos();
+}
+
+void WebView::SetChosenFile(const common::String &path, const common::String &name)
+{
+	WebIpcChosenFile message(path.GetString(), name.GetString());
+
+	WebIpc::GetInstance()->Send(&message, m_viewId);
+	m_cursorHidden = false;
+	ShowCursor();
+}
+
+static void OnUrlFieldEnter(int32_t type, Handler *self, Event *e, void *data);
+static void OnBackPressed(int32_t type, Handler *self, Event *e, void *data);
+static void OnForwardPressed(int32_t type, Handler *self, Event *e, void *data);
+static void OnReloadPressed(int32_t type, Handler *self, Event *e, void *data);
+
+int WebView::SetPart(Widget *widget, int part, bool attach)
+{
+	int ret = 0;
+
+	if (widget == NULL)
+		return WEB_VIEW_ERROR_NO_WIDGET;
+
+	for (list<WebViewPart>::iterator it = m_parts.begin(); it != m_parts.end(); ++it)
+		if (it->m_part == part)
+			return 0;
+
+	switch (part) {
+	case WEB_VIEW_PART_TITLE:
+	case WEB_VIEW_PART_PROGRESS:
+		m_parts.push_back(WebViewPart(part, widget, attach));
+		break;
+	case WEB_VIEW_PART_URL: {
+		m_parts.push_back(WebViewPart(part, widget, attach));
+
+		/* the caret takes the field's text color */
+		math::v4 color(0.0f, 0.0f, 0.0f, 0.0f);
+		Text *field = (Text *)widget;
+
+		if (field != NULL) {
+			field->GetStyleAttribute(graph::TextStyleAttribute_Color, 0, color);
+			field->SetCaretColor(color);
+		}
+		widget->AddEventListener(TextBox::CB_TEXT_BOX_ENTER_PRESSED,
+			new EventCBListener(OnUrlFieldEnter, this));
+		break;
+	}
+	case WEB_VIEW_PART_BACK:
+		m_parts.push_back(WebViewPart(part, widget, attach));
+		widget->AddEventListener(ButtonBase::CB_BTN_DECIDE,
+			new EventCBListener(OnBackPressed, this));
+		break;
+	case WEB_VIEW_PART_FORWARD:
+		m_parts.push_back(WebViewPart(part, widget, attach));
+		widget->AddEventListener(ButtonBase::CB_BTN_DECIDE,
+			new EventCBListener(OnForwardPressed, this));
+		break;
+	case WEB_VIEW_PART_RELOAD:
+		m_parts.push_back(WebViewPart(part, widget, attach));
+		widget->AddEventListener(ButtonBase::CB_BTN_DECIDE,
+			new EventCBListener(OnReloadPressed, this));
+		break;
+	default:
+		ret = -1;
+		break;
+	}
+	return ret;
+}
+
+/* the URL field's text is loaded when its enter is pressed */
+static void OnUrlFieldEnter(int32_t type, Handler *self, Event *e, void *data)
+{
+	WebView *view = (WebView *)data;
+
+	if (view == NULL)
+		return;
+
+	for (list<WebViewPart>::iterator it = view->m_parts.begin(); it != view->m_parts.end();
+	     ++it) {
+		if (it->m_part != WEB_VIEW_PART_URL)
+			continue;
+
+		TextBox *field = (TextBox *)it->m_widget;
+
+		if (field != NULL) {
+			field->EndEdit();
+
+			wstring text(L"");
+
+			field->GetString(text);
+			view->LoadUrl(Url(text));
+		}
+		return;
+	}
+}
+
+static void OnBackPressed(int32_t type, Handler *self, Event *e, void *data)
+{
+	WebView *view = (WebView *)data;
+
+	if (view != NULL)
+		view->GoBack();
+}
+
+static void OnForwardPressed(int32_t type, Handler *self, Event *e, void *data)
+{
+	WebView *view = (WebView *)data;
+
+	if (view != NULL)
+		view->GoForward();
+}
+
+static void OnReloadPressed(int32_t type, Handler *self, Event *e, void *data)
+{
+	WebView *view = (WebView *)data;
+
+	if (view != NULL)
+		view->Reload();
+}
+
+const char *WebViewParam::GetParamName() const
+{
+	return m_param_name;
+}
+
+const char *WebViewParam::ParamName()
+{
+	return m_param_name;
+}
+
+int32_t WebViewParam::Create(int32_t mode)
+{
+	int32_t ret = WidgetParam::Create(mode);
+
+	if (ret == 0 && m_serial != NULL) {
+		m_serial->AddParam("home_url", &m_home_url, ResourceParam::SEMANTIC_STRING);
+		if (m_serial != NULL) {
+			m_serial->AddParam("title_field", &m_title_field, ResourceParam::SEMANTIC_WIDGETREF);
+			if (m_serial != NULL) {
+				m_serial->AddParam("url_field", &m_url_field,
+					ResourceParam::SEMANTIC_WIDGETREF);
+				if (m_serial != NULL) {
+					m_serial->AddParam("back_btn", &m_back_btn,
+						ResourceParam::SEMANTIC_WIDGETREF);
+					if (m_serial != NULL) {
+						m_serial->AddParam("forward_btn", &m_forward_btn,
+							ResourceParam::SEMANTIC_WIDGETREF);
+						if (m_serial != NULL) {
+							m_serial->AddParam("reload_btn", &m_reload_btn,
+								ResourceParam::SEMANTIC_WIDGETREF);
+							if (m_serial != NULL)
+								m_serial->AddParam("progressbar",
+									&m_progressbar,
+									ResourceParam::SEMANTIC_WIDGETREF);
+						}
+					}
+				}
+			}
+		}
+	}
+	return ret;
+}
+
+/* the parts' widgets, found from the top of the view's tree, given to the view, and the home
+   page loaded */
+int32_t WebViewParam::Set()
+{
+	int32_t ret = WidgetParam::Set();
+
+	if (ret != 0)
+		return ret;
+
+	WebView *view = (WebView *)m_widget;
+
+	if (view == NULL)
+		return WEB_VIEW_ERROR_NO_WIDGET;
+
+	Widget *root = view;
+
+	for (Widget *parent = view->m_parent; parent != NULL; parent = parent->m_parent)
+		root = parent;
+
+	if (m_title_field.GetIDHash() != 0) {
+		Widget *widget = root->FindChild(m_title_field, 0);
+
+		if (widget != NULL)
+			view->SetPart(widget, WEB_VIEW_PART_TITLE, true);
+	}
+	if (m_url_field.GetIDHash() != 0) {
+		Widget *widget = root->FindChild(m_url_field, 0);
+
+		if (widget != NULL)
+			view->SetPart(widget, WEB_VIEW_PART_URL, true);
+	}
+	if (m_back_btn.GetIDHash() != 0) {
+		Widget *widget = root->FindChild(m_back_btn, 0);
+
+		if (widget != NULL)
+			view->SetPart(widget, WEB_VIEW_PART_BACK, true);
+	}
+	if (m_forward_btn.GetIDHash() != 0) {
+		Widget *widget = root->FindChild(m_forward_btn, 0);
+
+		if (widget != NULL)
+			view->SetPart(widget, WEB_VIEW_PART_FORWARD, true);
+	}
+	if (m_reload_btn.GetIDHash() != 0) {
+		Widget *widget = root->FindChild(m_reload_btn, 0);
+
+		if (widget != NULL)
+			view->SetPart(widget, WEB_VIEW_PART_RELOAD, true);
+	}
+	if (m_progressbar.GetIDHash() != 0) {
+		Widget *widget = root->FindChild(m_progressbar, 0);
+
+		if (widget != NULL)
+			view->SetPart(widget, WEB_VIEW_PART_PROGRESS, true);
+	}
+	if (m_home_url != NULL)
+		view->LoadUrl(Url(string(m_home_url)));
+	return 0;
+}
+
+WebViewParam::~WebViewParam()
+{
+}
+
 void WebView::RequestGeolocationPermission(const string &origin)
 {
 	WebViewGeolocation *geolocation = m_geolocation;
@@ -3650,22 +4103,22 @@ void WebView::Start()
 	}
 }
 
-void WebView::ReleaseHeldKey(int keycode)
+void WebView::RemovePart(int part)
 {
-	list<WebViewHeldKey>::iterator it = m_heldKeys.begin();
+	list<WebViewPart>::iterator it = m_parts.begin();
 
-	if (keycode == WEB_VIEW_KEY_ALL) {
-		for (; it != m_heldKeys.end(); ++it)
-			if (it->m_sent && it->m_widget != NULL)
+	if (part == WEB_VIEW_PART_ALL) {
+		for (; it != m_parts.end(); ++it)
+			if (it->m_attach && it->m_widget != NULL)
 				it->m_widget->DestroyWidget();
-		m_heldKeys.clear();
+		m_parts.clear();
 		return;
 	}
-	for (; it != m_heldKeys.end(); ++it) {
-		if (it->m_keycode == keycode) {
-			if (it->m_sent && it->m_widget != NULL)
+	for (; it != m_parts.end(); ++it) {
+		if (it->m_part == part) {
+			if (it->m_attach && it->m_widget != NULL)
 				it->m_widget->DestroyWidget();
-			m_heldKeys.erase(it);
+			m_parts.erase(it);
 			return;
 		}
 	}
@@ -3760,6 +4213,14 @@ WebView::~WebView()
 	if (m_receiveBuffer != NULL)
 		delete m_receiveBuffer;
 	m_receiveBuffer = NULL;
+}
+
+void WebViewAnalogListener::OnUpdate(const inputdevice::Data *data)
+{
+	WebView *view = (WebView *)m_binded_widget[0];
+
+	if (view != NULL && data != NULL)
+		view->HandleAnalog(data);
 }
 
 }

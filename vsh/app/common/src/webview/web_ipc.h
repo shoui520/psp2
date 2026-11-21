@@ -25,6 +25,7 @@ enum {
 	WEB_IPC_GO_FORWARD = 0x1018,
 	WEB_IPC_RELOAD = 0x1019,
 	WEB_IPC_STOP = 0x1020,
+	WEB_IPC_STRING_1023 = 0x1023,
 	WEB_IPC_RENDER_RECT = 0x1024,
 	WEB_IPC_VIEWPORT = 0x1025,
 	/* the view's settings, sent as a bool (what each sets is not known yet) */
@@ -33,6 +34,7 @@ enum {
 	WEB_IPC_CURSOR_PRESS = 0x1032,
 	WEB_IPC_CURSOR_RELEASE = 0x1033,
 	WEB_IPC_CURSOR_POS = 0x1034,
+	WEB_IPC_CHOSEN_FILE = 0x1035,
 	WEB_IPC_TAP = 0x1036,
 	WEB_IPC_TOUCH = 0x1038,
 	WEB_IPC_POINTER_POS = 0x1039,
@@ -54,6 +56,7 @@ enum {
 	WEB_IPC_REQUEST_DATA = 0x1071,
 	WEB_IPC_LOAD_DATA = 0x1080,
 	WEB_IPC_GEOLOCATION_PERMISSION = 0x1090,
+	WEB_IPC_GEOLOCATION_POSITION = 0x1091,
 	/* received: a zoom the view drops when it cannot zoom */
 	WEB_IPC_EVENT_2003 = 0x2003,
 	WEB_IPC_CREATE_PAGE_WITH_VIEW = 0x2100
@@ -391,6 +394,38 @@ public:
 	int m_allowed;
 };
 
+/* the device's position, from sceLocation, with which of its values it has (names ours) */
+struct WebIpcGeolocationPosition {
+	double m_timestamp;
+	double m_latitude;
+	double m_longitude;
+	double m_accuracy;
+	double m_altitude;
+	double m_altitudeAccuracy;
+	double m_heading;
+	double m_speed;
+	bool m_hasLatitude;
+	bool m_hasLongitude;
+	bool m_hasAccuracy;
+	bool m_hasAltitude;
+	bool m_hasAltitudeAccuracy;
+	bool m_hasHeading;
+	bool m_hasSpeed;
+};
+
+/* the device's position, for the page (0x81025610, type 0x1091; names ours) */
+class WebIpcGeolocationPositionMessage : public WebIpcMessage {
+public:
+	WebIpcGeolocationPositionMessage(const WebIpcGeolocationPosition &position);
+	virtual ~WebIpcGeolocationPositionMessage()
+	{
+	}
+
+	virtual void Write(WebIpcPacket *packet) const;
+
+	WebIpcGeolocationPosition m_position;
+};
+
 /* the page's vertical scroll (0x81024948, type 0x1060; names ours) */
 class WebIpcScrollY : public WebIpcIntMessage {
 public:
@@ -445,6 +480,31 @@ public:
 
 	string m_text;
 	int m_caret;
+};
+
+/* a string for the page (0x81024978, type 0x1023; what it sets is not known yet, nothing
+   imports its export; names ours) */
+class WebIpcString1023 : public WebIpcStringMessage {
+public:
+	WebIpcString1023(const string &value);
+	virtual ~WebIpcString1023()
+	{
+	}
+};
+
+/* the file the user chose for the page's file field, its path and name, both empty when none
+   (0x810253E8, type 0x1035; web_ui_plugin passes them after its file dialog; names ours) */
+class WebIpcChosenFile : public WebIpcMessage {
+public:
+	WebIpcChosenFile(const string &path, const string &name);
+	virtual ~WebIpcChosenFile()
+	{
+	}
+
+	virtual void Write(WebIpcPacket *packet) const;
+
+	string m_path;
+	string m_name;
 };
 
 class WebIpcImeSetText : public WebIpcStringMessage {

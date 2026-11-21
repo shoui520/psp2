@@ -102,9 +102,7 @@ public:
 	{
 	}
 
-	virtual void OnPosition(double latitude, double longitude, double altitude, double accuracy,
-		double altitudeAccuracy, double heading, double speed, double timestamp, int flags,
-		int valid) = 0;
+	virtual void OnPosition(WebIpcGeolocationPosition position) = 0;
 };
 
 class WebView;
@@ -363,8 +361,6 @@ void DestroyGeolocation(WebViewGeolocation *geolocation);
 /* the page's data did not come (name ours) */
 #define WEB_VIEW_ERROR_DATA_FAILED	((int)0x80AF0024)
 
-/* every key held (names ours) */
-#define WEB_VIEW_KEY_ALL		6
 /* WebCore's cursor type of none */
 #define WEB_VIEW_CURSOR_NONE		37
 /* WebCore's cursor types of the pointer and of the hand, over a link */
@@ -386,7 +382,9 @@ enum {
 	WEB_VIEW_PART_BACK = 2,
 	WEB_VIEW_PART_FORWARD = 3,
 	WEB_VIEW_PART_RELOAD = 4,
-	WEB_VIEW_PART_PROGRESS = 5
+	WEB_VIEW_PART_PROGRESS = 5,
+	/* every part */
+	WEB_VIEW_PART_ALL = 6
 };
 
 /* the analog sticks' listener of a web view: it passes their input to the view it is bound to
@@ -478,12 +476,17 @@ public:
 	bool m_down;
 };
 
-/* a key held down on the page (names ours) */
-struct WebViewHeldKey {
-	int m_keycode;
+/* the widget of one of the page's parts the view fills (names ours) */
+struct WebViewPart {
+	WebViewPart(int part, Widget *widget, bool attach)
+		: m_part(part), m_widget(widget), m_attach(attach)
+	{
+	}
+
+	int m_part;
 	Widget *m_widget;
-	/* the widget was given the key: it is told of the release */
-	bool m_sent;
+	/* the view was given the widget: it destroys it with the part */
+	bool m_attach;
 };
 
 /* an animation the web view runs on the page (names ours) */
@@ -591,7 +594,7 @@ public:
 
 	/* the widget of one of the page's parts (WEB_VIEW_PART_*), its title, URL, buttons and
 	   progress bar */
-	void SetPart(Widget *widget, int part, bool attach);
+	int SetPart(Widget *widget, int part, bool attach);
 	/* loads the page at the URL */
 	int LoadUrl(const Url &url);
 	/* loads the data, given as source with its scheme, from a file URL of the rest (names
@@ -771,6 +774,14 @@ public:
 	/* the origin's permission, once the location says whether it is known (0x8100c74e;
 	   name ours) */
 	void CheckGeolocationPermission();
+	/* the string of message 0x1023 sent to the page (export B1A078CD; name ours) */
+	void SendString1023(const string &value);
+	/* the view focus kept where a zoom takes it while the view plane grows to its scale
+	   (the plane's UpdateSize calls it; name ours) */
+	void UpdateZoomFocus();
+	/* the file the user chose for the page's file field, its path and name, sent to it; the
+	   cursor shows again (export B8CFECAE; name ours) */
+	void SetChosenFile(const common::String &path, const common::String &name);
 	/* an export that does nothing but return 0 (name ours) */
 	int Reserved3C88A96E();
 	/* the page's part the view shows, in the page's whole pixels: x, y, width, height
@@ -799,8 +810,9 @@ public:
 	/* the web view listener told of the view, and its page made if it has none */
 	void Start();
 
-	/* the held key let go (WEB_VIEW_KEY_ALL: every one), its widget told */
-	void ReleaseHeldKey(int keycode);
+	/* the part's widget dropped (WEB_VIEW_PART_ALL: every one), destroyed when it was given
+	   to the view */
+	void RemovePart(int part);
 	/* the cursor shown where the view has one, unless the page's cursor is none; and so
 	   after it was hidden for the page */
 	void ShowCursor();
@@ -815,7 +827,8 @@ public:
 	/* deletes the web IPC's data the page sent */
 	void ClearIpcData();
 
-	/* the analog sticks' input, from its analog listener */
+	/* the analog sticks' input, from its analog listener: the left stick moves the cursor,
+	   faster after a second at its edge; the right stick held keeps the view from scrolling */
 	void HandleAnalog(const inputdevice::Data *data);
 
 	virtual int32_t HandleKeycodeEvent(Event *e);
@@ -883,9 +896,7 @@ public:
 	virtual void OnImePressClose();
 
 	/* WebViewGeolocationClient */
-	virtual void OnPosition(double latitude, double longitude, double altitude, double accuracy,
-		double altitudeAccuracy, double heading, double speed, double timestamp, int flags,
-		int valid);
+	virtual void OnPosition(WebIpcGeolocationPosition position);
 
 	/* the receive buffer of the page's data */
 	class Buffer {
@@ -986,8 +997,8 @@ public:
 	common::SharedPtr<inputdevice::InputListener> m_keyListener;	/* 1900 */
 	common::SharedPtr<inputdevice::InputListener> m_analogListener;	/* 1908 */
 	int m_reserved1916;
-	int m_reserved1920;
-	int m_reserved1924;
+	/* when the left stick reached its edge, for the cursor's speed (name ours) */
+	SceUInt64 m_analogEdgeTime;		/* 1920 */
 	/* the cursor's textures: the arrow and the hand, each with a second one the view switches
 	   to and from while the page is touched (names ours) */
 	intrusive_ptr<graph::Surface> m_arrowTexture;		/* 1928 */
@@ -1007,7 +1018,7 @@ public:
 	list<WebViewKeyEvent> m_keyQueue;	/* 2052: the keys waiting for the last one's reply */
 	bool m_keyReady;			/* 2064: no key waits for a reply */
 	WebViewKeyEvent m_lastKey;		/* 2068 */
-	list<WebViewHeldKey> m_heldKeys;	/* 2080 */
+	list<WebViewPart> m_parts;		/* 2080 */
 };
 
 }
