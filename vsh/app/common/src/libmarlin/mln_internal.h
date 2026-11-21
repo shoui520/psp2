@@ -644,9 +644,9 @@ int MlnImpl_81081498(void *time, int *minutes);
 int MlnIdSetAdd(MlnIdSet **set, const MlnBuffer *id);
 int MlnNodesCollectReachable(MlnOctopusNode *nodes, const MlnBuffer *id, MlnIdSet **set);
 
-/* three buffers and a counted list of buffer triples (string.c frees it) */
+/* a word, three buffers and a counted list of buffer triples (string.c frees it) */
 typedef struct MlnBufferGroup {
-	unsigned int reserved;
+	unsigned int tag;
 	MlnBuffer *first;
 	MlnBuffer *second;
 	MlnBuffer *third;
@@ -1169,7 +1169,74 @@ int MlnImpl_81026D04(const unsigned char *header);
 unsigned int MlnImpl_81026D28(const unsigned char *header);
 unsigned int MlnImpl_81026D4C(const unsigned char *header);
 unsigned int MlnImpl_81026D70(const unsigned char *header);
-int MlnImpl_81026DE0(int heap, const MlnServiceArgs *args, MlnBuffer **out);
+/* a response's values, each a 16-byte header and its data, handed to a visitor */
+typedef int (*MlnServiceValueVisitor)(int heap, const unsigned char *value, void *context);
+/* the arguments, one by one, handed to a visitor */
+typedef int (*MlnServiceArgVisitor)(const MlnServiceArg *arg, void *context);
+
+/* the request writer's place in the buffer it fills */
+typedef struct MlnServiceWriter {
+	unsigned int written;
+	unsigned int size;
+	unsigned char *data;
+} MlnServiceWriter;
+
+/* MLN_SERVICE_ARG_OBJECT: a buffer between two words */
+typedef struct MlnServiceObject {
+	unsigned int first;
+	MlnBuffer *buffer;
+	unsigned int second;
+} MlnServiceObject;
+
+/* MLN_SERVICE_ARG_LIST: named values, each with a flag byte */
+typedef struct MlnServiceListEntry {
+	MlnBuffer *name;
+	MlnBuffer *value;
+	unsigned char flag;
+} MlnServiceListEntry;
+
+typedef struct MlnServiceList {
+	unsigned char count;
+	MlnServiceListEntry **entries;
+} MlnServiceList;
+
+/* MLN_SERVICE_ARG_STRUCT: named entries, each with a counted list of buffer pairs */
+typedef struct MlnServicePair {
+	MlnBuffer *first;
+	MlnBuffer *second;
+} MlnServicePair;
+
+typedef struct MlnServiceStructEntry {
+	MlnBuffer *name;
+	unsigned int pairCount;
+	MlnServicePair *pairs;
+} MlnServiceStructEntry;
+
+typedef struct MlnServiceStruct {
+	unsigned char count;
+	MlnServiceStructEntry **entries;
+} MlnServiceStruct;
+
+/* MLN_SERVICE_ARG_RECORD: a buffer and, by its kind, 0, 3 or 12 more bytes */
+#define MLN_SERVICE_RECORD_PLAIN	0
+#define MLN_SERVICE_RECORD_LONG		1	/* head[0..3] and tail */
+#define MLN_SERVICE_RECORD_SHORT	2	/* head[0..2] */
+
+typedef struct MlnServiceRecordValue {
+	MlnBuffer *buffer;
+	unsigned int kind;
+	unsigned char head[4];
+	unsigned char tail[8];
+} MlnServiceRecordValue;
+
+/* the response reader's place in the values it fills */
+typedef struct MlnServiceReader {
+	unsigned int index;
+	MlnServiceArg *items;
+} MlnServiceReader;
+
+int MlnImpl_81026DE0(int heap, const MlnBuffer *response, MlnServiceValueVisitor visit,
+		     void *context);
 int MlnImpl_81026FAC(int heap, const MlnServiceArg *value, int *out);
 int MlnImpl_8102704C(int heap, const MlnServiceArg *value, unsigned int *out);
 int MlnImpl_810270F4(int heap, const MlnServiceArg *value, void *out);
@@ -1177,7 +1244,23 @@ int MlnImpl_81027140(int heap, MlnServiceArg *value, void **out);
 int MlnImpl_8102717C(int heap, MlnServiceArg *value, void **out);
 int MlnImpl_810271B8(int heap, MlnServiceArg *value, void **out);
 int MlnImpl_810271F4(int heap, MlnServiceArg *value, void **out);
-int MlnImpl_81027B50(int heap, const MlnServiceArgs *args, MlnBuffer **out);
+int MlnImpl_81027B50(int heap, const MlnBuffer *response, MlnServiceValueVisitor visit,
+		     void *context);
+int MlnImpl_81027C00(int heap, const unsigned char *value, void *context);
+int MlnImpl_81027C1C(int heap, const unsigned char *value, void *context);
+void MlnImpl_81027230(int heap, unsigned int count, MlnServiceArg *items);
+int MlnImpl_8102766C(const MlnServiceArg *arg, unsigned int *size);
+int MlnImpl_810278C8(const unsigned char **cursor, unsigned int size, void *out,
+		     unsigned int *remaining);
+int MlnImpl_81027934(unsigned char **cursor, const MlnBuffer *buffer);
+int MlnImpl_81027A1C(int heap, const unsigned char **cursor, MlnBuffer **out,
+		     unsigned int *remaining);
+int MlnImpl_81028818(const MlnServiceArgs *args, MlnServiceArgVisitor visit, void *context);
+int MlnImpl_81028880(const MlnServiceArg *arg, void *context);
+int MlnImpl_810288D0(const MlnServiceArg *arg, void *context);
+void MlnImpl_8102913C(int heap, MlnServiceStruct *value);
+void MlnImpl_81029234(int heap, MlnServiceList *list);
+void MlnImpl_810292C8(int heap, MlnBufferGroup *group);
 int MlnImpl_810273C4(int heap, int command, int value, const MlnServiceArgs *args,
 		     MlnBuffer **request);
 int MlnImpl_8102752C(int heap, const MlnBuffer *response, MlnServiceReply **reply);
