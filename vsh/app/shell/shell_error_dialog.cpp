@@ -96,7 +96,7 @@ static __attribute__((noinline)) void shellErrorDialogOpen(int type, CommonGuiMe
 	param->buttonCount = 1;
 	param->dimmer = 2;
 	param->useLayout = true;
-	param->layout = SceCommonGuiDialog_AF75CA6D;
+	param->layout = SceCommonGuiDialog_B04C8C1A;
 	param->handler = new ShellErrorDialogHandler(type);
 	if (param->title.format.size() == 0 && param->messageId == 0)
 		param->messageId = 0xF91B07B7;

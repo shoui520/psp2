@@ -29,6 +29,7 @@
 #include <widget/w_text.h>
 #include <rtc/rtc.h>
 #include "../../livespace_db/livespace_db_internal.h"
+#include "impose_shell_event.h"
 #include "../../../plugins.h"
 
 /* the plugin's interface and the plugin itself (impose.cpp) */
@@ -178,18 +179,6 @@ public:
 };
 
 extern ImposeScreenshot *g_imposeScreenshot;	/* (0x815448E8) */
-
-/* (0x8115013C, 16 bytes) */
-class ImposePart8115013C {
-public:
-	ImposePart8115013C(paf::Plugin *plugin);
-	~ImposePart8115013C();
-	void Impose_81150164();
-	void Impose_811501D0();
-	void Impose_811503CE(int arg);
-
-	SceUInt8 data[16];
-};
 
 /* (0x81150574, 120 bytes) */
 class ImposePart81150574 {
@@ -554,7 +543,7 @@ public:
 	ImposeVolume m_volume;
 	ImposeNotification m_notification;
 	ImposeScreenshot m_screenshot;
-	ImposePart8115013C m_part8115013C;
+	ImposeShellEvent m_shellEvent;
 	ImposePart81150574 m_part81150574;
 	ImposeParentalControl m_parentalControl;
 	ImposePsMenu m_psMenu;
