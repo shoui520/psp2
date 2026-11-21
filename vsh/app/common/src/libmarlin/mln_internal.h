@@ -11,10 +11,14 @@
 /* return codes of the library's helpers */
 #define MLN_OK			0
 #define MLN_ERROR_NO_MEMORY	2
+#define MLN_ERROR_INVALID_ARGUMENT	3
 #define MLN_ERROR_INVALID	5
 
 /* the XML parser's errors */
-#define MLN_XML_ERROR_SYNTAX	0x10010003
+#define MLN_XML_ERROR_SYNTAX		0x10010003
+#define MLN_XML_ERROR_END_TAG		0x10010005	/* an end tag naming another element */
+#define MLN_XML_ERROR_NOT_NAMED		0x10010008	/* a node without a name */
+#define MLN_XML_ERROR_NOT_ELEMENT	0x10010009	/* a node that is not an element */
 
 /* which heap: the general one or the one for secure data */
 #define MLN_HEAP_GENERAL	0
@@ -464,7 +468,7 @@ unsigned int MlnStrlen(const char *s);
 /* api.c */
 int SceMarlin_A11B25C7(const unsigned char *data, int size, MlnTrackProtection *info);
 int MlnConvertResult(unsigned int result);
-int SceMarlin_D09A4419(const void *xml, unsigned int size, MlnBundleInfo **out);
+int SceMarlin_D09A4419(unsigned int size, const void *xml, MlnBundleInfo **out);
 int SceMarlin_73C12840(MlnBundleInfo *info);
 int SceMarlin_9609E2DF(MlnBuffer *buffer);
 int SceMarlin_45B29121(MlnApiNode *list);
@@ -540,6 +544,22 @@ int *MlnImpl_81007494(int unused, int *count);
 int MlnXmlSkipComment(MlnBuffer *cursor);
 int MlnXmlReadText(int heap, MlnBuffer **text, MlnBuffer *cursor, int delimiter);
 int MlnXmlParseProlog(int heap, MlnXmlParser *parser, MlnXmlProlog **out, MlnBuffer *cursor);
+int MlnXmlCompareAttributeNames(int heap, const MlnXmlAttributeArray *namespaces,
+				const MlnBuffer *elementName, const MlnBuffer *a, const MlnBuffer *b);
+int MlnXmlParseElement(int heap, MlnXmlParser *parser, MlnXmlElement **out, MlnBuffer *cursor);
+int MlnXmlParseContent(int heap, MlnXmlParser *parser, MlnXmlContent **out, MlnBuffer *cursor);
+int MlnXmlNodeAppendXml(int heap, unsigned int size, const void *xml, MlnXmlNode *node);
+int MlnXmlNodeReplaceChildXml(int heap, unsigned int size, const void *xml, MlnXmlNode *child,
+			      MlnXmlNode *parent);
+int MlnXmlParseInt(int heap, unsigned int size, const char *text, int *value);
+int MlnXmlParseDateTime(int heap, unsigned int size, const char *text, MlnDateTime *time);
+int MlnXmlElementMatchPredicate(const MlnXmlElement *element, const char *predicate,
+				int length, int position);
+int MlnXmlElementInNamespace(const MlnXmlElement *element, const void *uri, unsigned int size);
+int MlnXmlElementAppendContents(int heap, MlnXmlElement *element, int count,
+				MlnXmlContent **items);
+int MlnXmlElementReplaceChild(int heap, MlnXmlElement *element, MlnXmlElement *child,
+			      MlnXmlContent *content);
 
 /* xmlnode.c */
 int MlnXmlNodeGetElement(int heap, MlnXmlNode *node, MlnXmlNode **out);
@@ -634,7 +654,7 @@ int MlnImpl_8101E658(void *client, MlnBuffer **message, MlnApiResult **result);
 int MlnImpl_8101E9EC(void *client, MlnApiResult *step, MlnBuffer **message);
 int MlnImpl_81019B44(int a0, void *a1, void *a2, void *a3, int a4, void **engine);
 int MlnImpl_8101E380(void *client, void *a1, void *a2, void *a3, int a4);
-int MlnXmlParse(int heap, const void *xml, unsigned int size, MlnXmlNode **document);
+int MlnXmlParse(int heap, unsigned int size, const void *xml, MlnXmlNode **document);
 int MlnXmlFindNode(int heap, MlnXmlNode *node, const char *path, const char *ns, MlnXmlNode **found);
 int MlnXmlFindNodes(int heap, MlnXmlNode *node, const char *path, const char *ns,
 		    MlnXmlNodeList **found);

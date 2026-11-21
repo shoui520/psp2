@@ -5,8 +5,6 @@
  */
 #include "mln_internal.h"
 
-#define MLN_XML_ERROR_NOT_NAMED		0x10010008
-#define MLN_XML_ERROR_NOT_ELEMENT	0x10010009
 
 /*
  * Sony's build inlines the releases into one another to different depths; these copies

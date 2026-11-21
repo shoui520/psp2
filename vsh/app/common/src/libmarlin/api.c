@@ -596,7 +596,7 @@ out:
 }
 
 /* the controller and the protectors of an Octopus bundle */
-int SceMarlin_D09A4419(const void *xml, unsigned int size, MlnBundleInfo **out)
+int SceMarlin_D09A4419(unsigned int size, const void *xml, MlnBundleInfo **out)
 {
 	MlnXmlNode *document = NULL, *controller = NULL, *keyReference = NULL;
 	MlnXmlNodeList *protectorList = NULL;
@@ -607,7 +607,7 @@ int SceMarlin_D09A4419(const void *xml, unsigned int size, MlnBundleInfo **out)
 	unsigned int count = 0, i;
 	int ret;
 
-	if (xml == NULL || size == 0 || out == NULL) {
+	if (size == 0 || xml == NULL || out == NULL) {
 		ret = MLN_RESULT_INVALID_ARGUMENT;
 		goto out;
 	}
@@ -619,7 +619,7 @@ int SceMarlin_D09A4419(const void *xml, unsigned int size, MlnBundleInfo **out)
 	info->controllerUid = NULL;
 	info->protectorCount = 0;
 	info->protectors = NULL;
-	ret = MlnXmlParse(MLN_HEAP_SECURE, xml, size, &document);
+	ret = MlnXmlParse(MLN_HEAP_SECURE, size, xml, &document);
 	if (ret != MLN_OK) {
 		ret = MlnConvertResult(ret);
 		goto fail;

@@ -6,7 +6,6 @@
 #include <regmgr/regmgr.h>
 #include "mln_internal.h"
 
-#define MLN_ERROR_NO_MEMORY	3
 #define MLN_ERROR_REGISTRY	5
 
 /* The registry entry naming the PSN environment this console is set up for. */
@@ -116,7 +115,7 @@ int MlnMemoryInit(int heap, void *memory, unsigned int size)
 	if (use->refCount++ != 0)
 		return MLN_OK;
 	if (memory == NULL) {
-		ret = MLN_ERROR_NO_MEMORY;
+		ret = MLN_ERROR_INVALID_ARGUMENT;
 		goto fail;
 	}
 	ret = MlnHeapInit(heap, memory, size);
