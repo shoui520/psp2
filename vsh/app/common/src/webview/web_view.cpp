@@ -556,6 +556,331 @@ void WebView::RequestData(int64_t id, int64_t size)
 	WebIpc::GetInstance()->Send(&message, m_viewId);
 }
 
+inline void WebView::ClearSelect()
+{
+	m_selectItems.clear();
+	m_selectEnabled.clear();
+	m_selectChecked.clear();
+	m_selectCount = 0;
+	m_selectFocus = 0;
+}
+
+int WebView::CloseSelect(int index)
+{
+	ClearSelect();
+
+	WebIpcSelectReply message(index, false);
+	int ret = WebIpc::GetInstance()->Send(&message, m_viewId);
+
+	m_cursorHidden = false;
+	ShowCursor();
+	return ret;
+}
+
+int WebView::ChooseSelect(uint32_t index, bool force, bool close)
+{
+	int ret = WEB_VIEW_ERROR_NO_WIDGET;
+	bool choose = force;
+
+	if (!force && !close && m_selectEnabled.at(index))
+		choose = true;
+	if (close) {
+		ClearSelect();
+		m_cursorHidden = false;
+		ShowCursor();
+	} else if (!choose) {
+		return ret;
+	}
+
+	WebIpcSelectReply message(index, close);
+
+	ret = WebIpc::GetInstance()->Send(&message, m_viewId);
+	return ret;
+}
+
+int WebView::SendStringPair(const string &first, const string &second)
+{
+	WebIpcStringPair message(first, second);
+
+	return WebIpc::GetInstance()->Send(&message, m_viewId);
+}
+
+int WebView::SetImeText(int type, const string &text)
+{
+	int mode = 0;
+
+	m_imeType = type;
+	m_imeText = text;
+	switch (m_imeType) {
+	case 0:
+		mode = 1;
+		break;
+	case 1:
+		mode = 2;
+		break;
+	}
+
+	WebIpcImeText message(mode, text);
+
+	return WebIpc::GetInstance()->Send(&message, m_viewId);
+}
+
+int WebView::Request1051()
+{
+	WebIpcMessage message(WEB_IPC_REQUEST_1051);
+
+	return WebIpc::GetInstance()->Send(&message, m_viewId);
+}
+
+int WebView::SetScrollY(int y)
+{
+	int ret = WEB_VIEW_ERROR_NO_WIDGET;
+
+	if (m_scrollY > 0) {
+		WebIpcScrollY message(y);
+
+		ret = WebIpc::GetInstance()->Send(&message, m_viewId);
+		if (ret == 0)
+			m_scrollY = y;
+	}
+	return ret;
+}
+
+/* the rectangle's centre, the rectangle moved into the bound where it is not in it */
+static inline math::v2 FitRectCenter(const math::rect &boundRect, const math::rect &rect)
+{
+	math::rect bound(boundRect);
+	math::rect fitted(rect);
+
+	if (!fitted.is_in_rect(bound)) {
+		if (fitted.left() < bound.left()) {
+			float width = fitted.width();
+
+			fitted.set_left(bound.left());
+			fitted.set_right(bound.left() + width);
+		} else if (bound.right() < fitted.right()) {
+			float width = fitted.width();
+
+			fitted.set_left(bound.right() - width);
+			fitted.set_right(bound.right());
+		}
+		if (fitted.bottom() < bound.bottom())
+			fitted.align_bottom(bound.bottom());
+		else if (bound.top() < fitted.top())
+			fitted.align_top(bound.top());
+	}
+	return fitted.center();
+}
+
+math::v2 WebView::GetFittedViewFocus(bool offset)
+{
+	math::v2 focus = GetViewFocus();
+	const math::v4 *size = GetSize(0);
+	math::rect focusRect(focus, math::v2(size->extract_x(), size->extract_y()));
+	math::rect viewRect(math::v2(0.0f, 0.0f), math::v2(m_view_box_size));
+
+	viewRect.set_bottom(viewRect.bottom() - m_padding.extract_w());
+	focus = FitRectCenter(viewRect, focusRect);
+	if (offset)
+		focus.set_y(focus.extract_y() + (m_padding.extract_y() - m_pageRect.extract_y()));
+	return focus;
+}
+
+void WebView::SetViewFocus(const math::v2 &pos, Timer *timer, bool flag_a, bool flag_b)
+{
+	Widget *plane = GetViewParent()->FindChild(IDParam("view_plane"), 2);
+	math::v2 focus = pos;
+	math::rect area;
+
+	if (plane != NULL) {
+		const math::v4 *size = plane->GetSize(0);
+
+		area = math::rect(math::v2(0.0f, 0.0f), math::v2(size->extract_x(), size->extract_y()));
+	}
+	area.set_top(area.top() + m_padding.extract_y());
+	area.set_bottom(area.bottom() - m_padding.extract_w());
+	if (m_ime_padding)
+		area.set_bottom(area.bottom() - m_ime_height);
+
+	const math::v4 *size = GetSize(0);
+	math::rect focusRect(pos, math::v2(size->extract_x(), size->extract_y()));
+	math::v2 center = FitRectCenter(area, focusRect);
+
+	if (m_tapAnims.size() == 0) {
+		focus = center;
+		ScrollViewBase::SetViewFocus(focus, timer, flag_a, flag_b);
+	}
+}
+
+void WebView::QueueMessage21()
+{
+	WebIpcMessage *message = new WebIpcMessage(WEB_IPC_UPDATE_21);
+
+	if (message == NULL)
+		return;
+
+	thread::RMutexLock lock(&m_ipcDataLock);
+
+	m_ipcData.push_back(message);
+}
+
+void WebView::QueueMessage1056()
+{
+	WebIpcMessage *message = new WebIpcMessage(WEB_IPC_UPDATE_1056);
+
+	if (message == NULL)
+		return;
+
+	thread::RMutexLock lock(&m_ipcDataLock);
+
+	m_ipcData.push_back(message);
+}
+
+void WebView::SetSecure(bool secure)
+{
+	m_isSecure = secure;
+}
+
+int WebView::Reserved3C88A96E()
+{
+	return 0;
+}
+
+math::v4 WebView::GetVisiblePageRect()
+{
+	using namespace sce::Vectormath::Simd;
+
+	if (!CanZoom())
+		return math::v4(0.0f, 0.0f, 0.0f, 0.0f);
+
+	math::v2 focus = GetViewFocus();
+
+	focus = GetFittedViewFocus(false);
+
+	const math::v4 *parentSize = GetViewParent()->GetSize(0);
+
+	focus = focus + math::v2(parentSize->extract_x(), parentSize->extract_y()) *
+		math::v2(-0.5f, 0.5f);
+
+	floatInVec scale = recipf(m_view_box_size.getImpl().getX()) *
+		m_contentSize.getImpl().getX();
+	Aos::Matrix3 transform = GetPageTransform();
+	Aos::Vector3 pos = transform.getCol0() * focus.getImpl().getX() +
+		transform.getCol1() * focus.getImpl().getY() +
+		Aos::mulPerElem(transform.getCol2(), Aos::Vector3(1.0f));
+
+	if (pos.getX().getAsFloat() < 0.0f)
+		pos.setX(0.0f);
+	if (pos.getY().getAsFloat() < 0.0f)
+		pos.setY(0.0f);
+
+	float x = floorf(pos.getX()).getAsFloat();
+	float y = floorf(pos.getY()).getAsFloat();
+	float width = floorf(scale * GetSize(0)->getImpl().getX()).getAsFloat() + 1.0f;
+	float height = floorf(scale * GetSize(0)->getImpl().getY()).getAsFloat();
+
+	if (m_contentSize.extract_x() < width + x)
+		width = m_contentSize.extract_x() - x;
+	return math::v4(x, y, width, height);
+}
+
+__attribute__((noinline)) math::v2 WebView::GetCursorPos(bool offset)
+{
+	math::v2 pos(0.0f, 0.0f);
+
+	if (m_cursorPlane != NULL) {
+		math::v4 origin(0.0f, 0.0f, 0.0f, 0.0f);
+		math::v4 world = m_cursorPlane->GetPos(1, NULL, origin);
+		const math::v4 *size = m_cursorPlane->GetSize(0);
+
+		pos = math::v2(world.extract_x(), world.extract_y()) +
+			math::v2(size->extract_x(), size->extract_y()) * math::v2(-0.5f, 0.5f) -
+			m_cursorOffset;
+		if (offset)
+			pos = pos + GetFittedViewFocus(true);
+	}
+	return pos;
+}
+
+void WebView::SendCursorPos()
+{
+	using namespace sce::Vectormath::Simd;
+
+	if (m_cursorPlane == NULL || m_cursorMode == 0 || m_cursorHidden ||
+	    m_arrowTexture.get() == NULL)
+		return;
+
+	math::v2 cursor = GetCursorPos(true);
+	Aos::Matrix3 transform = GetPageTransform();
+	Aos::Vector3 pos = transform.getCol0() * cursor.getImpl().getX() +
+		transform.getCol1() * cursor.getImpl().getY() +
+		Aos::mulPerElem(transform.getCol2(), Aos::Vector3(1.0f));
+	math::v4 visible = GetVisiblePageRect();
+	int right = (int32_t)(visible.extract_x() + visible.extract_z());
+	int bottom = (int32_t)(visible.extract_y() + visible.extract_w());
+
+	if (right > (int32_t)pos.getX().getAsFloat()) {
+		if (pos.getX().getAsFloat() < visible.extract_x())
+			pos.setX(visible.extract_x());
+	} else {
+		pos.setX((float)right);
+	}
+	if (bottom > (int32_t)pos.getY().getAsFloat()) {
+		if (pos.getY().getAsFloat() < visible.extract_y())
+			pos.setY(visible.extract_y());
+	} else {
+		pos.setY((float)bottom);
+	}
+
+	WebIpcCursorPos message((int32_t)pos.getX().getAsFloat(), (int32_t)pos.getY().getAsFloat());
+
+	WebIpc::GetInstance()->Send(&message, m_viewId);
+}
+
+void WebView::SetCursorMode(int mode)
+{
+	Widget *cursor = m_cursorPlane;
+
+	m_cursorMode = mode;
+	if (cursor == NULL)
+		return;
+	if (mode != 0) {
+		SetFocus(NULL);
+		ShowCursor();
+		SendCursorPos();
+	} else {
+		cursor->m_transition_complete = false;
+		cursor->m_transition = 0xff;
+		cursor->DoTransitionReverse_core(0.0f, true);
+		ScePafWidget_4588699E(cursor, NULL, 2, 0.0f, NULL);
+	}
+}
+
+int WebView::SetCursorTextures(const intrusive_ptr<graph::Surface> &arrow,
+			       const intrusive_ptr<graph::Surface> &arrowAlt,
+			       const intrusive_ptr<graph::Surface> &hand,
+			       const intrusive_ptr<graph::Surface> &handAlt, const math::v2 &offset)
+{
+	if (arrow.get() == NULL)
+		return WEB_VIEW_ERROR_NO_TEXTURE;
+	m_arrowTexture = arrow;
+	m_arrowAltTexture = arrowAlt;
+	m_handTexture = hand;
+	m_handAltTexture = handAlt;
+	m_cursorOffset = offset;
+	if (m_cursorPlane != NULL && m_arrowTexture.get() != NULL) {
+		m_cursorPlane->SetTexture(m_arrowTexture);
+
+		Widget *cursor = m_cursorPlane;
+		const math::v4 *size = GetSize(0);
+		graph::Surface *texture = m_arrowTexture.get();
+
+		cursor->SetSize(math::v4(texture->GetWidth(), texture->GetHeight(), size->extract_z(),
+					 size->extract_w()));
+	}
+	return 0;
+}
+
 int WebView::CreateSurface()
 {
 	if (m_surface.get() != NULL)
@@ -744,7 +1069,7 @@ void WebView::ClearIpcData()
 {
 	thread::RMutexLock lock(&m_ipcDataLock);
 
-	for (vector<IpcData *>::iterator it = m_ipcData.begin(); it != m_ipcData.end(); ++it)
+	for (vector<WebIpcMessage *>::iterator it = m_ipcData.begin(); it != m_ipcData.end(); ++it)
 		if (*it != NULL)
 			delete *it;
 	m_ipcData.clear();

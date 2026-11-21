@@ -17,6 +17,7 @@ class WebView;
 
 /* the message types (names ours) */
 enum {
+	WEB_IPC_UPDATE_21 = 0x21,
 	WEB_IPC_CREATE_PAGE = 0x1002,
 	WEB_IPC_CLOSE_PAGE = 0x1003,
 	WEB_IPC_LOAD_URL = 0x1013,
@@ -25,11 +26,18 @@ enum {
 	WEB_IPC_RELOAD = 0x1019,
 	WEB_IPC_STOP = 0x1020,
 	/* the view's settings, sent as a bool (what each sets is not known yet) */
+	WEB_IPC_SELECT_REPLY = 0x1030,
 	WEB_IPC_SETTING_1031 = 0x1031,
+	WEB_IPC_CURSOR_POS = 0x1034,
 	WEB_IPC_TAP = 0x1036,
 	WEB_IPC_SETTING_1048 = 0x1048,
 	WEB_IPC_REQUEST_1050 = 0x1050,
+	WEB_IPC_REQUEST_1051 = 0x1051,
+	WEB_IPC_IME_TEXT = 0x1052,
 	WEB_IPC_SETTING_1053 = 0x1053,
+	WEB_IPC_STRING_PAIR = 0x1054,
+	WEB_IPC_UPDATE_1056 = 0x1056,
+	WEB_IPC_SCROLL_Y = 0x1060,
 	WEB_IPC_REQUEST_1070 = 0x1070,
 	WEB_IPC_REQUEST_DATA = 0x1071,
 	WEB_IPC_LOAD_DATA = 0x1080,
@@ -130,6 +138,77 @@ public:
 
 	int m_id;
 	int m_size;
+};
+
+/* the item the select popup chose, and whether it closes (0x81025358, type 0x1030; names
+   ours) */
+class WebIpcSelectReply : public WebIpcMessage {
+public:
+	WebIpcSelectReply(int index, bool close);
+	virtual ~WebIpcSelectReply()
+	{
+	}
+
+	virtual void Write(WebIpcPacket *packet) const;
+
+	int m_index;
+	bool m_close;
+};
+
+/* two strings for the page (0x81025370, type 0x1054; names ours) */
+class WebIpcStringPair : public WebIpcMessage {
+public:
+	WebIpcStringPair(const string &first, const string &second);
+	virtual ~WebIpcStringPair()
+	{
+	}
+
+	virtual void Write(WebIpcPacket *packet) const;
+
+	string m_first;
+	string m_second;
+};
+
+/* the IME's text, with its mode (0x81025448, type 0x1052; names ours) */
+class WebIpcImeText : public WebIpcMessage {
+public:
+	WebIpcImeText(int mode, const string &text);
+	virtual ~WebIpcImeText()
+	{
+	}
+
+	virtual void Write(WebIpcPacket *packet) const;
+
+	int m_mode;
+	string m_text;
+};
+
+/* the page's vertical scroll (0x81024948, type 0x1060; names ours) */
+class WebIpcScrollY : public WebIpcMessage {
+public:
+	WebIpcScrollY(int y);
+
+	virtual ~WebIpcScrollY()
+	{
+	}
+
+	virtual void Write(WebIpcPacket *packet) const;
+
+	int m_y;
+};
+
+/* the cursor's point on the page (0x810249D8, type 0x1034; names ours) */
+class WebIpcCursorPos : public WebIpcMessage {
+public:
+	WebIpcCursorPos(int x, int y);
+	virtual ~WebIpcCursorPos()
+	{
+	}
+
+	virtual void Write(WebIpcPacket *packet) const;
+
+	int m_x;
+	int m_y;
 };
 
 /* the page loads the URL (0x81025328, type 0x1013) */

@@ -183,6 +183,7 @@ void DestroyPopupMenu(WebViewPopupMenu *menu);
 /* the view has no size yet, or its surface no memory (names ours) */
 #define WEB_VIEW_ERROR_NO_SIZE		((int)0x80AF0084)
 #define WEB_VIEW_ERROR_NO_MEMORY	((int)0x80AF0022)
+#define WEB_VIEW_ERROR_NO_TEXTURE	((int)0x80AF008F)
 
 /* every key held (names ours) */
 #define WEB_VIEW_KEY_ALL		6
@@ -399,6 +400,46 @@ public:
 	void Request1070();
 	/* asks the page for its data: the receive buffer is made the size (name ours) */
 	void RequestData(int64_t id, int64_t size);
+	/* the select popup's items let go (name ours) */
+	void ClearSelect();
+	/* the select popup closes on the item (name ours) */
+	int CloseSelect(int index);
+	/* the select popup chooses the item, at once or when it closes; a disabled item only
+	   closes it (name ours) */
+	int ChooseSelect(uint32_t index, bool force, bool close);
+	/* sends the two strings (name ours) */
+	int SendStringPair(const string &first, const string &second);
+	/* the IME's type and text, sent to the page (name ours) */
+	int SetImeText(int type, const string &text);
+	/* sends 0x1051 (name ours) */
+	int Request1051();
+	/* scrolls the page; kept once the page takes it (name ours) */
+	int SetScrollY(int y);
+	/* the view's focus, moved so that the view's box round it lies in the view (above the
+	   bottom padding); with offset, y from the page's top (names ours) */
+	math::v2 GetFittedViewFocus(bool offset);
+	/* queues message 0x21 / 0x1056 for the view's update (names ours) */
+	void QueueMessage21();
+	void QueueMessage1056();
+	/* whether the page is a secure one (name ours) */
+	void SetSecure(bool secure);
+	/* an export that does nothing but return 0 (name ours) */
+	int Reserved3C88A96E();
+	/* the page's part the view shows, in the page's whole pixels: x, y, width, height
+	   (name ours) */
+	math::v4 GetVisiblePageRect();
+	/* the cursor plane's point (its hot spot), from the view's focus with offset (name ours) */
+	math::v2 GetCursorPos(bool offset);
+	/* sends the cursor's point on the page, kept in the page's visible part (name ours) */
+	void SendCursorPos();
+	/* the cursor shown (with the focus let go) or faded out (name ours) */
+	void SetCursorMode(int mode);
+	/* the cursor's textures and its hot spot; the cursor plane takes the arrow's size (name
+	   ours) */
+	int SetCursorTextures(const intrusive_ptr<graph::Surface> &arrow,
+			      const intrusive_ptr<graph::Surface> &arrowAlt,
+			      const intrusive_ptr<graph::Surface> &hand,
+			      const intrusive_ptr<graph::Surface> &handAlt, const math::v2 &offset);
 
 	/* the surface the page is drawn into, the view's size, and its render target */
 	int CreateSurface();
@@ -509,19 +550,14 @@ public:
 		char *m_data;
 	};
 
-	/* an IPC message the page sent, kept until the view's update reads it */
-	class IpcData {
-	public:
-		virtual ~IpcData();
-	};
-
 	Buffer *m_receiveBuffer;		/* 1100 */
 	int m_viewId;				/* 1104: the page's ID with the WebKit process */
 	int m_pageState;			/* 1108: WEB_VIEW_PAGE_* */
 	WebViewPageListener *m_listener;	/* 1112 */
 	WebViewLoadingPlane *m_loadingPlane;	/* 1116 */
 	void *m_appListener;			/* 1120: wutil's listener */
-	vector<IpcData *> m_ipcData;		/* 1124 */
+	/* the messages kept until the view's update reads them */
+	vector<WebIpcMessage *> m_ipcData;	/* 1124 */
 	int m_reserved1140;
 	thread::RMutex m_ipcDataLock;		/* 1144 */
 	intrusive_ptr<graph::Surface> m_surface;	/* 1176 */
