@@ -248,11 +248,11 @@ out:
 	return ret;
 }
 
-/* a reply of the 21 bytes the core reports */
+/* a reply of the CRL store's CRL number */
 int MlnImpl_8102CCA4(const MlnServiceReply *reply, MlnServiceArgs **out, int *status)
 {
 	MlnServiceArgs *args = NULL;
-	MlnCoreInfo *info = NULL;
+	MlnX509CrlNumber *info = NULL;
 	int ret;
 
 	if (MlnImpl_81026D94(reply, 0) != 0) {

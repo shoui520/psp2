@@ -1385,18 +1385,19 @@ unsigned int MlnImpl_8103B190(int *present);
 unsigned int MlnImpl_81043CF0(MlnBuffer **state);
 unsigned int MlnImpl_81043D7C(const MlnBuffer *state);
 
-/* 21 bytes the core reports (0x8103b3ec) */
-typedef struct MlnCoreInfo {
-	unsigned char bytes[21];
-} MlnCoreInfo;
+/* the CRLNumber extension of a CRL, as the CRL store reports it (0x8103b3ec) */
+typedef struct MlnX509CrlNumber {
+	unsigned char present;
+	unsigned char number[20];
+} MlnX509CrlNumber;
 
-unsigned int MlnImpl_8103B3EC(MlnCoreInfo *info);
+unsigned int MlnImpl_8103B3EC(MlnX509CrlNumber *number);
 unsigned int MlnImpl_810393D0(int kind, MlnBuffer **out);
 unsigned int MlnImpl_81047DC4(const MlnBuffer *id);
 unsigned int MlnImpl_81047E00(void);
 int MlnImpl_8102AAE8(int *loaded);
 int MlnImpl_8102AE84(const MlnBuffer *state);
-MlnCoreInfo MlnImpl_8102AFBC(void);
+MlnX509CrlNumber MlnImpl_8102AFBC(void);
 unsigned int MlnImpl_8102B054(void);
 int MlnImpl_8102B064(const MlnBuffer *id, MlnBlob *out);
 int MlnImpl_8102B198(const MlnBuffer *id);
@@ -1865,10 +1866,15 @@ typedef struct MlnAsn1Node {
 		};
 		unsigned int header;	/* the four as one word, MLN_ASN1_IDENTIFIER() */
 	};
-	unsigned int length;		/* bytes, or a constructed node's children */
 	union {
-		unsigned char *data;
-		struct MlnAsn1Node **children;
+		struct {
+			unsigned int length;	/* bytes, or a constructed node's children */
+			union {
+				unsigned char *data;
+				struct MlnAsn1Node **children;
+			};
+		};
+		MlnBuffer value;	/* a primitive node's length and data */
 	};
 	const unsigned char *encoding;	/* the node's whole encoding, header first */
 	unsigned int encodingLength;
@@ -1975,6 +1981,12 @@ typedef struct MlnX509PublicKey {
 #define MLN_X509_EXTENSION_AUTHORITY_KEY_IDENTIFIER	1	/* 2.5.29.35 */
 #define MLN_X509_EXTENSION_SUBJECT_KEY_IDENTIFIER	2	/* 2.5.29.14 */
 #define MLN_X509_EXTENSION_KEY_USAGE			3	/* 2.5.29.15 */
+#define MLN_X509_EXTENSION_BASIC_CONSTRAINTS		4	/* 2.5.29.19 */
+#define MLN_X509_EXTENSION_CRL_DISTRIBUTION_POINTS	5	/* 2.5.29.31 */
+#define MLN_X509_EXTENSION_CERTIFICATE_POLICIES		6	/* 2.5.29.32 */
+#define MLN_X509_EXTENSION_CRL_NUMBER			7	/* 2.5.29.20 */
+#define MLN_X509_EXTENSION_CERTIFICATE_ISSUER		8	/* 2.5.29.29 */
+#define MLN_X509_EXTENSION_ISSUING_DISTRIBUTION_POINT	9	/* 2.5.29.28 */
 
 /* an Extension: its OID (and the algorithm table's id for it), criticality and value */
 typedef struct MlnX509Extension {
@@ -1989,6 +2001,11 @@ typedef struct MlnX509Extensions {
 	MlnX509Extension **items;
 } MlnX509Extensions;
 
+typedef struct MlnX509Validity {
+	MlnDateTime notBefore;
+	MlnDateTime notAfter;
+} MlnX509Validity;
+
 /* a TBSCertificate; names are kept as their DER encodings */
 typedef struct MlnX509Tbs {
 	MlnBuffer encoding;		/* the signed bytes */
@@ -1996,8 +2013,7 @@ typedef struct MlnX509Tbs {
 	MlnBuffer serialNumber;
 	MlnX509Algorithm signature;
 	MlnBuffer issuer;
-	MlnDateTime notBefore;
-	MlnDateTime notAfter;
+	MlnX509Validity validity;
 	MlnBuffer subject;
 	MlnX509PublicKey publicKey;
 	MlnX509Extensions *extensions;
@@ -2010,12 +2026,112 @@ typedef struct MlnX509Certificate {
 	MlnBuffer signature;
 } MlnX509Certificate;
 
-/* certificates' DER, room for capacity of them */
-typedef struct MlnX509Chain {
+/* a revokedCertificates entry of a CRL */
+typedef struct MlnX509CrlEntry {
+	MlnBuffer serialNumber;
+	MlnDateTime revocationDate;
+	MlnBuffer certificateIssuer;	/* the CRL's issuer unless the entry names one */
+} MlnX509CrlEntry;
+
+typedef struct MlnX509CrlEntries {
+	int count;
+	MlnX509CrlEntry **items;
+} MlnX509CrlEntries;
+
+/* a TBSCertList with the extensions it understands */
+typedef struct MlnX509CrlTbs {
+	MlnBuffer encoding;		/* the signed bytes */
+	int version;
+	MlnX509Algorithm signature;
+	MlnBuffer issuer;
+	MlnDateTime thisUpdate;
+	MlnDateTime nextUpdate;
+	MlnX509CrlEntries *revokedCertificates;
+	MlnBuffer authorityKeyIdentifier;
+	MlnX509CrlNumber crlNumber;
+	/* issuingDistributionPoint */
+	int onlyContainsUserCerts;
+	int onlyContainsCACerts;
+	unsigned char onlySomeReasons[2];
+	int onlySomeReasonsBits;
+	int indirectCRL;
+	int onlyContainsAttributeCerts;
+} MlnX509CrlTbs;
+
+/* a CertificateList */
+typedef struct MlnX509CrlCertificate {
+	MlnX509CrlTbs *tbs;
+	MlnX509Algorithm signatureAlgorithm;
+	MlnBuffer signature;
+} MlnX509CrlCertificate;
+
+/* a parsed CRL and its DER */
+typedef struct MlnX509Crl {
+	MlnBuffer *der;
+	MlnX509CrlCertificate *certificate;
+} MlnX509Crl;
+
+/* the CRL the library checks certificates against (MlnShared's buffers[3]) */
+typedef struct MlnX509CrlStore {
+	MlnX509Crl *crl;
+} MlnX509CrlStore;
+
+/* copies of buffers (certificates' DER, policy OIDs), room for capacity of them */
+typedef struct MlnBufferList {
 	int count;
 	int capacity;
-	MlnBuffer **certificates;
-} MlnX509Chain;
+	MlnBuffer **items;
+} MlnBufferList;
+
+/* the certificates of a path, the trust anchor's child first */
+typedef struct MlnX509Certificates {
+	int count;
+	MlnBuffer **items;
+} MlnX509Certificates;
+
+/* an RSA public key */
+typedef struct MlnX509RsaKey {
+	int algorithm;			/* MLN_X509_ALGORITHM_RSA */
+	MlnBuffer modulus;
+	MlnBuffer exponent;
+} MlnX509RsaKey;
+
+/* what a path is validated against */
+typedef struct MlnX509ValidationParameters {
+	int depth;			/* the certificates in the path */
+	int checkValidity;		/* 1: each certificate valid at time */
+	MlnDateTime time;
+	MlnBuffer anchorName;		/* the trust anchor's subject, DER */
+	MlnX509RsaKey anchorKey;
+	int policyCount;
+	const MlnBuffer *policies;	/* the acceptable policy OIDs */
+	unsigned int keyUsage;		/* MLN_X509_KEY_USAGE_*: the end certificate's needed usage */
+	int checkRevocation;
+} MlnX509ValidationParameters;
+
+/* the state of a path validation (RFC 5280 6.1) */
+typedef struct MlnX509Validation {
+	int checkValidity;
+	int checkRevocation;
+	MlnDateTime time;
+	int depth;
+	MlnBufferList *userPolicies;
+	unsigned int keyUsage;
+	int maxPathLength;
+	MlnBufferList *validPolicies;
+	int index;			/* the certificate being processed, from 1 */
+	MlnBuffer *workingIssuer;
+	MlnBuffer *modulus;		/* the working public key */
+	MlnBuffer *exponent;
+	MlnBuffer *keyIdentifier;	/* the issuer's subject key identifier */
+} MlnX509Validation;
+
+typedef struct MlnX509BasicConstraints {
+	int ca;
+	int pathLength;			/* -1: no constraint */
+} MlnX509BasicConstraints;
+
+#define MLN_X509_KEY_USAGE_KEY_CERT_SIGN	0x20
 
 /* a certificate with its own copy of the DER it was parsed from */
 typedef struct MlnX509 {
@@ -2027,18 +2143,35 @@ int MlnImpl_81038718(const MlnX509PublicKey *publicKey, MlnBuffer **modulus,
 		     MlnBuffer **exponent);
 int MlnImpl_81038874(const MlnAsn1Node *node, MlnX509PublicKey *publicKey);
 int MlnImpl_81038900(const MlnBuffer *der, MlnX509Certificate **out);
-int MlnImpl_81038DB4(int capacity, MlnX509Chain **out);
+int MlnImpl_81038DB4(int capacity, MlnBufferList **out);
 int MlnImpl_81038E90(MlnX509 *x509);
 int MlnImpl_81038EF4(const MlnBuffer *der, MlnX509 **out);
 int MlnImpl_81039000(const MlnBuffer *der, MlnBuffer **modulus, MlnBuffer **exponent);
 int MlnImpl_810390C0(const MlnX509 *x509, MlnBuffer **out);
 int MlnImpl_81039228(const MlnX509 *x509, MlnBuffer **modulus, MlnBuffer **exponent);
 int MlnImpl_81039298(const MlnX509 *x509, MlnBuffer **out);
+int MlnImpl_81039418(const MlnX509ValidationParameters *parameters,
+		     const MlnX509Certificates *certificates);
+int MlnImpl_8103A888(const MlnX509Certificates *certificates, MlnBuffer **out);
 int MlnImpl_8103AA04(const MlnAsn1Node *node, MlnX509Algorithm *algorithm);
 int MlnImpl_8103AB18(const MlnAsn1Node *node, MlnDateTime *time);
 int MlnImpl_8103AC08(const MlnAsn1Node *node, MlnBuffer *name);
 int MlnImpl_8103AC34(MlnX509Extensions *extensions);
 int MlnImpl_8103AC98(const MlnAsn1Node *node, MlnX509Extensions **out);
+int MlnImpl_8103AFFC(const MlnBuffer *value, MlnBuffer *keyIdentifier, int heap);
+int MlnImpl_8103B0C4(const MlnDateTime *earlier, const MlnDateTime *later);
+int MlnImpl_8103B1E0(const MlnBuffer *serialNumber, const MlnBuffer *issuer);
+int MlnImpl_810583CC(const MlnBuffer *der, MlnX509Crl **crl);
+int MlnImpl_81058AD0(MlnX509Crl *crl);
+int MlnImpl_81058B80(const MlnX509Crl *crl, int *current);
+int MlnImpl_81058C0C(const MlnX509CrlNumber *a, const MlnX509CrlNumber *b, int *order);
+/* RSA (0x81055670-) */
+int MlnImpl_81055670(void **rsa, const MlnBuffer *modulus, const MlnBuffer *publicExponent,
+		     const MlnBuffer *privateExponent, const MlnBuffer *prime1,
+		     const MlnBuffer *prime2, const MlnBuffer *exponent1, const MlnBuffer *exponent2,
+		     const MlnBuffer *coefficient);
+int MlnImpl_81055ABC(void *rsa);
+int MlnImpl_81056F0C(void *rsa, int hash, const MlnBuffer *message, const MlnBuffer *signature);
 int MlnImpl_81034D38(const char *usage, int count, MlnBuffer **certificates, char **out);
 int MlnImpl_81035018(int encryptionCount, MlnBuffer **encryptionCertificates, int signingCount,
 		     MlnBuffer **signingCertificates, const MlnBuffer *role,

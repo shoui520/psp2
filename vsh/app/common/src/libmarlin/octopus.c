@@ -324,10 +324,10 @@ int MlnImpl_8102AE84(const MlnBuffer *state)
 	return ret;
 }
 
-MlnCoreInfo MlnImpl_8102AFBC(void)
+MlnX509CrlNumber MlnImpl_8102AFBC(void)
 {
-	MlnCoreInfo info;
-	MlnCoreInfo found;
+	MlnX509CrlNumber info;
+	MlnX509CrlNumber found;
 
 	MlnMemset(&info, 0, sizeof(info));
 	if (MlnImpl_8104A448() == 0) {
