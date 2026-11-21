@@ -1349,6 +1349,8 @@ int MlnImpl_8102302C(MlnBuffer *buffer, MlnBuffer **message);
 int MlnImpl_810232FC(MlnApiReportData *data, MlnBuffer **message);
 void MlnImpl_8102337C(unsigned int count, MlnBuffer **buffers);
 void MlnImpl_810233C4(MlnMessage *message);
+/* the list and pair-list fields, in another file */
+int MlnImpl_8108150C(const unsigned char *p, unsigned int left, void **payload);
 void MlnImpl_81020470(unsigned char **cursor, unsigned int count, MlnBuffer **buffers);
 void MlnImpl_810205A4(unsigned char *p, MlnMessagePairs *pairs);
 unsigned int MlnImpl_810206C0(const MlnBufferGroup *group);

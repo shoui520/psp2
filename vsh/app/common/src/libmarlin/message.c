@@ -127,7 +127,7 @@ __attribute__((noinline)) unsigned int MlnImpl_810206C0(const MlnBufferGroup *gr
 /* the encoded size of a message, by its type; 6 for a type it cannot send */
 __attribute__((noinline)) int MlnImpl_81020784(const MlnMessage *message, unsigned int *out)
 {
-	MlnBuffer **buffers = message->payload;
+	MlnBuffer **buffers;
 	MlnMessageResult *result;
 	MlnRightsSummary *rights;
 	MlnMessagePairs *pairs;
@@ -137,6 +137,7 @@ __attribute__((noinline)) int MlnImpl_81020784(const MlnMessage *message, unsign
 	switch (message->type) {
 	case 0x400:
 	case MLN_MESSAGE_HTTP_POST:
+		buffers = message->payload;
 		size = MlnBufferLength(buffers[1]) + 44 + MlnBufferLength(buffers[2]) +
 		       MlnBufferLength(buffers[3]);
 		break;
@@ -151,9 +152,11 @@ __attribute__((noinline)) int MlnImpl_81020784(const MlnMessage *message, unsign
 	case 0x601:
 	case 0x10b0:
 	case MLN_MESSAGE_TOKEN:
+		buffers = message->payload;
 		size = MlnBufferLength(buffers[0]) + 24;
 		break;
 	case MLN_MESSAGE_VALUE:
+		buffers = message->payload;
 		size = MlnBufferLength(buffers[1]) + 28;
 		break;
 	case MLN_MESSAGE_RIGHTS:
@@ -187,6 +190,7 @@ __attribute__((noinline)) int MlnImpl_81020784(const MlnMessage *message, unsign
 	case 0x504:
 	case 0x506:
 	case 0x10a4:
+		buffers = message->payload;
 		size = MlnBufferLength(buffers[0]) + 32 + MlnBufferLength(buffers[1]);
 		break;
 	case MLN_MESSAGE_PAIR:
@@ -208,6 +212,7 @@ __attribute__((noinline)) int MlnImpl_81020784(const MlnMessage *message, unsign
 	case MLN_MESSAGE_HANDLE:
 	case 0x10a2:
 	case MLN_MESSAGE_FOUND:
+		buffers = message->payload;
 		size = MlnBufferLength(buffers[0]) + 20;
 		break;
 	case MLN_MESSAGE_STATE:
@@ -1439,7 +1444,7 @@ __attribute__((noinline)) int MlnImpl_810232FC(MlnApiReportData *arg, MlnBuffer 
 }
 
 /* a buffer list's buffers and the list */
-__attribute__((noinline)) void MlnImpl_8102337C(unsigned int count, MlnBuffer **buffers)
+void MlnImpl_8102337C(unsigned int count, MlnBuffer **buffers)
 {
 	unsigned int i;
 
@@ -1448,4 +1453,682 @@ __attribute__((noinline)) void MlnImpl_8102337C(unsigned int count, MlnBuffer **
 	for (i = 0; i != count; i++)
 		MlnBufferDestroy(1, buffers[i]);
 	MlnFree(1, buffers);
+}
+
+/* a decoded message's fields; the message itself stays the caller's */
+__attribute__((noinline)) void MlnImpl_810233C4(MlnMessage *message)
+{
+	MlnMessagePairs *pairs;
+	MlnRightsSummary *rights;
+	unsigned int i;
+	void **fields;
+
+	if (message == NULL || message->payload == NULL)
+		return;
+	fields = message->payload;
+	switch (message->type) {
+	case 0x400:
+		MlnBufferDestroy(1, fields[1]);
+		MlnBufferDestroy(1, fields[2]);
+		MlnBufferDestroy(1, fields[3]);
+		break;
+	case MLN_MESSAGE_HTTP_POST:
+		MlnFree(1, fields[1]);		/* the URL, a string */
+		MlnBufferDestroy(1, fields[2]);
+		MlnBufferDestroy(1, fields[3]);
+		break;
+	case MLN_MESSAGE_HTTP_GET:
+		MlnFree(1, fields[0]);
+		break;
+	case MLN_MESSAGE_HTTP_BODY:
+	case 0x500:
+	case 0x601:
+	case 0x10a0:
+	case MLN_MESSAGE_HANDLE:
+	case 0x10a2:
+	case MLN_MESSAGE_FOUND:
+	case 0x10b0:
+	case MLN_MESSAGE_TOKEN:
+		MlnBufferDestroy(1, fields[0]);
+		break;
+	case MLN_MESSAGE_VALUE:
+		MlnBufferDestroy(1, ((MlnMessageValue *)message->payload)->data);
+		break;
+	case MLN_MESSAGE_RIGHTS:
+		rights = message->payload;
+		MlnImpl_8102337C(rights->idCount, rights->ids);
+		break;
+	case MLN_MESSAGE_LIST:
+	case MLN_MESSAGE_PAIRS:
+		pairs = message->payload;
+		if (pairs->items == NULL)
+			break;
+		for (i = 0; i != pairs->count; i++) {
+			if (pairs->items[i] != NULL) {
+				MlnImpl_8102337C(pairs->items[i]->count, pairs->items[i]->buffers);
+				MlnFree(1, pairs->items[i]);
+			}
+		}
+		MlnFree(1, pairs->items);
+		break;
+	case 0x504:
+	case 0x506:
+	case 0x10a4:
+		MlnBufferDestroy(1, fields[0]);
+		MlnBufferDestroy(1, fields[1]);
+		break;
+	case MLN_MESSAGE_VERSION:
+		MlnBufferDestroy(1, ((MlnApiVersion *)message->payload)->name);
+		MlnBufferDestroy(1, ((MlnApiVersion *)message->payload)->id);
+		break;
+	case MLN_MESSAGE_RESULT:
+		MlnImpl_81006D14(1, ((MlnMessageResult *)message->payload)->data);
+		break;
+	}
+	MlnFree(1, message->payload);
+}
+
+#define MLN_MESSAGE_ERROR_FORMAT	84	/* a message that does not parse */
+
+/* a big-endian word and halfword of a received message */
+static inline __attribute__((always_inline)) unsigned int MlnMessageGetWord(const unsigned char *p)
+{
+	return __builtin_bswap32(*(const unsigned int *)p);
+}
+
+static inline __attribute__((always_inline)) unsigned short MlnMessageGetHalf(const unsigned char *p)
+{
+	unsigned short half = *(const unsigned short *)p;
+
+	return (unsigned short)(half << 8 | half >> 8);
+}
+
+/* a buffer entry, left bytes from it to the message's end: its size, then its offset */
+static inline __attribute__((always_inline)) int MlnMessageGetBuffer(const unsigned char *p,
+								      unsigned int left,
+								      MlnBuffer **buffer)
+{
+	unsigned int size = MlnMessageGetWord(p), offset;
+
+	*buffer = NULL;
+	if (left <= 3)
+		return MLN_MESSAGE_ERROR_FORMAT;
+	offset = MlnMessageGetWord(p + 4);
+	if (left - 4 <= 3 || size > left - 8)
+		return MLN_MESSAGE_ERROR_FORMAT;
+	if (size == 0)
+		return MLN_OK;
+	*buffer = MlnBufferCreate(1, size, p + 8 + offset);
+	return *buffer != NULL ? MLN_OK : MLN_ERROR_NO_MEMORY;
+}
+
+/* a buffer given in place: its size, then its bytes */
+static inline __attribute__((always_inline)) int MlnMessageGetInline(const unsigned char *p,
+								      unsigned int left,
+								      MlnBuffer **buffer)
+{
+	unsigned int size = MlnMessageGetWord(p);
+
+	*buffer = NULL;
+	if (left <= 3 || size > left - 4)
+		return MLN_MESSAGE_ERROR_FORMAT;
+	if (size == 0)
+		return MLN_OK;
+	*buffer = MlnBufferCreate(1, size, p + 4);
+	return *buffer != NULL ? MLN_OK : MLN_ERROR_NO_MEMORY;
+}
+
+/*
+ * A buffer group: its three buffers and its entry table, each entry three buffers. The bounds
+ * are counted on from the message's, as if the group were where the value's entry is.
+ */
+static inline __attribute__((always_inline)) int MlnBufferGroupDecode(const unsigned char *p,
+								       unsigned int left,
+								       MlnBufferGroup **out)
+{
+	MlnBuffer *first = NULL, *second = NULL, *third = NULL, *table = NULL;
+	MlnBuffer *entry = NULL, *buffer[3] = { NULL, NULL, NULL };
+	MlnBuffer ***entries = NULL;
+	MlnBufferGroup *group = NULL;
+	const unsigned char *q;
+	unsigned int count = 0, rest, i;
+	int error;
+
+	error = MlnMessageGetBuffer(p, left, &first);
+	if (error != MLN_OK)
+		goto out;
+	error = MlnMessageGetBuffer(p + 8, left - 8, &second);
+	if (error != MLN_OK)
+		goto out;
+	error = MlnMessageGetBuffer(p + 16, left - 16, &third);
+	if (error != MLN_OK)
+		goto out;
+	error = MlnMessageGetBuffer(p + 24, left - 24, &table);
+	if (error != MLN_OK)
+		goto out;
+	if (table != NULL) {
+		q = table->data;
+		count = MlnMessageGetWord(q);
+		if (left - 32 <= 3 || 0xffffffffU / count <= 3) {
+			error = MLN_MESSAGE_ERROR_FORMAT;
+			goto out;
+		}
+		entries = MlnAllocate(1, count * sizeof(*entries));
+		if (entries == NULL) {
+			error = MLN_ERROR_NO_MEMORY;
+			goto out;
+		}
+		MlnMemset(entries, 0, count * sizeof(*entries));
+		q += 4;
+		rest = left - 36;
+		for (i = 0; i != count; i++) {
+			error = MlnMessageGetBuffer(q, rest, &entry);
+			if (error != MLN_OK)
+				goto out;
+			if (entry == NULL) {
+				error = MLN_CORE_ERROR_INVALID;
+				goto out;
+			}
+			error = MlnMessageGetBuffer(entry->data, rest - 8, &buffer[0]);
+			if (error != MLN_OK)
+				goto out;
+			error = MlnMessageGetBuffer(entry->data + 8, rest - 16, &buffer[1]);
+			if (error != MLN_OK)
+				goto out;
+			error = MlnMessageGetBuffer(entry->data + 16, rest - 24, &buffer[2]);
+			if (error != MLN_OK)
+				goto out;
+			entries[i] = MlnAllocate(1, 3 * sizeof(MlnBuffer *));
+			if (entries[i] == NULL) {
+				error = MLN_ERROR_NO_MEMORY;
+				goto out;
+			}
+			MlnMemset(entries[i], 0, 3 * sizeof(MlnBuffer *));
+			entries[i][0] = buffer[0];
+			entries[i][1] = buffer[1];
+			entries[i][2] = buffer[2];
+			buffer[0] = buffer[1] = buffer[2] = NULL;
+			MlnBufferDestroy(1, entry);
+			entry = NULL;
+			q += 8;
+			rest -= 32;
+		}
+	}
+	group = MlnAllocate(1, sizeof(*group));
+	if (group == NULL) {
+		error = MLN_ERROR_NO_MEMORY;
+		goto out;
+	}
+	MlnMemset(group, 0, sizeof(*group));
+	group->entries = entries;
+	entries = NULL;
+	group->third = third;
+	group->first = first;
+	group->second = second;
+	group->entryCount = count;
+	first = second = third = NULL;
+	*out = group;
+	group = NULL;
+out:
+	MlnBufferDestroy(1, first);
+	MlnBufferDestroy(1, second);
+	MlnBufferDestroy(1, third);
+	MlnBufferDestroy(1, table);
+	MlnBufferDestroy(1, entry);
+	MlnBufferDestroy(1, buffer[0]);
+	MlnBufferDestroy(1, buffer[1]);
+	MlnBufferDestroy(1, buffer[2]);
+	MlnImpl_81006D14(1, group);
+	if (entries != NULL) {
+		for (i = 0; i != count; i++) {
+			if (entries[i] != NULL) {
+				MlnBufferDestroy(1, entries[i][0]);
+				MlnBufferDestroy(1, entries[i][1]);
+				MlnBufferDestroy(1, entries[i][2]);
+			}
+		}
+		MlnFree(1, entries);
+	}
+	return error;
+}
+
+/* a result: its status, then a value (a buffer group), the error, or nothing */
+static inline __attribute__((always_inline)) int MlnMessageResultDecode(const unsigned char *p,
+									 unsigned int left,
+									 void **payload)
+{
+	MlnMessageResult *result;
+	MlnBufferGroup *group = NULL;
+	MlnBuffer *value;
+	unsigned int status = MlnMessageGetWord(p);
+	int error, code = 0;
+
+	if (left <= 3) {
+		value = NULL;
+		error = MLN_MESSAGE_ERROR_FORMAT;
+		goto out;
+	}
+	error = MlnMessageGetBuffer(p + 4, left - 4, &value);
+	if (error != MLN_OK)
+		goto out;
+	if (value != NULL) {
+		if (status == MLN_RESULT_VALUE) {
+			error = MlnBufferGroupDecode(value->data, left - 12, &group);
+			if (error != MLN_OK)
+				goto out;
+		} else if (status == MLN_RESULT_NONE) {
+			code = MlnMessageGetWord(value->data);
+		} else {
+			error = 6;
+			goto out;
+		}
+	}
+	result = MlnAllocate(1, sizeof(*result));
+	if (result == NULL) {
+		error = MLN_ERROR_NO_MEMORY;
+		goto out;
+	}
+	MlnMemset(result, 0, sizeof(*result));
+	result->data = group;
+	result->status = status;
+	result->error = code;
+	*payload = result;
+	group = NULL;
+out:
+	MlnBufferDestroy(1, value);
+	MlnImpl_81006D14(1, group);
+	return error;
+}
+
+/* a rights summary; one with version 0 stays empty */
+static inline __attribute__((always_inline)) int MlnRightsDecode(const unsigned char *p,
+								  unsigned int left,
+								  MlnRightsSummary *rights)
+{
+	MlnBuffer **ids = NULL, **list = NULL;
+	unsigned int count = 0, size, i, rest;
+	int notBefore, notAfter, notMoreThan, notLongerThan;
+	unsigned short state, flags;
+	const unsigned char *q;
+	int error;
+
+	if (left <= 3)
+		return MLN_MESSAGE_ERROR_FORMAT;
+	if (MlnMessageGetWord(p) == 0)
+		return MLN_OK;
+	if (left - 4 <= 3 || left - 8 <= 3)
+		return MLN_MESSAGE_ERROR_FORMAT;
+	state = MlnMessageGetHalf(p + 12);
+	if (left - 12 <= 1)
+		return MLN_MESSAGE_ERROR_FORMAT;
+	flags = MlnMessageGetHalf(p + 14);
+	if (left - 14 <= 1)
+		return MLN_MESSAGE_ERROR_FORMAT;
+	notBefore = MlnMessageGetWord(p + 16);
+	if (left - 16 <= 3)
+		return MLN_MESSAGE_ERROR_FORMAT;
+	notAfter = MlnMessageGetWord(p + 20);
+	if (left - 20 <= 3)
+		return MLN_MESSAGE_ERROR_FORMAT;
+	notMoreThan = MlnMessageGetWord(p + 24);
+	if (left - 24 <= 3)
+		return MLN_MESSAGE_ERROR_FORMAT;
+	notLongerThan = MlnMessageGetWord(p + 28);
+	if (left - 28 <= 3)
+		return MLN_MESSAGE_ERROR_FORMAT;
+	size = MlnMessageGetWord(p + 32);
+	if (left - 32 <= 3)
+		return MLN_MESSAGE_ERROR_FORMAT;
+	if (size != 0) {
+		count = MlnMessageGetWord(p + 36);
+		if (left - 36 <= 3 || 0xffffffffU / count <= 3) {
+			error = MLN_MESSAGE_ERROR_FORMAT;
+			goto out;
+		}
+		ids = MlnAllocate(1, count * sizeof(*ids));
+		if (ids == NULL) {
+			error = MLN_ERROR_NO_MEMORY;
+			goto out;
+		}
+		MlnMemset(ids, 0, count * sizeof(*ids));
+		q = p + 40;
+		rest = left - 40;
+		for (i = 0; i != count; i++) {
+			error = MlnMessageGetBuffer(q, rest, &ids[i]);
+			if (error != MLN_OK)
+				goto out;
+			q += 8;
+			rest -= 8;
+		}
+		list = ids;
+		ids = NULL;
+out:
+		MlnImpl_8102337C(count, ids);
+		if (error != MLN_OK)
+			return error;
+	}
+	rights->idCount = count;
+	rights->ids = list;
+	rights->state = state;
+	rights->notBefore = (flags & 0x8000) != 0 ? notBefore : -1;
+	rights->notAfter = (flags & 0x4000) != 0 ? notAfter : -1;
+	rights->notMoreThan = (flags & 0x2000) != 0 ? notMoreThan : -1;
+	rights->notLongerThan = (flags & 0x1000) != 0 ? notLongerThan : -1;
+	return MLN_OK;
+}
+
+/*
+ * A received message: its header (version 1, type, size, six zero bytes) and its fields, as the
+ * type's payload. 84 for a message that does not parse, 6 for a result it cannot hold.
+ */
+__attribute__((noinline)) int MlnImpl_8102371C(const MlnBuffer *reply, MlnMessage *message)
+{
+	unsigned char zero[12];
+	MlnMessage decoded;
+	MlnBuffer *buffer[3] = { NULL, NULL, NULL };
+	const unsigned char *data, *p;
+	unsigned int size, left;
+	unsigned int pair[2];
+	unsigned short half[3];
+	unsigned short *halves;
+	MlnBuffer **fields;
+	unsigned int *words;
+	void *payload;
+	int error;
+
+	MlnMemset(&decoded, 0, sizeof(decoded));
+	if (reply == NULL || message == NULL) {
+		error = MLN_CORE_ERROR_INVALID;
+		goto out;
+	}
+	data = reply->data;
+	size = reply->size;
+	if (data == NULL || size <= 15 || data[10] != 0 || data[11] != 0 || data[12] != 0 ||
+	    data[13] != 0 || data[14] != 0 || data[15] != 0 || size != MlnMessageGetWord(data + 6) ||
+	    MlnMessageGetHalf(data) != 1) {
+		error = MLN_MESSAGE_ERROR_FORMAT;
+		goto out;
+	}
+	p = data + 16;
+	left = size - 16;
+	decoded.type = MlnMessageGetWord(data + 2);
+	switch (decoded.type) {
+	case 0x400:
+	case MLN_MESSAGE_HTTP_POST:
+		half[0] = MlnMessageGetHalf(p);
+		if (left <= 1 || left - 2 <= 1) {
+			error = MLN_MESSAGE_ERROR_FORMAT;
+			goto three;
+		}
+		error = MlnMessageGetBuffer(p + 4, left - 4, &buffer[0]);
+		if (error != MLN_OK)
+			goto three;
+		error = MlnMessageGetBuffer(p + 12, left - 12, &buffer[1]);
+		if (error != MLN_OK)
+			goto three;
+		error = MlnMessageGetBuffer(p + 20, left - 20, &buffer[2]);
+		if (error != MLN_OK)
+			goto three;
+		halves = MlnAllocate(1, sizeof(MlnMessagePost));
+		if (halves == NULL) {
+			error = MLN_ERROR_NO_MEMORY;
+			goto three;
+		}
+		MlnMemset(halves, 0, sizeof(MlnMessagePost));
+		((MlnMessagePost *)halves)->method = half[0];
+		((MlnMessagePost *)halves)->url = buffer[0];
+		((MlnMessagePost *)halves)->body = buffer[1];
+		((MlnMessagePost *)halves)->headers = buffer[2];
+		decoded.payload = halves;
+		buffer[0] = buffer[1] = buffer[2] = NULL;
+three:
+		MlnBufferDestroy(1, buffer[0]);
+		MlnBufferDestroy(1, buffer[1]);
+		MlnBufferDestroy(1, buffer[2]);
+		break;
+	case 0x401:
+		half[0] = MlnMessageGetHalf(p);
+		if (left <= 1) {
+			error = MLN_MESSAGE_ERROR_FORMAT;
+			goto out;
+		}
+		halves = MlnAllocate(1, sizeof(*halves));
+		if (halves == NULL) {
+			error = MLN_ERROR_NO_MEMORY;
+			goto out;
+		}
+		MlnMemset(halves, 0, sizeof(*halves));
+		*halves = half[0];
+		decoded.payload = halves;
+		error = MLN_OK;
+		break;
+	case MLN_MESSAGE_HTTP_GET:
+	case MLN_MESSAGE_HTTP_BODY:
+	case 0x500:
+	case 0x601:
+	case 0x10b0:
+	case MLN_MESSAGE_TOKEN:
+		error = MlnMessageGetBuffer(p, left, &buffer[0]);
+		if (error != MLN_OK)
+			goto one;
+		goto single;
+	case MLN_MESSAGE_HANDLE:
+	case 0x10a2:
+	case MLN_MESSAGE_FOUND:
+		error = MlnMessageGetInline(p, left, &buffer[0]);
+		if (error != MLN_OK)
+			goto one;
+single:
+		fields = MlnAllocate(1, sizeof(*fields));
+		if (fields == NULL) {
+			error = MLN_ERROR_NO_MEMORY;
+			goto one;
+		}
+		MlnMemset(fields, 0, sizeof(*fields));
+		fields[0] = buffer[0];
+		decoded.payload = fields;
+		buffer[0] = NULL;
+one:
+		MlnBufferDestroy(1, buffer[0]);
+		break;
+	case MLN_MESSAGE_VALUE:
+		half[0] = MlnMessageGetHalf(p);
+		if (left <= 1 || left - 2 <= 1) {
+			error = MLN_MESSAGE_ERROR_FORMAT;
+			goto one;
+		}
+		error = MlnMessageGetBuffer(p + 4, left - 4, &buffer[0]);
+		if (error != MLN_OK)
+			goto one;
+		halves = MlnAllocate(1, sizeof(MlnMessageValue));
+		if (halves == NULL) {
+			error = MLN_ERROR_NO_MEMORY;
+			goto one;
+		}
+		MlnMemset(halves, 0, sizeof(MlnMessageValue));
+		((MlnMessageValue *)halves)->kind = half[0];
+		((MlnMessageValue *)halves)->data = buffer[0];
+		decoded.payload = halves;
+		buffer[0] = NULL;
+		goto one;
+	case MLN_MESSAGE_STATUS:
+		MlnMemset(zero, 0, sizeof(zero));
+		if (size != 32 || MlnMemcmp(p + 4, zero, sizeof(zero)) != 0) {
+			error = MLN_MESSAGE_ERROR_FORMAT;
+			goto out;
+		}
+		payload = MlnAllocate(1, 4);
+		if (payload == NULL) {
+			error = MLN_ERROR_NO_MEMORY;
+			goto out;
+		}
+		MlnMemset(payload, 0, 4);
+		MlnMemcpy(payload, p, 4);
+		decoded.payload = payload;
+		error = MLN_OK;
+		break;
+	case MLN_MESSAGE_RIGHTS:
+		payload = MlnAllocate(1, sizeof(MlnRightsSummary));
+		if (payload == NULL) {
+			error = MLN_ERROR_NO_MEMORY;
+			goto out;
+		}
+		MlnMemset(payload, 0, sizeof(MlnRightsSummary));
+		error = MlnRightsDecode(p, left, payload);
+		if (error != MLN_OK) {
+			MlnFree(1, payload);
+			goto out;
+		}
+		decoded.payload = payload;
+		break;
+	case 0x502:
+	case 0x603:
+	case 0x10a6:
+		error = MLN_OK;
+		break;
+	case MLN_MESSAGE_LIST:
+	case MLN_MESSAGE_PAIRS:
+		error = MlnImpl_8108150C(p, left, &decoded.payload);
+		break;
+	case 0x504:
+	case 0x10a4:
+		error = MlnMessageGetBuffer(p, left, &buffer[0]);
+		if (error != MLN_OK)
+			goto two;
+		error = MlnMessageGetBuffer(p + 8, left - 8, &buffer[1]);
+		if (error != MLN_OK)
+			goto two;
+		fields = MlnAllocate(1, 2 * sizeof(*fields));
+		if (fields == NULL) {
+			error = MLN_ERROR_NO_MEMORY;
+			goto two;
+		}
+		MlnMemset(fields, 0, 2 * sizeof(*fields));
+		fields[0] = buffer[0];
+		fields[1] = buffer[1];
+		decoded.payload = fields;
+		buffer[0] = buffer[1] = NULL;
+two:
+		MlnBufferDestroy(1, buffer[0]);
+		MlnBufferDestroy(1, buffer[1]);
+		break;
+	case 0x506:
+		error = MlnMessageGetBuffer(p, left, &buffer[0]);
+		if (error != MLN_OK)
+			goto pair;
+		error = MlnMessageGetBuffer(p + 8, left - 8, &buffer[1]);
+		if (error != MLN_OK)
+			goto pair;
+		fields = MlnAllocate(1, 2 * sizeof(*fields));
+		if (fields == NULL) {
+			error = MLN_ERROR_NO_MEMORY;
+			goto pair;
+		}
+		MlnMemset(fields, 0, 2 * sizeof(*fields));
+		fields[0] = buffer[0];
+		fields[1] = buffer[1];
+		decoded.payload = fields;
+		buffer[0] = buffer[1] = NULL;
+pair:
+		MlnBufferDestroy(1, buffer[1]);
+		MlnBufferDestroy(1, buffer[0]);
+		break;
+	case MLN_MESSAGE_PAIR:
+		pair[0] = MlnMessageGetWord(p);
+		pair[1] = MlnMessageGetWord(p + 4);
+		if (left <= 3 || left - 4 <= 3) {
+			error = MLN_MESSAGE_ERROR_FORMAT;
+			goto out;
+		}
+		words = MlnAllocate(1, 2 * sizeof(*words));
+		if (words == NULL) {
+			error = MLN_ERROR_NO_MEMORY;
+			goto out;
+		}
+		MlnMemset(words, 0, 2 * sizeof(*words));
+		words[0] = pair[0];
+		words[1] = pair[1];
+		decoded.payload = words;
+		error = MLN_OK;
+		break;
+	case MLN_MESSAGE_VERSION:
+		half[0] = MlnMessageGetHalf(p);
+		half[1] = MlnMessageGetHalf(p + 2);
+		half[2] = MlnMessageGetHalf(p + 4);
+		if (left <= 1 || left - 2 <= 1 || left - 4 <= 1 || left - 6 <= 1) {
+			error = MLN_MESSAGE_ERROR_FORMAT;
+			goto two;
+		}
+		error = MlnMessageGetBuffer(p + 8, left - 8, &buffer[0]);
+		if (error != MLN_OK)
+			goto two;
+		error = MlnMessageGetBuffer(p + 16, left - 16, &buffer[1]);
+		if (error != MLN_OK)
+			goto two;
+		halves = MlnAllocate(1, sizeof(MlnApiVersion));
+		if (halves == NULL) {
+			error = MLN_ERROR_NO_MEMORY;
+			goto two;
+		}
+		MlnMemset(halves, 0, sizeof(MlnApiVersion));
+		((MlnApiVersion *)halves)->major = half[0];
+		((MlnApiVersion *)halves)->minor = half[1];
+		((MlnApiVersion *)halves)->build = half[2];
+		((MlnApiVersion *)halves)->name = buffer[0];
+		((MlnApiVersion *)halves)->id = buffer[1];
+		decoded.payload = halves;
+		buffer[0] = buffer[1] = NULL;
+		goto two;
+	case MLN_MESSAGE_RESULT:
+		error = MlnMessageResultDecode(p, left, &decoded.payload);
+		break;
+	case 0x10a0:
+		if (left <= 1) {
+			error = MLN_MESSAGE_ERROR_FORMAT;
+			goto out;
+		}
+		half[0] = MlnMessageGetHalf(p + 2);
+		if (left - 2 <= 1) {
+			error = MLN_MESSAGE_ERROR_FORMAT;
+			goto out;
+		}
+		halves = MlnAllocate(1, 2 * sizeof(*halves));
+		if (halves == NULL) {
+			error = MLN_ERROR_NO_MEMORY;
+			goto out;
+		}
+		MlnMemset(halves, 0, 2 * sizeof(*halves));
+		halves[0] = half[0];
+		decoded.payload = halves;
+		error = MLN_OK;
+		break;
+	case MLN_MESSAGE_STATE:
+	case 0x10ae:
+		pair[0] = MlnMessageGetWord(p);
+		if (left <= 3) {
+			error = MLN_MESSAGE_ERROR_FORMAT;
+			goto out;
+		}
+		words = MlnAllocate(1, sizeof(*words));
+		if (words == NULL) {
+			error = MLN_ERROR_NO_MEMORY;
+			goto out;
+		}
+		MlnMemset(words, 0, sizeof(*words));
+		*words = pair[0];
+		decoded.payload = words;
+		error = MLN_OK;
+		break;
+	default:
+		error = MLN_MESSAGE_ERROR_FORMAT;
+		goto out;
+	}
+	if (error == MLN_OK) {
+		message->type = decoded.type;
+		message->payload = decoded.payload;
+		decoded.payload = NULL;
+	}
+out:
+	MlnImpl_810233C4(&decoded);
+	return error;
 }
