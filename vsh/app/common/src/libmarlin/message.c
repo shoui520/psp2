@@ -463,12 +463,21 @@ out:
 	}
 }
 
+/* a message's header: version 1, its type and its size */
+static inline __attribute__((always_inline)) void MlnMessagePutHeader(unsigned char *p,
+								      unsigned int type,
+								      unsigned int size)
+{
+	MlnMessagePutHalf(p, 1);
+	MlnMessagePutWord(p + 2, type);
+	MlnMessagePutWord(p + 6, size);
+}
+
 /* a message as one buffer: its header (version 1, type, size) and its fields */
 int MlnImpl_81021640(const MlnMessage *message, MlnBuffer **out)
 {
 	MlnBuffer *buffer = NULL;
-	unsigned char *p;
-	unsigned int size = 0, type;
+	unsigned int size = 0;
 	int error;
 
 	error = MlnImpl_81020784(message, &size);
@@ -480,11 +489,7 @@ int MlnImpl_81021640(const MlnMessage *message, MlnBuffer **out)
 		goto out;
 	}
 	MlnMemset(buffer->data, 0, buffer->size);
-	p = buffer->data;
-	type = message->type;
-	MlnMessagePutHalf(p, 1);
-	MlnMessagePutWord(p + 2, type);
-	MlnMessagePutWord(p + 6, size);
+	MlnMessagePutHeader(buffer->data, message->type, size);
 	error = MlnImpl_81020B20(buffer->data + 16, message);
 	if (error == MLN_OK) {
 		*out = buffer;
@@ -1020,4 +1025,427 @@ __attribute__((noinline)) int MlnImpl_81022570(MlnBuffer *first, MlnBuffer *seco
 	}
 	MlnBufferDestroy(1, encoded);
 	return error;
+}
+
+/* a list of buffers, sent as a list of pairs: each two items one pair */
+__attribute__((noinline)) int MlnImpl_81022608(MlnApiReportData *data, MlnBuffer **message)
+{
+	MlnBuffer *encoded = NULL;
+	MlnMessagePairs fields = { 0, NULL };
+	MlnMessageList *list;
+	MlnMessage request;
+	unsigned int count, i;
+	MlnBuffer **items;
+	int error;
+
+	request.type = MLN_MESSAGE_PAIRS;
+	request.payload = &fields;
+	if (data == NULL || message == NULL) {
+		error = MLN_CORE_ERROR_INVALID;
+		goto out;
+	}
+	count = data->items.count;
+	items = data->items.items;
+	if ((count == 0 && items != NULL) || (count != 0 && items == NULL) || (count & 1) != 0) {
+		error = MLN_CORE_ERROR_INVALID;
+		goto out;
+	}
+	if (count != 0) {
+		fields.count = count / 2;
+		fields.items = MlnAllocate(1, fields.count * sizeof(*fields.items));
+		if (fields.items == NULL) {
+			error = MLN_ERROR_NO_MEMORY;
+			goto out;
+		}
+		MlnMemset(fields.items, 0, fields.count * sizeof(*fields.items));
+		MlnMemset(fields.items, 0, fields.count * sizeof(*fields.items));
+		for (i = 0; i < fields.count; i++) {
+			list = MlnAllocate(1, sizeof(*list));
+			if (list == NULL) {
+				error = MLN_ERROR_NO_MEMORY;
+				goto out;
+			}
+			MlnMemset(list, 0, sizeof(*list));
+			list->count = 2;
+			list->buffers = NULL;
+			list->buffers = MlnAllocate(1, 2 * sizeof(*list->buffers));
+			if (list->buffers == NULL) {
+				error = MLN_ERROR_NO_MEMORY;
+				MlnBufferDestroy(1, encoded);
+				MlnFree(1, list->buffers);
+				MlnFree(1, list);
+				goto release;
+			}
+			MlnMemset(list->buffers, 0, 2 * sizeof(*list->buffers));
+			list->buffers[0] = items[2 * i];
+			list->buffers[1] = items[2 * i + 1];
+			fields.items[i] = list;
+		}
+	}
+	error = MlnImpl_81021640(&request, &encoded);
+	if (error == MLN_OK) {
+		*message = encoded;
+		encoded = NULL;
+	}
+out:
+	MlnBufferDestroy(1, encoded);
+release:
+	if (fields.items != NULL) {
+		for (i = 0; i < fields.count; i++) {
+			if (fields.items[i] != NULL)
+				MlnFree(1, fields.items[i]->buffers);
+			MlnFree(1, fields.items[i]);
+		}
+		MlnFree(1, fields.items);
+	}
+	return error;
+}
+
+/* the state, 0 or 0x100100 */
+__attribute__((noinline)) int MlnImpl_8102285C(MlnApiReportData *data, MlnBuffer **message)
+{
+	MlnBuffer *encoded = NULL;
+	int field = 0;
+	MlnMessage request;
+	int error;
+
+	request.type = MLN_MESSAGE_STATE;
+	request.payload = &field;
+	if (data == NULL || message == NULL) {
+		error = MLN_CORE_ERROR_INVALID;
+	} else if (data->state == 0x100100 || data->state == 0) {
+		field = data->state;
+		error = MlnImpl_81021640(&request, &encoded);
+		if (error == MLN_OK) {
+			*message = encoded;
+			encoded = NULL;
+		}
+	} else {
+		error = MLN_CORE_ERROR_INVALID;
+	}
+	MlnBufferDestroy(1, encoded);
+	return error;
+}
+
+/* type 0x10a6, no fields */
+__attribute__((noinline)) int MlnImpl_810228FC(MlnBuffer **request)
+{
+	MlnBuffer *encoded = NULL;
+	MlnMessage message;
+	int error;
+
+	message.type = 0x10a6;
+	message.payload = NULL;
+	if (request == NULL) {
+		error = MLN_CORE_ERROR_INVALID;
+	} else {
+		error = MlnImpl_81021640(&message, &encoded);
+		if (error == MLN_OK) {
+			*request = encoded;
+			encoded = NULL;
+		}
+	}
+	MlnBufferDestroy(1, encoded);
+	return error;
+}
+
+/* type 0x603, no fields */
+__attribute__((noinline)) int MlnImpl_81022A1C(MlnBuffer **request)
+{
+	MlnBuffer *encoded = NULL;
+	MlnMessage message;
+	int error;
+
+	message.type = 0x603;
+	message.payload = NULL;
+	if (request == NULL) {
+		error = MLN_CORE_ERROR_INVALID;
+	} else {
+		error = MlnImpl_81021640(&message, &encoded);
+		if (error == MLN_OK) {
+			*request = encoded;
+			encoded = NULL;
+		}
+	}
+	MlnBufferDestroy(1, encoded);
+	return error;
+}
+
+/* a result: a value with its data, or none (the error) or busy without */
+__attribute__((noinline)) int MlnImpl_81022B3C(int status, int error, void *data, MlnBuffer **reply)
+{
+	MlnBuffer *encoded = NULL;
+	MlnMessageResult fields;
+	MlnMessage message;
+	int ret;
+
+	fields.status = status;
+	fields.error = error;
+	fields.data = data;
+	message.type = MLN_MESSAGE_RESULT;
+	message.payload = &fields;
+	if (reply == NULL) {
+		ret = MLN_CORE_ERROR_INVALID;
+		goto out;
+	}
+	if (status == MLN_RESULT_VALUE) {
+		if (data == NULL) {
+			ret = MLN_CORE_ERROR_INVALID;
+			goto out;
+		}
+	} else {
+		if (status != MLN_RESULT_NONE && status != MLN_RESULT_BUSY) {
+			ret = MLN_CORE_ERROR_INVALID;
+			goto out;
+		}
+		if (data != NULL) {
+			ret = MLN_CORE_ERROR_INVALID;
+			goto out;
+		}
+	}
+	ret = MlnImpl_81021640(&message, &encoded);
+	if (ret == MLN_OK) {
+		*reply = encoded;
+		encoded = NULL;
+	}
+out:
+	MlnBufferDestroy(1, encoded);
+	return ret;
+}
+
+/* type 0x10a4: two buffers, the second required */
+__attribute__((noinline)) int MlnImpl_81022C10(MlnBuffer *first, MlnBuffer *second,
+					       MlnBuffer **request)
+{
+	MlnBuffer *encoded = NULL;
+	MlnBuffer *fields[2] = { first, second };
+	MlnMessage message;
+	int error;
+
+	message.type = 0x10a4;
+	message.payload = fields;
+	if (second == NULL || request == NULL) {
+		error = MLN_CORE_ERROR_INVALID;
+	} else {
+		error = MlnImpl_81021640(&message, &encoded);
+		if (error == MLN_OK) {
+			*request = encoded;
+			encoded = NULL;
+		}
+	}
+	MlnBufferDestroy(1, encoded);
+	return error;
+}
+
+/* the status: 0, 0x10 to 0x13 or 0x80, and whether a result is to be fetched */
+__attribute__((noinline)) int MlnImpl_81022C98(int status, int result, MlnBuffer **reply)
+{
+	MlnMessageStatus fields;
+	MlnBuffer *encoded = NULL;
+	MlnMessage message;
+	int error;
+
+	message.type = MLN_MESSAGE_STATUS;
+	message.payload = &fields;
+	if (reply == NULL) {
+		error = MLN_CORE_ERROR_INVALID;
+		goto out;
+	}
+	if ((unsigned int)status <= 0x13) {
+		if ((unsigned int)status < 0x10 && status != 0) {
+			error = MLN_CORE_ERROR_INVALID;
+			goto out;
+		}
+	} else if (status != 0x80) {
+		error = MLN_CORE_ERROR_INVALID;
+		goto out;
+	}
+	MlnMemset(&fields, 0, 4);
+	fields.failed = status;
+	if (result == 1)
+		fields.result = 1;
+	error = MlnImpl_81021640(&message, &encoded);
+	if (error == MLN_OK) {
+		*reply = encoded;
+		encoded = NULL;
+	}
+out:
+	MlnBufferDestroy(1, encoded);
+	return error;
+}
+
+/* type 0x10ae: a word */
+__attribute__((noinline)) int MlnImpl_81022D54(void *arg, MlnBuffer **request)
+{
+	MlnBuffer *encoded = NULL;
+	void *field = arg;
+	MlnMessage message;
+	int error;
+
+	message.type = 0x10ae;
+	message.payload = &field;
+	if (request == NULL) {
+		error = MLN_CORE_ERROR_INVALID;
+	} else {
+		error = MlnImpl_81021640(&message, &encoded);
+		if (error == MLN_OK) {
+			*request = encoded;
+			encoded = NULL;
+		}
+	}
+	MlnBufferDestroy(1, encoded);
+	return error;
+}
+
+/* a buffer the client found */
+__attribute__((noinline)) int MlnImpl_81022E7C(MlnApiReportData *arg, MlnBuffer **message)
+{
+	MlnBuffer *encoded = NULL;
+	MlnBuffer *field = NULL;
+	MlnMessage request;
+	int error;
+
+	request.type = MLN_MESSAGE_FOUND;
+	request.payload = &field;
+	if (arg == NULL || message == NULL) {
+		error = MLN_CORE_ERROR_INVALID;
+	} else {
+		field = arg->buffer;
+		error = MlnImpl_81021640(&request, &encoded);
+		if (error == MLN_OK) {
+			*message = encoded;
+			encoded = NULL;
+		}
+	}
+	MlnBufferDestroy(1, encoded);
+	return error;
+}
+
+/* type 0x10a0: version 1.0 */
+__attribute__((noinline)) int MlnImpl_81022EFC(MlnBuffer **request)
+{
+	MlnBuffer *encoded = NULL;
+	unsigned short fields[2] = { 1, 0 };
+	MlnMessage message;
+	int error;
+
+	message.type = 0x10a0;
+	message.payload = fields;
+	if (request == NULL) {
+		error = MLN_CORE_ERROR_INVALID;
+	} else {
+		error = MlnImpl_81021640(&message, &encoded);
+		if (error == MLN_OK) {
+			*request = encoded;
+			encoded = NULL;
+		}
+	}
+	MlnBufferDestroy(1, encoded);
+	return error;
+}
+
+/* a handle */
+__attribute__((noinline)) int MlnImpl_8102302C(MlnBuffer *arg, MlnBuffer **message)
+{
+	MlnBuffer *encoded = NULL;
+	MlnBuffer *field = NULL;
+	MlnMessage request;
+	int error;
+
+	request.type = MLN_MESSAGE_HANDLE;
+	request.payload = &field;
+	if (arg == NULL || message == NULL) {
+		error = MLN_CORE_ERROR_INVALID;
+	} else {
+		field = arg;
+		error = MlnImpl_81021640(&request, &encoded);
+		if (error == MLN_OK) {
+			*message = encoded;
+			encoded = NULL;
+		}
+	}
+	MlnBufferDestroy(1, encoded);
+	return error;
+}
+
+/* type 0x10a2: one buffer */
+__attribute__((noinline)) int MlnImpl_810230AC(MlnBuffer *arg, MlnBuffer **request)
+{
+	MlnBuffer *encoded = NULL;
+	MlnBuffer *field = arg;
+	MlnMessage message;
+	int error;
+
+	message.type = 0x10a2;
+	message.payload = &field;
+	if (request == NULL) {
+		error = MLN_CORE_ERROR_INVALID;
+	} else {
+		error = MlnImpl_81021640(&message, &encoded);
+		if (error == MLN_OK) {
+			*request = encoded;
+			encoded = NULL;
+		}
+	}
+	MlnBufferDestroy(1, encoded);
+	return error;
+}
+
+/* type 0x10b0: an action token */
+__attribute__((noinline)) int MlnImpl_810231D4(MlnBuffer *arg, MlnBuffer **request)
+{
+	MlnBuffer *encoded = NULL;
+	MlnBuffer *field = arg;
+	MlnMessage message;
+	int error;
+
+	message.type = 0x10b0;
+	message.payload = &field;
+	if (request == NULL) {
+		error = MLN_CORE_ERROR_INVALID;
+	} else {
+		error = MlnImpl_81021640(&message, &encoded);
+		if (error == MLN_OK) {
+			*request = encoded;
+			encoded = NULL;
+		}
+	}
+	MlnBufferDestroy(1, encoded);
+	return error;
+}
+
+/* a token */
+__attribute__((noinline)) int MlnImpl_810232FC(MlnApiReportData *arg, MlnBuffer **message)
+{
+	MlnBuffer *encoded = NULL;
+	MlnBuffer *field = NULL;
+	MlnMessage request;
+	int error;
+
+	request.type = MLN_MESSAGE_TOKEN;
+	request.payload = &field;
+	if (arg == NULL || message == NULL) {
+		error = MLN_CORE_ERROR_INVALID;
+	} else {
+		field = arg->buffer;
+		error = MlnImpl_81021640(&request, &encoded);
+		if (error == MLN_OK) {
+			*message = encoded;
+			encoded = NULL;
+		}
+	}
+	MlnBufferDestroy(1, encoded);
+	return error;
+}
+
+/* a buffer list's buffers and the list */
+__attribute__((noinline)) void MlnImpl_8102337C(unsigned int count, MlnBuffer **buffers)
+{
+	unsigned int i;
+
+	if (buffers == NULL)
+		return;
+	for (i = 0; i != count; i++)
+		MlnBufferDestroy(1, buffers[i]);
+	MlnFree(1, buffers);
 }

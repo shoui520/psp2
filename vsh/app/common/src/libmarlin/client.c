@@ -1435,7 +1435,7 @@ gated:
 			ret = 84;
 		break;
 busy:
-		ret = MlnImpl_81022C98(17, &reply);
+		ret = MlnImpl_81022C98(17, 0, &reply);
 		if (ret != MLN_OK)
 			break;
 		request->type = 5;
@@ -1597,7 +1597,7 @@ decoded:
 refuse:
 	if (session != NULL) {
 		session->allowed = 32;
-		ret = MlnImpl_81022C98(code, &reply);
+		ret = MlnImpl_81022C98(code, 1, &reply);
 		if (ret != MLN_OK) {
 			answer = NULL;
 		} else {
@@ -1621,12 +1621,13 @@ out:
 #define MLN_SESSION_NAME	"sony.net:1.0;"
 
 /* a status reply */
-static inline __attribute__((always_inline)) int MlnSessionStatus(int code, MlnBuffer **message)
+static inline __attribute__((always_inline)) int MlnSessionStatus(int code, int result,
+								 MlnBuffer **message)
 {
 	MlnBuffer *reply = NULL;
 	int ret;
 
-	ret = MlnImpl_81022C98(code, &reply);
+	ret = MlnImpl_81022C98(code, result, &reply);
 	if (ret == MLN_OK) {
 		*message = reply;
 		reply = NULL;
@@ -1658,7 +1659,7 @@ __attribute__((noinline)) int MlnImpl_81020094(MlnSession *session, int status, 
 	session->allowed = 1;
 	if (status != MLN_OK) {
 		session->allowed = 32;
-		ret = MlnSessionStatus(128, &message);
+		ret = MlnSessionStatus(128, 1, &message);
 		if (ret != MLN_OK)
 			goto out;
 	} else if (request != NULL) {
@@ -1684,7 +1685,7 @@ __attribute__((noinline)) int MlnImpl_81020094(MlnSession *session, int status, 
 		case 1:
 		case 2:
 		case 3:
-			ret = MlnSessionStatus(0, &message);
+			ret = MlnSessionStatus(0, 0, &message);
 			if (ret != MLN_OK)
 				goto out;
 			break;
@@ -1695,7 +1696,7 @@ __attribute__((noinline)) int MlnImpl_81020094(MlnSession *session, int status, 
 			break;
 		case 16:
 			session->allowed = 32;
-			ret = MlnSessionStatus(0, &message);
+			ret = MlnSessionStatus(0, 1, &message);
 			if (ret != MLN_OK)
 				goto out;
 			break;
@@ -1742,7 +1743,7 @@ __attribute__((noinline)) int MlnImpl_81020094(MlnSession *session, int status, 
 		if (ret != MLN_OK)
 			goto out;
 	} else {
-		ret = MlnSessionStatus(0, &message);
+		ret = MlnSessionStatus(0, 0, &message);
 		if (ret != MLN_OK)
 			goto out;
 	}

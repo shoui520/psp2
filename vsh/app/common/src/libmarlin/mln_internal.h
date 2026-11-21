@@ -515,6 +515,7 @@ typedef union MlnApiReportData {
 	MlnRightsSummary rights;
 	MlnBuffer *buffer;
 	void *value;
+	int state;			/* 0 or 0x100100 */
 	struct {
 		int first;
 		int second;
@@ -1326,15 +1327,15 @@ int MlnImpl_8102190C(int reserved, const char *url, MlnBuffer *body, MlnHttpHead
 		     MlnBuffer **request);
 int MlnImpl_81022180(MlnBuffer **request);
 int MlnImpl_81021D70(MlnBuffer *license, MlnBuffer **request);
-int MlnImpl_81022C10(void *a1, void *a2, MlnBuffer **request);
-int MlnImpl_81022D54(void *a1, MlnBuffer **request);
+int MlnImpl_81022C10(MlnBuffer *first, MlnBuffer *second, MlnBuffer **request);
+int MlnImpl_81022D54(void *arg, MlnBuffer **request);
 int MlnImpl_810228FC(MlnBuffer **request);
 int MlnImpl_81022EFC(MlnBuffer **request);
-int MlnImpl_810230AC(MlnBuffer *a1, MlnBuffer **request);
+int MlnImpl_810230AC(MlnBuffer *arg, MlnBuffer **request);
 int MlnImpl_810231D4(MlnBuffer *token, MlnBuffer **request);
 int MlnImpl_8102371C(const MlnBuffer *reply, MlnMessage *message);
-int MlnImpl_81022C98(int status, MlnBuffer **reply);
-int MlnImpl_81022B3C(int code, int status, void *data, MlnBuffer **reply);
+int MlnImpl_81022C98(int status, int result, MlnBuffer **reply);
+int MlnImpl_81022B3C(int status, int error, void *data, MlnBuffer **reply);
 int MlnImpl_81021CD4(int kind, void *data, MlnBuffer **message);
 int MlnImpl_810223C8(int major, int minor, int build, MlnBuffer *name, MlnBuffer *id,
 		     MlnBuffer **message);
@@ -1346,6 +1347,7 @@ int MlnImpl_81022E7C(MlnApiReportData *data, MlnBuffer **message);
 int MlnImpl_81022608(MlnApiReportData *data, MlnBuffer **message);
 int MlnImpl_8102302C(MlnBuffer *buffer, MlnBuffer **message);
 int MlnImpl_810232FC(MlnApiReportData *data, MlnBuffer **message);
+void MlnImpl_8102337C(unsigned int count, MlnBuffer **buffers);
 void MlnImpl_810233C4(MlnMessage *message);
 void MlnImpl_81020470(unsigned char **cursor, unsigned int count, MlnBuffer **buffers);
 void MlnImpl_810205A4(unsigned char *p, MlnMessagePairs *pairs);
