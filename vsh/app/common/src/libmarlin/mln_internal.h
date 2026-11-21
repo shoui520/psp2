@@ -952,11 +952,8 @@ typedef struct MlnServiceArgs {
 	MlnServiceArg *items;
 } MlnServiceArgs;
 
-/* a service reply: its values, each a type and a value like the arguments */
-typedef struct MlnServiceReply {
-	unsigned int count;
-	MlnServiceArg *values;
-} MlnServiceReply;
+/* a service reply has the arguments' form: its values, each a type and a value */
+typedef MlnServiceArgs MlnServiceReply;
 
 int MlnImpl_81014574(MlnServiceContext *context, int command, int value, MlnRightsInfo **rights,
 		     MlnBuffer **esb);
@@ -1058,6 +1055,29 @@ typedef struct __attribute__((packed)) MlnServiceRecord {
 
 MlnServiceRecord MlnImpl_81017764(MlnServiceContext *context);
 void MlnImpl_8101782C(MlnServiceContext *context);
+int MlnImpl_81017D1C(MlnServiceContext *context, void **list, unsigned int firstCount,
+		     MlnBuffer **first, unsigned int secondCount, MlnBuffer **second,
+		     const MlnBuffer *third, const MlnBuffer *fourth);
+int MlnImpl_81018220(MlnServiceContext *context);
+int MlnImpl_810182D0(MlnServiceContext *context, MlnBuffer *in, MlnBuffer **out);
+int MlnImpl_81018400(MlnServiceContext *context, MlnBuffer *in, MlnBuffer **out);
+int MlnImpl_81018528(MlnServiceContext *context, MlnBuffer *in, MlnBuffer **out);
+int MlnImpl_81018650(MlnServiceContext *context, MlnBuffer *in, MlnBuffer **out);
+int MlnImpl_81018784(MlnServiceContext *context, MlnBuffer *in, MlnBuffer *other,
+		     MlnBuffer **out);
+int MlnImpl_810188E8(MlnServiceContext *context, MlnBuffer *other, MlnBuffer *in, int *first,
+		     int *second);
+int MlnImpl_81018A2C(MlnServiceContext *context, unsigned int *count, MlnBuffer ***buffers);
+int MlnImpl_81018B8C(MlnServiceContext *context, MlnBuffer *serviceProvider, MlnBuffer *token,
+		     MlnBuffer *ids, unsigned int *count, MlnBuffer ***items);
+int MlnImpl_81018D00(MlnServiceContext *context, void **out);
+int MlnImpl_81018DA0(MlnServiceContext *context, MlnBuffer *in);
+int MlnImpl_81018E08(MlnServiceContext *context, MlnBuffer *other, MlnBuffer *in);
+int MlnImpl_81018EC4(MlnServiceContext *context);
+int MlnImpl_81018F50(MlnServiceContext *context);
+int MlnImpl_81018FD0(MlnServiceContext *context, unsigned int *size, void *data, int value);
+int MlnImpl_81019108(MlnServiceContext *context, MlnBuffer *in);
+unsigned short MlnImpl_81019274(int command);
 int MlnImpl_81017880(MlnServiceContext *context, void *list, unsigned int *firstCount,
 		     MlnBuffer ***first, unsigned int *secondCount, MlnBuffer ***second,
 		     MlnBuffer **third, MlnBuffer **fourth);
@@ -1073,6 +1093,7 @@ int MlnServiceCall(void *session, int command, const MlnServiceArgs *args,
 		   MlnServiceReply **reply, int *status);
 void MlnImpl_81027390(int heap, MlnServiceReply *reply);
 int MlnImpl_81026F0C(int heap, const MlnServiceArg *value, MlnBuffer **out);
+int MlnImpl_81026E20(int heap, unsigned int count, MlnServiceArgs **out);
 int MlnImpl_810191C4(int ret);
 
 typedef struct MlnFileInfo {
@@ -1105,25 +1126,18 @@ int MlnImpl_810318D4(void *a0, const MlnBuffer *a1, MlnBlob *first, MlnBlob *sec
 
 int MlnPlatformInit(void);
 int MlnPlatformTerm(void);
-int MlnImpl_81018B8C(MlnServiceContext *context, MlnBuffer *serviceProvider, MlnBuffer *token,
-		     MlnBuffer *ids, unsigned int *count, MlnBuffer ***items);
 int MlnImpl_81020094(void *session, int status, MlnApiValue *value, MlnHttpRequest *request,
 		     void *a4, void *a5);
 int MlnImpl_8101F954(void *session, MlnBuffer *message, int status, void *data,
 		     MlnApiRequest *request);
 int MlnImpl_8101A360(void *engine, MlnApiResult **result);
 int MlnImpl_8101A59C(MlnBuffer **handle);
-int MlnImpl_81018E08(MlnServiceContext *context, void *a1, void *a2);
 int MlnImpl_8101F1F0(void *client, void *a1, MlnBuffer **found);
 int MlnImpl_8101F0B8(void *client, void *a1, void *a2);
 int MlnImpl_8101DFA0(void *client, void *a1, void *a2, int *first, int *second);
-int MlnImpl_810188E8(MlnServiceContext *context, void *a1, void *a2, int *first, int *second);
-int MlnImpl_81018A2C(MlnServiceContext *context, unsigned int *count, MlnBuffer ***items);
 int MlnImpl_8101EC08(void *client, unsigned int *count, MlnBuffer ***items);
 int MlnImpl_8101E118(void *client, MlnBuffer *a1, MlnBuffer *a2, unsigned int *count,
 		     MlnBuffer ***items);
-int MlnImpl_81018D00(MlnServiceContext *context, void **a1);
-int MlnImpl_81018DA0(MlnServiceContext *context, MlnBuffer *a1);
 int MlnImpl_8101F4B0(void *client, void **a1);
 int MlnImpl_8101F5F4(void *client, MlnBuffer *a1);
 int MlnImpl_8101F724(void *client, MlnBuffer *token, MlnBuffer **found);
