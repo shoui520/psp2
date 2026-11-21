@@ -68,6 +68,11 @@ int vshDisplaySetViewportConf(SceUInt32 head, SceUInt32 plane,
 int vshDisplayGetActualViewportConf(SceUInt32 head, SceUInt32 plane,
 				    struct SceDisplayViewportConf *conf);
 
+/* the touch emulation's touches of the front and the back panel, through the stub library's
+   wrapper (0x81425E50 in SceShell) */
+struct SceTouchData;
+int vshTouchSetTouchEmulationData(const struct SceTouchData *front, const struct SceTouchData *back);
+
 /* sceIoMount's data and its 64-bit reserved word, in two halves, and the path's size */
 typedef struct VshIoMountArgs {
 	void *data;

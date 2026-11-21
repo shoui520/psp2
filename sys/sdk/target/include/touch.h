@@ -64,6 +64,8 @@ typedef struct SceTouchData {
 
 int sceTouchRead(SceUInt32 port, SceTouchData *pData, SceUInt32 nBufs);
 int sceTouchPeek(SceUInt32 port, SceTouchData *pData, SceUInt32 nBufs);
+/* not in the SDK (NID 3AD3D0A1): sceTouchPeek with a second argument the shell passes 0 */
+int sceTouchPeek2(SceUInt32 port, SceUInt32 reserved, SceTouchData *pData, SceUInt32 nBufs);
 
 /* sampling states */
 #define SCE_TOUCH_SAMPLING_STATE_STOP	0

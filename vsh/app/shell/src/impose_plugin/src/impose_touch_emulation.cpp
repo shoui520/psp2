@@ -422,7 +422,7 @@ void ImposeTouchEmulation::Start()
 		m_points[i].y = (m_front.maxY - m_front.minY) / 2;
 		m_points[i].state = 0;
 	}
-	m_device->Impose_8114433C();
+	m_device->Reset();
 	if (m_root != NULL) {
 		m_sema = sceKernelCreateSema("SceShellImposeTouchEmulation", 0, 0, 1, NULL);
 		m_thread = sceKernelCreateThread("SceShellImposeTouchEmulation",
@@ -464,15 +464,15 @@ void ImposeTouchEmulation::Enable(bool reset)
 				m_points[i].y = (m_front.maxY - m_front.minY) / 2;
 				m_points[i].state = 0;
 			}
-			m_device->Impose_8114433C();
+			m_device->Reset();
 		}
 		if (m_needsTouch) {
 			if (m_isGame && enabled)
-				m_device->Impose_81145084(2);
+				m_device->SetMode(2);
 			else
-				m_device->Impose_81145084(1);
+				m_device->SetMode(1);
 		} else {
-			m_device->Impose_81145084(0);
+			m_device->SetMode(0);
 		}
 		if (!m_running) {
 			sceKernelSignalSema(m_sema, 1);
@@ -492,8 +492,8 @@ void ImposeTouchEmulation::Disable(bool reset)
 			m_points[i].y = (m_front.maxY - m_front.minY) / 2;
 			m_points[i].state = 0;
 		}
-		m_device->Impose_8114433C();
-		m_device->Impose_81145084(0);
+		m_device->Reset();
+		m_device->SetMode(0);
 	}
 	if (m_running) {
 		SceUInt32 timeout = 1000000;
@@ -547,9 +547,9 @@ void ImposeTouchEmulation::UpdatePointers()
 
 			int state = 0;
 
-			if (point->mode == 2)
+			if (point->panel == 2)
 				state = 2;
-			if (point->mode == 1)
+			if (point->panel == 1)
 				state = 1;
 			m_pointers[i]->m_nextState = state;
 			m_pointers[i]->m_nextShape = point->state != 2;
@@ -573,11 +573,11 @@ int ImposeTouchEmulation::Poll()
 		m_pointers[0]->m_visible = false;
 		m_pointers[1]->m_nextState = 4;
 		m_pointers[1]->m_visible = false;
-		device->Impose_81144F88();
+		device->Suspend();
 		ret = sceKernelWaitSema(m_sema, 1, NULL);
 		if (ret < 0)
 			return ret;
-		m_device->Impose_8114502E();
+		m_device->Resume();
 	}
 	ret = sceKernelSignalSema(m_sema, 1);
 	if (ret < 0)
@@ -599,19 +599,19 @@ int ImposeTouchEmulation::Poll()
 	bool taken = remapped || inputdevice::IsOwnershipGotten(0x6F, 0);
 
 	if (taken) {
-		if (m_device->Impose_8114505C() == 0) {
+		if (m_device->IsSuspended() == 0) {
 			ImposeTouchDevice *device = m_device;
 
 			m_pointers[0]->m_nextState = 4;
 			m_pointers[0]->m_visible = false;
 			m_pointers[1]->m_nextState = 4;
 			m_pointers[1]->m_visible = false;
-			device->Impose_81144F88();
+			device->Suspend();
 		}
 	} else {
-		if (m_device->Impose_8114505C() != 0)
-			m_device->Impose_8114502E();
-		m_device->Impose_81144E02(m_points, 2);
+		if (m_device->IsSuspended() != 0)
+			m_device->Resume();
+		m_device->Update(m_points, 2);
 		UpdatePointers();
 		if (m_thread == -1)
 			return 1;
@@ -633,7 +633,7 @@ static int imposeTouchEmulationThread(SceSize args, void *argp)
 		point->y = (self->m_front.maxY - self->m_front.minY) / 2;
 		point->state = 0;
 	}
-	self->m_device->Impose_8114433C();
+	self->m_device->Reset();
 	self->m_pointers[0]->m_nextState = 4;
 	self->m_pointers[0]->m_visible = false;
 	self->m_pointers[1]->m_nextState = 4;

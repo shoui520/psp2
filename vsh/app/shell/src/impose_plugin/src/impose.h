@@ -177,13 +177,19 @@ public:
 	SceUInt8 data[16];
 };
 
-/* PLACEHOLDER names: a point the touch device reports, in its own panel's units (16 bytes) */
+/*
+ * PLACEHOLDER names: a point the touch device reports, in the front panel's units (16 bytes);
+ * the panel it touches: 0 the front, 1 the back (its place moved there), 2 both, 3 the front
+ * (a touch pad's)
+ */
 struct ImposeTouchPoint {
 	SceInt16 x;
 	SceInt16 y;
-	SceInt32 state;		/* 1 and 2: touched (2: held) */
-	SceInt32 mode;		/* the pointer's state shown (1, 2) */
-	SceInt32 reserved;
+	SceInt32 state;		/* 1 and 2: shown (2: touched) */
+	SceInt32 panel;
+	SceUInt8 frontId;	/* the touch's report IDs */
+	SceUInt8 backId;
+	SceUInt8 reserved[2];
 };
 
 /* PLACEHOLDER names: a panel's active area (16 bytes) */
@@ -194,27 +200,46 @@ struct ImposeTouchArea {
 	SceInt32 maxY;
 };
 
+struct SceCtrlData2;
+struct SceTouchData;
+
 /*
- * PLACEHOLDER names: the touch device the controller drives, the panels' areas as the touch
- * driver gives them (0x81144204, 104 bytes; its file is not written yet)
+ * PLACEHOLDER names: the touch device the controller drives: the points moved by the analog
+ * sticks or set from a touch pad, given to the touch driver as the panels' touches
+ * (impose_touch_device.cpp; 0x81144204, 104 bytes)
  */
 class ImposeTouchDevice {
 public:
 	ImposeTouchDevice();
 	virtual ~ImposeTouchDevice();
-	void Impose_8114433C();
-	void Impose_81144E02(ImposeTouchPoint *points, int count);
-	void Impose_81144F88();
-	void Impose_8114502E();
-	int Impose_8114505C();
-	void Impose_81145084(int mode);
+	void Reset();
+	void SetTouchData(const ImposeTouchPoint *points, int count);
+	SceInt16 MovePoint(int stick, float *speed, SceInt16 min, SceInt16 max, SceInt16 pos);
+	void UpdateFromPad(const SceCtrlData2 *pad, ImposeTouchPoint *points, int count);
+	void UpdateFromTouchPad(const SceTouchData *touch, bool touchFront, bool touchBack,
+				ImposeTouchPoint *points, int count);
+	void UpdateFromTouch(const SceTouchData *touch, bool touchFront, bool touchBack,
+			     ImposeTouchPoint *points, int count);
+	void UpdateState(const SceCtrlData2 *pad, const SceTouchData *touch);
+	void Update(ImposeTouchPoint *points, int count);
+	void Suspend();
+	void Resume();
+	int IsSuspended();
+	void SetMode(int mode);
 
-	SceInt32 m_state;
+	SceInt32 m_state;		/* 0 off, 1 the left stick, 2 the right, 3 both, 4 a touch pad */
 	ImposeTouchArea m_front;	/* the front panel's */
 	ImposeTouchArea m_area;		/* where the front and the back panel meet */
 	ImposeTouchArea m_frontPanel;
 	ImposeTouchArea m_backPanel;
-	SceUInt8 data[32];
+	SceInt32 m_reportId;		/* the last touch's report ID */
+	SceUInt32 m_buttons;		/* the buttons of the previous sample */
+	SceUInt32 m_touchButtons[2];	/* the buttons that touch with each point */
+	SceUInt32 m_cancelButtons;	/* the button that turns the pointers off */
+	SceInt32 m_suspendState;	/* 1 suspended, 2 resumed until the next sample */
+	bool m_cancelHeld;		/* the cancel button held since the resume */
+	bool m_touchHeld;		/* the first point's buttons held since the resume */
+	SceInt32 m_mode;		/* 1: the sticks off, 1 and 2: the touch pad off */
 };
 
 class ImposeTouchPointer;
