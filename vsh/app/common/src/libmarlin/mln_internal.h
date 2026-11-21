@@ -1851,6 +1851,69 @@ typedef struct MlnServiceConfig {
 int MlnImpl_81033D9C(unsigned int size, const void *xml, MlnServiceConfig **out);
 int MlnImpl_810341B8(MlnServiceConfig *config);
 int MlnImpl_81034224(MlnActionToken *token);
+int MlnImpl_810342E8(unsigned int size, const void *xml, MlnActionToken **out);
+int MlnImpl_810818F0(MlnXmlNode *node, MlnBuffer **id);
+
+/* a node of a DER (ASN.1) tree */
+typedef struct MlnAsn1Node {
+	unsigned char tagClass;
+	unsigned char constructed;
+	unsigned char tag;
+	unsigned char flags;		/* MLN_ASN1_* */
+	unsigned int length;		/* bytes, or a constructed node's children */
+	union {
+		unsigned char *data;
+		struct MlnAsn1Node **children;
+	};
+	const unsigned char *encoding;	/* the node's whole encoding, header first */
+	unsigned int encodingLength;
+} MlnAsn1Node;
+
+#define MLN_ASN1_TAG_UTC_TIME	23
+#define MLN_ASN1_INDEFINITE	0x01	/* the encoding ends with end-of-contents octets */
+#define MLN_ASN1_CONTENTS	0x02	/* data holds the encoded contents, also a constructed node's */
+#define MLN_ASN1_DATA_BORROWED	0x04	/* a primitive node's data belongs to another */
+#define MLN_ASN1_ENCODED	0x08	/* encodingLength holds the encoded size */
+#define MLN_ASN1_STATIC		0x80	/* the node is not the tree's to free */
+
+/* a decoded UTCTime or GeneralizedTime; offset is the zone's, in seconds */
+typedef struct MlnAsn1Time {
+	int year;
+	int month;
+	int day;
+	int hour;
+	int minute;
+	int second;
+	int millisecond;
+	int offset;
+	int reserved;
+} MlnAsn1Time;
+
+int MlnImpl_810353EC(int heap, MlnAsn1Node *node);
+int MlnImpl_81035440(const MlnAsn1Node *node, int pivot, MlnAsn1Time *time);
+int MlnImpl_810356A8(int heap, const unsigned char *der, const unsigned char *end,
+		     const unsigned char **next, MlnAsn1Node *node);
+int MlnImpl_81035884(const MlnAsn1Node *node, int depth);
+int MlnImpl_81035ABC(int heap, MlnAsn1Node *node);
+int MlnImpl_810360E8(int heap, int tagClass, unsigned char constructed, int tag,
+		     unsigned int length, const void *data, int borrowed, MlnAsn1Node **out);
+int MlnImpl_81036204(const MlnAsn1Node *node, unsigned int *size);
+int MlnImpl_81036364(const MlnAsn1Node *node, unsigned char **pos);
+int MlnImpl_810368BC(int heap, const MlnAsn1Node *node, unsigned int *size);
+int MlnImpl_8103696C(int heap, const MlnAsn1Node *node, unsigned char *buffer, unsigned int *size);
+int MlnImpl_810369B8(int heap, MlnAsn1Node *node, int definite);
+int MlnImpl_81036A04(int heap, const MlnAsn1Node *node);
+int MlnImpl_81034D38(const char *usage, int count, MlnBuffer **certificates, char **out);
+int MlnImpl_81035018(int encryptionCount, MlnBuffer **encryptionCertificates, int signingCount,
+		     MlnBuffer **signingCertificates, const MlnBuffer *role,
+		     const MlnBuffer *nodeId, char **out);
+int MlnImpl_810368D0(int heap, MlnAsn1Node *node, unsigned char **data, unsigned int *size);
+void MlnImpl_81036FC8(int heap, MlnAsn1Node *node);
+void MlnImpl_81036FD4(int heap, unsigned char *data);
+int MlnImpl_81037918(int heap, const unsigned char *data, unsigned int size, int flags,
+		     MlnAsn1Node **out);
+int MlnImpl_81037948(int heap, MlnAsn1Node *sequence, MlnAsn1Node *node, int flags);
+int MlnImpl_81037E6C(int heap, MlnAsn1Node **sequence);
 int MlnImpl_81081890(MlnXmlNode *node, const char *name, const char *ns, MlnXmlNodeList **list);
 int MlnImpl_81081BB4(MlnXmlNodeList **list, MlnConfigList *out, const char *role);
 
@@ -1914,8 +1977,6 @@ int MlnImpl_8101D29C(const MlnBuffer *serviceId, const MlnBuffer *config);
 int MlnImpl_8101D5B4(const char *path, MlnBuffer **config);
 int MlnImpl_8101CECC(int create, const MlnBuffer *serviceId, char *path);
 int MlnImpl_8101D020(const char *path, MlnBuffer **config);
-int MlnImpl_81035018(unsigned int firstCount, MlnBuffer **first, unsigned int secondCount,
-		     MlnBuffer **second, MlnBuffer *third, MlnBuffer *fourth, char **text);
 int MlnImpl_810353A8(char **text);
 int MlnImpl_8101AF30(MlnEngine *engine, MlnBuffer **message, MlnApiResult *result, int hasValue);
 int MlnImpl_8101B244(MlnEngine *engine, MlnBuffer **message, MlnApiResult *result, int hasValue);
