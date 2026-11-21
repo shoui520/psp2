@@ -28,6 +28,9 @@ enum {
 	SHELL_APP_EVENT_DEACTIVATED	= 6,	/* PLACEHOLDER name: the zoom's listener, after 5 */
 };
 
+/* the application whose status says which process is in front (appmgr's, name ours) */
+#define SHELL_APP_ID_FRONT	-6
+
 /* an application event's data (the fields the boot reads) */
 typedef struct ShellAppEvent {
 	SceUID processId;

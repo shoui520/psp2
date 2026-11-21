@@ -45,6 +45,7 @@ public:
 	~ImposePart81148260();
 	void Impose_811497A0(ImposeNotice *notice);
 	void Impose_811497DA();
+	void Impose_811499A6();
 	void Impose_811499CE();
 
 	SceUInt8 data[36];
@@ -176,17 +177,82 @@ public:
 	SceUInt8 data[16];
 };
 
-/* (0x8114353E, 116 bytes) */
-class ImposePart8114353E {
-public:
-	ImposePart8114353E(paf::Plugin *plugin);
-	~ImposePart8114353E();
-	void Impose_81143606();
-	void Impose_811438CC();
-	void Impose_81143A60();
-	void Impose_81143A82();
+/* PLACEHOLDER names: a point the touch device reports, in its own panel's units (16 bytes) */
+struct ImposeTouchPoint {
+	SceInt16 x;
+	SceInt16 y;
+	SceInt32 state;		/* 1 and 2: touched (2: held) */
+	SceInt32 mode;		/* the pointer's state shown (1, 2) */
+	SceInt32 reserved;
+};
 
-	SceUInt8 data[116];
+/* PLACEHOLDER names: a panel's active area (16 bytes) */
+struct ImposeTouchArea {
+	SceInt32 minX;
+	SceInt32 maxX;
+	SceInt32 minY;
+	SceInt32 maxY;
+};
+
+/*
+ * PLACEHOLDER names: the touch device the controller drives, the panels' areas as the touch
+ * driver gives them (0x81144204, 104 bytes; its file is not written yet)
+ */
+class ImposeTouchDevice {
+public:
+	ImposeTouchDevice();
+	virtual ~ImposeTouchDevice();
+	void Impose_8114433C();
+	void Impose_81144E02(ImposeTouchPoint *points, int count);
+	void Impose_81144F88();
+	void Impose_8114502E();
+	int Impose_8114505C();
+	void Impose_81145084(int mode);
+
+	SceInt32 m_state;
+	ImposeTouchArea m_front;	/* the front panel's */
+	ImposeTouchArea m_area;		/* where the front and the back panel meet */
+	ImposeTouchArea m_frontPanel;
+	ImposeTouchArea m_backPanel;
+	SceUInt8 data[32];
+};
+
+class ImposeTouchPointer;
+
+/*
+ * PLACEHOLDER names: the touch emulation of the PS TV ("SceShellImposeTouchEmulation"), the
+ * controller moving two pointers over the screen for the applications that need the touch
+ * screen (impose_touch_emulation.cpp; 0x8114353E, 116 bytes)
+ */
+class ImposeTouchEmulation {
+public:
+	ImposeTouchEmulation(paf::Plugin *plugin);
+	~ImposeTouchEmulation();
+	void Start();
+	void Stop();
+	void Enable(bool reset);
+	void Disable(bool reset);
+	void Lock();
+	void Unlock();
+	void UpdatePointers();
+	int Poll();
+
+	paf::Plugin *m_plugin;
+	paf::ui::Scene *m_root;
+	ImposeTouchPointer *m_pointers[2];
+	ImposeTouchPoint m_points[2];
+	bool m_running;
+	ImposeTouchArea m_front;
+	ImposeTouchArea m_area;
+	SceInt32 m_width;
+	SceInt32 m_height;
+	SceInt32 m_lockCount;
+	bool m_isGame;
+	bool m_needsTouch;
+	SceUID m_thread;
+	SceUID m_sema;
+	ImposeTouchDevice *m_device;
+	SceUInt8 reserved[4];
 };
 
 /* the plugin: its two pages and its parts (688 bytes) */
@@ -216,7 +282,7 @@ public:
 	ImposePart8115000C m_part8115000C;
 	ImposePart811516E4 m_part811516E4;
 	ImposePart81151B08 m_zoom;
-	ImposePart8114353E m_part8114353E;
+	ImposeTouchEmulation m_touchEmulation;
 };
 
 /* the cache manager (0x81564D68) */

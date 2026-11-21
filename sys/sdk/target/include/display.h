@@ -44,6 +44,9 @@ typedef struct SceDisplayFrameBuf {
 extern "C" {
 #endif
 
+/* waits for the start of the next VBLANK */
+SceInt32 sceDisplayWaitVblankStart(void);
+
 /* waits for the start of the VBLANK the given V periods after the previous call */
 SceInt32 sceDisplayWaitVblankStartMulti(SceUInt32 vcount);
 

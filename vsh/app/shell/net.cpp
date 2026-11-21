@@ -33,8 +33,6 @@
 
 using namespace paf;
 
-/* the application whose status says which process is in front (appmgr's, name ours) */
-#define SHELL_NET_APP_ID_FRONT		-6
 /* the application whose status says which process a restriction notice is for */
 #define SHELL_NET_APP_ID_NOTICE		-3
 
@@ -75,7 +73,7 @@ static bool shellNetIsThreadAllowed(const SceNetPsThreadInfo *thread, int onlyFr
 	SceAppMgrAppStatus status;
 	int policy;
 
-	if (sceAppMgrGetStatusByAppId(SHELL_NET_APP_ID_FRONT, &status) < 0)
+	if (sceAppMgrGetStatusByAppId(SHELL_APP_ID_FRONT, &status) < 0)
 		return false;
 
 	SceUID front = status.processId;
@@ -111,7 +109,7 @@ static void shellNetHostGetProcessStatus(SceUID processId, int *allowed, int *is
 	SceAppMgrAppStatus status;
 	SceUID front = -1;
 
-	if (sceAppMgrGetStatusByAppId(SHELL_NET_APP_ID_FRONT, &status) >= 0)
+	if (sceAppMgrGetStatusByAppId(SHELL_APP_ID_FRONT, &status) >= 0)
 		front = status.processId;
 	if (allowed != NULL)
 		*allowed = 1;
@@ -128,7 +126,7 @@ static int shellNetHostIsProcessConnecting(SceUID frontProcessId, SceUID process
 	int policy;
 	SceUID front = -1;
 
-	if (sceAppMgrGetStatusByAppId(SHELL_NET_APP_ID_FRONT, &status) >= 0)
+	if (sceAppMgrGetStatusByAppId(SHELL_APP_ID_FRONT, &status) >= 0)
 		front = status.processId;
 
 	int count = SceNetInternal_DEF2357F(counts, SHELL_NET_SLEEP_COUNT_MAX, 0);

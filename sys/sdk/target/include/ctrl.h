@@ -101,6 +101,9 @@ typedef struct SceCtrlWirelessControllerInfo {
 	SceUInt8 reserved[12];
 } SceCtrlWirelessControllerInfo;
 
+/* not in the SDK: a process's input status (1: its buttons are taken by another's remapping) */
+int sceCtrlGetProcessStatus(SceUID pid, int *status);
+
 #ifdef __cplusplus
 }
 #endif

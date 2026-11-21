@@ -593,6 +593,7 @@ const char *SceLsdb_AE60C3A5(const LsdbAppInfoPtr *app);
 bool SceLsdb_41019D89(const LsdbAppInfoPtr *app);
 int sceLsdbGetSystemVersion(const LsdbAppInfoPtr *app);
 int sceLsdbGetType(const LsdbAppInfoPtr *app);
+SceInt64 sceLsdbGetAttribute(const LsdbAppInfoPtr *app);
 const char *SceLsdb_C070E42E(const LsdbAppInfoPtr *app);
 int SceLsdb_BE72A404(const char *titleId);
 bool SceLsdb_69B32F6C(int value);

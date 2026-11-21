@@ -60,7 +60,7 @@ Impose::Impose(Plugin *plugin)
 	: m_plugin(plugin), m_page(NULL), m_cacheManager(plugin), m_part81149A7C(plugin),
 	  m_part8115013C(plugin), m_part81150574(plugin), m_parentalControl(plugin),
 	  m_part8114B0DC(plugin), m_part8114F348(plugin), m_part8114FD14(plugin),
-	  m_part8115000C(plugin), m_part8114353E(plugin)
+	  m_part8115000C(plugin), m_touchEmulation(plugin)
 {
 	g_impose = this;
 
@@ -134,7 +134,7 @@ void Impose::Start()
 	g_impose->m_part8115013C.Impose_81150164();
 	g_impose->m_part81150574.Impose_81150630();
 	if (system::Model::GetType() == 1)
-		g_impose->m_part8114353E.Impose_81143606();
+		g_impose->m_touchEmulation.Start();
 	common::MainThreadCallList::Register(imposeUpdate, NULL);
 }
 
@@ -145,7 +145,7 @@ void Impose::Stop()
 	g_impose->m_part8115013C.Impose_811501D0();
 	g_impose->m_part81150574.Impose_811508FE();
 	if (system::Model::GetType() == 1)
-		g_impose->m_part8114353E.Impose_811438CC();
+		g_impose->m_touchEmulation.Stop();
 }
 
 /* the interface's functions, each passed to the part that does it (0x81141144-0x81141366) */
@@ -241,12 +241,12 @@ static void imposeZoomHide(int x, int y)
 
 static void Impose_811412E2(void)
 {
-	g_impose->m_part8114353E.Impose_81143A60();
+	g_impose->m_touchEmulation.Lock();
 }
 
 static void Impose_811412F8(void)
 {
-	g_impose->m_part8114353E.Impose_81143A82();
+	g_impose->m_touchEmulation.Unlock();
 }
 
 static void Impose_8114130E(int arg)
