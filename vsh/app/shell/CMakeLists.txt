@@ -220,6 +220,8 @@ psp2_module(vs0_vsh_shell_shell KIND user COMPILER snc PARTIAL SOURCES
 	${PSP2_SRC}/vsh/app/common/src/mtp/mtpr2/MtpResponderHostFs.cc
 	${PSP2_SRC}/vsh/app/common/src/mtp/mtpr2/MtpResponderProto2.cc
 	${PSP2_SRC}/vsh/app/common/src/mtp/mtpr2/RingBuf.cc
+	${PSP2_SRC}/vsh/app/common/src/mtp_client/mtp_client_lib.cpp
+	${PSP2_SRC}/vsh/app/common/src/mtp_client/mtp_client_context.cpp
 	shell.c
 )
 target_include_directories(vs0_vsh_shell_shell PRIVATE "${PSP2_SRC}/vsh/paf/include"

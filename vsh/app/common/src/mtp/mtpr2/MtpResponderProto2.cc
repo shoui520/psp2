@@ -60,7 +60,7 @@ int MtpResponderProto2::endDownload(void)
 	if (s_mtpClient != NULL) {
 		s_mtpClient->Bgdl_81138068(handle, mode);
 		sceKernelDelayThread(PROTO2_CLOSE_DELAY_US);
-		ret = s_mtpClient->Bgdl_81138184(handle);
+		ret = s_mtpClient->EndHttpGetDataWithUrl(handle);
 		sceKernelDelayThread(PROTO2_CLOSE_DELAY_US);
 		deleteClient();
 		if (ret < 0) {
@@ -93,7 +93,7 @@ static __attribute__((noinline)) int createClient(void)
 		s_mtpClient = new MtpClient();
 		if (s_mtpClient == NULL)
 			return MTP_CLIENT_ERROR_NO_MEMORY;
-		ret = s_mtpClient->initializeClient();
+		ret = s_mtpClient->Bgdl_81137CF0();
 		if (ret != 0) {
 			MTPR2_PRINT_ERROR();
 			deleteClient();
@@ -196,13 +196,13 @@ error:
 		*kind = 3;
 		break;
 	}
-	ret = s_mtpClient->Bgdl_811380BC(url, sce_paf_strlen(url) + 1, 0, 0, &handle);
+	ret = s_mtpClient->BeginHttpGetDataWithUrl(url, sce_paf_strlen(url) + 1, 0, &handle);
 	if (ret != 0) {
 		MTPR2_PRINT_ERROR();
 		s_mtpClient->Bgdl_81137ADE();
 		return ret;
 	}
-	ret = s_mtpClient->Bgdl_81138266(handle, data, 0, &received, &remaining);
+	ret = s_mtpClient->RecvData(handle, data, 0, &received, &remaining);
 	if (ret != 0) {
 		int err;
 
@@ -230,7 +230,7 @@ int MtpResponderProto2::receiveData(void *buf, unsigned int size, unsigned int *
 	}
 	if (s_mtpClient == NULL)
 		return MTP_CLIENT_ERROR_NOT_CONNECTED;
-	ret = s_mtpClient->Bgdl_81138266(handle, buf, size, received, &remaining);
+	ret = s_mtpClient->RecvData(handle, buf, size, received, &remaining);
 	if (ret >= 0)
 		return 0;
 	MTPR2_PRINT_ERROR();
