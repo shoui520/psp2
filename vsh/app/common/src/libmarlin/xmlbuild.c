@@ -264,8 +264,8 @@ __attribute__((noinline)) int MlnXmlElementAppendContents(int heap, MlnXmlElemen
 }
 
 /* a child element taken out of an element's content */
-__attribute__((noinline)) int MlnXmlElementRemoveChild(int heap, MlnXmlElement *element,
-						       MlnXmlElement *child)
+static inline __attribute__((always_inline)) void MlnXmlElementRemoveChildInline(int heap,
+	MlnXmlElement *element, MlnXmlElement *child)
 {
 	MlnXmlContentArray *content = element->content;
 	MlnXmlContent *removed;
@@ -278,11 +278,17 @@ __attribute__((noinline)) int MlnXmlElementRemoveChild(int heap, MlnXmlElement *
 			break;
 	}
 	if (i >= count)
-		return MLN_OK;
+		return;
 	for (; i < count - 1; i++)
 		content->items[i] = content->items[i + 1];
 	content->count = count - 1;
 	MlnXmlContentRelease(heap, &removed);
+}
+
+__attribute__((noinline)) int MlnXmlElementRemoveChild(int heap, MlnXmlElement *element,
+						       MlnXmlElement *child)
+{
+	MlnXmlElementRemoveChildInline(heap, element, child);
 	return MLN_OK;
 }
 
@@ -621,5 +627,221 @@ out:
 		MlnXmlContentRelease(heap, &content);
 	if (array != NULL)
 		MlnXmlContentArrayRelease(heap, &array);
+	return ret;
+}
+
+/* an element node's text content replaced by one text */
+__attribute__((noinline)) int MlnXmlNodeSetText(int heap, MlnXmlNode *node, const char *text)
+{
+	MlnXmlContentArray *old = NULL, *array = NULL;
+	MlnXmlElement *element;
+	MlnXmlContent *item;
+	int count, kept, i;
+
+	if (node == NULL || text == NULL)
+		return MLN_ERROR_INVALID_ARGUMENT;
+	if (node->type != MLN_XML_NODE_ELEMENT)
+		return MLN_XML_ERROR_NOT_ELEMENT;
+	element = node->object.element;
+	if (element == NULL)
+		return MLN_ERROR_INVALID_ARGUMENT;
+	old = element->content;
+	if (old == NULL)
+		return MLN_ERROR_INVALID_ARGUMENT;
+	count = old->count;
+	if (count > 0) {
+		kept = 0;
+		for (i = 0; i < count; i++) {
+			if (old->items[i]->kind != MLN_XML_CONTENT_TEXT)
+				kept++;
+		}
+		/* Sony's ignores the result and tests the array */
+		MlnXmlContentArrayCreate(heap, &array, kept);
+		if (array == NULL)
+			return MLN_ERROR_NO_MEMORY;
+		kept = 0;
+		for (i = 0; i < old->count; i++) {
+			item = old->items[i];
+			if (item->kind != MLN_XML_CONTENT_TEXT) {
+				item->refCount++;
+				array->items[kept++] = item;
+			}
+		}
+		element->content = array;
+		MlnXmlContentArrayRelease(heap, &old);
+	}
+	return MlnXmlNodeAddText(heap, node, text);
+}
+
+/* an element node added after a parent element node's content, released with release set */
+__attribute__((noinline)) int MlnXmlNodeAppendChild(int heap, MlnXmlNode *parent,
+						    MlnXmlNode *child, int release)
+{
+	MlnXmlContent *content = NULL;
+	MlnXmlElement *element;
+	MlnXmlNode *own;
+	int ret;
+
+	if (parent == NULL || parent->type != MLN_XML_NODE_ELEMENT || child == NULL ||
+	    child->type != MLN_XML_NODE_ELEMENT)
+		return MLN_XML_ERROR_NOT_ELEMENT;
+	ret = MlnXmlContentCreate(heap, &content);
+	if (ret == MLN_OK) {
+		element = parent->object.element;
+		own = child;
+		content->kind = MLN_XML_CONTENT_ELEMENT;
+		child->object.element->refCount++;
+		content->data.element = own->object.element;
+		ret = MlnXmlElementAppendContents(heap, element, 1, &content);
+		if (ret == MLN_OK) {
+			content = NULL;
+			if (!release)
+				return ret;
+			MlnXmlNodeRelease(heap, &own);
+		}
+	}
+	if (content != NULL)
+		MlnXmlContentRelease(heap, &content);
+	return ret;
+}
+
+/*
+ * An element node as a document's text, after an XML declaration with the version and
+ * encoding given (neither: none). Sony's appends three bytes of each fixed piece of the
+ * declaration ("<?x", " ve", "'" and two bytes after it, ...), as it does here.
+ */
+#define MLN_XML_DECLARATION_PIECE	3
+
+__attribute__((noinline)) int MlnXmlNodeSerialize(int heap, MlnXmlNode *node, const char *version,
+						  const char *encoding, MlnBuffer **out)
+{
+	MlnTextBuffer *builder = NULL;
+	MlnBuffer *text = NULL;
+	int hasVersion, hasEncoding;
+	int ret;
+
+	if (node->type != MLN_XML_NODE_ELEMENT) {
+		ret = MLN_XML_ERROR_NOT_ELEMENT;
+		goto out;
+	}
+	ret = MlnXmlNodeToText(heap, node, &text);
+	if (ret != MLN_OK)
+		goto out;
+	builder = MlnTextBufferCreate(heap, 0, NULL);
+	if (builder == NULL)
+		goto no_memory;
+	hasVersion = version != NULL;
+	hasEncoding = encoding != NULL;
+	if (hasVersion || hasEncoding) {
+		ret = MlnTextBufferAppend(heap, builder, MLN_XML_DECLARATION_PIECE, "<?xml");
+		if (ret != MLN_OK)
+			goto out;
+		if (hasVersion) {
+			ret = MlnTextBufferAppend(heap, builder, MLN_XML_DECLARATION_PIECE,
+						  " version='");
+			if (ret != MLN_OK)
+				goto out;
+			ret = MlnTextBufferAppend(heap, builder, MlnStrlen(version), version);
+			if (ret != MLN_OK)
+				goto out;
+			ret = MlnTextBufferAppend(heap, builder, MLN_XML_DECLARATION_PIECE, "'");
+			if (ret != MLN_OK)
+				goto out;
+		}
+		if (hasEncoding) {
+			ret = MlnTextBufferAppend(heap, builder, MLN_XML_DECLARATION_PIECE,
+						  " encoding='");
+			if (ret != MLN_OK)
+				goto out;
+			ret = MlnTextBufferAppend(heap, builder, MlnStrlen(encoding), encoding);
+			if (ret != MLN_OK)
+				goto out;
+			ret = MlnTextBufferAppend(heap, builder, MLN_XML_DECLARATION_PIECE, "'");
+			if (ret != MLN_OK)
+				goto out;
+		}
+		ret = MlnTextBufferAppend(heap, builder, MLN_XML_DECLARATION_PIECE, " ?>\n");
+		if (ret != MLN_OK)
+			goto out;
+	}
+	MlnTextBufferAppend(heap, builder, text->size, text->data);
+	MlnBufferDestroy(heap, text);
+	text = NULL;
+	text = MlnBufferCreate(heap, builder->size, builder->data);
+	if (text == NULL)
+		goto no_memory;
+	*out = text;
+	text = NULL;
+	goto out;
+
+no_memory:
+	ret = MLN_ERROR_NO_MEMORY;
+out:
+	MlnTextBufferDestroy(heap, builder);
+	MlnBufferDestroy(heap, text);
+	return ret;
+}
+
+/* element nodes as one text, one after another */
+__attribute__((noinline)) int MlnXmlNodesSerialize(int heap, int count, MlnXmlNode **nodes,
+						   MlnBuffer **out)
+{
+	MlnTextBuffer *builder;
+	MlnBuffer *text = NULL;
+	int i, ret;
+
+	builder = MlnTextBufferCreate(heap, 0, NULL);
+	for (i = 0; i < count; i++) {
+		if (nodes[i]->type != MLN_XML_NODE_ELEMENT) {
+			ret = MLN_XML_ERROR_NOT_ELEMENT;
+			goto out;
+		}
+		ret = MlnXmlNodeToText(heap, nodes[i], &text);
+		if (ret != MLN_OK)
+			goto out;
+		MlnTextBufferAppend(heap, builder, text->size, text->data);
+		MlnBufferDestroy(heap, text);
+		text = NULL;
+	}
+	text = MlnBufferCreate(heap, builder->size, builder->data);
+	if (text != NULL) {
+		ret = MLN_OK;
+		*out = text;
+		text = NULL;
+	} else {
+		ret = MLN_ERROR_NO_MEMORY;
+	}
+out:
+	MlnTextBufferDestroy(heap, builder);
+	MlnBufferDestroy(heap, text);
+	return ret;
+}
+
+/* a child element node taken out of a parent element node's content */
+__attribute__((noinline)) int MlnXmlNodeRemoveChild(int heap, MlnXmlNode *parent,
+						    MlnXmlNode *child)
+{
+	if (parent == NULL || parent->type != MLN_XML_NODE_ELEMENT || child == NULL ||
+	    child->type != MLN_XML_NODE_ELEMENT)
+		return MLN_XML_ERROR_NOT_ELEMENT;
+	MlnXmlElementRemoveChildInline(heap, parent->object.element, child->object.element);
+	return MLN_OK;
+}
+
+/* a node, or for a document node its root element (the document node released) */
+__attribute__((noinline)) int MlnXmlNodeToElement(int heap, MlnXmlNode *node, MlnXmlNode **out)
+{
+	MlnXmlNode *own = node;
+	int ret;
+
+	if (node == NULL || out == NULL)
+		return MLN_XML_ERROR_NOT_ELEMENT;
+	if (node->type != MLN_XML_NODE_DOCUMENT) {
+		*out = node;
+		return MLN_OK;
+	}
+	ret = MlnXmlNodeCreateElement(heap, out, node->object.document->root);
+	if (ret == MLN_OK)
+		MlnXmlNodeRelease(heap, &own);
 	return ret;
 }

@@ -657,6 +657,26 @@ int MlnXmlElementBuild(int heap, const char *name, const char *prefix, const cha
 		       MlnXmlNode **out);
 int MlnXmlNodeAddAttribute(int heap, MlnXmlNode *node, const char *name, const char *value);
 int MlnXmlNodeAddText(int heap, MlnXmlNode *node, const char *text);
+int MlnXmlNodeSetText(int heap, MlnXmlNode *node, const char *text);
+int MlnXmlNodeAppendChild(int heap, MlnXmlNode *parent, MlnXmlNode *child, int release);
+int MlnXmlNodeSerialize(int heap, MlnXmlNode *node, const char *version, const char *encoding,
+			MlnBuffer **out);
+int MlnXmlNodesSerialize(int heap, int count, MlnXmlNode **nodes, MlnBuffer **out);
+int MlnXmlNodeRemoveChild(int heap, MlnXmlNode *parent, MlnXmlNode *child);
+int MlnXmlNodeToElement(int heap, MlnXmlNode *node, MlnXmlNode **out);
+
+/* a growing byte buffer, its capacity whole 4 KiB pages (not written in C yet) */
+typedef struct MlnTextBuffer {
+	unsigned int size;
+	unsigned char *data;
+	unsigned int capacity;
+} MlnTextBuffer;
+
+MlnTextBuffer *MlnTextBufferCreate(int heap, unsigned int size, const void *data);
+int MlnTextBufferAppend(int heap, MlnTextBuffer *buffer, unsigned int size, const void *data);
+void MlnTextBufferDestroy(int heap, MlnTextBuffer *buffer);
+/* an element node as XML text (not written in C yet) */
+int MlnXmlNodeToText(int heap, MlnXmlNode *node, MlnBuffer **text);
 
 /* not written in C yet: the prototypes are their callers' */
 int MlnCoreInit(void *memory, unsigned int size);
