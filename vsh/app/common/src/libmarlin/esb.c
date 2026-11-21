@@ -261,6 +261,8 @@ __attribute__((noinline)) int MlnRightsInfoFree(int heap, MlnRightsInfo *info)
 	MlnObligation *obligation;
 	MlnPermission *permission;
 	MlnCallback *callback;
+	MlnBuffer **ids;
+	MlnDateTime **times;
 	unsigned int i;
 
 	if (info == NULL)
@@ -316,15 +318,19 @@ __attribute__((noinline)) int MlnRightsInfoFree(int heap, MlnRightsInfo *info)
 	MlnBufferDestroy(heap, info->description);
 	MlnBufferDestroy(heap, info->shortDescription);
 	MlnBufferDestroy(heap, info->longDescription);
-	if (info->ids != NULL) {
+	ids = info->ids;
+	if (ids != NULL) {
 		for (i = 0; i < info->idCount; i++)
-			MlnBufferDestroy(heap, info->ids[i]);
-		MlnFree(heap, info->ids);
+			MlnBufferDestroy(heap, ids[i]);
+		MlnFree(heap, ids);
 	}
+	/* by pointer: the counts, not the arrays, bound the loops */
+	times = info->notBefore;
 	for (i = 0; i < info->notBeforeKind; i++)
-		MlnFree(heap, info->notBefore[i]);
+		MlnFree(heap, times[i]);
+	times = info->notAfter;
 	for (i = 0; i < info->notAfterKind; i++)
-		MlnFree(heap, info->notAfter[i]);
+		MlnFree(heap, times[i]);
 	MlnFree(heap, info->notDuring[0]);
 	MlnFree(heap, info->notDuring[1]);
 	MlnBufferDestroy(heap, info->membership);
@@ -406,7 +412,7 @@ __attribute__((noinline)) int MlnRightsInfoParse(int heap, unsigned int size, co
 	MlnMemset(info, 0, sizeof(*info));
 	list = esb->parameters;
 	count = list->count;
-	esbFlags = esb->flags;
+	esbFlags = esb->localFlags;
 	critical = 0;
 	for (i = 0; i < count; i++) {
 		item = list->items[i];
@@ -771,7 +777,7 @@ next_device:
 					    MLN_TYPE(source, 2) != MLN_VALUE_STRING ||
 					    MLN_TYPE(source, 3) != MLN_VALUE_DATE ||
 					    MLN_TYPE(source, 4) != MLN_VALUE_RESOURCE ||
-					    MLN_TYPE(source, 5) != MLN_VALUE_BYTES)
+					    MLN_TYPE(source, 5) != MLN_VALUE_BYTE_ARRAY)
 						goto unsupported;
 					obligation->type = MLN_OBLIGATION_CUSTOM;
 					info->custom.integer = source->items[0]->data.integer;
@@ -954,4 +960,258 @@ out:
 	if (info != NULL)
 		MlnRightsInfoFree(heap, info);
 	return ret;
+}
+
+/* a status block's global flags: 0, or what this library cannot act on */
+__attribute__((noinline)) int MlnEsbCheckGlobalFlags(int heap, const MlnEsb *esb)
+{
+	if (esb == NULL)
+		return MLN_ERROR_INVALID_ARGUMENT;
+	if (esb->globalFlags & MLN_ESB_GLOBAL_UNSUPPORTED)
+		return MLN_ERROR_UNSUPPORTED;
+	return MLN_OK;
+}
+
+static inline __attribute__((always_inline)) void MlnValueListFreeInline(int heap,
+									 MlnValueList *list)
+{
+	int count, i;
+
+	if (list == NULL)
+		return;
+	count = list->count;
+	for (i = 0; i < count; i++) {
+		if (list->items[i] != NULL)
+			MlnValueFree(heap, list->items[i]);
+	}
+	MlnFree(heap, list);
+}
+
+/* a parameter or an extended parameter: they begin with the same name and value */
+static inline __attribute__((always_inline)) void MlnParameterFreeInline(int heap,
+									 MlnParameter *parameter)
+{
+	if (parameter == NULL)
+		return;
+	if (parameter->name != NULL)
+		MlnBufferDestroy(heap, parameter->name);
+	if (parameter->value != NULL)
+		MlnValueFree(heap, parameter->value);
+	MlnFree(heap, parameter);
+}
+
+__attribute__((noinline)) int MlnValueFree(int heap, MlnValue *value)
+{
+	if (value == NULL)
+		return MLN_OK;
+	switch (value->type) {
+	case MLN_VALUE_STRING:
+		if (value->data.buffer != NULL)
+			MlnBufferDestroy(heap, value->data.buffer);
+		break;
+	case MLN_VALUE_PARAMETER:
+		MlnParameterFreeInline(heap, value->data.parameter);
+		break;
+	case MLN_VALUE_EXTENDED_PARAMETER:
+		MlnParameterFreeInline(heap, (MlnParameter *)value->data.extended);
+		break;
+	case MLN_VALUE_RESOURCE:
+		if (value->data.buffer != NULL)
+			MlnBufferDestroy(heap, value->data.buffer);
+		break;
+	case MLN_VALUE_BYTE_ARRAY:
+		if (value->data.buffer != NULL)
+			MlnBufferDestroy(heap, value->data.buffer);
+		break;
+	case MLN_VALUE_LIST:
+		MlnValueListFreeInline(heap, value->data.list);
+		break;
+	}
+	MlnFree(heap, value);
+	return MLN_OK;
+}
+
+__attribute__((noinline)) int MlnValueListFree(int heap, MlnValueList *list)
+{
+	MlnValueListFreeInline(heap, list);
+	return MLN_OK;
+}
+
+__attribute__((noinline)) int MlnExtendedParameterFree(int heap, MlnExtendedParameter *extended)
+{
+	MlnParameterFreeInline(heap, (MlnParameter *)extended);
+	return MLN_OK;
+}
+
+__attribute__((noinline)) int MlnParameterFree(int heap, MlnParameter *parameter)
+{
+	MlnParameterFreeInline(heap, parameter);
+	return MLN_OK;
+}
+
+/* The encoding is big-endian: a word for each value's type and size, then its data. */
+#define MLN_ESB_WORD(p)		((unsigned int)((const unsigned char *)(p))[0] << 24 |	\
+				 (unsigned int)((const unsigned char *)(p))[1] << 16 |	\
+				 (unsigned int)((const unsigned char *)(p))[2] << 8 |	\
+				 (unsigned int)((const unsigned char *)(p))[3])
+
+/* a list: its count, then each value */
+__attribute__((noinline)) int MlnValueListDecode(int heap, const unsigned int **cursor,
+						 MlnValueList **out)
+{
+	const unsigned int *p = *cursor;
+	MlnValueList *list;
+	int count, i;
+	int ret;
+
+	count = MLN_ESB_WORD(p);
+	list = MlnAllocate(heap, (count + 1) * sizeof(list->items[0]));
+	if (list == NULL)
+		return MLN_ERROR_NO_MEMORY;
+	list->count = count;
+	MlnMemset(list->items, 0, count * sizeof(list->items[0]));
+	*cursor = p + 1;
+	for (i = 0; i < count; i++) {
+		ret = MlnValueDecode(heap, cursor, &list->items[i]);
+		if (ret != MLN_OK) {
+			MlnValueListFreeInline(heap, list);
+			return ret;
+		}
+	}
+	*out = list;
+	return MLN_OK;
+}
+
+/* a value: integers, reals and dates of 4 bytes, strings and resources without their NUL */
+__attribute__((noinline)) int MlnValueDecode(int heap, const unsigned int **cursor, MlnValue **out)
+{
+	const unsigned int *p = *cursor, *start, *name;
+	MlnParameter *parameter;
+	MlnExtendedParameter *extended;
+	MlnValue *value;
+	unsigned int type, size, nameSize;
+	int ret;
+
+	value = MlnAllocate(heap, sizeof(*value));
+	if (value == NULL)
+		return MLN_ERROR_NO_MEMORY;
+	MlnMemset(value, 0, sizeof(*value));
+	start = p;
+	type = MLN_ESB_WORD(p);
+	value->type = type;
+	size = MLN_ESB_WORD(p + 1);
+	p += 2;
+	switch (type) {
+	case MLN_VALUE_INTEGER:
+	case MLN_VALUE_DATE:
+	case MLN_VALUE_REAL:
+		if (size != 4)
+			goto format;
+		value->data.integer = MLN_ESB_WORD(start + 2);
+		p = start + 3;
+		break;
+	case MLN_VALUE_STRING:
+	case MLN_VALUE_RESOURCE:
+		value->data.buffer = MlnBufferCreate(heap, size != 0 ? size - 1 : 0,
+						     size != 0 ? p : NULL);
+		if (value->data.buffer == NULL)
+			goto no_memory;
+		p = (const unsigned int *)((const char *)p + size);
+		break;
+	case MLN_VALUE_BYTE_ARRAY:
+		value->data.buffer = MlnBufferCreate(heap, size, size != 0 ? p : NULL);
+		if (value->data.buffer == NULL)
+			goto no_memory;
+		p = (const unsigned int *)((const char *)p + size);
+		break;
+	case MLN_VALUE_PARAMETER:
+		parameter = MlnAllocate(heap, sizeof(*parameter));
+		if (parameter == NULL)
+			goto no_memory;
+		parameter->name = NULL;
+		parameter->value = NULL;
+		name = start + 3;
+		nameSize = MLN_ESB_WORD(start + 2);
+		goto name;
+	case MLN_VALUE_EXTENDED_PARAMETER:
+		extended = MlnAllocate(heap, sizeof(*extended));
+		parameter = (MlnParameter *)extended;
+		if (extended == NULL)
+			goto no_memory;
+		extended->name = NULL;
+		extended->value = NULL;
+		extended->flags = MLN_ESB_WORD(start + 2);
+		name = start + 4;
+		nameSize = MLN_ESB_WORD(start + 3);
+name:
+		parameter->name = MlnBufferCreate(heap, nameSize - 1, name);
+		if (parameter->name == NULL) {
+			ret = MLN_ERROR_NO_MEMORY;
+		} else {
+			p = (const unsigned int *)((const char *)name + nameSize);
+			ret = MlnValueDecode(heap, &p, &parameter->value);
+			if (ret == MLN_OK) {
+				value->data.parameter = parameter;
+				break;
+			}
+		}
+		MlnParameterFreeInline(heap, parameter);
+		goto fail;
+	case MLN_VALUE_LIST:
+		ret = MlnValueListDecode(heap, &p, &value->data.list);
+		if (ret != MLN_OK)
+			goto fail;
+		break;
+	default:
+format:
+		ret = MLN_ERROR_FORMAT;
+		goto fail;
+	}
+	*cursor = p;
+	*out = value;
+	return MLN_OK;
+
+no_memory:
+	ret = MLN_ERROR_NO_MEMORY;
+fail:
+	MlnValueFree(heap, value);
+	return ret;
+}
+
+/* a status block: its six header words, then its parameters */
+__attribute__((noinline)) int MlnEsbDecode(int heap, unsigned int size, const void *data,
+					   MlnEsb **out)
+{
+	const unsigned int *p = data;
+	MlnEsb *esb;
+	int ret;
+
+	esb = MlnAllocate(heap, sizeof(*esb));
+	if (esb == NULL)
+		return MLN_ERROR_NO_MEMORY;
+	MlnMemset(esb, 0, sizeof(*esb));
+	esb->globalFlags = MLN_ESB_WORD(p);
+	esb->category = MLN_ESB_WORD(p + 1);
+	esb->subCategory = MLN_ESB_WORD(p + 2);
+	esb->localFlags = MLN_ESB_WORD(p + 3);
+	esb->cacheDurationType = MLN_ESB_WORD(p + 4);
+	esb->cacheDurationValue = MLN_ESB_WORD(p + 5);
+	p += 6;
+	ret = MlnValueListDecode(heap, &p, &esb->parameters);
+	if (ret != MLN_OK) {
+		MlnValueListFreeInline(heap, esb->parameters);
+		MlnFree(heap, esb);
+	} else {
+		*out = esb;
+	}
+	return ret;
+}
+
+__attribute__((noinline)) int MlnEsbFree(int heap, MlnEsb *esb)
+{
+	if (esb == NULL)
+		return MLN_OK;
+	MlnValueListFreeInline(heap, esb->parameters);
+	MlnFree(heap, esb);
+	return MLN_OK;
 }

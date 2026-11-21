@@ -788,7 +788,7 @@ int MlnXmlNodeToText(int heap, MlnXmlNode *node, MlnBuffer **text);
 #define MLN_VALUE_EXTENDED_PARAMETER	5
 #define MLN_VALUE_RESOURCE		6
 #define MLN_VALUE_LIST			7
-#define MLN_VALUE_BYTES			8	/* the Custom obligation's last value */
+#define MLN_VALUE_BYTE_ARRAY		8
 
 struct MlnValue;
 
@@ -855,24 +855,32 @@ typedef struct MlnOutputControl {
 int MlnOutputControlParse(int heap, const MlnValueList *parameters, const MlnBuffer *id,
 			  int report, unsigned int *flags, MlnOutputControl **out);
 int MlnValueCopy(int heap, const MlnValue *value, MlnValue **out);
-/* not written in C yet */
-void MlnValueFree(int heap, MlnValue *value);
-void MlnValueListFree(int heap, MlnValueList *list);
-void MlnExtendedParameterFree(int heap, MlnExtendedParameter *extended);
+int MlnValueFree(int heap, MlnValue *value);
+int MlnValueListFree(int heap, MlnValueList *list);
+int MlnExtendedParameterFree(int heap, MlnExtendedParameter *extended);
+int MlnParameterFree(int heap, MlnParameter *parameter);
+int MlnValueListDecode(int heap, const unsigned int **cursor, MlnValueList **out);
+int MlnValueDecode(int heap, const unsigned int **cursor, MlnValue **out);
 int MlnRightsInfoFree(int heap, MlnRightsInfo *info);
 int MlnRightsInfoParse(int heap, unsigned int size, const void *data, MlnRightsInfo **out);
 
-/* a decoded extended status block (not written in C yet) */
+/* a decoded extended status block, Octopus's ExtendedStatusBlock */
+#define MLN_ESB_GLOBAL_UNSUPPORTED	0x01	/* a block this library cannot act on */
+
 typedef struct MlnEsb {
-	unsigned int reserved0[3];
-	unsigned int flags;		/* bit 0: obligations, 1: callbacks, 2-7: the constraint groups */
-	unsigned int reserved1[2];
+	unsigned int globalFlags;
+	unsigned int category;
+	unsigned int subCategory;
+	unsigned int localFlags;	/* bit 0: obligations, 1: callbacks, 2-7: the constraint groups */
+	unsigned int cacheDurationType;
+	unsigned int cacheDurationValue;
 	MlnValueList *parameters;
 } MlnEsb;
 
 int MlnEsbDecode(int heap, unsigned int size, const void *data, MlnEsb **out);
 int MlnImpl_81026814(int heap, void *value, void *a2, void *a3, MlnBuffer **out);
-void MlnEsbFree(int heap, MlnEsb *esb);
+int MlnEsbFree(int heap, MlnEsb *esb);
+int MlnEsbCheckGlobalFlags(int heap, const MlnEsb *esb);
 
 /* not written in C yet: the prototypes are their callers' */
 int MlnCoreInit(void *memory, unsigned int size);
