@@ -1056,7 +1056,7 @@ static void controlsRequest0184Done(unsigned char command, unsigned char result)
 /* six fixed words */
 static void controlsRequest0185(void)
 {
-#if HW_IS(0x00315200)
+#if HW_IRT001
 	inputRequests.controlsAnswer.word[0] = 0x00ff;
 	inputRequests.controlsAnswer.word[1] = 0xff00;
 	inputRequests.controlsAnswer.word[2] = 0x0001;
@@ -4268,7 +4268,7 @@ void motionStreamPrepare(void)
 /* 0x0480: the sensor's two words (zeros if it is held in reset), once the scan has read them */
 static void motionRequest0480(void)
 {
-#if HW_IS(0x00315200) && !FW_SINCE(0x01000104)
+#if HW_IRT001 && !FW_SINCE(0x01000104)
 	unsigned char result;	/* 0x00315200's before 0x01000104: unused, its register saved */
 #elif HW_IS(0x00102603) && !FW_SINCE(0x00090206)
 	unsigned char result;	/* and 0x00102603's 0x00090009 */

@@ -708,7 +708,7 @@ void inputInit(void)
 	inputState3 = 0x04;
 	inputGroup3.prev = 0x04;
 	inputGroup3.changed = 0;
-#if BOARD_INPUT3_PINS && ERNIE_BOARD != 0x00406000 && (!BOARD_INPUTS_102603 || HW_IS(0x00315200)) && \
+#if BOARD_INPUT3_PINS && ERNIE_BOARD != 0x00406000 && (!BOARD_INPUTS_102603 || HW_IRT001) && \
     FW_SINCE(0x00090206)	/* 0x00601000: PCH-1000's, with the pins; 0x00090009 dispatches bit 1 (intp11Low) */
 	inputGroup3.pending = 0x24;
 	inputGroup3.enable = 0x3d;
@@ -902,7 +902,7 @@ void inputResumeOpen(void)
 #endif
 	inputGroup1.pending |= 0x08;
 #if (BOARD_INPUTS_102603 || (!FW_SINCE(0x00090804) && BOARD_IS(0x00411000))) && \
-    !(HW_IS(0x00315200) && !FW_SINCE(0x00090804))
+    !(HW_IRT001 && !FW_SINCE(0x00090804))
 #if HW_IS(0x00102603) && !FW_SINCE(0x00090206)
 	inputDelays.analog80 = 0x1c;	/* 0x00102603's 0x00090009 starts channel 8 */
 #else
@@ -1001,7 +1001,7 @@ void inputPowerOff(void)
 	analogStop();
 	adcCloseForBoard();
 #if BOARD_INPUTS_102603
-#if HW_IS(0x00315200)
+#if HW_IRT001
 	P127 = 0;
 #else
 	P12 &= (unsigned char)~0x80;
@@ -1012,7 +1012,7 @@ void inputPowerOff(void)
 	adcCloseForBoard();
 	inputKeysClose();
 #if BOARD_INPUTS_102603
-#if HW_IS(0x00315200)
+#if HW_IRT001
 	P127 = 0;
 #else
 	P12 &= (unsigned char)~0x80;
@@ -1284,7 +1284,7 @@ void inputSuspend(void)
 	analogStop();
 	adcCloseForBoard();
 #if BOARD_INPUTS_102603
-#if HW_IS(0x00315200)
+#if HW_IRT001
 	P127 = 0;
 #else
 	P12 &= (unsigned char)~0x80;
@@ -1294,7 +1294,7 @@ void inputSuspend(void)
 	adcCloseForBoard();
 	inputKeysClose();
 #if BOARD_INPUTS_102603
-#if HW_IS(0x00315200)
+#if HW_IRT001
 	P127 = 0;
 #else
 	P12 &= (unsigned char)~0x80;
@@ -1524,7 +1524,7 @@ void sampleInputs2(void)
 void sampleInputs3(void)
 {
 #if !INPUT_0104	/* DOL-1002's samples nothing */
-#if BOARD_INPUTS_102603 && !HW_IS(0x00315200)
+#if BOARD_INPUTS_102603 && !HW_IRT001
 	inputRaw3.0 = P7.3;
 	inputRaw3.1 = P7.2;
 #elif BOARD_INPUT3_PINS
@@ -1536,7 +1536,7 @@ void sampleInputs3(void)
 	inputRaw3.3 = P2.7;
 	inputRaw3.4 = P2.5;
 #endif
-#if BOARD_INPUTS_102603 && !HW_IS(0x00315200)
+#if BOARD_INPUTS_102603 && !HW_IRT001
 	inputRaw3.5 = P2.1;
 #endif
 	inputGroupUpdate(&inputRaw3, &inputState3, &inputGroup3);

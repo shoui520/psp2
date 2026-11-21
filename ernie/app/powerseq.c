@@ -1883,7 +1883,7 @@ void powerCtrlDeviceReset(unsigned char hold, unsigned char devices)
 }
 #endif
 #else
-#if HW_IS(0x00315200) && FW_SINCE(0x01000104)
+#if HW_IRT001 && FW_SINCE(0x01000104)
 /* 0x00315200 drives no WLAN line (before 0x01000104 the config's, as below) */
 #define POWER_SET_WLAN_LINE(level)	do { } while (0)
 #elif BOARD_WLAN_102603
@@ -1935,7 +1935,7 @@ static const struct PowerStep powerSuspendSteps[4] = {
 	{ { 0x8000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000 }, 0x5c },
 	{ { 0x0004, 0x4000, 0x0000, 0x0000, 0x0000, 0xa000 }, 0x7c },
 };
-#elif HW_IS(0x00315200)
+#elif HW_IRT001
 /* 0x00315200's: four steps each, 0x00102603's without register 0xa3's bits 15 and 14 and
    register 0xa2's 0x1880 */
 static const struct PowerStep powerResumeSteps[4] = {
@@ -2096,7 +2096,7 @@ void powerSeqOn(void)
 	cookieCtrlBatteryCharge(1);
 #endif
 #if !FW_SINCE(0x01000104)
-	elmoPowerOnStage = BOARD_IS(0x00411000) && !HW_IS(0x00315200) ? 0x0b : 7;
+	elmoPowerOnStage = BOARD_IS(0x00411000) && !HW_IRT001 ? 0x0b : 7;
 #endif
 	chargeInit();
 }
@@ -2269,7 +2269,7 @@ unsigned char powerSeqOff(void)
 #if FW_SINCE(0x00090206)	/* 0x00090009 keeps the line, and stops the clock output last */
 	POWER_SET_WLAN_LINE(0);
 #endif
-#if BOARD_102603 && !BOARD_WLAN_102603 && !HW_IS(0x00315200)
+#if BOARD_102603 && !BOARD_WLAN_102603 && !HW_IRT001
 	P6.7 = 0;
 #endif
 #if FW_SINCE(0x00090804) && BOARD_BBMC
@@ -2423,7 +2423,7 @@ unsigned char powerElmoA0Clear(unsigned char bit14, unsigned char bit13)
 	return result;
 }
 
-#if BOARD_102603 && !HW_IS(0x00315200)
+#if BOARD_102603 && !HW_IS(0x00315200)	/* 0x00315000 has 0x00102603's */
 /* 0x0885: Elmo register 0xa3's bits 15 and 14 and register 0xa0's bit 12 set, one per
    argument */
 unsigned char powerElmoA0Set2(unsigned char bit15, unsigned char bit14, unsigned char bit12)
@@ -2808,13 +2808,13 @@ unsigned char powerOffWlan(void)
 		P13.1 = 0;
 #if !FW_SINCE(0x00090206)
 		/* 0x00090009 keeps the line, and stops the clock output once the WLAN is off */
-#if BOARD_102603 && !HW_IS(0x00315200)
+#if BOARD_102603 && !HW_IRT001
 		P6.7 = 0;
 #endif
 #elif BOARD_WLAN_102603
 		POWER_SET_WLAN_LINE(0);
 		clockOutputStop();
-#elif BOARD_102603 && !HW_IS(0x00315200)
+#elif BOARD_102603 && !HW_IRT001
 		P6.7 = 0;
 		clockOutputStop();
 		POWER_SET_WLAN_LINE(0);
@@ -3436,7 +3436,7 @@ unsigned char powerElmoA0Clear(unsigned char bit14, unsigned char bit13)
 	return result;
 }
 
-#if BOARD_102603 && !HW_IS(0x00315200)
+#if BOARD_102603 && !HW_IS(0x00315200)	/* 0x00315000 has 0x00102603's */
 /* 0x0885: Elmo register 0xa3's bits 15 and 14 and register 0xa0's bit 12 set, one per
    argument */
 unsigned char powerElmoA0Set2(unsigned char bit15, unsigned char bit14, unsigned char bit12)

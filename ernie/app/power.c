@@ -250,7 +250,7 @@ unsigned char powerErrorGet(void)
 }
 #endif
 
-#if HW_IS(0x00315200)
+#if HW_IRT001
 /* no fault line */
 int powerFaulty(void)
 {

@@ -780,8 +780,8 @@ static int stateOffHandle(struct StateEvent *event)
 #else
 		/* 0x00090206 has the masks in its code */
 		/* bit 13 wakes the other boards (0x00315200 too) */
-		stateWakeMask |= BOARD_IS(0x00411000) && !HW_IS(0x00315200) ? 0xffa0057cUL : 0xffa0257cUL;
-		stateWakeMask &= BOARD_IS(0x00411000) && !HW_IS(0x00315200) ? ~0x001e7a01UL : ~0x001e5a01UL;
+		stateWakeMask |= BOARD_IS(0x00411000) && !HW_IRT001 ? 0xffa0057cUL : 0xffa0257cUL;
+		stateWakeMask &= BOARD_IS(0x00411000) && !HW_IRT001 ? ~0x001e7a01UL : ~0x001e5a01UL;
 #endif
 #if STATE_WAKE_BITS
 		stateWakeMaskHigh |= configGet()->wakeMasksHigh.on;
@@ -964,8 +964,8 @@ static int stateSuspendHandle(struct StateEvent *event)
 #else
 	}
 	/* 0x00090206 sets the masks and checks the request at every event */
-	stateWakeMask |= BOARD_IS(0x00411000) && !HW_IS(0x00315200) ? 0xffa21c10UL : 0xffa23d10UL;
-	stateWakeMask &= BOARD_IS(0x00411000) && !HW_IS(0x00315200) ? ~0x001c6001UL : ~0x001c4001UL;
+	stateWakeMask |= BOARD_IS(0x00411000) && !HW_IRT001 ? 0xffa21c10UL : 0xffa23d10UL;
+	stateWakeMask &= BOARD_IS(0x00411000) && !HW_IRT001 ? ~0x001c6001UL : ~0x001c4001UL;
 	if (stateRequest.bits.mode != 0 &&
 	    ((1UL << stateRequest.bits.mode) & stateWakeMask))
 		stateNext = 0;

@@ -26,6 +26,10 @@ extern unsigned char handshakeCommand(unsigned char *data);
 extern unsigned char handshakeState(void);
 #endif
 extern unsigned char handshakeUnlocked11(void);
+#if HW_IS(0x00315000)
+/* DEM-3000G (0x00315000): its requests and commands run without the handshake's test */
+#define handshakeUnlocked11()	1
+#endif
 #if FW_SINCE(0x00090903)
 extern int handshakeLock11(void);
 extern int handshakeUnlocked15(void);

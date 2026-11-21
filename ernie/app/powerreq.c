@@ -1029,7 +1029,7 @@ static void powerRequest0884(void)
 }
 
 /* 0x0885 (SceSysconForDriver_79E6DD8B) */
-#if BOARD_102603 && !HW_IS(0x00315200)
+#if BOARD_102603 && !HW_IS(0x00315200)	/* 0x00315000 has 0x00102603's */
 /* Elmo register 0xa3's bits 15 and 14 and register 0xa0's bit 12: bit 14 (data bit 1 to set,
    bit 2 to clear) must be on, or already on, for bit 15 (data bit 2 to set, bit 1 to clear),
    0x3c otherwise */
@@ -1811,7 +1811,7 @@ static void powerRequest0890(void)
 {
 	powerRequestDone(4);
 }
-#elif HW_IS(0x00315200) && !FW_SINCE(0x01000104)
+#elif HW_IRT001 && !FW_SINCE(0x01000104)
 /* 0x00315200 before 0x01000104: no P3.3 to switch (Sony's keeps the result variable, unused:
    its register is saved) */
 static void powerRequest0890(void)

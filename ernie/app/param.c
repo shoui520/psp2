@@ -49,7 +49,7 @@ static const struct ChargeLevel paramChargeLevelsDefault[9] = {
 struct Param param;
 
 /* serial1Command0950's base step at a reset: 0x00411000's 0x0b (not 0x00315200's) */
-#if BOARD_IS(0x00411000) && !HW_IS(0x00315200)
+#if BOARD_IS(0x00411000) && !HW_IRT001
 #define PARAM_BASE_DEFAULT	0x0b
 #else
 #define PARAM_BASE_DEFAULT	7

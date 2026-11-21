@@ -925,7 +925,7 @@ unsigned char analogStart(unsigned int inputs)
 	if (inputs & 0x0020)
 		mask |= 0x0c;
 	if (inputs & 0x0001) {
-#if HW_IS(0x00315200)
+#if HW_IRT001
 		P127 = 0;
 #else
 		P12 &= (unsigned char)~0x80;
@@ -1182,7 +1182,7 @@ void analogEvent(unsigned int inputs)
 #endif
 #if BOARD_102603
 	if (inputs & 0x0001) {
-#if HW_IS(0x00315200)
+#if HW_IRT001
 		P127 = 1;
 #else
 		P12 |= 0x80;
@@ -2455,7 +2455,7 @@ void analogReport(void)
 			analogSticks1[3] = 0xff - analogAxes[3].output[1].value;
 		}
 	}
-#elif HW_IS(0x00315200)
+#elif HW_IRT001
 	/* axes 0 and 1 inverted, 2 and 3 as they are */
 	if (analogFlags & ANALOG_SET0) {
 		analogSticks0[0] = 0xff - analogAxes[0].output[0].value;

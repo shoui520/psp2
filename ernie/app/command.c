@@ -424,8 +424,10 @@ void commandRequestNotify(void)
 	union CommandWord word;
 #else
 	/* before 0x01000104 the event carries the transition and its parameter itself */
+#if !HW_IS(0x00315000)	/* DEM-3000G's has neither */
 	unsigned char i;
 	unsigned char reserved;		/* never used */
+#endif
 	union RtcTick tick;
 	unsigned int offset;
 	unsigned char size;
@@ -451,6 +453,7 @@ void commandRequestNotify(void)
 			}
 		}
 #else
+#if !HW_IS(0x00315000)	/* DEM-3000G: no handshake to check */
 	if (!handshakeUnlocked11()) {
 		for (i = 0; i < COMMAND_BASE_REQUESTS; i++) {
 			if (commandBaseRequests[i] == commandRequest.command)
@@ -461,6 +464,7 @@ void commandRequestNotify(void)
 		return;
 	}
 allowed:
+#endif
 	switch (commandRequest.event) {
 	case HOST_EVENT_COMMAND:
 #endif

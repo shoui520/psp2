@@ -31,6 +31,8 @@
  * IRS-1001, 0x007 DOL (PS TV), 0x008 USS (PCH-2000)) */
 #define HW_FAMILY		(ERNIE_HW >> 20)
 #define HW_IS(id)		(ERNIE_HW == (id))
+/* IRT-001: DEM-3000H (0x00315200) and DEM-3000G (0x00315000), one board's code */
+#define HW_IRT001		(HW_IS(0x00315200) || HW_IS(0x00315000))
 #define FW_SINCE(version)	(ERNIE_FW >= (version))
 /* the 0x0103 source: the slim models' firmware (0x01030505 on), which the PS TV's (0x01030603 on,
    on the fat models' chip and wiring) is built from too; board.h's BOARD_USS1001 is the slim's

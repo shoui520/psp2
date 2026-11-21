@@ -335,7 +335,7 @@ const struct ConfigBank configDefault = {
 #elif ERNIE_BOARD == 0x00406000 && FW_SINCE(0x0100060B)
 		{ 0x0b, 0x08 }, 0x05,	/* reserved22, voltageTrim */
 		{ 0x00, 0x00, 0x00 },	/* reserved7 */
-#elif HW_IS(0x00315200)
+#elif HW_IRT001
 		{ 0x0b, 0x08, 0x05 }, 0x07,	/* reserved22, voltageTrim */
 		{ 0x00, 0x00 },	/* reserved7 */
 #elif ERNIE_BOARD == 0x00406000

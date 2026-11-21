@@ -12,7 +12,7 @@
    channel 10; the slim converts ANI2-ANI6, channel 2 first */
 #if BOARD_USS1001
 #define ADC_FIRST_CHANNEL	0x02
-#elif HW_IS(0x00315200)
+#elif HW_IRT001
 #define ADC_FIRST_CHANNEL	0x09
 #elif BOARD_IS(0x00411000)
 #define ADC_FIRST_CHANNEL	0x08

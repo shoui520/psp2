@@ -536,6 +536,7 @@ unsigned char handshakeState(void)
 }
 #endif
 
+#undef handshakeUnlocked11
 unsigned char handshakeUnlocked11(void)
 {
 	return handshakeUnlocked[0] == HANDSHAKE_UNLOCKED;
