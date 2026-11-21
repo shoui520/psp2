@@ -42,6 +42,9 @@ int sceAudioInInput(int port, void *destPtr);
 int sceAudioInGetAdopt(int portType);
 int sceAudioInGetStatus(int select);
 
+/* not in the SDK: the microphone muted (1) or not (2), the shell's setting */
+int sceAudioInSetMute(int select);
+
 #ifdef __cplusplus
 }
 #endif

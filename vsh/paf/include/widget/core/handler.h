@@ -279,6 +279,15 @@ public:
 		return KillTimer(CB_INTERVAL | (id & 0xFFFF));
 	}
 
+	/* the events of the mask taken, the focus events through EnableFocusEvent (inline in its
+	   callers, impose_plugin's 0x8141A4A8; name ours) */
+	void EnableEvent(uint32_t mask)
+	{
+		if ((m_event_enable & 0x400) == 0 && (mask & 0x400) != 0)
+			EnableFocusEvent(true);
+		m_event_enable |= mask;
+	}
+
 	EventQueue *m_event_queue;
 	uint32_t m_event_enable;
 	map<int32_t, EventListenerList *> m_map_e_listener;

@@ -1361,6 +1361,12 @@ public:
 	void remove_pad_gesture_mask(uint32_t port_id, uint32_t type);
 	void remove_touch_gesture_mask(uint32_t port_id, uint32_t touch_id, uint32_t type);
 
+	/* shown or hidden with the transition (0xff: the widget's own), the timer's time after
+	   the delay, the callback called when done (inline in Sony's callers, impose_plugin's
+	   0x8141A66C and 0x8141A5FC; names ours) */
+	inline void Show(uint8_t type, Timer *t, AnimCB cb_fin, float delay);
+	inline void Hide(uint8_t type, Timer *t, AnimCB cb_fin, float delay);
+
 	void SetHitBox(uint8_t mode, const math::v4 &size, const math::v4 &center)
 	{
 		m_hit_box_mode = mode;
@@ -2121,6 +2127,32 @@ int32_t ScePafWidget_4588699E(paf::ui::Widget *widget, paf::Timer *t, int32_t op
 /* Show(Timer *, int32_t opt, float delay, AnimCB): shows the widget, over the timer's time */
 int32_t ScePafWidget_FF5BC957(paf::ui::Widget *widget, paf::Timer *t, int32_t opt, float delay,
 			      paf::ui::AnimCB cb_fin);
+
+inline void paf::ui::Widget::Show(uint8_t type, Timer *t, AnimCB cb_fin, float delay)
+{
+	if (!m_transition_complete) {
+		m_transition = type;
+		m_transition_complete = true;
+		if (type == 0xff)
+			DoTransition_core(delay, true);
+		else
+			ScePafCommon_6CF3A3C8(delay, this, (common::transition::Type)type, false, true);
+	}
+	ScePafWidget_FF5BC957(this, t, 2, delay, cb_fin);
+}
+
+inline void paf::ui::Widget::Hide(uint8_t type, Timer *t, AnimCB cb_fin, float delay)
+{
+	float time = delay + (t != NULL ? t->m_total * 1000.0f : 0.0f);
+
+	m_transition_complete = false;
+	m_transition = type;
+	if (type == 0xff)
+		DoTransitionReverse_core(time, true);
+	else
+		ScePafCommon_B48C9BDC(time, this, (common::transition::Type)type, false, true);
+	ScePafWidget_4588699E(this, t, 2, delay, cb_fin);
+}
 /* SetPosHermite with the start's and the target's tangents given apart (no name found) */
 int32_t ScePafWidget_026C9E8C(paf::ui::Widget *widget, const paf::math::v4 &pos,
 			      const paf::math::v4 *start, const paf::math::v4 *target,

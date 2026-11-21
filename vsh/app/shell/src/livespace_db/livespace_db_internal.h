@@ -586,6 +586,8 @@ unsigned int SceLsdb_63C29E70(int language);
 
 /* an application's values: its title ID, its SUPPORT_URI text, whether it is a "gda" title */
 const char *sceLsdbGetName(const LsdbAppInfoPtr *app);
+/* its title in the system's language, else its TITLE */
+const char *sceLsdbGetTitle(const LsdbAppInfoPtr *app);
 /* an application's _bg_title_id text, and its subtype through the game plugin */
 const char *SceLsdb_457F369E(const LsdbAppInfoPtr *app);
 int SceLsdb_298134FE(const LsdbAppInfoPtr *app);

@@ -23,6 +23,10 @@
 #include <cache/cache_manager.h>
 #include <std/vector>
 #include <versatileparam/idparam.h>
+#include <job/job.h>
+#include <widget/w_slidebar.h>
+#include <widget/w_check_box.h>
+#include "../../livespace_db/livespace_db_internal.h"
 #include "../../../plugins.h"
 
 /* the plugin's interface and the plugin itself (impose.cpp) */
@@ -218,19 +222,139 @@ public:
 /* the parental control's lock page (0x81564BD8) */
 extern ImposeParentalControl *g_imposeParentalControl;
 
-/* (0x8114B0DC, 188 bytes) */
-class ImposePart8114B0DC {
+/*
+ * PLACEHOLDER names: the parts of the PS button's menu whose code is in later files, by the
+ * address of their constructors (impose_psmenu.cpp opens, updates and closes them)
+ */
+class ImposePart81158C14 {
 public:
-	ImposePart8114B0DC(paf::Plugin *plugin);
-	~ImposePart8114B0DC();
-	void Impose_8114C460();
-	void Impose_8114AA16();
-	int Impose_81135260();
-	void Impose_8114F232(bool arg);
-	void Impose_8114DDBE(bool arg);
+	ImposePart81158C14();
+	~ImposePart81158C14();
+	void Impose_81158E12(paf::ui::Widget *box);
+	void Impose_811598AA();
+	void Impose_811598BA(bool arg);
+	void Update();
 
-	SceUInt8 data[188];
+	SceUInt8 data[28];
 };
+
+class ImposePart81153A18 {
+public:
+	ImposePart81153A18(paf::Plugin *plugin);
+	~ImposePart81153A18();
+	void Impose_81153A26(paf::ui::Widget *box);
+	void Impose_8115422E();
+	void Impose_81154CD2();
+
+	SceUInt8 data[20];
+};
+
+class ImposePart811558C0 {
+public:
+	ImposePart811558C0(paf::Plugin *plugin);
+	~ImposePart811558C0();
+	void Impose_811561AA(paf::ui::Widget *box);
+	void Impose_8115756C();
+	void Impose_81157ACE();
+	void Impose_81158590(bool arg);
+
+	SceUInt8 data[64];
+};
+
+class ImposePart81152FB8 {
+public:
+	ImposePart81152FB8(paf::Plugin *plugin);
+	~ImposePart81152FB8();
+	void Impose_81152FC4(paf::ui::Widget *box);
+	void Impose_811535D2();
+
+	SceUInt8 data[16];
+};
+
+class ImposePart811527E0 {
+public:
+	ImposePart811527E0(paf::Plugin *plugin);
+	~ImposePart811527E0();
+	void Impose_811527E8(paf::ui::Widget *box);
+	void Impose_81152E5C();
+
+	SceUInt8 data[8];
+};
+
+/*
+ * PLACEHOLDER names: the jobs the menu puts on the default queue, Sony's names for them
+ * ("ImposePsMenuCheckAppMenuReady", "ImposePsMenuOpenAppMenu"; 0x81159EB4, 0x81159DF0)
+ */
+class ImposePsMenuCheckAppMenuReady : public paf::job::JobItem {
+public:
+	ImposePsMenuCheckAppMenuReady();
+	virtual int Run();
+	virtual void Finish(int result);
+};
+
+class ImposePsMenuOpenAppMenu : public paf::job::JobItem {
+public:
+	ImposePsMenuOpenAppMenu();
+	virtual int Run();
+	virtual void Finish(int result);
+};
+
+/*
+ * PLACEHOLDER names: the menu the PS button opens over an application ("ImposePsMenu", Sony's
+ * job names): the application's menu, the brightness, the microphone and the voice chat, the
+ * parental time left and the touch emulation (impose_psmenu.cpp; 0x8114B0DC, 188 bytes)
+ */
+class ImposePsMenu {
+public:
+	ImposePsMenu(paf::Plugin *plugin);
+	~ImposePsMenu();
+	void Close();
+	void ShowQuitDialog();
+	void SetAppMenuReady(bool ready);
+	int CheckAppMenuReady();
+	void UpdateAudioButtons();
+	void SetFocusButton(paf::ui::Widget *button);
+	bool GetApplication(LsdbAppInfoPtr *app);
+	void UpdateParentalIcon();
+	void UpdatePlayTime();
+	void Open();
+	bool IsOpen();
+	void Impose_8114DDBE(bool arg);
+	void ShowTouchEmulationHelp();
+	void OnTouchEmulation(SceInt32 type, paf::ui::Handler *self, paf::ui::Event *e, void *data);
+	void OnAppMenu(SceInt32 type, paf::ui::Handler *self, paf::ui::Event *e, void *data);
+	void LayoutPrioritizeInfo(paf::ui::Widget *text);
+	void ShowPrioritizeInfo();
+	void Impose_8114F232(bool arg);
+	void SetIcon(const paf::intrusive_ptr<paf::cache::CacheImageInterface> &icon,
+		     paf::ui::Widget *widget);
+
+	paf::Plugin *m_plugin;
+	paf::ui::Widget *m_page;
+	paf::ui::SlideBar *m_brightness;
+	paf::ui::CheckBox *m_micMute;
+	paf::ui::CheckBox *m_voicePriority;
+	SceInt32 m_brightnessValue;
+	SceInt32 m_prioritizeDialog;
+	SceInt32 m_helpDialog;
+	SceInt32 m_quitDialog;
+	paf::common::SharedPtr<paf::job::JobItem> m_job;
+	bool m_checking;
+	paf::ui::Widget *m_focusButton;
+	ImposePart81158C14 m_part81158C14;
+	ImposePart81153A18 m_part81153A18;
+	ImposePart811558C0 m_part811558C0;
+	ImposePart81152FB8 m_part81152FB8;
+	ImposePart811527E0 m_part811527E0;
+};
+
+/* the menu (0x81564DC0) */
+extern ImposePsMenu *g_imposePsMenu;
+
+/* PLACEHOLDER names: the console is a PS TV (0x8114BB84); a text child laid out on lines to
+   the width (0 keeps it) when the system asks for it (0x8114B894) */
+bool imposeIsDolce(void);
+void imposeLayoutText(paf::ui::Widget *parent, const paf::IDParam &id, float width);
 
 /* (0x8114F348, 56 bytes) */
 class ImposePart8114F348 {
@@ -413,7 +537,7 @@ public:
 	ImposePart8115013C m_part8115013C;
 	ImposePart81150574 m_part81150574;
 	ImposeParentalControl m_parentalControl;
-	ImposePart8114B0DC m_part8114B0DC;
+	ImposePsMenu m_psMenu;
 	ImposePart8114F348 m_part8114F348;
 	ImposePart8114FD14 m_part8114FD14;
 	ImposePart8115000C m_part8115000C;
@@ -424,6 +548,7 @@ public:
 
 /* the notices (0x81564D68) */
 extern ImposeNotification *g_imposeNotification;
+extern ImposeTouchEmulation *g_imposeTouchEmulation;
 
 /* PLACEHOLDER: a shader the shell keeps (0x8139303C, in the shell's own code) */
 const paf::common::SharedPtr<paf::graph::Shader> &Shell_8139303C(void);

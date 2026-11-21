@@ -1854,7 +1854,7 @@ modules:
           SceCommonGuiDialog_A6422883: 0xA6422883
           SceCommonGuiDialog_B1BA8D9E: 0xB1BA8D9E
           SceCommonGuiDialog_B59AE4AD: 0xB59AE4AD
-          SceCommonGuiDialog_BAC27433: 0xBAC27433
+          _ZN24CommonGuiListDialogParamC1Ev: 0xBAC27433
           SceCommonGuiDialog_BACBA7F2: 0xBACBA7F2
           SceCommonGuiDialog_BC311DC0: 0xBC311DC0
           SceCommonGuiDialog_C4601FBE: 0xC4601FBE

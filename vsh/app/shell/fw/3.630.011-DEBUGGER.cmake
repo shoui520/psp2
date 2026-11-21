@@ -776,7 +776,7 @@ set(MODULE_IMPORT_FUNCS
 	SceCommonGuiDialog_8947FC23
 	SceCommonGuiDialog_A6422883
 	SceCommonGuiDialog_B1BA8D9E
-	SceCommonGuiDialog_BAC27433
+	_ZN24CommonGuiListDialogParamC1Ev
 	SceCommonGuiDialog_BACBA7F2
 	SceCommonGuiDialog_BC311DC0
 	SceCommonGuiDialog_CCFCD9A6

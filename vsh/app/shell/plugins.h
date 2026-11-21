@@ -49,8 +49,11 @@ enum {
 	POWER_MANAGE_PLUGIN_FUNC_REMOVE_CALLBACK = 3,	/* the power events, and no longer */
 	POWER_MANAGE_PLUGIN_FUNC_GAME_HOLD	= 5,	/* PLACEHOLDER names: the game plugin at work, */
 	POWER_MANAGE_PLUGIN_FUNC_GAME_RELEASE	= 6,	/* and done */
+	POWER_MANAGE_PLUGIN_FUNC_MENU		= 14,	/* PLACEHOLDER name: the power menu shown */
 	POWER_MANAGE_PLUGIN_FUNC_POWER_EVENT	= 15,
 	POWER_MANAGE_PLUGIN_FUNC_BOOT_DONE	= 16,
+	POWER_MANAGE_PLUGIN_FUNC_MENU_OPENED	= 20,	/* PLACEHOLDER names: impose's menu opened, */
+	POWER_MANAGE_PLUGIN_FUNC_GET_LAYER	= 21,	/* and the widget it opens in */
 	POWER_MANAGE_PLUGIN_FUNC_IS_BUSY	= 25,	/* PLACEHOLDER: the console info is not written while it is not 0 */
 };
 

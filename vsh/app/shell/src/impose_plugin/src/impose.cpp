@@ -59,7 +59,7 @@ static void imposeUpdate(void *userdata);
 Impose::Impose(Plugin *plugin)
 	: m_plugin(plugin), m_page(NULL), m_volume(plugin), m_notification(plugin),
 	  m_screenshot(plugin), m_part8115013C(plugin), m_part81150574(plugin),
-	  m_parentalControl(plugin), m_part8114B0DC(plugin), m_part8114F348(plugin),
+	  m_parentalControl(plugin), m_psMenu(plugin), m_part8114F348(plugin),
 	  m_part8114FD14(plugin), m_part8115000C(plugin), m_touchEmulation(plugin)
 {
 	g_impose = this;
@@ -156,27 +156,27 @@ static const wchar_t *imposeGetString(const IDParam &id)
 
 static void Impose_8114115A(void)
 {
-	g_impose->m_part8114B0DC.Impose_8114C460();
+	g_impose->m_psMenu.Open();
 }
 
 static void Impose_81141170(void)
 {
-	g_impose->m_part8114B0DC.Impose_8114AA16();
+	g_impose->m_psMenu.Close();
 }
 
 static int Impose_81141186(void)
 {
-	return g_impose->m_part8114B0DC.Impose_81135260();
+	return g_impose->m_psMenu.IsOpen();
 }
 
 static void Impose_8114119C(bool arg)
 {
-	g_impose->m_part8114B0DC.Impose_8114F232(arg);
+	g_impose->m_psMenu.Impose_8114F232(arg);
 }
 
 static void Impose_811411B4(bool arg)
 {
-	g_impose->m_part8114B0DC.Impose_8114DDBE(arg);
+	g_impose->m_psMenu.Impose_8114DDBE(arg);
 }
 
 static void Impose_811411CC(void)
