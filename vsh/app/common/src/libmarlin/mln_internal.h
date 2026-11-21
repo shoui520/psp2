@@ -662,6 +662,8 @@ typedef struct MlnBufferGroup {
 /* SceDrmBridgeUser's calls (the SDK's stub library) */
 int sceDrmBridgeIsAllowRemotePlayDebug(void);
 int SceDrmBridgeUser_6F5DC6CD(void);
+int sceDrmBridgeGetCurrentSecureTick(unsigned long long *tick);
+int sceDrmBridgeMlnpsnlAuth1(void *input, void *tick, void *output, void *state);
 
 /* string.c */
 unsigned short MlnHtons(unsigned int value);
@@ -1336,8 +1338,19 @@ int MlnImpl_8102A418(void);
 typedef struct MlnBox {
 	unsigned int size;
 	unsigned char type[4];
-	const unsigned char *data;
+	unsigned char *data;
 } MlnBox;
+
+/* an attribute box: a box whose payload is a typed value of a number of bits */
+typedef struct MlnAttributeBox {
+	unsigned int size;
+	unsigned char type[4];
+	unsigned char flags[2];
+	unsigned short encoding;
+	unsigned short count;
+	unsigned short bits;
+	unsigned char *data;
+} MlnAttributeBox;
 
 int MlnImpl_8102A228(unsigned int error);
 int MlnImpl_8102A33C(const MlnBox *box, unsigned char *out);
@@ -1379,7 +1392,7 @@ int MlnImpl_8102AAE8(int *loaded);
 int MlnImpl_8102AE84(const MlnBuffer *state);
 MlnCoreInfo MlnImpl_8102AFBC(void);
 unsigned int MlnImpl_8102B054(void);
-int MlnImpl_8102B064(int unused, MlnBlob *out);
+int MlnImpl_8102B064(const MlnBuffer *id, MlnBlob *out);
 int MlnImpl_8102B198(const MlnBuffer *id);
 int MlnImpl_8102B2E0(void);
 unsigned int MlnImpl_81048214(unsigned int *flags);
@@ -1406,6 +1419,32 @@ void MlnImpl_81043F1C(MlnBuffer *entry);
 void MlnImpl_8103BBA0(MlnCoreRecord *record);
 unsigned int MlnImpl_81043B94(MlnBuffer ***base);
 int MlnImpl_8102B950(unsigned int *count, MlnBuffer ***entries, MlnBlob *state);
+unsigned int MlnImpl_8104436C(const MlnBuffer *id, MlnBuffer **entry);
+unsigned int MlnImpl_81044984(MlnBuffer *key, MlnBuffer *value, const MlnBuffer *first,
+			      const MlnBuffer *second);
+unsigned int MlnImpl_810444DC(const MlnBuffer *first, const MlnBuffer *second, void *a2, void *a3);
+unsigned int MlnImpl_810458B0(void *context, const MlnBuffer *data);
+int MlnImpl_8102BDBC(const MlnBuffer *first, const MlnBuffer *second, const MlnBuffer *id,
+		     void *a3, void *a4);
+int MlnImpl_8102C08C(void *context, const MlnBuffer *data, MlnBlob *out);
+int MlnImpl_8102C1E8(unsigned char kind, MlnBlob *out);
+int MlnImpl_8102C64C(unsigned int error);
+unsigned int MlnImpl_8104A8D8(int *handle);
+int MlnImpl_8104A9CC(int handle);
+int MlnImpl_8102C664(const MlnServiceReply *reply, MlnServiceArgs **out, int *status);
+int MlnImpl_8102C77C(const MlnServiceReply *reply, MlnServiceArgs **out, int *status);
+int MlnImpl_8102C7FC(const MlnServiceReply *reply, MlnServiceArgs **out, int *status);
+int MlnImpl_8102C870(const MlnServiceReply *reply, MlnServiceArgs **out, int *status);
+int MlnImpl_8102C95C(const MlnServiceReply *reply, MlnServiceArgs **out, int *status);
+int MlnImpl_8102CAAC(const MlnServiceReply *reply, MlnServiceArgs **out, int *status);
+int MlnImpl_8102CBF8(const MlnServiceReply *reply, MlnServiceArgs **out, int *status);
+int MlnImpl_8102CCA4(const MlnServiceReply *reply, MlnServiceArgs **out, int *status);
+int MlnImpl_8102CDB4(const MlnServiceReply *reply, MlnServiceArgs **out, int *status);
+int MlnImpl_8102CEEC(const MlnServiceReply *reply, MlnServiceArgs **out, int *status,
+		     MlnBuffer **result);
+int MlnImpl_8102CFB0(const MlnServiceReply *reply, MlnServiceArgs **out, int *status);
+int MlnImpl_8102D05C(const MlnServiceReply *reply, MlnServiceArgs **out, int *status,
+		     MlnBuffer **result);
 int MlnImpl_8102AA38(MlnBlob *blob, MlnBuffer *out);
 int MlnImpl_810318D4(void *a0, const MlnBuffer *a1, MlnBlob *first, MlnBlob *second);
 

@@ -34,6 +34,7 @@ set(MLN_ENGINE_SOURCES
 	service.c
 	xmlwrite.c
 	octopus.c
+	octopusservice.c
 )
 psp2_module(${PSP2_TARGET} KIND user COMPILER gcc48 PARTIAL SOURCES
 	${MLN_ARM_SOURCES}

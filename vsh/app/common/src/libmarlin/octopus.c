@@ -196,11 +196,13 @@ int MlnImpl_8102A69C(MlnBlob *out)
 	if (out == NULL) {
 		ret = 4;
 	} else {
-		ret = MlnImpl_8102A228(MlnImpl_81043A60(1, &buffer));
+		ret = MlnImpl_81043A60(1, &buffer);
 		if (ret == 0) {
 			out->buffer = buffer;
 			out->size = buffer->size;
 			buffer = NULL;
+		} else {
+			ret = MlnImpl_8102A228(ret);
 		}
 	}
 	MlnBufferDestroy(MLN_HEAP_GENERAL, buffer);
@@ -210,13 +212,21 @@ int MlnImpl_8102A69C(MlnBlob *out)
 /* restores the core's state */
 int MlnImpl_8102A7F0(const MlnBuffer *state)
 {
-	return MlnImpl_8102A228(MlnImpl_81043A6C(state));
+	int ret = MlnImpl_81043A6C(state);
+
+	if (ret != 0)
+		ret = MlnImpl_8102A228(ret);
+	return ret;
 }
 
 /* clears the core's state */
 int MlnImpl_8102A914(void)
 {
-	return MlnImpl_8102A228(MlnImpl_81043A78());
+	int ret = MlnImpl_81043A78();
+
+	if (ret != 0)
+		ret = MlnImpl_8102A228(ret);
+	return ret;
 }
 
 /* a blob's bytes into the caller's buffer, and the blob freed */
@@ -254,8 +264,8 @@ int MlnImpl_8102AAE8(int *loaded)
 {
 	MlnBuffer *state = NULL;
 	int present = 0;
-	unsigned int ret;
-	unsigned int err;
+	int ret;
+	int err;
 
 	if (loaded == NULL) {
 		ret = 4;
@@ -301,7 +311,7 @@ int MlnImpl_8102AAE8(int *loaded)
 int MlnImpl_8102AE84(const MlnBuffer *state)
 {
 	MlnBuffer copy;
-	unsigned int ret;
+	int ret;
 
 	if (state == NULL)
 		return 4;
@@ -309,7 +319,9 @@ int MlnImpl_8102AE84(const MlnBuffer *state)
 	ret = MlnImpl_8103B29C(&copy);
 	if (ret == 0)
 		ret = MlnImpl_81043D7C(&copy);
-	return MlnImpl_8102A228(ret);
+	if (ret != 0)
+		ret = MlnImpl_8102A228(ret);
+	return ret;
 }
 
 MlnCoreInfo MlnImpl_8102AFBC(void)
@@ -331,34 +343,44 @@ unsigned int MlnImpl_8102B054(void)
 	return MlnImpl_8103B29C(NULL);
 }
 
-int MlnImpl_8102B064(int unused, MlnBlob *out)
+int MlnImpl_8102B064(const MlnBuffer *id, MlnBlob *out)
 {
 	MlnBuffer *buffer = NULL;
-	unsigned int ret;
+	int ret;
 
-	(void)unused;
+	(void)id;
 	if (out == NULL)
 		return 4;
 	ret = MlnImpl_810393D0(0, &buffer);
 	if (ret == 0) {
 		out->buffer = buffer;
 		out->size = buffer->size;
-		return 0;
+	} else {
+		ret = MlnImpl_8102A228(ret);
 	}
-	return MlnImpl_8102A228(ret);
+	return ret;
 }
 
 /* a 20-byte identifier for the core */
 int MlnImpl_8102B198(const MlnBuffer *id)
 {
+	int ret;
+
 	if (id == NULL || id->size != 20 || id->data == NULL)
 		return 4;
-	return MlnImpl_8102A228(MlnImpl_81047DC4(id));
+	ret = MlnImpl_81047DC4(id);
+	if (ret != 0)
+		ret = MlnImpl_8102A228(ret);
+	return ret;
 }
 
 int MlnImpl_8102B2E0(void)
 {
-	return MlnImpl_8102A228(MlnImpl_81047E00());
+	int ret = MlnImpl_81047E00();
+
+	if (ret != 0)
+		ret = MlnImpl_8102A228(ret);
+	return ret;
 }
 
 /* the flags of the core and of an identifier: a flag in the top nibble is an error */
@@ -367,7 +389,7 @@ int MlnImpl_8102B404(void *id, unsigned int *flags)
 	unsigned int coreFlags = 0;
 	unsigned int idFlags = 0;
 	unsigned int value = 0;
-	unsigned int ret;
+	int ret;
 
 	if (id == NULL || flags == NULL) {
 		ret = 4;
@@ -399,7 +421,7 @@ out:
 int MlnImpl_8102B590(const MlnBuffer *id, MlnBlob *out)
 {
 	MlnBuffer *buffer = NULL;
-	unsigned int ret;
+	int ret;
 
 	if (out == NULL) {
 		ret = 4;
@@ -407,15 +429,16 @@ int MlnImpl_8102B590(const MlnBuffer *id, MlnBlob *out)
 		ret = 4;
 	} else {
 		ret = MlnImpl_810486D4(id);
-		if (ret == 0)
-			ret = MlnImpl_81043A60(1, &buffer);
 		if (ret == 0) {
-			out->buffer = buffer;
-			out->size = buffer->size;
-			buffer = NULL;
-		} else {
-			ret = MlnImpl_8102A228(ret);
+			ret = MlnImpl_81043A60(1, &buffer);
+			if (ret == 0) {
+				out->buffer = buffer;
+				out->size = buffer->size;
+				buffer = NULL;
+			}
 		}
+		if (ret != 0)
+			ret = MlnImpl_8102A228(ret);
 	}
 	MlnBufferDestroy(MLN_HEAP_GENERAL, buffer);
 	return ret;
@@ -425,7 +448,7 @@ int MlnImpl_8102B590(const MlnBuffer *id, MlnBlob *out)
 int MlnImpl_8102B718(const MlnBuffer *id, MlnBlob *out)
 {
 	MlnBuffer *buffer = NULL;
-	unsigned int ret;
+	int ret;
 
 	if (id == NULL || out == NULL || id->size != 20 || id->data == NULL) {
 		ret = 4;
@@ -461,7 +484,7 @@ int MlnImpl_8102B950(unsigned int *count, MlnBuffer ***entries, MlnBlob *state)
 	MlnBuffer *newState = NULL;
 	MlnCoreRecord *record = NULL;
 	MlnBuffer **array;
-	unsigned int ret, err;
+	int ret, err;
 	int n = 0;
 	int all, i, j;
 
@@ -550,3 +573,242 @@ out:
 	MlnImpl_8103B8F8(base);
 	return ret;
 }
+
+/* adds an entry; an existing entry for the identifier is moved first */
+int MlnImpl_8102BDBC(const MlnBuffer *first, const MlnBuffer *second, const MlnBuffer *id,
+		     void *a3, void *a4)
+{
+	MlnBuffer *entry = NULL;
+	MlnCoreRecord *record = NULL;
+	MlnBuffer **base = NULL;
+	MlnBuffer *key;
+	int ret, err;
+
+	if (first == NULL || first->size == 0 || first->data == NULL || second == NULL ||
+	    second->size == 0 || second->data == NULL || a3 == NULL || a4 == NULL) {
+		ret = 4;
+		goto out;
+	}
+	if (id != NULL && id->size != 0 && id->data != NULL) {
+		ret = MlnImpl_8104436C(id, &entry);
+		if (ret != 0x230A0003) {
+			if (ret != 0) {
+				ret = MlnImpl_8102A228(ret);
+				if (ret != 0)
+					goto out;
+			} else {
+				err = MlnImpl_810422E8(entry, &record);
+				if (err != 0) {
+					if (err == 2) {
+						ret = err;
+						goto out;
+					}
+					ret = 10;
+					MlnImpl_81043F1C(entry);
+					goto out;
+				}
+				err = MlnImpl_81043B94(&base);
+				if (err == 0) {
+					key = NULL;
+					if (MlnBufferCompare(MLN_HEAP_GENERAL, *base, record->key) != 0)
+						key = record->key;
+					err = MlnImpl_81044984(key, record->value, first, second);
+				}
+				if (err != 0) {
+					ret = MlnImpl_8102A228(err);
+					goto out;
+				}
+			}
+		}
+	}
+	ret = MlnImpl_810444DC(first, second, a3, a4);
+	if (ret == 0x230A0003)
+		ret = 0;
+	else if (ret != 0)
+		ret = MlnImpl_8102A228(ret);
+out:
+	MlnImpl_8103B8F8(base);
+	MlnImpl_8103BBA0(record);
+	MlnBufferDestroy(MLN_HEAP_GENERAL, entry);
+	return ret;
+}
+
+int MlnImpl_8102C08C(void *context, const MlnBuffer *data, MlnBlob *out)
+{
+	MlnBuffer *buffer = NULL;
+	int ret;
+
+	if (out == NULL) {
+		ret = 4;
+		goto out;
+	}
+	ret = MlnImpl_810458B0(context, data);
+	if (ret == 0) {
+		ret = MlnImpl_81043A60(1, &buffer);
+		if (ret == 0) {
+			out->buffer = buffer;
+			out->size = buffer->size;
+			buffer = NULL;
+			goto out;
+		}
+	}
+	ret = MlnImpl_8102A228(ret);
+out:
+	MlnBufferDestroy(MLN_HEAP_GENERAL, buffer);
+	return ret;
+}
+
+/* the client's name boxes: a box of the string's bytes */
+static inline int MlnNameBoxInit(MlnBox *box, const char *type, const char *name)
+{
+	unsigned int len = MlnStrlen(name);
+
+	if (len == 0)
+		return 4;
+	box->size = len + 8;
+	box->type[0] = type[0];
+	box->type[1] = type[1];
+	box->type[2] = type[2];
+	box->type[3] = type[3];
+	box->data = MlnAllocate(MLN_HEAP_GENERAL, len);
+	if (box->data == NULL)
+		return 2;
+	MlnMemcpy(box->data, name, len);
+	return 0;
+}
+
+static inline int MlnAttributeBoxWrite(const MlnAttributeBox *box, unsigned char *out)
+{
+	unsigned int size;
+
+	if (out == NULL)
+		return 4;
+	size = box->size;
+	out[0] = size >> 24;
+	out[1] = size >> 16;
+	out[3] = size;
+	out[2] = size >> 8;
+	MlnMemcpy(out + 4, box->type, sizeof(box->type));
+	out[8] = box->flags[0];
+	out[9] = box->flags[1];
+	out[11] = box->count;
+	out[10] = box->count >> 8;
+	out[13] = box->encoding;
+	out[12] = box->encoding >> 8;
+	out[15] = box->bits;
+	out[14] = box->bits >> 8;
+	MlnMemcpy(out + 16, box->data, box->bits >> 3);
+	return 0;
+}
+
+/* what SceDrmBridge keeps between the identity messages it signs */
+static unsigned char s_authState[64];
+
+/* the client's identity message: its maker, model and version, and the device ID */
+int MlnImpl_8102C1E8(unsigned char kind, MlnBlob *out)
+{
+	MlnBox mnfc, mdel, mver;
+	MlnAttributeBox duid;
+	unsigned long long tick;
+	unsigned char input[32];
+	unsigned char output[128];
+	MlnBuffer *device;
+	MlnBuffer *message = NULL;
+	MlnBuffer *result = NULL;
+	unsigned char *p;
+	int ret;
+
+	mnfc.data = NULL;
+	mdel.data = NULL;
+	mver.data = NULL;
+	duid.data = NULL;
+	ret = MlnNameBoxInit(&mnfc, "MNFC", "Sony");
+	if (ret != 0)
+		goto out;
+	ret = MlnNameBoxInit(&mdel, "MDEL", "Nautilus Client");
+	if (ret != 0)
+		goto out;
+	ret = MlnNameBoxInit(&mver, "MVER", "1.2.1");
+	if (ret != 0)
+		goto out;
+
+	/* the secure tick in milliseconds since the Unix epoch */
+	if (sceDrmBridgeGetCurrentSecureTick(&tick) == 0)
+		tick = (tick - 62135596800000000ULL) / 1000;
+	else
+		MlnMemset(&tick, 0, sizeof(tick));
+	MlnMemset(input, 0, sizeof(input));
+	MlnMemset(output, 0, sizeof(output));
+	input[0] = kind;
+	sceDrmBridgeMlnpsnlAuth1(input, &tick, output, s_authState);
+
+	device = MlnBufferCreate(MLN_HEAP_GENERAL, sizeof(output), output);
+	if (device == NULL || device->size == 0)
+		goto no_device;
+	duid.size = device->size + 16;
+	duid.type[0] = 'D';
+	duid.type[1] = 'U';
+	duid.type[2] = 'I';
+	duid.type[3] = 'D';
+	duid.flags[0] = 0;
+	duid.flags[1] = 0;
+	duid.encoding = 5;
+	duid.count = 1;
+	duid.bits = device->size * 8;
+	duid.data = MlnAllocate(MLN_HEAP_GENERAL, device->size);
+	if (duid.data == NULL)
+		goto no_device;
+	MlnMemcpy(duid.data, device->data, device->size);
+	MlnBufferDestroy(MLN_HEAP_GENERAL, device);
+
+	message = MlnBufferCreate(MLN_HEAP_GENERAL,
+				  mnfc.size + mdel.size + 4 + mver.size + duid.size, NULL);
+	if (message == NULL) {
+		ret = 2;
+		goto out;
+	}
+	p = message->data;
+	p[0] = 0;
+	p[1] = 0x10;
+	p[2] = 0;
+	p[3] = 0;
+	p += 4;
+	ret = MlnImpl_8102A33C(&mnfc, p);
+	if (ret != 0)
+		goto out;
+	p += mnfc.size;
+	ret = MlnImpl_8102A33C(&mdel, p);
+	if (ret != 0)
+		goto out;
+	p += mdel.size;
+	ret = MlnImpl_8102A33C(&mver, p);
+	if (ret != 0)
+		goto out;
+	p += mver.size;
+	ret = MlnAttributeBoxWrite(&duid, p);
+	if (ret == 0) {
+		result = message;
+		message = NULL;
+	}
+	goto out;
+no_device:
+	ret = 2;
+	MlnBufferDestroy(MLN_HEAP_GENERAL, device);
+out:
+	MlnBufferDestroy(MLN_HEAP_GENERAL, message);
+	MlnFree(MLN_HEAP_GENERAL, mnfc.data);
+	mnfc.data = NULL;
+	MlnFree(MLN_HEAP_GENERAL, mdel.data);
+	mdel.data = NULL;
+	MlnFree(MLN_HEAP_GENERAL, mver.data);
+	mver.data = NULL;
+	MlnFree(MLN_HEAP_GENERAL, duid.data);
+	if (ret == 0) {
+		out->buffer = result;
+		out->size = result->size;
+		result = NULL;
+	}
+	MlnBufferDestroy(MLN_HEAP_GENERAL, result);
+	return ret;
+}
+
