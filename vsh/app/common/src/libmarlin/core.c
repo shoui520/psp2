@@ -34,9 +34,9 @@ static inline __attribute__((always_inline)) int MlnBlobToBuffer(MlnBlob *blob, 
 	return ret;
 }
 
-/* the two buffers the core gives for a1 */
-__attribute__((noinline)) int MlnImpl_81012F48(void *a0, const MlnBuffer *a1, MlnBuffer **first,
-					       MlnBuffer **second)
+/* the response and the result of a request to the core, as buffers */
+__attribute__((noinline)) int MlnImpl_81012F48(const MlnBuffer *state, const MlnBuffer *request,
+					       MlnBuffer **first, MlnBuffer **second)
 {
 	MlnBlob secondBlob = { NULL, 0 }, firstBlob = { NULL, 0 };
 	MlnBuffer *one = NULL, *two = NULL;
@@ -45,7 +45,7 @@ __attribute__((noinline)) int MlnImpl_81012F48(void *a0, const MlnBuffer *a1, Ml
 	if (first == NULL || second == NULL) {
 		ret = MLN_CORE_ERROR_INVALID;
 	} else {
-		ret = MlnImpl_81013074(a0, a1, &firstBlob, &secondBlob);
+		ret = MlnImpl_81013074(state, request, &firstBlob, &secondBlob);
 		if (ret == MLN_OK) {
 			ret = MlnBlobToBuffer(&firstBlob, &one);
 			if (ret == MLN_OK) {
@@ -64,10 +64,10 @@ __attribute__((noinline)) int MlnImpl_81012F48(void *a0, const MlnBuffer *a1, Ml
 	return ret;
 }
 
-__attribute__((noinline)) int MlnImpl_81013074(void *a0, const MlnBuffer *a1, MlnBlob *first,
-					       MlnBlob *second)
+__attribute__((noinline)) int MlnImpl_81013074(const MlnBuffer *state, const MlnBuffer *request,
+					       MlnBlob *response, MlnBlob *result)
 {
-	return MlnImpl_810318D4(a0, a1, first, second);
+	return MlnImpl_810318D4(state, request, response, result);
 }
 
 /* copies of count headers, each name and value duplicated */

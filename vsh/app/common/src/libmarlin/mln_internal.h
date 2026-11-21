@@ -964,8 +964,10 @@ typedef struct MlnBlob {
 
 int MlnCoreInit(void *memory, unsigned int size);
 int MlnCoreTerm(void);
-int MlnImpl_81012F48(void *a0, const MlnBuffer *a1, MlnBuffer **first, MlnBuffer **second);
-int MlnImpl_81013074(void *a0, const MlnBuffer *a1, MlnBlob *first, MlnBlob *second);
+int MlnImpl_81012F48(const MlnBuffer *state, const MlnBuffer *request, MlnBuffer **first,
+		     MlnBuffer **second);
+int MlnImpl_81013074(const MlnBuffer *state, const MlnBuffer *request, MlnBlob *response,
+		     MlnBlob *result);
 int MlnHttpHeadersCreate(unsigned int count, MlnHttpHeader *const *headers, MlnHttpHeaders *out);
 void MlnHttpHeadersFree(MlnHttpHeaders *headers);
 void MlnHttpRequestFree(MlnHttpRequest *request);
@@ -1324,9 +1326,13 @@ int MlnImpl_810263D4(const char *path, int *isDirectory);
 extern ScePfsRndDriveId s_mountPoint;
 
 typedef struct MlnSha1Context {
-	unsigned int words[24];
+	unsigned int state[5];
+	unsigned int count[2];		/* the message's length in bits, low word first */
+	unsigned char buffer[64];
+	unsigned int padding;		/* the 96 bytes the callers' frames give it */
 } MlnSha1Context;
 
+void MlnImpl_81032404(unsigned int state[5], unsigned char buffer[64]);
 void MlnImpl_81033774(MlnSha1Context *context);
 void MlnImpl_810337C4(MlnSha1Context *context, const void *data, unsigned int size);
 void MlnImpl_81033864(MlnSha1Context *context, unsigned char *digest);
@@ -1424,10 +1430,10 @@ unsigned int MlnImpl_81044984(MlnBuffer *key, MlnBuffer *value, const MlnBuffer 
 			      const MlnBuffer *second);
 unsigned int MlnImpl_810444DC(const MlnBuffer *first, const MlnBuffer *second, unsigned int *count,
 			      MlnBuffer ***entries);
-unsigned int MlnImpl_810458B0(void *context, const MlnBuffer *data);
+unsigned int MlnImpl_810458B0(const MlnBuffer *context, const MlnBuffer *data);
 int MlnImpl_8102BDBC(const MlnBuffer *first, const MlnBuffer *second, const MlnBuffer *id,
 		     unsigned int *count, MlnBuffer ***entries);
-int MlnImpl_8102C08C(void *context, const MlnBuffer *data, MlnBlob *out);
+int MlnImpl_8102C08C(const MlnBuffer *context, const MlnBuffer *data, MlnBlob *out);
 int MlnImpl_8102C1E8(unsigned char kind, MlnBlob *out);
 int MlnImpl_8102C64C(unsigned int error);
 unsigned int MlnImpl_8104A8D8(int *handle);
@@ -1587,8 +1593,14 @@ int MlnImpl_8104CA50(const MlnBuffer *first, const MlnBuffer *second, unsigned i
 		     unsigned int *secondValue, MlnBlob *state);
 int MlnImpl_8103149C(const MlnServiceReply *reply, MlnServiceArgs **out, int *status,
 		     MlnBuffer **result);
+int MlnImpl_810316BC(const MlnServiceReply *reply, MlnServiceArgs **out, int *status,
+		     MlnBuffer **result);
+int MlnImpl_810317AC(const MlnServiceReply *reply, MlnServiceArgs **out, int *status);
+int MlnImpl_810318D4(const MlnBuffer *state, const MlnBuffer *request, MlnBlob *response,
+		     MlnBlob *result);
+int MlnImpl_81031A40(unsigned int command, MlnServiceReply *reply, MlnBuffer **response,
+		     MlnBuffer **result);
 int MlnImpl_8102AA38(MlnBlob *blob, MlnBuffer *out);
-int MlnImpl_810318D4(void *a0, const MlnBuffer *a1, MlnBlob *first, MlnBlob *second);
 
 int MlnPlatformInit(void);
 int MlnPlatformTerm(void);
@@ -1780,6 +1792,14 @@ typedef struct MlnConfigList {
 	void *items;
 } MlnConfigList;
 
+/* an entry of a kind 4 list: a key and a list of its own */
+typedef struct MlnConfigListEntry {
+	MlnBuffer *key;
+	MlnConfigList values;
+} MlnConfigListEntry;
+
+int MlnImpl_81033AE8(MlnConfigList *list);
+
 /* the kinds of action an action token asks for */
 #define MLN_ACTION_LICENSE_ACQUISITION	1
 #define MLN_ACTION_NODE_ACQUISITION	2
@@ -1827,6 +1847,12 @@ typedef struct MlnServiceConfig {
 	MlnConfigList licenseTransferService;
 	unsigned int reserved2;
 } MlnServiceConfig;
+
+int MlnImpl_81033D9C(unsigned int size, const void *xml, MlnServiceConfig **out);
+int MlnImpl_810341B8(MlnServiceConfig *config);
+int MlnImpl_81034224(MlnActionToken *token);
+int MlnImpl_81081890(MlnXmlNode *node, const char *name, const char *ns, MlnXmlNodeList **list);
+int MlnImpl_81081BB4(MlnXmlNodeList **list, MlnConfigList *out, const char *role);
 
 /* a directory's files, as the platform lists them */
 typedef struct MlnFileList {

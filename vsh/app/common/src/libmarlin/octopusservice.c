@@ -2706,3 +2706,126 @@ out:
 	MlnBufferDestroy(MLN_HEAP_GENERAL, data[1]);
 	return ret;
 }
+
+/* 0x8102C08C for the reply's two buffers; its result goes to the caller */
+int MlnImpl_810316BC(const MlnServiceReply *reply, MlnServiceArgs **out, int *status,
+		     MlnBuffer **result)
+{
+	MlnBuffer *data[2] = { NULL, NULL };
+	MlnBlob blob = { NULL, 0 };
+	int err, ret;
+
+	if (MlnImpl_81026D94(reply, 2) != 0) {
+		ret = 0x200;
+		goto out;
+	}
+	ret = MlnImpl_81026F0C(MLN_HEAP_GENERAL, &reply->items[0], &data[0]);
+	if (ret != 0) {
+		ret = MlnImpl_8102C64C(ret);
+		goto out;
+	}
+	ret = MlnImpl_81026F0C(MLN_HEAP_GENERAL, &reply->items[1], &data[1]);
+	if (ret != 0) {
+		ret = MlnImpl_8102C64C(ret);
+		goto out;
+	}
+	err = MlnImpl_8102C08C(data[0], data[1], &blob);
+	if (err == 0) {
+		*result = blob.buffer;
+		blob.buffer = NULL;
+	}
+	*out = NULL;
+	*status = err;
+out:
+	MlnBufferDestroy(MLN_HEAP_GENERAL, data[0]);
+	MlnBufferDestroy(MLN_HEAP_GENERAL, data[1]);
+	return ret;
+}
+
+/* a reply of the client boxes 0x8102C1E8 writes for the reply's kind */
+int MlnImpl_810317AC(const MlnServiceReply *reply, MlnServiceArgs **out, int *status)
+{
+	MlnServiceArgs *args = NULL;
+	MlnBuffer *object = NULL;
+	MlnBlob blob = { NULL, 0 };
+	unsigned int kind;
+	int err, ret;
+
+	if (MlnImpl_81026D94(reply, 1) != 0) {
+		ret = 0x200;
+		goto out;
+	}
+	ret = MlnImpl_81026FE4(MLN_HEAP_GENERAL, reply->items, &kind);
+	if (ret != 0) {
+		ret = MlnImpl_8102C64C(ret);
+		goto out;
+	}
+	err = MlnImpl_8102C1E8(kind, &blob);
+	if (err == 0) {
+		object = blob.buffer;
+		blob.buffer = NULL;
+		ret = MlnImpl_81026E20(MLN_HEAP_GENERAL, 1, &args);
+		if (ret != 0) {
+			ret = MlnImpl_8102C64C(ret);
+			goto out;
+		}
+		args->items[0].type = MLN_SERVICE_ARG_BUFFER;
+		args->items[0].value = object;
+	}
+	*out = args;
+	args = NULL;
+	*status = err;
+	object = NULL;
+out:
+	MlnImpl_81027390(MLN_HEAP_GENERAL, args);
+	MlnBufferDestroy(MLN_HEAP_GENERAL, object);
+	return ret;
+}
+
+/* a request to the DRM core: its header checked, its arguments parsed and handled by
+ * the command's handler; the response and the handler's result go to the caller */
+int MlnImpl_810318D4(const MlnBuffer *state, const MlnBuffer *request, MlnBlob *response,
+		     MlnBlob *result)
+{
+	MlnServiceReply *reply = NULL;
+	MlnBuffer *extra = NULL;
+	MlnBuffer *output = NULL;
+	unsigned int command;
+	int ret;
+
+	if (request == NULL || request->size == 0 || request->data == NULL ||
+	    request->size < 16 || result == NULL || response == NULL) {
+		ret = 4;
+		goto out;
+	}
+	command = MlnImpl_81026CBC(request->data);
+	if (request->size != MlnImpl_81026CE0(request->data)) {
+		ret = 4;
+		goto out;
+	}
+	if (state != NULL) {
+		ret = MlnImpl_8102A7F0(state);
+		if (ret != 0)
+			goto out;
+	}
+	ret = MlnImpl_8102752C(MLN_HEAP_GENERAL, request, &reply);
+	if (ret != 0) {
+		ret = MlnImpl_8102C64C(ret);
+		goto out;
+	}
+	ret = MlnImpl_81031A40(command, reply, &output, &extra);
+	if (ret == 0) {
+		if (extra != NULL) {
+			result->buffer = extra;
+			result->size = extra->size;
+			extra = NULL;
+		}
+		response->buffer = output;
+		response->size = output->size;
+		output = NULL;
+	}
+out:
+	MlnImpl_81027390(MLN_HEAP_GENERAL, reply);
+	MlnBufferDestroy(MLN_HEAP_GENERAL, extra);
+	return ret;
+}

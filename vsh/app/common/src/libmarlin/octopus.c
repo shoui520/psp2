@@ -633,7 +633,7 @@ out:
 	return ret;
 }
 
-int MlnImpl_8102C08C(void *context, const MlnBuffer *data, MlnBlob *out)
+int MlnImpl_8102C08C(const MlnBuffer *context, const MlnBuffer *data, MlnBlob *out)
 {
 	MlnBuffer *buffer = NULL;
 	int ret;
