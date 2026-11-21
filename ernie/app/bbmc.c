@@ -100,6 +100,8 @@ static const unsigned char bbmcRegModes[BBMC_REGS] = {
 };
 #if !BOARD_BBMC
 /* no modem: none of the zeros its registers are reset with */
+#elif !FW_SINCE(0x00080503)
+/* 0x00080502: bbmcPowerOff's zeros are its own, a 12- and a 10-byte array */
 #else
 static const unsigned char bbmcZero12[12] = { 0 };
 #if FW_SINCE(0x01000104)
@@ -174,14 +176,18 @@ void bbmcInit(void)
 	bbmcInputHandlerWake.handler = bbmcPostWake;
 #if !BOARD_BBMC
 	/* no modem to power down or detect */
-#elif BOARD_102603
+#elif BOARD_102603 && !(HW_IS(0x00102603) && !FW_SINCE(0x00090009))
 	P33 = 0;
 	/* the modem taken as there whenever the board says it detects one */
 	if (configGet()->board.bits.bbmcDetect)
 		setHardwareInfoFlags(0x02);
 #else
 	P33 = 0;
+#if HW_IS(0x00102603)	/* 0x00080502: the modem's line read whatever the board says */
+	{
+#else
 	if (configGet()->board.bits.bbmcDetect) {
+#endif
 		level = P3.2;
 		dly_tsk(1);
 		if (P3.2 == level && level == 0)
@@ -234,6 +240,11 @@ unsigned char bbmcPowerOff(void)
 #if !BOARD_BBMC
 	return 0;
 #else
+#if !FW_SINCE(0x00080503)
+	unsigned char bbmcZero12[12] = { 0 };
+	unsigned char bbmcZero10[10] = { 0 };
+#endif
+
 	P34 = 0;
 	PM34 = 0;
 	P36 = 0;
@@ -252,6 +263,8 @@ unsigned char bbmcPowerOff(void)
 	bbmcWriteRegs(3, 1, bbmcZero12, BBMC_WRITE_RESET);
 #if FW_SINCE(0x01000104)
 	bbmcWriteRegs(6, 0x10, bbmcZero16, BBMC_WRITE_RESET);
+#elif !FW_SINCE(0x00080503)
+	bbmcWriteRegs(6, 0x0a, bbmcZero10, BBMC_WRITE_RESET);
 #else
 	bbmcWriteRegs(6, 0x0e, bbmcZero16, BBMC_WRITE_RESET);
 #endif
@@ -1200,10 +1213,12 @@ void bbmcRequestRun(void)
 		handshakeRefuse();
 		return;
 	}
+#if !HW_IS(0x00102603) || FW_SINCE(0x00090009)	/* 0x00102603's 0x00080502 runs them without the modem flag */
 	if (!(getHardwareInfoFlags() & 0x02)) {
 		hostRequestAnswer(&bbmcRequest, HOST_REQUEST_ANSWER, 2, 0);
 		return;
 	}
+#endif
 	switch (bbmcRequest.command) {
 	case 0x0a80:
 		if (bbmcRequest.length != 2) {

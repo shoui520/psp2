@@ -1050,7 +1050,7 @@ void inputStateOff(void)
 #if !FW_SINCE(0x00090804)
 	/* 0x00090206: INTP10 off, no cold-start hold */
 	intp10Enable(0);
-#if !FW_SINCE(0x00090009)
+#if !FW_SINCE(0x00090009) && BOARD_OFF_WAKE
 	/* 0x00080504: INTP1 on too, and scan mode 2 whatever P4.6 */
 	intp1Enable(1);
 	intp13Enable(1);
@@ -2929,6 +2929,12 @@ void inputScanTimer(void)
 	unsigned char toggled;
 
 	inputKeys.events = 0;
+#if HW_IS(0x00102603)	/* 0x00102603's 0x00080502: channel 8 started after inputResumeOpen's delay */
+	if (inputDelays.analog80 != 0) {
+		if (--inputDelays.analog80 == 0)
+			analogStart80();
+	}
+#endif
 	if (inputDelays.motionInfo != 0) {
 		if (--inputDelays.motionInfo == 0)
 			motionInfoStart();

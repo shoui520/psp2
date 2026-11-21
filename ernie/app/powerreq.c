@@ -42,6 +42,10 @@
 #endif
 #include "version.h"
 
+/* the host-controlled devices asked through the hardware info flags (0x00102603's 0x00080502
+   has no such test) */
+#define POWERREQ_HWINFO	(!HW_IS(0x00102603) || FW_SINCE(0x00090009))
+
 /* request 9's data and answer: the battery's registers are words */
 union BatteryBuffer {
 	unsigned char	byte[0x20];
@@ -1360,9 +1364,13 @@ static void powerRequest088D(void)
 {
 	unsigned char result;
 
+#if POWERREQ_HWINFO
 	if (!(getHardwareInfoFlags() & 0x02)) {
 		powerRequestDone(4);
 	} else {
+#else
+	{
+#endif
 		if (powerRequest.length == 1) {
 			if (powerRequestData[0] & 0x01) {
 				if (powerRequestData[0] & 0x80) {
@@ -1817,9 +1825,13 @@ static void powerRequest0890(void)
 {
 	unsigned char result;
 
+#if POWERREQ_HWINFO
 	if (!(getHardwareInfoFlags() & 0x02)) {
 		powerRequestDone(4);
 	} else {
+#else
+	{
+#endif
 		if (powerRequest.length == 1) {
 			if (powerRequestData[0] != 0)
 				P33 = 0;
