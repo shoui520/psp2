@@ -13,6 +13,9 @@
 #define MLN_ERROR_NO_MEMORY	2
 #define MLN_ERROR_INVALID	5
 
+/* the XML parser's errors */
+#define MLN_XML_ERROR_SYNTAX	0x10010003
+
 /* which heap: the general one or the one for secure data */
 #define MLN_HEAP_GENERAL	0
 #define MLN_HEAP_SECURE		1
@@ -106,14 +109,111 @@ typedef struct MlnBundleInfo {
 	MlnProtector *protectors;
 } MlnBundleInfo;
 
-/* the XML parser's nodes, and the lists a path search returns */
-typedef struct MlnXmlNode MlnXmlNode;
+/*
+ * The XML parser's tree. Its objects are reference counted: the count is the number of
+ * references beyond the first, and a release frees the object when it is 0 (a negative
+ * count marks one that is never freed).
+ */
+
+/* an attribute or a namespace declaration (its prefix and URI) */
+typedef struct MlnXmlAttribute {
+	int refCount;
+	MlnBuffer *name;
+	MlnBuffer *value;
+} MlnXmlAttribute;
+
+typedef struct MlnXmlAttributeArray {
+	int count;
+	MlnXmlAttribute *items[];
+} MlnXmlAttributeArray;
+
+struct MlnXmlElement;
+
+/* an element's content: text or a child element */
+#define MLN_XML_CONTENT_TEXT	0
+#define MLN_XML_CONTENT_ELEMENT	1
+
+typedef struct MlnXmlContent {
+	int refCount;
+	int kind;
+	union {
+		MlnBuffer *text;
+		struct MlnXmlElement *element;
+	} data;
+} MlnXmlContent;
+
+typedef struct MlnXmlContentArray {
+	int refCount;
+	int count;
+	MlnXmlContent *items[];
+} MlnXmlContentArray;
+
+typedef struct MlnXmlElement {
+	int refCount;
+	MlnBuffer *name;
+	MlnXmlAttributeArray *namespaces;	/* the declarations in scope */
+	MlnXmlAttributeArray *attributes;
+	MlnXmlContentArray *content;
+} MlnXmlElement;
+
+/* what precedes a document's root element: its XML declaration's version and encoding */
+typedef struct MlnXmlProlog {
+	int refCount;
+	MlnBuffer *version;
+	MlnBuffer *encoding;
+} MlnXmlProlog;
+
+typedef struct MlnXmlDocument {
+	int refCount;
+	MlnXmlProlog *prolog;
+	MlnXmlElement *root;
+} MlnXmlDocument;
+
+/* a reference to a part of the tree, which a caller holds and frees */
+#define MLN_XML_NODE_DOCUMENT	0
+#define MLN_XML_NODE_NAMESPACE	1
+#define MLN_XML_NODE_ATTRIBUTE	2
+#define MLN_XML_NODE_ELEMENT	3
+#define MLN_XML_NODE_TEXT	4
+
+typedef struct MlnXmlNode {
+	int refCount;
+	int type;
+	union {
+		MlnXmlDocument *document;
+		MlnXmlAttribute *attribute;
+		MlnXmlElement *element;
+		MlnBuffer *text;
+	} object;
+} MlnXmlNode;
 
 typedef struct MlnXmlNodeList {
-	unsigned int reserved;
-	unsigned int count;
+	int refCount;
+	int count;
 	MlnXmlNode *nodes[];
 } MlnXmlNodeList;
+
+/* a singly linked list of the parser's objects */
+typedef struct MlnXmlLink {
+	void *item;
+	struct MlnXmlLink *next;
+} MlnXmlLink;
+
+/* how a list's items are released */
+#define MLN_XML_LINK_ATTRIBUTE	0
+#define MLN_XML_LINK_CONTENT	1
+#define MLN_XML_LINK_NODE	2
+
+/* the namespace declarations in scope, innermost first */
+typedef struct MlnXmlStack {
+	MlnXmlLink *top;
+	int depth;
+} MlnXmlStack;
+
+typedef struct MlnXmlParser {
+	MlnXmlStack namespaces;
+	unsigned int reserved[4];
+} MlnXmlParser;
 
 /* a value a call returns, and the list of them a caller keeps */
 typedef struct MlnApiValue {
@@ -435,6 +535,55 @@ int MlnTimeFromSeconds(const unsigned int *seconds, int utcOffset, int daylightS
 int MlnTimeFromMinutes(const unsigned int *minutes, MlnDateTime *time);
 int MlnTimeToMinutes(const MlnDateTime *time, unsigned int *minutes);
 int *MlnImpl_81007494(int unused, int *count);
+
+/* xml.c */
+int MlnXmlSkipComment(MlnBuffer *cursor);
+int MlnXmlReadText(int heap, MlnBuffer **text, MlnBuffer *cursor, int delimiter);
+int MlnXmlParseProlog(int heap, MlnXmlParser *parser, MlnXmlProlog **out, MlnBuffer *cursor);
+
+/* xmlnode.c */
+int MlnXmlNodeGetElement(int heap, MlnXmlNode *node, MlnXmlNode **out);
+int MlnXmlNodeGetName(int heap, MlnXmlNode *node, MlnBuffer **name);
+int MlnXmlBufferSet(int heap, MlnBuffer **buffer, const void *data, unsigned int size);
+int MlnXmlBufferTruncate(int heap, MlnBuffer **buffer, unsigned int size);
+int MlnXmlStackCreate(int heap, MlnXmlStack **out);
+int MlnXmlLinksFree(int heap, MlnXmlLink **list, int kind);
+int MlnXmlLinkPush(int heap, MlnXmlLink **list, void *item);
+int MlnXmlLinkAppend(int heap, MlnXmlLink **list, void *item);
+int MlnXmlAttributeInsertSorted(int heap, MlnXmlLink **list, MlnXmlAttribute *attribute);
+int MlnXmlLinksPop(int heap, MlnXmlLink **list, int kind);
+int MlnXmlLinksToAttributeArray(int heap, MlnXmlLink *list, MlnXmlAttributeArray **out);
+int MlnXmlAttributesSortUnique(int heap, MlnXmlLink *list, MlnXmlAttributeArray **out);
+int MlnXmlLinksToContentArray(int heap, MlnXmlLink *list, MlnXmlContentArray **out);
+int MlnXmlLinksToNodeList(int heap, MlnXmlLink *list, MlnXmlNodeList **out);
+int MlnXmlParserTerm(int heap, MlnXmlParser *parser);
+int MlnXmlStackPush(int heap, MlnXmlStack *stack, MlnXmlAttribute *declaration);
+int MlnXmlStackPop(int heap, MlnXmlStack *stack);
+int MlnXmlStackGetNamespaces(int heap, MlnXmlStack *stack, MlnXmlAttributeArray **out);
+int MlnXmlContentCreate(int heap, MlnXmlContent **out);
+int MlnXmlContentArrayCreate(int heap, MlnXmlContentArray **out, int count);
+int MlnXmlContentArrayRelease(int heap, MlnXmlContentArray **array);
+int MlnXmlAttributeCreate(int heap, MlnXmlAttribute **out);
+int MlnXmlAttributeRelease(int heap, MlnXmlAttribute **attribute);
+int MlnXmlAttributeArrayCreate(int heap, MlnXmlAttributeArray **out, int count);
+int MlnXmlAttributeArrayRelease(int heap, MlnXmlAttributeArray **array);
+int MlnXmlElementCreate(int heap, MlnXmlElement **out);
+int MlnXmlElementRelease(int heap, MlnXmlElement **element);
+int MlnXmlContentRelease(int heap, MlnXmlContent **content);
+int MlnXmlPrologCreate(int heap, MlnXmlProlog **out);
+int MlnXmlPrologRelease(int heap, MlnXmlProlog **prolog);
+int MlnXmlDocumentCreate(int heap, MlnXmlDocument **out);
+int MlnXmlDocumentRelease(int heap, MlnXmlDocument **document);
+int MlnXmlNodeCreate(int heap, MlnXmlNode **out);
+int MlnXmlNodeCreateDocument(int heap, MlnXmlNode **out, MlnXmlDocument *document);
+int MlnXmlNodeCreateElement(int heap, MlnXmlNode **out, MlnXmlElement *element);
+int MlnXmlNodeCreateNamespace(int heap, MlnXmlNode **out, MlnXmlAttribute *declaration);
+int MlnXmlNodeCreateAttribute(int heap, MlnXmlNode **out, MlnXmlAttribute *attribute);
+int MlnXmlNodeCreateText(int heap, MlnXmlNode **out, const MlnBuffer *text);
+int MlnXmlNodeRelease(int heap, MlnXmlNode **node);
+int MlnXmlNodeListCreate(int heap, MlnXmlNodeList **out, int count);
+int MlnXmlNodeListRelease(int heap, MlnXmlNodeList **list);
+int MlnXmlParserInit(int heap, MlnXmlParser *parser);
 
 /* not written in C yet: the prototypes are their callers' */
 int MlnCoreInit(void *memory, unsigned int size);

@@ -195,7 +195,7 @@ int MlnConvertResult(unsigned int result)
 	case 2:
 		return result;
 	case 3:
-	case 0x10010003:
+	case MLN_XML_ERROR_SYNTAX:
 	case 0x10010005:
 	case 0x10010008:
 	case 0x1001000a:
@@ -2611,7 +2611,7 @@ found:
 		ret = 2;
 		break;
 	case 3:
-	case 0x10010003:
+	case MLN_XML_ERROR_SYNTAX:
 	case 0x10010005:
 	case 0x10010008:
 	case 0x1001000a:
