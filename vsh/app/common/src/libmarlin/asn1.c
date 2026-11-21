@@ -19,7 +19,7 @@ int MlnImpl_810353EC(int heap, MlnAsn1Node *node)
  * A UTCTime or GeneralizedTime, YYMMDDHHMMSS or YYYYMMDDHHMMSS with an optional fraction
  * of three digits, then Z or a zone of four. A two-digit year below the pivot is 20YY.
  */
-int MlnImpl_81035440(const MlnAsn1Node *node, int pivot, MlnAsn1Time *time)
+int MlnImpl_81035440(const MlnAsn1Node *node, int pivot, MlnDateTime *time)
 {
 	const unsigned char *p = node->data;
 	const unsigned char *end = p + node->length;
@@ -87,8 +87,8 @@ int MlnImpl_81035440(const MlnAsn1Node *node, int pivot, MlnAsn1Time *time)
 	time->day = day;
 	time->hour = hour;
 	time->minute = minute;
-	time->millisecond = millisecond;
-	time->offset = offset;
+	time->microsecond = millisecond;
+	time->utcOffset = offset;
 	time->second = second;
 	return 0;
 }
@@ -164,6 +164,7 @@ int MlnImpl_810356A8(int heap, const unsigned char *der, const unsigned char *en
  * Walks a tree depth first, checking each node's class and tag; what the release build
  * did with each node (depth is the indent) is compiled out.
  */
+__attribute__((noinline))
 int MlnImpl_81035884(const MlnAsn1Node *node, int depth)
 {
 	int i;
@@ -227,7 +228,6 @@ int MlnImpl_81035ABC(int heap, MlnAsn1Node *node)
  * A node: its data copied, or borrowed from the caller. A constructed node gets its children
  * later.
  */
-__attribute__((noinline))
 int MlnImpl_810360E8(int heap, int tagClass, unsigned char constructed, int tag,
 		     unsigned int length, const void *data, int borrowed, MlnAsn1Node **out)
 {
@@ -482,16 +482,6 @@ int MlnImpl_81036A04(int heap, const MlnAsn1Node *node)
 	return !(node->flags & MLN_ASN1_INDEFINITE);
 }
 
-/* a child appended to a constructed node */
-static inline int MlnAsn1Append(int heap, MlnAsn1Node *parent, MlnAsn1Node *child)
-{
-	if (parent == NULL)
-		return 0x22000001;
-	if (!parent->constructed)
-		return 0x22000005;
-	return MlnImpl_81036FE4(heap, parent, parent->length, child);
-}
-
 /* a copy of a tree; a node that holds its encoding or borrows its data shares it */
 __attribute__((noinline))
 int MlnImpl_81036A14(int heap, const MlnAsn1Node *node, MlnAsn1Node **out)
@@ -526,7 +516,7 @@ int MlnImpl_81036A14(int heap, const MlnAsn1Node *node, MlnAsn1Node **out)
 			ret = MlnImpl_81036A14(heap, node->children[i], &child);
 			if (ret != 0)
 				goto fail;
-			ret = MlnAsn1Append(heap, copy, child);
+			ret = MlnImpl_81037948(heap, copy, child);
 			if (ret != 0)
 				goto fail;
 			child = NULL;
@@ -637,6 +627,7 @@ int MlnImpl_81036EBC(int heap, int tagClass, int tag, unsigned int length,
 }
 
 /* a tree, as the library's callers free it */
+__attribute__((noinline))
 int MlnImpl_81036FC8(int heap, MlnAsn1Node *node)
 {
 	return MlnImpl_81035ABC(heap, node);
@@ -755,7 +746,7 @@ int MlnImpl_81037084(int heap, int mode, const unsigned char *der, const unsigne
 			if (ret != 0)
 				goto done;
 			if (build) {
-				ret = MlnAsn1Append(heap, node, child);
+				ret = MlnImpl_81037948(heap, node, child);
 				if (ret != 0)
 					goto done;
 				child = NULL;
@@ -863,4 +854,392 @@ int MlnImpl_810378E4(int heap, const unsigned char *der, unsigned int size,
 		     const unsigned char **next, MlnAsn1Node **out)
 {
 	return MlnImpl_81037084(heap, 1, der, der + size, NULL, next, out);
+}
+
+/* decodes the encoding of size bytes at der into a tree of its own */
+int MlnImpl_81037918(int heap, const unsigned char *der, unsigned int size,
+		     const unsigned char **next, MlnAsn1Node **out)
+{
+	return MlnImpl_81037084(heap, 0, der, der + size, NULL, next, out);
+}
+
+/* a child appended to a constructed node */
+int MlnImpl_81037948(int heap, MlnAsn1Node *parent, MlnAsn1Node *child)
+{
+	if (parent == NULL)
+		return 0x22000001;
+	if (!parent->constructed)
+		return 0x22000005;
+	return MlnImpl_81036FE4(heap, parent, parent->length, child);
+}
+
+/* the child at index removed and freed */
+int MlnImpl_810379E0(int heap, MlnAsn1Node *parent, int index)
+{
+	if (parent == NULL || index < 0 || index >= (int)parent->length)
+		return 0x22000001;
+	if (!parent->constructed)
+		return 0x22000005;
+	MlnImpl_81035ABC(heap, parent->children[index]);
+	MlnMemmove(&parent->children[index], &parent->children[index + 1],
+		   (parent->length - index - 1) * sizeof(*parent->children));
+	parent->length--;
+	parent->children[parent->length] = NULL;
+	return 0;
+}
+
+/* the child at index replaced; the old one is given back, or freed */
+int MlnImpl_81037A80(int heap, MlnAsn1Node *parent, int index, MlnAsn1Node *child,
+		     MlnAsn1Node **old)
+{
+	MlnAsn1Node *previous;
+
+	if (parent == NULL || index < 0 || index >= (int)parent->length || child == NULL)
+		return 0x22000001;
+	if (!parent->constructed)
+		return 0x22000005;
+	previous = parent->children[index];
+	parent->children[index] = child;
+	if (old != NULL)
+		*old = previous;
+	else
+		MlnImpl_81036FC8(heap, previous);
+	return 0;
+}
+
+/* an ASN.1 NULL that stands in for a detached child; never freed */
+static const MlnAsn1Node MlnAsn1Null = {
+	.tag = 5,
+	.flags = MLN_ASN1_STATIC,
+};
+
+/* the child at index detached, a NULL left in its place; it is given back, or freed */
+int MlnImpl_81037B00(int heap, MlnAsn1Node *parent, int index, MlnAsn1Node **old)
+{
+	MlnAsn1Node *previous;
+
+	if (parent == NULL || index < 0 || index >= (int)parent->length)
+		return 0x22000001;
+	if (!parent->constructed)
+		return 0x22000005;
+	previous = parent->children[index];
+	parent->children[index] = (MlnAsn1Node *)&MlnAsn1Null;
+	if (old != NULL)
+		*old = previous;
+	else
+		MlnImpl_81036FC8(heap, previous);
+	return 0;
+}
+
+/* the first child of a class and tag */
+MlnAsn1Node *MlnImpl_81037B80(int heap, const MlnAsn1Node *parent, int tagClass, int tag)
+{
+	int i;
+
+	if (parent == NULL || !parent->constructed)
+		return NULL;
+	for (i = 0; i < (int)parent->length; i++)
+		if (parent->children[i]->tagClass == tagClass && parent->children[i]->tag == tag)
+			return parent->children[i];
+	return NULL;
+}
+
+/* an INTEGER in the fewest octets that hold value */
+__attribute__((noinline))
+int MlnImpl_81037BF4(int heap, int value, MlnAsn1Node **out)
+{
+	unsigned char bytes[4];
+	int skip;
+
+	bytes[0] = value >> 24;
+	bytes[1] = value >> 16;
+	bytes[2] = value >> 8;
+	bytes[3] = value;
+	for (skip = 0; skip < 3; skip++) {
+		if (value < 0) {
+			if (bytes[skip] != 0xff || !(bytes[skip + 1] & 0x80))
+				break;
+		} else if (bytes[skip] != 0 || (bytes[skip + 1] & 0x80)) {
+			break;
+		}
+	}
+	return MlnImpl_810360E8(heap, 0, 0, 2, 4 - skip, bytes + skip, 0, out);
+}
+
+/* an OCTET STRING, its data copied */
+int MlnImpl_81037D68(int heap, unsigned int length, const void *data, MlnAsn1Node **out)
+{
+	return MlnImpl_810360E8(heap, 0, 0, 4, length, data, 0, out);
+}
+
+/* an ENUMERATED */
+int MlnImpl_81037E4C(int heap, int value, MlnAsn1Node **out)
+{
+	int ret;
+
+	ret = MlnImpl_81037BF4(heap, value, out);
+	if (ret == 0)
+		(*out)->tag = 10;
+	return ret;
+}
+
+/* an empty SEQUENCE */
+int MlnImpl_81037E6C(int heap, MlnAsn1Node **sequence)
+{
+	return MlnImpl_81036E34(heap, 0, 16, sequence);
+}
+
+/* a node's contents as a signed integer of up to four octets */
+static inline int MlnAsn1GetInteger(const MlnAsn1Node *node, int tag, int *value)
+{
+	unsigned int count, i;
+	int result;
+
+	if (node == NULL)
+		return 0x22000001;
+	if (node->tag != tag)
+		return 0x22000005;
+	result = node->length;
+	if (result != 0) {
+		count = node->length;
+		if (count > 4)
+			return 0x22000003;
+		result = 0;
+		if (node->data[0] & 0x80)
+			result = -1;
+		for (i = 0; i < count; i++)
+			result = (result << 8) | node->data[i];
+	}
+	*value = result;
+	return 0;
+}
+
+/* a BOOLEAN's value */
+int MlnImpl_81037EC8(int heap, const MlnAsn1Node *node, int *value)
+{
+	return MlnAsn1GetInteger(node, 1, value);
+}
+
+/* an INTEGER's value */
+int MlnImpl_81037F54(int heap, const MlnAsn1Node *node, int *value)
+{
+	return MlnAsn1GetInteger(node, 2, value);
+}
+
+/* an INTEGER as an unsigned big-endian number of size octets */
+int MlnImpl_81037FE0(int heap, const MlnAsn1Node *node, int size, unsigned char *out)
+{
+	int length, skip, pad, i;
+
+	if (node == NULL)
+		return 0x22000001;
+	if (node->tag != 2)
+		return 0x22000005;
+	if (out == NULL)
+		return 0x22000001;
+	length = node->length;
+	if (length > size + 1 || length < 0)
+		return 0x22000003;
+	skip = 0;
+	if (length == size + 1) {
+		if (node->data[0] != 0)
+			return 0x22000003;
+		length = size;
+		skip = 1;
+	}
+	pad = size - length;
+	if (pad <= 0)
+		pad = 0;
+	for (i = 0; i < pad; i++)
+		out[i] = 0;
+	for (i = pad; i < size; i++)
+		out[i] = node->data[skip + i - pad];
+	return 0;
+}
+
+/* a BIT STRING's bits, the unused ones of the last octet cleared */
+int MlnImpl_8103814C(int heap, const MlnAsn1Node *node, unsigned int size, unsigned char *out,
+		     int *bits)
+{
+	unsigned int bytes, unused;
+	unsigned char mask;
+	int count;
+
+	if (node == NULL || out == NULL || bits == NULL)
+		return 0x22000001;
+	if (node->tag != 3)
+		return 0x22000005;
+	count = (node->length - 1) * 8 - node->data[0];
+	bytes = (unsigned int)(count + 7) >> 3;
+	if (bytes > size)
+		return 0x22000003;
+	unused = node->data[0] & 7;
+	MlnMemcpy(out, node->data + 1, bytes);
+	*bits = count;
+	mask = 0xff;
+	for (; unused != 0; unused--)
+		mask <<= 1;
+	out[bytes - 1] &= mask;
+	return 0;
+}
+
+/* an OCTET STRING's data, borrowed from the node */
+int MlnImpl_81038218(int heap, const MlnAsn1Node *node, const unsigned char **data,
+		     unsigned int *length)
+{
+	if (node == NULL || data == NULL)
+		return 0x22000001;
+	if (length == NULL)
+		return 0x22000001;
+	if (node->tag != 4)
+		return 0x22000005;
+	*data = node->data;
+	*length = node->length;
+	return 0;
+}
+
+/* an ENUMERATED's value */
+int MlnImpl_8103826C(int heap, const MlnAsn1Node *node, int *value)
+{
+	return MlnAsn1GetInteger(node, 10, value);
+}
+
+/* a UTCTime; a year below pivot is in the 2000s */
+int MlnImpl_810382F8(int heap, const MlnAsn1Node *node, int pivot, MlnDateTime *time)
+{
+	if (node == NULL)
+		return 0x22000001;
+	if (node->tag != MLN_ASN1_TAG_UTC_TIME)
+		return 0x22000005;
+	return MlnImpl_81035440(node, pivot, time);
+}
+
+/* a GeneralizedTime */
+int MlnImpl_8103833C(int heap, const MlnAsn1Node *node, MlnDateTime *time)
+{
+	if (node == NULL)
+		return 0x22000001;
+	if (node->tag != 24)
+		return 0x22000005;
+	return MlnImpl_81035440(node, 0, time);
+}
+
+/* a UTCTime as seconds since 1970 and the fraction: seconds[0], seconds[1] */
+int MlnImpl_8103837C(int heap, const MlnAsn1Node *node, int pivot, int *seconds)
+{
+	MlnDateTime time;
+	int value;
+	int ret;
+
+	if (node == NULL)
+		return 0x22000001;
+	if (node->tag != MLN_ASN1_TAG_UTC_TIME)
+		return 0x22000005;
+	ret = MlnImpl_81035440(node, pivot, &time);
+	if (ret != 0)
+		return ret;
+	if (MlnTimeToSeconds(&time, &value) != 0)
+		return 1;
+	seconds[0] = value;
+	seconds[1] = time.microsecond;
+	return 0;
+}
+
+/* a GeneralizedTime as seconds since 1970 and the fraction */
+int MlnImpl_810383F8(int heap, const MlnAsn1Node *node, int *seconds)
+{
+	MlnDateTime time;
+	int value;
+	int ret;
+
+	if (node == NULL)
+		return 0x22000001;
+	if (node->tag != 24)
+		return 0x22000005;
+	ret = MlnImpl_81035440(node, 0, &time);
+	if (ret != 0)
+		return ret;
+	if (MlnTimeToSeconds(&time, &value) != 0)
+		return 1;
+	seconds[0] = value;
+	seconds[1] = time.microsecond;
+	return 0;
+}
+
+/* a node retagged [tag] IMPLICIT, context-specific */
+int MlnImpl_81038470(int heap, int tag, MlnAsn1Node *node)
+{
+	node->tag = tag;
+	node->tagClass = 2;
+	return 0;
+}
+
+/* a node wrapped as [tag] EXPLICIT */
+int MlnImpl_81038484(int heap, int tag, MlnAsn1Node *child, MlnAsn1Node **out)
+{
+	MlnAsn1Node *node = NULL;
+	int ret;
+
+	ret = MlnAsn1NewNode(heap, 2, 1, tag, &node);
+	if (ret != 0)
+		goto fail;
+	ret = MlnImpl_81037948(heap, node, child);
+	if (ret != 0)
+		goto fail;
+	*out = node;
+	return 0;
+fail:
+	MlnImpl_81035ABC(heap, node);
+	return ret;
+}
+
+/* checks a tree's classes and tags: the root here, its subtrees from depth 1 */
+int MlnImpl_8103857C(int heap, const MlnAsn1Node *node)
+{
+	int i;
+
+	if (node == NULL || node->tagClass > 3 || node->tag > 30)
+		return 0x22000001;
+	if (!node->constructed)
+		return 0;
+	for (i = 0; i < (int)node->length; i++)
+		if (MlnImpl_81035884(node->children[i], 1) != 0)
+			break;
+	return 0;
+}
+
+/*
+ * The headers of the children of the constructed encoding at der, into nodes (up to max)
+ * that point into it; nothing is allocated.
+ */
+int MlnImpl_81038600(int heap, const unsigned char *der, unsigned int size, MlnAsn1Node *nodes,
+		     int max, int *count)
+{
+	const unsigned char *end = der + size;
+	const unsigned char *cursor;
+	const unsigned char *contentsEnd;
+	MlnAsn1Node header;
+	int n, ret;
+
+	if (end != NULL && end < der + 2)
+		return 0x22000004;
+	ret = MlnImpl_810356A8(heap, der, end, NULL, &header);
+	if (ret != 0)
+		return ret;
+	cursor = header.data;
+	contentsEnd = header.data + header.length;
+	n = 0;
+	while (n < max) {
+		if (contentsEnd != NULL && contentsEnd < cursor + 2)
+			return 0x22000004;
+		ret = MlnImpl_810356A8(heap, cursor, contentsEnd, &cursor, &nodes[n]);
+		n++;
+		if (ret != 0)
+			return ret;
+		if (cursor == contentsEnd)
+			break;
+	}
+	if (count != NULL)
+		*count = n;
+	return 0;
 }

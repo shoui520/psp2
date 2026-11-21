@@ -49,10 +49,10 @@ int MlnImpl_81034D38(const char *usage, int count, MlnBuffer **certificates, cha
 		goto fail;
 	for (i = count - 1; i >= 0; i--) {
 		err = MlnImpl_81037918(MLN_HEAP_SECURE, certificates[i]->data,
-				       certificates[i]->size, 0, &certificate);
+				       certificates[i]->size, NULL, &certificate);
 		if (err != 0)
 			goto fail;
-		err = MlnImpl_81037948(MLN_HEAP_SECURE, path, certificate, 0);
+		err = MlnImpl_81037948(MLN_HEAP_SECURE, path, certificate);
 		if (err != 0)
 			goto fail;
 		certificate = NULL;

@@ -1876,21 +1876,9 @@ typedef struct MlnAsn1Node {
 #define MLN_ASN1_ENCODED	0x08	/* encodingLength holds the encoded size */
 #define MLN_ASN1_STATIC		0x80	/* the node is not the tree's to free */
 
-/* a decoded UTCTime or GeneralizedTime; offset is the zone's, in seconds */
-typedef struct MlnAsn1Time {
-	int year;
-	int month;
-	int day;
-	int hour;
-	int minute;
-	int second;
-	int millisecond;
-	int offset;
-	int reserved;
-} MlnAsn1Time;
 
 int MlnImpl_810353EC(int heap, MlnAsn1Node *node);
-int MlnImpl_81035440(const MlnAsn1Node *node, int pivot, MlnAsn1Time *time);
+int MlnImpl_81035440(const MlnAsn1Node *node, int pivot, MlnDateTime *time);
 int MlnImpl_810356A8(int heap, const unsigned char *der, const unsigned char *end,
 		     const unsigned char **next, MlnAsn1Node *node);
 int MlnImpl_81035884(const MlnAsn1Node *node, int depth);
@@ -1922,15 +1910,40 @@ int MlnImpl_810378B0(int heap, const unsigned char *der, unsigned int size,
 		     const unsigned char **next);
 int MlnImpl_810378E4(int heap, const unsigned char *der, unsigned int size,
 		     const unsigned char **next, MlnAsn1Node **out);
+int MlnImpl_81037918(int heap, const unsigned char *der, unsigned int size,
+		     const unsigned char **next, MlnAsn1Node **out);
+int MlnImpl_81037948(int heap, MlnAsn1Node *parent, MlnAsn1Node *child);
+int MlnImpl_810379E0(int heap, MlnAsn1Node *parent, int index);
+int MlnImpl_81037A80(int heap, MlnAsn1Node *parent, int index, MlnAsn1Node *child,
+		     MlnAsn1Node **old);
+int MlnImpl_81037B00(int heap, MlnAsn1Node *parent, int index, MlnAsn1Node **old);
+MlnAsn1Node *MlnImpl_81037B80(int heap, const MlnAsn1Node *parent, int tagClass, int tag);
+int MlnImpl_81037E6C(int heap, MlnAsn1Node **sequence);
+int MlnImpl_81037BF4(int heap, int value, MlnAsn1Node **out);
+int MlnImpl_81037D68(int heap, unsigned int length, const void *data, MlnAsn1Node **out);
+int MlnImpl_81037E4C(int heap, int value, MlnAsn1Node **out);
+int MlnImpl_81037EC8(int heap, const MlnAsn1Node *node, int *value);
+int MlnImpl_81037F54(int heap, const MlnAsn1Node *node, int *value);
+int MlnImpl_81037FE0(int heap, const MlnAsn1Node *node, int size, unsigned char *out);
+int MlnImpl_8103814C(int heap, const MlnAsn1Node *node, unsigned int size, unsigned char *out,
+		     int *bits);
+int MlnImpl_81038218(int heap, const MlnAsn1Node *node, const unsigned char **data,
+		     unsigned int *length);
+int MlnImpl_8103826C(int heap, const MlnAsn1Node *node, int *value);
+int MlnImpl_810382F8(int heap, const MlnAsn1Node *node, int pivot, MlnDateTime *time);
+int MlnImpl_8103833C(int heap, const MlnAsn1Node *node, MlnDateTime *time);
+int MlnImpl_8103837C(int heap, const MlnAsn1Node *node, int pivot, int *seconds);
+int MlnImpl_810383F8(int heap, const MlnAsn1Node *node, int *seconds);
+int MlnImpl_81038470(int heap, int tag, MlnAsn1Node *node);
+int MlnImpl_81038484(int heap, int tag, MlnAsn1Node *child, MlnAsn1Node **out);
+int MlnImpl_8103857C(int heap, const MlnAsn1Node *node);
+int MlnImpl_81038600(int heap, const unsigned char *der, unsigned int size, MlnAsn1Node *nodes,
+		     int max, int *count);
 int MlnImpl_81034D38(const char *usage, int count, MlnBuffer **certificates, char **out);
 int MlnImpl_81035018(int encryptionCount, MlnBuffer **encryptionCertificates, int signingCount,
 		     MlnBuffer **signingCertificates, const MlnBuffer *role,
 		     const MlnBuffer *nodeId, char **out);
 int MlnImpl_810368D0(int heap, MlnAsn1Node *node, unsigned char **data, unsigned int *size);
-int MlnImpl_81037918(int heap, const unsigned char *data, unsigned int size, int flags,
-		     MlnAsn1Node **out);
-int MlnImpl_81037948(int heap, MlnAsn1Node *sequence, MlnAsn1Node *node, int flags);
-int MlnImpl_81037E6C(int heap, MlnAsn1Node **sequence);
 int MlnImpl_81081890(MlnXmlNode *node, const char *name, const char *ns, MlnXmlNodeList **list);
 int MlnImpl_81081BB4(MlnXmlNodeList **list, MlnConfigList *out, const char *role);
 
