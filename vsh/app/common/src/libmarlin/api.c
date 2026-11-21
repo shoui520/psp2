@@ -301,15 +301,16 @@ __attribute__((noinline)) int SceMarlin_9609E2DF(MlnBuffer *buffer)
 	return MLN_OK;
 }
 
-int MlnApi_81002430(void)
+int MlnApi_81002430(MlnBufferPair *pair)
 {
-	MlnImpl_810136AC();
+	MlnBufferPairFree(pair);
 	return MLN_OK;
 }
 
-int MlnApi_81002440(void *a0, void *a1, void *a2, void *a3, unsigned char a4, void *a5)
+int MlnApi_81002440(unsigned int firstSize, const void *firstData, unsigned int secondSize,
+		    const void *secondData, unsigned char flag, MlnBufferPair **out)
 {
-	return MlnImpl_810136E0(a0, a1, a2, a3, a4, a5);
+	return MlnBufferPairCreate(firstSize, firstData, secondSize, secondData, flag, out);
 }
 
 int SceMarlin_F6B7B9F4(void *a0, void *a1, void *a2, void *a3, void *a4)
@@ -332,7 +333,7 @@ int MlnApi_81002498(void *a0, void *a1, MlnBuffer **out)
 	MlnBuffer *buffer = NULL;
 	int ret;
 
-	ret = MlnImpl_81013804(a0, a1, &buffer);
+	ret = MlnCompositeIdCreate(a0, a1, &buffer);
 	if (ret == MLN_OK) {
 		*out = buffer;
 		buffer = NULL;
@@ -707,9 +708,9 @@ int SceMarlin_73C12840(MlnBundleInfo *info)
 	return MLN_OK;
 }
 
-int MlnApi_81003248(void *a0, void *a1)
+void MlnApi_81003248(MlnApiValue *value)
 {
-	return MlnImpl_81013350(a0, a1);
+	MlnApiValueFree(value);
 }
 
 int MlnApi_81003254(void *a0, void *a1, void *a2)
@@ -859,7 +860,7 @@ int MlnApi_81003464(MlnBuffer *serviceProvider, MlnBuffer *token, unsigned int *
 			}
 			box += boxSize;
 		} while (total < token->size);
-		ret = MlnImpl_81013804(accountId, entitlementId, &ids);
+		ret = MlnCompositeIdCreate(accountId, entitlementId, &ids);
 		SceMarlin_9609E2DF(accountId);
 		SceMarlin_9609E2DF(entitlementId);
 		if (ret != MLN_OK)
@@ -1336,7 +1337,7 @@ int SceMarlin_88AC64AD(MlnApiObject *object, void *a1, MlnBuffer *a2, MlnBuffer 
 
 	if (object == NULL) {
 		SceMarlin_9609E2DF(NULL);
-		MlnImpl_81013420(step);
+		MlnApiResultFree(step);
 		return 3;
 	}
 	if (object->kind == NULL || (object->kind->type == 1 && !object->kind->remote)) {
@@ -1422,8 +1423,8 @@ int SceMarlin_88AC64AD(MlnApiObject *object, void *a1, MlnBuffer *a2, MlnBuffer 
 			ret = MLN_RESULT_INVALID_ARGUMENT;
 			goto release;
 		}
-		if (request->headerCount != 0) {
-			header = request->headers[0];
+		if (request->headers.count != 0) {
+			header = request->headers.items[0];
 			if (header == NULL) {
 				ret = 85;
 				goto release;
@@ -1433,9 +1434,9 @@ int SceMarlin_88AC64AD(MlnApiObject *object, void *a1, MlnBuffer *a2, MlnBuffer 
 					ret = 85;
 					goto release;
 				}
-				if (i >= request->headerCount)
+				if (i >= request->headers.count)
 					break;
-				header = request->headers[i];
+				header = request->headers.items[i];
 				if (header == NULL) {
 					ret = 85;
 					goto release;
@@ -1465,11 +1466,11 @@ release:
 		if (ret != MLN_OK)
 			break;
 next:
-		MlnImpl_81013420(step);
+		MlnApiResultFree(step);
 		step = NULL;
 	}
 	SceMarlin_9609E2DF(response);
-	MlnImpl_81013420(step);
+	MlnApiResultFree(step);
 	if (url != NULL) {
 		if (transport->close != NULL)
 			transport->close(connection);
@@ -1478,7 +1479,7 @@ next:
 	goto out;
 fail:
 	SceMarlin_9609E2DF(response);
-	MlnImpl_81013420(step);
+	MlnApiResultFree(step);
 out:
 	MlnApiObjectReleaseEngine(object);
 	return ret;
@@ -1647,7 +1648,7 @@ int SceMarlin_0166ACC1(MlnApiObject *object, MlnBuffer *message, MlnApiNode **re
 			report.data.buffer = step->request->body;
 			step->request->body = NULL;
 		}
-		MlnImpl_81013420(step);
+		MlnApiResultFree(step);
 		step = NULL;
 		ret = MlnApi_8100370C(object, status, NULL, &report, &response);
 		break;
@@ -1818,17 +1819,17 @@ results:
 	}
 out:
 	SceMarlin_9609E2DF(response);
-	MlnImpl_81013420(step);
-	MlnImpl_810134E0(&request);
-	MlnImpl_8101359C(&report);
+	MlnApiResultFree(step);
+	MlnApiRequestClear(&request);
+	MlnApiReportClear(&report);
 	if (status != MLN_OK)
 		object->status = status;
 	return ret;
 fail:
 	SceMarlin_9609E2DF(response);
-	MlnImpl_81013420(step);
-	MlnImpl_810134E0(&request);
-	MlnImpl_8101359C(&report);
+	MlnApiResultFree(step);
+	MlnApiRequestClear(&request);
+	MlnApiReportClear(&report);
 	return ret;
 }
 
@@ -2199,7 +2200,7 @@ int SceMarlin_D7A21F7F(MlnApiObject *source, MlnApiObject *target, void *a2, int
 			ret = MlnImpl_8101E658(target->client, &message, &targetStep);
 			if (ret != MLN_OK)
 				goto steps;
-			MlnImpl_81013420(step);
+			MlnApiResultFree(step);
 			step = NULL;
 			request = targetStep->request;
 			if (request == NULL) {
@@ -2222,8 +2223,8 @@ int SceMarlin_D7A21F7F(MlnApiObject *source, MlnApiObject *target, void *a2, int
 				step = sourceStep;
 				sourceStep = NULL;
 			}
-			MlnImpl_81013420(sourceStep);
-			MlnImpl_81013420(targetStep);
+			MlnApiResultFree(sourceStep);
+			MlnApiResultFree(targetStep);
 		} while (step != NULL && step->request != NULL);
 	} else {
 		if (target->kind->type != 0) {
@@ -2249,8 +2250,8 @@ int SceMarlin_D7A21F7F(MlnApiObject *source, MlnApiObject *target, void *a2, int
 			goto steps;
 		step = targetStep;
 		targetStep = NULL;
-		MlnImpl_81013420(sourceStep);
-		MlnImpl_81013420(targetStep);
+		MlnApiResultFree(sourceStep);
+		MlnApiResultFree(targetStep);
 		do {
 			message = NULL;
 			targetStep = NULL;
@@ -2262,14 +2263,14 @@ int SceMarlin_D7A21F7F(MlnApiObject *source, MlnApiObject *target, void *a2, int
 			}
 			if (ret != MLN_OK) {
 				SceMarlin_9609E2DF(message);
-				MlnImpl_81013420(targetStep);
+				MlnApiResultFree(targetStep);
 				goto out;
 			}
-			MlnImpl_81013420(step);
+			MlnApiResultFree(step);
 			step = targetStep;
 			targetStep = NULL;
 			SceMarlin_9609E2DF(message);
-			MlnImpl_81013420(targetStep);
+			MlnApiResultFree(targetStep);
 		} while (step != NULL && step->request != NULL);
 	}
 	if (step != NULL && step->value != NULL) {
@@ -2282,10 +2283,10 @@ int SceMarlin_D7A21F7F(MlnApiObject *source, MlnApiObject *target, void *a2, int
 	list = NULL;
 	goto out;
 steps:
-	MlnImpl_81013420(sourceStep);
-	MlnImpl_81013420(targetStep);
+	MlnApiResultFree(sourceStep);
+	MlnApiResultFree(targetStep);
 out:
-	MlnImpl_81013420(step);
+	MlnApiResultFree(step);
 	SceMarlin_45B29121(list);
 	return ret;
 }

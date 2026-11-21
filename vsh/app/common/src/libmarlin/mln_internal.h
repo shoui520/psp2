@@ -245,11 +245,15 @@ typedef struct MlnHttpHeader {
 #define MLN_HTTP_GET	1
 #define MLN_HTTP_POST	2
 
+typedef struct MlnHttpHeaders {
+	unsigned int count;
+	MlnHttpHeader **items;
+} MlnHttpHeaders;
+
 typedef struct MlnHttpRequest {
 	int method;
 	char *url;
-	unsigned int headerCount;
-	MlnHttpHeader **headers;
+	MlnHttpHeaders headers;
 	MlnBuffer *body;
 } MlnHttpRequest;
 
@@ -883,23 +887,60 @@ int MlnEsbFree(int heap, MlnEsb *esb);
 int MlnEsbCheckGlobalFlags(int heap, const MlnEsb *esb);
 
 /* not written in C yet: the prototypes are their callers' */
+/* core.c */
+typedef struct MlnBlob {
+	MlnBuffer *buffer;
+	unsigned int size;
+} MlnBlob;
+
 int MlnCoreInit(void *memory, unsigned int size);
 int MlnCoreTerm(void);
+int MlnImpl_81012F48(void *a0, const MlnBuffer *a1, MlnBuffer **first, MlnBuffer **second);
+int MlnImpl_81013074(void *a0, const MlnBuffer *a1, MlnBlob *first, MlnBlob *second);
+int MlnHttpHeadersCreate(unsigned int count, MlnHttpHeader *const *headers, MlnHttpHeaders *out);
+void MlnHttpHeadersFree(MlnHttpHeaders *headers);
+void MlnHttpRequestFree(MlnHttpRequest *request);
+void MlnApiValueFree(MlnApiValue *value);
+void MlnApiResultFree(MlnApiResult *result);
+void MlnApiRequestClear(MlnApiRequest *request);
+void MlnApiReportClear(MlnApiReport *report);
+
+/* two buffers and a flag the API layer hands the core */
+typedef struct MlnBufferPair {
+	MlnBuffer *first;
+	MlnBuffer *second;
+	unsigned char flag;
+} MlnBufferPair;
+
+void MlnBufferPairFree(MlnBufferPair *pair);
+int MlnBufferPairCreate(unsigned int firstSize, const void *firstData, unsigned int secondSize,
+			const void *secondData, unsigned char flag, MlnBufferPair **out);
+int MlnCompositeIdCreate(const MlnBuffer *accountId, const MlnBuffer *entitlementId,
+			 MlnBuffer **out);
+/* not written in C yet */
+typedef struct MlnSha1Context {
+	unsigned int words[24];
+} MlnSha1Context;
+
+void MlnImpl_81033774(MlnSha1Context *context);
+void MlnImpl_810337C4(MlnSha1Context *context, const void *data, unsigned int size);
+void MlnImpl_81033864(MlnSha1Context *context, unsigned char *digest);
+int MlnImpl_8102A394(void *memory, unsigned int size);
+int MlnImpl_8102A418(void);
+int MlnImpl_8102AA38(MlnBlob *blob, MlnBuffer *out);
+int MlnImpl_810318D4(void *a0, const MlnBuffer *a1, MlnBlob *first, MlnBlob *second);
+
 int MlnPlatformInit(void);
 int MlnPlatformTerm(void);
 unsigned int MlnStateSerialize(MlnBuffer **state);
 int MlnServiceSetState(MlnServiceContext *context, MlnBuffer *state);
 int MlnServiceClearState(MlnServiceContext *context);
-int MlnImpl_81013350(void *a0, void *a1);
 int MlnImpl_81016A5C(void *a0, void *a1, void *a2);
 int MlnImpl_81016B4C(void *a0, void *a1);
 int MlnImpl_81018B8C(MlnServiceContext *context, MlnBuffer *serviceProvider, MlnBuffer *token,
 		     MlnBuffer *ids, unsigned int *count, MlnBuffer ***items);
 int MlnImpl_81020094(void *session, int status, MlnApiValue *value, MlnHttpRequest *request,
 		     void *a4, void *a5);
-void MlnImpl_81013420(MlnApiResult *result);
-void MlnImpl_810134E0(MlnApiRequest *request);
-void MlnImpl_8101359C(MlnApiReport *report);
 int MlnImpl_8101F954(void *session, MlnBuffer *message, int status, void *data,
 		     MlnApiRequest *request);
 int MlnImpl_8101A360(void *engine, MlnApiResult **result);
@@ -939,9 +980,6 @@ int MlnXmlGetAttribute(int heap, MlnXmlNode *node, const char *ns, const char *n
 int MlnXmlGetText(int heap, MlnXmlNode *node, MlnBuffer **text);
 int MlnXmlNodeFree(int heap, MlnXmlNode *node);
 int MlnXmlListFree(int heap, MlnXmlNodeList *list);
-void MlnImpl_810136AC(void);
-int MlnImpl_810136E0(void *a0, void *a1, void *a2, void *a3, unsigned char a4, void *a5);
-int MlnImpl_81013804(void *a0, void *a1, MlnBuffer **a2);
 int MlnImpl_810147D8(void *a0, int a1);
 int MlnImpl_81014860(void *a0, void *a1, void *a2, void *a3);
 int MlnImpl_810148F8(void *a0, void *a1, void *a2);
