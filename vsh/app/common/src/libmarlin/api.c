@@ -280,19 +280,19 @@ int SceMarlin_C76DA6C0(void)
  * Calls that pass through to the client. PLACEHOLDER names: each MlnApi_/MlnImpl_ name is
  * replaced by a name of what it does when its callee is written.
  */
-int MlnApi_810023F4(void *a0, int a1)
+int MlnApi_810023F4(MlnServiceContext *context, int value)
 {
-	return MlnImpl_810147D8(a0, a1);
+	return MlnImpl_810147D8(context, value);
 }
 
-int MlnApi_81002400(void *a0, void *a1, void *a2, void *a3)
+int MlnApi_81002400(MlnServiceContext *context, unsigned int size, void *data, MlnBuffer *buffer)
 {
-	return MlnImpl_81014860(a0, a1, a2, a3);
+	return MlnImpl_81014860(context, size, data, buffer);
 }
 
-int MlnApi_8100240C(void *a0, void *a1, void *a2)
+int MlnApi_8100240C(MlnServiceContext *context, MlnBuffer *in, MlnBuffer **out)
 {
-	return MlnImpl_810148F8(a0, a1, a2);
+	return MlnImpl_810148F8(context, in, out);
 }
 
 __attribute__((noinline)) int SceMarlin_9609E2DF(MlnBuffer *buffer)
@@ -313,19 +313,20 @@ int MlnApi_81002440(unsigned int firstSize, const void *firstData, unsigned int 
 	return MlnBufferPairCreate(firstSize, firstData, secondSize, secondData, flag, out);
 }
 
-int SceMarlin_F6B7B9F4(void *a0, void *a1, void *a2, void *a3, void *a4)
+int SceMarlin_F6B7B9F4(MlnServiceContext *context, MlnServiceDataGet get,
+		       MlnServiceDataRelease release, void *arg, void *cookie)
 {
-	return MlnImpl_81014A10(a0, a1, a2, a3, a4);
+	return MlnImpl_81014A10(context, get, release, arg, cookie);
 }
 
-int MlnApi_81002480(void *a0, void *a1)
+int MlnApi_81002480(MlnServiceContext *context, MlnBuffer *buffer)
 {
-	return MlnImpl_81014B8C(a0, a1);
+	return MlnImpl_81014B8C(context, buffer);
 }
 
-int MlnApi_8100248C(void *a0, void *a1, void *a2)
+int MlnApi_8100248C(MlnServiceContext *context, MlnBuffer *in, MlnBuffer **out)
 {
-	return MlnImpl_81014C20(a0, a1, a2);
+	return MlnImpl_81014C20(context, in, out);
 }
 
 int MlnApi_81002498(void *a0, void *a1, MlnBuffer **out)
@@ -342,79 +343,84 @@ int MlnApi_81002498(void *a0, void *a1, MlnBuffer **out)
 	return ret;
 }
 
-int MlnApi_810024E4(void *a0, void *a1)
+int MlnApi_810024E4(MlnServiceContext *context, MlnBuffer *buffer)
 {
-	return MlnImpl_81014D30(a0, a1);
+	return MlnImpl_81014D30(context, buffer);
 }
 
-int MlnApi_810024F0(void *a0, void *a1)
+int MlnApi_810024F0(MlnServiceContext *context)
 {
-	return MlnImpl_81014DC4(a0, a1);
+	return MlnImpl_81014DC4(context);
 }
 
-int MlnApi_810024FC(void *a0, void *a1, void *a2)
+int MlnApi_810024FC(MlnServiceContext *context, MlnBuffer *buffer, void *out)
 {
-	return MlnImpl_81014E28(a0, a1, a2);
+	return MlnImpl_81014E28(context, buffer, out);
 }
 
-int MlnApi_81002508(void *a0, void *a1)
+int MlnApi_81002508(MlnServiceContext *context, MlnBuffer *buffer)
 {
-	return MlnImpl_81014F24(a0, a1);
+	return MlnImpl_81014F24(context, buffer);
 }
 
-int MlnApi_81002514(void *a0, void *a1)
+int MlnApi_81002514(MlnServiceContext *context, MlnBuffer *buffer)
 {
-	return MlnImpl_81014FA8(a0, a1);
+	return MlnImpl_81014FA8(context, buffer);
 }
 
-int MlnApi_81002520(void *a0, void *a1, void *a2)
+int MlnApi_81002520(MlnServiceContext *context, int value, void *data)
 {
-	return MlnImpl_8101503C(a0, a1, a2);
+	return MlnImpl_8101503C(context, value, data);
 }
 
-int MlnApi_8100252C(void *a0)
+int MlnApi_8100252C(MlnServiceContext *context)
 {
-	return MlnImpl_81015168(a0);
+	return MlnImpl_81015168(context);
 }
 
-int MlnApi_81002538(void *a0, void *a1, void *a2, void *a3, void *a4)
+int MlnApi_81002538(MlnServiceContext *context, unsigned int size, void *data, const char *name,
+		    MlnBuffer **out)
 {
-	return MlnImpl_8101521C(a0, a1, a2, a3, a4);
+	return MlnImpl_8101521C(context, size, data, name, out);
 }
 
-int MlnApi_81002554(void *a0, void *a1, void *a2)
+int MlnApi_81002554(MlnServiceContext *context, MlnBuffer *in, MlnBuffer **out)
 {
-	return MlnImpl_81015374(a0, a1, a2);
+	return MlnImpl_81015374(context, in, out);
 }
 
-int MlnApi_81002560(void *a0, void *a1, void *a2, void *a3, void *a4, void *a5, void *a6)
+int MlnApi_81002560(MlnServiceContext *context, unsigned int size, void *data, const char *name,
+		    MlnBuffer *other, MlnBuffer *in, MlnBuffer **out)
 {
-	return MlnImpl_8101549C(a0, a1, a2, a3, a4, a5, a6);
+	return MlnImpl_8101549C(context, size, data, name, other, in, out);
 }
 
-int MlnApi_81002588(void *a0, void *a1, void *a2, void *a3)
+int MlnApi_81002588(MlnServiceContext *context, MlnBuffer *in, MlnBuffer **outFirst,
+		    MlnBuffer **outSecond)
 {
-	return MlnImpl_81015620(a0, a1, a2, a3);
+	return MlnImpl_81015620(context, in, outFirst, outSecond);
 }
 
-int MlnApi_81002594(void *a0, void *a1, void *a2, void *a3, void *a4, void *a5)
+int MlnApi_81002594(MlnServiceContext *context, unsigned int size, void *data, const char *name,
+		    MlnBuffer *in, MlnBuffer **out)
 {
-	return MlnImpl_81015798(a0, a1, a2, a3, a4, a5);
+	return MlnImpl_81015798(context, size, data, name, in, out);
 }
 
-int MlnApi_810025B8(void *a0, void *a1, void *a2)
+int MlnApi_810025B8(MlnServiceContext *context, MlnBuffer *in, MlnBuffer **out)
 {
-	return MlnImpl_810158FC(a0, a1, a2);
+	return MlnImpl_810158FC(context, in, out);
 }
 
-int MlnApi_810025C4(void *a0, void *a1, void *a2, void *a3, void *a4, void *a5, void *a6, void *a7)
+int MlnApi_810025C4(MlnServiceContext *context, unsigned int size, void *data, const char *name,
+		    MlnBuffer *other, MlnBuffer *extra, MlnBuffer *in, MlnBuffer **out)
 {
-	return MlnImpl_81015A24(a0, a1, a2, a3, a4, a5, a6, a7);
+	return MlnImpl_81015A24(context, size, data, name, other, extra, in, out);
 }
 
-int MlnApi_810025F4(void *a0, void *a1, void *a2)
+int MlnApi_810025F4(MlnServiceContext *context, MlnBuffer *in, MlnBuffer **out)
 {
-	return MlnImpl_81015BB0(a0, a1, a2);
+	return MlnImpl_81015BB0(context, in, out);
 }
 
 int MlnApi_81002600(void *a0)
@@ -423,34 +429,38 @@ int MlnApi_81002600(void *a0)
 	return MLN_OK;
 }
 
-int MlnApi_81002618(void *a0, void *a1)
+int MlnApi_81002618(MlnServiceContext *context, MlnBufferGroup **out)
 {
-	return MlnImpl_81015CD8(a0, a1);
+	return MlnImpl_81015CD8(context, out);
 }
 
-int MlnApi_81002624(void *a0, void *a1, void *a2, void *a3, void *a4, void *a5, void *a6)
+int MlnApi_81002624(MlnServiceContext *context, unsigned int firstSize, void *firstData,
+		    unsigned int secondSize, void *secondData, unsigned int thirdSize,
+		    void *thirdData)
 {
-	return MlnImpl_81015DDC(a0, a1, a2, a3, a4, a5, a6);
+	return MlnImpl_81015DDC(context, firstSize, firstData, secondSize, secondData, thirdSize,
+				thirdData);
 }
 
-int MlnApi_8100264C(void *a0, void *a1, void *a2)
+int MlnApi_8100264C(MlnServiceContext *context, MlnBuffer *in, MlnBuffer *other)
 {
-	return MlnImpl_81015EA4(a0, a1, a2);
+	return MlnImpl_81015EA4(context, in, other);
 }
 
-__attribute__((noinline)) int SceMarlin_A43BC777(void *a0)
+__attribute__((noinline)) int SceMarlin_A43BC777(MlnServiceContext *context)
 {
-	return MlnImpl_81015F3C(a0);
+	return MlnImpl_81015F3C(context);
 }
 
-__attribute__((noinline)) int SceMarlin_23838449(void *a0)
+__attribute__((noinline)) int SceMarlin_23838449(MlnServiceContext *context)
 {
-	return MlnImpl_81016034(a0);
+	return MlnImpl_81016034(context);
 }
 
-__attribute__((noinline)) int SceMarlin_FB95B259(void *a0, void *a1, void *a2)
+__attribute__((noinline)) int SceMarlin_FB95B259(MlnServiceContext *context, unsigned int size,
+						 void *data)
 {
-	return MlnImpl_810160E8(a0, a1, a2);
+	return MlnImpl_810160E8(context, size, data);
 }
 
 int SceMarlin_102593F5(void *a0, void *a1, void *a2)
@@ -1028,7 +1038,7 @@ __attribute__((noinline)) int MlnApi_81003A9C(MlnBuffer *license, MlnRightsSumma
 	ret = SceMarlin_A43BC777(&s_serviceContext);
 	if (ret != MLN_OK)
 		goto out;
-	ret = SceMarlin_FB95B259(&s_serviceContext, (void *)license->size, license->data);
+	ret = SceMarlin_FB95B259(&s_serviceContext, license->size, license->data);
 	if (ret != MLN_OK)
 		goto out;
 	i = SceMarlin_92A6A48F(&s_serviceContext, NULL, &info);
@@ -1764,7 +1774,7 @@ int SceMarlin_0166ACC1(MlnApiObject *object, MlnBuffer *message, MlnApiNode **re
 				status = SceMarlin_A43BC777(&s_transferContext);
 				if (status == MLN_OK)
 					status = SceMarlin_FB95B259(&s_transferContext,
-								    (void *)buffer->size, buffer->data);
+								    buffer->size, buffer->data);
 				if (status == MLN_OK)
 					status = MlnApi_810026B8(&s_transferContext, &handle);
 				if (status == MLN_OK) {
@@ -2580,7 +2590,7 @@ int SceMarlin_B477D615(MlnApiObject *object, MlnBuffer *token, MlnRightsInfo **o
 				ret = SceMarlin_A43BC777(&s_transferContext);
 				if (ret == MLN_OK)
 					ret = SceMarlin_FB95B259(&s_transferContext,
-								 (void *)token->size, token->data);
+								 token->size, token->data);
 				if (ret == MLN_OK)
 					ret = MlnApi_810026B8(&s_transferContext, &handle);
 				if (ret == MLN_OK) {

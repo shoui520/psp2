@@ -838,3 +838,1070 @@ __attribute__((noinline)) int MlnServiceClearState(MlnServiceContext *context)
 	MlnImpl_81027390(MLN_HEAP_SECURE, reply);
 	return ret;
 }
+
+/* service command 0x402 with one integer */
+__attribute__((noinline)) int MlnImpl_810147D8(MlnServiceContext *context, int value)
+{
+	MlnServiceArg item;
+	MlnServiceArgs args = { 0, NULL };
+	MlnServiceReply *reply = NULL;
+	int status;
+	int ret;
+
+	if (context == NULL) {
+		ret = MLN_ERROR_INVALID_ARGUMENT;
+	} else {
+		item.type = MLN_SERVICE_ARG_INTEGER;
+		item.value = &value;
+		args.count = 1;
+		args.items = &item;
+		ret = MlnServiceCall(context->session, 0x402, &args, &reply, &status);
+		if (ret == MLN_OK)
+			ret = status;
+	}
+	MlnImpl_81027390(MLN_HEAP_SECURE, reply);
+	return ret;
+}
+
+/* service command 0x404 with two buffers, the first given as its size and data */
+__attribute__((noinline)) int MlnImpl_81014860(MlnServiceContext *context, unsigned int size,
+					       void *data, MlnBuffer *buffer)
+{
+	MlnBuffer first;
+	MlnServiceArg items[2];
+	MlnServiceArgs args = { 0, NULL };
+	MlnServiceReply *reply = NULL;
+	int status;
+	int ret;
+
+	first.size = size;
+	first.data = data;
+	if (context == NULL) {
+		ret = MLN_ERROR_INVALID_ARGUMENT;
+	} else {
+		items[0].type = MLN_SERVICE_ARG_BUFFER;
+		items[0].value = &first;
+		items[1].type = MLN_SERVICE_ARG_BUFFER;
+		items[1].value = buffer;
+		args.count = 2;
+		args.items = items;
+		ret = MlnServiceCall(context->session, 0x404, &args, &reply, &status);
+		if (ret == MLN_OK)
+			ret = status;
+	}
+	MlnImpl_81027390(MLN_HEAP_SECURE, reply);
+	return ret;
+}
+
+/* service command 0x407 on a buffer: the buffer of its type 1 reply */
+__attribute__((noinline)) int MlnImpl_810148F8(MlnServiceContext *context, MlnBuffer *in,
+					       MlnBuffer **out)
+{
+	MlnServiceArg item;
+	MlnServiceArgs args = { 0, NULL };
+	MlnServiceReply *reply = NULL;
+	MlnBuffer *buffer = NULL;
+	int status;
+	int ret;
+
+	if (context == NULL) {
+		ret = MLN_ERROR_INVALID_ARGUMENT;
+	} else if (in == NULL || out == NULL) {
+		ret = MLN_CORE_ERROR_INVALID;
+	} else {
+		item.type = MLN_SERVICE_ARG_BUFFER;
+		item.value = in;
+		args.count = 1;
+		args.items = &item;
+		ret = MlnServiceCall(context->session, 0x407, &args, &reply, &status);
+		if (ret == MLN_OK) {
+			ret = status;
+			if (ret == MLN_OK) {
+				if (MlnImpl_81026D94(reply, 1) != 0) {
+					ret = MLN_SERVICE_ERROR_REPLY;
+				} else {
+					ret = MlnImpl_81026F0C(MLN_HEAP_SECURE, reply->data, &buffer);
+					if (ret != MLN_OK) {
+						ret = MlnImpl_810191C4(ret);
+					} else {
+						*out = buffer;
+						buffer = NULL;
+					}
+				}
+			}
+		}
+	}
+	MlnImpl_81027390(MLN_HEAP_SECURE, reply);
+	MlnBufferDestroy(MLN_HEAP_SECURE, buffer);
+	return ret;
+}
+
+/*
+ * Service command 0x405; when its type 1 reply's flag is clear, the application's data
+ * (get) sent with command 0x406, and released.
+ */
+__attribute__((noinline)) int MlnImpl_81014A10(MlnServiceContext *context, MlnServiceDataGet get,
+					       MlnServiceDataRelease release, void *arg,
+					       void *cookie)
+{
+	MlnBuffer buffer;
+	MlnServiceArg item;
+	MlnServiceArgs args = { 0, NULL };
+	MlnServiceReply *reply = NULL;
+	void *data = NULL;
+	unsigned int size = 0;
+	int status, flag;
+	int ret;
+
+	if (context == NULL) {
+		ret = MLN_ERROR_INVALID_ARGUMENT;
+		goto out;
+	}
+	ret = MlnServiceCall(context->session, 0x405, &args, &reply, &status);
+	if (ret != MLN_OK)
+		goto out;
+	ret = status;
+	if (ret != MLN_OK)
+		goto out;
+	if (MlnImpl_81026D94(reply, 1) != 0) {
+		ret = MLN_SERVICE_ERROR_REPLY;
+		goto out;
+	}
+	ret = MlnImpl_81027084(MLN_HEAP_SECURE, reply->data, &flag);
+	if (ret != MLN_OK) {
+		ret = MlnImpl_810191C4(ret);
+		goto out;
+	}
+	MlnImpl_81027390(MLN_HEAP_SECURE, reply);
+	reply = NULL;
+	if (flag != 0)
+		goto out;
+	if (get(cookie, arg, &data, &size) != 0) {
+		ret = 7;
+		goto out;
+	}
+	buffer.size = size;
+	buffer.data = data;
+	item.type = MLN_SERVICE_ARG_BUFFER;
+	item.value = &buffer;
+	args.count = 1;
+	args.items = &item;
+	ret = MlnServiceCall(context->session, 0x406, &args, &reply, &status);
+	if (ret == MLN_OK)
+		ret = status;
+out:
+	MlnImpl_81027390(MLN_HEAP_SECURE, reply);
+	release(cookie, data);
+	return ret;
+}
+
+/* service command 0x408 with a buffer */
+__attribute__((noinline)) int MlnImpl_81014B8C(MlnServiceContext *context, MlnBuffer *buffer)
+{
+	MlnServiceArg item;
+	MlnServiceArgs args = { 0, NULL };
+	MlnServiceReply *reply = NULL;
+	int status;
+	int ret;
+
+	if (context == NULL) {
+		ret = MLN_ERROR_INVALID_ARGUMENT;
+	} else if (buffer == NULL) {
+		ret = MLN_CORE_ERROR_INVALID;
+	} else {
+		item.type = MLN_SERVICE_ARG_BUFFER;
+		item.value = buffer;
+		args.count = 1;
+		args.items = &item;
+		ret = MlnServiceCall(context->session, 0x408, &args, &reply, &status);
+		if (ret == MLN_OK)
+			ret = status;
+	}
+	MlnImpl_81027390(MLN_HEAP_SECURE, reply);
+	return ret;
+}
+
+/* service command 0x40b on a buffer (or none): the buffer of its type 1 reply */
+__attribute__((noinline)) int MlnImpl_81014C20(MlnServiceContext *context, MlnBuffer *in,
+					       MlnBuffer **out)
+{
+	MlnServiceArg item;
+	MlnServiceArgs args = { 0, NULL };
+	MlnServiceReply *reply = NULL;
+	MlnBuffer *buffer = NULL;
+	int status;
+	int ret;
+
+	if (context == NULL) {
+		ret = MLN_ERROR_INVALID_ARGUMENT;
+	} else if (out == NULL) {
+		ret = MLN_CORE_ERROR_INVALID;
+	} else {
+		item.type = MLN_SERVICE_ARG_BUFFER;
+		item.value = in;
+		args.count = 1;
+		args.items = &item;
+		ret = MlnServiceCall(context->session, 0x40b, &args, &reply, &status);
+		if (ret == MLN_OK) {
+			ret = status;
+			if (ret == MLN_OK) {
+				if (MlnImpl_81026D94(reply, 1) != 0) {
+					ret = MLN_SERVICE_ERROR_REPLY;
+				} else {
+					ret = MlnImpl_81026F0C(MLN_HEAP_SECURE, reply->data, &buffer);
+					if (ret != MLN_OK) {
+						ret = MlnImpl_810191C4(ret);
+					} else {
+						*out = buffer;
+						buffer = NULL;
+					}
+				}
+			}
+		}
+	}
+	MlnImpl_81027390(MLN_HEAP_SECURE, reply);
+	MlnBufferDestroy(MLN_HEAP_SECURE, buffer);
+	return ret;
+}
+
+/* service command 0x40e with a buffer */
+__attribute__((noinline)) int MlnImpl_81014D30(MlnServiceContext *context, MlnBuffer *buffer)
+{
+	MlnServiceArg item;
+	MlnServiceArgs args = { 0, NULL };
+	MlnServiceReply *reply = NULL;
+	int status;
+	int ret;
+
+	if (context == NULL) {
+		ret = MLN_ERROR_INVALID_ARGUMENT;
+	} else if (buffer == NULL) {
+		ret = MLN_CORE_ERROR_INVALID;
+	} else {
+		item.type = MLN_SERVICE_ARG_BUFFER;
+		item.value = buffer;
+		args.count = 1;
+		args.items = &item;
+		ret = MlnServiceCall(context->session, 0x40e, &args, &reply, &status);
+		if (ret == MLN_OK)
+			ret = status;
+	}
+	MlnImpl_81027390(MLN_HEAP_SECURE, reply);
+	return ret;
+}
+
+/* service command 0x40f */
+__attribute__((noinline)) int MlnImpl_81014DC4(MlnServiceContext *context)
+{
+	MlnServiceArgs args = { 0, NULL };
+	MlnServiceReply *reply = NULL;
+	int status;
+	int ret;
+
+	if (context == NULL) {
+		ret = MLN_ERROR_INVALID_ARGUMENT;
+	} else {
+		ret = MlnServiceCall(context->session, 0x40f, &args, &reply, &status);
+		if (ret == MLN_OK)
+			ret = status;
+	}
+	MlnImpl_81027390(MLN_HEAP_SECURE, reply);
+	return ret;
+}
+
+/* service command 0x406 on a buffer: its type 1 reply (also a partial one) into out */
+__attribute__((noinline)) int MlnImpl_81014E28(MlnServiceContext *context, MlnBuffer *buffer,
+					       void *out)
+{
+	MlnServiceArg item;
+	MlnServiceArgs args = { 0, NULL };
+	MlnServiceReply *reply = NULL;
+	int status;
+	int ret;
+
+	if (context == NULL) {
+		ret = MLN_ERROR_INVALID_ARGUMENT;
+	} else if (buffer == NULL || out == NULL) {
+		ret = MLN_CORE_ERROR_INVALID;
+	} else {
+		item.type = MLN_SERVICE_ARG_BUFFER;
+		item.value = buffer;
+		args.count = 1;
+		args.items = &item;
+		ret = MlnServiceCall(context->session, 0x406, &args, &reply, &status);
+		if (ret == MLN_OK) {
+			ret = status;
+			if (status == MLN_OK || status == MLN_SERVICE_STATUS_MORE) {
+				if (MlnImpl_81026D94(reply, 1) != 0)
+					ret = MLN_SERVICE_ERROR_REPLY;
+				else if (MlnImpl_81026FE4(MLN_HEAP_SECURE, reply->data, out) != 0)
+					ret = MlnImpl_810191C4(ret);
+				else
+					ret = status;
+			}
+		}
+	}
+	MlnImpl_81027390(MLN_HEAP_SECURE, reply);
+	return ret;
+}
+
+/* service command 0x40d with a buffer (or none) */
+__attribute__((noinline)) int MlnImpl_81014F24(MlnServiceContext *context, MlnBuffer *buffer)
+{
+	MlnServiceArg item;
+	MlnServiceArgs args = { 0, NULL };
+	MlnServiceReply *reply = NULL;
+	int status;
+	int ret;
+
+	if (context == NULL) {
+		ret = MLN_ERROR_INVALID_ARGUMENT;
+	} else {
+		item.type = MLN_SERVICE_ARG_BUFFER;
+		item.value = buffer;
+		args.count = 1;
+		args.items = &item;
+		ret = MlnServiceCall(context->session, 0x40d, &args, &reply, &status);
+		if (ret == MLN_OK)
+			ret = status;
+	}
+	MlnImpl_81027390(MLN_HEAP_SECURE, reply);
+	return ret;
+}
+
+/* service command 0x410 with a buffer */
+__attribute__((noinline)) int MlnImpl_81014FA8(MlnServiceContext *context, MlnBuffer *buffer)
+{
+	MlnServiceArg item;
+	MlnServiceArgs args = { 0, NULL };
+	MlnServiceReply *reply = NULL;
+	int status;
+	int ret;
+
+	if (context == NULL) {
+		ret = MLN_ERROR_INVALID_ARGUMENT;
+	} else if (buffer == NULL) {
+		ret = MLN_CORE_ERROR_INVALID;
+	} else {
+		item.type = MLN_SERVICE_ARG_BUFFER;
+		item.value = buffer;
+		args.count = 1;
+		args.items = &item;
+		ret = MlnServiceCall(context->session, 0x410, &args, &reply, &status);
+		if (ret == MLN_OK)
+			ret = status;
+	}
+	MlnImpl_81027390(MLN_HEAP_SECURE, reply);
+	return ret;
+}
+
+/* opens the context's service handle (command 0x41a) */
+__attribute__((noinline)) int MlnImpl_8101503C(MlnServiceContext *context, int value, void *data)
+{
+	MlnServiceArg items[2];
+	MlnServiceArgs args = { 0, NULL };
+	MlnServiceReply *reply = NULL;
+	int status;
+	int id = -1;
+	int ret;
+
+	if (context == NULL) {
+		ret = MLN_ERROR_INVALID_ARGUMENT;
+	} else if (context->id != -1) {
+		ret = MLN_ERROR_INVALID_ARGUMENT;
+	} else {
+		items[0].type = MLN_SERVICE_ARG_INTEGER;
+		items[0].value = &value;
+		items[1].type = MLN_SERVICE_ARG_DATA;
+		items[1].value = data;
+		args.count = 2;
+		args.items = items;
+		ret = MlnServiceCall(context->session, 0x41a, &args, &reply, &status);
+		if (ret == MLN_OK) {
+			ret = status;
+			if (ret == MLN_OK) {
+				if (MlnImpl_81026D94(reply, 1) != 0) {
+					ret = MLN_SERVICE_ERROR_REPLY;
+				} else {
+					ret = MlnImpl_8102701C(MLN_HEAP_SECURE, reply->data, &id);
+					if (ret != MLN_OK) {
+						ret = MlnImpl_810191C4(ret);
+					} else if (id < 0) {
+						ret = MLN_ERROR_INVALID_ARGUMENT;
+					} else {
+						context->id = id;
+						id = -1;
+					}
+				}
+			}
+		}
+	}
+	MlnImpl_81027390(MLN_HEAP_SECURE, reply);
+	return ret;
+}
+
+/* closes the context's service handle (command 0x41b) */
+__attribute__((noinline)) int MlnImpl_81015168(MlnServiceContext *context)
+{
+	MlnServiceArg item;
+	MlnServiceArgs args = { 0, NULL };
+	MlnServiceReply *reply = NULL;
+	int status;
+	int ret;
+
+	if (context == NULL) {
+		ret = MLN_ERROR_INVALID_ARGUMENT;
+		goto out;
+	}
+	if (context->id != -1) {
+		item.type = MLN_SERVICE_ARG_HANDLE;
+		item.value = context;
+		args.count = 1;
+		args.items = &item;
+		ret = MlnServiceCall(context->session, 0x41b, &args, &reply, &status);
+		if (ret != MLN_OK)
+			goto out;
+		ret = status;
+		if (ret != MLN_OK)
+			goto out;
+	}
+	ret = MLN_OK;
+	context->id = -1;
+out:
+	MlnImpl_81027390(MLN_HEAP_SECURE, reply);
+	return ret;
+}
+
+/* service command 0x41c on the handle, a buffer and a name: the buffer of its type 1 reply */
+__attribute__((noinline)) int MlnImpl_8101521C(MlnServiceContext *context, unsigned int size,
+					       void *data, const char *name, MlnBuffer **out)
+{
+	MlnBuffer first;
+	MlnBuffer text;
+	MlnServiceArg items[3];
+	MlnServiceArgs args = { 0, NULL };
+	MlnServiceReply *reply = NULL;
+	MlnBuffer *buffer = NULL;
+	int status;
+	int ret;
+
+	first.size = size;
+	first.data = data;
+	if (context == NULL) {
+		ret = MLN_ERROR_INVALID_ARGUMENT;
+	} else if (name == NULL || out == NULL) {
+		ret = MLN_CORE_ERROR_INVALID;
+	} else {
+		text.size = MlnStrlen(name);
+		text.data = (void *)name;
+		items[0].type = MLN_SERVICE_ARG_HANDLE;
+		items[0].value = context;
+		items[1].type = MLN_SERVICE_ARG_BUFFER;
+		items[1].value = &first;
+		items[2].type = MLN_SERVICE_ARG_BUFFER;
+		items[2].value = &text;
+		args.count = 3;
+		args.items = items;
+		ret = MlnServiceCall(context->session, 0x41c, &args, &reply, &status);
+		if (ret == MLN_OK) {
+			ret = status;
+			if (ret == MLN_OK) {
+				if (MlnImpl_81026D94(reply, 1) != 0) {
+					ret = MLN_SERVICE_ERROR_REPLY;
+				} else {
+					ret = MlnImpl_81026F0C(MLN_HEAP_SECURE, reply->data, &buffer);
+					if (ret != MLN_OK) {
+						ret = MlnImpl_810191C4(ret);
+					} else {
+						*out = buffer;
+						buffer = NULL;
+					}
+				}
+			}
+		}
+	}
+	MlnImpl_81027390(MLN_HEAP_SECURE, reply);
+	MlnBufferDestroy(MLN_HEAP_SECURE, buffer);
+	return ret;
+}
+
+/* service command 0x41d on the handle and a buffer: the buffer of its type 1 reply */
+__attribute__((noinline)) int MlnImpl_81015374(MlnServiceContext *context, MlnBuffer *in,
+					       MlnBuffer **out)
+{
+	MlnServiceArg items[2];
+	MlnServiceArgs args = { 0, NULL };
+	MlnServiceReply *reply = NULL;
+	MlnBuffer *buffer = NULL;
+	int status;
+	int ret;
+
+	if (context == NULL) {
+		ret = MLN_ERROR_INVALID_ARGUMENT;
+	} else if (in == NULL || out == NULL) {
+		ret = MLN_CORE_ERROR_INVALID;
+	} else {
+		items[0].type = MLN_SERVICE_ARG_HANDLE;
+		items[0].value = context;
+		items[1].type = MLN_SERVICE_ARG_BUFFER;
+		items[1].value = in;
+		args.count = 2;
+		args.items = items;
+		ret = MlnServiceCall(context->session, 0x41d, &args, &reply, &status);
+		if (ret == MLN_OK) {
+			ret = status;
+			if (ret == MLN_OK) {
+				if (MlnImpl_81026D94(reply, 1) != 0) {
+					ret = MLN_SERVICE_ERROR_REPLY;
+				} else {
+					ret = MlnImpl_81026F0C(MLN_HEAP_SECURE, reply->data, &buffer);
+					if (ret != MLN_OK) {
+						ret = MlnImpl_810191C4(ret);
+					} else {
+						*out = buffer;
+						buffer = NULL;
+					}
+				}
+			}
+		}
+	}
+	MlnImpl_81027390(MLN_HEAP_SECURE, reply);
+	MlnBufferDestroy(MLN_HEAP_SECURE, buffer);
+	return ret;
+}
+
+/* service command 0x41e on the handle, a buffer, a name and two buffers: its reply's buffer */
+__attribute__((noinline)) int MlnImpl_8101549C(MlnServiceContext *context, unsigned int size,
+					       void *data, const char *name, MlnBuffer *other,
+					       MlnBuffer *in, MlnBuffer **out)
+{
+	MlnBuffer first;
+	MlnBuffer text;
+	MlnServiceArg items[5];
+	MlnServiceArgs args = { 0, NULL };
+	MlnServiceReply *reply = NULL;
+	MlnBuffer *buffer = NULL;
+	int status;
+	int ret;
+
+	first.size = size;
+	first.data = data;
+	if (context == NULL) {
+		ret = MLN_ERROR_INVALID_ARGUMENT;
+	} else if (name == NULL || out == NULL) {
+		ret = MLN_CORE_ERROR_INVALID;
+	} else if (in == NULL) {
+		ret = MLN_CORE_ERROR_INVALID;
+	} else {
+		text.size = MlnStrlen(name);
+		text.data = (void *)name;
+		items[0].type = MLN_SERVICE_ARG_HANDLE;
+		items[0].value = context;
+		items[1].type = MLN_SERVICE_ARG_BUFFER;
+		items[1].value = &first;
+		items[2].type = MLN_SERVICE_ARG_BUFFER;
+		items[2].value = &text;
+		items[3].type = MLN_SERVICE_ARG_BUFFER;
+		items[3].value = other;
+		items[4].type = MLN_SERVICE_ARG_BUFFER;
+		items[4].value = in;
+		args.count = 5;
+		args.items = items;
+		ret = MlnServiceCall(context->session, 0x41e, &args, &reply, &status);
+		if (ret == MLN_OK) {
+			ret = status;
+			if (ret == MLN_OK) {
+				if (MlnImpl_81026D94(reply, 1) != 0) {
+					ret = MLN_SERVICE_ERROR_REPLY;
+				} else {
+					ret = MlnImpl_81026F0C(MLN_HEAP_SECURE, reply->data, &buffer);
+					if (ret != MLN_OK) {
+						ret = MlnImpl_810191C4(ret);
+					} else {
+						*out = buffer;
+						buffer = NULL;
+					}
+				}
+			}
+		}
+	}
+	MlnImpl_81027390(MLN_HEAP_SECURE, reply);
+	MlnBufferDestroy(MLN_HEAP_SECURE, buffer);
+	return ret;
+}
+
+/* service command 0x41f on the handle and a buffer: the two buffers of its type 2 reply */
+__attribute__((noinline)) int MlnImpl_81015620(MlnServiceContext *context, MlnBuffer *in,
+					       MlnBuffer **outFirst, MlnBuffer **outSecond)
+{
+	MlnServiceArg items[2];
+	MlnServiceArgs args = { 0, NULL };
+	MlnServiceReply *reply = NULL;
+	MlnBuffer *first = NULL;
+	MlnBuffer *second = NULL;
+	int status;
+	int ret;
+
+	if (context == NULL) {
+		ret = MLN_ERROR_INVALID_ARGUMENT;
+	} else if (outFirst == NULL || outSecond == NULL) {
+		ret = MLN_CORE_ERROR_INVALID;
+	} else if (in == NULL) {
+		ret = MLN_CORE_ERROR_INVALID;
+	} else {
+		items[0].type = MLN_SERVICE_ARG_HANDLE;
+		items[0].value = context;
+		items[1].type = MLN_SERVICE_ARG_BUFFER;
+		items[1].value = in;
+		args.count = 2;
+		args.items = items;
+		ret = MlnServiceCall(context->session, 0x41f, &args, &reply, &status);
+		if (ret == MLN_OK) {
+			ret = status;
+			if (ret == MLN_OK) {
+				if (MlnImpl_81026D94(reply, 2) != 0) {
+					ret = MLN_SERVICE_ERROR_REPLY;
+				} else {
+					ret = MlnImpl_81026F0C(MLN_HEAP_SECURE, reply->data, &first);
+					if (ret == MLN_OK)
+						ret = MlnImpl_81026F0C(MLN_HEAP_SECURE,
+								       (MlnServiceArg *)reply->data + 1,
+								       &second);
+					if (ret != MLN_OK) {
+						ret = MlnImpl_810191C4(ret);
+					} else {
+						*outFirst = first;
+						first = NULL;
+						*outSecond = second;
+						second = NULL;
+					}
+				}
+			}
+		}
+	}
+	MlnImpl_81027390(MLN_HEAP_SECURE, reply);
+	MlnBufferDestroy(MLN_HEAP_SECURE, first);
+	MlnBufferDestroy(MLN_HEAP_SECURE, second);
+	return ret;
+}
+
+/* service command 0x420 on the handle, a buffer, a name and a buffer: the buffer of its reply */
+__attribute__((noinline)) int MlnImpl_81015798(MlnServiceContext *context, unsigned int size,
+					       void *data, const char *name, MlnBuffer *in,
+					       MlnBuffer **out)
+{
+	MlnBuffer first;
+	MlnBuffer text;
+	MlnServiceArg items[4];
+	MlnServiceArgs args = { 0, NULL };
+	MlnServiceReply *reply = NULL;
+	MlnBuffer *buffer = NULL;
+	int status;
+	int ret;
+
+	first.size = size;
+	first.data = data;
+	if (context == NULL) {
+		ret = MLN_ERROR_INVALID_ARGUMENT;
+	} else if (name == NULL || out == NULL) {
+		ret = MLN_CORE_ERROR_INVALID;
+	} else {
+		text.size = MlnStrlen(name);
+		text.data = (void *)name;
+		items[0].type = MLN_SERVICE_ARG_HANDLE;
+		items[0].value = context;
+		items[1].type = MLN_SERVICE_ARG_BUFFER;
+		items[1].value = &first;
+		items[2].type = MLN_SERVICE_ARG_BUFFER;
+		items[2].value = &text;
+		items[3].type = MLN_SERVICE_ARG_BUFFER;
+		items[3].value = in;
+		args.count = 4;
+		args.items = items;
+		ret = MlnServiceCall(context->session, 0x420, &args, &reply, &status);
+		if (ret == MLN_OK) {
+			ret = status;
+			if (ret == MLN_OK) {
+				if (MlnImpl_81026D94(reply, 1) != 0) {
+					ret = MLN_SERVICE_ERROR_REPLY;
+				} else {
+					ret = MlnImpl_81026F0C(MLN_HEAP_SECURE, reply->data, &buffer);
+					if (ret != MLN_OK) {
+						ret = MlnImpl_810191C4(ret);
+					} else {
+						*out = buffer;
+						buffer = NULL;
+					}
+				}
+			}
+		}
+	}
+	MlnImpl_81027390(MLN_HEAP_SECURE, reply);
+	MlnBufferDestroy(MLN_HEAP_SECURE, buffer);
+	return ret;
+}
+
+/* service command 0x421 on the handle and a buffer: the buffer of its type 1 reply */
+__attribute__((noinline)) int MlnImpl_810158FC(MlnServiceContext *context, MlnBuffer *in,
+					       MlnBuffer **out)
+{
+	MlnServiceArg items[2];
+	MlnServiceArgs args = { 0, NULL };
+	MlnServiceReply *reply = NULL;
+	MlnBuffer *buffer = NULL;
+	int status;
+	int ret;
+
+	if (context == NULL) {
+		ret = MLN_ERROR_INVALID_ARGUMENT;
+	} else if (in == NULL || out == NULL) {
+		ret = MLN_CORE_ERROR_INVALID;
+	} else {
+		items[0].type = MLN_SERVICE_ARG_HANDLE;
+		items[0].value = context;
+		items[1].type = MLN_SERVICE_ARG_BUFFER;
+		items[1].value = in;
+		args.count = 2;
+		args.items = items;
+		ret = MlnServiceCall(context->session, 0x421, &args, &reply, &status);
+		if (ret == MLN_OK) {
+			ret = status;
+			if (ret == MLN_OK) {
+				if (MlnImpl_81026D94(reply, 1) != 0) {
+					ret = MLN_SERVICE_ERROR_REPLY;
+				} else {
+					ret = MlnImpl_81026F0C(MLN_HEAP_SECURE, reply->data, &buffer);
+					if (ret != MLN_OK) {
+						ret = MlnImpl_810191C4(ret);
+					} else {
+						*out = buffer;
+						buffer = NULL;
+					}
+				}
+			}
+		}
+	}
+	MlnImpl_81027390(MLN_HEAP_SECURE, reply);
+	MlnBufferDestroy(MLN_HEAP_SECURE, buffer);
+	return ret;
+}
+
+/* service command 0x422 on the handle, a buffer, a name and three buffers: its reply's buffer */
+__attribute__((noinline)) int MlnImpl_81015A24(MlnServiceContext *context, unsigned int size,
+					       void *data, const char *name, MlnBuffer *other,
+					       MlnBuffer *extra, MlnBuffer *in, MlnBuffer **out)
+{
+	MlnBuffer first;
+	MlnBuffer text;
+	MlnServiceArg items[6];
+	MlnServiceArgs args = { 0, NULL };
+	MlnServiceReply *reply = NULL;
+	MlnBuffer *buffer = NULL;
+	int status;
+	int ret;
+
+	first.size = size;
+	first.data = data;
+	if (context == NULL) {
+		ret = MLN_ERROR_INVALID_ARGUMENT;
+	} else if (name == NULL || out == NULL) {
+		ret = MLN_CORE_ERROR_INVALID;
+	} else if (in == NULL) {
+		ret = MLN_CORE_ERROR_INVALID;
+	} else {
+		text.size = MlnStrlen(name);
+		text.data = (void *)name;
+		items[0].type = MLN_SERVICE_ARG_HANDLE;
+		items[0].value = context;
+		items[1].type = MLN_SERVICE_ARG_BUFFER;
+		items[1].value = &first;
+		items[2].type = MLN_SERVICE_ARG_BUFFER;
+		items[2].value = &text;
+		items[3].type = MLN_SERVICE_ARG_BUFFER;
+		items[3].value = other;
+		items[4].type = MLN_SERVICE_ARG_BUFFER;
+		items[4].value = extra;
+		items[5].type = MLN_SERVICE_ARG_BUFFER;
+		items[5].value = in;
+		args.count = 6;
+		args.items = items;
+		ret = MlnServiceCall(context->session, 0x422, &args, &reply, &status);
+		if (ret == MLN_OK) {
+			ret = status;
+			if (ret == MLN_OK) {
+				if (MlnImpl_81026D94(reply, 1) != 0) {
+					ret = MLN_SERVICE_ERROR_REPLY;
+				} else {
+					ret = MlnImpl_81026F0C(MLN_HEAP_SECURE, reply->data, &buffer);
+					if (ret != MLN_OK) {
+						ret = MlnImpl_810191C4(ret);
+					} else {
+						*out = buffer;
+						buffer = NULL;
+					}
+				}
+			}
+		}
+	}
+	MlnImpl_81027390(MLN_HEAP_SECURE, reply);
+	MlnBufferDestroy(MLN_HEAP_SECURE, buffer);
+	return ret;
+}
+
+/* service command 0x423 on the handle and a buffer: the buffer of its type 1 reply */
+__attribute__((noinline)) int MlnImpl_81015BB0(MlnServiceContext *context, MlnBuffer *in,
+					       MlnBuffer **out)
+{
+	MlnServiceArg items[2];
+	MlnServiceArgs args = { 0, NULL };
+	MlnServiceReply *reply = NULL;
+	MlnBuffer *buffer = NULL;
+	int status;
+	int ret;
+
+	if (context == NULL) {
+		ret = MLN_ERROR_INVALID_ARGUMENT;
+	} else if (in == NULL || out == NULL) {
+		ret = MLN_CORE_ERROR_INVALID;
+	} else {
+		items[0].type = MLN_SERVICE_ARG_HANDLE;
+		items[0].value = context;
+		items[1].type = MLN_SERVICE_ARG_BUFFER;
+		items[1].value = in;
+		args.count = 2;
+		args.items = items;
+		ret = MlnServiceCall(context->session, 0x423, &args, &reply, &status);
+		if (ret == MLN_OK) {
+			ret = status;
+			if (ret == MLN_OK) {
+				if (MlnImpl_81026D94(reply, 1) != 0) {
+					ret = MLN_SERVICE_ERROR_REPLY;
+				} else {
+					ret = MlnImpl_81026F0C(MLN_HEAP_SECURE, reply->data, &buffer);
+					if (ret != MLN_OK) {
+						ret = MlnImpl_810191C4(ret);
+					} else {
+						*out = buffer;
+						buffer = NULL;
+					}
+				}
+			}
+		}
+	}
+	MlnImpl_81027390(MLN_HEAP_SECURE, reply);
+	MlnBufferDestroy(MLN_HEAP_SECURE, buffer);
+	return ret;
+}
+
+/* service command 0x426 on the handle: the buffer group of its type 1 reply */
+__attribute__((noinline)) int MlnImpl_81015CD8(MlnServiceContext *context, MlnBufferGroup **out)
+{
+	MlnServiceArg item;
+	MlnServiceArgs args = { 0, NULL };
+	MlnServiceReply *reply = NULL;
+	MlnBufferGroup *group = NULL;
+	int status;
+	int ret;
+
+	if (context == NULL) {
+		ret = MLN_ERROR_INVALID_ARGUMENT;
+	} else if (out == NULL) {
+		ret = MLN_CORE_ERROR_INVALID;
+	} else {
+		item.type = MLN_SERVICE_ARG_HANDLE;
+		item.value = context;
+		args.count = 1;
+		args.items = &item;
+		ret = MlnServiceCall(context->session, 0x426, &args, &reply, &status);
+		if (ret == MLN_OK) {
+			ret = status;
+			if (ret == MLN_OK) {
+				if (MlnImpl_81026D94(reply, 1) != 0) {
+					ret = MLN_SERVICE_ERROR_REPLY;
+				} else {
+					ret = MlnImpl_81026ED0(MLN_HEAP_SECURE, reply->data, &group);
+					if (ret != MLN_OK) {
+						ret = MlnImpl_810191C4(ret);
+					} else {
+						*out = group;
+						group = NULL;
+					}
+				}
+			}
+		}
+	}
+	MlnImpl_81027390(MLN_HEAP_SECURE, reply);
+	MlnImpl_81006D14(MLN_HEAP_SECURE, group);
+	return ret;
+}
+
+/* service command 0x425 on the handle and three buffers */
+__attribute__((noinline)) int MlnImpl_81015DDC(MlnServiceContext *context, unsigned int firstSize,
+					       void *firstData, unsigned int secondSize,
+					       void *secondData, unsigned int thirdSize,
+					       void *thirdData)
+{
+	MlnBuffer first;
+	MlnBuffer second;
+	MlnBuffer third;
+	MlnServiceArg items[4];
+	MlnServiceArgs args = { 0, NULL };
+	MlnServiceReply *reply = NULL;
+	int status;
+	int ret;
+
+	first.size = firstSize;
+	first.data = firstData;
+	second.size = secondSize;
+	second.data = secondData;
+	third.size = thirdSize;
+	third.data = thirdData;
+	if (context == NULL) {
+		ret = MLN_ERROR_INVALID_ARGUMENT;
+	} else {
+		items[0].type = MLN_SERVICE_ARG_HANDLE;
+		items[0].value = context;
+		items[1].type = MLN_SERVICE_ARG_BUFFER;
+		items[1].value = &first;
+		items[2].type = MLN_SERVICE_ARG_BUFFER;
+		items[2].value = &second;
+		items[3].type = MLN_SERVICE_ARG_BUFFER;
+		items[3].value = &third;
+		args.count = 4;
+		args.items = items;
+		ret = MlnServiceCall(context->session, 0x425, &args, &reply, &status);
+		if (ret == MLN_OK)
+			ret = status;
+	}
+	MlnImpl_81027390(MLN_HEAP_SECURE, reply);
+	return ret;
+}
+
+/* service command 0x455 on the handle and two buffers */
+__attribute__((noinline)) int MlnImpl_81015EA4(MlnServiceContext *context, MlnBuffer *in,
+					       MlnBuffer *other)
+{
+	MlnServiceArg items[3];
+	MlnServiceArgs args = { 0, NULL };
+	MlnServiceReply *reply = NULL;
+	int status;
+	int ret;
+
+	if (context == NULL) {
+		ret = MLN_ERROR_INVALID_ARGUMENT;
+	} else {
+		items[0].type = MLN_SERVICE_ARG_HANDLE;
+		items[0].value = context;
+		items[1].type = MLN_SERVICE_ARG_BUFFER;
+		items[1].value = in;
+		items[2].type = MLN_SERVICE_ARG_BUFFER;
+		items[2].value = other;
+		args.count = 3;
+		args.items = items;
+		ret = MlnServiceCall(context->session, 0x455, &args, &reply, &status);
+		if (ret == MLN_OK)
+			ret = status;
+	}
+	MlnImpl_81027390(MLN_HEAP_SECURE, reply);
+	return ret;
+}
+
+/* opens the context's handle (command 0x400) */
+__attribute__((noinline)) int MlnImpl_81015F3C(MlnServiceContext *context)
+{
+	MlnServiceArgs args = { 0, NULL };
+	MlnServiceReply *reply = NULL;
+	int status;
+	int id = -1;
+	int ret;
+
+	if (context == NULL) {
+		ret = MLN_ERROR_INVALID_ARGUMENT;
+	} else if (context->id != -1) {
+		ret = MLN_ERROR_INVALID_ARGUMENT;
+	} else {
+		ret = MlnServiceCall(context->session, 0x400, &args, &reply, &status);
+		if (ret == MLN_OK) {
+			ret = status;
+			if (ret == MLN_OK) {
+				if (MlnImpl_81026D94(reply, 1) != 0) {
+					ret = MLN_SERVICE_ERROR_REPLY;
+				} else {
+					ret = MlnImpl_8102701C(MLN_HEAP_SECURE, reply->data, &id);
+					if (ret != MLN_OK) {
+						ret = MlnImpl_810191C4(ret);
+					} else if (id < 0) {
+						ret = MLN_ERROR_INVALID_ARGUMENT;
+					} else {
+						context->id = id;
+						id = -1;
+					}
+				}
+			}
+		}
+	}
+	MlnImpl_81027390(MLN_HEAP_SECURE, reply);
+	return ret;
+}
+
+/* closes the context's handle (command 0x401) */
+__attribute__((noinline)) int MlnImpl_81016034(MlnServiceContext *context)
+{
+	MlnServiceArg item;
+	MlnServiceArgs args = { 0, NULL };
+	MlnServiceReply *reply = NULL;
+	int status;
+	int ret;
+
+	if (context == NULL) {
+		ret = MLN_ERROR_INVALID_ARGUMENT;
+		goto out;
+	}
+	if (context->id != -1) {
+		item.type = MLN_SERVICE_ARG_HANDLE;
+		item.value = context;
+		args.count = 1;
+		args.items = &item;
+		ret = MlnServiceCall(context->session, 0x401, &args, &reply, &status);
+		if (ret != MLN_OK)
+			goto out;
+		ret = status;
+		if (ret != MLN_OK)
+			goto out;
+	}
+	ret = MLN_OK;
+	context->id = -1;
+out:
+	MlnImpl_81027390(MLN_HEAP_SECURE, reply);
+	return ret;
+}
+
+/* service command 0x429 on the handle and a buffer */
+__attribute__((noinline)) int MlnImpl_810160E8(MlnServiceContext *context, unsigned int size,
+					       void *data)
+{
+	MlnBuffer first;
+	MlnServiceArg items[2];
+	MlnServiceArgs args = { 0, NULL };
+	MlnServiceReply *reply = NULL;
+	int status;
+	int ret;
+
+	first.size = size;
+	first.data = data;
+	if (context == NULL) {
+		ret = MLN_ERROR_INVALID_ARGUMENT;
+	} else {
+		items[0].type = MLN_SERVICE_ARG_HANDLE;
+		items[0].value = context;
+		items[1].type = MLN_SERVICE_ARG_BUFFER;
+		items[1].value = &first;
+		args.count = 2;
+		args.items = items;
+		ret = MlnServiceCall(context->session, 0x429, &args, &reply, &status);
+		if (ret == MLN_OK)
+			ret = status;
+	}
+	MlnImpl_81027390(MLN_HEAP_SECURE, reply);
+	return ret;
+}

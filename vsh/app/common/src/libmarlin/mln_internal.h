@@ -591,9 +591,9 @@ int MlnApi_81003464(MlnBuffer *serviceProvider, MlnBuffer *token, unsigned int *
 int MlnApi_81003A9C(MlnBuffer *license, MlnRightsSummary **summary);
 int MlnApi_810037B0(const int *minutes, MlnApiDate *date);
 int MlnApi_810026B8(void *a0, void *a1);
-int SceMarlin_A43BC777(void *a0);
-int SceMarlin_23838449(void *a0);
-int SceMarlin_FB95B259(void *a0, void *a1, void *a2);
+int SceMarlin_A43BC777(MlnServiceContext *context);
+int SceMarlin_23838449(MlnServiceContext *context);
+int SceMarlin_FB95B259(MlnServiceContext *context, unsigned int size, void *data);
 int SceMarlin_92A6A48F(void *a0, void *a1, void *a2);
 int SceMarlin_A2E65A7E(void *a0, void *a1, void *a2);
 int MlnImpl_8101EE90(void *client, MlnBuffer *license, MlnRightsSummary **summary);
@@ -929,6 +929,7 @@ int MlnStateRestore(const MlnBuffer *state);
 #define MLN_SERVICE_ARG_HANDLE		0
 #define MLN_SERVICE_ARG_INTEGER		2	/* the value points to the integer */
 #define MLN_SERVICE_ARG_BUFFER		6
+#define MLN_SERVICE_ARG_DATA		11	/* passed as given */
 
 #define MLN_SERVICE_SET_STATE		0x411
 #define MLN_SERVICE_CLEAR_STATE		0x412
@@ -954,7 +955,55 @@ int MlnImpl_81014574(MlnServiceContext *context, int command, int value, MlnRigh
 		     MlnBuffer **esb);
 int MlnServiceSetState(MlnServiceContext *context, MlnBuffer *state);
 int MlnServiceClearState(MlnServiceContext *context);
+
+#define MLN_SERVICE_ERROR_REPLY		512	/* a reply of another type */
+#define MLN_SERVICE_STATUS_MORE		68	/* a reply that continues */
+
+/* the application's data for a service command, and its release */
+typedef int (*MlnServiceDataGet)(void *cookie, void *arg, void **data, unsigned int *size);
+typedef void (*MlnServiceDataRelease)(void *cookie, void *data);
+
+int MlnImpl_810147D8(MlnServiceContext *context, int value);
+int MlnImpl_81014860(MlnServiceContext *context, unsigned int size, void *data, MlnBuffer *buffer);
+int MlnImpl_810148F8(MlnServiceContext *context, MlnBuffer *in, MlnBuffer **out);
+int MlnImpl_81014A10(MlnServiceContext *context, MlnServiceDataGet get,
+		     MlnServiceDataRelease release, void *arg, void *cookie);
+int MlnImpl_81014B8C(MlnServiceContext *context, MlnBuffer *buffer);
+int MlnImpl_81014C20(MlnServiceContext *context, MlnBuffer *in, MlnBuffer **out);
+int MlnImpl_81014D30(MlnServiceContext *context, MlnBuffer *buffer);
+int MlnImpl_81014DC4(MlnServiceContext *context);
+int MlnImpl_81014E28(MlnServiceContext *context, MlnBuffer *buffer, void *out);
+int MlnImpl_81014F24(MlnServiceContext *context, MlnBuffer *buffer);
+int MlnImpl_81014FA8(MlnServiceContext *context, MlnBuffer *buffer);
+int MlnImpl_8101503C(MlnServiceContext *context, int value, void *data);
+int MlnImpl_81015168(MlnServiceContext *context);
+int MlnImpl_8101521C(MlnServiceContext *context, unsigned int size, void *data, const char *name,
+		     MlnBuffer **out);
+int MlnImpl_81015374(MlnServiceContext *context, MlnBuffer *in, MlnBuffer **out);
+int MlnImpl_8101549C(MlnServiceContext *context, unsigned int size, void *data, const char *name,
+		     MlnBuffer *other, MlnBuffer *in, MlnBuffer **out);
+int MlnImpl_81015620(MlnServiceContext *context, MlnBuffer *in, MlnBuffer **outFirst,
+		     MlnBuffer **outSecond);
+int MlnImpl_81015798(MlnServiceContext *context, unsigned int size, void *data, const char *name,
+		     MlnBuffer *in, MlnBuffer **out);
+int MlnImpl_810158FC(MlnServiceContext *context, MlnBuffer *in, MlnBuffer **out);
+int MlnImpl_81015A24(MlnServiceContext *context, unsigned int size, void *data, const char *name,
+		     MlnBuffer *other, MlnBuffer *extra, MlnBuffer *in, MlnBuffer **out);
+int MlnImpl_81015BB0(MlnServiceContext *context, MlnBuffer *in, MlnBuffer **out);
+int MlnImpl_81015CD8(MlnServiceContext *context, MlnBufferGroup **out);
+int MlnImpl_81015DDC(MlnServiceContext *context, unsigned int firstSize, void *firstData,
+		     unsigned int secondSize, void *secondData, unsigned int thirdSize,
+		     void *thirdData);
+int MlnImpl_81015EA4(MlnServiceContext *context, MlnBuffer *in, MlnBuffer *other);
+int MlnImpl_81015F3C(MlnServiceContext *context);
+int MlnImpl_81016034(MlnServiceContext *context);
+int MlnImpl_810160E8(MlnServiceContext *context, unsigned int size, void *data);
 /* not written in C yet */
+int MlnImpl_81026D94(const MlnServiceReply *reply, int type);
+int MlnImpl_81027084(int heap, void *data, int *out);
+int MlnImpl_81026FE4(int heap, void *data, void *out);
+int MlnImpl_8102701C(int heap, void *data, int *out);
+int MlnImpl_81026ED0(int heap, void *data, MlnBufferGroup **out);
 int MlnServiceCall(void *session, int command, const MlnServiceArgs *args,
 		   MlnServiceReply **reply, int *status);
 void MlnImpl_81027390(int heap, MlnServiceReply *reply);
@@ -1036,33 +1085,6 @@ int MlnXmlGetAttribute(int heap, MlnXmlNode *node, const char *ns, const char *n
 int MlnXmlGetText(int heap, MlnXmlNode *node, MlnBuffer **text);
 int MlnXmlNodeFree(int heap, MlnXmlNode *node);
 int MlnXmlListFree(int heap, MlnXmlNodeList *list);
-int MlnImpl_810147D8(void *a0, int a1);
-int MlnImpl_81014860(void *a0, void *a1, void *a2, void *a3);
-int MlnImpl_810148F8(void *a0, void *a1, void *a2);
-int MlnImpl_81014A10(void *a0, void *a1, void *a2, void *a3, void *a4);
-int MlnImpl_81014B8C(void *a0, void *a1);
-int MlnImpl_81014C20(void *a0, void *a1, void *a2);
-int MlnImpl_81014D30(void *a0, void *a1);
-int MlnImpl_81014DC4(void *a0, void *a1);
-int MlnImpl_81014E28(void *a0, void *a1, void *a2);
-int MlnImpl_81014F24(void *a0, void *a1);
-int MlnImpl_81014FA8(void *a0, void *a1);
-int MlnImpl_8101503C(void *a0, void *a1, void *a2);
-int MlnImpl_81015168(void *a0);
-int MlnImpl_8101521C(void *a0, void *a1, void *a2, void *a3, void *a4);
-int MlnImpl_81015374(void *a0, void *a1, void *a2);
-int MlnImpl_8101549C(void *a0, void *a1, void *a2, void *a3, void *a4, void *a5, void *a6);
-int MlnImpl_81015620(void *a0, void *a1, void *a2, void *a3);
-int MlnImpl_81015798(void *a0, void *a1, void *a2, void *a3, void *a4, void *a5);
-int MlnImpl_810158FC(void *a0, void *a1, void *a2);
-int MlnImpl_81015A24(void *a0, void *a1, void *a2, void *a3, void *a4, void *a5, void *a6, void *a7);
-int MlnImpl_81015BB0(void *a0, void *a1, void *a2);
-int MlnImpl_81015CD8(void *a0, void *a1);
-int MlnImpl_81015DDC(void *a0, void *a1, void *a2, void *a3, void *a4, void *a5, void *a6);
-int MlnImpl_81015EA4(void *a0, void *a1, void *a2);
-int MlnImpl_81015F3C(void *a0);
-int MlnImpl_81016034(void *a0);
-int MlnImpl_810160E8(void *a0, void *a1, void *a2);
 int MlnImpl_8101617C(void *a0, void *a1, void *a2);
 int MlnImpl_81016270(void *a0, void *a1);
 int MlnImpl_810162F4(void *a0, void *a1, void *a2);
