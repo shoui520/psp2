@@ -1150,7 +1150,11 @@ public:
 		{
 		}
 
-		virtual ~Buffer();
+		virtual ~Buffer()
+		{
+			if (m_data != NULL)
+				delete[] m_data;
+		}
 
 		int m_size;
 		int m_length;
