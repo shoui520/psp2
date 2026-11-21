@@ -2366,9 +2366,9 @@ void WebView::ProcessIpcData()
 			int inputType = 0;
 			int enterLabel = 0;
 
-			ImeGetInputType(string(request->m_text[1].c_str()), &inputType, &enterLabel);
-			m_imeRect = math::v4((float)request->m_int[0], (float)request->m_int[1],
-				(float)request->m_int[2], (float)request->m_int[3]);
+			ImeGetInputType(string(request->m_text1.c_str()), &inputType, &enterLabel);
+			m_imeRect = math::v4((float)request->m_x, (float)request->m_y,
+				(float)request->m_width, (float)request->m_height);
 			ImeOpen(m_ime, static_cast<WebViewInputClient *>(this), inputType, enterLabel,
 				request->m_bool);
 			OnEvent18(1, 0);
@@ -2445,7 +2445,7 @@ void WebView::ProcessIpcData()
 		case 0x2021: {
 			WebIpcEvent2021 *download = static_cast<WebIpcEvent2021 *>(message);
 
-			RequestDownload(download->m_text[0].c_str(), download->m_text[1].c_str());
+			RequestDownload(download->m_text0.c_str(), download->m_text1.c_str());
 			break;
 		}
 		case 0x2022:
@@ -2505,7 +2505,7 @@ void WebView::ProcessIpcData()
 			WebIpcEvent2035 *failed = static_cast<WebIpcEvent2035 *>(message);
 
 			if (!failed->m_bool)
-				OnLoadFailed(failed->m_int, common::String(failed->m_text[1].c_str()));
+				OnLoadFailed(failed->m_int, common::String(failed->m_text1.c_str()));
 			break;
 		}
 		case WEB_IPC_CREATE_PAGE_WITH_VIEW:

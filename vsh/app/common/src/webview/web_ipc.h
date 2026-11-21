@@ -59,7 +59,20 @@ enum {
 	WEB_IPC_GEOLOCATION_POSITION = 0x1091,
 	/* received: a zoom the view drops when it cannot zoom */
 	WEB_IPC_EVENT_2003 = 0x2003,
+	WEB_IPC_EVENT_2013 = 0x2013,
+	WEB_IPC_EVENT_2014 = 0x2014,
+	WEB_IPC_EVENT_2015 = 0x2015,
+	WEB_IPC_EVENT_2025 = 0x2025,
+	WEB_IPC_EVENT_2027 = 0x2027,
+	WEB_IPC_EVENT_2033 = 0x2033,
+	WEB_IPC_EVENT_2034 = 0x2034,
 	WEB_IPC_CREATE_PAGE_WITH_VIEW = 0x2100
+};
+
+/* the size of a packet's texts and of its data */
+enum {
+	WEB_IPC_TEXT_SIZE = 2048,
+	WEB_IPC_DATA_SIZE = 2048
 };
 
 /* the packet a message is written into: the view it is for, its type and the type's fields */
@@ -67,13 +80,13 @@ struct WebIpcPacket {
 	int m_reserved;			/* 0: only cleared */
 	int m_viewId;
 	unsigned int m_type;
-	char m_text[3][2048];
+	char m_text[3][WEB_IPC_TEXT_SIZE];
 	float m_float[4];
 	int m_int[4];
 	SceUInt8 m_reserved2[12];
 	bool m_bool[2];
 	int m_dataSize;
-	char m_data[2048];
+	char m_data[WEB_IPC_DATA_SIZE];
 };
 
 /* a message (0x810248b8): its type, and its fields written into a packet and read back */
@@ -211,12 +224,12 @@ public:
    (0x81025340, type 0x1002) */
 class WebIpcCreatePage : public WebIpcMessage {
 public:
-	WebIpcCreatePage(int width, int height, const void *param, int paramSize, bool secure);
+	__attribute__((noinline)) WebIpcCreatePage(int width, int height, const void *param,
+		int paramSize, bool secure);
 	WebIpcCreatePage(const WebIpcPacket *packet);
 	virtual ~WebIpcCreatePage();
 
 	virtual void Write(WebIpcPacket *packet) const;
-	virtual void Read(const WebIpcPacket *packet);
 
 	int m_width;
 	int m_height;
@@ -622,8 +635,12 @@ public:
 
 	virtual void Write(WebIpcPacket *packet) const;
 
-	int m_int[4];
-	string m_text[2];
+	int m_x;		/* the field's rect */
+	int m_y;
+	int m_width;
+	int m_height;
+	string m_text0;
+	string m_text1;
 	bool m_bool;
 };
 
@@ -723,7 +740,8 @@ public:
 
 	virtual void Write(WebIpcPacket *packet) const;
 
-	string m_text[2];
+	string m_text0;
+	string m_text1;
 };
 
 /* what a press on the page hit: the element's rectangle and the point, in page pixels, and
@@ -887,7 +905,8 @@ public:
 
 	int m_int;
 	bool m_bool;
-	string m_text[2];
+	string m_text0;
+	string m_text1;
 };
 
 class WebIpcEvent2206 : public WebIpcMessage {	/* 0x810255e0 */
