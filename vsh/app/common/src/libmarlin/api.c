@@ -492,9 +492,9 @@ int MlnApi_810026D0(void *a0, void *a1, void *a2)
 	return MlnImpl_810166AC(a0, a1, a2);
 }
 
-int SceMarlin_2FD092BD(void *a0)
+int SceMarlin_2FD092BD(MlnRightsInfo *info)
 {
-	return MlnConvertResult(MlnImpl_81010068(MLN_HEAP_SECURE, a0));
+	return MlnConvertResult(MlnRightsInfoFree(MLN_HEAP_SECURE, info));
 }
 
 int SceMarlin_2F1E4047(void *a0, void *a1, void *a2, void *a3, void *a4, void *a5)
@@ -1002,7 +1002,7 @@ static inline void MlnRightsSummaryFree(MlnRightsSummary *summary)
 }
 
 /* the time a license constraint gives, the later or the earlier of two by its kind */
-static inline void *MlnRightsTime(int kind, void *const times[2], int pick)
+static inline MlnDateTime *MlnRightsTime(unsigned int kind, MlnDateTime *const times[2], int pick)
 {
 	if (kind == 2 && MlnImpl_81081400(times[0], times[1]) == pick)
 		return times[1];
@@ -1032,7 +1032,7 @@ __attribute__((noinline)) int MlnApi_81003A9C(MlnBuffer *license, MlnRightsSumma
 		goto out;
 	i = SceMarlin_92A6A48F(&s_serviceContext, NULL, &info);
 	if (info != NULL) {
-		MlnImpl_81010068(MLN_HEAP_SECURE, info);
+		MlnRightsInfoFree(MLN_HEAP_SECURE, info);
 		info = NULL;
 	}
 	if (i != MLN_OK) {
@@ -1060,8 +1060,8 @@ __attribute__((noinline)) int MlnApi_81003A9C(MlnBuffer *license, MlnRightsSumma
 	MlnMemset(summary, 0, sizeof(*summary));
 	summary->notBefore = -1;
 	summary->notAfter = -1;
-	summary->flag10Value = -1;
-	summary->flag8Value = -1;
+	summary->notMoreThan = -1;
+	summary->notLongerThan = -1;
 	if (info->idFlags & 1) {
 		summary->state = 0;
 		summary->ids = MlnAllocate(MLN_HEAP_SECURE, info->idCount * sizeof(MlnBuffer *));
@@ -1086,14 +1086,14 @@ __attribute__((noinline)) int MlnApi_81003A9C(MlnBuffer *license, MlnRightsSumma
 		if (time == NULL || MlnImpl_81081498(time, &summary->notAfter) != 0)
 			goto invalid;
 	}
-	if (info->constraintFlags & MLN_RIGHTS_FLAG8)
-		summary->flag8Value = info->flag8Value;
-	if (info->constraintFlags & MLN_RIGHTS_FLAG10)
-		summary->flag10Value = info->flag10Value;
+	if (info->constraintFlags & MLN_RIGHTS_NOT_LONGER_THAN)
+		summary->notLongerThan = info->notLongerThan;
+	if (info->constraintFlags & MLN_RIGHTS_NOT_MORE_THAN)
+		summary->notMoreThan = info->notMoreThan;
 done:
 	*out = summary;
 out:
-	MlnImpl_81010068(MLN_HEAP_SECURE, info);
+	MlnRightsInfoFree(MLN_HEAP_SECURE, info);
 	SceMarlin_23838449(&s_serviceContext);
 	return ret;
 invalid:
@@ -1102,7 +1102,7 @@ invalid:
 nomem:
 	ret = MLN_ERROR_NO_MEMORY;
 fail:
-	MlnImpl_81010068(MLN_HEAP_SECURE, info);
+	MlnRightsInfoFree(MLN_HEAP_SECURE, info);
 	MlnRightsSummaryFree(summary);
 	SceMarlin_23838449(&s_serviceContext);
 	return ret;
@@ -2440,10 +2440,10 @@ summary:
 			ret = MLN_RESULT_INVALID_ARGUMENT;
 			goto fail;
 		}
-		if (summary->flag10Value != -1)
-			rights->flag10Value = summary->flag10Value;
-		if (summary->flag8Value != -1)
-			rights->flag8Value = summary->flag8Value;
+		if (summary->notMoreThan != -1)
+			rights->notMoreThan = summary->notMoreThan;
+		if (summary->notLongerThan != -1)
+			rights->notLongerThan = summary->notLongerThan;
 	}
 	*out = rights;
 	rights = NULL;
@@ -2546,13 +2546,13 @@ int SceMarlin_14097094(MlnApiObject *object, MlnBuffer *a1)
 }
 
 /* the value a token gives, read from the buffer the engine finds for it */
-int SceMarlin_B477D615(MlnApiObject *object, MlnBuffer *token, int *out)
+int SceMarlin_B477D615(MlnApiObject *object, MlnBuffer *token, MlnRightsInfo **out)
 {
 	MlnBuffer *found = NULL;
 	MlnBuffer *handle;
 	MlnApiKind *kind;
 	unsigned int result;
-	int value = 0;
+	MlnRightsInfo *value = NULL;
 	int ret;
 
 	if (object == NULL || (kind = object->kind) == NULL) {
@@ -2601,7 +2601,7 @@ int SceMarlin_B477D615(MlnApiObject *object, MlnBuffer *token, int *out)
 found:
 	if (ret != MLN_OK || found == NULL)
 		goto out;
-	result = MlnImpl_810103D8(MLN_HEAP_SECURE, found->size, found->data, &value);
+	result = MlnRightsInfoParse(MLN_HEAP_SECURE, found->size, found->data, &value);
 	switch (result) {
 	case MLN_OK:
 		*out = value;

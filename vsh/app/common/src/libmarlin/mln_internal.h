@@ -329,35 +329,134 @@ typedef struct MlnApiDate {
 	int microsecond;
 } MlnApiDate;
 
-/* what a license grants, as the engine evaluates it */
+/*
+ * What a license's control grants, read from the extended status block of its evaluation:
+ * obligations, callbacks and permissions, and the descriptions and constraints. A count
+ * of items whose names are not known, set where the parameter was marked critical.
+ */
+#define MLN_OBLIGATION_METER_PLAY_DURATION	1
+#define MLN_OBLIGATION_RUN_AGENT_ON_PEER	2
+#define MLN_OBLIGATION_OUTPUT_CONTROL		3
+#define MLN_OBLIGATION_CUSTOM			4
+
+typedef struct MlnObligation {
+	int type;
+	unsigned int flags;		/* bit 0: critical */
+	MlnBuffer *controlId;
+	union {
+		MlnBuffer *agentId;
+		struct MlnOutputControl *control;
+	} data;
+	int instanceId;
+	MlnBuffer *contextId;
+	struct MlnValueList *parameters;
+} MlnObligation;
+
+#define MLN_CALLBACK_ON_ACCEPT		1
+#define MLN_CALLBACK_ON_TIME		2
+#define MLN_CALLBACK_ON_TIME_ELAPSED	3
+#define MLN_CALLBACK_ON_EVENT		4
+#define MLN_CALLBACK_ON_AGENT_COMPLETION 5
+
+#define MLN_CALLBACK_EVENT_PLAY		1
+#define MLN_CALLBACK_EVENT_STOP		2
+#define MLN_CALLBACK_EVENT_TIMECODE	3
+#define MLN_CALLBACK_EVENT_SEEK		4
+
+typedef struct MlnCallback {
+	int type;
+	unsigned int flags;		/* bit 0: critical */
+	int routineType;
+	MlnBuffer *routine;
+	int cookie;
+	union {
+		struct MlnDateTime *time;	/* OnTime */
+		int value;			/* OnTimeElapsed, OnAgentCompletion, OnEvent's event */
+	} when;
+	int eventStart;			/* OnEvent */
+	int eventEnd;
+} MlnCallback;
+
+#define MLN_PERMISSION_OUTPUT_CONTROL_OVERRIDE	1
+
+typedef struct MlnPermission {
+	int type;
+	unsigned int flags;		/* bit 0: critical */
+	MlnBuffer *controlId;
+	struct MlnOutputControl *control;
+} MlnPermission;
+
 typedef struct MlnRightsInfo {
-	unsigned int reserved0[11];
-	unsigned int idFlags;		/* bit 0: ids are given */
-	int idCount;
+	unsigned int flags;		/* bit 0: a critical parameter not understood */
+	unsigned int obligationCount;
+	MlnObligation *obligations;
+	unsigned int callbackCount;
+	MlnCallback *callbacks;
+	unsigned int permissionCount;
+	MlnPermission *permissions;
+	unsigned int descriptionFlags;	/* bits 0-2: the three below */
+	MlnBuffer *description;
+	MlnBuffer *shortDescription;
+	MlnBuffer *longDescription;
+	unsigned int idFlags;		/* bit 0: ids are given, bit 1: requiredLicenseStatus */
+	unsigned int idCount;		/* NodeReachabilityRequired */
 	MlnBuffer **ids;
-	unsigned int reserved1;
+	int requiredLicenseStatus;
 	unsigned int constraintFlags;	/* MLN_RIGHTS_* */
-	int notBeforeKind;		/* 2: two times, the later counts */
-	int notAfterKind;		/* 2: two times, the earlier counts */
-	void *notBefore[2];
-	void *notAfter[2];
-	unsigned int reserved2[2];
-	int flag8Value;
-	int flag10Value;
+	unsigned int notBeforeKind;	/* how many times; 2: the later counts */
+	unsigned int notAfterKind;	/* how many times; 2: the earlier counts */
+	struct MlnDateTime *notBefore[2];
+	struct MlnDateTime *notAfter[2];
+	struct MlnDateTime *notDuring[2];
+	int notLongerThan;
+	int notMoreThan;
+	unsigned int reserved;		/* SpatialConstraints: read, nothing kept */
+	unsigned int groupFlags;	/* bit 0: membership, bit 1: identity */
+	MlnBuffer *membership;
+	MlnBuffer *identity;
+	unsigned int deviceFlags;	/* MLN_DEVICE_* */
+	MlnBuffer *deviceType;
+	MlnBuffer *deviceFeature;
+	MlnBuffer *deviceId;
+	int versionMajor;
+	int versionMinor;
+	int dcsFreshnessInterval;
+	unsigned int counterFlags;	/* bit 0: repeatCount */
+	int repeatCount[2];
+	unsigned int reserved2;
+	struct {			/* the Custom obligation's values */
+		int integer;
+		int real;
+		MlnBuffer *string;
+		struct MlnDateTime *date;
+		MlnBuffer *resource;
+		MlnBuffer *text;
+	} custom;
 } MlnRightsInfo;
 
-#define MLN_RIGHTS_NOT_BEFORE	0x1
-#define MLN_RIGHTS_NOT_AFTER	0x2
-#define MLN_RIGHTS_FLAG8	0x8
-#define MLN_RIGHTS_FLAG10	0x10
+#define MLN_RIGHTS_NOT_BEFORE		0x1
+#define MLN_RIGHTS_NOT_AFTER		0x2
+#define MLN_RIGHTS_NOT_DURING		0x4
+#define MLN_RIGHTS_NOT_LONGER_THAN	0x8
+#define MLN_RIGHTS_NOT_MORE_THAN	0x10
+
+#define MLN_DEVICE_TYPE			0x001
+#define MLN_DEVICE_FEATURE		0x002
+#define MLN_DEVICE_ID			0x004
+#define MLN_DEVICE_LICENSE_SUSPENSION	0x008
+#define MLN_DEVICE_METER_PLAY_DURATION	0x010
+#define MLN_DEVICE_TRUSTED_TIME		0x020
+#define MLN_DEVICE_VERSION_MAJOR	0x040
+#define MLN_DEVICE_VERSION_MINOR	0x080
+#define MLN_DEVICE_DCS_FRESHNESS	0x100
 
 /* the summary of a license's rights: times in minutes, -1 when not given */
 typedef struct MlnRightsSummary {
 	unsigned short state;
 	int notBefore;
 	int notAfter;
-	int flag10Value;
-	int flag8Value;
+	int notMoreThan;
+	int notLongerThan;
 	unsigned int idCount;
 	MlnBuffer **ids;
 } MlnRightsSummary;
@@ -367,8 +466,8 @@ typedef struct MlnApiRights {
 	struct MlnIdSet *ids;
 	MlnApiDate notBefore;
 	MlnApiDate notAfter;
-	int flag10Value;
-	int flag8Value;
+	int notMoreThan;
+	int notLongerThan;
 } MlnApiRights;
 
 /* what a report carries, by its type */
@@ -689,6 +788,7 @@ int MlnXmlNodeToText(int heap, MlnXmlNode *node, MlnBuffer **text);
 #define MLN_VALUE_EXTENDED_PARAMETER	5
 #define MLN_VALUE_RESOURCE		6
 #define MLN_VALUE_LIST			7
+#define MLN_VALUE_BYTES			8	/* the Custom obligation's last value */
 
 struct MlnValue;
 
@@ -759,6 +859,20 @@ int MlnValueCopy(int heap, const MlnValue *value, MlnValue **out);
 void MlnValueFree(int heap, MlnValue *value);
 void MlnValueListFree(int heap, MlnValueList *list);
 void MlnExtendedParameterFree(int heap, MlnExtendedParameter *extended);
+int MlnRightsInfoFree(int heap, MlnRightsInfo *info);
+int MlnRightsInfoParse(int heap, unsigned int size, const void *data, MlnRightsInfo **out);
+
+/* a decoded extended status block (not written in C yet) */
+typedef struct MlnEsb {
+	unsigned int reserved0[3];
+	unsigned int flags;		/* bit 0: obligations, 1: callbacks, 2-7: the constraint groups */
+	unsigned int reserved1[2];
+	MlnValueList *parameters;
+} MlnEsb;
+
+int MlnEsbDecode(int heap, unsigned int size, const void *data, MlnEsb **out);
+int MlnImpl_81026814(int heap, void *value, void *a2, void *a3, MlnBuffer **out);
+void MlnEsbFree(int heap, MlnEsb *esb);
 
 /* not written in C yet: the prototypes are their callers' */
 int MlnCoreInit(void *memory, unsigned int size);
@@ -796,7 +910,6 @@ int MlnImpl_81018DA0(MlnServiceContext *context, MlnBuffer *a1);
 int MlnImpl_8101F4B0(void *client, void **a1);
 int MlnImpl_8101F5F4(void *client, MlnBuffer *a1);
 int MlnImpl_8101F724(void *client, MlnBuffer *token, MlnBuffer **found);
-unsigned int MlnImpl_810103D8(int heap, unsigned int size, const void *data, int *value);
 int MlnImpl_8102045C(void *session);
 int MlnImpl_8101A020(void *engine);
 int MlnImpl_8101DD24(MlnApiKind *kind, MlnBuffer *address, void **client, MlnApiVersion *version);
@@ -818,7 +931,6 @@ int MlnXmlGetAttribute(int heap, MlnXmlNode *node, const char *ns, const char *n
 int MlnXmlGetText(int heap, MlnXmlNode *node, MlnBuffer **text);
 int MlnXmlNodeFree(int heap, MlnXmlNode *node);
 int MlnXmlListFree(int heap, MlnXmlNodeList *list);
-unsigned int MlnImpl_81010068(int heap, void *a1);
 void MlnImpl_810136AC(void);
 int MlnImpl_810136E0(void *a0, void *a1, void *a2, void *a3, unsigned char a4, void *a5);
 int MlnImpl_81013804(void *a0, void *a1, MlnBuffer **a2);
