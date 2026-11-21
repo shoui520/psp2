@@ -788,8 +788,8 @@ next_device:
 						     source->items[3]->data.integer, no_memory);
 					MLN_COPY_NAME(heap, info->custom.resource,
 						      source->items[4]->data.buffer, no_memory);
-					ret = MlnImpl_81026814(heap, source->items[5]->data.buffer, NULL,
-							       NULL, &converted);
+					ret = MlnImpl_81026814(heap, source->items[5]->data.buffer, 0, 0,
+							       &converted);
 					if (ret != MLN_OK)
 						goto out;
 					MLN_COPY_NAME(heap, info->custom.text, converted, no_memory);

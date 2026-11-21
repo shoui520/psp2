@@ -21,7 +21,6 @@
 #define MLN_APPDATA_MOUNT_ID		111
 
 #define MLN_FOURCC(a, b, c, d)	((unsigned int)(a) << 24 | (b) << 16 | (c) << 8 | (d))
-#define MLN_BE32(p)		((unsigned int)(p)[0] << 24 | (p)[1] << 16 | (p)[3] | (p)[2] << 8)
 
 static int s_initCount;
 ScePfsRndDriveId s_mountPoint;

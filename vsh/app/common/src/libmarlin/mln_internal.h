@@ -14,6 +14,9 @@
 #define MLN_ERROR_NO_MEMORY	2
 #define MLN_ERROR_INVALID_ARGUMENT	3
 #define MLN_ERROR_INVALID	5
+
+/* a big-endian word, read as the library reads it */
+#define MLN_BE32(p)		((unsigned int)(p)[0] << 24 | (p)[1] << 16 | (p)[3] | (p)[2] << 8)
 #define MLN_CORE_ERROR_INVALID	4
 #define MLN_ENGINE_ERROR_FORMAT	0x1f0001	/* a token, configuration or response the engine cannot read */
 
@@ -923,7 +926,10 @@ typedef struct MlnEsb {
 } MlnEsb;
 
 int MlnEsbDecode(int heap, unsigned int size, const void *data, MlnEsb **out);
-int MlnImpl_81026814(int heap, void *value, void *a2, void *a3, MlnBuffer **out);
+/* base64: lineLength characters a line (0: one line), lineEnd 0 "\n", 1 "\r\n", 2 "\r" */
+int MlnImpl_81026814(int heap, const MlnBuffer *in, int lineLength, unsigned int lineEnd,
+		     MlnBuffer **out);
+int MlnImpl_81026A9C(int heap, const MlnBuffer *in, MlnBuffer **out);
 int MlnEsbFree(int heap, MlnEsb *esb);
 int MlnEsbCheckGlobalFlags(int heap, const MlnEsb *esb);
 
@@ -974,8 +980,12 @@ int MlnStateRestore(const MlnBuffer *state);
 #define MLN_SERVICE_ARG_BLOCK28		4	/* the value points to 28 bytes (sized at 0x8102766c) */
 #define MLN_SERVICE_ARG_OFFSET		5	/* the value points to an offset (also given back) */
 #define MLN_SERVICE_ARG_BUFFER		6
+#define MLN_SERVICE_ARG_FLAG		7	/* the value points to a flag */
+#define MLN_SERVICE_ARG_RECORD21	8	/* the value points to a MlnServiceRecord */
 #define MLN_SERVICE_ARG_OBJECT		9	/* an object led by a buffer (sized at 0x8102766c) */
+#define MLN_SERVICE_ARG_STRUCT		10	/* an object handed over as it is */
 #define MLN_SERVICE_ARG_LIST		11	/* a counted list of entries (sized at 0x8102766c) */
+#define MLN_SERVICE_ARG_GROUP		12	/* a buffer group */
 #define MLN_SERVICE_ARG_RECORD		13	/* a record led by a buffer (sized at 0x8102766c) */
 
 #define MLN_SERVICE_SET_STATE		0x411
@@ -1134,11 +1144,10 @@ int MlnImpl_81017880(MlnServiceContext *context, void *list, unsigned int *first
 int MlnImpl_81026F48(int heap, const MlnServiceArg *value, MlnServiceRecord *out);
 int MlnImpl_810270BC(int heap, const MlnServiceArg *value, unsigned int *out);
 /* not written in C yet */
-int MlnImpl_81026D94(const MlnServiceReply *reply, unsigned int count);
 int MlnImpl_81027084(int heap, const MlnServiceArg *value, int *out);
 int MlnImpl_81026FE4(int heap, const MlnServiceArg *value, unsigned int *out);
 int MlnImpl_8102701C(int heap, const MlnServiceArg *value, int *out);
-int MlnImpl_81026ED0(int heap, const MlnServiceArg *value, MlnBufferGroup **out);
+int MlnImpl_81026ED0(int heap, MlnServiceArg *value, MlnBufferGroup **out);
 int MlnServiceCall(MlnServiceSession *session, int command, const MlnServiceArgs *args,
 		   MlnServiceReply **reply, int *status);
 int MlnImpl_810194B4(MlnBuffer *response);
@@ -1147,17 +1156,33 @@ int MlnImpl_81019760(void *cookie, const MlnBuffer *request, MlnBuffer **respons
 int MlnImpl_81019798(const MlnBuffer *request, MlnBuffer **response);
 int MlnImpl_81019860(MlnServiceSession *session, int command);
 /* the service message header: four big-endian words */
+int MlnImpl_81026D94(const MlnServiceReply *reply, unsigned int count);
 void MlnImpl_81026BFC(unsigned char *header, unsigned int command);
 void MlnImpl_81026C1C(unsigned char *header, unsigned int size);
 void MlnImpl_81026C3C(unsigned char *header, unsigned int status);
 void MlnImpl_81026C5C(unsigned char *header, unsigned int value);
+void MlnImpl_81026C7C(unsigned char *header, unsigned int first);
+void MlnImpl_81026C9C(unsigned char *header, unsigned int second);
 unsigned int MlnImpl_81026CBC(const unsigned char *header);
+unsigned int MlnImpl_81026CE0(const unsigned char *header);
 int MlnImpl_81026D04(const unsigned char *header);
+unsigned int MlnImpl_81026D28(const unsigned char *header);
+unsigned int MlnImpl_81026D4C(const unsigned char *header);
+unsigned int MlnImpl_81026D70(const unsigned char *header);
+int MlnImpl_81026DE0(int heap, const MlnServiceArgs *args, MlnBuffer **out);
+int MlnImpl_81026FAC(int heap, const MlnServiceArg *value, int *out);
+int MlnImpl_8102704C(int heap, const MlnServiceArg *value, unsigned int *out);
+int MlnImpl_810270F4(int heap, const MlnServiceArg *value, void *out);
+int MlnImpl_81027140(int heap, MlnServiceArg *value, void **out);
+int MlnImpl_8102717C(int heap, MlnServiceArg *value, void **out);
+int MlnImpl_810271B8(int heap, MlnServiceArg *value, void **out);
+int MlnImpl_810271F4(int heap, MlnServiceArg *value, void **out);
+int MlnImpl_81027B50(int heap, const MlnServiceArgs *args, MlnBuffer **out);
 int MlnImpl_810273C4(int heap, int command, int value, const MlnServiceArgs *args,
 		     MlnBuffer **request);
 int MlnImpl_8102752C(int heap, const MlnBuffer *response, MlnServiceReply **reply);
 void MlnImpl_81027390(int heap, MlnServiceReply *reply);
-int MlnImpl_81026F0C(int heap, const MlnServiceArg *value, MlnBuffer **out);
+int MlnImpl_81026F0C(int heap, MlnServiceArg *value, MlnBuffer **out);
 int MlnImpl_81026E20(int heap, unsigned int count, MlnServiceArgs **out);
 int MlnImpl_810191C4(int ret);
 
@@ -1492,6 +1517,7 @@ int MlnActionTokenParse(unsigned int size, const void *xml, MlnActionToken **out
 int MlnActionTokenFree(MlnActionToken *token);
 int MlnServiceConfigParse(unsigned int size, const void *xml, MlnServiceConfig **out);
 int MlnServiceConfigFree(MlnServiceConfig *config);
+int MlnImpl_81026438(const char *directory);
 int MlnImpl_810265E8(int heap, const char *directory, MlnFileList **files);
 int MlnImpl_810257DC(int heap, MlnFileList *files);
 int MlnImpl_8101ACD0(MlnEngine *engine, MlnActionToken *token, MlnApiResult *result);
