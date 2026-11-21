@@ -39,9 +39,9 @@ static InitEventFunctionEntry s_initEvents[] = {	/* (0x81544850) */
 
 static int downloadPluginNotify(void (*func)(void *), void *arg);
 static int downloadPluginSetPermission(void (*func)(void *), void *arg);
-static int downloadPluginBgdl_811239D4(void);
-static int downloadPluginBgdl_811239DC(void);
-static int downloadPluginBgdl_811239E4(void);
+static int downloadPluginBgdl_811239D4(const FgdlCaller *caller, int reserved, SceUInt32 taskId);
+static int downloadPluginBgdl_811239DC(void *reserved, const SceUInt32 *taskId);
+static int downloadPluginBgdl_811239E4(const FgdlTitleRequest *request);
 static int downloadPluginTerminate(void);
 static int downloadPluginBgdl_81123ACA(SceUInt32 taskId);
 int downloadPluginReserved(void);			/* (0x81409E2C) */
@@ -104,7 +104,7 @@ void downloadPluginInit(Plugin *plugin)
 	if (s_logManager != NULL)
 		s_logManager->Bgdl_811240B6(quota);
 	shellBgdlCreate(clean, quota);
-	SystemUpdateSvc::Bgdl_8112CD1A();
+	Fgdl_8112CD1A();
 	s_dispatcher = new BgdlJobDispatcher();
 	if (s_dispatcher != NULL)
 		s_dispatcher->Bgdl_8113A6A8();
@@ -134,7 +134,7 @@ static inline void downloadPluginDestroy(void)
 	if (s_active == true) {
 		shellBgdlNotify();
 		g_systemUpdateSvc->Bgdl_8112D7F0();
-		SystemUpdateSvc::Bgdl_8112CDB2();
+		Fgdl_8112CDB2();
 		shellBgdlDestroy();
 		if (s_logManager != NULL) {
 			s_logManager->Bgdl_81123EF8();
@@ -184,22 +184,19 @@ static int downloadPluginSetPermission(void (*func)(void *), void *arg)
 	return 0;
 }
 
-static int downloadPluginBgdl_811239D4(void)
+static int downloadPluginBgdl_811239D4(const FgdlCaller *caller, int reserved, SceUInt32 taskId)
 {
-	Bgdl_8112BB36();
-	return 0;
+	return Fgdl_8112BB36(caller, reserved, taskId);
 }
 
-static int downloadPluginBgdl_811239DC(void)
+static int downloadPluginBgdl_811239DC(void *reserved, const SceUInt32 *taskId)
 {
-	Bgdl_8112B9A2();
-	return 0;
+	return Fgdl_8112B9A2(reserved, taskId);
 }
 
-static int downloadPluginBgdl_811239E4(void)
+static int downloadPluginBgdl_811239E4(const FgdlTitleRequest *request)
 {
-	Bgdl_8112BCEC();
-	return 0;
+	return Fgdl_8112BCEC(request);
 }
 
 static int downloadPluginTerminate(void)

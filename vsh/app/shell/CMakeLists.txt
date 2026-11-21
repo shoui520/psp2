@@ -202,6 +202,7 @@ psp2_module(vs0_vsh_shell_shell KIND user COMPILER snc PARTIAL SOURCES
 	src/esecron/src/eseparam.cpp
 	src/download_plugin/src/download_plugin.cpp
 	src/download_plugin/src/log_job_manager.cpp
+	src/download_plugin/src/fgdl_manager.cpp
 	shell.c
 )
 target_include_directories(vs0_vsh_shell_shell PRIVATE "${PSP2_SRC}/vsh/paf/include"

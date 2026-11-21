@@ -11,14 +11,17 @@
 #include <plugin.h>
 #include <std/vector>
 
+struct FgdlCaller;
+struct FgdlTitleRequest;
+
 /* the table given as the plugin's GetInterface(1) (PLACEHOLDER names) */
 struct DownloadPluginInterface {
 	int (*Notify)(void (*func)(void *), void *arg);		/* (0x811237C4) */
 	int (*SetPermission)(void (*func)(void *), void *arg);	/* (0x811238C8) */
-	int (*Bgdl_811239D4)(void);
-	int (*Bgdl_811239DC)(void);
+	int (*Bgdl_811239D4)(const FgdlCaller *caller, int reserved, SceUInt32 taskId);
+	int (*Bgdl_811239DC)(void *reserved, const SceUInt32 *taskId);
 	int (*Terminate)(void);					/* (0x811239EC) */
-	int (*Bgdl_811239E4)(void);
+	int (*Bgdl_811239E4)(const FgdlTitleRequest *request);
 	int (*EventLogDownload)(SceInt64 rowid);		/* (0x81123DD0) */
 	int (*Bgdl_81123ACA)(SceUInt32 taskId);
 	int (*Reserved)(void);					/* (0x81409E2C) returns 0 */
@@ -99,8 +102,6 @@ public:
 /* system_update_svc.cpp's service (PLACEHOLDER names) */
 class SystemUpdateSvc {
 public:
-	static void Bgdl_8112CD1A(void);
-	static void Bgdl_8112CDB2(void);
 	static void Bgdl_8112D38C(void);
 	static void Bgdl_8112D42A(void);
 	void Bgdl_8112D508(paf::Plugin *plugin, DownloadPluginObject *object);
@@ -111,9 +112,44 @@ public:
 
 extern SystemUpdateSvc *g_systemUpdateSvc;		/* (0x81544898) PLACEHOLDER name */
 
-int Bgdl_8112BB36(void);
-int Bgdl_8112B9A2(void);
-int Bgdl_8112BCEC(void);
+/* what a task's install is asked for (PLACEHOLDER names) */
+struct FgdlInstallArgs {
+	int reserved;
+	int type;			/* 2: the error dialog shown when it fails */
+	int locale;			/* download_plugin's locale while it installs */
+};
+
+/* the task id a title's install is queued under (PLACEHOLDER name) */
+#define FGDL_TASK_TITLE			0xF7777777
+
+/* what a title's install is asked for (PLACEHOLDER names) */
+struct FgdlTitleRequest {
+	SceUInt32 flags;		/* bit 0: the tasks of kind 5 too */
+	int reserved[2];
+	int locale;			/* download_plugin's locale while it installs */
+	char titleId[68];
+};
+
+/* what a title's install gives back (PLACEHOLDER) */
+struct FgdlTitleResult {
+	int reserved;
+};
+
+/*
+ * PLACEHOLDER: what the caller of the interface's Bgdl_811239D4 passes (another plugin's
+ * object, not read yet): the install's arguments, 3496 bytes in
+ */
+struct FgdlCaller {
+	char unknown[3496];
+	FgdlInstallArgs args;
+};
+
+/* fgdl_manager.cpp's: the foreground installs queued */
+int Fgdl_8112BB36(const FgdlCaller *caller, int reserved, SceUInt32 taskId);
+int Fgdl_8112B9A2(void *reserved, const SceUInt32 *taskId);
+int Fgdl_8112BCEC(const FgdlTitleRequest *request);
+void Fgdl_8112CD1A(void);				/* the manager made */
+void Fgdl_8112CDB2(void);				/* and destroyed */
 int Bgdl_81123DD0(SceInt64 rowid);			/* log_job_manager.cpp's */
 
 paf::Plugin *downloadPluginGet(void);			/* (0x811234F4) PLACEHOLDER name */

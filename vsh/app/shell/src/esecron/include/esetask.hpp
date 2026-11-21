@@ -719,6 +719,10 @@ int bgdlAddContentTask(const BgdlContentRequest *request, const BgdlContentAccou
 int bgdlCheckQueue(void);					/* (0x81106346) PLACEHOLDER name */
 int bgdlManagerNotify(int value, int mask);			/* (0x810FD862) */
 int bgdlGetTaskParam(SceUInt32 id, EseParamCache *param);	/* (0x8110AD48) PLACEHOLDER name */
+int bgdlGetTaskStatus(SceUInt32 id, struct BgdlTaskStatus *status);	/* (0x8110AB1E) PLACEHOLDER name */
+int bgdlReloadTasks(void);					/* (0x8110B028) PLACEHOLDER name */
+bool bgdlTaskIsWaiting(SceUInt32 id);				/* (0x8110F3BE) PLACEHOLDER name */
+int bgdlUnmountGrw0(void);					/* (0x8110F70C) PLACEHOLDER name */
 int bgdlRemoveTask(SceUInt32 id);				/* (0x8110AD6C) PLACEHOLDER name */
 int bgdlReloadTask(SceUInt32 id);				/* (0x8110AD8E) PLACEHOLDER name */
 int bgdlCountTitleTasks(const char *titleId, SceUInt32 *count);	/* (0x8110B7E2) PLACEHOLDER name */
@@ -769,8 +773,10 @@ inline void EseTask::doSetPackage(const BgdlTaskPackage *src)
 
 /* the dispatcher's state, as Bgdl_8113A47C copies it (PLACEHOLDER) */
 struct BgdlDispatcherState {
-	int state;			/* 0: idle */
-	int reserved[3];
+	int state;			/* 0: idle, 1: a foreground install queued, 2: its result */
+	SceUInt32 taskId;		/* the task the foreground install works on */
+	int value;			/* what fgdl_manager.cpp's listener made of the task's event */
+	int error;			/* and the task's result */
 };
 
 /* (0x8113A434..) the job dispatcher, made by download_plugin (PLACEHOLDER names) */
@@ -782,7 +788,10 @@ public:
 
 	~BgdlJobDispatcher();						/* (0x8113A674) */
 	static BgdlJobDispatcher *Bgdl_8113A434(void);
+	/* (0x8113A440) the state set, the second one when second is set */
+	void Bgdl_8113A440(const BgdlDispatcherState *state, bool second);
 	void Bgdl_8113A47C(BgdlDispatcherState *state, bool second);
+	void Bgdl_8113A4B8(const int *result);			/* a title install's result kept */
 	int Bgdl_8113A4FC(paf::common::SharedPtr<paf::job::JobItem> &job);
 	void Bgdl_8113A644(void);					/* stops it */
 	void Bgdl_8113A6A8(void);					/* starts it */
