@@ -127,20 +127,67 @@ typedef struct MlnApiNode {
 	void *data[4];
 } MlnApiNode;
 
+/* a request the engine asks the application to send */
+typedef struct MlnHttpHeader {
+	char *name;
+	char *value;
+} MlnHttpHeader;
+
+#define MLN_HTTP_GET	1
+#define MLN_HTTP_POST	2
+
+typedef struct MlnHttpRequest {
+	int method;
+	char *url;
+	unsigned int headerCount;
+	MlnHttpHeader **headers;
+	MlnBuffer *body;
+} MlnHttpRequest;
+
+/* what one step of a transaction gives: a value for the caller, or a request to send */
 typedef struct MlnApiResult {
 	MlnApiValue *value;
-	void *next;
+	MlnHttpRequest *request;
 } MlnApiResult;
+
+/* the application's HTTP transport */
+typedef struct MlnTransport {
+	int (*open)(const char *url, void **connection);
+	int (*close)(void *connection);
+	int (*setHeader)(void *connection, const char *name, const char *value);
+	int (*send)(void *connection, int post, unsigned int size, const void *body,
+		    unsigned int *responseSize, void **response);
+	void (*release)(void *response);
+} MlnTransport;
 
 /* which engine an object runs on: the local one, or a remote client */
 typedef struct MlnApiKind {
 	int type;
 	int remote;
+	MlnBuffer *address;
 } MlnApiKind;
+
+/* what a remote client reports about itself */
+typedef struct MlnApiVersion {
+	unsigned short major;
+	unsigned short minor;
+	unsigned short build;
+	MlnBuffer *name;
+	MlnBuffer *id;
+} MlnApiVersion;
+
+typedef struct MlnApiStatus {
+	int type;
+	unsigned short major;
+	unsigned short minor;
+	MlnBuffer *name;
+	MlnBuffer *id;
+	unsigned short build;
+} MlnApiStatus;
 
 typedef struct MlnApiObject {
 	MlnApiKind *kind;
-	void *reserved;
+	int status;		/* the last step's failure, passed to the next */
 	void *data;
 	void *engine;
 	void *client;
@@ -148,8 +195,21 @@ typedef struct MlnApiObject {
 } MlnApiObject;
 
 typedef struct MlnApiInfo {
-	unsigned int value[7];
+	void *value;
+	void *data[6];
 } MlnApiInfo;
+
+/* a request the engine has decoded from a message, and its arguments */
+typedef struct MlnApiRequest {
+	int type;
+	void *arg[3];
+} MlnApiRequest;
+
+/* what processing a request reports back to the engine */
+typedef struct MlnApiReport {
+	int type;
+	MlnApiInfo info;
+} MlnApiReport;
 
 /* Octopus nodes and the links between them, by node ID */
 typedef struct MlnOctopusLink {
@@ -163,6 +223,13 @@ typedef struct MlnOctopusNode {
 	MlnOctopusLink *links;
 	MlnBuffer *id;
 } MlnOctopusNode;
+
+/* a list of buffer pairs, from an engine's list of items two by two */
+typedef struct MlnApiPair {
+	struct MlnApiPair *next;
+	MlnBuffer *key;
+	MlnBuffer *value;
+} MlnApiPair;
 
 /* a set of IDs */
 typedef struct MlnIdSet {
@@ -222,6 +289,21 @@ int MlnConvertResult(unsigned int result);
 int SceMarlin_D09A4419(const void *xml, unsigned int size, MlnBundleInfo **out);
 int SceMarlin_73C12840(MlnBundleInfo *info);
 int SceMarlin_9609E2DF(MlnBuffer *buffer);
+int SceMarlin_45B29121(MlnApiNode *list);
+int SceMarlin_8FEB4F94(MlnApiObject *object);
+int MlnApi_8100326C(MlnApiNode **list, MlnApiValue **value);
+int MlnApi_81003818(MlnApiObject *object, MlnBuffer **response, MlnApiResult **result);
+int MlnApi_810039A8(MlnApiObject *object, void *a1, void *a2, void *a3);
+int MlnApi_8100370C(MlnApiObject *object, int status, MlnApiResult *result, MlnApiReport *report,
+		    MlnBuffer **response);
+int MlnApi_81003464(MlnBuffer *serviceProvider, MlnBuffer *token, unsigned int *count,
+		    MlnBuffer ***items);
+int MlnApi_81003A9C(void *a0, MlnApiInfo **info);
+int MlnApi_810037B0(void *a0, MlnApiInfo *info);
+int MlnApi_810026B8(void *a0, void *a1);
+int SceMarlin_A43BC777(void *a0);
+int SceMarlin_23838449(void *a0);
+int SceMarlin_FB95B259(void *a0, void *a1, void *a2);
 int MlnIdSetAdd(MlnIdSet **set, const MlnBuffer *id);
 int MlnNodesCollectReachable(MlnOctopusNode *nodes, const MlnBuffer *id, MlnIdSet **set);
 
@@ -237,16 +319,40 @@ int MlnServiceSetState(MlnServiceContext *context, MlnBuffer *state);
 int MlnServiceClearState(MlnServiceContext *context);
 unsigned int MlnNtohl(unsigned int value);
 int MlnImpl_81013350(void *a0, void *a1);
-int MlnImpl_81016A5C(void *a0, void *a1);
+int MlnImpl_81016A5C(void *a0, void *a1, void *a2);
 int MlnImpl_81016B4C(void *a0, void *a1);
 int MlnImpl_81018B8C(MlnServiceContext *context, MlnBuffer *serviceProvider, MlnBuffer *token,
 		     MlnBuffer *ids, unsigned int *count, MlnBuffer ***items);
-int MlnImpl_81020094(void *session, void *a1, MlnApiValue *value, void *next, void *a4, void *a5);
+int MlnImpl_81020094(void *session, int status, MlnApiValue *value, MlnHttpRequest *request,
+		     void *a4, void *a5);
+void MlnImpl_81013420(MlnApiResult *result);
+void MlnImpl_810134E0(MlnApiRequest *request);
+void MlnImpl_8101359C(MlnApiReport *report);
+int MlnImpl_8101F954(void *session, MlnBuffer *message, int status, void *data,
+		     MlnApiRequest *request);
+int MlnImpl_8101A360(void *engine, MlnApiResult **result);
+int MlnImpl_8101A59C(MlnBuffer **handle);
+int MlnImpl_81018E08(MlnServiceContext *context, void *a1, void *a2);
+int MlnImpl_8101F0B8(void *client, void *a1, void *a2);
+int MlnImpl_8101DFA0(void *client, void *a1, void *a2, void **a3, void **a4);
+int MlnImpl_810188E8(MlnServiceContext *context, void *a1, void *a2, void **a3, void **a4);
+int MlnImpl_81018A2C(MlnServiceContext *context, unsigned int *count, MlnBuffer ***items);
+int MlnImpl_8101EC08(void *client, unsigned int *count, MlnBuffer ***items);
+int MlnImpl_8101E118(void *client, MlnBuffer *a1, MlnBuffer *a2, unsigned int *count,
+		     MlnBuffer ***items);
+int MlnImpl_81018D00(MlnServiceContext *context, void **a1);
+int MlnImpl_81018DA0(MlnServiceContext *context, MlnBuffer *a1);
+int MlnStrcmp(const char *a, const char *b);
 int MlnImpl_810072B0(void *a0, MlnApiInfo *info);
 int MlnImpl_8101A020(void *engine);
-int MlnImpl_8101A030(void *engine);
+int MlnImpl_8101DD24(MlnApiKind *kind, MlnBuffer *address, void **client, MlnApiVersion *version);
+int MlnImpl_8101DF70(void *client);
+int MlnImpl_8101F870(MlnApiKind *kind, MlnBuffer *address, void **session);
+int MlnImpl_8101F92C(void *session);
+int MlnImpl_8101A030(void *engine, MlnBuffer **message, MlnApiResult **result);
 int MlnImpl_8101E628(void *client);
-int MlnImpl_8101E658(void *client);
+int MlnImpl_8101E658(void *client, MlnBuffer **message, MlnApiResult **result);
+int MlnImpl_8101E9EC(void *client, MlnApiResult *step, MlnBuffer **message);
 int MlnImpl_81019B44(int a0, void *a1, void *a2, void *a3, int a4, void **engine);
 int MlnImpl_8101E380(void *client, void *a1, void *a2, void *a3, int a4);
 int MlnXmlParse(int heap, const void *xml, unsigned int size, MlnXmlNode **document);
@@ -263,7 +369,7 @@ unsigned int MlnImpl_81010068(int heap, void *a1);
 void MlnImpl_810136AC(void);
 int MlnImpl_810136E0(void *a0, void *a1, void *a2, void *a3, unsigned char a4, void *a5);
 int MlnImpl_81013804(void *a0, void *a1, MlnBuffer **a2);
-int MlnImpl_810147D8(void *a0, void *a1);
+int MlnImpl_810147D8(void *a0, int a1);
 int MlnImpl_81014860(void *a0, void *a1, void *a2, void *a3);
 int MlnImpl_810148F8(void *a0, void *a1, void *a2);
 int MlnImpl_81014A10(void *a0, void *a1, void *a2, void *a3, void *a4);
