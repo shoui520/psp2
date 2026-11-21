@@ -11,6 +11,7 @@
 #include <widget/w_text_box.h>
 #include <versatileparam/resourceparam.h>
 #include "web_view.h"
+#include "tilebackend.h"
 
 /* GetGlobalHeapAllocator, exported by its C name. */
 extern "C" paf::memory::HeapAllocator *GetGlobalHeapAllocator(void);
@@ -4062,8 +4063,8 @@ void WebView::CreatePageForView()
 
 	math::v4 size = *GetSize(0);
 	WebIpcCreatePageWithView message((int32_t)(float)size.getImpl().getX(),
-		(int32_t)(float)size.getImpl().getY(), m_viewId, GetRenderParam(),
-		sizeof(WebViewRenderParam), m_geolocationEnabled);
+		(int32_t)(float)size.getImpl().getY(), m_viewId, ScePafWebMapView_C2581D7F(),
+		sizeof(TilebackendParam), m_geolocationEnabled);
 
 	WebIpc::GetInstance()->Post(&message, m_viewId);
 	m_startWithParam = false;
@@ -4079,8 +4080,8 @@ int WebView::CreatePage()
 
 	math::v4 size = *GetSize(0);
 	WebIpcCreatePage message((int32_t)(float)size.getImpl().getX(),
-		(int32_t)(float)size.getImpl().getY(), GetRenderParam(),
-		sizeof(WebViewRenderParam), m_geolocationEnabled);
+		(int32_t)(float)size.getImpl().getY(), ScePafWebMapView_C2581D7F(),
+		sizeof(TilebackendParam), m_geolocationEnabled);
 
 	ret = WebIpc::GetInstance()->Send(&message, m_viewId);
 	m_pageState = ret != 0 ? 1 : 2;

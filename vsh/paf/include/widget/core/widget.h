@@ -2192,6 +2192,161 @@ extern paf::ui::AdjustParam ScePafWidget_BE1CEA2E;
 int32_t ScePafWidget_B1C23134(paf::ui::Widget *widget, const paf::ui::AdjustParam &param);
 }
 
+namespace paf {
+namespace ui {
+
+/* inline in Sony's header: the modules that derive from Widget carry their own copies
+   (libpaf_web_map_view) */
+inline void Widget::SetFocusDirection(int32_t dir, IDParam id)
+{
+	if (m_focuser != NULL) {
+		FocusHint *hint = m_focuser->GetHint();
+
+		if (dir != 0) {
+			switch (dir) {
+			case 1:
+				hint->m_down = id;
+				break;
+			case 2:
+				hint->m_left = id;
+				break;
+			case 3:
+				hint->m_right = id;
+				break;
+			}
+		} else {
+			hint->m_up = id;
+		}
+	}
+}
+
+inline void Widget::SetFocusDirectionWidget(int32_t dir, Widget *widget)
+{
+	if (m_focuser == NULL)
+		return;
+
+	Widget *old = ScePafWidget_71349B04(m_focuser, dir);
+
+	if (old != NULL) {
+		FocusReferrers *referrers = ScePafWidget_71349B04(m_focuser, dir)->m_focus_referrers;
+
+		if (referrers != NULL) {
+			vector<Widget *>::iterator it = referrers->m_referrers.begin();
+			vector<Widget *>::iterator end = referrers->m_referrers.end();
+
+			for (; it != end; ++it) {
+				if (*it == this)
+					break;
+			}
+			if (it != end)
+				referrers->m_referrers.erase(it);
+		}
+	}
+
+	FocusDirectionWidget *data = m_focuser->GetDirectionWidget();
+
+	if (dir != 0) {
+		switch (dir) {
+		case 1:
+			data->m_widget[1] = widget;
+			break;
+		case 2:
+			data->m_widget[2] = widget;
+			break;
+		case 3:
+			data->m_widget[3] = widget;
+			break;
+		}
+	} else {
+		data->m_widget[0] = widget;
+	}
+
+	if (widget != NULL) {
+		FocusReferrers *referrers = widget->m_focus_referrers;
+
+		if (referrers == NULL) {
+			referrers = new FocusReferrers;
+			widget->m_focus_referrers = referrers;
+		}
+
+		vector<Widget *>::iterator it = referrers->m_referrers.begin();
+		vector<Widget *>::iterator end = referrers->m_referrers.end();
+
+		for (; it != end; ++it) {
+			if (*it == this)
+				break;
+		}
+		if (it == end)
+			referrers->m_referrers.push_back(this);
+	}
+}
+
+inline void Widget::SetFocusSearchRect(const math::rect &rect)
+{
+	if (m_focuser != NULL) {
+		math::rect copy(rect);
+
+		m_focuser->GetHint()->m_search_rect = copy;
+	}
+}
+
+inline void Widget::EnableFocusSearchRect(bool on_off)
+{
+	if (m_focuser != NULL)
+		m_focuser->GetHint()->m_search_rect_enable = on_off;
+}
+
+inline AdjustParam *Widget::GetHitRegion()
+{
+	if (m_adjust_param == NULL)
+		ScePafWidget_55D83675(this, new AdjustParam());
+	return m_adjust_param;
+}
+
+inline int32_t Widget::SetHitRegion(const AdjustParam &param)
+{
+	if (m_adjust_param == NULL)
+		ScePafWidget_55D83675(this, new AdjustParam());
+	return ScePafWidget_B1C23134(this, param);
+}
+
+inline math::v4 Widget::GetFocusShapePos()
+{
+	math::v4 pos = GetPos(0, NULL, math::v4(0.0f, 0.0f, 0.0f, 0.0f));
+
+	if (m_focus_shape != NULL)
+		pos = pos + math::v4(m_focus_shape->m_offset, 0.0f);
+	return pos;
+}
+
+inline math::v4 Widget::GetFocusShapeWorldPos()
+{
+	if ((m_update_flag & 7) != 0)
+		UpdateMatrix();
+
+	math::v4 pos = m_world_matrix.w();
+
+	if (m_focus_shape != NULL)
+		pos = pos + math::v4(m_focus_shape->m_offset, 0.0f);
+	return pos;
+}
+
+inline math::v4 Widget::GetFocusShapeSize()
+{
+	math::v4 size = *GetSize(1);
+
+	if (m_focus_shape != NULL) {
+		math::v2 shape_size = m_focus_shape->m_size;
+
+		if (!(shape_size == math::v2(0.0f, 0.0f)))
+			size = math::v4(shape_size.extract_x(), shape_size.extract_y(), 0.0f, 0.0f);
+	}
+	return size;
+}
+
+}
+}
+
 PAF_VECTOR_INLINE_DTOR(ui::ResolutionData)
 PAF_VECTOR_INLINE_DTOR(ui::Widget::DeleteCBInfo)
 

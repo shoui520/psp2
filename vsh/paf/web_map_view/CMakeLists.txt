@@ -4,7 +4,7 @@ enable_language(CXX)
 # compiled from vsh/app/common/src/webview. Its paf imports take libpaf's link names.
 set(MODULE_IMPORT_NAMES vsh/paf/fw/3.65-CEX.exports.yml)
 set(WEBVIEW ../../app/common/src/webview)
-psp2_module(${PSP2_TARGET} KIND user COMPILER snc PARTIAL SOURCES
+psp2_module(${PSP2_TARGET} KIND user COMPILER snc SOURCES
 	module.cpp
 	${WEBVIEW}/context_menu_info.cpp
 	${WEBVIEW}/web_view.cpp

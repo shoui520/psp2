@@ -91,7 +91,8 @@ struct TilebackendClip {
 /* the command buffer the page's process writes */
 #define TILEBACKEND_COMMAND_BUFFER_SIZE	0x8000
 
-/* the parameter of the pool (tilebackend_pool.cpp) */
+/* the parameter of the pool (tilebackend_pool.cpp), which the view sends the page with its
+   create message */
 extern "C" TilebackendParam *ScePafWebMapView_C2581D7F(void);
 /* the parameter set from the process's name, the pool's size and type and the tile size */
 extern "C" void ScePafWebMapView_DE7C5CBE(const char *name, SceSize poolSize,

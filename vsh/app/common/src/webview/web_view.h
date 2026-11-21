@@ -176,14 +176,6 @@ int ImeTextChanged(WebViewIme *ime, int length);
 /* the IME's frame (sceImeVshUpdate), while it is open */
 int ImeUpdate(WebViewIme *ime);
 
-/* the render parameters the page is made with (80 bytes at 0x81026548; names ours) */
-struct WebViewRenderParam {
-	uint32_t m_data[20];
-};
-
-/* the render parameters every page is made with */
-WebViewRenderParam *GetRenderParam();
-
 /* what the page's data request gives the application's data listener: its start with the
    MIME type and the length, each part of the data, and its end with the result (names ours) */
 class WebViewDataEvent {
