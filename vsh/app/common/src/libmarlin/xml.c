@@ -38,12 +38,20 @@ static inline __attribute__((always_inline)) void MlnXmlRewind(MlnBuffer *cursor
 	cursor->size = size;
 }
 
-int MlnXmlNodeFree(int heap, MlnXmlNode *node)
+/* another reference to a node, for a caller that keeps it */
+__attribute__((noinline)) MlnXmlNode *MlnXmlNodeRetain(int heap, MlnXmlNode *node)
+{
+	(void)heap;
+	node->refCount++;
+	return node;
+}
+
+__attribute__((noinline)) int MlnXmlNodeFree(int heap, MlnXmlNode *node)
 {
 	return MlnXmlNodeRelease(heap, &node);
 }
 
-int MlnXmlListFree(int heap, MlnXmlNodeList *list)
+__attribute__((noinline)) int MlnXmlListFree(int heap, MlnXmlNodeList *list)
 {
 	return MlnXmlNodeListRelease(heap, &list);
 }
@@ -421,7 +429,7 @@ fail:
 }
 
 /* The prolog: the XML declaration if there is one, then white space and comments. */
-int MlnXmlParseProlog(int heap, MlnXmlParser *parser, MlnXmlProlog **out, MlnBuffer *cursor)
+__attribute__((noinline)) int MlnXmlParseProlog(int heap, MlnXmlParser *parser, MlnXmlProlog **out, MlnBuffer *cursor)
 {
 	unsigned int size = cursor->size;
 	MlnXmlProlog *prolog = NULL;
@@ -876,7 +884,7 @@ fail:
 }
 
 /* A document: the prolog and the root element, as a document node. */
-int MlnXmlParse(int heap, unsigned int size, const void *xml, MlnXmlNode **document)
+__attribute__((noinline)) int MlnXmlParse(int heap, unsigned int size, const void *xml, MlnXmlNode **document)
 {
 	MlnXmlNode *node = NULL;
 	MlnXmlDocument *doc = NULL;
@@ -941,7 +949,7 @@ static inline __attribute__((always_inline)) int MlnXmlParserPushNamespaces(int 
  * does not parse. Sony's terminates the parser also when the node is not an element,
  * before initialising it; ours does the same.
  */
-int MlnXmlNodeAppendXml(int heap, unsigned int size, const void *xml, MlnXmlNode *node)
+__attribute__((noinline)) int MlnXmlNodeAppendXml(int heap, unsigned int size, const void *xml, MlnXmlNode *node)
 {
 	MlnXmlContent *content = NULL;
 	MlnXmlElement *element;
@@ -988,7 +996,7 @@ out:
  * element of an element node, with the parent's namespaces in scope. Not an element:
  * as MlnXmlNodeAppendXml.
  */
-int MlnXmlNodeReplaceChildXml(int heap, unsigned int size, const void *xml, MlnXmlNode *child,
+__attribute__((noinline)) int MlnXmlNodeReplaceChildXml(int heap, unsigned int size, const void *xml, MlnXmlNode *child,
 			      MlnXmlNode *parent)
 {
 	MlnXmlContent *content = NULL;
@@ -1028,7 +1036,7 @@ out:
 }
 
 /* A decimal integer with an optional '-'; an empty number is 0. */
-int MlnXmlParseInt(int heap, unsigned int size, const char *text, int *value)
+__attribute__((noinline)) int MlnXmlParseInt(int heap, unsigned int size, const char *text, int *value)
 {
 	const char *end;
 	int sign, result, digit;
@@ -1069,7 +1077,7 @@ int MlnXmlParseInt(int heap, unsigned int size, const char *text, int *value)
  * the offset is stored negated, in seconds. Text that ends without a 'Z' or an offset is
  * a syntax error.
  */
-int MlnXmlParseDateTime(int heap, unsigned int size, const char *text, MlnDateTime *time)
+__attribute__((noinline)) int MlnXmlParseDateTime(int heap, unsigned int size, const char *text, MlnDateTime *time)
 {
 	const unsigned char *p, *end, *mark;
 	MlnDateTime parsed;
@@ -1165,7 +1173,7 @@ int MlnXmlParseDateTime(int heap, unsigned int size, const char *text, MlnDateTi
  * "@name=value" with the value quoted (equal values). Sony's checks the closing quote only
  * when the value starts with one, and always drops the value's first and last character.
  */
-int MlnXmlElementMatchPredicate(const MlnXmlElement *element, const char *predicate,
+__attribute__((noinline)) int MlnXmlElementMatchPredicate(const MlnXmlElement *element, const char *predicate,
 				int length, int position)
 {
 	const MlnXmlAttributeArray *attributes;
@@ -1230,7 +1238,7 @@ found:
  * Whether an element is in a namespace: the declaration in scope for its name's prefix
  * (the default declaration when the name has none) has that value.
  */
-int MlnXmlElementInNamespace(const MlnXmlElement *element, const void *uri, unsigned int size)
+__attribute__((noinline)) int MlnXmlElementInNamespace(const MlnXmlElement *element, const void *uri, unsigned int size)
 {
 	const MlnBuffer *name = element->name;
 	unsigned int length = name->size;
@@ -1266,4 +1274,746 @@ int MlnXmlElementInNamespace(const MlnXmlElement *element, const void *uri, unsi
 			return 1;
 	}
 	return 0;
+}
+
+/* a position predicate: all digits, equal to the position */
+static inline __attribute__((always_inline)) int MlnXmlPositionMatches(const char *predicate,
+								       int length, int position)
+{
+	const signed char *s = (const signed char *)predicate;
+	int i = 0, number = 0;
+
+	if (length > 0 && s[0] >= '0' && s[0] <= '9') {
+		do {
+			number = number * 10 + s[i] - '0';
+			i++;
+		} while (i != length && s[i] >= '0' && s[i] <= '9');
+	}
+	return position == number && length == i;
+}
+
+/* a node's predicate: an element's as MlnXmlElementMatchPredicate, other nodes' a position */
+static inline __attribute__((always_inline)) int MlnXmlNodePredicateMatches(
+	const MlnXmlNode *node, const char *predicate, int length, int position)
+{
+	if (node->type == MLN_XML_NODE_ELEMENT)
+		return MlnXmlElementMatchPredicate(node->object.element, predicate, length, position);
+	return MlnXmlPositionMatches(predicate, length, position);
+}
+
+/*
+ * One path step tried on an element: "*", "node()" or an empty name match any element,
+ * "text()" none; otherwise the element's name without its prefix must be the step's, and
+ * its namespace the one given (if any). A match counts towards the position, and when
+ * the predicate holds, an element node for it is appended to the matches.
+ */
+__attribute__((noinline)) int MlnXmlElementMatchStep(int heap, MlnXmlElement *element, int *position, const char *name,
+			   int nameLength, const char *predicate, int predicateLength,
+			   const void *uri, unsigned int uriSize, MlnXmlLink **matches)
+{
+	int count = *position;
+	const unsigned char *local;
+	MlnXmlNode *node;
+	int any, length, i, ret;
+
+	if (nameLength == 6) {
+		any = MlnMemcmp(name, "text()", 6) == 0 || MlnMemcmp(name, "node()", 6) == 0;
+		if (MlnMemcmp(name, "node()", 6) == 0)
+			any = 1;
+		else if (any)
+			return 0;
+	} else if (nameLength == 0) {
+		any = 1;
+	} else if (nameLength == 1 && *name == '*') {
+		any = 1;
+	} else {
+		any = 0;
+	}
+
+	if (element->name == NULL) {
+		local = NULL;
+		length = 0;
+	} else {
+		length = element->name->size;
+		local = element->name->data;
+		if (length > 0) {
+			for (i = 0; i != length; i++) {
+				if (local[i] == ':') {
+					local += i + 1;
+					length -= i + 1;
+					break;
+				}
+			}
+		}
+	}
+	if (!any) {
+		if (length != nameLength || (length != 0 && MlnMemcmp(local, name, length) != 0)) {
+			ret = 0;
+			goto out;
+		}
+		if (uriSize != 0) {
+			ret = MlnXmlElementInNamespace(element, uri, uriSize);
+			if (ret == 0)
+				goto out;
+		}
+	}
+
+	ret = MlnXmlElementMatchPredicate(element, predicate, predicateLength, ++count);
+	if (ret == 0)
+		goto out;
+	ret = MlnXmlNodeCreateElement(heap, &node, element);
+	if (ret == MLN_OK) {
+		ret = MlnXmlLinkAppend(heap, matches, node);
+		if (ret != MLN_OK)
+			MlnXmlNodeRelease(heap, &node);
+	}
+out:
+	*position = count;
+	return ret;
+}
+
+/*
+ * A path step tried on an item of content and, until one fails, on everything under it:
+ * text matches "text()", "node()" or an empty step; elements as MlnXmlElementMatchStep.
+ */
+__attribute__((noinline)) int MlnXmlContentMatchDescendants(int heap, MlnXmlContent *content, int *position,
+				  const char *name, int nameLength, const char *predicate,
+				  int predicateLength, const void *uri, unsigned int uriSize,
+				  MlnXmlLink **matches)
+{
+	int count = *position;
+	MlnXmlContentArray *children;
+	MlnXmlElement *element;
+	MlnXmlNode *node;
+	int i, ret;
+
+	if (nameLength == 6) {
+		if (MlnMemcmp(name, "text()", 6) == 0 || MlnMemcmp(name, "node()", 6) == 0) {
+			MlnMemcmp(name, "node()", 6);
+			if (content->kind != MLN_XML_CONTENT_TEXT)
+				goto element;
+			goto text;
+		}
+		MlnMemcmp(name, "node()", 6);
+		if (content->kind != MLN_XML_CONTENT_TEXT)
+			goto element;
+		ret = 0;
+		goto out;
+	}
+	if (nameLength != 0) {
+		if (content->kind != MLN_XML_CONTENT_TEXT)
+			goto element;
+		ret = 0;
+		goto out;
+	}
+	if (content->kind != MLN_XML_CONTENT_TEXT)
+		goto element;
+
+text:
+	count++;
+	if (predicateLength != 0 && !MlnXmlPositionMatches(predicate, predicateLength, count)) {
+		ret = 0;
+		goto out;
+	}
+	ret = MlnXmlNodeCreateText(heap, &node, content->data.text);
+	if (ret == MLN_OK) {
+		ret = MlnXmlLinkAppend(heap, matches, node);
+		if (ret != MLN_OK)
+			MlnXmlNodeRelease(heap, &node);
+	}
+out:
+	*position = count;
+	return ret;
+
+element:
+	element = content->data.element;
+	ret = MlnXmlElementMatchStep(heap, element, position, name, nameLength, predicate,
+				     predicateLength, uri, uriSize, matches);
+	if (ret != 0)
+		return ret;
+	children = element->content;
+	for (i = 0; i < children->count; i++) {
+		ret = MlnXmlContentMatchDescendants(heap, children->items[i], position, name,
+						    nameLength, predicate, predicateLength, uri,
+						    uriSize, matches);
+		if (ret != 0)
+			return ret;
+	}
+	return 0;
+}
+
+/*
+ * One path step tried on a node itself: an element as MlnXmlElementMatchStep (its whole
+ * name compared), text by "text()", "node()" or an empty step, the document by "node()"
+ * or an empty step. A match takes a reference to the node for the matches.
+ */
+__attribute__((noinline)) int MlnXmlNodeMatchStep(int heap, MlnXmlNode *node, int *position, const char *name,
+			int nameLength, const char *predicate, int predicateLength,
+			const void *uri, unsigned int uriSize, MlnXmlLink **matches)
+{
+	int count = *position;
+	MlnXmlNode *match = NULL;
+	const MlnXmlElement *element;
+	const MlnBuffer *own;
+	int text = 0, all, any, ret;
+
+	if (nameLength == 6) {
+		all = MlnMemcmp(name, "node()", 6) == 0;
+		if (MlnMemcmp(name, "text()", 6) == 0 || MlnMemcmp(name, "node()", 6) == 0)
+			text = 1;
+		any = MlnMemcmp(name, "node()", 6) == 0;
+	} else if (nameLength == 0) {
+		text = 1;
+		all = 1;
+		any = 1;
+	} else if (nameLength == 1 && *name == '*') {
+		any = 1;
+		all = 0;
+	} else {
+		all = 0;
+		any = 0;
+	}
+
+	switch (node->type) {
+	case MLN_XML_NODE_ELEMENT:
+		element = node->object.element;
+		own = element->name;
+		if (!any && (text || own == NULL || own->size != (unsigned int)nameLength ||
+			     MlnMemcmp(own->data, name, nameLength) != 0 ||
+			     (uriSize != 0 && MlnXmlElementInNamespace(element, uri, uriSize) == 0)))
+			goto none;
+		break;
+	case MLN_XML_NODE_TEXT:
+		if (!text)
+			goto none;
+		break;
+	case MLN_XML_NODE_DOCUMENT:
+		if (!all)
+			goto none;
+		break;
+	default:
+		goto none;
+	}
+	count++;
+	if (predicateLength != 0 &&
+	    !MlnXmlNodePredicateMatches(node, predicate, predicateLength, count))
+		goto none;
+
+	node->refCount++;
+	match = node;
+	ret = MlnXmlLinkAppend(heap, matches, node);
+	if (ret != MLN_OK && match != NULL)
+		MlnXmlNodeRelease(heap, &match);
+	goto out;
+
+none:
+	ret = 0;
+out:
+	*position = count;
+	return ret;
+}
+
+/* the path axes */
+#define MLN_XML_AXIS_CHILD			0
+#define MLN_XML_AXIS_SELF			1
+#define MLN_XML_AXIS_DESCENDANT			2
+#define MLN_XML_AXIS_DESCENDANT_OR_SELF		3
+#define MLN_XML_AXIS_NAMESPACE			4
+#define MLN_XML_AXIS_ATTRIBUTE			5
+
+/* a path step tried on one item of content: text as text, an element as an element */
+static inline __attribute__((always_inline)) int MlnXmlContentMatchStep(int heap,
+	MlnXmlContent *content, int *position, const char *name, int nameLength,
+	const char *predicate, int predicateLength, const void *uri, unsigned int uriSize,
+	MlnXmlLink **matches)
+{
+	MlnXmlNode *node;
+	int count, ret;
+
+	if (nameLength == 6) {
+		if (MlnMemcmp(name, "text()", nameLength) == 0 ||
+		    MlnMemcmp(name, "node()", nameLength) == 0) {
+			MlnMemcmp(name, "node()", 6);
+			if (content->kind == MLN_XML_CONTENT_TEXT)
+				goto text;
+		} else {
+			MlnMemcmp(name, "node()", nameLength);
+			if (content->kind == MLN_XML_CONTENT_TEXT)
+				return 0;
+		}
+	} else if (nameLength != 0) {
+		if (content->kind == MLN_XML_CONTENT_TEXT)
+			return 0;
+	} else if (content->kind == MLN_XML_CONTENT_TEXT) {
+		goto text;
+	}
+	return MlnXmlElementMatchStep(heap, content->data.element, position, name, nameLength,
+				      predicate, predicateLength, uri, uriSize, matches);
+
+text:
+	count = *position + 1;
+	if (predicateLength != 0 && !MlnXmlPositionMatches(predicate, predicateLength, count)) {
+		ret = 0;
+		goto out;
+	}
+	ret = MlnXmlNodeCreateText(heap, &node, content->data.text);
+	if (ret == MLN_OK) {
+		ret = MlnXmlLinkAppend(heap, matches, node);
+		if (ret != MLN_OK)
+			MlnXmlNodeRelease(heap, &node);
+	}
+out:
+	*position = count;
+	return ret;
+}
+
+/* a path step tried on every item of an element's content, until one fails */
+static inline __attribute__((always_inline)) int MlnXmlElementMatchDescendants(int heap,
+	MlnXmlElement *element, int *position, const char *name, int nameLength,
+	const char *predicate, int predicateLength, const void *uri, unsigned int uriSize,
+	MlnXmlLink **matches)
+{
+	MlnXmlContentArray *children = element->content;
+	int i, ret;
+
+	for (i = 0; i < children->count; i++) {
+		ret = MlnXmlContentMatchDescendants(heap, children->items[i], position, name,
+						    nameLength, predicate, predicateLength, uri,
+						    uriSize, matches);
+		if (ret != 0)
+			return ret;
+	}
+	return 0;
+}
+
+/*
+ * One path step from a node along an axis: its children (the root element of a
+ * document), itself, its descendants (a document's root and the root's descendants) or
+ * itself and its descendants; the matches are appended as nodes.
+ */
+__attribute__((noinline)) int MlnXmlNodeApplyStep(int heap, MlnXmlNode *node, const char *name,
+						  int nameLength, int axis, const char *predicate,
+						  int predicateLength, const void *uri,
+						  unsigned int uriSize, MlnXmlLink **matches)
+{
+	MlnXmlContentArray *children;
+	MlnXmlElement *element;
+	int position = 0, i, ret;
+
+	switch (axis) {
+	case MLN_XML_AXIS_CHILD:
+		if (node->type == MLN_XML_NODE_DOCUMENT)
+			return MlnXmlElementMatchStep(heap, node->object.document->root, &position,
+						      name, nameLength, predicate,
+						      predicateLength, uri, uriSize, matches);
+		children = node->object.element->content;
+		for (i = 0; i < children->count; i++) {
+			ret = MlnXmlContentMatchStep(heap, children->items[i], &position, name,
+						     nameLength, predicate, predicateLength, uri,
+						     uriSize, matches);
+			if (ret != 0)
+				return ret;
+		}
+		return 0;
+	case MLN_XML_AXIS_SELF:
+		return MlnXmlNodeMatchStep(heap, node, &position, name, nameLength, predicate,
+					   predicateLength, uri, uriSize, matches);
+	case MLN_XML_AXIS_DESCENDANT_OR_SELF:
+		ret = MlnXmlNodeMatchStep(heap, node, &position, name, nameLength, predicate,
+					  predicateLength, uri, uriSize, matches);
+		if (ret != 0)
+			return ret;
+		/* fall through */
+	case MLN_XML_AXIS_DESCENDANT:
+		if (node->type != MLN_XML_NODE_DOCUMENT)
+			return MlnXmlElementMatchDescendants(heap, node->object.element, &position,
+							     name, nameLength, predicate,
+							     predicateLength, uri, uriSize, matches);
+		element = node->object.document->root;
+		ret = MlnXmlElementMatchStep(heap, element, &position, name, nameLength,
+					     predicate, predicateLength, uri, uriSize, matches);
+		if (ret != 0)
+			return ret;
+		return MlnXmlElementMatchDescendants(heap, element, &position, name, nameLength,
+						     predicate, predicateLength, uri, uriSize,
+						     matches);
+	default:
+		return 0;
+	}
+}
+
+/* the declaration or attribute of an element with a name (an empty name: the unnamed one) */
+static inline __attribute__((always_inline)) MlnXmlAttribute *MlnXmlAttributeArrayFind(
+	const MlnXmlAttributeArray *array, const char *name, unsigned int length)
+{
+	MlnXmlAttribute *attribute;
+	int i;
+
+	for (i = 0; i < array->count; i++) {
+		attribute = array->items[i];
+		if (attribute == NULL)
+			continue;
+		if (length != 0) {
+			if (attribute->name != NULL && attribute->name->size == length &&
+			    MlnMemcmp(attribute->name->data, name, length) == 0)
+				return attribute;
+		} else if (attribute->name == NULL || attribute->name->size == 0) {
+			return attribute;
+		}
+	}
+	return NULL;
+}
+
+/*
+ * The nodes a path selects from a node: '/'-separated steps, each [axis::]name[predicate]
+ * ("@name" for the attribute axis, an empty step for descendant-or-self), the names in
+ * the namespace given (none: any). A path starting with '/' must start at the document.
+ * The namespace and attribute axes ignore the predicate. No node left after a step is an
+ * error.
+ */
+__attribute__((noinline)) int MlnXmlFindNodes(int heap, MlnXmlNode *node, const char *path,
+					      const char *ns, MlnXmlNodeList **out)
+{
+	MlnXmlLink *current = NULL, *next = NULL, *link;
+	const char *end, *stepEnd, *name, *predicate;
+	MlnXmlAttribute *attribute;
+	MlnXmlNode *context, *match;
+	unsigned int stepLength, nameLength, nsLength, i;
+	int axis, predicateLength, ret;
+
+	end = path + MlnStrlen(path);
+	if (path < end && *path == '/') {
+		if (node->type != MLN_XML_NODE_DOCUMENT) {
+			ret = MLN_XML_ERROR_NODE_TYPE;
+			goto out;
+		}
+		path++;
+	}
+	ret = MlnXmlLinkCreateEmpty(heap, &current);
+	if (ret != MLN_OK)
+		goto out;
+	node->refCount++;
+	current->item = node;
+
+	while (path < end) {
+		for (stepEnd = path; stepEnd != end && *stepEnd != '/'; stepEnd++)
+			;
+		stepLength = stepEnd - path;
+		for (link = current; link != NULL; link = link->next) {
+			context = link->item;
+			nsLength = ns != NULL ? MlnStrlen(ns) : 0;
+			if (context->type != MLN_XML_NODE_ELEMENT &&
+			    context->type != MLN_XML_NODE_DOCUMENT)
+				continue;
+
+			/* the axis */
+			name = path;
+			axis = MLN_XML_AXIS_CHILD;
+			if (stepLength == 0) {
+				axis = MLN_XML_AXIS_DESCENDANT_OR_SELF;
+			} else if (*path == '@') {
+				name = path + 1;
+				axis = MLN_XML_AXIS_ATTRIBUTE;
+			} else {
+				for (i = 0; i + 1 <= stepLength; i++) {
+					if (path[i] != ':' || path[i + 1] != ':')
+						continue;
+					if (i == 4 && MlnMemcmp(path, "self", 4) == 0)
+						axis = MLN_XML_AXIS_SELF;
+					else if (i == 5 && MlnMemcmp(path, "child", 5) == 0)
+						axis = MLN_XML_AXIS_CHILD;
+					else if (i == 9 && MlnMemcmp(path, "namespace", 9) == 0)
+						axis = MLN_XML_AXIS_NAMESPACE;
+					else if (i == 9 && MlnMemcmp(path, "attribute", 9) == 0)
+						axis = MLN_XML_AXIS_ATTRIBUTE;
+					else if (i == 10 && MlnMemcmp(path, "descendant", 10) == 0)
+						axis = MLN_XML_AXIS_DESCENDANT;
+					else if (i == 18 &&
+						 MlnMemcmp(path, "descendant-or-self", 18) == 0)
+						axis = MLN_XML_AXIS_DESCENDANT_OR_SELF;
+					else
+						continue;
+					name = path + i + 2;
+					break;
+				}
+			}
+
+			/* the name and its predicate */
+			nameLength = stepEnd - name;
+			predicate = NULL;
+			predicateLength = 0;
+			for (i = 0; i < nameLength; i++) {
+				if (name[i] != '[')
+					continue;
+				predicateLength = nameLength - 2 - i;
+				predicate = name + i + 1;
+				if (name[nameLength - 1] != ']') {
+					ret = MLN_XML_ERROR_PREDICATE;
+					goto out;
+				}
+				nameLength = i;
+				break;
+			}
+
+			switch (axis) {
+			case MLN_XML_AXIS_NAMESPACE:
+			case MLN_XML_AXIS_ATTRIBUTE:
+				if (context->type != MLN_XML_NODE_ELEMENT) {
+					ret = MLN_XML_ERROR_NODE_TYPE;
+					goto out;
+				}
+				attribute = MlnXmlAttributeArrayFind(
+					axis == MLN_XML_AXIS_NAMESPACE ?
+						context->object.element->namespaces :
+						context->object.element->attributes,
+					name, nameLength);
+				if (attribute == NULL)
+					continue;
+				if (axis == MLN_XML_AXIS_NAMESPACE)
+					ret = MlnXmlNodeCreateNamespace(heap, &match, attribute);
+				else
+					ret = MlnXmlNodeCreateAttribute(heap, &match, attribute);
+				if (ret != MLN_OK)
+					goto out;
+				ret = MlnXmlLinkAppend(heap, &next, match);
+				if (ret != MLN_OK) {
+					MlnXmlNodeRelease(heap, &match);
+					goto out;
+				}
+				break;
+			default:
+				ret = MlnXmlNodeApplyStep(heap, context, name, nameLength, axis,
+							  predicate, predicateLength, ns, nsLength,
+							  &next);
+				if (ret != MLN_OK)
+					goto out;
+				break;
+			}
+		}
+		if (next == NULL) {
+			ret = MLN_XML_ERROR_NOT_FOUND;
+			goto term;
+		}
+		path = stepEnd + 1;
+		MlnXmlLinksFree(heap, &current, MLN_XML_LINK_NODE);
+		current = next;
+		next = NULL;
+	}
+	ret = MlnXmlLinksToNodeList(heap, current, out);
+
+out:
+	if (next != NULL)
+		MlnXmlLinksFree(heap, &next, MLN_XML_LINK_NODE);
+term:
+	if (current != NULL)
+		MlnXmlLinksFree(heap, &current, MLN_XML_LINK_NODE);
+	return ret;
+}
+
+/* the one node a path selects; more or fewer is an error */
+__attribute__((noinline)) int MlnXmlFindNode(int heap, MlnXmlNode *node, const char *path,
+					     const char *ns, MlnXmlNode **found)
+{
+	MlnXmlNodeList *list = NULL;
+	int ret;
+
+	ret = MlnXmlFindNodes(heap, node, path, ns, &list);
+	if (ret == MLN_OK) {
+		if (list->count == 1)
+			*found = MlnXmlNodeRetain(heap, list->nodes[0]);
+		else
+			ret = MLN_XML_ERROR_NOT_UNIQUE;
+	}
+	MlnXmlListFree(heap, list);
+	return ret;
+}
+
+/* whether a declaration of the namespaces binds a prefix (empty: the default) to a URI */
+static inline __attribute__((always_inline)) int MlnXmlNamespaceDeclared(
+	const MlnXmlAttributeArray *namespaces, const void *prefix, unsigned int prefixLength,
+	const char *ns)
+{
+	const MlnXmlAttribute *declaration;
+	unsigned int length;
+	int count = namespaces->count;
+	int i;
+
+	for (i = 0; i != count; i++) {
+		declaration = namespaces->items[i];
+		if (declaration->name->size != prefixLength ||
+		    (prefixLength != 0 &&
+		     MlnMemcmp(prefix, declaration->name->data, prefixLength) != 0))
+			continue;
+		length = MlnStrlen(ns);
+		if (declaration->value->size == length &&
+		    (length == 0 || MlnMemcmp(ns, declaration->value->data, length) == 0))
+			return 1;
+	}
+	return 0;
+}
+
+/*
+ * A copy of an element's attribute value. Without a namespace the name is the attribute's
+ * full name. With one, a name with a prefix ("p:name") is an attribute's full name, its
+ * prefix declared as the namespace; a name without one is an attribute's local name, the
+ * attribute's prefix declared as the namespace, or for an attribute without a prefix the
+ * element's own prefix.
+ */
+__attribute__((noinline)) int MlnXmlGetAttribute(int heap, MlnXmlNode *node, const char *ns,
+						 const char *name, MlnBuffer **value)
+{
+	MlnXmlElement *element;
+	MlnXmlAttributeArray *attributes, *namespaces;
+	MlnXmlAttribute *attribute, *declaration;
+	const MlnBuffer *elementName;
+	const unsigned char *local, *prefix, *uri;
+	unsigned int length, prefixLength, localLength, attributePrefixLength, skip;
+	unsigned int elementPrefixLength, uriLength, j;
+	int count, declarations, i, k, unqualified;
+	MlnBuffer *copy;
+
+	if (node == NULL || name == NULL || value == NULL)
+		return MLN_XML_ERROR_NOT_FOUND;
+	element = node->object.element;
+	if (node->type != MLN_XML_NODE_ELEMENT)
+		return MLN_XML_ERROR_NOT_FOUND;
+
+	if (ns == NULL) {
+		length = MlnStrlen(name);
+		attributes = node->object.element->attributes;
+		count = attributes->count;
+		for (i = 0; i < count; i++) {
+			attribute = attributes->items[i];
+			if (attribute->name->size == length &&
+			    (length == 0 ||
+			     MlnMemcmp(attribute->name->data, name, length) == 0)) {
+				copy = MlnBufferCreate(heap, attribute->value->size,
+						       attribute->value->data);
+				if (copy == NULL)
+					return MLN_ERROR_NO_MEMORY;
+				*value = copy;
+				break;
+			}
+		}
+		return i == count ? MLN_XML_ERROR_NOT_FOUND : MLN_OK;
+	}
+
+	length = MlnStrlen(name);
+	for (prefixLength = 0; prefixLength != length; prefixLength++) {
+		if (name[prefixLength] == ':')
+			break;
+	}
+	unqualified = prefixLength == length;
+
+	attributes = element->attributes;
+	count = attributes->count;
+	for (i = 0; i != count; i++) {
+		attribute = attributes->items[i];
+		localLength = attribute->name->size;
+		local = attribute->name->data;
+		prefix = NULL;
+		attributePrefixLength = 0;
+		if (unqualified) {
+			for (j = 0; j != localLength; j++) {
+				if (local[j] == ':')
+					break;
+			}
+			if (j == localLength) {
+				attributePrefixLength = 0;
+				skip = 0;
+			} else {
+				attributePrefixLength = j;
+				skip = j + 1;
+			}
+			prefix = local;
+			localLength -= skip;
+			local += skip;
+		}
+		if (MlnStrlen(name) != localLength ||
+		    (localLength != 0 && MlnMemcmp(local, name, localLength) != 0))
+			continue;
+
+		if (!unqualified) {
+			if (MlnXmlNamespaceDeclared(element->namespaces, name, prefixLength, ns))
+				break;
+			continue;
+		}
+		if (attributePrefixLength != 0) {
+			if (MlnXmlNamespaceDeclared(element->namespaces, prefix,
+						    attributePrefixLength, ns))
+				break;
+			continue;
+		}
+
+		/* an attribute without a prefix: the namespace of the element's prefix */
+		elementName = element->name;
+		for (j = 0; j != elementName->size; j++) {
+			if (elementName->data[j] == ':')
+				break;
+		}
+		elementPrefixLength = j == elementName->size ? 0 : j;
+		namespaces = element->namespaces;
+		declarations = namespaces->count;
+		uri = NULL;
+		uriLength = 0;
+		for (k = 0; k != declarations; k++) {
+			declaration = namespaces->items[k];
+			if (declaration->name->size == elementPrefixLength &&
+			    (elementPrefixLength == 0 ||
+			     MlnMemcmp(elementName->data, declaration->name->data,
+				       elementPrefixLength) == 0)) {
+				uriLength = declaration->value->size;
+				uri = declaration->value->data;
+				break;
+			}
+		}
+		if (k != declarations && MlnStrlen(ns) == uriLength &&
+		    (uriLength == 0 || MlnMemcmp(uri, ns, uriLength) == 0))
+			break;
+	}
+	if (i == count)
+		return MLN_XML_ERROR_NOT_FOUND;
+
+	attribute = element->attributes->items[i];
+	copy = MlnBufferCreate(heap, attribute->value->size, attribute->value->data);
+	if (copy == NULL)
+		return MLN_ERROR_NO_MEMORY;
+	*value = copy;
+	return MLN_OK;
+}
+
+/* a copy of a node's text: an attribute's value, or an element's first text */
+__attribute__((noinline)) int MlnXmlGetText(int heap, MlnXmlNode *node, MlnBuffer **text)
+{
+	MlnXmlContentArray *content;
+	const MlnBuffer *source;
+	MlnBuffer *copy;
+	int count, i;
+
+	switch (node->type) {
+	case MLN_XML_NODE_NAMESPACE:
+	case MLN_XML_NODE_ATTRIBUTE:
+		source = node->object.attribute->value;
+		break;
+	case MLN_XML_NODE_ELEMENT:
+		content = node->object.element->content;
+		count = content->count;
+		source = NULL;
+		for (i = 0; i < count; i++) {
+			if (content->items[i]->kind == MLN_XML_CONTENT_TEXT) {
+				source = content->items[i]->data.text;
+				break;
+			}
+		}
+		if (i == count)
+			return MLN_XML_ERROR_NOT_FOUND;
+		break;
+	default:
+		return MLN_XML_ERROR_NOT_FOUND;
+	}
+	copy = MlnBufferCreate(heap, source->size, source->data);
+	if (copy == NULL)
+		return MLN_ERROR_NO_MEMORY;
+	*text = copy;
+	return MLN_OK;
 }

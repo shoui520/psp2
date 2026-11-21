@@ -17,8 +17,11 @@
 /* the XML parser's errors */
 #define MLN_XML_ERROR_SYNTAX		0x10010003
 #define MLN_XML_ERROR_END_TAG		0x10010005	/* an end tag naming another element */
-#define MLN_XML_ERROR_NOT_NAMED		0x10010008	/* a node without a name */
+#define MLN_XML_ERROR_NODE_TYPE		0x10010006	/* an absolute path or axis on the wrong node */
+#define MLN_XML_ERROR_PREDICATE		0x10010007	/* a '[' without its ']' */
+#define MLN_XML_ERROR_NOT_FOUND		0x10010008	/* no such node or name */
 #define MLN_XML_ERROR_NOT_ELEMENT	0x10010009	/* a node that is not an element */
+#define MLN_XML_ERROR_NOT_UNIQUE	0x1001000A	/* a path selecting more than one node */
 
 /* which heap: the general one or the one for secure data */
 #define MLN_HEAP_GENERAL	0
@@ -538,10 +541,10 @@ int MlnTimeFromSeconds(const unsigned int *seconds, int utcOffset, int daylightS
 		       MlnDateTime *time);
 int MlnTimeFromMinutes(const unsigned int *minutes, MlnDateTime *time);
 int MlnTimeToMinutes(const MlnDateTime *time, unsigned int *minutes);
-int *MlnImpl_81007494(int unused, int *count);
 
 /* xml.c */
 int MlnXmlSkipComment(MlnBuffer *cursor);
+MlnXmlNode *MlnXmlNodeRetain(int heap, MlnXmlNode *node);
 int MlnXmlReadText(int heap, MlnBuffer **text, MlnBuffer *cursor, int delimiter);
 int MlnXmlParseProlog(int heap, MlnXmlParser *parser, MlnXmlProlog **out, MlnBuffer *cursor);
 int MlnXmlCompareAttributeNames(int heap, const MlnXmlAttributeArray *namespaces,
@@ -556,6 +559,19 @@ int MlnXmlParseDateTime(int heap, unsigned int size, const char *text, MlnDateTi
 int MlnXmlElementMatchPredicate(const MlnXmlElement *element, const char *predicate,
 				int length, int position);
 int MlnXmlElementInNamespace(const MlnXmlElement *element, const void *uri, unsigned int size);
+int MlnXmlElementMatchStep(int heap, MlnXmlElement *element, int *position, const char *name,
+			   int nameLength, const char *predicate, int predicateLength,
+			   const void *uri, unsigned int uriSize, MlnXmlLink **matches);
+int MlnXmlContentMatchDescendants(int heap, MlnXmlContent *content, int *position,
+				  const char *name, int nameLength, const char *predicate,
+				  int predicateLength, const void *uri, unsigned int uriSize,
+				  MlnXmlLink **matches);
+int MlnXmlNodeMatchStep(int heap, MlnXmlNode *node, int *position, const char *name,
+			int nameLength, const char *predicate, int predicateLength,
+			const void *uri, unsigned int uriSize, MlnXmlLink **matches);
+int MlnXmlNodeApplyStep(int heap, MlnXmlNode *node, const char *name, int nameLength, int axis,
+			const char *predicate, int predicateLength, const void *uri,
+			unsigned int uriSize, MlnXmlLink **matches);
 int MlnXmlElementAppendContents(int heap, MlnXmlElement *element, int count,
 				MlnXmlContent **items);
 int MlnXmlElementReplaceChild(int heap, MlnXmlElement *element, MlnXmlElement *child,
@@ -566,7 +582,7 @@ int MlnXmlNodeGetElement(int heap, MlnXmlNode *node, MlnXmlNode **out);
 int MlnXmlNodeGetName(int heap, MlnXmlNode *node, MlnBuffer **name);
 int MlnXmlBufferSet(int heap, MlnBuffer **buffer, const void *data, unsigned int size);
 int MlnXmlBufferTruncate(int heap, MlnBuffer **buffer, unsigned int size);
-int MlnXmlStackCreate(int heap, MlnXmlStack **out);
+int MlnXmlLinkCreateEmpty(int heap, MlnXmlLink **out);
 int MlnXmlLinksFree(int heap, MlnXmlLink **list, int kind);
 int MlnXmlLinkPush(int heap, MlnXmlLink **list, void *item);
 int MlnXmlLinkAppend(int heap, MlnXmlLink **list, void *item);
@@ -657,7 +673,7 @@ int MlnImpl_8101E380(void *client, void *a1, void *a2, void *a3, int a4);
 int MlnXmlParse(int heap, unsigned int size, const void *xml, MlnXmlNode **document);
 int MlnXmlFindNode(int heap, MlnXmlNode *node, const char *path, const char *ns, MlnXmlNode **found);
 int MlnXmlFindNodes(int heap, MlnXmlNode *node, const char *path, const char *ns,
-		    MlnXmlNodeList **found);
+		    MlnXmlNodeList **out);
 int MlnXmlGetAttribute(int heap, MlnXmlNode *node, const char *ns, const char *name,
 		       MlnBuffer **value);
 int MlnXmlGetText(int heap, MlnXmlNode *node, MlnBuffer **text);

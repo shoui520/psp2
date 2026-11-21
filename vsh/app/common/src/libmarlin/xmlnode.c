@@ -162,7 +162,7 @@ __attribute__((noinline)) int MlnXmlNodeGetName(int heap, MlnXmlNode *node, MlnB
 
 	if (node->type != MLN_XML_NODE_ATTRIBUTE && node->type != MLN_XML_NODE_ELEMENT &&
 	    node->type != MLN_XML_NODE_NAMESPACE)
-		return MLN_XML_ERROR_NOT_NAMED;
+		return MLN_XML_ERROR_NOT_FOUND;
 	/* an attribute's and an element's name are both their object's second word */
 	own = node->object.attribute->name;
 	copy = MlnBufferCreate(heap, own->size, own->data);
@@ -194,15 +194,15 @@ __attribute__((noinline)) int MlnXmlBufferTruncate(int heap, MlnBuffer **buffer,
 	return MLN_OK;
 }
 
-__attribute__((noinline)) int MlnXmlStackCreate(int heap, MlnXmlStack **out)
+__attribute__((noinline)) int MlnXmlLinkCreateEmpty(int heap, MlnXmlLink **out)
 {
-	MlnXmlStack *stack = MlnAllocate(heap, sizeof(*stack));
+	MlnXmlLink *link = MlnAllocate(heap, sizeof(*link));
 
-	if (stack == NULL)
+	if (link == NULL)
 		return MLN_ERROR_NO_MEMORY;
-	stack->top = NULL;
-	stack->depth = 0;
-	*out = stack;
+	link->item = NULL;
+	link->next = NULL;
+	*out = link;
 	return MLN_OK;
 }
 

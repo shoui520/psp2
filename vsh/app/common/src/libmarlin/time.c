@@ -159,10 +159,3 @@ int MlnTimeToMinutes(const MlnDateTime *time, unsigned int *minutes)
 	*minutes = (tick.tick - MLN_UNIX_EPOCH_TICK) / MLN_MINUTE_TICKS;
 	return MLN_OK;
 }
-
-int *MlnImpl_81007494(int unused, int *count)
-{
-	(void)unused;
-	++*count;
-	return count;
-}
