@@ -1,11 +1,12 @@
 /*
- * SceJpegEncArm: the ARM-side JPEG encoder's context setup (Init, the setters), in the
- * original's order. The encoding itself (Encode, the strip entry point 0x4EE1BAED, the
- * bit writer, the DCT and the header writer) is still the skeleton's stubs below.
+ * SceJpegEncArm: the JPEG encoder on the ARM cores. The context setup (Init, the setters), the
+ * whole-image and strip-wise encoders, the Huffman bit writer, the NEON forward DCT and
+ * quantisation of each strip, and the header writer.
  */
 
 #include <skeleton.h>
 #include <stddef.h>
+#include <arm_neon.h>
 
 #include "jpegencarm.h"
 
@@ -124,7 +125,7 @@ int sceJpegArmEncoderEncode(SceJpegArmEncoderContext *context, const void *inBuf
 {
 	JpegEncArmComponent comp[4];
 	SceUInt8 *pStart;
-	SceInt32 mcuCount, stripCount, rowStep, chromaStride, y, n;
+	SceInt32 mcuCount, stripCount, rowStep, chromaStride, n;
 	SceInt32 planeRows;
 	SceUInt32 width, height;
 	const SceUInt8 *pY, *pCb, *pCr;
@@ -233,7 +234,7 @@ int SceJpegEncArm_4EE1BAED(SceJpegArmEncoderContext *context, const void *pY, co
 			   SceSize *pOutSize)
 {
 	JpegEncArmComponent comp[4];
-	SceUInt8 *pStart;
+	SceUInt8 *pStart, *pEnd;
 	SceInt32 ret, width, chromaStride, chromaStep, rowStep, rows, validWidth, validHeight, row;
 
 	if (context == NULL || ((SceUInt32)context & 3) != 0 || pY == NULL || ((SceUInt32)pY & 7) != 0 ||
@@ -315,7 +316,6 @@ int SceJpegEncArm_4EE1BAED(SceJpegArmEncoderContext *context, const void *pY, co
 	comp[2].advance[1] = 0;
 	comp[2].advance[2] = 0;
 	comp[2].advance[3] = 0;
-	comp[3].tableId = 0;
 	comp[3].blockCount = 0;
 	comp[1].advance[0] = 8;
 	comp[2].advance[0] = 8;
@@ -324,8 +324,9 @@ int SceJpegEncArm_4EE1BAED(SceJpegArmEncoderContext *context, const void *pY, co
 		context->bitCount = -32;
 		context->bitBuffer = 0;
 		context->outputBase = outBuffer != NULL ? 0 : (SceUInt32)pStart;
-		context->pOut = jpegEncArmWriteHeader(context);
-		if (context->pOut >= context->pOutLimit)
+		pEnd = jpegEncArmWriteHeader(context);
+		context->pOut = pEnd;
+		if (pEnd >= context->pOutLimit)
 			return SCE_JPEG_ARM_ENCODER_ERROR_OUTPUT_FULL;
 		context->stripRow = 0;
 		context->stripColumn = 0;
@@ -338,7 +339,8 @@ int SceJpegEncArm_4EE1BAED(SceJpegArmEncoderContext *context, const void *pY, co
 		comp[2].pBlock = pCr;
 		if (flags & 2) {
 			jpegEncArmEncodeStrip(context, 1, comp);
-			if (context->pOut >= context->pOutLimit)
+			pEnd = context->pOut;
+			if (pEnd >= context->pOutLimit)
 				return SCE_JPEG_ARM_ENCODER_ERROR_OUTPUT_FULL;
 			context->stripColumn++;
 			row = context->stripRow;
@@ -348,16 +350,19 @@ int SceJpegEncArm_4EE1BAED(SceJpegArmEncoderContext *context, const void *pY, co
 			}
 		} else {
 			jpegEncArmEncodeStrip(context, (validWidth + 15) >> 4, comp);
-			if (context->pOut >= context->pOutLimit)
+			pEnd = context->pOut;
+			if (pEnd >= context->pOutLimit)
 				return SCE_JPEG_ARM_ENCODER_ERROR_OUTPUT_FULL;
 			row = ++context->stripRow;
 		}
 	}
 	if (rows > row) {
 		if (outBuffer != NULL) {
-			*pOutSize = context->pOut - (SceUInt8 *)outBuffer;
-			context->outputBase += context->pOut - (SceUInt8 *)outBuffer;
+			SceUInt32 outputBase = context->outputBase;
+
+			*pOutSize = pEnd - (SceUInt8 *)outBuffer;
 			context->pOut = NULL;
+			context->outputBase = pEnd - (SceUInt8 *)outBuffer + outputBase;
 		}
 		return ret;
 	}
@@ -389,6 +394,58 @@ static const SceInt8 jpegEncArmZigzagDelta[64] = {
 	-14, -14, -14, 2, 14, 14, 14, 14, 14, 14, 16, -14, -14, -14, -14, -14,
 	-14, -14, 16, 14, 14, 14, 14, 14, 14, 2, -14, -14, -14, -14, -14, 16,
 	14, 14, 14, 14, 2, -14, -14, -14, 16, 14, 14, 2, -14, 16, 0, 0,
+};
+
+/* the luminance Huffman tables WriteBlock codes with: the DC and AC code lengths and codes */
+static const SceInt8 jpegEncArmLumaHuffman[342] = {
+	-28, -6, -5, -4, -3, -2, -2, -2, -2, -2, -2, -2, -4, -5, -6, -6,
+	-7, -7, -8, -9, -9, -9, -10, -10, -11, -16, -16, -2, -5, -8, -9, -10,
+	-11, -12, -12, -15, -16, -16, -16, -16, -16, -16, -16, -3, -7, -10, -12, -16,
+	-16, -16, -16, -16, -16, -16, -16, -16, -16, -16, -16, -4, -9, -12, -16, -16,
+	-16, -16, -16, -16, -16, -16, -16, -16, -16, -16, -16, -5, -11, -16, -16, -16,
+	-16, -16, -16, -16, -16, -16, -16, -16, -16, -16, -16, -7, -16, -16, -16, -16,
+	-16, -16, -16, -16, -16, -16, -16, -16, -16, -16, -16, -8, -16, -16, -16, -16,
+	-16, -16, -16, -16, -16, -16, -16, -16, -16, -16, -16, -10, -16, -16, -16, -16,
+	-16, -16, -16, -16, -16, -16, -16, -16, -16, -16, -16, -16, -16, -16, -16, -16,
+	-16, -16, -16, -16, -16, -16, -16, -16, -16, -16, -16, -16, -16, -16, -16, -16,
+	-16, -16, -16, -16, -16, -16, -16, -16, -16, -16, -16, -4, -4, -4, -6, -5,
+	-6, -5, -6, -8, -7, -6, -7, -6, -8, -21, -11, -3, -5, -7, -9, -8,
+	-9, -10, -9, -64, -66, -57, -48, -39, -30, -20, -10, -4, -7, -9, -11, -106,
+	-98, -90, -82, -74, -65, -56, -47, -38, -29, -19, -9, -5, -10, -12, -113, -105,
+	-97, -89, -81, -73, -64, -55, -46, -37, -28, -18, -8, -6, -10, -119, -112, -104,
+	-96, -88, -80, -72, -63, -54, -45, -36, -27, -17, -7, -8, -124, -118, -111, -103,
+	-95, -87, -79, -71, -62, -53, -44, -35, -26, -16, -6, -8, -123, -117, -110, -102,
+	-94, -86, -78, -70, -61, -52, -43, -34, -25, -15, -5, -10, -122, -116, -109, -101,
+	-93, -85, -77, -69, -60, -51, -42, -33, -24, -14, -4, -126, -121, -115, -108, -100,
+	-92, -84, -76, -68, -59, -50, -41, -32, -23, -13, -3, -125, -120, -114, -107, -99,
+	-91, -83, -75, -67, -58, -49, -40, -31, -22, -12, -2, -3, -3, -3, -3, -3,
+	-4, -5, -6, -7, -8, -9,
+};
+
+/* the same for chrominance */
+static const SceInt8 jpegEncArmChromaHuffman[342] = {
+	-48, -3, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -4, -5, -5, -6,
+	-6, -7, -7, -8, -9, -9, -9, -9, -11, -14, -15, -3, -6, -8, -8, -9,
+	-10, -11, -11, -16, -16, -16, -16, -16, -16, -16, -16, -4, -8, -10, -10, -16,
+	-16, -16, -16, -16, -16, -16, -16, -16, -16, -16, -16, -5, -9, -12, -12, -16,
+	-16, -16, -16, -16, -16, -16, -16, -16, -16, -16, -16, -5, -11, -15, -16, -16,
+	-16, -16, -16, -16, -16, -16, -16, -16, -16, -16, -16, -6, -12, -16, -16, -16,
+	-16, -16, -16, -16, -16, -16, -16, -16, -16, -16, -16, -7, -16, -16, -16, -16,
+	-16, -16, -16, -16, -16, -16, -16, -16, -16, -16, -16, -9, -16, -16, -16, -16,
+	-16, -16, -16, -16, -16, -16, -16, -16, -16, -16, -16, -10, -16, -16, -16, -16,
+	-16, -16, -16, -16, -16, -16, -16, -16, -16, -16, -16, -12, -16, -16, -16, -16,
+	-16, -16, -16, -16, -16, -16, -16, -16, -16, -16, -16, -3, -5, -6, -5, -6,
+	-5, -7, -6, -7, -9, -8, -7, -6, -7, -32, -61, -4, -7, -9, -8, -10,
+	-7, -9, -8, -73, -64, -55, -46, -37, -28, -19, -10, -6, -10, -9, -8, -105,
+	-97, -89, -81, -72, -63, -54, -45, -36, -27, -18, -9, -8, -11, -10, -9, -104,
+	-96, -88, -80, -71, -62, -53, -44, -35, -26, -17, -8, -7, -10, -62, -111, -103,
+	-95, -87, -79, -70, -61, -52, -43, -34, -25, -16, -7, -8, -11, -116, -110, -102,
+	-94, -86, -78, -69, -60, -51, -42, -33, -24, -15, -6, -8, -120, -115, -109, -101,
+	-93, -85, -77, -68, -59, -50, -41, -32, -23, -14, -5, -12, -119, -114, -108, -100,
+	-92, -84, -76, -67, -58, -49, -40, -31, -22, -13, -4, -10, -118, -113, -107, -99,
+	-91, -83, -75, -66, -57, -48, -39, -30, -21, -12, -3, -12, -117, -112, -106, -98,
+	-90, -82, -74, -65, -56, -47, -38, -29, -20, -11, -2, -2, -2, -3, -4, -5,
+	-6, -7, -8, -9, -10, -11,
 };
 
 /* the standard luminance and chrominance quantisation tables (quality 50) */
@@ -599,6 +656,152 @@ int jpegEncArmFlushBits(SceJpegArmEncoderContext *context)
 	}
 	context->pOut = &p[(context->bitCount + 39) >> 3];
 	return ret;
+}
+
+/*
+ * One pass of the forward DCT over eight vectors of four samples: the tangent-based factorisation
+ * (tan(pi/8), tan(pi/16), tan(3pi/16), 1/sqrt(2) in Q15), its outputs scaled per coefficient later.
+ */
+#define JPEG_ENC_ARM_FDCT(x0, x1, x2, x3, x4, x5, x6, x7)				\
+	do {										\
+		int16x4_t tmp0 = vqadd_s16(x0, x7), tmp7 = vqsub_s16(x0, x7);		\
+		int16x4_t tmp1 = vqadd_s16(x1, x6), tmp6 = vqsub_s16(x1, x6);		\
+		int16x4_t tmp2 = vqadd_s16(x2, x5), tmp5 = vqsub_s16(x2, x5);		\
+		int16x4_t tmp3 = vqadd_s16(x3, x4), tmp4 = vqsub_s16(x3, x4);		\
+		int16x4_t tmp10 = vqadd_s16(tmp0, tmp3), tmp13 = vqsub_s16(tmp0, tmp3);	\
+		int16x4_t tmp11 = vqadd_s16(tmp1, tmp2), tmp12 = vqsub_s16(tmp1, tmp2);	\
+		int16x4_t sum = vqadd_s16(tmp6, tmp5), diff = vqsub_s16(tmp6, tmp5);	\
+		int16x4_t z1 = vqadd_s16(vqrdmulh_lane_s16(sum, k0, 2), tmp7);		\
+		int16x4_t z2 = vqadd_s16(vqrdmulh_lane_s16(sum, k0, 3), tmp7);		\
+		int16x4_t z3 = vqadd_s16(vqrdmulh_lane_s16(diff, k0, 2), tmp4);		\
+		int16x4_t z4 = vqadd_s16(vqrdmulh_lane_s16(diff, k0, 3), tmp4);		\
+		x0 = vqadd_s16(tmp10, tmp11);						\
+		x4 = vqsub_s16(tmp10, tmp11);						\
+		x2 = vqadd_s16(vqrdmulh_lane_s16(tmp12, k0, 0), tmp13);			\
+		x6 = vqsub_s16(vqrdmulh_lane_s16(tmp13, k0, 0), tmp12);			\
+		x1 = vqadd_s16(vqrdmulh_lane_s16(z3, k0, 1), z1);			\
+		x7 = vqsub_s16(vqrdmulh_lane_s16(z1, k0, 1), z3);			\
+		x3 = vqadd_s16(vqrdmulh_lane_s16(z4, k1, 1), z2);			\
+		x5 = vqadd_s16(vqrdmulh_lane_s16(z2, k1, 0), z4);			\
+	} while (0)
+
+/* transposes the 4x4 block of rows a..d: a..d become its columns */
+#define JPEG_ENC_ARM_TRANSPOSE(a, b, c, d)						\
+	do {										\
+		int16x4x2_t ab = vtrn_s16(a, b), cd = vtrn_s16(c, d);			\
+		int32x2x2_t ac = vtrn_s32(vreinterpret_s32_s16(ab.val[0]),		\
+					  vreinterpret_s32_s16(cd.val[0]));		\
+		int32x2x2_t bd = vtrn_s32(vreinterpret_s32_s16(ab.val[1]),		\
+					  vreinterpret_s32_s16(cd.val[1]));		\
+		a = vreinterpret_s16_s32(ac.val[0]);					\
+		b = vreinterpret_s16_s32(bd.val[0]);					\
+		c = vreinterpret_s16_s32(ac.val[1]);					\
+		d = vreinterpret_s16_s32(bd.val[1]);					\
+	} while (0)
+
+/* scales a coefficient vector, quantises it with the reciprocals at recip and rounds to 16 bits */
+#define JPEG_ENC_ARM_QUANT(out, scale, x, recip)					\
+	((out) = vqshrn_n_s32(vmlal_s16(bias, *(const int16x4_t *)(recip),		\
+					vqrdmulh_s16(scale, x)), 14))
+
+/*
+ * Encodes mcuCount MCUs of a strip: each component's blocks of 8x8 samples are transformed,
+ * quantised into a block in transposed order and Huffman coded. The first component is luma,
+ * the rest chroma; the list ends at a component with no blocks.
+ */
+void jpegEncArmEncodeStrip(SceJpegArmEncoderContext *context, SceInt32 mcuCount,
+			   JpegEncArmComponent *components)
+{
+	/* tan(pi/8), tan(pi/16), 1/sqrt(2), -1/sqrt(2); tan(3pi/16), -tan(3pi/16) */
+	const int16x4_t k0 = { 13573, 6518, 23170, -23170 };
+	const int16x4_t k1 = { 21895, -21895, 0, 0 };
+	/* the scale of each coefficient (v, u), per pair of rows v and half of u */
+	const int16x4_t scale04lo = { 4096, 5681, 5352, 4816 };
+	const int16x4_t scale04hi = { 4096, 4816, 5352, 5681 };
+	const int16x4_t scale17lo = { 5681, 7880, 7423, 6681 };
+	const int16x4_t scale17hi = { 5681, 6681, 7423, 7880 };
+	const int16x4_t scale26lo = { 5352, 7423, 6992, 6293 };
+	const int16x4_t scale26hi = { 5352, 6293, 6992, 7423 };
+	const int16x4_t scale35lo = { 4816, 6681, 6293, 5663 };
+	const int16x4_t scale35hi = { 4816, 5663, 6293, 6681 };
+	int16x4_t block[16];
+	JpegEncArmComponent *comp;
+	const SceUInt16 *recip;
+	const SceInt8 *huffman;
+	const SceUInt8 *src;
+	SceInt32 stride;
+	SceInt32 i;
+
+	for (; mcuCount > 0; mcuCount--) {
+		recip = context->lumaRecip;
+		huffman = jpegEncArmLumaHuffman;
+		comp = components;
+		i = 0;
+		for (;;) {
+			const int32x4_t bias = vdupq_n_s32(0x2000);
+			const uint8x8_t offset = vdup_n_u8(0x80);
+			int16x4_t lo0, lo1, lo2, lo3, lo4, lo5, lo6, lo7;
+			int16x4_t hi0, hi1, hi2, hi3, hi4, hi5, hi6, hi7;
+			int16x8_t row;
+
+			src = comp->pBlock;
+			stride = comp->stride;
+#define JPEG_ENC_ARM_ROW(n)								\
+			row = vreinterpretq_s16_u16(vsubl_u8(*(const uint8x8_t *)	\
+					(src + (n) * stride), offset));			\
+			lo##n = vget_low_s16(row);					\
+			hi##n = vget_high_s16(row)
+			JPEG_ENC_ARM_ROW(0);
+			JPEG_ENC_ARM_ROW(1);
+			JPEG_ENC_ARM_ROW(2);
+			JPEG_ENC_ARM_ROW(3);
+			JPEG_ENC_ARM_ROW(4);
+			JPEG_ENC_ARM_ROW(5);
+			JPEG_ENC_ARM_ROW(6);
+			JPEG_ENC_ARM_ROW(7);
+#undef JPEG_ENC_ARM_ROW
+
+			/* down the columns, then the 8x8 transposed as four 4x4 blocks */
+			JPEG_ENC_ARM_FDCT(lo0, lo1, lo2, lo3, lo4, lo5, lo6, lo7);
+			JPEG_ENC_ARM_FDCT(hi0, hi1, hi2, hi3, hi4, hi5, hi6, hi7);
+			JPEG_ENC_ARM_TRANSPOSE(lo0, lo1, lo2, lo3);
+			JPEG_ENC_ARM_TRANSPOSE(lo4, lo5, lo6, lo7);
+			JPEG_ENC_ARM_TRANSPOSE(hi0, hi1, hi2, hi3);
+			JPEG_ENC_ARM_TRANSPOSE(hi4, hi5, hi6, hi7);
+
+			/* along the rows: column x of rows 0-3 is lo<x> (x < 4) or hi<x-4> */
+			JPEG_ENC_ARM_FDCT(lo0, lo1, lo2, lo3, hi0, hi1, hi2, hi3);
+			JPEG_ENC_ARM_FDCT(lo4, lo5, lo6, lo7, hi4, hi5, hi6, hi7);
+
+			JPEG_ENC_ARM_QUANT(block[0], scale04lo, lo0, &recip[0]);
+			JPEG_ENC_ARM_QUANT(block[1], scale04hi, lo4, &recip[4]);
+			JPEG_ENC_ARM_QUANT(block[2], scale17lo, lo1, &recip[8]);
+			JPEG_ENC_ARM_QUANT(block[3], scale17hi, lo5, &recip[12]);
+			JPEG_ENC_ARM_QUANT(block[4], scale26lo, lo2, &recip[16]);
+			JPEG_ENC_ARM_QUANT(block[5], scale26hi, lo6, &recip[20]);
+			JPEG_ENC_ARM_QUANT(block[6], scale35lo, lo3, &recip[24]);
+			JPEG_ENC_ARM_QUANT(block[7], scale35hi, lo7, &recip[28]);
+			JPEG_ENC_ARM_QUANT(block[8], scale04lo, hi0, &recip[32]);
+			JPEG_ENC_ARM_QUANT(block[9], scale04hi, hi4, &recip[36]);
+			JPEG_ENC_ARM_QUANT(block[10], scale35lo, hi1, &recip[40]);
+			JPEG_ENC_ARM_QUANT(block[11], scale35hi, hi5, &recip[44]);
+			JPEG_ENC_ARM_QUANT(block[12], scale26lo, hi2, &recip[48]);
+			JPEG_ENC_ARM_QUANT(block[13], scale26hi, hi6, &recip[52]);
+			JPEG_ENC_ARM_QUANT(block[14], scale17lo, hi3, &recip[56]);
+			JPEG_ENC_ARM_QUANT(block[15], scale17hi, hi7, &recip[60]);
+
+			comp->pBlock = src + comp->advance[i];
+			jpegEncArmWriteBlock(context, (SceInt16 *)block, comp->tableId, huffman);
+			if (++i < comp->blockCount)
+				continue;
+			comp++;
+			if (comp->blockCount == 0)
+				break;
+			recip = context->chromaRecip;
+			huffman = jpegEncArmChromaHuffman;
+			i = 0;
+		}
+	}
 }
 
 void *jpegEncArmMemcpy(void *dst, const void *src, SceSize len)
