@@ -10,6 +10,7 @@
 #include <scetypes.h>
 #include <plugin.h>
 #include <std/vector>
+#include "system_update_svc.h"
 
 struct FgdlCaller;
 struct FgdlTitleRequest;
@@ -52,7 +53,10 @@ public:
 	void *m_arg;
 };
 
-/* (0x8112F27C) a third object the plugin makes, 12 bytes (PLACEHOLDER) */
+/* the callback a DownloadPluginObject holds: a download's event (PLACEHOLDER names) */
+typedef void (*DownloadPluginCallback)(int kind, SceUInt32 id, SceUInt64 rowid, void *arg);
+
+/* (0x8112F27C) a third object the plugin makes, 12 bytes, system_update_svc.cpp's (PLACEHOLDER) */
 class DownloadPluginObject {
 public:
 	__attribute__((noinline)) DownloadPluginObject()
@@ -65,11 +69,15 @@ public:
 		sce_paf_memset(this, 0, sizeof(*this));
 	}
 
-	void Bgdl_8112F270(void);
-	void Bgdl_8112F28C(void);
+	__attribute__((noinline)) void Bgdl_8112F270(void);
+	__attribute__((noinline)) void Bgdl_8112F270(int type, DownloadPluginCallback func);	/* the same code */
+	int Bgdl_8112F28C(void);
 	void Bgdl_8112F29A(int type, int kind, SceUInt32 id, SceUInt64 rowid);
+	__attribute__((noinline)) int Bgdl_8112F2C4(int type, DownloadPluginCallback func, void *arg);
 
-	int m_words[3];			/* PLACEHOLDER: not read here */
+	int m_type;			/* the events it is called for */
+	DownloadPluginCallback m_func;
+	void *m_arg;
 };
 
 class BgdlJobQueue;
@@ -99,18 +107,6 @@ public:
 	bool m_mounted;			/* ux0: was there when it was made */
 };
 
-/* system_update_svc.cpp's service (PLACEHOLDER names) */
-class SystemUpdateSvc {
-public:
-	static void Bgdl_8112D38C(void);
-	static void Bgdl_8112D42A(void);
-	void Bgdl_8112D508(paf::Plugin *plugin, DownloadPluginObject *object);
-	void Bgdl_8112D7F0(void);
-	void Bgdl_8112DA56(void);
-	int Bgdl_81413CB0(bool flag);			/* folded with an inline "return 1" */
-};
-
-extern SystemUpdateSvc *g_systemUpdateSvc;		/* (0x81544898) PLACEHOLDER name */
 
 /* what a task's install is asked for (PLACEHOLDER names) */
 struct FgdlInstallArgs {

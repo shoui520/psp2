@@ -73,52 +73,60 @@ void downloadPluginInit(Plugin *plugin)
 
 	if (wakeup.c_str()[0] == 'f' && sce_paf_strcmp(wakeup.c_str(), "false") == 0) {
 		s_active = false;
-		return;
-	}
-	s_active = true;
+	} else {
+		s_active = true;
 
-	bool clean = shellStartupNeedsInitialSetup();
-	bool recovered;
+		bool clean = shellStartupNeedsInitialSetup();
+		bool recovered;
 
-	switch (shellBootGetDatabaseState()) {
-	case -1:
-	case 0:
-	case 1:
-		recovered = false;
-		break;
-	case 2:
-	case 3:
-	case 4:
-		recovered = true;
-		break;
-	default:
-		recovered = false;
-		break;
-	}
-	if (!clean && recovered == true)
-		clean = true;
+		switch (shellBootGetDatabaseState()) {
+		case -1:
+			recovered = false;
+			break;
+		case 0:
+			recovered = false;
+			break;
+		case 1:
+			recovered = false;
+			break;
+		case 2:
+			recovered = true;
+			break;
+		case 3:
+			recovered = true;
+			break;
+		case 4:
+			recovered = true;
+			break;
+		default:
+			recovered = false;
+			break;
+		}
+		if (!clean && recovered == true)
+			clean = true;
 
-	int quota[2] = { -1, -2 };
+		int quota[2] = { -1, -2 };
 
-	s_logManager = new LogJobManager(clean);
-	if (s_logManager != NULL)
-		s_logManager->Bgdl_811240B6(quota);
-	shellBgdlCreate(clean, quota);
-	Fgdl_8112CD1A();
-	s_dispatcher = new BgdlJobDispatcher();
-	if (s_dispatcher != NULL)
-		s_dispatcher->Bgdl_8113A6A8();
-	s_object = new DownloadPluginObject();
-	if (s_object != NULL)
-		s_object->Bgdl_8112F28C();
-	if (s_logManager != NULL) {
-		int reserved[2] = { 0, 0 };
+		s_logManager = new LogJobManager(clean);
+		if (s_logManager != NULL)
+			s_logManager->Bgdl_811240B6(quota);
+		shellBgdlCreate(clean, quota);
+		Fgdl_8112CD1A();
+		s_dispatcher = new BgdlJobDispatcher();
+		if (s_dispatcher != NULL)
+			s_dispatcher->Bgdl_8113A6A8();
+		s_object = new DownloadPluginObject();
+		if (s_object != NULL)
+			s_object->Bgdl_8112F28C();
+		if (s_logManager != NULL) {
+			int reserved[2] = { 0, 0 };
 
-		s_logManager->Bgdl_81126418(&s_object, reserved);
-		shellBgdlStart();
-		SystemUpdateSvc::Bgdl_8112D38C();
-		g_systemUpdateSvc->Bgdl_8112D508(plugin, s_object);
-		g_systemUpdateSvc->Bgdl_81413CB0(false);
+			s_logManager->Bgdl_81126418(&s_object, reserved);
+			shellBgdlStart();
+			SystemUpdateSvc::Bgdl_8112D38C();
+			g_systemUpdateSvc->Bgdl_8112D508(plugin, s_object);
+			g_systemUpdateSvc->Bgdl_81413CB0(false);
+		}
 	}
 }
 
