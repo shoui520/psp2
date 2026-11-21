@@ -58,7 +58,7 @@ static void imposeUpdate(void *userdata);
 /* the parts made, and the interface's functions given (0x81140D18) */
 Impose::Impose(Plugin *plugin)
 	: m_plugin(plugin), m_page(NULL), m_volume(plugin), m_notification(plugin),
-	  m_screenshot(plugin), m_shellEvent(plugin), m_part81150574(plugin),
+	  m_screenshot(plugin), m_shellEvent(plugin), m_incomingDialog(plugin),
 	  m_parentalControl(plugin), m_psMenu(plugin), m_activationWarning(plugin),
 	  m_busyScreen(plugin), m_zoomRefuse(plugin), m_touchEmulation(plugin)
 {
@@ -132,7 +132,7 @@ void Impose::Start()
 	g_impose->OpenPages();
 	g_impose->m_volume.Start();
 	g_impose->m_shellEvent.Start();
-	g_impose->m_part81150574.Impose_81150630();
+	g_impose->m_incomingDialog.Start();
 	if (system::Model::GetType() == 1)
 		g_impose->m_touchEmulation.Start();
 	common::MainThreadCallList::Register(imposeUpdate, NULL);
@@ -143,7 +143,7 @@ void Impose::Stop()
 {
 	common::MainThreadCallList::Unregister(imposeUpdate, NULL);
 	g_impose->m_shellEvent.Stop();
-	g_impose->m_part81150574.Impose_811508FE();
+	g_impose->m_incomingDialog.Stop();
 	if (system::Model::GetType() == 1)
 		g_impose->m_touchEmulation.Stop();
 }
@@ -274,5 +274,5 @@ static void imposeUpdate(void *userdata)
 {
 	g_impose->m_notification.Update();
 	g_impose->m_activationWarning.Update();
-	g_impose->m_part81150574.Impose_81151192();
+	g_impose->m_incomingDialog.Tick();
 }

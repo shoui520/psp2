@@ -140,6 +140,37 @@ void shellAccessibilityApply(void);			/* invert colours, key remap (0x810A76AA) 
 int shellNoticeServiceStart(void);			/* (0x81005204) */
 int shellNoticeServiceInit(void);			/* made and started (0x8139AB6C) */
 int shellIncomingDialogServerCreate(void);		/* (0x8115B1CA) */
+
+/*
+ * A request of the incoming dialog server (0x8115B1CA keeps eight): the application's
+ * parameters as sceIncomingDialog takes them (its first 604 bytes), then the server's own
+ * fields (PLACEHOLDER names).
+ */
+struct ShellIncomingDialogRequest {
+	SceInt32 sdkVersion;
+	char titleId[16];		/* the application the dialog launches */
+	char audioPath[128];		/* the sound played while it is up, in the application */
+	SceUInt32 timeout;		/* in seconds */
+	bool launchFlag;		/* passed on with the launch */
+	SceUInt8 reserved[65];
+	wchar_t acceptText[32];
+	wchar_t rejectText[32];		/* empty for a dialog with one button */
+	wchar_t dialogText[64];
+	wchar_t noticeText[65];		/* the new event written when the dialog goes */
+	bool canceled;
+	SceUID processId;		/* the application's; -1 for a free slot */
+	SceUInt64 startTime;		/* sceKernelGetProcessTimeWide when it was shown */
+	char *param;			/* the launch's param= argument, or NULL */
+	SceInt32 sequence;		/* the oldest pending request is taken first */
+	SceInt32 state;			/* 1 pending, 2 taken, else its result */
+	bool taken;
+	bool freeOnRelease;		/* the slot is freed when its request is released */
+};
+
+/* the oldest pending request taken, or NULL (0x8115B228); a taken request given back with its
+   result (0x8115B294) */
+ShellIncomingDialogRequest *shellIncomingDialogServerTakeRequest(void);
+void shellIncomingDialogServerReleaseRequest(ShellIncomingDialogRequest *request, int result);
 int shellIsComTestMode(int *error);			/* id storage leaf 2 says test (0x81132AA2) */
 int shellThemeLoad(void);				/* the current theme (0x810053D0) */
 int shellConsoleInfoRecord(int type, SceInt64 tick, int arg);	/* ur0:ci, tick -1: now (0x81376B74) */

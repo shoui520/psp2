@@ -12,6 +12,7 @@
 #include <scetypes.h>
 #include <plugin.h>
 #include <std/memory>
+#include <std/string>
 #include <common/shared_ptr.h>
 #include <inputdevice/inputdevice.h>
 #include <inputdevice/inputlistener.h>
@@ -180,16 +181,64 @@ public:
 
 extern ImposeScreenshot *g_imposeScreenshot;	/* (0x815448E8) */
 
-/* (0x81150574, 120 bytes) */
-class ImposePart81150574 {
-public:
-	ImposePart81150574(paf::Plugin *plugin);
-	~ImposePart81150574();
-	void Impose_81150630();
-	void Impose_811508FE();
-	void Impose_81151192();
+struct ShellIncomingDialogRequest;
+struct ShellPluginInterface;
 
-	SceUInt8 data[120];
+/*
+ * Sony's SceIncomingDialogMgr (its job's name and its messages): the shell's incoming dialog
+ * requests taken one at a time and shown as a dialog over the home screen, or as an indicator
+ * while an application is in front; its sound played meanwhile; the application launched when
+ * it is accepted. Its member names are ours (PLACEHOLDER).
+ */
+class IncomingDialogMgr {
+public:
+	/* what a request is at */
+	enum {
+		STATE_STOPPED = 0,
+		STATE_IDLE = 1,
+		STATE_DIALOG = 2,
+		STATE_INDICATOR = 3
+	};
+
+	IncomingDialogMgr(paf::Plugin *plugin);
+	~IncomingDialogMgr();
+	void Start();
+	/* the request's sound stopped, and its new event written */
+	void StopSound();
+	void PostNoticeEvent();
+	/* the request given back with its result */
+	int Close(int result);
+	int Stop();
+	int OpenDialog();
+	int ShowIndicator();
+	void PlaySound();
+	/* the dialog or the indicator, as the shell now is */
+	void Update();
+	/* each frame */
+	void Tick();
+	/* the launch's argument made */
+	void PrepareLaunch();
+	void OnDialogButton(SceInt32 id, SceInt32 button);
+	void OnEvent(int code, const void *data, SceSize size);
+
+	/* the indicator taken off, and the dialog closed */
+	void HideIndicator();
+	void CloseDialog();
+
+	paf::Plugin *m_plugin;
+	ShellPluginInterface *m_topmenu;
+	SceInt32 m_state;
+	ShellIncomingDialogRequest *m_request;
+	SceInt32 m_dialog;
+	bool m_inApp;			/* shell events 7 and 6 */
+	bool m_onStartScreen;		/* shell events 2 and 3 */
+	bool m_indicatorShown;
+	bool m_soundPlaying;
+	char m_launchTitleId[16];
+	bool m_launchFlag;
+	bool m_launchPending;
+	paf::string m_launchArg;
+	char m_mountPoint[64];		/* the application's folder, mounted for its sound */
 };
 
 /*
@@ -544,7 +593,7 @@ public:
 	ImposeNotification m_notification;
 	ImposeScreenshot m_screenshot;
 	ImposeShellEvent m_shellEvent;
-	ImposePart81150574 m_part81150574;
+	IncomingDialogMgr m_incomingDialog;
 	ImposeParentalControl m_parentalControl;
 	ImposePsMenu m_psMenu;
 	ImposeActivationWarning m_activationWarning;
