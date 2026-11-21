@@ -109,17 +109,6 @@ _Static_assert(sizeof(AppmgrDevice) == 0xa7c, "device state");
 
 extern AppmgrDevice g_appmgrDevice;
 
-/* What sceAppMgrGetCurrentBgmState2 copies out: the BGM port's owner. */
-typedef struct AppmgrCurrentBgmState {
-	SceUID bgmOutPortOwner;
-	int priority;
-	int subPriority;
-	int appId;			/* -1 when nobody owns the port */
-	SceUInt32 reserved[4];
-} AppmgrCurrentBgmState;
-
-_Static_assert(sizeof(AppmgrCurrentBgmState) == 32, "current BGM state");
-
 /* Complete local copy of acquisition3's sixteen user argument bytes. */
 typedef struct AppmgrSoundOutExclusiveArguments {
 	int displayBlanked;
@@ -140,7 +129,6 @@ void _deviceDeactivate(void);
 void _deviceSetRunStatus(int appId, int isRunning);
 void _deviceSetProcessId(int appId, SceUID pid);
 int sceAppMgrGetCurrentBgmState(SceUID *currentBgmId, int *currentBgmState);
-int sceAppMgrGetCurrentBgmState2(AppmgrCurrentBgmState *state);
 void _deviceGetBgmProxyAppName(int appId, char *name);
 void _deviceSetName(int appId, const char *name);
 int appmgrAcquireSoundOutExclusive(int priority, SceUInt32 displayEnabled, SceUInt32 displayMode);

@@ -224,8 +224,6 @@ static inline void imposePsMenuHideWidget(ui::Widget *widget)
 }
 
 static void imposePsMenuOnPower(void *data);
-static void imposePsMenuOnIcon(const intrusive_ptr<cache::CacheImageInterface> &icon,
-			       void *data);
 
 /* the brightness saved, the dialogs and the parts closed, and the page let go (0x8114AA16) */
 void ImposePsMenu::Close()
@@ -272,7 +270,7 @@ void ImposePsMenu::Close()
 	m_brightness = NULL;
 	m_part81158C14.Impose_811598AA();
 	m_controller.Close();
-	m_part811558C0.Impose_8115756C();
+	m_bgm.Close();
 	m_volume.Close();
 	m_accessibility.Close();
 	m_micMute = NULL;
@@ -340,7 +338,7 @@ int ImposePsMenu::CheckAppMenuReady()
 ImposePsMenu::ImposePsMenu(Plugin *plugin)
 	: m_plugin(plugin), m_page(NULL), m_brightness(NULL), m_micMute(NULL),
 	  m_voicePriority(NULL), m_prioritizeDialog(-1), m_helpDialog(-1), m_quitDialog(-1),
-	  m_checking(false), m_focusButton(NULL), m_controller(plugin), m_part811558C0(plugin),
+	  m_checking(false), m_focusButton(NULL), m_controller(plugin), m_bgm(plugin),
 	  m_volume(plugin), m_accessibility(plugin)
 {
 	int value;
@@ -846,7 +844,7 @@ void ImposePsMenu::Open()
 		}
 	}
 
-	m_part811558C0.Impose_811561AA(box);
+	m_bgm.Open(box);
 
 	m_plugin->TemplateOpen(box, IDParam(PSMENU_MIC_TEMPLATE), Plugin::TemplateOpenParam());
 	m_micMute = PSMENU_FIND(box, ui::CheckBox, PSMENU_MIC_CHECK);
@@ -900,7 +898,7 @@ void ImposePsMenu::Open()
 /* (0x8114DDBE) */
 void ImposePsMenu::Impose_8114DDBE(bool arg)
 {
-	m_part811558C0.Impose_81158590(arg);
+	m_bgm.SetActive(arg);
 }
 
 /* the close button (0x8114DDCA) */
@@ -917,7 +915,7 @@ static void imposePsMenuOnInterval(int32_t type, ui::Handler *self, ui::Event *e
 
 	menu->m_part81158C14.Update();
 	menu->m_controller.Update();
-	menu->m_part811558C0.Impose_81157ACE();
+	menu->m_bgm.Update();
 	if (Shell_81232FA6() == 0 || Shell_812327F8() != -1)
 		menu->UpdatePlayTime();
 	menu->UpdateAudioButtons();
@@ -1171,8 +1169,7 @@ ImposePsMenu::SetIcon(const intrusive_ptr<cache::CacheImageInterface> &icon, ui:
 }
 
 /* (0x8114F294) */
-static void imposePsMenuOnIcon(const intrusive_ptr<cache::CacheImageInterface> &icon,
-			       void *data)
+void imposePsMenuOnIcon(const intrusive_ptr<cache::CacheImageInterface> &icon, void *data)
 {
 	if (g_imposePsMenu != NULL)
 		g_imposePsMenu->SetIcon(icon, (ui::Widget *)data);

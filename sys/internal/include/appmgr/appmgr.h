@@ -122,6 +122,20 @@ int sceAppMgrKillAppByNameForDebugger(const char *titleId);
 int sceAppMgrGetPidByNameForDebugger(const char *titleId, SceUID *pid);
 int sceAppMgrGetAppIdByNameForDebugger(const char *titleId, int *appId);
 
+/* What sceAppMgrGetCurrentBgmState2 copies out: the BGM port's owner. */
+typedef struct AppmgrCurrentBgmState {
+	SceUID bgmOutPortOwner;
+	int priority;
+	int subPriority;
+	int appId;			/* -1 when nobody owns the port */
+	SceUInt32 reserved[4];
+} AppmgrCurrentBgmState;
+
+_Static_assert(sizeof(AppmgrCurrentBgmState) == 32, "current BGM state");
+
+/* the BGM port's owner (appmgr's appmgr_device.c; SceAppMgrUser's, for the shell) */
+int sceAppMgrGetCurrentBgmState2(AppmgrCurrentBgmState *state);
+
 /* a boot parameter: SceAppMgrForDriver_D2541B4A clears the attribute and version (the words
  * of the SDK's SceAppUtilBootParam) behind the size */
 typedef struct AppmgrBootParam {

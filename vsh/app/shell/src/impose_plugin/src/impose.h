@@ -20,6 +20,7 @@
 #include <widget/core/handler.h>
 #include <widget/w_scene.h>
 #include <widget/w_plane.h>
+#include <widget/w_plane_button.h>
 #include <graphics/drawobj/draw_obj.h>
 #include <cache/cache_image.h>
 #include <cache/cache_manager.h>
@@ -357,16 +358,63 @@ public:
 	SceUInt8 m_battery;
 };
 
-class ImposePart811558C0 {
-public:
-	ImposePart811558C0(paf::Plugin *plugin);
-	~ImposePart811558C0();
-	void Impose_811561AA(paf::ui::Widget *box);
-	void Impose_8115756C();
-	void Impose_81157ACE();
-	void Impose_81158590(bool arg);
+/* an icon applauncher has for the menu, set on the widget it was asked for (impose_psmenu.cpp;
+   PLACEHOLDER name) */
+void imposePsMenuOnIcon(const paf::intrusive_ptr<paf::cache::CacheImageInterface> &icon,
+			void *data);
 
-	SceUInt8 data[64];
+/* the menu's music player controls: the playing track's title, album and artist, the play,
+   previous and next buttons (held to seek) and the volume, after the shell's music player
+   (impose_psmenu_bgm.cpp; PLACEHOLDER names) */
+class ImposePsMenuBgm {
+public:
+	ImposePsMenuBgm(paf::Plugin *plugin);
+	~ImposePsMenuBgm();
+	void Disable(bool disable);
+	void UpdateApp();
+	void Open(paf::ui::Widget *box);
+	void Close();
+	void SetPlaying(bool playing);
+	void Update();
+	void SetActive(bool active);
+	void OnPlay(int32_t type, paf::ui::Handler *self, paf::ui::Event *e, void *data);
+
+	static void OnVolume(int32_t type, paf::ui::Handler *self, paf::ui::Event *e, void *data);
+
+	/* the buttons' listeners */
+	static void OnPlayDecide(int32_t type, paf::ui::Handler *self, paf::ui::Event *e,
+				 void *data)
+	{
+		((ImposePsMenuBgm *)data)->OnPlay(type, self, e, data);
+	}
+
+	static void OnPrevDecide(int32_t type, paf::ui::Handler *self, paf::ui::Event *e,
+				 void *data);
+	static void OnNextDecide(int32_t type, paf::ui::Handler *self, paf::ui::Event *e,
+				 void *data);
+	static void OnPrevRepeat(int32_t type, paf::ui::Handler *self, paf::ui::Event *e,
+				 void *data);
+	static void OnNextRepeat(int32_t type, paf::ui::Handler *self, paf::ui::Event *e,
+				 void *data);
+	static void OnSeekEnd(int32_t type, paf::ui::Handler *self, paf::ui::Event *e,
+			      void *data);
+
+	paf::Plugin *m_plugin;
+	paf::ui::Widget *m_box;
+	paf::ui::Text *m_title;
+	paf::ui::Text *m_album;		/* the album and the artist */
+	paf::ui::PlaneButton *m_play;
+	paf::ui::PlaneButton *m_prev;
+	paf::ui::PlaneButton *m_next;
+	paf::ui::Plane *m_pauseIcon;
+	paf::ui::Plane *m_playIcon;
+	paf::ui::Plane *m_prevIcon;
+	paf::ui::Plane *m_nextIcon;
+	paf::ui::SlideBar *m_volume;
+	bool m_active;
+	SceUInt8 m_state;		/* the player's state shown */
+	SceUInt16 m_seekCount;		/* the repeats of the button held */
+	paf::string m_trackTitle;	/* the title shown */
 };
 
 /* the menu's volume slide bar: the master volume set as it moves and written to the registry by
@@ -462,7 +510,7 @@ public:
 	paf::ui::Widget *m_focusButton;
 	ImposePart81158C14 m_part81158C14;
 	ImposePsMenuController m_controller;
-	ImposePart811558C0 m_part811558C0;
+	ImposePsMenuBgm m_bgm;
 	ImposePsMenuVolume m_volume;
 	ImposePsMenuAccessibility m_accessibility;
 };
