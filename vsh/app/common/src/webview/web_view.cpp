@@ -2560,7 +2560,7 @@ void WebView::ProcessIpcData()
 			string origin(static_cast<WebIpcEvent2211 *>(message)->m_value.c_str());
 
 			if (m_geolocation != NULL)
-				m_geolocation->GetState();
+				m_geolocation->AbortPermission();
 			m_geolocationOrigin.assign(NULL, 0);
 			KillTimeoutEvent(1);
 			break;

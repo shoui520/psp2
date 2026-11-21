@@ -109,20 +109,21 @@ public:
 
 class WebView;
 
-/* the device's location for a page, read with sceLocation by its thread
-   ("SceWebKitGeolocationMonitor"; vtable 0x81025c0c, names ours) */
+/* the device's location for a page (vtable 0x81025bec; names ours), made by CreateGeolocation
+   (geolocation_monitor.cpp) */
 class WebViewGeolocation {
 public:
-	virtual void Start();
-	virtual int Stop();
-	/* whether the page may have the location: 0 not yet known, 2 denied, 1 or an error: ask */
-	virtual int GetPermission();
-	virtual int GetState();
-	virtual ~WebViewGeolocation();
-	virtual void Notify();
-
-	WebViewGeolocationClient *m_client;
-	bool m_started;
+	/* the position sent to the view's client as it changes, from now on, and no more */
+	virtual void Start() = 0;
+	virtual void Stop() = 0;
+	/* whether the page may have the location: 0 not known yet (the user is being asked),
+	   1 allowed, 2 denied */
+	virtual int GetPermission() = 0;
+	/* the question to the user taken back */
+	virtual void AbortPermission() = 0;
+	virtual ~WebViewGeolocation()
+	{
+	}
 };
 
 /* a listener that calls a method of its object (vtable 0x81025204 for WebView; names ours) */

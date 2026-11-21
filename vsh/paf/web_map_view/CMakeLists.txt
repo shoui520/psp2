@@ -14,10 +14,15 @@ psp2_module(${PSP2_TARGET} KIND user COMPILER snc PARTIAL SOURCES
 	${WEBVIEW}/web_view_gesture.cpp
 	${WEBVIEW}/web_ipc_channel.cpp
 	${WEBVIEW}/finger_pointer.cpp
+	${WEBVIEW}/geolocation_monitor.cpp
+	../../../sys/sdk/target/src/libsnc/i64ops.c
+	../../../sys/sdk/target/src/libsnc/i32ops.c
+	../../../sys/sdk/target/src/libsnc/weak_calls.c
+	../../../sys/sdk/target/src/libsnc/aeabi_div0.c
 	../../../sys/sdk/target/src/libsnc/unwind_pr0.c
 )
 target_include_directories(${PSP2_TARGET} PRIVATE "${PSP2_SRC}/vsh/paf/include"
 	"${PSP2_SRC}/vsh/paf")
 # Sony linked with psp2ld --strip-unused: a section per SNC function, and --gc-sections
-target_compile_definitions(${PSP2_TARGET} PRIVATE PSP2_STRIP_UNUSED)
+target_compile_definitions(${PSP2_TARGET} PRIVATE PSP2_STRIP_UNUSED SNC_WEAK_CALLS_ON)
 target_link_options(${PSP2_TARGET} PRIVATE -Wl,--gc-sections)
