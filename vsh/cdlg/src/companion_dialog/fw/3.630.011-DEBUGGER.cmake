@@ -218,12 +218,12 @@ set(MODULE_IMPORT_FUNCS
 	sceRegMgrSystemParamSetInt
 	sceRegMgrSystemParamSetBin
 	sceNpManagerGetCachedParam
-	SceCompanionUtil_0634FFD8
+	sceCompanionUtilSetCallbackHandlerInternal
 	SceCompanionUtil_2B0EF5F8
 	SceCompanionUtil_53445DBF
-	SceCompanionUtil_6097D2A8
+	sceCompanionUtilStop
 	SceCompanionUtil_7AB433EC
-	SceCompanionUtil_8617FF79
+	sceCompanionUtilSearchToOrbis
 	SceCompanionUtil_C93BB8F0
 )
 set(MODULE_IMPORT_VARS

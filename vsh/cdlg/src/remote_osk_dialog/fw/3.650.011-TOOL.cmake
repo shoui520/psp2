@@ -201,7 +201,7 @@ set(MODULE_IMPORT_FUNCS
 	ScePafWidget_FB7FE189
 	ScePafWidget_FF5BC957
 	SceCompanionUtil_04BC85DC
-	SceCompanionUtil_0634FFD8
+	sceCompanionUtilSetCallbackHandlerInternal
 	SceCompanionUtil_18D13C74
 	SceCompanionUtil_52AA755B
 	SceCommonDialogMain_05EFC635

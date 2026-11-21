@@ -1,5 +1,6 @@
 # 3.65-CEX: vs0:sys/external/libSceCompanionUtil.suprx (generated)
 set(MODULE_NID 0x1C79ECF6)
+set(MODULE_AUTH_ID 0x2800000000017002)
 set(MODULE_ATTR 0)
 set(MODULE_EXPORTS exports.yml)
 set(MODULE_SDK_VERSION 0x03650011)
@@ -58,51 +59,4 @@ set(MODULE_IMPORT_NIDS
 	0xA6605D6F:F:0x0C733AE2
 	0x35C5ACD4:F:0x1AF2CFC9
 	0x35C5ACD4:F:0x2C28B1B0
-)
-set(MODULE_IMPORT_FUNCS
-	sceKernelGetThreadId
-	sceKernelDeleteLwMutex
-	sceClibMemcpy_safe
-	__stack_chk_fail
-	sceClibMspaceCreate
-	sceKernelLockLwMutex
-	sceClibMemset
-	sceClibStrncmp
-	sceClibMspaceMalloc
-	sceClibSnprintf
-	sceKernelUnlockLwMutex
-	sceClibMspaceFree
-	sceClibStrnlen
-	sceClibMspaceDestroy
-	sceKernelGetProcessTimeWide
-	sceClibStrncpy
-	sceKernelCreateThread
-	sceKernelCreateLwMutex
-	sceKernelWaitThreadEnd
-	sceClibStrstr
-	sceKernelStartThread
-	sceKernelGetSystemSwVersion
-	sceKernelDeleteThread
-	sceKernelDelayThread
-	sceKernelGetProcessId
-	sceNetRecv
-	sceNetSetsockopt
-	sceNetConnect
-	sceNetBind
-	sceNetSocketClose
-	sceNetSendto
-	sceNetShutdown
-	sceNetSocketAbort
-	sceNetHtons
-	sceNetRecvfrom
-	sceNetErrnoLoc
-	sceNetSend
-	sceNetSocket
-	sceKernelGetRandomNumber
-	sceAppMgrAppParamGetString
-	_vshSblAimgrGetPscode
-	vshSblAimgrIsDolce
-)
-set(MODULE_IMPORT_VARS
-	__stack_chk_guard
 )

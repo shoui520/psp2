@@ -252,7 +252,7 @@ static void Init(Plugin *plugin)
 	RemoteOskDialogPluginApiScope scope(__FUNCTION__, ret);
 
 	if (ret == SCE_OK) {
-		ret = SceCompanionUtil_0634FFD8(Callback, 1);
+		ret = sceCompanionUtilSetCallbackHandlerInternal(Callback, 1);
 		if (ret == SCE_OK)
 			ret = SceCompanionUtil_52AA755B();
 	}
@@ -294,7 +294,7 @@ static void Exit(Plugin *plugin)
 			break;
 		}
 	}
-	SceCompanionUtil_0634FFD8(NULL, 1);
+	sceCompanionUtilSetCallbackHandlerInternal(NULL, 1);
 }
 
 static void remoteOskDialogSetParam(Plugin::InitParam2 *param)

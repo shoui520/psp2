@@ -49,5 +49,6 @@ int MarlinRsaExponentOperation(unsigned int *output, const unsigned int *input,
 
 /* rsa_random.c */
 int MarlinRsaHasRandomGenerator(void);
+void MarlinRsaGenerateRandom(unsigned char *data, int size);
 void MarlinRsaFillNonzeroRandom(unsigned char *data, int size);
 int MarlinRsaSetRandomGenerator(int (*generator)(unsigned char *data, int size));

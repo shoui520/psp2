@@ -525,13 +525,13 @@ set(MODULE_IMPORT_FUNCS
 	sceTouchGetPanelInfo
 	sceTouchSetSamplingState
 	sceTouchRead2
-	SceCompanionUtil_0634FFD8
-	SceCompanionUtil_43D0A655
-	SceCompanionUtil_6097D2A8
-	SceCompanionUtil_7A5632D5
-	SceCompanionUtil_7A578A71
+	sceCompanionUtilSetCallbackHandlerInternal
+	sceCompanionUtilPowerOnOrbisForRemotePlay
+	sceCompanionUtilStop
+	sceCompanionUtilInit
+	sceCompanionUtilTerm
 	SceCompanionUtil_7AB433EC
-	SceCompanionUtil_8617FF79
+	sceCompanionUtilSearchToOrbis
 	SceNpWebApi_0D910413
 	sceNpWebApiSendRequest2
 	SceNpWebApi_4699EF17

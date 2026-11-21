@@ -76,10 +76,10 @@ set(MODULE_IMPORT_FUNCS
 	sceJpegEncoderSetCompressionRatio
 	sceJpegEncoderEncode
 	sceJpegEncoderEnd
-	SceCompanionUtil_0634FFD8
-	SceCompanionUtil_6097D2A8
-	SceCompanionUtil_7A5632D5
-	SceCompanionUtil_7A578A71
+	sceCompanionUtilSetCallbackHandlerInternal
+	sceCompanionUtilStop
+	sceCompanionUtilInit
+	sceCompanionUtilTerm
 	SceCompanionUtil_7AB433EC
 	SceCompanionUtil_C93BB8F0
 	SceCompanionUtil_CC52810C
