@@ -1,6 +1,6 @@
 /*
  * The gesture listeners the render plane attaches to a view plane's touches: the multi-touch
- * listener whose gestures, with the L and R buttons, the view's touch indicator follows, and the
+ * listener whose gestures, with the L and R buttons, the view's finger pointer follows, and the
  * listener that smooths a touch's place. Sony's file name is not known (the module has no debug
  * records); this one and every name in it are ours.
  */

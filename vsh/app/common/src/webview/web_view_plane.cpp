@@ -139,7 +139,7 @@ void WebViewViewPlane::UpdateSize()
    touch is (names ours; both set and never changed) */
 bool s_angleFromCorner = true;
 bool s_smoothTouch = true;
-static WebViewTouchIndicator *s_indicator;
+static FingerPointer *s_indicator;
 
 /* the touch panel's gesture listener of the priority for the widget's touch, and one attached
    to the touch (inline in Sony's; names ours) */
@@ -184,7 +184,7 @@ WebViewRenderPlane::WebViewRenderPlane(Widget *parent, WebViewViewPlane *viewPla
 	Widget *indicatorParent = m_rootEnv->m_root_widget;
 
 	if (s_indicator == NULL)
-		s_indicator = new WebViewTouchIndicator(indicatorParent, NULL);
+		s_indicator = new FingerPointer(indicatorParent, NULL);
 	m_indicator = s_indicator;
 	if (m_indicator != NULL)
 		m_indicator->SetEnabled(true);
@@ -239,25 +239,6 @@ int32_t WebViewRenderPlane::OnDraw(graph::DrawInfo &info)
 		m_env->m_reserved_flag_c[1] = false;
 	}
 	return Widget::OnDraw(info);
-}
-
-/* the widget shown, or hidden, at once (inlined in Sony's code) */
-static inline void ShowNow(Widget *widget)
-{
-	if (!widget->m_transition_complete) {
-		widget->m_transition = 0xff;
-		widget->m_transition_complete = true;
-		widget->DoTransition_core(0.0f, true);
-	}
-	ScePafWidget_FF5BC957(widget, NULL, 2, 0.0f, NULL);
-}
-
-static inline void HideNow(Widget *widget)
-{
-	widget->m_transition_complete = false;
-	widget->m_transition = 0xff;
-	widget->DoTransitionReverse_core(0.0f, true);
-	ScePafWidget_4588699E(widget, NULL, 2, 0.0f, NULL);
 }
 
 int32_t WebViewRenderPlane::Show()

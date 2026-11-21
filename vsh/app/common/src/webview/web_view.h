@@ -499,40 +499,73 @@ public:
 	bool m_secondPre;
 };
 
-/*
- * The plane that shows where the rear touches are, one for every view, made once (0x810141b4;
- * names ours): it draws the environment's three touch surfaces (Environment's
- * m_reserved_surface_a, b and c).
- */
-class WebViewTouchIndicator : public Plane {
-public:
-	WebViewTouchIndicator(Widget *parent, CreateParam *param);
+/* the widget shown, or hidden, at once (inlined in Sony's code; names ours) */
+static inline void ShowNow(Widget *widget)
+{
+	if (!widget->m_transition_complete) {
+		widget->m_transition = 0xff;
+		widget->m_transition_complete = true;
+		widget->DoTransition_core(0.0f, true);
+	}
+	ScePafWidget_FF5BC957(widget, NULL, 2, 0.0f, NULL);
+}
 
-	/* a surface with the color it is drawn in, or its size (names ours) */
-	void SetSurfaceA(intrusive_ptr<graph::Surface> surface, SceFColor color);
-	void SetSurfaceB(intrusive_ptr<graph::Surface> surface, SceFVector2 size);
-	void SetSurfaceC(intrusive_ptr<graph::Surface> surface, SceFColor color);
+static inline void HideNow(Widget *widget)
+{
+	widget->m_transition_complete = false;
+	widget->m_transition = 0xff;
+	widget->DoTransitionReverse_core(0.0f, true);
+	ScePafWidget_4588699E(widget, NULL, 2, 0.0f, NULL);
+}
+
+/*
+ * The plane that points where a rear touch is, one for every view, made once (0x810141b4; the
+ * name is ours, after its draw object's): it draws the environment's three touch surfaces
+ * (Environment's m_reserved_surface_a, b and c) on its planes a, c and b.
+ */
+class FingerPointer : public Plane {
+public:
+	/* its states: hidden, the press shown (plane b), the pointer shown on plane a or c */
+	enum {
+		STATE_HIDDEN = 0,
+		STATE_PRESS = 1,
+		STATE_POINT_A = 2,
+		STATE_POINT_C = 3
+	};
+
+	FingerPointer(Widget *parent, CreateParam *param);
+	virtual ~FingerPointer();
+
+	virtual int32_t OnDraw(graph::DrawInfo &info);
+
+	/* a surface with where it is anchored and its tip (x and y the anchor, z the tip, as
+	   fractions of the surface), or its anchor alone (names ours) */
+	void SetSurfaceA(intrusive_ptr<graph::Surface> surface, SceFColor region);
+	void SetSurfaceB(intrusive_ptr<graph::Surface> surface, SceFVector2 anchor);
+	void SetSurfaceC(intrusive_ptr<graph::Surface> surface, SceFColor region);
 	void SetEnabled(bool enabled);
-	/* the indicator shown at the place with the angle, moved there, and hidden at the place
+	/* the pointer shown at the place with the angle, moved there, and hidden at the place
 	   (0x810144ce, 0x81014522, 0x81014530) */
 	void Begin(float x, float y, float angle);
 	void Move(float x, float y, float angle);
 	void End(float x, float y);
 	/* where its tip is from its place: its size along its angle (0x81014b90) */
 	math::v2 GetTipOffset() const;
+	/* its planes shown, sized and placed for its state, from its draw object's Draw */
+	void DrawPointer();
 
-	/* fields: names ours, from what the indicator's functions do with them */
-	int32_t m_size;			/* surface a's drawn height in pixels (160 until set) */
+	/* fields: names ours, from what the pointer's functions do with them */
+	int32_t m_size;			/* surface a's tip length in pixels (160 until set) */
 	int32_t m_defaultSize;		/* 84; nothing here reads it */
-	int32_t m_state;		/* the animation's state, the switch at 0x81014c00 */
-	SceUInt64 m_stateTime;		/* when the state began */
+	int32_t m_state;		/* STATE_* */
+	SceUInt64 m_stateTime;		/* when it was made */
 	/* its place and angle (degrees) */
 	float m_x;
 	float m_y;
 	float m_angle;
-	float m_scale;			/* 1.0 */
-	bool m_enabled;			/* SetEnabled */
-	uint8_t reserved[164];		/* never touched by the indicator's functions */
+	float m_scale;			/* plane b's size scale: 1.0 */
+	bool m_enabled;			/* plane b is shown with the pointer (SetEnabled) */
+	uint8_t reserved[164];		/* never touched by the pointer's functions */
 	Plane *m_planeA;		/* the planes surfaces a, c and b are drawn on */
 	Plane *m_planeC;
 	Plane *m_planeB;
@@ -543,7 +576,7 @@ public:
 
 /*
  * The plane in the scene over a view plane (0x81010bec; names ours): it takes the rear touches
- * and the presses on its view plane, and shows the touch indicator.
+ * and the presses on its view plane, and shows the finger pointer.
  */
 class WebViewRenderPlane : public Plane {
 public:
@@ -551,7 +584,7 @@ public:
 	virtual ~WebViewRenderPlane();
 
 	virtual int32_t OnDraw(graph::DrawInfo &info);
-	/* it and the touch indicator shown, or hidden, at once */
+	/* it and the finger pointer shown, or hidden, at once */
 	virtual int32_t Show();
 	virtual int32_t Hide();
 	virtual void OnUpdate();
@@ -570,7 +603,7 @@ public:
 	int m_pressCount;
 	int m_reserved2[2];		/* only cleared */
 	uint8_t reserved[20];
-	WebViewTouchIndicator *m_indicator;
+	FingerPointer *m_indicator;
 	/* only released (what it holds is not known; a draw object, as the plane's) */
 	common::SharedPtr<graph::DrawObj> m_reserved3;
 	bool m_enabled;
