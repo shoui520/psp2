@@ -27,6 +27,7 @@
 #include <graphics/surface/surface.h>
 #include <inputdevice/inputlistener.h>
 #include <widget/core/widget.h>
+#include <widget/core/environment.h>
 #include <widget/core/uiinputlistener.h>
 #include <widget/wutil.h>
 #include <widget/w_plane.h>
@@ -408,16 +409,49 @@ public:
 	virtual void OnUpdate(const inputdevice::Data *data);
 };
 
-/* the plane the page's tiles are drawn on ("view_plane"; the class name is ours) */
+class WebViewViewPlane;
+
+/* the plane that draws the page's tiles for a view plane (0x81010bec; name ours) */
+class WebViewRenderPlane : public Plane {
+public:
+	WebViewRenderPlane(Widget *parent, WebViewViewPlane *viewPlane);
+};
+
+/*
+ * The plane the page's tiles are drawn on ("view_plane"; the class name is ours): it passes the
+ * front touches and gestures on it to its view, and has a render plane in the scene that draws
+ * the tiles.
+ */
 class WebViewViewPlane : public Widget {
 public:
+	static const char m_widget_type[];
+
 	WebViewViewPlane(Widget *parent, CreateParam *param);
 	virtual ~WebViewViewPlane();
 
+	virtual int32_t HandleTouchEvent(Event *e);
+	virtual int32_t HandleGestureEvent(Event *e);
+	virtual bool IsInherit(const char *type) const;
+	virtual char *GetTypeName() const;
+	virtual void UpdateSize();
+
+	/* where the front panel's first touch line crosses the plane, in its space */
+	math::v2 GetLinePos();
+
+	/* where the touch is on the plane: the hit's, or on its line where the hit is not the
+	   front panel's */
+	math::v2 GetTouchPos()
+	{
+		HitInfo hit;
+
+		if (m_env->GetHitStack(&hit, this) == 0 && hit.m_port == 0)
+			return hit.m_touch_pos;
+		return GetLinePos();
+	}
+
 	/* in the widget's tail padding */
 	WebView *m_view;
-	void *m_renderer;
-	int m_reserved644;
+	WebViewRenderPlane *m_renderer;
 };
 
 /* a load the web view keeps until its page is created: a URL, or data with its base URL

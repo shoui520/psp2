@@ -10,6 +10,7 @@ psp2_module(${PSP2_TARGET} KIND user COMPILER snc PARTIAL SOURCES
 	${WEBVIEW}/web_view.cpp
 	${WEBVIEW}/web_ime.cpp
 	${WEBVIEW}/web_ipc.cpp
+	${WEBVIEW}/web_view_plane.cpp
 	../../../sys/sdk/target/src/libsnc/unwind_pr0.c
 )
 target_include_directories(${PSP2_TARGET} PRIVATE "${PSP2_SRC}/vsh/paf/include"
