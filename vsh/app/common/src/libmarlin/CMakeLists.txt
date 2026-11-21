@@ -12,6 +12,7 @@ set(MLN_ARM_SOURCES
 	string.c
 	platform.c
 	time.c
+	esb.c
 )
 # The XML reader keeps every store before the loads after it, as -fno-strict-aliasing
 # compiles it (its node constructors store the node before reading the object's count).

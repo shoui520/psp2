@@ -13,6 +13,8 @@
 #define MLN_ERROR_NO_MEMORY	2
 #define MLN_ERROR_INVALID_ARGUMENT	3
 #define MLN_ERROR_INVALID	5
+#define MLN_ERROR_FORMAT	0x30000001	/* a value of the wrong type */
+#define MLN_ERROR_UNSUPPORTED	0x30000002	/* a value type the library does not know */
 
 /* the XML parser's errors */
 #define MLN_XML_ERROR_SYNTAX		0x10010003
@@ -677,6 +679,86 @@ int MlnTextBufferAppend(int heap, MlnTextBuffer *buffer, unsigned int size, cons
 void MlnTextBufferDestroy(int heap, MlnTextBuffer *buffer);
 /* an element node as XML text (not written in C yet) */
 int MlnXmlNodeToText(int heap, MlnXmlNode *node, MlnBuffer **text);
+
+/* esb.c: an extended status block's values */
+#define MLN_VALUE_INTEGER		0
+#define MLN_VALUE_REAL			1
+#define MLN_VALUE_STRING		2
+#define MLN_VALUE_DATE			3
+#define MLN_VALUE_PARAMETER		4
+#define MLN_VALUE_EXTENDED_PARAMETER	5
+#define MLN_VALUE_RESOURCE		6
+#define MLN_VALUE_LIST			7
+
+struct MlnValue;
+
+typedef struct MlnParameter {
+	MlnBuffer *name;
+	struct MlnValue *value;
+} MlnParameter;
+
+typedef struct MlnExtendedParameter {
+	MlnBuffer *name;
+	struct MlnValue *value;
+	int flags;
+} MlnExtendedParameter;
+
+typedef struct MlnValueList {
+	int count;
+	struct MlnValue *items[];
+} MlnValueList;
+
+typedef struct MlnValue {
+	int type;
+	union {
+		int integer;			/* an integer, a real's bits, a date */
+		MlnBuffer *buffer;		/* a string, a resource */
+		MlnParameter *parameter;
+		MlnExtendedParameter *extended;
+		MlnValueList *list;
+	} data;
+} MlnValue;
+
+/* an output control an action's status block names */
+#define MLN_OUTPUT_CONTROL_BASIC_CCI	1
+#define MLN_OUTPUT_CONTROL_DTCP		2
+
+#define MLN_OUTPUT_CONTROL_UNKNOWN		0x01	/* a parameter or control not known */
+#define MLN_OUTPUT_CONTROL_EPN			0x02
+#define MLN_OUTPUT_CONTROL_CCI			0x04
+#define MLN_OUTPUT_CONTROL_IMAGE_CONSTRAINT	0x08
+#define MLN_OUTPUT_CONTROL_DIGITAL_ONLY		0x10
+#define MLN_OUTPUT_CONTROL_APS			0x20
+#define MLN_OUTPUT_CONTROL_RETENTION_MOVE_MODE	0x40
+#define MLN_OUTPUT_CONTROL_RETENTION_STATE	0x80
+
+typedef struct MlnOutputControl {
+	int kind;
+	unsigned int flags;
+	struct {
+		int epn;
+		int cci;
+		int imageConstraintToken;
+		int digitalOnlyToken;
+		int aps;
+	} basic;
+	struct {
+		int retentionMoveMode;
+		int retentionState;
+		int epn;
+		int cci;
+		int imageConstraintToken;
+		int aps;
+	} dtcp;
+} MlnOutputControl;
+
+int MlnOutputControlParse(int heap, const MlnValueList *parameters, const MlnBuffer *id,
+			  int report, unsigned int *flags, MlnOutputControl **out);
+int MlnValueCopy(int heap, const MlnValue *value, MlnValue **out);
+/* not written in C yet */
+void MlnValueFree(int heap, MlnValue *value);
+void MlnValueListFree(int heap, MlnValueList *list);
+void MlnExtendedParameterFree(int heap, MlnExtendedParameter *extended);
 
 /* not written in C yet: the prototypes are their callers' */
 int MlnCoreInit(void *memory, unsigned int size);
