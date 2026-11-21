@@ -90,12 +90,19 @@ public:
 
 	/* the most touches it takes, its touches taken again where that changes (inline in
 	   Sony's; name ours) */
-	void SetTouchCountMax(uint32_t count)
+	int32_t SetTouchCountMax(uint32_t count)
 	{
-		if (m_touch_count_max != count) {
-			m_touch_count_max = count;
-			RefreshActiveTouch(m_attached_bitmap);
+		if (m_touch_count_max == count) {
+			int32_t held = 0;
+
+			for (uint32_t bits = m_touch_bitmap; bits != 0; bits >>= 1) {
+				if (bits & 1)
+					held++;
+			}
+			return held;
 		}
+		m_touch_count_max = count;
+		return RefreshActiveTouch(m_attached_bitmap);
 	}
 
 	/* the touch IDs it holds, a bit each */

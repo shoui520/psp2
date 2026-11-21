@@ -946,7 +946,8 @@ public:
 	intrusive_ptr<graph::Surface> m_reserved_surface_a;
 	intrusive_ptr<graph::Surface> m_reserved_surface_b;
 	intrusive_ptr<graph::Surface> m_reserved_surface_c;
-	uint8_t reserved6j[16];
+	/* the color the web view's touch indicator draws m_reserved_surface_a in (name ours) */
+	SceFColor m_reserved_color_a;
 	/* the motion noise filter is available (vshMotionNoiseFilterIsAvailable; name ours) */
 	bool m_motion_noise_filter;
 	uint8_t reserved6k[3];

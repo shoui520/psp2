@@ -32,6 +32,7 @@
 #include <widget/wutil.h>
 #include <widget/w_plane.h>
 #include <widget/w_scroll_view_base.h>
+#include <widget/core/widget_gesture.h>
 #include "context_menu_info.h"
 #include "web_ipc.h"
 
@@ -411,10 +412,168 @@ public:
 
 class WebViewViewPlane;
 
-/* the plane that draws the page's tiles for a view plane (0x81010bec; name ours) */
+/*
+ * The listener a view plane's touch is smoothed with (constructor 0x81012e58, vtable 0x810259b0,
+ * 0x114 bytes; names ours): it keeps the touch's last places and gives a place without the
+ * panel's one-pixel jitter, each axis on its own (GetX, GetY).
+ */
+class WebViewTouchListener : public TouchGestureListener {
+public:
+	WebViewTouchListener(uint32_t port, uint32_t touch_id, void *user_data);
+	virtual ~WebViewTouchListener();
+
+	virtual int32_t OnUpdateTouch(uint32_t id);
+
+	/* the smoothed place (0x81013a04, 0x81013a0a) */
+	float GetX();
+	float GetY();
+
+	/* 0 until the touch is down, 1 while it is */
+	int32_t m_state;
+	/* the smoothed place GetX and GetY give */
+	float m_pos[2];
+	/* the touch's place now, and the smoothed place it gives */
+	float m_cur[2];
+	float m_out[2];
+	/* the touch's places of the updates before, the last first */
+	float m_history[14][2];
+	/* the place the smoothed one moves with, now and the update before */
+	float m_target[2];
+	float m_targetPre[2];
+	/* the smoothed place, now and the update before */
+	float m_smoothed[2];
+	float m_smoothedPre[2];
+	/* the place held while the axis jitters, now and the update before */
+	float m_base[2];
+	float m_basePre[2];
+	/* the updates the axis stayed at one place, now and the update before */
+	int32_t m_stillCount[2];
+	int32_t m_stillCountPre[2];
+	/* how long the axis stayed at its last place, now and the update before */
+	int32_t m_lastRun[2];
+	int32_t m_lastRunPre[2];
+	/* the axis jitters by a pixel (one of seven patterns of its last places), now and the
+	   update before, and it began to */
+	bool m_jitter[2];
+	bool m_jitterPre[2];
+	bool m_jitterOn[2];
+	/* the touch moved on, in the time of each axis's last place */
+	bool m_moved[2];
+	/* the axis is held at m_base, now and the update before */
+	bool m_hold[2];
+	bool m_holdPre[2];
+};
+
+/*
+ * The listener of a widget's two touches on the panel, with the L and R buttons (constructor
+ * 0x81012780, vtable 0x81025984, 0x74 bytes; names ours): it sends the gestures of m_gesture
+ * (40 to 44, set where it is made) as the touches and buttons change.
+ */
+class WebViewMultiTouchListener : public MultiTouchGestureListener {
+public:
+	WebViewMultiTouchListener(uint32_t port, uint32_t touch_id, void *user_data);
+	virtual ~WebViewMultiTouchListener();
+
+	virtual int32_t OnUpdateMultiTouch(uint32_t bitmap, uint32_t bitmap_pre, int32_t diff);
+
+	uint32_t reserved38;		/* never touched */
+	/* the gestures it sends: begin, move, and the three ends */
+	int32_t m_gesture[5];
+	uint32_t reserved50[2];		/* never touched */
+	/* 0 until a touch is down, 1 while one is, 2 with L or R, 3 once they are let go */
+	int32_t m_state;
+	/* where the touch was pressed */
+	int32_t m_x;
+	int32_t m_y;
+	/* L and R held, now and the update before */
+	bool m_l;
+	bool m_lPre;
+	bool m_r;
+	bool m_rPre;
+	/* the button the gestures carry: 0 R, 1 L, 2 none */
+	int32_t m_button;
+	/* the touches it held the update before */
+	int32_t m_countPre;
+	/* the second touch is down, now and the update before */
+	bool m_second;
+	bool m_secondPre;
+};
+
+/*
+ * The plane that shows where the rear touches are, one for every view, made once (0x810141b4;
+ * names ours): it draws the environment's three touch surfaces (Environment's
+ * m_reserved_surface_a, b and c).
+ */
+class WebViewTouchIndicator : public Plane {
+public:
+	WebViewTouchIndicator(Widget *parent, CreateParam *param);
+
+	/* a surface with the color it is drawn in, or its size (names ours) */
+	void SetSurfaceA(intrusive_ptr<graph::Surface> surface, SceFColor color);
+	void SetSurfaceB(intrusive_ptr<graph::Surface> surface, SceFVector2 size);
+	void SetSurfaceC(intrusive_ptr<graph::Surface> surface, SceFColor color);
+	void SetEnabled(bool enabled);
+	/* the indicator shown at the place with the angle, moved there, and hidden at the place
+	   (0x810144ce, 0x81014522, 0x81014530) */
+	void Begin(float x, float y, float angle);
+	void Move(float x, float y, float angle);
+	void End(float x, float y);
+	/* where its tip is from its place: its size along its angle (0x81014b90) */
+	math::v2 GetTipOffset() const;
+
+	/* fields: names ours, from what the indicator's functions do with them */
+	int32_t m_size;			/* surface a's drawn height in pixels (160 until set) */
+	int32_t m_defaultSize;		/* 84; nothing here reads it */
+	int32_t m_state;		/* the animation's state, the switch at 0x81014c00 */
+	SceUInt64 m_stateTime;		/* when the state began */
+	/* its place and angle (degrees) */
+	float m_x;
+	float m_y;
+	float m_angle;
+	float m_scale;			/* 1.0 */
+	bool m_enabled;			/* SetEnabled */
+	uint8_t reserved[164];		/* never touched by the indicator's functions */
+	Plane *m_planeA;		/* the planes surfaces a, c and b are drawn on */
+	Plane *m_planeC;
+	Plane *m_planeB;
+	math::v4 m_sizeA;		/* each plane's size */
+	math::v4 m_sizeC;
+	math::v4 m_sizeB;
+};
+
+/*
+ * The plane in the scene over a view plane (0x81010bec; names ours): it takes the rear touches
+ * and the presses on its view plane, and shows the touch indicator.
+ */
 class WebViewRenderPlane : public Plane {
 public:
 	WebViewRenderPlane(Widget *parent, WebViewViewPlane *viewPlane);
+	virtual ~WebViewRenderPlane();
+
+	virtual int32_t OnDraw(graph::DrawInfo &info);
+	/* it and the touch indicator shown, or hidden, at once */
+	virtual int32_t Show();
+	virtual int32_t Hide();
+	virtual void OnUpdate();
+
+	/* a touch on the panel (port) with its ID, passed on from the widget */
+	void OnTouch(uint32_t port, uint32_t id, Handler *widget);
+
+	float m_pixelPerMm;		/* the front panel's */
+	Widget *m_root;			/* the parent it was made in */
+	Environment *m_rootEnv;
+	Camera *m_camera;		/* the parent's scene's */
+	WebViewViewPlane *m_viewPlane;
+	int m_reserved;			/* only cleared */
+	/* a press is held on the view plane, and how many */
+	bool m_pressed;
+	int m_pressCount;
+	int m_reserved2[2];		/* only cleared */
+	uint8_t reserved[20];
+	WebViewTouchIndicator *m_indicator;
+	/* only released (what it holds is not known; a draw object, as the plane's) */
+	common::SharedPtr<graph::DrawObj> m_reserved3;
+	bool m_enabled;
 };
 
 /*
