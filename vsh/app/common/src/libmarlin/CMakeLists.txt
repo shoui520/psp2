@@ -9,6 +9,9 @@ set(MLN_ARM_SOURCES
 	memory.c
 	mutex.c
 	api.c
+	string.c
+	platform.c
+	time.c
 )
 psp2_module(${PSP2_TARGET} KIND user COMPILER gcc48 PARTIAL SOURCES
 	${MLN_ARM_SOURCES}

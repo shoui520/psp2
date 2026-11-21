@@ -204,7 +204,9 @@ typedef struct MlnDateTime {
 	int hour;
 	int minute;
 	int second;
-	int reserved[3];
+	int microsecond;
+	int utcOffset;		/* seconds */
+	int daylightSaving;
 } MlnDateTime;
 
 /* the part of a time the interface gives */
@@ -215,7 +217,7 @@ typedef struct MlnApiDate {
 	int hour;
 	int minute;
 	int second;
-	int reserved;
+	int microsecond;
 } MlnApiDate;
 
 /* what a license grants, as the engine evaluates it */
@@ -389,9 +391,52 @@ int MlnImpl_81081498(void *time, int *minutes);
 int MlnIdSetAdd(MlnIdSet **set, const MlnBuffer *id);
 int MlnNodesCollectReachable(MlnOctopusNode *nodes, const MlnBuffer *id, MlnIdSet **set);
 
-/* not written in C yet: the prototypes are their callers' */
+/* three buffers and a counted list of buffer triples (string.c frees it) */
+typedef struct MlnBufferGroup {
+	unsigned int reserved;
+	MlnBuffer *first;
+	MlnBuffer *second;
+	MlnBuffer *third;
+	MlnBuffer ***entries;
+	unsigned int entryCount;
+} MlnBufferGroup;
+
+/* SceDrmBridgeUser's calls (the SDK's stub library) */
+int sceDrmBridgeIsAllowRemotePlayDebug(void);
+int SceDrmBridgeUser_6F5DC6CD(void);
+
+/* string.c */
+unsigned short MlnHtons(unsigned int value);
+unsigned int MlnNtohl(unsigned int value);
+unsigned int MlnHtonl(unsigned int value);
+char *MlnStrncpy(char *dst, const char *src, unsigned int n);
+int MlnStrcmp(const char *a, const char *b);
+int MlnStrncmp(const char *a, const char *b, unsigned int n);
+char *MlnStrncat(char *dst, const char *src, unsigned int n);
+char *MlnStrstr(const char *haystack, const char *needle);
+char *MlnStrchr(const char *s, int c);
+char *MlnStrrchr(const char *s, int c);
+unsigned int MlnStrspn(const char *s, const char *accept);
+void MlnImpl_81006CD4(int heap, MlnBuffer **buffers);
+void MlnImpl_81006D14(int heap, MlnBufferGroup *group);
+int MlnPlatformMode(void);
+void **MlnImpl_81006EAC(void);
 int MlnMemoryInit(int heap, void *memory, unsigned int size);
 int MlnMemoryTerm(int heap);
+
+/* time.c */
+int MlnImpl_8100702C(void);
+unsigned int MlnTimeNow(void);
+int MlnImpl_81007098(void);
+int MlnTimeGetTick(unsigned int *tick);
+int MlnTimeToSeconds(const MlnDateTime *time, int *seconds);
+int MlnTimeFromSeconds(const unsigned int *seconds, int utcOffset, int daylightSaving,
+		       MlnDateTime *time);
+int MlnTimeFromMinutes(const unsigned int *minutes, MlnDateTime *time);
+int MlnTimeToMinutes(const MlnDateTime *time, unsigned int *minutes);
+int *MlnImpl_81007494(int unused, int *count);
+
+/* not written in C yet: the prototypes are their callers' */
 int MlnCoreInit(void *memory, unsigned int size);
 int MlnCoreTerm(void);
 int MlnPlatformInit(void);
@@ -399,7 +444,6 @@ int MlnPlatformTerm(void);
 unsigned int MlnStateSerialize(MlnBuffer **state);
 int MlnServiceSetState(MlnServiceContext *context, MlnBuffer *state);
 int MlnServiceClearState(MlnServiceContext *context);
-unsigned int MlnNtohl(unsigned int value);
 int MlnImpl_81013350(void *a0, void *a1);
 int MlnImpl_81016A5C(void *a0, void *a1, void *a2);
 int MlnImpl_81016B4C(void *a0, void *a1);
@@ -430,8 +474,6 @@ int MlnImpl_8101F5F4(void *client, MlnBuffer *a1);
 int MlnImpl_8101F724(void *client, MlnBuffer *token, MlnBuffer **found);
 unsigned int MlnImpl_810103D8(int heap, unsigned int size, const void *data, int *value);
 int MlnImpl_8102045C(void *session);
-int MlnStrcmp(const char *a, const char *b);
-int MlnImpl_810072B0(const int *minutes, MlnDateTime *time);
 int MlnImpl_8101A020(void *engine);
 int MlnImpl_8101DD24(MlnApiKind *kind, MlnBuffer *address, void **client, MlnApiVersion *version);
 int MlnImpl_8101DF70(void *client);
@@ -452,7 +494,6 @@ int MlnXmlGetAttribute(int heap, MlnXmlNode *node, const char *ns, const char *n
 int MlnXmlGetText(int heap, MlnXmlNode *node, MlnBuffer **text);
 int MlnXmlNodeFree(int heap, MlnXmlNode *node);
 int MlnXmlListFree(int heap, MlnXmlNodeList *list);
-void MlnImpl_81006D14(int heap, void *a1);
 unsigned int MlnImpl_81010068(int heap, void *a1);
 void MlnImpl_810136AC(void);
 int MlnImpl_810136E0(void *a0, void *a1, void *a2, void *a3, unsigned char a4, void *a5);

@@ -917,7 +917,7 @@ __attribute__((noinline)) int MlnApi_810037B0(const int *minutes, MlnApiDate *da
 {
 	MlnDateTime time;
 
-	if (MlnImpl_810072B0(minutes, &time) != MLN_OK)
+	if (MlnTimeFromMinutes((const unsigned int *)minutes, &time) != MLN_OK)
 		return MLN_RESULT_INVALID_ARGUMENT;
 	MlnMemset(date, 0, sizeof(*date));
 	date->year = time.year;
@@ -926,7 +926,7 @@ __attribute__((noinline)) int MlnApi_810037B0(const int *minutes, MlnApiDate *da
 	date->hour = time.hour;
 	date->minute = time.minute;
 	date->second = time.second;
-	date->reserved = time.reserved[0];
+	date->microsecond = time.microsecond;
 	return MLN_OK;
 }
 
