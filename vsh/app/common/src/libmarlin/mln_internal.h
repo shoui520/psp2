@@ -1903,13 +1903,30 @@ int MlnImpl_810368BC(int heap, const MlnAsn1Node *node, unsigned int *size);
 int MlnImpl_8103696C(int heap, const MlnAsn1Node *node, unsigned char *buffer, unsigned int *size);
 int MlnImpl_810369B8(int heap, MlnAsn1Node *node, int definite);
 int MlnImpl_81036A04(int heap, const MlnAsn1Node *node);
+int MlnImpl_81036A14(int heap, const MlnAsn1Node *node, MlnAsn1Node **out);
+int MlnImpl_81036CA8(int heap, unsigned int size, const unsigned char *encoding,
+		     MlnAsn1Node **out);
+int MlnImpl_81036D28(int heap, int tagClass, unsigned char constructed, int tag,
+		     unsigned int length, const void *contents, MlnAsn1Node **out);
+int MlnImpl_81036E34(int heap, int tagClass, int tag, MlnAsn1Node **out);
+int MlnImpl_81036EBC(int heap, int tagClass, int tag, unsigned int length,
+		     const void *contents, MlnAsn1Node **out);
+int MlnImpl_81036FC8(int heap, MlnAsn1Node *node);
+int MlnImpl_81036FD4(int heap, unsigned char *data);
+int MlnImpl_81036FE4(int heap, MlnAsn1Node *parent, int index, MlnAsn1Node *child);
+int MlnImpl_81037084(int heap, int mode, const unsigned char *der, const unsigned char *end,
+		     unsigned int *size, const unsigned char **next, MlnAsn1Node **out);
+int MlnImpl_81037660(int heap, const unsigned char *der, unsigned int size,
+		     const unsigned char **contents, int *length, unsigned int *encodingSize);
+int MlnImpl_810378B0(int heap, const unsigned char *der, unsigned int size,
+		     const unsigned char **next);
+int MlnImpl_810378E4(int heap, const unsigned char *der, unsigned int size,
+		     const unsigned char **next, MlnAsn1Node **out);
 int MlnImpl_81034D38(const char *usage, int count, MlnBuffer **certificates, char **out);
 int MlnImpl_81035018(int encryptionCount, MlnBuffer **encryptionCertificates, int signingCount,
 		     MlnBuffer **signingCertificates, const MlnBuffer *role,
 		     const MlnBuffer *nodeId, char **out);
 int MlnImpl_810368D0(int heap, MlnAsn1Node *node, unsigned char **data, unsigned int *size);
-void MlnImpl_81036FC8(int heap, MlnAsn1Node *node);
-void MlnImpl_81036FD4(int heap, unsigned char *data);
 int MlnImpl_81037918(int heap, const unsigned char *data, unsigned int size, int flags,
 		     MlnAsn1Node **out);
 int MlnImpl_81037948(int heap, MlnAsn1Node *sequence, MlnAsn1Node *node, int flags);
