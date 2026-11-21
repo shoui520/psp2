@@ -122,9 +122,27 @@ public:
 #define BGDL_ERROR_TASK_BUSY		0x80103A46	/* PLACEHOLDER name: the task is being removed */
 #define BGDL_ERROR_GAME_DATA_RESTART	0x80103A53	/* PLACEHOLDER name: game data of key 116 was installed */
 #define BGDL_ERROR_NO_FOLDER		0x80103A29	/* PLACEHOLDER name: a folder a task installs into is not there */
+#define BGDL_ERROR_SERVER		0x80103A23	/* PLACEHOLDER name: the server answered with an HTTP error */
+/* PLACEHOLDER name: a transfer stopped before it completed (libmtp's errors other than its
+   0x80546600 group, a cancelled or held download) */
+#define BGDL_ERROR_INTERRUPTED		0x80103A24
+#define BGDL_ERROR_NO_SIZE		0x80103A2A	/* PLACEHOLDER name: the content's size is not known */
 #define BGDL_ERROR_PATCH_STATE4		0x80103A51	/* the update check's state 4 */
 #define BGDL_ERROR_PATCH_STATE3		0x80103A52	/* and its state 3 */
 #define BGDL_ERROR_BAD_STORAGE		0x80103A38	/* the title's storage kind is not one a task can use */
+/* PLACEHOLDER name: a package of kind 9 names no file 230, or its sce_sys/package is not there */
+#define BGDL_ERROR_NO_KEY230		0x80103A36
+/* PLACEHOLDER names: what AddContentTask finds wrong in the server's description (and
+   BGDL_ERROR_NO_SIZE); a file whose extension names no content kind, and a MIME type
+   that is not the kind's */
+#define BGDL_ERROR_BAD_KIND		0x80103A21
+#define BGDL_ERROR_BAD_MIME_TYPE	0x80103A20
+/* PLACEHOLDER names: the task's param file names no file (key 203 empty); the request names
+   no URL */
+#define BGDL_ERROR_NO_FILE		0x80103A1F
+#define BGDL_ERROR_NO_URL		0x80103A0A
+/* PLACEHOLDER name: a local file:// task's file is not a package (its extension) */
+#define BGDL_ERROR_NOT_PACKAGE		0x80103A2D
 
 /* a transfer's progress; times in microseconds (paf::get_time_internal) */
 class BgdlProgress {

@@ -1194,6 +1194,29 @@ int SceLsdb_7AF9008C(AppInfoQClient *client, const paf::string *titleId, LsdbIco
 	bool theme);
 int SceLsdb_65ECEF39(AppInfoQClient *client, const paf::string *titleId, unsigned int key,
 	LsdbValue *value);
+/* newevent.cpp's NewEventAccessor exports */
+NewEventAccessor *SceLsdb_919C0934(NewEventAccessor *accessor);
+NewEventAccessor *SceLsdb_60C08DFF(NewEventAccessor *accessor);
+int SceLsdb_4C137FCC(NewEventAccessor *accessor);
+int SceLsdb_937405B5(NewEventAccessor *accessor);
+int SceLsdb_315B9FD6(LsdbNewEvent *event, bool popup);
+int SceLsdb_B3252544(LsdbNewEventPtr *events, int count, unsigned int fields);
+int SceLsdb_AE04DDEB(const LsdbNewEventKey *keys, int count);
+int SceLsdb_C02E38AD(bool all);
+int SceLsdb_07ADA030(NewEventAccessor *accessor, LsdbNewEvent *event);
+int SceLsdb_B285FC5E(NewEventAccessor *accessor, paf::vector<LsdbNewEventPtr> *events, int max,
+	int *count, int *newCount, bool clear);
+paf::common::SharedPtr<DbBlob> SceLsdb_03B27FDF(NewEventAccessor *accessor,
+	const SceInt64 *rowid, int *pResult);
+bool SceLsdb_8DE37E2E(NewEventAccessor *accessor);
+void SceLsdb_B1F02AD0(NewEventAccessor *accessor);
+int SceLsdb_A2BD70BE(NewEventAccessor *accessor);
+int SceLsdb_D046218A(NewEventAccessor *accessor, LsdbNewEvent *event);
+int SceLsdb_98672963(NewEventAccessor *accessor, const SceInt64 *rowid);
+int SceLsdb_8A6B2B12(NewEventAccessor *accessor);
+int SceLsdb_464351D0(NewEventAccessor *accessor, LsdbNewEventPtr *events, int count);
+int SceLsdb_FB3B1767(NewEventAccessor *accessor);
+unsigned int SceLsdb_121C66FC(NewEventAccessor *accessor, const LsdbNewEvent *event);
 SceInt64 SceLsdb_61F17FDA(AppInfoQClient *client, int key, SceInt64 defaultValue);
 int SceLsdb_64DD44C2(AppInfoQClient *client, const paf::string *id, int language,
 	LsdbTheme *theme);

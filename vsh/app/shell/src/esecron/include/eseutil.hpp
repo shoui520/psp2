@@ -150,6 +150,8 @@ int Bgdl_81113400(const char *folder);
 int Bgdl_811137F6(bool mount);
 void Bgdl_81113890(int type);	/* sceKernelPowerTick */
 /* game_plugin's storage and category kind of a title, and its title id */
+/* another file's (0x81123BC0, PLACEHOLDER name): the title's row */
+int Bgdl_81123BC0(const char *titleId, LsdbAppInfoPtr *info);
 int Bgdl_81113898(const LsdbAppInfoPtr *info, int *storage);
 int Bgdl_811138CC(const LsdbAppInfoPtr *info, int *kind);
 bool Bgdl_81113900(const LsdbAppInfoPtr *info, paf::string *titleId);

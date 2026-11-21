@@ -195,8 +195,16 @@ public:
 
 	/* (0x8141550C) the transfer started over, shown when report is set */
 	__attribute__((noinline)) void setProgress(bool report, SceUInt64 total, SceUInt64 current);
+	/* (0x81415ECC) the transfer at current, the time left worked out again, shown when report
+	   is set (PLACEHOLDER name; esehttp.hpp) */
+	__attribute__((noinline)) void updateProgress(bool report, SceUInt64 current);
+	/* updateProgress's body, which Sony's compiler also places in its callers (PLACEHOLDER
+	   name; esehttp.hpp) */
+	void doUpdateProgress(bool report, SceUInt64 current);
 	/* (0x8141559C) the package copied in under "SceBgdlRMutexPackage" */
 	__attribute__((noinline)) void setPackage(const struct BgdlTaskPackage *src);
+	/* setPackage's body, which Sony's compiler also places in its callers (PLACEHOLDER name) */
+	void doSetPackage(const struct BgdlTaskPackage *src);
 
 	SceUInt32 id;			/* the task's number, its folder's name */
 	int result;			/* key 104; 0x80103A1A until it is read */
@@ -358,8 +366,18 @@ struct BgdlStorageInfo {
 /* a file closed when it goes (constructor 0x814152A0, destructor 0x814152C8) PLACEHOLDER */
 class BgdlFileCloser {
 public:
+	BgdlFileCloser() : m_result(0)
+	{
+	}
+
 	BgdlFileCloser(paf::common::SharedPtr<paf::File> file) : m_file(file), m_result(0)
 	{
+	}
+
+	/* (0x81415DAC) the file to close */
+	__attribute__((noinline)) void Set(paf::common::SharedPtr<paf::File> file)
+	{
+		m_file = file;
 	}
 
 	~BgdlFileCloser()
@@ -386,6 +404,8 @@ inline SceUInt32 bgdlWorkId(SceUInt32 type, bool flag)
 	}
 	return (SceUInt32)-1;
 }
+
+bool bgdlKindIsGame(int kind);		/* (0x81415650) esetask.cpp */
 
 class BgdlManagerThread;
 
@@ -444,6 +464,7 @@ public:
 	int deleteTask(SceUInt32 id, const EseParamCache *param);	/* (0x810FE8F0) probable */
 	int finishTask(EseTask *task, int result);			/* (0x810FED12) PLACEHOLDER name */
 	bool IsSuspended(void);						/* (0x810FF102) PLACEHOLDER name */
+	bool IsHeld(void);						/* (0x811104A0) PLACEHOLDER name */
 	bool NextTask(EseTask **next);					/* (0x810FF108) PLACEHOLDER name */
 	int RemoveTask(SceUInt32 id);					/* (0x810FF37C) PLACEHOLDER name */
 	void SetStatus(const BgdlTaskStatus *status);			/* (0x810FF6CC) PLACEHOLDER name */
@@ -486,7 +507,7 @@ public:
 	int ListTasks(paf::vector<BgdlTaskEntry> *list, int type);
 	int RemoveGameDataTasks(const char *titleId);	/* (0x8110C1EC) PLACEHOLDER name */
 	void FinishInstall(SceUInt32 id, EseTask *task, int *result, class BgdlTaskMark *mark);	/* (0x8110D34E) */
-	int InstallTask(const SceUInt32 *id);	/* (0x8110D722) PLACEHOLDER name */
+	int InstallTask(struct BgdlTaskInfo *info);	/* (0x8110D722) PLACEHOLDER name */
 	/* (0x8110D7E2) PLACEHOLDER name: the title's waiting tasks described */
 	int GetTitleTaskInfos(const char *titleId, paf::vector<struct BgdlTaskInfo> *infos, SceUInt32 flags,
 			      int type);
@@ -541,7 +562,7 @@ public:
 	SceUInt32 m_nextInternalId;	/* ur0:'s, from 0x80000000 */
 	SceUInt32 m_flags;		/* what the tasks may do (UpdateFlags) */
 	bool m_ux0Ready;		/* ux0: is there */
-	bool m_hold;			/* PLACEHOLDER name: set by 0x8110F1D8 and 0x8110F1DE, not read yet */
+	bool m_hold;			/* PLACEHOLDER name: set by 0x8110F1D8 and 0x8110F1DE; a download stops while it is set */
 	bool m_resumed;			/* PLACEHOLDER name: the system resumed (SHELL_EVENT_POWER) */
 	bool m_suspended;		/* PLACEHOLDER name: no task is started while it is set */
 	BgdlTaskStatus m_status;	/* the running task's (60 bytes copied) */
@@ -719,11 +740,11 @@ int bgdlInstallTitleTasksOfKinds(const char *titleId, int type, SceUInt32 flags,
 				 struct BgdlTaskInfo *failed, bool *patched);
 int bgdlCountTasks(SceUInt32 *count, paf::vector<BgdlTaskEntry> *list);	/* (0x8110E884) */
 int bgdlGetContentTaskInfos(paf::vector<struct BgdlTaskInfo> *infos);	/* (0x8110ED40) */
-int bgdlInstallTask(const SceUInt32 *id);			/* (0x8110ED62) PLACEHOLDER name */
+int bgdlInstallTask(struct BgdlTaskInfo *info);		/* (0x8110ED62) PLACEHOLDER name */
 int bgdlGetTitleTaskInfos(const char *titleId, paf::vector<struct BgdlTaskInfo> *infos,
 			  SceUInt32 flags, int type);			/* (0x8110ED8A) */
 int bgdlGetTaskInfo(SceUInt32 id, struct BgdlTaskInfo *info);	/* (0x8110F018) PLACEHOLDER name */
-int bgdlInstallTask2(const SceUInt32 *id);			/* (0x8110F03C) PLACEHOLDER name */
+int bgdlInstallTask2(struct BgdlTaskInfo *info);		/* (0x8110F03C) PLACEHOLDER name */
 void bgdlHold(void);						/* (0x8110F1DE) PLACEHOLDER name */
 void bgdlSuspend(bool reserved);				/* (0x8110F1F4) PLACEHOLDER name */
 /* (0x8110F208) PLACEHOLDER name */
@@ -734,5 +755,53 @@ int bgdlGetPatchVersion(const char *titleId, SceUInt8 *version);	/* (0x8110FB04)
 int bgdlListMtpTasks(void);					/* (0x8110FB28) PLACEHOLDER name */
 int bgdlCheckMtpContent(const BgdlMtpContent *content, int reserved);	/* (0x8110FC3E) */
 int bgdlAddMtpTask(const BgdlMtpRequest *request, SceUInt32 *id);	/* (0x811103CA) */
+
+/* (0x81563150) "SceBgdlRMutexPackage", guarding each task's package (esetask.cpp) */
+extern paf::thread::RMutex s_packageMutex;
+
+inline void EseTask::doSetPackage(const BgdlTaskPackage *src)
+{
+	s_packageMutex.Lock();
+	package = *src;
+	s_packageMutex.Unlock();
+}
+
+/* the dispatcher's state, as Bgdl_8113A47C copies it (PLACEHOLDER) */
+struct BgdlDispatcherState {
+	int state;			/* 0: idle */
+	int reserved[3];
+};
+
+/* (0x8113A434..) the job dispatcher, made by download_plugin (PLACEHOLDER names) */
+class BgdlJobDispatcher {
+public:
+	__attribute__((noinline)) BgdlJobDispatcher() : m_queue(NULL), m_reserved(0)
+	{
+	}
+
+	~BgdlJobDispatcher();						/* (0x8113A674) */
+	static BgdlJobDispatcher *Bgdl_8113A434(void);
+	void Bgdl_8113A47C(BgdlDispatcherState *state, bool second);
+	int Bgdl_8113A4FC(paf::common::SharedPtr<paf::job::JobItem> &job);
+	void Bgdl_8113A644(void);					/* stops it */
+	void Bgdl_8113A6A8(void);					/* starts it */
+
+	void *m_queue;
+	int m_reserved;
+};
+
+/* log_job_manager.cpp's (0x81123E48): the log job manager's job queue (PLACEHOLDER names) */
+class BgdlJobQueue {
+public:
+	BgdlJobQueue();						/* "SceLogJobManagerJob" made */
+	~BgdlJobQueue();
+
+	static BgdlJobQueue *Bgdl_81123E48(void);
+	int Bgdl_81123E3C(paf::common::SharedPtr<paf::job::JobItem> job);
+
+	paf::job::JobQueue *m_queue;
+};
+
+int bgdlCancelTask(SceUInt32 id);				/* (0x8110AEC4) */
 
 #endif

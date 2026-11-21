@@ -55,6 +55,8 @@ SceUInt32 vshAppMgrCheckContentInstallPeriod(SceUID pid);
 /* through the stub library's wrapper (0x81417D9C in SceShell): the 0x700-byte bgdl queue */
 SceUInt32 vshAppMgrBgdlSetQueueStatus(const void *status);
 SceUInt32 vshDisplaySetInvertColors(int head, int enable);
+/* through the stub library's wrapper (0x81417DA4 in SceShell): a title's rif re-read */
+int vshAppMgrUpdateRifInfo(const char *titleId);
 
 /* the display's viewport, through the stub library's wrappers (they pass the conf's size) */
 struct SceDisplayViewportConf;

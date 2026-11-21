@@ -2,7 +2,8 @@ enable_language(CXX)
 # SceShell (vs0:vsh/shell/shell.self), built by Sony with SNC 3.57 in C++: the system software's
 # shell, with its resident plugins linked in. Its paf imports take libpaf's link names.
 set(MODULE_IMPORT_NAMES vsh/paf/fw/3.65-CEX.exports.yml
-	sys/internal/usermode/src/ini_file_processor/exports.yml)
+	sys/internal/usermode/src/ini_file_processor/exports.yml
+	vsh/cdlg/src/npeula_dialog/state_check.imports.yml)
 psp2_module(vs0_vsh_shell_shell KIND user COMPILER snc PARTIAL SOURCES
 	boot.cpp
 	boot_screen.cpp
@@ -198,6 +199,9 @@ psp2_module(vs0_vsh_shell_shell KIND user COMPILER snc PARTIAL SOURCES
 	src/esecron/src/esetask.cpp
 	src/esecron/src/eseutil.cpp
 	src/esecron/src/esehttp.cpp
+	src/esecron/src/eseparam.cpp
+	src/download_plugin/src/download_plugin.cpp
+	src/download_plugin/src/log_job_manager.cpp
 	shell.c
 )
 target_include_directories(vs0_vsh_shell_shell PRIVATE "${PSP2_SRC}/vsh/paf/include"

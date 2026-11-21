@@ -20,11 +20,11 @@ BgdlTaskInfo::BgdlTaskInfo()
 	kind = 0;
 	taskId = -1;
 	category = 0;
-	reserved0 = false;
-	reserved1 = false;
+	noOtherFlag = false;
+	imported = false;
 	progress = 0;
-	reserved3 = 0;
-	reserved4 = 0;
+	progressFunc = NULL;
+	progressArg = NULL;
 	reserved5 = false;
 	reserved6 = false;
 }
@@ -150,9 +150,9 @@ int shellBgdlGetContentTaskInfos(paf::vector<BgdlTaskInfo> *infos)
 }
 
 /* (0x810FCB68) */
-int shellBgdlInstallTask(const SceUInt32 *id)
+int shellBgdlInstallTask(BgdlTaskInfo *info)
 {
-	return bgdlInstallTask(id);
+	return bgdlInstallTask(info);
 }
 
 /* (0x810FCB70) */
@@ -169,9 +169,9 @@ int shellBgdlGetTaskInfo(SceUInt32 id, BgdlTaskInfo *info)
 }
 
 /* (0x810FCB80) */
-int shellBgdlInstallTask2(const SceUInt32 *id)
+int shellBgdlInstallTask2(BgdlTaskInfo *info)
 {
-	return bgdlInstallTask2(id);
+	return bgdlInstallTask2(info);
 }
 
 /* (0x810FCB88) */

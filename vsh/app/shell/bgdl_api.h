@@ -25,11 +25,11 @@ struct BgdlTaskInfo {
 	paf::string titleId;		/* entry 105 */
 	int kind;			/* 0-3, from the task's flags (bits 23-25) */
 	int category;			/* 8 or 16, from the task's type */
-	bool reserved0;			/* PLACEHOLDER: only cleared here */
-	bool reserved1;
+	bool noOtherFlag;		/* PLACEHOLDER names: the install's GameInstallExParam flags */
+	bool imported;
 	float progress;			/* what the promote dialog's bar shows */
-	int reserved3;
-	int reserved4;
+	void (*progressFunc)(void *arg, float percent);	/* the install's progress, when set */
+	void *progressArg;
 	bool reserved5;
 	bool reserved6;
 };
@@ -56,12 +56,12 @@ int shellBgdlInstallTitleTasksOfKinds(const char *titleId, int type, SceUInt32 f
 int shellBgdlCountAppTasks(const char *titleId);		/* (0x810FCB02) */
 int shellBgdlCountTasks(void);					/* (0x810FCB30) */
 int shellBgdlGetContentTaskInfos(paf::vector<BgdlTaskInfo> *infos);	/* (0x810FCB60) */
-int shellBgdlInstallTask(const SceUInt32 *id);			/* (0x810FCB68) */
+int shellBgdlInstallTask(BgdlTaskInfo *info);			/* (0x810FCB68) */
 /* (0x810FCB70) */
 int shellBgdlGetTitleTaskInfos(const char *titleId, paf::vector<BgdlTaskInfo> *infos,
 			       SceUInt32 flags, int type);
 int shellBgdlGetTaskInfo(SceUInt32 id, BgdlTaskInfo *info);	/* (0x810FCB78) */
-int shellBgdlInstallTask2(const SceUInt32 *id);			/* (0x810FCB80) */
+int shellBgdlInstallTask2(BgdlTaskInfo *info);			/* (0x810FCB80) */
 void shellBgdlHold(void);					/* (0x810FCB88) */
 void shellBgdlSuspend(bool reserved);				/* (0x810FCB90) */
 int shellBgdlAddPsmRuntimeTask(paf::string *iconPath);		/* (0x810FCB9A) */
