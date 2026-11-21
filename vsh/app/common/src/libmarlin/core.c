@@ -5,8 +5,6 @@
  */
 #include "mln_internal.h"
 
-#define MLN_CORE_ERROR_INVALID	4
-
 __attribute__((noinline)) int MlnCoreInit(void *memory, unsigned int size)
 {
 	return MlnImpl_8102A394(memory, size);
@@ -70,21 +68,6 @@ __attribute__((noinline)) int MlnImpl_81013074(void *a0, const MlnBuffer *a1, Ml
 					       MlnBlob *second)
 {
 	return MlnImpl_810318D4(a0, a1, first, second);
-}
-
-static inline __attribute__((always_inline)) void MlnHttpHeaderArrayFree(MlnHttpHeader **items,
-									 unsigned int count)
-{
-	unsigned int i;
-
-	for (i = 0; i < count; i++) {
-		if (items[i] != NULL) {
-			MlnFree(MLN_HEAP_SECURE, items[i]->name);
-			MlnFree(MLN_HEAP_SECURE, items[i]->value);
-			MlnFree(MLN_HEAP_SECURE, items[i]);
-		}
-	}
-	MlnFree(MLN_HEAP_SECURE, items);
 }
 
 /* copies of count headers, each name and value duplicated */
@@ -390,8 +373,6 @@ out:
 #define MLN_FILE_ERROR_INVALID	5
 #define MLN_FILE_ERROR_NOT_FOUND	0x11060002
 
-#define MLN_FILE_AREA		1
-#define MLN_PATH_MAX		256
 
 /*
  * A state slot's file: <root>/sdata/<kind>0000000/<kind>000000<index>.DAT, the kind a letter

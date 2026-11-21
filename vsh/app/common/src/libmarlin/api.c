@@ -953,11 +953,11 @@ __attribute__((noinline)) int MlnApi_81003818(MlnApiObject *object, MlnBuffer **
 	if (object == NULL || object->kind == NULL)
 		return 3;
 	if (object->kind->type == 0) {
-		ret = MlnImpl_8101A030(object->engine, response, result);
+		ret = MlnEngineStep(object->engine, response, result);
 	} else if (object->kind->type == 1) {
 		if (object->kind->remote)
 			return MlnImpl_8101E658(object->client, response, result);
-		ret = MlnImpl_8101A030(object->engine, response, result);
+		ret = MlnEngineStep(object->engine, response, result);
 		if (ret == MLN_OK) {
 			if (*result != NULL && (*result)->value != NULL)
 				return (*result)->value->type == 16 ? 41 : MLN_OK;
@@ -978,21 +978,21 @@ __attribute__((noinline)) int MlnApi_810039A8(MlnApiObject *object, void *a1, vo
 	if (object == NULL || object->kind == NULL)
 		return 3;
 	if (object->kind->type == 0) {
-		MlnImpl_8101A020(object->engine);
+		MlnEngineDestroy(object->engine);
 		object->engine = NULL;
 	} else if (object->kind->type == 1) {
 		if (!object->kind->remote) {
-			MlnImpl_8101A020(object->engine);
+			MlnEngineDestroy(object->engine);
 			object->engine = NULL;
 		} else {
 			MlnImpl_8101E628(object->client);
 		}
 	}
 	if (object->kind->type == 0) {
-		ret = MlnImpl_81019B44(0, a1, a2, a3, 0, &object->engine);
+		ret = MlnEngineCreate(0, a1, a2, a3, 0, &object->engine);
 	} else if (object->kind->type == 1) {
 		if (!object->kind->remote)
-			ret = MlnImpl_81019B44(0, a1, a2, a3, 0, &object->engine);
+			ret = MlnEngineCreate(0, a1, a2, a3, 0, &object->engine);
 		else
 			ret = MlnImpl_8101E380(object->client, a1, a2, a3, 1);
 	} else {
@@ -1218,7 +1218,7 @@ static inline void MlnApiObjectReleaseEngine(MlnApiObject *object)
 	if (object->kind == NULL)
 		return;
 	if (object->kind->type == 0 || (object->kind->type == 1 && !object->kind->remote)) {
-		MlnImpl_8101A020(object->engine);
+		MlnEngineDestroy(object->engine);
 		object->engine = NULL;
 	} else if (object->kind->type == 1) {
 		MlnImpl_8101E628(object->client);
@@ -1617,10 +1617,10 @@ int SceMarlin_0166ACC1(MlnApiObject *object, MlnBuffer *message, MlnApiNode **re
 			handle = NULL;
 			if (kind != NULL && !kind->remote) {
 				if ((unsigned int)kind->type < 2) {
-					MlnImpl_8101A020(object->engine);
+					MlnEngineDestroy(object->engine);
 					object->engine = NULL;
 				}
-				status = MlnImpl_81019B44(1, NULL, NULL, NULL, 0, &object->engine);
+				status = MlnEngineCreate(1, NULL, NULL, NULL, 0, &object->engine);
 				if (status == MLN_OK)
 					status = MlnImpl_8101A59C(&handle);
 				if (status == MLN_OK) {
@@ -1796,9 +1796,9 @@ int SceMarlin_0166ACC1(MlnApiObject *object, MlnBuffer *message, MlnApiNode **re
 	case 15:
 		if (status == MLN_OK) {
 			value = NULL;
-			created = MlnAllocate(MLN_HEAP_SECURE, sizeof(MlnApiValue));
+			created = MlnAllocate(MLN_HEAP_SECURE, sizeof(*created));
 			if (created != NULL) {
-				MlnMemset(created, 0, sizeof(MlnApiValue));
+				MlnMemset(created, 0, sizeof(*created));
 				value = MlnAllocate(MLN_HEAP_SECURE, sizeof(MlnApiValue));
 			}
 			if (value != NULL) {
@@ -2194,7 +2194,7 @@ int SceMarlin_D7A21F7F(MlnApiObject *source, MlnApiObject *target, void *a2, int
 		}
 		MlnApiObjectReleaseEngine(source);
 		MlnApiObjectReleaseEngine(target);
-		ret = MlnImpl_81019B44(1, NULL, NULL, NULL, 0, &source->engine);
+		ret = MlnEngineCreate(1, NULL, NULL, NULL, 0, &source->engine);
 		if (ret == MLN_OK)
 			ret = MlnImpl_8101A59C(&handle);
 		if (ret != MLN_OK) {
@@ -2229,7 +2229,7 @@ int SceMarlin_D7A21F7F(MlnApiObject *source, MlnApiObject *target, void *a2, int
 					ret = MlnImpl_8101A360(source->engine, &sourceStep);
 				} else {
 					body = targetStep->request->body;
-					ret = MlnImpl_8101A030(source->engine, &body, &sourceStep);
+					ret = MlnEngineStep(source->engine, &body, &sourceStep);
 					if (ret == 0x1f0001)
 						ret = 82;
 				}
@@ -2254,10 +2254,10 @@ int SceMarlin_D7A21F7F(MlnApiObject *source, MlnApiObject *target, void *a2, int
 		if (ret == MLN_OK)
 			ret = MlnImpl_8101E658(source->client, NULL, &sourceStep);
 		if (ret == MLN_OK)
-			ret = MlnImpl_81019B44(1, sourceStep->request->body, NULL, a2, 0,
+			ret = MlnEngineCreate(1, sourceStep->request->body, NULL, a2, 0,
 					       &target->engine);
 		if (ret == MLN_OK) {
-			ret = MlnImpl_8101A030(target->engine, NULL, &targetStep);
+			ret = MlnEngineStep(target->engine, NULL, &targetStep);
 			if (ret == 0x1f0001)
 				ret = 82;
 		}
@@ -2272,7 +2272,7 @@ int SceMarlin_D7A21F7F(MlnApiObject *source, MlnApiObject *target, void *a2, int
 			targetStep = NULL;
 			ret = MlnImpl_8101E9EC(source->client, step, &message);
 			if (ret == MLN_OK) {
-				ret = MlnImpl_8101A030(target->engine, &message, &targetStep);
+				ret = MlnEngineStep(target->engine, &message, &targetStep);
 				if (ret == 0x1f0001)
 					ret = 82;
 			}

@@ -13,6 +13,11 @@
 #define MLN_ERROR_NO_MEMORY	2
 #define MLN_ERROR_INVALID_ARGUMENT	3
 #define MLN_ERROR_INVALID	5
+#define MLN_CORE_ERROR_INVALID	4
+
+/* the area of the application data the library keeps its files in, and a path's room */
+#define MLN_FILE_AREA		1
+#define MLN_PATH_MAX		256
 #define MLN_ERROR_FORMAT	0x30000001	/* a value of the wrong type */
 #define MLN_ERROR_UNSUPPORTED	0x30000002	/* a value type the library does not know */
 
@@ -267,10 +272,28 @@ typedef struct MlnHttpRequest {
 	MlnBuffer *body;
 } MlnHttpRequest;
 
+void MlnFree(int heap, void *p);
+
+static inline __attribute__((always_inline)) void MlnHttpHeaderArrayFree(MlnHttpHeader **items,
+									 unsigned int count)
+{
+	unsigned int i;
+
+	for (i = 0; i < count; i++) {
+		if (items[i] != NULL) {
+			MlnFree(MLN_HEAP_SECURE, items[i]->name);
+			MlnFree(MLN_HEAP_SECURE, items[i]->value);
+			MlnFree(MLN_HEAP_SECURE, items[i]);
+		}
+	}
+	MlnFree(MLN_HEAP_SECURE, items);
+}
+
 /* what one step of a transaction gives: a value for the caller, or a request to send */
 typedef struct MlnApiResult {
 	MlnApiValue *value;
 	MlnHttpRequest *request;
+	void *reserved[3];
 } MlnApiResult;
 
 /* the application's HTTP transport */
@@ -312,7 +335,7 @@ typedef struct MlnApiObject {
 	MlnApiKind *kind;
 	int status;		/* the last step's failure, passed to the next */
 	void *data;
-	void *engine;
+	struct MlnEngine *engine;
 	void *client;
 	void *session;
 } MlnApiObject;
@@ -984,7 +1007,7 @@ int MlnServiceClearState(MlnServiceContext *context);
 
 /* the application's data for a service command, and its release */
 typedef int (*MlnServiceDataGet)(void *cookie, void *arg, void **data, unsigned int *size);
-typedef void (*MlnServiceDataRelease)(void *cookie, void *data);
+typedef int (*MlnServiceDataRelease)(void *cookie, void *data);
 
 int MlnImpl_810147D8(MlnServiceContext *context, int value);
 int MlnImpl_81014860(MlnServiceContext *context, unsigned int size, void *data, MlnBuffer *buffer);
@@ -1164,8 +1187,6 @@ int MlnImpl_81020094(void *session, int status, MlnApiValue *value, MlnHttpReque
 		     void *a4, void *a5);
 int MlnImpl_8101F954(void *session, MlnBuffer *message, int status, void *data,
 		     MlnApiRequest *request);
-int MlnImpl_8101A360(void *engine, MlnApiResult **result);
-int MlnImpl_8101A59C(MlnBuffer **handle);
 int MlnImpl_8101F1F0(void *client, void *a1, MlnBuffer **found);
 int MlnImpl_8101F0B8(void *client, void *a1, void *a2);
 int MlnImpl_8101DFA0(void *client, void *a1, void *a2, int *first, int *second);
@@ -1176,16 +1197,13 @@ int MlnImpl_8101F4B0(void *client, void **a1);
 int MlnImpl_8101F5F4(void *client, MlnBuffer *a1);
 int MlnImpl_8101F724(void *client, MlnBuffer *token, MlnBuffer **found);
 int MlnImpl_8102045C(void *session);
-int MlnImpl_8101A020(void *engine);
 int MlnImpl_8101DD24(MlnApiKind *kind, MlnBuffer *address, void **client, MlnApiVersion *version);
 int MlnImpl_8101DF70(void *client);
 int MlnImpl_8101F870(MlnApiKind *kind, MlnBuffer *address, void **session);
 int MlnImpl_8101F92C(void *session);
-int MlnImpl_8101A030(void *engine, MlnBuffer **message, MlnApiResult **result);
 int MlnImpl_8101E628(void *client);
 int MlnImpl_8101E658(void *client, MlnBuffer **message, MlnApiResult **result);
 int MlnImpl_8101E9EC(void *client, MlnApiResult *step, MlnBuffer **message);
-int MlnImpl_81019B44(int a0, void *a1, void *a2, void *a3, int a4, void **engine);
 int MlnImpl_8101E380(void *client, void *a1, void *a2, void *a3, int a4);
 int MlnXmlParse(int heap, unsigned int size, const void *xml, MlnXmlNode **document);
 int MlnXmlFindNode(int heap, MlnXmlNode *node, const char *path, const char *ns, MlnXmlNode **found);
@@ -1196,5 +1214,118 @@ int MlnXmlGetAttribute(int heap, MlnXmlNode *node, const char *ns, const char *n
 int MlnXmlGetText(int heap, MlnXmlNode *node, MlnBuffer **text);
 int MlnXmlNodeFree(int heap, MlnXmlNode *node);
 int MlnXmlListFree(int heap, MlnXmlNodeList *list);
+
+/*
+ * A list in an action token or a service configuration: kind 1 holds buffers, 2 and 3
+ * pairs of buffers, 4 and 5 entries with lists of their own.
+ */
+typedef struct MlnConfigList {
+	unsigned short kind;
+	unsigned short count;
+	void *items;
+} MlnConfigList;
+
+/* the kinds of action an action token asks for */
+#define MLN_ACTION_LICENSE_ACQUISITION	1
+#define MLN_ACTION_NODE_ACQUISITION	2
+#define MLN_ACTION_LINK_ACQUISITION	3
+#define MLN_ACTION_DEREGISTRATION	4
+#define MLN_ACTION_GENERIC		5	/* an Action element, typed by its xsi:type */
+
+typedef struct MlnAction {
+	int type;
+	MlnBuffer *name;
+	MlnBuffer *businessToken;
+	MlnBuffer *uid[2];
+} MlnAction;
+
+/* a Marlin Broadband action token (urn:marlin:broadband:1-2:nemo:services:action-token) */
+typedef struct MlnActionToken {
+	MlnConfigList resourceLocations;
+	MlnBuffer *broadbandServiceId;
+	MlnBuffer *configVersion;
+	int actionCount;
+	MlnAction **actions;
+} MlnActionToken;
+
+/* a service's BroadbandServiceConfig, kept from an earlier action token */
+typedef struct MlnServiceConfig {
+	MlnBuffer *broadbandServiceId;
+	MlnBuffer *broadbandServiceFriendlyName;
+	MlnBuffer *configVersion;
+	MlnConfigList registrationService;
+	MlnConfigList licenseService;
+	unsigned char reserved[16];
+	MlnConfigList nemoPersonalizationService;
+	MlnConfigList octopusPersonalizationService;
+	MlnConfigList licenseTransferService;
+	unsigned int reserved2;
+} MlnServiceConfig;
+
+/* a directory's files, as the platform lists them */
+typedef struct MlnFileList {
+	struct MlnFileList *next;
+	char *path;
+} MlnFileList;
+
+typedef struct MlnBufferPairList {
+	unsigned char count;
+	MlnBufferPair **items;
+} MlnBufferPairList;
+
+/* the engine: runs an action token's actions with the service, step by step */
+typedef struct MlnEngine {
+	int kind;
+	int state;
+	MlnServiceSession session;
+	MlnServiceContext localContext;		/* the context when the caller gives none */
+	MlnServiceContext *context;
+	MlnBuffer *account;
+	MlnBuffer *secret;
+	MlnActionToken *token;
+	MlnServiceConfig *config;
+	unsigned int reserved;
+	unsigned int resourceIndex;
+	unsigned int resourceCount;
+	char **resources;
+	MlnBufferPairList *extensions;
+	unsigned int step;
+	unsigned int stepCount;
+} MlnEngine;
+
+void MlnEngineFree(MlnEngine *engine);
+int MlnImpl_810199E4(MlnEngine *engine);
+int MlnEngineCreate(int kind, const MlnBuffer *token, const MlnBuffer *account,
+		    const MlnBuffer *secret, MlnServiceContext *context, MlnEngine **out);
+/* not written in C yet */
+int MlnActionTokenParse(unsigned int size, const void *xml, MlnActionToken **out);
+int MlnActionTokenFree(MlnActionToken *token);
+int MlnServiceConfigParse(unsigned int size, const void *xml, MlnServiceConfig **out);
+int MlnServiceConfigFree(MlnServiceConfig *config);
+int MlnImpl_810265E8(int heap, const char *directory, MlnFileList **files);
+int MlnImpl_810257DC(int heap, MlnFileList *files);
+int MlnImpl_8101ACD0(MlnEngine *engine, MlnActionToken *token, int a2);
+int MlnImpl_8101D468(const MlnBuffer *serviceId, int *exists);
+int MlnImpl_8101D408(const MlnBuffer *serviceId, MlnBuffer **config);
+int MlnImpl_8101D520(const MlnBuffer *serviceId);
+int MlnImpl_8101AF30(MlnEngine *engine, MlnBuffer **message, MlnApiResult *result, int hasValue);
+int MlnImpl_8101B244(MlnEngine *engine, MlnBuffer **message, MlnApiResult *result, int hasValue);
+int MlnImpl_8101B324(MlnEngine *engine, MlnBuffer **message, MlnApiResult *result, int hasValue);
+int MlnImpl_8101B444(MlnEngine *engine, MlnBuffer **message, MlnApiResult *result, int hasValue);
+int MlnImpl_8101B850(MlnEngine *engine, MlnBuffer **message, MlnApiResult *result, int hasValue);
+int MlnImpl_8101BC60(MlnEngine *engine, MlnBuffer **message, MlnApiResult *result, int hasValue);
+int MlnImpl_8101BD9C(MlnEngine *engine, MlnBuffer **message, MlnApiResult *result, int hasValue);
+int MlnImpl_8101BE94(MlnEngine *engine, MlnBuffer **message, MlnApiResult *result, int hasValue);
+int MlnImpl_8101BFEC(MlnEngine *engine, MlnBuffer **message, MlnApiResult *result, int hasValue);
+int MlnImpl_8101C0F4(MlnEngine *engine, MlnBuffer **message, MlnApiResult *result, int hasValue);
+int MlnImpl_8101B158(MlnEngine *engine, MlnApiResult *result);
+int MlnImpl_8101CA44(MlnEngine *engine, MlnApiResult *result);
+int MlnImpl_8101C880(MlnEngine *engine, MlnApiResult *result);
+int MlnImpl_8101B7D8(MlnEngine *engine, MlnApiResult *result);
+int MlnImpl_8101C6B4(MlnEngine *engine, MlnApiResult *result);
+int MlnImpl_8101BBE4(MlnEngine *engine, MlnApiResult *result);
+int MlnImpl_8101C500(MlnEngine *engine, MlnApiResult *result);
+int MlnImpl_8101CC94(MlnEngine *engine, MlnApiResult *result);
+int MlnImpl_8101AD74(MlnEngine *engine, MlnApiResult *result, MlnBuffer **message);
 
 #endif /* MLN_INTERNAL_H */
