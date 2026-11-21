@@ -1,9 +1,12 @@
-# psp2_paf_cg(TARGET): PAF's GPU programs. Each program programs.S lists is compiled from its
-# Cg source in this folder (Sony's paf/cg/ paths; canvas/ is ours: the canvas painter's programs
-# carry no path) by psp2cgc (tools/cgc.py) into the build folder, and programs.S takes the
-# binaries with .incbin.
+# psp2_paf_cg(TARGET [FOLDER]): PAF's GPU programs. Each program programs.S lists is compiled from
+# its Cg source in this folder (Sony's paf/cg/ paths; canvas/ is ours: the canvas painter's
+# programs carry no path), or in FOLDER for another module's programs, by psp2cgc (tools/cgc.py)
+# into the build folder, and programs.S takes the binaries with .incbin.
 function(psp2_paf_cg target)
 	set(cg "${CMAKE_CURRENT_FUNCTION_LIST_DIR}")
+	if(ARGC GREATER 1)
+		get_filename_component(cg "${ARGV1}" ABSOLUTE BASE_DIR "${CMAKE_CURRENT_SOURCE_DIR}")
+	endif()
 	set(out "${CMAKE_CURRENT_BINARY_DIR}/cg")
 	file(STRINGS "${cg}/programs.S" lines REGEX "^\tPROGRAM ")
 	set(binaries)

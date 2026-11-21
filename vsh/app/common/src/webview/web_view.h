@@ -353,7 +353,7 @@ int CreateRenderTarget(WebViewRenderTarget **target, int width, int height, int 
 	void *base, SceUID memblock);
 int CreateRenderTarget(WebViewRenderTarget **target, int width, int height, int stride,
 	void *base);
-void DestroyRenderTarget(WebViewRenderTarget *target);
+int DestroyRenderTarget(WebViewRenderTarget *target);
 /* runs the drawing the page's process queued for the render target (name ours) */
 int ProcessRenderCommands(WebViewRenderTarget *target);
 

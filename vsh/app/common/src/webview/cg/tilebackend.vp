@@ -1,0 +1,9 @@
+void main(float2 aPosition,
+	  float2 aTexCoord,
+	  uniform float4x4 wvp,
+	  out float4 oPos : POSITION,
+	  out float2 oTex : TEXCOORD0)
+{
+	oPos = mul(float4(aPosition, 0, 1), wvp);
+	oTex = aTexCoord;
+}
