@@ -18,14 +18,9 @@
 #include <plugin.h>
 #include <ipmi/server.h>
 #include <ipmi/session.h>
+#include <system_update/system_update_job.h>
 
 class DownloadPluginObject;
-
-/* what most of the service's calls give back (PLACEHOLDER names) */
-struct SystemUpdateResult {
-	int error;
-	int reserved;
-};
 
 /* the error the service's calls give (PLACEHOLDER name) */
 #define SYSTEM_UPDATE_SVC_ERROR		0x801825FF
@@ -139,16 +134,6 @@ public:
 };
 
 class SystemUpdateIpmiServer;
-
-/* what the service is given back by the update's checks (PLACEHOLDER names) */
-class SystemUpdateListener {
-public:
-	virtual ~SystemUpdateListener()
-	{
-	}
-
-	virtual int Bgdl_8112CFD8(SystemUpdateResult result) = 0;
-};
 
 class SystemUpdateSvc : public SystemUpdateListener {
 public:
