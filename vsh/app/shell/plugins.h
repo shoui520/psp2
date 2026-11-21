@@ -238,7 +238,7 @@ struct ImposeNotice {
 	int reserved1;
 	int reserved2;
 	paf::string title;
-	int reserved3;
+	SceUInt32 titleHash;			/* PLACEHOLDER name: title and hash are laid out as an IDParam */
 	int reserved4;
 	int reserved5;
 	const wchar_t *message;
@@ -247,7 +247,7 @@ struct ImposeNotice {
 	int reserved8;
 
 	ImposeNotice() : name(NULL), reserved0(0), reserved1(0), reserved2(0), title(""),
-		reserved3(0), reserved4(0), reserved5(0), message(NULL), reserved6(0),
+		titleHash(0), reserved4(0), reserved5(0), message(NULL), reserved6(0),
 		reserved7(0), reserved8(0)
 	{
 	}
@@ -273,6 +273,7 @@ struct ImposePluginInterface {
 	void (*zoomShow)(int x, int y);		/* the zoom on, at the viewport's offset */
 	void (*zoomHide)(int x, int y);		/* the zoom off, from the offset it had */
 	int (*zoomIsBlocked)(void);		/* nonzero: the zoom is not toggled */
+	void (*reserved2[8])(void);		/* PLACEHOLDER: no shell file calls them */
 };
 
 /*

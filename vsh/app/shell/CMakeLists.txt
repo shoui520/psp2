@@ -229,6 +229,9 @@ psp2_module(vs0_vsh_shell_shell KIND user COMPILER snc PARTIAL SOURCES
 	ime_service.cpp
 	exclusive_func_ime.cpp
 	ime_config.cpp
+	src/impose_plugin/src/impose_plugin.cpp
+	src/impose_plugin/src/impose.cpp
+	src/impose_plugin/src/impose_parental_control.cpp
 	shell.c
 )
 target_include_directories(vs0_vsh_shell_shell PRIVATE "${PSP2_SRC}/vsh/paf/include"
