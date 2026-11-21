@@ -52,6 +52,10 @@ public:
 		{
 		}
 
+#ifndef PAF_TREE_ITERATOR_TRIVIAL
+		/* libpaf's own build copies its iterators through these, so they are returned in
+		   memory; the modules built on paf's SDK headers (libpaf_web_map_view, whose
+		   set::find returns its iterator in r0) have an iterator without them */
 		iterator(const iterator &other) : node(other.node)
 		{
 		}
@@ -61,6 +65,7 @@ public:
 			node = other.node;
 			return *this;
 		}
+#endif
 
 		value_type &operator*() const
 		{

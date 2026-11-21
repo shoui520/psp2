@@ -284,7 +284,7 @@ public:
 	virtual void OnLoadCommitted(WebView *view);
 	/* the page is laid out and its pending load started (name ours) */
 	virtual void OnPageLayout(WebView *view);
-	virtual void OnLoadProgress(WebView *view);
+	virtual void OnLoadProgress(WebView *view, int progress);
 	virtual void OnTitleChanged(WebView *view, const common::String &title);
 	virtual void OnUrlChanged(WebView *view, const Url &url);
 	virtual void OnEvent8(WebView *view, int arg);

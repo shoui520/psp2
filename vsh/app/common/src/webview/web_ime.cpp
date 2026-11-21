@@ -244,7 +244,7 @@ int ImeOpen(WebViewIme *ime, WebViewInputClient *client, int inputType, int ente
 			ImeMakeParam(&param, inputType, enterLabel, multiline);
 			param.arg = ime;
 			param.work = ime->m_work;
-			param.sdkVersion = 0x03650011;
+			param.sdkVersion = SCE_PSP2_SDK_VERSION;
 			ret = sceImeVshOpen(&ime->m_ime, &param);
 			if (ret >= 0) {
 				ime->m_client = client;

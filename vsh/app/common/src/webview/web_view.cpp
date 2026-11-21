@@ -1040,7 +1040,7 @@ void WebView::OnLoadProgress(int progress)
 {
 	m_loadProgress = progress;
 	if (m_listener != NULL)
-		m_listener->OnLoadProgress(this);
+		m_listener->OnLoadProgress(this, progress);
 }
 
 void WebView::OnTitleChanged(const common::String &title)
@@ -4258,7 +4258,7 @@ void WebViewPageListener::OnPageLayout(WebView *view)
 {
 }
 
-void WebViewPageListener::OnLoadProgress(WebView *view)
+void WebViewPageListener::OnLoadProgress(WebView *view, int progress)
 {
 }
 

@@ -52,8 +52,11 @@ Url ContextMenuInfo::GetItemUrl(size_t index) const
 {
 	Url url;
 
-	if (index < m_items.size())
-		url = Url(m_items.ptr[index].m_url);
+	if (index < m_items.size()) {
+		Url item(m_items.ptr[index].m_url);
+
+		url = item;
+	}
 	return url;
 }
 
