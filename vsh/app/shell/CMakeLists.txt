@@ -235,6 +235,7 @@ psp2_module(vs0_vsh_shell_shell KIND user COMPILER snc PARTIAL SOURCES
 	src/impose_plugin/src/impose_touch_emulation.cpp
 	src/impose_plugin/src/impose_touch_device.cpp
 	src/impose_plugin/src/impose_volume.cpp
+	src/impose_plugin/src/impose_volume_bar.cpp
 	shell.c
 )
 target_include_directories(vs0_vsh_shell_shell PRIVATE "${PSP2_SRC}/vsh/paf/include"

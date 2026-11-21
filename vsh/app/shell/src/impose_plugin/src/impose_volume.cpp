@@ -119,14 +119,14 @@ void ImposeVolume::VolumeDown(SceUInt32 flags)
 {
 	if (flags & IMPOSE_VOLUME_HEADSET) {
 		sceAVConfigSendVolKey(2);
-		m_bar.Impose_81146974(-1);
+		m_bar.ShowBluetoothKey(-1);
 		return;
 	}
 
 	int volume = m_volume;
 
 	if ((flags & IMPOSE_VOLUME_AVLS) && volume >= IMPOSE_VOLUME_AVLS_MAX) {
-		m_bar.Impose_81147706(0);
+		m_bar.BlinkAvls(0);
 		volume = IMPOSE_VOLUME_AVLS_MAX;
 		m_volume = IMPOSE_VOLUME_AVLS_MAX;
 	}
@@ -142,7 +142,7 @@ void ImposeVolume::VolumeUp(SceUInt32 flags)
 {
 	if (flags & IMPOSE_VOLUME_HEADSET) {
 		sceAVConfigSendVolKey(1);
-		m_bar.Impose_81146974(1);
+		m_bar.ShowBluetoothKey(1);
 		return;
 	}
 
@@ -154,7 +154,7 @@ void ImposeVolume::VolumeUp(SceUInt32 flags)
 			volume = m_volume;
 		}
 		m_bar.SetVolume(volume, flags);
-		m_bar.Impose_81147706(1);
+		m_bar.BlinkAvls(1);
 		return;
 	}
 	if (flags & IMPOSE_VOLUME_FIXED)
@@ -196,8 +196,8 @@ void ImposeVolume::Update(const inputdevice::Data *data)
 	if (fixed != m_fixed) {
 		if (fixed != 0) {
 			m_repeatTime = 0.0f;
-			m_bar.Impose_81145CDE(1);
-			m_bar.Impose_811470AC(avls);
+			m_bar.Open(1);
+			m_bar.ShowAvlsLimit(avls);
 			imposeVolumeSetIndicator(1);
 		} else {
 			imposeVolumeSetIndicator(0);
@@ -225,15 +225,15 @@ void ImposeVolume::Update(const inputdevice::Data *data)
 					m_external = true;
 				m_avls = avls != 0;
 			}
-			if (m_bar.Impose_811463B8(1) != 0 && (m_device == 4 || m_device == 0))
+			if (m_bar.IsOpen(1) != 0 && (m_device == 4 || m_device == 0))
 				m_external = true;
 			if ((up && !upHeld) || (down && !downHeld) || m_external) {
 				m_repeatTime = 0.0f;
 				m_firstRepeat = true;
-				m_bar.Impose_81145CDE(1);
+				m_bar.Open(1);
 				if (fixed != 0 && m_external) {
 					if (m_fixed)
-						m_bar.Impose_811470AC(avls);
+						m_bar.ShowAvlsLimit(avls);
 				} else {
 					int volume = m_volume;
 					int btDevice;
@@ -272,7 +272,7 @@ void ImposeVolume::Update(const inputdevice::Data *data)
 				m_repeatTime = 0.0f;
 				if (flags & IMPOSE_VOLUME_HEADSET) {
 					sceAVConfigSendVolKey(0);
-					m_bar.Impose_81146974(0);
+					m_bar.ShowBluetoothKey(0);
 				}
 			}
 			break;
@@ -282,8 +282,8 @@ void ImposeVolume::Update(const inputdevice::Data *data)
 			if ((up && !upHeld) || (down && !downHeld)) {
 				m_repeatTime = 0.0f;
 				m_firstRepeat = true;
-				m_bar.Impose_81145CDE(1);
-				m_bar.Impose_811478C0((flags & IMPOSE_VOLUME_BLUETOOTH) != 0);
+				m_bar.Open(1);
+				m_bar.ShowMute((flags & IMPOSE_VOLUME_BLUETOOTH) != 0);
 			} else if ((upHeld && !up) || (downHeld && !down)) {
 				m_repeatTime = 0.0f;
 				m_firstRepeat = true;
@@ -291,7 +291,7 @@ void ImposeVolume::Update(const inputdevice::Data *data)
 				m_bar.Close();
 			}
 			if (m_device != 4 && m_device != 0)
-				m_bar.Impose_811478C0((flags & IMPOSE_VOLUME_BLUETOOTH) != 0);
+				m_bar.ShowMute((flags & IMPOSE_VOLUME_BLUETOOTH) != 0);
 			break;
 		default:
 			break;

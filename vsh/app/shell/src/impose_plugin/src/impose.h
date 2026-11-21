@@ -17,6 +17,7 @@
 #include <inputdevice/inputlistener.h>
 #include <widget/core/widget.h>
 #include <widget/w_scene.h>
+#include <widget/w_plane.h>
 #include <graphics/drawobj/draw_obj.h>
 #include <cache/cache_image.h>
 #include "../../../plugins.h"
@@ -37,19 +38,29 @@ class ImposeVolumeBar {
 public:
 	ImposeVolumeBar(paf::Plugin *plugin);
 	~ImposeVolumeBar();
+	void Reset();					/* 0x81145B34 */
 	int Close();					/* 0x81145CB4: 0 if it was not shown */
-	void Impose_81145CDE(int arg);
-	int Impose_811463B8(int state);
+	void Open(int mode);				/* 0x81145CDE */
+	int IsOpen(int mode);				/* 0x811463B8 */
 	void SetVolume(int volume, SceUInt32 flags);	/* 0x811463CC */
-	void Impose_81146974(int key);
-	void Impose_811470AC(int avls);
-	void Impose_81147706(int arg);
-	void Impose_811478C0(bool bluetooth);
+	void ShowBluetoothKey(int dir);			/* 0x81146974 */
+	void ShowAvlsLimit(int avls);			/* 0x811470AC */
+	void BlinkAvls(int on);				/* 0x81147706 */
+	void ShowMute(bool bluetooth);			/* 0x811478C0 */
+	void OnFade(SceInt32 type, paf::ui::Handler *self, paf::ui::Event *e,
+		    void *data);			/* 0x81147C50 */
+	void ShowLimit();				/* 0x81147DDE */
 
 	paf::Plugin *m_plugin;
-	paf::ui::Widget *m_widget;
-	SceUInt32 reserved[6];
+	paf::ui::Widget *m_root;
+	paf::ui::Widget *m_frame;
+	paf::ui::Widget *m_bluetoothIcon;
+	paf::ui::Widget *m_avlsIcon;
+	paf::ui::Plane *m_gauge;		/* the volume's part of the gauge */
+	paf::ui::Plane *m_gaugeRest;		/* the rest of it */
+	SceInt32 m_shownVolume;
 	bool m_active;
+	bool m_avlsShown;
 	SceInt32 m_state;
 };
 
