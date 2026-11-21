@@ -4,6 +4,7 @@
 #include <stddef.h>
 #include <scetypes.h>
 #include <memory/heap_allocator.h>
+#include <rtc.h>
 #include <widget/core/environment.h>
 #include "web_view.h"
 
@@ -35,7 +36,7 @@ WebViewLoadingPlane::WebViewLoadingPlane(Widget *parent) : Plane(parent, NULL)
 {
 	m_state = 0;
 	m_delay = 0;
-	m_reserved = 0;
+	m_style = 0;
 	m_transition_complete = false;
 	m_transition = 0xff;
 	/* through the vtable, as Sony's */
@@ -61,7 +62,7 @@ WebView::WebView(Widget *parent, CreateParam *param)
 	  m_lastPageRect(0.0f, 0.0f, 0.0f, 0.0f), m_zoomed(true),
 	  m_zoomX(0.0f), m_zoomY(0.0f), m_zoomRect(0.0f, 0.0f, 0.0f, 0.0f),
 	  m_contextMenuShown(false), m_imeMinDate(0, 0, 0, 0, 0, 0, 0),
-	  m_imeMaxDate(0, 0, 0, 0, 0, 0, 0), m_selectCount(0), m_selectFocus(0),
+	  m_imeMaxDate(0, 0, 0, 0, 0, 0, 0), m_selectCount(0), m_selectReceived(0),
 	  m_selectMultiple(false), m_startWithParam(false), m_tapRect(0.0f, 0.0f, 0.0f, 0.0f),
 	  m_tapScale(1.0f), m_tapping(false), m_pageHandlesInput(false),
 	  m_inputMask(15), m_dragStart(0.0f, 0.0f), m_cursorMove(0.0f, 0.0f),
@@ -79,10 +80,10 @@ WebView::WebView(Widget *parent, CreateParam *param)
 	m_dialogParam.values[4] = 0;
 	m_dialogParam.button = common::String(L"");
 	m_dialogParam.user_data = NULL;
-	m_selectIndices.clear();
+	m_pendingDialogs.clear();
 	m_selectItems.clear();
 	m_selectEnabled.clear();
-	m_selectChecked.clear();
+	m_selectLabels.clear();
 	m_scrollAnims.clear();
 	m_zoomAnims.clear();
 	m_tapAnims.clear();
@@ -598,9 +599,9 @@ inline void WebView::ClearSelect()
 {
 	m_selectItems.clear();
 	m_selectEnabled.clear();
-	m_selectChecked.clear();
+	m_selectLabels.clear();
 	m_selectCount = 0;
-	m_selectFocus = 0;
+	m_selectReceived = 0;
 }
 
 int WebView::CloseSelect(int index)
@@ -1145,7 +1146,7 @@ void WebView::OnNavigationRequest(const Url &url, int type, bool *allow)
 		m_listener->OnNavigationRequest(this, url, type, allow);
 }
 
-void WebView::OnEvent14(int arg0, int arg1, int arg2, int arg3, int arg4)
+void WebView::OnDownloadRequest(const Url &url, const string &mimeType, int64_t length)
 {
 	if (m_listener == NULL)
 		return;
@@ -1159,7 +1160,7 @@ void WebView::OnEvent14(int arg0, int arg1, int arg2, int arg3, int arg4)
 		cursor->DoTransitionReverse_core(0.0f, true);
 		ScePafWidget_4588699E(cursor, NULL, 2, 0.0f, NULL);
 	}
-	m_listener->OnEvent14(this, arg0, arg1, arg3, arg4);
+	m_listener->OnDownloadRequest(this, url, mimeType, length);
 }
 
 void WebView::OnCreateWindow(const WebIpcCreatePageWithView *message)
@@ -1504,6 +1505,575 @@ void WebView::OnNavigationRequest(WebIpcEvent2027 *message)
 		m_listener->OnNavigationRequest(this, url, message->m_int, &allow);
 	message->m_bool = allow;
 	WebIpc::GetInstance()->Post(message, m_viewId);
+}
+
+void WebView::ScrollToPagePos(int x, int y)
+{
+	using namespace sce::Vectormath::Simd;
+
+	Widget *plane = GetViewParent()->FindChild(IDParam("view_plane"), 2);
+
+	if (m_ime_padding || plane == NULL)
+		return;
+
+	math::v2 offset(0.0f, 0.0f);
+
+	if (y <= 0)
+		offset = math::v2(m_padding.getImpl().getXY());
+
+	Aos::Matrix3 transform = GetViewTransform();
+	Aos::Vector3 world = transform.getCol0() * (float)x + transform.getCol1() * (float)y +
+		Aos::mulPerElem(transform.getCol2(), Aos::Vector3(1.0f));
+	math::v2 focus = math::v2(Aos::Vector2(world.getX(), world.getY())) +
+		math::v2(GetSize(0)->getImpl().getXY()) * math::v2(0.5f, -0.5f) + offset;
+
+	SetViewFocus(focus, NULL, true, true);
+}
+
+bool WebView::QueueDialog(WebIpcMessage *message)
+{
+	MessageDialogListener *dialog = wutil::GetMessageDialogListener();
+
+	if (dialog == NULL || !dialog->Method8())
+		return false;
+	m_pendingDialogs.push_back(message);
+	return true;
+}
+
+bool WebView::OnAuthRequest(WebIpcEvent2025 *message)
+{
+	if (message == NULL) {
+		WebIpcEvent2025 reply((string()), string(), string(), string());
+
+		WebIpc::GetInstance()->Post(&reply, m_viewId);
+		return false;
+	}
+	if (QueueDialog(message))
+		return true;
+
+	MessageDialogListener *dialog = wutil::GetMessageDialogListener();
+
+	if (dialog == NULL) {
+		message->SetCredentials(false, string(), string());
+		WebIpc::GetInstance()->Post(message, m_viewId);
+		return false;
+	}
+
+	m_dialogParam.values[0] = 0;
+	m_dialogParam.values[1] = 0;
+	m_dialogParam.values[2] = 0;
+	m_dialogParam.values[3] = 0;
+	m_dialogParam.title = common::String(L"");
+	m_dialogParam.message = common::String(L"");
+	m_dialogParam.owner = NULL;
+	m_dialogParam.values[4] = 0;
+	m_dialogParam.button = common::String(L"");
+	m_dialogParam.user_data = NULL;
+	m_dialogParam.owner = static_cast<WebViewPageClient *>(this);
+	m_dialogParam.values[0] = 6;
+
+	Widget *cursor = m_cursorPlane;
+
+	m_cursorHidden = true;
+	if (cursor != NULL) {
+		cursor->m_transition_complete = false;
+		cursor->m_transition = 0xff;
+		cursor->DoTransitionReverse_core(0.0f, true);
+		ScePafWidget_4588699E(cursor, NULL, 2, 0.0f, NULL);
+	}
+
+	MessageDialogTexts texts(string(message->m_text0.c_str()),
+		string(message->m_text1.c_str()), string(message->m_user.c_str()),
+		string(message->m_password.c_str()));
+
+	dialog->Method14(&m_dialogParam, texts);
+	return false;
+}
+
+/* the date the RTC gives for the page's time (name ours) */
+static inline void SetDateTime(datetime::DateTime *date, const SceDateTime &time)
+{
+	if (date == NULL)
+		return;
+	date->m_year = time.year;
+	date->m_month = time.month;
+	date->m_day = time.day;
+	date->m_hour = time.hour;
+	date->m_minute = time.minute;
+	date->m_second = time.second;
+	date->m_microsecond = time.microsecond;
+}
+
+bool WebView::OnDateTimeRequest(WebIpcEvent2033 *message)
+{
+	if (message == NULL) {
+		WebIpcEvent2033 reply(0, string(), string(), 0.0f, 0.0f, string());
+
+		WebIpc::GetInstance()->Post(&reply, m_viewId);
+		return false;
+	}
+	if (QueueDialog(message))
+		return true;
+
+	m_dialogParam.values[0] = 0;
+	m_dialogParam.values[1] = 0;
+	m_dialogParam.values[2] = 0;
+	m_dialogParam.values[3] = 0;
+	m_dialogParam.title = common::String(L"");
+	m_dialogParam.message = common::String(L"");
+	m_dialogParam.owner = NULL;
+	m_dialogParam.values[4] = 0;
+	m_dialogParam.button = common::String(L"");
+	m_dialogParam.user_data = NULL;
+
+	int inputType = message->m_inputType;
+	MessageDialogListener *dialog = wutil::GetMessageDialogListener();
+
+	if (dialog == NULL)
+		goto decline;
+
+	switch (inputType) {
+	case 2: case 4: case 6: case 7: case 8: case 18: case 19: case 21: case 22: case 23:
+	case 25: case 26:
+		m_dialogParam.values[1] = 0;
+		break;
+	case 100:
+		m_dialogParam.values[1] = 1;
+		break;
+	case 9: case 10: case 13: case 14:
+		m_dialogParam.values[1] = 2;
+		break;
+	case 20: case 24: case 27: case 28:
+		m_dialogParam.values[1] = 3;
+		break;
+	case 29: case 30: case 31: case 32: case 50:
+		m_dialogParam.values[1] = 4;
+		break;
+	default:
+		if (inputType <= 0)
+			goto decline;
+		m_dialogParam.values[1] = 4;
+		break;
+	}
+
+	{
+		m_imeTitle = common::String(message->m_title.c_str());
+		m_imeInitialText = common::String(message->m_initialText.c_str());
+
+		SceDateTime minDate;
+		SceDateTime maxDate;
+
+		sceRtcSetTime64_t(&minDate, (SceUInt64)message->m_minDate);
+		SetDateTime(&m_imeMinDate, minDate);
+		sceRtcSetTime64_t(&maxDate, (SceUInt64)message->m_maxDate);
+		SetDateTime(&m_imeMaxDate, maxDate);
+		m_imeDefault = common::String(message->m_defaultText.c_str());
+
+		Widget *cursor = m_cursorPlane;
+
+		m_cursorHidden = true;
+		m_dialogParam.owner = static_cast<WebViewPageClient *>(this);
+		m_dialogParam.values[0] = 2;
+		if (cursor != NULL) {
+			cursor->m_transition_complete = false;
+			cursor->m_transition = 0xff;
+			cursor->DoTransitionReverse_core(0.0f, true);
+			ScePafWidget_4588699E(cursor, NULL, 2, 0.0f, NULL);
+		}
+		if (dialog->Method12(&m_dialogParam) >= 0)
+			return false;
+	}
+
+decline:
+	message->m_accepted = false;
+	WebIpc::GetInstance()->Post(message, m_viewId);
+	return false;
+}
+
+bool WebView::OnDialogRequest(WebIpcEvent2034 *message)
+{
+	if (message == NULL) {
+		WebIpcEvent2034 reply(0);
+
+		WebIpc::GetInstance()->Post(&reply, m_viewId);
+		return false;
+	}
+	if (QueueDialog(message))
+		return true;
+
+	bool open = m_dialogParam.values[1] == 1 && m_dialogParam.values[0] == 4;
+
+	m_dialogParam.values[0] = 0;
+	m_dialogParam.values[1] = 0;
+	m_dialogParam.values[2] = 0;
+	m_dialogParam.values[3] = 0;
+	m_dialogParam.title = common::String(L"");
+	m_dialogParam.message = common::String(L"");
+	m_dialogParam.owner = NULL;
+	m_dialogParam.values[4] = 0;
+	m_dialogParam.button = common::String(L"");
+	m_dialogParam.user_data = NULL;
+
+	MessageDialogListener *dialog = wutil::GetMessageDialogListener();
+
+	if (dialog != NULL) {
+		switch (message->m_value) {
+		case 0:
+			m_dialogParam.values[1] = 0;
+			break;
+		case 1:
+			m_dialogParam.values[1] = 1;
+			if (open)
+				goto cancel;
+			break;
+		default:
+			goto cancel;
+		}
+
+		Widget *cursor = m_cursorPlane;
+
+		m_dialogParam.values[0] = 4;
+		m_dialogParam.owner = static_cast<WebViewPageClient *>(this);
+		m_cursorHidden = true;
+		if (cursor != NULL) {
+			cursor->m_transition_complete = false;
+			cursor->m_transition = 0xff;
+			cursor->DoTransitionReverse_core(0.0f, true);
+			ScePafWidget_4588699E(cursor, NULL, 2, 0.0f, NULL);
+		}
+		if (dialog->Method10(&m_dialogParam) >= 0)
+			return false;
+	}
+
+cancel:
+	message->m_cancelled = true;
+	WebIpc::GetInstance()->Post(message, m_viewId);
+	return false;
+}
+
+void WebView::ZoomToRect(const math::v2 &pos, const math::v2 &size)
+{
+	if (GetSize(0)->getImpl().getX().getAsFloat() < size.getImpl().getX().getAsFloat())
+		return;
+	if (GetSize(0)->getImpl().getY().getAsFloat() < size.getImpl().getY().getAsFloat())
+		return;
+	if (!CanZoom())
+		return;
+	if (((size.getImpl().getX() == sce::Vectormath::Simd::floatInVec(0.0f)) &
+	     (size.getImpl().getY() == sce::Vectormath::Simd::floatInVec(0.0f)))
+		    .getAsBool())
+		return;
+
+	float ratio = (sce::Vectormath::Simd::recipf(m_contentSize.getImpl().getX()) *
+		       m_view_box_size.getImpl().getX()).getAsFloat();
+	sce::Vectormath::Simd::Aos::Vector4 width = GetSize(0)->getImpl();
+	sce::Vectormath::Simd::floatInVec widthScale =
+		sce::Vectormath::Simd::recipf(size.getImpl().getX());
+	sce::Vectormath::Simd::Aos::Vector4 height = GetSize(0)->getImpl();
+	sce::Vectormath::Simd::floatInVec heightScale =
+		sce::Vectormath::Simd::recipf(size.getImpl().getY());
+	float scale = sce::Vectormath::Simd::fminf(widthScale * width.getX(),
+		heightScale * height.getY()).getAsFloat();
+
+	if (ratio * scale > m_maxScale)
+		scale = m_maxScale / ratio;
+	if (scale < 1.005f) {
+		sce::Vectormath::Simd::Aos::Vector4 view = GetSize(0)->getImpl();
+
+		scale = (sce::Vectormath::Simd::recipf(m_view_box_size.getImpl().getX()) *
+			 view.getX()).getAsFloat();
+	}
+	if (ratio * scale < m_minScale)
+		scale = m_minScale / ratio;
+	if ((m_inputMask & 2) == 0)
+		scale = 1.0f;
+	m_scrollAnims.push_back(WebViewAnim(pos, scale));
+}
+
+inline void WebViewLoadingPlane::FadeIn(float time)
+{
+	Timer *timer = new Timer(time);
+
+	if (!m_transition_complete) {
+		m_transition = 0xff;
+		m_transition_complete = true;
+		DoTransition_core(0.0f, true);
+	}
+	ScePafWidget_FF5BC957(this, timer, 2, 0.0f, NULL);
+}
+
+void WebViewLoadingPlane::Show()
+{
+	if (m_state != 0) {
+		m_state = 2;
+		return;
+	}
+	if (m_delay == 0) {
+		FadeIn(30.0f);
+	} else if (m_delay == 1) {
+		if (m_style == 0)
+			FadeIn(30.0f);
+		else if (m_style == 1)
+			FadeIn(200.0f);
+	}
+}
+
+inline void WebViewLoadingPlane::ShowNow()
+{
+	if (!m_transition_complete) {
+		m_transition = 0xff;
+		m_transition_complete = true;
+		DoTransition_core(0.0f, true);
+	}
+	ScePafWidget_FF5BC957(this, NULL, 2, 0.0f, NULL);
+}
+
+inline void WebViewLoadingPlane::FadeOut(float time)
+{
+	Timer *timer = new Timer(time);
+	float total = timer != NULL ? timer->GetTotalTime() : 0.0f;
+
+	m_transition_complete = false;
+	m_transition = 0xff;
+	DoTransitionReverse_core(total, true);
+	ScePafWidget_4588699E(this, timer, 2, 0.0f, NULL);
+}
+
+void WebViewLoadingPlane::Flash()
+{
+	if (m_state != 0) {
+		m_state = 3;
+		return;
+	}
+	if (m_delay == 0) {
+		ShowNow();
+		FadeOut(500.0f);
+	} else if (m_delay == 1 && m_style == 0) {
+		ShowNow();
+		FadeOut(500.0f);
+	}
+}
+
+void WebViewLoadingPlane::SetStyle(int style)
+{
+	switch (style) {
+	case 0:
+		SetColor(math::v4(0.38f, 0.4f, 0.4f, 0.41f), NULL, ANIM_COLOR, 0);
+		break;
+	case 1:
+		SetColor(math::v4(0.1f, 0.1f, 0.8f, 0.41f), NULL, ANIM_COLOR, 0);
+		break;
+	}
+	m_style = style;
+}
+
+void WebView::UpdateLoadingPlane(const math::v4 &rect, bool show, string first, string second)
+{
+	string firstText(first);
+	string secondText(second);
+	WebViewLoadingPlane *plane = m_loadingPlane;
+
+	if (plane == NULL)
+		goto done;
+	switch (plane->m_delay) {
+	case 0:
+		if (firstText.size() != 0)
+			show = true;
+		break;
+	case 1:
+		if ((firstText.size() | secondText.size()) != 0)
+			show = true;
+		if (secondText.size() != 0) {
+			plane->SetStyle(1);
+			plane = m_loadingPlane;
+		}
+		if (firstText.size() != 0) {
+			plane->SetStyle(0);
+			plane = m_loadingPlane;
+		}
+		break;
+	}
+
+	if (show) {
+		math::v4 cur = plane->GetPos(0, NULL, math::v4(0.0f, 0.0f, 0.0f, 0.0f));
+		sce::Vectormath::Simd::Aos::Vector4 pos(cur.getImpl());
+
+		pos.setXY(rect.getImpl().getXY());
+		m_loadingPlane->SetPos(math::v4(pos), NULL, Widget::ANIM_MOVE, 0);
+
+		sce::Vectormath::Simd::Aos::Vector4 size(m_loadingPlane->GetSize(0)->getImpl());
+
+		size.setXY(sce::Vectormath::Simd::Aos::Vector2(
+			rect.getImpl().getZ() + sce::Vectormath::Simd::floatInVec(15.0f),
+			rect.getImpl().getW() + sce::Vectormath::Simd::floatInVec(15.0f)));
+		m_loadingPlane->SetSize(math::v4(size), NULL, Widget::ANIM_SIZE, 0);
+		m_loadingPlane->RunPending();
+		if (m_cursorEnabled && firstText.size() != 0)
+			m_loadingPlane->Show();
+	} else if (m_cursorEnabled) {
+		plane->m_transition_complete = false;
+		plane->m_transition = 0xff;
+		plane->DoTransitionReverse_core(0.0f, true);
+		ScePafWidget_4588699E(plane, NULL, 2, 0.0f, NULL);
+	}
+done:
+	;
+}
+
+void WebView::OnHit(const WebViewHitResult *hit, int action, bool show, const string &linkUrl,
+	const string &imageUrl, bool contextMenuShown)
+{
+	using namespace sce::Vectormath::Simd;
+
+	if (!CanZoom() || hit == NULL)
+		return;
+
+	math::v2 hitSize((float)hit->width, (float)hit->height);
+	float centerX = (float)hit->x + hitSize.getImpl().getX().getAsFloat() * 0.5f;
+	float centerY = (float)hit->y + hitSize.getImpl().getY().getAsFloat() * 0.5f;
+	float pointX = (float)hit->pointX;
+	float pointY = (float)hit->pointY;
+	Aos::Matrix3 transform = GetViewTransform();
+	Aos::Vector3 center = transform.getCol0() * centerX + transform.getCol1() * centerY +
+		Aos::mulPerElem(transform.getCol2(), Aos::Vector3(1.0f));
+	math::v2 pos = math::v2(Aos::Vector2(center.getX(), center.getY())) - GetViewFocusTarget();
+	Aos::Vector3 pressed = transform.getCol0() * pointX + transform.getCol1() * pointY +
+		Aos::mulPerElem(transform.getCol2(), Aos::Vector3(1.0f));
+	math::v2 point = math::v2(Aos::Vector2(pressed.getX(), pressed.getY())) -
+		GetViewFocusTarget();
+	math::v2 size = hitSize * math::v2(Aos::Vector2(recipf(m_contentSize.getImpl().getX()) *
+		m_view_box_size.getImpl().getX()));
+	string link(linkUrl);
+	string image(imageUrl);
+	string mimeType(hit->mimeType);
+	int imageSize = hit->imageSize;
+	int format;
+
+	if (sce_paf_strcmp(mimeType.c_str(), string("image/bmp").c_str()) == 0)
+		format = CONTEXT_MENU_IMAGE_BMP;
+	else if (sce_paf_strcmp(mimeType.c_str(), string("image/gif").c_str()) == 0)
+		format = CONTEXT_MENU_IMAGE_GIF;
+	else if (sce_paf_strcmp(mimeType.c_str(), string("image/png").c_str()) == 0)
+		format = CONTEXT_MENU_IMAGE_PNG;
+	else if (sce_paf_strcmp(mimeType.c_str(), string("image/jpeg").c_str()) == 0)
+		format = CONTEXT_MENU_IMAGE_JPEG;
+	else
+		format = CONTEXT_MENU_IMAGE_NONE;
+
+	UpdateLoadingPlane(math::v4(Aos::Vector4(pos.getImpl(), size.getImpl())), show, linkUrl,
+		imageUrl);
+	m_contextMenuShown = contextMenuShown;
+
+	switch (action) {
+	case WEB_VIEW_HIT_ZOOM:
+		if (!((size.getImpl().getX() == floatInVec(0.0f)) &
+		      (size.getImpl().getY() == floatInVec(0.0f))).getAsBool()) {
+			pos = pos + GetViewFocusTarget();
+			ZoomToRect(math::v2(pos), math::v2(size));
+		}
+		break;
+	case WEB_VIEW_HIT_CONTEXT_MENU:
+		if ((link.size() | image.size()) != 0 && m_listener != NULL) {
+			ContextMenuInfo info(math::rect(pos, size), point);
+
+			if (link.size() != 0)
+				info.AddItem(CONTEXT_MENU_ITEM_LINK, link, 0, format);
+			if (image.size() != 0)
+				info.AddItem(CONTEXT_MENU_ITEM_IMAGE, image, imageSize, format);
+
+			Widget *cursor = m_cursorPlane;
+
+			m_cursorHidden = true;
+			if (cursor != NULL) {
+				cursor->m_transition_complete = false;
+				cursor->m_transition = 0xff;
+				cursor->DoTransitionReverse_core(0.0f, true);
+				ScePafWidget_4588699E(cursor, NULL, 2, 0.0f, NULL);
+			}
+			m_listener->OnContextMenu(this, info);
+		}
+		break;
+	}
+}
+
+void WebView::OnEvent22()
+{
+	if (m_appListener == NULL)
+		return;
+
+	Widget *cursor = m_cursorPlane;
+
+	m_cursorHidden = true;
+	if (cursor != NULL) {
+		cursor->m_transition_complete = false;
+		cursor->m_transition = 0xff;
+		cursor->DoTransitionReverse_core(0.0f, true);
+		ScePafWidget_4588699E(cursor, NULL, 2, 0.0f, NULL);
+	}
+	m_appListener->OnSlot3(this);
+}
+
+void WebView::RequestDownload(const char *url, const char *mimeType)
+{
+	OnDownloadRequest(Url(string(url)), string(mimeType), 0);
+}
+
+void WebView::ShowSelect(const vector<string> &items)
+{
+	if (items.size() == 0)
+		return;
+	if (m_loadingPlane != NULL)
+		m_loadingPlane->Hide();
+	OnInput9();
+
+	WebViewSelectInfo info;
+	WebViewSelectGroup group;
+
+	group.m_reserved = false;
+	info.m_multipleShown = m_selectMultiple;
+	info.m_multiple = m_selectMultiple;
+	for (uint32_t i = 0; i < items.size(); i++) {
+		WebViewSelectItem item;
+
+		item.m_selectable = false;
+		item.m_enabled = false;
+		item.m_text = items[i];
+		item.m_enabled = m_selectEnabled[i];
+		item.m_selectable = m_selectLabels[i] == 0;
+		group.m_items.push_back(item);
+	}
+	info.m_groups.push_back(group);
+	if (m_appListener != NULL) {
+		Widget *cursor = m_cursorPlane;
+
+		m_cursorHidden = true;
+		if (cursor != NULL) {
+			cursor->m_transition_complete = false;
+			cursor->m_transition = 0xff;
+			cursor->DoTransitionReverse_core(0.0f, true);
+			ScePafWidget_4588699E(cursor, NULL, 2, 0.0f, NULL);
+		}
+		m_appListener->OnSelect(this, info);
+	}
+}
+
+void WebView::AddSelectItem(const string &text, bool enabled, bool label)
+{
+	m_selectItems.push_back(text);
+	m_selectEnabled.push_back(enabled);
+	m_selectLabels.push_back(label);
+	if (++m_selectReceived == m_selectCount)
+		ShowSelect(m_selectItems);
+}
+
+void WebView::StartSelect(int count, int reserved, bool multiple)
+{
+	m_selectCount = count;
+	m_selectReceived = 0;
+	m_selectMultiple = multiple;
+	m_selectItems.clear();
+	m_selectEnabled.clear();
+	m_selectLabels.clear();
 }
 
 void WebView::RequestGeolocationPermission(const string &origin)

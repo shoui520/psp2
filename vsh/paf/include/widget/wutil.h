@@ -36,6 +36,21 @@ struct MessageDialogParam {
 	void *user_data;
 };
 
+/* the four texts a dialog is opened with (the web view's: the two lines of its request, the
+   user name and the password; names ours) */
+struct MessageDialogTexts {
+	MessageDialogTexts(const string &text0, const string &text1, const string &text2,
+		const string &text3)
+		: text0(text0), text1(text1), text2(text2), text3(text3)
+	{
+	}
+
+	common::String text0;
+	common::String text1;
+	common::String text2;
+	common::String text3;
+};
+
 class MessageDialogListener {
 public:
 	MessageDialogListener();
@@ -50,11 +65,14 @@ public:
 	virtual bool Method8() = 0;
 	/* opens the dialog asked for */
 	virtual void Method9(MessageDialogParam *param) = 0;
-	virtual void Method10() = 0;
+	/* opens the dialog of the kind asked for; negative when it cannot */
+	virtual int Method10(MessageDialogParam *param) = 0;
 	virtual void Method11() = 0;
-	virtual void Method12() = 0;
+	/* opens the date or time dialog asked for; negative when it cannot */
+	virtual int Method12(MessageDialogParam *param) = 0;
 	virtual void Method13() = 0;
-	virtual void Method14() = 0;
+	/* opens the dialog asked for with four texts (the web view's user name and password) */
+	virtual void Method14(MessageDialogParam *param, const MessageDialogTexts &texts) = 0;
 	virtual void Method15() = 0;
 	virtual void Method16() = 0;
 	/* the owner's dialog closed */

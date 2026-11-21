@@ -189,13 +189,68 @@ public:
 	int m_result;
 };
 
+/* the page's select popup as the application is given it: its groups of items (names ours) */
+class WebViewSelectItem {
+public:
+	virtual ~WebViewSelectItem()
+	{
+	}
+
+	string m_text;
+	/* not a group's label */
+	bool m_selectable;
+	bool m_enabled;
+};
+
+}
+}
+
+PAF_VECTOR_INLINE_DTOR(paf::ui::WebViewSelectItem)
+PAF_VECTOR_NOINLINE_PUSH_BACK(paf::ui::WebViewSelectItem, paf::allocator<paf::ui::WebViewSelectItem>)
+
+namespace paf {
+namespace ui {
+
+class WebViewSelectGroup {
+public:
+	virtual ~WebViewSelectGroup()
+	{
+	}
+
+	vector<WebViewSelectItem> m_items;
+	string m_label;
+	bool m_reserved;
+};
+
+}
+}
+
+PAF_VECTOR_INLINE_DTOR(paf::ui::WebViewSelectGroup)
+PAF_VECTOR_NOINLINE_PUSH_BACK(paf::ui::WebViewSelectGroup, paf::allocator<paf::ui::WebViewSelectGroup>)
+
+namespace paf {
+namespace ui {
+
+class WebViewSelectInfo {
+public:
+	virtual ~WebViewSelectInfo()
+	{
+	}
+
+	vector<WebViewSelectGroup> m_groups;
+	string m_title;
+	bool m_multiple;
+	bool m_multipleShown;
+};
+
 /* the application's listener of the page's data (wutil's ScePafWidget_E638AA1F; the slots
    not seen called are numbered, names ours) */
 class WebViewDataListener {
 public:
 	virtual ~WebViewDataListener();
-	virtual void OnSlot2();
-	virtual void OnSlot3();
+	/* the page's select popup opened (name ours) */
+	virtual void OnSelect(WebView *view, const WebViewSelectInfo &info);
+	virtual void OnSlot3(WebView *view);
 	virtual void OnSlot4();
 	virtual void OnData(WebViewDataEvent event, WebView *view);
 };
@@ -221,7 +276,8 @@ public:
 	virtual void OnPagePos(WebView *view, const math::v2 &pos);
 	virtual void OnPageTop(WebView *view, const float &top);
 	virtual void OnSlot13();
-	virtual void OnSlot14();
+	/* a long press on a link or an image: what it hit (name ours) */
+	virtual void OnContextMenu(WebView *view, const ContextMenuInfo &info);
 	/* the page asks for a new window at the URL, of the size: the view made for it, and
 	   whether the listener took the request itself (names ours) */
 	virtual void OnCreateWindow(WebView *view, const Url &url, int width, int height,
@@ -232,7 +288,9 @@ public:
 	/* the page asks whether it may go to the URL: *allow, true unless the listener says no
 	   (names ours) */
 	virtual void OnNavigationRequest(WebView *view, const Url &url, int type, bool *allow);
-	virtual void OnEvent14(WebView *view, int arg0, int arg1, int arg2, int arg3);
+	/* the page asks to download the URL (names ours) */
+	virtual void OnDownloadRequest(WebView *view, const Url &url, const string &mimeType,
+		int64_t length);
 	/* a cursor key the page did not take: its direction bit (1 81, 2 54, 4 64, 8 74), and
 	   whether it was let go (names ours) */
 	virtual void OnCursorKey(WebView *view, int direction, bool up);
@@ -286,6 +344,10 @@ void DestroyGeolocation(WebViewGeolocation *geolocation);
 /* WebCore's cursor type of none */
 #define WEB_VIEW_CURSOR_NONE		37
 /* WebCore's cursor types of the pointer and of the hand, over a link */
+/* what the page did with a press (names ours) */
+#define WEB_VIEW_HIT_CONTEXT_MENU	1
+#define WEB_VIEW_HIT_ZOOM		2
+
 #define WEB_VIEW_CURSOR_POINTER		0
 #define WEB_VIEW_CURSOR_HAND		2
 
@@ -402,11 +464,42 @@ public:
 
 	/* fades it out; a fade in progress ends shown (name ours) */
 	void Hide();
+	/* fades it in over the time its delay settings give; shown again (state 2) when it
+	   is already (name ours) */
+	void Show();
+	/* shown at once, then faded out over 500 ticks; done again (state 3) when it is fading
+	   (name ours) */
+	void Flash();
+	/* the colour of the style (see m_style; name ours) */
+	void SetStyle(int style);
+
+	/* the fade asked for while it was fading, done now (name ours) */
+	void RunPending()
+	{
+		int state = m_state;
+
+		if (state == 2) {
+			m_state = 0;
+			Show();
+		} else if (state == 3) {
+			m_state = 0;
+			Flash();
+		} else {
+			m_state = 0;
+		}
+	}
 
 	/* whether it is shown; 2 and 3 while it fades */
 	int m_state;
 	int m_delay;
-	int m_reserved;
+	/* its colour, and with delay 1 how long it fades in: 0 grey over 30 ticks, 1 blue over
+	   200 (name ours) */
+	int m_style;
+
+private:
+	void FadeIn(float time);
+	void ShowNow();
+	void FadeOut(float time);
 };
 
 /* the web view's resource parameters: the page it loads first, and the widgets of the page's
@@ -556,6 +649,41 @@ public:
 	/* the page asks whether it may go to the URL; the listener's answer is sent back in the
 	   message (name ours) */
 	void OnNavigationRequest(WebIpcEvent2027 *message);
+	/* the view focused on the page's point; the top padding kept for a point at the top
+	   (name ours) */
+	void ScrollToPagePos(int x, int y);
+	/* the dialog request kept while a message dialog is open (name ours) */
+	bool QueueDialog(WebIpcMessage *message);
+	/* the page asks for a user name and password: the dialog opened, or the request
+	   declined when there is none; queued while another dialog is open (name ours) */
+	bool OnAuthRequest(WebIpcEvent2025 *message);
+	/* the page asks for a date or time: the IME's texts and range kept and the dialog
+	   opened, or the request declined; queued while another dialog is open (name ours) */
+	bool OnDateTimeRequest(WebIpcEvent2033 *message);
+	/* the page asks for a message dialog of kind 0 or 1 (kind 1 not while one is open):
+	   opened, or the request cancelled; queued while another dialog is open (name ours) */
+	bool OnDialogRequest(WebIpcEvent2034 *message);
+	/* the page's block of the size given zoomed to fill the view, at the scale the view
+	   allows, centred at pos (name ours) */
+	void ZoomToRect(const math::v2 &pos, const math::v2 &size);
+	/* the select popup's items given to the application (name ours) */
+	void ShowSelect(const vector<string> &items);
+	/* one of the select popup's items received; the popup shown with the last (name ours) */
+	void AddSelectItem(const string &text, bool enabled, bool label);
+	/* the select popup started: the count of its items to come (name ours) */
+	void StartSelect(int count, int reserved, bool multiple);
+	/* the page asks for the URL to be downloaded, with its MIME type (name ours) */
+	void RequestDownload(const char *url, const char *mimeType);
+	/* the page's event 0x2022: told to the application's listener (name ours) */
+	void OnEvent22();
+	/* the loading plane put over the page's rect (its centre and size in a v4) and shown
+	   when asked or when there is a first text; the texts choose its style (names ours) */
+	void UpdateLoadingPlane(const math::v4 &rect, bool show, string first, string second);
+	/* what a press on the page hit: the loading plane put over it, then the element zoomed
+	   to (WEB_VIEW_HIT_ZOOM) or its context menu given to the listener
+	   (WEB_VIEW_HIT_CONTEXT_MENU) (name ours) */
+	void OnHit(const WebViewHitResult *hit, int action, bool show, const string &linkUrl,
+		const string &imageUrl, bool contextMenuShown);
 	/* the key sent to the page, or queued while the page has not replied to the last one
 	   (name ours) */
 	void SendKey(int keycode, bool down);
@@ -640,7 +768,8 @@ public:
 	virtual void OnEvent11(int arg0, int arg1);
 	virtual void OnEvent12(int arg);
 	virtual void OnNavigationRequest(const Url &url, int type, bool *allow);
-	virtual void OnEvent14(int arg0, int arg1, int arg2, int arg3, int arg4);
+	/* the page asks to download the URL: told to the listener (names ours) */
+	virtual void OnDownloadRequest(const Url &url, const string &mimeType, int64_t length);
 	virtual void OnEvent15(int arg);
 	virtual void OnEvent16();
 	virtual void OnHistoryChanged(bool canGoBack, bool canGoForward);
@@ -750,12 +879,13 @@ public:
 	common::String m_imeDefault;		/* 1580 */
 	/* the message dialog the page asked for, opened through wutil's listener */
 	MessageDialogParam m_dialogParam;	/* 1604 */
-	vector<int> m_selectIndices;		/* 1704 */
+	/* the page's dialog requests waiting while another dialog is open */
+	vector<WebIpcMessage *> m_pendingDialogs;	/* 1704 */
 	int m_selectCount;			/* 1720 */
-	int m_selectFocus;			/* 1724 */
+	int m_selectReceived;			/* 1724: the items received so far */
 	vector<string> m_selectItems;		/* 1728 */
 	vector<bool> m_selectEnabled;		/* 1744 */
-	vector<bool> m_selectChecked;		/* 1760 */
+	vector<bool> m_selectLabels;		/* 1760: the item is a group's label */
 	bool m_selectMultiple;			/* 1776 */
 	bool m_startWithParam;			/* 1777 */
 	math::v4 m_tapRect;			/* 1784 */

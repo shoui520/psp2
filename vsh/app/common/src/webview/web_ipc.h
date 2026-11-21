@@ -556,6 +556,20 @@ public:
 	string m_text[2];
 };
 
+/* what a press on the page hit: the element's rectangle and the point, in page pixels, and
+   its image's MIME type and size (names ours) */
+struct WebViewHitResult {
+	int x;
+	int y;
+	int width;
+	int height;
+	int pointX;
+	int pointY;
+	char mimeType[16];
+	int imageSize;
+};
+
+/* a press on the page: the element hit (names ours) */
 class WebIpcEvent2023 : public WebIpcMessage {	/* 0x81025520 */
 public:
 	WebIpcEvent2023(const WebIpcPacket *packet);
@@ -565,16 +579,24 @@ public:
 
 	virtual void Write(WebIpcPacket *packet) const;
 
-	string m_text[2];
-	int m_int;
-	bool m_bool[2];
+	/* the hit element's link and image URLs */
+	string m_linkUrl;
+	string m_imageUrl;
+	/* what the page did with the press (WEB_VIEW_HIT_*) */
+	int m_action;
+	bool m_show;
+	bool m_contextMenuShown;
 	/* the packet's data, when it is this size */
-	SceUInt8 m_data[44];
+	WebViewHitResult m_hit;
 };
 
+/* the page asks for a user name and password (names ours) */
 class WebIpcEvent2025 : public WebIpcMessage {	/* 0x81025598 */
 public:
 	WebIpcEvent2025(const WebIpcPacket *packet);
+	/* the reply (0x8100f922) */
+	WebIpcEvent2025(const string &text0, const string &text1, const string &user,
+		const string &password);
 	virtual ~WebIpcEvent2025()
 	{
 	}
@@ -582,12 +604,17 @@ public:
 	virtual void Write(WebIpcPacket *packet) const;
 	virtual void Read(const WebIpcPacket *packet);
 
-	string m_text[2];
-	/* the third text, split at m_split */
-	string m_head;
-	string m_tail;
-	int m_split;
-	bool m_bool;
+	/* the answer (0x8100fae2) */
+	void SetCredentials(bool accepted, const string &user, const string &password);
+
+	/* the two lines shown above the user name (names ours) */
+	string m_text0;
+	string m_text1;
+	/* sent as one text, split at m_userLength */
+	string m_user;
+	string m_password;
+	int m_userLength;
+	bool m_accepted;
 };
 
 class WebIpcEvent2027 : public WebIpcMessage {	/* 0x81025580 */
@@ -633,9 +660,14 @@ public:
 	int m_dataSize;
 };
 
+/* the page asks for a date or time input: its input type, texts and range; the answer goes
+   back in the message (names ours) */
 class WebIpcEvent2033 : public WebIpcMessage {	/* 0x810255c8 */
 public:
 	WebIpcEvent2033(const WebIpcPacket *packet);
+	/* the reply (0x8100fd6c) */
+	WebIpcEvent2033(int inputType, const string &title, const string &initialText,
+		float minDate, float maxDate, const string &defaultText);
 	virtual ~WebIpcEvent2033()
 	{
 	}
@@ -643,18 +675,26 @@ public:
 	virtual void Write(WebIpcPacket *packet) const;
 	virtual void Read(const WebIpcPacket *packet);
 
-	int m_int;
-	string m_text[2];
-	float m_float[2];
-	string m_text3;
-	bool m_bool;
+	int m_inputType;
+	string m_title;
+	string m_initialText;
+	/* the range, in RTC ticks */
+	float m_minDate;
+	float m_maxDate;
+	string m_defaultText;
+	bool m_accepted;
 };
 
+/* the page asks for a message dialog of the kind m_value says; m_cancelled is the answer
+   (names ours) */
 class WebIpcEvent2034 : public WebIpcIntMessage {	/* 0x810255b0 */
 public:
 	WebIpcEvent2034(const WebIpcPacket *packet) : WebIpcIntMessage(packet)
 	{
 	}
+
+	/* the reply (0x8100fd30) */
+	WebIpcEvent2034(int kind);
 
 	virtual ~WebIpcEvent2034()
 	{
@@ -663,7 +703,7 @@ public:
 	virtual void Write(WebIpcPacket *packet) const;
 	virtual void Read(const WebIpcPacket *packet);
 
-	bool m_bool;
+	bool m_cancelled;
 };
 
 class WebIpcEvent2035 : public WebIpcMessage {	/* 0x81025490 */
