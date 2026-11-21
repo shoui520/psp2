@@ -53,13 +53,13 @@ int SceAppUtil_7DA34311(const SceChar8 *str, SceSize size);
 int SceAppUtil_A3E0694F(SceAppUtilInternalState *state);
 /* passes the event to the callback the library was given, if any */
 int SceAppUtil_F93C691C(int event, SceAppUtilSaveDataSlotId id);
-/* two values of the application's: SceMsgDialogPlugin takes a first one above 0 as a patch found
-   for it */
 /* mount and unmount a drive SceAppUtil keeps for the system (202: the PSP save data root);
    SCE_APPUTIL_ERROR_BUSY when it is mounted already, mountPoint still filled in */
 int SceAppUtil_C3CB128B(int type, char *mountPoint);
 int SceAppUtil_C0418B1C(int type);
-int SceAppUtil_B2FE3BB1(SceInt32 *value, SceInt32 *value2);
+/* the application's own updates in the background download queue, not ready and ready:
+   SceMsgDialogPlugin takes a first one above 0 as a patch found for it */
+int SceAppUtil_B2FE3BB1(SceInt32 *notReady, SceInt32 *ready);
 
 #ifdef __cplusplus
 }

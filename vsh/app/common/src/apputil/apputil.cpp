@@ -369,17 +369,17 @@ extern "C" int SceAppUtilDevice_0AA41EAD(const char *device, SceUInt64 *maxSize,
 	return SCE_APPUTIL_ERROR_NOT_INITIALIZED;
 }
 
-extern "C" int SceAppUtilUmass_CC85F96F(void)
+extern "C" int SceAppUtilUmass_CC85F96F(int type, const char *key, AppmgrLoopBackImageInfo *info)
 {
 	if (g_initialized != 0)
-		return umassMount();
+		return umassFormat(type, key, info);
 	return SCE_APPUTIL_ERROR_NOT_INITIALIZED;
 }
 
-extern "C" int SceAppUtilUmass_96C76886(const char *path, char *mountPoint)
+extern "C" int SceAppUtilUmass_96C76886(const char *key, SceAppUtilMountPoint *mountPoint)
 {
 	if (g_initialized != 0)
-		return umassMountByPath(path, mountPoint);
+		return umassMount(key, mountPoint);
 	return SCE_APPUTIL_ERROR_NOT_INITIALIZED;
 }
 
@@ -393,14 +393,14 @@ extern "C" int SceAppUtilUmass_6D8CF67E(void)
 extern "C" int SceAppUtilUmass_AE1230D3(void)
 {
 	if (g_initialized != 0)
-		return umassGetDevInfo();
+		return umassForceUmount();
 	return SCE_APPUTIL_ERROR_NOT_INITIALIZED;
 }
 
-extern "C" int SceAppUtilUmass_0BC38A89(SceUInt64 *freeSize, SceUInt32 reserved)
+extern "C" int SceAppUtilUmass_0BC38A89(SceUInt64 *sizes, SceUInt32 num)
 {
 	if (g_initialized != 0)
-		return umassGetFreeSpace(freeSize, reserved);
+		return umassGetFormatSizes(sizes, num);
 	return SCE_APPUTIL_ERROR_NOT_INITIALIZED;
 }
 
@@ -425,10 +425,10 @@ extern "C" int sceAppUtilCacheGetDevInfo(SceUInt64 *maxSize, SceUInt64 *freeSize
 	return SCE_APPUTIL_ERROR_NOT_INITIALIZED;
 }
 
-extern "C" int sceAppUtilBookMount(void *param)
+extern "C" int sceAppUtilBookMount(SceAppUtilMountPoint *mountPoint)
 {
 	if (g_initialized != 0)
-		return bookMount(param);
+		return bookMount(mountPoint);
 	return SCE_APPUTIL_ERROR_NOT_INITIALIZED;
 }
 
@@ -590,10 +590,10 @@ extern "C" int SceAppUtil_C0418B1C(int type)
 	return SCE_APPUTIL_ERROR_PARAMETER;
 }
 
-extern "C" int SceAppUtil_B2FE3BB1(SceInt32 *value, SceInt32 *value2)
+extern "C" int SceAppUtil_B2FE3BB1(SceInt32 *notReady, SceInt32 *ready)
 {
 	if (g_initialized != 0)
-		return appVersionGet(value, value2);
+		return bgdlGetAppStatus(notReady, ready);
 	return SCE_APPUTIL_ERROR_NOT_INITIALIZED;
 }
 

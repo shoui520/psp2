@@ -194,6 +194,7 @@ int sceAppMgrSaveDataSlotFileOpen(const char *mountPoint, AppmgrSaveDataSlotFile
 int sceAppMgrSaveDataSlotFileGetParam(SceUInt32 slotId, SceAppMgrSaveDataSlotParam *param);
 int sceAppMgrSaveDataSlotFileClose(const char *mountPoint);
 int sceAppMgrSaveDataAddMount(const AppmgrAddMountParam *param);
+int sceAppMgrAddContAddMount(const AppmgrAddMountParam *param, int add);
 int sceAppMgrPspSaveDataRootMount(char *mountPoint);
 int sceAppMgrPspSaveDataRead(AppmgrPspSaveDataParams *params);
 #endif

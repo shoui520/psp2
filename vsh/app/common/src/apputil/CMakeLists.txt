@@ -8,6 +8,14 @@ psp2_module(${PSP2_TARGET} KIND user COMPILER snc PARTIAL SOURCES
 	apputil.cpp
 	system_param.cpp
 	app_event.cpp
+	store.cpp
+	addcont.cpp
+	umass.cpp
+	device.cpp
+	bgdl.cpp
+	npsignin.cpp
+	book.cpp
+	music.cpp
 	../../../../../sys/sdk/target/src/libsnc/unwind_pr0.c
 	../../../../../sys/sdk/target/src/libsnc/unwind_pr1.c
 )
@@ -19,3 +27,5 @@ set_source_files_properties(savedata_check.cpp PROPERTIES COMPILE_OPTIONS -Xauto
 set_source_files_properties(system_param.cpp PROPERTIES COMPILE_OPTIONS -Xautoinlinesize=0)
 # parseNpCommunicationId (19 instructions) stays a call
 set_source_files_properties(app_event.cpp PROPERTIES COMPILE_OPTIONS -Xautoinlinesize=0)
+# the checks several calls share stay calls; the title ID and passcode checks are inline
+set_source_files_properties(addcont.cpp bgdl.cpp PROPERTIES COMPILE_OPTIONS -Xautoinlinesize=0)

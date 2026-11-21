@@ -338,10 +338,60 @@ typedef struct SceAppMgrDrmOpenParam {
 	char mountPoint[16];
 } SceAppMgrDrmOpenParam;
 
+/* sceAppMgrLoopBackFormat's image size: in for create, out for query and shrink */
+typedef struct AppmgrLoopBackImageInfo {
+	SceUInt64 size;
+	SceUInt8 reserved[32];
+} AppmgrLoopBackImageInfo;
+
+_Static_assert(sizeof(AppmgrLoopBackImageInfo) == 40, "loop back image info");
+
+/* sceAppMgrLoopBackFormat's commands (mount ID 100) */
+#define APPMGR_LOOPBACK_CREATE		0	/* a new image of info->size */
+#define APPMGR_LOOPBACK_QUERY		1	/* the image's size */
+#define APPMGR_LOOPBACK_DELETE		2
+#define APPMGR_LOOPBACK_OWNER		3	/* the caller becomes the only one to format */
+#define APPMGR_LOOPBACK_SHRINK		4	/* 128 MiB less, a step of its removal */
+#define APPMGR_LOOPBACK_RELEASE		5	/* the owner forgotten (the shell) */
+
+/* sceAppMgrAppParamGetString's and sceAppMgrAppParamGetInt's parameters */
+#define APPMGR_APP_PARAM_TITLE_ID	12	/* 10 bytes */
+
+/* a queued background download, as the shell publishes it (sceAppMgrBgdlGetQueueStatus gives 32) */
+typedef struct AppmgrBgdlQueueItem {
+	SceUInt32 type;		/* 1, 3: an application (3 its license); 2: additional content */
+	SceInt32 state;		/* 0 not ready, 1 ready */
+	char contentId[48];	/* its title ID at 7 */
+} AppmgrBgdlQueueItem;
+
+_Static_assert(sizeof(AppmgrBgdlQueueItem) == 56, "background-download queue item");
+
+#define APPMGR_BGDL_TYPE_APP		1
+#define APPMGR_BGDL_TYPE_ADDCONT	2
+#define APPMGR_BGDL_TYPE_LICENSE	3
+#define APPMGR_BGDL_STATE_NOT_READY	0
+#define APPMGR_BGDL_STATE_READY		1
+
 /* vitasdk: ksceAppMgrDrmOpen */
 int SceAppMgrForDriver_EA75D157(const SceAppMgrDrmOpenParam *param);
 /* vitasdk: ksceAppMgrDrmClose */
 int SceAppMgrForDriver_088670A6(const SceAppMgrDrmOpenParam *param);
+
+/* SceAppMgrUser's (driver_us) mount, device and content calls, which SceAppUtil makes (its
+ * LaunchAppByUri, AppParamGetString and LoopBackFormat are in the SDK's <appmgr.h>) */
+#if !defined(PSP2_KERNEL)
+int sceAppMgrLaunchAppByUri2(const char *uri, const AppmgrLaunchAppByNameOption *option);
+int sceAppMgrContentInstallPeriodStart(void);
+int sceAppMgrContentInstallPeriodStop(void);
+int sceAppMgrDrmOpen(const SceAppMgrDrmOpenParam *param);
+int sceAppMgrDrmClose(const SceAppMgrDrmOpenParam *param);
+int sceAppMgrLoopBackMount(unsigned int mountId, const char *id, struct ScePfsRndDriveId *mountPoint);
+int sceAppMgrForceUmount(int mountId);
+int sceAppMgrGetDevInfo(const char *path, SceUInt64 *maxSize, SceUInt64 *freeSize);
+int sceAppMgrWorkDirMountById(unsigned int mountId, const char *id,
+			      struct ScePfsRndDriveId *mountPoint);
+int sceAppMgrBgdlGetQueueStatus(AppmgrBgdlQueueItem *status);
+#endif
 /* vitasdk: ksceAppMgrCloudDataCreateHeader */
 /* SceAppMgrForDriver_2FAA6ABD's output (names unknown) */
 typedef struct SceAppMgrCloudDataKey {

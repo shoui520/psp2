@@ -9,6 +9,7 @@
 #include <apputil.h>
 #include <apputil/apputil_psp.h>
 #include <apputil/apputil_internal.h>
+#include <appmgr/appmgr.h>
 #include <appmgr/appmgr_savedata.h>
 #include <shell_svc/shell_util.h>
 
@@ -17,6 +18,10 @@
 #define APPUTIL_ERROR_INVALID_STRING		(-2146433281)	/* 0x801006ff: not UTF-8 */
 #define APPUTIL_ERROR_LAUNCH_APP_REJECTED	(-2146433391)	/* 0x80100691 */
 #define APPUTIL_ERROR_NULL_STATE		(-2146433328)	/* 0x801006d0 */
+#define APPUTIL_ERROR_CACHE_DEVICE_NOT_FOUND	(-2146433407)	/* 0x80100681: no cache drive for the application */
+#define APPUTIL_ERROR_UMASS_DEVICE_NOT_FOUND	(-2146433406)	/* 0x80100682: no memory card for the USB mass storage image */
+#define APPUTIL_ERROR_UMASS_IMAGE_NOT_FOUND	(-2146433405)	/* 0x80100683: no image of that key */
+#define APPUTIL_ERROR_UMASS_MOUNT_POINT	(-2146433327)	/* 0x801006d1: the image mounted elsewhere than lm */
 
 /* SceShellSvc's launch request errors */
 #define SHELL_UTIL_ERROR_LAUNCH_APP_PARAMETER	(-2146428924)	/* 0x80101804 */
@@ -32,11 +37,48 @@
 #define APPMGR_ERROR_PSP_SAVEDATA_DATABUF_SIZE	(-2139094941)	/* 0x80800063 */
 #define APPMGR_ERROR_PSP_SAVEDATA_LAST		(-2139094937)	/* 0x80800067 */
 
+/* SceAppMgr's errors SceAppUtil translates (names ours, from what the kernel returns them for) */
+#define APPMGR_ERROR_LICENSE_NOT_FOUND	(-2139095036)	/* 0x80800004: no license file */
+#define APPMGR_ERROR_ADDCONT_LOCATION	(-2139095026)	/* 0x8080000e: the additional content is not where the title may mount it */
+#define APPMGR_ERROR_LICENSE_OPEN	(-2139095024)	/* 0x80800010: the license file cannot be read */
+#define APPMGR_ERROR_LICENSE_EXPIRED	(-2139095023)	/* 0x80800011 */
+#define APPMGR_ERROR_LICENSE_NOT_STARTED	(-2139095016)	/* 0x80800018: before the license's start time */
+#define APPMGR_ERROR_CONTENT_INSTALL_BUSY	(-2139094975)	/* 0x80800041: an installation period of the title already open */
+#define APPMGR_ERROR_LOOPBACK_BUSY	(-2139094970)	/* 0x80800046: another process formats the USB mass storage image */
+
+/* SceNpDrm's license errors, which sceAppUtilDrmOpen reports as no entitlement (names ours) */
+#define NPDRM_ERROR_DEBUG_LICENSE	(-2138636285)	/* 0x80870003 */
+#define NPDRM_ERROR_NO_LICENSE	(-2138636284)	/* 0x80870004 */
+#define NPDRM_ERROR_INVALID_LICENSE	(-2138636283)	/* 0x80870005 */
+#define NPDRM_ERROR_NOT_ACTIVATED	(-2138636282)	/* 0x80870006 */
+#define NPDRM_ERROR_ACTIVATION_TOO_OLD	(-2138636281)	/* 0x80870007 */
+#define NPDRM_ERROR_ACCOUNT_MISMATCH	(-2138636280)	/* 0x80870008 */
+
 /* the stack a launch request needs */
 #define APPUTIL_LAUNCH_STACK_SIZE		3072
 
 /* SceAppUtil_C3CB128B's and SceAppUtil_C0418B1C's mount: the PSP save data root */
 #define APPUTIL_MOUNT_PSP_SAVEDATA_ROOT		202
+
+/* the mount IDs of the drives SceAppUtil mounts */
+#define APPUTIL_MOUNT_ID_UMASS_FORMAT		100	/* sceAppMgrLoopBackFormat's */
+#define APPUTIL_MOUNT_ID_MUSIC			105
+#define APPUTIL_MOUNT_ID_BOOK			112
+#define APPUTIL_MOUNT_ID_CACHE			205
+#define APPUTIL_MOUNT_ID_UMASS			600
+
+/* how the store and the sign-in dialog are launched */
+#define APPUTIL_STORE_LAUNCH_MODE		0x60000
+#define APPUTIL_NP_SIGNIN_LAUNCH_MODE		0x40000
+
+/* SceAppUtilUmass_CC85F96F's kinds, sceAppMgrLoopBackFormat's commands one for one */
+#define UMASS_FORMAT_CREATE			0
+#define UMASS_FORMAT_QUERY			1
+#define UMASS_FORMAT_DELETE			2
+#define UMASS_FORMAT_OWNER			3
+#define UMASS_FORMAT_SHRINK			4
+/* the sizes SceAppUtilUmass_0BC38A89 lists */
+#define UMASS_FORMAT_SIZES_MAX			16
 
 /* a save data path: at most three folders, each name at most 63 bytes */
 #define APPUTIL_DATA_NAME_MAXLEN		63
@@ -206,19 +248,19 @@ int addcontMount(const SceAppUtilTitleId *titleId, int reserved, const SceAppUti
 int addcontUmount(int reserved);
 int drmOpen(const SceAppUtilDrmAddcontId *dirName, const SceAppUtilMountPoint *mountPoint);
 int drmClose(const SceAppUtilDrmAddcontId *dirName, const SceAppUtilMountPoint *mountPoint);
-int umassMount(void);
-int umassMountByPath(const char *path, char *mountPoint);
+int umassFormat(int type, const char *key, AppmgrLoopBackImageInfo *info);
+int umassMount(const char *key, SceAppUtilMountPoint *mountPoint);
 int umassUmount(void);
-int umassGetDevInfo(void);
-int umassGetFreeSpace(SceUInt64 *freeSize, SceUInt32 reserved);
+int umassForceUmount(void);
+int umassGetFormatSizes(SceUInt64 *sizes, SceUInt32 num);
 int deviceGetDevInfo(const char *device, SceUInt64 *maxSize, SceUInt64 *freeSize);
 int cacheMount(void);
 int cacheUmount(void);
 int cacheGetDevInfo(SceUInt64 *maxSize, SceUInt64 *freeSize);
 int bgdlGetStatus(SceAppUtilBgdlStatus *stat);
-int appVersionGet(SceInt32 *value, SceInt32 *value2);
+int bgdlGetAppStatus(SceInt32 *notReady, SceInt32 *ready);
 int npSigninState(void);
-int bookMount(void *param);
+int bookMount(SceAppUtilMountPoint *mountPoint);
 int bookUmount(void);
 int musicMount(void);
 int musicUmount(void);
@@ -231,6 +273,11 @@ int launchWebBrowser(SceAppUtilWebBrowserParam *param);
 int utf8Scan(const SceChar8 *str, SceSize size, SceUInt32 *length, SceUInt32 *bom);
 int utf8DecoderInit(void *context);
 int utf8Decode(void *context, const SceChar8 *str, SceSize size, SceUInt32 *length, SceUInt8 *last);
+
+/* the argument checks the add-on content and background download calls share */
+int checkAddcontMountPoint(const char *mountPoint, int added);
+int checkDrmAddcontId(const char *dirName);
+int checkBgdlStatus(const SceAppUtilBgdlStatus *stat);
 
 /* save data */
 void getModifiedTime(SceDateTime *time);

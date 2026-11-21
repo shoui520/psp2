@@ -74,11 +74,14 @@ int sceAppMgrIsPidShellAndCrashed(SceUID pid);
 /* not in the SDK: the application of that ID ended */
 int sceAppMgrQuitApp(int appId);
 
+/* user mode only: the kernel declares its own (appmgr's mount.h) */
+#ifndef PSP2_KERNEL
 /*
  * not in the SDK: the save data of an application (its path, its save data directory, the
  * application's ATTRIBUTE), as a 28-byte block the shell reads one word of (SceAppMgrUser)
  */
 int sceAppMgrGetSaveDataInfo(const char *path, const char *dir, int attr, void *info);
+#endif
 
 /*
  * not in the SDK: a process's application parameter (pid 0: the caller's own; id 3 its version,
@@ -88,8 +91,13 @@ int sceAppMgrAppParamGetInt(SceUID pid, int id, int *value);
 int sceAppMgrAppParamGetString(SceUID pid, int id, char *buf, SceSize bufSize);
 int sceAppMgrLaunchAppByUri(int flags, const char *uri);
 
-/* not in the SDK: a loop-back device formatted (the shell: id 100, kind 5, for ux0:umass) */
-int sceAppMgrLoopBackFormat(int id, int kind, int arg2, int arg3);
+#ifndef PSP2_KERNEL
+/*
+ * not in the SDK: a loop-back device formatted (the shell: id 100, kind 5, for ux0:umass), with
+ * its key and its image size (AppmgrLoopBackImageInfo in <appmgr/appmgr.h>)
+ */
+int sceAppMgrLoopBackFormat(unsigned int id, unsigned int kind, const char *key, void *info);
+#endif
 
 /*
  * not in the SDK: the license of the application at path (its layout is AppmgrLicenseInfo in

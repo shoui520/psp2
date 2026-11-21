@@ -5,6 +5,7 @@
 #include <scetypes.h>
 #include <pfsmgr/pfsmgr.h>
 #include <kernel/openpsid.h>
+#include <appmgr/appmgr.h>
 #include <appmgr/appmgr_license.h>
 
 typedef struct AppmgrPfsMount {
@@ -26,14 +27,6 @@ _Static_assert(offsetof(AppmgrPfsMount, mountId) == 0 &&
 	       offsetof(AppmgrPfsMount, prev) == 456 &&
 	       offsetof(AppmgrPfsMount, next) == 460,
 	       "PFS mount fields");
-
-/* sceAppMgrLoopBackFormat's image size: in for create, out for query and shrink */
-typedef struct AppmgrLoopBackImageInfo {
-	SceUInt64 size;
-	SceUInt8 reserved[32];
-} AppmgrLoopBackImageInfo;
-
-_Static_assert(sizeof(AppmgrLoopBackImageInfo) == 40, "loop back image info");
 
 /* sceAppMgrGetSaveDataInfo's result */
 typedef struct AppmgrSaveDataInfo {

@@ -4,6 +4,7 @@
 #include <sysmem/sysmem.h>
 #include <threadmgr/threadmgr.h>
 #include <string.h>
+#include <appmgr/appmgr.h>
 #include <appmgr/appmgr_rdrfp.h>
 #include "app_state_internal.h"
 
@@ -14,13 +15,6 @@ enum {
 	BGDL_QUEUE_ITEMS = 32,
 	BGDL_QUEUE_DATA_SIZE = 0x700,
 	BGDL_QUEUE_STORAGE_SIZE = 0x720,
-};
-
-/* a queued background download, as the shell publishes it */
-struct AppmgrBgdlQueueItem {
-	SceUInt32 type;		/* 1, 3: an application; 2: additional content */
-	SceUInt32 state;
-	char contentId[48];	/* its title ID at 7 */
 };
 
 _Static_assert(sizeof(struct AppmgrBgdlQueueItem) * BGDL_QUEUE_ITEMS == BGDL_QUEUE_DATA_SIZE,
