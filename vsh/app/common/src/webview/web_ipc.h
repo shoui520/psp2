@@ -40,9 +40,12 @@ enum {
 	WEB_IPC_STRING_PAIR = 0x1054,
 	WEB_IPC_UPDATE_1056 = 0x1056,
 	WEB_IPC_SCROLL_Y = 0x1060,
+	WEB_IPC_KEY_DOWN = 0x1040,
+	WEB_IPC_KEY_UP = 0x1041,
 	WEB_IPC_REQUEST_1070 = 0x1070,
 	WEB_IPC_REQUEST_DATA = 0x1071,
 	WEB_IPC_LOAD_DATA = 0x1080,
+	WEB_IPC_GEOLOCATION_PERMISSION = 0x1090,
 	/* received: a zoom the view drops when it cannot zoom */
 	WEB_IPC_EVENT_2003 = 0x2003,
 	WEB_IPC_CREATE_PAGE_WITH_VIEW = 0x2100
@@ -255,6 +258,30 @@ public:
 	int m_button;
 };
 
+/* a key pressed on the page, and whether the view's IME padding is on (0x810249f0, type
+   0x1040; names ours) */
+class WebIpcKeyDown : public WebIpcMessage {
+public:
+	WebIpcKeyDown(int keycode, bool ime);
+	virtual ~WebIpcKeyDown()
+	{
+	}
+
+	virtual void Write(WebIpcPacket *packet) const;
+
+	int m_keycode;
+	bool m_ime;
+};
+
+/* the key released (0x81024a08, type 0x1041; names ours) */
+class WebIpcKeyUp : public WebIpcKeyDown {
+public:
+	WebIpcKeyUp(int keycode, bool ime);
+	virtual ~WebIpcKeyUp()
+	{
+	}
+};
+
 /* asks the page for its data, of the size (0x81024930, type 0x1071; names ours) */
 class WebIpcRequestData : public WebIpcIntPairMessage {
 public:
@@ -340,6 +367,20 @@ public:
 
 	int m_mode;
 	string m_text;
+};
+
+/* whether the origin may have the device's location (0x810255f8, type 0x1090; names ours) */
+class WebIpcGeolocationPermission : public WebIpcMessage {
+public:
+	WebIpcGeolocationPermission(const string &origin, bool allowed);
+	virtual ~WebIpcGeolocationPermission()
+	{
+	}
+
+	virtual void Write(WebIpcPacket *packet) const;
+
+	string m_origin;
+	int m_allowed;
 };
 
 /* the page's vertical scroll (0x81024948, type 0x1060; names ours) */

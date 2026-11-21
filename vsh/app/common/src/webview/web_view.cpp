@@ -4,6 +4,7 @@
 #include <stddef.h>
 #include <scetypes.h>
 #include <memory/heap_allocator.h>
+#include <widget/core/environment.h>
 #include "web_view.h"
 
 /* GetGlobalHeapAllocator, exported by its C name. */
@@ -51,8 +52,8 @@ WebView::WebView(Widget *parent, CreateParam *param)
 	: ScrollView(parent, param), m_receiveBuffer(NULL), m_viewId(-1), m_pageState(0),
 	  m_listener(NULL), m_loadingPlane(NULL), m_appListener(ScePafWidget_E638AA1F()),
 	  m_ipcDataLock("SceWebViewWebIpcData", 0), m_surfacePool(NULL),
-	  m_surfaceWidth(0), m_ime(NULL), m_renderTarget(NULL), m_isSecure(false),
-	  m_cursorType(0), m_popupMenu(NULL), m_loadProgress(0), m_loadState(1),
+	  m_surfaceWidth(0), m_ime(NULL), m_renderTarget(NULL), m_geolocationEnabled(false),
+	  m_cursorType(0), m_geolocation(NULL), m_loadProgress(0), m_loadState(1),
 	  m_canReload(true), m_canGoBack(false), m_canGoForward(false), m_imeType(-1),
 	  m_options(0), m_imeOpen(false), m_imeEnabled(true), m_contentSize(0.0f, 0.0f),
 	  m_scale(1.0f), m_maxScale(5.0f), m_minScale(0.25f), m_userScalable(true), m_scrollX(0),
@@ -285,6 +286,39 @@ int WebView::Request1050()
 	WebIpcMessage message(WEB_IPC_REQUEST_1050);
 
 	return WebIpc::GetInstance()->Send(&message, m_viewId);
+}
+
+int WebView::SetZoomTop(const math::v2 &top, bool clip, float x, bool zoomed)
+{
+	math::v4 padding(0.0f, 0.0f, 0.0f, 0.0f);
+
+	padding.set_y(top.extract_y());
+	padding.set_w(m_padding.extract_w());
+	SetPadding(padding);
+	m_clip_children = clip;
+	m_zoomX = x;
+	m_zoomed = zoomed;
+	if (m_zoomRect == math::v4(0.0f, 0.0f, 0.0f, 0.0f))
+		m_zoomRect = m_vertical_bar_margin;
+
+	math::v4 margin = m_zoomRect;
+
+	if (!zoomed)
+		margin.set_x(margin.extract_x() - m_padding.extract_y());
+	margin.set_y(margin.extract_y() - m_padding.extract_w());
+	SetVerticalBarMargin(margin);
+
+	if (m_env != NULL) {
+		graph::Surface *screen = m_env->m_screen->m_surface.get();
+		math::rect layout(math::v2(0.0f, m_pageRect.extract_y() - m_padding.extract_y() -
+					   m_zoomX),
+			math::v2((float)screen->GetWidth(), (float)screen->GetHeight()));
+
+		if (m_layout_rect == NULL)
+			m_layout_rect = new math::rect();
+		*m_layout_rect = layout;
+	}
+	return 0;
 }
 
 int WebView::SetZoomOffset(float bottom, float y)
@@ -641,9 +675,11 @@ int WebView::SetScrollY(int y)
 	int ret = WEB_VIEW_ERROR_NO_WIDGET;
 
 	if (m_scrollY > 0) {
-		WebIpcScrollY message(y);
+		{
+			WebIpcScrollY message(y);
 
-		ret = WebIpc::GetInstance()->Send(&message, m_viewId);
+			ret = WebIpc::GetInstance()->Send(&message, m_viewId);
+		}
 		if (ret == 0)
 			m_scrollY = y;
 	}
@@ -928,6 +964,99 @@ void WebView::SetPageHandlesInput(bool on)
 /* the page asks for a new window: the user is asked first unless the view's options say not to,
    or else the listener makes the window's view, which then makes its page; with no view for it,
    the request goes back to the page */
+void WebView::ResetPage()
+{
+	OnTitleChanged(common::String(""));
+	m_scrollAnims.clear();
+	m_tapAnims.clear();
+	m_zoomAnims.clear();
+
+	math::v4 pageRect = m_pageRect;
+
+	m_imeEnabled = true;
+	m_tapping = false;
+	m_pageRect = math::v4(0.0f, 0.0f, 0.0f, 0.0f);
+	m_imeState = 0;
+	m_lastPageRect = pageRect;
+	m_keyQueue.clear();
+	m_loadState = 0;
+	m_keyReady = true;
+	m_cursorType = 0;
+	SetPageHandlesInput(false);
+	CloseIme();
+	if (m_loadingPlane != NULL)
+		m_loadingPlane->Hide();
+	if (m_listener != NULL)
+		m_listener->OnPageReset(this);
+}
+
+void WebView::OnLoadFinished()
+{
+	if (m_handAltTexture.get() != NULL && m_cursorPlane != NULL)
+		m_cursorPlane->SetTexture(m_arrowTexture);
+	if (m_listener != NULL)
+		m_listener->OnLoadFinished(this, m_loadState);
+	if (m_loadState == 1)
+		m_canReload = false;
+	m_loadState = 0;
+}
+
+void WebView::OnLoadFailed(int error, int arg)
+{
+	m_loadState = 1;
+	if (m_listener != NULL)
+		m_listener->OnLoadFailed(this, error | 0x80108000, arg);
+}
+
+void WebView::OnLoadCommitted()
+{
+	if (m_listener != NULL)
+		m_listener->OnLoadCommitted(this);
+}
+
+void WebView::OnPageLayout()
+{
+	SetImeText(m_imeType, m_imeText);
+	SetScrollY(m_scrollY);
+	if (m_url.GetUrlString().size() != 0) {
+		if (m_loadRequest.m_type == WebViewLoadRequest::TYPE_DATA)
+			LoadData(string(m_loadRequest.m_url), m_loadRequest.m_flag,
+				 string(m_loadRequest.m_data));
+		else
+			LoadUrl(m_url);
+		m_loadRequest = WebViewLoadRequest();
+	}
+	if (m_listener != NULL)
+		m_listener->OnPageLayout(this);
+}
+
+void WebView::OnLoadProgress(int progress)
+{
+	m_loadProgress = progress;
+	if (m_listener != NULL)
+		m_listener->OnLoadProgress(this);
+}
+
+void WebView::OnTitleChanged(const common::String &title)
+{
+	m_title = common::String(title.GetString());
+	if (m_listener != NULL)
+		m_listener->OnTitleChanged(this, title);
+}
+
+void WebView::OnUrlChanged(const Url &url)
+{
+	m_url = url;
+	if (m_listener != NULL)
+		m_listener->OnUrlChanged(this, url);
+}
+
+void WebView::OnEvent8(int arg)
+{
+	if (m_listener != NULL)
+		m_listener->OnEvent8(this, arg);
+}
+
 void WebView::OnCreateWindow(const WebIpcCreatePageWithView *message)
 {
 	if (message == NULL) {
@@ -1104,9 +1233,169 @@ void WebView::UpdateViewport()
 	}
 }
 
-void WebView::SetSecure(bool secure)
+void WebView::RequestGeolocationPermission(const string &origin)
 {
-	m_isSecure = secure;
+	WebViewGeolocation *geolocation = m_geolocation;
+
+	if (geolocation == NULL && m_geolocationEnabled) {
+		geolocation = CreateGeolocation(this);
+		m_geolocation = geolocation;
+	}
+	if (geolocation == NULL) {
+		WebIpcGeolocationPermission message(origin, false);
+		WebIpc::GetInstance()->Send(&message, m_viewId);
+		return;
+	}
+	m_geolocationOrigin = origin;
+	SetTimerListener(CB_TIMEOUT | 1, 0.0f,
+		new WebViewMemberListener<WebView>(this, &WebView::CheckGeolocationPermission));
+}
+
+void WebView::SendKey(int keycode, bool down)
+{
+	/* the keys the cursor moves with stay in the view while it shows a cursor */
+	if (m_cursorMode == 1 && (keycode == 74 || keycode == 64 || keycode == 54 ||
+		keycode == 81))
+		return;
+
+	if (m_keyReady) {
+		bool ime = m_ime_padding;
+
+		m_keyReady = false;
+		if (down) {
+			WebIpcKeyDown message(keycode, ime);
+			WebIpc::GetInstance()->Send(&message, m_viewId);
+		} else {
+			WebIpcKeyUp message(keycode, ime);
+			WebIpc::GetInstance()->Send(&message, m_viewId);
+		}
+		m_lastKey.m_keycode = keycode;
+		m_lastKey.m_down = down;
+	} else if (m_keyQueue.size() != 0) {
+		const WebViewKeyEvent &last = *--m_keyQueue.end();
+
+		/* a key held down repeats: one press waiting is enough */
+		if (!down || !last.m_down || keycode != last.m_keycode)
+			m_keyQueue.push_back(WebViewKeyEvent(keycode, down));
+	} else {
+		m_keyQueue.push_back(WebViewKeyEvent(keycode, down));
+	}
+}
+
+void WebView::SetCursorType(int type)
+{
+	Widget *cursor = m_cursorPlane;
+
+	if (cursor == NULL || m_cursorMode == 0 || m_cursorHidden ||
+	    m_arrowTexture.get() == NULL || m_cursorType == type)
+		return;
+
+	m_cursorType = type;
+	switch (type) {
+	case WEB_VIEW_CURSOR_NONE:
+		cursor->m_transition_complete = false;
+		cursor->m_transition = 0xff;
+		cursor->DoTransitionReverse_core(0.0f, true);
+		ScePafWidget_4588699E(cursor, NULL, 2, 0.0f, NULL);
+		break;
+	case WEB_VIEW_CURSOR_POINTER:
+		cursor->SetTexture(m_arrowTexture);
+		ShowCursor();
+		break;
+	case WEB_VIEW_CURSOR_HAND:
+		if (m_handTexture.get() != NULL)
+			cursor->SetTexture(m_handTexture);
+		ShowCursor();
+		break;
+	default:
+		/* every other type shows the arrow too */
+		cursor->SetTexture(m_arrowTexture);
+		ShowCursor();
+		break;
+	}
+}
+
+__attribute__((noinline)) sce::Vectormath::Simd::Aos::Matrix3 WebView::GetViewTransform()
+{
+	using namespace sce::Vectormath::Simd;
+
+	Aos::Matrix3 transform = Aos::Matrix3::identity();
+	Widget *plane = GetViewParent()->FindChild(IDParam("view_plane"), 2);
+
+	if (!(m_contentSize == math::v2(0.0f, 0.0f)) && plane != NULL) {
+		const math::v4 *size = plane->GetSize(0);
+		floatInVec rate = recipf(m_contentSize.getImpl().getX());
+		floatInVec width = size->getImpl().getX();
+
+		transform = Aos::Matrix3(Aos::Vector3(rate * width, floatInVec(0.0f), floatInVec(0.0f)),
+					 Aos::Vector3(floatInVec(0.0f), -width * rate, floatInVec(0.0f)),
+					 Aos::Vector3(size->extract_x() * -0.5f,
+						      size->extract_y() * 0.5f, 1.0f));
+	}
+	return transform;
+}
+
+void WebView::MoveCursorToPagePos(int x, int y)
+{
+	using namespace sce::Vectormath::Simd;
+
+	if (m_ime_padding || m_cursorPlane == NULL)
+		return;
+
+	if (m_keyQueue.size() != 0) {
+		/* the last key sent is let go unless a release of it is queued */
+		bool release = true;
+
+		for (list<WebViewKeyEvent>::iterator it = m_keyQueue.begin(); it != m_keyQueue.end();
+		     ++it) {
+			if (it->m_keycode == m_lastKey.m_keycode) {
+				if (!it->m_down || !m_lastKey.m_down) {
+					release = true;
+					break;
+				}
+				release = false;
+			}
+		}
+		m_keyQueue.clear();
+		if (m_lastKey.m_down && release)
+			SendKey(m_lastKey.m_keycode, false);
+	}
+
+	float posX = (float)x;
+	float posY = (float)y;
+	math::v4 visible = GetVisiblePageRect();
+
+	if (posX < visible.extract_x())
+		posX = visible.extract_x();
+	else if (visible.extract_x() + visible.extract_z() < posX)
+		posX = visible.extract_x() + visible.extract_z();
+	if (posY < visible.extract_y())
+		posY = visible.extract_y();
+	else if (visible.extract_y() + visible.extract_w() < posY)
+		posY = visible.extract_y() + visible.extract_w();
+
+	Aos::Matrix3 transform = GetViewTransform();
+	Aos::Vector3 world = transform.getCol0() * posX + transform.getCol1() * posY +
+		Aos::mulPerElem(transform.getCol2(), Aos::Vector3(1.0f));
+	math::v2 pos = math::v2(Aos::Vector2(world.getX(), world.getY())) - GetViewFocusTarget();
+
+	MoveCursor(&pos, 100.0f);
+}
+
+void WebView::ClearSurface()
+{
+	m_pageState = 0;
+	m_surface.clear();
+
+	intrusive_ptr<graph::Surface> none;
+
+	SetTexture(none);
+	OnLoadFinished();
+}
+
+void WebView::SetGeolocationEnabled(bool enabled)
+{
+	m_geolocationEnabled = enabled;
 }
 
 int WebView::Reserved3C88A96E()
@@ -1302,7 +1591,7 @@ void WebView::CreatePageForView()
 	math::v4 size = *GetSize(0);
 	WebIpcCreatePageWithView message((int32_t)(float)size.getImpl().getX(),
 		(int32_t)(float)size.getImpl().getY(), m_viewId, GetRenderParam(),
-		sizeof(WebViewRenderParam), m_isSecure);
+		sizeof(WebViewRenderParam), m_geolocationEnabled);
 
 	WebIpc::GetInstance()->Post(&message, m_viewId);
 	m_startWithParam = false;
@@ -1319,7 +1608,7 @@ int WebView::CreatePage()
 	math::v4 size = *GetSize(0);
 	WebIpcCreatePage message((int32_t)(float)size.getImpl().getX(),
 		(int32_t)(float)size.getImpl().getY(), GetRenderParam(),
-		sizeof(WebViewRenderParam), m_isSecure);
+		sizeof(WebViewRenderParam), m_geolocationEnabled);
 
 	ret = WebIpc::GetInstance()->Send(&message, m_viewId);
 	m_pageState = ret != 0 ? 1 : 2;
@@ -1445,9 +1734,9 @@ void WebView::ClearIpcData()
 
 WebView::~WebView()
 {
-	if (m_popupMenu != NULL) {
-		DestroyPopupMenu(m_popupMenu);
-		m_popupMenu = NULL;
+	if (m_geolocation != NULL) {
+		DestroyGeolocation(m_geolocation);
+		m_geolocation = NULL;
 	}
 	ClearIpcData();
 	if (m_receiveBuffer != NULL)

@@ -104,7 +104,48 @@ public:
 };
 
 class WebView;
-class WebViewPopupMenu;
+
+/* the device's location for a page, read with sceLocation by its thread
+   ("SceWebKitGeolocationMonitor"; vtable 0x81025c0c, names ours) */
+class WebViewGeolocation {
+public:
+	virtual void Start();
+	virtual int Stop();
+	/* whether the page may have the location: 0 not yet known, 2 denied, 1 or an error: ask */
+	virtual int GetPermission();
+	virtual int GetState();
+	virtual ~WebViewGeolocation();
+	virtual void Notify();
+
+	WebViewGeolocationClient *m_client;
+	bool m_started;
+};
+
+/* a listener that calls a method of its object (vtable 0x81025204 for WebView; names ours) */
+template <class T>
+class WebViewMemberListener : public EventListener {
+public:
+	typedef void (T::*Func)();
+
+	WebViewMemberListener(T *object, Func func) : m_object(object), m_func(func)
+	{
+	}
+
+	virtual ~WebViewMemberListener()
+	{
+	}
+
+	virtual int32_t Do(int32_t type, Handler *self, Event *e)
+	{
+		if (m_killed)
+			return 0x80AF4101;
+		(m_object->*m_func)();
+		return 0;
+	}
+
+	T *m_object;
+	Func m_func;
+};
 
 /* the system IME a page's text field opens (0x8100e298; names ours) */
 struct WebViewIme;
@@ -125,14 +166,16 @@ WebViewRenderParam *GetRenderParam();
 class WebViewPageListener {
 public:
 	virtual ~WebViewPageListener();
-	virtual void OnSlot2();
+	/* the page was reset (name ours) */
+	virtual void OnPageReset(WebView *view);
 	virtual void OnLoadFinished(WebView *view, int state);
 	virtual void OnLoadFailed(WebView *view, int error, int arg);
-	virtual void OnLoadCommitted();
-	virtual void OnSlot6();
-	virtual void OnLoadProgress();
-	virtual void OnTitleChanged(WebView *view, int arg);
-	virtual void OnUrlChanged(WebView *view, const char *url);
+	virtual void OnLoadCommitted(WebView *view);
+	/* the page is laid out and its pending load started (name ours) */
+	virtual void OnPageLayout(WebView *view);
+	virtual void OnLoadProgress(WebView *view);
+	virtual void OnTitleChanged(WebView *view, const common::String &title);
+	virtual void OnUrlChanged(WebView *view, const Url &url);
 	virtual void OnEvent8(WebView *view, int arg);
 	virtual void OnSlot11();
 	virtual void OnSlot12();
@@ -179,8 +222,10 @@ void DestroyRenderTarget(WebViewRenderTarget *target);
 /* runs the drawing the page's process queued for the render target (name ours) */
 int ProcessRenderCommands(WebViewRenderTarget *target);
 
-/* closes the popup menu (NULL: none) */
-void DestroyPopupMenu(WebViewPopupMenu *menu);
+/* the location for the client, NULL when sceLocation cannot be opened (0x81016844), and
+   freed (NULL: none) */
+WebViewGeolocation *CreateGeolocation(WebViewGeolocationClient *client);
+void DestroyGeolocation(WebViewGeolocation *geolocation);
 
 /* the error a parameter gives without its widget (name ours) */
 #define WEB_VIEW_ERROR_NO_WIDGET	((int)0x80AF0001)
@@ -193,6 +238,9 @@ void DestroyPopupMenu(WebViewPopupMenu *menu);
 #define WEB_VIEW_KEY_ALL		6
 /* WebCore's cursor type of none */
 #define WEB_VIEW_CURSOR_NONE		37
+/* WebCore's cursor types of the pointer and of the hand, over a link */
+#define WEB_VIEW_CURSOR_POINTER		0
+#define WEB_VIEW_CURSOR_HAND		2
 
 /* the page's parts the web view fills, the widgets its parameter names (names ours) */
 enum {
@@ -366,6 +414,9 @@ public:
 	int Stop();
 	/* sends 0x1050 (name ours) */
 	int Request1050();
+	/* the zoom's top padding, its x offset, and whether the view clips its children; the
+	   layout rectangle kept to the screen below the top (names ours) */
+	int SetZoomTop(const math::v2 &top, bool clip, float x, bool zoomed);
 	/* the zoom's bottom padding and its y offset (names ours) */
 	int SetZoomOffset(float bottom, float y);
 	/* the bool settings (names ours) */
@@ -398,6 +449,13 @@ public:
 	/* the view plane's points to the page's: scaled by the page's width over the plane's, y
 	   down, about the page's centre (name ours) */
 	sce::Vectormath::Simd::Aos::Matrix3 GetPageTransform();
+	/* the page's points to the view plane's, the inverse of GetPageTransform (name ours) */
+	sce::Vectormath::Simd::Aos::Matrix3 GetViewTransform();
+	/* the cursor moved to the page's point, kept in the visible part, once the keys queued
+	   are dropped (name ours) */
+	void MoveCursorToPagePos(int x, int y);
+	/* the page gone: its surface dropped and the view's texture cleared (name ours) */
+	void ClearSurface();
 	/* taps the page where the drag started (name ours) */
 	void TapAtDragStart();
 	/* sends 0x1070 (name ours) */
@@ -438,8 +496,19 @@ public:
 	void UpdateTexRegion();
 	/* the view's part of the page sent to the page, and the cursor kept in it (name ours) */
 	void UpdateViewport();
-	/* whether the page is a secure one (name ours) */
-	void SetSecure(bool secure);
+	/* whether a page may ask for the device's location (name ours) */
+	void SetGeolocationEnabled(bool enabled);
+	/* the origin asks for the device's location: asked of the user when no permission is
+	   kept for it (name ours) */
+	void RequestGeolocationPermission(const string &origin);
+	/* the key sent to the page, or queued while the page has not replied to the last one
+	   (name ours) */
+	void SendKey(int keycode, bool down);
+	/* the cursor's texture for WebCore's cursor type, hidden for none (name ours) */
+	void SetCursorType(int type);
+	/* the origin's permission, once the location says whether it is known (0x8100c74e;
+	   name ours) */
+	void CheckGeolocationPermission();
 	/* an export that does nothing but return 0 (name ours) */
 	int Reserved3C88A96E();
 	/* the page's part the view shows, in the page's whole pixels: x, y, width, height
@@ -505,10 +574,10 @@ public:
 	virtual void OnLoadFinished();
 	virtual void OnLoadFailed(int error, int arg);
 	virtual void OnLoadCommitted();
-	virtual void OnPageLayout(int arg);
+	virtual void OnPageLayout();
 	virtual void OnLoadProgress(int progress);
-	virtual void OnTitleChanged(const string &title);
-	virtual void OnUrlChanged(const char *url);
+	virtual void OnTitleChanged(const common::String &title);
+	virtual void OnUrlChanged(const Url &url);
 	virtual void OnEvent8(int arg);
 	virtual void UpdatePageRect(const math::v2 &focus);
 	virtual void OnEvent10(int arg);
@@ -582,10 +651,12 @@ public:
 	int m_surfaceWidth;			/* 1184 */
 	WebViewIme *m_ime;			/* 1188: the IME the page opened */
 	WebViewRenderTarget *m_renderTarget;	/* 1192 */
-	bool m_isSecure;			/* 1196 */
+	/* whether a page may ask for the device's location */
+	bool m_geolocationEnabled;		/* 1196 */
 	int m_cursorType;			/* 1200: WebCore's cursor type */
-	WebViewPopupMenu *m_popupMenu;		/* 1204 */
-	string m_popupText;			/* 1208 */
+	WebViewGeolocation *m_geolocation;	/* 1204 */
+	/* the origin asking for the location, while its permission is decided */
+	string m_geolocationOrigin;		/* 1208 */
 	map<string, string> m_popupItems;		/* 1220 */
 	int m_loadProgress;			/* 1232 */
 	int m_loadState;			/* 1236 */
