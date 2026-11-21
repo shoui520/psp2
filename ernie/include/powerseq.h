@@ -123,7 +123,7 @@ extern void powerSleepFactor21(void);
 #endif
 #if FW_SINCE(0x0100060B)
 extern void powerGetCutRegs(unsigned char *regs);
-#if BOARD_DOL1002
+#if BOARD_DOL1002 && !(defined(ERNIE_UPDATER))	/* the updater's is its host command */
 extern void powerCtrlDeviceReset(unsigned char hold, unsigned char devices);
 #endif
 #endif

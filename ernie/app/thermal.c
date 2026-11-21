@@ -21,6 +21,15 @@
 #include "state.h"
 #include "thermal.h"
 
+#if (defined(ERNIE_UPDATER)) && ANALOG_THERMISTOR
+/* DOL-1002's updater: no sensor and no statistics; powerSeqOn's call does nothing (no updater
+   image of DOL-1002 to check it against) */
+void thermalInit(void)
+{
+	return;
+}
+#else
+
 #if ANALOG_THERMISTOR
 struct Thermal thermal;
 
@@ -523,4 +532,5 @@ void thermalSetMode(unsigned char mode)
 		thermal.mode = mode;
 	}
 }
+#endif
 #endif

@@ -1066,10 +1066,15 @@ void batteryGetFaults(unsigned char *faults)
 /* DOL-1002 has no battery: what the other files call answers 0 (a read 0 0); the gauge's
    transfers stay behind it, logging a failure (events 0x25 and 0x26), for the control commands
    and the bootloader mode's start */
+#ifdef ERNIE_UPDATER	/* no event log in DOL-1002's updater */
+#define BATTERY_LOG_FAILURE(status)	if ((status) != 0) { \
+					}
+#else
 #define BATTERY_LOG_FAILURE(status)	if ((status) != 0) { \
 						logEvent(0x25); \
 						logEventValue(0x26, (status)); \
 					}
+#endif
 #define BATTERY_BUS_WRITE		batteryWriteBus
 #define BATTERY_BUS_READ		batteryReadBus
 #define BATTERY_BUS_READ_AT		batteryReadAtBus

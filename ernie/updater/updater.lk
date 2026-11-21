@@ -204,17 +204,17 @@ SEG	@@FSLDAT	IF ERNIE_FW>=0x01030000
 SEG	@@DATA		../app/util.c timer.c ../app/serialauth.c ../app/handshake.c version.c ../app/snvs.c	IF ERNIE_FW>=0x01030000
 SEG	@@DATA		IF ERNIE_FW>=0x01030000
 SEG	@@DATAL		host.c command.c stub.c ../app/nvs.c ../app/elmo.c power.c	IF ERNIE_FW>=0x01030000
-AT	0xfeb60		IF ERNIE_FW>=0x01030000
+AT	0xfeb60		IF ERNIE_FW>=0x01030000&&ERNIE_HW==0x00703030
 SEG	@@DATAL		../app/iica.c board.c powerwait.c ../app/battery.c	IF ERNIE_FW>=0x01030000
-AT	0xfec02		IF ERNIE_FW>=0x01030000
+AT	0xfec02		IF ERNIE_FW>=0x01030000&&ERNIE_HW==0x00703030
 SEG	@@DATAL		../app/charge.c ../app/cookie.c uart.c uart4.c ../app/version.c	IF ERNIE_FW>=0x01030000
-AT	0xfef18		IF ERNIE_FW>=0x01030000
+AT	0xfef18		IF ERNIE_FW>=0x01030000&&ERNIE_HW==0x00703030
 SEG	@@DATAL		../app/serial1.c	IF ERNIE_FW>=0x01030000
-AT	0xfef94		IF ERNIE_FW>=0x01030000
+AT	0xfef94		IF ERNIE_FW>=0x01030000&&ERNIE_HW==0x00703030
 SEG	@@DATAL		../app/serial.c ../app/serialauth.c ../app/handshake.c config.c	IF ERNIE_FW>=0x01030000
-AT	0xff10e		IF ERNIE_FW>=0x01030000
+AT	0xff10e		IF ERNIE_FW>=0x01030000&&ERNIE_HW==0x00703030
 SEG	@@DATAL		../app/snvs.c	IF ERNIE_FW>=0x01030000
-AT	0xff154		IF ERNIE_FW>=0x01030000
+AT	0xff154		IF ERNIE_FW>=0x01030000&&ERNIE_HW==0x00703030
 SEG	@@DATAL		../app/flash.c ../app/thermal.c ../app/powerled.c	IF ERNIE_FW>=0x01030000
 SEG	@@DATAL
 # the short direct area

@@ -23,6 +23,13 @@
 #include "uart.h"
 #include "updater.h"
 
+/* the serial mode (a bitfield in the 0x0104 source) */
+#if SERIAL_MODE_BITS
+#define UART_SERIAL_MODE	SERIAL_MODE_OF(serial)
+#else
+#define UART_SERIAL_MODE	serial.mode
+#endif
+
 /* UartPort.flags */
 #define UART_OPEN		0x01
 #define UART_CLOSED		0x02	/* opened before, then closed */
@@ -449,7 +456,7 @@ void uart3ReceiveInterrupt(void)
 	if ((p->rxWrite + 1 & p->rxMask) != p->rxRead) {
 		p->rxBuffer[p->rxWrite] = data;
 		p->rxWrite = p->rxWrite + 1 & p->rxMask;
-		if (serial.mode == 3) {
+		if (UART_SERIAL_MODE == 3) {
 			if (p->timeout.flgid != 0)
 				timerStart(p->timeout.timer, p->timeout.timeout);
 		} else
@@ -468,7 +475,7 @@ void uart3SendInterrupt(void)
 		p->txRead = p->txRead + 1 & p->txMask;
 	} else {
 		p->flags &= ~UART_SENDING;
-		if (serial.mode != 3)
+		if (UART_SERIAL_MODE != 3)
 			updEventSet(0x33);
 	}
 }

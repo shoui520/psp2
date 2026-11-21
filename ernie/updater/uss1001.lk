@@ -64,19 +64,43 @@ OBJECT	../lib/rl78/fsl.asm
 OBJECT	../lib/lucom.asm
 OBJECT	../lib/rl78/lmul.asm
 OBJECT	../lib/rl78/cudiv.asm
+OBJECT	../lib/lsdiv.asm	IF ERNIE_FW>=0x01050000	# 0x0105: the application's signed long and float routines too
 OBJECT	../lib/rl78/ludiv.asm
 OBJECT	../lib/rl78/curem.asm
 OBJECT	../lib/luadd.asm
+OBJECT	../lib/rl78/lusub.asm	IF ERNIE_FW>=0x01050000
 OBJECT	../lib/lulsh.asm
 OBJECT	../lib/lursh.asm
+OBJECT	../lib/iscmp.asm	IF ERNIE_FW>=0x01050000
+OBJECT	../lib/lscmp.asm	IF ERNIE_FW>=0x01050000
 OBJECT	../lib/luband.asm
 OBJECT	../lib/lubor.asm
 OBJECT	../lib/lubxor.asm
+OBJECT	../lib/rl78/divuw.asm	IF ERNIE_FW>=0x01050000
+OBJECT	../lib/rl78/fadd.asm	IF ERNIE_FW>=0x01050000
+OBJECT	../lib/rl78/fcom1.asm	IF ERNIE_FW>=0x01050000
+OBJECT	../lib/fcom5.asm	IF ERNIE_FW>=0x01050000
+OBJECT	../lib/fcom6.asm	IF ERNIE_FW>=0x01050000
+OBJECT	../lib/rl78/fmul.asm	IF ERNIE_FW>=0x01050000
+OBJECT	../lib/rl78/fdiv.asm	IF ERNIE_FW>=0x01050000
+OBJECT	../lib/rl78/fcmp.asm	IF ERNIE_FW>=0x01050000
+OBJECT	../lib/rl78/ftols.asm	IF ERNIE_FW>=0x01050000
+OBJECT	../lib/rl78/ftolu.asm	IF ERNIE_FW>=0x01050000
+OBJECT	../lib/rl78/lutof.asm	IF ERNIE_FW>=0x01050000
+OBJECT	../lib/rl78/fmulx.asm	IF ERNIE_FW>=0x01050000
+OBJECT	../lib/rl78/fdivx.asm	IF ERNIE_FW>=0x01050000
+OBJECT	../lib/rl78/lstof.asm	IF ERNIE_FW>=0x01050000
 OBJECT	../lib/memcpy.asm
 OBJECT	../lib/memcpy_n.asm
 OBJECT	../lib/memcmp.asm
 OBJECT	../lib/memset.asm
 OBJECT	../lib/memset_n.asm
+OBJECT	../lib/log.asm	IF ERNIE_FW>=0x01050000
+OBJECT	../lib/fcom4.asm	IF ERNIE_FW>=0x01050000
+OBJECT	../lib/flog.asm	IF ERNIE_FW>=0x01050000
+OBJECT	../lib/fsubx.asm	IF ERNIE_FW>=0x01050000
+OBJECT	../lib/fcom2.asm	IF ERNIE_FW>=0x01050000
+OBJECT	../lib/fcom3.asm	IF ERNIE_FW>=0x01050000
 # the ends of the startup's segments, after everything
 OBJECT	../app/cstartend.asm
 
@@ -129,6 +153,8 @@ SEG	@@CODEL		entry.c
 SEG	@@CSTART
 SEG	@@RTCODE
 SEG	@@LCODE		../lib/rl78/lmul.asm ../lib/rl78/cudiv.asm ../lib/rl78/ludiv.asm ../lib/rl78/curem.asm
+SEG	@@LCODE		../lib/rl78/lusub.asm ../lib/rl78/divuw.asm ../lib/rl78/fadd.asm ../lib/rl78/fcom1.asm ../lib/fcom5.asm ../lib/fcom6.asm	IF ERNIE_FW>=0x01050000
+SEG	@@LCODE		../lib/rl78/fmul.asm ../lib/rl78/fdiv.asm ../lib/rl78/fcmp.asm ../lib/rl78/ftols.asm ../lib/rl78/ftolu.asm ../lib/rl78/lutof.asm ../lib/rl78/fmulx.asm ../lib/rl78/fdivx.asm ../lib/rl78/lstof.asm	IF ERNIE_FW>=0x01050000
 SEG	@@BASE		main.c updater.c uart.c power.c uart4.c
 SEG	@@BASE
 SEG	@@R_INIT
@@ -143,6 +169,8 @@ SEG	@@CODEL		main.c updater.c host.c stub.c ../app/util.c ../app/elmo.c power.c 
 # the code from 0x35400: the libraries, then the rest
 AT	0x35400
 SEG	@@LCODE
+SEG	@@LCODEL	../lib/log.asm ../lib/fcom4.asm ../lib/flog.asm ../lib/fsubx.asm	IF ERNIE_FW>=0x01050000	# 0x0105: log() after memset_n (0x354bb)
+SEG	@@LCODEL	../lib/fcom2.asm ../lib/fcom3.asm	IF ERNIE_FW>=0x01050000
 SEG	@@CODEL		command.c spidev.c analog.c ../app/sha1.c ../app/aes.c powerwait.c ../app/charge.c ../app/cookie.c ../app/powerseq.c ../app/version.c serialevent.c timer.c ../app/handshake.c ../app/watchdog.c version.c ../app/eventlog.c ../app/clock.c ../app/clockout.c ../app/flash.c tau.c uart4.c ../app/serialline.c ../app/chipid.c ../app/multicn.c
 SEG	@@CODEL
 

@@ -477,10 +477,11 @@ void chargeInit(void)
 #endif
 }
 
-#if (BOARD_USS1001 && CHARGE_SINCE(0x01030511) && !(defined(ERNIE_UPDATER))) || CHARGE_0104
+#if (BOARD_USS1001 && CHARGE_SINCE(0x01030511) && !(defined(ERNIE_UPDATER))) || \
+    (CHARGE_0104 && !((defined(ERNIE_UPDATER)) && BOARD_DOL1002))	/* DOL-1002's updater: the event */
 /* the slim's (0x01030511 on) and DOL-1002 call stateTransition themselves (the slim's updater:
    the event, below) */
-#define chargeTransition(transition)	stateTransition(transition)
+#define chargeTransition(transition)	STATE_TRANSITION(transition)
 #elif SOURCE_0103 && !defined(ERNIE_UPDATER)	/* and the PS TV's (its updater: the event) */
 /* 0x01030505's: stateTransition with the transition's low byte */
 void chargeTransition(int transition)
@@ -1739,7 +1740,7 @@ static void chargeAlarm3(void)
 	} else {
 		charge.alarmsOn.bits.alarm3 = 1;
 		if (stateGet() == 0x20)
-			stateTransition(0x3b);
+			STATE_TRANSITION(0x3b);
 	}
 }
 #else

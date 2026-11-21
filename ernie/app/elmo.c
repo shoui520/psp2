@@ -283,8 +283,10 @@ unsigned char elmoWrite(unsigned char *data, unsigned char length)
 	} while (tries-- != 0);
 #if ELMO_GATED
 	if (status != 0) {
+#if !((defined(ERNIE_UPDATER)) && BOARD_DOL1002)	/* DOL-1002's updater has no event log */
 		logEvent(0x21);
 		logEventValue(0x22, status);
+#endif
 	}
 #endif
 	return status;
@@ -372,8 +374,10 @@ unsigned char elmoRead(unsigned char *reg, unsigned char *value)
 	} while (tries-- != 0);
 #if ELMO_GATED
 	if (status != 0) {
+#if !((defined(ERNIE_UPDATER)) && BOARD_DOL1002)	/* DOL-1002's updater has no event log */
 		logEvent(0x21);
 		logEventValue(0x22, status);
+#endif
 	}
 #endif
 	return status;
@@ -492,7 +496,7 @@ unsigned char elmoUpdateMasks(struct ElmoMasks *masks, unsigned char set)
 	}
 #endif
 	if (length != 0) {
-#if BOARD_DOL1002
+#if BOARD_DOL1002 && !UPD_0103	/* the application's: its kernel and serial2.c */
 		/* DOL-1002's: status mask 3's bit 12 lowers P0.1 before a clear; a set writes polled,
 		   with dispatching disabled, and raises P0.1 5 ms after it went through */
 		if (!set && (masks->status3 & 0x1000))

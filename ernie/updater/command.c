@@ -2329,7 +2329,7 @@ int hostCommand0820(void)
 	/* the slim's power LED flags: the host's blink */
 	powerLedClearFlags(POWER_LED_FLAG_HOST_BLINK);
 #else
-	powerLedEndMode(POWER_LED_MODE_HOST_BLINK);
+	POWER_LED_END(POWER_LED_MODE_HOST_BLINK, POWER_LED_EVENT_HOST_BLINK_END);
 #endif
 	answer->length = 2;
 	answer->result = 0;
@@ -2346,7 +2346,7 @@ int hostCommand0821(void)
 #if BOARD_USS1001
 	powerLedSetFlags(POWER_LED_FLAG_HOST_BLINK);
 #else
-	powerLedStartMode(POWER_LED_MODE_HOST_BLINK);
+	POWER_LED_START(POWER_LED_MODE_HOST_BLINK, POWER_LED_EVENT_HOST_BLINK);
 #endif
 	answer->length = 2;
 	answer->result = 0;
@@ -2362,7 +2362,7 @@ int hostCommand0822(void)
 #if BOARD_USS1001
 	powerLedSetFlags(POWER_LED_FLAG_HOST_BLINK);
 #else
-	powerLedStartMode(POWER_LED_MODE_HOST_BLINK);
+	POWER_LED_START(POWER_LED_MODE_HOST_BLINK, POWER_LED_EVENT_HOST_BLINK);
 #endif
 	answer->length = 2;
 	answer->result = 0;

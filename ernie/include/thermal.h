@@ -80,6 +80,8 @@ struct ThermalReport {
 	unsigned char	reserved15;
 };
 
+/* DOL-1002's updater has neither: no thermal state */
+#if !((defined(ERNIE_UPDATER)) && ANALOG_THERMISTOR)
 struct Thermal {
 #ifndef ERNIE_UPDATER	/* the PS TV's updater keeps only the sensor's */
 	signed char	peak;		/* the highest ever, kept in log record 0x1c */
@@ -98,6 +100,7 @@ struct Thermal {
 };
 
 extern struct Thermal thermal;
+#endif
 
 extern void thermalPoll(void);
 extern void thermalInit(void);
