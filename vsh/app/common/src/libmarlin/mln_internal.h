@@ -632,8 +632,8 @@ int SceMarlin_23838449(MlnServiceContext *context);
 int SceMarlin_FB95B259(MlnServiceContext *context, unsigned int size, void *data);
 int SceMarlin_92A6A48F(MlnServiceContext *context, int value, MlnRightsInfo **rights);
 int SceMarlin_A2E65A7E(MlnServiceContext *context, int value, MlnRightsInfo **rights);
-int MlnImpl_8101EE90(void *client, MlnBuffer *license, MlnRightsSummary **summary);
-int MlnImpl_8101F33C(void *client, int *a1);
+int MlnImpl_8101EE90(struct MlnClient *client, MlnBuffer *license, MlnRightsSummary **summary);
+int MlnImpl_8101F33C(struct MlnClient *client, int *state);
 int MlnImpl_81081400(void *a, void *b);
 int MlnImpl_81081498(void *time, int *minutes);
 int MlnIdSetAdd(MlnIdSet **set, const MlnBuffer *id);
@@ -1197,15 +1197,15 @@ int MlnImpl_81020094(void *session, int status, MlnApiValue *value, MlnHttpReque
 		     void *a4, void *a5);
 int MlnImpl_8101F954(void *session, MlnBuffer *message, int status, void *data,
 		     MlnApiRequest *request);
-int MlnImpl_8101F1F0(void *client, void *a1, MlnBuffer **found);
-int MlnImpl_8101F0B8(void *client, void *a1, void *a2);
+int MlnImpl_8101F1F0(struct MlnClient *client, void *a1, MlnBuffer **found);
+int MlnImpl_8101F0B8(struct MlnClient *client, void *a1, void *a2);
 int MlnImpl_8101DFA0(struct MlnClient *client, void *a1, void *a2, int *first, int *second);
-int MlnImpl_8101EC08(void *client, unsigned int *count, MlnBuffer ***items);
+int MlnImpl_8101EC08(struct MlnClient *client, unsigned int *count, MlnBuffer ***items);
 int MlnImpl_8101E118(struct MlnClient *client, MlnBuffer *a1, MlnBuffer *a2, unsigned int *count,
 		     MlnBuffer ***items);
-int MlnImpl_8101F4B0(void *client, void **a1);
-int MlnImpl_8101F5F4(void *client, MlnBuffer *a1);
-int MlnImpl_8101F724(void *client, MlnBuffer *token, MlnBuffer **found);
+int MlnImpl_8101F4B0(struct MlnClient *client, void **handle);
+int MlnImpl_8101F5F4(struct MlnClient *client, MlnBuffer *a1);
+int MlnImpl_8101F724(struct MlnClient *client, MlnBuffer *token, MlnBuffer **found);
 int MlnImpl_8102045C(void *session);
 int MlnImpl_8101DD24(MlnApiKind *kind, MlnBuffer *address, struct MlnClient **client,
 		     MlnApiVersion *version);
@@ -1213,8 +1213,8 @@ int MlnImpl_8101DF70(struct MlnClient *client);
 int MlnImpl_8101F870(MlnApiKind *kind, MlnBuffer *address, void **session);
 int MlnImpl_8101F92C(void *session);
 int MlnImpl_8101E628(struct MlnClient *client);
-int MlnImpl_8101E658(void *client, MlnBuffer **message, MlnApiResult **result);
-int MlnImpl_8101E9EC(void *client, MlnApiResult *step, MlnBuffer **message);
+int MlnImpl_8101E658(struct MlnClient *client, MlnBuffer **message, MlnApiResult **result);
+int MlnImpl_8101E9EC(struct MlnClient *client, MlnApiResult *step, MlnBuffer **message);
 int MlnImpl_8101E380(struct MlnClient *client, const MlnBuffer *token, MlnBuffer *account,
 		     MlnBuffer *secret, int start);
 
@@ -1227,7 +1227,14 @@ typedef struct MlnMessage {
 #define MLN_MESSAGE_HTTP_GET		0x402	/* the service asks for a request sent */
 #define MLN_MESSAGE_HTTP_POST		0x403
 #define MLN_MESSAGE_HTTP_BODY		0x404
+#define MLN_MESSAGE_VALUE		0x405
 #define MLN_MESSAGE_STATUS		0x406
+#define MLN_MESSAGE_LIST		0x503
+#define MLN_MESSAGE_RIGHTS		0x501
+#define MLN_MESSAGE_HANDLE		0x10a1
+#define MLN_MESSAGE_STATE		0x10a7
+#define MLN_MESSAGE_FOUND		0x10af
+#define MLN_MESSAGE_TOKEN		0x10b1
 #define MLN_MESSAGE_PAIR		0x505
 #define MLN_MESSAGE_PAIRS		0x507
 #define MLN_MESSAGE_VERSION		0x602
@@ -1244,6 +1251,11 @@ typedef struct MlnMessagePost {
 	MlnBuffer *body;
 	MlnBuffer *headers;		/* "Name: value" lines, CR LF after each */
 } MlnMessagePost;
+
+typedef struct MlnMessageValue {
+	unsigned short kind;		/* 1 only */
+	void *data;
+} MlnMessageValue;
 
 typedef struct MlnMessageStatus {
 	unsigned char reserved;
@@ -1286,6 +1298,18 @@ int MlnImpl_81022570(void *a1, void *a2, MlnBuffer **request);
 int MlnImpl_81021734(int noToken, const MlnBuffer *token, MlnBuffer *account, MlnBuffer *secret,
 		     MlnBuffer **request);
 int MlnImpl_810217E4(int type, MlnBuffer **request);
+int MlnImpl_81021BAC(MlnBuffer *response, MlnBuffer **request);
+int MlnImpl_81021864(const char *url, MlnBuffer **request);
+int MlnImpl_8102190C(int reserved, const char *url, MlnBuffer *body, MlnHttpHeaders *headers,
+		     MlnBuffer **request);
+int MlnImpl_81022180(MlnBuffer **request);
+int MlnImpl_81021D70(MlnBuffer *license, MlnBuffer **request);
+int MlnImpl_81022C10(void *a1, void *a2, MlnBuffer **request);
+int MlnImpl_81022D54(void *a1, MlnBuffer **request);
+int MlnImpl_810228FC(MlnBuffer **request);
+int MlnImpl_81022EFC(MlnBuffer **request);
+int MlnImpl_810230AC(MlnBuffer *a1, MlnBuffer **request);
+int MlnImpl_810231D4(MlnBuffer *token, MlnBuffer **request);
 int MlnImpl_8102371C(const MlnBuffer *reply, MlnMessage *message);
 void MlnImpl_810233C4(MlnMessage *message);
 int MlnImpl_8101D5D4(MlnClient *client, MlnApiValue **value);

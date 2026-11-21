@@ -635,3 +635,667 @@ __attribute__((noinline)) int MlnImpl_8101E628(MlnClient *client)
 	}
 	return MLN_OK;
 }
+
+/* a value message: the value of an action, with the client's account and secret */
+static inline __attribute__((always_inline)) int MlnClientValue(MlnClient *client,
+								MlnMessageValue *payload,
+								MlnApiResult **out)
+{
+	MlnBuffer *account = client->account, *secret = client->secret;
+	MlnApiResult *step = NULL;
+	MlnApiValue *value = NULL;
+	int ret;
+
+	if (payload == NULL) {
+		account = NULL;
+		secret = NULL;
+		ret = MLN_CORE_ERROR_INVALID;
+		goto out;
+	}
+	if (payload->kind != 1) {
+		account = NULL;
+		secret = NULL;
+		ret = 6;
+		goto out;
+	}
+	if (account != NULL) {
+		account = MlnBufferCreate(MLN_HEAP_SECURE, account->size, account->data);
+		if (account == NULL) {
+			secret = NULL;
+			ret = MLN_ERROR_NO_MEMORY;
+			goto out;
+		}
+	}
+	if (secret != NULL) {
+		secret = MlnBufferCreate(MLN_HEAP_SECURE, secret->size, secret->data);
+		if (secret == NULL) {
+			ret = MLN_ERROR_NO_MEMORY;
+			goto out;
+		}
+	}
+	value = MlnAllocate(MLN_HEAP_SECURE, sizeof(*value));
+	if (value == NULL) {
+		ret = MLN_ERROR_NO_MEMORY;
+		goto out;
+	}
+	MlnMemset(value, 0, sizeof(*value));
+	value->type = 5;
+	value->data[0] = account;
+	value->data[1] = secret;
+	value->data[2] = (void *)1;
+	value->data[3] = payload->data;
+	payload->data = NULL;
+	account = NULL;
+	secret = NULL;
+	step = MlnAllocate(MLN_HEAP_SECURE, sizeof(*step));
+	if (step == NULL) {
+		ret = MLN_ERROR_NO_MEMORY;
+		goto out;
+	}
+	MlnMemset(step, 0, sizeof(*step));
+	step->value = value;
+	value = NULL;
+	*out = step;
+	step = NULL;
+	ret = MLN_OK;
+out:
+	MlnApiValueFree(value);
+	MlnBufferDestroy(MLN_HEAP_SECURE, account);
+	MlnBufferDestroy(MLN_HEAP_SECURE, secret);
+	MlnApiResultFree(step);
+	return ret;
+}
+
+/*
+ * A step of the action token the client runs: the request it asked for before, or the
+ * client's answer to the response to the last one.
+ */
+__attribute__((noinline)) int MlnImpl_8101E658(MlnClient *client, MlnBuffer **message,
+					       MlnApiResult **out)
+{
+	MlnServiceSession *session;
+	MlnBuffer *request = NULL, *reply = NULL;
+	MlnApiResult *result = NULL;
+	MlnMessageStatus *status;
+	MlnMessage decoded;
+	int ret;
+
+	MlnMemset(&decoded, 0, sizeof(decoded));
+	if (client == NULL || out == NULL) {
+		ret = MLN_CORE_ERROR_INVALID;
+		goto free;
+	}
+	if (client->kind == NULL || client->kind->type != 1 ||
+	    (session = client->kind->remote) == NULL || session->transact == NULL ||
+	    session->release == NULL || client->busy != 1) {
+		ret = 3;
+		goto free;
+	}
+	if (client->pending.type != MLN_MESSAGE_NONE) {
+		ret = MlnImpl_8101D7C0(&client->pending, &result);
+		MlnImpl_810233C4(&client->pending);
+		client->pending.payload = NULL;
+		client->pending.type = MLN_MESSAGE_NONE;
+		if (ret != MLN_OK)
+			goto out;
+		goto done;
+	}
+	ret = MlnImpl_81021BAC(message != NULL ? *message : NULL, &request);
+	if (ret != MLN_OK)
+		goto out;
+	if (session->transact(session->cookie, request, &reply) != 0 || reply == NULL) {
+		ret = 83;
+		goto out;
+	}
+	ret = MlnImpl_8102371C(reply, &decoded);
+	if (ret != MLN_OK)
+		goto out;
+	switch (decoded.type) {
+	case MLN_MESSAGE_HTTP_GET:
+	case MLN_MESSAGE_HTTP_POST:
+		ret = MlnImpl_8101D7C0(&decoded, &result);
+		break;
+	case MLN_MESSAGE_VALUE:
+		ret = MlnClientValue(client, decoded.payload, &result);
+		break;
+	case MLN_MESSAGE_STATUS:
+		status = decoded.payload;
+		if (status == NULL) {
+			ret = 7;
+			goto out;
+		}
+		ret = MlnImpl_8101DC14(client, status->failed, status->result, &result);
+		break;
+	default:
+		ret = 84;
+		goto out;
+	}
+	if (ret != MLN_OK)
+		goto out;
+done:
+	*out = result;
+	result = NULL;
+	ret = MLN_OK;
+out:
+	MlnApiResultFree(result);
+	MlnImpl_810233C4(&decoded);
+	MlnBufferDestroy(MLN_HEAP_SECURE, request);
+	if (session->release != NULL)
+		session->release(reply);
+	return ret;
+free:
+	MlnApiResultFree(result);
+	MlnImpl_810233C4(&decoded);
+	MlnBufferDestroy(MLN_HEAP_SECURE, request);
+	return ret;
+}
+
+/* hands the client a step's request; the reply is the body to send with it */
+__attribute__((noinline)) int MlnImpl_8101E9EC(MlnClient *client, MlnApiResult *step,
+					       MlnBuffer **message)
+{
+	MlnServiceSession *session;
+	MlnBuffer *request = NULL, *reply = NULL, *body = NULL;
+	MlnHttpRequest *http;
+	MlnMessage decoded;
+	int ret;
+
+	if (client == NULL) {
+		ret = 3;
+		goto free;
+	}
+	if (step == NULL || step->request == NULL || message == NULL) {
+		ret = MLN_CORE_ERROR_INVALID;
+		goto free;
+	}
+	if (client->kind == NULL || client->kind->type != 1 ||
+	    (session = client->kind->remote) == NULL || session->transact == NULL ||
+	    session->release == NULL || client->busy != 1) {
+		ret = 3;
+		goto free;
+	}
+	MlnMemset(&decoded, 0, sizeof(decoded));
+	http = step->request;
+	session = client->kind->remote;
+	if (http->method == MLN_HTTP_GET)
+		ret = MlnImpl_81021864(http->url, &request);
+	else
+		ret = MlnImpl_8102190C(0, http->url, http->body, &http->headers, &request);
+	if (ret != MLN_OK)
+		goto out;
+	if (session->transact(session->cookie, request, &reply) != 0 || reply == NULL) {
+		ret = 83;
+		goto release;
+	}
+	ret = MlnImpl_8102371C(reply, &decoded);
+	if (ret != MLN_OK)
+		goto release;
+	if (decoded.type == MLN_MESSAGE_HTTP_BODY) {
+		body = *(MlnBuffer **)decoded.payload;
+		*(MlnBuffer **)decoded.payload = NULL;
+	} else if (decoded.type != MLN_MESSAGE_STATUS) {
+		ret = 84;
+		goto release;
+	} else if (decoded.payload == NULL) {
+		ret = 7;
+		goto release;
+	} else {
+		ret = MlnImpl_8101DCB4(client, decoded.payload);
+		if (ret != MLN_OK)
+			goto release;
+	}
+	*message = body;
+	body = NULL;
+release:
+	MlnBufferDestroy(MLN_HEAP_SECURE, body);
+	MlnBufferDestroy(MLN_HEAP_SECURE, request);
+	MlnImpl_810233C4(&decoded);
+	if (session->release != NULL)
+		session->release(reply);
+	return ret;
+out:
+	MlnBufferDestroy(MLN_HEAP_SECURE, body);
+	MlnBufferDestroy(MLN_HEAP_SECURE, request);
+	MlnImpl_810233C4(&decoded);
+	if (session != NULL && session->release != NULL)
+		session->release(reply);
+	return ret;
+free:
+	MlnBufferDestroy(MLN_HEAP_SECURE, NULL);
+	MlnBufferDestroy(MLN_HEAP_SECURE, request);
+	MlnImpl_810233C4(&decoded);
+	return ret;
+}
+
+/* the client's list: pairs of buffers, first and second of each in turn */
+__attribute__((noinline)) int MlnImpl_8101EC08(MlnClient *client, unsigned int *count,
+					       MlnBuffer ***items)
+{
+	MlnServiceSession *session = NULL;
+	MlnBuffer *request = NULL, *reply = NULL;
+	MlnBuffer **buffers = NULL;
+	MlnMessagePairs *pairs;
+	MlnMessage decoded;
+	unsigned int total = 0, i;
+	int ret;
+
+	MlnMemset(&decoded, 0, sizeof(decoded));
+	if (client == NULL || client->kind == NULL || client->kind->type != 1 ||
+	    client->kind->remote == NULL) {
+		ret = 3;
+		goto out;
+	}
+	ret = MlnImpl_81022180(&request);
+	if (ret != MLN_OK)
+		goto out;
+	session = client->kind->remote;
+	if (session->transact(session->cookie, request, &reply) != 0 || reply == NULL) {
+		ret = 83;
+		goto out;
+	}
+	ret = MlnImpl_8102371C(reply, &decoded);
+	if (ret != MLN_OK)
+		goto out;
+	if (decoded.type == MLN_MESSAGE_STATUS) {
+		ret = MlnImpl_8101DCB4(client, decoded.payload);
+		if (ret != MLN_OK)
+			goto out;
+	} else if (decoded.type != MLN_MESSAGE_LIST) {
+		ret = 84;
+		goto out;
+	} else {
+		pairs = decoded.payload;
+		total = pairs->count * 2;
+		if (total != 0) {
+			if (pairs->items == NULL) {
+				ret = 7;
+				total = 0;
+				goto out;
+			}
+			buffers = MlnAllocate(MLN_HEAP_SECURE, total * sizeof(*buffers));
+			if (buffers == NULL) {
+				ret = MLN_ERROR_NO_MEMORY;
+				total = 0;
+				goto out;
+			}
+			MlnMemset(buffers, 0, total * sizeof(*buffers));
+			for (i = 0; i < pairs->count; i++) {
+				if (pairs->items[i] == NULL) {
+					ret = 7;
+					goto out;
+				}
+				buffers[2 * i] = pairs->items[i]->pair->first;
+				pairs->items[i]->pair->first = NULL;
+				buffers[2 * i + 1] = pairs->items[i]->pair->second;
+				pairs->items[i]->pair->second = NULL;
+			}
+		}
+	}
+	*count = total;
+	*items = buffers;
+	buffers = NULL;
+out:
+	MlnImpl_810233C4(&decoded);
+	MlnBufferDestroy(MLN_HEAP_SECURE, request);
+	if (buffers != NULL) {
+		for (i = 0; i != total; i++)
+			MlnBufferDestroy(MLN_HEAP_SECURE, buffers[i]);
+		MlnFree(MLN_HEAP_SECURE, buffers);
+	}
+	if (session != NULL && session->release != NULL)
+		session->release(reply);
+	return ret;
+}
+
+/* a license's rights, summarized by the client; none when it gives nothing */
+__attribute__((noinline)) int MlnImpl_8101EE90(MlnClient *client, MlnBuffer *license,
+					       MlnRightsSummary **out)
+{
+	MlnServiceSession *session;
+	MlnBuffer *request = NULL, *reply = NULL;
+	MlnRightsSummary *rights, *summary;
+	MlnMessage decoded;
+	unsigned int count, i;
+	int ret;
+
+	MlnMemset(&decoded, 0, sizeof(decoded));
+	if (client == NULL || client->kind == NULL || client->kind->type != 1 ||
+	    client->kind->remote == NULL) {
+		ret = 3;
+		goto free;
+	}
+	ret = MlnImpl_81021D70(license, &request);
+	if (ret != MLN_OK)
+		goto free;
+	session = client->kind->remote;
+	if (session->transact(session->cookie, request, &reply) != 0 || reply == NULL) {
+		ret = 83;
+		goto out;
+	}
+	ret = MlnImpl_8102371C(reply, &decoded);
+	if (ret != MLN_OK)
+		goto out;
+	if (decoded.type == MLN_MESSAGE_STATUS) {
+		ret = MlnImpl_8101DCB4(client, decoded.payload);
+		if (ret != MLN_OK)
+			goto out;
+		summary = NULL;
+	} else if (decoded.type != MLN_MESSAGE_RIGHTS) {
+		ret = 84;
+		goto out;
+	} else {
+		rights = decoded.payload;
+		if (rights->notBefore == 0 && rights->notAfter == 0 && rights->notMoreThan == 0 &&
+		    rights->notLongerThan == 0 && rights->idCount == 0) {
+			summary = NULL;
+		} else {
+			summary = MlnAllocate(MLN_HEAP_SECURE, sizeof(*summary));
+			if (summary == NULL) {
+				ret = MLN_ERROR_NO_MEMORY;
+				goto out;
+			}
+			summary->state = rights->state;
+			summary->notBefore = rights->notBefore;
+			summary->notAfter = rights->notAfter;
+			summary->notMoreThan = rights->notMoreThan;
+			summary->notLongerThan = rights->notLongerThan;
+			count = rights->idCount;
+			summary->idCount = count;
+			if (count != 0) {
+				summary->ids = MlnAllocate(MLN_HEAP_SECURE, count * sizeof(*summary->ids));
+				if (summary->ids == NULL) {
+					ret = MLN_ERROR_NO_MEMORY;
+					goto out;
+				}
+				for (i = 0; i < summary->idCount; i++) {
+					summary->ids[i] = rights->ids[i];
+					rights->ids[i] = NULL;
+				}
+			}
+		}
+	}
+	*out = summary;
+out:
+	MlnImpl_810233C4(&decoded);
+	MlnBufferDestroy(MLN_HEAP_SECURE, request);
+	if (session->release != NULL)
+		session->release(reply);
+	return ret;
+free:
+	MlnImpl_810233C4(&decoded);
+	MlnBufferDestroy(MLN_HEAP_SECURE, request);
+	return ret;
+}
+
+/* a request the client answers with its status alone */
+__attribute__((noinline)) int MlnImpl_8101F0B8(MlnClient *client, void *a1, void *a2)
+{
+	MlnServiceSession *session;
+	MlnBuffer *request = NULL, *reply = NULL;
+	MlnMessageStatus *status;
+	MlnMessage decoded;
+	int ret;
+
+	MlnMemset(&decoded, 0, sizeof(decoded));
+	if (client == NULL || client->kind == NULL || client->kind->type != 1 ||
+	    client->kind->remote == NULL) {
+		ret = 3;
+		goto free;
+	}
+	ret = MlnImpl_81022C10(a1, a2, &request);
+	if (ret != MLN_OK)
+		goto free;
+	session = client->kind->remote;
+	if (session->transact(session->cookie, request, &reply) != 0 || reply == NULL) {
+		ret = 83;
+	} else {
+		ret = MlnImpl_8102371C(reply, &decoded);
+		if (ret == MLN_OK) {
+			if (decoded.type == MLN_MESSAGE_STATUS) {
+				status = decoded.payload;
+				ret = MlnImpl_8101DC14(client, status->failed, status->result, NULL);
+			} else {
+				ret = 84;
+			}
+		}
+	}
+	MlnImpl_810233C4(&decoded);
+	MlnBufferDestroy(MLN_HEAP_SECURE, request);
+	if (session->release != NULL)
+		session->release(reply);
+	return ret;
+free:
+	MlnImpl_810233C4(&decoded);
+	MlnBufferDestroy(MLN_HEAP_SECURE, request);
+	return ret;
+}
+
+/* a request the client answers with a buffer it found */
+__attribute__((noinline)) int MlnImpl_8101F1F0(MlnClient *client, void *a1, MlnBuffer **found)
+{
+	MlnServiceSession *session;
+	MlnBuffer *request = NULL, *reply = NULL;
+	MlnMessage decoded;
+	int ret;
+
+	MlnMemset(&decoded, 0, sizeof(decoded));
+	if (client == NULL || client->kind == NULL || client->kind->type != 1 ||
+	    client->kind->remote == NULL) {
+		ret = 3;
+		goto free;
+	}
+	ret = MlnImpl_81022D54(a1, &request);
+	if (ret != MLN_OK)
+		goto free;
+	session = client->kind->remote;
+	if (session->transact(session->cookie, request, &reply) != 0 || reply == NULL) {
+		ret = 83;
+	} else {
+		ret = MlnImpl_8102371C(reply, &decoded);
+		if (ret == MLN_OK) {
+			if (decoded.type == MLN_MESSAGE_STATUS) {
+				ret = MlnImpl_8101DCB4(client, decoded.payload);
+			} else if (decoded.type == MLN_MESSAGE_FOUND) {
+				*found = *(MlnBuffer **)decoded.payload;
+				*(MlnBuffer **)decoded.payload = NULL;
+			} else {
+				ret = 84;
+			}
+		}
+	}
+	MlnImpl_810233C4(&decoded);
+	MlnBufferDestroy(MLN_HEAP_SECURE, request);
+	if (session->release != NULL)
+		session->release(reply);
+	return ret;
+free:
+	MlnImpl_810233C4(&decoded);
+	MlnBufferDestroy(MLN_HEAP_SECURE, request);
+	return ret;
+}
+
+/* the client's state; one that announces a result has it fetched first */
+__attribute__((noinline)) int MlnImpl_8101F33C(MlnClient *client, int *out)
+{
+	MlnServiceSession *session;
+	MlnBuffer *request = NULL, *reply = NULL;
+	MlnMessage decoded;
+	int state, ret;
+
+	MlnMemset(&decoded, 0, sizeof(decoded));
+	if (client == NULL || client->kind == NULL || client->kind->type != 1 ||
+	    client->kind->remote == NULL) {
+		ret = 3;
+		goto free;
+	}
+	ret = MlnImpl_810228FC(&request);
+	if (ret != MLN_OK)
+		goto free;
+	session = client->kind->remote;
+	if (session->transact(session->cookie, request, &reply) != 0 || reply == NULL) {
+		ret = 83;
+		goto out;
+	}
+	ret = MlnImpl_8102371C(reply, &decoded);
+	if (ret != MLN_OK)
+		goto out;
+	if (decoded.type == MLN_MESSAGE_STATUS) {
+		ret = MlnImpl_8101DCB4(client, decoded.payload);
+		if (ret != MLN_OK)
+			goto out;
+		state = 0;
+	} else if (decoded.type != MLN_MESSAGE_STATE) {
+		ret = 84;
+		goto out;
+	} else {
+		state = *(int *)decoded.payload;
+		if ((state & 0x100100) != 0) {
+			ret = MlnImpl_8101D5D4(client, NULL);
+			if (ret != MLN_OK)
+				goto out;
+		}
+	}
+	*out = state;
+out:
+	MlnImpl_810233C4(&decoded);
+	MlnBufferDestroy(MLN_HEAP_SECURE, request);
+	if (session->release != NULL)
+		session->release(reply);
+	return ret;
+free:
+	MlnImpl_810233C4(&decoded);
+	MlnBufferDestroy(MLN_HEAP_SECURE, request);
+	return ret;
+}
+
+/* a request the client answers with a handle */
+__attribute__((noinline)) int MlnImpl_8101F4B0(MlnClient *client, void **handle)
+{
+	MlnServiceSession *session;
+	MlnBuffer *request = NULL, *reply = NULL;
+	MlnMessage decoded;
+	int ret;
+
+	MlnMemset(&decoded, 0, sizeof(decoded));
+	if (client == NULL || client->kind == NULL || client->kind->type != 1 ||
+	    client->kind->remote == NULL) {
+		ret = 3;
+		goto free;
+	}
+	ret = MlnImpl_81022EFC(&request);
+	if (ret != MLN_OK)
+		goto free;
+	session = client->kind->remote;
+	if (session->transact(session->cookie, request, &reply) != 0 || reply == NULL) {
+		ret = 83;
+	} else {
+		ret = MlnImpl_8102371C(reply, &decoded);
+		if (ret == MLN_OK) {
+			if (decoded.type == MLN_MESSAGE_STATUS) {
+				ret = MlnImpl_8101DCB4(client, decoded.payload);
+			} else if (decoded.type == MLN_MESSAGE_HANDLE) {
+				*handle = *(void **)decoded.payload;
+				*(void **)decoded.payload = NULL;
+			} else {
+				ret = 84;
+			}
+		}
+	}
+	MlnImpl_810233C4(&decoded);
+	MlnBufferDestroy(MLN_HEAP_SECURE, request);
+	if (session->release != NULL)
+		session->release(reply);
+	return ret;
+free:
+	MlnImpl_810233C4(&decoded);
+	MlnBufferDestroy(MLN_HEAP_SECURE, request);
+	return ret;
+}
+
+/* a buffer handed to the client, answered with its status alone */
+__attribute__((noinline)) int MlnImpl_8101F5F4(MlnClient *client, MlnBuffer *a1)
+{
+	MlnServiceSession *session;
+	MlnBuffer *request = NULL, *reply = NULL;
+	MlnMessageStatus *status;
+	MlnMessage decoded;
+	int ret;
+
+	MlnMemset(&decoded, 0, sizeof(decoded));
+	if (client == NULL || client->kind == NULL || client->kind->type != 1 ||
+	    client->kind->remote == NULL) {
+		ret = 3;
+		goto free;
+	}
+	ret = MlnImpl_810230AC(a1, &request);
+	if (ret != MLN_OK)
+		goto free;
+	session = client->kind->remote;
+	if (session->transact(session->cookie, request, &reply) != 0 || reply == NULL) {
+		ret = 83;
+	} else {
+		ret = MlnImpl_8102371C(reply, &decoded);
+		if (ret == MLN_OK) {
+			if (decoded.type == MLN_MESSAGE_STATUS) {
+				status = decoded.payload;
+				ret = MlnImpl_8101DC14(client, status->failed, status->result, NULL);
+			} else {
+				ret = 84;
+			}
+		}
+	}
+	MlnImpl_810233C4(&decoded);
+	MlnBufferDestroy(MLN_HEAP_SECURE, request);
+	if (session->release != NULL)
+		session->release(reply);
+	return ret;
+free:
+	MlnImpl_810233C4(&decoded);
+	MlnBufferDestroy(MLN_HEAP_SECURE, request);
+	return ret;
+}
+
+/* an action token handed to the client, answered with a buffer it found in it */
+__attribute__((noinline)) int MlnImpl_8101F724(MlnClient *client, MlnBuffer *token,
+					       MlnBuffer **found)
+{
+	MlnServiceSession *session;
+	MlnBuffer *request = NULL, *reply = NULL;
+	MlnMessage decoded;
+	int ret;
+
+	MlnMemset(&decoded, 0, sizeof(decoded));
+	if (client == NULL || client->kind == NULL || client->kind->type != 1 ||
+	    client->kind->remote == NULL) {
+		ret = 3;
+		goto free;
+	}
+	ret = MlnImpl_810231D4(token, &request);
+	if (ret != MLN_OK)
+		goto free;
+	session = client->kind->remote;
+	if (session->transact(session->cookie, request, &reply) != 0 || reply == NULL) {
+		ret = 83;
+	} else {
+		ret = MlnImpl_8102371C(reply, &decoded);
+		if (ret == MLN_OK) {
+			if (decoded.type == MLN_MESSAGE_STATUS) {
+				ret = MlnImpl_8101DCB4(client, decoded.payload);
+			} else if (decoded.type == MLN_MESSAGE_TOKEN) {
+				*found = *(MlnBuffer **)decoded.payload;
+				*(MlnBuffer **)decoded.payload = NULL;
+			} else {
+				ret = 84;
+			}
+		}
+	}
+	MlnImpl_810233C4(&decoded);
+	MlnBufferDestroy(MLN_HEAP_SECURE, request);
+	if (session->release != NULL)
+		session->release(reply);
+	return ret;
+free:
+	MlnImpl_810233C4(&decoded);
+	MlnBufferDestroy(MLN_HEAP_SECURE, request);
+	return ret;
+}
