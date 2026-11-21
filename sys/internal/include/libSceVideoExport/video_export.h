@@ -17,13 +17,14 @@ typedef struct VideoExportInputParam {
 	SceUInt8 reserved[60];
 } VideoExportInputParam;
 
-/* what the service answers for an item (sceVideoExportFromFile's output) */
+/* what the service answers for an item (sceVideoExportFromFile's output); 8-byte aligned, as
+   the content id is 64-bit (Sony's callers place it at 8 in their frames) */
 typedef struct VideoExportOutputParam {
 	char path[VIDEO_EXPORT_MAX_FS_PATH];	/* where the content is */
 	/* PLACEHOLDER names: the content id the export gave, the shell's key 233 */
 	SceInt32 contentIdLow;
 	SceInt32 contentIdHigh;
-} VideoExportOutputParam;
+} __attribute__((aligned(8))) VideoExportOutputParam;
 
 /* the cancel and progress callbacks of an export; the progress one gets the percent and, in the
    first form, the count the service reports */

@@ -409,7 +409,7 @@ extern "C" SceInt32 SceVideoExportEmpr_8493BF31(const VideoExportEmprInput *pInp
 			return VIDEO_EXPORT_ERROR_PARAM;
 		pByte++;
 	}
-	if (pInput->mode > 1 || pInput->workMemory == NULL)
+	if (pInput->mode < 0 || pInput->mode > 1 || pInput->workMemory == NULL)
 		return VIDEO_EXPORT_ERROR_PARAM;
 	if (pInput->workMemorySize < VIDEO_EXPORT_HEAP_SIZE)
 		return VIDEO_EXPORT_ERROR_PARAM;
@@ -446,9 +446,13 @@ extern "C" SceInt32 SceVideoExportEmpr_8493BF31(const VideoExportEmprInput *pInp
 					pInput->userdata, pResult);
 	videoExportCloseSession(&session);
 	if (result == 0) {
+		/* the content id is copied as one 64-bit value: both halves are read first */
+		SceInt32 contentIdHigh;
+
 		sceClibStrncpy(pOutput->path, pResult->path, VIDEO_EXPORT_MAX_FS_PATH);
+		contentIdHigh = pResult->contentIdHigh;
 		pOutput->reserved0 = pResult->contentIdLow;
-		pOutput->reserved1 = pResult->contentIdHigh;
+		pOutput->reserved1 = contentIdHigh;
 	}
 	return result;
 }

@@ -13,7 +13,6 @@
 #include <ces/libces_ucs.h>
 #include "video_export_internal.h"
 
-extern "C" int sceCesUtf8ToUcs4(const uint8_t *utf8buf, uint32_t utf8max, uint32_t *convSize, uint32_t *ucs4);
 extern "C" int sceAppMgrGetDevInfo(const char *dev, SceUInt64 *pMaxSize, SceUInt64 *pFreeSize);
 extern "C" int sceAppMgrAppParamGetString(SceUID pid, int param, char *string, SceSize length);
 extern "C" int sceAppMgrWorkDirMountById(int id, const char *titleId, char *mountPoint);
@@ -49,7 +48,7 @@ typedef struct VideoExportStartParam {
 	void *userdata;
 	void *workMemory;
 	SceSize workMemorySize;
-	SceUInt8 reserved2[0x60];
+	char reserved2[0x60];
 } VideoExportStartParam;
 
 /* what the first call keeps for the next two */
@@ -76,6 +75,7 @@ static VideoExportState videoExportState;
 extern "C" SceInt32 SceVideoExportData_3488EA69(const VideoExportStartParam *param)
 {
 	SceIoStat stat;
+	SceIoStat dataStat;
 	SceUInt64 maxSize;
 	SceUInt64 freeSize;
 	char file[0x400];
@@ -84,8 +84,8 @@ extern "C" SceInt32 SceVideoExportData_3488EA69(const VideoExportStartParam *par
 	char unmount[16];
 	SceCesUcsContext ucs;
 	SceUInt32 convSize;
-	SceUInt32 ucs4;
-	SceUInt32 utf16Len;
+	SceUInt32 ucs2Len;
+	SceUInt32 utf32;
 	const char *path;
 	const char *extension;
 	SceUInt32 length;
@@ -110,26 +110,24 @@ extern "C" SceInt32 SceVideoExportData_3488EA69(const VideoExportStartParam *par
 		goto end;
 	}
 	length = param->pathLength;
-	if (sceCesUtf8ToUcs4((const uint8_t *)path, length, &convSize, &ucs4) != 0 ||
-	    (convSize == 3 && ucs4 == 0xFEFF) ||
+	if (sceCesUtf8ToUtf32((const uint8_t *)path, length, &convSize, &utf32) != 0 ||
+	    (convSize == 3 && utf32 == 0xFEFF) ||
 	    (sceClibMemset(&ucs, 0, sizeof(ucs)), sceCesUcsContextInit(&ucs) != 0) ||
-	    sceCesUtf8StrGetUtf16Len(&ucs, (const uint8_t *)path, length, &convSize,
-				     &utf16Len) != 0) {
+	    sceCesUtf8StrGetUcs2Len(&ucs, (const uint8_t *)path, length, &convSize,
+				    &ucs2Len) != 0) {
 		ret = VIDEO_EXPORT_ERROR_NOT_SUPPORTED_FORMAT;
 		goto end;
 	}
+	path = param->path;
+	length = param->pathLength;
 	extension = sceClibStrrchr(path, '.');
 	if (extension == NULL ||
 	    (sceClibStrncasecmp(".mp4", extension, length - (extension - path)) != 0 &&
-	     sceClibStrncasecmp(".m4v", extension, length - (extension - path)) != 0)) {
-		ret = VIDEO_EXPORT_ERROR_INVALID_PATH;
-		goto end;
-	}
+	     sceClibStrncasecmp(".m4v", extension, length - (extension - path)) != 0))
+		goto invalid;
 	for (i = 0; i < length; i++) {
-		if (path[i] == '\\' || path[i] == '/') {
-			ret = VIDEO_EXPORT_ERROR_INVALID_PATH;
-			goto end;
-		}
+		if (path[i] == '\\' || path[i] == '/')
+			goto invalid;
 	}
 	sceAppMgrGetDevInfo("ux0:", &maxSize, &freeSize);
 	if (freeSize < VIDEO_EXPORT_MIN_FREE_SIZE) {
@@ -139,48 +137,47 @@ extern "C" SceInt32 SceVideoExportData_3488EA69(const VideoExportStartParam *par
 		ret = VIDEO_EXPORT_ERROR_NO_SPACE;
 	} else {
 		sceClibMemset(title, 0, sizeof(title));
-		if (sceAppMgrAppParamGetString(sceKernelGetProcessId(), 12, title, 10) < 0) {
+		if (sceAppMgrAppParamGetString(sceKernelGetProcessId(), 12, title, 10) < 0 ||
+		    (sceClibStrncpy(videoExportState.titleId, title, 10),
+		     sceClibMemset(mount, 0, sizeof(mount)),
+		     sceAppMgrWorkDirMountById(VIDEO_EXPORT_WORK_DIR_ID, title, mount) < 0)) {
 			ret = VIDEO_EXPORT_ERROR_INTERNAL;
 		} else {
-			sceClibStrncpy(videoExportState.titleId, title, 10);
-			sceClibMemset(mount, 0, sizeof(mount));
-			if (sceAppMgrWorkDirMountById(VIDEO_EXPORT_WORK_DIR_ID, title, mount) < 0) {
-				ret = VIDEO_EXPORT_ERROR_INTERNAL;
+			sceClibStrncpy(videoExportState.mountPoint, mount, sizeof(mount));
+			path = param->path;
+			length = param->pathLength;
+			sceClibMemset(file, 0, sizeof(file));
+			sceClibStrncat(file, videoExportState.mountPoint, sizeof(mount));
+			sceClibStrncat(file, path, length + 1);
+			if ((sceIoGetstat(file, &stat) != 0 || sceIoRemove(file) >= 0) &&
+			    (fd = sceIoOpen(file, VIDEO_EXPORT_OPEN_CREATE,
+					    VIDEO_EXPORT_FILE_MODE)) >= 0) {
+				sceIoClose(fd);
+				sceIoRemove(file);
+				sceClibStrncpy(videoExportState.path, param->path, param->pathLength);
+				videoExportState.reserved1 = param->reserved1;
+				videoExportState.reserved0 = param->reserved0;
+				videoExportState.pathLength = param->pathLength;
+				videoExportState.cancelFunc = param->cancelFunc;
+				videoExportState.progressFunc = param->progressFunc;
+				videoExportState.userdata = param->userdata;
+				videoExportState.workMemory = param->workMemory;
+				sceClibStrncat(videoExportState.dataPath, videoExportState.mountPoint,
+					       sizeof(mount));
+				sceClibStrncat(videoExportState.dataPath, VIDEO_EXPORT_DATA_FILE, 0x20);
+				if (sceIoGetstat(videoExportState.dataPath, &dataStat) != 0 ||
+				    sceIoRemove(videoExportState.dataPath) >= 0)
+					videoExportStarted = 1;
+				else
+					ret = VIDEO_EXPORT_ERROR_CREATE_FILE;
 			} else {
-				sceClibStrncpy(videoExportState.mountPoint, mount, sizeof(mount));
-				path = param->path;
-				length = param->pathLength;
-				sceClibMemset(file, 0, sizeof(file));
-				sceClibStrncat(file, videoExportState.mountPoint, sizeof(mount));
-				sceClibStrncat(file, path, length + 1);
-				if ((sceIoGetstat(file, &stat) != 0 || sceIoRemove(file) >= 0) &&
-				    (fd = sceIoOpen(file, VIDEO_EXPORT_OPEN_CREATE,
-						    VIDEO_EXPORT_FILE_MODE)) >= 0) {
-					sceIoClose(fd);
-					sceIoRemove(file);
-					sceClibStrncpy(videoExportState.path, param->path, param->pathLength);
-					videoExportState.reserved1 = param->reserved1;
-					videoExportState.reserved0 = param->reserved0;
-					videoExportState.pathLength = param->pathLength;
-					videoExportState.cancelFunc = param->cancelFunc;
-					videoExportState.progressFunc = param->progressFunc;
-					videoExportState.userdata = param->userdata;
-					videoExportState.workMemory = param->workMemory;
-					sceClibStrncat(videoExportState.dataPath, videoExportState.mountPoint,
-						       sizeof(mount));
-					sceClibStrncat(videoExportState.dataPath, VIDEO_EXPORT_DATA_FILE, 0x20);
-					if (sceIoGetstat(videoExportState.dataPath, &stat) != 0)
-						videoExportStarted = 1;
-					else if (sceIoRemove(videoExportState.dataPath) >= 0)
-						videoExportStarted = 1;
-					else
-						ret = VIDEO_EXPORT_ERROR_CREATE_FILE;
-				} else {
-					ret = VIDEO_EXPORT_ERROR_INVALID_PATH;
-				}
+				ret = VIDEO_EXPORT_ERROR_INVALID_PATH;
 			}
 		}
 	}
+	goto end;
+invalid:
+	ret = VIDEO_EXPORT_ERROR_INVALID_PATH;
 end:
 	if (videoExportStarted == 0 && videoExportState.mountPoint[0] != '\0') {
 		sceClibMemset(unmount, 0, sizeof(unmount));

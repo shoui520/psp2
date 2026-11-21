@@ -39,7 +39,7 @@
 typedef struct VideoExportEmprInput {
 	char path[VIDEO_EXPORT_MAX_FS_PATH];
 	SceUInt8 reserved0[64];
-	SceUInt32 mode;
+	SceInt32 mode;
 	VideoExportCancelFunc cancelFunc;
 	VideoExportProgressFunc progressFunc;
 	void *userdata;
