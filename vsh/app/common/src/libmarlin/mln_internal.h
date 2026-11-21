@@ -14,6 +14,7 @@
 #define MLN_ERROR_INVALID_ARGUMENT	3
 #define MLN_ERROR_INVALID	5
 #define MLN_CORE_ERROR_INVALID	4
+#define MLN_ENGINE_ERROR_FORMAT	0x1f0001	/* a token, configuration or response the engine cannot read */
 
 /* the area of the application data the library keeps its files in, and a path's room */
 #define MLN_FILE_AREA		1
@@ -293,7 +294,9 @@ static inline __attribute__((always_inline)) void MlnHttpHeaderArrayFree(MlnHttp
 typedef struct MlnApiResult {
 	MlnApiValue *value;
 	MlnHttpRequest *request;
-	void *reserved[3];
+	int progress;			/* what the step did (1: the actions start), */
+	unsigned int progressTotal;	/* the steps of the whole token */
+	unsigned int progressDone;	/* and those done */
 } MlnApiResult;
 
 /* the application's HTTP transport */
@@ -1234,7 +1237,7 @@ typedef struct MlnConfigList {
 
 typedef struct MlnAction {
 	int type;
-	MlnBuffer *name;
+	MlnBuffer *id;
 	MlnBuffer *businessToken;
 	MlnBuffer *uid[2];
 } MlnAction;
@@ -1247,6 +1250,17 @@ typedef struct MlnActionToken {
 	int actionCount;
 	MlnAction **actions;
 } MlnActionToken;
+
+/* a service of a configuration: its node, the keys of its protocol, its roles, its address */
+typedef struct MlnServiceEndpoint {
+	MlnBuffer *id;
+	MlnBuffer *nodeId;
+	MlnBuffer *requestEncryptionKey;
+	MlnBuffer *responseSigningKey;
+	MlnConfigList roles;
+	char *location;
+	unsigned int reserved[2];
+} MlnServiceEndpoint;
 
 /* a service's BroadbandServiceConfig, kept from an earlier action token */
 typedef struct MlnServiceConfig {
@@ -1273,6 +1287,12 @@ typedef struct MlnBufferPairList {
 	MlnBufferPair **items;
 } MlnBufferPairList;
 
+/* how far an engine is: the steps done, of all the token's */
+typedef struct MlnEngineProgress {
+	unsigned int done;
+	unsigned int total;
+} MlnEngineProgress;
+
 /* the engine: runs an action token's actions with the service, step by step */
 typedef struct MlnEngine {
 	int kind;
@@ -1284,13 +1304,12 @@ typedef struct MlnEngine {
 	MlnBuffer *secret;
 	MlnActionToken *token;
 	MlnServiceConfig *config;
-	unsigned int reserved;
+	unsigned int action;			/* the token's action it runs */
 	unsigned int resourceIndex;
 	unsigned int resourceCount;
 	char **resources;
 	MlnBufferPairList *extensions;
-	unsigned int step;
-	unsigned int stepCount;
+	MlnEngineProgress progress;
 } MlnEngine;
 
 void MlnEngineFree(MlnEngine *engine);
@@ -1304,7 +1323,7 @@ int MlnServiceConfigParse(unsigned int size, const void *xml, MlnServiceConfig *
 int MlnServiceConfigFree(MlnServiceConfig *config);
 int MlnImpl_810265E8(int heap, const char *directory, MlnFileList **files);
 int MlnImpl_810257DC(int heap, MlnFileList *files);
-int MlnImpl_8101ACD0(MlnEngine *engine, MlnActionToken *token, int a2);
+int MlnImpl_8101ACD0(MlnEngine *engine, MlnActionToken *token, MlnApiResult *result);
 int MlnImpl_8101D468(const MlnBuffer *serviceId, int *exists);
 int MlnImpl_8101D408(const MlnBuffer *serviceId, MlnBuffer **config);
 int MlnImpl_8101D520(const MlnBuffer *serviceId);
