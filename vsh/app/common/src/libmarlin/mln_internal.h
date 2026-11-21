@@ -7,6 +7,7 @@
 #define MLN_INTERNAL_H
 
 #include <stddef.h>
+#include <pfsmgr/pfsmgr.h>
 
 /* return codes of the library's helpers */
 #define MLN_OK			0
@@ -807,7 +808,7 @@ int MlnXmlNodesSerialize(int heap, int count, MlnXmlNode **nodes, MlnBuffer **ou
 int MlnXmlNodeRemoveChild(int heap, MlnXmlNode *parent, MlnXmlNode *child);
 int MlnXmlNodeToElement(int heap, MlnXmlNode *node, MlnXmlNode **out);
 
-/* a growing byte buffer, its capacity whole 4 KiB pages (not written in C yet) */
+/* a growing byte buffer, its capacity whole 4 KiB pages (textbuffer.c) */
 typedef struct MlnTextBuffer {
 	unsigned int size;
 	unsigned char *data;
@@ -816,6 +817,9 @@ typedef struct MlnTextBuffer {
 
 MlnTextBuffer *MlnTextBufferCreate(int heap, unsigned int size, const void *data);
 int MlnTextBufferAppend(int heap, MlnTextBuffer *buffer, unsigned int size, const void *data);
+int MlnTextBufferSetSize(int heap, MlnTextBuffer *buffer, unsigned int size);
+int MlnTextBufferCompare(int heap, const MlnTextBuffer *a, const MlnTextBuffer *b);
+MlnTextBuffer *MlnTextBufferCreateFilled(int heap, unsigned int size, int value);
 void MlnTextBufferDestroy(int heap, MlnTextBuffer *buffer);
 /* an element node as XML text (not written in C yet) */
 int MlnXmlNodeToText(int heap, MlnXmlNode *node, MlnBuffer **text);
@@ -1164,12 +1168,13 @@ int MlnImpl_810191C4(int ret);
 #define MLN_FILE_ERROR_NOT_FOUND	0x11060002
 
 typedef struct MlnFileInfo {
-	unsigned char type;
+	unsigned int type;	/* 1 a file, 0 a directory */
 	unsigned int size;
 } MlnFileInfo;
 
 int MlnImpl_810262B4(int area, unsigned int *size, char *path);
 int MlnImpl_810256EC(unsigned int *size, char *path, const char *name);
+int MlnImpl_8102581C(const char *directory);
 int MlnImpl_8102619C(int area, const char *path);
 int MlnImpl_81026324(int area, const char *path, MlnFileInfo *info);
 int MlnImpl_810259F8(int area, const char *path, int mode, void **file);
@@ -1178,7 +1183,15 @@ int MlnImpl_81025C1C(int area, void *file, unsigned int size, unsigned int *read
 int MlnImpl_81025BE8(int area, void *file);
 int MlnImpl_8102590C(int area, const char *path);
 int MlnImpl_81025F5C(int area, void *file, unsigned int size, const void *data);
-char MlnImpl_81026430(void);
+signed char MlnImpl_81026430(void);
+int MlnImpl_81025E74(int area, void *file, int delimiter, unsigned int size,
+		     unsigned int *read, unsigned char *data);
+int MlnImpl_81025FD4(int area, void *file, int offset, int whence);
+int MlnImpl_81026084(int area, void *file, int *position);
+int MlnImpl_810263D4(const char *path, int *isDirectory);
+
+/* the application data mount the client keeps its databases in */
+extern ScePfsRndDriveId s_mountPoint;
 
 typedef struct MlnSha1Context {
 	unsigned int words[24];

@@ -24,7 +24,7 @@
 #define MLN_BE32(p)		((unsigned int)(p)[0] << 24 | (p)[1] << 16 | (p)[3] | (p)[2] << 8)
 
 static int s_initCount;
-static ScePfsRndDriveId s_mountPoint;
+ScePfsRndDriveId s_mountPoint;
 static MlnServiceSession s_serviceSession;
 static MlnServiceSession s_transferSession;
 

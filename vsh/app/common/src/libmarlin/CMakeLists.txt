@@ -27,6 +27,9 @@ set(MLN_ENGINE_SOURCES
 	engine.c
 	client.c
 	message.c
+	textbuffer.c
+	file.c
+	dir.c
 )
 psp2_module(${PSP2_TARGET} KIND user COMPILER gcc48 PARTIAL SOURCES
 	${MLN_ARM_SOURCES}
