@@ -277,7 +277,8 @@ struct WebViewHeldKey {
 /* an animation the web view runs on the page (names ours) */
 class WebViewAnim {
 public:
-	WebViewAnim(const math::v2 &pos, float scale) : m_pos(pos), m_scale(scale), m_state(0)
+	WebViewAnim(const math::v2 &pos, float scale, int state = 0)
+		: m_pos(pos), m_scale(scale), m_state(state)
 	{
 	}
 
@@ -298,6 +299,9 @@ public:
 	virtual ~WebViewLoadingPlane()
 	{
 	}
+
+	/* fades it out; a fade in progress ends shown (name ours) */
+	void Hide();
 
 	/* whether it is shown; 2 and 3 while it fades */
 	int m_state;
@@ -346,7 +350,55 @@ public:
 	   progress bar */
 	void SetPart(Widget *widget, int part, bool attach);
 	/* loads the page at the URL */
-	void LoadUrl(const Url &url);
+	int LoadUrl(const Url &url);
+	/* loads the data, given as source with its scheme, from a file URL of the rest (names
+	   ours) */
+	int LoadData(const string &source, bool flag, const string &type);
+	/* the page goes back and forward in its history, reloads, stops loading (names ours) */
+	int GoBack();
+	int GoForward();
+	int Reload();
+	int Stop();
+	/* sends 0x1050 (name ours) */
+	int Request1050();
+	/* the zoom's bottom padding and its y offset (names ours) */
+	int SetZoomOffset(float bottom, float y);
+	/* the bool settings (names ours) */
+	int SetSetting1031(bool value);
+	int SetSetting1048(bool value);
+	int SetSetting1053(bool value);
+	/* hides the loading plane, then OnInput9 (name ours) */
+	int HideLoading();
+	/* the loading plane's delay before it shows (name ours) */
+	int SetLoadingDelay(int delay);
+	/* the IME's longest text (name ours) */
+	int SetImeMaxLength(int length);
+	/* the inputs the view takes (4: pinch), and the view plane's pinch mode with them (names
+	   ours) */
+	void SetInputMask(int mask);
+	void AddInputMask(int mask);
+	void RemoveInputMask(int mask);
+	/* whether the view has a size, a content scale and a scale to zoom by (names ours) */
+	bool CanZoom();
+	/* zooms by the factor, within the page's scale limits (name ours) */
+	void ZoomBy(float factor);
+	/* the zoom actions: 1 fits the page's width, 2 to the page's top, 4 in, 8 out (names
+	   ours) */
+	void Zoom(int action);
+	/* back to the page's own scale, about the point (names ours) */
+	void ResetZoom(const math::v2 &pos);
+	void ResetZoom();
+	/* taps the page at the point; the loading plane shows (name ours) */
+	void Tap(const math::v2 &pos, int button);
+	/* the view plane's points to the page's: scaled by the page's width over the plane's, y
+	   down, about the page's centre (name ours) */
+	sce::Vectormath::Simd::Aos::Matrix3 GetPageTransform();
+	/* taps the page where the drag started (name ours) */
+	void TapAtDragStart();
+	/* sends 0x1070 (name ours) */
+	void Request1070();
+	/* asks the page for its data: the receive buffer is made the size (name ours) */
+	void RequestData(int64_t id, int64_t size);
 
 	/* the surface the page is drawn into, the view's size, and its render target */
 	int CreateSurface();
@@ -446,11 +498,15 @@ public:
 	/* the receive buffer of the page's data */
 	class Buffer {
 	public:
+		Buffer(int size) : m_size(size), m_length(0), m_data(new char[size])
+		{
+		}
+
 		virtual ~Buffer();
 
-		SceSize m_size;
-		SceSize m_length;
-		void *m_data;
+		int m_size;
+		int m_length;
+		char *m_data;
 	};
 
 	/* an IPC message the page sent, kept until the view's update reads it */
@@ -480,7 +536,7 @@ public:
 	map<string, string> m_popupItems;		/* 1220 */
 	int m_loadProgress;			/* 1232 */
 	int m_loadState;			/* 1236 */
-	bool m_loadCanceled;			/* 1240 */
+	bool m_canReload;			/* 1240 */
 	bool m_canGoBack;			/* 1241 */
 	bool m_canGoForward;			/* 1242 */
 	Url m_url;				/* 1244 */
@@ -490,7 +546,7 @@ public:
 	int m_imeMaxLength;			/* 1364 */
 	bool m_imeOpen;				/* 1368 */
 	bool m_imeEnabled;			/* 1369 */
-	math::v2 m_contentScale;		/* 1376 */
+	math::v2 m_contentSize;		/* 1376 */
 	float m_scale;				/* 1384 */
 	float m_maxScale;			/* 1388 */
 	float m_minScale;			/* 1392 */

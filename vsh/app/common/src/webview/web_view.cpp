@@ -49,8 +49,8 @@ WebView::WebView(Widget *parent, CreateParam *param)
 	  m_ipcDataLock("SceWebViewWebIpcData", 0), m_surfacePool(NULL),
 	  m_surfaceWidth(0), m_ime(NULL), m_renderTarget(NULL), m_isSecure(false),
 	  m_cursorType(0), m_popupMenu(NULL), m_loadProgress(0), m_loadState(1),
-	  m_loadCanceled(true), m_canGoBack(false), m_canGoForward(false), m_imeType(-1),
-	  m_imeMaxLength(0), m_imeOpen(false), m_imeEnabled(true), m_contentScale(0.0f, 0.0f),
+	  m_canReload(true), m_canGoBack(false), m_canGoForward(false), m_imeType(-1),
+	  m_imeMaxLength(0), m_imeOpen(false), m_imeEnabled(true), m_contentSize(0.0f, 0.0f),
 	  m_scale(1.0f), m_maxScale(5.0f), m_minScale(0.25f), m_userScalable(true), m_scrollX(0),
 	  m_imeState(0), m_scrollY(0), m_pageRect(0.0f, 0.0f, 0.0f, 0.0f),
 	  m_lastPageRect(0.0f, 0.0f, 0.0f, 0.0f), m_zoomed(true),
@@ -182,6 +182,378 @@ void WebView::DestroyWidget()
 	m_handTexture.clear();
 	m_handAltTexture.clear();
 	m_surface.clear();
+}
+
+int WebView::LoadUrl(const Url &url)
+{
+	m_loadRequest.m_type = WebViewLoadRequest::TYPE_URL;
+	Start();
+	m_url = url;
+	m_title = common::String("");
+
+	WebIpcLoadUrlRequest message(m_url.GetUrlString());
+
+	return WebIpc::GetInstance()->Send(&message, m_viewId);
+}
+
+int WebView::LoadData(const string &source, bool flag, const string &type)
+{
+	int ret;
+
+	m_loadRequest.m_flag = flag;
+	m_loadRequest.m_type = WebViewLoadRequest::TYPE_DATA;
+	m_loadRequest.m_url = source;
+	m_loadRequest.m_data = type;
+	Start();
+
+	string data;
+
+	if (source.length() != 0) {
+		ret = WEB_VIEW_ERROR_NO_WIDGET;
+		{
+			string file("file:///");
+			Url url(source);
+			string path = source.substr(url.GetSchemeString().length() + 1,
+						    source.length());
+
+			m_url = file + path;
+		}
+		{
+			Url url(source);
+
+			data = source.substr(url.GetSchemeString().length() + 1, source.length());
+		}
+		m_title = common::String("");
+		if (data.length() != 0) {
+			WebIpcLoadData message(data, m_url.GetUrlString(), type, flag);
+
+			ret = WebIpc::GetInstance()->Send(&message, m_viewId);
+		}
+	} else {
+		m_url = string("about:blank");
+		ret = WEB_VIEW_ERROR_NO_WIDGET;
+	}
+	return ret;
+}
+
+int WebView::GoBack()
+{
+	Start();
+
+	WebIpcMessage message(WEB_IPC_GO_BACK);
+
+	return WebIpc::GetInstance()->Send(&message, m_viewId);
+}
+
+int WebView::GoForward()
+{
+	Start();
+
+	WebIpcMessage message(WEB_IPC_GO_FORWARD);
+
+	return WebIpc::GetInstance()->Send(&message, m_viewId);
+}
+
+int WebView::Reload()
+{
+	Start();
+	if (!m_canReload) {
+		m_canReload = true;
+		return LoadUrl(m_url);
+	}
+
+	WebIpcMessage message(WEB_IPC_RELOAD);
+
+	return WebIpc::GetInstance()->Send(&message, m_viewId);
+}
+
+int WebView::Stop()
+{
+	WebIpcMessage message(WEB_IPC_STOP);
+	int ret = WebIpc::GetInstance()->Send(&message, m_viewId);
+
+	m_loadState = 2;
+	return ret;
+}
+
+int WebView::Request1050()
+{
+	WebIpcMessage message(WEB_IPC_REQUEST_1050);
+
+	return WebIpc::GetInstance()->Send(&message, m_viewId);
+}
+
+int WebView::SetZoomOffset(float bottom, float y)
+{
+	math::v4 padding(0.0f, 0.0f, 0.0f, 0.0f);
+
+	padding.set_w(bottom);
+	padding.set_y(m_padding.extract_y());
+	SetPadding(padding);
+	m_zoomY = y;
+	return 0;
+}
+
+int WebView::SetSetting1031(bool value)
+{
+	WebIpcBoolMessage message(WEB_IPC_SETTING_1031, value);
+
+	return WebIpc::GetInstance()->Send(&message, m_viewId);
+}
+
+int WebView::SetSetting1048(bool value)
+{
+	WebIpcBoolMessage message(WEB_IPC_SETTING_1048, value);
+
+	return WebIpc::GetInstance()->Send(&message, m_viewId);
+}
+
+int WebView::SetSetting1053(bool value)
+{
+	WebIpcBoolMessage message(WEB_IPC_SETTING_1053, value);
+
+	return WebIpc::GetInstance()->Send(&message, m_viewId);
+}
+
+void WebViewLoadingPlane::Hide()
+{
+	Timer *timer = new Timer(50.0f);
+	float time = timer != NULL ? timer->GetTotalTime() : 0.0f;
+
+	m_transition_complete = false;
+	m_transition = 0xff;
+	DoTransitionReverse_core(time, true);
+	ScePafWidget_4588699E(this, timer, 2, 0.0f, NULL);
+	if (m_state == 2 || m_state == 3)
+		m_state = 1;
+}
+
+int WebView::HideLoading()
+{
+	if (m_loadingPlane != NULL)
+		m_loadingPlane->Hide();
+	OnInput9();
+	return 0;
+}
+
+int WebView::SetLoadingDelay(int delay)
+{
+	if (m_loadingPlane == NULL)
+		return WEB_VIEW_ERROR_NO_WIDGET;
+	m_loadingPlane->m_delay = delay;
+	return 0;
+}
+
+int WebView::SetImeMaxLength(int length)
+{
+	m_imeMaxLength = length;
+	return 0;
+}
+
+void WebView::SetVerticalScrollBar(ScrollBar *scroll_bar)
+{
+	ScrollViewBase::SetVerticalScrollBar(scroll_bar);
+}
+
+void WebView::SetHorizontalScrollBar(ScrollBar *scroll_bar)
+{
+	ScrollViewBase::SetHorizontalScrollBar(scroll_bar);
+}
+
+int32_t WebView::EnableTouchRearEvent(bool on_off)
+{
+	Widget::EnableTouchRearEvent(on_off);
+	/* Sony's returns nothing: r0 is what SetMovableDirOff leaves */
+	SetMovableDirOff(1);
+}
+
+__attribute__((noinline)) void WebView::SetInputMask(int mask)
+{
+	m_inputMask = mask;
+
+	Widget *parent = GetViewParent();
+	Widget *plane = parent->FindChild(IDParam("view_plane"), 2);
+
+	if (plane != NULL) {
+		if (m_inputMask & 4)
+			plane->SetPinchMode(0x200);
+		else
+			plane->SetPinchMode(0);
+	}
+}
+
+void WebView::AddInputMask(int mask)
+{
+	SetInputMask(m_inputMask | mask);
+}
+
+void WebView::RemoveInputMask(int mask)
+{
+	SetInputMask(m_inputMask & ~mask);
+}
+
+__attribute__((noinline)) bool WebView::CanZoom()
+{
+	if (((m_view_box_size.getImpl().getX() == sce::Vectormath::Simd::floatInVec(0.0f)) &
+	     (m_view_box_size.getImpl().getY() == sce::Vectormath::Simd::floatInVec(0.0f)))
+		    .getAsBool())
+		return false;
+	if (((m_contentSize.getImpl().getX() == sce::Vectormath::Simd::floatInVec(0.0f)) &
+	     (m_contentSize.getImpl().getY() == sce::Vectormath::Simd::floatInVec(0.0f)))
+		    .getAsBool())
+		return false;
+	return m_scale != 0.0f;
+}
+
+__attribute__((noinline)) void WebView::ZoomBy(float factor)
+{
+	if (!CanZoom() || m_ime_padding)
+		return;
+
+	math::v2 target = GetViewFocusTarget();
+	float ratio = (sce::Vectormath::Simd::recipf(m_contentSize.getImpl().getX()) *
+		       m_view_box_size.getImpl().getX()).getAsFloat();
+
+	if (ratio > 0.0f) {
+		if (ratio * factor > m_maxScale)
+			factor = m_maxScale / ratio;
+		else if (ratio * factor < m_minScale)
+			factor = m_minScale / ratio;
+		if (m_scrollAnims.size() == 0 && m_tapAnims.size() == 0)
+			m_scrollAnims.push_back(WebViewAnim(target, factor));
+	}
+}
+
+void WebView::Zoom(int action)
+{
+	if (!CanZoom() || m_ime_padding)
+		return;
+
+	switch (action) {
+	case 1: {
+		math::v2 target = m_view_box_size;
+		float scale = m_contentSize.extract_x() * m_scale / target.extract_x();
+
+		target = GetViewFocusTarget();
+		const math::v4 *size = GetSize(0);
+		math::v2 pos(sce::Vectormath::Simd::Aos::Vector2(target.getImpl().getX(),
+			(m_view_box_size.getImpl().getY() - size->getImpl().getY()) *
+				sce::Vectormath::Simd::floatInVec(0.5f) +
+			m_padding.getImpl().getY()));
+
+		if (scale <= 1.05f && scale >= 0.95f)
+			m_scrollAnims.push_back(WebViewAnim(pos, 1.0f, 0));
+		else
+			m_scrollAnims.push_back(WebViewAnim(pos, 1.0f, 1));
+		break;
+	}
+	case 2: {
+		math::v2 target = GetViewFocusTarget();
+		const math::v4 *size = GetSize(0);
+		math::v2 pos(sce::Vectormath::Simd::Aos::Vector2(target.getImpl().getX(),
+			-((m_view_box_size.getImpl().getY() - size->getImpl().getY()) *
+			  sce::Vectormath::Simd::floatInVec(0.5f)) -
+			m_padding.getImpl().getY()));
+
+		m_scrollAnims.push_back(WebViewAnim(pos, 1.0f));
+		break;
+	}
+	case 4:
+		ZoomBy(1.25f);
+		break;
+	case 8:
+		ZoomBy(0.75f);
+		break;
+	}
+}
+
+__attribute__((noinline)) void WebView::ResetZoom(const math::v2 &pos)
+{
+	if (!CanZoom())
+		return;
+
+	float scale = m_contentSize.extract_x() * m_scale / m_view_box_size.extract_x();
+
+	if (scale != 1.0f) {
+		if (m_tapAnims.size() != 0)
+			m_scrollAnims.push_back(WebViewAnim(pos, scale, 2));
+		else
+			m_scrollAnims.push_back(WebViewAnim(pos, scale, 0));
+	}
+}
+
+void WebView::ResetZoom()
+{
+	ResetZoom(GetViewFocusTarget());
+}
+
+__attribute__((noinline)) void WebView::Tap(const math::v2 &pos, int button)
+{
+	if (m_loadingPlane != NULL)
+		m_loadingPlane->m_state = 1;
+
+	WebIpcTap message((int32_t)pos.extract_x(), (int32_t)pos.extract_y(), button);
+
+	WebIpc::GetInstance()->Send(&message, m_viewId);
+}
+
+__attribute__((noinline)) sce::Vectormath::Simd::Aos::Matrix3 WebView::GetPageTransform()
+{
+	using namespace sce::Vectormath::Simd;
+
+	Aos::Matrix3 transform = Aos::Matrix3::identity();
+	Widget *plane = GetViewParent()->FindChild(IDParam("view_plane"), 2);
+
+	if (plane != NULL && !(*plane->GetSize(0) == math::v4(0.0f, 0.0f, 0.0f, 0.0f))) {
+		floatInVec rate = recipf(plane->GetSize(0)->getImpl().getX());
+		floatInVec width = m_contentSize.getImpl().getX();
+
+		transform = Aos::Matrix3(Aos::Vector3(rate * width, floatInVec(0.0f), floatInVec(0.0f)),
+					 Aos::Vector3(floatInVec(0.0f), -width * rate, floatInVec(0.0f)),
+					 Aos::Vector3(m_contentSize.extract_x() * 0.5f,
+						      m_contentSize.extract_y() * 0.5f, 1.0f));
+	}
+	return transform;
+}
+
+void WebView::TapAtDragStart()
+{
+	using namespace sce::Vectormath::Simd;
+
+	Aos::Matrix3 transform = GetPageTransform();
+	Aos::Vector3 pos = transform.getCol0() * m_dragStart.getImpl().getX() +
+		transform.getCol1() * m_dragStart.getImpl().getY() +
+		Aos::mulPerElem(transform.getCol2(), Aos::Vector3(1.0f));
+
+	Tap(math::v2(Aos::Vector2(pos.getX(), pos.getY())), 0);
+}
+
+void WebView::Request1070()
+{
+	WebIpcMessage message(WEB_IPC_REQUEST_1070);
+
+	WebIpc::GetInstance()->Send(&message, m_viewId);
+}
+
+void WebView::RequestData(int64_t id, int64_t size)
+{
+	Buffer *buffer = m_receiveBuffer;
+
+	if (buffer != NULL) {
+		if (buffer->m_size != size) {
+			delete buffer;
+			m_receiveBuffer = new Buffer(size);
+		} else {
+			sce_paf_memset(buffer->m_data, 0, buffer->m_size);
+			buffer->m_length = 0;
+		}
+	} else {
+		m_receiveBuffer = new Buffer(size);
+	}
+
+	WebIpcRequestData message(id, size);
+
+	WebIpc::GetInstance()->Send(&message, m_viewId);
 }
 
 int WebView::CreateSurface()
@@ -323,8 +695,8 @@ void WebView::UnhideCursor()
 void WebView::CloseIme()
 {
 	if (m_ime_padding &&
-	    !((m_contentScale.getImpl().getX() == sce::Vectormath::Simd::floatInVec(0.0f)) &
-	      (m_contentScale.getImpl().getY() == sce::Vectormath::Simd::floatInVec(0.0f)))
+	    !((m_contentSize.getImpl().getX() == sce::Vectormath::Simd::floatInVec(0.0f)) &
+	      (m_contentSize.getImpl().getY() == sce::Vectormath::Simd::floatInVec(0.0f)))
 		     .getAsBool()) {
 		m_cursorHidden = false;
 		ShowCursor();
@@ -332,7 +704,7 @@ void WebView::CloseIme()
 
 		math::v2 target = GetViewFocusTarget();
 		float scale = m_tapScale /
-			(sce::Vectormath::Simd::recipf(m_contentScale.getImpl().getX()) *
+			(sce::Vectormath::Simd::recipf(m_contentSize.getImpl().getX()) *
 			 m_view_box_size.getImpl().getX()).getAsFloat();
 
 		if (m_tapScale >= 1.75f)
