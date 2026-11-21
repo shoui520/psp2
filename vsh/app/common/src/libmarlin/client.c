@@ -521,10 +521,10 @@ __attribute__((noinline)) int MlnImpl_8101E118(MlnClient *client, MlnBuffer *a1,
 				ret = 7;
 				goto out;
 			}
-			buffers[2 * i] = pairs->items[i]->pair->first;
-			pairs->items[i]->pair->first = NULL;
-			buffers[2 * i + 1] = pairs->items[i]->pair->second;
-			pairs->items[i]->pair->second = NULL;
+			buffers[2 * i] = pairs->items[i]->buffers[0];
+			pairs->items[i]->buffers[0] = NULL;
+			buffers[2 * i + 1] = pairs->items[i]->buffers[1];
+			pairs->items[i]->buffers[1] = NULL;
 		}
 	} else {
 		buffers = NULL;
@@ -923,10 +923,10 @@ __attribute__((noinline)) int MlnImpl_8101EC08(MlnClient *client, unsigned int *
 					ret = 7;
 					goto out;
 				}
-				buffers[2 * i] = pairs->items[i]->pair->first;
-				pairs->items[i]->pair->first = NULL;
-				buffers[2 * i + 1] = pairs->items[i]->pair->second;
-				pairs->items[i]->pair->second = NULL;
+				buffers[2 * i] = pairs->items[i]->buffers[0];
+				pairs->items[i]->buffers[0] = NULL;
+				buffers[2 * i + 1] = pairs->items[i]->buffers[1];
+				pairs->items[i]->buffers[1] = NULL;
 			}
 		}
 	}

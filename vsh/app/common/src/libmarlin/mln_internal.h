@@ -1269,12 +1269,15 @@ typedef struct MlnMessageResult {
 	void *data;
 } MlnMessageResult;
 
+/* a list of buffer lists: each item is a pair, its first and second buffer */
+typedef struct MlnMessageList {
+	unsigned int count;
+	MlnBuffer **buffers;
+} MlnMessageList;
+
 typedef struct MlnMessagePairs {
 	unsigned int count;
-	struct MlnMessagePairItem {
-		void *reserved;
-		MlnBufferPair *pair;
-	} **items;
+	MlnMessageList **items;
 } MlnMessagePairs;
 
 #define MLN_RESULT_VALUE	0x101
@@ -1336,6 +1339,10 @@ int MlnImpl_81022608(MlnApiReportData *data, MlnBuffer **message);
 int MlnImpl_8102302C(MlnBuffer *buffer, MlnBuffer **message);
 int MlnImpl_810232FC(MlnApiReportData *data, MlnBuffer **message);
 void MlnImpl_810233C4(MlnMessage *message);
+void MlnImpl_81020470(unsigned char **cursor, unsigned int count, MlnBuffer **buffers);
+void MlnImpl_810205A4(unsigned char *p, MlnMessagePairs *pairs);
+unsigned int MlnImpl_810206C0(const MlnBufferGroup *group);
+int MlnImpl_81020784(const MlnMessage *message, unsigned int *size);
 int MlnImpl_8101D5D4(MlnClient *client, MlnApiValue **value);
 int MlnImpl_8101D7C0(MlnMessage *message, MlnApiResult **out);
 int MlnImpl_8101DC14(MlnClient *client, int failed, int result, MlnApiResult **out);
