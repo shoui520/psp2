@@ -58,9 +58,12 @@ public:
 	virtual void PluginOnStart(Plugin *plugin) = 0;
 	virtual void Method3() = 0;
 	virtual void Method4() = 0;
-	virtual void Method5() = 0;
+	/* whether the page's input is to be stopped while the dialog is open (WebView sends
+	   setting 0x1031 off when it is) */
+	virtual bool Method5() = 0;
 	virtual void Method6() = 0;
-	virtual void Method7() = 0;
+	/* the text of the dialog's text field at the index */
+	virtual const wstring *Method7(int index) = 0;
 	/* whether a dialog is open */
 	virtual bool Method8() = 0;
 	/* opens the dialog asked for */
@@ -70,7 +73,9 @@ public:
 	virtual void Method11() = 0;
 	/* opens the date or time dialog asked for; negative when it cannot */
 	virtual int Method12(MessageDialogParam *param) = 0;
-	virtual void Method13() = 0;
+	/* opens the dialog asked for again with the texts given (the web view passes its IME
+	   texts, and 0x5cc) */
+	virtual void Method13(MessageDialogParam *param, void *texts, int arg) = 0;
 	/* opens the dialog asked for with four texts (the web view's user name and password) */
 	virtual void Method14(MessageDialogParam *param, const MessageDialogTexts &texts) = 0;
 	virtual void Method15() = 0;

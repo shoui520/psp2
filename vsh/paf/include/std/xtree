@@ -216,6 +216,9 @@ public:
 	}
 
 	void erase(iterator where);
+	/* the node itself unlinked and deleted (libpaf_web_map_view's location answers call it
+	   for an iterator's node) */
+	void _Erase(_Node *erasednode);
 
 	_Node *head;
 	size_type count;
@@ -286,7 +289,6 @@ private:
 	_Node *_Copy(_Node *parent, const _Node *src);
 	void _Rebalance(_Node *node);
 	void _EraseFixup(_Node *fixnode, _Node *fixnodeparent);
-	void _Erase(_Node *erasednode);
 };
 
 template<class _Traits>

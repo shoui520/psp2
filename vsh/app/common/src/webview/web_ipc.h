@@ -30,8 +30,12 @@ enum {
 	/* the view's settings, sent as a bool (what each sets is not known yet) */
 	WEB_IPC_SELECT_REPLY = 0x1030,
 	WEB_IPC_SETTING_1031 = 0x1031,
+	WEB_IPC_CURSOR_PRESS = 0x1032,
+	WEB_IPC_CURSOR_RELEASE = 0x1033,
 	WEB_IPC_CURSOR_POS = 0x1034,
 	WEB_IPC_TAP = 0x1036,
+	WEB_IPC_TOUCH = 0x1038,
+	WEB_IPC_POINTER_POS = 0x1039,
 	WEB_IPC_SETTING_1048 = 0x1048,
 	WEB_IPC_REQUEST_1050 = 0x1050,
 	WEB_IPC_REQUEST_1051 = 0x1051,
@@ -393,6 +397,51 @@ public:
 	}
 };
 
+/* a touch on the page at a point, with its action (66 up, 67 move, ...) and its port
+   (0x810253b0, type 0x1038; names ours) */
+class WebIpcTouch : public WebIpcMessage {
+public:
+	WebIpcTouch(int x, int y, int action, int port);
+	virtual ~WebIpcTouch()
+	{
+	}
+
+	virtual void Write(WebIpcPacket *packet) const;
+
+	int m_x;
+	int m_y;
+	int m_action;
+	int m_port;
+};
+
+/* the cursor's button pressed and released on the page at a point (0x810249A8, type 0x1032,
+   and 0x810249C0, type 0x1033; names ours) */
+class WebIpcCursorPress : public WebIpcIntPairMessage {
+public:
+	WebIpcCursorPress(int x, int y);
+	virtual ~WebIpcCursorPress()
+	{
+	}
+};
+
+class WebIpcCursorRelease : public WebIpcIntPairMessage {
+public:
+	WebIpcCursorRelease(int x, int y);
+	virtual ~WebIpcCursorRelease()
+	{
+	}
+};
+
+/* the pointer's point in the view, sent while the page does not take the input
+   (0x81024990, type 0x1039; names ours) */
+class WebIpcPointerPos : public WebIpcIntPairMessage {
+public:
+	WebIpcPointerPos(int x, int y);
+	virtual ~WebIpcPointerPos()
+	{
+	}
+};
+
 /* the cursor's point on the page (0x810249D8, type 0x1034; names ours) */
 class WebIpcCursorPos : public WebIpcIntPairMessage {
 public:
@@ -448,7 +497,6 @@ WEB_IPC_EVENT(WebIpcStringMessage, 2004);	/* 0x81024a20 */
 WEB_IPC_EVENT(WebIpcStringMessage, 2005);	/* 0x81024a38 */
 WEB_IPC_EVENT(WebIpcFloatMessage, 2008);	/* 0x81024a68 */
 WEB_IPC_EVENT(WebIpcIntPairMessageB, 2011);	/* 0x81024a98 */
-WEB_IPC_EVENT(WebIpcStringMessage, 2013);	/* 0x81024a80 */
 WEB_IPC_EVENT(WebIpcIntPairMessage, 2016);	/* 0x81024ab0 */
 WEB_IPC_EVENT(WebIpcBoolMessage, 2024);		/* 0x81024ae0 */
 WEB_IPC_EVENT(WebIpcIntPairMessageA, 2026);	/* 0x81024af8 */
@@ -491,9 +539,25 @@ public:
 	bool m_bool;
 };
 
+/* the page's alert: its text (0x81024a80; names ours) */
+class WebIpcEvent2013 : public WebIpcStringMessage {	/* 0x81024a80 */
+public:
+	WebIpcEvent2013(const WebIpcPacket *packet) : WebIpcStringMessage(packet)
+	{
+	}
+
+	WebIpcEvent2013(const string &text);
+
+	virtual ~WebIpcEvent2013()
+	{
+	}
+};
+
+/* the page's confirm: its text, and the answer (names ours) */
 class WebIpcEvent2014 : public WebIpcStringMessage {	/* 0x810254a8 */
 public:
 	WebIpcEvent2014(const WebIpcPacket *packet);
+	WebIpcEvent2014(const string &text);
 	virtual ~WebIpcEvent2014()
 	{
 	}
@@ -501,12 +565,15 @@ public:
 	virtual void Write(WebIpcPacket *packet) const;
 	virtual void Read(const WebIpcPacket *packet);
 
-	bool m_bool;
+	bool m_accepted;
 };
 
+/* the page's prompt: its text, the default answer, the answer and whether it was given
+   (names ours) */
 class WebIpcEvent2015 : public WebIpcMessage {	/* 0x810254c0 */
 public:
 	WebIpcEvent2015(const WebIpcPacket *packet);
+	WebIpcEvent2015(const string &text, const string &defaultText, const string &result);
 	virtual ~WebIpcEvent2015()
 	{
 	}
@@ -514,8 +581,10 @@ public:
 	virtual void Write(WebIpcPacket *packet) const;
 	virtual void Read(const WebIpcPacket *packet);
 
-	string m_text[3];
-	bool m_bool;
+	string m_text;
+	string m_defaultText;
+	string m_result;
+	bool m_accepted;
 };
 
 class WebIpcEvent2019 : public WebIpcMessage {	/* 0x81025460 */
@@ -685,7 +754,7 @@ public:
 	bool m_accepted;
 };
 
-/* the page asks for a message dialog of the kind m_value says; m_cancelled is the answer
+/* the page asks for a message dialog of the kind m_value says; m_accepted is the answer
    (names ours) */
 class WebIpcEvent2034 : public WebIpcIntMessage {	/* 0x810255b0 */
 public:
@@ -703,7 +772,7 @@ public:
 	virtual void Write(WebIpcPacket *packet) const;
 	virtual void Read(const WebIpcPacket *packet);
 
-	bool m_cancelled;
+	bool m_accepted;
 };
 
 class WebIpcEvent2035 : public WebIpcMessage {	/* 0x81025490 */

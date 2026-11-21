@@ -15,6 +15,7 @@
 #include <std/vector>
 #include <std/list>
 #include <std/map>
+#include <std/set>
 #include <std/memory>
 #include <url/url.h>
 #include <math/rect.h>
@@ -36,19 +37,20 @@
 namespace paf {
 namespace ui {
 
-/* the page's events, as the WebKit process reports them (the web view's second base) */
-class WebViewPageClient {
+/* the results of the dialogs the view opens for the page, the dialog's owner (the web
+   view's second base; names ours) */
+class WebViewDialogClient {
 public:
-	virtual ~WebViewPageClient()
+	virtual ~WebViewDialogClient()
 	{
 	}
 
-	virtual void OnPageCreated(int result) = 0;
-	virtual void OnPageClosed(int reason) = 0;
+	virtual void OnMessageDialogResult(int result) = 0;
+	virtual void OnDialogResult(int result) = 0;
 	virtual void OnPageEvent0() = 0;
-	virtual void OnPageEvent1() = 0;
-	virtual void OnPageEvent2() = 0;
-	virtual void OnPageEvent3() = 0;
+	virtual void OnInputDialogResult(int result, int reopen) = 0;
+	virtual void OnAuthDialogResult(int result) = 0;
+	virtual void OnGeolocationDialogResult(int result) = 0;
 	virtual void OnPageEvent4() = 0;
 };
 
@@ -150,8 +152,26 @@ public:
 /* the system IME a page's text field opens (0x8100e298; names ours) */
 struct WebViewIme;
 
+/* the IME, made once (0x8100df60) */
+WebViewIme *ImeGetInstance();
+
+/* the IME's input type and option for a field's type ("password", "number", "tel", "email",
+   "url", "search") */
+void ImeGetInputType(const string &type, int *inputType, int *option);
+
+/* opens the IME for the client (sceImeVshOpen), or gives it the new parameters when open */
+int ImeOpen(WebViewIme *ime, WebViewInputClient *client, int inputType, int option,
+	bool multiline);
+
 /* closes the IME (sceImeVshClose) and frees its text */
 int ImeClose(WebViewIme *ime);
+
+/* the IME told of a change of the field's text (ScePafLowlayer 5CE62E49; the length is not
+   passed on) */
+int ImeTextChanged(WebViewIme *ime, int length);
+
+/* the IME's frame (sceImeVshUpdate), while it is open */
+int ImeUpdate(WebViewIme *ime);
 
 /* the render parameters the page is made with (80 bytes at 0x81026548; names ours) */
 struct WebViewRenderParam {
@@ -263,7 +283,7 @@ public:
 	/* the page was reset (name ours) */
 	virtual void OnPageReset(WebView *view);
 	virtual void OnLoadFinished(WebView *view, int state);
-	virtual void OnLoadFailed(WebView *view, int error, int arg);
+	virtual void OnLoadFailed(WebView *view, int error, const common::String &url);
 	virtual void OnLoadCommitted(WebView *view);
 	/* the page is laid out and its pending load started (name ours) */
 	virtual void OnPageLayout(WebView *view);
@@ -282,9 +302,9 @@ public:
 	   whether the listener took the request itself (names ours) */
 	virtual void OnCreateWindow(WebView *view, const Url &url, int width, int height,
 		WebView **window, bool *handled);
-	virtual void OnSlot16();
+	virtual void OnSlot16(WebView *view);
 	virtual void OnEvent11(WebView *view, int arg0, int arg1);
-	virtual void OnEvent12(WebView *view, int arg);
+	virtual void OnEvent12(WebView *view, const Url &url);
 	/* the page asks whether it may go to the URL: *allow, true unless the listener says no
 	   (names ours) */
 	virtual void OnNavigationRequest(WebView *view, const Url &url, int type, bool *allow);
@@ -299,6 +319,8 @@ public:
 	virtual void OnHistoryChanged(WebView *view, bool canGoBack, bool canGoForward);
 	virtual void OnEvent18(WebView *view, int arg0, int arg1);
 	virtual void OnImeClosed(WebView *view, int arg0, int arg1);
+	/* the page's confirm, with its text, before its dialog opens (names ours) */
+	virtual void OnConfirm(WebView *view, const common::String &text);
 };
 
 /* the application's web view listener, which starts the WebKit process for the views (Sony's
@@ -347,6 +369,10 @@ void DestroyGeolocation(WebViewGeolocation *geolocation);
 /* what the page did with a press (names ours) */
 #define WEB_VIEW_HIT_CONTEXT_MENU	1
 #define WEB_VIEW_HIT_ZOOM		2
+
+/* m_pageInfo: the page's content size and its viewport's scales are known (names ours) */
+#define WEB_VIEW_PAGE_CONTENT_SIZE	1
+#define WEB_VIEW_PAGE_VIEWPORT		2
 
 #define WEB_VIEW_CURSOR_POINTER		0
 #define WEB_VIEW_CURSOR_HAND		2
@@ -414,6 +440,28 @@ public:
 };
 
 /* a key the web view sends the page, pressed or released (names ours) */
+/* an origin's answer to the page's location request, kept for its next request: ordered by
+   the origin's length, then the origin; three are kept, the one used longest ago dropped for
+   a new one (names ours) */
+struct WebViewGeolocationPermission {
+	WebViewGeolocationPermission(const char *origin)
+		: m_state(2), m_origin(origin), m_length(m_origin.size()), m_time(0)
+	{
+	}
+
+	bool operator<(const WebViewGeolocationPermission &rhs) const
+	{
+		if (m_length != rhs.m_length)
+			return m_length < rhs.m_length;
+		return m_origin < rhs.m_origin;
+	}
+
+	int m_state;		/* 1 allowed, 2 denied */
+	string m_origin;
+	size_t m_length;
+	uint32_t m_time;	/* the use count when it was last asked */
+};
+
 class WebViewKeyEvent {
 public:
 	WebViewKeyEvent(int keycode = 0, bool down = false) : m_keycode(keycode), m_down(down)
@@ -527,7 +575,7 @@ public:
 	IDParam m_progressbar;
 };
 
-class WebView : public ScrollView, public WebViewPageClient, public WebViewInputClient,
+class WebView : public ScrollView, public WebViewDialogClient, public WebViewInputClient,
 	public WebViewGeolocationClient {
 public:
 	static const char m_widget_type[];
@@ -595,7 +643,7 @@ public:
 	   are dropped (name ours) */
 	void MoveCursorToPagePos(int x, int y);
 	/* the page gone: its surface dropped and the view's texture cleared (name ours) */
-	void ClearSurface();
+	__attribute__((noinline)) void ClearSurface();
 	/* taps the page where the drag started (name ours) */
 	void TapAtDragStart();
 	/* sends 0x1070 (name ours) */
@@ -663,6 +711,27 @@ public:
 	/* the page asks for a message dialog of kind 0 or 1 (kind 1 not while one is open):
 	   opened, or the request cancelled; queued while another dialog is open (name ours) */
 	bool OnDialogRequest(WebIpcEvent2034 *message);
+	/* the page's prompt, confirm and alert: their dialog opened, or with no dialog the
+	   answer sent back at once; queued while another dialog is open (names ours) */
+	bool OnPromptRequest(WebIpcEvent2015 *message);
+	bool OnConfirmRequest(WebIpcEvent2014 *message);
+	bool OnAlertRequest(WebIpcEvent2013 *message);
+	/* the messages the page sent, taken from the IPC queue and handled in order; those a
+	   dialog keeps are not freed (name ours) */
+	void ProcessIpcData();
+	/* the view animated to the page point at the scale: the plane sized to the scale, or at
+	   scale 1 (or when the page may not be scaled) only scrolled to it (name ours) */
+	void ZoomTo(const math::v2 &pos, float scale);
+	/* the end of ZoomTo's animation: the tap animations dropped (name ours) */
+	static void OnZoomDone(Timer *timer, AnimListener *listener, void *arg, void *data,
+		void *reserved);
+	/* the touch at the view point sent to the page for the port; a move to where the port
+	   already is is not sent, and after an up the port has no point (name ours) */
+	void SendTouch(const math::v2 &pos, int action, int port);
+	/* a pointer event at the view point: the animations stop, a tap (2, 4), a cursor move
+	   (29) or a touch (65..67, 71) goes to the page; 0 moves the page's pointer, 13 and 15
+	   hide the loading plane, 25 shows it (name ours) */
+	void Touch(const math::v2 &pos, uint16_t type, uint8_t port);
 	/* the page's block of the size given zoomed to fill the view, at the scale the view
 	   allows, centred at pos (name ours) */
 	void ZoomToRect(const math::v2 &pos, const math::v2 &size);
@@ -672,10 +741,13 @@ public:
 	void AddSelectItem(const string &text, bool enabled, bool label);
 	/* the select popup started: the count of its items to come (name ours) */
 	void StartSelect(int count, int reserved, bool multiple);
+	/* the view plane sized to the page's content at its scale, its pinch kept within the
+	   scales the page allows, and the view put back on the page (name ours) */
+	void UpdateContentSize();
 	/* the page asks for the URL to be downloaded, with its MIME type (name ours) */
 	void RequestDownload(const char *url, const char *mimeType);
 	/* the page's event 0x2022: told to the application's listener (name ours) */
-	void OnEvent22();
+	__attribute__((noinline)) void OnEvent22();
 	/* the loading plane put over the page's rect (its centre and size in a v4) and shown
 	   when asked or when there is a first text; the texts choose its style (names ours) */
 	void UpdateLoadingPlane(const math::v4 &rect, bool show, string first, string second);
@@ -755,7 +827,7 @@ public:
 	 */
 	virtual void ResetPage();
 	virtual void OnLoadFinished();
-	virtual void OnLoadFailed(int error, int arg);
+	virtual void OnLoadFailed(int error, const common::String &url);
 	virtual void OnLoadCommitted();
 	virtual void OnPageLayout();
 	virtual void OnLoadProgress(int progress);
@@ -766,7 +838,7 @@ public:
 	/* the page opens a window at the URL: the listener makes it (name ours) */
 	virtual void OnOpenWindow(const Url &url);
 	virtual void OnEvent11(int arg0, int arg1);
-	virtual void OnEvent12(int arg);
+	virtual void OnEvent12(const Url &url);
 	virtual void OnNavigationRequest(const Url &url, int type, bool *allow);
 	/* the page asks to download the URL: told to the listener (names ours) */
 	virtual void OnDownloadRequest(const Url &url, const string &mimeType, int64_t length);
@@ -778,15 +850,15 @@ public:
 	/* a key the page did not take, given to the listener as a cursor direction (name ours) */
 	virtual void OnEvent20(int keycode, int down);
 
-	/* WebViewPageClient */
-	virtual void OnPageCreated(int result);
-	virtual void OnPageClosed(int reason);
+	/* WebViewDialogClient */
+	virtual void OnMessageDialogResult(int result);
+	virtual void OnDialogResult(int result);
 	virtual void OnPageEvent0()
 	{
 	}
-	virtual void OnPageEvent1();
-	virtual void OnPageEvent2();
-	virtual void OnPageEvent3();
+	virtual void OnInputDialogResult(int result, int reopen);
+	virtual void OnAuthDialogResult(int result);
+	virtual void OnGeolocationDialogResult(int result);
 	virtual void OnPageEvent4()
 	{
 	}
@@ -834,7 +906,8 @@ public:
 	thread::RMutex m_ipcDataLock;		/* 1144 */
 	intrusive_ptr<graph::Surface> m_surface;	/* 1176 */
 	graph::SurfacePool *m_surfacePool;	/* 1180 */
-	int m_surfaceWidth;			/* 1184 */
+	/* the page's pixels the surface is copied from (name ours) */
+	const void *m_surfaceData;		/* 1184 */
 	WebViewIme *m_ime;			/* 1188: the IME the page opened */
 	WebViewRenderTarget *m_renderTarget;	/* 1192 */
 	/* whether a page may ask for the device's location */
@@ -843,7 +916,8 @@ public:
 	WebViewGeolocation *m_geolocation;	/* 1204 */
 	/* the origin asking for the location, while its permission is decided */
 	string m_geolocationOrigin;		/* 1208 */
-	map<string, string> m_popupItems;		/* 1220 */
+	/* the origins' answers kept */
+	set<WebViewGeolocationPermission> m_geolocationPermissions;	/* 1220 */
 	int m_loadProgress;			/* 1232 */
 	int m_loadState;			/* 1236 */
 	bool m_canReload;			/* 1240 */
@@ -856,14 +930,17 @@ public:
 	/* the view's options (bit 0: a page's new window opens without asking; names ours) */
 	int m_options;				/* 1364 */
 	bool m_imeOpen;				/* 1368 */
-	bool m_imeEnabled;			/* 1369 */
+	/* the page is laid out for the first time: its rect starts at 0 (name ours) */
+	bool m_firstLayout;			/* 1369 */
 	math::v2 m_contentSize;		/* 1376 */
 	float m_scale;				/* 1384 */
 	float m_maxScale;			/* 1388 */
 	float m_minScale;			/* 1392 */
 	bool m_userScalable;			/* 1396 */
-	int m_scrollX;				/* 1400 */
-	int m_imeState;				/* 1404 */
+	/* the scale that fits the page's layout width into the view (name ours) */
+	float m_fitScale;			/* 1400 */
+	/* what the page has told of itself, WEB_VIEW_PAGE_* (name ours) */
+	int m_pageInfo;				/* 1404 */
 	int m_scrollY;				/* 1408 */
 	math::v4 m_pageRect;			/* 1416 */
 	math::v4 m_lastPageRect;		/* 1432 */
@@ -888,7 +965,8 @@ public:
 	vector<bool> m_selectLabels;		/* 1760: the item is a group's label */
 	bool m_selectMultiple;			/* 1776 */
 	bool m_startWithParam;			/* 1777 */
-	math::v4 m_tapRect;			/* 1784 */
+	/* the rectangle of the text field the IME was opened for (name ours) */
+	math::v4 m_imeRect;			/* 1784 */
 	float m_tapScale;			/* 1800 */
 	bool m_tapping;				/* 1804 */
 	/* the page takes the view's input (name ours) */
@@ -916,7 +994,8 @@ public:
 	list<WebViewAnim> m_scrollAnims;		/* 1968 */
 	list<WebViewAnim> m_zoomAnims;			/* 1980 */
 	list<WebViewAnim> m_tapAnims;			/* 1992 */
-	math::v2 m_reserved2008;
+	/* where ZoomTo's scale moves the view focus, from the focus (name ours) */
+	math::v2 m_zoomOffset;
 	WebViewLoadRequest m_loadRequest;	/* 2016 */
 	list<WebViewKeyEvent> m_keyQueue;	/* 2052: the keys waiting for the last one's reply */
 	bool m_keyReady;			/* 2064: no key waits for a reply */

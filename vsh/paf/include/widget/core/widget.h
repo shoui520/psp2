@@ -1187,6 +1187,31 @@ public:
 		m_drag_limit[1].y = pos.extract_y();
 		m_drag_limit[1].z = pos.extract_z();
 	}
+
+	/* the smallest and the largest size its pinch keeps it in (names ours) */
+	void SetPinchLimitMin(const math::v4 &size)
+	{
+		SceFVector3 limit;
+
+		limit.x = size.extract_x();
+		limit.y = size.extract_y();
+		limit.z = size.extract_z();
+		if (m_pinch_limit == NULL)
+			m_pinch_limit = new SceFVector3[2];
+		m_pinch_limit[0] = limit;
+	}
+
+	void SetPinchLimitMax(const math::v4 &size)
+	{
+		SceFVector3 limit;
+
+		limit.x = size.extract_x();
+		limit.y = size.extract_y();
+		limit.z = size.extract_z();
+		if (m_pinch_limit == NULL)
+			m_pinch_limit = new SceFVector3[2];
+		m_pinch_limit[1] = limit;
+	}
 	void KillObjAnim(int32_t obj, int32_t id);
 	/* the draw object with the ID, or the end (name ours) */
 	vector<DrawObjEntry>::iterator FindDrawObj(int32_t id);
