@@ -161,6 +161,45 @@ struct WebViewRenderParam {
 /* the render parameters every page is made with */
 WebViewRenderParam *GetRenderParam();
 
+/* what the page's data request gives the application's data listener: its start with the
+   MIME type and the length, each part of the data, and its end with the result (names ours) */
+class WebViewDataEvent {
+public:
+	enum {
+		TYPE_START = 0,
+		TYPE_DATA = 1,
+		TYPE_END = 2
+	};
+
+	WebViewDataEvent(int type)
+		: m_type(type), m_data(NULL), m_size(0), m_length(0), m_result(0)
+	{
+	}
+
+	virtual ~WebViewDataEvent()
+	{
+	}
+
+	int m_type;
+	string m_mimeType;
+	string m_reserved;
+	void *m_data;
+	int m_size;
+	int64_t m_length;
+	int m_result;
+};
+
+/* the application's listener of the page's data (wutil's ScePafWidget_E638AA1F; the slots
+   not seen called are numbered, names ours) */
+class WebViewDataListener {
+public:
+	virtual ~WebViewDataListener();
+	virtual void OnSlot2();
+	virtual void OnSlot3();
+	virtual void OnSlot4();
+	virtual void OnData(WebViewDataEvent event, WebView *view);
+};
+
 /* the view's listener, told of its page's events (the class name and the method names are
    ours, after the view's methods that call each; slots not yet seen called are numbered) */
 class WebViewPageListener {
@@ -177,8 +216,10 @@ public:
 	virtual void OnTitleChanged(WebView *view, const common::String &title);
 	virtual void OnUrlChanged(WebView *view, const Url &url);
 	virtual void OnEvent8(WebView *view, int arg);
-	virtual void OnSlot11();
-	virtual void OnSlot12();
+	/* the page's position in the view, and the view's top padding left showing above it
+	   (names ours) */
+	virtual void OnPagePos(WebView *view, const math::v2 &pos);
+	virtual void OnPageTop(WebView *view, const float &top);
 	virtual void OnSlot13();
 	virtual void OnSlot14();
 	/* the page asks for a new window at the URL, of the size: the view made for it, and
@@ -188,12 +229,16 @@ public:
 	virtual void OnSlot16();
 	virtual void OnEvent11(WebView *view, int arg0, int arg1);
 	virtual void OnEvent12(WebView *view, int arg);
-	virtual void OnEvent13(WebView *view, int arg0, int arg1, int arg2);
+	/* the page asks whether it may go to the URL: *allow, true unless the listener says no
+	   (names ours) */
+	virtual void OnNavigationRequest(WebView *view, const Url &url, int type, bool *allow);
 	virtual void OnEvent14(WebView *view, int arg0, int arg1, int arg2, int arg3);
-	virtual void OnSlot21();
+	/* a cursor key the page did not take: its direction bit (1 81, 2 54, 4 64, 8 74), and
+	   whether it was let go (names ours) */
+	virtual void OnCursorKey(WebView *view, int direction, bool up);
 	virtual void OnEvent15(WebView *view, int arg);
-	virtual void OnEvent16();
-	virtual void OnHistoryChanged();
+	virtual void OnEvent16(WebView *view);
+	virtual void OnHistoryChanged(WebView *view, bool canGoBack, bool canGoForward);
 	virtual void OnEvent18(WebView *view, int arg0, int arg1);
 	virtual void OnImeClosed(WebView *view, int arg0, int arg1);
 };
@@ -233,6 +278,8 @@ void DestroyGeolocation(WebViewGeolocation *geolocation);
 #define WEB_VIEW_ERROR_NO_SIZE		((int)0x80AF0084)
 #define WEB_VIEW_ERROR_NO_MEMORY	((int)0x80AF0022)
 #define WEB_VIEW_ERROR_NO_TEXTURE	((int)0x80AF008F)
+/* the page's data did not come (name ours) */
+#define WEB_VIEW_ERROR_DATA_FAILED	((int)0x80AF0024)
 
 /* every key held (names ours) */
 #define WEB_VIEW_KEY_ALL		6
@@ -501,6 +548,14 @@ public:
 	/* the origin asks for the device's location: asked of the user when no permission is
 	   kept for it (name ours) */
 	void RequestGeolocationPermission(const string &origin);
+	/* the page's data: its start, each part kept in the receive buffer, given to the
+	   application when the buffer is full, and its end (names ours) */
+	void OnDataStart(int length, const string &mimeType);
+	void OnData(const WebIpcEvent2030 *message);
+	void OnDataEnd(bool success);
+	/* the page asks whether it may go to the URL; the listener's answer is sent back in the
+	   message (name ours) */
+	void OnNavigationRequest(WebIpcEvent2027 *message);
 	/* the key sent to the page, or queued while the page has not replied to the last one
 	   (name ours) */
 	void SendKey(int keycode, bool down);
@@ -580,17 +635,19 @@ public:
 	virtual void OnUrlChanged(const Url &url);
 	virtual void OnEvent8(int arg);
 	virtual void UpdatePageRect(const math::v2 &focus);
-	virtual void OnEvent10(int arg);
+	/* the page opens a window at the URL: the listener makes it (name ours) */
+	virtual void OnOpenWindow(const Url &url);
 	virtual void OnEvent11(int arg0, int arg1);
 	virtual void OnEvent12(int arg);
-	virtual void OnEvent13(int arg0, int arg1, int arg2);
+	virtual void OnNavigationRequest(const Url &url, int type, bool *allow);
 	virtual void OnEvent14(int arg0, int arg1, int arg2, int arg3, int arg4);
 	virtual void OnEvent15(int arg);
 	virtual void OnEvent16();
 	virtual void OnHistoryChanged(bool canGoBack, bool canGoForward);
 	virtual void OnEvent18(int arg0, int arg1);
 	virtual void OnEvent19(int arg0, int arg1);
-	virtual void OnEvent20(int arg0, int arg1);
+	/* a key the page did not take, given to the listener as a cursor direction (name ours) */
+	virtual void OnEvent20(int keycode, int down);
 
 	/* WebViewPageClient */
 	virtual void OnPageCreated(int result);
@@ -641,7 +698,7 @@ public:
 	int m_pageState;			/* 1108: WEB_VIEW_PAGE_* */
 	WebViewPageListener *m_listener;	/* 1112 */
 	WebViewLoadingPlane *m_loadingPlane;	/* 1116 */
-	void *m_appListener;			/* 1120: wutil's listener */
+	WebViewDataListener *m_appListener;	/* 1120: wutil's listener */
 	/* the messages kept until the view's update reads them */
 	vector<WebIpcMessage *> m_ipcData;	/* 1124 */
 	int m_reserved1140;

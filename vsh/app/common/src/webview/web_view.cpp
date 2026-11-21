@@ -50,7 +50,7 @@ WebViewLoadingPlane::WebViewLoadingPlane(Widget *parent) : Plane(parent, NULL)
 
 WebView::WebView(Widget *parent, CreateParam *param)
 	: ScrollView(parent, param), m_receiveBuffer(NULL), m_viewId(-1), m_pageState(0),
-	  m_listener(NULL), m_loadingPlane(NULL), m_appListener(ScePafWidget_E638AA1F()),
+	  m_listener(NULL), m_loadingPlane(NULL), m_appListener((WebViewDataListener *)ScePafWidget_E638AA1F()),
 	  m_ipcDataLock("SceWebViewWebIpcData", 0), m_surfacePool(NULL),
 	  m_surfaceWidth(0), m_ime(NULL), m_renderTarget(NULL), m_geolocationEnabled(false),
 	  m_cursorType(0), m_geolocation(NULL), m_loadProgress(0), m_loadState(1),
@@ -1057,6 +1057,111 @@ void WebView::OnEvent8(int arg)
 		m_listener->OnEvent8(this, arg);
 }
 
+void WebView::UpdatePageRect(const math::v2 &focus)
+{
+	math::v2 box = m_view_box_size;
+	math::v2 origin = ((box - math::v2(GetSize(0)->getImpl().getXY())) * 0.5f +
+		math::v2(m_padding.getImpl().getXY())) * math::v2(1.0f, -1.0f);
+	math::v2 view = GetViewFocus() * math::v2(1.0f, -1.0f);
+	math::v2 viewSize = m_view_box_size;
+	float offset = view.extract_y() - origin.extract_y();
+
+	/* the page's top, moved down by as much of the top padding as the view shows */
+	if (offset < 0.0f)
+		offset = 0.0f;
+	else if (offset > m_padding.extract_y())
+		offset = m_padding.extract_y();
+	m_pageRect.set_y(offset);
+	if (m_zoomRect == math::v4(0.0f, 0.0f, 0.0f, 0.0f))
+		m_zoomRect = m_vertical_bar_margin;
+
+	math::v4 margin = m_zoomRect;
+
+	if (m_zoomed)
+		margin.set_x(margin.extract_x() - offset);
+	else
+		margin.set_x(margin.extract_x() - m_padding.extract_y());
+
+	math::rect area(math::v2(0.0f, 0.0f), viewSize);
+	float bottom = -(view + math::v2(GetSize(0)->getImpl().getXY()) * 0.5f).extract_y();
+	float top = area.bottom() - bottom;
+
+	if (top > m_padding.extract_w())
+		top = m_padding.extract_w();
+	else if (top < 0.0f)
+		top = 0.0f;
+	margin.set_y(m_zoomRect.extract_y() - m_padding.extract_w());
+	SetVerticalBarMargin(margin);
+
+	float layoutTop;
+
+	if (top == 0.0f) {
+		m_pageRect.set_w(0.0f);
+		layoutTop = m_pageRect.extract_y() - m_padding.extract_y() - m_zoomX;
+	} else {
+		layoutTop = top + m_zoomY;
+		m_pageRect.set_w(layoutTop);
+	}
+	if (m_env != NULL) {
+		graph::Surface *screen = m_env->m_screen->m_surface.get();
+		math::rect layout(math::v2(0.0f, layoutTop),
+			math::v2((float)screen->GetWidth(), (float)screen->GetHeight()));
+
+		if (m_layout_rect == NULL)
+			m_layout_rect = new math::rect();
+		*m_layout_rect = layout;
+	}
+	if (m_listener != NULL && m_loadState != 5) {
+		m_listener->OnPagePos(this, math::v2(m_pageRect.getImpl().getXY()));
+		m_listener->OnPageTop(this, top);
+	}
+}
+
+void WebView::OnOpenWindow(const Url &url)
+{
+	if (m_listener != NULL) {
+		WebView *window = NULL;
+		bool handled = false;
+
+		m_listener->OnCreateWindow(this, url, 0, 0, &window, &handled);
+	}
+}
+
+void WebView::OnEvent11(int arg0, int arg1)
+{
+	if (m_listener != NULL)
+		m_listener->OnEvent11(this, arg0, arg1);
+}
+
+void WebView::OnEvent12(int arg)
+{
+	if (m_listener != NULL)
+		m_listener->OnEvent12(this, arg);
+}
+
+void WebView::OnNavigationRequest(const Url &url, int type, bool *allow)
+{
+	if (m_listener != NULL)
+		m_listener->OnNavigationRequest(this, url, type, allow);
+}
+
+void WebView::OnEvent14(int arg0, int arg1, int arg2, int arg3, int arg4)
+{
+	if (m_listener == NULL)
+		return;
+
+	Widget *cursor = m_cursorPlane;
+
+	m_cursorHidden = true;
+	if (cursor != NULL) {
+		cursor->m_transition_complete = false;
+		cursor->m_transition = 0xff;
+		cursor->DoTransitionReverse_core(0.0f, true);
+		ScePafWidget_4588699E(cursor, NULL, 2, 0.0f, NULL);
+	}
+	m_listener->OnEvent14(this, arg0, arg1, arg3, arg4);
+}
+
 void WebView::OnCreateWindow(const WebIpcCreatePageWithView *message)
 {
 	if (message == NULL) {
@@ -1125,6 +1230,63 @@ void WebView::OnCreateWindow(const WebIpcCreatePageWithView *message)
 /* the cursor moved by the step, kept in the view (less the IME's height where it pads the view,
    with ime): where it would leave the view, the focus moves by the step instead, and with
    scroll the view follows it */
+void WebView::OnEvent15(int arg)
+{
+	if (m_listener != NULL)
+		m_listener->OnEvent15(this, arg);
+}
+
+void WebView::OnEvent16()
+{
+	if (m_listener != NULL)
+		m_listener->OnEvent16(this);
+}
+
+void WebView::OnHistoryChanged(bool canGoBack, bool canGoForward)
+{
+	if (m_canGoBack == canGoBack && m_canGoForward == canGoForward)
+		return;
+
+	m_canGoBack = canGoBack;
+	m_canGoForward = canGoForward;
+	if (m_listener != NULL)
+		m_listener->OnHistoryChanged(this, canGoBack, canGoForward);
+}
+
+void WebView::OnEvent18(int arg0, int arg1)
+{
+	if (m_listener != NULL)
+		m_listener->OnEvent18(this, arg0, arg1);
+}
+
+void WebView::OnEvent19(int arg0, int arg1)
+{
+	if (m_listener != NULL)
+		m_listener->OnImeClosed(this, arg0, arg1);
+}
+
+void WebView::OnEvent20(int keycode, int down)
+{
+	int direction = 0;
+
+	switch (keycode) {
+	case 54:
+		direction = 2;
+		break;
+	case 64:
+		direction = 4;
+		break;
+	case 74:
+		direction = 8;
+		break;
+	case 81:
+		direction = 1;
+		break;
+	}
+	if (m_listener != NULL)
+		m_listener->OnCursorKey(this, direction, down == 0);
+}
+
 math::v2 WebView::MoveCursorInView(const math::v2 &step, bool ime, bool scroll)
 {
 	math::v2 focus = GetViewFocusTarget();
@@ -1231,6 +1393,117 @@ void WebView::UpdateViewport()
 		m_zoomAnims.clear();
 		UpdateViewport();
 	}
+}
+
+void WebView::OnPartsLayoutUpdated(bool is_dirty)
+{
+	if (is_dirty || m_imeOpen) {
+		if (m_loadingPlane != NULL && !m_cursorEnabled)
+			m_loadingPlane->Hide();
+		UpdateViewport();
+	}
+	ScrollViewBase::OnPartsLayoutUpdated(is_dirty);
+}
+
+void WebView::OnDataEnd(bool success)
+{
+	if (m_appListener == NULL)
+		return;
+
+	if (success) {
+		Buffer *buffer = m_receiveBuffer;
+
+		if (buffer != NULL && buffer->m_length > 0) {
+			WebViewDataEvent event(WebViewDataEvent::TYPE_DATA);
+
+			event.m_data = buffer->m_data;
+			event.m_size = buffer->m_length;
+			m_appListener->OnData(event, this);
+
+			buffer = m_receiveBuffer;
+			sce_paf_memset(buffer->m_data, 0, buffer->m_size);
+			buffer->m_length = 0;
+		}
+	}
+
+	WebViewDataEvent end(WebViewDataEvent::TYPE_END);
+
+	end.m_result = success ? 0 : WEB_VIEW_ERROR_DATA_FAILED;
+	m_appListener->OnData(end, this);
+	if (m_receiveBuffer != NULL)
+		delete m_receiveBuffer;
+	m_receiveBuffer = NULL;
+}
+
+void WebView::OnData(const WebIpcEvent2030 *message)
+{
+	Buffer *buffer = m_receiveBuffer;
+
+	if (buffer == NULL || message == NULL)
+		return;
+
+	int size = message->m_dataSize;
+	bool copied = false;
+
+	/* the part kept, and the buffer given to the application once it is full; a part that
+	   does not fit goes into the emptied buffer */
+	if (buffer->m_length + size <= buffer->m_size) {
+		sce_paf_memcpy(buffer->m_data + buffer->m_length, message->m_data, size);
+		buffer->m_length += size;
+		buffer = m_receiveBuffer;
+		copied = true;
+		if (buffer->m_size != buffer->m_length)
+			return;
+	}
+	if (m_appListener != NULL) {
+		WebViewDataEvent event(WebViewDataEvent::TYPE_DATA);
+
+		event.m_data = buffer->m_data;
+		event.m_size = buffer->m_length;
+		m_appListener->OnData(event, this);
+
+		buffer = m_receiveBuffer;
+		sce_paf_memset(buffer->m_data, 0, buffer->m_size);
+		buffer->m_length = 0;
+	}
+	if (!copied) {
+		buffer = m_receiveBuffer;
+		size = message->m_dataSize;
+		if (buffer->m_length + size <= buffer->m_size) {
+			sce_paf_memcpy(buffer->m_data + buffer->m_length, message->m_data, size);
+			buffer->m_length += size;
+		}
+	}
+}
+
+void WebView::OnDataStart(int length, const string &mimeType)
+{
+	if (m_appListener == NULL)
+		return;
+
+	WebViewDataEvent event(WebViewDataEvent::TYPE_START);
+
+	event.m_mimeType = mimeType;
+	event.m_length = length;
+	m_appListener->OnData(event, this);
+}
+
+void WebView::OnNavigationRequest(WebIpcEvent2027 *message)
+{
+	if (message == NULL) {
+		WebIpcEvent2027 reply(string(), 0);
+
+		WebIpc::GetInstance()->Post(&reply, m_viewId);
+		return;
+	}
+
+	Url url(string(message->m_text.c_str()));
+	bool allow = true;
+
+	if (m_listener != NULL)
+		m_listener->OnNavigationRequest(this, url, message->m_int, &allow);
+	message->m_bool = allow;
+	WebIpc::GetInstance()->Post(message, m_viewId);
 }
 
 void WebView::RequestGeolocationPermission(const string &origin)

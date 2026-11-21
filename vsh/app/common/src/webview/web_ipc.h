@@ -593,6 +593,8 @@ public:
 class WebIpcEvent2027 : public WebIpcMessage {	/* 0x81025580 */
 public:
 	WebIpcEvent2027(const WebIpcPacket *packet);
+	/* the empty reply (0x8100f860) */
+	WebIpcEvent2027(const string &text, int value);
 	virtual ~WebIpcEvent2027()
 	{
 	}
