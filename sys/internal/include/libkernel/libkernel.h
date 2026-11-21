@@ -135,6 +135,7 @@ SceUID sceKernelCreateMsgPipeWithLR(const char *name, SceUInt32 type, SceUInt32 
 
 /* the system time, in microseconds */
 int sceKernelGetSystemTime(SceKernelSysClock *clock);
+SceInt64 sceKernelGetSystemTimeWide(void);		/* a syscall, no SDK prototype */
 
 /*
  * A PSP saved data's MAC, computed by GcAuthMgr (save_context.c): the context set up for a

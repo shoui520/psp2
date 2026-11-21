@@ -11,6 +11,8 @@
 #include <file/file.h>
 #include <thread/thread.h>
 
+#include "../mtp/mtpr2/mtpr2.h"
+
 #define MTP_HTTP_FILE_TYPE		257	/* PLACEHOLDER names */
 #define MTP_HTTP_FILE_CAPABILITY	87
 
@@ -23,24 +25,6 @@ struct MtpHttpFileOpenArg : public paf::File::OpenArg {
 	int bufferSize;
 	int reserved2;
 	SceUInt32 options[3];		/* PLACEHOLDER: kept as they are */
-};
-
-/* what the MTP connection is asked for: the open arguments it keeps */
-struct MtpHttpRequest {
-	const char *url;
-	int reserved;
-	SceInt64 offset;
-	int bufferSize;
-	int reserved2;
-	SceUInt32 options[3];
-	int reserved3;
-};
-
-/* the file the MTP connection gives */
-struct MtpHttpFileInfo {
-	SceUInt32 size;
-	SceUInt32 time;			/* its date, an RTC tick */
-	SceUInt32 kind;			/* 1 or 2, as MtpHttpFileOpenArg's */
 };
 
 /* the file's states */
@@ -81,9 +65,9 @@ public:
 
 	int m_state;			/* MtpHttpFileState */
 	paf::thread::RMutex m_lock;
-	MtpHttpRequest m_request;
-	int m_client;			/* the MTP connection's request, -1 none */
-	MtpHttpFileInfo m_info;
+	MTPR2Args m_request;
+	int m_client;			/* the download's file handle, -1 none */
+	MTPR2FileAttributes m_info;
 	SceUInt32 m_offset;		/* where the next read starts */
 	int m_error;			/* the MTP error Open mapped, 0 none */
 	bool m_aborted;
@@ -93,11 +77,5 @@ private:
 	int fetchInfo(void);
 };
 
-/* the MTP connection's (system_update_mtp's) */
-int Bgdl_8113566C(const MtpHttpRequest *request, int *client);
-int Bgdl_8113599A(int client, MtpHttpFileInfo *info);
-int Bgdl_81135AA6(int client, void *reserved);
-int Bgdl_81135B6C(int client, void *buf, size_t nbyte, SceInt64 offset, int *read);
-int Bgdl_81135C6A(void);
 
 #endif

@@ -210,6 +210,14 @@ psp2_module(vs0_vsh_shell_shell KIND user COMPILER snc PARTIAL SOURCES
 	${PSP2_SRC}/vsh/app/common/src/system_update/system_update_registry.cpp
 	${PSP2_SRC}/vsh/app/common/src/system_update/system_update_updatelistprocessor.cpp
 	${PSP2_SRC}/vsh/app/common/src/system_update/system_update_mtphttpfile.cpp
+	${PSP2_SRC}/vsh/app/common/src/mtp/mtpr2/mtpr2.cc
+	${PSP2_SRC}/vsh/app/common/src/mtp/mtpr2/CCondvar.cc
+	${PSP2_SRC}/vsh/app/common/src/mtp/mtpr2/Daemon.cc
+	${PSP2_SRC}/vsh/app/common/src/mtp/mtpr2/FileBuf.cc
+	${PSP2_SRC}/vsh/app/common/src/mtp/mtpr2/FileHandleTable.cc
+	${PSP2_SRC}/vsh/app/common/src/mtp/mtpr2/MtpResponderHostFs.cc
+	${PSP2_SRC}/vsh/app/common/src/mtp/mtpr2/MtpResponderProto2.cc
+	${PSP2_SRC}/vsh/app/common/src/mtp/mtpr2/RingBuf.cc
 	shell.c
 )
 target_include_directories(vs0_vsh_shell_shell PRIVATE "${PSP2_SRC}/vsh/paf/include"

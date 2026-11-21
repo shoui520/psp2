@@ -78,7 +78,7 @@ inline int MtpHttpFile::connect(void)
 	if (m_state == MTP_HTTP_FILE_OPENED)
 		return SCE_PAF_ERROR_FILE_NOT_BUSY;
 
-	int ret = Bgdl_8113566C(&m_request, &m_client);
+	int ret = MTPR2StartDownloadStep1(&m_request, (unsigned int *)&m_client);
 
 	if (ret < 0)
 		return ret;
@@ -95,7 +95,7 @@ inline int MtpHttpFile::fetchInfo(void)
 		return SCE_PAF_ERROR_FILE_NOT_BUSY;
 	}
 
-	int ret = Bgdl_8113599A(m_client, &m_info);
+	int ret = MTPR2StartDownloadStep2(m_client, &m_info);
 
 	if (ret < 0) {
 		m_lock.Unlock();
@@ -116,10 +116,10 @@ int MtpHttpFile::Bgdl_81134E8A(const MtpHttpFileOpenArg *param)
 	}
 	m_request.url = param->url;
 	m_request.offset = param->offset;
-	m_request.bufferSize = param->bufferSize;
-	m_request.options[0] = param->options[0];
-	m_request.options[1] = param->options[1];
-	m_request.options[2] = param->options[2];
+	m_request.ringBufSize = param->bufferSize;
+	m_request.optionFlags = param->options[0];
+	m_request.optionType = param->options[1];
+	m_request.optionValue = param->options[2];
 
 	int ret = connect();
 
@@ -179,7 +179,7 @@ int32_t MtpHttpFile::OpenAsync(const OpenArg *param)
 int32_t MtpHttpFile::Close()
 {
 	Abort();
-	Bgdl_81135AA6(m_client, NULL);
+	MTPR2EndDownload(m_client, NULL);
 	m_lock.Lock();
 	if (IsOpened() != false) {
 		m_state = MTP_HTTP_FILE_CLOSED;
@@ -207,7 +207,7 @@ bool MtpHttpFile::IsEof()
 
 int32_t MtpHttpFile::Abort()
 {
-	Bgdl_81135C6A();
+	MTPR2AbortDownload();
 	m_aborted = true;
 	return 0;
 }
@@ -234,7 +234,7 @@ int32_t MtpHttpFile::Read(void *buf, size_t nbyte)
 	do {
 		n = 0;
 
-		int ret = Bgdl_81135B6C(m_client, (char *)buf + done, nbyte - done, m_offset, &n);
+		int ret = MTPR2Read(m_client, (char *)buf + done, nbyte - done, m_offset, (unsigned int *)&n);
 
 		if (ret < 0) {
 			m_lock.Unlock();
@@ -286,10 +286,10 @@ int64_t MtpHttpFile::Seek(int64_t offset, int32_t whence)
 		return SCE_PAF_ERROR_FILE_INVALID_ARGUMENT;
 	}
 	if (pos != m_offset) {
-		int ret = Bgdl_81135C6A();
+		int ret = MTPR2AbortDownload();
 
 		if ((ret < 0 && ret != MTP_ERROR_NOT_STARTED) ||
-		    (ret = Bgdl_81135AA6(m_client, NULL)) < 0) {
+		    (ret = MTPR2EndDownload(m_client, NULL)) < 0) {
 			m_lock.Unlock();
 			return ret;
 		}
