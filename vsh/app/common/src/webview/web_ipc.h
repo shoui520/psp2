@@ -46,7 +46,11 @@ enum {
 	WEB_IPC_SCROLL_Y = 0x1060,
 	WEB_IPC_KEY_DOWN = 0x1040,
 	WEB_IPC_KEY_UP = 0x1041,
+	WEB_IPC_IME_PREEDIT = 0x1044,
+	WEB_IPC_IME_COMMIT = 0x1045,
+	WEB_IPC_IME_CLOSE = 0x1046,
 	WEB_IPC_REQUEST_1070 = 0x1070,
+	WEB_IPC_IME_CLEAR = 0x1073,
 	WEB_IPC_REQUEST_DATA = 0x1071,
 	WEB_IPC_LOAD_DATA = 0x1080,
 	WEB_IPC_GEOLOCATION_PERMISSION = 0x1090,
@@ -412,6 +416,43 @@ public:
 	int m_y;
 	int m_action;
 	int m_port;
+};
+
+/* the IME's text being composed with its caret (0x81025388, type 0x1044), the text it commits
+   with its caret (0x810253A0, type 0x1045), and the text it sets (0x81024960, type 0x1045;
+   names ours) */
+class WebIpcImePreedit : public WebIpcMessage {
+public:
+	WebIpcImePreedit(const string &text, int caret);
+	virtual ~WebIpcImePreedit()
+	{
+	}
+
+	virtual void Write(WebIpcPacket *packet) const;
+
+	string m_text;
+	int m_caret;
+};
+
+class WebIpcImeCommit : public WebIpcMessage {
+public:
+	WebIpcImeCommit(const string &text, int caret);
+	virtual ~WebIpcImeCommit()
+	{
+	}
+
+	virtual void Write(WebIpcPacket *packet) const;
+
+	string m_text;
+	int m_caret;
+};
+
+class WebIpcImeSetText : public WebIpcStringMessage {
+public:
+	WebIpcImeSetText(const string &text);
+	virtual ~WebIpcImeSetText()
+	{
+	}
 };
 
 /* the cursor's button pressed and released on the page at a point (0x810249A8, type 0x1032,

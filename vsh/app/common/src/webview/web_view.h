@@ -54,41 +54,43 @@ public:
 	virtual void OnPageEvent4() = 0;
 };
 
-/* the text input the page asks for (the third base); none does anything by default */
+/* the IME's events for the page's text field (the third base, given to ImeOpen; named after the
+   SCE_IME_VSH_EVENT_* and SCE_IME_EVENT_* each is called for, names ours); none does anything
+   by default */
 class WebViewInputClient {
 public:
 	virtual ~WebViewInputClient()
 	{
 	}
 
-	virtual void OnInput0()
+	virtual void OnImeUpdatePreedit(const string &text, int caret)
 	{
 	}
-	virtual void OnInput1()
+	virtual void OnImeCommit(const string &text, int caret)
 	{
 	}
-	virtual void OnInput2()
+	virtual void OnImeSetText(const string &text)
 	{
 	}
-	virtual void OnInput3()
+	virtual void OnImeBackspace()
 	{
 	}
-	virtual void OnInput4()
+	virtual void OnImeDelete()
 	{
 	}
-	virtual void OnInput5()
+	virtual void OnImeMoveCaret(int dx, int dy)
 	{
 	}
-	virtual void OnInput6()
+	virtual void OnImeClear()
 	{
 	}
-	virtual void OnInput7()
+	virtual void OnImePressEnter()
 	{
 	}
-	virtual void OnInput8()
+	virtual void OnImeOpen(int height)
 	{
 	}
-	virtual void OnInput9()
+	virtual void OnImePressClose()
 	{
 	}
 };
@@ -611,7 +613,7 @@ public:
 	int SetSetting1031(bool value);
 	int SetSetting1048(bool value);
 	int SetSetting1053(bool value);
-	/* hides the loading plane, then OnInput9 (name ours) */
+	/* hides the loading plane, then OnImePressClose (name ours) */
 	int HideLoading();
 	/* the loading plane's delay before it shows (name ours) */
 	int SetLoadingDelay(int delay);
@@ -732,6 +734,11 @@ public:
 	   (29) or a touch (65..67, 71) goes to the page; 0 moves the page's pointer, 13 and 15
 	   hide the loading plane, 25 shows it (name ours) */
 	void Touch(const math::v2 &pos, uint16_t type, uint8_t port);
+	/* the view focus for pos at the scale, moved into the view above the IME (name ours) */
+	math::v2 GetFittedFocus(const math::v2 &pos, float scale);
+	/* the page's text field zoomed into the view above the IME: fitted to it up to 1.75 and
+	   the page's largest scale, where the page may be scaled (name ours) */
+	void ZoomToIme();
 	/* the page's block of the size given zoomed to fill the view, at the scale the view
 	   allows, centred at pos (name ours) */
 	void ZoomToRect(const math::v2 &pos, const math::v2 &size);
@@ -864,16 +871,16 @@ public:
 	}
 
 	/* WebViewInputClient */
-	virtual void OnInput0();
-	virtual void OnInput1();
-	virtual void OnInput2();
-	virtual void OnInput3();
-	virtual void OnInput4();
-	virtual void OnInput5();
-	virtual void OnInput6();
-	virtual void OnInput7();
-	virtual void OnInput8();
-	virtual void OnInput9();
+	virtual void OnImeUpdatePreedit(const string &text, int caret);
+	virtual void OnImeCommit(const string &text, int caret);
+	virtual void OnImeSetText(const string &text);
+	virtual void OnImeBackspace();
+	virtual void OnImeDelete();
+	virtual void OnImeMoveCaret(int dx, int dy);
+	virtual void OnImeClear();
+	virtual void OnImePressEnter();
+	virtual void OnImeOpen(int height);
+	virtual void OnImePressClose();
 
 	/* WebViewGeolocationClient */
 	virtual void OnPosition(double latitude, double longitude, double altitude, double accuracy,

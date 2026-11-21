@@ -371,7 +371,7 @@ int WebView::HideLoading()
 {
 	if (m_loadingPlane != NULL)
 		m_loadingPlane->Hide();
-	OnInput9();
+	OnImePressClose();
 	return 0;
 }
 
@@ -2024,7 +2024,7 @@ void WebView::ShowSelect(const vector<string> &items)
 		return;
 	if (m_loadingPlane != NULL)
 		m_loadingPlane->Hide();
-	OnInput9();
+	OnImePressClose();
 
 	WebViewSelectInfo info;
 	WebViewSelectGroup group;
@@ -3094,6 +3094,161 @@ void WebView::OnGeolocationDialogResult(int result)
 	}
 	m_cursorHidden = false;
 	ShowCursor();
+}
+
+void WebView::OnImeUpdatePreedit(const string &text, int caret)
+{
+	WebIpcImePreedit message(text, caret);
+
+	WebIpc::GetInstance()->Send(&message, m_viewId);
+}
+
+void WebView::OnImeCommit(const string &text, int caret)
+{
+	WebIpcImeCommit message(text, caret);
+
+	WebIpc::GetInstance()->Send(&message, m_viewId);
+}
+
+void WebView::OnImeSetText(const string &text)
+{
+	WebIpcImeSetText message(text);
+
+	WebIpc::GetInstance()->Send(&message, m_viewId);
+}
+
+void WebView::OnImeBackspace()
+{
+	SendKey(50, true);
+	SendKey(50, false);
+}
+
+void WebView::OnImeDelete()
+{
+	SendKey(53, true);
+	SendKey(53, false);
+}
+
+/* the caret moved a step by the IME, sent as the key of the direction */
+void WebView::OnImeMoveCaret(int dx, int dy)
+{
+	int keycode;
+
+	if (dx == 1)
+		keycode = 74;
+	else if (dx == -1)
+		keycode = 64;
+	else if (dy == 1)
+		keycode = 54;
+	else if (dy == -1)
+		keycode = 81;
+	else
+		return;
+	SendKey(keycode, true);
+	SendKey(keycode, false);
+}
+
+void WebView::OnImeClear()
+{
+	WebIpcMessage message(WEB_IPC_IME_CLEAR);
+
+	WebIpc::GetInstance()->Send(&message, m_viewId);
+}
+
+void WebView::OnImePressEnter()
+{
+	SendKey(56, true);
+	SendKey(56, false);
+	CloseIme();
+}
+
+math::v2 WebView::GetFittedFocus(const math::v2 &pos, float scale)
+{
+	math::v2 focus = pos;
+	const math::v4 *size = GetSize(0);
+	math::rect focusRect(focus, math::v2(size->extract_x(), size->extract_y()));
+	math::rect viewRect(math::v2(0.0f, 0.0f), math::v2(m_view_box_size) * scale);
+
+	viewRect.set_bottom(viewRect.bottom() - m_padding.extract_w());
+	viewRect.set_bottom(viewRect.bottom() - m_ime_height);
+	return FitRectCenter(viewRect, focusRect);
+}
+
+void WebView::ZoomToIme()
+{
+	using namespace sce::Vectormath::Simd;
+
+	if (!CanZoom())
+		return;
+
+	math::v4 rect = m_imeRect;
+	math::v2 center(rect.extract_x() + rect.extract_z() * 0.5f,
+		rect.extract_y() + rect.extract_w() * 0.5f);
+	Aos::Matrix3 transform = GetViewTransform();
+	Aos::Vector3 pos3 = transform.getCol0() * center.getImpl().getX() +
+		transform.getCol1() * center.getImpl().getY() +
+		Aos::mulPerElem(transform.getCol2(), Aos::Vector3(1.0f));
+	math::v2 pos(Aos::Vector2(pos3.getX(), pos3.getY()));
+	math::v2 size = math::v2(rect.extract_z(), rect.extract_w()) *
+		(recipf(m_contentSize.getImpl().getX()) * m_view_box_size.getImpl().getX()).getAsFloat();
+	float height = GetSize(0)->extract_y() - m_ime_height;
+	float ratio = (recipf(m_contentSize.getImpl().getX()) *
+		m_view_box_size.getImpl().getX()).getAsFloat();
+	const math::v4 *viewSize = GetSize(0);
+	float scale = fminf(recipf(floatInVec(size.extract_x())) * viewSize->getImpl().getX(),
+		floatInVec(height) * recipf(floatInVec(size.extract_y()))).getAsFloat();
+
+	if (ratio * scale > 1.75f)
+		scale = 1.75f / ratio;
+	if (ratio * scale > m_maxScale)
+		scale = m_maxScale / ratio;
+	if (scale < 1.0f)
+		scale = 1.0f;
+	if (ratio > 1.75f)
+		scale = 1.0f;
+	if ((m_inputMask & 1) == 0 || !m_userScalable)
+		scale = 1.0f;
+
+	float x = GetSize(0)->extract_x() - size.extract_x() * scale;
+
+	if (x > 0.0f)
+		x = 0.0f;
+
+	math::v2 offset(x, -m_ime_height);
+	math::v2 focus = pos + offset * 0.5f * recipf(floatInVec(scale)).getAsFloat();
+
+	if (size.extract_y() > height)
+		focus.set_y(focus.extract_y() + (size.extract_y() - height) * 0.5f + 10.0f);
+
+	math::v2 fitted = GetFittedFocus(focus, scale);
+
+	m_tapScale = ratio;
+	m_scrollAnims.push_back(WebViewAnim(fitted, scale));
+}
+
+void WebView::OnImeOpen(int height)
+{
+	Widget *cursor = m_cursorPlane;
+
+	m_cursorHidden = true;
+	if (cursor != NULL) {
+		cursor->m_transition_complete = false;
+		cursor->m_transition = 0xff;
+		cursor->DoTransitionReverse_core(0.0f, true);
+		ScePafWidget_4588699E(cursor, NULL, 2, 0.0f, NULL);
+	}
+	SetImePadding(true);
+	SetImeRect(math::rect(0.0f, 0.0f, 0.0f, (float)(height - 30)));
+	ZoomToIme();
+}
+
+void WebView::OnImePressClose()
+{
+	CloseIme();
+
+	WebIpcMessage message(WEB_IPC_IME_CLOSE);
+
+	WebIpc::GetInstance()->Send(&message, m_viewId);
 }
 
 void WebView::RequestGeolocationPermission(const string &origin)
