@@ -25,11 +25,11 @@
 
 static int s_initCount;
 static ScePfsRndDriveId s_mountPoint;
-static unsigned char s_serviceSession[12];
-static unsigned char s_transferSession[12];
+static MlnServiceSession s_serviceSession;
+static MlnServiceSession s_transferSession;
 
-static MlnServiceContext s_serviceContext = { -1, s_serviceSession };
-static MlnServiceContext s_transferContext = { -1, s_transferSession };
+static MlnServiceContext s_serviceContext = { -1, &s_serviceSession };
+static MlnServiceContext s_transferContext = { -1, &s_transferSession };
 
 /*
  * The protection boxes of a track: in a 'sinf' with the scheme 'ACBC' 1.0, the 'schi' holds

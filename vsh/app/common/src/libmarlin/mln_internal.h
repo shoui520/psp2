@@ -1314,6 +1314,10 @@ typedef struct MlnEngine {
 
 void MlnEngineFree(MlnEngine *engine);
 int MlnImpl_810199E4(MlnEngine *engine);
+int MlnEngineDestroy(MlnEngine *engine);
+int MlnEngineStep(MlnEngine *engine, MlnBuffer **message, MlnApiResult **out);
+int MlnImpl_8101A360(MlnEngine *engine, MlnApiResult **out);
+int MlnImpl_8101A59C(MlnBuffer **out);
 int MlnEngineCreate(int kind, const MlnBuffer *token, const MlnBuffer *account,
 		    const MlnBuffer *secret, MlnServiceContext *context, MlnEngine **out);
 /* not written in C yet */
@@ -1327,6 +1331,11 @@ int MlnImpl_8101ACD0(MlnEngine *engine, MlnActionToken *token, MlnApiResult *res
 int MlnImpl_8101D468(const MlnBuffer *serviceId, int *exists);
 int MlnImpl_8101D408(const MlnBuffer *serviceId, MlnBuffer **config);
 int MlnImpl_8101D520(const MlnBuffer *serviceId);
+int MlnImpl_8101D29C(const MlnBuffer *serviceId, const MlnBuffer *config);
+int MlnImpl_8101D5B4(const char *text, MlnBuffer **decoded);
+int MlnImpl_81035018(unsigned int firstCount, MlnBuffer **first, unsigned int secondCount,
+		     MlnBuffer **second, MlnBuffer *third, MlnBuffer *fourth, char **text);
+int MlnImpl_810353A8(char **text);
 int MlnImpl_8101AF30(MlnEngine *engine, MlnBuffer **message, MlnApiResult *result, int hasValue);
 int MlnImpl_8101B244(MlnEngine *engine, MlnBuffer **message, MlnApiResult *result, int hasValue);
 int MlnImpl_8101B324(MlnEngine *engine, MlnBuffer **message, MlnApiResult *result, int hasValue);
@@ -1346,5 +1355,7 @@ int MlnImpl_8101BBE4(MlnEngine *engine, MlnApiResult *result);
 int MlnImpl_8101C500(MlnEngine *engine, MlnApiResult *result);
 int MlnImpl_8101CC94(MlnEngine *engine, MlnApiResult *result);
 int MlnImpl_8101AD74(MlnEngine *engine, MlnApiResult *result, MlnBuffer **message);
+int MlnImpl_8101C1E8(MlnEngine *engine, int service, char **nodeId, char **location);
+int MlnImpl_8101CBF0(char *url, int method, MlnBuffer *body, MlnHttpRequest **out);
 
 #endif /* MLN_INTERNAL_H */

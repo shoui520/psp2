@@ -1372,3 +1372,553 @@ out:
 	MlnBufferDestroy(MLN_HEAP_SECURE, body);
 	return ret;
 }
+
+/* state 22: the remote engine's request (command 0x446), sent to the license transfer service */
+__attribute__((noinline)) int MlnImpl_8101BE94(MlnEngine *engine, MlnBuffer **message,
+					       MlnApiResult *result, int hasValue)
+{
+	MlnHttpRequest *request = NULL;
+	MlnServiceEndpoint *endpoint;
+	MlnServiceConfig *config;
+	MlnBuffer *body = NULL;
+	const char *location;
+	char *url = NULL;
+	int ret;
+
+	if (engine == NULL) {
+		ret = 7;
+		goto out;
+	}
+	if (message == NULL || result == NULL) {
+		ret = MLN_CORE_ERROR_INVALID;
+		goto out;
+	}
+	ret = MlnImpl_81018528(engine->context, *message, &body);
+	if (ret != MLN_OK)
+		goto out;
+	location = NULL;
+	config = engine->config;
+	if (config != NULL && config->licenseTransferService.items != NULL &&
+	    (endpoint = *(MlnServiceEndpoint **)config->licenseTransferService.items) != NULL)
+		location = endpoint->location;
+	url = MlnStrdup(MLN_HEAP_SECURE, location);
+	if (url == NULL) {
+		ret = MLN_ERROR_NO_MEMORY;
+		goto out;
+	}
+	ret = MlnImpl_8101CBF0(url, 2, body, &request);
+	if (ret == MLN_OK) {
+		url = NULL;
+		result->request = request;
+		request = NULL;
+		body = NULL;
+		engine->state = 24;
+	}
+out:
+	MlnFree(MLN_HEAP_SECURE, url);
+	MlnHttpRequestFree(request);
+	MlnBufferDestroy(MLN_HEAP_SECURE, body);
+	return ret;
+}
+
+/* state 23: the remote engine's reply (command 0x447), sent back; the engine is closed */
+__attribute__((noinline)) int MlnImpl_8101BFEC(MlnEngine *engine, MlnBuffer **message,
+					       MlnApiResult *result, int hasValue)
+{
+	MlnHttpRequest *request = NULL;
+	MlnBuffer *body = NULL;
+	int ret;
+
+	if (engine == NULL) {
+		ret = 7;
+		goto out;
+	}
+	if (message == NULL || result == NULL) {
+		ret = MLN_CORE_ERROR_INVALID;
+		goto out;
+	}
+	ret = MlnImpl_81018650(engine->context, *message, &body);
+	if (ret != MLN_OK)
+		goto out;
+	ret = MlnImpl_81018220(engine->context);
+	if (ret != MLN_OK)
+		goto out;
+	engine->state = 0;
+	ret = MlnImpl_8101CBF0(NULL, 2, body, &request);
+	if (ret == MLN_OK) {
+		result->request = request;
+		request = NULL;
+		body = NULL;
+		engine->state = 0;
+	}
+out:
+	MlnHttpRequestFree(request);
+	MlnBufferDestroy(MLN_HEAP_SECURE, body);
+	return ret;
+}
+
+/*
+ * State 24: the license the transfer service sent (command 0x448 with the engine's secret);
+ * the engine is closed and goes on to the next action.
+ */
+__attribute__((noinline)) int MlnImpl_8101C0F4(MlnEngine *engine, MlnBuffer **message,
+					       MlnApiResult *result, int hasValue)
+{
+	MlnBuffer *license = NULL;
+	int ret;
+
+	if (engine == NULL) {
+		ret = 7;
+		goto out;
+	}
+	if (message == NULL || result == NULL) {
+		ret = MLN_CORE_ERROR_INVALID;
+		goto out;
+	}
+	ret = MlnImpl_81018784(engine->context, engine->secret, *message, &license);
+	if (ret != MLN_OK)
+		goto out;
+	MlnBufferDestroy(MLN_HEAP_SECURE, engine->secret);
+	engine->secret = NULL;
+	ret = MlnImpl_81018220(engine->context);
+	if (ret != MLN_OK)
+		goto out;
+	engine->state = 0;
+	ret = MlnImpl_8101A960(engine, 4, license, NULL, &result->value);
+	if (ret != MLN_OK)
+		goto out;
+	license = NULL;
+	engine->state = 0;
+	engine->action++;
+	if (engine->token != NULL)
+		ret = MlnImpl_8101ABE0(engine, engine->token);
+	else
+		ret = 7;
+out:
+	MlnBufferDestroy(MLN_HEAP_SECURE, license);
+	return ret;
+}
+
+/* the first endpoint of the license service or of the registration service */
+static inline __attribute__((always_inline)) MlnServiceEndpoint *
+MlnEngineEndpoint(MlnEngine *engine, int license)
+{
+	MlnServiceConfig *config = engine->config;
+	MlnConfigList *list;
+
+	if (config == NULL)
+		return NULL;
+	list = license ? &config->licenseService : &config->registrationService;
+	if (list->items == NULL)
+		return NULL;
+	return *(MlnServiceEndpoint **)list->items;
+}
+
+/*
+ * Opens the engine's context on a service (2 node, 3 link, 4 license, 5 deregistration):
+ * its keys and first role from the service's endpoint, the engine's account and secret for a
+ * link. Gives the endpoint's node and location.
+ */
+__attribute__((noinline)) int MlnImpl_8101C1E8(MlnEngine *engine, int service, char **nodeId,
+					       char **location)
+{
+	MlnBuffer *account, *secret, *encryptionKey, *signingKey, *role;
+	MlnServiceEndpoint *endpoint;
+	MlnBufferPairList *extensions;
+	char *node = NULL, *url = NULL, *where;
+	int license, ret;
+
+	if (engine == NULL || engine->context == NULL || nodeId == NULL) {
+		ret = 7;
+		goto out;
+	}
+	switch (service) {
+	case 2:
+	case 5:
+		account = NULL;
+		secret = NULL;
+		license = 0;
+		break;
+	case 3:
+		secret = engine->secret;
+		account = engine->account;
+		license = 0;
+		break;
+	case 4:
+		account = NULL;
+		secret = NULL;
+		license = 1;
+		break;
+	default:
+		ret = 7;
+		goto out;
+	}
+	endpoint = MlnEngineEndpoint(engine, license);
+	if (endpoint != NULL) {
+		encryptionKey = endpoint->requestEncryptionKey;
+		signingKey = endpoint->responseSigningKey;
+		role = endpoint->roles.items != NULL ? *(MlnBuffer **)endpoint->roles.items : NULL;
+	} else {
+		encryptionKey = NULL;
+		signingKey = NULL;
+		role = NULL;
+	}
+	extensions = engine->extensions;
+	ret = MlnBufferToString(MLN_HEAP_SECURE, endpoint != NULL ? endpoint->nodeId : NULL, &node);
+	if (ret != MLN_OK) {
+		if (ret != MLN_ERROR_NO_MEMORY)
+			ret = MLN_ENGINE_ERROR_FORMAT;
+		goto out;
+	}
+	endpoint = MlnEngineEndpoint(engine, license);
+	where = endpoint != NULL ? endpoint->location : NULL;
+	ret = MlnImpl_8101503C(engine->context, service, extensions);
+	if (ret != MLN_OK)
+		goto out;
+	if (encryptionKey == NULL || signingKey == NULL || role == NULL) {
+		ret = MLN_ENGINE_ERROR_FORMAT;
+		goto out;
+	}
+	if (secret != NULL) {
+		if (account == NULL) {
+			ret = MLN_CORE_ERROR_INVALID;
+			goto out;
+		}
+		ret = MlnImpl_81015EA4(engine->context, account, secret);
+		if (ret != MLN_OK)
+			goto out;
+	}
+	ret = MlnImpl_81015DDC(engine->context, encryptionKey->size, encryptionKey->data,
+			       signingKey->size, signingKey->data, role->size, role->data);
+	if (ret != MLN_OK)
+		goto out;
+	if (where == NULL) {
+		ret = MLN_ENGINE_ERROR_FORMAT;
+		goto out;
+	}
+	url = MlnStrdup(MLN_HEAP_SECURE, where);
+	if (url == NULL) {
+		ret = MLN_ERROR_NO_MEMORY;
+		goto out;
+	}
+	*nodeId = node;
+	node = NULL;
+	*location = url;
+	url = NULL;
+out:
+	MlnFree(MLN_HEAP_SECURE, url);
+	MlnFree(MLN_HEAP_SECURE, node);
+	return ret;
+}
+
+/* state 18: the license acquisition (a business token for the action's content) */
+__attribute__((noinline)) int MlnImpl_8101C500(MlnEngine *engine, MlnApiResult *result)
+{
+	MlnHttpRequest *request = NULL;
+	MlnBuffer *body = NULL;
+	MlnAction *action;
+	char *node = NULL, *url = NULL;
+	int ret;
+
+	if (engine == NULL) {
+		ret = 7;
+		goto free;
+	}
+	if (engine->token == NULL || engine->token->actions == NULL || engine->context == NULL ||
+	    result == NULL) {
+		ret = 7;
+		goto close;
+	}
+	action = engine->token->actions[engine->action];
+	if (action == NULL || action->businessToken == NULL) {
+		ret = 7;
+		goto close;
+	}
+	ret = MlnImpl_8101C1E8(engine, 4, &node, &url);
+	if (ret != MLN_OK)
+		goto close;
+	ret = MlnImpl_81015798(engine->context, action->businessToken->size,
+			       action->businessToken->data, node, action->uid[1], &body);
+	if (ret != MLN_OK)
+		goto close;
+	ret = MlnImpl_8101CBF0(url, MLN_HTTP_POST, body, &request);
+	if (ret != MLN_OK)
+		goto close;
+	result->request = request;
+	request = NULL;
+	body = NULL;
+	url = NULL;
+	engine->state = 19;
+	goto free;
+close:
+	MlnImpl_81015168(engine->context);
+free:
+	MlnFree(MLN_HEAP_SECURE, url);
+	MlnFree(MLN_HEAP_SECURE, node);
+	MlnBufferDestroy(MLN_HEAP_SECURE, body);
+	MlnHttpRequestFree(request);
+	return ret;
+}
+
+/* state 15: the deregistration of the action's link (its two ends) */
+__attribute__((noinline)) int MlnImpl_8101C6B4(MlnEngine *engine, MlnApiResult *result)
+{
+	MlnHttpRequest *request = NULL;
+	MlnBuffer *body = NULL;
+	MlnAction *action;
+	char *node = NULL, *url = NULL;
+	int ret;
+
+	if (engine == NULL) {
+		ret = 7;
+		goto free;
+	}
+	if (engine->token == NULL || engine->token->actions == NULL || engine->context == NULL ||
+	    result == NULL) {
+		ret = 7;
+		goto close;
+	}
+	action = engine->token->actions[engine->action];
+	if (action == NULL || action->businessToken == NULL || action->uid[1] == NULL) {
+		ret = 7;
+		goto close;
+	}
+	ret = MlnImpl_8101C1E8(engine, 5, &node, &url);
+	if (ret != MLN_OK)
+		goto close;
+	ret = MlnImpl_81015A24(engine->context, action->businessToken->size,
+			       action->businessToken->data, node, NULL, action->uid[0],
+			       action->uid[1], &body);
+	if (ret != MLN_OK)
+		goto close;
+	ret = MlnImpl_8101CBF0(url, MLN_HTTP_POST, body, &request);
+	if (ret != MLN_OK)
+		goto close;
+	result->request = request;
+	request = NULL;
+	body = NULL;
+	url = NULL;
+	engine->state = 16;
+	goto free;
+close:
+	MlnImpl_81015168(engine->context);
+free:
+	MlnFree(MLN_HEAP_SECURE, url);
+	MlnFree(MLN_HEAP_SECURE, node);
+	MlnBufferDestroy(MLN_HEAP_SECURE, body);
+	MlnHttpRequestFree(request);
+	return ret;
+}
+
+/* state 12: the link acquisition, between the action's two ends */
+__attribute__((noinline)) int MlnImpl_8101C880(MlnEngine *engine, MlnApiResult *result)
+{
+	MlnHttpRequest *request = NULL;
+	MlnBuffer *body = NULL;
+	MlnAction *action;
+	char *node = NULL, *url = NULL;
+	int ret;
+
+	if (engine == NULL) {
+		ret = 7;
+		goto free;
+	}
+	if (engine->token == NULL || engine->token->actions == NULL || engine->context == NULL ||
+	    result == NULL) {
+		ret = 7;
+		goto close;
+	}
+	action = engine->token->actions[engine->action];
+	if (action == NULL || action->businessToken == NULL || action->uid[1] == NULL) {
+		ret = 7;
+		goto close;
+	}
+	ret = MlnImpl_8101C1E8(engine, 3, &node, &url);
+	if (ret != MLN_OK)
+		goto close;
+	ret = MlnImpl_8101549C(engine->context, action->businessToken->size,
+			       action->businessToken->data, node, action->uid[0], action->uid[1],
+			       &body);
+	if (ret != MLN_OK)
+		goto close;
+	ret = MlnImpl_8101CBF0(url, MLN_HTTP_POST, body, &request);
+	if (ret != MLN_OK)
+		goto close;
+	result->request = request;
+	request = NULL;
+	body = NULL;
+	url = NULL;
+	engine->state = 13;
+	goto free;
+close:
+	MlnImpl_81015168(engine->context);
+free:
+	MlnFree(MLN_HEAP_SECURE, url);
+	MlnFree(MLN_HEAP_SECURE, node);
+	MlnBufferDestroy(MLN_HEAP_SECURE, body);
+	MlnHttpRequestFree(request);
+	return ret;
+}
+
+/* state 10: the node acquisition */
+__attribute__((noinline)) int MlnImpl_8101CA44(MlnEngine *engine, MlnApiResult *result)
+{
+	MlnHttpRequest *request = NULL;
+	MlnBuffer *body = NULL;
+	MlnAction *action;
+	char *node = NULL, *url = NULL;
+	int ret;
+
+	if (engine == NULL) {
+		ret = 7;
+		goto free;
+	}
+	if (engine->token == NULL || engine->token->actions == NULL || engine->context == NULL ||
+	    result == NULL) {
+		ret = 7;
+		goto close;
+	}
+	action = engine->token->actions[engine->action];
+	if (action == NULL || action->businessToken == NULL) {
+		ret = 7;
+		goto close;
+	}
+	ret = MlnImpl_8101C1E8(engine, 2, &node, &url);
+	if (ret != MLN_OK)
+		goto close;
+	ret = MlnImpl_8101521C(engine->context, action->businessToken->size,
+			       action->businessToken->data, node, &body);
+	if (ret != MLN_OK)
+		goto close;
+	ret = MlnImpl_8101CBF0(url, MLN_HTTP_POST, body, &request);
+	if (ret != MLN_OK)
+		goto close;
+	result->request = request;
+	request = NULL;
+	body = NULL;
+	url = NULL;
+	engine->state = 11;
+	goto free;
+close:
+	MlnImpl_81015168(engine->context);
+free:
+	MlnFree(MLN_HEAP_SECURE, url);
+	MlnFree(MLN_HEAP_SECURE, node);
+	MlnBufferDestroy(MLN_HEAP_SECURE, body);
+	MlnHttpRequestFree(request);
+	return ret;
+}
+
+/* a request to send: the method, the url and body it takes, the body's SOAP headers */
+int MlnImpl_8101CBF0(char *url, int method, MlnBuffer *body, MlnHttpRequest **out)
+{
+	MlnHttpHeaders headers = { 0, NULL };
+	MlnHttpRequest *request;
+	int ret;
+
+	if (out == NULL) {
+		request = NULL;
+		ret = 7;
+		goto out;
+	}
+	request = MlnAllocate(MLN_HEAP_SECURE, sizeof(*request));
+	if (request == NULL) {
+		ret = MLN_ERROR_NO_MEMORY;
+		goto out;
+	}
+	MlnMemset(request, 0, sizeof(*request));
+	ret = MlnImpl_8101A63C(body, &headers);
+	if (ret != MLN_OK)
+		goto out;
+	request->method = method;
+	request->url = url;
+	request->body = body;
+	request->headers = headers;
+	*out = request;
+	request = NULL;
+out:
+	MlnFree(MLN_HEAP_SECURE, request);
+	return ret;
+}
+
+/*
+ * State 21: the license transfer, to the transfer service's endpoint with its keys and the
+ * engine's secret.
+ */
+__attribute__((noinline)) int MlnImpl_8101CC94(MlnEngine *engine, MlnApiResult *result)
+{
+	MlnBuffer *body = NULL, *encryptionKey = NULL, *signingKey = NULL;
+	const MlnBuffer *nodeId, *role;
+	MlnHttpRequest *request = NULL;
+	MlnServiceEndpoint *endpoint;
+	MlnServiceConfig *config;
+	char *url = NULL;
+	int ret;
+
+	config = engine->config;
+	if (config == NULL || config->licenseTransferService.count == 0 || engine->state != 21) {
+		ret = MLN_CORE_ERROR_INVALID;
+		goto out;
+	}
+	endpoint = config->licenseTransferService.items != NULL ?
+		   *(MlnServiceEndpoint **)config->licenseTransferService.items : NULL;
+	if (endpoint != NULL) {
+		nodeId = endpoint->nodeId;
+		role = endpoint->roles.items != NULL ? *(MlnBuffer **)endpoint->roles.items : NULL;
+	} else {
+		nodeId = NULL;
+		role = NULL;
+	}
+	url = MlnStrdup(MLN_HEAP_SECURE, endpoint != NULL ? endpoint->location : NULL);
+	if (url == NULL) {
+		ret = MLN_ERROR_NO_MEMORY;
+		goto out;
+	}
+	config = engine->config;
+	if (config == NULL || config->licenseTransferService.items == NULL ||
+	    (endpoint = *(MlnServiceEndpoint **)config->licenseTransferService.items) == NULL ||
+	    endpoint->requestEncryptionKey == NULL) {
+		ret = 7;
+		goto out;
+	}
+	encryptionKey = MlnBufferCreate(MLN_HEAP_SECURE, endpoint->requestEncryptionKey->size,
+					endpoint->requestEncryptionKey->data);
+	if (encryptionKey == NULL) {
+		ret = MLN_ERROR_NO_MEMORY;
+		goto out;
+	}
+	config = engine->config;
+	if (config == NULL || config->licenseTransferService.items == NULL ||
+	    (endpoint = *(MlnServiceEndpoint **)config->licenseTransferService.items) == NULL ||
+	    endpoint->responseSigningKey == NULL) {
+		ret = 7;
+		goto out;
+	}
+	signingKey = MlnBufferCreate(MLN_HEAP_SECURE, endpoint->responseSigningKey->size,
+				     endpoint->responseSigningKey->data);
+	if (signingKey == NULL) {
+		ret = MLN_ERROR_NO_MEMORY;
+		goto out;
+	}
+	ret = MlnImpl_81017D1C(engine->context, (void **)&engine->extensions, 1, &encryptionKey, 1,
+			       &signingKey, role, nodeId);
+	if (ret != MLN_OK)
+		goto out;
+	ret = MlnImpl_810182D0(engine->context, engine->secret, &body);
+	if (ret != MLN_OK)
+		goto out;
+	ret = MlnImpl_8101CBF0(url, MLN_HTTP_POST, body, &request);
+	if (ret != MLN_OK)
+		goto out;
+	body = NULL;
+	url = NULL;
+	result->request = request;
+	request = NULL;
+	engine->state = 22;
+out:
+	MlnFree(MLN_HEAP_SECURE, encryptionKey);
+	MlnFree(MLN_HEAP_SECURE, signingKey);
+	MlnFree(MLN_HEAP_SECURE, url);
+	MlnBufferDestroy(MLN_HEAP_SECURE, body);
+	return ret;
+}
