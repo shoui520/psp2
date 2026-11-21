@@ -368,11 +368,6 @@ out:
 	return ret;
 }
 
-/* the file layer's errors */
-#define MLN_FILE_ERROR_SPACE	2
-#define MLN_FILE_ERROR_INVALID	5
-#define MLN_FILE_ERROR_NOT_FOUND	0x11060002
-
 
 /*
  * A state slot's file: <root>/sdata/<kind>0000000/<kind>000000<index>.DAT, the kind a letter

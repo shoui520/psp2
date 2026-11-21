@@ -312,7 +312,7 @@ typedef struct MlnTransport {
 /* which engine an object runs on: the local one, or a remote client */
 typedef struct MlnApiKind {
 	int type;
-	int remote;
+	MlnServiceSession *remote;	/* the remote client's transport, NULL for the local engine */
 	MlnBuffer *address;
 } MlnApiKind;
 
@@ -339,7 +339,7 @@ typedef struct MlnApiObject {
 	int status;		/* the last step's failure, passed to the next */
 	void *data;
 	struct MlnEngine *engine;
-	void *client;
+	struct MlnClient *client;
 	void *session;
 } MlnApiObject;
 
@@ -1156,6 +1156,12 @@ int MlnImpl_81026F0C(int heap, const MlnServiceArg *value, MlnBuffer **out);
 int MlnImpl_81026E20(int heap, unsigned int count, MlnServiceArgs **out);
 int MlnImpl_810191C4(int ret);
 
+/* the file layer's errors: the platform's (0x11060001-0x11060008) and the results they give */
+#define MLN_FILE_ERROR_SPACE	2
+#define MLN_FILE_ERROR_INVALID	5
+#define MLN_FILE_ERROR_PLATFORM	0x11060001
+#define MLN_FILE_ERROR_NOT_FOUND	0x11060002
+
 typedef struct MlnFileInfo {
 	unsigned char type;
 	unsigned int size;
@@ -1171,6 +1177,7 @@ int MlnImpl_81025C1C(int area, void *file, unsigned int size, unsigned int *read
 int MlnImpl_81025BE8(int area, void *file);
 int MlnImpl_8102590C(int area, const char *path);
 int MlnImpl_81025F5C(int area, void *file, unsigned int size, const void *data);
+char MlnImpl_81026430(void);
 
 typedef struct MlnSha1Context {
 	unsigned int words[24];
@@ -1192,22 +1199,100 @@ int MlnImpl_8101F954(void *session, MlnBuffer *message, int status, void *data,
 		     MlnApiRequest *request);
 int MlnImpl_8101F1F0(void *client, void *a1, MlnBuffer **found);
 int MlnImpl_8101F0B8(void *client, void *a1, void *a2);
-int MlnImpl_8101DFA0(void *client, void *a1, void *a2, int *first, int *second);
+int MlnImpl_8101DFA0(struct MlnClient *client, void *a1, void *a2, int *first, int *second);
 int MlnImpl_8101EC08(void *client, unsigned int *count, MlnBuffer ***items);
-int MlnImpl_8101E118(void *client, MlnBuffer *a1, MlnBuffer *a2, unsigned int *count,
+int MlnImpl_8101E118(struct MlnClient *client, MlnBuffer *a1, MlnBuffer *a2, unsigned int *count,
 		     MlnBuffer ***items);
 int MlnImpl_8101F4B0(void *client, void **a1);
 int MlnImpl_8101F5F4(void *client, MlnBuffer *a1);
 int MlnImpl_8101F724(void *client, MlnBuffer *token, MlnBuffer **found);
 int MlnImpl_8102045C(void *session);
-int MlnImpl_8101DD24(MlnApiKind *kind, MlnBuffer *address, void **client, MlnApiVersion *version);
-int MlnImpl_8101DF70(void *client);
+int MlnImpl_8101DD24(MlnApiKind *kind, MlnBuffer *address, struct MlnClient **client,
+		     MlnApiVersion *version);
+int MlnImpl_8101DF70(struct MlnClient *client);
 int MlnImpl_8101F870(MlnApiKind *kind, MlnBuffer *address, void **session);
 int MlnImpl_8101F92C(void *session);
-int MlnImpl_8101E628(void *client);
+int MlnImpl_8101E628(struct MlnClient *client);
 int MlnImpl_8101E658(void *client, MlnBuffer **message, MlnApiResult **result);
 int MlnImpl_8101E9EC(void *client, MlnApiResult *step, MlnBuffer **message);
-int MlnImpl_8101E380(void *client, void *a1, void *a2, void *a3, int a4);
+int MlnImpl_8101E380(struct MlnClient *client, const MlnBuffer *token, MlnBuffer *account,
+		     MlnBuffer *secret, int start);
+
+/* a message of the remote client's protocol, as decoded */
+typedef struct MlnMessage {
+	int type;
+	void *payload;
+} MlnMessage;
+
+#define MLN_MESSAGE_HTTP_GET		0x402	/* the service asks for a request sent */
+#define MLN_MESSAGE_HTTP_POST		0x403
+#define MLN_MESSAGE_HTTP_BODY		0x404
+#define MLN_MESSAGE_STATUS		0x406
+#define MLN_MESSAGE_PAIR		0x505
+#define MLN_MESSAGE_PAIRS		0x507
+#define MLN_MESSAGE_VERSION		0x602
+#define MLN_MESSAGE_RESULT		0x604
+#define MLN_MESSAGE_NONE		0x1000
+
+typedef struct MlnMessageGet {
+	MlnBuffer *url;
+} MlnMessageGet;
+
+typedef struct MlnMessagePost {
+	unsigned short method;		/* 0 only */
+	MlnBuffer *url;
+	MlnBuffer *body;
+	MlnBuffer *headers;		/* "Name: value" lines, CR LF after each */
+} MlnMessagePost;
+
+typedef struct MlnMessageStatus {
+	unsigned char reserved;
+	unsigned char failed;
+	unsigned char result;		/* 1: a result to fetch */
+} MlnMessageStatus;
+
+typedef struct MlnMessageResult {
+	int status;			/* 0x101 a value, 0x10100 none or the error, 0x100 busy */
+	int error;
+	void *data;
+} MlnMessageResult;
+
+typedef struct MlnMessagePairs {
+	unsigned int count;
+	struct MlnMessagePairItem {
+		void *reserved;
+		MlnBufferPair *pair;
+	} **items;
+} MlnMessagePairs;
+
+#define MLN_RESULT_VALUE	0x101
+#define MLN_RESULT_BUSY		0x100
+#define MLN_RESULT_NONE		0x10100
+
+/* a remote client: the engine runs in another process, reached through the kind's transport */
+typedef struct MlnClient {
+	MlnApiKind *kind;
+	unsigned short build;		/* the client's build, from its version */
+	int busy;			/* an action token runs */
+	MlnBuffer *account;
+	MlnBuffer *secret;
+	MlnMessage pending;		/* the request the client asked for, MLN_MESSAGE_NONE when none */
+} MlnClient;
+
+int MlnImpl_810222A0(const MlnBuffer *address, MlnBuffer **request);
+int MlnImpl_81022A1C(MlnBuffer **request);
+int MlnImpl_81022478(void *a1, void *a2, MlnBuffer **request);
+int MlnImpl_81022570(void *a1, void *a2, MlnBuffer **request);
+int MlnImpl_81021734(int noToken, const MlnBuffer *token, MlnBuffer *account, MlnBuffer *secret,
+		     MlnBuffer **request);
+int MlnImpl_810217E4(int type, MlnBuffer **request);
+int MlnImpl_8102371C(const MlnBuffer *reply, MlnMessage *message);
+void MlnImpl_810233C4(MlnMessage *message);
+int MlnImpl_8101D5D4(MlnClient *client, MlnApiValue **value);
+int MlnImpl_8101D7C0(MlnMessage *message, MlnApiResult **out);
+int MlnImpl_8101DC14(MlnClient *client, int failed, int result, MlnApiResult **out);
+int MlnImpl_8101DCB4(MlnClient *client, const MlnMessageStatus *status);
+
 int MlnXmlParse(int heap, unsigned int size, const void *xml, MlnXmlNode **document);
 int MlnXmlFindNode(int heap, MlnXmlNode *node, const char *path, const char *ns, MlnXmlNode **found);
 int MlnXmlFindNodes(int heap, MlnXmlNode *node, const char *path, const char *ns,
@@ -1332,7 +1417,9 @@ int MlnImpl_8101D468(const MlnBuffer *serviceId, int *exists);
 int MlnImpl_8101D408(const MlnBuffer *serviceId, MlnBuffer **config);
 int MlnImpl_8101D520(const MlnBuffer *serviceId);
 int MlnImpl_8101D29C(const MlnBuffer *serviceId, const MlnBuffer *config);
-int MlnImpl_8101D5B4(const char *text, MlnBuffer **decoded);
+int MlnImpl_8101D5B4(const char *path, MlnBuffer **config);
+int MlnImpl_8101CECC(int create, const MlnBuffer *serviceId, char *path);
+int MlnImpl_8101D020(const char *path, MlnBuffer **config);
 int MlnImpl_81035018(unsigned int firstCount, MlnBuffer **first, unsigned int secondCount,
 		     MlnBuffer **second, MlnBuffer *third, MlnBuffer *fourth, char **text);
 int MlnImpl_810353A8(char **text);

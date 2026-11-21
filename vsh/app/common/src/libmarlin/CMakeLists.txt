@@ -25,6 +25,7 @@ set(MLN_XML_SOURCES
 # The engine too: it re-reads its progress after each store into the step it fills.
 set(MLN_ENGINE_SOURCES
 	engine.c
+	client.c
 )
 psp2_module(${PSP2_TARGET} KIND user COMPILER gcc48 PARTIAL SOURCES
 	${MLN_ARM_SOURCES}

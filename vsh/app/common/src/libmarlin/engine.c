@@ -1922,3 +1922,234 @@ out:
 	MlnBufferDestroy(MLN_HEAP_SECURE, body);
 	return ret;
 }
+
+/* a file layer's error as the engine gives it */
+static inline __attribute__((always_inline)) int MlnFileError(unsigned int ret)
+{
+	if (ret <= MLN_ERROR_NO_MEMORY)
+		return ret != MLN_OK ? MLN_ERROR_NO_MEMORY : MLN_OK;
+	if (ret - MLN_FILE_ERROR_PLATFORM <= 7)
+		return MLN_FILE_ERROR_INVALID;
+	return 7;
+}
+
+/* a path in the file area */
+#define MLN_FILE_PATH_MAX	1024
+
+static const char s_hexDigits[16] = "0123456789ABCDEF";
+
+/*
+ * The file that keeps a service's configuration: the SHA-1 of its id in hex, ".xml", in the
+ * file area (made first when create is set).
+ */
+__attribute__((noinline)) int MlnImpl_8101CECC(int create, const MlnBuffer *serviceId,
+					       char *path)
+{
+	unsigned char digest[20];
+	MlnSha1Context sha;
+	char name[45];
+	unsigned int size = MLN_FILE_PATH_MAX;
+	unsigned int i;
+	int ret;
+
+	if (serviceId == NULL || serviceId->size == 0 || serviceId->data == NULL || path == NULL)
+		return 7;
+	MlnMemset(name, 0, sizeof(name));
+	ret = MlnImpl_810262B4(MLN_FILE_AREA, &size, path);
+	if (ret != MLN_OK)
+		goto error;
+	if (create) {
+		ret = MlnImpl_8102619C(MLN_FILE_AREA, path);
+		if (ret != MLN_OK)
+			goto error;
+	}
+	MlnImpl_81033774(&sha);
+	MlnImpl_810337C4(&sha, serviceId->data, serviceId->size);
+	MlnImpl_81033864(&sha, digest);
+	for (i = 0; i < sizeof(digest); i++) {
+		name[2 * i] = s_hexDigits[digest[i] >> 4];
+		name[2 * i + 1] = s_hexDigits[digest[i] & 0xf];
+	}
+	MlnStrncat(name, ".xml", 5);
+	size = MLN_FILE_PATH_MAX;
+	ret = MlnImpl_810256EC(&size, path, name);
+	if (ret == MLN_OK)
+		return MLN_OK;
+error:
+	return MlnFileError(ret);
+}
+
+/* reads a configuration file: its SHA-1, then the configuration it must match */
+__attribute__((noinline)) int MlnImpl_8101D020(const char *path, MlnBuffer **config)
+{
+	unsigned char stored[20], digest[20];
+	unsigned int length, end, size, read, i;
+	MlnBuffer *buffer = NULL;
+	MlnSha1Context sha;
+	void *file = NULL;
+	int ret;
+
+	if (config == NULL) {
+		ret = 7;
+		goto out;
+	}
+	if (path == NULL)
+		goto invalid;
+	length = MlnStrlen(path);
+	if (length <= 44)
+		goto invalid;
+	end = length - 4;
+	if (MlnMemcmp(&path[end], ".xml", 4) != 0 || path[length - 45] != MlnImpl_81026430())
+		goto invalid;
+	for (i = length - 44; i < end; i++) {
+		if ((unsigned char)path[i] - 'A' > 5 && (unsigned char)path[i] - '0' > 9)
+			goto invalid;
+	}
+	ret = MlnImpl_810259F8(MLN_FILE_AREA, path, 1, &file);
+	if (ret == MLN_OK)
+		ret = MlnImpl_810260E4(MLN_FILE_AREA, file, &size);
+	if (ret != MLN_OK) {
+		ret = MlnFileError(ret);
+		goto out;
+	}
+	if (size <= sizeof(stored)) {
+		ret = 7;
+		goto out;
+	}
+	size -= sizeof(stored);
+	buffer = MlnBufferCreate(MLN_HEAP_SECURE, size, NULL);
+	if (buffer == NULL) {
+		ret = MLN_ERROR_NO_MEMORY;
+		goto out;
+	}
+	ret = MlnImpl_81025C1C(MLN_FILE_AREA, file, sizeof(stored), &read, stored);
+	if (ret != MLN_OK) {
+		ret = MlnFileError(ret);
+		goto out;
+	}
+	if (read != sizeof(stored)) {
+		ret = 7;
+		goto out;
+	}
+	ret = MlnImpl_81025C1C(MLN_FILE_AREA, file, size, &read, buffer->data);
+	if (ret != MLN_OK) {
+		ret = MlnFileError(ret);
+		goto out;
+	}
+	if (size != read) {
+		ret = 7;
+		goto out;
+	}
+	MlnImpl_81033774(&sha);
+	MlnImpl_810337C4(&sha, buffer->data, buffer->size);
+	MlnImpl_81033864(&sha, digest);
+	if (MlnMemcmp(stored, digest, sizeof(digest)) != 0) {
+		MlnImpl_8102590C(MLN_FILE_AREA, path);
+		ret = MLN_FILE_ERROR_INVALID;
+		goto out;
+	}
+	*config = buffer;
+	buffer = NULL;
+	goto out;
+invalid:
+	ret = MLN_FILE_ERROR_INVALID;
+out:
+	MlnBufferDestroy(MLN_HEAP_SECURE, buffer);
+	if (file != NULL)
+		MlnImpl_81025BE8(MLN_FILE_AREA, file);
+	return ret;
+}
+
+/* keeps a service's configuration, after its SHA-1; a file left unfinished is removed */
+__attribute__((noinline)) int MlnImpl_8101D29C(const MlnBuffer *serviceId, const MlnBuffer *config)
+{
+	unsigned char digest[20];
+	char path[MLN_FILE_PATH_MAX];
+	MlnSha1Context sha;
+	void *file = NULL;
+	int ret;
+
+	if (serviceId == NULL || config == NULL || config->size == 0 || config->data == NULL)
+		return 7;
+	MlnMemset(path, 0, sizeof(path));
+	ret = MlnImpl_8101CECC(1, serviceId, path);
+	if (ret == MLN_OK) {
+		MlnImpl_81033774(&sha);
+		MlnImpl_810337C4(&sha, config->data, config->size);
+		MlnImpl_81033864(&sha, digest);
+		ret = MlnImpl_810259F8(MLN_FILE_AREA, path, 2, &file);
+		if (ret == MLN_OK)
+			ret = MlnImpl_81025F5C(MLN_FILE_AREA, file, sizeof(digest), digest);
+		if (ret == MLN_OK)
+			ret = MlnImpl_81025F5C(MLN_FILE_AREA, file, config->size, config->data);
+		ret = MlnFileError(ret);
+	}
+	if (file != NULL) {
+		MlnImpl_81025BE8(MLN_FILE_AREA, file);
+		if (ret != MLN_OK)
+			MlnImpl_8102590C(MLN_FILE_AREA, path);
+	}
+	return ret;
+}
+
+/* a service's kept configuration */
+__attribute__((noinline)) int MlnImpl_8101D408(const MlnBuffer *serviceId, MlnBuffer **config)
+{
+	char path[MLN_FILE_PATH_MAX];
+	int ret;
+
+	if (config == NULL)
+		return 7;
+	MlnMemset(path, 0, sizeof(path));
+	ret = MlnImpl_8101CECC(0, serviceId, path);
+	if (ret != MLN_OK)
+		return ret;
+	return MlnImpl_8101D020(path, config);
+}
+
+/* whether a service's configuration is kept */
+__attribute__((noinline)) int MlnImpl_8101D468(const MlnBuffer *serviceId, int *exists)
+{
+	char path[MLN_FILE_PATH_MAX];
+	MlnFileInfo info;
+	int ret, status;
+
+	if (exists == NULL)
+		return 7;
+	MlnMemset(path, 0, sizeof(path));
+	ret = MlnImpl_8101CECC(0, serviceId, path);
+	if (ret != MLN_OK)
+		return ret;
+	status = MlnImpl_81026324(MLN_FILE_AREA, path, &info);
+	if (status == MLN_OK)
+		*exists = 1;
+	else if (status == MLN_FILE_ERROR_NOT_FOUND)
+		*exists = 0;
+	else
+		ret = MlnFileError(status);
+	return ret;
+}
+
+/* removes a service's kept configuration */
+__attribute__((noinline)) int MlnImpl_8101D520(const MlnBuffer *serviceId)
+{
+	char path[MLN_FILE_PATH_MAX];
+	int ret, status;
+
+	MlnMemset(path, 0, sizeof(path));
+	ret = MlnImpl_8101CECC(0, serviceId, path);
+	if (ret != MLN_OK)
+		return ret;
+	status = MlnImpl_8102590C(MLN_FILE_AREA, path);
+	if (status != MLN_OK && status != MLN_FILE_ERROR_NOT_FOUND)
+		ret = MlnFileError(status);
+	return ret;
+}
+
+/* a configuration file read by its path */
+__attribute__((noinline)) int MlnImpl_8101D5B4(const char *path, MlnBuffer **config)
+{
+	if (path == NULL || config == NULL)
+		return MLN_CORE_ERROR_INVALID;
+	return MlnImpl_8101D020(path, config);
+}
