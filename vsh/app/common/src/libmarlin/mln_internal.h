@@ -1445,6 +1445,50 @@ int MlnImpl_8102CEEC(const MlnServiceReply *reply, MlnServiceArgs **out, int *st
 int MlnImpl_8102CFB0(const MlnServiceReply *reply, MlnServiceArgs **out, int *status);
 int MlnImpl_8102D05C(const MlnServiceReply *reply, MlnServiceArgs **out, int *status,
 		     MlnBuffer **result);
+int MlnImpl_8102D138(const MlnServiceReply *reply, MlnServiceArgs **out, int *status);
+int MlnImpl_8102D1D4(const MlnServiceReply *reply, MlnServiceArgs **out, int *status,
+		     MlnBuffer **result);
+unsigned int MlnImpl_8104D5E0(int kind, MlnServiceList *list, int *handle);
+int MlnImpl_8104DAA4(int handle);
+int MlnImpl_8102D240(const MlnServiceReply *reply, MlnServiceArgs **out, int *status);
+int MlnImpl_8102D454(const MlnServiceReply *reply, MlnServiceArgs **out, int *status);
+unsigned int MlnImpl_8104DC4C(int handle, unsigned int size, const unsigned char *data,
+			      const char *name, MlnBlob *out);
+int MlnImpl_8102D4D4(const MlnServiceReply *reply, MlnServiceArgs **out, int *status);
+unsigned int MlnImpl_8104DE10(int handle, const MlnBuffer *data, MlnBlob *first, MlnBlob *second);
+int MlnImpl_8102D6F8(const MlnServiceReply *reply, MlnServiceArgs **out, int *status,
+		     MlnBuffer **result);
+unsigned int MlnImpl_8104E18C(int handle, unsigned int size, const unsigned char *data,
+			      const char *name, const MlnBuffer *third, const MlnBuffer *fourth,
+			      MlnBlob *first, MlnBlob *second);
+int MlnImpl_8102D8B8(const MlnServiceReply *reply, MlnServiceArgs **out, int *status,
+		     MlnBuffer **result);
+unsigned int MlnImpl_8104E45C(int handle, const MlnBuffer *data, MlnBlob *first, MlnBlob *second,
+			      MlnBlob *third);
+int MlnImpl_8102DB4C(const MlnServiceReply *reply, MlnServiceArgs **out, int *status,
+		     MlnBuffer **result);
+unsigned int MlnImpl_8104E9B8(int handle, unsigned int size, const unsigned char *data,
+			      const char *name, const MlnBuffer *third, MlnBlob *first,
+			      MlnBlob *second);
+int MlnImpl_8102DD64(const MlnServiceReply *reply, MlnServiceArgs **out, int *status,
+		     MlnBuffer **result);
+unsigned int MlnImpl_8104EBD8(int handle, const MlnBuffer *data, MlnBlob *first, MlnBlob *second);
+int MlnImpl_8102DFC8(const MlnServiceReply *reply, MlnServiceArgs **out, int *status,
+		     MlnBuffer **result);
+unsigned int MlnImpl_8104F044(int handle, unsigned int size, const unsigned char *data,
+			      const char *name, const MlnBuffer *third, const MlnBuffer *fourth,
+			      const MlnBuffer *fifth, MlnBlob *first, MlnBlob *second);
+int MlnImpl_8102E188(const MlnServiceReply *reply, MlnServiceArgs **out, int *status,
+		     MlnBuffer **result);
+unsigned int MlnImpl_8104F2F4(int handle, const MlnBuffer *data, MlnBlob *first, MlnBlob *second);
+int MlnImpl_8102E468(const MlnServiceReply *reply, MlnServiceArgs **out, int *status,
+		     MlnBuffer **result);
+unsigned int MlnImpl_8104FC70(int handle, unsigned int firstSize, const unsigned char *first,
+			      unsigned int secondSize, const unsigned char *second,
+			      unsigned int thirdSize, const unsigned char *third);
+int MlnImpl_8102E628(const MlnServiceReply *reply, MlnServiceArgs **out, int *status);
+unsigned int MlnImpl_81050110(int handle, const MlnBuffer *first, const MlnBuffer *second);
+int MlnImpl_8102E7A8(const MlnServiceReply *reply, MlnServiceArgs **out, int *status);
 int MlnImpl_8102AA38(MlnBlob *blob, MlnBuffer *out);
 int MlnImpl_810318D4(void *a0, const MlnBuffer *a1, MlnBlob *first, MlnBlob *second);
 
