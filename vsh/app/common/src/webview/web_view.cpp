@@ -3,7 +3,11 @@
  */
 #include <stddef.h>
 #include <scetypes.h>
+#include <memory/heap_allocator.h>
 #include "web_view.h"
+
+/* GetGlobalHeapAllocator, exported by its C name. */
+extern "C" paf::memory::HeapAllocator *GetGlobalHeapAllocator(void);
 
 namespace paf {
 namespace ui {
@@ -58,7 +62,7 @@ WebView::WebView(Widget *parent, CreateParam *param)
 	  m_contextMenuShown(false), m_imeMinDate(0, 0, 0, 0, 0, 0, 0),
 	  m_imeMaxDate(0, 0, 0, 0, 0, 0, 0), m_selectCount(0), m_selectFocus(0),
 	  m_selectMultiple(false), m_startWithParam(false), m_tapRect(0.0f, 0.0f, 0.0f, 0.0f),
-	  m_tapScale(1.0f), m_tapping(false), m_tapButton(false),
+	  m_tapScale(1.0f), m_tapping(false), m_pageHandlesInput(false),
 	  m_inputMask(15), m_dragStart(0.0f, 0.0f), m_cursorMove(0.0f, 0.0f),
 	  m_cursorEnabled(false), m_reserved1920(0), m_reserved1924(0), m_cursorPlane(NULL), m_cursorMode(0), m_cursorHidden(false),
 	  m_cursorOffset(0.0f, 0.0f), m_reserved2008(0.0f, 0.0f), m_keyReady(true)
@@ -296,21 +300,21 @@ int WebView::SetZoomOffset(float bottom, float y)
 
 int WebView::SetSetting1031(bool value)
 {
-	WebIpcBoolMessage message(WEB_IPC_SETTING_1031, value);
+	WebIpcSetting message(WEB_IPC_SETTING_1031, value);
 
 	return WebIpc::GetInstance()->Send(&message, m_viewId);
 }
 
 int WebView::SetSetting1048(bool value)
 {
-	WebIpcBoolMessage message(WEB_IPC_SETTING_1048, value);
+	WebIpcSetting message(WEB_IPC_SETTING_1048, value);
 
 	return WebIpc::GetInstance()->Send(&message, m_viewId);
 }
 
 int WebView::SetSetting1053(bool value)
 {
-	WebIpcBoolMessage message(WEB_IPC_SETTING_1053, value);
+	WebIpcSetting message(WEB_IPC_SETTING_1053, value);
 
 	return WebIpc::GetInstance()->Send(&message, m_viewId);
 }
@@ -734,6 +738,191 @@ void WebView::QueueMessage1056()
 	thread::RMutexLock lock(&m_ipcDataLock);
 
 	m_ipcData.push_back(message);
+}
+
+/* the message the page sent, read from its packet and queued for the view's update; a type the
+   view does not know is dropped */
+void WebView::ReceiveMessage(const WebIpcPacket *packet)
+{
+	WebIpcMessage *message = NULL;
+
+	if (packet->m_type == WEB_IPC_EVENT_2003 && !CanZoom())
+		return;
+
+	switch (packet->m_type) {
+	case WEB_IPC_EVENT_2003:
+	case 0x2006:
+	case 0x2007:
+	case 0x2010:
+	case 0x2022:
+	case 0x2101:
+	case 0x2201:
+	case 0x2202:
+	case 0x2212:
+	case 0x2213:
+		message = new WebIpcMessage(packet->m_type);
+		break;
+	case 0x2001:
+		message = new WebIpcEvent2001(packet);
+		break;
+	case 0x2004:
+		message = new WebIpcEvent2004(packet);
+		break;
+	case 0x2005:
+		message = new WebIpcEvent2005(packet);
+		break;
+	case 0x2008:
+		message = new WebIpcEvent2008(packet);
+		break;
+	case 0x2009:
+		message = new WebIpcEvent2009(packet);
+		break;
+	case 0x2011:
+		message = new WebIpcEvent2011(packet);
+		break;
+	case 0x2012:
+		message = new WebIpcEvent2012(packet);
+		break;
+	case 0x2013:
+		message = new WebIpcEvent2013(packet);
+		break;
+	case 0x2014:
+		message = new WebIpcEvent2014(packet);
+		break;
+	case 0x2015:
+		message = new WebIpcEvent2015(packet);
+		break;
+	case 0x2016:
+		message = new WebIpcEvent2016(packet);
+		break;
+	case 0x2019:
+		message = new WebIpcEvent2019(packet);
+		break;
+	case 0x2020:
+		message = new WebIpcEvent2020(packet);
+		break;
+	case 0x2021:
+		message = new WebIpcEvent2021(packet);
+		break;
+	case 0x2023:
+		message = new WebIpcEvent2023(packet);
+		break;
+	case 0x2024:
+		message = new WebIpcEvent2024(packet);
+		break;
+	case 0x2025:
+		message = new WebIpcEvent2025(packet);
+		break;
+	case 0x2026:
+		message = new WebIpcEvent2026(packet);
+		break;
+	case 0x2027:
+		message = new WebIpcEvent2027(packet);
+		break;
+	case 0x2028:
+		message = new WebIpcEvent2028(packet);
+		break;
+	case 0x2029:
+		message = new WebIpcEvent2029(packet);
+		break;
+	case 0x2030:
+		message = new WebIpcEvent2030(packet);
+		break;
+	case 0x2031:
+		message = new WebIpcEvent2031(packet);
+		break;
+	case 0x2032:
+		message = new WebIpcEvent2032(packet);
+		break;
+	case 0x2033:
+		message = new WebIpcEvent2033(packet);
+		break;
+	case 0x2034:
+		message = new WebIpcEvent2034(packet);
+		break;
+	case 0x2035:
+		message = new WebIpcEvent2035(packet);
+		break;
+	case WEB_IPC_CREATE_PAGE_WITH_VIEW:
+		message = new WebIpcCreatePageWithView(packet);
+		break;
+	case 0x2203:
+		message = new WebIpcEvent2203(packet);
+		break;
+	case 0x2204:
+		message = new WebIpcEvent2204(packet);
+		break;
+	case 0x2205:
+		message = new WebIpcEvent2205(packet);
+		break;
+	case 0x2206:
+		message = new WebIpcEvent2206(packet);
+		break;
+	case 0x2210:
+		message = new WebIpcEvent2210(packet);
+		break;
+	case 0x2211:
+		message = new WebIpcEvent2211(packet);
+		break;
+	default:
+		break;
+	}
+
+	if (message != NULL) {
+		thread::RMutexLock lock(&m_ipcDataLock);
+
+		m_ipcData.push_back(message);
+		return;
+	}
+
+	string url = m_url.GetUrlString();
+	memory::HeapAllocator *heap = GetGlobalHeapAllocator();
+
+	if (heap != NULL) {
+		heap->GetFreeSize();
+		sce_paf_printf_dummy();
+	}
+}
+
+/* the web process gone: a page made or loading is lost, and the messages it sent with it */
+void WebView::OnProcessExit()
+{
+	if (m_pageState != 0)
+		m_pageState = 4;
+	ClearIpcData();
+}
+
+/* the page takes the view's input, the view's plane neither scrolling, pinching nor taking the
+   gestures, while the input mask passes any; otherwise the plane has them back */
+void WebView::SetPageHandlesInput(bool on)
+{
+	if (m_pageHandlesInput == on)
+		return;
+
+	Widget *parent = GetViewParent();
+	Widget *plane = parent->FindChild(IDParam("view_plane"), 2);
+
+	if (on && (m_inputMask & 0xf) != 0) {
+		if (plane != NULL) {
+			if (m_tapping)
+				return;
+			SetMovableDirOn(3);
+			plane->SetPinchMode(0);
+			plane->SetGestureMask(plane->m_touch_gesture_mask & ~1, true);
+			plane->SetGestureMask(plane->m_touch_gesture_mask & ~4, true);
+			plane->SetGestureMask(plane->m_touch_gesture_mask & ~2, true);
+		}
+	} else if (plane != NULL) {
+		SetMovableDirOn(0);
+		if (m_userScalable)
+			plane->SetPinchMode(0x200);
+		if ((m_inputMask & 4) == 0)
+			plane->SetPinchMode(0);
+		plane->SetGestureMask(plane->m_touch_gesture_mask | 1, true);
+		plane->SetGestureMask(plane->m_touch_gesture_mask | 4, true);
+		plane->SetGestureMask(plane->m_touch_gesture_mask | 2, true);
+	}
+	m_pageHandlesInput = on;
 }
 
 void WebView::SetSecure(bool secure)

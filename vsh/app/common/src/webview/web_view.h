@@ -421,6 +421,11 @@ public:
 	/* queues message 0x21 / 0x1056 for the view's update (names ours) */
 	void QueueMessage21();
 	void QueueMessage1056();
+	/* the message the page sent, queued; the web process gone; the page taking the view's input
+	   (names ours) */
+	void ReceiveMessage(const WebIpcPacket *packet);
+	void OnProcessExit();
+	void SetPageHandlesInput(bool on);
 	/* whether the page is a secure one (name ours) */
 	void SetSecure(bool secure);
 	/* an export that does nothing but return 0 (name ours) */
@@ -623,7 +628,8 @@ public:
 	math::v4 m_tapRect;			/* 1784 */
 	float m_tapScale;			/* 1800 */
 	bool m_tapping;				/* 1804 */
-	bool m_tapButton;			/* 1805 */
+	/* the page takes the view's input (name ours) */
+	bool m_pageHandlesInput;		/* 1805 */
 	int m_inputMask;			/* 1808 */
 	math::v2 m_dragStart;			/* 1816 */
 	math::v2 m_cursorPos[8];		/* 1824 */

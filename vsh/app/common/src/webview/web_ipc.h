@@ -41,11 +41,24 @@ enum {
 	WEB_IPC_REQUEST_1070 = 0x1070,
 	WEB_IPC_REQUEST_DATA = 0x1071,
 	WEB_IPC_LOAD_DATA = 0x1080,
+	/* received: a zoom the view drops when it cannot zoom */
+	WEB_IPC_EVENT_2003 = 0x2003,
 	WEB_IPC_CREATE_PAGE_WITH_VIEW = 0x2100
 };
 
-/* the packet a message is written into: its view, its type and the type's fields */
-struct WebIpcPacket;
+/* the packet a message is written into: the view it is for, its type and the type's fields */
+struct WebIpcPacket {
+	int m_reserved;			/* 0: only cleared */
+	int m_viewId;
+	unsigned int m_type;
+	char m_text[3][2048];
+	float m_float[4];
+	int m_int[4];
+	SceUInt8 m_reserved2[12];
+	bool m_bool[2];
+	int m_dataSize;
+	char m_data[2048];
+};
 
 /* a message (0x810248b8): its type, and its fields written into a packet and read back */
 class WebIpcMessage {
@@ -58,10 +71,124 @@ public:
 	{
 	}
 
-	virtual void Write(WebIpcPacket *packet) const;
-	virtual void Read(const WebIpcPacket *packet);
+	virtual void Write(WebIpcPacket *packet) const
+	{
+		packet->m_type = m_type;
+	}
+
+	virtual void Read(const WebIpcPacket *packet)
+	{
+		m_type = packet->m_type;
+	}
 
 	int m_type;
+};
+
+/*
+ * The messages of one value, each read from its packet by its own constructor: an int
+ * (0x810252c8), two ints (0x810252e0), a float (0x810252f8), a bool (0x81025310) and a string
+ * (0x81025328). Most messages are one of these under their own type.
+ */
+class WebIpcIntMessage : public WebIpcMessage {
+public:
+	WebIpcIntMessage(int type, int value) : WebIpcMessage(type), m_value(value)
+	{
+	}
+
+	WebIpcIntMessage(const WebIpcPacket *packet);
+
+	virtual ~WebIpcIntMessage()
+	{
+	}
+
+	virtual void Write(WebIpcPacket *packet) const;
+
+	int m_value;
+};
+
+class WebIpcIntPairMessage : public WebIpcMessage {
+public:
+	WebIpcIntPairMessage(int type, int first, int second) :
+		WebIpcMessage(type), m_first(first), m_second(second)
+	{
+	}
+
+	WebIpcIntPairMessage(const WebIpcPacket *packet);
+
+	virtual ~WebIpcIntPairMessage()
+	{
+	}
+
+	virtual void Write(WebIpcPacket *packet) const;
+
+	int m_first;
+	int m_second;
+};
+
+class WebIpcFloatMessage : public WebIpcMessage {
+public:
+	WebIpcFloatMessage(const WebIpcPacket *packet);
+
+	virtual ~WebIpcFloatMessage()
+	{
+	}
+
+	virtual void Write(WebIpcPacket *packet) const;
+
+	float m_value;
+};
+
+class WebIpcBoolMessage : public WebIpcMessage {
+public:
+	WebIpcBoolMessage(int type, bool value) : WebIpcMessage(type), m_value(value)
+	{
+	}
+
+	WebIpcBoolMessage(const WebIpcPacket *packet);
+
+	virtual ~WebIpcBoolMessage()
+	{
+	}
+
+	virtual void Write(WebIpcPacket *packet) const;
+
+	bool m_value;
+};
+
+class WebIpcStringMessage : public WebIpcMessage {
+public:
+	WebIpcStringMessage(int type, const string &value) : WebIpcMessage(type), m_value(value)
+	{
+	}
+
+	WebIpcStringMessage(const WebIpcPacket *packet);
+
+	virtual ~WebIpcStringMessage()
+	{
+	}
+
+	virtual void Write(WebIpcPacket *packet) const;
+
+	string m_value;
+};
+
+/* two ints, of two kinds read by their own constructors (0x810248d0, 0x810248e8) */
+class WebIpcIntPairMessageA : public WebIpcIntPairMessage {
+public:
+	WebIpcIntPairMessageA(const WebIpcPacket *packet);
+
+	virtual ~WebIpcIntPairMessageA()
+	{
+	}
+};
+
+class WebIpcIntPairMessageB : public WebIpcIntPairMessage {
+public:
+	WebIpcIntPairMessageB(const WebIpcPacket *packet);
+
+	virtual ~WebIpcIntPairMessageB()
+	{
+	}
 };
 
 /* the page made for the view, its size, the render parameters and whether it is secure
@@ -69,6 +196,7 @@ public:
 class WebIpcCreatePage : public WebIpcMessage {
 public:
 	WebIpcCreatePage(int width, int height, const void *param, int paramSize, bool secure);
+	WebIpcCreatePage(const WebIpcPacket *packet);
 	virtual ~WebIpcCreatePage();
 
 	virtual void Write(WebIpcPacket *packet) const;
@@ -86,6 +214,7 @@ class WebIpcCreatePageWithView : public WebIpcCreatePage {
 public:
 	WebIpcCreatePageWithView(int width, int height, int viewId, const void *param,
 		int paramSize, bool secure);
+	WebIpcCreatePageWithView(const WebIpcPacket *packet);
 	virtual ~WebIpcCreatePageWithView()
 	{
 	}
@@ -98,17 +227,13 @@ public:
 	int m_viewId;
 };
 
-/* a message carrying one bool (0x81024918) */
-class WebIpcBoolMessage : public WebIpcMessage {
+/* one of the view's settings, a bool (0x81024918) */
+class WebIpcSetting : public WebIpcBoolMessage {
 public:
-	WebIpcBoolMessage(int type, bool value);
-	virtual ~WebIpcBoolMessage()
+	WebIpcSetting(int type, bool value);
+	virtual ~WebIpcSetting()
 	{
 	}
-
-	virtual void Write(WebIpcPacket *packet) const;
-
-	bool m_value;
 };
 
 /* a tap on the page at the point (0x810253D0, type 0x1036; names ours) */
@@ -127,17 +252,12 @@ public:
 };
 
 /* asks the page for its data, of the size (0x81024930, type 0x1071; names ours) */
-class WebIpcRequestData : public WebIpcMessage {
+class WebIpcRequestData : public WebIpcIntPairMessage {
 public:
 	WebIpcRequestData(int id, int size);
 	virtual ~WebIpcRequestData()
 	{
 	}
-
-	virtual void Write(WebIpcPacket *packet) const;
-
-	int m_id;
-	int m_size;
 };
 
 /* the item the select popup chose, and whether it closes (0x81025358, type 0x1030; names
@@ -184,53 +304,31 @@ public:
 };
 
 /* the page's vertical scroll (0x81024948, type 0x1060; names ours) */
-class WebIpcScrollY : public WebIpcMessage {
+class WebIpcScrollY : public WebIpcIntMessage {
 public:
 	WebIpcScrollY(int y);
 
 	virtual ~WebIpcScrollY()
 	{
 	}
-
-	virtual void Write(WebIpcPacket *packet) const;
-
-	int m_y;
 };
 
 /* the cursor's point on the page (0x810249D8, type 0x1034; names ours) */
-class WebIpcCursorPos : public WebIpcMessage {
+class WebIpcCursorPos : public WebIpcIntPairMessage {
 public:
 	WebIpcCursorPos(int x, int y);
 	virtual ~WebIpcCursorPos()
 	{
 	}
-
-	virtual void Write(WebIpcPacket *packet) const;
-
-	int m_x;
-	int m_y;
 };
 
-/* the page loads the URL (0x81025328, type 0x1013) */
-class WebIpcLoadUrl : public WebIpcMessage {
-public:
-	WebIpcLoadUrl(const string &url) : WebIpcMessage(WEB_IPC_LOAD_URL), m_url(url)
-	{
-	}
-
-	virtual ~WebIpcLoadUrl()
-	{
-	}
-
-	virtual void Write(WebIpcPacket *packet) const;
-
-	string m_url;
-};
-
-/* the load the view asks for (0x81024900) */
-class WebIpcLoadUrlRequest : public WebIpcLoadUrl {
+/* the load the view asks for (0x81024900, type 0x1013) */
+class WebIpcLoadUrlRequest : public WebIpcStringMessage {
 public:
 	WebIpcLoadUrlRequest(const string &url);
+	virtual ~WebIpcLoadUrlRequest()
+	{
+	}
 };
 
 /* the page loads the data, as from the URL (0x81025430, type 0x1080) */
@@ -247,6 +345,270 @@ public:
 	string m_url;
 	string m_type;
 	bool m_flag;
+};
+
+/*
+ * The messages the page sends the view, named by their type until what each reports is known
+ * (names ours). Those of one value are the value's message under their own vtable.
+ */
+#define WEB_IPC_EVENT(base, type)					\
+	class WebIpcEvent##type : public base {				\
+	public:								\
+		WebIpcEvent##type(const WebIpcPacket *packet) : base(packet) \
+		{							\
+		}							\
+									\
+		virtual ~WebIpcEvent##type()				\
+		{							\
+		}							\
+	}
+
+WEB_IPC_EVENT(WebIpcStringMessage, 2001);	/* 0x81024b40 */
+WEB_IPC_EVENT(WebIpcStringMessage, 2004);	/* 0x81024a20 */
+WEB_IPC_EVENT(WebIpcStringMessage, 2005);	/* 0x81024a38 */
+WEB_IPC_EVENT(WebIpcFloatMessage, 2008);	/* 0x81024a68 */
+WEB_IPC_EVENT(WebIpcIntPairMessageB, 2011);	/* 0x81024a98 */
+WEB_IPC_EVENT(WebIpcStringMessage, 2013);	/* 0x81024a80 */
+WEB_IPC_EVENT(WebIpcIntPairMessage, 2016);	/* 0x81024ab0 */
+WEB_IPC_EVENT(WebIpcBoolMessage, 2024);		/* 0x81024ae0 */
+WEB_IPC_EVENT(WebIpcIntPairMessageA, 2026);	/* 0x81024af8 */
+WEB_IPC_EVENT(WebIpcStringMessage, 2028);	/* 0x81024b28 */
+WEB_IPC_EVENT(WebIpcBoolMessage, 2031);		/* 0x81024b10 */
+WEB_IPC_EVENT(WebIpcIntMessage, 2032);		/* 0x81024a50 */
+WEB_IPC_EVENT(WebIpcIntPairMessage, 2203);	/* 0x81024ac8 */
+WEB_IPC_EVENT(WebIpcIntPairMessageA, 2204);	/* 0x81024b58 */
+WEB_IPC_EVENT(WebIpcIntMessage, 2205);		/* 0x81024b70 */
+WEB_IPC_EVENT(WebIpcStringMessage, 2210);	/* 0x81024b88 */
+WEB_IPC_EVENT(WebIpcStringMessage, 2211);	/* 0x81024ba0 */
+
+#undef WEB_IPC_EVENT
+
+/* the received messages of several fields, each read by its own constructor */
+class WebIpcEvent2009 : public WebIpcMessage {	/* 0x810254d8 */
+public:
+	WebIpcEvent2009(const WebIpcPacket *packet);
+	virtual ~WebIpcEvent2009()
+	{
+	}
+
+	virtual void Write(WebIpcPacket *packet) const;
+
+	int m_int[4];
+	string m_text[2];
+	bool m_bool;
+};
+
+class WebIpcEvent2012 : public WebIpcMessage {	/* 0x810254f0 */
+public:
+	WebIpcEvent2012(const WebIpcPacket *packet);
+	virtual ~WebIpcEvent2012()
+	{
+	}
+
+	virtual void Write(WebIpcPacket *packet) const;
+
+	float m_float[3];
+	bool m_bool;
+};
+
+class WebIpcEvent2014 : public WebIpcStringMessage {	/* 0x810254a8 */
+public:
+	WebIpcEvent2014(const WebIpcPacket *packet);
+	virtual ~WebIpcEvent2014()
+	{
+	}
+
+	virtual void Write(WebIpcPacket *packet) const;
+	virtual void Read(const WebIpcPacket *packet);
+
+	bool m_bool;
+};
+
+class WebIpcEvent2015 : public WebIpcMessage {	/* 0x810254c0 */
+public:
+	WebIpcEvent2015(const WebIpcPacket *packet);
+	virtual ~WebIpcEvent2015()
+	{
+	}
+
+	virtual void Write(WebIpcPacket *packet) const;
+	virtual void Read(const WebIpcPacket *packet);
+
+	string m_text[3];
+	bool m_bool;
+};
+
+class WebIpcEvent2019 : public WebIpcMessage {	/* 0x81025460 */
+public:
+	WebIpcEvent2019(const WebIpcPacket *packet);
+	virtual ~WebIpcEvent2019()
+	{
+	}
+
+	virtual void Write(WebIpcPacket *packet) const;
+
+	int m_int[2];
+	bool m_bool;
+};
+
+class WebIpcEvent2020 : public WebIpcMessage {	/* 0x81025478 */
+public:
+	WebIpcEvent2020(const WebIpcPacket *packet);
+	virtual ~WebIpcEvent2020()
+	{
+	}
+
+	virtual void Write(WebIpcPacket *packet) const;
+
+	string m_text;
+	bool m_bool[2];
+};
+
+class WebIpcEvent2021 : public WebIpcMessage {	/* 0x81025508 */
+public:
+	WebIpcEvent2021(const WebIpcPacket *packet);
+	virtual ~WebIpcEvent2021()
+	{
+	}
+
+	virtual void Write(WebIpcPacket *packet) const;
+
+	string m_text[2];
+};
+
+class WebIpcEvent2023 : public WebIpcMessage {	/* 0x81025520 */
+public:
+	WebIpcEvent2023(const WebIpcPacket *packet);
+	virtual ~WebIpcEvent2023()
+	{
+	}
+
+	virtual void Write(WebIpcPacket *packet) const;
+
+	string m_text[2];
+	int m_int;
+	bool m_bool[2];
+	/* the packet's data, when it is this size */
+	SceUInt8 m_data[44];
+};
+
+class WebIpcEvent2025 : public WebIpcMessage {	/* 0x81025598 */
+public:
+	WebIpcEvent2025(const WebIpcPacket *packet);
+	virtual ~WebIpcEvent2025()
+	{
+	}
+
+	virtual void Write(WebIpcPacket *packet) const;
+	virtual void Read(const WebIpcPacket *packet);
+
+	string m_text[2];
+	/* the third text, split at m_split */
+	string m_head;
+	string m_tail;
+	int m_split;
+	bool m_bool;
+};
+
+class WebIpcEvent2027 : public WebIpcMessage {	/* 0x81025580 */
+public:
+	WebIpcEvent2027(const WebIpcPacket *packet);
+	virtual ~WebIpcEvent2027()
+	{
+	}
+
+	virtual void Write(WebIpcPacket *packet) const;
+	virtual void Read(const WebIpcPacket *packet);
+
+	string m_text;
+	int m_int;
+	bool m_bool;
+};
+
+class WebIpcEvent2029 : public WebIpcMessage {	/* 0x81025538 */
+public:
+	WebIpcEvent2029(const WebIpcPacket *packet);
+	virtual ~WebIpcEvent2029()
+	{
+	}
+
+	virtual void Write(WebIpcPacket *packet) const;
+
+	string m_text;
+	int m_int;
+};
+
+class WebIpcEvent2030 : public WebIpcMessage {	/* 0x81025550 */
+public:
+	WebIpcEvent2030(const WebIpcPacket *packet);
+	virtual ~WebIpcEvent2030()
+	{
+	}
+
+	virtual void Write(WebIpcPacket *packet) const;
+
+	char m_data[2048];
+	int m_dataSize;
+};
+
+class WebIpcEvent2033 : public WebIpcMessage {	/* 0x810255c8 */
+public:
+	WebIpcEvent2033(const WebIpcPacket *packet);
+	virtual ~WebIpcEvent2033()
+	{
+	}
+
+	virtual void Write(WebIpcPacket *packet) const;
+	virtual void Read(const WebIpcPacket *packet);
+
+	int m_int;
+	string m_text[2];
+	float m_float[2];
+	string m_text3;
+	bool m_bool;
+};
+
+class WebIpcEvent2034 : public WebIpcIntMessage {	/* 0x810255b0 */
+public:
+	WebIpcEvent2034(const WebIpcPacket *packet) : WebIpcIntMessage(packet)
+	{
+	}
+
+	virtual ~WebIpcEvent2034()
+	{
+	}
+
+	virtual void Write(WebIpcPacket *packet) const;
+	virtual void Read(const WebIpcPacket *packet);
+
+	bool m_bool;
+};
+
+class WebIpcEvent2035 : public WebIpcMessage {	/* 0x81025490 */
+public:
+	WebIpcEvent2035(const WebIpcPacket *packet);
+	virtual ~WebIpcEvent2035()
+	{
+	}
+
+	virtual void Write(WebIpcPacket *packet) const;
+
+	int m_int;
+	bool m_bool;
+	string m_text[2];
+};
+
+class WebIpcEvent2206 : public WebIpcMessage {	/* 0x810255e0 */
+public:
+	WebIpcEvent2206(const WebIpcPacket *packet);
+	virtual ~WebIpcEvent2206()
+	{
+	}
+
+	virtual void Write(WebIpcPacket *packet) const;
+
+	bool m_bool;
+	int m_int[2];
 };
 
 /* the IPC with the web UI process, one for every web view: each view's slot is its view ID with
