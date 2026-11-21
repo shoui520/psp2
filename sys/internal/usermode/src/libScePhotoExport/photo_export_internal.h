@@ -9,6 +9,7 @@
 #include <stddef.h>
 #include <scetypes.h>
 #include <photo_export.h>
+#include <libScePhotoExport/photo_export.h>
 #include "../../../../vsh/lowlayer/src/ipmi/client.h"
 
 /* the media service's methods */

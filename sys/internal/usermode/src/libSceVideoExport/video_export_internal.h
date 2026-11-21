@@ -8,6 +8,7 @@
 
 #include <scetypes.h>
 #include <libkernel/libkernel.h>
+#include <libSceVideoExport/video_export.h>
 #include "../../../../../vsh/lowlayer/src/ipmi/client.h"
 
 /* the codes the library returns (0x80105400 and up; the SDK has no header for them) */
@@ -27,32 +28,12 @@
 /* the memory the library takes for itself: the IPMI client and the results */
 #define VIDEO_EXPORT_HEAP_SIZE			0x10000
 #define VIDEO_EXPORT_MAX_ITEMS			10
-#define VIDEO_EXPORT_MAX_FS_PATH		1024
 
 /* the media service's methods */
 #define VIDEO_EXPORT_METHOD_START		0x41560007
 #define VIDEO_EXPORT_METHOD_GET_RESULT		0x41560008
 #define VIDEO_EXPORT_METHOD_CANCEL		0x41560009
 #define VIDEO_EXPORT_METHOD_GET_PROGRESS	0x4156000A
-
-/* an item to export (sceVideoExportFromFile's input) */
-typedef struct VideoExportInputParam {
-	char path[VIDEO_EXPORT_MAX_FS_PATH];
-	SceUInt32 mode;
-	SceUInt8 reserved[60];
-} VideoExportInputParam;
-
-/* what the service answers for an item (sceVideoExportFromFile's output) */
-typedef struct VideoExportOutputParam {
-	char path[VIDEO_EXPORT_MAX_FS_PATH];	/* where the content is */
-	SceInt32 reserved0;
-	SceInt32 reserved1;
-} VideoExportOutputParam;
-
-/* the cancel and progress callbacks of an export; the progress one gets the percent and, in the
-   first form, the count the service reports */
-typedef SceInt32 (*VideoExportCancelFunc)(void *userdata);
-typedef void (*VideoExportProgressFunc)(void *userdata, SceInt32 progress, ...);
 
 /* SceVideoExportEmpr_8493BF31's input and output */
 typedef struct VideoExportEmprInput {

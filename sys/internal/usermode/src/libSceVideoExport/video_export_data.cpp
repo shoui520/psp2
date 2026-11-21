@@ -20,10 +20,6 @@ extern "C" int sceAppMgrWorkDirMountById(int id, const char *titleId, char *moun
 extern "C" int sceAppMgrUmount(const char *mountPoint);
 extern "C" int sceRegMgrSystemParamGetInt(int id, int *pValue);
 extern "C" SceUID sceKernelGetProcessId(void);
-extern "C" SceInt32 sceVideoExportFromFile(const VideoExportInputParam *pItems, SceInt32 count,
-					   void *workMemory, VideoExportCancelFunc cancelFunc,
-					   VideoExportProgressFunc progressFunc, void *userdata,
-					   SceInt32 mode, VideoExportOutputParam *pResults);
 
 /* the registry setting that tells the media is full */
 #define VIDEO_EXPORT_PARAM_MEDIA_FULL		1395244

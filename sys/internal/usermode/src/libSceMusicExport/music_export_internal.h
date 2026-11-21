@@ -8,6 +8,7 @@
 #include <scetypes.h>
 #include <music_export.h>
 #include <libkernel/libkernel.h>
+#include <libSceMusicExport/music_export.h>
 #include "../../../../../vsh/lowlayer/src/ipmi/client.h"
 
 /* the memory the library takes for itself: the IPMI client and the results */
@@ -20,20 +21,6 @@
 #define MUSIC_EXPORT_METHOD_CANCEL		0x4156000D
 #define MUSIC_EXPORT_METHOD_GET_PROGRESS	0x4156000E
 #define MUSIC_EXPORT_METHOD_SEND_DATA		0x41560013
-
-/* an item to export (SceMusicExport_D1011570's input; sceMusicExportFromFile sends one) */
-typedef struct MusicExportItem {
-	char path[SCE_MUSIC_EXPORT_MAX_FS_PATH];
-	SceInt32 mode;			/* 1: the data goes in pieces (SEND_DATA), else it is read from the path */
-	SceUInt8 reserved[64];
-} MusicExportItem;
-
-/* what the service answers for an item */
-typedef struct MusicExportResult {
-	char path[SCE_MUSIC_EXPORT_MAX_FS_PATH];	/* where the content is */
-	SceInt32 reserved0;
-	SceInt32 reserved1;
-} MusicExportResult;
 
 /* the data the media service takes with SEND_DATA, ahead of the data, the extension and the path */
 typedef struct MusicExportDataHeader {
