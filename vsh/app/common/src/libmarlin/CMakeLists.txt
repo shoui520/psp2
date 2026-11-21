@@ -18,6 +18,7 @@ set(MLN_ARM_SOURCES
 set(MLN_XML_SOURCES
 	xml.c
 	xmlnode.c
+	xmlbuild.c
 )
 psp2_module(${PSP2_TARGET} KIND user COMPILER gcc48 PARTIAL SOURCES
 	${MLN_ARM_SOURCES}

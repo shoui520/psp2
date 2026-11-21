@@ -572,10 +572,6 @@ int MlnXmlNodeMatchStep(int heap, MlnXmlNode *node, int *position, const char *n
 int MlnXmlNodeApplyStep(int heap, MlnXmlNode *node, const char *name, int nameLength, int axis,
 			const char *predicate, int predicateLength, const void *uri,
 			unsigned int uriSize, MlnXmlLink **matches);
-int MlnXmlElementAppendContents(int heap, MlnXmlElement *element, int count,
-				MlnXmlContent **items);
-int MlnXmlElementReplaceChild(int heap, MlnXmlElement *element, MlnXmlElement *child,
-			      MlnXmlContent *content);
 
 /* xmlnode.c */
 int MlnXmlNodeGetElement(int heap, MlnXmlNode *node, MlnXmlNode **out);
@@ -620,6 +616,47 @@ int MlnXmlNodeRelease(int heap, MlnXmlNode **node);
 int MlnXmlNodeListCreate(int heap, MlnXmlNodeList **out, int count);
 int MlnXmlNodeListRelease(int heap, MlnXmlNodeList **list);
 int MlnXmlParserInit(int heap, MlnXmlParser *parser);
+
+/* xmlbuild.c: what an element is built from */
+typedef struct MlnXmlBuildAttribute {
+	const char *name;
+	const char *value;
+} MlnXmlBuildAttribute;
+
+#define MLN_XML_BUILD_STRING	0	/* a C string */
+#define MLN_XML_BUILD_NODE	1	/* an element node */
+#define MLN_XML_BUILD_BUFFER	2	/* text in a buffer */
+#define MLN_XML_BUILD_INT	3	/* an integer, as decimal text */
+#define MLN_XML_BUILD_DATETIME	4	/* a dateTime, as text */
+#define MLN_XML_BUILD_NUMBER	5	/* a big-endian unsigned integer, as decimal text */
+
+typedef struct MlnXmlBuildContent {
+	int kind;
+	union {
+		const char *string;
+		MlnXmlNode *node;
+		MlnBuffer *buffer;
+		int integer;
+		const MlnDateTime *time;
+	} value;
+} MlnXmlBuildContent;
+
+int MlnXmlIntToText(int heap, int value, MlnBuffer **text);
+int MlnXmlBytesToDecimal(int heap, const MlnBuffer *number, MlnBuffer **text);
+int MlnXmlDateTimeToText(int heap, const MlnDateTime *time, MlnBuffer **text);
+int MlnXmlElementInheritNamespaces(int heap, MlnXmlElement *element,
+				   MlnXmlAttributeArray *namespaces);
+int MlnXmlElementAppendContents(int heap, MlnXmlElement *element, int count,
+				MlnXmlContent **items);
+int MlnXmlElementRemoveChild(int heap, MlnXmlElement *element, MlnXmlElement *child);
+int MlnXmlElementReplaceChild(int heap, MlnXmlElement *element, MlnXmlElement *child,
+			      MlnXmlContent *content);
+int MlnXmlElementBuild(int heap, const char *name, const char *prefix, const char *uri,
+		       int attributeCount, const MlnXmlBuildAttribute *attributeList,
+		       int contentCount, MlnXmlBuildContent *contentList, int release,
+		       MlnXmlNode **out);
+int MlnXmlNodeAddAttribute(int heap, MlnXmlNode *node, const char *name, const char *value);
+int MlnXmlNodeAddText(int heap, MlnXmlNode *node, const char *text);
 
 /* not written in C yet: the prototypes are their callers' */
 int MlnCoreInit(void *memory, unsigned int size);
