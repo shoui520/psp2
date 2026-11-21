@@ -57,10 +57,10 @@ static void imposeUpdate(void *userdata);
 
 /* the parts made, and the interface's functions given (0x81140D18) */
 Impose::Impose(Plugin *plugin)
-	: m_plugin(plugin), m_page(NULL), m_cacheManager(plugin), m_part81149A7C(plugin),
-	  m_part8115013C(plugin), m_part81150574(plugin), m_parentalControl(plugin),
-	  m_part8114B0DC(plugin), m_part8114F348(plugin), m_part8114FD14(plugin),
-	  m_part8115000C(plugin), m_touchEmulation(plugin)
+	: m_plugin(plugin), m_page(NULL), m_volume(plugin), m_cacheManager(plugin),
+	  m_part81149A7C(plugin), m_part8115013C(plugin), m_part81150574(plugin),
+	  m_parentalControl(plugin), m_part8114B0DC(plugin), m_part8114F348(plugin),
+	  m_part8114FD14(plugin), m_part8115000C(plugin), m_touchEmulation(plugin)
 {
 	g_impose = this;
 
@@ -130,7 +130,7 @@ void Impose::OpenPages()
 void Impose::Start()
 {
 	g_impose->OpenPages();
-	g_impose->m_part811450A4.Impose_811451A4();
+	g_impose->m_volume.Start();
 	g_impose->m_part8115013C.Impose_81150164();
 	g_impose->m_part81150574.Impose_81150630();
 	if (system::Model::GetType() == 1)
@@ -181,7 +181,7 @@ static void Impose_811411B4(bool arg)
 
 static void Impose_811411CC(void)
 {
-	g_impose->m_part811450A4.Impose_8114592E();
+	g_impose->m_volume.IsFixed();
 }
 
 static void Impose_811411E0(int arg1, int arg2)

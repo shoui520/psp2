@@ -13,6 +13,8 @@
 #include <plugin.h>
 #include <std/memory>
 #include <common/shared_ptr.h>
+#include <inputdevice/inputdevice.h>
+#include <inputdevice/inputlistener.h>
 #include <widget/core/widget.h>
 #include <widget/w_scene.h>
 #include <graphics/drawobj/draw_obj.h>
@@ -27,16 +29,66 @@ extern paf::Plugin *g_imposePlugin;
 /* PLACEHOLDER: an empty function the plugin's exit calls (the shell's empty function) */
 void imposeExitReserved(void);
 
-/* (0x811450A4, 76 bytes) */
-class ImposePart811450A4 {
+/*
+ * PLACEHOLDER names: the volume bar shown while the volume keys are pressed; its methods are
+ * named by their addresses until its file is written (0x81145B00, 40 bytes)
+ */
+class ImposeVolumeBar {
 public:
-	ImposePart811450A4();
-	~ImposePart811450A4();
-	void Impose_811451A4();
-	void Impose_8114592E();
+	ImposeVolumeBar(paf::Plugin *plugin);
+	~ImposeVolumeBar();
+	int Close();					/* 0x81145CB4: 0 if it was not shown */
+	void Impose_81145CDE(int arg);
+	int Impose_811463B8(int state);
+	void SetVolume(int volume, SceUInt32 flags);	/* 0x811463CC */
+	void Impose_81146974(int key);
+	void Impose_811470AC(int avls);
+	void Impose_81147706(int arg);
+	void Impose_811478C0(bool bluetooth);
 
-	SceUInt8 data[76];
+	paf::Plugin *m_plugin;
+	paf::ui::Widget *m_widget;
+	SceUInt32 reserved[6];
+	bool m_active;
+	SceInt32 m_state;
 };
+
+/* the volume control's flags for a press (PLACEHOLDER names) */
+#define IMPOSE_VOLUME_HEADSET	0x1	/* the Bluetooth headset takes the keys */
+#define IMPOSE_VOLUME_BLUETOOTH	0x2	/* the Bluetooth device's volume */
+#define IMPOSE_VOLUME_AVLS	0x4	/* limited to IMPOSE_VOLUME_AVLS_MAX */
+#define IMPOSE_VOLUME_FIXED	0x8	/* the volume does not change */
+
+/*
+ * PLACEHOLDER names: the volume control: the volume keys, repeated while held, the volume bar,
+ * the AV configuration's callback (impose_volume.cpp; 0x811450A4, 76 bytes)
+ */
+class ImposeVolume {
+public:
+	ImposeVolume(paf::Plugin *plugin);
+	~ImposeVolume();
+	void Start();
+	void VolumeDown(SceUInt32 flags);
+	void VolumeUp(SceUInt32 flags);
+	void Update(const paf::inputdevice::Data *data);
+	bool IsFixed();
+
+	paf::common::SharedPtr<paf::inputdevice::InputListener> m_listener;
+	float m_repeatTime;		/* since the last step */
+	float m_muteTime;		/* both keys held */
+	bool m_firstRepeat;
+	bool m_external;		/* the volume changed elsewhere: read again, not set */
+	SceInt32 m_volume;
+	SceUInt32 reserved;
+	SceInt32 m_device;		/* the output's controls in the last frame */
+	ImposeVolumeBar m_bar;
+	bool m_avls;
+	bool m_fixed;
+};
+
+/* the volume control and its bar (0x81564D3C, 0x81564D40) */
+extern ImposeVolume *g_imposeVolume;
+extern ImposeVolumeBar *g_imposeVolumeBar;
 
 /* the cache manager ("impose_plugin_CacheManager"; 0x81148260, 36 bytes) */
 class ImposePart81148260 {
@@ -295,7 +347,7 @@ public:
 	paf::Plugin *m_plugin;
 	paf::ui::Scene *m_page;
 	paf::ui::Scene *m_page2;
-	ImposePart811450A4 m_part811450A4;
+	ImposeVolume m_volume;
 	ImposePart81148260 m_cacheManager;
 	ImposePart81149A7C m_part81149A7C;
 	ImposePart8115013C m_part8115013C;

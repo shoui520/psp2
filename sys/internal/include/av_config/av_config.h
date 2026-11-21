@@ -25,6 +25,23 @@ int sceAVConfigGetConnectedAudioDevice(SceUInt32 *devices);
 int sceAVConfigSetAutoSuspend2(unsigned int interval);
 int sceAVConfigClearAutoSuspend2(void);
 
+/*
+ * the volume (0 to 30), as the shell's volume keys change it: the output's controls (device: 0
+ * none, 1 the speaker or headphones, 2 and 3 Bluetooth (3: the headset's own keys), 4 HDMI;
+ * fixed: the volume cannot change; avls: the volume limited), the Bluetooth device's volume, a
+ * key passed to the headset (0 released, 1 up, 2 down), the mute, the volume written to the
+ * registry, and the callback told of a change (names ours)
+ */
+int sceAVConfigGetVolCtrlEnable(int *device, int *fixed, int *avls);
+int sceAVConfigGetSystemVol(int *volume);
+int sceAVConfigSetSystemVol(int volume);
+int sceAVConfigWriteRegSystemVol(int volume);
+int sceAVConfigGetBtVol(int *device, int *volume);
+int sceAVConfigSendVolKey(int key);
+int sceAVConfigMuteOn(void);
+int sceAVConfigRegisterCallback(SceUID callback, unsigned int events);
+int sceAVConfigUnRegisterCallback(void);
+
 /* the display's brightness, its maximum, the display turned on, and the auto suspend */
 int sceAVConfigGetDisplayMaxBrightness(unsigned int *brightness);
 
