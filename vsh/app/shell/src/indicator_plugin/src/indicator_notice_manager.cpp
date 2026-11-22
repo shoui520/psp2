@@ -51,7 +51,7 @@ PAF_VECTOR_NOINLINE_PUSH_BACK(IDParam, allocator<IDParam>)
 #define INDICATOR_NOTICE_PAGE_GROUP	0x33001E2B
 
 /* the message shown while the notices are deleted, and the question before */
-#define INDICATOR_NOTICE_MSG_DELETING	0x632B4333
+#define INDICATOR_NOTICE_MSG_DELETING	0x632B6733
 #define INDICATOR_NOTICE_MSG_DELETE_ALL	0xAF9B2409
 
 /* the menu's items: the downloads cancelled, read again, and every notice deleted */
