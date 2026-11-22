@@ -155,6 +155,9 @@ int indicatorErrorDialogOpen(int error, const wchar_t *message, IndicatorDialogC
 			     void *arg);
 /* the text of the seconds left, in minutes from 120 on (0x81182050; PLACEHOLDER name) */
 paf::wstring indicatorRemainingText(int seconds);
+/* the date and time of a "YYYY-MM-DD HH:MM:SS" text as the system shows it, empty for none
+   (0x8118221C; PLACEHOLDER name) */
+paf::wstring indicatorTimeText(const char *time);
 /* the error's text, its title set when empty, and its external code and its number in hex
    appended in parentheses as asked; the external code's result (0x811822A4; PLACEHOLDER
    name) */
@@ -327,6 +330,8 @@ public:
 	/* every event deleted, the accessor's (0x8117F1B8) */
 	static int DeleteAll(bool all);
 	int GetPopupCount();					/* (0x8117F41C) */
+	/* the icon data of the event of the row, the accessor's (0x8117F40C) */
+	paf::common::SharedPtr<DbBlob> GetIcon(const SceInt64 *rowid, int *result);
 
 	NewEventAccessor m_accessor;
 };
@@ -412,12 +417,56 @@ public:
 	paf::ui::Widget *m_widget;
 };
 
+/* an icon's information by its title, as the icon information job gives it (PLACEHOLDER
+   names) */
+typedef paf::map<paf::string, LsdbIconPtr> IndicatorIconInfoMap;
+typedef void (*IndicatorIconInfoCB)(IndicatorIconInfoMap *icons, int result, void *arg);
+
+/* a text scrolled along while its item is focused, on the scene of the item's drawer
+   (0x81180848-; 48 bytes; PLACEHOLDER names, its file not written yet) */
+class IndicatorTextScroll {
+public:
+	IndicatorTextScroll(paf::ui::Scene *scene);		/* (0x81180848) */
+	virtual ~IndicatorTextScroll();				/* (0x8118087C) */
+	/* the text scrolled (0x81180C84) and back in place (0x81180C24) */
+	int Start(int mode, paf::graph::TextObj *text);
+	int Stop(paf::graph::TextObj *text);
+
+	int m_state;					/* PLACEHOLDER: not read yet */
+	SceUInt64 m_time;				/* PLACEHOLDER: not read yet */
+	bool m_running;					/* PLACEHOLDER: not read yet */
+	int m_offset;					/* PLACEHOLDER: not read yet */
+	int m_width;					/* PLACEHOLDER: not read yet */
+	int m_speed;					/* PLACEHOLDER: not read yet */
+	paf::graph::TextObj *m_text;			/* the text scrolled */
+	bool m_ellipsis;				/* the text's, kept while it scrolls */
+	bool m_wordWrap;				/* the text's, kept while it scrolls */
+	bool m_wrapped;					/* PLACEHOLDER: not read yet */
+	paf::ui::Scene *m_scene;
+};
+
+/* the icons' information of titles read as a job, the callback told (0x811825A0-; 64
+   bytes; Sony's name from its job's) */
+class JobGetIconInfo : public paf::job::JobItem {
+public:
+	JobGetIconInfo(paf::vector<paf::string> *titleIds, IndicatorIconInfoCB callback,
+		       void *arg);
+	virtual ~JobGetIconInfo();
+	virtual int Run();
+	virtual void Finish(int result);
+
+	paf::vector<paf::string> m_titleIds;
+	IndicatorIconInfoMap m_icons;
+	IndicatorIconInfoCB m_callback;			/* NULL once the item is let go */
+	void *m_arg;
+};
+
 /* an item with an icon loaded through the cache (420 bytes and its derived classes' fields
-   after it) */
+   after it; indicator_event_icon.cpp, 0x8117B780-0x8117E0BC) */
 class IndicatorEventIconItem : public IndicatorEventItem {
 public:
 	IndicatorEventIconItem(const LsdbNewEvent &event, IndicatorEventItemCB callback)
-		: IndicatorEventItem(event, callback)
+		: IndicatorEventItem(event, callback), m_icon(NULL)
 	{
 		m_iconOption.auto_delete = true;
 		m_iconOption.retry = true;
@@ -462,11 +511,25 @@ public:
 	static void OnIconError(int32_t type, paf::ui::Handler *self, paf::ui::Event *e,
 				void *data);
 
-	paf::intrusive_ptr<paf::cache::CacheImageInterface> m_icon;
-	int m_iconType;					/* PLACEHOLDER: not set yet */
-	paf::string m_iconPath;
+	/* the icon's listeners, the drawer's and the scroll let go and the icon's job cancelled
+	   (0x8117B780; PLACEHOLDER name) */
+	int Release();
+	/* the icon of the title the event runs asked of the icons' job (0x8117C34A), of the
+	   file (0x8117C542) or of the event's own icon data (0x8117C7EE) loaded, and the
+	   icons' information read (0x8117DFE2) (PLACEHOLDER names) */
+	int LoadIconInfo();
+	int LoadIconFile(paf::ui::Widget *icon, const paf::string &path);
+	int LoadIconData(paf::ui::Widget *icon, const LsdbNewEvent *event);
+	void OnIconInfo(IndicatorIconInfoMap *icons, int result);
+	/* the path the cache opens the event's icon data by, "newevtdb:<rowid>" (0x8117C6B4;
+	   PLACEHOLDER name) */
+	paf::string GetIconDataPath(const LsdbNewEvent *event);
+
+	paf::ui::Widget *m_icon;			/* the AppIconSimple made on the drawer */
+	IndicatorTextScroll *m_scroll;			/* the title's, while focused */
+	paf::string m_iconPath;				/* the file loaded, until it is shown */
 	paf::cache::CacheImage::Option m_iconOption;
-	paf::common::SharedPtr<paf::job::JobItem> m_iconJob;
+	paf::common::SharedPtr<paf::job::JobItem> m_iconJob;	/* the icons' job */
 };
 
 /* the item of a message from an application or a user (424 bytes) */
@@ -611,11 +674,6 @@ public:
 	int reserved;					/* zero from the constructor; never read */
 	paf::common::JobSlots m_updateSlots;		/* the progress's job (PLACEHOLDER name) */
 };
-
-/* an icon's information by its title, as the icon information job gives it (PLACEHOLDER
-   names) */
-typedef paf::map<paf::string, LsdbIconPtr> IndicatorIconInfoMap;
-typedef void (*IndicatorIconInfoCB)(IndicatorIconInfoMap *icons, int result, void *arg);
 
 /*
  * The notices' list page (0x81544A54, indicator_notice_manager.cpp): the page made from its
