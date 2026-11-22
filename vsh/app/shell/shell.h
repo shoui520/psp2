@@ -28,6 +28,19 @@ enum {
 	SHELL_APP_EVENT_DEACTIVATED	= 6,	/* PLACEHOLDER name: the zoom's listener, after 5 */
 };
 
+/* what SHELL_APP_EVENT_ACTIVATED sends with an application brought to the front (13 bytes
+   copied) */
+struct ShellAppActivatedEvent {
+	ShellAppActivatedEvent() : fromBoot(false)
+	{
+	}
+
+	SceUID processId;
+	int appId;
+	const char *appName;
+	bool fromBoot;
+};
+
 /* the application whose status says which process is in front (appmgr's, name ours) */
 #define SHELL_APP_ID_FRONT	-6
 

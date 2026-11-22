@@ -699,14 +699,6 @@ static void shellBootOnDbrecoveryPluginLoaded(Plugin *plugin)
 		shellBootProceed();
 }
 
-/* what SHELL_APP_EVENT_ACTIVATED sends with an application brought to the front */
-struct ShellAppActivatedEvent {
-	SceUID processId;
-	int appId;
-	const char *appName;
-	bool fromBoot;
-};
-
 /*
  * an application event while the boot's applications run (the initial setup, a recovery): their
  * ids are stacked as they start and unstacked as they end, the one on top is brought to the
@@ -761,7 +753,6 @@ static void shellBootOnAppEvent(int code, const void *data, SceSize size, void *
 		if (sceAppMgrGetStatusByAppId(appId, &status) == 0) {
 			ShellAppActivatedEvent activated;
 
-			activated.fromBoot = false;
 			activated.processId = status.processId;
 			activated.appId = status.appId;
 			activated.appName = status.appName;

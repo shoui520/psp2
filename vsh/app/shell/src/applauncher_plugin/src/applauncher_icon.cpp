@@ -206,7 +206,7 @@ void ApplauncherIcon::Update(bool clear)
 		opt.auto_delete = true;
 		opt.retry = true;
 		opt.retry_count = -1;
-		opt.reserved = 1;
+		opt.reserved = true;
 		opt.read_size = 0;
 		opt.read_offset = 0;
 		opt.max_size_kb = 0;

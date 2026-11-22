@@ -36,7 +36,7 @@ public:
 		bool auto_delete;
 		bool retry;
 		int32_t retry_count;
-		uint32_t reserved;
+		bool reserved;		/* set to 1 by every caller, a byte; what reads it is not written yet (PLACEHOLDER) */
 		size_t read_size;
 		size_t read_offset;
 		uint16_t max_size_kb;
