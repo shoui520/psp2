@@ -21,6 +21,7 @@
 #include "../../esecron/include/esetask.hpp"
 #include "system_update_svc.h"
 #include "download_plugin.h"
+#include "../../indicator_plugin/src/indicator_interface.h"
 
 /* the service's own errors (PLACEHOLDER names) */
 #define DOWNLOAD_SVC_ERROR_INVALID_ARGUMENT	0x80103B01
@@ -74,24 +75,6 @@ struct BgdlSpaceInfo {
 	SceUInt64 max;
 	SceUInt64 used;
 	SceUInt64 free;
-};
-
-/* what indicator_plugin is told of a task (PLACEHOLDER names) */
-struct IndicatorTaskEvent {
-	IndicatorTaskEvent() : taskId(0)
-	{
-		reserved[0] = 0;
-		reserved[1] = 0;
-	}
-
-	SceUInt32 taskId;
-	int reserved[2];
-};
-
-/* the table given as indicator_plugin's GetInterface(1), as far as the service uses it */
-struct IndicatorPluginInterface {
-	void *reserved[12];		/* PLACEHOLDER: not called here */
-	void (*TaskEvent)(const IndicatorTaskEvent *event);	/* PLACEHOLDER name */
 };
 
 int Bgdl_81138FE4(IPMI::Session *session, int kind, const BgdlTaskDetail *detail);
