@@ -1919,8 +1919,91 @@ unsigned int MlnImpl_81043A78(void);
 unsigned int MlnImpl_81043A6C(const MlnBuffer *state);
 unsigned int MlnImpl_81043A60(int kind, MlnBuffer **out);
 unsigned int MlnImpl_81043C70(int step);
-unsigned int MlnImpl_8104A448(void);		/* the core's lock */
-unsigned int MlnImpl_8104A558(void);		/* the core's unlock */
+unsigned int MlnImpl_8104A448(void);
+unsigned int MlnImpl_8104A4B8(void);
+unsigned int MlnImpl_8104A558(void);
+
+/*
+ * The core context (0x3c bytes, zeroed by MlnImpl_81062024): what one
+ * open of the core holds, filled from the store by MlnImpl_8104A560.
+ */
+typedef struct MlnCoreContext MlnCoreContext;
+
+unsigned int MlnImpl_8104A560(MlnCoreContext **context, MlnBuffer **state);
+unsigned int MlnImpl_81062024(MlnCoreContext **context);
+void MlnImpl_81062060(MlnCoreContext *context);
+unsigned int MlnImpl_81062164(MlnCoreContext *context, MlnOctopusNode *node);
+unsigned int MlnImpl_81062224(MlnCoreContext *context, MlnOctopusArray *links);
+unsigned int MlnImpl_810623F0(MlnCoreContext *context, MlnOctopusSamlAssertion *assertion);
+unsigned int MlnImpl_81062450(MlnCoreContext *context, MlnArray *pair);
+unsigned int MlnImpl_810644A0(MlnOctopusSamlAssertion **out);
+
+/*
+ * The handle table in MlnShared's buffers[4]: 0x400 slots and whether
+ * MlnImpl_81069F10 has set it up.
+ */
+#define MLN_HANDLE_TABLE_SLOTS	0x400
+
+typedef struct MlnHandleTable {
+	void *slots[MLN_HANDLE_TABLE_SLOTS];
+	int initialized;
+} MlnHandleTable;
+
+/* a pending response of a core handle (freed by MlnImpl_81069A9C) */
+typedef struct MlnCoreResponse {
+	int reserved0;
+	int pending;		/* data still to be written to the store */
+	int reserved8;
+	MlnBuffer *request;
+	MlnBuffer *data;	/* the store's table 14 */
+} MlnCoreResponse;
+
+/* what a handle of MlnImpl_8104A8D8 names (0x28 bytes) */
+typedef struct MlnCoreHandle {
+	MlnCoreContext *context;
+	unsigned int flags;	/* MLN_CORE_HANDLE_BUNDLE */
+	MlnOctopusSignedBundle *bundle;
+	int reservedC;
+	void *memory;
+	MlnCoreResponse *response;
+	int outcome;		/* set by MlnImpl_8104BFB0, 0 when a record handle opens */
+	MlnBuffer *state;
+	int reserved20;
+	int kind;		/* 4 when opened */
+} MlnCoreHandle;
+
+#define MLN_CORE_HANDLE_BUNDLE	0x1	/* a bundle was given (MlnImpl_8104AB18) */
+#define MLN_CORE_HANDLE_RECORD	0x2	/* a record handle was opened (MlnImpl_8104AF48) */
+#define MLN_CORE_HANDLE_DONE	0x4	/* set by MlnImpl_8104BFB0: no more record handles */
+
+/* a record handle of MlnImpl_8104AF48 (0x20 bytes): a record of a core handle */
+typedef struct MlnCoreRecordHandle {
+	void *object;		/* made by MlnImpl_81061BBC */
+	MlnCoreHandle *core;
+	void *entry;		/* the record's entry in the core context (MlnImpl_8106273C) */
+	MlnBuffer *buffer;	/* the record's buffer */
+	unsigned int kind;	/* MLN_SERVICE_RECORD_*, with head and tail as in the record */
+	unsigned char head[4];
+	unsigned char tail[8];
+} MlnCoreRecordHandle;
+
+unsigned int MlnImpl_81061BBC(void **out);
+void MlnImpl_81061C00(void *object);
+unsigned int MlnImpl_81061C1C(void *object, int kind, const unsigned char *data);
+unsigned int MlnImpl_8106273C(MlnCoreContext *context, MlnBuffer *buffer, void **entry);
+
+unsigned int MlnImpl_8104AE1C(int handle, MlnXmlNode *node);
+unsigned int MlnImpl_81062524(MlnCoreContext *context, MlnOctopusBundle *bundle);
+unsigned int MlnImpl_81069968(MlnBuffer *data, int kind, MlnCoreResponse **out);
+
+unsigned int MlnImpl_81069F10(MlnHandleTable *table);
+unsigned int MlnImpl_81069F68(void *object, MlnHandleTable *table, int *handle);
+unsigned int MlnImpl_81069FE8(int handle, MlnHandleTable *table, void *out);
+unsigned int MlnImpl_8106A048(int handle, void *object, MlnHandleTable *table);
+int MlnImpl_81069A9C(MlnCoreResponse *response);
+int MlnImpl_8105F2C4(int *id, unsigned int *flags);
+unsigned int MlnImpl_81052D14(int id, int mode, unsigned int start, int owner);
+unsigned int MlnImpl_81052D84(int *id, int *mode);
 unsigned int MlnImpl_81080BFC(void **handle);
 unsigned int MlnImpl_81081374(int full);
 unsigned int MlnImpl_81080C1C(void *handle);

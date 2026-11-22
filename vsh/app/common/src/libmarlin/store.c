@@ -1,6 +1,6 @@
 /*
  * The license store: the core's state records by step, the links table, the
- * stored records and the digest the core keeps (0x810436e4-)
+ * stored records and the digest the core keeps (0x810436e4-0x8104a444)
  */
 
 #include "mln_internal.h"
