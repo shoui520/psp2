@@ -1625,7 +1625,7 @@ static inline __attribute__((always_inline)) int MlnBufferGroupDecode(const unsi
 			if (error != MLN_OK)
 				goto out;
 			if (entry == NULL) {
-				error = MLN_CORE_ERROR_INVALID;
+				error = 7;
 				goto out;
 			}
 			error = MlnMessageGetBuffer(entry->data, rest - 8, &buffer[0]);
