@@ -32,6 +32,7 @@
 #include "../../../plugins.h"
 #include "../../../shell.h"
 #include "impose.h"
+#include "incoming_dialog_server.h"
 
 using namespace paf;
 
@@ -1108,15 +1109,6 @@ int shellIncomingDialogServerSwitchToDialog(IPMI::Session *session)
 
 	return INCOMING_DIALOG_ERROR_NOT_READY;
 }
-
-/* the methods 0x170000-0x170005, and the asynchronous ones, which it does not have, in the next
-   file (0x8115B498, 0x8115B554; PLACEHOLDER names) */
-int shellIncomingDialogServerSyncDispatch(IPMI::Session *session, SceUInt32 methodId,
-					  const IPMI::DataInfo *inList, SceUInt32 inCount,
-					  IPMI::BufferInfo *outList, SceUInt32 outCount);
-int shellIncomingDialogServerAsyncDispatch(IPMI::Session *session, SceUInt32 requestId,
-					   SceUInt32 methodId, const IPMI::DataInfo *inList,
-					   SceUInt32 inCount);
 
 /* the server's handlers in the shell's table of them (0x81511F44) */
 

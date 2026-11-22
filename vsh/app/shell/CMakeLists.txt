@@ -252,6 +252,8 @@ psp2_module(vs0_vsh_shell_shell KIND user COMPILER snc PARTIAL SOURCES
 	src/impose_plugin/src/impose_psmenu_bgm.cpp
 	src/impose_plugin/src/impose_psmenu_wireless.cpp
 	src/impose_plugin/src/impose_psmenu_util.cpp
+	src/impose_plugin/src/incoming_dialog_server_ipc.cpp
+	src/indicator_plugin/src/indicator_plugin.cpp
 	shell.c
 )
 target_include_directories(vs0_vsh_shell_shell PRIVATE "${PSP2_SRC}/vsh/paf/include"
