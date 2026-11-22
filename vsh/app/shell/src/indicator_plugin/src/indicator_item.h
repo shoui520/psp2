@@ -155,6 +155,10 @@ public:
 class IndicatorMobileSignal : public IndicatorItem {
 public:
 	IndicatorMobileSignal(paf::Plugin *plugin, paf::ui::Widget *widget);	/* (0x81169288) */
+	virtual ~IndicatorMobileSignal();				/* (0x81169610) */
+	virtual void OnStatus(IndicatorStatus status);			/* (0x8116C534) */
+	virtual void UpdateColor(IndicatorStatus status);		/* (0x8116C5CC) */
+
 	paf::ui::Widget *m_root;
 	paf::Plugin *m_plugin;
 };
@@ -235,6 +239,11 @@ public:
 #define INDICATOR_SIGNAL_UNREGISTERED	104
 #define INDICATOR_SIGNAL_REGISTERED	105
 
+/* the signal item's own events, from its OnStatus (PLACEHOLDER names): hidden for the flight mode
+   or the status's value6, and the last level given back */
+#define INDICATOR_SIGNAL_HIDE		106
+#define INDICATOR_SIGNAL_RESTORE	107
+
 /* the operator's names the telephony listener gives (plugins.h) */
 struct TelephonyOperatorNames;
 
@@ -258,6 +267,9 @@ extern void *g_indicatorSimConditionArg;
 /* the telephony listener's general network type event: its value handed to the main thread
    (0x811685F8; PLACEHOLDER name) */
 void indicatorTelGeneralNetworkTypeCB(int event, int result, const int *value, int size);
+
+/* the plugin (indicator_interface.cpp) */
+extern paf::Plugin *g_indicatorPlugin;
 
 class IndicatorBattery : public IndicatorItem {
 public:

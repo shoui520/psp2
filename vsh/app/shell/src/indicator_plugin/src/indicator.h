@@ -96,7 +96,6 @@ class IndicatorCache;
 extern IndicatorCache *g_indicatorCache;
 extern paf::memory::HeapAllocator *g_indicatorHeap;
 extern IndicatorPluginInterface *g_indicatorInterface;
-extern paf::Plugin *g_indicatorPlugin;
 
 /* the registry values read on the plugin's job queue, the callback given them (0x8115FBC6) */
 paf::common::SharedPtr<paf::job::JobItem> indicatorRegInfoJobStart(

@@ -1366,6 +1366,9 @@ public:
 	   0x8141A66C and 0x8141A5FC; names ours) */
 	inline void Show(uint8_t type, Timer *t, AnimCB cb_fin, float delay);
 	inline void Hide(uint8_t type, Timer *t, AnimCB cb_fin, float delay);
+	/* hidden over a timer of the time after the delay, or at once when both are 0 (out of line
+	   in Sony's callers, shell's 0x8141BF74; name ours) */
+	inline void Hide(float time, float delay);
 
 	void SetHitBox(uint8_t mode, const math::v4 &size, const math::v4 &center)
 	{
@@ -2152,6 +2155,14 @@ inline void paf::ui::Widget::Hide(uint8_t type, Timer *t, AnimCB cb_fin, float d
 	else
 		ScePafCommon_B48C9BDC(time, this, (common::transition::Type)type, false, true);
 	ScePafWidget_4588699E(this, t, 2, delay, cb_fin);
+}
+
+inline void paf::ui::Widget::Hide(float time, float delay)
+{
+	if (time > 0.0f || delay > 0.0f)
+		Hide(0xff, new Timer(time), NULL, delay);
+	else
+		Hide(0xff, NULL, NULL, 0.0f);
 }
 /* SetPosHermite with the start's and the target's tangents given apart (no name found) */
 int32_t ScePafWidget_026C9E8C(paf::ui::Widget *widget, const paf::math::v4 &pos,
