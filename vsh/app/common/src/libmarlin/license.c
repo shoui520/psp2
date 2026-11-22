@@ -2220,8 +2220,8 @@ unsigned int MlnImpl_81051084(int handle, const MlnBuffer *data, MlnBlob *first,
 	MlnParameter *parameter;
 	MlnValueList *parameters;
 	MlnHandleTable *table;
-	void *agent = NULL;
-	void *context = NULL;
+	MlnXmlNode *agent = NULL;
+	MlnXmlNode *context = NULL;
 	unsigned int ret;
 	unsigned int r;
 	int failed = 1;
@@ -2300,7 +2300,7 @@ unsigned int MlnImpl_81051084(int handle, const MlnBuffer *data, MlnBlob *first,
 		goto fail;
 	}
 	parameter = obligation->parameters->items[i]->data.parameter;
-	r = MlnImpl_8106668C(parameter->name, parameter->value->data.buffer, &parameterNode);
+	r = MlnImpl_8106668C(parameter->name, parameter->value->data.integer, &parameterNode);
 	if (r == 0)
 		r = MlnImpl_81066548(session->context, &agent, &context);
 	if (r == 0)

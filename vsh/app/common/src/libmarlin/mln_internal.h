@@ -1946,6 +1946,8 @@ int MlnImpl_8106A0AC(int algorithm, const MlnBuffer *key, const MlnBuffer *messa
 unsigned int MlnImpl_81052EBC(unsigned int *seconds);
 int MlnImpl_81052944(const MlnDateTime *a, const MlnDateTime *b);
 int MlnImpl_810529E8(int value, int base, int size, char *buf);
+/* prefix, the buffer's text and suffix joined into a new string */
+int MlnImpl_81082EA4(const char *prefix, const MlnBuffer *value, const char *suffix, char **out);
 int MlnImpl_81052CA8(int value, int base);
 int MlnImpl_81061898(int kind, const MlnOctopusKey *key, const MlnBuffer *message,
 		     const MlnBuffer *signature);
@@ -2188,20 +2190,20 @@ unsigned int MlnImpl_8105D280(unsigned char *data, unsigned int *size);
 unsigned int MlnImpl_8105D3F4(unsigned char *data, unsigned int *size);
 unsigned int MlnImpl_8105D34C(unsigned char *data);
 unsigned int MlnImpl_8105D428(unsigned char *data);
-unsigned int MlnImpl_81066588(void *context, MlnXmlNode *document, int *refused);
+unsigned int MlnImpl_81066588(void *context, MlnXmlNode *document, int *category);
 unsigned int MlnImpl_81066A28(MlnXmlNode *document, int *value, MlnBuffer **payload);
-unsigned int MlnImpl_81065920(void *context, int count, MlnBuffer **first, MlnBuffer **second,
-			      MlnBuffer **third, MlnBuffer *pair, MlnBuffer *answer,
-			      MlnXmlNode **document);
+unsigned int MlnImpl_81065920(void *context, int count, MlnBuffer **encryptedKeys,
+			      MlnBuffer **keyIds, MlnBuffer **contentKeyIds, MlnBuffer *pair,
+			      MlnBuffer *answer, MlnXmlNode **document);
 unsigned int MlnImpl_81065848(MlnXmlNode *document, MlnXmlNode **payload);
 unsigned int MlnImpl_81068C90(MlnXmlNode *payload, MlnArray *keys, int kind, MlnXmlNode **node,
 			      MlnArray **pending);
 unsigned int MlnImpl_81066888(void *context, MlnXmlNode *node, MlnXmlNode **document);
 unsigned int MlnImpl_810651F4(MlnXmlNode *document, MlnBuffer **request, MlnBuffer **token);
-unsigned int MlnImpl_8106632C(void *context, const MlnBuffer *token);
-unsigned int MlnImpl_81066B84(MlnBuffer *request, MlnBuffer **transfer, MlnXmlNode **node);
-unsigned int MlnImpl_8106668C(const MlnBuffer *name, MlnBuffer *value, MlnXmlNode **node);
-unsigned int MlnImpl_81066548(void *context, void **first, void **second);
+unsigned int MlnImpl_8106632C(void *context, const MlnBuffer *license);
+unsigned int MlnImpl_81066B84(const MlnBuffer *request, MlnBuffer **transfer, MlnXmlNode **node);
+unsigned int MlnImpl_8106668C(const MlnBuffer *name, int date, MlnXmlNode **node);
+unsigned int MlnImpl_81066548(void *context, MlnXmlNode **control, MlnXmlNode **signature);
 unsigned int MlnImpl_81065430(const MlnBuffer *agentId, const MlnBuffer *contextId,
 			      const MlnBuffer *controlId, MlnXmlNode *parameter, MlnXmlNode *agent,
 			      MlnXmlNode *context, MlnXmlNode **document);
