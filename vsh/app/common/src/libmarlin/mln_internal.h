@@ -2306,6 +2306,7 @@ unsigned int MlnImpl_81064E18(MlnBufferGroups **info);
 unsigned int MlnImpl_81064E68(MlnBuffer **request);
 unsigned int MlnImpl_81064EC0(void *context, MlnBuffer *request, const MlnBuffer *data,
 			      MlnXmlNode **document);
+struct MlnX509Certificates;
 unsigned int MlnImpl_81082E44(int count, MlnBuffer **items, struct MlnX509Certificates *out);
 int MlnImpl_8102FE68(const MlnServiceReply *reply, MlnServiceArgs **out, int *status);
 int MlnImpl_81030648(const MlnServiceReply *reply, MlnServiceArgs **out, int *status);
