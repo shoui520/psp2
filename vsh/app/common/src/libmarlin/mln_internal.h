@@ -1952,9 +1952,9 @@ typedef struct MlnHandleTable {
 
 /* a pending response of a core handle (freed by MlnImpl_81069A9C) */
 typedef struct MlnCoreResponse {
-	int reserved0;
+	unsigned int entryOffset;	/* the content's entry in data, 0 when none (MlnImpl_81069AE4) */
 	int pending;		/* data still to be written to the store */
-	int reserved8;
+	unsigned int minutes;	/* the entry's first use (MlnImpl_81069D28) */
 	MlnBuffer *request;
 	MlnBuffer *data;	/* the store's table 14 */
 } MlnCoreResponse;
@@ -2023,6 +2023,15 @@ unsigned int MlnImpl_81069F68(void *object, MlnHandleTable *table, int *handle);
 unsigned int MlnImpl_81069FE8(int handle, MlnHandleTable *table, void *out);
 unsigned int MlnImpl_8106A048(int handle, void *object, MlnHandleTable *table);
 int MlnImpl_81069A9C(MlnCoreResponse *response);
+unsigned int MlnImpl_81069AE4(MlnCoreResponse *response, const MlnBuffer *id);
+unsigned int MlnImpl_81069C38(MlnCoreResponse *response, const MlnBuffer *id, unsigned int minutes);
+unsigned int MlnImpl_81069D28(MlnCoreResponse *response, unsigned int minutes);
+unsigned int MlnImpl_81069D90(MlnCoreResponse *response);
+
+/* license.c */
+int MlnImpl_8104D15C(int handle, unsigned int size, const unsigned char *data);
+unsigned int MlnImpl_8104D16C(int handle, int kind, MlnBuffer **out);
+unsigned int MlnImpl_8104D208(const MlnBuffer *controller, const MlnBuffer *token);
 int MlnImpl_8105F2C4(int *id, unsigned int *flags);
 unsigned int MlnImpl_81052D14(int id, int mode, unsigned int start, int owner);
 unsigned int MlnImpl_81052D84(int *id, int *mode);

@@ -45,6 +45,7 @@ set(MLN_ENGINE_SOURCES
 	store.c
 	session.c
 	handle.c
+	license.c
 )
 psp2_module(${PSP2_TARGET} KIND user COMPILER gcc48 PARTIAL SOURCES
 	${MLN_ARM_SOURCES}

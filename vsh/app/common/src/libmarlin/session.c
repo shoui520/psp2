@@ -1,6 +1,6 @@
 /*
  * The core's sessions: the session record (its id, mode and start time)
- * kept for the platform (0x8104a448-0x8104a55c)
+ * kept for the platform (0x8104a448-0x8104a55c). The file's name is ours.
  */
 
 #include "mln_internal.h"

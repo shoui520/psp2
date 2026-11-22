@@ -1,7 +1,7 @@
 /*
  * The core context and the handles that name it: each open reads the
  * store into a context, and the handle table maps handles to their
- * MlnCoreHandle (0x8104a560-)
+ * MlnCoreHandle (0x8104a560-0x8104d140). The file's name is ours.
  */
 
 #include "mln_internal.h"
