@@ -1358,6 +1358,14 @@ typedef struct MlnAttributeBox {
 	unsigned char *data;
 } MlnAttributeBox;
 
+/* the XML namespaces the Octopus objects are read from */
+#define MLN_OCTOPUS_NAMESPACE	"http://www.octopus-drm.com/profiles/base/1.0"
+#define MLN_XMLDSIG_NAMESPACE	"http://www.w3.org/2000/09/xmldsig#"
+#define MLN_SAML_NAMESPACE	"urn:oasis:names:tc:SAML:1.0:assertion"
+
+/* an Octopus object or token that is not as its schema says */
+#define MLN_OCTOPUS_ERROR_FORMAT	0x230F0002
+
 /*
  * Octopus objects (http://www.octopus-drm.com/profiles/base/1.0), as parsed
  * from their XML. An array of objects is an MlnOctopusArray; what it holds is
@@ -1547,6 +1555,17 @@ typedef struct MlnOctopusBundle {
 	MlnOctopusArray *attributes;
 } MlnOctopusBundle;
 
+/* a bundle and, for each of its content keys, the SignedInfo and signature over it */
+typedef struct MlnOctopusBundleSignature {
+	MlnBuffer *signedInfo;
+	MlnBuffer *signature;
+} MlnOctopusBundleSignature;
+
+typedef struct MlnOctopusSignedBundle {
+	MlnOctopusBundle *bundle;
+	MlnOctopusBundleSignature *signatures;
+} MlnOctopusSignedBundle;
+
 /* a Plankton value, of a Parameter's or a ValueList's ValueBlock */
 #define MLN_PLANKTON_INTEGER		1
 #define MLN_PLANKTON_REAL		2
@@ -1642,6 +1661,36 @@ void MlnImpl_8103CEB0(MlnPlanktonValueList *list);
 void MlnImpl_8103CFC0(MlnPlanktonParameterBlock *block);
 void MlnImpl_8103D01C(MlnPlanktonValue *value);
 int MlnImpl_8103D0DC(const MlnRecordArray *array, MlnBuffer **out);
+int MlnImpl_8103D30C(const MlnBuffer *data, MlnRecordArray *array);
+int MlnImpl_8103D4AC(MlnBuffer *data, const MlnBuffer *id, MlnRecord **out);
+void MlnImpl_8103D5B8(MlnRecord *record);
+int MlnImpl_8103D628(MlnXmlNode *node, MlnOctopusArray **transforms, MlnBuffer **digestMethod,
+		     MlnBuffer **digestValue);
+int MlnImpl_8103D890(MlnXmlNode *node, unsigned int anonymous, MlnOctopusAttribute **out);
+int MlnImpl_8103DCBC(MlnXmlNode *node, MlnOctopusArray **out);
+int MlnImpl_8103DDB0(MlnXmlNode *node, int pair, void **out);
+int MlnImpl_81082230(MlnXmlNode *node, MlnBuffer **encryptionMethod, MlnBuffer **oaepParams,
+		     MlnBuffer **keyName, MlnBuffer **keyEncryptionMethod, MlnBuffer **encryptedKey,
+		     MlnBuffer **cipherValue);
+int MlnImpl_8103E4FC(const void *data, unsigned int size, unsigned char *digest,
+		     int digestSize);
+int MlnImpl_810570A8(const void *data, unsigned int size, unsigned char *digest);
+int MlnImpl_8105713C(const void *data, unsigned int size, unsigned char *digest);
+int MlnImpl_8103EF84(const MlnOctopusArray *transforms);
+int MlnImpl_8103E540(const MlnBuffer *token, int type, MlnOctopusSamlAssertion **out,
+		     int verify);
+int MlnImpl_8105BF78(MlnXmlNode *signature, int *digestSize);
+int MlnImpl_8103FF44(MlnXmlNode *node, MlnOctopusControl **out);
+int MlnImpl_8103F6F0(const MlnBuffer *token, MlnOctopusNode **out, int type, int verify);
+int MlnImpl_81061330(const MlnOctopusScubaKeys *keys, MlnBuffer **out);
+int MlnImpl_810611BC(const MlnOctopusNode *node, MlnBuffer **out);
+int MlnImpl_81059558(MlnXmlNode *node, MlnXmlNode *transform, MlnBuffer **out);
+int MlnImpl_8105BA14(MlnXmlNode *signature, int usage, int count, MlnBuffer **references,
+		     unsigned char **digests, int *digestTypes, int flags, int *verified);
+int MlnImpl_8103EFDC(MlnXmlNode *node, MlnOctopusExtension **out);
+int MlnImpl_8103F62C(MlnXmlNodeList *list, MlnOctopusArray **out);
+int MlnImpl_81040368(MlnOctopusSignedBundle *signedBundle);
+int MlnImpl_81009B50(int heap, unsigned int size, const unsigned char *text, int *value);
 void MlnImpl_81080C80(void *key);
 
 int MlnImpl_8102A228(unsigned int error);

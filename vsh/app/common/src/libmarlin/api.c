@@ -522,8 +522,6 @@ int SceMarlin_EB4A1345(MlnServiceContext *context, int id, int value, unsigned i
 	return MlnImpl_8101698C(context, id, value, firstSize, firstData, secondSize, secondData);
 }
 
-#define MLN_OCTOPUS_NAMESPACE	"http://www.octopus-drm.com/profiles/base/1.0"
-
 static void MlnContentTargetsFree(MlnContentTarget *targets, unsigned int count)
 {
 	unsigned int i;
