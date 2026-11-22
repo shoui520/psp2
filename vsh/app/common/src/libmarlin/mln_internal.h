@@ -1884,6 +1884,10 @@ int MlnImpl_81046F98(int kind, const unsigned char *id1, const unsigned char *id
 int MlnImpl_810472BC(unsigned int *count, int table);
 int MlnImpl_81047424(unsigned int i, int table, MlnBuffer **out);
 int MlnImpl_81047CDC(const unsigned char *digest);
+int MlnImpl_81048CF8(const MlnStoreLink *links, const unsigned char *digest);
+int MlnImpl_81048FF0(const MlnStoreLink *links);
+int MlnImpl_81048DF0(MlnStoreLink *links, const MlnBuffer *from, const MlnBuffer *to,
+		     MlnStoreLink **found, int *free);
 int MlnImpl_81047D7C(int ret, int miss, unsigned int flag, unsigned int *found,
 		     unsigned int *damaged);
 int MlnImpl_81049E34(MlnStoreLink **links, MlnStoreLink *link);
@@ -1918,7 +1922,8 @@ unsigned int MlnImpl_8104A558(void);		/* the core's unlock */
 unsigned int MlnImpl_81080BFC(void **handle);
 unsigned int MlnImpl_81081374(int full);
 unsigned int MlnImpl_81080C1C(void *handle);
-void MlnImpl_810485B4(void);
+int MlnImpl_810485B4(void);
+unsigned int MlnImpl_8108136C(int full, const void *data, unsigned int size);
 unsigned int MlnImpl_81042A60(const MlnBuffer *token, MlnOctopusNode **out, int verify);
 int MlnImpl_8103B8F8(MlnOctopusNode *node);
 int MlnImpl_8102A484(unsigned int mode);

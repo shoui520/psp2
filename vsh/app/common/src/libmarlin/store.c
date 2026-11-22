@@ -1530,7 +1530,7 @@ out:
 }
 
 /* makes a set of count bits, all clear */
-int MlnImpl_81046354(int count, MlnBitset **out)
+static inline __attribute__((always_inline)) int MlnBitsetCreate(int count, MlnBitset **out)
 {
 	MlnBitset *set;
 	int size;
@@ -1551,14 +1551,15 @@ int MlnImpl_81046354(int count, MlnBitset **out)
 	return ret;
 }
 
-int MlnImpl_810463B4(MlnBitset *set)
+static inline __attribute__((always_inline)) int MlnBitsetDestroy(MlnBitset *set)
 {
 	MlnFree(MLN_HEAP_GENERAL, set);
 	return 0;
 }
 
 /* sets or clears bit index (bit 0 is the top bit of the first byte) */
-int MlnImpl_810463CC(MlnBitset *set, int index, int value)
+static inline __attribute__((always_inline)) int MlnBitsetSet(MlnBitset *set, int index,
+							     int value)
 {
 	if (index < 0 || index >= set->count)
 		return 5;
@@ -1569,8 +1570,23 @@ int MlnImpl_810463CC(MlnBitset *set, int index, int value)
 	return 0;
 }
 
+__attribute__((noinline)) int MlnImpl_81046354(int count, MlnBitset **out)
+{
+	return MlnBitsetCreate(count, out);
+}
+
+__attribute__((noinline)) int MlnImpl_810463B4(MlnBitset *set)
+{
+	return MlnBitsetDestroy(set);
+}
+
+__attribute__((noinline)) int MlnImpl_810463CC(MlnBitset *set, int index, int value)
+{
+	return MlnBitsetSet(set, index, value);
+}
+
 /* finds the first bit that is set (value nonzero) or clear, -1 when none */
-int MlnImpl_81046420(const MlnBitset *set, int value, int *index)
+__attribute__((noinline)) int MlnImpl_81046420(const MlnBitset *set, int value, int *index)
 {
 	unsigned int byte;
 	int bytes;
@@ -1660,10 +1676,10 @@ int MlnImpl_8104657C(int kind, const MlnBuffer *index, const unsigned char *id1,
 		ret = 5;
 		goto out;
 	}
-	ret = MlnImpl_81046354(8, &used);
+	ret = MlnBitsetCreate(8, &used);
 	if (ret != 0)
 		goto out;
-	ret = MlnImpl_810463CC(used, 0, 1);
+	ret = MlnBitsetSet(used, 0, 1);
 	if (ret != 0)
 		goto out;
 	if ((index->size & 0x3F) != 0) {
@@ -1678,7 +1694,7 @@ int MlnImpl_8104657C(int kind, const MlnBuffer *index, const unsigned char *id1,
 		    (id2 == NULL || MlnMemcmp(p + 0x14, id2, 20) == 0) &&
 		    (id3 == NULL || MlnMemcmp(p + 0x28, id3, 20) == 0))
 			break;
-		if (MlnImpl_810463CC(used, key, 1) != 0) {
+		if (MlnBitsetSet(used, key, 1) != 0) {
 			ret = 6;
 			goto out;
 		}
@@ -1699,7 +1715,7 @@ int MlnImpl_8104657C(int kind, const MlnBuffer *index, const unsigned char *id1,
 	if (free != NULL)
 		*free = slot;
 out:
-	MlnImpl_810463B4(used);
+	MlnBitsetDestroy(used);
 	return ret;
 }
 
@@ -2140,10 +2156,10 @@ int MlnImpl_810476C0(int kind)
 	}
 	MlnBufferDestroy(MLN_HEAP_GENERAL, index);
 	index = NULL;
-	ret = MlnImpl_81046354(8, &used);
+	ret = MlnBitsetCreate(8, &used);
 	if (ret != 0)
 		goto out;
-	ret = MlnImpl_810463CC(used, 0, 1);
+	ret = MlnBitsetSet(used, 0, 1);
 	if (ret != 0)
 		goto out;
 	ret = MlnImpl_81045EF8(table, &index);
@@ -2155,7 +2171,7 @@ int MlnImpl_810476C0(int kind)
 		for (i = 0; i < count; i++, entry += 0x40) {
 			key = entry[0x3C] << 24 | entry[0x3D] << 16 | entry[0x3E] << 8 |
 			      entry[0x3F];
-			ret = MlnImpl_810463CC(used, key, 1);
+			ret = MlnBitsetSet(used, key, 1);
 			if (ret != 0)
 				goto out;
 		}
@@ -2172,12 +2188,12 @@ int MlnImpl_810476C0(int kind)
 		ret = 6;
 out:
 	MlnBufferDestroy(MLN_HEAP_GENERAL, index);
-	MlnImpl_810463B4(used);
+	MlnBitsetDestroy(used);
 	return ret;
 }
 
 /* removes the link whose id is digest, and its record (table 7) */
-int MlnImpl_81047CDC(const unsigned char *digest)
+__attribute__((noinline)) int MlnImpl_81047CDC(const unsigned char *digest)
 {
 	MlnStoreLink *links = NULL;
 	MlnStoreLink *found = NULL;
@@ -2376,7 +2392,7 @@ unsigned int MlnImpl_81047E48(const MlnBuffer *id, unsigned int *flags)
  * the state flags of the core: which of the steps' states (tables 15, 3 and
  * 17) and the two key states are there (found) or damaged; damaged wins
  */
-unsigned int MlnImpl_81048214(unsigned int *flags)
+__attribute__((noinline)) unsigned int MlnImpl_81048214(unsigned int *flags)
 {
 	unsigned int found = 0;
 	unsigned int damaged = 0;
@@ -2434,5 +2450,418 @@ invalid:
 	ret = 5;
 out:
 	MlnImpl_81080C1C(handle);
+	return ret;
+}
+
+/* resets the core: drops the steps' states, the key states and every link */
+int MlnImpl_810485B4(void)
+{
+	unsigned char zero[20];
+	unsigned int flags = 0;
+	MlnStoreLink *links = NULL;
+	void *handle = NULL;
+	int ret;
+
+	ret = MlnImpl_81048214(&flags);
+	if (ret != 0)
+		goto out;
+	if (flags == 0) {
+		ret = 0x230A0002;
+		goto out;
+	}
+	ret = MlnImpl_8105DC0C(15, 0, NULL);
+	if (ret != 0)
+		goto out;
+	ret = MlnImpl_81080BFC(&handle);
+	if (ret != 0)
+		goto out;
+	ret = MlnImpl_8108136C(0, NULL, 0);
+	if (ret != 0)
+		goto out;
+	ret = MlnImpl_8108136C(1, NULL, 0);
+	if (ret != 0)
+		goto out;
+	ret = MlnImpl_8105DC0C(3, 0, NULL);
+	if (ret != 0)
+		goto out;
+	ret = MlnImpl_8105DC0C(17, 0, NULL);
+	if (ret != 0)
+		goto out;
+	ret = MlnImpl_81049874(&links);
+	if (ret != 0)
+		goto out;
+	MlnMemset(zero, 0, sizeof(zero));
+	ret = MlnImpl_8104A110(&links, zero);
+	if (ret != 0)
+		goto out;
+	ret = MlnImpl_8104990C(links);
+out:
+	MlnImpl_81080C1C(handle);
+	MlnImpl_81049918(links);
+	return ret;
+}
+
+/* drops record key of tables 6 and 7 */
+static inline __attribute__((always_inline)) void MlnStoreLinkSlotClear(unsigned int key)
+{
+	MlnImpl_8105DC0C(6, key, NULL);
+	MlnImpl_8105DC0C(7, key, NULL);
+}
+
+/*
+ * removes the link whose id is id, and its record (table 7); without an id,
+ * drops tables 6 and 7 whole
+ */
+unsigned int MlnImpl_810486D4(const MlnBuffer *id)
+{
+	MlnStoreLink *links;
+	MlnStoreLink *found;
+	MlnBuffer key;
+	unsigned int record;
+	int ret;
+
+	if (id == NULL || id->data == NULL) {
+		MlnStoreLinkSlotClear(0);
+		MlnStoreLinkSlotClear(1);
+		MlnStoreLinkSlotClear(2);
+		MlnStoreLinkSlotClear(3);
+		MlnStoreLinkSlotClear(4);
+		MlnStoreLinkSlotClear(5);
+		MlnStoreLinkSlotClear(6);
+		MlnStoreLinkSlotClear(7);
+		return 0;
+	}
+	if (id->size != 20)
+		return 3;
+	links = NULL;
+	found = NULL;
+	key.size = 20;
+	key.data = id->data;
+	ret = MlnImpl_81049874(&links);
+	if (ret != 0)
+		goto out;
+	ret = MlnImpl_81049D54(links, &key, &found);
+	if (ret != 0)
+		goto out;
+	record = found->key;
+	ret = MlnImpl_81049E34(&links, found);
+	if (ret != 0)
+		goto out;
+	ret = MlnImpl_8104990C(links);
+	if (ret != 0)
+		goto out;
+	ret = MlnImpl_8105DC0C(7, record, NULL);
+out:
+	MlnImpl_81049918(links);
+	if (ret == 0x230A0003)
+		ret = 0;
+	return ret;
+}
+
+/*
+ * repairs what the core's and the id's state flags call damaged: the steps'
+ * and key states, then the links (all of them, or those of the id's head
+ * and tail ids) and the key pair records
+ */
+unsigned int MlnImpl_810488A8(const MlnBuffer *id)
+{
+	unsigned char headId[20];
+	unsigned char tailId[20];
+	unsigned int idFlags = 0;
+	unsigned int coreFlags = 0;
+	void *handle = NULL;
+	const unsigned char *data;
+	unsigned int repair;
+	int ret;
+
+	if (id == NULL || (data = id->data) == NULL || id->size != 20) {
+		ret = 3;
+		goto out;
+	}
+	ret = MlnImpl_81048214(&coreFlags);
+	if (ret != 0)
+		goto out;
+	if (coreFlags & 0x10000000) {
+		if (coreFlags & 0x01)
+			MlnImpl_8105DC0C(15, 0, NULL);
+		if (coreFlags & 0x02) {
+			ret = MlnImpl_81080BFC(&handle);
+			if (ret != 0)
+				goto out;
+			ret = MlnImpl_8108136C(1, NULL, 0);
+			if (ret != 0)
+				goto out;
+		}
+		if (coreFlags & 0x04)
+			MlnImpl_8105DC0C(3, 0, NULL);
+		if (coreFlags & 0x08) {
+			if (handle == NULL) {
+				ret = MlnImpl_81080BFC(&handle);
+				if (ret != 0)
+					goto out;
+			}
+			ret = MlnImpl_8108136C(0, NULL, 0);
+			if (ret != 0)
+				goto out;
+		}
+		if (coreFlags & 0x10)
+			MlnImpl_8105DC0C(17, 0, NULL);
+	}
+	ret = MlnImpl_81047E48(id, &idFlags);
+	if (ret != 0)
+		goto out;
+	repair = 0;
+	if (idFlags & 0x60000000) {
+		if (idFlags & 0x1800)
+			repair |= 1;
+		else if (idFlags & 0x6000)
+			repair |= 2;
+		if (idFlags & 0x700)
+			repair |= 5;
+	}
+	if (idFlags & 0xC0000000) {
+		if (idFlags & 0x1800)
+			repair |= 1;
+		else if (idFlags & 0x30000)
+			repair |= 2;
+		if (idFlags & 0x700)
+			repair |= 5;
+	}
+	if (repair & 1) {
+		MlnStoreLinkSlotClear(0);
+		MlnStoreLinkSlotClear(1);
+		MlnStoreLinkSlotClear(2);
+		MlnStoreLinkSlotClear(3);
+		MlnStoreLinkSlotClear(4);
+		MlnStoreLinkSlotClear(5);
+		MlnStoreLinkSlotClear(6);
+		MlnStoreLinkSlotClear(7);
+	} else if (repair & 2) {
+		MlnMemset(headId, 0, sizeof(headId));
+		MlnMemcpy(headId, data, 10);
+		MlnMemset(tailId, 0, sizeof(tailId));
+		MlnMemcpy(tailId + 12, data + 12, 8);
+		if (idFlags & 0x2000) {
+			ret = MlnImpl_81046BFC(2, NULL, NULL, tailId, 1);
+			if (ret != 0x230A0011 && ret != 0)
+				goto out;
+		}
+		if (idFlags & 0x4000) {
+			ret = MlnImpl_81047CDC(tailId);
+			if (ret != 0x230A0003 && ret != 0)
+				goto out;
+		}
+		if (idFlags & 0x10000) {
+			ret = MlnImpl_81046BFC(2, NULL, NULL, headId, 1);
+			if (ret != 0x230A0011 && ret != 0)
+				goto out;
+		}
+		if (idFlags & 0x20000) {
+			ret = MlnImpl_81047CDC(data);
+			if (ret != 0x230A0003 && ret != 0)
+				goto out;
+		}
+	}
+	if (repair & 4) {
+		MlnImpl_8105DC0C(12, 1, NULL);
+		MlnImpl_8105DC0C(12, 2, NULL);
+		MlnImpl_8105DC0C(14, 0, NULL);
+	}
+	ret = 0;
+out:
+	MlnImpl_81080C1C(handle);
+	return ret;
+}
+
+/* whether digest is the from or to digest of one of links: 0 when it is, else 1 */
+int MlnImpl_81048CF8(const MlnStoreLink *links, const unsigned char *digest)
+{
+	unsigned char fromDigest[20];
+	unsigned char toDigest[20];
+	const MlnStoreLink *link;
+
+	if (digest == NULL)
+		return 3;
+	for (link = links; link != NULL; link = link->next) {
+		if (link->byValue == 1) {
+			MlnMemset(fromDigest, 0, sizeof(fromDigest));
+			MlnMemset(toDigest, 0, sizeof(toDigest));
+			if (link->from != NULL)
+				MlnImpl_810570A8(link->from->data, link->from->size, fromDigest);
+			if (link->to != NULL)
+				MlnImpl_810570A8(link->to->data, link->to->size, toDigest);
+			if (MlnMemcmp(toDigest, digest, 20) == 0 ||
+			    MlnMemcmp(fromDigest, digest, 20) == 0)
+				return 0;
+		} else {
+			if (MlnMemcmp(link->toDigest, digest, 20) == 0 ||
+			    MlnMemcmp(link->fromDigest, digest, 20) == 0)
+				return 0;
+		}
+	}
+	return 1;
+}
+
+/*
+ * finds the link from from to to; without one, gives the first key (1 to
+ * 7) no link uses in free, and 0x230A0012 when all are used
+ */
+int MlnImpl_81048DF0(MlnStoreLink *links, const MlnBuffer *from, const MlnBuffer *to,
+		     MlnStoreLink **found, int *free)
+{
+	unsigned char fromDigest[20];
+	unsigned char toDigest[20];
+	MlnBitset *used = NULL;
+	MlnStoreLink *link;
+	int hash = 1;
+	int slot;
+	int ret;
+
+	if (to == NULL || found == NULL) {
+		ret = 3;
+		goto out;
+	}
+	*found = NULL;
+	ret = MlnImpl_81046354(8, &used);
+	if (ret != 0)
+		goto out;
+	ret = MlnImpl_810463CC(used, 0, 1);
+	if (ret != 0)
+		goto out;
+	for (link = links; link != NULL; link = link->next) {
+		if (link->byValue == 1) {
+			if (MlnBufferCompare(MLN_HEAP_GENERAL, link->from, from) == 0 &&
+			    MlnBufferCompare(MLN_HEAP_GENERAL, link->to, to) == 0)
+				break;
+		} else {
+			if (hash == 1) {
+				MlnMemset(fromDigest, 0, sizeof(fromDigest));
+				MlnMemset(toDigest, 0, sizeof(toDigest));
+				if (from != NULL) {
+					ret = MlnImpl_810570A8(from->data, from->size, fromDigest);
+					if (ret != 0)
+						goto out;
+				}
+				ret = MlnImpl_810570A8(to->data, to->size, toDigest);
+				if (ret != 0)
+					goto out;
+			}
+			hash = 0;
+			if (MlnMemcmp(link->fromDigest, fromDigest, 20) == 0 &&
+			    MlnMemcmp(link->toDigest, toDigest, 20) == 0)
+				break;
+		}
+		ret = MlnImpl_810463CC(used, link->key, 1);
+		if (ret != 0)
+			goto out;
+	}
+	if (link != NULL) {
+		*found = link;
+		if (free != NULL)
+			*free = -1;
+		ret = 0;
+		goto out;
+	}
+	if (free == NULL)
+		goto out;
+	ret = MlnImpl_81046420(used, 0, &slot);
+	if (ret != 0)
+		goto out;
+	if (slot != -1)
+		*free = slot;
+	else
+		ret = 0x230A0012;
+out:
+	MlnImpl_810463B4(used);
+	return ret;
+}
+
+/* stores v big-endian at p */
+static inline __attribute__((always_inline)) void MlnStorePutBE32(unsigned char *p, unsigned int v)
+{
+	p[0] = v >> 24;
+	p[1] = v >> 16;
+	p[2] = v >> 8;
+	p[3] = v;
+}
+
+/* appends buffer's bytes at p, when there is a buffer */
+#define MLN_STORE_APPEND(p, buffer)						\
+	do {									\
+		if ((buffer) != NULL) {						\
+			MlnMemcpy((p), (buffer)->data, (buffer)->size);		\
+			(p) += (buffer)->size;					\
+		}								\
+	} while (0)
+
+/*
+ * stores links (record 0 of table 7): a 64-byte entry per link, its key at
+ * 0x3C; a by-value link (key bit 31) has the sizes of its ids at 0x00 to
+ * 0x0F and the ids after the entry, the others their three digests
+ */
+int MlnImpl_81048FF0(const MlnStoreLink *links)
+{
+	unsigned char entry[0x40];
+	const MlnStoreLink *link;
+	MlnBuffer *buffer;
+	unsigned char *p;
+	unsigned int size;
+	int ret;
+
+	if (links == NULL) {
+		buffer = NULL;
+		ret = MlnImpl_8105DC0C(7, 0, NULL);
+		goto out;
+	}
+	size = 0;
+	for (link = links; link != NULL; link = link->next) {
+		size += sizeof(entry);
+		if (link->byValue != 1)
+			continue;
+		if (link->from != NULL)
+			size += link->from->size;
+		if (link->to != NULL)
+			size += link->to->size;
+		if (link->value1 != NULL)
+			size += link->value1->size;
+		if (link->value2 != NULL)
+			size += link->value2->size;
+	}
+	buffer = MlnBufferCreate(MLN_HEAP_GENERAL, size, NULL);
+	if (buffer == NULL) {
+		ret = 2;
+		goto out;
+	}
+	p = buffer->data;
+	for (link = links; link != NULL; link = link->next) {
+		MlnMemset(entry, 0, sizeof(entry));
+		if (link->byValue == 1) {
+			if (link->from != NULL)
+				MlnStorePutBE32(entry + 0x00, link->from->size);
+			if (link->to != NULL)
+				MlnStorePutBE32(entry + 0x04, link->to->size);
+			if (link->value1 != NULL)
+				MlnStorePutBE32(entry + 0x08, link->value1->size);
+			if (link->value2 != NULL)
+				MlnStorePutBE32(entry + 0x0C, link->value2->size);
+			MlnStorePutBE32(entry + 0x3C, link->key | 0x80000000);
+			MlnMemcpy(p, entry, sizeof(entry));
+			p += sizeof(entry);
+			MLN_STORE_APPEND(p, link->from);
+			MLN_STORE_APPEND(p, link->to);
+			MLN_STORE_APPEND(p, link->value1);
+			MLN_STORE_APPEND(p, link->value2);
+		} else {
+			MlnMemcpy(entry + 0x00, link->toDigest, 20);
+			MlnMemcpy(entry + 0x14, link->fromDigest, 20);
+			MlnMemcpy(entry + 0x28, link->idDigest, 20);
+			MlnStorePutBE32(entry + 0x3C, link->key);
+			MlnMemcpy(p, entry, sizeof(entry));
+			p += sizeof(entry);
+		}
+	}
+	ret = MlnImpl_8105DC0C(7, 0, buffer);
+out:
+	MlnBufferDestroy(MLN_HEAP_GENERAL, buffer);
 	return ret;
 }
