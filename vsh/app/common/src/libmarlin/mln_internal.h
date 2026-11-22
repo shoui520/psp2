@@ -1360,6 +1360,7 @@ typedef struct MlnAttributeBox {
 
 /* the XML namespaces the Octopus objects are read from */
 #define MLN_OCTOPUS_NAMESPACE	"http://www.octopus-drm.com/profiles/base/1.0"
+#define MLN_PLANKTON_NAMESPACE	"http://www.octopus-drm.com/profiles/base/1.0/plankton"
 #define MLN_XMLDSIG_NAMESPACE	"http://www.w3.org/2000/09/xmldsig#"
 #define MLN_SAML_NAMESPACE	"urn:oasis:names:tc:SAML:1.0:assertion"
 
@@ -1753,6 +1754,10 @@ int MlnImpl_81042B18(const MlnBuffer *token, int type, MlnOctopusSamlAssertion *
 int MlnImpl_81042B38(MlnXmlNode *node, MlnOctopusControl **out);
 int MlnImpl_81042B58(const MlnBuffer *token, int type, const MlnBuffer *role,
 		     MlnBuffer **nameIdentifier);
+int MlnImpl_81042D10(MlnXmlNode *node, MlnOctopusArray **out);
+int MlnImpl_81042E1C(MlnXmlNodeList *nodes, MlnPlanktonParameterBlock **out);
+int MlnImpl_81042FC0(MlnXmlNodeList *nodes, MlnPlanktonValueList *list);
+int MlnImpl_81052BD0(const char *s);
 int MlnImpl_81052EBC(unsigned int *seconds);
 int MlnImpl_81052944(const MlnDateTime *a, const MlnDateTime *b);
 int MlnImpl_81061898(int kind, const MlnOctopusKey *key);

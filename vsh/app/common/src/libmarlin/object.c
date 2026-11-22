@@ -617,7 +617,7 @@ MLN_ALWAYS_INLINE void MlnPlanktonValueRelease(MlnPlanktonValue *value)
 	}
 }
 
-void MlnImpl_8103CEB0(MlnPlanktonValueList *list)
+__attribute__((noinline)) void MlnImpl_8103CEB0(MlnPlanktonValueList *list)
 {
 	unsigned int i;
 
@@ -630,12 +630,12 @@ void MlnImpl_8103CEB0(MlnPlanktonValueList *list)
 	MlnFree(MLN_HEAP_GENERAL, list->values);
 }
 
-void MlnImpl_8103CFC0(MlnPlanktonParameterBlock *block)
+__attribute__((noinline)) void MlnImpl_8103CFC0(MlnPlanktonParameterBlock *block)
 {
 	MlnPlanktonParameterBlockFree(block);
 }
 
-void MlnImpl_8103D01C(MlnPlanktonValue *value)
+__attribute__((noinline)) void MlnImpl_8103D01C(MlnPlanktonValue *value)
 {
 	MlnPlanktonValueRelease(value);
 }
@@ -3637,5 +3637,239 @@ format:
 out:
 	MlnBufferDestroy(MLN_HEAP_GENERAL, spare);
 	MlnImpl_8103CD0C(assertion);
+	return ret;
+}
+
+/* reads a node's AttributeList, as 8103DCBC does, checking its arguments */
+int MlnImpl_81042D10(MlnXmlNode *node, MlnOctopusArray **out)
+{
+	if (node == NULL || out == NULL)
+		return 3;
+	return MlnOctopusAttributeListParse(node, out);
+}
+
+/* reads the Parameters of a ParameterBlock: each one's name and ValueBlocks */
+int MlnImpl_81042E1C(MlnXmlNodeList *nodes, MlnPlanktonParameterBlock **out)
+{
+	MlnXmlNodeList *list = NULL;
+	MlnPlanktonParameterBlock *block = NULL;
+	MlnPlanktonValueList *parameters = NULL;
+	MlnXmlNode *node;
+	unsigned int count;
+	unsigned int i;
+	int ret;
+
+	if (nodes == NULL) {
+		ret = 3;
+		goto out;
+	}
+	count = nodes->count;
+	parameters = MlnAllocate(MLN_HEAP_GENERAL, count * sizeof(*parameters));
+	if (parameters == NULL) {
+		ret = 2;
+		goto out;
+	}
+	MlnMemset(parameters, 0, count * sizeof(*parameters));
+	for (i = 0; i < count; i++) {
+		node = nodes->nodes[i];
+		ret = MlnXmlGetAttribute(MLN_HEAP_GENERAL, node, NULL, "name", &parameters[i].name);
+		if (ret != 0)
+			goto out;
+		ret = MlnXmlFindNodes(MLN_HEAP_GENERAL, node, "ValueBlock", MLN_PLANKTON_NAMESPACE,
+				      &list);
+		if (ret != 0)
+			goto out;
+		ret = MlnImpl_81042FC0(list, &parameters[i]);
+		if (ret != 0)
+			goto out;
+		MlnXmlListFree(MLN_HEAP_GENERAL, list);
+		list = NULL;
+	}
+	block = MlnAllocate(MLN_HEAP_GENERAL, sizeof(*block));
+	if (block == NULL) {
+		ret = 2;
+		goto out;
+	}
+	MlnMemset(block, 0, sizeof(*block));
+	block->count = count;
+	block->parameters = parameters;
+	*out = block;
+	block = NULL;
+	parameters = NULL;
+	ret = 0;
+out:
+	MlnXmlListFree(MLN_HEAP_GENERAL, list);
+	MlnImpl_8103CFC0(block);
+	if (parameters != NULL) {
+		for (i = 0; i < count; i++)
+			MlnImpl_8103CEB0(&parameters[i]);
+		MlnFree(MLN_HEAP_GENERAL, parameters);
+	}
+	return ret;
+}
+
+/* an Integer's or a Date's text, as a number */
+MLN_ALWAYS_INLINE int MlnPlanktonIntegerRead(const MlnBuffer *text, int *value)
+{
+	char *string;
+
+	string = MlnAllocate(MLN_HEAP_GENERAL, text->size + 1);
+	if (string == NULL)
+		return 2;
+	MlnMemcpy(string, text->data, text->size);
+	string[text->size] = '\0';
+	*value = MlnImpl_81052BD0(string);
+	MlnFree(MLN_HEAP_GENERAL, string);
+	return 0;
+}
+
+/*
+ * reads ValueBlocks into list's values, each by its type: a Real is read but
+ * kept as 0, and a ValueList's ValueBlocks are never freed (Sony's leak)
+ */
+int MlnImpl_81042FC0(MlnXmlNodeList *nodes, MlnPlanktonValueList *list)
+{
+	MlnXmlNodeList *valueBlocks = NULL;
+	MlnXmlNodeList *parameterBlocks = NULL;
+	MlnPlanktonParameterBlock *parameters = NULL;
+	MlnPlanktonValueList *child = NULL;
+	MlnPlanktonValue *values = NULL;
+	MlnBuffer *type = NULL;
+	MlnBuffer *text = NULL;
+	MlnBuffer *bytes = NULL;
+	MlnXmlNode *node;
+	unsigned int count = 0;
+	unsigned int i;
+	int ret;
+
+	if (nodes == NULL) {
+		ret = 3;
+		goto out;
+	}
+	count = nodes->count;
+	if (count == 0) {
+		ret = MLN_OCTOPUS_ERROR_FORMAT;
+		goto out;
+	}
+	values = MlnAllocate(MLN_HEAP_GENERAL, count * sizeof(*values));
+	if (values == NULL) {
+		ret = 2;
+		goto out;
+	}
+	MlnMemset(values, 0, count * sizeof(*values));
+	for (i = 0; i < count; i++) {
+		node = nodes->nodes[i];
+		ret = MlnXmlGetAttribute(MLN_HEAP_GENERAL, node, NULL, "type", &type);
+		if (ret != 0)
+			goto out;
+		if (MLN_IS(type, "Integer")) {
+			values[i].type = MLN_PLANKTON_INTEGER;
+		} else if (MLN_IS(type, "Real")) {
+			values[i].type = MLN_PLANKTON_REAL;
+		} else if (MLN_IS(type, "String")) {
+			values[i].type = MLN_PLANKTON_STRING;
+		} else if (MLN_IS(type, "Date")) {
+			values[i].type = MLN_PLANKTON_DATE;
+		} else if (MLN_IS(type, "Resource")) {
+			values[i].type = MLN_PLANKTON_RESOURCE;
+		} else if (MLN_IS(type, "Parameter")) {
+			values[i].type = MLN_PLANKTON_PARAMETER;
+		} else if (MLN_IS(type, "ValueList")) {
+			values[i].type = MLN_PLANKTON_VALUE_LIST;
+		} else if (MLN_IS(type, "ByteArray")) {
+			values[i].type = MLN_PLANKTON_BYTE_ARRAY;
+		} else {
+			ret = MLN_OCTOPUS_ERROR_FORMAT;
+			goto out;
+		}
+		switch (values[i].type) {
+		case MLN_PLANKTON_INTEGER:
+		case MLN_PLANKTON_DATE:
+			ret = MlnXmlGetText(MLN_HEAP_GENERAL, node, &text);
+			if (ret != 0)
+				goto out;
+			ret = MlnPlanktonIntegerRead(text, &values[i].value.integer);
+			if (ret != 0)
+				goto out;
+			break;
+		case MLN_PLANKTON_REAL:
+			ret = MlnXmlGetText(MLN_HEAP_GENERAL, node, &text);
+			if (ret != 0)
+				goto out;
+			break;
+		case MLN_PLANKTON_STRING:
+		case MLN_PLANKTON_RESOURCE:
+			ret = MlnXmlGetText(MLN_HEAP_GENERAL, node, &text);
+			if (ret != 0)
+				goto out;
+			values[i].value.buffer = text;
+			text = NULL;
+			break;
+		case MLN_PLANKTON_PARAMETER:
+			ret = MlnXmlFindNodes(MLN_HEAP_GENERAL, node, "ParameterBlock",
+					      MLN_PLANKTON_NAMESPACE, &parameterBlocks);
+			if (ret != 0)
+				goto out;
+			ret = MlnImpl_81042E1C(parameterBlocks, &parameters);
+			if (ret != 0)
+				goto out;
+			values[i].value.parameters = parameters;
+			parameters = NULL;
+			MlnXmlListFree(MLN_HEAP_GENERAL, parameterBlocks);
+			parameterBlocks = NULL;
+			break;
+		case MLN_PLANKTON_VALUE_LIST:
+			ret = MlnXmlFindNodes(MLN_HEAP_GENERAL, node, "ValueListBlock/ValueBlock", "",
+					      &valueBlocks);
+			if (ret != 0)
+				goto out;
+			child = MlnAllocate(MLN_HEAP_GENERAL, sizeof(*child));
+			if (child == NULL) {
+				ret = 2;
+				goto out;
+			}
+			MlnMemset(child, 0, sizeof(*child));
+			ret = MlnImpl_81042FC0(valueBlocks, child);
+			if (ret != 0)
+				goto out;
+			values[i].value.list = child;
+			break;
+		case MLN_PLANKTON_BYTE_ARRAY:
+			ret = MlnXmlGetText(MLN_HEAP_GENERAL, node, &text);
+			if (ret != 0)
+				goto out;
+			ret = MlnImpl_81026A9C(MLN_HEAP_GENERAL, text, &bytes);
+			if (ret != 0)
+				goto out;
+			values[i].value.buffer = bytes;
+			MlnBufferDestroy(MLN_HEAP_GENERAL, text);
+			text = NULL;
+			bytes = NULL;
+			break;
+		}
+		child = NULL;
+		MlnBufferDestroy(MLN_HEAP_GENERAL, type);
+		type = NULL;
+		MlnBufferDestroy(MLN_HEAP_GENERAL, text);
+		text = NULL;
+	}
+	list->values = values;
+	values = NULL;
+	list->count = count;
+out:
+	MlnXmlListFree(MLN_HEAP_GENERAL, valueBlocks);
+	MlnXmlListFree(MLN_HEAP_GENERAL, parameterBlocks);
+	MlnImpl_8103CFC0(parameters);
+	MlnBufferDestroy(MLN_HEAP_GENERAL, type);
+	MlnBufferDestroy(MLN_HEAP_GENERAL, text);
+	MlnBufferDestroy(MLN_HEAP_GENERAL, bytes);
+	if (values != NULL)
+		for (i = 0; i < count; i++)
+			MlnImpl_8103D01C(&values[i]);
+	MlnFree(MLN_HEAP_GENERAL, values);
+	if (child != NULL) {
+		MlnImpl_8103CEB0(child);
+		MlnFree(MLN_HEAP_GENERAL, child);
+	}
 	return ret;
 }
