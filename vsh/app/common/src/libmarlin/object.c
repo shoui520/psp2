@@ -1973,21 +1973,6 @@ out:
 	return ret;
 }
 
-/* hashes data with the digest of the given size into digest */
-MLN_ALWAYS_INLINE int MlnOctopusDigest(const MlnBuffer *data, int digestSize,
-				       unsigned char *digest)
-{
-	if (data->data == NULL)
-		return 3;
-	if (digestSize == 20)
-		return MlnImpl_810570A8(data->data, data->size, digest);
-	if (digestSize == 32)
-		return MlnImpl_8105713C(data->data, data->size, digest);
-	if (digestSize != 0)
-		return 3;
-	return 0;
-}
-
 /*
  * reads a bundle's personality (type 0) or user (type 1) Node, and when
  * verify is set checks its ScubaKeys digests and its signatures
@@ -2131,11 +2116,19 @@ int MlnImpl_8103F6F0(const MlnBuffer *token, MlnOctopusNode **out, int type, int
 				ret = MLN_OCTOPUS_ERROR_FORMAT;
 			goto fail;
 		}
-		ret = MlnOctopusDigest(data, digestSize, digest);
-		if (ret == 3)
-			goto out;
-		if (ret != 0)
-			goto fail;
+		if (data->data == NULL)
+			goto unsupported;
+		if (digestSize == 20) {
+			ret = MlnImpl_810570A8(data->data, data->size, digest);
+			if (ret != 0)
+				goto fail;
+		} else if (digestSize == 32) {
+			ret = MlnImpl_8105713C(data->data, data->size, digest);
+			if (ret != 0)
+				goto fail;
+		} else if (digestSize != 0) {
+			goto unsupported;
+		}
 		ret = MlnImpl_8105BA14(signatures->nodes[i], usage, 1, &id, &digest, &digestType,
 				       0, &verified);
 		if (ret == 0)
@@ -3270,5 +3263,379 @@ out:
 	MlnImpl_81080C1C(handle);
 	ret = MlnOctopusFormatError(ret);
 	MlnBufferDestroy(MLN_HEAP_GENERAL, spare);
+	return ret;
+}
+
+/* reads a bundle's Link: from which node to which, and its Control */
+MLN_ALWAYS_INLINE int MlnOctopusLinkParse(MlnXmlNode *document, MlnOctopusLink **out,
+					  MlnBuffer **id)
+{
+	MlnXmlNode *controlNode = NULL;
+	MlnBuffer *linkId = NULL;
+	MlnBuffer *uid = NULL;
+	MlnBuffer *from = NULL;
+	MlnBuffer *to = NULL;
+	MlnXmlNodeList *list = NULL;
+	MlnXmlNodeList *nodes = NULL;
+	MlnOctopusArray *attributes = NULL;
+	MlnOctopusArray *extensions = NULL;
+	MlnOctopusControl *control = NULL;
+	MlnOctopusExtension *extension;
+	MlnOctopusLink *link;
+	MlnXmlNode *node;
+	int scubaKeys;
+	int ret;
+	int i;
+
+	ret = MlnXmlFindNodes(MLN_HEAP_GENERAL, document, "/Bundle/Link", MLN_OCTOPUS_NAMESPACE,
+			      &list);
+	if (ret != 0)
+		goto out;
+	if (list->count != 1)
+		goto format;
+	node = list->nodes[0];
+	ret = MlnXmlGetAttribute(MLN_HEAP_GENERAL, node, NULL, "uid", &uid);
+	if (ret != 0)
+		goto out;
+	ret = MlnXmlGetAttribute(MLN_HEAP_GENERAL, node, NULL, "Id", &linkId);
+	if (ret != 0)
+		goto out;
+	ret = MlnXmlFindNodes(MLN_HEAP_GENERAL, node, "LinkFrom/Uid", MLN_OCTOPUS_NAMESPACE, &nodes);
+	if (ret != 0)
+		goto out;
+	if (nodes->count != 1)
+		goto format;
+	ret = MlnXmlGetText(MLN_HEAP_GENERAL, nodes->nodes[0], &from);
+	if (ret != 0)
+		goto out;
+	MlnXmlListFree(MLN_HEAP_GENERAL, nodes);
+	nodes = NULL;
+	ret = MlnXmlFindNodes(MLN_HEAP_GENERAL, node, "LinkTo/Uid", MLN_OCTOPUS_NAMESPACE, &nodes);
+	if (ret != 0)
+		goto out;
+	if (nodes->count != 1)
+		goto format;
+	ret = MlnXmlGetText(MLN_HEAP_GENERAL, nodes->nodes[0], &to);
+	if (ret != 0)
+		goto out;
+	MlnXmlListFree(MLN_HEAP_GENERAL, nodes);
+	nodes = NULL;
+	ret = MlnImpl_8103DCBC(node, &attributes);
+	if (ret != 0)
+		goto out;
+	if (MlnXmlFindNodes(MLN_HEAP_GENERAL, node, "ExtensionList/Extension",
+			    MLN_OCTOPUS_NAMESPACE, &nodes) == 0) {
+		ret = MlnImpl_8103F62C(nodes, &extensions);
+		if (ret != 0)
+			goto out;
+		/* exactly one ScubaKeys extension, without a digest */
+		scubaKeys = 0;
+		for (i = 0; i < extensions->count; i++) {
+			extension = extensions->items[i];
+			if (extension == NULL) {
+				ret = 5;
+				goto out;
+			}
+			if (extension->type == MLN_OCTOPUS_EXTENSION_SCUBA) {
+				scubaKeys++;
+				if (extension->digestValue != NULL)
+					goto format;
+			}
+		}
+		if (scubaKeys != 1)
+			goto format;
+	}
+	ret = MlnXmlFindNode(MLN_HEAP_GENERAL, node, "Control", MLN_OCTOPUS_NAMESPACE,
+			     &controlNode);
+	if (ret == 0) {
+		ret = MlnImpl_8103FF44(controlNode, &control);
+		if (ret != 0)
+			goto out;
+	} else if (ret != MLN_XML_ERROR_NOT_FOUND) {
+		goto out;
+	}
+	link = MlnAllocate(MLN_HEAP_GENERAL, sizeof(*link));
+	if (link == NULL) {
+		ret = 2;
+		goto out;
+	}
+	link->uid = uid;
+	link->attributes = attributes;
+	link->extensions = extensions;
+	link->from = from;
+	link->to = to;
+	uid = NULL;
+	from = NULL;
+	link->control = control;
+	to = NULL;
+	attributes = NULL;
+	extensions = NULL;
+	*id = linkId;
+	linkId = NULL;
+	control = NULL;
+	*out = link;
+	ret = 0;
+	goto out;
+format:
+	ret = MLN_OCTOPUS_ERROR_FORMAT;
+out:
+	MlnXmlNodeFree(MLN_HEAP_GENERAL, controlNode);
+	MlnBufferDestroy(MLN_HEAP_GENERAL, linkId);
+	MlnBufferDestroy(MLN_HEAP_GENERAL, uid);
+	MlnBufferDestroy(MLN_HEAP_GENERAL, from);
+	MlnBufferDestroy(MLN_HEAP_GENERAL, to);
+	MlnXmlListFree(MLN_HEAP_GENERAL, list);
+	MlnXmlListFree(MLN_HEAP_GENERAL, nodes);
+	MlnImpl_8103C57C(attributes, MLN_OCTOPUS_ATTRIBUTE);
+	MlnImpl_8103C57C(extensions, MLN_OCTOPUS_EXTENSION);
+	MlnImpl_8103C284(control);
+	return ret;
+}
+
+/* reads a bundle's Link and verifies its signatures; keeps the signer */
+unsigned int MlnImpl_810422E8(MlnBuffer *token, MlnOctopusLink **out)
+{
+	MlnXmlNodeList *bundles = NULL;
+	MlnXmlNodeList *signatures = NULL;
+	MlnXmlNode *document = NULL;
+	MlnBuffer *xml = NULL;
+	MlnBuffer *id = NULL;
+	MlnBuffer *signer = NULL;
+	int digestType = 4;
+	unsigned char *digest;
+	int verified;
+	unsigned char digestBuffer[32];
+	MlnOctopusLink *link = NULL;
+	MlnXmlNode *signature;
+	int verifiedSignature;
+	int digestSize;
+	int count;
+	int ret;
+	int i;
+
+	if (out == NULL || token == NULL) {
+		ret = 3;
+		goto out;
+	}
+	ret = MlnXmlParse(MLN_HEAP_GENERAL, token->size, token->data, &document);
+	if (ret != 0)
+		goto fail;
+	ret = MlnOctopusLinkParse(document, &link, &id);
+	if (ret != 0)
+		goto fail;
+	ret = MlnXmlFindNodes(MLN_HEAP_GENERAL, document, "/Bundle", MLN_OCTOPUS_NAMESPACE,
+			      &bundles);
+	if (ret != 0)
+		goto fail;
+	if (bundles->count != 1) {
+		ret = MLN_OCTOPUS_ERROR_FORMAT;
+		goto out;
+	}
+	ret = MlnXmlFindNodes(MLN_HEAP_GENERAL, bundles->nodes[0], "Signature",
+			      MLN_XMLDSIG_NAMESPACE, &signatures);
+	MlnXmlListFree(MLN_HEAP_GENERAL, bundles);
+	bundles = NULL;
+	if (ret != 0) {
+		if (ret == MLN_XML_ERROR_NOT_FOUND)
+			goto unsigned_;
+		goto fail;
+	}
+	ret = MlnImpl_810614EC(link, &xml);
+	if (ret != 0)
+		goto fail;
+	count = signatures->count;
+	if (count <= 0)
+		goto unsigned_;
+	verifiedSignature = 0;
+	for (i = 0; i < count; i++) {
+		signature = signatures->nodes[i];
+		ret = MlnImpl_8105BF78(signature, &digestSize);
+		if (ret != 0) {
+			if (ret == 0x220A0006)
+				ret = MLN_OCTOPUS_ERROR_FORMAT;
+			goto fail;
+		}
+		if (xml->data == NULL)
+			goto unsupported;
+		if (digestSize == 20) {
+			ret = MlnImpl_810570A8(xml->data, xml->size, digestBuffer);
+			if (ret != 0)
+				goto fail;
+		} else if (digestSize == 32) {
+			ret = MlnImpl_8105713C(xml->data, xml->size, digestBuffer);
+			if (ret != 0)
+				goto fail;
+		} else if (digestSize != 0) {
+			goto unsupported;
+		}
+		digest = digestBuffer;
+		ret = MlnImpl_8105B568(signature, 4, 1, &id, &digest, &digestType, 0, &signer,
+				       &verified);
+		/* only the first signature is checked against the Link's Id */
+		MlnBufferDestroy(MLN_HEAP_GENERAL, id);
+		id = NULL;
+		if (ret == 0)
+			verifiedSignature = 1;
+		else if (ret != 0x220A0003)
+			goto fail;
+	}
+	if (!verifiedSignature)
+		goto unsigned_;
+	if (link->control != NULL) {
+		link->control->signer = signer;
+		signer = NULL;
+	}
+	*out = link;
+	link = NULL;
+	ret = 0;
+	goto out;
+unsupported:
+	ret = 3;
+	goto out;
+unsigned_:
+	ret = 0x230F0003;
+	goto out;
+fail:
+	ret = MlnOctopusFormatError(ret);
+out:
+	MlnBufferDestroy(MLN_HEAP_GENERAL, id);
+	MlnBufferDestroy(MLN_HEAP_GENERAL, xml);
+	MlnXmlListFree(MLN_HEAP_GENERAL, bundles);
+	MlnXmlListFree(MLN_HEAP_GENERAL, signatures);
+	MlnBufferDestroy(MLN_HEAP_GENERAL, signer);
+	MlnImpl_8103BBA0(link);
+	MlnXmlNodeFree(MLN_HEAP_GENERAL, document);
+	return ret;
+}
+
+/* reads a personality Node */
+int MlnImpl_810429F8(const MlnBuffer *token, int verify, MlnOctopusNode **out)
+{
+	MlnOctopusNode *node = NULL;
+	int ret;
+
+	if (token == NULL || out == NULL) {
+		ret = 3;
+		goto out;
+	}
+	ret = MlnImpl_8103F6F0(token, &node, 0, verify);
+	if (ret == 0) {
+		*out = node;
+		node = NULL;
+	}
+out:
+	MlnImpl_8103B8F8(node);
+	return ret;
+}
+
+/* reads a user Node */
+unsigned int MlnImpl_81042A60(const MlnBuffer *token, MlnOctopusNode **out, int verify)
+{
+	if (token == NULL || out == NULL)
+		return 3;
+	return MlnImpl_8103F6F0(token, out, 1, verify);
+}
+
+int MlnImpl_81042A88(MlnBufferGroups *groups)
+{
+	int i;
+	int j;
+
+	if (groups != NULL) {
+		for (i = 0; i != 2; i++) {
+			if (groups->lists[i].items == NULL)
+				continue;
+			for (j = 0; j < groups->lists[i].count; j++)
+				MlnBufferDestroy(MLN_HEAP_GENERAL, groups->lists[i].items[j]);
+			MlnFree(MLN_HEAP_GENERAL, groups->lists[i].items);
+		}
+		MlnBufferDestroy(MLN_HEAP_GENERAL, groups->first);
+		MlnBufferDestroy(MLN_HEAP_GENERAL, groups->last);
+		MlnFree(MLN_HEAP_GENERAL, groups);
+	}
+	return 0;
+}
+
+/* reads a SAML Assertion */
+int MlnImpl_81042B18(const MlnBuffer *token, int type, MlnOctopusSamlAssertion **out,
+		     int verify)
+{
+	if (token == NULL || out == NULL)
+		return 3;
+	return MlnImpl_8103E540(token, type, out, verify);
+}
+
+/* reads a Control */
+int MlnImpl_81042B38(MlnXmlNode *node, MlnOctopusControl **out)
+{
+	if (node == NULL || out == NULL)
+		return 3;
+	return MlnImpl_8103FF44(node, out);
+}
+
+/*
+ * checks a signed SAML Assertion: valid now, and with the role attribute
+ * given; gives its NameIdentifier
+ */
+int MlnImpl_81042B58(const MlnBuffer *token, int type, const MlnBuffer *role,
+		     MlnBuffer **nameIdentifier)
+{
+	MlnOctopusSamlAssertion *assertion = NULL;
+	MlnBuffer roleName = { 35, (unsigned char *)"urn:marlin:nemo:2004:attribute:role" };
+	/* Sony's code frees a buffer it never sets */
+	MlnBuffer *spare = NULL;
+	MlnOctopusSamlAttribute *attribute;
+	MlnBuffer *copy;
+	unsigned int seconds;
+	MlnDateTime now;
+	int ret;
+	int i;
+
+	if (role == NULL || token == NULL || nameIdentifier == NULL) {
+		ret = 3;
+		goto out;
+	}
+	ret = MlnImpl_8103E540(token, type, &assertion, 1);
+	if (ret != 0)
+		goto out;
+	ret = MlnImpl_81052EBC(&seconds);
+	if (ret != 0)
+		goto out;
+	if (MlnTimeFromSeconds(&seconds, 0, 0, &now) != 0) {
+		ret = 5;
+		goto out;
+	}
+	if (assertion->notBefore != NULL && MlnImpl_81052944(assertion->notBefore, &now) > 0)
+		goto format;
+	if (assertion->notOnOrAfter != NULL &&
+	    MlnImpl_81052944(assertion->notOnOrAfter, &now) <= 0)
+		goto format;
+	for (i = 0; i < assertion->attributes->count; i++) {
+		attribute = assertion->attributes->items[i];
+		if (MlnBufferCompare(MLN_HEAP_GENERAL, attribute->name, &roleName) == 0) {
+			if (MlnBufferCompare(MLN_HEAP_GENERAL, attribute->value.string, role) != 0)
+				goto format;
+			break;
+		}
+	}
+	if (i == assertion->attributes->count)
+		goto format;
+	if (assertion->nameIdentifier != NULL) {
+		copy = MlnBufferCreate(MLN_HEAP_GENERAL, assertion->nameIdentifier->size,
+				       assertion->nameIdentifier->data);
+		if (copy == NULL) {
+			ret = 2;
+			goto out;
+		}
+	} else {
+		copy = NULL;
+	}
+	*nameIdentifier = copy;
+	goto out;
+format:
+	ret = MLN_OCTOPUS_ERROR_FORMAT;
+out:
+	MlnBufferDestroy(MLN_HEAP_GENERAL, spare);
+	MlnImpl_8103CD0C(assertion);
 	return ret;
 }

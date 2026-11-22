@@ -1588,6 +1588,16 @@ typedef struct MlnXmlDsigSignature {
 	} keyInfo;
 } MlnXmlDsigSignature;
 
+/* a buffer, two lists of buffers and another buffer (freed by MlnImpl_81042A88) */
+typedef struct MlnBufferGroups {
+	MlnBuffer *first;
+	struct {
+		int count;
+		MlnBuffer **items;
+	} lists[2];
+	MlnBuffer *last;
+} MlnBufferGroups;
+
 /* a bundle and, for each of its content keys, the SignedInfo and signature over it */
 typedef struct MlnOctopusBundleSignature {
 	MlnBuffer *signedInfo;
@@ -1735,6 +1745,16 @@ int MlnImpl_81060DE0(const MlnOctopusController *controller, MlnBuffer **out);
 int MlnImpl_810403F4(const MlnBuffer *token, MlnOctopusSignedBundle **out);
 int MlnImpl_81041F48(MlnOctopusSignedBundle *signedBundle, MlnOctopusContentKey **contentKeys);
 int MlnImpl_81080C74(void *key);
+int MlnImpl_810614EC(const MlnOctopusLink *link, MlnBuffer **out);
+int MlnImpl_810429F8(const MlnBuffer *token, int verify, MlnOctopusNode **out);
+int MlnImpl_81042A88(MlnBufferGroups *groups);
+int MlnImpl_81042B18(const MlnBuffer *token, int type, MlnOctopusSamlAssertion **out,
+		     int verify);
+int MlnImpl_81042B38(MlnXmlNode *node, MlnOctopusControl **out);
+int MlnImpl_81042B58(const MlnBuffer *token, int type, const MlnBuffer *role,
+		     MlnBuffer **nameIdentifier);
+int MlnImpl_81052EBC(unsigned int *seconds);
+int MlnImpl_81052944(const MlnDateTime *a, const MlnDateTime *b);
 int MlnImpl_81061898(int kind, const MlnOctopusKey *key);
 int MlnImpl_81060FE8(const MlnOctopusContentKey *contentKey, MlnBuffer **out);
 int MlnImpl_81061964(int kind, const MlnOctopusKey *key, unsigned int size, const void *data,
@@ -1760,7 +1780,7 @@ unsigned int MlnImpl_81080BFC(void **handle);
 unsigned int MlnImpl_81081374(int full);
 unsigned int MlnImpl_81080C1C(void *handle);
 void MlnImpl_810485B4(void);
-unsigned int MlnImpl_81042A60(void *id, MlnOctopusNode **node, int flags);
+unsigned int MlnImpl_81042A60(const MlnBuffer *token, MlnOctopusNode **out, int verify);
 int MlnImpl_8103B8F8(MlnOctopusNode *node);
 int MlnImpl_8102A484(unsigned int mode);
 int MlnImpl_8102A5B0(void *id, MlnBlob *out);
