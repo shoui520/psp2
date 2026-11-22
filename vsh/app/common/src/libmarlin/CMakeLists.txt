@@ -42,6 +42,7 @@ set(MLN_ENGINE_SOURCES
 	asn1.c
 	x509.c
 	object.c
+	store.c
 )
 psp2_module(${PSP2_TARGET} KIND user COMPILER gcc48 PARTIAL SOURCES
 	${MLN_ARM_SOURCES}

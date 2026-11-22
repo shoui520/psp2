@@ -1758,6 +1758,62 @@ int MlnImpl_81042D10(MlnXmlNode *node, MlnOctopusArray **out);
 int MlnImpl_81042E1C(MlnXmlNodeList *nodes, MlnPlanktonParameterBlock **out);
 int MlnImpl_81042FC0(MlnXmlNodeList *nodes, MlnPlanktonValueList *list);
 int MlnImpl_81052BD0(const char *s);
+
+/*
+ * store.c: the license store, records in numbered tables kept by the store
+ * layer (0x8105dc0c writes a record, NULL deletes it; 0x8105dedc reads one:
+ * 0 read, 1 none, 6 a record whose check failed)
+ */
+typedef struct MlnStoreDigest {
+	unsigned char bytes[20];
+	MlnBuffer buffer;		/* over bytes once set */
+} MlnStoreDigest;
+
+/*
+ * a stored link: either the digests of its ends and id, or (byValue) the ids
+ * themselves, hashed when it is checked
+ */
+typedef struct MlnStoreLink {
+	struct MlnStoreLink *next;
+	unsigned char toDigest[20];
+	unsigned char fromDigest[20];
+	unsigned char idDigest[20];
+	int byValue;
+	unsigned int key;		/* its record in table 7 */
+	MlnBuffer *from;
+	MlnBuffer *to;
+	MlnBuffer *value1;
+	MlnBuffer *value2;
+} MlnStoreLink;
+
+int MlnImpl_810436E4(const MlnBuffer *first, const MlnBuffer *second);
+int MlnImpl_810437BC(MlnStoreLink **links, MlnStoreLink *link);
+int MlnImpl_81043860(const MlnBuffer *id, const MlnRecordArray *records, MlnRecord **out,
+		     int *stored);
+MlnStoreDigest *MlnImpl_81043A08(void);
+int MlnImpl_81043DE0(const MlnBuffer *to, const MlnBuffer *from, const MlnBuffer *record,
+		     const MlnBuffer *value1, const MlnBuffer *value2);
+int MlnImpl_81043F1C(const MlnBuffer *to);
+void MlnImpl_810475F4(int table);
+const MlnBuffer *MlnImpl_81047E34(void);
+int MlnImpl_81049874(MlnStoreLink **links);
+int MlnImpl_8104990C(MlnStoreLink *links);
+void MlnImpl_81049918(MlnStoreLink *links);
+int MlnImpl_81049978(MlnStoreLink **links, const MlnBuffer *from, const MlnBuffer *to,
+		     const MlnBuffer *id, const MlnBuffer *value1, const MlnBuffer *value2,
+		     unsigned int *key);
+int MlnImpl_81049F14(unsigned int key);
+int MlnImpl_81043A84(int step, unsigned int size, const void *data);
+int MlnImpl_81043AE4(int step, MlnBuffer **out);
+int MlnImpl_81043D94(void);
+int MlnImpl_81046F98(int kind, const unsigned char *digest, const void *arg2, const void *arg3,
+		     int *found, int arg5);
+int MlnImpl_81049E34(MlnStoreLink **links, MlnStoreLink *link);
+int MlnImpl_8105DC0C(int table, unsigned int key, const MlnBuffer *data);
+int MlnImpl_8105DEDC(int table, unsigned int key, MlnBuffer **out);
+unsigned int MlnImpl_8105E060(int kind, MlnBuffer **out);
+unsigned int MlnImpl_8105E5E4(const MlnBuffer *state);
+unsigned int MlnImpl_8105EA2C(void);
 int MlnImpl_81052EBC(unsigned int *seconds);
 int MlnImpl_81052944(const MlnDateTime *a, const MlnDateTime *b);
 int MlnImpl_81061898(int kind, const MlnOctopusKey *key);
@@ -1827,7 +1883,6 @@ unsigned int MlnImpl_8104411C(int *count, void **iterator);
 unsigned int MlnImpl_810442D4(void **iterator, MlnBuffer **entry);
 void MlnImpl_8104435C(void *iterator);
 unsigned int MlnImpl_810422E8(MlnBuffer *entry, MlnOctopusLink **link);
-void MlnImpl_81043F1C(MlnBuffer *entry);
 unsigned int MlnImpl_81043B94(MlnOctopusNode **base);
 int MlnImpl_8102B950(unsigned int *count, MlnBuffer ***entries, MlnBlob *state);
 unsigned int MlnImpl_8104436C(const MlnBuffer *id, MlnBuffer **entry);
