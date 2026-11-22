@@ -1753,6 +1753,9 @@ int MlnImpl_8105C234(MlnXmlNode *signedInfo, const MlnBuffer *signatureValue, in
 		     MlnBuffer **certificates, const char *id, MlnXmlNode **out);
 int MlnImpl_8105C7F0(int count, int hash, const int *transforms, const char *const *uris,
 		     unsigned char **digests, MlnXmlNode **out);
+int MlnImpl_8105CF28(int count, int hash, const int *transforms, const char *const *uris,
+		     unsigned char **digests, void *rsa, int keyInfo, MlnBuffer **certificates,
+		     const char *id, MlnXmlNode **out);
 int MlnImpl_8105BA50(MlnXmlNode *signature, MlnXmlNode *document, int usage, int count,
 		     MlnBuffer *const *references, unsigned char **digests, int *digestTypes,
 		     const MlnBuffer *certificate, int *verified);
@@ -3008,6 +3011,7 @@ int MlnImpl_81055BB4(void **values, MlnBuffer *modulus, MlnBuffer *publicExponen
 		     MlnBuffer *privateExponent, MlnBuffer *prime1, MlnBuffer *prime2,
 		     MlnBuffer *exponent1, MlnBuffer *exponent2, MlnBuffer *coefficient);
 int MlnImpl_81055CA8(void *rsa);
+unsigned int MlnImpl_81056A74(void *rsa, int hash, const MlnBuffer *in, MlnBuffer **out);
 int MlnImpl_81056F0C(void *rsa, int hash, const MlnBuffer *message, const MlnBuffer *signature);
 int MlnImpl_81034D38(const char *usage, int count, MlnBuffer **certificates, char **out);
 int MlnImpl_81035018(int encryptionCount, MlnBuffer **encryptionCertificates, int signingCount,

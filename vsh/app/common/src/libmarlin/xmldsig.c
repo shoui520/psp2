@@ -1568,3 +1568,42 @@ out:
 		MlnXmlDsigFreeContents(contents);
 	return ret;
 }
+
+/*
+ * Sign references with an RSA key: their SignedInfo, its signature and the KeyInfo
+ * (MlnImpl_8105C234's) as a Signature element.
+ */
+int MlnImpl_8105CF28(int count, int hash, const int *transforms, const char *const *uris,
+		     unsigned char **digests, void *rsa, int keyInfo, MlnBuffer **certificates,
+		     const char *id, MlnXmlNode **out)
+{
+	MlnXmlNode *signature = NULL;
+	MlnBuffer *value = NULL;
+	MlnBuffer *xml = NULL;
+	MlnXmlNode *signedInfo = NULL;
+	unsigned int ret;
+
+	ret = MlnImpl_8105C7F0(count, hash, transforms, uris, digests, &signedInfo);
+	if (ret != 0)
+		goto out;
+	ret = MlnXmlNodeToXml(MLN_HEAP_GENERAL, signedInfo, &xml);
+	if (ret != 0)
+		goto out;
+	ret = MlnImpl_81056A74(rsa, hash, xml, &value);
+	if (ret != 0) {
+		if ((ret >> 16) != 0)
+			ret = 5;
+		goto out;
+	}
+	ret = MlnImpl_8105C234(signedInfo, value, keyInfo, certificates, id, &signature);
+	if (ret == 0) {
+		*out = signature;
+		signature = NULL;
+	}
+out:
+	MlnBufferDestroy(MLN_HEAP_GENERAL, value);
+	MlnBufferDestroy(MLN_HEAP_GENERAL, xml);
+	MlnXmlNodeFree(MLN_HEAP_GENERAL, signature);
+	MlnXmlNodeFree(MLN_HEAP_GENERAL, signedInfo);
+	return ret;
+}
