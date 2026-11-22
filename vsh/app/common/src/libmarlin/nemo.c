@@ -258,9 +258,9 @@ MlnNemoServiceException(const MlnNemoFault *fault, MlnXmlNode **out)
 	unsigned int size;
 	unsigned int ret;
 
-	if (fault->redirectUrl != NULL) {
+	if (fault->parts[MLN_NEMO_FAULT_REDIRECT_URL] != NULL) {
 		text.kind = MLN_XML_BUILD_BUFFER;
-		text.value.buffer = fault->redirectUrl;
+		text.value.buffer = fault->parts[MLN_NEMO_FAULT_REDIRECT_URL];
 		ret = MlnXmlElementBuild(MLN_HEAP_GENERAL, "RedirectURL", "exc",
 					 MLN_NEMO_NS_EXCEPTIONS, 0, NULL, 1, &text, 0, &redirect);
 		if (ret != 0)
@@ -269,9 +269,9 @@ MlnNemoServiceException(const MlnNemoFault *fault, MlnXmlNode **out)
 		contents[0].value.node = redirect;
 		count = 1;
 	}
-	if (fault->details != NULL) {
+	if (fault->parts[MLN_NEMO_FAULT_DETAILS] != NULL) {
 		text.kind = MLN_XML_BUILD_BUFFER;
-		text.value.buffer = fault->details;
+		text.value.buffer = fault->parts[MLN_NEMO_FAULT_DETAILS];
 		ret = MlnXmlElementBuild(MLN_HEAP_GENERAL, "Details", "exc", MLN_NEMO_NS_EXCEPTIONS,
 					 0, NULL, 1, &text, 0, &details);
 		if (ret != 0)
@@ -280,14 +280,14 @@ MlnNemoServiceException(const MlnNemoFault *fault, MlnXmlNode **out)
 		contents[count].value.node = details;
 		count++;
 	}
-	if (fault->name != NULL) {
-		size = fault->name->size;
+	if (fault->parts[MLN_NEMO_FAULT_NAME] != NULL) {
+		size = fault->parts[MLN_NEMO_FAULT_NAME]->size;
 		name = MlnAllocate(MLN_HEAP_GENERAL, size + 1);
 		if (name == NULL) {
 			ret = 2;
 			goto out;
 		}
-		MlnMemcpy(name, fault->name->data, size);
+		MlnMemcpy(name, fault->parts[MLN_NEMO_FAULT_NAME]->data, size);
 		name[size] = '\0';
 		attribute.name = "name";
 		attribute.value = name;
@@ -1038,12 +1038,12 @@ unsigned int MlnImpl_81072240(MlnNemoMessage *message, unsigned char kind, unsig
 	present = message->header.present;
 	missing = 1;
 	if (present & MLN_NEMO_PART_ACTION) {
-		missing = !(present & MLN_NEMO_PART_SENDER);
+		missing = !(present & MLN_NEMO_PART_MESSAGE_ID);
 		if ((step == MLN_NEMO_STEP_RESPONSE || step == MLN_NEMO_STEP_CONFIRMATION ||
-		     step == MLN_NEMO_STEP_FAULT) && !(present & MLN_NEMO_PART_ORIGIN))
+		     step == MLN_NEMO_STEP_FAULT) && !(present & MLN_NEMO_PART_ORIGINATES_FROM))
 			missing = 1;
 		if (kind != MLN_NEMO_KIND_TRANSFER && step == MLN_NEMO_STEP_REQUEST &&
-		    (present & (MLN_NEMO_PART_ORIGIN | MLN_NEMO_PART_RECIPIENT)))
+		    (present & (MLN_NEMO_PART_ORIGINATES_FROM | MLN_NEMO_PART_RELATES_TO)))
 			missing = 1;
 	}
 	if (missing && step != MLN_NEMO_STEP_FAULT) {
@@ -1292,8 +1292,8 @@ out:
 #define MLN_NEMO_SIGNED_BODY		0x008
 #define MLN_NEMO_SIGNED_MESSAGE_KEY	0x010	/* the message key's token */
 #define MLN_NEMO_SIGNED_PROTOCOL	0x020
-#define MLN_NEMO_SIGNED_SENDER		0x040	/* the header's MLN_NEMO_PART_SENDER node */
-#define MLN_NEMO_SIGNED_ORIGIN		0x080	/* the header's MLN_NEMO_PART_ORIGIN node */
+#define MLN_NEMO_SIGNED_MESSAGE_ID	0x040	/* the header's MessageID node */
+#define MLN_NEMO_SIGNED_ORIGINATES_FROM	0x080	/* the header's RelatesTo originatesFrom node */
 #define MLN_NEMO_SIGNED_CERTIFICATES	0x100	/* a request's second certificate chain */
 #define MLN_NEMO_SIGNED_FAULT		0x200	/* a fault's details */
 #define MLN_NEMO_SIGNED_PROFILE		0x400
@@ -1479,10 +1479,10 @@ static inline __attribute__((always_inline)) unsigned int MlnNemoReadHeaderRefer
 			break;
 		MlnBufferDestroy(MLN_HEAP_GENERAL, xml);
 		xml = NULL;
-		if (entry->type == MLN_NEMO_PART_SENDER)
-			*signedParts |= MLN_NEMO_SIGNED_SENDER;
-		if (entry->type == MLN_NEMO_PART_ORIGIN)
-			*signedParts |= MLN_NEMO_SIGNED_ORIGIN;
+		if (entry->type == MLN_NEMO_PART_MESSAGE_ID)
+			*signedParts |= MLN_NEMO_SIGNED_MESSAGE_ID;
+		if (entry->type == MLN_NEMO_PART_ORIGINATES_FROM)
+			*signedParts |= MLN_NEMO_SIGNED_ORIGINATES_FROM;
 	}
 out:
 	MlnBufferDestroy(MLN_HEAP_GENERAL, xml);
@@ -1646,7 +1646,7 @@ out:
 	return ret;
 }
 
-/* the ToNode of a message read, which has to name the sender's node */
+/* the ToNode of a message read, which has to name this node (the credentials' first) */
 static inline __attribute__((always_inline)) unsigned int MlnNemoReadToNode(
 	MlnXmlNode *security, const MlnBuffer *node, int digestSize, unsigned char *digest,
 	MlnBuffer **ids, int *count, unsigned int *signedParts, int *missing)
@@ -2042,10 +2042,10 @@ static inline __attribute__((always_inline)) int MlnNemoReadSecured(
 		    !(signedParts & MLN_NEMO_SIGNED_CERTIFICATES))
 			return 0;
 		if ((step == MLN_NEMO_STEP_REQUEST || step == MLN_NEMO_STEP_RESPONSE) &&
-		    !(signedParts & MLN_NEMO_SIGNED_SENDER))
+		    !(signedParts & MLN_NEMO_SIGNED_MESSAGE_ID))
 			return 0;
 		if ((step == MLN_NEMO_STEP_CONFIRMATION || step == MLN_NEMO_STEP_RESPONSE) &&
-		    !(signedParts & MLN_NEMO_SIGNED_ORIGIN))
+		    !(signedParts & MLN_NEMO_SIGNED_ORIGINATES_FROM))
 			return 0;
 	}
 	if ((usage & MLN_NEMO_USAGE_ENCRYPTED) &&
@@ -2309,12 +2309,12 @@ unsigned int MlnImpl_81074EC4(unsigned int size, const void *data, MlnNemoMessag
 	if (!(present & MLN_NEMO_PART_ACTION)) {
 		bad = 1;
 	} else {
-		bad = !(present & MLN_NEMO_PART_SENDER);
+		bad = !(present & MLN_NEMO_PART_MESSAGE_ID);
 		if ((readStep == MLN_NEMO_STEP_RESPONSE || readStep == MLN_NEMO_STEP_CONFIRMATION ||
-		     readStep == MLN_NEMO_STEP_FAULT) && !(present & MLN_NEMO_PART_ORIGIN))
+		     readStep == MLN_NEMO_STEP_FAULT) && !(present & MLN_NEMO_PART_ORIGINATES_FROM))
 			bad = 1;
 		if (readStep == MLN_NEMO_STEP_REQUEST && kind != MLN_NEMO_KIND_TRANSFER &&
-		    (present & (MLN_NEMO_PART_ORIGIN | MLN_NEMO_PART_RECIPIENT)))
+		    (present & (MLN_NEMO_PART_ORIGINATES_FROM | MLN_NEMO_PART_RELATES_TO)))
 			bad = 1;
 	}
 	if (bad && !faultRead) {
@@ -2323,7 +2323,7 @@ unsigned int MlnImpl_81074EC4(unsigned int size, const void *data, MlnNemoMessag
 	}
 	ret = MlnImpl_810789DC(&message->header, readStep);
 	if (ret != 0 &&
-	    !((ret == MLN_NEMO_ERROR_SENDER || ret == MLN_NEMO_ERROR_PARAMETER) && faultRead))
+	    !((ret == MLN_NEMO_ERROR_RELATES_TO || ret == MLN_NEMO_ERROR_PARAMETER) && faultRead))
 		goto out;
 
 	/* the header nodes' references, after the parts' */
@@ -2552,4 +2552,697 @@ out:
 			MlnBufferDestroy(MLN_HEAP_GENERAL, ids[i]);
 	MlnImpl_81080C1C(hci);
 	return MlnNemoReadError(ret);
+}
+
+#define MLN_NEMO_NS_ADDRESSING	"http://www.w3.org/2005/08/addressing"
+#define MLN_NEMO_ORIGINATES_FROM "http://nemo.intertrust.com/2004/addressing/originatesFrom"
+#define MLN_NEMO_REPLY		"http://www.w3.org/2005/08/addressing/reply"
+#define MLN_NEMO_HEADER_NODES_MAX 16
+
+/*
+ * A WS-Addressing header read into its part (an endpoint's Address for From,
+ * ReplyTo and FaultTo), its element kept among the header's nodes.
+ */
+__attribute__((noinline))
+unsigned int MlnImpl_81077DE8(MlnXmlNode *soapHeader, const char *name, unsigned int part,
+			      unsigned int *present, MlnNemoHeaderNodes *nodes, unsigned int *index,
+			      MlnBuffer **value)
+{
+	MlnXmlNodeList *elements = NULL;
+	MlnXmlNodeList *addresses = NULL;
+	MlnXmlNode *node;
+	MlnBuffer *text = NULL;
+	MlnNemoHeaderNode *entry;
+	unsigned int ret;
+
+	ret = MlnXmlFindNodes(MLN_HEAP_GENERAL, soapHeader, name, MLN_NEMO_NS_ADDRESSING,
+			      &elements);
+	if (ret != 0) {
+		if (ret == MLN_XML_ERROR_NOT_FOUND)
+			ret = 0;
+		goto out;
+	}
+	if (elements->count != 1) {
+		ret = MLN_NEMO_ERROR_FORMAT;
+		goto out;
+	}
+	if (part == MLN_NEMO_PART_FROM || part == MLN_NEMO_PART_REPLY_TO ||
+	    part == MLN_NEMO_PART_FAULT_TO) {
+		ret = MlnXmlFindNodes(MLN_HEAP_GENERAL, elements->nodes[0], "Address",
+				      MLN_NEMO_NS_ADDRESSING, &addresses);
+		if (ret != 0)
+			goto out;
+		if (addresses->count != 1) {
+			ret = MLN_NEMO_ERROR_FORMAT;
+			goto out;
+		}
+		node = addresses->nodes[0];
+	} else {
+		node = elements->nodes[0];
+	}
+	ret = MlnXmlGetText(MLN_HEAP_GENERAL, node, &text);
+	if (ret != 0)
+		goto out;
+	*value = text;
+	text = NULL;
+	*present |= part;
+	if (*index >= MLN_NEMO_HEADER_NODES_MAX) {
+		ret = MLN_NEMO_ERROR_PARAMETER;
+		goto out;
+	}
+	nodes->items[*index].type = part;
+	entry = &nodes->items[*index];
+	entry->node = MlnXmlNodeRetain(MLN_HEAP_GENERAL, node);
+	*index += 1;
+	nodes->count++;
+out:
+	MlnXmlListFree(MLN_HEAP_GENERAL, elements);
+	MlnXmlListFree(MLN_HEAP_GENERAL, addresses);
+	MlnBufferDestroy(MLN_HEAP_GENERAL, text);
+	return ret;
+}
+
+/* an element of the header made from a part: its text, or an endpoint holding it */
+static inline __attribute__((always_inline)) unsigned int MlnNemoHeaderElement(
+	const char *name, int attributeCount, const MlnXmlBuildAttribute *attributes,
+	MlnBuffer *value, MlnXmlNode **out)
+{
+	MlnXmlBuildContent content;
+
+	content.kind = MLN_XML_BUILD_BUFFER;
+	content.value.buffer = value;
+	return MlnXmlElementBuild(MLN_HEAP_GENERAL, name, "wsa", MLN_NEMO_NS_ADDRESSING,
+				  attributeCount, attributes, 1, &content, 0, out);
+}
+
+static inline __attribute__((always_inline)) unsigned int MlnNemoHeaderEndpoint(
+	const char *name, MlnBuffer *value, MlnXmlNode **address, MlnXmlNode **out)
+{
+	MlnXmlBuildContent content;
+	unsigned int ret;
+
+	ret = MlnNemoHeaderElement("Address", 0, NULL, value, address);
+	if (ret != 0)
+		return ret;
+	content.kind = MLN_XML_BUILD_NODE;
+	content.value.node = *address;
+	return MlnXmlElementBuild(MLN_HEAP_GENERAL, name, "wsa", MLN_NEMO_NS_ADDRESSING, 0, NULL,
+				  1, &content, 0, out);
+}
+
+/* the SOAP header's WS-Addressing elements made from a header's parts */
+__attribute__((noinline))
+unsigned int MlnImpl_81077FAC(MlnNemoHeader *header, MlnNemoHeaderNodes **out)
+{
+	MlnNemoHeaderNodes *nodes;
+	MlnXmlNode *from = NULL;
+	MlnXmlNode *replyTo = NULL;
+	MlnXmlNode *faultTo = NULL;
+	MlnXmlBuildAttribute relationship;
+	unsigned int present;
+	unsigned int n = 0;
+	unsigned int ret;
+
+	if (header == NULL || header->count == 0) {
+		*out = NULL;
+		return 0;
+	}
+	nodes = MlnAllocate(MLN_HEAP_GENERAL, sizeof(*nodes));
+	if (nodes == NULL ||
+	    (nodes->items = MlnAllocate(MLN_HEAP_GENERAL,
+					header->count * sizeof(*nodes->items))) == NULL) {
+		ret = 2;
+		goto out;
+	}
+	nodes->count = 0;
+	present = header->present;
+	if (present & MLN_NEMO_PART_TO) {
+		ret = MlnNemoHeaderElement("To", 0, NULL,
+					   MLN_NEMO_HEADER_PART(header, MLN_NEMO_PART_TO),
+					   &nodes->items[n].node);
+		if (ret != 0)
+			goto out;
+		nodes->items[n++].type = MLN_NEMO_PART_TO;
+		nodes->count++;
+		present = header->present;
+	}
+	if (present & MLN_NEMO_PART_ACTION) {
+		ret = MlnNemoHeaderElement("Action", 0, NULL,
+					   MLN_NEMO_HEADER_PART(header, MLN_NEMO_PART_ACTION),
+					   &nodes->items[n].node);
+		if (ret != 0)
+			goto out;
+		nodes->items[n++].type = MLN_NEMO_PART_ACTION;
+		nodes->count++;
+		present = header->present;
+	}
+	if (present & MLN_NEMO_PART_ORIGINATES_FROM) {
+		relationship.name = "RelationshipType";
+		relationship.value = MLN_NEMO_ORIGINATES_FROM;
+		ret = MlnNemoHeaderElement("RelatesTo", 1, &relationship,
+					   MLN_NEMO_HEADER_PART(header,
+								MLN_NEMO_PART_ORIGINATES_FROM),
+					   &nodes->items[n].node);
+		if (ret != 0)
+			goto out;
+		nodes->items[n++].type = MLN_NEMO_PART_ORIGINATES_FROM;
+		nodes->count++;
+		present = header->present;
+	}
+	if (present & MLN_NEMO_PART_RELATES_TO) {
+		relationship.name = "RelationshipType";
+		relationship.value = MLN_NEMO_REPLY;
+		ret = MlnNemoHeaderElement("RelatesTo", 1, &relationship,
+					   MLN_NEMO_HEADER_PART(header, MLN_NEMO_PART_RELATES_TO),
+					   &nodes->items[n].node);
+		if (ret != 0)
+			goto out;
+		nodes->items[n++].type = MLN_NEMO_PART_RELATES_TO;
+		nodes->count++;
+		present = header->present;
+	}
+	if (present & MLN_NEMO_PART_MESSAGE_ID) {
+		ret = MlnNemoHeaderElement("MessageID", 0, NULL,
+					   MLN_NEMO_HEADER_PART(header, MLN_NEMO_PART_MESSAGE_ID),
+					   &nodes->items[n].node);
+		if (ret != 0)
+			goto out;
+		nodes->items[n++].type = MLN_NEMO_PART_MESSAGE_ID;
+		nodes->count++;
+		present = header->present;
+	}
+	if (present & MLN_NEMO_PART_FROM) {
+		ret = MlnNemoHeaderEndpoint("From", MLN_NEMO_HEADER_PART(header, MLN_NEMO_PART_FROM),
+					    &from, &nodes->items[n].node);
+		if (ret != 0)
+			goto out;
+		nodes->items[n++].type = MLN_NEMO_PART_FROM;
+		nodes->count++;
+		present = header->present;
+	}
+	if (present & MLN_NEMO_PART_REPLY_TO) {
+		ret = MlnNemoHeaderEndpoint("ReplyTo",
+					    MLN_NEMO_HEADER_PART(header, MLN_NEMO_PART_REPLY_TO),
+					    &replyTo, &nodes->items[n].node);
+		if (ret != 0)
+			goto out;
+		nodes->items[n++].type = MLN_NEMO_PART_REPLY_TO;
+		nodes->count++;
+		present = header->present;
+	}
+	if (present & MLN_NEMO_PART_FAULT_TO) {
+		ret = MlnNemoHeaderEndpoint("FaultTo",
+					    MLN_NEMO_HEADER_PART(header, MLN_NEMO_PART_FAULT_TO),
+					    &faultTo, &nodes->items[n].node);
+		if (ret != 0)
+			goto out;
+		nodes->items[n].type = MLN_NEMO_PART_FAULT_TO;
+		nodes->count++;
+	}
+	*out = nodes;
+	nodes = NULL;
+	ret = 0;
+out:
+	MlnImpl_81079854(nodes);
+	MlnXmlNodeFree(MLN_HEAP_GENERAL, from);
+	MlnXmlNodeFree(MLN_HEAP_GENERAL, replyTo);
+	MlnXmlNodeFree(MLN_HEAP_GENERAL, faultTo);
+	return ret;
+}
+
+/* a SOAP header's WS-Addressing parts read into a header, their elements kept */
+__attribute__((noinline))
+unsigned int MlnImpl_81078688(MlnXmlNode *soapHeader, MlnNemoHeader *header,
+			      MlnNemoHeaderNodes **out)
+{
+	MlnNemoHeaderNodes *nodes = NULL;
+	MlnXmlNodeList *list = NULL;
+	MlnXmlNode *relatesTo;
+	MlnBuffer *relationship;
+	unsigned int index = 0;
+	unsigned int ret;
+
+	if (header == NULL || soapHeader == NULL) {
+		*out = NULL;
+		return 0;
+	}
+	/* a header to read into holds no more than a request's MessageID */
+	if (header->present & ~MLN_NEMO_PART_REQUEST_ID) {
+		ret = MLN_NEMO_ERROR_PARAMETER;
+		goto out;
+	}
+	nodes = MlnAllocate(MLN_HEAP_GENERAL, sizeof(*nodes));
+	if (nodes == NULL ||
+	    (nodes->items = MlnAllocate(MLN_HEAP_GENERAL,
+					MLN_NEMO_HEADER_NODES_MAX * sizeof(*nodes->items))) == NULL) {
+		ret = 2;
+		goto out;
+	}
+	nodes->count = 0;
+	ret = MlnImpl_81077DE8(soapHeader, "To", MLN_NEMO_PART_TO, &header->present, nodes, &index,
+			       &MLN_NEMO_HEADER_PART(header, MLN_NEMO_PART_TO));
+	if (ret != 0)
+		goto out;
+	ret = MlnImpl_81077DE8(soapHeader, "Action", MLN_NEMO_PART_ACTION, &header->present, nodes,
+			       &index, &MLN_NEMO_HEADER_PART(header, MLN_NEMO_PART_ACTION));
+	if (ret != 0)
+		goto out;
+
+	/* a RelatesTo, either relationship read as the originatesFrom */
+	relatesTo = NULL;
+	relationship = NULL;
+	ret = MlnXmlFindNode(MLN_HEAP_GENERAL, soapHeader, "RelatesTo", MLN_NEMO_NS_ADDRESSING,
+			     &relatesTo);
+	if (ret == 0) {
+		ret = MlnXmlGetAttribute(MLN_HEAP_GENERAL, relatesTo, NULL, "RelationshipType",
+					 &relationship);
+		if (ret != 0)
+			goto relates;
+		/* Sony compares the buffer itself, not its data */
+		if (!(relationship->size == 57 &&
+		      MlnMemcmp(relationship, MLN_NEMO_ORIGINATES_FROM, 57) != 0) &&
+		    (relationship->size != 42 || MlnMemcmp(relationship, MLN_NEMO_REPLY, 42) == 0)) {
+			ret = MLN_NEMO_ERROR_FORMAT;
+			goto relates;
+		}
+		ret = MlnXmlGetText(MLN_HEAP_GENERAL, relatesTo,
+				    &MLN_NEMO_HEADER_PART(header, MLN_NEMO_PART_ORIGINATES_FROM));
+		if (ret != 0)
+			goto relates;
+		header->present |= MLN_NEMO_PART_ORIGINATES_FROM;
+		if (index >= MLN_NEMO_HEADER_NODES_MAX) {
+			ret = MLN_NEMO_ERROR_PARAMETER;
+			goto relates;
+		}
+		nodes->items[index].type = MLN_NEMO_PART_ORIGINATES_FROM;
+		nodes->items[index++].node = relatesTo;
+		relatesTo = NULL;
+		nodes->count++;
+	} else if (ret == MLN_XML_ERROR_NOT_FOUND) {
+		ret = 0;
+	}
+relates:
+	MlnBufferDestroy(MLN_HEAP_GENERAL, relationship);
+	MlnXmlNodeFree(MLN_HEAP_GENERAL, relatesTo);
+	if (ret != 0)
+		goto out;
+
+	ret = MlnImpl_81077DE8(soapHeader, "MessageID", MLN_NEMO_PART_MESSAGE_ID, &header->present,
+			       nodes, &index,
+			       &MLN_NEMO_HEADER_PART(header, MLN_NEMO_PART_MESSAGE_ID));
+	if (ret != 0)
+		goto out;
+	ret = MlnImpl_81077DE8(soapHeader, "From", MLN_NEMO_PART_FROM, &header->present, nodes,
+			       &index, &MLN_NEMO_HEADER_PART(header, MLN_NEMO_PART_FROM));
+	if (ret != 0)
+		goto out;
+	ret = MlnImpl_81077DE8(soapHeader, "ReplyTo", MLN_NEMO_PART_REPLY_TO, &header->present,
+			       nodes, &index, &MLN_NEMO_HEADER_PART(header, MLN_NEMO_PART_REPLY_TO));
+	if (ret != 0)
+		goto out;
+	ret = MlnImpl_81077DE8(soapHeader, "FaultTo", MLN_NEMO_PART_FAULT_TO, &header->present,
+			       nodes, &index, &MLN_NEMO_HEADER_PART(header, MLN_NEMO_PART_FAULT_TO));
+	if (ret != 0)
+		goto out;
+	header->count += nodes->count;
+	*out = nodes;
+	nodes = NULL;
+out:
+	MlnXmlListFree(MLN_HEAP_GENERAL, list);
+	MlnImpl_81079854(nodes);
+	return ret;
+}
+
+/*
+ * A header's RelatesTo checked: a request's against the originatesFrom it
+ * has to carry, its MessageID then kept as the request's; a reply's against
+ * the request's MessageID.
+ */
+__attribute__((noinline))
+unsigned int MlnImpl_810789DC(MlnNemoHeader *header, unsigned int step)
+{
+	MlnBuffer *messageId;
+	MlnBuffer *expected;
+	MlnBuffer *originatesFrom;
+	MlnBuffer *requestId;
+
+	if (header == NULL)
+		return MLN_NEMO_ERROR_PARAMETER;
+	if (step == MLN_NEMO_STEP_REQUEST) {
+		messageId = MLN_NEMO_HEADER_PART(header, MLN_NEMO_PART_MESSAGE_ID);
+		if (messageId == NULL)
+			return MLN_NEMO_ERROR_PARAMETER;
+		expected = MLN_NEMO_HEADER_PART(header, MLN_NEMO_PART_EXPECTED_ORIGIN);
+		if (expected != NULL) {
+			originatesFrom = MLN_NEMO_HEADER_PART(header, MLN_NEMO_PART_ORIGINATES_FROM);
+			if (originatesFrom == NULL ||
+			    MlnBufferCompare(MLN_HEAP_GENERAL, originatesFrom, expected) != 0)
+				return MLN_NEMO_ERROR_RELATES_TO;
+		}
+		MlnBufferDestroy(MLN_HEAP_GENERAL,
+				 MLN_NEMO_HEADER_PART(header, MLN_NEMO_PART_REQUEST_ID));
+		MLN_NEMO_HEADER_PART(header, MLN_NEMO_PART_REQUEST_ID) = NULL;
+		messageId = MLN_NEMO_HEADER_PART(header, MLN_NEMO_PART_MESSAGE_ID);
+		MLN_NEMO_HEADER_PART(header, MLN_NEMO_PART_REQUEST_ID) =
+			MlnBufferCreate(MLN_HEAP_GENERAL, messageId->size, messageId->data);
+		if (MLN_NEMO_HEADER_PART(header, MLN_NEMO_PART_REQUEST_ID) == NULL)
+			return 2;
+		header->count++;
+		header->present |= MLN_NEMO_PART_REQUEST_ID;
+		return 0;
+	}
+	originatesFrom = MLN_NEMO_HEADER_PART(header, MLN_NEMO_PART_ORIGINATES_FROM);
+	if (originatesFrom == NULL)
+		return MLN_NEMO_ERROR_RELATES_TO;
+	requestId = MLN_NEMO_HEADER_PART(header, MLN_NEMO_PART_REQUEST_ID);
+	if (requestId == NULL)
+		return MLN_NEMO_ERROR_RELATES_TO;
+	if (MlnBufferCompare(MLN_HEAP_GENERAL, originatesFrom, requestId) != 0)
+		return MLN_NEMO_ERROR_RELATES_TO;
+	return 0;
+}
+
+#define MLN_NEMO_FAULTS_READ_MAX	25
+
+/* a SOAP Body holding a payload */
+unsigned int MlnImpl_81078AB8(MlnXmlNode *body, MlnXmlNode **out)
+{
+	MlnXmlBuildAttribute attributes[3];
+	MlnXmlBuildContent content;
+
+	content.kind = MLN_XML_BUILD_NODE;
+	content.value.node = body;
+	attributes[0].name = "wsu:Id";
+	attributes[0].value = "soapBody";
+	attributes[1].name = "xmlns:wsu";
+	attributes[1].value = MLN_NEMO_NS_UTILITY;
+	attributes[2].name = "xmlns:senv";
+	attributes[2].value = MLN_NEMO_NS_SOAP;
+	return MlnXmlElementBuild(MLN_HEAP_GENERAL, "Body", "senv", NULL, 3, attributes, 1,
+				  &content, 0, out);
+}
+
+/* a SOAP Envelope of a header's nodes and a body, serialized */
+__attribute__((noinline))
+unsigned int MlnImpl_81078B5C(MlnXmlNode **header, unsigned char count, MlnXmlNode *body,
+			      MlnBuffer **out)
+{
+	MlnXmlBuildContent headerContents[MLN_NEMO_HEADER_NODES_MAX];
+	MlnXmlBuildContent contents[2];
+	MlnXmlBuildAttribute xenc;
+	MlnXmlNode *nodes[3];		/* the Header, the Body, the Envelope */
+	unsigned int n;
+	unsigned int ret;
+	unsigned int i;
+
+	MlnMemset(nodes, 0, sizeof(nodes));
+	n = 0;
+	if (header != NULL) {
+		if (count > MLN_NEMO_HEADER_NODES_MAX) {
+			ret = MLN_NEMO_ERROR_PARAMETER;
+			goto out;
+		}
+		for (i = 0; i < count; i++) {
+			headerContents[i].kind = MLN_XML_BUILD_NODE;
+			headerContents[i].value.node = header[i];
+		}
+		ret = MlnXmlElementBuild(MLN_HEAP_GENERAL, "Header", "senv", NULL, 0, NULL, count,
+					 headerContents, 0, &nodes[0]);
+		if (ret != 0)
+			goto out;
+		n = 1;
+	}
+	if (body != NULL) {
+		ret = MlnImpl_81078AB8(body, &nodes[n]);
+		if (ret != 0)
+			goto out;
+		n++;
+	}
+	for (i = 0; i < n; i++) {
+		contents[i].kind = MLN_XML_BUILD_NODE;
+		contents[i].value.node = nodes[i];
+	}
+	xenc.name = "xmlns:xenc";
+	xenc.value = MLN_NEMO_NS_XENC;
+	ret = MlnXmlElementBuild(MLN_HEAP_GENERAL, "Envelope", "senv", MLN_NEMO_NS_SOAP, 1, &xenc, n,
+				 contents, 1, &nodes[2]);
+	if (ret != 0)
+		goto out;
+	/* the Envelope holds them now */
+	for (i = 0; i < n; i++)
+		nodes[i] = NULL;
+	ret = MlnXmlNodeSerialize(MLN_HEAP_GENERAL, nodes[2], NULL, NULL, out);
+out:
+	if (ret != 0)
+		ret = MlnImpl_8107A340(ret);
+	if (nodes[0] != NULL)
+		MlnXmlNodeFree(MLN_HEAP_GENERAL, nodes[0]);
+	if (nodes[1] != NULL)
+		MlnXmlNodeFree(MLN_HEAP_GENERAL, nodes[1]);
+	if (nodes[2] != NULL)
+		MlnXmlNodeFree(MLN_HEAP_GENERAL, nodes[2]);
+	return ret;
+}
+
+/* a payload's XML in a BusinessToken of a service's namespace */
+unsigned int MlnImpl_81078EB8(const MlnBuffer *xml, const char *prefix, const char *uri,
+			      MlnXmlNode **node)
+{
+	MlnXmlBuildContent content;
+	MlnXmlNode *token = NULL;
+	MlnBuffer *copy;
+	unsigned int ret;
+
+	copy = MlnBufferCreate(MLN_HEAP_GENERAL, xml->size, xml->data);
+	if (copy == NULL) {
+		ret = 2;
+		goto out;
+	}
+	content.kind = MLN_XML_BUILD_BUFFER;
+	content.value.buffer = copy;
+	ret = MlnXmlElementBuild(MLN_HEAP_GENERAL, "BusinessToken", prefix, uri, 0, NULL, 1,
+				 &content, 1, &token);
+	if (ret == 0) {
+		/* the token holds the copy now */
+		copy = NULL;
+		*node = token;
+		token = NULL;
+	}
+out:
+	MlnBufferDestroy(MLN_HEAP_GENERAL, copy);
+	MlnXmlNodeFree(MLN_HEAP_GENERAL, token);
+	return ret;
+}
+
+/* a ServiceException read: its name, RedirectURL and Details, each optional */
+__attribute__((noinline))
+unsigned int MlnImpl_81078F70(MlnXmlNode *exception, MlnNemoFault **out)
+{
+	MlnXmlNode *redirect = NULL;
+	MlnXmlNode *details = NULL;
+	MlnNemoFault *fault;
+	unsigned int ret;
+
+	fault = MlnAllocate(MLN_HEAP_GENERAL, sizeof(*fault));
+	if (fault == NULL) {
+		ret = 2;
+		goto out;
+	}
+	MlnMemset(fault, 0, sizeof(*fault));
+	ret = MlnXmlGetAttribute(MLN_HEAP_GENERAL, exception, NULL, "name", &fault->parts[MLN_NEMO_FAULT_NAME]);
+	if (ret != 0 && ret != MLN_XML_ERROR_NOT_FOUND)
+		goto fail;
+	ret = MlnXmlFindNode(MLN_HEAP_GENERAL, exception, "RedirectURL", MLN_NEMO_NS_EXCEPTIONS,
+			     &redirect);
+	if (ret == 0)
+		ret = MlnXmlGetText(MLN_HEAP_GENERAL, redirect, &fault->parts[MLN_NEMO_FAULT_REDIRECT_URL]);
+	if (ret != 0 && ret != MLN_XML_ERROR_NOT_FOUND)
+		goto fail;
+	ret = MlnXmlFindNode(MLN_HEAP_GENERAL, exception, "Details", MLN_NEMO_NS_EXCEPTIONS,
+			     &details);
+	if (ret == 0)
+		ret = MlnXmlGetText(MLN_HEAP_GENERAL, details, &fault->parts[MLN_NEMO_FAULT_DETAILS]);
+	if (ret != 0 && ret != MLN_XML_ERROR_NOT_FOUND)
+		goto fail;
+	*out = fault;
+	ret = 0;
+	goto out;
+fail:
+	MlnBufferDestroy(MLN_HEAP_GENERAL, fault->parts[MLN_NEMO_FAULT_NAME]);
+	MlnBufferDestroy(MLN_HEAP_GENERAL, fault->parts[MLN_NEMO_FAULT_REDIRECT_URL]);
+	MlnBufferDestroy(MLN_HEAP_GENERAL, fault->parts[MLN_NEMO_FAULT_DETAILS]);
+	MlnFree(MLN_HEAP_GENERAL, fault);
+out:
+	MlnXmlNodeFree(MLN_HEAP_GENERAL, redirect);
+	MlnXmlNodeFree(MLN_HEAP_GENERAL, details);
+	return ret;
+}
+
+/* random bytes from the secure generator, a word at a time */
+__attribute__((noinline))
+unsigned int MlnImpl_810790EC(int size, unsigned char *data)
+{
+	void *random = NULL;
+	unsigned int word;
+	unsigned int ret;
+	int words;
+	int rest;
+	int i;
+
+	ret = MlnImpl_8105714C(&random);
+	if (ret != 0)
+		goto out;
+	words = size / 4;
+	for (i = 0; i < words; i++) {
+		ret = MlnImpl_810571C4(random, sizeof(word), &word);
+		if (ret != 0)
+			goto out;
+		data[0] = word;
+		data[1] = word >> 8;
+		data[2] = word >> 16;
+		data[3] = word >> 24;
+		data += 4;
+	}
+	rest = size - 4 * words;
+	if (rest > 0) {
+		ret = MlnImpl_810571C4(random, sizeof(word), &word);
+		if (ret != 0)
+			goto out;
+		data[0] = word;
+		if (rest != 1) {
+			data[1] = word >> 8;
+			if (rest != 2)
+				data[2] = word >> 16;
+		}
+	}
+out:
+	MlnImpl_81057244(random);
+	return ret;
+}
+
+/* random bytes from the secure generator, each from a word of it */
+__attribute__((noinline))
+unsigned int MlnImpl_810791F0(int size, unsigned char *data)
+{
+	void *random = NULL;
+	unsigned char word[4];
+	unsigned char *end;
+	unsigned int ret;
+
+	ret = MlnImpl_8105714C(&random);
+	if (ret == 0 && size > 0) {
+		end = data + size;
+		do {
+			ret = MlnImpl_810571C4(random, sizeof(word), word);
+			if (ret != 0)
+				break;
+			*data++ = word[0] ^ word[2];
+		} while (data != end);
+	}
+	MlnImpl_81057244(random);
+	return ret;
+}
+
+/* a ServiceException read, freed */
+inline __attribute__((always_inline)) unsigned int MlnImpl_81079270(MlnNemoFault *fault)
+{
+	if (fault != NULL) {
+		MlnBufferDestroy(MLN_HEAP_GENERAL, fault->parts[MLN_NEMO_FAULT_NAME]);
+		MlnBufferDestroy(MLN_HEAP_GENERAL, fault->parts[MLN_NEMO_FAULT_REDIRECT_URL]);
+		MlnBufferDestroy(MLN_HEAP_GENERAL, fault->parts[MLN_NEMO_FAULT_DETAILS]);
+		MlnFree(MLN_HEAP_GENERAL, fault);
+	}
+	return 0;
+}
+
+/*
+ * The ServiceExceptions of a fault's detail and of its FaultDetails header,
+ * at most MLN_NEMO_FAULTS_READ_MAX in all.
+ */
+__attribute__((noinline))
+unsigned int MlnImpl_810792B4(MlnXmlNode *detail, MlnXmlNode *faultDetails, MlnNemoFault ***items,
+			      unsigned int *count)
+{
+	MlnXmlNodeList *first = NULL;
+	MlnXmlNodeList *second = NULL;
+	MlnNemoFault **faults;
+	unsigned int firstCount;
+	unsigned int secondCount;
+	unsigned int total;
+	unsigned int ret;
+	unsigned int i;
+
+	if (detail == NULL && faultDetails == NULL)
+		return 0;
+	firstCount = 0;
+	if (detail != NULL) {
+		ret = MlnXmlFindNodes(MLN_HEAP_GENERAL, detail, "ServiceException",
+				      MLN_NEMO_NS_EXCEPTIONS, &first);
+		if (ret != 0)
+			goto out;
+		firstCount = first->count;
+		if ((int)firstCount >= MLN_NEMO_FAULTS_READ_MAX)
+			firstCount = MLN_NEMO_FAULTS_READ_MAX;
+	}
+	secondCount = 0;
+	if (faultDetails != NULL) {
+		ret = MlnXmlFindNodes(MLN_HEAP_GENERAL, faultDetails, "ServiceException",
+				      MLN_NEMO_NS_EXCEPTIONS, &second);
+		if (ret != 0)
+			goto out;
+		secondCount = second->count;
+		if ((int)secondCount >= MLN_NEMO_FAULTS_READ_MAX)
+			secondCount = MLN_NEMO_FAULTS_READ_MAX;
+	}
+	total = firstCount + secondCount;
+	if (total >= MLN_NEMO_FAULTS_READ_MAX)
+		total = MLN_NEMO_FAULTS_READ_MAX;
+	faults = MlnAllocate(MLN_HEAP_GENERAL, total * sizeof(*faults));
+	if (faults == NULL) {
+		ret = 2;
+		goto out;
+	}
+	MlnMemset(faults, 0, total * sizeof(*faults));
+	for (i = 0; i < firstCount; i++) {
+		ret = MlnImpl_81078F70(first->nodes[i], &faults[i]);
+		if (ret != 0)
+			goto fail;
+	}
+	for (i = 0; i < total - firstCount; i++) {
+		ret = MlnImpl_81078F70(second->nodes[i], &faults[firstCount + i]);
+		if (ret != 0)
+			goto fail;
+	}
+	*items = faults;
+	ret = 0;
+	*count = total;
+	goto out;
+fail:
+	for (i = 0; i < total; i++)
+		MlnImpl_81079270(faults[i]);
+	MlnFree(MLN_HEAP_GENERAL, faults);
+out:
+	MlnXmlListFree(MLN_HEAP_GENERAL, first);
+	MlnXmlListFree(MLN_HEAP_GENERAL, second);
+	return ret;
+}
+
+/* a fault read, freed with its exceptions */
+__attribute__((noinline))
+unsigned int MlnImpl_810794DC(MlnNemoFaults *faults)
+{
+	unsigned int i;
+
+	if (faults != NULL) {
+		MlnBufferDestroy(MLN_HEAP_GENERAL, faults->code);
+		MlnBufferDestroy(MLN_HEAP_GENERAL, faults->string);
+		MlnBufferDestroy(MLN_HEAP_GENERAL, faults->actor);
+		if (faults->items != NULL) {
+			for (i = 0; i < faults->count; i++)
+				MlnImpl_81079270(faults->items[i]);
+			MlnFree(MLN_HEAP_GENERAL, faults->items);
+		}
+		MlnFree(MLN_HEAP_GENERAL, faults);
+	}
+	return 0;
 }

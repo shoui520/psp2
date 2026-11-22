@@ -2471,20 +2471,28 @@ unsigned int MlnImpl_8104D16C(int handle, int kind, MlnBuffer **out);
 unsigned int MlnImpl_8104D208(const MlnBuffer *controller, const MlnBuffer *token);
 
 /*
- * A NEMO message's header (0x30 bytes): the parts set with MlnImpl_8107A04C, a part's buffer at
- * the index of its bit. The part names are ours, from where this library fills them.
+ * A NEMO message's header (0x30 bytes): its WS-Addressing parts, set with
+ * MlnImpl_8107A04C, a part's buffer at the index of its bit (MlnImpl_81077FAC
+ * writes them as the elements named, MlnImpl_81078688 reads them).
  */
-#define MLN_NEMO_PART_ACTION		0x002	/* the action's URN */
-#define MLN_NEMO_PART_ORIGIN		0x004	/* a license transfer's: the requester before */
-#define MLN_NEMO_PART_RECIPIENT		0x008	/* a license transfer's: the sender before */
-#define MLN_NEMO_PART_SENDER		0x010	/* the sender's node, from its credentials */
-#define MLN_NEMO_PART_REQUESTER		0x100	/* a request's sender */
-#define MLN_NEMO_PART_CONFIRMER		0x200	/* a license transfer step's sender */
+#define MLN_NEMO_PART_TO		0x001	/* To */
+#define MLN_NEMO_PART_ACTION		0x002	/* Action, the action's URN */
+#define MLN_NEMO_PART_ORIGINATES_FROM	0x004	/* RelatesTo, originatesFrom */
+#define MLN_NEMO_PART_RELATES_TO	0x008	/* RelatesTo, reply */
+#define MLN_NEMO_PART_MESSAGE_ID	0x010	/* MessageID */
+#define MLN_NEMO_PART_FROM		0x020	/* From's Address */
+#define MLN_NEMO_PART_REPLY_TO		0x040	/* ReplyTo's Address */
+#define MLN_NEMO_PART_FAULT_TO		0x080	/* FaultTo's Address */
+#define MLN_NEMO_PART_REQUEST_ID	0x100	/* a request's MessageID, kept */
+#define MLN_NEMO_PART_EXPECTED_ORIGIN	0x200	/* the originatesFrom a request has to carry */
+
+/* a header's part by its bit */
+#define MLN_NEMO_HEADER_PART(header, part)	((header)->parts[__builtin_ctz(part)])
 
 typedef struct MlnNemoHeader {
 	int count;			/* the parts present */
 	unsigned int present;		/* their MLN_NEMO_PART_* bits */
-	MlnBuffer *parts[10];		/* by bit, MLN_NEMO_PART_SENDER's in parts[4] */
+	MlnBuffer *parts[10];		/* by bit, MLN_NEMO_PART_MESSAGE_ID's in parts[4] */
 } MlnNemoHeader;
 
 /* a service's certificate and what a message uses of it (MlnImpl_81079A7C, 0x10 bytes) */
@@ -2495,16 +2503,21 @@ typedef struct MlnNemoPeerKey {
 	MlnBuffer *exponent;
 } MlnNemoPeerKey;
 
-/* an exception a fault reports: a ServiceException */
+/* an exception a fault reports: a ServiceException's parts (MlnImpl_81078F70) */
+#define MLN_NEMO_FAULT_NAME		0	/* its name attribute */
+#define MLN_NEMO_FAULT_REDIRECT_URL	1
+#define MLN_NEMO_FAULT_DETAILS		2
+#define MLN_NEMO_FAULT_PARTS		3
+
 typedef struct MlnNemoFault {
-	MlnBuffer *name;
-	MlnBuffer *redirectUrl;
-	MlnBuffer *details;
+	MlnBuffer *parts[MLN_NEMO_FAULT_PARTS];
 } MlnNemoFault;
 
-/* the exceptions of a fault */
+/* a SOAP fault and the exceptions its details give (MlnImpl_81079594, 0x14 bytes) */
 typedef struct MlnNemoFaults {
-	int reserved[3];
+	MlnBuffer *code;		/* faultcode */
+	MlnBuffer *string;		/* faultstring */
+	MlnBuffer *actor;		/* faultactor */
 	MlnNemoFault **items;
 	unsigned int count;
 } MlnNemoFaults;
@@ -2560,8 +2573,9 @@ typedef struct MlnExchange {
 #define MLN_NEMO_ERROR_KIND		0x2305000C	/* no such kind of message */
 #define MLN_NEMO_ERROR_STEP		0x2305000E	/* no such step */
 #define MLN_NEMO_ERROR_FAULT		0x23050007	/* the message read is a fault */
+#define MLN_NEMO_ERROR_NO_FAULT		0x23050008	/* the message read carries no fault */
 #define MLN_NEMO_ERROR_UNSECURED	0x2305000D	/* a part not signed or encrypted as needed */
-#define MLN_NEMO_ERROR_SENDER		0x2305000F	/* the header's sender is not the requester */
+#define MLN_NEMO_ERROR_RELATES_TO	0x2305000F	/* a reply's RelatesTo is not the request's */
 #define MLN_NEMO_ERROR_HEADER		0x23050010	/* the header lacks a part the step needs */
 #define MLN_NEMO_ERROR_UNKNOWN_TIME	0x23050011	/* the time is not known */
 #define MLN_NEMO_ERROR_EXPIRED		0x23050012	/* the timestamp is too old */
@@ -2589,9 +2603,15 @@ unsigned int MlnImpl_81077FAC(MlnNemoHeader *header, MlnNemoHeaderNodes **out);
 unsigned int MlnImpl_81078AB8(MlnXmlNode *body, MlnXmlNode **out);
 unsigned int MlnImpl_81078B5C(MlnXmlNode **header, unsigned char count, MlnXmlNode *body,
 			      MlnBuffer **out);
-unsigned int MlnImpl_810790EC(unsigned int size, unsigned char *data);
-unsigned int MlnImpl_810791F0(unsigned int size, unsigned char *data);
-void MlnImpl_81079854(MlnNemoHeaderNodes *nodes);
+unsigned int MlnImpl_810790EC(int size, unsigned char *data);
+unsigned int MlnImpl_810791F0(int size, unsigned char *data);
+unsigned int MlnImpl_81078F70(MlnXmlNode *exception, MlnNemoFault **out);
+unsigned int MlnImpl_81079270(MlnNemoFault *fault);
+unsigned int MlnImpl_810792B4(MlnXmlNode *detail, MlnXmlNode *faultDetails, MlnNemoFault ***items,
+			      unsigned int *count);
+unsigned int MlnImpl_81079814(const MlnNemoMessage *message, MlnNemoFaults **faults);
+unsigned int MlnImpl_8107A340(unsigned int ret);
+unsigned int MlnImpl_81079854(MlnNemoHeaderNodes *nodes);
 unsigned int MlnImpl_81079D78(char **time);
 unsigned int MlnImpl_8108418C(const char *string, char **copy);
 unsigned int MlnImpl_81084F3C(const MlnBuffer *name, const MlnBuffer *certificate);
@@ -2624,6 +2644,9 @@ typedef struct MlnNemoMessageKey {
 	unsigned int idCount;
 } MlnNemoMessageKey;
 
+unsigned int MlnImpl_81077DE8(MlnXmlNode *soapHeader, const char *name, unsigned int part,
+			      unsigned int *present, MlnNemoHeaderNodes *nodes, unsigned int *index,
+			      MlnBuffer **value);
 unsigned int MlnImpl_81078688(MlnXmlNode *soapHeader, MlnNemoHeader *header,
 			      MlnNemoHeaderNodes **nodes);
 unsigned int MlnImpl_810789DC(MlnNemoHeader *header, unsigned int step);
@@ -2912,17 +2935,7 @@ typedef struct MlnCoreGroup {
 
 unsigned int MlnImpl_8104F620(int handle, MlnCoreGroup *group);
 
-/* a SOAP fault of a service exchange (MlnImpl_81068C4C), kept by the exchange */
-typedef struct MlnServiceFault {
-	MlnBuffer *code;
-	MlnBuffer *string;
-	MlnBuffer *actor;
-	MlnBuffer ***details;		/* each three buffers, the first its name */
-	unsigned int detailCount;
-} MlnServiceFault;
-
-unsigned int MlnImpl_81068C4C(MlnExchange *exchange, MlnServiceFault **fault);
-unsigned int MlnImpl_81079814(MlnNemoMessage *message, MlnServiceFault **fault);
+unsigned int MlnImpl_81068C4C(MlnExchange *exchange, MlnNemoFaults **fault);
 int MlnImpl_8102E8A0(const MlnServiceReply *reply, MlnServiceArgs **out, int *status);
 unsigned int MlnImpl_8104AB18(int handle, unsigned int size, const unsigned char *data,
 			      MlnBlob *out);

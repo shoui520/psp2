@@ -82,10 +82,10 @@ int MlnImpl_810681E4(MlnExchange *exchange, MlnBufferGroups **credentials,
 	ret = MlnImpl_81079EE8(message->credentials->first, &value);
 	if (ret != 0)
 		goto fail;
-	ret = MlnImpl_8107A04C(&message->header, MLN_NEMO_PART_SENDER, value);
+	ret = MlnImpl_8107A04C(&message->header, MLN_NEMO_PART_MESSAGE_ID, value);
 	if (ret != 0)
 		goto fail;
-	ret = MlnImpl_8107A04C(&message->header, MLN_NEMO_PART_REQUESTER, value);
+	ret = MlnImpl_8107A04C(&message->header, MLN_NEMO_PART_REQUEST_ID, value);
 	if (ret != 0)
 		goto fail;
 	MlnBufferDestroy(MLN_HEAP_GENERAL, value);

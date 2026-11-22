@@ -22,10 +22,10 @@ MlnServiceRequestParts(MlnNemoMessage *message, const char *action, MlnBuffer **
 	ret = MlnImpl_81079EE8(message->credentials->first, value);
 	if (ret != 0)
 		return ret;
-	ret = MlnImpl_8107A04C(&message->header, MLN_NEMO_PART_SENDER, *value);
+	ret = MlnImpl_8107A04C(&message->header, MLN_NEMO_PART_MESSAGE_ID, *value);
 	if (ret != 0)
 		return ret;
-	ret = MlnImpl_8107A04C(&message->header, MLN_NEMO_PART_REQUESTER, *value);
+	ret = MlnImpl_8107A04C(&message->header, MLN_NEMO_PART_REQUEST_ID, *value);
 	if (ret != 0)
 		return ret;
 	MlnBufferDestroy(MLN_HEAP_GENERAL, *value);
@@ -634,24 +634,24 @@ int MlnImpl_81067CA4(MlnExchange *exchange, int step, MlnBufferGroups **credenti
 		}
 		/* the step goes back to the sender of the message before */
 		if (message->header.parts[4] != NULL) {
-			ret = MlnImpl_8107A04C(&message->header, MLN_NEMO_PART_RECIPIENT,
+			ret = MlnImpl_8107A04C(&message->header, MLN_NEMO_PART_RELATES_TO,
 					       message->header.parts[4]);
 			if (ret != 0)
 				goto fail;
-			message->header.present = MLN_NEMO_PART_RECIPIENT;
+			message->header.present = MLN_NEMO_PART_RELATES_TO;
 		}
 	}
 	ret = MlnImpl_81079EE8(message->credentials->first, &node);
 	if (ret != 0)
 		goto fail;
-	ret = MlnImpl_8107A04C(&message->header, MLN_NEMO_PART_SENDER, node);
+	ret = MlnImpl_8107A04C(&message->header, MLN_NEMO_PART_MESSAGE_ID, node);
 	if (ret != 0)
 		goto fail;
 	if (step != 1) {
-		ret = MlnImpl_8107A04C(&message->header, MLN_NEMO_PART_CONFIRMER, node);
+		ret = MlnImpl_8107A04C(&message->header, MLN_NEMO_PART_EXPECTED_ORIGIN, node);
 		if (ret != 0)
 			goto fail;
-		ret = MlnImpl_8107A04C(&message->header, MLN_NEMO_PART_ORIGIN,
+		ret = MlnImpl_8107A04C(&message->header, MLN_NEMO_PART_ORIGINATES_FROM,
 				       message->header.parts[8]);
 		if (ret != 0)
 			goto fail;
@@ -661,7 +661,7 @@ int MlnImpl_81067CA4(MlnExchange *exchange, int step, MlnBufferGroups **credenti
 		if (ret != 0)
 			goto fail;
 	} else {
-		ret = MlnImpl_8107A04C(&message->header, MLN_NEMO_PART_REQUESTER, node);
+		ret = MlnImpl_8107A04C(&message->header, MLN_NEMO_PART_REQUEST_ID, node);
 		if (ret != 0)
 			goto fail;
 		MlnBufferDestroy(MLN_HEAP_GENERAL, node);

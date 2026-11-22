@@ -142,7 +142,7 @@ unsigned int MlnImpl_81068A8C(MlnExchange *exchange, MlnBuffer *first, MlnBuffer
 }
 
 /* the SOAP fault the exchange's message received */
-unsigned int MlnImpl_81068C4C(MlnExchange *exchange, MlnServiceFault **fault)
+unsigned int MlnImpl_81068C4C(MlnExchange *exchange, MlnNemoFaults **fault)
 {
 	if (exchange == NULL)
 		return 4;

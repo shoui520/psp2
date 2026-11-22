@@ -1366,7 +1366,7 @@ static const struct {
 unsigned int MlnImpl_8104F620(int handle, MlnCoreGroup *core)
 {
 	MlnCoreServiceHandle *service = NULL;
-	MlnServiceFault *fault;
+	MlnNemoFaults *fault;
 	MlnBufferGroup *group;
 	MlnBuffer ***entries;
 	MlnBuffer **entry;
@@ -1415,12 +1415,12 @@ unsigned int MlnImpl_8104F620(int handle, MlnCoreGroup *core)
 			error = MlnServiceFaultErrors[i].error;
 			break;
 		}
-		if (fault->details == NULL || fault->detailCount == 0)
+		if (fault->items == NULL || fault->count == 0)
 			continue;
-		for (j = 0; j < fault->detailCount; j++) {
-			if (fault->details[j] == NULL)
+		for (j = 0; j < fault->count; j++) {
+			if (fault->items[j] == NULL)
 				continue;
-			detail = fault->details[j][0];
+			detail = fault->items[j]->parts[MLN_NEMO_FAULT_NAME];
 			if (detail == NULL)
 				continue;
 			if (MlnBufferCompareKey(MLN_HEAP_GENERAL, detail,
@@ -1449,12 +1449,12 @@ unsigned int MlnImpl_8104F620(int handle, MlnCoreGroup *core)
 		if (group->third == NULL)
 			goto nomem;
 	}
-	if (fault->details != NULL && fault->detailCount != 0) {
-		entries = MlnAllocate(MLN_HEAP_GENERAL, fault->detailCount * sizeof(*entries));
+	if (fault->items != NULL && fault->count != 0) {
+		entries = MlnAllocate(MLN_HEAP_GENERAL, fault->count * sizeof(*entries));
 		if (entries == NULL)
 			goto nomem;
-		MlnMemset(entries, 0, fault->detailCount * sizeof(*entries));
-		count = fault->detailCount;
+		MlnMemset(entries, 0, fault->count * sizeof(*entries));
+		count = fault->count;
 		for (j = 0; j < count; j++) {
 			entry = MlnAllocate(MLN_HEAP_GENERAL, 3 * sizeof(*entry));
 			entries[j] = entry;
@@ -1462,11 +1462,11 @@ unsigned int MlnImpl_8104F620(int handle, MlnCoreGroup *core)
 				goto free;
 			MlnMemset(entry, 0, 3 * sizeof(*entry));
 			for (i = 0; i < 3; i++) {
-				if (fault->details[j][i] == NULL)
+				if (fault->items[j]->parts[i] == NULL)
 					continue;
 				entry[i] = MlnBufferCreate(MLN_HEAP_GENERAL,
-							   fault->details[j][i]->size,
-							   fault->details[j][i]->data);
+							   fault->items[j]->parts[i]->size,
+							   fault->items[j]->parts[i]->data);
 				if (entries[j][i] == NULL)
 					goto free;
 			}
