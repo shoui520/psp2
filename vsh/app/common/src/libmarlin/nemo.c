@@ -1284,3 +1284,1272 @@ out:
 	MlnImpl_81079854(headerNodes);
 	return MlnNemoError(ret);
 }
+
+/* what a message read carries, signed and encrypted: the parts its usage needs */
+#define MLN_NEMO_SIGNED_TIMESTAMP	0x001
+#define MLN_NEMO_SIGNED_NONCE		0x002
+#define MLN_NEMO_SIGNED_RETURNED_NONCE	0x004
+#define MLN_NEMO_SIGNED_BODY		0x008
+#define MLN_NEMO_SIGNED_MESSAGE_KEY	0x010	/* the message key's token */
+#define MLN_NEMO_SIGNED_PROTOCOL	0x020
+#define MLN_NEMO_SIGNED_SENDER		0x040	/* the header's MLN_NEMO_PART_SENDER node */
+#define MLN_NEMO_SIGNED_ORIGIN		0x080	/* the header's MLN_NEMO_PART_ORIGIN node */
+#define MLN_NEMO_SIGNED_CERTIFICATES	0x100	/* a request's second certificate chain */
+#define MLN_NEMO_SIGNED_FAULT		0x200	/* a fault's details */
+#define MLN_NEMO_SIGNED_PROFILE		0x400
+#define MLN_NEMO_SIGNED_TO_NODE		0x800
+#define MLN_NEMO_SIGNED_REQUIRED \
+	(MLN_NEMO_SIGNED_TO_NODE | MLN_NEMO_SIGNED_PROFILE | MLN_NEMO_SIGNED_PROTOCOL | \
+	 MLN_NEMO_SIGNED_BODY)
+
+#define MLN_NEMO_FOUND_TIMESTAMP	0x1
+#define MLN_NEMO_FOUND_NONCE		0x2
+#define MLN_NEMO_FOUND_RETURNED_NONCE	0x4
+
+#define MLN_NEMO_ENCRYPTED_KEY		0x1
+#define MLN_NEMO_ENCRYPTED_BODY		0x2
+
+/* the references a signature read covers: the parts', then the header nodes' from here */
+#define MLN_NEMO_READ_PARTS		16
+#define MLN_NEMO_READ_REFERENCES	32
+
+#define MLN_NEMO_NS_SOAP	"http://schemas.xmlsoap.org/soap/envelope/"
+#define MLN_NEMO_ROLE_USAGE	"http://nemo.intertrust.com/2004/attribute/role"
+#define MLN_NEMO_PROFILE	"urn:marlin:core:1.0:nemo:protocol:profile:1"
+#define MLN_NEMO_PROFILE_USAGE	"http://nemo.intertrust.com/2005/10/security/profile"
+
+/* whether a buffer read holds a string */
+#define MLN_NEMO_IS(buffer, s) \
+	(MlnBytesCompare(MLN_HEAP_GENERAL, (buffer)->size, (buffer)->data, MlnStrlen(s), s) == 0)
+
+/* the step a message read declares, and its ProtocolDeclaration */
+static inline __attribute__((always_inline)) unsigned int MlnNemoReadProtocol(
+	MlnXmlNode *security, MlnXmlNode **declaration, unsigned int *step)
+{
+	MlnXmlNode *node = NULL;
+	MlnXmlNode *stepNode = NULL;
+	MlnBuffer *type = NULL;
+	unsigned int ret;
+
+	if (security == NULL) {
+		ret = MLN_NEMO_ERROR_PARAMETER;
+		goto out;
+	}
+	ret = MlnXmlFindNode(MLN_HEAP_GENERAL, security, "ProtocolDeclaration",
+			     MLN_NEMO_NS_SECURITY, &node);
+	if (ret != 0)
+		goto out;
+	ret = MlnXmlFindNode(MLN_HEAP_GENERAL, node, "Step", MLN_NEMO_NS_SECURITY, &stepNode);
+	if (ret != 0)
+		goto out;
+	ret = MlnXmlGetAttribute(MLN_HEAP_GENERAL, stepNode, NULL, "Type", &type);
+	if (ret != 0)
+		goto out;
+	if (MLN_NEMO_IS(type, "response"))
+		*step = MLN_NEMO_STEP_RESPONSE;
+	else if (MLN_NEMO_IS(type, "request"))
+		*step = MLN_NEMO_STEP_REQUEST;
+	else if (MLN_NEMO_IS(type, "confirmation"))
+		*step = MLN_NEMO_STEP_CONFIRMATION;
+	else if (MLN_NEMO_IS(type, "fault"))
+		*step = MLN_NEMO_STEP_FAULT;
+	else {
+		ret = MLN_NEMO_ERROR_STEP;
+		goto out;
+	}
+	*declaration = node;
+	node = NULL;
+out:
+	MlnBufferDestroy(MLN_HEAP_GENERAL, type);
+	MlnXmlNodeFree(MLN_HEAP_GENERAL, node);
+	MlnXmlNodeFree(MLN_HEAP_GENERAL, stepNode);
+	return ret;
+}
+
+/* the Security header's EncryptedData decrypted in place with the message keys */
+static inline __attribute__((always_inline)) unsigned int MlnNemoReadDecrypt(
+	MlnXmlNode *security, unsigned int usage, MlnNemoMessageKey *keys, int keyCount)
+{
+	MlnXmlNodeList *list = NULL;
+	unsigned int ret;
+
+	if (security == NULL) {
+		ret = MLN_NEMO_ERROR_PARAMETER;
+	} else {
+		ret = MlnXmlFindNodes(MLN_HEAP_GENERAL, security, "EncryptedData", MLN_NEMO_NS_XENC,
+				      &list);
+		if (ret == 0)
+			ret = MlnImpl_810849E0(list, security, keys, keyCount);
+		else if (ret == MLN_XML_ERROR_NOT_FOUND)
+			ret = (usage & MLN_NEMO_USAGE_ENCRYPTED) ? MLN_NEMO_ERROR_UNSECURED : 0;
+	}
+	MlnXmlListFree(MLN_HEAP_GENERAL, list);
+	return ret;
+}
+
+/*
+ * A part's wsu:Id and the digest of its XML, a reference the signature has to
+ * cover: *id stays NULL for a part without an Id.
+ */
+static inline __attribute__((always_inline)) unsigned int MlnNemoReadReference(
+	MlnXmlNode *node, int digestSize, unsigned char *digest, MlnBuffer **id)
+{
+	MlnBuffer *xml = NULL;
+	unsigned int ret;
+
+	ret = MlnXmlGetAttribute(MLN_HEAP_GENERAL, node, NULL, "wsu:Id", id);
+	if (ret == MLN_XML_ERROR_NOT_FOUND)
+		return 0;
+	if (ret == 0)
+		ret = MlnXmlNodeToXml(MLN_HEAP_GENERAL, node, &xml);
+	if (ret == 0)
+		ret = MlnImpl_81084D14(xml->data, xml->size, digest, digestSize);
+	MlnBufferDestroy(MLN_HEAP_GENERAL, xml);
+	return ret;
+}
+
+/* the Profile a message read names, which has to be Marlin's */
+static inline __attribute__((always_inline)) unsigned int MlnNemoReadProfile(
+	MlnXmlNode *security, MlnXmlNode **profile)
+{
+	MlnXmlNode *node = NULL;
+	MlnBuffer *uri = NULL;
+	MlnBuffer *usage = NULL;
+	unsigned int ret;
+
+	ret = MlnXmlFindNode(MLN_HEAP_GENERAL, security, "Profile", MLN_NEMO_NS_SECURITY, &node);
+	if (ret != 0)
+		goto out;
+	ret = MlnXmlGetAttribute(MLN_HEAP_GENERAL, node, NULL, "URI", &uri);
+	if (ret != 0)
+		goto out;
+	ret = MlnXmlGetAttribute(MLN_HEAP_GENERAL, node, NULL, "nemosec:Usage", &usage);
+	if (ret != 0)
+		goto out;
+	if (MlnBytesCompare(MLN_HEAP_GENERAL, MlnStrlen(MLN_NEMO_PROFILE), MLN_NEMO_PROFILE,
+			    uri->size, uri->data) != 0 ||
+	    MlnBytesCompare(MLN_HEAP_GENERAL, MlnStrlen(MLN_NEMO_PROFILE_USAGE),
+			    MLN_NEMO_PROFILE_USAGE, usage->size, usage->data) != 0) {
+		ret = MLN_NEMO_ERROR_FORMAT;
+		goto out;
+	}
+	*profile = node;
+	node = NULL;
+out:
+	MlnXmlNodeFree(MLN_HEAP_GENERAL, node);
+	MlnBufferDestroy(MLN_HEAP_GENERAL, uri);
+	MlnBufferDestroy(MLN_HEAP_GENERAL, usage);
+	return ret;
+}
+
+/*
+ * The header nodes' references, kept from MLN_NEMO_READ_PARTS on: the
+ * sender's and the origin's marked signed.
+ */
+static inline __attribute__((always_inline)) unsigned int MlnNemoReadHeaderReferences(
+	const MlnNemoHeaderNodes *nodes, int digestSize,
+	unsigned char (*digests)[MLN_NEMO_DIGEST_MAX], MlnBuffer **ids, unsigned int *signedParts,
+	int *count)
+{
+	MlnBuffer *xml = NULL;
+	MlnNemoHeaderNode *entry;
+	unsigned int ret;
+	int n = 0;
+	int i;
+
+	if (nodes == NULL) {
+		ret = MLN_NEMO_ERROR_PARAMETER;
+		goto out;
+	}
+	ret = 0;
+	for (i = 0; i < nodes->count; i++) {
+		entry = &nodes->items[i];
+		ret = MlnXmlGetAttribute(MLN_HEAP_GENERAL, entry->node, NULL, "wsu:Id", &ids[n]);
+		if (ret == MLN_XML_ERROR_NOT_FOUND) {
+			ret = 0;
+			continue;
+		}
+		if (ret != 0)
+			break;
+		n++;
+		ret = MlnXmlNodeToXml(MLN_HEAP_GENERAL, entry->node, &xml);
+		if (ret == 0)
+			ret = MlnImpl_81084D14(xml->data, xml->size, digests[n - 1], digestSize);
+		if (ret != 0)
+			break;
+		MlnBufferDestroy(MLN_HEAP_GENERAL, xml);
+		xml = NULL;
+		if (entry->type == MLN_NEMO_PART_SENDER)
+			*signedParts |= MLN_NEMO_SIGNED_SENDER;
+		if (entry->type == MLN_NEMO_PART_ORIGIN)
+			*signedParts |= MLN_NEMO_SIGNED_ORIGIN;
+	}
+out:
+	MlnBufferDestroy(MLN_HEAP_GENERAL, xml);
+	if (ret != 0) {
+		for (i = 0; i < n; i++) {
+			MlnBufferDestroy(MLN_HEAP_GENERAL, ids[i]);
+			ids[i] = NULL;
+		}
+		return ret;
+	}
+	*count = n;
+	return 0;
+}
+
+/*
+ * The Timestamp of a message read: its Created time kept in the message, and
+ * refused when older than the message's limit by the secure clock.
+ */
+static inline __attribute__((always_inline)) unsigned int MlnNemoReadTimestamp(
+	MlnXmlNode *security, MlnNemoMessage *message, int digestSize, unsigned char *digest,
+	MlnBuffer **ids, int *count, unsigned int *found, unsigned int *signedParts)
+{
+	MlnXmlNode *timestamp = NULL;
+	MlnXmlNode *created = NULL;
+	MlnBuffer *id = NULL;
+	MlnBuffer *text = NULL;
+	MlnBuffer *again = NULL;
+	MlnDateTime time;
+	int limit = message->timestampLimit;
+	int seconds;
+	int now;
+	int mode;
+	unsigned int ret;
+
+	if (security == NULL) {
+		ret = MLN_NEMO_ERROR_PARAMETER;
+		goto out;
+	}
+	ret = MlnXmlFindNode(MLN_HEAP_GENERAL, security, "Timestamp", MLN_NEMO_NS_UTILITY,
+			     &timestamp);
+	if (ret == MLN_XML_ERROR_NOT_FOUND) {
+		ret = 0;
+		ids[*count] = NULL;
+		goto out;
+	}
+	if (ret != 0)
+		goto out;
+	ret = MlnNemoReadReference(timestamp, digestSize, digest, &id);
+	if (ret != 0)
+		goto out;
+	ret = MlnXmlFindNode(MLN_HEAP_GENERAL, timestamp, "Created", MLN_NEMO_NS_UTILITY,
+			     &created);
+	if (ret != 0)
+		goto out;
+	ret = MlnXmlGetText(MLN_HEAP_GENERAL, created, &text);
+	if (ret != 0)
+		goto out;
+	if (text == NULL) {
+		ret = MLN_NEMO_ERROR_PARAMETER;
+		goto out;
+	}
+	ret = MlnImpl_81052D84(&now, &mode);
+	if (ret == 0x220B0001)
+		limit = 0;
+	else if (ret != 0) {
+		ret = 5;
+		goto out;
+	}
+	if (MlnXmlParseDateTime(MLN_HEAP_GENERAL, text->size, (const char *)text->data,
+				&time) != 0) {
+		ret = MLN_NEMO_ERROR_FORMAT;
+		goto out;
+	}
+	ret = MlnTimeToSeconds(&time, &seconds);
+	if (ret != 0)
+		goto out;
+	if (limit != 0 && (unsigned int)(seconds + limit) < (unsigned int)now) {
+		ret = MLN_NEMO_ERROR_EXPIRED;
+		goto out;
+	}
+	ret = MlnXmlGetText(MLN_HEAP_GENERAL, created, &again);
+	if (ret != 0)
+		goto out;
+	ret = MlnXmlParseDateTime(MLN_HEAP_GENERAL, again->size, (const char *)again->data, &time);
+	if (ret != 0)
+		goto out;
+	ret = MlnTimeToSeconds(&time, &message->timestamp);
+	if (ret != 0)
+		goto out;
+	*found |= MLN_NEMO_FOUND_TIMESTAMP;
+	ids[*count] = id;
+	if (id != NULL) {
+		*count += 1;
+		*signedParts |= MLN_NEMO_SIGNED_TIMESTAMP;
+	}
+	id = NULL;
+out:
+	MlnBufferDestroy(MLN_HEAP_GENERAL, again);
+	MlnBufferDestroy(MLN_HEAP_GENERAL, id);
+	MlnXmlNodeFree(MLN_HEAP_GENERAL, timestamp);
+	MlnXmlNodeFree(MLN_HEAP_GENERAL, created);
+	MlnBufferDestroy(MLN_HEAP_GENERAL, text);
+	return ret;
+}
+
+/* the Nonce of a message read (at most two: the peer's and the one returned), checked */
+static inline __attribute__((always_inline)) unsigned int MlnNemoReadNonces(
+	MlnXmlNode *security, unsigned int kind, unsigned int step, const MlnBuffer *sent,
+	unsigned int *found, unsigned int *signedParts, int digestSize,
+	unsigned char (*digests)[MLN_NEMO_DIGEST_MAX], MlnBuffer **ids, int *count,
+	MlnBuffer **nonce)
+{
+	MlnXmlNodeList *list = NULL;
+	MlnBuffer *first = NULL;
+	MlnBuffer *second = NULL;
+	int index = *count;
+	int n;
+	unsigned int ret;
+
+	if (security == NULL) {
+		ret = MLN_NEMO_ERROR_PARAMETER;
+		goto out;
+	}
+	ret = MlnXmlFindNodes(MLN_HEAP_GENERAL, security, "Nonce", MLN_NEMO_NS_SECEXT, &list);
+	if (ret == 0) {
+		n = list->count;
+		if (n > 2) {
+			ret = MLN_NEMO_ERROR_FORMAT;
+			goto out;
+		}
+		ret = MlnImpl_81085E20(list->nodes[0], kind, step, found, signedParts, sent,
+				       &first, count, digests[index], digestSize, &ids[index]);
+		if (ret != 0)
+			goto out;
+		if (n == 2) {
+			ret = MlnImpl_81085E20(list->nodes[1], kind, step, found, signedParts,
+					       sent, &second, count, digests[index + 1],
+					       digestSize, &ids[index + 1]);
+			if (ret != 0)
+				goto out;
+		}
+	} else if (ret != MLN_XML_ERROR_NOT_FOUND) {
+		goto out;
+	}
+	ret = 0;
+	if (second != NULL) {
+		if (first != NULL) {
+			ret = MLN_NEMO_ERROR_FORMAT;
+			goto out;
+		}
+		*nonce = second;
+		second = NULL;
+	} else {
+		*nonce = first;
+		first = NULL;
+	}
+out:
+	MlnBufferDestroy(MLN_HEAP_GENERAL, first);
+	MlnBufferDestroy(MLN_HEAP_GENERAL, second);
+	MlnXmlListFree(MLN_HEAP_GENERAL, list);
+	return ret;
+}
+
+/* the ToNode of a message read, which has to name the sender's node */
+static inline __attribute__((always_inline)) unsigned int MlnNemoReadToNode(
+	MlnXmlNode *security, const MlnBuffer *node, int digestSize, unsigned char *digest,
+	MlnBuffer **ids, int *count, unsigned int *signedParts, int *missing)
+{
+	MlnXmlNode *toNode = NULL;
+	MlnBuffer *id = NULL;
+	MlnBuffer *text = NULL;
+	unsigned int ret;
+
+	*missing = 0;
+	if (security == NULL || node == NULL) {
+		ret = MLN_NEMO_ERROR_PARAMETER;
+		goto out;
+	}
+	ret = MlnXmlFindNode(MLN_HEAP_GENERAL, security, "ToNode", MLN_NEMO_NS_SECURITY, &toNode);
+	if (ret == 0)
+		ret = MlnNemoReadReference(toNode, digestSize, digest, &id);
+	if (ret == 0)
+		ret = MlnXmlGetText(MLN_HEAP_GENERAL, toNode, &text);
+	if (ret != 0) {
+		*missing = ret == MLN_XML_ERROR_NOT_FOUND;
+		goto out;
+	}
+	if (MlnBufferCompare(MLN_HEAP_GENERAL, node, text) != 0) {
+		ret = MLN_NEMO_ERROR_TO_NODE;
+		goto out;
+	}
+	if (ids[*count] != NULL)
+		MlnBufferDestroy(MLN_HEAP_GENERAL, ids[*count]);
+	ids[*count] = id;
+	if (id != NULL) {
+		*count += 1;
+		*signedParts |= MLN_NEMO_SIGNED_TO_NODE;
+	}
+	id = NULL;
+out:
+	MlnBufferDestroy(MLN_HEAP_GENERAL, id);
+	MlnBufferDestroy(MLN_HEAP_GENERAL, text);
+	MlnXmlNodeFree(MLN_HEAP_GENERAL, toNode);
+	return ret;
+}
+
+/* a fault's FaultDetails, in the SOAP header: *details set when there are some */
+static inline __attribute__((always_inline)) unsigned int MlnNemoReadFaultDetails(
+	MlnXmlNode *header, unsigned int step, int digestSize, unsigned char *digest,
+	MlnBuffer **ids, int *count, unsigned int *signedParts, int *details)
+{
+	MlnXmlNode *node = NULL;
+	MlnBuffer *id = NULL;
+	unsigned int ret;
+
+	if (header == NULL) {
+		ret = MLN_NEMO_ERROR_PARAMETER;
+		goto out;
+	}
+	ret = 0;
+	if (step == MLN_NEMO_STEP_FAULT) {
+		ret = MlnXmlFindNode(MLN_HEAP_GENERAL, header, "FaultDetails", MLN_NEMO_NS_CORE,
+				     &node);
+		if (ret == 0) {
+			ret = MlnNemoReadReference(node, digestSize, digest, &id);
+			if (ret != 0)
+				goto out;
+			*details = 1;
+		} else if (ret != MLN_XML_ERROR_NOT_FOUND) {
+			goto out;
+		}
+		ret = 0;
+	}
+	ids[*count] = id;
+	if (id != NULL) {
+		*count += 1;
+		*signedParts |= MLN_NEMO_SIGNED_FAULT;
+	}
+	id = NULL;
+out:
+	MlnBufferDestroy(MLN_HEAP_GENERAL, id);
+	MlnXmlNodeFree(MLN_HEAP_GENERAL, node);
+	return ret;
+}
+
+/* the message key's token checked against the keys the EncryptedKeys unwrapped */
+static inline __attribute__((always_inline)) unsigned int MlnNemoReadKeyToken(
+	const MlnBuffer *token, MlnNemoMessageKey *keys, int keyCount)
+{
+	unsigned char sha[20];
+	MlnBuffer *digest;
+	unsigned short i;
+	int valid = 0;
+	unsigned int ret;
+
+	if (keys == NULL)
+		return MLN_NEMO_ERROR_PARAMETER;
+	MlnImpl_810570A8(token->data, token->size, sha);
+	digest = MlnBufferCreate(MLN_HEAP_GENERAL, sizeof(sha), sha);
+	if (digest == NULL)
+		return 2;
+	ret = MLN_NEMO_ERROR_FORMAT;
+	for (i = 0; i < keyCount; i++) {
+		ret = MlnImpl_81080FF4(keys[i].key, 0, NULL, digest, &valid);
+		if (ret != 0)
+			break;
+		if (valid == 1)
+			break;
+		ret = MLN_NEMO_ERROR_FORMAT;
+	}
+	MlnBufferDestroy(MLN_HEAP_GENERAL, digest);
+	return ret;
+}
+
+/*
+ * The payload of a message read, the body decrypted first when it is
+ * encrypted: the element named, or a SOAP Fault (*fault set).
+ */
+static inline __attribute__((always_inline)) unsigned int MlnNemoReadBody(
+	MlnXmlNode *body, const char *name, const char *uri, MlnNemoMessageKey *keys,
+	int keyCount, unsigned int *encrypted, MlnXmlNode **payload, int *fault)
+{
+	MlnXmlNodeList *list = NULL;
+	MlnXmlNode *node = NULL;
+	int decrypted = 0;
+	int isFault = 0;
+	unsigned int ret;
+
+	if (body == NULL) {
+		ret = MLN_NEMO_ERROR_PARAMETER;
+		goto out;
+	}
+	ret = MlnXmlFindNodes(MLN_HEAP_GENERAL, body, "EncryptedData", MLN_NEMO_NS_XENC, &list);
+	if (ret == 0) {
+		if (list->count != 1) {
+			ret = MLN_NEMO_ERROR_FORMAT;
+			goto out;
+		}
+		ret = MlnImpl_810849E0(list, body, keys, keyCount);
+		if (ret != 0)
+			goto out;
+		decrypted = 1;
+	} else if (ret != MLN_XML_ERROR_NOT_FOUND) {
+		goto out;
+	}
+	ret = MlnXmlFindNode(MLN_HEAP_GENERAL, body, name, uri, &node);
+	if (ret == MLN_XML_ERROR_NOT_FOUND) {
+		ret = MlnXmlFindNode(MLN_HEAP_GENERAL, body, "Fault", MLN_NEMO_NS_SOAP, &node);
+		isFault = 1;
+	}
+	if (ret != 0)
+		goto out;
+	if (decrypted)
+		*encrypted |= MLN_NEMO_ENCRYPTED_BODY;
+	*fault = isFault;
+	*payload = node;
+	node = NULL;
+out:
+	MlnXmlListFree(MLN_HEAP_GENERAL, list);
+	MlnXmlNodeFree(MLN_HEAP_GENERAL, node);
+	return ret;
+}
+
+/*
+ * A request's sender: the NameIdentifier of the assertion its role's
+ * SecurityTokenReference names (NULL when none of them matches).
+ */
+static inline __attribute__((always_inline)) unsigned int MlnNemoReadRequester(
+	MlnXmlNode *security, const MlnXmlNodeList *assertions, MlnBuffer **requester)
+{
+	MlnXmlNodeList *references = NULL;
+	MlnXmlNode *keyIdentifier = NULL;
+	MlnXmlNode *subject = NULL;
+	MlnXmlNode *nameIdentifier = NULL;
+	MlnXmlNode *reference;
+	MlnXmlNode *assertion;
+	MlnBuffer *usage = NULL;
+	MlnBuffer *keyId = NULL;
+	MlnBuffer *assertionId = NULL;
+	MlnBuffer *name = NULL;
+	unsigned short i;
+	unsigned short j;
+	int count;
+	unsigned int ret;
+
+	if (security == NULL || assertions == NULL) {
+		ret = MLN_NEMO_ERROR_PARAMETER;
+		goto out;
+	}
+	/* Sony bounds the references by the assertions' count */
+	count = assertions->count;
+	if (count <= 0) {
+		ret = MLN_NEMO_ERROR_PARAMETER;
+		goto out;
+	}
+	ret = MlnXmlFindNodes(MLN_HEAP_GENERAL, security, "SecurityTokenReference",
+			      MLN_NEMO_NS_SECEXT, &references);
+	if (ret != 0)
+		goto out;
+	for (i = 0; ; ) {
+		reference = references->nodes[i];
+		ret = MlnXmlGetAttribute(MLN_HEAP_GENERAL, reference, NULL, "nemosec:Usage", &usage);
+		if (ret != 0)
+			goto out;
+		if (MlnBytesCompare(MLN_HEAP_GENERAL, MlnStrlen(MLN_NEMO_ROLE_USAGE),
+				    MLN_NEMO_ROLE_USAGE, usage->size, usage->data) == 0)
+			break;
+		MlnBufferDestroy(MLN_HEAP_GENERAL, usage);
+		usage = NULL;
+		if (++i >= count) {
+			ret = MLN_NEMO_ERROR_FORMAT;
+			goto out;
+		}
+	}
+	ret = MlnXmlFindNode(MLN_HEAP_GENERAL, reference, "KeyIdentifier", MLN_NEMO_NS_SECEXT,
+			     &keyIdentifier);
+	if (ret != 0)
+		goto out;
+	ret = MlnXmlGetText(MLN_HEAP_GENERAL, keyIdentifier, &keyId);
+	if (ret != 0)
+		goto out;
+	if (i >= count) {
+		ret = MLN_NEMO_ERROR_FORMAT;
+		goto out;
+	}
+	for (j = 0; j < count; j++) {
+		assertion = assertions->nodes[j];
+		ret = MlnXmlGetAttribute(MLN_HEAP_GENERAL, assertion, NULL, "AssertionID",
+					 &assertionId);
+		if (ret != 0)
+			goto out;
+		if (MlnBufferCompare(MLN_HEAP_GENERAL, keyId, assertionId) == 0) {
+			ret = MlnXmlFindNode(MLN_HEAP_GENERAL, assertion,
+					     "AttributeStatement/Subject", MLN_NEMO_NS_SAML,
+					     &subject);
+			if (ret != 0)
+				goto out;
+			ret = MlnXmlFindNode(MLN_HEAP_GENERAL, subject, "NameIdentifier",
+					     MLN_NEMO_NS_SAML, &nameIdentifier);
+			if (ret != 0)
+				goto out;
+			ret = MlnXmlGetText(MLN_HEAP_GENERAL, nameIdentifier, &name);
+			if (ret != 0)
+				goto out;
+			break;
+		}
+		MlnBufferDestroy(MLN_HEAP_GENERAL, assertionId);
+		assertionId = NULL;
+	}
+	*requester = name;
+	name = NULL;
+out:
+	MlnBufferDestroy(MLN_HEAP_GENERAL, usage);
+	MlnBufferDestroy(MLN_HEAP_GENERAL, name);
+	MlnBufferDestroy(MLN_HEAP_GENERAL, keyId);
+	MlnBufferDestroy(MLN_HEAP_GENERAL, assertionId);
+	MlnXmlNodeFree(MLN_HEAP_GENERAL, nameIdentifier);
+	MlnXmlNodeFree(MLN_HEAP_GENERAL, keyIdentifier);
+	MlnXmlNodeFree(MLN_HEAP_GENERAL, subject);
+	MlnXmlListFree(MLN_HEAP_GENERAL, references);
+	return ret;
+}
+
+/* a license transfer request's sender, which has to hold the device role */
+static inline __attribute__((always_inline)) unsigned int MlnNemoReadDeviceRole(
+	MlnXmlNode *security)
+{
+	MlnXmlNodeList *assertions = NULL;
+	MlnXmlNodeList *attributes;
+	MlnXmlNode *assertion;
+	MlnBuffer *attributeName;
+	MlnBuffer *token = NULL;
+	MlnBuffer *name = NULL;
+	MlnBuffer role;
+	unsigned short i;
+	int k;
+	unsigned int ret;
+
+	role.size = 27;
+	role.data = (unsigned char *)"urn:marlin:core:role:device";
+	ret = MlnXmlFindNodes(MLN_HEAP_GENERAL, security, "Assertion", MLN_NEMO_NS_SAML,
+			      &assertions);
+	if (ret != 0)
+		return ret;
+	for (i = 0; i < assertions->count; i++) {
+		assertion = assertions->nodes[i];
+		attributes = NULL;
+		attributeName = NULL;
+		ret = MlnXmlFindNodes(MLN_HEAP_GENERAL, assertion, "AttributeStatement/Attribute",
+				      MLN_NEMO_NS_SAML, &attributes);
+		if (ret == 0 && attributes->count == 0)
+			ret = MLN_NEMO_ERROR_FORMAT;
+		if (ret != 0)
+			goto fail;
+		for (k = 0; k < attributes->count; k++) {
+			ret = MlnXmlGetAttribute(MLN_HEAP_GENERAL, attributes->nodes[k],
+						 MLN_NEMO_NS_SAML, "AttributeName",
+						 &attributeName);
+			if (ret != 0)
+				goto fail;
+			if (MlnBytesCompare(MLN_HEAP_GENERAL, 4, "role", attributeName->size,
+					    attributeName->data) == 0) {
+				MlnBufferDestroy(MLN_HEAP_GENERAL, attributeName);
+				MlnXmlListFree(MLN_HEAP_GENERAL, attributes);
+				ret = MlnXmlNodeToText(MLN_HEAP_GENERAL, assertion, &token);
+				if (ret == 0)
+					ret = MlnImpl_81042B58(token, 0, &role, &name);
+				MlnXmlListFree(MLN_HEAP_GENERAL, assertions);
+				MlnBufferDestroy(MLN_HEAP_GENERAL, token);
+				MlnBufferDestroy(MLN_HEAP_GENERAL, name);
+				return ret;
+			}
+			MlnBufferDestroy(MLN_HEAP_GENERAL, attributeName);
+			attributeName = NULL;
+		}
+		MlnBufferDestroy(MLN_HEAP_GENERAL, attributeName);
+		MlnXmlListFree(MLN_HEAP_GENERAL, attributes);
+	}
+	MlnXmlListFree(MLN_HEAP_GENERAL, assertions);
+	return MLN_NEMO_ERROR_FORMAT;
+fail:
+	MlnBufferDestroy(MLN_HEAP_GENERAL, attributeName);
+	MlnXmlListFree(MLN_HEAP_GENERAL, attributes);
+	MlnXmlListFree(MLN_HEAP_GENERAL, assertions);
+	return ret;
+}
+
+/*
+ * The signature of a message read verified with the signing certificate
+ * against the sender's name, each reference digest as read.
+ */
+static inline __attribute__((always_inline)) unsigned int MlnNemoReadVerify(
+	MlnXmlNode *signature, MlnXmlNode *security, const MlnBuffer *peer,
+	const MlnNemoPeerKey *signer, unsigned int usage, int signerKind, unsigned short count,
+	MlnBuffer **ids, unsigned char (*digests)[MLN_NEMO_DIGEST_MAX])
+{
+	unsigned char *digestList[MLN_NEMO_READ_PARTS];
+	int digestTypes[MLN_NEMO_READ_PARTS];
+	int failed[MLN_NEMO_READ_PARTS];
+	unsigned int ret;
+	int i;
+
+	if (security == NULL || peer == NULL || count > MLN_NEMO_READ_PARTS - 1)
+		return MLN_NEMO_ERROR_PARAMETER;
+	if (signature == NULL)
+		return (usage & MLN_NEMO_USAGE_SIGNED) ? MLN_NEMO_ERROR_UNSECURED : 0;
+	if (signer == NULL)
+		return MLN_NEMO_ERROR_PARAMETER;
+	ret = MlnImpl_81084F3C(peer, signer->certificate);
+	if (ret != 0)
+		return ret;
+	for (i = 0; i < count; i++) {
+		digestList[i] = digests[i];
+		digestTypes[i] = 1;
+	}
+	ret = MlnImpl_8105BA50(signature, security, signerKind, count, ids, digestList,
+			       digestTypes, signer->certificate, failed);
+	if (ret != 0)
+		return ret;
+	for (i = 0; i < count; i++)
+		if (failed[i] != 0)
+			return MLN_NEMO_ERROR_FORMAT;
+	return 0;
+}
+
+/* whether a message read carries, signed and encrypted, what its usage needs */
+static inline __attribute__((always_inline)) int MlnNemoReadSecured(
+	unsigned int kind, unsigned int step, unsigned char found, unsigned short signedParts,
+	unsigned int encrypted, int details)
+{
+	unsigned char usage;
+
+	if (MlnImpl_81072138(kind, step, &usage) != 0)
+		return 0;
+	if ((usage & MLN_NEMO_USAGE_TIMESTAMP) && !(found & MLN_NEMO_FOUND_TIMESTAMP))
+		return 0;
+	if (usage & MLN_NEMO_USAGE_FRESH) {
+		if (MlnImpl_81085D84(kind, step) && !(found & MLN_NEMO_FOUND_NONCE))
+			return 0;
+		if (MlnImpl_810721BC(kind, step) && !(found & MLN_NEMO_FOUND_RETURNED_NONCE))
+			return 0;
+	}
+	if (usage & MLN_NEMO_USAGE_SIGNED) {
+		if ((signedParts & MLN_NEMO_SIGNED_REQUIRED) != MLN_NEMO_SIGNED_REQUIRED)
+			return 0;
+		if ((found & MLN_NEMO_FOUND_TIMESTAMP) && !(signedParts & MLN_NEMO_SIGNED_TIMESTAMP))
+			return 0;
+		if (details && !(signedParts & MLN_NEMO_SIGNED_FAULT))
+			return 0;
+		if ((usage & MLN_NEMO_USAGE_ENCRYPTED) && !(signedParts & MLN_NEMO_SIGNED_MESSAGE_KEY))
+			return 0;
+		if (MlnImpl_81085D84(kind, step) && !(signedParts & MLN_NEMO_SIGNED_NONCE))
+			return 0;
+		if (MlnImpl_810721BC(kind, step) && !(signedParts & MLN_NEMO_SIGNED_RETURNED_NONCE))
+			return 0;
+		if (step == MLN_NEMO_STEP_REQUEST && MlnImpl_81086254(kind) &&
+		    !(signedParts & MLN_NEMO_SIGNED_CERTIFICATES))
+			return 0;
+		if ((step == MLN_NEMO_STEP_REQUEST || step == MLN_NEMO_STEP_RESPONSE) &&
+		    !(signedParts & MLN_NEMO_SIGNED_SENDER))
+			return 0;
+		if ((step == MLN_NEMO_STEP_CONFIRMATION || step == MLN_NEMO_STEP_RESPONSE) &&
+		    !(signedParts & MLN_NEMO_SIGNED_ORIGIN))
+			return 0;
+	}
+	if ((usage & MLN_NEMO_USAGE_ENCRYPTED) &&
+	    encrypted != (MLN_NEMO_ENCRYPTED_KEY | MLN_NEMO_ENCRYPTED_BODY))
+		return 0;
+	if (usage == 0x0f && !(signedParts & MLN_NEMO_SIGNED_TO_NODE))
+		return 0;
+	return 1;
+}
+
+/* a message read's error as NEMO's */
+static inline __attribute__((always_inline)) unsigned int MlnNemoReadError(unsigned int ret)
+{
+	unsigned int domain;
+
+	if (ret == 0x22090001 || ret == 0x23110001)
+		return MLN_NEMO_ERROR_UNKNOWN_TIME;
+	domain = ret & 0xFFFF0000;
+	if (domain == 0x10010000 || domain == 0x22090000)
+		return MLN_NEMO_ERROR_FORMAT;
+	if (domain == 0x22060000 || domain == 0x22030000)
+		return MLN_NEMO_ERROR_FAILED;
+	if (domain == 0x23110000) {
+		if (ret - 0x23110004 > 1)
+			return MLN_NEMO_ERROR_FAILED;
+		return ret;
+	}
+	if ((ret >> 17) == 0x1100)
+		return MLN_NEMO_ERROR_CRYPTO;
+	if (ret == 0 || ret == 2)
+		return ret;
+	if (ret == 3)
+		return MLN_NEMO_ERROR_PARAMETER;
+	if (domain != 0x23050000 && ret != 0x230A0004 && ret != 6)
+		return 5;
+	return ret;
+}
+
+/* the message keys a message read unwrapped, freed with their references */
+static inline __attribute__((always_inline)) void MlnNemoMessageKeysFree(MlnNemoMessageKey *keys,
+									  unsigned short count)
+{
+	MlnNemoMessageKey *entry;
+	unsigned short j;
+	int i;
+
+	if (keys == NULL)
+		return;
+	for (i = 0; i < count; i++) {
+		entry = &keys[i];
+		if (entry->ids != NULL)
+			for (j = 0; j < entry->idCount; j++)
+				MlnBufferDestroy(MLN_HEAP_GENERAL, entry->ids[j]);
+		MlnFree(MLN_HEAP_GENERAL, entry->ids);
+		MlnImpl_81080C80(entry->key);
+	}
+	MlnFree(MLN_HEAP_GENERAL, keys);
+}
+
+/* a certificate chain read, freed */
+static inline __attribute__((always_inline)) void MlnNemoCertificatesFree(MlnBuffer **certificates,
+									   int count)
+{
+	unsigned short i;
+
+	if (certificates == NULL)
+		return;
+	for (i = 0; i < count; i++)
+		if (certificates[i] != NULL)
+			MlnBufferDestroy(MLN_HEAP_GENERAL, certificates[i]);
+	MlnFree(MLN_HEAP_GENERAL, certificates);
+}
+
+/*
+ * A message of a kind read at a step: the SOAP envelope parsed, its Security
+ * header decrypted and checked (the step declared, the profile, the header's
+ * parts, the timestamp, the nonces, the recipient, the certificates and
+ * assertions, the signature over every part the usage needs), the peer's keys
+ * and nonce kept in the message and the payload named returned in *payloadOut.
+ * A fault's exceptions are kept in the message instead (MLN_NEMO_ERROR_FAULT).
+ */
+unsigned int MlnImpl_81074EC4(unsigned int size, const void *data, MlnNemoMessage *message,
+			      const char *name, const char *uri, unsigned char kind,
+			      unsigned char step, int signerKind, int peerKind,
+			      MlnXmlNode **payloadOut)
+{
+	unsigned char digests[MLN_NEMO_READ_REFERENCES][MLN_NEMO_DIGEST_MAX];
+	MlnBuffer *ids[MLN_NEMO_READ_REFERENCES] = { NULL };
+	unsigned char keyDigest[MLN_NEMO_DIGEST_MAX];
+	unsigned char secondDigest[MLN_NEMO_DIGEST_MAX];
+	void *hci = NULL;
+	MlnXmlNode *document = NULL;
+	MlnXmlNode *envelope = NULL;
+	MlnXmlNode *header = NULL;
+	MlnXmlNode *security = NULL;
+	MlnXmlNode *body = NULL;
+	MlnXmlNode *signature = NULL;
+	MlnXmlNode *declaration = NULL;
+	MlnXmlNode *profile;
+	MlnXmlNode *payload = NULL;
+	MlnXmlNodeList *assertions;
+	MlnNemoMessageKey *keys = NULL;
+	MlnNemoHeaderNodes *headerNodes = NULL;
+	MlnNemoFaults *faults = NULL;
+	MlnBuffer *keyToken = NULL;
+	MlnBuffer *signingCertificate = NULL;
+	MlnBuffer *encryptionCertificate = NULL;
+	MlnBuffer *keyId = NULL;
+	MlnBuffer *secondId = NULL;
+	MlnBuffer **certificates = NULL;
+	MlnBuffer **secondCertificates = NULL;
+	MlnBuffer *nonce = NULL;
+	MlnBuffer *requester = NULL;
+	MlnBuffer *id;
+	unsigned int found = 0;
+	unsigned int signedParts = 0;
+	unsigned int encrypted = 0;
+	unsigned int readStep = 0;
+	unsigned int present;
+	unsigned char usage;
+	int certificateCount = 0;
+	int secondCertificateCount = 0;
+	int keyCount = 0;
+	int count = 0;
+	int digestSize = 0;
+	int headerCount = 0;
+	int faultRead;
+	int details = 0;
+	int isFault = 0;
+	int missing;
+	int bad;
+	unsigned short k;
+	unsigned int ret;
+	unsigned int r;
+	int i;
+
+	ret = MlnImpl_81080BFC(&hci);
+	if (ret != 0)
+		goto out;
+	if (data == NULL || message == NULL || name == NULL || uri == NULL ||
+	    message->credentials == NULL) {
+		ret = MLN_NEMO_ERROR_PARAMETER;
+		goto out;
+	}
+	if (kind > 14) {
+		ret = MLN_NEMO_ERROR_KIND;
+		goto out;
+	}
+	ret = MlnImpl_81072138(kind, step, &usage);
+	if (ret != 0)
+		goto out;
+
+	/* the envelope, its body and its headers */
+	ret = MlnXmlParse(MLN_HEAP_GENERAL, size, data, &document);
+	if (ret != 0)
+		goto out;
+	ret = MlnXmlFindNode(MLN_HEAP_GENERAL, document, "Envelope", MLN_NEMO_NS_SOAP, &envelope);
+	if (ret != 0)
+		goto out;
+	ret = MlnXmlFindNode(MLN_HEAP_GENERAL, envelope, "Body", MLN_NEMO_NS_SOAP, &body);
+	if (ret != 0)
+		goto out;
+	ret = MlnXmlFindNode(MLN_HEAP_GENERAL, envelope, "Header", MLN_NEMO_NS_SOAP, &header);
+	if (ret == MLN_XML_ERROR_NOT_FOUND) {
+		/* only a SOAP fault comes without a header */
+		r = MlnImpl_81083F90(body, NULL, message);
+		if (r != 0)
+			ret = r;
+		goto out;
+	}
+	if (ret != 0)
+		goto out;
+	ret = MlnImpl_81083F90(body, header, message);
+	if (ret != 0)
+		goto out;
+	ret = MlnXmlFindNode(MLN_HEAP_GENERAL, header, "Security", MLN_NEMO_NS_SECEXT, &security);
+	if (ret != 0)
+		goto out;
+	ret = MlnNemoReadProtocol(security, &declaration, &readStep);
+	if (ret != 0)
+		goto out;
+
+	/* the message keys, the Security header decrypted, the signature's digest */
+	ret = MlnImpl_81084204(security, message, &keys, &keyCount);
+	if (ret != 0)
+		goto out;
+	faultRead = readStep == MLN_NEMO_STEP_FAULT;
+	ret = MlnNemoReadDecrypt(security, usage, keys, keyCount);
+	if (ret != 0 && !(ret == MLN_NEMO_ERROR_UNSECURED && faultRead))
+		goto out;
+	ret = MlnXmlFindNode(MLN_HEAP_GENERAL, security, "Signature", MLN_NEMO_NS_DSIG, &signature);
+	if (ret == 0) {
+		ret = MlnImpl_8105BF78(signature, &digestSize);
+		if (ret == 3)
+			ret = MLN_NEMO_ERROR_PARAMETER;
+		else if (ret == 0x22090006)
+			ret = MLN_NEMO_ERROR_FORMAT;
+		if (ret != 0)
+			goto out;
+	} else if (ret != MLN_XML_ERROR_NOT_FOUND) {
+		goto out;
+	}
+
+	/* the protocol declaration's reference, the step */
+	if (count > MLN_NEMO_READ_PARTS) {
+		ret = 5;
+		goto out;
+	}
+	id = NULL;
+	if (declaration == NULL)
+		ret = MLN_NEMO_ERROR_PARAMETER;
+	else
+		ret = MlnNemoReadReference(declaration, digestSize, digests[count], &id);
+	if (ret != 0) {
+		MlnBufferDestroy(MLN_HEAP_GENERAL, id);
+		goto out;
+	}
+	ids[count] = id;
+	if (id != NULL) {
+		count++;
+		signedParts |= MLN_NEMO_SIGNED_PROTOCOL;
+	}
+	if (step != readStep && readStep != MLN_NEMO_STEP_FAULT) {
+		ret = MLN_NEMO_ERROR_STEP;
+		goto out;
+	}
+
+	/* the profile */
+	if (count > MLN_NEMO_READ_PARTS) {
+		ret = 5;
+		goto out;
+	}
+	id = NULL;
+	profile = NULL;
+	if (security == NULL) {
+		ret = MLN_NEMO_ERROR_PARAMETER;
+	} else {
+		ret = MlnNemoReadProfile(security, &profile);
+		if (ret == 0)
+			ret = MlnNemoReadReference(profile, digestSize, digests[count], &id);
+	}
+	if (ret == 0) {
+		ids[count] = id;
+		if (id != NULL) {
+			count++;
+			signedParts |= MLN_NEMO_SIGNED_PROFILE;
+		}
+		id = NULL;
+	}
+	MlnBufferDestroy(MLN_HEAP_GENERAL, id);
+	MlnXmlNodeFree(MLN_HEAP_GENERAL, profile);
+	if (ret != 0)
+		goto out;
+
+	/* the SOAP header's parts, as the step needs them */
+	MlnImpl_810798CC(&message->header);
+	ret = MlnImpl_81078688(header, &message->header, &headerNodes);
+	if (ret != 0)
+		goto out;
+	present = message->header.present;
+	if (!(present & MLN_NEMO_PART_ACTION)) {
+		bad = 1;
+	} else {
+		bad = !(present & MLN_NEMO_PART_SENDER);
+		if ((readStep == MLN_NEMO_STEP_RESPONSE || readStep == MLN_NEMO_STEP_CONFIRMATION ||
+		     readStep == MLN_NEMO_STEP_FAULT) && !(present & MLN_NEMO_PART_ORIGIN))
+			bad = 1;
+		if (readStep == MLN_NEMO_STEP_REQUEST && kind != MLN_NEMO_KIND_TRANSFER &&
+		    (present & (MLN_NEMO_PART_ORIGIN | MLN_NEMO_PART_RECIPIENT)))
+			bad = 1;
+	}
+	if (bad && !faultRead) {
+		ret = MLN_NEMO_ERROR_HEADER;
+		goto out;
+	}
+	ret = MlnImpl_810789DC(&message->header, readStep);
+	if (ret != 0 &&
+	    !((ret == MLN_NEMO_ERROR_SENDER || ret == MLN_NEMO_ERROR_PARAMETER) && faultRead))
+		goto out;
+
+	/* the header nodes' references, after the parts' */
+	ret = MlnNemoReadHeaderReferences(headerNodes, digestSize, &digests[MLN_NEMO_READ_PARTS],
+					  &ids[MLN_NEMO_READ_PARTS], &signedParts, &headerCount);
+	if (ret != 0)
+		goto out;
+	for (k = 0; k < headerCount; k++) {
+		if (count > MLN_NEMO_READ_PARTS) {
+			ret = 5;
+			goto out;
+		}
+		MlnMemcpy(digests[count], digests[MLN_NEMO_READ_PARTS + k], MLN_NEMO_DIGEST_MAX);
+		ids[count] = ids[MLN_NEMO_READ_PARTS + k];
+		ids[MLN_NEMO_READ_PARTS + k] = NULL;
+		count++;
+	}
+
+	/* the timestamp, the nonces, the recipient, a fault's details */
+	if (count > MLN_NEMO_READ_PARTS) {
+		ret = 5;
+		goto out;
+	}
+	ret = MlnNemoReadTimestamp(security, message, digestSize, digests[count], ids, &count,
+				   &found, &signedParts);
+	if (ret != 0)
+		goto out;
+	if (count > MLN_NEMO_READ_PARTS - 1) {
+		ret = 5;
+		goto out;
+	}
+	ret = MlnNemoReadNonces(security, kind, readStep, message->nonce, &found, &signedParts,
+				digestSize, digests, ids, &count, &nonce);
+	if (ret != 0)
+		goto out;
+	if (count > MLN_NEMO_READ_PARTS) {
+		ret = 5;
+		goto out;
+	}
+	ret = MlnNemoReadToNode(security, message->credentials->first, digestSize, digests[count],
+				ids, &count, &signedParts, &missing);
+	if (ret != 0 && !(missing && faultRead))
+		goto out;
+	if (count > MLN_NEMO_READ_PARTS) {
+		ret = 5;
+		goto out;
+	}
+	ret = MlnNemoReadFaultDetails(header, readStep, digestSize, digests[count], ids, &count,
+				      &signedParts, &details);
+	if (ret != 0)
+		goto out;
+
+	/* the certificates and the message key's token */
+	ret = MlnImpl_81086284(security, kind, readStep, signerKind, peerKind, &encrypted,
+			       &signedParts, &keyToken, &signingCertificate, &encryptionCertificate,
+			       keyDigest, secondDigest, digestSize, digestSize, &keyId, &secondId,
+			       &certificates, &certificateCount, &secondCertificates,
+			       &secondCertificateCount);
+	if (ret != 0 && !(ret == MLN_NEMO_ERROR_FORMAT && faultRead))
+		goto out;
+	if (keyToken != NULL) {
+		ret = MlnNemoReadKeyToken(keyToken, keys, keyCount);
+		if (ret != 0)
+			goto out;
+	}
+	if (keyId != NULL) {
+		MlnMemcpy(digests[count], keyDigest, MLN_NEMO_DIGEST_MAX);
+		ids[count++] = keyId;
+		keyId = NULL;
+	}
+	if (secondId != NULL) {
+		MlnMemcpy(digests[count], secondDigest, MLN_NEMO_DIGEST_MAX);
+		ids[count++] = secondId;
+		secondId = NULL;
+	}
+
+	/* the payload and the body's reference */
+	ret = MlnNemoReadBody(body, name, uri, keys, keyCount, &encrypted, &payload, &isFault);
+	if (ret != 0)
+		goto out;
+	if (details && !isFault) {
+		ret = MLN_NEMO_ERROR_FORMAT;
+		goto out;
+	}
+	if (count > MLN_NEMO_READ_PARTS) {
+		ret = 5;
+		goto out;
+	}
+	id = NULL;
+	if (body == NULL)
+		ret = MLN_NEMO_ERROR_PARAMETER;
+	else
+		ret = MlnNemoReadReference(body, digestSize, digests[count], &id);
+	if (ret != 0) {
+		MlnBufferDestroy(MLN_HEAP_GENERAL, id);
+		goto out;
+	}
+	ids[count] = id;
+	if (id != NULL) {
+		count++;
+		signedParts |= MLN_NEMO_SIGNED_BODY;
+	}
+
+	/* a fault's exceptions */
+	if (payload == NULL) {
+		ret = MLN_NEMO_ERROR_PARAMETER;
+		goto out;
+	}
+	if (readStep == MLN_NEMO_STEP_FAULT) {
+		if (!isFault) {
+			ret = MLN_NEMO_ERROR_FORMAT;
+			goto out;
+		}
+		ret = MlnImpl_81079594(payload, header, &faults);
+	} else if (isFault) {
+		ret = MlnImpl_81079594(payload, NULL, &faults);
+	}
+	if (ret != 0)
+		goto out;
+
+	/* the assertions, a request's sender named by its role's */
+	if (message->bundles != NULL) {
+		ret = 5;
+		goto out;
+	}
+	if (security == NULL) {
+		ret = MLN_NEMO_ERROR_PARAMETER;
+		goto out;
+	}
+	assertions = NULL;
+	ret = MlnXmlFindNodes(MLN_HEAP_GENERAL, security, "Assertion", MLN_NEMO_NS_SAML,
+			      &assertions);
+	if (ret == 0) {
+		message->bundles = assertions;
+		assertions = NULL;
+	}
+	MlnXmlListFree(MLN_HEAP_GENERAL, assertions);
+	if (ret == MLN_XML_ERROR_NOT_FOUND) {
+		if (readStep == MLN_NEMO_STEP_REQUEST) {
+			ret = MLN_NEMO_ERROR_FORMAT;
+			goto out;
+		}
+	} else if (ret != 0) {
+		goto out;
+	} else if (readStep == MLN_NEMO_STEP_REQUEST) {
+		ret = MlnNemoReadRequester(security, message->bundles, &requester);
+		if (ret != 0)
+			goto out;
+	}
+
+	/* the signer's key, a transfer's device role, the signature */
+	if (signingCertificate != NULL) {
+		MlnImpl_81079A2C(message->keys[1]);
+		message->keys[1] = NULL;
+		ret = MlnImpl_81084FC8(signingCertificate, &message->keys[1]);
+		if (ret != 0)
+			goto out;
+	}
+	if (kind == MLN_NEMO_KIND_TRANSFER && readStep == MLN_NEMO_STEP_REQUEST) {
+		ret = MlnNemoReadDeviceRole(security);
+		if (ret != 0)
+			goto out;
+	}
+	if (requester != NULL) {
+		MlnBufferDestroy(MLN_HEAP_GENERAL, message->peer);
+		message->peer = MlnBufferCreate(MLN_HEAP_GENERAL, requester->size, requester->data);
+	}
+	ret = MlnNemoReadVerify(signature, security, message->peer, message->keys[1], usage,
+				signerKind, (unsigned short)count, ids, digests);
+	if (ret != 0)
+		goto out;
+	if (!MlnNemoReadSecured(kind, readStep, found, signedParts, encrypted, details) &&
+	    readStep != MLN_NEMO_STEP_FAULT) {
+		ret = MLN_NEMO_ERROR_UNSECURED;
+		goto out;
+	}
+
+	/* what the message gave kept */
+	if (message->peerNonce != NULL) {
+		ret = 5;
+		goto out;
+	}
+	message->peerNonce = nonce;
+	nonce = NULL;
+	if (encryptionCertificate != NULL) {
+		MlnImpl_81079A2C(message->keys[0]);
+		message->keys[0] = NULL;
+		ret = MlnImpl_81084FC8(encryptionCertificate, &message->keys[0]);
+		if (ret != 0)
+			goto out;
+	}
+	if (isFault) {
+		message->faults = faults;
+		faults = NULL;
+		ret = MLN_NEMO_ERROR_FAULT;
+	} else {
+		*payloadOut = payload;
+		payload = NULL;
+		ret = 0;
+	}
+out:
+	MlnBufferDestroy(MLN_HEAP_GENERAL, requester);
+	MlnBufferDestroy(MLN_HEAP_GENERAL, nonce);
+	MlnNemoMessageKeysFree(keys, keyCount);
+	MlnImpl_810794DC(faults);
+	for (i = 0; i < MLN_NEMO_READ_PARTS; i++)
+		MlnBufferDestroy(MLN_HEAP_GENERAL, ids[i]);
+	MlnXmlNodeFree(MLN_HEAP_GENERAL, payload);
+	MlnXmlNodeFree(MLN_HEAP_GENERAL, body);
+	MlnXmlNodeFree(MLN_HEAP_GENERAL, header);
+	MlnXmlNodeFree(MLN_HEAP_GENERAL, security);
+	MlnXmlNodeFree(MLN_HEAP_GENERAL, signature);
+	MlnXmlNodeFree(MLN_HEAP_GENERAL, declaration);
+	MlnXmlNodeFree(MLN_HEAP_GENERAL, document);
+	MlnXmlNodeFree(MLN_HEAP_GENERAL, envelope);
+	MlnImpl_81079854(headerNodes);
+	MlnBufferDestroy(MLN_HEAP_GENERAL, keyToken);
+	MlnBufferDestroy(MLN_HEAP_GENERAL, signingCertificate);
+	MlnBufferDestroy(MLN_HEAP_GENERAL, encryptionCertificate);
+	MlnBufferDestroy(MLN_HEAP_GENERAL, keyId);
+	MlnBufferDestroy(MLN_HEAP_GENERAL, secondId);
+	MlnNemoCertificatesFree(certificates, certificateCount);
+	MlnNemoCertificatesFree(secondCertificates, secondCertificateCount);
+	for (i = MLN_NEMO_READ_PARTS; i < MLN_NEMO_READ_REFERENCES; i++)
+		if (ids[i] != NULL)
+			MlnBufferDestroy(MLN_HEAP_GENERAL, ids[i]);
+	MlnImpl_81080C1C(hci);
+	return MlnNemoReadError(ret);
+}

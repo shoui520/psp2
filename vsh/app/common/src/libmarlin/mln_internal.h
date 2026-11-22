@@ -2523,7 +2523,8 @@ typedef struct MlnNemoMessage {
 	MlnNemoPeerKey *keys[2];	/* the service's encryption and signing certificates */
 	MlnNemoFaults *faults;		/* a fault's exceptions */
 	MlnNemoHeader header;
-	int reserved3[2];
+	int timestampLimit;		/* seconds a timestamp read stays valid, 0 always */
+	int timestamp;			/* the Created time read, in seconds */
 	int digestMethod;		/* the references' digest: 0 SHA-1, 1 SHA-256 */
 	int signatureMethod;		/* the signature's, the same */
 } MlnNemoMessage;
@@ -2558,7 +2559,13 @@ typedef struct MlnExchange {
 #define MLN_NEMO_ERROR_PARAMETER	0x2305000B
 #define MLN_NEMO_ERROR_KIND		0x2305000C	/* no such kind of message */
 #define MLN_NEMO_ERROR_STEP		0x2305000E	/* no such step */
+#define MLN_NEMO_ERROR_FAULT		0x23050007	/* the message read is a fault */
+#define MLN_NEMO_ERROR_UNSECURED	0x2305000D	/* a part not signed or encrypted as needed */
+#define MLN_NEMO_ERROR_SENDER		0x2305000F	/* the header's sender is not the requester */
 #define MLN_NEMO_ERROR_HEADER		0x23050010	/* the header lacks a part the step needs */
+#define MLN_NEMO_ERROR_UNKNOWN_TIME	0x23050011	/* the time is not known */
+#define MLN_NEMO_ERROR_EXPIRED		0x23050012	/* the timestamp is too old */
+#define MLN_NEMO_ERROR_TO_NODE		0x23050015	/* sent to another node */
 
 /* how a signature names its key: by name, by the signer's certificate */
 #define MLN_NEMO_KEY_INFO_NAME		(-1)
@@ -2607,8 +2614,43 @@ unsigned int MlnImpl_81072240(MlnNemoMessage *message, unsigned char kind, unsig
 			      MlnBuffer **out);
 unsigned int MlnImpl_81074EC4(unsigned int size, const void *data, MlnNemoMessage *message,
 			      const char *name, const char *uri, unsigned char kind,
-			      unsigned char step,
-			      int faultKind, int faultStep, MlnXmlNode **payload);
+			      unsigned char step, int signerKind, int peerKind,
+			      MlnXmlNode **payload);
+
+/* a message key an EncryptedKey of a message read unwraps, and the DataReferences it opens */
+typedef struct MlnNemoMessageKey {
+	void *key;			/* the HCI's (MlnImpl_81080C80 frees it) */
+	MlnBuffer **ids;
+	unsigned int idCount;
+} MlnNemoMessageKey;
+
+unsigned int MlnImpl_81078688(MlnXmlNode *soapHeader, MlnNemoHeader *header,
+			      MlnNemoHeaderNodes **nodes);
+unsigned int MlnImpl_810789DC(MlnNemoHeader *header, unsigned int step);
+unsigned int MlnImpl_810794DC(MlnNemoFaults *faults);
+unsigned int MlnImpl_81079594(MlnXmlNode *fault, MlnXmlNode *header, MlnNemoFaults **out);
+unsigned int MlnImpl_810798CC(MlnNemoHeader *header);
+unsigned int MlnImpl_81079A2C(MlnNemoPeerKey *key);
+unsigned int MlnImpl_81083F90(MlnXmlNode *body, MlnXmlNode *header, MlnNemoMessage *message);
+unsigned int MlnImpl_81084204(MlnXmlNode *security, MlnNemoMessage *message,
+			      MlnNemoMessageKey **keys, int *count);
+unsigned int MlnImpl_810849E0(MlnXmlNodeList *encrypted, MlnXmlNode *parent,
+			      MlnNemoMessageKey *keys, int count);
+unsigned int MlnImpl_81084D14(const void *data, unsigned int size, unsigned char *digest,
+			      int digestSize);
+unsigned int MlnImpl_81084FC8(const MlnBuffer *certificate, MlnNemoPeerKey **out);
+unsigned int MlnImpl_81085E20(MlnXmlNode *nonce, unsigned int kind, unsigned int step,
+			      unsigned int *found, unsigned int *signedParts,
+			      const MlnBuffer *sent, MlnBuffer **out, int *count,
+			      unsigned char *digest, int digestSize, MlnBuffer **id);
+unsigned int MlnImpl_81086284(MlnXmlNode *security, unsigned int kind, unsigned int step,
+			      int signerKind, int peerKind, unsigned int *encrypted,
+			      unsigned int *signedParts, MlnBuffer **keyToken,
+			      MlnBuffer **signingCertificate, MlnBuffer **encryptionCertificate,
+			      unsigned char *digest, unsigned char *secondDigest, int digestSize,
+			      int secondDigestSize, MlnBuffer **id, MlnBuffer **secondId,
+			      MlnBuffer ***certificates, int *certificateCount,
+			      MlnBuffer ***secondCertificates, int *secondCertificateCount);
 unsigned int MlnImpl_81078EB8(const MlnBuffer *xml, const char *prefix, const char *uri,
 			      MlnXmlNode **node);
 unsigned int MlnImpl_810799B0(MlnNemoHeader *header);
