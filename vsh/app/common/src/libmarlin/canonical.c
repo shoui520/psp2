@@ -6,10 +6,18 @@
 #include "mln_internal.h"
 
 #define MLN_CANONICAL_ERROR_CLOCK	0x230E0001
+#define MLN_OCTOPUS_ERROR_KIND		0x23070001
+#define MLN_OCTOPUS_ERROR_SCUBA_KEYS	0x23070005
 
 /* 1970-01-01 00:00:00 in RTC ticks */
 #define MLN_UNIX_EPOCH_TICK		62135596800000000ULL
 #define MLN_SECOND_TICKS		1000000
+
+/* an Octopus object of a kind (MLN_OCTOPUS_*) */
+typedef struct MlnCanonicalObject {
+	int kind;
+	void *object;
+} MlnCanonicalObject;
 
 /* an object sorted by its first or its second field */
 typedef struct MlnCanonicalItem {
@@ -157,8 +165,9 @@ out:
 }
 
 /* write an array */
-int MlnImpl_8105F3AC(const MlnOctopusArray *array, MlnCanonicalCompare compare,
-		     MlnCanonicalWrite write, MlnTextBuffer *out)
+__attribute__((noinline)) int MlnImpl_8105F3AC(const MlnOctopusArray *array,
+					      MlnCanonicalCompare compare,
+					      MlnCanonicalWrite write, MlnTextBuffer *out)
 {
 	return MlnCanonicalWriteArray(array, compare, write, out);
 }
@@ -246,8 +255,8 @@ int MlnImpl_8105FA24(const MlnOctopusKeyPair *pair, MlnTextBuffer *out)
 	return MlnCanonicalWriteBuffer(out, pair->pair);
 }
 
-/* write the private keys */
-int MlnImpl_8105FAF4(const MlnOctopusArray *keys, MlnTextBuffer *out)
+/* write public or private keys, sorted by their uids */
+__attribute__((noinline)) int MlnImpl_8105FAF4(const MlnOctopusArray *keys, MlnTextBuffer *out)
 {
 	return MlnCanonicalWriteArray(keys, MlnImpl_8105F358, (MlnCanonicalWrite)MlnImpl_8105FA24,
 				      out);
@@ -343,7 +352,8 @@ int MlnImpl_810602AC(const MlnOctopusExtension *extension, MlnTextBuffer *out)
 }
 
 /* write the extensions */
-int MlnImpl_810602B8(const MlnOctopusArray *extensions, MlnTextBuffer *out)
+__attribute__((noinline)) int MlnImpl_810602B8(const MlnOctopusArray *extensions,
+					      MlnTextBuffer *out)
 {
 	return MlnCanonicalWriteArray(extensions, MlnImpl_8105F33C,
 				      (MlnCanonicalWrite)MlnImpl_81060034, out);
@@ -445,8 +455,282 @@ int MlnImpl_81060970(const MlnOctopusAttribute *attribute, MlnTextBuffer *out)
 }
 
 /* write a list's attributes, sorted by their names */
-int MlnImpl_8106097C(const MlnOctopusArray *attributes, MlnTextBuffer *out)
+__attribute__((noinline)) int MlnImpl_8106097C(const MlnOctopusArray *attributes,
+					      MlnTextBuffer *out)
 {
 	return MlnCanonicalWriteArray(attributes, MlnImpl_8105F358,
 				      (MlnCanonicalWrite)MlnImpl_810604F4, out);
+}
+
+/* an object's attributes and extensions, or a count of 0 for each one it has not */
+static inline int MlnCanonicalWriteAttributes(MlnTextBuffer *out,
+					      MlnOctopusArray *const *attributes,
+					      MlnOctopusArray *const *extensions)
+{
+	int ret;
+
+	if (*attributes != NULL) {
+		ret = MlnImpl_8106097C(*attributes, out);
+		if (ret != 0)
+			return ret;
+	} else {
+		ret = MlnCanonicalWriteSize(out, 0);
+		if (ret != 0)
+			return ret;
+	}
+	if (*extensions != NULL)
+		return MlnImpl_810602B8(*extensions, out);
+	return MlnCanonicalWriteSize(out, 0);
+}
+
+/* write a control: its uid, attributes and extensions, protocol and code module */
+__attribute__((noinline)) int MlnImpl_81060BB8(const MlnOctopusControl *control,
+					      MlnTextBuffer *out)
+{
+	unsigned char flag;
+	int ret;
+
+	flag = 1;
+	ret = MlnTextBufferAppend(MLN_HEAP_GENERAL, out, sizeof(flag), &flag);
+	if (ret != 0)
+		return ret;
+	ret = MlnCanonicalWriteBuffer(out, control->uid);
+	if (ret != 0)
+		return ret;
+	ret = MlnCanonicalWriteAttributes(out, &control->attributes, &control->extensions);
+	if (ret != 0)
+		return ret;
+	ret = MlnCanonicalWriteBuffer(out, control->protocol);
+	if (ret != 0)
+		return ret;
+	ret = MlnCanonicalWriteBuffer(out, control->type);
+	if (ret != 0)
+		return ret;
+	return MlnCanonicalWriteData(out, control->codeModule);
+}
+
+/*
+ * A controller's canonical byte sequence: its uid, attributes and extensions, its control's
+ * reference and the references of what it controls.
+ */
+int MlnImpl_81060DE0(const MlnOctopusController *controller, MlnBuffer **out)
+{
+	MlnTextBuffer *text;
+	unsigned char flag;
+	int ret;
+
+	text = MlnTextBufferCreate(MLN_HEAP_GENERAL, 0, NULL);
+	if (text == NULL)
+		return 2;
+	flag = 1;
+	ret = MlnTextBufferAppend(MLN_HEAP_GENERAL, text, sizeof(flag), &flag);
+	if (ret != 0)
+		goto out;
+	ret = MlnCanonicalWriteBuffer(text, controller->uid);
+	if (ret != 0)
+		goto out;
+	ret = MlnCanonicalWriteAttributes(text, &controller->attributes, &controller->extensions);
+	if (ret != 0)
+		goto out;
+	ret = MlnImpl_8105FDE0(controller->control, text);
+	if (ret != 0)
+		goto out;
+	ret = MlnImpl_8105F3AC(controller->controlledTargets, MlnImpl_8105F390,
+			       (MlnCanonicalWrite)MlnImpl_81060028, text);
+	if (ret != 0)
+		goto out;
+	*out = MlnBufferCreate(MLN_HEAP_GENERAL, text->size, text->data);
+	if (*out == NULL)
+		ret = 2;
+out:
+	MlnTextBufferDestroy(MLN_HEAP_GENERAL, text);
+	return ret;
+}
+
+/* a control's canonical byte sequence */
+int MlnImpl_81060F80(const MlnOctopusControl *control, MlnBuffer **out)
+{
+	MlnTextBuffer *text;
+	int ret;
+
+	text = MlnTextBufferCreate(MLN_HEAP_GENERAL, 0, NULL);
+	if (text == NULL)
+		return 2;
+	ret = MlnImpl_81060BB8(control, text);
+	if (ret == 0) {
+		*out = MlnBufferCreate(MLN_HEAP_GENERAL, text->size, text->data);
+		if (*out == NULL)
+			ret = 2;
+	}
+	MlnTextBufferDestroy(MLN_HEAP_GENERAL, text);
+	return ret;
+}
+
+/* a content key's canonical byte sequence: its uid, attributes, extensions and its key */
+int MlnImpl_81060FE8(const MlnOctopusContentKey *contentKey, MlnBuffer **out)
+{
+	MlnTextBuffer *text;
+	unsigned char flag;
+	int ret;
+
+	text = MlnTextBufferCreate(MLN_HEAP_GENERAL, 0, NULL);
+	if (text == NULL)
+		return 2;
+	flag = 1;
+	ret = MlnTextBufferAppend(MLN_HEAP_GENERAL, text, sizeof(flag), &flag);
+	if (ret != 0)
+		goto out;
+	ret = MlnCanonicalWriteBuffer(text, contentKey->uid);
+	if (ret != 0)
+		goto out;
+	ret = MlnCanonicalWriteAttributes(text, &contentKey->attributes, &contentKey->extensions);
+	if (ret != 0)
+		goto out;
+	ret = MlnImpl_8105F9A4(contentKey->secretKey, text);
+	if (ret != 0)
+		goto out;
+	*out = MlnBufferCreate(MLN_HEAP_GENERAL, text->size, text->data);
+	if (*out == NULL)
+		ret = 2;
+out:
+	MlnTextBufferDestroy(MLN_HEAP_GENERAL, text);
+	return ret;
+}
+
+/* a node's canonical byte sequence: its uid, attributes and extensions */
+int MlnImpl_810611BC(const MlnOctopusNode *node, MlnBuffer **out)
+{
+	MlnTextBuffer *text;
+	unsigned char flag;
+	int ret;
+
+	text = MlnTextBufferCreate(MLN_HEAP_GENERAL, 0, NULL);
+	if (text == NULL)
+		return 2;
+	flag = 1;
+	ret = MlnTextBufferAppend(MLN_HEAP_GENERAL, text, sizeof(flag), &flag);
+	if (ret != 0)
+		goto out;
+	ret = MlnCanonicalWriteBuffer(text, node->uid);
+	if (ret != 0)
+		goto out;
+	ret = MlnCanonicalWriteAttributes(text, &node->attributes, &node->extensions);
+	if (ret != 0)
+		goto out;
+	*out = MlnBufferCreate(MLN_HEAP_GENERAL, text->size, text->data);
+	ret = *out != NULL ? 0 : 2;
+out:
+	MlnTextBufferDestroy(MLN_HEAP_GENERAL, text);
+	return ret;
+}
+
+/* ScubaKeys' canonical byte sequence: their public, private and secret keys */
+int MlnImpl_81061330(const MlnOctopusScubaKeys *keys, MlnBuffer **out)
+{
+	MlnTextBuffer *text;
+	int ret;
+
+	text = MlnTextBufferCreate(MLN_HEAP_GENERAL, 0, NULL);
+	if (text == NULL)
+		return 2;
+	if (keys == NULL) {
+		ret = MLN_OCTOPUS_ERROR_SCUBA_KEYS;
+		goto out;
+	}
+	ret = MlnCanonicalWriteBytes(text, 9, "ScubaKeys");
+	if (ret != 0)
+		goto out;
+	if (keys->publicKeys != NULL)
+		ret = MlnImpl_8105FAF4(keys->publicKeys, text);
+	else
+		ret = MlnCanonicalWriteSize(text, 0);
+	if (ret != 0)
+		goto out;
+	if (keys->privateKeys != NULL)
+		ret = MlnImpl_8105FAF4(keys->privateKeys, text);
+	else
+		ret = MlnCanonicalWriteSize(text, 0);
+	if (ret != 0)
+		goto out;
+	if (keys->secretKeys != NULL)
+		ret = MlnImpl_8105F3AC(keys->secretKeys, MlnImpl_8105F374,
+				       (MlnCanonicalWrite)MlnImpl_8105F9A4, text);
+	else
+		ret = MlnCanonicalWriteSize(text, 0);
+	if (ret == 0) {
+		*out = MlnBufferCreate(MLN_HEAP_GENERAL, text->size, text->data);
+		if (*out == NULL)
+			ret = 2;
+	}
+out:
+	MlnTextBufferDestroy(MLN_HEAP_GENERAL, text);
+	return ret;
+}
+
+/*
+ * A link's canonical byte sequence: its uid, attributes and extensions, the uids it links
+ * from and to, and whether it carries a control and then the control.
+ */
+int MlnImpl_810614EC(const MlnOctopusLink *link, MlnBuffer **out)
+{
+	MlnTextBuffer *text;
+	unsigned char flag;
+	int ret;
+
+	text = MlnTextBufferCreate(MLN_HEAP_GENERAL, 0, NULL);
+	if (text == NULL)
+		return 2;
+	flag = 1;
+	ret = MlnTextBufferAppend(MLN_HEAP_GENERAL, text, sizeof(flag), &flag);
+	if (ret != 0)
+		goto out;
+	ret = MlnCanonicalWriteBuffer(text, link->uid);
+	if (ret != 0)
+		goto out;
+	ret = MlnCanonicalWriteAttributes(text, &link->attributes, &link->extensions);
+	if (ret != 0)
+		goto out;
+	ret = MlnCanonicalWriteBuffer(text, link->from);
+	if (ret != 0)
+		goto out;
+	ret = MlnCanonicalWriteBuffer(text, link->to);
+	if (ret != 0)
+		goto out;
+	if (link->control != NULL) {
+		flag = 1;
+		ret = MlnTextBufferAppend(MLN_HEAP_GENERAL, text, sizeof(flag), &flag);
+		if (ret != 0)
+			goto out;
+		ret = MlnImpl_81060BB8(link->control, text);
+		if (ret != 0)
+			goto out;
+	} else {
+		flag = 0;
+		ret = MlnTextBufferAppend(MLN_HEAP_GENERAL, text, sizeof(flag), &flag);
+		if (ret != 0)
+			goto out;
+	}
+	*out = MlnBufferCreate(MLN_HEAP_GENERAL, text->size, text->data);
+	ret = *out != NULL ? 0 : 2;
+out:
+	MlnTextBufferDestroy(MLN_HEAP_GENERAL, text);
+	return ret;
+}
+
+/* an object's canonical byte sequence, by its kind */
+int MlnImpl_81061768(const MlnCanonicalObject *object, MlnBuffer **out)
+{
+	switch (object->kind) {
+	case MLN_OCTOPUS_CONTENT_KEY:
+		return MlnImpl_81060FE8(object->object, out);
+	case MLN_OCTOPUS_CONTROLLER:
+		return MlnImpl_81060DE0(object->object, out);
+	case MLN_OCTOPUS_CONTROL:
+		return MlnImpl_81060F80(object->object, out);
+	case MLN_OCTOPUS_LINK:
+		return MlnImpl_810614EC(object->object, out);
+	case MLN_OCTOPUS_NODE:
+		return MlnImpl_810611BC(object->object, out);
+	}
+	return MLN_OCTOPUS_ERROR_KIND;
 }
