@@ -8,6 +8,7 @@
 #include <plugin.h>
 #include <std/string>
 #include <common/shared_ptr.h>
+#include <rtc/rtc.h>
 
 struct LsdbThemeInfo;
 
@@ -340,6 +341,13 @@ paf::wstring shellFormatText(const wchar_t *format, const wchar_t *text1 = L"",
 			     const wchar_t *text6 = L"", const wchar_t *text7 = L"",
 			     const wchar_t *text8 = L"", const wchar_t *text9 = L"",
 			     const wchar_t *text10 = L"", const wchar_t *text11 = L"");
+
+/*
+ * PLACEHOLDER name: an RTC tick as the shell shows it, its date in the system's format and its
+ * time; empty for a zero tick or without the network's time (0x8134385E, in the shell's own
+ * code). The flag is not read.
+ */
+paf::wstring shellTickText(const paf::rtc::Tick *tick, bool flag);
 
 /*
  * PLACEHOLDER name: a size in bytes as the shell shows it, its unit picked by the size
