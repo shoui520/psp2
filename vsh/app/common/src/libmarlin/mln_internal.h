@@ -1985,16 +1985,130 @@ unsigned int MlnImpl_8104A558(void);
 typedef struct MlnCoreContext MlnCoreContext;
 
 /* the control VM, the link graph and the key store under a core context */
-unsigned int MlnImpl_8106C794(void *vm, const char *routine);
-unsigned int MlnImpl_8106C54C(unsigned int size, void *host, void **vm);
-unsigned int MlnImpl_8106C6F8(void *vm, MlnBuffer *codeModule, MlnBuffer *uid, MlnBuffer *protocol,
+
+/* what the control VM is given of its host: the link graph and its functions */
+typedef struct MlnCoreHost {
+	void *graph;
+	void *functions[7];
+} MlnCoreHost;
+
+/* a host function of System.Host.GetTrustedTime and GetLocalTrustedTime */
+typedef unsigned int (*MlnVmHostTimeFunction)(MlnCoreHost *host, unsigned int *minutes,
+					      int *trusted);
+/* a host function of System.Host.GetLocalTime and GetLocalTimeOffset */
+typedef unsigned int (*MlnVmHostValueFunction)(MlnCoreHost *host, int *value);
+
+#define MLN_VM_HOST_TRUSTED_TIME	2	/* functions[] of each system call */
+#define MLN_VM_HOST_LOCAL_TIME		3
+#define MLN_VM_HOST_LOCAL_TIME_OFFSET	4
+#define MLN_VM_HOST_LOCAL_TRUSTED_TIME	5
+
+#define MLN_VM_MODULES		4	/* the code modules a VM's group registers */
+#define MLN_VM_INSTANCES	8	/* the VMs of a group */
+#define MLN_VM_CALL_DEPTH	128
+
+/* a routine a code module exports */
+typedef struct MlnVmExport {
+	char *name;
+	unsigned int nameSize;		/* with its terminating NUL */
+	unsigned int offset;		/* in the module's code */
+} MlnVmExport;
+
+/* a loaded code module: its code follows the header */
+typedef struct MlnVmModule {
+	unsigned int codeSize;
+	unsigned int dataOffset;	/* where its data segment is in the VM's memory */
+	int exportCount;
+	MlnVmExport *exports;
+	const unsigned char *signer;	/* the signer's data and size, as registered */
+	unsigned int signerSize;
+	MlnOctopusArray *attributes;
+	struct MlnVmModule *next;
+	unsigned char code[];
+} MlnVmModule;
+
+/* a VM's memory: the data segments from the bottom, the stack down from the top */
+typedef struct MlnVmMemory {
+	unsigned int size;
+	unsigned int dataSize;		/* the data segments' end */
+	unsigned char data[];
+} MlnVmMemory;
+
+struct MlnVm;
+
+/* a group of VMs: the code modules registered and the VMs spawned */
+typedef struct MlnVmGroup {
+	int moduleCount;
+	MlnBuffer *codeModules[MLN_VM_MODULES];
+	MlnBuffer *uids[MLN_VM_MODULES];
+	MlnBuffer *signers[MLN_VM_MODULES];
+	MlnOctopusArray *attributes[MLN_VM_MODULES];
+	int vmCount;
+	struct MlnVm *vms[MLN_VM_INSTANCES];
+} MlnVmGroup;
+
+/* a Plankton VM (MlnImpl_8106C54C) */
+typedef struct MlnVm {
+	MlnVmMemory *memory;
+	MlnVmModule *modules;
+	unsigned char *sp;
+	MlnCoreHost *host;
+	unsigned int children;		/* a bit per VM of the group this one spawned */
+	MlnVmGroup *group;
+	int index;			/* in the group's vms */
+	int maxStack;			/* the deepest stack, in words */
+	int maxCalls;			/* the deepest call nesting */
+} MlnVm;
+
+/* a routine's run (MlnImpl_8106A780), as the system calls see it */
+typedef struct MlnVmContext {
+	MlnVm *vm;
+	MlnVmModule *module;
+	MlnVmMemory *memory;
+	MlnVmExport *routine;
+	const unsigned char *ip;
+	unsigned char *sp;
+	int calls;
+	const unsigned char *returns[MLN_VM_CALL_DEPTH];
+	const unsigned char *codeStart;
+	const unsigned char *codeEnd;
+	unsigned char *data;
+	unsigned char *dataEnd;
+	unsigned char *stackLow;
+	unsigned char *stackHigh;
+} MlnVmContext;
+
+unsigned int MlnImpl_8106A15C(unsigned int result, int *code);
+unsigned int MlnImpl_8106A264(MlnVmModule **list);
+unsigned int MlnImpl_8106A590(MlnVm *vm);
+unsigned int MlnImpl_8106A780(MlnVm *vm, const char *routine, int *status);
+unsigned int MlnImpl_8106BDA0(MlnVm *vm, const MlnBuffer *uid);
+unsigned int MlnImpl_8106C794(MlnVm *vm, const char *routine);
+unsigned int MlnImpl_8106C54C(int size, MlnCoreHost *host, MlnVm **vm);
+unsigned int MlnImpl_8106C694(MlnVm *vm);
+unsigned int MlnImpl_8106C6F8(MlnVm *vm, MlnBuffer *codeModule, MlnBuffer *uid, MlnBuffer *protocol,
 			      MlnBuffer *type, MlnBuffer *signer, MlnOctopusArray *attributes);
-unsigned int MlnImpl_8106C788(void *vm, MlnBuffer *uid);
-unsigned int MlnImpl_8106C970(void *vm, unsigned int *status);
-unsigned int MlnImpl_8106C86C(void *vm, unsigned int value);
-unsigned int MlnImpl_8106C8CC(void *vm, unsigned int size, const unsigned char *data);
-unsigned int MlnImpl_8106C7A4(void *vm, unsigned int address, unsigned int size, unsigned char *out);
-unsigned int MlnImpl_8106C9F4(void *vm, unsigned int value, MlnBuffer **out, unsigned int *type);
+unsigned int MlnImpl_8106C788(MlnVm *vm, MlnBuffer *uid);
+unsigned int MlnImpl_8106C828(MlnVm *vm, unsigned int *words);
+unsigned int MlnImpl_8106C970(MlnVm *vm, unsigned int *value);
+unsigned int MlnImpl_8106C86C(MlnVm *vm, unsigned int value);
+unsigned int MlnImpl_8106C8CC(MlnVm *vm, unsigned int size, const unsigned char *data);
+unsigned int MlnImpl_8106C7A4(MlnVm *vm, int address, int size, unsigned char *out);
+unsigned int MlnImpl_8106C9D4(MlnVm *vm);
+unsigned int MlnImpl_8106C9F4(MlnVm *vm, unsigned int address, MlnBuffer **out, unsigned int *type);
+
+/* the VM's stack and system calls (0x81083010-) */
+unsigned int MlnImpl_81083010(MlnVmContext *context, unsigned int first, unsigned int second);
+unsigned int MlnImpl_810830A4(MlnVmContext *context, int *value);
+unsigned int MlnImpl_81083118(MlnVmContext *context, int *top, int *next);
+unsigned int MlnImpl_810831C0(MlnVmContext *context, int *top, int *next);
+unsigned int MlnImpl_8108325C(MlnVmContext *context);
+unsigned int MlnImpl_81083408(MlnVmContext *context);
+unsigned int MlnImpl_81083638(MlnVmContext *context);
+unsigned int MlnImpl_810836DC(MlnVmContext *context);
+unsigned int MlnImpl_810837CC(MlnVmContext *context);
+unsigned int MlnImpl_81083A58(MlnVmContext *context);
+
 unsigned int MlnImpl_8106EE94(void *graph, MlnPlanktonParameterBlock *parameters);
 unsigned int MlnImpl_8106EEA8(void *graph, MlnOctopusBundle *bundle);
 /* the control VM's host functions; their parameters come with their C */
@@ -2005,7 +2119,7 @@ unsigned int MlnImpl_8106F388();
 unsigned int MlnImpl_8106F3F4();
 unsigned int MlnImpl_8106F438();
 unsigned int MlnImpl_81070424();
-void MlnImpl_8106C6C4(void *vm);
+unsigned int MlnImpl_8106C6C4(MlnVm *vm);
 unsigned int MlnImpl_8106EC8C(void **graph);
 void MlnImpl_8106ED54(void *graph);
 unsigned int MlnImpl_8106EE80(void *graph, MlnOctopusNode *node);

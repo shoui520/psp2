@@ -41,12 +41,6 @@ typedef struct MlnCoreRoutines {
 
 #define MLN_CORE_CONTROL	4	/* the index of the control's own routines */
 
-/* what the control VM is given of its host */
-typedef struct MlnCoreHost {
-	void *graph;
-	void *functions[7];
-} MlnCoreHost;
-
 struct MlnCoreContext {
 	MlnOctopusNode *node;
 	MlnOctopusBundle *bundle;
@@ -54,7 +48,7 @@ struct MlnCoreContext {
 	void *graph;			/* the links and nodes (MlnImpl_8106EC8C) */
 	void *keys;			/* the key store (MlnImpl_810710F8) */
 	MlnCoreHost host;
-	void *vm;			/* the control VM (MlnImpl_8106C54C) */
+	MlnVm *vm;			/* the control VM (MlnImpl_8106C54C) */
 	int actions;			/* MLN_CORE_ACTION_* */
 };
 
@@ -782,7 +776,7 @@ fail:
 unsigned int MlnImpl_8106314C(MlnCoreContext *context, MlnOctopusControl *control,
 			      MlnBuffer **out)
 {
-	void *vm = NULL;
+	MlnVm *vm = NULL;
 	unsigned int status = 0;
 	unsigned int value = 0;
 	unsigned int released;
@@ -991,7 +985,7 @@ unsigned int MlnImpl_8106340C(int count, MlnOctopusControl **controls, const Mln
 			      unsigned int *status, MlnBuffer **data, MlnArray **result)
 {
 	char *name = NULL;
-	void *vm = NULL;
+	MlnVm *vm = NULL;
 	unsigned int initStatus = 0;
 	unsigned int runStatus = 0;
 	unsigned int runData = 0;	/* an address in the VM */
