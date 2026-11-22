@@ -1,7 +1,7 @@
 /*
  * indicator_interface.cpp: indicator_plugin's cache manager, its interface table given to the
  * shell, the jobs that read the Bluetooth configuration and the registry values for the bar, and
- * the bar's left group and first items (0x8115F7C4-0x811614D8). The file's and the names are
+ * the bar's left group and its page dots (0x8115F7C4-0x81161548). The file's and the names are
  * ours (PLACEHOLDER), but for the jobs' classes, named by the names they give their jobs.
  */
 #include <stddef.h>
@@ -20,6 +20,12 @@
 #include <widget/w_scene.h>
 #include <regmgr/regmgr.h>
 #include <bt/bt.h>
+#include <std/stdio.h>
+#include <widget/core/handler.h>
+#include "../../../plugins.h"
+#include "../../applauncher_plugin/src/applauncher.h"
+#include "../../impose_plugin/src/impose.h"
+#include "../../livespace_db/lsdb_keys.h"
 #include "indicator.h"
 
 using namespace paf;
@@ -34,6 +40,13 @@ using namespace paf;
 /* the flight mode icon's template and the icon in it (PLACEHOLDER names) */
 #define INDICATOR_FLIGHT_MODE_TEMPLATE	0xC8B5915B
 #define INDICATOR_FLIGHT_MODE_ICON	0xC6F5E77C
+
+/* the page dots' template and a dot in it, the box's timer of a refresh after a dot is added or
+   removed, and a dot's timer of its destruction (PLACEHOLDER names) */
+#define INDICATOR_PAGE_DOT_TEMPLATE	0x09C61366
+#define INDICATOR_PAGE_DOT		0x90BE1658
+#define INDICATOR_PAGE_DOTS_REFRESH_TIMER	0x1001000
+#define INDICATOR_PAGE_DOT_REMOVE_TIMER	0x1001001
 
 /* the plugin's cache manager, made when it starts (8 bytes; PLACEHOLDER name) */
 class IndicatorCache {
@@ -55,6 +68,9 @@ IndicatorCache *g_indicatorCache;
 memory::HeapAllocator *g_indicatorHeap;
 IndicatorPluginInterface *g_indicatorInterface;
 Plugin *g_indicatorPlugin;
+
+/* the page dots, while the bar has them (0x81566880) */
+static IndicatorPageDots *s_pageDots;
 
 /* (0x81544960); the bar and its items fill it */
 static IndicatorPluginInterface s_interface = { NULL };
@@ -292,7 +308,55 @@ void JobGetRegistryInfo::Finish(int result)
 	}
 }
 
-/* PLACEHOLDER: the left group's constructor (0x8115FDA0), written with its items' classes */
+static int indicatorGroupOnLayout(ui::Layouter *layouter, ui::Widget *widget, void *data1,
+				  void *data2, void *data3);
+
+/* the group's items made in its widget, laid out by indicatorGroupOnLayout: the mobile network's
+   with a modem that needs its check, then the Wi-Fi's, the battery's but on the Dolce, and the
+   clock's (0x8115FDA0) */
+IndicatorLeftGroup::IndicatorLeftGroup(Plugin *plugin, ui::Widget *widget)
+	: IndicatorItem(widget), m_root(widget)
+{
+	if (widget == NULL)
+		return;
+	widget->SetLayouter(new ui::Layouter(indicatorGroupOnLayout, NULL));
+
+	TelephonyPluginInterface *telephony = (TelephonyPluginInterface *)
+		applauncherPluginGetInterface("telephony_plugin", 1);
+
+	if (telephony != NULL && telephony->getModem() != NULL) {
+		TelephonyModem *modem = telephony->getModem();
+
+		if (modem->vtable->needsInitialCheck(modem) == 1) {
+			IndicatorItem *item = new IndicatorMobileSignal(plugin, m_widget);
+
+			if (item != NULL)
+				m_items.push_back(item);
+			item = new IndicatorMobileNetwork(plugin, m_widget);
+			if (item != NULL)
+				m_items.push_back(item);
+			item = new IndicatorMobileOperator(plugin, m_widget);
+			if (item != NULL)
+				m_items.push_back(item);
+			item = new IndicatorMobileCall(plugin, m_widget);
+			if (item != NULL)
+				m_items.push_back(item);
+		}
+	}
+
+	IndicatorItem *item = new IndicatorWireless(plugin, m_widget);
+
+	if (item != NULL)
+		m_items.push_back(item);
+	if (!imposeIsDolce()) {
+		item = new IndicatorBattery(plugin, m_widget);
+		if (item != NULL)
+			m_items.push_back(item);
+	}
+	item = new IndicatorClock(plugin, m_widget);
+	if (item != NULL)
+		m_items.push_back(item);
+}
 
 /* its items deleted, the first one first (0x81160084) */
 IndicatorLeftGroup::~IndicatorLeftGroup()
@@ -330,7 +394,7 @@ static int indicatorGroupOnLayout(ui::Layouter *layouter, ui::Widget *widget, vo
 			math::v4 pos = child->GetPos(0, NULL, math::v4(0.0f, 0.0f, 0.0f, 0.0f));
 
 			pos.set_x(x + size.extract_x() * 0.5f);
-			child->SetPos(pos, new Timer(0.0f), ui::Widget::ANIM_MOVE, 0);
+			child->SetPos(pos, new Timer(200.0f), ui::Widget::ANIM_MOVE, 0);
 			if (size.extract_x() > 0.0f)
 				x = size.extract_x() + 4.0f + x;
 		}
@@ -356,4 +420,288 @@ IndicatorFlightModeIcon::IndicatorFlightModeIcon(Plugin *plugin, ui::Widget *wid
 void IndicatorFlightModeIcon::OnStatus(IndicatorStatus status)
 {
 	UpdateColor(status);
+}
+
+void shellWidgetDestroyCB(SceInt32 type, ui::Handler *self, ui::Event *e, void *data);
+static ui::Widget *indicatorAddPageDot(int key);
+static void indicatorRemovePageDot(int key);
+static void indicatorRefreshPageDots(void);
+static void indicatorSetPageDotImage(int key, const intrusive_ptr<ui::TextureSource> *image);
+static void indicatorSetPageDotTexture(int key, const intrusive_ptr<graph::Surface> &texture);
+static int indicatorPageDotsOnLayout(ui::Layouter *layouter, ui::Widget *widget, void *data1,
+				     void *data2, void *data3);
+static void indicatorPageDotsOnRefreshTimer(SceInt32 type, ui::Handler *self, ui::Event *e,
+					    void *data);
+
+/* the dots laid out by their layouter in the widget; the interface's page dot slots filled
+   (0x8116067C) */
+IndicatorPageDots::IndicatorPageDots(Plugin *plugin, ui::Widget *widget)
+	: m_root(widget), m_plugin(plugin), m_reserved(-1), m_curPage(-1)
+{
+	if (widget != NULL) {
+		m_widget = widget;
+		widget->SetLayouter(new ui::Layouter(indicatorPageDotsOnLayout, NULL));
+	}
+	g_indicatorInterface->AddPageDot = indicatorAddPageDot;
+	g_indicatorInterface->RemovePageDot = indicatorRemovePageDot;
+	g_indicatorInterface->RefreshPageDots = indicatorRefreshPageDots;
+	g_indicatorInterface->SetPageDotImage = indicatorSetPageDotImage;
+	g_indicatorInterface->SetPageDotTexture = indicatorSetPageDotTexture;
+	s_pageDots = this;
+}
+
+/* (0x81160774) */
+IndicatorPageDots::~IndicatorPageDots()
+{
+	s_pageDots = NULL;
+}
+
+/* the dots not being destroyed put in the order of topmenu's pages, each in front of the one
+   before; the page in view's dot drawn opaque, the others at half (0x8116078E) */
+void IndicatorPageDots::Refresh()
+{
+	ShellPluginInterface *topmenu =
+		(ShellPluginInterface *)applauncherPluginGetInterface("topmenu_plugin", 1);
+
+	if (topmenu == NULL)
+		return;
+
+	ui::Widget *prev = NULL;
+	int index = 0;
+
+	for (list<ui::Widget *>::iterator it = m_widget->m_children.begin();
+	     it != m_widget->m_children.end(); ++it, ++index) {
+		ui::Widget *child = *it;
+
+		if (child->m_hold_count <= 0) {
+			char name[64];
+
+			sce_paf_snprintf(name, sizeof(name), "%d",
+					 ((int (*)(int))topmenu->func[TOPMENU_PLUGIN_FUNC_GET_PAGE_KEY])(index));
+
+			ui::Widget *root = m_widget;
+			ui::Widget *dot = root->FindChild(IDParam(string(name)), 0);
+
+			if (dot != child && dot != NULL)
+				dot->SetForward(prev);
+			prev = dot;
+		}
+	}
+
+	int cur = ((int (*)(void))topmenu->func[TOPMENU_PLUGIN_FUNC_GET_CUR_PAGE])();
+
+	if (cur == m_curPage)
+		return;
+	for (list<ui::Widget *>::iterator it = m_widget->m_children.begin();
+	     it != m_widget->m_children.end(); ++it) {
+		ui::Widget *dot = *it;
+
+		if (dot->m_map_t_listener.find(INDICATOR_PAGE_DOT_REMOVE_TIMER) !=
+		    dot->m_map_t_listener.end())
+			continue;
+
+		int key = sce_paf_strtol(dot->m_name.m_id.c_str(), NULL, 10);
+		math::v4 color = dot->GetColor();
+
+		if (cur == key) {
+			color.set_w(1.0f);
+			dot->SetColor(color, NULL, ui::Widget::ANIM_COLOR, 0);
+		} else {
+			color.set_w(0.5f);
+			dot->SetColor(color, NULL, ui::Widget::ANIM_COLOR, 0);
+		}
+	}
+	m_curPage = cur;
+}
+
+/* (0x811609E4) */
+void IndicatorPageDots::OnStatus(IndicatorStatus status)
+{
+	Refresh();
+	UpdateColor(status);
+}
+
+/* the first dot given the icons' color, keeping its alpha (0x81160AD8) */
+void IndicatorPageDots::UpdateColor(IndicatorStatus status)
+{
+	list<ui::Widget *>::iterator it = m_widget->m_children.begin();
+
+	if (it != m_widget->m_children.end()) {
+		ui::Widget *dot = *it;
+		math::v4 color = status.iconColor;
+
+		color.set_w(dot->m_color_alpha);
+		dot->SetColor(color, NULL, ui::Widget::ANIM_COLOR, 0);
+	}
+}
+
+/* a dot opened in the widget before its second child and named after the key, grown in from
+   nothing; the dots refreshed a moment after (0x81160B46) */
+ui::Widget *IndicatorPageDots::AddDot(int key)
+{
+	Plugin::TemplateOpenParam param;
+
+	param.sibling = m_widget->GetChild(1);
+	m_plugin->TemplateOpen(m_widget, IDParam(s_empty_name, INDICATOR_PAGE_DOT_TEMPLATE), param);
+
+	ui::Widget *dot = m_widget->FindChild(IDParam(s_empty_name, INDICATOR_PAGE_DOT), 0);
+
+	if (dot != NULL) {
+		char name[64];
+
+		sce_paf_snprintf(name, sizeof(name), "%d", key);
+		dot->m_name.SetID(string(name));
+		dot->SetMetaAlpha(0.0f, NULL, ui::Widget::ANIM_META_ALPHA, 0);
+		dot->SetColor(math::v4(1.0f, 1.0f, 1.0f, 1.0f), NULL, ui::Widget::ANIM_COLOR, 0);
+
+		math::v4 size = *dot->GetSize(0);
+
+		dot->SetSize(math::v4(0.0f, 0.0f, 0.0f, 0.0f), NULL, ui::Widget::ANIM_SIZE, 0);
+		dot->SetSize(size, new Timer(200.0f), ui::Widget::ANIM_SIZE, 0);
+		m_widget->SetTimerListener(INDICATOR_PAGE_DOTS_REFRESH_TIMER, 200.0f,
+					   new ui::EventCBListener(indicatorPageDotsOnRefreshTimer, this));
+	}
+	return dot;
+}
+
+/* the key's dot faded out and shrunk, and destroyed when that is done; the dots refreshed a
+   moment after (0x81160E02) */
+void IndicatorPageDots::RemoveDot(int key)
+{
+	char name[64];
+
+	sce_paf_snprintf(name, sizeof(name), "%d", key);
+
+	ui::Widget *root = m_widget;
+	ui::Widget *dot = root->FindChild(IDParam(string(name)), 0);
+
+	if (dot == NULL)
+		return;
+	dot->SetMetaAlpha(0.0f, new Timer(100.0f), ui::Widget::ANIM_META_ALPHA, 0);
+	dot->SetSize(math::v4(0.0f, 0.0f, 0.0f, 0.0f), new Timer(100.0f), ui::Widget::ANIM_SIZE, 0);
+	dot->SetTimerListener(INDICATOR_PAGE_DOT_REMOVE_TIMER, 100.0f,
+			      new ui::EventCBListener(shellWidgetDestroyCB, this));
+	m_reserved = -1;
+	m_widget->SetTimerListener(INDICATOR_PAGE_DOTS_REFRESH_TIMER, 200.0f,
+				   new ui::EventCBListener(indicatorPageDotsOnRefreshTimer, this));
+}
+
+/* the interface's page dot slots (0x81161052-0x8116119C) */
+static ui::Widget *indicatorAddPageDot(int key)
+{
+	return s_pageDots->AddDot(key);
+}
+
+static void indicatorRemovePageDot(int key)
+{
+	s_pageDots->RemoveDot(key);
+}
+
+static void indicatorRefreshPageDots(void)
+{
+	s_pageDots->Refresh();
+}
+
+/* the key's dot drawn with the image; without one, its image and texture dropped */
+static void indicatorSetPageDotImage(int key, const intrusive_ptr<ui::TextureSource> *image)
+{
+	char name[64];
+
+	sce_paf_snprintf(name, sizeof(name), "%d", key);
+
+	ui::Widget *root = s_pageDots->m_widget;
+	ui::Widget *dot = root->FindChild(IDParam(string(name)), 0);
+
+	if (dot == NULL)
+		return;
+	dot->SetDrawObjMaskBit(image, 0);
+	if (image->get() == NULL) {
+		{
+			intrusive_ptr<ui::TextureSource> none;
+
+			dot->SetDrawObjMaskBit(&none, 0, 0);
+		}
+		dot->SetTexture(intrusive_ptr<graph::Surface>());
+	}
+}
+
+static void indicatorSetPageDotTexture(int key, const intrusive_ptr<graph::Surface> &texture)
+{
+	char name[64];
+
+	sce_paf_snprintf(name, sizeof(name), "%d", key);
+
+	ui::Widget *root = s_pageDots->m_widget;
+	ui::Widget *dot = root->FindChild(IDParam(string(name)), 0);
+
+	if (dot != NULL)
+		dot->SetTexture(texture);
+}
+
+/* the dots put side by side, 4 apart, centred on the widget as topmenu places their pages; a new
+   dot (still clear) put in place and faded in, the others moved there (0x8116126A) */
+static int indicatorPageDotsOnLayout(ui::Layouter *layouter, ui::Widget *widget, void *data1,
+				     void *data2, void *data3)
+{
+	if (!layouter->IsDirty(0xff) || widget == NULL)
+		return 0;
+
+	ShellPluginInterface *topmenu =
+		(ShellPluginInterface *)applauncherPluginGetInterface("topmenu_plugin", 1);
+
+	if (topmenu == NULL)
+		return 0;
+
+	float dotSize = 28.0f;
+	float gap = 4.0f;
+	float width = 0.0f;
+	int index = 0;
+
+	for (list<ui::Widget *>::iterator it = widget->m_children.begin();
+	     it != widget->m_children.end(); ++it, ++index) {
+		ui::Widget *dot = *it;
+
+		if (dot->m_map_t_listener.find(INDICATOR_PAGE_DOT_REMOVE_TIMER) !=
+		    dot->m_map_t_listener.end())
+			continue;
+		if (index != 0)
+			width = width + gap;
+		width = width + dotSize;
+	}
+
+	float left = (dotSize - width) * 0.5f;
+
+	for (list<ui::Widget *>::iterator it = widget->m_children.begin();
+	     it != widget->m_children.end(); ++it) {
+		float time = 200.0f;
+
+		if ((*it)->m_meta_alpha == 0.0f) {
+			(*it)->SetMetaAlpha(1.0f, new Timer(200.0f), ui::Widget::ANIM_META_ALPHA, 0);
+			time = 0.0f;
+		}
+
+		int place = ((int (*)(int))topmenu->func[TOPMENU_PLUGIN_FUNC_GET_PAGE_INDEX])(
+			sce_paf_atoi((*it)->m_name.m_id.c_str()));
+
+		if (place >= 0)
+			(*it)->SetPos(math::v4(left + (float)place * (dotSize + gap), 0.0f, 0.0f, 0.0f),
+				      new Timer(time), ui::Widget::ANIM_MOVE, 0);
+	}
+	return 0;
+}
+
+/* the handler's widget destroyed: a timer's callback (0x811614AC) */
+void shellWidgetDestroyCB(SceInt32 type, ui::Handler *self, ui::Event *e, void *data)
+{
+	if (self != NULL)
+		static_cast<ui::Widget *>(self)->DestroyWidget();
+}
+
+/* the refresh's timer done: the dots refreshed (0x811614BA) */
+static void indicatorPageDotsOnRefreshTimer(SceInt32 type, ui::Handler *self, ui::Event *e,
+					    void *data)
+{
+	self->KillTimer((type & 0xFFFF) | 0x1000000);
+	if (data != NULL)
+		((IndicatorPageDots *)data)->Refresh();
 }

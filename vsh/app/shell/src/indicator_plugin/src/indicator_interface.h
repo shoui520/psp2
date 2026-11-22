@@ -6,6 +6,17 @@
 #define INDICATOR_INTERFACE_H
 
 #include <scetypes.h>
+#include <std/memory>
+
+namespace paf {
+namespace graph {
+class Surface;
+}
+namespace ui {
+class Widget;
+class TextureSource;
+}
+}
 
 /* how the bar is drawn: given by value (12 bytes; PLACEHOLDER names) */
 struct IndicatorMode {
@@ -45,7 +56,15 @@ struct IndicatorPluginInterface {
 	int (*Unsupported10)(void);		/* -1 */
 	int (*SetNotification)(int on);
 	void (*TaskEvent)(const IndicatorTaskEvent *event);
-	void *itemFunctions[18];		/* PLACEHOLDER: filled by the bar's items */
+	void *itemFunctions[5];			/* PLACEHOLDER: filled by the bar's items */
+	/* the page dots': a page's dot added (its widget) and removed by the page's key, the dots
+	   refreshed, and a dot's image or texture set (indicator_interface.cpp) */
+	paf::ui::Widget *(*AddPageDot)(int key);
+	void (*RemovePageDot)(int key);
+	void (*RefreshPageDots)(void);
+	void (*SetPageDotImage)(int key, const paf::intrusive_ptr<paf::ui::TextureSource> *image);
+	void (*SetPageDotTexture)(int key, const paf::intrusive_ptr<paf::graph::Surface> &texture);
+	void *moreItemFunctions[8];		/* PLACEHOLDER: filled by the bar's items */
 	void (*UpdateTheme)(void);		/* the theme's look taken again, on the main thread */
 };
 

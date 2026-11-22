@@ -18,6 +18,7 @@
 #include <job/job.h>
 #include <cache/cache_manager.h>
 #include <widget/core/widget.h>
+#include <widget/w_text.h>
 #include "indicator_interface.h"
 
 /* the page and the bar's widgets (PLACEHOLDER names) */
@@ -62,8 +63,42 @@ public:
 	{
 	}
 
-	/* its widget colored as the status gives (0x8141BAE0) */
-	virtual void UpdateColor(IndicatorStatus status);
+	/* its widget given the status's text color (a text) or icon color, kept clear when it is
+	   clear, and so its widgets under it, each keeping its alpha (0x8141BAE0) */
+	virtual void UpdateColor(IndicatorStatus status)
+	{
+		paf::ui::Widget *widget = m_widget;
+
+		if (widget == NULL)
+			return;
+
+		paf::math::v4 current = widget->GetColor();
+		paf::ui::Widget *text = widget->IsInherit(paf::ui::Text::TypeName()) ? m_widget : NULL;
+		paf::math::v4 color;
+
+		if (text != NULL) {
+			color = status.textColor;
+			color.set_w(current.extract_w() == 0.0f ? 0.0f : status.textColor.extract_w());
+		} else {
+			color = status.iconColor;
+			color.set_w(current.extract_w() == 0.0f ? 0.0f : status.iconColor.extract_w());
+		}
+		m_widget->SetColor(color, NULL, paf::ui::Widget::ANIM_COLOR, 0);
+		SetChildrenColor(m_widget, color);
+	}
+
+	/* the widget's widgets given the color, each keeping its alpha, and theirs (0x8141BA3C) */
+	void SetChildrenColor(paf::ui::Widget *widget, const paf::math::v4 &color)
+	{
+		for (paf::list<paf::ui::Widget *>::iterator it = widget->m_children.begin();
+		     it != widget->m_children.end(); ++it) {
+			paf::math::v4 childColor = color;
+
+			childColor.set_w((*it)->m_color_alpha);
+			(*it)->SetColor(childColor, NULL, paf::ui::Widget::ANIM_COLOR, 0);
+			SetChildrenColor(*it, color);
+		}
+	}
 
 	paf::ui::Widget *m_widget;	/* the widget colored, NULL for none */
 };
@@ -102,6 +137,83 @@ public:
 	virtual void OnStatus(IndicatorStatus status);			/* (0x8116058A) */
 
 	paf::ui::Widget *m_root;
+};
+
+/*
+ * The left group's other items, each opened from its template in the group's widget (16 bytes,
+ * the battery's 24; PLACEHOLDER names, after what their widgets show, until each one's file is
+ * written): the mobile network's four, made only with a modem, the Wi-Fi's, the battery's (not on
+ * the Dolce) and the clock's.
+ */
+class IndicatorMobileSignal : public IndicatorItem {
+public:
+	IndicatorMobileSignal(paf::Plugin *plugin, paf::ui::Widget *widget);	/* (0x81169288) */
+	paf::ui::Widget *m_root;
+	paf::Plugin *m_plugin;
+};
+
+class IndicatorMobileNetwork : public IndicatorItem {
+public:
+	IndicatorMobileNetwork(paf::Plugin *plugin, paf::ui::Widget *widget);	/* (0x81168DF0) */
+	paf::ui::Widget *m_root;
+	paf::Plugin *m_plugin;
+};
+
+class IndicatorMobileOperator : public IndicatorItem {
+public:
+	IndicatorMobileOperator(paf::Plugin *plugin, paf::ui::Widget *widget);	/* (0x81168030) */
+	paf::ui::Widget *m_root;
+	paf::Plugin *m_plugin;
+};
+
+class IndicatorMobileCall : public IndicatorItem {
+public:
+	IndicatorMobileCall(paf::Plugin *plugin, paf::ui::Widget *widget);	/* (0x8116C804) */
+	paf::ui::Widget *m_root;
+	paf::Plugin *m_plugin;
+};
+
+class IndicatorWireless : public IndicatorItem {
+public:
+	IndicatorWireless(paf::Plugin *plugin, paf::ui::Widget *widget);	/* (0x81161A80) */
+	paf::ui::Widget *m_root;
+	paf::Plugin *m_plugin;
+};
+
+class IndicatorBattery : public IndicatorItem {
+public:
+	IndicatorBattery(paf::Plugin *plugin, paf::ui::Widget *widget);		/* (0x8118365A) */
+	paf::ui::Widget *m_root;
+	int m_reserved[2];
+	paf::Plugin *m_plugin;
+};
+
+class IndicatorClock : public IndicatorItem {
+public:
+	IndicatorClock(paf::Plugin *plugin, paf::ui::Widget *widget);		/* (0x81183B60) */
+	paf::ui::Widget *m_root;
+	paf::Plugin *m_plugin;
+};
+
+/*
+ * The home's page dots on the bar, a dot for each of topmenu's pages, the page in view's drawn
+ * opaque (24 bytes; PLACEHOLDER names). Its functions are the interface's page dot slots.
+ */
+class IndicatorPageDots : public IndicatorItem {
+public:
+	IndicatorPageDots(paf::Plugin *plugin, paf::ui::Widget *widget);	/* (0x8116067C) */
+	virtual ~IndicatorPageDots();					/* (0x81160774) */
+	virtual void OnStatus(IndicatorStatus status);			/* (0x811609E4) */
+	virtual void UpdateColor(IndicatorStatus status);		/* (0x81160AD8) */
+
+	void Refresh();							/* (0x8116078E) */
+	paf::ui::Widget *AddDot(int key);				/* (0x81160B46) */
+	void RemoveDot(int key);					/* (0x81160E02) */
+
+	paf::ui::Widget *m_root;
+	paf::Plugin *m_plugin;
+	int m_reserved;		/* -1 at construction and when a dot is removed; not read */
+	int m_curPage;		/* the page in view's key Refresh last drew, -1 for none */
 };
 
 /* a registry value the bar reads: asked for by its path and name, given back with the result of

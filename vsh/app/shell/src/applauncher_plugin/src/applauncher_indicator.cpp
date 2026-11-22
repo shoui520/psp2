@@ -41,8 +41,8 @@ using namespace paf;
 #define SHELL_SNAP_LIST_EVENT_REMOVE		1
 #define SHELL_SNAP_LIST_EVENT_MOVE		2
 
-/* PLACEHOLDER: the handler's widget destroyed, a timer's callback (0x811614AC, not written
-   yet) */
+/* PLACEHOLDER: the handler's widget destroyed, a timer's callback (0x811614AC, in
+   indicator_plugin's indicator_interface.cpp) */
 void shellWidgetDestroyCB(SceInt32 type, ui::Handler *self, ui::Event *e, void *data);
 
 static int onLayout(ui::Layouter *layouter, ui::Widget *widget, void *data1, void *data2,

@@ -21,6 +21,9 @@ struct ShellPluginInterface {
 
 /* topmenu_plugin's functions */
 enum {
+	TOPMENU_PLUGIN_FUNC_GET_CUR_PAGE	= 9,	/* PLACEHOLDER names: the key of the page in view, */
+	TOPMENU_PLUGIN_FUNC_GET_PAGE_INDEX	= 10,	/* a page's place by its key (-1: none), */
+	TOPMENU_PLUGIN_FUNC_GET_PAGE_KEY	= 11,	/* and the key of the page at a place */
 	TOPMENU_PLUGIN_FUNC_GAME_HOLD		= 31,	/* PLACEHOLDER names: the game plugin at work, */
 	TOPMENU_PLUGIN_FUNC_GAME_RELEASE	= 32,	/* and done; what topmenu does is not read yet */
 	TOPMENU_PLUGIN_FUNC_HOLD_BEGIN		= 33,	/* PLACEHOLDER names: taken inside the game hold by */
