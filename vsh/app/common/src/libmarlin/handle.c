@@ -1097,10 +1097,10 @@ static inline __attribute__((always_inline)) unsigned int MlnCoreKeyError(unsign
 
 /*
  * Run a core handle's keyed operation with an RSA public key given as
- * DER: input to output, *outputSize its size.
+ * DER: it gives three arrays of *count buffers.
  */
-unsigned int MlnImpl_8104C130(int handle, const MlnBuffer *publicKey, const void *input,
-			      unsigned int inputSize, void *output, unsigned int *outputSize)
+unsigned int MlnImpl_8104C130(int handle, const MlnBuffer *publicKey, int *count,
+			      MlnBuffer ***first, MlnBuffer ***second, MlnBuffer ***third)
 {
 	MlnCoreHandle *core = NULL;
 	void *rsa = NULL;
@@ -1123,7 +1123,7 @@ unsigned int MlnImpl_8104C130(int handle, const MlnBuffer *publicKey, const void
 		goto out;
 	}
 	context = core->context;
-	if (publicKey == NULL || inputSize == 0 || output == NULL || outputSize == NULL) {
+	if (publicKey == NULL || first == NULL || second == NULL || third == NULL) {
 		ret = 4;
 		goto out;
 	}
@@ -1141,7 +1141,7 @@ unsigned int MlnImpl_8104C130(int handle, const MlnBuffer *publicKey, const void
 	MlnBufferDestroy(MLN_HEAP_GENERAL, modulus);
 	MlnBufferDestroy(MLN_HEAP_GENERAL, exponent);
 	if (ret == 0)
-		ret = MlnImpl_81063F38(context, rsa, input, inputSize, output, outputSize);
+		ret = MlnImpl_81063F38(context, rsa, count, first, second, third);
 	ret = MlnCoreKeyError(ret);
 out:
 	if (rsa != NULL)

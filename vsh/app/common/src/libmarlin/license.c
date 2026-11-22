@@ -1803,8 +1803,8 @@ out:
 }
 
 /* take the reply to a request of a kind through a service handle of kind 8 */
-unsigned int MlnImpl_81050378(int handle, int kind, const MlnBuffer *extra,
-			      const MlnBuffer *message, MlnBlob *out)
+unsigned int MlnImpl_81050378(int handle, int kind, const char *name,
+			      const MlnBuffer *message, MlnXmlNode **document)
 {
 	MlnCoreServiceHandle *service = NULL;
 	MlnHandleTable *table;
@@ -1818,14 +1818,14 @@ unsigned int MlnImpl_81050378(int handle, int kind, const MlnBuffer *extra,
 		return ret;
 	if (service == NULL || service->state != 8 << 8)
 		return 3;
-	if (message == NULL || out == NULL)
+	if (message == NULL || document == NULL)
 		return 4;
 	if (message->size == 0 || message->data == NULL)
 		return 0x24;
 	if (MlnImpl_8104A448() != 0)
 		return 7;
 
-	ret = MlnImpl_81068060(service->exchange, kind, extra, message, out);
+	ret = MlnImpl_81068060(service->exchange, kind, name, message, document);
 	switch (ret) {
 	case 0:
 	case 2:
@@ -2193,5 +2193,433 @@ unsigned int MlnImpl_81050E58(int handle, const MlnBuffer *data, MlnBlob *out)
 out:
 	MlnXmlNodeFree(MLN_HEAP_GENERAL, document);
 	MlnBufferDestroy(MLN_HEAP_GENERAL, request);
+	return ret;
+}
+
+/*
+ * Take a registration session's license transfer reply: the license is added to the session's
+ * core handle and its transfer action run; when the license's first obligation carries a
+ * ValidityAfterFirstUse parameter, the service is told of it. Errors 9, 0xf and 0x44 also
+ * reset the store (MlnImpl_810485B4).
+ */
+unsigned int MlnImpl_81051084(int handle, const MlnBuffer *data, MlnBlob *first, MlnBlob *second)
+{
+	MlnRegistrationSession *session = NULL;
+	MlnXmlNode *document = NULL;
+	MlnXmlNode *transferNode = NULL;
+	MlnXmlNode *parameterNode = NULL;
+	MlnXmlNode *reply = NULL;
+	MlnBuffer *request = NULL;
+	MlnBuffer *token = NULL;
+	MlnBuffer *pair[2] = { NULL, NULL };
+	MlnBuffer *transfer[2] = { NULL, NULL };
+	MlnBlob response = { NULL, 0 };
+	MlnRightsInfo *info = NULL;
+	MlnBuffer *rights = NULL;
+	MlnObligation *obligation;
+	MlnParameter *parameter;
+	MlnValueList *parameters;
+	MlnHandleTable *table;
+	void *agent = NULL;
+	void *context = NULL;
+	unsigned int ret;
+	unsigned int r;
+	int failed = 1;
+	int count;
+	int i;
+
+	if (data == NULL || data->size == 0 || data->data == NULL ||
+	    first == NULL || second == NULL) {
+		ret = 4;
+		goto out;
+	}
+	table = MlnRegistrationHandleTable(MlnImpl_81006EAC());
+	if (table == NULL) {
+		ret = 2;
+		goto out;
+	}
+	ret = MlnImpl_81069FE8(handle, table, &session);
+	if (ret != 0)
+		goto fail;
+	if (session == NULL) {
+		ret = 3;
+		goto out;
+	}
+	ret = MlnImpl_81050378(session->service, 1, "LicenseTransferRequestPayload", data, &document);
+	if (ret != 0)
+		goto fail;
+	r = MlnImpl_810651F4(document, &request, &token);
+	if (r != 0)
+		goto map;
+	ret = MlnImpl_8104AB18(session->core, token->size, token->data, second);
+	if (ret != 0)
+		goto fail;
+	r = MlnImpl_8106632C(session->context, token);
+	if (r != 0)
+		goto map;
+	r = MlnImpl_81066B84(request, pair, &transferNode);
+	if (r != 0)
+		goto map;
+	transfer[0] = pair[0];
+	transfer[1] = pair[1];
+	if (transferNode != NULL) {
+		ret = MlnImpl_8104AE1C(session->core, transferNode);
+		if (ret != 0)
+			goto fail;
+	}
+	ret = MlnImpl_8104B4C4(session->core, 2, transfer, &response, second);
+	if (ret != 0)
+		goto fail;
+	rights = response.buffer;
+	response.buffer = NULL;
+	if (rights == NULL) {
+		ret = 7;
+		goto out;
+	}
+	r = MlnRightsInfoParse(MLN_HEAP_GENERAL, rights->size, rights->data, &info);
+	if (r == 0)
+		r = MlnEsbCheckGlobalFlags(MLN_HEAP_GENERAL, (const MlnEsb *)info);
+	if (r != 0)
+		goto map;
+	if (info == NULL) {
+		ret = 4;
+		goto fail;
+	}
+
+	obligation = &info->obligations[0];
+	parameters = obligation->parameters;
+	count = parameters->count;
+	for (i = 0; i != count; i++) {
+		parameter = parameters->items[i]->data.parameter;
+		if (MlnStrncmp((const char *)parameter->name->data, "ValidityAfterFirstUse",
+			       21) == 0)
+			break;
+	}
+	if (i == count || count <= i) {
+		ret = 0x42;
+		goto fail;
+	}
+	parameter = obligation->parameters->items[i]->data.parameter;
+	r = MlnImpl_8106668C(parameter->name, parameter->value->data.buffer, &parameterNode);
+	if (r == 0)
+		r = MlnImpl_81066548(session->context, &agent, &context);
+	if (r == 0)
+		r = MlnImpl_81065430(obligation->data.agentId, obligation->contextId,
+				     obligation->controlId, parameterNode, agent, context, &reply);
+	if (r != 0)
+		goto map;
+	ret = MlnImpl_81050210(session->service, 2, &reply, session->token, first);
+	if (ret != 0)
+		goto fail;
+	session->buffer = request;
+	request = NULL;
+	session->rights = info;
+	info = NULL;
+	failed = 0;
+	goto out;
+
+map:
+	ret = MlnImpl_810504EC(r, 7);
+fail:
+	failed = ret != 0x1d && ret != 0;
+	if (ret == 9 || ret == 0x44 || ret == 0xf)
+		MlnImpl_810485B4();
+out:
+	MlnXmlNodeFree(MLN_HEAP_GENERAL, document);
+	MlnBufferDestroy(MLN_HEAP_GENERAL, token);
+	MlnBufferDestroy(MLN_HEAP_GENERAL, request);
+	MlnBufferDestroy(MLN_HEAP_GENERAL, pair[0]);
+	MlnBufferDestroy(MLN_HEAP_GENERAL, pair[1]);
+	if (response.buffer != NULL) {
+		rights = response.buffer;
+		response.buffer = NULL;
+	}
+	MlnBufferDestroy(MLN_HEAP_GENERAL, rights);
+	if (failed && second->buffer != NULL) {
+		MlnBufferDestroy(MLN_HEAP_GENERAL, second->buffer);
+		second->buffer = NULL;
+	}
+	MlnRightsInfoFree(MLN_HEAP_GENERAL, info);
+	MlnXmlNodeFree(MLN_HEAP_GENERAL, reply);
+	MlnXmlNodeFree(MLN_HEAP_GENERAL, parameterNode);
+	MlnXmlNodeFree(MLN_HEAP_GENERAL, transferNode);
+	return ret;
+}
+
+/*
+ * Take a registration session's license transfer response: the keys it carries are stored and
+ * the node it gives kept in the session; the service is told, and the core's state returned.
+ */
+unsigned int MlnImpl_8105152C(int handle, const MlnBuffer *data, MlnBlob *first, MlnBlob *second)
+{
+	MlnRegistrationSession *session = NULL;
+	MlnXmlNode *document = NULL;
+	MlnXmlNode *payload = NULL;
+	MlnXmlNode *reply = NULL;
+	MlnArray *keys = NULL;
+	MlnArray *pending = NULL;
+	MlnBuffer *state = NULL;
+	MlnHandleTable *table;
+	unsigned int ret;
+	unsigned int r;
+
+	if (data == NULL || data->size == 0 || data->data == NULL || first == NULL) {
+		ret = 4;
+		goto out;
+	}
+	table = MlnRegistrationHandleTable(MlnImpl_81006EAC());
+	if (table == NULL) {
+		ret = 2;
+		goto out;
+	}
+	ret = MlnImpl_81069FE8(handle, table, &session);
+	if (ret != 0)
+		goto out;
+	if (session == NULL) {
+		ret = 3;
+		goto out;
+	}
+	ret = MlnImpl_81050378(session->service, 2, "LicenseTransferResponsePayload", data,
+			       &document);
+	if (ret != 0)
+		goto out;
+	r = MlnImpl_81065848(document, &payload);
+	if (r == 0)
+		r = MlnImpl_8104570C(&keys);
+	if (r != 0)
+		goto map;
+	r = MlnImpl_81068C90(payload, keys, 0xf, &session->node, &pending);
+	if (r != 0)
+		goto map;
+	if (session->node == NULL) {
+		ret = 7;
+		goto out;
+	}
+	r = MlnImpl_810456B0((const MlnStoreKeyPair *)pending);
+	if (r == 0)
+		r = MlnImpl_81043A60(1, &state);
+	if (r == 0)
+		r = MlnImpl_81066888(session->context, session->node, &reply);
+	if (r != 0)
+		goto map;
+	ret = MlnImpl_81050210(session->service, 1, &reply, session->token, first);
+	if (ret != 0)
+		goto out;
+	second->buffer = state;
+	second->size = state->size;
+	state = NULL;
+	goto out;
+
+map:
+	ret = MlnImpl_810504EC(r, 7);
+out:
+	MlnXmlNodeFree(MLN_HEAP_GENERAL, document);
+	MlnXmlNodeFree(MLN_HEAP_GENERAL, payload);
+	MlnXmlNodeFree(MLN_HEAP_GENERAL, reply);
+	MlnArrayDestroy(MLN_HEAP_GENERAL, keys);
+	MlnArrayDestroy(MLN_HEAP_GENERAL, pending);
+	MlnBufferDestroy(MLN_HEAP_GENERAL, state);
+	return ret;
+}
+
+/* free an array of count buffers */
+static inline void MlnServiceBuffersFree(MlnBuffer **buffers, int count)
+{
+	int i;
+
+	for (i = 0; i < count; i++)
+		MlnBufferDestroy(MLN_HEAP_GENERAL, buffers[i]);
+	MlnFree(MLN_HEAP_GENERAL, buffers);
+}
+
+/*
+ * Complete a registration session's license transfer: the payload of the service's request
+ * (a big-endian number before it) is given to the license's callback; with the answer and
+ * the keyed operation's buffers, made with the public key in the ScubaKeys of the session's
+ * token, the reply is sent to the service.
+ */
+unsigned int MlnImpl_8105183C(int handle, const MlnBuffer *data, MlnBlob *first, MlnBlob *second)
+{
+	MlnRegistrationSession *session = NULL;
+	MlnXmlNode *document = NULL;
+	MlnXmlNode *reply = NULL;
+	MlnXmlNode *unused = NULL;
+	MlnBuffer *payload = NULL;
+	MlnBuffer *answer = NULL;
+	MlnBuffer *publicKey = NULL;
+	MlnBuffer *pair = NULL;
+	MlnBuffer **firsts = NULL;
+	MlnBuffer **seconds = NULL;
+	MlnBuffer **thirds = NULL;
+	MlnBlob response = { NULL, 0 };
+	MlnOctopusNode *node;
+	MlnOctopusExtension *extension;
+	MlnOctopusArray *extensions;
+	MlnOctopusArray *publicKeys;
+	MlnOctopusKeyPair *keyPair;
+	MlnOctopusKey key;
+	MlnRightsInfo *info;
+	MlnHandleTable *table;
+	const MlnBuffer *token;
+	unsigned char *blob = NULL;
+	unsigned int size;
+	unsigned int ret;
+	unsigned int r;
+	int value = 0;
+	int count = 0;
+	int i;
+
+	if (data == NULL || data->size == 0 || data->data == NULL) {
+		ret = 4;
+		goto out;
+	}
+	table = MlnRegistrationHandleTable(MlnImpl_81006EAC());
+	if (table == NULL) {
+		ret = 2;
+		goto out;
+	}
+	ret = MlnImpl_81069FE8(handle, table, &session);
+	if (ret != 0)
+		goto out;
+	if (session == NULL) {
+		ret = 3;
+		goto out;
+	}
+	ret = MlnImpl_81050378(session->service, 1, "LicenseTransferRequestPayload", data, &document);
+	if (ret != 0)
+		goto out;
+	r = MlnImpl_81066A28(document, &value, &payload);
+	if (r != 0) {
+		ret = MlnImpl_810504EC(r, 7);
+		goto out;
+	}
+	if (payload == NULL || payload->size == 0 || payload->data == NULL) {
+		ret = 4;
+		goto out;
+	}
+	size = payload->size + 8;
+	blob = MlnAllocate(MLN_HEAP_GENERAL, size);
+	if (blob == NULL) {
+		ret = 2;
+		goto out;
+	}
+	blob[0] = 0;
+	blob[1] = 0;
+	blob[2] = 0;
+	blob[3] = 0;
+	blob[4] = value >> 24;
+	blob[5] = value >> 16;
+	blob[6] = value >> 8;
+	blob[7] = value;
+	MlnMemcpy(blob + 8, payload->data, payload->size);
+	info = session->rights;
+	if (info == NULL) {
+		ret = 4;
+		goto out;
+	}
+	if (info->callbackCount != 1) {
+		ret = 0x42;
+		goto out;
+	}
+	ret = MlnImpl_8104C32C(session->core,
+			       (const MlnServiceObject *)&info->callbacks[0].routineType, size, blob,
+			       &response, second);
+	answer = response.buffer;
+	response.buffer = NULL;
+	if (ret == 0x1d)
+		goto send;
+	if (ret != 0)
+		goto out;
+
+	node = NULL;
+	token = session->buffer;
+	if (token == NULL || token->size == 0 || token->data == NULL) {
+		ret = 4;
+		goto unload;
+	}
+	r = MlnImpl_810429F8(token, 1, &node);
+	if (r != 0) {
+		ret = MlnImpl_810504EC(r, 9);
+		MlnImpl_8103B8F8(node);
+		if (ret != 0)
+			goto out;
+		goto keyed;
+	}
+	if (node == NULL || node->extensions == NULL || node->extensions->count <= 0) {
+		ret = 7;
+		goto unload;
+	}
+	extensions = node->extensions;
+	for (i = 0;; i++) {
+		extension = extensions->items[i];
+		if (extension == NULL) {
+			ret = 7;
+			goto unload;
+		}
+		if (extension->type == MLN_OCTOPUS_EXTENSION_SCUBA)
+			break;
+		if (i + 1 == extensions->count) {
+			ret = 7;
+			goto unload;
+		}
+	}
+	publicKeys = extension->scubaKeys->publicKeys;
+	if (publicKeys == NULL) {
+		ret = 7;
+		goto unload;
+	}
+	if (publicKeys->count != 1) {
+		ret = 4;
+		goto unload;
+	}
+	keyPair = publicKeys->items[0];
+	if (keyPair == NULL) {
+		ret = 7;
+		goto unload;
+	}
+	key = keyPair->key;
+	publicKey = MlnBufferCreate(MLN_HEAP_GENERAL, key.data->size, key.data->data);
+	if (publicKey == NULL) {
+		ret = 2;
+		goto unload;
+	}
+	pair = MlnBufferCreate(MLN_HEAP_GENERAL, keyPair->pair->size, keyPair->pair->data);
+	if (pair == NULL) {
+		ret = 2;
+		goto unload;
+	}
+	MlnImpl_8103B8F8(node);
+keyed:
+	ret = MlnImpl_8104C130(session->core, publicKey, &count, &firsts, &seconds, &thirds);
+	if (ret != 0)
+		goto out;
+send:
+	r = MlnImpl_81065920(session->context, count, firsts, seconds, thirds, pair, answer,
+			     &reply);
+	if (r != 0) {
+		ret = MlnImpl_810504EC(r, 7);
+		goto out;
+	}
+	ret = MlnImpl_81050210(session->service, 2, &reply, session->token, first);
+	goto out;
+
+unload:
+	MlnImpl_8103B8F8(node);
+out:
+	MlnXmlNodeFree(MLN_HEAP_GENERAL, document);
+	MlnXmlNodeFree(MLN_HEAP_GENERAL, unused);
+	MlnBufferDestroy(MLN_HEAP_GENERAL, payload);
+	MlnFree(MLN_HEAP_GENERAL, blob);
+	MlnBufferDestroy(MLN_HEAP_GENERAL, answer);
+	if (ret != 0 && second->buffer != NULL) {
+		MlnBufferDestroy(MLN_HEAP_GENERAL, second->buffer);
+		second->buffer = NULL;
+	}
+	MlnXmlNodeFree(MLN_HEAP_GENERAL, reply);
+	MlnBufferDestroy(MLN_HEAP_GENERAL, publicKey);
+	MlnBufferDestroy(MLN_HEAP_GENERAL, pair);
+	MlnServiceBuffersFree(firsts, count);
+	MlnServiceBuffersFree(seconds, count);
+	MlnServiceBuffersFree(thirds, count);
 	return ret;
 }

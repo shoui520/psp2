@@ -1999,10 +1999,10 @@ unsigned int MlnImpl_81062BE8(MlnCoreContext *context, int kind, MlnPlanktonPara
 void MlnImpl_81062EDC(MlnCoreContext *context, int count, MlnOctopusContentKey **contentKeys);
 unsigned int MlnImpl_810629C8(MlnCoreContext *context, int kind,
 			      MlnPlanktonParameterBlock *parameters, MlnBuffer **out);
-unsigned int MlnImpl_8104C130(int handle, const MlnBuffer *publicKey, const void *input,
-			      unsigned int inputSize, void *output, unsigned int *outputSize);
-unsigned int MlnImpl_81063F38(MlnCoreContext *context, void *rsa, const void *input,
-			      unsigned int inputSize, void *output, unsigned int *outputSize);
+unsigned int MlnImpl_8104C130(int handle, const MlnBuffer *publicKey, int *count,
+			      MlnBuffer ***first, MlnBuffer ***second, MlnBuffer ***third);
+unsigned int MlnImpl_81063F38(MlnCoreContext *context, void *rsa, int *count,
+			      MlnBuffer ***first, MlnBuffer ***second, MlnBuffer ***third);
 unsigned int MlnImpl_81063CE4(MlnCoreContext *context, const MlnServiceObject *object,
 			      unsigned int size, const unsigned char *data, MlnBuffer **rights);
 unsigned int MlnImpl_8106314C(MlnCoreContext *context, MlnOctopusControl *control,
@@ -2065,10 +2065,26 @@ int MlnImpl_81067CA4(void *exchange, int kind, MlnBufferGroups **groups, const M
 		     MlnXmlNode **document, MlnBuffer **response);
 unsigned int MlnImpl_81050210(int handle, int kind, MlnXmlNode **document,
 			      const MlnBuffer *extra, MlnBlob *out);
-unsigned int MlnImpl_81068060(void *exchange, int kind, const MlnBuffer *extra,
-			      const MlnBuffer *message, MlnBlob *out);
-unsigned int MlnImpl_81050378(int handle, int kind, const MlnBuffer *extra,
-			      const MlnBuffer *message, MlnBlob *out);
+unsigned int MlnImpl_81068060(void *exchange, int kind, const char *name,
+			      const MlnBuffer *message, MlnXmlNode **document);
+unsigned int MlnImpl_81050378(int handle, int kind, const char *name,
+			      const MlnBuffer *message, MlnXmlNode **document);
+unsigned int MlnImpl_81066A28(MlnXmlNode *document, int *value, MlnBuffer **payload);
+unsigned int MlnImpl_81065920(void *context, int count, MlnBuffer **first, MlnBuffer **second,
+			      MlnBuffer **third, MlnBuffer *pair, MlnBuffer *answer,
+			      MlnXmlNode **document);
+unsigned int MlnImpl_81065848(MlnXmlNode *document, MlnXmlNode **payload);
+unsigned int MlnImpl_81068C90(MlnXmlNode *payload, MlnArray *keys, int kind, MlnXmlNode **node,
+			      MlnArray **pending);
+unsigned int MlnImpl_81066888(void *context, MlnXmlNode *node, MlnXmlNode **document);
+unsigned int MlnImpl_810651F4(MlnXmlNode *document, MlnBuffer **request, MlnBuffer **token);
+unsigned int MlnImpl_8106632C(void *context, const MlnBuffer *token);
+unsigned int MlnImpl_81066B84(MlnBuffer *request, MlnBuffer **transfer, MlnXmlNode **node);
+unsigned int MlnImpl_8106668C(const MlnBuffer *name, MlnBuffer *value, MlnXmlNode **node);
+unsigned int MlnImpl_81066548(void *context, void **first, void **second);
+unsigned int MlnImpl_81065430(const MlnBuffer *agentId, const MlnBuffer *contextId,
+			      const MlnBuffer *controlId, MlnXmlNode *parameter, void *first,
+			      void *second, MlnXmlNode **document);
 unsigned int MlnImpl_810504EC(unsigned int r, unsigned int fallback);
 unsigned int MlnImpl_81067BA4(void *exchange, const MlnBuffer *message, MlnXmlNode **document);
 int MlnImpl_81067814(void *exchange, MlnBufferGroups **groups, void *reserved1, void *reserved2,
