@@ -198,9 +198,40 @@ private:
 	paf::string m_reserved;
 };
 
+/*
+ * The modem's general state, given to its general listeners whenever it changes (52 bytes;
+ * PLACEHOLDER names, after the shell's TelGeneral*CallbackRegister calls the earlier builds
+ * made, one per value): the network's type, the registration (1: registered), the operator's
+ * names, the signal level, the roaming, the SIM card's condition (1: usable), the flight mode
+ * (1: on) and the heat condition (not 0: too hot to serve).
+ */
+struct TelephonyOperatorNames {
+	paf::wstring name;
+	paf::wstring shortName;		/* shown when the name has 12 characters or more */
+};
+
+struct TelephonyGeneralInfo {
+	int networkType;
+	int registration;
+	TelephonyOperatorNames operatorNames;
+	int signalLevel;
+	int roaming;
+	int simCondition;
+	int flightMode;
+	int heatCondition;
+};
+
+typedef void (*TelephonyGeneralListener)(int event, int result, const TelephonyGeneralInfo *info,
+					 int size);
+
 struct TelephonyModem;
 struct TelephonyModemVtable {
-	void *reserved0[7];
+	void *reserved0[5];
+	/* PLACEHOLDER names: a general listener added and removed, with its argument */
+	int (*addGeneralListener)(TelephonyModem *self, TelephonyGeneralListener listener,
+				  void *arg);						/* +0x14 */
+	int (*removeGeneralListener)(TelephonyModem *self, TelephonyGeneralListener listener,
+				     void *arg);						/* +0x18 */
 	int (*getNetworkName)(TelephonyModem *self, char *name);			/* +0x1C */
 	/* PLACEHOLDER name: 0 when the initial check is not to be run (the shell's
 	   telephony setup) */

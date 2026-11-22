@@ -332,7 +332,7 @@ IndicatorLeftGroup::IndicatorLeftGroup(Plugin *plugin, ui::Widget *widget)
 
 			if (item != NULL)
 				m_items.push_back(item);
-			item = new IndicatorMobileNetwork(plugin, m_widget);
+			item = new IndicatorRoaming(plugin, m_widget);
 			if (item != NULL)
 				m_items.push_back(item);
 			item = new IndicatorMobileOperator(plugin, m_widget);

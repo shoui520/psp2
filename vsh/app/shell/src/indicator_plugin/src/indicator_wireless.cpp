@@ -35,31 +35,6 @@ using namespace paf;
 /* the icon's animations' time, in milliseconds */
 #define INDICATOR_WIRELESS_ANIM_TIME	200.0f
 
-/*
- * The events the icon is given (PLACEHOLDER names): the phone network's types (1 to 6, 102,
- * 103), the icon hidden (106), the Wi-Fi's levels the poll gives (206 to 212) and the phone
- * network attached and detached (306, 307).
- */
-#define INDICATOR_NETWORK_NONE		0
-#define INDICATOR_NETWORK_TYPE_1	1
-#define INDICATOR_NETWORK_TYPE_2	2
-#define INDICATOR_NETWORK_TYPE_3	3
-#define INDICATOR_NETWORK_TYPE_4	4
-#define INDICATOR_NETWORK_TYPE_5	5
-#define INDICATOR_NETWORK_TYPE_6	6
-#define INDICATOR_NETWORK_TYPE_102	102
-#define INDICATOR_NETWORK_TYPE_103	103
-#define INDICATOR_NETWORK_HIDE		106
-#define INDICATOR_WIFI_NONE		206
-#define INDICATOR_WIFI_LEVEL_1		207
-#define INDICATOR_WIFI_LEVEL_2		208
-#define INDICATOR_WIFI_LEVEL_3		209
-#define INDICATOR_WIFI_LEVEL_4		210
-#define INDICATOR_WIFI_CONNECTING	211
-#define INDICATOR_WIFI_WIRED		212
-#define INDICATOR_NETWORK_ATTACHED	306
-#define INDICATOR_NETWORK_DETACHED	307
-
 /* the phone network types' icons (PLACEHOLDER names) */
 #define INDICATOR_NETWORK_TYPE_2_ICON	0xB255DB63
 #define INDICATOR_NETWORK_TYPE_3_ICON	0x32870FF6
