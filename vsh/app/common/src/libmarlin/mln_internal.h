@@ -2211,7 +2211,9 @@ typedef struct MlnAsn1Node MlnAsn1Node;
 #define MLN_SEASHELL_ERROR_FORMAT	0x230B0002	/* not an object as SeaShell writes it */
 #define MLN_SEASHELL_ERROR_DATABASE	0x230B0010	/* no database is loaded */
 #define MLN_SEASHELL_ERROR_PATH		0x230B0011	/* no such path, or not a container */
-#define MLN_SEASHELL_ERROR_ACCESS	0x230B0013	/* the owner is not the object's */
+#define MLN_SEASHELL_ERROR_ACCESS	0x230B0013	/* the owner is not the object's, or read-only */
+#define MLN_SEASHELL_ERROR_TYPE	0x230B0012	/* the value is not of the object's type */
+#define MLN_SEASHELL_ERROR_BUFFER	0x230B0014	/* the value does not fit the buffer */
 
 /* an object's attributes (MlnImpl_8107A8F8, 0x24 bytes) */
 typedef struct MlnSeaShellAttributes {
@@ -2238,7 +2240,7 @@ typedef struct MlnSeaShellDatabase {
 /* a path opened, the base of the paths given with its handle (0x0C bytes) */
 typedef struct MlnSeaShellHandle {
 	struct MlnSeaShellHandle *next;
-	void *handle;
+	int handle;			/* the number a container's value reads as */
 	char *path;
 } MlnSeaShellHandle;
 
@@ -2252,7 +2254,7 @@ typedef struct MlnSeaShellExport {
 /* the databases loaded and the paths opened (MlnImpl_8107B450, 0x0C bytes) */
 typedef struct MlnSeaShellRecords {
 	MlnSeaShellDatabase *databases;
-	unsigned int limit;		/* 4096 */
+	int nextHandle;			/* from 4096 */
 	MlnSeaShellHandle *handles;
 } MlnSeaShellRecords;
 
@@ -2346,7 +2348,7 @@ int MlnImpl_8107AB50(const char *s, const char *prefix);
 int MlnImpl_8107AB98(MlnAsn1Node *object, unsigned int now);
 int MlnImpl_8107ACD4(MlnSeaShellDatabase *database, unsigned int *size, unsigned char **data);
 int MlnImpl_8107AE00(const char *path, char **copy, int *count, char **components);
-int MlnImpl_8107AF0C(MlnSeaShellRecords *records, void *handle, const char *path,
+int MlnImpl_8107AF0C(MlnSeaShellRecords *records, int handle, const char *path,
 		     char **absolute, char **attribute);
 int MlnImpl_8107B144(MlnAsn1Node **ancestors, const MlnBuffer *owner, int index, int self);
 int MlnImpl_8107B4A0(MlnSeaShellRecords *records);
@@ -2360,11 +2362,15 @@ int MlnImpl_8107BB04(MlnSeaShellRecords *records, int *count, MlnSeaShellExport 
 int MlnImpl_8107BCE0(MlnSeaShellRecords *records, MlnSeaShellExport *export);
 int MlnImpl_8107BD34(MlnSeaShellRecords *records, int count, MlnSeaShellExport *exports);
 int MlnImpl_8107BDB8(MlnSeaShellRecords *records, const unsigned char *signer,
-		     unsigned int signerSize, int index, const char *path, unsigned char *buffer,
+		     unsigned int signerSize, int handle, const char *path, unsigned char *buffer,
 		     unsigned int size, int *type, unsigned int *outSize);
 int MlnImpl_8107C5F0(MlnSeaShellRecords *records, const unsigned char *signer,
-		     unsigned int signerSize, int index, const char *path,
+		     unsigned int signerSize, int handle, const char *path,
 		     const unsigned char *data, unsigned int size, int type);
+/* an object's value set: a word ([2]), a string ([3]), bytes ([4]) */
+int MlnImpl_81086B18(unsigned int value, MlnAsn1Node *object);
+int MlnImpl_81086BE4(const unsigned char *data, unsigned int size, MlnAsn1Node *object);
+int MlnImpl_81086C9C(const unsigned char *data, unsigned int size, MlnAsn1Node *object);
 
 /* keystore.c: the keys of a control's run, by uid */
 #define MLN_KEY_ENTRY_SECRET		0

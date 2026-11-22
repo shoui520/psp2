@@ -235,6 +235,7 @@ int MlnImpl_8107A8F8(const MlnAsn1Node *object, MlnSeaShellAttributes *attribute
 }
 
 /* an object's attributes, given both */
+__attribute__((noinline))
 int MlnImpl_8107AB30(const MlnAsn1Node *object, MlnSeaShellAttributes *attributes)
 {
 	if (object == NULL || attributes == NULL)
@@ -383,7 +384,7 @@ out:
  * A path made absolute, under the path a handle opened when it is relative,
  * and its last component given apart when it names an attribute ("@Flags").
  */
-int MlnImpl_8107AF0C(MlnSeaShellRecords *records, void *handle, const char *path,
+int MlnImpl_8107AF0C(MlnSeaShellRecords *records, int handle, const char *path,
 		     char **absolute, char **attribute)
 {
 	MlnSeaShellHandle *opened;
@@ -402,7 +403,7 @@ int MlnImpl_8107AF0C(MlnSeaShellRecords *records, void *handle, const char *path
 		ret = 3;
 		goto out;
 	}
-	if (handle == NULL || path[0] == '/') {
+	if (handle == 0 || path[0] == '/') {
 		size = MlnStrlen(path) + 1;
 		if (path[0] == '/') {
 			full = MlnAllocate(MLN_HEAP_GENERAL, size);
@@ -608,7 +609,7 @@ int MlnImpl_8107B450(MlnSeaShellRecords **records)
 	if (new == NULL)
 		return 2;
 	MlnMemset(new, 0, sizeof(*new));
-	new->limit = 4096;
+	new->nextHandle = 4096;
 	*records = new;
 	return 0;
 }
@@ -930,4 +931,731 @@ int MlnImpl_8107BD34(MlnSeaShellRecords *records, int count, MlnSeaShellExport *
 		MlnImpl_8107BCE0(records, &exports[i]);
 	MlnFree(MLN_HEAP_GENERAL, exports);
 	return 0;
+}
+
+/* a handle for a container's path, a number from 4096 */
+static inline int MlnSeaShellHandleOpen(MlnSeaShellRecords *records, const char *path,
+					MlnSeaShellHandle **out)
+{
+	MlnSeaShellHandle *new = NULL;
+	unsigned int size;
+	char *copy;
+	int ret;
+
+	if (path == NULL) {
+		ret = 5;
+		goto out;
+	}
+	new = MlnAllocate(MLN_HEAP_GENERAL, sizeof(*new));
+	if (new == NULL) {
+		ret = 2;
+		goto out;
+	}
+	MlnMemset(new, 0, sizeof(*new));
+	size = MlnStrlen(path) + 1;
+	copy = MlnAllocate(MLN_HEAP_GENERAL, size);
+	if (copy == NULL) {
+		ret = 2;
+		goto out;
+	}
+	MlnMemcpy(copy, path, size);
+	new->path = copy;
+	new->handle = records->nextHandle++;
+	new->next = records->handles;
+	records->handles = new;
+	*out = new;
+	new = NULL;
+	ret = 0;
+out:
+	MlnImpl_8107A4F8(new);
+	return ret;
+}
+
+/*
+ * An object read, as the owner given (its signer): its attributes when the path's
+ * last component names one ("@Name", "@Size", ...), the object at an index of a
+ * container when it is a number, else its value. A container's value is a handle
+ * for its path; the dates, flags, type and size are big-endian words.
+ */
+int MlnImpl_8107BDB8(MlnSeaShellRecords *records, const unsigned char *signer,
+		     unsigned int signerSize, int handle, const char *path, unsigned char *buffer,
+		     unsigned int size, int *type, unsigned int *outSize)
+{
+	char *absolute = NULL;
+	char *attribute;
+	char *componentsCopy = NULL;
+	unsigned int count;
+	unsigned int now;
+	int mode;
+	MlnBuffer owner;
+	MlnBuffer name;
+	MlnSeaShellAttributes attributes;
+	MlnSeaShellAttributes childAttributes;
+	char *components[MLN_SEASHELL_PATH_MAX];
+	MlnAsn1Node *ancestors[MLN_SEASHELL_PATH_MAX + 1];
+	unsigned char word[4];
+	MlnSeaShellDatabase *database;
+	MlnSeaShellHandle *opened;
+	MlnAsn1Node *objects;
+	MlnAsn1Node *node;
+	MlnAsn1Node *child;
+	const char *rest;
+	const void *value;
+	unsigned char *p;
+	unsigned int length;
+	unsigned int index;
+	unsigned int number;
+	unsigned int i;
+	int prefixLength;
+	int depth;
+	int kind;
+	int j;
+	int ret;
+
+	owner.size = signerSize;
+	owner.data = (unsigned char *)signer;
+	if (records == NULL) {
+		ret = 4;
+		goto out;
+	}
+	if (path == NULL || buffer == NULL) {
+		ret = 3;
+		goto out;
+	}
+	if (type == NULL || outSize == NULL) {
+		ret = 3;
+		goto out;
+	}
+	ret = MlnImpl_8107AF0C(records, handle, path, &absolute, &attribute);
+	if (ret != 0)
+		goto out;
+	if (absolute == NULL) {
+		ret = 4;
+		goto out;
+	}
+	length = MlnStrlen(absolute);
+	prefixLength = MlnStrlen(MLN_SEASHELL_ROOT);
+	if ((int)length < prefixLength || MlnMemcmp(absolute, MLN_SEASHELL_ROOT, prefixLength) != 0) {
+		ret = MLN_SEASHELL_ERROR_PATH;
+		goto out;
+	}
+	rest = &absolute[MlnStrlen(MLN_SEASHELL_DATABASES)];
+	database = records->databases;
+	if (database == NULL) {
+		ret = MLN_SEASHELL_ERROR_DATABASE;
+		goto out;
+	}
+	ret = MlnImpl_8107AE00(rest, &componentsCopy, (int *)&count, components);
+	if (ret != 0)
+		goto out;
+	node = MlnX509Child(database->root, 2);
+	for (i = 1; i < count; i++) {
+		name.size = MlnStrlen(components[i]) + 1;
+		name.data = (unsigned char *)components[i];
+		ancestors[i - 1] = node;
+		if (node == NULL) {
+			ret = 5;
+			goto out;
+		}
+		ret = MlnImpl_8107A8F8(node, &attributes);
+		if (ret != 0)
+			goto out;
+		if (attributes.type != MLN_SEASHELL_TYPE_CONTAINER) {
+			ret = MLN_SEASHELL_ERROR_PATH;
+			goto out;
+		}
+		objects = MlnImpl_81037B80(MLN_HEAP_GENERAL, node, 2, 1 /* [1] */);
+		if (objects == NULL) {
+			ret = MLN_SEASHELL_ERROR_FORMAT;
+			goto out;
+		}
+		for (j = 0; j < (int)objects->length; j++) {
+			child = MlnX509Child(objects, j);
+			if (child == NULL) {
+				ret = 5;
+				goto out;
+			}
+			ret = MlnImpl_8107A8F8(child, &childAttributes);
+			if (ret != 0)
+				goto out;
+			if (MlnBufferCompare(MLN_HEAP_GENERAL, &childAttributes.name, &name) == 0)
+				break;
+		}
+		if (objects->length == 0 || j >= (int)objects->length || j < 0) {
+			ret = MLN_SEASHELL_ERROR_PATH;
+			goto out;
+		}
+		node = MlnX509Child(objects, j);
+		if (node == NULL) {
+			ret = 5;
+			goto out;
+		}
+		ret = MlnImpl_8107A8F8(node, &attributes);
+		if (ret != 0)
+			goto out;
+		if (attributes.expirationDate != 0) {
+			now = 0;
+			ret = MlnImpl_81052D84((int *)&now, &mode);
+			if (ret == 0 && attributes.expirationDate < now / 60)
+				ret = MLN_SEASHELL_ERROR_PATH;
+			if (ret != 0)
+				goto out;
+		}
+	}
+	depth = i - 1;
+
+	if (attribute != NULL) {
+		ancestors[depth] = node;
+		ret = MlnImpl_8107B144(ancestors, &owner, depth, 1);
+		if (ret != 0)
+			goto out;
+		ret = MlnImpl_8107AB30(node, &childAttributes);
+		if (ret != 0)
+			goto out;
+		if (MlnStrcmp(attribute, "@Name") == 0) {
+			kind = 2;
+			length = childAttributes.name.size;
+			value = childAttributes.name.data;
+			goto copy;
+		}
+		if (MlnStrcmp(attribute, "@Size") == 0) {
+			switch (childAttributes.type) {
+			case 0:
+				index = 1;
+				break;
+			case 1:
+				index = 2;
+				break;
+			case 2:
+				index = 3;
+				break;
+			case 3:
+				index = 4;
+				break;
+			default:
+				ret = MLN_SEASHELL_ERROR_FORMAT;
+				goto out;
+			}
+			objects = MlnImpl_81037B80(MLN_HEAP_GENERAL, node, 2, index);
+			if (objects == NULL) {
+				ret = MLN_SEASHELL_ERROR_FORMAT;
+				goto out;
+			}
+			number = objects->length;
+			goto attribute;
+		}
+		if (MlnStrcmp(attribute, "@Type") == 0) {
+			number = childAttributes.type;
+			goto attribute;
+		}
+		if (MlnStrcmp(attribute, "@Owner") == 0) {
+			for (j = depth; j >= 0; j--) {
+				ret = MlnImpl_8107AB30(ancestors[j], &childAttributes);
+				if (ret != 0)
+					goto out;
+				if (childAttributes.owner.data != NULL) {
+					kind = 2;
+					length = childAttributes.owner.size;
+					value = childAttributes.owner.data;
+					goto copy;
+				}
+			}
+			ret = 5;
+			goto out;
+		}
+		if (MlnStrcmp(attribute, "@CreationDate") == 0) {
+			number = childAttributes.creationDate;
+			goto attribute;
+		}
+		if (MlnStrcmp(attribute, "@ModificationDate") == 0) {
+			number = childAttributes.modificationDate;
+			goto attribute;
+		}
+		if (MlnStrcmp(attribute, "@ExpirationDate") == 0) {
+			number = childAttributes.expirationDate;
+			goto attribute;
+		}
+		if (MlnStrcmp(attribute, "@Flags") == 0) {
+			number = childAttributes.flags;
+			goto attribute;
+		}
+		/* "@<n>": the container's object at n */
+		index = MlnImpl_81052BD0(attribute + 1);
+		if (childAttributes.type != MLN_SEASHELL_TYPE_CONTAINER) {
+			ret = MLN_SEASHELL_ERROR_PATH;
+			goto out;
+		}
+		objects = MlnImpl_81037B80(MLN_HEAP_GENERAL, node, 2, 1 /* [1] */);
+		if (objects == NULL) {
+			ret = MLN_SEASHELL_ERROR_FORMAT;
+			goto out;
+		}
+		if (index >= objects->length) {
+			ret = MLN_SEASHELL_ERROR_PATH;
+			goto out;
+		}
+		node = objects->constructed ? objects->children[index] : NULL;
+	}
+
+	ancestors[depth] = node;
+	ret = MlnImpl_8107B144(ancestors, &owner, depth, 1);
+	if (ret != 0)
+		goto out;
+	ret = MlnImpl_8107AB30(node, &childAttributes);
+	if (ret != 0)
+		goto out;
+	switch (childAttributes.type) {
+	case MLN_SEASHELL_TYPE_CONTAINER:
+		if (absolute == NULL) {
+			ret = 5;
+			goto out;
+		}
+		for (opened = records->handles; opened != NULL; opened = opened->next)
+			if (MlnStrcmp(opened->path, absolute) == 0)
+				break;
+		if (opened == NULL) {
+			ret = MlnSeaShellHandleOpen(records, absolute, &opened);
+			if (ret != 0)
+				goto out;
+		}
+		kind = 0;
+		number = opened->handle;
+		goto word;
+	case 1:
+		objects = MlnImpl_81037B80(MLN_HEAP_GENERAL, node, 2, 2);
+		if (objects == NULL || objects->length != 4) {
+			ret = MLN_SEASHELL_ERROR_FORMAT;
+			goto out;
+		}
+		kind = 1;
+		length = objects->length;
+		value = objects->data;
+		goto copy;
+	case 2:
+		objects = MlnImpl_81037B80(MLN_HEAP_GENERAL, node, 2, 3);
+		if (objects == NULL) {
+			ret = MLN_SEASHELL_ERROR_FORMAT;
+			goto out;
+		}
+		kind = 2;
+		length = objects->length;
+		value = objects->data;
+		goto copy;
+	case 3:
+		objects = MlnImpl_81037B80(MLN_HEAP_GENERAL, node, 2, 4);
+		if (objects == NULL) {
+			ret = MLN_SEASHELL_ERROR_FORMAT;
+			goto out;
+		}
+		kind = 3;
+		length = objects->length;
+		value = objects->data;
+		goto copy;
+	default:
+		ret = MLN_SEASHELL_ERROR_FORMAT;
+		goto out;
+	}
+
+attribute:
+	kind = 1;
+word:
+	p = word;
+	MLN_SEASHELL_PUT_WORD(p, number);
+	length = sizeof(word);
+	value = word;
+copy:
+	*type = kind;
+	*outSize = length;
+	if (value != NULL) {
+		if (length > size) {
+			ret = MLN_SEASHELL_ERROR_BUFFER;
+			goto out;
+		}
+		MlnMemcpy(buffer, value, length);
+	}
+out:
+	MlnFree(MLN_HEAP_GENERAL, absolute);
+	MlnFree(MLN_HEAP_GENERAL, componentsCopy);
+	return ret;
+}
+
+/* the index of a child of a container, -1 when it is none of its */
+static inline int MlnSeaShellChildIndex(const MlnAsn1Node *parent, const MlnAsn1Node *child)
+{
+	int i;
+
+	for (i = 0; i != (int)parent->length; i++)
+		if (parent->children[i] == child)
+			return i;
+	return -1;
+}
+
+/*
+ * An object written, as the owner given (its signer): an attribute when the
+ * path's last component names one (@Owner, @Flags and @ExpirationDate; the
+ * others are read-only), else its value, set or made anew, or with no data the
+ * object deleted and the handles below it closed. A container missing on the
+ * way is made where the signer owns one of its ancestors. The database is marked
+ * changed.
+ */
+int MlnImpl_8107C5F0(MlnSeaShellRecords *records, const unsigned char *signer,
+		     unsigned int signerSize, int handle, const char *path,
+		     const unsigned char *data, unsigned int size, int type)
+{
+	char *absolute = NULL;
+	char *attribute;
+	char *componentsCopy = NULL;
+	unsigned int count;
+	MlnAsn1Node *node;
+	MlnAsn1Node *new = NULL;
+	MlnBuffer owner;
+	MlnBuffer name;
+	MlnSeaShellAttributes attributes;
+	MlnSeaShellAttributes childAttributes;
+	MlnAsn1Node *ancestors[MLN_SEASHELL_PATH_MAX];
+	char *components[MLN_SEASHELL_PATH_MAX];
+	MlnSeaShellDatabase *database;
+	MlnSeaShellHandle **link;
+	MlnSeaShellHandle *opened;
+	MlnSeaShellHandle *next;
+	MlnAsn1Node *made = NULL;
+	MlnAsn1Node *parent;
+	MlnAsn1Node *child;
+	const char *rest;
+	unsigned int index;
+	unsigned int i;
+	int prefixLength;
+	int length;
+	int depth;
+	int j;
+	int ret;
+
+	owner.size = signerSize;
+	owner.data = (unsigned char *)signer;
+	if (records == NULL) {
+		ret = 4;
+		goto out;
+	}
+	if (path == NULL) {
+		ret = 3;
+		goto out;
+	}
+	ret = MlnImpl_8107AF0C(records, handle, path, &absolute, &attribute);
+	if (ret != 0)
+		goto out;
+	if (absolute == NULL) {
+		ret = 4;
+		goto out;
+	}
+	length = MlnStrlen(absolute);
+	prefixLength = MlnStrlen(MLN_SEASHELL_ROOT);
+	if (length < prefixLength || MlnMemcmp(absolute, MLN_SEASHELL_ROOT, prefixLength) != 0)
+		goto path;
+	rest = &absolute[MlnStrlen(MLN_SEASHELL_DATABASES)];
+	database = records->databases;
+	if (database == NULL) {
+		ret = MLN_SEASHELL_ERROR_DATABASE;
+		goto out;
+	}
+	ret = MlnImpl_8107AE00(rest, &componentsCopy, (int *)&count, components);
+	if (ret != 0)
+		goto out;
+	if (count == 0) {
+		ret = 5;
+		goto out;
+	}
+	parent = database->root;
+	database->modified = 1;
+	node = MlnX509Child(parent, 2);
+	if (count == 1) {
+		depth = 0;
+		if (attribute != NULL)
+			goto attribute;
+		if (parent == NULL) {
+			ret = 5;
+			goto out;
+		}
+		goto value;
+	}
+	for (i = 1;; i++) {
+		depth = i;
+		name.size = MlnStrlen(components[i]) + 1;
+		name.data = (unsigned char *)components[i];
+		if (node == NULL) {
+			/* the container missing made, where the signer owns an ancestor */
+			if (data == NULL)
+				goto path;
+			if (owner.data == NULL) {
+				ret = MLN_SEASHELL_ERROR_ACCESS;
+				goto out;
+			}
+			for (j = i - 2;; j--) {
+				if (j < 0) {
+					ret = MLN_SEASHELL_ERROR_ACCESS;
+					goto out;
+				}
+				if (ancestors[j] == NULL) {
+					ret = 5;
+					goto out;
+				}
+				ret = MlnImpl_8107A8F8(ancestors[j], &childAttributes);
+				if (ret != 0)
+					goto out;
+				if (childAttributes.owner.data != NULL &&
+				    MlnBytesCompare(MLN_HEAP_GENERAL, childAttributes.owner.size - 1,
+						    childAttributes.owner.data, owner.size,
+						    owner.data) == 0)
+					break;
+			}
+			ret = MlnImpl_8107A748(components[i - 1], MLN_SEASHELL_TYPE_CONTAINER, 0, &node);
+			if (ret != 0)
+				goto out;
+			made = node;
+			ret = MlnImpl_8107A850(made);
+			if (ret != 0)
+				goto out;
+			ret = MlnImpl_81037948(MLN_HEAP_GENERAL, parent, made);
+			if (ret != 0) {
+				ret = MlnSeaShellAsn1Error(ret);
+				goto out;
+			}
+			made = NULL;
+		}
+		ancestors[i - 1] = node;
+		if (node == NULL) {
+			ret = 5;
+			goto out;
+		}
+		ret = MlnImpl_8107A8F8(node, &attributes);
+		if (ret != 0)
+			goto out;
+		if (attributes.type != MLN_SEASHELL_TYPE_CONTAINER)
+			goto path;
+		parent = MlnImpl_81037B80(MLN_HEAP_GENERAL, node, 2, 1 /* [1] */);
+		if (parent == NULL) {
+			ret = MLN_SEASHELL_ERROR_FORMAT;
+			goto out;
+		}
+		for (j = 0; j < (int)parent->length; j++) {
+			child = MlnX509Child(parent, j);
+			if (child == NULL) {
+				ret = 5;
+				goto out;
+			}
+			ret = MlnImpl_8107A8F8(child, &childAttributes);
+			if (ret != 0)
+				goto out;
+			if (MlnBufferCompare(MLN_HEAP_GENERAL, &childAttributes.name, &name) == 0)
+				break;
+		}
+		if (parent->length == 0 || j >= (int)parent->length || j < 0)
+			node = NULL;
+		else
+			node = MlnX509Child(parent, j);
+		if (i >= count - 1)
+			break;
+	}
+	if (attribute == NULL)
+		goto value;
+
+attribute:
+	ancestors[depth] = node;
+	ret = MlnImpl_8107B144(ancestors, &owner, depth, 0);
+	if (ret != 0)
+		goto out;
+	ret = MlnImpl_8107AB30(node, &childAttributes);
+	if (ret != 0)
+		goto out;
+	if (MlnStrcmp(attribute, "@Owner") == 0) {
+		if (MlnStrcmp(MLN_SEASHELL_ROOT, absolute) == 0) {
+			ret = MLN_SEASHELL_ERROR_ACCESS;
+			goto out;
+		}
+		childAttributes.owner.size = data != NULL ? size : 0;
+		childAttributes.owner.data = (unsigned char *)data;
+		ret = MlnImpl_8107A524(&childAttributes, &new);
+		if (ret != 0)
+			goto out;
+		goto replace;
+	}
+	if (MlnStrcmp(attribute, "@Flags") == 0) {
+		if (data == NULL) {
+			childAttributes.flags = 0;
+		} else {
+			if (size != 4) {
+				ret = 3;
+				goto out;
+			}
+			childAttributes.flags = MLN_SEASHELL_GET_WORD(data);
+		}
+		goto attributes;
+	}
+	if (MlnStrcmp(attribute, "@ExpirationDate") == 0) {
+		if (data == NULL) {
+			childAttributes.expirationDate = 0;
+		} else {
+			if (size != 4) {
+				ret = 3;
+				goto out;
+			}
+			childAttributes.expirationDate = MLN_SEASHELL_GET_WORD(data);
+		}
+		goto attributes;
+	}
+	if (MlnStrcmp(attribute, "@Name") == 0 || MlnStrcmp(attribute, "@Size") == 0 ||
+	    MlnStrcmp(attribute, "@Type") == 0 || MlnStrcmp(attribute, "@CreationDate") == 0 ||
+	    MlnStrcmp(attribute, "@ModificationDate") == 0) {
+		ret = MLN_SEASHELL_ERROR_ACCESS;
+		goto out;
+	}
+	/* "@<n>": the container's object at n */
+	index = MlnImpl_81052BD0(attribute + 1);
+	if (childAttributes.type != MLN_SEASHELL_TYPE_CONTAINER)
+		goto path;
+	child = MlnImpl_81037B80(MLN_HEAP_GENERAL, node, 2, 1 /* [1] */);
+	if (child == NULL) {
+		ret = MLN_SEASHELL_ERROR_FORMAT;
+		goto out;
+	}
+	if (index >= child->length)
+		goto path;
+	parent = child;
+	node = parent->constructed ? parent->children[index] : NULL;
+
+value:
+	if (data != NULL && node != NULL) {
+		/* the object's value set */
+		ancestors[depth] = node;
+		ret = MlnImpl_8107B144(ancestors, &owner, depth, 0);
+		if (ret != 0)
+			goto out;
+		ret = MlnImpl_8107AB30(node, &childAttributes);
+		if (ret != 0)
+			goto out;
+		if (childAttributes.type != type) {
+			ret = MLN_SEASHELL_ERROR_TYPE;
+			goto out;
+		}
+		switch (type) {
+		case MLN_SEASHELL_TYPE_CONTAINER:
+			goto out;
+		case 1:
+			if (size != 4) {
+				ret = 3;
+				goto out;
+			}
+			ret = MlnImpl_81086B18(MLN_SEASHELL_GET_WORD(data), node);
+			goto out;
+		case 2:
+			if (data[size - 1] != '\0' || MlnStrlen((const char *)data) != size - 1) {
+				ret = 3;
+				goto out;
+			}
+			ret = MlnImpl_81086BE4(data, size, node);
+			goto out;
+		case 3:
+			ret = MlnImpl_81086C9C(data, size, node);
+			goto out;
+		default:
+			ret = 3;
+			goto out;
+		}
+	}
+	if (data != NULL) {
+		/* the object made, of the path's last component */
+		ret = MlnImpl_8107B144(ancestors, &owner, depth - 1, 0);
+		if (ret != 0)
+			goto out;
+		switch (type) {
+		case MLN_SEASHELL_TYPE_CONTAINER:
+			if (size != 0) {
+				ret = 3;
+				goto out;
+			}
+			ret = MlnImpl_8107A748(components[count - 1], 0, 0, &new);
+			if (ret != 0)
+				goto out;
+			ret = MlnImpl_8107A850(new);
+			break;
+		case 1:
+			if (size != 4) {
+				ret = 3;
+				goto out;
+			}
+			ret = MlnImpl_8107A748(components[count - 1], 1, 0, &new);
+			if (ret != 0)
+				goto out;
+			ret = MlnImpl_81086B18(MLN_SEASHELL_GET_WORD(data), new);
+			break;
+		case 2:
+			if (data[size - 1] != '\0' || MlnStrlen((const char *)data) != size - 1) {
+				ret = 3;
+				goto out;
+			}
+			ret = MlnImpl_8107A748(components[count - 1], 2, 0, &new);
+			if (ret != 0)
+				goto out;
+			ret = MlnImpl_81086BE4(data, size, new);
+			break;
+		case 3:
+			ret = MlnImpl_8107A748(components[count - 1], 3, 0, &new);
+			if (ret != 0)
+				goto out;
+			ret = MlnImpl_81086C9C(data, size, new);
+			break;
+		default:
+			ret = 3;
+			goto out;
+		}
+		if (ret != 0)
+			goto out;
+		ret = MlnImpl_81037948(MLN_HEAP_GENERAL, parent, new);
+		if (ret == 0)
+			new = NULL;
+		goto out;
+	}
+	/* the object deleted and the handles at or below it closed */
+	if (node == NULL)
+		goto path;
+	ret = MlnImpl_8107B144(ancestors, &owner, depth - 1, 0);
+	if (ret != 0)
+		goto out;
+	j = MlnSeaShellChildIndex(parent, node);
+	if (j < 0 || absolute == NULL) {
+		ret = 5;
+		goto out;
+	}
+	length = MlnStrlen(absolute);
+	link = &records->handles;
+	for (opened = *link; opened != NULL; opened = next) {
+		if (opened->path != NULL && MlnImpl_8107AB50(opened->path, absolute) &&
+		    (opened->path[length] == '\0' || opened->path[length] == '/')) {
+			next = opened->next;
+			MlnImpl_8107A4F8(opened);
+			*link = next;
+		} else {
+			next = opened->next;
+			link = &opened->next;
+		}
+	}
+	ret = MlnImpl_810379E0(MLN_HEAP_GENERAL, parent, j);
+	goto out;
+
+attributes:
+	ret = MlnImpl_8107A524(&childAttributes, &new);
+	if (ret != 0)
+		goto out;
+replace:
+	ret = MlnImpl_81037A80(MLN_HEAP_GENERAL, node, 0, new, NULL);
+	if (ret == 0)
+		new = NULL;
+	goto out;
+path:
+	ret = MLN_SEASHELL_ERROR_PATH;
+out:
+	MlnImpl_81036FC8(MLN_HEAP_GENERAL, new);
+	MlnImpl_81036FC8(MLN_HEAP_GENERAL, made);
+	MlnFree(MLN_HEAP_GENERAL, absolute);
+	MlnFree(MLN_HEAP_GENERAL, componentsCopy);
+	return ret;
 }
