@@ -1553,7 +1553,8 @@ unsigned int MlnImpl_8104CDA0(int handle, unsigned int offset, unsigned int size
 		return 0x50;
 
 	key = rec->kind != MLN_SERVICE_RECORD_PLAIN ? rec->contentKey->secretKey : NULL;
-	ret = MlnImpl_81061C64(rec->object, size, offset, key, limit, position);
+	ret = MlnImpl_81061C64(rec->object, (const unsigned char *)size, offset, key,
+			       (unsigned char *)limit, position);
 	switch (ret) {
 	case 0:
 	case 2:

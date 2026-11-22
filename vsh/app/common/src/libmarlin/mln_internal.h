@@ -2037,7 +2037,7 @@ typedef struct MlnCoreRecordHandle {
 } MlnCoreRecordHandle;
 
 unsigned int MlnImpl_81061BBC(void **out);
-void MlnImpl_81061C00(void *object);
+unsigned int MlnImpl_81061C00(void *track);
 unsigned int MlnImpl_81061C1C(void *object, int kind, const unsigned char *data);
 unsigned int MlnImpl_81082834(MlnCoreContext *context, MlnCoreHandle *core);
 unsigned int MlnImpl_8106249C(MlnCoreContext *context, MlnArray **pair);
@@ -2058,8 +2058,9 @@ unsigned int MlnImpl_81062F20(MlnCoreContext *context, int kind,
 			      MlnPlanktonParameterBlock *parameters, MlnBuffer **out);
 unsigned int MlnImpl_8106273C(MlnCoreContext *context, MlnBuffer *buffer,
 			      MlnOctopusContentKey **contentKey);
-unsigned int MlnImpl_81061C64(void *object, unsigned int size, unsigned int offset,
-			      const MlnOctopusKey *key, unsigned int limit, unsigned int *position);
+unsigned int MlnImpl_81061C64(void *object, const unsigned char *data, unsigned int size,
+			      const MlnOctopusKey *key, unsigned char *out,
+			      unsigned int *outSize);
 unsigned int MlnImpl_81061B2C(const MlnOctopusKey *key, const MlnBuffer *data, MlnBuffer **out);
 
 unsigned int MlnImpl_8104AE1C(int handle, MlnXmlNode *node);
@@ -2174,6 +2175,15 @@ unsigned int MlnImpl_81052E60(int *owner);
 unsigned int MlnImpl_81080BFC(void **handle);
 unsigned int MlnImpl_81081374(int full);
 unsigned int MlnImpl_81080C1C(void *handle);
+int MlnImpl_81080F80(void *key, int sha256, const MlnBuffer *message,
+		     const MlnBuffer *signature, int *valid);
+int MlnImpl_81080FF4(void *key, int sha256, const MlnBuffer *message,
+		     const MlnBuffer *digest, int *valid);
+unsigned int MlnImpl_8108106C(void *key, const MlnBuffer *data, MlnBuffer **out);
+int MlnImpl_81072020(void *const *key, unsigned int flags, const void *parameters,
+		     const MlnBuffer *in, void *out, unsigned int *outSize);
+int MlnImpl_81061858(const MlnOctopusKey *key, unsigned int flags, const void *parameters,
+		     const MlnBuffer *in, void *out, unsigned int *outSize);
 int MlnImpl_810485B4(void);
 unsigned int MlnImpl_8108136C(int full, unsigned int size, const void *data);
 unsigned int MlnImpl_81042A60(const MlnBuffer *token, MlnOctopusNode **out, int verify);
