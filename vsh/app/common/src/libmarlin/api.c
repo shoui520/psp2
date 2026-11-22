@@ -741,7 +741,7 @@ __attribute__((noinline)) int MlnApi_8100326C(MlnApiNode **list, MlnApiValue **v
 	MlnApiNode *node = NULL, *last;
 	int ret;
 
-	if (list == NULL || value == NULL || *value == NULL) {
+	if (value == NULL || list == NULL || *value == NULL) {
 		ret = MLN_RESULT_INVALID_ARGUMENT;
 		goto out;
 	}
@@ -852,12 +852,8 @@ int MlnApi_81003464(MlnBuffer *serviceProvider, MlnBuffer *token, unsigned int *
 			MlnMemcpy(&boxSize, box, sizeof(boxSize));
 			boxSize = MlnNtohl(boxSize);
 			total += boxSize;
-			if (total > token->size || boxSize < 8) {
-				ret = MLN_RESULT_INVALID_ARGUMENT;
-				SceMarlin_9609E2DF(accountId);
-				SceMarlin_9609E2DF(entitlementId);
-				goto fail;
-			}
+			if (total > token->size || boxSize < 8)
+				goto bad;
 			MlnMemcpy(&boxType, box + 4, sizeof(boxType));
 			boxType = MlnNtohl(boxType);
 			if (boxType == MLN_FOURCC('A', 'C', 'I', 'D')) {
@@ -865,10 +861,7 @@ int MlnApi_81003464(MlnBuffer *serviceProvider, MlnBuffer *token, unsigned int *
 			} else if (boxType == MLN_FOURCC('E', 'T', 'I', 'D')) {
 				entitlementId = MlnBufferCreate(MLN_HEAP_SECURE, boxSize - 8, box + 8);
 			} else {
-				ret = MLN_RESULT_INVALID_ARGUMENT;
-				SceMarlin_9609E2DF(accountId);
-				SceMarlin_9609E2DF(entitlementId);
-				goto fail;
+				goto bad;
 			}
 			box += boxSize;
 		} while (total < token->size);
@@ -891,6 +884,11 @@ int MlnApi_81003464(MlnBuffer *serviceProvider, MlnBuffer *token, unsigned int *
 		}
 		ret = MLN_RESULT_FAILED;
 	}
+	goto fail;
+bad:
+	ret = MLN_RESULT_INVALID_ARGUMENT;
+	SceMarlin_9609E2DF(accountId);
+	SceMarlin_9609E2DF(entitlementId);
 fail:
 	if (found != NULL) {
 		for (i = 0; i < foundCount; i++)
@@ -951,6 +949,8 @@ __attribute__((noinline)) int MlnApi_81003818(MlnApiObject *object, MlnBuffer **
 		return 3;
 	if (object->kind->type == 0) {
 		ret = MlnEngineStep(object->engine, response, result);
+		if (ret == MLN_OK)
+			return ret;
 	} else if (object->kind->type == 1) {
 		if (object->kind->remote)
 			return MlnImpl_8101E658(object->client, response, result);
@@ -1107,6 +1107,7 @@ done:
 	*out = summary;
 out:
 	MlnRightsInfoFree(MLN_HEAP_SECURE, info);
+end:
 	SceMarlin_23838449(&s_serviceContext);
 	return ret;
 invalid:
@@ -1117,16 +1118,15 @@ nomem:
 fail:
 	MlnRightsInfoFree(MLN_HEAP_SECURE, info);
 	MlnRightsSummaryFree(summary);
-	SceMarlin_23838449(&s_serviceContext);
-	return ret;
+	goto end;
 }
 
 /* the same ID: both missing, or the same bytes */
 static inline int MlnBufferEquals(const MlnBuffer *a, const MlnBuffer *b)
 {
-	if (a == NULL || b == NULL)
-		return a == NULL && b == NULL;
-	return MlnBytesCompare(MLN_HEAP_SECURE, a->size, a->data, b->size, b->data) == 0;
+	return (a == NULL && b == NULL) ||
+	       (a != NULL && b != NULL &&
+		MlnBytesCompare(MLN_HEAP_SECURE, a->size, a->data, b->size, b->data) == 0);
 }
 
 /* adds a copy of an ID to a set of IDs, unless the set has it */
@@ -1135,12 +1135,13 @@ int MlnIdSetAdd(MlnIdSet **set, const MlnBuffer *id)
 	MlnIdSet *entry;
 	int ret;
 
+	entry = *set;
 	if (id == NULL) {
 		entry = NULL;
 		ret = MLN_RESULT_FAILED;
 		goto out;
 	}
-	for (entry = *set; entry != NULL; entry = entry->next) {
+	for (; entry != NULL; entry = entry->next) {
 		if (entry->id != NULL && MlnBytesCompare(MLN_HEAP_SECURE, entry->id->size,
 							 entry->id->data, id->size, id->data) == 0) {
 			entry = NULL;
@@ -1731,7 +1732,7 @@ int SceMarlin_0166ACC1(MlnApiObject *object, MlnBuffer *message, MlnApiNode **re
 		if (status == MLN_OK) {
 			handle = NULL;
 			MlnServiceContextInit(&context, &session);
-			status = MlnImpl_81016A5C(&context, request.arg[0], &handle);
+			status = MlnImpl_81016A5C(&context, (int)request.arg[0], &handle);
 			if (status == MLN_OK) {
 				report.data.buffer = handle;
 				handle = NULL;
@@ -2333,7 +2334,7 @@ int SceMarlin_E8276179(MlnApiObject *object, void *a1, MlnBuffer **out)
 		if (kind->type == 0) {
 			handle = NULL;
 			MlnServiceContextInit(&context, &session);
-			ret = MlnImpl_81016A5C(&context, a1, &handle);
+			ret = MlnImpl_81016A5C(&context, (int)a1, &handle);
 			if (ret == MLN_OK) {
 				found = handle;
 				handle = NULL;

@@ -337,10 +337,8 @@ void *MlnReallocate(int heap, void *p, unsigned int size)
 		q = MlnHeapAllocate(h, size);
 		goto out;
 	}
-	if (p != NULL && size == 0) {
-		MlnHeapFree(h, p);
-		goto out;
-	}
+	if (p != NULL && size == 0)
+		goto free;
 	if (p == NULL || size == 0)
 		goto out;
 
@@ -358,7 +356,8 @@ void *MlnReallocate(int heap, void *p, unsigned int size)
 			if (q == NULL)
 				goto out;
 			copy = run * MLN_HEAP_UNIT < size ? run * MLN_HEAP_UNIT : size;
-			MlnMemcpy(q, p, copy);
+			for (k = 0; k < copy; k++)
+				((unsigned char *)q)[k] = ((const unsigned char *)p)[k];
 			for (k = 0; k < run; k++)
 				page->map[i + k] = 0;
 			page->freeUnits += run;
@@ -407,7 +406,9 @@ void *MlnReallocate(int heap, void *p, unsigned int size)
 		goto out;
 	copy = (unsigned int)blockUnits * MLN_HEAP_UNIT < size ?
 		(unsigned int)blockUnits * MLN_HEAP_UNIT : size;
-	MlnMemcpy(q, p, copy);
+	for (k = 0; k < copy; k++)
+		((unsigned char *)q)[k] = ((const unsigned char *)p)[k];
+free:
 	MlnHeapFree(h, p);
 out:
 	MlnMutexUnlock(heap ? &s_heaps[1].mutex : &s_heaps[0].mutex);

@@ -537,7 +537,7 @@ int MlnImpl_810278C8(const unsigned char **cursor, unsigned int size, void *out,
 }
 
 /* put size bytes at the cursor */
-static inline int MlnServiceWrite(unsigned char **cursor, const void *data, unsigned int size)
+static inline __attribute__((always_inline)) int MlnServiceWrite(unsigned char **cursor, const void *data, unsigned int size)
 {
 	if (cursor == NULL || *cursor == NULL || data == NULL)
 		return 3;
