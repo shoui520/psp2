@@ -265,8 +265,8 @@ int MlnImpl_8104A9CC(int handle)
 		MlnFree(MLN_HEAP_GENERAL, core->memory);
 	if (core->context != NULL)
 		MlnImpl_81062060(core->context);
-	if (core->state != NULL)
-		MlnBufferDestroy(MLN_HEAP_GENERAL, core->state);
+	if (core->callbackRoutine != NULL)
+		MlnBufferDestroy(MLN_HEAP_GENERAL, core->callbackRoutine);
 	MlnFree(MLN_HEAP_GENERAL, core);
 	ret = MlnImpl_8106A048(handle, NULL, table) != 0 ? 7 : 0;
 end:
@@ -552,5 +552,769 @@ int MlnImpl_8104B1C8(int handle)
 	ret = MlnImpl_8106A048(handle, NULL, table) != 0 ? 7 : 0;
 end:
 	MlnImpl_8104A558();
+	return ret;
+}
+
+/*
+ * Evaluate a core handle's license for an action (kind 0..3): the rights
+ * info it gives is checked and handed out in *out; 0x1d when the license
+ * is missing or its rights carry what the library cannot act on.
+ */
+unsigned int MlnImpl_8104B2AC(int handle, int kind, int flags, MlnBlob *out)
+{
+	MlnBuffer *rights = NULL;
+	MlnCoreHandle *core = NULL;
+	MlnRightsInfo *info = NULL;
+	MlnPlanktonParameterBlock *parameters = NULL;
+	MlnHandleTable *table;
+	MlnCoreContext *context;
+	unsigned int ret;
+	unsigned int r;
+	int missing;
+
+	table = MlnCoreHandleTable(MlnImpl_81006EAC());
+	if (table == NULL) {
+		ret = 2;
+		goto out;
+	}
+	ret = MlnImpl_81069FE8(handle, table, &core);
+	if (ret != 0)
+		goto out;
+	if (core == NULL) {
+		ret = 3;
+		goto out;
+	}
+	if (!(core->flags & MLN_CORE_HANDLE_BUNDLE)) {
+		ret = 0x1b;
+		goto out;
+	}
+	context = core->context;
+	if (context == NULL) {
+		ret = 3;
+		goto out;
+	}
+	if (core->flags & MLN_CORE_HANDLE_DONE) {
+		ret = 0x1c;
+		goto out;
+	}
+	if ((unsigned int)kind > 3) {
+		ret = 4;
+		goto out;
+	}
+	if (MlnImpl_8104A4B8() != 0) {
+		ret = 7;
+		goto out;
+	}
+
+	ret = MlnImpl_81082834(context, core);
+	if (ret != 0)
+		goto end;
+	if (flags != 0) {
+		ret = kind == 3 ? 6 : 4;
+		goto end;
+	}
+	r = MlnImpl_810629C8(context, kind, parameters, &rights);
+	if (r == 0) {
+		missing = 0;
+	} else if (r == 0x23020006) {
+		missing = 1;
+	} else {
+		ret = r == 2 ? 2 : 0x17;
+		goto end;
+	}
+	if (rights != NULL) {
+		if (MlnRightsInfoParse(MLN_HEAP_GENERAL, rights->size, rights->data, &info) != 0) {
+			ret = 0x42;
+			goto end;
+		}
+		if (out != NULL) {
+			out->buffer = rights;
+			rights = NULL;
+			out->size = out->buffer->size;
+		}
+		/* the rights info's flags carry the same unsupported bit */
+		r = MlnEsbCheckGlobalFlags(MLN_HEAP_GENERAL, (const MlnEsb *)info);
+		if (r != 0) {
+			ret = r == MLN_ERROR_UNSUPPORTED ? 0x1d : 7;
+			goto end;
+		}
+	}
+	ret = missing ? 0x1d : 0;
+end:
+	MlnRightsInfoFree(MLN_HEAP_GENERAL, info);
+	MlnImpl_8103CFC0(parameters);
+	MlnBufferDestroy(MLN_HEAP_GENERAL, rights);
+	MlnImpl_8104A558();
+	return ret;
+out:
+	MlnRightsInfoFree(MLN_HEAP_GENERAL, info);
+	MlnImpl_8103CFC0(parameters);
+	MlnBufferDestroy(MLN_HEAP_GENERAL, rights);
+	return ret;
+}
+
+#define MLN_CORE_CONTENT_KEYS	16	/* content keys MlnImpl_8104B4C4 keeps on its stack */
+
+/*
+ * The parameters of a transfer action: Sink, a value list of one
+ * ParameterBlock holding Id (transfer[0]), and TransferMode (transfer[1]).
+ */
+static inline __attribute__((always_inline)) unsigned int
+MlnCoreTransferParameters(MlnBuffer *const *transfer, MlnPlanktonParameterBlock **out)
+{
+	MlnPlanktonValueList *lists = NULL;
+	MlnPlanktonValue *sink = NULL;
+	MlnPlanktonValue *mode = NULL;
+	MlnPlanktonValue *id = NULL;
+	MlnPlanktonValue *idValue = NULL;
+	MlnPlanktonValueList *idList = NULL;
+	MlnPlanktonValueList *sinkList;
+	MlnPlanktonParameterBlock *idBlock = NULL;
+	MlnPlanktonParameterBlock *block = NULL;
+	MlnBuffer *name;
+	unsigned int ret = 0;
+	unsigned int count = 2;
+	unsigned int i;
+
+	if (transfer[0] == NULL || transfer[1] == NULL) {
+		ret = 4;
+		goto out;
+	}
+	lists = MlnAllocate(MLN_HEAP_GENERAL, count * sizeof(*lists));
+	if (lists == NULL)
+		goto nomem;
+	MlnMemset(lists, 0, count * sizeof(*lists));
+	sink = MlnAllocate(MLN_HEAP_GENERAL, sizeof(*sink));
+	if (sink == NULL)
+		goto nomem;
+	MlnMemset(sink, 0, sizeof(*sink));
+	mode = MlnAllocate(MLN_HEAP_GENERAL, sizeof(*mode));
+	if (mode == NULL)
+		goto nomem;
+	MlnMemset(mode, 0, sizeof(*mode));
+
+	idList = MlnAllocate(MLN_HEAP_GENERAL, sizeof(*idList));
+	if (idList == NULL)
+		goto nomem;
+	MlnMemset(idList, 0, sizeof(*idList));
+	id = MlnAllocate(MLN_HEAP_GENERAL, sizeof(*id));
+	if (id == NULL)
+		goto nomem;
+	MlnMemset(id, 0, sizeof(*id));
+	id->type = MLN_PLANKTON_STRING;
+	id->value.buffer = MlnBufferCreate(MLN_HEAP_GENERAL, transfer[0]->size, transfer[0]->data);
+	if (id->value.buffer == NULL)
+		goto nomem;
+	name = MlnBufferCreate(MLN_HEAP_GENERAL, 2, "Id");
+	if (name == NULL)
+		goto nomem;
+	idList->name = name;
+	idList->count = 1;
+	idList->values = id;
+	id = NULL;
+
+	idBlock = MlnAllocate(MLN_HEAP_GENERAL, sizeof(*idBlock));
+	if (idBlock == NULL)
+		goto nomem;
+	MlnMemset(idBlock, 0, sizeof(*idBlock));
+	idBlock->parameters = idList;
+	idBlock->count = 1;
+	idList = NULL;
+	idValue = MlnAllocate(MLN_HEAP_GENERAL, sizeof(*idValue));
+	if (idValue == NULL)
+		goto nomem;
+	MlnMemset(idValue, 0, sizeof(*idValue));
+	idValue->value.parameters = idBlock;
+	idValue->type = MLN_PLANKTON_PARAMETER;
+	idBlock = NULL;
+	sinkList = MlnAllocate(MLN_HEAP_GENERAL, sizeof(*sinkList));
+	if (sinkList == NULL)
+		goto nomem;
+	MlnMemset(sinkList, 0, sizeof(*sinkList));
+	sinkList->values = idValue;
+	sinkList->count = 1;
+	idValue = NULL;
+	sink->value.list = sinkList;
+	sink->type = MLN_PLANKTON_VALUE_LIST;
+
+	name = MlnBufferCreate(MLN_HEAP_GENERAL, 4, "Sink");
+	if (name == NULL)
+		goto nomem;
+	lists[0].name = name;
+	lists[0].count = 1;
+	lists[0].values = sink;
+	sink = NULL;
+	name = MlnBufferCreate(MLN_HEAP_GENERAL, 12, "TransferMode");
+	if (name == NULL)
+		goto nomem;
+	lists[1].name = name;
+	lists[1].count = 1;
+	mode->type = MLN_PLANKTON_STRING;
+	mode->value.buffer = MlnBufferCreate(MLN_HEAP_GENERAL, transfer[1]->size, transfer[1]->data);
+	if (mode->value.buffer == NULL)
+		goto nomem;
+	lists[1].values = mode;
+	mode = NULL;
+
+	block = MlnAllocate(MLN_HEAP_GENERAL, sizeof(*block));
+	if (block == NULL)
+		goto nomem;
+	MlnMemset(block, 0, sizeof(*block));
+	block->count = count;
+	block->parameters = lists;
+	lists = NULL;
+	*out = block;
+	block = NULL;
+	goto out;
+nomem:
+	ret = 2;
+out:
+	if (sink != NULL) {
+		MlnImpl_8103D01C(sink);
+		MlnFree(MLN_HEAP_GENERAL, sink);
+	}
+	if (mode != NULL) {
+		MlnImpl_8103D01C(mode);
+		MlnFree(MLN_HEAP_GENERAL, mode);
+	}
+	if (id != NULL) {
+		MlnImpl_8103D01C(id);
+		MlnFree(MLN_HEAP_GENERAL, id);
+	}
+	if (idValue != NULL) {
+		MlnImpl_8103D01C(idValue);
+		MlnFree(MLN_HEAP_GENERAL, idValue);
+	}
+	MlnImpl_8103CFC0(block);
+	MlnImpl_8103CFC0(idBlock);
+	if (idList != NULL) {
+		MlnImpl_8103CEB0(idList);
+		MlnFree(MLN_HEAP_GENERAL, idList);
+	}
+	if (lists != NULL) {
+		for (i = 0; i < count; i++)
+			MlnImpl_8103CEB0(&lists[i]);
+		MlnFree(MLN_HEAP_GENERAL, lists);
+	}
+	return ret;
+}
+
+/*
+ * Take an action (kind 0..3; 2 a transfer, with its parameters) under a
+ * core handle's license. The rights it gives go to *out, the core's state
+ * to *state; the rights' first callback of type 1 is kept in the handle.
+ * 0x1d when the license is missing or its rights carry what the library
+ * cannot act on.
+ */
+unsigned int MlnImpl_8104B4C4(int handle, int kind, MlnBuffer *const *transfer, MlnBlob *out,
+			      MlnBlob *state)
+{
+	MlnOctopusContentKey *keys[MLN_CORE_CONTENT_KEYS];
+	MlnOctopusContentKey **contentKeys = NULL;
+	MlnPlanktonParameterBlock *parameters = NULL;
+	MlnBuffer *rights = NULL;
+	MlnRightsInfo *info = NULL;
+	MlnBuffer *coreState = NULL;
+	MlnArray *pending = NULL;
+	MlnArray *pair = NULL;
+	MlnCoreHandle *core = NULL;
+	MlnOctopusSignedBundle *bundle;
+	MlnCoreContext *context;
+	MlnHandleTable *table;
+	MlnCallback *callback;
+	unsigned int ret;
+	unsigned int r;
+	unsigned short i;
+	int sessions = 0;
+	int count;
+	int found = 0;
+	int missing = 0;
+	int outcome;
+
+	table = MlnCoreHandleTable(MlnImpl_81006EAC());
+	if (table == NULL) {
+		ret = 2;
+		goto out;
+	}
+	ret = MlnImpl_81069FE8(handle, table, &core);
+	if (ret != 0)
+		goto out;
+	if (core == NULL) {
+		ret = 3;
+		goto out;
+	}
+	if (!(core->flags & MLN_CORE_HANDLE_BUNDLE)) {
+		ret = 0x1b;
+		goto out;
+	}
+	context = core->context;
+	if (context == NULL) {
+		ret = 3;
+		goto out;
+	}
+	if (!(core->flags & MLN_CORE_HANDLE_RECORD) && kind != 2) {
+		ret = 0x1a;
+		goto out;
+	}
+	if (core->flags & MLN_CORE_HANDLE_DONE) {
+		ret = 0x1c;
+		goto out;
+	}
+	if ((unsigned int)kind > 3) {
+		ret = 4;
+		goto out;
+	}
+	core->kind = kind;
+	__builtin_memset(keys, 0, sizeof(keys));
+	if (MlnImpl_8104A448() != 0) {
+		ret = 7;
+		goto out;
+	}
+	sessions = 1;
+
+	r = MlnImpl_8104570C(&pair);
+	if (r == 0)
+		r = MlnImpl_81062450(context, pair);
+	else if (r == 6) {
+		ret = 0x44;
+		goto out;
+	}
+	if (r != 0) {
+		ret = r == 2 ? 2 : 7;
+		goto out;
+	}
+
+	bundle = core->bundle;
+	count = bundle->bundle->contentKeyCount;
+	if (count > MLN_CORE_CONTENT_KEYS) {
+		contentKeys = MlnAllocate(MLN_HEAP_GENERAL, count * sizeof(*contentKeys));
+		if (contentKeys == NULL) {
+			ret = 2;
+			goto out;
+		}
+		MlnMemset(contentKeys, 0, count * sizeof(*contentKeys));
+	} else {
+		contentKeys = keys;
+	}
+	ret = MlnImpl_81082834(context, core);
+	if (ret != 0)
+		goto out;
+	if (transfer != NULL) {
+		if (kind != 2) {
+			ret = kind == 3 ? 6 : 4;
+			goto out;
+		}
+		ret = MlnCoreTransferParameters(transfer, &parameters);
+		if (ret != 0)
+			goto out;
+	}
+
+	r = MlnImpl_81062BE8(context, kind, parameters, contentKeys, &rights);
+	if (r == 0) {
+		r = MlnImpl_81041F48(bundle, contentKeys);
+		if (r != 0) {
+			ret = r == 2 ? 2 : 0x17;
+			goto unload;
+		}
+		found = 1;
+	} else if (r == 0x23020006) {
+		missing = 1;
+	} else {
+		ret = r == 2 ? 2 : 0x17;
+		goto out;
+	}
+
+	r = MlnImpl_8106249C(context, &pending);
+	if (r == 0)
+		r = MlnImpl_810456B0((const MlnStoreKeyPair *)pending);
+	if (r == 0)
+		r = MlnImpl_81062450(context, pending);
+	if (r == 0)
+		r = MlnImpl_81043A60(1, &coreState);
+	if (r != 0) {
+		ret = r == 2 ? 2 : 7;
+		goto failed;
+	}
+
+	outcome = 1;
+	if (found == 1 && rights != NULL) {
+		if (MlnRightsInfoParse(MLN_HEAP_GENERAL, rights->size, rights->data, &info) != 0) {
+			ret = 0x42;
+			goto unload;
+		}
+		for (i = 0; i < info->callbackCount; i++) {
+			if (info->callbacks[i].type == 1)
+				break;
+		}
+		if (i < info->callbackCount) {
+			callback = &info->callbacks[i];
+			core->callbackCookie = callback->cookie;
+			MlnBufferDestroy(MLN_HEAP_GENERAL, core->callbackRoutine);
+			core->callbackRoutine = MlnBufferCreate(MLN_HEAP_GENERAL,
+								info->callbacks[i].routine->size,
+								info->callbacks[i].routine->data);
+			if (core->callbackRoutine == NULL) {
+				ret = 2;
+				goto unload;
+			}
+			outcome = info->callbacks[i].flags != 1;
+		}
+	}
+	if (rights != NULL && out != NULL) {
+		out->buffer = rights;
+		rights = NULL;
+		out->size = out->buffer->size;
+	}
+	state->buffer = coreState;
+	coreState = NULL;
+	state->size = state->buffer->size;
+	if (info != NULL) {
+		r = MlnEsbCheckGlobalFlags(MLN_HEAP_GENERAL, (const MlnEsb *)info);
+		if (r != 0) {
+			ret = r == MLN_ERROR_UNSUPPORTED ? 0x1d : 7;
+			goto failed;
+		}
+	}
+	core->flags |= MLN_CORE_HANDLE_DONE;
+	if (missing == 1) {
+		ret = 0x1d;
+		goto out;
+	}
+	core->outcome = outcome;
+	ret = 0;
+	goto out;
+
+failed:
+	if (!found)
+		goto out;
+unload:
+	MlnImpl_81062EDC(context, count, contentKeys);
+out:
+	MlnImpl_8103CFC0(parameters);
+	MlnArrayDestroy(MLN_HEAP_GENERAL, pending);
+	MlnArrayDestroy(MLN_HEAP_GENERAL, pair);
+	MlnBufferDestroy(MLN_HEAP_GENERAL, coreState);
+	MlnBufferDestroy(MLN_HEAP_GENERAL, rights);
+	if (info != NULL)
+		MlnRightsInfoFree(MLN_HEAP_GENERAL, info);
+	if (contentKeys != NULL && contentKeys != keys)
+		MlnFree(MLN_HEAP_GENERAL, contentKeys);
+	while (sessions > 0) {
+		sessions--;
+		MlnImpl_8104A558();
+	}
+	return ret;
+}
+
+/*
+ * Read what a core handle's license gives for an action (kind 0..3) into
+ * *out; 0x1e when the license has nothing for it.
+ */
+unsigned int MlnImpl_8104BFB0(int handle, int kind, int flags, MlnBlob *out)
+{
+	MlnBuffer *data = NULL;
+	MlnCoreHandle *core = NULL;
+	MlnPlanktonParameterBlock *parameters = NULL;
+	MlnHandleTable *table;
+	MlnCoreContext *context;
+	unsigned int ret;
+
+	table = MlnCoreHandleTable(MlnImpl_81006EAC());
+	if (table == NULL) {
+		ret = 2;
+		goto out;
+	}
+	ret = MlnImpl_81069FE8(handle, table, &core);
+	if (ret != 0)
+		goto out;
+	if (core == NULL) {
+		ret = 3;
+		goto out;
+	}
+	if (out == NULL) {
+		ret = 4;
+		goto out;
+	}
+	if (!(core->flags & MLN_CORE_HANDLE_BUNDLE)) {
+		ret = 0x1b;
+		goto out;
+	}
+	context = core->context;
+	if (context == NULL) {
+		ret = 3;
+		goto out;
+	}
+	if ((unsigned int)kind > 3) {
+		ret = 4;
+		goto out;
+	}
+	if (MlnImpl_8104A4B8() != 0) {
+		ret = 7;
+		goto out;
+	}
+
+	if (flags != 0) {
+		ret = kind == 3 ? 6 : 4;
+		goto end;
+	}
+	ret = MlnImpl_81062F20(context, kind, parameters, &data);
+	if (ret == 0) {
+		out->buffer = data;
+		data = NULL;
+		out->size = out->buffer->size;
+	} else if (ret != 2) {
+		ret = ret == 0x2302000C ? 0x1e : 0x17;
+	}
+end:
+	MlnImpl_8103CFC0(parameters);
+	MlnBufferDestroy(MLN_HEAP_GENERAL, data);
+	MlnImpl_8104A558();
+	return ret;
+out:
+	MlnImpl_8103CFC0(parameters);
+	MlnBufferDestroy(MLN_HEAP_GENERAL, data);
+	return ret;
+}
+
+/* the core's errors of a keyed operation as the library's */
+static inline __attribute__((always_inline)) unsigned int MlnCoreKeyError(unsigned int ret)
+{
+	switch (ret) {
+	case 0:
+	case 2:
+		return ret;
+	case 3:
+		return 4;
+	case 4:
+		return 3;
+	case 6:
+		return 0x44;
+	case 0x23020007:
+	case 0x23040002:
+	case 0x23040005:
+	case 0x23040006:
+		return 0x20;
+	default:
+		return 7;
+	}
+}
+
+/*
+ * Run a core handle's keyed operation with an RSA public key given as
+ * DER: input to output, *outputSize its size.
+ */
+unsigned int MlnImpl_8104C130(int handle, const MlnBuffer *publicKey, const void *input,
+			      unsigned int inputSize, void *output, unsigned int *outputSize)
+{
+	MlnCoreHandle *core = NULL;
+	void *rsa = NULL;
+	MlnBuffer *modulus;
+	MlnBuffer *exponent;
+	MlnHandleTable *table;
+	MlnCoreContext *context;
+	unsigned int ret;
+
+	table = MlnCoreHandleTable(MlnImpl_81006EAC());
+	if (table == NULL) {
+		ret = 2;
+		goto out;
+	}
+	ret = MlnImpl_81069FE8(handle, table, &core);
+	if (ret != 0)
+		goto out;
+	if (core == NULL || core->context == NULL) {
+		ret = 3;
+		goto out;
+	}
+	context = core->context;
+	if (publicKey == NULL || inputSize == 0 || output == NULL || outputSize == NULL) {
+		ret = 4;
+		goto out;
+	}
+
+	modulus = NULL;
+	exponent = NULL;
+	ret = MlnImpl_81039000(publicKey, &modulus, &exponent);
+	if (ret == 0) {
+		ret = MlnImpl_81055B3C(&rsa, modulus, exponent);
+		if (ret == 0) {
+			modulus = NULL;
+			exponent = NULL;
+		}
+	}
+	MlnBufferDestroy(MLN_HEAP_GENERAL, modulus);
+	MlnBufferDestroy(MLN_HEAP_GENERAL, exponent);
+	if (ret == 0)
+		ret = MlnImpl_81063F38(context, rsa, input, inputSize, output, outputSize);
+	ret = MlnCoreKeyError(ret);
+out:
+	if (rsa != NULL)
+		MlnImpl_81055CA8(rsa);
+	return ret;
+}
+
+#define MLN_CORE_MOVE_CALLBACK	"OnAgentCompletion.Move.Callback"
+
+/*
+ * Run a callback of a core handle's license (without a record handle only
+ * OnAgentCompletion.Move.Callback): the rights it gives go to *first, the
+ * core's state to *second. Whether the callback is the one the handle
+ * kept becomes the handle's outcome.
+ */
+unsigned int MlnImpl_8104C32C(int handle, const MlnServiceObject *object, unsigned int size,
+			      const unsigned char *data, MlnBlob *first, MlnBlob *second)
+{
+	MlnBuffer *rights = NULL;
+	MlnBuffer *state = NULL;
+	MlnRightsInfo *info = NULL;
+	MlnArray *pending = NULL;
+	MlnArray *pair = NULL;
+	MlnCoreHandle *core = NULL;
+	MlnHandleTable *table;
+	MlnCoreContext *context;
+	MlnCallback *callback;
+	unsigned int ret;
+	unsigned int r;
+	unsigned int count;
+	unsigned int i;
+	int sessions = 0;
+	int missing;
+	int match;
+
+	table = MlnCoreHandleTable(MlnImpl_81006EAC());
+	if (table == NULL) {
+		ret = 2;
+		goto out;
+	}
+	ret = MlnImpl_81069FE8(handle, table, &core);
+	if (ret != 0)
+		goto out;
+	if (core == NULL) {
+		ret = 3;
+		goto out;
+	}
+	if (!(core->flags & MLN_CORE_HANDLE_BUNDLE)) {
+		ret = 0x1b;
+		goto out;
+	}
+	context = core->context;
+	if (context == NULL) {
+		ret = 3;
+		goto out;
+	}
+	if (second == NULL) {
+		ret = 4;
+		goto out;
+	}
+	if (!(core->flags & MLN_CORE_HANDLE_RECORD) &&
+	    MlnStrncmp((const char *)object->buffer->data, MLN_CORE_MOVE_CALLBACK,
+		       MlnStrlen(MLN_CORE_MOVE_CALLBACK)) != 0) {
+		ret = 0x1a;
+		goto out;
+	}
+	if (MlnImpl_8104A448() != 0) {
+		ret = 7;
+		goto out;
+	}
+	sessions = 1;
+
+	r = MlnImpl_8104570C(&pair);
+	if (r == 0)
+		r = MlnImpl_81062450(context, pair);
+	else if (r == 6) {
+		ret = 0x44;
+		goto out;
+	}
+	if (r != 0) {
+		ret = r == 2 ? 2 : 7;
+		goto out;
+	}
+
+	r = MlnImpl_81063CE4(context, object, size, data, &rights);
+	if (r == 0x23020006) {
+		match = 0;
+		missing = 1;
+		goto pending;
+	}
+	if (r != 0) {
+		ret = r == 2 ? 2 : 0x17;
+		goto out;
+	}
+	if (core->callbackRoutine == NULL)
+		match = 1;
+	else if (object->second != core->callbackCookie)
+		match = 0;
+	else
+		match = MlnBufferCompare(MLN_HEAP_GENERAL, core->callbackRoutine, object->buffer) == 0;
+	missing = 0;
+	if (rights == NULL)
+		goto pending;
+	if (MlnRightsInfoParse(MLN_HEAP_GENERAL, rights->size, rights->data, &info) != 0) {
+		ret = 0x42;
+		goto out;
+	}
+	/* the rights info's flags carry the same unsupported bit */
+	r = MlnEsbCheckGlobalFlags(MLN_HEAP_GENERAL, (const MlnEsb *)info);
+	if (r != 0) {
+		ret = r == MLN_ERROR_UNSUPPORTED ? 0x1d : 7;
+		goto out;
+	}
+	count = info->callbackCount;
+	for (i = 0; i < count; i++) {
+		if (info->callbacks[i].type == 1)
+			break;
+	}
+	if (i < count) {
+		callback = &info->callbacks[i];
+		core->callbackCookie = callback->cookie;
+		MlnBufferDestroy(MLN_HEAP_GENERAL, core->callbackRoutine);
+		core->callbackRoutine = MlnBufferCreate(MLN_HEAP_GENERAL,
+							info->callbacks[i].routine->size,
+							info->callbacks[i].routine->data);
+		if (core->callbackRoutine == NULL) {
+			ret = 2;
+			goto out;
+		}
+		if (info->callbacks[i].flags == 1)
+			match = 0;
+	}
+
+pending:
+	r = MlnImpl_8106249C(context, &pending);
+	if (r == 0)
+		r = MlnImpl_810456B0((const MlnStoreKeyPair *)pending);
+	if (r == 0)
+		r = MlnImpl_81062450(context, pending);
+	if (r == 0)
+		r = MlnImpl_81043A60(1, &state);
+	if (r != 0) {
+		ret = r == 2 ? 2 : 7;
+		goto out;
+	}
+	second->buffer = state;
+	state = NULL;
+	second->size = second->buffer->size;
+	ret = missing == 1 ? 0x1d : 0;
+	if (core->outcome != 1)
+		core->outcome = match;
+
+out:
+	if (rights != NULL) {
+		if ((ret == 0 || ret == 0x1d) && first != NULL) {
+			first->buffer = rights;
+			rights = NULL;
+			first->size = first->buffer->size;
+		} else {
+			MlnBufferDestroy(MLN_HEAP_GENERAL, rights);
+		}
+	}
+	MlnBufferDestroy(MLN_HEAP_GENERAL, state);
+	MlnArrayDestroy(MLN_HEAP_GENERAL, pending);
+	MlnArrayDestroy(MLN_HEAP_GENERAL, pair);
+	MlnRightsInfoFree(MLN_HEAP_GENERAL, info);
+	while (sessions > 0) {
+		sessions--;
+		MlnImpl_8104A558();
+	}
 	return ret;
 }

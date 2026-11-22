@@ -1966,15 +1966,15 @@ typedef struct MlnCoreHandle {
 	int reservedC;
 	void *memory;
 	MlnCoreResponse *response;
-	int outcome;		/* set by MlnImpl_8104BFB0, 0 when a record handle opens */
-	MlnBuffer *state;
-	int reserved20;
-	int kind;		/* 4 when opened */
+	int outcome;		/* set by MlnImpl_8104B4C4, 0 when a record handle opens */
+	MlnBuffer *callbackRoutine;	/* the rights' first callback of type 1 */
+	int callbackCookie;
+	int kind;		/* the last action (MlnImpl_8104B4C4), 4 until one */
 } MlnCoreHandle;
 
 #define MLN_CORE_HANDLE_BUNDLE	0x1	/* a bundle was given (MlnImpl_8104AB18) */
 #define MLN_CORE_HANDLE_RECORD	0x2	/* a record handle was opened (MlnImpl_8104AF48) */
-#define MLN_CORE_HANDLE_DONE	0x4	/* set by MlnImpl_8104BFB0: no more record handles */
+#define MLN_CORE_HANDLE_DONE	0x4	/* an action was taken (MlnImpl_8104B4C4) */
 
 /* a record handle of MlnImpl_8104AF48 (0x20 bytes): a record of a core handle */
 typedef struct MlnCoreRecordHandle {
@@ -1990,6 +1990,21 @@ typedef struct MlnCoreRecordHandle {
 unsigned int MlnImpl_81061BBC(void **out);
 void MlnImpl_81061C00(void *object);
 unsigned int MlnImpl_81061C1C(void *object, int kind, const unsigned char *data);
+unsigned int MlnImpl_81082834(MlnCoreContext *context, MlnCoreHandle *core);
+unsigned int MlnImpl_8106249C(MlnCoreContext *context, MlnArray **pair);
+unsigned int MlnImpl_81062BE8(MlnCoreContext *context, int kind, MlnPlanktonParameterBlock *parameters,
+			      MlnOctopusContentKey **contentKeys, MlnBuffer **rights);
+void MlnImpl_81062EDC(MlnCoreContext *context, int count, MlnOctopusContentKey **contentKeys);
+unsigned int MlnImpl_810629C8(MlnCoreContext *context, int kind,
+			      MlnPlanktonParameterBlock *parameters, MlnBuffer **out);
+unsigned int MlnImpl_8104C130(int handle, const MlnBuffer *publicKey, const void *input,
+			      unsigned int inputSize, void *output, unsigned int *outputSize);
+unsigned int MlnImpl_81063F38(MlnCoreContext *context, void *rsa, const void *input,
+			      unsigned int inputSize, void *output, unsigned int *outputSize);
+unsigned int MlnImpl_81063CE4(MlnCoreContext *context, const MlnServiceObject *object,
+			      unsigned int size, const unsigned char *data, MlnBuffer **rights);
+unsigned int MlnImpl_81062F20(MlnCoreContext *context, int kind,
+			      MlnPlanktonParameterBlock *parameters, MlnBuffer **out);
 unsigned int MlnImpl_8106273C(MlnCoreContext *context, MlnBuffer *buffer, void **entry);
 
 unsigned int MlnImpl_8104AE1C(int handle, MlnXmlNode *node);
@@ -2155,7 +2170,8 @@ int MlnImpl_8104B1C8(int handle);
 int MlnImpl_8102ED08(const MlnServiceReply *reply, MlnServiceArgs **out, int *status);
 int MlnImpl_8102EED4(const MlnServiceReply *reply, MlnServiceArgs **out, int *status);
 unsigned int MlnImpl_8104B2AC(int handle, int kind, int flags, MlnBlob *out);
-unsigned int MlnImpl_8104B4C4(int handle, int kind, int flags, MlnBlob *out, MlnBlob *second);
+unsigned int MlnImpl_8104B4C4(int handle, int kind, MlnBuffer *const *transfer, MlnBlob *out,
+			      MlnBlob *state);
 unsigned int MlnImpl_8104BFB0(int handle, int kind, int flags, MlnBlob *out);
 int MlnImpl_8102EF48(int command, const MlnServiceReply *reply, MlnServiceArgs **out, int *status,
 		     MlnBuffer **result);
@@ -2795,6 +2811,8 @@ int MlnImpl_81055670(void **rsa, const MlnBuffer *modulus, const MlnBuffer *publ
 		     const MlnBuffer *prime2, const MlnBuffer *exponent1, const MlnBuffer *exponent2,
 		     const MlnBuffer *coefficient);
 int MlnImpl_81055ABC(void *rsa);
+int MlnImpl_81055B3C(void **rsa, MlnBuffer *modulus, MlnBuffer *publicExponent);
+int MlnImpl_81055CA8(void *rsa);
 int MlnImpl_81056F0C(void *rsa, int hash, const MlnBuffer *message, const MlnBuffer *signature);
 int MlnImpl_81034D38(const char *usage, int count, MlnBuffer **certificates, char **out);
 int MlnImpl_81035018(int encryptionCount, MlnBuffer **encryptionCertificates, int signingCount,
