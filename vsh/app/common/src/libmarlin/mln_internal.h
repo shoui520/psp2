@@ -2182,6 +2182,80 @@ typedef struct MlnHostLinks {
 	MlnOctopusArray *targets;	/* MlnHostLinkTarget, the personality's first */
 } MlnHostLinks;
 
+/*
+ * SeaShell, the secure database (seashell.c): a database is an ASN.1 tree
+ * SEQUENCE { INTEGER version, OCTET STRING its path, object }, and an object
+ * SEQUENCE { attributes, [1] SEQUENCE OF object (a container's) or its
+ * value }, the attributes SEQUENCE { OCTET STRING the present fields, name,
+ * owner }. The attribute names are Sony's ("@Flags", "@ExpirationDate", ...).
+ */
+typedef struct MlnAsn1Node MlnAsn1Node;
+
+#define MLN_SEASHELL_VERSION		0x1000000
+#define MLN_SEASHELL_DATABASES		"/Octopus/SeaShell/Databases"
+#define MLN_SEASHELL_ROOT		MLN_SEASHELL_DATABASES "/Marlin"
+#define MLN_SEASHELL_SNE_LIST		MLN_SEASHELL_ROOT "/sne/l"	/* the objects 7B730 adds */
+#define MLN_SEASHELL_OWNER		"urn:marlin:drmservices:seashell"
+#define MLN_SEASHELL_PATH_MAX		16	/* the components of a path */
+
+/* the fields an object's attributes carry, its first OCTET STRING's first two bytes */
+#define MLN_SEASHELL_HAS_TYPE			0x01	/* one byte */
+#define MLN_SEASHELL_HAS_FLAGS			0x02	/* the rest four bytes, big-endian */
+#define MLN_SEASHELL_HAS_CREATION_DATE		0x04
+#define MLN_SEASHELL_HAS_MODIFICATION_DATE	0x08
+#define MLN_SEASHELL_HAS_EXPIRATION_DATE	0x10
+
+#define MLN_SEASHELL_TYPE_CONTAINER	0	/* its value holds objects */
+
+#define MLN_SEASHELL_ERROR_VERSION	0x230B0001	/* a database already loaded, or not version 1 */
+#define MLN_SEASHELL_ERROR_FORMAT	0x230B0002	/* not an object as SeaShell writes it */
+#define MLN_SEASHELL_ERROR_DATABASE	0x230B0010	/* no database is loaded */
+#define MLN_SEASHELL_ERROR_PATH		0x230B0011	/* no such path, or not a container */
+#define MLN_SEASHELL_ERROR_ACCESS	0x230B0013	/* the owner is not the object's */
+
+/* an object's attributes (MlnImpl_8107A8F8, 0x24 bytes) */
+typedef struct MlnSeaShellAttributes {
+	MlnBuffer name;			/* NUL-terminated, the NUL counted */
+	MlnBuffer owner;		/* the same, data NULL when none */
+	unsigned int type;		/* MLN_SEASHELL_TYPE_* */
+	unsigned int flags;		/* "@Flags" */
+	unsigned int creationDate;	/* "@CreationDate" */
+	unsigned int modificationDate;	/* "@ModificationDate" */
+	unsigned int expirationDate;	/* "@ExpirationDate", minutes, 0 never */
+} MlnSeaShellAttributes;
+
+/* a database loaded (MlnImpl_8107B534, 0x1C bytes) */
+typedef struct MlnSeaShellDatabase {
+	struct MlnSeaShellDatabase *next;
+	unsigned int version;		/* MLN_SEASHELL_VERSION */
+	const char *path;		/* in data */
+	MlnAsn1Node *root;
+	unsigned int size;		/* data's */
+	unsigned char *data;		/* the encoding the tree points into */
+	int modified;
+} MlnSeaShellDatabase;
+
+/* a path opened, the base of the paths given with its handle (0x0C bytes) */
+typedef struct MlnSeaShellHandle {
+	struct MlnSeaShellHandle *next;
+	void *handle;
+	char *path;
+} MlnSeaShellHandle;
+
+/* a database changed, given encoded with its path (MlnImpl_8107BB04, 0x0C bytes) */
+typedef struct MlnSeaShellExport {
+	char *path;
+	unsigned int size;
+	unsigned char *data;
+} MlnSeaShellExport;
+
+/* the databases loaded and the paths opened (MlnImpl_8107B450, 0x0C bytes) */
+typedef struct MlnSeaShellRecords {
+	MlnSeaShellDatabase *databases;
+	unsigned int limit;		/* 4096 */
+	MlnSeaShellHandle *handles;
+} MlnSeaShellRecords;
+
 typedef struct MlnHostGraph {
 	MlnOctopusNode *personality;
 	MlnOctopusBundle *bundle;
@@ -2189,7 +2263,7 @@ typedef struct MlnHostGraph {
 	unsigned int current;		/* the assertion last given as an object, or -1 */
 	MlnHostLinks *links;
 	MlnBuffer *licenseSuspension;
-	void *records;			/* freed by MlnImpl_8107B4A0 */
+	MlnSeaShellRecords *records;	/* freed by MlnImpl_8107B4A0 */
 	MlnBuffer *contextId;
 	MlnPlanktonParameterBlock *parameters;
 	MlnHostSlot slots[MLN_HOST_SLOTS];
@@ -2261,18 +2335,36 @@ void MlnImpl_8106F2C8(MlnHostGraph *graph);
 unsigned int MlnImpl_8106F300(MlnHostGraph *graph, MlnBuffer *contextId);
 unsigned int MlnImpl_810706F4(MlnHostGraph *graph, MlnArray *pair);
 unsigned int MlnImpl_81070808(MlnHostGraph *graph, MlnArray **pair);
-int MlnImpl_8107B4A0(void *records);
-int MlnImpl_8107B228(void *source, unsigned int *size, unsigned char **data);
-int MlnImpl_8107B450(void **records);
-int MlnImpl_8107B534(void *records, unsigned int size, const unsigned char *data);
-int MlnImpl_8107B730(void *records, unsigned int size, const unsigned char *data);
-int MlnImpl_8107BA3C(void *records, int flags, unsigned int *size, unsigned char **data);
-int MlnImpl_8107C5F0(void *records, const unsigned char *signer, unsigned int signerSize,
-		     int index, const char *path, const unsigned char *data, unsigned int size,
-		     int type);
-int MlnImpl_8107BDB8(void *records, const unsigned char *signer, unsigned int signerSize,
-		     int index, const char *path, unsigned char *buffer, unsigned int size,
-		     int *type, unsigned int *outSize);
+/* seashell.c */
+int MlnImpl_8107A4F8(MlnSeaShellHandle *handle);
+int MlnImpl_8107A524(const MlnSeaShellAttributes *attributes, MlnAsn1Node **out);
+int MlnImpl_8107A748(const char *name, unsigned int type, int marlin, MlnAsn1Node **out);
+int MlnImpl_8107A850(MlnAsn1Node *object);
+int MlnImpl_8107A8F8(const MlnAsn1Node *object, MlnSeaShellAttributes *attributes);
+int MlnImpl_8107AB30(const MlnAsn1Node *object, MlnSeaShellAttributes *attributes);
+int MlnImpl_8107AB50(const char *s, const char *prefix);
+int MlnImpl_8107AB98(MlnAsn1Node *object, unsigned int now);
+int MlnImpl_8107ACD4(MlnSeaShellDatabase *database, unsigned int *size, unsigned char **data);
+int MlnImpl_8107AE00(const char *path, char **copy, int *count, char **components);
+int MlnImpl_8107AF0C(MlnSeaShellRecords *records, void *handle, const char *path,
+		     char **absolute, char **attribute);
+int MlnImpl_8107B144(MlnAsn1Node **ancestors, const MlnBuffer *owner, int index, int self);
+int MlnImpl_8107B4A0(MlnSeaShellRecords *records);
+int MlnImpl_8107B228(const char *path, unsigned int *size, unsigned char **data);
+int MlnImpl_8107B450(MlnSeaShellRecords **records);
+int MlnImpl_8107B534(MlnSeaShellRecords *records, unsigned int size, const unsigned char *data);
+int MlnImpl_8107B730(MlnSeaShellRecords *records, unsigned int size, const unsigned char *data);
+int MlnImpl_8107BA3C(MlnSeaShellRecords *records, int flags, unsigned int *size,
+		     unsigned char **data);
+int MlnImpl_8107BB04(MlnSeaShellRecords *records, int *count, MlnSeaShellExport **exports);
+int MlnImpl_8107BCE0(MlnSeaShellRecords *records, MlnSeaShellExport *export);
+int MlnImpl_8107BD34(MlnSeaShellRecords *records, int count, MlnSeaShellExport *exports);
+int MlnImpl_8107BDB8(MlnSeaShellRecords *records, const unsigned char *signer,
+		     unsigned int signerSize, int index, const char *path, unsigned char *buffer,
+		     unsigned int size, int *type, unsigned int *outSize);
+int MlnImpl_8107C5F0(MlnSeaShellRecords *records, const unsigned char *signer,
+		     unsigned int signerSize, int index, const char *path,
+		     const unsigned char *data, unsigned int size, int type);
 
 /* keystore.c: the keys of a control's run, by uid */
 #define MLN_KEY_ENTRY_SECRET		0
