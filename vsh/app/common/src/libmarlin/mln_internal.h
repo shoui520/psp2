@@ -2954,6 +2954,9 @@ int MlnImpl_81055670(void **rsa, const MlnBuffer *modulus, const MlnBuffer *publ
 		     const MlnBuffer *coefficient);
 int MlnImpl_81055ABC(void *rsa);
 int MlnImpl_81055B3C(void **rsa, MlnBuffer *modulus, MlnBuffer *publicExponent);
+int MlnImpl_81055BB4(void **values, MlnBuffer *modulus, MlnBuffer *publicExponent,
+		     MlnBuffer *privateExponent, MlnBuffer *prime1, MlnBuffer *prime2,
+		     MlnBuffer *exponent1, MlnBuffer *exponent2, MlnBuffer *coefficient);
 int MlnImpl_81055CA8(void *rsa);
 int MlnImpl_81056F0C(void *rsa, int hash, const MlnBuffer *message, const MlnBuffer *signature);
 int MlnImpl_81034D38(const char *usage, int count, MlnBuffer **certificates, char **out);
