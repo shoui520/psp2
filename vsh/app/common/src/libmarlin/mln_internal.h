@@ -1984,6 +1984,9 @@ unsigned int MlnImpl_8106C6F8(void *vm, MlnBuffer *codeModule, MlnBuffer *uid, M
 			      MlnBuffer *type, MlnBuffer *signer, MlnOctopusArray *attributes);
 unsigned int MlnImpl_8106C788(void *vm, MlnBuffer *uid);
 unsigned int MlnImpl_8106C970(void *vm, unsigned int *status);
+unsigned int MlnImpl_8106C86C(void *vm, unsigned int value);
+unsigned int MlnImpl_8106C8CC(void *vm, unsigned int size, const unsigned char *data);
+unsigned int MlnImpl_8106C7A4(void *vm, void *address, unsigned int size, unsigned char *out);
 unsigned int MlnImpl_8106C9F4(void *vm, unsigned int value, MlnBuffer **out, unsigned int *type);
 unsigned int MlnImpl_8106EE94(void *graph, MlnPlanktonParameterBlock *parameters);
 unsigned int MlnImpl_8106EEA8(void *graph, MlnOctopusBundle *bundle);
@@ -2001,11 +2004,16 @@ void MlnImpl_8106ED54(void *graph);
 unsigned int MlnImpl_8106EE80(void *graph, MlnOctopusNode *node);
 unsigned int MlnImpl_8106EEBC(void *graph, MlnOctopusArray *links);
 unsigned int MlnImpl_8106F264(void *graph, MlnOctopusSamlAssertion *assertion);
+void MlnImpl_8106F2C8(void *graph);
+unsigned int MlnImpl_8106F300(void *graph, void *value);
 unsigned int MlnImpl_810706F4(void *graph, MlnArray *pair);
 unsigned int MlnImpl_81070808(void *graph, MlnArray **pair);
 unsigned int MlnImpl_810710F8(void **keys);
 void MlnImpl_81071278(void *keys);
 unsigned int MlnImpl_810712F0(void *keys, const MlnOctopusKey *key);
+unsigned int MlnImpl_81071368(void *keys, const MlnOctopusKey *key);
+unsigned int MlnImpl_810715FC(void *keys, MlnBuffer *keyName, unsigned int method, void *rsa,
+			      MlnBuffer *out);
 unsigned int MlnImpl_8107148C(void *keys, MlnBuffer *uid, MlnOctopusBroadcastKeyBlock *block);
 unsigned int MlnImpl_8107132C(void *keys, const MlnOctopusKeyPair *key);
 
@@ -2075,13 +2083,15 @@ unsigned int MlnImpl_81082834(MlnCoreContext *context, MlnCoreHandle *core);
 unsigned int MlnImpl_8106249C(MlnCoreContext *context, MlnArray **pair);
 unsigned int MlnImpl_81062BE8(MlnCoreContext *context, int kind, MlnPlanktonParameterBlock *parameters,
 			      MlnOctopusContentKey **contentKeys, MlnBuffer **rights);
-void MlnImpl_81062EDC(MlnCoreContext *context, int count, MlnOctopusContentKey **contentKeys);
+unsigned int MlnImpl_81062EDC(MlnCoreContext *context, int count,
+			      MlnOctopusContentKey **contentKeys);
 unsigned int MlnImpl_810629C8(MlnCoreContext *context, int kind,
 			      MlnPlanktonParameterBlock *parameters, MlnBuffer **out);
 unsigned int MlnImpl_8104C130(int handle, const MlnBuffer *publicKey, int *count,
 			      MlnBuffer ***first, MlnBuffer ***second, MlnBuffer ***third);
 unsigned int MlnImpl_81063F38(MlnCoreContext *context, void *rsa, int *count,
-			      MlnBuffer ***first, MlnBuffer ***second, MlnBuffer ***third);
+			      MlnBuffer ***encryptedKeys, MlnBuffer ***keyIds,
+			      MlnBuffer ***contentKeyIds);
 unsigned int MlnImpl_81063CE4(MlnCoreContext *context, const MlnServiceObject *object,
 			      unsigned int size, const unsigned char *data, MlnBuffer **rights);
 unsigned int MlnImpl_8106314C(MlnCoreContext *context, MlnOctopusControl *control,
