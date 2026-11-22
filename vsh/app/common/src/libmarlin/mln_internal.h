@@ -2430,12 +2430,14 @@ unsigned int MlnImpl_81071F4C(void **key, const MlnBuffer *data, unsigned char *
 
 /* the HCI's keys (SceMarlinHci, 0x81080BFC-), as the key store uses them */
 unsigned int MlnImpl_81080C3C(int kind, void **key);
+unsigned int MlnImpl_81080C90(void *key, int kind, const MlnBuffer *data, MlnBuffer **out);
 unsigned int MlnImpl_81080E80(void *wrapping, int kind, const MlnBuffer *param,
 			      const MlnBuffer *data, int usage, void **key);
 unsigned int MlnImpl_81080D18(void *key, int kind, int mode, const void *parameters,
 			      const MlnBuffer *b, const MlnBuffer *data, MlnBuffer **out);
 unsigned int MlnImpl_810810F4(void *key, MlnBuffer **out);
-unsigned int MlnImpl_8108117C(void *key, unsigned int size, const void *data, MlnBuffer **out);
+unsigned int MlnImpl_8108117C(void *key, unsigned int messageSize, const void *message,
+			      MlnBuffer **out);
 unsigned int MlnImpl_81081204(MlnBuffer ***names, unsigned int *count);
 unsigned int MlnImpl_81080EF8(int shift, int node, const MlnBuffer *key, const MlnBuffer *id,
 			      const MlnBuffer *iv, const MlnBuffer *data, void **out);
