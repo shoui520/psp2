@@ -1172,10 +1172,10 @@ out:
 }
 
 /* adds to a set the IDs of every node the links lead to from a node, the node's own excepted */
-int MlnNodesCollectReachable(MlnOctopusNode *nodes, const MlnBuffer *id, MlnIdSet **set)
+int MlnNodesCollectReachable(MlnApiOctopusNode *nodes, const MlnBuffer *id, MlnIdSet **set)
 {
-	MlnOctopusNode *node;
-	MlnOctopusLink *link;
+	MlnApiOctopusNode *node;
+	MlnApiOctopusLink *link;
 	MlnIdSet *entry, *next;
 	int ret;
 
@@ -2048,9 +2048,9 @@ int SceMarlin_7E65734B(MlnApiObject *object, void *a1, void *a2)
 	return MlnImpl_8101F0B8(object->client, a1, a2);
 }
 
-static inline MlnOctopusLink *MlnOctopusLinkCreate(MlnBuffer *to)
+static inline MlnApiOctopusLink *MlnOctopusLinkCreate(MlnBuffer *to)
 {
-	MlnOctopusLink *link;
+	MlnApiOctopusLink *link;
 
 	link = MlnAllocate(MLN_HEAP_SECURE, sizeof(*link));
 	if (link == NULL)
@@ -2060,10 +2060,10 @@ static inline MlnOctopusLink *MlnOctopusLinkCreate(MlnBuffer *to)
 	return link;
 }
 
-static inline void MlnOctopusNodesFree(MlnOctopusNode *node)
+static inline void MlnOctopusNodesFree(MlnApiOctopusNode *node)
 {
-	MlnOctopusNode *next;
-	MlnOctopusLink *link, *following;
+	MlnApiOctopusNode *next;
+	MlnApiOctopusLink *link, *following;
 
 	if (node == NULL)
 		return;
@@ -2083,8 +2083,8 @@ static inline void MlnOctopusNodesFree(MlnOctopusNode *node)
  */
 int SceMarlin_CCD2D17E(MlnApiPair *links, const MlnBuffer *id, MlnIdSet **out)
 {
-	MlnOctopusNode *nodes = NULL, *node;
-	MlnOctopusLink **tail;
+	MlnApiOctopusNode *nodes = NULL, *node;
+	MlnApiOctopusLink **tail;
 	MlnBuffer *from, *to;
 	MlnIdSet *set = NULL;
 	int ret;

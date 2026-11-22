@@ -152,7 +152,7 @@ int MlnImpl_8102A484(unsigned int mode)
 /* a copy of the core object's bytes */
 int MlnImpl_8102A5B0(void *id, MlnBlob *out)
 {
-	MlnBuffer **object = NULL;
+	MlnOctopusNode *object = NULL;
 	MlnBuffer *buffer;
 	int locked = 0;
 	int ret;
@@ -170,7 +170,7 @@ int MlnImpl_8102A5B0(void *id, MlnBlob *out)
 			if (ret != 2)
 				ret = 11;
 		} else {
-			buffer = MlnBufferCreate(MLN_HEAP_GENERAL, (*object)->size, (*object)->data);
+			buffer = MlnBufferCreate(MLN_HEAP_GENERAL, object->uid->size, object->uid->data);
 			if (buffer != NULL) {
 				out->buffer = buffer;
 				out->size = buffer->size;
@@ -479,10 +479,10 @@ int MlnImpl_8102B718(const MlnBuffer *id, MlnBlob *out)
 int MlnImpl_8102B950(unsigned int *count, MlnBuffer ***entries, MlnBlob *state)
 {
 	void *iterator = NULL;
-	MlnBuffer **base = NULL;
+	MlnOctopusNode *base = NULL;
 	MlnBuffer *entry = NULL;
 	MlnBuffer *newState = NULL;
-	MlnCoreRecord *record = NULL;
+	MlnOctopusLink *record = NULL;
 	MlnBuffer **array;
 	int ret, err;
 	int n = 0;
@@ -534,12 +534,12 @@ int MlnImpl_8102B950(unsigned int *count, MlnBuffer ***entries, MlnBlob *state)
 			all = 0;
 			entry = NULL;
 		} else {
-			if (MlnBufferCompare(MLN_HEAP_GENERAL, *base, record->key) != 0) {
-				array[2 * i] = record->key;
-				record->key = NULL;
+			if (MlnBufferCompare(MLN_HEAP_GENERAL, base->uid, record->from) != 0) {
+				array[2 * i] = record->from;
+				record->from = NULL;
 			}
-			array[2 * i + 1] = record->value;
-			record->value = NULL;
+			array[2 * i + 1] = record->to;
+			record->to = NULL;
 			MlnBufferDestroy(MLN_HEAP_GENERAL, entry);
 			MlnImpl_8103BBA0(record);
 			entry = NULL;
@@ -579,8 +579,8 @@ int MlnImpl_8102BDBC(const MlnBuffer *first, const MlnBuffer *second, const MlnB
 		     unsigned int *count, MlnBuffer ***entries)
 {
 	MlnBuffer *entry = NULL;
-	MlnCoreRecord *record = NULL;
-	MlnBuffer **base = NULL;
+	MlnOctopusLink *record = NULL;
+	MlnOctopusNode *base = NULL;
 	MlnBuffer *key;
 	int ret, err;
 
@@ -610,9 +610,9 @@ int MlnImpl_8102BDBC(const MlnBuffer *first, const MlnBuffer *second, const MlnB
 				err = MlnImpl_81043B94(&base);
 				if (err == 0) {
 					key = NULL;
-					if (MlnBufferCompare(MLN_HEAP_GENERAL, *base, record->key) != 0)
-						key = record->key;
-					err = MlnImpl_81044984(key, record->value, first, second);
+					if (MlnBufferCompare(MLN_HEAP_GENERAL, base->uid, record->from) != 0)
+						key = record->from;
+					err = MlnImpl_81044984(key, record->to, first, second);
 				}
 				if (err != 0) {
 					ret = MlnImpl_8102A228(err);

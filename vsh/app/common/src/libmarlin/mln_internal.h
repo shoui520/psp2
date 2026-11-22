@@ -547,18 +547,18 @@ typedef struct MlnApiReport {
 	MlnApiReportData data;
 } MlnApiReport;
 
-/* Octopus nodes and the links between them, by node ID */
-typedef struct MlnOctopusLink {
+/* the Octopus nodes and the links between them the engine lists, by node ID */
+typedef struct MlnApiOctopusLink {
 	MlnBuffer *from;
-	struct MlnOctopusLink *next;
+	struct MlnApiOctopusLink *next;
 	MlnBuffer *to;
-} MlnOctopusLink;
+} MlnApiOctopusLink;
 
-typedef struct MlnOctopusNode {
-	struct MlnOctopusNode *next;
-	MlnOctopusLink *links;
+typedef struct MlnApiOctopusNode {
+	struct MlnApiOctopusNode *next;
+	MlnApiOctopusLink *links;
 	MlnBuffer *id;
-} MlnOctopusNode;
+} MlnApiOctopusNode;
 
 /* a list of buffer pairs, from an engine's list of items two by two */
 typedef struct MlnApiPair {
@@ -647,7 +647,7 @@ int MlnImpl_8101F33C(struct MlnClient *client, int *state);
 int MlnImpl_81081400(void *a, void *b);
 int MlnImpl_81081498(void *time, int *minutes);
 int MlnIdSetAdd(MlnIdSet **set, const MlnBuffer *id);
-int MlnNodesCollectReachable(MlnOctopusNode *nodes, const MlnBuffer *id, MlnIdSet **set);
+int MlnNodesCollectReachable(MlnApiOctopusNode *nodes, const MlnBuffer *id, MlnIdSet **set);
 
 /* a word, three buffers and a counted list of buffer triples (string.c frees it) */
 typedef struct MlnBufferGroup {
@@ -1358,6 +1358,292 @@ typedef struct MlnAttributeBox {
 	unsigned char *data;
 } MlnAttributeBox;
 
+/*
+ * Octopus objects (http://www.octopus-drm.com/profiles/base/1.0), as parsed
+ * from their XML. An array of objects is an MlnOctopusArray; what it holds is
+ * named by its kind when it is freed (MlnImpl_8103C57C).
+ */
+#define MLN_OCTOPUS_PROTECTOR		1
+#define MLN_OCTOPUS_CONTENT_KEY		2
+#define MLN_OCTOPUS_CONTROLLER		3
+#define MLN_OCTOPUS_CONTROL		4
+#define MLN_OCTOPUS_LINK		5
+#define MLN_OCTOPUS_NODE		6
+#define MLN_OCTOPUS_REFERENCE		7
+#define MLN_OCTOPUS_ATTRIBUTE		8
+#define MLN_OCTOPUS_EXTENSION		9
+#define MLN_OCTOPUS_KEY			11
+#define MLN_OCTOPUS_KEY_PAIR		12
+#define MLN_OCTOPUS_BUFFER		13
+#define MLN_OCTOPUS_SAML_ATTRIBUTE	14
+#define MLN_OCTOPUS_PLAIN		15	/* nothing of its own to free */
+
+typedef struct MlnOctopusArray {
+	int count;
+	void *items[];
+} MlnOctopusArray;
+
+/* an Attribute's type attribute */
+#define MLN_OCTOPUS_ATTRIBUTE_INT	0
+#define MLN_OCTOPUS_ATTRIBUTE_STRING	1
+#define MLN_OCTOPUS_ATTRIBUTE_BYTES	2
+#define MLN_OCTOPUS_ATTRIBUTE_LIST	3
+#define MLN_OCTOPUS_ATTRIBUTE_ARRAY	4
+
+typedef struct MlnOctopusAttribute {
+	MlnBuffer *name;
+	int type;
+	union {
+		int integer;
+		MlnBuffer *string;
+		MlnBuffer *bytes;
+		MlnOctopusArray *attributes;	/* LIST and ARRAY */
+	} value;
+} MlnOctopusAttribute;
+
+/* a reference to another object, with the digest of it */
+typedef struct MlnOctopusReference {
+	MlnBuffer *uid;
+	MlnOctopusArray *transforms;	/* buffers: the transform algorithms */
+	MlnBuffer *digestMethod;
+	MlnBuffer *digestValue;
+} MlnOctopusReference;
+
+/* a key of ScubaKeys or a ContentKey: KeyData, as given or xmlenc-encrypted */
+typedef struct MlnOctopusKey {
+	MlnBuffer *uid;
+	unsigned char usage;		/* 0 KeySharing, 1 Confidentiality, 2 none */
+	unsigned char format;		/* 0 PKCS#8, 1 X509SPKI, 2 RAW */
+	unsigned char encryptionMethod;	/* the EncryptedData's; 2 when given plain */
+	MlnBuffer *oaepParams;
+	unsigned char keyEncryptionMethod;	/* the EncryptedKey's, 0 without one */
+	MlnBuffer *keyName;
+	MlnBuffer *encryptedKey;
+	MlnBuffer *data;		/* the KeyData or the CipherValue */
+	void *key;			/* the key loaded from data (MlnImpl_81080C80 frees it) */
+	int state;
+} MlnOctopusKey;
+
+/* a PublicKey or a PrivateKey: a key and the uid of its pair */
+typedef struct MlnOctopusKeyPair {
+	MlnOctopusKey key;
+	MlnBuffer *pair;
+} MlnOctopusKeyPair;
+
+typedef struct MlnOctopusScubaKeys {
+	MlnOctopusArray *secretKeys;	/* MLN_OCTOPUS_KEY */
+	MlnOctopusArray *privateKeys;	/* MLN_OCTOPUS_KEY_PAIR */
+	MlnOctopusArray *publicKeys;	/* MLN_OCTOPUS_KEY_PAIR */
+} MlnOctopusScubaKeys;
+
+/* an Extension; type 1 carries ScubaKeys */
+#define MLN_OCTOPUS_EXTENSION_DIGEST	0
+#define MLN_OCTOPUS_EXTENSION_SCUBA	1
+
+typedef struct MlnOctopusExtension {
+	int type;
+	MlnBuffer *uid;
+	int critical;
+	MlnOctopusArray *transforms;	/* the Digest's */
+	MlnBuffer *digestMethod;
+	MlnBuffer *digestValue;
+	MlnBuffer *subject;
+	MlnOctopusScubaKeys *scubaKeys;
+} MlnOctopusExtension;
+
+typedef struct MlnOctopusNode {
+	MlnBuffer *uid;
+	MlnOctopusArray *attributes;
+	MlnOctopusArray *extensions;
+	MlnOctopusExtension *scubaKeys;	/* the extension with the node's ScubaKeys */
+} MlnOctopusNode;
+
+typedef struct MlnOctopusControl {
+	MlnBuffer *uid;
+	MlnOctopusArray *attributes;
+	MlnOctopusArray *extensions;
+	MlnBuffer *protocol;
+	MlnBuffer *type;		/* the CodeModule's */
+	MlnBuffer *codeModule;
+	MlnBuffer *signer;		/* who signed the link that carries it */
+} MlnOctopusControl;
+
+typedef struct MlnOctopusLink {
+	MlnBuffer *uid;
+	MlnBuffer *from;
+	MlnBuffer *to;
+	MlnOctopusArray *attributes;
+	MlnOctopusArray *extensions;
+	MlnOctopusControl *control;
+} MlnOctopusLink;
+
+typedef struct MlnOctopusProtector {
+	MlnBuffer *uid;
+	MlnOctopusReference *contentKey;
+	MlnOctopusArray *protectedTargets;	/* MLN_OCTOPUS_REFERENCE */
+} MlnOctopusProtector;
+
+typedef struct MlnOctopusContentKey {
+	MlnBuffer *uid;
+	MlnOctopusKey *secretKey;
+	MlnOctopusArray *attributes;
+	MlnOctopusArray *extensions;
+} MlnOctopusContentKey;
+
+typedef struct MlnOctopusController {
+	MlnBuffer *uid;
+	MlnOctopusReference *control;
+	MlnOctopusArray *controlledTargets;	/* MLN_OCTOPUS_REFERENCE */
+	MlnOctopusArray *attributes;
+	MlnOctopusArray *extensions;
+} MlnOctopusController;
+
+/* a SAML AttributeStatement's Attribute, its name "AttributeNamespace:AttributeName" */
+#define MLN_OCTOPUS_SAML_INTEGER	0	/* xsd:nonNegativeInteger */
+#define MLN_OCTOPUS_SAML_STRING		1
+#define MLN_OCTOPUS_SAML_EMPTY		2	/* an AttributeValue without text */
+
+typedef struct MlnOctopusSamlAttribute {
+	MlnBuffer *name;
+	int type;
+	union {
+		unsigned int integer;
+		MlnBuffer *string;
+	} value;
+} MlnOctopusSamlAttribute;
+
+/* a SAML 1.0 Assertion */
+typedef struct MlnOctopusSamlAssertion {
+	int reserved;
+	MlnBuffer *assertionId;
+	MlnDateTime issueInstant;
+	MlnDateTime *notBefore;		/* Conditions, or NULL */
+	MlnDateTime *notOnOrAfter;
+	MlnOctopusArray *attributes;	/* MLN_OCTOPUS_SAML_ATTRIBUTE */
+	MlnBuffer *nameIdentifier;	/* AttributeStatement/Subject */
+} MlnOctopusSamlAssertion;
+
+/* a bundle's starfish BroadcastKeyBlock, both base64-decoded */
+typedef struct MlnOctopusBroadcastKeyBlock {
+	MlnBuffer *revocationInformation;
+	MlnBuffer *encryptedBroadcastKeys;
+} MlnOctopusBroadcastKeyBlock;
+
+/* a /Bundle/Extension and the bundle's Control it is about */
+typedef struct MlnOctopusBundleExtension {
+	MlnOctopusExtension *extension;
+	MlnOctopusControl *control;
+} MlnOctopusBundleExtension;
+
+/* an Octopus /Bundle */
+typedef struct MlnOctopusBundle {
+	MlnOctopusControl *control;
+	MlnOctopusController *controller;
+	int contentKeyCount;			/* -1 until a list gives it */
+	MlnOctopusArray *contentKeys;		/* MLN_OCTOPUS_CONTENT_KEY */
+	MlnOctopusBroadcastKeyBlock *broadcastKeyBlock;
+	MlnOctopusArray *protectors;		/* MLN_OCTOPUS_PROTECTOR */
+	MlnOctopusBundleExtension *extension;
+	MlnOctopusArray *attributes;
+} MlnOctopusBundle;
+
+/* a Plankton value, of a Parameter's or a ValueList's ValueBlock */
+#define MLN_PLANKTON_INTEGER		1
+#define MLN_PLANKTON_REAL		2
+#define MLN_PLANKTON_STRING		3
+#define MLN_PLANKTON_DATE		4
+#define MLN_PLANKTON_PARAMETER		5	/* a ParameterBlock */
+#define MLN_PLANKTON_RESOURCE		7
+#define MLN_PLANKTON_VALUE_LIST		8
+#define MLN_PLANKTON_BYTE_ARRAY		9
+
+struct MlnPlanktonValueList;
+struct MlnPlanktonParameterBlock;
+
+typedef struct MlnPlanktonValue {
+	int type;
+	union {
+		int integer;				/* INTEGER, DATE */
+		MlnBuffer *buffer;			/* STRING, RESOURCE, BYTE_ARRAY */
+		struct MlnPlanktonParameterBlock *parameters;
+		struct MlnPlanktonValueList *list;
+	} value;
+} MlnPlanktonValue;
+
+/* a Parameter (its name) or a ValueList (no name): its values */
+typedef struct MlnPlanktonValueList {
+	MlnBuffer *name;
+	unsigned int count;
+	MlnPlanktonValue *values;
+} MlnPlanktonValueList;
+
+typedef struct MlnPlanktonParameterBlock {
+	unsigned int count;
+	MlnPlanktonValueList *parameters;
+} MlnPlanktonParameterBlock;
+
+/*
+ * a stored record: a header of a big-endian tag, item count and id, and the
+ * items, a list of buffers
+ */
+typedef struct MlnRecordHeader {
+	unsigned int tag;
+	int count;
+	MlnBuffer *id;
+} MlnRecordHeader;
+
+typedef struct MlnRecordItem {
+	struct MlnRecordItem *previous;
+	struct MlnRecordItem *next;
+	MlnBuffer *data;
+} MlnRecordItem;
+
+typedef struct MlnRecord {
+	MlnRecordHeader *header;
+	MlnRecordItem *first;
+	MlnRecordItem *current;
+	MlnRecordItem *last;
+	int count;
+} MlnRecord;
+
+typedef struct MlnRecordArray {
+	int count;
+	MlnRecord **records;
+} MlnRecordArray;
+
+int MlnImpl_8103B4A0(const MlnBuffer *data, MlnRecord **record, unsigned int *size);
+MlnOctopusArray *MlnImpl_8103B758(int count);
+int MlnImpl_8103B7A4(MlnOctopusKey *key);
+int MlnImpl_8103B808(MlnOctopusKeyPair *pair);
+int MlnImpl_8103B878(MlnOctopusSamlAttribute *attribute);
+int MlnImpl_8103B8C0(MlnOctopusBroadcastKeyBlock *block);
+int MlnImpl_8103BA60(MlnOctopusAttribute *attribute);
+int MlnImpl_8103BBA0(MlnOctopusLink *link);
+int MlnImpl_8103BD20(MlnOctopusProtector *protector);
+int MlnImpl_8103BE9C(MlnOctopusController *controller);
+int MlnImpl_8103C028(MlnOctopusReference *reference);
+int MlnImpl_8103C0B8(MlnOctopusExtension *extension);
+int MlnImpl_8103C16C(MlnOctopusContentKey *contentKey);
+int MlnImpl_8103C284(MlnOctopusControl *control);
+int MlnImpl_8103C370(MlnOctopusScubaKeys *keys);
+int MlnImpl_8103C57C(MlnOctopusArray *array, int kind);
+MlnOctopusBundle *MlnImpl_8103CAA4(void);
+int MlnImpl_8103CAD8(MlnOctopusBundle *bundle);
+int MlnImpl_8103CC38(MlnOctopusBundleExtension *extension);
+int MlnImpl_8103CD0C(MlnOctopusSamlAssertion *assertion);
+int MlnImpl_8103CDE0(MlnOctopusKey *key, MlnBuffer *uid, int usage, int format,
+		     int encryptionMethod, MlnBuffer *oaepParams, MlnBuffer *keyName,
+		     int keyEncryptionMethod, MlnBuffer *encryptedKey, MlnBuffer *data);
+int MlnImpl_8103CE44(MlnOctopusKeyPair *pair, MlnBuffer *keyPair, MlnBuffer *uid, int usage,
+		     int format, int encryptionMethod, MlnBuffer *oaepParams,
+		     MlnBuffer *keyName, int keyEncryptionMethod, MlnBuffer *encryptedKey,
+		     MlnBuffer *data);
+void MlnImpl_8103CEB0(MlnPlanktonValueList *list);
+void MlnImpl_8103CFC0(MlnPlanktonParameterBlock *block);
+void MlnImpl_8103D01C(MlnPlanktonValue *value);
+int MlnImpl_8103D0DC(const MlnRecordArray *array, MlnBuffer **out);
+void MlnImpl_81080C80(void *key);
+
 int MlnImpl_8102A228(unsigned int error);
 int MlnImpl_8102A33C(const MlnBox *box, unsigned char *out);
 void MlnImpl_81080BF4(void);
@@ -1373,8 +1659,8 @@ unsigned int MlnImpl_81080BFC(void **handle);
 unsigned int MlnImpl_81081374(int full);
 unsigned int MlnImpl_81080C1C(void *handle);
 void MlnImpl_810485B4(void);
-unsigned int MlnImpl_81042A60(void *id, MlnBuffer ***object, int flags);
-void MlnImpl_8103B8F8(MlnBuffer **object);
+unsigned int MlnImpl_81042A60(void *id, MlnOctopusNode **node, int flags);
+int MlnImpl_8103B8F8(MlnOctopusNode *node);
 int MlnImpl_8102A484(unsigned int mode);
 int MlnImpl_8102A5B0(void *id, MlnBlob *out);
 int MlnImpl_8102A69C(MlnBlob *out);
@@ -1410,21 +1696,13 @@ int MlnImpl_8102B404(void *id, unsigned int *flags);
 int MlnImpl_8102B590(const MlnBuffer *id, MlnBlob *out);
 int MlnImpl_8102B718(const MlnBuffer *id, MlnBlob *out);
 
-/* a record the core keeps per entry: two buffers it hands over */
-typedef struct MlnCoreRecord {
-	unsigned int reserved;
-	MlnBuffer *key;
-	MlnBuffer *value;
-} MlnCoreRecord;
-
 unsigned int MlnImpl_81045A84(void);
 unsigned int MlnImpl_8104411C(int *count, void **iterator);
 unsigned int MlnImpl_810442D4(void **iterator, MlnBuffer **entry);
 void MlnImpl_8104435C(void *iterator);
-unsigned int MlnImpl_810422E8(MlnBuffer *entry, MlnCoreRecord **record);
+unsigned int MlnImpl_810422E8(MlnBuffer *entry, MlnOctopusLink **link);
 void MlnImpl_81043F1C(MlnBuffer *entry);
-void MlnImpl_8103BBA0(MlnCoreRecord *record);
-unsigned int MlnImpl_81043B94(MlnBuffer ***base);
+unsigned int MlnImpl_81043B94(MlnOctopusNode **base);
 int MlnImpl_8102B950(unsigned int *count, MlnBuffer ***entries, MlnBlob *state);
 unsigned int MlnImpl_8104436C(const MlnBuffer *id, MlnBuffer **entry);
 unsigned int MlnImpl_81044984(MlnBuffer *key, MlnBuffer *value, const MlnBuffer *first,
