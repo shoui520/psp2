@@ -174,7 +174,7 @@ int MlnImpl_81035884(const MlnAsn1Node *node, int depth)
 	if (!node->constructed)
 		return 0;
 	for (i = 0; i < (int)node->length; i++)
-		if (MlnImpl_81035884(node->children[i], depth + 1) != 0)
+		if (MlnImpl_81035884(node->children[i], depth + 4) != 0)
 			break;
 	return 0;
 }
