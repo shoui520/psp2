@@ -103,12 +103,43 @@ set(MLN_RSA_SOURCES
 	${mln_hci}/rsa_integer_tail.c
 	${mln_gcauth}/rsa_digest.c
 )
+# The SDK's libSceHmac, libSceSha1, libSceSha256 and libSceMt19937, then libgcc's division
+# routines, which Sony built with GCC and without stack guards.
+set(mln_sdk ../../../../../sys/sdk/target/src)
+set(mln_libgcc ../../../../../toolchains/libgcc)
+set(MLN_SDK_SOURCES
+	${mln_sdk}/hmac/sha1.c
+	${mln_sdk}/hmac/sha256.c
+	${mln_sdk}/hmac/libhmac.c
+	${mln_sdk}/sha1/libsha1.c
+	${mln_sdk}/sha256/libsha256.c
+	${mln_sdk}/mt19937/libmt19937.c
+)
+set(MLN_LIBGCC_SOURCES
+	${mln_libgcc}/udiv.S
+	${mln_libgcc}/idiv.S
+	${mln_libgcc}/dvmd_tls.S
+	${mln_libgcc}/uldivmod.S
+)
+# The library's memset, then its HCI calls, Thumb like the RSA code; the memset vectorized
+# (16-byte stores after an alignment peel; Sony's byte loops are also unrolled with pld).
+set(MLN_THUMB_SOURCES
+	libc.c
+	hci.c
+)
 psp2_module(${PSP2_TARGET} KIND user COMPILER gcc48 PARTIAL SOURCES
 	${MLN_ARM_SOURCES}
 	${MLN_ENGINE_SOURCES}
 	${MLN_RSA_SOURCES}
+	${MLN_SDK_SOURCES}
+	${MLN_LIBGCC_SOURCES}
+	${MLN_THUMB_SOURCES}
 	${MLN_XML_SOURCES}
 	libmarlin.c
 )
 set_source_files_properties(${MLN_ARM_SOURCES} PROPERTIES COMPILE_OPTIONS "-marm;-O2;-ftree-vectorize;-finline-functions;-fno-stack-protector")
 set_source_files_properties(${MLN_XML_SOURCES} ${MLN_ENGINE_SOURCES} PROPERTIES COMPILE_OPTIONS "-marm;-O2;-ftree-vectorize;-finline-functions;-fno-stack-protector;-fno-strict-aliasing")
+set_source_files_properties(${MLN_SDK_SOURCES} PROPERTIES COMPILE_OPTIONS "-fno-stack-protector")
+set_source_files_properties(libc.c PROPERTIES COMPILE_OPTIONS "-ftree-vectorize")
+include(${mln_libgcc}/lib1funcs.cmake)
+gcc48_use_lib1funcs(${PSP2_TARGET})

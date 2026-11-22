@@ -1967,7 +1967,8 @@ int MlnImpl_81080C80(void *key);
 
 int MlnImpl_8102A228(unsigned int error);
 int MlnImpl_8102A33C(const MlnBox *box, unsigned char *out);
-void MlnImpl_81080BF4(void);
+/* hci.c */
+int MlnImpl_81080BF4(void);
 void MlnImpl_81080BF8(void);
 unsigned int MlnImpl_8103B29C(const MlnBuffer *state);
 unsigned int MlnImpl_81043A78(void);
