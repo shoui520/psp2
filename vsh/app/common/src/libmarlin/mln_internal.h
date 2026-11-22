@@ -2772,6 +2772,25 @@ typedef struct MlnNemoFaults {
 	unsigned int count;
 } MlnNemoFaults;
 
+/* the namespaces and URIs of NEMO messages */
+#define MLN_NEMO_NS_SOAP	"http://schemas.xmlsoap.org/soap/envelope/"
+#define MLN_NEMO_NS_SECURITY	"http://nemo.intertrust.com/2005/10/security"
+#define MLN_NEMO_NS_CORE	"http://nemo.intertrust.com/2005/10/core"
+#define MLN_NEMO_NS_EXCEPTIONS	"urn:marlin:core:1-2:nemo:services:schemas:exceptions"
+#define MLN_NEMO_NS_SAML	"urn:oasis:names:tc:SAML:1.0:assertion"
+#define MLN_NEMO_NS_SECEXT \
+	"http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-secext-1.0.xsd"
+#define MLN_NEMO_NS_UTILITY \
+	"http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-utility-1.0.xsd"
+#define MLN_NEMO_NS_DSIG	"http://www.w3.org/2000/09/xmldsig#"
+#define MLN_NEMO_NS_XENC	"http://www.w3.org/2001/04/xmlenc#"
+#define MLN_NEMO_BASE64 \
+	"http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-soap-message-security-1.0#Base64Binary"
+#define MLN_NEMO_PROTOCOL	"http://nemo.intertrust.com/2005/10/security/secure-protocol/basic/1.0"
+#define MLN_NEMO_USAGE(part)	MLN_NEMO_PROTOCOL "#" part
+#define MLN_NEMO_XENC_ELEMENT	"http://www.w3.org/2001/04/xmlenc#Element"
+#define MLN_NEMO_XENC_CONTENT	"http://www.w3.org/2001/04/xmlenc#Content"
+
 /* a NEMO message a service exchange sends and receives (0x7c bytes) */
 typedef struct MlnNemoMessage {
 	MlnXmlNode *body;		/* the payload sent */
@@ -2813,6 +2832,45 @@ typedef struct MlnExchange {
 #define MLN_NEMO_STEP_RESPONSE		2
 #define MLN_NEMO_STEP_CONFIRMATION	4
 #define MLN_NEMO_STEP_FAULT		8
+
+/* what a step of a kind of message carries (MlnNemoUsage) */
+#define MLN_NEMO_USAGE_SIGNED		0x01	/* the parts are signed */
+#define MLN_NEMO_USAGE_FRESH		0x02	/* timestamped, the peer's nonce returned */
+#define MLN_NEMO_USAGE_TIMESTAMP	0x04	/* a timestamp is required */
+#define MLN_NEMO_USAGE_ENCRYPTED	0x08	/* the body under a message key */
+#define MLN_NEMO_USAGE_NONE		0x80	/* the kind has no such step */
+
+/* the usages of a step, by kind: request, response, confirmation, fault (nemo.c) */
+extern const unsigned char MlnNemoUsage[15][4];
+
+/* what a message read carries, signed and encrypted: the parts its usage needs */
+#define MLN_NEMO_SIGNED_TIMESTAMP	0x001
+#define MLN_NEMO_SIGNED_NONCE		0x002
+#define MLN_NEMO_SIGNED_RETURNED_NONCE	0x004
+#define MLN_NEMO_SIGNED_BODY		0x008
+#define MLN_NEMO_SIGNED_MESSAGE_KEY	0x010	/* the message key's token */
+#define MLN_NEMO_SIGNED_PROTOCOL	0x020
+#define MLN_NEMO_SIGNED_MESSAGE_ID	0x040	/* the header's MessageID node */
+#define MLN_NEMO_SIGNED_ORIGINATES_FROM	0x080	/* the header's RelatesTo originatesFrom node */
+#define MLN_NEMO_SIGNED_CERTIFICATES	0x100	/* a request's second certificate chain */
+#define MLN_NEMO_SIGNED_FAULT		0x200	/* a fault's details */
+#define MLN_NEMO_SIGNED_PROFILE		0x400
+#define MLN_NEMO_SIGNED_TO_NODE		0x800
+#define MLN_NEMO_SIGNED_REQUIRED \
+	(MLN_NEMO_SIGNED_TO_NODE | MLN_NEMO_SIGNED_PROFILE | MLN_NEMO_SIGNED_PROTOCOL | \
+	 MLN_NEMO_SIGNED_BODY)
+
+#define MLN_NEMO_FOUND_TIMESTAMP	0x1
+#define MLN_NEMO_FOUND_NONCE		0x2
+#define MLN_NEMO_FOUND_RETURNED_NONCE	0x4
+
+#define MLN_NEMO_ENCRYPTED_KEY		0x1
+#define MLN_NEMO_ENCRYPTED_BODY		0x2
+
+/* whether a buffer read holds a string */
+#define MLN_NEMO_IS(buffer, s) \
+	(MlnBytesCompare(MLN_HEAP_GENERAL, (buffer)->size, (buffer)->data, MlnStrlen(s), s) == 0)
+
 #define MLN_NEMO_KIND_TRANSFER		7
 
 /* NEMO's errors (nemo.c) */
@@ -2829,6 +2887,7 @@ typedef struct MlnExchange {
 #define MLN_NEMO_ERROR_HEADER		0x23050010	/* the header lacks a part the step needs */
 #define MLN_NEMO_ERROR_UNKNOWN_TIME	0x23050011	/* the time is not known */
 #define MLN_NEMO_ERROR_EXPIRED		0x23050012	/* the timestamp is too old */
+#define MLN_NEMO_ERROR_NONCE		0x23050014	/* a nonce too long, or not the one sent */
 #define MLN_NEMO_ERROR_TO_NODE		0x23050015	/* sent to another node */
 #define MLN_NEMO_ERROR_NO_TIMESTAMP	0x23050016	/* the message read carried no Created time */
 
@@ -2895,6 +2954,41 @@ typedef struct MlnNemoMessageKey {
 	unsigned int idCount;
 } MlnNemoMessageKey;
 
+/* the message keys a message read unwrapped, freed with their references */
+static inline __attribute__((always_inline)) void MlnNemoMessageKeysFree(MlnNemoMessageKey *keys,
+									  unsigned short count)
+{
+	MlnNemoMessageKey *entry;
+	unsigned short j;
+	int i;
+
+	if (keys == NULL)
+		return;
+	for (i = 0; i < count; i++) {
+		entry = &keys[i];
+		if (entry->ids != NULL)
+			for (j = 0; j < entry->idCount; j++)
+				MlnBufferDestroy(MLN_HEAP_GENERAL, entry->ids[j]);
+		MlnFree(MLN_HEAP_GENERAL, entry->ids);
+		MlnImpl_81080C80(entry->key);
+	}
+	MlnFree(MLN_HEAP_GENERAL, keys);
+}
+
+/* a certificate chain read, freed */
+static inline __attribute__((always_inline)) void MlnNemoCertificatesFree(MlnBuffer **certificates,
+									   int count)
+{
+	unsigned short i;
+
+	if (certificates == NULL)
+		return;
+	for (i = 0; i < count; i++)
+		if (certificates[i] != NULL)
+			MlnBufferDestroy(MLN_HEAP_GENERAL, certificates[i]);
+	MlnFree(MLN_HEAP_GENERAL, certificates);
+}
+
 unsigned int MlnImpl_81077DE8(MlnXmlNode *soapHeader, const char *name, unsigned int part,
 			      unsigned int *present, MlnNemoHeaderNodes *nodes, unsigned int *index,
 			      MlnBuffer **value);
@@ -2912,6 +3006,8 @@ unsigned int MlnImpl_810849E0(MlnXmlNodeList *encrypted, MlnXmlNode *parent,
 			      MlnNemoMessageKey *keys, int count);
 unsigned int MlnImpl_81084D14(const void *data, unsigned int size, unsigned char *digest,
 			      int digestSize);
+unsigned int MlnImpl_81084D58(const MlnBuffer *valueType, const char *type, MlnXmlNode *token,
+			      int purpose, MlnBuffer **leaf, MlnBuffer ***certificates, int *count);
 unsigned int MlnImpl_81084FC8(const MlnBuffer *certificate, MlnNemoPeerKey **out);
 unsigned int MlnImpl_81085E20(MlnXmlNode *nonce, unsigned int kind, unsigned int step,
 			      unsigned int *found, unsigned int *signedParts,

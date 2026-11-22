@@ -140,6 +140,11 @@ set(MLN_TAIL_SOURCES
 set(MLN_VM_SOURCES
 	vmstack.c
 )
+# The NEMO message security code after them, with the engine's flags too.
+set(MLN_NEMO_SOURCES
+	nemosecurity.c
+	seashellvalue.c
+)
 psp2_module(${PSP2_TARGET} KIND user COMPILER gcc48 PARTIAL SOURCES
 	${MLN_ARM_SOURCES}
 	${MLN_ENGINE_SOURCES}
@@ -149,11 +154,12 @@ psp2_module(${PSP2_TARGET} KIND user COMPILER gcc48 PARTIAL SOURCES
 	${MLN_THUMB_SOURCES}
 	${MLN_TAIL_SOURCES}
 	${MLN_VM_SOURCES}
+	${MLN_NEMO_SOURCES}
 	${MLN_XML_SOURCES}
 	libmarlin.c
 )
 set_source_files_properties(${MLN_ARM_SOURCES} ${MLN_TAIL_SOURCES} PROPERTIES COMPILE_OPTIONS "-marm;-O2;-ftree-vectorize;-finline-functions;-fno-stack-protector")
-set_source_files_properties(${MLN_XML_SOURCES} ${MLN_ENGINE_SOURCES} ${MLN_VM_SOURCES} PROPERTIES COMPILE_OPTIONS "-marm;-O2;-ftree-vectorize;-finline-functions;-fno-stack-protector;-fno-strict-aliasing")
+set_source_files_properties(${MLN_XML_SOURCES} ${MLN_ENGINE_SOURCES} ${MLN_VM_SOURCES} ${MLN_NEMO_SOURCES} PROPERTIES COMPILE_OPTIONS "-marm;-O2;-ftree-vectorize;-finline-functions;-fno-stack-protector;-fno-strict-aliasing")
 set_source_files_properties(${MLN_SDK_SOURCES} PROPERTIES COMPILE_OPTIONS "-fno-stack-protector")
 set_source_files_properties(libc.c PROPERTIES COMPILE_OPTIONS "-ftree-vectorize")
 include(${mln_libgcc}/lib1funcs.cmake)
