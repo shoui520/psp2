@@ -461,6 +461,31 @@ public:
 	void *m_arg;
 };
 
+/* the icon item's draw objects: its title, the friend's description, its time and its
+   frame */
+#define INDICATOR_ICON_OBJ_TITLE	0
+#define INDICATOR_ICON_OBJ_SUBTEXT	1
+#define INDICATOR_ICON_OBJ_TIME		2
+#define INDICATOR_ICON_OBJ_FRAME	3
+
+/* a composite drawer's text or plane object of the ID, NULL when it has another one or none */
+#define INDICATOR_ICON_TEXT(widget, id)							\
+	((widget)->GetDrawObj(id) != NULL &&						\
+	 (widget)->GetDrawObj(id)->IsInherit(paf::graph::TextObj::DrawObjType()) ?	\
+	 (paf::graph::TextObj *)(widget)->GetDrawObj(id) : NULL)
+
+#define INDICATOR_ICON_PLANE(widget, id)						\
+	((widget)->GetDrawObj(id) != NULL &&						\
+	 (widget)->GetDrawObj(id)->IsInherit(paf::graph::PlaneObj::DrawObjType()) ?	\
+	 (paf::graph::PlaneObj *)(widget)->GetDrawObj(id) : NULL)
+
+/* the item's drawer on its widget, NULL when it has none */
+#define INDICATOR_ICON_DRAWER(widget)							\
+	((widget)->FindChild(paf::IDParam("composite_item"), 0) != NULL &&		\
+	 (widget)->FindChild(paf::IDParam("composite_item"), 0)				\
+		 ->IsInherit(paf::ui::CompositeDrawer::TypeName()) ?			\
+	 (widget)->FindChild(paf::IDParam("composite_item"), 0) : NULL)
+
 /* an item with an icon loaded through the cache (420 bytes and its derived classes' fields
    after it; indicator_event_icon.cpp, 0x8117B780-0x8117E0BC) */
 class IndicatorEventIconItem : public IndicatorEventItem {
@@ -532,48 +557,41 @@ public:
 	paf::common::SharedPtr<paf::job::JobItem> m_iconJob;	/* the icons' job */
 };
 
-/* the item of a message from an application or a user (424 bytes) */
-class IndicatorEventMessageItem : public IndicatorEventIconItem {
+/* the friend's item: the icon item with the event's description in a second text object
+   under its title (indicator_event_friend.cpp, 0x8117E12C-0x8117ED90; 420 bytes) */
+class IndicatorEventFriendItem : public IndicatorEventIconItem {
 public:
-	IndicatorEventMessageItem(const LsdbNewEvent &event, IndicatorEventItemCB callback)
+	IndicatorEventFriendItem(const LsdbNewEvent &event, IndicatorEventItemCB callback)
 		: IndicatorEventIconItem(event, callback)
 	{
 	}
 
-	virtual ~IndicatorEventMessageItem();
-};
-
-/* a message item with its own application (PLACEHOLDER) */
-class IndicatorEventAppItem : public IndicatorEventMessageItem {
-public:
-	IndicatorEventAppItem(const LsdbNewEvent &event, IndicatorEventItemCB callback)
-		: IndicatorEventMessageItem(event, callback)
+	virtual ~IndicatorEventFriendItem()
 	{
 	}
 
-	virtual int Launch();				/* PLACEHOLDER name */
-};
-
-/* the item of a friend's event, msgType 0xA00-0xAFF (424 bytes) */
-class IndicatorEventFriendItem : public IndicatorEventAppItem {
-public:
-	IndicatorEventFriendItem(const LsdbNewEvent &event, IndicatorEventItemCB callback)
-		: IndicatorEventAppItem(event, callback)
-	{
-	}
-
+	/* (0x8117E12C, 0x8117E372, 0x8117E928) */
 	virtual int Attach(paf::ui::Widget *widget, IndicatorEventItemLook look);
+	virtual int SetText(paf::ui::Widget *widget, paf::IDParam id);
+	virtual int Layout(paf::ui::Widget *widget, bool animate);
+	/* the description's text object (0x8117E518; PLACEHOLDER name) */
+	virtual int SetSubText(paf::ui::Widget *widget, paf::IDParam id);
 };
 
-/* the item of a trophy, from NPXS10008 (424 bytes) */
-class IndicatorEventTrophyItem : public IndicatorEventAppItem {
+/* the trophy's item, from NPXS10008: a notified one looks like the icon item, the others
+   like the friend's with a white title (indicator_event_trophy.cpp, 0x8117ED90-0x8117EF12;
+   420 bytes) */
+class IndicatorEventTrophyItem : public IndicatorEventFriendItem {
 public:
 	IndicatorEventTrophyItem(const LsdbNewEvent &event, IndicatorEventItemCB callback)
-		: IndicatorEventAppItem(event, callback)
+		: IndicatorEventFriendItem(event, callback)
 	{
 	}
 
+	/* (0x8117ED90, 0x8117EDC6, 0x8117EEEA) */
 	virtual int Attach(paf::ui::Widget *widget, IndicatorEventItemLook look);
+	virtual int SetText(paf::ui::Widget *widget, paf::IDParam id);
+	virtual int Layout(paf::ui::Widget *widget, bool animate);
 };
 
 /* the task and transfer items' templates, widgets, textures and strings (their IDs' hashes) */

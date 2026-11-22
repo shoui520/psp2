@@ -49,11 +49,6 @@ using namespace paf;
 #define INDICATOR_ICON_FRAME_SMALL	0xFACFB344
 #define INDICATOR_ICON_FRAME		0x94A74EDF
 
-/* the drawer's draw objects: its title, its time and its frame */
-#define INDICATOR_ICON_OBJ_TITLE	0
-#define INDICATOR_ICON_OBJ_TIME		2
-#define INDICATOR_ICON_OBJ_FRAME	3
-
 /* the icon an event of act type 11 (a web page's) shows */
 #define INDICATOR_ICON_BROWSER		"vs0:app/NPXS10002/sce_sys/icon0.png"
 
@@ -63,21 +58,6 @@ using namespace paf;
 /* the scene's state of a drawer closing, when it is not laid out again */
 #define INDICATOR_ICON_SCENE_CLOSING	3
 
-#define INDICATOR_ICON_TEXT(widget, id)							\
-	((widget)->GetDrawObj(id) != NULL &&						\
-	 (widget)->GetDrawObj(id)->IsInherit(graph::TextObj::DrawObjType()) ?		\
-	 (graph::TextObj *)(widget)->GetDrawObj(id) : NULL)
-
-#define INDICATOR_ICON_PLANE(widget, id)						\
-	((widget)->GetDrawObj(id) != NULL &&						\
-	 (widget)->GetDrawObj(id)->IsInherit(graph::PlaneObj::DrawObjType()) ?		\
-	 (graph::PlaneObj *)(widget)->GetDrawObj(id) : NULL)
-
-#define INDICATOR_ICON_DRAWER(widget)							\
-	((widget)->FindChild(IDParam("composite_item"), 0) != NULL &&			\
-	 (widget)->FindChild(IDParam("composite_item"), 0)				\
-		 ->IsInherit(ui::CompositeDrawer::TypeName()) ?				\
-	 (widget)->FindChild(IDParam("composite_item"), 0) : NULL)
 
 /* the item's drawer on its widget */
 static inline ui::Widget *indicatorIconFindDrawer(ui::Widget *widget)

@@ -681,7 +681,7 @@ IndicatorEventItem *IndicatorNewEvent::CreateItem(LsdbNewEventPtr event,
 	default:
 		if (e->titleId == "NPXS10008")
 			return new IndicatorEventTrophyItem(*e, callback);
-		return new IndicatorEventMessageItem(*e, callback);
+		return new IndicatorEventIconItem(*e, callback);
 	}
 }
 
