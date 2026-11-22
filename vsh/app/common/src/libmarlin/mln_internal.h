@@ -2000,10 +2000,29 @@ typedef void (*MlnVmHostTimeFunction)(MlnCoreHost *host, unsigned int *minutes, 
 /* a host function of System.Host.GetLocalTime and GetLocalTimeOffset */
 typedef void (*MlnVmHostValueFunction)(MlnCoreHost *host, int *value);
 
-#define MLN_VM_HOST_TRUSTED_TIME	2	/* functions[] of each system call */
+/* a host function of System.Host.GetObject (MlnImpl_8106F504) */
+typedef unsigned int (*MlnVmHostGetObjectFunction)(MlnCoreHost *host, int index, const char *path,
+						   unsigned char *buffer, unsigned int size,
+						   const unsigned char *signer,
+						   unsigned int signerSize,
+						   MlnOctopusArray *attributes, int *type,
+						   unsigned int *outSize);
+/* a host function of System.Host.SetObject (MlnImpl_81070318) */
+typedef unsigned int (*MlnVmHostSetObjectFunction)(MlnCoreHost *host, int index, const char *path,
+						   const unsigned char *data, unsigned int size,
+						   const unsigned char *signer,
+						   unsigned int signerSize, int type, int *result);
+/* a host function of Octopus.Links.IsNodeReachable (MlnImpl_81070424) */
+typedef unsigned int (*MlnVmHostReachableFunction)(MlnCoreHost *host, unsigned int size,
+						   const void *uid, int *result);
+
+#define MLN_VM_HOST_GET_OBJECT		0	/* functions[] of each system call */
+#define MLN_VM_HOST_SET_OBJECT		1
+#define MLN_VM_HOST_TRUSTED_TIME	2
 #define MLN_VM_HOST_LOCAL_TIME		3
 #define MLN_VM_HOST_LOCAL_TIME_OFFSET	4
 #define MLN_VM_HOST_LOCAL_TRUSTED_TIME	5
+#define MLN_VM_HOST_IS_NODE_REACHABLE	6
 
 #define MLN_VM_MODULES		4	/* the code modules a VM's group registers */
 #define MLN_VM_INSTANCES	8	/* the VMs of a group */
@@ -2101,7 +2120,102 @@ unsigned int MlnImpl_8106C7A4(MlnVm *vm, int address, int size, unsigned char *o
 unsigned int MlnImpl_8106C9D4(MlnVm *vm);
 unsigned int MlnImpl_8106C9F4(MlnVm *vm, unsigned int address, MlnBuffer **out, unsigned int *type);
 
-/* the VM's stack and system calls (0x81083010-) */
+/* what a VM's run ends with, and what its stack and system calls (0x81083010-) give */
+#define MLN_VM_HALT			0x23090001	/* STOP, or RET from the routine */
+#define MLN_VM_ERROR_MEMORY		0x23090002	/* the VM's memory is too small */
+#define MLN_VM_ERROR_MODULE		0x23090003	/* the code module cannot be used */
+#define MLN_VM_ERROR_DATA_SIZE		0x23090005	/* the data segment does not fit */
+#define MLN_VM_ERROR_STACK_UNDERFLOW	0x23090006
+#define MLN_VM_ERROR_STACK_OVERFLOW	0x23090007
+#define MLN_VM_ERROR_CALL_DEPTH		0x23090008
+#define MLN_VM_ERROR_DIVIDE		0x23090009
+#define MLN_VM_ERROR_OPCODE		0x2309000A
+#define MLN_VM_ERROR_RANGE_LAST		0x2309000B
+#define MLN_VM_ERROR_SYSTEM_CALL	0x2309000C
+#define MLN_VM_ERROR_ACCESS		0x2309000D	/* code or data out of range */
+#define MLN_VM_ERROR_MODULES		0x2309000E	/* the group has no room for a module */
+#define MLN_VM_ERROR_UNLOAD		0x2309000F
+#define MLN_VM_ERROR_CALL_STATUS	0x23090010	/* a called VM's routine gave a status */
+#define MLN_VM_ERROR_LOADED		0x23090011	/* the VM already has its module */
+
+/* the result codes a routine sees */
+#define MLN_VM_RESULT_FAILURE		(-1)
+#define MLN_VM_RESULT_INVALID_PARAMETERS (-2)
+#define MLN_VM_RESULT_UNSUPPORTED	(-3)
+#define MLN_VM_RESULT_OUT_OF_MEMORY	(-4)
+#define MLN_VM_RESULT_OUT_OF_RESOURCES	(-5)
+#define MLN_VM_RESULT_NO_SUCH_ITEM	(-6)
+#define MLN_VM_RESULT_INSUFFICIENT_SPACE (-7)
+#define MLN_VM_RESULT_FAULT		(-9)
+#define MLN_VM_RESULT_INVALID_MODULE	(-10)
+
+/* a big-endian word of the VM's memory or code */
+#define MLN_VM_WORD(p) \
+	((unsigned int)(p)[0] << 24 | (unsigned int)(p)[1] << 16 | (unsigned int)(p)[2] << 8 | \
+	 (unsigned int)(p)[3])
+
+static inline __attribute__((always_inline)) void MlnVmSetWord(unsigned char *p, unsigned int value)
+{
+	p[0] = value >> 24;
+	p[1] = value >> 16;
+	p[2] = value >> 8;
+	p[3] = value;
+}
+
+/* push a word onto a run's stack */
+static inline __attribute__((always_inline)) unsigned int MlnVmPush(MlnVmContext *context,
+								    unsigned int value)
+{
+	context->sp -= 4;
+	if (context->sp < context->stackLow)
+		return MLN_VM_ERROR_STACK_OVERFLOW;
+	if (context->sp >= context->stackHigh)
+		return MLN_VM_ERROR_STACK_UNDERFLOW;
+	MlnVmSetWord(context->sp, value);
+	return 0;
+}
+
+#define MLN_VM_MEMORY_MIN	512
+#define MLN_VM_DATA_START	256	/* the data segments start above the VM's own words */
+
+/* a new VM of size bytes of memory */
+static inline unsigned int MlnVmCreate(int size, MlnCoreHost *host, MlnVm **out)
+{
+	MlnVmMemory *memory = NULL;
+	MlnVm *vm = NULL;
+	unsigned int ret;
+
+	if (size < MLN_VM_MEMORY_MIN) {
+		ret = MLN_VM_ERROR_MEMORY;
+		goto out;
+	}
+	memory = MlnAllocate(MLN_HEAP_GENERAL, sizeof(*memory) + size);
+	if (memory == NULL) {
+		ret = 2;
+		goto out;
+	}
+	MlnMemset(memory, 0, sizeof(*memory) + size);
+	memory->size = size;
+	memory->dataSize = MLN_VM_DATA_START;
+	vm = MlnAllocate(MLN_HEAP_GENERAL, sizeof(*vm));
+	if (vm == NULL) {
+		ret = 2;
+		goto out;
+	}
+	MlnMemset(vm, 0, sizeof(*vm));
+	vm->memory = memory;
+	vm->sp = (unsigned char *)((unsigned int)(memory->data + memory->size) & ~3);
+	vm->host = host;
+	*out = vm;
+	memory = NULL;
+	vm = NULL;
+	ret = 0;
+out:
+	MlnFree(MLN_HEAP_GENERAL, memory);
+	MlnFree(MLN_HEAP_GENERAL, vm);
+	return ret;
+}
+
 unsigned int MlnImpl_81083010(MlnVmContext *context, unsigned int first, unsigned int second);
 unsigned int MlnImpl_810830A4(MlnVmContext *context, int *value);
 unsigned int MlnImpl_81083118(MlnVmContext *context, int *top, int *next);
@@ -2846,6 +2960,7 @@ int MlnImpl_81066CE0(MlnExchange *exchange, MlnBufferGroups **credentials,
 unsigned int MlnImpl_81082DC0(int ret);
 unsigned int MlnImpl_81066F74(MlnExchange *exchange, const MlnBuffer *response,
 			      MlnBuffer **node);
+int MlnImpl_8105F334(int time);
 unsigned int MlnImpl_81082B04(void *exchange);
 unsigned int MlnImpl_81082BC4(MlnXmlNode **node);
 unsigned int MlnImpl_81082B44(MlnXmlNode *document, MlnXmlNode **node);

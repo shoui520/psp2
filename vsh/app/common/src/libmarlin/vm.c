@@ -5,31 +5,6 @@
  */
 #include "mln_internal.h"
 
-/* what a routine's run ends with */
-#define MLN_VM_HALT			0x23090001	/* STOP, or RET from the routine */
-#define MLN_VM_ERROR_MEMORY		0x23090002	/* the VM's memory is too small */
-#define MLN_VM_ERROR_MODULE		0x23090003	/* the code module cannot be used */
-#define MLN_VM_ERROR_DATA_SIZE		0x23090005	/* the data segment does not fit */
-#define MLN_VM_ERROR_STACK_UNDERFLOW	0x23090006
-#define MLN_VM_ERROR_STACK_OVERFLOW	0x23090007
-#define MLN_VM_ERROR_CALL_DEPTH		0x23090008
-#define MLN_VM_ERROR_DIVIDE		0x23090009
-#define MLN_VM_ERROR_OPCODE		0x2309000A
-#define MLN_VM_ERROR_RANGE_LAST		0x2309000B
-#define MLN_VM_ERROR_SYSTEM_CALL	0x2309000C
-#define MLN_VM_ERROR_ACCESS		0x2309000D	/* code or data out of range */
-#define MLN_VM_ERROR_MODULES		0x2309000E	/* the group has no room for a module */
-#define MLN_VM_ERROR_UNLOAD		0x2309000F
-#define MLN_VM_ERROR_LOADED		0x23090011	/* the VM already has its module */
-
-/* the result codes a routine sees */
-#define MLN_VM_RESULT_FAILURE		(-1)
-#define MLN_VM_RESULT_INVALID_PARAMETERS (-2)
-#define MLN_VM_RESULT_OUT_OF_MEMORY	(-4)
-#define MLN_VM_RESULT_NO_SUCH_ITEM	(-6)
-#define MLN_VM_RESULT_FAULT		(-9)
-#define MLN_VM_RESULT_INVALID_MODULE	(-10)
-
 /* the instructions */
 #define MLN_VM_OP_NOP		0
 #define MLN_VM_OP_PUSH		1
@@ -82,16 +57,9 @@
 #define MLN_VM_CALL_HOST_RELEASE_VM		0x4007
 #define MLN_VM_CALL_IS_NODE_REACHABLE		0x4008
 
-#define MLN_VM_MEMORY_MIN	512
-#define MLN_VM_DATA_START	256	/* the data segments start above the VM's own words */
 #define MLN_VM_STACK_MAX	0x80	/* the most stack a module may ask for */
 
 #define MLN_VM_ALIGN(x)		(((x) + 3) & ~3)
-
-/* a big-endian word of the VM's memory or code */
-#define MLN_VM_WORD(p) \
-	((unsigned int)(p)[0] << 24 | (unsigned int)(p)[1] << 16 | (unsigned int)(p)[2] << 8 | \
-	 (unsigned int)(p)[3])
 
 /* the protocol and type of a code module the VM runs */
 static const MlnBuffer MlnVmProtocol = {
@@ -112,27 +80,6 @@ typedef struct MlnVmImage {
 	int hasRequirements;		/* its pkRQ */
 	unsigned int requirements[4];	/* reserved, memory, stack, reserved */
 } MlnVmImage;
-
-static inline __attribute__((always_inline)) void MlnVmSetWord(unsigned char *p, unsigned int value)
-{
-	p[0] = value >> 24;
-	p[1] = value >> 16;
-	p[2] = value >> 8;
-	p[3] = value;
-}
-
-/* push a word onto a run's stack */
-static inline __attribute__((always_inline)) unsigned int MlnVmPush(MlnVmContext *context,
-								    unsigned int value)
-{
-	context->sp -= 4;
-	if (context->sp < context->stackLow)
-		return MLN_VM_ERROR_STACK_OVERFLOW;
-	if (context->sp >= context->stackHigh)
-		return MLN_VM_ERROR_STACK_UNDERFLOW;
-	MlnVmSetWord(context->sp, value);
-	return 0;
-}
 
 /* pop a word from a VM's stack */
 static inline __attribute__((always_inline)) unsigned int MlnVmPop(MlnVm *vm, unsigned int *value)
@@ -938,44 +885,6 @@ static inline unsigned int MlnVmGroupCreate(MlnVmGroup **out)
 		ret = 0;
 	}
 	MlnFree(MLN_HEAP_GENERAL, group);
-	return ret;
-}
-
-/* a new VM of size bytes of memory */
-static inline unsigned int MlnVmCreate(int size, MlnCoreHost *host, MlnVm **out)
-{
-	MlnVmMemory *memory = NULL;
-	MlnVm *vm = NULL;
-	unsigned int ret;
-
-	if (size < MLN_VM_MEMORY_MIN) {
-		ret = MLN_VM_ERROR_MEMORY;
-		goto out;
-	}
-	memory = MlnAllocate(MLN_HEAP_GENERAL, sizeof(*memory) + size);
-	if (memory == NULL) {
-		ret = 2;
-		goto out;
-	}
-	MlnMemset(memory, 0, sizeof(*memory) + size);
-	memory->size = size;
-	memory->dataSize = MLN_VM_DATA_START;
-	vm = MlnAllocate(MLN_HEAP_GENERAL, sizeof(*vm));
-	if (vm == NULL) {
-		ret = 2;
-		goto out;
-	}
-	MlnMemset(vm, 0, sizeof(*vm));
-	vm->memory = memory;
-	vm->sp = (unsigned char *)((unsigned int)(memory->data + memory->size) & ~3);
-	vm->host = host;
-	*out = vm;
-	memory = NULL;
-	vm = NULL;
-	ret = 0;
-out:
-	MlnFree(MLN_HEAP_GENERAL, memory);
-	MlnFree(MLN_HEAP_GENERAL, vm);
 	return ret;
 }
 

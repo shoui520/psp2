@@ -84,8 +84,10 @@ int MlnImpl_8105F2C4(int *id, unsigned int *flags)
 	return 0;
 }
 
-int MlnImpl_8105F334(void)
+/* sets the clock: nothing to do here */
+int MlnImpl_8105F334(int time)
 {
+	(void)time;
 	return 0;
 }
 
