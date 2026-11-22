@@ -198,7 +198,7 @@ extern IndicatorNewEvent *g_indicatorNewEvent;	/* (0x815449FC) */
 /* what a notice pushed to the notification job carries (36 bytes, PLACEHOLDER names), the
    callback told its result with the event's rowid, and the job started on the indicator's
    queue (0x81182A92) */
-typedef void (*IndicatorPushNotificationCB)(int result, int reserved, SceInt64 rowid, void *arg);
+typedef void (*IndicatorPushNotificationCB)(int result, SceInt64 rowid, void *arg);
 
 struct IndicatorPushNotificationParam {
 	IndicatorPushNotificationParam(int target, LsdbNewEventPtr event, const char *titleId,
@@ -456,12 +456,57 @@ public:
 
 IndicatorNoticeManager *indicatorNoticeManager(void);		/* (0x8116FAAA) */
 
-/* the notices' cache (0x81544A50): the notices shown cancelled on the main thread
-   (0x8116EA8C) (PLACEHOLDER names) */
+/*
+ * The notices' cache (0x81544A50, indicator_notice_cache.cpp): the notices pushed wait in their
+ * order to pop up on the notification page, one at a time, each told how it ended; added and
+ * cancelled on the main thread (36 bytes, PLACEHOLDER names).
+ */
+class IndicatorNotice;
+
+/* an icon's information by its title, as the icon information job gives it (PLACEHOLDER
+   names) */
+typedef paf::map<paf::string, LsdbIconPtr> IndicatorIconInfoMap;
+typedef void (*IndicatorIconInfoCB)(IndicatorIconInfoMap *icons, void *arg);
+
+/* the icons' information of the titles read on the indicator's job queue, the callback told
+   (0x81182604; PLACEHOLDER name, its file not written yet) */
+paf::common::SharedPtr<paf::job::JobItem>
+indicatorIconInfoJobStart(paf::vector<paf::string> *titleIds, IndicatorIconInfoCB callback,
+			  void *arg);
+
+/* a new event to be told with its sound and icon: not the background or log status, of
+   kind 4 or 6 (0x81174A12; PLACEHOLDER name, in the list's file) */
+bool indicatorNoticeIsShown(const LsdbNewEvent *event);
+
 class IndicatorNoticeCache {
 public:
-	int CancelAll();
+	IndicatorNoticeCache(paf::Plugin *plugin)
+		: m_plugin(plugin), m_page(NULL), m_current(NULL), m_popup(NULL), m_reserved(NULL)
+	{
+		m_queue.reserve(16);
+	}
+
+	void ShowNext();
+	void Dismiss(bool animate);
+	void Push(IndicatorNotice *notice);
+	void OnTimeout();
+	void Finish(int result);
+	void CancelNow(paf::string *titleId);
+	int Add(const IndicatorPushNotificationParam &param);
 	int Cancel(const char *titleId);			/* (0x8116EA38) */
+	int CancelAll();
+	void AttachItem();
+	void OnIconInfo(IndicatorIconInfoMap *icons);
+	void LoadIconInfo();
+	void GetBounds(paf::ui::Widget *widget, paf::math::v4 *size, paf::math::v4 *center);
+	void Open();
+
+	paf::Plugin *m_plugin;
+	paf::ui::Scene *m_page;			/* page_event_notification */
+	paf::vector<IndicatorNotice *> m_queue;	/* by their option, the lower first */
+	IndicatorNotice *m_current;		/* the one shown */
+	paf::ui::Widget *m_popup;		/* the notice's widget on the page */
+	void *m_reserved;			/* PLACEHOLDER: only cleared */
 };
 
 IndicatorNoticeCache *indicatorNoticeCache(void);		/* (0x8116EAE2) */
