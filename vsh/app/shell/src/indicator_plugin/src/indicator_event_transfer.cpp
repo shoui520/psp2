@@ -37,39 +37,14 @@ PAF_VECTOR_NOINLINE_PUSH_BACK(IDParam, allocator<IDParam>)
 #define INDICATOR_TRANSFER_TIMER		0x400
 #define INDICATOR_TRANSFER_INTERVAL		10.0f
 
-/* the menu's button pressed */
-#define INDICATOR_TRANSFER_ON_PRESSED		0x10000008
-
 /* the dialog's button that cancels the transfer */
 #define INDICATOR_TRANSFER_BUTTON_YES		4
 
-/* the templates, widgets, textures and strings (their IDs' hashes) */
-#define INDICATOR_TRANSFER_MENU_TEMPLATE	0x187D55CB
-#define INDICATOR_TRANSFER_MENU_BUTTON		0xE1DE6C06
-#define INDICATOR_TRANSFER_BAR_TEMPLATE		0x2FD67BCB
-#define INDICATOR_TRANSFER_BAR			0x136D89D3
-#define INDICATOR_TRANSFER_BACK_NEW		0xFC9E90F4
-#define INDICATOR_TRANSFER_BACK			0x21E6334F
-#define INDICATOR_TRANSFER_DONE_BACK_NEW	0xB0B3F4AD
-#define INDICATOR_TRANSFER_DONE_BACK		0x0D60DC18
-#define INDICATOR_TRANSFER_SUBTEXT		0x0531C070
-#define INDICATOR_TRANSFER_MENU_CANCEL		0xADCD9ADF
-#define INDICATOR_TRANSFER_CANCELLING		0x632B4933
+/* the string shown while the transfer is cancelled (its ID's hash) */
+#define INDICATOR_TRANSFER_CANCELLING		0x632B6733
 
 /* the transfer's commands */
 #define INDICATOR_TRANSFER_CMD_CANCEL		0
-
-/* a typed child found by its ID, NULL when there is none or it is of another type */
-#define INDICATOR_TRANSFER_FIND(parent, type, id)					\
-	((parent)->FindChild(id, 0) != NULL &&						\
-	 (parent)->FindChild(id, 0)->IsInherit(type::TypeName()) ?			\
-	 (type *)(parent)->FindChild(id, 0) : NULL)
-
-/* a composite drawer's text object of the ID, NULL when it has another one or none */
-#define INDICATOR_TRANSFER_TEXT(widget, id)						\
-	((widget)->GetDrawObj(id) != NULL &&						\
-	 (widget)->GetDrawObj(id)->IsInherit(graph::TextObj::DrawObjType()) ?		\
-	 (graph::TextObj *)(widget)->GetDrawObj(id) : NULL)
 
 /* the menu's items (0x81566A08) and the transfers' commands' slots (0x81566A18) */
 static vector<IDParam> s_menuIds((allocator<IDParam>()));
@@ -190,16 +165,16 @@ int IndicatorEventTransferItem::AttachMenu(ui::Widget *item)
 	if (GetMode() == 1) {
 		if (IsTransferring()) {
 			g_indicatorPlugin->TemplateOpen(
-				item, IDParam(s_empty_name, INDICATOR_TRANSFER_MENU_TEMPLATE),
+				item, IDParam(s_empty_name, INDICATOR_TASK_MENU_TEMPLATE),
 				Plugin::TemplateOpenParam());
 
 			ui::Widget *button = item->FindChild(
-				IDParam(s_empty_name, INDICATOR_TRANSFER_MENU_BUTTON), 0);
+				IDParam(s_empty_name, INDICATOR_TASK_MENU_BUTTON), 0);
 
 			if (button != NULL) {
 				button->SetPos(math::v4(339.0f, -35.0f, 0.0f, 0.0f));
 				button->SetSize(math::v4(60.0f, 60.0f, 0.0f, 0.0f));
-				button->AddEventCallback(INDICATOR_TRANSFER_ON_PRESSED,
+				button->AddEventCallback(INDICATOR_TASK_ON_PRESSED,
 							 indicatorTransferOnMenuButton, this);
 				button->Show(0xff, NULL, NULL, 0.0f);
 			}
@@ -223,12 +198,12 @@ int IndicatorEventTransferItem::Attach(ui::Widget *widget, IndicatorEventItemLoo
 		bool enable;
 
 		if (IsTransferring()) {
-			back.m_idhash = m_event.newFlag ? INDICATOR_TRANSFER_BACK_NEW :
-							  INDICATOR_TRANSFER_BACK;
+			back.m_idhash = m_event.newFlag ? INDICATOR_TASK_BACK_NEW :
+							  INDICATOR_TASK_BACK;
 			enable = false;
 		} else {
-			back.m_idhash = m_event.newFlag ? INDICATOR_TRANSFER_DONE_BACK_NEW :
-							  INDICATOR_TRANSFER_DONE_BACK;
+			back.m_idhash = m_event.newFlag ? INDICATOR_TASK_DONE_BACK_NEW :
+							  INDICATOR_TASK_DONE_BACK;
 			enable = true;
 		}
 		if (enable)
@@ -238,23 +213,23 @@ int IndicatorEventTransferItem::Attach(ui::Widget *widget, IndicatorEventItemLoo
 		widget->SetTexture(g_indicatorPlugin->GetTexture(back), 0, 0);
 	}
 
-	ui::CompositeDrawer *item = INDICATOR_TRANSFER_FIND(widget, ui::CompositeDrawer,
+	ui::CompositeDrawer *item = INDICATOR_TASK_FIND(widget, ui::CompositeDrawer,
 							   IDParam("composite_item"));
 
 	if (item == NULL)
 		return 0;
 
-	SetSubText(item, IDParam(s_empty_name, INDICATOR_TRANSFER_SUBTEXT));
+	SetSubText(item, IDParam(s_empty_name, INDICATOR_TASK_SUBTEXT));
 	AttachMenu(item);
 
 	ret = g_indicatorPlugin->TemplateOpen(item,
-					      IDParam(s_empty_name, INDICATOR_TRANSFER_BAR_TEMPLATE),
+					      IDParam(s_empty_name, INDICATOR_TASK_BAR_TEMPLATE),
 					      Plugin::TemplateOpenParam());
 	if (ret != 0)
 		return ret;
 
-	m_bar = INDICATOR_TRANSFER_FIND(widget, ui::ProgressBar,
-					IDParam(s_empty_name, INDICATOR_TRANSFER_BAR));
+	m_bar = INDICATOR_TASK_FIND(widget, ui::ProgressBar,
+					IDParam(s_empty_name, INDICATOR_TASK_BAR));
 	if (m_bar != NULL) {
 		m_bar->SetSize(math::v4(606.0f, 12.0f, 0.0f, 0.0f));
 		m_bar->SetPos(math::v4(-298.0f, -51.0f, 0.0f, 0.0f));
@@ -276,7 +251,7 @@ int IndicatorEventTransferItem::SetText(ui::Widget *widget, IDParam id)
 	if (ret < 0 || widget == NULL || !widget->IsInherit(ui::CompositeDrawer::TypeName()))
 		return ret;
 
-	graph::TextObj *text = INDICATOR_TRANSFER_TEXT(widget, 0);
+	graph::TextObj *text = INDICATOR_TASK_TEXT(widget, 0);
 
 	if (text == NULL)
 		return ret;
@@ -310,7 +285,7 @@ int IndicatorEventTransferItem::SetSubText(ui::Widget *widget, IDParam id)
 	if (widget == NULL || !widget->IsInherit(ui::CompositeDrawer::TypeName()))
 		return -1;
 
-	graph::TextObj *text = INDICATOR_TRANSFER_TEXT(widget, 1);
+	graph::TextObj *text = INDICATOR_TASK_TEXT(widget, 1);
 
 	if (text == NULL) {
 		common::SharedPtr<graph::DrawObj> obj(new graph::TextObj(graph::TextObjStyle()));
@@ -392,7 +367,7 @@ void IndicatorEventTransferItem::OpenMenu(ui::Widget *anchor)
 	param.SetCloseCallback(indicatorTransferOnMenuClosed,
 			       new IndicatorCallArg<LsdbNewEventPtr>(event));
 	s_menuIds.clear();
-	s_menuIds.push_back(IDParam(s_empty_name, INDICATOR_TRANSFER_MENU_CANCEL));
+	s_menuIds.push_back(IDParam(s_empty_name, INDICATOR_TASK_MENU_CANCEL));
 
 	SceUInt32 count = s_menuIds.size();
 
@@ -408,7 +383,7 @@ void IndicatorEventTransferItem::OpenMenu(ui::Widget *anchor)
 static __attribute__((noinline)) void indicatorTransferOnMenuChosen(int index,
 								     const LsdbNewEventPtr &arg)
 {
-	if (index < 0 || s_menuIds[index].GetIDHash() != INDICATOR_TRANSFER_MENU_CANCEL)
+	if (index < 0 || s_menuIds[index].GetIDHash() != INDICATOR_TASK_MENU_CANCEL)
 		return;
 
 	LsdbNewEventPtr event = arg;
@@ -454,13 +429,13 @@ static void indicatorTransferOnCancelAnswered(int result, int button, void *arg)
 /* the progress's percentage and status shown and the bar set (0x81177226) */
 int IndicatorEventTransferItem::SetProgress(float progress, string status, string percent)
 {
-	ui::CompositeDrawer *item = INDICATOR_TRANSFER_FIND(m_widget, ui::CompositeDrawer,
+	ui::CompositeDrawer *item = INDICATOR_TASK_FIND(m_widget, ui::CompositeDrawer,
 							   IDParam("composite_item"));
 
 	if (item != NULL) {
 		graph::TextObj *text;
 
-		if (status.length() != 0 && (text = INDICATOR_TRANSFER_TEXT(item, 0)) != NULL) {
+		if (status.length() != 0 && (text = INDICATOR_TASK_TEXT(item, 0)) != NULL) {
 			{
 				wstring str;
 
@@ -469,7 +444,7 @@ int IndicatorEventTransferItem::SetProgress(float progress, string status, strin
 			}
 			text->SetVisible(true);
 		}
-		if ((text = INDICATOR_TRANSFER_TEXT(item, 1)) != NULL) {
+		if ((text = INDICATOR_TASK_TEXT(item, 1)) != NULL) {
 			{
 				wstring str;
 

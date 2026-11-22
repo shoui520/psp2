@@ -61,6 +61,10 @@ struct BgdlTaskCopy {
 
 /* a task's copy as GetTaskCopy gives it (PLACEHOLDER names) */
 struct BgdlTaskCopyStatus {
+	BgdlTaskCopyStatus() : result(0)
+	{
+	}
+
 	int result;			/* the task's copyResult */
 	BgdlTaskCopy copy;
 };
@@ -758,6 +762,7 @@ int bgdlCheckQueue(void);					/* (0x81106346) PLACEHOLDER name */
 int bgdlManagerNotify(int value, int mask);			/* (0x810FD862) */
 int bgdlGetTaskParam(SceUInt32 id, EseParamCache *param);	/* (0x8110AD48) PLACEHOLDER name */
 int bgdlGetTaskStatus(SceUInt32 id, struct BgdlTaskStatus *status);	/* (0x8110AB1E) PLACEHOLDER name */
+int bgdlGetTaskCopy(SceUInt32 id, struct BgdlTaskCopyStatus *copy);	/* (0x8110ABFC) PLACEHOLDER name */
 int bgdlReloadTasks(void);					/* (0x8110B028) PLACEHOLDER name */
 bool bgdlTaskIsWaiting(SceUInt32 id);				/* (0x8110F3BE) PLACEHOLDER name */
 int bgdlUnmountGrw0(void);					/* (0x8110F70C) PLACEHOLDER name */

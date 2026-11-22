@@ -150,6 +150,15 @@ typedef void (*IndicatorDialogCB)(int result, int button, void *arg);
    name) */
 int indicatorDialogOpen(const CommonGuiDialogLayout *layout, const wchar_t *message,
 			IndicatorDialogCB callback, void *arg);
+/* the dialog of an error opened, its ID returned (0x8117EF86; PLACEHOLDER name) */
+int indicatorErrorDialogOpen(int error, const wchar_t *message, IndicatorDialogCB callback,
+			     void *arg);
+/* the text of the seconds left, in minutes from 120 on (0x81182050; PLACEHOLDER name) */
+paf::wstring indicatorRemainingText(int seconds);
+/* the error's text, its title set when empty, and its external code and its number in hex
+   appended in parentheses as asked; the external code's result (0x811822A4; PLACEHOLDER
+   name) */
+int indicatorErrorText(paf::wstring *title, paf::wstring *text, int error, bool code, bool hex);
 
 /* what a main-thread call or a dialog's callback is given: a copy of the caller's value, made
    from a copy of it (PLACEHOLDER name) */
@@ -313,6 +322,8 @@ public:
 	int UpdateNewFlag(const LsdbNewEvent *event);		/* (0x8117F48E) */
 	int ClearNewFlags();					/* (0x8117F692) */
 	bool IsChanged();					/* (0x8117F414) */
+	/* the event of the key deleted, the accessor's (0x8117F1AE; PLACEHOLDER name) */
+	static int Delete(const LsdbNewEventKey *key);
 	/* every event deleted, the accessor's (0x8117F1B8) */
 	static int DeleteAll(bool all);
 	int GetPopupCount();					/* (0x8117F41C) */
@@ -444,6 +455,13 @@ public:
 	virtual int SetTime(paf::ui::Widget *widget);
 	virtual int Layout(paf::ui::Widget *widget, bool animate);
 
+	/* the icon's texture made (0x8117BE38) and not made (0x8117BF7A), its events 0x100005
+	   and 0x100006 (PLACEHOLDER names) */
+	static void OnIconReady(int32_t type, paf::ui::Handler *self, paf::ui::Event *e,
+				void *data);
+	static void OnIconError(int32_t type, paf::ui::Handler *self, paf::ui::Event *e,
+				void *data);
+
 	paf::intrusive_ptr<paf::cache::CacheImageInterface> m_icon;
 	int m_iconType;					/* PLACEHOLDER: not set yet */
 	paf::string m_iconPath;
@@ -495,11 +513,41 @@ public:
 	virtual int Attach(paf::ui::Widget *widget, IndicatorEventItemLook look);
 };
 
-/* the item of a system task, msgType 0x00-0xFF, its jobs in slots (464 bytes) */
+/* the task and transfer items' templates, widgets, textures and strings (their IDs' hashes) */
+#define INDICATOR_TASK_MENU_TEMPLATE	0x187D55CB
+#define INDICATOR_TASK_MENU_BUTTON	0xE1DE6C06
+#define INDICATOR_TASK_BAR_TEMPLATE	0x2FD67BCB
+#define INDICATOR_TASK_BAR		0x136D89D3
+#define INDICATOR_TASK_BACK_NEW		0xFC9E90F4
+#define INDICATOR_TASK_BACK		0x21E6334F
+#define INDICATOR_TASK_DONE_BACK_NEW	0xB0B3F4AD
+#define INDICATOR_TASK_DONE_BACK	0x0D60DC18
+#define INDICATOR_TASK_SUBTEXT		0x0531C070
+#define INDICATOR_TASK_MENU_CANCEL	0xADCD9ADF
+
+/* the menu's button pressed */
+#define INDICATOR_TASK_ON_PRESSED	0x10000008
+
+/* a typed child found by its ID, NULL when there is none or it is of another type */
+#define INDICATOR_TASK_FIND(parent, type, id)						\
+	((parent)->FindChild(id, 0) != NULL &&						\
+	 (parent)->FindChild(id, 0)->IsInherit(type::TypeName()) ?			\
+	 (type *)(parent)->FindChild(id, 0) : NULL)
+
+/* a composite drawer's text object of the ID, NULL when it has another one or none */
+#define INDICATOR_TASK_TEXT(widget, id)							\
+	((widget)->GetDrawObj(id) != NULL &&						\
+	 (widget)->GetDrawObj(id)->IsInherit(paf::graph::TextObj::DrawObjType()) ?	\
+	 (paf::graph::TextObj *)(widget)->GetDrawObj(id) : NULL)
+
+/* the item of a system task, msgType 0x00-0xFF: a background download, its progress bar
+   updated by a job while it runs, and its menu of commands (indicator_event_task.cpp,
+   0x81177C44-0x8117B780; 464 bytes) */
 class IndicatorEventTaskItem : public IndicatorEventIconItem {
 public:
 	IndicatorEventTaskItem(const LsdbNewEvent &event, IndicatorEventItemCB callback)
-		: IndicatorEventIconItem(event, callback), m_progress(0), m_busy(false)
+		: IndicatorEventIconItem(event, callback), m_bar(NULL), m_subText(NULL), m_text(NULL),
+		  m_busy(false)
 	{
 	}
 
@@ -519,10 +567,19 @@ public:
 	virtual int Stop();
 	virtual bool IsTransferring();
 
+	/* the bar's timer set or the bar hidden (0x81177D08), the menu's button put on the item
+	   (0x81177E2C), and the progress of a copy (0x811797F2) or of a download (0x81179B2C)
+	   shown (PLACEHOLDER names) */
+	void UpdateTimer(paf::ui::Widget *bar);
+	int AttachMenu(paf::ui::Widget *item);
+	int SetCopyProgress(paf::string name, int number, int total, int remaining, bool show);
+	int SetDownloadProgress(SceUInt64 total, SceUInt64 current, int remaining, bool show);
+
 	paf::common::JobSlots m_slots;
-	paf::common::SharedPtr<paf::job::JobItem> m_taskJob;
-	int m_progress;					/* PLACEHOLDER: not read yet */
-	bool m_busy;					/* PLACEHOLDER: not read yet */
+	paf::ui::ProgressBar *m_bar;
+	paf::graph::TextObj *m_subText;			/* the composite drawer's text 1 */
+	paf::graph::TextObj *m_text;			/* the composite drawer's text 0 */
+	bool m_busy;					/* its icon is the task's state */
 };
 
 /* the item of a transfer, msgType 0x40-0x4F and 0x80-0x8F, with its progress bar updated by a
