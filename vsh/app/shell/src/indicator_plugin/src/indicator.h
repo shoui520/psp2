@@ -551,8 +551,21 @@ paf::common::SharedPtr<paf::job::JobItem>
 indicatorIconInfoJobStart(paf::vector<paf::string> *titleIds, IndicatorIconInfoCB callback,
 			  void *arg);
 
-/* a new event to be told with its sound and icon: not the background or log status, of
-   kind 4 or 6 (0x81174A12; PLACEHOLDER name, in the list's file) */
+/* what the bar says of a new event (indicator_event_text.cpp, 0x81173AD0-0x81174D48;
+   PLACEHOLDER names): its message's format and text, a system application's notice text, the
+   tests of its kind and its download's state, and whether it is told with its sound and icon
+   (not the background or log status, of kind 4 or 6) */
+bool indicatorEventIsBgcpStatus(const LsdbNewEvent *event);
+const wchar_t *indicatorEventMessageFormat(const LsdbNewEvent *event);
+paf::wstring indicatorEventMessage(const LsdbNewEvent *event);
+paf::wstring indicatorEventText(const LsdbNewEvent *event);
+paf::wstring indicatorEventAppText(const paf::string &titleId);
+unsigned int indicatorEventIsNotified(const LsdbNewEvent *event);
+bool indicatorEventIsStateFive(const LsdbNewEvent *event);
+bool indicatorEventRunsPcsi00011(const LsdbNewEvent *event);
+bool indicatorEventIsStateSix(const LsdbNewEvent *event);
+bool indicatorEventRunsPcsc80018(const LsdbNewEvent *event);
+int indicatorEventBgcpState(const LsdbNewEvent *event);
 bool indicatorNoticeIsShown(const LsdbNewEvent *event);
 
 class IndicatorNoticeCache {
