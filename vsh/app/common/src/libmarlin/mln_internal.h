@@ -2203,8 +2203,8 @@ unsigned int MlnImpl_81066B84(MlnBuffer *request, MlnBuffer **transfer, MlnXmlNo
 unsigned int MlnImpl_8106668C(const MlnBuffer *name, MlnBuffer *value, MlnXmlNode **node);
 unsigned int MlnImpl_81066548(void *context, void **first, void **second);
 unsigned int MlnImpl_81065430(const MlnBuffer *agentId, const MlnBuffer *contextId,
-			      const MlnBuffer *controlId, MlnXmlNode *parameter, void *first,
-			      void *second, MlnXmlNode **document);
+			      const MlnBuffer *controlId, MlnXmlNode *parameter, MlnXmlNode *agent,
+			      MlnXmlNode *context, MlnXmlNode **document);
 unsigned int MlnImpl_810504EC(unsigned int r, unsigned int fallback);
 unsigned int MlnImpl_81067BA4(void *exchange, const MlnBuffer *message, MlnXmlNode **document);
 int MlnImpl_81067814(void *exchange, MlnBufferGroups **groups, void *reserved1, void *reserved2,
