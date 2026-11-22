@@ -2706,7 +2706,7 @@ int MlnImpl_81048CF8(const MlnStoreLink *links, const unsigned char *digest)
  * finds the link from from to to; without one, gives the first key (1 to
  * 7) no link uses in free, and 0x230A0012 when all are used
  */
-int MlnImpl_81048DF0(MlnStoreLink *links, const MlnBuffer *from, const MlnBuffer *to,
+__attribute__((noinline)) int MlnImpl_81048DF0(MlnStoreLink *links, const MlnBuffer *from, const MlnBuffer *to,
 		     MlnStoreLink **found, int *free)
 {
 	unsigned char fromDigest[20];
@@ -2799,7 +2799,7 @@ static inline __attribute__((always_inline)) void MlnStorePutBE32(unsigned char 
  * 0x3C; a by-value link (key bit 31) has the sizes of its ids at 0x00 to
  * 0x0F and the ids after the entry, the others their three digests
  */
-int MlnImpl_81048FF0(const MlnStoreLink *links)
+__attribute__((noinline)) int MlnImpl_81048FF0(const MlnStoreLink *links)
 {
 	unsigned char entry[0x40];
 	const MlnStoreLink *link;
@@ -2864,4 +2864,515 @@ int MlnImpl_81048FF0(const MlnStoreLink *links)
 out:
 	MlnBufferDestroy(MLN_HEAP_GENERAL, buffer);
 	return ret;
+}
+
+/*
+ * drops the index entries (table 6) of link's ends that no link of links
+ * uses any more
+ */
+int MlnImpl_810492F8(const MlnStoreLink *links, const MlnStoreLink *link)
+{
+	unsigned char zero[20];
+	unsigned char fromDigest[20];
+	unsigned char toDigest[20];
+	int ret;
+
+	MlnMemset(zero, 0, sizeof(zero));
+	MlnMemset(fromDigest, 0, sizeof(fromDigest));
+	MlnMemset(toDigest, 0, sizeof(toDigest));
+	if (link->byValue == 1) {
+		if (link->from != NULL) {
+			ret = MlnImpl_810570A8(link->from->data, link->from->size, fromDigest);
+			if (ret != 0)
+				return ret;
+		}
+		if (link->to != NULL) {
+			ret = MlnImpl_810570A8(link->to->data, link->to->size, toDigest);
+			if (ret != 0)
+				return ret;
+		}
+	} else {
+		MlnMemcpy(fromDigest, link->fromDigest, sizeof(fromDigest));
+		MlnMemcpy(toDigest, link->toDigest, sizeof(toDigest));
+	}
+	if (MlnMemcmp(fromDigest, zero, sizeof(zero)) != 0 &&
+	    MlnImpl_81048CF8(links, fromDigest) != 0) {
+		ret = MlnImpl_81046BFC(2, fromDigest, NULL, NULL, 1);
+		if (ret != 0x230A0011 && ret != 0)
+			return ret;
+	}
+	if (MlnImpl_81048CF8(links, toDigest) != 0) {
+		ret = MlnImpl_81046BFC(2, toDigest, NULL, NULL, 1);
+		if (ret != 0x230A0011)
+			return ret;
+	}
+	return 0;
+}
+
+/* frees links and their ids */
+static inline __attribute__((always_inline)) void MlnStoreLinksFree(MlnStoreLink *links)
+{
+	MlnStoreLink *next;
+
+	for (; links != NULL; links = next) {
+		next = links->next;
+		MlnBufferDestroy(MLN_HEAP_GENERAL, links->to);
+		MlnBufferDestroy(MLN_HEAP_GENERAL, links->from);
+		MlnBufferDestroy(MLN_HEAP_GENERAL, links->value1);
+		MlnBufferDestroy(MLN_HEAP_GENERAL, links->value2);
+		MlnFree(MLN_HEAP_GENERAL, links);
+	}
+}
+
+/* reads big-endian at p */
+#define MLN_STORE_BE32(p) ((p)[0] << 24 | (p)[1] << 16 | (p)[2] << 8 | (p)[3])
+
+/* parses the stored links (record 0 of table 7), the layout of 0x81048FF0 */
+__attribute__((noinline)) int MlnImpl_81049464(MlnStoreLink **out)
+{
+	MlnBuffer *buffer = NULL;
+	MlnStoreLink *links = NULL;
+	MlnStoreLink *last = NULL;
+	MlnStoreLink *link;
+	const unsigned char *data;
+	const unsigned char *entry;
+	unsigned int fromSize;
+	unsigned int toSize;
+	unsigned int value1Size;
+	unsigned int value2Size;
+	unsigned int offset;
+	unsigned int end;
+	int ret;
+
+	if (out == NULL) {
+		ret = 3;
+		goto out;
+	}
+	ret = MlnImpl_8105DEDC(7, 0, &buffer);
+	if (ret == 1) {
+		*out = NULL;
+		return 0;
+	}
+	if (ret != 0)
+		goto out;
+	offset = 0;
+	data = buffer->data;
+	while (offset < buffer->size) {
+		end = offset + 0x40;
+		if (buffer->size < end) {
+			ret = 6;
+			goto fail;
+		}
+		entry = data + offset;
+		link = MlnAllocate(MLN_HEAP_GENERAL, sizeof(*link));
+		if (link == NULL) {
+			ret = 2;
+			goto fail;
+		}
+		MlnMemset(link, 0, sizeof(*link));
+		if ((signed char)entry[0x3C] >= 0) {
+			MlnMemcpy(link->toDigest, entry, 20);
+			MlnMemcpy(link->fromDigest, entry + 0x14, 20);
+			MlnMemcpy(link->idDigest, entry + 0x28, 20);
+			link->byValue = 0;
+			offset = end;
+		} else {
+			fromSize = MLN_STORE_BE32(entry);
+			toSize = MLN_STORE_BE32(entry + 4);
+			value1Size = MLN_STORE_BE32(entry + 8);
+			value2Size = MLN_STORE_BE32(entry + 12);
+			offset = value1Size + toSize + value2Size + (fromSize + end);
+			if (offset > buffer->size) {
+				ret = 6;
+				goto bad;
+			}
+			if (fromSize != 0) {
+				link->from = MlnBufferCreate(MLN_HEAP_GENERAL, fromSize,
+							     data + end);
+				if (link->from == NULL)
+					goto nomem;
+			}
+			if (toSize != 0) {
+				link->to = MlnBufferCreate(MLN_HEAP_GENERAL, toSize,
+							   data + fromSize + end);
+				if (link->to == NULL)
+					goto nomem;
+			}
+			if (value1Size != 0) {
+				link->value1 = MlnBufferCreate(MLN_HEAP_GENERAL, value1Size,
+							       data + (fromSize + toSize + end));
+				if (link->value1 == NULL)
+					goto nomem;
+			}
+			if (value2Size != 0) {
+				link->value2 = MlnBufferCreate(MLN_HEAP_GENERAL, value2Size,
+							       data + (fromSize + toSize + end +
+									       value1Size));
+				if (link->value2 == NULL)
+					goto nomem;
+			}
+			link->byValue = 1;
+		}
+		link->key = MLN_STORE_BE32(entry + 0x3C) & ~0x80000000;
+		if (links == NULL)
+			links = link;
+		else
+			last->next = link;
+		last = link;
+	}
+	if (offset == buffer->size) {
+		*out = links;
+		goto out;
+	}
+	ret = 6;
+	goto fail;
+nomem:
+	ret = 2;
+bad:
+	MlnStoreLinksFree(link);
+fail:
+	MlnStoreLinksFree(links);
+out:
+	MlnBufferDestroy(MLN_HEAP_GENERAL, buffer);
+	return ret;
+}
+
+/* loads the stored links */
+__attribute__((noinline)) int MlnImpl_81049874(MlnStoreLink **links)
+{
+	MlnStoreLink *loaded = NULL;
+	int ret;
+
+	if (links == NULL)
+		return 3;
+	ret = MlnImpl_81049464(&loaded);
+	if (ret != 0) {
+		MlnStoreLinksFree(loaded);
+		return ret;
+	}
+	*links = loaded;
+	return 0;
+}
+
+/* stores links */
+__attribute__((noinline)) int MlnImpl_8104990C(const MlnStoreLink *links)
+{
+	return MlnImpl_81048FF0(links);
+}
+
+__attribute__((noinline)) int MlnImpl_81049918(MlnStoreLink *links)
+{
+	MlnStoreLinksFree(links);
+	return 0;
+}
+
+/* copies buffer into *copy, when there is a buffer: 2 when it cannot */
+#define MLN_STORE_COPY(copy, buffer)						\
+	do {									\
+		if ((buffer) != NULL) {						\
+			(copy) = MlnBufferCreate(MLN_HEAP_GENERAL, (buffer)->size,	\
+						 (buffer)->data);		\
+			if ((copy) == NULL)					\
+				return 2;					\
+		}								\
+	} while (0)
+
+/*
+ * adds the link from from to to, or updates the one there: with an id the
+ * link keeps the digests of its ends and the id, without one the ends
+ * themselves and the two values; gives its key
+ */
+int MlnImpl_81049978(MlnStoreLink **links, const MlnBuffer *from, const MlnBuffer *to,
+		     const MlnBuffer *id, const MlnBuffer *value1, const MlnBuffer *value2,
+		     unsigned int *key)
+{
+	unsigned char digest[20];
+	MlnStoreLink *found = NULL;
+	MlnStoreLink *head;
+	MlnStoreLink *link;
+	MlnStoreLink *last;
+	int slot = 0;
+	int ret;
+
+	if (links == NULL || to == NULL || key == NULL)
+		return 3;
+	head = *links;
+	ret = MlnImpl_81048DF0(head, from, to, &found, &slot);
+	if (ret != 0)
+		return ret;
+	if (found != NULL) {
+		if (found->byValue == 0) {
+			if (id != NULL) {
+				MlnMemcpy(found->idDigest, id->data, 20);
+			} else {
+				MlnMemset(found->toDigest, 0, 20);
+				MlnMemset(found->fromDigest, 0, 20);
+				MlnMemset(found->idDigest, 0, 20);
+				found->byValue = 1;
+				MLN_STORE_COPY(found->from, from);
+				found->to = MlnBufferCreate(MLN_HEAP_GENERAL, to->size, to->data);
+				if (found->to == NULL)
+					return 2;
+				MLN_STORE_COPY(found->value1, value1);
+				MLN_STORE_COPY(found->value2, value2);
+			}
+		} else {
+			MlnBufferDestroy(MLN_HEAP_GENERAL, found->value1);
+			found->value1 = NULL;
+			MlnBufferDestroy(MLN_HEAP_GENERAL, found->value2);
+			found->value2 = NULL;
+			MLN_STORE_COPY(found->value1, value1);
+			MLN_STORE_COPY(found->value2, value2);
+		}
+		*key = found->key;
+		return 0;
+	}
+	link = MlnAllocate(MLN_HEAP_GENERAL, sizeof(*link));
+	if (link == NULL)
+		return 2;
+	MlnMemset(link, 0, sizeof(*link));
+	link->key = slot;
+	if (id != NULL) {
+		if (from != NULL) {
+			ret = MlnImpl_810570A8(from->data, from->size, digest);
+			if (ret != 0)
+				goto fail;
+			MlnMemcpy(link->fromDigest, digest, 20);
+		}
+		ret = MlnImpl_810570A8(to->data, to->size, digest);
+		if (ret != 0)
+			goto fail;
+		MlnMemcpy(link->toDigest, digest, 20);
+		MlnMemcpy(link->idDigest, id->data, 20);
+	} else {
+		link->byValue = 1;
+		if (from != NULL) {
+			link->from = MlnBufferCreate(MLN_HEAP_GENERAL, from->size, from->data);
+			if (link->from == NULL)
+				goto nomem;
+		}
+		link->to = MlnBufferCreate(MLN_HEAP_GENERAL, to->size, to->data);
+		if (link->to == NULL)
+			goto nomem;
+		if (value1 != NULL) {
+			link->value1 = MlnBufferCreate(MLN_HEAP_GENERAL, value1->size,
+						       value1->data);
+			if (link->value1 == NULL)
+				goto nomem;
+		}
+		if (value2 != NULL) {
+			link->value2 = MlnBufferCreate(MLN_HEAP_GENERAL, value2->size,
+						       value2->data);
+			if (link->value2 == NULL)
+				goto nomem;
+		}
+	}
+	if (head != NULL) {
+		for (last = head; last->next != NULL; last = last->next)
+			;
+		last->next = link;
+	} else {
+		*links = link;
+	}
+	*key = slot;
+	return 0;
+nomem:
+	ret = 2;
+fail:
+	MlnStoreLinksFree(link);
+	return ret;
+}
+
+/* finds the link whose id digest is id */
+__attribute__((noinline)) int MlnImpl_81049D54(MlnStoreLink *links, const MlnBuffer *id, MlnStoreLink **found)
+{
+	MlnStoreLink *link;
+
+	if (id == NULL || found == NULL)
+		return 3;
+	*found = NULL;
+	for (link = links; link != NULL; link = link->next) {
+		if (MlnMemcmp(link->idDigest, id->data, 20) == 0) {
+			*found = link;
+			break;
+		}
+	}
+	if (*found == NULL)
+		return 0x230A0003;
+	return 0;
+}
+
+/* finds the link from from to to */
+__attribute__((noinline)) int MlnImpl_81049DDC(MlnStoreLink *links, const MlnBuffer *from, const MlnBuffer *to,
+		     MlnStoreLink **found)
+{
+	int ret;
+
+	if (to == NULL || found == NULL)
+		return 3;
+	*found = NULL;
+	ret = MlnImpl_81048DF0(links, from, to, found, NULL);
+	if (ret != 0)
+		return ret;
+	if (*found == NULL)
+		return 0x230A0003;
+	return 0;
+}
+
+/* takes link out of links and frees it, dropping the index entries it leaves unused */
+static inline __attribute__((always_inline)) int MlnStoreLinkRemove(MlnStoreLink **links,
+								   MlnStoreLink *link)
+{
+	MlnStoreLink *previous;
+	int ret;
+
+	if (links == NULL || link == NULL)
+		return 3;
+	if (*links == NULL)
+		return 0;
+	if (*links == link) {
+		*links = link->next;
+	} else {
+		for (previous = *links; previous->next != NULL; previous = previous->next)
+			if (previous->next == link)
+				break;
+		if (previous->next == NULL)
+			return 0;
+		previous->next = link->next;
+	}
+	link->next = NULL;
+	ret = MlnImpl_810492F8(*links, link);
+	MlnStoreLinksFree(link);
+	return ret;
+}
+
+__attribute__((noinline)) int MlnImpl_81049E34(MlnStoreLink **links, MlnStoreLink *link)
+{
+	return MlnStoreLinkRemove(links, link);
+}
+
+/* removes the link with key from the stored links */
+__attribute__((noinline)) int MlnImpl_81049F14(unsigned int key)
+{
+	MlnStoreLink *links;
+	MlnStoreLink *link;
+	MlnStoreLink *previous;
+	int ret;
+
+	if (key > 8)
+		return 3;
+	links = NULL;
+	ret = MlnImpl_81049464(&links);
+	if (ret != 0)
+		goto out;
+	if (links == NULL)
+		return 0;
+	if (links->key == key) {
+		link = links;
+		links = link->next;
+	} else {
+		for (previous = links; (link = previous->next) != NULL; previous = link)
+			if (link->key == key)
+				break;
+		if (link == NULL)
+			goto out;
+		previous->next = link->next;
+	}
+	link->next = NULL;
+	ret = MlnImpl_810492F8(links, link);
+	MlnStoreLinksFree(link);
+	if (ret == 0)
+		ret = MlnImpl_81048FF0(links);
+out:
+	MlnStoreLinksFree(links);
+	return ret;
+}
+
+/* removes every link one of whose ends has digest, and its record (table 7) */
+int MlnImpl_8104A110(MlnStoreLink **links, const unsigned char *digest)
+{
+	unsigned char fromDigest[20];
+	unsigned char toDigest[20];
+	MlnStoreLink *link;
+	MlnStoreLink *next;
+	int ret;
+
+	if (links == NULL)
+		return 3;
+	link = *links;
+	while (link != NULL) {
+		next = link->next;
+		if (link->byValue == 1) {
+			MlnMemset(fromDigest, 0, sizeof(fromDigest));
+			MlnMemset(toDigest, 0, sizeof(toDigest));
+			if (link->from != NULL) {
+				ret = MlnImpl_810570A8(link->from->data, link->from->size,
+						       fromDigest);
+				if (ret != 0)
+					return ret;
+			}
+			if (link->to != NULL) {
+				ret = MlnImpl_810570A8(link->to->data, link->to->size, toDigest);
+				if (ret != 0)
+					return ret;
+			}
+			if (MlnMemcmp(fromDigest, digest, 20) != 0 &&
+			    MlnMemcmp(toDigest, digest, 20) != 0) {
+				link = link->next;
+				continue;
+			}
+		} else {
+			if (MlnMemcmp(link->toDigest, digest, 20) != 0 &&
+			    MlnMemcmp(link->fromDigest, digest, 20) != 0) {
+				link = link->next;
+				continue;
+			}
+		}
+		MlnImpl_8105DC0C(7, link->key, NULL);
+		ret = MlnStoreLinkRemove(links, link);
+		if (ret != 0)
+			return ret;
+		link = next;
+	}
+	return 0;
+}
+
+/* makes the link from from to to keep its ends and the two values themselves */
+int MlnImpl_8104A300(MlnStoreLink *links, const MlnBuffer *from, const MlnBuffer *to,
+		     const MlnBuffer *value1, const MlnBuffer *value2)
+{
+	MlnStoreLink *found;
+	int ret;
+
+	if (to == NULL)
+		return 3;
+	found = NULL;
+	ret = MlnImpl_81048DF0(links, from, to, &found, NULL);
+	if (ret != 0)
+		return ret;
+	if (found == NULL)
+		return 0x230A0003;
+	MlnMemset(found->toDigest, 0, 20);
+	MlnMemset(found->fromDigest, 0, 20);
+	MlnMemset(found->idDigest, 0, 20);
+	if (from != NULL) {
+		found->from = MlnBufferCreate(MLN_HEAP_GENERAL, from->size, from->data);
+		if (found->from == NULL)
+			return 2;
+	}
+	found->to = MlnBufferCreate(MLN_HEAP_GENERAL, to->size, to->data);
+	if (found->to == NULL)
+		return 2;
+	if (value1 != NULL) {
+		found->value1 = MlnBufferCreate(MLN_HEAP_GENERAL, value1->size, value1->data);
+		if (found->value1 == NULL)
+			return 2;
+	}
+	if (value2 != NULL) {
+		found->value2 = MlnBufferCreate(MLN_HEAP_GENERAL, value2->size, value2->data);
+		if (found->value2 == NULL)
+			return 2;
+	}
+	found->byValue = 1;
+	return 0;
 }

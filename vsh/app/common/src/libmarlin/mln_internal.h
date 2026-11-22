@@ -1863,15 +1863,15 @@ int MlnImpl_81046BFC(int kind, const unsigned char *id1, const unsigned char *id
 int MlnImpl_8104A110(MlnStoreLink **links, const unsigned char *entry);
 int MlnImpl_810467C0(int kind, const unsigned char *id1, const unsigned char *id2,
 		     const unsigned char *id3, MlnBuffer value);
-int MlnImpl_8104A300(MlnStoreLink *links, MlnBuffer *key, MlnBuffer *value, const MlnBuffer *first,
-		     const MlnBuffer *second);
+int MlnImpl_8104A300(MlnStoreLink *links, const MlnBuffer *from, const MlnBuffer *to,
+		     const MlnBuffer *value1, const MlnBuffer *value2);
 int MlnImpl_81049DDC(MlnStoreLink *links, const MlnBuffer *from, const MlnBuffer *to,
 		     MlnStoreLink **found);
 int MlnImpl_810475F4(int table);
 const MlnBuffer *MlnImpl_81047E34(void);
 int MlnImpl_81049874(MlnStoreLink **links);
-int MlnImpl_8104990C(MlnStoreLink *links);
-void MlnImpl_81049918(MlnStoreLink *links);
+int MlnImpl_8104990C(const MlnStoreLink *links);
+int MlnImpl_81049918(MlnStoreLink *links);
 int MlnImpl_81049978(MlnStoreLink **links, const MlnBuffer *from, const MlnBuffer *to,
 		     const MlnBuffer *id, const MlnBuffer *value1, const MlnBuffer *value2,
 		     unsigned int *key);
@@ -1886,6 +1886,8 @@ int MlnImpl_81047424(unsigned int i, int table, MlnBuffer **out);
 int MlnImpl_81047CDC(const unsigned char *digest);
 int MlnImpl_81048CF8(const MlnStoreLink *links, const unsigned char *digest);
 int MlnImpl_81048FF0(const MlnStoreLink *links);
+int MlnImpl_810492F8(const MlnStoreLink *links, const MlnStoreLink *link);
+int MlnImpl_81049464(MlnStoreLink **out);
 int MlnImpl_81048DF0(MlnStoreLink *links, const MlnBuffer *from, const MlnBuffer *to,
 		     MlnStoreLink **found, int *free);
 int MlnImpl_81047D7C(int ret, int miss, unsigned int flag, unsigned int *found,
