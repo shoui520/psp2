@@ -1837,7 +1837,7 @@ typedef struct MlnStoreKeyPair {
 int MlnImpl_810456B0(const MlnStoreKeyPair *pair);
 int MlnImpl_8104570C(MlnArray **out);
 int MlnImpl_810457D4(const MlnBuffer *data, const MlnBuffer *value);
-int MlnImpl_810459F0(const MlnBuffer *data, int *found);
+int MlnImpl_810459F0(const MlnBuffer *data, MlnBuffer **out);
 int MlnImpl_81045A3C(const MlnBuffer *data);
 int MlnImpl_81045E74(MlnBuffer **out);
 int MlnImpl_81045EE0(const MlnBuffer *data);
@@ -1858,15 +1858,16 @@ int MlnImpl_8104657C(int kind, const MlnBuffer *index, const unsigned char *id1,
 		     const unsigned char *id2, const unsigned char *id3,
 		     const unsigned char **entry, int *free);
 int MlnImpl_810476C0(int kind);
-int MlnImpl_81046BFC(int kind, const unsigned char *digest, const void *arg2, const void *arg3,
-		     int arg4);
+int MlnImpl_81046BFC(int kind, const unsigned char *id1, const unsigned char *id2,
+		     const unsigned char *id3, int links);
+int MlnImpl_8104A110(MlnStoreLink **links, const unsigned char *entry);
 int MlnImpl_810467C0(int kind, const unsigned char *id1, const unsigned char *id2,
 		     const unsigned char *id3, MlnBuffer value);
 int MlnImpl_8104A300(MlnStoreLink *links, MlnBuffer *key, MlnBuffer *value, const MlnBuffer *first,
 		     const MlnBuffer *second);
 int MlnImpl_81049DDC(MlnStoreLink *links, const MlnBuffer *from, const MlnBuffer *to,
 		     MlnStoreLink **found);
-void MlnImpl_810475F4(int table);
+int MlnImpl_810475F4(int table);
 const MlnBuffer *MlnImpl_81047E34(void);
 int MlnImpl_81049874(MlnStoreLink **links);
 int MlnImpl_8104990C(MlnStoreLink *links);
@@ -1878,8 +1879,10 @@ int MlnImpl_81049F14(unsigned int key);
 int MlnImpl_81043A84(int step, unsigned int size, const void *data);
 int MlnImpl_81043AE4(int step, MlnBuffer **out);
 int MlnImpl_81043D94(void);
-int MlnImpl_81046F98(int kind, const unsigned char *digest, const void *arg2, const void *arg3,
-		     int *found, int arg5);
+int MlnImpl_81046F98(int kind, const unsigned char *id1, const unsigned char *id2,
+		     const unsigned char *id3, MlnBuffer **out, int links);
+int MlnImpl_810472BC(unsigned int *count, int table);
+int MlnImpl_81047424(unsigned int i, int table, MlnBuffer **out);
 int MlnImpl_81049E34(MlnStoreLink **links, MlnStoreLink *link);
 int MlnImpl_8105DC0C(int table, unsigned int key, const MlnBuffer *data);
 int MlnImpl_8105DEDC(int table, unsigned int key, MlnBuffer **out);

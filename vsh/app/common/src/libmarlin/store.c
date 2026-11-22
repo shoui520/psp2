@@ -1306,18 +1306,18 @@ out:
 	return ret;
 }
 
-/* looks up the link whose id is the digest of data */
-int MlnImpl_810459F0(const MlnBuffer *data, int *found)
+/* reads the record stored under the digest of data (table 6) */
+int MlnImpl_810459F0(const MlnBuffer *data, MlnBuffer **out)
 {
 	unsigned char digest[20];
 
-	if (found == NULL)
+	if (out == NULL)
 		return 3;
 	MlnImpl_810570A8(data->data, data->size, digest);
-	return MlnImpl_81046F98(2, digest, NULL, NULL, found, 1);
+	return MlnImpl_81046F98(2, digest, NULL, NULL, out, 1);
 }
 
-/* removes the link whose id is the digest of data */
+/* removes the record stored under the digest of data (table 6) */
 int MlnImpl_81045A3C(const MlnBuffer *data)
 {
 	unsigned char digest[20];
@@ -1813,5 +1813,365 @@ int MlnImpl_810467C0(int kind, const unsigned char *id1, const unsigned char *id
 out:
 	MlnBufferDestroy(MLN_HEAP_GENERAL, index);
 	MlnBufferDestroy(MLN_HEAP_GENERAL, grown);
+	return ret;
+}
+
+/*
+ * removes the index entry with the given ids, and its record, from table 2
+ * (kind 1) or 6 (kind 2); for kind 2 with links 1, also the links the entry
+ * names
+ */
+__attribute__((noinline)) int MlnImpl_81046BFC(int kind, const unsigned char *id1, const unsigned char *id2,
+		     const unsigned char *id3, int links)
+{
+	unsigned char removed[0x40];
+	MlnBuffer *index = NULL;
+	const unsigned char *entry = NULL;
+	MlnStoreLink *loaded = NULL;
+	unsigned int missing;
+	int linked;
+	int table;
+	int ret;
+
+	if (id1 == NULL && id2 == NULL && id3 == NULL) {
+		ret = 5;
+		goto out;
+	}
+	if (kind == 1) {
+		table = 2;
+		missing = 0x230A0006;
+		linked = 0;
+	} else if (kind == 2) {
+		table = 6;
+		missing = 0x230A0011;
+		linked = 1;
+	} else {
+		ret = 5;
+		goto out;
+	}
+	ret = MlnImpl_8105DEDC(table, 0, &index);
+	if (ret == 1) {
+		ret = missing;
+		goto out;
+	}
+	if (ret == 6) {
+		MlnStoreTableClear(table);
+		goto out;
+	}
+	if (ret != 0)
+		goto out;
+	ret = MlnImpl_8104657C(kind, index, id1, id2, id3, &entry, NULL);
+	if (ret == 6) {
+		MlnStoreTableClear(table);
+		goto out;
+	}
+	if (ret != 0)
+		goto out;
+	if (entry == NULL) {
+		ret = missing;
+		goto out;
+	}
+	MlnMemcpy(removed, entry, sizeof(removed));
+	ret = MlnImpl_81046264(table, entry, index);
+	if (ret != 0)
+		goto out;
+	if (linked && links == 1) {
+		ret = MlnImpl_81049874(&loaded);
+		if (ret == 6) {
+			MlnStoreTableClear(7);
+			goto out;
+		}
+		if (ret != 0)
+			goto out;
+		ret = MlnImpl_8104A110(&loaded, removed);
+		if (ret != 0)
+			goto out;
+		ret = MlnImpl_8104990C(loaded);
+	}
+out:
+	MlnImpl_81049918(loaded);
+	MlnBufferDestroy(MLN_HEAP_GENERAL, index);
+	return ret;
+}
+
+/*
+ * reads the record of the index entry with the given ids from table 2
+ * (kind 1) or 6 (kind 2); a damaged record loses its entry (for kind 2 with
+ * links 1, its links too)
+ */
+__attribute__((noinline)) int MlnImpl_81046F98(int kind, const unsigned char *id1, const unsigned char *id2,
+		     const unsigned char *id3, MlnBuffer **out, int links)
+{
+	MlnBuffer *index = NULL;
+	MlnBuffer *record = NULL;
+	const unsigned char *entry = NULL;
+	unsigned int missing;
+	unsigned int key;
+	int table;
+	int ret;
+
+	if (id1 == NULL && id2 == NULL && id3 == NULL) {
+		ret = 5;
+		goto out;
+	}
+	if (kind == 1) {
+		table = 2;
+		missing = 0x230A0006;
+	} else if (kind == 2) {
+		table = 6;
+		missing = 0x230A0011;
+	} else {
+		ret = 5;
+		goto out;
+	}
+	ret = MlnImpl_8105DEDC(table, 0, &index);
+	if (ret == 1) {
+		ret = missing;
+		goto out;
+	}
+	if (ret == 6) {
+		MlnStoreTableClear(table);
+		goto out;
+	}
+	if (ret != 0)
+		goto out;
+	ret = MlnImpl_8104657C(kind, index, id1, id2, id3, &entry, NULL);
+	if (ret == 6) {
+		MlnStoreTableClear(table);
+		goto out;
+	}
+	if (ret != 0)
+		goto out;
+	if (entry == NULL) {
+		ret = missing;
+		goto out;
+	}
+	key = entry[0x3C] << 24 | entry[0x3D] << 16 | entry[0x3E] << 8 | entry[0x3F];
+	ret = MlnImpl_8105DEDC(table, key, &record);
+	if (ret == 1) {
+		ret = missing;
+		goto out;
+	}
+	if (ret == 6) {
+		if (table == 6)
+			MlnImpl_81046BFC(kind, id1, id2, id3, links);
+		else if (table == 2)
+			MlnImpl_81046264(2, entry, index);
+		goto out;
+	}
+	if (ret != 0)
+		goto out;
+	if (out != NULL) {
+		*out = record;
+		record = NULL;
+	}
+out:
+	MlnBufferDestroy(MLN_HEAP_GENERAL, index);
+	MlnBufferDestroy(MLN_HEAP_GENERAL, record);
+	return ret;
+}
+
+/* counts the entries of the index of table (2 or 6), dropping a damaged table */
+int MlnImpl_810472BC(unsigned int *count, int table)
+{
+	MlnBuffer *index = NULL;
+	unsigned int entries = 0;
+	int ret;
+
+	if (count == NULL || (table != 2 && table != 6)) {
+		ret = 5;
+		goto out;
+	}
+	ret = MlnImpl_8105DEDC(table, 0, &index);
+	if (ret == 0) {
+		entries = index->size;
+		if ((entries & 0x3F) != 0)
+			goto damaged;
+		entries >>= 6;
+	} else if (ret == 6) {
+		goto damaged;
+	} else if (ret != 1) {
+		goto out;
+	}
+	*count = entries;
+	ret = 0;
+	goto out;
+damaged:
+	MlnStoreTableClear(table);
+	ret = 6;
+out:
+	MlnBufferDestroy(MLN_HEAP_GENERAL, index);
+	return ret;
+}
+
+/* reads the record of entry i of the index of table 2 */
+int MlnImpl_81047424(unsigned int i, int table, MlnBuffer **out)
+{
+	MlnBuffer *index = NULL;
+	MlnBuffer *record = NULL;
+	const unsigned char *entry;
+	unsigned int key;
+	int ret;
+
+	if (out == NULL || table != 2) {
+		ret = 5;
+		goto out;
+	}
+	ret = MlnImpl_8105DEDC(table, 0, &index);
+	if (ret == 6) {
+		MlnStoreTableClear(table);
+		goto out;
+	}
+	if (ret != 0)
+		goto missing;
+	if (index->size < (i + 1) << 6) {
+		ret = 0x230A0007;
+		goto out;
+	}
+	entry = index->data + (i << 6);
+	key = entry[0x3C] << 24 | entry[0x3D] << 16 | entry[0x3E] << 8 | entry[0x3F];
+	ret = MlnImpl_8105DEDC(table, key, &record);
+	if (ret == 6) {
+		MlnImpl_81046264(table, entry, index);
+		goto out;
+	}
+	if (ret != 0)
+		goto missing;
+	*out = record;
+	record = NULL;
+	goto out;
+missing:
+	if (ret == 1)
+		ret = 0x230A0006;
+out:
+	MlnBufferDestroy(MLN_HEAP_GENERAL, index);
+	MlnBufferDestroy(MLN_HEAP_GENERAL, record);
+	return ret;
+}
+
+/* drops every record of table (2, 6 or 7) */
+__attribute__((noinline)) int MlnImpl_810475F4(int table)
+{
+	return MlnStoreTableClear(table);
+}
+
+/* reads bit index of set */
+static inline __attribute__((always_inline)) int MlnBitsetGet(const MlnBitset *set, int index,
+							     int *value)
+{
+	if (index < 0 || index >= set->count)
+		return 5;
+	*value = set->bits[index >> 3] & (0x80 >> (index & 7));
+	return 0;
+}
+
+/* drops record key of table when it is damaged or no index entry uses it */
+static inline __attribute__((always_inline)) int MlnStoreRecordCheck(int table, int key,
+								    const MlnBitset *used,
+								    int *damaged)
+{
+	int bit;
+	int ret;
+
+	ret = MlnImpl_8105DEDC(table, key, NULL);
+	if (ret == 0) {
+		ret = MlnBitsetGet(used, key, &bit);
+		if (ret != 0)
+			return ret;
+		if (bit == 0) {
+			if (MlnImpl_8105DC0C(table, key, NULL) == 2)
+				return 2;
+			*damaged = 1;
+		}
+	} else if (ret == 6) {
+		if (MlnImpl_8105DC0C(table, key, NULL) == 2)
+			return 2;
+		*damaged = 1;
+	} else if (ret != 1) {
+		return ret;
+	}
+	return 0;
+}
+
+/*
+ * checks the index of table 2 (kind 1) or 6 (kind 2) against its records:
+ * drops each entry whose record is missing or damaged, then each record
+ * (keys 1 to 7) no entry uses or that is damaged; 6 when anything was dropped
+ */
+int MlnImpl_810476C0(int kind)
+{
+	MlnBuffer *index = NULL;
+	MlnBitset *used = NULL;
+	const unsigned char *entry;
+	unsigned int count;
+	unsigned int i;
+	int damaged;
+	int table;
+	int key;
+	int ret;
+
+	if (kind == 1) {
+		table = 2;
+	} else if (kind == 2) {
+		table = 6;
+	} else {
+		ret = 5;
+		goto out;
+	}
+	ret = MlnImpl_81045EF8(table, &index);
+	if (ret != 0)
+		goto out;
+	if (index == NULL) {
+		ret = 0;
+		goto out;
+	}
+	damaged = 0;
+	count = index->size >> 6;
+	entry = index->data;
+	for (i = 0; i < count; i++, entry += 0x40) {
+		key = entry[0x3C] << 24 | entry[0x3D] << 16 | entry[0x3E] << 8 | entry[0x3F];
+		ret = MlnImpl_8105DEDC(table, key, NULL);
+		if (ret == 1 || ret == 6) {
+			MlnImpl_81046BFC(kind, entry, entry + 0x14, entry + 0x28, 1);
+			damaged = 1;
+		} else if (ret != 0) {
+			goto out;
+		}
+	}
+	MlnBufferDestroy(MLN_HEAP_GENERAL, index);
+	index = NULL;
+	ret = MlnImpl_81046354(8, &used);
+	if (ret != 0)
+		goto out;
+	ret = MlnImpl_810463CC(used, 0, 1);
+	if (ret != 0)
+		goto out;
+	ret = MlnImpl_81045EF8(table, &index);
+	if (ret != 0)
+		goto out;
+	if (index != NULL) {
+		count = index->size >> 6;
+		entry = index->data;
+		for (i = 0; i < count; i++, entry += 0x40) {
+			key = entry[0x3C] << 24 | entry[0x3D] << 16 | entry[0x3E] << 8 |
+			      entry[0x3F];
+			ret = MlnImpl_810463CC(used, key, 1);
+			if (ret != 0)
+				goto out;
+		}
+	}
+	if ((ret = MlnStoreRecordCheck(table, 1, used, &damaged)) != 0 ||
+	    (ret = MlnStoreRecordCheck(table, 2, used, &damaged)) != 0 ||
+	    (ret = MlnStoreRecordCheck(table, 3, used, &damaged)) != 0 ||
+	    (ret = MlnStoreRecordCheck(table, 4, used, &damaged)) != 0 ||
+	    (ret = MlnStoreRecordCheck(table, 5, used, &damaged)) != 0 ||
+	    (ret = MlnStoreRecordCheck(table, 6, used, &damaged)) != 0 ||
+	    (ret = MlnStoreRecordCheck(table, 7, used, &damaged)) != 0)
+		goto out;
+	if (damaged == 1)
+		ret = 6;
+out:
+	MlnBufferDestroy(MLN_HEAP_GENERAL, index);
+	MlnImpl_810463B4(used);
 	return ret;
 }
