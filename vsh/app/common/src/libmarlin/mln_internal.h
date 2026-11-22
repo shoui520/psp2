@@ -1749,6 +1749,10 @@ int MlnImpl_8105B568(MlnXmlNode *signature, int usage, int count, MlnBuffer *con
 int MlnImpl_81059934(MlnXmlNode *node, MlnXmlDsigSignature **out);
 int MlnImpl_8105D018(MlnXmlDsigReference *reference);
 int MlnImpl_8105A3D8(MlnXmlNode *node, MlnXmlNode *document, MlnXmlDsigSignature **out);
+int MlnImpl_8105C234(MlnXmlNode *signedInfo, const MlnBuffer *signatureValue, int keyInfo,
+		     MlnBuffer **certificates, const char *id, MlnXmlNode **out);
+int MlnImpl_8105C7F0(int count, int hash, const int *transforms, const char *const *uris,
+		     unsigned char **digests, MlnXmlNode **out);
 int MlnImpl_8105BA50(MlnXmlNode *signature, MlnXmlNode *document, int usage, int count,
 		     MlnBuffer *const *references, unsigned char **digests, int *digestTypes,
 		     const MlnBuffer *certificate, int *verified);

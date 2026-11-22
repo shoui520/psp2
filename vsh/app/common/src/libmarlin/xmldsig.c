@@ -1179,3 +1179,392 @@ out:
 		MlnXmlListFree(MLN_HEAP_GENERAL, list);
 	return ret;
 }
+
+#define MLN_XMLDSIG_ERROR_DIGEST	0x220A0006
+
+/*
+ * The digest size of a Signature element: its first Reference's SHA-1 or SHA-256 digest,
+ * which its RSA signature method must match.
+ */
+int MlnImpl_8105BF78(MlnXmlNode *signature, int *digestSize)
+{
+	MlnBuffer *digestMethod = NULL;
+	MlnBuffer *signatureMethod = NULL;
+	MlnXmlNodeList *references = NULL;
+	MlnXmlNode *method = NULL;
+	MlnXmlNode *signedInfo = NULL;
+	MlnXmlNode *signatureNode = NULL;
+	int ret;
+
+	if (signature == NULL || digestSize == NULL) {
+		ret = 3;
+		goto out;
+	}
+	ret = MlnXmlFindNode(MLN_HEAP_GENERAL, signature, "SignedInfo", MLN_XMLDSIG_NAMESPACE,
+			     &signedInfo);
+	if (ret != 0)
+		goto out;
+	ret = MlnXmlFindNodes(MLN_HEAP_GENERAL, signedInfo, "Reference", MLN_XMLDSIG_NAMESPACE,
+			      &references);
+	if (ret != 0)
+		goto out;
+	ret = MlnXmlFindNode(MLN_HEAP_GENERAL, references->nodes[0], "DigestMethod",
+			     MLN_XMLDSIG_NAMESPACE, &method);
+	if (ret != 0)
+		goto out;
+	ret = MlnXmlGetAttribute(MLN_HEAP_GENERAL, method, NULL, "Algorithm", &digestMethod);
+	if (ret != 0)
+		goto out;
+	if (MlnBytesCompare(MLN_HEAP_GENERAL, digestMethod->size, digestMethod->data,
+			    MlnStrlen(MLN_XMLDSIG_SHA256), MLN_XMLDSIG_SHA256) == 0) {
+		*digestSize = 32;
+	} else {
+		if (MlnBytesCompare(MLN_HEAP_GENERAL, digestMethod->size, digestMethod->data,
+				    MlnStrlen(MLN_XMLDSIG_SHA1), MLN_XMLDSIG_SHA1) != 0)
+			goto invalid;
+		*digestSize = 20;
+	}
+	ret = MlnXmlFindNode(MLN_HEAP_GENERAL, signedInfo, "SignatureMethod",
+			     MLN_XMLDSIG_NAMESPACE, &signatureNode);
+	if (ret != 0)
+		goto out;
+	ret = MlnXmlGetAttribute(MLN_HEAP_GENERAL, signatureNode, NULL, "Algorithm",
+				 &signatureMethod);
+	if (ret != 0)
+		goto out;
+	if (MlnBytesCompare(MLN_HEAP_GENERAL, signatureMethod->size, signatureMethod->data,
+			    MlnStrlen(MLN_XMLDSIG_RSA_SHA256), MLN_XMLDSIG_RSA_SHA256) == 0) {
+		if (*digestSize != 32)
+			goto invalid;
+	} else if (MlnBytesCompare(MLN_HEAP_GENERAL, signatureMethod->size,
+				   signatureMethod->data, MlnStrlen(MLN_XMLDSIG_RSA_SHA1),
+				   MLN_XMLDSIG_RSA_SHA1) != 0 || *digestSize != 20) {
+		goto invalid;
+	}
+	goto out;
+invalid:
+	ret = MLN_XMLDSIG_ERROR_DIGEST;
+out:
+	MlnBufferDestroy(MLN_HEAP_GENERAL, digestMethod);
+	MlnBufferDestroy(MLN_HEAP_GENERAL, signatureMethod);
+	MlnXmlListFree(MLN_HEAP_GENERAL, references);
+	MlnXmlNodeFree(MLN_HEAP_GENERAL, method);
+	MlnXmlNodeFree(MLN_HEAP_GENERAL, signedInfo);
+	MlnXmlNodeFree(MLN_HEAP_GENERAL, signatureNode);
+	return ret;
+}
+
+/* free the nodes left in a build's contents */
+static inline void MlnXmlDsigFreeContents(MlnXmlBuildContent *contents)
+{
+	MlnXmlBuildContent *content;
+
+	for (content = contents; content < contents + 8; content++) {
+		if (content->kind == MLN_XML_BUILD_NODE && content->value.node != NULL)
+			MlnXmlNodeFree(MLN_HEAP_GENERAL, content->value.node);
+	}
+}
+
+/* how MlnImpl_8105C234 names the signer's key */
+#define MLN_XMLDSIG_BUILD_SKI		0	/* an X509Data's X509SKI */
+#define MLN_XMLDSIG_BUILD_REFERENCE	(-1)	/* a token by its wsse:Reference URI */
+#define MLN_XMLDSIG_BUILD_KEY_ID	(-2)	/* a wsse:KeyIdentifier of the SKI */
+
+#define MLN_WSSE_BASE64 \
+	"http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-soap-message-security-1.0" \
+	"#Base64Binary"
+
+/*
+ * Build a Signature element of a SignedInfo and its signature value, with a KeyInfo of
+ * keyInfo certificates (> 0), an SKI or a security token reference; id is its Id, if any.
+ */
+int MlnImpl_8105C234(MlnXmlNode *signedInfo, const MlnBuffer *signatureValue, int keyInfo,
+		     MlnBuffer **certificates, const char *id, MlnXmlNode **out)
+{
+	MlnXmlNode *signature = NULL;
+	MlnXmlNode *value = NULL;
+	MlnXmlNode *key = NULL;
+	MlnBuffer *text = NULL;
+	MlnXmlBuildContent content;
+	MlnXmlBuildAttribute attributes[2];
+	MlnXmlBuildContent contents[8];
+	int count;
+	int ret;
+	int i;
+
+	if (signedInfo == NULL || signatureValue == NULL) {
+		ret = 3;
+		goto out;
+	}
+	if (certificates == NULL || out == NULL) {
+		ret = 3;
+		goto out;
+	}
+	MlnMemset(contents, 0, sizeof(contents));
+	ret = MlnImpl_81026814(MLN_HEAP_GENERAL, signatureValue, 0, 0, &text);
+	if (ret != 0)
+		goto out;
+	contents[0].kind = MLN_XML_BUILD_BUFFER;
+	contents[0].value.buffer = text;
+	ret = MlnXmlElementBuild(MLN_HEAP_GENERAL, "SignatureValue", "ds", NULL, 0, NULL, 1,
+				 contents, 1, &value);
+	if (ret != 0)
+		goto out;
+	text = NULL;
+
+	if (keyInfo < 0) {
+		if (keyInfo == MLN_XMLDSIG_BUILD_KEY_ID) {
+			attributes[0].name = "ValueType";
+			attributes[0].value = MLN_WSSE_X509_SKI;
+			attributes[1].name = "EncodingType";
+			attributes[1].value = MLN_WSSE_BASE64;
+			content.kind = MLN_XML_BUILD_BUFFER;
+			content.value.buffer = certificates[0];
+			ret = MlnXmlElementBuild(MLN_HEAP_GENERAL, "KeyIdentifier", "wsse", NULL, 2,
+						 attributes, 1, &content, 0, &key);
+			if (ret != 0)
+				goto out;
+		} else {
+			attributes[0].name = "URI";
+			attributes[0].value = (const char *)certificates[0]->data;
+			ret = MlnXmlElementBuild(MLN_HEAP_GENERAL, "Reference", "wsse", NULL, 1,
+						 attributes, 0, NULL, 0, &key);
+			if (ret != 0)
+				goto out;
+		}
+		contents[0].kind = MLN_XML_BUILD_NODE;
+		contents[0].value.node = key;
+		ret = MlnXmlElementBuild(MLN_HEAP_GENERAL, "SecurityTokenReference", "wsse",
+					 MLN_WSSE_NAMESPACE, 0, NULL, 1, contents, 1, &key);
+		if (ret != 0)
+			goto out;
+	} else {
+		count = keyInfo;
+		if (count != 0) {
+			for (i = 0; i < count; i++) {
+				contents[0].kind = MLN_XML_BUILD_BUFFER;
+				contents[0].value.buffer = certificates[i];
+				ret = MlnXmlElementBuild(MLN_HEAP_GENERAL, "X509Certificate", "ds",
+							 NULL, 0, NULL, 1, contents, 0,
+							 &contents[i + 1].value.node);
+				if (ret != 0)
+					goto out;
+				contents[i + 1].kind = MLN_XML_BUILD_NODE;
+			}
+		} else {
+			/* Sony leaves the X509SKI's content kind a string */
+			contents[0].kind = MLN_XML_BUILD_BUFFER;
+			contents[0].value.buffer = certificates[0];
+			ret = MlnXmlElementBuild(MLN_HEAP_GENERAL, "X509SKI", "ds", NULL, 0, NULL, 1,
+						 contents, 0, &contents[1].value.node);
+			if (ret != 0)
+				goto out;
+			count = 1;
+		}
+		ret = MlnXmlElementBuild(MLN_HEAP_GENERAL, "X509Data", "ds", NULL, 0, NULL, count,
+					 &contents[1], 1, &key);
+		if (ret != 0)
+			goto out;
+	}
+	contents[0].kind = MLN_XML_BUILD_NODE;
+	contents[0].value.node = key;
+	ret = MlnXmlElementBuild(MLN_HEAP_GENERAL, "KeyInfo", "ds", NULL, 0, NULL, 1, contents, 1,
+				 &key);
+	if (ret != 0)
+		goto out;
+
+	contents[0].kind = MLN_XML_BUILD_NODE;
+	contents[0].value.node = signedInfo;
+	contents[1].kind = MLN_XML_BUILD_NODE;
+	contents[1].value.node = value;
+	contents[2].kind = MLN_XML_BUILD_NODE;
+	contents[2].value.node = key;
+	if (id != NULL) {
+		attributes[0].name = "Id";
+		attributes[0].value = id;
+	}
+	ret = MlnXmlElementBuild(MLN_HEAP_GENERAL, "Signature", "ds", MLN_XMLDSIG_NAMESPACE,
+				 id != NULL, attributes, 3, contents, 0, &signature);
+	if (ret != 0)
+		goto out;
+	*out = signature;
+	signature = NULL;
+out:
+	MlnBufferDestroy(MLN_HEAP_GENERAL, text);
+	if (signature != NULL)
+		MlnXmlNodeFree(MLN_HEAP_GENERAL, signature);
+	if (value != NULL)
+		MlnXmlNodeFree(MLN_HEAP_GENERAL, value);
+	if (key != NULL)
+		MlnXmlNodeFree(MLN_HEAP_GENERAL, key);
+	if (ret != 0)
+		MlnXmlDsigFreeContents(contents);
+	return ret;
+}
+
+/*
+ * Build a SignedInfo element of count References: exclusive canonicalization, RSA with
+ * SHA-1 (hash 0) or SHA-256 (1), and for each reference its URI, its transforms (0
+ * exclusive canonicalization, 1 the enveloped signature and canonicalization) and its
+ * digest.
+ */
+int MlnImpl_8105C7F0(int count, int hash, const int *transforms, const char *const *uris,
+		     unsigned char **digests, MlnXmlNode **out)
+{
+	MlnXmlNode *signedInfo = NULL;
+	MlnXmlNode *first = NULL;
+	MlnXmlNode *second = NULL;
+	MlnXmlNode *digestValue = NULL;
+	MlnBuffer *unused = NULL;
+	MlnBuffer *text = NULL;
+	MlnBuffer digest;
+	MlnXmlBuildAttribute attribute;
+	MlnXmlBuildContent contents[8];
+	const char *digestMethod;
+	unsigned int digestSize;
+	int ret;
+	int i;
+
+	if (transforms == NULL || uris == NULL) {
+		ret = 3;
+		goto out;
+	}
+	if (digests == NULL || out == NULL) {
+		ret = 3;
+		goto out;
+	}
+	MlnMemset(contents, 0, sizeof(contents));
+	attribute.name = "Algorithm";
+	attribute.value = MLN_XMLDSIG_EXC_C14N;
+	ret = MlnXmlElementBuild(MLN_HEAP_GENERAL, "CanonicalizationMethod", "ds", NULL, 1,
+				 &attribute, 0, NULL, 0, &signedInfo);
+	if (ret != 0)
+		goto out;
+	attribute.name = "Algorithm";
+	if (hash == 0) {
+		digestSize = 20;
+		attribute.value = MLN_XMLDSIG_RSA_SHA1;
+		digestMethod = MLN_XMLDSIG_SHA1;
+	} else if (hash == 1) {
+		digestMethod = MLN_XMLDSIG_SHA256;
+		digestSize = 32;
+		attribute.value = MLN_XMLDSIG_RSA_SHA256;
+	} else {
+		ret = MLN_XMLDSIG_ERROR_METHOD;
+		goto out;
+	}
+	ret = MlnXmlElementBuild(MLN_HEAP_GENERAL, "SignatureMethod", "ds", NULL, 1, &attribute,
+				 0, NULL, 0, &first);
+	if (ret != 0)
+		goto out;
+	contents[0].kind = MLN_XML_BUILD_NODE;
+	contents[0].value.node = signedInfo;
+	contents[1].kind = MLN_XML_BUILD_NODE;
+	contents[1].value.node = first;
+	ret = MlnXmlElementBuild(MLN_HEAP_GENERAL, "SignedInfo", "ds", MLN_XMLDSIG_NAMESPACE, 0,
+				 NULL, 2, contents, 1, &signedInfo);
+	if (ret != 0)
+		goto out;
+	first = NULL;
+
+	for (i = 0; i < count; i++) {
+		switch (transforms[i]) {
+		case 0:
+			attribute.name = "Algorithm";
+			attribute.value = MLN_XMLDSIG_EXC_C14N;
+			ret = MlnXmlElementBuild(MLN_HEAP_GENERAL, "Transform", "ds", NULL, 1,
+						 &attribute, 0, NULL, 0, &first);
+			if (ret != 0)
+				goto out;
+			contents[0].kind = MLN_XML_BUILD_NODE;
+			contents[0].value.node = first;
+			ret = MlnXmlElementBuild(MLN_HEAP_GENERAL, "Transforms", "ds", NULL, 0, NULL,
+						 1, contents, 1, &first);
+			if (ret != 0)
+				goto out;
+			break;
+		case 1:
+			attribute.value = MLN_XMLDSIG_ENVELOPED;
+			attribute.name = "Algorithm";
+			ret = MlnXmlElementBuild(MLN_HEAP_GENERAL, "Transform", "ds", NULL, 1,
+						 &attribute, 0, NULL, 0, &first);
+			if (ret != 0)
+				goto out;
+			attribute.name = "Algorithm";
+			attribute.value = MLN_XMLDSIG_EXC_C14N;
+			ret = MlnXmlElementBuild(MLN_HEAP_GENERAL, "Transform", "ds", NULL, 1,
+						 &attribute, 0, NULL, 0, &second);
+			if (ret != 0)
+				goto out;
+			contents[0].kind = MLN_XML_BUILD_NODE;
+			contents[0].value.node = first;
+			contents[1].kind = MLN_XML_BUILD_NODE;
+			contents[1].value.node = second;
+			ret = MlnXmlElementBuild(MLN_HEAP_GENERAL, "Transforms", "ds", NULL, 0, NULL,
+						 2, contents, 1, &first);
+			if (ret != 0)
+				goto out;
+			break;
+		case 2:
+			ret = MLN_XMLDSIG_ERROR_METHOD;
+			goto out;
+		default:
+			ret = 3;
+			goto out;
+		}
+		attribute.value = digestMethod;
+		attribute.name = "Algorithm";
+		ret = MlnXmlElementBuild(MLN_HEAP_GENERAL, "DigestMethod", "ds", NULL, 1, &attribute,
+					 0, NULL, 0, &second);
+		if (ret != 0)
+			goto out;
+		digest.size = digestSize;
+		digest.data = digests[i];
+		ret = MlnImpl_81026814(MLN_HEAP_GENERAL, &digest, 0, 0, &text);
+		if (ret != 0)
+			goto out;
+		contents[0].kind = MLN_XML_BUILD_BUFFER;
+		contents[0].value.buffer = text;
+		ret = MlnXmlElementBuild(MLN_HEAP_GENERAL, "DigestValue", "ds", NULL, 0, NULL, 1,
+					 contents, 1, &digestValue);
+		if (ret != 0)
+			goto out;
+		text = NULL;
+		attribute.name = "URI";
+		attribute.value = uris[i];
+		contents[0].kind = MLN_XML_BUILD_NODE;
+		contents[0].value.node = first;
+		contents[1].kind = MLN_XML_BUILD_NODE;
+		contents[1].value.node = second;
+		contents[2].kind = MLN_XML_BUILD_NODE;
+		contents[2].value.node = digestValue;
+		ret = MlnXmlElementBuild(MLN_HEAP_GENERAL, "Reference", "ds", NULL, 1, &attribute, 3,
+					 contents, 1, &first);
+		if (ret != 0)
+			goto out;
+		digestValue = NULL;
+		second = NULL;
+		ret = MlnXmlNodeAppendChild(MLN_HEAP_GENERAL, signedInfo, first, 1);
+		if (ret != 0)
+			goto out;
+		first = NULL;
+	}
+	second = NULL;
+	*out = signedInfo;
+	signedInfo = NULL;
+	first = NULL;
+out:
+	MlnBufferDestroy(MLN_HEAP_GENERAL, unused);
+	MlnBufferDestroy(MLN_HEAP_GENERAL, text);
+	if (signedInfo != NULL)
+		MlnXmlNodeFree(MLN_HEAP_GENERAL, signedInfo);
+	if (first != NULL)
+		MlnXmlNodeFree(MLN_HEAP_GENERAL, first);
+	if (second != NULL)
+		MlnXmlNodeFree(MLN_HEAP_GENERAL, second);
+	if (digestValue != NULL)
+		MlnXmlNodeFree(MLN_HEAP_GENERAL, digestValue);
+	if (ret != 0)
+		MlnXmlDsigFreeContents(contents);
+	return ret;
+}
