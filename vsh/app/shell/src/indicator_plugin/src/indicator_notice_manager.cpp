@@ -294,7 +294,10 @@ public:
 
 		if (event == NULL)
 			return;
-		event->Attach(button, 1, 0);
+
+		IndicatorEventItemLook look = { 1, 0 };
+
+		event->Attach(button, look);
 
 		common::property_list::PropertyValue value;
 

@@ -21,6 +21,7 @@
 #include <cache/cache_image.h>
 #include <widget/core/widget.h>
 #include <widget/w_text.h>
+#include <widget/w_progress_bar.h>
 #include "shell.h"
 #include "src/livespace_db/livespace_db_internal.h"
 #include "indicator_interface.h"
@@ -149,6 +150,25 @@ typedef void (*IndicatorDialogCB)(int result, int button, void *arg);
    name) */
 int indicatorDialogOpen(const CommonGuiDialogLayout *layout, const wchar_t *message,
 			IndicatorDialogCB callback, void *arg);
+
+/* what a main-thread call or a dialog's callback is given: a copy of the caller's value, made
+   from a copy of it (PLACEHOLDER name) */
+template <typename T>
+struct IndicatorCallArg {
+	IndicatorCallArg(T value) : value(value)
+	{
+	}
+
+	T value;
+};
+
+/* the system task of the new event's rowid: its progress with its status and percentage
+   texts (0x811C3F7C), it removed (0x811C3F8C), and its name (0x811C3F94) (PLACEHOLDER
+   names) */
+int indicatorTaskGetProgress(SceInt64 id, float *progress, paf::string *status,
+			     paf::string *percent);
+int indicatorTaskRemove(SceInt64 id);
+paf::string indicatorTaskGetName(SceInt64 id);
 
 /*
  * The new events' item: the button on the bar that opens the notices, with the count of the
@@ -333,6 +353,13 @@ void indicatorNoticePopupsDestroy(void);
  * (PLACEHOLDER); their functions are in the list's file.
  */
 
+/* what the list gives an item with its widget: the list's mode and the item's color
+   (0xRRGGBBAA), by value (PLACEHOLDER names) */
+struct IndicatorEventItemLook {
+	int mode;
+	SceUInt32 color;
+};
+
 /* an item: the new event copied, its callback and its serial number, the widget it is given
    with the list's mode and its color (320 bytes; indicator_event_item.cpp, 0x81174D48-0x8117587C) */
 class IndicatorEventItem {
@@ -341,7 +368,7 @@ public:
 	virtual ~IndicatorEventItem();
 	/* the item given its widget, the list's mode and its color (0xRRGGBBAA): told of the
 	   widget's presses and focus (0x81174FFC; PLACEHOLDER name) */
-	virtual int Attach(paf::ui::Widget *widget, int mode, SceUInt32 color);
+	virtual int Attach(paf::ui::Widget *widget, IndicatorEventItemLook look);
 	/* the item's listener on its widget's scene removed (0x81174ECC; PLACEHOLDER name) */
 	virtual int Detach();
 	/* what the event runs, by its act type (0x81175238; PLACEHOLDER name) */
@@ -400,6 +427,22 @@ public:
 	}
 
 	virtual ~IndicatorEventIconItem();
+	/* (0x8117BAF8, 0x8117BE28, 0x8117D6E4, 0x8117D902) */
+	virtual int Attach(paf::ui::Widget *widget, IndicatorEventItemLook look);
+	virtual int Detach();
+	virtual void OnFocus();
+	virtual void OnUnfocus();
+	/* the icon shown (0x8117C0A4) and listened to (0x8117C188) (PLACEHOLDER names) */
+	virtual void ShowIcon(paf::ui::Widget *icon);
+	virtual void ListenIcon(paf::ui::Widget *icon);
+	/* the icon of the texture's ID or the file loaded (0x8117C9AA), its frame
+	   (0x8117CCFA), the item's text (0x8117CF64) and its time (0x8117D448), and the
+	   widget laid out (0x8117DD0C) (PLACEHOLDER names) */
+	virtual int SetIcon(paf::ui::Widget *widget, paf::IDParam id, const char *path);
+	virtual int SetIconFrame(paf::ui::Widget *widget);
+	virtual int SetText(paf::ui::Widget *widget, paf::IDParam id);
+	virtual int SetTime(paf::ui::Widget *widget);
+	virtual int Layout(paf::ui::Widget *widget, bool animate);
 
 	paf::intrusive_ptr<paf::cache::CacheImageInterface> m_icon;
 	int m_iconType;					/* PLACEHOLDER: not set yet */
@@ -417,7 +460,6 @@ public:
 	}
 
 	virtual ~IndicatorEventMessageItem();
-	virtual int Attach(paf::ui::Widget *widget, int arg, SceUInt32 color);
 };
 
 /* a message item with its own application (PLACEHOLDER) */
@@ -439,7 +481,7 @@ public:
 	{
 	}
 
-	virtual int Attach(paf::ui::Widget *widget, int arg, SceUInt32 color);
+	virtual int Attach(paf::ui::Widget *widget, IndicatorEventItemLook look);
 };
 
 /* the item of a trophy, from NPXS10008 (424 bytes) */
@@ -450,7 +492,7 @@ public:
 	{
 	}
 
-	virtual int Attach(paf::ui::Widget *widget, int arg, SceUInt32 color);
+	virtual int Attach(paf::ui::Widget *widget, IndicatorEventItemLook look);
 };
 
 /* the item of a system task, msgType 0x00-0xFF, its jobs in slots (464 bytes) */
@@ -461,8 +503,21 @@ public:
 	{
 	}
 
+	/* (0x81177CAE; 0x8117806E, 0x8117889A, 0x81179668, 0x811788AC, 0x81178990, 0x81178B98,
+	   0x8117AEEC) */
 	virtual ~IndicatorEventTaskItem();
-	virtual int Attach(paf::ui::Widget *widget, int arg, SceUInt32 color);
+	virtual int Attach(paf::ui::Widget *widget, IndicatorEventItemLook look);
+	virtual int Detach();
+	virtual int Execute();
+	virtual void ShowIcon(paf::ui::Widget *icon);
+	virtual void ListenIcon(paf::ui::Widget *icon);
+	virtual int SetText(paf::ui::Widget *widget, paf::IDParam id);
+	virtual int Layout(paf::ui::Widget *widget, bool animate);
+	/* the item's second line (0x81178DFA), its jobs stopped (0x81177C44), and whether it
+	   shows a transfer under way (0x8117AE88) (PLACEHOLDER names) */
+	virtual int SetSubText(paf::ui::Widget *widget, paf::IDParam id);
+	virtual int Stop();
+	virtual bool IsTransferring();
 
 	paf::common::JobSlots m_slots;
 	paf::common::SharedPtr<paf::job::JobItem> m_taskJob;
@@ -470,19 +525,34 @@ public:
 	bool m_busy;					/* PLACEHOLDER: not read yet */
 };
 
-/* the item of a transfer, msgType 0x40-0x4F and 0x80-0x8F, with its progress
-   (Job_TaskControl, Job_UpdateProgress; 496 bytes) */
+/* the item of a transfer, msgType 0x40-0x4F and 0x80-0x8F, with its progress bar updated by a
+   job while it runs (indicator_event_transfer.cpp, 0x8117587C-0x81177C44; 496 bytes) */
 class IndicatorEventTransferItem : public IndicatorEventTaskItem {
 public:
 	IndicatorEventTransferItem(const LsdbNewEvent &event, IndicatorEventItemCB callback)
-		: IndicatorEventTaskItem(event, callback)
+		: IndicatorEventTaskItem(event, callback), m_bar(NULL), reserved(0)
 	{
 	}
 
-	virtual int Attach(paf::ui::Widget *widget, int arg, SceUInt32 color);
+	virtual int Attach(paf::ui::Widget *widget, IndicatorEventItemLook look);
+	virtual int Execute();
+	virtual int SetText(paf::ui::Widget *widget, paf::IDParam id);
+	virtual int Layout(paf::ui::Widget *widget, bool animate);
+	virtual int SetSubText(paf::ui::Widget *widget, paf::IDParam id);
+	virtual int Stop();
+	virtual bool IsTransferring();
 
-	paf::common::SharedPtr<paf::job::JobItem> m_progressJob;
-	paf::common::JobSlots m_transferSlots;
+	/* the bar's timer set while the transfer runs, else the bar hidden (0x8117587C), the
+	   menu's button on the item (0x811759A0), its menu opened (0x811767B0) and the progress
+	   shown (0x81177226) (PLACEHOLDER names) */
+	void UpdateTimer(paf::ui::Widget *bar);
+	int AttachMenu(paf::ui::Widget *item);
+	void OpenMenu(paf::ui::Widget *anchor);
+	int SetProgress(float progress, paf::string status, paf::string percent);
+
+	paf::ui::ProgressBar *m_bar;
+	int reserved;					/* zero from the constructor; never read */
+	paf::common::JobSlots m_updateSlots;		/* the progress's job (PLACEHOLDER name) */
 };
 
 /* an icon's information by its title, as the icon information job gives it (PLACEHOLDER

@@ -94,15 +94,15 @@ IndicatorEventItem::~IndicatorEventItem()
 }
 
 /* (0x81174FFC) */
-int IndicatorEventItem::Attach(ui::Widget *widget, int mode, SceUInt32 color)
+int IndicatorEventItem::Attach(ui::Widget *widget, IndicatorEventItemLook look)
 {
 	if (g_indicatorPlugin == NULL || widget == NULL)
 		return -1;
 
 	m_widget = widget;
-	m_mode = mode;
+	m_mode = look.mode;
 
-	uint16x8_t rgba = vmovl_u8(vreinterpret_u8_u32(vdup_n_u32(color)));
+	uint16x8_t rgba = vmovl_u8(vreinterpret_u8_u32(vdup_n_u32(look.color)));
 
 	m_color = math::v4(sce::Vectormath::Simd::Aos::Vector4(
 		vmulq_f32(vcvtq_f32_u32(vmovl_u16(vget_low_u16(rgba))),

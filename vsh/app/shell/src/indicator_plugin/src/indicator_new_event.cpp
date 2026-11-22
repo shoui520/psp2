@@ -191,17 +191,6 @@ void indicatorNewEventUnlockButton(void);
 bool indicatorNewEventUpdateNotices(void);
 ui::Widget *indicatorNewEventGetButton(void);
 
-/* what a main-thread call is given: a copy of the caller's value, made from a copy of it
-   (PLACEHOLDER name) */
-template <typename T>
-struct IndicatorCallArg {
-	IndicatorCallArg(T value) : value(value)
-	{
-	}
-
-	T value;
-};
-
 /* the command started on the item's queue, in its slot */
 static inline common::SharedPtr<job::JobItem> indicatorNewEventCommand(IndicatorNewEvent *item,
 								       int command)
@@ -1304,7 +1293,9 @@ int indicatorPushNewEvent(IndicatorPushNewEventParam *param)
 	IndicatorEventItem *item = g_indicatorNewEvent->CreateItem(event, NULL);
 
 	if (item != NULL) {
-		item->Attach(param->widget, 0, param->color);
+		IndicatorEventItemLook look = { 0, param->color };
+
+		item->Attach(param->widget, look);
 		param->item = item;
 	}
 	return ret;

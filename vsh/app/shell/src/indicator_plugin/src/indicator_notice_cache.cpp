@@ -496,7 +496,9 @@ void IndicatorNoticeCache::AttachItem()
 	box->AddEventListener(INDICATOR_NOTICE_BOX_EVENT,
 			      new ui::EventCBListener(indicatorNoticeCacheOnBoxEvent, this), true);
 	box->SetMetaAlpha(0.0f, NULL, ui::Widget::ANIM_META_ALPHA, 0);
-	m_current->m_item->Attach(box, 2, 0);
+	IndicatorEventItemLook look = { 2, 0 };
+
+	m_current->m_item->Attach(box, look);
 }
 
 /* the icons' information read: an event told with its icon takes its title's name and icon
