@@ -2623,3 +2623,110 @@ out:
 	MlnServiceBuffersFree(thirds, count);
 	return ret;
 }
+
+/*
+ * Take a registration session's license transfer teardown: the ContentKeys of the bundle given
+ * are replaced by the payload's, and the first use of the new bundle is recorded; returns the
+ * new bundle and the core's state.
+ */
+unsigned int MlnImpl_81051F2C(int handle, const MlnBuffer *data, const MlnBuffer *extra,
+			      MlnBlob *first, MlnBlob *second)
+{
+	MlnRegistrationSession *session;
+	MlnXmlNode *bundle = NULL;
+	MlnXmlNode *node = NULL;
+	MlnXmlNode *document = NULL;
+	MlnXmlNodeList *keys = NULL;
+	MlnXmlNodeList *replacements = NULL;
+	MlnBuffer *text = NULL;
+	MlnBuffer *state = NULL;
+	MlnHandleTable *table;
+	unsigned int ret;
+	unsigned int r;
+	int refused;
+	int i;
+
+	if (first == NULL || data == NULL || data->size == 0 || data->data == NULL ||
+	    extra == NULL || extra->size == 0 || extra->data == NULL) {
+		ret = 4;
+		goto out;
+	}
+	r = MlnXmlParse(MLN_HEAP_GENERAL, data->size, data->data, &bundle);
+	if (r == 0)
+		r = MlnXmlFindNode(MLN_HEAP_GENERAL, bundle, "Bundle", NULL, &node);
+	if (r == 0)
+		r = MlnXmlFindNodes(MLN_HEAP_GENERAL, node, "ContentKey", NULL, &keys);
+	if (r != 0) {
+		ret = MlnImpl_810504EC(r, 0x17);
+		goto out;
+	}
+
+	session = NULL;
+	table = MlnRegistrationHandleTable(MlnImpl_81006EAC());
+	if (table == NULL) {
+		ret = 2;
+		goto out;
+	}
+	ret = MlnImpl_81069FE8(handle, table, &session);
+	if (ret != 0)
+		goto out;
+	if (session == NULL) {
+		ret = 3;
+		goto out;
+	}
+	ret = MlnImpl_81050378(session->service, 2, "LicenseTransferTeardownPayload", extra,
+			       &document);
+	if (ret != 0)
+		goto out;
+	r = MlnImpl_81066588(session->context, document, &refused);
+	if (r != 0)
+		goto map;
+	if (refused != 0) {
+		ret = 0x42;
+		goto out;
+	}
+	r = MlnXmlFindNodes(MLN_HEAP_GENERAL, document,
+			    "descendant-or-self::LicenseTransferTeardownPayload/ContentKeyList/"
+			    "ContentKey", NULL, &replacements);
+	if (r != 0)
+		goto map;
+	if (keys->count <= 0 || keys->count != replacements->count) {
+		ret = 0x17;
+		goto out;
+	}
+	for (i = 0; i < keys->count; i++) {
+		r = MlnXmlNodeRemoveChild(MLN_HEAP_GENERAL, node, keys->nodes[i]);
+		if (r == 0)
+			r = MlnXmlNodeAppendChild(MLN_HEAP_GENERAL, node, replacements->nodes[i], 0);
+		if (r != 0)
+			goto map;
+	}
+	r = MlnXmlNodeToText(MLN_HEAP_GENERAL, bundle, &text);
+	if (r != 0)
+		goto map;
+	ret = MlnImpl_8104D208(NULL, text);
+	if (ret != 0)
+		goto out;
+	r = MlnImpl_81043A60(1, &state);
+	if (r != 0)
+		goto map;
+	first->buffer = text;
+	first->size = text->size;
+	text = NULL;
+	second->buffer = state;
+	second->size = state->size;
+	state = NULL;
+	goto out;
+
+map:
+	ret = MlnImpl_810504EC(r, 7);
+out:
+	MlnBufferDestroy(MLN_HEAP_GENERAL, state);
+	MlnXmlNodeFree(MLN_HEAP_GENERAL, bundle);
+	MlnXmlNodeFree(MLN_HEAP_GENERAL, document);
+	MlnXmlNodeFree(MLN_HEAP_GENERAL, node);
+	MlnXmlListFree(MLN_HEAP_GENERAL, keys);
+	MlnXmlListFree(MLN_HEAP_GENERAL, replacements);
+	MlnBufferDestroy(MLN_HEAP_GENERAL, text);
+	return ret;
+}

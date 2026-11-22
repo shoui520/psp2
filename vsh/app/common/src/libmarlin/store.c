@@ -2475,10 +2475,10 @@ int MlnImpl_810485B4(void)
 	ret = MlnImpl_81080BFC(&handle);
 	if (ret != 0)
 		goto out;
-	ret = MlnImpl_8108136C(0, NULL, 0);
+	ret = MlnImpl_8108136C(0, 0, NULL);
 	if (ret != 0)
 		goto out;
-	ret = MlnImpl_8108136C(1, NULL, 0);
+	ret = MlnImpl_8108136C(1, 0, NULL);
 	if (ret != 0)
 		goto out;
 	ret = MlnImpl_8105DC0C(3, 0, NULL);
@@ -2588,7 +2588,7 @@ unsigned int MlnImpl_810488A8(const MlnBuffer *id)
 			ret = MlnImpl_81080BFC(&handle);
 			if (ret != 0)
 				goto out;
-			ret = MlnImpl_8108136C(1, NULL, 0);
+			ret = MlnImpl_8108136C(1, 0, NULL);
 			if (ret != 0)
 				goto out;
 		}
@@ -2600,7 +2600,7 @@ unsigned int MlnImpl_810488A8(const MlnBuffer *id)
 				if (ret != 0)
 					goto out;
 			}
-			ret = MlnImpl_8108136C(0, NULL, 0);
+			ret = MlnImpl_8108136C(0, 0, NULL);
 			if (ret != 0)
 				goto out;
 		}

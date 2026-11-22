@@ -664,6 +664,7 @@ int sceDrmBridgeIsAllowRemotePlayDebug(void);
 int SceDrmBridgeUser_6F5DC6CD(void);
 int sceDrmBridgeGetCurrentSecureTick(unsigned long long *tick);
 int sceDrmBridgeMlnpsnlAuth1(void *input, void *tick, void *output, void *state);
+int sceDrmBridgeMlnpsnlAuth2(const void *input, void *state, void *key);
 
 /* string.c */
 unsigned short MlnHtons(unsigned int value);
@@ -1898,8 +1899,10 @@ int MlnImpl_8105DEDC(int table, unsigned int key, MlnBuffer **out);
 unsigned int MlnImpl_8105E060(int kind, MlnBuffer **out);
 unsigned int MlnImpl_8105E5E4(const MlnBuffer *state);
 unsigned int MlnImpl_8105EA2C(void);
-int MlnImpl_81052EBC(unsigned int *seconds);
+unsigned int MlnImpl_81052EBC(unsigned int *seconds);
 int MlnImpl_81052944(const MlnDateTime *a, const MlnDateTime *b);
+int MlnImpl_810529E8(int value, int base, int size, char *buf);
+int MlnImpl_81052CA8(int value, int base);
 int MlnImpl_81061898(int kind, const MlnOctopusKey *key, const MlnBuffer *message,
 		     const MlnBuffer *signature);
 int MlnImpl_81060FE8(const MlnOctopusContentKey *contentKey, MlnBuffer **out);
@@ -2069,6 +2072,17 @@ unsigned int MlnImpl_81068060(void *exchange, int kind, const char *name,
 			      const MlnBuffer *message, MlnXmlNode **document);
 unsigned int MlnImpl_81050378(int handle, int kind, const char *name,
 			      const MlnBuffer *message, MlnXmlNode **document);
+unsigned int MlnImpl_81054880(void **cipher, unsigned int algorithm, const void *iv,
+			      unsigned int ivSize, const void *reserved, const void *key,
+			      unsigned int keySize);
+void MlnImpl_81054A90(void *cipher);
+unsigned int MlnImpl_81054C2C(void *cipher, const void *in, unsigned int size, void *out,
+			      unsigned int *outSize);
+unsigned int MlnImpl_81054F84(const void *iv, const void *key, const void *in, unsigned int size,
+			      void *out, unsigned int *outSize);
+unsigned int MlnImpl_8105D280(unsigned char *data, unsigned int *size);
+unsigned int MlnImpl_8105D3F4(unsigned char *data, unsigned int *size);
+unsigned int MlnImpl_81066588(void *context, MlnXmlNode *document, int *refused);
 unsigned int MlnImpl_81066A28(MlnXmlNode *document, int *value, MlnBuffer **payload);
 unsigned int MlnImpl_81065920(void *context, int count, MlnBuffer **first, MlnBuffer **second,
 			      MlnBuffer **third, MlnBuffer *pair, MlnBuffer *answer,
@@ -2101,11 +2115,13 @@ int MlnImpl_810670A0(void *exchange, MlnBufferGroups **groups, void *reserved1, 
 int MlnImpl_8105F2C4(int *id, unsigned int *flags);
 unsigned int MlnImpl_81052D14(int id, int mode, unsigned int start, int owner);
 unsigned int MlnImpl_81052D84(int *id, int *mode);
+unsigned int MlnImpl_81052E04(unsigned int *start);
+unsigned int MlnImpl_81052E60(int *owner);
 unsigned int MlnImpl_81080BFC(void **handle);
 unsigned int MlnImpl_81081374(int full);
 unsigned int MlnImpl_81080C1C(void *handle);
 int MlnImpl_810485B4(void);
-unsigned int MlnImpl_8108136C(int full, const void *data, unsigned int size);
+unsigned int MlnImpl_8108136C(int full, unsigned int size, const void *data);
 unsigned int MlnImpl_81042A60(const MlnBuffer *token, MlnOctopusNode **out, int verify);
 int MlnImpl_8103B8F8(MlnOctopusNode *node);
 int MlnImpl_8102A484(unsigned int mode);
@@ -2288,9 +2304,9 @@ int MlnImpl_81052600(void);
 int MlnImpl_81052608(void);
 int MlnImpl_8102FA24(const MlnServiceReply *reply, MlnServiceArgs **out, int *status);
 int MlnImpl_8102FA70(const MlnServiceReply *reply, MlnServiceArgs **out, int *status);
-unsigned int MlnImpl_81052610(unsigned int second, unsigned int first, MlnBlob *out);
+unsigned int MlnImpl_81052610(unsigned int kind, unsigned int capacity, MlnBlob *out);
 int MlnImpl_8102FAAC(const MlnServiceReply *reply, MlnServiceArgs **out, int *status);
-unsigned int MlnImpl_8105272C(unsigned int size, const unsigned char *data, int flags,
+unsigned int MlnImpl_8105272C(unsigned int size, const unsigned char *data, int plain,
 			      MlnBlob *out);
 int MlnImpl_8102FC18(const MlnServiceReply *reply, MlnServiceArgs **out, int *status,
 		     MlnBuffer **result);
