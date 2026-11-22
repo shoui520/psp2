@@ -118,9 +118,9 @@ public:
 
 class IndicatorRightGroup : public IndicatorItem {
 public:
-	IndicatorRightGroup(paf::Plugin *plugin, paf::ui::Widget *widget);
-	virtual ~IndicatorRightGroup();
-	virtual void OnStatus(IndicatorStatus status);
+	IndicatorRightGroup(paf::Plugin *plugin, paf::ui::Widget *widget);	/* (0x8116D398) */
+	virtual ~IndicatorRightGroup();					/* (0x8116D580) */
+	virtual void OnStatus(IndicatorStatus status);	/* folded with the left group's */
 
 	paf::ui::Widget *m_root;
 	paf::vector<IndicatorItem *> m_items;
@@ -288,6 +288,45 @@ public:
 	IndicatorClock(paf::Plugin *plugin, paf::ui::Widget *widget);		/* (0x81183B60) */
 	paf::ui::Widget *m_root;
 	paf::Plugin *m_plugin;
+};
+
+/*
+ * The right group's items (PLACEHOLDER names and fields, from what their constructors store,
+ * until each one's file is written): an icon with two children on a timer, told the shell's
+ * events 13 and 14 (32 bytes, not on the Dolce), the item started at once (12 bytes, the one
+ * made kept at 0x81566BD8), the item using impose_plugin's interface (16 bytes) and the notices'
+ * icon (28 bytes).
+ */
+class IndicatorTimedIcon : public IndicatorItem {
+public:
+	IndicatorTimedIcon(paf::Plugin *plugin, paf::ui::Widget *widget);	/* (0x81184D68) */
+	paf::ui::Widget *m_root;
+	paf::Plugin *m_plugin;
+	paf::ui::Widget *m_child[2];
+	int m_state[2];
+};
+
+class IndicatorStartedItem : public IndicatorItem {
+public:
+	IndicatorStartedItem(paf::Plugin *plugin, paf::ui::Widget *widget);	/* (0x81183D68) */
+	void Start();							/* (0x811841A8) */
+	paf::ui::Widget *m_root;
+};
+
+class IndicatorImposeItem : public IndicatorItem {
+public:
+	IndicatorImposeItem(paf::Plugin *plugin, paf::ui::Widget *widget);	/* (0x811834BE) */
+	paf::ui::Widget *m_root;
+	paf::Plugin *m_plugin;
+};
+
+class IndicatorNoticeIcon : public IndicatorItem {
+public:
+	IndicatorNoticeIcon(paf::Plugin *plugin, paf::ui::Widget *widget);	/* (0x81180FD8) */
+	paf::ui::Widget *m_root;
+	paf::Plugin *m_plugin;
+	int m_state[2];
+	bool m_flag[3];
 };
 
 /*
