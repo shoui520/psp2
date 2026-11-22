@@ -112,8 +112,8 @@ public:
 		padding[0] = 20.0f;
 		padding[1] = 20.0f;
 		anchor = NULL;
-		anchorOffset[0] = 0;
-		anchorOffset[1] = 0;
+		anchorOffset[0] = 0.0f;
+		anchorOffset[1] = 0.0f;
 		bounds[0] = 240.0f;
 		bounds[1] = -240.0f;
 		bounds[2] = -480.0f;
@@ -156,7 +156,7 @@ public:
 	int offset[2];
 	float padding[2];
 	paf::ui::Widget *anchor;		/* the widget the list opens at, when set */
-	int anchorOffset[2];
+	float anchorOffset[2];
 	float bounds[4];
 	bool show[4];
 	int extra[2];

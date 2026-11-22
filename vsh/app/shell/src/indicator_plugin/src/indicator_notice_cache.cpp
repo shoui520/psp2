@@ -107,7 +107,7 @@ IndicatorNoticeCache *g_indicatorNoticeCache;
 static void indicatorNoticeCacheOnTimeout(SceInt32 type, ui::Handler *self, ui::Event *e,
 					  void *data);
 static void indicatorNoticeCacheOnEnd(SceInt32 type, ui::Handler *self, ui::Event *e, void *data);
-static void indicatorNoticeCacheOnIconInfo(IndicatorIconInfoMap *icons, void *arg);
+static void indicatorNoticeCacheOnIconInfo(IndicatorIconInfoMap *icons, int result, void *arg);
 static void indicatorNoticeCacheOnBoxEvent(SceInt32 type, ui::Handler *self, ui::Event *e,
 					   void *data);
 static void indicatorNoticeCacheOnHidden(Timer *t, ui::AnimListener *listener, void *data1,
@@ -501,7 +501,7 @@ void IndicatorNoticeCache::AttachItem()
 
 /* the icons' information read: an event told with its icon takes its title's name and icon
    where it has none, and its item is made (0x8116EE2A) */
-void IndicatorNoticeCache::OnIconInfo(IndicatorIconInfoMap *icons)
+void IndicatorNoticeCache::OnIconInfo(IndicatorIconInfoMap *icons, int result, void *arg)
 {
 	if (m_current == NULL)
 		return;
@@ -520,9 +520,9 @@ void IndicatorNoticeCache::OnIconInfo(IndicatorIconInfoMap *icons)
 }
 
 /* (0x8116EF04) */
-static void indicatorNoticeCacheOnIconInfo(IndicatorIconInfoMap *icons, void *arg)
+static void indicatorNoticeCacheOnIconInfo(IndicatorIconInfoMap *icons, int result, void *arg)
 {
-	g_indicatorNoticeCache->OnIconInfo(icons);
+	g_indicatorNoticeCache->OnIconInfo(icons, result, arg);
 }
 
 /* the icon's information of the title the notice's event runs read (0x8116EF1C) */

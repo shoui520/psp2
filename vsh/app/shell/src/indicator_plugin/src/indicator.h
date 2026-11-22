@@ -131,8 +131,24 @@ int indicatorCacheCreateTexture(paf::Plugin *plugin, paf::IDParam &id,
 				const paf::cache::CacheImage::Option *option,
 				paf::job::JobQueue *queue);
 
+/* the indicator plugin's string of the ID (0x81182420; PLACEHOLDER name) */
+const wchar_t *indicatorGetString(const paf::IDParam &id);
+
 /* an error posted to the error history (0x8118243A) */
 int indicatorPostError(int error);
+
+/* the busy dialog with the message opened (0x81182D06) and closed (0x81182E4C), on the main
+   thread when asked; the dialog's ID, below 0 when none opened (PLACEHOLDER names) */
+int indicatorBusyDialogOpen(const wchar_t *message, bool sync);
+int indicatorBusyDialogClose(bool sync);
+struct CommonGuiDialogLayout;
+
+/* told the button of a question dialog closed (PLACEHOLDER names) */
+typedef void (*IndicatorDialogCB)(int result, int button, void *arg);
+/* a dialog of the layout with the message opened, its ID returned (0x81183012; PLACEHOLDER
+   name) */
+int indicatorDialogOpen(const CommonGuiDialogLayout *layout, const wchar_t *message,
+			IndicatorDialogCB callback, void *arg);
 
 /*
  * The new events' item: the button on the bar that opens the notices, with the count of the
@@ -277,6 +293,8 @@ public:
 	int UpdateNewFlag(const LsdbNewEvent *event);		/* (0x8117F48E) */
 	int ClearNewFlags();					/* (0x8117F692) */
 	bool IsChanged();					/* (0x8117F414) */
+	/* every event deleted, the accessor's (0x8117F1B8) */
+	static int DeleteAll(bool all);
 	int GetPopupCount();					/* (0x8117F41C) */
 
 	NewEventAccessor m_accessor;
@@ -322,6 +340,9 @@ public:
 	/* the item given its widget, the list's argument and its color (0xRRGGBBAA)
 	   (0x81174FFC; PLACEHOLDER name) */
 	virtual int Attach(paf::ui::Widget *widget, int arg, SceUInt32 color);
+	/* the item let go of its widget (0x81174ECC; PLACEHOLDER name); slots 4 and 5 are
+	   0x81175238 and 0x81175302 */
+	virtual void Detach();
 
 	LsdbNewEvent m_event;
 	IndicatorEventItemCB m_callback;
@@ -443,15 +464,73 @@ public:
 	paf::common::JobSlots m_transferSlots;
 };
 
-/* the notices' list page (0x81544A54): open while its state is neither 0 nor 3 (0x8116FBD8),
-   closed (0x8117034A), and opened on a page with the new events (0x811719BC) (PLACEHOLDER
+/* an icon's information by its title, as the icon information job gives it (PLACEHOLDER
    names) */
+typedef paf::map<paf::string, LsdbIconPtr> IndicatorIconInfoMap;
+typedef void (*IndicatorIconInfoCB)(IndicatorIconInfoMap *icons, int result, void *arg);
+
+/*
+ * The notices' list page (0x81544A54, indicator_notice_manager.cpp): the page made from its
+ * template on the bar's page, its list of the new events laid out to fit and slid in and out,
+ * its commands run as jobs, one slot each (96 bytes, PLACEHOLDER names).
+ */
+/* the events kept for the icons' callback (PLACEHOLDER name) */
+struct IndicatorNoticeIconArg {
+	IndicatorNoticeIconArg(paf::vector<LsdbNewEventPtr> *events) : events(events)
+	{
+	}
+
+	paf::vector<LsdbNewEventPtr> *events;
+};
+
 class IndicatorNoticeManager {
 public:
+	/* (0x811702D8) */
+	IndicatorNoticeManager(paf::Plugin *plugin) : m_plugin(plugin), m_page(NULL), m_state(0)
+	{
+	}
+
+	virtual ~IndicatorNoticeManager();				/* (0x8117360E) */
+
+	/* open while its state is neither 0 nor 3 (0x8116FBD8) */
 	bool IsOpen();
-	void Close(int reason, int option);
+	void Layout(paf::ui::Widget *list, bool focus);		/* (0x8116FBE8) */
+	IndicatorEventItem *CreateItem(SceUInt32 index);		/* (0x81170218) */
+	void Close(int reason, int option);				/* (0x8117034A) */
+	void LoadIconInfo(const paf::vector<LsdbNewEventPtr> &events,
+			  IndicatorIconInfoCB callback);		/* (0x81170DC0) */
+	paf::ui::Widget *MakePage(paf::ui::Widget *parent);		/* (0x81171074) */
 	void Open(paf::ui::Widget *page, const paf::vector<LsdbNewEventPtr> &events);
+									/* (0x811719BC) */
 	void Update(const paf::vector<LsdbNewEventPtr> &events);	/* (0x81171DE2) */
+	/* the list and its background shown once the frame is grown (0x81171EFE) */
+	void OnFrameResized(paf::ui::Widget *frame, void *data);
+	/* the menu of the corner button opened at the widget (0x811724C0) */
+	void OpenMenu(paf::ui::Widget *anchor);
+	/* the menu's item chosen, by its index (0x811728F6) */
+	void OnMenuClosed(int index);
+	/* the list's cells made again for the events (0x81172E5E) */
+	void Refresh();
+	/* the shown events' empty titles and icons filled from the icons read (0x811730A2) */
+	void ApplyIcons(IndicatorIconInfoMap *icons);
+	/* the events taken, the ones before kept (0x81173132) */
+	int SetEvents(const paf::vector<LsdbNewEventPtr> &events, int option);
+	/* the icons read: the events kept for them taken and their icons filled (0x811731C8) */
+	void OnIconInfo(IndicatorIconInfoMap *icons, int result, IndicatorNoticeIconArg *arg);
+	/* the icons read for an open page: its cells changed to the new events (0x81173278) */
+	void Sync(IndicatorIconInfoMap *icons, int result, IndicatorNoticeIconArg *arg);
+
+	paf::Plugin *m_plugin;
+	paf::ui::Widget *m_page;
+	/* 0 closed, 1 opening, 2 open, 3 closing */
+	int m_state;
+	paf::vector<LsdbNewEventPtr> m_events;
+	/* the events before the last ones taken */
+	paf::vector<LsdbNewEventPtr> m_shownEvents;
+	paf::common::JobSlots m_jobs;
+	paf::common::SharedPtr<paf::job::JobItem> m_iconJob;
+	/* the menu's items' strings */
+	paf::vector<paf::IDParam> m_ids;
 };
 
 IndicatorNoticeManager *indicatorNoticeManager(void);		/* (0x8116FAAA) */
@@ -463,10 +542,6 @@ IndicatorNoticeManager *indicatorNoticeManager(void);		/* (0x8116FAAA) */
  */
 class IndicatorNotice;
 
-/* an icon's information by its title, as the icon information job gives it (PLACEHOLDER
-   names) */
-typedef paf::map<paf::string, LsdbIconPtr> IndicatorIconInfoMap;
-typedef void (*IndicatorIconInfoCB)(IndicatorIconInfoMap *icons, void *arg);
 
 /* the icons' information of the titles read on the indicator's job queue, the callback told
    (0x81182604; PLACEHOLDER name, its file not written yet) */
@@ -496,7 +571,7 @@ public:
 	int Cancel(const char *titleId);			/* (0x8116EA38) */
 	int CancelAll();
 	void AttachItem();
-	void OnIconInfo(IndicatorIconInfoMap *icons);
+	void OnIconInfo(IndicatorIconInfoMap *icons, int result, void *arg);
 	void LoadIconInfo();
 	void GetBounds(paf::ui::Widget *widget, paf::math::v4 *size, paf::math::v4 *center);
 	void Open();
@@ -532,6 +607,10 @@ void indicatorExitReserved(void);
 /* the notices' queue emptied (0x81173A82) and their page closed (0x81180152), when the mode
    changes */
 void indicatorNoticeQueueClear(void);
+/* the popup list of the ID kept, forgotten as it closes (0x81173A52), and closed by its ID
+   (0x81173A6A) (PLACEHOLDER names) */
+void indicatorNoticePopupAdd(SceInt64 id);
+void indicatorNoticePopupClose(SceInt64 id);
 void indicatorNoticePageClose(void);
 
 /* telephony_plugin's general state listened to while the bar lives (0x81168D24, 0x81168D86;
