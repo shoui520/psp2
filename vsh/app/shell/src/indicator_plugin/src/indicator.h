@@ -297,8 +297,13 @@ void indicatorNoticeManagerCreate(paf::Plugin *plugin);
 void indicatorNoticeManagerDestroy(void);
 void indicatorNoticeCacheCreate(paf::Plugin *plugin);
 void indicatorNoticeCacheDestroy(void);
-void indicatorNoticeStateCreate(void);
-void indicatorNoticeStateDestroy(void);
+void indicatorNoticeDialogsCreate(void);
+void indicatorNoticeDialogsDestroy(void);
+/* a notice's dialog kept by its ID until it ends, let go by its ID, or all of them let go
+   (indicator_notice_dialogs.cpp: 0x8116D9E0, 0x8116DA00, 0x8116DA18; PLACEHOLDER names) */
+void indicatorNoticeDialogAdd(SceInt64 id, int dialogId);
+void indicatorNoticeDialogClose(SceInt64 id);
+void indicatorNoticeDialogCloseAll(void);
 void indicatorNoticeListCreate(void);
 void indicatorNoticeListDestroy(void);
 

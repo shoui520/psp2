@@ -309,7 +309,7 @@ IndicatorNewEvent::IndicatorNewEvent(Plugin *plugin, ui::Widget *root)
 		m_widget->EnableFocusEvent(false);
 		indicatorNoticeManagerCreate(m_plugin);
 		indicatorNoticeCacheCreate(m_plugin);
-		indicatorNoticeStateCreate();
+		indicatorNoticeDialogsCreate();
 		indicatorNoticeListCreate();
 		indicatorNewEventStart(this, INDICATOR_NEW_EVENT_CMD_INIT);
 		indicatorNewEventDb()->Open();
@@ -359,7 +359,7 @@ IndicatorNewEvent::~IndicatorNewEvent()
 	}
 	indicatorNoticeManagerDestroy();
 	indicatorNoticeCacheDestroy();
-	indicatorNoticeStateDestroy();
+	indicatorNoticeDialogsDestroy();
 	indicatorNoticeListDestroy();
 	common::MainThreadCallList::Unregister(indicatorNewEventOnMainThread, this);
 	indicatorNewEventDb()->Close();
