@@ -8,7 +8,7 @@
 static inline unsigned int MlnExchangeError(unsigned int ret)
 {
 	switch (ret & 0xFFFF0000) {
-	case 0x22080000:
+	case 0x22060000:
 	case 0x22020000:
 	case 0x22030000:
 		return MLN_EXCHANGE_ERROR_MESSAGE;
