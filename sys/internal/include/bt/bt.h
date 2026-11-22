@@ -38,6 +38,8 @@ int sceBtHidVuUnregisterCallback(void);
 int sceBtPairingOOB(void);
 int sceBtPushBip(uint64_t deviceAddress, const void *path, unsigned int length);
 int sceBtPushOpp(void);
+struct SceBtEvent;
+int sceBtReadEvent(struct SceBtEvent *events, int maxCount);
 int sceBtRecvAudio(uint64_t deviceAddress, void *buffer, SceSize size);
 int sceBtRecvBip(const void *path, unsigned int length);
 int sceBtRecvOpp(void);

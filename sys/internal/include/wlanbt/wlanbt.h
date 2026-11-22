@@ -1,5 +1,7 @@
 #pragma once
 
+#include <scetypes.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -18,6 +20,7 @@ unsigned int sceWlanBtGetConfiguration(void);
 unsigned int sceWlanGetConfiguration(void);
 int sceWlanGetWakeOnTargetProcess(void);
 int sceWlanSetConfiguration(int request);
+int sceWlanRegisterCallback(SceUID callbackId);
 int sceWlanUnregisterCallback(void);
 
 #ifdef __cplusplus

@@ -140,14 +140,13 @@ int shellNetworkMgrCreate(bool enable);			/* (0x811C9070) */
 void shellAccessibilityApply(void);			/* invert colours, key remap (0x810A76AA) */
 int shellNoticeServiceStart(void);			/* (0x81005204) */
 int shellNoticeServiceInit(void);			/* made and started (0x8139AB6C) */
-int shellIncomingDialogServerCreate(void);		/* (0x8115B1CA) */
+void shellIncomingDialogServerCreate(void);		/* (0x8115B1CA) */
 
 /*
- * A request of the incoming dialog server (0x8115B1CA keeps eight): the application's
- * parameters as sceIncomingDialog takes them (its first 604 bytes), then the server's own
- * fields (PLACEHOLDER names).
+ * An incoming dialog as the application asks for it through sceIncomingDialog (604 bytes;
+ * PLACEHOLDER names, the type's after vitasdk's)
  */
-struct ShellIncomingDialogRequest {
+struct SceIncomingDialogParam {
 	SceInt32 sdkVersion;
 	char titleId[16];		/* the application the dialog launches */
 	char audioPath[128];		/* the sound played while it is up, in the application */
@@ -158,11 +157,19 @@ struct ShellIncomingDialogRequest {
 	wchar_t rejectText[32];		/* empty for a dialog with one button */
 	wchar_t dialogText[64];
 	wchar_t noticeText[65];		/* the new event written when the dialog goes */
+};
+
+/*
+ * A request of the incoming dialog server (0x8115B1CA keeps eight): the application's
+ * parameters, then the server's own fields (PLACEHOLDER names).
+ */
+struct ShellIncomingDialogRequest : SceIncomingDialogParam {
 	bool canceled;
 	SceUID processId;		/* the application's; -1 for a free slot */
 	SceUInt64 startTime;		/* sceKernelGetProcessTimeWide when it was shown */
 	char *param;			/* the launch's param= argument, or NULL */
-	SceInt32 sequence;		/* the oldest pending request is taken first */
+	SceInt32 reserved2;		/* nothing reads or writes it */
+	SceUInt32 sequence;		/* the oldest pending request is taken first */
 	SceInt32 state;			/* 1 pending, 2 taken, else its result */
 	bool taken;
 	bool freeOnRelease;		/* the slot is freed when its request is released */

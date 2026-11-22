@@ -319,11 +319,24 @@ public:
 extern ImposeParentalControl *g_imposeParentalControl;
 
 /*
+ * A wait the flight mode jobs end (their own vtable, 0x81530F64; the class's and the members'
+ * names are ours, PLACEHOLDER): the drivers' callbacks put their result in and wake the job.
+ */
+class ImposeFlightModeWait : public paf::thread::Cond {
+public:
+	ImposeFlightModeWait(paf::thread::Mutex &mutex, const char *name)
+		: paf::thread::Cond(mutex, name, 0), m_result(0) {}
+	virtual ~ImposeFlightModeWait() { m_result = 0; }
+	virtual void Notify(SceInt32 result) { m_result = result; paf::thread::Cond::Notify(); }
+
+	SceInt32 m_result;
+};
+
+/*
  * The flight mode switched as a job ("SceImposeFlightModeJob", Sony's name for it; its
  * callbacks "SceImposeBtDriverEventCallback", "SceImposeWlanDriverEventCallback"): the job
- * waits for the Wi-Fi and Bluetooth drivers, with the dialog shown meanwhile. Its code and its
- * other members are in the file after impose_psmenu_wireless.cpp (0x8115A13A-0x8115A9DE); the
- * class's and the members' names are ours (PLACEHOLDER).
+ * waits for the Wi-Fi and Bluetooth drivers, with the dialog shown meanwhile. Its code is in
+ * impose_psmenu_util.cpp; the class's and the members' names are ours (PLACEHOLDER).
  */
 class ImposeFlightModeJob : public paf::job::JobItem {
 public:
@@ -338,26 +351,30 @@ public:
 	SceUID m_btCallback;
 	SceUID m_wlanCallback;
 	paf::thread::Mutex m_mutex;
-	/* PLACEHOLDER: an object of its own vtable (0x81530F64), read with the job's file */
-	void *m_waiter;
-	paf::thread::Cond m_cond;
-	SceInt32 m_state;
+	ImposeFlightModeWait m_wait;
 };
 
-/* PLACEHOLDER names: the job's functions the menu's switches call, in the job's file: */
-bool Impose_8115AA1E(bool on);		/* the flight mode set */
-bool Impose_8115AA80(void);		/* Wi-Fi cannot be switched (its configuration's 0x200) */
-bool Impose_8115AA94(bool on);		/* Wi-Fi set */
-bool Impose_8115AB10(void);		/* the mobile network is there (telephony_plugin) */
-bool Impose_8115AB46(void);		/* the mobile network cannot be switched (0x400) */
-bool Impose_8115AB5A(bool on);		/* the mobile network set */
-bool Impose_8115AC0C(bool on);		/* Bluetooth set */
-bool Impose_8115AC7C(void);		/* the flight mode is on */
-bool Impose_8115ACC2(void);		/* Wi-Fi is on */
-bool Impose_8115ACD6(void);		/* the mobile network is on */
-bool Impose_8115AD9C(void);		/* Bluetooth is on */
-bool Impose_8115ADB0(void);		/* the switches can be used */
-void Impose_8115A080(bool on);		/* the menu's event flag told of Wi-Fi */
+/* PLACEHOLDER names: the menu's switches and its event flag, in impose_psmenu_util.cpp */
+bool imposeSetFlightMode(bool on);
+bool imposeWlanIsLocked(void);		/* Wi-Fi cannot be switched (its configuration's 0x200) */
+bool imposeSetWlan(bool on);
+bool imposeHasMobile(void);		/* the mobile network is there (telephony_plugin) */
+bool imposeMobileIsLocked(void);	/* the mobile network cannot be switched (0x400) */
+bool imposeSetMobile(bool on);
+bool imposeSetBluetooth(bool on);
+bool imposeIsFlightMode(void);
+bool imposeIsWlanOn(void);
+bool imposeIsMobileOn(void);
+bool imposeIsBluetoothOn(void);
+bool imposeSwitchesUsable(void);	/* no application of the list is running */
+void imposePsMenuEventCreate(void);
+void imposePsMenuEventDelete(void);
+void imposePsMenuEventClear(void);
+void imposePsMenuEventSetClose(void);
+void imposePsMenuEventSetVibration(SceUInt8 on);
+void imposePsMenuEventSetWlan(bool on);
+void imposePsMenuAppEventAdd(void);
+void imposePsMenuAppEventRemove(void);
 
 /*
  * The menu's wireless switches (impose_psmenu_wireless.cpp; PLACEHOLDER names): the flight

@@ -87,7 +87,7 @@ public:
 			applauncherPluginGetInterface("indicator_plugin", 1);
 
 		((void (*)(int))indicator->func[WIRELESS_INDICATOR_FLIGHT_MODE])(
-			Impose_8115AC7C() ? 1 : 0);
+			imposeIsFlightMode() ? 1 : 0);
 	}
 
 	ImposePsMenuWireless *m_wireless;
@@ -141,25 +141,25 @@ __attribute__((noinline)) void ImposePsMenuWireless::UpdateButtons()
 	if (m_box == NULL)
 		return;
 
-	SetButtonState(m_flightMode, Impose_8115AC7C());
-	SetButtonState(m_wlan, Impose_8115ACC2());
-	SetButtonState(m_mobile, Impose_8115ACD6());
-	SetButtonState(m_bluetooth, Impose_8115AD9C());
+	SetButtonState(m_flightMode, imposeIsFlightMode());
+	SetButtonState(m_wlan, imposeIsWlanOn());
+	SetButtonState(m_mobile, imposeIsMobileOn());
+	SetButtonState(m_bluetooth, imposeIsBluetoothOn());
 
 	bool flightMode = false;
 	bool wlan = false;
 	bool mobile = false;
 	bool bluetooth = false;
 
-	if (m_enabled && Impose_8115ADB0()) {
+	if (m_enabled && imposeSwitchesUsable()) {
 		m_box->FindChild(IDParam(WIRELESS_LABEL), 0)->SetMetaAlpha(1.0f);
 		m_box->FindChild(IDParam(WIRELESS_LABEL2), 0)->SetMetaAlpha(1.0f);
-		if (!Impose_8115AA80())
+		if (!imposeWlanIsLocked())
 			flightMode = true;
-		wlan = !Impose_8115AA80();
+		wlan = !imposeWlanIsLocked();
 		mobile = false;
-		if (!Impose_8115AB46())
-			mobile = !Impose_8115AC7C();
+		if (!imposeMobileIsLocked())
+			mobile = !imposeIsFlightMode();
 		bluetooth = true;
 	} else {
 		m_box->FindChild(IDParam(WIRELESS_LABEL), 0)->SetMetaAlpha(0.3f);
@@ -256,7 +256,7 @@ void ImposePsMenuWireless::Open(ui::Widget *box)
 
 	m_mobile = PSMENU_FIND(m_box, ui::ButtonBase, WIRELESS_MOBILE);
 	if (m_mobile != NULL) {
-		if (Impose_8115AB10()) {
+		if (imposeHasMobile()) {
 			imposePsMenuWirelessListen(this, m_mobile, ui::ButtonBase::CB_BTN_DECIDE,
 							   &ImposePsMenuWireless::OnMobile);
 			imposePsMenuWirelessListen(this, m_mobile, WIRELESS_EVENT_LAYOUT,
@@ -306,10 +306,10 @@ void ImposePsMenuWireless::SetEnabled(bool enabled)
 /* the flight mode switched, by its job behind the waiting dialog (0x811598C4) */
 void ImposePsMenuWireless::OnFlightMode(ui::Widget *button)
 {
-	if (Impose_8115AA80() || button == NULL)
+	if (imposeWlanIsLocked() || button == NULL)
 		return;
 
-	bool on = !Impose_8115AC7C();
+	bool on = !imposeIsFlightMode();
 
 	sceKernelPowerLock(SCE_KERNEL_POWER_TICK_DEFAULT);
 	inputdevice::Lock(0x7F);
@@ -332,7 +332,7 @@ void ImposePsMenuWireless::OnFlightMode(ui::Widget *button)
 			job::JobQueue::default_queue->Enqueue(job);
 	}
 
-	if (Impose_8115AA1E(on))
+	if (imposeSetFlightMode(on))
 		SetButtonState(button, on);
 }
 
@@ -340,11 +340,11 @@ void ImposePsMenuWireless::OnFlightMode(ui::Widget *button)
 void ImposePsMenuWireless::OnWlan(ui::Widget *button)
 {
 	if (button != NULL) {
-		bool on = !Impose_8115ACC2();
+		bool on = !imposeIsWlanOn();
 
-		if (Impose_8115AA94(on)) {
+		if (imposeSetWlan(on)) {
 			SetButtonState(button, on);
-			Impose_8115A080(on);
+			imposePsMenuEventSetWlan(on);
 		}
 	}
 }
@@ -353,9 +353,9 @@ void ImposePsMenuWireless::OnWlan(ui::Widget *button)
 void ImposePsMenuWireless::OnMobile(ui::Widget *button)
 {
 	if (button != NULL) {
-		bool on = !Impose_8115ACD6();
+		bool on = !imposeIsMobileOn();
 
-		if (Impose_8115AB5A(on))
+		if (imposeSetMobile(on))
 			SetButtonState(button, on);
 	}
 }
@@ -364,9 +364,9 @@ void ImposePsMenuWireless::OnMobile(ui::Widget *button)
 void ImposePsMenuWireless::OnBluetooth(ui::Widget *button)
 {
 	if (button != NULL) {
-		bool on = !Impose_8115AD9C();
+		bool on = !imposeIsBluetoothOn();
 
-		if (Impose_8115AC0C(on)) {
+		if (imposeSetBluetooth(on)) {
 			SetButtonState(button, on);
 			ShellPluginInterface *indicator = (ShellPluginInterface *)
 				applauncherPluginGetInterface("indicator_plugin", 1);

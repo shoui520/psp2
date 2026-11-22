@@ -73,10 +73,6 @@ using namespace paf;
 #define CONTROLLER_ASSIGN_LIST_WIDTH	300.0f
 #define CONTROLLER_ASSIGN_LIST_PADDING	70.0f
 
-/* PLACEHOLDER: the menu's vibration event flag bits set (0x8115A034, in impose_psmenu's
-   neighbour) */
-void Impose_8115A034(SceUInt8 vibration);
-
 /* the ports' marks' colours (0x81564F68) */
 static math::v4 s_portColors[CONTROLLER_PORTS] = {
 	math::v4(54.0f, 148.0f, 255.0f, 255.0f) / 255.0f,
@@ -451,7 +447,7 @@ void ImposePsMenuController::OnVibration(ui::CheckBox *check)
 		SceUInt8 checked = check->m_is_checked;
 		int value;
 
-		Impose_8115A034(checked);
+		imposePsMenuEventSetVibration(checked);
 		value = checked != 0;
 		sceRegMgrSetKeyInt("/CONFIG/SYSTEM", "controller_vibration", value);
 		vshCtrlSetVibrationSetting(value);

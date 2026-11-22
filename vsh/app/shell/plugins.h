@@ -212,7 +212,12 @@ struct TelephonyModem {
 
 struct TelephonyService;
 struct TelephonyServiceVtable {
-	void *reserved0[7];
+	void *reserved0[4];
+	/* PLACEHOLDER names, after impose_plugin's flight mode and mobile network switches: the
+	   modem's radio off with the flight mode, and the mobile data network on or off */
+	TelephonyResult (*setFlightMode)(TelephonyService *self, int on);		/* +0x10 */
+	TelephonyResult (*getFlightMode)(TelephonyService *self, SceUInt8 *on);	/* +0x14 */
+	TelephonyResult (*setDataEnabled)(TelephonyService *self, bool enabled);	/* +0x18 */
 	TelephonyResult (*getDataEnabled)(TelephonyService *self, SceUInt8 *enabled);	/* +0x1C */
 	void *reserved1[16];
 	TelephonyResult (*getPlmn)(TelephonyService *self, TelephonyPlmn *plmn);	/* +0x60 */

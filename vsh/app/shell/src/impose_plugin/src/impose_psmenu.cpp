@@ -129,15 +129,6 @@ int Shell_81232FA6(void);
 int Shell_812327F8(void);
 int Shell_8124A6E2(int arg1, int arg2);
 
-/* PLACEHOLDER names: the menu's event flag (0x81159F9A made, 0x81159FBC deleted, 0x81159FF6
-   cleared, 0x8115A01A set) and the application events it listens to (0x8115A9DE, 0x8115A9FE) */
-void Impose_81159F9A(void);
-void Impose_81159FBC(void);
-void Impose_81159FF6(void);
-void Impose_8115A01A(void);
-void Impose_8115A9DE(void);
-void Impose_8115A9FE(void);
-
 /* (0x81564DC0) */
 ImposePsMenu *g_imposePsMenu;
 
@@ -161,7 +152,7 @@ public:
 	virtual void operator()(SceInt32 value, SceInt32 button)
 	{
 		if (button == 4) {
-			Impose_8115A01A();
+			imposePsMenuEventSetClose();
 			g_imposePsMenu->Close();
 		}
 		SceCommonGuiDialog_BC311DC0(value);
@@ -195,7 +186,7 @@ public:
 		if (result == 2) {
 			g_imposePsMenu->ShowQuitDialog();
 		} else if (result == 1) {
-			Impose_8115A01A();
+			imposePsMenuEventSetClose();
 			g_imposePsMenu->Close();
 		} else if (result == 3) {
 			g_imposePsMenu->Close();
@@ -278,7 +269,7 @@ void ImposePsMenu::Close()
 	m_focusButton = NULL;
 	inputdevice::ReleaseOwnership(0x6F);
 	g_imposeTouchEmulation->Unlock();
-	Impose_81159FF6();
+	imposePsMenuEventClear();
 	ScePafCommon_B48C9BDC(0.0f, m_page, common::transition::Type_SlideFromBottom4, true,
 			      false);
 	m_page->m_name.SetID(string(""));
@@ -352,15 +343,15 @@ ImposePsMenu::ImposePsMenu(Plugin *plugin)
 		else
 			sceAudioInSetMute(2);
 	}
-	Impose_8115A9DE();
-	Impose_81159F9A();
+	imposePsMenuAppEventAdd();
+	imposePsMenuEventCreate();
 }
 
 /* (0x8114B1B2) */
 ImposePsMenu::~ImposePsMenu()
 {
-	Impose_81159FBC();
-	Impose_8115A9FE();
+	imposePsMenuEventDelete();
+	imposePsMenuAppEventRemove();
 	g_imposePsMenu = NULL;
 }
 
