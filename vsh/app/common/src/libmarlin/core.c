@@ -882,7 +882,7 @@ __attribute__((noinline)) int MlnImpl_810148F8(MlnServiceContext *context, MlnBu
 
 	if (context == NULL) {
 		ret = MLN_ERROR_INVALID_ARGUMENT;
-	} else if (in == NULL || out == NULL) {
+	} else if (out == NULL || in == NULL) {
 		ret = MLN_CORE_ERROR_INVALID;
 	} else {
 		item.type = MLN_SERVICE_ARG_BUFFER;
@@ -1097,7 +1097,7 @@ __attribute__((noinline)) int MlnImpl_81014E28(MlnServiceContext *context, MlnBu
 
 	if (context == NULL) {
 		ret = MLN_ERROR_INVALID_ARGUMENT;
-	} else if (buffer == NULL || out == NULL) {
+	} else if (out == NULL || buffer == NULL) {
 		ret = MLN_CORE_ERROR_INVALID;
 	} else {
 		item.type = MLN_SERVICE_ARG_BUFFER;
@@ -1108,12 +1108,15 @@ __attribute__((noinline)) int MlnImpl_81014E28(MlnServiceContext *context, MlnBu
 		if (ret == MLN_OK) {
 			ret = status;
 			if (status == MLN_OK || status == MLN_SERVICE_STATUS_MORE) {
-				if (MlnImpl_81026D94(reply, 1) != 0)
+				if (MlnImpl_81026D94(reply, 1) != 0) {
 					ret = MLN_SERVICE_ERROR_REPLY;
-				else if (MlnImpl_81026FE4(MLN_HEAP_SECURE, reply->items, out) != 0)
-					ret = MlnImpl_810191C4(ret);
-				else
-					ret = status;
+				} else {
+					ret = MlnImpl_81026FE4(MLN_HEAP_SECURE, reply->items, out);
+					if (ret != MLN_OK)
+						ret = MlnImpl_810191C4(ret);
+					else
+						ret = status;
+				}
 			}
 		}
 	}
@@ -1265,7 +1268,7 @@ __attribute__((noinline)) int MlnImpl_8101521C(MlnServiceContext *context, unsig
 	first.data = data;
 	if (context == NULL) {
 		ret = MLN_ERROR_INVALID_ARGUMENT;
-	} else if (name == NULL || out == NULL) {
+	} else if (out == NULL || name == NULL) {
 		ret = MLN_CORE_ERROR_INVALID;
 	} else {
 		text.size = MlnStrlen(name);
@@ -1314,7 +1317,7 @@ __attribute__((noinline)) int MlnImpl_81015374(MlnServiceContext *context, MlnBu
 
 	if (context == NULL) {
 		ret = MLN_ERROR_INVALID_ARGUMENT;
-	} else if (in == NULL || out == NULL) {
+	} else if (out == NULL || in == NULL) {
 		ret = MLN_CORE_ERROR_INVALID;
 	} else {
 		items[0].type = MLN_SERVICE_ARG_HANDLE;
@@ -1364,7 +1367,7 @@ __attribute__((noinline)) int MlnImpl_8101549C(MlnServiceContext *context, unsig
 	first.data = data;
 	if (context == NULL) {
 		ret = MLN_ERROR_INVALID_ARGUMENT;
-	} else if (name == NULL || out == NULL) {
+	} else if (out == NULL || name == NULL) {
 		ret = MLN_CORE_ERROR_INVALID;
 	} else if (in == NULL) {
 		ret = MLN_CORE_ERROR_INVALID;
@@ -1420,7 +1423,7 @@ __attribute__((noinline)) int MlnImpl_81015620(MlnServiceContext *context, MlnBu
 
 	if (context == NULL) {
 		ret = MLN_ERROR_INVALID_ARGUMENT;
-	} else if (outFirst == NULL || outSecond == NULL) {
+	} else if (outSecond == NULL || outFirst == NULL) {
 		ret = MLN_CORE_ERROR_INVALID;
 	} else if (in == NULL) {
 		ret = MLN_CORE_ERROR_INVALID;
@@ -1478,7 +1481,7 @@ __attribute__((noinline)) int MlnImpl_81015798(MlnServiceContext *context, unsig
 	first.data = data;
 	if (context == NULL) {
 		ret = MLN_ERROR_INVALID_ARGUMENT;
-	} else if (name == NULL || out == NULL) {
+	} else if (out == NULL || name == NULL) {
 		ret = MLN_CORE_ERROR_INVALID;
 	} else {
 		text.size = MlnStrlen(name);
@@ -1529,7 +1532,7 @@ __attribute__((noinline)) int MlnImpl_810158FC(MlnServiceContext *context, MlnBu
 
 	if (context == NULL) {
 		ret = MLN_ERROR_INVALID_ARGUMENT;
-	} else if (in == NULL || out == NULL) {
+	} else if (out == NULL || in == NULL) {
 		ret = MLN_CORE_ERROR_INVALID;
 	} else {
 		items[0].type = MLN_SERVICE_ARG_HANDLE;
@@ -1579,7 +1582,7 @@ __attribute__((noinline)) int MlnImpl_81015A24(MlnServiceContext *context, unsig
 	first.data = data;
 	if (context == NULL) {
 		ret = MLN_ERROR_INVALID_ARGUMENT;
-	} else if (name == NULL || out == NULL) {
+	} else if (out == NULL || name == NULL) {
 		ret = MLN_CORE_ERROR_INVALID;
 	} else if (in == NULL) {
 		ret = MLN_CORE_ERROR_INVALID;
@@ -1636,7 +1639,7 @@ __attribute__((noinline)) int MlnImpl_81015BB0(MlnServiceContext *context, MlnBu
 
 	if (context == NULL) {
 		ret = MLN_ERROR_INVALID_ARGUMENT;
-	} else if (in == NULL || out == NULL) {
+	} else if (out == NULL || in == NULL) {
 		ret = MLN_CORE_ERROR_INVALID;
 	} else {
 		items[0].type = MLN_SERVICE_ARG_HANDLE;
@@ -2112,7 +2115,7 @@ __attribute__((noinline)) int MlnImpl_810166AC(MlnServiceContext *context, MlnBu
 
 	if (context == NULL) {
 		ret = MLN_ERROR_INVALID_ARGUMENT;
-	} else if (in == NULL || rights == NULL) {
+	} else if (rights == NULL || in == NULL) {
 		ret = MLN_CORE_ERROR_INVALID;
 	} else {
 		items[0].type = MLN_SERVICE_ARG_HANDLE;
@@ -2167,7 +2170,7 @@ __attribute__((noinline)) int MlnImpl_81016844(MlnServiceContext *context, int i
 
 	if (context == NULL) {
 		ret = MLN_ERROR_INVALID_ARGUMENT;
-	} else if (size == 0 || position == NULL) {
+	} else if (position == NULL || size == 0) {
 		ret = MLN_CORE_ERROR_INVALID;
 	} else if (count == 0) {
 		ret = MLN_CORE_ERROR_INVALID;
@@ -3629,7 +3632,7 @@ __attribute__((noinline)) int MlnImpl_81018FD0(MlnServiceContext *context, unsig
 
 	if (context == NULL) {
 		ret = MLN_ERROR_INVALID_ARGUMENT;
-	} else if (size == NULL || data == NULL) {
+	} else if (data == NULL || size == NULL) {
 		ret = MLN_CORE_ERROR_INVALID;
 	} else {
 		items[0].type = MLN_SERVICE_ARG_ID;
