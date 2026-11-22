@@ -155,6 +155,7 @@ int MlnImpl_8106CB78(MlnHostObject *object)
  * database (an absolute path, or one below the root) gives 1, with the root's
  * index and the path; an index of MLN_HOST_PATH_INDEXES or more is passed on.
  */
+__attribute__((noinline))
 int MlnImpl_8106CBC4(int index, const char *path, int *outIndex, const char **outPath)
 {
 	if (*path == '/') {
@@ -1253,4 +1254,813 @@ unsigned int MlnImpl_8106F300(MlnHostGraph *graph, MlnBuffer *contextId)
 		return 4;
 	graph->contextId = contextId;
 	return 0;
+}
+
+/*
+ * System.Host.GetTrustedTime: the trusted time in minutes, and whether it is
+ * trusted; -5 when there is none.
+ */
+void MlnImpl_8106F314(MlnCoreHost *host, unsigned int *minutes, int *trusted)
+{
+	unsigned int now = 0;
+	int mode = 0;
+
+	if (MlnImpl_81052D84((int *)&now, &mode) != 0) {
+		*minutes = -5;
+		*trusted = 0;
+		return;
+	}
+	*minutes = now / 60;
+	*trusted = mode == 2;
+}
+
+/* System.Host.GetLocalTime: the local time in minutes, or -5 */
+void MlnImpl_8106F388(MlnCoreHost *host, int *minutes)
+{
+	int offset = 0;
+	int start;
+	int local;
+
+	if (MlnImpl_81052E04((unsigned int *)&start) != 0)
+		goto fail;
+	local = start;
+	if (MlnImpl_81052E60(&offset) != 0)
+		goto fail;
+	*minutes = (local + offset) / 60;
+	return;
+fail:
+	*minutes = -5;
+}
+
+/* System.Host.GetLocalTimeOffset: the local time's offset in minutes, or -5 */
+void MlnImpl_8106F3F4(MlnCoreHost *host, int *minutes)
+{
+	int offset;
+
+	if (MlnImpl_81052E60(&offset) != 0)
+		*minutes = -5;
+	else
+		*minutes = offset / 60;
+}
+
+/*
+ * System.Host.GetLocalTrustedTime: the trusted time in local minutes, and how
+ * far the local clock is ahead of it; -5 and 0 when either clock fails.
+ */
+void MlnImpl_8106F438(MlnCoreHost *host, int *minutes, int *ahead)
+{
+	unsigned int now;
+	int mode;
+	int offset;
+	int start;
+	int local;
+	int trusted;
+
+	if (MlnImpl_81052D84((int *)&now, &mode) != 0)
+		goto fail;
+	if (MlnImpl_81052E04((unsigned int *)&start) != 0)
+		goto fail;
+	local = start;
+	if (MlnImpl_81052E60(&offset) != 0)
+		goto fail;
+	local = local / 60 + offset / 60;
+	if (local < 0)
+		local = 0;
+	trusted = offset / 60 + (int)(now / 60);
+	if (trusted < 0) {
+		trusted = 0;
+	} else {
+		local -= trusted;
+		if (local < 0)
+			local = 0;
+	}
+	if (minutes != NULL)
+		*minutes = trusted;
+	if (ahead != NULL)
+		*ahead = local;
+	return;
+fail:
+	if (minutes != NULL)
+		*minutes = -5;
+	if (ahead != NULL)
+		*ahead = 0;
+}
+
+/* a word into a value buffer, the most significant byte first */
+#define MLN_HOST_PUT_WORD(buffer, word) do {	\
+	(buffer)[0] = (word) >> 24;		\
+	(buffer)[1] = (word) >> 16;		\
+	(buffer)[2] = (word) >> 8;		\
+	(buffer)[3] = (word);			\
+} while (0)
+
+/*
+ * System.Host.GetObject: the value of the object at a path, below the node of
+ * an index. A path into the database is read from it. Otherwise the path is
+ * walked from the tree's node: a name is a child of the node, or one the
+ * object's callback gives, "@<n>" its n-th child, and a last "@Name", "@Size"
+ * or "@Type" the object's name, size or type. A container's value is its id,
+ * and one with children is given a slot. The result is 0, 1 with the value's
+ * type negative when there is none (-6 not found, -7 too small, -8 not
+ * readable), or an error.
+ */
+unsigned int MlnImpl_8106F504(MlnCoreHost *host, int index, const char *path,
+			      unsigned char *buffer, unsigned int size,
+			      const unsigned char *signer, unsigned int signerSize,
+			      MlnOctopusArray *attributes, int *type, unsigned int *outSize)
+{
+	MlnHostGraph *graph = host->graph;
+	MlnHostObject *current = NULL;
+	MlnHostObject *child = NULL;
+	int dbIndex = 0;
+	const char *dbPath = NULL;
+	const char *next;
+	MlnBuffer *data;
+	unsigned int result;
+	unsigned int length;
+	unsigned int value;
+	unsigned int count;
+	unsigned int i;
+	int position;
+	int node;
+	int exotic;
+	int scaled;
+	int digit;
+	int slot;
+	int c;
+
+	if (path == NULL || type == NULL || outSize == NULL)
+		return 3;
+	if (MlnStrlen(path) == 0) {
+		*type = -6;
+		*outSize = 0;
+		return 1;
+	}
+	if (*path == '/')
+		index = 0;
+	if (MlnImpl_8106CBC4(index, path, &dbIndex, &dbPath)) {
+		result = MlnImpl_8107BDB8(graph->records, signer, signerSize, dbIndex, dbPath,
+					  buffer, size, type, outSize);
+		if (result == 0x230B0011) {
+			*type = -6;
+			*outSize = 0;
+			return 1;
+		}
+		if (result == 0x230B0013) {
+			*type = -8;
+			*outSize = 0;
+			return 1;
+		}
+		if (result == 0x230B0014) {
+			*type = -7;
+			return 1;
+		}
+		if (result != 0) {
+			*type = -2;
+			*outSize = 0;
+			return 1;
+		}
+		return 0;
+	}
+	result = MlnImpl_8106E57C(graph, index, attributes, &current);
+	if (result != 0)
+		goto out;
+
+	/* the tree's nodes, as far as the path names them */
+	exotic = 0;
+	node = -1;
+	position = -1;
+	for (;;) {
+		if (current == NULL)
+			goto missing;
+		c = *path;
+		if (current->id < 0)
+			goto callbacks;
+		while (c == '/')
+			c = *++path;
+		if (c == '\0')
+			goto value;
+		length = 0;
+		do
+			length++;
+		while (path[length] != '/' && path[length] != '\0');
+		next = path + length;
+		if (c != '@') {
+			if ((unsigned int)current->id >= MLN_HOST_NODE_COUNT) {
+				exotic = 1;
+			} else {
+				node = MlnHostNodes[current->id].firstChild;
+				if (current->id == MLN_HOST_NODE_AGENT_PARAMETERS)
+					exotic = 1;
+			}
+			for (; node >= 0; node = MlnHostNodes[node].nextSibling)
+				if (length == MlnStrlen(MlnHostNodes[node].name) &&
+				    MlnMemcmp(MlnHostNodes[node].name, path, length) == 0)
+					break;
+			if (node >= 0) {
+				result = MlnImpl_8106E57C(graph, node, attributes, &child);
+				if (result != 0)
+					goto out;
+			} else if (current->getByName != NULL) {
+				result = current->getByName(graph, current, path, length, &child);
+				if (result != 0)
+					goto out;
+			} else {
+				child = NULL;
+			}
+			MlnImpl_8106CB78(current);
+			current = child;
+			child = NULL;
+			path = next;
+			continue;
+		}
+		if (length == 5) {
+			if (MlnMemcmp(path, "@Name", 5) == 0 || MlnMemcmp(path, "@Size", 5) == 0 ||
+			    MlnMemcmp(path, "@Type", 5) == 0)
+				goto callbacks;
+		} else if (length == 1) {
+			result = 3;
+			goto out;
+		}
+		position = path[1] - '0';
+		if ((unsigned char)position > 9) {
+			result = 3;
+			goto out;
+		}
+		for (i = 2; i < length; i++) {
+			digit = path[i] - '0';
+			scaled = position * 10;
+			position = scaled + digit;
+			if ((unsigned char)digit > 9) {
+				result = 3;
+				goto out;
+			}
+			if (scaled > position) {
+				MlnImpl_8106CB78(child);
+				*type = -6;
+				*outSize = 0;
+				result = 1;
+				goto out;
+			}
+		}
+		if ((unsigned int)current->id < MLN_HOST_NODE_COUNT)
+			node = MlnHostNodes[current->id].firstChild;
+		if (node >= 0) {
+			do {
+				result = MlnImpl_8106E57C(graph, node, attributes, &child);
+				if (result != 0)
+					goto out;
+				if (child != NULL)
+					position--;
+				if (position < 0)
+					goto found;
+				node = MlnHostNodes[node].nextSibling;
+				MlnImpl_8106CB78(child);
+				child = NULL;
+			} while (node >= 0);
+		} else if (position < 0) {
+			goto found;
+		}
+		if (current->getByIndex == NULL) {
+			child = NULL;
+		} else {
+			result = current->getByIndex(graph, current, position, &child);
+			if (result != 0)
+				goto out;
+		}
+found:
+		MlnImpl_8106CB78(current);
+		current = child;
+		child = NULL;
+		path = next;
+	}
+
+	/* below a node the tree does not have: the objects' callbacks */
+callbacks:
+	if (c == '\0')
+		goto value;
+	if (current->type == MLN_HOST_OBJECT_CONTAINER && exotic != 1) {
+		for (;;) {
+			while (c == '/')
+				c = *++path;
+			length = 0;
+			if (c != '\0') {
+				do
+					length++;
+				while (path[length] != '/' && path[length] != '\0');
+			}
+			next = path + length;
+			if (c != '@') {
+				if (current->getByName == NULL)
+					goto missing;
+				result = current->getByName(graph, current, path, length, &child);
+				if (result != 0)
+					goto out;
+			} else {
+				if (length == 5 && (MlnMemcmp(path, "@Name", 5) == 0 ||
+						    MlnMemcmp(path, "@Size", 5) == 0 ||
+						    MlnMemcmp(path, "@Type", 5) == 0)) {
+					c = *path;
+					break;
+				}
+				if (length == 1) {
+					result = 3;
+					goto out;
+				}
+				position = path[1] - '0';
+				if ((unsigned char)position > 9) {
+					result = 3;
+					goto out;
+				}
+				for (i = 2; i < length; i++) {
+					digit = path[i] - '0';
+					scaled = position * 10;
+					position = scaled + digit;
+					if ((unsigned char)digit > 9) {
+						result = 3;
+						goto out;
+					}
+					if (scaled > position)
+						goto missing;
+				}
+				if (current->getByIndex == NULL)
+					goto missing;
+				result = current->getByIndex(graph, current, position, &child);
+				if (result != 0)
+					goto out;
+			}
+			MlnImpl_8106CB78(current);
+			current = child;
+			child = NULL;
+			if (current == NULL)
+				goto missing;
+			path = next;
+			c = *path;
+			if (c == '\0')
+				goto value;
+			if (current->type != MLN_HOST_OBJECT_CONTAINER)
+				break;
+		}
+	}
+
+	/* a last "@Name", "@Size" or "@Type" */
+	if (c == '\0' || exotic == 1)
+		goto value;
+	if (current->type != MLN_HOST_OBJECT_CONTAINER)
+		c = *++path;
+	if (c == '/' || c == '\0') {
+		result = 3;
+		goto out;
+	}
+	length = 0;
+	do
+		length++;
+	while (path[length] != '/' && path[length] != '\0');
+	if (path[length] != '\0' || length != 5) {
+		result = 3;
+		goto out;
+	}
+	if (MlnMemcmp(path, "@Name", 5) == 0) {
+		data = current->name;
+		if (data == NULL) {
+			result = 3;
+			goto out;
+		}
+		if (size < data->size + 1) {
+			*type = -7;
+			*outSize = data->size + 1;
+			result = 1;
+			goto out;
+		}
+		*type = MLN_HOST_OBJECT_STRING;
+		*outSize = data->size + 1;
+		MlnMemcpy(buffer, data->data, data->size);
+		buffer[data->size] = '\0';
+		goto out;
+	}
+	if (MlnMemcmp(path, "@Size", 5) == 0) {
+		switch (current->type) {
+		case MLN_HOST_OBJECT_CONTAINER:
+			count = 0;
+			if ((unsigned int)current->id < MLN_HOST_NODE_COUNT)
+				node = MlnHostNodes[current->id].firstChild;
+			while (node >= 0) {
+				result = MlnImpl_8106E57C(graph, node, attributes, &child);
+				if (result != 0)
+					goto out;
+				node = MlnHostNodes[node].nextSibling;
+				if (child != NULL)
+					count++;
+				MlnImpl_8106CB78(child);
+				child = NULL;
+			}
+			value = count + current->childCount;
+			break;
+		case MLN_HOST_OBJECT_INTEGER:
+			value = 4;
+			break;
+		case MLN_HOST_OBJECT_STRING:
+		case MLN_HOST_OBJECT_BYTES:
+			value = current->value.buffer->size;
+			break;
+		default:
+			value = position;
+			break;
+		}
+		if (size < 4) {
+			*type = -7;
+			*outSize = 4;
+			result = 1;
+			goto out;
+		}
+		*type = MLN_HOST_OBJECT_INTEGER;
+		*outSize = 4;
+		MLN_HOST_PUT_WORD(buffer, value);
+		goto out;
+	}
+	if (MlnMemcmp(path, "@Type", 5) == 0) {
+		value = current->type;
+		if (size < 4) {
+			*type = -7;
+			*outSize = 4;
+			result = 1;
+			goto out;
+		}
+		*type = MLN_HOST_OBJECT_INTEGER;
+		*outSize = 4;
+		MLN_HOST_PUT_WORD(buffer, value);
+		goto out;
+	}
+	result = 3;
+	goto out;
+
+	/* the object's value */
+value:
+	switch (current->type) {
+	case MLN_HOST_OBJECT_CONTAINER:
+		if (size < 4)
+			goto small;
+		if (current->hasChildren == 1) {
+			if (graph == NULL) {
+				result = 3;
+				goto out;
+			}
+			for (slot = 0; slot < MLN_HOST_SLOTS; slot++)
+				if (graph->slots[slot].value == NULL)
+					break;
+			if (slot == MLN_HOST_SLOTS) {
+				result = MLN_HOST_ERROR_NO_SLOT;
+				goto out;
+			}
+			current->id = graph->slots[slot].id;
+			graph->slots[slot].kind = MLN_HOST_SLOT_ATTRIBUTES;
+			graph->slots[slot].value = current->value.container;
+		}
+		*type = MLN_HOST_OBJECT_CONTAINER;
+		*outSize = 4;
+		MLN_HOST_PUT_WORD(buffer, current->id);
+		break;
+	case MLN_HOST_OBJECT_INTEGER:
+		value = current->value.integer;
+		if (size < 4)
+			goto small;
+		*type = MLN_HOST_OBJECT_INTEGER;
+		*outSize = 4;
+		MLN_HOST_PUT_WORD(buffer, value);
+		break;
+	case MLN_HOST_OBJECT_STRING:
+		data = current->value.buffer;
+		if (data == NULL) {
+			result = 3;
+			break;
+		}
+		if (size < data->size + 1) {
+			*type = -7;
+			*outSize = data->size + 1;
+			result = 1;
+			break;
+		}
+		*type = MLN_HOST_OBJECT_STRING;
+		*outSize = data->size + 1;
+		MlnMemcpy(buffer, data->data, data->size);
+		buffer[data->size] = '\0';
+		break;
+	case MLN_HOST_OBJECT_BYTES:
+		data = current->value.buffer;
+		if (data == NULL) {
+			result = 3;
+			break;
+		}
+		if (size < data->size) {
+			*type = -7;
+			*outSize = data->size;
+			result = 1;
+			break;
+		}
+		*type = MLN_HOST_OBJECT_BYTES;
+		*outSize = data->size;
+		MlnMemcpy(buffer, data->data, data->size);
+		break;
+	default:
+		result = 5;
+		break;
+	}
+	goto out;
+
+small:
+	*type = -7;
+	*outSize = 4;
+	result = 1;
+	goto out;
+missing:
+	*type = -6;
+	*outSize = 0;
+	result = 1;
+out:
+	MlnImpl_8106CB78(current);
+	MlnImpl_8106CB78(child);
+	return result;
+}
+
+/*
+ * System.Host.SetObject: an object of the database set, at a path below the
+ * node of an index; only the database's objects can be set. The result is 0,
+ * or 1 with -6 (not found), -3 (not writable), -8 (not allowed) or -2.
+ */
+unsigned int MlnImpl_81070318(MlnCoreHost *host, int index, const char *path,
+			      const unsigned char *data, unsigned int size,
+			      const unsigned char *signer, unsigned int signerSize, int type,
+			      int *result)
+{
+	MlnHostGraph *graph = host->graph;
+	int dbIndex = 0;
+	const char *dbPath = NULL;
+	unsigned int ret;
+
+	if (graph == NULL || path == NULL)
+		goto fail;
+	if (*path == '/')
+		index = 0;
+	if (!MlnImpl_8106CBC4(index, path, &dbIndex, &dbPath))
+		goto fail;
+	ret = MlnImpl_8107C5F0(graph->records, signer, signerSize, dbIndex, dbPath, data, size,
+			       type);
+	if (ret == 0x230B0011) {
+		*result = -6;
+		return 1;
+	}
+	if (ret == 0x230B0012) {
+		*result = -3;
+		return 1;
+	}
+	if (ret == 0x230B0013) {
+		*result = -8;
+		return 1;
+	}
+	if (ret == 0) {
+		*result = 0;
+		return 0;
+	}
+fail:
+	*result = -2;
+	return 1;
+}
+
+/*
+ * Octopus.Links.IsNodeReachable: whether the node of a uid is reached from
+ * the personality over links whose constraints hold. For each link on the way
+ * that carries a control, the control's program is loaded and its
+ * Control.Link.Constraint.Init, Check and Release are run; a Check that gives
+ * a status, no result or a false one fails the way. *result is 0 when one way
+ * holds, -1 when none does.
+ */
+unsigned int MlnImpl_81070424(MlnCoreHost *host, unsigned int size, const void *uid,
+			      int *result)
+{
+	MlnHostLinks *links;
+	MlnHostLinkTarget *target;
+	MlnOctopusControl *control;
+	MlnVm *vm;
+	unsigned int value;
+	unsigned int address;
+	MlnBuffer *answer;
+	unsigned int type;
+	unsigned int ret;
+	unsigned int check;
+	unsigned int r;
+	int count;
+	int i;
+
+	if (host == NULL || host->graph == NULL) {
+		*result = -1;
+		return 4;
+	}
+	links = ((MlnHostGraph *)host->graph)->links;
+	if (links == NULL)
+		goto none;
+	count = links->targets->count;
+	if (count <= 0)
+		goto none;
+	for (i = 0; i < count; i++) {
+		target = links->targets->items[i];
+		if (MlnBytesCompare(MLN_HEAP_GENERAL, target->uid->size, target->uid->data, size,
+				    uid) != 0)
+			continue;
+		for (; target->from != NULL; target = target->from) {
+			control = target->control;
+			if (control == NULL)
+				continue;
+			vm = NULL;
+			answer = NULL;
+			ret = MlnImpl_8106C54C(0x8000, host, &vm);
+			if (ret != 0)
+				goto release;
+			ret = MlnImpl_8106C6F8(vm, control->codeModule, control->uid,
+					       control->protocol, control->type, control->signer,
+					       control->attributes);
+			if (ret != 0)
+				goto release;
+			ret = MlnImpl_8106C788(vm, control->uid);
+			if (ret != 0)
+				goto release;
+			r = MlnImpl_8106C794(vm, "Control.Link.Constraint.Init");
+			if (r == 0) {
+				ret = MlnImpl_8106C970(vm, &value);
+				if (ret != 0)
+					goto release;
+				if (value != 0) {
+					ret = 1;
+					goto release;
+				}
+			} else if (r != MLN_VM_ERROR_NO_ROUTINE) {
+				ret = 1;
+				goto release;
+			}
+			check = MlnImpl_8106C794(vm, "Control.Link.Constraint.Check");
+			if (check == 0) {
+				check = MlnImpl_8106C970(vm, &value);
+				if (check == 0) {
+					if (value != 0) {
+						check = 1;
+					} else {
+						check = MlnImpl_8106C970(vm, &address);
+						if (check == 0) {
+							if (address == 0) {
+								check = 1;
+							} else {
+								check = MlnImpl_8106C9F4(vm, address,
+											 &answer,
+											 &type);
+								if (check == 0)
+									check = type != 0;
+							}
+						}
+					}
+				}
+			}
+			if (vm == NULL) {
+				ret = check;
+				goto destroy;
+			}
+			r = MlnImpl_8106C794(vm, "Control.Link.Constraint.Release");
+			if (r != MLN_VM_ERROR_NO_ROUTINE) {
+				if (r != 0) {
+					ret = 1;
+				} else {
+					ret = MlnImpl_8106C970(vm, &value);
+					if (ret == 0)
+						ret = value != 0;
+				}
+			}
+			if (check != 0)
+				ret = check;
+			MlnImpl_8106C6C4(vm);
+			vm = NULL;
+			goto destroy;
+release:
+			if (vm != NULL) {
+				MlnImpl_8106C6C4(vm);
+				vm = NULL;
+			}
+destroy:
+			if (answer != NULL)
+				MlnBufferDestroy(MLN_HEAP_GENERAL, answer);
+			if (ret != 0)
+				goto next;
+		}
+		*result = 0;
+		return 0;
+next:
+		;
+	}
+none:
+	*result = -1;
+	return 0;
+}
+
+/*
+ * The SeaShell database made anew from its saved state, a pair of buffers:
+ * the database and the pending changes. Without a pair, from what is stored.
+ */
+unsigned int MlnImpl_810706F4(MlnHostGraph *graph, MlnArray *pair)
+{
+	unsigned char *data = NULL;
+	unsigned int size = 0;
+	MlnBuffer *state;
+	MlnBuffer *pending;
+	unsigned int pendingSize;
+	unsigned char *pendingData;
+	unsigned int ret;
+
+	if (graph == NULL) {
+		ret = 4;
+		goto out;
+	}
+	if (pair == NULL) {
+		ret = MlnImpl_8107B228(NULL, &size, &data);
+		if (ret != 0)
+			goto out;
+		pendingSize = 0;
+		pendingData = NULL;
+	} else {
+		if (pair->count != 2)
+			return 3;
+		state = pair->items[0];
+		if (state == NULL)
+			return 3;
+		pending = pair->items[1];
+		size = state->size;
+		data = state->data;
+		if (pending != NULL) {
+			pendingSize = pending->size;
+			pendingData = pending->data;
+		} else {
+			pendingSize = 0;
+			pendingData = NULL;
+		}
+	}
+	if (graph->records != NULL) {
+		ret = MlnImpl_8107B4A0(graph->records);
+		if (ret != 0)
+			goto out;
+		graph->records = NULL;
+	}
+	ret = MlnImpl_8107B450(&graph->records);
+	if (ret != 0)
+		goto out;
+	ret = MlnImpl_8107B534(graph->records, size, data);
+	if (ret != 0)
+		goto out;
+	if (pendingSize != 0)
+		ret = MlnImpl_8107B730(graph->records, pendingSize, pendingData);
+out:
+	if (pair == NULL)
+		MlnFree(MLN_HEAP_GENERAL, data);
+	return ret;
+}
+
+/* the SeaShell database saved into a pair of buffers, and closed */
+unsigned int MlnImpl_81070808(MlnHostGraph *graph, MlnArray **pair)
+{
+	unsigned int size = 0;
+	unsigned char *data = NULL;
+	unsigned int words[2] = { 0, 0 };
+	MlnBuffer *buffer = NULL;
+	MlnArray *array = NULL;
+	unsigned int ret;
+
+	if (graph == NULL || graph->records == NULL) {
+		ret = 4;
+		goto out;
+	}
+	if (pair == NULL) {
+		ret = 3;
+		goto out;
+	}
+	ret = MlnImpl_8107BA3C(graph->records, 0, &size, &data);
+	if (ret != 0)
+		goto out;
+	buffer = MlnBufferCreate(MLN_HEAP_GENERAL, size, data);
+	if (buffer == NULL) {
+		ret = 2;
+		goto out;
+	}
+	words[0] = (unsigned int)buffer;
+	array = MlnWordArrayCreate(MLN_HEAP_GENERAL, 2, words);
+	if (array == NULL) {
+		ret = 2;
+		goto out;
+	}
+	buffer = NULL;
+	ret = MlnImpl_8107B4A0(graph->records);
+	if (ret != 0)
+		goto out;
+	graph->records = NULL;
+	*pair = array;
+	array = NULL;
+out:
+	MlnArrayDestroy(MLN_HEAP_GENERAL, array);
+	MlnFree(MLN_HEAP_GENERAL, data);
+	MlnBufferDestroy(MLN_HEAP_GENERAL, buffer);
+	return ret;
 }

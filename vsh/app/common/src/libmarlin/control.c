@@ -21,7 +21,6 @@
 #define MLN_CORE_ERROR_RELEASE_STATUS	0x23020011	/* the Release routine failed */
 
 #define MLN_KEY_STORE_ERROR_FOUND	0x23040001	/* the key was there already */
-#define MLN_VM_ERROR_NO_ROUTINE		0x23090004	/* the program has no such routine */
 #define MLN_STORE_ERROR_NO_ASSERTION	0x230A000B	/* the store holds no such assertion */
 
 /* the actions whose routines were initialized, released with the control */

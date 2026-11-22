@@ -9,7 +9,6 @@
 #define MLN_VM_HALT			0x23090001	/* STOP, or RET from the routine */
 #define MLN_VM_ERROR_MEMORY		0x23090002	/* the VM's memory is too small */
 #define MLN_VM_ERROR_MODULE		0x23090003	/* the code module cannot be used */
-#define MLN_VM_ERROR_NOT_FOUND		0x23090004	/* no module exports the routine */
 #define MLN_VM_ERROR_DATA_SIZE		0x23090005	/* the data segment does not fit */
 #define MLN_VM_ERROR_STACK_UNDERFLOW	0x23090006
 #define MLN_VM_ERROR_STACK_OVERFLOW	0x23090007
@@ -168,7 +167,7 @@ unsigned int MlnImpl_8106A15C(unsigned int result, int *code)
 	case MLN_VM_ERROR_MODULE:
 		*code = MLN_VM_RESULT_INVALID_MODULE;
 		return 0;
-	case MLN_VM_ERROR_NOT_FOUND:
+	case MLN_VM_ERROR_NO_ROUTINE:
 		*code = 0;
 		return result;
 	case MLN_VM_ERROR_STACK_UNDERFLOW:
@@ -246,7 +245,7 @@ __attribute__((noinline)) unsigned int MlnImpl_8106A590(MlnVm *vm)
 	sp = vm->sp;
 	r = MlnImpl_8106A780(vm, "Global.OnUnload", NULL);
 	if (r != 0) {
-		ret = r == MLN_VM_ERROR_NOT_FOUND ? 0 : MLN_VM_ERROR_UNLOAD;
+		ret = r == MLN_VM_ERROR_NO_ROUTINE ? 0 : MLN_VM_ERROR_UNLOAD;
 	} else if (sp - vm->sp != 4) {
 		ret = MLN_VM_ERROR_UNLOAD;
 		vm->sp = sp;
@@ -303,7 +302,7 @@ unsigned int MlnImpl_8106A780(MlnVm *vm, const char *routine, int *status)
 			break;
 	}
 	if (context.module == NULL) {
-		result = MLN_VM_ERROR_NOT_FOUND;
+		result = MLN_VM_ERROR_NO_ROUTINE;
 		goto end;
 	}
 
@@ -906,7 +905,7 @@ unsigned int MlnImpl_8106BDA0(MlnVm *vm, const MlnBuffer *uid)
 	sp = vm->sp;
 	r = MlnImpl_8106A780(vm, "Global.OnLoad", NULL);
 	if (r != 0) {
-		ret = r == MLN_VM_ERROR_NOT_FOUND ? 0 : MLN_VM_ERROR_MODULE;
+		ret = r == MLN_VM_ERROR_NO_ROUTINE ? 0 : MLN_VM_ERROR_MODULE;
 	} else if (sp - vm->sp != 4) {
 		ret = MLN_VM_ERROR_MODULE;
 		vm->sp = sp;

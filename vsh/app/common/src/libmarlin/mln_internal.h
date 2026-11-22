@@ -1993,10 +1993,9 @@ typedef struct MlnCoreHost {
 } MlnCoreHost;
 
 /* a host function of System.Host.GetTrustedTime and GetLocalTrustedTime */
-typedef unsigned int (*MlnVmHostTimeFunction)(MlnCoreHost *host, unsigned int *minutes,
-					      int *trusted);
+typedef void (*MlnVmHostTimeFunction)(MlnCoreHost *host, unsigned int *minutes, int *trusted);
 /* a host function of System.Host.GetLocalTime and GetLocalTimeOffset */
-typedef unsigned int (*MlnVmHostValueFunction)(MlnCoreHost *host, int *value);
+typedef void (*MlnVmHostValueFunction)(MlnCoreHost *host, int *value);
 
 #define MLN_VM_HOST_TRUSTED_TIME	2	/* functions[] of each system call */
 #define MLN_VM_HOST_LOCAL_TIME		3
@@ -2046,6 +2045,8 @@ typedef struct MlnVmGroup {
 	int vmCount;
 	struct MlnVm *vms[MLN_VM_INSTANCES];
 } MlnVmGroup;
+
+#define MLN_VM_ERROR_NO_ROUTINE		0x23090004	/* no module exports the routine */
 
 /* a Plankton VM (MlnImpl_8106C54C) */
 typedef struct MlnVm {
@@ -2236,13 +2237,20 @@ int MlnImpl_8106E57C(MlnHostGraph *graph, int index, MlnOctopusArray *attributes
 unsigned int MlnImpl_8106EE94(MlnHostGraph *graph, MlnPlanktonParameterBlock *parameters);
 unsigned int MlnImpl_8106EEA8(MlnHostGraph *graph, MlnOctopusBundle *bundle);
 /* the control VM's host functions; their parameters come with their C */
-unsigned int MlnImpl_8106F504();
-unsigned int MlnImpl_81070318();
-unsigned int MlnImpl_8106F314();
-unsigned int MlnImpl_8106F388();
-unsigned int MlnImpl_8106F3F4();
-unsigned int MlnImpl_8106F438();
-unsigned int MlnImpl_81070424();
+void MlnImpl_8106F314(MlnCoreHost *host, unsigned int *minutes, int *trusted);
+void MlnImpl_8106F388(MlnCoreHost *host, int *minutes);
+void MlnImpl_8106F3F4(MlnCoreHost *host, int *minutes);
+void MlnImpl_8106F438(MlnCoreHost *host, int *minutes, int *ahead);
+unsigned int MlnImpl_8106F504(MlnCoreHost *host, int index, const char *path,
+			      unsigned char *buffer, unsigned int size,
+			      const unsigned char *signer, unsigned int signerSize,
+			      MlnOctopusArray *attributes, int *type, unsigned int *outSize);
+unsigned int MlnImpl_81070318(MlnCoreHost *host, int index, const char *path,
+			      const unsigned char *data, unsigned int size,
+			      const unsigned char *signer, unsigned int signerSize, int type,
+			      int *result);
+unsigned int MlnImpl_81070424(MlnCoreHost *host, unsigned int size, const void *uid,
+			      int *result);
 unsigned int MlnImpl_8106C6C4(MlnVm *vm);
 unsigned int MlnImpl_8106EC8C(MlnHostGraph **graph);
 unsigned int MlnImpl_8106ED54(MlnHostGraph *graph);
@@ -2254,6 +2262,17 @@ unsigned int MlnImpl_8106F300(MlnHostGraph *graph, MlnBuffer *contextId);
 unsigned int MlnImpl_810706F4(MlnHostGraph *graph, MlnArray *pair);
 unsigned int MlnImpl_81070808(MlnHostGraph *graph, MlnArray **pair);
 int MlnImpl_8107B4A0(void *records);
+int MlnImpl_8107B228(void *source, unsigned int *size, unsigned char **data);
+int MlnImpl_8107B450(void **records);
+int MlnImpl_8107B534(void *records, unsigned int size, const unsigned char *data);
+int MlnImpl_8107B730(void *records, unsigned int size, const unsigned char *data);
+int MlnImpl_8107BA3C(void *records, int flags, unsigned int *size, unsigned char **data);
+int MlnImpl_8107C5F0(void *records, const unsigned char *signer, unsigned int signerSize,
+		     int index, const char *path, const unsigned char *data, unsigned int size,
+		     int type);
+int MlnImpl_8107BDB8(void *records, const unsigned char *signer, unsigned int signerSize,
+		     int index, const char *path, unsigned char *buffer, unsigned int size,
+		     int *type, unsigned int *outSize);
 unsigned int MlnImpl_810710F8(void **keys);
 void MlnImpl_81071278(void *keys);
 unsigned int MlnImpl_810712F0(void *keys, const MlnOctopusKey *key);
