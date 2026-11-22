@@ -2039,7 +2039,7 @@ unsigned int MlnImpl_8104D208(const MlnBuffer *controller, const MlnBuffer *toke
  * buffers[5]: a protocol exchange of a kind, with the values it was given.
  */
 typedef struct MlnCoreServiceHandle {
-	unsigned int state;		/* the kind, in bits 8 and up */
+	int state;			/* the kind in bits 8 and up, the messages done below */
 	void *exchange;			/* the protocol's (MlnImpl_81068844, 0x80 bytes) */
 	MlnServiceList *values;		/* a copy of the values given */
 	MlnBuffer *messages[4];
@@ -2058,6 +2058,18 @@ unsigned int MlnImpl_81082B44(MlnXmlNode *document, MlnXmlNode **node);
 unsigned int MlnImpl_81067494(void *exchange, const MlnBuffer *message, MlnBuffer **response,
 			      MlnXmlNode **document);
 int MlnImpl_81067618(void *exchange, MlnXmlNode *node, MlnBuffer **reply);
+unsigned int MlnImpl_81059600(const MlnBuffer *chain, MlnBuffer ***certificates, int *count);
+unsigned int MlnImpl_81082A60(MlnBuffer **certificates, int count, int kind);
+int MlnImpl_81068A8C(void *exchange, MlnBuffer *first, MlnBuffer *second);
+int MlnImpl_81067CA4(void *exchange, int kind, MlnBufferGroups **groups, const MlnBuffer *extra,
+		     MlnXmlNode **document, MlnBuffer **response);
+unsigned int MlnImpl_81050210(int handle, int kind, MlnXmlNode **document,
+			      const MlnBuffer *extra, MlnBlob *out);
+unsigned int MlnImpl_81068060(void *exchange, int kind, const MlnBuffer *extra,
+			      const MlnBuffer *message, MlnBlob *out);
+unsigned int MlnImpl_81050378(int handle, int kind, const MlnBuffer *extra,
+			      const MlnBuffer *message, MlnBlob *out);
+unsigned int MlnImpl_810504EC(unsigned int r, unsigned int fallback);
 unsigned int MlnImpl_81067BA4(void *exchange, const MlnBuffer *message, MlnXmlNode **document);
 int MlnImpl_81067814(void *exchange, MlnBufferGroups **groups, void *reserved1, void *reserved2,
 		     MlnXmlNode *first, MlnXmlNode *second, const MlnBuffer *name,
@@ -2191,29 +2203,40 @@ int MlnImpl_8102E628(const MlnServiceReply *reply, MlnServiceArgs **out, int *st
 unsigned int MlnImpl_81050110(int handle, const MlnBuffer *first, const MlnBuffer *second);
 int MlnImpl_8102E7A8(const MlnServiceReply *reply, MlnServiceArgs **out, int *status);
 
-/* the core's form of a buffer group: each buffer with whether it is present */
+/* the core's form of a buffer group: each buffer with its size */
 typedef struct MlnCoreGroupEntry {
 	MlnBuffer *first;
-	unsigned int firstPresent;
+	unsigned int firstSize;
 	MlnBuffer *second;
-	unsigned int secondPresent;
+	unsigned int secondSize;
 	MlnBuffer *third;
-	unsigned int thirdPresent;
+	unsigned int thirdSize;
 } MlnCoreGroupEntry;
 
 typedef struct MlnCoreGroup {
 	unsigned int tag;
 	MlnBuffer *first;
-	unsigned int firstPresent;
+	unsigned int firstSize;
 	MlnBuffer *second;
-	unsigned int secondPresent;
+	unsigned int secondSize;
 	MlnBuffer *third;
-	unsigned int thirdPresent;
+	unsigned int thirdSize;
 	MlnCoreGroupEntry *entries;
 	unsigned int entryCount;
 } MlnCoreGroup;
 
 unsigned int MlnImpl_8104F620(int handle, MlnCoreGroup *group);
+
+/* a SOAP fault of a service exchange (MlnImpl_81068C4C), kept by the exchange */
+typedef struct MlnServiceFault {
+	MlnBuffer *code;
+	MlnBuffer *string;
+	MlnBuffer *actor;
+	MlnBuffer ***details;		/* each three buffers, the first its name */
+	unsigned int detailCount;
+} MlnServiceFault;
+
+unsigned int MlnImpl_81068C4C(void *exchange, MlnServiceFault **fault);
 int MlnImpl_8102E8A0(const MlnServiceReply *reply, MlnServiceArgs **out, int *status);
 unsigned int MlnImpl_8104AB18(int handle, unsigned int size, const unsigned char *data,
 			      MlnBlob *out);
@@ -2262,6 +2285,28 @@ unsigned int MlnImpl_81050778(int *handle, MlnServiceList *list, unsigned int *f
 			      MlnBuffer ***firsts, unsigned int *secondCount, MlnBuffer ***seconds,
 			      MlnBuffer **third, MlnBuffer **fourth);
 int MlnImpl_810505B8(int handle);
+
+/*
+ * A session with a registration service (MlnImpl_81050778), in MlnShared's buffers[7]: its
+ * service handle (kind 8) and core handle, with what the session keeps.
+ */
+typedef struct MlnRegistrationSession {
+	void *context;			/* MlnImpl_81064D8C's */
+	int service;
+	int core;
+	MlnBuffer *buffer;
+	MlnBuffer *token;		/* the caller's, taken */
+	MlnRightsInfo *rights;
+	MlnXmlNode *node;
+} MlnRegistrationSession;
+
+unsigned int MlnImpl_81064D8C(void **context);
+unsigned int MlnImpl_81064DD4(void *context);
+unsigned int MlnImpl_81064E18(MlnBufferGroups **info);
+unsigned int MlnImpl_81064E68(MlnBuffer **request);
+unsigned int MlnImpl_81064EC0(void *context, MlnBuffer *request, const MlnBuffer *data,
+			      MlnXmlNode **document);
+unsigned int MlnImpl_81082E44(int count, MlnBuffer **items, struct MlnX509Certificates *out);
 int MlnImpl_8102FE68(const MlnServiceReply *reply, MlnServiceArgs **out, int *status);
 int MlnImpl_81030648(const MlnServiceReply *reply, MlnServiceArgs **out, int *status);
 unsigned int MlnImpl_81050E58(int handle, const MlnBuffer *data, MlnBlob *out);

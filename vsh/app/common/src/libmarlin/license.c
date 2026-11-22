@@ -1335,3 +1335,863 @@ out:
 		MlnImpl_8104A558();
 	return ret;
 }
+
+/* the errors of a service's SOAP faults: by fault code and, where given, detail name */
+static const struct {
+	MlnBuffer code;
+	MlnBuffer detail;
+	unsigned int error;
+} MlnServiceFaultErrors[13] = {
+#define MLN_FAULT_TEXT(s)	{ sizeof(s) - 1, (unsigned char *)(s) }
+	{ MLN_FAULT_TEXT("wsse:InvalidSecurityToken"),
+	  MLN_FAULT_TEXT("NemoTrustObjectDCSAssertionStaleException"), 0x30 },
+	{ MLN_FAULT_TEXT("wsse:InvalidSecurityToken"),
+	  MLN_FAULT_TEXT("NemoTrustObjectMarlinSpecVersionException"), 0x31 },
+	{ MLN_FAULT_TEXT("wsse:InvalidSecurityToken"),
+	  MLN_FAULT_TEXT("NemoTrustObjectClientAttributeMismatchException"), 0x32 },
+	{ MLN_FAULT_TEXT("soap:Server"), MLN_FAULT_TEXT("MediaServiceException"), 0x33 },
+	{ MLN_FAULT_TEXT("soap:Server"), { 0, NULL }, 0x34 },
+	{ MLN_FAULT_TEXT("soap:Client"), { 0, NULL }, 0x35 },
+	{ MLN_FAULT_TEXT("wsse:InvalidSecurity"), { 0, NULL }, 0x36 },
+	{ MLN_FAULT_TEXT("wsse:InvalidSecurityToken"), { 0, NULL }, 0x37 },
+	{ MLN_FAULT_TEXT("wsse:UnsupportedSecurityToken"), { 0, NULL }, 0x38 },
+	{ MLN_FAULT_TEXT("wsse:FailedCheck"), { 0, NULL }, 0x39 },
+	{ MLN_FAULT_TEXT("wsse:FailedAuthentication"), { 0, NULL }, 0x3a },
+	{ MLN_FAULT_TEXT("wsu:MessageExpired"), { 0, NULL }, 0x3b },
+	{ MLN_FAULT_TEXT("nemosec:UnsupportedSecureProtocol"), { 0, NULL }, 0x3c },
+#undef MLN_FAULT_TEXT
+};
+
+/* the SOAP fault of a service handle's exchange, with its error, in the core's form */
+unsigned int MlnImpl_8104F620(int handle, MlnCoreGroup *core)
+{
+	MlnCoreServiceHandle *service = NULL;
+	MlnServiceFault *fault;
+	MlnBufferGroup *group;
+	MlnBuffer ***entries;
+	MlnBuffer **entry;
+	MlnBuffer *detail;
+	MlnHandleTable *table;
+	unsigned int error;
+	unsigned int count;
+	unsigned int ret;
+	unsigned int i, j;
+
+	table = MlnServiceHandleTable(MlnImpl_81006EAC());
+	if (table == NULL)
+		return 2;
+	ret = MlnImpl_81069FE8(handle, table, &service);
+	if (ret != 0)
+		return ret;
+	if (service == NULL || service->exchange == NULL)
+		return 3;
+	if (core == NULL)
+		return 4;
+	if (MlnImpl_8104A448() != 0)
+		return 7;
+
+	group = NULL;
+	ret = MlnImpl_81068C4C(service->exchange, &fault);
+	if (ret != 0) {
+		ret = ret == 0x23000009 ? 0x2a : 7;
+		goto end;
+	}
+	if (fault == NULL) {
+		ret = 0x2a;
+		goto end;
+	}
+	group = MlnAllocate(MLN_HEAP_GENERAL, sizeof(*group));
+	if (group == NULL)
+		goto nomem;
+	MlnMemset(group, 0, sizeof(*group));
+
+	error = 0x2f;
+	for (i = 0; i < 13; i++) {
+		if (MlnBufferCompareKey(MLN_HEAP_GENERAL, fault->code,
+					&MlnServiceFaultErrors[i].code) != 0)
+			continue;
+		if (MlnServiceFaultErrors[i].detail.size == 0 ||
+		    MlnServiceFaultErrors[i].detail.data == NULL) {
+			error = MlnServiceFaultErrors[i].error;
+			break;
+		}
+		if (fault->details == NULL || fault->detailCount == 0)
+			continue;
+		for (j = 0; j < fault->detailCount; j++) {
+			if (fault->details[j] == NULL)
+				continue;
+			detail = fault->details[j][0];
+			if (detail == NULL)
+				continue;
+			if (MlnBufferCompareKey(MLN_HEAP_GENERAL, detail,
+						&MlnServiceFaultErrors[i].detail) == 0) {
+				error = MlnServiceFaultErrors[i].error;
+				break;
+			}
+		}
+	}
+	group->tag = error;
+	if (fault->code != NULL) {
+		group->first = MlnBufferCreate(MLN_HEAP_GENERAL, fault->code->size,
+					       fault->code->data);
+		if (group->first == NULL)
+			goto nomem;
+	}
+	if (fault->string != NULL) {
+		group->second = MlnBufferCreate(MLN_HEAP_GENERAL, fault->string->size,
+						fault->string->data);
+		if (group->second == NULL)
+			goto nomem;
+	}
+	if (fault->actor != NULL) {
+		group->third = MlnBufferCreate(MLN_HEAP_GENERAL, fault->actor->size,
+					       fault->actor->data);
+		if (group->third == NULL)
+			goto nomem;
+	}
+	if (fault->details != NULL && fault->detailCount != 0) {
+		entries = MlnAllocate(MLN_HEAP_GENERAL, fault->detailCount * sizeof(*entries));
+		if (entries == NULL)
+			goto nomem;
+		MlnMemset(entries, 0, fault->detailCount * sizeof(*entries));
+		count = fault->detailCount;
+		for (j = 0; j < count; j++) {
+			entry = MlnAllocate(MLN_HEAP_GENERAL, 3 * sizeof(*entry));
+			entries[j] = entry;
+			if (entry == NULL)
+				goto free;
+			MlnMemset(entry, 0, 3 * sizeof(*entry));
+			for (i = 0; i < 3; i++) {
+				if (fault->details[j][i] == NULL)
+					continue;
+				entry[i] = MlnBufferCreate(MLN_HEAP_GENERAL,
+							   fault->details[j][i]->size,
+							   fault->details[j][i]->data);
+				if (entries[j][i] == NULL)
+					goto free;
+			}
+		}
+		group->entries = entries;
+		group->entryCount = count;
+	}
+
+	core->tag = group->tag;
+	if (group->first != NULL) {
+		core->firstSize = group->first->size;
+		core->first = group->first;
+		group->first = NULL;
+	}
+	if (group->second != NULL) {
+		core->secondSize = group->second->size;
+		core->second = group->second;
+		group->second = NULL;
+	}
+	if (group->third != NULL) {
+		core->thirdSize = group->third->size;
+		core->third = group->third;
+		group->third = NULL;
+	}
+	if (group->entries != NULL && group->entryCount != 0) {
+		core->entries = MlnAllocate(MLN_HEAP_GENERAL,
+					    group->entryCount * sizeof(*core->entries));
+		if (core->entries == NULL)
+			goto nomem;
+		/* half the array: three words an entry */
+		MlnMemset(core->entries, 0, group->entryCount * 3 * sizeof(MlnBuffer *));
+		core->entryCount = group->entryCount;
+		for (j = 0; j < core->entryCount; j++) {
+			core->entries[j].first = NULL;
+			core->entries[j].firstSize = 0;
+			core->entries[j].second = NULL;
+			core->entries[j].secondSize = 0;
+			core->entries[j].third = NULL;
+			core->entries[j].thirdSize = 0;
+			entry = group->entries[j];
+			if (entry[0] != NULL) {
+				core->entries[j].firstSize = entry[0]->size;
+				core->entries[j].first = group->entries[j][0];
+				group->entries[j][0] = NULL;
+			}
+			if (group->entries[j][1] != NULL) {
+				core->entries[j].secondSize = group->entries[j][1]->size;
+				core->entries[j].second = group->entries[j][1];
+				group->entries[j][1] = NULL;
+			}
+			if (group->entries[j][2] != NULL) {
+				core->entries[j].thirdSize = group->entries[j][2]->size;
+				core->entries[j].third = group->entries[j][2];
+				group->entries[j][2] = NULL;
+			}
+		}
+	}
+	goto out;
+
+free:
+	for (j = 0; j < count; j++)
+		MlnImpl_81006CD4(MLN_HEAP_GENERAL, entries[j]);
+	MlnFree(MLN_HEAP_GENERAL, entries);
+nomem:
+	ret = 2;
+	if (core->entries != NULL) {
+		MlnFree(MLN_HEAP_GENERAL, core->entries);
+		core->entries = NULL;
+		core->entryCount = 0;
+	}
+out:
+	MlnImpl_81006D14(MLN_HEAP_GENERAL, group);
+end:
+	MlnImpl_8104A558();
+	return ret;
+}
+
+/* free a certificate chain of MlnImpl_81059600 */
+static inline void MlnServiceChainFree(MlnBuffer **certificates, int count)
+{
+	unsigned short i;
+
+	if (certificates == NULL)
+		return;
+	for (i = 0; i < count; i++) {
+		if (certificates[i] != NULL)
+			MlnBufferDestroy(MLN_HEAP_GENERAL, certificates[i]);
+	}
+	MlnFree(MLN_HEAP_GENERAL, certificates);
+}
+
+/*
+ * Give a service handle's exchange the two certificate chains of its peers, once each chain is
+ * checked for the peer's role and the leaf certificates' subjects match the NameIdentifier of
+ * the SAML assertion given.
+ */
+unsigned int MlnImpl_8104FC70(int handle, unsigned int firstSize, const unsigned char *first,
+			      unsigned int secondSize, const unsigned char *second,
+			      unsigned int thirdSize, const unsigned char *third)
+{
+	MlnCoreServiceHandle *service = NULL;
+	MlnBuffer **firstChain = NULL;
+	MlnBuffer **secondChain = NULL;
+	MlnBuffer *nameIdentifier = NULL;
+	MlnBuffer *subject;
+	MlnX509 *x509;
+	MlnBuffer firstBuffer = { firstSize, (unsigned char *)first };
+	MlnBuffer secondBuffer = { secondSize, (unsigned char *)second };
+	MlnBuffer assertion;
+	MlnBuffer role;
+	MlnHandleTable *table;
+	unsigned int ret;
+	unsigned int r;
+	int firstCount = 0;
+	int secondCount = 0;
+	int firstKind, secondKind;
+	int type;
+	int sessions = 0;
+
+	table = MlnServiceHandleTable(MlnImpl_81006EAC());
+	if (table == NULL) {
+		ret = 2;
+		goto out;
+	}
+	ret = MlnImpl_81069FE8(handle, table, &service);
+	if (ret != 0)
+		goto out;
+	if (service == NULL) {
+		ret = 3;
+		goto out;
+	}
+	if (firstSize == 0 || first == NULL || secondSize == 0 || second == NULL ||
+	    thirdSize == 0 || third == NULL) {
+		ret = 4;
+		goto out;
+	}
+	if (MlnImpl_8104A448() != 0) {
+		ret = 7;
+		goto out;
+	}
+	sessions = 1;
+
+	assertion.size = thirdSize;
+	assertion.data = (unsigned char *)third;
+	switch (service->state >> 8) {
+	case 2:
+	case 3:
+	case 5:
+		role.size = 27;
+		role.data = (unsigned char *)"urn:marlin:core:role:device";
+		firstKind = 0xc;
+		secondKind = 0xb;
+		type = 0;
+		break;
+	case 4:
+		role.size = 41;
+		role.data = (unsigned char *)"urn:marlin:broadband:role:license-service";
+		firstKind = 0xa;
+		secondKind = 9;
+		type = 2;
+		break;
+	case 8:
+		role.size = 46;
+		role.data = (unsigned char *)"urn:marlin:broadband:role:registration-service";
+		firstKind = 0xa;
+		secondKind = 9;
+		type = 2;
+		break;
+	default:
+		ret = 4;
+		goto out;
+	}
+	r = MlnImpl_81042B58(&assertion, type, &role, &nameIdentifier);
+	switch (r) {
+	case 0:
+		break;
+	case 1:
+		ret = 0xc;
+		goto out;
+	case 2:
+		ret = 2;
+		goto out;
+	case 3:
+		ret = 7;
+		goto out;
+	case 4:
+		ret = 0xc;
+		goto out;
+	case 5:
+		ret = 7;
+		goto out;
+	default:
+		ret = 0xc;
+		goto out;
+	}
+	r = MlnImpl_81059600(&firstBuffer, &firstChain, &firstCount);
+	if (r == 0)
+		r = MlnImpl_81059600(&secondBuffer, &secondChain, &secondCount);
+	if (r != 0) {
+		ret = r == 2 ? 2 : 0x2b;
+		goto out;
+	}
+
+	x509 = NULL;
+	subject = NULL;
+	r = MlnImpl_81082A60(secondChain, secondCount, secondKind);
+	if (r == 0)
+		r = MlnImpl_81082A60(firstChain, firstCount, firstKind);
+	if (r == 0)
+		r = MlnImpl_81038EF4(firstChain[0], &x509);
+	if (r == 0)
+		r = MlnImpl_81039298(x509, &subject);
+	if (r != 0)
+		goto check;
+	if (MlnBufferCompare(MLN_HEAP_GENERAL, nameIdentifier, subject) != 0) {
+		r = 5;
+		goto check;
+	}
+	MlnBufferDestroy(MLN_HEAP_GENERAL, subject);
+	subject = NULL;
+	MlnImpl_81038E90(x509);
+	x509 = NULL;
+	r = MlnImpl_81038EF4(secondChain[0], &x509);
+	if (r == 0)
+		r = MlnImpl_81039298(x509, &subject);
+	if (r != 0)
+		goto check;
+	if (MlnBufferCompare(MLN_HEAP_GENERAL, nameIdentifier, subject) != 0) {
+		r = 5;
+		goto check;
+	}
+	MlnBufferDestroy(MLN_HEAP_GENERAL, subject);
+	subject = NULL;
+	MlnImpl_81038E90(x509);
+	x509 = NULL;
+	r = MlnImpl_81068A8C(service->exchange, firstChain[0], secondChain[0]);
+check:
+	MlnBufferDestroy(MLN_HEAP_GENERAL, subject);
+	if (x509 != NULL)
+		MlnImpl_81038E90(x509);
+	if (r != 0)
+		ret = r == 2 ? 2 : 0x2b;
+	else
+		ret = 0;
+out:
+	MlnServiceChainFree(secondChain, secondCount);
+	MlnServiceChainFree(firstChain, firstCount);
+	MlnBufferDestroy(MLN_HEAP_GENERAL, nameIdentifier);
+	while (sessions-- > 0)
+		MlnImpl_8104A558();
+	return ret;
+}
+
+/* keep two more messages (each when given and not empty) in a service handle */
+unsigned int MlnImpl_81050110(int handle, const MlnBuffer *first, const MlnBuffer *second)
+{
+	MlnCoreServiceHandle *service = NULL;
+	MlnHandleTable *table;
+	MlnBuffer *copy;
+	unsigned int ret;
+
+	table = MlnServiceHandleTable(MlnImpl_81006EAC());
+	if (table == NULL)
+		return 2;
+	ret = MlnImpl_81069FE8(handle, table, &service);
+	if (ret != 0)
+		return ret;
+	if (service == NULL)
+		return 3;
+	if (first != NULL && first->size != 0 && first->data != NULL) {
+		copy = MlnBufferCreate(MLN_HEAP_GENERAL, first->size, first->data);
+		service->messages[2] = copy;
+		if (copy == NULL)
+			return 2;
+	}
+	if (second != NULL && second->size != 0 && second->data != NULL) {
+		copy = MlnBufferCreate(MLN_HEAP_GENERAL, second->size, second->data);
+		service->messages[3] = copy;
+		if (copy == NULL)
+			return 2;
+		return 0;
+	}
+	return ret;
+}
+
+/* send a request of a kind through a service handle of kind 8 */
+unsigned int MlnImpl_81050210(int handle, int kind, MlnXmlNode **document,
+			      const MlnBuffer *extra, MlnBlob *out)
+{
+	MlnCoreServiceHandle *service = NULL;
+	MlnBufferGroups *groups = NULL;
+	MlnBuffer *response = NULL;
+	MlnHandleTable *table;
+	unsigned int ret;
+	int sessions = 0;
+
+	table = MlnServiceHandleTable(MlnImpl_81006EAC());
+	if (table == NULL) {
+		ret = 2;
+		goto out;
+	}
+	ret = MlnImpl_81069FE8(handle, table, &service);
+	if (ret != 0)
+		goto out;
+	if (service == NULL || service->state != 8 << 8 || document == NULL || out == NULL) {
+		ret = 3;
+		goto out;
+	}
+	if (extra == NULL && kind == 1) {
+		ret = 4;
+		goto out;
+	}
+	if (MlnImpl_8104A448() != 0) {
+		ret = 7;
+		goto out;
+	}
+	sessions = 1;
+	ret = MlnImpl_8108299C(&groups);
+	if (ret != 0)
+		goto out;
+	ret = MlnImpl_81082DC0(MlnImpl_81067CA4(service->exchange, kind, &groups, extra, document,
+						&response));
+	if (ret != 0)
+		goto out;
+	out->buffer = response;
+	out->size = response->size;
+	response = NULL;
+out:
+	MlnImpl_81042A88(groups);
+	MlnBufferDestroy(MLN_HEAP_GENERAL, response);
+	while (sessions-- > 0)
+		MlnImpl_8104A558();
+	return ret;
+}
+
+/* take the reply to a request of a kind through a service handle of kind 8 */
+unsigned int MlnImpl_81050378(int handle, int kind, const MlnBuffer *extra,
+			      const MlnBuffer *message, MlnBlob *out)
+{
+	MlnCoreServiceHandle *service = NULL;
+	MlnHandleTable *table;
+	unsigned int ret;
+
+	table = MlnServiceHandleTable(MlnImpl_81006EAC());
+	if (table == NULL)
+		return 2;
+	ret = MlnImpl_81069FE8(handle, table, &service);
+	if (ret != 0)
+		return ret;
+	if (service == NULL || service->state != 8 << 8)
+		return 3;
+	if (message == NULL || out == NULL)
+		return 4;
+	if (message->size == 0 || message->data == NULL)
+		return 0x24;
+	if (MlnImpl_8104A448() != 0)
+		return 7;
+
+	ret = MlnImpl_81068060(service->exchange, kind, extra, message, out);
+	switch (ret) {
+	case 0:
+	case 2:
+		break;
+	case 6:
+		ret = 0x44;
+		break;
+	case 0x23000001:
+	case 0x23000002:
+	case 0x2300000b:
+		ret = 0x24;
+		break;
+	case 0x23000007:
+		ret = 0x29;
+		break;
+	default:
+		ret = 7;
+		break;
+	}
+	MlnImpl_8104A558();
+	return ret;
+}
+
+/* map an error of the store or the core, others to fallback */
+unsigned int MlnImpl_810504EC(unsigned int r, unsigned int fallback)
+{
+	switch (r) {
+	case 0:
+		return 0;
+	case 2:
+		return 2;
+	case 3:
+		return 4;
+	case 4:
+		return 3;
+	case 6:
+		return 0x44;
+	case 0x230a0002:
+		return 0x10;
+	case 0x230a0004:
+		return 9;
+	case 0x23100005:
+		return 0x17;
+	case 0x23100006:
+		return 9;
+	case 0x23110004:
+		return 9;
+	case 0x23110005:
+		return 0x10;
+	default:
+		return fallback;
+	}
+}
+
+/* the registration session handle table, made on first use */
+static inline __attribute__((always_inline)) MlnHandleTable *MlnRegistrationHandleTable(MlnShared *shared)
+{
+	MlnHandleTable *table = shared->buffers[7];
+
+	if (table == NULL) {
+		table = MlnAllocate(MLN_HEAP_GENERAL, sizeof(*table));
+		if (table == NULL)
+			return NULL;
+		table->initialized = 0;
+		MlnMemset(table->slots, 0, sizeof(table->slots));
+		shared->buffers[7] = table;
+	}
+	return table;
+}
+
+/* close a session of MlnImpl_81050778 */
+int MlnImpl_810505B8(int handle)
+{
+	MlnRegistrationSession *session = NULL;
+	MlnHandleTable *table;
+	unsigned int r;
+	int ret;
+
+	table = MlnRegistrationHandleTable(MlnImpl_81006EAC());
+	if (table == NULL)
+		return 2;
+	ret = MlnImpl_81069FE8(handle, table, &session);
+	if (ret != 0 || session == NULL)
+		return ret;
+	MlnBufferDestroy(MLN_HEAP_GENERAL, session->buffer);
+	MlnBufferDestroy(MLN_HEAP_GENERAL, session->token);
+	MlnXmlNodeFree(MLN_HEAP_GENERAL, session->node);
+	MlnRightsInfoFree(MLN_HEAP_GENERAL, session->rights);
+	ret = MlnImpl_8104DAA4(session->service);
+	r = MlnImpl_8104A9CC(session->core);
+	if (r != 0)
+		ret = r;
+	r = MlnImpl_81064DD4(session->context);
+	if (r != 0)
+		ret = MlnImpl_810504EC(r, 7);
+	MlnFree(MLN_HEAP_GENERAL, session);
+	if (MlnImpl_8106A048(handle, NULL, table) != 0)
+		ret = 7;
+	return ret;
+}
+
+/*
+ * Open a session with a registration service. Without a token, the device's own certificates
+ * and token are given back (the leaf certificates, the token and the other buffer of the core's
+ * groups); with the caller's (which the session takes), the service is given the leaf
+ * certificates of the two chains given, checked against the token.
+ */
+unsigned int MlnImpl_81050778(int *handle, MlnServiceList *list, unsigned int *firstCount,
+			      MlnBuffer ***firsts, unsigned int *secondCount, MlnBuffer ***seconds,
+			      MlnBuffer **third, MlnBuffer **fourth)
+{
+	MlnRegistrationSession *session = NULL;
+	MlnRegistrationSession *opened;
+	MlnBufferGroups *info = NULL;
+	MlnBuffer *firstLeaf = NULL;
+	MlnBuffer *secondLeaf = NULL;
+	MlnBuffer **chain;
+	MlnBuffer *encoded;
+	MlnBuffer *firstCopy, *secondCopy;
+	MlnX509Certificates certificates;
+	MlnHandleTable *table;
+	MlnBuffer **items;
+	MlnBuffer *token;
+	unsigned int count;
+	unsigned int ret;
+	unsigned int r;
+	unsigned int i;
+	int chainCount;
+	int id;
+	int k;
+
+	if (handle == NULL || list == NULL || firstCount == NULL || fourth == NULL ||
+	    firsts == NULL || seconds == NULL || secondCount == NULL || third == NULL) {
+		ret = 4;
+		goto fail;
+	}
+	session = MlnAllocate(MLN_HEAP_GENERAL, sizeof(*session));
+	if (session == NULL) {
+		ret = 2;
+		goto fail;
+	}
+	MlnMemset(session, 0, sizeof(*session));
+	table = MlnRegistrationHandleTable(MlnImpl_81006EAC());
+	if (table == NULL) {
+		ret = 2;
+		goto fail;
+	}
+	ret = MlnImpl_81069F10(table);
+	if (ret != 0)
+		goto fail;
+	ret = MlnImpl_81069F68(session, table, &id);
+	if (ret != 0)
+		goto fail;
+	opened = session;
+
+	ret = MlnImpl_8104D5E0(8, list, &opened->service);
+	if (ret != 0)
+		goto out;
+	ret = MlnImpl_8104A8D8(&opened->core);
+	if (ret != 0)
+		goto out;
+	r = MlnImpl_81064D8C(&opened->context);
+	if (r != 0) {
+		ret = MlnImpl_810504EC(r, 7);
+		goto out;
+	}
+
+	token = *fourth;
+	if (token == NULL) {
+		r = MlnImpl_81064E18(&info);
+		if (r != 0) {
+			ret = r == 0x230a0002 ? 0xf : MlnImpl_810504EC(r, 7);
+			goto out;
+		}
+		*firstCount = info->lists[1].count;
+		*firsts = MlnAllocate(MLN_HEAP_GENERAL, *firstCount * sizeof(**firsts));
+		if (*firsts == NULL)
+			goto nomem;
+		MlnMemset(*firsts, 0, *firstCount * sizeof(**firsts));
+		for (i = 0; i < *firstCount; i++) {
+			items = *firsts;
+			items[i] = MlnBufferCreate(MLN_HEAP_GENERAL, info->lists[1].items[i]->size,
+						   info->lists[1].items[i]->data);
+			if ((*firsts)[i] == NULL)
+				goto nomem;
+		}
+		/* the second list's count is the first's, as Sony's code reads it */
+		*secondCount = info->lists[1].count;
+		*seconds = MlnAllocate(MLN_HEAP_GENERAL, *secondCount * sizeof(**seconds));
+		if (*seconds == NULL)
+			goto nomem;
+		MlnMemset(*seconds, 0, *secondCount * sizeof(**seconds));
+		for (i = 0; i < *secondCount; i++) {
+			items = *seconds;
+			items[i] = MlnBufferCreate(MLN_HEAP_GENERAL, info->lists[0].items[i]->size,
+						   info->lists[0].items[i]->data);
+			if ((*seconds)[i] == NULL)
+				goto nomem;
+		}
+		*third = MlnBufferCreate(MLN_HEAP_GENERAL, info->last->size, info->last->data);
+		if (*third == NULL)
+			goto nomem;
+		*fourth = MlnBufferCreate(MLN_HEAP_GENERAL, info->first->size, info->first->data);
+		if (*fourth == NULL)
+			goto nomem;
+		goto done;
+	}
+
+	if (*firsts == NULL || *seconds == NULL || *third == NULL) {
+		ret = 4;
+		goto out;
+	}
+	opened->token = token;
+	*fourth = NULL;
+	encoded = NULL;
+	firstCopy = NULL;
+	secondCopy = NULL;
+	chain = NULL;
+	chainCount = 0;
+	certificates.count = 0;
+	certificates.items = NULL;
+	count = *firstCount;
+	r = MlnImpl_81059600((*firsts)[0], &chain, &chainCount);
+	if (r == 0) {
+		if (count != 1 || *secondCount != 1) {
+			ret = 4;
+			goto check;
+		}
+		firstCopy = MlnBufferCreate(MLN_HEAP_GENERAL, (*firsts)[0]->size, (*firsts)[0]->data);
+		secondCopy = MlnBufferCreate(MLN_HEAP_GENERAL, (*seconds)[0]->size,
+					     (*seconds)[0]->data);
+		if (firstCopy == NULL || secondCopy == NULL) {
+			ret = 2;
+			goto check;
+		}
+	} else if ((r & 0xffff0000) == 0x22000000) {
+		/* not one certificate: chains, encoded */
+		if (count == 0) {
+			ret = 4;
+			goto check;
+		}
+		ret = MlnImpl_81082E44(count, *firsts, &certificates);
+		if (ret != 0)
+			goto check;
+		r = MlnImpl_8103A888(&certificates, &encoded);
+		if (r == 0)
+			r = MlnImpl_81026814(MLN_HEAP_GENERAL, encoded, 0, 0, &firstCopy);
+		if (r != 0) {
+			ret = MlnImpl_810504EC(r, 7);
+			goto check;
+		}
+		MlnBufferDestroy(MLN_HEAP_GENERAL, encoded);
+		MlnFree(MLN_HEAP_GENERAL, certificates.items);
+		encoded = NULL;
+		certificates.count = 0;
+		certificates.items = NULL;
+		if (*secondCount == 0 || *seconds == NULL) {
+			ret = 4;
+			goto check;
+		}
+		ret = MlnImpl_81082E44(*secondCount, *seconds, &certificates);
+		if (ret != 0)
+			goto check;
+		r = MlnImpl_8103A888(&certificates, &encoded);
+		if (r == 0)
+			r = MlnImpl_81026814(MLN_HEAP_GENERAL, encoded, 0, 0, &secondCopy);
+		if (r != 0) {
+			ret = MlnImpl_810504EC(r, 7);
+			goto check;
+		}
+	} else {
+		ret = MlnImpl_810504EC(r, 7);
+		if (ret != 0)
+			goto check;
+	}
+	ret = 0;
+	firstLeaf = firstCopy;
+	secondLeaf = secondCopy;
+	firstCopy = NULL;
+	secondCopy = NULL;
+check:
+	MlnBufferDestroy(MLN_HEAP_GENERAL, encoded);
+	MlnBufferDestroy(MLN_HEAP_GENERAL, firstCopy);
+	MlnBufferDestroy(MLN_HEAP_GENERAL, secondCopy);
+	MlnFree(MLN_HEAP_GENERAL, certificates.items);
+	if (chain != NULL) {
+		for (k = 0; k < chainCount; k++)
+			MlnBufferDestroy(MLN_HEAP_GENERAL, chain[k]);
+		MlnFree(MLN_HEAP_GENERAL, chain);
+	}
+	if (ret != 0)
+		goto out;
+	ret = MlnImpl_8104FC70(opened->service, firstLeaf->size, firstLeaf->data, secondLeaf->size,
+			       secondLeaf->data, (*third)->size, (*third)->data);
+	if (ret != 0)
+		goto out;
+done:
+	*handle = id;
+	ret = 0;
+	goto out;
+
+nomem:
+	ret = 2;
+out:
+	MlnBufferDestroy(MLN_HEAP_GENERAL, firstLeaf);
+	MlnBufferDestroy(MLN_HEAP_GENERAL, secondLeaf);
+	if (ret != 0)
+		MlnImpl_810505B8(id);
+	MlnImpl_81042A88(info);
+	return ret;
+
+fail:
+	MlnBufferDestroy(MLN_HEAP_GENERAL, NULL);
+	MlnBufferDestroy(MLN_HEAP_GENERAL, NULL);
+	MlnFree(MLN_HEAP_GENERAL, session);
+	/* Sony's code closes the session even when none was opened */
+	MlnImpl_810505B8(id);
+	MlnImpl_81042A88(info);
+	return ret;
+}
+
+/*
+ * Make a registration session's request from the data given and send it; the request is kept
+ * in the session.
+ */
+unsigned int MlnImpl_81050E58(int handle, const MlnBuffer *data, MlnBlob *out)
+{
+	MlnRegistrationSession *session = NULL;
+	MlnXmlNode *document = NULL;
+	MlnBuffer *request = NULL;
+	MlnHandleTable *table;
+	unsigned int ret;
+	unsigned int r;
+
+	if (out == NULL || data == NULL || data->size == 0 || data->data == NULL) {
+		ret = 4;
+		goto out;
+	}
+	table = MlnRegistrationHandleTable(MlnImpl_81006EAC());
+	if (table == NULL) {
+		ret = 2;
+		goto out;
+	}
+	ret = MlnImpl_81069FE8(handle, table, &session);
+	if (ret != 0)
+		goto out;
+	if (session == NULL) {
+		ret = 3;
+		goto out;
+	}
+	r = MlnImpl_81064E68(&request);
+	if (r == 0)
+		r = MlnImpl_81064EC0(session->context, request, data, &document);
+	if (r != 0) {
+		ret = MlnImpl_810504EC(r, 7);
+		goto out;
+	}
+	ret = MlnImpl_81050210(session->service, 1, &document, session->token, out);
+	if (ret != 0)
+		goto out;
+	if (session->buffer != NULL)
+		MlnBufferDestroy(MLN_HEAP_GENERAL, session->buffer);
+	session->buffer = request;
+	request = NULL;
+out:
+	MlnXmlNodeFree(MLN_HEAP_GENERAL, document);
+	MlnBufferDestroy(MLN_HEAP_GENERAL, request);
+	return ret;
+}

@@ -1229,7 +1229,7 @@ static inline int MlnCoreGroupConvert(MlnCoreGroup *core, MlnBufferGroup **out)
 	core->first = NULL;
 	group->second = core->second;
 	core->second = NULL;
-	if (core->thirdPresent) {
+	if (core->thirdSize) {
 		group->third = core->third;
 		core->third = NULL;
 	}
@@ -1246,15 +1246,15 @@ static inline int MlnCoreGroupConvert(MlnCoreGroup *core, MlnBufferGroup **out)
 			entries[i] = MlnAllocate(MLN_HEAP_GENERAL, 3 * sizeof(**entries));
 			MlnMemset(entries[i], 0, 3 * sizeof(**entries));
 			entry = &core->entries[i];
-			if (entry->firstPresent) {
+			if (entry->firstSize) {
 				entries[i][0] = entry->first;
 				entry->first = NULL;
 			}
-			if (entry->secondPresent) {
+			if (entry->secondSize) {
 				entries[i][1] = entry->second;
 				entry->second = NULL;
 			}
-			if (entry->thirdPresent) {
+			if (entry->thirdSize) {
 				entries[i][2] = entry->third;
 				entry->third = NULL;
 			}
@@ -1283,11 +1283,11 @@ int MlnImpl_8102E8A0(const MlnServiceReply *reply, MlnServiceArgs **out, int *st
 	int err, ret;
 
 	core.first = NULL;
-	core.firstPresent = 0;
+	core.firstSize = 0;
 	core.second = NULL;
-	core.secondPresent = 0;
+	core.secondSize = 0;
 	core.third = NULL;
-	core.thirdPresent = 0;
+	core.thirdSize = 0;
 	core.entries = NULL;
 	core.entryCount = 0;
 	if (MlnImpl_81026D94(reply, 1) != 0) {
