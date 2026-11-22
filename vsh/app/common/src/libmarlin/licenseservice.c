@@ -47,8 +47,8 @@ int MlnImpl_810681E4(MlnExchange *exchange, MlnBufferGroups **credentials,
 		goto fail;
 
 	message = &exchange->message;
-	message->integrity = 1;
-	message->confidentiality = 1;
+	message->digestMethod = 1;
+	message->signatureMethod = 1;
 	message->body = parts[0];
 	parts[2] = NULL;
 	parts[0] = NULL;
@@ -72,8 +72,8 @@ int MlnImpl_810681E4(MlnExchange *exchange, MlnBufferGroups **credentials,
 	}
 	message->nodeCount = nodeCount;
 	message->nodes = copies;
-	message->received = NULL;
-	message->transferKey = NULL;
+	message->nonce = NULL;
+	message->peerNonce = NULL;
 	message->peer = MlnBufferCreate(MLN_HEAP_GENERAL, name->size, name->data);
 	if (message->peer == NULL) {
 		ret = 2;

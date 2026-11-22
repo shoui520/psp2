@@ -73,6 +73,7 @@ set(MLN_ENGINE_SOURCES
 	vm.c
 	hostobject.c
 	keystore.c
+	nemo.c
 )
 psp2_module(${PSP2_TARGET} KIND user COMPILER gcc48 PARTIAL SOURCES
 	${MLN_ARM_SOURCES}

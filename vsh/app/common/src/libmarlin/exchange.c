@@ -84,8 +84,8 @@ unsigned int MlnImpl_81068798(MlnExchange *exchange)
 	}
 	MlnBufferDestroy(MLN_HEAP_GENERAL, message->peer);
 	message->peer = NULL;
-	MlnBufferDestroy(MLN_HEAP_GENERAL, message->received);
-	message->received = NULL;
+	MlnBufferDestroy(MLN_HEAP_GENERAL, message->nonce);
+	message->nonce = NULL;
 	return MlnImpl_810799B0(&message->header);
 }
 

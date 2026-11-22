@@ -74,8 +74,8 @@ int MlnImpl_81066CE0(MlnExchange *exchange, MlnBufferGroups **credentials,
 		goto fail;
 
 	message = &exchange->message;
-	message->integrity = 1;
-	message->confidentiality = 1;
+	message->digestMethod = 1;
+	message->signatureMethod = 1;
 	message->body = body;
 	body = NULL;
 	message->credentials = *credentials;
@@ -94,8 +94,8 @@ int MlnImpl_81066CE0(MlnExchange *exchange, MlnBufferGroups **credentials,
 	}
 	message->nodeCount = nodeCount;
 	message->nodes = copies;
-	message->received = NULL;
-	message->transferKey = NULL;
+	message->nonce = NULL;
+	message->peerNonce = NULL;
 	message->peer = MlnBufferCreate(MLN_HEAP_GENERAL, name->size, name->data);
 	if (message->peer == NULL) {
 		ret = 2;
@@ -247,8 +247,8 @@ int MlnImpl_810670A0(MlnExchange *exchange, MlnBufferGroups **credentials, int n
 	MlnXmlNodeFree(MLN_HEAP_GENERAL, body);
 
 	message = &exchange->message;
-	message->integrity = 1;
-	message->confidentiality = 1;
+	message->digestMethod = 1;
+	message->signatureMethod = 1;
 	message->body = built;
 	built = NULL;
 	body = NULL;
@@ -268,8 +268,8 @@ int MlnImpl_810670A0(MlnExchange *exchange, MlnBufferGroups **credentials, int n
 	}
 	message->nodeCount = nodeCount;
 	message->nodes = copies;
-	message->received = NULL;
-	message->transferKey = NULL;
+	message->nonce = NULL;
+	message->peerNonce = NULL;
 	message->peer = MlnBufferCreate(MLN_HEAP_GENERAL, name->size, name->data);
 	if (message->peer == NULL) {
 		ret = 2;
@@ -386,8 +386,8 @@ int MlnImpl_81067618(MlnExchange *exchange, MlnXmlNode *node, MlnBuffer **reply)
 				     &value);
 	if (ret != 0)
 		goto fail;
-	message->integrity = 1;
-	message->confidentiality = 1;
+	message->digestMethod = 1;
+	message->signatureMethod = 1;
 	if (message->body != NULL)
 		MlnXmlNodeFree(MLN_HEAP_GENERAL, message->body);
 	message->body = confirm;
@@ -472,8 +472,8 @@ int MlnImpl_81067814(MlnExchange *exchange, MlnBufferGroups **credentials,
 	MlnXmlNodeFree(MLN_HEAP_GENERAL, body);
 
 	message = &exchange->message;
-	message->integrity = 1;
-	message->confidentiality = 1;
+	message->digestMethod = 1;
+	message->signatureMethod = 1;
 	message->body = built;
 	built = NULL;
 	body = NULL;
@@ -496,8 +496,8 @@ int MlnImpl_81067814(MlnExchange *exchange, MlnBufferGroups **credentials,
 	}
 	message->nodeCount = nodeCount;
 	message->nodes = copies;
-	message->received = NULL;
-	message->transferKey = NULL;
+	message->nonce = NULL;
+	message->peerNonce = NULL;
 	message->peer = MlnBufferCreate(MLN_HEAP_GENERAL, name->size, name->data);
 	if (message->peer == NULL) {
 		ret = 2;
@@ -597,8 +597,8 @@ int MlnImpl_81067CA4(MlnExchange *exchange, int step, MlnBufferGroups **credenti
 	message = &exchange->message;
 	if (step == 1)
 		message->header.present = 0;
-	message->integrity = 1;
-	message->confidentiality = 1;
+	message->digestMethod = 1;
+	message->signatureMethod = 1;
 	MlnXmlNodeFree(MLN_HEAP_GENERAL, message->body);
 	message->body = *document;
 	*document = NULL;
@@ -617,9 +617,9 @@ int MlnImpl_81067CA4(MlnExchange *exchange, int step, MlnBufferGroups **credenti
 	}
 
 	if (step == 1) {
-		if (message->received != NULL)
-			MlnBufferDestroy(MLN_HEAP_GENERAL, message->received);
-		message->received = NULL;
+		if (message->nonce != NULL)
+			MlnBufferDestroy(MLN_HEAP_GENERAL, message->nonce);
+		message->nonce = NULL;
 		if (message->peer != NULL) {
 			if (MlnBufferCompare(MLN_HEAP_GENERAL, message->peer, peer) != 0) {
 				ret = 5;
@@ -681,9 +681,9 @@ int MlnImpl_81067CA4(MlnExchange *exchange, int step, MlnBufferGroups **credenti
 		ret = MlnImpl_81072240(message, 7, 1, &sent);
 		if (ret != 0)
 			goto fail;
-		if (message->transferKey != NULL) {
-			MlnBufferDestroy(MLN_HEAP_GENERAL, message->transferKey);
-			message->transferKey = NULL;
+		if (message->peerNonce != NULL) {
+			MlnBufferDestroy(MLN_HEAP_GENERAL, message->peerNonce);
+			message->peerNonce = NULL;
 		}
 	}
 	*request = sent;
@@ -719,10 +719,10 @@ unsigned int MlnImpl_81068060(MlnExchange *exchange, int step, const char *name,
 	if (step == 1) {
 		if (message->bundles != NULL)
 			MlnXmlListFree(MLN_HEAP_GENERAL, message->bundles);
-		if (message->transferKey != NULL)
-			MlnBufferDestroy(MLN_HEAP_GENERAL, message->transferKey);
+		if (message->peerNonce != NULL)
+			MlnBufferDestroy(MLN_HEAP_GENERAL, message->peerNonce);
 		message->bundles = NULL;
-		message->transferKey = NULL;
+		message->peerNonce = NULL;
 	}
 	ret = MlnImpl_81064E18(&credentials);
 	if (ret != 0)

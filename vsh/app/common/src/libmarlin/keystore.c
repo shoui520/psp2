@@ -672,3 +672,52 @@ done:
 	MlnBufferDestroy(MLN_HEAP_GENERAL, result);
 	return ret;
 }
+
+/*
+ * Data decrypted with an HCI key into the caller's buffer: AES only, the
+ * algorithm word's padding and mode picking the HCI's.
+ */
+unsigned int MlnImpl_81072020(void *const *key, unsigned int flags, const void *parameters,
+			      const MlnBuffer *in, void *out, unsigned int *outSize)
+{
+	MlnBuffer *result = NULL;
+	unsigned int ret;
+	int padded;
+	int mode;
+
+	if (key == NULL || in == NULL || in->size < 32 || out == NULL) {
+		ret = 3;
+		goto done;
+	}
+	if (flags & MLN_CIPHER_PAD_PKCS) {
+		padded = 1;
+	} else if (flags & MLN_CIPHER_PAD_NONE) {
+		padded = 0;
+	} else {
+		ret = 3;
+		goto done;
+	}
+	if (!(flags & MLN_CIPHER_AES)) {
+		ret = 3;
+		goto done;
+	}
+	if (flags & MLN_CIPHER_MODE_CBC) {
+		mode = 2;
+	} else if (flags & MLN_CIPHER_MODE_CTR) {
+		mode = 3;
+	} else {
+		ret = 3;
+		goto done;
+	}
+	ret = MlnImpl_81080D18(*key, mode, padded, parameters, NULL, in, &result);
+	if (ret != 0) {
+		if ((ret >> 16) != 0)
+			ret = MLN_KEY_ERROR_FAILED;
+		goto done;
+	}
+	MlnMemcpy(out, result->data, result->size);
+	*outSize = result->size;
+done:
+	MlnBufferDestroy(MLN_HEAP_GENERAL, result);
+	return ret;
+}

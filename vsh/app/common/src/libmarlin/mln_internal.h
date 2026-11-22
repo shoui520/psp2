@@ -2316,11 +2316,24 @@ unsigned int MlnImpl_81071F00(const MlnBuffer *buffer, MlnBuffer **out);
 unsigned int MlnImpl_81071F4C(void **key, const MlnBuffer *data, unsigned char *out,
 			      unsigned int *size);
 
+/* the parts of a cipher's algorithm word (MlnImpl_81054880) */
+#define MLN_CIPHER_AES			1
+#define MLN_CIPHER_KEY_ENCRYPT		0x100
+#define MLN_CIPHER_KEY_DECRYPT		0x200
+#define MLN_CIPHER_KEY_COUNTER		0x300
+#define MLN_CIPHER_MODE_ECB		0x10000
+#define MLN_CIPHER_MODE_CBC		0x20000
+#define MLN_CIPHER_MODE_CTR		0x30000
+#define MLN_CIPHER_PAD_NONE		0x1000000
+#define MLN_CIPHER_PAD_PKCS		0x2000000
+#define MLN_CIPHER_PAD_ZERO		0x3000000
+#define MLN_CIPHER_PAD_SPACE		0x4000000
+
 /* the HCI's keys (SceMarlinHci, 0x81080BFC-), as the key store uses them */
 unsigned int MlnImpl_81080C3C(int kind, void **key);
 unsigned int MlnImpl_81080E80(void *wrapping, int kind, const MlnBuffer *param,
 			      const MlnBuffer *data, int usage, void **key);
-unsigned int MlnImpl_81080D18(void *key, int kind, int mode, const MlnBuffer *a,
+unsigned int MlnImpl_81080D18(void *key, int kind, int mode, const void *parameters,
 			      const MlnBuffer *b, const MlnBuffer *data, MlnBuffer **out);
 unsigned int MlnImpl_810810F4(void *key, MlnBuffer **out);
 unsigned int MlnImpl_8108117C(void *key, unsigned int size, const void *data, MlnBuffer **out);
@@ -2474,6 +2487,28 @@ typedef struct MlnNemoHeader {
 	MlnBuffer *parts[10];		/* by bit, MLN_NEMO_PART_SENDER's in parts[4] */
 } MlnNemoHeader;
 
+/* a service's certificate and what a message uses of it (MlnImpl_81079A7C, 0x10 bytes) */
+typedef struct MlnNemoPeerKey {
+	MlnBuffer *certificate;
+	MlnBuffer *keyId;		/* its subject key identifier, base64 */
+	MlnBuffer *modulus;		/* its RSA public key */
+	MlnBuffer *exponent;
+} MlnNemoPeerKey;
+
+/* an exception a fault reports: a ServiceException */
+typedef struct MlnNemoFault {
+	MlnBuffer *name;
+	MlnBuffer *redirectUrl;
+	MlnBuffer *details;
+} MlnNemoFault;
+
+/* the exceptions of a fault */
+typedef struct MlnNemoFaults {
+	int reserved[3];
+	MlnNemoFault **items;
+	unsigned int count;
+} MlnNemoFaults;
+
 /* a NEMO message a service exchange sends and receives (0x7c bytes) */
 typedef struct MlnNemoMessage {
 	MlnXmlNode *body;		/* the payload sent */
@@ -2481,16 +2516,16 @@ typedef struct MlnNemoMessage {
 	unsigned char nodeCount;
 	MlnXmlNode **nodes;		/* nodes sent with the payload */
 	MlnXmlNodeList *bundles;	/* a license transfer response's */
-	MlnBuffer *received;
-	MlnBuffer *transferKey;		/* dropped once a license transfer's move is sent */
+	MlnBuffer *nonce;		/* the nonce sent, the reply returns it */
+	MlnBuffer *peerNonce;		/* the peer's, returned in the reply */
 	MlnBuffer *peer;		/* the name the service was given */
 	int reserved[4];
-	void *keys[2];			/* both set before a request is made */
-	int reserved2;
+	MlnNemoPeerKey *keys[2];	/* the service's encryption and signing certificates */
+	MlnNemoFaults *faults;		/* a fault's exceptions */
 	MlnNemoHeader header;
 	int reserved3[2];
-	int integrity;			/* the request is signed */
-	int confidentiality;		/* and encrypted */
+	int digestMethod;		/* the references' digest: 0 SHA-1, 1 SHA-256 */
+	int signatureMethod;		/* the signature's, the same */
 } MlnNemoMessage;
 
 /* the protocol of a service exchange */
@@ -2509,7 +2544,65 @@ typedef struct MlnExchange {
 	MlnNemoMessage message;
 } MlnExchange;
 
+/* the steps of a NEMO exchange, the kind of a license transfer's messages */
+#define MLN_NEMO_STEP_REQUEST		1
+#define MLN_NEMO_STEP_RESPONSE		2
+#define MLN_NEMO_STEP_CONFIRMATION	4
+#define MLN_NEMO_STEP_FAULT		8
+#define MLN_NEMO_KIND_TRANSFER		7
+
+/* NEMO's errors (nemo.c) */
+#define MLN_NEMO_ERROR_FORMAT		0x23050001	/* not one Assertion */
+#define MLN_NEMO_ERROR_FAILED		0x23050002	/* the cipher or the HMAC failed */
+#define MLN_NEMO_ERROR_CRYPTO		0x23050009	/* an X.509 or RSA error */
+#define MLN_NEMO_ERROR_PARAMETER	0x2305000B
+#define MLN_NEMO_ERROR_KIND		0x2305000C	/* no such kind of message */
+#define MLN_NEMO_ERROR_STEP		0x2305000E	/* no such step */
+#define MLN_NEMO_ERROR_HEADER		0x23050010	/* the header lacks a part the step needs */
+
+/* how a signature names its key: by name, by the signer's certificate */
+#define MLN_NEMO_KEY_INFO_NAME		(-1)
+#define MLN_NEMO_KEY_INFO_CERTIFICATE	(-2)
+
+/* a node of a message's SOAP header, of its MLN_NEMO_PART_* (MlnImpl_81077FAC) */
+typedef struct MlnNemoHeaderNode {
+	int type;
+	MlnXmlNode *node;
+} MlnNemoHeaderNode;
+
+typedef struct MlnNemoHeaderNodes {
+	int count;
+	MlnNemoHeaderNode *items;
+} MlnNemoHeaderNodes;
+
 /* the NEMO message (0x81072240-): its parts, sending and receiving */
+unsigned int MlnImpl_81072138(unsigned int kind, unsigned int step, unsigned char *usage);
+int MlnImpl_810721BC(unsigned int kind, unsigned int step);
+unsigned int MlnImpl_81077FAC(MlnNemoHeader *header, MlnNemoHeaderNodes **out);
+unsigned int MlnImpl_81078AB8(MlnXmlNode *body, MlnXmlNode **out);
+unsigned int MlnImpl_81078B5C(MlnXmlNode **header, unsigned char count, MlnXmlNode *body,
+			      MlnBuffer **out);
+unsigned int MlnImpl_810790EC(unsigned int size, unsigned char *data);
+unsigned int MlnImpl_810791F0(unsigned int size, unsigned char *data);
+void MlnImpl_81079854(MlnNemoHeaderNodes *nodes);
+unsigned int MlnImpl_81079D78(char **time);
+unsigned int MlnImpl_8108418C(const char *string, char **copy);
+unsigned int MlnImpl_81084F3C(const MlnBuffer *name, const MlnBuffer *certificate);
+unsigned int MlnImpl_810850D4(const MlnBuffer *nonce, const char *usage, MlnXmlNode **out);
+unsigned int MlnImpl_81085204(const MlnBuffer *id, const char *usage, MlnXmlNode **out);
+unsigned int MlnImpl_81085338(int chain, int count, MlnBuffer **certificates, unsigned int step,
+			      MlnXmlNode **out);
+unsigned int MlnImpl_81085678(unsigned short index, char **id);
+unsigned int MlnImpl_81085718(const unsigned char *key, const char *id, MlnXmlNode *node,
+			      const char *type, MlnXmlNode **out);
+unsigned int MlnImpl_81085A88(char *id, int kind, MlnXmlNode *node);
+unsigned int MlnImpl_81085B24(MlnXmlNode *node, int kind, unsigned char *digest,
+			      unsigned int digestSize, unsigned short index, char **id);
+unsigned int MlnImpl_81085C24(unsigned int count, int method, int *transforms, char **uris,
+			      unsigned char **digests, int keyInfo, MlnBuffer *key,
+			      MlnXmlNode **out);
+int MlnImpl_81085D84(unsigned int kind, unsigned int step);
+int MlnImpl_81086254(unsigned int kind);
 unsigned int MlnImpl_81072240(MlnNemoMessage *message, unsigned char kind, unsigned char step,
 			      MlnBuffer **out);
 unsigned int MlnImpl_81074EC4(unsigned int size, const void *data, MlnNemoMessage *message,
@@ -2634,8 +2727,8 @@ int MlnImpl_81080F80(void *key, int sha256, const MlnBuffer *message,
 int MlnImpl_81080FF4(void *key, int sha256, const MlnBuffer *message,
 		     const MlnBuffer *digest, int *valid);
 unsigned int MlnImpl_8108106C(void *key, const MlnBuffer *data, MlnBuffer **out);
-int MlnImpl_81072020(void *const *key, unsigned int flags, const void *parameters,
-		     const MlnBuffer *in, void *out, unsigned int *outSize);
+unsigned int MlnImpl_81072020(void *const *key, unsigned int flags, const void *parameters,
+			      const MlnBuffer *in, void *out, unsigned int *outSize);
 int MlnImpl_81061858(const MlnOctopusKey *key, unsigned int flags, const void *parameters,
 		     const MlnBuffer *in, void *out, unsigned int *outSize);
 int MlnImpl_810485B4(void);
@@ -3504,6 +3597,8 @@ int MlnImpl_81055BB4(void **values, MlnBuffer *modulus, MlnBuffer *publicExponen
 		     MlnBuffer *exponent1, MlnBuffer *exponent2, MlnBuffer *coefficient);
 int MlnImpl_81055CA8(void *rsa);
 unsigned int MlnImpl_81056A74(void *rsa, int hash, const MlnBuffer *in, MlnBuffer **out);
+unsigned int MlnImpl_81055D28(void *rsa, const MlnBuffer *in, const MlnBuffer *label,
+			      MlnBuffer **out);
 int MlnImpl_81056F0C(void *rsa, int hash, const MlnBuffer *message, const MlnBuffer *signature);
 int MlnImpl_81034D38(const char *usage, int count, MlnBuffer **certificates, char **out);
 int MlnImpl_81035018(int encryptionCount, MlnBuffer **encryptionCertificates, int signingCount,

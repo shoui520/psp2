@@ -6,19 +6,6 @@
 
 #include "mln_internal.h"
 
-/* the parts of a cipher's algorithm word (MlnImpl_81054880) */
-#define MLN_CIPHER_AES			1
-#define MLN_CIPHER_KEY_ENCRYPT		0x100
-#define MLN_CIPHER_KEY_DECRYPT		0x200
-#define MLN_CIPHER_KEY_COUNTER		0x300
-#define MLN_CIPHER_MODE_ECB		0x10000
-#define MLN_CIPHER_MODE_CBC		0x20000
-#define MLN_CIPHER_MODE_CTR		0x30000
-#define MLN_CIPHER_PAD_NONE		0x1000000
-#define MLN_CIPHER_PAD_PKCS		0x2000000
-#define MLN_CIPHER_PAD_ZERO		0x3000000
-#define MLN_CIPHER_PAD_SPACE		0x4000000
-
 typedef struct MlnCipher {
 	int algorithm;
 	int keyType;
