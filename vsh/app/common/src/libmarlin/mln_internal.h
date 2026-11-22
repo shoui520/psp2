@@ -1900,7 +1900,8 @@ unsigned int MlnImpl_8105E5E4(const MlnBuffer *state);
 unsigned int MlnImpl_8105EA2C(void);
 int MlnImpl_81052EBC(unsigned int *seconds);
 int MlnImpl_81052944(const MlnDateTime *a, const MlnDateTime *b);
-int MlnImpl_81061898(int kind, const MlnOctopusKey *key);
+int MlnImpl_81061898(int kind, const MlnOctopusKey *key, const MlnBuffer *message,
+		     const MlnBuffer *signature);
 int MlnImpl_81060FE8(const MlnOctopusContentKey *contentKey, MlnBuffer **out);
 int MlnImpl_81061964(int kind, const MlnOctopusKey *key, unsigned int size, const void *data,
 		     unsigned int digestSize, const void *digest);
@@ -1980,7 +1981,7 @@ typedef struct MlnCoreHandle {
 typedef struct MlnCoreRecordHandle {
 	void *object;		/* made by MlnImpl_81061BBC */
 	MlnCoreHandle *core;
-	void *entry;		/* the record's entry in the core context (MlnImpl_8106273C) */
+	MlnOctopusContentKey *contentKey;	/* the record's, from the core context (MlnImpl_8106273C) */
 	MlnBuffer *buffer;	/* the record's buffer */
 	unsigned int kind;	/* MLN_SERVICE_RECORD_*, with head and tail as in the record */
 	unsigned char head[4];
@@ -2003,9 +2004,15 @@ unsigned int MlnImpl_81063F38(MlnCoreContext *context, void *rsa, const void *in
 			      unsigned int inputSize, void *output, unsigned int *outputSize);
 unsigned int MlnImpl_81063CE4(MlnCoreContext *context, const MlnServiceObject *object,
 			      unsigned int size, const unsigned char *data, MlnBuffer **rights);
+unsigned int MlnImpl_8106314C(MlnCoreContext *context, MlnOctopusControl *control,
+			      MlnBuffer **out);
 unsigned int MlnImpl_81062F20(MlnCoreContext *context, int kind,
 			      MlnPlanktonParameterBlock *parameters, MlnBuffer **out);
-unsigned int MlnImpl_8106273C(MlnCoreContext *context, MlnBuffer *buffer, void **entry);
+unsigned int MlnImpl_8106273C(MlnCoreContext *context, MlnBuffer *buffer,
+			      MlnOctopusContentKey **contentKey);
+unsigned int MlnImpl_81061C64(void *object, unsigned int size, unsigned int offset,
+			      const MlnOctopusKey *key, unsigned int limit, unsigned int *position);
+unsigned int MlnImpl_81061B2C(const MlnOctopusKey *key, const MlnBuffer *data, MlnBuffer **out);
 
 unsigned int MlnImpl_8104AE1C(int handle, MlnXmlNode *node);
 unsigned int MlnImpl_81062524(MlnCoreContext *context, MlnOctopusBundle *bundle);
@@ -2230,8 +2237,10 @@ int MlnImpl_81030FA8(const MlnServiceReply *reply, MlnServiceArgs **out, int *st
 int MlnImpl_8103110C(const MlnServiceReply *reply, MlnServiceArgs **out, int *status,
 		     MlnBuffer **result);
 int MlnImpl_81031288(const MlnServiceReply *reply, MlnServiceArgs **out, int *status);
-int MlnImpl_8104CA50(const MlnBuffer *first, const MlnBuffer *second, unsigned int *firstValue,
-		     unsigned int *secondValue, MlnBlob *state);
+int MlnImpl_8104CA50(const MlnBuffer *from, const MlnBuffer *to, unsigned int *notBefore,
+		     unsigned int *notAfter, MlnBlob *state);
+int MlnImpl_8104D144(int *handle);
+int MlnImpl_8104D150(int handle);
 int MlnImpl_8103149C(const MlnServiceReply *reply, MlnServiceArgs **out, int *status,
 		     MlnBuffer **result);
 int MlnImpl_810316BC(const MlnServiceReply *reply, MlnServiceArgs **out, int *status,

@@ -388,10 +388,8 @@ out:
 	MlnBufferDestroy(MLN_HEAP_GENERAL, state);
 	if (bundle != NULL)
 		MlnImpl_81040368(bundle);
-	while (sessions > 0) {
-		sessions--;
+	while (sessions-- > 0)
 		MlnImpl_8104A558();
-	}
 	return ret;
 }
 
@@ -486,7 +484,7 @@ unsigned int MlnImpl_8104AF48(int handle, const MlnServiceRecordValue *record, i
 		ret = 2;
 		goto fail;
 	}
-	ret = MlnImpl_8106273C(core->context, rec->buffer, &rec->entry);
+	ret = MlnImpl_8106273C(core->context, rec->buffer, &rec->contentKey);
 	if (ret != 0) {
 		if (ret != 2)
 			ret = 4;
@@ -999,10 +997,8 @@ out:
 		MlnRightsInfoFree(MLN_HEAP_GENERAL, info);
 	if (contentKeys != NULL && contentKeys != keys)
 		MlnFree(MLN_HEAP_GENERAL, contentKeys);
-	while (sessions > 0) {
-		sessions--;
+	while (sessions-- > 0)
 		MlnImpl_8104A558();
-	}
 	return ret;
 }
 
@@ -1312,9 +1308,335 @@ out:
 	MlnArrayDestroy(MLN_HEAP_GENERAL, pending);
 	MlnArrayDestroy(MLN_HEAP_GENERAL, pair);
 	MlnRightsInfoFree(MLN_HEAP_GENERAL, info);
-	while (sessions > 0) {
-		sessions--;
+	while (sessions-- > 0)
 		MlnImpl_8104A558();
-	}
 	return ret;
+}
+
+/*
+ * Run the control of the stored link whose digest is data: the context is
+ * opened from the store (its state to *second on failure) and the
+ * control's result goes to *first.
+ */
+unsigned int MlnImpl_8104C7B4(int handle, const MlnBuffer *data, MlnBlob *first, MlnBlob *second)
+{
+	MlnCoreHandle *core = NULL;
+	MlnBuffer *entry = NULL;
+	MlnOctopusLink *link = NULL;
+	MlnBuffer *result = NULL;
+	MlnBuffer *state = NULL;
+	MlnHandleTable *table;
+	unsigned int ret;
+	unsigned int r;
+	int sessions = 0;
+
+	table = MlnCoreHandleTable(MlnImpl_81006EAC());
+	if (table == NULL) {
+		ret = 2;
+		goto out;
+	}
+	ret = MlnImpl_81069FE8(handle, table, &core);
+	if (ret != 0)
+		goto out;
+	if (core == NULL) {
+		ret = 3;
+		goto out;
+	}
+	if (first == NULL || second == NULL) {
+		ret = 4;
+		goto out;
+	}
+	if (MlnImpl_8104A4B8() != 0) {
+		ret = 7;
+		goto out;
+	}
+	sessions = 1;
+
+	ret = MlnImpl_8104A560(&core->context, &state);
+	if (ret != 0) {
+		if (state != NULL) {
+			second->buffer = state;
+			state = NULL;
+			second->size = second->buffer->size;
+		}
+		goto out;
+	}
+	r = MlnImpl_8104436C(data, &entry);
+	if (r != 0) {
+		if (r == 3)
+			ret = 4;
+		else if (r == 2)
+			ret = 2;
+		else if (r == 6)
+			ret = 0x44;
+		else
+			ret = r == 0x230A0003 ? 0x12 : 7;
+		goto out;
+	}
+	r = MlnImpl_810422E8(entry, &link);
+	if (r != 0) {
+		if (r == 2) {
+			ret = 2;
+		} else {
+			MlnImpl_81043F1C(entry);
+			ret = 0xA;
+		}
+		goto out;
+	}
+	r = MlnImpl_8106314C(core->context, link->control, &result);
+	if (r != 0) {
+		if (r == 2)
+			ret = 2;
+		else
+			ret = r == 0x2302000C ? 0x1e : 0xA;
+		goto out;
+	}
+	first->buffer = result;
+	result = NULL;
+	first->size = first->buffer->size;
+	ret = 0;
+out:
+	MlnImpl_8103BBA0(link);
+	MlnBufferDestroy(MLN_HEAP_GENERAL, entry);
+	MlnBufferDestroy(MLN_HEAP_GENERAL, state);
+	if (result != NULL)
+		MlnBufferDestroy(MLN_HEAP_GENERAL, result);
+	while (sessions-- > 0)
+		MlnImpl_8104A558();
+	return ret;
+}
+
+/*
+ * The validity of the stored link from from to to: its control's rights
+ * give the minutes of their NotBefore and NotAfter (0 when not given). The
+ * context is opened in a core handle of its own; its state goes to *state
+ * when that fails.
+ */
+int MlnImpl_8104CA50(const MlnBuffer *from, const MlnBuffer *to, unsigned int *notBefore,
+		     unsigned int *notAfter, MlnBlob *state)
+{
+	MlnCoreHandle *core = NULL;
+	MlnBuffer *entry = NULL;
+	MlnOctopusLink *link = NULL;
+	MlnBuffer *rights = NULL;
+	MlnRightsInfo *info = NULL;
+	unsigned int before = 0;
+	unsigned int after = 0;
+	MlnBuffer *coreState = NULL;
+	MlnHandleTable *table;
+	unsigned int ret;
+	unsigned int r;
+	int handle;
+
+	if (to == NULL || notBefore == NULL || notAfter == NULL) {
+		ret = 4;
+		goto out;
+	}
+	r = MlnImpl_8104D144(&handle);
+	if (r != 0) {
+		ret = r == 2 ? 2 : 7;
+		goto out;
+	}
+	table = MlnCoreHandleTable(MlnImpl_81006EAC());
+	if (table == NULL) {
+		ret = 2;
+		goto out;
+	}
+	ret = MlnImpl_81069FE8(handle, table, &core);
+	if (ret != 0)
+		goto out;
+	if (core == NULL || MlnImpl_8104A4B8() != 0) {
+		ret = 7;
+		goto out;
+	}
+
+	ret = MlnImpl_8104A560(&core->context, &coreState);
+	if (ret != 0) {
+		if (coreState != NULL) {
+			state->buffer = coreState;
+			coreState = NULL;
+			state->size = state->buffer->size;
+		}
+		goto end;
+	}
+	r = MlnImpl_81044824(from, to, &entry);
+	if (r != 0) {
+		if (r == 3)
+			ret = 4;
+		else if (r == 2)
+			ret = 2;
+		else if (r == 6)
+			ret = 0x44;
+		else if (r == 0x230A0011)
+			ret = 0x11;
+		else
+			ret = r == 0x230A0003 ? 0x12 : 7;
+		goto end;
+	}
+	ret = MlnImpl_810422E8(entry, &link);
+	if (ret != 0) {
+		if (ret != 2) {
+			ret = 0xA;
+			MlnImpl_81043F1C(entry);
+		}
+		goto end;
+	}
+	r = MlnImpl_8106314C(core->context, link->control, &rights);
+	if (r == 0x2302000C)
+		goto done;
+	if (r != 0) {
+		ret = r == 2 ? r : 0xA;
+		goto end;
+	}
+	r = MlnRightsInfoParse(MLN_HEAP_GENERAL, rights->size, rights->data, &info);
+	if (r != 0) {
+		ret = r == 2 ? 2 : 0x42;
+		goto end;
+	}
+	if ((info->constraintFlags & MLN_RIGHTS_NOT_BEFORE) &&
+	    MlnTimeToMinutes(info->notBefore[0], &before) != 0) {
+		ret = 7;
+		goto end;
+	}
+	if ((info->constraintFlags & MLN_RIGHTS_NOT_AFTER) &&
+	    MlnTimeToMinutes(info->notAfter[0], &after) != 0) {
+		ret = 7;
+		goto end;
+	}
+done:
+	*notBefore = before;
+	*notAfter = after;
+end:
+	MlnRightsInfoFree(MLN_HEAP_GENERAL, info);
+	MlnBufferDestroy(MLN_HEAP_GENERAL, rights);
+	MlnImpl_8103BBA0(link);
+	MlnBufferDestroy(MLN_HEAP_GENERAL, entry);
+	MlnBufferDestroy(MLN_HEAP_GENERAL, coreState);
+	MlnImpl_8104A558();
+	MlnImpl_8104D150(handle);
+	return ret;
+out:
+	MlnRightsInfoFree(MLN_HEAP_GENERAL, info);
+	MlnBufferDestroy(MLN_HEAP_GENERAL, rights);
+	MlnImpl_8103BBA0(link);
+	MlnBufferDestroy(MLN_HEAP_GENERAL, entry);
+	MlnBufferDestroy(MLN_HEAP_GENERAL, coreState);
+	MlnImpl_8104D150(handle);
+	return ret;
+}
+
+/*
+ * Move a record handle's position within the record by its content key:
+ * offset and size of what is wanted, limit of what may be read.
+ */
+unsigned int MlnImpl_8104CDA0(int handle, unsigned int offset, unsigned int size,
+			      unsigned int *position, unsigned int limit)
+{
+	MlnCoreRecordHandle *rec = NULL;
+	MlnHandleTable *table;
+	MlnCoreHandle *core;
+	const MlnOctopusKey *key;
+	unsigned int ret;
+
+	table = MlnCoreHandleTable(MlnImpl_81006EAC());
+	if (table == NULL)
+		return 2;
+	ret = MlnImpl_81069FE8(handle, table, &rec);
+	if (ret != 0)
+		return ret;
+	if (rec == NULL || rec->object == NULL || rec->core == NULL)
+		return 3;
+	core = rec->core;
+	if (offset == 0 || size == 0 || position == NULL || limit == 0)
+		return 4;
+	if (core->outcome == 0 || core->kind != 0)
+		return 0x50;
+
+	key = rec->kind != MLN_SERVICE_RECORD_PLAIN ? rec->contentKey->secretKey : NULL;
+	ret = MlnImpl_81061C64(rec->object, size, offset, key, limit, position);
+	switch (ret) {
+	case 0:
+	case 2:
+		return ret;
+	case 3:
+		return 4;
+	case 0x23010004:
+		return 0x20;
+	case 0x23010003:
+		return 0x21;
+	default:
+		return 0x22;
+	}
+}
+
+/* check a record handle's 32-byte HMAC (second) of first with its content key */
+unsigned int MlnImpl_8104CF00(int handle, int kind, unsigned int firstSize,
+			      const unsigned char *first, unsigned int secondSize,
+			      const unsigned char *second)
+{
+	MlnCoreRecordHandle *rec = NULL;
+	MlnHandleTable *table;
+	MlnBuffer message;
+	MlnBuffer signature;
+	unsigned int ret;
+
+	table = MlnCoreHandleTable(MlnImpl_81006EAC());
+	if (table == NULL)
+		return 2;
+	ret = MlnImpl_81069FE8(handle, table, &rec);
+	if (ret != 0)
+		return ret;
+	if (rec == NULL)
+		return 3;
+	if (kind != 1 || firstSize == 0 || first == NULL || second == NULL || secondSize != 32)
+		return 4;
+	if (rec->kind == MLN_SERVICE_RECORD_PLAIN)
+		return 0x20;
+
+	message.size = firstSize;
+	message.data = (unsigned char *)first;
+	signature.size = secondSize;
+	signature.data = (unsigned char *)second;
+	if (MlnImpl_81061898(2, rec->contentKey->secretKey, &message, &signature) != 0)
+		return 0x22;
+	return 0;
+}
+
+/* decrypt data with a record handle's content key into *out */
+unsigned int MlnImpl_8104D018(int handle, const MlnBuffer *data, MlnBuffer **out)
+{
+	MlnCoreRecordHandle *rec = NULL;
+	MlnHandleTable *table;
+	MlnCoreHandle *core;
+	const MlnOctopusKey *key;
+	unsigned int ret;
+
+	table = MlnCoreHandleTable(MlnImpl_81006EAC());
+	if (table == NULL)
+		return 2;
+	ret = MlnImpl_81069FE8(handle, table, &rec);
+	if (ret != 0)
+		return ret;
+	if (rec == NULL || rec->core == NULL || rec->contentKey == NULL ||
+	    rec->contentKey->secretKey == NULL)
+		return 3;
+	core = rec->core;
+	key = rec->contentKey->secretKey;
+	if (core->outcome == 0 || core->kind != 0)
+		return 0x50;
+
+	ret = MlnImpl_81061B2C(key, data, out);
+	switch (ret) {
+	case 0:
+	case 2:
+		return ret;
+	case 3:
+		return 4;
+	case 4:
+		return 3;
+	case 6:
+		return 0x44;
+	default:
+		return 0x20;
+	}
 }

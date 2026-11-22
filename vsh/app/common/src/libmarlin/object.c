@@ -3250,7 +3250,8 @@ int MlnImpl_81041F48(MlnOctopusSignedBundle *signedBundle, MlnOctopusContentKey 
 			ret = 0x230F0001;
 			goto out;
 		}
-		if (MlnImpl_81061898(pair->signature->size == 32 ? 2 : 1, key) != 0) {
+		if (MlnImpl_81061898(pair->signature->size == 32 ? 2 : 1, key, pair->signedInfo,
+				      pair->signature) != 0) {
 			ret = 0x230F0001;
 			goto out;
 		}
