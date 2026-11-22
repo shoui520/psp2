@@ -2977,12 +2977,12 @@ void MlnImpl_8105725C(MlnX509ValidationParameters *parameters, int anchor);
 int MlnImpl_81057314(int purpose, const MlnX509Certificates *certificates);
 int MlnImpl_810583CC(const MlnBuffer *der, MlnX509Crl **crl);
 /* the trust anchors by the platform mode (0x81058CA4-) */
-const unsigned char *MlnImpl_81058CA4(int anchor);
-const unsigned char *MlnImpl_81058CFC(int anchor);
-const unsigned char *MlnImpl_81058D58(int anchor);
-unsigned int MlnImpl_81058D90(int anchor);
-unsigned int MlnImpl_81058DEC(int anchor);
-unsigned int MlnImpl_81058E20(int anchor);
+const unsigned char *MlnImpl_81058CA4(unsigned int anchor);
+const unsigned char *MlnImpl_81058CFC(unsigned int anchor);
+const unsigned char *MlnImpl_81058D58(unsigned int anchor);
+unsigned int MlnImpl_81058D90(unsigned int anchor);
+unsigned int MlnImpl_81058DEC(unsigned int anchor);
+unsigned int MlnImpl_81058E20(unsigned int anchor);
 int MlnImpl_81058AD0(MlnX509Crl *crl);
 int MlnImpl_81058B80(const MlnX509Crl *crl, int *current);
 int MlnImpl_81058C0C(const MlnX509CrlNumber *a, const MlnX509CrlNumber *b, int *order);

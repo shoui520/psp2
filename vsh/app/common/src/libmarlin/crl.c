@@ -415,11 +415,13 @@ out:
 	return ret;
 }
 
-/* a CRL's entries, each with the buffers it points to in the DER */
+/* a CRL's entries; their buffers point into the DER */
 static inline void MlnCrlFreeEntries(MlnX509CrlEntries *entries)
 {
 	int i;
 
+	if (entries == NULL)
+		return;
 	for (i = 0; i < entries->count; i++)
 		MlnFree(MLN_HEAP_GENERAL, entries->items[i]);
 	MlnFree(MLN_HEAP_GENERAL, entries->items);
@@ -471,4 +473,269 @@ int MlnImpl_81057F70(const MlnAsn1Node *node, MlnX509CrlTbs *tbs, int *present)
 fail:
 	MlnCrlFreeEntries(entries);
 	return ret;
+}
+
+static inline void MlnCrlFreeTbs(MlnX509CrlTbs *tbs)
+{
+	if (tbs == NULL)
+		return;
+	MlnCrlFreeEntries(tbs->revokedCertificates);
+	MlnFree(MLN_HEAP_GENERAL, tbs);
+}
+
+static inline void MlnCrlFreeCertificate(MlnX509CrlCertificate *certificate)
+{
+	if (certificate == NULL)
+		return;
+	MlnCrlFreeTbs(certificate->tbs);
+	MlnFree(MLN_HEAP_GENERAL, certificate);
+}
+
+/* reads a TBSCertList field from its node, NULL when the fields have run out */
+typedef int (*MlnCrlFieldParser)(const MlnAsn1Node *node, MlnX509CrlTbs *tbs, int *present);
+
+/* a condition a parsed CRL must meet */
+typedef int (*MlnCrlCheck)(const MlnX509CrlCertificate *crl);
+
+/* one field: its node is the next one unless the field is absent */
+static inline int MlnCrlParseField(MlnCrlFieldParser parser, const MlnAsn1Node *node,
+				   MlnX509CrlTbs *tbs, unsigned int *index)
+{
+	int present = 1;
+	int ret;
+
+	ret = parser(MlnX509Child(node, *index), tbs, &present);
+	if (ret != 0)
+		return ret;
+	if (present)
+		(*index)++;
+	return 0;
+}
+
+/* a TBSCertList, its fields in order, an optional one that is absent not taking a node */
+static inline int MlnCrlParseTbs(const MlnAsn1Node *node, MlnX509CrlTbs **out)
+{
+	MlnCrlFieldParser parsers[] = {
+		MlnImpl_81057F04,	/* version */
+		MlnImpl_81057C88,	/* signature */
+		MlnImpl_81057D48,	/* issuer */
+		MlnImpl_81057D00,	/* thisUpdate */
+		MlnImpl_81057CB8,	/* nextUpdate */
+		MlnImpl_81057F70,	/* revokedCertificates */
+		MlnImpl_810577F4,	/* crlExtensions */
+	};
+	MlnX509CrlTbs *tbs;
+	unsigned int index;
+	unsigned int i;
+	int ret;
+
+	tbs = MlnAllocate(MLN_HEAP_GENERAL, sizeof(*tbs));
+	if (tbs == NULL)
+		return 2;
+	MlnMemset(tbs, 0, sizeof(*tbs));
+	MlnImpl_8103AC08(node, &tbs->encoding);
+	index = 0;
+	for (i = 0; i < sizeof(parsers) / sizeof(parsers[0]); i++) {
+		ret = MlnCrlParseField(parsers[i], node, tbs, &index);
+		if (ret != 0) {
+			MlnCrlFreeTbs(tbs);
+			return ret;
+		}
+	}
+	*out = tbs;
+	return 0;
+}
+
+/* a CertificateList from its DER */
+static inline int MlnCrlParseCertificate(const MlnBuffer *der, MlnX509CrlCertificate **out)
+{
+	MlnX509CrlCertificate *certificate;
+	MlnAsn1Node *tree = NULL;
+	MlnAsn1Node *tbs;
+	MlnAsn1Node *algorithm;
+	MlnAsn1Node *signature;
+	int ret;
+
+	certificate = MlnAllocate(MLN_HEAP_GENERAL, sizeof(*certificate));
+	if (certificate == NULL) {
+		ret = 2;
+		goto out;
+	}
+	MlnMemset(certificate, 0, sizeof(*certificate));
+	ret = MlnImpl_810378E4(MLN_HEAP_GENERAL, der->data, der->size, NULL, &tree);
+	if (ret != 0)
+		goto fail;
+	tbs = MlnX509Child(tree, 0);
+	algorithm = MlnX509Child(tree, 1);
+	signature = MlnX509Child(tree, 2);
+	if (tbs == NULL || algorithm == NULL || signature == NULL) {
+		ret = MLN_CRL_ERROR_FORMAT;
+		goto fail;
+	}
+	ret = MlnCrlParseTbs(tbs, &certificate->tbs);
+	if (ret != 0)
+		goto fail;
+	ret = MlnImpl_8103AA04(algorithm, &certificate->signatureAlgorithm);
+	if (ret != 0)
+		goto fail;
+	if (MLN_ASN1_IDENTIFIER(signature) != MLN_ASN1_ID(0, 0, MLN_ASN1_TAG_BIT_STRING)) {
+		ret = MLN_CRL_ERROR_FORMAT;
+		goto fail;
+	}
+	/* the BIT STRING's contents after its unused-bits octet */
+	certificate->signature.size = signature->length - 1;
+	certificate->signature.data = signature->data + 1;
+	*out = certificate;
+out:
+	MlnImpl_81036FC8(MLN_HEAP_GENERAL, tree);
+	return ret;
+fail:
+	MlnImpl_81036FC8(MLN_HEAP_GENERAL, tree);
+	MlnCrlFreeCertificate(certificate);
+	return ret;
+}
+
+/* the CRL's algorithms agree, its distribution point covers everything, its dates are ordered */
+static inline int MlnCrlCheckAll(const MlnX509CrlCertificate *crl)
+{
+	MlnCrlCheck checks[] = {
+		MlnImpl_81057C3C,
+		MlnImpl_81057728,
+		MlnImpl_810577D4,
+	};
+	unsigned int i;
+
+	for (i = 0; i < sizeof(checks) / sizeof(checks[0]); i++) {
+		if (!checks[i](crl))
+			return MLN_CRL_ERROR_FORMAT;
+	}
+	return 0;
+}
+
+/* the CRL's signature under the platform's CRL signing key, trust anchor 3 */
+static inline int MlnCrlVerify(const MlnX509CrlCertificate *crl)
+{
+	MlnBuffer modulus;
+	MlnBuffer exponent;
+	void *key = NULL;
+	int ret;
+
+	modulus.size = MlnImpl_81058DEC(3);
+	modulus.data = (unsigned char *)MlnImpl_81058CFC(3);
+	exponent.size = MlnImpl_81058E20(3);
+	exponent.data = (unsigned char *)MlnImpl_81058D58(3);
+	ret = MlnImpl_81055670(&key, &modulus, &exponent, NULL, NULL, NULL, NULL, NULL, NULL);
+	if (ret != 0)
+		goto out;
+	switch (crl->signatureAlgorithm.algorithm) {
+	case MLN_X509_ALGORITHM_SHA1_RSA:
+		ret = MlnImpl_81056F0C(key, 0, &crl->tbs->encoding, &crl->signature);
+		break;
+	case MLN_X509_ALGORITHM_SHA256_RSA:
+		ret = MlnImpl_81056F0C(key, 1, &crl->tbs->encoding, &crl->signature);
+		break;
+	default:
+		ret = MLN_CRL_ERROR_FORMAT;
+		break;
+	}
+out:
+	MlnImpl_81055ABC(key);
+	return ret;
+}
+
+/* a CRL from its DER, checked and its signature verified */
+int MlnImpl_810583CC(const MlnBuffer *der, MlnX509Crl **out)
+{
+	MlnX509Crl *crl;
+	int ret;
+
+	crl = MlnAllocate(MLN_HEAP_GENERAL, sizeof(*crl));
+	if (crl == NULL) {
+		ret = 2;
+		goto error;
+	}
+	MlnMemset(crl, 0, sizeof(*crl));
+	crl->der = MlnBufferCreate(MLN_HEAP_GENERAL, der->size, der->data);
+	if (crl->der == NULL) {
+		ret = 2;
+		goto fail;
+	}
+	ret = MlnCrlParseCertificate(crl->der, &crl->certificate);
+	if (ret != 0)
+		goto fail;
+	ret = MlnCrlCheckAll(crl->certificate);
+	if (ret != 0)
+		goto fail;
+	ret = MlnCrlVerify(crl->certificate);
+	if (ret != 0)
+		goto fail;
+	*out = crl;
+	return 0;
+fail:
+	MlnImpl_81058AD0(crl);
+error:
+	if (ret != 0) {
+		if ((ret & 0xFFFF0000) == 0x22000000 || (ret & 0xFFFF0000) == 0x22060000)
+			ret = MLN_CRL_ERROR_FORMAT;
+		else if (ret == MLN_CRL_ERROR_ENCODING)
+			ret = MLN_CRL_ERROR_FORMAT;
+	}
+	return ret;
+}
+
+int MlnImpl_81058AD0(MlnX509Crl *crl)
+{
+	if (crl != NULL) {
+		MlnCrlFreeCertificate(crl->certificate);
+		MlnBufferDestroy(MLN_HEAP_GENERAL, crl->der);
+		MlnFree(MLN_HEAP_GENERAL, crl);
+	}
+	return 0;
+}
+
+/* whether the time is within the CRL's thisUpdate and nextUpdate; none is not current */
+int MlnImpl_81058B80(const MlnX509Crl *crl, int *current)
+{
+	const MlnX509CrlTbs *tbs;
+	unsigned int seconds;
+	MlnDateTime now;
+	int ret;
+
+	if (crl == NULL) {
+		*current = 0;
+		return 0;
+	}
+	tbs = crl->certificate->tbs;
+	ret = MlnImpl_81052EBC(&seconds);
+	if (ret != 0)
+		return ret;
+	ret = MlnTimeFromSeconds(&seconds, 0, 0, &now);
+	if (ret != 0)
+		return ret;
+	ret = MlnImpl_8103B0C4(&tbs->thisUpdate, &now);
+	if (ret != 0)
+		return ret;
+	*current = MlnImpl_8103B0C4(&now, &tbs->nextUpdate) == 0;
+	return 0;
+}
+
+/* the order of two CRL numbers, compared as 20 big-endian bytes */
+int MlnImpl_81058C0C(const MlnX509CrlNumber *a, const MlnX509CrlNumber *b, int *order)
+{
+	int i;
+
+	if (a == NULL || b == NULL || order == NULL || !a->present || !b->present)
+		return 3;
+	*order = 0;
+	for (i = 0; i < (int)sizeof(a->number); i++) {
+		if (a->number[i] < b->number[i]) {
+			*order = -1;
+			return 0;
+		}
+		if (a->number[i] > b->number[i]) {
+			*order = 1;
+			return 0;
+		}
+	}
+	return 0;
 }
