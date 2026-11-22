@@ -470,7 +470,7 @@ unsigned int MlnImpl_8104DC4C(int handle, unsigned int size, const unsigned char
 	nameBuffer.data = (unsigned char *)name;
 	message.size = size;
 	message.data = (unsigned char *)data;
-	ret = MlnImpl_81082DC0(MlnImpl_81066CE0(service->exchange, &groups, NULL, NULL,
+	ret = MlnImpl_81082DC0(MlnImpl_81066CE0(service->exchange, &groups, 0, NULL,
 						&nameBuffer, &message, &response));
 	if (ret != 0)
 		goto out;
@@ -665,7 +665,7 @@ unsigned int MlnImpl_8104E18C(int handle, unsigned int size, const unsigned char
 	nameBuffer.data = (unsigned char *)name;
 	message.size = size;
 	message.data = (unsigned char *)data;
-	ret = MlnImpl_81082DC0(MlnImpl_810670A0(service->exchange, &groups, NULL, NULL, header,
+	ret = MlnImpl_81082DC0(MlnImpl_810670A0(service->exchange, &groups, 0, NULL, header,
 						thirdNode, fourthNode, &nameBuffer, &message,
 						&response));
 	if (ret != 0)
@@ -932,7 +932,7 @@ unsigned int MlnImpl_8104E9B8(int handle, unsigned int size, const unsigned char
 	nameBuffer.data = (unsigned char *)name;
 	message.size = size;
 	message.data = (unsigned char *)data;
-	ret = MlnImpl_81082DC0(MlnImpl_810681E4(service->exchange, &groups, NULL, NULL, node,
+	ret = MlnImpl_81082DC0(MlnImpl_810681E4(service->exchange, &groups, 0, NULL, node,
 						&nameBuffer, &message, &response));
 	if (ret != 0)
 		goto out;
@@ -1181,7 +1181,7 @@ unsigned int MlnImpl_8104F044(int handle, unsigned int size, const unsigned char
 	nameBuffer.data = (unsigned char *)name;
 	message.size = size;
 	message.data = (unsigned char *)data;
-	ret = MlnImpl_81082DC0(MlnImpl_81067814(service->exchange, &groups, NULL, NULL, fourthNode,
+	ret = MlnImpl_81082DC0(MlnImpl_81067814(service->exchange, &groups, 0, NULL, fourthNode,
 						fifthNode, &nameBuffer, &message, &response));
 	if (ret != 0)
 		goto out;

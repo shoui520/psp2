@@ -2136,38 +2136,113 @@ unsigned int MlnImpl_8104D16C(int handle, int kind, MlnBuffer **out);
 unsigned int MlnImpl_8104D208(const MlnBuffer *controller, const MlnBuffer *token);
 
 /*
+ * A NEMO message's header (0x30 bytes): the parts set with MlnImpl_8107A04C, a part's buffer at
+ * the index of its bit. The part names are ours, from where this library fills them.
+ */
+#define MLN_NEMO_PART_ACTION		0x002	/* the action's URN */
+#define MLN_NEMO_PART_ORIGIN		0x004	/* a license transfer's: the requester before */
+#define MLN_NEMO_PART_RECIPIENT		0x008	/* a license transfer's: the sender before */
+#define MLN_NEMO_PART_SENDER		0x010	/* the sender's node, from its credentials */
+#define MLN_NEMO_PART_REQUESTER		0x100	/* a request's sender */
+#define MLN_NEMO_PART_CONFIRMER		0x200	/* a license transfer step's sender */
+
+typedef struct MlnNemoHeader {
+	int count;			/* the parts present */
+	unsigned int present;		/* their MLN_NEMO_PART_* bits */
+	MlnBuffer *parts[10];		/* by bit, MLN_NEMO_PART_SENDER's in parts[4] */
+} MlnNemoHeader;
+
+/* a NEMO message a service exchange sends and receives (0x7c bytes) */
+typedef struct MlnNemoMessage {
+	MlnXmlNode *body;		/* the payload sent */
+	MlnBufferGroups *credentials;	/* the sender's */
+	unsigned char nodeCount;
+	MlnXmlNode **nodes;		/* nodes sent with the payload */
+	MlnXmlNodeList *bundles;	/* a license transfer response's */
+	MlnBuffer *received;
+	MlnBuffer *transferKey;		/* dropped once a license transfer's move is sent */
+	MlnBuffer *peer;		/* the name the service was given */
+	int reserved[4];
+	void *keys[2];			/* both set before a request is made */
+	int reserved2;
+	MlnNemoHeader header;
+	int reserved3[2];
+	int integrity;			/* the request is signed */
+	int confidentiality;		/* and encrypted */
+} MlnNemoMessage;
+
+/* the protocol of a service exchange */
+#define MLN_EXCHANGE_REGISTRATION	2	/* the registration service */
+#define MLN_EXCHANGE_LICENSE		3	/* the license service */
+#define MLN_EXCHANGE_TRANSFER		6	/* a license transfer between devices */
+
+/* an exchange's errors (exchange.c) */
+#define MLN_EXCHANGE_ERROR_FORMAT	0x23000001	/* a payload not as expected */
+#define MLN_EXCHANGE_ERROR_MESSAGE	0x23000002	/* the message could not be made or read */
+#define MLN_EXCHANGE_ERROR_FAULT	0x23000009	/* no fault to give */
+
+/* a service exchange (MlnImpl_81068844, 0x80 bytes) */
+typedef struct MlnExchange {
+	int protocol;			/* MLN_EXCHANGE_* */
+	MlnNemoMessage message;
+} MlnExchange;
+
+/* the NEMO message (0x81072240-): its parts, sending and receiving */
+unsigned int MlnImpl_81072240(MlnNemoMessage *message, unsigned char kind, unsigned char step,
+			      MlnBuffer **out);
+unsigned int MlnImpl_81074EC4(unsigned int size, const void *data, MlnNemoMessage *message,
+			      const char *name, const char *uri, unsigned char kind,
+			      unsigned char step,
+			      int faultKind, int faultStep, MlnXmlNode **payload);
+unsigned int MlnImpl_81078EB8(const MlnBuffer *xml, const char *prefix, const char *uri,
+			      MlnXmlNode **node);
+unsigned int MlnImpl_810799B0(MlnNemoHeader *header);
+unsigned int MlnImpl_81079A7C(MlnNemoMessage *message, MlnBuffer *first, MlnBuffer *second);
+unsigned int MlnImpl_81079EE8(const MlnBuffer *credential, MlnBuffer **node);
+unsigned int MlnImpl_8107A04C(MlnNemoHeader *header, unsigned int part, const MlnBuffer *value);
+unsigned int MlnImpl_8107A15C(MlnNemoMessage *message);
+unsigned int MlnImpl_8107A19C(MlnNemoMessage *message);
+
+/* exchange.c */
+unsigned int MlnImpl_810685FC(unsigned int ret);
+unsigned int MlnImpl_81068798(MlnExchange *exchange);
+unsigned int MlnImpl_810688CC(MlnExchange *exchange);
+
+/*
  * A service handle of MlnImpl_8104D5E0 (0x1c bytes), in MlnShared's
  * buffers[5]: a protocol exchange of a kind, with the values it was given.
  */
 typedef struct MlnCoreServiceHandle {
 	int state;			/* the kind in bits 8 and up, the messages done below */
-	void *exchange;			/* the protocol's (MlnImpl_81068844, 0x80 bytes) */
+	MlnExchange *exchange;		/* the protocol's (MlnImpl_81068844) */
 	MlnServiceList *values;		/* a copy of the values given */
 	MlnBuffer *messages[4];
 } MlnCoreServiceHandle;
 
-unsigned int MlnImpl_81068844(int protocol, void **exchange);
-int MlnImpl_81068888(void *exchange);
+unsigned int MlnImpl_81068844(int protocol, MlnExchange **exchange);
+int MlnImpl_81068888(MlnExchange *exchange);
 unsigned int MlnImpl_8108299C(MlnBufferGroups **groups);
-int MlnImpl_81066CE0(void *exchange, MlnBufferGroups **groups, void *reserved1, void *reserved2,
-		     const MlnBuffer *name, const MlnBuffer *message, MlnBuffer **response);
+int MlnImpl_81066CE0(MlnExchange *exchange, MlnBufferGroups **credentials,
+		     unsigned int nodeCount, MlnXmlNode **nodes, const MlnBuffer *name,
+		     const MlnBuffer *payload, MlnBuffer **request);
 unsigned int MlnImpl_81082DC0(int ret);
-unsigned int MlnImpl_81066F74(void *exchange, const MlnBuffer *message, MlnBuffer **response);
+unsigned int MlnImpl_81066F74(MlnExchange *exchange, const MlnBuffer *response,
+			      MlnBuffer **node);
 unsigned int MlnImpl_81082B04(void *exchange);
 unsigned int MlnImpl_81082BC4(MlnXmlNode **node);
 unsigned int MlnImpl_81082B44(MlnXmlNode *document, MlnXmlNode **node);
-unsigned int MlnImpl_81067494(void *exchange, const MlnBuffer *message, MlnBuffer **response,
-			      MlnXmlNode **document);
-int MlnImpl_81067618(void *exchange, MlnXmlNode *node, MlnBuffer **reply);
+unsigned int MlnImpl_81067494(MlnExchange *exchange, const MlnBuffer *response,
+			      MlnBuffer **link, MlnXmlNode **agent);
+int MlnImpl_81067618(MlnExchange *exchange, MlnXmlNode *node, MlnBuffer **reply);
 unsigned int MlnImpl_81059600(const MlnBuffer *chain, MlnBuffer ***certificates, int *count);
 unsigned int MlnImpl_81082A60(MlnBuffer **certificates, int count, int kind);
-int MlnImpl_81068A8C(void *exchange, MlnBuffer *first, MlnBuffer *second);
-int MlnImpl_81067CA4(void *exchange, int kind, MlnBufferGroups **groups, const MlnBuffer *extra,
-		     MlnXmlNode **document, MlnBuffer **response);
+unsigned int MlnImpl_81068A8C(MlnExchange *exchange, MlnBuffer *first, MlnBuffer *second);
+int MlnImpl_81067CA4(MlnExchange *exchange, int step, MlnBufferGroups **credentials,
+		     const MlnBuffer *peer, MlnXmlNode **document, MlnBuffer **request);
 unsigned int MlnImpl_81050210(int handle, int kind, MlnXmlNode **document,
 			      const MlnBuffer *extra, MlnBlob *out);
-unsigned int MlnImpl_81068060(void *exchange, int kind, const char *name,
-			      const MlnBuffer *message, MlnXmlNode **document);
+unsigned int MlnImpl_81068060(MlnExchange *exchange, int step, const char *name,
+			      const MlnBuffer *response, MlnXmlNode **document);
 unsigned int MlnImpl_81050378(int handle, int kind, const char *name,
 			      const MlnBuffer *message, MlnXmlNode **document);
 unsigned int MlnImpl_81054880(void **cipher, int algorithm, const void *iv, unsigned int ivSize,
@@ -2208,18 +2283,22 @@ unsigned int MlnImpl_81065430(const MlnBuffer *agentId, const MlnBuffer *context
 			      const MlnBuffer *controlId, MlnXmlNode *parameter, MlnXmlNode *agent,
 			      MlnXmlNode *context, MlnXmlNode **document);
 unsigned int MlnImpl_810504EC(unsigned int r, unsigned int fallback);
-unsigned int MlnImpl_81067BA4(void *exchange, const MlnBuffer *message, MlnXmlNode **document);
-int MlnImpl_81067814(void *exchange, MlnBufferGroups **groups, void *reserved1, void *reserved2,
-		     MlnXmlNode *first, MlnXmlNode *second, const MlnBuffer *name,
-		     const MlnBuffer *message, MlnBuffer **response);
-unsigned int MlnImpl_810684CC(void *exchange, const MlnBuffer *message, MlnBuffer **token);
-int MlnImpl_810681E4(void *exchange, MlnBufferGroups **groups, void *reserved1, void *reserved2,
-		     MlnXmlNode *node, const MlnBuffer *name, const MlnBuffer *message,
-		     MlnBuffer **response);
+unsigned int MlnImpl_81067BA4(MlnExchange *exchange, const MlnBuffer *response,
+			      MlnXmlNode **agent);
+int MlnImpl_81067814(MlnExchange *exchange, MlnBufferGroups **credentials,
+		     unsigned int nodeCount, MlnXmlNode **nodes, MlnXmlNode *from,
+		     MlnXmlNode *to, const MlnBuffer *name, const MlnBuffer *payload,
+		     MlnBuffer **request);
+unsigned int MlnImpl_810684CC(MlnExchange *exchange, const MlnBuffer *response,
+			      MlnBuffer **license);
+int MlnImpl_810681E4(MlnExchange *exchange, MlnBufferGroups **credentials,
+		     unsigned int nodeCount, MlnXmlNode **nodes, MlnXmlNode *node,
+		     const MlnBuffer *name, const MlnBuffer *payload, MlnBuffer **request);
 unsigned int MlnImpl_81082CB4(const MlnBuffer *xml, MlnXmlNode **node, MlnBlob *detail);
-int MlnImpl_810670A0(void *exchange, MlnBufferGroups **groups, void *reserved1, void *reserved2,
-		     MlnXmlNode *first, MlnXmlNode *second, MlnXmlNode *third,
-		     const MlnBuffer *name, const MlnBuffer *message, MlnBuffer **response);
+int MlnImpl_810670A0(MlnExchange *exchange, MlnBufferGroups **credentials, int nodeCount,
+		     MlnXmlNode **nodes, MlnXmlNode *from, MlnXmlNode *fromOverride,
+		     MlnXmlNode *to, const MlnBuffer *name, const MlnBuffer *payload,
+		     MlnBuffer **request);
 int MlnImpl_8105F2C4(int *id, unsigned int *flags);
 unsigned int MlnImpl_81052D14(int id, int mode, unsigned int start, int owner);
 unsigned int MlnImpl_81052D84(int *id, int *mode);
@@ -2385,7 +2464,8 @@ typedef struct MlnServiceFault {
 	unsigned int detailCount;
 } MlnServiceFault;
 
-unsigned int MlnImpl_81068C4C(void *exchange, MlnServiceFault **fault);
+unsigned int MlnImpl_81068C4C(MlnExchange *exchange, MlnServiceFault **fault);
+unsigned int MlnImpl_81079814(MlnNemoMessage *message, MlnServiceFault **fault);
 int MlnImpl_8102E8A0(const MlnServiceReply *reply, MlnServiceArgs **out, int *status);
 unsigned int MlnImpl_8104AB18(int handle, unsigned int size, const unsigned char *data,
 			      MlnBlob *out);
