@@ -1999,10 +1999,11 @@ __attribute__((noinline)) int MlnImpl_8101D020(const char *path, MlnBuffer **con
 	if (length <= 44)
 		goto invalid;
 	end = length - 4;
-	if (MlnMemcmp(&path[end], ".xml", 4) != 0 || (signed char)path[length - 45] != MlnImpl_81026430())
+	if (MlnMemcmp(&path[end], ".xml", 4) != 0 || MlnImpl_81026430() != (signed char)path[length - 45])
 		goto invalid;
 	for (i = length - 44; i < end; i++) {
-		if ((unsigned char)path[i] - 'A' > 5 && (unsigned char)path[i] - '0' > 9)
+		if ((unsigned int)((unsigned char)path[i] - 'A') > 5 &&
+		    (unsigned int)((unsigned char)path[i] - '0') > 9)
 			goto invalid;
 	}
 	ret = MlnImpl_810259F8(MLN_FILE_AREA, path, 1, &file);
