@@ -15,6 +15,7 @@
 #include <std/list>
 #include <std/vector>
 #include <common/shared_ptr.h>
+#include <math/ngp/v2.h>
 #include <math/ngp/v4.h>
 #include <job/job.h>
 #include <common/job_slots.h>
@@ -449,26 +450,36 @@ public:
 typedef paf::map<paf::string, LsdbIconPtr> IndicatorIconInfoMap;
 typedef void (*IndicatorIconInfoCB)(IndicatorIconInfoMap *icons, int result, void *arg);
 
-/* a text scrolled along while its item is focused, on the scene of the item's drawer
-   (0x81180848-; 48 bytes; PLACEHOLDER names, its file not written yet) */
+/* a text scrolled along while its item is focused, on the scene of the item's drawer, ticked by
+   the scene's draw function: shown a while, scrolled its overflow at 100 a second, faded out and
+   in again at its start, then again or stopped (48 bytes; indicator_text_scroll.cpp,
+   0x81180848-0x81180FD8; PLACEHOLDER names) */
 class IndicatorTextScroll {
 public:
 	IndicatorTextScroll(paf::ui::Scene *scene);		/* (0x81180848) */
 	virtual ~IndicatorTextScroll();				/* (0x8118087C) */
-	/* the text scrolled (0x81180C84) and back in place (0x81180C24) */
-	int Start(int mode, paf::graph::TextObj *text);
-	int Stop(paf::graph::TextObj *text);
+	/* the text scrolled across, the argument unused (0x81180C84), and back in place
+	   (0x81180C24) */
+	void Start(int unused, paf::graph::TextObj *text);
+	void Stop(paf::graph::TextObj *text);
+	/* the text's bounds laid out on one line (0x811808F0) */
+	int GetTextBounds(paf::math::v2 &bounds);
+	/* the scroll begun in the direction, or ended (0: none), again after it when looping
+	   (0x81180A58) */
+	void Reset(int direction, bool loop);
+	/* a frame's tick (0x81180D32) */
+	void Update();
 
-	int m_state;					/* PLACEHOLDER: not read yet */
-	SceUInt64 m_time;				/* PLACEHOLDER: not read yet */
-	bool m_running;					/* PLACEHOLDER: not read yet */
-	int m_offset;					/* PLACEHOLDER: not read yet */
-	int m_width;					/* PLACEHOLDER: not read yet */
-	int m_speed;					/* PLACEHOLDER: not read yet */
+	int m_direction;				/* 0 none, 1 across, 2 down */
+	paf::math::v2 m_distance;			/* the text's overflow */
+	bool m_scrolling;
+	int m_phase;					/* INDICATOR_TEXT_SCROLL_* */
+	float m_elapsed;				/* in the phase, in milliseconds */
+	float m_duration;				/* of the scroll, in milliseconds */
 	paf::graph::TextObj *m_text;			/* the text scrolled */
 	bool m_ellipsis;				/* the text's, kept while it scrolls */
 	bool m_wordWrap;				/* the text's, kept while it scrolls */
-	bool m_wrapped;					/* PLACEHOLDER: not read yet */
+	bool m_loop;					/* scrolled again after the fade */
 	paf::ui::Scene *m_scene;
 };
 
