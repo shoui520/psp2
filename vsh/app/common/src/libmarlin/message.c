@@ -314,9 +314,9 @@ __attribute__((noinline)) int MlnImpl_81020B20(unsigned char *p, const MlnMessag
 
 	if (message->type == 0x603 || message->type == 0x10a6 || message->type == 0x502) {
 		if (payload != NULL)
-			return MLN_CORE_ERROR_INVALID;
+			return 7;
 	} else if (payload == NULL) {
-		return MLN_CORE_ERROR_INVALID;
+		return 7;
 	}
 	switch (message->type) {
 	case 0x400:			/* MlnMessageAccount, the same layout */
@@ -603,12 +603,12 @@ static inline __attribute__((always_inline)) int MlnHttpHeadersEncode(const MlnH
 	if (headers->count == 0)
 		goto out;
 	if (headers->items == NULL) {
-		error = MLN_CORE_ERROR_INVALID;
+		error = 7;
 		goto out;
 	}
 	for (i = 0; i < headers->count; i++) {
 		if (headers->items[i] == NULL) {
-			error = MLN_CORE_ERROR_INVALID;
+			error = 7;
 			goto out;
 		}
 		size += MlnStrlen(headers->items[i]->name) + MlnStrlen(headers->items[i]->value) + 3;
