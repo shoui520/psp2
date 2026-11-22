@@ -2025,7 +2025,16 @@ unsigned int MlnImpl_81062164(MlnCoreContext *context, MlnOctopusNode *node);
 unsigned int MlnImpl_81062224(MlnCoreContext *context, MlnOctopusArray *links);
 unsigned int MlnImpl_810623F0(MlnCoreContext *context, MlnOctopusSamlAssertion *assertion);
 unsigned int MlnImpl_81062450(MlnCoreContext *context, MlnArray *pair);
+/* the device's credentials in the cache (credentials.c) */
+int MlnImpl_81064238(const MlnBufferGroups *groups);
+int MlnImpl_81064340(MlnBufferGroups **out);
 unsigned int MlnImpl_810644A0(MlnOctopusSamlAssertion **out);
+int MlnImpl_8106455C(const MlnBuffer *xml);
+int MlnImpl_81064728(const MlnBuffer *der, int *count, MlnBuffer ***items);
+int MlnImpl_81064838(const MlnBuffer *packed, MlnBuffer **first, MlnBuffer **second,
+		     MlnBuffer **third);
+int MlnImpl_81064A18(const MlnBuffer *first, int count1, MlnBuffer **items1, int count2,
+		     MlnBuffer **items2, MlnBuffer **out);
 
 /*
  * The handle table in MlnShared's buffers[4]: 0x400 slots and whether
@@ -2438,6 +2447,7 @@ typedef struct MlnRegistrationSession {
 	MlnXmlNode *node;
 } MlnRegistrationSession;
 
+int MlnImpl_81064CD8(MlnXmlNode *node, const char *name, MlnXmlNode **out);
 unsigned int MlnImpl_81064D8C(void **context);
 unsigned int MlnImpl_81064DD4(void *context);
 unsigned int MlnImpl_81064E18(MlnBufferGroups **info);
@@ -2989,6 +2999,9 @@ typedef struct MlnX509Certificates {
 	int count;
 	MlnBuffer **items;
 } MlnX509Certificates;
+
+/* a list of copies of count buffers, in the reverse order (credentials.c) */
+int MlnImpl_81064614(int count, MlnBuffer **items, MlnX509Certificates **out);
 
 /* an RSA public key */
 typedef struct MlnX509RsaKey {

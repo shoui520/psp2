@@ -63,6 +63,8 @@ set(MLN_ENGINE_SOURCES
 	canonical.c
 	octopuskey.c
 	control.c
+	credentials.c
+	registration.c
 )
 psp2_module(${PSP2_TARGET} KIND user COMPILER gcc48 PARTIAL SOURCES
 	${MLN_ARM_SOURCES}
