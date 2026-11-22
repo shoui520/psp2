@@ -1977,6 +1977,38 @@ unsigned int MlnImpl_8104A558(void);
  */
 typedef struct MlnCoreContext MlnCoreContext;
 
+/* the control VM, the link graph and the key store under a core context */
+unsigned int MlnImpl_8106C794(void *vm, const char *routine);
+unsigned int MlnImpl_8106C54C(unsigned int size, void *host, void **vm);
+unsigned int MlnImpl_8106C6F8(void *vm, MlnBuffer *codeModule, MlnBuffer *uid, MlnBuffer *protocol,
+			      MlnBuffer *type, MlnBuffer *signer, MlnOctopusArray *attributes);
+unsigned int MlnImpl_8106C788(void *vm, MlnBuffer *uid);
+unsigned int MlnImpl_8106C970(void *vm, unsigned int *status);
+unsigned int MlnImpl_8106C9F4(void *vm, unsigned int value, MlnBuffer **out, unsigned int *type);
+unsigned int MlnImpl_8106EE94(void *graph, MlnPlanktonParameterBlock *parameters);
+unsigned int MlnImpl_8106EEA8(void *graph, MlnOctopusBundle *bundle);
+/* the control VM's host functions; their parameters come with their C */
+unsigned int MlnImpl_8106F504();
+unsigned int MlnImpl_81070318();
+unsigned int MlnImpl_8106F314();
+unsigned int MlnImpl_8106F388();
+unsigned int MlnImpl_8106F3F4();
+unsigned int MlnImpl_8106F438();
+unsigned int MlnImpl_81070424();
+void MlnImpl_8106C6C4(void *vm);
+unsigned int MlnImpl_8106EC8C(void **graph);
+void MlnImpl_8106ED54(void *graph);
+unsigned int MlnImpl_8106EE80(void *graph, MlnOctopusNode *node);
+unsigned int MlnImpl_8106EEBC(void *graph, MlnOctopusArray *links);
+unsigned int MlnImpl_8106F264(void *graph, MlnOctopusSamlAssertion *assertion);
+unsigned int MlnImpl_810706F4(void *graph, MlnArray *pair);
+unsigned int MlnImpl_81070808(void *graph, MlnArray **pair);
+unsigned int MlnImpl_810710F8(void **keys);
+void MlnImpl_81071278(void *keys);
+unsigned int MlnImpl_810712F0(void *keys, const MlnOctopusKey *key);
+unsigned int MlnImpl_8107148C(void *keys, MlnBuffer *uid, MlnOctopusBroadcastKeyBlock *block);
+unsigned int MlnImpl_8107132C(void *keys, const MlnOctopusKeyPair *key);
+
 unsigned int MlnImpl_8104A560(MlnCoreContext **context, MlnBuffer **state);
 unsigned int MlnImpl_81062024(MlnCoreContext **context);
 void MlnImpl_81062060(MlnCoreContext *context);
