@@ -2436,7 +2436,40 @@ unsigned int MlnImpl_81080D18(void *key, int kind, int mode, const void *paramet
 unsigned int MlnImpl_810810F4(void *key, MlnBuffer **out);
 unsigned int MlnImpl_8108117C(void *key, unsigned int size, const void *data, MlnBuffer **out);
 unsigned int MlnImpl_81081204(MlnBuffer ***names, unsigned int *count);
+unsigned int MlnImpl_81080EF8(int shift, int node, const MlnBuffer *key, const MlnBuffer *id,
+			      const MlnBuffer *iv, const MlnBuffer *data, void **out);
+unsigned int MlnImpl_810812EC(MlnBuffer **nodeId);
+
+/* broadcastkey.c: a broadcast key block's keys, chosen by the HCI's node id */
+#define MLN_BKB_ERROR_FAILED	0x230D0001
+#define MLN_BKB_ERROR_REVOKED	0x230D0002	/* every subset of the block excludes the node */
+#define MLN_BKB_ERROR_NODE_ID	0x230D0003	/* the node id is not 16 hexadecimal digits */
+#define MLN_BKB_ERROR_VERSION	0x230D0004
+#define MLN_BKB_ERROR_FORMAT	0x230D0005
+#define MLN_BKB_DIGITS		16		/* the node id's, a row of the table each */
+#define MLN_BKB_KEY_SIZE	16
+
+/* the revocation information read, with the block's keys (0x14 bytes) */
+typedef struct MlnBkbRevocation {
+	unsigned int size;		/* its first word: the whole block's size */
+	unsigned char *id;		/* 16 bytes */
+	unsigned int columns;
+	unsigned char *table;		/* MLN_BKB_DIGITS rows of columns entries */
+	unsigned char *keys;		/* MLN_BKB_KEY_SIZE bytes each */
+} MlnBkbRevocation;
+
+/* the subset found: the key's index, and the row and range of digits it covers */
+typedef struct MlnBkbSubset {
+	unsigned int index;
+	unsigned char row;
+	unsigned char start;
+	unsigned char end;
+} MlnBkbSubset;
+
+void MlnImpl_8107D17C(const unsigned char *run, unsigned int length, MlnBkbSubset *subset);
+int MlnImpl_8107D270(MlnBkbRevocation *revocation, const MlnBuffer *keyData, void **out);
 unsigned int MlnImpl_8107DF18(MlnOctopusBroadcastKeyBlock *block, MlnBuffer *key, void **out);
+int MlnImpl_8107E124(const MlnBuffer *block, const MlnBuffer *keyData, void **out);
 
 unsigned int MlnImpl_8104A560(MlnCoreContext **context, MlnBuffer **state);
 unsigned int MlnImpl_81062024(MlnCoreContext **context);
