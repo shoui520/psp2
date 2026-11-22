@@ -2675,16 +2675,28 @@ typedef struct MlnAsn1Node {
 #define MLN_ASN1_IDENTIFIER(node)	((node)->header & 0xFFFFFF)
 #define MLN_ASN1_ID(tagClass, constructed, tag) \
 	((unsigned int)(tagClass) | (unsigned int)(constructed) << 8 | (unsigned int)(tag) << 16)
+#define MLN_ASN1_TAG_BOOLEAN	1
 #define MLN_ASN1_TAG_INTEGER	2
 #define MLN_ASN1_TAG_BIT_STRING	3
 #define MLN_ASN1_TAG_OID	6
 #define MLN_ASN1_TAG_UTF8_STRING	12
+#define MLN_ASN1_TAG_SEQUENCE	16
+#define MLN_ASN1_TAG_SET	17
 #define MLN_ASN1_TAG_UTC_TIME	23
+#define MLN_ASN1_TAG_GENERALIZED_TIME	24
 #define MLN_ASN1_INDEFINITE	0x01	/* the encoding ends with end-of-contents octets */
 #define MLN_ASN1_CONTENTS	0x02	/* data holds the encoded contents, also a constructed node's */
 #define MLN_ASN1_DATA_BORROWED	0x04	/* a primitive node's data belongs to another */
 #define MLN_ASN1_ENCODED	0x08	/* encodingLength holds the encoded size */
 #define MLN_ASN1_STATIC		0x80	/* the node is not the tree's to free */
+
+/* the child at index of a constructed node, NULL when there is none */
+static inline MlnAsn1Node *MlnX509Child(const MlnAsn1Node *node, unsigned int index)
+{
+	if (node == NULL || !node->constructed || index >= node->length)
+		return NULL;
+	return node->children[index];
+}
 
 
 int MlnImpl_810353EC(int heap, MlnAsn1Node *node);
@@ -2829,6 +2841,23 @@ typedef struct MlnX509CrlEntries {
 	MlnX509CrlEntry **items;
 } MlnX509CrlEntries;
 
+/* an IssuingDistributionPoint, its distributionPoint not kept */
+typedef struct MlnX509CrlIssuingDistributionPoint {
+	int onlyContainsUserCerts;
+	int onlyContainsCACerts;
+	unsigned char onlySomeReasons[2];
+	int onlySomeReasonsBits;
+	int indirectCRL;
+	int onlyContainsAttributeCerts;
+} MlnX509CrlIssuingDistributionPoint;
+
+/* the crlExtensions the library understands */
+typedef struct MlnX509CrlExtensions {
+	MlnBuffer authorityKeyIdentifier;
+	MlnX509CrlNumber crlNumber;
+	MlnX509CrlIssuingDistributionPoint issuingDistributionPoint;
+} MlnX509CrlExtensions;
+
 /* a TBSCertList with the extensions it understands */
 typedef struct MlnX509CrlTbs {
 	MlnBuffer encoding;		/* the signed bytes */
@@ -2838,15 +2867,7 @@ typedef struct MlnX509CrlTbs {
 	MlnDateTime thisUpdate;
 	MlnDateTime nextUpdate;
 	MlnX509CrlEntries *revokedCertificates;
-	MlnBuffer authorityKeyIdentifier;
-	MlnX509CrlNumber crlNumber;
-	/* issuingDistributionPoint */
-	int onlyContainsUserCerts;
-	int onlyContainsCACerts;
-	unsigned char onlySomeReasons[2];
-	int onlySomeReasonsBits;
-	int indirectCRL;
-	int onlyContainsAttributeCerts;
+	MlnX509CrlExtensions extensions;
 } MlnX509CrlTbs;
 
 /* a CertificateList */
@@ -2895,7 +2916,7 @@ typedef struct MlnX509ValidationParameters {
 	MlnBuffer anchorName;		/* the trust anchor's subject, DER */
 	MlnX509RsaKey anchorKey;
 	int policyCount;
-	const MlnBuffer *policies;	/* the acceptable policy OIDs */
+	MlnBuffer *policies;		/* the acceptable policy OIDs */
 	unsigned int keyUsage;		/* MLN_X509_KEY_USAGE_*: the end certificate's needed usage */
 	int checkRevocation;
 } MlnX509ValidationParameters;
@@ -2952,7 +2973,16 @@ int MlnImpl_8103AC98(const MlnAsn1Node *node, MlnX509Extensions **out);
 int MlnImpl_8103AFFC(const MlnBuffer *value, MlnBuffer *keyIdentifier, int heap);
 int MlnImpl_8103B0C4(const MlnDateTime *earlier, const MlnDateTime *later);
 int MlnImpl_8103B1E0(const MlnBuffer *serialNumber, const MlnBuffer *issuer);
+void MlnImpl_8105725C(MlnX509ValidationParameters *parameters, int anchor);
+int MlnImpl_81057314(int purpose, const MlnX509Certificates *certificates);
 int MlnImpl_810583CC(const MlnBuffer *der, MlnX509Crl **crl);
+/* the trust anchors by the platform mode (0x81058CA4-) */
+const unsigned char *MlnImpl_81058CA4(int anchor);
+const unsigned char *MlnImpl_81058CFC(int anchor);
+const unsigned char *MlnImpl_81058D58(int anchor);
+unsigned int MlnImpl_81058D90(int anchor);
+unsigned int MlnImpl_81058DEC(int anchor);
+unsigned int MlnImpl_81058E20(int anchor);
 int MlnImpl_81058AD0(MlnX509Crl *crl);
 int MlnImpl_81058B80(const MlnX509Crl *crl, int *current);
 int MlnImpl_81058C0C(const MlnX509CrlNumber *a, const MlnX509CrlNumber *b, int *order);

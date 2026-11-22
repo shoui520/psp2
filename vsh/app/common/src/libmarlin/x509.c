@@ -6,14 +6,6 @@
 
 #define MLN_X509_ERROR_FORMAT	0x22010001
 
-/* the child at index of a constructed node, NULL when there is none */
-static inline MlnAsn1Node *MlnX509Child(const MlnAsn1Node *node, unsigned int index)
-{
-	if (node == NULL || !node->constructed || index >= node->length)
-		return NULL;
-	return node->children[index];
-}
-
 /* an RSA public key's modulus and exponent, from a SubjectPublicKeyInfo's key bits */
 __attribute__((noinline)) int MlnImpl_81038718(const MlnX509PublicKey *publicKey, MlnBuffer **modulus,
 		     MlnBuffer **exponent)
@@ -1436,8 +1428,8 @@ unsigned int MlnImpl_8103B29C(const MlnBuffer *der)
 	if (ret != 0)
 		goto out;
 	if (store->crl != NULL) {
-		stored = store->crl->certificate->tbs->crlNumber;
-		number = crl->certificate->tbs->crlNumber;
+		stored = store->crl->certificate->tbs->extensions.crlNumber;
+		number = crl->certificate->tbs->extensions.crlNumber;
 		ret = MlnImpl_81058C0C(&number, &stored, &order);
 		if (ret != 0)
 			goto out;
@@ -1473,6 +1465,6 @@ unsigned int MlnImpl_8103B3EC(MlnX509CrlNumber *number)
 		MlnMemset(number, 0, sizeof(*number));
 		return 0;
 	}
-	*number = store->crl->certificate->tbs->crlNumber;
+	*number = store->crl->certificate->tbs->extensions.crlNumber;
 	return 0;
 }
