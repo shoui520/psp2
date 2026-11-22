@@ -1,7 +1,7 @@
 /*
  * indicator_notice_manager.cpp: the notices' list page, opened from the bar with the new events,
  * its list sized to them and slid in and out, its events' icons read and their commands run as
- * jobs (0x8116F9DA-0x811739D4). The file's and the names are ours (PLACEHOLDER), but the job's,
+ * jobs (0x8116F9DA-0x81173878). The file's and the names are ours (PLACEHOLDER), but the job's,
  * Job_EventWindowTaskCommand.
  */
 #include <stddef.h>
@@ -587,7 +587,7 @@ void IndicatorNoticeManager::Close(int reason, int option)
 	if (button != NULL)
 		ScePafWidget_F1176ACC(button, (common::transition::Type)0xff, 0.0f, NULL, NULL);
 	indicatorNoticeDialogCloseAll();
-	indicatorNoticeQueueClear();
+	indicatorNoticePopupCloseAll();
 
 	ui::Widget *frame = INDICATOR_NOTICE_FIND(page, ui::Widget,
 						  IDParam(s_empty_name, INDICATOR_NOTICE_PAGE_FRAME));

@@ -520,7 +520,7 @@ void Indicator::SetMode(IndicatorMode mode, bool animate)
 			}
 		}
 	}
-	indicatorNoticeQueueClear();
+	indicatorNoticePopupCloseAll();
 	indicatorNoticePageClose();
 }
 

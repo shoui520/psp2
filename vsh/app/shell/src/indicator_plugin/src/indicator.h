@@ -322,8 +322,10 @@ void indicatorNoticeDialogsDestroy(void);
 void indicatorNoticeDialogAdd(SceInt64 id, int dialogId);
 void indicatorNoticeDialogClose(SceInt64 id);
 void indicatorNoticeDialogCloseAll(void);
-void indicatorNoticeListCreate(void);
-void indicatorNoticeListDestroy(void);
+/* the popup lists kept for the notices (indicator_notice_popups.cpp: 0x811739D4, 0x81173A08;
+   PLACEHOLDER names) */
+void indicatorNoticePopupsCreate(void);
+void indicatorNoticePopupsDestroy(void);
 
 /*
  * The items of the notices' list (the event window, Job_EventWindowTaskCommand), each made from
@@ -604,9 +606,9 @@ void indicatorCreate(void);
 void indicatorDestroy(void);
 void indicatorExitReserved(void);
 
-/* the notices' queue emptied (0x81173A82) and their page closed (0x81180152), when the mode
+/* the notices' popup lists closed (0x81173A82) and their page closed (0x81180152), when the mode
    changes */
-void indicatorNoticeQueueClear(void);
+void indicatorNoticePopupCloseAll(void);
 /* the popup list of the ID kept, forgotten as it closes (0x81173A52), and closed by its ID
    (0x81173A6A) (PLACEHOLDER names) */
 void indicatorNoticePopupAdd(SceInt64 id);

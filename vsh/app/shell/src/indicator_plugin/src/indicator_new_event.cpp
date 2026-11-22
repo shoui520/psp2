@@ -172,8 +172,8 @@ void indicatorNewEventOnDecide(SceInt32 type, ui::Handler *self, ui::Event *e, v
 void indicatorNewEventOnImageReady(SceInt32 type, ui::Handler *self, ui::Event *e, void *data);
 void indicatorNewEventOnImageFailed(SceInt32 type, ui::Handler *self, ui::Event *e, void *data);
 void indicatorNewEventOnBlink(SceInt32 type, ui::Handler *self, ui::Event *e, void *data);
-void indicatorNewEventOnNoticeDone(int result, int type, SceInt64 rowid, void *arg);
-void indicatorNewEventOnPopupDone(int result, int type, SceInt64 rowid, void *arg);
+void indicatorNewEventOnNoticeDone(int result, SceInt64 rowid, void *arg);
+void indicatorNewEventOnPopupDone(int result, SceInt64 rowid, void *arg);
 void indicatorNewEventOnPopped(Timer *timer, ui::AnimListener *listener, void *arg1, void *arg2,
 			       void *arg3);
 void indicatorNewEventOnMainThread(void *data);
@@ -310,7 +310,7 @@ IndicatorNewEvent::IndicatorNewEvent(Plugin *plugin, ui::Widget *root)
 		indicatorNoticeManagerCreate(m_plugin);
 		indicatorNoticeCacheCreate(m_plugin);
 		indicatorNoticeDialogsCreate();
-		indicatorNoticeListCreate();
+		indicatorNoticePopupsCreate();
 		indicatorNewEventStart(this, INDICATOR_NEW_EVENT_CMD_INIT);
 		indicatorNewEventDb()->Open();
 		common::MainThreadCallList::Register(indicatorNewEventOnMainThread, this);
@@ -360,7 +360,7 @@ IndicatorNewEvent::~IndicatorNewEvent()
 	indicatorNoticeManagerDestroy();
 	indicatorNoticeCacheDestroy();
 	indicatorNoticeDialogsDestroy();
-	indicatorNoticeListDestroy();
+	indicatorNoticePopupsDestroy();
 	common::MainThreadCallList::Unregister(indicatorNewEventOnMainThread, this);
 	indicatorNewEventDb()->Close();
 	SceShell_D4C7D2B7(0, indicatorNewEventOnShellEvent, this);
@@ -1072,7 +1072,7 @@ void Job_NewEventTaskCommand::Finish(int result)
 }
 
 /* the shell's notice done with: no notice is the last one pushed any more (0x81166BA8) */
-void indicatorNewEventOnNoticeDone(int result, int type, SceInt64 rowid, void *arg)
+void indicatorNewEventOnNoticeDone(int result, SceInt64 rowid, void *arg)
 {
 	if (rowid == s_lastNoticeRowid)
 		s_lastNoticeRowid = 0;
@@ -1080,7 +1080,7 @@ void indicatorNewEventOnNoticeDone(int result, int type, SceInt64 rowid, void *a
 
 /* the popup done with: forgotten when it was cancelled, else cleared from the database on the
    item's queue (0x81166BC8) */
-void indicatorNewEventOnPopupDone(int result, int type, SceInt64 rowid, void *arg)
+void indicatorNewEventOnPopupDone(int result, SceInt64 rowid, void *arg)
 {
 	if (rowid == s_lastNoticeRowid) {
 		if (result == 3)

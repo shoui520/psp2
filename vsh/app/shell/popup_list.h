@@ -168,6 +168,8 @@ public:
 int shellPopupListOpen(ShellPopupListParam *param, unsigned int depth, int arg);
 /* PLACEHOLDER: the lists from a depth up closed (0x81348DAC) */
 int shellPopupListClose(unsigned int depth);
+/* PLACEHOLDER: the widget of the list open on top when depth is 0, else NULL (0x81348DDA) */
+paf::ui::Widget *shellPopupListGetWidget(unsigned int depth);
 
 typedef char ShellPopupListParamSizeCheck[sizeof(ShellPopupListParam) == 224 ? 1 : -1];
 typedef char ShellPopupListItemSizeCheck[sizeof(ShellPopupListItem) == 24 ? 1 : -1];
