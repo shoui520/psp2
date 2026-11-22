@@ -717,3 +717,465 @@ out:
 	}
 	return ret;
 }
+
+/*
+ * The index of the id a Reference's URI names, "#<id>", the id itself or an XPointer
+ * "#xmlns(...)...[@Id='<id>']"; -1 if none.
+ */
+int MlnImpl_8105B140(const MlnBuffer *uri, int count, MlnBuffer *const *ids)
+{
+	const MlnBuffer *id;
+	const char *data;
+	const char *p;
+	int i;
+
+	for (i = 0; i < count; i++) {
+		id = ids[i];
+		if (id == NULL)
+			continue;
+		data = (const char *)uri->data;
+		if (data[0] == '#' && uri->size == id->size + 1 &&
+		    MlnMemcmp(data + 1, id->data, id->size) == 0)
+			return i;
+		if (MlnBufferCompare(MLN_HEAP_GENERAL, uri, ids[i]) == 0)
+			return i;
+		if (MlnMemcmp(data, "#xmlns(", 7) != 0)
+			continue;
+		p = MlnStrstr(data + 7, "[@Id='");
+		if (p == NULL)
+			continue;
+		if (MlnMemcmp(p + 6, ids[i]->data, ids[i]->size) == 0)
+			return i;
+	}
+	return -1;
+}
+
+#define MLN_XMLDSIG_EXC_C14N	"http://www.w3.org/2001/10/xml-exc-c14n#"
+#define MLN_XMLDSIG_RSA_SHA1	"http://www.w3.org/2000/09/xmldsig#rsa-sha1"
+#define MLN_XMLDSIG_RSA_SHA256	"http://www.w3.org/2001/04/xmldsig-more#rsa-sha256"
+#define MLN_XMLDSIG_HMAC_SHA1	"http://www.w3.org/2000/09/xmldsig#hmac-sha1"
+#define MLN_XMLDSIG_HMAC_SHA256	"http://www.w3.org/2001/04/xmldsig-more#hmac-sha256"
+
+/* whether a buffer holds a string literal */
+#define MLN_XMLDSIG_IS(buffer, literal) \
+	((buffer)->size == sizeof(literal) - 1 && \
+	 MlnMemcmp((buffer)->data, literal, sizeof(literal) - 1) == 0)
+
+/*
+ * A signature's method, for exclusive canonicalization only: 0 RSA-SHA1, 1 RSA-SHA256
+ * (with certificates or a key identifier), 2 HMAC-SHA1, 3 HMAC-SHA256 (with a key name);
+ * -1 otherwise.
+ */
+int MlnImpl_8105B230(const MlnXmlDsigSignature *signature)
+{
+	if (!MLN_XMLDSIG_IS(signature->canonicalizationMethod, MLN_XMLDSIG_EXC_C14N))
+		return -1;
+	if (MLN_XMLDSIG_IS(signature->signatureMethod, MLN_XMLDSIG_RSA_SHA1) &&
+	    (signature->keyInfoType == MLN_XMLDSIG_KEYINFO_X509 ||
+	     signature->keyInfoType == MLN_XMLDSIG_KEYINFO_X509SKI))
+		return 0;
+	if (MLN_XMLDSIG_IS(signature->signatureMethod, MLN_XMLDSIG_RSA_SHA256) &&
+	    (signature->keyInfoType == MLN_XMLDSIG_KEYINFO_X509 ||
+	     signature->keyInfoType == MLN_XMLDSIG_KEYINFO_X509SKI))
+		return 1;
+	if (MLN_XMLDSIG_IS(signature->signatureMethod, MLN_XMLDSIG_HMAC_SHA1) &&
+	    signature->keyInfoType == MLN_XMLDSIG_KEYINFO_KEYNAME)
+		return 2;
+	if (MLN_XMLDSIG_IS(signature->signatureMethod, MLN_XMLDSIG_HMAC_SHA256) &&
+	    signature->keyInfoType == MLN_XMLDSIG_KEYINFO_KEYNAME)
+		return 3;
+	return -1;
+}
+
+#define MLN_XMLDSIG_ERROR_REFERENCE	0x220A0001
+
+#define MLN_XMLDSIG_SHA1		"http://www.w3.org/2000/09/xmldsig#sha1"
+#define MLN_XMLDSIG_SHA256		"http://www.w3.org/2001/04/xmlenc#sha256"
+#define MLN_XMLDSIG_ENVELOPED		"http://www.w3.org/2000/09/xmldsig#enveloped-signature"
+#define MLN_OCTOPUS_CBS			"http://www.octopus-drm.com/octopus/specs/cbs-1_0"
+#define MLN_OCTOPUS_CBS_INTERTRUST	"http://www.intertrust.com/Octopus/xmldsig#cbs-1_0"
+
+/*
+ * Check a Reference: its transforms are those of a kind (0 none, 1 exclusive
+ * canonicalization, 2 enveloped signature, 3 both, 4 Octopus's canonical byte sequence),
+ * and its digest value is the one given.
+ */
+int MlnImpl_8105B364(const MlnXmlDsigReference *reference, int kind, int digestSize,
+		     const unsigned char *digest)
+{
+	const MlnBuffer *method;
+
+	if (reference == NULL)
+		return 3;
+	switch (kind) {
+	case 0:
+digest:
+		/*
+		 * Sony's test of the digest method fails only for a method that is both SHA-1 and
+		 * SHA-256, which none is: every method passes.
+		 */
+		method = reference->digestMethod;
+		if (MlnBytesCompare(MLN_HEAP_GENERAL, sizeof(MLN_XMLDSIG_SHA1) - 1,
+				    MLN_XMLDSIG_SHA1, method->size, method->data) == 0 &&
+		    MlnBytesCompare(MLN_HEAP_GENERAL, sizeof(MLN_XMLDSIG_SHA256) - 1,
+				    MLN_XMLDSIG_SHA256, reference->digestMethod->size,
+				    reference->digestMethod->data) == 0)
+			return MLN_XMLDSIG_ERROR_REFERENCE;
+		if (reference->digestValue->size != (unsigned int)digestSize)
+			return MLN_XMLDSIG_ERROR_REFERENCE;
+		if (MlnMemcmp(reference->digestValue->data, digest, digestSize) != 0)
+			return MLN_XMLDSIG_ERROR_REFERENCE;
+		return 0;
+	case 1:
+		if (reference->transformCount != 1 ||
+		    !MLN_XMLDSIG_IS(reference->transforms[0], MLN_XMLDSIG_EXC_C14N))
+			return MLN_XMLDSIG_ERROR_REFERENCE;
+		goto digest;
+	case 2:
+		if (reference->transformCount != 1 ||
+		    !MLN_XMLDSIG_IS(reference->transforms[0], MLN_XMLDSIG_ENVELOPED))
+			return MLN_XMLDSIG_ERROR_REFERENCE;
+		goto digest;
+	case 3:
+		if (reference->transformCount != 2 ||
+		    !MLN_XMLDSIG_IS(reference->transforms[0], MLN_XMLDSIG_ENVELOPED) ||
+		    !MLN_XMLDSIG_IS(reference->transforms[1], MLN_XMLDSIG_EXC_C14N))
+			return MLN_XMLDSIG_ERROR_REFERENCE;
+		goto digest;
+	case 4:
+		if (reference->transformCount != 1)
+			return MLN_XMLDSIG_ERROR_REFERENCE;
+		if (!MLN_XMLDSIG_IS(reference->transforms[0], MLN_OCTOPUS_CBS) &&
+		    !MLN_XMLDSIG_IS(reference->transforms[0], MLN_OCTOPUS_CBS_INTERTRUST))
+			return MLN_XMLDSIG_ERROR_REFERENCE;
+		goto digest;
+	default:
+		return 3;
+	}
+}
+
+#define MLN_XMLDSIG_ERROR_METHOD	0x220A0002
+#define MLN_XMLDSIG_ERROR_NO_REFERENCE	0x220A0003
+
+/*
+ * Verify a Signature element with RSA: each of its References that names one of the ids
+ * must have that id's transforms and digest (verified[i] is cleared for each id
+ * checked), and the SignedInfo must be signed by the key of its certificate chain, valid
+ * for a usage, or by the certificate given whose key identifier the KeyInfo names; the
+ * signer's subject is returned.
+ */
+int MlnImpl_8105B568(MlnXmlNode *signature, int usage, int count, MlnBuffer *const *references,
+		     unsigned char **digests, int *digestTypes, const MlnBuffer *certificate,
+		     MlnBuffer **signer, int *verified)
+{
+	MlnXmlDsigSignature *parsed = NULL;
+	MlnBuffer *signedInfo = NULL;
+	MlnBuffer *keyIdentifier = NULL;
+	MlnBuffer *modulus = NULL;
+	MlnBuffer *exponent = NULL;
+	MlnBuffer *subject = NULL;
+	MlnX509 *x509 = NULL;
+	MlnXmlNodeList *list = NULL;
+	MlnX509Certificates chain = { 0, NULL };
+	MlnXmlDsigReference *reference;
+	void *rsa = NULL;
+	int hash;
+	int digestSize;
+	int referenceCount;
+	int found;
+	int index;
+	int ret;
+	int i;
+
+	ret = MlnImpl_81059934(signature, &parsed);
+	if (ret != 0)
+		goto out;
+	hash = MlnImpl_8105B230(parsed);
+	if (hash == 0) {
+		digestSize = 20;
+	} else if (hash == 1) {
+		digestSize = 32;
+	} else {
+		ret = MLN_XMLDSIG_ERROR_METHOD;
+		goto out;
+	}
+
+	for (i = 0; i < count; i++)
+		verified[i] = 1;
+	referenceCount = parsed->referenceCount;
+	if (referenceCount <= 0) {
+		ret = MLN_XMLDSIG_ERROR_NO_REFERENCE;
+		goto out;
+	}
+	found = 0;
+	for (i = 0; i < referenceCount; i++) {
+		reference = &parsed->references[i];
+		index = MlnImpl_8105B140(reference->uri, count, references);
+		if (index < 0)
+			continue;
+		found = 1;
+		ret = MlnImpl_8105B364(reference, digestTypes[index], digestSize, digests[index]);
+		if (ret != 0)
+			goto out;
+		verified[index] = 0;
+	}
+	if (!found) {
+		ret = MLN_XMLDSIG_ERROR_NO_REFERENCE;
+		goto out;
+	}
+
+	ret = MlnXmlFindNodes(MLN_HEAP_GENERAL, signature, "SignedInfo", MLN_XMLDSIG_NAMESPACE,
+			      &list);
+	if (ret != 0)
+		goto out;
+	if (list->count != 1)
+		goto invalid;
+	ret = MlnXmlNodeToXml(MLN_HEAP_GENERAL, list->nodes[0], &signedInfo);
+	if (ret != 0)
+		goto out;
+	MlnXmlListFree(MLN_HEAP_GENERAL, list);
+	list = NULL;
+
+	if (parsed->keyInfoType == MLN_XMLDSIG_KEYINFO_X509) {
+		/* the chain from the anchor's child down */
+		chain.count = parsed->keyInfo.x509.count;
+		chain.items = MlnAllocate(MLN_HEAP_GENERAL, chain.count * sizeof(MlnBuffer *));
+		if (chain.items == NULL) {
+			ret = 2;
+			goto out;
+		}
+		for (i = 0; i < chain.count; i++)
+			chain.items[i] = parsed->keyInfo.x509.certificates[chain.count - 1 - i];
+		ret = MlnImpl_81057314(usage, &chain);
+		if (ret != 0)
+			goto fail;
+		MlnFree(MLN_HEAP_GENERAL, chain.items);
+		chain.items = NULL;
+		ret = MlnImpl_81038EF4(parsed->keyInfo.x509.certificates[0], &x509);
+		if (ret != 0)
+			goto fail;
+		ret = MlnImpl_81039228(x509, &modulus, &exponent);
+		if (ret != 0)
+			goto fail;
+		if (signer != NULL) {
+			ret = MlnImpl_81039298(x509, &subject);
+			if (ret != 0)
+				goto fail;
+			*signer = MlnBufferCreate(MLN_HEAP_GENERAL, subject->size, subject->data);
+		}
+	} else {
+		ret = MlnImpl_81038EF4(certificate, &x509);
+		if (ret != 0)
+			goto fail;
+		ret = MlnImpl_810390C0(x509, &keyIdentifier);
+		if (ret != 0)
+			goto fail;
+		if (MlnBufferCompare(MLN_HEAP_GENERAL, keyIdentifier, parsed->keyInfo.keyName) != 0)
+			goto invalid;
+		MlnBufferDestroy(MLN_HEAP_GENERAL, keyIdentifier);
+		keyIdentifier = NULL;
+		ret = MlnImpl_81039228(x509, &modulus, &exponent);
+		if (ret != 0)
+			goto fail;
+	}
+	MlnImpl_81038E90(x509);
+	x509 = NULL;
+
+	ret = MlnImpl_81055670(&rsa, modulus, exponent, NULL, NULL, NULL, NULL, NULL, NULL);
+	if (ret != 0)
+		goto fail;
+	ret = MlnImpl_81056F0C(rsa, hash, signedInfo, parsed->signatureValue);
+	if (ret != 0)
+		goto fail;
+	MlnImpl_81055ABC(rsa);
+	rsa = NULL;
+	goto out;
+fail:
+	if ((ret & 0xFFFF0000) == 0)
+		goto out;
+invalid:
+	ret = MLN_XMLDSIG_ERROR_REFERENCE;
+out:
+	MlnBufferDestroy(MLN_HEAP_GENERAL, signedInfo);
+	MlnBufferDestroy(MLN_HEAP_GENERAL, keyIdentifier);
+	MlnBufferDestroy(MLN_HEAP_GENERAL, modulus);
+	MlnBufferDestroy(MLN_HEAP_GENERAL, exponent);
+	MlnBufferDestroy(MLN_HEAP_GENERAL, subject);
+	MlnFree(MLN_HEAP_GENERAL, chain.items);
+	if (rsa != NULL)
+		MlnImpl_81055ABC(rsa);
+	if (x509 != NULL)
+		MlnImpl_81038E90(x509);
+	if (parsed != NULL)
+		MlnImpl_8105D0AC(parsed);
+	if (list != NULL)
+		MlnXmlListFree(MLN_HEAP_GENERAL, list);
+	return ret;
+}
+
+/* verify a Signature element as MlnImpl_8105B568 does, without the signer */
+int MlnImpl_8105BA14(MlnXmlNode *signature, int usage, int count, MlnBuffer *const *references,
+		     unsigned char **digests, int *digestTypes, const MlnBuffer *certificate,
+		     int *verified)
+{
+	return MlnImpl_8105B568(signature, usage, count, references, digests, digestTypes,
+				certificate, NULL, verified);
+}
+
+/*
+ * Verify a Signature element of a document as MlnImpl_8105B568 does, its KeyInfo read by
+ * MlnImpl_8105A3D8; the digests are SHA-1 or SHA-256 by the first matching Reference's
+ * digest method.
+ */
+int MlnImpl_8105BA50(MlnXmlNode *signature, MlnXmlNode *document, int usage, int count,
+		     MlnBuffer *const *references, unsigned char **digests, int *digestTypes,
+		     const MlnBuffer *certificate, int *verified)
+{
+	MlnXmlDsigSignature *parsed = NULL;
+	MlnBuffer *signedInfo = NULL;
+	MlnBuffer *keyIdentifier = NULL;
+	MlnBuffer *modulus = NULL;
+	MlnBuffer *exponent = NULL;
+	MlnX509 *x509 = NULL;
+	MlnXmlNodeList *list = NULL;
+	MlnX509Certificates chain = { 0, NULL };
+	MlnXmlDsigReference *reference;
+	const MlnBuffer *method;
+	void *rsa = NULL;
+	unsigned int hash;
+	int digestSize;
+	int referenceCount;
+	int found;
+	int index;
+	int ret;
+	int i;
+
+	ret = MlnImpl_8105A3D8(signature, document, &parsed);
+	if (ret != 0)
+		goto out;
+	hash = MlnImpl_8105B230(parsed);
+	if (hash > 1) {
+		ret = MLN_XMLDSIG_ERROR_METHOD;
+		goto out;
+	}
+
+	for (i = 0; i < count; i++)
+		verified[i] = 1;
+	referenceCount = parsed->referenceCount;
+	if (referenceCount <= 0) {
+		ret = MLN_XMLDSIG_ERROR_NO_REFERENCE;
+		goto out;
+	}
+	found = 0;
+	digestSize = 0;
+	for (i = 0; i < referenceCount; i++) {
+		reference = &parsed->references[i];
+		index = MlnImpl_8105B140(reference->uri, count, references);
+		if (index < 0)
+			continue;
+		if (digestSize == 0) {
+			method = reference->digestMethod;
+			if (MlnBytesCompare(MLN_HEAP_GENERAL, method->size, method->data,
+					    MlnStrlen(MLN_XMLDSIG_SHA256), MLN_XMLDSIG_SHA256) == 0) {
+				digestSize = 32;
+			} else {
+				method = reference->digestMethod;
+				digestSize = 20;
+				if (MlnBytesCompare(MLN_HEAP_GENERAL, method->size, method->data,
+						    MlnStrlen(MLN_XMLDSIG_SHA1),
+						    MLN_XMLDSIG_SHA1) != 0)
+					goto invalid;
+			}
+		}
+		found = 1;
+		ret = MlnImpl_8105B364(reference, digestTypes[index], digestSize, digests[index]);
+		if (ret != 0)
+			goto out;
+		verified[index] = 0;
+	}
+	if (!found) {
+		ret = MLN_XMLDSIG_ERROR_NO_REFERENCE;
+		goto out;
+	}
+
+	ret = MlnXmlFindNodes(MLN_HEAP_GENERAL, signature, "SignedInfo", MLN_XMLDSIG_NAMESPACE,
+			      &list);
+	if (ret != 0)
+		goto out;
+	if (list->count != 1)
+		goto invalid;
+	ret = MlnXmlNodeToXml(MLN_HEAP_GENERAL, list->nodes[0], &signedInfo);
+	if (ret != 0)
+		goto out;
+	MlnXmlListFree(MLN_HEAP_GENERAL, list);
+	list = NULL;
+
+	if (parsed->keyInfoType == MLN_XMLDSIG_KEYINFO_X509) {
+		/* the chain from the anchor's child down */
+		chain.count = parsed->keyInfo.x509.count;
+		chain.items = MlnAllocate(MLN_HEAP_GENERAL, chain.count * sizeof(MlnBuffer *));
+		if (chain.items == NULL) {
+			ret = 2;
+			goto out;
+		}
+		for (i = 0; i < chain.count; i++)
+			chain.items[i] = parsed->keyInfo.x509.certificates[chain.count - 1 - i];
+		ret = MlnImpl_81057314(usage, &chain);
+		if (ret != 0)
+			goto fail;
+		MlnFree(MLN_HEAP_GENERAL, chain.items);
+		chain.items = NULL;
+		ret = MlnImpl_81038EF4(parsed->keyInfo.x509.certificates[0], &x509);
+		if (ret != 0)
+			goto fail;
+		ret = MlnImpl_81039228(x509, &modulus, &exponent);
+		if (ret != 0)
+			goto fail;
+	} else {
+		ret = MlnImpl_81038EF4(certificate, &x509);
+		if (ret != 0)
+			goto fail;
+		ret = MlnImpl_810390C0(x509, &keyIdentifier);
+		if (ret != 0)
+			goto fail;
+		if (MlnBufferCompare(MLN_HEAP_GENERAL, keyIdentifier, parsed->keyInfo.keyName) != 0)
+			goto invalid;
+		MlnBufferDestroy(MLN_HEAP_GENERAL, keyIdentifier);
+		keyIdentifier = NULL;
+		ret = MlnImpl_81039228(x509, &modulus, &exponent);
+		if (ret != 0)
+			goto fail;
+	}
+	MlnImpl_81038E90(x509);
+	x509 = NULL;
+
+	ret = MlnImpl_81055670(&rsa, modulus, exponent, NULL, NULL, NULL, NULL, NULL, NULL);
+	if (ret != 0)
+		goto fail;
+	ret = MlnImpl_81056F0C(rsa, hash != 0, signedInfo, parsed->signatureValue);
+	if (ret != 0)
+		goto fail;
+	MlnImpl_81055ABC(rsa);
+	rsa = NULL;
+	goto out;
+fail:
+	if ((ret & 0xFFFF0000) == 0)
+		goto out;
+invalid:
+	ret = MLN_XMLDSIG_ERROR_REFERENCE;
+out:
+	MlnBufferDestroy(MLN_HEAP_GENERAL, signedInfo);
+	MlnBufferDestroy(MLN_HEAP_GENERAL, keyIdentifier);
+	MlnBufferDestroy(MLN_HEAP_GENERAL, modulus);
+	MlnBufferDestroy(MLN_HEAP_GENERAL, exponent);
+	MlnFree(MLN_HEAP_GENERAL, chain.items);
+	if (rsa != NULL)
+		MlnImpl_81055ABC(rsa);
+	if (x509 != NULL)
+		MlnImpl_81038E90(x509);
+	if (parsed != NULL)
+		MlnImpl_8105D0AC(parsed);
+	if (list != NULL)
+		MlnXmlListFree(MLN_HEAP_GENERAL, list);
+	return ret;
+}

@@ -1740,16 +1740,20 @@ int MlnImpl_8103F6F0(const MlnBuffer *token, MlnOctopusNode **out, int type, int
 int MlnImpl_81061330(const MlnOctopusScubaKeys *keys, MlnBuffer **out);
 int MlnImpl_810611BC(const MlnOctopusNode *node, MlnBuffer **out);
 int MlnImpl_81059558(MlnXmlNode *node, MlnXmlNode *transform, MlnBuffer **out);
-int MlnImpl_8105BA14(MlnXmlNode *signature, int usage, int count, MlnBuffer **references,
-		     unsigned char **digests, int *digestTypes, int flags, int *verified);
-int MlnImpl_8105B568(MlnXmlNode *signature, int usage, int count, MlnBuffer **references,
-		     unsigned char **digests, int *digestTypes, int flags, MlnBuffer **signer,
+int MlnImpl_8105BA14(MlnXmlNode *signature, int usage, int count, MlnBuffer *const *references,
+		     unsigned char **digests, int *digestTypes, const MlnBuffer *certificate,
 		     int *verified);
+int MlnImpl_8105B568(MlnXmlNode *signature, int usage, int count, MlnBuffer *const *references,
+		     unsigned char **digests, int *digestTypes, const MlnBuffer *certificate,
+		     MlnBuffer **signer, int *verified);
 int MlnImpl_81059934(MlnXmlNode *node, MlnXmlDsigSignature **out);
 int MlnImpl_8105D018(MlnXmlDsigReference *reference);
 int MlnImpl_8105A3D8(MlnXmlNode *node, MlnXmlNode *document, MlnXmlDsigSignature **out);
+int MlnImpl_8105BA50(MlnXmlNode *signature, MlnXmlNode *document, int usage, int count,
+		     MlnBuffer *const *references, unsigned char **digests, int *digestTypes,
+		     const MlnBuffer *certificate, int *verified);
 int MlnImpl_8105B230(const MlnXmlDsigSignature *signature);
-int MlnImpl_8105B140(const MlnBuffer *uri, int fragment, MlnBuffer *const *id);
+int MlnImpl_8105B140(const MlnBuffer *uri, int count, MlnBuffer *const *ids);
 int MlnImpl_8105B364(const MlnXmlDsigReference *reference, int transforms, int digestSize,
 		     const unsigned char *digest);
 int MlnImpl_8105D0AC(MlnXmlDsigSignature *signature);
