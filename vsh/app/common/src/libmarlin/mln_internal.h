@@ -1943,6 +1943,11 @@ int MlnImpl_8105EC88(unsigned char *key);
 MlnBuffer *MlnImpl_8106A08C(int heap);
 int MlnImpl_8106A0AC(int algorithm, const MlnBuffer *key, const MlnBuffer *message,
 		     MlnBuffer **out);
+int MlnImpl_8106A0A4(void);
+void MlnImpl_8107FB58(const unsigned char *key, unsigned int keySize,
+		      const unsigned char *message, unsigned int messageSize, unsigned char *out);
+void MlnImpl_8107FBAC(const unsigned char *key, unsigned int keySize,
+		      const unsigned char *message, unsigned int messageSize, unsigned char *out);
 unsigned int MlnImpl_81052EBC(unsigned int *seconds);
 int MlnImpl_81052944(const MlnDateTime *a, const MlnDateTime *b);
 int MlnImpl_810529E8(int value, int base, int size, char *buf);
@@ -2048,6 +2053,17 @@ typedef struct MlnHandleTable {
 	void *slots[MLN_HANDLE_TABLE_SLOTS];
 	int initialized;
 } MlnHandleTable;
+
+/* a view of an array of object slots (MlnImpl_8107A3D0-) */
+typedef struct MlnSlotArray {
+	void **items;
+	unsigned int count;
+} MlnSlotArray;
+
+unsigned int MlnImpl_8107A3D0(MlnSlotArray *array);
+unsigned int MlnImpl_8107A428(MlnSlotArray *array, unsigned int *index);
+unsigned int MlnImpl_8107A48C(MlnSlotArray *array, unsigned int index, void *object);
+unsigned int MlnImpl_8107A4C0(MlnSlotArray *array, unsigned int index, void **out);
 
 /* a pending response of a core handle (freed by MlnImpl_81069A9C) */
 typedef struct MlnCoreResponse {
