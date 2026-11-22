@@ -2100,6 +2100,9 @@ unsigned int MlnImpl_810629C8(MlnCoreContext *context, int kind,
 			      MlnPlanktonParameterBlock *parameters, MlnBuffer **out);
 unsigned int MlnImpl_8104C130(int handle, const MlnBuffer *publicKey, int *count,
 			      MlnBuffer ***first, MlnBuffer ***second, MlnBuffer ***third);
+unsigned int MlnImpl_8106340C(int count, MlnOctopusControl **controls, const MlnBuffer *agent,
+			      void *value, MlnPlanktonParameterBlock *parameters, MlnArray *pair,
+			      unsigned int *status, MlnBuffer **data, MlnArray **result);
 unsigned int MlnImpl_81063F38(MlnCoreContext *context, void *rsa, int *count,
 			      MlnBuffer ***encryptedKeys, MlnBuffer ***keyIds,
 			      MlnBuffer ***contentKeyIds);
