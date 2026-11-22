@@ -1839,10 +1839,29 @@ int MlnImpl_8104570C(MlnArray **out);
 int MlnImpl_810457D4(const MlnBuffer *data, const MlnBuffer *value);
 int MlnImpl_810459F0(const MlnBuffer *data, int *found);
 int MlnImpl_81045A3C(const MlnBuffer *data);
+int MlnImpl_81045E74(MlnBuffer **out);
+int MlnImpl_81045EE0(const MlnBuffer *data);
+int MlnImpl_81045EF8(int table, MlnBuffer **out);
+int MlnImpl_81046264(int table, const unsigned char *entry, const MlnBuffer *index);
+
+/* a set of bits, the first one the top bit of bits[0] */
+typedef struct MlnBitset {
+	int count;
+	unsigned char bits[];
+} MlnBitset;
+
+int MlnImpl_81046354(int count, MlnBitset **out);
+int MlnImpl_810463B4(MlnBitset *set);
+int MlnImpl_810463CC(MlnBitset *set, int index, int value);
+int MlnImpl_81046420(const MlnBitset *set, int value, int *index);
+int MlnImpl_8104657C(int kind, const MlnBuffer *index, const unsigned char *id1,
+		     const unsigned char *id2, const unsigned char *id3,
+		     const unsigned char **entry, int *free);
+int MlnImpl_810476C0(int kind);
 int MlnImpl_81046BFC(int kind, const unsigned char *digest, const void *arg2, const void *arg3,
 		     int arg4);
-int MlnImpl_810467C0(int kind, const unsigned char *digest, const void *reserved,
-		     const unsigned char *id, MlnBuffer value);
+int MlnImpl_810467C0(int kind, const unsigned char *id1, const unsigned char *id2,
+		     const unsigned char *id3, MlnBuffer value);
 int MlnImpl_8104A300(MlnStoreLink *links, MlnBuffer *key, MlnBuffer *value, const MlnBuffer *first,
 		     const MlnBuffer *second);
 int MlnImpl_81049DDC(MlnStoreLink *links, const MlnBuffer *from, const MlnBuffer *to,

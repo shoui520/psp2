@@ -1228,8 +1228,8 @@ out:
 }
 
 /*
- * passes the digest of data and the device id (its first ten bytes when the
- * id is neither zero at the start nor at the end) on to 0x810467C0
+ * stores value under the digest of data in table 2, with the device id (its
+ * first ten bytes when the id is neither zero at the start nor at the end)
  */
 int MlnImpl_810457D4(const MlnBuffer *data, const MlnBuffer *value)
 {
@@ -1326,4 +1326,492 @@ int MlnImpl_81045A3C(const MlnBuffer *data)
 		return 3;
 	MlnImpl_810570A8(data->data, data->size, digest);
 	return MlnImpl_81046BFC(2, digest, NULL, NULL, 1);
+}
+
+/* drops the record with key from table when it is there or damaged */
+static inline __attribute__((always_inline)) int MlnStoreRecordDrop(int table, unsigned int key,
+								   int *damaged)
+{
+	int ret;
+
+	ret = MlnImpl_8105DEDC(table, key, NULL);
+	if (ret == 0 || ret == 6) {
+		ret = MlnImpl_8105DC0C(table, key, NULL);
+		if (ret == 2)
+			return 2;
+		*damaged = 1;
+		return 0;
+	}
+	if (ret != 1)
+		return ret;
+	return 0;
+}
+
+/*
+ * checks the links against their records (table 7): drops each link whose
+ * record is missing or damaged, then each record (keys 1 to 7) no link names
+ * or that is damaged; 6 when anything was dropped. With no links at all,
+ * every record is dropped first
+ */
+unsigned int MlnImpl_81045A84(void)
+{
+	MlnStoreLink *links = NULL;
+	MlnStoreLink *link;
+	MlnStoreLink *next;
+	unsigned int key;
+	int damaged = 0;
+	int ret;
+
+	ret = MlnImpl_810476C0(2);
+	if (ret == 6)
+		damaged = 1;
+	else if (ret != 0)
+		goto out;
+	ret = MlnImpl_81049874(&links);
+	if (ret != 0) {
+		if (ret == 6)
+			MlnImpl_810475F4(7);
+		goto done;
+	}
+	if (links == NULL) {
+		/* no links: every record is stale */
+		if ((ret = MlnStoreRecordDrop(7, 1, &damaged)) != 0 ||
+		    (ret = MlnStoreRecordDrop(7, 2, &damaged)) != 0 ||
+		    (ret = MlnStoreRecordDrop(7, 3, &damaged)) != 0 ||
+		    (ret = MlnStoreRecordDrop(7, 4, &damaged)) != 0 ||
+		    (ret = MlnStoreRecordDrop(7, 5, &damaged)) != 0 ||
+		    (ret = MlnStoreRecordDrop(7, 6, &damaged)) != 0 ||
+		    (ret = MlnStoreRecordDrop(7, 7, &damaged)) != 0)
+			goto done;
+		if (damaged == 1)
+			goto done;
+	}
+	for (link = links; link != NULL; link = next) {
+		ret = MlnImpl_8105DEDC(7, link->key, NULL);
+		if (ret == 1 || ret == 6) {
+			ret = MlnImpl_8105DC0C(7, link->key, NULL);
+			if (ret == 2)
+				goto done;
+			next = link->next;
+			MlnImpl_81049E34(&links, link);
+			damaged = 1;
+		} else if (ret != 0) {
+			goto done;
+		} else {
+			next = link->next;
+		}
+	}
+	ret = MlnImpl_8104990C(links);
+	if (ret != 0)
+		goto done;
+	for (key = 1; key < 8; key++) {
+		ret = MlnImpl_8105DEDC(7, key, NULL);
+		if (ret == 0 || ret == 6) {
+			for (link = links; link != NULL; link = link->next)
+				if (link->key == key)
+					break;
+			if (link == NULL || ret == 6) {
+				ret = MlnImpl_8105DC0C(7, key, NULL);
+				if (ret == 2)
+					goto done;
+				damaged = 1;
+			}
+		} else if (ret != 1) {
+			goto done;
+		} else {
+			ret = 0;
+		}
+	}
+done:
+	if (damaged == 1)
+		ret = 6;
+out:
+	MlnImpl_81049918(links);
+	return ret;
+}
+
+/* reads table 14, NULL when it is empty */
+int MlnImpl_81045E74(MlnBuffer **out)
+{
+	MlnBuffer *buffer = NULL;
+	int ret;
+
+	ret = MlnImpl_8105DEDC(14, 0, &buffer);
+	if (ret == 1 || ret == 0) {
+		*out = buffer;
+		buffer = NULL;
+		ret = 0;
+	}
+	MlnBufferDestroy(MLN_HEAP_GENERAL, buffer);
+	return ret;
+}
+
+/* writes table 14 */
+int MlnImpl_81045EE0(const MlnBuffer *data)
+{
+	return MlnImpl_8105DC0C(14, 0, data);
+}
+
+/*
+ * reads record 0 of table (2 or 6); when it is missing, drops records 1 to 7,
+ * and when it is damaged, drops all eight; 6 when anything was dropped
+ */
+int MlnImpl_81045EF8(int table, MlnBuffer **out)
+{
+	MlnBuffer *buffer = NULL;
+	int damaged;
+	int ret;
+
+	if (out == NULL || (table != 2 && table != 6)) {
+		ret = 5;
+		goto out;
+	}
+	ret = MlnImpl_8105DEDC(table, 0, &buffer);
+	if (ret == 1) {
+		damaged = 0;
+		if ((ret = MlnStoreRecordDrop(table, 1, &damaged)) != 0 ||
+		    (ret = MlnStoreRecordDrop(table, 2, &damaged)) != 0 ||
+		    (ret = MlnStoreRecordDrop(table, 3, &damaged)) != 0 ||
+		    (ret = MlnStoreRecordDrop(table, 4, &damaged)) != 0 ||
+		    (ret = MlnStoreRecordDrop(table, 5, &damaged)) != 0 ||
+		    (ret = MlnStoreRecordDrop(table, 6, &damaged)) != 0 ||
+		    (ret = MlnStoreRecordDrop(table, 7, &damaged)) != 0)
+			goto out;
+		ret = damaged == 1 ? 6 : 0;
+	} else if (ret == 6) {
+		if (MlnImpl_8105DC0C(table, 1, NULL) == 2 ||
+		    MlnImpl_8105DC0C(table, 2, NULL) == 2 ||
+		    MlnImpl_8105DC0C(table, 3, NULL) == 2 ||
+		    MlnImpl_8105DC0C(table, 4, NULL) == 2 ||
+		    MlnImpl_8105DC0C(table, 5, NULL) == 2 ||
+		    MlnImpl_8105DC0C(table, 6, NULL) == 2 ||
+		    MlnImpl_8105DC0C(table, 7, NULL) == 2 ||
+		    MlnImpl_8105DC0C(table, 0, NULL) == 2)
+			ret = 2;
+	} else if (ret == 0) {
+		*out = buffer;
+		buffer = NULL;
+	}
+out:
+	MlnBufferDestroy(MLN_HEAP_GENERAL, buffer);
+	return ret;
+}
+
+/*
+ * drops the 64-byte index entry at entry from index (record 0 of table) and
+ * the record the entry names (its big-endian key at 0x3C)
+ */
+int MlnImpl_81046264(int table, const unsigned char *entry, const MlnBuffer *index)
+{
+	MlnBuffer *buffer = NULL;
+	unsigned int offset;
+	unsigned int key;
+	int ret;
+
+	if (entry == NULL || index == NULL) {
+		ret = 5;
+		goto out;
+	}
+	key = entry[0x3C] << 24 | entry[0x3D] << 16 | entry[0x3E] << 8 | entry[0x3F];
+	buffer = MlnBufferCreate(MLN_HEAP_GENERAL, index->size - 0x40, NULL);
+	if (buffer == NULL) {
+		ret = 2;
+		goto out;
+	}
+	offset = entry - index->data;
+	MlnMemcpy(buffer->data, index->data, offset);
+	MlnMemcpy(buffer->data + offset, index->data + offset + 0x40, index->size - 0x40 - offset);
+	ret = MlnImpl_8105DC0C(table, key, NULL);
+	if (ret == 0)
+		ret = MlnImpl_8105DC0C(table, 0, buffer);
+out:
+	MlnBufferDestroy(MLN_HEAP_GENERAL, buffer);
+	return ret;
+}
+
+/* makes a set of count bits, all clear */
+int MlnImpl_81046354(int count, MlnBitset **out)
+{
+	MlnBitset *set;
+	int size;
+	int ret;
+
+	size = (count + 7) / 8;
+	set = MlnAllocate(MLN_HEAP_GENERAL, size + 8);
+	if (set == NULL) {
+		ret = 2;
+	} else {
+		set->count = count;
+		MlnMemset(set->bits, 0, size);
+		ret = 0;
+		*out = set;
+		set = NULL;
+	}
+	MlnFree(MLN_HEAP_GENERAL, set);
+	return ret;
+}
+
+int MlnImpl_810463B4(MlnBitset *set)
+{
+	MlnFree(MLN_HEAP_GENERAL, set);
+	return 0;
+}
+
+/* sets or clears bit index (bit 0 is the top bit of the first byte) */
+int MlnImpl_810463CC(MlnBitset *set, int index, int value)
+{
+	if (index < 0 || index >= set->count)
+		return 5;
+	if (value != 0)
+		set->bits[index >> 3] |= 0x80 >> (index & 7);
+	else
+		set->bits[index >> 3] &= 0xFF7F >> (index & 7);
+	return 0;
+}
+
+/* finds the first bit that is set (value nonzero) or clear, -1 when none */
+int MlnImpl_81046420(const MlnBitset *set, int value, int *index)
+{
+	unsigned int byte;
+	int bytes;
+	int found = -1;
+	int i;
+
+	bytes = (set->count + 7) >> 3;
+	if (value == 0) {
+		for (i = 0; i < bytes; i++) {
+			byte = set->bits[i];
+			if (byte == 0xFF)
+				continue;
+			if ((byte & 0x80) == 0)
+				found = i * 8;
+			else if ((byte & 0x40) == 0)
+				found = i * 8 + 1;
+			else if ((byte & 0x20) == 0)
+				found = i * 8 + 2;
+			else if ((byte & 0x10) == 0)
+				found = i * 8 + 3;
+			else if ((byte & 0x08) == 0)
+				found = i * 8 + 4;
+			else if ((byte & 0x04) == 0)
+				found = i * 8 + 5;
+			else if ((byte & 0x02) == 0)
+				found = i * 8 + 6;
+			else if ((byte & 0x01) == 0)
+				found = i * 8 + 7;
+			else
+				continue;
+			break;
+		}
+	} else {
+		for (i = 0; i < bytes; i++) {
+			byte = set->bits[i];
+			if (byte == 0)
+				continue;
+			if ((byte & 0x80) != 0)
+				found = i * 8;
+			else if ((byte & 0x40) != 0)
+				found = i * 8 + 1;
+			else if ((byte & 0x20) != 0)
+				found = i * 8 + 2;
+			else if ((byte & 0x10) != 0)
+				found = i * 8 + 3;
+			else if ((byte & 0x08) != 0)
+				found = i * 8 + 4;
+			else if ((byte & 0x04) != 0)
+				found = i * 8 + 5;
+			else if ((byte & 0x02) != 0)
+				found = i * 8 + 6;
+			else if ((byte & 0x01) != 0)
+				found = i * 8 + 7;
+			else
+				continue;
+			break;
+		}
+	}
+	if (found >= set->count)
+		found = -1;
+	*index = found;
+	return 0;
+}
+
+/*
+ * finds the 64-byte entry of index whose ids (at 0x00, 0x14 and 0x28) equal
+ * the given ones (NULL matches any); without one, the first key from 1 to 7
+ * no entry uses
+ */
+int MlnImpl_8104657C(int kind, const MlnBuffer *index, const unsigned char *id1,
+		     const unsigned char *id2, const unsigned char *id3,
+		     const unsigned char **entry, int *free)
+{
+	MlnBitset *used = NULL;
+	const unsigned char *p;
+	unsigned int count;
+	unsigned int i;
+	int slot;
+	int key;
+	int ret;
+
+	if (index == NULL || (id1 == NULL && id2 == NULL && id3 == NULL)) {
+		ret = 5;
+		goto out;
+	}
+	if (kind != 1 && kind != 2) {
+		ret = 5;
+		goto out;
+	}
+	ret = MlnImpl_81046354(8, &used);
+	if (ret != 0)
+		goto out;
+	ret = MlnImpl_810463CC(used, 0, 1);
+	if (ret != 0)
+		goto out;
+	if ((index->size & 0x3F) != 0) {
+		ret = 6;
+		goto out;
+	}
+	count = index->size >> 6;
+	p = index->data;
+	for (i = 0; i < count; i++, p += 0x40) {
+		key = p[0x3C] << 24 | p[0x3D] << 16 | p[0x3E] << 8 | p[0x3F];
+		if ((id1 == NULL || MlnMemcmp(p, id1, 20) == 0) &&
+		    (id2 == NULL || MlnMemcmp(p + 0x14, id2, 20) == 0) &&
+		    (id3 == NULL || MlnMemcmp(p + 0x28, id3, 20) == 0))
+			break;
+		if (MlnImpl_810463CC(used, key, 1) != 0) {
+			ret = 6;
+			goto out;
+		}
+	}
+	if (i != count) {
+		if (entry != NULL)
+			*entry = p;
+		if (free != NULL)
+			*free = -1;
+		ret = 0;
+		goto out;
+	}
+	ret = MlnImpl_81046420(used, 0, &slot);
+	if (ret != 0)
+		goto out;
+	if (entry != NULL)
+		*entry = NULL;
+	if (free != NULL)
+		*free = slot;
+out:
+	MlnImpl_810463B4(used);
+	return ret;
+}
+
+/* drops every record of table (2, 6 or 7), the index (record 0) last */
+static inline __attribute__((always_inline)) int MlnStoreTableClear(int table)
+{
+	int ret;
+
+	switch (table) {
+	case 2:
+	case 6:
+	case 7:
+		break;
+	default:
+		return 5;
+	}
+	if ((ret = MlnImpl_8105DC0C(table, 1, NULL)) != 0 ||
+	    (ret = MlnImpl_8105DC0C(table, 2, NULL)) != 0 ||
+	    (ret = MlnImpl_8105DC0C(table, 3, NULL)) != 0 ||
+	    (ret = MlnImpl_8105DC0C(table, 4, NULL)) != 0 ||
+	    (ret = MlnImpl_8105DC0C(table, 5, NULL)) != 0 ||
+	    (ret = MlnImpl_8105DC0C(table, 6, NULL)) != 0 ||
+	    (ret = MlnImpl_8105DC0C(table, 7, NULL)) != 0)
+		return ret;
+	return MlnImpl_8105DC0C(table, 0, NULL);
+}
+
+/*
+ * stores value as the record of the index entry with ids id1 and id2 in
+ * table 2 (kind 1) or 6 (kind 2), setting the entry's third id to id3, and
+ * adds the entry, under the first free key, when there is none
+ */
+int MlnImpl_810467C0(int kind, const unsigned char *id1, const unsigned char *id2,
+		     const unsigned char *id3, MlnBuffer value)
+{
+	unsigned char added[0x40];
+	MlnBuffer *index = NULL;
+	MlnBuffer *grown = NULL;
+	const unsigned char *entry = NULL;
+	int table;
+	int key;
+	int ret;
+
+	if (id1 == NULL || value.data == NULL) {
+		ret = 5;
+		goto out;
+	}
+	if (kind == 1) {
+		table = 2;
+	} else if (kind == 2) {
+		table = 6;
+	} else {
+		ret = 5;
+		goto out;
+	}
+	ret = MlnImpl_8105DEDC(table, 0, &index);
+	if (ret == 1) {
+		index = MlnBufferCreate(MLN_HEAP_GENERAL, 0, NULL);
+		if (index == NULL) {
+			ret = 2;
+			goto out;
+		}
+	} else if (ret == 6) {
+		MlnStoreTableClear(table);
+		goto out;
+	} else if (ret != 0) {
+		goto out;
+	}
+	ret = MlnImpl_8104657C(kind, index, id1, id2, NULL, &entry, &key);
+	if (ret == 6) {
+		MlnStoreTableClear(table);
+		goto out;
+	}
+	if (ret != 0)
+		goto out;
+	if (entry != NULL) {
+		key = entry[0x3C] << 24 | entry[0x3D] << 16 | entry[0x3E] << 8 | entry[0x3F];
+		if (id3 != NULL)
+			MlnMemcpy((unsigned char *)entry + 0x28, id3, 20);
+		ret = MlnImpl_8105DC0C(table, key, &value);
+		if (ret == 0)
+			ret = MlnImpl_8105DC0C(table, 0, index);
+		goto out;
+	}
+	if (index->size >= 7 * sizeof(added)) {
+		ret = 0x230A0012;
+		goto out;
+	}
+	MlnMemset(added, 0, sizeof(added));
+	MlnMemcpy(added, id1, 20);
+	if (id2 != NULL)
+		MlnMemcpy(added + 0x14, id2, 20);
+	if (id3 != NULL)
+		MlnMemcpy(added + 0x28, id3, 20);
+	added[0x3C] = key >> 24;
+	added[0x3D] = key >> 16;
+	added[0x3E] = key >> 8;
+	added[0x3F] = key;
+	grown = MlnBufferCreate(MLN_HEAP_GENERAL, index->size + sizeof(added), NULL);
+	if (grown == NULL) {
+		ret = 2;
+		goto out;
+	}
+	MlnMemcpy(grown->data, index->data, index->size);
+	MlnMemcpy(grown->data + index->size, added, sizeof(added));
+	MlnBufferDestroy(MLN_HEAP_GENERAL, index);
+	index = NULL;
+	ret = MlnImpl_8105DC0C(table, key, &value);
+	if (ret == 0)
+		ret = MlnImpl_8105DC0C(table, 0, grown);
+out:
+	MlnBufferDestroy(MLN_HEAP_GENERAL, index);
+	MlnBufferDestroy(MLN_HEAP_GENERAL, grown);
+	return ret;
 }
