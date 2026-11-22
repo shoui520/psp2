@@ -1555,6 +1555,39 @@ typedef struct MlnOctopusBundle {
 	MlnOctopusArray *attributes;
 } MlnOctopusBundle;
 
+/*
+ * an XML signature (http://www.w3.org/2000/09/xmldsig#) as MlnImpl_81059934
+ * reads it, and one of its SignedInfo's References
+ */
+typedef struct MlnXmlDsigReference {
+	MlnBuffer *uri;
+	int transformCount;
+	MlnBuffer **transforms;		/* the Transform algorithms */
+	MlnBuffer *digestMethod;
+	MlnBuffer *digestValue;
+} MlnXmlDsigReference;
+
+#define MLN_XMLDSIG_KEYINFO_KEYNAME	0
+#define MLN_XMLDSIG_KEYINFO_X509	1	/* X509Data/X509Certificate */
+
+typedef struct MlnXmlDsigSignature {
+	MlnBuffer *id;
+	MlnBuffer *canonicalizationMethod;
+	MlnBuffer *signatureMethod;
+	int referenceCount;
+	MlnXmlDsigReference *references;
+	MlnBuffer *signedInfo;		/* the SignedInfo as XML */
+	MlnBuffer *signatureValue;
+	int keyInfoType;
+	union {
+		MlnBuffer *keyName;	/* also the X509SKI or SecurityTokenReference */
+		struct {
+			int count;
+			MlnBuffer **certificates;
+		} x509;
+	} keyInfo;
+} MlnXmlDsigSignature;
+
 /* a bundle and, for each of its content keys, the SignedInfo and signature over it */
 typedef struct MlnOctopusBundleSignature {
 	MlnBuffer *signedInfo;
@@ -1687,6 +1720,25 @@ int MlnImpl_810611BC(const MlnOctopusNode *node, MlnBuffer **out);
 int MlnImpl_81059558(MlnXmlNode *node, MlnXmlNode *transform, MlnBuffer **out);
 int MlnImpl_8105BA14(MlnXmlNode *signature, int usage, int count, MlnBuffer **references,
 		     unsigned char **digests, int *digestTypes, int flags, int *verified);
+int MlnImpl_8105B568(MlnXmlNode *signature, int usage, int count, MlnBuffer **references,
+		     unsigned char **digests, int *digestTypes, int flags, MlnBuffer **signer,
+		     int *verified);
+int MlnImpl_81059934(MlnXmlNode *node, MlnXmlDsigSignature **out);
+int MlnImpl_8105B230(const MlnXmlDsigSignature *signature);
+int MlnImpl_8105B140(const MlnBuffer *uri, int fragment, MlnBuffer *const *id);
+int MlnImpl_8105B364(const MlnXmlDsigReference *reference, int transforms, int digestSize,
+		     const unsigned char *digest);
+int MlnImpl_8105D0AC(MlnXmlDsigSignature *signature);
+int MlnImpl_81082614(MlnXmlNode *node, MlnOctopusReference **out);
+int MlnImpl_81060F80(const MlnOctopusControl *control, MlnBuffer **out);
+int MlnImpl_81060DE0(const MlnOctopusController *controller, MlnBuffer **out);
+int MlnImpl_810403F4(const MlnBuffer *token, MlnOctopusSignedBundle **out);
+int MlnImpl_81041F48(MlnOctopusSignedBundle *signedBundle, MlnOctopusContentKey **contentKeys);
+int MlnImpl_81080C74(void *key);
+int MlnImpl_81061898(int kind, const MlnOctopusKey *key);
+int MlnImpl_81060FE8(const MlnOctopusContentKey *contentKey, MlnBuffer **out);
+int MlnImpl_81061964(int kind, const MlnOctopusKey *key, unsigned int size, const void *data,
+		     unsigned int digestSize, const void *digest);
 int MlnImpl_8103EFDC(MlnXmlNode *node, MlnOctopusExtension **out);
 int MlnImpl_8103F62C(MlnXmlNodeList *list, MlnOctopusArray **out);
 int MlnImpl_81040368(MlnOctopusSignedBundle *signedBundle);

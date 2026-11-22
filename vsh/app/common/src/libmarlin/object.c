@@ -488,7 +488,7 @@ MLN_ALWAYS_INLINE void MlnOctopusBundleExtensionFree(MlnOctopusBundleExtension *
 }
 
 /* a bundle with no content key count yet */
-MlnOctopusBundle *MlnImpl_8103CAA4(void)
+__attribute__((noinline)) MlnOctopusBundle *MlnImpl_8103CAA4(void)
 {
 	MlnOctopusBundle *bundle;
 
@@ -2265,7 +2265,7 @@ out:
 	return ret;
 }
 
-int MlnImpl_81040368(MlnOctopusSignedBundle *signedBundle)
+MLN_ALWAYS_INLINE int MlnOctopusSignedBundleFree(MlnOctopusSignedBundle *signedBundle)
 {
 	int count;
 	int i;
@@ -2287,4 +2287,988 @@ int MlnImpl_81040368(MlnOctopusSignedBundle *signedBundle)
 		MlnFree(MLN_HEAP_GENERAL, signedBundle);
 	}
 	return 0;
+}
+
+__attribute__((noinline)) int MlnImpl_81040368(MlnOctopusSignedBundle *signedBundle)
+{
+	return MlnOctopusSignedBundleFree(signedBundle);
+}
+
+#define MLN_STARFISH_NAMESPACE	"http://marlin-drm.com/starfish/1.2"
+
+/*
+ * reads the bundle's Controller: the Control it signs for and the content
+ * keys it controls, whose number all of the bundle's lists must agree on
+ */
+MLN_ALWAYS_INLINE int MlnOctopusControllerParse(MlnXmlNode *document, MlnOctopusBundle *bundle,
+						MlnBuffer **id)
+{
+	MlnXmlNodeList *list = NULL;
+	MlnXmlNodeList *references = NULL;
+	MlnBuffer *uid = NULL;
+	MlnBuffer *controllerId = NULL;
+	MlnOctopusArray *attributes = NULL;
+	MlnOctopusArray *extensions = NULL;
+	MlnOctopusReference *control = NULL;
+	MlnOctopusReference *target;
+	MlnOctopusArray *targets = NULL;
+	MlnOctopusController *controller = NULL;
+	MlnXmlNode *node;
+	int count;
+	int ret;
+	int i;
+
+	ret = MlnXmlFindNodes(MLN_HEAP_GENERAL, document, "/Bundle/Controller",
+			      MLN_OCTOPUS_NAMESPACE, &list);
+	if (ret != 0)
+		goto out;
+	if (list->count != 1)
+		goto format;
+	node = list->nodes[0];
+	ret = MlnXmlGetAttribute(MLN_HEAP_GENERAL, node, NULL, "uid", &uid);
+	if (ret != 0)
+		goto out;
+	ret = MlnXmlGetAttribute(MLN_HEAP_GENERAL, node, NULL, "Id", &controllerId);
+	if (ret != 0)
+		goto out;
+	ret = MlnImpl_8103DCBC(node, &attributes);
+	if (ret != 0)
+		goto out;
+	if (MlnXmlFindNodes(MLN_HEAP_GENERAL, node, "ExtensionList/Extension",
+			    MLN_OCTOPUS_NAMESPACE, &references) == 0) {
+		ret = MlnImpl_8103F62C(references, &extensions);
+		if (ret != 0)
+			goto out;
+		MlnXmlListFree(MLN_HEAP_GENERAL, references);
+		references = NULL;
+	}
+	ret = MlnXmlFindNodes(MLN_HEAP_GENERAL, node, "ControlReference", MLN_OCTOPUS_NAMESPACE,
+			      &references);
+	if (ret != 0)
+		goto out;
+	if (references->count != 1)
+		goto format;
+	ret = MlnImpl_81082614(references->nodes[0], &control);
+	if (ret != 0)
+		goto out;
+	if (control->digestValue == NULL)
+		goto format;
+	if (control->transforms != NULL) {
+		if (control->transforms->count != 1)
+			goto format;
+		ret = MlnImpl_8103EF84(control->transforms);
+		if (ret != 0)
+			goto out;
+	}
+	MlnXmlListFree(MLN_HEAP_GENERAL, references);
+	references = NULL;
+	ret = MlnXmlFindNodes(MLN_HEAP_GENERAL, node, "ControlledTargets/ContentKeyReference",
+			      MLN_OCTOPUS_NAMESPACE, &references);
+	if (ret != 0)
+		goto out;
+	count = references->count;
+	if (bundle->contentKeyCount != -1 && count != bundle->contentKeyCount)
+		goto format;
+	bundle->contentKeyCount = count;
+	targets = MlnImpl_8103B758(count);
+	if (targets == NULL) {
+		ret = 2;
+		goto out;
+	}
+	for (i = 0; i < count; i++) {
+		ret = MlnImpl_81082614(references->nodes[i], &target);
+		if (ret != 0)
+			goto out;
+		targets->items[i] = target;
+	}
+	controller = MlnAllocate(MLN_HEAP_GENERAL, sizeof(*controller));
+	if (controller == NULL) {
+		ret = 2;
+		goto out;
+	}
+	controller->uid = uid;
+	uid = NULL;
+	controller->control = control;
+	control = NULL;
+	controller->controlledTargets = targets;
+	targets = NULL;
+	controller->attributes = attributes;
+	attributes = NULL;
+	controller->extensions = extensions;
+	*id = controllerId;
+	extensions = NULL;
+	controllerId = NULL;
+	bundle->controller = controller;
+	controller = NULL;
+	goto out;
+format:
+	ret = MLN_OCTOPUS_ERROR_FORMAT;
+out:
+	MlnImpl_8103C57C(attributes, MLN_OCTOPUS_ATTRIBUTE);
+	MlnImpl_8103C57C(extensions, MLN_OCTOPUS_EXTENSION);
+	MlnBufferDestroy(MLN_HEAP_GENERAL, controllerId);
+	MlnBufferDestroy(MLN_HEAP_GENERAL, uid);
+	MlnXmlListFree(MLN_HEAP_GENERAL, list);
+	MlnXmlListFree(MLN_HEAP_GENERAL, references);
+	MlnImpl_8103C028(control);
+	MlnImpl_8103BE9C(controller);
+	MlnImpl_8103C57C(targets, MLN_OCTOPUS_REFERENCE);
+	return ret;
+}
+
+/* reads the bundle's starfish BroadcastKeyBlock, if it has one */
+MLN_ALWAYS_INLINE int MlnOctopusBroadcastKeyBlockParse(MlnXmlNode *document,
+						       MlnOctopusBundle *bundle)
+{
+	MlnXmlNodeList *bundles = NULL;
+	MlnXmlNodeList *blocks = NULL;
+	MlnXmlNodeList *revocations = NULL;
+	MlnXmlNodeList *encryptedKeys = NULL;
+	MlnBuffer *revocationInformation = NULL;
+	MlnBuffer *revocationText = NULL;
+	MlnBuffer *encryptedBroadcastKeys = NULL;
+	MlnBuffer *encryptedText = NULL;
+	MlnOctopusBroadcastKeyBlock *block = NULL;
+	MlnXmlNode *node;
+	int ret;
+
+	ret = MlnXmlFindNodes(MLN_HEAP_GENERAL, document, "/Bundle", MLN_OCTOPUS_NAMESPACE,
+			      &bundles);
+	if (ret != 0)
+		goto out;
+	if (bundles->count != 1)
+		goto format;
+	ret = MlnXmlFindNodes(MLN_HEAP_GENERAL, bundles->nodes[0], "BroadcastKeyBlock",
+			      MLN_STARFISH_NAMESPACE, &blocks);
+	if (ret != 0) {
+		if (ret != MLN_XML_ERROR_NOT_FOUND)
+			goto out;
+		ret = 0;
+		goto none;
+	}
+	if (blocks->count <= 0)
+		goto none;
+	if (blocks->count != 1)
+		goto format;
+	node = blocks->nodes[0];
+	ret = MlnXmlFindNodes(MLN_HEAP_GENERAL, node, "RevocationInformation",
+			      MLN_STARFISH_NAMESPACE, &revocations);
+	if (ret != 0)
+		goto out;
+	if (revocations->count != 1)
+		goto format;
+	ret = MlnXmlFindNodes(MLN_HEAP_GENERAL, node, "EncryptedBroadcastKeys",
+			      MLN_STARFISH_NAMESPACE, &encryptedKeys);
+	if (ret != 0)
+		goto out;
+	if (encryptedKeys->count != 1)
+		goto format;
+	ret = MlnXmlGetText(MLN_HEAP_GENERAL, revocations->nodes[0], &revocationText);
+	if (ret != 0)
+		goto out;
+	ret = MlnXmlGetText(MLN_HEAP_GENERAL, encryptedKeys->nodes[0], &encryptedText);
+	if (ret != 0)
+		goto out;
+	ret = MlnImpl_81026A9C(MLN_HEAP_GENERAL, revocationText, &revocationInformation);
+	if (ret != 0)
+		goto out;
+	ret = MlnImpl_81026A9C(MLN_HEAP_GENERAL, encryptedText, &encryptedBroadcastKeys);
+	if (ret != 0)
+		goto out;
+	block = MlnAllocate(MLN_HEAP_GENERAL, sizeof(*block));
+	if (block == NULL) {
+		ret = 2;
+		goto out;
+	}
+	block->revocationInformation = revocationInformation;
+	revocationInformation = NULL;
+	block->encryptedBroadcastKeys = encryptedBroadcastKeys;
+	encryptedBroadcastKeys = NULL;
+none:
+	bundle->broadcastKeyBlock = block;
+	block = NULL;
+	goto out;
+format:
+	ret = MLN_OCTOPUS_ERROR_FORMAT;
+out:
+	MlnFree(MLN_HEAP_GENERAL, block);
+	MlnBufferDestroy(MLN_HEAP_GENERAL, revocationInformation);
+	MlnBufferDestroy(MLN_HEAP_GENERAL, revocationText);
+	MlnBufferDestroy(MLN_HEAP_GENERAL, encryptedBroadcastKeys);
+	MlnBufferDestroy(MLN_HEAP_GENERAL, encryptedText);
+	MlnXmlListFree(MLN_HEAP_GENERAL, bundles);
+	MlnXmlListFree(MLN_HEAP_GENERAL, blocks);
+	MlnXmlListFree(MLN_HEAP_GENERAL, revocations);
+	MlnXmlListFree(MLN_HEAP_GENERAL, encryptedKeys);
+	return ret;
+}
+
+/* reads the bundle's ContentKeys, each with its SecretKey */
+MLN_ALWAYS_INLINE int MlnOctopusContentKeysParse(MlnXmlNode *document, MlnOctopusBundle *bundle)
+{
+	MlnOctopusBroadcastKeyBlock *broadcastKeyBlock = bundle->broadcastKeyBlock;
+	MlnXmlNodeList *list = NULL;
+	MlnXmlNodeList *keyList = NULL;
+	MlnOctopusKey *secretKey = NULL;
+	MlnBuffer *uid = NULL;
+	MlnOctopusArray *attributes = NULL;
+	MlnOctopusArray *extensions = NULL;
+	MlnOctopusArray *contentKeys = NULL;
+	MlnOctopusContentKey *contentKey;
+	MlnXmlNode *node;
+	int count;
+	int ret;
+	int i;
+
+	ret = MlnXmlFindNodes(MLN_HEAP_GENERAL, document, "/Bundle/ContentKey",
+			      MLN_OCTOPUS_NAMESPACE, &list);
+	if (ret != 0)
+		goto out;
+	count = list->count;
+	if (bundle->contentKeyCount != -1 && count != bundle->contentKeyCount) {
+		ret = MLN_OCTOPUS_ERROR_FORMAT;
+		goto out;
+	}
+	contentKeys = MlnImpl_8103B758(count);
+	if (contentKeys == NULL) {
+		ret = 2;
+		goto out;
+	}
+	for (i = 0; i < count; i++) {
+		node = list->nodes[i];
+		ret = MlnXmlGetAttribute(MLN_HEAP_GENERAL, node, NULL, "uid", &uid);
+		if (ret != 0)
+			goto out;
+		ret = MlnOctopusAttributeListParse(node, &attributes);
+		if (ret != 0)
+			goto out;
+		if (MlnXmlFindNodes(MLN_HEAP_GENERAL, node, "ExtensionList/Extension",
+				    MLN_OCTOPUS_NAMESPACE, &keyList) == 0) {
+			ret = MlnOctopusExtensionListParse(keyList, &extensions);
+			if (ret != 0)
+				goto out;
+			MlnXmlListFree(MLN_HEAP_GENERAL, keyList);
+			keyList = NULL;
+		}
+		ret = MlnXmlFindNodes(MLN_HEAP_GENERAL, node, "SecretKey", MLN_OCTOPUS_NAMESPACE,
+				      &keyList);
+		if (ret != 0)
+			goto out;
+		if (keyList->count != 1) {
+			ret = MLN_OCTOPUS_ERROR_FORMAT;
+			goto out;
+		}
+		ret = MlnImpl_8103DDB0(keyList->nodes[0], 0, (void **)&secretKey);
+		if (ret != 0)
+			goto out;
+		/* a key under a broadcast key block is encrypted with a broadcast key */
+		secretKey->state = broadcastKeyBlock != NULL ? 6 : 7;
+		MlnXmlListFree(MLN_HEAP_GENERAL, keyList);
+		keyList = NULL;
+		contentKey = MlnAllocate(MLN_HEAP_GENERAL, sizeof(*contentKey));
+		if (contentKey == NULL) {
+			ret = 2;
+			goto out;
+		}
+		contentKey->uid = uid;
+		uid = NULL;
+		contentKey->secretKey = secretKey;
+		secretKey = NULL;
+		contentKey->attributes = attributes;
+		contentKey->extensions = extensions;
+		contentKeys->items[i] = contentKey;
+		attributes = NULL;
+		extensions = NULL;
+	}
+	bundle->contentKeys = contentKeys;
+	bundle->contentKeyCount = count;
+	contentKeys = NULL;
+	ret = 0;
+out:
+	MlnBufferDestroy(MLN_HEAP_GENERAL, uid);
+	MlnXmlListFree(MLN_HEAP_GENERAL, list);
+	MlnXmlListFree(MLN_HEAP_GENERAL, keyList);
+	MlnImpl_8103B7A4(secretKey);
+	MlnImpl_8103C57C(attributes, MLN_OCTOPUS_ATTRIBUTE);
+	MlnImpl_8103C57C(extensions, MLN_OCTOPUS_EXTENSION);
+	MlnImpl_8103C57C(contentKeys, MLN_OCTOPUS_CONTENT_KEY);
+	return ret;
+}
+
+/* reads the bundle's Protectors: which content key protects which content */
+MLN_ALWAYS_INLINE int MlnOctopusProtectorsParse(MlnXmlNode *document, MlnOctopusBundle *bundle)
+{
+	MlnXmlNodeList *list = NULL;
+	MlnXmlNodeList *references = NULL;
+	MlnOctopusReference *contentKey = NULL;
+	MlnOctopusReference *target;
+	MlnOctopusArray *protectors = NULL;
+	MlnOctopusArray *targets = NULL;
+	MlnOctopusProtector *protector;
+	MlnXmlNode *node;
+	int targetCount;
+	int count;
+	int ret;
+	int i;
+	int j;
+
+	ret = MlnXmlFindNodes(MLN_HEAP_GENERAL, document, "/Bundle/Protector",
+			      MLN_OCTOPUS_NAMESPACE, &list);
+	if (ret != 0)
+		goto out;
+	count = list->count;
+	if (bundle->contentKeyCount != -1 && count != bundle->contentKeyCount)
+		goto format;
+	protectors = MlnImpl_8103B758(count);
+	if (protectors == NULL) {
+		ret = 2;
+		goto out;
+	}
+	for (i = 0; i < count; i++) {
+		node = list->nodes[i];
+		ret = MlnXmlFindNodes(MLN_HEAP_GENERAL, node, "ContentKeyReference",
+				      MLN_OCTOPUS_NAMESPACE, &references);
+		if (ret != 0)
+			goto out;
+		if (references->count != 1)
+			goto format;
+		ret = MlnImpl_81082614(references->nodes[0], &contentKey);
+		if (ret != 0)
+			goto out;
+		if (contentKey->digestValue != NULL)
+			goto format;
+		MlnXmlListFree(MLN_HEAP_GENERAL, references);
+		references = NULL;
+		ret = MlnXmlFindNodes(MLN_HEAP_GENERAL, node, "ProtectedTargets/ContentReference",
+				      MLN_OCTOPUS_NAMESPACE, &references);
+		if (ret != 0)
+			goto out;
+		targetCount = references->count;
+		targets = MlnImpl_8103B758(targetCount);
+		for (j = 0; j < targetCount; j++) {
+			ret = MlnImpl_81082614(references->nodes[j], &target);
+			if (ret != 0)
+				goto out;
+			targets->items[j] = target;
+			if (target->digestValue != NULL)
+				goto format;
+		}
+		MlnXmlListFree(MLN_HEAP_GENERAL, references);
+		references = NULL;
+		protector = MlnAllocate(MLN_HEAP_GENERAL, sizeof(*protector));
+		if (protector == NULL) {
+			ret = 2;
+			goto out;
+		}
+		protector->uid = NULL;
+		protector->contentKey = contentKey;
+		contentKey = NULL;
+		protector->protectedTargets = targets;
+		protectors->items[i] = protector;
+		targets = NULL;
+	}
+	bundle->protectors = protectors;
+	protectors = NULL;
+	bundle->contentKeyCount = count;
+	ret = 0;
+	goto out;
+format:
+	ret = MLN_OCTOPUS_ERROR_FORMAT;
+out:
+	MlnXmlListFree(MLN_HEAP_GENERAL, list);
+	MlnXmlListFree(MLN_HEAP_GENERAL, references);
+	MlnImpl_8103C028(contentKey);
+	MlnImpl_8103C57C(targets, MLN_OCTOPUS_REFERENCE);
+	MlnImpl_8103C57C(protectors, MLN_OCTOPUS_PROTECTOR);
+	return ret;
+}
+
+/*
+ * reads the bundle's Extension, a second Control for the bundle's own one;
+ * a bundle without a usable one simply has none
+ */
+MLN_ALWAYS_INLINE void MlnOctopusBundleExtensionParse(MlnXmlNode *document,
+						      MlnOctopusBundle *bundle)
+{
+	MlnXmlNode *node = NULL;
+	MlnOctopusControl *control = NULL;
+	MlnBuffer *uid = NULL;
+	MlnBuffer *subject = NULL;
+	MlnOctopusExtension *extension;
+	MlnOctopusBundleExtension *bundleExtension = NULL;
+	MlnXmlNodeList *list;
+	int ret;
+
+	if (document == NULL ||
+	    MlnXmlFindNode(MLN_HEAP_GENERAL, document, "/Bundle/Extension",
+			   MLN_OCTOPUS_NAMESPACE, &node) != 0 ||
+	    MlnXmlGetAttribute(MLN_HEAP_GENERAL, node, NULL, "uid", &uid) != 0 ||
+	    MlnXmlGetAttribute(MLN_HEAP_GENERAL, node, NULL, "subject", &subject) != 0 ||
+	    (bundle->control != NULL &&
+	     MlnBufferCompare(MLN_HEAP_GENERAL, bundle->control->uid, subject) != 0) ||
+	    (extension = MlnAllocate(MLN_HEAP_GENERAL, sizeof(*extension))) == NULL) {
+		extension = NULL;
+		goto out;
+	}
+	MlnMemset(extension, 0, sizeof(*extension));
+	list = NULL;
+	if (MlnXmlFindNodes(MLN_HEAP_GENERAL, document, "/Bundle/Control", MLN_OCTOPUS_NAMESPACE,
+			    &list) != 0 || list->count != 1) {
+		MlnXmlListFree(MLN_HEAP_GENERAL, list);
+		goto out;
+	}
+	ret = MlnImpl_8103FF44(list->nodes[0], &control);
+	MlnXmlListFree(MLN_HEAP_GENERAL, list);
+	if (ret != 0)
+		goto out;
+	bundleExtension = MlnAllocate(MLN_HEAP_GENERAL, sizeof(*bundleExtension));
+	if (bundleExtension == NULL)
+		goto out;
+	MlnMemset(bundleExtension, 0, sizeof(*bundleExtension));
+	extension->uid = uid;
+	extension->critical = 0;
+	extension->subject = subject;
+	uid = NULL;
+	subject = NULL;
+	bundle->extension = bundleExtension;
+	bundleExtension->extension = extension;
+	extension = NULL;
+	bundle->extension->control = control;
+	control = NULL;
+	bundleExtension = NULL;
+out:
+	MlnXmlNodeFree(MLN_HEAP_GENERAL, node);
+	MlnBufferDestroy(MLN_HEAP_GENERAL, uid);
+	MlnBufferDestroy(MLN_HEAP_GENERAL, subject);
+	MlnImpl_8103C0B8(extension);
+	MlnImpl_8103C284(control);
+	MlnImpl_8103CC38(bundleExtension);
+}
+
+/* the digest size a signature or digest method names, -1 for another */
+#define MLN_XMLDSIG_SHA1	"http://www.w3.org/2000/09/xmldsig#sha1"
+#define MLN_XMLENC_SHA256	"http://www.w3.org/2001/04/xmlenc#sha256"
+
+/*
+ * verifies the bundle's signatures: at most one public key signature over
+ * the Controller, and for each content key one HMAC signature with it over
+ * the Controller (and the public key signature); keeps each content key's
+ * SignedInfo and signature, and the signer of the public key signature
+ */
+MLN_ALWAYS_INLINE int MlnOctopusBundleSignaturesVerify(MlnOctopusSignedBundle *signedBundle,
+						       MlnXmlNodeList *signatureNodes,
+						       const MlnBuffer *controllerXml,
+						       MlnBuffer *controllerId)
+{
+	MlnBuffer *reference = controllerId;
+	MlnXmlNodeList *signedInfos = NULL;
+	MlnBuffer *signatureXml = NULL;
+	unsigned char *digest = NULL;
+	MlnBuffer *signer = NULL;
+	int digestType = 4;
+	int verified;
+	unsigned char controlDigest[32];
+	unsigned char signatureDigest[32];
+	MlnOctopusBundle *bundle;
+	MlnXmlDsigSignature **signatures;
+	MlnXmlDsigSignature *signature;
+	MlnXmlDsigReference *ref;
+	MlnOctopusBundleSignature *pair;
+	MlnBuffer *method;
+	int publicKeySignature;
+	int hmacSignatures;
+	int referenceCount;
+	int signatureRef;
+	int digestSize;
+	int count;
+	int keyCount;
+	int ret;
+	int i;
+	int j;
+
+	(void)controlDigest;
+	count = signatureNodes->count;
+	if (count < 0) {
+		ret = MLN_OCTOPUS_ERROR_FORMAT;
+		goto out;
+	}
+	if ((unsigned int)count > 0x1FFFFFFF) {
+		ret = 5;
+		goto out;
+	}
+	signatures = MlnAllocate(MLN_HEAP_GENERAL, 4 * count);
+	if (signatures == NULL) {
+		ret = 2;
+		goto out;
+	}
+	MlnMemset(signatures, 0, 4 * count);
+	digest = MlnAllocate(MLN_HEAP_GENERAL, 32);
+	if (digest == NULL) {
+		ret = 2;
+		goto free_signatures;
+	}
+	MlnMemset(digest, 0, 32);
+
+	hmacSignatures = 0;
+	publicKeySignature = -1;
+	for (i = 0; i != count; i++) {
+		ret = MlnImpl_81059934(signatureNodes->nodes[i], &signatures[i]);
+		if (ret != 0)
+			goto free_signatures;
+		switch (MlnImpl_8105B230(signatures[i])) {
+		case 0:
+		case 1:
+			if (publicKeySignature != -1) {
+				ret = MLN_OCTOPUS_ERROR_FORMAT;
+				goto free_signatures;
+			}
+			publicKeySignature = i;
+			break;
+		case 2:
+		case 3:
+			hmacSignatures++;
+			break;
+		default:
+			ret = MLN_OCTOPUS_ERROR_FORMAT;
+			goto free_signatures;
+		}
+	}
+	bundle = signedBundle->bundle;
+	if (hmacSignatures != bundle->contentKeyCount) {
+		ret = 0x230F0003;
+		goto free_signatures;
+	}
+	if (publicKeySignature == -1) {
+		referenceCount = 1;
+	} else {
+		if (signatures[publicKeySignature]->id == NULL) {
+			ret = 0x230F0004;
+			goto free_signatures;
+		}
+		switch (MlnImpl_8105B230(signatures[publicKeySignature])) {
+		case 0:
+			digestSize = 20;
+			break;
+		case 1:
+			digestSize = 32;
+			break;
+		default:
+			digestSize = -1;
+			break;
+		}
+		ret = MlnImpl_8103E4FC(controllerXml->data, controllerXml->size, digest, digestSize);
+		if (ret != 0)
+			goto free_signatures;
+		ret = MlnImpl_8105B568(signatureNodes->nodes[publicKeySignature], 6, 1, &reference,
+				       &digest, &digestType, 0, &signer, &verified);
+		if (ret != 0) {
+			ret = (ret & 0xFFFF0000) == 0 ? ret : 0x230F0003;
+			goto free_signatures;
+		}
+		ret = MlnXmlNodeToXml(MLN_HEAP_GENERAL, signatureNodes->nodes[publicKeySignature],
+				      &signatureXml);
+		if (ret != 0)
+			goto free_signatures;
+		referenceCount = 2;
+	}
+
+	for (i = 0; i != count; i++) {
+		if (i == publicKeySignature)
+			continue;
+		signature = signatures[i];
+		if (signature->referenceCount != referenceCount) {
+			ret = 0x230F0004;
+			goto free_signatures;
+		}
+		method = signature->signatureMethod;
+		if (method == NULL)
+			digestSize = -1;
+		else if (MlnBytesCompare(MLN_HEAP_GENERAL, 42,
+					 "http://www.w3.org/2000/09/xmldsig#rsa-sha1",
+					 method->size, method->data) == 0 ||
+			 MlnBytesCompare(MLN_HEAP_GENERAL, 43,
+					 "http://www.w3.org/2000/09/xmldsig#hmac-sha1",
+					 method->size, method->data) == 0)
+			digestSize = 20;
+		else if (MlnBytesCompare(MLN_HEAP_GENERAL, 49,
+					 "http://www.w3.org/2001/04/xmldsig-more#rsa-sha256",
+					 method->size, method->data) == 0 ||
+			 MlnBytesCompare(MLN_HEAP_GENERAL, 50,
+					 "http://www.w3.org/2001/04/xmldsig-more#hmac-sha256",
+					 method->size, method->data) == 0)
+			digestSize = 32;
+		else
+			digestSize = -1;
+
+		if (referenceCount == 2) {
+			/* one reference is to the public key signature */
+			ret = MlnImpl_8103E4FC(signatureXml->data, signatureXml->size,
+					       signatureDigest, digestSize);
+			if (ret != 0)
+				goto free_signatures;
+			ref = &signatures[i]->references[0];
+			signatureRef = 0;
+			if (MlnImpl_8105B140(ref->uri, 1, &signatures[publicKeySignature]->id) != 0) {
+				ref = &signatures[i]->references[1];
+				if (MlnImpl_8105B140(ref->uri, 1,
+						     &signatures[publicKeySignature]->id) != 0) {
+					ret = 0x230F0004;
+					goto free_signatures;
+				}
+				signatureRef = 1;
+			}
+			ret = MlnImpl_8105B364(ref, 1, digestSize, signatureDigest);
+			if (ret != 0) {
+				ret = (ret & 0xFFFF0000) == 0 ? ret : 0x230F0001;
+				goto free_signatures;
+			}
+			ref = &signatures[i]->references[1 - signatureRef];
+		} else {
+			ref = &signatures[i]->references[0];
+		}
+		/* the other is to the Controller */
+		if (MlnImpl_8105B140(ref->uri, 1, &reference) != 0) {
+			ret = 0x230F0004;
+			goto free_signatures;
+		}
+		ret = MlnImpl_8103E4FC(controllerXml->data, controllerXml->size, digest, digestSize);
+		if (ret != 0)
+			goto free_signatures;
+		ret = MlnImpl_8105B364(ref, 4, digestSize, digest);
+		if (ret != 0)
+			goto free_signatures;
+
+		/* the content key whose uid the KeyName gives */
+		keyCount = signedBundle->bundle->contentKeyCount;
+		for (j = 0; j < keyCount; j++) {
+			MlnOctopusContentKey *contentKey = signedBundle->bundle->contentKeys->items[j];
+
+			if (MlnBufferCompare(MLN_HEAP_GENERAL, contentKey->secretKey->uid,
+					     signatures[i]->keyInfo.keyName) != 0)
+				continue;
+			pair = &signedBundle->signatures[j];
+			if (pair->signedInfo != NULL || pair->signature != NULL) {
+				ret = 0x230F0001;
+				goto free_signatures;
+			}
+			ret = MlnXmlFindNodes(MLN_HEAP_GENERAL, signatureNodes->nodes[i], "SignedInfo",
+					      MLN_XMLDSIG_NAMESPACE, &signedInfos);
+			if (ret != 0)
+				goto free_signatures;
+			if (signedInfos->count != 1) {
+				ret = 0x230F0001;
+				goto free_signatures;
+			}
+			ret = MlnXmlNodeToXml(MLN_HEAP_GENERAL, signedInfos->nodes[0],
+					      &signedBundle->signatures[j].signedInfo);
+			if (ret != 0)
+				goto free_signatures;
+			MlnXmlListFree(MLN_HEAP_GENERAL, signedInfos);
+			signedInfos = NULL;
+			signedBundle->signatures[j].signature = signatures[i]->signatureValue;
+			signatures[i]->signatureValue = NULL;
+		}
+	}
+
+	/* every content key must have its signature */
+	ret = 0;
+	for (j = signedBundle->bundle->contentKeyCount - 1; j >= 0; j--) {
+		pair = &signedBundle->signatures[j];
+		if (pair->signedInfo == NULL || pair->signature == NULL) {
+			ret = 0x230F0003;
+			goto free_signatures;
+		}
+	}
+	if (signedBundle->bundle->control != NULL) {
+		signedBundle->bundle->control->signer = signer;
+		signer = NULL;
+	}
+free_signatures:
+	for (i = 0; i != count; i++) {
+		if (signatures[i] != NULL)
+			MlnImpl_8105D0AC(signatures[i]);
+	}
+	MlnFree(MLN_HEAP_GENERAL, signatures);
+out:
+	MlnFree(MLN_HEAP_GENERAL, digest);
+	MlnXmlListFree(MLN_HEAP_GENERAL, signedInfos);
+	MlnBufferDestroy(MLN_HEAP_GENERAL, signatureXml);
+	MlnBufferDestroy(MLN_HEAP_GENERAL, signer);
+	return ret;
+}
+
+/*
+ * reads a bundle (Control, Controller, BroadcastKeyBlock, ContentKeys,
+ * Protectors, Extension), checks the Controller's digest of the Control and
+ * verifies the bundle's signatures
+ */
+int MlnImpl_810403F4(const MlnBuffer *token, MlnOctopusSignedBundle **out)
+{
+	MlnXmlNodeList *bundles = NULL;
+	MlnXmlNodeList *signatureNodes = NULL;
+	MlnXmlNode *document = NULL;
+	MlnBuffer *xml = NULL;
+	MlnBuffer *controllerId = NULL;
+	MlnOctopusSignedBundle *signedBundle = NULL;
+	MlnOctopusBundle *bundle = NULL;
+	MlnXmlNodeList *list;
+	MlnOctopusController *controller;
+	MlnBuffer *method;
+	MlnBuffer *digestValue;
+	unsigned char digest[32];
+	unsigned int count;
+	int digestSize;
+	int ret;
+
+	if (token == NULL || out == NULL) {
+		ret = 3;
+		goto out;
+	}
+	ret = MlnXmlParse(MLN_HEAP_GENERAL, token->size, token->data, &document);
+	if (ret != 0)
+		goto fail;
+	bundle = MlnImpl_8103CAA4();
+	if (bundle == NULL) {
+		ret = 2;
+		goto out;
+	}
+	bundle->contentKeyCount = -1;
+
+	list = NULL;
+	ret = MlnXmlFindNodes(MLN_HEAP_GENERAL, document, "/Bundle/Control", MLN_OCTOPUS_NAMESPACE,
+			      &list);
+	if (ret == 0 && list->count != 1)
+		ret = MLN_OCTOPUS_ERROR_FORMAT;
+	if (ret != 0) {
+		MlnXmlListFree(MLN_HEAP_GENERAL, list);
+		goto fail;
+	}
+	ret = MlnImpl_8103FF44(list->nodes[0], &bundle->control);
+	MlnXmlListFree(MLN_HEAP_GENERAL, list);
+	if (ret != 0)
+		goto fail;
+	ret = MlnOctopusControllerParse(document, bundle, &controllerId);
+	if (ret != 0)
+		goto fail;
+	ret = MlnOctopusBroadcastKeyBlockParse(document, bundle);
+	if (ret != 0)
+		goto fail;
+	ret = MlnOctopusContentKeysParse(document, bundle);
+	if (ret != 0)
+		goto fail;
+	ret = MlnOctopusProtectorsParse(document, bundle);
+	if (ret != 0)
+		goto fail;
+	MlnOctopusBundleExtensionParse(document, bundle);
+
+	signedBundle = MlnAllocate(MLN_HEAP_GENERAL, sizeof(*signedBundle));
+	if (signedBundle == NULL) {
+		ret = 2;
+		goto out;
+	}
+	MlnMemset(signedBundle, 0, sizeof(*signedBundle));
+
+	/* the Controller's digest of the Control */
+	ret = MlnImpl_81060F80(bundle->control, &xml);
+	if (ret != 0)
+		goto fail;
+	method = bundle->controller->control->digestMethod;
+	if (method == NULL)
+		digestSize = -1;
+	else if (MlnBytesCompare(MLN_HEAP_GENERAL, 38, MLN_XMLDSIG_SHA1, method->size,
+				 method->data) == 0)
+		digestSize = 20;
+	else if (MlnBytesCompare(MLN_HEAP_GENERAL, 39, MLN_XMLENC_SHA256, method->size,
+				 method->data) == 0)
+		digestSize = 32;
+	else
+		digestSize = -1;
+	ret = MlnImpl_8103E4FC(xml->data, xml->size, digest, digestSize);
+	if (ret != 0)
+		goto fail;
+	MlnBufferDestroy(MLN_HEAP_GENERAL, xml);
+	controller = bundle->controller;
+	digestValue = controller->control->digestValue;
+	xml = NULL;
+	if (digestValue == NULL || (unsigned int)digestSize != digestValue->size ||
+	    MlnMemcmp(digestValue->data, digest, digestSize) != 0) {
+		ret = MLN_OCTOPUS_ERROR_FORMAT;
+		goto out;
+	}
+
+	ret = MlnXmlFindNodes(MLN_HEAP_GENERAL, document, "/Bundle", MLN_OCTOPUS_NAMESPACE,
+			      &bundles);
+	if (ret != 0)
+		goto fail;
+	if (bundles->count != 1)
+		goto format;
+	ret = MlnXmlFindNodes(MLN_HEAP_GENERAL, bundles->nodes[0], "Signature",
+			      MLN_XMLDSIG_NAMESPACE, &signatureNodes);
+	MlnXmlListFree(MLN_HEAP_GENERAL, bundles);
+	bundles = NULL;
+	count = bundle->contentKeyCount;
+	signedBundle->bundle = bundle;
+	bundle = NULL;
+	if (ret != 0) {
+		if (ret != MLN_XML_ERROR_NOT_FOUND)
+			goto fail;
+		ret = 0x230F0003;
+		goto out;
+	}
+	if (count > 0x0FFFFFFF) {
+		ret = 5;
+		goto out;
+	}
+	signedBundle->signatures = MlnAllocate(MLN_HEAP_GENERAL, 8 * count);
+	if (signedBundle->signatures == NULL) {
+		ret = 2;
+		goto out;
+	}
+	MlnMemset(signedBundle->signatures, 0, 8 * count);
+	ret = MlnImpl_81060DE0(controller, &xml);
+	if (ret != 0)
+		goto fail;
+	ret = MlnOctopusBundleSignaturesVerify(signedBundle, signatureNodes, xml, controllerId);
+	MlnBufferDestroy(MLN_HEAP_GENERAL, xml);
+	xml = NULL;
+	if (ret != 0)
+		goto fail;
+	*out = signedBundle;
+	signedBundle = NULL;
+	goto out;
+format:
+	ret = MLN_OCTOPUS_ERROR_FORMAT;
+	goto out;
+fail:
+	ret = MlnOctopusFormatError(ret);
+out:
+	MlnBufferDestroy(MLN_HEAP_GENERAL, controllerId);
+	MlnBufferDestroy(MLN_HEAP_GENERAL, xml);
+	MlnXmlNodeFree(MLN_HEAP_GENERAL, document);
+	MlnImpl_8103CAD8(bundle);
+	MlnOctopusSignedBundleFree(signedBundle);
+	MlnXmlListFree(MLN_HEAP_GENERAL, bundles);
+	MlnXmlListFree(MLN_HEAP_GENERAL, signatureNodes);
+	return ret;
+}
+
+/* the key data a ContentKey's digest is taken over in place of the key */
+static const unsigned char MlnOctopusMaskedKeyData[16] = {
+	0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
+	0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
+};
+
+/*
+ * checks a content key against the Controller's reference to it: the
+ * reference's digest is the content key's HMAC, with the key itself, over the
+ * ContentKey with its key data masked
+ */
+MLN_ALWAYS_INLINE int MlnOctopusContentKeyVerify(MlnOctopusContentKey *contentKey,
+						 const MlnOctopusArray *targets)
+{
+	MlnBuffer *xml = NULL;
+	MlnBuffer masked = { sizeof(MlnOctopusMaskedKeyData),
+			     (unsigned char *)MlnOctopusMaskedKeyData };
+	MlnOctopusContentKey copy;
+	MlnOctopusKey key;
+	MlnOctopusReference *target;
+	MlnBuffer *method;
+	int count;
+	int kind;
+	int ret;
+	int i;
+
+	count = targets->count;
+	for (i = 0; i < count; i++) {
+		target = targets->items[i];
+		if (MlnBufferCompare(MLN_HEAP_GENERAL, target->uid, contentKey->uid) == 0)
+			break;
+	}
+	if (i >= count) {
+		ret = 0x230F0001;
+		goto out;
+	}
+	kind = 2;
+	method = target->digestMethod;
+	if (method != NULL) {
+		if (MlnBytesCompare(MLN_HEAP_GENERAL, 38, MLN_XMLDSIG_SHA1, method->size,
+				    method->data) == 0)
+			kind = 1;
+		else if (MlnBytesCompare(MLN_HEAP_GENERAL, 39, MLN_XMLENC_SHA256, method->size,
+					 method->data) == 0)
+			kind = 2;
+	}
+	MlnMemcpy(&copy, contentKey, sizeof(copy));
+	MlnMemcpy(&key, contentKey->secretKey, sizeof(key));
+	copy.secretKey = &key;
+	key.data = &masked;
+	ret = MlnImpl_81060FE8(&copy, &xml);
+	if (ret != 0)
+		goto out;
+	ret = MlnImpl_81061964(kind, contentKey->secretKey, xml->size, xml->data,
+			       target->digestValue->size, target->digestValue->data);
+out:
+	MlnBufferDestroy(MLN_HEAP_GENERAL, xml);
+	return ret;
+}
+
+/*
+ * checks the HMAC signature of each of a signed bundle's content keys that
+ * is loaded, and each such key against the Controller's digest of it
+ */
+int MlnImpl_81041F48(MlnOctopusSignedBundle *signedBundle, MlnOctopusContentKey **contentKeys)
+{
+	MlnOctopusBundle *bundle;
+	MlnOctopusArray *targets;
+	MlnOctopusContentKey *contentKey;
+	MlnOctopusBundleSignature *pair;
+	MlnOctopusKey *key;
+	void *handle = NULL;
+	/* Sony's code frees a buffer it never sets */
+	MlnBuffer *spare = NULL;
+	int loaded;
+	int count;
+	int ret;
+	int i;
+
+	if (signedBundle == NULL || (bundle = signedBundle->bundle) == NULL ||
+	    bundle->controller == NULL ||
+	    (targets = bundle->controller->controlledTargets) == NULL || contentKeys == NULL) {
+		ret = 3;
+		goto out;
+	}
+	count = bundle->contentKeyCount;
+	for (i = 0; i < count; i++) {
+		contentKey = contentKeys[i];
+		if (contentKey == NULL || (key = contentKey->secretKey) == NULL)
+			continue;
+		ret = MlnImpl_81080BFC(&handle);
+		if (ret != 0)
+			goto out;
+		loaded = MlnImpl_81080C74(key->key);
+		ret = MlnImpl_81080C1C(handle);
+		if (ret != 0)
+			goto out;
+		handle = NULL;
+		if (!loaded)
+			continue;
+		pair = &signedBundle->signatures[i];
+		if (pair->signedInfo == NULL || pair->signature == NULL) {
+			ret = 0x230F0001;
+			goto out;
+		}
+		if (MlnImpl_81061898(pair->signature->size == 32 ? 2 : 1, key) != 0) {
+			ret = 0x230F0001;
+			goto out;
+		}
+		ret = MlnOctopusContentKeyVerify(contentKey, targets);
+		if (ret != 0)
+			goto out;
+	}
+	ret = 0;
+out:
+	MlnImpl_81080C1C(handle);
+	ret = MlnOctopusFormatError(ret);
+	MlnBufferDestroy(MLN_HEAP_GENERAL, spare);
+	return ret;
 }
