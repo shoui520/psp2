@@ -1571,6 +1571,7 @@ typedef struct MlnXmlDsigReference {
 
 #define MLN_XMLDSIG_KEYINFO_KEYNAME	0
 #define MLN_XMLDSIG_KEYINFO_X509	1	/* X509Data/X509Certificate */
+#define MLN_XMLDSIG_KEYINFO_X509SKI	2	/* X509Data/X509SKI, also in a SecurityTokenReference */
 
 typedef struct MlnXmlDsigSignature {
 	MlnBuffer *id;
@@ -1582,7 +1583,7 @@ typedef struct MlnXmlDsigSignature {
 	MlnBuffer *signatureValue;
 	int keyInfoType;
 	union {
-		MlnBuffer *keyName;	/* also the X509SKI or SecurityTokenReference */
+		MlnBuffer *keyName;	/* or the X509SKI */
 		struct {
 			int count;
 			MlnBuffer **certificates;
@@ -1745,6 +1746,8 @@ int MlnImpl_8105B568(MlnXmlNode *signature, int usage, int count, MlnBuffer **re
 		     unsigned char **digests, int *digestTypes, int flags, MlnBuffer **signer,
 		     int *verified);
 int MlnImpl_81059934(MlnXmlNode *node, MlnXmlDsigSignature **out);
+int MlnImpl_8105D018(MlnXmlDsigReference *reference);
+int MlnImpl_8105A3D8(MlnXmlNode *node, MlnXmlNode *document, MlnXmlDsigSignature **out);
 int MlnImpl_8105B230(const MlnXmlDsigSignature *signature);
 int MlnImpl_8105B140(const MlnBuffer *uri, int fragment, MlnBuffer *const *id);
 int MlnImpl_8105B364(const MlnXmlDsigReference *reference, int transforms, int digestSize,
