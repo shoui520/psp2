@@ -1786,6 +1786,26 @@ typedef struct MlnStoreLink {
 	MlnBuffer *value2;
 } MlnStoreLink;
 
+/* keys to add to or remove from a stored record */
+typedef struct MlnRecordKeys {
+	int count;
+	MlnBuffer **keys;
+} MlnRecordKeys;
+
+/* an update of the stored record with id */
+typedef struct MlnRecordUpdate {
+	int reset;			/* drop the record's items first */
+	unsigned int tag;		/* the record's new tag; one not newer stops */
+	MlnBuffer *id;
+	MlnRecordKeys *add;
+	MlnRecordKeys *remove;
+} MlnRecordUpdate;
+
+typedef struct MlnRecordUpdates {
+	unsigned int count;
+	MlnRecordUpdate **updates;
+} MlnRecordUpdates;
+
 int MlnImpl_810436E4(const MlnBuffer *first, const MlnBuffer *second);
 int MlnImpl_810437BC(MlnStoreLink **links, MlnStoreLink *link);
 int MlnImpl_81043860(const MlnBuffer *id, const MlnRecordArray *records, MlnRecord **out,
@@ -1803,6 +1823,26 @@ int MlnImpl_81044824(const MlnBuffer *from, const MlnBuffer *to, MlnBuffer **rec
 int MlnImpl_81044A34(int kind);
 int MlnImpl_81044D64(MlnBuffer **out);
 int MlnImpl_81044DEC(int kind, MlnOctopusSamlAssertion **out);
+int MlnImpl_81044F44(const MlnRecordUpdates *updates);
+int MlnImpl_810455D8(MlnBuffer **out);
+int MlnImpl_81045630(const MlnBuffer *id, unsigned int *tag);
+
+/* the two buffers stored in table 12 */
+typedef struct MlnStoreKeyPair {
+	int version;			/* 2 */
+	MlnBuffer *first;		/* key 1 */
+	MlnBuffer *second;		/* key 2 */
+} MlnStoreKeyPair;
+
+int MlnImpl_810456B0(const MlnStoreKeyPair *pair);
+int MlnImpl_8104570C(MlnArray **out);
+int MlnImpl_810457D4(const MlnBuffer *data, const MlnBuffer *value);
+int MlnImpl_810459F0(const MlnBuffer *data, int *found);
+int MlnImpl_81045A3C(const MlnBuffer *data);
+int MlnImpl_81046BFC(int kind, const unsigned char *digest, const void *arg2, const void *arg3,
+		     int arg4);
+int MlnImpl_810467C0(int kind, const unsigned char *digest, const void *reserved,
+		     const unsigned char *id, MlnBuffer value);
 int MlnImpl_8104A300(MlnStoreLink *links, MlnBuffer *key, MlnBuffer *value, const MlnBuffer *first,
 		     const MlnBuffer *second);
 int MlnImpl_81049DDC(MlnStoreLink *links, const MlnBuffer *from, const MlnBuffer *to,

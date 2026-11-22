@@ -72,7 +72,7 @@ __attribute__((noinline)) int MlnImpl_810437BC(MlnStoreLink **links, MlnStoreLin
  * the record with id: from records when it is there (a broken entry there is
  * freed and gives 5), else the one stored in table 11, *stored then set
  */
-int MlnImpl_81043860(const MlnBuffer *id, const MlnRecordArray *records, MlnRecord **out,
+__attribute__((noinline)) int MlnImpl_81043860(const MlnBuffer *id, const MlnRecordArray *records, MlnRecord **out,
 		     int *stored)
 {
 	MlnRecord *record = NULL;
@@ -912,4 +912,418 @@ __attribute__((noinline)) int MlnImpl_81044D64(MlnBuffer **out)
 __attribute__((noinline)) int MlnImpl_81044DEC(int kind, MlnOctopusSamlAssertion **out)
 {
 	return MlnStoreReadAssertion(kind, out);
+}
+
+/* appends a copy of key to record's items, as the current one */
+static inline __attribute__((always_inline)) int MlnStoreRecordAppend(MlnRecord *record,
+								     const MlnBuffer *key)
+{
+	MlnRecordItem *item;
+	MlnBuffer *data;
+
+	item = MlnAllocate(MLN_HEAP_GENERAL, sizeof(*item));
+	if (item == NULL) {
+		MlnFree(MLN_HEAP_GENERAL, item);
+		return 2;
+	}
+	data = MlnBufferCreate(MLN_HEAP_GENERAL, key->size, key->data);
+	item->data = data;
+	if (data == NULL) {
+		MlnBufferDestroy(MLN_HEAP_GENERAL, data);
+		MlnFree(MLN_HEAP_GENERAL, item);
+		return 2;
+	}
+	item->next = NULL;
+	item->previous = record->last;
+	if (record->last != NULL) {
+		record->last->next = item;
+		record->last = item;
+	} else {
+		record->last = item;
+		record->first = item;
+	}
+	record->current = item;
+	record->count++;
+	MlnFree(MLN_HEAP_GENERAL, NULL);
+	return 0;
+}
+
+/*
+ * applies updates to the stored records (table 11): each finds or makes its
+ * record, stops the run when the record's tag is not older than its own, and
+ * adds its keys in order and removes the ones it lists
+ */
+int MlnImpl_81044F44(const MlnRecordUpdates *updates)
+{
+	MlnRecordArray array = { 0, NULL };
+	MlnRecord *record = NULL;
+	MlnBuffer *serialized = NULL;
+	MlnBuffer *buffer;
+	MlnBuffer *data = NULL;
+	MlnBuffer *key;
+	MlnRecordUpdate *update;
+	MlnRecordItem *item;
+	MlnRecordItem *next;
+	MlnRecordKeys *keys;
+	unsigned int count;
+	unsigned int i;
+	int stored = 0;
+	int k;
+	int ret;
+
+	if (updates == NULL) {
+		ret = 3;
+		goto out;
+	}
+	count = updates->count;
+	if (count == 0) {
+		ret = 0;
+		goto out;
+	}
+	buffer = NULL;
+	ret = MlnImpl_8105DEDC(11, 0, &buffer);
+	if (ret == 0) {
+		data = buffer;
+		buffer = NULL;
+	}
+	MlnBufferDestroy(MLN_HEAP_GENERAL, buffer);
+	if (ret != 0) {
+		if (ret != 1)
+			goto fail;
+		MlnBufferDestroy(MLN_HEAP_GENERAL, data);
+		data = NULL;
+	}
+	array.count = count;
+	ret = MlnImpl_8103D30C(data, &array);
+	if (ret != 0)
+		goto fail;
+	array.count -= count;
+	MlnBufferDestroy(MLN_HEAP_GENERAL, data);
+	if (updates->count == 0)
+		goto save;
+	update = updates->updates[0];
+	if (update == NULL || update->id == NULL)
+		goto invalid;
+	i = 0;
+	for (;;) {
+		ret = MlnImpl_81043860(update->id, &array, &record, &stored);
+		if (ret != 0) {
+			if (ret != 1)
+				goto out;
+			record = MlnAllocate(MLN_HEAP_GENERAL, sizeof(*record));
+			if (record == NULL) {
+				MlnImpl_8103D5B8(record);
+				ret = 2;
+				goto out;
+			}
+			MlnMemset(record, 0, sizeof(*record));
+			MlnImpl_8103D5B8(NULL);
+			stored = 1;
+		} else if (update->reset != 0) {
+			for (item = record->first; item != NULL; item = next) {
+				next = item->next;
+				MlnBufferDestroy(MLN_HEAP_GENERAL, item->data);
+				MlnFree(MLN_HEAP_GENERAL, item);
+			}
+			record->count = 0;
+			record->last = NULL;
+			record->current = NULL;
+			record->first = NULL;
+		}
+		if (record->header == NULL) {
+			record->header = MlnAllocate(MLN_HEAP_GENERAL, sizeof(*record->header));
+			if (record->header == NULL)
+				goto nomem;
+			record->header->count = 0;
+			record->header->id = MlnBufferCreate(MLN_HEAP_GENERAL, update->id->size,
+							     update->id->data);
+		} else if ((int)record->header->tag >= (int)update->tag) {
+			goto save;
+		}
+		record->header->tag = update->tag;
+		keys = update->add;
+		if (keys != NULL) {
+			if (record->count == 0) {
+				for (k = 0; k < keys->count; k++)
+					if (MlnStoreRecordAppend(record, keys->keys[k]) != 0)
+						goto nomem;
+			} else {
+				record->current = record->first;
+				for (k = 0; k < keys->count; k++) {
+					key = keys->keys[k];
+					while (record->current != NULL &&
+					       MlnBufferCompareKey(MLN_HEAP_GENERAL, record->current->data,
+								   key) <= 0)
+						record->current = record->current->next;
+					if (record->current == NULL) {
+						if (MlnStoreRecordAppend(record, key) != 0)
+							goto nomem;
+						continue;
+					}
+					item = MlnAllocate(MLN_HEAP_GENERAL, sizeof(*item));
+					if (item == NULL ||
+					    (item->data = MlnBufferCreate(MLN_HEAP_GENERAL, key->size,
+									  key->data)) == NULL) {
+						MlnFree(MLN_HEAP_GENERAL, item);
+						goto nomem;
+					}
+					item->next = record->current;
+					item->previous = record->current->previous;
+					if (record->current->previous != NULL)
+						record->current->previous->next = item;
+					else
+						record->first = item;
+					record->current->previous = item;
+					record->current = item;
+					record->count++;
+					MlnFree(MLN_HEAP_GENERAL, NULL);
+				}
+			}
+		}
+		keys = update->remove;
+		if (keys != NULL && record->count > 0) {
+			record->current = record->first;
+			for (k = 0; k < keys->count; k++) {
+				while (record->current != NULL &&
+				       MlnBufferCompareKey(MLN_HEAP_GENERAL, record->current->data,
+							   keys->keys[k]) != 0)
+					record->current = record->current->next;
+				item = record->current;
+				if (item == NULL)
+					continue;
+				if (item->next != NULL)
+					item->next->previous = item->previous;
+				else
+					record->last = item->previous;
+				if (item->previous != NULL)
+					item->previous->next = item->next;
+				else
+					record->first = item->next;
+				record->current = item->next;
+				record->count--;
+				MlnBufferDestroy(MLN_HEAP_GENERAL, item->data);
+				MlnFree(MLN_HEAP_GENERAL, item);
+			}
+		}
+		if (stored) {
+			array.records[array.count++] = record;
+			record = NULL;
+		}
+		i++;
+		if (i >= updates->count)
+			goto save;
+		update = updates->updates[i];
+		if (update == NULL || update->id == NULL)
+			goto invalid;
+	}
+save:
+	ret = MlnImpl_8103D0DC(&array, &serialized);
+	if (ret == 0)
+		ret = MlnImpl_8105DC0C(11, 0, serialized);
+	goto out;
+invalid:
+	ret = 5;
+	goto out;
+nomem:
+	ret = 2;
+	goto out;
+fail:
+	MlnBufferDestroy(MLN_HEAP_GENERAL, data);
+out:
+	MlnBufferDestroy(MLN_HEAP_GENERAL, serialized);
+	if (record != NULL && stored != 0)
+		MlnImpl_8103D5B8(record);
+	if (array.records != NULL) {
+		for (k = 0; k < array.count; k++)
+			MlnImpl_8103D5B8(array.records[k]);
+		MlnFree(MLN_HEAP_GENERAL, array.records);
+	}
+	return ret;
+}
+
+/* reads the stored records (table 11) as one buffer */
+int MlnImpl_810455D8(MlnBuffer **out)
+{
+	MlnBuffer *buffer;
+	int ret;
+
+	buffer = NULL;
+	if (out == NULL) {
+		ret = 3;
+	} else {
+		ret = MlnImpl_8105DEDC(11, 0, &buffer);
+		if (ret == 0) {
+			*out = buffer;
+			buffer = NULL;
+		}
+	}
+	MlnBufferDestroy(MLN_HEAP_GENERAL, buffer);
+	return ret;
+}
+
+/* reads the tag of the stored record with id */
+int MlnImpl_81045630(const MlnBuffer *id, unsigned int *tag)
+{
+	MlnRecord *record = NULL;
+	int ret;
+
+	if (id == NULL || tag == NULL) {
+		ret = 3;
+	} else {
+		ret = MlnImpl_81043860(id, NULL, &record, NULL);
+		if (ret == 0)
+			*tag = record->header->tag;
+		else if (ret == 1)
+			ret = 0x230A0008;
+	}
+	MlnImpl_8103D5B8(record);
+	return ret;
+}
+
+/* stores a key pair (table 12, keys 1 and 2) */
+int MlnImpl_810456B0(const MlnStoreKeyPair *pair)
+{
+	int ret;
+
+	if (pair == NULL)
+		return 0;
+	if (pair->version != 2 || pair->first == NULL)
+		return 3;
+	ret = MlnImpl_8105DC0C(12, 1, pair->first);
+	if (ret != 0)
+		return ret;
+	return MlnImpl_8105DC0C(12, 2, pair->second);
+}
+
+/* reads the key pair (table 12) as an array of its two buffers, NULL when none */
+int MlnImpl_8104570C(MlnArray **out)
+{
+	MlnBuffer *buffers[2] = { NULL, NULL };
+	MlnArray *array = NULL;
+	int ret;
+
+	ret = MlnImpl_8105DEDC(12, 1, &buffers[0]);
+	if (ret != 1 && ret != 0)
+		goto out;
+	ret = MlnImpl_8105DEDC(12, 2, &buffers[1]);
+	if (ret != 1 && ret != 0)
+		goto out;
+	if (buffers[0] != NULL) {
+		array = MlnWordArrayCreate(MLN_HEAP_GENERAL, 2, (const unsigned int *)buffers);
+		if (array == NULL) {
+			ret = 2;
+			goto out;
+		}
+		buffers[0] = NULL;
+		buffers[1] = NULL;
+	}
+	ret = 0;
+	*out = array;
+	array = NULL;
+out:
+	MlnArrayDestroy(MLN_HEAP_GENERAL, array);
+	MlnBufferDestroy(MLN_HEAP_GENERAL, buffers[1]);
+	MlnBufferDestroy(MLN_HEAP_GENERAL, buffers[0]);
+	return ret;
+}
+
+/*
+ * passes the digest of data and the device id (its first ten bytes when the
+ * id is neither zero at the start nor at the end) on to 0x810467C0
+ */
+int MlnImpl_810457D4(const MlnBuffer *data, const MlnBuffer *value)
+{
+	unsigned char zero[10];
+	unsigned char digest[20];
+	unsigned char shortId[20];
+	const MlnBuffer *device;
+	const unsigned char *id;
+
+	device = MlnImpl_81047E34();
+	if (device == NULL)
+		return 2;
+	MlnMemset(zero, 0, sizeof(zero));
+	id = device->data;
+	if (id != NULL) {
+		if (device->size != sizeof(shortId))
+			return 5;
+		if (MlnMemcmp(id, zero, 10) != 0 && MlnMemcmp(id + 12, zero, 8) != 0) {
+			MlnMemset(shortId, 0, sizeof(shortId));
+			MlnMemcpy(shortId, id, 10);
+			id = shortId;
+		}
+	}
+	MlnImpl_810570A8(data->data, data->size, digest);
+	return MlnImpl_810467C0(2, digest, NULL, id, *value);
+}
+
+/* removes the link from context to data, and its record (table 7) */
+unsigned int MlnImpl_810458B0(const MlnBuffer *context, const MlnBuffer *data)
+{
+	MlnStoreLink *links = NULL;
+	MlnStoreLink *loaded;
+	MlnStoreLink *found = NULL;
+	unsigned int key;
+	int damaged;
+	int ret;
+
+	if (data == NULL || data->size == 0 || data->data == NULL) {
+		ret = 3;
+		goto out;
+	}
+	loaded = NULL;
+	ret = MlnImpl_81049874(&loaded);
+	if (ret == 6) {
+		MlnImpl_810475F4(7);
+		MlnImpl_81049918(loaded);
+		goto out;
+	}
+	if (ret != 0) {
+		MlnImpl_81049918(loaded);
+		goto out;
+	}
+	links = loaded;
+	loaded = NULL;
+	MlnImpl_81049918(loaded);
+	ret = MlnImpl_81049DDC(links, context, data, &found);
+	if (ret != 0)
+		goto out;
+	key = found->key;
+	ret = MlnImpl_81049E34(&links, found);
+	if (ret == 6)
+		damaged = 1;
+	else if (ret != 0)
+		goto out;
+	else
+		damaged = 0;
+	ret = MlnImpl_8104990C(links);
+	if (ret == 0)
+		ret = MlnImpl_8105DC0C(7, key, NULL);
+	if (damaged == 1)
+		ret = 6;
+out:
+	MlnImpl_81049918(links);
+	return ret;
+}
+
+/* looks up the link whose id is the digest of data */
+int MlnImpl_810459F0(const MlnBuffer *data, int *found)
+{
+	unsigned char digest[20];
+
+	if (found == NULL)
+		return 3;
+	MlnImpl_810570A8(data->data, data->size, digest);
+	return MlnImpl_81046F98(2, digest, NULL, NULL, found, 1);
+}
+
+/* removes the link whose id is the digest of data */
+int MlnImpl_81045A3C(const MlnBuffer *data)
+{
+	unsigned char digest[20];
+
+	if (data == NULL)
+		return 3;
+	MlnImpl_810570A8(data->data, data->size, digest);
+	return MlnImpl_81046BFC(2, digest, NULL, NULL, 1);
 }
