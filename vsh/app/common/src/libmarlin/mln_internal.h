@@ -2113,6 +2113,8 @@ unsigned int MlnImpl_81054F84(const void *iv, const void *key, const void *in, u
 			      void *out, unsigned int *outSize);
 unsigned int MlnImpl_8105D280(unsigned char *data, unsigned int *size);
 unsigned int MlnImpl_8105D3F4(unsigned char *data, unsigned int *size);
+unsigned int MlnImpl_8105D34C(unsigned char *data);
+unsigned int MlnImpl_8105D428(unsigned char *data);
 unsigned int MlnImpl_81066588(void *context, MlnXmlNode *document, int *refused);
 unsigned int MlnImpl_81066A28(MlnXmlNode *document, int *value, MlnBuffer **payload);
 unsigned int MlnImpl_81065920(void *context, int count, MlnBuffer **first, MlnBuffer **second,
