@@ -333,26 +333,45 @@ void indicatorNoticePopupsDestroy(void);
  * (PLACEHOLDER); their functions are in the list's file.
  */
 
-/* an item: the new event copied, its callback and its serial number (308 bytes; its
-   constructor at 0x81174D48, the base's at 0x81174EC4) */
+/* an item: the new event copied, its callback and its serial number, the widget it is given
+   with the list's mode and its color (320 bytes; indicator_event_item.cpp, 0x81174D48-0x8117587C) */
 class IndicatorEventItem {
 public:
 	IndicatorEventItem(const LsdbNewEvent &event, IndicatorEventItemCB callback);
 	virtual ~IndicatorEventItem();
-	/* the item given its widget, the list's argument and its color (0xRRGGBBAA)
-	   (0x81174FFC; PLACEHOLDER name) */
-	virtual int Attach(paf::ui::Widget *widget, int arg, SceUInt32 color);
-	/* the item let go of its widget (0x81174ECC; PLACEHOLDER name); slots 4 and 5 are
-	   0x81175238 and 0x81175302 */
-	virtual void Detach();
+	/* the item given its widget, the list's mode and its color (0xRRGGBBAA): told of the
+	   widget's presses and focus (0x81174FFC; PLACEHOLDER name) */
+	virtual int Attach(paf::ui::Widget *widget, int mode, SceUInt32 color);
+	/* the item's listener on its widget's scene removed (0x81174ECC; PLACEHOLDER name) */
+	virtual int Detach();
+	/* what the event runs, by its act type (0x81175238; PLACEHOLDER name) */
+	virtual int Execute();
+	/* the widget's look: its button white, its new or old back and its frame
+	   (0x81175302; PLACEHOLDER name) */
+	virtual int SetStyle(paf::ui::Widget *widget);
+	/* the widget focused and no longer (PLACEHOLDER names; nothing in the base) */
+	virtual void OnFocus()
+	{
+	}
+
+	virtual void OnUnfocus()
+	{
+	}
+
+	const LsdbNewEvent *GetEvent();			/* (0x81175490) */
+	int GetMode();					/* (0x81175520) */
+	unsigned int IsNotified();			/* (0x81175802) */
+	/* the text's place on the widget by its alignment (4 to 9), from its first or last line
+	   (0x81175526; PLACEHOLDER name) */
+	int AlignText(paf::graph::TextObj *text, int align, const paf::math::v4 &size,
+		      paf::math::v4 *pos);
 
 	LsdbNewEvent m_event;
 	IndicatorEventItemCB m_callback;
 	SceInt64 m_serial;				/* the items made before it, plus one */
-	int m_status;					/* PLACEHOLDER: not read yet */
-	SceInt64 m_startTime;				/* PLACEHOLDER: not read yet */
-	SceInt64 m_endTime;				/* PLACEHOLDER: not read yet */
-	int m_flags;					/* PLACEHOLDER: not read yet */
+	int m_mode;					/* the list's mode (PLACEHOLDER name) */
+	paf::math::v4 m_color;
+	paf::ui::Widget *m_widget;
 };
 
 /* an item with an icon loaded through the cache (420 bytes and its derived classes' fields
