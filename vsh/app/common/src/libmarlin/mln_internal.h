@@ -1933,6 +1933,7 @@ typedef struct MlnCoreContext MlnCoreContext;
 unsigned int MlnImpl_8104A560(MlnCoreContext **context, MlnBuffer **state);
 unsigned int MlnImpl_81062024(MlnCoreContext **context);
 void MlnImpl_81062060(MlnCoreContext *context);
+void MlnImpl_810628E4(MlnCoreContext *context);
 unsigned int MlnImpl_81062164(MlnCoreContext *context, MlnOctopusNode *node);
 unsigned int MlnImpl_81062224(MlnCoreContext *context, MlnOctopusArray *links);
 unsigned int MlnImpl_810623F0(MlnCoreContext *context, MlnOctopusSamlAssertion *assertion);
@@ -2046,6 +2047,29 @@ typedef struct MlnCoreServiceHandle {
 
 unsigned int MlnImpl_81068844(int protocol, void **exchange);
 int MlnImpl_81068888(void *exchange);
+unsigned int MlnImpl_8108299C(MlnBufferGroups **groups);
+int MlnImpl_81066CE0(void *exchange, MlnBufferGroups **groups, void *reserved1, void *reserved2,
+		     const MlnBuffer *name, const MlnBuffer *message, MlnBuffer **response);
+unsigned int MlnImpl_81082DC0(int ret);
+unsigned int MlnImpl_81066F74(void *exchange, const MlnBuffer *message, MlnBuffer **response);
+unsigned int MlnImpl_81082B04(void *exchange);
+unsigned int MlnImpl_81082BC4(MlnXmlNode **node);
+unsigned int MlnImpl_81082B44(MlnXmlNode *document, MlnXmlNode **node);
+unsigned int MlnImpl_81067494(void *exchange, const MlnBuffer *message, MlnBuffer **response,
+			      MlnXmlNode **document);
+int MlnImpl_81067618(void *exchange, MlnXmlNode *node, MlnBuffer **reply);
+unsigned int MlnImpl_81067BA4(void *exchange, const MlnBuffer *message, MlnXmlNode **document);
+int MlnImpl_81067814(void *exchange, MlnBufferGroups **groups, void *reserved1, void *reserved2,
+		     MlnXmlNode *first, MlnXmlNode *second, const MlnBuffer *name,
+		     const MlnBuffer *message, MlnBuffer **response);
+unsigned int MlnImpl_810684CC(void *exchange, const MlnBuffer *message, MlnBuffer **token);
+int MlnImpl_810681E4(void *exchange, MlnBufferGroups **groups, void *reserved1, void *reserved2,
+		     MlnXmlNode *node, const MlnBuffer *name, const MlnBuffer *message,
+		     MlnBuffer **response);
+unsigned int MlnImpl_81082CB4(const MlnBuffer *xml, MlnXmlNode **node, MlnBlob *detail);
+int MlnImpl_810670A0(void *exchange, MlnBufferGroups **groups, void *reserved1, void *reserved2,
+		     MlnXmlNode *first, MlnXmlNode *second, MlnXmlNode *third,
+		     const MlnBuffer *name, const MlnBuffer *message, MlnBuffer **response);
 int MlnImpl_8105F2C4(int *id, unsigned int *flags);
 unsigned int MlnImpl_81052D14(int id, int mode, unsigned int start, int owner);
 unsigned int MlnImpl_81052D84(int *id, int *mode);
