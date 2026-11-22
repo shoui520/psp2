@@ -139,6 +139,17 @@ public:
 	paf::ui::Widget *m_root;
 };
 
+/* a text on the bar, the plugin's string, condensed to fit (16 bytes; PLACEHOLDER names,
+   indicator_label.cpp) */
+class IndicatorLabel : public IndicatorItem {
+public:
+	IndicatorLabel(paf::Plugin *plugin, paf::ui::Widget *widget);		/* (0x81161548) */
+	virtual void OnStatus(IndicatorStatus status);			/* (0x81161A6E) */
+
+	paf::ui::Widget *m_root;
+	paf::ui::Widget *m_text;	/* set only when its template opens */
+};
+
 /*
  * The left group's other items, each opened from its template in the group's widget (16 bytes,
  * the battery's 24; PLACEHOLDER names, after what their widgets show, until each one's file is
