@@ -2595,7 +2595,8 @@ unsigned int MlnImpl_810488A8(const MlnBuffer *id)
 		if (coreFlags & 0x04)
 			MlnImpl_8105DC0C(3, 0, NULL);
 		if (coreFlags & 0x08) {
-			if (handle == NULL) {
+			/* Sony opens it again only when it is already open */
+			if (handle != NULL) {
 				ret = MlnImpl_81080BFC(&handle);
 				if (ret != 0)
 					goto out;
