@@ -45,7 +45,7 @@ struct MlnCoreContext {
 	MlnOctopusBundle *bundle;
 	int contentKeysLoaded;		/* a bit per content key of the bundle */
 	MlnHostGraph *graph;		/* the links and nodes (MlnImpl_8106EC8C) */
-	void *keys;			/* the key store (MlnImpl_810710F8) */
+	MlnKeyStore *keys;		/* the key store (MlnImpl_810710F8) */
 	MlnCoreHost host;
 	MlnVm *vm;			/* the control VM (MlnImpl_8106C54C) */
 	int actions;			/* MLN_CORE_ACTION_* */
@@ -672,7 +672,7 @@ fail:
 unsigned int MlnImpl_81062EDC(MlnCoreContext *context, int count,
 			      MlnOctopusContentKey **contentKeys)
 {
-	void *keys = context->keys;
+	MlnKeyStore *keys = context->keys;
 	int i;
 
 	for (i = 0; i < count; i++) {

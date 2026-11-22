@@ -1963,7 +1963,7 @@ int MlnImpl_8103EFDC(MlnXmlNode *node, MlnOctopusExtension **out);
 int MlnImpl_8103F62C(MlnXmlNodeList *list, MlnOctopusArray **out);
 int MlnImpl_81040368(MlnOctopusSignedBundle *signedBundle);
 int MlnImpl_81009B50(int heap, unsigned int size, const unsigned char *text, int *value);
-void MlnImpl_81080C80(void *key);
+int MlnImpl_81080C80(void *key);
 
 int MlnImpl_8102A228(unsigned int error);
 int MlnImpl_8102A33C(const MlnBox *box, unsigned char *out);
@@ -2273,14 +2273,59 @@ int MlnImpl_8107C5F0(void *records, const unsigned char *signer, unsigned int si
 int MlnImpl_8107BDB8(void *records, const unsigned char *signer, unsigned int signerSize,
 		     int index, const char *path, unsigned char *buffer, unsigned int size,
 		     int *type, unsigned int *outSize);
-unsigned int MlnImpl_810710F8(void **keys);
-void MlnImpl_81071278(void *keys);
-unsigned int MlnImpl_810712F0(void *keys, const MlnOctopusKey *key);
-unsigned int MlnImpl_81071368(void *keys, const MlnOctopusKey *key);
-unsigned int MlnImpl_810715FC(void *keys, MlnBuffer *keyName, unsigned int method, void *rsa,
-			      MlnBuffer *out);
-unsigned int MlnImpl_8107148C(void *keys, MlnBuffer *uid, MlnOctopusBroadcastKeyBlock *block);
-unsigned int MlnImpl_8107132C(void *keys, const MlnOctopusKeyPair *key);
+
+/* keystore.c: the keys of a control's run, by uid */
+#define MLN_KEY_ENTRY_SECRET		0
+#define MLN_KEY_ENTRY_PRIVATE		1
+#define MLN_KEY_ENTRY_PUBLIC		2
+
+/* a stored key; the keys of one uid hang behind the first, by duplicate */
+typedef struct MlnKeyStoreEntry {
+	MlnBuffer *uid;
+	int kind;			/* MLN_KEY_ENTRY_* */
+	MlnOctopusKey *key;
+	struct MlnKeyStoreEntry *duplicate;
+	struct MlnKeyStoreEntry *next;
+} MlnKeyStoreEntry;
+
+typedef struct MlnKeyStore {
+	MlnKeyStoreEntry *entries;
+	MlnBuffer **deviceKeys;		/* the uids of the keys the HCI holds itself */
+	unsigned int deviceKeyCount;
+} MlnKeyStore;
+
+unsigned int MlnImpl_81070920(int method, const MlnBuffer *oaepParams, const MlnBuffer *data,
+			      void *wrapping, int usage, void **out);
+unsigned int MlnImpl_81070A54(MlnKeyStore *store, MlnOctopusKey *key, MlnBuffer *pair);
+void MlnImpl_81070B60(MlnKeyStoreEntry *entry);
+unsigned int MlnImpl_81070D6C(MlnKeyStore *store, const MlnBuffer *uid, int method,
+			      int *temporary, void **key, void ***slot);
+unsigned int MlnImpl_810710F8(MlnKeyStore **out);
+void MlnImpl_81071278(MlnKeyStore *store);
+unsigned int MlnImpl_810712F0(MlnKeyStore *store, MlnOctopusKey *key);
+unsigned int MlnImpl_8107132C(MlnKeyStore *store, MlnOctopusKeyPair *key);
+unsigned int MlnImpl_81071368(MlnKeyStore *store, MlnOctopusKey *key);
+unsigned int MlnImpl_8107148C(MlnKeyStore *store, MlnBuffer *uid,
+			      MlnOctopusBroadcastKeyBlock *block);
+unsigned int MlnImpl_810715FC(MlnKeyStore *store, MlnBuffer *keyName, unsigned char method,
+			      MlnBuffer *message, MlnBuffer *buffer);
+void MlnImpl_810717EC(unsigned char *data, unsigned int size);
+void MlnImpl_81071B3C(unsigned char *data, unsigned int size);
+unsigned int MlnImpl_81071E8C(MlnBuffer **buffer);
+unsigned int MlnImpl_81071F00(const MlnBuffer *buffer, MlnBuffer **out);
+unsigned int MlnImpl_81071F4C(void **key, const MlnBuffer *data, unsigned char *out,
+			      unsigned int *size);
+
+/* the HCI's keys (SceMarlinHci, 0x81080BFC-), as the key store uses them */
+unsigned int MlnImpl_81080C3C(int kind, void **key);
+unsigned int MlnImpl_81080E80(void *wrapping, int kind, const MlnBuffer *param,
+			      const MlnBuffer *data, int usage, void **key);
+unsigned int MlnImpl_81080D18(void *key, int kind, int mode, const MlnBuffer *a,
+			      const MlnBuffer *b, const MlnBuffer *data, MlnBuffer **out);
+unsigned int MlnImpl_810810F4(void *key, MlnBuffer **out);
+unsigned int MlnImpl_8108117C(void *key, unsigned int size, const void *data, MlnBuffer **out);
+unsigned int MlnImpl_81081204(MlnBuffer ***names, unsigned int *count);
+unsigned int MlnImpl_8107DF18(MlnOctopusBroadcastKeyBlock *block, MlnBuffer *key, void **out);
 
 unsigned int MlnImpl_8104A560(MlnCoreContext **context, MlnBuffer **state);
 unsigned int MlnImpl_81062024(MlnCoreContext **context);
