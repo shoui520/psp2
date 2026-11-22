@@ -180,9 +180,13 @@ public:
 	paf::Plugin *m_plugin;
 };
 
-class IndicatorMobileCall : public IndicatorItem {
+/* the SIM card's condition, shown in the operator's text (indicator_sim.cpp) */
+class IndicatorMobileSim : public IndicatorItem {
 public:
-	IndicatorMobileCall(paf::Plugin *plugin, paf::ui::Widget *widget);	/* (0x8116C804) */
+	IndicatorMobileSim(paf::Plugin *plugin, paf::ui::Widget *widget);	/* (0x8116C804) */
+	virtual ~IndicatorMobileSim();					/* (0x8116C948) */
+	virtual void OnStatus(IndicatorStatus status);			/* (0x8116D2F8) */
+
 	paf::ui::Widget *m_root;
 	paf::Plugin *m_plugin;
 };

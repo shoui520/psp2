@@ -338,7 +338,7 @@ IndicatorLeftGroup::IndicatorLeftGroup(Plugin *plugin, ui::Widget *widget)
 			item = new IndicatorMobileOperator(plugin, m_widget);
 			if (item != NULL)
 				m_items.push_back(item);
-			item = new IndicatorMobileCall(plugin, m_widget);
+			item = new IndicatorMobileSim(plugin, m_widget);
 			if (item != NULL)
 				m_items.push_back(item);
 		}
