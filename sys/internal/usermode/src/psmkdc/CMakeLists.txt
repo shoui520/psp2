@@ -7,6 +7,8 @@ set(psmkdc_sdk ../../../../sdk/target/src)
 psp2_module(${PSP2_TARGET} KIND user COMPILER snc SOURCES
 	psmkdc.c
 	../../../kernel/src/gcauthmgr/rsa_signature.c
+	../../../kernel/src/gcauthmgr/rsa_verify.c
+	../../../kernel/src/gcauthmgr/rsa_digest.c
 	${psmkdc_marlin}/rsa_public_operation.c
 	${psmkdc_marlin}/rsa_integer_arithmetic.c
 	${psmkdc_marlin}/rsa_montgomery.c
@@ -27,6 +29,8 @@ psp2_module(${PSP2_TARGET} KIND user COMPILER snc SOURCES
 # GcAuthMgr's RSA files, a section per function: the module links only the check
 set_source_files_properties(
 	../../../kernel/src/gcauthmgr/rsa_signature.c
+	../../../kernel/src/gcauthmgr/rsa_verify.c
+	../../../kernel/src/gcauthmgr/rsa_digest.c
 	${psmkdc_marlin}/rsa_public_operation.c
 	${psmkdc_marlin}/rsa_integer_arithmetic.c
 	${psmkdc_marlin}/rsa_montgomery.c

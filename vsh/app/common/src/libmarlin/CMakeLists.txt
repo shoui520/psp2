@@ -1,6 +1,6 @@
 # SceLibMarlin, Intertrust's Marlin DRM client, built with GCC in ARM mode, -O2 with the
-# vectorizer (its copy loops are vectorized; -O3 would also peel and unroll them, Sony's are not).
-# No stack protector: the module imports no __stack_chk_guard.
+# vectorizer (its copy loops are vectorized; -O3 would also peel and unroll them, Sony's are not),
+# without the stack protector.
 # One Sony build, shipped as vs0:vsh/common/libmarlin and vs0:sys/external/libmln:
 # the target is named from the rel. No debug records or strings name its files: the
 # file names are ours, one per address range.
@@ -79,9 +79,34 @@ set(MLN_ENGINE_SOURCES
 	seashell.c
 	broadcastkey.c
 )
+# The RSA arithmetic SceMarlinHci and SceSblGcAuthMgr link, in Thumb with the stack protector
+# like the rest of Sony's GCC code: the HCI's private and public operations, then GcAuthMgr's
+# signature check and DigestInfo encoding.
+set(mln_hci ../../../../../sys/internal/driver/src/marlin_hci)
+set(mln_gcauth ../../../../../sys/internal/kernel/src/gcauthmgr)
+set(MLN_RSA_SOURCES
+	${mln_hci}/integer_words.c
+	${mln_hci}/rsa_random.c
+	${mln_hci}/rsa_crt.c
+	${mln_hci}/rsa_private.c
+	${mln_hci}/rsa_exponent.c
+	${mln_hci}/rsa_public_operation.c
+	${mln_hci}/rsa_encrypt.c
+	${mln_hci}/rsa_sign.c
+	${mln_gcauth}/rsa_verify.c
+	${mln_hci}/integer_encode.c
+	${mln_hci}/rsa_integer_arithmetic.c
+	${mln_hci}/rsa_montgomery.c
+	${mln_hci}/rsa_integer_multiply.c
+	${mln_hci}/rsa_integer_remainder.c
+	${mln_hci}/rsa_integer_square.c
+	${mln_hci}/rsa_integer_tail.c
+	${mln_gcauth}/rsa_digest.c
+)
 psp2_module(${PSP2_TARGET} KIND user COMPILER gcc48 PARTIAL SOURCES
 	${MLN_ARM_SOURCES}
 	${MLN_ENGINE_SOURCES}
+	${MLN_RSA_SOURCES}
 	${MLN_XML_SOURCES}
 	libmarlin.c
 )

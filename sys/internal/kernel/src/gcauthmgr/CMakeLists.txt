@@ -3,6 +3,8 @@ psp2_module(os0_kd_gcauthmgr KIND kernel COMPILER gcc48 SOURCES
 	../../../driver/src/marlin_hci/rsa_random.c
 	../../../driver/src/marlin_hci/rsa_encrypt.c
 	rsa_signature.c
+	rsa_verify.c
+	rsa_digest.c
 	../../../driver/src/marlin_hci/rsa_private.c
 	../../../driver/src/marlin_hci/rsa_public_operation.c
 	../../../driver/src/marlin_hci/rsa_integer_arithmetic.c
