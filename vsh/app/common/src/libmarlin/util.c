@@ -95,7 +95,7 @@ int MlnImpl_81052BD0(const char *s)
 	int sign = 1;
 	int limit = INT_MAX;
 	int value = 0;
-	int digit;
+	unsigned int digit;
 	signed char c;
 
 	c = *s;
@@ -119,7 +119,8 @@ int MlnImpl_81052BD0(const char *s)
 		if (c == 0 || !MLN_IS_DIGIT(c))
 			return value * sign;
 		digit = c - '0';
-		if (digit > INT_MAX - value * 10)
+		/* Sony's bound is unsigned: once value * 10 passes INT_MAX it no longer saturates */
+		if (digit > (unsigned int)INT_MAX - (unsigned int)value * 10)
 			return limit;
 	}
 }
