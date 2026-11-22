@@ -2072,10 +2072,18 @@ unsigned int MlnImpl_81068060(void *exchange, int kind, const char *name,
 			      const MlnBuffer *message, MlnXmlNode **document);
 unsigned int MlnImpl_81050378(int handle, int kind, const char *name,
 			      const MlnBuffer *message, MlnXmlNode **document);
-unsigned int MlnImpl_81054880(void **cipher, unsigned int algorithm, const void *iv,
-			      unsigned int ivSize, const void *reserved, const void *key,
-			      unsigned int keySize);
-void MlnImpl_81054A90(void *cipher);
+unsigned int MlnImpl_81054880(void **cipher, int algorithm, const void *iv, unsigned int ivSize,
+			      const void *nonce, const void *key, unsigned int keySize);
+unsigned int MlnImpl_81054A90(void *cipher);
+unsigned int MlnImpl_81054AC8(void *cipher, const void *in, unsigned int size, void *out,
+			      unsigned int *outSize);
+unsigned int MlnImpl_81054EDC(const void *iv, const void *key, const void *in, unsigned int size,
+			      void *out, unsigned int *outSize);
+unsigned int MlnImpl_810550B0(const void *key, const void *in, void *out);
+int MlnImpl_81086D54(void *context, unsigned int keyBits, unsigned int blockBits,
+		     const void *key);
+void MlnImpl_81087358(void *context, const unsigned char *in, unsigned char *out);
+void MlnImpl_81087612(void *context, const unsigned char *in, unsigned char *out);
 unsigned int MlnImpl_81054C2C(void *cipher, const void *in, unsigned int size, void *out,
 			      unsigned int *outSize);
 unsigned int MlnImpl_81054F84(const void *iv, const void *key, const void *in, unsigned int size,
