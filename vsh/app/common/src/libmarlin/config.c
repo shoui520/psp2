@@ -111,30 +111,30 @@ int MlnImpl_81033D9C(unsigned int size, const void *xml, MlnServiceConfig **out)
 	MlnMemset(config, 0, sizeof(*config));
 	ret = MlnXmlParse(MLN_HEAP_SECURE, size, xml, &document);
 	if (ret != 0) {
-		ret = ret == 2 ? 2 : 0x1f0001;
+		ret = ret == 2 ? 2 : MLN_CONFIG_ERROR_FORMAT;
 		goto out;
 	}
 	ret = MlnXmlFindNode(MLN_HEAP_SECURE, document, "BroadbandServiceConfig",
 			     MLN_NS_CONFIGURATION, &root);
 	if (ret != 0) {
-		ret = ret == 2 ? 2 : 0x1f0001;
+		ret = ret == 2 ? 2 : MLN_CONFIG_ERROR_FORMAT;
 		goto out;
 	}
 	if (MlnXmlGetAttribute(MLN_HEAP_SECURE, root, NULL, "broadbandServiceId", &id) != 0) {
-		ret = 0x1f0001;
+		ret = MLN_CONFIG_ERROR_FORMAT;
 		goto out;
 	}
 	config->broadbandServiceId = id;
 	id = NULL;
 	if (MlnXmlGetAttribute(MLN_HEAP_SECURE, root, NULL, "broadbandServiceFriendlyName",
 			       &name) != 0) {
-		ret = 0x1f0001;
+		ret = MLN_CONFIG_ERROR_FORMAT;
 		goto out;
 	}
 	config->broadbandServiceFriendlyName = name;
 	name = NULL;
 	if (MlnXmlGetAttribute(MLN_HEAP_SECURE, root, NULL, "configVersion", &version) != 0) {
-		ret = 0x1f0001;
+		ret = MLN_CONFIG_ERROR_FORMAT;
 		goto out;
 	}
 	config->configVersion = version;
@@ -248,7 +248,7 @@ MlnConfigListFromTexts(const MlnXmlNodeList *nodes, MlnConfigList *list)
 	for (i = 0; i < nodes->count; i++) {
 		err = MlnXmlGetText(MLN_HEAP_SECURE, nodes->nodes[i], &text);
 		if (err != 0) {
-			ret = err == 2 ? 2 : 0x1f0001;
+			ret = err == 2 ? 2 : MLN_CONFIG_ERROR_FORMAT;
 			goto out;
 		}
 		buffers[i] = text;
@@ -310,13 +310,13 @@ MlnActionParse(MlnXmlNode *node, int type, MlnAction **out)
 	} else {
 		uidCount = list->count;
 		if (uidCount > 2) {
-			ret = 0x1f0001;
+			ret = MLN_CONFIG_ERROR_FORMAT;
 			goto out;
 		}
 	}
 	for (i = 0; i < uidCount; i++) {
 		if (MlnXmlGetText(MLN_HEAP_SECURE, list->nodes[i], &uid[i]) != 0) {
-			ret = 0x1f0001;
+			ret = MLN_CONFIG_ERROR_FORMAT;
 			goto out;
 		}
 	}
@@ -324,12 +324,12 @@ MlnActionParse(MlnXmlNode *node, int type, MlnAction **out)
 		err = MlnXmlFindNode(MLN_HEAP_SECURE, node, "BusinessToken", MLN_NS_ACTION_TOKEN,
 				     &business);
 		if (err != 0) {
-			ret = err == 2 ? 2 : 0x1f0001;
+			ret = err == 2 ? 2 : MLN_CONFIG_ERROR_FORMAT;
 			goto out;
 		}
 		err = MlnXmlGetText(MLN_HEAP_SECURE, business, &businessToken);
 		if (err != 0) {
-			ret = err == 2 ? 2 : 0x1f0001;
+			ret = err == 2 ? 2 : MLN_CONFIG_ERROR_FORMAT;
 			goto out;
 		}
 		if (type == MLN_ACTION_LICENSE_ACQUISITION) {
@@ -339,7 +339,7 @@ MlnActionParse(MlnXmlNode *node, int type, MlnAction **out)
 				action->uid[1] = uid[0];
 				uid[0] = NULL;
 			} else {
-				ret = 0x1f0001;
+				ret = MLN_CONFIG_ERROR_FORMAT;
 				goto out;
 			}
 		} else if (type == MLN_ACTION_LINK_ACQUISITION || type == MLN_ACTION_DEREGISTRATION) {
@@ -352,7 +352,7 @@ MlnActionParse(MlnXmlNode *node, int type, MlnAction **out)
 				uid[0] = NULL;
 				uid[1] = NULL;
 			} else {
-				ret = 0x1f0001;
+				ret = MLN_CONFIG_ERROR_FORMAT;
 				goto out;
 			}
 		}
@@ -417,17 +417,17 @@ int MlnImpl_810342E8(unsigned int size, const void *xml, MlnActionToken **out)
 	ret = MlnXmlParse(MLN_HEAP_SECURE, size, xml, &document);
 	if (ret != 0) {
 		if (ret != 2)
-			ret = 0x1f0001;
+			ret = MLN_CONFIG_ERROR_FORMAT;
 		goto out;
 	}
 	err = MlnXmlFindNodes(MLN_HEAP_SECURE, document, "ActionToken", MLN_NS_ACTION_TOKEN,
 			      &tokens);
 	if (err != 0) {
-		ret = err == 0x10010008 ? 0x1f0001 : 7;
+		ret = err == 0x10010008 ? MLN_CONFIG_ERROR_FORMAT : 7;
 		goto out;
 	}
 	if (tokens->count != 1) {
-		ret = 0x1f0001;
+		ret = MLN_CONFIG_ERROR_FORMAT;
 		goto out;
 	}
 	err = MlnXmlFindNodes(MLN_HEAP_SECURE, tokens->nodes[0], "*", MLN_NS_ACTION_TOKEN,
@@ -437,7 +437,7 @@ int MlnImpl_810342E8(unsigned int size, const void *xml, MlnActionToken **out)
 		goto out;
 	}
 	if (children->count <= 1) {
-		ret = 0x1f0001;
+		ret = MLN_CONFIG_ERROR_FORMAT;
 		goto out;
 	}
 	actions = MlnAllocate(MLN_HEAP_SECURE, (children->count - 1) * sizeof(*actions));
@@ -449,7 +449,7 @@ int MlnImpl_810342E8(unsigned int size, const void *xml, MlnActionToken **out)
 	for (i = 0; i < children->count; i++) {
 		node = children->nodes[i];
 		if (MlnXmlNodeGetName(MLN_HEAP_SECURE, node, &name) != 0 || name->size == 0) {
-			ret = 0x1f0001;
+			ret = MLN_CONFIG_ERROR_FORMAT;
 			goto out;
 		}
 		/* the name without its prefix */
@@ -460,7 +460,7 @@ int MlnImpl_810342E8(unsigned int size, const void *xml, MlnActionToken **out)
 				length -= j + 1;
 				local += j + 1;
 				if (length == 0) {
-					ret = 0x1f0001;
+					ret = MLN_CONFIG_ERROR_FORMAT;
 					goto out;
 				}
 				break;
@@ -468,20 +468,20 @@ int MlnImpl_810342E8(unsigned int size, const void *xml, MlnActionToken **out)
 		}
 		if (length == 17) {
 			if (MlnMemcmp(local, "ConfigurationInfo", 17) != 0) {
-				ret = 0x1f0001;
+				ret = MLN_CONFIG_ERROR_FORMAT;
 				goto out;
 			}
 			err = MlnXmlGetAttribute(MLN_HEAP_SECURE, node, NULL, "broadbandServiceId",
 						 &serviceId);
 			if (err != 0) {
-				ret = err == 2 ? 2 : 0x1f0001;
+				ret = err == 2 ? 2 : MLN_CONFIG_ERROR_FORMAT;
 				goto out;
 			}
 			token->broadbandServiceId = serviceId;
 			serviceId = NULL;
 			err = MlnXmlGetAttribute(MLN_HEAP_SECURE, node, NULL, "configVersion", &version);
 			if (err != 0) {
-				ret = err == 2 ? 2 : 0x1f0001;
+				ret = err == 2 ? 2 : MLN_CONFIG_ERROR_FORMAT;
 				goto out;
 			}
 			token->configVersion = version;
@@ -489,7 +489,7 @@ int MlnImpl_810342E8(unsigned int size, const void *xml, MlnActionToken **out)
 			err = MlnXmlFindNodes(MLN_HEAP_SECURE, node, "ResourceLocation",
 					      MLN_NS_ACTION_TOKEN, &locations);
 			if (err != 0) {
-				ret = err == 2 ? 2 : 0x1f0001;
+				ret = err == 2 ? 2 : MLN_CONFIG_ERROR_FORMAT;
 				goto out;
 			}
 			ret = MlnConfigListFromTexts(locations, &token->resourceLocations);
@@ -501,7 +501,7 @@ int MlnImpl_810342E8(unsigned int size, const void *xml, MlnActionToken **out)
 			switch (length) {
 			case 18:
 				if (MlnMemcmp(local, "LicenseAcquisition", 18) != 0) {
-					ret = 0x1f0001;
+					ret = MLN_CONFIG_ERROR_FORMAT;
 					goto out;
 				}
 				type = MLN_ACTION_LICENSE_ACQUISITION;
@@ -512,26 +512,26 @@ int MlnImpl_810342E8(unsigned int size, const void *xml, MlnActionToken **out)
 				} else if (MlnMemcmp(local, "LinkAcquisition", 15) == 0) {
 					type = MLN_ACTION_LINK_ACQUISITION;
 				} else {
-					ret = 0x1f0001;
+					ret = MLN_CONFIG_ERROR_FORMAT;
 					goto out;
 				}
 				break;
 			case 14:
 				if (MlnMemcmp(local, "Deregistration", 14) != 0) {
-					ret = 0x1f0001;
+					ret = MLN_CONFIG_ERROR_FORMAT;
 					goto out;
 				}
 				type = MLN_ACTION_DEREGISTRATION;
 				break;
 			default:
 				if (length != 6 || MlnMemcmp(local, "Action", 6) != 0) {
-					ret = 0x1f0001;
+					ret = MLN_CONFIG_ERROR_FORMAT;
 					goto out;
 				}
 				err = MlnXmlGetAttribute(MLN_HEAP_SECURE, node, NULL, "xsi:type",
 							 &actionType);
 				if (err != 0) {
-					ret = err == 2 ? 2 : 0x1f0001;
+					ret = err == 2 ? 2 : MLN_CONFIG_ERROR_FORMAT;
 					goto out;
 				}
 				type = MLN_ACTION_GENERIC;

@@ -127,6 +127,14 @@ set(MLN_THUMB_SOURCES
 	libc.c
 	hci.c
 )
+# The ARM code linked after them.
+set(MLN_TAIL_SOURCES
+	support.c
+	serviceconfig.c
+	xmlenc.c
+	octopusref.c
+	coreaction.c
+)
 psp2_module(${PSP2_TARGET} KIND user COMPILER gcc48 PARTIAL SOURCES
 	${MLN_ARM_SOURCES}
 	${MLN_ENGINE_SOURCES}
@@ -134,10 +142,11 @@ psp2_module(${PSP2_TARGET} KIND user COMPILER gcc48 PARTIAL SOURCES
 	${MLN_SDK_SOURCES}
 	${MLN_LIBGCC_SOURCES}
 	${MLN_THUMB_SOURCES}
+	${MLN_TAIL_SOURCES}
 	${MLN_XML_SOURCES}
 	libmarlin.c
 )
-set_source_files_properties(${MLN_ARM_SOURCES} PROPERTIES COMPILE_OPTIONS "-marm;-O2;-ftree-vectorize;-finline-functions;-fno-stack-protector")
+set_source_files_properties(${MLN_ARM_SOURCES} ${MLN_TAIL_SOURCES} PROPERTIES COMPILE_OPTIONS "-marm;-O2;-ftree-vectorize;-finline-functions;-fno-stack-protector")
 set_source_files_properties(${MLN_XML_SOURCES} ${MLN_ENGINE_SOURCES} PROPERTIES COMPILE_OPTIONS "-marm;-O2;-ftree-vectorize;-finline-functions;-fno-stack-protector;-fno-strict-aliasing")
 set_source_files_properties(${MLN_SDK_SOURCES} PROPERTIES COMPILE_OPTIONS "-fno-stack-protector")
 set_source_files_properties(libc.c PROPERTIES COMPILE_OPTIONS "-ftree-vectorize")

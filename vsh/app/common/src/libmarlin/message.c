@@ -1528,7 +1528,6 @@ __attribute__((noinline)) void MlnImpl_810233C4(MlnMessage *message)
 	MlnFree(1, message->payload);
 }
 
-#define MLN_MESSAGE_ERROR_FORMAT	84	/* a message that does not parse */
 
 /* a big-endian word and halfword of a received message */
 static inline __attribute__((always_inline)) unsigned int MlnMessageGetWord(const unsigned char *p)

@@ -12,6 +12,8 @@
 /* return codes of the library's helpers */
 #define MLN_OK			0
 #define MLN_ERROR_NO_MEMORY	2
+#define MLN_MESSAGE_ERROR_FORMAT	84	/* a message that does not parse */
+#define MLN_CONFIG_ERROR_FORMAT		0x1f0001	/* a service configuration that does not parse */
 #define MLN_ERROR_INVALID_ARGUMENT	3
 #define MLN_ERROR_INVALID	5
 
@@ -644,8 +646,8 @@ int SceMarlin_92A6A48F(MlnServiceContext *context, int value, MlnRightsInfo **ri
 int SceMarlin_A2E65A7E(MlnServiceContext *context, int value, MlnRightsInfo **rights);
 int MlnImpl_8101EE90(struct MlnClient *client, MlnBuffer *license, MlnRightsSummary **summary);
 int MlnImpl_8101F33C(struct MlnClient *client, int *state);
-int MlnImpl_81081400(void *a, void *b);
-int MlnImpl_81081498(void *time, int *minutes);
+int MlnImpl_81081400(const MlnDateTime *a, const MlnDateTime *b);
+int MlnImpl_81081498(const MlnDateTime *time, int *minutes);
 int MlnIdSetAdd(MlnIdSet **set, const MlnBuffer *id);
 int MlnNodesCollectReachable(MlnApiOctopusNode *nodes, const MlnBuffer *id, MlnIdSet **set);
 
@@ -3410,7 +3412,7 @@ typedef struct MlnServiceEndpoint {
 	MlnBuffer *responseSigningKey;
 	MlnConfigList roles;
 	char *location;
-	unsigned int reserved[2];
+	MlnConfigList spareList;	/* freed with the endpoint; nothing fills it */
 } MlnServiceEndpoint;
 
 /* a service's BroadbandServiceConfig, kept from an earlier action token */
@@ -3798,6 +3800,8 @@ int MlnImpl_81035018(int encryptionCount, MlnBuffer **encryptionCertificates, in
 int MlnImpl_810368D0(int heap, MlnAsn1Node *node, unsigned char **data, unsigned int *size);
 int MlnImpl_81081890(MlnXmlNode *node, const char *name, const char *ns, MlnXmlNodeList **list);
 int MlnImpl_81081BB4(MlnXmlNodeList **list, MlnConfigList *out, const char *role);
+int MlnImpl_8108196C(MlnXmlNode *node, MlnBuffer **key, MlnConfigList *roles);
+void MlnImpl_81081B2C(MlnServiceEndpoint *endpoint);
 
 /* a directory's files, as the platform lists them */
 typedef struct MlnFileList {
