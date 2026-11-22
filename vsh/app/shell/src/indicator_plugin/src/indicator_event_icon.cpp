@@ -70,29 +70,6 @@ static void indicatorIconOnIconInfo(IndicatorIconInfoMap *icons, int result, voi
 static common::SharedPtr<File> indicatorIconOpenData(const char *path, void *userdata,
 						     int32_t *error);
 
-/* the cache's option of the item's icon, its image scaled to the size given (0: as it is) */
-static inline void indicatorIconOption(cache::CacheImage::Option *option, int32_t size)
-{
-	option->auto_delete = true;
-	option->retry = true;
-	option->retry_count = -1;
-	option->reserved = true;
-	option->read_size = 0;
-	option->read_offset = 0;
-	option->max_size_kb = 0;
-	option->open_func = NULL;
-	option->open_userdata = NULL;
-	memset(&option->sub_rect, 0, sizeof(option->sub_rect));
-	option->scale = image::ImageExtent(size, size);
-	option->resize_type = image::ImageResizeType_NearestNeighbor;
-	option->direct_load = false;
-	option->image_order = ImageOrder_NONE;
-	option->image_order_param = 0;
-	option->check_image = NULL;
-	option->check_image_userdata = NULL;
-	option->surface_flag = false;
-}
-
 /* (0x8117B780) */
 int IndicatorEventIconItem::Release()
 {

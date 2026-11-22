@@ -8,6 +8,7 @@
 #define INDICATOR_H
 
 #include <stddef.h>
+#include <string.h>
 #include <scetypes.h>
 #include <plugin.h>
 #include <std/string>
@@ -131,6 +132,29 @@ int indicatorCacheCreateTexture(paf::Plugin *plugin, paf::IDParam &id,
 				paf::intrusive_ptr<paf::cache::CacheImageInterface> &image,
 				const paf::cache::CacheImage::Option *option,
 				paf::job::JobQueue *queue);
+
+/* the cache's option of an icon, its image scaled to the size given (0: as it is) */
+static inline void indicatorIconOption(paf::cache::CacheImage::Option *option, int32_t size)
+{
+	option->auto_delete = true;
+	option->retry = true;
+	option->retry_count = -1;
+	option->reserved = true;
+	option->read_size = 0;
+	option->read_offset = 0;
+	option->max_size_kb = 0;
+	option->open_func = NULL;
+	option->open_userdata = NULL;
+	memset(&option->sub_rect, 0, sizeof(option->sub_rect));
+	option->scale = paf::image::ImageExtent(size, size);
+	option->resize_type = paf::image::ImageResizeType_NearestNeighbor;
+	option->direct_load = false;
+	option->image_order = ImageOrder_NONE;
+	option->image_order_param = 0;
+	option->check_image = NULL;
+	option->check_image_userdata = NULL;
+	option->surface_flag = false;
+}
 
 /* the indicator plugin's string of the ID (0x81182420; PLACEHOLDER name) */
 const wchar_t *indicatorGetString(const paf::IDParam &id);
@@ -281,14 +305,15 @@ struct IndicatorNoticeRequest {
 	int flags;
 };
 
-/* an icon's inhale animation: the callback told when it ends, the icon's texture and its
-   title (28 bytes, PLACEHOLDER names), and the animation's page opened (0x8118014A) */
+/* an icon's inhale animation: the callback told when it ends, the icon's texture, else the
+   file it is loaded from (28 bytes, PLACEHOLDER names), and the animation's page opened
+   (0x8118014A; indicator_inhale_anim.cpp) */
 struct IndicatorInhaleAnim {
 	int reserved0;
 	paf::ui::AnimCB callback;
 	float reserved8;
 	paf::intrusive_ptr<paf::graph::Surface> texture;
-	paf::string titleId;
+	paf::string iconPath;
 };
 
 int indicatorInhaleAnimStart(const IndicatorInhaleAnim *anim);
@@ -307,8 +332,8 @@ void indicatorPushNotification(int type, LsdbNewEventPtr event, int option, int 
 void indicatorPushNotice(const IndicatorNoticeRequest *request, int target,
 			 IndicatorPushNotificationCB callback, void *arg);	/* (0x81162CB0) */
 
-/* the new-event database the shell keeps open while the bar lives (0x81566914; its
-   constructor, destructor, Open and Close at 0x8117F184-0x8117F1AC; PLACEHOLDER names) */
+/* the new-event database the shell keeps open while the bar lives (0x81566914; its methods in
+   indicator_new_event_db.cpp, 0x8117F184-0x8117F6A4; PLACEHOLDER names) */
 class IndicatorNewEventDb {
 public:
 	IndicatorNewEventDb();
@@ -332,6 +357,8 @@ public:
 	int GetPopupCount();					/* (0x8117F41C) */
 	/* the icon data of the event of the row, the accessor's (0x8117F40C) */
 	paf::common::SharedPtr<DbBlob> GetIcon(const SceInt64 *rowid, int *result);
+	/* the notifications the event shows, the accessor's (0x8117F69A) */
+	unsigned int GetNotifyFlags(const LsdbNewEvent *event);
 
 	NewEventAccessor m_accessor;
 };
