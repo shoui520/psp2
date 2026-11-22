@@ -184,12 +184,29 @@ public:
 	paf::Plugin *m_plugin;
 };
 
+/*
+ * The network's icon: the phone network's type, or the Wi-Fi's signal level the item polls
+ * (indicator_wireless.cpp). It is told the network's events through the telephony listener's
+ * callback, g_indicatorNetworkTypeCB.
+ */
 class IndicatorWireless : public IndicatorItem {
 public:
 	IndicatorWireless(paf::Plugin *plugin, paf::ui::Widget *widget);	/* (0x81161A80) */
+	virtual ~IndicatorWireless();					/* (0x81161CE4) */
+	virtual void OnStatus(IndicatorStatus status);			/* (0x8116287C) */
+
 	paf::ui::Widget *m_root;
 	paf::Plugin *m_plugin;
 };
+
+/* the function the telephony listener gives the network's type events to, and its argument
+   (0x81544A18, 0x81544A1C; PLACEHOLDER names) */
+extern void (*g_indicatorNetworkTypeCB)(int type, void *arg);
+extern void *g_indicatorNetworkTypeArg;
+
+/* the telephony listener's general network type event: its value handed to the main thread
+   (0x811685F8; PLACEHOLDER name) */
+void indicatorTelGeneralNetworkTypeCB(int event, int result, const int *value, int size);
 
 class IndicatorBattery : public IndicatorItem {
 public:
