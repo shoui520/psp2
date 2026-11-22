@@ -2580,6 +2580,7 @@ typedef struct MlnExchange {
 #define MLN_NEMO_ERROR_UNKNOWN_TIME	0x23050011	/* the time is not known */
 #define MLN_NEMO_ERROR_EXPIRED		0x23050012	/* the timestamp is too old */
 #define MLN_NEMO_ERROR_TO_NODE		0x23050015	/* sent to another node */
+#define MLN_NEMO_ERROR_NO_TIMESTAMP	0x23050016	/* the message read carried no Created time */
 
 /* how a signature names its key: by name, by the signer's certificate */
 #define MLN_NEMO_KEY_INFO_NAME		(-1)
@@ -2677,16 +2678,17 @@ unsigned int MlnImpl_81086284(MlnXmlNode *security, unsigned int kind, unsigned 
 unsigned int MlnImpl_81078EB8(const MlnBuffer *xml, const char *prefix, const char *uri,
 			      MlnXmlNode **node);
 unsigned int MlnImpl_810799B0(MlnNemoHeader *header);
+unsigned int MlnImpl_810799F0(MlnNemoHeader *header);
 unsigned int MlnImpl_81079A7C(MlnNemoMessage *message, MlnBuffer *first, MlnBuffer *second);
 unsigned int MlnImpl_81079EE8(const MlnBuffer *credential, MlnBuffer **node);
 unsigned int MlnImpl_8107A04C(MlnNemoHeader *header, unsigned int part, const MlnBuffer *value);
-unsigned int MlnImpl_8107A15C(MlnNemoMessage *message);
+unsigned int MlnImpl_8107A15C(MlnNemoMessage *message, int *timestamp);
 unsigned int MlnImpl_8107A19C(MlnNemoMessage *message);
 
 /* exchange.c */
 unsigned int MlnImpl_810685FC(unsigned int ret);
 unsigned int MlnImpl_81068798(MlnExchange *exchange);
-unsigned int MlnImpl_810688CC(MlnExchange *exchange);
+unsigned int MlnImpl_810688CC(MlnExchange *exchange, int *timestamp);
 
 /*
  * A service handle of MlnImpl_8104D5E0 (0x1c bytes), in MlnShared's

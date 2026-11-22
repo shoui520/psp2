@@ -116,13 +116,14 @@ int MlnImpl_81068888(MlnExchange *exchange)
 	return 0;
 }
 
-unsigned int MlnImpl_810688CC(MlnExchange *exchange)
+/* the Created time of the message the exchange read */
+unsigned int MlnImpl_810688CC(MlnExchange *exchange, int *timestamp)
 {
 	unsigned int ret;
 
 	if (exchange == NULL)
 		return 4;
-	ret = MlnImpl_8107A15C(&exchange->message);
+	ret = MlnImpl_8107A15C(&exchange->message, timestamp);
 	if (ret != 0)
 		ret = MlnExchangeError(ret);
 	return ret;
