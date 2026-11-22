@@ -2032,6 +2032,20 @@ unsigned int MlnImpl_81069D90(MlnCoreResponse *response);
 int MlnImpl_8104D15C(int handle, unsigned int size, const unsigned char *data);
 unsigned int MlnImpl_8104D16C(int handle, int kind, MlnBuffer **out);
 unsigned int MlnImpl_8104D208(const MlnBuffer *controller, const MlnBuffer *token);
+
+/*
+ * A service handle of MlnImpl_8104D5E0 (0x1c bytes), in MlnShared's
+ * buffers[5]: a protocol exchange of a kind, with the values it was given.
+ */
+typedef struct MlnCoreServiceHandle {
+	unsigned int state;		/* the kind, in bits 8 and up */
+	void *exchange;			/* the protocol's (MlnImpl_81068844, 0x80 bytes) */
+	MlnServiceList *values;		/* a copy of the values given */
+	MlnBuffer *messages[4];
+} MlnCoreServiceHandle;
+
+unsigned int MlnImpl_81068844(int protocol, void **exchange);
+int MlnImpl_81068888(void *exchange);
 int MlnImpl_8105F2C4(int *id, unsigned int *flags);
 unsigned int MlnImpl_81052D14(int id, int mode, unsigned int start, int owner);
 unsigned int MlnImpl_81052D84(int *id, int *mode);

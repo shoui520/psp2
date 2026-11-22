@@ -193,3 +193,237 @@ out:
 		MlnImpl_81069A9C(response);
 	return ret;
 }
+
+/* a service list entry and its buffers */
+static inline __attribute__((always_inline)) void MlnServiceEntryFree(MlnServiceListEntry *entry)
+{
+	MlnBufferDestroy(MLN_HEAP_GENERAL, entry->name);
+	entry->name = NULL;
+	MlnBufferDestroy(MLN_HEAP_GENERAL, entry->value);
+	entry->value = NULL;
+	MlnFree(MLN_HEAP_GENERAL, entry);
+}
+
+/* a service list, its entries and their buffers */
+static inline __attribute__((always_inline)) void MlnServiceValuesFree(MlnServiceList *list)
+{
+	MlnServiceListEntry *entry;
+	unsigned int i;
+
+	for (i = 0; i < list->count; i++) {
+		entry = list->entries[i];
+		if (entry != NULL) {
+			MlnBufferDestroy(MLN_HEAP_GENERAL, entry->name);
+			entry->name = NULL;
+			MlnBufferDestroy(MLN_HEAP_GENERAL, entry->value);
+			entry->value = NULL;
+		}
+		MlnFree(MLN_HEAP_GENERAL, entry);
+	}
+	MlnFree(MLN_HEAP_GENERAL, list->entries);
+	list->entries = NULL;
+	list->count = 0;
+	MlnFree(MLN_HEAP_GENERAL, list);
+}
+
+/* the second handle table, made on first use */
+static inline __attribute__((always_inline)) MlnHandleTable *MlnServiceHandleTable(MlnShared *shared)
+{
+	MlnHandleTable *table = shared->buffers[5];
+
+	if (table == NULL) {
+		table = MlnAllocate(MLN_HEAP_GENERAL, sizeof(*table));
+		if (table == NULL)
+			return NULL;
+		table->initialized = 0;
+		MlnMemset(table->slots, 0, sizeof(table->slots));
+		shared->buffers[5] = table;
+	}
+	return table;
+}
+
+/*
+ * Open a service handle of a kind (2 to 8) with a copy of the values
+ * given: *handle names it. Kinds 6 and 7 are not services of the core.
+ */
+unsigned int MlnImpl_8104D5E0(int kind, MlnServiceList *list, int *handle)
+{
+	MlnCoreServiceHandle *service;
+	MlnServiceListEntry *source;
+	MlnServiceListEntry *entry;
+	MlnServiceList *values;
+	MlnHandleTable *table;
+	unsigned int ret;
+	unsigned int i;
+	int protocol;
+	int sessions = 0;
+	int id;
+
+	if (handle == NULL)
+		return 4;
+	switch (kind) {
+	case 2:
+	case 3:
+	case 5:
+		protocol = 2;
+		break;
+	case 4:
+		protocol = 3;
+		break;
+	case 6:
+	case 7:
+		return 6;
+	case 8:
+		protocol = 6;
+		break;
+	default:
+		return 4;
+	}
+
+	service = MlnAllocate(MLN_HEAP_GENERAL, sizeof(*service));
+	if (service == NULL)
+		return 2;
+	MlnMemset(service, 0, sizeof(*service));
+	service->state = kind << 8;
+	service->values = NULL;
+
+	values = NULL;
+	if (list != NULL && list->count != 0) {
+		values = MlnAllocate(MLN_HEAP_GENERAL, sizeof(*values));
+		if (values == NULL) {
+			ret = 2;
+			goto out;
+		}
+		values->count = 0;
+		values->entries = MlnAllocate(MLN_HEAP_GENERAL, list->count * sizeof(*values->entries));
+		if (values->entries == NULL) {
+			ret = 2;
+			goto free;
+		}
+		for (i = 0; i < list->count; i++) {
+			values->entries[i] = NULL;
+			source = list->entries[i];
+			entry = NULL;
+			ret = 0;
+			if (source != NULL) {
+				if (source->name == NULL || source->name->data == NULL ||
+				    source->name->size == 0) {
+					ret = 4;
+					goto next;
+				}
+				entry = MlnAllocate(MLN_HEAP_GENERAL, sizeof(*entry));
+				if (entry == NULL) {
+					ret = 2;
+					goto next;
+				}
+				entry->value = NULL;
+				entry->name = MlnBufferCreate(MLN_HEAP_GENERAL, source->name->size,
+							      source->name->data);
+				if (entry->name == NULL) {
+					ret = 2;
+					goto bad;
+				}
+				if (source->value != NULL && source->value->size != 0) {
+					if (source->value->data == NULL) {
+						ret = 4;
+						goto bad;
+					}
+					entry->value = MlnBufferCreate(MLN_HEAP_GENERAL,
+								       source->value->size,
+								       source->value->data);
+					if (entry->value == NULL) {
+						ret = 2;
+						goto bad;
+					}
+				}
+				entry->flag = source->flag;
+			}
+			values->entries[i] = entry;
+			entry = NULL;
+			goto next;
+bad:
+			MlnServiceEntryFree(entry);
+			entry = NULL;
+next:
+			MlnFree(MLN_HEAP_GENERAL, entry);
+			if (ret != 0)
+				goto free;
+			values->count++;
+		}
+	}
+	service->values = values;
+
+	ret = MlnImpl_81068844(protocol, &service->exchange);
+	if (ret != 0) {
+		ret = 2;
+		goto out;
+	}
+	if (MlnImpl_8104A448() != 0) {
+		ret = 7;
+		goto out;
+	}
+	sessions = 1;
+	table = MlnServiceHandleTable(MlnImpl_81006EAC());
+	if (table == NULL) {
+		ret = 2;
+		goto out;
+	}
+	ret = MlnImpl_81069F10(table);
+	if (ret != 0)
+		goto out;
+	ret = MlnImpl_81069F68(service, table, &id);
+	if (ret != 0)
+		goto out;
+	*handle = id;
+	goto end;
+
+free:
+	MlnServiceValuesFree(values);
+out:
+	values = service->values;
+	if (values != NULL)
+		MlnServiceValuesFree(values);
+	MlnFree(MLN_HEAP_GENERAL, service->exchange);
+	MlnFree(MLN_HEAP_GENERAL, service);
+end:
+	while (sessions-- > 0)
+		MlnImpl_8104A558();
+	return ret;
+}
+
+/* close a service handle of MlnImpl_8104D5E0 */
+int MlnImpl_8104DAA4(int handle)
+{
+	MlnCoreServiceHandle *service = NULL;
+	MlnHandleTable *table;
+	int ret;
+
+	if (MlnImpl_8104A448() != 0)
+		return 7;
+
+	table = MlnServiceHandleTable(MlnImpl_81006EAC());
+	if (table == NULL) {
+		ret = 2;
+		goto end;
+	}
+	ret = MlnImpl_81069FE8(handle, table, &service);
+	if (ret != 0 || service == NULL)
+		goto end;
+	ret = MlnImpl_81068888(service->exchange) != 0 ? 7 : 0;
+	MlnBufferDestroy(MLN_HEAP_GENERAL, service->messages[0]);
+	service->messages[0] = NULL;
+	MlnBufferDestroy(MLN_HEAP_GENERAL, service->messages[1]);
+	service->messages[1] = NULL;
+	MlnBufferDestroy(MLN_HEAP_GENERAL, service->messages[2]);
+	service->messages[2] = NULL;
+	MlnBufferDestroy(MLN_HEAP_GENERAL, service->messages[3]);
+	service->messages[3] = NULL;
+	if (service->values != NULL)
+		MlnServiceValuesFree(service->values);
+	MlnFree(MLN_HEAP_GENERAL, service);
+	if (MlnImpl_8106A048(handle, NULL, table) != 0)
+		ret = 7;
+end:
+	MlnImpl_8104A558();
+	return ret;
+}
