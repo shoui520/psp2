@@ -13,6 +13,7 @@
 #include <std/string>
 #include <std/list>
 #include <std/vector>
+#include <std/memory>
 #include <math/ngp/v4.h>
 #include <widget/core/widget.h>
 #include <widget/w_text.h>
@@ -320,13 +321,34 @@ public:
 	paf::Plugin *m_plugin;
 };
 
+/*
+ * The icon the shell puts on the bar (28 bytes; PLACEHOLDER names): its frame risen into the
+ * bar with the image in it, or the parental lock's image for content the lock holds back, and
+ * the frame's texture lit while it is active. Its functions are the interface's notice icon
+ * slots (indicator_notice_icon.cpp).
+ */
 class IndicatorNoticeIcon : public IndicatorItem {
 public:
 	IndicatorNoticeIcon(paf::Plugin *plugin, paf::ui::Widget *widget);	/* (0x81180FD8) */
+	virtual ~IndicatorNoticeIcon();					/* (0x811812FE) */
+
+	/* the status's colors not taken (the empty function at 0x814098DC) */
+	virtual void UpdateColor(IndicatorStatus status)
+	{
+	}
+
+	void Show();							/* (0x81181562) */
+	void Hide();							/* (0x811818FE) */
+	void UpdateFrame();						/* (0x81181B7C) */
+	void UpdateImage();						/* (0x81181D0C) */
+
 	paf::ui::Widget *m_root;
 	paf::Plugin *m_plugin;
-	int m_state[2];
-	bool m_flag[3];
+	paf::intrusive_ptr<paf::graph::Surface> m_texture;	/* the image, NULL for none */
+	int m_parentalLevel;	/* the content's parental level, 99 always held back */
+	bool m_shown;		/* the frame risen into the bar */
+	bool m_active;		/* the frame's lit texture, while the lock does not hold it */
+	bool m_locked;		/* the parental lock's image shown */
 };
 
 /*

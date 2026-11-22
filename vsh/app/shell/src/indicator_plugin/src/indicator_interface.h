@@ -24,6 +24,12 @@ struct IndicatorNoticeRequest;
 struct IndicatorPushNewEventParam;
 class IndicatorEventItem;
 
+/* the notice icon's image and its content's parental level (8 bytes; PLACEHOLDER names) */
+struct IndicatorNoticeIconParam {
+	paf::intrusive_ptr<paf::graph::Surface> texture;
+	int parentalLevel;
+};
+
 /* how the bar is drawn: given by value (12 bytes; PLACEHOLDER names) */
 struct IndicatorMode {
 	int type;		/* 1: the bar's notices hidden */
@@ -78,7 +84,12 @@ struct IndicatorPluginInterface {
 	void (*RefreshPageDots)(void);
 	void (*SetPageDotImage)(int key, const paf::intrusive_ptr<paf::ui::TextureSource> *image);
 	void (*SetPageDotTexture)(int key, const paf::intrusive_ptr<paf::graph::Surface> &texture);
-	void *moreItemFunctions[4];		/* PLACEHOLDER: filled by the bar's items */
+	/* the notice icon's: shown with an image, hidden, its frame lit or not (1: lit), and its
+	   image taken again (indicator_notice_icon.cpp) */
+	void (*ShowNoticeIcon)(const IndicatorNoticeIconParam *param);
+	void (*HideNoticeIcon)(void);
+	void (*SetNoticeIconActive)(int active);
+	void (*UpdateNoticeIcon)(void);
 	/* the new events' item's: its button disabled while one or more hold it, enabled again,
 	   the notices' state updated, and the button */
 	void (*LockButton)(void);
