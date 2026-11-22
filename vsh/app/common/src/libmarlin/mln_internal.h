@@ -1883,6 +1883,9 @@ int MlnImpl_81046F98(int kind, const unsigned char *id1, const unsigned char *id
 		     const unsigned char *id3, MlnBuffer **out, int links);
 int MlnImpl_810472BC(unsigned int *count, int table);
 int MlnImpl_81047424(unsigned int i, int table, MlnBuffer **out);
+int MlnImpl_81047CDC(const unsigned char *digest);
+int MlnImpl_81047D7C(int ret, int miss, unsigned int flag, unsigned int *found,
+		     unsigned int *damaged);
 int MlnImpl_81049E34(MlnStoreLink **links, MlnStoreLink *link);
 int MlnImpl_8105DC0C(int table, unsigned int key, const MlnBuffer *data);
 int MlnImpl_8105DEDC(int table, unsigned int key, MlnBuffer **out);
@@ -1936,7 +1939,7 @@ typedef struct MlnX509CrlNumber {
 
 unsigned int MlnImpl_8103B3EC(MlnX509CrlNumber *number);
 unsigned int MlnImpl_810393D0(int kind, MlnBuffer **out);
-unsigned int MlnImpl_81047DC4(const MlnBuffer *id);
+unsigned int MlnImpl_81047DC4(const unsigned char *id);
 unsigned int MlnImpl_81047E00(void);
 int MlnImpl_8102AAE8(int *loaded);
 int MlnImpl_8102AE84(const MlnBuffer *state);
@@ -1946,7 +1949,8 @@ int MlnImpl_8102B064(const MlnBuffer *id, MlnBlob *out);
 int MlnImpl_8102B198(const MlnBuffer *id);
 int MlnImpl_8102B2E0(void);
 unsigned int MlnImpl_81048214(unsigned int *flags);
-unsigned int MlnImpl_81047E48(void *id, unsigned int *flags);
+unsigned int MlnImpl_81047E48(const MlnBuffer *id, unsigned int *flags);
+int MlnImpl_810827B0(const unsigned char *id);
 unsigned int MlnImpl_810486D4(const MlnBuffer *id);
 unsigned int MlnImpl_810488A8(const MlnBuffer *id);
 int MlnImpl_8102B404(void *id, unsigned int *flags);

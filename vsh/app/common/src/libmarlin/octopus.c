@@ -368,7 +368,7 @@ int MlnImpl_8102B198(const MlnBuffer *id)
 
 	if (id == NULL || id->size != 20 || id->data == NULL)
 		return 4;
-	ret = MlnImpl_81047DC4(id);
+	ret = MlnImpl_81047DC4(id->data);
 	if (ret != 0)
 		ret = MlnImpl_8102A228(ret);
 	return ret;

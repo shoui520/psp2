@@ -134,7 +134,7 @@ out:
 }
 
 /* the digest kept in the shared state, made on first use */
-MlnStoreDigest *MlnImpl_81043A08(void)
+__attribute__((noinline)) MlnStoreDigest *MlnImpl_81043A08(void)
 {
 	MlnShared *shared = MlnImpl_81006EAC();
 	MlnStoreDigest *digest = shared->buffers[1];
@@ -2173,5 +2173,266 @@ int MlnImpl_810476C0(int kind)
 out:
 	MlnBufferDestroy(MLN_HEAP_GENERAL, index);
 	MlnImpl_810463B4(used);
+	return ret;
+}
+
+/* removes the link whose id is digest, and its record (table 7) */
+int MlnImpl_81047CDC(const unsigned char *digest)
+{
+	MlnStoreLink *links = NULL;
+	MlnStoreLink *found = NULL;
+	MlnBuffer id = { 20, (unsigned char *)digest };
+	unsigned int key;
+	int ret;
+
+	ret = MlnImpl_81049874(&links);
+	if (ret != 0)
+		goto out;
+	ret = MlnImpl_81049D54(links, &id, &found);
+	if (ret != 0)
+		goto out;
+	key = found->key;
+	ret = MlnImpl_81049E34(&links, found);
+	if (ret != 0)
+		goto out;
+	ret = MlnImpl_8104990C(links);
+	if (ret != 0)
+		goto out;
+	ret = MlnImpl_8105DC0C(7, key, NULL);
+out:
+	MlnImpl_81049918(links);
+	return ret;
+}
+
+/*
+ * folds a check's result into the flags: found (0) and damaged (6) set flag
+ * in their word, the expected miss is 0, anything else 5
+ */
+__attribute__((noinline)) int MlnImpl_81047D7C(int ret, int miss, unsigned int flag, unsigned int *found,
+		     unsigned int *damaged)
+{
+	if (ret == 0) {
+		*found |= flag;
+		return 0;
+	}
+	if (ret == 6) {
+		*damaged |= flag;
+		return 0;
+	}
+	return ret == miss ? 0 : 5;
+}
+
+/* sets the device id (20 bytes) */
+unsigned int MlnImpl_81047DC4(const unsigned char *id)
+{
+	MlnStoreDigest *device = MlnImpl_81043A08();
+
+	if (device == NULL)
+		return 2;
+	MlnMemcpy(device->bytes, id, sizeof(device->bytes));
+	device->buffer.size = sizeof(device->bytes);
+	device->buffer.data = device->bytes;
+	return 0;
+}
+
+/* clears the device id */
+unsigned int MlnImpl_81047E00(void)
+{
+	MlnStoreDigest *device = MlnImpl_81043A08();
+
+	if (device == NULL)
+		return 2;
+	MlnMemset(device->bytes, 0, sizeof(device->bytes));
+	device->buffer.size = 0;
+	device->buffer.data = NULL;
+	return 0;
+}
+
+/* the device id, NULL without one */
+__attribute__((noinline)) const MlnBuffer *MlnImpl_81047E34(void)
+{
+	MlnStoreDigest *device = MlnImpl_81043A08();
+
+	if (device == NULL)
+		return NULL;
+	return &device->buffer;
+}
+
+/*
+ * the state flags of the device id and of what is stored for it: which
+ * records are there (found) or damaged; the damaged flags win and gain a
+ * summary bit per group, else two summary bits for complete sets
+ */
+unsigned int MlnImpl_81047E48(const MlnBuffer *id, unsigned int *flags)
+{
+	unsigned char zero[10];
+	unsigned char headId[20];
+	unsigned char tailId[20];
+	unsigned int found = 0;
+	unsigned int damaged = 0;
+	const unsigned char *data;
+	const unsigned char *tail;
+	const unsigned char *head;
+	const unsigned char *full;
+	int headZero;
+	int tailZero;
+	int ret;
+
+	if (id == NULL || id->data == NULL || id->size != 20)
+		return 3;
+	MlnMemset(zero, 0, sizeof(zero));
+	data = id->data;
+	headZero = MlnMemcmp(data, zero, 10) == 0;
+	tailZero = MlnMemcmp(data + 12, zero, 8) == 0;
+	if (headZero && tailZero)
+		return 3;
+	ret = MlnImpl_8105DEDC(12, 1, NULL);
+	if (ret == 0)
+		found |= 0x100;
+	else if (ret == 6)
+		damaged |= 0x100;
+	else if (ret != 1)
+		return 5;
+	ret = MlnImpl_8105DEDC(12, 2, NULL);
+	if (ret == 0)
+		found |= 0x200;
+	else if (ret == 6)
+		damaged |= 0x200;
+	else if (ret != 1)
+		return 5;
+	ret = MlnImpl_81047D7C(MlnImpl_8105DEDC(14, 0, NULL), 1, 0x400, &found, &damaged);
+	if (ret != 0)
+		return ret;
+	ret = MlnImpl_81047D7C(MlnImpl_8105DEDC(6, 0, NULL), 1, 0x800, &found, &damaged);
+	if (ret != 0)
+		return ret;
+	ret = MlnImpl_81047D7C(MlnImpl_8105DEDC(7, 0, NULL), 1, 0x1000, &found, &damaged);
+	if (ret != 0)
+		return ret;
+	if (headZero) {
+		tail = data;
+		head = NULL;
+		full = NULL;
+	} else if (tailZero) {
+		tail = NULL;
+		head = data;
+		full = data;
+	} else {
+		MlnMemset(headId, 0, sizeof(headId));
+		MlnMemcpy(headId, data, 10);
+		MlnMemset(tailId, 0, sizeof(tailId));
+		MlnMemcpy(tailId + 12, data + 12, 8);
+		tail = tailId;
+		head = headId;
+		full = data;
+	}
+	if ((damaged & 0x800) == 0) {
+		if (tail != NULL) {
+			ret = MlnImpl_81047D7C(MlnImpl_81046F98(2, NULL, NULL, tail, NULL, 1),
+					       0x230A0011, 0x2000, &found, &damaged);
+			if (ret != 0)
+				return ret;
+		}
+		if (head != NULL) {
+			ret = MlnImpl_81047D7C(MlnImpl_81046F98(2, NULL, NULL, head, NULL, 1),
+					       0x230A0011, 0x10000, &found, &damaged);
+			if (ret != 0)
+				return ret;
+		}
+	}
+	if ((damaged & 0x1000) == 0) {
+		if (tail != NULL) {
+			ret = MlnImpl_81047D7C(MlnImpl_810827B0(tail), 0x230A0003, 0x4000, &found,
+					       &damaged);
+			if (ret != 0)
+				return ret;
+		}
+		if (full != NULL) {
+			ret = MlnImpl_81047D7C(MlnImpl_810827B0(full), 0x230A0003, 0x20000, &found,
+					       &damaged);
+			if (ret != 0)
+				return ret;
+		}
+	}
+	if (damaged != 0) {
+		if (damaged & 0x1F00)
+			damaged |= 0x40000000;
+		if (damaged & 0x6000)
+			damaged |= 0x20000000;
+		if (damaged & 0x30000)
+			damaged |= 0x80000000;
+		*flags = damaged;
+	} else {
+		if ((found & 0x60007900) == 0x7900)
+			found |= 0x2000000;
+		if ((found & 0xC0031900) == 0x31900)
+			found |= 0x800000;
+		*flags = found;
+	}
+	return 0;
+}
+
+/*
+ * the state flags of the core: which of the steps' states (tables 15, 3 and
+ * 17) and the two key states are there (found) or damaged; damaged wins
+ */
+unsigned int MlnImpl_81048214(unsigned int *flags)
+{
+	unsigned int found = 0;
+	unsigned int damaged = 0;
+	void *handle = NULL;
+	unsigned int ret;
+
+	ret = MlnImpl_8105DEDC(15, 0, NULL);
+	if (ret == 0)
+		found |= 0x01;
+	else if (ret == 6)
+		damaged |= 0x01;
+	else if (ret != 1)
+		goto invalid;
+	ret = MlnImpl_8105DEDC(3, 0, NULL);
+	if (ret == 0)
+		found |= 0x04;
+	else if (ret == 6)
+		damaged |= 0x04;
+	else if (ret != 1)
+		goto invalid;
+	ret = MlnImpl_8105DEDC(17, 0, NULL);
+	if (ret == 0)
+		found |= 0x10;
+	else if (ret == 6)
+		damaged |= 0x10;
+	else if (ret != 1)
+		goto invalid;
+	ret = MlnImpl_81080BFC(&handle);
+	if (ret != 0)
+		goto out;
+	ret = MlnImpl_81081374(1);
+	if (ret == 0)
+		found |= 0x02;
+	else if (ret == 6)
+		damaged |= 0x02;
+	else if (ret != 0x23110005)
+		goto invalid;
+	ret = MlnImpl_81081374(0);
+	if (ret == 0)
+		found |= 0x08;
+	else if (ret == 6)
+		damaged |= 0x08;
+	else if (ret != 0x23110005)
+		goto invalid;
+	if (damaged != 0) {
+		*flags = damaged | 0x10000000;
+	} else {
+		if (found == 0x1F)
+			found |= 0x1000000;
+		*flags = found;
+	}
+	ret = 0;
+	goto out;
+invalid:
+	ret = 5;
+out:
+	MlnImpl_81080C1C(handle);
 	return ret;
 }
