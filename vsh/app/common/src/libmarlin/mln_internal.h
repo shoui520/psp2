@@ -1721,6 +1721,15 @@ int MlnImpl_8103E4FC(const void *data, unsigned int size, unsigned char *digest,
 		     int digestSize);
 int MlnImpl_810570A8(const void *data, unsigned int size, unsigned char *digest);
 int MlnImpl_8105713C(const void *data, unsigned int size, unsigned char *digest);
+int MlnImpl_81057024(void **context);
+int MlnImpl_81057078(void *context, unsigned char *digest);
+int MlnImpl_81057098(void *context, const void *data, unsigned int size);
+int MlnImpl_810570B8(void **context);
+int MlnImpl_8105710C(void *context, unsigned char *digest);
+int MlnImpl_8105712C(void *context, const void *data, unsigned int size);
+int MlnImpl_8105714C(void **context);
+int MlnImpl_810571C4(void *context, unsigned int size, void *out);
+int MlnImpl_81057244(void *context);
 int MlnImpl_8103EF84(const MlnOctopusArray *transforms);
 int MlnImpl_8103E540(const MlnBuffer *token, int type, MlnOctopusSamlAssertion **out,
 		     int verify);
