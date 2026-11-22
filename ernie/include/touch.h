@@ -132,11 +132,11 @@ struct TouchObjects {
 	unsigned int	report;		/* T34's byte 0x0e: what a frame reads */
 	unsigned int	numTouch;	/* T9's NUMTOUCH (byte 14): the touches reported */
 	unsigned int	reset;		/* T6 (command processor): its RESET */
-#if FW_SINCE(0x00090009)
+#if FW_SINCE(0x00090006)
 	unsigned int	backup;		/* T6's BACKUPNV */
 	unsigned int	power;		/* T7 (power configuration) */
 #endif
-#if FW_SINCE(0x00090804)	/* 0x00090206 keeps only the five above */
+#if FW_SINCE(0x00090502)	/* 0x00090206 keeps only the five above */
 	unsigned int	selfTest;	/* T25 */
 	unsigned int	userData;	/* T38 */
 	unsigned int	t34;
@@ -242,7 +242,7 @@ struct TouchPanel {
 					   as touchReadGripEdges last read them */
 #endif
 	struct TouchObjects objects;
-#if FW_SINCE(0x00090804)	/* 0x00090206 has no modes */
+#if FW_SINCE(0x00090502)	/* 0x00090206 has no modes */
 	struct TouchMode modes[TOUCH_MODES];
 #endif
 #if SOURCE_0103
@@ -568,7 +568,7 @@ extern void touchClose(void);
 extern void touchClearFrames0(void);
 extern void touchClearFrames1(void);
 extern void touchStartFrame(void);
-#if !FW_SINCE(0x00090009)
+#if !FW_SINCE(0x00090006)
 extern void touchIdentify0(void);
 extern void touchIdentify1(void);
 #endif

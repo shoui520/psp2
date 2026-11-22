@@ -40,7 +40,7 @@
 #define BBMC_NVS_MODE		0x2e	/* bbmcRegs.r.mode in NVS area 1 */
 
 /* the link timeout's timer: 0x00090206 gives it timer 0x13, its first RTC timer */
-#if FW_SINCE(0x00090804)
+#if FW_SINCE(0x00090502)
 #define BBMC_LINK_TIMER		TIMER(0x13)
 #else
 #define BBMC_LINK_TIMER		TIMER_RTC_FIRST	/* 0x13 (0x00080504: 0x11) */
@@ -180,14 +180,14 @@ void bbmcInit(void)
 	bbmcInputHandlerWake.handler = bbmcPostWake;
 #if !BOARD_BBMC
 	/* no modem to power down or detect */
-#elif BOARD_102603 && !(HW_IS(0x00102603) && !FW_SINCE(0x00090009))
+#elif BOARD_102603 && !(HW_102603 && !FW_SINCE(0x00090006))
 	P33 = 0;
 	/* the modem taken as there whenever the board says it detects one */
 	if (configGet()->board.bits.bbmcDetect)
 		setHardwareInfoFlags(0x02);
 #else
 	P33 = 0;
-#if HW_IS(0x00102603)	/* 0x00080502: the modem's line read whatever the board says */
+#if HW_102603	/* 0x00080502: the modem's line read whatever the board says */
 	{
 #else
 	if (configGet()->board.bits.bbmcDetect) {
@@ -207,7 +207,7 @@ unsigned char bbmcPowerOn(void)
 	return 0;
 #else
 	uart2Open();
-#if FW_SINCE(0x00090804)
+#if FW_SINCE(0x00090502)
 	switch (bbmc.state) {
 	case 3:
 		break;
@@ -253,7 +253,7 @@ unsigned char bbmcPowerOff(void)
 	PM34 = 0;
 	P36 = 0;
 	PM36 = 0;
-#if FW_SINCE(0x00090804)
+#if FW_SINCE(0x00090502)
 	uart2Close(0);
 #else
 	uart2Close();
@@ -325,7 +325,7 @@ unsigned char bbmcStart(void)
 	bbmcWriteRegs(8, 4, zero4, BBMC_WRITE_RESET);
 #endif
 	switch (bbmcRegs.r.mode) {
-#if FW_SINCE(0x00090804)
+#if FW_SINCE(0x00090502)
 	case 1:
 		P125 = 1;
 #if FW_SINCE(0x01000104)
@@ -396,7 +396,7 @@ unsigned char bbmcGetMode(void)
 		return 2;
 	case 6:
 		return 3;
-#if FW_SINCE(0x00090804)
+#if FW_SINCE(0x00090502)
 	case 7:
 		return 4;
 #endif
@@ -404,7 +404,7 @@ unsigned char bbmcGetMode(void)
 	return 0;
 }
 
-#if FW_SINCE(0x00090804)
+#if FW_SINCE(0x00090502)
 unsigned char bbmcIsOn(void)
 {
 	switch (bbmc.state) {
@@ -433,7 +433,7 @@ unsigned char bbmcModeIsNone(void)
 /* event flag 6's events */
 unsigned char bbmcEvent(FLGPTN ptn)
 {
-#if !BOARD_BBMC && !FW_SINCE(0x00090804)
+#if !BOARD_BBMC && !FW_SINCE(0x00090502)
 	/* 0x00315200's 0x00090206: the request, and the state's change still writes the modem's
 	   registers */
 	if (ptn & BBMC_EVENT_REQUEST)
@@ -519,7 +519,7 @@ unsigned char bbmcEvent(FLGPTN ptn)
 
 		mode = bbmcRegs.r.mode;
 		P125 = 0;
-#if FW_SINCE(0x00090804)
+#if FW_SINCE(0x00090502)
 		if (mode == 7)
 			mode = 1;
 #endif
@@ -537,7 +537,7 @@ unsigned char bbmcEvent(FLGPTN ptn)
 		bbmcReceive();
 	if (ptn & BBMC_EVENT_RX_TIMEOUT)
 		bbmc.rxLength = 0;
-#if FW_SINCE(0x00090804)
+#if FW_SINCE(0x00090502)
 	if (ptn & BBMC_EVENT_LINK_TIMEOUT) {
 		if (stateGet() == 0x0008) {
 			uart2Close(1);
@@ -550,7 +550,7 @@ unsigned char bbmcEvent(FLGPTN ptn)
 #endif
 	if (ptn & BBMC_EVENT_START)
 		;
-#if !FW_SINCE(0x00090804)
+#if !FW_SINCE(0x00090502)
 	/* 0x00090206 runs the request before the state's change, and has no resume */
 	if (ptn & BBMC_EVENT_REQUEST)
 		bbmcRequestRun();
@@ -582,7 +582,7 @@ unsigned char bbmcEvent(FLGPTN ptn)
 #endif
 	}
 #endif
-#if !FW_SINCE(0x01000104) && FW_SINCE(0x00090804)
+#if !FW_SINCE(0x01000104) && FW_SINCE(0x00090502)
 	/* before 0x01000104 the states and their transitions are handled alike, and the mode's
 	   status and events cleared off; 0x00090804 leaves the transition flag set */
 	if (ptn & BBMC_EVENT_STATE) {
@@ -695,7 +695,7 @@ unsigned char bbmcEvent(FLGPTN ptn)
 		}
 	}
 #endif
-#if FW_SINCE(0x00090804)
+#if FW_SINCE(0x00090502)
 	if (ptn & BBMC_EVENT_REQUEST)
 		bbmcRequestRun();
 	return 0;
@@ -983,7 +983,7 @@ void bbmcRegsInit(void)
 	memset(&bbmcRegs, 0, BBMC_REGS);
 #if FW_SINCE(0x01000104)
 	bbmcRegs.r.id = 5;
-#elif FW_SINCE(0x00090009)
+#elif FW_SINCE(0x00090006)
 	bbmcRegs.r.id = 3;
 #else
 	bbmcRegs.r.id = 1;
@@ -1088,7 +1088,7 @@ unsigned char bbmcReadRegs(unsigned char reg, unsigned char count, unsigned char
 	}
 	result = count;
 	while (count--) {
-#if FW_SINCE(0x00090009)
+#if FW_SINCE(0x00090006)
 		if (reg >= 8 && reg < 0x14) {
 #else
 		if (reg >= 8 && reg < 0x10) {
@@ -1141,7 +1141,7 @@ unsigned char bbmcGetPending(void)
 	return bbmc.pending;
 }
 
-#if FW_SINCE(0x00090009) && !(BOARD_USS1001 && SOURCE_0104) /* not in 0x00080504 */
+#if FW_SINCE(0x00090006) && !(BOARD_USS1001 && SOURCE_0104) /* not in 0x00080504 */
 /* 0 without a version, 1 for versions 0-2, else 2 */
 unsigned char bbmcGetVersion(void)
 {
@@ -1217,7 +1217,7 @@ void bbmcRequestRun(void)
 		handshakeRefuse();
 		return;
 	}
-#if !HW_IS(0x00102603) || FW_SINCE(0x00090009)	/* 0x00102603's 0x00080502 runs them without the modem flag */
+#if !HW_102603 || FW_SINCE(0x00090006)	/* 0x00102603's 0x00080502 runs them without the modem flag */
 	if (!(getHardwareInfoFlags() & 0x02)) {
 		hostRequestAnswer(&bbmcRequest, HOST_REQUEST_ANSWER, 2, 0);
 		return;

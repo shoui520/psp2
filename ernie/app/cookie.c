@@ -1088,7 +1088,7 @@ unsigned char cookieCtrlReg3Bit0(void)
 
 #else
 static struct IicaRequest cookieIica;
-#if FW_SINCE(0x00090804)
+#if FW_SINCE(0x00090502)
 union CookieReg cookieRegs[6];
 #else
 union CookieReg cookieRegs[7];			/* 0x00090206: register 6 too, set only here */
@@ -1102,7 +1102,7 @@ void cookieInit(void)
 	cookieRegs[3].word = 0x0010;
 	cookieRegs[4].word = 0x0020;
 	cookieRegs[5].word = 0x0010;
-#if !FW_SINCE(0x00090804)
+#if !FW_SINCE(0x00090502)
 	cookieRegs[6].word = 0xa020;
 #endif
 }
@@ -1261,7 +1261,7 @@ unsigned char cookieCtrlBatteryCharge(unsigned char on)
 	return result;
 }
 
-#if FW_SINCE(0x00090804)
+#if FW_SINCE(0x00090502)
 /* register 3's bit 7 (powerCookieSet, powerCookieClear), then the AC's charge */
 unsigned char cookieCtrlCharge(unsigned char on)
 {
@@ -1282,7 +1282,7 @@ unsigned char cookieCtrlCharge(unsigned char on)
 	unsigned char value;
 
 	if (on) {
-#if FW_SINCE(0x00090206)
+#if FW_SINCE(0x00090203)
 		if (!powerStatus.bits.cookieLock0 && !powerStatus.bits.cookieLock1)
 			value = cookieRegs[0].byte[0] & 0x3f;
 		else {
@@ -1303,7 +1303,7 @@ unsigned char cookieCtrlCharge(unsigned char on)
 			cookieRegs[0].byte[0] = value;
 	} else
 		result = 0;
-#if FW_SINCE(0x00090206)
+#if FW_SINCE(0x00090203)
 done:
 #endif
 	return result;
@@ -1349,7 +1349,7 @@ unsigned char cookieCtrlSupplyCurrentAc(unsigned char current)
 	return result;
 }
 
-#if FW_SINCE(0x00090206)
+#if FW_SINCE(0x00090203)
 /* register 7's low byte, its bits 5-7 */
 unsigned char cookieCtrlReg7(unsigned char value)
 {
@@ -1400,7 +1400,7 @@ void cookieReadReg3(void)
 }
 #endif
 
-#if FW_SINCE(0x00090206)
+#if FW_SINCE(0x00090203)
 /* register 3's bit 6 clear while on and nothing holds it: 0x0892 (sceSysconCtrlChargeAC).
    Sony's compares the new value with the register's high byte, not the low one it sets. */
 unsigned char cookieCtrlChargeAc(unsigned char on)
@@ -1413,7 +1413,7 @@ unsigned char cookieCtrlChargeAc(unsigned char on)
 #if FW_SINCE(0x01000107)
 		if (!powerStatus.bits.cookieLock0 && !powerStatus.bits.cookieLock1 &&
 		    !chargeCookieHeld && chargeControl.1)
-#elif FW_SINCE(0x00090804)
+#elif FW_SINCE(0x00090502)
 		if (!powerStatus.bits.cookieLock0 && !powerStatus.bits.cookieLock1 &&
 		    chargeControl.1)
 #else
@@ -1458,7 +1458,7 @@ unsigned char cookieCtrlReg3Mode(unsigned char mode)
 	if (mode == 1)
 		value = cookieRegs[0].byte[0] & 0xfb;
 	else {
-#if FW_SINCE(0x00090804)
+#if FW_SINCE(0x00090502)
 		if (configGet()->start.bits.chargeLedOff) {
 			result = 0;
 			goto done;
@@ -1476,7 +1476,7 @@ unsigned char cookieCtrlReg3Mode(unsigned char mode)
 			cookieRegs[0].byte[0] = value;
 	} else
 		result = 0;
-#if !FW_SINCE(0x01000104) && FW_SINCE(0x00090804)
+#if !FW_SINCE(0x01000104) && FW_SINCE(0x00090502)
 done:
 #endif
 	return result;
@@ -1497,7 +1497,7 @@ unsigned char cookieCtrlReg3Bit2(unsigned char on)
 #else
 	/* before 0x01000104 bit 0, not read first, and kept clear by chargeLedOff */
 	if (on) {
-#if FW_SINCE(0x00090804)
+#if FW_SINCE(0x00090502)
 		if (configGet()->start.bits.chargeLedOff) {
 			result = 0;
 			goto done;
@@ -1516,13 +1516,13 @@ unsigned char cookieCtrlReg3Bit2(unsigned char on)
 			cookieRegs[0].byte[0] = value;
 	} else
 		result = 0;
-#if !FW_SINCE(0x01000104) && FW_SINCE(0x00090804)
+#if !FW_SINCE(0x01000104) && FW_SINCE(0x00090502)
 done:
 #endif
 	return result;
 }
 
-#if !FW_SINCE(0x00090206)	/* 0x00090009's order */
+#if !FW_SINCE(0x00090203)	/* 0x00090009's order */
 /* register 7's low byte, its bits 5-7 */
 unsigned char cookieCtrlReg7(unsigned char value)
 {
@@ -1538,7 +1538,7 @@ unsigned char cookieCtrlReg7(unsigned char value)
 	return result;
 }
 
-#if FW_SINCE(0x00090009)	/* 0x00080504 has only cookieCtrlReg7 here */
+#if FW_SINCE(0x00090006)	/* 0x00080504 has only cookieCtrlReg7 here */
 /* 0x00090009: register 3's bit 6 clear while on, no lock and no read first */
 unsigned char cookieCtrlChargeAc(unsigned char on)
 {

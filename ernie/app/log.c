@@ -183,6 +183,12 @@ static TABLE_CONST struct LogRecord logRecords[] = {
 };
 
 static struct LogHeader logHeader;
+/* a request the started log refuses: 0x00090502 answers 2 */
+#if FW_SINCE(0x00090804)
+#define LOG_ERROR_STARTED	3
+#else
+#define LOG_ERROR_STARTED	2
+#endif
 #if LOG_VALUES
 /* DOL-1001's event: a record and the value it is given */
 struct LogEvent {
@@ -511,7 +517,11 @@ void logUpdate(void)
 	unsigned int id;
 	unsigned char size;
 
+#if FW_SINCE(0x00090804)
 	if (logHeader.state == LOG_STATE_UNLOADED) {
+#else	/* 0x00090502 reads the header at every tick */
+	{
+#endif
 		result = LOG_READ(LOG_HEADER, &record, &size);
 		if (result != 0)
 			return;
@@ -520,9 +530,14 @@ void logUpdate(void)
 	if (logHeader.version < LOG_VERSION) {
 		/* an older layout's records moved to this one's */
 		memcpy(&record, &logHeader, sizeof(logHeader));
+#if FW_SINCE(0x00090804)
 		result = logStop();
 		if (result != 0)
 			return;
+#else
+		logStop();
+		LOG_READ(LOG_HEADER, &logHeader, &size);
+#endif
 		switch (logHeader.version) {
 		case 0:
 		case 1:
@@ -561,9 +576,14 @@ void logUpdate(void)
 			break;
 #endif
 		}
+#if FW_SINCE(0x00090804)
 		result = logWriteHeader(&record.header);
 		if (result != 0)
 			return;
+#else
+		memcpy(&logHeader, &record, sizeof(logHeader));
+		logWrite(LOG_HEADER, &logHeader);
+#endif
 		logSetVersion(LOG_VERSION);
 	}
 	switch (logHeader.mode) {
@@ -870,16 +890,23 @@ int logStart(void)
 	unsigned char size;
 
 	if (logHeader.mode == LOG_MODE_STARTED)
-		result = 3;
+		result = LOG_ERROR_STARTED;
 	else if (logHeader.state == LOG_STATE_IDLE || logHeader.state == LOG_STATE_RUNNING) {
 		logQueueInit();
 		result = LOG_READ(LOG_HEADER, &header, &size);
 		if (result != 0)
 			result = 2;
 		else {
+#if FW_SINCE(0x00090804)
 			header.state = LOG_STATE_RUNNING;
 			header.mode = LOG_MODE_STARTED;
 			result = logWriteHeader(&header);
+#else	/* 0x00090502 keeps the header read, not the one written */
+			memcpy(&logHeader, &header, sizeof(logHeader));
+			header.state = LOG_STATE_RUNNING;
+			header.mode = LOG_MODE_STARTED;
+			result = logWrite(LOG_HEADER, &header);
+#endif
 		}
 	} else
 		result = 2;
@@ -896,8 +923,14 @@ int logStop(void)
 	if (result != 0)
 		result = 2;
 	else {
+#if FW_SINCE(0x00090804)
 		header.mode = LOG_MODE_STOPPED;
 		result = logWriteHeader(&header);
+#else
+		memcpy(&logHeader, &header, sizeof(logHeader));
+		header.mode = LOG_MODE_STOPPED;
+		result = logWrite(LOG_HEADER, &header);
+#endif
 	}
 	return result;
 }
@@ -921,7 +954,7 @@ int logClear(unsigned int id)
 
 	result = 0;
 	if (logHeader.mode == LOG_MODE_STARTED)
-		result = 3;
+		result = LOG_ERROR_STARTED;
 	else {
 		zero = 0;
 		result = logWrite(id, &zero);
@@ -935,7 +968,7 @@ int logClearIfStopped(void)
 
 	result = 0;
 	if (logHeader.mode == LOG_MODE_STARTED)
-		result = 3;
+		result = LOG_ERROR_STARTED;
 	else
 		result = logReset();
 	return result;
@@ -967,8 +1000,14 @@ int logSetVersion(unsigned int version)
 	if (result != 0)
 		result = 2;
 	else {
+#if FW_SINCE(0x00090804)
 		header.version = version;
 		result = logWriteHeader(&header);
+#else
+		memcpy(&logHeader, &header, sizeof(logHeader));
+		header.version = version;
+		result = logWrite(LOG_HEADER, &header);
+#endif
 	}
 	return result;
 }
@@ -983,6 +1022,7 @@ int logReset(void)
 	return logSetVersion(LOG_VERSION);
 }
 
+#if FW_SINCE(0x00090804)	/* 0x00090502 writes the header with logWrite */
 int logWriteHeader(struct LogHeader *header)
 {
 	int result;
@@ -994,6 +1034,7 @@ int logWriteHeader(struct LogHeader *header)
 		memmove(&logHeader, header, sizeof(logHeader));
 	return result;
 }
+#endif
 #endif
 
 #if LOG_VALUES

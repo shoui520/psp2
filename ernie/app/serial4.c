@@ -515,7 +515,7 @@ void serial4StartTimers(void)
    nothing reads; a segment of its own, which the link moves to the next 64 KiB page (and
    config.c's constants into the hole) where it does not fit before one, as Sony's does on
    0x00102603's 0x00090009 */
-#if HW_IS(0x00102603) && !FW_SINCE(0x00090206)
+#if HW_102603 && !FW_SINCE(0x00090203)
 #pragma section @@CNSTL @@CNSTU
 #endif
 const char serial4Users[5][12] = {

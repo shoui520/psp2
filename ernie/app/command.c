@@ -294,17 +294,17 @@ unsigned char hostCommandPins(unsigned char *out, unsigned char *length)
 	commandPins.value |= 0x1e;
 	*out = commandPins.value & 0x1f;
 #else
-#if FW_SINCE(0x00090206)
+#if FW_SINCE(0x00090206) || ERNIE_BOARD == 0x00406000	/* PCH-1000's 0x00090007 too */
 	commandPins.bits.present = 1;
 #else
-	commandPins.bits.present = P14.1;	/* 0x00090009 reads it */
+	commandPins.bits.present = P14.1;	/* 0x00090009 and 0x00090203 read it */
 #endif
 #if FW_SINCE(0x0100060B)
 	commandPins.bits.p31 = 1;	/* P3.1 is driven low (inputInit): reported high */
 #else
 	commandPins.bits.p31 = P3.1;
 #endif
-#if FW_SINCE(0x00090804)
+#if FW_SINCE(0x00090502)
 	commandPins.bits.p76 = P7.6;
 	*out = commandPins.value & 0x0f;
 #else
@@ -424,7 +424,7 @@ void commandRequestNotify(void)
 	union CommandWord word;
 #else
 	/* before 0x01000104 the event carries the transition and its parameter itself */
-#if !HW_IS(0x00315000)	/* DEM-3000G's has neither */
+#if !HANDSHAKE_UNCHECKED	/* DEM-3000G's and 0x00102403's have neither */
 	unsigned char i;
 	unsigned char reserved;		/* never used */
 #endif
@@ -453,7 +453,7 @@ void commandRequestNotify(void)
 			}
 		}
 #else
-#if !HW_IS(0x00315000)	/* DEM-3000G: no handshake to check */
+#if !HANDSHAKE_UNCHECKED	/* no handshake to check */
 	if (!handshakeUnlocked11()) {
 		for (i = 0; i < COMMAND_BASE_REQUESTS; i++) {
 			if (commandBaseRequests[i] == commandRequest.command)
@@ -551,7 +551,7 @@ allowed:
 			hostRequestAnswer(&commandRequest, 0x10, 0x3f, 0);
 			break;
 #endif
-#if FW_SINCE(0x00090804)	/* 0x00090206 has no log */
+#if FW_SINCE(0x00090502)	/* 0x00090206 has no log */
 		case 0x0086:		/* the log: sceSysconGetLogInfo */
 		case 0x0087:		/* sceSysconLogStart */
 #if FW_SINCE(0x00090903)
@@ -639,7 +639,7 @@ allowed:
 				hostRequestAnswer(&commandRequest, HOST_REQUEST_ANSWER, 0x3b, 0);
 			break;
 		case 0x00b1:		/* sceSysconCtrlWirelessPowerDown */
-#if HW_IS(0x00102603)
+#if HW_102603
 			/* the wireless power line, P6.7 */
 			if (commandRequest.length == 1) {
 				if (commandRequestData[0] == 1)
@@ -653,7 +653,7 @@ allowed:
 			hostRequestAnswer(&commandRequest, HOST_REQUEST_ANSWER, 0x3e, 0);
 #endif
 			break;
-#if FW_SINCE(0x00090009)	/* not in 0x00080504 */
+#if FW_SINCE(0x00090006)	/* not in 0x00080504 */
 		case 0x00b2:		/* sceSysconCtrlHostOutputViaDongle */
 			if (commandRequest.length == 1) {
 				if (boardMultiCnIsDongle() == 0)
@@ -683,7 +683,7 @@ allowed:
 				hostRequestAnswer(&commandRequest, HOST_REQUEST_ANSWER, 0x3b, 0);
 			break;
 #endif
-#if FW_SINCE(0x00090804)	/* not in 0x00090206 */
+#if FW_SINCE(0x00090804)	/* not in 0x00090206 or 0x00090502 */
 		case 0x00b3:		/* P6.7 */
 #if BOARD_102603 && FW_SINCE(0x01000104)
 			commandRequestAnswer[0] = 0;	/* P6.7 is an output (0x00b1) or not wired */
@@ -949,7 +949,7 @@ allowed:
 			hostRequestAnswer(&commandRequest, HOST_REQUEST_ANSWER, 0x3e, 0);
 			COMMAND_LOG_ANSWER();
 			break;
-#if FW_SINCE(0x00090009)	/* not in 0x00080504 */
+#if FW_SINCE(0x00090006)	/* not in 0x00080504 */
 		case 0x00c2:
 			COMMAND_LOG_REQUEST();
 			if (commandRequest.length == 1) {
@@ -971,7 +971,7 @@ allowed:
 					else
 						hostRequestAnswer(&commandRequest, HOST_REQUEST_ANSWER, 6, 0);
 				}
-#if FW_SINCE(0x00090206)	/* 0x00090009 leaves the other commands unanswered */
+#if FW_SINCE(0x00090203)	/* 0x00090009 leaves the other commands unanswered */
 				else
 					hostRequestAnswer(&commandRequest, HOST_REQUEST_ANSWER, 0, 0);
 			} else
@@ -1031,7 +1031,7 @@ allowed:
 void commandRequestRun(void)
 {
 	switch (commandRequest.command) {
-#if FW_SINCE(0x00090804)
+#if FW_SINCE(0x00090502)
 	case 0x0086:
 		commandLogInfo(commandRequestData, 0x86, commandLogDone);
 		break;
@@ -1097,7 +1097,7 @@ void commandHandshakeDone(unsigned char command, unsigned char result)
 		hostRequestAnswer(&commandRequest, HOST_REQUEST_ANSWER, 0x10, 0);
 }
 
-#if FW_SINCE(0x00090804)
+#if FW_SINCE(0x00090502)
 /* 0x0087 (sceSysconLogStart) */
 int commandLogStart(unsigned char *data, unsigned char command, CommandDone done)
 {
@@ -1157,7 +1157,7 @@ int commandLogHalt(unsigned char *data, unsigned char command, CommandDone done)
 #endif
 #endif
 
-#if FW_SINCE(0x00090804)
+#if FW_SINCE(0x00090502)
 void commandLogDone(unsigned char command, unsigned char result)
 {
 	unsigned char status;

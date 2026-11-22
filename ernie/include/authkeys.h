@@ -32,7 +32,7 @@ extern const unsigned char handshakeIv[16];
 /* Serial authentication keys and packet constants. */
 extern const unsigned char serialHeader[4];
 extern const unsigned char serialIv[16];
-#if !FW_SINCE(0x00090009)
+#if !FW_SINCE(0x00090006)
 /* 0x00080504: the keys expanded, AES-128's 11 round keys each */
 extern const unsigned long serialKey0First[44];
 extern const unsigned long serialKey0Second[44];
@@ -48,7 +48,7 @@ extern const unsigned char serialKey1First[16];
 extern const unsigned char serialKey1Second[16];
 extern const unsigned char serialKey1Check[16];
 #endif
-#if FW_SINCE(0x00090804)
+#if FW_SINCE(0x00090502)
 extern const unsigned char serialKey2First[16];
 extern const unsigned char serialKey2Second[16];
 extern const unsigned char serialKey2Check[16];

@@ -17,6 +17,7 @@
 #include "powerreq.h"
 #include "powerseq.h"
 #include "powerwait.h"
+#include "sleepfactor.h"
 #include "state.h"
 #include "task5.h"
 #include "tau.h"
@@ -33,7 +34,7 @@ static const struct PowerDeviceJob powerDeviceJobs[POWER_DEVICE_JOBS] = {
 	{ 0x0002, powerAccOff },
 	{ 0x0004, powerHpremoteOn },
 	{ 0x0008, powerHpremoteOff },
-#if FW_SINCE(0x00090009)
+#if FW_SINCE(0x00090006)
 	{ 0x0010, powerMultiCnOn },
 	{ 0x0020, powerMultiCnOff },
 #else	/* 0x00080504: no multi-connector power */
@@ -261,7 +262,7 @@ static void powerTimerEnd11(void)
 	powerTimers &= ~0x0800;
 }
 
-#if FW_SINCE(0x00090009)	/* 0x00080504 has no bits 12 and 13 */
+#if FW_SINCE(0x00090006)	/* 0x00080504 has no bits 12 and 13 */
 static void powerTimerEnd12(void)
 {
 	powerTimers &= ~0x1000;
@@ -270,6 +271,21 @@ static void powerTimerEnd12(void)
 static void powerTimerEnd13(void)
 {
 	powerTimers &= ~0x2000;
+}
+#endif
+
+#if FW_SINCE(0x00090502) && !FW_SINCE(0x00090804)
+/* 0x00090502 has no powerSeqInit: powerTimersInit sets timers 0x11 and 0x12 itself */
+/* timer 0x11 (powerAccOn) */
+void powerAccTimer(void)
+{
+	sleepFactorSet2(1);
+}
+
+/* timer 0x12 (powerSdOn) */
+void powerSdTimer(void)
+{
+	sleepFactorSet10(1);
 }
 #endif
 
@@ -346,11 +362,17 @@ void powerTimersInit(void)
 #endif
 	handler.handler = powerTimerEnd11;
 	timerSetHandler(POWER_TIMER11, &handler);
-#if FW_SINCE(0x00090009)
+#if FW_SINCE(0x00090006)
 	handler.handler = powerTimerEnd12;
 	timerSetHandler(TIMER(0x0d), &handler);
 	handler.handler = powerTimerEnd13;
 	timerSetHandler(TIMER(0x0e), &handler);
+#endif
+#if FW_SINCE(0x00090502) && !FW_SINCE(0x00090804)
+	handler.handler = powerAccTimer;
+	timerSetHandler(TIMER(0x11), &handler);
+	handler.handler = powerSdTimer;
+	timerSetHandler(TIMER(0x12), &handler);
 #endif
 #if BOARD_DOL1001
 	handler.handler = powerTimerEnd14;

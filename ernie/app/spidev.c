@@ -70,7 +70,7 @@ unsigned char spiDevAuthenticate(void)
 		unsigned long words[4];
 		unsigned char bytes[16];
 	} block;
-#if FW_SINCE(0x00090804)
+#if FW_SINCE(0x00090502)
 	unsigned char timeout = 0;
 #endif
 
@@ -87,7 +87,7 @@ unsigned char spiDevAuthenticate(void)
 #endif
 		spiDevWait(50);
 		if (--retries == 0) {
-#if FW_SINCE(0x00090804)
+#if FW_SINCE(0x00090502)
 			timeout = 1;
 #endif
 			break;
@@ -116,13 +116,13 @@ unsigned char spiDevAuthenticate(void)
 #endif
 		spiDevWait(50);
 		if (--retries == 0) {
-#if FW_SINCE(0x00090804)
+#if FW_SINCE(0x00090502)
 			timeout = 1;
 #endif
 			break;
 		}
 	}
-#if FW_SINCE(0x00090804)
+#if FW_SINCE(0x00090502)
 	if (timeout == 0)
 		logEvent(0x15);
 	else

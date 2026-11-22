@@ -86,11 +86,11 @@ extern struct InputHandler inputHandler3Bit2;
 extern struct InputHandler inputHandlerMultiCn;
 extern struct InputHandler inputHandlerWake1;
 extern struct InputHandler inputHandlerCharge;
-#if FW_SINCE(0x00090804)
+#if FW_SINCE(0x00090502)
 extern struct InputHandler inputHandler1Bit7;
 #endif
 extern struct InputHandler inputHandler1Bit3;
-#if FW_SINCE(0x00090009)
+#if FW_SINCE(0x00090006)
 extern struct InputHandler inputHandler1Bit0;
 #endif
 /* a group of input bits, debounced over two samples */
@@ -122,7 +122,7 @@ struct PinMonitors {
 
 extern struct InputGroup inputGroup1;
 extern struct PinMonitors pinMonitors;
-#if FW_SINCE(0x00090206)
+#if FW_SINCE(0x00090203)
 extern unsigned char intp11Level;
 #endif
 extern __sreg unsigned char inputState1;
@@ -180,7 +180,7 @@ struct InputScan {
 	unsigned int	hold;
 };
 
-#if !FW_SINCE(0x00090804)
+#if !FW_SINCE(0x00090502)
 extern struct InputScan inputScan;
 extern void inputScanMode1(unsigned int interval);
 extern void intp1Enable(unsigned char enable);

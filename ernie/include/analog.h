@@ -99,7 +99,7 @@ struct AnalogAxis {
 	struct AnalogOutputFault outputFault[ANALOG_SETS];
 #endif
 };
-#elif defined(ERNIE_UPDATER) || FW_SINCE(0x00090206)
+#elif defined(ERNIE_UPDATER) || FW_SINCE(0x00090203)
 struct AnalogAxis {
 	unsigned int		samples[ANALOG_SAMPLES];
 	unsigned int		median;
@@ -158,7 +158,7 @@ extern void analogFilter1(void);
 extern void analogFilter2(void);
 extern void analogFilter3(void);
 extern void analogReport(void);
-#if defined(ERNIE_UPDATER) || FW_SINCE(0x00090206)
+#if defined(ERNIE_UPDATER) || FW_SINCE(0x00090203)
 extern unsigned int analogMedian(unsigned int *samples);
 #else
 extern unsigned int analogMedian(unsigned int __far *samples);
@@ -172,7 +172,7 @@ extern void analogStop80(void);
 extern void analogMultiCnStart(void);
 extern void analogMultiCnStop(void);
 extern unsigned char analogGetMultiCn(void);
-#if defined(ERNIE_UPDATER) || FW_SINCE(0x00090206)
+#if defined(ERNIE_UPDATER) || FW_SINCE(0x00090203)
 extern void analogGetSamples(unsigned int *out);
 #else
 extern void analogGetSamples(unsigned int __far *out);

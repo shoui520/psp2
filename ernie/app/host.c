@@ -121,12 +121,12 @@ static const struct HostCommand hostCommands[] = {
 	{ 0x0101, hostCommandControlsAnalog, 0 },
 	{ 0x0102, hostCommand0102, 0 },
 	{ 0x0103, hostCommandMultiCnInfo, 0 },
-#if FW_SINCE(0x00090206)	/* 0x00090009: no command for both sets of axes */
+#if FW_SINCE(0x00090203)	/* 0x00090009: no command for both sets of axes */
 	{ 0x0104, hostCommandControlsAnalogBoth, 0 },
 #endif
 	{ 0x0111, hostCommandAnalog, 0 },
 	{ 0x0112, hostCommand0112, 0 },
-#if FW_SINCE(0x00090206)
+#if FW_SINCE(0x00090203)
 	{ 0x0113, hostCommandAnalogBoth, 0 },
 #endif
 #if FW_SINCE(0x0100060B)
@@ -170,7 +170,7 @@ static const struct HostCommand hostCommands[] = {
 #endif
 	{ 0x0900, hostCommandBatteryRemainCap, 0 },
 	{ 0x0901, hostCommandBatteryVolt, 0 },
-#if FW_SINCE(0x00090009)
+#if FW_SINCE(0x00090006)
 	{ 0x0902, hostCommandBatteryLifePercent, 0 },
 #endif
 #if SOURCE_0104
@@ -756,7 +756,7 @@ int hostFrameFinish(void)
 		if (hostLink.requestMismatch == 1) {
 			/* the command was not the request's */
 		}
-#if FW_SINCE(0x00090206)
+#if FW_SINCE(0x00090203)
 		else if (!hostLink.flags.bits.checksum) {
 #else
 		else {	/* 0x00090009 passes on a frame whose checksum failed too */

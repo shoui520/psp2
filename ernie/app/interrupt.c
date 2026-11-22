@@ -31,7 +31,7 @@
 #pragma rtos_interrupt INTSRE0 sre0Interrupt
 #pragma rtos_interrupt INTP0 intp0Interrupt
 #endif
-#if ERNIE_FW < 0x0100060B && ERNIE_FW >= 0x00090206	/* HANG_TIMER */
+#if ERNIE_FW < 0x0100060B && ERNIE_FW >= 0x00090203	/* HANG_TIMER */
 #pragma interrupt INTTM11 tm11Interrupt
 #endif
 #pragma sfr
@@ -76,7 +76,7 @@ void intp9Interrupt(void)
 /* BOARD_INTP1_PIN (P4.6) low: the scan held long */
 void intp1Interrupt(void)
 {
-#if FW_SINCE(0x00090804)
+#if FW_SINCE(0x00090502)
 	if (!BOARD_INTP1_PIN)
 		inputScanHold(0x754);
 #else
@@ -121,11 +121,11 @@ void sre0Interrupt(void)
 void intp2Interrupt(void)
 {
 	if (P4.7) {
-#if !FW_SINCE(0x00090804)
+#if !FW_SINCE(0x00090502)
 		intp2Enable(0);
 #endif
 		inputGroup1.prev &= ~0x10;
-#if !FW_SINCE(0x00090804)
+#if !FW_SINCE(0x00090502)
 		if (inputScan.mode != 1)
 #endif
 		inputScanHold(0x1a);
@@ -136,13 +136,13 @@ void intp2Interrupt(void)
 void intp7Interrupt(void)
 {
 	if (!P14.1) {
-#if !FW_SINCE(0x00090804)
+#if !FW_SINCE(0x00090502)
 		intp7Enable(0);
 #endif
 		if (pinMonitors.pin[2].config.reload != 0) {
 			pinMonitor2Enable(1);
 			pinMonitors.pin[2].last = 0;
-#if !FW_SINCE(0x00090804)
+#if !FW_SINCE(0x00090502)
 			if (inputScan.mode != 1)
 #endif
 			inputScanHold(0x1a);
@@ -180,7 +180,7 @@ void intp7Interrupt(void)
 void intp4Interrupt(void)
 {
 }
-#elif !FW_SINCE(0x00090804)
+#elif !FW_SINCE(0x00090502)
 /* in 0x00090206 the pin monitors' interrupts are turned off at the edge, and the scan is
    held only while it does not run in mode 1 */
 void intp4Interrupt(void)
@@ -201,7 +201,11 @@ void intp4Interrupt(void)
    handler at once when it has no ticks */
 void intp4Interrupt(void)
 {
+#if FW_SINCE(0x00090804)
 	if (configGet()->CONFIG_WLAN_LINE == 0 && !P3.1) {
+#else
+	if (!P3.1) {	/* 0x00090502 has no WLAN line */
+#endif
 		if (pinMonitors.pin[3].config.reload != 0) {
 			pinMonitor3Enable(1);
 			pinMonitors.pin[3].last = 0;
@@ -216,13 +220,13 @@ void intp4Interrupt(void)
 void intp3Interrupt(void)
 {
 	if (!P3.0) {
-#if !FW_SINCE(0x00090804)
+#if !FW_SINCE(0x00090502)
 		intp3Enable(0);
 #endif
 		if (pinMonitors.pin[4].config.reload != 0) {
 			pinMonitor4Enable(1);
 			pinMonitors.pin[4].last = 0;
-#if !FW_SINCE(0x00090804)
+#if !FW_SINCE(0x00090502)
 			if (inputScan.mode != 1)
 #endif
 			inputScanHold(0x1a);
@@ -235,13 +239,13 @@ void intp3Interrupt(void)
 void intp10Interrupt(void)
 {
 	if (!P7.6) {
-#if !FW_SINCE(0x00090804)
+#if !FW_SINCE(0x00090502)
 		intp10Enable(0);
 #endif
 		if (pinMonitors.pin[5].config.reload != 0) {
 			pinMonitor5Enable(1);
 			pinMonitors.pin[5].last = 0;
-#if !FW_SINCE(0x00090804)
+#if !FW_SINCE(0x00090502)
 			if (inputScan.mode != 1)
 #endif
 			inputScanHold(0x1a);
@@ -254,7 +258,7 @@ void intp10Interrupt(void)
 void intp8Interrupt(void)
 {
 	/* nothing in 0x00090206 */
-#if !BOARD_INPUTS_102603 && FW_SINCE(0x00090804)
+#if !BOARD_INPUTS_102603 && FW_SINCE(0x00090502)
 	if (P7.4) {
 		if (pinMonitors.pin[6].config.reload != 0) {
 			pinMonitor6Enable(1);
@@ -290,7 +294,7 @@ void tm04Interrupt(void)
 {
 	TT0L = 0x10;
 	if (inputKeys.state & 0x000c)
-#if FW_SINCE(0x00090804)
+#if FW_SINCE(0x00090502)
 		touchStartFrameNoLock();
 #else
 		touchStartFrame();
@@ -312,7 +316,7 @@ void intp0Interrupt(void)
 void sre0Interrupt(void)
 {
 	if (!BOARD_SRE0_PIN) {
-#if FW_SINCE(0x00090804)
+#if FW_SINCE(0x00090502)
 		inputGroup1.prev &= ~0x01;
 		inputScanHold(0x754);
 #else

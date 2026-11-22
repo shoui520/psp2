@@ -1268,7 +1268,7 @@ unsigned char batteryControl(unsigned int command, unsigned char *data, unsigned
 	return result;
 }
 
-#if !FW_SINCE(0x00090206)	/* 0x00090009's order */
+#if !FW_SINCE(0x00090203)	/* 0x00090009's order */
 /* a write to the device at packet[0]: the rest of the length bytes */
 unsigned char batteryWriteAt(unsigned char *packet, unsigned char length)
 {
@@ -1489,7 +1489,7 @@ unsigned char batteryReadTemp(unsigned int *value)
 	return batteryRead(&reg, (unsigned char *)value, 2);
 }
 
-#if FW_SINCE(0x00090206)	/* 0x00090009 has no internal temperature */
+#if FW_SINCE(0x00090203)	/* 0x00090009 has no internal temperature */
 /* its internal temperature (0x20), from version 0x0404 on; before it 0x0aac (0 degrees) */
 unsigned char batteryReadBicTemp(unsigned int *value)
 {
@@ -1509,7 +1509,7 @@ unsigned char batteryReadBicTemp(unsigned int *value)
 }
 #endif
 
-#if FW_SINCE(0x00090009)	/* 0x00080504 reads no state of charge */
+#if FW_SINCE(0x00090006)	/* 0x00080504 reads no state of charge */
 /* its state of charge in percent (0x2c) */
 unsigned char batteryReadLifePercent(unsigned int *value)
 {
@@ -1521,7 +1521,7 @@ unsigned char batteryReadLifePercent(unsigned int *value)
 #endif
 
 #if !UPD_0103	/* the PS TV's updater: none of the rest */
-#if FW_SINCE(0x00090206)
+#if FW_SINCE(0x00090203)
 #if BOARD_DOL1002
 unsigned char batteryReadAt(unsigned char *packet, unsigned char *data, unsigned char length)
 {
@@ -1624,7 +1624,7 @@ unsigned char batteryWriteAt(unsigned char *packet, unsigned char length)
 	return status;
 }
 #else	/* 0x00090009's order */
-#if FW_SINCE(0x00090009)	/* 0x00080504 has no bootloader line and no hibernation */
+#if FW_SINCE(0x00090006)	/* 0x00080504 has no bootloader line and no hibernation */
 /* 0x08b0: the battery's bootloader line */
 void batteryBLLineOn(void)
 {
@@ -1676,7 +1676,7 @@ unsigned char batteryStartBLMode(void)
 	if (result != 0)
 		;
 #endif
-#if FW_SINCE(0x00090804)
+#if FW_SINCE(0x00090502)
 	if (result == 0) {
 		BATTERY_CHARGE(0);
 		chargeTimerStop();
@@ -1690,7 +1690,7 @@ unsigned char batteryStopBLMode(void)
 {
 	unsigned char result;
 
-#if FW_SINCE(0x00090804)
+#if FW_SINCE(0x00090502)
 	chargeTimerStart(0x0a);
 #endif
 	elmoCommand[0] = 0x16;
@@ -1717,7 +1717,7 @@ unsigned char batteryStopBLMode(void)
 	/* DOL-1002's: the charge is not restarted */
 	if (result == 0)
 		;
-#elif FW_SINCE(0x00090804)
+#elif FW_SINCE(0x00090502)
 	BATTERY_CHARGE(1);
 #endif
 	return result;
@@ -1738,7 +1738,7 @@ unsigned char batterySWReset(void)
 	result = batteryWrite(elmoCommand, 3);
 	return result;
 #else
-#if FW_SINCE(0x00090804)
+#if FW_SINCE(0x00090502)
 	chargeTimerStart(0x0a);
 #endif
 	elmoCommand[0] = 0;
@@ -1798,7 +1798,7 @@ unsigned char batteryHibernate(void)
 	return batteryWrite(elmoCommand, 3);
 #endif
 }
-#elif FW_SINCE(0x00090206)
+#elif FW_SINCE(0x00090203)
 /* 0x08b0: the battery's bootloader line */
 void batteryBLLineOn(void)
 {

@@ -155,7 +155,7 @@ int csi10Transfer(struct Csi10Transfer *transfer)
 	return 1;
 }
 
-#if FW_SINCE(0x00090804)	/* 0x00090206 has no NoLock forms */
+#if FW_SINCE(0x00090502)	/* 0x00090206 has no NoLock forms */
 /* csi10Transfer, for a caller that has disabled the interrupts */
 int csi10TransferNoLock(struct Csi10Transfer *transfer)
 {

@@ -18,7 +18,7 @@
 
 /* a register the controls write and the status reads: 0x00090206 numbers them from 0
    whatever the settings say (only its version read takes the settings' base) */
-#if FW_SINCE(0x00090804)
+#if FW_SINCE(0x00090502)
 #define COOKIE_CTRL_REG(reg)	COOKIE_REG(reg)
 #else
 #define COOKIE_CTRL_REG(reg)	(reg)
@@ -41,7 +41,7 @@ union CookieReg {
 	unsigned char	byte[2];
 };
 
-#if FW_SINCE(0x00090804)
+#if FW_SINCE(0x00090502)
 extern union CookieReg cookieRegs[6];	/* registers 3-8 */
 #else
 extern union CookieReg cookieRegs[7];	/* registers 3-9 */

@@ -591,7 +591,9 @@ void powerLedInit(void)
 	powerLedFade.phase = LED_FADE_START;
 	powerLedFade.pattern = 0;
 	powerLedFade.steps = &powerLedPattern;
+#if !(FW_SINCE(0x00090502) && !FW_SINCE(0x00090804))	/* 0x00090502 leaves the status */
 	powerLedFade.status = 0;
+#endif
 #if LED_REQUESTS
 	powerLedFade.keep = 0;
 #endif
@@ -806,10 +808,12 @@ int powerLedSetPwm(unsigned char on)
 }
 #endif
 
+#if !(FW_SINCE(0x00090502) && !FW_SINCE(0x00090804))	/* 0x00090502 has none */
 unsigned char powerLedGetStatus(void)
 {
 	return powerLedFade.status;
 }
+#endif
 
 #if LED_REQUESTS
 unsigned char powerLedGetState(void)

@@ -180,7 +180,7 @@ void timerTick(void)
 
 	DI();
 	timerTicks++;
-#if FW_SINCE(0x00090804)
+#if FW_SINCE(0x00090502)
 	for (i = 0; i < TIMER_RTC_FIRST; i++) {
 #else
 	/* 0x00090206 runs every timer, the RTC's too, by these ticks */

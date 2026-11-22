@@ -45,17 +45,17 @@ unsigned int elmoLed;
 unsigned int elmoRegA6;
 unsigned int elmoRegA7;
 unsigned int elmoRegAA;
-#if FW_SINCE(0x00090009)
+#if FW_SINCE(0x00090006)
 unsigned int elmoRegAB;
 #endif
-#if FW_SINCE(0x00090804)
+#if FW_SINCE(0x00090502)
 unsigned int elmoReg60;
 #endif
 #if !FW_SINCE(0x01000104)
 unsigned char elmoPowerOnStage;
 #endif
 
-#if FW_SINCE(0x00090804)
+#if FW_SINCE(0x00090502)
 static const struct ElmoRegInit elmoRegInit[] = {
 	{ 0xa0, &elmoStatusMask.reg[0], 0 },
 	{ 0xa1, &elmoStatusMask.reg[1], 0 },
@@ -175,7 +175,7 @@ void elmoInitRegs(void)
 /* writes every register of elmoRegInit with its initial value */
 void elmoInitRegs(void)
 {
-#if !FW_SINCE(0x00090804)
+#if !FW_SINCE(0x00090502)
 	elmoStatusMask.reg[0] = 0;
 	elmoStatusMask.reg[1] = 0;
 	elmoStatusMask.reg[2] = 0;
@@ -185,7 +185,7 @@ void elmoInitRegs(void)
 	elmoRegA6 = 0;
 	elmoRegA7 = 0;
 	elmoRegAA = 0;
-#if FW_SINCE(0x00090009)	/* 0x00080504 has no multi connector power */
+#if FW_SINCE(0x00090006)	/* 0x00080504 has no multi connector power */
 	elmoRegAB = 0;
 #endif
 #else

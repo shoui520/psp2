@@ -101,7 +101,7 @@ void task3(VP_INT exinf)
 #endif
 
 	for (;;) {
-#if BOARD_TOUCH_RESET && FW_SINCE(0x00090009)	/* 0x00080504 identifies the panels in inputProcess */
+#if BOARD_TOUCH_RESET && FW_SINCE(0x00090006)	/* 0x00080504 identifies the panels in inputProcess */
 		ercd = wai_flg(2, 0x00dc, TWF_ORW, &ptn);
 #else
 		ercd = wai_flg(2, 0x001c, TWF_ORW, &ptn);
@@ -131,13 +131,13 @@ void task3(VP_INT exinf)
 				clr_flg(2, ~0x0010);
 				controlsRequestRun();
 			}
-#if BOARD_TOUCH_RESET && FW_SINCE(0x00090009)
+#if BOARD_TOUCH_RESET && FW_SINCE(0x00090006)
 			if (ptn & 0x0040) {
 				clr_flg(2, ~0x0040);
 				touchIdentify0();
 #if FW_SINCE(0x01000109)
 				touchReadConfigVersion0(data);
-#elif FW_SINCE(0x00090804)
+#elif FW_SINCE(0x00090502)
 				touchReadModes0();
 #endif
 			} else if (ptn & 0x0080) {
@@ -145,12 +145,12 @@ void task3(VP_INT exinf)
 				touchIdentify1();
 #if FW_SINCE(0x01000109)
 				touchReadConfigVersion1(data);
-#elif FW_SINCE(0x00090804)
+#elif FW_SINCE(0x00090502)
 				touchReadModes1();
 #endif
 			}
 #endif
-#if FW_SINCE(0x00090804)
+#if FW_SINCE(0x00090502)
 			if (ptn & 0x0100) {
 				clr_flg(2, ~0x0100);
 				touchUpdateState();

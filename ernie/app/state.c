@@ -31,7 +31,7 @@
 #include "updatereq.h"
 
 /* the reset's transition: a resume in this mode (0x00090009's 0x55) */
-#if FW_SINCE(0x00090206)
+#if FW_SINCE(0x00090203)
 #define STATE_RESET_TRANSITION	0x04
 #else
 #define STATE_RESET_TRANSITION	0x55
@@ -54,10 +54,10 @@ extern int button1Reset(void);
 extern int button1Result(void);
 extern int button2Reset(void);
 extern int button2Result(void);
-#if !FW_SINCE(0x00090206)
+#if !FW_SINCE(0x00090203)
 extern int button1State(void);
 #endif
-#if !FW_SINCE(0x00090206) || BOARD_DOL1001
+#if !FW_SINCE(0x00090203) || BOARD_DOL1001
 extern int button2State(void);
 #endif
 
@@ -250,7 +250,7 @@ void stateEvent(struct StateEvent *event)
 				stateNext = stateNextOf();
 				powerState = stateNext | 0x8000;
 				statePhase = 1;
-#if FW_SINCE(0x00090009)	/* 0x00080504 keeps no cause */
+#if FW_SINCE(0x00090006)	/* 0x00080504 keeps no cause */
 				stateCause = event->transition;
 #endif
 				taskHookState();
@@ -313,7 +313,7 @@ int stateGetWakeBit(unsigned char factor)
 
 void stateInit(void)
 {
-#if FW_SINCE(0x00090009)
+#if FW_SINCE(0x00090006)
 	unsigned long mask;
 #endif
 
@@ -344,7 +344,7 @@ void stateInit(void)
 	mask &= ~configGet()->BOARD_WAKE_MASKS.off;
 	if (configGet()->start.bits.wakeUnmask22)
 		mask &= ~0x00400000UL;
-#elif !FW_SINCE(0x00090009)
+#elif !FW_SINCE(0x00090006)
 	/* 0x00080504 wakes on everything */
 	stateSetWakeMask(0xffffffff);
 #else
@@ -362,7 +362,7 @@ void stateInit(void)
 	if (configGet()->start.bits.coldStartOn)	/* and wake factor 20 unmasked */
 		mask &= ~0x00100000UL;
 #endif
-#if FW_SINCE(0x00090009) && !STATE_WAKE_BITS
+#if FW_SINCE(0x00090006) && !STATE_WAKE_BITS
 	stateSetWakeMask(mask);
 #endif
 }
@@ -546,7 +546,7 @@ static int stateOffEnter(void)
 		logEvent(0x18);
 		break;
 	}
-#elif FW_SINCE(0x00090804)	/* 0x00090206 has no log */
+#elif FW_SINCE(0x00090502)	/* 0x00090206 has no log */
 	if (stateCause == 0x31)
 		logEvent(5);
 #endif
@@ -617,13 +617,13 @@ static int stateOffEnter(void)
 
 static int stateResumeEnter(void)
 {
-#if FW_SINCE(0x00090804)
+#if FW_SINCE(0x00090502)
 	union PowerRequest *factor;
 
 #endif
 	serial4Answer0205();
 	serialAnswer0105();
-#if FW_SINCE(0x00090804)
+#if FW_SINCE(0x00090502)
 	factor = stateGetWakeupFactor();
 	if (factor->bits.notify)
 		logEvent(2);
@@ -670,7 +670,7 @@ static int stateCutEnter(void)
 #if SOURCE_0103
 	setResetCause(0x20);
 #endif
-#if FW_SINCE(0x00090804)
+#if FW_SINCE(0x00090502)
 	if (stateCause == 0x41)
 		logEvent(8);
 #endif
@@ -779,9 +779,11 @@ static int stateOffHandle(struct StateEvent *event)
 		stateWakeMask &= ~configGet()->BOARD_WAKE_MASKS.off;
 #else
 		/* 0x00090206 has the masks in its code */
-		/* bit 13 wakes the other boards (0x00315200 too) */
-		stateWakeMask |= BOARD_IS(0x00411000) && !HW_IRT001 ? 0xffa0057cUL : 0xffa0257cUL;
-		stateWakeMask &= BOARD_IS(0x00411000) && !HW_IRT001 ? ~0x001e7a01UL : ~0x001e5a01UL;
+		/* bit 13 wakes the other boards (0x00315200 too), bit 14 PCH-1000 too */
+		stateWakeMask |= BOARD_IS(0x00411000) && !HW_IRT001 ? 0xffa0057cUL :
+				 ERNIE_BOARD == 0x00406000 ? 0xffa0657cUL : 0xffa0257cUL;
+		stateWakeMask &= BOARD_IS(0x00411000) && !HW_IRT001 ? ~0x001e7a01UL :
+				 ERNIE_BOARD == 0x00406000 ? ~0x001e1a01UL : ~0x001e5a01UL;
 #endif
 #if STATE_WAKE_BITS
 		stateWakeMaskHigh |= configGet()->wakeMasksHigh.on;
@@ -856,7 +858,7 @@ static int stateResumeHandle(struct StateEvent *event)
 #endif
 	case 0x50:
 	case 0x52: case 0x53:
-#if FW_SINCE(0x00090009)
+#if FW_SINCE(0x00090006)
 	case 0x56:
 #endif
 #if FW_SINCE(0x01000104)
@@ -964,8 +966,11 @@ static int stateSuspendHandle(struct StateEvent *event)
 #else
 	}
 	/* 0x00090206 sets the masks and checks the request at every event */
-	stateWakeMask |= BOARD_IS(0x00411000) && !HW_IRT001 ? 0xffa21c10UL : 0xffa23d10UL;
-	stateWakeMask &= BOARD_IS(0x00411000) && !HW_IRT001 ? ~0x001c6001UL : ~0x001c4001UL;
+	stateWakeMask |= BOARD_IS(0x00411000) && !HW_IRT001 ? 0xffa21c10UL :
+			 ERNIE_BOARD == 0x00406000 ? 0xffa27c10UL : 0xffa23d10UL;	/* PCH-1000: bit 14, not 8 */
+	stateWakeMask &= BOARD_IS(0x00411000) && !HW_IRT001 ? ~0x001c6001UL :
+			 HW_IS(0x00404400) ? ~0x001c0201UL :	/* 0x00404400's 0x00090502: bit 9 too */
+			 ERNIE_BOARD == 0x00406000 ? ~0x001c0001UL : ~0x001c4001UL;
 	if (stateRequest.bits.mode != 0 &&
 	    ((1UL << stateRequest.bits.mode) & stateWakeMask))
 		stateNext = 0;
@@ -985,7 +990,7 @@ static int stateShutdownHandle(struct StateEvent *event)
 		if (levelMonitor1High())
 			stateNext = STATE_ON;
 		break;
-#if FW_SINCE(0x00090804)	/* 0x00090206 has no transition 0x62 */
+#if FW_SINCE(0x00090502)	/* 0x00090206 has no transition 0x62 */
 	case 0x62:
 		if (input1Bit7Active())
 			stateNext = STATE_ON;
@@ -1019,7 +1024,7 @@ static int stateResetHandle(struct StateEvent *event)
 	case STATE_RESET_TRANSITION:
 		stateNext = STATE_RESUME;
 		stateRequest.bits.mode = event->transition & 0x7f;
-#if FW_SINCE(0x00090206)
+#if FW_SINCE(0x00090203)
 		stateRequest.bits.notify = 0;
 #endif
 		break;
@@ -1145,7 +1150,7 @@ static unsigned int stateNextOf(void)
 
 /* input handler: input 1.4 (input1Bit4Active) wakes a suspended system; its release with button 2
    not pressed and input 1.6 up starts an off one */
-#if !FW_SINCE(0x00090206)
+#if !FW_SINCE(0x00090203)
 /* 0x00090009: released with no press counted, in the state the press began in (not resuming),
    the system wakes by transition 0 */
 void stateInputWake2(void)
@@ -1211,8 +1216,8 @@ void stateInputWake2(void)
 		button2Reset();
 		pinMonitor1Enable(1);
 	} else {
-#if SOURCE_0103
-		/* the slim starts nothing here, and does not look at the state */
+#if SOURCE_0103 || (FW_SINCE(0x00090502) && !FW_SINCE(0x00090804))
+		/* the slim (and 0x00090502) starts nothing here, and does not look at the state */
 		if (!(unsigned char)button2Result() && !input1Bit6Active()) {
 		}
 #else

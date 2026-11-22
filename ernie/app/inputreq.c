@@ -131,7 +131,7 @@ static void controlsRequest0183(void);
 static void controlsRequest0183Done(unsigned char command, unsigned char result);
 static void controlsRequest0184(void);
 static void controlsRequest0184Done(unsigned char command, unsigned char result);
-#if FW_SINCE(0x00090009)	/* not in 0x00080504 */
+#if FW_SINCE(0x00090006)	/* not in 0x00080504 */
 static void controlsRequest0185(void);
 #endif
 static void controlsRequest0190(void);
@@ -149,7 +149,7 @@ static void touchRequestWrite0(void);
 static void touchRequestRead0(void);
 static void touchRequestWrite1(void);
 static void touchRequestRead1(void);
-#if FW_SINCE(0x00090009)	/* not in 0x00080504 */
+#if FW_SINCE(0x00090006)	/* not in 0x00080504 */
 static void touchRequestSetPower(void);
 #endif
 #if SOURCE_0103
@@ -167,12 +167,12 @@ static void touchRequestUnlock0(void);
 static void touchRequestLoad0(void);
 static void touchRequestFlash0(void);
 static void touchRequestBootloaderStatus0(void);
-#if FW_SINCE(0x00090009)	/* not in 0x00080504 */
+#if FW_SINCE(0x00090006)	/* not in 0x00080504 */
 static void touchRequestBackup0(void);
 static void touchRequestReset0(void);
 static void touchRequestConfigVersion0(void);
 #endif
-#if FW_SINCE(0x00090804)
+#if FW_SINCE(0x00090502)
 static void touchRequestUserData0(void);
 static void touchRequestSelfTest0(void);
 #endif
@@ -181,12 +181,12 @@ static void touchRequestUnlock1(void);
 static void touchRequestLoad1(void);
 static void touchRequestFlash1(void);
 static void touchRequestBootloaderStatus1(void);
-#if FW_SINCE(0x00090009)	/* not in 0x00080504 */
+#if FW_SINCE(0x00090006)	/* not in 0x00080504 */
 static void touchRequestBackup1(void);
 static void touchRequestReset1(void);
 static void touchRequestConfigVersion1(void);
 #endif
-#if FW_SINCE(0x00090804)
+#if FW_SINCE(0x00090502)
 static void touchRequestUserData1(void);
 static void touchRequestSelfTest1(void);
 #endif
@@ -266,7 +266,7 @@ static const struct InputCommand controlsCommands[] = {
 	{ 0x0182, controlsRequest0182 },
 	{ 0x0183, controlsRequest0183 },
 	{ 0x0184, controlsRequest0184 },
-#if FW_SINCE(0x00090009)	/* not in 0x00080504 */
+#if FW_SINCE(0x00090006)	/* not in 0x00080504 */
 	{ 0x0185, controlsRequest0185 },
 #endif
 #if INPUT_REQUEST_0105
@@ -287,7 +287,7 @@ static const struct InputCommand touchCommands[] = {
 	{ 0x0384, touchRequestRead0 },
 	{ 0x0385, touchRequestWrite1 },
 	{ 0x0386, touchRequestRead1 },
-#if FW_SINCE(0x00090009)	/* not in 0x00080504 */
+#if FW_SINCE(0x00090006)	/* not in 0x00080504 */
 	{ 0x0387, touchRequestSetPower },
 #endif
 #if SOURCE_0103
@@ -321,10 +321,10 @@ static const struct InputCommand touchCommands[] = {
 	{ 0x03a2, touchRequestLoad0 },
 	{ 0x03a3, touchRequestFlash0 },
 	{ 0x03a4, touchRequestBootloaderStatus0 },
-#if FW_SINCE(0x00090009)	/* 0x00080504 ends at 0x03a4 and 0x03b4 */
+#if FW_SINCE(0x00090006)	/* 0x00080504 ends at 0x03a4 and 0x03b4 */
 	{ 0x03a5, touchRequestBackup0 },
 #endif
-#if FW_SINCE(0x00090804)
+#if FW_SINCE(0x00090502)
 	{ 0x03a6, touchRequestReset0 },
 	{ 0x03a7, touchRequestConfigVersion0 },
 	{ 0x03a8, touchRequestUserData0 },
@@ -339,7 +339,7 @@ static const struct InputCommand touchCommands[] = {
 	{ 0x03ae, touchRequest03AE },
 	{ 0x03af, touchRequest03AF },
 #endif
-#elif FW_SINCE(0x00090009)
+#elif FW_SINCE(0x00090006)
 	{ 0x03a7, touchRequestConfigVersion0 },
 	{ 0x03a6, touchRequestReset0 },
 #endif
@@ -348,12 +348,12 @@ static const struct InputCommand touchCommands[] = {
 	{ 0x03b2, touchRequestLoad1 },
 	{ 0x03b3, touchRequestFlash1 },
 	{ 0x03b4, touchRequestBootloaderStatus1 },
-#if FW_SINCE(0x00090009)	/* not in 0x00080504 */
+#if FW_SINCE(0x00090006)	/* not in 0x00080504 */
 	{ 0x03b5, touchRequestBackup1 },
 	{ 0x03b6, touchRequestReset1 },
 	{ 0x03b7, touchRequestConfigVersion1 },
 #endif
-#if FW_SINCE(0x00090804)
+#if FW_SINCE(0x00090502)
 	{ 0x03b8, touchRequestUserData1 },
 	{ 0x03b9, touchRequestSelfTest1 },
 #endif
@@ -750,7 +750,7 @@ void controlsReadButtons(unsigned char *out)
 				  (!P4.6 ? (unsigned char)0xbf : (unsigned char)0xff) & 0xf0);
 	out[2] = (P11 >> 2 & 3) | 0xfc;
 #endif
-#if FW_SINCE(0x00090009)
+#if FW_SINCE(0x00090006)
 	out[3] = ((inputState1 ^ 0x0a) & 0x0e) | 0x74;
 #else
 	/* 0x00080504: bit 0 is the analog latch's */
@@ -758,7 +758,7 @@ void controlsReadButtons(unsigned char *out)
 #endif
 }
 
-#if FW_SINCE(0x00090206)	/* 0x00090009 has one set */
+#if FW_SINCE(0x00090203)	/* 0x00090009 has one set */
 /* the analog sticks, from the set analogFlags names */
 void controlsReadAnalog(unsigned char *out)
 {
@@ -778,7 +778,7 @@ void controlsReadAnalog0(unsigned char *out)
 	out[3] = analogSticks0[3];
 }
 
-#if FW_SINCE(0x00090206)
+#if FW_SINCE(0x00090203)
 void controlsReadAnalog1(unsigned char *out)
 {
 	out[0] = analogSticks1[0];
@@ -800,7 +800,7 @@ unsigned char hostCommandControlsInfo(unsigned char *out, unsigned char *length)
 /* 0x0111 */
 unsigned char hostCommandAnalog(unsigned char *out, unsigned char *length)
 {
-#if FW_SINCE(0x00090206)
+#if FW_SINCE(0x00090203)
 	controlsReadAnalog(out);
 #else
 	controlsReadAnalog0(out);
@@ -809,7 +809,7 @@ unsigned char hostCommandAnalog(unsigned char *out, unsigned char *length)
 	return 0;
 }
 
-#if FW_SINCE(0x00090206)	/* 0x00090009 has neither command for both sets of axes */
+#if FW_SINCE(0x00090203)	/* 0x00090009 has neither command for both sets of axes */
 /* 0x0113 */
 unsigned char hostCommandAnalogBoth(unsigned char *out, unsigned char *length)
 {
@@ -824,7 +824,7 @@ unsigned char hostCommandAnalogBoth(unsigned char *out, unsigned char *length)
 unsigned char hostCommandControlsAnalog(unsigned char *out, unsigned char *length)
 {
 	controlsReadButtons(out);
-#if FW_SINCE(0x00090206)
+#if FW_SINCE(0x00090203)
 	controlsReadAnalog(out + 4);
 #else
 	controlsReadAnalog0(out + 4);
@@ -833,7 +833,7 @@ unsigned char hostCommandControlsAnalog(unsigned char *out, unsigned char *lengt
 	return 0;
 }
 
-#if FW_SINCE(0x00090206)
+#if FW_SINCE(0x00090203)
 /* 0x0104 */
 unsigned char hostCommandControlsAnalogBoth(unsigned char *out, unsigned char *length)
 {
@@ -962,7 +962,7 @@ static void controlsRequest0181(void)
 			analogCalibrationReset();
 			analogCalibrationSave();
 		}
-#if FW_SINCE(0x00090206)	/* 0x00090009 has no default */
+#if FW_SINCE(0x00090203)	/* 0x00090009 has no default */
 		else if (controlsRequest.data[0] == 2) {
 			analogCalibrationDefault();
 			analogCalibrationSave();
@@ -1042,7 +1042,7 @@ static void controlsRequest0184Done(unsigned char command, unsigned char result)
 #else
 	if (result == 0) {
 		controlsRequest.status = 0;
-#if FW_SINCE(0x00090804)
+#if FW_SINCE(0x00090502)
 		logEvent(3);
 #endif
 	} else
@@ -1052,7 +1052,7 @@ static void controlsRequest0184Done(unsigned char command, unsigned char result)
 #endif
 }
 
-#if FW_SINCE(0x00090009)	/* not in 0x00080504 */
+#if FW_SINCE(0x00090006)	/* not in 0x00080504 */
 /* six fixed words */
 static void controlsRequest0185(void)
 {
@@ -1695,7 +1695,7 @@ static void touchRequestStart(void)
 				TMMK04 = 0;
 				TS0L = 0x10;
 			}
-#if FW_SINCE(0x00090804)
+#if FW_SINCE(0x00090502)
 			touchUpdateState();
 #endif
 			inputRequests.touchPhase = 1;
@@ -1706,7 +1706,7 @@ static void touchRequestStart(void)
 				TMIF04 = 0;
 #if SOURCE_0103
 				touchClearMode();
-#elif FW_SINCE(0x00090804)
+#elif FW_SINCE(0x00090502)
 				touchSetMode(0);
 #endif
 #if FW_SINCE(0x01000306)
@@ -1891,7 +1891,7 @@ static void touchRequestRead1(void)
 #endif
 }
 
-#if FW_SINCE(0x00090009)	/* not in 0x00080504 */
+#if FW_SINCE(0x00090006)	/* not in 0x00080504 */
 /* 0x0387: each panel's power interval (data[1] if data[0], data[5] if data[4]) */
 static void touchRequestSetPower(void)
 {
@@ -2919,7 +2919,7 @@ static void touchRequestBootloaderStatus1(void)
 #endif
 }
 
-#if FW_SINCE(0x00090009)	/* not in 0x00080504 */
+#if FW_SINCE(0x00090006)	/* not in 0x00080504 */
 /* 0x03a5: panel 0's settings saved, answered 10 runs later */
 static void touchRequestBackup0(void)
 {
@@ -3169,7 +3169,7 @@ static void touchRequestConfigVersion0(void)
 	inputRequests.touchPending = 0;
 	hostRequestAnswer(&touchRequest, HOST_REQUEST_ANSWER, status, 2);
 #else
-#if FW_SINCE(0x00090804)
+#if FW_SINCE(0x00090502)
 	touchReadConfigVersion0(inputRequests.touchAnswer);
 #else
 	inputRequests.touchAnswer[0] = 0;	/* no version read yet */
@@ -3209,7 +3209,7 @@ static void touchRequestConfigVersion1(void)
 	inputRequests.touchPending = 0;
 	hostRequestAnswer(&touchRequest, HOST_REQUEST_ANSWER, status, 2);
 #else
-#if FW_SINCE(0x00090804)
+#if FW_SINCE(0x00090502)
 	touchReadConfigVersion1(inputRequests.touchAnswer);
 #else
 	inputRequests.touchAnswer[0] = 0;	/* no version read yet */
@@ -3229,7 +3229,7 @@ static void touchRequestConfigVersion1(void)
 }
 #endif
 
-#if FW_SINCE(0x00090804)
+#if FW_SINCE(0x00090502)
 /* 0x03a8 */
 static void touchRequestUserData0(void)
 {
@@ -4270,8 +4270,8 @@ static void motionRequest0480(void)
 {
 #if HW_IRT001 && !FW_SINCE(0x01000104)
 	unsigned char result;	/* 0x00315200's before 0x01000104: unused, its register saved */
-#elif HW_IS(0x00102603) && !FW_SINCE(0x00090206)
-	unsigned char result;	/* and 0x00102603's 0x00090009 */
+#elif (HW_102603 && !FW_SINCE(0x00090203)) || HW_IS(0x00404400)
+	unsigned char result;	/* and 0x00102603's 0x00090009, 0x00404400's 0x00090502 */
 
 #endif
 	switch (inputRequests.motionPhase) {

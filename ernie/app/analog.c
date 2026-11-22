@@ -112,7 +112,7 @@ static __near unsigned int analogWorkHigh;	/* and its divisor */
 static __near unsigned char analogSample;	/* the samples[] the next conversions go to */
 static __near unsigned char analogMinRange;	/* the high byte of a range that calibrates
 						   (0x00090009: unused) */
-#if FW_SINCE(0x00090206)
+#if FW_SINCE(0x00090203)
 static __near unsigned int analogScales[ANALOG_SETS];	/* each set's margin, 1/1000 of the range */
 #else
 static __near unsigned char analogScale;	/* the margin, range * analogScale >> */
@@ -127,11 +127,11 @@ static __near unsigned char analogMultiCn;		/* the level of the last reading */
 static __near unsigned char analogMultiCnPrevious;	/* of the one before */
 static __near unsigned char analogMultiCnReported;	/* the level the host reads; 0xff: none */
 __near unsigned char analogSticks0[ANALOG_AXES];
-#if FW_SINCE(0x00090206)
+#if FW_SINCE(0x00090203)
 __near unsigned char analogSticks1[ANALOG_AXES];
 #endif
 static __near struct AnalogCalibration analogCalibration;
-#if FW_SINCE(0x00090206)
+#if FW_SINCE(0x00090203)
 __near unsigned char analogFlags;
 #endif
 #if BOARD_USS1001
@@ -209,7 +209,7 @@ static unsigned char analogSuspend;	/* 0xff (analogInput80Reset): the sticks' sa
 					   taken */
 #endif
 
-#if FW_SINCE(0x00090206)
+#if FW_SINCE(0x00090203)
 /* the axes' samples centred and the calibration's limits from the settings */
 void analogInit(void)
 {
@@ -730,7 +730,7 @@ static void analogCalibrationLoaded(unsigned char command, unsigned char result)
 
 	if (result == 0) {
 		for (i = 0; i < ANALOG_AXES; i++) {
-#if FW_SINCE(0x00090206)
+#if FW_SINCE(0x00090203)
 			range = analogCalibration.axis[i].max - analogCalibration.axis[i].min;
 			if (analogCalibration.axis[i].min > configGet()->analogMin ||
 			    analogCalibration.axis[i].max < configGet()->analogMax ||
@@ -1102,8 +1102,27 @@ void analogEvent(unsigned int inputs)
 		analogFilter1();
 		analogFilter2();
 		analogFilter3();
-#if FW_SINCE(0x00090206)
+#if FW_SINCE(0x00090203)
 		analogReport();
+#elif BOARD_ANALOG_CHANNEL8
+		/* as analogReport: channel 8's level 2 keeps the axes, otherwise each turned over */
+		if (analogSuspend == 2) {
+			analogSticks0[0] = analogAxes[0].value;
+			analogSticks0[1] = analogAxes[1].value;
+			analogSticks0[2] = analogAxes[2].value;
+			analogSticks0[3] = analogAxes[3].value;
+		} else {
+			analogSticks0[0] = 0xff - analogAxes[0].value;
+			analogSticks0[1] = 0xff - analogAxes[1].value;
+			analogSticks0[2] = 0xff - analogAxes[2].value;
+			analogSticks0[3] = 0xff - analogAxes[3].value;
+		}
+#elif ERNIE_BOARD == 0x00406000
+		/* as analogReport: PCH-1000's axes 1 and 0, 3 and 2 swapped, 1 and 2 turned over */
+		analogSticks0[0] = 0xff - analogAxes[1].value;
+		analogSticks0[1] = analogAxes[0].value;
+		analogSticks0[2] = analogAxes[3].value;
+		analogSticks0[3] = 0xff - analogAxes[2].value;
 #else
 		analogSticks0[0] = 0xff - analogAxes[0].value;
 		analogSticks0[1] = 0xff - analogAxes[1].value;
@@ -1132,13 +1151,13 @@ void analogEvent(unsigned int inputs)
 		if (analogMultiCn == analogMultiCnPrevious && analogMultiCn != analogMultiCnReported) {
 			analogMultiCnReported = analogMultiCn;
 			analogMultiCnStop();
-#if !FW_SINCE(0x0100010B) && FW_SINCE(0x00090009)	/* 0x00080504 keeps the ADC open */
+#if !FW_SINCE(0x0100010B) && FW_SINCE(0x00090006)	/* 0x00080504 keeps the ADC open */
 			if (stateGet() != 0x0020)
 				adcClose();
 #endif
 			sleepFactorSet6(1);
 			sleepFactorSet5(1);
-#if FW_SINCE(0x00090804)
+#if FW_SINCE(0x00090502)
 			task2SetFlag(3, 0x0001);
 #else
 			switch (analogMultiCnReported) {
@@ -1226,7 +1245,7 @@ void analogLatchUpdate(unsigned char value)
 }
 #endif
 
-#if FW_SINCE(0x00090206)
+#if FW_SINCE(0x00090203)
 #if SOURCE_SLIM
 /* axis 0: the median of its samples; one within the limits widens the calibration and is
    scaled into its sets, one outside them is recorded */
@@ -2729,7 +2748,7 @@ void analogFilter3(void)
 
 /* the median of three samples (never called; the slim's 0x0105 has none) */
 #if !ADC_AVERAGE
-#if FW_SINCE(0x00090206)
+#if FW_SINCE(0x00090203)
 unsigned int analogMedian(unsigned int *samples)
 #else
 unsigned int analogMedian(unsigned int __far *samples)
@@ -2834,7 +2853,7 @@ void analogSetMode(unsigned char mode)
 {
 	dis_dsp();
 	switch (mode) {
-#if !FW_SINCE(0x00090206)
+#if !FW_SINCE(0x00090203)
 	case 0:
 		inputKeys.state &= ~0x0002;
 		analogInit();
@@ -3101,7 +3120,7 @@ unsigned char analogGetMultiCn(void)
 }
 
 /* each axis's last sample */
-#if FW_SINCE(0x00090206)
+#if FW_SINCE(0x00090203)
 void analogGetSamples(unsigned int *out)
 #else
 void analogGetSamples(unsigned int __far *out)

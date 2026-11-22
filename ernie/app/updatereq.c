@@ -372,7 +372,7 @@ void updaterStartDownloader(void)
 #endif
 	snapshot = sleepFactorSnapshot();
 	sleepFactor = sleepFactorGet();
-#if FW_SINCE(0x00090009)	/* 0x00080504 clears nothing for the downloader */
+#if FW_SINCE(0x00090009)	/* 0x00080504 and 0x00090007 clear nothing for the downloader */
 	getErnieDlVersion((unsigned char *)&version);
 	version &= 0xffffff00;
 #endif

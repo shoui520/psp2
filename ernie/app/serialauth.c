@@ -21,7 +21,7 @@
 #include "sysinfo.h"
 #include "util.h"
 
-#if FW_SINCE(0x00090804)
+#if FW_SINCE(0x00090502)
 #define SERIAL_AUTH_MODES	3
 #else
 #define SERIAL_AUTH_MODES	2	/* 0x00090206 has no mode 0x0e */
@@ -80,7 +80,7 @@ static int serialAuthGetRoundKeys(unsigned long __far * __far *w);
 #endif
 
 
-#if FW_SINCE(0x00090804)
+#if FW_SINCE(0x00090502)
 static unsigned char serialAuthUnlock0(void);
 static unsigned char serialAuthLock0(void);
 static unsigned char serialAuthUnlock1(void);
@@ -91,7 +91,7 @@ static unsigned char serialAuthLock14(void);
 
 
 static const struct SerialAuthKeys serialAuthKeys[SERIAL_AUTH_MODES] = {
-#if !FW_SINCE(0x00090009)	/* the round keys */
+#if !FW_SINCE(0x00090006)	/* the round keys */
 	{ 0x00, (const unsigned char *)serialKey0First, (const unsigned char *)serialKey0Second,
 	  serialKey0Check },
 	{ 0x01, (const unsigned char *)serialKey1First, (const unsigned char *)serialKey1Second,
@@ -100,13 +100,13 @@ static const struct SerialAuthKeys serialAuthKeys[SERIAL_AUTH_MODES] = {
 	{ 0x00, serialKey0First, serialKey0Second, serialKey0Check },
 	{ 0x01, serialKey1First, serialKey1Second, serialKey1Check },
 #endif
-#if FW_SINCE(0x00090804)
+#if FW_SINCE(0x00090502)
 	{ 0x0e, serialKey2First, serialKey2Second, serialKey2Check },
 #endif
 };
 
 static const struct SerialAuthMode serialAuthModes[SERIAL_AUTH_MODES] = {
-#if FW_SINCE(0x00090804)
+#if FW_SINCE(0x00090502)
 	{ 0x00, &serialAuthUnlocked[0], serialAuthUnlock0, serialAuthLock0 },
 	{ 0x01, &serialAuthUnlocked[1], serialAuthUnlock1, serialAuthLock1 },
 	{ 0x0e, &serialAuthUnlocked[2], serialAuthUnlock14, serialAuthLock14 },
@@ -125,7 +125,7 @@ unsigned char serialAuthInit(void)
 	serialAuth.mode = 0xff;
 	serialAuthUnlocked[0] = SERIAL_AUTH_LOCKED;
 	serialAuthUnlocked[1] = SERIAL_AUTH_LOCKED;
-#if FW_SINCE(0x00090804)
+#if FW_SINCE(0x00090502)
 	serialAuthUnlocked[2] = SERIAL_AUTH_LOCKED;
 #endif
 	return 0;
@@ -159,13 +159,13 @@ unsigned char serialAuthSetMode(unsigned char state, unsigned char mode)
 	return result;
 }
 
-#if FW_SINCE(0x00090804)
+#if FW_SINCE(0x00090502)
 #define SERIAL_AUTH_KEY	serialAuthKeys[index]
 #else
 #define SERIAL_AUTH_KEY	serialAuthKeys[serialAuth.mode]	/* 0x00090206: the modes are 0 and 1 */
 #endif
 
-#if !FW_SINCE(0x00090009)
+#if !FW_SINCE(0x00090006)
 /*
  * Process serial mode 1's authenticated exchange. 0x00080504 keeps each mode's keys expanded
  * (authkeys.c), so it takes no pool block and expands nothing.
@@ -277,8 +277,10 @@ unsigned char serialAuthCommand(unsigned char *data)
 #endif
 	VP block;
 	int poolResult;
-#if FW_SINCE(0x00090804)
+#if FW_SINCE(0x00090502)
 	unsigned char index;
+#endif
+#if FW_SINCE(0x00090804)
 	unsigned char result = 0;
 #endif
 
@@ -286,7 +288,7 @@ unsigned char serialAuthCommand(unsigned char *data)
 	switch (serialAuth.state) {
 	case 0:
 		serialAuth.mode = serialAuthPacket.mode;
-#if FW_SINCE(0x00090804)
+#if FW_SINCE(0x00090502)
 		if (serialAuth.mode != 0 && serialAuth.mode != 1 && serialAuth.mode != 0x0e) {
 #else
 		if (serialAuth.mode != 0 && serialAuth.mode != 1) {
@@ -323,7 +325,7 @@ unsigned char serialAuthCommand(unsigned char *data)
 			serialAuth.state = 3;
 			serialAuthPacket.error = 0;
 		}
-#if FW_SINCE(0x00090804)
+#if FW_SINCE(0x00090502)
 		index = SERIAL_AUTH_MODES;
 		while (index-- != 0) {
 			if (serialAuthKeys[index].mode == serialAuth.mode)
@@ -359,7 +361,7 @@ unsigned char serialAuthCommand(unsigned char *data)
 			serialAuth.state = 0xff;
 			serialAuthPacket.error = 1;
 		}
-#if FW_SINCE(0x00090804)
+#if FW_SINCE(0x00090502)
 		index = SERIAL_AUTH_MODES;
 		while (index-- != 0) {
 			if (serialAuthKeys[index].mode == serialAuth.mode)
@@ -409,7 +411,7 @@ unsigned char serialAuthCommand(unsigned char *data)
 	}
 	return result;
 #else
-	/* 0x00090206 drops the handler's result: 0x10 when the exchange failed */
+	/* 0x00090206 and 0x00090502 drop the handler's result: 0x10 when the exchange failed */
 	if (serialAuth.state == 0xff) {
 		serialAuthSetMode(serialAuth.state, serialAuth.mode);
 		return 0x10;
@@ -439,7 +441,7 @@ unsigned char serialAuthUnlocked1(void)
 	return serialAuthUnlocked[1] == SERIAL_AUTH_UNLOCKED;
 }
 
-#if FW_SINCE(0x00090804)
+#if FW_SINCE(0x00090502)
 unsigned char serialAuthUnlocked14(void)
 {
 	return serialAuthUnlocked[2] == SERIAL_AUTH_UNLOCKED;
@@ -460,9 +462,10 @@ static int serialAuthGetRoundKeys(unsigned long __far * __far *w)
 }
 #endif
 
-#if FW_SINCE(0x00090804)
+#if FW_SINCE(0x00090502)
 static unsigned char serialAuthUnlock0(void)
 {
+#if FW_SINCE(0x00090804)
 	unsigned char result;
 
 	if (stateSerialUnlock())
@@ -470,6 +473,10 @@ static unsigned char serialAuthUnlock0(void)
 	else
 		result = 0;
 	return result;
+#else
+	stateSerialUnlock();	/* 0x00090502 answers 0 whatever it returns */
+	return 0;
+#endif
 }
 
 static unsigned char serialAuthLock0(void)

@@ -503,7 +503,7 @@ unsigned char powerResume(union PowerRequest *request)
 	task2SetFlag(3, 0x1000);
 	POWER_WAIT_KEEP(2, 0x19);
 	powerPendingClear(2);
-#if FW_SINCE(0x00090804)
+#if FW_SINCE(0x00090502)
 	task6SetFlag(6, 0x80);
 #endif
 #if FW_SINCE(0x0100060B)
@@ -655,7 +655,7 @@ unsigned char powerOff(void)
 	powerPendingClear(5);
 	POWER_WAIT_CLEAR(6);
 	task6SetFlag(6, 0x80);
-#if FW_SINCE(0x00090804)
+#if FW_SINCE(0x00090502)
 	POWER_WAIT(6, 5);
 #endif
 	powerPendingClear(6);
@@ -667,10 +667,10 @@ unsigned char powerOff(void)
 	PER0.2 = 0;
 #if FW_SINCE(0x0100060B)
 	if (stateCause == 0x56 || stateCause == 0x5c)
-#elif FW_SINCE(0x00090009)	/* 0x00080504 has no off end job */
+#elif FW_SINCE(0x00090006)	/* 0x00080504 has no off end job */
 	if (stateCause == 0x56)
 #endif
-#if FW_SINCE(0x00090009)
+#if FW_SINCE(0x00090006)
 		powerJobPostOffEnd();
 #endif
 	if (powerPendingGet() != 0)
@@ -764,7 +764,7 @@ unsigned char powerSuspend(void)
 	POWER_WAIT(5, 0xfa);
 	powerPendingClear(5);
 	POWER_WAIT_CLEAR(6);
-#if FW_SINCE(0x00090804)
+#if FW_SINCE(0x00090502)
 	task6SetFlag(6, 0x80);
 	POWER_WAIT(6, 5);
 #endif
@@ -915,7 +915,7 @@ unsigned char powerCut(void)
 	BOARD_POWER_CUT_PIN = 1;
 	return result;
 #else
-#if FW_SINCE(0x00090206)
+#if FW_SINCE(0x00090203)
 	clockOutputStop();
 #endif
 	POWER_WAIT_CLEAR(5);
@@ -927,7 +927,7 @@ unsigned char powerCut(void)
 		P33 = 1;
 #endif
 	P6.2 = 0;
-#if !FW_SINCE(0x00090206)
+#if !FW_SINCE(0x00090203)
 	clockOutputStop();	/* 0x00090009: after the line */
 #endif
 	hostIntDisable();

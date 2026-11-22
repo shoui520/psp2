@@ -69,6 +69,11 @@ unsigned int powerCutRegs[POWER_CUT_REGS];	/* registers 0xb0-0xb2 (the slim's: 0
 #define POWER_JOB_VBUS_ON()	(chargeVbus = 1)
 #endif
 
+/* PCH-1000's code before 0x01000104 (0x00404100's 0x00090007): with the start's
+   chargeLedOffReleased the charge LED's blink (CHARGE_LED_TIMER, the Cookie's register 3 bit 2)
+   runs while suspended and stops with every other job */
+#define POWER_JOB_LED_RELEASED	(BOARD_IS(0x00406000) && !FW_SINCE(0x01000104))
+
 #if FW_SINCE(0x0100060B)
 extern unsigned char input1Bit7Active(void);
 #endif
@@ -79,7 +84,7 @@ static void powerJobOff(void);
 static void powerJobShutdown(void);
 static void powerJobSuspend(void);
 static void powerJobCut(void);
-#if FW_SINCE(0x00090009)	/* not in 0x00080504 */
+#if FW_SINCE(0x00090006)	/* not in 0x00080504 */
 static void powerJobOffEnd(void);
 #endif
 #if FW_SINCE(0x01000104)
@@ -113,7 +118,7 @@ void powerJob(void)
 	case POWER_JOB_CUT:
 		powerJobCut();
 		return;
-#if FW_SINCE(0x00090009)	/* not in 0x00080504 */
+#if FW_SINCE(0x00090006)	/* not in 0x00080504 */
 	case POWER_JOB_OFF_END:
 		powerJobOffEnd();
 		return;
@@ -507,7 +512,7 @@ static void powerJobOn(void)
 	chargeLedInit();
 	timerStart(TIMER_RTC(0x17), 1);
 	powerResumed = 0;
-#elif !FW_SINCE(0x00090804)
+#elif !FW_SINCE(0x00090502)
 	chargeLedInit();
 	timerStart(TIMER_RTC(0x17), 1);
 #else
@@ -528,7 +533,7 @@ static void powerJobResume(void)
 	union PowerRequest *mode;
 #endif
 
-#if FW_SINCE(0x00090009)	/* 0x00080504 has no bootloader line */
+#if FW_SINCE(0x00090006)	/* 0x00080504 has no bootloader line */
 	batteryBLLineOff();
 #endif
 #if FW_SINCE(0x01000104)
@@ -541,7 +546,7 @@ static void powerJobResume(void)
 		powerLedSetPwm(1);
 	}
 #endif
-#elif FW_SINCE(0x00090804)
+#elif FW_SINCE(0x00090502)
 	powerLedFadeStart(0);
 	powerSleep(4);
 #endif
@@ -555,6 +560,12 @@ static void powerJobResume(void)
 	powerRequestInit();
 	POWER_JOB_AC_DELAY();
 	task5SetFlag(4, 0x20);
+#if POWER_JOB_LED_RELEASED
+	if (configGet()->start.bits.chargeLedOffReleased) {
+		cookieCtrlReg3Bit2(1);
+		timerStop(CHARGE_LED_TIMER);
+	}
+#endif
 #if FW_SINCE(0x01000107)
 	mode = stateGetWakeupFactor();
 	if (mode->bits.mode == 0x0f && !mode->bits.notify)
@@ -632,15 +643,26 @@ static void powerJobOff(void)
 	if ((signed char)bbmc.state >= 2 || input2Bit0Get() == 1)
 		powerBbmcRestart();
 	powerSeqOff();
-#if FW_SINCE(0x00090804)
+#if FW_SINCE(0x00090502)
 	cookieCtrlBatteryCharge(1);
 #endif
 	charge.acDelay = 0x3c;
 	task5SetFlag(4, 0x20);
 	POWER_JOB_VBUS_ON();
-#if FW_SINCE(0x00090804)
+#if FW_SINCE(0x00090502)
 	chargeControl.1 = 1;
+#if !POWER_JOB_LED_RELEASED
 	powerLedFadeStart(0);
+#endif
+#endif
+#if POWER_JOB_LED_RELEASED
+	if (configGet()->start.bits.chargeLedOffReleased) {
+		cookieCtrlReg3Bit2(0);
+		timerStop(CHARGE_LED_TIMER);
+	}
+#if FW_SINCE(0x00090502)	/* 0x00090502: the LED's fade after the charge LED */
+	powerLedFadeStart(0);
+#endif
 #endif
 	powerReady(POWER_JOB_PART);
 }
@@ -667,8 +689,15 @@ static void powerJobShutdown(void)
 static void powerJobShutdown(void)
 {
 	powerSeqOff();
+#if POWER_JOB_LED_RELEASED
+	if (configGet()->start.bits.chargeLedOffReleased) {
+		cookieCtrlReg3Bit2(0);
+		cookieCtrlReg3Mode(0);
+		timerStop(CHARGE_LED_TIMER);
+	}
+#endif
 	iicaClose();
-#if FW_SINCE(0x00090804)
+#if FW_SINCE(0x00090502)
 	chargeTimerStop();
 	powerLedFadeStart(0);
 #else
@@ -721,8 +750,19 @@ static void powerJobSuspend(void)
 	charge.acDelay = 0x3c;
 	task5SetFlag(4, 0x20);
 	POWER_JOB_VBUS_ON();
-#if FW_SINCE(0x00090804)
+#if FW_SINCE(0x00090502)
 	chargeControl.1 = 1;
+#endif
+#if POWER_JOB_LED_RELEASED
+	if (configGet()->start.bits.chargeLedOffReleased) {
+#if FW_SINCE(0x00090502)
+		chargeLedSetBlink(1);	/* 0x00090502: through chargeLedSetBlink */
+#else
+		chargeLedBlinkOn = 1;
+		cookieCtrlReg3Bit2(1);
+		timerStart(CHARGE_LED_TIMER, 1);
+#endif
+	}
 #endif
 	powerReady(POWER_JOB_PART);
 }
@@ -750,7 +790,7 @@ static void powerJobCut(void)
 	chargeLedInit();
 #endif
 	iicaClose();
-#if FW_SINCE(0x00090804)
+#if FW_SINCE(0x00090502)
 	chargeTimerStop();
 #else
 	timerStop(TIMER_RTC(0x17));
@@ -758,11 +798,11 @@ static void powerJobCut(void)
 	powerReady(POWER_JOB_PART);
 }
 
-#if FW_SINCE(0x00090009)	/* not in 0x00080504 */
+#if FW_SINCE(0x00090006)	/* not in 0x00080504 */
 static void powerJobOffEnd(void)
 {
 	batteryHibernate();
-#if FW_SINCE(0x00090804)
+#if FW_SINCE(0x00090502)
 	chargeTimerStop();
 #else
 	timerStop(TIMER_RTC(0x17));
@@ -785,7 +825,7 @@ static void powerJobUpdate(void)
    paramSetting1 and 2 */
 static void chargeLedBlinkExpire(void)
 {
-#if FW_SINCE(0x00090206)	/* 0x00090009 only posts the update */
+#if FW_SINCE(0x00090203)	/* 0x00090009 only posts the update */
 	if (chargeLedBlinkOn == 1) {
 		chargeLedBlinkOn = 0;
 		timerStart(CHARGE_LED_TIMER, configGet()->paramSetting2 - 1);
@@ -801,7 +841,7 @@ void chargeLedInit(void)
 {
 	struct TimerHandler handler;
 
-#if FW_SINCE(0x00090206)
+#if FW_SINCE(0x00090203)
 	chargeLedBlinking = 0;
 #endif
 	chargeLedBlinkOn = 0;

@@ -72,10 +72,10 @@ struct Timer {
 #elif FW_SINCE(0x01000104)
 #define TIMER_RTC_FIRST		0x14
 #define TIMER_RTC(id)		((id) - 1)
-#elif FW_SINCE(0x00090804)
+#elif FW_SINCE(0x00090502)
 #define TIMER_RTC_FIRST		0x15
 #define TIMER_RTC(id)		((id) + 1)
-#elif FW_SINCE(0x00090009)
+#elif FW_SINCE(0x00090006)
 #define TIMER_RTC_FIRST		0x13
 #define TIMER_RTC(id)		((id) - 1)
 #else
@@ -88,7 +88,7 @@ struct Timer {
 #elif FW_SINCE(0x0100060B) && (!defined(ERNIE_UPDATER) || FW_SINCE(0x0100060D))
 /* the application's since 0x0100060B, the updater's since 0x0100060D */
 #define TIMER(id)		((id) - 2)
-#elif defined(ERNIE_UPDATER) || FW_SINCE(0x01000104) || !FW_SINCE(0x00090009)
+#elif defined(ERNIE_UPDATER) || FW_SINCE(0x01000104) || !FW_SINCE(0x00090006)
 #define TIMER(id)		(id)
 #else
 #define TIMER(id)		((id) + 2)
@@ -111,9 +111,9 @@ struct Timer {
 #define TIMER_COUNT		(TIMER_RTC(0x1f) + 1)
 #elif FW_SINCE(0x00090903)
 #define TIMER_COUNT		0x1f
-#elif FW_SINCE(0x00090804)
+#elif FW_SINCE(0x00090502)
 #define TIMER_COUNT		0x1e	/* 0x00090804: no timer 0x1e */
-#elif FW_SINCE(0x00090009)
+#elif FW_SINCE(0x00090006)
 #define TIMER_COUNT		0x1b	/* 0x00090206: no power timers 9 and 10 (TIMER()), and
 					   the RTC's end at 0x1c (TIMER_RTC()) */
 #else

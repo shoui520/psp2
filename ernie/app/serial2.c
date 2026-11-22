@@ -246,7 +246,7 @@ static unsigned char serial2Command0205(struct SerialBuffer *request, struct Ser
 #if SERIAL2_ARM
 		serial2Disarm();
 		if (state != 0x0020 && state != 0x0008) {
-#elif !FW_SINCE(0x00090804)
+#elif !FW_SINCE(0x00090502)
 		if (state != 0x0020 && state != 0x0008) {
 #else
 		if (state != 0x0020) {
@@ -266,7 +266,7 @@ static unsigned char serial2Command0205(struct SerialBuffer *request, struct Ser
 			serial4SetAnswer(SERIAL_ANSWER);
 			return 0x51;
 		}
-#elif FW_SINCE(0x00090804)
+#elif FW_SINCE(0x00090502)
 		if (!(unsigned char)chargeMayStart()) {
 			serial4SetAnswer(SERIAL_ANSWER);
 			return 0x51;

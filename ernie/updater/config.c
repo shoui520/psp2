@@ -22,15 +22,6 @@ struct Config {
 #endif
 };
 
-#if FW_SINCE(0x0100060D)
-/* the application's records buffer (app/config.c), only cleared here */
-struct ConfigRecords {
-	unsigned char	buffer[SHA1BlockSize];
-	unsigned char	count;
-	unsigned char	reserved[3];
-};
-#endif
-
 /* the banks, in the updater's part of the flash */
 #if CHIP_RL78
 static const struct ConfigBank *const __far configBanks = (const struct ConfigBank *)0x5f800;

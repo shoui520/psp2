@@ -11,7 +11,7 @@
 #include "kernel.h"
 #include "param.h"
 
-#if FW_SINCE(0x00090804) && !BOARD_DOL1001	/* DOL-1001 keeps no default patterns */
+#if FW_SINCE(0x00090502) && !BOARD_DOL1001	/* DOL-1001 keeps no default patterns */
 static TABLE_CONST unsigned char paramPattern1Default[PARAM_PATTERN_SIZE] = {
 	0x00, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100,
 	0x01, 0x01, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100,
@@ -31,7 +31,7 @@ static const unsigned char paramPattern2Default[PARAM_PATTERN_SIZE] = {
 };
 #endif
 
-#if !FW_SINCE(0x00090206)
+#if !FW_SINCE(0x00090203)
 /* 0x00090009's battery levels (remainCap, volt), without a settings block */
 static const struct ChargeLevel paramChargeLevelsDefault[9] = {
 	{ 0x00d6, 0x0dac },
@@ -53,6 +53,13 @@ struct Param param;
 #define PARAM_BASE_DEFAULT	0x0b
 #else
 #define PARAM_BASE_DEFAULT	7
+#endif
+
+/* the regulators' levels at a reset before 0x01000104: 0x00090203's 0x24 (0x00090009's too) */
+#if FW_SINCE(0x00090206)
+#define PARAM_LEVEL_DEFAULT	0x23
+#else
+#define PARAM_LEVEL_DEFAULT	0x24
 #endif
 
 #if FW_SINCE(0x01000104)
@@ -89,7 +96,7 @@ int paramInit(void)
 	ena_dsp();
 	return 0;
 }
-#elif !FW_SINCE(0x00090206)
+#elif !FW_SINCE(0x00090203)
 /* 0x00090009 has no settings block: nine levels from its own table, the tenth unset */
 int paramInit(void)
 {
@@ -105,7 +112,7 @@ int paramInit(void)
 	param.levels[2] = 0x24;
 	param.levels[3] = 0x24;
 	param.base = PARAM_BASE_DEFAULT;
-#if FW_SINCE(0x00090009)	/* not in 0x00080504 */
+#if FW_SINCE(0x00090006)	/* not in 0x00080504 */
 	param.adjust = 0;
 #endif
 	ena_dsp();
@@ -122,21 +129,23 @@ int paramInit(void)
 	else
 		memcpy(param.chargeLevels, configGet()->chargeLevelsNoDetect,
 		       sizeof(param.chargeLevels));
-	param.levels[0] = 0x23;
-	param.levels[1] = 0x23;
-	param.levels[2] = 0x23;
-	param.levels[3] = 0x23;
+	param.levels[0] = PARAM_LEVEL_DEFAULT;
+	param.levels[1] = PARAM_LEVEL_DEFAULT;
+	param.levels[2] = PARAM_LEVEL_DEFAULT;
+	param.levels[3] = PARAM_LEVEL_DEFAULT;
 	param.base = PARAM_BASE_DEFAULT;
 	param.adjust = 0;
 #if FW_SINCE(0x00090804)
 	param.setting1 = configGet()->paramSetting1;
 	param.setting2 = configGet()->paramSetting2;
-	memcpy(param.pattern1, paramPattern1Default, PARAM_PATTERN_SIZE);
 #else
-	/* 0x00090206 takes the settings from the bytes the press times have later, and has no
-	   pattern 1 */
+	/* 0x00090206 and 0x00090502 take the settings from the bytes the press times have
+	   later */
 	param.setting1 = configGet()->pressTime1;
 	param.setting2 = configGet()->pressTime2;
+#endif
+#if FW_SINCE(0x00090502)	/* 0x00090206 has no pattern 1 */
+	memcpy(param.pattern1, paramPattern1Default, PARAM_PATTERN_SIZE);
 #endif
 	ena_dsp();
 	return 0;
@@ -172,7 +181,7 @@ unsigned char paramRead(unsigned int offset, unsigned int size, unsigned char *b
 		return 1;
 	if (size > PARAM_ACCESS_MAX)
 		return 1;
-#if FW_SINCE(0x00090206)
+#if FW_SINCE(0x00090203)
 	dis_dsp();
 	memcpy(buf, (unsigned char *)&param + offset, size);
 	ena_dsp();
@@ -200,7 +209,7 @@ void paramGetChargeLevels(struct ChargeLevel *levels)
 {
 	unsigned int i;
 
-#if FW_SINCE(0x00090206)
+#if FW_SINCE(0x00090203)
 	dis_dsp();
 	for (i = 0; i < 10; i++) {
 		levels->remainCap = param.chargeLevels[i].remainCap;
@@ -299,14 +308,14 @@ void paramGetBase(unsigned char *base)
 	*base = param.base & 0x3f;
 }
 
-#if FW_SINCE(0x00090009)
+#if FW_SINCE(0x00090006)
 void paramGetAdjust(unsigned char *adjust)
 {
 	*adjust = param.adjust & 0xf0;
 }
 #endif
 
-#if FW_SINCE(0x00090804)
+#if FW_SINCE(0x00090502)
 void paramGetPattern1(unsigned char *pattern)
 {
 	memcpy(pattern, param.pattern1, PARAM_PATTERN_SIZE);

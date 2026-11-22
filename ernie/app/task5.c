@@ -19,12 +19,13 @@
 #include "state.h"
 #include "task.h"
 #include "task5.h"
+#include "timer.h"
 #if BOARD_DOL1001
 #include "thermal.h"
 #endif
 
 unsigned int powerDevicePending;
-#if !FW_SINCE(0x00090206)
+#if !FW_SINCE(0x00090203)
 unsigned char chargeLedBlinkOn;
 #endif
 
@@ -110,7 +111,7 @@ void task5(VP_INT exinf)
 		ercd = wai_flg(4, 0xffa3, TWF_ORW, &ptn);
 #elif FW_SINCE(0x00090903)
 		ercd = wai_flg(4, 0xf7a3, TWF_ORW, &ptn);
-#elif FW_SINCE(0x00090804)
+#elif FW_SINCE(0x00090502)
 		ercd = wai_flg(4, 0xf3a3, TWF_ORW, &ptn);	/* no Cookie cycle */
 #else
 		ercd = wai_flg(4, 0xf1a3, TWF_ORW, &ptn);	/* no power LED fade */
@@ -199,7 +200,7 @@ void task5(VP_INT exinf)
 				chargeLedBlinkUpdate();
 			}
 #endif
-#if FW_SINCE(0x00090804)
+#if FW_SINCE(0x00090502)
 			if (ptn & 0x0200) {
 				clr_flg(4, ~0x0200);
 				powerLedFadeStep();
@@ -275,7 +276,7 @@ void powerJobPostCut(void)
 #endif
 }
 
-#if FW_SINCE(0x00090009)	/* not in 0x00080504 */
+#if FW_SINCE(0x00090006)	/* not in 0x00080504 */
 void powerJobPostOffEnd(void)
 {
 	powerJobState.id = POWER_JOB_OFF_END;
@@ -379,9 +380,9 @@ static void task5ChargeLed(void)
    (chargeLedSetBlink) or the Cookie's; 0x00090009 leaves it to the Cookie */
 static void task5ChargeLed(void)
 {
-#if FW_SINCE(0x00090206)
+#if FW_SINCE(0x00090203)
 	if (input1Bit7Active()) {
-#if FW_SINCE(0x00090804)
+#if FW_SINCE(0x00090502)
 		if (configGet()->start.bits.chargeLedOff) {
 			cookieCtrlReg3Bit2(0);
 			cookieCtrlReg3Mode(1);
@@ -398,14 +399,35 @@ static void task5ChargeLed(void)
 		else
 			chargeLedSetBlink(0);
 	}
+#elif ERNIE_BOARD == 0x00406000
+	/* PCH-1000's 0x00090007: only with the start's chargeLedOffReleased, the Cookie's mode 0
+	   while input 1.7 holds, else 1 */
+	if (configGet()->start.bits.chargeLedOffReleased) {
+		if (input1Bit7Active())
+			cookieCtrlReg3Mode(0);
+		else
+			cookieCtrlReg3Mode(1);
+	}
 #endif
 }
 
 /* task 5's (flag 0x2000): the blink's state to the Cookie */
 static void chargeLedBlinkUpdate(void)
 {
-#if FW_SINCE(0x00090206)
+#if FW_SINCE(0x00090203)
 	cookieCtrlReg3Bit2(chargeLedBlinkOn);
+#elif ERNIE_BOARD == 0x00406000
+	/* PCH-1000's 0x00090007 blinks it itself: on for 1 tick, off for 6 */
+	if (configGet()->start.bits.chargeLedOffReleased) {
+		if (chargeLedBlinkOn == 1) {
+			chargeLedBlinkOn = 0;
+			timerStart(CHARGE_LED_TIMER, 6);
+		} else {
+			chargeLedBlinkOn = 1;
+			timerStart(CHARGE_LED_TIMER, 1);
+		}
+		cookieCtrlReg3Bit2(chargeLedBlinkOn);
+	}
 #endif
 }
 #endif

@@ -116,7 +116,7 @@ extern int logClearIfStopped(void);
 extern int logSetVersion(unsigned int version);
 #endif
 extern int logReset(void);
-#if !LOG_0104
+#if !LOG_0104 && FW_SINCE(0x00090804)	/* 0x00090502 writes it with logWrite */
 extern int logWriteHeader(struct LogHeader *header);
 #endif
 #if LOG_VALUES

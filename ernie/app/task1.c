@@ -70,7 +70,7 @@ void task1(VP_INT exinf)
 void systemInit(void)
 {
 	struct TimerHandler timer;
-#if FW_SINCE(0x00090804)
+#if FW_SINCE(0x00090502)
 	unsigned char cause;
 #endif
 #if BOARD_DL_SCRATCHPAD
@@ -164,7 +164,7 @@ void systemInit(void)
 	statePhase = 2;
 	stateNext = 0;
 	stateEvents = 0;
-#if FW_SINCE(0x00090009)
+#if FW_SINCE(0x00090006)
 	stateCause = 0x7f;
 #endif
 #if FW_SINCE(0x0100060B)
@@ -174,7 +174,7 @@ void systemInit(void)
 	debugPinReserved(0);
 	debugPinCode(0x7f);
 #endif
-#if FW_SINCE(0x00090206)
+#if FW_SINCE(0x00090203)
 	resetFlags = RESF;
 	configInit();
 #endif
@@ -186,15 +186,21 @@ void systemInit(void)
 	timer.handler = stateCheck;
 	timerSetHandler(TIMER_RTC(0x1a), &timer);
 	versionInit();
-#if FW_SINCE(0x00090804)
+#if FW_SINCE(0x00090502)
 	cause = getResetCause() & 0xf0;
+#endif
 #if BOARD_DL_SCRATCHPAD
+#if FW_SINCE(0x00090502)
 	if (cause == 0) {
+#else
+	if ((getResetCause() & 0xf0) == 0) {	/* PCH-1000's 0x00090007 checks this alone */
+#endif
 		getErnieDlVersion(dlVersion.byte);
 		if (dlVersion.byte[1] == 0 && dlVersion.byte[2] < 0x16)
 			scratchPadClear();
 	}
 #endif
+#if FW_SINCE(0x00090502)
 	logQueueInit();
 	logInit();
 #if !FW_SINCE(0x01000104)

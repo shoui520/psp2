@@ -455,6 +455,9 @@ static unsigned char nvsErase(unsigned char block)
 {
 	unsigned char result;
 
+#if BOARD_WDT	/* PCH-1000's 0x00090007 */
+	WDTE = 0xac;
+#endif
 	FSL_Open();
 	result = FSL_Init(fslDataBuffer);
 	while (result == FLASH_BUSY)
@@ -976,7 +979,7 @@ done:
 	}
 	return result;
 }
-#elif FW_SINCE(0x00090804)
+#elif FW_SINCE(0x00090502)
 unsigned char nvsMove(void)
 {
 	unsigned char result;
@@ -1072,6 +1075,9 @@ unsigned char nvsMove(void)
 	nvsState = 3;
 	index = 0;
 	for (i = 0; i < NVS_DATA_BLOCKS; i++) {
+#if BOARD_WDT	/* PCH-1000's 0x00090007 */
+		WDTE = 0xac;
+#endif
 		block = nvsCopyBlocks[i];
 		if (block == 0) {
 			result = 8;
@@ -1607,7 +1613,7 @@ unsigned char nvsMount(unsigned char mode)
 }
 #endif
 
-#if FW_SINCE(0x00090804)
+#if FW_SINCE(0x00090502)
 /* the data's header mark, the spares missing and the moves made */
 unsigned char nvsGetInfo(unsigned char *mark, unsigned char *missing, unsigned int *moves)
 {
@@ -1741,7 +1747,7 @@ unsigned char nvsSetMark(unsigned char block, unsigned long extra)
 }
 #endif
 
-#if FW_SINCE(0x00090804)
+#if FW_SINCE(0x00090502)
 /* clears a block's mark: the block is bad */
 unsigned char nvsMarkBad(unsigned char block)
 {
@@ -1762,7 +1768,7 @@ unsigned char nvsMarkBad(unsigned char block)
 }
 #endif
 
-#if FW_SINCE(0x00090804)
+#if FW_SINCE(0x00090502)
 /* takes the blocks after the last data block that hold no data as the copy blocks and spares */
 unsigned char nvsAssignBlocks(void)
 {
@@ -1790,7 +1796,7 @@ unsigned char nvsAssignBlocks(void)
 }
 #endif
 
-#if FW_SINCE(0x00090804)
+#if FW_SINCE(0x00090502)
 /* a block's role: 1 data, 2 copy, 3 spare, 0 none */
 unsigned char nvsBlockRole(unsigned char block)
 {

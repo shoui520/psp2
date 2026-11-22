@@ -50,7 +50,7 @@ struct ConfigHash {
 	unsigned char	unhashed;		/* set: records written since the last digest */
 };
 
-#if !FW_SINCE(0x00090804)
+#if !FW_SINCE(0x00090502)
 /* 0x00090206's record: a write, with no type */
 struct ConfigWriteRecord {
 	unsigned char	length;
@@ -74,13 +74,6 @@ struct ConfigRecord {
 	} body;
 };
 
-/* the records received, hashed and applied a block at a time */
-struct ConfigRecords {
-	unsigned char	buffer[SHA1BlockSize];
-	unsigned char	count;
-	unsigned char	reserved[3];
-};
-
 #if !BOARD_USS1001	/* the slim's flash library and its configFlashWrite: flash.c */
 /* the flash library (the updater's, at 0xf2b2-0xf6f2) */
 extern void FSL_Open(void);
@@ -102,14 +95,16 @@ extern const struct ConfigBank configDefault;
 
 struct ConfigBank configBuffer;			/* the open copy, and the updater's output */
 static struct Config config;
-#if FW_SINCE(0x00090804)
+#if FW_SINCE(0x00090502)
 static struct ConfigHash configHash;
+#endif
+#if FW_SINCE(0x00090804)
 static struct ConfigRecords configRecords;
 
 static char configApplyRecords(unsigned char *records, unsigned int length,
 			       unsigned char check);
 #endif
-#if FW_SINCE(0x00090009)	/* 0x00080504 merges nothing */
+#if FW_SINCE(0x00090006)	/* 0x00080504 merges nothing */
 static unsigned char configMerge(unsigned char from, unsigned char to);
 #endif
 static unsigned char configCheck(unsigned char bank);
@@ -146,7 +141,7 @@ int configInit(void)
 		if (newer == CONFIG_SAME_VERSION) {
 			config.bank = configNewerCount();
 		} else {
-#if FW_SINCE(0x00090009)
+#if FW_SINCE(0x00090006)
 			result0 = configMerge(newer, newer == 0 ? 1 : 0);
 			if (result0 != 0) {
 			}
@@ -226,6 +221,12 @@ unsigned char configOpen(void)
 #if FW_SINCE(0x00090804)
 	configHash.unhashed = 0;
 	configRecords.count = 0;
+#elif FW_SINCE(0x00090502)	/* the hash starts at the open, the records' count in configreq.c */
+	if ((unsigned char)SHA1Reset((SHA1Context __near *)&configHash.context,
+				     (unsigned char __near *)configHash.block,
+				     (unsigned long __near *)configHash.w) != 0)
+		return 0x20;
+	configHash.unhashed = 0;
 #endif
 	memcpy(&configBuffer, &configBanks[config.bank], sizeof(configBuffer));
 	config.state = CONFIG_OPEN;
@@ -249,9 +250,11 @@ unsigned char configCommit(void)
 	sum = 0;
 	if (config.state != CONFIG_OPEN)
 		return 2;
-#if FW_SINCE(0x00090804)
+#if FW_SINCE(0x00090502)
 	if (configHash.unhashed != 0)
 		return 6;
+#endif
+#if FW_SINCE(0x00090804)	/* 0x00090502's request applies what is left (configreq.c) */
 	if (configRecords.count != 0) {
 		result = configApplyRecords(configRecords.buffer, configRecords.count, 0);
 		configRecords.count = 0;
@@ -283,6 +286,7 @@ unsigned char configCommit(void)
 	return result;
 }
 
+#if FW_SINCE(0x00090502)
 #if FW_SINCE(0x00090804)
 /* records for the open copy (check 0), or to compare with the bank used (check 1), from
    offset 0 on: hashed and applied 64 bytes at a time */
@@ -321,11 +325,16 @@ unsigned char configWriteRecords(unsigned int offset, unsigned char size, unsign
 	}
 	return result;
 }
+#endif
 
 /* each record its length, its type and its bytes: a write's an offset and data, a digest's
    the SHA-1 of the records before it, which the writes must end with */
+#if FW_SINCE(0x00090804)
 static char configApplyRecords(unsigned char *records, unsigned int length,
 			       unsigned char check)
+#else
+int configApplyRecords(unsigned char *records, unsigned int length)
+#endif
 {
 	struct ConfigRecord *record;
 	struct ConfigBank *bank;
@@ -334,13 +343,17 @@ static char configApplyRecords(unsigned char *records, unsigned int length,
 	unsigned char result;
 	int left;
 
+#if FW_SINCE(0x00090804)
 	if (check) {
 		bank = (struct ConfigBank *)&configBanks[config.bank];
 	} else {
+#endif
 		if (config.state != CONFIG_OPEN)
 			return 2;
 		bank = &configBuffer;
+#if FW_SINCE(0x00090804)
 	}
+#endif
 	record = (struct ConfigRecord *)records;
 	left = length;
 	while (left > 0) {
@@ -356,14 +369,18 @@ static char configApplyRecords(unsigned char *records, unsigned int length,
 					size = record->length - 3;
 					if (offset + size > CONFIG_SIZE)
 						return 6;
+#if FW_SINCE(0x00090804)
 					if (check) {
 						if (memcmp((unsigned char *)&bank->block + offset,
 							   record->body.write.data, size) != 0)
 							return 0x21;
 					} else {
+#endif
 						memcpy((unsigned char *)&bank->block + offset,
 						       record->body.write.data, size);
+#if FW_SINCE(0x00090804)
 					}
+#endif
 #if !SOURCE_0104
 					configHash.unhashed = 1;
 #endif
@@ -401,7 +418,49 @@ static char configApplyRecords(unsigned char *records, unsigned int length,
 	}
 	return left == 0 ? 0 : 6;
 }
-#elif !FW_SINCE(0x00090009)
+
+#if !FW_SINCE(0x00090804)
+/* 0x00090502: the writes compared with the bank used (0x21 when they differ); nothing hashed */
+int configCompareRecords(unsigned char *records, unsigned int length)
+{
+	struct ConfigRecord *record;
+	struct ConfigBank *bank;
+	unsigned int offset;
+	unsigned char size;
+	int left;
+
+	bank = (struct ConfigBank *)&configBanks[config.bank];
+	record = (struct ConfigRecord *)records;
+	left = length;
+	while (left > 0) {
+		if (record->length != 0) {
+			switch (record->type) {
+			case CONFIG_RECORD_WRITE:
+				if (record->length >= 3) {
+					offset = (unsigned int)record->body.write.offsetHigh << 8 |
+						 record->body.write.offsetLow;
+					size = record->length - 3;
+					if (offset + size > CONFIG_SIZE)
+						return 6;
+					if (memcmp((unsigned char *)&bank->block + offset,
+						   record->body.write.data, size) != 0)
+						return 0x21;
+				}
+				break;
+			case CONFIG_RECORD_TEXT:
+				break;
+			case CONFIG_RECORD_HASH:
+				break;
+			}
+		}
+		left -= (unsigned char)(record->length + 1);
+		record = (struct ConfigRecord *)((unsigned char *)record +
+						 (unsigned char)(record->length + 1));
+	}
+	return left == 0 ? 0 : 6;
+}
+#endif
+#elif !FW_SINCE(0x00090006)
 /* 0x00080504 writes no records */
 unsigned char configWriteRecords(unsigned char *records, int length)
 {
@@ -501,7 +560,7 @@ static const struct ConfigBank *const configTable[3] = {
 #define CONFIG_BANK(i)	(&configBanks[i])
 #endif
 
-#if FW_SINCE(0x00090009)
+#if FW_SINCE(0x00090006)
 /* the block of one bank (from: 0 or 1, or 2 the defaults), with what another keeps (to: the
    sticks' calibration, the board, ...), written over to: when from is a new layout's defaults
    and to has been written since its own */
@@ -533,7 +592,7 @@ static unsigned char configMerge(unsigned char from, unsigned char to)
 	copy->block.wlanLine = kept->block.wlanLine;
 	copy->block.wlanLineExtra = kept->block.wlanLineExtra;
 #endif
-#if FW_SINCE(0x00090206)	/* 0x00090009 keeps no more than these */
+#if FW_SINCE(0x00090203)	/* 0x00090009 keeps no more than these */
 	copy->block.keep.value = kept->block.keep.value;
 	if (copy->block.keep.bits.pressTimesSet) {
 		copy->block.pressTime1 = kept->block.pressTime1;

@@ -32,7 +32,7 @@
 #define BBMC_EVENT_STATE	0x0080	/* the system state changed */
 #define BBMC_EVENT_MODE		0x0100	/* timer 0x19: the mode set takes effect */
 #define BBMC_EVENT_RESUME	0x0200	/* UART2 opens again */
-#if FW_SINCE(0x00090804)
+#if FW_SINCE(0x00090502)
 #define BBMC_EVENTS		0x03ff
 #else
 #define BBMC_EVENTS		0x01ff	/* no BBMC_EVENT_RESUME on 0x00090206 */
@@ -135,7 +135,7 @@ extern void bbmcWake(void);
 extern void bbmcSignal4(void);
 extern void bbmcSignal8(void);
 extern unsigned char bbmcGetMode(void);
-#if FW_SINCE(0x00090804)
+#if FW_SINCE(0x00090502)
 extern unsigned char bbmcIsOn(void);
 #endif
 #if FW_SINCE(0x01000104)

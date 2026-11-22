@@ -21,7 +21,7 @@ $ELSE
 RAMBOTTOM	EQU	0CF00H		; the RAM's start (0xfcf00)
 DATASTART	EQU	0D900H		; the RAM a cold start clears: the kept RAM on
 KEEPRAM		EQU	0D900H		; the kept RAM (keepRam)
-$_IF (ERNIE_FW>=0x00090009)
+$_IF (ERNIE_FW>=0x00090006)
 KEEPCLEAR	EQU	0DA90H		; what a warm start clears from
 $ELSE
 KEEPCLEAR	EQU	0DA8EH		; (0x00080504)

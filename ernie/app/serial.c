@@ -336,7 +336,7 @@ unsigned char serialDispatch(void)
 	} else if (SERIAL_MODE_OF(serial) == 1) {
 		if (serial.status != 0)
 			goto answer;
-#if FW_SINCE(0x00090804)
+#if FW_SINCE(0x00090502)
 		request.data = &serialFrame[SERIAL_FRAME_DATA];
 		request.length = serial.length;
 #if SERIAL_LOG

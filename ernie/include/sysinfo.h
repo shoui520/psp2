@@ -20,7 +20,7 @@
 #define HANG_RESET		2	/* the system reset with cause 0x30 */
 
 /* INTTM11 counts a hang from 0x00090206 until 0x0100060B; 0x00090009 has no hang counter */
-#define HANG_TIMER		(FW_SINCE(0x00090206) && !FW_SINCE(0x0100060B))
+#define HANG_TIMER		(FW_SINCE(0x00090203) && !FW_SINCE(0x0100060B))
 
 extern SYSINFO_NEAR unsigned char hangState;
 extern SYSINFO_NEAR unsigned char hangCount;
@@ -39,7 +39,7 @@ extern int hangDetected(void);
 #include "chip.h"
 #define HANG_DETECTED()		(!P11.5 && !P4.6)
 #endif
-#if !FW_SINCE(0x0100060B)
+#if !FW_SINCE(0x0100060B) && (FW_SINCE(0x00090804) || !FW_SINCE(0x00090502))
 extern int hangStarted(void);
 #endif
 #if FW_SINCE(0x01000104) && !FW_SINCE(0x0100060B)

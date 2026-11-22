@@ -10,6 +10,7 @@
 #include "analog.h"
 #include "board.h"
 #include "charge.h"
+#include "sha1.h"
 #include "watchdog.h"
 
 #define CONFIG_SIZE		0x3f0	/* a bank's block */
@@ -417,9 +418,22 @@ extern unsigned char configRead(unsigned int offset, unsigned char size, unsigne
 extern unsigned char configWrite(unsigned int offset, unsigned char size, unsigned char *data);
 extern unsigned char configOpen(void);
 extern unsigned char configCommit(void);
+#if FW_SINCE(0x00090502)
+/* the records received, applied a block at a time */
+struct ConfigRecords {
+	unsigned char	buffer[SHA1BlockSize];
+	unsigned char	count;
+	unsigned char	reserved[3];
+};
+#endif
 #if FW_SINCE(0x00090804)
 extern unsigned char configWriteRecords(unsigned int offset, unsigned char size,
 					unsigned char *data, unsigned char check);
+#elif FW_SINCE(0x00090502)
+/* 0x00090502: the requests gather the records themselves (configreq.c, serial1.c) and hand
+   them over 64 bytes at a time: for the open copy, or to compare with the bank used */
+extern int configApplyRecords(unsigned char *records, unsigned int length);
+extern int configCompareRecords(unsigned char *records, unsigned int length);
 #else
 /* 0x00090206: write records applied to the open copy as they come, no digest */
 extern unsigned char configWriteRecords(unsigned char *records, int length);

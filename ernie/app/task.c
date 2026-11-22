@@ -21,6 +21,10 @@
 #include "task.h"
 #include "timer.h"
 
+#if BOARD_STANDBY_STOP && !FW_SINCE(0x00090203)
+extern unsigned char input1Bit5Active(void);
+#endif
+
 __sreg unsigned int taskPending;
 
 ER task1SendMessage(ID mbxid, T_MSG *msg)
@@ -405,7 +409,11 @@ unsigned int taskGetPending(void)
 /* standby halts while a timer, a task, a dongle or debug link or a hang needs the clock */
 int taskStandbyHalt(void)
 {
-#if FW_SINCE(0x0100060B)
+#if !FW_SINCE(0x00090203) || (FW_SINCE(0x00090502) && !FW_SINCE(0x00090804))
+	/* PCH-1000's 0x00090007 and 0x00090502: whatever is on the multi-connector, no debug
+	   link or hang */
+	return timerArmed() || taskGetPending() || input1Bit5Active();
+#elif FW_SINCE(0x0100060B)
 	/* no hang check since 0x0100060B */
 	return timerArmed() || taskGetPending() || boardMultiCnIsDongle() ||
 	       boardMultiCnIsDebug();

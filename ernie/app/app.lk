@@ -75,16 +75,16 @@ OBJECT	handshake.c
 OBJECT	serial1op.c
 OBJECT	task.c
 # before 0x01000104 the configuration's defaults are among the constants, before config.c's
-OBJECT	configdefault.c	IF ERNIE_FW<0x01000104&&ERNIE_FW>=0x00090804	# 0x00090206 has no defaults
+OBJECT	configdefault.c	IF ERNIE_FW<0x01000104&&ERNIE_FW>=0x00090502	# 0x00090206 has no defaults
 OBJECT	config.c
 OBJECT	configreq.c
-OBJECT	watchdog.c	IF ERNIE_FW>=0x00090009
+OBJECT	watchdog.c	IF ERNIE_FW>=0x00090006
 OBJECT	sysinfo.c
-OBJECT	log.c		IF ERNIE_FW>=0x00090804
+OBJECT	log.c		IF ERNIE_FW>=0x00090502
 # param.c's constants follow log.c's in Sony's link (its code is placed before config.c's)
 OBJECT	param.c
 # 0x00090206 has no power LED fade: its LED is powerseq.c's powerLedSet
-OBJECT	led.c		IF ERNIE_FW>=0x00090804&&ERNIE_HW<0x00700000||ERNIE_FW>=0x00090804&&ERNIE_HW>=0x00800000	# DOL-1001 has none: its LED is powerled.c's
+OBJECT	led.c		IF ERNIE_FW>=0x00090502&&ERNIE_HW<0x00700000||ERNIE_FW>=0x00090502&&ERNIE_HW>=0x00800000	# DOL-1001 has none: its LED is powerled.c's
 OBJECT	authkeys.c	IF ERNIE_FW>=0x0100060B
 OBJECT	serialreq.c	IF ERNIE_FW>=0x00090903
 OBJECT	snvs.c		IF ERNIE_FW>=0x00090903
@@ -122,7 +122,7 @@ OBJECT	../lib/fslflags.asm
 OBJECT	../lib/fslswap.asm
 OBJECT	../lib/memcpy.asm
 OBJECT	../lib/memcpy_n.asm	IF ERNIE_FW>=0x01000107
-OBJECT	../lib/memmove.asm	IF ERNIE_FW>=0x00090804	# log.c's
+OBJECT	../lib/memmove.asm	IF ERNIE_FW>=0x00090502	# log.c's
 OBJECT	../lib/memcmp.asm
 OBJECT	../lib/memset.asm
 OBJECT	../lib/memset_n.asm
@@ -357,8 +357,8 @@ SEG	@@CODEL
 
 # the RAM: kept over a warm start, then the heap, the near data, the flash library's
 AT	0xfd900
-SEG	@@DATAL		main.c param.c IF ERNIE_FW<0x00090009	# (no watchdog.c)
-SEG	@@DATAL		main.c param.c watchdog.c IF ERNIE_FW>=0x00090009
+SEG	@@DATAL		main.c param.c IF ERNIE_FW<0x00090006	# (no watchdog.c)
+SEG	@@DATAL		main.c param.c watchdog.c IF ERNIE_FW>=0x00090006
 SEG	@@HEAP
 SEG	@@INIT
 SEG	@@DATA		cstart.asm input.c util.c adc.c analog.c serialauth.c power.c timer.c sysinfo.c

@@ -15,7 +15,7 @@
 #define PARAM_PATTERN_SIZE	0x22
 
 struct Param {
-#if FW_SINCE(0x00090206)
+#if FW_SINCE(0x00090203)
 	struct ChargeLevel chargeLevels[10];	/* chargeReadFlags's levels */
 #else
 	struct ChargeLevel chargeLevels[9];	/* 0x00090009's nine */

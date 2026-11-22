@@ -79,7 +79,7 @@ extern int updStateEvent(unsigned char transition);
 	} while (0)
 #endif
 
-#if FW_SINCE(0x00090804)
+#if FW_SINCE(0x00090502)
 extern const struct SerialCommand1 serialCommands1[];
 #else
 /* 0x00090206's table has no flags: serialDispatch searches it as mode 2's, and the commands
@@ -112,7 +112,7 @@ struct Serial1Level {
 extern const struct Serial1Level serial1Levels[SERIAL1_LEVELS];
 #endif
 
-#if FW_SINCE(0x00090804)
+#if FW_SINCE(0x00090502)
 /* the bytes command 0x0900 compares its request with (the PS Dev Wiki's "service 0x900 passphrase") */
 static const unsigned char serial1Password[16] = {
 	0x93, 0xce, 0x8e, 0xbe, 0xdf, 0x7f, 0x69, 0xa9,
@@ -143,7 +143,7 @@ static union {
 		unsigned char	hardwareInfo[4];
 		unsigned char	version[4];
 		unsigned char	dlVersion[4];
-#if FW_SINCE(0x00090206)
+#if FW_SINCE(0x00090203)
 		unsigned char	flags;		/* getResetFlags's */
 #if SOURCE_0103
 		unsigned char	resetCause;	/* getResetCause's */
@@ -178,7 +178,7 @@ static union {
 unsigned char serial1State;
 union Serial1Args serial1Args;
 
-#if FW_SINCE(0x00090804) && !(defined(ERNIE_UPDATER))
+#if FW_SINCE(0x00090502) && !(defined(ERNIE_UPDATER))
 static unsigned int serial1Key;		/* SERIAL1_KEY_OPEN or SERIAL1_KEY_CLOSED */
 #endif
 
@@ -194,7 +194,7 @@ void serial1Reset(void)
 	memset(&serial1Data, 0, sizeof(serial1Data));
 	serialAuthInit();
 	serial1State = 0;
-#if FW_SINCE(0x00090804)
+#if FW_SINCE(0x00090502)
 	serial1Key = SERIAL1_KEY_CLOSED;
 #endif
 }
@@ -205,7 +205,7 @@ void serial1Reset(void)
 #include "serialreq.c"
 #endif
 
-#if FW_SINCE(0x00090804)
+#if FW_SINCE(0x00090502)
 /* runs command; status 1 if no command has its number */
 unsigned char serialCommand1(unsigned int command, struct SerialBuffer *request,
 			     struct SerialBuffer *response)
@@ -242,10 +242,12 @@ unsigned char serialCommand1(unsigned int command, struct SerialBuffer *request,
 #endif
 			}
 #endif
+#if FW_SINCE(0x00090804)	/* 0x00090502 has no third key */
 			if ((flags & SERIAL1_NVS_KEY3) && !serialAuthUnlocked14()) {
 				serialSetAnswer(SERIAL_ANSWER);
 				return 0x10;
 			}
+#endif
 			return entry->handler(request, response);
 		}
 		if (command < entry->command)
@@ -348,7 +350,9 @@ unsigned char serialCommands1Count(void)
 	return 0x2d;
 #elif FW_SINCE(0x00090804)
 	return 0x31;
-#elif FW_SINCE(0x00090009)
+#elif FW_SINCE(0x00090502)
+	return 0x2c;	/* 0x00090502: no 0x0146-0x0147, 0x0160, 0x0170-0x0171 */
+#elif FW_SINCE(0x00090006)
 	return 0x25;
 #else
 	return 0x1f;
@@ -388,7 +392,7 @@ static unsigned char serial1Command0101(struct SerialBuffer *request, struct Ser
 #else
 #if FW_SINCE(0x01000107)
 	serial1Data.version.flags = getResetFlags();
-#elif FW_SINCE(0x00090206)
+#elif FW_SINCE(0x00090203)
 	serial1Data.version.flags = resetFlags;
 #endif
 	memset(serial1Data.version.reserved, 0, sizeof(serial1Data.version.reserved));
@@ -664,7 +668,7 @@ static unsigned char serial1Command0105(struct SerialBuffer *request, struct Ser
 	state = stateGet();
 	mode = request->data[0];
 	response->length = 0;
-#if !FW_SINCE(0x00090804)
+#if !FW_SINCE(0x00090502)
 	SERIAL1_UNLOCKED_CHECK();
 #endif
 	if (mode == 0) {
@@ -683,7 +687,7 @@ static unsigned char serial1Command0105(struct SerialBuffer *request, struct Ser
 			serialSetAnswer(SERIAL_ANSWER);
 			return 0x50;
 		}
-#if FW_SINCE(0x00090804)	/* 0x00090206 does not ask the charger */
+#if FW_SINCE(0x00090502)	/* 0x00090206 does not ask the charger */
 		if (!CHARGE_TEST(chargeMayStart())) {
 			serialSetAnswer(SERIAL_ANSWER);
 			return 0x51;
@@ -762,7 +766,7 @@ static unsigned char serial1Command0110(struct SerialBuffer *request, struct Ser
 	unsigned char result = 0;
 
 	response->length = 0;
-#if !FW_SINCE(0x00090804)
+#if !FW_SINCE(0x00090502)
 	SERIAL1_UNLOCKED_CHECK();
 #endif
 	if (request->length != sizeof(serial1Data)) {
@@ -789,7 +793,7 @@ static unsigned char serial1Command0120(struct SerialBuffer *request, struct Ser
 
 	result = 0;
 	response->length = 0;
-#if !FW_SINCE(0x00090804)
+#if !FW_SINCE(0x00090502)
 	SERIAL1_UNLOCKED_CHECK();
 #endif
 	mode = *stateGetWakeupFactor();
@@ -834,7 +838,7 @@ static unsigned char serial1Command0121(struct SerialBuffer *request, struct Ser
 
 	result = 0;
 	response->length = 0;
-#if !FW_SINCE(0x00090804)
+#if !FW_SINCE(0x00090502)
 	SERIAL1_UNLOCKED_CHECK();
 #endif
 	mode = *stateGetWakeupFactor();
@@ -945,7 +949,7 @@ static unsigned char serial1Command0131(struct SerialBuffer *request, struct Ser
 
 	result = 0;
 	response->length = 0;
-#if !FW_SINCE(0x00090804)
+#if !FW_SINCE(0x00090502)
 	SERIAL1_UNLOCKED_CHECK();
 	if (!serialAuthUnlocked1()) {
 		serialSetAnswer(SERIAL_ANSWER);
@@ -975,7 +979,7 @@ static unsigned char serial1Command0132(struct SerialBuffer *request, struct Ser
 
 	result = 0;
 	response->length = 0;
-#if !FW_SINCE(0x00090804)
+#if !FW_SINCE(0x00090502)
 	SERIAL1_UNLOCKED_CHECK();
 	if (!serialAuthUnlocked1()) {
 		serialSetAnswer(SERIAL_ANSWER);
@@ -1106,7 +1110,7 @@ static unsigned char serial1ConfigResult(unsigned char result)
 #define SERIAL1_CONFIG_RESULT(result)	((result) == 0 ? 0 : (result))
 #endif
 
-#if FW_SINCE(0x00090009) /* 0x00080504 has no settings commands */
+#if FW_SINCE(0x00090006) /* 0x00080504 has no settings commands */
 /* 0x0140: the banks' versions and counts (configGetVersions) */
 static unsigned char serial1Command0140(struct SerialBuffer *request, struct SerialBuffer *response)
 {
@@ -1135,7 +1139,7 @@ static unsigned char serial1Command0141(struct SerialBuffer *request, struct Ser
 	SERIAL1_CONFIG_SIZE_TYPE size;
 	unsigned char result;
 
-#if !FW_SINCE(0x00090804)
+#if !FW_SINCE(0x00090502)
 	SERIAL1_UNLOCKED_CHECK();
 #endif
 	id.byte[0] = request->data[0];
@@ -1225,7 +1229,7 @@ static unsigned char serial1Command0109(struct SerialBuffer *request, struct Ser
 #endif	/* !ERNIE_UPDATER */
 #endif
 
-#if FW_SINCE(0x00090009) && !(defined(ERNIE_UPDATER))	/* not in the PS TV's updater */
+#if FW_SINCE(0x00090006) && !(defined(ERNIE_UPDATER))	/* not in the PS TV's updater */
 /* 0x0142: the offset, the size, the data: a write to the open copy (configWrite) */
 static unsigned char serial1Command0142(struct SerialBuffer *request, struct SerialBuffer *response)
 {
@@ -1233,7 +1237,7 @@ static unsigned char serial1Command0142(struct SerialBuffer *request, struct Ser
 	SERIAL1_CONFIG_SIZE_TYPE size;
 	unsigned char result;
 
-#if !FW_SINCE(0x00090804)
+#if !FW_SINCE(0x00090502)
 	SERIAL1_UNLOCKED_CHECK();
 #endif
 	id.byte[0] = request->data[0];
@@ -1251,7 +1255,7 @@ static unsigned char serial1Command0143(struct SerialBuffer *request, struct Ser
 {
 	unsigned char result;
 
-#if !FW_SINCE(0x00090804)
+#if !FW_SINCE(0x00090502)
 	SERIAL1_UNLOCKED_CHECK();
 #endif
 	response->data = serial1Data.byte;
@@ -1266,7 +1270,7 @@ static unsigned char serial1Command0144(struct SerialBuffer *request, struct Ser
 {
 	unsigned char result;
 
-#if !FW_SINCE(0x00090804)
+#if !FW_SINCE(0x00090502)
 	SERIAL1_UNLOCKED_CHECK();
 #endif
 	response->data = serial1Data.byte;
@@ -1281,7 +1285,7 @@ static unsigned char serial1Command0145(struct SerialBuffer *request, struct Ser
 {
 	unsigned char result;
 
-#if !FW_SINCE(0x00090804)
+#if !FW_SINCE(0x00090502)
 	SERIAL1_UNLOCKED_CHECK();
 #endif
 	response->data = serial1Data.byte;
@@ -1293,8 +1297,8 @@ static unsigned char serial1Command0145(struct SerialBuffer *request, struct Ser
 
 #endif
 
-#if !FW_SINCE(0x00090009)
-#elif !FW_SINCE(0x00090804)
+#if !FW_SINCE(0x00090006)
+#elif !FW_SINCE(0x00090502)
 /* 0x00090206's records for the open copy (configWriteRecords): the size, the records; no entry
    of serialCommands1 runs it, and it sets no answer */
 static unsigned char serial1Command0146(struct SerialBuffer *request, struct SerialBuffer *response)
@@ -1313,6 +1317,23 @@ static unsigned char serial1Command0146(struct SerialBuffer *request, struct Ser
 }
 #else
 #ifndef ERNIE_UPDATER	/* the PS TV's updater has none of 0x0146-0x0160 */
+#if !FW_SINCE(0x00090804)
+/* 0x00090502's 0x0146: the size, the records, for the open copy (configApplyRecords) as they
+   come; no answer set, and no 0x0147 */
+static unsigned char serial1Command0146(struct SerialBuffer *request, struct SerialBuffer *response)
+{
+	unsigned char result;
+	unsigned char size;
+	unsigned char *data;
+
+	size = request->data[0];
+	data = &request->data[1];
+	response->data = serial1Data.byte;
+	response->length = 0;
+	result = configApplyRecords(data, size);
+	return SERIAL1_CONFIG_RESULT(result);
+}
+#else
 /* 0x0146: the position, the size, the data: records for the open copy (configWriteRecords) */
 static unsigned char serial1Command0146(struct SerialBuffer *request, struct SerialBuffer *response)
 {
@@ -1350,6 +1371,7 @@ static unsigned char serial1Command0147(struct SerialBuffer *request, struct Ser
 	serialSetAnswer(SERIAL_ANSWER);
 	return SERIAL1_CONFIG_RESULT(result);
 }
+#endif
 
 #if BATTERY_GAUGE
 /* 0x0148: the offset, the size, the data: written to the settings in one go (open, write,
@@ -1387,6 +1409,7 @@ static unsigned char serial1Command0148(struct SerialBuffer *request, struct Ser
 }
 #endif
 
+#if FW_SINCE(0x00090804)
 /* 0x0171: getResetFlags's flags, the reset's cause, stateGetCause, the system mode, stateGetWakeMask
    (DOL-1002: and stateGetWakeMaskHigh) */
 static unsigned char serial1Command0171(struct SerialBuffer *request, struct SerialBuffer *response)
@@ -1419,6 +1442,7 @@ static unsigned char serial1Command0171(struct SerialBuffer *request, struct Ser
 	serialSetAnswer(SERIAL_ANSWER);
 	return 0;
 }
+#endif
 
 #if FW_SINCE(0x01000104)
 /* 0x0172: the clock, the alarm and its mode */
@@ -1583,6 +1607,7 @@ static unsigned char serial1Command0157(struct SerialBuffer *request, struct Ser
 }
 #endif
 
+#if FW_SINCE(0x00090804)
 /* 0x0160: in state 4, clears (1) the NVS's syscon area (mask bit 0, then logClearIfStopped) and
    configRestoreDefaults's (bit 1; the slim also bstoreMigrate, bit 2), or (2) runs nvsFormat and
    logClearIfStopped */
@@ -1707,6 +1732,7 @@ done:
 	serialSetAnswer(SERIAL_ANSWER);
 	return result;
 }
+#endif
 
 #endif	/* !ERNIE_UPDATER */
 
@@ -2370,7 +2396,7 @@ static unsigned char serial1Command01d1(struct SerialBuffer *request, struct Ser
 #endif
 #ifndef ERNIE_UPDATER
 
-#if FW_SINCE(0x00090804)
+#if FW_SINCE(0x00090502)
 int serial1KeyOpen(void)
 {
 	return serial1Key == SERIAL1_KEY_OPEN;
@@ -2382,7 +2408,7 @@ int serial1KeyOpen(void)
 static unsigned char serial1Command0900(struct SerialBuffer *request, struct SerialBuffer *response)
 {
 	unsigned char result = 0;
-#if FW_SINCE(0x00090804)
+#if FW_SINCE(0x00090502)
 	unsigned char *data;
 
 	data = request->data;
@@ -2401,7 +2427,7 @@ static unsigned char serial1Command0901(struct SerialBuffer *request, struct Ser
 {
 	unsigned char result = 0;
 
-#if FW_SINCE(0x00090804)
+#if FW_SINCE(0x00090502)
 	serial1Key = SERIAL1_KEY_CLOSED;
 #endif
 	response->length = 0;
@@ -3262,7 +3288,7 @@ const struct SerialCommand1 serialCommands1[] = {
 	{ 0x0969, serial1Command0969, SERIAL1_KEY | SERIAL1_NVS_KEY3 },
 #endif
 };
-#elif !FW_SINCE(0x00090804)
+#elif !FW_SINCE(0x00090502)
 const struct SerialCommand serialCommands1[] = {
 	{ 0x0100, serial1Command0100 },
 	{ 0x0101, serial1Command0101 },
@@ -3276,7 +3302,7 @@ const struct SerialCommand serialCommands1[] = {
 	{ 0x0121, serial1Command0121 },
 	{ 0x0131, serial1Command0131 },
 	{ 0x0132, serial1Command0132 },
-#if FW_SINCE(0x00090009)
+#if FW_SINCE(0x00090006)
 	{ 0x0140, serial1Command0140 },
 	{ 0x0141, serial1Command0141 },
 	{ 0x0142, serial1Command0142 },
@@ -3324,8 +3350,10 @@ const struct SerialCommand1 serialCommands1[] = {
 	{ 0x0143, serial1Command0143, SERIAL1_UNLOCKED | SERIAL1_NVS_KEY3 },
 	{ 0x0144, serial1Command0144, SERIAL1_UNLOCKED | SERIAL1_NVS_KEY3 },
 	{ 0x0145, serial1Command0145, SERIAL1_UNLOCKED | SERIAL1_NVS_KEY3 },
+#if FW_SINCE(0x00090804)	/* 0x00090502 runs neither (nor 0x0160 and 0x0170-0x0171) */
 	{ 0x0146, serial1Command0146, SERIAL1_UNLOCKED | SERIAL1_NVS_KEY3 },
 	{ 0x0147, serial1Command0147, SERIAL1_UNLOCKED | SERIAL1_NVS_KEY3 },
+#endif
 	{ 0x0150, serial1Command0150, SERIAL1_UNLOCKED },
 	{ 0x0151, serial1Command0151, SERIAL1_UNLOCKED },
 	{ 0x0152, serial1Command0152, SERIAL1_UNLOCKED | SERIAL1_NVS_KEY3 },
@@ -3333,7 +3361,9 @@ const struct SerialCommand1 serialCommands1[] = {
 	{ 0x0154, serial1Command0154, SERIAL1_UNLOCKED | SERIAL1_NVS_KEY3 },
 	{ 0x0155, serial1Command0155, SERIAL1_UNLOCKED | SERIAL1_NVS_KEY3 },
 	{ 0x0156, serial1Command0156, SERIAL1_UNLOCKED | SERIAL1_NVS_KEY3 },
+#if FW_SINCE(0x00090804)
 	{ 0x0160, serial1Command0160, SERIAL1_UNLOCKED | SERIAL1_NVS_KEY3 },
+#endif
 #if FW_SINCE(0x01000104)
 	{ 0x0161, serial1Command0161, SERIAL1_UNLOCKED | SERIAL1_NVS_KEY3 },
 #endif
@@ -3344,8 +3374,10 @@ const struct SerialCommand1 serialCommands1[] = {
 	{ 0x0163, serial1Command0163, SERIAL1_UNLOCKED | SERIAL1_NVS_KEY3 },
 	{ 0x0168, serial1Command0168, SERIAL1_UNLOCKED },
 #endif
+#if FW_SINCE(0x00090804)
 	{ 0x0170, serial1Command0170, SERIAL1_UNLOCKED | SERIAL1_NVS_KEY3 },
 	{ 0x0171, serial1Command0171, SERIAL1_UNLOCKED | SERIAL1_NVS_KEY3 },
+#endif
 #if FW_SINCE(0x01000104)
 	{ 0x0172, serial1Command0172, SERIAL1_UNLOCKED | SERIAL1_NVS_KEY3 },
 #endif

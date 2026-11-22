@@ -51,7 +51,7 @@ struct ButtonPress {
 	unsigned char	keys;		/* the keys held at the second press */
 	unsigned char	result;		/* the keys of the press reported */
 	unsigned char	reserved;
-#if FW_SINCE(0x00090206)	/* 0x00090009 has no press times */
+#if FW_SINCE(0x00090203)	/* 0x00090009 has no press times */
 	unsigned char	time1;		/* presses for the first report (byte 0x2e of NVS area
 					   1, at least 3) */
 	unsigned char	time2;		/* presses for the second (byte 0x2f, at least 3) */
@@ -97,7 +97,7 @@ void sampleInputs3(void);
 void inputGroupUpdate(unsigned char *raw, unsigned char *state, struct InputGroup *group);
 void pinMonitorPoll(void);
 unsigned char input1Bit5Active(void);
-#if FW_SINCE(0x00090009)
+#if FW_SINCE(0x00090006)
 unsigned char input1Bit0Active(void);
 #endif
 unsigned char input1Bit3Active(void);
@@ -137,7 +137,7 @@ void input1Bit2Low(void);
 void input1Bit2High(void);
 #endif
 void inputMultiCnChanged(void);
-#if FW_SINCE(0x00090009)
+#if FW_SINCE(0x00090006)
 void input1Bit0Changed(void);
 #endif
 void inputScanHold(unsigned int ticks);
@@ -219,7 +219,9 @@ struct InputHandler inputHandler1Bit2Low;
 struct InputHandler inputHandler1Bit2High;
 #endif
 struct InputHandler inputHandlerSerial2Request;
+#if BOARD_INPUT3_LINK
 struct InputHandler inputHandlerSerial2Link;
+#endif
 struct InputHandler inputHandlerSerial1;
 #if !SOURCE_0103	/* the slim's group 3 bit 2 has none */
 struct InputHandler inputHandler3Bit2;
@@ -227,11 +229,11 @@ struct InputHandler inputHandler3Bit2;
 struct InputHandler inputHandlerMultiCn;
 struct InputHandler inputHandlerWake1;
 struct InputHandler inputHandlerCharge;
-#if FW_SINCE(0x00090804)
+#if FW_SINCE(0x00090502)
 struct InputHandler inputHandler1Bit7;
 #endif
 struct InputHandler inputHandler1Bit3;
-#if FW_SINCE(0x00090009)	/* 0x00080504 has no input 1 bit 0 handler */
+#if FW_SINCE(0x00090006)	/* 0x00080504 has no input 1 bit 0 handler */
 struct InputHandler inputHandler1Bit0;
 #endif
 #if FW_SINCE(0x0100060B) && INPUT_BITS2_HANDLERS
@@ -242,7 +244,7 @@ struct InputDelays inputDelays;
 #endif
 struct InputScan inputScan;
 struct PinMonitors pinMonitors;
-#if FW_SINCE(0x00090206)
+#if FW_SINCE(0x00090203)
 unsigned char intp11Level;			/* P7.7 at its last edge (INTP11) */
 #endif
 
@@ -647,7 +649,7 @@ void inputInit(void)
 #endif
 #elif FW_SINCE(0x00090804)
 	/* before 0x01000104 every start is cold, and the settings' wlanLine picks the WLAN's
-	   line: P3.1 driven low, or P6.7 (0x00090206 sets neither here) */
+	   line: P3.1 driven low, or P6.7 (0x00090206 and 0x00090502 set neither here) */
 	coldStart = 1;
 	if (configGet()->CONFIG_WLAN_LINE) {
 		PM3.0 = 1;
@@ -660,6 +662,8 @@ void inputInit(void)
 		PM6.7 = 0;
 		P6.7 = 0;
 	}
+#elif FW_SINCE(0x00090502)
+	coldStart = 1;
 #endif
 	intp1Enable(0);
 	intp2Enable(0);
@@ -670,10 +674,10 @@ void inputInit(void)
 	intp10Enable(0);
 	intp8Enable(0);
 	intp11Enable(0);
-#if FW_SINCE(0x00090206)
+#if FW_SINCE(0x00090203)
 	intp11Level = 1;
 #endif
-#if FW_SINCE(0x00090009)
+#if FW_SINCE(0x00090006)
 	inputRaw1 = 0xff;
 	inputState1 = 0xff;
 	inputGroup1.prev = 0xff;
@@ -689,7 +693,7 @@ void inputInit(void)
 #endif
 #if FW_SINCE(0x0100060B)
 	inputGroup1.enable = 0xfb;	/* bit 2 is not watched */
-#elif !FW_SINCE(0x00090009)
+#elif !FW_SINCE(0x00090006)
 	inputGroup1.enable = 0xfe;	/* 0x00080504: bit 0 is not watched */
 #else
 	inputGroup1.enable = 0xff;
@@ -709,7 +713,7 @@ void inputInit(void)
 	inputGroup3.prev = 0x04;
 	inputGroup3.changed = 0;
 #if BOARD_INPUT3_PINS && ERNIE_BOARD != 0x00406000 && (!BOARD_INPUTS_102603 || HW_IRT001) && \
-    FW_SINCE(0x00090206)	/* 0x00601000: PCH-1000's, with the pins; 0x00090009 dispatches bit 1 (intp11Low) */
+    FW_SINCE(0x00090203)	/* 0x00601000: PCH-1000's, with the pins; 0x00090009 dispatches bit 1 (intp11Low) */
 	inputGroup3.pending = 0x24;
 	inputGroup3.enable = 0x3d;
 #else
@@ -737,9 +741,11 @@ void inputInit(void)
 	inputHandlerSerial2Request.edges = INPUT_EDGE_LOW | INPUT_EDGE_HIGH;
 #endif
 	inputHandlerSerial2Request.handler = serial2InputRequest;
+#if BOARD_INPUT3_LINK
 	inputHandlerSerial2Link.type = 1;
 	inputHandlerSerial2Link.edges = INPUT_EDGE_LOW | INPUT_EDGE_HIGH;
 	inputHandlerSerial2Link.handler = serial2InputLink;
+#endif
 #else
 	inputHandlerSerial2Request.type = 0;
 	inputHandlerSerial2Request.edges = INPUT_EDGE_LOW | INPUT_EDGE_HIGH;
@@ -749,7 +755,7 @@ void inputInit(void)
 	inputHandlerSerial2Link.handler = inputNone;
 #endif
 	inputHandlerSerial1.type = 1;
-#if FW_SINCE(0x00090804)
+#if FW_SINCE(0x00090502)
 	inputHandlerSerial1.edges = INPUT_EDGE_HIGH;
 #else
 	inputHandlerSerial1.edges = INPUT_EDGE_LOW | INPUT_EDGE_HIGH;
@@ -771,7 +777,7 @@ void inputInit(void)
 #else
 	inputHandlerCharge.handler = chargeUpdateSoon;
 #endif
-#if FW_SINCE(0x00090804)
+#if FW_SINCE(0x00090502)
 	inputHandler1Bit7.type = 1;
 	inputHandler1Bit7.edges = INPUT_EDGE_LOW | INPUT_EDGE_HIGH;
 	inputHandler1Bit7.handler = input1Bit7Changed;
@@ -779,7 +785,7 @@ void inputInit(void)
 	inputHandler1Bit3.type = 1;
 	inputHandler1Bit3.edges = INPUT_EDGE_LOW | INPUT_EDGE_HIGH;
 	inputHandler1Bit3.handler = input1Bit3Changed;
-#if FW_SINCE(0x00090009)
+#if FW_SINCE(0x00090006)
 	inputHandler1Bit0.type = 1;
 	inputHandler1Bit0.edges = INPUT_EDGE_LOW | INPUT_EDGE_HIGH;
 	inputHandler1Bit0.handler = input1Bit0Changed;
@@ -830,7 +836,7 @@ void inputInit(void)
 	inputDelays.latchOn = 0;
 	inputKeys.state = 0;
 	inputKeys.events = 0;
-#if FW_SINCE(0x00090804)
+#if FW_SINCE(0x00090502)
 	inputShutdownMarked = 0;
 	levelMonitor1.enable = 0;
 	levelMonitor2.enable = 0;
@@ -859,7 +865,7 @@ void inputResumePrepare(void)
 {
 	intp1Enable(0);
 	intp13Enable(0);
-#if (BOARD_INTP11 || BOARD_102603) && !FW_SINCE(0x00090206)	/* 0x00102603's does nothing */
+#if (BOARD_INTP11 || BOARD_102603 || ERNIE_BOARD == 0x00406000) && !FW_SINCE(0x00090203)	/* 0x00102603's does nothing; PCH-1000's 0x00090007 has it */
 	intp11Enable(0);
 #endif
 #if SOURCE_0103
@@ -895,16 +901,16 @@ void inputResumeOpen(void)
 	analogInit();
 #endif
 	adcOpenForBoard();
-#if BOARD_INPUTS_102603 && !FW_SINCE(0x00090804)
+#if BOARD_INPUTS_102603 && !FW_SINCE(0x00090502)
 	P127 = 1;
 #elif BOARD_INPUTS_102603
 	P12 |= 0x80;
 #endif
 	inputGroup1.pending |= 0x08;
-#if (BOARD_INPUTS_102603 || (!FW_SINCE(0x00090804) && BOARD_IS(0x00411000))) && \
-    !(HW_IRT001 && !FW_SINCE(0x00090804))
-#if HW_IS(0x00102603) && !FW_SINCE(0x00090206)
-	inputDelays.analog80 = 0x1c;	/* 0x00102603's 0x00090009 starts channel 8 */
+#if (BOARD_INPUTS_102603 || (!FW_SINCE(0x00090502) && BOARD_IS(0x00411000))) && \
+    !(HW_IRT001 && !FW_SINCE(0x00090502))
+#if HW_102603 && !FW_SINCE(0x00090206)
+	inputDelays.analog80 = 0x1c;	/* 0x00102603's 0x00090009 and 0x00102403's 0x00090204 start channel 8 */
 #else
 	inputDelays.latchOn = 0x1c;
 #endif
@@ -920,7 +926,7 @@ void inputResumeOpen(void)
 	return;
 }
 
-#if !FW_SINCE(0x00090804)
+#if !FW_SINCE(0x00090502)
 /* 0x00090206: no wake from INTP10 at power-off; the multi-connector off */
 void inputPowerOff(void)
 {
@@ -977,6 +983,7 @@ void inputPowerOff(void)
 #else
 void inputPowerOff(void)
 {
+#if FW_SINCE(0x00090804)	/* 0x00090502: no wake from INTP10 at power-off */
 	unsigned long flags;
 
 	flags = stateGetWakeMask();
@@ -988,6 +995,7 @@ void inputPowerOff(void)
 			inputScanHold(0x1a);
 		}
 	}
+#endif
 #if SOURCE_0104
 	touchClose(0);
 #else
@@ -1047,10 +1055,10 @@ void inputStateOff(void)
 	intp7Enable(0);
 	intp4Enable(0);
 	intp3Enable(0);
-#if !FW_SINCE(0x00090804)
+#if !FW_SINCE(0x00090502)
 	/* 0x00090206: INTP10 off, no cold-start hold */
 	intp10Enable(0);
-#if !FW_SINCE(0x00090009) && BOARD_OFF_WAKE
+#if !FW_SINCE(0x00090006) && BOARD_OFF_WAKE
 	/* 0x00080504: INTP1 on too, and scan mode 2 whatever P4.6 */
 	intp1Enable(1);
 	intp13Enable(1);
@@ -1058,7 +1066,9 @@ void inputStateOff(void)
 	inputScanMode2(1);
 #elif BOARD_OFF_WAKE
 	intp13Enable(1);
+#if BOARD_INTP11	/* not PCH-1000's 0x00090007 */
 	intp11Enable(1);
+#endif
 	if (!P4.6)
 		inputScanMode1(1);
 	else {
@@ -1069,6 +1079,9 @@ void inputStateOff(void)
 	inputScanMode1(1);
 #endif
 #elif BOARD_OFF_WAKE
+#if !FW_SINCE(0x00090804)
+	intp10Enable(0);	/* 0x00090502's INTP10 is still off here */
+#endif
 	intp13Enable(1);
 	intp1Enable(1);
 #if BOARD_INTP11
@@ -1081,7 +1094,7 @@ void inputStateOff(void)
 #else
 	inputScanMode1(1);
 #endif
-#if FW_SINCE(0x00090804)
+#if FW_SINCE(0x00090502)
 	coldStart = 0;
 #endif
 }
@@ -1104,7 +1117,7 @@ void inputShutdown(void)
 #else
 	adcCloseForBoard();
 	inputKeysClose();
-#if !FW_SINCE(0x00090804)
+#if !FW_SINCE(0x00090502)
 	boardMultiCnOutputOff();	/* 0x00090206 turns the multi-connector off here */
 #endif
 #endif
@@ -1113,7 +1126,7 @@ void inputShutdown(void)
 void inputStateShutdown(void)
 {
 	levelMonitor1Start();
-#if FW_SINCE(0x00090804)	/* 0x00090206 has no mark */
+#if FW_SINCE(0x00090502)	/* 0x00090206 has no mark */
 	inputShutdownMark();
 #endif
 	timerStop(INPUT_SCAN_TIMER);
@@ -1137,7 +1150,7 @@ void inputCut(void)
 #else
 	adcCloseForBoard();
 	inputKeysClose();
-#if !FW_SINCE(0x00090804)
+#if !FW_SINCE(0x00090502)
 	boardMultiCnOutputOff();	/* 0x00090206 turns the multi-connector off here */
 #endif
 #endif
@@ -1186,7 +1199,7 @@ void inputSuspend(void)
 	if ((flags & 0x40000000) == 0)
 		intp8Enable(1);
 #endif
-#elif !FW_SINCE(0x00090804)
+#elif !FW_SINCE(0x00090502)
 	/* 0x00090206 turns a pin's interrupt on only while the pin is high: a low pin is
 	   monitored at once, and its interrupt turns itself off at the edge */
 	if ((flags & 0x00000004) == 0) {
@@ -1232,7 +1245,7 @@ void inputSuspend(void)
 			inputScanHold(0x1a);
 		}
 	}
-#if BOARD_PIN3_102603
+#if BOARD_PIN3_102603 || !FW_SINCE(0x00090804)
 	if ((flags & 0x00000020) == 0) {
 		intp4Enable(1);
 		if (!P3.1) {
@@ -1311,7 +1324,7 @@ void inputStateSuspend(void)
 #if BOARD_OFF_WAKE
 	intp1Enable(1);
 	intp13Enable(1);
-#if BOARD_INTP11 && !FW_SINCE(0x00090206)
+#if BOARD_INTP11 && !FW_SINCE(0x00090203)
 	intp11Enable(1);
 #endif
 	inputScanMode2(1);
@@ -1437,7 +1450,7 @@ void inputProcess(void)
 	events = inputKeys.events;
 	switch (stateGet() & 0x7fff) {
 	case 0x0020:
-#if !FW_SINCE(0x00090009)	/* 0x00080504 reads the panels' identity here */
+#if !FW_SINCE(0x00090006)	/* 0x00080504 reads the panels' identity here */
 		if (events & 0x0100)
 			touchIdentify0();
 		if (events & 0x0200)
@@ -1529,7 +1542,9 @@ void sampleInputs3(void)
 	inputRaw3.1 = P7.2;
 #elif BOARD_INPUT3_PINS
 	inputRaw3.0 = P7.3;
+#if BOARD_INPUT3_LINK
 	inputRaw3.1 = P7.7;
+#endif
 #endif
 #if BOARD_INPUT3_PORT2
 	inputRaw3.2 = P2.3;
@@ -1689,7 +1704,7 @@ void pinMonitorPoll(void)
 				}
 			} else {
 				pinMonitor2Enable(0);
-#if !FW_SINCE(0x00090804)
+#if !FW_SINCE(0x00090502)
 				intp7Enable(1);
 #endif
 			}
@@ -1706,7 +1721,7 @@ void pinMonitorPoll(void)
 				}
 			} else {
 				pinMonitor3Enable(0);
-#if !FW_SINCE(0x00090804)
+#if !FW_SINCE(0x00090502)
 				intp4Enable(1);
 #endif
 			}
@@ -1735,7 +1750,7 @@ void pinMonitorPoll(void)
 				}
 			} else {
 				pinMonitor4Enable(0);
-#if !FW_SINCE(0x00090804)
+#if !FW_SINCE(0x00090502)
 				intp3Enable(1);
 #endif
 			}
@@ -1750,13 +1765,13 @@ void pinMonitorPoll(void)
 				}
 			} else {
 				pinMonitor5Enable(0);
-#if !FW_SINCE(0x00090804)
+#if !FW_SINCE(0x00090502)
 				intp10Enable(1);
 #endif
 			}
 			pinMonitors.pin[5].last = level;
 		}
-#if !BOARD_INPUTS_102603 && FW_SINCE(0x00090804)
+#if !BOARD_INPUTS_102603 && FW_SINCE(0x00090502)
 		if (pinMonitors.mask & 0x40) {
 			level = P7.4;
 			if (pinMonitors.pin[6].last == level) {
@@ -1808,7 +1823,7 @@ unsigned char input1Bit5Active(void)
 #endif
 }
 
-#if FW_SINCE(0x00090009)
+#if FW_SINCE(0x00090006)
 unsigned char input1Bit0Active(void)
 {
 	return !inputState1.0;
@@ -1951,7 +1966,7 @@ void pinMonitor1Enable(unsigned char enable)
 /* pin monitor 1's handler (P4.6 held): its presses counted with the key read at the second */
 #if !FW_SINCE(0x01000107)
 /* before 0x01000107 the system state is checked first, and pressAnyState does not exist */
-#if !FW_SINCE(0x00090206)
+#if !FW_SINCE(0x00090203)
 /* 0x00090009: no press times in the parameters; key 1 held for the sixth tick is a press */
 void button2Held(void)
 {
@@ -2328,7 +2343,7 @@ unsigned char button1Keys(void)
 }
 
 /* pin monitor 0's handler (P11.5 held) */
-#if !FW_SINCE(0x00090206)
+#if !FW_SINCE(0x00090203)
 /* 0x00090009: no press times in the parameters; held to the sixth tick, both buttons a press
    (0x0b), button 1 alone 0x13 (not in state 0x0020), and to the 0x14th both keys 2 a press of
    button 2 too (0x31, with the keys closed); other keys 0x13 at once */
@@ -2680,7 +2695,7 @@ void intp8Enable(unsigned char enable)
 		PMK8 = 1;
 		PIF8 = 0;
 	}
-#if !BOARD_INPUTS_102603 && FW_SINCE(0x00090804)	/* 0x00090206 never enables it */
+#if !BOARD_INPUTS_102603 && FW_SINCE(0x00090502)	/* 0x00090206 never enables it */
 	else {
 		EGP1.0 = 1;
 		EGN1.0 = 0;
@@ -2701,7 +2716,7 @@ void pinMonitor6Enable(unsigned char enable)
 	if (enable == 0) {
 		pinMonitors.mask &= ~0x40;
 	}
-#if !BOARD_INPUTS_102603 && FW_SINCE(0x00090804)	/* 0x00090206 never enables it */
+#if !BOARD_INPUTS_102603 && FW_SINCE(0x00090502)	/* 0x00090206 never enables it */
 	else {
 #if FW_SINCE(0x0100060B)
 		pinMonitors.pin[6].last = 1;
@@ -2716,7 +2731,7 @@ void pinMonitor6Enable(unsigned char enable)
 
 void pinMonitor6Expired(void)
 {
-#if FW_SINCE(0x00090804)	/* 0x00090206's does nothing */
+#if FW_SINCE(0x00090502)	/* 0x00090206's does nothing */
 	task6SetFlag(6, 0x0200);
 #endif
 }
@@ -2750,7 +2765,7 @@ void inputMultiCnChanged(void)
 		sleepFactorSet5(0);
 		analogMultiCnInit();
 	}
-#if FW_SINCE(0x00090804)	/* 0x00090206 wakes no task */
+#if FW_SINCE(0x00090502)	/* 0x00090206 wakes no task */
 	INPUT_SET_FLAG(2, 0x0100);
 #endif
 #if INPUT_MEASURE	/* the slim's 0x0105 calls the setter and returns */
@@ -2758,7 +2773,7 @@ void inputMultiCnChanged(void)
 #endif
 }
 
-#if FW_SINCE(0x00090009)
+#if FW_SINCE(0x00090006)
 void input1Bit0Changed(void)
 {
 #if !BOARD_INPUTS_102603 && !SOURCE_0103
@@ -2768,7 +2783,7 @@ void input1Bit0Changed(void)
 		powerDeviceSetPending(2);
 		sleepFactorSet15(0);
 	}
-#if FW_SINCE(0x00090804)
+#if FW_SINCE(0x00090502)
 	INPUT_SET_FLAG(2, 0x0100);
 #endif
 #endif
@@ -2921,7 +2936,7 @@ void inputScanRtcTimer(void)
 	task3ISetFlag(0x0008);
 	timerStart(INPUT_SCAN_RTC_TIMER, 0);
 }
-#elif !FW_SINCE(0x00090009)
+#elif !FW_SINCE(0x00090006)
 /* 0x00080504: the delays first, and the touch panels' two report events 0x0100 and 0x0200
    (inputProcess identifies the panels on them) */
 void inputScanTimer(void)
@@ -2929,7 +2944,7 @@ void inputScanTimer(void)
 	unsigned char toggled;
 
 	inputKeys.events = 0;
-#if HW_IS(0x00102603)	/* 0x00102603's 0x00080502: channel 8 started after inputResumeOpen's delay */
+#if HW_102603	/* 0x00102603's 0x00080502: channel 8 started after inputResumeOpen's delay */
 	if (inputDelays.analog80 != 0) {
 		if (--inputDelays.analog80 == 0)
 			analogStart80();
@@ -3038,7 +3053,7 @@ void levelMonitor1Poll(void)
 #if SOURCE_0103
 				inputLogTransition(0x61);
 #endif
-#if !FW_SINCE(0x00090804)
+#if !FW_SINCE(0x00090502)
 				levelMonitor1.enable = 0;
 #endif
 			}
@@ -3064,7 +3079,7 @@ void levelMonitor2Poll(void)
 #if SOURCE_0103
 				inputLogTransition(0x42);
 #endif
-#if !FW_SINCE(0x00090804)
+#if !FW_SINCE(0x00090502)
 				levelMonitor2.enable = 0;
 #endif
 			}
@@ -3074,7 +3089,7 @@ void levelMonitor2Poll(void)
 }
 
 /* the RTC's interrupt (state 0x0010), after a shutdown is marked: P14.5 (IRS-1001: P7.5) as input 1's bit 7 */
-#if FW_SINCE(0x00090804)
+#if FW_SINCE(0x00090502)
 void input1Bit7Poll(void)
 {
 #if BOARD_INPUT1_BIT7_POLL && !BOARD_DOL1001
@@ -3120,7 +3135,7 @@ void input1Bit3Changed(void)
 		analogLatchInit();
 	}
 #endif
-#if FW_SINCE(0x00090804)	/* 0x00090206 wakes no task */
+#if FW_SINCE(0x00090502)	/* 0x00090206 wakes no task */
 	INPUT_SET_FLAG(2, 0x0100);
 #endif
 #if INPUT_MEASURE	/* the slim's 0x0105 calls the setter and returns */
@@ -3159,7 +3174,7 @@ void levelMonitor2Start(void)
 	levelMonitor2.enable = 1;
 }
 
-#if FW_SINCE(0x00090804)	/* 0x00090206 marks no shutdown */
+#if FW_SINCE(0x00090502)	/* 0x00090206 marks no shutdown */
 void inputShutdownMark(void)
 {
 	inputShutdownMarked = 1;
@@ -3198,7 +3213,7 @@ void inputScanMode2(unsigned int interval)
 	return;
 }
 
-#if FW_SINCE(0x00090804)	/* 0x00090206 has no input 1 bit 7 */
+#if FW_SINCE(0x00090502)	/* 0x00090206 has no input 1 bit 7 */
 void input1Bit7Changed(void)
 {
 	INPUT_SET_FLAG(2, 0x0100);

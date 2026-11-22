@@ -49,8 +49,8 @@ int hangDetected(void)
 }
 #endif
 
-#if !FW_SINCE(0x0100060B) && (FW_SINCE(0x00090804) || BOARD_STANDBY_STOP)
-/* neither is in 0x0100060B, nor in 0x00090206 without the standby stop */
+#if !FW_SINCE(0x0100060B) && (FW_SINCE(0x00090804) || (BOARD_STANDBY_STOP && !FW_SINCE(0x00090502)))
+/* neither is in 0x0100060B or 0x00090502, nor in 0x00090206 without the standby stop */
 int hangStarted(void)
 {
 	return hangCount == 1;

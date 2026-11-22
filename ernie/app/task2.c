@@ -139,7 +139,7 @@ void task2MultiCnEvent(FLGPTN ptn)
 				case 1:
 					break;
 				}
-#if FW_SINCE(0x00090804)
+#if FW_SINCE(0x00090502)
 			} else if (boardMultiCnIsDebug()) {
 				serialClose1();
 				serialOpen3(3);
@@ -260,12 +260,12 @@ unsigned char task2On(void)
 unsigned char task2On(void)
 {
 	unsigned char ret;
-#if !FW_SINCE(0x00090206)
+#if !FW_SINCE(0x00090203)
 	unsigned char config;
 #endif
 
 	ret = 0;
-#if !FW_SINCE(0x00090206)
+#if !FW_SINCE(0x00090203)
 	/* 0x00090009 opens the settings here; its result is tested and nothing done (an empty
 	   statement, as a print left out of the build) */
 	config = configInit();
@@ -286,7 +286,7 @@ unsigned char task2On(void)
 		task2SetFlag(3, 0x0040);
 #endif
 	serial1Reset();
-#if FW_SINCE(0x00090804)
+#if FW_SINCE(0x00090502)
 	boardMultiCnOutputOff();
 #endif
 #if HOST_WATCHDOG
@@ -316,7 +316,7 @@ unsigned char task2Off(void)
 	serial4StartTimers();
 #if SOURCE_0103
 	boardMultiCnUpdate();
-#elif FW_SINCE(0x00090804)
+#elif FW_SINCE(0x00090502)
 	if (boardMultiCnIsDongle() || boardMultiCnIsDebug())
 		boardSetMultiCnOutput(0);
 	else
@@ -398,7 +398,7 @@ unsigned char task2Suspend(void)
 	serialAuthInit();
 #if SOURCE_0103
 	boardMultiCnUpdate();
-#elif FW_SINCE(0x00090804)
+#elif FW_SINCE(0x00090502)
 	if (boardMultiCnIsDongle() || boardMultiCnIsDebug())
 		boardSetMultiCnOutput(0);
 	else
@@ -421,7 +421,7 @@ unsigned char task2Shutdown(void)
 	boardMultiCnOutputOff();
 #else
 	serial4Close2();
-#if FW_SINCE(0x00090804)
+#if FW_SINCE(0x00090502)
 	boardMultiCnStop();
 #else
 	boardSetMultiCnOutput(0);
@@ -444,7 +444,7 @@ unsigned char task2Cut(void)
 	boardMultiCnOutputOff();
 #else
 	serial4Close2();
-#if FW_SINCE(0x00090804)
+#if FW_SINCE(0x00090502)
 	boardMultiCnStop();
 #else
 	boardSetMultiCnOutput(0);
@@ -533,7 +533,7 @@ unsigned char task2Tick(void)
 	if (state != 0x0010 && (clock & 3) == 3)
 		nvsJobService();
 #endif
-#if FW_SINCE(0x00090804)
+#if FW_SINCE(0x00090502)
 	logUpdate();
 #endif
 	if (state != 0x0004 && state != 0x0008)

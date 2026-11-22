@@ -36,7 +36,7 @@ _rtos_task_table:
 	DW	LOWW(_task2), 8801H
 	DW	LOWW(_task3), 8401H
 	DW	LOWW(_hostTask), 8401H
-$_IF (ERNIE_FW>=0x00090804)
+$_IF (ERNIE_FW>=0x00090502)
 	DW	LOWW(_task5), 8C02H
 	DW	LOWW(_task6), 8C02H
 $ELSE

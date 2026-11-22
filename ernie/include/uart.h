@@ -48,7 +48,7 @@ extern unsigned char uartReceived(unsigned char port);
 extern int uartFlush(unsigned char port);
 extern unsigned char uartSetTimeout(unsigned char port, struct UartTimeout *timeout);
 extern int uart2Open(void);
-#if FW_SINCE(0x00090804)
+#if FW_SINCE(0x00090502)
 extern int uart2Close(unsigned char keep);
 #else
 extern int uart2Close(void);

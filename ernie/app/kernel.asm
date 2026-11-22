@@ -126,7 +126,7 @@ kResult		EQU	0FFE78H
 kTemp		EQU	0FFE7AH
 kTimeout	EQU	0FFE7CH
 $ELSE
-$_IF (ERNIE_FW<0x00090206)	; (no charge LED blink bytes)
+$_IF (ERNIE_FW<0x00090203)	; (no charge LED blink bytes)
 kResult		EQU	0FFE6EH		; a service's result, or an index it keeps
 kTemp		EQU	0FFE70H
 kTimeout	EQU	0FFE72H		; a service's timeout, 32 bits

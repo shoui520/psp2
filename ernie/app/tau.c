@@ -56,8 +56,10 @@ void tau1PowerOn(void)
 		TAU1EN = 1;
 #if CHIP_RL78
 		TPS1 = 0xf0;	/* the RL78's 16-bit register */
-#else
+#elif FW_SINCE(0x00090203)
 		TPS1L = 0xf0;
+#else
+		TPS1L = 0x80;	/* before 0x00090203: CK01 at fCLK/2^8 */
 #endif
 	}
 }

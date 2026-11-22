@@ -64,7 +64,7 @@ void serialRequestReset(void)
 	return;
 }
 
-#if !FW_SINCE(0x00090009)
+#if !FW_SINCE(0x00090006)
 /* 0x00080504: the status and the length go into the request, and hostRequestAnswerReady sends them */
 void serialRequestNotify(void)
 {

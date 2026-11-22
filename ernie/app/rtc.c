@@ -187,7 +187,7 @@ void rtcInterrupt(void)
 	if (state != 0x0010 && (rtcClockLow & 0x0003) == 0)
 		task2ISetFlag(0x0040);
 #endif
-#if FW_SINCE(0x00090804)
+#if FW_SINCE(0x00090502)
 	if (state == 0x0010) {
 		levelMonitor1Poll();
 		input1Bit7Poll();

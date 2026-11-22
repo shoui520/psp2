@@ -4,6 +4,8 @@
  * task 2, at event flag 3's bit 0x4000. The slim's also take 0x1390-0x1394 on the backup
  * store's regions (app/bstore.c), and command 0x1310 answers their number.
  */
+#include <string.h>
+
 #include "board.h"
 #include "bstore.h"
 #include "config.h"
@@ -32,8 +34,11 @@ unsigned char configRequestAnswer[0x20];
 #if SOURCE_0103
 #elif FW_SINCE(0x01000104)
 unsigned char configRequestData[3 + 0x40];	/* the offset, the size, the data or records */
-#elif FW_SINCE(0x00090804)
+#elif FW_SINCE(0x00090502)
 unsigned char configRequestData[0x40];
+#if !FW_SINCE(0x00090804)
+static struct ConfigRecords configRecords;	/* 0x00090502's, given over 64 bytes at a time */
+#endif
 #else
 unsigned char configRequestData[0x20];
 #endif
@@ -47,6 +52,9 @@ void configRequestInit(void)
 	configRequest.size = sizeof(configRequestData);
 	configRequest.notify = configRequestNotify;
 	configRequest.state = HOST_REQUEST_RECEIVE;
+#if FW_SINCE(0x00090502) && !FW_SINCE(0x00090804)
+	memset(&configRecords, 0, sizeof(configRecords));
+#endif
 }
 
 /* 0x1300: the settings' versions (struct ConfigVersions) */
@@ -77,7 +85,7 @@ void configRequestEvent(FLGPTN ptn)
 	unsigned char result;
 	union ConfigRequestOffset offset;
 	unsigned char size;
-#if FW_SINCE(0x00090804)
+#if FW_SINCE(0x00090502)
 	unsigned char length;
 #endif
 
@@ -121,6 +129,9 @@ void configRequestEvent(FLGPTN ptn)
 				}
 				break;
 			case 0x1382:
+#if FW_SINCE(0x00090502) && !FW_SINCE(0x00090804)
+				configRecords.count = 0;
+#endif
 				result = configOpen();
 				hostRequestAnswer(&configRequest, HOST_REQUEST_ANSWER, result, 0);
 				break;
@@ -129,10 +140,22 @@ void configRequestEvent(FLGPTN ptn)
 				hostRequestAnswer(&configRequest, HOST_REQUEST_ANSWER, result, 0);
 				break;
 			case 0x1384:
+#if FW_SINCE(0x00090502) && !FW_SINCE(0x00090804)
+				/* what is left of the records first */
+				result = 0;
+				if (configRecords.count != 0) {
+					result = configApplyRecords(configRecords.buffer,
+								    configRecords.count);
+					configRecords.count = 0;
+				}
+				if (result == 0)
+					result = configCommit();
+#else
 				result = configCommit();
+#endif
 				hostRequestAnswer(&configRequest, HOST_REQUEST_ANSWER, result, 0);
 				break;
-#if FW_SINCE(0x00090804)	/* 0x00090206 takes no records from the host */
+#if FW_SINCE(0x00090804)
 			case 0x1385:		/* records */
 				/* a short command is answered, and still run */
 				if (configRequest.length < 4)
@@ -158,6 +181,50 @@ void configRequestEvent(FLGPTN ptn)
 								    &configRequestData[3], 1);
 				else
 					result = 0x3c;
+				hostRequestAnswer(&configRequest, HOST_REQUEST_ANSWER, result, 0);
+				break;
+#elif FW_SINCE(0x00090502)
+			case 0x1385:		/* records for the open copy */
+				if (configRequest.length < 4)
+					hostRequestAnswer(&configRequest, HOST_REQUEST_ANSWER, 0x3b, 0);
+				result = 0;
+				length = configRequestData[2];
+				if (configRequest.length - 3 != length)
+					result = 0x3c;
+				/* each chunk from the command's first byte of records */
+				while (length != 0 && result == 0) {
+					size = SHA1BlockSize - configRecords.count > length ?
+						length : SHA1BlockSize - configRecords.count;
+					memcpy(&configRecords.buffer[configRecords.count],
+					       &configRequestData[3], size);
+					configRecords.count += size;
+					if (configRecords.count == SHA1BlockSize) {
+						result = configApplyRecords(configRecords.buffer,
+									    configRecords.count);
+						configRecords.count = 0;
+					}
+					length -= size;
+				}
+				hostRequestAnswer(&configRequest, HOST_REQUEST_ANSWER, result, 0);
+				break;
+			case 0x1386:		/* records compared with the bank used; no short check */
+				result = 0;
+				length = configRequestData[2];
+				if (configRequest.length - 3 != length)
+					result = 0x3c;
+				while (length != 0 && result == 0) {
+					size = SHA1BlockSize - configRecords.count > length ?
+						length : SHA1BlockSize - configRecords.count;
+					memcpy(&configRecords.buffer[configRecords.count],
+					       &configRequestData[3], size);
+					configRecords.count += size;
+					if (configRecords.count == SHA1BlockSize) {
+						result = configCompareRecords(configRecords.buffer,
+									      configRecords.count);
+						configRecords.count = 0;
+					}
+					length -= size;
+				}
 				hostRequestAnswer(&configRequest, HOST_REQUEST_ANSWER, result, 0);
 				break;
 #else

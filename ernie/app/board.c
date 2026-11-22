@@ -9,7 +9,7 @@
 #include "board.h"
 #ifdef ERNIE_UPDATER
 #include "../updater/updater.h"
-#elif BOARD_102603 && !FW_SINCE(0x00090804)
+#elif BOARD_102603 && !FW_SINCE(0x00090502)
 extern unsigned char input1Bit5Active(void);
 #endif
 
@@ -71,7 +71,7 @@ unsigned char boardGetMultiCnOutput(void)
 /* bit 0 to P13.0, bit 1 to P2.2; 1 for an output above 4 (above 3 in 0x00090206) */
 unsigned char boardSetMultiCnOutput(unsigned char output)
 {
-#if FW_SINCE(0x00090804)
+#if FW_SINCE(0x00090502)
 	if (output >= 5)
 #else
 	if (output >= 4)
@@ -88,7 +88,7 @@ unsigned char boardMultiCnStop(void)
 	P2.2 = 0;
 	return 0;
 }
-#elif !FW_SINCE(0x00090804)
+#elif !FW_SINCE(0x00090502)
 /* 0x00090206: the switch is P13.0 alone, the dongle on (1) or off (0) */
 unsigned char boardMultiCnOutputOff(void)
 {
@@ -205,7 +205,7 @@ unsigned char boardMultiCnStop(void)
 
 #if SOURCE_0103
 /* the slim's in multicn.c */
-#elif defined(ERNIE_UPDATER) || (HW_IS(0x00102603) && !FW_SINCE(0x00090804))
+#elif defined(ERNIE_UPDATER) || (HW_102603 && !FW_SINCE(0x00090502))
 /* the updater's (and 0x00102603's 0x00090206): something on the multi-connector, as its
    inputs report it */
 unsigned char boardMultiCnIsDongle(void)
@@ -220,7 +220,7 @@ unsigned char boardMultiCnIsDongle(void)
 }
 #endif
 
-#if FW_SINCE(0x00090804) && !SOURCE_0103	/* 0x00090206 has no debug board */
+#if FW_SINCE(0x00090502) && !SOURCE_0103	/* 0x00090206 has no debug board */
 /* a debug board on the multi-connector (UART3 in its debug mode): never on this board */
 unsigned char boardMultiCnIsDebug(void)
 {
@@ -230,10 +230,10 @@ unsigned char boardMultiCnIsDebug(void)
 
 #ifndef ERNIE_UPDATER
 #if !FW_SINCE(0x00090804)
-/* 0x00090206's hdwinit sets the ports through this */
+/* 0x00090206's and 0x00090502's hdwinit sets the ports through this */
 void boardInit(void)
 {
-#if HW_IS(0x00102603) && !FW_SINCE(0x00090206)
+#if HW_102603 && !FW_SINCE(0x00090203)
 	boardPortInit102603();	/* 0x00090009 */
 #else
 	boardPortInit();
@@ -241,7 +241,7 @@ void boardInit(void)
 }
 
 #endif
-#if !FW_SINCE(0x00090206)
+#if !FW_SINCE(0x00090203)
 /* 0x00090009 keeps the ports of three other boards, which nothing calls */
 /* an early board's ports, with the A/D pins (ADPC 9) */
 void boardPortInitA(void)
@@ -419,7 +419,7 @@ void boardPortInit(void)
 	PM12 = BOARD_PM12;
 	P13 = 0x00;
 	PM13 = 0xfc;
-#if FW_SINCE(0x00090804) || !BOARD_IS(0x00411000) || BOARD_PORTS_315200
+#if FW_SINCE(0x00090502) || !BOARD_IS(0x00411000) || BOARD_PORTS_315200
 	P14 = 0x00;
 #else
 	/* 0x00411000's 0x00090206 (not 0x00315200's): P14.3 an open-drain output, high */

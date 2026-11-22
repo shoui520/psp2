@@ -196,7 +196,7 @@ void uartStopTx(unsigned char port)
 	} else if (port < 4) {
 		mask = 1 << (port - 2) * 2;
 		ST1L = 0x0f & mask;
-#if FW_SINCE(0x00090804)
+#if FW_SINCE(0x00090502)
 		SOE1L &= ~mask;
 #else
 		SOE1L |= ~mask;		/* sets the other outputs: fixed by 0x00090804 */
@@ -464,8 +464,10 @@ int uart2Open(void)
 	STMK2 = 0;
 	SRMK2 = 0;
 	SREMK2 = 0;
-#if HW_IS(0x00102603) && !FW_SINCE(0x00090206)
-	uart2.flags = UART_OPEN;	/* 0x00102603's 0x00090009 drops the closed flag */
+#if ((HW_102603 || ERNIE_BOARD == 0x00406000) && !FW_SINCE(0x00090206)) || \
+    (FW_SINCE(0x00090502) && !FW_SINCE(0x00090804))
+	uart2.flags = UART_OPEN;	/* 0x00102603's 0x00090009, 0x00102403's 0x00090204, PCH-1000's
+					   0x00090007 and 0x00090502 drop the closed flag */
 #else
 	uart2.flags |= UART_OPEN;
 #endif
@@ -473,7 +475,7 @@ int uart2Open(void)
 #endif
 }
 
-#if !FW_SINCE(0x00090804)
+#if !FW_SINCE(0x00090502)
 /* closes UART2 and its pins; SAU1 is enabled (not disabled) when channel 2's output is off */
 int uart2Close(void)
 {
@@ -483,8 +485,8 @@ int uart2Close(void)
 		uartStopRx(2);
 		SS1L.0 = 0;
 		SS1L.1 = 0;
-#if HW_IS(0x00102603) && !FW_SINCE(0x00090206)
-		P14.3 = 1;	/* 0x00102603's 0x00090009: P14.3 an output, high */
+#if HW_102603 && !FW_SINCE(0x00090206)
+		P14.3 = 1;	/* 0x00102603's 0x00090009 and 0x00102403's 0x00090204: P14.3 an output, high */
 		PM14.3 = 0;
 #endif
 		P14.4 = 0;
@@ -519,8 +521,10 @@ int uart2Close(unsigned char keep)
 			P14.4 = 1;
 			PM36 = 1;
 		} else {
-			P14.3 = 0;
+#if FW_SINCE(0x00090804)
+			P14.3 = 0;	/* not in 0x00090502 */
 			PM14.3 = 0;
+#endif
 			P14.4 = 0;
 			P36 = 0;
 			PM36 = 0;

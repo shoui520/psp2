@@ -46,7 +46,7 @@ const unsigned char handshakeIv[16] = {
 #include "handshakekeys.h"
 #endif
 
-#if !FW_SINCE(0x00090009)
+#if !FW_SINCE(0x00090006)
 /* 0x00080504: the IV before the header, and each mode's two keys kept expanded (AES-128's 11
    round keys; the first four words are the keys of the later builds) */
 const unsigned char serialIv[16] = {
@@ -155,7 +155,7 @@ const unsigned char serialKey1Second[16] = {
 
 #endif
 
-#if FW_SINCE(0x00090804)	/* 0x00090206 has no mode 0x0e */
+#if FW_SINCE(0x00090502)	/* 0x00090206 has no mode 0x0e */
 const unsigned char serialKey2Check[16] = {
 	0xad, 0x2f, 0x32, 0x2f, 0x42, 0x56, 0xc4, 0x9d, 0x18, 0x48, 0x81, 0x8f, 0x0f, 0xdd, 0x81, 0xbe
 };

@@ -135,18 +135,18 @@ struct Charge {
 	unsigned int	batteryRemainCap;
 	unsigned int	batteryVolt;
 	unsigned int	batteryTemp;
-#if defined(ERNIE_UPDATER) || FW_SINCE(0x00090206)	/* 0x00090009 has no BIC temperature */
+#if defined(ERNIE_UPDATER) || FW_SINCE(0x00090203)	/* 0x00090009 has no BIC temperature */
 	unsigned int	batteryBicTemp;
 #endif
-#if defined(ERNIE_UPDATER) || FW_SINCE(0x00090009)	/* 0x00080504 has none */
+#if defined(ERNIE_UPDATER) || FW_SINCE(0x00090006)	/* 0x00080504 has none */
 	unsigned int	batteryLifePercent;
 #endif
 	unsigned int	batteryTempC;
-#if defined(ERNIE_UPDATER) || FW_SINCE(0x00090206)
+#if defined(ERNIE_UPDATER) || FW_SINCE(0x00090203)
 	unsigned int	batteryBicTempC;
 #endif
 	unsigned int	acDelay;		/* timer 0x18's, the update's period */
-#if defined(ERNIE_UPDATER) || FW_SINCE(0x00090009)	/* 0x00080504: chargeTempTicks and
+#if defined(ERNIE_UPDATER) || FW_SINCE(0x00090006)	/* 0x00080504: chargeTempTicks and
 							   chargeCheckTicks */
 	unsigned int	tempTicks;		/* not used by the updater */
 	unsigned int	checkTicks;		/* 0x00090804's: the RTC's ticks at the update */
@@ -231,10 +231,10 @@ union PowerStatus {
 };
 
 
-#if FW_SINCE(0x00090206) && !FW_SINCE(0x01000104)
+#if FW_SINCE(0x00090203) && !FW_SINCE(0x01000104)
 extern __sreg unsigned char chargeLedBlinking;	/* the charge LED's blink runs (chargeLedSetBlink) */
 extern __sreg unsigned char chargeLedBlinkOn;	/* and is lit */
-#elif !FW_SINCE(0x00090206)
+#elif !FW_SINCE(0x00090203)
 extern unsigned char chargeLedBlinkOn;		/* 0x00090009's, task 5's: cleared, never read */
 #endif
 extern __sreg union CookieStatus1 cookieStatus1;

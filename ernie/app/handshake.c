@@ -557,7 +557,7 @@ static int handshakeUnlock11(void)
 
 static int handshakeLockHandler11(void)
 {
-#if FW_SINCE(0x00090804) && !defined(ERNIE_UPDATER)
+#if FW_SINCE(0x00090502) && !defined(ERNIE_UPDATER)
 	logEvent(0x16);
 #endif
 	return 0;
