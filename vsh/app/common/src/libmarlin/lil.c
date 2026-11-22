@@ -4,6 +4,7 @@
  * where a handle is the index of its object's slot; the cache's secret and
  * its HMAC (0x81069968-0x8106A15C). The file's name is ours.
  */
+#include <libhmac.h>
 #include "mln_internal.h"
 
 #define MLN_LIL_VERSION		1
@@ -386,13 +387,13 @@ int MlnImpl_8106A0AC(int algorithm, const MlnBuffer *key, const MlnBuffer *messa
 		digest = MlnBufferCreate(MLN_HEAP_GENERAL, MLN_SHA1_DIGEST_SIZE, NULL);
 		if (digest == NULL)
 			return 2;
-		MlnImpl_8107FB58(key->data, key->size, message->data, message->size,
+		sceHmacSha1Digest(key->data, key->size, message->data, message->size,
 				 digest->data);
 	} else if (algorithm == MLN_HMAC_SHA256) {
 		digest = MlnBufferCreate(MLN_HEAP_GENERAL, MLN_SHA256_DIGEST_SIZE, NULL);
 		if (digest == NULL)
 			return 2;
-		MlnImpl_8107FBAC(key->data, key->size, message->data, message->size,
+		sceHmacSha256Digest(key->data, key->size, message->data, message->size,
 				 digest->data);
 	} else {
 		return 3;

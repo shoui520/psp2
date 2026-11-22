@@ -1946,10 +1946,6 @@ MlnBuffer *MlnImpl_8106A08C(int heap);
 int MlnImpl_8106A0AC(int algorithm, const MlnBuffer *key, const MlnBuffer *message,
 		     MlnBuffer **out);
 int MlnImpl_8106A0A4(void);
-void MlnImpl_8107FB58(const unsigned char *key, unsigned int keySize,
-		      const unsigned char *message, unsigned int messageSize, unsigned char *out);
-void MlnImpl_8107FBAC(const unsigned char *key, unsigned int keySize,
-		      const unsigned char *message, unsigned int messageSize, unsigned char *out);
 unsigned int MlnImpl_81052EBC(unsigned int *seconds);
 int MlnImpl_81052944(const MlnDateTime *a, const MlnDateTime *b);
 int MlnImpl_810529E8(int value, int base, int size, char *buf);
@@ -1964,7 +1960,6 @@ int MlnImpl_81061964(int kind, const MlnOctopusKey *key, unsigned int size, cons
 int MlnImpl_8103EFDC(MlnXmlNode *node, MlnOctopusExtension **out);
 int MlnImpl_8103F62C(MlnXmlNodeList *list, MlnOctopusArray **out);
 int MlnImpl_81040368(MlnOctopusSignedBundle *signedBundle);
-int MlnImpl_81009B50(int heap, unsigned int size, const unsigned char *text, int *value);
 int MlnImpl_81080C80(void *key);
 
 int MlnImpl_8102A228(unsigned int error);
@@ -3082,10 +3077,6 @@ unsigned int MlnImpl_81054AC8(void *cipher, const void *in, unsigned int size, v
 unsigned int MlnImpl_81054EDC(const void *iv, const void *key, const void *in, unsigned int size,
 			      void *out, unsigned int *outSize);
 unsigned int MlnImpl_810550B0(const void *key, const void *in, void *out);
-int MlnImpl_81086D54(void *context, unsigned int keyBits, unsigned int blockBits,
-		     const void *key);
-void MlnImpl_81087358(void *context, const unsigned char *in, unsigned char *out);
-void MlnImpl_81087612(void *context, const unsigned char *in, unsigned char *out);
 unsigned int MlnImpl_81054C2C(void *cipher, const void *in, unsigned int size, void *out,
 			      unsigned int *outSize);
 unsigned int MlnImpl_81054F84(const void *iv, const void *key, const void *in, unsigned int size,
@@ -3640,10 +3631,10 @@ typedef struct MlnServiceConfig {
 	unsigned int reserved2;
 } MlnServiceConfig;
 
-int MlnImpl_81033D9C(unsigned int size, const void *xml, MlnServiceConfig **out);
-int MlnImpl_810341B8(MlnServiceConfig *config);
-int MlnImpl_81034224(MlnActionToken *token);
-int MlnImpl_810342E8(unsigned int size, const void *xml, MlnActionToken **out);
+int MlnServiceConfigParse(unsigned int size, const void *xml, MlnServiceConfig **out);
+int MlnServiceConfigFree(MlnServiceConfig *config);
+int MlnActionTokenFree(MlnActionToken *token);
+int MlnActionTokenParse(unsigned int size, const void *xml, MlnActionToken **out);
 int MlnImpl_810818F0(MlnXmlNode *node, MlnBuffer **id);
 
 /* a node of a DER (ASN.1) tree */
@@ -4058,11 +4049,6 @@ int MlnImpl_8101A360(MlnEngine *engine, MlnApiResult **out);
 int MlnImpl_8101A59C(MlnBuffer **out);
 int MlnEngineCreate(int kind, const MlnBuffer *token, const MlnBuffer *account,
 		    const MlnBuffer *secret, MlnServiceContext *context, MlnEngine **out);
-/* not written in C yet */
-int MlnActionTokenParse(unsigned int size, const void *xml, MlnActionToken **out);
-int MlnActionTokenFree(MlnActionToken *token);
-int MlnServiceConfigParse(unsigned int size, const void *xml, MlnServiceConfig **out);
-int MlnServiceConfigFree(MlnServiceConfig *config);
 int MlnImpl_81026438(const char *directory);
 int MlnImpl_810265E8(int heap, const char *directory, MlnFileList **files);
 int MlnImpl_810257DC(int heap, MlnFileList *files);

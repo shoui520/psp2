@@ -145,7 +145,26 @@ set(MLN_NEMO_SOURCES
 	nemosecurity.c
 	seashellvalue.c
 )
-psp2_module(${PSP2_TARGET} KIND user COMPILER gcc48 PARTIAL SOURCES
+# The SDK 3.10 libaes after them, Thumb like the SDK libraries above.
+set(MLN_AES_SOURCES
+	${mln_sdk}/aes/libaes.c
+	${mln_sdk}/aes/aes.S
+	${mln_sdk}/sha1/sha1.S
+	${mln_sdk}/sha256/sha256.S
+	${mln_sdk}/mt19937/mtrand.S
+)
+# Last, libgcc's 64-bit unsigned division (the helper of __aeabi_uldivmod and __udivdi3), in
+# Thumb: of GCC's bpabi.c only __gnu_uldivmod_helper.
+set(mln_gcc ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../contrib/gcc-4.8-2014.05)
+include(${mln_libgcc}/select.cmake)
+set(mln_bpabi_source "${CMAKE_CURRENT_BINARY_DIR}/bpabi-uldivmod.c")
+gcc48_select_tail("${mln_gcc}/libgcc/config/arm/bpabi.c" "${mln_bpabi_source}"
+	"long long\n__gnu_ldivmod_helper (" "unsigned long long\n__gnu_uldivmod_helper (")
+set(MLN_LIBGCC_TAIL_SOURCES
+	${mln_bpabi_source}
+	${mln_libgcc}/udiv64.c
+)
+psp2_module(${PSP2_TARGET} KIND user COMPILER gcc48 SOURCES
 	${MLN_ARM_SOURCES}
 	${MLN_ENGINE_SOURCES}
 	${MLN_RSA_SOURCES}
@@ -155,12 +174,18 @@ psp2_module(${PSP2_TARGET} KIND user COMPILER gcc48 PARTIAL SOURCES
 	${MLN_TAIL_SOURCES}
 	${MLN_VM_SOURCES}
 	${MLN_NEMO_SOURCES}
+	${MLN_AES_SOURCES}
+	${MLN_LIBGCC_TAIL_SOURCES}
 	${MLN_XML_SOURCES}
 	libmarlin.c
 )
 set_source_files_properties(${MLN_ARM_SOURCES} ${MLN_TAIL_SOURCES} PROPERTIES COMPILE_OPTIONS "-marm;-O2;-ftree-vectorize;-finline-functions;-fno-stack-protector")
 set_source_files_properties(${MLN_XML_SOURCES} ${MLN_ENGINE_SOURCES} ${MLN_VM_SOURCES} ${MLN_NEMO_SOURCES} PROPERTIES COMPILE_OPTIONS "-marm;-O2;-ftree-vectorize;-finline-functions;-fno-stack-protector;-fno-strict-aliasing")
-set_source_files_properties(${MLN_SDK_SOURCES} PROPERTIES COMPILE_OPTIONS "-fno-stack-protector")
+set_source_files_properties(${MLN_SDK_SOURCES} ${MLN_AES_SOURCES} PROPERTIES COMPILE_OPTIONS "-fno-stack-protector")
+set_source_files_properties(${MLN_LIBGCC_TAIL_SOURCES} PROPERTIES
+	COMPILE_OPTIONS "-fno-stack-protector;-fbuilding-libgcc"
+	COMPILE_DEFINITIONS "IN_LIBGCC2"
+	INCLUDE_DIRECTORIES "${CMAKE_CURRENT_SOURCE_DIR}/${mln_libgcc};${CMAKE_CURRENT_SOURCE_DIR}/${mln_libgcc}/target;${mln_gcc}/gcc;${mln_gcc}/gcc/ginclude;${mln_gcc}/libgcc;${mln_gcc}/include")
 set_source_files_properties(libc.c PROPERTIES COMPILE_OPTIONS "-ftree-vectorize")
 include(${mln_libgcc}/lib1funcs.cmake)
 gcc48_use_lib1funcs(${PSP2_TARGET})

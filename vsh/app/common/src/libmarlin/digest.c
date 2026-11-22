@@ -2,23 +2,15 @@
  * SHA-1, SHA-256 and a Mersenne Twister seeded from the RTC, over the library's crypto
  * routines (0x81057024-). The file's name is ours.
  */
+#include <libmt19937.h>
+#include <libsha1.h>
+#include <libsha256.h>
 #include <rtc.h>
 #include "mln_internal.h"
 
 #define MLN_SHA1_CONTEXT_SIZE	0x78
 #define MLN_SHA256_CONTEXT_SIZE	0x90
 #define MLN_RANDOM_CONTEXT_SIZE	0x9C4
-
-void MlnImpl_8107FE2C(void *context);
-void MlnImpl_8107FE80(void *context, const void *data, unsigned int size);
-void MlnImpl_8107FF70(void *context, unsigned char *digest);
-void MlnImpl_81080094(const void *data, unsigned int size, unsigned char *digest);
-void MlnImpl_81080118(void *context);
-void MlnImpl_81080190(void *context, const void *data, unsigned int size);
-void MlnImpl_81080280(void *context, unsigned char *digest);
-void MlnImpl_810803A8(const void *data, unsigned int size, unsigned char *digest);
-void MlnImpl_81080450(void *context, unsigned int seed);
-unsigned int MlnImpl_81087DF8(void *context);
 
 int MlnImpl_81057024(void **context)
 {
@@ -28,7 +20,7 @@ int MlnImpl_81057024(void **context)
 	sha = MlnAllocate(MLN_HEAP_GENERAL, MLN_SHA1_CONTEXT_SIZE);
 	if (sha == NULL)
 		goto fail;
-	MlnImpl_8107FE2C(sha);
+	sceSha1BlockInit(sha);
 	*context = sha;
 	return 0;
 fail:
@@ -40,20 +32,20 @@ fail:
 
 int MlnImpl_81057078(void *context, unsigned char *digest)
 {
-	MlnImpl_8107FF70(context, digest);
+	sceSha1BlockResult(context, digest);
 	MlnFree(MLN_HEAP_GENERAL, context);
 	return 0;
 }
 
 int MlnImpl_81057098(void *context, const void *data, unsigned int size)
 {
-	MlnImpl_8107FE80(context, data, size);
+	sceSha1BlockUpdate(context, data, size);
 	return 0;
 }
 
 int MlnImpl_810570A8(const void *data, unsigned int size, unsigned char *digest)
 {
-	MlnImpl_81080094(data, size, digest);
+	sceSha1Digest(data, size, digest);
 	return 0;
 }
 
@@ -65,7 +57,7 @@ int MlnImpl_810570B8(void **context)
 	sha = MlnAllocate(MLN_HEAP_GENERAL, MLN_SHA256_CONTEXT_SIZE);
 	if (sha == NULL)
 		goto fail;
-	MlnImpl_81080118(sha);
+	sceSha256BlockInit(sha);
 	*context = sha;
 	return 0;
 fail:
@@ -76,20 +68,20 @@ fail:
 
 int MlnImpl_8105710C(void *context, unsigned char *digest)
 {
-	MlnImpl_81080280(context, digest);
+	sceSha256BlockResult(context, digest);
 	MlnFree(MLN_HEAP_GENERAL, context);
 	return 0;
 }
 
 int MlnImpl_8105712C(void *context, const void *data, unsigned int size)
 {
-	MlnImpl_81080190(context, data, size);
+	sceSha256BlockUpdate(context, data, size);
 	return 0;
 }
 
 int MlnImpl_8105713C(const void *data, unsigned int size, unsigned char *digest)
 {
-	MlnImpl_810803A8(data, size, digest);
+	sceSha256Digest(data, size, digest);
 	return 0;
 }
 
@@ -103,7 +95,7 @@ int MlnImpl_8105714C(void **context)
 	if (random == NULL)
 		goto fail;
 	sceRtcGetCurrentTick(&tick);
-	MlnImpl_81080450(random, (unsigned int)tick.tick);
+	sceMt19937Init(random, (unsigned int)tick.tick);
 	*context = random;
 	return 0;
 fail:
@@ -131,7 +123,7 @@ int MlnImpl_810571C4(void *context, unsigned int size, void *out)
 	if (context == NULL || out == NULL)
 		return 3;
 	for (; size != 0; size -= 4, p += 4) {
-		value = MlnImpl_81087DF8(context);
+		value = sceMt19937UInt(context);
 		p[0] = value;
 		if (size == 1)
 			break;

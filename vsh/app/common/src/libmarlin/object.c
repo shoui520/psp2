@@ -999,7 +999,7 @@ int MlnImpl_8103D890(MlnXmlNode *node, unsigned int anonymous, MlnOctopusAttribu
 		elements = NULL;
 		break;
 	default:
-		ret = MlnImpl_81009B50(MLN_HEAP_GENERAL, text->size, text->data,
+		ret = MlnXmlParseInt(MLN_HEAP_GENERAL, text->size, (const char *)text->data,
 				       &attribute->value.integer);
 		if (ret != 0)
 			goto out;
@@ -1477,7 +1477,7 @@ int MlnImpl_8103E540(const MlnBuffer *token, int type, MlnOctopusSamlAssertion *
 					if (ret != 0)
 						goto out;
 					attribute->type = MLN_OCTOPUS_SAML_INTEGER;
-					ret = MlnImpl_81009B50(MLN_HEAP_GENERAL, value->size, value->data,
+					ret = MlnXmlParseInt(MLN_HEAP_GENERAL, value->size, (const char *)value->data,
 							       (int *)&attribute->value.integer);
 					if (ret != 0)
 						goto out;

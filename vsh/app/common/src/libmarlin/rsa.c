@@ -82,33 +82,33 @@ static struct {
 	unsigned char *next;
 } s_random;
 
-int MlnImpl_8107E30C(unsigned int *number, unsigned int words, const unsigned char *data,
+int MarlinDecodeIntegerWords(unsigned int *number, unsigned int words, const unsigned char *data,
 		     int size);
-int MlnImpl_8107E428(void *out, const void *in, const MlnRsaPrivate *key);
-int MlnImpl_8107E432(void *out, const void *in, const MlnRsaPrivate *key);
-int MlnImpl_8107E43C(void *out, const void *in, const MlnRsaPrivate *key);
-int MlnImpl_8107E6D8(void *out, const void *in, const MlnRsaPublic *key);
-int MlnImpl_8107E6E2(void *out, const void *in, const MlnRsaPublic *key);
-int MlnImpl_8107E6EC(void *out, const void *in, const MlnRsaPublic *key);
-int MlnImpl_8107E416(unsigned int (*random)(unsigned char *out, unsigned int size));
-int MlnImpl_8107E986(MlnRsaOctets *out, const MlnRsaOctets *in, const MlnRsaPublic *key);
-int MlnImpl_8107E998(MlnRsaOctets *out, const MlnRsaOctets *in, const MlnRsaPublic *key);
-int MlnImpl_8107E9AA(MlnRsaOctets *out, const MlnRsaOctets *in, const MlnRsaPublic *key);
-int MlnImpl_8107E9C0(void *out, const void *in, const MlnRsaPrivate *key);
-int MlnImpl_8107E9CA(void *out, const void *in, const MlnRsaPrivate *key);
-int MlnImpl_8107E9D4(void *out, const void *in, const MlnRsaPrivate *key);
-int MlnImpl_8107EBA8(void *out, const void *in, const MlnRsaPublic *key);
-int MlnImpl_8107EBB2(void *out, const void *in, const MlnRsaPublic *key);
-int MlnImpl_8107EBBC(void *out, const void *in, const MlnRsaPublic *key);
+int MarlinRsaPrivate512(void *out, const void *in, const MlnRsaPrivate *key);
+int MarlinRsaPrivate1024(void *out, const void *in, const MlnRsaPrivate *key);
+int MarlinRsaPrivate2048(void *out, const void *in, const MlnRsaPrivate *key);
+int MarlinRsaExponent512(void *out, const void *in, const MlnRsaPublic *key);
+int MarlinRsaExponent1024(void *out, const void *in, const MlnRsaPublic *key);
+int MarlinRsaExponent2048(void *out, const void *in, const MlnRsaPublic *key);
+int MarlinRsaSetRandomGenerator(unsigned int (*random)(unsigned char *out, unsigned int size));
+int MarlinRsaEncrypt512(MlnRsaOctets *out, const MlnRsaOctets *in, const MlnRsaPublic *key);
+int MarlinRsaEncrypt1024(MlnRsaOctets *out, const MlnRsaOctets *in, const MlnRsaPublic *key);
+int MarlinRsaEncrypt2048(MlnRsaOctets *out, const MlnRsaOctets *in, const MlnRsaPublic *key);
+int MarlinRsaSignPrivate512(void *out, const void *in, const MlnRsaPrivate *key);
+int MarlinRsaSignPrivate1024(void *out, const void *in, const MlnRsaPrivate *key);
+int MarlinRsaSignPrivate2048(void *out, const void *in, const MlnRsaPrivate *key);
+int MarlinRsaSignExponent512(void *out, const void *in, const MlnRsaPublic *key);
+int MarlinRsaSignExponent1024(void *out, const void *in, const MlnRsaPublic *key);
+int MarlinRsaSignExponent2048(void *out, const void *in, const MlnRsaPublic *key);
 typedef int (*MlnRsaVerifyFunc)(const MlnRsaOctets *signature, const MlnRsaOctets *digest,
 				const MlnRsaPublic *key, int hash);
-int MlnImpl_8107EB6A(const MlnRsaOctets *signature, const MlnRsaOctets *digest,
+int GcAuthRsaVerify512(const MlnRsaOctets *signature, const MlnRsaOctets *digest,
 		     const MlnRsaPublic *key, int hash);
-int MlnImpl_8107EB7E(const MlnRsaOctets *signature, const MlnRsaOctets *digest,
+int GcAuthRsaVerify1024(const MlnRsaOctets *signature, const MlnRsaOctets *digest,
 		     const MlnRsaPublic *key, int hash);
-int MlnImpl_8107EB92(const MlnRsaOctets *signature, const MlnRsaOctets *digest,
+int GcAuthRsaVerify2048(const MlnRsaOctets *signature, const MlnRsaOctets *digest,
 		     const MlnRsaPublic *key, int hash);
-int MlnImpl_8107EBC8(unsigned char *out, unsigned int size, const unsigned int *number,
+int MarlinEncodeIntegerWords(unsigned char *out, unsigned int size, const unsigned int *number,
 		     unsigned int words);
 
 /* MGF1 with SHA-1: the mask is the digests of the seed and a big-endian counter */
@@ -167,7 +167,7 @@ unsigned int MlnImpl_810553F4(const MlnBuffer *value, unsigned int words, unsign
 	number = MlnAllocate(MLN_HEAP_GENERAL, words * 4);
 	if (number == NULL)
 		return 2;
-	MlnImpl_8107E30C(number, words, data, size);
+	MarlinDecodeIntegerWords(number, words, data, size);
 	*out = number;
 	return 0;
 }
@@ -181,22 +181,22 @@ unsigned int MlnImpl_81055484(MlnRsaKey *key, const void *in, void *out)
 	if (key->prime1 != NULL && key->prime2 != NULL && key->exponent1 != NULL &&
 	    key->exponent2 != NULL && key->coefficient != NULL) {
 		if (key->bits == 512)
-			ret = MlnImpl_8107E428(out, in, &key->privateKey);
+			ret = MarlinRsaPrivate512(out, in, &key->privateKey);
 		else if (key->bits == 1024)
-			ret = MlnImpl_8107E432(out, in, &key->privateKey);
+			ret = MarlinRsaPrivate1024(out, in, &key->privateKey);
 		else
-			ret = MlnImpl_8107E43C(out, in, &key->privateKey);
+			ret = MarlinRsaPrivate2048(out, in, &key->privateKey);
 	} else {
 		if (key->privateExponent == NULL)
 			return 0x2206000A;
 		exponent.modulus = key->modulus;
 		exponent.publicExponent = key->privateExponent;
 		if (key->bits == 512)
-			ret = MlnImpl_8107E6D8(out, in, &exponent);
+			ret = MarlinRsaExponent512(out, in, &exponent);
 		else if (key->bits == 1024)
-			ret = MlnImpl_8107E6E2(out, in, &exponent);
+			ret = MarlinRsaExponent1024(out, in, &exponent);
 		else
-			ret = MlnImpl_8107E6EC(out, in, &exponent);
+			ret = MarlinRsaExponent2048(out, in, &exponent);
 	}
 	if (ret != 0)
 		return 0x2206000A;
@@ -517,17 +517,17 @@ unsigned int MlnImpl_81055D28(void *rsa, const MlnBuffer *in, const MlnBuffer *l
 	if (ret != 0)
 		goto out;
 	if (key->bits == 512)
-		ret = MlnImpl_8107E6D8(value, number, &key->publicKey);
+		ret = MarlinRsaExponent512(value, number, &key->publicKey);
 	else if (key->bits == 1024)
-		ret = MlnImpl_8107E6E2(value, number, &key->publicKey);
+		ret = MarlinRsaExponent1024(value, number, &key->publicKey);
 	else
-		ret = MlnImpl_8107E6EC(value, number, &key->publicKey);
+		ret = MarlinRsaExponent2048(value, number, &key->publicKey);
 	if (ret != 0) {
 		ret = 0x22060002;
 		goto out;
 	}
 	words = key->words;
-	MlnImpl_8107EBC8(bytes, sizeof(bytes), value, words);
+	MarlinEncodeIntegerWords(bytes, sizeof(bytes), value, words);
 	p = bytes;
 	length = words * 4;
 	while (length > 0 && *p == 0) {
@@ -644,7 +644,7 @@ unsigned int MlnImpl_81056394(void *rsa, const MlnBuffer *in, const MlnBuffer *l
 		goto out;
 	}
 	words = key->words;
-	MlnImpl_8107EBC8(bytes, sizeof(bytes), (const unsigned int *)value, words);
+	MarlinEncodeIntegerWords(bytes, sizeof(bytes), (const unsigned int *)value, words);
 	size--;
 	p = bytes;
 	length = words * 4;
@@ -684,13 +684,13 @@ unsigned int MlnImpl_81056744(void *rsa, const MlnBuffer *in, MlnBuffer **out)
 	message.data = in->data;
 	message.size = in->size;
 	result.data = data;
-	MlnImpl_8107E416(MlnImpl_81055598);
+	MarlinRsaSetRandomGenerator(MlnImpl_81055598);
 	if (key->bits == 512)
-		encrypt = MlnImpl_8107E986;
+		encrypt = MarlinRsaEncrypt512;
 	else if (key->bits == 1024)
-		encrypt = MlnImpl_8107E998;
+		encrypt = MarlinRsaEncrypt1024;
 	else
-		encrypt = MlnImpl_8107E9AA;
+		encrypt = MarlinRsaEncrypt2048;
 	if (encrypt(&result, &message, &key->publicKey) != 0)
 		return 0x22060002;
 	buffer = MlnBufferCreate(MLN_HEAP_GENERAL, result.size, result.data);
@@ -726,7 +726,7 @@ unsigned int MlnImpl_810567EC(void *rsa, const MlnBuffer *in, MlnBuffer **out)
 	if (ret != 0)
 		goto out;
 	words = key->words;
-	MlnImpl_8107EBC8(bytes, sizeof(bytes), (const unsigned int *)value, words);
+	MarlinEncodeIntegerWords(bytes, sizeof(bytes), (const unsigned int *)value, words);
 	size--;
 	p = bytes;
 	length = words * 4;
@@ -850,11 +850,11 @@ unsigned int MlnImpl_81056A74(void *rsa, int hash, const MlnBuffer *in, MlnBuffe
 	if (key->prime1 != NULL && key->prime2 != NULL && key->exponent1 != NULL &&
 	    key->exponent2 != NULL && key->coefficient != NULL) {
 		if (key->bits == 512)
-			ret = MlnImpl_8107E9C0(value, number, &key->privateKey);
+			ret = MarlinRsaSignPrivate512(value, number, &key->privateKey);
 		else if (key->bits == 1024)
-			ret = MlnImpl_8107E9CA(value, number, &key->privateKey);
+			ret = MarlinRsaSignPrivate1024(value, number, &key->privateKey);
 		else
-			ret = MlnImpl_8107E9D4(value, number, &key->privateKey);
+			ret = MarlinRsaSignPrivate2048(value, number, &key->privateKey);
 	} else {
 		if (key->privateExponent == NULL) {
 			ret = 0x22060002;
@@ -863,18 +863,18 @@ unsigned int MlnImpl_81056A74(void *rsa, int hash, const MlnBuffer *in, MlnBuffe
 		exponent.modulus = key->modulus;
 		exponent.publicExponent = key->privateExponent;
 		if (key->bits == 512)
-			ret = MlnImpl_8107EBA8(value, number, &exponent);
+			ret = MarlinRsaSignExponent512(value, number, &exponent);
 		else if (key->bits == 1024)
-			ret = MlnImpl_8107EBB2(value, number, &exponent);
+			ret = MarlinRsaSignExponent1024(value, number, &exponent);
 		else
-			ret = MlnImpl_8107EBBC(value, number, &exponent);
+			ret = MarlinRsaSignExponent2048(value, number, &exponent);
 	}
 	if (ret != 0) {
 		ret = 0x22060002;
 		goto out;
 	}
 	words = key->words;
-	MlnImpl_8107EBC8(bytes, sizeof(bytes), (const unsigned int *)value, words);
+	MarlinEncodeIntegerWords(bytes, sizeof(bytes), (const unsigned int *)value, words);
 	p = bytes;
 	length = words * 4;
 	while (length > 0 && *p == 0) {
@@ -929,11 +929,11 @@ int MlnImpl_81056F0C(void *rsa, int hash, const MlnBuffer *message, const MlnBuf
 	octets.data = signature->data;
 	octets.size = signature->size;
 	if (key->bits == 512)
-		verify = MlnImpl_8107EB6A;
+		verify = GcAuthRsaVerify512;
 	else if (key->bits == 1024)
-		verify = MlnImpl_8107EB7E;
+		verify = GcAuthRsaVerify1024;
 	else
-		verify = MlnImpl_8107EB92;
+		verify = GcAuthRsaVerify2048;
 	if (hash == MLN_RSA_HASH_SHA1)
 		ret = verify(&octets, &digest, &key->publicKey, 5);
 	else if (hash == MLN_RSA_HASH_SHA256)

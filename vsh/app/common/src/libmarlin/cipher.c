@@ -4,6 +4,7 @@
  * name is ours.
  */
 
+#include <libaes.h>
 #include "mln_internal.h"
 
 typedef struct MlnCipher {
@@ -702,7 +703,7 @@ unsigned int MlnImpl_810551D8(void **key, int type, unsigned int keySize, const 
 		ret = 0x22020002;
 		goto fail;
 	}
-	ret = MlnImpl_81086D54(context, keySize * 8, keySize * 8, keyData);
+	ret = sceAesScheduleKey(context, keySize * 8, keySize * 8, keyData);
 	*key = context;
 	return ret;
 
@@ -724,7 +725,7 @@ int MlnImpl_8105528C(void *key, const unsigned char *in, unsigned char *out)
 		return 0x22020004;
 	if (in == NULL || out == NULL)
 		return 3;
-	MlnImpl_81087358(key, in, out);
+	sceAesEncrypt(key, in, out);
 	return 0;
 }
 
@@ -734,6 +735,6 @@ int MlnImpl_810552CC(void *key, const unsigned char *in, unsigned char *out)
 		return 0x22020004;
 	if (in == NULL || out == NULL)
 		return 3;
-	MlnImpl_81087612(key, in, out);
+	sceAesDecrypt(key, in, out);
 	return 0;
 }

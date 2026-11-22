@@ -88,7 +88,7 @@ int MlnImpl_81033AE8(MlnConfigList *list)
 	"urn:marlin:organization:sony:nemo:services:schemas:configuration:1-0"
 
 /* a BroadbandServiceConfig document, read into a new configuration */
-int MlnImpl_81033D9C(unsigned int size, const void *xml, MlnServiceConfig **out)
+int MlnServiceConfigParse(unsigned int size, const void *xml, MlnServiceConfig **out)
 {
 	MlnXmlNode *document = NULL;
 	MlnXmlNodeList *list = NULL;
@@ -179,14 +179,14 @@ out:
 	MlnBufferDestroy(MLN_HEAP_SECURE, id);
 	MlnBufferDestroy(MLN_HEAP_SECURE, name);
 	MlnBufferDestroy(MLN_HEAP_SECURE, version);
-	MlnImpl_810341B8(config);
+	MlnServiceConfigFree(config);
 	MlnXmlNodeFree(MLN_HEAP_SECURE, root);
 	MlnXmlListFree(MLN_HEAP_SECURE, list);
 	MlnXmlNodeFree(MLN_HEAP_SECURE, document);
 	return ret;
 }
 
-int MlnImpl_810341B8(MlnServiceConfig *config)
+int MlnServiceConfigFree(MlnServiceConfig *config)
 {
 	if (config == NULL)
 		return 0;
@@ -202,7 +202,7 @@ int MlnImpl_810341B8(MlnServiceConfig *config)
 	return 0;
 }
 
-int MlnImpl_81034224(MlnActionToken *token)
+int MlnActionTokenFree(MlnActionToken *token)
 {
 	MlnAction *action;
 	int i;
@@ -385,7 +385,7 @@ out:
  * An ActionToken document: its ConfigurationInfo (the service's id and configuration
  * version, its resource locations) and its actions, read into a new token.
  */
-int MlnImpl_810342E8(unsigned int size, const void *xml, MlnActionToken **out)
+int MlnActionTokenParse(unsigned int size, const void *xml, MlnActionToken **out)
 {
 	MlnXmlNode *document = NULL;
 	MlnXmlNodeList *tokens = NULL;
@@ -571,7 +571,7 @@ out:
 		}
 		MlnFree(MLN_HEAP_SECURE, actions);
 	}
-	MlnImpl_81034224(token);
+	MlnActionTokenFree(token);
 	MlnXmlListFree(MLN_HEAP_SECURE, tokens);
 	MlnXmlListFree(MLN_HEAP_SECURE, children);
 	MlnXmlListFree(MLN_HEAP_SECURE, locations);

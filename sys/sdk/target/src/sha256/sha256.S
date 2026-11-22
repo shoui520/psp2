@@ -1,6 +1,8 @@
 /*
  * libSceSha256 (the SDK's static library, sha256.o): Sony's hand-written SHA-256
- * compression core (_sceSha256Core) and round constants (K_value).
+ * compression core and round constants (K_value). 3.570.011's core is _sceSha256Core,
+ * blocks of bytes; the 3.10 SDK's (SceLibMarlin links it, SDK 3.100.010) is
+ * Sha256Transform(block, state), one block of big-endian words.
  */
 	.syntax unified
 	.arch armv7-a
@@ -8,6 +10,129 @@
 	.fpu neon
 	.thumb
 
+#if defined(SCE_PSP2_SDK_VERSION) && SCE_PSP2_SDK_VERSION < 0x03570000
+/*
+ * One round, its registers renamed by the caller: t = h + S1(e) + Ch(e, f, g) + K[i] + W[i];
+ * d += t; h = t + S0(a) + Maj(a, b, c), the majority as ((a | b) & c) | (a & b).
+ */
+	.macro	SHA256_ROUND a, b, c, d, e, f, g, h, i
+	mov.w	ip, \e, ror #6
+	eors.w	ip, ip, \e, ror #11
+	eors.w	ip, ip, \e, ror #25
+	add	ip, \h
+	eors.w	r3, \f, \g
+	ands	r3, \e
+	eors	r3, \g
+	add	ip, r3
+	ldr	r3, [r2, #\i * 4]
+	add	ip, r3
+	ldr	r3, [r0, #\i * 4]
+	add.w	\h, ip, r3
+	add	\d, \h
+	mov.w	r3, \a, ror #2
+	eors.w	r3, r3, \a, ror #13
+	eors.w	r3, r3, \a, ror #22
+	add	\h, r3
+	orrs.w	ip, \a, \b
+	ands.w	ip, ip, \c
+	ands.w	r3, \a, \b
+	orrs.w	ip, ip, r3
+	add	\h, ip
+	.endm
+
+	.section .text.sceSha256, "ax", %progbits
+	.align 1
+	.global Sha256Transform
+	.thumb_func
+	.type Sha256Transform, %function
+Sha256Transform:
+	stmdb	sp!, {r4, r5, r6, r7, r8, r9, sl, fp}
+	sub.w	sp, sp, #256
+	/* the schedule on the stack: the block's sixteen words, then 48 more */
+	mov	ip, sp
+	ldmia.w	r0!, {r4, r5, r6, r7, r8, r9, sl, fp}
+	stmia.w	ip!, {r4, r5, r6, r7, r8, r9, sl, fp}
+	ldmia.w	r0!, {r4, r5, r6, r7, r8, r9, sl, fp}
+	stmia.w	ip!, {r4, r5, r6, r7, r8, r9, sl, fp}
+	mov.w	r4, #48
+1:
+	ldr.w	r5, [ip, #-64]
+	ldr.w	r6, [ip, #-60]
+	ldr.w	r7, [ip, #-28]
+	ldr.w	r8, [ip, #-8]
+	mov.w	r9, r6, ror #7
+	eors.w	r9, r9, r6, ror #18
+	eors.w	r9, r9, r6, lsr #3
+	mov.w	sl, r8, ror #17
+	eors.w	sl, sl, r8, ror #19
+	eors.w	sl, sl, r8, lsr #10
+	add	r5, r7
+	add	r5, r9
+	add	r5, sl
+	str.w	r5, [ip]
+	add.w	ip, ip, #4
+	adds.w	r4, r4, #-1
+	bne.n	1b
+	/* a..h from the state, eight rounds a pass over the schedule */
+	ldmia.w	r1, {r4, r5, r6, r7, r8, r9, sl, fp}
+	mov	r0, sp
+	movw	r2, #:lower16:K_value
+	movt	r2, #:upper16:K_value
+2:
+	SHA256_ROUND r4, r5, r6, r7, r8, r9, sl, fp, 0
+	SHA256_ROUND fp, r4, r5, r6, r7, r8, r9, sl, 1
+	SHA256_ROUND sl, fp, r4, r5, r6, r7, r8, r9, 2
+	SHA256_ROUND r9, sl, fp, r4, r5, r6, r7, r8, 3
+	SHA256_ROUND r8, r9, sl, fp, r4, r5, r6, r7, 4
+	SHA256_ROUND r7, r8, r9, sl, fp, r4, r5, r6, 5
+	SHA256_ROUND r6, r7, r8, r9, sl, fp, r4, r5, 6
+	SHA256_ROUND r5, r6, r7, r8, r9, sl, fp, r4, 7
+	add.w	r0, r0, #32
+	add.w	r2, r2, #32
+	adds.w	ip, sp, #256
+	cmp	r0, ip
+	bne.w	2b
+	/* the state plus a..h */
+	ldmia.w	r1!, {r0, r2, r3, ip}
+	add	r4, r0
+	add	r5, r2
+	add	r6, r3
+	add	r7, ip
+	ldmia.w	r1!, {r0, r2, r3, ip}
+	sub.w	r1, r1, #32
+	add	r8, r0
+	add	r9, r2
+	add	sl, r3
+	add	fp, ip
+	stmia.w	r1, {r4, r5, r6, r7, r8, r9, sl, fp}
+	add	sp, #256
+	ldmia.w	sp!, {r4, r5, r6, r7, r8, r9, sl, fp}
+	bx	lr
+	.size Sha256Transform, .-Sha256Transform
+
+	/* the round constants in their order */
+	.section .rodata.sceSha256, "a", %progbits
+	.align 2
+	.type K_value, %object
+	.size K_value, 256
+K_value:
+	.word 0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5
+	.word 0x3956c25b, 0x59f111f1, 0x923f82a4, 0xab1c5ed5
+	.word 0xd807aa98, 0x12835b01, 0x243185be, 0x550c7dc3
+	.word 0x72be5d74, 0x80deb1fe, 0x9bdc06a7, 0xc19bf174
+	.word 0xe49b69c1, 0xefbe4786, 0x0fc19dc6, 0x240ca1cc
+	.word 0x2de92c6f, 0x4a7484aa, 0x5cb0a9dc, 0x76f988da
+	.word 0x983e5152, 0xa831c66d, 0xb00327c8, 0xbf597fc7
+	.word 0xc6e00bf3, 0xd5a79147, 0x06ca6351, 0x14292967
+	.word 0x27b70a85, 0x2e1b2138, 0x4d2c6dfc, 0x53380d13
+	.word 0x650a7354, 0x766a0abb, 0x81c2c92e, 0x92722c85
+	.word 0xa2bfe8a1, 0xa81a664b, 0xc24b8b70, 0xc76c51a3
+	.word 0xd192e819, 0xd6990624, 0xf40e3585, 0x106aa070
+	.word 0x19a4c116, 0x1e376c08, 0x2748774c, 0x34b0bcb5
+	.word 0x391c0cb3, 0x4ed8aa4a, 0x5b9cca4f, 0x682e6ff3
+	.word 0x748f82ee, 0x78a5636f, 0x84c87814, 0x8cc70208
+	.word 0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2
+#else
 	.section .text.sceSha256, "ax", %progbits
 	.align 1
 	.global _sceSha256Core
@@ -388,6 +513,7 @@ _sceSha256Core:
 	.fnend
 	.size _sceSha256Core, .-_sceSha256Core
 
+
 	.section .rodata.sceSha256, "a", %progbits
 	.align 2
 	.type K_value, %object
@@ -409,3 +535,4 @@ K_value:
 	.word 0xd192e819, 0xd6990624, 0xf40e3585, 0x106aa070
 	.word 0x19a4c116, 0x1e376c08, 0x2748774c, 0x34b0bcb5
 	.word 0x391c0cb3, 0x4ed8aa4a, 0x5b9cca4f, 0x682e6ff3
+#endif
