@@ -45,7 +45,7 @@ struct MlnCoreContext {
 	MlnOctopusNode *node;
 	MlnOctopusBundle *bundle;
 	int contentKeysLoaded;		/* a bit per content key of the bundle */
-	void *graph;			/* the links and nodes (MlnImpl_8106EC8C) */
+	MlnHostGraph *graph;		/* the links and nodes (MlnImpl_8106EC8C) */
 	void *keys;			/* the key store (MlnImpl_810710F8) */
 	MlnCoreHost host;
 	MlnVm *vm;			/* the control VM (MlnImpl_8106C54C) */
@@ -870,7 +870,7 @@ destroy:
 }
 
 /* the stored assertions of kinds 0 and 3 added to a graph */
-static inline unsigned int MlnCoreAddAssertions(void *graph)
+static inline unsigned int MlnCoreAddAssertions(MlnHostGraph *graph)
 {
 	MlnOctopusSamlAssertion *assertion = NULL;
 	unsigned int ret;
@@ -892,7 +892,7 @@ static inline unsigned int MlnCoreAddAssertions(void *graph)
 }
 
 /* the stored node and links added to a graph */
-static inline unsigned int MlnCoreAddStore(void *graph)
+static inline unsigned int MlnCoreAddStore(MlnHostGraph *graph)
 {
 	MlnOctopusNode *node = NULL;
 	MlnBuffer *record = NULL;
@@ -991,7 +991,7 @@ unsigned int MlnImpl_8106340C(int count, MlnOctopusControl **controls, const Mln
 	unsigned int runData = 0;	/* an address in the VM */
 	unsigned int runSize = 0;
 	MlnArray *resultPair = NULL;
-	void *graph = NULL;
+	MlnHostGraph *graph = NULL;
 	char *routine = NULL;
 	MlnBuffer *buffer = NULL;
 	unsigned int released;

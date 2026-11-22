@@ -2109,8 +2109,132 @@ unsigned int MlnImpl_810836DC(MlnVmContext *context);
 unsigned int MlnImpl_810837CC(MlnVmContext *context);
 unsigned int MlnImpl_81083A58(MlnVmContext *context);
 
-unsigned int MlnImpl_8106EE94(void *graph, MlnPlanktonParameterBlock *parameters);
-unsigned int MlnImpl_8106EEA8(void *graph, MlnOctopusBundle *bundle);
+/*
+ * hostobject.c: the host's object tree, as the control VM's system calls see it
+ * (0x8106CB50-): a graph of the personality node, the bundle, the SAML
+ * assertions and the parameters, and the objects made from it on demand.
+ */
+#define MLN_HOST_OBJECT_CONTAINER	0
+#define MLN_HOST_OBJECT_INTEGER		1
+#define MLN_HOST_OBJECT_STRING		2
+#define MLN_HOST_OBJECT_BYTES		3
+
+/* a path that names nothing, and a ninth value list for the eight slots */
+#define MLN_HOST_ERROR_NOT_FOUND	0x23060002
+#define MLN_HOST_ERROR_NO_SLOT		0x23060003
+
+#define MLN_HOST_ASSERTIONS	256
+#define MLN_HOST_SLOTS		8
+#define MLN_HOST_SLOT_FIRST	25	/* the slots' object ids, 25-32 */
+
+struct MlnHostGraph;
+struct MlnHostObject;
+
+typedef int (*MlnHostObjectGetByIndex)(struct MlnHostGraph *graph, struct MlnHostObject *object,
+				       int index, struct MlnHostObject **out);
+typedef int (*MlnHostObjectGetByName)(struct MlnHostGraph *graph, struct MlnHostObject *object,
+				      const char *name, unsigned int size,
+				      struct MlnHostObject **out);
+
+typedef struct MlnHostObject {
+	int id;				/* the tree's node, a slot's, or -1 */
+	MlnBuffer *name;
+	int type;			/* MLN_HOST_OBJECT_* */
+	int hasChildren;
+	union {
+		int integer;
+		MlnBuffer *buffer;	/* STRING and BYTES */
+		void *container;	/* what the callbacks read the children from */
+	} value;
+	int childCount;
+	MlnHostObjectGetByIndex getByIndex;
+	MlnHostObjectGetByName getByName;
+} MlnHostObject;
+
+/* a node of the tree: its id, its first child and the next of its siblings, or -1 */
+typedef struct MlnHostNode {
+	int id;
+	int firstChild;
+	int nextSibling;
+	const char *name;
+} MlnHostNode;
+
+/* a value list or an attribute list the VM was given an object of */
+#define MLN_HOST_SLOT_VALUE_LIST	0	/* MlnPlanktonValueList */
+#define MLN_HOST_SLOT_ATTRIBUTES	1	/* MlnOctopusArray of MlnOctopusAttribute */
+
+typedef struct MlnHostSlot {
+	int id;
+	int kind;			/* MLN_HOST_SLOT_*, -1 when free */
+	void *value;
+} MlnHostSlot;
+
+/* a node the links reach from the personality, the node it is reached from and the link's control */
+typedef struct MlnHostLinkTarget {
+	MlnBuffer *uid;
+	struct MlnHostLinkTarget *from;
+	MlnOctopusControl *control;
+} MlnHostLinkTarget;
+
+typedef struct MlnHostLinks {
+	MlnOctopusArray *links;		/* MLN_OCTOPUS_LINK */
+	MlnOctopusArray *targets;	/* MlnHostLinkTarget, the personality's first */
+} MlnHostLinks;
+
+typedef struct MlnHostGraph {
+	MlnOctopusNode *personality;
+	MlnOctopusBundle *bundle;
+	MlnOctopusSamlAssertion *assertions[MLN_HOST_ASSERTIONS];
+	unsigned int current;		/* the assertion last given as an object, or -1 */
+	MlnHostLinks *links;
+	MlnBuffer *licenseSuspension;
+	void *records;			/* freed by MlnImpl_8107B4A0 */
+	MlnBuffer *contextId;
+	MlnPlanktonParameterBlock *parameters;
+	MlnHostSlot slots[MLN_HOST_SLOTS];
+} MlnHostGraph;
+
+int MlnImpl_8106CB50(MlnHostGraph *graph, MlnHostObject *object, int index, MlnHostObject **out);
+int MlnImpl_8106CB58(MlnHostGraph *graph, MlnHostObject *object, const char *name,
+		     unsigned int size, MlnHostObject **out);
+int MlnImpl_8106CB60(MlnHostGraph *graph, MlnHostObject *object, const char *name,
+		     unsigned int size, MlnHostObject **out);
+int MlnImpl_8106CB78(MlnHostObject *object);
+int MlnImpl_8106CBC4(int index, const char *path, int *outIndex, const char **outPath);
+int MlnImpl_8106CD00(const MlnPlanktonParameterBlock *block, const char *path, unsigned int size,
+		     int top, MlnPlanktonValueList **out);
+int MlnImpl_8106CF58(const MlnOctopusSamlAttribute *attribute, MlnHostObject **out);
+int MlnImpl_8106D138(MlnHostGraph *graph, MlnHostObject *object, const char *name,
+		     unsigned int size, MlnHostObject **out);
+int MlnImpl_8106D1C8(MlnHostGraph *graph, MlnHostObject *object, int index, MlnHostObject **out);
+int MlnImpl_8106D200(MlnHostGraph *graph, MlnHostObject *object, const char *name,
+		     unsigned int size, MlnHostObject **out);
+int MlnImpl_8106D318(MlnHostGraph *graph, MlnHostObject *object, const char *name,
+		     unsigned int size, MlnHostObject **out);
+int MlnImpl_8106D434(MlnHostGraph *graph, MlnHostObject *object, int index, MlnHostObject **out);
+int MlnImpl_8106D530(MlnHostGraph *graph, MlnHostObject *object, const char *name,
+		     unsigned int size, MlnHostObject **out);
+int MlnImpl_8106D64C(MlnHostGraph *graph, MlnHostObject *object, int index, MlnHostObject **out);
+int MlnImpl_8106D748(MlnHostGraph *graph, MlnHostObject *object, const char *name,
+		     unsigned int size, MlnHostObject **out);
+int MlnImpl_8106D864(MlnHostGraph *graph, MlnHostObject *object, int index, MlnHostObject **out);
+int MlnImpl_8106D960(const MlnOctopusAttribute *attribute, MlnHostObject **out);
+int MlnImpl_8106DC1C(MlnHostGraph *graph, MlnHostObject *object, const char *name,
+		     unsigned int size, MlnHostObject **out);
+int MlnImpl_8106DCC0(MlnHostGraph *graph, MlnHostObject *object, int index, MlnHostObject **out);
+int MlnImpl_8106DCF8(MlnHostGraph *graph, const MlnPlanktonParameterBlock *block, const char *path,
+		     int top, MlnHostObject **out);
+int MlnImpl_8106E060(MlnHostGraph *graph, MlnHostObject *object, const char *name,
+		     unsigned int size, MlnHostObject **out);
+int MlnImpl_8106E0C0(MlnHostGraph *graph, MlnHostObject *object, const char *name,
+		     unsigned int size, MlnHostObject **out);
+int MlnImpl_8106E10C(MlnHostGraph *graph, MlnHostObject *object, int index, MlnHostObject **out);
+int MlnImpl_8106E20C(MlnHostGraph *graph, MlnHostObject *object, const char *name,
+		     unsigned int size, MlnHostObject **out);
+int MlnImpl_8106E57C(MlnHostGraph *graph, int index, MlnOctopusArray *attributes,
+		     MlnHostObject **out);
+unsigned int MlnImpl_8106EE94(MlnHostGraph *graph, MlnPlanktonParameterBlock *parameters);
+unsigned int MlnImpl_8106EEA8(MlnHostGraph *graph, MlnOctopusBundle *bundle);
 /* the control VM's host functions; their parameters come with their C */
 unsigned int MlnImpl_8106F504();
 unsigned int MlnImpl_81070318();
@@ -2120,15 +2244,16 @@ unsigned int MlnImpl_8106F3F4();
 unsigned int MlnImpl_8106F438();
 unsigned int MlnImpl_81070424();
 unsigned int MlnImpl_8106C6C4(MlnVm *vm);
-unsigned int MlnImpl_8106EC8C(void **graph);
-void MlnImpl_8106ED54(void *graph);
-unsigned int MlnImpl_8106EE80(void *graph, MlnOctopusNode *node);
-unsigned int MlnImpl_8106EEBC(void *graph, MlnOctopusArray *links);
-unsigned int MlnImpl_8106F264(void *graph, MlnOctopusSamlAssertion *assertion);
-void MlnImpl_8106F2C8(void *graph);
-unsigned int MlnImpl_8106F300(void *graph, void *value);
-unsigned int MlnImpl_810706F4(void *graph, MlnArray *pair);
-unsigned int MlnImpl_81070808(void *graph, MlnArray **pair);
+unsigned int MlnImpl_8106EC8C(MlnHostGraph **graph);
+unsigned int MlnImpl_8106ED54(MlnHostGraph *graph);
+unsigned int MlnImpl_8106EE80(MlnHostGraph *graph, MlnOctopusNode *node);
+unsigned int MlnImpl_8106EEBC(MlnHostGraph *graph, MlnOctopusArray *links);
+unsigned int MlnImpl_8106F264(MlnHostGraph *graph, MlnOctopusSamlAssertion *assertion);
+void MlnImpl_8106F2C8(MlnHostGraph *graph);
+unsigned int MlnImpl_8106F300(MlnHostGraph *graph, MlnBuffer *contextId);
+unsigned int MlnImpl_810706F4(MlnHostGraph *graph, MlnArray *pair);
+unsigned int MlnImpl_81070808(MlnHostGraph *graph, MlnArray **pair);
+int MlnImpl_8107B4A0(void *records);
 unsigned int MlnImpl_810710F8(void **keys);
 void MlnImpl_81071278(void *keys);
 unsigned int MlnImpl_810712F0(void *keys, const MlnOctopusKey *key);
