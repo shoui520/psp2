@@ -1794,6 +1794,19 @@ MlnStoreDigest *MlnImpl_81043A08(void);
 int MlnImpl_81043DE0(const MlnBuffer *to, const MlnBuffer *from, const MlnBuffer *record,
 		     const MlnBuffer *value1, const MlnBuffer *value2);
 int MlnImpl_81043F1C(const MlnBuffer *to);
+unsigned int MlnImpl_8104411C(int *count, MlnStoreLink **out);
+unsigned int MlnImpl_810442D4(MlnStoreLink **links, MlnBuffer **record);
+int MlnImpl_8104435C(MlnStoreLink *links);
+unsigned int MlnImpl_8104436C(const MlnBuffer *digest, MlnBuffer **record);
+int MlnImpl_81049D54(MlnStoreLink *links, const MlnBuffer *digest, MlnStoreLink **found);
+int MlnImpl_81044824(const MlnBuffer *from, const MlnBuffer *to, MlnBuffer **record);
+int MlnImpl_81044A34(int kind);
+int MlnImpl_81044D64(MlnBuffer **out);
+int MlnImpl_81044DEC(int kind, MlnOctopusSamlAssertion **out);
+int MlnImpl_8104A300(MlnStoreLink *links, MlnBuffer *key, MlnBuffer *value, const MlnBuffer *first,
+		     const MlnBuffer *second);
+int MlnImpl_81049DDC(MlnStoreLink *links, const MlnBuffer *from, const MlnBuffer *to,
+		     MlnStoreLink **found);
 void MlnImpl_810475F4(int table);
 const MlnBuffer *MlnImpl_81047E34(void);
 int MlnImpl_81049874(MlnStoreLink **links);
@@ -1879,13 +1892,9 @@ int MlnImpl_8102B590(const MlnBuffer *id, MlnBlob *out);
 int MlnImpl_8102B718(const MlnBuffer *id, MlnBlob *out);
 
 unsigned int MlnImpl_81045A84(void);
-unsigned int MlnImpl_8104411C(int *count, void **iterator);
-unsigned int MlnImpl_810442D4(void **iterator, MlnBuffer **entry);
-void MlnImpl_8104435C(void *iterator);
 unsigned int MlnImpl_810422E8(MlnBuffer *entry, MlnOctopusLink **link);
 unsigned int MlnImpl_81043B94(MlnOctopusNode **base);
 int MlnImpl_8102B950(unsigned int *count, MlnBuffer ***entries, MlnBlob *state);
-unsigned int MlnImpl_8104436C(const MlnBuffer *id, MlnBuffer **entry);
 unsigned int MlnImpl_81044984(MlnBuffer *key, MlnBuffer *value, const MlnBuffer *first,
 			      const MlnBuffer *second);
 unsigned int MlnImpl_810444DC(const MlnBuffer *first, const MlnBuffer *second, unsigned int *count,

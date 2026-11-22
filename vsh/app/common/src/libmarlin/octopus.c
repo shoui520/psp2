@@ -478,7 +478,7 @@ int MlnImpl_8102B718(const MlnBuffer *id, MlnBlob *out)
  */
 int MlnImpl_8102B950(unsigned int *count, MlnBuffer ***entries, MlnBlob *state)
 {
-	void *iterator = NULL;
+	MlnStoreLink *links = NULL;
 	MlnOctopusNode *base = NULL;
 	MlnBuffer *entry = NULL;
 	MlnBuffer *newState = NULL;
@@ -494,7 +494,7 @@ int MlnImpl_8102B950(unsigned int *count, MlnBuffer ***entries, MlnBlob *state)
 	}
 	ret = MlnImpl_81045A84();
 	if (ret == 0)
-		ret = MlnImpl_8104411C(&n, &iterator);
+		ret = MlnImpl_8104411C(&n, &links);
 	if (ret != 0) {
 		ret = MlnImpl_8102A228(ret);
 		goto out;
@@ -518,7 +518,7 @@ int MlnImpl_8102B950(unsigned int *count, MlnBuffer ***entries, MlnBlob *state)
 		goto done;
 	all = 1;
 	for (i = 0; i < n; i++) {
-		err = MlnImpl_810442D4(&iterator, &entry);
+		err = MlnImpl_810442D4(&links, &entry);
 		if (err != 0) {
 			ret = MlnImpl_8102A228(err);
 			goto fail;
@@ -566,7 +566,7 @@ done:
 	*count = 2 * n;
 	*entries = array;
 out:
-	MlnImpl_8104435C(iterator);
+	MlnImpl_8104435C(links);
 	MlnBufferDestroy(MLN_HEAP_GENERAL, entry);
 	MlnBufferDestroy(MLN_HEAP_GENERAL, newState);
 	MlnImpl_8103BBA0(record);

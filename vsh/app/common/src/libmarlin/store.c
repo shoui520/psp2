@@ -9,7 +9,7 @@
  * checks two ids against the stored nodes: 6 when either is a damaged record,
  * 0x230A0011 when either is missing, else the first id's result
  */
-int MlnImpl_810436E4(const MlnBuffer *first, const MlnBuffer *second)
+__attribute__((noinline)) int MlnImpl_810436E4(const MlnBuffer *first, const MlnBuffer *second)
 {
 	unsigned char digest[20];
 	int firstRet = 0;
@@ -41,7 +41,7 @@ int MlnImpl_810436E4(const MlnBuffer *first, const MlnBuffer *second)
  * deletes link's record, then the records of the links after it that are
  * damaged, unlinking those from links; 6 when the list is done
  */
-int MlnImpl_810437BC(MlnStoreLink **links, MlnStoreLink *link)
+__attribute__((noinline)) int MlnImpl_810437BC(MlnStoreLink **links, MlnStoreLink *link)
 {
 	MlnStoreLink *next;
 	int ret;
@@ -444,4 +444,472 @@ out:
 	MlnBufferDestroy(MLN_HEAP_GENERAL, record);
 	MlnImpl_81049918(links);
 	return ret;
+}
+
+/*
+ * the link list with its damaged or dangling links dropped (6 when any was,
+ * the list then saved), and its length; 0x230A0012 past 8 links
+ */
+unsigned int MlnImpl_8104411C(int *count, MlnStoreLink **out)
+{
+	MlnStoreLink *links = NULL;
+	MlnStoreLink *loaded;
+	MlnStoreLink *link;
+	MlnStoreLink *next;
+	int damaged;
+	int n;
+	int ret;
+
+	if (count == NULL || out == NULL) {
+		ret = 5;
+		goto out;
+	}
+	loaded = NULL;
+	ret = MlnImpl_81049874(&loaded);
+	if (ret == 6) {
+		MlnImpl_810475F4(7);
+		MlnImpl_81049918(loaded);
+		goto out;
+	}
+	if (ret != 0) {
+		MlnImpl_81049918(loaded);
+		goto out;
+	}
+	links = loaded;
+	loaded = NULL;
+	MlnImpl_81049918(loaded);
+	n = 0;
+	damaged = 0;
+	link = links;
+	while (link != NULL) {
+		ret = MlnImpl_8105DEDC(7, link->key, NULL);
+		if (ret == 1 || ret == 6)
+			ret = MlnImpl_810437BC(&links, link);
+		else if (ret == 0 && link->byValue == 1)
+			ret = MlnImpl_810436E4(link->from, link->to);
+		if (ret == 6) {
+			next = link->next;
+			damaged = 1;
+			MlnImpl_81049E34(&links, link);
+			link = next;
+		} else if (ret == 0x230A0011) {
+			next = link->next;
+			MlnImpl_81049E34(&links, link);
+			link = next;
+		} else if (ret == 0) {
+			link = link->next;
+			n++;
+		}
+	}
+	if (damaged == 1) {
+		ret = MlnImpl_8104990C(links);
+		if (ret == 0)
+			ret = 6;
+		goto out;
+	}
+	if (n > 8) {
+		ret = 0x230A0012;
+		goto out;
+	}
+	*count = n;
+	*out = links;
+	links = NULL;
+out:
+	MlnImpl_81049918(links);
+	return ret;
+}
+
+/* takes the first link off links and reads its record */
+unsigned int MlnImpl_810442D4(MlnStoreLink **links, MlnBuffer **record)
+{
+	MlnStoreLink *link = *links;
+	MlnBuffer *buffer = NULL;
+	int ret;
+
+	if (link == NULL) {
+		ret = 5;
+		goto out;
+	}
+	ret = MlnImpl_8105DEDC(7, link->key, &buffer);
+	if (ret != 0) {
+		ret = 5;
+		goto out;
+	}
+	*links = link->next;
+	link->next = NULL;
+	MlnImpl_81049918(link);
+	*record = buffer;
+	buffer = NULL;
+out:
+	MlnBufferDestroy(MLN_HEAP_GENERAL, buffer);
+	return ret;
+}
+
+int MlnImpl_8104435C(MlnStoreLink *links)
+{
+	MlnImpl_81049918(links);
+	return 0;
+}
+
+/* the record of the link with a 20-byte digest; a damaged one gives 6 */
+unsigned int MlnImpl_8104436C(const MlnBuffer *digest, MlnBuffer **record)
+{
+	MlnStoreLink *links = NULL;
+	MlnStoreLink *found = NULL;
+	MlnStoreLink *loaded;
+	MlnBuffer *buffer;
+	unsigned int key;
+	int ret;
+
+	if (digest == NULL || digest->size != 20 || digest->data == NULL || record == NULL) {
+		ret = 3;
+		goto out;
+	}
+	loaded = NULL;
+	ret = MlnImpl_81049874(&loaded);
+	if (ret == 6) {
+		MlnImpl_810475F4(7);
+		MlnImpl_81049918(loaded);
+		goto out;
+	}
+	if (ret != 0) {
+		MlnImpl_81049918(loaded);
+		goto out;
+	}
+	links = loaded;
+	loaded = NULL;
+	MlnImpl_81049918(loaded);
+	ret = MlnImpl_81049D54(links, digest, &found);
+	if (ret != 0)
+		goto out;
+	key = found->key;
+	buffer = NULL;
+	if (key > 8) {
+		ret = 5;
+	} else {
+		ret = MlnImpl_8105DEDC(7, key, &buffer);
+		if (ret == 1 || ret == 6) {
+			if (MlnImpl_81049F14(key) == 0)
+				MlnImpl_8105DC0C(7, key, NULL);
+			ret = 6;
+		} else if (ret == 0) {
+			*record = buffer;
+			buffer = NULL;
+		}
+	}
+	MlnBufferDestroy(MLN_HEAP_GENERAL, buffer);
+out:
+	MlnImpl_81049918(links);
+	return ret;
+}
+
+/*
+ * the ends of the by-value links whose values are first and second, as
+ * from, to pairs (count buffers); 0x230A0003 when none is
+ */
+unsigned int MlnImpl_810444DC(const MlnBuffer *first, const MlnBuffer *second, unsigned int *count,
+			      MlnBuffer ***entries)
+{
+	MlnStoreLink *matches[8];
+	MlnStoreLink *links = NULL;
+	MlnStoreLink *loaded;
+	MlnStoreLink *link;
+	MlnStoreLink *next;
+	MlnBuffer **array;
+	int damaged;
+	int n;
+	int i;
+	int ret;
+
+	if (first == NULL || first->size == 0 || first->data == NULL || second == NULL ||
+	    second->size == 0 || second->data == NULL || entries == NULL) {
+		ret = 3;
+		goto out;
+	}
+	loaded = NULL;
+	ret = MlnImpl_81049874(&loaded);
+	if (ret == 6) {
+		MlnImpl_810475F4(7);
+		MlnImpl_81049918(loaded);
+		goto out;
+	}
+	if (ret != 0) {
+		MlnImpl_81049918(loaded);
+		goto out;
+	}
+	links = loaded;
+	loaded = NULL;
+	MlnImpl_81049918(loaded);
+	MlnMemset(matches, 0, sizeof(matches));
+	if (links == NULL) {
+		ret = 0x230A0003;
+		goto out;
+	}
+	damaged = 0;
+	n = 0;
+	link = links;
+	while (link != NULL) {
+		if (link->byValue != 1 ||
+		    MlnBufferCompare(MLN_HEAP_GENERAL, link->value1, first) != 0 ||
+		    MlnBufferCompare(MLN_HEAP_GENERAL, link->value2, second) != 0) {
+			link = link->next;
+			continue;
+		}
+		ret = MlnImpl_8105DEDC(7, link->key, NULL);
+		if (ret == 1 || ret == 6)
+			ret = MlnImpl_810437BC(&links, link);
+		else if (ret == 0 && link->byValue == 1)
+			ret = MlnImpl_810436E4(link->from, link->to);
+		if (ret == 6) {
+			next = link->next;
+			MlnImpl_81049E34(&links, link);
+			damaged = 1;
+			link = next;
+		} else if (ret == 0x230A0011) {
+			link = link->next;
+		} else if (ret == 0) {
+			matches[n++] = link;
+			link = link->next;
+		}
+	}
+	if (damaged == 1) {
+		ret = MlnImpl_8104990C(links);
+		if (ret == 0)
+			ret = 6;
+		goto out;
+	}
+	if (n == 0) {
+		ret = 0x230A0003;
+		goto out;
+	}
+	array = MlnAllocate(MLN_HEAP_GENERAL, n * 2 * sizeof(*array));
+	if (array == NULL) {
+		ret = 2;
+		goto out;
+	}
+	MlnMemset(array, 0, n * 2 * sizeof(*array));
+	for (i = 0; i < n; i++) {
+		if (matches[i]->from != NULL) {
+			array[i * 2] = MlnBufferCreate(MLN_HEAP_GENERAL, matches[i]->from->size,
+						       matches[i]->from->data);
+			if (array[i * 2] == NULL)
+				goto fail;
+		}
+		array[i * 2 + 1] = MlnBufferCreate(MLN_HEAP_GENERAL, matches[i]->to->size,
+						   matches[i]->to->data);
+		if (array[i * 2 + 1] == NULL)
+			goto fail;
+	}
+	*count = n * 2;
+	*entries = array;
+	goto out;
+fail:
+	for (i = 0; i < n * 2; i++)
+		MlnBufferDestroy(MLN_HEAP_GENERAL, array[i]);
+	MlnFree(MLN_HEAP_GENERAL, array);
+	ret = 2;
+out:
+	MlnImpl_81049918(links);
+	return ret;
+}
+
+/* the record of the link from from to to; a damaged one gives 6 */
+int MlnImpl_81044824(const MlnBuffer *from, const MlnBuffer *to, MlnBuffer **record)
+{
+	MlnStoreLink *links = NULL;
+	MlnStoreLink *found = NULL;
+	MlnStoreLink *loaded;
+	MlnBuffer *buffer;
+	unsigned int key;
+	int ret;
+
+	if (to == NULL || to->size == 0 || to->data == NULL) {
+		ret = 3;
+		goto out;
+	}
+	loaded = NULL;
+	ret = MlnImpl_81049874(&loaded);
+	if (ret == 6) {
+		MlnImpl_810475F4(7);
+		MlnImpl_81049918(loaded);
+		goto out;
+	}
+	if (ret != 0) {
+		MlnImpl_81049918(loaded);
+		goto out;
+	}
+	links = loaded;
+	loaded = NULL;
+	MlnImpl_81049918(loaded);
+	ret = MlnImpl_81049DDC(links, from, to, &found);
+	if (ret != 0)
+		goto out;
+	key = found->key;
+	buffer = NULL;
+	if (key > 8) {
+		ret = 5;
+	} else {
+		ret = MlnImpl_8105DEDC(7, key, &buffer);
+		if (ret == 1 || ret == 6) {
+			if (MlnImpl_81049F14(key) == 0)
+				MlnImpl_8105DC0C(7, key, NULL);
+			ret = 6;
+		} else if (ret == 0) {
+			*record = buffer;
+			buffer = NULL;
+		}
+	}
+	MlnBufferDestroy(MLN_HEAP_GENERAL, buffer);
+out:
+	MlnImpl_81049918(links);
+	return ret;
+}
+
+/* sets the values of the link from first to second, and saves the list */
+unsigned int MlnImpl_81044984(MlnBuffer *key, MlnBuffer *value, const MlnBuffer *first,
+			      const MlnBuffer *second)
+{
+	MlnStoreLink *links = NULL;
+	MlnStoreLink *loaded = NULL;
+	int ret;
+
+	ret = MlnImpl_81049874(&loaded);
+	if (ret == 6) {
+		MlnImpl_810475F4(7);
+		MlnImpl_81049918(loaded);
+		goto out;
+	}
+	if (ret != 0) {
+		MlnImpl_81049918(loaded);
+		goto out;
+	}
+	links = loaded;
+	loaded = NULL;
+	MlnImpl_81049918(loaded);
+	ret = MlnImpl_8104A300(links, key, value, first, second);
+	if (ret == 0)
+		ret = MlnImpl_8104990C(links);
+out:
+	MlnImpl_81049918(links);
+	return ret;
+}
+
+/* the third step's state; a missing or damaged one marks the core broken */
+static inline __attribute__((always_inline)) int MlnStoreReadToken(MlnBuffer **out)
+{
+	MlnBufferGroups *groups = NULL;
+	MlnBuffer *buffer = NULL;
+	int ret;
+
+	ret = MlnImpl_8105DEDC(17, 0, &buffer);
+	if (ret == 0) {
+		*out = buffer;
+		buffer = NULL;
+	} else if (ret == 1) {
+		ret = 0x230A0002;
+		MlnImpl_810485B4();
+	} else if (ret == 6 || ret == 0x230A0002) {
+		MlnImpl_810485B4();
+	}
+	MlnBufferDestroy(MLN_HEAP_GENERAL, buffer);
+	MlnImpl_81042A88(groups);
+	return ret;
+}
+
+/* the SAML assertion in the third step's state (kind 0; 2 and 3 have none) */
+static inline __attribute__((always_inline)) int MlnStoreReadAssertion(int kind,
+								   MlnOctopusSamlAssertion **out)
+{
+	MlnOctopusSamlAssertion *assertion = NULL;
+	MlnBuffer *token = NULL;
+	int ret;
+
+	if (kind != 0) {
+		if (kind == 2 || kind == 3)
+			ret = 0x230A000B;
+		else
+			ret = 3;
+		goto out;
+	}
+	ret = MlnStoreReadToken(&token);
+	if (ret != 0)
+		goto out;
+	ret = MlnImpl_81042B18(token, 0, &assertion, 0);
+	if (ret == MLN_OCTOPUS_ERROR_FORMAT) {
+		MlnImpl_810485B4();
+		ret = 0x230A0004;
+	} else if (ret == 0) {
+		*out = assertion;
+		assertion = NULL;
+	}
+out:
+	MlnImpl_8103CD0C(assertion);
+	MlnBufferDestroy(MLN_HEAP_GENERAL, token);
+	return ret;
+}
+
+/* a against b by date and time to the second: -1, 0 or 1 */
+static inline __attribute__((always_inline)) int MlnStoreTimeCompare(MlnDateTime a, MlnDateTime b)
+{
+	if (a.year != b.year)
+		return a.year > b.year ? 1 : -1;
+	if (a.month != b.month)
+		return a.month > b.month ? 1 : -1;
+	if (a.day != b.day)
+		return a.day > b.day ? 1 : -1;
+	if (a.hour != b.hour)
+		return a.hour > b.hour ? 1 : -1;
+	if (a.minute != b.minute)
+		return a.minute > b.minute ? 1 : -1;
+	if (a.second != b.second)
+		return a.second > b.second ? 1 : -1;
+	return 0;
+}
+
+/*
+ * whether the SAML assertion in the third step's state is valid now:
+ * 0x230A0004 before its NotBefore or after its NotOnOrAfter
+ */
+int MlnImpl_81044A34(int kind)
+{
+	MlnOctopusSamlAssertion *assertion = NULL;
+	MlnDateTime now;
+	unsigned int seconds;
+	int ret;
+
+	ret = MlnStoreReadAssertion(kind, &assertion);
+	if (ret != 0)
+		goto out;
+	if (assertion->notBefore == NULL && assertion->notOnOrAfter == NULL)
+		goto out;
+	ret = MlnImpl_81052EBC(&seconds);
+	if (ret != 0) {
+		ret = ret == 5 ? 5 : 0x230A0004;
+		goto out;
+	}
+	if (MlnTimeFromSeconds(&seconds, 0, 0, &now) != 0) {
+		ret = 5;
+		goto out;
+	}
+	if (assertion->notBefore != NULL && MlnStoreTimeCompare(*assertion->notBefore, now) > 0)
+		goto invalid;
+	if (assertion->notOnOrAfter != NULL &&
+	    MlnStoreTimeCompare(now, *assertion->notOnOrAfter) > 0)
+		goto invalid;
+	goto out;
+invalid:
+	ret = 0x230A0004;
+out:
+	MlnImpl_8103CD0C(assertion);
+	return ret;
+}
+
+__attribute__((noinline)) int MlnImpl_81044D64(MlnBuffer **out)
+{
+	return MlnStoreReadToken(out);
+}
+
+__attribute__((noinline)) int MlnImpl_81044DEC(int kind, MlnOctopusSamlAssertion **out)
+{
+	return MlnStoreReadAssertion(kind, out);
 }
