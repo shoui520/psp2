@@ -1393,6 +1393,13 @@ typedef struct MlnOctopusArray {
 	void *items[];
 } MlnOctopusArray;
 
+/* an array's items compared, and one written, for its canonical byte sequence */
+typedef int (*MlnCanonicalCompare)(const void *a, const void *b);
+typedef int (*MlnCanonicalWrite)(const void *item, MlnTextBuffer *out);
+
+int MlnImpl_8105F3AC(const MlnOctopusArray *array, MlnCanonicalCompare compare,
+		     MlnCanonicalWrite write, MlnTextBuffer *out);
+
 /* an Attribute's type attribute */
 #define MLN_OCTOPUS_ATTRIBUTE_INT	0
 #define MLN_OCTOPUS_ATTRIBUTE_STRING	1
@@ -1917,11 +1924,25 @@ int MlnImpl_81048DF0(MlnStoreLink *links, const MlnBuffer *from, const MlnBuffer
 int MlnImpl_81047D7C(int ret, int miss, unsigned int flag, unsigned int *found,
 		     unsigned int *damaged);
 int MlnImpl_81049E34(MlnStoreLink **links, MlnStoreLink *link);
-int MlnImpl_8105DC0C(int table, unsigned int key, const MlnBuffer *data);
-int MlnImpl_8105DEDC(int table, unsigned int key, MlnBuffer **out);
-unsigned int MlnImpl_8105E060(int kind, MlnBuffer **out);
+int MlnImpl_8105D444(unsigned int kind, unsigned int hash, unsigned int key, MlnBuffer **value);
+int MlnImpl_8105D52C(void);
+int MlnImpl_8105D620(unsigned int kind, unsigned int hash, unsigned int key, int dirty,
+		     MlnBuffer *value);
+int MlnImpl_8105DAD0(unsigned int kind, int index, const MlnBuffer *value);
+int MlnImpl_8105DC0C(unsigned int kind, int index, const MlnBuffer *value);
+void MlnImpl_8105DD94(MlnBuffer *value);
+int MlnImpl_8105DDA8(unsigned int kind, int index, MlnBuffer **out);
+int MlnImpl_8105DEDC(unsigned int kind, int index, MlnBuffer **out);
+int MlnImpl_8105ED38(unsigned int key, const MlnBuffer *value, MlnBuffer **out);
+int MlnImpl_8105F124(unsigned int key, const MlnBuffer *value, MlnBuffer **out);
+unsigned int MlnImpl_8105E060(int dirty, MlnBuffer **out);
 unsigned int MlnImpl_8105E5E4(const MlnBuffer *state);
 unsigned int MlnImpl_8105EA2C(void);
+int MlnImpl_8105EC7C(unsigned int key, const MlnBuffer *value, MlnBuffer **out);
+int MlnImpl_8105EC88(unsigned char *key);
+MlnBuffer *MlnImpl_8106A08C(int heap);
+int MlnImpl_8106A0AC(int algorithm, const MlnBuffer *key, const MlnBuffer *message,
+		     MlnBuffer **out);
 unsigned int MlnImpl_81052EBC(unsigned int *seconds);
 int MlnImpl_81052944(const MlnDateTime *a, const MlnDateTime *b);
 int MlnImpl_810529E8(int value, int base, int size, char *buf);
