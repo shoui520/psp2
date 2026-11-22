@@ -1986,7 +1986,7 @@ unsigned int MlnImpl_8106C788(void *vm, MlnBuffer *uid);
 unsigned int MlnImpl_8106C970(void *vm, unsigned int *status);
 unsigned int MlnImpl_8106C86C(void *vm, unsigned int value);
 unsigned int MlnImpl_8106C8CC(void *vm, unsigned int size, const unsigned char *data);
-unsigned int MlnImpl_8106C7A4(void *vm, void *address, unsigned int size, unsigned char *out);
+unsigned int MlnImpl_8106C7A4(void *vm, unsigned int address, unsigned int size, unsigned char *out);
 unsigned int MlnImpl_8106C9F4(void *vm, unsigned int value, MlnBuffer **out, unsigned int *type);
 unsigned int MlnImpl_8106EE94(void *graph, MlnPlanktonParameterBlock *parameters);
 unsigned int MlnImpl_8106EEA8(void *graph, MlnOctopusBundle *bundle);

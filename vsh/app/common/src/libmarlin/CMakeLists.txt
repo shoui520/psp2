@@ -62,7 +62,7 @@ set(MLN_ENGINE_SOURCES
 	cache.c
 	canonical.c
 	octopuskey.c
-	core.c
+	control.c
 )
 psp2_module(${PSP2_TARGET} KIND user COMPILER gcc48 PARTIAL SOURCES
 	${MLN_ARM_SOURCES}
