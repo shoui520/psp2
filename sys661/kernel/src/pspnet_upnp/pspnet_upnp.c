@@ -70,8 +70,8 @@ extern s32 sceNetApctlGetInfo(s32 code, void *info);
 extern s32 sceNetApctlDelHandler(s32 id);
 extern s32 sceNetApctlGetState(s32 *state);
 extern s32 sceNetApctlAddHandler(void *handler, void *arg);
-extern void *sceNetIfhandle_lib_15CFE3C0(u32 size);
-extern void sceNetIfhandle_lib_76BAD213(void *ptr);
+extern void *sceNetMallocInternal(u32 size);
+extern void sceNetFreeInternal(void *ptr);
 
 /* Imports: sceNetInet */
 extern s32 sceNetInetSendto(s32 s, const void *buf, u32 len, s32 flags, const void *to, s32 tolen);
@@ -82,9 +82,9 @@ extern s32 sceNetInetConnect(s32 s, const void *name, s32 namelen);
 extern s32 sceNetInetGetsockopt(s32 s, s32 level, s32 optname, void *optval, s32 *optlen);
 extern s32 sceNetInetSelect(s32 nfds, void *readfds, void *writefds, void *exceptfds, void *timeout);
 extern s32 sceNetInetSend(s32 s, const void *buf, u32 len, s32 flags);
-extern s32 sceNetInet_80A21ABD(s32 s);
+extern s32 sceNetInetSocketAbort(s32 s);
 extern s32 sceNetInetSocket(s32 domain, s32 type, s32 protocol);
-extern s32 sceNetInet_8CA3A97E(void);
+extern s32 sceNetInetGetPspError(void);
 extern s32 sceNetInetClose(s32 s);
 extern u32 sceNetInetInetAddr(const char *cp);
 extern s32 sceNetInetRecvfrom(s32 s, void *buf, u32 len, s32 flags, void *from, s32 *fromlen);
@@ -99,18 +99,18 @@ extern s32 sceNetResolverStop(s32 rid);
 extern s32 sceNetResolverDelete(s32 rid);
 
 /* Imports: sceNet_lib */
-extern u32 sceNet_lib_1858883D(void);
-extern s32 sceNet_lib_2A73ADDC(const char *s, char **endptr, s32 base);
-extern void *sceNet_lib_4753D878(void *dst, const void *src, u32 n);
-extern char *sceNet_lib_80C9F02A(char *dst, const char *src);
-extern s32 sceNet_lib_94DCA9F0(const char *s1, const char *s2, u32 n);
-extern s32 sceNet_lib_9CFBC7E3(const char *s1, const char *s2);
-extern s32 sceNet_lib_A0F16ABD(const char *s1, const char *s2);
-extern char *sceNet_lib_B5CE388A(char *dst, const char *src, u32 n);
-extern char *sceNet_lib_BCBE14CF(const char *s, s32 c);
-extern s32 sceNet_lib_CF705E46(char *dst, const char *fmt, ...);
-extern u32 sceNet_lib_D8722983(const char *s);
-extern s32 sceNet_lib_E0A81C7C(const void *a, const void *b, u32 n);
+extern u32 sceNetRand(void);
+extern s32 sceNetStrtoul(const char *s, char **endptr, s32 base);
+extern void *sceNetMemmove(void *dst, const void *src, u32 n);
+extern char *sceNetStrcpy(char *dst, const char *src);
+extern s32 sceNetStrncmp(const char *s1, const char *s2, u32 n);
+extern s32 sceNetStrcasecmp(const char *s1, const char *s2);
+extern s32 sceNetStrcmp(const char *s1, const char *s2);
+extern char *sceNetStrncpy(char *dst, const char *src, u32 n);
+extern char *sceNetStrchr(const char *s, s32 c);
+extern s32 sceNetSprintf(char *dst, const char *fmt, ...);
+extern u32 sceNetStrlen(const char *s);
+extern s32 sceNetMemcmp(const void *a, const void *b, u32 n);
 
 /* Imports: sceReg */
 extern s32 sceRegCloseCategory(u32 hd);
@@ -156,9 +156,9 @@ struct XmlParser {
 	char tag_name[0xff];      /* 0x004 */
 	char text_val[0xff];      /* 0x103 */
 	char ns_prefix[0x40];     /* 0x202 */
-	char unk_242[6];          /* 0x242 */
-	u32 unk_248;              /* 0x248 */
-	u32 unk_24c;              /* 0x24c */
+	char entity_buf[6];          /* 0x242 */
+	u32 entity_len;              /* 0x248 */
+	u32 entity_state;              /* 0x24c */
 	s32 depth;                /* 0x250 */
 	s32 match_idx[10];        /* 0x254 */
 	s32 state;                /* 0x27c */
@@ -194,7 +194,7 @@ typedef struct UpnpNatInfoEx {
 	u16 ext_port;             /* 0x20 */
 	u8 stun_mapped_ip[4];     /* 0x22 */
 	u8 upnp_ext_ip[4];        /* 0x26 */
-	u8 pad_2a[2];             /* 0x2a */
+	u8 reserved[2];             /* 0x2a */
 	s32 ip_match;             /* 0x2c */
 } UpnpNatInfoEx; /* 0x30 */
 
@@ -225,8 +225,8 @@ typedef struct UpnpCtx {
 	u16 ext_port;             /* 0x006c */
 	u16 port2;                /* 0x006e */
 	u16 port3;                /* 0x0070 */
-	u16 pad_72;               /* 0x0072 */
-	u32 pad_74[2];            /* 0x0074 */
+	u16 reserved0;               /* 0x0072 */
+	u32 reserved1[2];            /* 0x0074 */
 	u32 stun_mapped_ip;       /* 0x007c */
 	char http_buf[0x400];     /* 0x0080 */
 	char soap_buf[0x400];     /* 0x0480 */
@@ -234,7 +234,7 @@ typedef struct UpnpCtx {
 	u32 local_ip;             /* 0x0900 */
 	u32 gw_ip;                /* 0x0904 */
 	u16 gw_port;              /* 0x0908 */
-	u16 pad_90a;              /* 0x090a */
+	u16 reserved2;              /* 0x090a */
 	char url_base[0x400];     /* 0x090c */
 	s32 active_svc_idx;       /* 0x0d0c */
 	u32 found_svc_mask;       /* 0x0d10 */
@@ -250,7 +250,7 @@ typedef struct StunMsg {
 	void *user_arg;           /* 0x0c */
 	s32 sock_fd;              /* 0x10 */
 	u16 bind_port;            /* 0x14 */
-	u16 pad_16;               /* 0x16 */
+	u16 reserved;               /* 0x16 */
 } StunMsg; /* 0x18 */
 
 typedef struct StunConfig {
@@ -274,7 +274,7 @@ typedef struct StunCtx {
 	s32 sock_fd;              /* 0x2c */
 	char host[0x40];          /* 0x30 */
 	u16 port;                 /* 0x70 */
-	u16 pad_72;               /* 0x72 */
+	u16 reserved0;               /* 0x72 */
 	StunConfig cfg;           /* 0x74 */
 	StunCallback cb;          /* 0x9c */
 	void *pkt_buf;            /* 0xa0 */
@@ -284,7 +284,7 @@ typedef struct StunCtx {
 
 typedef struct StunReqOpts {
 	s32 has_resp_addr;        /* 0x00 */
-	u16 pad_04;               /* 0x04 */
+	u16 reserved;               /* 0x04 */
 	u16 resp_port;            /* 0x06 */
 	u32 resp_addr;            /* 0x08 */
 	u32 change_req;           /* 0x0c */
@@ -309,7 +309,7 @@ typedef struct StunRespData {
 	StunAddrAttr mapped;      /* 0x00 */
 	StunAddrAttr source;      /* 0x08 */
 	StunAddrAttr changed;     /* 0x10 */
-	u32 pad_18[2];            /* 0x18 */
+	u32 reserved[2];            /* 0x18 */
 	void *hmac_key;           /* 0x20 */
 	u32 hmac_key_len;         /* 0x24 */
 	s32 check_ext;            /* 0x28 */
@@ -398,110 +398,110 @@ static const u8 g_stun_hmac_key[20] = {
 };
 
 /* Forward declarations */
-static void sub_0078(u32 *w, u32 *state);
-static s32 sub_19b4(char *buf, s32 bufsize, s32 action, s32 svc_type);
-static s32 sub_1b40(char *buf, s32 bufsize, s32 action);
-static s32 sub_1f48(const char *url, u32 *gw_ip, u16 *gw_port, const char *base_path, char *tmp_buf, u32 tmp_size, char *out_path, u32 out_size);
-static s32 sub_2450(char *buf, s32 bufsize, const SockAddrIn *addr, const char *path);
-static s32 sub_25c4(s32 sock, char *buf, u32 bufsize, XmlParser *parser);
-static s32 sub_279c(char *buf, s32 bufsize, const SockAddrIn *addr, const char *path, s32 action, s32 svc_type, s32 content_len);
-static s32 sub_2a48(s32 sock, const SockAddrIn *addr, u32 timeout_us);
-static s32 sub_2c5c(s32 sock, char *buf, u32 initial_len, u32 content_len, u32 buf_cap, XmlParser *parser);
-static s32 sub_2d74(s32 stack_size, s32 prio);
-static s32 sub_2fbc(UpnpHandlerCb cb, void *arg, s32 *out_id);
-static s32 sub_30b4(UpnpNatInfoEx *info);
-static s32 sub_3228(s32 *out_err, s32 upnp_code);
-static s32 sub_3330(UpnpCtx *ctx, s32 prev_state);
-static void sub_3428(void);
-static s32 sub_350c(s32 id);
-static s32 sub_35b0(s32 ext_flag);
-static s32 sub_3624(void);
-static s32 sub_366c(void);
-static s32 sub_36b4(s32 *out_state);
-static s32 sub_36c8(UpnpNatInfo *info);
-static s32 sub_3740(s32 *out_err);
-static s32 sub_3754(u32 bits);
-static s32 sub_377c(u32 bits);
-static s32 sub_37a4(u32 bits, u32 *out_bits);
-static s32 sub_37d8(u32 bits, u32 *out_bits);
-static s32 sub_3808(const char *cat, const char *key, char *out, s32 out_size);
-static s32 sub_3974(char *url, u32 *expected_ip, u16 *out_port, char *out_path, u32 out_path_size);
-static s32 sub_3ad4(s32 sock, char *buf, u32 bufsize, u32 *gw_ip, u16 *gw_port, char *desc_path, u32 desc_path_size);
-static s32 sub_3d5c(char *buf, u32 len);
-static s32 sub_3e38(char *line);
-static s32 sub_3f1c(char *buf, s32 bufsize);
-static s32 sub_414c(s32 sock, char *buf, u32 bufsize, u32 *gw_ip, u16 *gw_port, char *desc_path, u32 desc_path_size);
-static s32 sub_44a8(UpnpCtx *ctx, s32 cur_state, s32 *next_state, s32 *out_event);
-static s32 sub_4790(UpnpCtx *ctx, s32 cur_state, s32 *next_state, s32 *out_event);
-static s32 sub_4978(UpnpCtx *ctx, s32 cur_state, s32 *next_state, s32 *out_event);
-static s32 sub_4ad8(UpnpCtx *ctx, s32 cur_state, s32 *next_state, s32 *out_event);
-static s32 sub_4dc8(u32 args, void *argp);
-static s32 sub_4e8c(UpnpCtx *ctx, s32 cur_state, s32 *next_state, s32 *out_event);
-static s32 sub_4f3c(UpnpCtx *ctx, s32 cur_state, s32 *next_state, s32 *out_event);
-static s32 sub_4f44(UpnpCtx *ctx, s32 cur_state, s32 *next_state, s32 *out_event);
-static s32 sub_4fec(UpnpCtx *ctx, s32 cur_state, s32 *next_state, s32 *out_event);
-static void sub_5094(s32 prev_state, s32 new_state, s32 event, s32 err, void *arg);
-static s32 sub_511c(UpnpCtx *ctx, s32 svc_idx, s32 action, u16 ext_port, s32 proto, u16 int_port, s32 *out_err, u32 timeout_us);
-static void sub_5384(s32 stun_id, void *arg, s32 event, void *data);
-static s32 sub_541c(XmlParser *p, const char *data, s32 len);
-static s32 sub_5a38(XmlParser *p, const XmlSchema *schema, XmlCallback cb, void *arg);
-static s32 sub_5a98(XmlParser *p, s32 *out_matched);
-static s32 sub_5ba4(XmlParser *p, s32 *out_matched);
-static void sub_5cc8(const u8 *data, s32 data_len, const u8 *key, s32 key_len, u8 *out_digest);
-static s32 sub_5e48(void);
-static s32 sub_5ea0(void);
+static void sha1Compress(u32 *w, u32 *state);
+static s32 soapWriteEnvelopeHeader(char *buf, s32 bufsize, s32 action, s32 svc_type);
+static s32 soapWriteEnvelopeFooter(char *buf, s32 bufsize, s32 action);
+static s32 upnpResolveControlUrl(const char *url, u32 *gw_ip, u16 *gw_port, const char *base_path, char *tmp_buf, u32 tmp_size, char *out_path, u32 out_size);
+static s32 httpBuildGetRequest(char *buf, s32 bufsize, const SockAddrIn *addr, const char *path);
+static s32 httpRecvResponse(s32 sock, char *buf, u32 bufsize, XmlParser *parser);
+static s32 httpBuildSoapPostHeader(char *buf, s32 bufsize, const SockAddrIn *addr, const char *path, s32 action, s32 svc_type, s32 content_len);
+static s32 httpConnectTimeout(s32 sock, const SockAddrIn *addr, u32 timeout_us);
+static s32 httpRecvBodyToXml(s32 sock, char *buf, u32 initial_len, u32 content_len, u32 buf_cap, XmlParser *parser);
+static s32 upnpInitInternal(s32 stack_size, s32 prio);
+static s32 upnpAddHandlerInternal(UpnpHandlerCb cb, void *arg, s32 *out_id);
+static s32 upnpGetNatInfoExInternal(UpnpNatInfoEx *info);
+static s32 upnpMapErrorCode(s32 *out_err, s32 upnp_code);
+static s32 upnpNotifyHandlers(UpnpCtx *ctx, s32 prev_state);
+static void upnpTermInternal(void);
+static s32 upnpDelHandlerInternal(s32 id);
+static s32 upnpStartInternal(s32 ext_flag);
+static s32 upnpStopInternal(void);
+static s32 upnpAbortInternal(void);
+static s32 upnpGetStateInternal(s32 *out_state);
+static s32 upnpGetNatInfoInternal(UpnpNatInfo *info);
+static s32 upnpGetLastErrorInternal(s32 *out_err);
+static s32 upnpSetEventBits(u32 bits);
+static s32 upnpClearEventBits(u32 bits);
+static s32 upnpWaitEventBits(u32 bits, u32 *out_bits);
+static s32 upnpPollEventBits(u32 bits, u32 *out_bits);
+static s32 upnpReadRegistryString(const char *cat, const char *key, char *out, s32 out_size);
+static s32 ssdpParseLocationUrl(char *url, u32 *expected_ip, u16 *out_port, char *out_path, u32 out_path_size);
+static s32 ssdpRecvResponse(s32 sock, char *buf, u32 bufsize, u32 *gw_ip, u16 *gw_port, char *desc_path, u32 desc_path_size);
+static s32 ssdpFindLocationHeader(char *buf, u32 len);
+static s32 ssdpCheckStatusOk(char *line);
+static s32 ssdpBuildMSearch(char *buf, s32 bufsize);
+static s32 ssdpDiscoverGateway(s32 sock, char *buf, u32 bufsize, u32 *gw_ip, u16 *gw_port, char *desc_path, u32 desc_path_size);
+static s32 upnpStateDiscoverIgd(UpnpCtx *ctx, s32 cur_state, s32 *next_state, s32 *out_event);
+static s32 upnpStateAddPortMapping(UpnpCtx *ctx, s32 cur_state, s32 *next_state, s32 *out_event);
+static s32 upnpStateDeletePortMapping(UpnpCtx *ctx, s32 cur_state, s32 *next_state, s32 *out_event);
+static s32 upnpStateRunStunProbe(UpnpCtx *ctx, s32 cur_state, s32 *next_state, s32 *out_event);
+static s32 upnpWorkerThread(u32 args, void *argp);
+static s32 upnpStateWaitStart(UpnpCtx *ctx, s32 cur_state, s32 *next_state, s32 *out_event);
+static s32 upnpStateIdle(UpnpCtx *ctx, s32 cur_state, s32 *next_state, s32 *out_event);
+static s32 upnpStateWaitStop(UpnpCtx *ctx, s32 cur_state, s32 *next_state, s32 *out_event);
+static s32 upnpStateWaitApctl(UpnpCtx *ctx, s32 cur_state, s32 *next_state, s32 *out_event);
+static void upnpApctlHandler(s32 prev_state, s32 new_state, s32 event, s32 err, void *arg);
+static s32 upnpExecSoapAction(UpnpCtx *ctx, s32 svc_idx, s32 action, u16 ext_port, s32 proto, u16 int_port, s32 *out_err, u32 timeout_us);
+static void upnpStunCallback(s32 stun_id, void *arg, s32 event, void *data);
+static s32 xmlParserFeed(XmlParser *p, const char *data, s32 len);
+static s32 xmlParserInit(XmlParser *p, const XmlSchema *schema, XmlCallback cb, void *arg);
+static s32 xmlParserMatchOpenTag(XmlParser *p, s32 *out_matched);
+static s32 xmlParserMatchCloseTag(XmlParser *p, s32 *out_matched);
+static void hmacSha1Compute(const u8 *data, s32 data_len, const u8 *key, s32 key_len, u8 *out_digest);
+static s32 stunInitGlobal(void);
+static s32 stunTermGlobal(void);
 s32 sceNetStun_EBF3C24D(s32 stack_size, s32 prio, const char *host, u16 port, const StunConfig *cfg, StunCallback cb, s32 *out_id);
 s32 sceNetStun_4403D9E7(s32 id);
 s32 sceNetStun_A0CF3A47(s32 id, void *arg);
 s32 sceNetStun_FBF60C6B(s32 id, u16 port, void *arg);
 s32 sceNetStun_6CA54FC9(s32 id, s32 sock_fd, void *arg);
 s32 sceNetStun_40971567(s32 id, void *arg);
-static s32 sub_6014(s32 stack_size, s32 prio, const char *host, u16 port, const StunConfig *cfg, StunCallback cb, s32 *out_id);
-static s32 sub_6240(s32 id, void *arg);
-static s32 sub_632c(void);
-static s32 sub_6390(void);
-static s32 sub_6498(s32 id);
-static s32 sub_6588(s32 id, void *arg);
-static s32 sub_661c(s32 id, u16 port, void *arg);
-static s32 sub_66c0(s32 id, s32 sock_fd, void *arg);
-static s32 sub_6764(u32 args, void *argp);
-static void sub_6888(s32 idx);
-static void sub_696c(StunCtx *ctx, u16 port, s32 sock_fd, void *arg);
-static void sub_6ca8(StunCtx *ctx, void *arg);
-static void sub_71e0(StunCtx *ctx, void *arg);
-static s32 sub_75b8(StunCtx *ctx, const char *host, SockAddrIn *out_addr);
-static s32 sub_76c0(s32 send_fd, s32 recv_fd, const SockAddrIn *dst_addr, const SockAddrIn *expect_addr, const StunReqOpts *req, StunRespData *resp, u8 *pkt_buf, u32 pkt_buf_size);
-static s32 sub_78f4(s32 sock_fd, const StunAddrAttr *dst, u32 *out_res);
-static s32 sub_7a3c(u8 *buf, u32 bufsize, const u8 *tid, const StunReqOpts *req);
-static s32 sub_7bf0(u8 *buf, u32 bufsize, const u8 *tid, StunRespData *resp);
-static s32 sub_7e9c(u8 *buf, u32 total_len, const u8 *tid, u16 msg_type);
-static s32 sub_7f2c(u8 *buf, u32 bufsize, const u8 *tid, u16 expect_type);
-static s32 sub_8014(u8 *buf, u32 bufsize, u16 attr_type, u16 port, u32 addr);
-static s32 sub_80f4(const u8 *buf, u32 bufsize, s32 *out_skip, StunAddrAttr *out_addr);
-static s32 sub_81d0(u8 *buf, u32 bufsize, u32 flags);
-static s32 sub_8278(u8 *buf, u32 bufsize, u16 attr_type, const void *data, u32 data_len);
-static s32 sub_8344(u8 *pkt_start, u32 bufsize, u8 *attr_pos, const u8 *key, u32 key_len);
-static s32 sub_845c(u8 *pkt_start, u32 bufsize, u8 *attr_pos, const u8 *key, u32 key_len);
-static s32 sub_854c(const u8 *attr_pos, u32 rem, s32 check_ext, const void *ext_data, u32 ext_len);
-static s32 sub_85f0(Sha1Ctx *ctx, const u8 *data, u32 len);
-static s32 sub_87c0(Sha1Ctx *ctx, u8 *out_digest);
-static s32 sub_89bc(Sha1Ctx *ctx);
+static s32 stunCreateInternal(s32 stack_size, s32 prio, const char *host, u16 port, const StunConfig *cfg, StunCallback cb, s32 *out_id);
+static s32 stunStopInternal(s32 id, void *arg);
+static s32 stunInitLib(void);
+static s32 stunTermLib(void);
+static s32 stunDeleteInternal(s32 id);
+static s32 stunStartNatCheckInternal(s32 id, void *arg);
+static s32 stunStartPortCheckInternal(s32 id, u16 port, void *arg);
+static s32 stunStartSockCheckInternal(s32 id, s32 sock_fd, void *arg);
+static s32 stunWorkerThread(u32 args, void *argp);
+static void stunDestroyContext(s32 idx);
+static void stunExecPortCheck(StunCtx *ctx, u16 port, s32 sock_fd, void *arg);
+static void stunExecNatCheck(StunCtx *ctx, void *arg);
+static void stunExecExtNatCheck(StunCtx *ctx, void *arg);
+static s32 stunResolveServer(StunCtx *ctx, const char *host, SockAddrIn *out_addr);
+static s32 stunSendRecvRequest(s32 send_fd, s32 recv_fd, const SockAddrIn *dst_addr, const SockAddrIn *expect_addr, const StunReqOpts *req, StunRespData *resp, u8 *pkt_buf, u32 pkt_buf_size);
+static s32 stunTestChangedAddrReachable(s32 sock_fd, const StunAddrAttr *dst, u32 *out_res);
+static s32 stunBuildBindingRequest(u8 *buf, u32 bufsize, const u8 *tid, const StunReqOpts *req);
+static s32 stunParseBindingResponse(u8 *buf, u32 bufsize, const u8 *tid, StunRespData *resp);
+static s32 stunWriteHeader(u8 *buf, u32 total_len, const u8 *tid, u16 msg_type);
+static s32 stunVerifyHeader(u8 *buf, u32 bufsize, const u8 *tid, u16 expect_type);
+static s32 stunWriteAddrAttr(u8 *buf, u32 bufsize, u16 attr_type, u16 port, u32 addr);
+static s32 stunReadAddrAttr(const u8 *buf, u32 bufsize, s32 *out_skip, StunAddrAttr *out_addr);
+static s32 stunWriteChangeReqAttr(u8 *buf, u32 bufsize, u32 flags);
+static s32 stunWriteBytesAttr(u8 *buf, u32 bufsize, u16 attr_type, const void *data, u32 data_len);
+static s32 stunWriteMessageIntegrity(u8 *pkt_start, u32 bufsize, u8 *attr_pos, const u8 *key, u32 key_len);
+static s32 stunVerifyMessageIntegrity(u8 *pkt_start, u32 bufsize, u8 *attr_pos, const u8 *key, u32 key_len);
+static s32 stunVerifyExtAttr(const u8 *attr_pos, u32 rem, s32 check_ext, const void *ext_data, u32 ext_len);
+static s32 sha1Update(Sha1Ctx *ctx, const u8 *data, u32 len);
+static s32 sha1Final(Sha1Ctx *ctx, u8 *out_digest);
+static s32 sha1Init(Sha1Ctx *ctx);
 
 static const UpnpStateFn g_upnp_state_handlers[8] = {
-	sub_4e8c, sub_44a8, sub_4790, sub_4978,
-	sub_4f3c, sub_4ad8, sub_4f44, sub_4fec
+	upnpStateWaitStart, upnpStateDiscoverIgd, upnpStateAddPortMapping, upnpStateDeletePortMapping,
+	upnpStateIdle, upnpStateRunStunProbe, upnpStateWaitStop, upnpStateWaitApctl
 };
 
 /* =========================================================================
  * SHA-1 core (0x0000..0x047c)
  * ========================================================================= */
 
-static void sub_0000(u32 *w, u32 *state)
+static void sha1TransformBlock(u32 *w, u32 *state)
 {
-	sub_0078(w, state);
+	sha1Compress(w, state);
 }
 
-static void sub_0078(u32 *w, u32 *state)
+static void sha1Compress(u32 *w, u32 *state)
 {
 	u32 a = state[0];
 	u32 b = state[1];
@@ -549,7 +549,7 @@ static void sub_0078(u32 *w, u32 *state)
 	state[4] += e;
 }
 
-static s32 sub_01d0(const u8 *data, u32 len, u8 *out_digest)
+static s32 sha1ComputeDigest(const u8 *data, u32 len, u8 *out_digest)
 {
 	u32 state[5];
 	u32 w[16];
@@ -569,7 +569,7 @@ static s32 sub_01d0(const u8 *data, u32 len, u8 *out_digest)
 			w[i] = v;
 			data += 4;
 		}
-		sub_0078(w, state);
+		sha1Compress(w, state);
 		len -= 64;
 	}
 
@@ -583,11 +583,11 @@ static s32 sub_01d0(const u8 *data, u32 len, u8 *out_digest)
 		wb[len] = 0x80;
 		for (i = 0; i < 16; i++)
 			w[i] = bswap32(w[i]);
-		sub_0078(w, state);
+		sha1Compress(w, state);
 		for (i = 0; i < 16; i++)
 			w[i] = 0;
 		w[15] = bitlen;
-		sub_0078(w, state);
+		sha1Compress(w, state);
 	} else {
 		u8 *wb = (u8 *)w;
 		for (i = 0; i < len; i++)
@@ -596,7 +596,7 @@ static s32 sub_01d0(const u8 *data, u32 len, u8 *out_digest)
 		for (i = 0; i < 14; i++)
 			w[i] = bswap32(w[i]);
 		w[15] = bitlen;
-		sub_0078(w, state);
+		sha1Compress(w, state);
 	}
 
 	for (i = 0; i < 5; i++) {
@@ -620,7 +620,7 @@ s32 sceNetUpnp_E24220B5(s32 stack_size, s32 prio)
 		return (s32)0x80410005;
 	if (g_upnp_initialized > 0)
 		return (s32)0x80411602;
-	ret = sub_2d74(stack_size, prio);
+	ret = upnpInitInternal(stack_size, prio);
 	if (ret < 0)
 		return ret;
 	g_upnp_initialized = 1;
@@ -633,7 +633,7 @@ s32 sceNetUpnp_540491EF(void)
 		return (s32)0x80410005;
 	if (!g_upnp_initialized)
 		return 0;
-	sub_3428();
+	upnpTermInternal();
 	g_upnp_initialized = 0;
 	return 0;
 }
@@ -642,14 +642,14 @@ s32 sceNetUpnp_8513C6D1(UpnpHandlerCb cb, void *arg, s32 *out_id)
 {
 	if (_sceKernelCheckThreadStack() < 0x7f0)
 		return (s32)0x80410005;
-	return sub_2fbc(cb, arg, out_id);
+	return upnpAddHandlerInternal(cb, arg, out_id);
 }
 
 s32 sceNetUpnp_74A51211(s32 id)
 {
 	if (_sceKernelCheckThreadStack() < 0x7f0)
 		return (s32)0x80410005;
-	return sub_350c(id);
+	return upnpDelHandlerInternal(id);
 }
 
 s32 sceNetUpnp_3432B2E5(void)
@@ -658,7 +658,7 @@ s32 sceNetUpnp_3432B2E5(void)
 		return (s32)0x80410005;
 	if (!g_upnp_initialized)
 		return (s32)0x80411601;
-	return sub_35b0(0);
+	return upnpStartInternal(0);
 }
 
 s32 sceNetUpnp_FDA78483(void)
@@ -667,7 +667,7 @@ s32 sceNetUpnp_FDA78483(void)
 		return (s32)0x80410005;
 	if (!g_upnp_initialized)
 		return (s32)0x80411601;
-	return sub_35b0(1);
+	return upnpStartInternal(1);
 }
 
 s32 sceNetUpnp_3E32ED9E(void)
@@ -676,7 +676,7 @@ s32 sceNetUpnp_3E32ED9E(void)
 		return (s32)0x80410005;
 	if (!g_upnp_initialized)
 		return (s32)0x80411601;
-	return sub_3624();
+	return upnpStopInternal();
 }
 
 s32 sceNetUpnp_C3A35217(s32 *out_state)
@@ -685,7 +685,7 @@ s32 sceNetUpnp_C3A35217(s32 *out_state)
 		return (s32)0x80410005;
 	if (!g_upnp_initialized)
 		return (s32)0x80411601;
-	return sub_36b4(out_state);
+	return upnpGetStateInternal(out_state);
 }
 
 s32 sceNetUpnp_27045362(UpnpNatInfo *info)
@@ -694,7 +694,7 @@ s32 sceNetUpnp_27045362(UpnpNatInfo *info)
 		return (s32)0x80410005;
 	if (!g_upnp_initialized)
 		return (s32)0x80411601;
-	return sub_36c8(info);
+	return upnpGetNatInfoInternal(info);
 }
 
 s32 sceNetUpnp_1038E77A(UpnpNatInfoEx *info)
@@ -703,7 +703,7 @@ s32 sceNetUpnp_1038E77A(UpnpNatInfoEx *info)
 		return (s32)0x80410005;
 	if (!g_upnp_initialized)
 		return (s32)0x80411601;
-	return sub_30b4(info);
+	return upnpGetNatInfoExInternal(info);
 }
 
 s32 sceNetUpnp_EAF1C841(s32 *out_err)
@@ -712,151 +712,151 @@ s32 sceNetUpnp_EAF1C841(s32 *out_err)
 		return (s32)0x80410005;
 	if (!g_upnp_initialized)
 		return (s32)0x80411601;
-	return sub_3740(out_err);
+	return upnpGetLastErrorInternal(out_err);
 }
 
 /* =========================================================================
  * SOAP request builders & XML response callbacks (0x1398..0x2c5b)
  * ========================================================================= */
 
-static s32 sub_1398(char *buf, s32 bufsize, const char *client_ip, s32 svc_type, u16 ext_port, s32 proto, u16 int_port)
+static s32 soapBuildAddPortMappingBody(char *buf, s32 bufsize, const char *client_ip, s32 svc_type, u16 ext_port, s32 proto, u16 int_port)
 {
 	char line[0x80];
 	char *p;
 	s32 rem, n;
 
-	n = sub_19b4(buf, bufsize, 0, svc_type);
+	n = soapWriteEnvelopeHeader(buf, bufsize, 0, svc_type);
 	if (n < 0)
 		return n;
 	p = buf + n;
 	rem = bufsize - n;
 
 	sceKernelMemset(line, 0, sizeof(line));
-	n = sceNet_lib_CF705E46(line, " <%s>%s</%s>\r\n", "NewRemoteHost", "", "NewRemoteHost");
+	n = sceNetSprintf(line, " <%s>%s</%s>\r\n", "NewRemoteHost", "", "NewRemoteHost");
 	if (n < 0 || n >= rem)
 		return (s32)0x80411685;
-	sceNet_lib_80C9F02A(p, line);
+	sceNetStrcpy(p, line);
 	p += n;
 	rem -= n;
 
 	sceKernelMemset(line, 0, sizeof(line));
-	n = sceNet_lib_CF705E46(line, " <%s>%d</%s>\r\n", "NewExternalPort", (u32)ext_port, "NewExternalPort");
+	n = sceNetSprintf(line, " <%s>%d</%s>\r\n", "NewExternalPort", (u32)ext_port, "NewExternalPort");
 	if (n < 0 || n >= rem)
 		return (s32)0x80411685;
-	sceNet_lib_80C9F02A(p, line);
+	sceNetStrcpy(p, line);
 	p += n;
 	rem -= n;
 
 	sceKernelMemset(line, 0, sizeof(line));
-	n = sceNet_lib_CF705E46(line, " <%s>%s</%s>\r\n", "NewProtocol", g_proto_names[proto], "NewProtocol");
+	n = sceNetSprintf(line, " <%s>%s</%s>\r\n", "NewProtocol", g_proto_names[proto], "NewProtocol");
 	if (n < 0 || n >= rem)
 		return (s32)0x80411685;
-	sceNet_lib_80C9F02A(p, line);
+	sceNetStrcpy(p, line);
 	p += n;
 	rem -= n;
 
 	sceKernelMemset(line, 0, sizeof(line));
-	n = sceNet_lib_CF705E46(line, " <%s>%d</%s>\r\n", "NewInternalPort", (u32)int_port, "NewInternalPort");
+	n = sceNetSprintf(line, " <%s>%d</%s>\r\n", "NewInternalPort", (u32)int_port, "NewInternalPort");
 	if (n < 0 || n >= rem)
 		return (s32)0x80411685;
-	sceNet_lib_80C9F02A(p, line);
+	sceNetStrcpy(p, line);
 	p += n;
 	rem -= n;
 
 	sceKernelMemset(line, 0, sizeof(line));
-	n = sceNet_lib_CF705E46(line, " <%s>%s</%s>\r\n", "NewInternalClient", client_ip, "NewInternalClient");
+	n = sceNetSprintf(line, " <%s>%s</%s>\r\n", "NewInternalClient", client_ip, "NewInternalClient");
 	if (n < 0 || n >= rem)
 		return (s32)0x80411685;
-	sceNet_lib_80C9F02A(p, line);
+	sceNetStrcpy(p, line);
 	p += n;
 	rem -= n;
 
 	sceKernelMemset(line, 0, sizeof(line));
-	n = sceNet_lib_CF705E46(line, " <%s>%d</%s>\r\n", "NewEnabled", 1, "NewEnabled");
+	n = sceNetSprintf(line, " <%s>%d</%s>\r\n", "NewEnabled", 1, "NewEnabled");
 	if (n < 0 || n >= rem)
 		return (s32)0x80411685;
-	sceNet_lib_80C9F02A(p, line);
+	sceNetStrcpy(p, line);
 	p += n;
 	rem -= n;
 
 	sceKernelMemset(line, 0, sizeof(line));
-	n = sceNet_lib_CF705E46(line, " <%s>%s:%d to %d (%s)</%s>\r\n",
+	n = sceNetSprintf(line, " <%s>%s:%d to %d (%s)</%s>\r\n",
 		"NewPortMappingDescription", client_ip, (u32)int_port, (u32)ext_port,
 		g_proto_names[proto], "NewPortMappingDescription");
 	if (n < 0 || n >= rem)
 		return (s32)0x80411685;
-	sceNet_lib_80C9F02A(p, line);
+	sceNetStrcpy(p, line);
 	p += n;
 	rem -= n;
 
 	sceKernelMemset(line, 0, sizeof(line));
-	n = sceNet_lib_CF705E46(line, " <%s>%d</%s>\r\n", "NewLeaseDuration", 0, "NewLeaseDuration");
+	n = sceNetSprintf(line, " <%s>%d</%s>\r\n", "NewLeaseDuration", 0, "NewLeaseDuration");
 	if (n < 0 || n >= rem)
 		return (s32)0x80411685;
-	sceNet_lib_80C9F02A(p, line);
+	sceNetStrcpy(p, line);
 	p += n;
 	rem -= n;
 
-	n = sub_1b40(p, rem, 0);
+	n = soapWriteEnvelopeFooter(p, rem, 0);
 	if (n < 0)
 		return n;
 	return (s32)((p + n) - buf);
 }
 
-static s32 sub_1770(char *buf, s32 bufsize, s32 svc_type, u16 ext_port, s32 proto)
+static s32 soapBuildDeletePortMappingBody(char *buf, s32 bufsize, s32 svc_type, u16 ext_port, s32 proto)
 {
 	char line[0x80];
 	char *p;
 	s32 rem, n;
 
-	n = sub_19b4(buf, bufsize, 1, svc_type);
+	n = soapWriteEnvelopeHeader(buf, bufsize, 1, svc_type);
 	if (n < 0)
 		return n;
 	p = buf + n;
 	rem = bufsize - n;
 
 	sceKernelMemset(line, 0, sizeof(line));
-	n = sceNet_lib_CF705E46(line, " <%s>%s</%s>\r\n", "NewRemoteHost", "", "NewRemoteHost");
+	n = sceNetSprintf(line, " <%s>%s</%s>\r\n", "NewRemoteHost", "", "NewRemoteHost");
 	if (n < 0 || n >= rem)
 		return (s32)0x80411685;
-	sceNet_lib_80C9F02A(p, line);
+	sceNetStrcpy(p, line);
 	p += n;
 	rem -= n;
 
 	sceKernelMemset(line, 0, sizeof(line));
-	n = sceNet_lib_CF705E46(line, " <%s>%d</%s>\r\n", "NewExternalPort", (u32)ext_port, "NewExternalPort");
+	n = sceNetSprintf(line, " <%s>%d</%s>\r\n", "NewExternalPort", (u32)ext_port, "NewExternalPort");
 	if (n < 0 || n >= rem)
 		return (s32)0x80411685;
-	sceNet_lib_80C9F02A(p, line);
+	sceNetStrcpy(p, line);
 	p += n;
 	rem -= n;
 
 	sceKernelMemset(line, 0, sizeof(line));
-	n = sceNet_lib_CF705E46(line, " <%s>%s</%s>\r\n", "NewProtocol", g_proto_names[proto], "NewProtocol");
+	n = sceNetSprintf(line, " <%s>%s</%s>\r\n", "NewProtocol", g_proto_names[proto], "NewProtocol");
 	if (n < 0 || n >= rem)
 		return (s32)0x80411685;
-	sceNet_lib_80C9F02A(p, line);
+	sceNetStrcpy(p, line);
 	p += n;
 	rem -= n;
 
-	n = sub_1b40(p, rem, 1);
+	n = soapWriteEnvelopeFooter(p, rem, 1);
 	if (n < 0)
 		return n;
 	return (s32)((p + n) - buf);
 }
 
-static s32 sub_1944(char *buf, s32 bufsize, s32 action, s32 svc_type)
+static s32 soapBuildActionBody(char *buf, s32 bufsize, s32 action, s32 svc_type)
 {
-	s32 n = sub_19b4(buf, bufsize, action, svc_type);
+	s32 n = soapWriteEnvelopeHeader(buf, bufsize, action, svc_type);
 	if (n < 0)
 		return n;
-	s32 m = sub_1b40(buf + n, bufsize - n, action);
+	s32 m = soapWriteEnvelopeFooter(buf + n, bufsize - n, action);
 	if (m < 0)
 		return m;
 	return n + m;
 }
 
-static s32 sub_19b4(char *buf, s32 bufsize, s32 action, s32 svc_type)
+static s32 soapWriteEnvelopeHeader(char *buf, s32 bufsize, s32 action, s32 svc_type)
 {
 	char line[0x80];
 	char *p = buf;
@@ -864,35 +864,35 @@ static s32 sub_19b4(char *buf, s32 bufsize, s32 action, s32 svc_type)
 	s32 n;
 
 	sceKernelMemset(line, 0, sizeof(line));
-	n = sceNet_lib_CF705E46(line, "<s:%s xmlns:s=\"%s\" s:encodingStyle=\"%s\">\r\n",
+	n = sceNetSprintf(line, "<s:%s xmlns:s=\"%s\" s:encodingStyle=\"%s\">\r\n",
 		"Envelope",
 		"http://schemas.xmlsoap.org/soap/envelope/",
 		"http://schemas.xmlsoap.org/soap/encoding/");
 	if (n < 0 || n >= rem)
 		return (s32)0x80411685;
-	sceNet_lib_80C9F02A(p, line);
+	sceNetStrcpy(p, line);
 	p += n;
 	rem -= n;
 
 	sceKernelMemset(line, 0, sizeof(line));
-	n = sceNet_lib_CF705E46(line, "   <s:%s>\r\n", "Body");
+	n = sceNetSprintf(line, "   <s:%s>\r\n", "Body");
 	if (n < 0 || n >= rem)
 		return (s32)0x80411685;
-	sceNet_lib_80C9F02A(p, line);
+	sceNetStrcpy(p, line);
 	p += n;
 	rem -= n;
 
 	sceKernelMemset(line, 0, sizeof(line));
-	n = sceNet_lib_CF705E46(line, "      <u:%s xmlns:u=\"%s\">\r\n",
+	n = sceNetSprintf(line, "      <u:%s xmlns:u=\"%s\">\r\n",
 		g_soap_actions[action], g_service_types[svc_type]);
 	if (n < 0 || n >= rem)
 		return (s32)0x80411685;
-	sceNet_lib_80C9F02A(p, line);
+	sceNetStrcpy(p, line);
 	p += n;
 	return (s32)(p - buf);
 }
 
-static s32 sub_1b40(char *buf, s32 bufsize, s32 action)
+static s32 soapWriteEnvelopeFooter(char *buf, s32 bufsize, s32 action)
 {
 	char line[0x40];
 	char *p = buf;
@@ -900,47 +900,47 @@ static s32 sub_1b40(char *buf, s32 bufsize, s32 action)
 	s32 n;
 
 	sceKernelMemset(line, 0, sizeof(line));
-	n = sceNet_lib_CF705E46(line, "      </u:%s>\r\n", g_soap_actions[action]);
+	n = sceNetSprintf(line, "      </u:%s>\r\n", g_soap_actions[action]);
 	if (n < 0 || n >= rem)
 		return (s32)0x80411685;
-	sceNet_lib_80C9F02A(p, line);
+	sceNetStrcpy(p, line);
 	p += n;
 	rem -= n;
 
 	sceKernelMemset(line, 0, sizeof(line));
-	n = sceNet_lib_CF705E46(line, "   </s:%s>\r\n", "Body");
+	n = sceNetSprintf(line, "   </s:%s>\r\n", "Body");
 	if (n < 0 || n >= rem)
 		return (s32)0x80411685;
-	sceNet_lib_80C9F02A(p, line);
+	sceNetStrcpy(p, line);
 	p += n;
 	rem -= n;
 
 	sceKernelMemset(line, 0, sizeof(line));
-	n = sceNet_lib_CF705E46(line, "</s:%s>\r\n", "Envelope");
+	n = sceNetSprintf(line, "</s:%s>\r\n", "Envelope");
 	if (n < 0 || n >= rem)
 		return (s32)0x80411685;
-	sceNet_lib_80C9F02A(p, line);
+	sceNetStrcpy(p, line);
 	p += n;
 	return (s32)(p - buf);
 }
 
-static s32 sub_1c98(XmlParser *p, s32 event, s32 depth, s32 idx, const char *val1, const char *val2, void *arg)
+static s32 upnpDescXmlCallback(XmlParser *p, s32 event, s32 depth, s32 idx, const char *val1, const char *val2, void *arg)
 {
 	UpnpCtx *ctx = (UpnpCtx *)arg;
 	s32 ret;
 
 	if (event == 3 && depth == 1 && idx == 0) {
-		sub_3974((char *)val1, &ctx->gw_ip, &ctx->gw_port, ctx->url_base, 0x400);
+		ssdpParseLocationUrl((char *)val1, &ctx->gw_ip, &ctx->gw_port, ctx->url_base, 0x400);
 		ctx->xml_parse_flags |= 1;
 	}
 
 	if (event == 3 && (depth == 4 || depth == 6 || depth == 8) && idx == 0) {
-		if (sceNet_lib_A0F16ABD("urn:schemas-upnp-org:service:WANIPConnection:1", val1) == 0) {
+		if (sceNetStrcmp("urn:schemas-upnp-org:service:WANIPConnection:1", val1) == 0) {
 			g_xml_service_type = 0;
 			g_xml_found_service = 1;
 			g_xml_service_depth = depth;
 			g_xml_service_idx = idx;
-		} else if (sceNet_lib_A0F16ABD("urn:schemas-upnp-org:service:WANPPPConnection:1", val1) == 0) {
+		} else if (sceNetStrcmp("urn:schemas-upnp-org:service:WANPPPConnection:1", val1) == 0) {
 			g_xml_service_type = 1;
 			g_xml_found_service = 1;
 			g_xml_service_depth = depth;
@@ -954,7 +954,7 @@ static s32 sub_1c98(XmlParser *p, s32 event, s32 depth, s32 idx, const char *val
 		if (g_xml_service_type == 0) {
 			if (ctx->found_svc_mask & 1)
 				return 0;
-			ret = sub_1f48(val1, &ctx->gw_ip, &ctx->gw_port, ctx->url_base,
+			ret = upnpResolveControlUrl(val1, &ctx->gw_ip, &ctx->gw_port, ctx->url_base,
 				ctx->http_buf, 0x400, ctx->ctrl_url[0], 0x400);
 			if (ret < 0)
 				return ret;
@@ -962,7 +962,7 @@ static s32 sub_1c98(XmlParser *p, s32 event, s32 depth, s32 idx, const char *val
 		} else if (g_xml_service_type == 1) {
 			if (ctx->found_svc_mask & 2)
 				return 0;
-			ret = sub_1f48(val1, &ctx->gw_ip, &ctx->gw_port, ctx->url_base,
+			ret = upnpResolveControlUrl(val1, &ctx->gw_ip, &ctx->gw_port, ctx->url_base,
 				ctx->http_buf, 0x400, ctx->ctrl_url[1], 0x400);
 			if (ret < 0)
 				return ret;
@@ -981,57 +981,57 @@ static s32 sub_1c98(XmlParser *p, s32 event, s32 depth, s32 idx, const char *val
 	return 0;
 }
 
-static s32 sub_1f10(UpnpCtx *ctx, XmlParser *parser)
+static s32 upnpInitDescXmlParser(UpnpCtx *ctx, XmlParser *parser)
 {
-	return sub_5a38(parser, &g_desc_schema, sub_1c98, ctx);
+	return xmlParserInit(parser, &g_desc_schema, upnpDescXmlCallback, ctx);
 }
 
-static s32 sub_1f40(void)
+static s32 upnpResetDescXmlState(void)
 {
 	return 0;
 }
 
-static s32 sub_1f48(const char *url, u32 *gw_ip, u16 *gw_port, const char *base_path,
+static s32 upnpResolveControlUrl(const char *url, u32 *gw_ip, u16 *gw_port, const char *base_path,
                     char *tmp_buf, u32 tmp_size, char *out_path, u32 out_size)
 {
 	u16 parsed_port;
 	char combined[0x100];
 	s32 ret;
 
-	ret = sub_3974((char *)url, gw_ip, &parsed_port, tmp_buf, tmp_size);
+	ret = ssdpParseLocationUrl((char *)url, gw_ip, &parsed_port, tmp_buf, tmp_size);
 	if (ret >= 0) {
 		*gw_port = parsed_port;
-		if (sceNet_lib_D8722983(tmp_buf) >= out_size)
+		if (sceNetStrlen(tmp_buf) >= out_size)
 			return (s32)0x80411685;
-		sceNet_lib_80C9F02A(out_path, tmp_buf);
+		sceNetStrcpy(out_path, tmp_buf);
 		return 0;
 	}
 
 	if (url[0] == '/') {
-		if (sceNet_lib_D8722983(url) >= out_size)
+		if (sceNetStrlen(url) >= out_size)
 			return (s32)0x80411685;
-		sceNet_lib_80C9F02A(out_path, url);
+		sceNetStrcpy(out_path, url);
 		return 0;
 	}
 
 	sceKernelMemset(combined, 0, sizeof(combined));
-	ret = sceNet_lib_CF705E46(combined, "%s%s", base_path, url);
+	ret = sceNetSprintf(combined, "%s%s", base_path, url);
 	if (ret >= (s32)out_size)
 		return (s32)0x80411685;
-	sceNet_lib_80C9F02A(out_path, combined);
+	sceNetStrcpy(out_path, combined);
 	return 0;
 }
 
-static s32 sub_204c(s32 sock, char *buf, u32 bufsize, const SockAddrIn *addr, const char *path,
+static s32 upnpSendSoapRequest(s32 sock, char *buf, u32 bufsize, const SockAddrIn *addr, const char *path,
                     s32 action, s32 svc_type, const char *body, u32 body_len, XmlParser *parser, u32 timeout_us)
 {
 	s32 ret, hdr_len;
 
-	ret = sub_2a48(sock, addr, timeout_us);
+	ret = httpConnectTimeout(sock, addr, timeout_us);
 	if (ret < 0)
 		return ret;
 
-	hdr_len = sub_279c(buf, (s32)bufsize, addr, path, action, svc_type, (s32)body_len);
+	hdr_len = httpBuildSoapPostHeader(buf, (s32)bufsize, addr, path, action, svc_type, (s32)body_len);
 	if (hdr_len < 0)
 		return hdr_len;
 
@@ -1049,19 +1049,19 @@ static s32 sub_204c(s32 sock, char *buf, u32 bufsize, const SockAddrIn *addr, co
 			return ret;
 	}
 
-	return sub_25c4(sock, buf, bufsize, parser);
+	return httpRecvResponse(sock, buf, bufsize, parser);
 }
 
-static s32 sub_2180(XmlParser *p, s32 event, s32 depth, s32 idx, const char *val1, const char *val2, void *arg)
+static s32 upnpExtIpXmlCallback(XmlParser *p, s32 event, s32 depth, s32 idx, const char *val1, const char *val2, void *arg)
 {
 	UpnpCtx *ctx = (UpnpCtx *)arg;
 	s32 ret = 0;
 
 	if (event == 3 && depth == 0 && idx == 0) {
-		if (sceNet_lib_D8722983(val1) >= 0x10)
+		if (sceNetStrlen(val1) >= 0x10)
 			return (s32)0x80411609;
 		sceKernelMemset(ctx->ext_ip_str, 0, 0x10);
-		sceNet_lib_80C9F02A(ctx->ext_ip_str, val1);
+		sceNetStrcpy(ctx->ext_ip_str, val1);
 		ctx->xml_parse_flags |= 2;
 	}
 
@@ -1073,7 +1073,7 @@ static s32 sub_2180(XmlParser *p, s32 event, s32 depth, s32 idx, const char *val
 	return ret;
 }
 
-static s32 sub_228c(s32 sock, char *buf, u32 bufsize, const SockAddrIn *addr, const char *path, XmlParser *parser)
+static s32 upnpHttpGetXml(s32 sock, char *buf, u32 bufsize, const SockAddrIn *addr, const char *path, XmlParser *parser)
 {
 	s32 ret;
 
@@ -1081,7 +1081,7 @@ static s32 sub_228c(s32 sock, char *buf, u32 bufsize, const SockAddrIn *addr, co
 	if (ret < 0)
 		return ret;
 
-	ret = sub_2450(buf, (s32)bufsize, addr, path);
+	ret = httpBuildGetRequest(buf, (s32)bufsize, addr, path);
 	if (ret < 0)
 		return ret;
 
@@ -1089,17 +1089,17 @@ static s32 sub_228c(s32 sock, char *buf, u32 bufsize, const SockAddrIn *addr, co
 	if (ret < 0)
 		return ret;
 
-	return sub_25c4(sock, buf, bufsize, parser);
+	return httpRecvResponse(sock, buf, bufsize, parser);
 }
 
-static s32 sub_23c0(XmlParser *p, s32 event, s32 depth, s32 idx, const char *val1, const char *val2, void *arg)
+static s32 upnpSoapFaultXmlCallback(XmlParser *p, s32 event, s32 depth, s32 idx, const char *val1, const char *val2, void *arg)
 {
 	UpnpCtx *ctx = (UpnpCtx *)arg;
 	s32 err = 0;
 
 	if (event == 3 && depth == 5 && idx == 0) {
-		s32 code = sceNet_lib_2A73ADDC(val1, NULL, 10);
-		sub_3228(&err, code);
+		s32 code = sceNetStrtoul(val1, NULL, 10);
+		upnpMapErrorCode(&err, code);
 		return err;
 	}
 
@@ -1109,16 +1109,16 @@ static s32 sub_23c0(XmlParser *p, s32 event, s32 depth, s32 idx, const char *val
 	return err;
 }
 
-static s32 sub_2348(UpnpCtx *ctx, XmlParser *parser, s32 action)
+static s32 upnpInitSoapXmlParser(UpnpCtx *ctx, XmlParser *parser, s32 action)
 {
 	if (action == 0 || action == 1)
-		return sub_5a38(parser, &g_soap_schema, sub_23c0, ctx);
+		return xmlParserInit(parser, &g_soap_schema, upnpSoapFaultXmlCallback, ctx);
 	if (action == 2)
-		return sub_5a38(parser, &g_extip_schema, sub_2180, ctx);
+		return xmlParserInit(parser, &g_extip_schema, upnpExtIpXmlCallback, ctx);
 	return (s32)0x8041168f;
 }
 
-static s32 sub_2450(char *buf, s32 bufsize, const SockAddrIn *addr, const char *path)
+static s32 httpBuildGetRequest(char *buf, s32 bufsize, const SockAddrIn *addr, const char *path)
 {
 	char ip_str[0x10];
 	char line[0x80];
@@ -1127,32 +1127,32 @@ static s32 sub_2450(char *buf, s32 bufsize, const SockAddrIn *addr, const char *
 	s32 n;
 
 	sceKernelMemset(line, 0, sizeof(line));
-	n = sceNet_lib_CF705E46(line, "GET %s HTTP/1.1\r\n", path);
+	n = sceNetSprintf(line, "GET %s HTTP/1.1\r\n", path);
 	if (n < 0 || n >= rem)
 		return (s32)0x80411685;
-	sceNet_lib_80C9F02A(p, line);
+	sceNetStrcpy(p, line);
 	p += n;
 	rem -= n;
 
 	sceKernelMemset(line, 0, sizeof(line));
 	const char *host = sceNetInetInetNtop(2, &addr->sin_addr, ip_str, sizeof(ip_str));
-	n = sceNet_lib_CF705E46(line, "HOST: %s:%d\r\n", host, (u32)bswap16(addr->sin_port));
+	n = sceNetSprintf(line, "HOST: %s:%d\r\n", host, (u32)bswap16(addr->sin_port));
 	if (n < 0 || n >= rem)
 		return (s32)0x80411685;
-	sceNet_lib_80C9F02A(p, line);
+	sceNetStrcpy(p, line);
 	p += n;
 	rem -= n;
 
 	sceKernelMemset(line, 0, sizeof(line));
-	n = sceNet_lib_CF705E46(line, "\r\n");
+	n = sceNetSprintf(line, "\r\n");
 	if (n < 0 || n >= rem)
 		return (s32)0x80411685;
-	sceNet_lib_80C9F02A(p, line);
+	sceNetStrcpy(p, line);
 	p += n;
 	return (s32)(p - buf);
 }
 
-static s32 sub_25c4(s32 sock, char *buf, u32 bufsize, XmlParser *parser)
+static s32 httpRecvResponse(s32 sock, char *buf, u32 bufsize, XmlParser *parser)
 {
 	u32 cap = bufsize - 1;
 	char *end = buf + cap;
@@ -1179,7 +1179,7 @@ static s32 sub_25c4(s32 sock, char *buf, u32 bufsize, XmlParser *parser)
 		buffered += (u32)ret;
 
 		for (;;) {
-			s32 line_len = sub_3d5c(buf, buffered);
+			s32 line_len = ssdpFindLocationHeader(buf, buffered);
 			if (line_len == (s32)0x80411688) {
 				cur = buf + buffered;
 				break;
@@ -1193,22 +1193,22 @@ static s32 sub_25c4(s32 sock, char *buf, u32 bufsize, XmlParser *parser)
 			} else if (buf[0] == '\0') {
 				header_done = 1;
 			} else {
-				s32 val_off = sub_3e38(buf);
+				s32 val_off = ssdpCheckStatusOk(buf);
 				if (val_off != (s32)0x80411689) {
 					if (val_off < 0)
 						return (s32)0x8041168b;
 					char *val = buf + val_off;
-					if (sceNet_lib_9CFBC7E3(buf, "Content-Length") == 0) {
-						if (sceNet_lib_D8722983(val) < 5)
-							content_len = (u32)sceNet_lib_2A73ADDC(val, NULL, 10);
+					if (sceNetStrcasecmp(buf, "Content-Length") == 0) {
+						if (sceNetStrlen(val) < 5)
+							content_len = (u32)sceNetStrtoul(val, NULL, 10);
 					}
 				}
 			}
 
 			buffered -= (u32)(next_line - buf);
-			sceNet_lib_4753D878(buf, next_line, buffered);
+			sceNetMemmove(buf, next_line, buffered);
 			if (header_done == 1) {
-				ret = sub_2c5c(sock, buf, buffered, content_len, cap, parser);
+				ret = httpRecvBodyToXml(sock, buf, buffered, content_len, cap, parser);
 				if (ret < 0)
 					return ret;
 				if (content_len != 0 && (u32)ret != content_len)
@@ -1219,7 +1219,7 @@ static s32 sub_25c4(s32 sock, char *buf, u32 bufsize, XmlParser *parser)
 	}
 }
 
-static s32 sub_279c(char *buf, s32 bufsize, const SockAddrIn *addr, const char *path,
+static s32 httpBuildSoapPostHeader(char *buf, s32 bufsize, const SockAddrIn *addr, const char *path,
                     s32 action, s32 svc_type, s32 content_len)
 {
 	char ip_str[0x10];
@@ -1229,57 +1229,57 @@ static s32 sub_279c(char *buf, s32 bufsize, const SockAddrIn *addr, const char *
 	s32 n;
 
 	sceKernelMemset(line, 0, sizeof(line));
-	n = sceNet_lib_CF705E46(line, "POST %s HTTP/1.1\r\n", path);
+	n = sceNetSprintf(line, "POST %s HTTP/1.1\r\n", path);
 	if (n < 0 || n >= rem)
 		return (s32)0x80411685;
-	sceNet_lib_80C9F02A(p, line);
+	sceNetStrcpy(p, line);
 	p += n;
 	rem -= n;
 
 	sceKernelMemset(line, 0, sizeof(line));
 	const char *host = sceNetInetInetNtop(2, &addr->sin_addr, ip_str, sizeof(ip_str));
-	n = sceNet_lib_CF705E46(line, "HOST: %s:%d\r\n", host, (u32)bswap16(addr->sin_port));
+	n = sceNetSprintf(line, "HOST: %s:%d\r\n", host, (u32)bswap16(addr->sin_port));
 	if (n < 0 || n >= rem)
 		return (s32)0x80411685;
-	sceNet_lib_80C9F02A(p, line);
+	sceNetStrcpy(p, line);
 	p += n;
 	rem -= n;
 
 	sceKernelMemset(line, 0, sizeof(line));
-	n = sceNet_lib_CF705E46(line, "Content-Length: %d\r\n", content_len);
+	n = sceNetSprintf(line, "Content-Length: %d\r\n", content_len);
 	if (n < 0 || n >= rem)
 		return (s32)0x80411685;
-	sceNet_lib_80C9F02A(p, line);
+	sceNetStrcpy(p, line);
 	p += n;
 	rem -= n;
 
 	sceKernelMemset(line, 0, sizeof(line));
-	n = sceNet_lib_CF705E46(line, "Content-Type: %s\r\n", "text/xml; charset=\"utf-8\"");
+	n = sceNetSprintf(line, "Content-Type: %s\r\n", "text/xml; charset=\"utf-8\"");
 	if (n < 0 || n >= rem)
 		return (s32)0x80411685;
-	sceNet_lib_80C9F02A(p, line);
+	sceNetStrcpy(p, line);
 	p += n;
 	rem -= n;
 
 	sceKernelMemset(line, 0, sizeof(line));
-	n = sceNet_lib_CF705E46(line, "SOAPACTION: \"%s#%s\"\r\n",
+	n = sceNetSprintf(line, "SOAPACTION: \"%s#%s\"\r\n",
 		g_service_types[svc_type], g_soap_actions[action]);
 	if (n < 0 || n >= rem)
 		return (s32)0x80411685;
-	sceNet_lib_80C9F02A(p, line);
+	sceNetStrcpy(p, line);
 	p += n;
 	rem -= n;
 
 	sceKernelMemset(line, 0, sizeof(line));
-	n = sceNet_lib_CF705E46(line, "\r\n");
+	n = sceNetSprintf(line, "\r\n");
 	if (n < 0 || n >= rem)
 		return (s32)0x80411685;
-	sceNet_lib_80C9F02A(p, line);
+	sceNetStrcpy(p, line);
 	p += n;
 	return (s32)(p - buf);
 }
 
-static s32 sub_2a48(s32 sock, const SockAddrIn *addr, u32 timeout_us)
+static s32 httpConnectTimeout(s32 sock, const SockAddrIn *addr, u32 timeout_us)
 {
 	FdSet rfds, wfds;
 	TimeVal tv;
@@ -1301,7 +1301,7 @@ static s32 sub_2a48(s32 sock, const SockAddrIn *addr, u32 timeout_us)
 	if (ret >= 0)
 		return 0;
 
-	if (sceNetInet_8CA3A97E() != (s32)0x80010077)
+	if (sceNetInetGetPspError() != (s32)0x80010077)
 		return ret;
 
 	while (elapsed < timeout_us) {
@@ -1337,7 +1337,7 @@ static s32 sub_2a48(s32 sock, const SockAddrIn *addr, u32 timeout_us)
 	return sceNetInetSetsockopt(sock, 0xffff, 0x1009, &nonblock, 4);
 }
 
-static s32 sub_2c5c(s32 sock, char *buf, u32 initial_len, u32 content_len, u32 buf_cap, XmlParser *parser)
+static s32 httpRecvBodyToXml(s32 sock, char *buf, u32 initial_len, u32 content_len, u32 buf_cap, XmlParser *parser)
 {
 	u32 total = 0;
 	s32 ret;
@@ -1346,7 +1346,7 @@ static s32 sub_2c5c(s32 sock, char *buf, u32 initial_len, u32 content_len, u32 b
 		u32 chunk = initial_len;
 		if (content_len != 0 && chunk > content_len)
 			chunk = content_len;
-		ret = sub_541c(parser, buf, (s32)chunk);
+		ret = xmlParserFeed(parser, buf, (s32)chunk);
 		if (ret < 0)
 			return ret;
 		total = chunk;
@@ -1361,7 +1361,7 @@ static s32 sub_2c5c(s32 sock, char *buf, u32 initial_len, u32 content_len, u32 b
 		u32 chunk = (u32)ret;
 		if (content_len != 0 && total + chunk > content_len)
 			chunk = content_len - total;
-		ret = sub_541c(parser, buf, (s32)chunk);
+		ret = xmlParserFeed(parser, buf, (s32)chunk);
 		total += chunk;
 		if (ret < 0)
 			return ret;
@@ -1374,7 +1374,7 @@ static s32 sub_2c5c(s32 sock, char *buf, u32 initial_len, u32 content_len, u32 b
  * UPnP lifecycle, handlers, NAT info, event flag & registry helpers (0x2d74..0x44a7)
  * ========================================================================= */
 
-static s32 sub_2d74(s32 stack_size, s32 prio)
+static s32 upnpInitInternal(s32 stack_size, s32 prio)
 {
 	char env_buf[9];
 	UpnpCtx *ctx = &g_upnp;
@@ -1385,9 +1385,9 @@ static s32 sub_2d74(s32 stack_size, s32 prio)
 	sceKernelMemset(env_buf, 0, sizeof(env_buf));
 	sceKernelMemset(ctx->stun_host, 0, sizeof(ctx->stun_host));
 
-	ret = sub_3808("/CONFIG/NP", "env", env_buf, sizeof(env_buf));
+	ret = upnpReadRegistryString("/CONFIG/NP", "env", env_buf, sizeof(env_buf));
 	if (ret >= 0) {
-		sceNet_lib_CF705E46(ctx->stun_host, "%s.%s.%s", "us", env_buf, "stun.playstation.net");
+		sceNetSprintf(ctx->stun_host, "%s.%s.%s", "us", env_buf, "stun.playstation.net");
 	}
 	if (ret < 0)
 		goto fail;
@@ -1412,7 +1412,7 @@ static s32 sub_2d74(s32 stack_size, s32 prio)
 	ctx->mutex_id = ret;
 	ctx->flags |= 8;
 
-	ret = sceKernelCreateThread("SceNetUpnpThread", sub_4dc8, ctx->thread_prio, ctx->stack_size, 0, NULL);
+	ret = sceKernelCreateThread("SceNetUpnpThread", upnpWorkerThread, ctx->thread_prio, ctx->stack_size, 0, NULL);
 	if (ret < 0)
 		goto fail;
 	ctx->thread_id = ret;
@@ -1421,14 +1421,14 @@ static s32 sub_2d74(s32 stack_size, s32 prio)
 	if (ret < 0)
 		goto fail;
 
-	ret = sub_5e48();
+	ret = stunInitGlobal();
 	if (ret < 0)
 		goto fail;
 
 	return 0;
 
 fail:
-	sub_5ea0();
+	stunTermGlobal();
 	if (g_upnp.thread_id != -1) {
 		sceKernelWaitThreadEnd(g_upnp.thread_id, NULL);
 		sceKernelDeleteThread(g_upnp.thread_id);
@@ -1447,7 +1447,7 @@ fail:
 	return ret;
 }
 
-static s32 sub_2fbc(UpnpHandlerCb cb, void *arg, s32 *out_id)
+static s32 upnpAddHandlerInternal(UpnpHandlerCb cb, void *arg, s32 *out_id)
 {
 	s32 ret, i;
 
@@ -1475,7 +1475,7 @@ static s32 sub_2fbc(UpnpHandlerCb cb, void *arg, s32 *out_id)
 	return ret;
 }
 
-static s32 sub_30b4(UpnpNatInfoEx *info)
+static s32 upnpGetNatInfoExInternal(UpnpNatInfoEx *info)
 {
 	sceKernelMemset(info, 0, sizeof(UpnpNatInfoEx));
 	sceKernelMemcpy(info->stun_mapped_ip, &g_upnp.stun_mapped_ip, 4);
@@ -1527,7 +1527,7 @@ static s32 sub_30b4(UpnpNatInfoEx *info)
 	return 0;
 }
 
-static s32 sub_3228(s32 *out_err, s32 upnp_code)
+static s32 upnpMapErrorCode(s32 *out_err, s32 upnp_code)
 {
 	u32 err;
 	switch (upnp_code) {
@@ -1549,7 +1549,7 @@ static s32 sub_3228(s32 *out_err, s32 upnp_code)
 	return 0;
 }
 
-static s32 sub_3330(UpnpCtx *ctx, s32 prev_state)
+static s32 upnpNotifyHandlers(UpnpCtx *ctx, s32 prev_state)
 {
 	s32 ret, i;
 
@@ -1569,15 +1569,15 @@ static s32 sub_3330(UpnpCtx *ctx, s32 prev_state)
 	return 0;
 }
 
-static void sub_3428(void)
+static void upnpTermInternal(void)
 {
 	if (g_upnp.flags & 1) {
 		if (g_upnp.sock_fd >= 0)
-			sceNetInet_80A21ABD(g_upnp.sock_fd);
+			sceNetInetSocketAbort(g_upnp.sock_fd);
 		sceKernelSetEventFlag(g_upnp.evf_id, 4);
 	}
 	sceKernelSetEventFlag(g_upnp.evf_id, 1);
-	sub_5ea0();
+	stunTermGlobal();
 
 	if (g_upnp.thread_id != -1) {
 		sceKernelWaitThreadEnd(g_upnp.thread_id, NULL);
@@ -1596,7 +1596,7 @@ static void sub_3428(void)
 	}
 }
 
-static s32 sub_350c(s32 id)
+static s32 upnpDelHandlerInternal(s32 id)
 {
 	s32 ret;
 
@@ -1616,7 +1616,7 @@ static s32 sub_350c(s32 id)
 	return ret;
 }
 
-static s32 sub_35b0(s32 ext_flag)
+static s32 upnpStartInternal(s32 ext_flag)
 {
 	if (g_upnp.flags & 1)
 		return (s32)0x80411603;
@@ -1632,35 +1632,35 @@ static s32 sub_35b0(s32 ext_flag)
 	return 0;
 }
 
-static s32 sub_3624(void)
+static s32 upnpStopInternal(void)
 {
 	if (g_upnp.sock_fd >= 0)
-		sceNetInet_80A21ABD(g_upnp.sock_fd);
+		sceNetInetSocketAbort(g_upnp.sock_fd);
 	sceKernelSetEventFlag(g_upnp.evf_id, 4);
 	return 0;
 }
 
-static s32 sub_366c(void)
+static s32 upnpAbortInternal(void)
 {
 	if (g_upnp.sock_fd >= 0)
-		sceNetInet_80A21ABD(g_upnp.sock_fd);
+		sceNetInetSocketAbort(g_upnp.sock_fd);
 	sceKernelSetEventFlag(g_upnp.evf_id, 0x20);
 	return 0;
 }
 
-static s32 sub_36b4(s32 *out_state)
+static s32 upnpGetStateInternal(s32 *out_state)
 {
 	*out_state = g_upnp.state;
 	return 0;
 }
 
-static s32 sub_36c8(UpnpNatInfo *info)
+static s32 upnpGetNatInfoInternal(UpnpNatInfo *info)
 {
 	UpnpNatInfoEx ex;
 	s32 ret;
 
 	sceKernelMemset(&ex, 0, sizeof(ex));
-	ret = sub_30b4(&ex);
+	ret = upnpGetNatInfoExInternal(&ex);
 	if (ret < 0)
 		return ret;
 
@@ -1673,33 +1673,33 @@ static s32 sub_36c8(UpnpNatInfo *info)
 	return ret;
 }
 
-static s32 sub_3740(s32 *out_err)
+static s32 upnpGetLastErrorInternal(s32 *out_err)
 {
 	*out_err = g_upnp.last_error;
 	return 0;
 }
 
-static s32 sub_3754(u32 bits)
+static s32 upnpSetEventBits(u32 bits)
 {
 	return sceKernelClearEventFlag(g_upnp.evf_id, bits);
 }
 
-static s32 sub_377c(u32 bits)
+static s32 upnpClearEventBits(u32 bits)
 {
 	return sceKernelSetEventFlag(g_upnp.evf_id, bits);
 }
 
-static s32 sub_37a4(u32 bits, u32 *out_bits)
+static s32 upnpWaitEventBits(u32 bits, u32 *out_bits)
 {
 	return sceKernelWaitEventFlag(g_upnp.evf_id, bits, 0x21, out_bits, NULL);
 }
 
-static s32 sub_37d8(u32 bits, u32 *out_bits)
+static s32 upnpPollEventBits(u32 bits, u32 *out_bits)
 {
 	return sceKernelPollEventFlag(g_upnp.evf_id, bits, 0x21, out_bits);
 }
 
-static s32 sub_3808(const char *cat, const char *key, char *out, s32 out_size)
+static s32 upnpReadRegistryString(const char *cat, const char *key, char *out, s32 out_size)
 {
 	u32 reg_param[0x44];
 	u32 reg_h, cat_h, key_h, key_type, key_size;
@@ -1754,36 +1754,36 @@ static s32 sub_3808(const char *cat, const char *key, char *out, s32 out_size)
 	return 0;
 }
 
-static s32 sub_3974(char *url, u32 *expected_ip, u16 *out_port, char *out_path, u32 out_path_size)
+static s32 ssdpParseLocationUrl(char *url, u32 *expected_ip, u16 *out_port, char *out_path, u32 out_path_size)
 {
 	const char *prefix = "http://";
-	u32 plen = sceNet_lib_D8722983(prefix);
+	u32 plen = sceNetStrlen(prefix);
 	char *host, *slash, *colon;
 	u32 ip;
 
-	if (sceNet_lib_94DCA9F0(url, prefix, plen) != 0)
+	if (sceNetStrncmp(url, prefix, plen) != 0)
 		return (s32)0x80411689;
 
-	host = url + sceNet_lib_D8722983(prefix);
-	slash = sceNet_lib_BCBE14CF(host, '/');
+	host = url + sceNetStrlen(prefix);
+	slash = sceNetStrchr(host, '/');
 	if (slash != NULL) {
-		if (sceNet_lib_D8722983(slash) >= out_path_size)
+		if (sceNetStrlen(slash) >= out_path_size)
 			return (s32)0x80411689;
-		sceNet_lib_80C9F02A(out_path, slash);
+		sceNetStrcpy(out_path, slash);
 		*slash = '\0';
 	} else {
 		if (out_path_size < 2)
 			return (s32)0x80411689;
-		sceNet_lib_80C9F02A(out_path, "/");
+		sceNetStrcpy(out_path, "/");
 	}
 
-	colon = sceNet_lib_BCBE14CF(host, ':');
+	colon = sceNetStrchr(host, ':');
 	if (colon != NULL) {
 		char *port_str = colon + 1;
 		*colon = '\0';
-		if (sceNet_lib_D8722983(port_str) >= 6)
+		if (sceNetStrlen(port_str) >= 6)
 			return (s32)0x80411689;
-		*out_port = (u16)sceNet_lib_2A73ADDC(port_str, NULL, 10);
+		*out_port = (u16)sceNetStrtoul(port_str, NULL, 10);
 	} else {
 		*out_port = 80;
 	}
@@ -1800,7 +1800,7 @@ static s32 sub_3974(char *url, u32 *expected_ip, u16 *out_port, char *out_path, 
 	return 0;
 }
 
-static s32 sub_3ad4(s32 sock, char *buf, u32 bufsize, u32 *gw_ip, u16 *gw_port,
+static s32 ssdpRecvResponse(s32 sock, char *buf, u32 bufsize, u32 *gw_ip, u16 *gw_port,
                     char *desc_path, u32 desc_path_size)
 {
 	SockAddrIn mcast_addr;
@@ -1822,7 +1822,7 @@ static s32 sub_3ad4(s32 sock, char *buf, u32 bufsize, u32 *gw_ip, u16 *gw_port,
 	mcast_addr.sin_port = bswap16(1900);
 
 	while ((u32)retry < 6u) {
-		ret = sub_3f1c(buf, (s32)bufsize);
+		ret = ssdpBuildMSearch(buf, (s32)bufsize);
 		retry++;
 		if (ret < 0)
 			return ret;
@@ -1849,7 +1849,7 @@ static s32 sub_3ad4(s32 sock, char *buf, u32 bufsize, u32 *gw_ip, u16 *gw_port,
 			if (ret == 0)
 				break;
 
-			ret = sub_414c(sock, buf, bufsize, gw_ip, gw_port, desc_path, desc_path_size);
+			ret = ssdpDiscoverGateway(sock, buf, bufsize, gw_ip, gw_port, desc_path, desc_path_size);
 			if (ret != (s32)0x8041168a)
 				return ret;
 		}
@@ -1858,9 +1858,9 @@ static s32 sub_3ad4(s32 sock, char *buf, u32 bufsize, u32 *gw_ip, u16 *gw_port,
 	return (s32)0x80411687;
 }
 
-static s32 sub_3d5c(char *buf, u32 len)
+static s32 ssdpFindLocationHeader(char *buf, u32 len)
 {
-	char *nl = sceNet_lib_BCBE14CF(buf, '\n');
+	char *nl = sceNetStrchr(buf, '\n');
 	if (nl == NULL || (u32)(nl - buf) >= len)
 		return (s32)0x80411688;
 
@@ -1879,9 +1879,9 @@ static s32 sub_3d5c(char *buf, u32 len)
 	return (s32)(next - buf);
 }
 
-static s32 sub_3e38(char *line)
+static s32 ssdpCheckStatusOk(char *line)
 {
-	char *colon = sceNet_lib_BCBE14CF(line, ':');
+	char *colon = sceNetStrchr(line, ':');
 	if (colon == NULL)
 		return (s32)0x80411689;
 
@@ -1899,7 +1899,7 @@ static s32 sub_3e38(char *line)
 	return (s32)(val - line);
 }
 
-static s32 sub_3f1c(char *buf, s32 bufsize)
+static s32 ssdpBuildMSearch(char *buf, s32 bufsize)
 {
 	char line[0x40];
 	char *p = buf;
@@ -1907,55 +1907,55 @@ static s32 sub_3f1c(char *buf, s32 bufsize)
 	s32 n;
 
 	sceKernelMemset(line, 0, sizeof(line));
-	n = sceNet_lib_CF705E46(line, "M-SEARCH * HTTP/1.1\r\n");
+	n = sceNetSprintf(line, "M-SEARCH * HTTP/1.1\r\n");
 	if (n < 0 || n >= rem)
 		return (s32)0x80411685;
-	sceNet_lib_80C9F02A(p, line);
+	sceNetStrcpy(p, line);
 	p += n;
 	rem -= n;
 
 	sceKernelMemset(line, 0, sizeof(line));
-	n = sceNet_lib_CF705E46(line, "HOST: %s:%d\r\n", "239.255.255.250", 1900);
+	n = sceNetSprintf(line, "HOST: %s:%d\r\n", "239.255.255.250", 1900);
 	if (n < 0 || n >= rem)
 		return (s32)0x80411685;
-	sceNet_lib_80C9F02A(p, line);
+	sceNetStrcpy(p, line);
 	p += n;
 	rem -= n;
 
 	sceKernelMemset(line, 0, sizeof(line));
-	n = sceNet_lib_CF705E46(line, "MAN: %s\r\n", "\"ssdp:discover\"");
+	n = sceNetSprintf(line, "MAN: %s\r\n", "\"ssdp:discover\"");
 	if (n < 0 || n >= rem)
 		return (s32)0x80411685;
-	sceNet_lib_80C9F02A(p, line);
+	sceNetStrcpy(p, line);
 	p += n;
 	rem -= n;
 
 	sceKernelMemset(line, 0, sizeof(line));
-	n = sceNet_lib_CF705E46(line, "MX: %d\r\n", 5);
+	n = sceNetSprintf(line, "MX: %d\r\n", 5);
 	if (n < 0 || n >= rem)
 		return (s32)0x80411685;
-	sceNet_lib_80C9F02A(p, line);
+	sceNetStrcpy(p, line);
 	p += n;
 	rem -= n;
 
 	sceKernelMemset(line, 0, sizeof(line));
-	n = sceNet_lib_CF705E46(line, "ST: %s\r\n", "urn:schemas-upnp-org:device:InternetGatewayDevice:1");
+	n = sceNetSprintf(line, "ST: %s\r\n", "urn:schemas-upnp-org:device:InternetGatewayDevice:1");
 	if (n < 0 || n >= rem)
 		return (s32)0x80411685;
-	sceNet_lib_80C9F02A(p, line);
+	sceNetStrcpy(p, line);
 	p += n;
 	rem -= n;
 
 	sceKernelMemset(line, 0, sizeof(line));
-	n = sceNet_lib_CF705E46(line, "\r\n");
+	n = sceNetSprintf(line, "\r\n");
 	if (n < 0 || n >= rem)
 		return (s32)0x80411685;
-	sceNet_lib_80C9F02A(p, line);
+	sceNetStrcpy(p, line);
 	p += n;
 	return (s32)(p - buf);
 }
 
-static s32 sub_414c(s32 sock, char *buf, u32 bufsize, u32 *gw_ip, u16 *gw_port,
+static s32 ssdpDiscoverGateway(s32 sock, char *buf, u32 bufsize, u32 *gw_ip, u16 *gw_port,
                     char *desc_path, u32 desc_path_size)
 {
 	SockAddrIn from;
@@ -1976,7 +1976,7 @@ static s32 sub_414c(s32 sock, char *buf, u32 bufsize, u32 *gw_ip, u16 *gw_port,
 
 	u32 rem = (u32)ret;
 	char *cur = buf;
-	s32 line_len = sub_3d5c(cur, rem);
+	s32 line_len = ssdpFindLocationHeader(cur, rem);
 	if (line_len < 0)
 		return (s32)0x8041168a;
 	cur += line_len;
@@ -1984,7 +1984,7 @@ static s32 sub_414c(s32 sock, char *buf, u32 bufsize, u32 *gw_ip, u16 *gw_port,
 
 	for (;;) {
 		char *line = cur;
-		line_len = sub_3d5c(cur, rem);
+		line_len = ssdpFindLocationHeader(cur, rem);
 		if (line_len < 0)
 			return (s32)0x8041168a;
 		if (cur[0] == '\0') {
@@ -1994,16 +1994,16 @@ static s32 sub_414c(s32 sock, char *buf, u32 bufsize, u32 *gw_ip, u16 *gw_port,
 		}
 		cur += line_len;
 
-		s32 val_off = sub_3e38(line);
+		s32 val_off = ssdpCheckStatusOk(line);
 		if (val_off != (s32)0x80411689) {
 			if (val_off < 0)
 				return (s32)0x8041168a;
 			char *val = line + val_off;
-			if (sceNet_lib_9CFBC7E3(line, "Location") == 0) {
-				if (sub_3974(val, gw_ip, gw_port, desc_path, desc_path_size) >= 0)
+			if (sceNetStrcasecmp(line, "Location") == 0) {
+				if (ssdpParseLocationUrl(val, gw_ip, gw_port, desc_path, desc_path_size) >= 0)
 					got_loc = 1;
-			} else if (sceNet_lib_9CFBC7E3(line, "ST") == 0) {
-				if (sceNet_lib_A0F16ABD(val, "urn:schemas-upnp-org:device:InternetGatewayDevice:1") == 0)
+			} else if (sceNetStrcasecmp(line, "ST") == 0) {
+				if (sceNetStrcmp(val, "urn:schemas-upnp-org:device:InternetGatewayDevice:1") == 0)
 					got_st = 1;
 			}
 		}
@@ -2015,7 +2015,7 @@ static s32 sub_414c(s32 sock, char *buf, u32 bufsize, u32 *gw_ip, u16 *gw_port,
  * UPnP state machine (0x44a8..0x541b)
  * ========================================================================= */
 
-static s32 sub_44a8(UpnpCtx *ctx, s32 cur_state, s32 *next_state, s32 *out_event)
+static s32 upnpStateDiscoverIgd(UpnpCtx *ctx, s32 cur_state, s32 *next_state, s32 *out_event)
 {
 	SockAddrIn addr;
 	char ip_str[0x80];
@@ -2032,7 +2032,7 @@ static s32 sub_44a8(UpnpCtx *ctx, s32 cur_state, s32 *next_state, s32 *out_event
 	sceKernelMemset(&ctx->stun_mapped_ip, 0, 4);
 
 	if (ctx->apctl_handler_id < 0) {
-		ret = sceNetApctlAddHandler(sub_5094, ctx);
+		ret = sceNetApctlAddHandler(upnpApctlHandler, ctx);
 		if (ret < 0)
 			goto err_check;
 		ctx->apctl_handler_id = ret;
@@ -2043,7 +2043,7 @@ static s32 sub_44a8(UpnpCtx *ctx, s32 cur_state, s32 *next_state, s32 *out_event
 		goto err_check;
 
 	if (apctl_state != 4) {
-		sub_37a4(0x1c, &ev_bits);
+		upnpWaitEventBits(0x1c, &ev_bits);
 		if (ev_bits & 4) {
 			*out_event = 6;
 			*next_state = 0;
@@ -2074,13 +2074,13 @@ static s32 sub_44a8(UpnpCtx *ctx, s32 cur_state, s32 *next_state, s32 *out_event
 		goto err_check;
 	ctx->sock_fd = ret;
 
-	ret = sub_3ad4(ctx->sock_fd, ctx->http_buf, 0x400, &ctx->gw_ip, &ctx->gw_port, ctx->desc_path, 0x80);
+	ret = ssdpRecvResponse(ctx->sock_fd, ctx->http_buf, 0x400, &ctx->gw_ip, &ctx->gw_port, ctx->desc_path, 0x80);
 	sceNetInetClose(ctx->sock_fd);
 	ctx->sock_fd = -1;
 	if (ret < 0)
 		goto err_check;
 
-	ret = sub_1f10(ctx, &parser);
+	ret = upnpInitDescXmlParser(ctx, &parser);
 	if (ret < 0)
 		goto err_check;
 
@@ -2094,7 +2094,7 @@ static s32 sub_44a8(UpnpCtx *ctx, s32 cur_state, s32 *next_state, s32 *out_event
 	addr.sin_port = bswap16(ctx->gw_port);
 	addr.sin_addr = ctx->gw_ip;
 
-	ret = sub_228c(ctx->sock_fd, ctx->http_buf, 0x400, &addr, ctx->desc_path, &parser);
+	ret = upnpHttpGetXml(ctx->sock_fd, ctx->http_buf, 0x400, &addr, ctx->desc_path, &parser);
 	sceNetInetClose(ctx->sock_fd);
 	ctx->sock_fd = -1;
 	if (ret < 0)
@@ -2102,35 +2102,35 @@ static s32 sub_44a8(UpnpCtx *ctx, s32 cur_state, s32 *next_state, s32 *out_event
 
 	*out_event = 1;
 	*next_state = 2;
-	sub_1f40();
+	upnpResetDescXmlState();
 	return 0;
 
 err_check:
 err_check_poll:
-	if (sub_37d8(0x24, &ev_bits) >= 0) {
+	if (upnpPollEventBits(0x24, &ev_bits) >= 0) {
 		if (ev_bits & 4) {
 stop_done:
 			*out_event = 6;
 			*next_state = 0;
 			ctx->flags &= ~1u;
-			sub_1f40();
+			upnpResetDescXmlState();
 			return 0;
 		}
 		if (ev_bits & 0x20) {
 			*out_event = 5;
 			*next_state = 1;
-			sub_1f40();
+			upnpResetDescXmlState();
 			return 0;
 		}
 	}
 	*out_event = 9;
 	ctx->last_error = ret;
 	*next_state = 5;
-	sub_1f40();
+	upnpResetDescXmlState();
 	return 0;
 }
 
-static s32 sub_4790(UpnpCtx *ctx, s32 cur_state, s32 *next_state, s32 *out_event)
+static s32 upnpStateAddPortMapping(UpnpCtx *ctx, s32 cur_state, s32 *next_state, s32 *out_event)
 {
 	s32 svc_idx = 0;
 	s32 soap_err;
@@ -2149,7 +2149,7 @@ static s32 sub_4790(UpnpCtx *ctx, s32 cur_state, s32 *next_state, s32 *out_event
 
 	ctx->flags |= 0x20;
 	for (;;) {
-		ret = sub_511c(ctx, svc_idx, 2, 0, 0, 0, &soap_err, 0);
+		ret = upnpExecSoapAction(ctx, svc_idx, 2, 0, 0, 0, &soap_err, 0);
 		if (ret == (s32)0x80411608) {
 			ret = soap_err;
 			*out_event = 4;
@@ -2166,7 +2166,7 @@ static s32 sub_4790(UpnpCtx *ctx, s32 cur_state, s32 *next_state, s32 *out_event
 		}
 
 handle_err:
-		if (sub_37d8(0x24, &ev_bits) >= 0) {
+		if (upnpPollEventBits(0x24, &ev_bits) >= 0) {
 			if (ev_bits & 4) {
 				*out_event = 6;
 				*next_state = 0;
@@ -2194,13 +2194,13 @@ handle_err:
 	}
 }
 
-static s32 sub_4978(UpnpCtx *ctx, s32 cur_state, s32 *next_state, s32 *out_event)
+static s32 upnpStateDeletePortMapping(UpnpCtx *ctx, s32 cur_state, s32 *next_state, s32 *out_event)
 {
 	s32 soap_err = 0;
 	u32 ev_bits;
 	s32 ret;
 
-	ret = sub_511c(ctx, ctx->active_svc_idx, 0, ctx->ext_port, 0, ctx->ext_port, &soap_err, 0);
+	ret = upnpExecSoapAction(ctx, ctx->active_svc_idx, 0, ctx->ext_port, 0, ctx->ext_port, &soap_err, 0);
 	if (ret == (s32)0x80411608) {
 		if (soap_err == (s32)0x80411678) {
 			u16 port = ctx->ext_port;
@@ -2229,7 +2229,7 @@ static s32 sub_4978(UpnpCtx *ctx, s32 cur_state, s32 *next_state, s32 *out_event
 		return 0;
 	}
 
-	if (sub_37d8(0x24, &ev_bits) >= 0) {
+	if (upnpPollEventBits(0x24, &ev_bits) >= 0) {
 		if (ev_bits & 4) {
 			*out_event = 6;
 			*next_state = 0;
@@ -2247,7 +2247,7 @@ static s32 sub_4978(UpnpCtx *ctx, s32 cur_state, s32 *next_state, s32 *out_event
 	return 0;
 }
 
-static s32 sub_4ad8(UpnpCtx *ctx, s32 cur_state, s32 *next_state, s32 *out_event)
+static s32 upnpStateRunStunProbe(UpnpCtx *ctx, s32 cur_state, s32 *next_state, s32 *out_event)
 {
 	StunConfig cfg;
 	s32 stun_id = 0;
@@ -2262,7 +2262,7 @@ static s32 sub_4ad8(UpnpCtx *ctx, s32 cur_state, s32 *next_state, s32 *out_event
 
 	if (ctx->flags & 0x800) {
 		cfg.ext_data_len = 0x800;
-		ext_buf = sceNetIfhandle_lib_15CFE3C0(0x800);
+		ext_buf = sceNetMallocInternal(0x800);
 		if (ext_buf == NULL) {
 			ret = (s32)0x80411604;
 			goto cleanup;
@@ -2271,21 +2271,21 @@ static s32 sub_4ad8(UpnpCtx *ctx, s32 cur_state, s32 *next_state, s32 *out_event
 		cfg.ext_data = ext_buf;
 	}
 
-	ret = sceNetStun_EBF3C24D(ctx->stack_size, ctx->thread_prio, ctx->stun_host, 3478, &cfg, sub_5384, &stun_id);
+	ret = sceNetStun_EBF3C24D(ctx->stack_size, ctx->thread_prio, ctx->stun_host, 3478, &cfg, upnpStunCallback, &stun_id);
 	if (ret < 0)
 		goto stun_fail;
 
 	sceKernelMemset(ctx->stun_result, 0, sizeof(ctx->stun_result));
-	sub_3754(~0xc0u);
+	upnpSetEventBits(~0xc0u);
 
 	ret = sceNetStun_A0CF3A47(stun_id, ctx);
 	if (ret < 0)
 		goto stun_fail;
 
-	sub_37a4(0x64, &ev_bits);
+	upnpWaitEventBits(0x64, &ev_bits);
 	if (ev_bits & 4) {
 		if (sceNetStun_40971567(stun_id, ctx) >= 0)
-			sub_37a4(0x80, NULL);
+			upnpWaitEventBits(0x80, NULL);
 		ctx->flags &= ~1u;
 		*next_state = 0;
 		*out_event = 6;
@@ -2293,7 +2293,7 @@ static s32 sub_4ad8(UpnpCtx *ctx, s32 cur_state, s32 *next_state, s32 *out_event
 	}
 	if (ev_bits & 0x20) {
 		if (sceNetStun_40971567(stun_id, ctx) >= 0)
-			sub_37a4(0x80, NULL);
+			upnpWaitEventBits(0x80, NULL);
 		*out_event = 5;
 		*next_state = 1;
 		goto cleanup;
@@ -2310,10 +2310,10 @@ static s32 sub_4ad8(UpnpCtx *ctx, s32 cur_state, s32 *next_state, s32 *out_event
 		ctx->stun_ext_ok = 1;
 		ret = sceNetStun_FBF60C6B(stun_id, 0, ctx);
 		if (ret >= 0) {
-			sub_37a4(0x64, &ev_bits);
+			upnpWaitEventBits(0x64, &ev_bits);
 			if (ev_bits & 4) {
 				if (sceNetStun_40971567(stun_id, ctx) >= 0)
-					sub_37a4(0x80, NULL);
+					upnpWaitEventBits(0x80, NULL);
 				ctx->flags &= ~1u;
 				*next_state = 0;
 				*out_event = 6;
@@ -2321,7 +2321,7 @@ static s32 sub_4ad8(UpnpCtx *ctx, s32 cur_state, s32 *next_state, s32 *out_event
 			}
 			if (ev_bits & 0x20) {
 				if (sceNetStun_40971567(stun_id, ctx) >= 0)
-					sub_37a4(0x80, NULL);
+					upnpWaitEventBits(0x80, NULL);
 				*out_event = 5;
 				*next_state = 1;
 				goto cleanup;
@@ -2346,11 +2346,11 @@ cleanup:
 	if (stun_id != 0)
 		sceNetStun_4403D9E7(stun_id);
 	if (ext_buf != NULL)
-		sceNetIfhandle_lib_76BAD213(ext_buf);
+		sceNetFreeInternal(ext_buf);
 	return ret;
 }
 
-static s32 sub_4dc8(u32 args, void *argp)
+static s32 upnpWorkerThread(u32 args, void *argp)
 {
 	UpnpCtx *ctx = *(UpnpCtx **)argp;
 	s32 next_state, out_event;
@@ -2368,16 +2368,16 @@ static s32 sub_4dc8(u32 args, void *argp)
 		}
 		ctx->state = next_state;
 		ctx->event_code = out_event;
-		sub_3330(ctx, cur_state);
+		upnpNotifyHandlers(ctx, cur_state);
 	}
 }
 
-static s32 sub_4e8c(UpnpCtx *ctx, s32 cur_state, s32 *next_state, s32 *out_event)
+static s32 upnpStateWaitStart(UpnpCtx *ctx, s32 cur_state, s32 *next_state, s32 *out_event)
 {
 	u32 ev_bits;
 
 	ctx->flags &= ~0x734u;
-	sub_37a4(0xffffffffu, &ev_bits);
+	upnpWaitEventBits(0xffffffffu, &ev_bits);
 	if (ev_bits & 1) {
 		ctx->flags |= 2;
 	} else if (ev_bits & 4) {
@@ -2391,50 +2391,50 @@ static s32 sub_4e8c(UpnpCtx *ctx, s32 cur_state, s32 *next_state, s32 *out_event
 	return 0;
 }
 
-static s32 sub_4f3c(UpnpCtx *ctx, s32 cur_state, s32 *next_state, s32 *out_event)
+static s32 upnpStateIdle(UpnpCtx *ctx, s32 cur_state, s32 *next_state, s32 *out_event)
 {
 	return 0;
 }
 
-static s32 sub_4f44(UpnpCtx *ctx, s32 cur_state, s32 *next_state, s32 *out_event)
+static s32 upnpStateWaitStop(UpnpCtx *ctx, s32 cur_state, s32 *next_state, s32 *out_event)
 {
 	u32 ev_bits;
 	s32 soap_err;
 
-	sub_37a4(0x24, &ev_bits);
+	upnpWaitEventBits(0x24, &ev_bits);
 	if (ev_bits & 0x20) {
 		*out_event = 5;
 		*next_state = 1;
 		return 0;
 	}
 
-	sub_511c(ctx, ctx->active_svc_idx, 1, ctx->ext_port, 0, ctx->ext_port, &soap_err, 1000000);
+	upnpExecSoapAction(ctx, ctx->active_svc_idx, 1, ctx->ext_port, 0, ctx->ext_port, &soap_err, 1000000);
 	*out_event = 6;
 	*next_state = 0;
 	ctx->flags &= ~1u;
 	return 0;
 }
 
-static s32 sub_4fec(UpnpCtx *ctx, s32 cur_state, s32 *next_state, s32 *out_event)
+static s32 upnpStateWaitApctl(UpnpCtx *ctx, s32 cur_state, s32 *next_state, s32 *out_event)
 {
 	u32 ev_bits;
 	s32 soap_err;
 
-	sub_37a4(0x24, &ev_bits);
+	upnpWaitEventBits(0x24, &ev_bits);
 	if (ev_bits & 0x20) {
 		*out_event = 5;
 		*next_state = 1;
 		return 0;
 	}
 
-	sub_511c(ctx, ctx->active_svc_idx, 1, ctx->ext_port, 0, ctx->ext_port, &soap_err, 1000000);
+	upnpExecSoapAction(ctx, ctx->active_svc_idx, 1, ctx->ext_port, 0, ctx->ext_port, &soap_err, 1000000);
 	*out_event = 6;
 	*next_state = 0;
 	ctx->flags &= ~1u;
 	return 0;
 }
 
-static void sub_5094(s32 prev_state, s32 new_state, s32 event, s32 err, void *arg)
+static void upnpApctlHandler(s32 prev_state, s32 new_state, s32 event, s32 err, void *arg)
 {
 	UpnpCtx *ctx = (UpnpCtx *)arg;
 	if (ctx == NULL)
@@ -2443,14 +2443,14 @@ static void sub_5094(s32 prev_state, s32 new_state, s32 event, s32 err, void *ar
 		return;
 	if (new_state == 4 && event == 4) {
 		g_apctl_connected = 1;
-		sub_377c(0x10);
+		upnpClearEventBits(0x10);
 	} else if (new_state == 0 && g_apctl_connected != 0) {
-		sub_366c();
+		upnpAbortInternal();
 		g_apctl_connected = 0;
 	}
 }
 
-static s32 sub_511c(UpnpCtx *ctx, s32 svc_idx, s32 action, u16 ext_port, s32 proto,
+static s32 upnpExecSoapAction(UpnpCtx *ctx, s32 svc_idx, s32 action, u16 ext_port, s32 proto,
                     u16 int_port, s32 *out_err, u32 timeout_us)
 {
 	char local_ip_str[0x80];
@@ -2464,11 +2464,11 @@ static s32 sub_511c(UpnpCtx *ctx, s32 svc_idx, s32 action, u16 ext_port, s32 pro
 		ret = sceNetApctlGetInfo(8, local_ip_str);
 		if (ret < 0)
 			return ret;
-		body_len = sub_1398(ctx->soap_buf, 0x400, local_ip_str, svc_idx, ext_port, proto, int_port);
+		body_len = soapBuildAddPortMappingBody(ctx->soap_buf, 0x400, local_ip_str, svc_idx, ext_port, proto, int_port);
 	} else if (action == 1) {
-		body_len = sub_1770(ctx->soap_buf, 0x400, svc_idx, ext_port, proto);
+		body_len = soapBuildDeletePortMappingBody(ctx->soap_buf, 0x400, svc_idx, ext_port, proto);
 	} else if (action == 2) {
-		body_len = sub_1944(ctx->soap_buf, 0x400, 2, svc_idx);
+		body_len = soapBuildActionBody(ctx->soap_buf, 0x400, 2, svc_idx);
 	} else {
 		body_len = (s32)0x8041168f;
 	}
@@ -2476,7 +2476,7 @@ static s32 sub_511c(UpnpCtx *ctx, s32 svc_idx, s32 action, u16 ext_port, s32 pro
 	if (body_len < 0)
 		return body_len;
 
-	ret = sub_2348(ctx, &parser, action);
+	ret = upnpInitSoapXmlParser(ctx, &parser, action);
 	if (ret < 0)
 		return ret;
 
@@ -2502,7 +2502,7 @@ static s32 sub_511c(UpnpCtx *ctx, s32 svc_idx, s32 action, u16 ext_port, s32 pro
 	addr.sin_addr = ctx->gw_ip;
 
 	if ((u32)action < 3u) {
-		ret = sub_204c(ctx->sock_fd, ctx->http_buf, 0x400, &addr, ctx->ctrl_url[svc_idx],
+		ret = upnpSendSoapRequest(ctx->sock_fd, ctx->http_buf, 0x400, &addr, ctx->ctrl_url[svc_idx],
 			action, svc_idx, ctx->soap_buf, (u32)body_len, &parser, timeout_us);
 	} else {
 		ret = (s32)0x8041168f;
@@ -2519,27 +2519,27 @@ static s32 sub_511c(UpnpCtx *ctx, s32 svc_idx, s32 action, u16 ext_port, s32 pro
 	return ret;
 }
 
-static void sub_5384(s32 stun_id, void *arg, s32 event, void *data)
+static void upnpStunCallback(s32 stun_id, void *arg, s32 event, void *data)
 {
 	UpnpCtx *ctx = (UpnpCtx *)arg;
 
 	if (event < 0) {
 		ctx->stun_cb_status = event;
-		sub_377c(0x40);
+		upnpClearEventBits(0x40);
 		return;
 	}
 	if (event == 4) {
 		ctx->stun_cb_status = 0;
-		sub_377c(0x80);
+		upnpClearEventBits(0x80);
 	} else if (event == 5) {
 		sceKernelMemcpy(&ctx->stun_mapped_ip, data, 4);
 	} else if (event == 1) {
 		ctx->stun_cb_status = 0;
 		sceKernelMemcpy(ctx->stun_result, data, 0x10);
-		sub_377c(0x40);
+		upnpClearEventBits(0x40);
 	} else if (event == 2) {
 		ctx->stun_cb_status = 0;
-		sub_377c(0x40);
+		upnpClearEventBits(0x40);
 	}
 }
 
@@ -2547,7 +2547,7 @@ static void sub_5384(s32 stun_id, void *arg, s32 event, void *data)
  * Streaming XML parser (0x541c..0x5cc7)
  * ========================================================================= */
 
-static s32 sub_541c(XmlParser *p, const char *data, s32 len)
+static s32 xmlParserFeed(XmlParser *p, const char *data, s32 len)
 {
 	const char *cur = data;
 	s32 state = p->state;
@@ -2595,13 +2595,13 @@ static s32 sub_541c(XmlParser *p, const char *data, s32 len)
 			p->tag_name[p->buf_pos] = '\0';
 			if (state == 1) {
 				s32 matched = 0;
-				ret = sub_5a98(p, &matched);
+				ret = xmlParserMatchOpenTag(p, &matched);
 				if (ret < 0)
 					return ret;
 				state = matched ? 2 : 0;
 			} else if (state == 4) {
 				s32 matched = 0;
-				ret = sub_5ba4(p, &matched);
+				ret = xmlParserMatchCloseTag(p, &matched);
 				if (ret < 0)
 					return ret;
 				if (matched == 1)
@@ -2629,9 +2629,9 @@ static s32 sub_541c(XmlParser *p, const char *data, s32 len)
 					if (ent->has_text == 1) {
 						p->buf_pos = 0;
 						sceKernelMemset(p->text_val, 0, 0xff);
-						p->unk_24c = 0;
-						p->unk_248 = 0;
-						sceKernelMemset(p->unk_242, 0, 6);
+						p->entity_state = 0;
+						p->entity_len = 0;
+						sceKernelMemset(p->entity_buf, 0, 6);
 						state = 3;
 						cur++;
 					} else {
@@ -2748,7 +2748,7 @@ static s32 sub_541c(XmlParser *p, const char *data, s32 len)
 	return 0;
 }
 
-static s32 sub_5a38(XmlParser *p, const XmlSchema *schema, XmlCallback cb, void *arg)
+static s32 xmlParserInit(XmlParser *p, const XmlSchema *schema, XmlCallback cb, void *arg)
 {
 	sceKernelMemset(p, 0, sizeof(XmlParser));
 	p->schema = schema;
@@ -2757,7 +2757,7 @@ static s32 sub_5a38(XmlParser *p, const XmlSchema *schema, XmlCallback cb, void 
 	return 0;
 }
 
-static s32 sub_5a98(XmlParser *p, s32 *out_matched)
+static s32 xmlParserMatchOpenTag(XmlParser *p, s32 *out_matched)
 {
 	const XmlSchema *schema = p->schema;
 	s32 depth = p->depth;
@@ -2769,13 +2769,13 @@ static s32 sub_5a98(XmlParser *p, s32 *out_matched)
 
 	const XmlTagEntry *level = schema->levels[depth];
 	s32 idx = 0;
-	while (sceNet_lib_D8722983(level[idx].name) != 0) {
-		if (sceNet_lib_9CFBC7E3(level[idx].name, p->tag_name) == 0)
+	while (sceNetStrlen(level[idx].name) != 0) {
+		if (sceNetStrcasecmp(level[idx].name, p->tag_name) == 0)
 			break;
 		idx++;
 	}
 
-	if (sceNet_lib_D8722983(level[idx].name) == 0) {
+	if (sceNetStrlen(level[idx].name) == 0) {
 		*out_matched = 0;
 		return 0;
 	}
@@ -2785,7 +2785,7 @@ static s32 sub_5a98(XmlParser *p, s32 *out_matched)
 	return p->cb(p, 1, depth, idx, NULL, NULL, p->user_arg);
 }
 
-static s32 sub_5ba4(XmlParser *p, s32 *out_matched)
+static s32 xmlParserMatchCloseTag(XmlParser *p, s32 *out_matched)
 {
 	s32 depth = p->depth;
 	if (depth == 0) {
@@ -2802,7 +2802,7 @@ static s32 sub_5ba4(XmlParser *p, s32 *out_matched)
 	const XmlTagEntry *level = schema->levels[depth - 1];
 	s32 idx = p->match_idx[depth - 1];
 	if (p->is_self_closing != 1) {
-		if (sceNet_lib_9CFBC7E3(level[idx].name, p->tag_name) != 0) {
+		if (sceNetStrcasecmp(level[idx].name, p->tag_name) != 0) {
 			*out_matched = 0;
 			return 0;
 		}
@@ -2818,7 +2818,7 @@ static s32 sub_5ba4(XmlParser *p, s32 *out_matched)
  * HMAC-SHA1 (0x5cc8..0x5e47)
  * ========================================================================= */
 
-static void sub_5cc8(const u8 *data, s32 data_len, const u8 *key, s32 key_len, u8 *out_digest)
+static void hmacSha1Compute(const u8 *data, s32 data_len, const u8 *key, s32 key_len, u8 *out_digest)
 {
 	Sha1Ctx ctx;
 	u8 k_ipad[0x41];
@@ -2828,9 +2828,9 @@ static void sub_5cc8(const u8 *data, s32 data_len, const u8 *key, s32 key_len, u
 	s32 i;
 
 	if (key_len > 64) {
-		sub_89bc(&tctx);
-		sub_85f0(&tctx, key, (u32)key_len);
-		sub_87c0(&tctx, tk);
+		sha1Init(&tctx);
+		sha1Update(&tctx, key, (u32)key_len);
+		sha1Final(&tctx, tk);
 		key = tk;
 		key_len = 20;
 	}
@@ -2845,39 +2845,39 @@ static void sub_5cc8(const u8 *data, s32 data_len, const u8 *key, s32 key_len, u
 		k_opad[i] ^= 0x5c;
 	}
 
-	sub_89bc(&ctx);
-	sub_85f0(&ctx, k_ipad, 64);
-	sub_85f0(&ctx, data, (u32)data_len);
-	sub_87c0(&ctx, out_digest);
+	sha1Init(&ctx);
+	sha1Update(&ctx, k_ipad, 64);
+	sha1Update(&ctx, data, (u32)data_len);
+	sha1Final(&ctx, out_digest);
 
-	sub_89bc(&ctx);
-	sub_85f0(&ctx, k_opad, 64);
-	sub_85f0(&ctx, out_digest, 20);
-	sub_87c0(&ctx, out_digest);
+	sha1Init(&ctx);
+	sha1Update(&ctx, k_opad, 64);
+	sha1Update(&ctx, out_digest, 20);
+	sha1Final(&ctx, out_digest);
 }
 
 /* =========================================================================
  * sceNetStun init/term & exports (0x5e48..0x6013)
  * ========================================================================= */
 
-static s32 sub_5e48(void)
+static s32 stunInitGlobal(void)
 {
 	s32 ret;
 	if (g_stun_initialized > 0)
 		return (s32)0x80411701;
-	ret = sub_632c();
+	ret = stunInitLib();
 	if (ret < 0)
 		return ret;
 	g_stun_initialized = 1;
 	return 0;
 }
 
-static s32 sub_5ea0(void)
+static s32 stunTermGlobal(void)
 {
 	s32 ret;
 	if (!g_stun_initialized)
 		return 0;
-	ret = sub_6390();
+	ret = stunTermLib();
 	if (ret < 0)
 		return ret;
 	g_stun_initialized = 0;
@@ -2889,49 +2889,49 @@ s32 sceNetStun_EBF3C24D(s32 stack_size, s32 prio, const char *host, u16 port,
 {
 	if (!g_stun_initialized)
 		return (s32)0x80411702;
-	return sub_6014(stack_size, prio, host, port, cfg, cb, out_id);
+	return stunCreateInternal(stack_size, prio, host, port, cfg, cb, out_id);
 }
 
 s32 sceNetStun_4403D9E7(s32 id)
 {
 	if (!g_stun_initialized)
 		return (s32)0x80411702;
-	return sub_6498(id);
+	return stunDeleteInternal(id);
 }
 
 s32 sceNetStun_A0CF3A47(s32 id, void *arg)
 {
 	if (!g_stun_initialized)
 		return (s32)0x80411702;
-	return sub_6588(id, arg);
+	return stunStartNatCheckInternal(id, arg);
 }
 
 s32 sceNetStun_FBF60C6B(s32 id, u16 port, void *arg)
 {
 	if (!g_stun_initialized)
 		return (s32)0x80411702;
-	return sub_661c(id, port, arg);
+	return stunStartPortCheckInternal(id, port, arg);
 }
 
 s32 sceNetStun_6CA54FC9(s32 id, s32 sock_fd, void *arg)
 {
 	if (!g_stun_initialized)
 		return (s32)0x80411702;
-	return sub_66c0(id, sock_fd, arg);
+	return stunStartSockCheckInternal(id, sock_fd, arg);
 }
 
 s32 sceNetStun_40971567(s32 id, void *arg)
 {
 	if (!g_stun_initialized)
 		return (s32)0x80411702;
-	return sub_6240(id, arg);
+	return stunStopInternal(id, arg);
 }
 
 /* =========================================================================
  * STUN client implementation (0x6014..0x85ef)
  * ========================================================================= */
 
-static s32 sub_6014(s32 stack_size, s32 prio, const char *host, u16 port,
+static s32 stunCreateInternal(s32 stack_size, s32 prio, const char *host, u16 port,
                     const StunConfig *cfg, StunCallback cb, s32 *out_id)
 {
 	s32 idx, ret;
@@ -2944,19 +2944,19 @@ static s32 sub_6014(s32 stack_size, s32 prio, const char *host, u16 port,
 	if (idx == 4)
 		return (s32)0x80411709;
 
-	if (sceNet_lib_D8722983(host) >= 0x40)
+	if (sceNetStrlen(host) >= 0x40)
 		return (s32)0x8041170a;
 
 	ctx = &g_stun_ctx[idx];
 	sceKernelMemset(ctx->host, 0, 0x40);
-	sceNet_lib_B5CE388A(ctx->host, host, 0x3f);
+	sceNetStrncpy(ctx->host, host, 0x3f);
 	ctx->port = port;
 	sceKernelMemcpy(&ctx->cfg, cfg, sizeof(StunConfig));
 	ctx->cb = cb;
 	ctx->sock_fd = -1;
 
 	if (ctx->cfg.has_ext_data != 0) {
-		ctx->ext_copy = sceNetIfhandle_lib_15CFE3C0(ctx->cfg.ext_data_len);
+		ctx->ext_copy = sceNetMallocInternal(ctx->cfg.ext_data_len);
 		if (ctx->ext_copy == NULL) {
 			ret = (s32)0x8041170d;
 			goto fail;
@@ -2967,7 +2967,7 @@ static s32 sub_6014(s32 stack_size, s32 prio, const char *host, u16 port,
 		ctx->pkt_buf_size = 0x400;
 	}
 
-	ctx->pkt_buf = sceNetIfhandle_lib_15CFE3C0(ctx->pkt_buf_size);
+	ctx->pkt_buf = sceNetMallocInternal(ctx->pkt_buf_size);
 	if (ctx->pkt_buf == NULL) {
 		ret = (s32)0x8041170d;
 		goto fail;
@@ -2978,7 +2978,7 @@ static s32 sub_6014(s32 stack_size, s32 prio, const char *host, u16 port,
 	if (ret < 0)
 		goto fail;
 
-	ret = sceKernelCreateThread("SceNetStun", sub_6764, prio, stack_size, 0, NULL);
+	ret = sceKernelCreateThread("SceNetStun", stunWorkerThread, prio, stack_size, 0, NULL);
 	ctx->thread_id = ret;
 	if (ret < 0)
 		goto fail;
@@ -2991,11 +2991,11 @@ static s32 sub_6014(s32 stack_size, s32 prio, const char *host, u16 port,
 	return ret;
 
 fail:
-	sub_6888(idx);
+	stunDestroyContext(idx);
 	return ret;
 }
 
-static s32 sub_6240(s32 id, void *arg)
+static s32 stunStopInternal(s32 id, void *arg)
 {
 	StunCtx *ctx = &g_stun_ctx[id - 1];
 	StunMsg *msg;
@@ -3007,10 +3007,10 @@ static s32 sub_6240(s32 id, void *arg)
 	if (ctx->resolver_id > 0)
 		sceNetResolverStop(ctx->resolver_id);
 	if (ctx->sock_fd >= 0)
-		sceNetInet_80A21ABD(ctx->sock_fd);
+		sceNetInetSocketAbort(ctx->sock_fd);
 	sceNetFreeThreadinfo(sceKernelGetThreadId());
 
-	msg = (StunMsg *)sceNetIfhandle_lib_15CFE3C0(sizeof(StunMsg));
+	msg = (StunMsg *)sceNetMallocInternal(sizeof(StunMsg));
 	if (msg == NULL)
 		return (s32)0x8041170d;
 	sceKernelMemset(msg, 0, sizeof(StunMsg));
@@ -3019,7 +3019,7 @@ static s32 sub_6240(s32 id, void *arg)
 	return sceKernelSendMbx(ctx->mbx_id, msg);
 }
 
-static s32 sub_632c(void)
+static s32 stunInitLib(void)
 {
 	s32 i;
 	sceKernelMemset(g_stun_ctx, 0, sizeof(g_stun_ctx));
@@ -3032,7 +3032,7 @@ static s32 sub_632c(void)
 	return 0;
 }
 
-static s32 sub_6390(void)
+static s32 stunTermLib(void)
 {
 	s32 i;
 	for (i = 0; i < 4; i++) {
@@ -3042,18 +3042,18 @@ static s32 sub_6390(void)
 			if (ctx->resolver_id != 0)
 				sceNetResolverStop(ctx->resolver_id);
 			if (ctx->sock_fd >= 0)
-				sceNetInet_80A21ABD(ctx->sock_fd);
+				sceNetInetSocketAbort(ctx->sock_fd);
 			sceNetFreeThreadinfo(sceKernelGetThreadId());
 			sceKernelMemset(&ctx->stop_msg, 0, sizeof(StunMsg));
 			ctx->stop_msg.cmd = 5;
 			if (sceKernelSendMbx(ctx->mbx_id, &ctx->stop_msg) >= 0)
-				sub_6888(i);
+				stunDestroyContext(i);
 		}
 	}
 	return 0;
 }
 
-static s32 sub_6498(s32 id)
+static s32 stunDeleteInternal(s32 id)
 {
 	s32 idx = id - 1;
 	StunCtx *ctx = &g_stun_ctx[idx];
@@ -3065,23 +3065,23 @@ static s32 sub_6498(s32 id)
 	if (ctx->resolver_id != 0)
 		sceNetResolverStop(ctx->resolver_id);
 	if (ctx->sock_fd >= 0)
-		sceNetInet_80A21ABD(ctx->sock_fd);
+		sceNetInetSocketAbort(ctx->sock_fd);
 	sceNetFreeThreadinfo(sceKernelGetThreadId());
 
 	sceKernelMemset(&ctx->stop_msg, 0, sizeof(StunMsg));
 	ctx->stop_msg.cmd = 5;
 	if (sceKernelSendMbx(ctx->mbx_id, &ctx->stop_msg) >= 0)
-		sub_6888(idx);
+		stunDestroyContext(idx);
 	return 0;
 }
 
-static s32 sub_6588(s32 id, void *arg)
+static s32 stunStartNatCheckInternal(s32 id, void *arg)
 {
 	StunCtx *ctx = &g_stun_ctx[id - 1];
 	StunMsg *msg;
 
 	ctx->flags = 0;
-	msg = (StunMsg *)sceNetIfhandle_lib_15CFE3C0(sizeof(StunMsg));
+	msg = (StunMsg *)sceNetMallocInternal(sizeof(StunMsg));
 	if (msg == NULL)
 		return (s32)0x8041170d;
 	sceKernelMemset(msg, 0, sizeof(StunMsg));
@@ -3090,13 +3090,13 @@ static s32 sub_6588(s32 id, void *arg)
 	return sceKernelSendMbx(ctx->mbx_id, msg);
 }
 
-static s32 sub_661c(s32 id, u16 port, void *arg)
+static s32 stunStartPortCheckInternal(s32 id, u16 port, void *arg)
 {
 	StunCtx *ctx = &g_stun_ctx[id - 1];
 	StunMsg *msg;
 
 	ctx->flags = 0;
-	msg = (StunMsg *)sceNetIfhandle_lib_15CFE3C0(sizeof(StunMsg));
+	msg = (StunMsg *)sceNetMallocInternal(sizeof(StunMsg));
 	if (msg == NULL)
 		return (s32)0x8041170d;
 	sceKernelMemset(msg, 0, sizeof(StunMsg));
@@ -3106,13 +3106,13 @@ static s32 sub_661c(s32 id, u16 port, void *arg)
 	return sceKernelSendMbx(ctx->mbx_id, msg);
 }
 
-static s32 sub_66c0(s32 id, s32 sock_fd, void *arg)
+static s32 stunStartSockCheckInternal(s32 id, s32 sock_fd, void *arg)
 {
 	StunCtx *ctx = &g_stun_ctx[id - 1];
 	StunMsg *msg;
 
 	ctx->flags = 0;
-	msg = (StunMsg *)sceNetIfhandle_lib_15CFE3C0(sizeof(StunMsg));
+	msg = (StunMsg *)sceNetMallocInternal(sizeof(StunMsg));
 	if (msg == NULL)
 		return (s32)0x8041170d;
 	sceKernelMemset(msg, 0, sizeof(StunMsg));
@@ -3122,7 +3122,7 @@ static s32 sub_66c0(s32 id, s32 sock_fd, void *arg)
 	return sceKernelSendMbx(ctx->mbx_id, msg);
 }
 
-static s32 sub_6764(u32 args, void *argp)
+static s32 stunWorkerThread(u32 args, void *argp)
 {
 	StunCtx *ctx = *(StunCtx **)argp;
 	StunMsg *msg = NULL;
@@ -3132,10 +3132,10 @@ static s32 sub_6764(u32 args, void *argp)
 			break;
 		switch (msg->cmd) {
 		case 1:
-			sub_6ca8(ctx, msg->user_arg);
+			stunExecNatCheck(ctx, msg->user_arg);
 			break;
 		case 2:
-			sub_696c(ctx, msg->bind_port, -1, msg->user_arg);
+			stunExecPortCheck(ctx, msg->bind_port, -1, msg->user_arg);
 			break;
 		case 4:
 			if (ctx->flags & 1) {
@@ -3148,15 +3148,15 @@ static s32 sub_6764(u32 args, void *argp)
 			sceNetFreeThreadinfo(sceKernelGetThreadId());
 			return 0;
 		case 6:
-			sub_696c(ctx, 0, msg->sock_fd, msg->user_arg);
+			stunExecPortCheck(ctx, 0, msg->sock_fd, msg->user_arg);
 			break;
 		case 7:
-			sub_71e0(ctx, msg->user_arg);
+			stunExecExtNatCheck(ctx, msg->user_arg);
 			break;
 		default:
 			break;
 		}
-		sceNetIfhandle_lib_76BAD213(msg);
+		sceNetFreeInternal(msg);
 		msg = NULL;
 	}
 
@@ -3164,7 +3164,7 @@ static s32 sub_6764(u32 args, void *argp)
 	return 0;
 }
 
-static void sub_6888(s32 idx)
+static void stunDestroyContext(s32 idx)
 {
 	StunCtx *ctx = &g_stun_ctx[idx];
 
@@ -3180,16 +3180,16 @@ static void sub_6888(s32 idx)
 		ctx->mbx_id = -1;
 	}
 	if (ctx->pkt_buf != NULL) {
-		sceNetIfhandle_lib_76BAD213(ctx->pkt_buf);
+		sceNetFreeInternal(ctx->pkt_buf);
 		ctx->pkt_buf = NULL;
 	}
 	if (ctx->ext_copy != NULL) {
-		sceNetIfhandle_lib_76BAD213(ctx->ext_copy);
+		sceNetFreeInternal(ctx->ext_copy);
 		ctx->ext_copy = NULL;
 	}
 }
 
-static void sub_696c(StunCtx *ctx, u16 port, s32 sock_fd, void *arg)
+static void stunExecPortCheck(StunCtx *ctx, u16 port, s32 sock_fd, void *arg)
 {
 	SockAddrIn local_addr, srv_addr;
 	u8 mapped_out[8];
@@ -3200,7 +3200,7 @@ static void sub_696c(StunCtx *ctx, u16 port, s32 sock_fd, void *arg)
 	s32 ret;
 
 	sceKernelMemset(mapped_out, 0, sizeof(mapped_out));
-	ret = sub_75b8(ctx, ctx->host, &srv_addr);
+	ret = stunResolveServer(ctx, ctx->host, &srv_addr);
 	if (ret < 0)
 		goto done;
 	srv_addr.sin_port = bswap16(ctx->port);
@@ -3261,7 +3261,7 @@ static void sub_696c(StunCtx *ctx, u16 port, s32 sock_fd, void *arg)
 		resp.ext_data_len = ctx->cfg.ext_data_len;
 	}
 
-	ret = sub_76c0(ctx->sock_fd, ctx->sock_fd, &srv_addr, &srv_addr, &req, &resp,
+	ret = stunSendRecvRequest(ctx->sock_fd, ctx->sock_fd, &srv_addr, &srv_addr, &req, &resp,
 		(u8 *)ctx->pkt_buf, ctx->pkt_buf_size);
 	if (ret >= 0) {
 		u16 mport = bswap16(resp.mapped.port);
@@ -3287,7 +3287,7 @@ done:
 	ctx->flags = 0;
 }
 
-static void sub_6ca8(StunCtx *ctx, void *arg)
+static void stunExecNatCheck(StunCtx *ctx, void *arg)
 {
 	u32 result[4];
 	u8 mapped_ev[8];
@@ -3301,7 +3301,7 @@ static void sub_6ca8(StunCtx *ctx, void *arg)
 	for (;;) {
 		sceKernelMemset(result, 0, sizeof(result));
 		if (!retry_pass) {
-			ret = sub_75b8(ctx, ctx->host, &srv_addr);
+			ret = stunResolveServer(ctx, ctx->host, &srv_addr);
 			if (ret < 0)
 				break;
 			srv_addr.sin_port = bswap16(ctx->port);
@@ -3342,7 +3342,7 @@ static void sub_6ca8(StunCtx *ctx, void *arg)
 			resp.hmac_key_len = 20;
 		}
 
-		ret = sub_76c0(ctx->sock_fd, ctx->sock_fd, &srv_addr, &srv_addr, &req, &resp,
+		ret = stunSendRecvRequest(ctx->sock_fd, ctx->sock_fd, &srv_addr, &srv_addr, &req, &resp,
 			(u8 *)ctx->pkt_buf, ctx->pkt_buf_size);
 		if (ret < 0)
 			break;
@@ -3383,7 +3383,7 @@ static void sub_6ca8(StunCtx *ctx, void *arg)
 			resp.hmac_key_len = 20;
 		}
 
-		ret = sub_76c0(ctx->sock_fd, ctx->sock_fd, &alt_addr, &alt_addr, &req, &resp,
+		ret = stunSendRecvRequest(ctx->sock_fd, ctx->sock_fd, &alt_addr, &alt_addr, &req, &resp,
 			(u8 *)ctx->pkt_buf, ctx->pkt_buf_size);
 		if (ret < 0)
 			break;
@@ -3414,7 +3414,7 @@ static void sub_6ca8(StunCtx *ctx, void *arg)
 			resp.hmac_key_len = 20;
 		}
 
-		ret = sub_76c0(ctx->sock_fd, ctx->sock_fd, &alt_addr, &alt_addr, &req, &resp,
+		ret = stunSendRecvRequest(ctx->sock_fd, ctx->sock_fd, &alt_addr, &alt_addr, &req, &resp,
 			(u8 *)ctx->pkt_buf, ctx->pkt_buf_size);
 		if (ret < 0)
 			break;
@@ -3467,7 +3467,7 @@ static void sub_6ca8(StunCtx *ctx, void *arg)
 	ctx->flags = 0;
 }
 
-static void sub_71e0(StunCtx *ctx, void *arg)
+static void stunExecExtNatCheck(StunCtx *ctx, void *arg)
 {
 	u32 out_res[2];
 	StunReqOpts req;
@@ -3478,7 +3478,7 @@ static void sub_71e0(StunCtx *ctx, void *arg)
 	s32 ret;
 
 	sceKernelMemset(out_res, 0, sizeof(out_res));
-	ret = sub_75b8(ctx, ctx->host, &srv_addr);
+	ret = stunResolveServer(ctx, ctx->host, &srv_addr);
 	if (ret < 0)
 		goto done;
 	srv_addr.sin_port = bswap16(ctx->port);
@@ -3518,7 +3518,7 @@ static void sub_71e0(StunCtx *ctx, void *arg)
 		resp.hmac_key_len = 20;
 	}
 
-	ret = sub_76c0(ctx->sock_fd, ctx->sock_fd, &srv_addr, &srv_addr, &req, &resp,
+	ret = stunSendRecvRequest(ctx->sock_fd, ctx->sock_fd, &srv_addr, &srv_addr, &req, &resp,
 		(u8 *)ctx->pkt_buf, ctx->pkt_buf_size);
 	if (ret < 0)
 		goto done;
@@ -3546,11 +3546,11 @@ static void sub_71e0(StunCtx *ctx, void *arg)
 	if (ctx->cfg.use_xor != 0)
 		req.use_xor = 1;
 
-	ret = sub_76c0(ctx->sock_fd, ctx->sock_fd, &src_addr, &expect_addr, &req, &resp,
+	ret = stunSendRecvRequest(ctx->sock_fd, ctx->sock_fd, &src_addr, &expect_addr, &req, &resp,
 		(u8 *)ctx->pkt_buf, ctx->pkt_buf_size);
 	if (ret == (s32)0x80411703) {
 		out_res[0] = 2;
-		ret = sub_78f4(ctx->sock_fd, &resp.mapped, out_res);
+		ret = stunTestChangedAddrReachable(ctx->sock_fd, &resp.mapped, out_res);
 		goto done;
 	}
 	if (ret < 0)
@@ -3569,7 +3569,7 @@ static void sub_71e0(StunCtx *ctx, void *arg)
 	if (ctx->cfg.use_xor != 0)
 		req.use_xor = 1;
 
-	ret = sub_76c0(ctx->sock_fd, ctx->sock_fd, &src_addr, &expect_addr, &req, &resp,
+	ret = stunSendRecvRequest(ctx->sock_fd, ctx->sock_fd, &src_addr, &expect_addr, &req, &resp,
 		(u8 *)ctx->pkt_buf, ctx->pkt_buf_size);
 	if (ret == (s32)0x80411703) {
 		out_res[0] = 1;
@@ -3579,7 +3579,7 @@ static void sub_71e0(StunCtx *ctx, void *arg)
 		out_res[0] = 0;
 	}
 
-	ret = sub_78f4(ctx->sock_fd, &resp.mapped, out_res);
+	ret = stunTestChangedAddrReachable(ctx->sock_fd, &resp.mapped, out_res);
 
 done:
 	if (ctx->sock_fd >= 0) {
@@ -3598,7 +3598,7 @@ done:
 	ctx->flags = 0;
 }
 
-static s32 sub_75b8(StunCtx *ctx, const char *host, SockAddrIn *out_addr)
+static s32 stunResolveServer(StunCtx *ctx, const char *host, SockAddrIn *out_addr)
 {
 	void *res_buf = NULL;
 	s32 ret = 0;
@@ -3612,7 +3612,7 @@ static s32 sub_75b8(StunCtx *ctx, const char *host, SockAddrIn *out_addr)
 		goto cleanup;
 	}
 
-	res_buf = sceNetIfhandle_lib_15CFE3C0(0x300);
+	res_buf = sceNetMallocInternal(0x300);
 	if (res_buf == NULL) {
 		ret = (s32)0x8041170d;
 		goto cleanup;
@@ -3631,11 +3631,11 @@ cleanup:
 		sceNetResolverDelete(ctx->resolver_id);
 	ctx->resolver_id = 0;
 	if (res_buf != NULL)
-		sceNetIfhandle_lib_76BAD213(res_buf);
+		sceNetFreeInternal(res_buf);
 	return ret;
 }
 
-static s32 sub_76c0(s32 send_fd, s32 recv_fd, const SockAddrIn *dst_addr, const SockAddrIn *expect_addr,
+static s32 stunSendRecvRequest(s32 send_fd, s32 recv_fd, const SockAddrIn *dst_addr, const SockAddrIn *expect_addr,
                     const StunReqOpts *req, StunRespData *resp, u8 *pkt_buf, u32 pkt_buf_size)
 {
 	u32 tid[4];
@@ -3648,7 +3648,7 @@ static s32 sub_76c0(s32 send_fd, s32 recv_fd, const SockAddrIn *dst_addr, const 
 	s32 i, ret;
 
 	for (i = 0; i < 4; i++)
-		tid[i] = sceNet_lib_1858883D();
+		tid[i] = sceNetRand();
 
 	for (;;) {
 		if (attempt > 0) {
@@ -3658,7 +3658,7 @@ static s32 sub_76c0(s32 send_fd, s32 recv_fd, const SockAddrIn *dst_addr, const 
 				rto <<= 1;
 		}
 
-		ret = sub_7a3c(pkt_buf, pkt_buf_size, (const u8 *)tid, req);
+		ret = stunBuildBindingRequest(pkt_buf, pkt_buf_size, (const u8 *)tid, req);
 		if (ret < 0)
 			return ret;
 
@@ -3694,7 +3694,7 @@ static s32 sub_76c0(s32 send_fd, s32 recv_fd, const SockAddrIn *dst_addr, const 
 			if (from.sin_addr != exp_ip)
 				continue;
 
-			ret = sub_7bf0(pkt_buf, pkt_buf_size, (const u8 *)tid, resp);
+			ret = stunParseBindingResponse(pkt_buf, pkt_buf_size, (const u8 *)tid, resp);
 			if (ret != (s32)0x80411704)
 				return ret;
 		}
@@ -3702,7 +3702,7 @@ static s32 sub_76c0(s32 send_fd, s32 recv_fd, const SockAddrIn *dst_addr, const 
 	}
 }
 
-static s32 sub_78f4(s32 sock_fd, const StunAddrAttr *dst, u32 *out_res)
+static s32 stunTestChangedAddrReachable(s32 sock_fd, const StunAddrAttr *dst, u32 *out_res)
 {
 	SockAddrIn addr;
 	TimeVal tv;
@@ -3735,14 +3735,14 @@ static s32 sub_78f4(s32 sock_fd, const StunAddrAttr *dst, u32 *out_res)
 	return ret;
 }
 
-static s32 sub_7a3c(u8 *buf, u32 bufsize, const u8 *tid, const StunReqOpts *req)
+static s32 stunBuildBindingRequest(u8 *buf, u32 bufsize, const u8 *tid, const StunReqOpts *req)
 {
 	u8 *p = buf + 0x14;
 	u32 rem = bufsize - 0x14;
 	s32 ret;
 
 	if (req->has_resp_addr == 1) {
-		ret = sub_8014(p, rem, 2, req->resp_port, req->resp_addr);
+		ret = stunWriteAddrAttr(p, rem, 2, req->resp_port, req->resp_addr);
 		if (ret < 0)
 			return ret;
 		p += ret;
@@ -3750,7 +3750,7 @@ static s32 sub_7a3c(u8 *buf, u32 bufsize, const u8 *tid, const StunReqOpts *req)
 	}
 
 	if (req->change_req != 0) {
-		ret = sub_81d0(p, rem, req->change_req);
+		ret = stunWriteChangeReqAttr(p, rem, req->change_req);
 		if (ret < 0)
 			return ret;
 		p += ret;
@@ -3758,7 +3758,7 @@ static s32 sub_7a3c(u8 *buf, u32 bufsize, const u8 *tid, const StunReqOpts *req)
 	}
 
 	if (req->use_xor == 1) {
-		ret = sub_8278(p, rem, 0x0021, NULL, 0);
+		ret = stunWriteBytesAttr(p, rem, 0x0021, NULL, 0);
 		if (ret < 0)
 			return ret;
 		p += ret;
@@ -3766,7 +3766,7 @@ static s32 sub_7a3c(u8 *buf, u32 bufsize, const u8 *tid, const StunReqOpts *req)
 	}
 
 	if (req->username != NULL) {
-		ret = sub_8278(p, rem, 0x0006, req->username, req->username_len);
+		ret = stunWriteBytesAttr(p, rem, 0x0006, req->username, req->username_len);
 		if (ret < 0)
 			return ret;
 		p += ret;
@@ -3774,29 +3774,29 @@ static s32 sub_7a3c(u8 *buf, u32 bufsize, const u8 *tid, const StunReqOpts *req)
 	}
 
 	if (req->has_ext == 1) {
-		ret = sub_8278(p, rem, 0x8099, req->ext_data, req->ext_data_len);
+		ret = stunWriteBytesAttr(p, rem, 0x8099, req->ext_data, req->ext_data_len);
 		if (ret < 0)
 			return ret;
 		p += ret;
 	}
 
 	if (req->hmac_key != NULL) {
-		ret = sub_7e9c(buf, (u32)(p - buf) + 0x18, tid, 1);
+		ret = stunWriteHeader(buf, (u32)(p - buf) + 0x18, tid, 1);
 		if (ret < 0)
 			return ret;
-		ret = sub_8344(buf, bufsize, p, (const u8 *)req->hmac_key, req->hmac_key_len);
+		ret = stunWriteMessageIntegrity(buf, bufsize, p, (const u8 *)req->hmac_key, req->hmac_key_len);
 		if (ret < 0)
 			return ret;
 		return (s32)((p + ret) - buf);
 	}
 
-	ret = sub_7e9c(buf, (u32)(p - buf), tid, 1);
+	ret = stunWriteHeader(buf, (u32)(p - buf), tid, 1);
 	if (ret < 0)
 		return ret;
 	return (s32)(p - buf);
 }
 
-static s32 sub_7bf0(u8 *buf, u32 bufsize, const u8 *tid, StunRespData *resp)
+static s32 stunParseBindingResponse(u8 *buf, u32 bufsize, const u8 *tid, StunRespData *resp)
 {
 	StunAttrHdr hdr;
 	s32 skip;
@@ -3804,7 +3804,7 @@ static s32 sub_7bf0(u8 *buf, u32 bufsize, const u8 *tid, StunRespData *resp)
 	s32 rem, ret;
 	u8 *p;
 
-	rem = sub_7f2c(buf, bufsize, tid, 0x0101);
+	rem = stunVerifyHeader(buf, bufsize, tid, 0x0101);
 	if (rem < 0)
 		return rem;
 
@@ -3818,7 +3818,7 @@ static s32 sub_7bf0(u8 *buf, u32 bufsize, const u8 *tid, StunRespData *resp)
 		u16 attr_type = bswap16(hdr.type);
 
 		if (attr_type == 0x0001 || attr_type == 0x8020) {
-			ret = sub_80f4(p, (u32)rem, &skip, &resp->mapped);
+			ret = stunReadAddrAttr(p, (u32)rem, &skip, &resp->mapped);
 			if (ret < 0)
 				return ret;
 			if (skip != 1) {
@@ -3832,23 +3832,23 @@ static s32 sub_7bf0(u8 *buf, u32 bufsize, const u8 *tid, StunRespData *resp)
 				}
 			}
 		} else if (attr_type == 0x0004) {
-			ret = sub_80f4(p, (u32)rem, &skip, &resp->source);
+			ret = stunReadAddrAttr(p, (u32)rem, &skip, &resp->source);
 			if (ret < 0)
 				return ret;
 			if (skip != 1)
 				got_source = 1;
 		} else if (attr_type == 0x0005) {
-			ret = sub_80f4(p, (u32)rem, &skip, &resp->changed);
+			ret = stunReadAddrAttr(p, (u32)rem, &skip, &resp->changed);
 			if (ret < 0)
 				return ret;
 			if (skip != 1)
 				got_changed = 1;
 		} else if (attr_type == 0x0008) {
-			ret = sub_845c(buf, bufsize, p, (const u8 *)resp->hmac_key, resp->hmac_key_len);
+			ret = stunVerifyMessageIntegrity(buf, bufsize, p, (const u8 *)resp->hmac_key, resp->hmac_key_len);
 			if (ret < 0)
 				return ret;
 		} else if (attr_type == 0x8099) {
-			ret = sub_854c(p, (u32)rem, resp->check_ext, resp->ext_data, resp->ext_data_len);
+			ret = stunVerifyExtAttr(p, (u32)rem, resp->check_ext, resp->ext_data, resp->ext_data_len);
 			if (ret < 0)
 				return ret;
 		}
@@ -3864,7 +3864,7 @@ static s32 sub_7bf0(u8 *buf, u32 bufsize, const u8 *tid, StunRespData *resp)
 	return 0;
 }
 
-static s32 sub_7e9c(u8 *buf, u32 total_len, const u8 *tid, u16 msg_type)
+static s32 stunWriteHeader(u8 *buf, u32 total_len, const u8 *tid, u16 msg_type)
 {
 	StunHdr hdr;
 
@@ -3876,7 +3876,7 @@ static s32 sub_7e9c(u8 *buf, u32 total_len, const u8 *tid, u16 msg_type)
 	return (s32)total_len;
 }
 
-static s32 sub_7f2c(u8 *buf, u32 bufsize, const u8 *tid, u16 expect_type)
+static s32 stunVerifyHeader(u8 *buf, u32 bufsize, const u8 *tid, u16 expect_type)
 {
 	StunHdr hdr;
 
@@ -3884,7 +3884,7 @@ static s32 sub_7f2c(u8 *buf, u32 bufsize, const u8 *tid, u16 expect_type)
 		return (s32)0x80411704;
 
 	sceKernelMemcpy(&hdr, buf, sizeof(hdr));
-	if (sceNet_lib_E0A81C7C(tid, hdr.tid, 16) != 0)
+	if (sceNetMemcmp(tid, hdr.tid, 16) != 0)
 		return (s32)0x80411704;
 
 	if (hdr.type != expect_type)
@@ -3899,7 +3899,7 @@ static s32 sub_7f2c(u8 *buf, u32 bufsize, const u8 *tid, u16 expect_type)
 	return (s32)body_len;
 }
 
-static s32 sub_8014(u8 *buf, u32 bufsize, u16 attr_type, u16 port, u32 addr)
+static s32 stunWriteAddrAttr(u8 *buf, u32 bufsize, u16 attr_type, u16 port, u32 addr)
 {
 	StunAttrHdr hdr;
 	StunAddrAttr val;
@@ -3920,7 +3920,7 @@ static s32 sub_8014(u8 *buf, u32 bufsize, u16 attr_type, u16 port, u32 addr)
 	return 12;
 }
 
-static s32 sub_80f4(const u8 *buf, u32 bufsize, s32 *out_skip, StunAddrAttr *out_addr)
+static s32 stunReadAddrAttr(const u8 *buf, u32 bufsize, s32 *out_skip, StunAddrAttr *out_addr)
 {
 	StunAttrHdr hdr;
 	StunAddrAttr val;
@@ -3949,7 +3949,7 @@ static s32 sub_80f4(const u8 *buf, u32 bufsize, s32 *out_skip, StunAddrAttr *out
 	return 12;
 }
 
-static s32 sub_81d0(u8 *buf, u32 bufsize, u32 flags)
+static s32 stunWriteChangeReqAttr(u8 *buf, u32 bufsize, u32 flags)
 {
 	StunAttrHdr hdr;
 	u32 val;
@@ -3967,7 +3967,7 @@ static s32 sub_81d0(u8 *buf, u32 bufsize, u32 flags)
 	return 8;
 }
 
-static s32 sub_8278(u8 *buf, u32 bufsize, u16 attr_type, const void *data, u32 data_len)
+static s32 stunWriteBytesAttr(u8 *buf, u32 bufsize, u16 attr_type, const void *data, u32 data_len)
 {
 	StunAttrHdr hdr;
 	u32 total = data_len + 4;
@@ -3985,7 +3985,7 @@ static s32 sub_8278(u8 *buf, u32 bufsize, u16 attr_type, const void *data, u32 d
 	return (s32)total;
 }
 
-static s32 sub_8344(u8 *pkt_start, u32 bufsize, u8 *attr_pos, const u8 *key, u32 key_len)
+static s32 stunWriteMessageIntegrity(u8 *pkt_start, u32 bufsize, u8 *attr_pos, const u8 *key, u32 key_len)
 {
 	StunAttrHdr hdr;
 	u8 digest[20];
@@ -3996,7 +3996,7 @@ static s32 sub_8344(u8 *pkt_start, u32 bufsize, u8 *attr_pos, const u8 *key, u32
 		return (s32)0x80411706;
 
 	sceKernelMemset(attr_pos, 0, padded_len - (u32)msg_len);
-	sub_5cc8(pkt_start, (s32)padded_len, key, (s32)key_len, digest);
+	hmacSha1Compute(pkt_start, (s32)padded_len, key, (s32)key_len, digest);
 
 	sceKernelMemset(&hdr, 0, sizeof(hdr));
 	hdr.type = bswap16(8);
@@ -4006,7 +4006,7 @@ static s32 sub_8344(u8 *pkt_start, u32 bufsize, u8 *attr_pos, const u8 *key, u32
 	return 24;
 }
 
-static s32 sub_845c(u8 *pkt_start, u32 bufsize, u8 *attr_pos, const u8 *key, u32 key_len)
+static s32 stunVerifyMessageIntegrity(u8 *pkt_start, u32 bufsize, u8 *attr_pos, const u8 *key, u32 key_len)
 {
 	u8 expected[20];
 	u8 computed[20];
@@ -4018,14 +4018,14 @@ static s32 sub_845c(u8 *pkt_start, u32 bufsize, u8 *attr_pos, const u8 *key, u32
 
 	sceKernelMemcpy(expected, attr_pos + 4, 20);
 	sceKernelMemset(attr_pos, 0, padded_len - (u32)msg_len);
-	sub_5cc8(pkt_start, (s32)padded_len, key, (s32)key_len, computed);
+	hmacSha1Compute(pkt_start, (s32)padded_len, key, (s32)key_len, computed);
 
-	if (sceNet_lib_E0A81C7C(expected, computed, 20) != 0)
+	if (sceNetMemcmp(expected, computed, 20) != 0)
 		return (s32)0x80411707;
 	return 0;
 }
 
-static s32 sub_854c(const u8 *attr_pos, u32 rem, s32 check_ext, const void *ext_data, u32 ext_len)
+static s32 stunVerifyExtAttr(const u8 *attr_pos, u32 rem, s32 check_ext, const void *ext_data, u32 ext_len)
 {
 	StunAttrHdr hdr;
 
@@ -4037,7 +4037,7 @@ static s32 sub_854c(const u8 *attr_pos, u32 rem, s32 check_ext, const void *ext_
 	if (hdr.length != ext_len)
 		return (s32)0x8041170b;
 
-	if (sceNet_lib_E0A81C7C(attr_pos + 4, ext_data, ext_len) != 0)
+	if (sceNetMemcmp(attr_pos + 4, ext_data, ext_len) != 0)
 		return (s32)0x8041170c;
 	return 0;
 }
@@ -4046,7 +4046,7 @@ static s32 sub_854c(const u8 *attr_pos, u32 rem, s32 check_ext, const void *ext_
  * Streaming SHA-1 (0x85f0..0x8a24)
  * ========================================================================= */
 
-static s32 sub_85f0(Sha1Ctx *ctx, const u8 *data, u32 len)
+static s32 sha1Update(Sha1Ctx *ctx, const u8 *data, u32 len)
 {
 	u32 block[16];
 	u32 rem;
@@ -4078,7 +4078,7 @@ static s32 sub_85f0(Sha1Ctx *ctx, const u8 *data, u32 len)
 		}
 		for (i = 0; i < 16; i++)
 			block[i] = bswap32(block[i]);
-		sub_0000(block, ctx->state);
+		sha1TransformBlock(block, ctx->state);
 		rem -= 64;
 	}
 
@@ -4091,7 +4091,7 @@ static s32 sub_85f0(Sha1Ctx *ctx, const u8 *data, u32 len)
 	return 0;
 }
 
-static s32 sub_87c0(Sha1Ctx *ctx, u8 *out_digest)
+static s32 sha1Final(Sha1Ctx *ctx, u8 *out_digest)
 {
 	u32 block[16];
 	u32 i;
@@ -4111,7 +4111,7 @@ static s32 sub_87c0(Sha1Ctx *ctx, u8 *out_digest)
 		if (cur >= 56) {
 			for (i = 0; i < 16; i++)
 				block[i] = bswap32(block[i]);
-			sub_0000(block, ctx->state);
+			sha1TransformBlock(block, ctx->state);
 			for (i = 0; i < 16; i++)
 				block[i] = 0;
 		}
@@ -4122,7 +4122,7 @@ static s32 sub_87c0(Sha1Ctx *ctx, u8 *out_digest)
 
 		for (i = 0; i < 16; i++)
 			block[i] = bswap32(block[i]);
-		sub_0000(block, ctx->state);
+		sha1TransformBlock(block, ctx->state);
 
 		for (i = 0; i < 5; i++)
 			ctx->state[i] = bswap32(ctx->state[i]);
@@ -4137,7 +4137,7 @@ static s32 sub_87c0(Sha1Ctx *ctx, u8 *out_digest)
 	return 0;
 }
 
-static s32 sub_89bc(Sha1Ctx *ctx)
+static s32 sha1Init(Sha1Ctx *ctx)
 {
 	if (ctx == NULL)
 		return (s32)0x80000103;

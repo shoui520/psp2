@@ -153,14 +153,14 @@ sceNetApctlGetState: /* sceNetApctl 0x5deac81b @ 0x8b08 */
 sceNetApctlAddHandler: /* sceNetApctl 0x8abadd51 @ 0x8b10 */
 	jr	$ra
 	nop
-	.globl	sceNetIfhandle_lib_15CFE3C0
-	.type	sceNetIfhandle_lib_15CFE3C0, @function
-sceNetIfhandle_lib_15CFE3C0: /* sceNetIfhandle_lib 0x15cfe3c0 @ 0x8b18 */
+	.globl	sceNetMallocInternal
+	.type	sceNetMallocInternal, @function
+sceNetMallocInternal: /* sceNetIfhandle_lib 0x15cfe3c0 @ 0x8b18 */
 	jr	$ra
 	nop
-	.globl	sceNetIfhandle_lib_76BAD213
-	.type	sceNetIfhandle_lib_76BAD213, @function
-sceNetIfhandle_lib_76BAD213: /* sceNetIfhandle_lib 0x76bad213 @ 0x8b20 */
+	.globl	sceNetFreeInternal
+	.type	sceNetFreeInternal, @function
+sceNetFreeInternal: /* sceNetIfhandle_lib 0x76bad213 @ 0x8b20 */
 	jr	$ra
 	nop
 	.globl	sceNetInetSendto
@@ -203,9 +203,9 @@ sceNetInetSelect: /* sceNetInet 0x5be8d595 @ 0x8b58 */
 sceNetInetSend: /* sceNetInet 0x7aa671bc @ 0x8b60 */
 	jr	$ra
 	nop
-	.globl	sceNetInet_80A21ABD
-	.type	sceNetInet_80A21ABD, @function
-sceNetInet_80A21ABD: /* sceNetInet 0x80a21abd @ 0x8b68 */
+	.globl	sceNetInetSocketAbort
+	.type	sceNetInetSocketAbort, @function
+sceNetInetSocketAbort: /* sceNetInet 0x80a21abd @ 0x8b68 */
 	jr	$ra
 	nop
 	.globl	sceNetInetSocket
@@ -213,9 +213,9 @@ sceNetInet_80A21ABD: /* sceNetInet 0x80a21abd @ 0x8b68 */
 sceNetInetSocket: /* sceNetInet 0x8b7b220f @ 0x8b70 */
 	jr	$ra
 	nop
-	.globl	sceNetInet_8CA3A97E
-	.type	sceNetInet_8CA3A97E, @function
-sceNetInet_8CA3A97E: /* sceNetInet 0x8ca3a97e @ 0x8b78 */
+	.globl	sceNetInetGetPspError
+	.type	sceNetInetGetPspError, @function
+sceNetInetGetPspError: /* sceNetInet 0x8ca3a97e @ 0x8b78 */
 	jr	$ra
 	nop
 	.globl	sceNetInetClose
@@ -268,64 +268,64 @@ sceNetResolverStop: /* sceNetResolver 0x808f6063 @ 0x8bc0 */
 sceNetResolverDelete: /* sceNetResolver 0x94523e09 @ 0x8bc8 */
 	jr	$ra
 	nop
-	.globl	sceNet_lib_1858883D
-	.type	sceNet_lib_1858883D, @function
-sceNet_lib_1858883D: /* sceNet_lib 0x1858883d @ 0x8bd0 */
+	.globl	sceNetRand
+	.type	sceNetRand, @function
+sceNetRand: /* sceNet_lib 0x1858883d @ 0x8bd0 */
 	jr	$ra
 	nop
-	.globl	sceNet_lib_2A73ADDC
-	.type	sceNet_lib_2A73ADDC, @function
-sceNet_lib_2A73ADDC: /* sceNet_lib 0x2a73addc @ 0x8bd8 */
+	.globl	sceNetStrtoul
+	.type	sceNetStrtoul, @function
+sceNetStrtoul: /* sceNet_lib 0x2a73addc @ 0x8bd8 */
 	jr	$ra
 	nop
-	.globl	sceNet_lib_4753D878
-	.type	sceNet_lib_4753D878, @function
-sceNet_lib_4753D878: /* sceNet_lib 0x4753d878 @ 0x8be0 */
+	.globl	sceNetMemmove
+	.type	sceNetMemmove, @function
+sceNetMemmove: /* sceNet_lib 0x4753d878 @ 0x8be0 */
 	jr	$ra
 	nop
-	.globl	sceNet_lib_80C9F02A
-	.type	sceNet_lib_80C9F02A, @function
-sceNet_lib_80C9F02A: /* sceNet_lib 0x80c9f02a @ 0x8be8 */
+	.globl	sceNetStrcpy
+	.type	sceNetStrcpy, @function
+sceNetStrcpy: /* sceNet_lib 0x80c9f02a @ 0x8be8 */
 	jr	$ra
 	nop
-	.globl	sceNet_lib_94DCA9F0
-	.type	sceNet_lib_94DCA9F0, @function
-sceNet_lib_94DCA9F0: /* sceNet_lib 0x94dca9f0 @ 0x8bf0 */
+	.globl	sceNetStrncmp
+	.type	sceNetStrncmp, @function
+sceNetStrncmp: /* sceNet_lib 0x94dca9f0 @ 0x8bf0 */
 	jr	$ra
 	nop
-	.globl	sceNet_lib_9CFBC7E3
-	.type	sceNet_lib_9CFBC7E3, @function
-sceNet_lib_9CFBC7E3: /* sceNet_lib 0x9cfbc7e3 @ 0x8bf8 */
+	.globl	sceNetStrcasecmp
+	.type	sceNetStrcasecmp, @function
+sceNetStrcasecmp: /* sceNet_lib 0x9cfbc7e3 @ 0x8bf8 */
 	jr	$ra
 	nop
-	.globl	sceNet_lib_A0F16ABD
-	.type	sceNet_lib_A0F16ABD, @function
-sceNet_lib_A0F16ABD: /* sceNet_lib 0xa0f16abd @ 0x8c00 */
+	.globl	sceNetStrcmp
+	.type	sceNetStrcmp, @function
+sceNetStrcmp: /* sceNet_lib 0xa0f16abd @ 0x8c00 */
 	jr	$ra
 	nop
-	.globl	sceNet_lib_B5CE388A
-	.type	sceNet_lib_B5CE388A, @function
-sceNet_lib_B5CE388A: /* sceNet_lib 0xb5ce388a @ 0x8c08 */
+	.globl	sceNetStrncpy
+	.type	sceNetStrncpy, @function
+sceNetStrncpy: /* sceNet_lib 0xb5ce388a @ 0x8c08 */
 	jr	$ra
 	nop
-	.globl	sceNet_lib_BCBE14CF
-	.type	sceNet_lib_BCBE14CF, @function
-sceNet_lib_BCBE14CF: /* sceNet_lib 0xbcbe14cf @ 0x8c10 */
+	.globl	sceNetStrchr
+	.type	sceNetStrchr, @function
+sceNetStrchr: /* sceNet_lib 0xbcbe14cf @ 0x8c10 */
 	jr	$ra
 	nop
-	.globl	sceNet_lib_CF705E46
-	.type	sceNet_lib_CF705E46, @function
-sceNet_lib_CF705E46: /* sceNet_lib 0xcf705e46 @ 0x8c18 */
+	.globl	sceNetSprintf
+	.type	sceNetSprintf, @function
+sceNetSprintf: /* sceNet_lib 0xcf705e46 @ 0x8c18 */
 	jr	$ra
 	nop
-	.globl	sceNet_lib_D8722983
-	.type	sceNet_lib_D8722983, @function
-sceNet_lib_D8722983: /* sceNet_lib 0xd8722983 @ 0x8c20 */
+	.globl	sceNetStrlen
+	.type	sceNetStrlen, @function
+sceNetStrlen: /* sceNet_lib 0xd8722983 @ 0x8c20 */
 	jr	$ra
 	nop
-	.globl	sceNet_lib_E0A81C7C
-	.type	sceNet_lib_E0A81C7C, @function
-sceNet_lib_E0A81C7C: /* sceNet_lib 0xe0a81c7c @ 0x8c28 */
+	.globl	sceNetMemcmp
+	.type	sceNetMemcmp, @function
+sceNetMemcmp: /* sceNet_lib 0xe0a81c7c @ 0x8c28 */
 	jr	$ra
 	nop
 	.globl	sceRegCloseCategory
@@ -403,7 +403,7 @@ __lib_stub_top:
 	.byte	5, 0
 	.half	2
 	.word	.L_imp_nid_0
-	.word	sceNetIfhandle_lib_15CFE3C0
+	.word	sceNetMallocInternal
 	.word	.L_imp_lib_1
 	.byte	17, 0
 	.half	0x0009
@@ -417,7 +417,7 @@ __lib_stub_top:
 	.byte	5, 0
 	.half	12
 	.word	.L_imp_nid_2
-	.word	sceNet_lib_1858883D
+	.word	sceNetRand
 	.word	.L_imp_lib_3
 	.byte	17, 0
 	.half	0x0009
