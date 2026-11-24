@@ -1,0 +1,97 @@
+name: SceUpdateDL_Library
+attributes: 0x0006
+version: [1, 1]
+sdk_version: 0x06060110
+stub_order: [Kernel_Library, ThreadManForUser, sceHttp, sceNetApctl, sceNet_lib, sceParseHttp]
+exports:
+  - name: syslib
+    version: [0, 0]
+    attributes: 0x8000
+    variables:
+      - module_info: 0xf01d73a7
+      - module_sdk_version: 0x11b97506
+  - name: sceLibUpdateDL
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 1
+    functions:
+      - sceLibUpdateDL_34243B86: 0x34243b86
+      - sceLibUpdateDL_36D8F34B: 0x36d8f34b
+      - sceLibUpdateDL_4F49C9C1: 0x4f49c9c1
+      - sceLibUpdateDL_88FF3935: 0x88ff3935
+      - sceLibUpdateDL_B5DB018D: 0xb5db018d
+      - sceLibUpdateDL_C1AF1076: 0xc1af1076
+      - sceLibUpdateDL_D6A09757: 0xd6a09757
+      - sceLibUpdateDL_F6690A9A: 0xf6690a9a
+      - sceLibUpdateDL_F7E66CB4: 0xf7e66cb4
+      - sceLibUpdateDL_FA9AA797: 0xfa9aa797
+      - sceLibUpdateDL_FC1AB540: 0xfc1ab540
+      - sceLibUpdateDL_FD675E8D: 0xfd675e8d
+imports:
+  - name: sceNet_lib
+    version: [0, 17]
+    attributes: 0x0009
+    pad: 5
+    functions:
+      - sceNet_lib_5705F6F9: 0x5705f6f9
+      - sceNet_lib_750F705D: 0x750f705d
+      - sceNet_lib_80C9F02A: 0x80c9f02a
+      - sceNet_lib_96EF9DA1: 0x96ef9da1
+      - sceNet_lib_9CFBC7E3: 0x9cfbc7e3
+      - sceNet_lib_BCBE14CF: 0xbcbe14cf
+      - sceNet_lib_D8722983: 0xd8722983
+  - name: sceHttp
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 4
+    functions:
+      - sceHttpGetContentLength: 0x0282a3bd
+      - sceHttpDeleteHeader: 0x15540184
+      - sceHttpSetRecvTimeOut: 0x1f0fc3e3
+      - sceHttpAddExtraHeader: 0x3eaba285
+      - sceHttpSetResolveTimeOut: 0x47940436
+      - sceHttpGetStatusCode: 0x4cc7d78f
+      - sceHttpDeleteConnection: 0x5152773b
+      - sceHttpSetConnectTimeOut: 0x8acd1f73
+      - sceHttpSetSendTimeOut: 0x9988172d
+      - sceHttpCreateTemplate: 0x9b1f1f36
+      - sceHttpDeleteRequest: 0xa5512e01
+      - sceHttpCreateRequestWithURL: 0xb509b09e
+      - sceHttpSendRequest: 0xbb70706f
+      - sceHttpAbortRequest: 0xc10b6bd9
+      - sceHttpCreateConnectionWithURL: 0xcdf8ecb9
+      - sceHttpGetNetworkErrno: 0xd081ec8f
+      - sceHttpGetAllHeader: 0xdb266ccf
+      - sceHttpReadData: 0xedeeb999
+      - sceHttpDeleteTemplate: 0xfcf8c055
+  - name: sceParseHttp
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 7
+    functions:
+      - sceParseHttp_AD7BFDEF: 0xad7bfdef
+  - name: sceNetApctl
+    version: [0, 17]
+    attributes: 0x0009
+    pad: 4
+    functions:
+      - sceNetApctlGetInfo: 0x2befdf23
+      - sceNetApctlDelHandler: 0x5963991b
+      - sceNetApctlAddHandler: 0x8abadd51
+  - name: Kernel_Library
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 5
+    functions:
+      - sceKernelMemset: 0xa089eca4
+      - sceKernelMemcpy: 0x1839852a
+  - name: ThreadManForUser
+    version: [0, 17]
+    attributes: 0x4001
+    pad: 3
+    functions:
+      - sceKernelGetSystemTimeLow: 0x369ed59d
+      - sceKernelCreateVpl: 0x56c039b5
+      - sceKernelDeleteVpl: 0x89b3d48c
+      - sceKernelTryAllocateVpl: 0xaf36d708
+      - sceKernelFreeVpl: 0xb736e9ff

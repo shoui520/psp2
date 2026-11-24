@@ -3,10 +3,12 @@
 #   make [O=<build dir>]
 
 KERNEL_DIR := $(abspath $(dir $(lastword $(MAKEFILE_LIST))))
+TOOLS_DIR  := $(abspath $(KERNEL_DIR)/../../tools)
 PSPDEV     ?= $(if $(PSP2_TOOLCHAINS),$(PSP2_TOOLCHAINS)/pspdev-v20261001,$(KERNEL_DIR)/../../toolchains/install/pspdev-v20261001)
 CROSS      := $(PSPDEV)/bin/psp-
 CC         := $(CROSS)gcc
 PRXGEN     := $(CROSS)prxgen
+PYTHON     ?= python3
 O          ?= $(if $(MEP_OUT),$(MEP_OUT)/sys661/$(TARGET),build)
 
 CFLAGS     := -std=gnu17 -O2 -G0 -march=allegrex -ffreestanding -fno-builtin -fno-common \
@@ -15,18 +17,26 @@ CFLAGS     := -std=gnu17 -O2 -G0 -march=allegrex -ffreestanding -fno-builtin -fn
               -Wall -Wextra \
               -Wno-unused-parameter -Wno-unused-function -Wno-unused-variable \
               -Wno-unused-but-set-variable -Wno-sign-compare -Wno-implicit-fallthrough \
-              -Wno-attribute-alias -Wno-incompatible-pointer-types \
-              -Wno-cast-function-type -Wno-maybe-uninitialized -Wno-array-bounds \
-              -Wno-implicit-function-declaration -Wno-int-conversion \
-              -Wno-tautological-compare -Wno-pragmas \
+              -Wno-attribute-alias -Wno-incompatible-pointer-types -Wno-cast-function-type \
+              -Wno-maybe-uninitialized -Wno-array-bounds -Wno-implicit-function-declaration \
+              -Wno-int-conversion -Wno-tautological-compare -Wno-pragmas \
               -I. -I$(KERNEL_DIR)/include -I$(PSPDEV)/psp/sdk/include \
               $(EXTRA_CFLAGS)
 ASFLAGS    := -G0 -march=allegrex -I. -I$(KERNEL_DIR)/include -I$(PSPDEV)/psp/sdk/include
 LDFLAGS    := -nostdlib -Wl,-q,-T,$(KERNEL_DIR)/prx.ld -Wl,-Map,$(O)/$(TARGET).map
 
 OBJS       := $(addprefix $(O)/,$(addsuffix .o,$(basename $(SRCS))))
+ifneq ($(wildcard module.yml),)
+OBJS       += $(O)/scetables.o
+endif
 
 all: $(O)/$(TARGET).prx
+
+$(O)/scetables.S: module.yml $(TOOLS_DIR)/mkprx_psp.py | $(O)
+	$(PYTHON) $(TOOLS_DIR)/mkprx_psp.py $< -o $@
+
+$(O)/scetables.o: $(O)/scetables.S | $(O)
+	$(CC) $(ASFLAGS) -c $< -o $@
 
 $(O)/%.o: %.c $(wildcard *.h $(KERNEL_DIR)/include/*.h) | $(O)
 	$(CC) $(CFLAGS) -c $< -o $@

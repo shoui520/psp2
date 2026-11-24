@@ -1,4 +1,4 @@
 TARGET := vaudio
-SRCS   := vaudio.c scetables.S
+SRCS   := vaudio.c
 
 include ../../build.mak

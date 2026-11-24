@@ -1,0 +1,65 @@
+name: sceChnnlsv
+attributes: 0x5006
+version: [1, 6]
+sdk_version: 0x06060010
+exports:
+  - name: syslib
+    version: [0, 0]
+    attributes: 0x8000
+    functions:
+      - module_start: 0xd632acdb
+      - module_stop: 0xcee8593c
+    variables:
+      - module_info: 0xf01d73a7
+      - module_sdk_version: 0x11b97506
+  - name: sceChnnlsv
+    version: [0, 17]
+    attributes: 0x4001
+    pad: 1
+    functions:
+      - sceSdCleanList: 0x21be78b4
+      - sceSdSetMember: 0x850a7fa1
+      - sceSdCreateList: 0xabfdfc8b
+      - sceSdGetLastIndex: 0xc4c494f8
+      - sceSdSetIndex: 0xe7833020
+      - sceSdRemoveValue: 0xf21a1fca
+  - name: sceChnnlsv_driver
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 2
+    functions:
+      - sceSdCleanList: 0x21be78b4
+      - sceSdSetMember: 0x850a7fa1
+      - sceSdCreateList: 0xabfdfc8b
+      - sceSdGetLastIndex: 0xc4c494f8
+      - sceSdSetIndex: 0xe7833020
+      - sceSdRemoveValue: 0xf21a1fca
+imports:
+  - name: SysclibForKernel
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 7
+    functions:
+      - memset: 0x10f3bb61
+  - name: ThreadManForKernel
+    version: [0, 17]
+    attributes: 0x0001
+    len: 6
+    pad: 5
+    functions:
+      - sceKernelDeleteSema: 0x28b6489c
+      - sceKernelSignalSema: 0x3f53e640
+      - sceKernelWaitSema: 0x4e3a1105
+      - sceKernelCreateSema: 0xd6da4ba1
+  - name: UtilsForKernel
+    version: [0, 17]
+    attributes: 0x0009
+    pad: 5
+    functions:
+      - sceKernelDcacheWritebackRange: 0x3ee30821
+  - name: semaphore
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 2
+    functions:
+      - sceUtilsBufferCopyWithRange: 0x4c537c72

@@ -1,5 +1,5 @@
 TARGET := libdnas
-SRCS := libdnas.c scetables.S
+SRCS := libdnas.c
 
 include ../../build.mak
 CFLAGS += -O0

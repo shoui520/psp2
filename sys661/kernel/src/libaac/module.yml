@@ -1,0 +1,69 @@
+name: sceAac_Library
+attributes: 0x0006
+version: [1, 1]
+sdk_version: 0x06060110
+exports:
+  - name: syslib
+    version: [0, 0]
+    attributes: 0x8000
+    functions:
+      - sceAacStartEntry: 0xd632acdb
+      - sceAacEndEntry: 0xcee8593c
+    variables:
+      - module_info: 0xf01d73a7
+      - module_sdk_version: 0x11b97506
+      - module_start_thread_parameter: 0x0f7c276c
+      - module_stop_thread_parameter: 0xcf0cc697
+  - name: sceAac
+    version: [0, 17]
+    attributes: 0x0001
+    len: 5
+    pad: 1
+    extra_words: [0x00020000]
+    bucket_words: [0x00010000, 0x00020001, 0x00030003, 0x00090006, 0x000a000a, 0x000b000a, 0x000c000c, 0x0010000e]
+    functions:
+      - sceAacGetInfoToAddStreamData: 0x02098c69
+      - sceAacTermResource: 0x23d35cae
+      - sceAacExit: 0x33b8c009
+      - sceAacGetSumDecodedSample: 0x506bf66c
+      - sceAacGetLoopNum: 0x523347d9
+      - sceAacInitResource: 0x5cffc57c
+      - sceAacEndEntry: 0x61aa43c9
+      - sceAacStartEntry: 0x6c05813b
+      - sceAacGetMaxOutputSample: 0x6dc7758a
+      - sceAacDecode: 0x7e4cfee4
+      - sceAacNotifyAddStreamData: 0xac6dcbe3
+      - sceAacSetLoopNum: 0xbbdd6403
+      - sceAacResetPlayPosition: 0xd2da2bba
+      - sceAacCheckStreamDataNeeded: 0xd7c51541
+      - sceAacInit: 0xe0c89aca
+      - sceAac_E955E83A: 0xe955e83a
+      - sceAac_FA01FCB6: 0xfa01fcb6
+imports:
+  - name: Kernel_Library
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 5
+    functions:
+      - sceKernelCpuSuspendIntr: 0x092968f4
+      - sceKernelMemset: 0xa089eca4
+      - sceKernelMemcpy: 0x1839852a
+      - sceKernelCpuResumeIntr: 0x5f10d406
+  - name: ThreadManForUser
+    version: [0, 17]
+    attributes: 0x4001
+    pad: 7
+    functions:
+      - sceKernelCreateFpl: 0xc07bb470
+      - sceKernelAllocateFpl: 0xd979e9bf
+      - sceKernelDeleteFpl: 0xed1410e0
+      - sceKernelFreeFpl: 0xf6414a71
+  - name: sceAudiocodec
+    version: [0, 17]
+    attributes: 0x4009
+    pad: 2
+    functions:
+      - sceAudiocodecAlcExtendParameter: 0x59176a0f
+      - sceAudiocodecInit: 0x5b37eb1d
+      - sceAudiocodecDecode: 0x70a703f8
+      - sceAudiocodecGetInfo: 0x8aca11d5

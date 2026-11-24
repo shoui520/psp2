@@ -1,4 +1,4 @@
 TARGET := sircs
-SRCS := sircs.c scetables.S
+SRCS := sircs.c
 
 include ../../build.mak

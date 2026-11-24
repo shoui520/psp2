@@ -1,5 +1,5 @@
 TARGET := np9660
-SRCS := np9660.c scetables.S
+SRCS := np9660.c
 EXTRA_CFLAGS := -O2 -fno-reorder-blocks -fno-shrink-wrap -fno-tree-ch -fno-thread-jumps -fno-tree-dominator-opts -fno-tree-vrp -fno-code-hoisting
 
 include ../../build.mak

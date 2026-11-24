@@ -1,0 +1,46 @@
+name: sceBlueScreenOfDeath
+attributes: 0x1007
+version: [1, 8]
+sdk_version: 0x06060110
+stub_order: [ExceptionManagerForKernel, InterruptManagerForKernel, SysMemForKernel, ThreadManForKernel]
+exports:
+  - name: syslib
+    version: [0, 0]
+    attributes: 0x8000
+    functions:
+      - module_bootstart: 0xd632acdb
+      - module_bootstart: 0xd3744be0
+      - module_reboot_before: 0x2f064fa6
+    variables:
+      - module_info: 0xf01d73a7
+      - module_sdk_version: 0x11b97506
+imports:
+  - name: ExceptionManagerForKernel
+    version: [0, 17]
+    attributes: 0x0001
+    len: 6
+    pad: 6
+    functions:
+      - sceKernelReleaseExceptionHandler: 0x54b0cad2
+      - sceKernelRegisterPriorityExceptionHandler: 0x7c11759d
+      - sceKernelRegisterExceptionHandler: 0xfbc2353a
+  - name: InterruptManagerForKernel
+    version: [0, 17]
+    attributes: 0x0009
+    len: 6
+    pad: 6
+    functions:
+      - sceKernelCpuSuspendIntr: 0x092968f4
+      - sceKernelCpuResumeIntr: 0x5f10d406
+  - name: ThreadManForKernel
+    version: [0, 17]
+    attributes: 0x0001
+    len: 6
+    pad: 5
+    functions:
+      - sceKernelRegisterDeadThreadHandler: 0x80ca77ba
+  - name: SysMemForKernel
+    version: [0, 17]
+    attributes: 0x0001
+    functions:
+      - sceKernelMemset: 0x8ae776af

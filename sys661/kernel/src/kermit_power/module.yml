@@ -1,0 +1,367 @@
+name: scePower_Service
+attributes: 0x1007
+version: [1, 13]
+sdk_version: 0x06060110
+stub_order: [InitForKernel, InterruptManagerForKernel, KDebugForKernel, SysMemForKernel, SysclibForKernel, ThreadManForKernel, UtilsForKernel, sceCtrl_driver, sceDdr_driver, sceDisplay_driver, sceGe_driver, sceKermitPeripheral_driver, sceKermit_driver, sceSuspendForKernel, sceSysEventForKernel, sceSysreg_driver]
+exports:
+  - name: syslib
+    version: [0, 0]
+    attributes: 0x8000
+    functions:
+      - module_start: 0xd632acdb
+      - module_reboot_phase: 0xadf12745
+      - module_reboot_before: 0x2f064fa6
+    variables:
+      - module_info: 0xf01d73a7
+      - module_sdk_version: 0x11b97506
+  - name: scePower
+    version: [0, 17]
+    attributes: 0x4001
+    len: 5
+    pad: 3
+    extra_words: [0x00020000]
+    bucket_words: [0x00050000, 0x000f0007, 0x00150011, 0x00160016, 0x001e001a, 0x00250021, 0x002e002c, 0x00380033]
+    functions:
+      - scePower_0074EF9B: 0x0074ef9b
+      - scePowerRequestColdReset: 0x0442d852
+      - scePowerRegisterCallback: 0x04b7766e
+      - scePowerIsBatteryExist: 0x0afd0d8b
+      - scePower_0CD21B1F: 0x0cd21b1f
+      - scePower_165CE085: 0x165ce085
+      - scePowerIsBatteryCharging: 0x1e490401
+      - scePowerGetBatteryLifePercent: 0x2085d15d
+      - scePower_23436A4A: 0x23436a4a
+      - scePower_23C31FFE: 0x23c31ffe
+      - scePower_27F3292C: 0x27f3292c
+      - scePower_2875994B: 0x2875994b
+      - scePowerGetBatteryTemp: 0x28e12023
+      - scePower_2B51FE2F: 0x2b51fe2f
+      - scePowerRequestStandby: 0x2b7c7cf4
+      - scePower_34F9C463: 0x34f9c463
+      - scePower_3951AF53: 0x3951af53
+      - scePower_442BFBAC: 0x442bfbac
+      - scePower_469989AD: 0x469989ad
+      - scePowerGetBusClockFrequencyInt: 0x478fe6f5
+      - scePowerGetBatteryVolt: 0x483ce86b
+      - scePower_545A7F3C: 0x545a7f3c
+      - scePowerSetClockFrequency: 0x737486f2
+      - scePowerIsSuspendRequired: 0x78a1a796
+      - scePowerIdleTimerEnable: 0x7f30b3b1
+      - scePower_7FA406DD: 0x7fa406dd
+      - scePowerSetCpuClockFrequency: 0x843fbf43
+      - scePowerGetBatteryElec: 0x862ae1a6
+      - scePowerIsPowerOnline: 0x87440f5e
+      - scePowerGetBatteryLifeTime: 0x8efb3fa2
+      - scePowerGetBatteryRemainCapacity: 0x94f5a53f
+      - scePowerIdleTimerDisable: 0x972ce941
+      - scePowerGetBusClockFrequencyFloat: 0x9badb3eb
+      - scePower_A4E93389: 0xa4e93389
+      - scePower_A85880D0: 0xa85880d0
+      - scePower_A9D22232: 0xa9d22232
+      - scePowerRequestSuspend: 0xac32c9cc
+      - scePowerGetCpuClockFrequencyFloat: 0xb1a52c83
+      - scePower_B3EDD801: 0xb3edd801
+      - scePowerGetBatteryChargingStatus: 0xb4432bc8
+      - scePowerSetBusClockFrequency: 0xb8d7b3fb
+      - scePower_B999184C: 0xb999184c
+      - scePower_BAFA3DF0: 0xbafa3df0
+      - scePowerGetBusClockFrequencyInt: 0xbd681969
+      - scePowerUnlock: 0xca3d34c1
+      - scePower_CB49F5CE: 0xcb49f5ce
+      - scePowerIsLowBattery: 0xd3075926
+      - scePowerLock: 0xd6d016ef
+      - scePower_DB62C9CF: 0xdb62c9cf
+      - scePowerUnregisterCallback: 0xdb9d28dd
+      - scePowerUnregisterCallback: 0xdfa8baf8
+      - scePower_E8E4E204: 0xe8e4e204
+      - scePower_EA382A27: 0xea382a27
+      - scePower_EBD177D6: 0xebd177d6
+      - scePowerGetIdleTimer: 0xedc13fe5
+      - scePowerTick: 0xefd3c963
+      - scePower_FA97A599: 0xfa97a599
+      - scePowerGetBatteryFullCapacity: 0xfd18a0ff
+      - scePowerGetCpuClockFrequencyInt: 0xfdb5bfe9
+      - scePowerGetCpuClockFrequencyInt: 0xfee03a2f
+  - name: scePower_driver
+    version: [0, 17]
+    attributes: 0x0001
+    len: 5
+    extra_words: [0x00040000]
+    bucket_words: [0x00020000, 0x00050005, 0x000c0007, 0x000f000e, 0x00130012, 0x00160015, 0x00190016, 0x00190019, 0x001b0019, 0x001c001c, 0x001e001d, 0x0020001f, 0x00220022, 0x00250024, 0x00290026, 0x002d002b, 0x002e002e, 0x00310030, 0x00340033, 0x00370035, 0x00390039, 0x003b003a, 0x003c003c, 0x0042003f, 0x00430042, 0x00470047, 0x004a0048, 0x004d004c, 0x00510050, 0x00530052, 0x00550055, 0x00570056]
+    functions:
+      - scePowerGetBatteryFullCapacity: 0x003b1e03
+      - scePower_driver_018AB235: 0x018ab235
+      - scePowerGetBusClockFrequencyInt: 0x04711dfb
+      - scePower_driver_0655D7C3: 0x0655d7c3
+      - scePower_driver_071160B1: 0x071160b1
+      - scePower_27F3292C: 0x0da940d2
+      - scePowerTick: 0x0efee60e
+      - scePower_driver_100A77A1: 0x100a77a1
+      - scePower_driver_10CE273F: 0x10ce273f
+      - scePower_driver_114B75AB: 0x114b75ab
+      - scePower_driver_12F8302D: 0x12f8302d
+      - scePower_driver_13D7CCE4: 0x13d7cce4
+      - scePower_driver_16F965C9: 0x16f965c9
+      - scePower_BAFA3DF0: 0x17eea285
+      - scePower_driver_1BA2FCAE: 0x1ba2fcae
+      - scePowerIdleTimerEnable: 0x1e3b1fae
+      - scePower_driver_1EC2D4E4: 0x1ec2d4e4
+      - scePowerGetBusClockFrequencyFloat: 0x1ff8da3b
+      - scePower_driver_23BDDD8B: 0x23bddd8b
+      - scePower_442BFBAC: 0x2509ff3b
+      - scePower_driver_2638EF48: 0x2638ef48
+      - scePower_A9D22232: 0x29e23416
+      - scePowerUnregisterCallback: 0x315b8cb6
+      - scePowerGetBatteryLifePercent: 0x31aea94c
+      - scePower_3951AF53: 0x3300d85a
+      - scePowerGetBatteryTemp: 0x40870dac
+      - scePowerGetBatteryRemainCapacity: 0x41adff48
+      - scePower_469989AD: 0x469989ad
+      - scePower_driver_4E32E9B8: 0x4e32e9b8
+      - scePowerSetCpuClockFrequency: 0x53808cbb
+      - scePower_7FA406DD: 0x566b8353
+      - scePower_B3EDD801: 0x5978b1c2
+      - scePowerRequestSuspend: 0x5c1333b7
+      - scePower_driver_5F5006D2: 0x5f5006d2
+      - scePowerGetBatteryChargingStatus: 0x67492c52
+      - scePower_34F9C463: 0x67bd889b
+      - scePower_A85880D0: 0x693f6cf0
+      - scePower_driver_6CF50928: 0x6cf50928
+      - scePower_23C31FFE: 0x70f42744
+      - scePower_driver_72D1B53A: 0x72d1b53a
+      - scePower_0CD21B1F: 0x73785d34
+      - scePower_driver_75906F9A: 0x75906f9a
+      - scePowerRegisterCallback: 0x766cd857
+      - scePowerIsBatteryCharging: 0x7a9ea6de
+      - scePower_B999184C: 0x7b908caa
+      - scePower_driver_7EAA4247: 0x7eaa4247
+      - scePower_CB49F5CE: 0x8432901e
+      - scePowerIsPowerOnline: 0x872f4ece
+      - scePowerIsSuspendRequired: 0x88c79735
+      - scePower_driver_8C6BEFD9: 0x8c6befd9
+      - scePowerIsBatteryExist: 0x8c873aa7
+      - scePower_driver_9127E5B2: 0x9127e5b2
+      - scePowerIdleTimerDisable: 0x961a06a5
+      - scePowerGetBatteryElec: 0x993b8c4a
+      - scePowerRequestStandby: 0x9b44cfd9
+      - scePower_driver_9CE06934: 0x9ce06934
+      - scePowerRequestColdReset: 0x9daf25a0
+      - scePower_E8E4E204: 0xa641cf3f
+      - scePower_FA97A599: 0xa882aeb7
+      - scePower_driver_AD5BB433: 0xad5bb433
+      - scePower_0074EF9B: 0xb45c9066
+      - scePower_driver_B7000C75: 0xb7000c75
+      - scePowerSetBusClockFrequency: 0xb71a8b2f
+      - scePower_driver_BA566CD0: 0xba566cd0
+      - scePower_EA382A27: 0xba8cbcbf
+      - scePower_driver_BADA8332: 0xbada8332
+      - scePower_driver_C3024FE6: 0xc3024fe6
+      - scePower_driver_C463E7F2: 0xc463e7f2
+      - scePower_driver_C520F5DC: 0xc520f5dc
+      - scePower_23436A4A: 0xc730f432
+      - scePowerGetBatteryLifeTime: 0xc79f9157
+      - scePower_2B51FE2F: 0xce2032cd
+      - scePower_driver_D13377F7: 0xd13377f7
+      - scePower_2875994B: 0xd1fff513
+      - scePower_driver_D79B0122: 0xd79b0122
+      - scePower_driver_D7DD9D38: 0xd7dd9d38
+      - scePower_DB62C9CF: 0xdb62c9cf
+      - scePowerGetCpuClockFrequencyFloat: 0xdc4395e2
+      - scePowerGetIdleTimer: 0xdf336cde
+      - scePower_driver_DF904CDE: 0xdf904cde
+      - scePower_165CE085: 0xe11cdffa
+      - scePower_driver_E52B4362: 0xe52b4362
+      - scePower_EBD177D6: 0xebd177d6
+      - scePower_driver_EEFB2ACF: 0xeefb2acf
+      - scePower_driver_EF751B4A: 0xef751b4a
+      - scePowerGetBatteryVolt: 0xf7de0e81
+      - scePowerIsLowBattery: 0xfa651ce1
+      - scePowerGetCpuClockFrequencyInt: 0xfdb5bfe9
+    variables:
+      - scePower_driver_var_07FC869E: 0x07fc869e
+      - scePower_driver_var_18DFA43A: 0x18dfa43a
+      - scePower_driver_var_2A28BB48: 0x2a28bb48
+      - scePower_driver_var_2EDA246C: 0x2eda246c
+      - scePower_driver_var_3080D4C0: 0x3080d4c0
+      - scePower_driver_var_33399B15: 0x33399b15
+      - scePower_driver_var_4A03DA50: 0x4a03da50
+      - scePower_driver_var_8B317890: 0x8b317890
+      - scePower_driver_var_93E16800: 0x93e16800
+      - scePower_driver_var_94FA3195: 0x94fa3195
+      - scePower_driver_var_C7998FA4: 0xc7998fa4
+      - scePower_driver_var_E59CA666: 0xe59ca666
+imports:
+  - name: SysMemForKernel
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 4
+    functions:
+      - sceKernelGetModel: 0x07c586a1
+      - sceKernelSetDdrMemoryProtection: 0x83b5226d
+      - sceKernelGetCompiledSdkVersion: 0xb4f00cb5
+      - sceKernelQueryMemoryPartitionInfo: 0xc4eeaf20
+      - sceKernelGetUIDcontrolBlock: 0xc90b0992
+      - sceKernelGetGameInfo: 0xef29061c
+  - name: sceSuspendForKernel
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 4
+    functions:
+      - sceKernelDispatchResumeHandlers: 0x0ab0c6f3
+      - sceSuspendForKernel_67B59042: 0x67b59042
+      - sceKernelDispatchSuspendHandlers: 0x8f58b1ec
+      - sceSuspendForKernel_B2C9640B: 0xb2c9640b
+      - sceKernelRegisterPowerHandlers: 0xbde686cd
+  - name: sceSysEventForKernel
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 7
+    functions:
+      - sceKernelSysEventDispatch: 0x36331294
+      - sceKernelRegisterSysEventHandler: 0xcd9e4bb5
+      - sceKernelUnregisterSysEventHandler: 0xd7d3fdcd
+  - name: InterruptManagerForKernel
+    version: [0, 17]
+    attributes: 0x0009
+    len: 6
+    pad: 6
+    functions:
+      - sceKernelCpuSuspendIntr: 0x092968f4
+      - sceKernelCpuResumeIntrWithSync: 0x3b84732d
+      - sceKernelCpuResumeIntr: 0x5f10d406
+      - sceKernelReleaseSubIntrHandler: 0xd61e6961
+      - sceKernelEnableSubIntr: 0xfb8e22ec
+      - sceKernelRegisterSubIntrHandler: 0xffa8b183
+  - name: SysclibForKernel
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 7
+    functions:
+      - memset: 0x10f3bb61
+  - name: ThreadManForKernel
+    version: [0, 17]
+    attributes: 0x0001
+    len: 6
+    pad: 5
+    functions:
+      - sceKernelSetEventFlag: 0x1fb15a32
+      - sceKernelWaitThreadEnd: 0x278c0df5
+      - sceKernelDeleteSema: 0x28b6489c
+      - sceKernelGetThreadId: 0x293b45b8
+      - sceKernelGetCallbackCount: 0x2a3d44ff
+      - sceKernelPollEventFlag: 0x30fd48f0
+      - sceKernelGetThreadExitStatus: 0x3b183e26
+      - sceKernelSignalSema: 0x3f53e640
+      - sceKernelWaitEventFlag: 0x402fcf22
+      - sceKernelCreateThread: 0x446d8de6
+      - sceKernelWaitSema: 0x4e3a1105
+      - sceKernelCreateEventFlag: 0x55c20a00
+      - sceKernelGetThreadmanIdType: 0x57cf62dd
+      - sceKernelPollSema: 0x58b1f937
+      - sceKernelUnlockMutex: 0x6b30100f
+      - sceKernelCancelAlarm: 0x7e65b999
+      - sceKernelClearEventFlag: 0x812346e4
+      - sceKernelGetSystemTimeWide: 0x82bc5777
+      - sceKernelLockMutex: 0xb011b11f
+      - sceKernelCreateMutex: 0xb7d098c6
+      - sceKernelNotifyCallback: 0xc11ba8c4
+      - sceKernelDelayThread: 0xceadeb47
+      - sceKernelCreateSema: 0xd6da4ba1
+      - sceKernelDeleteEventFlag: 0xef9e4c70
+      - sceKernelStartThread: 0xf475845d
+      - sceKernelGetUserLevel: 0xf6427665
+      - sceKernelDeleteMutex: 0xf8170fbe
+  - name: UtilsForKernel
+    version: [0, 17]
+    attributes: 0x0009
+    pad: 5
+    functions:
+      - sceKernelDcacheWritebackInvalidateRange: 0x34b9fa9e
+      - UtilsForKernel_39FFB756: 0x39ffb756
+      - sceKernelDcacheWritebackAll: 0x79d1c3fa
+      - sceKernelUtilsSha1Digest: 0x840259f1
+      - UtilsForKernel_A6B0A6B8: 0xa6b0a6b8
+  - name: InitForKernel
+    version: [0, 17]
+    attributes: 0x0009
+    pad: 6
+    functions:
+      - sceKernelApplicationType: 0x7233b5bc
+      - sceKernelSetInitCallback: 0x9f9ae99c
+      - sceKernelInitParamSfo: 0xd83a9bd7
+  - name: KDebugForKernel
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 4
+    functions:
+      - Kprintf: 0x84f370bc
+      - sceKernelDipsw: 0x86010fcb
+      - sceKernelSm1ReferOperations: 0xe892d9a1
+  - name: sceSysreg_driver
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 7
+    functions:
+      - sceSysregGpioIoDisable: 0x15dc34bc
+      - sceSysregPllGetOutSelect: 0x187f651d
+      - sceSysreg_driver_2458B6AC: 0x2458b6ac
+      - sceSysreg_driver_3F6F2CC7: 0x3f6f2cc7
+      - sceSysregGetFuseId: 0x4f46eede
+      - sceSysreg_driver_63E1EE9C: 0x63e1ee9c
+      - sceSysreg_driver_73EBC752: 0x73ebc752
+      - sceSysreg_driver_7CF05E81: 0x7cf05e81
+      - sceSysreg_driver_85B74FDA: 0x85b74fda
+      - sceSysregGetFuseConfig: 0x8f4f4e96
+      - sceSysreg_driver_96D74557: 0x96d74557
+      - sceSysregSpiIoDisable: 0xa16e55f4
+      - sceSysregPllGetFrequency: 0xa5cc6025
+      - sceSysreg_driver_B413B041: 0xb413b041
+      - sceSysregUartIoDisable: 0xbb823481
+      - sceSysregGetTachyonVersion: 0xe2a5d1ee
+  - name: sceDdr_driver
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 6
+    functions:
+      - sceDdr_driver_00E36648: 0x00e36648
+      - sceDdr_driver_0BAAE4C5: 0x0baae4c5
+      - sceDdr_driver_CF07B9E2: 0xcf07b9e2
+      - sceDdr_driver_E0A39D3E: 0xe0a39d3e
+  - name: sceGe_driver
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 7
+    functions:
+      - sceGeEdramSetRefreshParam: 0x2539d845
+  - name: sceCtrl_driver
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 5
+    functions:
+      - sceCtrlSetButtonIntercept: 0xf8346777
+  - name: sceDisplay_driver
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 6
+    functions:
+      - sceDisplayIsVblank: 0x572d7804
+      - sceDisplayWaitVblankStart: 0xb0942511
+      - sceDisplay_driver_CE8A328E: 0xce8a328e
+      - sceDisplayAdjustAccumulatedHcount: 0xd81a8ff9
+      - sceDisplayGetCurrentHcount: 0xec80d435
+      - sceDisplayGetAccumulatedHcount: 0xf84d16cc
+  - name: sceKermit_driver
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 7
+    functions:
+      - sceKermit_driver_5280B410: 0x5280b410
+  - name: sceKermitPeripheral_driver
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 1
+    functions:
+      - sceKermitPeripheral_driver_0648E1A3: 0x0648e1a3
+      - sceKermitPeripheral_driver_15F5C107: 0x15f5c107
+      - sceKermitPeripheral_driver_65D98A21: 0x65d98a21
+      - sceKermitPeripheral_driver_6D6AA215: 0x6d6aa215

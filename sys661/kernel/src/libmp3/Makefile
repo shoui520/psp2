@@ -1,4 +1,4 @@
 TARGET := libmp3
-SRCS := libmp3.c scetables.S
+SRCS := libmp3.c
 
 include ../../build.mak

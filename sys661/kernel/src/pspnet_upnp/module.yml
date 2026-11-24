@@ -1,0 +1,156 @@
+name: sceNetUpnp_Library
+attributes: 0x0006
+version: [1, 1]
+sdk_version: 0x06060110
+stub_order: [Kernel_Library, ThreadManForUser, sceNet, sceNetApctl, sceNetIfhandle_lib, sceNetInet, sceNetResolver, sceNet_lib, sceReg]
+exports:
+  - name: syslib
+    version: [0, 0]
+    attributes: 0x8000
+    variables:
+      - module_info: 0xf01d73a7
+      - module_sdk_version: 0x11b97506
+  - name: sceNetStun
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 1
+    functions:
+      - sceNetStun_40971567: 0x40971567
+      - sceNetStun_4403D9E7: 0x4403d9e7
+      - sceNetStun_6CA54FC9: 0x6ca54fc9
+      - sceNetStun_A0CF3A47: 0xa0cf3a47
+      - sceNetStun_EBF3C24D: 0xebf3c24d
+      - sceNetStun_FBF60C6B: 0xfbf60c6b
+  - name: sceNetUpnp
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 1
+    functions:
+      - sceNetUpnp_1038E77A: 0x1038e77a
+      - sceNetUpnp_27045362: 0x27045362
+      - sceNetUpnp_3432B2E5: 0x3432b2e5
+      - sceNetUpnp_3E32ED9E: 0x3e32ed9e
+      - sceNetUpnp_540491EF: 0x540491ef
+      - sceNetUpnp_74A51211: 0x74a51211
+      - sceNetUpnp_8513C6D1: 0x8513c6d1
+      - sceNetUpnp_C3A35217: 0xc3a35217
+      - sceNetUpnp_E24220B5: 0xe24220b5
+      - sceNetUpnp_EAF1C841: 0xeaf1c841
+      - sceNetUpnp_FDA78483: 0xfda78483
+imports:
+  - name: sceNetIfhandle_lib
+    version: [0, 17]
+    attributes: 0x4009
+    pad: 5
+    functions:
+      - sceNetMallocInternal: 0x15cfe3c0
+      - sceNetFreeInternal: 0x76bad213
+  - name: sceNet
+    version: [0, 17]
+    attributes: 0x0009
+    pad: 5
+    functions:
+      - sceNetFreeThreadinfo: 0x50647530
+  - name: sceNet_lib
+    version: [0, 17]
+    attributes: 0x0009
+    pad: 5
+    functions:
+      - sceNetRand: 0x1858883d
+      - sceNetStrtoul: 0x2a73addc
+      - sceNetMemmove: 0x4753d878
+      - sceNetStrcpy: 0x80c9f02a
+      - sceNetStrncmp: 0x94dca9f0
+      - sceNetStrcasecmp: 0x9cfbc7e3
+      - sceNetStrcmp: 0xa0f16abd
+      - sceNetStrncpy: 0xb5ce388a
+      - sceNetStrchr: 0xbcbe14cf
+      - sceNetSprintf: 0xcf705e46
+      - sceNetStrlen: 0xd8722983
+      - sceNetMemcmp: 0xe0a81c7c
+  - name: sceNetInet
+    version: [0, 17]
+    attributes: 0x0009
+    pad: 5
+    functions:
+      - sceNetInetSendto: 0x05038fc7
+      - sceNetInetGetsockname: 0x162e6fd5
+      - sceNetInetBind: 0x1a33f9ae
+      - sceNetInetSetsockopt: 0x2fe71fe7
+      - sceNetInetConnect: 0x410b34aa
+      - sceNetInetGetsockopt: 0x4a114c7c
+      - sceNetInetSelect: 0x5be8d595
+      - sceNetInetSend: 0x7aa671bc
+      - sceNetInetSocketAbort: 0x80a21abd
+      - sceNetInetSocket: 0x8b7b220f
+      - sceNetInetGetPspError: 0x8ca3a97e
+      - sceNetInetClose: 0x8d7284ea
+      - sceNetInetInetAddr: 0xb75d5b0a
+      - sceNetInetRecvfrom: 0xc91142e4
+      - sceNetInetRecv: 0xcda85c99
+      - sceNetInetInetNtop: 0xd0792666
+      - sceNetInetInetPton: 0xe30b8c19
+  - name: sceNetApctl
+    version: [0, 17]
+    attributes: 0x0009
+    pad: 4
+    functions:
+      - sceNetApctlGetInfo: 0x2befdf23
+      - sceNetApctlDelHandler: 0x5963991b
+      - sceNetApctlGetState: 0x5deac81b
+      - sceNetApctlAddHandler: 0x8abadd51
+  - name: sceNetResolver
+    version: [0, 17]
+    attributes: 0x0009
+    pad: 5
+    functions:
+      - sceNetResolverStartNtoA: 0x224c5f44
+      - sceNetResolverCreate: 0x244172af
+      - sceNetResolverStop: 0x808f6063
+      - sceNetResolverDelete: 0x94523e09
+  - name: sceReg
+    version: [0, 17]
+    attributes: 0x4001
+    pad: 5
+    functions:
+      - sceRegCloseCategory: 0x0cae832b
+      - sceRegOpenCategory: 0x1d8a762e
+      - sceRegGetKeyValue: 0x28a8e98a
+      - sceRegOpenRegistry: 0x92e41280
+      - sceRegGetKeyInfo: 0xd4475aa8
+      - sceRegCloseRegistry: 0xfa8a5739
+  - name: Kernel_Library
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 5
+    functions:
+      - sceKernelMemset: 0xa089eca4
+      - _sceKernelCheckThreadStack: 0xd13bde95
+      - sceKernelMemcpy: 0x1839852a
+      - sceKernelGetThreadId: 0x293b45b8
+  - name: ThreadManForUser
+    version: [0, 17]
+    attributes: 0x4001
+    pad: 3
+    functions:
+      - sceKernelSetEventFlag: 0x1fb15a32
+      - sceKernelSendMbx: 0xe9b3061e
+      - sceKernelDeleteEventFlag: 0xef9e4c70
+      - sceKernelStartThread: 0xf475845d
+      - sceKernelDeleteMutex: 0xf8170fbe
+      - sceKernelWaitThreadEnd: 0x278c0df5
+      - sceKernelPollEventFlag: 0x30fd48f0
+      - sceKernelGetSystemTimeLow: 0x369ed59d
+      - sceKernelWaitEventFlag: 0x402fcf22
+      - sceKernelCreateThread: 0x446d8de6
+      - sceKernelCreateEventFlag: 0x55c20a00
+      - sceKernelUnlockMutex: 0x6b30100f
+      - sceKernelClearEventFlag: 0x812346e4
+      - sceKernelCreateMbx: 0x8125221d
+      - sceKernelGetSystemTimeWide: 0x82bc5777
+      - sceKernelDeleteMbx: 0x86255ada
+      - sceKernelReceiveMbx: 0x18260574
+      - sceKernelDeleteThread: 0x9fa03cd3
+      - sceKernelExitThread: 0xaa73c935
+      - sceKernelLockMutex: 0xb011b11f
+      - sceKernelCreateMutex: 0xb7d098c6

@@ -1,4 +1,4 @@
 TARGET := usbgps
-SRCS := usbgps.c scetables.S
+SRCS := usbgps.c
 
 include ../../build.mak

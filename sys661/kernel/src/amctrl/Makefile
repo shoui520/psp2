@@ -1,4 +1,4 @@
 TARGET := amctrl
-SRCS   := amctrl.c scetables.S
+SRCS   := amctrl.c
 
 include ../../build.mak

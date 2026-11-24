@@ -1,0 +1,55 @@
+name: sceMemab
+attributes: 0x1006
+version: [1, 3]
+sdk_version: 0x06060002
+exports:
+  - name: syslib
+    version: [0, 0]
+    attributes: 0x8000
+    functions:
+      - module_start: 0xd632acdb
+      - module_stop: 0xcee8593c
+    variables:
+      - module_info: 0xf01d73a7
+      - module_sdk_version: 0x11b97506
+  - name: sceMemab_driver
+    version: [0, 17]
+    attributes: 0x0001
+    functions:
+      - sceMemab_driver_16594684: 0x16594684
+      - sceMemab_driver_23E4659B: 0x23e4659b
+      - sceMemab_driver_3C15BC8C: 0x3c15bc8c
+      - sceMemab_driver_4B54EAAD: 0x4b54eaad
+      - sceMemab_driver_6DD7339A: 0x6dd7339a
+      - sceMemab_driver_8ABE3445: 0x8abe3445
+      - sceMemab_driver_9BF0C95D: 0x9bf0c95d
+      - sceMemab_driver_9BF1A0A4: 0x9bf1a0a4
+      - sceMemab_driver_9DE8C8CD: 0x9de8c8cd
+      - sceMemab_driver_C3981EE1: 0xc3981ee1
+      - sceMemab_driver_CB5D3916: 0xcb5d3916
+      - sceMemab_driver_D47A50B1: 0xd47a50b1
+      - sceMemab_driver_D57856A7: 0xd57856a7
+      - sceMemab_driver_F742F283: 0xf742f283
+imports:
+  - name: ThreadManForKernel
+    version: [0, 17]
+    attributes: 0x0001
+    len: 6
+    pad: 5
+    functions:
+      - sceKernelDeleteSema: 0x28b6489c
+      - sceKernelSignalSema: 0x3f53e640
+      - sceKernelWaitSema: 0x4e3a1105
+      - sceKernelCreateSema: 0xd6da4ba1
+  - name: sceIdStorage_driver
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 4
+    functions:
+      - sceIdStorageLookup: 0x6fe062d1
+  - name: semaphore
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 2
+    functions:
+      - sceUtilsBufferCopyWithRange: 0x4c537c72

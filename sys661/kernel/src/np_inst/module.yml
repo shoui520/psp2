@@ -1,0 +1,90 @@
+name: sceNpInstall_Driver
+attributes: 0x5006
+version: [1, 1]
+sdk_version: 0x06060002
+stub_order: [IoFileMgrForKernel, SysclibForKernel, ThreadManForKernel, sceOpenPSID_driver, scePcact_driver, scePspNpDrm_driver, sceRtc_driver]
+exports:
+  - name: syslib
+    version: [0, 0]
+    attributes: 0x8000
+    functions:
+      - module_start: 0xd632acdb
+      - module_stop: 0xcee8593c
+    variables:
+      - module_info: 0xf01d73a7
+      - module_sdk_version: 0x11b97506
+  - name: sceNpInstall_driver
+    version: [0, 17]
+    attributes: 0x0001
+    functions:
+      - sceNpInstall_user_0B039B36: 0x0b039b36
+      - sceNpInstall_user_5847D8C7: 0x5847d8c7
+      - sceNpInstall_user_7AE4C8BC: 0x7ae4c8bc
+      - sceNpInstall_user_91F9D50D: 0x91f9d50d
+  - name: sceNpInstall_user
+    version: [0, 17]
+    attributes: 0x4001
+    pad: 2
+    functions:
+      - sceNpInstall_user_0B039B36: 0x0b039b36
+      - sceNpInstall_user_5847D8C7: 0x5847d8c7
+      - sceNpInstall_user_7AE4C8BC: 0x7ae4c8bc
+      - sceNpInstall_user_91F9D50D: 0x91f9d50d
+imports:
+  - name: ThreadManForKernel
+    version: [0, 17]
+    attributes: 0x0001
+    len: 6
+    pad: 5
+    functions:
+      - sceKernelWaitThreadEnd: 0x278c0df5
+      - sceKernelCreateThread: 0x446d8de6
+      - sceKernelTerminateThread: 0x616403ba
+      - sceKernelDeleteThread: 0x9fa03cd3
+      - sceKernelStartThread: 0xf475845d
+  - name: SysclibForKernel
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 7
+    functions:
+      - memset: 0x10f3bb61
+      - __udivdi3: 0x7dee14de
+      - memcpy: 0xab7592ff
+  - name: IoFileMgrForKernel
+    version: [0, 17]
+    attributes: 0x0001
+    len: 6
+    pad: 5
+    functions:
+      - sceIoOpen: 0x109f50bc
+      - sceIoWrite: 0x42ec03ac
+      - sceIoRead: 0x6a638d83
+      - sceIoClose: 0x810c4bc3
+      - sceIoRemove: 0xf27a9c51
+  - name: scePspNpDrm_driver
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 5
+    functions:
+      - sceNpDrmVerifyAct: 0x17e3f4bb
+      - sceNpDrmDecActivation: 0xebb198ed
+  - name: scePcact_driver
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 4
+    functions:
+      - scePcactAuth2BB: 0x08bb9677
+      - scePcactAuth1BB: 0xf9ecfddd
+  - name: sceRtc_driver
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 6
+    functions:
+      - sceRtc_driver_89FA4262: 0x89fa4262
+      - sceRtc_driver_CEEF238F: 0xceef238f
+  - name: sceOpenPSID_driver
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 1
+    functions:
+      - sceOpenPSIDGetPSID: 0x19d579f0

@@ -1,0 +1,108 @@
+name: sceIsofs_driver
+attributes: 0x1007
+version: [1, 5]
+sdk_version: 0x06060110
+stub_order: [InterruptManagerForKernel, IoFileMgrForKernel, SysMemForKernel, SysclibForKernel, ThreadManForKernel, sceRtc_driver, sceUmd, sceUmd9660_driver, sceUmdMan_driver]
+exports:
+  - name: syslib
+    version: [0, 0]
+    attributes: 0x8000
+    functions:
+      - module_start: 0xd632acdb
+      - module_reboot_before: 0x2f064fa6
+    variables:
+      - module_info: 0xf01d73a7
+      - module_sdk_version: 0x11b97506
+imports:
+  - name: InterruptManagerForKernel
+    version: [0, 17]
+    attributes: 0x0009
+    len: 6
+    pad: 6
+    functions:
+      - sceKernelCpuSuspendIntr: 0x092968f4
+      - sceKernelCpuResumeIntr: 0x5f10d406
+  - name: ThreadManForKernel
+    version: [0, 17]
+    attributes: 0x0001
+    len: 6
+    pad: 5
+    functions:
+      - sceKernelDeleteSema: 0x28b6489c
+      - sceKernelSignalSema: 0x3f53e640
+      - sceKernelWaitSema: 0x4e3a1105
+      - sceKernelTryAllocateFpl: 0x623ae665
+      - sceKernelExtendKernelStack: 0xbc31c1b9
+      - sceKernelCreateFpl: 0xc07bb470
+      - sceKernelDelayThread: 0xceadeb47
+      - sceKernelCreateSema: 0xd6da4ba1
+      - sceKernelDeleteFpl: 0xed1410e0
+      - sceKernelFreeFpl: 0xf6414a71
+  - name: IoFileMgrForKernel
+    version: [0, 17]
+    attributes: 0x0001
+    len: 6
+    pad: 5
+    functions:
+      - sceIoDevctl: 0x54f5fb11
+      - sceIoTerminateFd: 0x76da16e3
+      - sceIoAddDrv: 0x8e982a74
+  - name: SysclibForKernel
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 7
+    functions:
+      - strstr: 0x0d188658
+      - memset: 0x10f3bb61
+      - look_ctype_table: 0x32c767f2
+      - strtol: 0x47dd934d
+      - strrchr: 0x4c0e0274
+      - strlen: 0x52df196c
+      - __umoddi3: 0x5e8e5f42
+      - strncmp: 0x7ab35214
+      - __udivdi3: 0x7dee14de
+      - memcmp: 0x81d0d1f7
+      - memcpy: 0xab7592ff
+      - strchr: 0xb1dc2ae8
+      - strcmp: 0xc0ab8932
+  - name: SysMemForKernel
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 4
+    functions:
+      - sceKernelAllocHeapMemory: 0x23d81675
+      - sceKernelCreateHeap: 0x58148f07
+      - sceKernelFreeHeapMemory: 0x87c2ab85
+      - sceKernelGetCompiledSdkVersion: 0xb4f00cb5
+      - sceKernelDeleteHeap: 0xdd6512d0
+  - name: sceRtc_driver
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 6
+    functions:
+      - sceRtcTickAddTicks: 0x44f45e05
+      - sceRtcGetTick: 0x6ff40acc
+      - sceRtcSetTick: 0xe7b3abf4
+  - name: sceUmd
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 5
+    functions:
+      - sceUmd_040A7090: 0x040a7090
+      - sceUmdSetDriveStatus: 0x982272fe
+  - name: sceUmdMan_driver
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 7
+    functions:
+      - sceUmdManRegisterInsertEjectUMDCallBack: 0x3c8c523d
+      - sceUmdMan_driver_65E2B3E0: 0x65e2b3e0
+      - sceUmdManUnRegisterInsertEjectUMDCallBack: 0xa7536109
+  - name: sceUmd9660_driver
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 2
+    functions:
+      - sceUmd9660_driver_7EB57F56: 0x7eb57f56
+      - sceUmd9660_driver_887C3193: 0x887c3193
+      - sceUmd9660_driver_C0933C16: 0xc0933c16

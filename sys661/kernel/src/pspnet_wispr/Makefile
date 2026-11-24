@@ -1,4 +1,4 @@
 TARGET := pspnet_wispr
-SRCS := pspnet_wispr.c scetables.S
+SRCS := pspnet_wispr.c
 
 include ../../build.mak

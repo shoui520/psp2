@@ -1,4 +1,4 @@
 TARGET := kermit_wlan
-SRCS   := kermit_wlan.c scetables.S
+SRCS   := kermit_wlan.c
 
 include ../../build.mak

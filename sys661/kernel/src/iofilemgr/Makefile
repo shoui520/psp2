@@ -1,4 +1,4 @@
 TARGET := iofilemgr
-SRCS   := stdio.c iofilemgr.c scetables.S
+SRCS   := stdio.c iofilemgr.c
 
 include ../../build.mak

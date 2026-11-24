@@ -1,4 +1,4 @@
 TARGET := kermit
-SRCS   := kermit.c scetables.S
+SRCS   := kermit.c
 
 include ../../build.mak

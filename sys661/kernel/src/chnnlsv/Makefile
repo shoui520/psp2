@@ -1,4 +1,4 @@
 TARGET := chnnlsv
-SRCS   := chnnlsv.c scetables.S
+SRCS   := chnnlsv.c
 
 include ../../build.mak

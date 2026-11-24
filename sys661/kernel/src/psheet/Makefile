@@ -1,4 +1,4 @@
 TARGET := psheet
-SRCS   := psheet.c scetables.S
+SRCS   := psheet.c
 
 include ../../build.mak

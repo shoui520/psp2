@@ -1,4 +1,4 @@
 TARGET := memlmd_01g
-SRCS   := memlmd.c scetables.S
+SRCS   := memlmd.c
 
 include ../../build.mak

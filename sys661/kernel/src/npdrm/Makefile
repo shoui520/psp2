@@ -1,4 +1,4 @@
 TARGET := npdrm
-SRCS := npdrm.c scetables.S
+SRCS := npdrm.c
 
 include ../../build.mak

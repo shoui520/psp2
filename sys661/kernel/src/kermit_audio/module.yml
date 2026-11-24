@@ -1,0 +1,178 @@
+name: sceAudio_Driver
+attributes: 0x1007
+version: [1, 13]
+sdk_version: 0x06060110
+stub_order: [DmacManForKernel, InterruptManagerForKernel, KDebugForKernel, SysMemForKernel, SysclibForKernel, ThreadManForKernel, UtilsForKernel, sceDdr_driver, sceKermitMemory_driver, sceKermit_driver, sceSysEventForKernel]
+exports:
+  - name: syslib
+    version: [0, 0]
+    attributes: 0x8000
+    functions:
+      - sceAudioInit: 0xd632acdb
+      - sceAudioEnd: 0xcee8593c
+      - sceAudioEnd: 0x2f064fa6
+    variables:
+      - module_info: 0xf01d73a7
+      - module_sdk_version: 0x11b97506
+  - name: sceAudio_driver
+    version: [0, 17]
+    attributes: 0x0001
+    len: 5
+    extra_words: [0x00020000]
+    bucket_words: [0x00010000, 0x00040003, 0x00090004, 0x000f000c, 0x00120010, 0x00150014, 0x00180017, 0x001b001a]
+    functions:
+      - sceAudioSetChannelDataLen: 0x093c7a46
+      - sceAudioInputInit: 0x10900742
+      - sceAudioOutputPanned: 0x17d856b9
+      - sceAudioInit: 0x22e4fb37
+      - sceAudioInputBlocking: 0x42cc2d83
+      - sceAudioSetFrequency: 0x4a0fe97d
+      - sceAudioEnd: 0x4a7f9e9d
+      - sceAudioInputInitEx: 0x4afa04d9
+      - sceAudioChReserve: 0x4f959094
+      - sceAudio_driver_5182B550: 0x5182b550
+      - sceAudioLoopbackTest: 0x53a4fe20
+      - sceAudioOutputBlocking: 0x5cdef9a4
+      - sceAudioPollInputEnd: 0x60b750b2
+      - sceAudioChangeChannelConfig: 0x63b5a460
+      - sceAudioOutput: 0x671e97e8
+      - sceAudioInput: 0x76bba42e
+      - sceAudioSRCChReserve: 0x837701cc
+      - sceAudioOutput2GetRestSample: 0x8a7cd9c6
+      - sceAudio_driver_95AE5A2B: 0x95ae5a2b
+      - sceAudioGetChannelRestLength: 0x9d77949e
+      - sceAudioSRCOutputBlocking: 0xac81de4f
+      - sceAudioOutputPannedBlocking: 0xb7ccf1d7
+      - sceAudioSRCChRelease: 0xb7f5a1b2
+      - sceAudioGetChannelRestLen: 0xcf62029e
+      - sceAudioWaitInputEnd: 0xd2f5a41a
+      - sceAudioChRelease: 0xda16ff61
+      - sceAudioOneshotOutput: 0xe440df7d
+      - sceAudioSetVolumeOffset: 0xf86dfdd6
+      - sceAudioGetInputLength: 0xfa05ef51
+      - sceAudioChangeChannelVolume: 0xfad7b114
+      - sceAudio_driver_FF298CE7: 0xff298ce7
+  - name: sceAudio
+    version: [0, 17]
+    attributes: 0x4001
+    len: 5
+    pad: 3
+    extra_words: [0x00020000]
+    bucket_words: [0x00020000, 0x00050004, 0x00080006, 0x000e000a, 0x0011000f, 0x00140012, 0x00170016, 0x001b0017]
+    functions:
+      - sceAudioOutput2Reserve: 0x01562ba3
+      - sceAudioInputBlocking: 0x086e5895
+      - sceAudioOutputBlocking: 0x136caf51
+      - sceAudioOutputPannedBlocking: 0x13f592bc
+      - sceAudioOutput2OutputBlocking: 0x2d53f36e
+      - sceAudioSRCChReserve: 0x38553111
+      - sceAudioOneshotOutput: 0x41efade7
+      - sceAudioOutput2Release: 0x43196845
+      - sceAudioSRCChRelease: 0x5c37c0ae
+      - sceAudioChReserve: 0x5ec81c55
+      - sceAudioOutput2ChangeLength: 0x63f2889c
+      - sceAudioOutput2GetRestSample: 0x647cef33
+      - sceAudioInput: 0x6d4bec68
+      - sceAudioChRelease: 0x6fc46853
+      - sceAudioInputInit: 0x7de61688
+      - sceAudioWaitInputEnd: 0x87b2e651
+      - sceAudioOutput: 0x8c1009b2
+      - sceAudioChangeChannelConfig: 0x95fd0c2d
+      - sceAudioPollInputEnd: 0xa633048e
+      - sceAudioGetInputLength: 0xa708c6a6
+      - sceAudioGetChannelRestLength: 0xb011922f
+      - sceAudioChangeChannelVolume: 0xb7e1d8e7
+      - sceAudioSetChannelDataLen: 0xcb2e439e
+      - sceAudioSRCOutputBlocking: 0xe0727056
+      - sceAudioOutputPanned: 0xe2d56b2d
+      - sceAudioInputInitEx: 0xe926d3fb
+      - sceAudioGetChannelRestLen: 0xe9d97901
+imports:
+  - name: ThreadManForKernel
+    version: [0, 17]
+    attributes: 0x0001
+    len: 6
+    pad: 5
+    functions:
+      - sceKernelSetEventFlag: 0x1fb15a32
+      - sceKernelGetThreadId: 0x293b45b8
+      - sceKernelGetSystemTimeLow: 0x369ed59d
+      - sceKernelWaitEventFlag: 0x402fcf22
+      - sceKernelCreateThread: 0x446d8de6
+      - sceKernelCreateEventFlag: 0x55c20a00
+      - sceKernelGetSystemTimeWide: 0x82bc5777
+      - sceKernelExitThread: 0xaa73c935
+      - sceKernelCreateMutex: 0xb7d098c6
+      - sceKernelDelayThread: 0xceadeb47
+      - sceKernelDeleteEventFlag: 0xef9e4c70
+      - sceKernelStartThread: 0xf475845d
+  - name: DmacManForKernel
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 7
+    functions:
+      - sceKernelDmaOpQuit: 0x5af32783
+      - sceKernelDmaOpFree: 0x745e19ef
+  - name: UtilsForKernel
+    version: [0, 17]
+    attributes: 0x0009
+    pad: 5
+    functions:
+      - sceKernelDcacheWritebackInvalidateRange: 0x34b9fa9e
+      - sceKernelDcacheWritebackRange: 0x3ee30821
+      - sceKernelDcacheInvalidateRange: 0xbfa98062
+  - name: SysclibForKernel
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 7
+    functions:
+      - memset: 0x10f3bb61
+      - __udivdi3: 0x7dee14de
+  - name: InterruptManagerForKernel
+    version: [0, 17]
+    attributes: 0x0009
+    len: 6
+    pad: 6
+    functions:
+      - sceKernelCpuSuspendIntr: 0x092968f4
+      - sceKernelCpuResumeIntr: 0x5f10d406
+      - sceKernelReleaseIntrHandler: 0xf987b1f0
+  - name: KDebugForKernel
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 4
+    functions:
+      - Kprintf: 0x84f370bc
+  - name: sceSysEventForKernel
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 7
+    functions:
+      - sceKernelRegisterSysEventHandler: 0xcd9e4bb5
+      - sceKernelUnregisterSysEventHandler: 0xd7d3fdcd
+  - name: SysMemForKernel
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 4
+    functions:
+      - sceKernelMemset: 0x8ae776af
+      - sceKernelGetCompiledSdkVersion: 0xb4f00cb5
+  - name: sceDdr_driver
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 6
+    functions:
+      - sceDdrFlush: 0x87d86769
+  - name: sceKermit_driver
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 7
+    functions:
+      - sceKermit_driver_36666181: 0x36666181
+      - sceKermit_driver_5280B410: 0x5280b410
+  - name: sceKermitMemory_driver
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 1
+    functions:
+      - sceKermitMemory_driver_AAF047AC: 0xaaf047ac

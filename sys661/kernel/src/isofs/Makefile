@@ -1,4 +1,4 @@
 TARGET := isofs
-SRCS   := isofs.c scetables.S
+SRCS   := isofs.c
 
 include ../../build.mak

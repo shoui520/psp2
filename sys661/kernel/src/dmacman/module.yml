@@ -1,0 +1,88 @@
+name: sceDMAManager
+attributes: 0x1007
+version: [1, 8]
+sdk_version: 0x06060110
+stub_order: [InterruptManagerForKernel, KDebugForKernel, SysclibForKernel, ThreadManForKernel, sceSuspendForKernel]
+exports:
+  - name: syslib
+    version: [0, 0]
+    attributes: 0x8000
+    functions:
+      - module_start: 0xd3744be0
+      - module_start: 0xd632acdb
+      - sceKernelDmaExit: 0x2f064fa6
+    variables:
+      - module_info: 0xf01d73a7
+      - module_sdk_version: 0x11b97506
+  - name: DmacManForKernel
+    version: [0, 17]
+    attributes: 0x0001
+    len: 5
+    pad: 3
+    extra_words: [0x00020000]
+    bucket_words: [0x00000000, 0x00030002, 0x00060006, 0x00080008, 0x000b000b, 0x000e000d, 0x000f000e, 0x00140013]
+    functions:
+      - sceKernelDmaExit: 0x1c46158a
+      - sceKernelDmaOpLLIConcatenate: 0x1fc036b7
+      - sceKernelDmaChReserve: 0x2e3bc333
+      - sceKernelDmaRegisterDdrFlush: 0x32757c57
+      - sceKernelDmaOpEnQueue: 0x3bdea96c
+      - sceKernelDmaOpSetupMemcpy: 0x3fad5844
+      - sceKernelDmaOpAlloc: 0x59615199
+      - sceKernelDmaOpQuit: 0x5af32783
+      - sceKernelDmaOpFree: 0x745e19ef
+      - sceKernelDmaSoftRequest: 0x7b9634e1
+      - sceKernelDmaOpSetupLink: 0x7d21a2ef
+      - sceKernelDmaOpAssignMultiple: 0x904110fc
+      - sceKernelDmaOpDeQueue: 0x92700ccd
+      - sceKernelDmaOpAllCancel: 0xa84b084b
+      - sceKernelDmaOpSetupNormal: 0xce467d9b
+      - sceKernelDmaOpSetCallback: 0xd0358be9
+      - sceKernelDmaOnDebugMode: 0xd3f62265
+      - sceKernelDmaChExclude: 0xd8bc3120
+      - sceKernelDmaOpSync: 0xdb286d65
+      - sceKernelDmaOpConcatenate: 0xe18a93a5
+      - sceKernelDmaOpAssign: 0xf64bab99
+imports:
+  - name: InterruptManagerForKernel
+    version: [0, 17]
+    attributes: 0x0009
+    len: 6
+    pad: 6
+    functions:
+      - sceKernelCpuSuspendIntr: 0x092968f4
+      - sceKernelCpuResumeIntrWithSync: 0x3b84732d
+      - sceKernelEnableIntr: 0x4d6e7305
+      - sceKernelRegisterIntrHandler: 0x58dd8978
+      - sceKernelCpuResumeIntr: 0x5f10d406
+      - sceKernelDisableIntr: 0xd774ba45
+      - sceKernelReleaseIntrHandler: 0xf987b1f0
+  - name: SysclibForKernel
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 7
+    functions:
+      - memset: 0x10f3bb61
+  - name: ThreadManForKernel
+    version: [0, 17]
+    attributes: 0x0001
+    len: 6
+    pad: 5
+    functions:
+      - sceKernelSetEventFlag: 0x1fb15a32
+      - sceKernelWaitEventFlag: 0x402fcf22
+      - sceKernelCreateEventFlag: 0x55c20a00
+      - sceKernelClearEventFlag: 0x812346e4
+      - sceKernelDeleteEventFlag: 0xef9e4c70
+  - name: sceSuspendForKernel
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 4
+    functions:
+      - sceKernelRegisterSuspendHandler: 0x91a77137
+      - sceKernelRegisterResumeHandler: 0xb43d1a8c
+  - name: KDebugForKernel
+    version: [0, 17]
+    attributes: 0x0001
+    functions:
+      - Kprintf: 0x84f370bc

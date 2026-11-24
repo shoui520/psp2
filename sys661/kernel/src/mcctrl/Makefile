@@ -1,4 +1,4 @@
 TARGET := mcctrl
-SRCS   := mcctrl.c scetables.S
+SRCS   := mcctrl.c
 
 include ../../build.mak

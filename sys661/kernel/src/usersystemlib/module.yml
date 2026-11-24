@@ -1,0 +1,70 @@
+name: sceKernelLibrary
+attributes: 0x0007
+version: [1, 6]
+sdk_version: 0x06060110
+stub_order: [InterruptManager, SysMemUserForUser, ThreadManForUser]
+exports:
+  - name: syslib
+    version: [0, 0]
+    attributes: 0x8000
+    functions:
+      - module_start: 0xd632acdb
+    variables:
+      - module_info: 0xf01d73a7
+      - module_sdk_version: 0x11b97506
+      - module_start_thread_parameter: 0x0f7c276c
+  - name: Kernel_Library
+    version: [0, 17]
+    attributes: 0x0001
+    len: 5
+    pad: 1
+    extra_words: [0x00020000]
+    bucket_words: [0x00010000, 0x00050004, 0x00090008, 0x000a000a, 0x000a000a, 0x000b000a, 0x000e000d, 0x00100010]
+    functions:
+      - sceKernelCpuSuspendIntr: 0x092968f4
+      - sceKernelUnlockLwMutex: 0x15b6446b
+      - sceKernelMemcpy: 0x1839852a
+      - sceKernelLockLwMutexCB: 0x1fc64e09
+      - sceKernelGetThreadId: 0x293b45b8
+      - sceKernelTryLockLwMutex_600: 0x37431849
+      - Kernel_Library_3AD10D4D: 0x3ad10d4d
+      - sceKernelCpuResumeIntrWithSync: 0x3b84732d
+      - sceKernelIsCpuIntrSuspended: 0x47a0b729
+      - sceKernelCpuResumeIntr: 0x5f10d406
+      - sceKernelMemset: 0xa089eca4
+      - sceKernelIsCpuIntrEnable: 0xb55249d2
+      - sceKernelLockLwMutex: 0xbea46419
+      - sceKernelReferLwMutexStatus: 0xc1734599
+      - sceKernelCheckThreadStack: 0xd13bde95
+      - sceKernelTryLockLwMutex: 0xdc692ee3
+      - sceKernelGetTlsAddr: 0xfa835cde
+  - name: sceGe_lazy
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 1
+    functions:
+      - sceGe_lazy_31129B95: 0x31129b95
+imports:
+  - name: SysMemUserForUser
+    version: [0, 17]
+    attributes: 0x4000
+    pad: 6
+    functions:
+      - sceKernelSetUsersystemLibWork: 0xa6848df8
+  - name: InterruptManager
+    version: [0, 17]
+    attributes: 0x4000
+    pad: 7
+    functions:
+      - sceKernelRegisterUserSpaceIntrStack: 0xeee43f47
+  - name: ThreadManForUser
+    version: [0, 17]
+    attributes: 0x4001
+    pad: 3
+    functions:
+      - _sceKernelLockLwMutexCB: 0x31327f19
+      - sceKernelReferLwMutexStatusByID: 0x4c145944
+      - _sceKernelAllocateTlspl: 0x65f54ffb
+      - _sceKernelLockLwMutex: 0x7cff8cf3
+      - _sceKernelUnlockLwMutex: 0xbeed3a47
+      - sceKernelCheckThreadStack: 0xd13bde95

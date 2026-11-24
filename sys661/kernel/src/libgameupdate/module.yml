@@ -1,0 +1,99 @@
+name: sceGameUpdate_Library
+attributes: 0x0000
+version: [1, 1]
+sdk_version: 0x06060110
+stub_order: [Kernel_Library, SysMemUserForUser, ThreadManForUser, sceHttp, sceHttpStorage_bridge, sceNetApctl, sceNet_lib, sceUtility]
+exports:
+  - name: syslib
+    version: [0, 0]
+    attributes: 0x8000
+    variables:
+      - module_info: 0xf01d73a7
+      - module_sdk_version: 0x11b97506
+  - name: sceGameUpdate
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 2
+    functions:
+      - sceGameUpdate_381CB9B3: 0x381cb9b3
+      - sceGameUpdate_3EBB6055: 0x3ebb6055
+      - sceGameUpdate_596AD78C: 0x596ad78c
+      - sceGameUpdate_5F5D98A6: 0x5f5d98a6
+      - sceGameUpdate_BB4B68DE: 0xbb4b68de
+      - sceGameUpdate_CBE69FB3: 0xcbe69fb3
+      - sceGameUpdate_D92F50CA: 0xd92f50ca
+imports:
+  - name: Kernel_Library
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 5
+    functions:
+      - sceKernelMemset: 0xa089eca4
+      - sceKernelLockLwMutex: 0xbea46419
+      - sceKernelUnlockLwMutex: 0x15b6446b
+      - sceKernelMemcpy: 0x1839852a
+  - name: ThreadManForUser
+    version: [0, 17]
+    attributes: 0x4001
+    pad: 7
+    functions:
+      - sceKernelDelayThread: 0xceadeb47
+      - sceKernelDeleteLwMutex: 0x60107536
+      - sceKernelCreateLwMutex: 0x19cff145
+  - name: sceUtility
+    version: [0, 17]
+    attributes: 0x4001
+    pad: 5
+    functions:
+      - sceUtilityGetSystemParamInt: 0xa5da2406
+  - name: SysMemUserForUser
+    version: [0, 17]
+    attributes: 0x4000
+    pad: 6
+    functions:
+      - SysMemUserForUser_945E45DA: 0x945e45da
+  - name: sceHttpStorage_bridge
+    version: [0, 17]
+    attributes: 0x4009
+    pad: 6
+    functions:
+      - sceHttpStorage_bridge_EFE06A20: 0xefe06a20
+  - name: sceNet_lib
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 5
+    functions:
+      - sceNet_lib_2A73ADDC: 0x2a73addc
+      - sceNet_lib_303A2F80: 0x303a2f80
+      - sceNet_lib_750F705D: 0x750f705d
+      - sceNet_lib_9CFBC7E3: 0x9cfbc7e3
+      - sceNet_lib_B5CE388A: 0xb5ce388a
+      - sceNet_lib_B9085A96: 0xb9085a96
+      - sceNet_lib_D8722983: 0xd8722983
+  - name: sceNetApctl
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 4
+    functions:
+      - sceNetApctlGetInfo: 0x2befdf23
+  - name: sceHttp
+    version: [0, 17]
+    attributes: 0x0001
+    functions:
+      - sceHttpGetContentLength: 0x0282a3bd
+      - sceHttpDeleteHeader: 0x15540184
+      - sceHttpSetRecvTimeOut: 0x1f0fc3e3
+      - sceHttpGetStatusCode: 0x4cc7d78f
+      - sceHttpDeleteConnection: 0x5152773b
+      - sceHttpSetConnectTimeOut: 0x8acd1f73
+      - sceHttpSetSendTimeOut: 0x9988172d
+      - sceHttpCreateTemplate: 0x9b1f1f36
+      - sceHttpDeleteRequest: 0xa5512e01
+      - sceHttpCreateRequestWithURL: 0xb509b09e
+      - sceHttpSendRequest: 0xbb70706f
+      - sceHttpAbortRequest: 0xc10b6bd9
+      - sceHttpCreateConnectionWithURL: 0xcdf8ecb9
+      - sceHttpReadData: 0xedeeb999
+      - sceHttpDeleteTemplate: 0xfcf8c055
+      - sceHttp_3C478044: 0x3c478044
+      - sceHttp_87F1E666: 0x87f1e666

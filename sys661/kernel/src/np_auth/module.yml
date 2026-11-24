@@ -1,0 +1,145 @@
+name: sceNpAuth
+attributes: 0x0006
+version: [1, 3]
+sdk_version: 0x06060110
+stub_order: [Kernel_Library, ModuleMgrForUser, SysMemUserForUser, ThreadManForUser, sceHttp, sceNet, sceNet_lib, sceNp, sceNpCore, sceParseHttp, sceParseUri]
+exports:
+  - name: syslib
+    version: [0, 0]
+    attributes: 0x8000
+    variables:
+      - module_info: 0xf01d73a7
+      - module_sdk_version: 0x11b97506
+  - name: sceNpAuth
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 2
+    functions:
+      - sceNpAuth_3F1C1F70: 0x3f1c1f70
+      - sceNpAuth_4EC1F667: 0x4ec1f667
+      - sceNpAuth_5A3CB57A: 0x5a3cb57a
+      - sceNpAuth_61BB18B3: 0x61bb18b3
+      - sceNpAuth_6900F084: 0x6900f084
+      - sceNpAuth_72BB0467: 0x72bb0467
+      - sceNpAuth_75FB0AE3: 0x75fb0ae3
+      - sceNpAuth_A1DE86F8: 0xa1de86f8
+      - sceNpAuth_B714FBDD: 0xb714fbdd
+      - sceNpAuth_CD86A656: 0xcd86a656
+      - sceNpAuth_CE85B3B8: 0xce85b3b8
+      - sceNpAuth_D99455DD: 0xd99455dd
+      - sceNpAuth_DAD65284: 0xdad65284
+      - sceNpAuth_F4531ADC: 0xf4531adc
+imports:
+  - name: sceNpCore
+    version: [0, 17]
+    attributes: 0x4009
+    pad: 6
+    functions:
+      - sceNpCore_0366DAB6: 0x0366dab6
+      - sceNpCore_04096629: 0x04096629
+      - sceNpCore_243690EE: 0x243690ee
+      - sceNpCore_5145344F: 0x5145344f
+      - sceNpCore_515B65E8: 0x515b65e8
+      - sceNpCore_8AFAB4A0: 0x8afab4a0
+      - sceNpCore_9218ACF6: 0x9218acf6
+      - sceNpCore_B13D27CA: 0xb13d27ca
+      - sceNpCore_E7AED5A3: 0xe7aed5a3
+  - name: SysMemUserForUser
+    version: [0, 17]
+    attributes: 0x4000
+    pad: 6
+    functions:
+      - sceKernelQueryMemoryInfo: 0x2a3e5280
+  - name: sceNet
+    version: [0, 17]
+    attributes: 0x0009
+    pad: 5
+    functions:
+      - sceNetFreeThreadinfo: 0x50647530
+  - name: sceNet_lib
+    version: [0, 17]
+    attributes: 0x0009
+    pad: 5
+    functions:
+      - sceNet_lib_B5CE388A: 0xb5ce388a
+      - sceNet_lib_CF705E46: 0xcf705e46
+      - sceNet_lib_D8722983: 0xd8722983
+      - sceNet_lib_E0A81C7C: 0xe0a81c7c
+  - name: sceParseUri
+    version: [0, 17]
+    attributes: 0x0009
+    pad: 4
+    functions:
+      - sceParseUri_49E950EC: 0x49e950ec
+  - name: sceParseHttp
+    version: [0, 17]
+    attributes: 0x0009
+    pad: 7
+    functions:
+      - sceParseHttp_AD7BFDEF: 0xad7bfdef
+  - name: sceHttp
+    version: [0, 17]
+    attributes: 0x0009
+    pad: 4
+    functions:
+      - sceHttpGetContentLength: 0x0282a3bd
+      - sceHttpSetRecvTimeOut: 0x1f0fc3e3
+      - sceHttpAddExtraHeader: 0x3eaba285
+      - sceHttpGetStatusCode: 0x4cc7d78f
+      - sceHttpDeleteConnection: 0x5152773b
+      - sceHttpSetConnectTimeOut: 0x8acd1f73
+      - sceHttpSetSendTimeOut: 0x9988172d
+      - sceHttpCreateTemplate: 0x9b1f1f36
+      - sceHttpDeleteRequest: 0xa5512e01
+      - sceHttp_AB1540D5: 0xab1540d5
+      - sceHttpCreateRequestWithURL: 0xb509b09e
+      - sceHttpSendRequest: 0xbb70706f
+      - sceHttpAbortRequest: 0xc10b6bd9
+      - sceHttpCreateConnectionWithURL: 0xcdf8ecb9
+      - sceHttpGetAllHeader: 0xdb266ccf
+      - sceHttpReadData: 0xedeeb999
+      - sceHttpDeleteTemplate: 0xfcf8c055
+      - sceHttp_3C478044: 0x3c478044
+      - sceHttp_87F1E666: 0x87f1e666
+  - name: sceNp
+    version: [0, 17]
+    attributes: 0x0009
+    pad: 6
+    functions:
+      - sceNp_B4063F7A: 0xb4063f7a
+      - sceNp_B819A0C8: 0xb819a0c8
+      - sceNp_E24DA399: 0xe24da399
+  - name: Kernel_Library
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 5
+    functions:
+      - sceKernelCpuSuspendIntr: 0x092968f4
+      - sceKernelMemset: 0xa089eca4
+      - _sceKernelCheckThreadStack: 0xd13bde95
+      - sceKernelMemcpy: 0x1839852a
+      - sceKernelCpuResumeIntr: 0x5f10d406
+  - name: ModuleMgrForUser
+    version: [0, 17]
+    attributes: 0x4001
+    pad: 7
+    functions:
+      - sceKernelGetModuleGPByAddress: 0xd2fbc957
+  - name: ThreadManForUser
+    version: [0, 17]
+    attributes: 0x4001
+    pad: 3
+    functions:
+      - sceKernelSendMbx: 0xe9b3061e
+      - sceKernelStartThread: 0xf475845d
+      - sceKernelWaitThreadEnd: 0x278c0df5
+      - sceKernelReferVplStatus: 0x39810265
+      - sceKernelCreateThread: 0x446d8de6
+      - sceKernelCreateVpl: 0x56c039b5
+      - sceKernelCreateMbx: 0x8125221d
+      - sceKernelDeleteMbx: 0x86255ada
+      - sceKernelDeleteVpl: 0x89b3d48c
+      - sceKernelReceiveMbx: 0x18260574
+      - sceKernelDeleteThread: 0x9fa03cd3
+      - sceKernelTryAllocateVpl: 0xaf36d708
+      - sceKernelFreeVpl: 0xb736e9ff

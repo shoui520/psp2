@@ -1,4 +1,4 @@
 TARGET := exitgame
-SRCS := start.S exitgame.c scetables.S
+SRCS := start.S exitgame.c
 
 include ../../build.mak

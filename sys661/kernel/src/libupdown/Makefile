@@ -1,4 +1,4 @@
 TARGET := libupdown
-SRCS := libupdown.c scetables.S
+SRCS := libupdown.c
 
 include ../../build.mak

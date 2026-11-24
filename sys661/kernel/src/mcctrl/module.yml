@@ -1,0 +1,45 @@
+name: sceMcctrl
+attributes: 0x5006
+version: [1, 1]
+sdk_version: 0x06060002
+exports:
+  - name: syslib
+    version: [0, 0]
+    attributes: 0x8000
+    functions:
+      - module_start: 0xd632acdb
+      - module_stop: 0xcee8593c
+    variables:
+      - module_info: 0xf01d73a7
+      - module_sdk_version: 0x11b97506
+  - name: sceMcctrl
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 2
+    functions:
+      - sceMcctrl_1EDFD6BB: 0x1edfd6bb
+      - sceMcctrl_3EF531DB: 0x3ef531db
+      - sceMcctrl_61550814: 0x61550814
+      - sceMcctrl_7CAC25B2: 0x7cac25b2
+      - sceMcctrl_877CD3A5: 0x877cd3a5
+      - sceMcctrl_9618EE57: 0x9618ee57
+imports:
+  - name: sceDdrdb_driver
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 4
+    functions:
+      - sceDdrdbHash: 0x40cb752a
+      - sceDdrdbSigvry: 0xe27ce4cb
+      - sceDdrdbCertvry: 0x370f456a
+      - sceDdrdbEncrypt: 0x05d50f41
+      - sceDdrdbDecrypt: 0xb33acb44
+      - sceDdrdbMul1: 0xf970d54e
+      - sceDdrdbMul2: 0xec05300a
+      - sceDdrdbSiggen: 0xb24e1391
+      - sceDdrdbPrngen: 0xb8218473
+  - name: sceIdStorage_driver
+    version: [0, 17]
+    attributes: 0x0001
+    functions:
+      - sceIdStorageLookup: 0x6fe062d1

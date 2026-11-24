@@ -1,4 +1,4 @@
 TARGET := libatrac3plus
-SRCS   := libatrac3plus.c scetables.S
+SRCS   := libatrac3plus.c
 
 include ../../build.mak

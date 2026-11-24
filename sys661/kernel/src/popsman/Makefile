@@ -1,4 +1,4 @@
 TARGET := popsman
-SRCS := popsman.c scetables.S
+SRCS := popsman.c
 
 include ../../build.mak

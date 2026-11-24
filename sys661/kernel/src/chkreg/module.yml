@@ -1,0 +1,48 @@
+name: sceChkreg
+attributes: 0x5006
+version: [1, 9]
+sdk_version: 0x06060002
+exports:
+  - name: syslib
+    version: [0, 0]
+    attributes: 0x8000
+    functions:
+      - module_start: 0xd632acdb
+      - module_stop: 0xcee8593c
+    variables:
+      - module_info: 0xf01d73a7
+      - module_sdk_version: 0x11b97506
+  - name: sceChkreg_driver
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 3
+    functions:
+      - sceChkregCheckRegion: 0x54495b19
+      - sceChkregGetPsCode: 0x59f8491d
+      - sceChkregGetPsFlags: 0x6894a027
+      - sceChkregGetPspModel: 0x7939c851
+      - sceChkreg_driver_9C6E1D34: 0x9c6e1d34
+imports:
+  - name: ThreadManForKernel
+    version: [0, 17]
+    attributes: 0x0001
+    len: 6
+    pad: 5
+    functions:
+      - sceKernelDeleteSema: 0x28b6489c
+      - sceKernelSignalSema: 0x3f53e640
+      - sceKernelWaitSema: 0x4e3a1105
+      - sceKernelCreateSema: 0xd6da4ba1
+  - name: sceIdStorage_driver
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 4
+    functions:
+      - sceIdStorageLookup: 0x6fe062d1
+      - sceIdStorageReadLeaf: 0xeb00c509
+  - name: semaphore
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 2
+    functions:
+      - sceUtilsBufferCopyWithRange: 0x4c537c72

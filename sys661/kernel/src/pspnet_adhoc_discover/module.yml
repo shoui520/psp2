@@ -1,0 +1,77 @@
+name: sceNetAdhocDiscover_Library
+attributes: 0x0006
+version: [1, 2]
+sdk_version: 0x06060110
+stub_order: [Kernel_Library, ThreadManForUser, sceNetAdhocctl, sceNetAdhocctl_lib, sceNetIfhandle_lib, sceNet_lib, sceUtility]
+exports:
+  - name: syslib
+    version: [0, 0]
+    attributes: 0x8000
+    variables:
+      - module_info: 0xf01d73a7
+      - module_sdk_version: 0x11b97506
+  - name: sceNetAdhocDiscover
+    version: [0, 17]
+    attributes: 0x0001
+    functions:
+      - sceNetAdhocDiscover_52DE1B97: 0x52de1b97
+      - sceNetAdhocDiscover_941B3877: 0x941b3877
+      - sceNetAdhocDiscover_944DDBC6: 0x944ddbc6
+      - sceNetAdhocDiscover_A2246614: 0xa2246614
+      - sceNetAdhocDiscover_A423A21B: 0xa423a21b
+      - sceNetAdhocDiscover_F7D13214: 0xf7d13214
+imports:
+  - name: sceUtility
+    version: [0, 17]
+    attributes: 0x4001
+    pad: 5
+    functions:
+      - sceUtilityGetSystemParamInt: 0xa5da2406
+  - name: sceNetIfhandle_lib
+    version: [0, 17]
+    attributes: 0x4009
+    pad: 5
+    functions:
+      - sceNetIfhandle_lib_15CFE3C0: 0x15cfe3c0
+      - sceNetIfhandle_lib_76BAD213: 0x76bad213
+  - name: sceNet_lib
+    version: [0, 17]
+    attributes: 0x0009
+    pad: 5
+    functions:
+      - sceNet_lib_1858883D: 0x1858883d
+      - sceNet_lib_E0A81C7C: 0xe0a81c7c
+  - name: sceNetAdhocctl
+    version: [0, 17]
+    attributes: 0x0009
+    pad: 5
+    functions:
+      - sceNetAdhocctlScan: 0x08fff7a0
+      - sceNetAdhocctlDisconnect: 0x34401d65
+      - sceNetAdhocctlJoin: 0x5e7f79c9
+      - sceNetAdhocctlGetScanInfo: 0x81aee1be
+      - sceNetAdhocctlGetPeerList: 0xe162cb14
+      - sceNetAdhocctlCreate: 0xec0635c1
+  - name: sceNetAdhocctl_lib
+    version: [0, 17]
+    attributes: 0x0009
+    pad: 5
+    functions:
+      - sceNetAdhocctl_lib_1572422C: 0x1572422c
+      - sceNetAdhocctl_lib_1A2B6D03: 0x1a2b6d03
+      - sceNetAdhocctl_lib_1C679240: 0x1c679240
+      - sceNetAdhocctl_lib_F6057CC4: 0xf6057cc4
+      - sceNetAdhocctl_lib_F8BABD85: 0xf8babd85
+  - name: Kernel_Library
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 5
+    functions:
+      - _sceKernelCheckThreadStack: 0xd13bde95
+      - sceKernelMemcpy: 0x1839852a
+  - name: ThreadManForUser
+    version: [0, 17]
+    attributes: 0x4001
+    pad: 3
+    functions:
+      - sceKernelGetSystemTimeWide: 0x82bc5777

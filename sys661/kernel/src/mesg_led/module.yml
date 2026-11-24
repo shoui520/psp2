@@ -1,0 +1,135 @@
+name: sceMesgLed
+attributes: 0x7007
+version: [1, 29]
+sdk_version: 0x06060010
+exports:
+  - name: syslib
+    version: [0, 0]
+    attributes: 0x8000
+    functions:
+      - module_start: 0xd632acdb
+    variables:
+      - module_info: 0xf01d73a7
+      - module_sdk_version: 0x11b97506
+  - name: sceMesgLed_driver
+    version: [0, 17]
+    attributes: 0x0009
+    len: 5
+    pad: 2
+    extra_words: [0x00020000]
+    bucket_words: [0x00000000, 0x00020000, 0x00080006, 0x000c000a, 0x000d000d, 0x000f000f, 0x00170012, 0x00180017]
+    functions:
+      - sceUtilsGetLoadModuleMLength: 0x21affaac
+      - sceUtilsGetLoadModuleDLength: 0x2cb700ec
+      - sceUtilsGetLoadModuleDLengthByPolling: 0x308d37ff
+      - sceUtilsGetLoadModuleYLength: 0x31d6d8aa
+      - sceUtilsGetLoadModuleILength: 0x337d0dd3
+      - sceUtilsGetLoadModuleCLengthByPolling: 0x3783b0ad
+      - sceUtilsGetLoadModuleJLengthByPolling: 0x4be02a12
+      - sceUtilsGetLoadModuleJLength: 0x4eab9850
+      - sceUtilsGetLoadModuleMLengthByPolling: 0x52b6e552
+      - sceUtilsGetLoadModuleCLength: 0x5c3a61fe
+      - sceUtilsGetLoadModuleULength: 0x66b348b2
+      - sceUtilsGetLoadModuleLLengthByPolling: 0x6bf453d3
+      - sceUtilsGetLoadModuleILengthByPolling: 0x792a6126
+      - sceUtilsGetLoadModuleWLength: 0x91e0a9ad
+      - sceUtilsGetModuleExpireTick: 0x9e3c79d9
+      - sceUtilsGetLoadModuleKLength: 0xb2cdac3f
+      - sceUtilsGetLoadModuleVLength: 0xb2d95fdf
+      - sceUtilsGetLoadModuleKLengthByPolling: 0xb5596be4
+      - sceUtilsGetLoadModuleNLength: 0xc00dad75
+      - sceUtilsGetLoadModuleLLength: 0xc79e3488
+      - sceUtilsGetLoadModuleSLength: 0xc7d1c16b
+      - sceUtilsGetLoadModuleVLengthByPolling: 0xc9abd2f2
+      - sceUtilsGetLoadModuleRLength: 0xced2c075
+      - sceUtilsGetLoadModuleTLength: 0xebb4613d
+      - sceUtilsGetLoadModuleNLengthByPolling: 0xf8485c9c
+  - name: sceResmap_driver
+    version: [0, 17]
+    attributes: 0x0009
+    pad: 3
+    functions:
+      - sceResmapPrepareByPolling: 0x4434e59f
+      - sceResmapPrepare: 0xe5659590
+  - name: sceDbman_driver
+    version: [0, 17]
+    attributes: 0x0009
+    functions:
+      - sceDbmanSelectByPolling: 0x34b53d46
+      - sceDbmanSelect: 0xb2b8c3f9
+  - name: sceNwman_driver
+    version: [0, 17]
+    attributes: 0x0009
+    functions:
+      - sceNwman_driver_9555D68D: 0x9555d68d
+  - name: sceResmgr_driver
+    version: [0, 17]
+    attributes: 0x0009
+    pad: 3
+    functions:
+      - sceResmgr_8E6C62C8: 0x8e6c62c8
+      - sceResmgr_9DC14891: 0x9dc14891
+  - name: sceResmgr
+    version: [0, 17]
+    attributes: 0x4009
+    pad: 2
+    functions:
+      - sceResmgr_8E6C62C8: 0x8e6c62c8
+      - sceResmgr_9DC14891: 0x9dc14891
+  - name: sceMesgd_driver
+    version: [0, 17]
+    attributes: 0x0009
+    functions:
+      - sceMesgd_driver_102DC8AF: 0x102dc8af
+      - sceMesgd_driver_ADD0CB66: 0xadd0cb66
+  - name: sceWmd_driver
+    version: [0, 17]
+    attributes: 0x0009
+    pad: 2
+    functions:
+      - sceWmd_driver_7A0E484C: 0x7a0e484c
+      - sceWmd_driver_B7CE9041: 0xb7ce9041
+  - name: sceDbsvr_driver
+    version: [0, 17]
+    attributes: 0x0009
+    functions:
+      - sceDbsvrGetData: 0x94561901
+  - name: sceMesgIns_driver
+    version: [0, 17]
+    attributes: 0x0009
+    pad: 2
+    functions:
+      - sceUtilsPrepareGetLoadModuleSLength: 0x4a03f940
+      - sceUtilsPrepareGetLoadModuleRLength: 0xd062b635
+  - name: scePauth_driver
+    version: [0, 17]
+    attributes: 0x0009
+    functions:
+      - scePauth_98B83B5D: 0x98b83b5d
+      - scePauth_F7AA47F6: 0xf7aa47f6
+  - name: scePauth
+    version: [0, 17]
+    attributes: 0x4009
+    pad: 3
+    functions:
+      - scePauth_98B83B5D: 0x98b83b5d
+      - scePauth_F7AA47F6: 0xf7aa47f6
+imports:
+  - name: ThreadManForKernel
+    version: [0, 17]
+    attributes: 0x0001
+    len: 6
+    pad: 5
+    functions:
+      - sceKernelDeleteSema: 0x28b6489c
+      - sceKernelSignalSema: 0x3f53e640
+      - sceKernelWaitSema: 0x4e3a1105
+      - sceKernelPollSema: 0x58b1f937
+      - sceKernelCreateSema: 0xd6da4ba1
+  - name: semaphore
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 2
+    functions:
+      - sceUtilsBufferCopyWithRange: 0x4c537c72
+      - sceUtilsBufferCopyByPollingWithRange: 0x77e97079

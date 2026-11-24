@@ -1,5 +1,5 @@
 TARGET := np
-SRCS := np.c scetables.S
+SRCS := np.c
 EXTRA_CFLAGS := -fno-inline -Os
 
 include ../../build.mak

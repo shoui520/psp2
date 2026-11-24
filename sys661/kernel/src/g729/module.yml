@@ -1,0 +1,84 @@
+name: sceG729
+attributes: 0x1006
+version: [1, 3]
+sdk_version: 0x06060110
+stub_order: [InterruptManagerForKernel, SysclibForKernel, ThreadManForKernel, UtilsForKernel, sceMeCore_driver]
+exports:
+  - name: syslib
+    version: [0, 0]
+    attributes: 0x8000
+    variables:
+      - module_info: 0xf01d73a7
+      - module_sdk_version: 0x11b97506
+  - name: sceG729_driver
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 1
+    functions:
+      - sceG729_driver_13F1028A: 0x13f1028a
+      - sceG729_driver_17C11696: 0x17c11696
+      - sceG729_driver_3489D1F3: 0x3489d1f3
+      - sceG729_driver_55E14F75: 0x55e14f75
+      - sceG729_driver_5A409D1B: 0x5a409d1b
+      - sceG729_driver_74804D93: 0x74804d93
+      - sceG729_driver_890B86AE: 0x890b86ae
+      - sceG729_driver_8C87A2CA: 0x8c87a2ca
+      - sceG729_driver_94714D50: 0x94714d50
+      - sceG729_driver_AA1E5462: 0xaa1e5462
+      - sceG729_driver_CFCD367C: 0xcfcd367c
+      - sceG729_driver_DB7259D5: 0xdb7259d5
+  - name: sceG729
+    version: [0, 17]
+    attributes: 0x4001
+    functions:
+      - sceG729_driver_13F1028A: 0x13f1028a
+      - sceG729_driver_17C11696: 0x17c11696
+      - sceG729_driver_3489D1F3: 0x3489d1f3
+      - sceG729_driver_55E14F75: 0x55e14f75
+      - sceG729_driver_5A409D1B: 0x5a409d1b
+      - sceG729_driver_74804D93: 0x74804d93
+      - sceG729_driver_890B86AE: 0x890b86ae
+      - sceG729_driver_8C87A2CA: 0x8c87a2ca
+      - sceG729_driver_94714D50: 0x94714d50
+      - sceG729_driver_AA1E5462: 0xaa1e5462
+      - sceG729_driver_CFCD367C: 0xcfcd367c
+      - sceG729_driver_DB7259D5: 0xdb7259d5
+imports:
+  - name: sceMeCore_driver
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 7
+    functions:
+      - sceMeCore_driver_635397BB: 0x635397bb
+      - sceMeCore_driver_FA398D71: 0xfa398d71
+  - name: UtilsForKernel
+    version: [0, 17]
+    attributes: 0x0009
+    pad: 5
+    functions:
+      - sceKernelDcacheWritebackInvalidateRange: 0x34b9fa9e
+      - sceKernelDcacheInvalidateRangeForUser: 0xbfa98062
+  - name: InterruptManagerForKernel
+    version: [0, 17]
+    attributes: 0x0009
+    len: 6
+    pad: 6
+    functions:
+      - sceKernelCpuSuspendIntr: 0x092968f4
+      - sceKernelCpuResumeIntr: 0x5f10d406
+  - name: ThreadManForKernel
+    version: [0, 17]
+    attributes: 0x0001
+    len: 6
+    pad: 5
+    functions:
+      - sceKernelCreateFpl: 0xc07bb470
+      - sceKernelAllocateFpl: 0xd979e9bf
+      - sceKernelDeleteFpl: 0xed1410e0
+      - sceKernelFreeFpl: 0xf6414a71
+  - name: SysclibForKernel
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 3
+    functions:
+      - memcpy: 0xab7592ff

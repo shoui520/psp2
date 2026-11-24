@@ -1,5 +1,5 @@
 TARGET := registry
-SRCS := registry.c scetables.S
+SRCS := registry.c
 EXTRA_CFLAGS := -O2 -fno-reorder-blocks -fno-shrink-wrap
 
 include ../../build.mak

@@ -1,4 +1,4 @@
 TARGET := usbpspcm
-SRCS   := usbpspcm.c scetables.S
+SRCS   := usbpspcm.c
 
 include ../../build.mak

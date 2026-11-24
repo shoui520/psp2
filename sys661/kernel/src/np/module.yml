@@ -1,0 +1,98 @@
+name: sceNp
+attributes: 0x0006
+version: [1, 3]
+sdk_version: 0x06060110
+stub_order: [Kernel_Library, ThreadManForUser, sceNpCore, sceReg, sceRtc]
+exports:
+  - name: syslib
+    version: [0, 0]
+    attributes: 0x8000
+    variables:
+      - module_info: 0xf01d73a7
+      - module_sdk_version: 0x11b97506
+  - name: sceNp
+    version: [0, 17]
+    attributes: 0x0001
+    len: 5
+    pad: 2
+    extra_words: [0x00020000]
+    bucket_words: [0x00020000, 0x00060004, 0x000a0007, 0x0012000b, 0x00140013, 0x00170016, 0x0020001b, 0x00230020]
+    functions:
+      - sceNp_02CA8CAA: 0x02ca8caa
+      - sceNp_0B8BEE48: 0x0b8bee48
+      - sceNp_1916432C: 0x1916432c
+      - sceNp_1D60AE4B: 0x1d60ae4b
+      - sceNp_2D8E93D2: 0x2d8e93d2
+      - sceNp_2E4769C3: 0x2e4769c3
+      - sceNp_37E1E274: 0x37e1e274
+      - sceNp_4556A257: 0x4556a257
+      - sceNp_4B09907A: 0x4b09907a
+      - sceNp_4B5C71C8: 0x4b5c71c8
+      - sceNp_5FA879D8: 0x5fa879d8
+      - sceNp_60A4791A: 0x60a4791a
+      - sceNp_633B5F71: 0x633b5f71
+      - sceNp_64F72B22: 0x64f72b22
+      - sceNp_66B86876: 0x66b86876
+      - sceNp_67BCF9E3: 0x67bcf9e3
+      - sceNp_6999EDC4: 0x6999edc4
+      - sceNp_6CBB0614: 0x6cbb0614
+      - sceNp_7E0864DF: 0x7e0864df
+      - sceNp_857B47D3: 0x857b47d3
+      - sceNp_9A264EF2: 0x9a264ef2
+      - sceNp_9B87B19B: 0x9b87b19b
+      - sceNp_A0BE3C4B: 0xa0be3c4b
+      - sceNp_B2BFADB2: 0xb2bfadb2
+      - sceNp_B4063F7A: 0xb4063f7a
+      - sceNp_B819A0C8: 0xb819a0c8
+      - sceNp_BB069A87: 0xbb069a87
+      - sceNp_C0B3616C: 0xc0b3616c
+      - sceNp_C250A650: 0xc250a650
+      - sceNp_C48F2847: 0xc48f2847
+      - sceNp_CDCC21D3: 0xcdcc21d3
+      - sceNp_CF83CC3B: 0xcf83cc3b
+      - sceNp_E24DA399: 0xe24da399
+      - sceNp_E41288E7: 0xe41288e7
+      - sceNp_E90DFBC4: 0xe90dfbc4
+      - sceNp_F2B95034: 0xf2b95034
+imports:
+  - name: sceRtc
+    version: [0, 17]
+    attributes: 0x4001
+    pad: 5
+    functions:
+      - sceRtcGetCurrentTick: 0x3f7ad767
+  - name: sceReg
+    version: [0, 17]
+    attributes: 0x4001
+    pad: 5
+    functions:
+      - sceRegCloseCategory: 0x0cae832b
+      - sceRegOpenCategory: 0x1d8a762e
+      - sceRegGetKeyValue: 0x28a8e98a
+      - sceRegOpenRegistry: 0x92e41280
+      - sceRegGetKeyInfo: 0xd4475aa8
+      - sceRegCloseRegistry: 0xfa8a5739
+  - name: sceNpCore
+    version: [0, 17]
+    attributes: 0x4009
+    pad: 6
+    functions:
+      - sceNpCore_52440ABF: 0x52440abf
+      - sceNpCore_57E15796: 0x57e15796
+  - name: Kernel_Library
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 5
+    functions:
+      - _sceKernelCheckThreadStack: 0xd13bde95
+  - name: ThreadManForUser
+    version: [0, 17]
+    attributes: 0x4001
+    pad: 3
+    functions:
+      - sceKernelDeleteMutex: 0xf8170fbe
+      - sceKernelGetSystemTimeLow: 0x369ed59d
+      - sceKernelUnlockMutex: 0x6b30100f
+      - sceKernelGetSystemTimeWide: 0x82bc5777
+      - sceKernelLockMutex: 0xb011b11f
+      - sceKernelCreateMutex: 0xb7d098c6

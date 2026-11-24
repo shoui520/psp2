@@ -1,0 +1,50 @@
+name: sceAudiocodec_Driver
+attributes: 0x1006
+version: [1, 3]
+sdk_version: 0x06060110
+stub_order: [UtilsForKernel, sceMeAudio_driver, sceMeMemory_driver]
+exports:
+  - name: syslib
+    version: [0, 0]
+    attributes: 0x8000
+    variables:
+      - module_info: 0xf01d73a7
+      - module_sdk_version: 0x11b97506
+  - name: sceAudiocodec
+    version: [0, 17]
+    attributes: 0x4001
+    pad: 2
+    functions:
+      - sceAudiocodecReleaseEDRAM: 0x29681260
+      - sceAudiocodecGetEDRAM: 0x3a20a200
+      - sceAudiocodec_3DD7EE1A: 0x3dd7ee1a
+      - sceAudiocodecAlcExtendParameter: 0x59176a0f
+      - sceAudiocodecInit: 0x5b37eb1d
+      - sceAudiocodecDecode: 0x70a703f8
+      - sceAudiocodecGetInfo: 0x8aca11d5
+      - sceAudiocodecCheckNeedMem: 0x9d3f790c
+imports:
+  - name: sceMeMemory_driver
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 5
+    functions:
+      - sceMeFree: 0x6ed69327
+      - sceMeMalloc: 0x92d3baa1
+  - name: sceMeAudio_driver
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 6
+    functions:
+      - sceMeAudio_driver_6AD33F60: 0x6ad33f60
+      - sceMeAudio_driver_81956A0B: 0x81956a0b
+      - sceMeAudio_driver_9A9E21EE: 0x9a9e21ee
+      - sceMeAudio_driver_B57F033A: 0xb57f033a
+      - sceMeAudio_driver_C300D466: 0xc300d466
+  - name: UtilsForKernel
+    version: [0, 17]
+    attributes: 0x0009
+    pad: 1
+    functions:
+      - sceKernelDcacheWritebackInvalidateRange: 0x34b9fa9e
+      - sceKernelDcacheWritebackRange: 0x3ee30821

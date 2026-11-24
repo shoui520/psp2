@@ -1,4 +1,4 @@
 TARGET := ifhandle
-SRCS := ifhandle.c scetables.S
+SRCS := ifhandle.c
 
 include ../../build.mak

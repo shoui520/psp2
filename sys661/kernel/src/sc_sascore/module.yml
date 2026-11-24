@@ -1,0 +1,115 @@
+name: sceSAScore
+attributes: 0x1006
+version: [1, 10]
+sdk_version: 0x06060110
+stub_order: [SysMemForKernel, ThreadManForKernel, UtilsForKernel, sceMeCore_driver, sceMeMemory_driver]
+exports:
+  - name: syslib
+    version: [0, 0]
+    attributes: 0x8000
+    functions:
+      - module_start: 0xd632acdb
+      - module_stop: 0xcee8593c
+    variables:
+      - module_info: 0xf01d73a7
+      - module_sdk_version: 0x11b97506
+  - name: sceSasCore_driver
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 2
+    functions:
+      - module_start: 0xb0f9f98f
+      - module_stop: 0xe143a1ea
+  - name: sceSasCore
+    version: [0, 17]
+    attributes: 0x4001
+    len: 5
+    pad: 1
+    extra_words: [0x00020000]
+    bucket_words: [0x00020000, 0x00040002, 0x00080005, 0x000b000a, 0x000f000f, 0x00150011, 0x00180017, 0x001e001b]
+    functions:
+      - sceSasCore_019B25EB: 0x019b25eb
+      - sceSasCore_07F58C24: 0x07f58c24
+      - sceSasCore_267A6DD2: 0x267a6dd2
+      - sceSasCore_2C8E6AB3: 0x2c8e6ab3
+      - sceSasCore_33D4AB37: 0x33d4ab37
+      - sceSasCore_42778A9F: 0x42778a9f
+      - sceSasCore_440CA7D8: 0x440ca7d8
+      - sceSasCore_4AA9EAD6: 0x4aa9ead6
+      - sceSasCore_50A14DFC: 0x50a14dfc
+      - sceSasCore_5F9529F6: 0x5f9529f6
+      - sceSasCore_68A46B95: 0x68a46b95
+      - sceSasCore_7497EA85: 0x7497ea85
+      - sceSasCore_74AE582A: 0x74ae582a
+      - sceSasCore_76F01ACA: 0x76f01aca
+      - sceSasCore_787D04D5: 0x787d04d5
+      - sceSasCore_99944089: 0x99944089
+      - sceSasCore_9EC3676A: 0x9ec3676a
+      - sceSasCore_A0CF2FA4: 0xa0cf2fa4
+      - sceSasCore_A232CBE6: 0xa232cbe6
+      - sceSasCore_A3589D81: 0xa3589d81
+      - sceSasCore_AD84D37F: 0xad84d37f
+      - sceSasCore_B7660A23: 0xb7660a23
+      - sceSasCore_BD11B7C2: 0xbd11b7c2
+      - sceSasCore_CBCD4F79: 0xcbcd4f79
+      - sceSasCore_D1E0A01E: 0xd1e0a01e
+      - sceSasCore_D5A229C9: 0xd5a229c9
+      - sceSasCore_D5EBBBCD: 0xd5ebbbcd
+      - sceSasCore_E175EF66: 0xe175ef66
+      - sceSasCore_E1CD9561: 0xe1cd9561
+      - sceSasCore_E855BF76: 0xe855bf76
+      - sceSasCore_F6107F00: 0xf6107f00
+      - sceSasCore_F983B186: 0xf983b186
+  - name: sceP3da_driver
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 1
+    functions:
+      - sceP3da_driver_374500A5: 0x374500a5
+      - sceP3da_driver_43F756A2: 0x43f756a2
+  - name: sceP3da
+    version: [0, 17]
+    attributes: 0x4001
+    functions:
+      - sceP3da_013016F3: 0x013016f3
+      - sceP3da_driver_374500A5: 0x374500a5
+      - sceP3da_driver_43F756A2: 0x43f756a2
+imports:
+  - name: sceMeCore_driver
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 7
+    functions:
+      - sceMeCore_driver_635397BB: 0x635397bb
+      - sceMeCore_driver_FA398D71: 0xfa398d71
+  - name: sceMeMemory_driver
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 5
+    functions:
+      - sceMeFree: 0x6ed69327
+      - sceMeCalloc: 0xc4eda9f4
+  - name: UtilsForKernel
+    version: [0, 17]
+    attributes: 0x0009
+    pad: 5
+    functions:
+      - sceKernelDcacheWritebackInvalidateRange: 0x34b9fa9e
+      - sceKernelDcacheWritebackRange: 0x3ee30821
+      - sceKernelDcacheWritebackInvalidateAll: 0xb435dec5
+      - sceKernelDcacheInvalidateRangeForUser: 0xbfa98062
+  - name: ThreadManForKernel
+    version: [0, 17]
+    attributes: 0x0001
+    len: 6
+    pad: 5
+    functions:
+      - sceKernelDeleteSema: 0x28b6489c
+      - sceKernelSignalSema: 0x3f53e640
+      - sceKernelWaitSema: 0x4e3a1105
+      - sceKernelCreateSema: 0xd6da4ba1
+  - name: SysMemForKernel
+    version: [0, 17]
+    attributes: 0x0001
+    functions:
+      - sceKernelGetCompiledSdkVersion: 0xb4f00cb5

@@ -1,4 +1,4 @@
 TARGET  := impose_kermit
-SRCS    := impose_kermit.c scetables.S
+SRCS    := impose_kermit.c
 
 include ../../build.mak

@@ -1,0 +1,96 @@
+name: sceDNASCore_lib
+attributes: 0x1006
+version: [1, 1]
+sdk_version: 0x06060002
+stub_order: [ModuleMgrForKernel, SysMemForKernel, SysclibForKernel, sceChkreg_driver, sceMcctrl, sceRtc_driver]
+exports:
+  - name: syslib
+    version: [0, 0]
+    attributes: 0x8000
+    variables:
+      - module_info: 0xf01d73a7
+      - module_sdk_version: 0x11b97506
+  - name: sceDNASCore_lib
+    version: [0, 17]
+    attributes: 0x4009
+    len: 5
+    extra_words: [0x00020000]
+    bucket_words: [0x00000000, 0x00040001, 0x00050004, 0x00050005, 0x00080005, 0x00080008, 0x000d000c, 0x000f000f]
+    functions:
+      - sceDNASCore_lib_15096ECD: 0x15096ecd
+      - sceDNASCore_lib_2370130E: 0x2370130e
+      - sceDNASCore_lib_26E1E2BD: 0x26e1e2bd
+      - sceDNASCore_lib_2B6C67EA: 0x2b6c67ea
+      - sceDNASCore_lib_4108128B: 0x4108128b
+      - sceDNASCore_lib_80CEC43A: 0x80cec43a
+      - sceDNASCore_lib_822357BB: 0x822357bb
+      - sceDNASCore_lib_8309549E: 0x8309549e
+      - sceDNASCore_lib_B6C76A14: 0xb6c76a14
+      - sceDNASCore_lib_BA0A32CA: 0xba0a32ca
+      - sceDNASCore_lib_BA0D27F8: 0xba0d27f8
+      - sceDNASCore_lib_BF6A7475: 0xbf6a7475
+      - sceDNASCore_lib_C54657B7: 0xc54657b7
+      - sceDNASCore_lib_D5E80301: 0xd5e80301
+      - sceDNASCore_lib_DA5939B4: 0xda5939b4
+      - sceDNASCore_lib_F0EB4367: 0xf0eb4367
+      - sceDNASCore_lib_F479F616: 0xf479f616
+      - sceDNASCore_lib_FA571A75: 0xfa571a75
+imports:
+  - name: SysclibForKernel
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 7
+    functions:
+      - strstr: 0x0d188658
+      - memset: 0x10f3bb61
+      - look_ctype_table: 0x32c767f2
+      - strtol: 0x47dd934d
+      - strlen: 0x52df196c
+      - sprintf: 0x7661e728
+      - strncmp: 0x7ab35214
+      - memcmp: 0x81d0d1f7
+      - memcpy: 0xab7592ff
+      - strchr: 0xb1dc2ae8
+      - strncpy: 0xb49a7697
+  - name: sceChkreg_driver
+    version: [0, 17]
+    attributes: 0x0009
+    pad: 7
+    functions:
+      - sceChkregGetPsCode: 0x59f8491d
+  - name: SysMemForKernel
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 4
+    functions:
+      - sceKernelSetDNAS: 0x982a4779
+      - sceKernelGetDNAS: 0xbfd53fb7
+      - sceKernelGetGameInfo: 0xef29061c
+  - name: ModuleMgrForKernel
+    version: [0, 17]
+    attributes: 0x0009
+    pad: 5
+    functions:
+      - sceKernelUnloadModule: 0x387e3ca9
+      - sceKernelStartModule: 0x3ff74df1
+      - sceKernelLoadModuleForKernel: 0x939e4270
+      - sceKernelSearchModuleByName: 0xd86dd11b
+      - sceKernelStopModule: 0xe5d6087b
+  - name: sceRtc_driver
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 6
+    functions:
+      - sceRtc_driver_66054C2A: 0x66054c2a
+      - sceRtcGetTick: 0x6ff40acc
+  - name: sceMcctrl
+    version: [0, 17]
+    attributes: 0x0009
+    pad: 2
+    functions:
+      - sceMcctrl_3EF531DB: 0x3ef531db
+      - sceMcctrl_877CD3A5: 0x877cd3a5
+      - sceMcctrl_1EDFD6BB: 0x1edfd6bb
+      - sceMcctrl_7CAC25B2: 0x7cac25b2
+      - sceMcctrl_9618EE57: 0x9618ee57
+      - sceMcctrl_61550814: 0x61550814

@@ -1,4 +1,4 @@
 TARGET := usbmic
-SRCS   := usbmic.c scetables.S
+SRCS   := usbmic.c
 
 include ../../build.mak

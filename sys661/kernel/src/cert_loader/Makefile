@@ -1,4 +1,4 @@
 TARGET := cert_loader
-SRCS   := cert_loader.c scetables.S
+SRCS   := cert_loader.c
 
 include ../../build.mak

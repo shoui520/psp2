@@ -1,0 +1,61 @@
+name: sceIdStorage_Service
+attributes: 0x1007
+version: [1, 4]
+sdk_version: 0x06060110
+exports:
+  - name: syslib
+    version: [0, 0]
+    attributes: 0x8000
+    functions:
+      - module_start: 0xd632acdb
+      - module_reboot_before: 0x2f064fa6
+    variables:
+      - module_info: 0xf01d73a7
+      - module_sdk_version: 0x11b97506
+  - name: sceIdStorage_driver
+    version: [0, 17]
+    attributes: 0x0001
+    len: 5
+    extra_words: [0x00020000]
+    bucket_words: [0x00010000, 0x00050002, 0x00080008, 0x000a0008, 0x000a000a, 0x000d000c, 0x000e000e, 0x0010000e]
+    functions:
+      - sceIdStorageCreateLeaf: 0x08a471a6
+      - sceIdStorageWriteLeaf: 0x1fa4d135
+      - sceIdStorageDeleteLeaf: 0x2c97ab36
+      - sceIdStorageEnd: 0x2ce0be69
+      - sceIdStorageIsReadOnly: 0x2d633688
+      - sceIdStorageEnumId: 0x31e08afb
+      - sceIdStorageGetFreeLeaves: 0x37833cb8
+      - sceIdStorageFlush: 0x3ad32523
+      - sceIdStorageUpdate: 0x683aac10
+      - sceIdStorageLookup: 0x6fe062d1
+      - sceIdStorageFormat: 0x958089db
+      - sceIdStorageCreateAtomicLeaves: 0x99accb71
+      - sceIdStorageInit: 0xab129d20
+      - sceIdStorageIsDirty: 0xb9069bad
+      - sceIdStorageReadLeaf: 0xeb00c509
+      - sceIdStorageGetLeafSize: 0xeb830733
+      - sceIdStorageUnformat: 0xf4bcb3ee
+      - sceIdStorageIsFormatted: 0xfefa40c2
+imports:
+  - name: KDebugForKernel
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 4
+    functions:
+      - Kprintf: 0x84f370bc
+  - name: ThreadManForKernel
+    version: [0, 17]
+    attributes: 0x0001
+    len: 6
+    pad: 5
+    functions:
+      - sceKernelUnlockMutex: 0x6b30100f
+      - sceKernelLockMutex: 0xb011b11f
+      - sceKernelDelayThread: 0xceadeb47
+  - name: sceKermitPeripheral_driver
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 1
+    functions:
+      - sceKermitPeripheral_driver_C6F8B4E1: 0xc6f8b4e1

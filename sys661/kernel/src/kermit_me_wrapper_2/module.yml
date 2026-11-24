@@ -1,0 +1,210 @@
+name: sceMeCodecWrapper
+attributes: 0x1007
+version: [1, 9]
+sdk_version: 0x06060110
+stub_order: [InterruptManagerForKernel, IoFileMgrForKernel, KDebugForKernel, SysMemForKernel, SysclibForKernel, ThreadManForKernel, UtilsForKernel, sceDdr_driver, sceKermitMemory_driver, sceKermit_driver, sceSysEventForKernel, sceSysreg_driver]
+exports:
+  - name: syslib
+    version: [0, 0]
+    attributes: 0x8000
+    functions:
+      - module_reboot_phase: 0xadf12745
+      - sceMeWrapperInit: 0xd632acdb
+    variables:
+      - module_info: 0xf01d73a7
+      - module_sdk_version: 0x11b97506
+  - name: sceMeWrapper_driver
+    version: [0, 17]
+    attributes: 0x0001
+    len: 5
+    extra_words: [0x00020000]
+    bucket_words: [0x00010000, 0x00040002, 0x00050004, 0x000a0006, 0x000d000a, 0x00100010, 0x00140011, 0x00160014]
+    functions:
+      - sceMePowerSelectAvcClock: 0x0defa6a5
+      - sceMePower_driver_1862B784: 0x1862b784
+      - sceMeVideo_driver_21521BE5: 0x21521be5
+      - sceMeWrapperInit: 0x24317cd0
+      - sceMeVideo_driver_4D78330C: 0x4d78330c
+      - sceMeWrapperEnd: 0x5f6bf6df
+      - sceMeCore_driver_635397BB: 0x635397bb
+      - sceMeAudio_driver_6AD33F60: 0x6ad33f60
+      - sceMeVideo_driver_6D68B223: 0x6d68b223
+      - sceMeFree: 0x6ed69327
+      - sceMeAudio_driver_81956A0B: 0x81956a0b
+      - sceMeVideo_driver_8768915D: 0x8768915d
+      - sceMeVideo_driver_8DD56014: 0x8dd56014
+      - sceMeMalloc: 0x92d3baa1
+      - sceMePower_driver_984E2608: 0x984e2608
+      - sceMeAudio_driver_9A9E21EE: 0x9a9e21ee
+      - sceMePowerControlAvcPower: 0xb37562aa
+      - sceMeAudio_driver_C300D466: 0xc300d466
+      - sceMeVideo_driver_C441994C: 0xc441994c
+      - sceMeCalloc: 0xc4eda9f4
+      - sceMeVideo_driver_E8CD3C75: 0xe8cd3c75
+      - sceMePower_driver_E9F69ACF: 0xe9f69acf
+      - sceMeCore_driver_FA398D71: 0xfa398d71
+  - name: sceMeVideo_driver
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 2
+    functions:
+      - sceMeVideo_driver_21521BE5: 0x21521be5
+      - sceMeVideo_driver_4D78330C: 0x4d78330c
+      - sceMeVideo_driver_6D68B223: 0x6d68b223
+      - sceMeVideo_driver_8768915D: 0x8768915d
+      - sceMeVideo_driver_8DD56014: 0x8dd56014
+      - sceMeVideo_driver_C441994C: 0xc441994c
+      - sceMeVideo_driver_E8CD3C75: 0xe8cd3c75
+  - name: sceMeAudio_driver
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 2
+    functions:
+      - sceMeAudio_driver_6AD33F60: 0x6ad33f60
+      - sceMeAudio_driver_81956A0B: 0x81956a0b
+      - sceMeAudio_driver_9A9E21EE: 0x9a9e21ee
+      - sceMeAudio_driver_B57F033A: 0xb57f033a
+      - sceMeAudio_driver_C300D466: 0xc300d466
+  - name: sceMeMemory_driver
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 1
+    functions:
+      - sceMeFree: 0x6ed69327
+      - sceMeMalloc: 0x92d3baa1
+      - sceMeCalloc: 0xc4eda9f4
+  - name: sceMeCore_driver
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 3
+    functions:
+      - sceMeCore_driver_4CD5B5BF: 0x4cd5b5bf
+      - sceMeBootStart: 0x5dff5c50
+      - sceMeCore_driver_635397BB: 0x635397bb
+      - sceMeCore_driver_905A7500: 0x905a7500
+      - sceMeCore_driver_9EB2943B: 0x9eb2943b
+      - sceMeCore_driver_FA398D71: 0xfa398d71
+    variables:
+      - sceMeCore_driver_var_1B960AB4: 0x1b960ab4
+      - sceMeCore_driver_var_385A4CC6: 0x385a4cc6
+      - sceMeCore_driver_var_61FF4837: 0x61ff4837
+      - sceMeCore_driver_var_AB354CA1: 0xab354ca1
+  - name: sceMePower_driver
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 2
+    functions:
+      - sceMePowerSelectAvcClock: 0x0defa6a5
+      - sceMePower_driver_1862B784: 0x1862b784
+      - sceMePower_driver_984E2608: 0x984e2608
+      - sceMePowerControlAvcPower: 0xb37562aa
+      - sceMePower_driver_E9F69ACF: 0xe9f69acf
+imports:
+  - name: sceSysreg_driver
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 7
+    functions:
+      - sceSysregAvcResetEnable: 0x0ae8e549
+      - sceSysregVmeResetEnable: 0x1a27b224
+      - sceSysregMeBusClockEnable: 0x38527743
+      - sceSysregMeResetEnable: 0x457feba9
+      - sceSysregMeResetDisable: 0x48f1c4ad
+      - sceSysregAvcResetDisable: 0x55ff02e9
+      - sceSysregVmeResetDisable: 0xb73d3619
+      - sceSysregGetTachyonVersion: 0xe2a5d1ee
+  - name: sceDmacplus_driver
+    version: [0, 17]
+    attributes: 0x0001
+    len: 6
+    pad: 5
+    variables:
+      - sceDmacplus_driver_var_AA2E7E54: 0xaa2e7e54
+      - sceDmacplus_driver_var_C10B947A: 0xc10b947a
+  - name: sceKermit_driver
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 7
+    functions:
+      - sceKermit_driver_36666181: 0x36666181
+  - name: sceKermitMemory_driver
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 5
+    functions:
+      - sceKermitMemory_driver_80E1240A: 0x80e1240a
+      - sceKermitMemory_driver_90B662D0: 0x90b662d0
+  - name: UtilsForKernel
+    version: [0, 17]
+    attributes: 0x0009
+    pad: 5
+    functions:
+      - sceKernelDcacheWritebackInvalidateRange: 0x34b9fa9e
+      - UtilsForKernel_6C6887EE: 0x6c6887ee
+      - sceKernelIcacheInvalidateAll: 0x920f104a
+      - sceKernelDcacheWritebackInvalidateAll: 0xb435dec5
+      - sceKernelDcacheInvalidateRange: 0xbfa98062
+  - name: IoFileMgrForKernel
+    version: [0, 17]
+    attributes: 0x0001
+    len: 6
+    pad: 5
+    functions:
+      - sceIoOpen: 0x109f50bc
+      - sceIoLseek: 0x27eb27b8
+      - sceIoRead: 0x6a638d83
+      - sceIoClose: 0x810c4bc3
+  - name: sceSysEventForKernel
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 7
+    functions:
+      - sceKernelRegisterSysEventHandler: 0xcd9e4bb5
+      - sceKernelUnregisterSysEventHandler: 0xd7d3fdcd
+  - name: SysclibForKernel
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 7
+    functions:
+      - memcmp: 0x81d0d1f7
+      - memcpy: 0xab7592ff
+  - name: SysMemForKernel
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 4
+    functions:
+      - sceKernelMemset32: 0x22a114dc
+      - sceKernelMemset: 0x8ae776af
+      - sceKernelGetCompiledSdkVersion: 0xb4f00cb5
+  - name: InterruptManagerForKernel
+    version: [0, 17]
+    attributes: 0x0009
+    len: 6
+    pad: 6
+    functions:
+      - sceKernelCpuSuspendIntr: 0x092968f4
+      - sceKernelCpuResumeIntr: 0x5f10d406
+  - name: ThreadManForKernel
+    version: [0, 17]
+    attributes: 0x0001
+    len: 6
+    pad: 5
+    functions:
+      - sceKernelTryLockMutex: 0x0ddcd2c9
+      - sceKernelUnlockMutex: 0x6b30100f
+      - sceKernelGetSystemTimeWide: 0x82bc5777
+      - sceKernelLockMutex: 0xb011b11f
+      - sceKernelCreateMutex: 0xb7d098c6
+      - sceKernelDelayThread: 0xceadeb47
+  - name: KDebugForKernel
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 4
+    functions:
+      - Kprintf: 0x84f370bc
+  - name: sceDdr_driver
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 2
+    functions:
+      - sceDdrFlush: 0x87d86769

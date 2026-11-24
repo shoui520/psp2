@@ -1,4 +1,4 @@
 TARGET := usbacc
-SRCS   := usbacc.c scetables.S
+SRCS   := usbacc.c
 
 include ../../build.mak

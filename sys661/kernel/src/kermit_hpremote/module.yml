@@ -1,0 +1,99 @@
+name: sceHP_Remote_Driver
+attributes: 0x1007
+version: [1, 6]
+sdk_version: 0x06060110
+stub_order: [InterruptManagerForKernel, SysMemForKernel, ThreadManForKernel, sceSysEventForKernel]
+exports:
+  - name: syslib
+    version: [0, 0]
+    attributes: 0x8000
+    functions:
+      - module_start: 0xd632acdb
+      - module_reboot_before: 0x2f064fa6
+    variables:
+      - module_info: 0xf01d73a7
+      - module_sdk_version: 0x11b97506
+  - name: sceHprm
+    version: [0, 17]
+    attributes: 0x4001
+    functions:
+      - sceHprmPeekCurrentKey: 0x1910b327
+      - sceHprmIsRemoteExist: 0x208db1bd
+      - sceHprmIsMicrophoneExist: 0x219c58f1
+      - sceHprmPeekLatch: 0x2bcec83e
+      - sceHprm_3953DE6B: 0x3953de6b
+      - sceHprm_396FD885: 0x396fd885
+      - sceHprmReadLatch: 0x40d2f9f0
+      - sceHprm_444ED0B7: 0x444ed0b7
+      - sceHprm_71B5FB67: 0x71b5fb67
+      - sceHprmIsHeadphoneExist: 0x7e69eda4
+      - sceHprm_C7154136: 0xc7154136
+      - sceHprm_444ED0B7: 0xfd7de6cd
+  - name: sceHprm_driver
+    version: [0, 17]
+    attributes: 0x0001
+    len: 5
+    pad: 1
+    extra_words: [0x00020000]
+    bucket_words: [0x00020000, 0x000a0006, 0x000c000c, 0x000f000e, 0x0011000f, 0x00140012, 0x00170016, 0x001e001b]
+    functions:
+      - sceHprm_driver_06C478D4: 0x06c478d4
+      - sceHprm_driver_0B83352B: 0x0b83352b
+      - sceHprmPeekCurrentKey: 0x1910b327
+      - sceHprm_driver_1C3525DD: 0x1c3525dd
+      - sceHprm_driver_1C5BC5A0: 0x1c5bc5a0
+      - sceHprmPeekLatch: 0x1f64b227
+      - sceHprm_396FD885: 0x2903130a
+      - sceHprm_driver_2C7B8B05: 0x2c7b8b05
+      - sceHprm_driver_2E1A7B7C: 0x2e1a7b7c
+      - sceHprm_driver_2F17A548: 0x2f17a548
+      - sceHprm_driver_301063CC: 0x301063cc
+      - sceHprm_71B5FB67: 0x370ddc12
+      - sceHprm_driver_526BB7F4: 0x526bb7f4
+      - sceHprm_driver_588845DA: 0x588845da
+      - sceHprm_3953DE6B: 0x602d5955
+      - sceHprm_driver_8AEC8EE9: 0x8aec8ee9
+      - sceHprm_driver_8C728BB4: 0x8c728bb4
+      - sceHprm_driver_9BDE174B: 0x9bde174b
+      - sceHprm_driver_A0B1A19B: 0xa0b1a19b
+      - sceHprmIsMicrophoneExist: 0xad158331
+      - sceHprm_driver_B2BEADB8: 0xb2beadb8
+      - sceHprm_driver_B6895C1C: 0xb6895c1c
+      - sceHprm_driver_C00DE13F: 0xc00de13f
+      - sceHprm_driver_D3F17366: 0xd3f17366
+      - sceHprm_driver_DC895B2B: 0xdc895b2b
+      - sceHprm_C7154136: 0xdfc57c88
+      - sceHprm_driver_DFE72E99: 0xdfe72e99
+      - sceHprmReadLatch: 0xe9b776be
+      - sceHprm_444ED0B7: 0xeb0cfccc
+      - sceHprmIsRemoteExist: 0xefcfd0c5
+      - sceHprmIsHeadphoneExist: 0xfa4a25a7
+imports:
+  - name: SysMemForKernel
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 4
+    functions:
+      - sceKernelGetUIDcontrolBlock: 0xc90b0992
+  - name: sceSysEventForKernel
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 7
+    functions:
+      - sceKernelRegisterSysEventHandler: 0xcd9e4bb5
+      - sceKernelUnregisterSysEventHandler: 0xd7d3fdcd
+  - name: InterruptManagerForKernel
+    version: [0, 17]
+    attributes: 0x0009
+    len: 6
+    pad: 6
+    functions:
+      - sceKernelCpuSuspendIntr: 0x092968f4
+      - sceKernelCpuResumeIntr: 0x5f10d406
+  - name: ThreadManForKernel
+    version: [0, 17]
+    attributes: 0x0001
+    len: 6
+    pad: 1
+    functions:
+      - sceKernelGetThreadmanIdType: 0x57cf62dd

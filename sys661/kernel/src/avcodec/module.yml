@@ -1,0 +1,204 @@
+name: sceAvcodec_wrapper
+attributes: 0x1006
+version: [1, 2]
+sdk_version: 0x06060110
+stub_order: [KDebugForKernel, SysMemForKernel, ThreadManForKernel, UtilsForKernel, sceDmacplus_driver, sceMeAudio_driver, sceMeCore_driver, sceMeMemory_driver, sceMePower_driver, sceMeVideo_driver]
+exports:
+  - name: syslib
+    version: [0, 0]
+    attributes: 0x8000
+    functions:
+      - sceAvcodecStartEntry: 0xd632acdb
+      - sceAvcodecEndEntry: 0xcee8593c
+    variables:
+      - module_info: 0xf01d73a7
+      - module_sdk_version: 0x11b97506
+  - name: sceAvcodec_driver
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 2
+    functions:
+      - sceAvcodecStartEntry: 0x4a0592c7
+      - sceAvcodecEndEntry: 0xc692c906
+  - name: sceVideocodec
+    version: [0, 17]
+    attributes: 0x4001
+    pad: 2
+    functions:
+      - sceVideocodecInit: 0x17099f0a
+      - sceVideocodecGetFrameCrop: 0x17cf7d2c
+      - sceVideocodecGetVersion: 0x26927d19
+      - sceVideocodecGetEDRAM: 0x2d31f5b1
+      - sceVideocodecScanHeader: 0x2f385e7f
+      - sceVideocodecDelete: 0x307e6e1c
+      - sceVideocodecReleaseEDRAM: 0x4f160bf4
+      - sceVideocodecGetSEI: 0x627b7d42
+      - sceVideocodecSetMemory: 0x745a7b7a
+      - sceVideocodec_893B32B1: 0x893b32b1
+      - sceVideocodecStop: 0xa2f0564e
+      - sceVideocodecOpen: 0xc01ec829
+      - sceVideocodec_D95C24D5: 0xd95c24d5
+      - sceVideocodecDecode: 0xdba273fa
+  - name: sceAudiocodec
+    version: [0, 17]
+    attributes: 0x4001
+    pad: 2
+    functions:
+      - sceAudiocodecReleaseEDRAM: 0x29681260
+      - sceAudiocodecGetEDRAM: 0x3a20a200
+      - sceAudiocodec_3DD7EE1A: 0x3dd7ee1a
+      - sceAudiocodecAlcExtendParameter: 0x59176a0f
+      - sceAudiocodecInit: 0x5b37eb1d
+      - sceAudiocodecDecode: 0x70a703f8
+      - sceAudiocodecGetInfo: 0x8aca11d5
+      - sceAudiocodecCheckNeedMem: 0x9d3f790c
+  - name: sceMpegbase
+    version: [0, 17]
+    attributes: 0x4001
+    functions:
+      - sceMpegbase_0530BE4E: 0x0530be4e
+      - sceMpegbase_119D5DDA: 0x119d5dda
+      - sceMpegBaseCscAvcRange: 0x304882e1
+      - sceMpegbase_31007FF8: 0x31007ff8
+      - sceMpegBaseCscInit: 0x492b5e4b
+      - sceMpegBaseYCrCbCopy: 0x7ac0321a
+      - sceMpegBaseCscAvc: 0x91929a21
+      - sceMpegbase_AC9E717E: 0xac9e717e
+      - sceMpegBaseYCrCbCopyVme: 0xbe45c284
+      - sceMpegBasePESpacketCopy: 0xbea18f91
+      - sceMpegBaseCscVme: 0xce8eb837
+  - name: sceMpegbase_driver
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 1
+    functions:
+      - sceMpegbase_0530BE4E: 0x0530be4e
+      - sceMpegBaseCscAvcRange: 0x304882e1
+      - sceMpegBaseCscInit: 0x492b5e4b
+      - sceMpegBaseYCrCbCopy: 0x7ac0321a
+      - sceMpegBaseCscAvc: 0x91929a21
+      - sceMpegbase_AC9E717E: 0xac9e717e
+      - sceMpegBaseYCrCbCopyVme: 0xbe45c284
+      - sceMpegBasePESpacketCopy: 0xbea18f91
+      - sceMpegBaseCscVme: 0xce8eb837
+  - name: sceJpeg
+    version: [0, 17]
+    attributes: 0x4001
+    functions:
+      - sceJpegMJpegCsc: 0x04b5ae02
+      - sceJpegDecodeMJpeg: 0x04b93cef
+      - sceJpegDecodeMJpegYCbCrSuccessively: 0x227662d7
+      - sceJpegDeleteMJpeg: 0x48b602b7
+      - sceJpegDecodeMJpegSuccessively: 0x64b6f978
+      - sceJpegCsc: 0x67f0ed84
+      - sceJpegFinishMJpeg: 0x7d2f3d7f
+      - sceJpegGetOutputInfo: 0x8f2bb012
+      - sceJpegDecodeMJpegYCbCr: 0x91eed83c
+      - sceJpegCreateMJpeg: 0x9d47469c
+      - sceJpegMJpegCscWithColorOption: 0xa06a75c4
+      - sceJpegInitMJpeg: 0xac9e70e6
+imports:
+  - name: sceMePower_driver
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 6
+    functions:
+      - sceMePower_driver_984E2608: 0x984e2608
+      - sceMePowerControlAvcPower: 0xb37562aa
+  - name: sceMeMemory_driver
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 5
+    functions:
+      - sceMeFree: 0x6ed69327
+      - sceMeMalloc: 0x92d3baa1
+      - sceMeCalloc: 0xc4eda9f4
+  - name: sceMeAudio_driver
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 6
+    functions:
+      - sceMeAudio_driver_6AD33F60: 0x6ad33f60
+      - sceMeAudio_driver_81956A0B: 0x81956a0b
+      - sceMeAudio_driver_9A9E21EE: 0x9a9e21ee
+      - sceMeAudio_driver_B57F033A: 0xb57f033a
+      - sceMeAudio_driver_C300D466: 0xc300d466
+  - name: sceMeVideo_driver
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 6
+    functions:
+      - sceMeVideo_driver_21521BE5: 0x21521be5
+      - sceMeVideo_driver_4D78330C: 0x4d78330c
+      - sceMeVideo_driver_6D68B223: 0x6d68b223
+      - sceMeVideo_driver_8768915D: 0x8768915d
+      - sceMeVideo_driver_8DD56014: 0x8dd56014
+      - sceMeVideo_driver_C441994C: 0xc441994c
+      - sceMeVideo_driver_E8CD3C75: 0xe8cd3c75
+  - name: sceMeCore_driver
+    version: [0, 17]
+    attributes: 0x0001
+    len: 6
+    pad: 7
+    functions:
+      - sceMeCore_driver_635397BB: 0x635397bb
+      - sceMeCore_driver_905A7500: 0x905a7500
+      - sceMeCore_driver_9EB2943B: 0x9eb2943b
+      - sceMeCore_driver_FA398D71: 0xfa398d71
+    variables:
+      - sceMeCore_driver_var_1B960AB4: 0x1b960ab4
+      - sceMeCore_driver_var_61FF4837: 0x61ff4837
+      - sceMeCore_driver_var_AB354CA1: 0xab354ca1
+  - name: sceDmacplus_driver
+    version: [0, 17]
+    attributes: 0x0001
+    len: 6
+    pad: 5
+    functions:
+      - sceDmacplus_driver_282CA0D7: 0x282ca0d7
+      - sceDmacplus_driver_47D400CB: 0x47d400cb
+      - sceDmacplus_driver_5FCF43BD: 0x5fcf43bd
+      - sceDmacplus_driver_6945F1D3: 0x6945f1d3
+      - sceDmacplus_driver_9C492B9B: 0x9c492b9b
+      - sceDmacplus_driver_B269EAC9: 0xb269eac9
+      - sceDmacplus_driver_BF0DB45E: 0xbf0db45e
+      - sceDmacplus_driver_D126494B: 0xd126494b
+      - sceDmacplus_driver_F652F09D: 0xf652f09d
+  - name: ThreadManForKernel
+    version: [0, 17]
+    attributes: 0x0001
+    len: 6
+    pad: 5
+    functions:
+      - sceKernelSetEventFlag: 0x1fb15a32
+      - sceKernelDeleteSema: 0x28b6489c
+      - sceKernelPollEventFlag: 0x30fd48f0
+      - sceKernelSignalSema: 0x3f53e640
+      - sceKernelWaitSema: 0x4e3a1105
+      - sceKernelCreateEventFlag: 0x55c20a00
+      - sceKernelUnlockMutex: 0x6b30100f
+      - sceKernelLockMutex: 0xb011b11f
+      - sceKernelCreateMutex: 0xb7d098c6
+      - sceKernelDelayThread: 0xceadeb47
+      - sceKernelCreateSema: 0xd6da4ba1
+      - sceKernelDeleteEventFlag: 0xef9e4c70
+      - sceKernelDeleteMutex: 0xf8170fbe
+  - name: UtilsForKernel
+    version: [0, 17]
+    attributes: 0x0009
+    pad: 5
+    functions:
+      - sceKernelDcacheWritebackInvalidateRange: 0x34b9fa9e
+      - sceKernelDcacheWritebackRange: 0x3ee30821
+      - sceKernelDcacheInvalidateRangeForUser: 0xbfa98062
+  - name: SysMemForKernel
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 4
+    functions:
+      - sceKernelGetCompiledSdkVersion: 0xb4f00cb5
+  - name: KDebugForKernel
+    version: [0, 17]
+    attributes: 0x0001
+    functions:
+      - Kprintf: 0x84f370bc

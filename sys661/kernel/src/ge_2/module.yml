@@ -1,0 +1,177 @@
+name: sceGE_Manager
+attributes: 0x1007
+version: [1, 11]
+sdk_version: 0x06060110
+stub_order: [InitForKernel, InterruptManagerForKernel, KDebugForKernel, SysMemForKernel, SysclibForKernel, ThreadManForKernel, UtilsForKernel, sceSysEventForKernel, sceSysreg_driver]
+exports:
+  - name: syslib
+    version: [0, 0]
+    attributes: 0x8000
+    functions:
+      - module_start: 0xd632acdb
+      - module_reboot_phase: 0xadf12745
+      - module_reboot_before: 0x2f064fa6
+    variables:
+      - module_info: 0xf01d73a7
+      - module_sdk_version: 0x11b97506
+  - name: sceGe_driver
+    version: [0, 17]
+    attributes: 0x0001
+    len: 5
+    pad: 3
+    extra_words: [0x00020000]
+    bucket_words: [0x00040000, 0x000a0008, 0x000d000a, 0x00120010, 0x00190017, 0x001f001c, 0x001f001f, 0x00220020]
+    functions:
+      - sceGePutBreakpoint: 0x05238809
+      - sceGeUnsetCallback: 0x0b986a8d
+      - sceGeEdramInit: 0x0f204a96
+      - sceGeSaveContext: 0x0ffb3afd
+      - sceGeRegisterLogHandler: 0x17133a54
+      - sceGeSetReg: 0x1b01e589
+      - sceGeDrawSync: 0x1f6b3c34
+      - sceGeGetReg: 0x1fdb4c62
+      - sceGeEdramSetRefreshParam: 0x2539d845
+      - sceGeEdramSetAddrTranslation: 0x2dfaaf99
+      - sceGeInit: 0x410ee294
+      - sceGeListSync: 0x4b9554eb
+      - sceGeSetCmd: 0x4f66bd43
+      - sceGeEdramGetHwSize: 0x547ec5f0
+      - sceGeEdramGetSize: 0x5d28a52b
+      - sceGeSetMtx: 0x5e7de870
+      - sceGeSetCallback: 0x6a600875
+      - sceGeGetBreakpoint: 0x6e9c829d
+      - sceGeBreak: 0x71f8db0e
+      - sceGeListEnQueueHead: 0x762fa6d0
+      - sceGeGetList: 0x7af3de00
+      - sceGeListUpdateStallAddr: 0x7cfd2733
+      - sceGeEdramGetAddr: 0x7d662df2
+      - sceGeContinue: 0x816d56ee
+      - sceGeGetListIdList: 0x82f1049f
+      - sceGeGetMtx: 0x95d0cdc2
+      - sceGeSetGeometryClock: 0x9691676d
+      - sceGeRestoreContext: 0x9b893efc
+      - sceGeListDeQueue: 0xa741076a
+      - sceGeGetStack: 0xa8a9ce31
+      - sceGeListEnQueue: 0xafe6c9ef
+      - sceGeEdramSetSize: 0xd8633888
+      - sceGeGetCmd: 0xe6ee2394
+      - sceGeEnd: 0xef76edf5
+  - name: sceGe_user
+    version: [0, 17]
+    attributes: 0x4001
+    len: 5
+    pad: 1
+    extra_words: [0x00020000]
+    bucket_words: [0x00030000, 0x00050005, 0x00070005, 0x00090009, 0x00090009, 0x000b0009, 0x000e000e, 0x0012000f]
+    functions:
+      - sceGeListSync: 0x03444eb4
+      - sceGeUnsetCallback: 0x05db22ce
+      - sceGeRestoreContext: 0x0bf608fb
+      - sceGeListEnQueueHead: 0x1c0d95a6
+      - sceGeEdramGetSize: 0x1f6752ad
+      - sceGeSaveContext: 0x438a385a
+      - sceGeContinue: 0x4c06e472
+      - sceGeGetMtx: 0x57c8945b
+      - sceGeListDeQueue: 0x5fb86ab0
+      - sceGeSetCallback: 0xa4fc06a4
+      - sceGeListEnQueue: 0xab49e76a
+      - sceGeDrawSync: 0xb287bd61
+      - sceGeBreak: 0xb448ec0d
+      - sceGeEdramSetAddrTranslation: 0xb77905ea
+      - sceGeGetCmd: 0xdc93cfef
+      - sceGeListUpdateStallAddr: 0xe0d68148
+      - sceGeEdramGetAddr: 0xe47e40e4
+      - sceGeGetStack: 0xe66cb92e
+imports:
+  - name: SysMemForKernel
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 4
+    functions:
+      - sceKernelGetCompiledSdkVersion: 0xb4f00cb5
+      - sceKernelGetAWeDramSaveAddr: 0xe0eb8cbe
+      - sceKernelGetGameInfo: 0xef29061c
+      - sceKernelGetUsersystemLibWork: 0xfe3cf2bc
+  - name: sceSysEventForKernel
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 7
+    functions:
+      - sceKernelRegisterSysEventHandler: 0xcd9e4bb5
+      - sceKernelUnregisterSysEventHandler: 0xd7d3fdcd
+  - name: KDebugForKernel
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 4
+    functions:
+      - Kprintf: 0x84f370bc
+      - sceKernelDeci2pReferOperations: 0xf339073c
+  - name: InterruptManagerForKernel
+    version: [0, 17]
+    attributes: 0x0009
+    len: 6
+    pad: 6
+    functions:
+      - sceKernelCpuSuspendIntr: 0x092968f4
+      - sceKernelCallSubIntrHandler: 0x0c5f7ae3
+      - sceKernelCpuResumeIntrWithSync: 0x3b84732d
+      - sceKernelDisableSubIntr: 0x4023e1a7
+      - sceKernelEnableIntr: 0x4d6e7305
+      - sceKernelRegisterIntrHandler: 0x58dd8978
+      - sceKernelCpuResumeIntr: 0x5f10d406
+      - sceKernelSetUserModeIntrHanlerAcceptable: 0xa1b88367
+      - sceKernelReleaseSubIntrHandler: 0xd61e6961
+      - sceKernelDisableIntr: 0xd774ba45
+      - sceKernelQuerySystemCall: 0xf153b371
+      - sceKernelReleaseIntrHandler: 0xf987b1f0
+      - sceKernelEnableSubIntr: 0xfb8e22ec
+      - sceKernelRegisterSubIntrHandler: 0xffa8b183
+  - name: SysclibForKernel
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 7
+    functions:
+      - memcpy: 0xab7592ff
+      - strcmp: 0xc0ab8932
+  - name: ThreadManForKernel
+    version: [0, 17]
+    attributes: 0x0001
+    len: 6
+    pad: 5
+    functions:
+      - sceKernelSetEventFlag: 0x1fb15a32
+      - sceKernelWaitEventFlag: 0x402fcf22
+      - sceKernelCreateEventFlag: 0x55c20a00
+      - sceKernelClearEventFlag: 0x812346e4
+      - sceKernelGetSystemTimeWide: 0x82bc5777
+      - sceKernelDeleteEventFlag: 0xef9e4c70
+  - name: UtilsForKernel
+    version: [0, 17]
+    attributes: 0x0009
+    pad: 5
+    functions:
+      - sceKernelDcacheWritebackInvalidateRange: 0x34b9fa9e
+      - sceKernelDcacheWritebackAll: 0x79d1c3fa
+      - sceKernelDcacheWritebackInvalidateAll: 0xb435dec5
+  - name: InitForKernel
+    version: [0, 17]
+    attributes: 0x0009
+    pad: 6
+    functions:
+      - sceKernelSetInitCallback: 0x9f9ae99c
+  - name: sceSysreg_driver
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 3
+    functions:
+      - sceSysregAwEdramBusClockDisable: 0x258782a3
+      - sceSysregAwRegBBusClockEnable: 0x44277d0d
+      - sceSysregAwRegABusClockEnable: 0x51571e8f
+      - sceSysregAwRegABusClockDisable: 0x52b74976
+      - sceSysregAwResetEnable: 0x66899952
+      - sceSysregAwRegBBusClockDisable: 0x7e1b1f28
+      - sceSysregSetMasterPriv: 0x9cd29d6c
+      - sceSysregAwResetDisable: 0xaeb8dbd1
+      - sceSysregSetAwEdramSize: 0xaec87dfd
+      - sceSysregAwEdramBusClockEnable: 0xc2e0e869
+      - sceSysregGetTachyonVersion: 0xe2a5d1ee

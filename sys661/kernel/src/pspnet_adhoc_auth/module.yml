@@ -1,0 +1,134 @@
+name: sceNetAdhocAuth_Service
+attributes: 0x1006
+version: [1, 3]
+sdk_version: 0x06060002
+stub_order: [InterruptManagerForKernel, SysMemForKernel, SysclibForKernel, ThreadManForKernel, sceMemab_driver, sceNetIfhandle_driver]
+exports:
+  - name: syslib
+    version: [0, 0]
+    attributes: 0x8000
+    functions:
+      - module_reboot_before: 0x2f064fa6
+      - module_start: 0xd632acdb
+      - module_stop: 0xcee8593c
+    variables:
+      - module_info: 0xf01d73a7
+      - module_sdk_version: 0x11b97506
+  - name: sceNetAdhocAuth_lib
+    version: [0, 17]
+    attributes: 0x4001
+    functions:
+      - sceNetAdhocAuth_lib_015A8A64: 0x015a8a64
+      - sceNetAdhocAuth_lib_1F9A90B8: 0x1f9a90b8
+      - sceNetAdhocAuth_lib_2AD8C677: 0x2ad8c677
+      - sceNetAdhocAuth_lib_2E6AA271: 0x2e6aa271
+      - sceNetAdhocAuth_lib_312BD812: 0x312bd812
+      - sceNetAdhocAuth_lib_6074D8F1: 0x6074d8f1
+      - sceNetAdhocAuth_lib_6CE209A3: 0x6ce209a3
+      - sceNetAdhocAuth_lib_72AAC6D3: 0x72aac6d3
+      - sceNetAdhocAuth_lib_76F26AB0: 0x76f26ab0
+      - sceNetAdhocAuth_lib_86004235: 0x86004235
+      - sceNetAdhocAuth_lib_89F2A732: 0x89f2a732
+      - sceNetAdhocAuth_lib_AAB06250: 0xaab06250
+      - sceNetAdhocAuth_lib_BD144DA6: 0xbd144da6
+      - sceNetAdhocAuth_lib_CF4D9BED: 0xcf4d9bed
+  - name: sceNetAdhocAuth_driver
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 1
+    functions:
+      - sceNetAdhocAuth_lib_015A8A64: 0x015a8a64
+      - sceNetAdhocAuth_lib_1F9A90B8: 0x1f9a90b8
+      - sceNetAdhocAuth_lib_2AD8C677: 0x2ad8c677
+      - sceNetAdhocAuth_lib_2E6AA271: 0x2e6aa271
+      - sceNetAdhocAuth_lib_312BD812: 0x312bd812
+      - sceNetAdhocAuth_lib_6074D8F1: 0x6074d8f1
+      - sceNetAdhocAuth_lib_6CE209A3: 0x6ce209a3
+      - sceNetAdhocAuth_lib_72AAC6D3: 0x72aac6d3
+      - sceNetAdhocAuth_lib_76F26AB0: 0x76f26ab0
+      - sceNetAdhocAuth_lib_86004235: 0x86004235
+      - sceNetAdhocAuth_lib_89F2A732: 0x89f2a732
+      - sceNetAdhocAuth_lib_AAB06250: 0xaab06250
+      - sceNetAdhocAuth_lib_BD144DA6: 0xbd144da6
+      - sceNetAdhocAuth_lib_CF4D9BED: 0xcf4d9bed
+imports:
+  - name: sceNetIfhandle_driver
+    version: [0, 17]
+    attributes: 0x0009
+    pad: 6
+    functions:
+      - sceNetIfhandle_driver_0542835F: 0x0542835f
+      - sceNetIfhandle_driver_1560F143: 0x1560f143
+      - sceNetIfhandle_driver_15CFE3C0: 0x15cfe3c0
+      - sceNetIfhandle_driver_76BAD213: 0x76bad213
+      - sceNetIfhandle_driver_773FC77C: 0x773fc77c
+      - sceNetIfhandle_driver_9A6261EC: 0x9a6261ec
+      - sceNetIfhandle_driver_9CBA24D4: 0x9cba24d4
+      - sceNetIfhandle_driver_C5623112: 0xc5623112
+      - sceNetIfhandle_driver_F56FAC82: 0xf56fac82
+      - sceNetIfhandle_driver_F8825DC4: 0xf8825dc4
+  - name: sceMemab_driver
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 4
+    functions:
+      - sceMemab_driver_16594684: 0x16594684
+      - sceMemab_driver_23E4659B: 0x23e4659b
+      - sceMemab_driver_3C15BC8C: 0x3c15bc8c
+      - sceMemab_driver_4B54EAAD: 0x4b54eaad
+      - sceMemab_driver_6DD7339A: 0x6dd7339a
+      - sceMemab_driver_8ABE3445: 0x8abe3445
+      - sceMemab_driver_9BF0C95D: 0x9bf0c95d
+      - sceMemab_driver_9BF1A0A4: 0x9bf1a0a4
+      - sceMemab_driver_9DE8C8CD: 0x9de8c8cd
+      - sceMemab_driver_C3981EE1: 0xc3981ee1
+      - sceMemab_driver_CB5D3916: 0xcb5d3916
+      - sceMemab_driver_D47A50B1: 0xd47a50b1
+      - sceMemab_driver_D57856A7: 0xd57856a7
+      - sceMemab_driver_F742F283: 0xf742f283
+  - name: SysclibForKernel
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 7
+    functions:
+      - memset: 0x10f3bb61
+      - memcmp: 0x81d0d1f7
+      - memcpy: 0xab7592ff
+  - name: ThreadManForKernel
+    version: [0, 17]
+    attributes: 0x0001
+    len: 6
+    pad: 5
+    functions:
+      - sceKernelReceiveMbx: 0x18260574
+      - sceKernelWaitThreadEnd: 0x278c0df5
+      - sceKernelDeleteSema: 0x28b6489c
+      - sceKernelGetThreadId: 0x293b45b8
+      - sceKernelSignalSema: 0x3f53e640
+      - sceKernelCreateThread: 0x446d8de6
+      - sceKernelWaitSema: 0x4e3a1105
+      - sceKernelTerminateThread: 0x616403ba
+      - sceKernelSetAlarm: 0x6652b8ca
+      - sceKernelCancelAlarm: 0x7e65b999
+      - sceKernelCreateMbx: 0x8125221d
+      - sceKernelGetSystemTimeWide: 0x82bc5777
+      - sceKernelDeleteMbx: 0x86255ada
+      - sceKernelDeleteThread: 0x9fa03cd3
+      - sceKernelCreateSema: 0xd6da4ba1
+      - sceKernelSendMbx: 0xe9b3061e
+      - sceKernelStartThread: 0xf475845d
+  - name: InterruptManagerForKernel
+    version: [0, 17]
+    attributes: 0x0009
+    len: 6
+    pad: 6
+    functions:
+      - sceKernelCpuSuspendIntr: 0x092968f4
+      - sceKernelCpuResumeIntr: 0x5f10d406
+  - name: SysMemForKernel
+    version: [0, 17]
+    attributes: 0x0001
+    functions:
+      - sceKernelGetModel: 0x07c586a1
+      - sceKernelGetCompiledSdkVersion: 0xb4f00cb5
+      - sceKernelDevkitVersion: 0xc886b169

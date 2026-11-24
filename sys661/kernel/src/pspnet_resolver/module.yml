@@ -1,0 +1,82 @@
+name: sceNetResolver_Library
+attributes: 0x0006
+version: [1, 2]
+sdk_version: 0x06060110
+stub_order: [Kernel_Library, ThreadManForUser, sceNetIfhandle_lib, sceNetInet, sceNetInet_lib, sceNet_lib]
+exports:
+  - name: syslib
+    version: [0, 0]
+    attributes: 0x8000
+    variables:
+      - module_info: 0xf01d73a7
+      - module_sdk_version: 0x11b97506
+  - name: sceNetResolver
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 1
+    functions:
+      - sceNetResolver_12748EB9: 0x12748eb9
+      - sceNetResolver_14C17EF9: 0x14c17ef9
+      - sceNetResolverStartNtoA: 0x224c5f44
+      - sceNetResolverCreate: 0x244172af
+      - sceNetResolver_4EE99358: 0x4ee99358
+      - sceNetResolverTerm: 0x6138194a
+      - sceNetResolverStartAtoN: 0x629e2fb7
+      - sceNetResolverStop: 0x808f6063
+      - sceNetResolverDelete: 0x94523e09
+      - sceNetResolver_AAC09184: 0xaac09184
+      - sceNetResolverInit: 0xf3370e61
+imports:
+  - name: sceNetIfhandle_lib
+    version: [0, 17]
+    attributes: 0x4009
+    pad: 5
+    functions:
+      - sceNetIfhandle_lib_15CFE3C0: 0x15cfe3c0
+      - sceNetIfhandle_lib_76BAD213: 0x76bad213
+  - name: sceNet_lib
+    version: [0, 17]
+    attributes: 0x0009
+    pad: 5
+    functions:
+      - sceNet_lib_750F705D: 0x750f705d
+      - sceNet_lib_80C9F02A: 0x80c9f02a
+      - sceNet_lib_B5CE388A: 0xb5ce388a
+      - sceNet_lib_BCBE14CF: 0xbcbe14cf
+      - sceNet_lib_D8722983: 0xd8722983
+  - name: sceNetInet
+    version: [0, 17]
+    attributes: 0x0009
+    pad: 5
+    functions:
+      - sceNetInetSendto: 0x05038fc7
+      - sceNetInetSetsockopt: 0x2fe71fe7
+      - sceNetInet_80A21ABD: 0x80a21abd
+      - sceNetInetSocket: 0x8b7b220f
+      - sceNetInetClose: 0x8d7284ea
+      - sceNetInetRecvfrom: 0xc91142e4
+      - sceNetInetGetErrno: 0xfbabe411
+  - name: sceNetInet_lib
+    version: [0, 17]
+    attributes: 0x0009
+    pad: 5
+    functions:
+      - sceNetInet_lib_AC9D90A5: 0xac9d90a5
+  - name: Kernel_Library
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 5
+    functions:
+      - sceKernelCpuSuspendIntr: 0x092968f4
+      - sceKernelMemset: 0xa089eca4
+      - _sceKernelCheckThreadStack: 0xd13bde95
+      - sceKernelMemcpy: 0x1839852a
+      - sceKernelGetThreadId: 0x293b45b8
+      - sceKernelCpuResumeIntr: 0x5f10d406
+  - name: ThreadManForUser
+    version: [0, 17]
+    attributes: 0x4001
+    pad: 3
+    functions:
+      - sceKernelGetSystemTime: 0xdb738f35
+      - sceKernelGetSystemTimeLow: 0x369ed59d

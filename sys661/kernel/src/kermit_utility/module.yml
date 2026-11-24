@@ -1,0 +1,399 @@
+name: sceUtility_Driver
+attributes: 0x1007
+version: [1, 2]
+sdk_version: 0x06060110
+stub_order: [InitForKernel, InterruptManagerForKernel, IoFileMgrForKernel, KDebugForKernel, ModuleMgrForKernel, SysMemForKernel, SysclibForKernel, ThreadManForKernel, UtilsForKernel, sceCtrl_driver, sceKermitMemory_driver, sceKermitPeripheral_driver, sceKermit_driver, sceMeCore_driver, scePower_driver, scePspNpDrm_driver, sceReg_driver, sceSuspendForKernel, sceSysEventForKernel]
+exports:
+  - name: syslib
+    version: [0, 0]
+    attributes: 0x8000
+    functions:
+      - module_start: 0xd632acdb
+    variables:
+      - module_info: 0xf01d73a7
+      - module_sdk_version: 0x11b97506
+  - name: sceUtility_driver
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 2
+    functions:
+      - sceUtility_driver_20C68C34: 0x20c68c34
+      - sceUtility_driver_F062AEA6: 0xf062aea6
+  - name: sceUtility
+    version: [0, 17]
+    attributes: 0x4001
+    len: 5
+    pad: 1
+    extra_words: [0x00040000]
+    bucket_words: [0x00010000, 0x00050003, 0x00090008, 0x000f000e, 0x000f000f, 0x00150010, 0x00160015, 0x001a0017, 0x001f001b, 0x00250020, 0x00280027, 0x00290029, 0x002c002b, 0x002e002e, 0x0030002f, 0x00310030, 0x00330031, 0x00380035, 0x00390038, 0x003e003d, 0x0041003f, 0x00450044, 0x00460045, 0x004a0049, 0x004d004c, 0x00500050, 0x00530051, 0x00580055, 0x005a0059, 0x005c005c, 0x00620060, 0x00680066]
+    functions:
+      - sceUtility_0251B134: 0x0251b134
+      - sceUtilityHtmlViewerUpdate: 0x05afb9e4
+      - sceUtility_06A48659: 0x06a48659
+      - sceUtility_0940A1B9: 0x0940a1b9
+      - sceUtility_094198B8: 0x094198b8
+      - sceUtilityLoadUsbModule: 0x0d5bc6d2
+      - sceUtility_0E0C27AF: 0x0e0c27af
+      - sceUtility_0F3EEAAC: 0x0f3eeaac
+      - sceUtility_1281DA8E: 0x1281da8e
+      - sceUtility_147F7C85: 0x147f7c85
+      - sceUtility_149A7895: 0x149a7895
+      - sceUtilityLoadNetModule: 0x1579a159
+      - sceUtility_16A1A8D8: 0x16a1a8d8
+      - sceUtility_16D02AF0: 0x16d02af0
+      - sceUtility_180F7B62: 0x180f7b62
+      - sceUtility_24AC31EB: 0x24ac31eb
+      - sceUtility_28D35634: 0x28d35634
+      - sceUtility_2995D020: 0x2995d020
+      - sceUtilityLoadModule: 0x2a2b3de0
+      - sceUtilityMsgDialogInitStart: 0x2ad8e239
+      - sceUtility_2B96173B: 0x2b96173b
+      - sceUtility_32E32DCB: 0x32e32dcb
+      - sceUtilityGetSystemParamString: 0x34b78343
+      - sceUtility_3A15CD0A: 0x3a15cd0a
+      - sceUtility_3AAD51DC: 0x3aad51dc
+      - sceUtility_3AD50AE7: 0x3ad50ae7
+      - sceUtilityOskShutdownStart: 0x3dfaeba9
+      - sceUtility_417BED54: 0x417bed54
+      - sceUtilitySetSystemParamString: 0x41e30674
+      - sceUtility_42071A83: 0x42071a83
+      - sceUtilityGetNetParam: 0x434d4b3a
+      - sceUtilitySetSystemParamInt: 0x45c18506
+      - sceUtilityMsgDialogAbort: 0x4928bd96
+      - sceUtility_4A833BA4: 0x4a833ba4
+      - sceUtility_4AECD179: 0x4aecd179
+      - sceUtility_4B0A8FE5: 0x4b0a8fe5
+      - sceUtilityOskUpdate: 0x4b85c861
+      - sceUtilityNetconfInitStart: 0x4db1e739
+      - sceUtility_4FED24D8: 0x4fed24d8
+      - sceUtilitySavedataInitStart: 0x50c4cd57
+      - sceUtility_54A5C62F: 0x54a5c62f
+      - sceUtilityCheckNetParam: 0x5eee6548
+      - sceUtility_5EF1C24A: 0x5ef1c24a
+      - sceUtilityNetconfGetStatus: 0x6332aa39
+      - sceUtilityUnloadNetModule: 0x64d50c56
+      - sceUtilityMsgDialogShutdownStart: 0x67af3428
+      - sceUtility_6F56F9CF: 0x6f56f9cf
+      - sceUtility_70267ADF: 0x70267adf
+      - sceUtilityGameSharingUpdate: 0x7853182d
+      - sceUtility_81C44706: 0x81c44706
+      - sceUtility_8326AB05: 0x8326ab05
+      - sceUtility_86A03A27: 0x86a03a27
+      - sceUtility_86ABDB1B: 0x86abdb1b
+      - sceUtilitySavedataGetStatus: 0x8874dbe0
+      - sceUtility_88BC7406: 0x88bc7406
+      - sceUtility_89317C8F: 0x89317c8f
+      - sceUtilityNetconfUpdate: 0x91e70e35
+      - sceUtility_943CBA46: 0x943cba46
+      - sceUtilityGameSharingGetStatus: 0x946963f3
+      - sceUtilityMsgDialogUpdate: 0x95fc253b
+      - sceUtilitySavedataShutdownStart: 0x9790b33c
+      - sceUtilityMsgDialogGetStatus: 0x9a1c91d7
+      - sceUtility_9F313D14: 0x9f313d14
+      - sceUtility_A03D29BA: 0xa03d29ba
+      - sceUtility_A084E056: 0xa084e056
+      - sceUtility_A50E5B30: 0xa50e5b30
+      - sceUtilityGetSystemParamInt: 0xa5da2406
+      - sceUtility_A7BB7C67: 0xa7bb7c67
+      - sceUtility_AB083EA9: 0xab083ea9
+      - sceUtility_B0FB7FF5: 0xb0fb7ff5
+      - sceUtility_B57E95D9: 0xb57e95d9
+      - sceUtility_B62A4061: 0xb62a4061
+      - sceUtility_B6CEE597: 0xb6cee597
+      - sceUtility_B8592D5F: 0xb8592d5f
+      - sceUtility_BC6B6296: 0xbc6b6296
+      - sceUtilityHtmlViewerGetStatus: 0xbda7d894
+      - sceUtility_C130D441: 0xc130d441
+      - sceUtility_C4700FA3: 0xc4700fa3
+      - sceUtilityGameSharingInitStart: 0xc492f751
+      - sceUtilityLoadAvModule: 0xc629af26
+      - sceUtilityHtmlViewerInitStart: 0xcdc3aa41
+      - sceUtility_D17A0573: 0xd17a0573
+      - sceUtility_D23665F4: 0xd23665f4
+      - sceUtilitySavedataUpdate: 0xd4b95ffb
+      - sceUtility_D4C2BD73: 0xd4c2bd73
+      - sceUtility_D81957B7: 0xd81957b7
+      - sceUtility_D852CDCE: 0xd852cdce
+      - sceUtility_DA97F1AA: 0xda97f1aa
+      - sceUtility_DDE5389D: 0xdde5389d
+      - sceUtility_E19C97D6: 0xe19c97d6
+      - sceUtilityUnloadModule: 0xe49bfe92
+      - sceUtility_E7B778D8: 0xe7b778d8
+      - sceUtility_ECE1D3E5: 0xece1d3e5
+      - sceUtility_ED0FAD38: 0xed0fad38
+      - sceUtility_EF3582B2: 0xef3582b2
+      - sceUtilityGameSharingShutdownStart: 0xefc6f80f
+      - sceUtilityOskGetStatus: 0xf3f76017
+      - sceUtility_F3FBC572: 0xf3fbc572
+      - sceUtilityHtmlViewerShutdownStart: 0xf5ce1134
+      - sceUtilityOskInitStart: 0xf6269b82
+      - sceUtilityUnloadUsbModule: 0xf64910f0
+      - sceUtilityUnloadAvModule: 0xf7d8d092
+      - sceUtilityNetconfShutdownStart: 0xf88155f6
+      - sceUtility_F9E0008C: 0xf9e0008c
+  - name: sceUtility_private
+    version: [0, 17]
+    attributes: 0x4001
+    len: 5
+    pad: 1
+    extra_words: [0x00020000]
+    bucket_words: [0x00050000, 0x000b0009, 0x00160012, 0x001c001b, 0x00250022, 0x002c0027, 0x00360031, 0x003b0037]
+    functions:
+      - sceUtility_private_0027D953: 0x0027d953
+      - sceUtility_private_031D0944: 0x031d0944
+      - sceUtility_private_048BFC46: 0x048bfc46
+      - sceUtility_private_0C0AE566: 0x0c0ae566
+      - sceUtility_private_0D6B23A4: 0x0d6b23a4
+      - sceUtility_private_10D1B3FF: 0x10d1b3ff
+      - sceUtility_private_14E94D25: 0x14e94d25
+      - sceUtility_private_186A2C84: 0x186a2c84
+      - sceUtility_private_1E82FB49: 0x1e82fb49
+      - sceUtility_private_26D0B065: 0x26d0b065
+      - sceUtility_private_29AFE096: 0x29afe096
+      - sceUtility_private_31516141: 0x31516141
+      - sceUtility_private_34340686: 0x34340686
+      - sceUtility_private_363A12E2: 0x363a12e2
+      - sceUtility_private_369D25E4: 0x369d25e4
+      - sceUtility_private_390A738F: 0x390a738f
+      - sceUtility_private_39E7692B: 0x39e7692b
+      - sceUtility_private_3B6D7CED: 0x3b6d7ced
+      - sceUtility_private_40FBA532: 0x40fba532
+      - sceUtility_private_421E2726: 0x421e2726
+      - sceUtility_private_48B0FBCD: 0x48b0fbcd
+      - sceUtility_private_4F6FFC7C: 0x4f6ffc7c
+      - sceUtility_private_5809B44A: 0x5809b44a
+      - sceUtility_private_59EB3A17: 0x59eb3a17
+      - sceUtility_private_5C494AC6: 0x5c494ac6
+      - sceUtility_private_5DCBD3C0: 0x5dcbd3c0
+      - sceUtility_private_5ED16EBA: 0x5ed16eba
+      - sceUtility_private_69AB28E8: 0x69ab28e8
+      - sceUtility_private_74E69D03: 0x74e69d03
+      - sceUtility_private_756A93B3: 0x756a93b3
+      - sceUtility_private_78A2FE0C: 0x78a2fe0c
+      - sceUtility_private_78EC982D: 0x78ec982d
+      - sceUtility_private_7E0D4BCD: 0x7e0d4bcd
+      - sceUtility_private_7EBD6208: 0x7ebd6208
+      - sceUtility_private_8024FCA7: 0x8024fca7
+      - sceUtility_private_86AA70BC: 0x86aa70bc
+      - sceUtility_private_8D681EE0: 0x8d681ee0
+      - sceUtility_private_966912D2: 0x966912d2
+      - sceUtility_private_981FFD72: 0x981ffd72
+      - sceUtility_private_A1348D82: 0xa1348d82
+      - sceUtility_private_A25E0194: 0xa25e0194
+      - sceUtility_private_A6B323E1: 0xa6b323e1
+      - sceUtility_private_AC7FD75C: 0xac7fd75c
+      - sceUtility_private_ACB67A01: 0xacb67a01
+      - sceUtility_private_B08B2B48: 0xb08b2b48
+      - sceUtility_private_B34EC4AD: 0xb34ec4ad
+      - sceUtility_private_B9D9C78F: 0xb9d9c78f
+      - sceUtility_private_BAFFB9D5: 0xbaffb9d5
+      - sceUtility_private_BBCD1885: 0xbbcd1885
+      - sceUtility_private_C1916D25: 0xc1916d25
+      - sceUtility_private_C7D5983F: 0xc7d5983f
+      - sceUtility_private_CDEEBEE2: 0xcdeebee2
+      - sceUtility_private_CE484145: 0xce484145
+      - sceUtility_private_CF6799A3: 0xcf6799a3
+      - sceUtility_private_DF025E50: 0xdf025e50
+      - sceUtility_private_E0F5DEC1: 0xe0f5dec1
+      - sceUtility_private_E8EE4E87: 0xe8ee4e87
+      - sceUtility_private_EA446CD5: 0xea446cd5
+      - sceUtility_private_ED4E37CA: 0xed4e37ca
+      - sceUtility_private_FC841AC3: 0xfc841ac3
+  - name: sceUtility_netparam_internal
+    version: [0, 17]
+    attributes: 0x4001
+    len: 5
+    pad: 3
+    extra_words: [0x01000000]
+    functions:
+      - sceUtility_netparam_internal_02598DB8: 0x02598db8
+      - sceUtility_netparam_internal_09905636: 0x09905636
+      - sceUtility_netparam_internal_239F260D: 0x239f260d
+      - sceUtility_netparam_internal_4CB183A4: 0x4cb183a4
+      - sceUtility_netparam_internal_5D63AA06: 0x5d63aa06
+      - sceUtility_netparam_internal_61D0686E: 0x61d0686e
+      - sceUtility_netparam_internal_67C2105B: 0x67c2105b
+      - sceUtility_netparam_internal_6B1BC62C: 0x6b1bc62c
+      - sceUtility_netparam_internal_6D77B975: 0x6d77b975
+imports:
+  - name: sceReg_driver
+    version: [0, 17]
+    attributes: 0x0001
+    len: 6
+    pad: 6
+    functions:
+      - sceRegGetKeyValueByName: 0x38415b9f
+      - sceRegCreateKey: 0x3b6ca1e6
+      - sceRegSetKeyValue: 0x49c70163
+      - sceRegCloseRegistry: 0x49d77d65
+      - sceRegOpenCategory: 0x4f471457
+      - sceRegFlushRegistry: 0x5fd4764a
+      - sceRegRemoveCategory: 0x61db9d06
+      - sceRegGetKeyInfo: 0x9980519f
+      - sceRegFlushCategory: 0xd743a608
+      - sceRegOpenRegistry: 0xdba46704
+      - sceRegGetKeyInfoByName: 0xf2619407
+      - sceRegGetKeyValue: 0xf4a3e396
+      - sceRegCloseCategory: 0xfc742751
+  - name: scePower_driver
+    version: [0, 17]
+    attributes: 0x0001
+    len: 6
+    pad: 4
+    functions:
+      - scePower_driver_315B8CB6: 0x315b8cb6
+      - scePower_driver_766CD857: 0x766cd857
+  - name: sceCtrl_driver
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 5
+    functions:
+      - sceCtrlPeekBufferPositive: 0x2ba616af
+      - sceCtrlSetSamplingMode: 0xf6e94ea3
+      - sceCtrlGetSamplingMode: 0xf8ec18bd
+  - name: SysclibForKernel
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 7
+    functions:
+      - memset: 0x10f3bb61
+      - strlen: 0x52df196c
+      - strncpy: 0xb49a7697
+      - strcmp: 0xc0ab8932
+      - snprintf: 0xc2145e80
+  - name: InterruptManagerForKernel
+    version: [0, 17]
+    attributes: 0x0009
+    len: 6
+    pad: 6
+    functions:
+      - sceKernelCpuSuspendIntr: 0x092968f4
+      - sceKernelCpuResumeIntr: 0x5f10d406
+  - name: ThreadManForKernel
+    version: [0, 17]
+    attributes: 0x0001
+    len: 6
+    pad: 5
+    functions:
+      - sceKernelSetEventFlag: 0x1fb15a32
+      - sceKernelWaitThreadEnd: 0x278c0df5
+      - sceKernelGetThreadId: 0x293b45b8
+      - sceKernelGetSystemTimeLow: 0x369ed59d
+      - sceKernelWaitEventFlag: 0x402fcf22
+      - sceKernelCreateThread: 0x446d8de6
+      - sceKernelCreateEventFlag: 0x55c20a00
+      - sceKernelUnlockMutex: 0x6b30100f
+      - sceKernelExitDeleteThread: 0x809ce29b
+      - sceKernelClearEventFlag: 0x812346e4
+      - sceKernelDeleteThread: 0x9fa03cd3
+      - sceKernelLockMutex: 0xb011b11f
+      - sceKernelCreateMutex: 0xb7d098c6
+      - sceKernelExtendKernelStack: 0xbc31c1b9
+      - sceKernelDelayThread: 0xceadeb47
+      - sceKernelDeleteEventFlag: 0xef9e4c70
+      - sceKernelStartThread: 0xf475845d
+  - name: ModuleMgrForKernel
+    version: [0, 17]
+    attributes: 0x0009
+    len: 6
+    pad: 5
+    functions:
+      - sceKernelUnloadModule: 0x387e3ca9
+      - sceKernelStartModule: 0x3ff74df1
+      - sceKernelLoadModuleForKernel: 0x939e4270
+      - sceKernelLoadModuleToBlock: 0xd4ee2d26
+      - sceKernelSearchModuleByName: 0xd86dd11b
+      - sceKernelStopModule: 0xe5d6087b
+  - name: IoFileMgrForKernel
+    version: [0, 17]
+    attributes: 0x0001
+    len: 6
+    pad: 5
+    functions:
+      - sceIoDevctl: 0x54f5fb11
+  - name: sceSysEventForKernel
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 7
+    functions:
+      - sceKernelRegisterSysEventHandler: 0xcd9e4bb5
+      - sceKernelUnregisterSysEventHandler: 0xd7d3fdcd
+  - name: sceSuspendForKernel
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 4
+    functions:
+      - sceKernelPowerUnlockForUser: 0x3aee7261
+      - sceKernelVolatileMemLock: 0x3e0271d3
+      - sceKernelVolatileMemUnlock: 0xa569e425
+      - sceKernelPowerLockForUser: 0xeadb1bd7
+  - name: KDebugForKernel
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 4
+    functions:
+      - sceKernelIsToolMode: 0x47570ac5
+      - Kprintf: 0x84f370bc
+      - sceKernelDipsw: 0x86010fcb
+      - sceKernelIsDevelopmentToolMode: 0xacf427dc
+  - name: UtilsForKernel
+    version: [0, 17]
+    attributes: 0x0009
+    pad: 5
+    functions:
+      - sceKernelDcacheInvalidateRange: 0xbfa98062
+  - name: SysMemForKernel
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 4
+    functions:
+      - sceKernelGetModel: 0x07c586a1
+      - sceKernelMemcpy: 0x181065ab
+      - sceKernelJointMemoryBlock: 0x1ab50974
+      - sceKernelMemset32: 0x22a114dc
+      - sceKernelAllocPartitionMemory: 0x7158ce7e
+      - sceKernelMemset: 0x8ae776af
+      - sceKernelGetCompiledSdkVersion: 0xb4f00cb5
+      - sceKernelFreePartitionMemory: 0xc1a26c6f
+      - sceKernelQueryMemoryBlockInfo: 0xe860be8f
+      - sceKernelGetGameInfo: 0xef29061c
+  - name: InitForKernel
+    version: [0, 17]
+    attributes: 0x0009
+    pad: 6
+    functions:
+      - sceKernelBootFrom: 0x27932388
+      - sceKernelApplicationType: 0x7233b5bc
+      - sceKernelInitDiscImage: 0xa18a4a8b
+  - name: scePspNpDrm_driver
+    version: [0, 17]
+    attributes: 0x0009
+    pad: 5
+    functions:
+      - sceNpDrmSetDebugMode: 0x2d88879a
+  - name: sceKermit_driver
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 7
+    functions:
+      - sceKermit_driver_36666181: 0x36666181
+  - name: sceKermitMemory_driver
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 5
+    functions:
+      - sceKermitMemory_driver_90B662D0: 0x90b662d0
+      - sceKermitMemory_driver_AAF047AC: 0xaaf047ac
+  - name: sceKermitPeripheral_driver
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 5
+    functions:
+      - sceKermitPeripheral_driver_61BEA1D2: 0x61bea1d2
+  - name: sceMeCore_driver
+    version: [0, 17]
+    attributes: 0x0009
+    len: 6
+    pad: 3
+    functions:
+      - sceMeBootStart: 0x5dff5c50

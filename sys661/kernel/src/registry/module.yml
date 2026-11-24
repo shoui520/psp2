@@ -1,0 +1,94 @@
+name: sceRegistry_Service
+attributes: 0x1007
+version: [1, 7]
+sdk_version: 0x06060110
+stub_order: [SysclibForKernel, ThreadManForKernel]
+exports:
+  - name: syslib
+    version: [0, 0]
+    attributes: 0x8000
+    functions:
+      - sceReg_driver_30E567D5: 0xd632acdb
+      - module_reboot_before: 0x2f064fa6
+      - module_reboot_phase: 0xadf12745
+    variables:
+      - module_info: 0xf01d73a7
+      - module_sdk_version: 0x11b97506
+  - name: sceReg
+    version: [0, 17]
+    attributes: 0x4001
+    len: 5
+    pad: 1
+    extra_words: [0x00020000]
+    bucket_words: [0x00020000, 0x00070004, 0x000b000a, 0x000c000c, 0x000d000c, 0x000f000f, 0x00110010, 0x00130013]
+    functions:
+      - sceRegCloseCategory: 0x0cae832b
+      - sceRegFlushCategory: 0x0d69bf40
+      - sceRegSetKeyValue: 0x17768e14
+      - sceRegOpenCategory: 0x1d8a762e
+      - sceRegGetKeyValue: 0x28a8e98a
+      - sceReg_driver_D323FC94: 0x2c0db9dd
+      - sceReg_driver_BAE3371A: 0x2d211135
+      - sceRegGetKeyValueByName: 0x30be0259
+      - sceReg_driver_405D36C3: 0x3615bc87
+      - sceRegFlushRegistry: 0x39461b4d
+      - sceRegRemoveCategory: 0x4ca16893
+      - sceRegCreateKey: 0x57641a81
+      - sceReg_driver_6328E4C6: 0x835ece6f
+      - sceRegOpenRegistry: 0x92e41280
+      - sceReg_driver_BDE681CF: 0x9b25edf1
+      - sceReg_driver_90AA3904: 0xbe8c1263
+      - sceRegGetKeyInfoByName: 0xc5768d02
+      - sceRegGetKeyInfo: 0xd4475aa8
+      - sceReg_driver_C3DEEBC6: 0xdeda92bf
+      - sceRegCloseRegistry: 0xfa8a5739
+  - name: sceReg_driver
+    version: [0, 17]
+    attributes: 0x0001
+    len: 5
+    pad: 2
+    extra_words: [0x00020000]
+    bucket_words: [0x00000000, 0x00000000, 0x00070003, 0x000a0008, 0x000a000a, 0x000c000c, 0x000f000e, 0x00120012]
+    functions:
+      - sceReg_driver_30E567D5: 0x30e567d5
+      - sceRegGetKeyValueByName: 0x38415b9f
+      - sceRegCreateKey: 0x3b6ca1e6
+      - sceReg_driver_405D36C3: 0x405d36c3
+      - sceRegSetKeyValue: 0x49c70163
+      - sceRegCloseRegistry: 0x49d77d65
+      - sceRegOpenCategory: 0x4f471457
+      - sceRegFlushRegistry: 0x5fd4764a
+      - sceRegRemoveCategory: 0x61db9d06
+      - sceReg_driver_6328E4C6: 0x6328e4c6
+      - sceReg_driver_90AA3904: 0x90aa3904
+      - sceRegGetKeyInfo: 0x9980519f
+      - sceReg_driver_BAE3371A: 0xbae3371a
+      - sceReg_driver_BDE681CF: 0xbde681cf
+      - sceReg_driver_C3DEEBC6: 0xc3deebc6
+      - sceReg_driver_D323FC94: 0xd323fc94
+      - sceRegFlushCategory: 0xd743a608
+      - sceRegOpenRegistry: 0xdba46704
+      - sceRegGetKeyInfoByName: 0xf2619407
+      - sceRegGetKeyValue: 0xf4a3e396
+      - sceRegCloseCategory: 0xfc742751
+    variables:
+      - sceReg_driver_var_5105E3FF: 0x5105e3ff
+      - sceReg_driver_var_867D5F60: 0x867d5f60
+imports:
+  - name: ThreadManForKernel
+    version: [0, 17]
+    attributes: 0x0001
+    len: 6
+    pad: 5
+    functions:
+      - sceKernelDelayThread: 0xceadeb47
+  - name: SysclibForKernel
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 3
+    functions:
+      - memset: 0x10f3bb61
+      - strncmp: 0x7ab35214
+      - strnlen: 0x90c5573d
+      - memcpy: 0xab7592ff
+      - strncpy: 0xb49a7697

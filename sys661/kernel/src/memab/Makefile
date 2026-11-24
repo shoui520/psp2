@@ -1,4 +1,4 @@
 TARGET := memab
-SRCS := memab.c scetables.S
+SRCS := memab.c
 
 include ../../build.mak

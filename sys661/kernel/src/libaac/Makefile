@@ -1,4 +1,4 @@
 TARGET := libaac
-SRCS   := libaac.c scetables.S
+SRCS   := libaac.c
 
 include ../../build.mak

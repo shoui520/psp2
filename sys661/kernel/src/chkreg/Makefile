@@ -1,4 +1,4 @@
 TARGET := chkreg
-SRCS   := chkreg.c scetables.S
+SRCS   := chkreg.c
 
 include ../../build.mak

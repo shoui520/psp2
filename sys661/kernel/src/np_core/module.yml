@@ -1,0 +1,50 @@
+name: sceNpCore
+attributes: 0x1006
+version: [1, 1]
+sdk_version: 0x06060110
+exports:
+  - name: syslib
+    version: [0, 0]
+    attributes: 0x8000
+    variables:
+      - module_info: 0xf01d73a7
+      - module_sdk_version: 0x11b97506
+  - name: sceNpCore
+    version: [0, 17]
+    attributes: 0x4001
+    pad: 2
+    functions:
+      - sceNpCore_0366DAB6: 0x0366dab6
+      - sceNpCore_04096629: 0x04096629
+      - sceNpCore_243690EE: 0x243690ee
+      - sceNpCore_5145344F: 0x5145344f
+      - sceNpCore_515B65E8: 0x515b65e8
+      - sceNpCore_52440ABF: 0x52440abf
+      - sceNpCore_57E15796: 0x57e15796
+      - sceNpCore_8AFAB4A0: 0x8afab4a0
+      - sceNpCore_9218ACF6: 0x9218acf6
+      - sceNpCore_B13D27CA: 0xb13d27ca
+      - sceNpCore_E7AED5A3: 0xe7aed5a3
+imports:
+  - name: SysMemForKernel
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 4
+    functions:
+      - SysMemUserForUser_945E45DA: 0x7ff2f35a
+  - name: SysclibForKernel
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 7
+    functions:
+      - strtol: 0x47dd934d
+      - strlen: 0x52df196c
+      - sprintf: 0x7661e728
+      - strncmp: 0x7ab35214
+      - strcpy: 0xec6f1cf2
+  - name: sceOpenPSID_driver
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 1
+    functions:
+      - sceOpenPSIDGetPSID: 0x19d579f0

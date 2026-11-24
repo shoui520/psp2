@@ -1,0 +1,233 @@
+name: sceWlan_Driver
+attributes: 0x1007
+version: [1, 9]
+sdk_version: 0x06060110
+stub_order: [InterruptManagerForKernel, SysMemForKernel, SysclibForKernel, ThreadManForKernel, UtilsForKernel, sceIdStorage_driver, sceKermitMemory_driver, sceKermit_driver, sceNetIfhandle_driver, scePower_driver, sceSysEventForKernel]
+exports:
+  - name: syslib
+    version: [0, 0]
+    attributes: 0x8000
+    functions:
+      - sceWlanDrv_driver_A9E6A56D: 0xd632acdb
+      - sceWlanDrv_driver_EE744B5C: 0xcee8593c
+      - module_reboot_before: 0x2f064fa6
+    variables:
+      - module_info: 0xf01d73a7
+      - module_sdk_version: 0x11b97506
+  - name: sceWlanDrv
+    version: [0, 17]
+    attributes: 0x4001
+    pad: 1
+    functions:
+      - sceWlanGetEtherAddr: 0x0c622081
+      - sceWlanDrv_driver_0387523A: 0x93440b11
+      - sceWlanGetSwitchState: 0xd7763699
+  - name: sceWlanDrv_lib
+    version: [0, 17]
+    attributes: 0x4001
+    len: 5
+    pad: 1
+    extra_words: [0x00020000]
+    bucket_words: [0x00010000, 0x00060005, 0x000d0008, 0x00160014, 0x001e001b, 0x00240022, 0x002a0027, 0x002d002a]
+    functions:
+      - sceWlanDrv_driver_67645D5F: 0x05fe320c
+      - sceWlanDrv_lib_107E61D0: 0x107e61d0
+      - sceWlanDrv_lib_19602A86: 0x19602a86
+      - sceWlanDevGetMacAddr: 0x19e51f54
+      - sceWlanDrv_driver_1AE1B369: 0x1ae1b369
+      - sceWlanDrv_driver_041810C3: 0x2d0fae4e
+      - sceWlanDrv_lib_327C9FCE: 0x327c9fce
+      - sceWlanDrv_lib_3BE42BCF: 0x3be42bcf
+      - sceWlanDrv_driver_A082E6A2: 0x40b0aa4a
+      - sceWlanDrv_driver_1C18F5FE: 0x482cae9a
+      - sceWlanDrv_driver_4ADEA1CF: 0x4adea1cf
+      - sceWlanDrv_driver_F713143F: 0x4c14baca
+      - sceWlanDrv_driver_54764A18: 0x4c7f62e0
+      - sceWlanDrv_lib_51FF0D5F: 0x51ff0d5f
+      - sceWlanDrv_lib_56AE09D2: 0x56ae09d2
+      - sceWlanDrv_driver_53F89D4E: 0x56f467ca
+      - sceWlanDrv_driver_B17481BB: 0x5baa1fe5
+      - sceWlanDrv_lib_5CFFAAB1: 0x5cffaab1
+      - sceWlanDrv_driver_7C0EC2A9: 0x5e7c8d94
+      - sceWlanDrv_driver_ED79DCD4: 0x5ed4049a
+      - sceWlanDrv_lib_6417F8E3: 0x6417f8e3
+      - sceWlanDrv_driver_60A078E9: 0x6d5c839e
+      - sceWlanDrv_driver_58EDD140: 0x749b813a
+      - sceWlanDrv_lib_768E275B: 0x768e275b
+      - sceWlanDrv_lib_78C84FEC: 0x78c84fec
+      - sceWlanDrv_lib_7EED1723: 0x7eed1723
+      - sceWlanDrv_driver_C4BCD411: 0x7ff54bd2
+      - sceWlanDrv_lib_80B7162E: 0x80b7162e
+      - sceWlanDrv_driver_5E3A5AD3: 0x81579d36
+      - sceWlanDrv_driver_561FD176: 0x8d5f551b
+      - sceWlanDrv_lib_91E04A18: 0x91e04a18
+      - sceWlanDrv_lib_9506F322: 0x9506f322
+      - sceWlanDrv_driver_02E66C38: 0x9658c9f7
+      - sceWlanDrv_lib_9ED787C8: 0x9ed787c8
+      - sceWlanDrv_lib_A2DA9314: 0xa2da9314
+      - sceWlanDrv_driver_04DBA413: 0xa447103a
+      - sceWlanDrv_driver_EEC2F8AB: 0xb4d7cb74
+      - sceWlanDrv_lib_B7865DB5: 0xb7865db5
+      - sceWlanDrv_lib_BFE46C6D: 0xbfe46c6d
+      - sceWlanDrv_lib_C934D53F: 0xc934d53f
+      - sceWlanDrv_driver_8DF43D4C: 0xc9a8cab7
+      - sceWlanDrv_lib_CAC1FB0D: 0xcac1fb0d
+      - sceWlanDrv_lib_E093A922: 0xe093a922
+      - sceWlanDrv_lib_E39F7F88: 0xe39f7f88
+      - sceWlanDrv_lib_E47015D7: 0xe47015d7
+      - sceWlanDrv_lib_F7713C18: 0xf7713c18
+      - sceWlanDrv_driver_0CAB500F: 0xfe8a0b46
+  - name: sceWlanDrv_driver
+    version: [0, 17]
+    attributes: 0x0001
+    len: 5
+    pad: 2
+    extra_words: [0x00020000]
+    bucket_words: [0x00050000, 0x00090008, 0x000b000a, 0x00120010, 0x00150014, 0x00180016, 0x001b001a, 0x001f001b]
+    functions:
+      - sceWlanDrv_driver_02E66C38: 0x02e66c38
+      - sceWlanDrv_driver_0387523A: 0x0387523a
+      - sceWlanDrv_driver_041810C3: 0x041810c3
+      - sceWlanDrv_driver_04DBA413: 0x04dba413
+      - sceWlanDrv_driver_0CAB500F: 0x0cab500f
+      - sceWlanDevGetMacAddr: 0x19e51f54
+      - sceWlanDrv_driver_1AE1B369: 0x1ae1b369
+      - sceWlanDrv_driver_1C18F5FE: 0x1c18f5fe
+      - sceWlanDrv_driver_2519EAA7: 0x2519eaa7
+      - sceWlanDrv_driver_325F7172: 0x325f7172
+      - sceWlanDrv_driver_4ADEA1CF: 0x4adea1cf
+      - sceWlanDrv_driver_53F89D4E: 0x53f89d4e
+      - sceWlanDrv_driver_54764A18: 0x54764a18
+      - sceWlanDrv_driver_561FD176: 0x561fd176
+      - sceWlanDrv_driver_58EDD140: 0x58edd140
+      - sceWlanDrv_driver_5E3A5AD3: 0x5e3a5ad3
+      - sceWlanDrv_driver_60A078E9: 0x60a078e9
+      - sceWlanDrv_driver_67645D5F: 0x67645d5f
+      - sceWlanDrv_driver_7C0EC2A9: 0x7c0ec2a9
+      - sceWlanDrv_driver_7DD3787C: 0x7dd3787c
+      - sceWlanDrv_driver_8DF43D4C: 0x8df43d4c
+      - sceWlanDrv_driver_90E5530F: 0x90e5530f
+      - sceWlanDrv_driver_A082E6A2: 0xa082e6a2
+      - sceWlanDrv_driver_A9E6A56D: 0xa9e6a56d
+      - sceWlanDrv_driver_B17481BB: 0xb17481bb
+      - sceWlanDrv_driver_B6A9700D: 0xb6a9700d
+      - sceWlanDrv_driver_C4BCD411: 0xc4bcd411
+      - sceWlanDrv_driver_ED79DCD4: 0xed79dcd4
+      - sceWlanDrv_driver_EDD207B1: 0xedd207b1
+      - sceWlanDrv_driver_EE744B5C: 0xee744b5c
+      - sceWlanDrv_driver_EEC2F8AB: 0xeec2f8ab
+      - sceWlanDrv_driver_F713143F: 0xf713143f
+imports:
+  - name: SysMemForKernel
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 4
+    functions:
+      - sceKernelMemcpy: 0x181065ab
+  - name: sceSysEventForKernel
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 7
+    functions:
+      - sceKernelRegisterSysEventHandler: 0xcd9e4bb5
+      - sceKernelUnregisterSysEventHandler: 0xd7d3fdcd
+  - name: sceIdStorage_driver
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 4
+    functions:
+      - sceIdStorageLookup: 0x6fe062d1
+  - name: scePower_driver
+    version: [0, 17]
+    attributes: 0x0001
+    len: 6
+    pad: 4
+    functions:
+      - scePower_driver_8C6BEFD9: 0x8c6befd9
+  - name: sceKermit_driver
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 7
+    functions:
+      - sceKermit_driver_36666181: 0x36666181
+      - sceKermit_driver_5280B410: 0x5280b410
+  - name: sceKermitMemory_driver
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 5
+    functions:
+      - sceKermitMemory_driver_AAF047AC: 0xaaf047ac
+  - name: sceNetIfhandle_driver
+    version: [0, 0]
+    attributes: 0x0009
+    pad: 6
+    functions:
+      - sceNetIfhandle_driver_16042084: 0x16042084
+      - sceNetIfhandle_driver_C9344A59: 0xc9344a59
+      - sceNetIfhandle_driver_AE81C0CB: 0xae81c0cb
+      - sceNetIfhandle_driver_54D1AEA1: 0x54d1aea1
+      - sceNetIfhandle_driver_F94BAF52: 0xf94baf52
+      - sceNetIfhandle_driver_263767F6: 0x263767f6
+      - sceNetIfhandle_driver_E2F4F1C9: 0xe2f4f1c9
+      - sceNetIfhandle_driver_C28F6FF2: 0xc28f6ff2
+      - sceNetIfhandle_driver_16246B99: 0x16246b99
+      - sceNetIfhandle_driver_C6D14282: 0xc6d14282
+      - sceNetIfhandle_driver_D5AD6DEA: 0xd5ad6dea
+      - sceNetIfhandle_driver_15CFE3C0: 0x15cfe3c0
+      - sceNetIfhandle_driver_F8825DC4: 0xf8825dc4
+      - sceNetIfhandle_driver_F56FAC82: 0xf56fac82
+  - name: SysclibForKernel
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 7
+    functions:
+      - memset: 0x10f3bb61
+      - memcpy: 0xab7592ff
+  - name: ThreadManForKernel
+    version: [0, 17]
+    attributes: 0x0001
+    len: 6
+    pad: 5
+    functions:
+      - sceKernelReceiveMbx: 0x18260574
+      - sceKernelWaitThreadEnd: 0x278c0df5
+      - sceKernelDeleteSema: 0x28b6489c
+      - sceKernelGetSystemTimeLow: 0x369ed59d
+      - sceKernelSignalSema: 0x3f53e640
+      - sceKernelCreateThread: 0x446d8de6
+      - sceKernelWaitSema: 0x4e3a1105
+      - sceKernelCreateVpl: 0x56c039b5
+      - sceKernelTerminateThread: 0x616403ba
+      - sceKernelSetAlarm: 0x6652b8ca
+      - sceKernelUnlockMutex: 0x6b30100f
+      - sceKernelChangeThreadPriority: 0x71bc9871
+      - sceKernelCancelAlarm: 0x7e65b999
+      - sceKernelExitDeleteThread: 0x809ce29b
+      - sceKernelCreateMbx: 0x8125221d
+      - sceKernelGetSystemTimeWide: 0x82bc5777
+      - sceKernelDeleteMbx: 0x86255ada
+      - sceKernelDeleteVpl: 0x89b3d48c
+      - sceKernelTryAllocateVpl: 0xaf36d708
+      - sceKernelLockMutex: 0xb011b11f
+      - sceKernelFreeVpl: 0xb736e9ff
+      - sceKernelCreateMutex: 0xb7d098c6
+      - sceKernelAllocateVpl: 0xbed27435
+      - sceKernelNotifyCallback: 0xc11ba8c4
+      - sceKernelDelayThread: 0xceadeb47
+      - sceKernelCreateSema: 0xd6da4ba1
+      - sceKernelSendMbx: 0xe9b3061e
+      - sceKernelStartThread: 0xf475845d
+  - name: InterruptManagerForKernel
+    version: [0, 17]
+    attributes: 0x0009
+    len: 6
+    pad: 6
+    functions:
+      - sceKernelCpuSuspendIntr: 0x092968f4
+      - sceKernelCpuResumeIntr: 0x5f10d406
+  - name: UtilsForKernel
+    version: [0, 17]
+    attributes: 0x0009
+    pad: 1
+    functions:
+      - sceKernelDcacheInvalidateRange: 0xbfa98062

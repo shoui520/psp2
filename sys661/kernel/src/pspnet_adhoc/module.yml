@@ -1,0 +1,133 @@
+name: sceNetAdhoc_Library
+attributes: 0x0006
+version: [1, 4]
+sdk_version: 0x06060110
+stub_order: [Kernel_Library, ThreadManForUser, sceNet, sceNetAdhocAuth_lib, sceNetIfhandle_lib, sceNet_lib, sceWlanDrv_lib]
+exports:
+  - name: syslib
+    version: [0, 0]
+    attributes: 0x8000
+    variables:
+      - module_info: 0xf01d73a7
+      - module_sdk_version: 0x11b97506
+  - name: sceNetAdhoc
+    version: [0, 17]
+    attributes: 0x0001
+    len: 5
+    extra_words: [0x00020000]
+    bucket_words: [0x00010000, 0x00020002, 0x00050003, 0x00070005, 0x000d000b, 0x00130010, 0x00150014, 0x00180016]
+    functions:
+      - sceNetAdhocGameModeDeleteReplica: 0x0b2228e9
+      - sceNetAdhocPtpClose: 0x157e6225
+      - sceNetAdhocGameModeCreateReplica: 0x3278ab0c
+      - sceNetAdhoc_4D2CE199: 0x4d2ce199
+      - sceNetAdhocPtpSend: 0x4da4c788
+      - sceNetAdhoc_67346A2A: 0x67346a2a
+      - sceNetAdhocPdpCreate: 0x6f92741b
+      - sceNetAdhoc_73BFD52D: 0x73bfd52d
+      - sceNetAdhoc_7A662D6B: 0x7a662d6b
+      - sceNetAdhocPdpDelete: 0x7f27bb5e
+      - sceNetAdhocGameModeCreateMaster: 0x7f75c338
+      - sceNetAdhocPtpOpen: 0x877f6d66
+      - sceNetAdhocPtpRecv: 0x8bea2b3e
+      - sceNetAdhocGameModeUpdateMaster: 0x98c204c8
+      - sceNetAdhocPtpFlush: 0x9ac2eeac
+      - sceNetAdhocPtpAccept: 0x9df81198
+      - sceNetAdhocGameModeDeleteMaster: 0xa0229362
+      - sceNetAdhocTerm: 0xa62c6f57
+      - sceNetAdhocPdpSend: 0xabed3790
+      - sceNetAdhocGetPtpStat: 0xb9685118
+      - sceNetAdhocGetPdpStat: 0xc7c1fc57
+      - sceNetAdhocPdpRecv: 0xdfe53e03
+      - sceNetAdhocPtpListen: 0xe08bdac1
+      - sceNetAdhocInit: 0xe1d621d7
+      - sceNetAdhocGameModeUpdateReplica: 0xfa324b4e
+      - sceNetAdhocPtpConnect: 0xfc6fc07b
+  - name: sceNetAdhoc_lib
+    version: [0, 17]
+    attributes: 0x0001
+    functions:
+      - sceNetAdhoc_lib_1059683E: 0x1059683e
+      - sceNetAdhoc_lib_2CA12790: 0x2ca12790
+      - sceNetAdhoc_lib_62B875A8: 0x62b875a8
+      - sceNetAdhoc_67346A2A: 0x67346a2a
+      - sceNetAdhoc_lib_AF6DFB15: 0xaf6dfb15
+      - sceNetAdhoc_lib_F9240FBA: 0xf9240fba
+imports:
+  - name: sceWlanDrv_lib
+    version: [0, 17]
+    attributes: 0x4001
+    pad: 5
+    functions:
+      - sceWlanDevIsGameMode: 0x5e7c8d94
+      - sceWlanGPPrevEstablishActive: 0x5ed4049a
+      - sceWlanGPRecv: 0xa447103a
+      - sceWlanGPSend: 0xb4d7cb74
+  - name: sceNetIfhandle_lib
+    version: [0, 17]
+    attributes: 0x4009
+    pad: 5
+    functions:
+      - sceNetIfhandle_lib_07505747: 0x07505747
+      - sceNetIfhandle_lib_15CFE3C0: 0x15cfe3c0
+      - sceNetIfhandle_lib_3E8DD3F8: 0x3e8dd3f8
+      - sceNetIfhandle_lib_49EDBB18: 0x49edbb18
+      - sceNetIfhandle_lib_76BAD213: 0x76bad213
+      - sceNetIfhandle_lib_9A6261EC: 0x9a6261ec
+      - sceNetIfhandle_lib_BFF3CEA5: 0xbff3cea5
+      - sceNetIfhandle_lib_F56FAC82: 0xf56fac82
+      - sceNetIfhandle_lib_F8825DC4: 0xf8825dc4
+  - name: sceNetAdhocAuth_lib
+    version: [0, 17]
+    attributes: 0x4009
+    pad: 4
+    functions:
+      - sceNetAdhocAuth_lib_015A8A64: 0x015a8a64
+      - sceNetAdhocAuth_lib_AAB06250: 0xaab06250
+  - name: sceNet
+    version: [0, 17]
+    attributes: 0x0009
+    pad: 5
+    functions:
+      - sceNetGetLocalEtherAddr: 0x0bf0a3ae
+  - name: sceNet_lib
+    version: [0, 17]
+    attributes: 0x0009
+    pad: 5
+    functions:
+      - sceNet_lib_05D525E4: 0x05d525e4
+      - sceNet_lib_0A5A8751: 0x0a5a8751
+      - sceNet_lib_1858883D: 0x1858883d
+      - sceNet_lib_1F94AFD9: 0x1f94afd9
+      - sceNet_lib_25CC373A: 0x25cc373a
+      - sceNet_lib_2E005032: 0x2e005032
+      - sceNet_lib_33B230BD: 0x33b230bd
+      - sceNet_lib_515B2F33: 0x515b2f33
+      - sceNet_lib_6B294EE4: 0x6b294ee4
+      - sceNet_lib_757085B0: 0x757085b0
+      - sceNet_lib_7574FDA1: 0x7574fda1
+      - sceNet_lib_949F1FBB: 0x949f1fbb
+      - sceNet_lib_94B44F26: 0x94b44f26
+      - sceNet_lib_A8B6205A: 0xa8b6205a
+      - sceNet_lib_A93A93E9: 0xa93a93e9
+      - sceNet_lib_B3A48B7F: 0xb3a48b7f
+      - sceNet_lib_CA3CF5EB: 0xca3cf5eb
+      - sceNet_lib_D60225A3: 0xd60225a3
+      - sceNet_lib_E0A81C7C: 0xe0a81c7c
+      - sceNet_lib_F6DB0A0B: 0xf6db0a0b
+  - name: Kernel_Library
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 5
+    functions:
+      - sceKernelMemset: 0xa089eca4
+      - _sceKernelCheckThreadStack: 0xd13bde95
+      - sceKernelMemcpy: 0x1839852a
+  - name: ThreadManForUser
+    version: [0, 17]
+    attributes: 0x4001
+    pad: 3
+    functions:
+      - sceKernelDelayThread: 0xceadeb47
+      - sceKernelSignalSema: 0x3f53e640
+      - sceKernelGetSystemTimeWide: 0x82bc5777

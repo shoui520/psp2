@@ -1,4 +1,4 @@
 TARGET := libgameupdate
-SRCS := libgameupdate.c scetables.S
+SRCS := libgameupdate.c
 
 include ../../build.mak

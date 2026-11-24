@@ -1,0 +1,60 @@
+name: sceMsEmu_Driver
+attributes: 0x1007
+version: [1, 1]
+sdk_version: 0x06060110
+stub_order: [IoFileMgrForKernel, SysMemForKernel, ThreadManForKernel, sceKermitMsfs_driver, sceSuspendForKernel, sceSysEventForKernel]
+exports:
+  - name: syslib
+    version: [0, 0]
+    attributes: 0x8000
+    functions:
+      - module_start: 0xd632acdb
+    variables:
+      - module_info: 0xf01d73a7
+      - module_sdk_version: 0x11b97506
+imports:
+  - name: IoFileMgrForKernel
+    version: [0, 17]
+    attributes: 0x0001
+    len: 6
+    pad: 5
+    functions:
+      - sceIoAddDrv: 0x8e982a74
+      - sceIoDelDrv: 0xc7f35804
+      - IoFileMgrForKernel_E5323C5B: 0xe5323c5b
+  - name: ThreadManForKernel
+    version: [0, 17]
+    attributes: 0x0001
+    len: 6
+    pad: 5
+    functions:
+      - sceKernelResumeDispatchThread: 0x27e22ec2
+      - sceKernelSuspendDispatchThread: 0x3ad58b8c
+      - sceKernelNotifyCallback: 0xc11ba8c4
+  - name: SysMemForKernel
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 4
+    functions:
+      - sceKernelGetUIDcontrolBlock: 0xc90b0992
+  - name: sceSuspendForKernel
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 4
+    functions:
+      - sceKernelPowerUnlockForUser: 0x3aee7261
+      - sceKernelPowerLockForUser: 0xeadb1bd7
+  - name: sceSysEventForKernel
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 7
+    functions:
+      - sceKernelRegisterSysEventHandler: 0xcd9e4bb5
+      - sceKernelUnregisterSysEventHandler: 0xd7d3fdcd
+  - name: sceKermitMsfs_driver
+    version: [0, 17]
+    attributes: 0x0001
+    len: 6
+    pad: 3
+    functions:
+      - sceKermitMsfs_driver_1A4DC9B7: 0x1a4dc9b7

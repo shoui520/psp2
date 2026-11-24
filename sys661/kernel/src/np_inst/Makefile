@@ -1,4 +1,4 @@
 TARGET := np_inst
-SRCS   := np_inst.c scetables.S
+SRCS   := np_inst.c
 
 include ../../build.mak

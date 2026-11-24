@@ -1,0 +1,80 @@
+name: sceATRAC3plus_Library
+attributes: 0x0006
+version: [1, 5]
+sdk_version: 0x06060110
+exports:
+  - name: syslib
+    version: [0, 0]
+    attributes: 0x8000
+    functions:
+      - sceAtracStartEntry: 0xd632acdb
+      - sceAtracEndEntry: 0xcee8593c
+    variables:
+      - module_info: 0xf01d73a7
+      - module_sdk_version: 0x11b97506
+      - module_start_thread_parameter: 0x0f7c276c
+      - module_stop_thread_parameter: 0xcf0cc697
+  - name: sceAtrac3plus
+    version: [0, 17]
+    attributes: 0x0001
+    len: 5
+    pad: 2
+    extra_words: [0x00020000]
+    bucket_words: [0x00030000, 0x00070005, 0x000a000a, 0x0011000e, 0x00170014, 0x001b0019, 0x001d001c, 0x00230020]
+    functions:
+      - sceAtracLowLevelDecode: 0x0c116e1b
+      - sceAtracSetData: 0x0e2a73ab
+      - sceAtracSetHalfwayBufferAndGetID: 0x0fae370e
+      - sceAtracReinit: 0x132f1eca
+      - sceAtracLowLevelInitDecoder: 0x1575d64b
+      - _sceAtracGetContextAddress: 0x231fc6b7
+      - sceAtracGetBufferInfoForReseting: 0x2dd3e298
+      - sceAtracGetChannel: 0x31668baa
+      - sceAtracGetNextSample: 0x36faabfb
+      - sceAtracSetHalfwayBuffer: 0x3f6e26b5
+      - sceAtracSetAA3DataAndGetID: 0x5622b7c1
+      - sceAtracSetMOutHalfwayBuffer: 0x5cf9d852
+      - sceAtracGetStreamDataInfo: 0x5d268707
+      - sceAtracSetAA3HalfwayBufferAndGetID: 0x5dd66588
+      - sceAtracReleaseAtracID: 0x61eb33f5
+      - sceAtracResetPlayPosition: 0x644e5607
+      - sceAtracDecodeData: 0x6a8c3cd5
+      - sceAtracGetAtracID: 0x780f88d1
+      - sceAtracSetDataAndGetID: 0x7a20e7af
+      - sceAtracAddStreamData: 0x7db31251
+      - sceAtracSetSecondBuffer: 0x83bf7afd
+      - sceAtracGetSecondBufferInfo: 0x83e85ea0
+      - sceAtracSetLoopNum: 0x868120b5
+      - sceAtracGetRemainFrame: 0x9ae849a7
+      - sceAtracSetMOutHalfwayBufferAndGetID: 0x9cd7de03
+      - sceAtracGetSoundSample: 0xa2bba8be
+      - sceAtracGetBitrate: 0xa554a158
+      - sceAtracGetOutputChannel: 0xb3b5d042
+      - sceAtracGetBufferInfoForReseting: 0xca3ca3d2
+      - sceAtracStartEntry: 0xd1f59fdb
+      - sceAtracEndEntry: 0xd5c28cc0
+      - sceAtracGetMaxSample: 0xd6a5f2f7
+      - sceAtracGetNextDecodePosition: 0xe23e3a35
+      - sceAtracGetInternalErrorInfo: 0xe88f759b
+      - sceAtracIsSecondBufferNeeded: 0xeca32a99
+      - sceAtracGetLoopStatus: 0xfaa4f89b
+imports:
+  - name: Kernel_Library
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 5
+    functions:
+      - sceKernelCpuSuspendIntr: 0x092968f4
+      - sceKernelMemcpy: 0x1839852a
+      - sceKernelCpuResumeIntr: 0x5f10d406
+  - name: sceAudiocodec
+    version: [0, 17]
+    attributes: 0x4001
+    pad: 2
+    functions:
+      - sceAudiocodecReleaseEDRAM: 0x29681260
+      - sceAudiocodecGetEDRAM: 0x3a20a200
+      - sceAudiocodec_3DD7EE1A: 0x3dd7ee1a
+      - sceAudiocodecInit: 0x5b37eb1d
+      - sceAudiocodecDecode: 0x70a703f8
+      - sceAudiocodecCheckNeedMem: 0x9d3f790c

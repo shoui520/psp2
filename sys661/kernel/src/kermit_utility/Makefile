@@ -2,6 +2,6 @@
 # ePSP 6.61 sceUtility_Driver (kermit_utility.prx)
 
 TARGET  := kermit_utility
-SRCS    := kermit_utility.c scetables.S
+SRCS    := kermit_utility.c
 
 include ../../build.mak

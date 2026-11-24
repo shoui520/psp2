@@ -1,0 +1,240 @@
+name: sceDisplay_Service
+attributes: 0x1007
+version: [1, 13]
+sdk_version: 0x06060110
+stub_order: [InitForKernel, InterruptManagerForKernel, KDebugForKernel, SysMemForKernel, SysclibForKernel, ThreadManForKernel, UtilsForKernel, sceDmacplus_driver, sceGe_driver, sceIdStorage_driver, sceKermitPeripheral_driver, sceKermit_driver, sceLcdc_driver, sceSysEventForKernel, sceSysreg_driver]
+exports:
+  - name: syslib
+    version: [0, 0]
+    attributes: 0x8000
+    functions:
+      - module_start: 0xd632acdb
+      - module_reboot_before: 0x2f064fa6
+    variables:
+      - module_info: 0xf01d73a7
+      - module_sdk_version: 0x11b97506
+  - name: sceDisplay
+    version: [0, 17]
+    attributes: 0x4001
+    len: 5
+    pad: 1
+    extra_words: [0x00020000]
+    bucket_words: [0x00010000, 0x00040001, 0x00090006, 0x000a0009, 0x000e000d, 0x00120010, 0x00140014, 0x00170016]
+    functions:
+      - sceDisplaySetMode: 0x0e20f177
+      - sceDisplayIsVsync: 0x21038913
+      - sceDisplayGetAccumulatedHcount: 0x210eab3a
+      - sceDisplaySetFrameBuf: 0x289d82fe
+      - sceDisplayGetBrightness: 0x31c4baa8
+      - sceDisplayWaitVblank: 0x36cdfade
+      - sceDisplay_driver_A70066A1: 0x40f1469c
+      - sceDisplayWaitVblankStartCB: 0x46f186c3
+      - sceDisplayIsVblank: 0x4d4e10ec
+      - sceDisplayGetVblankRest: 0x69b53541
+      - sceDisplayGetCurrentHcount: 0x773dd3a3
+      - sceDisplay_driver_113958AE: 0x77ed8b3a
+      - sceDisplaySetHoldMode: 0x7ed59bc4
+      - sceDisplayWaitVblankCB: 0x8eb9ec49
+      - sceDisplayWaitVblankStart: 0x984c27e7
+      - sceDisplayGetVcount: 0x9c6eaad7
+      - sceDisplaySetResumeMode: 0xa544c486
+      - sceDisplayAdjustAccumulatedHcount: 0xa83ef139
+      - sceDisplayIsForeground: 0xb4f378fa
+      - sceDisplayGetResumeMode: 0xbf79f646
+      - sceDisplayGetFramePerSec: 0xdba6c4c4
+      - sceDisplayGetMode: 0xdea197d4
+      - sceDisplayGetFrameBuf: 0xeeda2e54
+  - name: sceDisplay_driver
+    version: [0, 17]
+    attributes: 0x0001
+    len: 5
+    pad: 2
+    extra_words: [0x00020000]
+    bucket_words: [0x00030000, 0x00080007, 0x000e000c, 0x00110010, 0x00170015, 0x001e001b, 0x00210020, 0x00290024]
+    functions:
+      - sceDisplayGetBrightness: 0x0043973f
+      - sceDisplaySetResumeMode: 0x03f16fd4
+      - sceDisplaySetMode: 0x0e20f177
+      - sceDisplay_driver_113958AE: 0x113958ae
+      - sceDisplayEnable: 0x117c3e2c
+      - sceDisplayGetFramePerSec: 0x1eaa0bdc
+      - sceDisplayGetVcount: 0x1fbe8856
+      - sceDisplayInit: 0x206276c2
+      - sceDisplayDisable: 0x33b620af
+      - sceDisplayIsPseudoField: 0x34516323
+      - sceDisplaySetHoldMode: 0x3552ab11
+      - sceDisplay_driver_3E17FE8D: 0x3e17fe8d
+      - sceDisplay_driver_401450A6: 0x401450a6
+      - sceDisplayGetResumeMode: 0x46cc2336
+      - sceDisplayIsVblank: 0x572d7804
+      - sceDisplayWaitVblankCB: 0x58e8680e
+      - sceDisplay_driver_60112E07: 0x60112e07
+      - sceDisplayIsVsync: 0x71695015
+      - sceDisplay_driver_78AF29C6: 0x78af29c6
+      - sceDisplayEnd: 0x7a10289d
+      - sceDisplay_driver_7DF044BA: 0x7df044ba
+      - sceDisplayGetForegroundLevel: 0x8059136a
+      - sceDisplay_driver_8475E040: 0x8475e040
+      - sceDisplayGetBacklightSel: 0x96cfac38
+      - sceDisplay_driver_996881D2: 0x996881d2
+      - sceDisplayIsForeground: 0x99e358f1
+      - sceDisplay_driver_9B18DDDD: 0x9b18dddd
+      - sceDisplaySetFrameBuf: 0xa38b3f89
+      - sceDisplay_driver_A70066A1: 0xa70066a1
+      - sceDisplay_driver_AF2E6CDC: 0xaf2e6cdc
+      - sceDisplayWaitVblankStart: 0xb0942511
+      - sceDisplay_driver_BA3ADBF0: 0xba3adbf0
+      - sceDisplay_driver_CE8A328E: 0xce8a328e
+      - sceDisplayAdjustAccumulatedHcount: 0xd81a8ff9
+      - sceDisplay_driver_D94EB277: 0xd94eb277
+      - sceDisplayGetMode: 0xdea197d4
+      - sceDisplayWaitVblankStartCB: 0xe38ca615
+      - sceDisplaySetBacklightSel: 0xe55f0d50
+      - sceDisplayGetVblankRest: 0xe7397e7a
+      - sceDisplaySetPseudoVsync: 0xe97e9718
+      - sceDisplayGetCurrentHcount: 0xec80d435
+      - sceDisplay_driver_F338AAE0: 0xf338aae0
+      - sceDisplay_driver_F455917F: 0xf455917f
+      - sceDisplayGetAccumulatedHcount: 0xf84d16cc
+      - sceDisplayGetFrameBuf: 0xfbb369fd
+      - sceDisplayWaitVblank: 0xfe5884ef
+imports:
+  - name: SysMemForKernel
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 4
+    functions:
+      - sceKernelGetModel: 0x07c586a1
+      - sceKernelMemset32: 0x22a114dc
+      - sceKernelGetGameInfo: 0xef29061c
+  - name: sceSysEventForKernel
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 7
+    functions:
+      - sceKernelRegisterSysEventHandler: 0xcd9e4bb5
+      - sceKernelUnregisterSysEventHandler: 0xd7d3fdcd
+  - name: KDebugForKernel
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 4
+    functions:
+      - sceKernelSm1ReferOperations: 0xe892d9a1
+  - name: InterruptManagerForKernel
+    version: [0, 17]
+    attributes: 0x0009
+    len: 6
+    pad: 6
+    functions:
+      - sceKernelCpuSuspendIntr: 0x092968f4
+      - sceKernelCallSubIntrHandler: 0x0c5f7ae3
+      - sceKernelCpuResumeIntrWithSync: 0x3b84732d
+      - sceKernelDisableSubIntr: 0x4023e1a7
+      - sceKernelEnableIntr: 0x4d6e7305
+      - sceKernelRegisterIntrHandler: 0x58dd8978
+      - sceKernelCpuResumeIntr: 0x5f10d406
+      - sceKernelSetUserModeIntrHanlerAcceptable: 0xa1b88367
+      - sceKernelReleaseSubIntrHandler: 0xd61e6961
+      - sceKernelDisableIntr: 0xd774ba45
+      - sceKernelReleaseIntrHandler: 0xf987b1f0
+      - sceKernelEnableSubIntr: 0xfb8e22ec
+      - sceKernelIsIntrContext: 0xfe28c6d9
+      - sceKernelRegisterSubIntrHandler: 0xffa8b183
+  - name: SysclibForKernel
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 7
+    functions:
+      - memset: 0x10f3bb61
+      - memcpy: 0xab7592ff
+      - strcmp: 0xc0ab8932
+  - name: ThreadManForKernel
+    version: [0, 17]
+    attributes: 0x0001
+    len: 6
+    pad: 5
+    functions:
+      - sceKernelAllocateKTLS: 0x04e72261
+      - sceKernelSetEventFlag: 0x1fb15a32
+      - sceKernelWaitEventFlagCB: 0x328c546a
+      - sceKernelWaitEventFlag: 0x402fcf22
+      - sceKernelCreateEventFlag: 0x55c20a00
+      - sceKernelClearEventFlag: 0x812346e4
+      - sceKernelGetKTLS: 0xa249eaae
+      - sceKernelFreeKTLS: 0xd198b811
+      - sceKernelDeleteEventFlag: 0xef9e4c70
+  - name: InitForKernel
+    version: [0, 17]
+    attributes: 0x0009
+    pad: 6
+    functions:
+      - sceKernelApplicationType: 0x7233b5bc
+      - sceKernelInitApitype: 0x7a2333ad
+      - sceKernelSetInitCallback: 0x9f9ae99c
+  - name: UtilsForKernel
+    version: [0, 17]
+    attributes: 0x0009
+    pad: 5
+    functions:
+      - sceKernelDcacheWritebackRange: 0x3ee30821
+      - sceKernelDcacheWritebackAll: 0x79d1c3fa
+  - name: sceSysreg_driver
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 7
+    functions:
+      - sceSysreg_driver_4841B2D2: 0x4841b2d2
+      - sceSysreg_driver_4E5C86AA: 0x4e5c86aa
+      - sceSysregApbTimerClkEnable: 0x74c6f776
+      - sceSysregApbTimerClkSelect: 0xa4706857
+      - sceSysregApbTimerClkDisable: 0xded12806
+  - name: sceDmacplus_driver
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 5
+    functions:
+      - sceDmacplus_driver_33CD36DD: 0x33cd36dd
+      - sceDmacplus_driver_88ACB6F1: 0x88acb6f1
+      - sceDmacplus_driver_A3AA8D00: 0xa3aa8d00
+      - sceDmacplus_driver_CCCF6069: 0xcccf6069
+      - sceDmacplus_driver_E9B746F9: 0xe9b746f9
+      - sceDmacplus_driver_ED849260: 0xed849260
+  - name: sceLcdc_driver
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 5
+    functions:
+      - sceLcdc_driver_2D80BB2E: 0x2d80bb2e
+      - sceLcdc_driver_9D4FB8B1: 0x9d4fb8b1
+      - sceLcdc_driver_BAF165CE: 0xbaf165ce
+      - sceLcdc_driver_E9DBD35F: 0xe9dbd35f
+  - name: sceGe_driver
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 7
+    functions:
+      - sceGeDrawSync: 0x1f6b3c34
+      - sceGeEdramSetAddrTranslation: 0x2dfaaf99
+      - sceGeListSync: 0x4b9554eb
+      - sceGeEdramGetHwSize: 0x547ec5f0
+      - sceGeEdramGetAddr: 0x7d662df2
+      - sceGeListEnQueue: 0xafe6c9ef
+      - sceGeEdramSetSize: 0xd8633888
+  - name: sceIdStorage_driver
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 4
+    functions:
+      - sceIdStorageLookup: 0x6fe062d1
+  - name: sceKermitPeripheral_driver
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 5
+    functions:
+      - sceKermitPeripheral_driver_D0A69002: 0xd0a69002
+  - name: sceKermit_driver
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 3
+    functions:
+      - sceKermit_driver_D69C50BB: 0xd69c50bb

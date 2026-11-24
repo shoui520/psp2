@@ -1,0 +1,67 @@
+name: sceVideocodec_Driver
+attributes: 0x1006
+version: [1, 3]
+sdk_version: 0x06060110
+stub_order: [UtilsForKernel, sceMeMemory_driver, sceMePower_driver, sceMeVideo_driver]
+exports:
+  - name: syslib
+    version: [0, 0]
+    attributes: 0x8000
+    variables:
+      - module_info: 0xf01d73a7
+      - module_sdk_version: 0x11b97506
+  - name: sceVideocodec
+    version: [0, 17]
+    attributes: 0x4001
+    pad: 2
+    functions:
+      - sceVideocodecInit: 0x17099f0a
+      - sceVideocodecGetVersion: 0x26927d19
+      - sceVideocodecGetEDRAM: 0x2d31f5b1
+      - sceVideocodecScanHeader: 0x2f385e7f
+      - sceVideocodecDelete: 0x307e6e1c
+      - sceVideocodecReleaseEDRAM: 0x4f160bf4
+      - sceVideocodecGetSEI: 0x627b7d42
+      - sceVideocodecSetMemory: 0x745a7b7a
+      - sceVideocodecStop: 0xa2f0564e
+      - sceVideocodecOpen: 0xc01ec829
+      - sceVideocodecDecode: 0xdba273fa
+  - name: sceVideocodec_driver
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 3
+    functions:
+      - sceVideocodec_driver_CB3312D1: 0xcb3312d1
+imports:
+  - name: sceMePower_driver
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 6
+    functions:
+      - sceMePower_driver_984E2608: 0x984e2608
+      - sceMePowerControlAvcPower: 0xb37562aa
+  - name: sceMeMemory_driver
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 5
+    functions:
+      - sceMeFree: 0x6ed69327
+      - sceMeCalloc: 0xc4eda9f4
+  - name: sceMeVideo_driver
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 6
+    functions:
+      - sceMeVideo_driver_4D78330C: 0x4d78330c
+      - sceMeVideo_driver_6D68B223: 0x6d68b223
+      - sceMeVideo_driver_8768915D: 0x8768915d
+      - sceMeVideo_driver_8DD56014: 0x8dd56014
+      - sceMeVideo_driver_C441994C: 0xc441994c
+      - sceMeVideo_driver_E8CD3C75: 0xe8cd3c75
+  - name: UtilsForKernel
+    version: [0, 17]
+    attributes: 0x0009
+    pad: 1
+    functions:
+      - sceKernelDcacheWritebackInvalidateRange: 0x34b9fa9e
+      - sceKernelDcacheInvalidateRangeForUser: 0xbfa98062

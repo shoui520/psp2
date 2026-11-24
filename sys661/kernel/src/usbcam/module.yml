@@ -1,0 +1,208 @@
+name: sceUSBCam_Driver
+attributes: 0x1006
+version: [1, 7]
+sdk_version: 0x06060110
+stub_order: [InterruptManagerForKernel, SysclibForKernel, ThreadManForKernel, sceKermit_driver, sceUsbAcc_internal, sceUsb_driver]
+exports:
+  - name: syslib
+    version: [0, 0]
+    attributes: 0x8000
+    functions:
+      - module_start: 0xd632acdb
+      - module_stop: 0xcee8593c
+    variables:
+      - module_info: 0xf01d73a7
+      - module_sdk_version: 0x11b97506
+  - name: sceUsbCam
+    version: [0, 17]
+    attributes: 0x4001
+    len: 5
+    pad: 2
+    extra_words: [0x00020000]
+    bucket_words: [0x00050000, 0x000b0009, 0x0013000f, 0x001b0016, 0x001f001e, 0x00260023, 0x00290027, 0x002f002e]
+    functions:
+      - sceUsbCam_00631D06: 0x00631d06
+      - sceUsbCamSetupMic: 0x03ed7a82
+      - sceUsbCam_08AEE98A: 0x08aee98a
+      - sceUsbCamSetContrast: 0x09c26c7e
+      - sceUsbCamSetupStillEx: 0x0a41a298
+      - sceUsbCamGetAutoImageReverseState: 0x11a1f128
+      - sceUsbCamSetupVideo: 0x17f7b2fb
+      - sceUsbCamStillPollInputEnd: 0x1a46cfe7
+      - sceUsbCamSetEvLevel: 0x1d686870
+      - sceUsbCamGetEvLevel: 0x2bcd50c0
+      - sceUsbCam_2E930264: 0x2e930264
+      - sceUsbCam_36636925: 0x36636925
+      - sceUsbCamGetSaturation: 0x383e9fa8
+      - sceUsbCam_3DC0088E: 0x3dc0088e
+      - sceUsbCamSetupStill: 0x3f0cf289
+      - sceUsbCamPollReadVideoFrameEnd: 0x41e73e95
+      - sceUsbCam_41EE8797: 0x41ee8797
+      - sceUsbCamGetLensDirection: 0x4c34f553
+      - sceUsbCamSetBrightness: 0x4f3d84d5
+      - sceUsbCam_5145868A: 0x5145868a
+      - sceUsbCamStartVideo: 0x574a8c3f
+      - sceUsbCam_5778B452: 0x5778b452
+      - sceUsbCamStillInputBlocking: 0x61be5cac
+      - sceUsbCamSetSharpness: 0x622f83cc
+      - sceUsbCam_6784E6A8: 0x6784e6a8
+      - sceUsbCamStopVideo: 0x6cf32cb9
+      - sceUsbCamSetSaturation: 0x6e205974
+      - sceUsbCamGetBrightness: 0x70f522c5
+      - sceUsbCamStillWaitInputEnd: 0x7563afa1
+      - sceUsbCamReadVideoFrameBlocking: 0x7dac0c71
+      - sceUsbCam_82A64030: 0x82a64030
+      - sceUsbCamSetReverseMode: 0x951bedf5
+      - sceUsbCamGetImageEffectMode: 0x994471e0
+      - sceUsbCamReadVideoFrame: 0x99d86281
+      - sceUsbCamGetZoom: 0x9e8aaf8d
+      - sceUsbCamGetContrast: 0xa063a957
+      - sceUsbCamStillCancelInput: 0xa720937c
+      - sceUsbCam_AA7D94BA: 0xaa7d94ba
+      - sceUsbCam_B048A67D: 0xb048a67d
+      - sceUsbCamSetZoom: 0xc484901f
+      - sceUsbCamSetupVideoEx: 0xcfe9e999
+      - sceUsbCam_D293A100: 0xd293a100
+      - sceUsbCamSetImageEffectMode: 0xd4876173
+      - sceUsbCamGetReverseMode: 0xd5279339
+      - sceUsbCam_D865997B: 0xd865997b
+      - sceUsbCamGetReadVideoFrameSize: 0xdf9d0c92
+      - sceUsbCamStillGetInputLength: 0xe5959c36
+      - sceUsbCam_F8847F60: 0xf8847f60
+      - sceUsbCamWaitReadVideoFrameEnd: 0xf90b2293
+      - sceUsbCamAutoImageReverseSW: 0xf93c4669
+      - sceUsbCamStillInput: 0xfb0a6c5d
+      - sceUsbCamGetSharpness: 0xfdb68c23
+  - name: sceUsbCam_driver
+    version: [0, 17]
+    attributes: 0x0001
+    len: 5
+    pad: 3
+    extra_words: [0x00020000]
+    bucket_words: [0x00050000, 0x000b0009, 0x0012000f, 0x001a0015, 0x001e001d, 0x00250022, 0x00280026, 0x002e002d]
+    functions:
+      - sceUsbCam_00631D06: 0x00631d06
+      - sceUsbCamSetupMic: 0x03ed7a82
+      - sceUsbCam_08AEE98A: 0x08aee98a
+      - sceUsbCamSetContrast: 0x09c26c7e
+      - sceUsbCamSetupStillEx: 0x0a41a298
+      - sceUsbCamGetAutoImageReverseState: 0x11a1f128
+      - sceUsbCamSetupVideo: 0x17f7b2fb
+      - sceUsbCamStillPollInputEnd: 0x1a46cfe7
+      - sceUsbCamSetEvLevel: 0x1d686870
+      - sceUsbCamGetEvLevel: 0x2bcd50c0
+      - sceUsbCam_2E930264: 0x2e930264
+      - sceUsbCam_36636925: 0x36636925
+      - sceUsbCamGetSaturation: 0x383e9fa8
+      - sceUsbCam_3DC0088E: 0x3dc0088e
+      - sceUsbCamSetupStill: 0x3f0cf289
+      - sceUsbCam_41EE8797: 0x41ee8797
+      - sceUsbCamGetLensDirection: 0x4c34f553
+      - sceUsbCamSetBrightness: 0x4f3d84d5
+      - sceUsbCam_5145868A: 0x5145868a
+      - sceUsbCamStartVideo: 0x574a8c3f
+      - sceUsbCam_5778B452: 0x5778b452
+      - sceUsbCamStillInputBlocking: 0x61be5cac
+      - sceUsbCamSetSharpness: 0x622f83cc
+      - sceUsbCam_6784E6A8: 0x6784e6a8
+      - sceUsbCamStopVideo: 0x6cf32cb9
+      - sceUsbCamSetSaturation: 0x6e205974
+      - sceUsbCamGetBrightness: 0x70f522c5
+      - sceUsbCamStillWaitInputEnd: 0x7563afa1
+      - sceUsbCamReadVideoFrameBlocking: 0x7dac0c71
+      - sceUsbCam_82A64030: 0x82a64030
+      - sceUsbCamSetReverseMode: 0x951bedf5
+      - sceUsbCamGetImageEffectMode: 0x994471e0
+      - sceUsbCamReadVideoFrame: 0x99d86281
+      - sceUsbCamGetZoom: 0x9e8aaf8d
+      - sceUsbCamGetContrast: 0xa063a957
+      - sceUsbCamStillCancelInput: 0xa720937c
+      - sceUsbCam_AA7D94BA: 0xaa7d94ba
+      - sceUsbCam_B048A67D: 0xb048a67d
+      - sceUsbCamSetZoom: 0xc484901f
+      - sceUsbCamSetupVideoEx: 0xcfe9e999
+      - sceUsbCam_D293A100: 0xd293a100
+      - sceUsbCamSetImageEffectMode: 0xd4876173
+      - sceUsbCamGetReverseMode: 0xd5279339
+      - sceUsbCam_D865997B: 0xd865997b
+      - sceUsbCamGetReadVideoFrameSize: 0xdf9d0c92
+      - sceUsbCamStillGetInputLength: 0xe5959c36
+      - sceUsbCam_F8847F60: 0xf8847f60
+      - sceUsbCamWaitReadVideoFrameEnd: 0xf90b2293
+      - sceUsbCamAutoImageReverseSW: 0xf93c4669
+      - sceUsbCamStillInput: 0xfb0a6c5d
+      - sceUsbCamGetSharpness: 0xfdb68c23
+imports:
+  - name: sceUsb_driver
+    version: [0, 17]
+    attributes: 0x0001
+    len: 6
+    pad: 6
+    functions:
+      - sceUsb_driver_1159202A: 0x1159202a
+      - sceUsb_driver_18DB54DC: 0x18db54dc
+      - sceUsb_driver_292740A2: 0x292740a2
+      - sceUsb_driver_32627D8F: 0x32627d8f
+      - sceUsb_driver_3B578B06: 0x3b578b06
+      - sceUsb_driver_469C73EB: 0x469c73eb
+      - sceUsb_driver_63E55EBE: 0x63e55ebe
+      - sceUsb_driver_6C68EE25: 0x6c68ee25
+      - sceUsb_driver_8839766F: 0x8839766f
+      - sceUsb_driver_8C079564: 0x8c079564
+      - sceUsb_driver_96A32FBC: 0x96a32fbc
+      - sceUsb_driver_A119F065: 0xa119f065
+      - sceUsb_driver_A229F2CF: 0xa229f2cf
+      - sceUsb_driver_B3E9ABCE: 0xb3e9abce
+      - sceUsb_driver_BDA21CF7: 0xbda21cf7
+      - sceUsb_driver_BFCDFDD1: 0xbfcdfdd1
+      - sceUsb_driver_C99E1766: 0xc99e1766
+      - sceUsb_driver_CCA3CDF7: 0xcca3cdf7
+      - sceUsb_driver_D1F264A2: 0xd1f264a2
+      - sceUsb_driver_D27EDB31: 0xd27edb31
+      - sceUsb_driver_D9EE03ED: 0xd9ee03ed
+      - sceUsb_driver_E09431A0: 0xe09431a0
+      - sceUsb_driver_ED8C8695: 0xed8c8695
+      - sceUsb_driver_F183B4EF: 0xf183b4ef
+    variables:
+      - sceUsb_driver_var_3EA085BF: 0x3ea085bf
+      - sceUsb_driver_var_A942D291: 0xa942d291
+  - name: sceUsbAcc_internal
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 5
+    functions:
+      - sceUsbAccGetAuthStat: 0x79a1c743
+  - name: ThreadManForKernel
+    version: [0, 17]
+    attributes: 0x0001
+    len: 6
+    pad: 5
+    functions:
+      - sceKernelWaitThreadEnd: 0x278c0df5
+      - sceKernelTerminateDeleteThread: 0x383f7bcc
+      - sceKernelGetThreadExitStatus: 0x3b183e26
+      - sceKernelCreateThread: 0x446d8de6
+      - sceKernelGetThreadmanIdType: 0x57cf62dd
+      - sceKernelTerminateThread: 0x616403ba
+      - sceKernelNotifyCallback: 0xc11ba8c4
+      - sceKernelStartThread: 0xf475845d
+  - name: InterruptManagerForKernel
+    version: [0, 17]
+    attributes: 0x0009
+    len: 6
+    pad: 6
+    functions:
+      - sceKernelCpuSuspendIntr: 0x092968f4
+      - sceKernelCpuResumeIntr: 0x5f10d406
+  - name: sceKermit_driver
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 7
+    functions:
+      - sceKermit_driver_5280B410: 0x5280b410
+  - name: SysclibForKernel
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 3
+    functions:
+      - memcpy: 0xab7592ff

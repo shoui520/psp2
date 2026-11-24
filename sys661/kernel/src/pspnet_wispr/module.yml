@@ -1,0 +1,125 @@
+name: sceNetWispr_Library
+attributes: 0x0006
+version: [1, 1]
+sdk_version: 0x06060110
+stub_order: [Kernel_Library, ThreadManForUser, sceHttp, sceNet, sceNetApctl, sceNet_lib, sceParseHttp, sceParseUri, sceUtility, sceUtility_netparam_internal, sceWlanDrv]
+exports:
+  - name: syslib
+    version: [0, 0]
+    attributes: 0x8000
+    variables:
+      - module_info: 0xf01d73a7
+      - module_sdk_version: 0x11b97506
+  - name: sceNetWispr
+    version: [0, 17]
+    attributes: 0x0001
+    functions:
+      - sceNetWispr_19235F8C: 0x19235f8c
+      - sceNetWispr_757BDC9F: 0x757bdc9f
+      - sceNetWispr_BC05EC73: 0xbc05ec73
+      - sceNetWispr_BD745B6D: 0xbd745b6d
+      - sceNetWispr_C856AAAC: 0xc856aaac
+imports:
+  - name: sceWlanDrv
+    version: [0, 17]
+    attributes: 0x4001
+    pad: 5
+    functions:
+      - sceWlanGetEtherAddr: 0x0c622081
+  - name: sceUtility
+    version: [0, 17]
+    attributes: 0x4001
+    pad: 5
+    functions:
+      - sceUtilityCheckNetParam: 0x5eee6548
+      - sceUtility_28D35634: 0x28d35634
+      - sceUtility_EF3582B2: 0xef3582b2
+  - name: sceUtility_netparam_internal
+    version: [0, 17]
+    attributes: 0x4001
+    pad: 7
+    functions:
+      - sceUtility_netparam_internal_67C2105B: 0x67c2105b
+  - name: sceNet
+    version: [0, 17]
+    attributes: 0x0009
+    pad: 5
+    functions:
+      - sceNetFreeThreadinfo: 0x50647530
+  - name: sceNet_lib
+    version: [0, 17]
+    attributes: 0x0009
+    pad: 5
+    functions:
+      - sceNet_lib_2A73ADDC: 0x2a73addc
+      - sceNet_lib_9CFBC7E3: 0x9cfbc7e3
+      - sceNet_lib_B5CE388A: 0xb5ce388a
+      - sceNet_lib_B9085A96: 0xb9085a96
+      - sceNet_lib_BCBE14CF: 0xbcbe14cf
+      - sceNet_lib_CF705E46: 0xcf705e46
+      - sceNet_lib_D8722983: 0xd8722983
+  - name: sceHttp
+    version: [0, 17]
+    attributes: 0x0009
+    pad: 4
+    functions:
+      - sceHttpEnableRedirect: 0x0809c831
+      - sceHttpDisableRedirect: 0x1a0ebb69
+      - sceHttpAddExtraHeader: 0x3eaba285
+      - sceHttpGetStatusCode: 0x4cc7d78f
+      - sceHttpDeleteConnection: 0x5152773b
+      - sceHttpCreateTemplate: 0x9b1f1f36
+      - sceHttpDeleteRequest: 0xa5512e01
+      - sceHttp_AB1540D5: 0xab1540d5
+      - sceHttp_B3FAF831: 0xb3faf831
+      - sceHttpCreateRequestWithURL: 0xb509b09e
+      - sceHttpSendRequest: 0xbb70706f
+      - sceHttpAbortRequest: 0xc10b6bd9
+      - sceHttpCreateConnectionWithURL: 0xcdf8ecb9
+      - sceHttpGetNetworkErrno: 0xd081ec8f
+      - sceHttpGetAllHeader: 0xdb266ccf
+      - sceHttpReadData: 0xedeeb999
+      - sceHttpDeleteTemplate: 0xfcf8c055
+  - name: sceParseHttp
+    version: [0, 17]
+    attributes: 0x0009
+    pad: 7
+    functions:
+      - sceParseHttp_AD7BFDEF: 0xad7bfdef
+  - name: sceParseUri
+    version: [0, 17]
+    attributes: 0x0009
+    pad: 4
+    functions:
+      - sceParseUri_49E950EC: 0x49e950ec
+  - name: sceNetApctl
+    version: [0, 17]
+    attributes: 0x0009
+    pad: 4
+    functions:
+      - sceNetApctlGetInfo: 0x2befdf23
+  - name: Kernel_Library
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 5
+    functions:
+      - sceKernelMemset: 0xa089eca4
+  - name: ThreadManForUser
+    version: [0, 17]
+    attributes: 0x4001
+    pad: 3
+    functions:
+      - sceKernelCreateSema: 0xd6da4ba1
+      - sceKernelSetEventFlag: 0x1fb15a32
+      - sceKernelDeleteEventFlag: 0xef9e4c70
+      - sceKernelStartThread: 0xf475845d
+      - sceKernelWaitThreadEnd: 0x278c0df5
+      - sceKernelDeleteSema: 0x28b6489c
+      - sceKernelPollEventFlag: 0x30fd48f0
+      - sceKernelSignalSema: 0x3f53e640
+      - sceKernelWaitEventFlag: 0x402fcf22
+      - sceKernelCreateThread: 0x446d8de6
+      - sceKernelWaitSema: 0x4e3a1105
+      - sceKernelCreateEventFlag: 0x55c20a00
+      - sceKernelTerminateThread: 0x616403ba
+      - sceKernelDeleteThread: 0x9fa03cd3

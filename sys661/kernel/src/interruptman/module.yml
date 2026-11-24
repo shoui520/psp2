@@ -1,0 +1,119 @@
+name: sceInterruptManager
+attributes: 0x1007
+version: [1, 9]
+sdk_version: 0x06060110
+exports:
+  - name: syslib
+    version: [0, 0]
+    attributes: 0x8000
+    functions:
+      - module_bootstart: 0xd3744be0
+      - module_reboot_before: 0x2f064fa6
+    variables:
+      - module_info: 0xf01d73a7
+      - module_sdk_version: 0x11b97506
+  - name: InterruptManagerForKernel
+    version: [0, 17]
+    attributes: 0x0009
+    len: 5
+    pad: 2
+    extra_words: [0x00020000]
+    bucket_words: [0x00040000, 0x000a0007, 0x000f000c, 0x00170013, 0x00190017, 0x001f0019, 0x00220020, 0x002a0027]
+    functions:
+      - sceKernelCpuEnableIntr: 0x02314986
+      - InterruptManagerForKernel_02AC50D5: 0x02ac50d5
+      - sceKernelCpuSuspendIntr: 0x092968f4
+      - sceKernelCallSubIntrHandler: 0x0c5f7ae3
+      - InterruptManagerForKernel_1373F20E: 0x1373f20e
+      - sceKernelRegisterSystemCallTable: 0x14d4c61a
+      - ReleaseSubIntrruptMonitor: 0x19596cd3
+      - sceKernelSuspendIntr: 0x2412f096
+      - sceKernelResumeSubIntr: 0x2980ae03
+      - InterruptManagerForKernel_2F3C4DCD: 0x2f3c4dcd
+      - sceKernelGetCpuClockCounter: 0x30c08374
+      - sceKernelCpuResumeIntrWithSync: 0x3b84732d
+      - sceKernelDisableSubIntr: 0x4023e1a7
+      - sceKernelIsSubInterruptOccured: 0x4351dd4e
+      - sceKernelEnableIntr: 0x4d6e7305
+      - InterruptManagerForKernel_551097F2: 0x551097f2
+      - sceKernelSetPrimarySyscallHandler: 0x55d18836
+      - sceKernelRegisterIntrHandler: 0x58dd8978
+      - sceKernelCpuResumeIntr: 0x5f10d406
+      - SaveThreadContext: 0x6042aee0
+      - sceKernelQueryIntrHandlerInfo: 0x68b5ca51
+      - QueryInterruptManCB: 0x6dda4d7b
+      - InterruptManagerForKernel_6FCBA912: 0x6fcba912
+      - UnSupportIntr: 0x8357e7fa
+      - InterruptManagerForKernel_8DFBD787: 0x8dfbd787
+      - sceKernelGetSyscallRA: 0xa0f88036
+      - sceKernelSetUserModeIntrHanlerAcceptable: 0xa1b88367
+      - sceKernelClearIntrLogging: 0xa4c1c627
+      - InterruptManagerForKernel_A6978B70: 0xa6978b70
+      - sceKernelSetIntrLogging: 0xab1fc793
+      - sceKernelCallUserIntrHandler: 0xaf799f96
+      - sceKernelSetIntrLevel: 0xb941600e
+      - sceKernelSuspendSubIntr: 0xc495f536
+      - sceKernelGetUserIntrStack: 0xcd36eb65
+      - sceKernelReleaseSubIntrHandler: 0xd61e6961
+      - sceKernelDisableIntr: 0xd774ba45
+      - sceKernelResumeIntr: 0xdb14cbe0
+      - ReleaseContextHooks: 0xdb9a5496
+      - RegisterSubIntrruptMonitor: 0xdbd52a5d
+      - InterruptManagerForKernel_E526B767: 0xe526b767
+      - _sceKernelGetCpuClockCounterLow: 0xe6fb16e3
+      - InterruptManagerForKernel_E790EAED: 0xe790eaed
+      - sceKernelQuerySystemCall: 0xf153b371
+      - sceKernelIsInterruptOccurred: 0xf2f1e983
+      - sceKernelReleaseIntrHandler: 0xf987b1f0
+      - sceKernelGetCpuClockCounterWide: 0xf9e06df1
+      - sceKernelEnableSubIntr: 0xfb8e22ec
+      - sceKernelIsIntrContext: 0xfe28c6d9
+      - sceKernelRegisterSubIntrHandler: 0xffa8b183
+    variables:
+      - intInfo + 116: 0x201a1a19
+      - intInfo: 0xfd6b9cab
+  - name: InterruptManager
+    version: [0, 17]
+    attributes: 0x4000
+    pad: 3
+    functions:
+      - sceKernelSuspendSubIntr: 0x5cb5a78b
+      - sceKernelResumeSubIntr: 0x7860e0dc
+      - sceKernelDisableSubIntr: 0x8a389411
+      - sceKernelRegisterSubIntrHandler: 0xca04a2b9
+      - QueryIntrHandlerInfoForUser: 0xd2e8363f
+      - sceKernelReleaseSubIntrHandler: 0xd61e6961
+      - sceKernelRegisterUserSpaceIntrStack: 0xeee43f47
+      - sceKernelEnableSubIntr: 0xfb8e22ec
+      - sceKernelIsSubInterruptOccured: 0xfc4374b8
+imports:
+  - name: ExceptionManagerForKernel
+    version: [0, 17]
+    attributes: 0x0001
+    len: 6
+    pad: 6
+    functions:
+      - sceKernelReleaseExceptionHandler: 0x54b0cad2
+      - sceKernelRegisterPriorityExceptionHandler: 0x7c11759d
+      - sceKernelRegisterExceptionHandler: 0xfbc2353a
+  - name: LoadCoreForKernel
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 6
+    functions:
+      - sceKernelGetModuleGPByAddressForKernel: 0x410084f9
+      - sceKernelRegisterLibrary: 0x48af96a9
+  - name: SysMemForKernel
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 4
+    functions:
+      - sceKernelAllocHeapMemory: 0x23d81675
+      - sceKernelCreateHeap: 0x58148f07
+      - sceKernelFreeHeapMemory: 0x87c2ab85
+  - name: sceSuspendForKernel
+    version: [0, 17]
+    attributes: 0x0001
+    functions:
+      - sceKernelRegisterSuspendHandler: 0x91a77137
+      - sceKernelRegisterResumeHandler: 0xb43d1a8c

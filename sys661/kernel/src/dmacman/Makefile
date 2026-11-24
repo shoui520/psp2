@@ -1,4 +1,4 @@
 TARGET := dmacman
-SRCS   := dmacman.c scetables.S
+SRCS   := dmacman.c
 
 include ../../build.mak

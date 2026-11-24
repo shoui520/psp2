@@ -1,0 +1,92 @@
+name: sceVaudio_driver
+attributes: 0x1006
+version: [1, 8]
+sdk_version: 0x06060110
+stub_order: [InitForKernel, SysMemForKernel, ThreadManForKernel, UtilsForKernel, sceAudio_driver, sceMeCore_driver]
+exports:
+  - name: syslib
+    version: [0, 0]
+    attributes: 0x8000
+    functions:
+      - module_start: 0xd632acdb
+      - module_stop: 0xcee8593c
+    variables:
+      - module_info: 0xf01d73a7
+      - module_sdk_version: 0x11b97506
+  - name: sceVaudio_driver
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 3
+    functions:
+      - sceVaudioChReserve: 0x03b6807d
+      - sceVaudio_driver_27ACC20B: 0x27acc20b
+      - sceVaudioSetEffectType: 0x346fbe94
+      - sceVaudioChRelease: 0x67585dfd
+      - sceVaudioOutputBlocking: 0x8986295e
+      - sceVaudio_driver_A3B71098: 0xa3b71098
+      - sceVaudioSetAlcMode: 0xcbd4ac51
+      - sceVaudio_driver_DCC18F25: 0xdcc18f25
+  - name: sceVaudio
+    version: [0, 17]
+    attributes: 0x4001
+    pad: 2
+    functions:
+      - sceVaudioChReserve: 0x03b6807d
+      - sceVaudio_driver_27ACC20B: 0x27acc20b
+      - sceVaudioSetEffectType: 0x346fbe94
+      - sceVaudio_504E4745: 0x504e4745
+      - sceVaudioChRelease: 0x67585dfd
+      - sceVaudioOutputBlocking: 0x8986295e
+      - sceVaudioSetAlcMode: 0xcbd4ac51
+      - sceVaudio_E8E78DC8: 0xe8e78dc8
+imports:
+  - name: sceMeCore_driver
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 7
+    functions:
+      - sceMeCore_driver_635397BB: 0x635397bb
+      - sceMeCore_driver_FA398D71: 0xfa398d71
+  - name: UtilsForKernel
+    version: [0, 17]
+    attributes: 0x0009
+    pad: 5
+    functions:
+      - sceKernelDcacheWritebackRange: 0x3ee30821
+      - sceKernelDcacheInvalidateRangeForUser: 0xbfa98062
+  - name: InitForKernel
+    version: [0, 17]
+    attributes: 0x0009
+    pad: 6
+    functions:
+      - sceKernelApplicationType: 0x7233b5bc
+  - name: SysMemForKernel
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 4
+    functions:
+      - sceKernelMemcpy: 0x181065ab
+      - sceKernelMemset32: 0x22a114dc
+  - name: ThreadManForKernel
+    version: [0, 17]
+    attributes: 0x0001
+    len: 6
+    pad: 5
+    functions:
+      - sceKernelDeleteSema: 0x28b6489c
+      - sceKernelSignalSema: 0x3f53e640
+      - sceKernelWaitSema: 0x4e3a1105
+      - sceKernelCreateFpl: 0xc07bb470
+      - sceKernelCreateSema: 0xd6da4ba1
+      - sceKernelAllocateFpl: 0xd979e9bf
+      - sceKernelDeleteFpl: 0xed1410e0
+  - name: sceAudio_driver
+    version: [0, 17]
+    attributes: 0x0001
+    functions:
+      - sceAudioSetFrequency: 0x4a0fe97d
+      - sceAudioSRCChReserve: 0x837701cc
+      - sceAudioOutput2GetRestSample: 0x8a7cd9c6
+      - sceAudioSRCOutputBlocking: 0xac81de4f
+      - sceAudioSRCChRelease: 0xb7f5a1b2
+      - sceAudioSetVolumeOffset: 0xf86dfdd6

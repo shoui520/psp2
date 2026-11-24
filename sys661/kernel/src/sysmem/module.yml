@@ -1,0 +1,428 @@
+name: sceSystemMemoryManager
+attributes: 0x1007
+version: [1, 17]
+sdk_version: 0x06060110
+exports:
+  - name: syslib
+    label: __library_exports_0
+    version: [0, 0]
+    attributes: 0x8000
+    functions:
+      - module_bootstart: 0xd3744be0
+    variables:
+      - module_info: 0xf01d73a7
+      - module_sdk_version: 0x11b97506
+  - name: SysMemForKernel
+    label: __library_exports_1
+    version: [0, 17]
+    attributes: 0x0001
+    len: 5
+    extra_words: [0x00040000]
+    bucket_words: [0x00040000, 0x00060005, 0x00080006, 0x000c0009, 0x0012000e, 0x00130012, 0x00140013, 0x00170017, 0x001b0019, 0x00220020, 0x00240022, 0x00260025, 0x00270027, 0x00270027, 0x002a0029, 0x002d002b, 0x00320030, 0x00350034, 0x00360036, 0x003a0037, 0x003e003c, 0x003f003f, 0x00410040, 0x00430042, 0x00460045, 0x004b0049, 0x004f004c, 0x004f004f, 0x00530050, 0x00580056, 0x005d0059, 0x00630060]
+    functions:
+      - sceKernelSysMemMaxFreeMemSize: 0x00154b6d
+      - sceKernelPartitionTotalFreeMemSize: 0x0115b0f8
+      - sceKernelHeapTotalFreeSize: 0x01810023
+      - sceKernelCreateUIDtype: 0x034129fb
+      - sceKernelGetModel: 0x07c586a1
+      - sceKernelCreateUID: 0x0a34c078
+      - SysMemForKernel_13EE28DA: 0x13ee28da
+      - sceKernelPartitionMaxFreeMemSize: 0x13f4a0de
+      - sceKernelSetUmdCacheOn: 0x1404c1aa
+      - sceKernelMemcpy: 0x181065ab
+      - sceKernelSetGprofFunction: 0x1a726c89
+      - sceKernelJointMemoryBlock: 0x1ab50974
+      - sceKernelMemoryExtendSize: 0x1e6bb8e8
+      - sceKernelDeleteUIDtype: 0x1ecab5c4
+      - sceKernelLookupUIDFunction: 0x21487e5b
+      - sceKernelMemset32: 0x22a114dc
+      - sceKernelCallUIDObjCommonFunction: 0x235c2646
+      - sceKernelAllocHeapMemory: 0x23d81675
+      - SysMemForKernel_2A8B8B2D: 0x2a8b8b2d
+      - sceKernelRegisterGetIdFunc: 0x310802a9
+      - sceKernelMemoryOpenSize: 0x35170484
+      - sceKernelDeleteUID: 0x361f0f88
+      - sceKernelGetSystemStatus: 0x36c503a9
+      - sceKernelPrintUidListAll: 0x3e384043
+      - sceKernelGetUIDname: 0x3ec451eb
+      - SysMemForKernel_40B744A4: 0x40b744a4
+      - sceKernelGetQTGP3: 0x43e0a861
+      - sceKernelGetUIDcontrolBlockWithType: 0x44bdf332
+      - sceKernelSysMemTotalFreeMemSize: 0x45332d44
+      - sceKernelGetQTGP2: 0x474ca24f
+      - sceKernelQueryLowheapInfo: 0x476b244f
+      - sceKernelSetCompilerVersion: 0x476f687a
+      - sceKernelGetAllowReplaceUmd: 0x4972f9d1
+      - sceKernelGetInitialRandomValue: 0x4a325aa0
+      - sceKernelSetSystemStatus: 0x521ac5a4
+      - sceKernelPartitionTotalMemSize: 0x53d50ac2
+      - sceKernelGetSysMemoryInfo: 0x57fa5af4
+      - sceKernelCreateHeap: 0x58148f07
+      - sceKernelCallGcovFunction: 0x5fe712e9
+      - sceKernelSysMemRealMemorySize: 0x6d9e2dd6
+      - sceKernelGetCompilerVersion: 0x6e4f9f62
+      - sceKernelAllocPartitionMemory: 0x7158ce7e
+      - sceKernelCallUIDFunction: 0x757eac7d
+      - sceKernelQueryHeapInfo: 0x79bd1975
+      - sceKernelMemoryShrinkSize: 0x7a7cd7bc
+      - sceKernelCallUIDObjFunction: 0x7d50ce82
+      - sceKernelHoldUID: 0x7dda0e01
+      - SysMemUserForUser_945E45DA: 0x7ff2f35a
+      - SysMemForKernel_807179E7: 0x807179e7
+      - sceKernelSetDdrMemoryProtection: 0x83b5226d
+      - sceKernelApiEvaluationReport: 0x845310cf
+      - sceKernelFreeHeapMemory: 0x87c2ab85
+      - sceKernelMemset: 0x8ae776af
+      - sceKernelSizeLockMemoryBlock: 0x8e742787
+      - sceKernelSetRebootKernel: 0x96a3ce2c
+      - sceKernelSetDNAS: 0x982a4779
+      - sceKernelMemmoveWithFill: 0x9b20acef
+      - sceKernelMemmove: 0x9bac123d
+      - sceKernelSetQTGP2: 0x9e5b1acb
+      - sceKernelGetUIDtype: 0x9f205d3e
+      - SysMemForKernel_A03CB480: 0xa03cb480
+      - SysMemUserForUser_D8DE5C1E: 0xa0a9185a
+      - sceKernelRenameUID: 0xa7622297
+      - sceKernelGetUidmanCB: 0xac12f678
+      - sceKernelReleaseUID: 0xb0ca8a4e
+      - sceKernelGetCompiledSdkVersion: 0xb4f00cb5
+      - sceKernelCopyGameInfo: 0xb9b7281a
+      - sceKernelGetDNAS: 0xbfd53fb7
+      - SysMemForKernel_BFE08689: 0xbfe08689
+      - sceKernelFreePartitionMemory: 0xc1a26c6f
+      - sceKernelGetAWeDramSaveSize: 0xc4d3a378
+      - sceKernelQueryMemoryPartitionInfo: 0xc4eeaf20
+      - sceKernelApiEvaluationInit: 0xc5ec364c
+      - sceKernelDevkitVersion: 0xc886b169
+      - sceKernelGetUIDcontrolBlock: 0xc90b0992
+      - SysMemForKernel_CC31DEAD: 0xcc31dead
+      - sceKernelGetId: 0xd0c1460d
+      - sceKernelCreateUIDtypeInherit: 0xd222daa7
+      - sceKernelGetMEeDramSaveSize: 0xd3ca555c
+      - sceKernelDeleteHeap: 0xdd6512d0
+      - sceKernelGetAWeDramSaveAddr: 0xe0eb8cbe
+      - sceKernelIsHold: 0xe13ddc87
+      - sceKernelSearchUIDbyName: 0xe3f9c38e
+      - sceKernelMemoryCloseSize: 0xe5fb2ee5
+      - sceKernelRebootKernel: 0xe73fbc0b
+      - sceKernelCallGprofFunction: 0xe7a3f4d5
+      - sceKernelQueryMemoryBlockInfo: 0xe860be8f
+      - sceKernelFillFreeBlock: 0xea1cabf1
+      - sceKernelGetGameInfo: 0xef29061c
+      - sceKernelGetBlockHeadAddr: 0xf12a62f7
+      - sceKernelSetAllowReplaceUmd: 0xf19ba38d
+      - sceKernelAllocHeapMemoryWithOption: 0xf2284ecc
+      - SysMemForKernel_F3BDB718: 0xf3bdb718
+      - sceKernelRegisterApiEvaluation: 0xf5153060
+      - sceKernelGetSysmemIdList: 0xf5228c40
+      - sceKernelSeparateMemoryBlock: 0xf7e78b33
+      - sceKernelApiEvaliationAddData: 0xf8f54a95
+      - sceKernelQueryMemoryInfo: 0xfaf29f34
+      - sceKernelResizeMemoryBlock: 0xfb5beb66
+      - sceKernelSetQTGP3: 0xfc639a2b
+      - sceKernelSetGcovFunction: 0xfd15d334
+      - sceKernelSysMemMemSize: 0xfdbdeb5c
+      - sceKernelGetMEeDramSaveAddr: 0xfdc97d28
+      - sceKernelGetUsersystemLibWork: 0xfe3cf2bc
+      - sceKernelIsKindOf: 0xffc63884
+  - name: SysMemUserForUser
+    label: __library_exports_2
+    version: [0, 17]
+    attributes: 0x4000
+    len: 5
+    pad: 2
+    extra_words: [0x00020000]
+    bucket_words: [0x00010000, 0x00050003, 0x000a000a, 0x000b000b, 0x000d000d, 0x00130010, 0x00140014, 0x00170016]
+    functions:
+      - sceKernelSetCompiledSdkVersion410_420: 0x057e7380
+      - KprintfForUser: 0x13a5abef
+      - sceKernelSetCompiledSdkVersion630_650: 0x1b4217bc
+      - sceKernelAllocPartitionMemoryForUser: 0x237dbd4f
+      - sceKernelQueryMemoryInfoForUser: 0x2a3e5280
+      - sceKernelSetCompiledSdkVersion380_390: 0x315ad3a0
+      - sceKernelSetCompiledSdkVersion370: 0x342061e5
+      - sceKernelSetCompiledSdkVersion600_620: 0x35669d4c
+      - sceKernelSetCompiledSdkVersion660: 0x358ca1bb
+      - sceKernelDevkitVersion: 0x3fc9ae6a
+      - sceKernelFreeMemoryBlock: 0x50f61d8a
+      - sceKernelSetCompiledSdkVersion100: 0x7591c7db
+      - sceKernelSetCompiledSdkVersion570: 0x7893f79a
+      - sceKernelSetCompiledSdkVersion500_550: 0x91de343c
+      - SysMemUserForUser_945E45DA: 0x945e45da
+      - sceKernelGetBlockHeadAddrForUser: 0x9d9a5ba1
+      - sceKernelPartitionMaxFreeMemSizeForUser: 0xa291f107
+      - sceKernelSetUsersystemLibWork: 0xa6848df8
+      - sceKernelTotalMemSize: 0xacbd88ca
+      - sceKernelFreePartitionMemoryForUser: 0xb6d61d02
+      - SysMemUserForUser_D8DE5C1E: 0xd8de5c1e
+      - sceKernelGetMemoryBlockAddr: 0xdb83a952
+      - sceKernelSetCompiledSdkVersion395: 0xebd5c3e6
+      - sceKernelSetCompilerVersion: 0xf77d77cb
+      - sceKernelPartitionTotalFreeMemSizeForUser: 0xf919f628
+      - sceKernelGetCompiledSdkVersion: 0xfc114573
+      - sceKernelAllocMemoryBlock: 0xfe707fdf
+  - name: SysclibForKernel
+    label: __library_exports_3
+    version: [0, 17]
+    attributes: 0x0001
+    len: 5
+    pad: 3
+    extra_words: [0x00020000]
+    bucket_words: [0x00030000, 0x00060005, 0x000b0008, 0x000f000d, 0x00160013, 0x00190017, 0x001e001b, 0x00210020]
+    functions:
+      - bcopy: 0x097049bd
+      - strstr: 0x0d188658
+      - strpbrk: 0x0dfb7b6c
+      - memset: 0x10f3bb61
+      - wmemset: 0x1493ebd9
+      - rindex: 0x243665ed
+      - look_ctype_table: 0x32c767f2
+      - tolower: 0x3ec5bbf6
+      - strcat: 0x476fd94a
+      - strtol: 0x47dd934d
+      - strrchr: 0x4c0e0274
+      - strlen: 0x52df196c
+      - __umoddi3: 0x5e8e5f42
+      - memchr: 0x68a78817
+      - strtoul: 0x6a7900e1
+      - sprintf: 0x7661e728
+      - strncmp: 0x7ab35214
+      - __udivdi3: 0x7dee14de
+      - bcmp: 0x7f8a6f23
+      - memcmp: 0x81d0d1f7
+      - bzero: 0x86fefce9
+      - prnt: 0x87c78fb6
+      - strnlen: 0x90c5573d
+      - memmove: 0xa48d2592
+      - memcpy: 0xab7592ff
+      - strchr: 0xb1dc2ae8
+      - strncpy: 0xb49a7697
+      - strcmp: 0xc0ab8932
+      - snprintf: 0xc2145e80
+      - toupper: 0xce2f7487
+      - index: 0xd1cd40e5
+      - __udivmoddi4: 0xdf17f4a2
+      - strcpy: 0xec6f1cf2
+  - name: sceSysEventForKernel
+    label: __library_exports_4
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 3
+    functions:
+      - sceKernelSysEventDispatch: 0x36331294
+      - sceKernelReferSysEventHandler: 0x68d55505
+      - sceKernelIsRegisterSysEventHandler: 0xaeb300ae
+      - sceKernelRegisterSysEventHandler: 0xcd9e4bb5
+      - sceKernelUnregisterSysEventHandler: 0xd7d3fdcd
+  - name: sceSuspendForKernel
+    label: __library_exports_5
+    version: [0, 17]
+    attributes: 0x0001
+    len: 5
+    extra_words: [0x00020000]
+    bucket_words: [0x00020000, 0x00020002, 0x00040004, 0x00050004, 0x00060005, 0x000a0008, 0x000f000e, 0x0010000f]
+    functions:
+      - sceKernelPowerTick: 0x090ccb3f
+      - sceKernelDispatchResumeHandlers: 0x0ab0c6f3
+      - sceKernelPowerUnlock: 0x3aee7261
+      - sceKernelVolatileMemLock: 0x3e0271d3
+      - sceSuspendForKernel_67B59042: 0x67b59042
+      - sceKernelDispatchSuspendHandlers: 0x8f58b1ec
+      - sceKernelRegisterSuspendHandler: 0x91a77137
+      - sceKernelPowerRebootStart: 0x98a1d061
+      - sceKernelVolatileMemTryLock: 0xa14f40b2
+      - sceKernelVolatileMemUnlock: 0xa569e425
+      - sceSuspendForKernel_B2C9640B: 0xb2c9640b
+      - sceKernelRegisterResumeHandler: 0xb43d1a8c
+      - sceKernelPowerLockForUser: 0xb53b2147
+      - sceKernelRegisterPowerHandlers: 0xbde686cd
+      - sceKernelPowerUnlockForUser: 0xc7c928c7
+      - sceKernelPowerLock: 0xeadb1bd7
+  - name: sceSuspendForUser
+    label: __library_exports_6
+    version: [0, 17]
+    attributes: 0x4000
+    pad: 2
+    functions:
+      - sceKernelPowerTick: 0x090ccb3f
+      - sceKernelPowerUnlockForUser: 0x3aee7261
+      - sceKernelVolatileMemLock: 0x3e0271d3
+      - sceKernelVolatileMemTryLock: 0xa14f40b2
+      - sceKernelVolatileMemUnlock: 0xa569e425
+      - sceKernelPowerLockForUser: 0xeadb1bd7
+  - name: UtilsForUser
+    label: __library_exports_7
+    version: [0, 17]
+    attributes: 0x4001
+    len: 5
+    pad: 3
+    extra_words: [0x00020000]
+    bucket_words: [0x00030000, 0x00070006, 0x0010000d, 0x00170013, 0x0020001d, 0x00250024, 0x002b0029, 0x002d002c]
+    functions:
+      - sceKernelL1DcacheWritebackRange: 0x004d4dee
+      - sceKernelUtilsMt19937UInt: 0x06fb8a63
+      - sceKernelL2cacheWritebackAll: 0x0939d45c
+      - sceKernelL1DcacheInvalidateRangeForUser: 0x157a383a
+      - sceKernelDcacheReadTagForUser: 0x16641d70
+      - sceKernelL1DcacheWritebackInvalidateRange: 0x1b0592a3
+      - sceKernelLibcTime: 0x27cc57f0
+      - sceKernelUtilsSha1BlockUpdate: 0x346f6da8
+      - sceKernelDcacheWritebackInvalidateRange: 0x34b9fa9e
+      - sceKernelGetGPI: 0x37fb5c42
+      - sceKernelGetPTRIG: 0x39f49610
+      - sceKernelDcacheWritebackRange: 0x3ee30821
+      - sceKernelL1DcacheWritebackAll: 0x3fd3d324
+      - sceKernelL1IcacheInvalidateRangeForUser: 0x43c9a8db
+      - sceKernelL2cacheWritebackInvalidateAll: 0x485e430a
+      - sceKernelIcacheProbe: 0x4fd31c9d
+      - sceKernelDcacheReadTagForUser: 0x515b4faf
+      - sceKernelUtilsSha1BlockResult: 0x585f1c09
+      - sceKernelIcacheReadTagForUser: 0x5c7f2b1a
+      - sceKernelL2cacheWritebackRange: 0x601e43e6
+      - sceKernelUtilsMd5BlockUpdate: 0x61e1e525
+      - sceKernelSetPTRIG: 0x6231a71d
+      - sceKernelSetGPO: 0x6ad345d7
+      - sceKernelLibcGettimeofday: 0x71ec4271
+      - sceKernelL1IcacheInvalidateAll: 0x7333e539
+      - sceKernelL1DcacheProbe: 0x740df7f0
+      - sceKernelDcacheProbeRange: 0x77dff087
+      - sceKernelDcacheWritebackAll: 0x79d1c3fa
+      - sceKernelL2cacheWritebackInvalidateRange: 0x7c5dc253
+      - sceKernelDcacheProbe: 0x80001c4c
+      - sceKernelUtilsSha1Digest: 0x840259f1
+      - sceKernelPutUserLog: 0x87e81561
+      - sceKernelLibcClock: 0x91e4f6a7
+      - sceKernelIcacheInvalidateAll: 0x920f104a
+      - sceKernelDcachePurgeRangeForUser: 0x99134c3f
+      - sceKernelUtilsMd5BlockInit: 0x9e5c5086
+      - sceKernelL1DcacheWritebackInvalidateAll: 0xaf3766bb
+      - sceKernelDcacheWritebackInvalidateAll: 0xb435dec5
+      - sceKernelDcachePurgeRangeForUser: 0xb83a1e76
+      - sceKernelUtilsMd5BlockResult: 0xb8d24e78
+      - sceKernelDcacheInvalidateRangeForUser: 0xbfa98062
+      - sceKernelIcacheInvalidateRangeForUser: 0xc2df770e
+      - sceKernelUtilsMd5Digest: 0xc8186a58
+      - sceKernelL1DcacheProbeRange: 0xdbbe9a46
+      - sceKernelUtilsMt19937Init: 0xe860e75e
+      - sceKernelL1IcacheProbe: 0xf0155bca
+      - sceKernelUtilsSha1BlockInit: 0xf8fcd5ba
+      - sceKernelIcacheReadTagForUser: 0xfb05fad0
+  - name: UtilsForKernel
+    label: __library_exports_8
+    version: [0, 17]
+    attributes: 0x0009
+    len: 5
+    pad: 1
+    extra_words: [0x00040000]
+    bucket_words: [0x00010000, 0x00030002, 0x00040003, 0x00080006, 0x000a0008, 0x000b000b, 0x000c000c, 0x0011000f, 0x00150013, 0x00160015, 0x00180017, 0x00190018, 0x001d001a, 0x001f001e, 0x00220020, 0x00260024, 0x00280027, 0x002b002b, 0x002f002c, 0x00310030, 0x00320032, 0x00340033, 0x00380037, 0x003b0039, 0x003e003d, 0x003f003e, 0x003f003f, 0x0040003f, 0x00420040, 0x00440042, 0x00470045, 0x00490047]
+    functions:
+      - sceKernelL1DcacheWritebackRange: 0x004d4dee
+      - sceKernelUtilsMt19937UInt: 0x06fb8a63
+      - sceKernelL2cacheWritebackAll: 0x0939d45c
+      - sceKernelSetPTRIGMask: 0x136f2419
+      - sceKernelL1DcacheInvalidateRange: 0x157a383a
+      - sceKernelDcacheReadTag: 0x16641d70
+      - sceKernelSetGPIMask: 0x193d4036
+      - sceKernelL1DcacheWritebackInvalidateRange: 0x1b0592a3
+      - sceKernelRegisterRtcFunc: 0x23a0c5ba
+      - sceKernelGzipGetCompressedData: 0x23ffc828
+      - sceKernelLibcTime: 0x27cc57f0
+      - sceKernelL2cacheProbeRange: 0x2f80288e
+      - sceKernelUtilsSha1BlockUpdate: 0x346f6da8
+      - sceKernelDcacheWritebackInvalidateRange: 0x34b9fa9e
+      - sceKernelGetGPI: 0x37fb5c42
+      - sceKernelGetPTRIG: 0x39f49610
+      - UtilsForKernel_39FFB756: 0x39ffb756
+      - sceKernelDcacheWritebackRange: 0x3ee30821
+      - sceKernelL1DcacheWritebackAll: 0x3fd3d324
+      - sceKernelReleaseRtcFunc: 0x41887ef4
+      - sceKernelL1IcacheInvalidateRange: 0x43c9a8db
+      - sceKernelL2cacheWritebackInvalidateAll: 0x485e430a
+      - sceKernelIcacheProbe: 0x4fd31c9d
+      - sceKernelDcacheReadTag: 0x515b4faf
+      - sceKernelUtilsSha1BlockResult: 0x585f1c09
+      - sceKernelIcacheReadTag: 0x5c7f2b1a
+      - sceKernelL2cacheWritebackRange: 0x601e43e6
+      - sceKernelUtilsMd5BlockUpdate: 0x61e1e525
+      - sceKernelSetPTRIG: 0x6231a71d
+      - UtilsForKernel_66463BEC: 0x66463bec
+      - sceKernelSetGPO: 0x6ad345d7
+      - UtilsForKernel_6C6887EE: 0x6c6887ee
+      - sceKernelLibcGettimeofday: 0x71ec4271
+      - sceKernelL1IcacheInvalidateAll: 0x7333e539
+      - sceKernelL1DcacheProbe: 0x740df7f0
+      - sceKernelDcacheProbeRange: 0x77dff087
+      - sceKernelGzipDecompress: 0x78934841
+      - sceKernelDcacheWritebackAll: 0x79d1c3fa
+      - sceKernelL2cacheWritebackInvalidateRange: 0x7c5dc253
+      - sceKernelDcacheProbe: 0x80001c4c
+      - sceKernelUtilsSha1Digest: 0x840259f1
+      - sceKernelDcacheInvalidateAll: 0x864a9d72
+      - sceKernelPutUserLog: 0x87e81561
+      - sceKernelGzipGetComment: 0x8c1fbe04
+      - sceKernelLibcClock: 0x91e4f6a7
+      - sceKernelIcacheInvalidateAll: 0x920f104a
+      - sceKernelRegisterUserLogHandler: 0x92282a47
+      - sceKernelSetGPOMask: 0x95035fef
+      - sceKernelDcachePurgeRange: 0x99134c3f
+      - sceKernelUtilsMd5BlockInit: 0x9e5c5086
+      - UtilsForKernel_A6B0A6B8: 0xa6b0a6b8
+      - sceKernelL1DcacheInvalidateAll: 0xaa9af5cf
+      - sceKernelL2cacheInvalidateAll: 0xaf0c0173
+      - sceKernelGetGPO: 0xaf3616c0
+      - sceKernelL1DcacheWritebackInvalidateAll: 0xaf3766bb
+      - sceKernelGzipGetInfo: 0xb0e9c31f
+      - sceKernelDcacheWritebackInvalidateAll: 0xb435dec5
+      - sceKernelDcachePurgeRange: 0xb83a1e76
+      - sceKernelUtilsMd5BlockResult: 0xb8d24e78
+      - sceKernelRtcGetTick: 0xbdbfca89
+      - sceKernelDcacheInvalidateRange: 0xbfa98062
+      - sceKernelIcacheInvalidateRange: 0xc2df770e
+      - sceKernelUtilsMd5Digest: 0xc8186a58
+      - sceKernelL1DcacheProbeRange: 0xdbbe9a46
+      - sceKernelGzipIsValid: 0xe0ce3e29
+      - sceKernelGzipGetName: 0xe0e6ba96
+      - sceKernelUtilsMt19937Init: 0xe860e75e
+      - sceKernelDeflateDecompress: 0xe8db3ce6
+      - sceKernelL2cacheProbe: 0xec86074d
+      - sceKernelL1IcacheProbe: 0xf0155bca
+      - sceKernelL2cacheInvalidateRange: 0xf192f2ec
+      - sceKernelUtilsSha1BlockInit: 0xf8fcd5ba
+      - sceKernelIcacheReadTag: 0xfb05fad0
+  - name: KDebugForKernel
+    label: __library_exports_9
+    version: [0, 17]
+    attributes: 0x0001
+    len: 5
+    extra_words: [0x00020000]
+    bucket_words: [0x00030000, 0x00070003, 0x000b0007, 0x000e000c, 0x0011000e, 0x00140011, 0x00160016, 0x001c0018]
+    functions:
+      - sceKernelRegisterDebugPutchar: 0x01ffe328
+      - sceKernelSm1RegisterOperations: 0x02668c61
+      - sceKernelRegisterAssertHandler: 0x0c56f87a
+      - sceKernelDebugWrite: 0x2214799b
+      - sceKernelGetDebugPutchar: 0x276c02e3
+      - sceKernelIsUMDMode: 0x27b23800
+      - sceKernelCheckDebugHandler: 0x2c7d85fa
+      - sceKernelDipswLow32: 0x43f0f8ab
+      - sceKernelIsToolMode: 0x47570ac5
+      - sceKernelRegisterDebugRead: 0x48be5aa9
+      - sceKernelRegisterDebugWrite: 0x4a74a9d4
+      - sceKernelDipswCpTime: 0x568dcd25
+      - sceKernelDeci2pRegisterOperations: 0x604276eb
+      - sceKernelDipswHigh32: 0x6cb0bda4
+      - Kprintf: 0x84f370bc
+      - sceKernelDipsw: 0x86010fcb
+      - sceKernelRegisterDebugPutcharByBootloader: 0x8a0f4e94
+      - sceKernelDebugEchoSet: 0xa1c5b42f
+      - sceKernelAssert: 0xaa9b2f07
+      - sceKernelIsDevelopmentToolMode: 0xacf427dc
+      - sceKernelDipswSet: 0xb20cabdb
+      - sceKernelIsDVDMode: 0xb41e2430
+      - sceKernelDebugRead: 0xd4ec38c1
+      - sceKernelDipswAll: 0xd636b827
+      - sceKernelRegisterKprintfHandler: 0xe201a0d8
+      - sceKernelSm1ReferOperations: 0xe892d9a1
+      - sceKernelDebugEcho: 0xe8fe3ee3
+      - sceKernelDipswClear: 0xeff672d1
+      - sceKernelDeci2pReferOperations: 0xf339073c

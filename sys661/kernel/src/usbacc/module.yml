@@ -1,0 +1,44 @@
+name: sceUSB_Acc_Driver
+attributes: 0x1006
+version: [1, 3]
+sdk_version: 0x06060110
+exports:
+  - name: syslib
+    version: [0, 0]
+    attributes: 0x8000
+    functions:
+      - module_start: 0xd632acdb
+      - module_stop: 0xcee8593c
+    variables:
+      - module_info: 0xf01d73a7
+      - module_sdk_version: 0x11b97506
+  - name: sceUsbAcc_internal
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 1
+    functions:
+      - sceUsbAccGetInfo: 0x0cd7d4aa
+      - sceUsbAccGetAuthStat: 0x79a1c743
+  - name: sceUsbAcc
+    version: [0, 17]
+    attributes: 0x4001
+    pad: 2
+    functions:
+      - sceUsbAccGetInfo: 0x0cd7d4aa
+      - sceUsbAccGetAuthStat: 0x79a1c743
+  - name: sceUsbAcc_driver
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 3
+    functions:
+      - sceUsbAccGetInfo: 0x0cd7d4aa
+      - sceUsbAccGetAuthStat: 0x79a1c743
+imports:
+  - name: sceUsb_driver
+    version: [0, 17]
+    attributes: 0x0001
+    len: 6
+    pad: 2
+    functions:
+      - sceUsb_driver_6C68EE25: 0x6c68ee25
+      - sceUsb_driver_C99E1766: 0xc99e1766

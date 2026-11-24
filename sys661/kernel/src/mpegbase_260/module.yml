@@ -1,0 +1,106 @@
+name: sceMpegbase_Driver
+attributes: 0x1006
+version: [1, 3]
+sdk_version: 0x06060110
+stub_order: [KDebugForKernel, SysMemForKernel, SysclibForKernel, ThreadManForKernel, UtilsForKernel, sceDmacplus_driver, sceMeCore_driver]
+exports:
+  - name: syslib
+    version: [0, 0]
+    attributes: 0x8000
+    functions:
+      - module_start: 0xd632acdb
+      - module_stop: 0xcee8593c
+    variables:
+      - module_info: 0xf01d73a7
+      - module_sdk_version: 0x11b97506
+  - name: sceMpegbase
+    version: [0, 17]
+    attributes: 0x4001
+    functions:
+      - sceMpegbase_0530BE4E: 0x0530be4e
+      - sceMpegbase_119D5DDA: 0x119d5dda
+      - sceMpegBaseCscAvcRange: 0x304882e1
+      - sceMpegbase_31007FF8: 0x31007ff8
+      - sceMpegBaseCscInit: 0x492b5e4b
+      - sceMpegBaseYCrCbCopy: 0x7ac0321a
+      - sceMpegBaseCscAvc: 0x91929a21
+      - sceMpegbase_AC9E717E: 0xac9e717e
+      - sceMpegBaseYCrCbCopyVme: 0xbe45c284
+      - sceMpegBasePESpacketCopy: 0xbea18f91
+      - sceMpegBaseCscVme: 0xce8eb837
+  - name: sceMpegbase_driver
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 1
+    functions:
+      - sceMpegbase_0530BE4E: 0x0530be4e
+      - module_start: 0x27a2982f
+      - sceMpegBaseCscAvcRange: 0x304882e1
+      - sceMpegBaseCscInit: 0x492b5e4b
+      - sceMpegBaseYCrCbCopy: 0x7ac0321a
+      - sceMpegBaseCscAvc: 0x91929a21
+      - sceMpegbase_AC9E717E: 0xac9e717e
+      - sceMpegBaseYCrCbCopyVme: 0xbe45c284
+      - sceMpegBasePESpacketCopy: 0xbea18f91
+      - sceMpegBaseCscVme: 0xce8eb837
+imports:
+  - name: sceDmacplus_driver
+    version: [0, 17]
+    attributes: 0x0001
+    len: 6
+    pad: 5
+    functions:
+      - sceDmacplus_driver_282CA0D7: 0x282ca0d7
+      - sceDmacplus_driver_47D400CB: 0x47d400cb
+      - sceDmacplus_driver_5FCF43BD: 0x5fcf43bd
+      - sceDmacplus_driver_6945F1D3: 0x6945f1d3
+      - sceDmacplus_driver_9C492B9B: 0x9c492b9b
+      - sceDmacplus_driver_B269EAC9: 0xb269eac9
+      - sceDmacplus_driver_BF0DB45E: 0xbf0db45e
+      - sceDmacplus_driver_D126494B: 0xd126494b
+      - sceDmacplus_driver_F652F09D: 0xf652f09d
+  - name: ThreadManForKernel
+    version: [0, 17]
+    attributes: 0x0001
+    len: 6
+    pad: 5
+    functions:
+      - sceKernelDeleteSema: 0x28b6489c
+      - sceKernelSignalSema: 0x3f53e640
+      - sceKernelWaitSema: 0x4e3a1105
+      - sceKernelCreateSema: 0xd6da4ba1
+  - name: UtilsForKernel
+    version: [0, 17]
+    attributes: 0x0009
+    pad: 5
+    functions:
+      - sceKernelDcacheWritebackInvalidateRange: 0x34b9fa9e
+      - sceKernelDcacheWritebackRange: 0x3ee30821
+      - sceKernelDcacheWritebackAll: 0x79d1c3fa
+  - name: SysclibForKernel
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 7
+    functions:
+      - strcmp: 0xc0ab8932
+  - name: SysMemForKernel
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 4
+    functions:
+      - sceKernelGetGameInfo: 0xef29061c
+  - name: KDebugForKernel
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 4
+    functions:
+      - Kprintf: 0x84f370bc
+  - name: sceMeCore_driver
+    version: [0, 17]
+    attributes: 0x0001
+    len: 6
+    pad: 3
+    functions:
+      - sceMeCore_driver_9EB2943B: 0x9eb2943b
+    variables:
+      - sceMeCore_driver_var_AB354CA1: 0xab354ca1

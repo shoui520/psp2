@@ -1,0 +1,86 @@
+name: sceMemlmd
+attributes: 0x7007
+version: [1, 37]
+sdk_version: 0x06060010
+stub_order: [InterruptManagerForKernel, ThreadManForKernel, UtilsForKernel, sceSuspendForKernel, sceSysEventForKernel]
+exports:
+  - name: syslib
+    version: [0, 0]
+    attributes: 0x8000
+    functions:
+      - module_start: 0xd632acdb
+      - module_reboot_before: 0x2f064fa6
+    variables:
+      - module_info: 0xf01d73a7
+      - module_sdk_version: 0x11b97506
+  - name: memlmd
+    version: [0, 17]
+    attributes: 0x0009
+    pad: 1
+    functions:
+      - memlmd_2AE425D2: 0x2ae425d2
+      - memlmd_2F3D7E2D: 0x2f3d7e2d
+      - memlmd_6192F715: 0x6192f715
+      - memlmd_76B7E315: 0x76b7e315
+      - memlmd_9D36A439: 0x9d36a439
+      - memlmd_CF03556B: 0xcf03556b
+      - memlmd_EA94592C: 0xea94592c
+      - memlmd_EF73E85B: 0xef73e85b
+      - memlmd_F26A33C3: 0xf26a33c3
+  - name: semaphore
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 2
+    functions:
+      - sceUtilsBufferCopy: 0x00eec06a
+      - sceUtilsBufferCopyWithRange: 0x4c537c72
+      - sceUtilsBufferCopyByPollingWithRange: 0x77e97079
+      - sceUtilsBufferCopyByPolling: 0x8eeb7bf2
+imports:
+  - name: sceSysEventForKernel
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 7
+    functions:
+      - sceKernelRegisterSysEventHandler: 0xcd9e4bb5
+      - sceKernelUnregisterSysEventHandler: 0xd7d3fdcd
+  - name: ThreadManForKernel
+    version: [0, 17]
+    attributes: 0x0001
+    len: 6
+    pad: 5
+    functions:
+      - sceKernelSetEventFlag: 0x1fb15a32
+      - sceKernelWaitEventFlag: 0x402fcf22
+      - sceKernelCreateEventFlag: 0x55c20a00
+      - sceKernelUnlockMutex: 0x6b30100f
+      - sceKernelLockMutex: 0xb011b11f
+      - sceKernelCreateMutex: 0xb7d098c6
+      - sceKernelDeleteEventFlag: 0xef9e4c70
+      - sceKernelDeleteMutex: 0xf8170fbe
+  - name: InterruptManagerForKernel
+    version: [0, 17]
+    attributes: 0x0009
+    len: 6
+    pad: 6
+    functions:
+      - sceKernelCpuSuspendIntr: 0x092968f4
+      - sceKernelCpuResumeIntrWithSync: 0x3b84732d
+      - sceKernelEnableIntr: 0x4d6e7305
+      - sceKernelRegisterIntrHandler: 0x58dd8978
+      - sceKernelDisableIntr: 0xd774ba45
+      - sceKernelReleaseIntrHandler: 0xf987b1f0
+  - name: UtilsForKernel
+    version: [0, 17]
+    attributes: 0x0009
+    pad: 5
+    functions:
+      - sceKernelDcacheWritebackInvalidateRange: 0x34b9fa9e
+      - UtilsForKernel_66463BEC: 0x66463bec
+      - sceKernelDcacheWritebackInvalidateAll: 0xb435dec5
+  - name: sceSuspendForKernel
+    version: [0, 17]
+    attributes: 0x0001
+    functions:
+      - sceKernelPowerUnlockForUser: 0x3aee7261
+      - sceKernelPowerLockForUser: 0xeadb1bd7

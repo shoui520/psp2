@@ -1,0 +1,111 @@
+name: sceSIRCS_IrDA_Driver
+attributes: 0x1006
+version: [1, 4]
+sdk_version: 0x06060110
+stub_order: [InterruptManagerForKernel, IoFileMgrForKernel, ThreadManForKernel, sceGpio_driver, sceSuspendForKernel, sceSysEventForKernel, sceSysreg_driver]
+exports:
+  - name: syslib
+    version: [0, 0]
+    attributes: 0x8000
+    functions:
+      - module_start: 0xd632acdb
+      - module_stop: 0xcee8593c
+      - module_reboot_before: 0x2f064fa6
+    variables:
+      - module_info: 0xf01d73a7
+      - module_sdk_version: 0x11b97506
+  - name: sceSircs
+    version: [0, 17]
+    attributes: 0x4001
+    pad: 3
+    functions:
+      - sceSircsSend: 0x71eef62d
+      - sceSircs_83381633: 0x83381633
+  - name: sceSircs_driver
+    version: [0, 17]
+    attributes: 0x0001
+    functions:
+      - sceSircs_driver_19155A2F: 0x19155a2f
+      - sceSircs_driver_62411801: 0x62411801
+      - sceSircsSend: 0x71eef62d
+      - sceSircs_83381633: 0x83381633
+imports:
+  - name: sceSysEventForKernel
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 7
+    functions:
+      - sceKernelRegisterSysEventHandler: 0xcd9e4bb5
+      - sceKernelUnregisterSysEventHandler: 0xd7d3fdcd
+  - name: IoFileMgrForKernel
+    version: [0, 17]
+    attributes: 0x0001
+    len: 6
+    pad: 5
+    functions:
+      - sceIoAddDrv: 0x8e982a74
+      - sceIoDelDrv: 0xc7f35804
+  - name: InterruptManagerForKernel
+    version: [0, 17]
+    attributes: 0x0009
+    len: 6
+    pad: 6
+    functions:
+      - sceKernelCpuSuspendIntr: 0x092968f4
+      - sceKernelEnableIntr: 0x4d6e7305
+      - sceKernelRegisterIntrHandler: 0x58dd8978
+      - sceKernelCpuResumeIntr: 0x5f10d406
+      - sceKernelDisableIntr: 0xd774ba45
+      - sceKernelReleaseIntrHandler: 0xf987b1f0
+      - sceKernelIsIntrContext: 0xfe28c6d9
+  - name: ThreadManForKernel
+    version: [0, 17]
+    attributes: 0x0001
+    len: 6
+    pad: 5
+    functions:
+      - sceKernelSetEventFlag: 0x1fb15a32
+      - sceKernelDeleteSema: 0x28b6489c
+      - sceKernelGetSystemTimeLow: 0x369ed59d
+      - sceKernelSignalSema: 0x3f53e640
+      - sceKernelWaitEventFlag: 0x402fcf22
+      - sceKernelWaitSema: 0x4e3a1105
+      - sceKernelCreateEventFlag: 0x55c20a00
+      - sceKernelTryAllocateFpl: 0x623ae665
+      - sceKernelSetAlarm: 0x6652b8ca
+      - sceKernelCancelAlarm: 0x7e65b999
+      - sceKernelClearEventFlag: 0x812346e4
+      - sceKernelSysClock2USec: 0xba6b92e2
+      - sceKernelCreateFpl: 0xc07bb470
+      - sceKernelDelayThread: 0xceadeb47
+      - sceKernelCreateSema: 0xd6da4ba1
+      - sceKernelDeleteFpl: 0xed1410e0
+      - sceKernelDeleteEventFlag: 0xef9e4c70
+  - name: sceSuspendForKernel
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 4
+    functions:
+      - sceKernelPowerUnlock: 0x3aee7261
+      - sceKernelPowerLock: 0xeadb1bd7
+  - name: sceSysreg_driver
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 7
+    functions:
+      - sceSysregSircsClkDisable: 0x20388c9e
+      - sceSysregSircsIoDisable: 0x26fa0928
+      - sceSysregSircsIoEnable: 0x4c49a8bc
+      - sceSysregSircsClkEnable: 0x6417cdd6
+      - sceSysregUartClkEnable: 0x7725ca08
+      - sceSysregUartIoEnable: 0x7fd7a631
+      - sceSysregUartIoDisable: 0xbb823481
+      - sceSysregGetTachyonVersion: 0xe2a5d1ee
+  - name: sceGpio_driver
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 1
+    functions:
+      - sceGpioPortClear: 0x103c3eb2
+      - sceGpioPortSet: 0x310f0ccf
+      - sceGpioSetPortMode: 0x317d9d2c

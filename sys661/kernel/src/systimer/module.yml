@@ -1,0 +1,48 @@
+name: sceSystimer
+attributes: 0x1007
+version: [1, 2]
+sdk_version: 0x06060110
+exports:
+  - name: syslib
+    version: [0, 0]
+    attributes: 0x8000
+    functions:
+      - module_bootstart: 0xd3744be0
+      - module_reboot_before: 0x2f064fa6
+    variables:
+      - module_info: 0xf01d73a7
+      - module_sdk_version: 0x11b97506
+  - name: SysTimerForKernel
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 2
+    functions:
+      - sceSTimerStartCount: 0x4bc8c61c
+      - sceSTimerResetCount: 0x6ac97b04
+      - sceSTimerAlloc: 0x893dec1a
+      - sceSTimerFree: 0x93b952d1
+      - sceSTimerStopCount: 0x973104d0
+      - sceSTimerSetPrscl: 0xcac43feb
+      - sceSTimerGetCount: 0xdda5d3ea
+      - sceSTimerSetTMCY: 0xe265669a
+      - sceSTimerSetHandler: 0xeee11ca5
+imports:
+  - name: InterruptManagerForKernel
+    version: [0, 17]
+    attributes: 0x0009
+    len: 6
+    pad: 6
+    functions:
+      - sceKernelCpuSuspendIntr: 0x092968f4
+      - sceKernelEnableIntr: 0x4d6e7305
+      - sceKernelRegisterIntrHandler: 0x58dd8978
+      - sceKernelCpuResumeIntr: 0x5f10d406
+      - sceKernelDisableIntr: 0xd774ba45
+      - sceKernelReleaseIntrHandler: 0xf987b1f0
+      - sceKernelIsIntrContext: 0xfe28c6d9
+  - name: sceSuspendForKernel
+    version: [0, 17]
+    attributes: 0x0001
+    functions:
+      - sceKernelRegisterSuspendHandler: 0x91a77137
+      - sceKernelRegisterResumeHandler: 0xb43d1a8c

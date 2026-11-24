@@ -1,0 +1,30 @@
+name: sceExceptionManager
+attributes: 0x1007
+version: [1, 3]
+sdk_version: 0x06060110
+exports:
+  - name: syslib
+    version: [0, 0]
+    attributes: 0x8000
+    functions:
+      - module_bootstart: 0xd3744be0
+    variables:
+      - module_info: 0xf01d73a7
+      - module_sdk_version: 0x11b97506
+  - name: ExceptionManagerForKernel
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 2
+    functions:
+      - sceKernelRegisterDefaultExceptionHandler: 0x0a998599
+      - sceKernelRegisterNmiHandler: 0x15adc862
+      - sceKernelGetActiveDefaultExceptionHandler: 0x27e6a663
+      - sceKernelReleaseDefaultExceptionHandler: 0x409dbb53
+      - sceKernelReleaseExceptionHandler: 0x54b0cad2
+      - ExceptionManagerForKernel_79454858: 0x79454858
+      - sceKernelRegisterPriorityExceptionHandler: 0x7c11759d
+      - ExceptionManagerForKernel_96D47F7E: 0x96d47f7e
+      - sceKernelReleaseNmiHandler: 0xb15357c9
+      - sceKernelRegisterExceptionHandler: 0xfbc2353a
+    variables:
+      - ExcepManCB: 0x6437d22a

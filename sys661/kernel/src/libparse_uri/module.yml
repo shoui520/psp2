@@ -1,0 +1,30 @@
+name: SceParseURI_Library
+attributes: 0x0006
+version: [1, 1]
+sdk_version: 0x06060110
+exports:
+  - name: syslib
+    version: [0, 0]
+    attributes: 0x8000
+    variables:
+      - module_info: 0xf01d73a7
+      - module_sdk_version: 0x11b97506
+  - name: sceParseUri
+    version: [0, 17]
+    attributes: 0x0001
+    functions:
+      - sceParseUri_062BB07E: 0x062bb07e
+      - sceParseUri_49E950EC: 0x49e950ec
+      - sceParseUri_568518C9: 0x568518c9
+      - sceParseUri_7EE318AF: 0x7ee318af
+      - sceParseUri_8885A782: 0x8885a782
+      - sceParseUri_8AA55D17: 0x8aa55d17
+imports:
+  - name: Kernel_Library
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 1
+    functions:
+      - sceKernelMemset: 0xa089eca4
+      - _sceKernelCheckThreadStack: 0xd13bde95
+      - sceKernelMemcpy: 0x1839852a

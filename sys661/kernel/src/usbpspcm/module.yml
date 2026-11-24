@@ -1,0 +1,96 @@
+name: sceUSB_PSPComm_Driver
+attributes: 0x1006
+version: [1, 4]
+sdk_version: 0x06060110
+stub_order: [IoFileMgrForKernel, SysMemForKernel, SysclibForKernel, ThreadManForKernel, UtilsForKernel, sceKermitMemory_driver, sceKermit_driver, sceUsb_driver]
+exports:
+  - name: syslib
+    version: [0, 0]
+    attributes: 0x8000
+    functions:
+      - module_start: 0xd632acdb
+      - module_stop: 0xcee8593c
+    variables:
+      - module_info: 0xf01d73a7
+      - module_sdk_version: 0x11b97506
+imports:
+  - name: sceUsb_driver
+    version: [0, 17]
+    attributes: 0x0001
+    len: 6
+    pad: 6
+    functions:
+      - sceUsb_driver_6C68EE25: 0x6c68ee25
+      - sceUsb_driver_9F89B84C: 0x9f89b84c
+      - sceUsb_driver_C99E1766: 0xc99e1766
+  - name: IoFileMgrForKernel
+    version: [0, 17]
+    attributes: 0x0001
+    len: 6
+    pad: 5
+    functions:
+      - sceIoAddDrv: 0x8e982a74
+      - sceIoDelDrv: 0xc7f35804
+  - name: ThreadManForKernel
+    version: [0, 17]
+    attributes: 0x0001
+    len: 6
+    pad: 5
+    functions:
+      - sceKernelSetEventFlag: 0x1fb15a32
+      - sceKernelWaitThreadEnd: 0x278c0df5
+      - sceKernelDeleteSema: 0x28b6489c
+      - sceKernelTerminateDeleteThread: 0x383f7bcc
+      - sceKernelSignalSema: 0x3f53e640
+      - sceKernelWaitEventFlag: 0x402fcf22
+      - sceKernelCreateThread: 0x446d8de6
+      - sceKernelCreateEventFlag: 0x55c20a00
+      - sceKernelGetThreadmanIdType: 0x57cf62dd
+      - sceKernelPollSema: 0x58b1f937
+      - sceKernelTerminateThread: 0x616403ba
+      - sceKernelUnlockMutex: 0x6b30100f
+      - sceKernelExitThread: 0xaa73c935
+      - sceKernelLockMutex: 0xb011b11f
+      - sceKernelCreateMutex: 0xb7d098c6
+      - sceKernelCreateSema: 0xd6da4ba1
+      - sceKernelDeleteEventFlag: 0xef9e4c70
+      - sceKernelStartThread: 0xf475845d
+      - sceKernelDeleteMutex: 0xf8170fbe
+  - name: UtilsForKernel
+    version: [0, 17]
+    attributes: 0x0009
+    pad: 5
+    functions:
+      - sceKernelDcacheWritebackRange: 0x3ee30821
+      - sceKernelDcacheInvalidateRangeForUser: 0xbfa98062
+  - name: SysclibForKernel
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 7
+    functions:
+      - memset: 0x10f3bb61
+      - strlen: 0x52df196c
+      - strncpy: 0xb49a7697
+      - snprintf: 0xc2145e80
+  - name: SysMemForKernel
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 4
+    functions:
+      - sceKernelMemcpy: 0x181065ab
+      - sceKernelMemset: 0x8ae776af
+      - sceKernelGetUIDcontrolBlock: 0xc90b0992
+  - name: sceKermit_driver
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 7
+    functions:
+      - sceKermit_driver_36666181: 0x36666181
+      - sceKermit_driver_5280B410: 0x5280b410
+  - name: sceKermitMemory_driver
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 1
+    functions:
+      - sceKermitMemory_driver_90B662D0: 0x90b662d0
+      - sceKermitMemory_driver_AAF047AC: 0xaaf047ac

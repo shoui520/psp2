@@ -1,4 +1,4 @@
 TARGET := openpsid
-SRCS   := openpsid.c ddrdb.c scetables.S
+SRCS   := openpsid.c ddrdb.c
 
 include ../../build.mak

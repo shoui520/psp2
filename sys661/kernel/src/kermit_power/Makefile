@@ -1,4 +1,4 @@
 TARGET = kermit_power
-SRCS   = kermit_power.c scetables.S
+SRCS   = kermit_power.c
 
 include ../../build.mak

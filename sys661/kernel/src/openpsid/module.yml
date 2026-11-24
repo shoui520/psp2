@@ -1,0 +1,106 @@
+name: sceOpenPSID_Service
+attributes: 0x5007
+version: [1, 16]
+sdk_version: 0x06060010
+stub_order: [InterruptManagerForKernel, SysMemForKernel, ThreadManForKernel, sceIdStorage_driver, sceRtc_driver, semaphore]
+exports:
+  - name: syslib
+    version: [0, 0]
+    attributes: 0x8000
+    functions:
+      - module_start: 0xd632acdb
+    variables:
+      - module_info: 0xf01d73a7
+      - module_sdk_version: 0x11b97506
+  - name: sceOpenPSID
+    version: [0, 17]
+    attributes: 0x4001
+    functions:
+      - sceOpenPSID_AE6DD68C: 0xae6dd68c
+      - sceOpenPSIDGetProductCode: 0xb29330de
+      - sceOpenPSIDGetOpenPSID: 0xc69bebce
+  - name: sceOpenPSID_driver
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 1
+    functions:
+      - sceOpenPSIDGetPSID: 0x19d579f0
+      - sceOpenPSID_driver_8546569E: 0x8546569e
+      - sceOpenPSIDGetOpenPSID: 0xc69bebce
+      - sceOpenPSID_driver_E8316C16: 0xe8316c16
+  - name: sceDdrdb_driver
+    version: [0, 17]
+    attributes: 0x0001
+    functions:
+      - sceDdrdbEncrypt: 0x05d50f41
+      - sceDdrdbCertvry: 0x370f456a
+      - sceDdrdbHash: 0x40cb752a
+      - sceDdrdbSiggen: 0xb24e1391
+      - sceDdrdbDecrypt: 0xb33acb44
+      - sceDdrdbPrngen: 0xb8218473
+      - sceDdrdbSigvry: 0xe27ce4cb
+      - sceDdrdbMul2: 0xec05300a
+      - sceDdrdbMul1: 0xf970d54e
+  - name: scePcact_driver
+    version: [0, 17]
+    attributes: 0x0001
+    functions:
+      - scePcactAuth2BB: 0x08bb9677
+      - scePcactAuth1BB: 0xf9ecfddd
+  - name: sceMlnpsnl_driver
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 2
+    functions:
+      - sceMlnpsnlAuth2BB: 0x6885f392
+      - sceMlnpsnlAuth1BB: 0x8523e178
+  - name: sceDdrdb
+    version: [0, 17]
+    attributes: 0x4001
+    pad: 3
+    functions:
+      - sceDdrdb_F013F8BF: 0xf013f8bf
+imports:
+  - name: SysMemForKernel
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 4
+    functions:
+      - sceKernelGetQTGP3: 0x43e0a861
+      - sceKernelGetQTGP2: 0x474ca24f
+      - sceKernelGetGameInfo: 0xef29061c
+  - name: ThreadManForKernel
+    version: [0, 17]
+    attributes: 0x0001
+    len: 6
+    pad: 5
+    functions:
+      - sceKernelSignalSema: 0x3f53e640
+      - sceKernelWaitSema: 0x4e3a1105
+      - sceKernelCreateSema: 0xd6da4ba1
+  - name: InterruptManagerForKernel
+    version: [0, 17]
+    attributes: 0x0009
+    len: 6
+    pad: 6
+    functions:
+      - sceKernelCpuSuspendIntr: 0x092968f4
+      - sceKernelCpuResumeIntr: 0x5f10d406
+  - name: sceIdStorage_driver
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 4
+    functions:
+      - sceIdStorageLookup: 0x6fe062d1
+  - name: sceRtc_driver
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 6
+    functions:
+      - sceRtc_driver_CEEF238F: 0xceef238f
+  - name: semaphore
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 2
+    functions:
+      - sceUtilsBufferCopyWithRange: 0x4c537c72

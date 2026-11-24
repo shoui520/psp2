@@ -1,4 +1,4 @@
 TARGET := kermit_flashfs
-SRCS   := kermit_flashfs.c scetables.S
+SRCS   := kermit_flashfs.c
 
 include ../../build.mak

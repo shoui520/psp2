@@ -1,4 +1,4 @@
 TARGET := kermit_idstorage
-SRCS   := kermit_idstorage.c scetables.S
+SRCS   := kermit_idstorage.c
 
 include ../../build.mak

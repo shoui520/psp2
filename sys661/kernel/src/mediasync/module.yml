@@ -1,0 +1,254 @@
+name: sceMediaSync
+attributes: 0x1007
+version: [1, 9]
+sdk_version: 0x06060110
+stub_order: [InitForKernel, InterruptManagerForKernel, IoFileMgrForKernel, KDebugForKernel, ModuleMgrForKernel, SysMemForKernel, SysclibForKernel, ThreadManForKernel, UtilsForKernel, sceAudio_driver, sceCtrl_driver, sceKermitPeripheral_driver, sceMeCore_driver, sceReg_driver, sceUmd, sceUmd9660_driver, sceUmdCache_driver, sceWlanDrv_driver]
+exports:
+  - name: syslib
+    version: [0, 0]
+    attributes: 0x8000
+    functions:
+      - module_start: 0xd632acdb
+    variables:
+      - module_info: 0xf01d73a7
+      - module_sdk_version: 0x11b97506
+imports:
+  - name: KDebugForKernel
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 4
+    functions:
+      - Kprintf: 0x84f370bc
+      - sceKernelDipsw: 0x86010fcb
+      - sceKernelIsDevelopmentToolMode: 0xacf427dc
+  - name: SysMemForKernel
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 4
+    functions:
+      - SysMemForKernel_13EE28DA: 0x13ee28da
+      - sceKernelMemcpy: 0x181065ab
+      - sceKernelAllocHeapMemory: 0x23d81675
+      - sceKernelCreateHeap: 0x58148f07
+      - sceKernelAllocPartitionMemory: 0x7158ce7e
+      - sceKernelFreeHeapMemory: 0x87c2ab85
+      - sceKernelMemset: 0x8ae776af
+      - SysMemForKernel_A03CB480: 0xa03cb480
+      - sceKernelFreePartitionMemory: 0xc1a26c6f
+      - sceKernelDeleteHeap: 0xdd6512d0
+      - sceKernelGetGameInfo: 0xef29061c
+      - sceKernelGetBlockHeadAddr: 0xf12a62f7
+  - name: SysclibForKernel
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 7
+    functions:
+      - memset: 0x10f3bb61
+      - tolower: 0x3ec5bbf6
+      - strcat: 0x476fd94a
+      - strlen: 0x52df196c
+      - strncmp: 0x7ab35214
+      - memcmp: 0x81d0d1f7
+      - strncpy: 0xb49a7697
+      - strcmp: 0xc0ab8932
+  - name: IoFileMgrForKernel
+    version: [0, 17]
+    attributes: 0x0001
+    len: 6
+    pad: 5
+    functions:
+      - sceIoOpen: 0x109f50bc
+      - sceIoLseek: 0x27eb27b8
+      - sceIoWrite: 0x42ec03ac
+      - sceIoDevctl: 0x54f5fb11
+      - sceIoRead: 0x6a638d83
+      - sceIoClose: 0x810c4bc3
+      - sceIoDopen: 0xb29ddf9c
+      - sceIoDread: 0xe3eb004c
+      - sceIoDclose: 0xeb092469
+    variables:
+      - g_deleted_error: 0xe4d75bc0
+      - IoFileMgrForKernel_var_E6F7A8DF: 0xe6f7a8df
+      - IoFileMgrForKernel_var_F659661B: 0xf659661b
+  - name: ThreadManForKernel
+    version: [0, 17]
+    attributes: 0x0001
+    len: 6
+    pad: 5
+    functions:
+      - sceKernelSetEventFlag: 0x1fb15a32
+      - sceKernelWaitEventFlagCB: 0x328c546a
+      - sceKernelCreateEventFlag: 0x55c20a00
+      - sceKernelCreateVpl: 0x56c039b5
+      - sceKernelDeleteVpl: 0x89b3d48c
+      - sceKernelTryAllocateVpl: 0xaf36d708
+      - sceKernelFreeVpl: 0xb736e9ff
+      - ThreadManForKernel_D366D35A: 0xd366d35a
+      - sceKernelCreateCallback: 0xe81caf8f
+      - sceKernelDeleteCallback: 0xedba5844
+      - sceKernelDeleteEventFlag: 0xef9e4c70
+  - name: UtilsForKernel
+    version: [0, 17]
+    attributes: 0x0009
+    pad: 5
+    functions:
+      - sceKernelGetGPI: 0x37fb5c42
+      - sceKernelUtilsMd5Digest: 0xc8186a58
+  - name: InterruptManagerForKernel
+    version: [0, 17]
+    attributes: 0x0009
+    len: 6
+    pad: 6
+    functions:
+      - InterruptManagerForKernel_E526B767: 0xe526b767
+  - name: InitForKernel
+    version: [0, 17]
+    attributes: 0x0009
+    pad: 6
+    functions:
+      - sceKernelGetChunk: 0x2c6e9fe9
+      - sceKernelApplicationType: 0x7233b5bc
+      - sceKernelInitApitype: 0x7a2333ad
+      - InitForKernel_9D33A110: 0x9d33a110
+      - sceKernelInitDiscImage: 0xa18a4a8b
+      - sceKernelInitFileName: 0xa6e71b93
+  - name: ModuleMgrForKernel
+    version: [0, 17]
+    attributes: 0x0009
+    len: 6
+    pad: 5
+    functions:
+      - sceKernelSearchModuleByName: 0xd86dd11b
+    variables:
+      - ModuleMgrForKernel_var_57F4B35E: 0x57f4b35e
+      - ModuleMgrForKernel_var_99BFFDB8: 0x99bffdb8
+      - ModuleMgrForKernel_var_DB08B7FF: 0xdb08b7ff
+  - name: sceUmd
+    version: [0, 17]
+    attributes: 0x0009
+    pad: 5
+    functions:
+      - sceUmdWaitDriveStat: 0x8ef08fce
+      - sceUmdCheckMedium: 0xa9b5b972
+      - sceUmdGetDriveStatus: 0xb7bf4c31
+      - sceUmdActivate: 0xc6183d47
+  - name: sceUmdCache_driver
+    version: [0, 17]
+    attributes: 0x0009
+    pad: 5
+    functions:
+      - sceUmdCache_driver_576E0F06: 0x576e0f06
+      - sceUmdCache_driver_A21D8213: 0xa21d8213
+      - sceUmdCache_driver_DB97E432: 0xdb97e432
+  - name: sceUmd9660_driver
+    version: [0, 17]
+    attributes: 0x0009
+    pad: 6
+    functions:
+      - sceUmd9660_driver_3CC9CE54: 0x3cc9ce54
+      - sceUmd9660_driver_FE3A8B67: 0xfe3a8b67
+  - name: sceWlanDrv_driver
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 6
+    functions:
+      - sceWlanDrv_driver_EDD207B1: 0xedd207b1
+  - name: sceKermitPeripheral_driver
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 5
+    functions:
+      - sceKermitPeripheral_driver_4A26B7C8: 0x4a26b7c8
+      - sceKermitPeripheral_driver_675DB2C1: 0x675db2c1
+      - sceKermitPeripheral_driver_B93A88E2: 0xb93a88e2
+  - name: scePower_driver
+    version: [0, 17]
+    attributes: 0x0001
+    len: 6
+    pad: 4
+    variables:
+      - scePower_driver_var_07FC869E: 0x07fc869e
+      - scePower_driver_var_18DFA43A: 0x18dfa43a
+      - scePower_driver_var_2A28BB48: 0x2a28bb48
+      - scePower_driver_var_2EDA246C: 0x2eda246c
+      - scePower_driver_var_3080D4C0: 0x3080d4c0
+      - scePower_driver_var_33399B15: 0x33399b15
+      - scePower_driver_var_4A03DA50: 0x4a03da50
+      - scePower_driver_var_8B317890: 0x8b317890
+      - scePower_driver_var_93E16800: 0x93e16800
+      - scePower_driver_var_94FA3195: 0x94fa3195
+      - scePower_driver_var_C7998FA4: 0xc7998fa4
+      - scePower_driver_var_E59CA666: 0xe59ca666
+  - name: sceUsb_driver
+    version: [0, 17]
+    attributes: 0x0001
+    len: 6
+    pad: 6
+    variables:
+      - sceUsb_driver_var_3EA085BF: 0x3ea085bf
+      - sceUsb_driver_var_A942D291: 0xa942d291
+  - name: sceKermitMsfs_driver
+    version: [0, 17]
+    attributes: 0x0001
+    len: 6
+    pad: 7
+    variables:
+      - sceKermitMsfs_driver_var_7668D90C: 0x7668d90c
+      - sceKermitMsfs_driver_var_93B61A29: 0x93b61a29
+      - sceKermitMsfs_driver_var_BE954163: 0xbe954163
+      - sceKermitMsfs_driver_var_C1B4213A: 0xc1b4213a
+  - name: sceCtrl_driver
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 5
+    functions:
+      - sceCtrl_driver_5886194C: 0x5886194c
+  - name: sceAudio_driver
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 4
+    functions:
+      - sceAudio_driver_95AE5A2B: 0x95ae5a2b
+  - name: sceReg_driver
+    version: [0, 17]
+    attributes: 0x0001
+    len: 6
+    pad: 6
+    functions:
+      - sceRegCloseRegistry: 0x49d77d65
+      - sceRegOpenCategory: 0x4f471457
+      - sceRegGetKeyInfo: 0x9980519f
+      - sceRegOpenRegistry: 0xdba46704
+      - sceRegGetKeyValue: 0xf4a3e396
+      - sceRegCloseCategory: 0xfc742751
+    variables:
+      - sceReg_driver_var_5105E3FF: 0x5105e3ff
+      - sceReg_driver_var_867D5F60: 0x867d5f60
+  - name: sceMeCore_driver
+    version: [0, 17]
+    attributes: 0x0001
+    len: 6
+    pad: 7
+    functions:
+      - sceMeCore_driver_4CD5B5BF: 0x4cd5b5bf
+    variables:
+      - sceMeCore_driver_var_385A4CC6: 0x385a4cc6
+      - sceMeCore_driver_var_61FF4837: 0x61ff4837
+      - sceMeCore_driver_var_AB354CA1: 0xab354ca1
+  - name: sceDmacplus_driver
+    version: [0, 17]
+    attributes: 0x0001
+    len: 6
+    pad: 5
+    variables:
+      - sceDmacplus_driver_var_374689B0: 0x374689b0
+      - sceDmacplus_driver_var_9D3DDDF0: 0x9d3dddf0
+      - sceDmacplus_driver_var_AA2E7E54: 0xaa2e7e54
+      - sceDmacplus_driver_var_C10B947A: 0xc10b947a
+  - name: sceRtc_driver
+    version: [0, 17]
+    attributes: 0x0001
+    len: 6
+    pad: 2
+    variables:
+      - sceRtc_driver_var_5A64FA55: 0x5a64fa55

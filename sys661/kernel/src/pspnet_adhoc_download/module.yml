@@ -1,0 +1,140 @@
+name: sceNetAdhocDownload_Library
+attributes: 0x0006
+version: [1, 4]
+sdk_version: 0x06060110
+stub_order: [Kernel_Library, ThreadManForUser, sceNet, sceNetAdhoc, sceNetAdhocMatching, sceNet_lib, sceUtility]
+exports:
+  - name: syslib
+    version: [0, 0]
+    attributes: 0x8000
+    variables:
+      - module_info: 0xf01d73a7
+      - module_sdk_version: 0x11b97506
+  - name: sceNetAdhocDownload
+    version: [0, 17]
+    attributes: 0x0001
+    len: 5
+    extra_words: [0x00020000]
+    bucket_words: [0x00020000, 0x00080005, 0x0012000d, 0x00130013, 0x00190015, 0x001d001a, 0x0020001e, 0x00220021]
+    functions:
+      - sceNetAdhocDownload_04077014: 0x04077014
+      - sceNetAdhocDownload_0A531FBE: 0x0a531fbe
+      - sceNetAdhocDownload_117CA01A: 0x117ca01a
+      - sceNetAdhocDownload_13DAB550: 0x13dab550
+      - sceNetAdhocDownload_1AD5CC88: 0x1ad5cc88
+      - sceNetAdhocDownload_22C2BCC6: 0x22c2bcc6
+      - sceNetAdhocDownload_24FD9B7A: 0x24fd9b7a
+      - sceNetAdhocDownload_2B6FB0DA: 0x2b6fb0da
+      - sceNetAdhocDownload_3082F4E2: 0x3082f4e2
+      - sceNetAdhocDownload_314ED31E: 0x314ed31e
+      - sceNetAdhocDownload_378D4311: 0x378d4311
+      - sceNetAdhocDownload_3B6A7B35: 0x3b6a7b35
+      - sceNetAdhocDownload_3E91D2DC: 0x3e91d2dc
+      - sceNetAdhocDownload_469F6B83: 0x469f6b83
+      - sceNetAdhocDownload_48252AF0: 0x48252af0
+      - sceNetAdhocDownload_48F87AB1: 0x48f87ab1
+      - sceNetAdhocDownload_4C542FD1: 0x4c542fd1
+      - sceNetAdhocDownload_4E6029F1: 0x4e6029f1
+      - sceNetAdhocDownload_57A51DD0: 0x57a51dd0
+      - sceNetAdhocDownload_7A483F9E: 0x7a483f9e
+      - sceNetAdhocDownload_7CAC6934: 0x7cac6934
+      - sceNetAdhocDownload_827157E2: 0x827157e2
+      - sceNetAdhocDownload_8846D2B0: 0x8846d2b0
+      - sceNetAdhocDownload_8A5500E0: 0x8a5500e0
+      - sceNetAdhocDownload_8A987F07: 0x8a987f07
+      - sceNetAdhocDownload_90B616A4: 0x90b616a4
+      - sceNetAdhocDownload_A21FEF45: 0xa21fef45
+      - sceNetAdhocDownload_A45230D9: 0xa45230d9
+      - sceNetAdhocDownload_A70FDFBE: 0xa70fdfbe
+      - sceNetAdhocDownload_BF1433F0: 0xbf1433f0
+      - sceNetAdhocDownload_C421875C: 0xc421875c
+      - sceNetAdhocDownload_C8402ACD: 0xc8402acd
+      - sceNetAdhocDownload_D0189004: 0xd0189004
+      - sceNetAdhocDownload_E01A6429: 0xe01a6429
+      - sceNetAdhocDownload_F76147B1: 0xf76147b1
+      - sceNetAdhocDownload_F8FC359E: 0xf8fc359e
+imports:
+  - name: sceUtility
+    version: [0, 17]
+    attributes: 0x4001
+    pad: 5
+    functions:
+      - sceUtilityGetSystemParamString: 0x34b78343
+  - name: sceNetAdhocMatching
+    version: [0, 17]
+    attributes: 0x0009
+    pad: 4
+    functions:
+      - sceNetAdhocMatchingStop: 0x32b156b3
+      - sceNetAdhocMatchingSelectTarget: 0x5e3d4b79
+      - sceNetAdhocMatchingSetHelloOpt: 0xb58e61b7
+      - sceNetAdhocMatchingCreate: 0xca5eda6f
+      - sceNetAdhocMatching_E8454C65: 0xe8454c65
+      - sceNetAdhocMatchingCancelTarget: 0xea3c6108
+      - sceNetAdhocMatchingDelete: 0xf16eaf4f
+  - name: sceNet_lib
+    version: [0, 17]
+    attributes: 0x0009
+    pad: 5
+    functions:
+      - sceNet_lib_E0A81C7C: 0xe0a81c7c
+  - name: sceNet
+    version: [0, 17]
+    attributes: 0x0009
+    pad: 5
+    functions:
+      - sceNetGetLocalEtherAddr: 0x0bf0a3ae
+      - sceNetFreeThreadinfo: 0x50647530
+  - name: sceNetAdhoc
+    version: [0, 17]
+    attributes: 0x0009
+    pad: 4
+    functions:
+      - sceNetAdhocPtpClose: 0x157e6225
+      - sceNetAdhocPtpSend: 0x4da4c788
+      - sceNetAdhoc_73BFD52D: 0x73bfd52d
+      - sceNetAdhocPtpOpen: 0x877f6d66
+      - sceNetAdhocPtpRecv: 0x8bea2b3e
+      - sceNetAdhocPtpFlush: 0x9ac2eeac
+      - sceNetAdhocPtpAccept: 0x9df81198
+      - sceNetAdhocPtpListen: 0xe08bdac1
+      - sceNetAdhocPtpConnect: 0xfc6fc07b
+  - name: Kernel_Library
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 5
+    functions:
+      - sceKernelCpuSuspendIntr: 0x092968f4
+      - sceKernelMemset: 0xa089eca4
+      - sceKernelLockLwMutex: 0xbea46419
+      - _sceKernelCheckThreadStack: 0xd13bde95
+      - sceKernelUnlockLwMutex: 0x15b6446b
+      - sceKernelMemcpy: 0x1839852a
+      - sceKernelCpuResumeIntr: 0x5f10d406
+  - name: ThreadManForUser
+    version: [0, 17]
+    attributes: 0x4001
+    pad: 3
+    functions:
+      - sceKernelDelayThread: 0xceadeb47
+      - sceKernelCreateSema: 0xd6da4ba1
+      - sceKernelSetEventFlag: 0x1fb15a32
+      - sceKernelDeleteEventFlag: 0xef9e4c70
+      - sceKernelStartThread: 0xf475845d
+      - sceKernelWaitThreadEnd: 0x278c0df5
+      - sceKernelDeleteSema: 0x28b6489c
+      - sceKernelPollEventFlag: 0x30fd48f0
+      - sceKernelReferVplStatus: 0x39810265
+      - sceKernelSignalSema: 0x3f53e640
+      - sceKernelWaitEventFlag: 0x402fcf22
+      - sceKernelCreateThread: 0x446d8de6
+      - sceKernelWaitSema: 0x4e3a1105
+      - sceKernelCreateEventFlag: 0x55c20a00
+      - sceKernelCreateVpl: 0x56c039b5
+      - sceKernelDeleteLwMutex: 0x60107536
+      - sceKernelDeleteVpl: 0x89b3d48c
+      - sceKernelCancelSema: 0x8ffdf9a2
+      - sceKernelDeleteThread: 0x9fa03cd3
+      - sceKernelCreateLwMutex: 0x19cff145
+      - sceKernelTryAllocateVpl: 0xaf36d708
+      - sceKernelFreeVpl: 0xb736e9ff

@@ -1,0 +1,381 @@
+name: sceLowIO_Driver
+attributes: 0x1007
+version: [1, 2]
+sdk_version: 0x06060110
+stub_order: [DmacManForKernel, InterruptManagerForKernel, KDebugForKernel, SysMemForKernel, SysclibForKernel, ThreadManForKernel, UtilsForKernel, sceKermit_driver, sceSysEventForKernel]
+exports:
+  - name: syslib
+    version: [0, 0]
+    attributes: 0x8000
+    functions:
+      - module_start: 0xd632acdb
+      - module_reboot_before: 0x2f064fa6
+    variables:
+      - module_info: 0xf01d73a7
+      - module_sdk_version: 0x11b97506
+  - name: sceSysreg_driver
+    version: [0, 17]
+    attributes: 0x0001
+    len: 5
+    pad: 3
+    extra_words: [0x00040000]
+    bucket_words: [0x00020000, 0x00080003, 0x00080008, 0x0013000e, 0x001c0018, 0x0020001f, 0x00250022, 0x002a0028, 0x002f002d, 0x003a0034, 0x0042003f, 0x00460046, 0x004a0048, 0x0052004f, 0x00590055, 0x005d005c, 0x00630061, 0x006d006a, 0x00750070, 0x007b0079, 0x0081007f, 0x00860085, 0x008a0089, 0x0091008e, 0x00990094, 0x009d009c, 0x009f009d, 0x00a500a2, 0x00a700a6, 0x00a900a8, 0x00ac00aa, 0x00af00ad]
+    functions:
+      - sceSysregSemaTryLock: 0x0143e8a8
+      - sceSysregAtahddClkEnable: 0x018f913a
+      - sceSysreg_driver_0607A4C4: 0x0607a4c4
+      - sceSysregUsbhostClkEnable: 0x08fe40f5
+      - sceSysregAudioClkDisable: 0x092af6a9
+      - sceSysreg_driver_0995F8F6: 0x0995f8f6
+      - sceSysregAvcResetEnable: 0x0ae8e549
+      - sceSysregEmcddrBusClockEnable: 0x0bbd4ed6
+      - sceSysreg_driver_14EB1393: 0x14eb1393
+      - sceSysreg_driver_1561BCD2: 0x1561bcd2
+      - sceSysreg_driver_15786501: 0x15786501
+      - sceSysregGpioIoDisable: 0x15dc34bc
+      - sceSysregAtaBusClockEnable: 0x16909002
+      - sceSysregMsifIoDisable: 0x176e590a
+      - sceSysregPllGetOutSelect: 0x187f651d
+      - sceSysregApbBusClockEnable: 0x191d7461
+      - sceSysregPllSetOutSelect: 0x19a6e54b
+      - sceSysreg_driver_19F4C92D: 0x19f4c92d
+      - sceSysregVmeResetEnable: 0x1a27b224
+      - sceSysregEmcsmIoDisable: 0x1c4c4c7a
+      - sceSysregUsbBusClockDisable: 0x1d233ef9
+      - sceSysregMsifClkDisable: 0x1e111b75
+      - sceSysreg_driver_1E62714E: 0x1e62714e
+      - sceSysregIntrInit: 0x1e881843
+      - sceSysregSircsClkDisable: 0x20388c9e
+      - sceSysreg_driver_20B1D0A9: 0x20b1d0a9
+      - sceSysregMsifGetConnectStatus: 0x20df8278
+      - sceSysregPllUpdateFrequency: 0x231ee757
+      - sceSysreg_driver_2458B6AC: 0x2458b6ac
+      - sceSysregAwEdramBusClockDisable: 0x258782a3
+      - sceSysregSircsIoDisable: 0x26fa0928
+      - sceSysregGpioClkEnable: 0x283d7a95
+      - sceSysregEmcsmBusClockDisable: 0x2d0f7755
+      - sceSysregKirkResetDisable: 0x2f9b03e0
+      - sceSysregUsbResetEnable: 0x30c0a141
+      - sceSysreg_driver_32E02FDF: 0x32e02fdf
+      - sceSysreg_driver_33EE43F0: 0x33ee43f0
+      - sceSysregUsbhostBusClockEnable: 0x35c23493
+      - sceSysregMsifResetEnable: 0x370419ad
+      - sceSysregGpioIoEnable: 0x37fbaca5
+      - sceSysregMeBusClockEnable: 0x38527743
+      - sceSysreg_driver_3BB0B2C8: 0x3bb0b2c8
+      - sceSysregApbBusClockDisable: 0x3d2ce374
+      - sceSysregAtaIoEnable: 0x3e95ab4d
+      - sceSysreg_driver_3F6F2CC7: 0x3f6f2cc7
+      - sceSysregAudioClkoutClkSelect: 0x41b0337b
+      - sceSysreg_driver_434E8AF1: 0x434e8af1
+      - sceSysregAwRegBBusClockEnable: 0x44277d0d
+      - sceSysregUsbhostBusClockDisable: 0x4479c9bd
+      - sceSysregMeResetEnable: 0x457feba9
+      - sceSysregAudioIoEnable: 0x4634c9dc
+      - sceSysregTopResetEnable: 0x47c971b2
+      - sceSysregMsifClkSelect: 0x48124afe
+      - sceSysreg_driver_4841B2D2: 0x4841b2d2
+      - sceSysregAtahddClkSelect: 0x48cf8e69
+      - sceSysregMeResetDisable: 0x48f1c4ad
+      - sceSysregUsbhostResetEnable: 0x4a433dc3
+      - sceSysregAudioClkoutIoEnable: 0x4b4cce80
+      - sceSysreg_driver_4C0BED71: 0x4c0bed71
+      - sceSysregSircsIoEnable: 0x4c49a8bc
+      - sceSysregMsifClkEnable: 0x4db0c55d
+      - sceSysreg_driver_4E5C86AA: 0x4e5c86aa
+      - sceSysregGetFuseId: 0x4f46eede
+      - sceSysregAwRegABusClockEnable: 0x51571e8f
+      - sceSysregMsifIoEnable: 0x518e3f29
+      - sceSysregAwRegABusClockDisable: 0x52b74976
+      - sceSysregAtahddClkDisable: 0x55373ee4
+      - sceSysreg_driver_554E97F7: 0x554e97f7
+      - sceSysregAvcResetDisable: 0x55ff02e9
+      - sceSysregMsifAcquireConnectIntr: 0x56e95bb6
+      - sceSysregAtahddIoEnable: 0x5d5118cd
+      - sceSysregAtahddBusClockDisable: 0x5f179286
+      - sceSysregInterruptToOther: 0x61fae917
+      - sceSysreg_driver_63E1EE9C: 0x63e1ee9c
+      - sceSysregSircsClkEnable: 0x6417cdd6
+      - sceSysregAtaResetEnable: 0x64c8e8dd
+      - sceSysregScResetEnable: 0x655c9cfc
+      - sceSysreg_driver_6596EBC3: 0x6596ebc3
+      - sceSysregAwResetEnable: 0x66899952
+      - sceSysreg_driver_68AE6434: 0x68ae6434
+      - sceSysregAtaClkEnable: 0x6a9b0426
+      - sceSysregPllGetBaseFrequency: 0x6b3a3417
+      - sceSysregUsbClkDisable: 0x6c0ee043
+      - sceSysreg_driver_6DA9347D: 0x6da9347d
+      - sceSysreg_driver_6F3B6D7D: 0x6f3b6d7d
+      - sceSysreg_driver_72887197: 0x72887197
+      - sceSysregUsbGetConnectStatus: 0x72c1ca96
+      - sceSysreg_driver_73B3E52D: 0x73b3e52d
+      - sceSysreg_driver_73EBC752: 0x73ebc752
+      - sceSysregApbTimerClkEnable: 0x74c6f776
+      - sceSysreg_driver_76E57DC6: 0x76e57dc6
+      - sceSysregUartClkEnable: 0x7725ca08
+      - sceSysregIntrEnd: 0x7aa8a8be
+      - sceSysreg_driver_7CF05E81: 0x7cf05e81
+      - sceSysregMsifResetDisable: 0x7dd0cbee
+      - sceSysregAwRegBBusClockDisable: 0x7e1b1f28
+      - sceSysregUartIoEnable: 0x7fd7a631
+      - sceSysreg_driver_803E5F37: 0x803e5f37
+      - sceSysreg_driver_80944C8A: 0x80944c8a
+      - sceSysregUsbClkEnable: 0x84a279a4
+      - sceSysreg_driver_84E0F197: 0x84e0f197
+      - sceSysreg_driver_85B74FDA: 0x85b74fda
+      - sceSysregAudioBusClockDisable: 0x85ba0c0b
+      - sceSysregAtahddResetEnable: 0x866eeb74
+      - sceSysregKirkBusClockDisable: 0x867bd103
+      - sceSysreg_driver_87B61303: 0x87b61303
+      - sceSysregSpiClkEnable: 0x8835d1e1
+      - sceSysregAudioBusClockEnable: 0x8b1dd83a
+      - sceSysregSpiClkDisable: 0x8b90b8b5
+      - sceSysregSpiIoEnable: 0x8c5c53de
+      - sceSysregAtaResetDisable: 0x8cfd0dca
+      - sceSysregGetFuseConfig: 0x8f4f4e96
+      - sceSysregAtaClkSelect: 0x9057c9e2
+      - sceSysregUsbhostAcquireIntr: 0x915b3772
+      - sceSysreg_driver_9275DD37: 0x9275dd37
+      - sceSysregUsbResetDisable: 0x9306f27b
+      - sceSysregMsifBusClockEnable: 0x93f96d8f
+      - sceSysregAtahddBusClockEnable: 0x94b89638
+      - sceSysregUsbIoEnable: 0x95ca8aa1
+      - sceSysreg_driver_96D74557: 0x96d74557
+      - sceSysreg_driver_9746F3B2: 0x9746f3b2
+      - sceSysregUsbQueryIntr: 0x9a6e7bb8
+      - sceSysregUsbhostResetDisable: 0x9b710d3c
+      - sceSysregSetMasterPriv: 0x9cd29d6c
+      - sceSysregEmcsmIoEnable: 0x9dd1f821
+      - sceSysreg_driver_9E2F8FD5: 0x9e2f8fd5
+      - sceSysregAtahddResetDisable: 0x9eb8c49e
+      - sceSysregSpiIoDisable: 0xa16e55f4
+      - sceSysregUartClkDisable: 0xa3e4154c
+      - sceSysregApbTimerClkSelect: 0xa4706857
+      - sceSysregPllGetFrequency: 0xa5cc6025
+      - sceSysregUsbhostClkDisable: 0xa781b599
+      - sceSysreg_driver_A7C82BDD: 0xa7c82bdd
+      - sceSysregGpioClkDisable: 0xa9ee3124
+      - sceSysregAwResetDisable: 0xaeb8dbd1
+      - sceSysregSetAwEdramSize: 0xaec87dfd
+      - sceSysregDoTimerEvent: 0xafe47914
+      - sceSysregAudioClkEnable: 0xb1751b06
+      - sceSysreg_driver_B413B041: 0xb413b041
+      - sceSysreg_driver_B6296512: 0xb6296512
+      - sceSysregAtaBusClockDisable: 0xb6c10df0
+      - sceSysregVmeResetDisable: 0xb73d3619
+      - sceSysregMsifQueryConnectIntr: 0xbb6baa00
+      - sceSysregUartIoDisable: 0xbb823481
+      - sceSysregKirkBusClockEnable: 0xbbc721ea
+      - sceSysreg_driver_BD7B035B: 0xbd7b035b
+      - sceSysregAudioClkoutClkEnable: 0xbe03d832
+      - sceSysreg_driver_BE1FF8BD: 0xbe1ff8bd
+      - sceSysregUsbIoDisable: 0xc11b5c0d
+      - sceSysregKirkResetEnable: 0xc1a37b37
+      - sceSysregAwEdramBusClockEnable: 0xc2e0e869
+      - sceSysreg_driver_C2F3061F: 0xc2f3061f
+      - sceSysregAudioClkSelect: 0xc36775ad
+      - sceSysregMeBusClockDisable: 0xc4c21cab
+      - sceSysregAudioIoDisable: 0xc60fafb4
+      - sceSysreg_driver_C6C75585: 0xc6c75585
+      - sceSysreg_driver_C9585F8E: 0xc9585f8e
+      - sceSysregUsbhostQueryIntr: 0xd3e23912
+      - sceSysregMsifDelaySelect: 0xd3e8f2af
+      - sceSysregAudioClkoutClkDisable: 0xd507a82d
+      - sceSysregSpiClkSelect: 0xd6628a48
+      - sceSysregUsbBusClockEnable: 0xd7ad9705
+      - sceSysregRequestIntr: 0xd8e6cae0
+      - sceSysreg_driver_DA5B5ED9: 0xda5b5ed9
+      - sceSysregSemaUnlock: 0xdb97c70e
+      - sceSysregApbTimerClkDisable: 0xded12806
+      - sceSysregGetTachyonVersion: 0xe2a5d1ee
+      - sceSysregAudioClkoutIoDisable: 0xe5764eac
+      - sceSysregAtaIoDisable: 0xeb5c723a
+      - sceSysregUsbAcquireIntr: 0xec03f6e2
+      - sceSysregEmcddrBusClockDisable: 0xf1924607
+      - sceSysregMsifBusClockDisable: 0xf288e58e
+      - sceSysregAtahddIoDisable: 0xf4a3c03a
+      - sceSysregEmcsmBusClockEnable: 0xf97d9d73
+      - sceSysreg_driver_F9C93DD4: 0xf9c93dd4
+      - sceSysreg_driver_FC0131A7: 0xfc0131a7
+      - sceSysregAtaClkDisable: 0xfc5cdd48
+      - sceSysreg_driver_FF0E07B1: 0xff0e07b1
+  - name: sceDmac
+    version: [0, 17]
+    attributes: 0x4001
+    functions:
+      - sceDmacplus_driver_2C5FC1E3: 0x617f3fe6
+      - sceDmacplus_driver_D57D5BC2: 0xd97f94d8
+  - name: sceDmacplus_driver
+    version: [0, 17]
+    attributes: 0x0001
+    len: 5
+    pad: 1
+    extra_words: [0x00020000]
+    bucket_words: [0x00000000, 0x00020000, 0x00040003, 0x00060005, 0x00070006, 0x000a0009, 0x000e000d, 0x00130011]
+    functions:
+      - sceDmacplus_driver_282CA0D7: 0x282ca0d7
+      - sceDmacplus_driver_2C5FC1E3: 0x2c5fc1e3
+      - sceDmacplus_driver_33CD36DD: 0x33cd36dd
+      - sceDmacplus_driver_47D400CB: 0x47d400cb
+      - sceDmacplus_driver_5FCF43BD: 0x5fcf43bd
+      - sceDmacplus_driver_6945F1D3: 0x6945f1d3
+      - sceDmacplus_driver_88ACB6F1: 0x88acb6f1
+      - sceDmacplus_driver_9C492B9B: 0x9c492b9b
+      - sceDmacplus_driver_9EBF7D3E: 0x9ebf7d3e
+      - sceDmacplus_driver_A3AA8D00: 0xa3aa8d00
+      - sceDmacplus_driver_B0EC610D: 0xb0ec610d
+      - sceDmacplus_driver_B269EAC9: 0xb269eac9
+      - sceDmacplus_driver_BF0DB45E: 0xbf0db45e
+      - sceDmacplus_driver_CCCF6069: 0xcccf6069
+      - sceDmacplus_driver_D126494B: 0xd126494b
+      - sceDmacplus_driver_D57D5BC2: 0xd57d5bc2
+      - sceDmacplus_driver_DBD8526F: 0xdbd8526f
+      - sceDmacplus_driver_E9B746F9: 0xe9b746f9
+      - sceDmacplus_driver_ED849260: 0xed849260
+      - sceDmacplus_driver_F652F09D: 0xf652f09d
+    variables:
+      - sceDmacplus_driver_var_374689B0: 0x374689b0
+      - sceDmacplus_driver_var_9D3DDDF0: 0x9d3dddf0
+      - sceDmacplus_driver_var_AA2E7E54: 0xaa2e7e54
+      - sceDmacplus_driver_var_C10B947A: 0xc10b947a
+  - name: sceKermitMemory_driver
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 1
+    functions:
+      - sceKermitMemory_driver_80E1240A: 0x80e1240a
+      - sceKermitMemory_driver_90B662D0: 0x90b662d0
+      - sceKermitMemory_driver_AAF047AC: 0xaaf047ac
+  - name: sceLcdc_driver
+    version: [0, 17]
+    attributes: 0x0001
+    len: 5
+    pad: 1
+    extra_words: [0x00020000]
+    bucket_words: [0x00010000, 0x00030002, 0x00060005, 0x00090009, 0x000b000a, 0x000f000e, 0x00130011, 0x00140013]
+    functions:
+      - sceLcdc_driver_0BFF31C5: 0x0bff31c5
+      - sceLcdc_driver_1F01BD08: 0x1f01bd08
+      - sceLcdc_driver_2D80BB2E: 0x2d80bb2e
+      - sceLcdc_driver_35F45B50: 0x35f45b50
+      - sceLcdc_driver_3EDBFCB9: 0x3edbfcb9
+      - sceLcdc_driver_451FE1A1: 0x451fe1a1
+      - sceLcdc_driver_525E7EB1: 0x525e7eb1
+      - sceLcdc_driver_56307DBC: 0x56307dbc
+      - sceLcdc_driver_5DF2F52A: 0x5df2f52a
+      - sceLcdc_driver_75C4DA9A: 0x75c4da9a
+      - sceLcdc_driver_88C3D167: 0x88c3d167
+      - sceLcdc_driver_90AA786C: 0x90aa786c
+      - sceLcdc_driver_94F83F74: 0x94f83f74
+      - sceLcdc_driver_9D4FB8B1: 0x9d4fb8b1
+      - sceLcdc_driver_A3DCEF64: 0xa3dcef64
+      - sceLcdc_driver_BAF165CE: 0xbaf165ce
+      - sceLcdc_driver_BB839185: 0xbb839185
+      - sceLcdc_driver_C004BBE0: 0xc004bbe0
+      - sceLcdc_driver_C943B9A2: 0xc943b9a2
+      - sceLcdc_driver_E9DBD35F: 0xe9dbd35f
+  - name: sceDdr_driver
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 2
+    functions:
+      - sceDdr_driver_00E36648: 0x00e36648
+      - sceDdr_driver_0BAAE4C5: 0x0baae4c5
+      - sceDdr_driver_2AA39A80: 0x2aa39a80
+      - sceDdr_driver_397756C0: 0x397756c0
+      - sceDdr_driver_3D50DEC9: 0x3d50dec9
+      - sceDdr_driver_4F30BFE8: 0x4f30bfe8
+      - sceDdr_driver_6DE74D80: 0x6de74d80
+      - sceDdr_driver_77CD1FB3: 0x77cd1fb3
+      - sceDdrFlush: 0x87d86769
+      - sceDdr_driver_95B9A692: 0x95b9a692
+      - sceDdr_driver_9F882141: 0x9f882141
+      - sceDdr_driver_CF07B9E2: 0xcf07b9e2
+      - sceDdr_driver_E0A39D3E: 0xe0a39d3e
+      - sceDdr_driver_F1005384: 0xf1005384
+imports:
+  - name: sceKermit_driver
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 7
+    functions:
+      - sceKermit_driver_36666181: 0x36666181
+      - sceKermit_driver_5280B410: 0x5280b410
+      - sceKermit_driver_D69C50BB: 0xd69c50bb
+  - name: sceSysEventForKernel
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 7
+    functions:
+      - sceKernelRegisterSysEventHandler: 0xcd9e4bb5
+      - sceKernelUnregisterSysEventHandler: 0xd7d3fdcd
+  - name: SysMemForKernel
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 4
+    functions:
+      - sceKernelMemcpy: 0x181065ab
+      - sceKernelMemset: 0x8ae776af
+  - name: KDebugForKernel
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 4
+    functions:
+      - Kprintf: 0x84f370bc
+  - name: InterruptManagerForKernel
+    version: [0, 17]
+    attributes: 0x0009
+    len: 6
+    pad: 6
+    functions:
+      - sceKernelCpuSuspendIntr: 0x092968f4
+      - sceKernelCallSubIntrHandler: 0x0c5f7ae3
+      - sceKernelCpuResumeIntrWithSync: 0x3b84732d
+      - sceKernelEnableIntr: 0x4d6e7305
+      - sceKernelRegisterIntrHandler: 0x58dd8978
+      - sceKernelCpuResumeIntr: 0x5f10d406
+      - sceKernelReleaseSubIntrHandler: 0xd61e6961
+      - sceKernelReleaseIntrHandler: 0xf987b1f0
+      - sceKernelEnableSubIntr: 0xfb8e22ec
+      - sceKernelRegisterSubIntrHandler: 0xffa8b183
+  - name: SysclibForKernel
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 7
+    functions:
+      - memset: 0x10f3bb61
+      - memcpy: 0xab7592ff
+  - name: ThreadManForKernel
+    version: [0, 17]
+    attributes: 0x0001
+    len: 6
+    pad: 5
+    functions:
+      - sceKernelSetEventFlag: 0x1fb15a32
+      - sceKernelDeleteSema: 0x28b6489c
+      - sceKernelPollEventFlag: 0x30fd48f0
+      - sceKernelGetSystemTimeLow: 0x369ed59d
+      - sceKernelSignalSema: 0x3f53e640
+      - sceKernelWaitEventFlag: 0x402fcf22
+      - sceKernelWaitSema: 0x4e3a1105
+      - sceKernelCreateEventFlag: 0x55c20a00
+      - sceKernelPollSema: 0x58b1f937
+      - sceKernelClearEventFlag: 0x812346e4
+      - sceKernelCreateMutex: 0xb7d098c6
+      - sceKernelCreateSema: 0xd6da4ba1
+      - sceKernelDeleteEventFlag: 0xef9e4c70
+  - name: DmacManForKernel
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 7
+    functions:
+      - sceKernelDmaRegisterDdrFlush: 0x32757c57
+  - name: UtilsForKernel
+    version: [0, 17]
+    attributes: 0x0009
+    pad: 1
+    functions:
+      - sceKernelDcacheWritebackInvalidateRange: 0x34b9fa9e
+      - sceKernelDcacheWritebackRange: 0x3ee30821
+      - sceKernelDcacheWritebackAll: 0x79d1c3fa
+      - sceKernelDcacheInvalidateRange: 0xbfa98062

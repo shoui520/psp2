@@ -1,4 +1,4 @@
 TARGET := g729
-SRCS   := g729.c scetables.S
+SRCS   := g729.c
 
 include ../../build.mak

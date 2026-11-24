@@ -1,4 +1,4 @@
 TARGET := systimer
-SRCS   := systimer.c scetables.S
+SRCS   := systimer.c
 
 include ../../build.mak

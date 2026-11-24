@@ -1,0 +1,68 @@
+name: sceIoFilemgrDNAS
+attributes: 0x1007
+version: [1, 9]
+sdk_version: 0x06060002
+stub_order: [InitForKernel, IoFileMgrForKernel, SysMemForKernel, SysclibForKernel, ThreadManForKernel, sceAmctrl_driver]
+exports:
+  - name: syslib
+    version: [0, 0]
+    attributes: 0x8000
+    functions:
+      - module_start: 0xd632acdb
+      - module_reboot_before: 0xcee8593c
+      - module_reboot_phase: 0xadf12745
+      - module_reboot_before: 0x2f064fa6
+    variables:
+      - module_info: 0xf01d73a7
+      - module_sdk_version: 0x11b97506
+imports:
+  - name: sceAmctrl_driver
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 7
+    functions:
+      - sceDrmBBCipherUpdate: 0x0785c974
+      - sceDrmBBCipherInit: 0x1ccb66d2
+      - sceDrmBBMacInit: 0x525b8218
+      - sceAmctrl_driver_9227EA79: 0x9227ea79
+      - sceDrmBBCipherFinal: 0x9951c50f
+      - sceAmctrl_driver_E04ADD4C: 0xe04add4c
+      - sceDrmBBMacFinal: 0xef95a213
+      - sceDrmBBMacFinal2: 0xf5186d8e
+  - name: SysMemForKernel
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 4
+    functions:
+      - sceKernelMemcpy: 0x181065ab
+      - sceKernelMemset: 0x8ae776af
+  - name: SysclibForKernel
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 7
+    functions:
+      - memcmp: 0x81d0d1f7
+  - name: ThreadManForKernel
+    version: [0, 17]
+    attributes: 0x0001
+    len: 6
+    pad: 5
+    functions:
+      - sceKernelDeleteSema: 0x28b6489c
+      - sceKernelSignalSema: 0x3f53e640
+      - sceKernelWaitSema: 0x4e3a1105
+      - sceKernelCreateSema: 0xd6da4ba1
+  - name: IoFileMgrForKernel
+    version: [0, 17]
+    attributes: 0x0001
+    len: 6
+    pad: 5
+    functions:
+      - sceIoAddHook: 0x22f15793
+  - name: InitForKernel
+    version: [0, 17]
+    attributes: 0x0009
+    pad: 2
+    functions:
+      - sceKernelApplicationType: 0x7233b5bc
+      - sceKernelInitDiscImage: 0xa18a4a8b

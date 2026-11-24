@@ -1,4 +1,4 @@
 TARGET := usbcam
-SRCS   := usbcam.c scetables.S
+SRCS   := usbcam.c
 
 include ../../build.mak

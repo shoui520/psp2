@@ -1,0 +1,251 @@
+name: sceModuleManager
+attributes: 0x3007
+version: [1, 18]
+sdk_version: 0x06060110
+stub_order: [InterruptManagerForKernel, IoFileMgrForKernel, KDebugForKernel, LoadCoreForKernel, SysMemForKernel, SysclibForKernel, ThreadManForKernel, UtilsForKernel]
+exports:
+  - name: syslib
+    version: [0, 0]
+    attributes: 0x8000
+    functions:
+      - module_bootstart: 0xd3744be0
+      - module_reboot_before: 0x2f064fa6
+      - module_reboot_phase: 0xadf12745
+    variables:
+      - module_info: 0xf01d73a7
+      - module_sdk_version: 0x11b97506
+  - name: ModuleMgrForUser
+    version: [0, 17]
+    attributes: 0x4001
+    len: 5
+    pad: 3
+    extra_words: [0x00020000]
+    bucket_words: [0x00000000, 0x00030001, 0x00030003, 0x00050004, 0x00080007, 0x00090009, 0x000c000a, 0x00110010]
+    functions:
+      - sceKernelLoadModuleBufferMs: 0x1196472e
+      - sceKernelLoadModuleBufferApp: 0x24ec0641
+      - sceKernelUnloadModule: 0x2e0911aa
+      - sceKernelStartModule: 0x50f0c1ec
+      - sceKernelGetModuleIdList: 0x644395e2
+      - sceKernelLoadModuleMs: 0x710f61b5
+      - sceKernelQueryModuleInfo: 0x748cbed9
+      - sceKernelStopUnloadSelfModuleWithStatus: 0x8f2df740
+      - sceKernelLoadModule: 0x977de386
+      - sceKernelLoadModuleByID: 0xb7f46618
+      - sceKernelStopUnloadSelfModule: 0xcc1d3699
+      - sceKernelCheckTextSegment: 0xcde1c1fe
+      - sceKernelStopModule: 0xd1ff982a
+      - sceKernelGetModuleGPByAddress: 0xd2fbc957
+      - sceKernelSelfStopUnloadModule: 0xd675ebb8
+      - sceKernelGetModuleIdByAddress: 0xd8b73127
+      - sceKernelLoadModuleWithBlockOffset: 0xe4c4211c
+      - sceKernelGetModuleId: 0xf0a26395
+      - sceKernelLoadModuleNpDrm: 0xf2d8d1b4
+      - sceKernelLoadModuleBufferUsbWlan: 0xf9275d98
+      - sceKernelLoadModuleByIDWithBlockOffset: 0xfbe27467
+      - sceKernelLoadModuleDNAS: 0xfef27dc1
+  - name: ModuleMgrForKernel
+    version: [0, 17]
+    attributes: 0x0009
+    len: 5
+    pad: 1
+    extra_words: [0x00020000]
+    bucket_words: [0x00000000, 0x00080003, 0x0011000c, 0x00150014, 0x00190017, 0x001e001d, 0x0027001e, 0x0031002b]
+    functions:
+      - sceKernelSearchModuleByAddress: 0x12f99392
+      - sceKernelLoadModuleBufferBootInitBtcnf: 0x1cf0b794
+      - sceKernelModuleMgrMode: 0x1cffc5de
+      - sceKernelQueryModuleInfo: 0x22bdbeff
+      - sceKernelLoadModuleBufferForExitVSHKernel: 0x253aa17c
+      - sceKernelLoadModuleForLoadExecForUser: 0x2b7fc10d
+      - sceKernelLoadModuleForLoadExecVSHDiscDebug: 0x2c4f270d
+      - sceKernelLoadModuleBufferForLoadExecBufferVSHUsbWlan: 0x2f3f9b6a
+      - sceKernelGetModuleIdList: 0x303fab7f
+      - sceKernelLoadModuleForLoadExecNpDrm: 0x30727524
+      - sceKernelUnloadModule: 0x387e3ca9
+      - sceKernelStartModule: 0x3ff74df1
+      - sceKernelGetModuleIdByAddress: 0x433d5287
+      - sceKernelLoadModuleDeci: 0x4493e013
+      - sceKernelLoadModuleBufferForRebootKernel: 0x4e38ea1d
+      - sceKernelLoadModuleBufferForKernel: 0x4e62c48a
+      - sceKernelLoadModuleForLoadExecVSHMs5: 0x4e8a2c9d
+      - sceKernelSelfStopUnloadModule: 0x5805c1ca
+      - sceKernelLoadModuleByIDBootInitConfig: 0x5fc32087
+      - sceKernelRebootBeforeForKernel: 0x5fc3b3da
+      - sceKernelLoadModuleBufferForExitGame: 0x61e3ec69
+      - sceKernelLoadModuleForLoadExecVSHMs4: 0x76f0e956
+      - sceKernelLoadModuleForLoadExecVSHMs2: 0x7bd53193
+      - sceKernelLoadModuleForLoadExecVSHDiscEmu: 0x853a6c16
+      - ModuleMgrForKernel_8DD336D4: 0x8dd336d4
+      - sceKernelLoadModuleBufferForExitVSHVSH: 0x9236b422
+      - sceKernelLoadModuleForKernel: 0x939e4270
+      - sceKernelLoadModuleBootInitBtcnf: 0x955d6cb2
+      - sceKernelRebootPhaseForKernel: 0x9b7102e2
+      - sceKernelSetNpDrmGetModuleKeyFunction: 0xa40ec254
+      - sceKernelLoadModuleBufferForLoadExecBufferVSHUsbWlanDebug: 0xc13e2de5
+      - ModuleMgrForKernel_C2A5E6CA: 0xc2a5e6ca
+      - sceKernelNpDrmGetModuleKey: 0xc3ddabef
+      - sceKernelLoadModuleBufferVSH: 0xc6de0b9c
+      - sceKernelGetModuleId: 0xcab06d30
+      - sceKernelLoadModuleForLoadExecVSHDiscUpdater: 0xcae8e169
+      - sceKernelLoadModuleVSHByID: 0xcba02988
+      - sceKernelRebootBeforeForUser: 0xcc873dfa
+      - sceKernelLoadModuleForLoadExecVSHDisc: 0xce0a74a5
+      - sceKernelLoadModuleToBlock: 0xd4ee2d26
+      - sceKernelLoadModuleVSH: 0xd5ddab1f
+      - sceKernelLoadModuleForLoadExecVSHMs3: 0xd60ab6cc
+      - sceKernelSearchModuleByName: 0xd86dd11b
+      - sceKernelStopModule: 0xe5d6087b
+      - sceKernelLoadModuleForLoadExecVSHMs6: 0xe8422026
+      - sceKernelLoadModuleBufferBootInitConfig: 0xe8b9d19d
+      - sceKernelStopUnloadSelfModule: 0xe97e0db7
+      - sceKernelStopUnloadSelfModuleWithStatus: 0xee6e8f49
+      - sceKernelLoadModuleByIDForKernel: 0xeec2a745
+      - sceKernelLoadModuleBootInitConfig: 0xf7c7febc
+      - sceKernelLoadModuleForLoadExecVSHMs1: 0xfe61f16d
+    variables:
+      - ModuleMgrForKernel_var_57F4B35E: 0x57f4b35e
+      - ModuleMgrForKernel_var_99BFFDB8: 0x99bffdb8
+      - ModuleMgrForKernel_var_DB08B7FF: 0xdb08b7ff
+  - name: InitForKernel
+    version: [0, 17]
+    attributes: 0x0009
+    len: 5
+    pad: 2
+    extra_words: [0x00020000]
+    bucket_words: [0x00010000, 0x00040002, 0x00050005, 0x00060006, 0x00080008, 0x000c000a, 0x000e000c, 0x0010000f]
+    functions:
+      - sceKernelQueryInitCB: 0x040c934b
+      - sceKernelRegisterChunk: 0x1d3256ba
+      - sceKernelBootFrom: 0x27932388
+      - sceKernelGetChunk: 0x2c6e9fe9
+      - sceKernelShowIntrHandlerInfo: 0x3acccd7e
+      - sceKernelInitLptSummary: 0x5238f4cc
+      - sceKernelApplicationType: 0x7233b5bc
+      - sceKernelInitApitype: 0x7a2333ad
+      - InitForKernel_9D33A110: 0x9d33a110
+      - sceKernelSetInitCallback: 0x9f9ae99c
+      - sceKernelInitDiscImage: 0xa18a4a8b
+      - sceKernelInitFileName: 0xa6e71b93
+      - sceKernelShowIntrMaskTime: 0xcb837ac5
+      - sceKernelReleaseChunk: 0xce88e870
+      - sceKernelInitParamSfo: 0xd83a9bd7
+      - sceKernelStartIntrLogging: 0xe444cffc
+imports:
+  - name: KDebugForKernel
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 4
+    functions:
+      - sceKernelIsToolMode: 0x47570ac5
+      - Kprintf: 0x84f370bc
+      - sceKernelDipsw: 0x86010fcb
+      - sceKernelIsDevelopmentToolMode: 0xacf427dc
+  - name: SysMemForKernel
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 4
+    functions:
+      - sceKernelMemset32: 0x22a114dc
+      - sceKernelAllocPartitionMemory: 0x7158ce7e
+      - sceKernelMemset: 0x8ae776af
+      - sceKernelMemmoveWithFill: 0x9b20acef
+      - sceKernelMemmove: 0x9bac123d
+      - sceKernelGetCompiledSdkVersion: 0xb4f00cb5
+      - sceKernelFreePartitionMemory: 0xc1a26c6f
+      - sceKernelQueryMemoryPartitionInfo: 0xc4eeaf20
+      - sceKernelGetId: 0xd0c1460d
+      - sceKernelQueryMemoryBlockInfo: 0xe860be8f
+      - sceKernelGetBlockHeadAddr: 0xf12a62f7
+      - sceKernelSeparateMemoryBlock: 0xf7e78b33
+      - sceKernelQueryMemoryInfo: 0xfaf29f34
+      - sceKernelResizeMemoryBlock: 0xfb5beb66
+  - name: LoadCoreForKernel
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 6
+    functions:
+      - sceKernelDeleteModule: 0x001b57bb
+      - sceKernelUnlinkLibraryEntries: 0x0295cfce
+      - sceKernelLoadCoreLock: 0x1999032f
+      - sceKernelLoadExecutableObject: 0x1c394885
+      - sceKernelCreateModule: 0x2c44f793
+      - sceKernelRegisterLibraryForUser: 0x2c60ccb8
+      - sceKernelGetModuleIdListForKernel: 0x37e6f41b
+      - sceKernelGetModuleListWithAlloc: 0x3fe631f0
+      - sceKernelFindModuleByUID: 0x40972e6e
+      - sceKernelGetModuleGPByAddressForKernel: 0x410084f9
+      - sceKernelProbeExecutableObject: 0x41d10899
+      - sceKernelRegisterLibrary: 0x48af96a9
+      - sceKernelCanReleaseLibrary: 0x538129f8
+      - sceKernelSegmentChecksum: 0x5fddb07a
+      - sceKernelLinkLibraryEntries: 0x8eae9534
+      - sceKernelLinkLibraryEntriesWithModule: 0xa481e30e
+      - sceKernelReleaseModule: 0xb17f5075
+      - sceKernelLoadCoreUnlock: 0xb6c037ea
+      - sceKernelFindModuleByAddress: 0xbc99c625
+      - sceKernelRegisterModule: 0xbf2e388c
+      - sceKernelReleaseLibrary: 0xcb636a90
+      - sceKernelGetModuleFromUID: 0xcd26e0ca
+      - sceKernelCheckExecFile: 0xd3353ec4
+      - sceKernelAssignModule: 0xf3dd4808
+      - sceKernelFindModuleByName: 0xf6b1bf0f
+  - name: InterruptManagerForKernel
+    version: [0, 17]
+    attributes: 0x0009
+    len: 6
+    pad: 6
+    functions:
+      - sceKernelGetSyscallRA: 0xa0f88036
+      - sceKernelIsIntrContext: 0xfe28c6d9
+  - name: SysclibForKernel
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 7
+    functions:
+      - memset: 0x10f3bb61
+      - strncmp: 0x7ab35214
+      - memcmp: 0x81d0d1f7
+      - memcpy: 0xab7592ff
+      - strchr: 0xb1dc2ae8
+      - strncpy: 0xb49a7697
+  - name: ThreadManForKernel
+    version: [0, 17]
+    attributes: 0x0001
+    len: 6
+    pad: 5
+    functions:
+      - sceKernelSetEventFlag: 0x1fb15a32
+      - sceKernelWaitThreadEnd: 0x278c0df5
+      - sceKernelGetThreadId: 0x293b45b8
+      - sceKernelWaitEventFlag: 0x402fcf22
+      - sceKernelCreateThread: 0x446d8de6
+      - sceKernelCreateEventFlag: 0x55c20a00
+      - sceKernelUnlockMutex: 0x6b30100f
+      - sceKernelChangeThreadPriority: 0x71bc9871
+      - sceKernelExitDeleteThread: 0x809ce29b
+      - sceKernelSuspendThread: 0x9944f31f
+      - sceKernelDeleteThread: 0x9fa03cd3
+      - sceKernelLockMutex: 0xb011b11f
+      - sceKernelCreateMutex: 0xb7d098c6
+      - sceKernelStartThread: 0xf475845d
+      - sceKernelGetUserLevel: 0xf6427665
+  - name: IoFileMgrForKernel
+    version: [0, 17]
+    attributes: 0x0001
+    len: 6
+    pad: 5
+    functions:
+      - sceIoOpen: 0x109f50bc
+      - sceIoLseek: 0x27eb27b8
+      - sceIoValidateFd: 0x2b6a9b21
+      - sceIoIoctl: 0x63632449
+      - sceIoRead: 0x6a638d83
+      - sceIoClose: 0x810c4bc3
+  - name: UtilsForKernel
+    version: [0, 17]
+    attributes: 0x0009
+    pad: 1
+    functions:
+      - sceKernelDcacheWritebackAll: 0x79d1c3fa
+      - sceKernelIcacheInvalidateAll: 0x920f104a

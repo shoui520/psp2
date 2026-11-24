@@ -1,4 +1,4 @@
 TARGET := kermit_peripheral
-SRCS   := kermit_peripheral.c scetables.S
+SRCS   := kermit_peripheral.c
 
 include ../../build.mak

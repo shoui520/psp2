@@ -1,0 +1,80 @@
+name: sceUSBGps_Driver
+attributes: 0x1006
+version: [1, 7]
+sdk_version: 0x06060110
+stub_order: [sceKermit_driver, sceSysEventForKernel, sceUsb_driver]
+exports:
+  - name: syslib
+    version: [0, 0]
+    attributes: 0x8000
+    functions:
+      - module_start: 0xd632acdb
+      - module_stop: 0xcee8593c
+    variables:
+      - module_info: 0xf01d73a7
+      - module_sdk_version: 0x11b97506
+  - name: sceUsbGps
+    version: [0, 17]
+    attributes: 0x4001
+    pad: 2
+    functions:
+      - sceUsbGps_268F95CA: 0x268f95ca
+      - sceUsbGps_31F95CDE: 0x31f95cde
+      - sceUsbGps_54D26AA4: 0x54d26aa4
+      - sceUsbGps_5881C826: 0x5881c826
+      - sceUsbGps_63D1F89D: 0x63d1f89d
+      - sceUsbGps_69E4AAA8: 0x69e4aaa8
+      - sceUsbGps_6EED4811: 0x6eed4811
+      - sceUsbGps_7C16AC3A: 0x7c16ac3a
+      - sceUsbGps_934EC2B2: 0x934ec2b2
+      - sceUsbGps_9D8F99E8: 0x9d8f99e8
+      - sceUsbGps_9F267D34: 0x9f267d34
+      - sceUsbGps_A259CD67: 0xa259cd67
+      - sceUsbGps_A8ED0BC2: 0xa8ed0bc2
+  - name: sceUsbGps_driver
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 3
+    functions:
+      - sceUsbGps_268F95CA: 0x268f95ca
+      - sceUsbGps_31F95CDE: 0x31f95cde
+      - sceUsbGps_54D26AA4: 0x54d26aa4
+      - sceUsbGps_5881C826: 0x5881c826
+      - sceUsbGps_69E4AAA8: 0x69e4aaa8
+      - sceUsbGps_6EED4811: 0x6eed4811
+      - sceUsbGps_7C16AC3A: 0x7c16ac3a
+      - sceUsbGps_934EC2B2: 0x934ec2b2
+      - sceUsbGps_9D8F99E8: 0x9d8f99e8
+      - sceUsbGps_9F267D34: 0x9f267d34
+      - sceUsbGps_A259CD67: 0xa259cd67
+      - sceUsbGps_A8ED0BC2: 0xa8ed0bc2
+imports:
+  - name: sceUsb_driver
+    version: [0, 17]
+    attributes: 0x0001
+    len: 6
+    pad: 6
+    functions:
+      - sceUsb_driver_55494514: 0x55494514
+      - sceUsb_driver_6C68EE25: 0x6c68ee25
+      - sceUsb_driver_79545577: 0x79545577
+      - sceUsb_driver_7C5791D3: 0x7c5791d3
+      - sceUsb_driver_8A2D38D7: 0x8a2d38d7
+      - sceUsb_driver_9009AD6B: 0x9009ad6b
+      - sceUsb_driver_AB8ADCC8: 0xab8adcc8
+      - sceUsb_driver_C99E1766: 0xc99e1766
+      - sceUsb_driver_CB30E794: 0xcb30e794
+      - sceUsb_driver_D9EE03ED: 0xd9ee03ed
+  - name: sceKermit_driver
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 7
+    functions:
+      - sceKermit_driver_5280B410: 0x5280b410
+  - name: sceSysEventForKernel
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 3
+    functions:
+      - sceKernelRegisterSysEventHandler: 0xcd9e4bb5
+      - sceKernelUnregisterSysEventHandler: 0xd7d3fdcd
