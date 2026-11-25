@@ -115,8 +115,8 @@ typedef struct RegParam {
     u32 regtype;
     char name[256];
     u32 namelen;
-    u32 unk2;
-    u32 unk3;
+    u32 reserved2;
+    u32 reserved3;
 } RegParam;
 
 extern s32 sceRegOpenRegistry(RegParam *reg, s32 mode, s32 *h);
@@ -169,77 +169,77 @@ static const SceImposeTvOutMode *g_tvout_mode = NULL;
 #define IMP_PTR(off) ((void *)((u8 *)g_impose + (off)))
 
 /* Forward declarations */
-static void sub_0000(s32 a0, s32 a1);
-static s32 sub_009c(u32 bits);
-static s32 sub_00c4(s32 val);
-static s32 sub_0110(u32 idx);
-static s32 sub_0138(s32 val);
-static s32 sub_0190(s32 *out0, s32 *out1);
-static void sub_0210(s32 mode);
-static void sub_0384(u32 p0, u32 p1, u32 p2);
-static s32 sub_0520(void);
-static void sub_055c(s32 val);
-static void sub_056c(s32 val);
-static void sub_0590(u32 mask);
-static void sub_07f8(void);
-static void sub_0898(void);
-static s32 sub_160c(s32 a0);
-static s32 sub_169c(void);
-static void sub_16d8(void);
-static s32 sub_173c(s32 flag, s32 mode, s32 w, s32 h);
-static void sub_187c(void);
-static void sub_191c(s32 idx);
+static void imposeNotifyBrightnessEvent(s32 a0, s32 a1);
+static s32 imposeSetEventFlag(u32 bits);
+static s32 imposeBrightnessToLevel(s32 val);
+static s32 imposeLevelToBrightness(u32 idx);
+static s32 imposeBrightnessToBacklightSel(s32 val);
+static s32 imposeGetBacklightInfo(s32 *out0, s32 *out1);
+static void imposeStepBrightness(s32 mode);
+static void imposeHandleDialogButtons(u32 p0, u32 p1, u32 p2);
+static s32 imposeGetHprmStatus(void);
+static void imposeSetVolumeTarget(s32 val);
+static void imposeRequestVolumeUpdate(s32 val);
+static void imposeClearOsdRegion(u32 mask);
+static void imposeDismissActiveOverlay(void);
+static void imposeLoadRegistrySettings(void);
+static s32 imposeCloseOverlayByType(s32 a0);
+static s32 imposeIsMenuAllowed(void);
+static void imposeRestoreDisplayMode(void);
+static s32 imposeSetTvOutMode(s32 flag, s32 mode, s32 w, s32 h);
+static void imposeResetTvOutState(void);
+static void imposeSelectTvOutProfile(s32 idx);
 static int impose_sysevent_handler(int ev_id, char *ev_name, void *param, int *result);
-static s32 sub_27f8(void);
-static s32 sub_2878(void);
-static s32 sub_293c(void);
-static s32 sub_29bc(void);
-static void sub_2ae0(s32 mode);
-static void sub_2c00(void);
-static void sub_317c(u32 cur_buttons, u32 last_buttons, u32 arg);
-static void sub_3308(u32 cur_buttons, u32 last_buttons, u32 arg);
-static void sub_3380(s32 a0, s32 a1);
-static void sub_3388(s32 subintr_no, void *arg);
-static void sub_38cc(void);
-static s32 sub_3968(u32 args, void *argp);
-static s32 sub_3e0c(u32 id);
-static void sub_3f54(void);
-static void sub_4334(void);
-static void sub_441c(void);
-static void sub_452c(void);
-static s32 sub_4558(void);
-static s32 sub_4644(s32 lang);
-static s32 sub_48b0(void);
-static void sub_49f4(u32 a0, u32 a1, u32 a2, s32 a3);
-static void sub_4ba0(s32 mode);
-static void sub_4ff0(void);
-static void sub_520c(void);
-static void sub_5228(void);
-static void sub_5360(void);
-static void sub_53c4(void);
-static void sub_54f0(s32 x, s32 y, s32 w, s32 h, const void *src);
-static void sub_5588(s32 x, s32 y, s32 w, s32 h, const void *src);
-static void sub_5638(s32 y);
-static s32 sub_5830(void);
-static s32 sub_5ddc(void);
-static s32 sub_6008(void);
-static s32 sub_648c(const char *category, const char *key, s32 val);
-static void sub_658c(s32 set, u32 mask);
-static s32 sub_660c(void *arg0, s32 arg1, void *arg2);
-static s32 sub_6638(s32 mode);
-static s32 sub_66d8(s32 mode);
-static s32 sub_6788(void);
-static s32 sub_6870(void);
-static void sub_6908(u32 trig, u32 cur_buttons, u32 prev_buttons);
-static void sub_7018(void);
-static s32 sub_70e0(s32 a0, s32 a1);
-static void sub_7290(s32 a0, s32 a1);
-static void sub_7388(s32 a0);
-static s32 sub_73d4(u32 id);
-static s32 sub_75fc(const void *time_ptr, s32 x, s32 y, s32 align);
-static void sub_7e74(void);
-static s32 sub_800c(const char *category, const char *key, s32 *out);
-static void sub_8138(void);
+static s32 imposeFreeTextResource(void);
+static s32 imposeLoadLanguageText(void);
+static s32 imposeFreeIconResource(void);
+static s32 imposeAllocIconResource(void);
+static void imposeEnableButtonIntercept(s32 mode);
+static void imposeRestoreButtonIntercept(void);
+static void imposeHandleHomeButton(u32 cur_buttons, u32 last_buttons, u32 arg);
+static void imposeHandleHoldButton(u32 cur_buttons, u32 last_buttons, u32 arg);
+static void imposeNoopCallback(s32 a0, s32 a1);
+static void imposeCtrlSubIntrHandler(s32 subintr_no, void *arg);
+static void imposeHideOsdFrameBuf(void);
+static s32 imposeMainThread(u32 args, void *argp);
+static s32 imposeApplyRegistrySetting(u32 id);
+static void imposeRedrawOsd(void);
+static void imposeDrawBlinkCursor(void);
+static void imposeDrawVolumeBar(void);
+static void imposeShowBatteryIcon(void);
+static s32 imposeLoadResourceFile(void);
+static s32 imposeParseResourceHeader(s32 lang);
+static s32 imposeValidateResourceMagic(void);
+static void imposeShowOsdPopup(u32 a0, u32 a1, u32 a2, s32 a3);
+static void imposeRefreshRegistryValues(s32 mode);
+static void imposeSyncAudioVolume(void);
+static void imposeTriggerPowerPoll(void);
+static void imposePollHprmState(void);
+static void imposePollHeadphoneState(void);
+static void imposeTickPopupTimer(void);
+static void imposeBlitIcon16(s32 x, s32 y, s32 w, s32 h, const void *src);
+static void imposeBlitIcon16Wrapper(s32 x, s32 y, s32 w, s32 h, const void *src);
+static void imposeDrawStatusBanner(s32 y);
+static s32 imposeDrawMuteIcon(void);
+static s32 imposeDrawClockDisplay(void);
+static s32 imposeAdvanceAnimFrame(void);
+static s32 imposeWriteRegistryInt(const char *category, const char *key, s32 val);
+static void imposeUpdateStatusFlags(s32 set, u32 mask);
+static s32 imposeInitAudioCallback(void *arg0, s32 arg1, void *arg2);
+static s32 imposeSetAudioMode(s32 mode);
+static s32 imposeCalcEffectiveVolume(s32 mode);
+static s32 imposeApplyHeadphoneVolume(void);
+static s32 imposeApplySpeakerVolume(void);
+static void imposeHandleVolumeButtons(u32 trig, u32 cur_buttons, u32 prev_buttons);
+static void imposeClearAllOverlays(void);
+static s32 imposeHandlePowerEvent(s32 a0, s32 a1);
+static void imposeRefreshHprmDevices(s32 a0, s32 a1);
+static void imposeUpdateHprmOnEvent(s32 a0);
+static s32 imposeReadRegistrySetting(u32 id);
+static s32 imposeFormatTimeString(const void *time_ptr, s32 x, s32 y, s32 align);
+static void imposeDrawBatteryLevel(void);
+static s32 imposeReadRegistryInt(const char *category, const char *key, s32 *out);
+static void imposeUpdateAudioRouting(void);
 
 s32 sceImpose_driver_BB12F974(s32 a0);
 s32 sceImpose_driver_0F067E16(void);
@@ -264,34 +264,34 @@ static SceSysEventHandler g_sysevent_handler = {
  * Internal Helper Implementations
  * ========================================================================= */
 
-static void sub_0000(s32 a0, s32 a1)
+static void imposeNotifyBrightnessEvent(s32 a0, s32 a1)
 {
     if (a0 != 0) {
         if ((IMPU(0xE8) & 1) == 0) {
             IMPU(0xE8) |= 1;
-            sub_009c(0x1000);
+            imposeSetEventFlag(0x1000);
         }
         if (a1 != 0) {
-            sub_2ae0(0);
+            imposeEnableButtonIntercept(0);
         } else {
-            sub_2c00();
+            imposeRestoreButtonIntercept();
         }
     } else {
         if ((IMPU(0xE8) & 1) != 0) {
             IMPU(0xE8) &= ~1u;
-            sub_2c00();
-            sub_009c(0x2000);
+            imposeRestoreButtonIntercept();
+            imposeSetEventFlag(0x2000);
         }
     }
     IMPU(0xBC) |= 0x20000000u;
 }
 
-static s32 sub_009c(u32 bits)
+static s32 imposeSetEventFlag(u32 bits)
 {
     return sceKernelSetEventFlag(IMP(0x08), bits);
 }
 
-static s32 sub_00c4(s32 val)
+static s32 imposeBrightnessToLevel(s32 val)
 {
     if ((u32)(val - 73) < 28u) {
         return 3;
@@ -308,7 +308,7 @@ static s32 sub_00c4(s32 val)
     return 4;
 }
 
-static s32 sub_0110(u32 idx)
+static s32 imposeLevelToBrightness(u32 idx)
 {
     if (idx < 5u) {
         return g_brightness_levels[idx];
@@ -316,7 +316,7 @@ static s32 sub_0110(u32 idx)
     return -1;
 }
 
-static s32 sub_0138(s32 val)
+static s32 imposeBrightnessToBacklightSel(s32 val)
 {
     s32 sel;
 
@@ -335,7 +335,7 @@ static s32 sub_0138(s32 val)
     return 0;
 }
 
-static s32 sub_0190(s32 *out0, s32 *out1)
+static s32 imposeGetBacklightInfo(s32 *out0, s32 *out1)
 {
     s32 sel = 0;
     s32 val;
@@ -361,12 +361,12 @@ static s32 sub_0190(s32 *out0, s32 *out1)
     return 0;
 }
 
-static void sub_0210(s32 mode)
+static void imposeStepBrightness(s32 mode)
 {
     if (mode == 1) {
-        s32 idx = sub_00c4(IMP(0x3C));
+        s32 idx = imposeBrightnessToLevel(IMP(0x3C));
         if (idx == 4) {
-            idx = sub_00c4(IMP(0xD8));
+            idx = imposeBrightnessToLevel(IMP(0xD8));
         } else {
             s32 max_idx = (IMP(0xFC) != 0) ? 3 : 2;
             idx++;
@@ -374,7 +374,7 @@ static void sub_0210(s32 mode)
                 idx = 0;
             }
         }
-        IMP(0xB4) = sub_0110((u32)idx);
+        IMP(0xB4) = imposeLevelToBrightness((u32)idx);
         IMP(0xD4) = IMP(0xB4);
         IMP(0x3C) = IMP(0xB4);
         IMP(0x180) = 0;
@@ -385,7 +385,7 @@ static void sub_0210(s32 mode)
         }
         if ((IMPU(0xE8) & 4) == 0) {
             IMP(0xD8) = IMP(0x3C);
-            IMP(0xB4) = sub_0110(4);
+            IMP(0xB4) = imposeLevelToBrightness(4);
             IMP(0x3C) = IMP(0xB4);
             IMPU(0xE8) |= 4u;
         } else {
@@ -397,7 +397,7 @@ static void sub_0210(s32 mode)
         if ((IMPU(0xE8) & 4) == 0) {
             IMP(0xD8) = IMP(0x3C);
         }
-        IMP(0xB4) = sub_0110(4);
+        IMP(0xB4) = imposeLevelToBrightness(4);
         IMP(0x3C) = IMP(0xB4);
         IMPU(0xE8) |= 4u;
     } else if (mode == 3) {
@@ -410,11 +410,11 @@ static void sub_0210(s32 mode)
         return;
     }
 
-    sub_0138(IMP(0x3C));
+    imposeBrightnessToBacklightSel(IMP(0x3C));
     IMPU(0xBC) |= 2u;
 }
 
-static void sub_0384(u32 p0, u32 p1, u32 p2)
+static void imposeHandleDialogButtons(u32 p0, u32 p1, u32 p2)
 {
     u32 confirm_btn = (IMP(0x24) == 0) ? 0x2000u : 0x4000u;
     u32 cancel_btn  = (IMP(0x24) == 0) ? 0x4000u : 0x2000u;
@@ -437,7 +437,7 @@ static void sub_0384(u32 p0, u32 p1, u32 p2)
         if (IMP(0x14C) == 0) {
             if (sceKernelCheckExitCallback() != 0) {
                 IMPU(0xA4) |= 0x80000000u;
-                sub_009c(0x10);
+                imposeSetEventFlag(0x10);
             }
             sceImpose_driver_BB12F974(1);
         } else {
@@ -446,7 +446,7 @@ static void sub_0384(u32 p0, u32 p1, u32 p2)
     }
 }
 
-static s32 sub_0520(void)
+static s32 imposeGetHprmStatus(void)
 {
     s32 val = 0;
     s32 res = sceHprm_driver_0B83352B(0, &val, 0, 0);
@@ -456,18 +456,18 @@ static s32 sub_0520(void)
     return val;
 }
 
-static void sub_055c(s32 val)
+static void imposeSetVolumeTarget(s32 val)
 {
     IMP(0x130) = val;
 }
 
-static void sub_056c(s32 val)
+static void imposeRequestVolumeUpdate(s32 val)
 {
-    sub_055c(val);
-    sub_009c(0x8000);
+    imposeSetVolumeTarget(val);
+    imposeSetEventFlag(0x8000);
 }
 
-static void sub_0590(u32 mask)
+static void imposeClearOsdRegion(u32 mask)
 {
     u8 *fb = (u8 *)IMPU(0x1B0);
     if (fb == NULL) {
@@ -491,7 +491,7 @@ static void sub_0590(u32 mask)
     }
 }
 
-static void sub_07f8(void)
+static void imposeDismissActiveOverlay(void)
 {
     u32 a4 = IMPU(0xA4);
     s32 idx;
@@ -514,20 +514,20 @@ static void sub_07f8(void)
     }
 }
 
-static void sub_0898(void)
+static void imposeLoadRegistrySettings(void)
 {
-    sub_3e0c(3);
-    sub_3e0c(4);
-    sub_3e0c(6);
-    sub_3e0c(7);
+    imposeApplyRegistrySetting(3);
+    imposeApplyRegistrySetting(4);
+    imposeApplyRegistrySetting(6);
+    imposeApplyRegistrySetting(7);
     if (IMP(0x110) != 0) {
-        sub_3e0c(16);
-        sub_3e0c(17);
-        sub_3e0c(20);
+        imposeApplyRegistrySetting(16);
+        imposeApplyRegistrySetting(17);
+        imposeApplyRegistrySetting(20);
     }
 }
 
-static s32 sub_160c(s32 a0)
+static s32 imposeCloseOverlayByType(s32 a0)
 {
     u32 a4 = IMPU(0xA4);
 
@@ -543,7 +543,7 @@ static s32 sub_160c(s32 a0)
     return sceImpose_driver_BB12F974((a0 != 0) ? 0x50102 : 0x50002);
 }
 
-static s32 sub_169c(void)
+static s32 imposeIsMenuAllowed(void)
 {
     if (IMP(0x10C) == 0x300) {
         return 1;
@@ -554,7 +554,7 @@ static s32 sub_169c(void)
     return 0;
 }
 
-static void sub_16d8(void)
+static void imposeRestoreDisplayMode(void)
 {
     if (IMP(0x9C) == 1 || IMP(0x9C) == 2) {
         sceDisplay_driver_D94EB277(IMP(0x328));
@@ -562,12 +562,12 @@ static void sub_16d8(void)
     sceDisplaySetMode(IMP(0x32C), IMP(0x330), IMP(0x334));
 }
 
-static s32 sub_173c(s32 flag, s32 mode, s32 w, s32 h)
+static s32 imposeSetTvOutMode(s32 flag, s32 mode, s32 w, s32 h)
 {
     s32 intr = sceKernelCpuSuspendIntr();
 
     if (g_tvout_mode == NULL) {
-        sub_191c(0);
+        imposeSelectTvOutProfile(0);
     }
     IMP(0x328) = g_tvout_mode->mode0;
     if (mode != 0) {
@@ -582,18 +582,18 @@ static s32 sub_173c(s32 flag, s32 mode, s32 w, s32 h)
     IMP(0x31C) = 1;
     sceKernelCpuResumeIntr(intr);
 
-    sub_0210(2);
-    sub_3380(2, 0);
-    sub_055c(1);
+    imposeStepBrightness(2);
+    imposeNoopCallback(2, 0);
+    imposeSetVolumeTarget(1);
     if (flag != 0) {
-        sub_009c(0x800);
+        imposeSetEventFlag(0x800);
     } else {
-        sub_16d8();
+        imposeRestoreDisplayMode();
     }
     return 0;
 }
 
-static void sub_187c(void)
+static void imposeResetTvOutState(void)
 {
     if (IMP(0x31C) != 0) {
         IMP(0x31C) = 0;
@@ -601,13 +601,13 @@ static void sub_187c(void)
         IMP(0x32C) = 0;
         IMP(0x330) = 480;
         IMP(0x334) = 272;
-        sub_16d8();
-        sub_0210(3);
-        sub_056c(0);
+        imposeRestoreDisplayMode();
+        imposeStepBrightness(3);
+        imposeRequestVolumeUpdate(0);
     }
 }
 
-static void sub_191c(s32 idx)
+static void imposeSelectTvOutProfile(s32 idx)
 {
     if (IMP(0x6C) == 0) {
         if ((u32)idx >= 3u) {
@@ -638,9 +638,9 @@ static int impose_sysevent_handler(int ev_id, char *ev_name, void *param, int *r
         }
     } else if (ev_id == 0x402) {
         sceKernelDisableSubIntr(0x1E, 0x14);
-        sub_0898();
+        imposeLoadRegistrySettings();
     } else if (ev_id == 0x400E) {
-        sub_187c();
+        imposeResetTvOutState();
     } else if (ev_id == 0x1000E) {
         IMP(0xEC) = scePower_driver_31AEA94C();
         IMPU(0xE8) &= ~5u;
@@ -652,17 +652,17 @@ static int impose_sysevent_handler(int ev_id, char *ev_name, void *param, int *r
         IMP(0x130) = 0;
         IMP(0x180) = 0;
         IMP(0x188) = 0;
-        sub_0190((s32 *)IMP_PTR(0x3C), NULL);
+        imposeGetBacklightInfo((s32 *)IMP_PTR(0x3C), NULL);
         IMP(0xB4) = IMP(0x3C);
         IMP(0xD4) = IMP(0x3C);
         sceKernelEnableSubIntr(0x1E, 0x14);
     } else if (ev_id == 0x100000) {
-        sub_009c(0x80000000u);
+        imposeSetEventFlag(0x80000000u);
     }
     return 0;
 }
 
-static s32 sub_27f8(void)
+static s32 imposeFreeTextResource(void)
 {
     if (IMP(0x2B8) == 0) {
         return 0;
@@ -678,17 +678,17 @@ static s32 sub_27f8(void)
     return 0;
 }
 
-static s32 sub_2878(void)
+static s32 imposeLoadLanguageText(void)
 {
     if (IMP(0x310) == 0) {
         return 0;
     }
     if (IMP(0x20) != IMP(0x314)) {
-        s32 sz = sub_4558();
+        s32 sz = imposeLoadResourceFile();
         if (sz < 0) {
             return sz;
         }
-        s32 res = sub_4644(IMP(0x314));
+        s32 res = imposeParseResourceHeader(IMP(0x314));
         if (res < 0) {
             return res;
         }
@@ -707,7 +707,7 @@ static s32 sub_2878(void)
     return 0;
 }
 
-static s32 sub_293c(void)
+static s32 imposeFreeIconResource(void)
 {
     if (IMP(0x2B0) == 0) {
         return 0;
@@ -725,7 +725,7 @@ static s32 sub_293c(void)
     return 0;
 }
 
-static s32 sub_29bc(void)
+static s32 imposeAllocIconResource(void)
 {
     s32 fpl = sceKernelCreateFpl("SceImpose_IconResource", IMP(0x04), 0x4100u, 0xB400u, 1, NULL);
     if (fpl < 0) {
@@ -745,15 +745,15 @@ static s32 sub_29bc(void)
     sceKernelTryAllocateFpl(fpl, (void **)IMP_PTR(0x1C8));
     IMP(0x1CC) = IMP(0x1C8);
 
-    s32 sz = sub_4558();
+    s32 sz = imposeLoadResourceFile();
     if (sz < 0) {
         return sz;
     }
-    s32 res = sub_48b0();
+    s32 res = imposeValidateResourceMagic();
     if (res < 0) {
         return res;
     }
-    res = sub_4644(IMP(0x20));
+    res = imposeParseResourceHeader(IMP(0x20));
     if (res < 0) {
         return res;
     }
@@ -761,7 +761,7 @@ static s32 sub_29bc(void)
     return 0;
 }
 
-static void sub_2ae0(s32 mode)
+static void imposeEnableButtonIntercept(s32 mode)
 {
     u32 mask = (mode == 0) ? 0x002DF3F9u : 0x000DF3F9u;
     IMP(0x178) = sceCtrlGetButtonIntercept(0xFFFFFFFFu);
@@ -769,7 +769,7 @@ static void sub_2ae0(s32 mode)
     IMPU(0xA4) |= 0x40000000u;
 }
 
-static void sub_2c00(void)
+static void imposeRestoreButtonIntercept(void)
 {
     if ((IMPU(0xA4) & 0x40000000u) != 0) {
         sceCtrlSetButtonIntercept((u32)IMP(0x178));
@@ -777,7 +777,7 @@ static void sub_2c00(void)
     }
 }
 
-static void sub_317c(u32 cur_buttons, u32 last_buttons, u32 arg)
+static void imposeHandleHomeButton(u32 cur_buttons, u32 last_buttons, u32 arg)
 {
     (void)arg;
     if (IMP(0xA4) == 0) {
@@ -785,7 +785,7 @@ static void sub_317c(u32 cur_buttons, u32 last_buttons, u32 arg)
     }
     if ((last_buttons & 0x01000000u) != 0 && (cur_buttons & 0x01000000u) == 0) {
         if ((IMPU(0x74) & 2u) == 0 && IMP(0x11C) == 0) {
-            sub_160c(1);
+            imposeCloseOverlayByType(1);
         }
     }
     if ((cur_buttons & 0x00020000u) != 0) {
@@ -797,7 +797,7 @@ static void sub_317c(u32 cur_buttons, u32 last_buttons, u32 arg)
         }
         if ((IMPU(0x74) & 1u) == 0 && (IMPU(0xAC) & 0x00010000u) == 0) {
             if ((IMPU(0xA4) & 0x100u) == 0 || IMP(0xC8) >= 4) {
-                sub_160c((IMPU(0xA4) & 0x100u) ? 0 : 1);
+                imposeCloseOverlayByType((IMPU(0xA4) & 0x100u) ? 0 : 1);
             } else {
                 return;
             }
@@ -819,7 +819,7 @@ static void sub_317c(u32 cur_buttons, u32 last_buttons, u32 arg)
     }
 }
 
-static void sub_3308(u32 cur_buttons, u32 last_buttons, u32 arg)
+static void imposeHandleHoldButton(u32 cur_buttons, u32 last_buttons, u32 arg)
 {
     (void)last_buttons;
     (void)arg;
@@ -840,13 +840,13 @@ static void sub_3308(u32 cur_buttons, u32 last_buttons, u32 arg)
     IMP(0x170) = 0;
 }
 
-static void sub_3380(s32 a0, s32 a1)
+static void imposeNoopCallback(s32 a0, s32 a1)
 {
     (void)a0;
     (void)a1;
 }
 
-static void sub_3388(s32 subintr_no, void *arg)
+static void imposeCtrlSubIntrHandler(s32 subintr_no, void *arg)
 {
     SceCtrlData pad;
     u32 trig = 0;
@@ -883,7 +883,7 @@ static void sub_3388(s32 subintr_no, void *arg)
         cur_buttons = pad.Buttons;
         IMPU(0xAC) = cur_buttons;
         trig = cur_buttons & (cur_buttons ^ prev_buttons);
-        sub_6908(trig, cur_buttons, prev_buttons);
+        imposeHandleVolumeButtons(trig, cur_buttons, prev_buttons);
     } else {
         IMP(0xAC) = 0;
     }
@@ -904,13 +904,13 @@ static void sub_3388(s32 subintr_no, void *arg)
     }
 
     if (IMP(0x134) == 0) {
-        sub_5228();
+        imposePollHprmState();
     }
     if ((IMPU(0x114) & 0x00010000u) != 0) {
-        sub_5360();
+        imposePollHeadphoneState();
     }
 
-    sub_53c4();
+    imposeTickPopupTimer();
 
     if ((IMP(0x160) & 3) == 0 && IMP(0xE4) == 0) {
         s32 prev_60 = IMP(0x60);
@@ -953,7 +953,7 @@ static void sub_3388(s32 subintr_no, void *arg)
 
     if (IMP(0xE8) == 2) {
         if ((u32)(sys_time - IMPU(0x180)) > 0x98967Fu) {
-            sub_009c(0x2000);
+            imposeSetEventFlag(0x2000);
             IMP(0xE8) = 1;
         }
     }
@@ -962,13 +962,13 @@ static void sub_3388(s32 subintr_no, void *arg)
         s32 cur_val = 0;
         s32 cur_sel = 0;
         IMP(0xDC) = 0;
-        s32 target = sub_0110((u32)IMP(0xB4));
-        sub_0190(&cur_val, &cur_sel);
+        s32 target = imposeLevelToBrightness((u32)IMP(0xB4));
+        imposeGetBacklightInfo(&cur_val, &cur_sel);
         if (IMP(0xD4) != 0) {
             IMP(0xD8) = 1;
         } else {
             if (IMP(0xDC) < target || cur_val < target) {
-                sub_0138(target);
+                imposeBrightnessToBacklightSel(target);
             }
         }
     }
@@ -976,24 +976,24 @@ static void sub_3388(s32 subintr_no, void *arg)
     if (IMP(0xEC) != 0) {
         IMP(0x16C)++;
         if (IMP(0x16C) > IMP(0xF0)) {
-            sub_009c(0);
+            imposeSetEventFlag(0);
             IMP(0x16C) = 0;
             IMP(0xEC) = 0;
         }
     }
 
     if (IMP(0x188) != 0) {
-        sub_07f8();
+        imposeDismissActiveOverlay();
         if (IMP(0x160) >= 0x78 && (IMPU(0xA4) & 4u) == 0) {
             if ((IMPU(0xA4) & 0x00040000u) == 0) {
                 sceImpose_driver_BB12F974(1);
             } else if ((IMPU(0xA4) & 0x00020000u) != 0) {
                 IMPU(0xA4) &= ~0x00020000u;
-                sub_0590(0x10);
+                imposeClearOsdRegion(0x10);
             }
         }
         if ((IMPU(0xA4) & 0x100u) != 0) {
-            sub_0384(trig, IMPU(0xAC), prev_buttons);
+            imposeHandleDialogButtons(trig, IMPU(0xAC), prev_buttons);
         }
         u32 bit17 = (IMPU(0xAC) >> 17) & 1u;
         if ((u32)IMP(0x30) != bit17) {
@@ -1003,7 +1003,7 @@ static void sub_3388(s32 subintr_no, void *arg)
     }
 }
 
-static void sub_38cc(void)
+static void imposeHideOsdFrameBuf(void)
 {
     if ((IMPU(0xA4) & 1u) != 0) {
         if (IMP(0x188) != 0) {
@@ -1021,11 +1021,11 @@ static void sub_38cc(void)
                 IMP(0xF4) = 1;
             }
         }
-        sub_2c00();
+        imposeRestoreButtonIntercept();
     }
 }
 
-static s32 sub_3968(u32 args, void *argp)
+static s32 imposeMainThread(u32 args, void *argp)
 {
     u32 pattern = 0;
 
@@ -1041,39 +1041,39 @@ static s32 sub_3968(u32 args, void *argp)
 
         if ((pattern & 0x100u) != 0) {
             s32 intr = sceKernelCpuSuspendIntr();
-            sub_2ae0(1);
+            imposeEnableButtonIntercept(1);
             sceKernelCpuResumeIntr(intr);
         }
         if ((pattern & 0x200u) != 0) {
             IMP(0x104) = 1;
-            sub_2878();
+            imposeLoadLanguageText();
             IMP(0x104) = 0;
         }
         if ((pattern & 1u) != 0) {
-            sub_7018();
+            imposeClearAllOverlays();
         }
         if ((pattern & 2u) != 0) {
             s32 intr = sceKernelCpuSuspendIntr();
-            sub_38cc();
+            imposeHideOsdFrameBuf();
             sceKernelCpuResumeIntr(intr);
         }
         if ((pattern & 0x800u) != 0) {
             if (IMP(0x31C) == 1 && (IMPU(0x110) & 0x01000000u) != 0 && IMP(0x9C) == 0) {
                 pattern |= 0x4000u;
             } else {
-                sub_16d8();
+                imposeRestoreDisplayMode();
             }
         }
         if ((pattern & 0x8000u) != 0) {
             if (IMP(0x130) == 1) {
                 if (IMP(0x31C) == 1) {
-                    sub_6870();
+                    imposeApplySpeakerVolume();
                 }
                 pattern |= 0x20u;
             } else if (IMP(0x130) == 2) {
                 if (sceImpose_driver_E9B0E008(NULL) == 0 && IMP(0x31C) == 0) {
-                    if (sub_6788() < 0) {
-                        sub_055c(1);
+                    if (imposeApplyHeadphoneVolume() < 0) {
+                        imposeSetVolumeTarget(1);
                     }
                 }
                 pattern |= 0x20u;
@@ -1088,7 +1088,7 @@ static s32 sub_3968(u32 args, void *argp)
             }
         }
         if ((pattern & 0x4000u) != 0) {
-            if (sub_70e0(s3_val, s2_val) != 0) {
+            if (imposeHandlePowerEvent(s3_val, s2_val) != 0) {
                 pattern |= 4u;
             }
             if (IMP(0x124) == 0x10) {
@@ -1096,10 +1096,10 @@ static s32 sub_3968(u32 args, void *argp)
             }
         }
         if ((pattern & 0x20u) != 0) {
-            sub_7290(s3_val, s2_val);
+            imposeRefreshHprmDevices(s3_val, s2_val);
         }
         if ((pattern & 0x44u) != 0) {
-            sub_7388(s3_val);
+            imposeUpdateHprmOnEvent(s3_val);
             if ((pattern & 4u) != 0) {
                 IMPU(0xB8) &= ~6u;
                 if (IMP(0xC0) == 0) {
@@ -1125,7 +1125,7 @@ static s32 sub_3968(u32 args, void *argp)
             sceDisplayDisable();
         }
         if ((pattern & 8u) != 0) {
-            sub_0898();
+            imposeLoadRegistrySettings();
             IMP(0xE0) = 0;
         }
         if ((pattern & 0x80u) != 0) {
@@ -1136,10 +1136,10 @@ static s32 sub_3968(u32 args, void *argp)
                 if (sceKernelDeleteFpl(IMP(0x10)) < 0) {
                     return (s32)0x8001000C;
                 }
-                if (sub_293c() < 0) {
+                if (imposeFreeIconResource() < 0) {
                     return (s32)0x8001000C;
                 }
-                if (sub_27f8() < 0) {
+                if (imposeFreeTextResource() < 0) {
                     return (s32)0x8001000C;
                 }
                 IMP(0x1B0) = 0;
@@ -1161,7 +1161,7 @@ static s32 sub_3968(u32 args, void *argp)
     return 0;
 }
 
-static s32 sub_3e0c(u32 id)
+static s32 imposeApplyRegistrySetting(u32 id)
 {
     const char *cat = NULL;
     const char *key = NULL;
@@ -1209,25 +1209,25 @@ static s32 sub_3e0c(u32 id)
     if (val == -1) {
         return 0;
     }
-    return (sub_648c(cat, key, val) != 0) ? -1 : 0;
+    return (imposeWriteRegistryInt(cat, key, val) != 0) ? -1 : 0;
 }
 
-static void sub_3f54(void)
+static void imposeRedrawOsd(void)
 {
     if (IMP(0xA4) < 0) {
         if (IMP(0xB8) >= 0) {
-            sub_0590(0xFF);
+            imposeClearOsdRegion(0xFF);
             if (IMP(0x1D0) != 0) {
-                sub_5588(IMP(0x22C), IMP(0x230), IMP(0x234), IMP(0x238), (const void *)IMPU(0x1E0));
+                imposeBlitIcon16Wrapper(IMP(0x22C), IMP(0x230), IMP(0x234), IMP(0x238), (const void *)IMPU(0x1E0));
                 IMPU(0xB8) |= 0x80000000u;
-                sub_009c(0x10);
+                imposeSetEventFlag(0x10);
             }
         }
         return;
     }
-    s32 r = sub_5ddc();
+    s32 r = imposeDrawClockDisplay();
     if ((IMPU(0xB8) & 0x10u) == 0) {
-        if (sub_6008() == 0) {
+        if (imposeAdvanceAnimFrame() == 0) {
             return;
         }
     }
@@ -1235,7 +1235,7 @@ static void sub_3f54(void)
         return;
     }
     if ((IMPU(0xA4) & 0x00010000u) != 0) {
-        r = sub_5830();
+        r = imposeDrawMuteIcon();
         if (r != 0) {
             return;
         }
@@ -1244,15 +1244,15 @@ static void sub_3f54(void)
         return;
     }
     if ((IMPU(0xB8) & 8u) == 0) {
-        sub_5588(IMP(0x1FC), IMP(0x200) + IMP(0x158), IMP(0x204), IMP(0x208), (const void *)IMPU(0x1D4));
-        sub_5588(IMP(0x2A4), IMP(0x2A8), 16, 16, (const void *)IMPU(0x2C8));
-        sub_5588(IMP(0x29C), IMP(0x2A0), 16, 16, (const void *)IMPU(0x2C4));
+        imposeBlitIcon16Wrapper(IMP(0x1FC), IMP(0x200) + IMP(0x158), IMP(0x204), IMP(0x208), (const void *)IMPU(0x1D4));
+        imposeBlitIcon16Wrapper(IMP(0x2A4), IMP(0x2A8), 16, 16, (const void *)IMPU(0x2C8));
+        imposeBlitIcon16Wrapper(IMP(0x29C), IMP(0x2A0), 16, 16, (const void *)IMPU(0x2C4));
         if (IMP(0x24) != 0) {
-            sub_5588(IMP(0x21C), IMP(0x220), IMP(0x214), IMP(0x218), (const void *)IMPU(0x1D8));
-            sub_5588(IMP(0x20C), IMP(0x210), IMP(0x224), IMP(0x228), (const void *)IMPU(0x1DC));
+            imposeBlitIcon16Wrapper(IMP(0x21C), IMP(0x220), IMP(0x214), IMP(0x218), (const void *)IMPU(0x1D8));
+            imposeBlitIcon16Wrapper(IMP(0x20C), IMP(0x210), IMP(0x224), IMP(0x228), (const void *)IMPU(0x1DC));
         } else {
-            sub_5588(IMP(0x21C), IMP(0x220), IMP(0x224), IMP(0x228), (const void *)IMPU(0x1DC));
-            sub_5588(IMP(0x20C), IMP(0x210), IMP(0x214), IMP(0x218), (const void *)IMPU(0x1D8));
+            imposeBlitIcon16Wrapper(IMP(0x21C), IMP(0x220), IMP(0x224), IMP(0x228), (const void *)IMPU(0x1DC));
+            imposeBlitIcon16Wrapper(IMP(0x20C), IMP(0x210), IMP(0x214), IMP(0x218), (const void *)IMPU(0x1D8));
         }
         IMPU(0xB8) |= 8u;
         return;
@@ -1276,20 +1276,20 @@ static void sub_3f54(void)
         IMP(0x14C) = 0;
     }
     if ((IMPU(0xB8) & 0x100u) == 0) {
-        sub_5588(IMP(0x23C), IMP(0x240) + IMP(0x158), IMP(0x244), IMP(0x248), (const void *)sp0);
+        imposeBlitIcon16Wrapper(IMP(0x23C), IMP(0x240) + IMP(0x158), IMP(0x244), IMP(0x248), (const void *)sp0);
         IMPU(0xB8) |= 0x100u;
     }
     if ((IMPU(0xB8) & 0x200u) == 0) {
-        sub_5588(IMP(0x26C), IMP(0x270) + IMP(0x158), IMP(0x274), IMP(0x278), (const void *)sp4);
+        imposeBlitIcon16Wrapper(IMP(0x26C), IMP(0x270) + IMP(0x158), IMP(0x274), IMP(0x278), (const void *)sp4);
         IMPU(0xB8) |= 0x200u;
     }
-    sub_5638(0xB9);
+    imposeDrawStatusBanner(0xB9);
 }
 
-static void sub_4334(void)
+static void imposeDrawBlinkCursor(void)
 {
     if ((IMP(0x164) % 20) < 12) {
-        sub_54f0(0xE2, 0x7B, 0x1C, 0x19, (const void *)IMPU(0x2C0));
+        imposeBlitIcon16(0xE2, 0x7B, 0x1C, 0x19, (const void *)IMPU(0x2C0));
     } else {
         u8 *dst = (u8 *)IMPU(0x1B0) + ((IMP(0x18) * 0x7B + 0xE2) << 1);
         s32 i;
@@ -1300,7 +1300,7 @@ static void sub_4334(void)
     }
 }
 
-static void sub_441c(void)
+static void imposeDrawVolumeBar(void)
 {
     if (IMP(0xB8) >= 0) {
         u8 *dst = (u8 *)IMPU(0x1B0) + ((IMP(0x18) * 0x7C + 0xCA) << 1);
@@ -1324,17 +1324,17 @@ static void sub_441c(void)
     }
     sceImpose_driver_BB12F974(1);
     if (IMP(0x31C) == 2 && g_tvout_mode != NULL) {
-        sub_173c(0, g_tvout_mode->mode1, g_tvout_mode->width, g_tvout_mode->height);
+        imposeSetTvOutMode(0, g_tvout_mode->mode1, g_tvout_mode->width, g_tvout_mode->height);
     }
 }
 
-static void sub_452c(void)
+static void imposeShowBatteryIcon(void)
 {
     IMP(0x348) = 3;
-    sub_5638(0x80);
+    imposeDrawStatusBanner(0x80);
 }
 
-static s32 sub_4558(void)
+static s32 imposeLoadResourceFile(void)
 {
     if (IMP(0x14) == 0) {
         return -1;
@@ -1352,7 +1352,7 @@ static s32 sub_4558(void)
     return size;
 }
 
-static s32 sub_4644(s32 lang)
+static s32 imposeParseResourceHeader(s32 lang)
 {
     if (IMP(0x14) == 0) {
         return -1;
@@ -1363,7 +1363,7 @@ static s32 sub_4644(s32 lang)
     return 0;
 }
 
-static s32 sub_48b0(void)
+static s32 imposeValidateResourceMagic(void)
 {
     u8 *rsc = (u8 *)IMPU(0x14);
     if (rsc == NULL) {
@@ -1388,7 +1388,7 @@ static s32 sub_48b0(void)
     return 0;
 }
 
-static void sub_49f4(u32 a0, u32 a1, u32 a2, s32 a3)
+static void imposeShowOsdPopup(u32 a0, u32 a1, u32 a2, s32 a3)
 {
     u32 sp[2];
 
@@ -1429,7 +1429,7 @@ static void sub_49f4(u32 a0, u32 a1, u32 a2, s32 a3)
         if (IMP(0x14) != 0) {
             s32 cur_158 = IMP(0x158);
             IMP(0x158) = prev_158;
-            sub_0590(0x22);
+            imposeClearOsdRegion(0x22);
             IMP(0x158) = cur_158;
             if ((IMPU(0xA4) & 0x100u) != 0) {
                 IMP(0x164) = 0;
@@ -1444,40 +1444,40 @@ static void sub_49f4(u32 a0, u32 a1, u32 a2, s32 a3)
     }
 }
 
-static void sub_4ba0(s32 mode)
+static void imposeRefreshRegistryValues(s32 mode)
 {
     s32 v;
 
     if (mode == -1) {
-        v = sub_73d4(0);  if (v != -1) IMP(0x18) = v;
-        v = sub_73d4(1);  if (v != -1) IMP(0x1C) = v;
-        v = sub_73d4(2);  if (v != -1) IMP(0x20) = v;
-        v = sub_73d4(14); if (v != -1) IMP(0x24) = v;
-        v = sub_73d4(15); if (v != -1) IMP(0x78) = v;
-        v = sub_73d4(19); if (v != -1) IMP(0xA0) = v;
+        v = imposeReadRegistrySetting(0);  if (v != -1) IMP(0x18) = v;
+        v = imposeReadRegistrySetting(1);  if (v != -1) IMP(0x1C) = v;
+        v = imposeReadRegistrySetting(2);  if (v != -1) IMP(0x20) = v;
+        v = imposeReadRegistrySetting(14); if (v != -1) IMP(0x24) = v;
+        v = imposeReadRegistrySetting(15); if (v != -1) IMP(0x78) = v;
+        v = imposeReadRegistrySetting(19); if (v != -1) IMP(0xA0) = v;
     }
-    v = sub_73d4(3);  if (v != -1) IMP(0x28) = v;
-    v = sub_73d4(4);  if (v != -1) IMP(0x2C) = v;
-    v = sub_73d4(5);  if (v != -1) IMP(0x34) = v;
-    v = sub_73d4(6);  if (v != -1) IMP(0x38) = v;
-    v = sub_73d4(8);  if (v != -1) IMP(0x48) = v;
-    v = sub_73d4(9);  if (v != -1) IMP(0x4C) = v;
-    v = sub_73d4(12); if (v != -1) IMP(0x64) = v;
-    v = sub_73d4(13); if (v != -1) IMP(0x68) = v;
+    v = imposeReadRegistrySetting(3);  if (v != -1) IMP(0x28) = v;
+    v = imposeReadRegistrySetting(4);  if (v != -1) IMP(0x2C) = v;
+    v = imposeReadRegistrySetting(5);  if (v != -1) IMP(0x34) = v;
+    v = imposeReadRegistrySetting(6);  if (v != -1) IMP(0x38) = v;
+    v = imposeReadRegistrySetting(8);  if (v != -1) IMP(0x48) = v;
+    v = imposeReadRegistrySetting(9);  if (v != -1) IMP(0x4C) = v;
+    v = imposeReadRegistrySetting(12); if (v != -1) IMP(0x64) = v;
+    v = imposeReadRegistrySetting(13); if (v != -1) IMP(0x68) = v;
 
     if (IMP(0x110) != 0) {
-        v = sub_73d4(16); if (v != -1) IMP(0x94) = v;
-        v = sub_73d4(17); if (v != -1) IMP(0x98) = v;
-        v = sub_73d4(18); if (v != -1) IMP(0x6C) = v;
+        v = imposeReadRegistrySetting(16); if (v != -1) IMP(0x94) = v;
+        v = imposeReadRegistrySetting(17); if (v != -1) IMP(0x98) = v;
+        v = imposeReadRegistrySetting(18); if (v != -1) IMP(0x6C) = v;
         IMP(0x138) = 1;
-        v = sub_73d4(20); if (v != -1) IMP(0x138) = v;
+        v = imposeReadRegistrySetting(20); if (v != -1) IMP(0x138) = v;
         if ((IMPU(0x110) & 4u) != 0) {
             sceDisplay_driver_7DF044BA(IMP(0x138));
         }
     }
 
     if (IMP(0x10C) != 0x100) {
-        v = sub_73d4(21);
+        v = imposeReadRegistrySetting(21);
         s32 arg = 2;
         if (v == 1) {
             arg = 1;
@@ -1487,15 +1487,15 @@ static void sub_4ba0(s32 mode)
         sceDisplay_driver_9B18DDDD(arg);
     }
 
-    v = sub_73d4(22);
+    v = imposeReadRegistrySetting(22);
     sceDisplay_driver_F455917F((v == 1) ? 1 : 0);
 
-    v = sub_73d4(7);
+    v = imposeReadRegistrySetting(7);
     s32 s2_flag = 0;
     s32 saved_b4 = 0;
     if ((u32)v < 4u) {
         IMP(0xB4) = v;
-        s32 cur = sub_00c4(IMP(0xDC));
+        s32 cur = imposeBrightnessToLevel(IMP(0xDC));
         if (cur < v) {
             saved_b4 = v;
             s2_flag = 1;
@@ -1511,16 +1511,16 @@ static void sub_4ba0(s32 mode)
         }
     }
     IMP(0xD4) = 1;
-    sub_0210(0);
+    imposeStepBrightness(0);
     if (s2_flag != 0) {
         IMP(0xB4) = saved_b4;
     }
     if (IMP(0x110) != 0 && IMP(0x328) != 0 && IMP(0x328) != 0xE0) {
-        sub_0210(3);
+        imposeStepBrightness(3);
     }
 
-    s32 v11 = sub_73d4(11);
-    s32 v10 = sub_73d4(10);
+    s32 v11 = imposeReadRegistrySetting(11);
+    s32 v10 = imposeReadRegistrySetting(10);
     if (v10 == -1) v10 = 0;
     if (v11 == -1) v11 = 0;
     sceRtc_driver_DFF30673(IMP(0x4C), IMP(0x48), v11, v10 * 60);
@@ -1534,7 +1534,7 @@ static void sub_4ba0(s32 mode)
         IMP(0x318) = IMP(0x24);
         IMP(0x100) = IMP(0x20);
     } else if (mode == 2) {
-        v = sub_73d4(2);
+        v = imposeReadRegistrySetting(2);
         if ((u32)v >= 12u) {
             v = 0;
         }
@@ -1542,7 +1542,7 @@ static void sub_4ba0(s32 mode)
             IMP(0x314) = v;
             IMP(0x100) = v;
         }
-        if (sub_169c() != 0) {
+        if (imposeIsMenuAllowed() != 0) {
             IMP(0x20) = v;
         } else {
             IMP(0x310) = 1;
@@ -1551,7 +1551,7 @@ static void sub_4ba0(s32 mode)
     }
 }
 
-static void sub_4ff0(void)
+static void imposeSyncAudioVolume(void)
 {
     if (IMP(0x110) == 0) {
         return;
@@ -1568,17 +1568,17 @@ static void sub_4ff0(void)
 
     if (IMP(0x328) == 0 || IMP(0x328) == 0xE0) {
         IMP(0x31C) = 0;
-        sub_055c(1);
+        imposeSetVolumeTarget(1);
         if (IMP(0x134) != 2) {
-            sub_009c(0x4020);
+            imposeSetEventFlag(0x4020);
         }
         return;
     }
 
     IMP(0x31C) = 1;
-    sub_055c(2);
+    imposeSetVolumeTarget(2);
     if (IMP(0x134) != 2) {
-        sub_009c(0x4020);
+        imposeSetEventFlag(0x4020);
     }
     if (IMP(0x134) == 2) {
         return;
@@ -1592,23 +1592,23 @@ static void sub_4ff0(void)
         return;
     }
     if (g_tvout_mode != NULL) {
-        sub_173c(1, g_tvout_mode->mode0, g_tvout_mode->width, g_tvout_mode->height);
+        imposeSetTvOutMode(1, g_tvout_mode->mode0, g_tvout_mode->width, g_tvout_mode->height);
     }
 }
 
-static void sub_520c(void)
+static void imposeTriggerPowerPoll(void)
 {
-    sub_009c(0x10);
+    imposeSetEventFlag(0x10);
 }
 
-static void sub_5228(void)
+static void imposePollHprmState(void)
 {
     s32 changed = 0;
-    s32 v = sub_0520();
+    s32 v = imposeGetHprmStatus();
     if (v != 0 && IMP(0x124) != v) {
         IMP(0x124) = v;
         if (v == 0x10) {
-            sub_056c((IMP(0x31C) == 1) ? 2 : 1);
+            imposeRequestVolumeUpdate((IMP(0x31C) == 1) ? 2 : 1);
         } else {
             IMP(0x12C) = 0;
             IMP(0x128) = 0;
@@ -1621,7 +1621,7 @@ static void sub_5228(void)
     if (IMP(0x128) != v) {
         IMP(0x128) = v;
         if (IMP(0x130) == 2 && v == 0 && IMP(0x12C) == 0) {
-            sub_056c(1);
+            imposeRequestVolumeUpdate(1);
         }
         if (IMP(0x12C) == 0) {
             changed = 1;
@@ -1631,16 +1631,16 @@ static void sub_5228(void)
     if (IMP(0x12C) != v) {
         IMP(0x12C) = v;
         if (IMP(0x130) == 2 && v == 0) {
-            sub_056c(1);
+            imposeRequestVolumeUpdate(1);
         }
         changed = 1;
     }
     if (changed != 0) {
-        sub_009c(0x20);
+        imposeSetEventFlag(0x20);
     }
 }
 
-static void sub_5360(void)
+static void imposePollHeadphoneState(void)
 {
     s32 v = sceHprm_driver_AD158331();
     if (v >= 0 && IMP(0x118) != v) {
@@ -1650,7 +1650,7 @@ static void sub_5360(void)
     }
 }
 
-static void sub_53c4(void)
+static void imposeTickPopupTimer(void)
 {
     if (IMP(0x340) == 0) {
         return;
@@ -1669,13 +1669,13 @@ static void sub_53c4(void)
         u32 now = sceKernelGetSystemTimeLow();
         if ((s32)(now - IMPU(0x184)) > 0x4C4B40) {
             IMPU(0xA4) |= 0x80000000u;
-            sub_009c(0x10);
+            imposeSetEventFlag(0x10);
             IMP(0x344) = 4;
         }
     }
 }
 
-static void sub_54f0(s32 x, s32 y, s32 w, s32 h, const void *src)
+static void imposeBlitIcon16(s32 x, s32 y, s32 w, s32 h, const void *src)
 {
     if (h <= 0 || IMPU(0x1B0) == 0 || src == NULL) {
         return;
@@ -1696,46 +1696,46 @@ static void sub_54f0(s32 x, s32 y, s32 w, s32 h, const void *src)
     }
 }
 
-static void sub_5588(s32 x, s32 y, s32 w, s32 h, const void *src)
+static void imposeBlitIcon16Wrapper(s32 x, s32 y, s32 w, s32 h, const void *src)
 {
-    sub_54f0(x, y, w, h, src);
+    imposeBlitIcon16(x, y, w, h, src);
 }
 
-static void sub_5638(s32 y)
+static void imposeDrawStatusBanner(s32 y)
 {
     if (IMP(0x340) == 0 || (IMPU(0xB8) & 0x400u) != 0) {
         return;
     }
     IMPU(0xB8) |= 0x400u;
-    sub_75fc(IMP_PTR(0x35C), 16, y + 2, 2);
+    imposeFormatTimeString(IMP_PTR(0x35C), 16, y + 2, 2);
 }
 
-static s32 sub_5830(void)
+static s32 imposeDrawMuteIcon(void)
 {
     if (IMP(0x338) == 1) {
         if ((IMPU(0xB8) & 0x20u) == 0) {
-            sub_5588(0x1C, 0xDF, 0x20, 0x1C, (const void *)(IMPU(0x304) + 0xE00));
+            imposeBlitIcon16Wrapper(0x1C, 0xDF, 0x20, 0x1C, (const void *)(IMPU(0x304) + 0xE00));
             IMPU(0xB8) |= 0x20u;
         }
         return 0;
     }
     if ((IMPU(0xB8) & 0x20u) == 0) {
         u32 icon = IMPU(0x304) + ((IMP(0x2C) != 0) ? 0x700u : 0u);
-        sub_5588(0x1C, 0xDF, 0x20, 0x1C, (const void *)icon);
+        imposeBlitIcon16Wrapper(0x1C, 0xDF, 0x20, 0x1C, (const void *)icon);
         IMPU(0xB8) |= 0x20u;
     }
     return 0;
 }
 
-static s32 sub_5ddc(void)
+static s32 imposeDrawClockDisplay(void)
 {
     s32 ret = 0;
     if ((IMPU(0xB8) & 1u) == 0) {
-        sub_0590(1);
-        IMP(0xD0) = sub_75fc(IMP_PTR(0x194), (IMP(0x60) != 0) ? 0x1C2 : 0x1E0, 5, 0);
+        imposeClearOsdRegion(1);
+        IMP(0xD0) = imposeFormatTimeString(IMP_PTR(0x194), (IMP(0x60) != 0) ? 0x1C2 : 0x1E0, 5, 0);
         if (IMP(0x30) != 0) {
             IMP(0xD0) -= 0x1D;
-            sub_5588(IMP(0xD0), 7, 0x18, 0x0C, (const void *)IMPU(0x2D0));
+            imposeBlitIcon16Wrapper(IMP(0xD0), 7, 0x18, 0x0C, (const void *)IMPU(0x2D0));
         }
         IMPU(0xB8) |= 1u;
         if (IMP(0x60) != 0) {
@@ -1744,26 +1744,26 @@ static s32 sub_5ddc(void)
         ret = 1;
     }
     if (IMP(0x60) != 0) {
-        sub_7e74();
+        imposeDrawBatteryLevel();
     }
     return ret;
 }
 
-static s32 sub_6008(void)
+static s32 imposeAdvanceAnimFrame(void)
 {
     if ((u32)IMP(0xC8) < 5u) {
         IMP(0xC8)++;
         return 0;
     }
     if ((IMPU(0xB8) & 0x10u) == 0) {
-        sub_5588(0x50, IMP(0x158) + 0x60, 0x148, 9, (const void *)IMPU(0x2DC));
-        sub_5588(0x50, IMP(0x158) + 0xAF, 0x148, 9, (const void *)IMPU(0x2DC));
+        imposeBlitIcon16Wrapper(0x50, IMP(0x158) + 0x60, 0x148, 9, (const void *)IMPU(0x2DC));
+        imposeBlitIcon16Wrapper(0x50, IMP(0x158) + 0xAF, 0x148, 9, (const void *)IMPU(0x2DC));
         IMPU(0xB8) |= 0x10u;
     }
     return 1;
 }
 
-static s32 sub_648c(const char *category, const char *key, s32 val)
+static s32 imposeWriteRegistryInt(const char *category, const char *key, s32 val)
 {
     RegParam reg;
     s32 h = 0;
@@ -1773,8 +1773,8 @@ static s32 sub_648c(const char *category, const char *key, s32 val)
     reg.regtype = 1;
     strncpy(reg.name, "/system", 0xFF);
     reg.namelen = 7;
-    reg.unk2 = 1;
-    reg.unk3 = 1;
+    reg.reserved2 = 1;
+    reg.reserved3 = 1;
 
     if (sceRegOpenRegistry(&reg, 2, &h) != 0) {
         return -1;
@@ -1795,7 +1795,7 @@ static s32 sub_648c(const char *category, const char *key, s32 val)
     return 0;
 }
 
-static void sub_658c(s32 set, u32 mask)
+static void imposeUpdateStatusFlags(s32 set, u32 mask)
 {
     s32 intr = sceKernelCpuSuspendIntr();
     if (set == 0) {
@@ -1806,17 +1806,17 @@ static void sub_658c(s32 set, u32 mask)
     sceKernelCpuResumeIntr(intr);
 }
 
-static s32 sub_660c(void *arg0, s32 arg1, void *arg2)
+static s32 imposeInitAudioCallback(void *arg0, s32 arg1, void *arg2)
 {
     (void)arg0;
     (void)arg1;
     (void)arg2;
-    sub_4ff0();
+    imposeSyncAudioVolume();
     IMP(0x134) = 0;
     return 0;
 }
 
-static s32 sub_6638(s32 mode)
+static s32 imposeSetAudioMode(s32 mode)
 {
     if ((u32)mode >= 4u) {
         return (s32)0x802C01FE;
@@ -1827,13 +1827,13 @@ static s32 sub_6638(s32 mode)
         prev = IMP(0x54);
         IMP(0x84) = 1;
         IMP(0x54) = mode;
-        sub_009c(0x20);
+        imposeSetEventFlag(0x20);
         sceKernelCpuResumeIntr(intr);
     }
     return prev;
 }
 
-static s32 sub_66d8(s32 mode)
+static s32 imposeCalcEffectiveVolume(s32 mode)
 {
     s32 s3_val;
     if (mode == 0) {
@@ -1847,12 +1847,12 @@ static s32 sub_66d8(s32 mode)
     IMP(0x80) = s3_val;
     IMP(0x7C) = mode;
     IMP(0xC4) = 0;
-    sub_009c(0x400);
+    imposeSetEventFlag(0x400);
     sceKernelCpuResumeIntr(intr);
     return 0;
 }
 
-static s32 sub_6788(void)
+static s32 imposeApplyHeadphoneVolume(void)
 {
     IMPU(0xC4) &= ~0x00400000u;
     if (IMP(0x110) == 0 || IMP(0x320) == 0) {
@@ -1867,35 +1867,35 @@ static s32 sub_6788(void)
     IMP(0x31C) = 2;
     IMPU(0xBC) |= 0x200u;
     if (IMP(0xFC) != 0) {
-        sub_2c00();
-        sub_0210(0);
-        sub_3380(2, 1);
+        imposeRestoreButtonIntercept();
+        imposeStepBrightness(0);
+        imposeNoopCallback(2, 1);
         IMP(0xF8) = 0;
         IMPU(0xBC) |= 0x20000000u;
     }
     IMP(0xFC) = 0;
-    if (sub_169c() == 0) {
+    if (imposeIsMenuAllowed() == 0) {
         sceImpose_driver_BB12F974(0x40402);
     }
     return 0;
 }
 
-static s32 sub_6870(void)
+static s32 imposeApplySpeakerVolume(void)
 {
     IMPU(0xC4) &= ~0x00400000u;
     if (IMP(0x110) == 0) {
         return -1;
     }
     if (IMP(0x320) == 1) {
-        if (sub_169c() == 0 && g_tvout_mode != NULL) {
-            sub_173c(0, g_tvout_mode->mode0, g_tvout_mode->width, g_tvout_mode->height);
+        if (imposeIsMenuAllowed() == 0 && g_tvout_mode != NULL) {
+            imposeSetTvOutMode(0, g_tvout_mode->mode0, g_tvout_mode->width, g_tvout_mode->height);
         }
         IMPU(0xBC) |= 0x200u;
     }
     return 0;
 }
 
-static void sub_6908(u32 trig, u32 cur_buttons, u32 prev_buttons)
+static void imposeHandleVolumeButtons(u32 trig, u32 cur_buttons, u32 prev_buttons)
 {
     (void)trig;
     (void)prev_buttons;
@@ -1903,13 +1903,13 @@ static void sub_6908(u32 trig, u32 cur_buttons, u32 prev_buttons)
     if (IMP(0xF8) != 0) {
         if ((cur_buttons & 0x00F1FFFFu) != 0) {
             if (IMP(0xF8) == 3) {
-                sub_0210(0);
-                sub_3380(2, 1);
+                imposeStepBrightness(0);
+                imposeNoopCallback(2, 1);
                 IMP(0xF8) = 1;
                 IMPU(0xBC) |= 0x20000000u;
             }
         } else if (IMP(0xF8) == 1) {
-            sub_2c00();
+            imposeRestoreButtonIntercept();
             IMP(0xF8) = 0;
         } else if (IMP(0xF8) == 2) {
             IMP(0xF8) = 3;
@@ -1928,7 +1928,7 @@ static void sub_6908(u32 trig, u32 cur_buttons, u32 prev_buttons)
             IMP(0x28)--;
         }
         IMPU(0xC4) &= ~0x00200000u;
-        sub_009c(4);
+        imposeSetEventFlag(4);
     }
     if ((IMPU(0xC4) & 0x00100000u) != 0) {
         s32 max_vol = (IMP(0x34) == 0) ? 30 : 20;
@@ -1936,26 +1936,26 @@ static void sub_6908(u32 trig, u32 cur_buttons, u32 prev_buttons)
             IMP(0x28)++;
         }
         IMPU(0xC4) &= ~0x00100000u;
-        sub_009c(4);
+        imposeSetEventFlag(4);
     }
     if ((IMPU(0xC4) & 0x00800000u) != 0) {
         IMPU(0xC4) &= ~0x00800000u;
-        sub_009c(4);
+        imposeSetEventFlag(4);
     }
     if ((IMPU(0xC4) & 0x00400000u) != 0) {
         IMPU(0xC4) &= ~0x00400000u;
         if (IMP(0xF8) == 0 && IMP(0x134) == 0) {
-            sub_0210(1);
+            imposeStepBrightness(1);
         }
     }
 }
 
-static void sub_7018(void)
+static void imposeClearAllOverlays(void)
 {
     if ((IMPU(0xA4) & 1u) != 0 || IMP(0x188) != 0) {
         return;
     }
-    sub_0590(0xFF);
+    imposeClearOsdRegion(0xFF);
     s32 intr = sceKernelCpuSuspendIntr();
     sceDisplay_driver_3E17FE8D(0, (void *)IMPU(0x1B0), 512, 1, 1);
     IMP(0xA8) = 0;
@@ -1973,7 +1973,7 @@ static void sub_7018(void)
     sceKernelCpuResumeIntr(intr);
 }
 
-static s32 sub_70e0(s32 a0, s32 a1)
+static s32 imposeHandlePowerEvent(s32 a0, s32 a1)
 {
     s32 ret = 0;
     (void)a0;
@@ -1992,21 +1992,21 @@ static s32 sub_70e0(s32 a0, s32 a1)
         IMPU(0xBC) |= 0x400u;
         if ((IMPU(0x110) & 0x02000000u) == 0) {
             if (IMP(0x31C) == 1) {
-                if (sub_169c() == 0 && g_tvout_mode != NULL) {
-                    sub_173c(1, g_tvout_mode->mode0, g_tvout_mode->width, g_tvout_mode->height);
+                if (imposeIsMenuAllowed() == 0 && g_tvout_mode != NULL) {
+                    imposeSetTvOutMode(1, g_tvout_mode->mode0, g_tvout_mode->width, g_tvout_mode->height);
                 }
                 IMPU(0xBC) |= 0x200u;
             } else if (IMP(0x31C) == 2) {
                 IMP(0x31C) = 0;
             }
         }
-        sub_055c(1);
+        imposeSetVolumeTarget(1);
     }
     IMPU(0xB8) &= ~0x27u;
     return ret;
 }
 
-static void sub_7290(s32 a0, s32 a1)
+static void imposeRefreshHprmDevices(s32 a0, s32 a1)
 {
     (void)a0;
     IMP(0x128) = sceHprm_driver_FA4A25A7();
@@ -2019,19 +2019,19 @@ static void sub_7290(s32 a0, s32 a1)
         a1 != 0 && (IMPU(0x88) & 0x10u) == 0 && IMP(0x38) != 0) {
         IMPU(0xBC) |= 4u;
     }
-    sub_8138();
+    imposeUpdateAudioRouting();
     IMP(0x84) = 0;
 }
 
-static void sub_7388(s32 a0)
+static void imposeUpdateHprmOnEvent(s32 a0)
 {
     (void)a0;
     IMP(0x128) = sceHprm_driver_FA4A25A7();
     IMP(0x12C) = sceHprm_driver_EFCFD0C5();
-    sub_8138();
+    imposeUpdateAudioRouting();
 }
 
-static s32 sub_73d4(u32 id)
+static s32 imposeReadRegistrySetting(u32 id)
 {
     s32 val = 0;
     const char *cat = NULL;
@@ -2064,13 +2064,13 @@ static s32 sub_73d4(u32 id)
     default: return -1;
     }
 
-    if (sub_800c(cat, key, &val) != 0) {
+    if (imposeReadRegistryInt(cat, key, &val) != 0) {
         return -1;
     }
     return val;
 }
 
-static s32 sub_75fc(const void *time_ptr, s32 x, s32 y, s32 align)
+static s32 imposeFormatTimeString(const void *time_ptr, s32 x, s32 y, s32 align)
 {
     (void)time_ptr;
     (void)y;
@@ -2078,7 +2078,7 @@ static s32 sub_75fc(const void *time_ptr, s32 x, s32 y, s32 align)
     return x;
 }
 
-static void sub_7e74(void)
+static void imposeDrawBatteryLevel(void)
 {
     if ((IMPU(0xB8) & 0x80u) != 0) {
         return;
@@ -2099,7 +2099,7 @@ static void sub_7e74(void)
     (void)lvl;
 }
 
-static s32 sub_800c(const char *category, const char *key, s32 *out)
+static s32 imposeReadRegistryInt(const char *category, const char *key, s32 *out)
 {
     RegParam reg;
     s32 h = 0;
@@ -2113,8 +2113,8 @@ static s32 sub_800c(const char *category, const char *key, s32 *out)
     reg.regtype = 1;
     strncpy(reg.name, "/system", 0xFF);
     reg.namelen = 7;
-    reg.unk2 = 1;
-    reg.unk3 = 1;
+    reg.reserved2 = 1;
+    reg.reserved3 = 1;
 
     if (sceRegOpenRegistry(&reg, 2, &h) != 0) {
         return -1;
@@ -2137,7 +2137,7 @@ static s32 sub_800c(const char *category, const char *key, s32 *out)
     return 0;
 }
 
-static void sub_8138(void)
+static void imposeUpdateAudioRouting(void)
 {
     s32 m = IMP(0x54);
     s32 a0 = 0;
@@ -2177,7 +2177,7 @@ s32 sceImpose_driver_E9A42056(void) __attribute__((alias("sceImposeGetHomePopup"
 
 s32 sceImposeSetHomePopup(s32 val)
 {
-    sub_658c(val ^ 1, 1);
+    imposeUpdateStatusFlags(val ^ 1, 1);
     return 0;
 }
 
@@ -2193,7 +2193,7 @@ s32 sceImpose_driver_EF4D1BC5(void) __attribute__((alias("sceImposeGetUMDPopup")
 
 s32 sceImposeSetUMDPopup(s32 val)
 {
-    sub_658c(val ^ 1, 2);
+    imposeUpdateStatusFlags(val ^ 1, 2);
     return 0;
 }
 
@@ -2222,7 +2222,7 @@ s32 sceImposeSetLanguageMode(s32 lang, s32 button)
     if (IMP(0x104) == 0 && (IMP(0x20) != lang || IMP(0x24) != button)) {
         IMP(0x100) = lang;
         IMP(0x24) = button;
-        sub_009c(0x200);
+        imposeSetEventFlag(0x200);
     }
     sceKernelCpuResumeIntr(intr);
     return 0;
@@ -2299,7 +2299,7 @@ s32 sceImpose_FCD44963(s32 id, s32 val)
     case 1:
         if ((u32)val < 31u) {
             IMP(0x28) = val;
-            sub_009c(4);
+            imposeSetEventFlag(4);
         } else {
             res = (s32)0x80000108;
         }
@@ -2307,7 +2307,7 @@ s32 sceImpose_FCD44963(s32 id, s32 val)
     case 2:
         if ((u32)val < 2u) {
             IMP(0x2C) = val;
-            sub_009c(4);
+            imposeSetEventFlag(4);
         } else {
             res = (s32)0x80000108;
         }
@@ -2315,7 +2315,7 @@ s32 sceImpose_FCD44963(s32 id, s32 val)
     case 4:
         if ((u32)val < 2u) {
             IMP(0x34) = val;
-            sub_009c(0x40);
+            imposeSetEventFlag(0x40);
         } else {
             res = (s32)0x80000108;
         }
@@ -2323,7 +2323,7 @@ s32 sceImpose_FCD44963(s32 id, s32 val)
     case 8:
         if ((u32)val < 6u) {
             IMP(0x38) = val;
-            sub_009c(0x40);
+            imposeSetEventFlag(0x40);
         } else {
             res = (s32)0x80000108;
         }
@@ -2331,7 +2331,7 @@ s32 sceImpose_FCD44963(s32 id, s32 val)
     case 0x10:
         if ((u32)val < 2u) {
             IMP(0x90) = val;
-            sub_009c(0x40);
+            imposeSetEventFlag(0x40);
         } else {
             res = (s32)0x80000108;
         }
@@ -2340,7 +2340,7 @@ s32 sceImpose_FCD44963(s32 id, s32 val)
         if ((u32)val < 4u) {
             IMP(0xB4) = val;
             IMP(0xD4) = 1;
-            sub_0210(0);
+            imposeStepBrightness(0);
         } else {
             res = (s32)0x80000108;
         }
@@ -2362,7 +2362,7 @@ s32 sceImpose_FCD44963(s32 id, s32 val)
     case 0x200:
         if ((u32)val < 3u) {
             IMP(0x9C) = val;
-            sub_009c(0x4000);
+            imposeSetEventFlag(0x4000);
         } else {
             res = (s32)0x80000108;
         }
@@ -2387,7 +2387,7 @@ s32 sceImpose_FCD44963(s32 id, s32 val)
         break;
     case 0x80000006:
         IMP(0x6C) = val;
-        sub_191c(IMP(0x98));
+        imposeSelectTvOutProfile(IMP(0x98));
         break;
     case 0x80000007:
         IMP(0x70) = val;
@@ -2450,7 +2450,7 @@ s32 sceImpose_381BD9E7(s32 a0)
     s32 intr = sceKernelCpuSuspendIntr();
     s32 res = (s32)0x80000021;
     if ((IMPU(0x74) & 1u) == 0) {
-        res = sub_160c(a0);
+        res = imposeCloseOverlayByType(a0);
     }
     sceKernelCpuResumeIntr(intr);
     return res;
@@ -2482,12 +2482,12 @@ s32 sceImpose_A9884B00(s32 a0)
     if (IMP(0x110) == 0) {
         return (s32)0x80000004;
     }
-    sub_191c(a0);
+    imposeSelectTvOutProfile(a0);
     if (g_tvout_mode == NULL) {
         return (s32)0x80000104;
     }
     s32 mode = ((IMPU(0x110) & 0x200u) != 0) ? g_tvout_mode->mode1 : g_tvout_mode->mode0;
-    return sub_173c(1, mode, g_tvout_mode->width, g_tvout_mode->height);
+    return imposeSetTvOutMode(1, mode, g_tvout_mode->width, g_tvout_mode->height);
 }
 
 s32 sceImpose_BB3F5DEC(void)
@@ -2535,13 +2535,13 @@ s32 sceImpose_driver_28B97035(s32 a0, s32 a1, s32 a2)
         return (s32)0x80000004;
     }
     if (a0 != 0) {
-        sub_173c(1, a0, a1, a2);
+        imposeSetTvOutMode(1, a0, a1, a2);
         return 0;
     }
     IMP(0x9C) = 0;
-    sub_187c();
+    imposeResetTvOutState();
     if (IMP(0x124) != 0x10) {
-        sub_009c(0x40004020u);
+        imposeSetEventFlag(0x40004020u);
     }
     return 0;
 }
@@ -2567,15 +2567,15 @@ s32 sceImpose_driver_9E921836(void)
     IMP(0xC4) = 0;
     IMP(0xCC) = 0;
     if (IMP(0xD4) != 0) {
-        sub_2c00();
-        sub_0210(0);
-        sub_3380(2, 1);
+        imposeRestoreButtonIntercept();
+        imposeStepBrightness(0);
+        imposeNoopCallback(2, 1);
         IMP(0xF8) = 0;
         IMPU(0xBC) |= 0x20000000u;
     }
-    sub_055c(1);
+    imposeSetVolumeTarget(1);
     IMP(0x70) = 0;
-    sub_3380(8, 0);
+    imposeNoopCallback(8, 0);
     sceKernelEnableSubIntr(0x1E, 0x14);
     return 0;
 }
@@ -2584,7 +2584,7 @@ s32 sceImpose_driver_AABEE36A(void)
 {
     if (IMP(0xA4) >= 0) {
         IMP(0xE0) = 1;
-        sub_009c(8);
+        imposeSetEventFlag(8);
         while (IMP(0xE0) != 0) {
             sceKernelDelayThread(100000);
         }
@@ -2637,24 +2637,24 @@ s32 sceImpose_driver_BB12F974(s32 a0)
             if (IMP(0x14) != 0) {
                 ev |= 0x80;
             }
-            sub_3380(1, 1);
+            imposeNoopCallback(1, 1);
             if (IMP(0x110) != 0 && IMP(0x328) != 0) {
-                sub_3380(4, 0);
+                imposeNoopCallback(4, 0);
             }
-            sub_3380(2, 1);
+            imposeNoopCallback(2, 1);
             IMP(0x90) = 1;
         } else if ((a0 & 2) != 0) {
-            if (sub_169c() != 0) {
+            if (imposeIsMenuAllowed() != 0) {
                 return (s32)0x80000105;
             }
             if ((IMPU(0xA4) < 2u)) {
                 ev = ((a0 & 0x200) != 0) ? 0x101 : 1;
             } else {
                 if ((a0 & 0x200) != 0 || (a0 & 0x800) != 0) {
-                    sub_0590(0xFF);
+                    imposeClearOsdRegion(0xFF);
                     ev = 0x100;
                 } else if ((a0 & 0x400) != 0) {
-                    sub_0590(0xFF);
+                    imposeClearOsdRegion(0xFF);
                 } else if ((IMPU(0xA4) & 0x00040000u) != 0) {
                     return (s32)0x80000105;
                 }
@@ -2674,7 +2674,7 @@ s32 sceImpose_driver_BB12F974(s32 a0)
 
     IMP(0xA4) = a0;
     if (ev != 0) {
-        sub_009c((u32)ev);
+        imposeSetEventFlag((u32)ev);
     }
     return 0;
 }
@@ -2709,7 +2709,7 @@ s32 sceImpose_driver_D067235E(void)
     IMP(0x58) = scePower_driver_872F4ECE();
     IMP(0x5C) = scePower_driver_7A9EA6DE();
 
-    sub_4ba0(-1);
+    imposeRefreshRegistryValues(-1);
 
     IMP(0x140) = sceHprm_driver_370DDC12();
     if ((IMPU(0x114) & 2u) != 0) {
@@ -2717,10 +2717,10 @@ s32 sceImpose_driver_D067235E(void)
     }
     IMP(0x128) = sceHprm_driver_FA4A25A7();
     IMP(0x12C) = sceHprm_driver_EFCFD0C5();
-    IMP(0x124) = sub_0520();
+    IMP(0x124) = imposeGetHprmStatus();
     IMP(0x120) = sceKernelBootFrom();
 
-    IMP(0x0C) = sceKernelCreateThread("SceImpose", sub_3968, 0x14, 0x800, 0x00100000u, NULL);
+    IMP(0x0C) = sceKernelCreateThread("SceImpose", imposeMainThread, 0x14, 0x800, 0x00100000u, NULL);
     if (IMP(0x0C) < 0) {
         return IMP(0x0C);
     }
@@ -2732,32 +2732,32 @@ s32 sceImpose_driver_D067235E(void)
         IMPU(0x1B0) = (u32)fb;
     }
 
-    sub_29bc();
+    imposeAllocIconResource();
 
     IMP(0x08) = sceKernelCreateEventFlag("SceImpose", 1, 0, NULL);
     if (IMP(0x08) < 0) {
         return IMP(0x08);
     }
 
-    IMPU(0x1B4) = (u32)sub_3f54;
-    IMPU(0x1B8) = (u32)sub_4334;
-    IMPU(0x1BC) = (u32)sub_441c;
-    IMPU(0x1C0) = (u32)sub_452c;
+    IMPU(0x1B4) = (u32)imposeRedrawOsd;
+    IMPU(0x1B8) = (u32)imposeDrawBlinkCursor;
+    IMPU(0x1BC) = (u32)imposeDrawVolumeBar;
+    IMPU(0x1C0) = (u32)imposeShowBatteryIcon;
 
-    sceCtrlSetSpecialButtonCallback(2, 0x01C30000u, sub_317c, 0);
-    sceCtrlSetSpecialButtonCallback(3, 0x00320000u, sub_3308, 0);
+    sceCtrlSetSpecialButtonCallback(2, 0x01C30000u, imposeHandleHomeButton, 0);
+    sceCtrlSetSpecialButtonCallback(3, 0x00320000u, imposeHandleHoldButton, 0);
 
     sceKernelStartThread(IMP(0x0C), 0, NULL);
-    sub_3380(8, 0);
+    imposeNoopCallback(8, 0);
     sceKernelRegisterSysEventHandler(&g_sysevent_handler);
 
     if (IMPU(0x1B0) != 0) {
         sceKernelMemset32((void *)IMPU(0x1B0), (s32)0x9CE79CE7u, 0x44000);
     }
 
-    sceKernelRegisterSubIntrHandler(0x1E, 0x14, sub_3388, NULL);
+    sceKernelRegisterSubIntrHandler(0x1E, 0x14, imposeCtrlSubIntrHandler, NULL);
     sceKernelEnableSubIntr(0x1E, 0x14);
-    sceKermit_driver_5280B410(9, sub_520c);
+    sceKermit_driver_5280B410(9, imposeTriggerPowerPoll);
 
     if (sceIoDevctl("fatms0:", 0x02425856u, NULL, 0, &devctl_out, 4) >= 0 && devctl_out != 0) {
         IMPU(0x114) |= 1u;
@@ -2766,9 +2766,9 @@ s32 sceImpose_driver_D067235E(void)
         IMP(0x11C) = 1;
     }
 
-    sub_49f4(0, 0, 0, 0);
-    sub_009c(0x4000);
-    sceKernelSetInitCallback(sub_660c, 3, NULL);
+    imposeShowOsdPopup(0, 0, 0, 0);
+    imposeSetEventFlag(0x4000);
+    sceKernelSetInitCallback(imposeInitAudioCallback, 3, NULL);
     return 0;
 }
 
@@ -2802,7 +2802,7 @@ s32 sceImpose_driver_E9B0E008(s32 *out)
 
 s32 sceAudioRoutingSetMode(s32 mode)
 {
-    return sub_6638(mode);
+    return imposeSetAudioMode(mode);
 }
 
 s32 sceAudioRoutingGetMode(void)
@@ -2812,7 +2812,7 @@ s32 sceAudioRoutingGetMode(void)
 
 s32 sceAudioRoutingSetVolumeMode(s32 mode)
 {
-    return sub_66d8(mode);
+    return imposeCalcEffectiveVolume(mode);
 }
 
 s32 sceAudioRoutingGetVolumeMode(void)
@@ -2848,9 +2848,13 @@ s32 module_reboot_phase(s32 phase, void *argp)
 s32 module_reboot_before(void *arg0)
 {
     if (IMP(0x340) != 0 && IMP(0x344) == 4 && arg0 != NULL) {
+        typedef struct {
+            u8 reserved[0x10];
+            s32 status;
+        } SceImposeRebootArg;
         u32 p = *(u32 *)((u8 *)arg0 + 0x14);
         if (p != 0) {
-            *(s32 *)(p + 0x10) = (s32)0x80020152;
+            ((SceImposeRebootArg *)p)->status = (s32)0x80020152;
         }
     }
     return 0;
