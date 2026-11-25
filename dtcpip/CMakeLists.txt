@@ -16,6 +16,7 @@ psp2_module(vs0_app_NPXS10080_eboot KIND user COMPILER snc PARTIAL SOURCES
 	DTCPIP-MW/Src/Mw/SwMwSink.cpp
 	DTCPIP-MW/Src/Mw/SwMwSinkStream.cpp
 	DTCPIP-MW/Src/Mw/SwMwMoveSink.cpp
+	DTCPIP-MW/Src/Mw/SwMwMoveSinkStream.cpp
 	DTCPIP-MW/Src/Mw/SwMwMoveSinkDispatch.cpp
 	DTCPIP-MW/Src/Mw/SwMwSync.cpp
 	DTCPIP-MW/Src/Mw/SwMwTrace.c

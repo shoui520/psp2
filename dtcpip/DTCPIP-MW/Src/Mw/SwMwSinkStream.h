@@ -14,12 +14,17 @@
 /* the windows the stream shares with the library: the receive and send areas of the
  * shared memory, their sizes and the block size */
 struct SwMwStreamWindow {
-	unsigned char *receiveBase;	/* 0x00: base + receive size */
-	int sendSize;			/* 0x04 */
-	unsigned char *sendBase;	/* 0x08: the shared memory's base */
-	int receiveSize;		/* 0x0C */
-	int reserved;			/* 0x10: the library's config[3] */
-	int blockSize;			/* 0x14 */
+	union {
+		struct {
+			unsigned char *receiveBase;	/* 0x00: base + receive size */
+			int sendSize;			/* 0x04 */
+			unsigned char *sendBase;	/* 0x08: the shared memory's base */
+			int receiveSize;		/* 0x0C */
+			int reserved;			/* 0x10: the library's config[3] */
+			int blockSize;			/* 0x14 */
+		};
+		int value[6];				/* the same words, as the commands copy them */
+	};
 };
 
 /* one chunk of a transfer: where it starts in its window and how many bytes it holds */
