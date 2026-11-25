@@ -592,3 +592,163 @@ int dtcpIpSwFiniClient(struct SwIpcClient *client)
 	dtcpIpMspaceFree(client);
 	return 0;
 }
+
+/*
+ * carry a message over the channel: build the 8-dword block, copy the payload into the
+ * channel's shared slice, send it (or signal the stream), then read the reply's fields
+ * back into the caller's message. A channel byte of 255 marks a control request: no
+ * reply block is read.
+ */
+int dtcpIpSwRequest(struct SwIpcChannel *channel, struct SceDtcpIpIpcMessage *message, SceUID pipe)
+{
+	struct SwIpcClient *client = channel->client;
+	unsigned int channelByte = message->channel;
+	unsigned short size = message->size;
+	unsigned int index = 0;
+	unsigned int block[8];
+	char *blockPointer;
+	SceUID replyPipe;
+	int ret;
+	int replyIndex;
+	char *reply;
+	unsigned short outSize;
+	unsigned int outSizeValue;
+
+	if (channelByte != 255 && channelByte >= 4)
+		return 12003;
+	if (channelByte != 255)
+		index = channelByte;
+	if (channel->size != 0)
+		blockPointer = (char *)client->sharedBase + 16520 * channel->index + 4128 * index + 4104;
+	else
+		blockPointer = (char *)block;
+	*(unsigned int *)(blockPointer + 8) = (channelByte << 24) | size;
+	*(unsigned int *)(blockPointer + 12) = message->command;
+	*(unsigned int *)(blockPointer + 16) = message->value1;
+	*(unsigned int *)(blockPointer + 20) = message->value0;
+	*(unsigned int *)(blockPointer + 24) = message->value3;
+	*(unsigned int *)(blockPointer + 28) = message->value2;
+	if (size != 0 && size <= 2048 && channelByte != 255)
+		dtcpIpSwCopy((char *)client->sharedBase + 16520 * channel->index +
+				32 * (channelByte + (channelByte << 7)) + 8, message->payload, size);
+	if (channel->size != 0)
+		ret = dtcpIpSwSignal(pipe, index);
+	else
+		ret = dtcpIpSwSend(pipe, blockPointer);
+	if (ret != 0)
+		return ret;
+
+	if (channelByte == 255) {
+		message->result = 0;
+		message->outSize = 0;
+		message->outPayload = NULL;
+		message->out0 = 0;
+		message->out1 = 0;
+		message->out2 = 0;
+		message->out3 = 0;
+	} else {
+		replyPipe = channel->pipeStoC[index];
+		if (channel->size != 0) {
+			ret = dtcpIpSwWait(replyPipe, &replyIndex, 3000000);
+			if (ret != 0)
+				return ret;
+			reply = (char *)client->sharedBase + 16520 * channel->index +
+				4128 * replyIndex + 4104;
+		} else {
+			ret = dtcpIpSwReceive(replyPipe, block, 0);
+			if (ret != 0)
+				return ret;
+			reply = (char *)block;
+		}
+		message->result = *(unsigned int *)(reply + 12);
+		outSize = *(unsigned short *)(reply + 10);
+		message->outSize = outSize;
+		message->out0 = *(unsigned int *)(reply + 20);
+		message->out1 = *(unsigned int *)(reply + 16);
+		message->out2 = *(unsigned int *)(reply + 28);
+		message->out3 = *(unsigned int *)(reply + 24);
+		outSizeValue = outSize;
+		if (outSizeValue != 0 && outSizeValue <= 0x800 && channelByte != 255)
+			message->outPayload = (char *)client->sharedBase + 16520 * channel->index +
+					      4128 * channelByte + 2056;
+	}
+	return 0;
+}
+
+/* carry a request over the channel: the caller's message picks the stream's pipe */
+int dtcpIpIpcRequest(void *stream, struct SceDtcpIpIpcMessage *message)
+{
+	struct SwIpcChannel *channel = stream;
+	unsigned int channelByte = message->channel;
+	unsigned int index = 0;
+	SceUID pipe;
+
+	if (channelByte <= 4)
+		index = channelByte;
+	if (channel->size != 0)
+		pipe = channel->pipeCtoS[index];
+	else
+		pipe = channel->pipeSingle;
+	return dtcpIpSwRequest(channel, message, pipe);
+}
+
+/*
+ * free a stream channel: close the stream's request (one per stream, or the single
+ * pipe), tell the middleware the channel closes (kind 6, the reply's kind 7), mark the
+ * channel free and free it.
+ */
+int dtcpIpIpcFiniStream(void *stream, int status)
+{
+	struct SwIpcChannel *channel = stream;
+	struct SwIpcClient *client = channel->client;
+	struct SceDtcpIpIpcMessage message;
+	struct SwIpcWireMessage control;
+	unsigned int reply[8];
+	int ret = 0;
+	unsigned int i;
+
+	if (channel->shared != NULL) {
+		dtcpIpSwCloseShared(channel->shared);
+		channel->reserved0 = 0;
+		channel->sharedBase = NULL;
+		channel->shared = NULL;
+	}
+	message.command = 0;
+	message.channel = 255;
+	message.size = 0;
+	message.value0 = 0;
+	if (channel->size != 0) {
+		for (i = 0; i < 4; ++i) {
+			ret = dtcpIpSwRequest(channel, &message, channel->pipeCtoS[i]);
+			if (ret != 0 && ret != 12011 && ret != 12017)
+				return ret;
+		}
+	} else {
+		ret = dtcpIpSwRequest(channel, &message, channel->pipeSingle);
+		if (ret != 0 && ret != 12011 && ret != 12017)
+			return ret;
+	}
+	control.kind = 6;
+	control.result = 0;
+	control.value0 = channel->index;
+	control.value1 = 0;
+	control.value2 = 0;
+	control.value3 = 0;
+	ret = dtcpIpSwSend(client->pipeCtoS, &control);
+	if (ret == 0 || ret == 12011 || ret == 12017) {
+		ret = dtcpIpSwReceive(client->pipeStoC, reply, 0);
+		if (ret == 0 || ret == 12011 || ret == 12017) {
+			if (ret != 0 || *(int *)(reply + 8) == 7) {
+				dtcpIpSwFiniChannel(channel);
+				dtcpIpSwLock(client->mutex);
+				*(unsigned char *)((char *)client->sharedBase + 16520 * channel->index) = 0;
+				dtcpIpSwUnlock(client->mutex);
+				if (ret != 0)
+					return 0;
+			} else {
+				ret = 12004;
+			}
+		}
+	}
+	return ret;
+}
