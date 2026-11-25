@@ -10,7 +10,7 @@
 
 typedef struct {   
     int size;
-    int (*ops[])(...);
+    int (*ops[])();
 } SceKernelDeci2Ops;
 
 int sceKernelDeci2pRegisterOperations(SceKernelDeci2Ops *ops);
@@ -39,4 +39,5 @@ void sceKernelRegisterDebugPutcharByBootloader(void (*func)(short*, int));
 
 void sceKernelRegisterAssertHandler(void (*func)(int));
 void sceKernelAssert(int test, int lvl);
+
 

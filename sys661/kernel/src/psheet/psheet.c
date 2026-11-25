@@ -2,9 +2,28 @@
    See the file COPYING for copying permission.
 */
 
-#include <pspkernel.h>
-#include <pspkerneltypes.h>
+#include <common/types.h>
+#include <iofilemgr_kernel.h>
+#include <threadman_kernel.h>
+#include <sysmem_kdebug.h>
 #include <string.h>
+
+#ifndef PSP_O_RDONLY
+#define PSP_O_RDONLY 0x0001
+#define PSP_O_WRONLY 0x0002
+#define PSP_O_RDWR   0x0003
+#define PSP_O_CREAT  0x0200
+#define PSP_O_TRUNC  0x0400
+#endif
+#ifndef PSP_SEEK_SET
+#define PSP_SEEK_SET 0
+#endif
+#ifndef PSP_SEEK_CUR
+#define PSP_SEEK_CUR 1
+#endif
+#ifndef PSP_SEEK_END
+#define PSP_SEEK_END 2
+#endif
 
 #define SCE_PSHEET_ERROR_SEMAID          0x80510108
 #define SCE_PSHEET_ERROR_ILLEGAL_ADDRESS 0x80510109

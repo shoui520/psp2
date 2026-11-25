@@ -146,7 +146,7 @@ diff -ruN gcc-3.3.6.orig/gcc/config/mips/mips.c gcc-3.3.6/gcc/config/mips/mips.c
 +}
 diff -ruN gcc-3.3.6.orig/gcc/config/mips/mips.h gcc-3.3.6/gcc/config/mips/mips.h
 --- gcc-3.3.6.orig/gcc/config/mips/mips.h	2005-01-08 14:33:34.000000000 +0000
-+++ gcc-3.3.6/gcc/config/mips/mips.h	2026-11-25 04:52:44.598012593 +0000
++++ gcc-3.3.6/gcc/config/mips/mips.h	2026-11-25 05:04:49.925004824 +0000
 @@ -76,7 +76,8 @@
    PROCESSOR_R5KC,
    PROCESSOR_R20KC,
@@ -182,7 +182,14 @@ diff -ruN gcc-3.3.6.orig/gcc/config/mips/mips.h gcc-3.3.6/gcc/config/mips/mips.h
  
  /* ISA has the mips4 FP condition code instructions: FP-compare to CC,
     branch on CC, and move (both FP and non-FP) on CC.  */
-@@ -833,6 +836,7 @@
+@@ -828,11 +831,13 @@
+ 
+ /* ISA has conditional trap instructions.  */
+ #define ISA_HAS_COND_TRAP	(!ISA_MIPS1				\
+-				 && !TARGET_MIPS16)
++				 && !TARGET_MIPS16			\
++				 && !TARGET_ALLEGREX)
+ 
  /* ISA has integer multiply-accumulate instructions, madd and msub.  */
  #define ISA_HAS_MADD_MSUB       ((ISA_MIPS32				\
  				  || ISA_MIPS64				\
@@ -190,7 +197,7 @@ diff -ruN gcc-3.3.6.orig/gcc/config/mips/mips.h gcc-3.3.6/gcc/config/mips/mips.h
  				  ) && !TARGET_MIPS16)
  
  /* ISA has floating-point nmadd and nmsub instructions.  */
-@@ -844,6 +848,7 @@
+@@ -844,6 +849,7 @@
  /* ISA has count leading zeroes/ones instruction (not implemented).  */
  #define ISA_HAS_CLZ_CLO         ((ISA_MIPS32				\
                                    || ISA_MIPS64				\
@@ -198,7 +205,7 @@ diff -ruN gcc-3.3.6.orig/gcc/config/mips/mips.h gcc-3.3.6/gcc/config/mips/mips.h
                                   ) && !TARGET_MIPS16)
  
  /* ISA has double-word count leading zeroes/ones instruction (not
-@@ -882,8 +887,12 @@
+@@ -882,8 +888,12 @@
  #define ISA_HAS_ROTR_SI         (TARGET_MIPS5400                        \
                                   || TARGET_MIPS5500                     \
                                   || TARGET_SR71K                        \
@@ -211,7 +218,7 @@ diff -ruN gcc-3.3.6.orig/gcc/config/mips/mips.h gcc-3.3.6/gcc/config/mips/mips.h
  /* ISA has 32-bit rotate right instruction.  */
  #define ISA_HAS_ROTR_DI         (TARGET_64BIT                           \
                                   && (TARGET_MIPS5400                    \
-@@ -2571,8 +2580,9 @@
+@@ -2571,8 +2581,9 @@
  #define OUTGOING_REG_PARM_STACK_SPACE
  
  #define STACK_BOUNDARY \
@@ -223,7 +230,7 @@ diff -ruN gcc-3.3.6.orig/gcc/config/mips/mips.h gcc-3.3.6/gcc/config/mips/mips.h
  
  /* Make sure 4 words are always allocated on the stack.  */
  
-@@ -2874,9 +2884,10 @@
+@@ -2874,9 +2885,10 @@
  /* Treat LOC as a byte offset from the stack pointer and round it up
     to the next fully-aligned offset.  */
  #define MIPS_STACK_ALIGN(LOC)						\
@@ -239,7 +246,7 @@ diff -ruN gcc-3.3.6.orig/gcc/config/mips/mips.h gcc-3.3.6/gcc/config/mips/mips.h
  /* Define the `__builtin_va_list' type for the ABI.  */
 diff -ruN gcc-3.3.6.orig/gcc/config/mips/mips.md gcc-3.3.6/gcc/config/mips/mips.md
 --- gcc-3.3.6.orig/gcc/config/mips/mips.md	2005-01-08 14:11:12.000000000 +0000
-+++ gcc-3.3.6/gcc/config/mips/mips.md	2026-11-25 04:49:56.446548980 +0000
++++ gcc-3.3.6/gcc/config/mips/mips.md	2026-11-25 05:03:16.093931732 +0000
 @@ -125,7 +125,7 @@
  
  ;; ??? Fix everything that tests this attribute.
@@ -249,7 +256,79 @@ diff -ruN gcc-3.3.6.orig/gcc/config/mips/mips.md gcc-3.3.6/gcc/config/mips/mips.
    (const (symbol_ref "mips_cpu_attr")))
  
  ;; Does the instruction have a mandatory delay slot?
-@@ -2852,9 +2852,9 @@
+@@ -1914,6 +1914,7 @@
+    (clobber (match_scratch:SI 6 ""))
+    (clobber (match_scratch:SI 7 ""))]
+   "reload_completed && !TARGET_DEBUG_D_MODE
++   && (GENERATE_MULT3_SI || TARGET_MAD)
+    && GP_REG_P (true_regnum (operands[0]))
+    && GP_REG_P (true_regnum (operands[3]))"
+   [(parallel [(set (match_dup 7)
+@@ -1924,6 +1925,27 @@
+    (set (match_dup 0) (plus:SI (match_dup 7) (match_dup 3)))]
+   "")
+ 
++(define_split
++  [(set (match_operand:SI 0 "register_operand" "")
++	(plus:SI (mult:SI (match_operand:SI 1 "register_operand" "")
++			  (match_operand:SI 2 "register_operand" ""))
++		 (match_operand:SI 3 "register_operand" "")))
++   (clobber (match_scratch:SI 4 ""))
++   (clobber (match_scratch:SI 5 ""))
++   (clobber (match_scratch:SI 6 ""))
++   (clobber (match_scratch:SI 7 ""))]
++  "reload_completed && !TARGET_DEBUG_D_MODE
++   && !(GENERATE_MULT3_SI || TARGET_MAD)
++   && GP_REG_P (true_regnum (operands[0]))
++   && GP_REG_P (true_regnum (operands[3]))"
++  [(parallel [(set (match_dup 5)
++		   (mult:SI (match_dup 1) (match_dup 2)))
++	      (clobber (match_dup 4))
++	      (clobber (match_dup 6))])
++   (set (match_dup 7) (match_dup 5))
++   (set (match_dup 0) (plus:SI (match_dup 7) (match_dup 3)))]
++  "")
++
+ ;; Splitter to copy result of MADD to a general register
+ (define_split
+   [(set (match_operand:SI                   0 "register_operand" "")
+@@ -1978,6 +2000,7 @@
+    (clobber (match_scratch:SI 6 ""))
+    (clobber (match_scratch:SI 7 ""))]
+   "reload_completed && !TARGET_DEBUG_D_MODE
++   && (GENERATE_MULT3_SI || TARGET_MAD)
+    && GP_REG_P (true_regnum (operands[0]))
+    && GP_REG_P (true_regnum (operands[1]))"
+   [(parallel [(set (match_dup 7)
+@@ -1988,6 +2011,27 @@
+    (set (match_dup 0) (minus:SI (match_dup 1) (match_dup 7)))]
+   "")
+ 
++(define_split
++  [(set (match_operand:SI                   0 "register_operand" "")
++        (minus:SI (match_operand:SI         1 "register_operand" "")
++                  (mult:SI (match_operand:SI 2 "register_operand" "")
++                           (match_operand:SI 3 "register_operand" ""))))
++   (clobber (match_scratch:SI               4 ""))
++   (clobber (match_scratch:SI               5 ""))
++   (clobber (match_scratch:SI               6 ""))
++   (clobber (match_scratch:SI               7 ""))]
++  "reload_completed && !TARGET_DEBUG_D_MODE
++   && !(GENERATE_MULT3_SI || TARGET_MAD)
++   && GP_REG_P (true_regnum (operands[0]))
++   && GP_REG_P (true_regnum (operands[1]))"
++  [(parallel [(set (match_dup 5)
++                   (mult:SI (match_dup 2) (match_dup 3)))
++              (clobber (match_dup 4))
++              (clobber (match_dup 6))])
++   (set (match_dup 7) (match_dup 5))
++   (set (match_dup 0) (minus:SI (match_dup 1) (match_dup 7)))]
++  "")
++
+ ;; Splitter to copy result of MSUB to a general register
+ (define_split
+   [(set (match_operand:SI 0 "register_operand" "")
+@@ -2852,9 +2896,9 @@
        if (GENERATE_BRANCHLIKELY)
  	{
            if (which_alternative == 1)
@@ -261,7 +340,7 @@ diff -ruN gcc-3.3.6.orig/gcc/config/mips/mips.md gcc-3.3.6/gcc/config/mips/mips.
  	}
        else
  	{
-@@ -4384,6 +4384,11 @@
+@@ -4384,6 +4428,11 @@
    if (optimize && GET_CODE (operands[1]) == MEM)
      operands[1] = force_not_mem (operands[1]);
  
@@ -273,7 +352,7 @@ diff -ruN gcc-3.3.6.orig/gcc/config/mips/mips.md gcc-3.3.6/gcc/config/mips/mips.
    if (GET_CODE (operands[1]) != MEM)
      {
        rtx op1   = gen_lowpart (SImode, operands[1]);
-@@ -4446,6 +4451,11 @@
+@@ -4446,6 +4495,11 @@
    if (optimize && GET_CODE (operands[1]) == MEM)
      operands[1] = force_not_mem (operands[1]);
  
@@ -285,7 +364,7 @@ diff -ruN gcc-3.3.6.orig/gcc/config/mips/mips.md gcc-3.3.6/gcc/config/mips/mips.
    if (GET_CODE (operands[1]) != MEM)
      {
        rtx op1   = gen_lowpart (SImode, operands[1]);
-@@ -4897,12 +4907,19 @@
+@@ -4897,12 +4951,19 @@
  ;; Only specify the mode operand 1, the rest are assumed to be word_mode.
  (define_expand "extzv"
    [(set (match_operand 0 "register_operand" "")
@@ -306,7 +385,7 @@ diff -ruN gcc-3.3.6.orig/gcc/config/mips/mips.md gcc-3.3.6/gcc/config/mips/mips.
    /* If the field does not start on a byte boundary, then fail.  */
    if (INTVAL (operands[3]) % 8 != 0)
      FAIL;
-@@ -4945,13 +4962,21 @@
+@@ -4945,13 +5006,21 @@
  
  ;; Only specify the mode operands 0, the rest are assumed to be word_mode.
  (define_expand "insv"
@@ -330,7 +409,7 @@ diff -ruN gcc-3.3.6.orig/gcc/config/mips/mips.md gcc-3.3.6/gcc/config/mips/mips.
    /* If the field does not start on a byte boundary, then fail.  */
    if (INTVAL (operands[2]) % 8 != 0)
      FAIL;
-@@ -7739,14 +7764,14 @@
+@@ -7739,14 +7808,14 @@
    "ISA_HAS_ROTR_SI"
    "*
  {
@@ -348,7 +427,7 @@ diff -ruN gcc-3.3.6.orig/gcc/config/mips/mips.md gcc-3.3.6/gcc/config/mips/mips.
  }"
    [(set_attr "type"     "arith")
     (set_attr "mode"     "SI")])
-@@ -11198,3 +11223,59 @@
+@@ -11198,3 +11267,59 @@
    [(set_attr "type"	"arith")
     (set_attr "mode"	"DI")
     (set_attr "length"	"40")])

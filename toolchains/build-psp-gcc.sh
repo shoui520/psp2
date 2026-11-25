@@ -4,7 +4,7 @@
 # "GCC: (GNU) 3.3.6+allegrex-2.2.2-psp-1.21.0.internal").
 #
 # Run on Linux (see common.sh):
-#   . agent/env.sh && python3 tools/host.py linux -- bash toolchains/build-psp-gcc.sh
+#   python3 tools/host.py linux -- bash toolchains/build-psp-gcc.sh
 #
 # Requires psp-as / psp-ld / psp-ar (from $PSPDEV or $TC/pspdev-v20261001).
 # Installs to <toolchains>/psp-gcc-3.3.6-allegrex.

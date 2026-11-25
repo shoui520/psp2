@@ -18,7 +18,8 @@ CFLAGS     := -std=gnu99 -O2 -G0 -march=allegrex -mabi=eabi -mgp32 -mfp32 -msing
               -ffreestanding -fno-builtin -fno-common -fno-pic -mno-abicalls \
               -Wall -W -Wno-unused-parameter -Wno-unused-function -Wno-unused-variable -Wno-sign-compare \
               -I. -I$(KERNEL_DIR)/include -I$(PSPDEV)/psp/sdk/include \
-              $(filter-out -fno-reorder-blocks -fno-inline -fno-inline-small-functions -fno-ipa-cp -fno-optimize-sibling-calls -fno-toplevel-reorder -fno-ipa-icf -fno-ipa-ra,$(EXTRA_CFLAGS))
+              -include common/gcc336_compat.h \
+              $(filter-out -fno-reorder-blocks -fno-inline -fno-inline-small-functions -fno-ipa-cp -fno-optimize-sibling-calls -fno-toplevel-reorder -fno-ipa-icf -fno-ipa-ra -fno-shrink-wrap -fno-inline-functions-called-once -fno-tree-ch -fno-ipa-sra -fno-tree-dominator-opts -fno-tree-vrp -fno-code-hoisting,$(EXTRA_CFLAGS))
 ASFLAGS    := -G0 -march=allegrex -I. -I$(KERNEL_DIR)/include -I$(PSPDEV)/psp/sdk/include
 else
 CROSS      := $(PSPDEV)/bin/psp-

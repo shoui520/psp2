@@ -28,27 +28,8 @@
 #define COP0_STATE_SCCODE  21
 #define COP0_STATE_CPUID   22
 
-static inline int pspCop0StateGet(int reg)
-{
-    int ret;
-    asm("mfc0 %0, $%1" : "=r" (ret) : "ri" (reg));
-    return ret;
-}
-
-static inline void pspCop0StateSet(int reg, int val)
-{
-    asm("mtc0 %0, $%1" : : "r" (val), "ri" (reg));
-}
-
-static inline int pspCop0CtrlGet(int reg)
-{
-    int ret;
-    asm("cfc0 %0, $%1" : "=r" (ret) : "ri" (reg));
-    return ret;
-}
-
-static inline void pspCop0CtrlSet(int reg, int val)
-{
-    asm("ctc0 %0, $%1" : : "r" (val), "ri" (reg));
-}
+#define pspCop0StateGet(reg) ({ int _ret; __asm__ __volatile__("mfc0 %0, $%1" : "=r" (_ret) : "i" (reg)); _ret; })
+#define pspCop0StateSet(reg, val) __asm__ __volatile__("mtc0 %0, $%1" : : "r" (val), "i" (reg))
+#define pspCop0CtrlGet(reg) ({ int _ret; __asm__ __volatile__("cfc0 %0, $%1" : "=r" (_ret) : "i" (reg)); _ret; })
+#define pspCop0CtrlSet(reg, val) __asm__ __volatile__("ctc0 %0, $%1" : : "r" (val), "i" (reg))
 

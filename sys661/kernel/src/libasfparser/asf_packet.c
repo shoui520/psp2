@@ -86,7 +86,7 @@ s64 asfIoSeek(SceAsfIoContext *io, s64 offset, s32 whence)
 /* Packet bitfield accessors */
 static s32 pktHasErrorCorrection(const SceAsfPacketState *pkt)
 {
-	return (pkt->errCorrFlags & 0x80) != 0;
+	return pkt->errCorrFlags & 0x80;
 }
 
 static u32 pktErrorCorrType(const SceAsfPacketState *pkt)
