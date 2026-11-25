@@ -116,9 +116,6 @@ using namespace paf;
 #define INDICATOR_NEW_EVENT_LED		2
 #define INDICATOR_NEW_EVENT_LED_MODE	4
 
-/* the notices pushed to the notification job (PLACEHOLDER names) */
-#define INDICATOR_PUSH_NOTICE		1
-
 /* the button's hit box, scaled to the button (PLACEHOLDER name) */
 #define INDICATOR_NEW_EVENT_HIT_SCALE	0.7f
 

@@ -271,6 +271,10 @@ extern IndicatorNewEvent *g_indicatorNewEvent;	/* (0x815449FC) */
 /* what a notice pushed to the notification job carries (36 bytes, PLACEHOLDER names), the
    callback told its result with the event's rowid, and the job started on the indicator's
    queue (0x81182A92) */
+/* a notice of the shell's own, its notifications read from the title it runs (PLACEHOLDER
+   name) */
+#define INDICATOR_PUSH_NOTICE		1
+
 typedef void (*IndicatorPushNotificationCB)(int result, SceInt64 rowid, void *arg);
 
 struct IndicatorPushNotificationParam {

@@ -283,6 +283,9 @@ psp2_module(vs0_vsh_shell_shell KIND user COMPILER snc PARTIAL SOURCES
 	src/indicator_plugin/src/indicator_notice_icon.cpp
 	src/indicator_plugin/src/indicator_util.cpp
 	src/indicator_plugin/src/indicator_icon_info.cpp
+	src/indicator_plugin/src/indicator_push_notification.cpp
+	src/indicator_plugin/src/indicator_busy_dialog.cpp
+	src/indicator_plugin/src/indicator_dialog.cpp
 	shell.c
 )
 target_include_directories(vs0_vsh_shell_shell PRIVATE "${PSP2_SRC}/vsh/paf/include"
