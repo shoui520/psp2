@@ -12,672 +12,401 @@ typedef signed int s32;
 typedef unsigned long long u64;
 typedef signed long long s64;
 
-static inline u32 byteswap32(u32 v)
-{
-    return ((v & 0x000000FFU) << 24) |
-           ((v & 0x0000FF00U) << 8)  |
-           ((v & 0x00FF0000U) >> 8)  |
-           ((v & 0xFF000000U) >> 24);
-}
-static inline u16 byteswap16(u16 v) { return (u16)((v << 8) | (v >> 8)); }
-static inline u16 _wsbh(u16 v) { return byteswap16(v); }
-static inline u32 _bswapw(u32 v) { return byteswap32(v); }
-static inline s32 mp4_min_s32(s32 a, s32 b) { return a < b ? a : b; }
-static inline s32 mp4_max_s32(s32 a, s32 b) { return a > b ? a : b; }
+/* MP4 MSV error codes */
+enum Mp4Error {
+    MP4_OK               = 0,
+    MP4_ERR_NOMEM        = 1,
+    MP4_ERR_IO           = 2,
+    MP4_ERR_BAD_HANDLE   = 4,
+    MP4_ERR_INVALID_ARG  = 6,
+    MP4_ERR_NOT_OPEN     = 7,
+    MP4_ERR_NOT_FOUND    = 9,
+    MP4_ERR_INTERNAL     = 10,
+    MP4_ERR_NO_BRAND     = 8194,
+    MP4_ERR_BAD_STATE    = 8195,
+    MP4_ERR_OUT_OF_RANGE = 8201,
+    MP4_ERR_PARSE        = 20481,
+};
 
-static inline void *qmemcpy(void *dst, const void *src, size_t n)
-{
-    u8 *d = (u8 *)dst;
-    const u8 *s = (const u8 *)src;
-    while (n--) *d++ = *s++;
-    return dst;
-}
-static inline void *memset(void *dst, int c, size_t n)
-{
-    u8 *d = (u8 *)dst;
-    while (n--) *d++ = (u8)c;
-    return dst;
-}
-static inline char *strcpy(char *dst, const char *src)
-{
-    char *d = dst;
-    while ((*d++ = *src++) != '\0') {}
-    return dst;
-}
-#define WORD2(x) ((u16)((u64)(x) >> 32))
+/* ISO BMFF FourCC constants */
+#define MP4_FOURCC(a, b, c, d) \
+    (((u32)(u8)(a) << 24) | ((u32)(u8)(b) << 16) | ((u32)(u8)(c) << 8) | (u32)(u8)(d))
 
-#define LODWORD(x) ((u32)((u64)(x)))
-#define HIDWORD(x) ((u32)((u64)(x) >> 32))
-#define SHIDWORD(x) ((s32)((u64)(x) >> 32))
-#define SLODWORD(x) ((s32)((u64)(x)))
-#define LOWORD(x)  ((u16)((u32)(x)))
-#define HIWORD(x)  ((u16)((u32)(x) >> 16))
-#define LOBYTE(x)  ((u8)((u32)(x)))
-#define HIBYTE(x)  ((u8)((u32)(x) >> 8))
-#define BYTE1(x)   ((u8)((u32)(x) >> 8))
-#define BYTE2(x)   ((u8)((u32)(x) >> 16))
-#define BYTE3(x)   ((u8)((u32)(x) >> 24))
-#define __PAIR64__(hi, lo) (((u64)(u32)(hi) << 32) | (u32)(lo))
-#define __CFADD__(x, y)    ((u32)((u32)(x) + (u32)(y)) < (u32)(x))
-#define true 1
-#define false 0
-#define _break(...) __asm__ volatile("break 7")
+#define MP4_BOX_FTYP MP4_FOURCC('f', 't', 'y', 'p')
+#define MP4_BOX_MOOV MP4_FOURCC('m', 'o', 'o', 'v')
+#define MP4_BOX_MVHD MP4_FOURCC('m', 'v', 'h', 'd')
+#define MP4_BOX_TRAK MP4_FOURCC('t', 'r', 'a', 'k')
+#define MP4_BOX_TKHD MP4_FOURCC('t', 'k', 'h', 'd')
+#define MP4_BOX_MDIA MP4_FOURCC('m', 'd', 'i', 'a')
+#define MP4_BOX_MDHD MP4_FOURCC('m', 'd', 'h', 'd')
+#define MP4_BOX_HDLR MP4_FOURCC('h', 'd', 'l', 'r')
+#define MP4_BOX_MINF MP4_FOURCC('m', 'i', 'n', 'f')
+#define MP4_BOX_STBL MP4_FOURCC('s', 't', 'b', 'l')
+#define MP4_BOX_STSD MP4_FOURCC('s', 't', 's', 'd')
+#define MP4_BOX_STTS MP4_FOURCC('s', 't', 't', 's')
+#define MP4_BOX_CTTS MP4_FOURCC('c', 't', 't', 's')
+#define MP4_BOX_STSC MP4_FOURCC('s', 't', 's', 'c')
+#define MP4_BOX_STSZ MP4_FOURCC('s', 't', 's', 'z')
+#define MP4_BOX_STCO MP4_FOURCC('s', 't', 'c', 'o')
+#define MP4_BOX_CO64 MP4_FOURCC('c', 'o', '6', '4')
+#define MP4_BOX_STSS MP4_FOURCC('s', 't', 's', 's')
+#define MP4_BOX_AVCC MP4_FOURCC('a', 'v', 'c', 'C')
+#define MP4_BOX_ESDS MP4_FOURCC('e', 's', 'd', 's')
+#define MP4_BOX_MDAT MP4_FOURCC('m', 'd', 'a', 't')
+#define MP4_BOX_MOOF MP4_FOURCC('m', 'o', 'o', 'f')
+#define MP4_BOX_UUID MP4_FOURCC('u', 'u', 'i', 'd')
+#define MP4_BOX_UDTA MP4_FOURCC('u', 'd', 't', 'a')
+#define MP4_BOX_FREE MP4_FOURCC('f', 'r', 'e', 'e')
+#define MP4_BOX_SKIP MP4_FOURCC('s', 'k', 'i', 'p')
+#define MP4_BOX_PRFT MP4_FOURCC('P', 'R', 'F', 'T')
 
-extern u8 g_mp4_data[0x80];
-extern u8 g_mp4_bss[0x80];
-#define MP4_DATA_U32(off) (*(u32 *)(g_mp4_data + (off)))
-#define MP4_BSS_U32(off)  (*(u32 *)(g_mp4_bss + (off)))
+static inline s32 mp4MinS32(s32 lhs, s32 rhs)
+{
+    return lhs < rhs ? lhs : rhs;
+}
 
+static inline u16 mp4ReadBe16(const u8 *buf)
+{
+    return (u16)(((u16)buf[0] << 8) | buf[1]);
+}
+
+static inline u32 mp4ReadBe32(const u8 *buf)
+{
+    return ((u32)buf[0] << 24) | ((u32)buf[1] << 16) | ((u32)buf[2] << 8) | buf[3];
+}
+
+static inline u64 mp4ReadBe64(const u8 *buf)
+{
+    return ((u64)mp4ReadBe32(buf) << 32) | mp4ReadBe32(buf + 4);
+}
+
+static inline void mp4WriteBe16(u8 *buf, u16 val)
+{
+    buf[0] = (u8)(val >> 8);
+    buf[1] = (u8)val;
+}
+
+static inline void mp4WriteBe32(u8 *buf, u32 val)
+{
+    buf[0] = (u8)(val >> 24);
+    buf[1] = (u8)(val >> 16);
+    buf[2] = (u8)(val >> 8);
+    buf[3] = (u8)val;
+}
+
+static inline void mp4WriteBe64(u8 *buf, u64 val)
+{
+    mp4WriteBe32(buf, (u32)(val >> 32));
+    mp4WriteBe32(buf + 4, (u32)val);
+}
+
+/* Host OS / I/O / allocator callback table */
+typedef struct Mp4OsCallbacks {
+    void *(*open)(const char *path, u32 mode);
+    int (*close)(void *fh);
+    s64 (*tell)(void *fh);
+    int (*seek)(void *fh, s64 offset, int whence);
+    s64 (*get_size)(void *fh);
+    s32 (*read)(void *fh, void *buf, u32 size);
+    s32 (*write)(void *fh, const void *buf, u32 size);
+    void *(*alloc)(u32 size);
+    void (*free)(void *ptr);
+    u32 (*get_time)(void);
+    void *(*memcpy_fn)(void *dst, const void *src, u32 len);
+    void *(*memmove_fn)(void *dst, const void *src, u32 len);
+    void *(*memset_fn)(void *dst, int val, u32 len);
+    int (*memcmp_fn)(const void *lhs, const void *rhs, u32 len);
+    int (*lock_fn)(void *ctx);
+    int (*unlock_fn)(void *ctx);
+    int (*flush)(void *fh);
+} Mp4OsCallbacks;
+
+/* Global cache configuration */
+typedef struct Mp4Config {
+    u32 base_unit;
+    u32 min_mult;
+    u32 cache_mult;
+    u32 max_mult;
+    u32 flags;
+} Mp4Config;
+
+/* Parser/muxer state machine */
+typedef struct Mp4StateMachine {
+    u32 cur_state;
+    u32 pending_state;
+} Mp4StateMachine;
+
+/* Buffered stream context */
+typedef struct Mp4IoStream {
+    void *file_handle;
+    u32 error_flags;
+    u32 last_box_type;
+    u32 mode;
+    u32 base_unit;
+    u32 min_read;
+    u32 cache_size;
+    u32 max_read;
+    u32 reserved0;
+    void *user_handle;
+    u32 is_attached;
+    u32 reserved1;
+    u64 file_pos;
+    u64 file_size;
+    u8 *cache_buf;
+    u32 cache_pos;
+    u32 cache_valid;
+    u32 io_mode;
+    Mp4StateMachine *fsm;
+} Mp4IoStream;
+
+/* Chunked dynamic array for MP4 sample tables */
+typedef struct Mp4TableChunk {
+    u32 count;
+    u32 capacity;
+    u32 stride_words;
+    u32 *entries;
+    u32 reserved[3];
+    struct Mp4TableChunk *next;
+} Mp4TableChunk;
+
+/* Sample-to-chunk (stsc) lookup table */
+typedef struct Mp4StscTable {
+    u32 valid;
+    u32 reserved[7];
+    Mp4TableChunk *chunks;
+    u32 chunk_count;
+    u32 first_entry;
+    u32 entry_count;
+    u32 first_sample;
+    u32 sample_count;
+    u32 first_chunk;
+    u32 total_chunks;
+    u32 cached_entry;
+    u32 cached_sample;
+} Mp4StscTable;
+
+/* Sample-to-time (stts) and composition-time (ctts) entry */
+typedef struct Mp4TimeToSampleEntry {
+    u32 sample_count;
+    u32 sample_delta;
+} Mp4TimeToSampleEntry;
+
+/* Sample description / codec config */
+typedef struct Mp4CodecConfig {
+    u32 format;
+    u32 width;
+    u32 height;
+    u32 sample_rate;
+    u32 channels;
+    u32 sample_size;
+    u8 *sps_data;
+    u32 sps_size;
+    u8 *pps_data;
+    u32 pps_size;
+    u8 *esds_data;
+    u32 esds_size;
+    u8 avc_profile;
+    u8 avc_compat;
+    u8 avc_level;
+    u8 nal_length_size;
+} Mp4CodecConfig;
+
+/* UUID box entry */
+typedef struct Mp4UuidBox {
+    struct Mp4UuidBox *next;
+    u32 size;
+    u64 file_offset;
+    u32 uuid[4];
+} Mp4UuidBox;
+
+/* Track reference / profile entry */
+typedef struct Mp4ProfileItem {
+    u32 id;
+    u32 type;
+    u16 ref_index;
+    u16 reserved;
+    u32 flags;
+    u32 param0;
+    u32 param1;
+    u32 param2;
+    struct Mp4ProfileItem *next;
+} Mp4ProfileItem;
+
+/* Metadata / user data entry */
+typedef struct Mp4MetaItem {
+    u32 type;
+    u32 size;
+    u16 lang;
+    u16 reserved;
+    void *data;
+    struct Mp4MetaItem *next;
+} Mp4MetaItem;
+
+/* Media sample index & table container */
+typedef struct Mp4SampleTable {
+    Mp4StscTable stsc;
+    Mp4TableChunk *stts_chunks;
+    u32 stts_count;
+    Mp4TableChunk *ctts_chunks;
+    u32 ctts_count;
+    Mp4TableChunk *stsz_chunks;
+    u32 stsz_fixed_size;
+    u32 stsz_count;
+    Mp4TableChunk *stco_chunks;
+    u32 stco_count;
+    u32 stco_is_64bit;
+    Mp4TableChunk *stss_chunks;
+    u32 stss_count;
+    u32 max_sample_size;
+    u32 cur_sample_idx;
+} Mp4SampleTable;
+
+/* Forward declaration */
+struct Mp4Movie;
+struct Mp4Handle;
+
+/* Track descriptor */
+typedef struct Mp4Track {
+    struct Mp4Track *next;
+    struct Mp4Movie *movie;
+    u32 track_id;
+    u32 handler_type;
+    u32 timescale;
+    u64 duration;
+    u32 creation_time;
+    u32 modification_time;
+    u16 language;
+    u16 volume;
+    u32 width_fixed;
+    u32 height_fixed;
+    u32 flags;
+    Mp4CodecConfig codec;
+    Mp4SampleTable samples;
+    u32 edit_count;
+    u32 *edit_list;
+    u32 ref_count;
+    u32 *ref_tracks;
+    void *extra_data;
+} Mp4Track;
+
+/* Movie fragment descriptor */
+typedef struct Mp4Fragment {
+    struct Mp4Fragment *next;
+    struct Mp4Movie *movie;
+    u32 seq_number;
+    u64 base_offset;
+    u32 sample_count;
+    u32 flags;
+} Mp4Fragment;
+
+/* File-type (ftyp) box */
+typedef struct Mp4FtypBox {
+    u32 major_brand;
+    u32 minor_version;
+    u32 compat_count;
+    u32 compat_brands[16];
+} Mp4FtypBox;
+
+/* Top-level MP4 movie container */
+typedef struct Mp4Movie {
+    struct Mp4Handle *handle;
+    u32 flags;
+    u32 track_count;
+    Mp4Track *tracks;
+    u32 timescale;
+    u64 duration;
+    u32 creation_time;
+    u32 modification_time;
+    u32 next_track_id;
+    u32 rate_fixed;
+    u16 volume_fixed;
+    u16 reserved0;
+    Mp4FtypBox *ftyp;
+    u64 mdat_offset;
+    u64 mdat_size;
+    Mp4UuidBox *uuid_list;
+    u32 fragment_count;
+    Mp4Fragment *fragments;
+    u32 profile_count;
+    Mp4ProfileItem *profiles;
+    Mp4MetaItem *meta_list;
+    void *fragment_index;
+} Mp4Movie;
+
+/* Public opaque MP4 handle */
+typedef struct Mp4Handle {
+    Mp4Movie *movie;
+    Mp4IoStream *stream;
+    u32 options;
+} Mp4Handle;
+
+/* Globals */
+extern Mp4Config g_mp4_config;
+extern Mp4OsCallbacks g_mp4_os_cbs;
 extern const u32 g_mp4_state_table[360];
 extern const u32 g_mp4_err_table[28];
 
-/* Imported library functions */
+/* Memory & OS helpers (mp4_io.c) */
+void *mp4Alloc(u32 size);
+void mp4Free(void *ptr);
+void *mp4MemCopy(void *dst, const void *src, u32 len);
+void *mp4MemSet(void *dst, int val, u32 len);
+s64 mp4IoTell(Mp4IoStream *stream);
+int mp4IoSeek(Mp4IoStream *stream, s64 offset, int whence);
+s64 mp4IoGetSize(Mp4IoStream *stream);
+s32 mp4IoRead(Mp4IoStream *stream, void *buf, u32 size);
+s32 mp4IoWrite(Mp4IoStream *stream, const void *buf, u32 size);
+int mp4IoFlush(Mp4IoStream *stream);
+u16 mp4IoReadU16(Mp4IoStream *stream);
+u32 mp4IoReadU32(Mp4IoStream *stream);
+u64 mp4IoReadU64(Mp4IoStream *stream);
+int mp4IoReadBytes(Mp4IoStream *stream, void *buf, u32 size);
+int mp4IoWriteU16(Mp4IoStream *stream, u16 val);
+int mp4IoWriteU32(Mp4IoStream *stream, u32 val);
+int mp4IoWriteU64(Mp4IoStream *stream, u64 val);
+int mp4IoWriteBytes(Mp4IoStream *stream, const void *buf, u32 size);
+void mp4IoRecordError(Mp4IoStream *stream, u32 box_type, u32 err_flag);
 
-/* Module functions */
-int mp4msv_9CA13D1A();
-#define mp4_box_fn_1 mp4msv_9CA13D1A
-int mp4msv_032F3500(u32 *a1, u32 *a2, u32 *a3);
-int mp4msv_2A2D949A();
-int *mp4msv_4A7AD789();
-int mp4msv_3C2183C7(int a1, int *a2);
-int mp4_box_fn_2();
-int mp4_box_fn_3();
-int mp4_box_fn_4();
-int mp4_box_fn_5();
-int mp4_box_fn_6();
-int mp4_box_fn_7();
-int mp4_box_fn_8();
-int mp4_box_fn_9();
-int mp4_box_fn_10();
-int mp4_box_fn_11();
-int mp4_box_fn_12();
-int mp4msv_F595F917(int *a1);
-int mp4_box_fn_13();
-int mp4msv_68FBFBE1(int a1);
-int mp4msv_DEBFCBCA(s64 a1, int a2);
-int mp4msv_576C693B(s64 a1, int a2);
-int mp4msv_3D8D41A0(int a1, int a2);
-int mp4msv_9D56A7CC(int *a1);
-int mp4msv_A824645B(int a1, int a2, int a3, int a4);
-int mp4msv_98ADC323(int a1, int a2, int a3);
-int mp4msv_5087548E(int a1);
-int mp4msv_8A0FD93F(int a1, int a2, int a3, int a4, int a5);
-int mp4msv_46186C26(u32 *a1);
-int mp4msv_BD23D34A(u32 *a1);
-int mp4msv_D8BA6AFE(int a1);
-int mp4msv_0C0843B0(int a1);
-int mp4msv_089364A9(int a1);
-int mp4msv_E5C33D61(int a1);
-int mp4msv_21BD7274(int a1);
-int mp4msv_9501780A(int a1);
-int mp4msv_21BE7D96(int a1);
-int mp4msv_0D6843EA(int a1, int a2, int a3);
-int mp4msv_67AF9E0F(int a1, int a2, int a3);
-int mp4msv_BE203EA3(int a1, int a2, int a3);
-int mp4msv_CFF25FAC(int a1, int a2);
-int mp4msv_3149D53B(int a1, int a2, int a3);
-int mp4msv_27412E93(int a1, int a2, int a3, int a4);
-int mp4msv_E641D779(int a1, unsigned int a2, int a3, int a4, int a5);
-int mp4msv_BE558D75(int a1, unsigned int a2, int a3, int a4, int a5);
-int mp4msv_CE9C6D39(int a1, int a2, int a3, int a4);
-int mp4msv_5565A318(s64 a1, int a2, int a3, int a4, u16 *a5);
-int mp4msv_9076AA02(s64 a1, int a2, int a3, int a4, int a5, unsigned int a6, int a7);
-int mp4msv_6AE9B944(s64 a1, int a2, int a3, int a4, int a5, int a6, unsigned int a7, int a8);
-int mp4msv_AADD18E7(int a1, unsigned int a2, int a3, int a4, int a5);
-int mp4msv_E4AFDAD3(int *a1, u32 *a2);
-int mp4msv_4154992A(u32 *a1, u32 *a2, u32 *a3);
-int mp4msv_C38F9765(u32 *a1, unsigned int a2, u32 *a3, u32 *a4, u32 *a5, u32 *a6);
-int mp4msv_63752099(int a1, unsigned int a2, u32 *a3, int a4);
-int mp4msv_F50268BF(int a1, u32 *a2);
-int mp4msv_2A296DDA(int a1, int a2, u32 *a3);
-int mp4msv_A41C1F5F(int *a1, u32 *a2);
-int mp4msv_B919743C(int *a1, int (*a2)(int a1, int *a2), u32 *a3, u32 *a4, int a5);
-int mp4msv_509B3BAC(int *a1, u32 *a2, int a3, u32 *a4, u32 *a5);
-int mp4msv_07C60A23(u32 *a1);
-int mp4msv_8FD8E0A4(u32 *a1);
-int mp4msv_E042AB3C(u32 *a1);
-int mp4msv_182FF541(u32 *a1);
-int mp4msv_3D57BA52(u32 *a1);
-int mp4msv_0C06DACB(u32 *a1);
-int mp4msv_8D564A92(u32 *a1);
-int mp4msv_A55AF94C(int a1);
-int mp4msv_6B94A29D(s64 a1);
-int mp4msv_D3505C12(int a1);
-int mp4msv_A2AE6F30(int a1);
-int mp4msv_54410730(int a1);
-int mp4msv_EE62F96D(int a1);
-int mp4msv_9BB5E338(int a1);
-int mp4msv_FF9E6F58(int a1);
-int mp4msv_3F6B6C59(int a1);
-int mp4msv_5EE48079(int a1);
-int mp4msv_162503F3(int a1);
-int mp4msv_A9FD62E2(int a1);
-int mp4msv_6D619263(int a1);
-int mp4msv_2BAF7C25(int a1);
-int mp4msv_A418509D(int a1);
-int mp4msv_8C998600(int a1);
-int mp4msv_35144B9C(int a1);
-int mp4msv_2B1B8D23(int a1, unsigned int a2);
-int mp4msv_A09878FC(int a1, unsigned int a2);
-int mp4msv_08F96BE2(int a1);
-int mp4msv_287B3FDA(int a1);
-int mp4msv_886CFC3D(int a1);
-int mp4msv_9632797F(u16 *a1, int a2, int a3, int a4);
-int mp4msv_EF6D76BC(s64 a1);
-int mp4msv_4C677A7E(s64 a1);
-int mp4msv_0DF0B9AD(u32 *a1);
-int mp4msv_AD3AF34E(u32 *a1);
-int mp4msv_0D32271B(u32 *a1);
-int mp4msv_D070C0AA(u32 *a1);
-int mp4msv_888C1115(u32 *a1);
-int mp4msv_E8DE0EB8(int a1);
-int mp4msv_CD733822(int a1, unsigned int a2);
-int mp4msv_9A8B21D2(u32 *a1);
-int mp4msv_65C17387(int a1);
-int mp4msv_2BFE233D(int a1);
-int mp4msv_190E442D(int a1, int a2);
-int mp4msv_9878A6B3(int a1, u32 *a2);
-int mp4msv_C9D3D397(int a1, int a2);
-int mp4msv_D5936DBD(int a1, int a2, int a3);
-int mp4_box_fn_14();
-int mp4_box_fn_15();
-int mp4_box_fn_16();
-int mp4_box_fn_17();
-int mp4_box_fn_18();
-int mp4_box_fn_19();
-int mp4_box_fn_20();
-int mp4_box_fn_21();
-int mp4_box_fn_22();
-int mp4_box_fn_23();
-int mp4_box_fn_24();
-int mp4_box_fn_25();
-int mp4_box_fn_26();
-int mp4_box_fn_27();
-int mp4_box_fn_28();
-int mp4_box_fn_29();
-int mp4_box_fn_30();
-int mp4_box_fn_31();
-int mp4_box_fn_32();
-int mp4_box_fn_33();
-int mp4_box_fn_34();
-int mp4_box_fn_35();
-int mp4_box_fn_36();
-int mp4_box_fn_37();
-int mp4_box_fn_38();
-int mp4_box_fn_39();
-int mp4_box_fn_40();
-int mp4_box_fn_41();
-int mp4_box_fn_42();
-int mp4_box_fn_43();
-int mp4_box_fn_44();
-int mp4_box_fn_45();
-int mp4_box_fn_46();
-int mp4_box_fn_47();
-int mp4_box_fn_48();
-int mp4_box_fn_49();
-int mp4_box_fn_50();
-int mp4_box_fn_51();
-int mp4_box_fn_52();
-int mp4_box_fn_53();
-int mp4_box_fn_54();
-int mp4_box_fn_55();
-int mp4_box_fn_56();
-int mp4_box_fn_57();
-int mp4_box_fn_58();
-int mp4_box_fn_59();
-int mp4_box_fn_60();
-int mp4_box_fn_61();
-int mp4_box_fn_62();
-int mp4_box_fn_63();
-int mp4_box_fn_64();
-int mp4_box_fn_65();
-int mp4_box_fn_66();
-int mp4_box_fn_67();
-int mp4_box_fn_68();
-int mp4_box_fn_69();
-int mp4_box_fn_70();
-int mp4_box_fn_71();
-int mp4_box_fn_72();
-int mp4_box_fn_73();
-int mp4_box_fn_74();
-int mp4_box_fn_75();
-int mp4_box_fn_76();
-int mp4_box_fn_77();
-int mp4_box_fn_78();
-int mp4_box_fn_79();
-int mp4_box_fn_80();
-int mp4_box_fn_81();
-int mp4_box_fn_82();
-int mp4_box_fn_83();
-int mp4_box_fn_84();
-int mp4_box_fn_85();
-int mp4_box_fn_86();
-int mp4_box_fn_87();
-int mp4_box_fn_88();
-int mp4_box_fn_89();
-int mp4_box_fn_90();
-int mp4_box_fn_91();
-int mp4_box_fn_92();
-int mp4_box_fn_93();
-int mp4_box_fn_94();
-int mp4_box_fn_95();
-int mp4_box_fn_96();
-int mp4_box_fn_97();
-int mp4_box_fn_98();
-int mp4_box_fn_99();
-int mp4_box_fn_100();
-int mp4_box_fn_101();
-int mp4_box_fn_102();
-int mp4_box_fn_103();
-int mp4_box_fn_104();
-unsigned int mp4_box_fn_105();
-int mp4_box_fn_106();
-int mp4_box_fn_107();
-int mp4_box_fn_108();
-int mp4_box_fn_109();
-int mp4_track_fn_1();
-int mp4_track_fn_2();
-int mp4_track_fn_3();
-int mp4_track_fn_4();
-int mp4_track_fn_5();
-int mp4_track_fn_6();
-int mp4_track_fn_7();
-int mp4_track_fn_8();
-int mp4_track_fn_9();
-int mp4_track_fn_10();
-int mp4_track_fn_11();
-int mp4_track_fn_12();
-int mp4_track_fn_13();
-int mp4_track_fn_14();
-u8 * mp4_track_fn_15();
-int mp4_track_fn_16();
-int mp4_track_fn_17();
-int mp4_track_fn_18();
-int mp4_track_fn_19();
-int mp4_track_fn_20();
-int mp4_track_fn_21();
-int mp4_track_fn_22();
-int mp4_track_fn_23();
-int mp4_track_fn_24();
-int mp4_track_fn_25();
-int mp4_track_fn_26();
-int mp4_track_fn_27();
-int mp4_track_fn_28();
-int mp4_track_fn_29();
-int mp4_track_fn_30();
-int mp4_track_fn_31();
-int mp4_track_fn_32();
-int mp4_track_fn_33();
-int mp4_track_fn_34();
-int mp4_track_fn_35();
-int mp4_track_fn_36();
-int mp4_track_fn_37();
-int mp4_track_fn_38();
-void mp4_track_fn_39();
-int mp4_track_fn_40();
-int mp4_track_fn_41();
-int mp4_track_fn_42();
-int mp4_track_fn_43();
-int mp4_track_fn_44();
-int mp4_track_fn_45();
-int mp4_track_fn_46();
-int mp4_track_fn_47();
-int mp4_track_fn_48();
-int mp4_track_fn_49();
-int mp4_track_fn_50();
-int mp4_track_fn_51();
-int mp4_track_fn_52();
-int mp4_track_fn_53();
-int mp4_track_fn_54();
-int mp4_track_fn_55();
-int mp4_track_fn_56();
-int mp4_track_fn_57();
-int mp4_track_fn_58();
-int mp4_track_fn_59();
-int mp4_track_fn_60();
-int mp4_track_fn_61();
-int mp4_track_fn_62();
-int mp4_track_fn_63();
-int mp4_track_fn_64();
-int mp4_track_fn_65();
-int mp4_track_fn_66();
-int mp4_track_fn_67();
-int mp4_track_fn_68();
-int mp4_track_fn_69();
-int mp4_track_fn_70();
-int mp4_track_fn_71();
-int mp4_track_fn_72();
-int mp4_track_fn_73();
-int mp4_track_fn_74();
-int mp4_track_fn_75();
-int mp4_track_fn_76();
-int mp4_track_fn_77();
-int mp4_track_fn_78();
-int mp4_track_fn_79();
-int mp4_track_fn_80();
-int mp4_track_fn_81();
-int mp4_track_fn_82();
-int mp4_track_fn_83();
-int mp4_track_fn_84();
-int mp4_track_fn_85();
-int mp4_track_fn_86();
-int mp4_sample_fn_1();
-int mp4_sample_fn_2();
-int mp4_sample_fn_3();
-int mp4_sample_fn_4();
-int mp4_sample_fn_5();
-int mp4_sample_fn_6();
-int mp4_sample_fn_7();
-int mp4_sample_fn_8();
-int mp4_sample_fn_9();
-int mp4_sample_fn_10();
-int mp4_sample_fn_11();
-int mp4_sample_fn_12();
-int mp4_sample_fn_13();
-int mp4_sample_fn_14();
-int mp4_sample_fn_15();
-int mp4_sample_fn_16();
-int mp4_sample_fn_17();
-int mp4_sample_fn_18();
-int mp4_sample_fn_19();
-int mp4_sample_fn_20();
-int mp4_sample_fn_21();
-int mp4_sample_fn_22();
-int mp4_sample_fn_23();
-int mp4_sample_fn_24();
-int mp4_sample_fn_25();
-int mp4_sample_fn_26();
-int mp4_sample_fn_27();
-int mp4_sample_fn_28();
-int mp4_sample_fn_29();
-int mp4_sample_fn_30();
-int mp4_sample_fn_31();
-int mp4_sample_fn_32();
-int mp4_sample_fn_33();
-int mp4_sample_fn_34();
-int mp4_sample_fn_35();
-int mp4_sample_fn_36();
-int mp4_sample_fn_37();
-int mp4_sample_fn_38();
-int mp4_sample_fn_39();
-int mp4_sample_fn_40();
-int mp4_sample_fn_41();
-int mp4_sample_fn_42();
-int mp4_sample_fn_43();
-int mp4_sample_fn_44();
-int mp4_io_fn_1();
-int mp4_io_fn_2();
-int mp4_io_fn_3();
-int mp4_io_fn_4();
-int mp4_io_fn_5();
-int mp4_io_fn_6();
-int mp4_io_fn_7();
-int mp4_io_fn_8();
-int mp4_io_fn_9();
-int mp4_io_fn_10();
-int mp4_io_fn_11();
-int mp4_io_fn_12();
-int mp4_io_fn_13();
-int mp4_io_fn_14();
-int mp4_io_fn_15();
-int mp4_io_fn_16();
-int mp4_io_fn_17();
-int mp4_io_fn_18();
-int mp4_io_fn_19();
-int mp4_io_fn_20();
-int mp4_io_fn_21();
-int mp4_io_fn_22();
-int mp4_io_fn_23();
-int mp4_io_fn_24();
-int mp4_io_fn_25();
-int mp4_io_fn_26();
-int mp4_io_fn_27();
-int mp4_io_fn_28();
-int mp4_io_fn_29();
-int mp4_io_fn_30();
-int mp4_io_fn_31();
-int mp4_io_fn_32();
-int mp4_io_fn_33();
-int mp4_io_fn_34();
-int mp4_io_fn_35();
-int mp4_io_fn_36();
-int mp4_io_fn_37();
-int mp4_io_fn_38();
-int mp4_io_fn_39();
-int mp4_io_fn_40();
-int mp4_io_fn_41();
-int mp4_io_fn_42();
-int mp4_io_fn_43();
-int mp4_io_fn_44();
-int mp4_io_fn_45();
-int mp4_io_fn_46();
-int * mp4_io_fn_47();
-int mp4_io_fn_48();
-int mp4_io_fn_49();
-int mp4_io_fn_50();
-int mp4_io_fn_51();
-int mp4_io_fn_52();
-int mp4_io_fn_53();
-int mp4_io_fn_54();
-int mp4_io_fn_55();
-int mp4_io_fn_56();
-int mp4_io_fn_57();
-int mp4_api_fn_1();
-int mp4_api_fn_2();
-int mp4_api_fn_3();
-int mp4_api_fn_4();
-int mp4_api_fn_5();
-int mp4_api_fn_6();
-int mp4_api_fn_7();
-int mp4_api_fn_8();
-int mp4_api_fn_9();
-void mp4_api_fn_10();
-void mp4_api_fn_11();
-int mp4_api_fn_12();
-int mp4_api_fn_13();
-int mp4_api_fn_14();
-int mp4_api_fn_15();
-int mp4_api_fn_16();
-int mp4_api_fn_17();
-int mp4_api_fn_18();
-int mp4_api_fn_19();
-int mp4_api_fn_20();
-int mp4_api_fn_21();
-int mp4_api_fn_22();
-int mp4_api_fn_23();
-int mp4_api_fn_24();
-int mp4_api_fn_25();
-int mp4_api_fn_26();
-int mp4_api_fn_27();
-int mp4_api_fn_28();
-int mp4_api_fn_29();
-int mp4_api_fn_30();
-int mp4_api_fn_31();
-int mp4_api_fn_32();
-int mp4_api_fn_33();
-int mp4_api_fn_34();
-int mp4_api_fn_35();
-int mp4_api_fn_36();
-int mp4_api_fn_37();
-int mp4_api_fn_38();
-int mp4_api_fn_39();
-int mp4_api_fn_40();
-int mp4_api_fn_41();
-int mp4_api_fn_42();
-int mp4_api_fn_43();
-int mp4_api_fn_44();
-int mp4_api_fn_45();
-int mp4_api_fn_46();
-int mp4_api_fn_47();
-int mp4_api_fn_48();
-int mp4_api_fn_49();
-int mp4_api_fn_50();
-int mp4_api_fn_51();
-int mp4_api_fn_52();
-int mp4_api_fn_53();
-int mp4_api_fn_54();
-int mp4_api_fn_55();
-int mp4_api_fn_56();
-int mp4_api_fn_57();
-int mp4_api_fn_58();
-int mp4_api_fn_59();
-int mp4_api_fn_60();
-int mp4_api_fn_61();
-int mp4_api_fn_62();
-int mp4_api_fn_63();
-int mp4_api_fn_64();
-int mp4_api_fn_65();
-int mp4_api_fn_66();
-int mp4_api_fn_67();
-int mp4_api_fn_68();
-int mp4_api_fn_69();
-int mp4_api_fn_70();
-int mp4_api_fn_71();
-int mp4_api_fn_72();
-int mp4_api_fn_73();
-int mp4_api_fn_74();
-int mp4_codec_fn_1();
-int mp4_codec_fn_2();
-int mp4_codec_fn_3();
-int mp4_codec_fn_4();
-int mp4_codec_fn_5();
-int mp4_codec_fn_6();
-int mp4_codec_fn_7();
-int mp4_codec_fn_8();
-int mp4_codec_fn_9();
-int mp4_codec_fn_10();
-int mp4_codec_fn_11();
-int mp4_codec_fn_12();
-int mp4_codec_fn_13();
-int mp4_codec_fn_14();
-int mp4_codec_fn_15();
-int mp4_codec_fn_16();
-int mp4_codec_fn_17();
-int mp4_codec_fn_18();
-int mp4_codec_fn_19();
-int mp4_codec_fn_20();
-int mp4_codec_fn_21();
-int mp4_codec_fn_22();
-int mp4_codec_fn_23();
-int mp4_codec_fn_24();
-int mp4_codec_fn_25();
-int mp4_codec_fn_26();
-int mp4_codec_fn_27();
-int mp4_codec_fn_28();
-int mp4_codec_fn_29();
-int mp4_codec_fn_30();
-int mp4_codec_fn_31();
-int mp4_codec_fn_32();
-int mp4_codec_fn_33();
-int mp4_codec_fn_34();
-int mp4_codec_fn_35();
-int mp4_codec_fn_36();
-int mp4_codec_fn_37();
-int mp4_codec_fn_38();
-int mp4_codec_fn_39();
-int mp4_codec_fn_40();
-int mp4_codec_fn_41();
-int mp4msv_32AB9DCB(int *a1, u32 *a2);
-int mp4_codec_fn_42();
-int mp4_codec_fn_43();
-int mp4_codec_fn_44();
-int mp4_codec_fn_45();
-int mp4_codec_fn_46();
-int mp4_codec_fn_47();
-int mp4_codec_fn_48();
-int mp4_codec_fn_49();
-int mp4_codec_fn_50();
-int mp4_codec_fn_51();
-void mp4_codec_fn_52();
-int mp4_codec_fn_53();
-void mp4_codec_fn_54();
-int mp4_codec_fn_55();
-int mp4_codec_fn_56();
-int mp4_codec_fn_57();
-int mp4_codec_fn_58();
-int mp4_codec_fn_59();
-void mp4_codec_fn_60();
-int mp4_codec_fn_61();
-int mp4_codec_fn_62();
-int mp4_codec_fn_63();
-int mp4_codec_fn_64();
-int mp4_codec_fn_65();
-int mp4_codec_fn_66();
-int mp4_codec_fn_67();
-int mp4_codec_fn_68();
-int mp4_codec_fn_69();
-int mp4_codec_fn_70();
-int mp4_codec_fn_71();
-int mp4_codec_fn_72();
-int mp4_codec_fn_73();
-int mp4_codec_fn_74();
-int mp4_codec_fn_75();
-int mp4_codec_fn_76();
-int mp4_codec_fn_77();
-int mp4_codec_fn_78();
-int mp4_codec_fn_79();
-int mp4_codec_fn_80();
-int mp4_codec_fn_81();
-int mp4_codec_fn_82();
-int mp4_codec_fn_83();
-int mp4_codec_fn_84();
-int mp4_codec_fn_85();
-int mp4_codec_fn_86();
-int mp4_codec_fn_87();
-int mp4_codec_fn_88();
-int mp4_codec_fn_89();
-int mp4_codec_fn_90();
-int mp4_codec_fn_91();
-u32 * mp4_codec_fn_92();
-u32 * mp4_codec_fn_93();
-int mp4_codec_fn_94();
-int mp4_codec_fn_95();
-int mp4_codec_fn_96();
-int mp4_codec_fn_97();
-int mp4_codec_fn_98();
-int mp4_codec_fn_99();
-int mp4_codec_fn_100();
-int mp4_codec_fn_101();
-int mp4_codec_fn_102();
-int mp4_codec_fn_103();
-int mp4_codec_fn_104();
-int mp4_codec_fn_105();
-int mp4_codec_fn_106();
-int mp4_codec_fn_107();
-int mp4_codec_fn_108();
-int mp4_codec_fn_109();
-int mp4_codec_fn_110();
-int mp4_codec_fn_111();
-int mp4_codec_fn_112();
-void mp4_codec_fn_113();
-int mp4_codec_fn_114();
-int mp4_codec_fn_115();
-int mp4_codec_fn_116();
-int mp4_codec_fn_117();
-void mp4_codec_fn_118();
-int mp4_codec_fn_119();
-int mp4_codec_fn_120();
-int mp4_codec_fn_121();
-void mp4_codec_fn_122();
-void mp4_codec_fn_123();
-int mp4_codec_fn_124();
-void mp4_codec_fn_125();
-int mp4_codec_fn_126();
-int mp4_codec_fn_127();
-void mp4_codec_fn_128();
-int mp4_codec_fn_129();
-void mp4_codec_fn_130();
-int mp4_codec_fn_131();
-int mp4_codec_fn_132();
-int mp4_codec_fn_133();
-int mp4_codec_fn_134();
-int mp4_codec_fn_135();
-int mp4_codec_fn_136();
-int mp4_codec_fn_137();
-int mp4_codec_fn_138();
-int mp4_codec_fn_139();
-int mp4_codec_fn_140();
-int mp4_codec_fn_141();
-int mp4_codec_fn_142();
+/* State machine helpers (mp4_box.c) */
+int mp4StateCreate(Mp4StateMachine **out_fsm);
+void mp4StateDestroy(Mp4StateMachine *fsm);
+int mp4StateCheck(Mp4StateMachine *fsm, u32 action);
+void mp4StateCommit(Mp4StateMachine *fsm);
+int mp4ParseTopLevel(Mp4Movie *movie, u32 parse_mask, Mp4IoStream *stream);
+
+/* Track helpers (mp4_track.c) */
+Mp4Track *mp4TrackCreate(Mp4Movie *movie, u32 handler_type);
+void mp4TrackDestroy(Mp4Track *track);
+Mp4Track *mp4TrackGetByIndex(Mp4Movie *movie, u32 index);
+Mp4Track *mp4TrackGetById(Mp4Movie *movie, u32 track_id);
+int mp4MovieCreate(Mp4Handle *handle);
+int mp4MovieDestroy(Mp4Handle *handle);
+int mp4ParseTrakBox(Mp4Movie *movie, Mp4IoStream *stream, u64 end_pos);
+
+/* Sample table helpers (mp4_sample.c) */
+Mp4TableChunk *mp4ChunkAlloc(u32 capacity, u32 stride_words);
+void mp4ChunkListFree(Mp4TableChunk *head);
+int mp4ChunkGetWord(const Mp4TableChunk *head, u32 row, u32 col, u32 *out_val);
+int mp4ChunkAppendRow(Mp4TableChunk **head_ptr, u32 stride_words, const u32 *row_words);
+int mp4StscLookup(Mp4StscTable *stsc, u32 sample_num, u32 *out_chunk,
+                  u32 *out_first_sample, u32 *out_desc_idx);
+int mp4SampleGetInfo(Mp4Track *track, u32 sample_idx, u64 *out_offset,
+                     u32 *out_size, u64 *out_dts, s32 *out_cts, u32 *out_sync);
+int mp4SampleTimeToIndex(Mp4Track *track, u64 target_time, u32 *out_idx);
+int mp4SampleFindSync(Mp4Track *track, u32 sample_idx, int forward, u32 *out_idx);
+int mp4SampleAppend(Mp4Track *track, u64 offset, u32 size, u32 duration, s32 cts_offset, int is_sync);
+
+/* Codec config helpers (mp4_codec.c) */
+int mp4ParseAvcC(Mp4CodecConfig *codec, Mp4IoStream *stream, u64 end_pos);
+int mp4ParseEsds(Mp4CodecConfig *codec, Mp4IoStream *stream, u64 end_pos);
+void mp4CodecConfigFree(Mp4CodecConfig *codec);
+int mp4WriteAvcC(const Mp4CodecConfig *codec, Mp4IoStream *stream);
+
+/* Public APIs referenced internally */
+int mp4msv_9CA13D1A(int enable, const Mp4OsCallbacks *cbs);
+int mp4msv_2A2D949A(void);
+Mp4Config *mp4msv_4A7AD789(void);
+int mp4msv_3C2183C7(int enable, const Mp4Config *cfg);
+int mp4msv_2A296DDA(Mp4Movie *movie, u32 index, Mp4MetaItem **out_item);
 
 #endif /* MP4MSV_INTERNAL_H */
