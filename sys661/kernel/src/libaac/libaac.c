@@ -22,10 +22,10 @@ SCE_MODULE_BOOTSTART("sceAacStartEntry");
 SCE_MODULE_STOP("sceAacEndEntry");
 SCE_SDK_VERSION(SDK_VERSION);
 
-void sub_00000000(s32);
-void sub_000000F8(s32);
-s32 sub_000012B8(s32);
-void sub_000013B4(s32);
+void updateStreamBuffer(s32);
+void compactInputBuffer(s32);
+s32 initAacCodec(s32);
+void handleAacLoop(s32);
 
 typedef struct {
     s32 state; // 0
@@ -34,11 +34,11 @@ typedef struct {
     s32 streamStart; // 12
     s32 streamEnd; // 16
     s32 streamCur; // 20
-    void *unk24; // ptr to data src
-    s32 unk28;
-    s32 unk32;
-    void *unk36;
-    s32 unk40; // bytes to decode
+    void *encBuf; // ptr to data src
+    s32 halfEncSize;
+    s32 bufIdx;
+    void *writePtr;
+    s32 availBytes; // bytes to decode
     s32 streamRemaining;
     void *decBuf; // 48
     s32 decSize; // 52
@@ -58,9 +58,9 @@ static s32 g_poolId = -1; // 1740
 static SceAacId *g_pool; // 1750
 static s32 g_nbr; // 1754
 
-void sub_00000000(s32 id)
+void updateStreamBuffer(s32 id)
 {
-    dbg_printf("sub_00000000(id=%d)\n", id);
+    dbg_printf("updateStreamBuffer(id=%d)\n", id);
 
     SceAacId *p;
 
@@ -82,24 +82,24 @@ void sub_00000000(s32 id)
         return;
     }
 
-    if (((u32)p->info.unk24 + 2 * p->info.unk28 - (u32)p->codec.inBuf + 1600) < 1536) {
-        sub_000000F8(id);
+    if (((u32)p->info.encBuf + 2 * p->info.halfEncSize - (u32)p->codec.inBuf + 1600) < 1536) {
+        compactInputBuffer(id);
     }
 
-    if (p->info.unk28 < p->info.unk40) {
+    if (p->info.halfEncSize < p->info.availBytes) {
         return;
     }
 
-    if (p->info.unk36 != (p->info.unk24 + p->info.unk28 * (p->info.unk32 + 1) + 1600)) {
+    if (p->info.writePtr != (p->info.encBuf + p->info.halfEncSize * (p->info.bufIdx + 1) + 1600)) {
         return;
     }
 
-    p->info.unk32 ^= 1;
-    p->info.unk36 = p->info.unk24 + p->info.unk28 * p->info.unk32 + 1600;
+    p->info.bufIdx ^= 1;
+    p->info.writePtr = p->info.encBuf + p->info.halfEncSize * p->info.bufIdx + 1600;
 }
 
-void sub_000000F8(s32 id) {
-    dbg_printf("sub_000000F8(id=%d)\n", id);
+void compactInputBuffer(s32 id) {
+    dbg_printf("compactInputBuffer(id=%d)\n", id);
 
     SceAacId *p;
     void *dst;
@@ -122,13 +122,13 @@ void sub_000000F8(s32 id) {
         return;
     }
 
-    dst = p->info.unk24 - ((u32)p->info.unk24 + (p->info.unk28 << 1) - (u32)p->codec.inBuf);
+    dst = p->info.encBuf - ((u32)p->info.encBuf + (p->info.halfEncSize << 1) - (u32)p->codec.inBuf);
 
     // Kernel_Library_1839852A
     sceKernelMemcpy(
         dst,
         p->codec.inBuf,
-        (SceSize)((u32)p->info.unk24 + (p->info.unk28 << 1) - (u32)p->codec.inBuf + 1600)
+        (SceSize)((u32)p->info.encBuf + (p->info.halfEncSize << 1) - (u32)p->codec.inBuf + 1600)
     );
 
     p->codec.inBuf = dst;
@@ -352,14 +352,14 @@ s32 sceAacInit(SceAacInitArg *arg)
     p->info.streamCur = arg->streamStart;
     p->info.reset = 0;
     p->info.streamEnd = arg->streamEnd;
-    p->info.unk32 = 1;
-    p->info.unk28 = (arg->encSize - 1600 + ((arg->encSize - 1600) < 0)) >> 1; // wtf?
+    p->info.bufIdx = 1;
+    p->info.halfEncSize = (arg->encSize - 1600 + ((arg->encSize - 1600) < 0)) >> 1; // wtf?
     p->info.streamRemaining = arg->streamEnd - arg->streamStart;
-    p->info.unk40 = 0;
+    p->info.availBytes = 0;
     p->info.curChannel = 0;
-    p->info.unk36 = arg->encBuf + 1600;
+    p->info.writePtr = arg->encBuf + 1600;
     p->info.decSize = (arg->decSize + (arg->decSize < 0)) >> 1;
-    p->info.unk24 = arg->encBuf;
+    p->info.encBuf = arg->encBuf;
     p->info.sumDecodedSample = 0;
 
     p->info.state = 2;
@@ -367,7 +367,7 @@ s32 sceAacInit(SceAacInitArg *arg)
     p->info.sampleRate = arg->sampleRate;
     p->info.decBuf = arg->decBuf;
 
-    ret = sub_000012B8(id);
+    ret = initAacCodec(id);
     if (ret < 0) {
         // sceAac_33B8C009
         sceAacExit(id);
@@ -423,15 +423,15 @@ s32 sceAac_E955E83A(s32 *sampleRate)
     }
 
     p->info.sampleRate = *sampleRate;
-    p->info.unk24 = 0;
+    p->info.encBuf = 0;
     p->info.decBuf = NULL;
     p->info.state = 2;
     p->codec.edramAddr = &p->data;
     p->codec.neededMem = SCE_AAC_DATA_SIZE;
-    p->codec.unk20 = 1;
-    p->codec.unk40.v32 = *sampleRate;
-    p->codec.unk44.v8.u45 = 0;
-    p->codec.unk44.v8.u44 = 0;
+    p->codec.reserved1 = 1;
+    p->codec.param0.v32 = *sampleRate;
+    p->codec.param1.v8.b1 = 0;
+    p->codec.param1.v8.b0 = 0;
 
     // sceAudiocodec_5B37EB1D
     ret = sceAudiocodecInit(&p->codec, 0x1003);
@@ -528,15 +528,15 @@ s32 sceAacDecode(s32 id, void** src)
     }
 
     if ((p->info.streamCur == p->info.streamEnd && p->info.streamRemaining > 0) ||
-        (p->info.unk40 >= 1536)) {
+        (p->info.availBytes >= 1536)) {
         // sceAudiocodec_70A703F8
         if (sceAudiocodecDecode(&p->codec, 0x1003) < 0) {
-            sub_000013B4(id);
+            handleAacLoop(id);
 
             return 0x80691401;
         }
 
-        p->info.unk40 -= p->codec.readSample;
+        p->info.availBytes -= p->codec.readSample;
         p->codec.inBuf += p->codec.readSample;
         p->info.streamRemaining -= p->codec.readSample;
 
@@ -544,7 +544,7 @@ s32 sceAacDecode(s32 id, void** src)
         p->info.sumDecodedSample += p->codec.decodedSample;
         p->info.curChannel = !p->info.curChannel;
 
-        sub_000013B4(id);
+        handleAacLoop(id);
 
         return p->codec.decodedSample;
     }
@@ -630,7 +630,7 @@ s32 sceAacCheckStreamDataNeeded(s32 id)
         return 0;
     }
 
-    return (p->info.unk36 < (p->info.unk24 + p->info.unk28 * (p->info.unk32 + 1) + 1600));
+    return (p->info.writePtr < (p->info.encBuf + p->info.halfEncSize * (p->info.bufIdx + 1) + 1600));
 }
 
 // sceAac_02098C69
@@ -678,11 +678,11 @@ s32 sceAacGetInfoToAddStreamData(s32 id, s32 **arg1, s32 *arg2, s32 *arg3)
         }
 
         if (arg1 != NULL) {
-            *arg1 = p->info.unk36;
+            *arg1 = p->info.writePtr;
         }
 
         if (arg2 != NULL) {
-            *arg2 = (p->info.unk24 + p->info.unk28 * (p->info.unk32 + 1) + 1600) - p->info.unk36;
+            *arg2 = (p->info.encBuf + p->info.halfEncSize * (p->info.bufIdx + 1) + 1600) - p->info.writePtr;
         }
     }
 
@@ -716,7 +716,7 @@ s32 sceAacNotifyAddStreamData(s32 id, s32 size)
     }
 
     if (size < 0 &&
-        (p->info.unk24 + p->info.unk28 * (p->info.unk32 + 1) + 1600 - p->info.unk36) < size) {
+        (p->info.encBuf + p->info.halfEncSize * (p->info.bufIdx + 1) + 1600 - p->info.writePtr) < size) {
         return 0x80691003;
     }
 
@@ -724,16 +724,16 @@ s32 sceAacNotifyAddStreamData(s32 id, s32 size)
 
     if (remaining < size) {
         p->info.streamCur = p->info.streamEnd;
-        p->info.unk40 += remaining;
-        p->info.unk36 += remaining;
+        p->info.availBytes += remaining;
+        p->info.writePtr += remaining;
     }
     else {
-        p->info.unk40 += size;
+        p->info.availBytes += size;
         p->info.streamCur += size;
-        p->info.unk36 += size;
+        p->info.writePtr += size;
     }
 
-    sub_00000000(id);
+    updateStreamBuffer(id);
 
     return SCE_ERROR_OK;
 }
@@ -768,14 +768,14 @@ s32 sceAacResetPlayPosition(s32 id)
         return 0x80691103;
     }
 
-    p->codec.inBuf = p->info.unk24 + 1600;
+    p->codec.inBuf = p->info.encBuf + 1600;
     p->info.streamRemaining = p->info.streamEnd - p->info.streamStart;
-    p->info.unk36 = p->info.unk24 + 1600;
+    p->info.writePtr = p->info.encBuf + 1600;
     p->info.reset = 0;
     p->info.streamCur = p->info.streamStart;
-    p->info.unk40 = 0;
+    p->info.availBytes = 0;
     p->info.sumDecodedSample = 0;
-    p->info.unk32 = 1;
+    p->info.bufIdx = 1;
 
     return SCE_ERROR_OK;
 }
@@ -921,9 +921,9 @@ s32 sceAacStartEntry(SceSize argc __attribute__((unused)), void *argp __attribut
     return SCE_ERROR_OK;
 }
 
-s32 sub_000012B8(s32 id)
+s32 initAacCodec(s32 id)
 {
-    dbg_printf("sub_000012B8(id=%d)\n", id);
+    dbg_printf("initAacCodec(id=%d)\n", id);
 
     SceAacId *p;
     s32 ret;
@@ -943,18 +943,18 @@ s32 sub_000012B8(s32 id)
     }
 
     p->codec.neededMem = SCE_AAC_DATA_SIZE;
-    p->codec.unk20 = 1;
+    p->codec.reserved1 = 1;
     p->codec.edramAddr = p->data;
-    p->codec.unk40.v32 = p->info.sampleRate;
-    p->codec.unk44.v8.u45 = 0;
-    p->codec.unk44.v8.u44 = 0;
+    p->codec.param0.v32 = p->info.sampleRate;
+    p->codec.param1.v8.b1 = 0;
+    p->codec.param1.v8.b0 = 0;
 
     ret = sceAudiocodecInit(&p->codec, 0x1003);
     if (ret < 0) {
         return ret;
     }
 
-    p->codec.inBuf = p->info.unk24 + 1600;
+    p->codec.inBuf = p->info.encBuf + 1600;
     p->codec.outBuf = p->info.decBuf + p->info.decSize * p->info.curChannel;
 
     // sceAudiocodec_8ACA11D5
@@ -966,9 +966,9 @@ s32 sub_000012B8(s32 id)
     return SCE_ERROR_OK;
 }
 
-void sub_000013B4(s32 id)
+void handleAacLoop(s32 id)
 {
-    dbg_printf("sub_000013B4(id=%d)\n", id);
+    dbg_printf("handleAacLoop(id=%d)\n", id);
 
     SceAacId *p;
 
@@ -997,5 +997,5 @@ void sub_000013B4(s32 id)
         }
     }
 
-    sub_00000000(id);
+    updateStreamBuffer(id);
 }

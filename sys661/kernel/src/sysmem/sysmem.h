@@ -72,8 +72,8 @@ typedef struct {
 
 typedef struct {
     u32 memSize;
-    u32 unk4;
-    u32 unk8;
+    u32 kernelPartMode;
+    u32 userPartMode;
     SceSysmemPartInfo other1; // 12
     SceSysmemPartInfo other2; // 20
     SceSysmemPartInfo vshell; // 28

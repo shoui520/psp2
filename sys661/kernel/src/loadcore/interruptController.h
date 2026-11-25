@@ -7,7 +7,7 @@
 
 s32 loadCoreCpuSuspendIntr(void);
 void loadCoreCpuResumeIntr(s32 intr);
-void sub_00003D84(void);
+void loadCoreBreakHalt(void);
 
 #endif	/* INTERRUPTCONTROLLER_H */
 

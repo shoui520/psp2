@@ -24,7 +24,7 @@ u32 g_1453C;
 // 14540
 u32 gSysmemModel;
 
-void sub_A1E8(void)
+void InitSystemIdString(void)
 {
     strncpy(g_140C8, "invalid", 8);
     g_140C8[8] = '\0';

@@ -221,11 +221,11 @@ static s32 ProcessModuleExportEnt(SceModule *mod, SceResidentLibraryEntryTable *
 static s32 CopyLibEnt(SceResidentLibrary *lib, SceResidentLibraryEntryTable *libEntryTable, u32 isUserLib);
 static s32 CopyLibStub(SceStubLibrary *stubLib, SceStubLibraryEntryTable *stubLibEntryTable, u32 isUserLib);
 
-static u32 sceKernelSetGetLengthFunction(s32 (*funcPtr)(u8 *file, u32 size, u32 *newSize)); //sub_0000562C
-static u32 sceKernelSetPrepareGetLengthFunction(s32 (*funcPtr)(u8 *buf, u32 size)); //sub_0000563C
-static u32 sceKernelSetSetMaskFunction(s32 (*funcPtr)(u32 unk1, vs32 *addr)); //sub_0000564C
-static u32 sceKernelSetCompareSubType(s32 (*funcPtr)(u32 tag)); //sub_0000565C
-static u32 sceKernelSetCompareLatestSubType(u32 (*funcPtr)(u32 tag)); //sub_0000566C
+static u32 sceKernelSetGetLengthFunction(s32 (*funcPtr)(u8 *file, u32 size, u32 *newSize));
+static u32 sceKernelSetPrepareGetLengthFunction(s32 (*funcPtr)(u8 *buf, u32 size));
+static u32 sceKernelSetSetMaskFunction(s32 (*funcPtr)(u32 mode, vs32 *addr));
+static u32 sceKernelSetCompareSubType(s32 (*funcPtr)(u32 tag));
+static u32 sceKernelSetCompareLatestSubType(u32 (*funcPtr)(u32 tag));
 
 static __inline__ void __attribute__((always_inline)) StopLoadCore(void);
 
@@ -289,7 +289,7 @@ static u32 g_MemSize; //0x000083CD
 
 s32 (*g_getLengthFunc)(u8 *file, u32 size, u32 *newSize); //0x000083D0
 s32 (*g_prepareGetLengthFunc)(u8 *buf, u32 size); //0x000083D4
-s32 (*g_setMaskFunc)(u32 unk1, vs32 *addr); //0x000083D8
+s32 (*g_setMaskFunc)(u32 mode, vs32 *addr); //0x000083D8
 s32 (*g_compareSubType)(u32 tag); //0x000083DC
 static u32 (*g_compareLatestSubType)(u32 tag); //0x000083E0
 
@@ -413,7 +413,7 @@ SceResidentLibraryEntryTable loadCoreKernelLib = {
     .nidTableCount = 0,
 };
 
-//sub_000000A0
+
 /* Initialize Loadcore's resident library control block linked list. */
 static u32 LibEntTableInit(void)
 {
@@ -428,7 +428,7 @@ static u32 LibEntTableInit(void)
     return SCE_ERROR_OK;
 }
 
-//sub_000000E8
+
 /*
  * Return a requested resident library control block.  If less than 
  * RESIDENT_LIBRARY_CONTROL_BLOCKS blocks are currently being used, 
@@ -449,7 +449,7 @@ static SceResidentLibrary *NewLibEntCB(void)
     return curFreeLibEntry;
 }
 
-//sub_00000140
+
 /*
  * Free a used resident library control block. It is called when
  *    a) registering a resident library failed
@@ -475,7 +475,7 @@ static SceResidentLibrary *FreeLibEntCB(SceResidentLibrary *libEntry)
     return g_FreeLibEnt;
 }
 
-//sub_000001F4
+
 /* Initialize Loadcore's stub library control block linked list. */
 static u32 LibStubTableInit(void) 
 {
@@ -490,7 +490,7 @@ static u32 LibStubTableInit(void)
 
 } 
 
-//sub_0000023C
+
 /*
  * Return a requested stub library control block.  If less than 
  * STUB_LIBRARY_CONTROL_BLOCKS blocks are currently being used, unlink a 
@@ -509,7 +509,7 @@ static SceStubLibrary *NewLibStubCB(void)
     return curFreeLibStub;
 }
 
-//sub_00000290
+
 /*
  * Free a used stub library control block. It is called when
  *    a) linking library entries failed
@@ -535,19 +535,19 @@ static SceStubLibrary *FreeLibStubCB(SceStubLibrary *stubLib)
     return g_FreeLibStub;
 }
 
-//sub_0000074C
+
 static s32 aLinkVariableStub(SceResidentLibrary *libEntry, SceStubLibraryEntryTable *stubLibEntryTable, u32 isUserLib)
 {   
     return aLinkVariableStub_sub(libEntry, stubLibEntryTable, VARIABLE_STUB_LINK, isUserLib);
 }
 
-//sub_0000076C
+
 static s32 aUnLinkVariableStub(SceResidentLibrary *libEntry, SceStubLibraryEntryTable *stubLibEntryTable, u32 isUserLib)
 {
     return aLinkVariableStub_sub(libEntry, stubLibEntryTable, VARIABLE_STUB_UNLINK, isUserLib);
 }
 
-//sub_0000078C
+
 /* 
  * Link variable stub entries. Linking itself is performed in
  * aVariableLinkApply(). 
@@ -597,7 +597,7 @@ static s32 aLinkVariableStub_sub(SceResidentLibrary *lib, SceStubLibraryEntryTab
     return SCE_ERROR_OK;
 }
 
-//sub_0000091C
+
 /* Link a variable stub. */
 static s32 aVariableLinkApply(u32 *arg1, u32 exportedVar, u32 linkOption, u32 isUserLib) 
 {
@@ -760,7 +760,7 @@ s32 loadCoreInit(SceSize argSize __attribute__((unused)), const void *argBlock)
     return linkLibsRes;
 }
 
-//sub_00000EA8
+
 /*
  * Find the location of a NID in a resident library's entry table.
  * This routine can perform two operations; finding a function NID
@@ -778,67 +778,67 @@ static s32 search_nid_in_entrytable(SceResidentLibrary *lib, u32 nid, u32 arg2, 
     u32 *curNidPtr;
     u32 nNids;
     u8 counter;
-    u8 unk2;
+    u8 groupShift;
     s32 i;
-    s32 unk6, unk7, unk8, unk9, unk10, unk11, unk12, unk14;    
+    s32 tableOffset, baseGroupIdx, tmpOff, idxTableBase, startScaled, bucketByteOff, negStartScaled, startQuad;    
     
     if (nidSearchOption == FUNCTION_NID_SEARCH) { //0x00000EB0
         endNidPos = lib->stubCount; //0x00000FD0
-        unk2 = lib->funcGroupShift; //0x00000FD4
+        groupShift = lib->funcGroupShift; //0x00000FD4
         startIndex = 0; //0x00000FD8
-        unk7 = 0; //0x00000FE0
+        baseGroupIdx = 0; //0x00000FE0
     }
     else {
         startIndex = lib->stubCount; //0x00000EB8
         endNidPos = lib->numExports; //0x00000EBC
-        unk2 = lib->varGroupShift; //0x00000EC0
-        unk7 = lib->funcNidCount; //0x00000EC4
+        groupShift = lib->varGroupShift; //0x00000EC0
+        baseGroupIdx = lib->funcNidCount; //0x00000EC4
     }
     
     entryTable = (u32 *)lib->entryTable; //0x00000ECC
-    unk6 = lib->exportsSize; //0x00000ED0
+    tableOffset = lib->exportsSize; //0x00000ED0
     counter = lib->exportGroupCount; //0x00000EC8
     
-    unk8 = (nid >> unk2) + unk7; //0x00000EDC & 0x00000EE0
-    unk10 = startIndex << 1; //0x00000EE4
-    unk11 = unk8 << 1; //0x00000EE8
-    unk12 = -unk10; //0x00000EEC
+    tmpOff = (nid >> groupShift) + baseGroupIdx; //0x00000EDC & 0x00000EE0
+    startScaled = startIndex << 1; //0x00000EE4
+    bucketByteOff = tmpOff << 1; //0x00000EE8
+    negStartScaled = -startScaled; //0x00000EEC
     nNids = endNidPos - startIndex; //0x00000EF4
     
     //0x00000ED4 - 0x00000F80
     for (i = 0; i < counter; i++) {  
-         unk8 = 1 << i; //0x00000EF8
-         if ((arg2 & unk8) == 0) { //0x00000F00     
-             unk6 += lib->nidTableStride; //0x00000F04 & 0x00000F84 & 0x00000F88
-             entryTable += unk6; //0x00000F8C
-             unk6 = lib->midFuncIndex; //0x00000F94                       
+         tmpOff = 1 << i; //0x00000EF8
+         if ((arg2 & tmpOff) == 0) { //0x00000F00     
+             tableOffset += lib->nidTableStride; //0x00000F04 & 0x00000F84 & 0x00000F88
+             entryTable += tableOffset; //0x00000F8C
+             tableOffset = lib->midFuncIndex; //0x00000F94                       
              continue;
          }
          
          nidCurIndex = startIndex; //0x00000F0C
-         if (unk2 != 0) { //0x00000F08 --
-             unk8 = (int)(entryTable + unk6); //0x00000F10 - 0x00000F14
-             curNidPtr = (u32 *)(unk11 + unk8); //0x00000F14
+         if (groupShift != 0) { //0x00000F08 --
+             tmpOff = (int)(entryTable + tableOffset); //0x00000F10 - 0x00000F14
+             curNidPtr = (u32 *)(bucketByteOff + tmpOff); //0x00000F14
             
              if (nNids < *curNidPtr) //0x00000F20
                  return SCE_ERROR_KERNEL_ERROR;
              
-             unk8 = startIndex + *curNidPtr; //0x00000F28 & 0x00000F2C
-             curNidPtr = (u32 *)(unk8 + entryTable); //0x00000F30
+             tmpOff = startIndex + *curNidPtr; //0x00000F28 & 0x00000F2C
+             curNidPtr = (u32 *)(tmpOff + entryTable); //0x00000F30
             
              if (nid < *curNidPtr) //0x00000F38 & 0x00000F3C
                  return SCE_ERROR_KERNEL_ERROR;
          }
          
-         unk14 = unk10 << 1; //0x00000F44
+         startQuad = startScaled << 1; //0x00000F44
          if (nidCurIndex >= endNidPos) { //0x00000F44 & 0x00000F48      
-             unk6 += lib->nidTableStride; //0x00000F04 & 0x00000F84 & 0x00000F88
-             entryTable += unk6; //0x00000F8C
-             unk6 = lib->midFuncIndex; //0x00000F94                       
+             tableOffset += lib->nidTableStride; //0x00000F04 & 0x00000F84 & 0x00000F88
+             entryTable += tableOffset; //0x00000F8C
+             tableOffset = lib->midFuncIndex; //0x00000F94                       
              continue;
          }
          curNidPtr = (u32 *)(nidCurIndex << 1); //0x00000F50      
-         unk8 = unk14 + unk12; //0x00000F54 
+         tmpOff = startQuad + negStartScaled; //0x00000F54 
          curNidPtr = entryTable + ((u32)curNidPtr); //0x00000F58
             
          //0x00000F54 - 0x00000F74 
@@ -847,13 +847,13 @@ static s32 search_nid_in_entrytable(SceResidentLibrary *lib, u32 nid, u32 arg2, 
                     if (i == 0) //0x00000FB0
                         return nidCurIndex - startIndex; //0x00000FB4
 
-                    unk9 = lib->numExports << 2; //0x00000FBC
-                    unk9 = (u32)(entryTable + unk9); //0x00000FC0
-                    return *(u16 *)(unk8 + unk9); //0x00000FC4 & 0x00000FCC
+                    idxTableBase = lib->numExports << 2; //0x00000FBC
+                    idxTableBase = (u32)(entryTable + idxTableBase); //0x00000FC0
+                    return *(u16 *)(tmpOff + idxTableBase); //0x00000FC4 & 0x00000FCC
                     
                 }
                 curNidPtr++; //0x00000F64
-                unk8 += 2; //0x00000F74
+                tmpOff += 2; //0x00000F74
         }
     }
     return SCE_ERROR_KERNEL_ERROR;
@@ -994,7 +994,7 @@ s32 sceKernelLoadModuleBootLoadCore(SceLoadCoreBootModuleInfo *bootModInfo, SceL
     return SCE_KERNEL_VALUE_UNITIALIZED;
 }
 
-//Subroutine sub_00001694
+
 /*
  * Boots the rest of the system.  SysBoot is called after the System Memory
  * Manager and Loadcore are booted and it loads/boots the following PRX 
@@ -1391,13 +1391,13 @@ u32 sceKernelLoadCoreMode(void)
     return SCE_ERROR_OK;
 }
 
-//sub_00002678
+
 static void LoadCoreHeapStatic(void)
 {
     StopLoadCore();
 }
 
-//sub_00002718
+
 static s32 LoadCoreHeapDynamic(void)
 {
     if (g_loadCore.loadCoreHeapId <= 0)
@@ -1406,60 +1406,60 @@ static s32 LoadCoreHeapDynamic(void)
     return g_loadCore.loadCoreHeapId;
 }
 
-//sub_00002768 
+
 static void UpdateCacheAllStatic(void)
 {
-    sceKernelIcacheClearAll(); //0x00002770 - sub_0000748C
-    sceKernelDcacheWBinvAll(); //0x00002778 - sub_0000744C
+    sceKernelIcacheClearAll(); //0x00002770
+    sceKernelDcacheWBinvAll(); //0x00002778
     
 }
 
-//sub_0000278C
+
 static void UpdateCacheAllDynamic(void)
 {
     sceKernelIcacheInvalidateAll(); //0x00002794
     sceKernelDcacheWritebackInvalidateAll(); //0x0000279C
 }
 
-//sub_000027B0
+
 static void UpdateCacheDataAllStatic(void)
 {
-    sceKernelDcacheWBinvAll(); //0x000027B8 - sub_0000744C
+    sceKernelDcacheWBinvAll(); //0x000027B8
 }
 
-//sub_000027CC
+
 static void UpdateCacheDataAllDynamic(void)
 {
     sceKernelDcacheWritebackInvalidateAll(); //0x000027D4
 }
 
-//sub_000027E8
+
 static void UpdateCacheRangeStatic(const void *addr __attribute__((unused)), u32 size __attribute__((unused)))
 {
-    sceKernelIcacheClearAll(); //0x000027F0 - sub_0000748C
-    sceKernelDcacheWBinvAll(); //0x000027F8 - sub_0000744C
+    sceKernelIcacheClearAll(); //0x000027F0
+    sceKernelDcacheWBinvAll(); //0x000027F8
 }
 
-//sub_0000280C
+
 static void UpdateCacheRangeDynamic(const void *addr, u32 size)
 {
     sceKernelIcacheInvalidateRange(addr, size); //0x00002820
     sceKernelDcacheWritebackInvalidateRange(addr, size); //0x0000282C
 }
 
-//sub_00002848
+
 static void UpdateCacheRangeDataStatic(const void *addr __attribute__((unused)), u32 size __attribute__((unused)))
 {
-    sceKernelDcacheWBinvAll(); //0x00002850 - sub_0000744C
+    sceKernelDcacheWBinvAll(); //0x00002850
 }
 
-//sub_00002864
+
 static void UpdateCacheRangeDataDynamic(const void *addr, u32 size) 
 {
     sceKernelDcacheWritebackInvalidateRange(addr, size);
 }
 
-//sub_00002880
+
 /*
  * Register a resident library to the system.  When registering a 
  * library, several steps are performed.  
@@ -1631,7 +1631,7 @@ static s32 doRegisterLibrary(SceResidentLibraryEntryTable *libEntryTable, u32 is
              if (i < nLib->stubCount) //0x00002AC4
                  funcAddr = MAKE_USER_ADDRESS(nLib->entryTable[nLib->stubCount + nLib->vStubCount + i]); //0x00002AE4
              else
-                 funcAddr = (u32)sub_00003D84;
+                 funcAddr = (u32)loadCoreBreakHalt;
                 
              if ((nLib->sysTableEntryStartIndex + i) >= (nLib->stubCount + nLib->extraExportEntries)) //0x00002AF8
                  index = (nLib->sysTableEntryStartIndex + i) % (nLib->stubCount + nLib->extraExportEntries); //0x00002B0C
@@ -1711,7 +1711,7 @@ static s32 doRegisterLibrary(SceResidentLibraryEntryTable *libEntryTable, u32 is
     return SCE_ERROR_OK;
 }
 
-//Subroutine sub_00002DDC - Address 0x00002DDC
+
 /*
  * Delete a registered resident library from the system. 
  * The corresponding stub libraries' table entries with the
@@ -1798,7 +1798,7 @@ static s32 ReleaseLibEntCB(SceResidentLibrary *lib, SceResidentLibrary **prevLib
     return SCE_ERROR_OK;
 }
 
-//sub_00002FCC
+
 /* Find a registered resident library.  This functions returns
  * the address of a member of loadCore's linked-list of registered 
  * resident libraries.  The address is
@@ -1822,7 +1822,7 @@ static SceResidentLibrary **FoundLibrary(SceResidentLibraryEntryTable *libEntryT
     return NULL;
 }
 
-//sub_00003080
+
 /*
  * Link stub library entry tables with their corresponding resident libraries.
  * 
@@ -1901,7 +1901,7 @@ static s32 doLinkLibraryEntries(SceStubLibraryEntryTable *stubLibEntryTable, u32
     return SCE_ERROR_OK;
 }          
 
-//sub_00003244
+
 /*
  * Unlink a stub library from its corresponding resident library.
  * In addition, we remove the stub library from the system.
@@ -1996,7 +1996,7 @@ static s32 UnLinkLibraryEntry(SceStubLibraryEntryTable *stubLibEntryTable)
     return SCE_ERROR_OK;         
 }
 
-//sub_00003410
+
 /*
  * Update module export entries via an entry table of a resident library.
  * 
@@ -2053,7 +2053,7 @@ static s32 ProcessModuleExportEnt(SceModule *mod, SceResidentLibraryEntryTable *
     return SCE_ERROR_OK;
 }
 
-//sub_000039B4
+
 /*
  * Link function/variable stubs of a stub library with the
  * corresponding exports of a registered resident library.
@@ -2116,7 +2116,7 @@ static s32 aLinkClient(SceStubLibrary *stubLib, SceResidentLibrary *lib)
     return SCE_ERROR_OK;
 }
 
-//sub_00003BB8
+
 /*
  * Dynamically link a stub library with its corresponding registered
  * resident library.  A stub library has to meet a few conditions in
@@ -2250,7 +2250,7 @@ s32 sceKernelCheckPspConfig(u8 *file, u32 size)
     return newSize;
 }
 
-//Subroutine sub_00003E80 - Address 0x00003E80
+
 s32 CheckLatestSubType(u8 *file)
 {
     u32 subType;
@@ -2300,7 +2300,7 @@ s32 sceKernelLoadRebootBin(u8 *file, u32 size)
     return memlmd_2F3D7E2D(); //0x00003FA4
 }
 
-//sub_0000367C
+
 /* 
  * Copy a resident library's entry table to the corresponding
  * resident library object registered to the system.  This library
@@ -2386,7 +2386,7 @@ static s32 CopyLibEnt(SceResidentLibrary *lib, SceResidentLibraryEntryTable *lib
     return SCE_ERROR_OK;
 }
 
-//sub_00003850
+
 /*
  * Copy a stub library's entry table to the corresponding
  * stub library object registered to the system.  In case
@@ -2456,27 +2456,27 @@ static s32 CopyLibStub(SceStubLibrary *stubLib, SceStubLibraryEntryTable *stubLi
     return SCE_ERROR_OK;                        
 }
 
-//sub_0000562C
+
 static u32 sceKernelSetGetLengthFunction(s32 (*funcPtr)(u8 *file, u32 size, u32 *newSize))
 {
     g_getLengthFunc = funcPtr;
     return SCE_ERROR_OK;
 }
-//sub_0000563C
+
 static u32 sceKernelSetPrepareGetLengthFunction(s32 (*funcPtr)(u8 *buf, u32 size))
 {
     g_prepareGetLengthFunc = funcPtr;
     return SCE_ERROR_OK;
 }
 
-//sub_0000564C
-static u32 sceKernelSetSetMaskFunction(s32 (*funcPtr)(u32 unk1, vs32 *addr))
+
+static u32 sceKernelSetSetMaskFunction(s32 (*funcPtr)(u32 mode, vs32 *addr))
 {
     g_setMaskFunc = funcPtr;
     return SCE_ERROR_OK;
 }
 
-//sub_0000565C
+
 static u32 sceKernelSetCompareSubType(s32 (*funcPtr)(u32 tag))
 {
    g_compareSubType = funcPtr;

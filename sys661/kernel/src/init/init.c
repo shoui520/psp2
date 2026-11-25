@@ -176,23 +176,23 @@ static void PowerUnlock(void)
 static void invoke_init_callback(s32 arg)
 {
     s32 i; 
-    s32 unk;
+    s32 maxStage;
     SceBootCallback *bootCallBacks;
     SceKernelBootCallbackFunction bootCbFunc;
     
     if (arg >= 4) {
         bootCallBacks = g_init->bootCallbacks2;
         i = 4;
-        unk = 5;
+        maxStage = 5;
     } else {
         bootCallBacks = g_init->bootCallbacks1;
         i = 0;
-        unk = 4;
+        maxStage = 4;
     }
     s32 starti = i;
     
     for (; i <= arg; i++) {
-        if ((arg == (unk - 1)) && (arg == i)) {
+        if ((arg == (maxStage - 1)) && (arg == i)) {
             if (arg >= 4) //0x00000514
                 g_init->bootCallbacks2 = NULL;
             else
@@ -202,7 +202,7 @@ static void invoke_init_callback(s32 arg)
         for (j = 0; bootCallBacks[j].bootCBFunc != NULL; j++) { 
             if ((starti + ((s32)bootCallBacks[j].bootCBFunc & 3)) == i) {
                 bootCbFunc = (SceKernelBootCallbackFunction)((s32)bootCallBacks[j].bootCBFunc & ~0x3);
-                if (i != (unk - 1))
+                if (i != (maxStage - 1))
                     bootCbFunc((void *)bootCallBacks, 1, NULL);
                 else
                     bootCbFunc(((void *)&bootCallBacks[j]) + 2, 0, NULL);
@@ -219,7 +219,7 @@ static void invoke_init_callback(s32 arg)
     }
 }
 
-static u32 sub_05F0(void)
+static u32 finishModuleBoot(void)
 {   
     s32 pspModel;
     s32 apiType;
@@ -449,7 +449,7 @@ static void ProtectHandling(const SceLoadCoreBootInfo *bootInfo)
     }
 }
 
-static SceBool sub_0CFC(SceLoadCoreBootModuleInfo *mod)
+static SceBool isModuleInScUserPartition(SceLoadCoreBootModuleInfo *mod)
 {
     SceSysmemPartitionInfo partInfo;
     
@@ -482,7 +482,7 @@ static s32 ClearFreeBlock(void)
     return status;
 }
 
-static u32 sub_0DD0(SceLoadCoreBootInfo *bootInfo)
+static u32 isDevkitGameColdBoot(SceLoadCoreBootInfo *bootInfo)
 {
     if (sceKernelIsDevelopmentToolMode() == SCE_FALSE || bootInfo->bootMode != 0)
         return 0;
@@ -749,7 +749,7 @@ static void InitThreadEntry(SceSize args, void *argp)
         SceLoadCoreBootModuleInfo *mod;
         for (i = curMod; i < (s32)bootInfo->numModules; i++) {
             mod = &bootInfo->modules[i];
-            if (sub_0CFC(mod) == SCE_TRUE) {
+            if (isModuleInScUserPartition(mod) == SCE_TRUE) {
                 sceKernelMemmove(buf, mod->modBuf, mod->modSize);
                 mod->modBuf = buf;
                 buf = (void *)UPALIGN64((u32)buf + mod->modSize);
@@ -778,7 +778,7 @@ static void InitThreadEntry(SceSize args, void *argp)
                     mod->argSize = prot->size;
                 }
             }
-            if (sub_0CFC(mod) == SCE_FALSE)
+            if (isModuleInScUserPartition(mod) == SCE_FALSE)
                 mod->bootData = 0;
             else {
                 SceUID partId = sceKernelAllocPartitionMemory(SCE_KERNEL_PRIMARY_USER_PARTITION, "backup area", 1, 
@@ -842,7 +842,7 @@ static void InitThreadEntry(SceSize args, void *argp)
                 CleanupPhase1(bootInfo);
                 ExitCheck();
                 
-                if (sub_0DD0(bootInfo) == 0) {
+                if (isDevkitGameColdBoot(bootInfo) == 0) {
                     if (g_mod.attr & 4)
                         modId = LoadModuleAnchorInBtcnf((char *)g_mod.modBuf); //TODO: Shouldn't it be g_mod.modPath?
                     else {
@@ -857,7 +857,7 @@ static void InitThreadEntry(SceSize args, void *argp)
             }
             if (mod->attr & 2) {
                 ClearFreeBlock();
-                sub_05F0();
+                finishModuleBoot();
             }
             if (modId >= 0) {
                 s32 status;
@@ -868,7 +868,7 @@ static void InitThreadEntry(SceSize args, void *argp)
                             NULL);
                 if (status < SCE_ERROR_OK && (mod->attr & 2))
                     ExitInit(status);
-            } else if ((mod->attr & 2) == 0 || sub_0DD0(bootInfo) == 0)
+            } else if ((mod->attr & 2) == 0 || isDevkitGameColdBoot(bootInfo) == 0)
                 StopInit(__FUNCTION__, __LINE__);
             
             if (mod->argPartId != 0)
@@ -891,7 +891,7 @@ static void InitThreadEntry(SceSize args, void *argp)
     printf("Loading all modules ... Ready\n");
     
     if (sceKernelGetSystemStatus() == 0)
-        sub_05F0();
+        finishModuleBoot();
 
     /* Step 2: Call the last module boot callbacks. */
     if (foundMod == SCE_TRUE)

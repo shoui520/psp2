@@ -14,8 +14,8 @@ int memlmdMemcmp(const u8 *a, const u8 *b, SceSize n);
 int checkWhitelist(const u8 *prx, const u8 *list, SceSize listSize);
 int sceUtilsGetLoadModuleABLengthByPolling(u8 *prx, SceSize size, SceSize *newSize);
 int memlmdUnsign(u8 *prx, SceSize size);
-int memlmdInitializeScrambleKey(u32 unk, const u8 *hash);
-int memlmdClearScrambleKey(u32 unk);
+int memlmdInitializeScrambleKey(u32 mode, const u8 *hash);
+int memlmdClearScrambleKey(u32 mode);
 int memlmdCompareSubType(u32 tag);
 int memlmdCompareLatestSubType(u32 tag);
 

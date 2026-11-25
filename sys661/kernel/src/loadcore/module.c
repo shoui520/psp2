@@ -298,7 +298,7 @@ s32 sceKernelGetModuleIdListForKernel(SceUID *modIdList, u32 size, u32 *modCount
     return SCE_ERROR_OK;
 }
 
-//sub_00006D30
+
 /*
  * Create the UID type for modules.  Every created UID via 
  * sceKernelCreateModule() is stored in the linked-list 
@@ -496,7 +496,7 @@ SceUID sceKernelGetModuleListWithAlloc(u32 *modCount)
     return blockId;
 }
 
-//sub_00007164
+
 /*
  * Register the created UIDControlBlock for a new module in the
  * linked-list of the UID type of "module" objects?
@@ -535,7 +535,7 @@ static SceUID module_do_initialize(SceSysmemUidCB *cb, SceSysmemUidCB *uidWithFu
     return getModuleUid(cb);
 }
 
-//sub_0000720C
+
 /*
  * Unlink a UIDControlBlock belonging to an unloaded module
  * from the linked-list of the UID type of "module" objects?
@@ -547,13 +547,13 @@ static SceUID module_do_delete(SceSysmemUidCB *cb, SceSysmemUidCB *uidWithFunc, 
     return getModuleUid(cb);
 }
 
-//sub_00007238
+
 static SceUID __attribute__((noinline)) getModuleUid(SceSysmemUidCB *cb)
 {
     return cb->uid ^ g_ModuleUidXor;
 }
 
-//sub_0000724C
+
 /*
  * We check if a module's resident libraries have a legal SDK
  * version.  A library's SDK version is legal when it is 
@@ -586,7 +586,7 @@ static s32 __attribute__((noinline)) CheckDevkitVersion(SceModuleInfo *modInfo, 
     return SCE_ERROR_OK;
 }
 
-//sub_0000731C
+
 /*
  * Once a module is in the process of being loaded, its UID name
  * is updated in order to make identifying the module easier.

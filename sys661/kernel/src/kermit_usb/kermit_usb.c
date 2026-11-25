@@ -4,7 +4,7 @@ typedef struct SceUsbDriverEntry {
 	u32 size;
 	char name[32];
 	u32 state;
-	u32 unk28[2];
+	u32 reserved[2];
 } SceUsbDriverEntry;
 
 typedef struct SceUsbPspcmCallbacks {

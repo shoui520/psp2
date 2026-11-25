@@ -31,7 +31,7 @@ extern u8 g_keySave[0x28];
 /* loadelf */
 extern int (*g_getLengthFunc)(u8 *file, SceSize size, SceSize *newSize);
 extern int (*g_prepareGetLengthFunc)(u8 *buf, SceSize size);
-extern int (*g_setMaskFunc)(u32 unk, const u8 *addr);
+extern int (*g_setMaskFunc)(u32 mode, const u8 *addr);
 extern int (*g_compareSubType)(u32 tag);
 extern int (*g_compareLatestSubType)(u32 tag);
 extern SceSize g_maxAllocSize;

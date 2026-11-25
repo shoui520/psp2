@@ -8,10 +8,6 @@
     .global sceKernelDcacheWBinvAll
     .global sceKernelIcacheClearAll
 
-##
-# sub_0000744C
-##
-
     .ent sceKernelDcacheWBinvAll
 sceKernelDcacheWBinvAll:
     mfc0    $a2, COP0_STATE_CONFIG
@@ -36,9 +32,6 @@ exit:
     .end sceKernelDcacheWBinvAll
 
 
-##
-# sub_0000748C
-##
     .ent sceKernelIcacheClearAll
 sceKernelIcacheClearAll:
     mfc0       $a2, COP0_STATE_CONFIG

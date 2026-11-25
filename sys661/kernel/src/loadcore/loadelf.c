@@ -725,7 +725,7 @@ s32 sceKernelLoadExecutableObject(u8 *buf, SceLoadCoreExecFileInfo *execInfo)
     return SCE_ERROR_OK;
 }
 
-//Subroutine sub_00004E70 - Address 0x00004E70
+
 static s32 sceKernelApplyPspRelSegment2(u32 *segmentAddr, u32 nSegments, u8 *relocData, u32 relocSize) 
 {
     u32 type;
@@ -904,7 +904,7 @@ static s32 sceKernelApplyPspRelSegment2(u32 *segmentAddr, u32 nSegments, u8 *rel
     return SCE_ERROR_OK;   
 }
 
-//Subroutine sub_00005280 - Address 0x00005280
+
 static s32 sceKernelApplyPspRelSection(u32 *segmentAddr, u32 nSegments, Elf32_Rel *relocInfo, u32 fileSize)
 {
     u32 daddr, daddr2;
@@ -1001,7 +1001,7 @@ static s32 sceKernelApplyPspRelSection(u32 *segmentAddr, u32 nSegments, Elf32_Re
     return SCE_ERROR_OK;
 }
 
-//sub_000056B8
+
 static s32 PspUncompress(u8 *modBuf, SceLoadCoreExecFileInfo *execInfo, 
                          u32 *newSize) 
 {   
@@ -1369,7 +1369,7 @@ static s32 PspUncompress(u8 *modBuf, SceLoadCoreExecFileInfo *execInfo,
     return 0; //0x00005884
 }
 
-//sub_00006324
+
 /*
  * Get the lowest start address of the file's segments (it will be used 
  * to set the entry address for the executable).  Also compute the largest
@@ -1398,7 +1398,7 @@ static void readElfSegmentInfo(PspHeader *header, SceLoadCoreExecFileInfo *execI
     execInfo->modCodeSize = maxSegEnd - (u32)execInfo->topAddr;
 }
 
-//sub_000063C0
+
 /*
  * Verify loadable program segments and update the object file's 
  * section data.  A plain ELF file on the PSP does not contain any 
@@ -1439,7 +1439,7 @@ static s32 CheckElfSection(Elf32_Ehdr *elfHeader, SceLoadCoreExecFileInfo *execI
 }
 
 
-//Subroutine sub_00006468 - Address 0x00006468
+
 /*
  * Check the sections of a PRX module and add their sizes to the 
  * module segments which are TEXT, DATA and BSS.  Each of these 
@@ -1513,7 +1513,7 @@ static s32 CheckElfSectionPRX(Elf32_Ehdr *elfHeader, SceLoadCoreExecFileInfo *ex
     return SCE_ERROR_OK;  
 }
 
-//sub_000066E4
+
 /*
  * Count the loadable segments of an object file.  A segment can 
  * contain several sections (such as .text, .data, .rodata, .bss).  
@@ -1545,7 +1545,7 @@ static s32 CheckElfImage(Elf32_Ehdr *elfHeader1 __attribute((unused)), Elf32_Ehd
     return SCE_ERROR_OK;
 }
 
-//Subroutine sub_000067B8 - Address 0x000067B8
+
 static s32 CheckTick(u8 *modBuf)
 {
     s32 status;

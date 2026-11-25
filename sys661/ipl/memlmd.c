@@ -324,11 +324,11 @@ int memlmdUnsign(u8 *prx, SceSize size)
 }
 
 /* loadelf's set-mask function: scramble key = hash ^ constant */
-int memlmdInitializeScrambleKey(u32 unk, const u8 *hash)
+int memlmdInitializeScrambleKey(u32 mode, const u8 *hash)
 {
 	int i;
 
-	if (unk != 0)
+	if (mode != 0)
 		return -2;
 	for (i = 0; i < 16; i++) {
 		if (hash[i] != 0)
@@ -341,11 +341,11 @@ int memlmdInitializeScrambleKey(u32 unk, const u8 *hash)
 	return 0;
 }
 
-int memlmdClearScrambleKey(u32 unk)
+int memlmdClearScrambleKey(u32 mode)
 {
 	int i;
 
-	if (unk != 0)
+	if (mode != 0)
 		return -2;
 	for (i = 0; i < 16; i++)
 		g_scrambleKey[i] = 0;

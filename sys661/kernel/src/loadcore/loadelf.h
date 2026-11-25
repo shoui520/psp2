@@ -76,32 +76,8 @@ typedef struct {
     u32 size; //4
     /* The version of the SCE Header. */
     u8 hdrVersion; //8
-    /* Unknown. */
-    u32 unk12; //12
-    /* Unknown. */
-    u32 unk16; //16
-    /* Unknown. */
-    u32 unk20; //20
-    /* Unknown. */
-    u32 unk24; //24
-    /* Unknown. */
-    u32 unk28; //28
-    /* Unknown. */
-    u32 unk32; //32
-    /* Unknown. */
-    u32 unk36; //36
-    /* Unknown. */
-    u32 unk40; //40
-    /* Unknown. */
-    u32 unk44; //44
-    /* Unknown. */
-    u32 unk48; //48
-    /* Unknown. */
-    u32 unk52; //52
-    /* Unknown. */
-    u32 unk56; //56
-    /* Unknown. */
-    u32 unk60; //60   
+    /* Reserved. */
+    u32 reserved[13]; //12..60
 } SceHeader; //size = SCE_HEADER_SIZE
 
 /*
@@ -159,12 +135,8 @@ typedef struct {
     u8 cmacHeaderHash[CMAC_HEADER_HASH_SIZE]; //160
     /* The size of the compressed ELF. */
     u32 compSize; //176
-    /* Unknown. */
-    u32 unk180; //180
-    /* Unknown. */
-    u32 unk184; //184
-    /* Unknown. */
-    u32 unk188; //188
+    /* Reserved. */
+    u32 reserved180[3]; //180..188
     /* The CMAC Data hash. */
     u8 cmacDataHash[CMAC_DATA_HASH_SIZE]; //192
     /* Tag value. */

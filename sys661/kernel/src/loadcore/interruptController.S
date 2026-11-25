@@ -7,11 +7,7 @@
 
     .global loadCoreCpuSuspendIntr
     .global loadCoreCpuResumeIntr
-    .global sub_00003D84
-
-##
-# sub_00007680
-##
+    .global loadCoreBreakHalt
 
     .ent loadCoreCpuSuspendIntr
 loadCoreCpuSuspendIntr:
@@ -29,10 +25,6 @@ loc_000076A4:
 	nop    
     .end loadCoreCpuSuspendIntr
 
-##
-# sub_000076B4
-##
-
     .ent loadCoreCpuResumeIntr
 loadCoreCpuResumeIntr:
     mtic       $a0, INTR_CTRL_STATE
@@ -44,15 +36,11 @@ loadCoreCpuResumeIntr:
 	nop     
     .end loadCoreCpuResumeIntr
 
-##
-# sub_00003D84
-##
-
-    .ent sub_00003D84
-sub_00003D84:
+    .ent loadCoreBreakHalt
+loadCoreBreakHalt:
     break
-    j          sub_00003D84
+    j          loadCoreBreakHalt
     nop
-    .end sub_00003D84
+    .end loadCoreBreakHalt
 
 

@@ -60,23 +60,23 @@ typedef struct {
 } SceMemoryProtect;
 
 typedef struct {
-    u32 unk0;
-    u32 unk4; // 4
-    u32 unk8; // 8
-    u32 unk12; // 12
-    u32 unk16; // 16
+    u32 reserved0;
+    u32 memAddr; // 4
+    u32 kernelPartSize; // 8
+    u32 kernelPartMode; // 12
+    u32 userPartMode; // 16
     u32 model; // 20
-    u32 unk24; // 24
-    u32 unk28, unk32, unk36, unk40, unk44, unk48, unk52, unk56;
+    u32 memLayoutMode; // 24
+    u32 reserved28[8];
     u32 dipsLo; // 60
     u32 dipsHi; // 64
     u32 cpTime; // 68
     u32 nBlocks; // 72
     SceMemoryProtect *memBlocks; // 76
     void (*debugPutchar)(short*, int); // 80
-    u32 unk84;
+    u32 reserved84;
     SysMemThreadConfig *threadConf; // 88
-    u32 unk92;
+    u32 reserved92;
     u32 realMemSize; // 96
     u32 randomValue; // 100
 } SysMemConfig;
@@ -86,8 +86,8 @@ int SysMemPostInit(SceSysmemMemoryPartition *mainPart, SceSysmemPartTable *partT
 int SysMemReInit(SceSysmemMemoryPartition *mainPart);
 
 void SetMemoryPartitionTable(SysMemConfig *config, SceSysmemPartTable *table);
-s32 suspendSysmem(s32 unk __attribute__((unused)), void *param __attribute__((unused)));
-s32 resumeSysmem(s32 unk __attribute__((unused)), void *param __attribute__((unused)));
+s32 suspendSysmem(s32 flag __attribute__((unused)), void *param __attribute__((unused)));
+s32 resumeSysmem(s32 flag __attribute__((unused)), void *param __attribute__((unused)));
 
 int SysMemInit(SceSize argSize __attribute__((unused)), const void *argBlock)
 {
@@ -104,7 +104,7 @@ int SysMemInit(SceSize argSize __attribute__((unused)), const void *argBlock)
     sceKernelSuspendInit();
     sceKernelSysEventInit();
     InitGameInfo();
-    sub_A1E8();
+    InitSystemIdString();
     // 10B54
     u32 i;
     for (i = 0; i < config->nBlocks; i++) {
@@ -149,8 +149,8 @@ int SysMemInit(SceSize argSize __attribute__((unused)), const void *argBlock)
 
 int SysMemInitMain(SysMemConfig *config, SceSysmemMemoryPartition *mainPart, SceSysmemPartTable *table)
 {
-    table->unk4 = config->unk12;
-    table->unk8 = config->unk16;
+    table->kernelPartMode = config->kernelPartMode;
+    table->userPartMode = config->userPartMode;
     SetMemoryPartitionTable(config, table);
     SceSysmemCtlBlk *ctlBlk = (SceSysmemCtlBlk*)(((u32)&end + 0xFF) & 0xFFFFFF00);
     if (table->memSize >= 0xFFFFFF00)
@@ -159,10 +159,10 @@ int SysMemInitMain(SysMemConfig *config, SceSysmemMemoryPartition *mainPart, Sce
     // 10D6C
     MemoryProtectInit(table->other1.size + table->other2.size, table->extSc2Kernel.size + table->extScKernel.size + table->extMeKernel.size);
     g_MemInfo.memSize = table->memSize;
-    g_MemInfo.unk64 = 0;
-    g_MemInfo.memAddr = config->unk4;
+    g_MemInfo.reserved64 = 0;
+    g_MemInfo.memAddr = config->memAddr;
     SceSysmemPartInfo *info;
-    if (table->unk4 != 3)
+    if (table->kernelPartMode != 3)
         info = &table->other2;
     else
         info = &table->other1;
@@ -251,14 +251,14 @@ int SysMemPostInit(SceSysmemMemoryPartition *mainPart, SceSysmemPartTable *partT
     memBlock->size = memblk_memman.size;
     memBlock->part = memblk_memman.part;
     sceKernelProtectMemoryBlock(memblk_memman.part, memblk_memman.addr);
-    if (partTable->unk4 != 3)
+    if (partTable->kernelPartMode != 3)
         info = &partTable->other1;
     sceKernelGetUIDcontrolBlockWithType(sceKernelCreateMemoryPartition("SceOtherKernelPartition", 12, info->addr, info->size), g_PartType, &uidOther);
     part = NULL;
     if (info->size != 0)
         part = UID_CB_TO_DATA(uidOther, g_PartType, SceSysmemMemoryPartition);
     // 11160
-    if (partTable->unk4 == 3) {
+    if (partTable->kernelPartMode == 3) {
         // 11450
         g_MemInfo.other2 = part;
         g_MemInfo.other1 = kernelPart;
@@ -288,7 +288,7 @@ int SysMemPostInit(SceSysmemMemoryPartition *mainPart, SceSysmemPartTable *partT
         part = UID_CB_TO_DATA(uidMeUser, g_PartType, SceSysmemMemoryPartition);
     // 11270
     g_MemInfo.meUser = part;
-    if (partTable->unk8 == 6) {
+    if (partTable->userPartMode == 6) {
         // 11448
         g_MemInfo.user = g_MemInfo.scUser;
     } else
@@ -315,7 +315,7 @@ int SysMemPostInit(SceSysmemMemoryPartition *mainPart, SceSysmemPartTable *partT
         part = UID_CB_TO_DATA(uidExtMeKernel, g_PartType, SceSysmemMemoryPartition);
     // 11384
     g_MemInfo.extMeKernel = part;
-    if (partTable->unk4 == 3) {
+    if (partTable->kernelPartMode == 3) {
         // 11440
         g_MemInfo.extKernel = g_MemInfo.extScKernel;
     } else
@@ -597,7 +597,7 @@ void SetMemoryPartitionTable(SysMemConfig *config, SceSysmemPartTable *table)
         // 11C08
         table->memSize = 0x04000000;
         type = 2;
-        if (config->unk24 != 2)
+        if (config->memLayoutMode != 2)
             type = 3;
     } else {
         if ((config->dipsLo & 0x400) == 0 || config->realMemSize <= 0x037FFFFF) {
@@ -609,7 +609,7 @@ void SetMemoryPartitionTable(SysMemConfig *config, SceSysmemPartTable *table)
                 table->memSize = 0x02000000;
             }
             table->memSize = 0x04000000;
-            switch (config->unk24) { // jump table at 0x13AE8
+            switch (config->memLayoutMode) { // jump table at 0x13AE8
             case 2:
             case 3:
                 // 11BF0
@@ -626,15 +626,15 @@ void SetMemoryPartitionTable(SysMemConfig *config, SceSysmemPartTable *table)
             table->memSize = 0x03800000;
         }
     }
-    u32 curAddr = config->unk4;
+    u32 curAddr = config->memAddr;
     // 119E4
     table->other1.addr = 0x80000000 | (curAddr & 0x1FFFFFFF);
     // 11A08
     table->other1.size = (type != 2 ? 0x300000 : 0x600000);
     int diff = 0;
-    if (config->unk8 != 0) {
-        diff = config->unk8 - table->other1.size;
-        table->other1.size = config->unk8;
+    if (config->kernelPartSize != 0) {
+        diff = config->kernelPartSize - table->other1.size;
+        table->other1.size = config->kernelPartSize;
     }
 
     curAddr += table->other1.size;
@@ -708,7 +708,7 @@ void SetMemoryPartitionTable(SysMemConfig *config, SceSysmemPartTable *table)
     }
 }
 
-s32 suspendSysmem(s32 unk __attribute__((unused)), void *param __attribute__((unused)))
+s32 suspendSysmem(s32 flag __attribute__((unused)), void *param __attribute__((unused)))
 {
     SysmemRegSave[0]  = HW(0xBC100040);
     SysmemRegSave[1]  = HW(0xBC000000) & 0xFEDCEDCF;
@@ -725,7 +725,7 @@ s32 suspendSysmem(s32 unk __attribute__((unused)), void *param __attribute__((un
     return 0;
 }
 
-s32 resumeSysmem(s32 unk __attribute__((unused)), void *param __attribute__((unused)))
+s32 resumeSysmem(s32 flag __attribute__((unused)), void *param __attribute__((unused)))
 {
     HW(0xBC100040) = SysmemRegSave[0];
     HW(0xBC000000) = SysmemRegSave[1] & 0xCDEFDEFC;
