@@ -49,15 +49,15 @@ int sceNet_lib_E0A81C7C(const void *a, const void *b, size_t len);
 
 /* Imports from sceNetAdhoc */
 int sceNetAdhocPtpOpen(const uint8_t *srcmac, uint16_t srcport, const uint8_t *destmac,
-                       uint16_t destport, uint32_t bufsize, uint32_t delay, int count, int unk);
+                       uint16_t destport, uint32_t bufsize, uint32_t delay, int count, int flags);
 int sceNetAdhocPtpConnect(int id, uint32_t timeout, int nonblock);
 int sceNetAdhocPtpListen(const uint8_t *srcmac, uint16_t srcport, uint32_t bufsize,
-                         uint32_t delay, int count, int queue, int unk);
+                         uint32_t delay, int count, int queue, int flags);
 int sceNetAdhocPtpAccept(int id, uint8_t *mac, uint16_t *port, uint32_t timeout, int nonblock);
 int sceNetAdhocPtpSend(int id, const void *data, int *datasize, uint32_t timeout, int nonblock);
 int sceNetAdhocPtpRecv(int id, void *data, int *datasize, uint32_t timeout, int nonblock);
 int sceNetAdhocPtpFlush(int id, uint32_t timeout, int nonblock);
-int sceNetAdhocPtpClose(int id, int unk);
+int sceNetAdhocPtpClose(int id, int flags);
 int sceNetAdhoc_73BFD52D(int id, int flags);
 
 /* Imports from sceNetAdhocMatching */
@@ -85,9 +85,29 @@ typedef struct SceNetAdhocDownloadQueue {
     SceNetAdhocDownloadQueueItem *tail; /* 0x04 */
 } SceNetAdhocDownloadQueue;
 
+typedef struct SceNetAdhocDownloadPeerOut {
+    struct SceNetAdhocDownloadPeerOut *next; /* 0x00 */
+    uint32_t data_len;                       /* 0x04 */
+    void *data_ptr;                          /* 0x08 */
+    char nickname[0x80];                     /* 0x0c */
+    void *extra_ptr;                         /* 0x8c */
+    uint8_t mac[6];                          /* 0x90 */
+    uint8_t pad[2];                          /* 0x96 */
+} SceNetAdhocDownloadPeerOut;
+
+typedef struct SceNetAdhocDistributeWorkerInfo {
+    int state;                               /* 0x00 */
+    int error_code;                          /* 0x04 */
+    uint8_t mac[6];                          /* 0x08 */
+    uint8_t pad[2];                          /* 0x0e */
+    char nickname[0x80];                     /* 0x10 */
+    uint32_t total_len;                      /* 0x90 */
+    uint32_t sent_len;                       /* 0x94 */
+} SceNetAdhocDistributeWorkerInfo;
+
 typedef struct SceNetAdhocDownloadServerInfo {
     uint32_t size;     /* 0x00 */
-    uint32_t unk_04;   /* 0x04 */
+    uint32_t version;   /* 0x04 */
     uint32_t total;    /* 0x08 */
     uint32_t sent;     /* 0x0c */
 } SceNetAdhocDownloadServerInfo;
@@ -103,7 +123,7 @@ typedef struct SceNetAdhocDownloadServerCtx {
     int ptp_id;                                               /* 0x1c */
     uint8_t peer_mac[6];                                      /* 0x20 */
     char peer_nickname[0x80];                                 /* 0x26 */
-    uint16_t pad_a6;                                          /* 0xa6 */
+    uint16_t reserved_a6;                                          /* 0xa6 */
     SceNetAdhocDownloadQueue queue;                           /* 0xa8 */
 } SceNetAdhocDownloadServerCtx; /* 0xb0 */
 
@@ -113,7 +133,7 @@ typedef struct SceNetAdhocDownloadClientPeer {
     uint8_t *raw_buf;                           /* 0x08 */
     uint8_t mac[6];                             /* 0x0c */
     char nickname[0x80];                        /* 0x12 */
-    uint16_t pad_92;                            /* 0x92 */
+    uint16_t reserved_92;                            /* 0x92 */
     uint32_t data_len;                          /* 0x94 */
     void *data_ptr;                             /* 0x98 */
     void *extra_ptr;                            /* 0x9c */
@@ -130,7 +150,7 @@ typedef struct SceNetAdhocDownloadClientCtx {
     int evf_id;                                                     /* 0x18 */
     int ptp_id;                                                     /* 0x1c */
     uint8_t target_mac[6];                                          /* 0x20 */
-    uint16_t pad_26;                                                /* 0x26 */
+    uint16_t reserved_26;                                                /* 0x26 */
 } SceNetAdhocDownloadClientCtx; /* 0x28 */
 
 typedef struct SceNetAdhocDistributeWorker {
@@ -140,7 +160,7 @@ typedef struct SceNetAdhocDistributeWorker {
     int state;           /* 0x0c */
     int error_code;      /* 0x10 */
     uint8_t mac[6];      /* 0x14 */
-    uint16_t pad_1a;     /* 0x1a */
+    uint16_t reserved_1a;     /* 0x1a */
     char nickname[0x80]; /* 0x1c */
     uint32_t total_len;  /* 0x9c */
     uint32_t sent_len;   /* 0xa0 */
@@ -180,36 +200,36 @@ static int g_vpl_id;                                        /* 0x45c0 */
 static uint32_t g_max_vpl_used;                             /* 0x45c4 */
 
 /* Forward declarations of internal helpers */
-static void __attribute__((noinline)) sub_0928(int matching_id, int event, uint8_t *mac, int optlen, void *optdata);
-static int __attribute__((noinline)) sub_1028(int evth_pri, int evth_stack, int evth_part,
+static void __attribute__((noinline)) adhocDownloadServerMatchingCb(int matching_id, int event, uint8_t *mac, int optlen, void *optdata);
+static int __attribute__((noinline)) adhocDownloadServerStartMatching(int evth_pri, int evth_stack, int evth_part,
                                               int inth_pri, int inth_stack, int inth_part);
-static void __attribute__((noinline)) sub_195c(int matching_id, int event, uint8_t *mac, int optlen, void *optdata);
-static int __attribute__((noinline)) sub_1be8(SceNetAdhocDownloadClientPeer *peer, const uint8_t *mac,
+static void __attribute__((noinline)) adhocDownloadClientMatchingCb(int matching_id, int event, uint8_t *mac, int optlen, void *optdata);
+static int __attribute__((noinline)) adhocDownloadClientParsePeerData(SceNetAdhocDownloadClientPeer *peer, const uint8_t *mac,
                                               uint32_t optlen, const void *optdata);
-static SceNetAdhocDownloadClientPeer *__attribute__((noinline)) sub_1cdc(const uint8_t *mac);
-static void __attribute__((noinline)) sub_1d38(SceNetAdhocDownloadClientPeer *peer);
-static void __attribute__((noinline)) sub_1d7c(SceNetAdhocDownloadClientPeer *peer);
-static void *__attribute__((noinline)) sub_23b4(int tag, const uint8_t *buf, uint32_t len, uint32_t *out_len);
-static int __attribute__((noinline)) sub_2480(uint32_t pool_size, int part);
-static void __attribute__((noinline)) sub_24bc(void);
-static void *__attribute__((noinline)) sub_24f4(uint32_t size);
-static void __attribute__((noinline)) sub_2578(void *ptr);
-static uint8_t *__attribute__((noinline)) sub_25a8(int tag, const void *data, uint32_t len, uint8_t *dst);
-static void __attribute__((noinline)) sub_261c(SceNetAdhocDownloadQueue *q, SceNetAdhocDownloadQueueItem *item);
-static SceNetAdhocDownloadQueueItem *__attribute__((noinline)) sub_2638(SceNetAdhocDownloadQueue *q);
-static SceNetAdhocDownloadQueueItem *__attribute__((noinline)) sub_2660(SceNetAdhocDownloadQueue *q, const uint8_t *mac);
-static void __attribute__((noinline)) sub_26b8(SceNetAdhocDownloadQueue *q, SceNetAdhocDownloadQueueItem *item);
-static void __attribute__((noinline)) sub_2b28(int matching_id, int event, uint8_t *mac, int optlen, void *optdata);
-static SceNetAdhocDistributeWorker *__attribute__((noinline)) sub_2cf8(const uint8_t *mac);
-static int __attribute__((noinline)) sub_2da0(uint32_t arglen, void *argp);
-static void __attribute__((noinline)) sub_305c(SceNetAdhocDistributeWorker *worker);
-static int __attribute__((noinline)) sub_30d4(int worker_idx);
-static int __attribute__((noinline)) sub_378c(int max_workers, int worker_pri, int worker_stack, int worker_part,
+static SceNetAdhocDownloadClientPeer *__attribute__((noinline)) adhocDownloadClientFindPeer(const uint8_t *mac);
+static void __attribute__((noinline)) adhocDownloadClientAddPeer(SceNetAdhocDownloadClientPeer *peer);
+static void __attribute__((noinline)) adhocDownloadClientRemovePeer(SceNetAdhocDownloadClientPeer *peer);
+static void *__attribute__((noinline)) adhocDownloadFindTlvTag(int tag, const uint8_t *buf, uint32_t len, uint32_t *out_len);
+static int __attribute__((noinline)) adhocDownloadCreatePool(uint32_t pool_size, int part);
+static void __attribute__((noinline)) adhocDownloadDeletePool(void);
+static void *__attribute__((noinline)) adhocDownloadAlloc(uint32_t size);
+static void __attribute__((noinline)) adhocDownloadFree(void *ptr);
+static uint8_t *__attribute__((noinline)) adhocDownloadWriteTlvTag(int tag, const void *data, uint32_t len, uint8_t *dst);
+static void __attribute__((noinline)) adhocDownloadQueuePush(SceNetAdhocDownloadQueue *q, SceNetAdhocDownloadQueueItem *item);
+static SceNetAdhocDownloadQueueItem *__attribute__((noinline)) adhocDownloadQueuePop(SceNetAdhocDownloadQueue *q);
+static SceNetAdhocDownloadQueueItem *__attribute__((noinline)) adhocDownloadQueueFindByMac(SceNetAdhocDownloadQueue *q, const uint8_t *mac);
+static void __attribute__((noinline)) adhocDownloadQueueRemove(SceNetAdhocDownloadQueue *q, SceNetAdhocDownloadQueueItem *item);
+static void __attribute__((noinline)) adhocDistributeMatchingCb(int matching_id, int event, uint8_t *mac, int optlen, void *optdata);
+static SceNetAdhocDistributeWorker *__attribute__((noinline)) adhocDistributeFindWorkerByMac(const uint8_t *mac);
+static int __attribute__((noinline)) adhocDistributeWorkerThread(uint32_t arglen, void *argp);
+static void __attribute__((noinline)) adhocDistributeResetWorker(SceNetAdhocDistributeWorker *worker);
+static int __attribute__((noinline)) adhocDistributeSendToClient(int worker_idx);
+static int __attribute__((noinline)) adhocDistributeCreateContext(int max_workers, int worker_pri, int worker_stack, int worker_part,
                                               uint32_t data_len, void *data_ptr, void *extra_ptr,
                                               int total_send_len, void *cb_arg,
                                               int (*send_cb)(int, void *, int, void **, int *),
                                               int max_concurrent);
-static int __attribute__((noinline)) sub_3bf0(int evth_pri, int evth_stack, int evth_part,
+static int __attribute__((noinline)) adhocDistributeStartMatching(int evth_pri, int evth_stack, int evth_part,
                                               int inth_pri, int inth_stack, int inth_part);
 
 /* 0x0000 */
@@ -246,22 +266,22 @@ int sceNetAdhocDownload_13DAB550(uint32_t data_len, void *data_ptr, void *extra_
         g_server_ctx_buf.opt_len = data_len + 0x91;
     }
 
-    g_server_ctx->opt_buf = sub_24f4(g_server_ctx->opt_len);
+    g_server_ctx->opt_buf = adhocDownloadAlloc(g_server_ctx->opt_len);
     if (g_server_ctx->opt_buf == NULL) {
         g_server_ctx = NULL;
         return 0x80410c06;
     }
 
-    uint8_t *p = sub_25a8(1, nickname, 0x80, (uint8_t *)g_server_ctx->opt_buf);
-    p = sub_25a8(2, data_ptr, data_len, p);
+    uint8_t *p = adhocDownloadWriteTlvTag(1, nickname, 0x80, (uint8_t *)g_server_ctx->opt_buf);
+    p = adhocDownloadWriteTlvTag(2, data_ptr, data_len, p);
     if (extra_ptr != NULL) {
-        sub_25a8(3, extra_ptr, 8, p);
+        adhocDownloadWriteTlvTag(3, extra_ptr, 8, p);
     }
 
     g_server_ctx->req_cb = req_cb;
     g_server_ctx->info = info;
     if (info != NULL && info->size >= 0x10) {
-        info->unk_04 = 0x20000;
+        info->version = 0x20000;
         info->sent = 0;
         info->total = 0;
     }
@@ -269,9 +289,9 @@ int sceNetAdhocDownload_13DAB550(uint32_t data_len, void *data_ptr, void *extra_
     sceKernelMemset(g_server_ctx->peer_mac, 0, 6);
     sceKernelMemset(g_server_ctx->peer_nickname, 0, 0x80);
 
-    int mid = sceNetAdhocMatchingCreate(1, 2, 0x8001, 0x800, 1000000, 30000000, 3, 1000000, sub_0928);
+    int mid = sceNetAdhocMatchingCreate(1, 2, 0x8001, 0x800, 1000000, 30000000, 3, 1000000, adhocDownloadServerMatchingCb);
     if (mid < 0) {
-        sub_2578(g_server_ctx->opt_buf);
+        adhocDownloadFree(g_server_ctx->opt_buf);
         g_server_ctx = NULL;
         return mid;
     }
@@ -338,11 +358,11 @@ int sceNetAdhocDownload_F8FC359E(uint8_t *mac, int reply_mode)
             res = 0;
         }
         int intr = sceKernelCpuSuspendIntr();
-        SceNetAdhocDownloadQueueItem *item = sub_2638(&g_server_ctx->queue);
+        SceNetAdhocDownloadQueueItem *item = adhocDownloadQueuePop(&g_server_ctx->queue);
         if (item != NULL) {
             sceKernelMemcpy(g_server_ctx->peer_mac, item->mac, 6);
             sceKernelMemcpy(g_server_ctx->peer_nickname, item->nickname, 0x80);
-            sub_2578(item);
+            adhocDownloadFree(item);
         } else {
             sceKernelMemset(g_server_ctx->peer_mac, 0, 6);
             sceKernelMemset(g_server_ctx->peer_nickname, 0, 0x80);
@@ -512,7 +532,7 @@ sceNetAdhocDownload_A70FDFBE(void)
 }
 
 /* 0x0928 */
-static void __attribute__((noinline)) sub_0928(int matching_id, int event, uint8_t *mac, int optlen, void *optdata)
+static void __attribute__((noinline)) adhocDownloadServerMatchingCb(int matching_id, int event, uint8_t *mac, int optlen, void *optdata)
 {
     uint32_t nick_len;
 
@@ -522,7 +542,7 @@ static void __attribute__((noinline)) sub_0928(int matching_id, int event, uint8
 
     switch (event) {
     case 2: {
-        void *nick = sub_23b4(1, (const uint8_t *)optdata, optlen, &nick_len);
+        void *nick = adhocDownloadFindTlvTag(1, (const uint8_t *)optdata, optlen, &nick_len);
         if (nick == NULL || nick_len != 0x80) {
             return;
         }
@@ -535,11 +555,11 @@ static void __attribute__((noinline)) sub_0928(int matching_id, int event, uint8
         }
         int intr = sceKernelCpuSuspendIntr();
         if (g_server_ctx->state == 2 && sceNet_lib_E0A81C7C(g_server_ctx->peer_mac, mac, 6) != 0) {
-            SceNetAdhocDownloadQueueItem *item = (SceNetAdhocDownloadQueueItem *)sub_24f4(sizeof(SceNetAdhocDownloadQueueItem));
+            SceNetAdhocDownloadQueueItem *item = (SceNetAdhocDownloadQueueItem *)adhocDownloadAlloc(sizeof(SceNetAdhocDownloadQueueItem));
             if (item != NULL) {
                 sceKernelMemcpy(item->mac, mac, 6);
                 sceKernelMemcpy(item->nickname, nick, 0x80);
-                sub_261c(&g_server_ctx->queue, item);
+                adhocDownloadQueuePush(&g_server_ctx->queue, item);
             }
         }
         sceKernelCpuResumeIntr(intr);
@@ -563,10 +583,10 @@ static void __attribute__((noinline)) sub_0928(int matching_id, int event, uint8
             g_server_ctx->state = 5;
             sceKernelSetEventFlag(g_server_ctx->evf_id, 1);
         } else if (g_server_ctx->state == 2) {
-            SceNetAdhocDownloadQueueItem *item = sub_2660(&g_server_ctx->queue, mac);
+            SceNetAdhocDownloadQueueItem *item = adhocDownloadQueueFindByMac(&g_server_ctx->queue, mac);
             if (item != NULL) {
-                sub_26b8(&g_server_ctx->queue, item);
-                sub_2578(item);
+                adhocDownloadQueueRemove(&g_server_ctx->queue, item);
+                adhocDownloadFree(item);
             }
         }
         sceKernelCpuResumeIntr(intr);
@@ -586,7 +606,7 @@ int sceNetAdhocDownload_A21FEF45(uint32_t pool_size)
     if (g_server_inited) {
         return 0x80410c02;
     }
-    int res = sub_2480(pool_size, 2);
+    int res = adhocDownloadCreatePool(pool_size, 2);
     if (res < 0) {
         return res;
     }
@@ -606,7 +626,7 @@ int sceNetAdhocDownload_04077014(uint32_t pool_size, int part)
     if (part != 2 && part != 5) {
         return 0x80410c03;
     }
-    int res = sub_2480(pool_size, part);
+    int res = adhocDownloadCreatePool(pool_size, part);
     if (res < 0) {
         return res;
     }
@@ -620,7 +640,7 @@ int sceNetAdhocDownload_2B6FB0DA(int evth_pri, int evth_stack, int inth_pri, int
     if (_sceKernelCheckThreadStack() < 0xfd0) {
         return 0x80410005;
     }
-    return sub_1028(evth_pri, evth_stack, 2, inth_pri, inth_stack, 2);
+    return adhocDownloadServerStartMatching(evth_pri, evth_stack, 2, inth_pri, inth_stack, 2);
 }
 
 /* 0x0d30 */
@@ -630,7 +650,7 @@ int sceNetAdhocDownload_7CAC6934(int evth_pri, int evth_stack, int evth_part,
     if (_sceKernelCheckThreadStack() < 0xfd0) {
         return 0x80410005;
     }
-    return sub_1028(evth_pri, evth_stack, evth_part, inth_pri, inth_stack, inth_part);
+    return adhocDownloadServerStartMatching(evth_pri, evth_stack, evth_part, inth_pri, inth_stack, inth_part);
 }
 
 /* 0x0dc8 */
@@ -673,8 +693,8 @@ int sceNetAdhocDownload_F76147B1(void)
     sceKernelMemset(g_server_ctx->peer_mac, 0, 6);
     sceKernelMemset(g_server_ctx->peer_nickname, 0, 0x80);
     SceNetAdhocDownloadQueueItem *item;
-    while ((item = sub_2638(&g_server_ctx->queue)) != NULL) {
-        sub_2578(item);
+    while ((item = adhocDownloadQueuePop(&g_server_ctx->queue)) != NULL) {
+        adhocDownloadFree(item);
     }
     return 0;
 }
@@ -695,7 +715,7 @@ int sceNetAdhocDownload_7A483F9E(void)
         return 0x80410c07;
     }
     sceNetAdhocMatchingDelete(g_server_ctx->matching_id);
-    sub_2578(g_server_ctx->opt_buf);
+    adhocDownloadFree(g_server_ctx->opt_buf);
     g_server_ctx = NULL;
     return 0;
 }
@@ -712,13 +732,13 @@ int sceNetAdhocDownload_117CA01A(void)
     if (g_server_ctx != NULL) {
         return 0x80410c04;
     }
-    sub_24bc();
+    adhocDownloadDeletePool();
     g_server_inited = 0;
     return 0;
 }
 
 /* 0x1028 */
-static int __attribute__((noinline)) sub_1028(int evth_pri, int evth_stack, int evth_part,
+static int __attribute__((noinline)) adhocDownloadServerStartMatching(int evth_pri, int evth_stack, int evth_part,
                                               int inth_pri, int inth_stack, int inth_part)
 {
     if (!g_server_inited) {
@@ -770,20 +790,20 @@ int sceNetAdhocDownload_57A51DD0(void (*hello_cb)(void *, uint8_t *, char *, uin
     g_client_ctx_buf.opt_len = 0x83;
     g_client_ctx_buf.state = 0;
     g_client_ctx = &g_client_ctx_buf;
-    g_client_ctx_buf.opt_buf = sub_24f4(0x83);
+    g_client_ctx_buf.opt_buf = adhocDownloadAlloc(0x83);
     if (g_client_ctx->opt_buf == NULL) {
         g_client_ctx = NULL;
         return 0x80410c06;
     }
 
-    sub_25a8(1, nickname, 0x80, (uint8_t *)g_client_ctx->opt_buf);
+    adhocDownloadWriteTlvTag(1, nickname, 0x80, (uint8_t *)g_client_ctx->opt_buf);
     g_client_ctx->hello_cb = hello_cb;
     g_client_ctx->cb_arg = cb_arg;
     sceKernelMemset(g_client_ctx->target_mac, 0, 6);
 
-    int mid = sceNetAdhocMatchingCreate(2, 2, 0x8001, 0x800, 1000000, 30000000, 3, 1000000, sub_195c);
+    int mid = sceNetAdhocMatchingCreate(2, 2, 0x8001, 0x800, 1000000, 30000000, 3, 1000000, adhocDownloadClientMatchingCb);
     if (mid < 0) {
-        sub_2578(g_client_ctx->opt_buf);
+        adhocDownloadFree(g_client_ctx->opt_buf);
         g_client_ctx = NULL;
         return mid;
     }
@@ -825,26 +845,27 @@ int sceNetAdhocDownload_22C2BCC6(uint32_t *buflen, uint8_t *buf)
         if (*buflen < total + item_size) {
             break;
         }
-        sceKernelMemcpy(cur + 0x90, peer->mac, 6);
-        sceKernelMemcpy(cur + 0x0c, peer->nickname, 0x80);
-        *(void **)(cur + 0x08) = cur + 0x98;
-        *(uint32_t *)(cur + 0x04) = peer->data_len;
+        SceNetAdhocDownloadPeerOut *out_peer = (SceNetAdhocDownloadPeerOut *)cur;
+        sceKernelMemcpy(out_peer->mac, peer->mac, 6);
+        sceKernelMemcpy(out_peer->nickname, peer->nickname, 0x80);
+        out_peer->data_ptr = cur + 0x98;
+        out_peer->data_len = peer->data_len;
         sceKernelMemcpy(cur + 0x98, peer->data_ptr, peer->data_len);
         if (peer->extra_ptr != NULL) {
             void *ext_dst = cur + ((peer->data_len + 3) & ~3U) + 0x98;
-            *(void **)(cur + 0x8c) = ext_dst;
+            out_peer->extra_ptr = ext_dst;
             sceKernelMemcpy(ext_dst, peer->extra_ptr, 8);
         } else {
-            *(void **)(cur + 0x8c) = NULL;
+            out_peer->extra_ptr = NULL;
         }
-        *(void **)(cur + 0x00) = NULL;
+        out_peer->next = NULL;
         if (prev != NULL) {
             *(void **)prev = cur;
         }
         prev = cur;
         g_client_peer_list = peer->next;
-        sub_2578(peer->raw_buf);
-        sub_2578(peer);
+        adhocDownloadFree(peer->raw_buf);
+        adhocDownloadFree(peer);
         total += item_size;
         peer = next_peer;
     }
@@ -1012,8 +1033,8 @@ sceNetAdhocDownload_469F6B83(void)
         SceNetAdhocDownloadClientPeer *peer = g_client_peer_list;
         while (peer != NULL) {
             SceNetAdhocDownloadClientPeer *next = peer->next;
-            sub_2578(peer->raw_buf);
-            sub_2578(peer);
+            adhocDownloadFree(peer->raw_buf);
+            adhocDownloadFree(peer);
             peer = next;
         }
         g_client_peer_list = NULL;
@@ -1024,7 +1045,7 @@ sceNetAdhocDownload_469F6B83(void)
 }
 
 /* 0x195c */
-static void __attribute__((noinline)) sub_195c(int matching_id, int event, uint8_t *mac, int optlen, void *optdata)
+static void __attribute__((noinline)) adhocDownloadClientMatchingCb(int matching_id, int event, uint8_t *mac, int optlen, void *optdata)
 {
     if (g_client_ctx->matching_id != matching_id) {
         return;
@@ -1036,15 +1057,15 @@ static void __attribute__((noinline)) sub_195c(int matching_id, int event, uint8
             return;
         }
         sceKernelLockLwMutex(g_client_lwmutex, 1, NULL);
-        SceNetAdhocDownloadClientPeer *peer = sub_1cdc(mac);
+        SceNetAdhocDownloadClientPeer *peer = adhocDownloadClientFindPeer(mac);
         if (peer != NULL) {
             if (peer->raw_len == (uint32_t)optlen &&
                 sceNet_lib_E0A81C7C(peer->raw_buf, optdata, optlen) == 0) {
                 sceKernelUnlockLwMutex(g_client_lwmutex, 1);
                 return;
             }
-            sub_1d7c(peer);
-            sub_2578(peer->raw_buf);
+            adhocDownloadClientRemovePeer(peer);
+            adhocDownloadFree(peer->raw_buf);
             if (optlen == 0) {
                 sceKernelUnlockLwMutex(g_client_lwmutex, 1);
                 return;
@@ -1054,17 +1075,17 @@ static void __attribute__((noinline)) sub_195c(int matching_id, int event, uint8
                 sceKernelUnlockLwMutex(g_client_lwmutex, 1);
                 return;
             }
-            peer = (SceNetAdhocDownloadClientPeer *)sub_24f4(sizeof(SceNetAdhocDownloadClientPeer));
+            peer = (SceNetAdhocDownloadClientPeer *)adhocDownloadAlloc(sizeof(SceNetAdhocDownloadClientPeer));
             if (peer == NULL) {
                 sceKernelUnlockLwMutex(g_client_lwmutex, 1);
                 return;
             }
         }
         sceKernelMemset(peer, 0, sizeof(SceNetAdhocDownloadClientPeer));
-        if (sub_1be8(peer, mac, optlen, optdata) < 0) {
-            sub_2578(peer);
+        if (adhocDownloadClientParsePeerData(peer, mac, optlen, optdata) < 0) {
+            adhocDownloadFree(peer);
         } else {
-            sub_1d38(peer);
+            adhocDownloadClientAddPeer(peer);
             g_client_ctx->hello_cb(g_client_ctx->cb_arg, mac, peer->nickname,
                                    peer->data_len, peer->data_ptr, peer->extra_ptr);
         }
@@ -1084,11 +1105,11 @@ static void __attribute__((noinline)) sub_195c(int matching_id, int event, uint8
     case 10: {
         if (g_client_ctx->state == 1) {
             sceKernelLockLwMutex(g_client_lwmutex, 1, NULL);
-            SceNetAdhocDownloadClientPeer *peer = sub_1cdc(mac);
+            SceNetAdhocDownloadClientPeer *peer = adhocDownloadClientFindPeer(mac);
             if (peer != NULL) {
-                sub_1d7c(peer);
-                sub_2578(peer->raw_buf);
-                sub_2578(peer);
+                adhocDownloadClientRemovePeer(peer);
+                adhocDownloadFree(peer->raw_buf);
+                adhocDownloadFree(peer);
             }
             sceKernelUnlockLwMutex(g_client_lwmutex, 1);
             return;
@@ -1112,12 +1133,12 @@ static void __attribute__((noinline)) sub_195c(int matching_id, int event, uint8
 }
 
 /* 0x1be8 */
-static int __attribute__((noinline)) sub_1be8(SceNetAdhocDownloadClientPeer *peer, const uint8_t *mac,
+static int __attribute__((noinline)) adhocDownloadClientParsePeerData(SceNetAdhocDownloadClientPeer *peer, const uint8_t *mac,
                                               uint32_t optlen, const void *optdata)
 {
     uint32_t tag_len;
 
-    void *buf = sub_24f4(optlen);
+    void *buf = adhocDownloadAlloc(optlen);
     peer->raw_buf = (uint8_t *)buf;
     if (buf == NULL) {
         return -1;
@@ -1126,12 +1147,12 @@ static int __attribute__((noinline)) sub_1be8(SceNetAdhocDownloadClientPeer *pee
     sceKernelMemcpy(buf, optdata, optlen);
     sceKernelMemcpy(peer->mac, mac, 6);
 
-    void *nick = sub_23b4(1, peer->raw_buf, peer->raw_len, &tag_len);
+    void *nick = adhocDownloadFindTlvTag(1, peer->raw_buf, peer->raw_len, &tag_len);
     if (nick != NULL) {
         sceKernelMemcpy(peer->nickname, nick, 0x80);
     }
 
-    void *dptr = sub_23b4(2, peer->raw_buf, peer->raw_len, &tag_len);
+    void *dptr = adhocDownloadFindTlvTag(2, peer->raw_buf, peer->raw_len, &tag_len);
     peer->data_ptr = dptr;
     if (dptr != NULL) {
         peer->data_len = tag_len;
@@ -1139,12 +1160,12 @@ static int __attribute__((noinline)) sub_1be8(SceNetAdhocDownloadClientPeer *pee
         peer->data_len = 0;
     }
 
-    peer->extra_ptr = sub_23b4(3, peer->raw_buf, peer->raw_len, &tag_len);
+    peer->extra_ptr = adhocDownloadFindTlvTag(3, peer->raw_buf, peer->raw_len, &tag_len);
     return 0;
 }
 
 /* 0x1cdc */
-static SceNetAdhocDownloadClientPeer *__attribute__((noinline)) sub_1cdc(const uint8_t *mac)
+static SceNetAdhocDownloadClientPeer *__attribute__((noinline)) adhocDownloadClientFindPeer(const uint8_t *mac)
 {
     SceNetAdhocDownloadClientPeer *p = g_client_peer_list;
     while (p != NULL) {
@@ -1157,7 +1178,7 @@ static SceNetAdhocDownloadClientPeer *__attribute__((noinline)) sub_1cdc(const u
 }
 
 /* 0x1d38 */
-static void __attribute__((noinline)) sub_1d38(SceNetAdhocDownloadClientPeer *peer)
+static void __attribute__((noinline)) adhocDownloadClientAddPeer(SceNetAdhocDownloadClientPeer *peer)
 {
     if (g_client_peer_list == NULL) {
         g_client_peer_list = peer;
@@ -1172,7 +1193,7 @@ static void __attribute__((noinline)) sub_1d38(SceNetAdhocDownloadClientPeer *pe
 }
 
 /* 0x1d7c */
-static void __attribute__((noinline)) sub_1d7c(SceNetAdhocDownloadClientPeer *peer)
+static void __attribute__((noinline)) adhocDownloadClientRemovePeer(SceNetAdhocDownloadClientPeer *peer)
 {
     if (g_client_peer_list == peer) {
         g_client_peer_list = peer->next;
@@ -1197,13 +1218,13 @@ int sceNetAdhocDownload_3082F4E2(uint32_t pool_size)
     if (g_client_inited) {
         return 0x80410c02;
     }
-    int res = sub_2480(pool_size, 2);
+    int res = adhocDownloadCreatePool(pool_size, 2);
     if (res < 0) {
         return res;
     }
     res = sceKernelCreateLwMutex(g_client_lwmutex, "SceNetAdhocDownloadClient", 0, 0, NULL);
     if (res < 0) {
-        sub_24bc();
+        adhocDownloadDeletePool();
         return res;
     }
     g_client_inited = 1;
@@ -1223,13 +1244,13 @@ int sceNetAdhocDownload_C8402ACD(uint32_t pool_size, int part)
     if (part != 2 && part != 5) {
         return 0x80410c03;
     }
-    int res = sub_2480(pool_size, part);
+    int res = adhocDownloadCreatePool(pool_size, part);
     if (res < 0) {
         return res;
     }
     res = sceKernelCreateLwMutex(g_client_lwmutex, "SceNetAdhocDownloadClient", 0, 0, NULL);
     if (res < 0) {
-        sub_24bc();
+        adhocDownloadDeletePool();
         return res;
     }
     g_client_inited = 1;
@@ -1366,13 +1387,13 @@ int sceNetAdhocDownload_BF1433F0(void)
         return 0x80410c04;
     }
     sceKernelDeleteLwMutex(g_client_lwmutex);
-    sub_24bc();
+    adhocDownloadDeletePool();
     g_client_inited = 0;
     return 0;
 }
 
 /* 0x23b4 */
-static void *__attribute__((noinline)) sub_23b4(int tag, const uint8_t *buf, uint32_t len, uint32_t *out_len)
+static void *__attribute__((noinline)) adhocDownloadFindTlvTag(int tag, const uint8_t *buf, uint32_t len, uint32_t *out_len)
 {
     const uint8_t *end = buf + len;
     const uint8_t *p = buf;
@@ -1399,7 +1420,7 @@ static void *__attribute__((noinline)) sub_23b4(int tag, const uint8_t *buf, uin
 }
 
 /* 0x2480 */
-static int __attribute__((noinline)) sub_2480(uint32_t pool_size, int part)
+static int __attribute__((noinline)) adhocDownloadCreatePool(uint32_t pool_size, int part)
 {
     int uid = sceKernelCreateVpl("SceNetAdhocDownloadMemoryPool", part, 0, pool_size, NULL);
     if (uid < 0) {
@@ -1410,7 +1431,7 @@ static int __attribute__((noinline)) sub_2480(uint32_t pool_size, int part)
 }
 
 /* 0x24bc */
-static void __attribute__((noinline)) sub_24bc(void)
+static void __attribute__((noinline)) adhocDownloadDeletePool(void)
 {
     if (g_vpl_id > 0) {
         sceKernelDeleteVpl(g_vpl_id);
@@ -1419,7 +1440,7 @@ static void __attribute__((noinline)) sub_24bc(void)
 }
 
 /* 0x24f4 */
-static void *__attribute__((noinline)) sub_24f4(uint32_t size)
+static void *__attribute__((noinline)) adhocDownloadAlloc(uint32_t size)
 {
     uint32_t status[16];
     void *ptr = NULL;
@@ -1441,7 +1462,7 @@ static void *__attribute__((noinline)) sub_24f4(uint32_t size)
 }
 
 /* 0x2578 */
-static void __attribute__((noinline)) sub_2578(void *ptr)
+static void __attribute__((noinline)) adhocDownloadFree(void *ptr)
 {
     if (g_vpl_id > 0) {
         sceKernelFreeVpl(g_vpl_id, ptr);
@@ -1449,7 +1470,7 @@ static void __attribute__((noinline)) sub_2578(void *ptr)
 }
 
 /* 0x25a8 */
-static uint8_t *__attribute__((noinline)) sub_25a8(int tag, const void *data, uint32_t len, uint8_t *dst)
+static uint8_t *__attribute__((noinline)) adhocDownloadWriteTlvTag(int tag, const void *data, uint32_t len, uint8_t *dst)
 {
     uint16_t be_len = (uint16_t)(((len & 0xffff) >> 8) | ((len & 0xff) << 8));
     dst[0] = (uint8_t)tag;
@@ -1459,7 +1480,7 @@ static uint8_t *__attribute__((noinline)) sub_25a8(int tag, const void *data, ui
 }
 
 /* 0x261c */
-static void __attribute__((noinline)) sub_261c(SceNetAdhocDownloadQueue *q, SceNetAdhocDownloadQueueItem *item)
+static void __attribute__((noinline)) adhocDownloadQueuePush(SceNetAdhocDownloadQueue *q, SceNetAdhocDownloadQueueItem *item)
 {
     item->next = NULL;
     if (q->tail != NULL) {
@@ -1471,7 +1492,7 @@ static void __attribute__((noinline)) sub_261c(SceNetAdhocDownloadQueue *q, SceN
 }
 
 /* 0x2638 */
-static SceNetAdhocDownloadQueueItem *__attribute__((noinline)) sub_2638(SceNetAdhocDownloadQueue *q)
+static SceNetAdhocDownloadQueueItem *__attribute__((noinline)) adhocDownloadQueuePop(SceNetAdhocDownloadQueue *q)
 {
     SceNetAdhocDownloadQueueItem *item = q->head;
     if (item != NULL) {
@@ -1485,7 +1506,7 @@ static SceNetAdhocDownloadQueueItem *__attribute__((noinline)) sub_2638(SceNetAd
 }
 
 /* 0x2660 */
-static SceNetAdhocDownloadQueueItem *__attribute__((noinline)) sub_2660(SceNetAdhocDownloadQueue *q, const uint8_t *mac)
+static SceNetAdhocDownloadQueueItem *__attribute__((noinline)) adhocDownloadQueueFindByMac(SceNetAdhocDownloadQueue *q, const uint8_t *mac)
 {
     SceNetAdhocDownloadQueueItem *cur = q->head;
     while (cur != NULL) {
@@ -1498,7 +1519,7 @@ static SceNetAdhocDownloadQueueItem *__attribute__((noinline)) sub_2660(SceNetAd
 }
 
 /* 0x26b8 */
-static void __attribute__((noinline)) sub_26b8(SceNetAdhocDownloadQueue *q, SceNetAdhocDownloadQueueItem *item)
+static void __attribute__((noinline)) adhocDownloadQueueRemove(SceNetAdhocDownloadQueue *q, SceNetAdhocDownloadQueueItem *item)
 {
     SceNetAdhocDownloadQueueItem *cur = q->head;
     SceNetAdhocDownloadQueueItem *prev = NULL;
@@ -1554,8 +1575,8 @@ int sceNetAdhocDownload_4C542FD1(void)
     }
 
     SceNetAdhocDownloadQueueItem *item;
-    while ((item = sub_2638(&g_distribute_ctx->queue)) != NULL) {
-        sub_2578(item);
+    while ((item = adhocDownloadQueuePop(&g_distribute_ctx->queue)) != NULL) {
+        adhocDownloadFree(item);
     }
     return 0;
 }
@@ -1591,8 +1612,8 @@ int sceNetAdhocDownload_A45230D9(void)
     }
     sceKernelDeleteSema(g_distribute_ctx->queue_sema);
     sceNetAdhocMatchingDelete(g_distribute_ctx->matching_id);
-    sub_2578(g_distribute_ctx->opt_buf);
-    sub_2578(g_distribute_ctx->workers);
+    adhocDownloadFree(g_distribute_ctx->opt_buf);
+    adhocDownloadFree(g_distribute_ctx->workers);
     g_distribute_ctx = NULL;
     return 0;
 }
@@ -1643,12 +1664,13 @@ sceNetAdhocDownload_0A531FBE(int worker_idx, uint8_t *info_out)
     } else {
         SceNetAdhocDistributeWorker *w = &g_distribute_ctx->workers[worker_idx];
         int intr = sceKernelCpuSuspendIntr();
-        *(int *)(info_out + 0x00) = w->state;
-        *(int *)(info_out + 0x04) = w->error_code;
-        sceKernelMemcpy(info_out + 0x08, w->mac, 6);
-        sceKernelMemcpy(info_out + 0x10, w->nickname, 0x80);
-        *(uint32_t *)(info_out + 0x90) = w->total_len;
-        *(uint32_t *)(info_out + 0x94) = w->sent_len;
+        SceNetAdhocDistributeWorkerInfo *winfo = (SceNetAdhocDistributeWorkerInfo *)info_out;
+        winfo->state = w->state;
+        winfo->error_code = w->error_code;
+        sceKernelMemcpy(winfo->mac, w->mac, 6);
+        sceKernelMemcpy(winfo->nickname, w->nickname, 0x80);
+        winfo->total_len = w->total_len;
+        winfo->sent_len = w->sent_len;
         sceKernelCpuResumeIntr(intr);
         res = 0;
     }
@@ -1656,7 +1678,7 @@ sceNetAdhocDownload_0A531FBE(int worker_idx, uint8_t *info_out)
 }
 
 /* 0x2b28 */
-static void __attribute__((noinline)) sub_2b28(int matching_id, int event, uint8_t *mac, int optlen, void *optdata)
+static void __attribute__((noinline)) adhocDistributeMatchingCb(int matching_id, int event, uint8_t *mac, int optlen, void *optdata)
 {
     uint32_t nick_len;
 
@@ -1666,11 +1688,11 @@ static void __attribute__((noinline)) sub_2b28(int matching_id, int event, uint8
 
     switch (event) {
     case 2: {
-        void *nick = sub_23b4(1, (const uint8_t *)optdata, optlen, &nick_len);
+        void *nick = adhocDownloadFindTlvTag(1, (const uint8_t *)optdata, optlen, &nick_len);
         if (nick == NULL || nick_len != 0x80) {
             return;
         }
-        SceNetAdhocDownloadQueueItem *item = (SceNetAdhocDownloadQueueItem *)sub_24f4(sizeof(SceNetAdhocDownloadQueueItem));
+        SceNetAdhocDownloadQueueItem *item = (SceNetAdhocDownloadQueueItem *)adhocDownloadAlloc(sizeof(SceNetAdhocDownloadQueueItem));
         if (item == NULL) {
             sceNetAdhocMatchingCancelTarget(g_distribute_ctx->matching_id, mac);
             return;
@@ -1678,14 +1700,14 @@ static void __attribute__((noinline)) sub_2b28(int matching_id, int event, uint8
         sceKernelMemcpy(item->mac, mac, 6);
         sceKernelMemcpy(item->nickname, nick, 0x80);
         int intr = sceKernelCpuSuspendIntr();
-        sub_261c(&g_distribute_ctx->queue, item);
+        adhocDownloadQueuePush(&g_distribute_ctx->queue, item);
         sceKernelCpuResumeIntr(intr);
         sceKernelSignalSema(g_distribute_ctx->queue_sema, 1);
         break;
     }
     case 7: {
         int intr = sceKernelCpuSuspendIntr();
-        SceNetAdhocDistributeWorker *w = sub_2cf8(mac);
+        SceNetAdhocDistributeWorker *w = adhocDistributeFindWorkerByMac(mac);
         if (w != NULL) {
             w->state = 3;
             sceKernelSetEventFlag(w->evf_id, 1);
@@ -1698,16 +1720,16 @@ static void __attribute__((noinline)) sub_2b28(int matching_id, int event, uint8
     case 9:
     case 10: {
         int intr = sceKernelCpuSuspendIntr();
-        SceNetAdhocDistributeWorker *w = sub_2cf8(mac);
+        SceNetAdhocDistributeWorker *w = adhocDistributeFindWorkerByMac(mac);
         if (w != NULL) {
             w->error_code = 0x80410c08;
             w->state = 4;
             sceKernelSetEventFlag(w->evf_id, 1);
         } else {
-            SceNetAdhocDownloadQueueItem *item = sub_2660(&g_distribute_ctx->queue, mac);
+            SceNetAdhocDownloadQueueItem *item = adhocDownloadQueueFindByMac(&g_distribute_ctx->queue, mac);
             if (item != NULL) {
-                sub_26b8(&g_distribute_ctx->queue, item);
-                sub_2578(item);
+                adhocDownloadQueueRemove(&g_distribute_ctx->queue, item);
+                adhocDownloadFree(item);
             }
         }
         sceKernelCpuResumeIntr(intr);
@@ -1719,7 +1741,7 @@ static void __attribute__((noinline)) sub_2b28(int matching_id, int event, uint8
 }
 
 /* 0x2cf8 */
-static SceNetAdhocDistributeWorker *__attribute__((noinline)) sub_2cf8(const uint8_t *mac)
+static SceNetAdhocDistributeWorker *__attribute__((noinline)) adhocDistributeFindWorkerByMac(const uint8_t *mac)
 {
     for (int i = 0; i < g_distribute_ctx->max_workers; i++) {
         SceNetAdhocDistributeWorker *w = &g_distribute_ctx->workers[i];
@@ -1731,7 +1753,7 @@ static SceNetAdhocDistributeWorker *__attribute__((noinline)) sub_2cf8(const uin
 }
 
 /* 0x2da0 */
-static int __attribute__((noinline)) sub_2da0(uint32_t arglen, void *argp)
+static int __attribute__((noinline)) adhocDistributeWorkerThread(uint32_t arglen, void *argp)
 {
     (void)arglen;
     uint32_t out_bits;
@@ -1740,7 +1762,7 @@ static int __attribute__((noinline)) sub_2da0(uint32_t arglen, void *argp)
     int res;
 
     for (;;) {
-        sub_305c(w);
+        adhocDistributeResetWorker(w);
         res = sceKernelWaitSema(g_distribute_ctx->queue_sema, 1, NULL);
         if (res < 0) {
             break;
@@ -1753,7 +1775,7 @@ static int __attribute__((noinline)) sub_2da0(uint32_t arglen, void *argp)
         }
 
         int intr = sceKernelCpuSuspendIntr();
-        SceNetAdhocDownloadQueueItem *item = sub_2638(&g_distribute_ctx->queue);
+        SceNetAdhocDownloadQueueItem *item = adhocDownloadQueuePop(&g_distribute_ctx->queue);
         sceKernelCpuResumeIntr(intr);
 
         if (item == NULL) {
@@ -1765,7 +1787,7 @@ static int __attribute__((noinline)) sub_2da0(uint32_t arglen, void *argp)
 
         res = sceNetAdhocMatchingSelectTarget(g_distribute_ctx->matching_id, item->mac, 0, NULL);
         if (res < 0) {
-            sub_2578(item);
+            adhocDownloadFree(item);
             if ((uint32_t)(res + 0x7fbef7f4U) < 2U) {
                 if (g_distribute_ctx->max_concurrent > 0) {
                     sceKernelSignalSema(g_distribute_ctx->concurrent_sema, 1);
@@ -1780,7 +1802,7 @@ static int __attribute__((noinline)) sub_2da0(uint32_t arglen, void *argp)
         sceKernelMemcpy(w->nickname, item->nickname, 0x80);
         w->state = 2;
         sceKernelCpuResumeIntr(intr);
-        sub_2578(item);
+        adhocDownloadFree(item);
 
         res = sceKernelWaitEventFlag(w->evf_id, 3, 0x11, &out_bits, NULL);
         if (res < 0 || (out_bits & 2) != 0) {
@@ -1792,7 +1814,7 @@ static int __attribute__((noinline)) sub_2da0(uint32_t arglen, void *argp)
                 sceKernelSignalSema(g_distribute_ctx->concurrent_sema, 1);
             }
         } else {
-            res = sub_30d4(worker_idx);
+            res = adhocDistributeSendToClient(worker_idx);
             if (res < 0 && g_distribute_ctx->max_concurrent > 0) {
                 sceKernelSignalSema(g_distribute_ctx->concurrent_sema, 1);
             }
@@ -1821,7 +1843,7 @@ static int __attribute__((noinline)) sub_2da0(uint32_t arglen, void *argp)
 }
 
 /* 0x305c */
-static void __attribute__((noinline)) sub_305c(SceNetAdhocDistributeWorker *worker)
+static void __attribute__((noinline)) adhocDistributeResetWorker(SceNetAdhocDistributeWorker *worker)
 {
     int intr = sceKernelCpuSuspendIntr();
     worker->state = 1;
@@ -1834,7 +1856,7 @@ static void __attribute__((noinline)) sub_305c(SceNetAdhocDistributeWorker *work
 }
 
 /* 0x30d4 */
-static int __attribute__((noinline)) sub_30d4(int worker_idx)
+static int __attribute__((noinline)) adhocDistributeSendToClient(int worker_idx)
 {
     uint8_t local_mac[16];
     uint32_t net_len;
@@ -1925,7 +1947,7 @@ int sceNetAdhocDownload_48252AF0(uint32_t pool_size)
     if (g_distribute_inited) {
         return 0x80410c02;
     }
-    int res = sub_2480(pool_size, 2);
+    int res = adhocDownloadCreatePool(pool_size, 2);
     if (res < 0) {
         return res;
     }
@@ -1945,7 +1967,7 @@ int sceNetAdhocDownload_E01A6429(uint32_t pool_size, int part)
     if (part != 2 && part != 5) {
         return 0x80410c03;
     }
-    int res = sub_2480(pool_size, part);
+    int res = adhocDownloadCreatePool(pool_size, part);
     if (res < 0) {
         return res;
     }
@@ -1963,7 +1985,7 @@ int sceNetAdhocDownload_3B6A7B35(int max_workers, int worker_pri, int worker_sta
     if (_sceKernelCheckThreadStack() < 0xfc0) {
         return 0x80410005;
     }
-    return sub_378c(max_workers, worker_pri, worker_stack, 2,
+    return adhocDistributeCreateContext(max_workers, worker_pri, worker_stack, 2,
                     data_len, data_ptr, extra_ptr, total_send_len,
                     cb_arg, send_cb, max_concurrent);
 }
@@ -1978,7 +2000,7 @@ int sceNetAdhocDownload_90B616A4(int max_workers, int worker_pri, int worker_sta
     if (_sceKernelCheckThreadStack() < 0xfc0) {
         return 0x80410005;
     }
-    return sub_378c(max_workers, worker_pri, worker_stack, worker_part,
+    return adhocDistributeCreateContext(max_workers, worker_pri, worker_stack, worker_part,
                     data_len, data_ptr, extra_ptr, total_send_len,
                     cb_arg, send_cb, max_concurrent);
 }
@@ -1989,7 +2011,7 @@ int sceNetAdhocDownload_8A987F07(int evth_pri, int evth_stack, int inth_pri, int
     if (_sceKernelCheckThreadStack() < 0xfd0) {
         return 0x80410005;
     }
-    return sub_3bf0(evth_pri, evth_stack, 2, inth_pri, inth_stack, 2);
+    return adhocDistributeStartMatching(evth_pri, evth_stack, 2, inth_pri, inth_stack, 2);
 }
 
 /* 0x368c */
@@ -1999,7 +2021,7 @@ int sceNetAdhocDownload_3E91D2DC(int evth_pri, int evth_stack, int evth_part,
     if (_sceKernelCheckThreadStack() < 0xfd0) {
         return 0x80410005;
     }
-    return sub_3bf0(evth_pri, evth_stack, evth_part, inth_pri, inth_stack, inth_part);
+    return adhocDistributeStartMatching(evth_pri, evth_stack, evth_part, inth_pri, inth_stack, inth_part);
 }
 
 /* 0x3724 */
@@ -2014,13 +2036,13 @@ int sceNetAdhocDownload_827157E2(void)
     if (g_distribute_ctx != NULL) {
         return 0x80410c04;
     }
-    sub_24bc();
+    adhocDownloadDeletePool();
     g_distribute_inited = 0;
     return 0;
 }
 
 /* 0x378c */
-static int __attribute__((noinline)) sub_378c(int max_workers, int worker_pri, int worker_stack, int worker_part,
+static int __attribute__((noinline)) adhocDistributeCreateContext(int max_workers, int worker_pri, int worker_stack, int worker_part,
                                               uint32_t data_len, void *data_ptr, void *extra_ptr,
                                               int total_send_len, void *cb_arg,
                                               int (*send_cb)(int, void *, int, void **, int *),
@@ -2056,7 +2078,7 @@ static int __attribute__((noinline)) sub_378c(int max_workers, int worker_pri, i
     g_distribute_ctx_buf.queue_sema = -1;
 
     uint32_t workers_bytes = (uint32_t)max_workers * sizeof(SceNetAdhocDistributeWorker);
-    SceNetAdhocDistributeWorker *workers = (SceNetAdhocDistributeWorker *)sub_24f4(workers_bytes);
+    SceNetAdhocDistributeWorker *workers = (SceNetAdhocDistributeWorker *)adhocDownloadAlloc(workers_bytes);
     g_distribute_ctx_buf.workers = workers;
     if (workers == NULL) {
         return 0x80410c06;
@@ -2078,15 +2100,15 @@ static int __attribute__((noinline)) sub_378c(int max_workers, int worker_pri, i
     }
 
     res = 0x80410c06;
-    g_distribute_ctx->opt_buf = sub_24f4(g_distribute_ctx->opt_len);
+    g_distribute_ctx->opt_buf = adhocDownloadAlloc(g_distribute_ctx->opt_len);
     if (g_distribute_ctx->opt_buf == NULL) {
         goto fail;
     }
 
-    uint8_t *p = sub_25a8(1, nickname, 0x80, (uint8_t *)g_distribute_ctx->opt_buf);
-    p = sub_25a8(2, data_ptr, data_len, p);
+    uint8_t *p = adhocDownloadWriteTlvTag(1, nickname, 0x80, (uint8_t *)g_distribute_ctx->opt_buf);
+    p = adhocDownloadWriteTlvTag(2, data_ptr, data_len, p);
     if (extra_ptr != NULL) {
-        sub_25a8(3, extra_ptr, 8, p);
+        adhocDownloadWriteTlvTag(3, extra_ptr, 8, p);
     }
 
     g_distribute_ctx->max_concurrent = max_concurrent;
@@ -2094,7 +2116,7 @@ static int __attribute__((noinline)) sub_378c(int max_workers, int worker_pri, i
     g_distribute_ctx->cb_arg = cb_arg;
     g_distribute_ctx->send_cb = send_cb;
 
-    res = sceNetAdhocMatchingCreate(1, max_workers + 1, 0x8001, 0x800, 1000000, 30000000, 3, 1000000, sub_2b28);
+    res = sceNetAdhocMatchingCreate(1, max_workers + 1, 0x8001, 0x800, 1000000, 30000000, 3, 1000000, adhocDistributeMatchingCb);
     if (res < 0) {
         goto fail;
     }
@@ -2121,7 +2143,7 @@ static int __attribute__((noinline)) sub_378c(int max_workers, int worker_pri, i
     th_opt[1] = (uint32_t)worker_part;
 
     for (int i = 0; i < max_workers; i++) {
-        res = sceKernelCreateThread("SceNetAdhocDistributeWorker", sub_2da0,
+        res = sceKernelCreateThread("SceNetAdhocDistributeWorker", adhocDistributeWorkerThread,
                                     worker_pri, worker_stack, 0, th_opt);
         if (res < 0) {
             goto fail;
@@ -2157,16 +2179,16 @@ fail:
             sceNetAdhocMatchingDelete(g_distribute_ctx->matching_id);
         }
         if (g_distribute_ctx->opt_buf != NULL) {
-            sub_2578(g_distribute_ctx->opt_buf);
+            adhocDownloadFree(g_distribute_ctx->opt_buf);
         }
-        sub_2578(g_distribute_ctx->workers);
+        adhocDownloadFree(g_distribute_ctx->workers);
         g_distribute_ctx = NULL;
     }
     return res;
 }
 
 /* 0x3bf0 */
-static int __attribute__((noinline)) sub_3bf0(int evth_pri, int evth_stack, int evth_part,
+static int __attribute__((noinline)) adhocDistributeStartMatching(int evth_pri, int evth_stack, int evth_part,
                                               int inth_pri, int inth_stack, int inth_part)
 {
     int idx;
@@ -2187,7 +2209,7 @@ static int __attribute__((noinline)) sub_3bf0(int evth_pri, int evth_stack, int 
     int res = 0;
     for (idx = 0; idx < g_distribute_ctx->max_workers; idx++) {
         SceNetAdhocDistributeWorker *w = &g_distribute_ctx->workers[idx];
-        sub_305c(w);
+        adhocDistributeResetWorker(w);
         if (w->thid >= 0) {
             res = sceKernelStartThread(w->thid, 4, &idx);
             if (res < 0) {
