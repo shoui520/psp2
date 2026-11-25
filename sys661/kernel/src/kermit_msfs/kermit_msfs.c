@@ -65,6 +65,33 @@ typedef struct SceMsfsCloseResult {
 	int result;
 } SceMsfsCloseResult;
 
+typedef struct SceUidControlBlock {
+	void *parent;
+	void *nextChild;
+	void *meta;
+	SceUID uid;
+	const char *name;
+	u8 size;
+	u8 nextSize;
+	u16 attr;
+} SceUidControlBlock;
+
+typedef struct SceMsfsDirent {
+	u8 statAndName[0x158];
+	void *d_private;
+} SceMsfsDirent;
+
+typedef struct SceMsfsDirentPrivate {
+	u32 size;
+	char shortName[0x10];
+	char longName[0x400];
+} SceMsfsDirentPrivate;
+
+typedef struct SceMsfsOldDirentPrivate {
+	char shortName[0xD];
+	char longName[0x100];
+} SceMsfsOldDirentPrivate;
+
 u32 sceKernelGetSyscallRA(void);
 int sceIoTerminateFd(const char *drive);
 int sceIoAddDrv(const SceIoDeviceTable *drv);
@@ -329,8 +356,8 @@ static int _msCloseDirect(SceIoIob *iob, u32 cmd)
 		return 0x80010009;
 	}
 
-	req->args[0] = (u32)slot->kermitFd;
-	u64 resp = 0;
+	req->argWords[0].lo = (u32)slot->kermitFd;
+	u64 resp;
 	int kres = sceKermit_driver_36666181(req, KERMIT_MODE_MSFS, cmd, 1, 0, &resp);
 	if (kres != 0) {
 		return kres;
@@ -338,7 +365,7 @@ static int _msCloseDirect(SceIoIob *iob, u32 cmd)
 
 	sceKernelDeleteMutex(slot->mutexId);
 	int intr = sceKernelCpuSuspendIntr();
-	slot->iob->i_private = NULL;
+	iob->i_private = NULL;
 	slot->iob = NULL;
 	sceKernelCpuResumeIntr(intr);
 	return (int)resp;
@@ -378,15 +405,15 @@ static int _msIoRead(SceIoIob *iob, char *data, SceSize len)
 			chunk = len;
 		}
 
-		req->args[0] = (u32)slot->kermitFd;
+		req->argWords[0].lo = (u32)slot->kermitFd;
 		sceKermitMemory_driver_AAF047AC(req, 1, work, chunk, 2);
-		req->args[2] = chunk;
+		req->argWords[2].lo = chunk;
 
 		if (sceKermitMsfs_driver_var_BE954163 != 0) {
 			sceKernelDelayThread((SceUInt)sceKermitMsfs_driver_var_BE954163);
 		}
 
-		u64 resp = 0;
+		u64 resp;
 		int kres = sceKermit_driver_36666181(req, KERMIT_MODE_MSFS, 0xC5E, 3, 0, &resp);
 		if (kres != 0) {
 			res = sceKernelUnlockMutex(g_mutexId, 1);
@@ -400,7 +427,9 @@ static int _msIoRead(SceIoIob *iob, char *data, SceSize len)
 			if (res != 0) {
 				return res;
 			}
-			goto done;
+			slot->offset += totalRead;
+			iob->i_fpos = slot->offset;
+			return totalRead;
 		}
 
 		sceKernelMemcpy(data, work, (u32)r);
@@ -412,7 +441,9 @@ static int _msIoRead(SceIoIob *iob, char *data, SceSize len)
 			if (res != 0) {
 				return res;
 			}
-			goto done;
+			slot->offset += totalRead;
+			iob->i_fpos = slot->offset;
+			return totalRead;
 		}
 
 		res = sceKernelUnlockMutex(g_mutexId, 1);
@@ -424,16 +455,16 @@ static int _msIoRead(SceIoIob *iob, char *data, SceSize len)
 	if (len != 0) {
 		u32 alignedLen = len & ~0x3Fu;
 		if (alignedLen != 0) {
-			req->args[0] = (u32)slot->kermitFd;
+			req->argWords[0].lo = (u32)slot->kermitFd;
 			sceKermitMemory_driver_AAF047AC(req, 1, data, alignedLen, 2);
-			req->args[2] = alignedLen;
+			req->argWords[2].lo = alignedLen;
 			sceKernelDcacheInvalidateRange(data, alignedLen);
 
 			if (sceKermitMsfs_driver_var_BE954163 != 0) {
 				sceKernelDelayThread((SceUInt)sceKermitMsfs_driver_var_BE954163);
 			}
 
-			u64 resp = 0;
+			u64 resp;
 			int kres = sceKermit_driver_36666181(req, KERMIT_MODE_MSFS, 0xC5E, 3, 0, &resp);
 			if (kres != 0) {
 				return kres;
@@ -444,7 +475,9 @@ static int _msIoRead(SceIoIob *iob, char *data, SceSize len)
 				if (r < 0) {
 					totalRead = r;
 				}
-				goto done;
+				slot->offset += totalRead;
+				iob->i_fpos = slot->offset;
+				return totalRead;
 			}
 
 			sceKermitMemory_driver_90B662D0(data, (u32)r);
@@ -452,7 +485,9 @@ static int _msIoRead(SceIoIob *iob, char *data, SceSize len)
 			len -= (u32)r;
 			data += r;
 			if ((u32)r != alignedLen) {
-				goto done;
+				slot->offset += totalRead;
+				iob->i_fpos = slot->offset;
+				return totalRead;
 			}
 		}
 
@@ -462,15 +497,15 @@ static int _msIoRead(SceIoIob *iob, char *data, SceSize len)
 				return res;
 			}
 
-			req->args[0] = (u32)slot->kermitFd;
+			req->argWords[0].lo = (u32)slot->kermitFd;
 			sceKermitMemory_driver_AAF047AC(req, 1, work, len, 2);
-			req->args[2] = len;
+			req->argWords[2].lo = len;
 
 			if (sceKermitMsfs_driver_var_BE954163 != 0) {
 				sceKernelDelayThread((SceUInt)sceKermitMsfs_driver_var_BE954163);
 			}
 
-			u64 resp = 0;
+			u64 resp;
 			int kres = sceKermit_driver_36666181(req, KERMIT_MODE_MSFS, 0xC5E, 3, 0, &resp);
 			if (kres != 0) {
 				res = sceKernelUnlockMutex(g_mutexId, 1);
@@ -492,7 +527,6 @@ static int _msIoRead(SceIoIob *iob, char *data, SceSize len)
 		}
 	}
 
-done:
 	slot->offset += totalRead;
 	iob->i_fpos = slot->offset;
 	return totalRead;
@@ -524,11 +558,11 @@ static int _msIoWrite(SceIoIob *iob, const char *data, SceSize len)
 	u32 low6 = (u32)data & 0x3Fu;
 	sceKernelDcacheWritebackRange((const void *)((u32)data - low6), (low6 + len + 0x3Fu) & ~0x3Fu);
 
-	req->args[0] = (u32)slot->kermitFd;
+	req->argWords[0].lo = (u32)slot->kermitFd;
 	sceKermitMemory_driver_AAF047AC(req, 1, (void *)data, len, 1);
-	req->args[2] = len;
+	req->argWords[2].lo = len;
 
-	u64 resp = 0;
+	u64 resp;
 	int kres = sceKermit_driver_36666181(req, KERMIT_MODE_MSFS, 0xC6A, 3, 0, &resp);
 	if (kres != 0) {
 		return kres;
@@ -562,11 +596,11 @@ static SceOff _msIoLseek(SceIoIob *iob, SceOff ofs, int whence)
 		return (SceOff)0x80010009u;
 	}
 
-	req->args[0] = (u32)slot->kermitFd;
+	req->argWords[0].lo = (u32)slot->kermitFd;
 	req->args[1] = (u64)ofs;
-	req->args[2] = (u32)whence;
+	req->argWords[2].lo = (u32)whence;
 
-	u64 resp = 0;
+	u64 resp;
 	int kres = sceKermit_driver_36666181(req, KERMIT_MODE_MSFS, 0xC62, 3, 0, &resp);
 	if (kres != 0) {
 		return (SceOff)kres;
@@ -602,8 +636,8 @@ static int _msIoIoctl(SceIoIob *iob, int cmd, void *indata, SceSize inlen, void 
 	}
 
 	u32 half = g_workSize >> 1;
-	char *work1 = (char *)g_workBuf;
-	char *work2 = work1 + half;
+	char *workBase = (char *)g_workBuf;
+	char *workPath = workBase + half;
 
 	SceMsfsFileSlot *slot = (SceMsfsFileSlot *)iob->i_private;
 	if (slot < &g_fileSlots[0] || slot >= &g_fileSlots[32] || slot->iob != iob) {
@@ -615,18 +649,18 @@ static int _msIoIoctl(SceIoIob *iob, int cmd, void *indata, SceSize inlen, void 
 		return res;
 	}
 
-	strncpy(work2, *(const char **)indata, half);
-	work2[half - 1] = '\0';
-	*(char **)work1 = work2;
+	strncpy(workPath, *(const char **)indata, half);
+	workPath[half - 1] = '\0';
+	*(char **)workBase = workPath;
 
-	req->args[0] = (u32)slot->kermitFd;
-	req->args[1] = (u32)cmd;
-	sceKermitMemory_driver_AAF047AC(req, 2, work1, inlen, 1);
-	req->args[3] = inlen;
+	req->argWords[0].lo = (u32)slot->kermitFd;
+	req->argWords[1].lo = (u32)cmd;
+	sceKermitMemory_driver_AAF047AC(req, 2, workBase, inlen, 1);
+	req->argWords[3].lo = inlen;
 	sceKermitMemory_driver_AAF047AC(req, 4, NULL, 0, 2);
-	req->args[5] = 0;
+	req->argWords[5].lo = 0;
 
-	u64 resp = 0;
+	u64 resp;
 	int kres = sceKermit_driver_36666181(req, KERMIT_MODE_MSFS, 0xC6F, 6, 0, &resp);
 	int cmdRes = (kres == 0) ? (int)resp : kres;
 	res = sceKernelUnlockMutex(g_mutexId, 1);
@@ -652,7 +686,7 @@ static int _msIoRemove(SceIoIob *iob, const char *name)
 	work[half - 1] = '\0';
 	sceKermitMemory_driver_AAF047AC(req, 0, work, strlen(work) + 1u, 1);
 
-	u64 resp = 0;
+	u64 resp;
 	int kres = sceKermit_driver_36666181(req, KERMIT_MODE_MSFS, 0xC6C, 1, 0, &resp);
 	int cmdRes = (kres == 0) ? (int)resp : kres;
 	res = sceKernelUnlockMutex(g_mutexId, 1);
@@ -677,9 +711,9 @@ static int _msIoMkdir(SceIoIob *iob, const char *name, int mode)
 	strncpy(work, name, half);
 	work[half - 1] = '\0';
 	sceKermitMemory_driver_AAF047AC(req, 0, work, strlen(work) + 1u, 1);
-	req->args[1] = (u32)mode;
+	req->argWords[1].lo = (u32)mode;
 
-	u64 resp = 0;
+	u64 resp;
 	int kres = sceKermit_driver_36666181(req, KERMIT_MODE_MSFS, 0xC66, 2, 0, &resp);
 	int cmdRes = (kres == 0) ? (int)resp : kres;
 	res = sceKernelUnlockMutex(g_mutexId, 1);
@@ -705,7 +739,7 @@ static int _msIoRmdir(SceIoIob *iob, const char *name)
 	work[half - 1] = '\0';
 	sceKermitMemory_driver_AAF047AC(req, 0, work, strlen(work) + 1u, 1);
 
-	u64 resp = 0;
+	u64 resp;
 	int kres = sceKermit_driver_36666181(req, KERMIT_MODE_MSFS, 0xC61, 1, 0, &resp);
 	int cmdRes = (kres == 0) ? (int)resp : kres;
 	res = sceKernelUnlockMutex(g_mutexId, 1);
@@ -744,10 +778,9 @@ static int _msIoDread(SceIoIob *iob, void *dir)
 		return res;
 	}
 
-	req->args[0] = (u32)slot->kermitFd;
-	u8 *work1 = (u8 *)g_workBuf;
-	u8 *work2 = work1 + (g_workSize >> 1);
-	typedef struct { u8 data[0x158]; void *d_private; } SceMsfsDirent;
+	req->argWords[0].lo = (u32)slot->kermitFd;
+	u8 *workBase = (u8 *)g_workBuf;
+	SceMsfsDirentPrivate *workPriv = (SceMsfsDirentPrivate *)(workBase + (g_workSize >> 1));
 	void *dPriv = ((SceMsfsDirent *)dir)->d_private;
 
 	if (useOldShortName == 0) {
@@ -772,17 +805,17 @@ static int _msIoDread(SceIoIob *iob, void *dir)
 		}
 	}
 
-	sceKernelMemcpy(work1, dir, 0x160);
+	sceKernelMemcpy(workBase, dir, 0x160);
 	if (dPriv != NULL) {
-		sceKernelMemcpy(work2, dPriv, 0x414);
+		sceKernelMemcpy(workPriv, dPriv, 0x414);
 		if (useOldShortName != 0) {
-			*(u32 *)work2 = 0x414u;
+			workPriv->size = 0x414u;
 		}
-		((SceMsfsDirent *)work1)->d_private = work2;
+		((SceMsfsDirent *)workBase)->d_private = workPriv;
 	}
 
-	sceKermitMemory_driver_AAF047AC(req, 1, work1, 0x160, 3);
-	u64 resp = 0;
+	sceKermitMemory_driver_AAF047AC(req, 1, workBase, 0x160, 3);
+	u64 resp;
 	int kres = sceKermit_driver_36666181(req, KERMIT_MODE_MSFS, 0xC65, 2, 0, &resp);
 	if (kres != 0) {
 		res = sceKernelUnlockMutex(g_mutexId, 1);
@@ -796,17 +829,18 @@ static int _msIoDread(SceIoIob *iob, void *dir)
 	s32 cmdRes = (s32)resp;
 	if (cmdRes > 0) {
 		iob->i_fpos++;
-		((SceMsfsDirent *)work1)->d_private = ((SceMsfsDirent *)dir)->d_private;
-		sceKernelMemcpy(dir, work1, 0x160);
+		((SceMsfsDirent *)workBase)->d_private = ((SceMsfsDirent *)dir)->d_private;
+		sceKernelMemcpy(dir, workBase, 0x160);
 		if (dPriv != NULL) {
 			if (useOldShortName == 0) {
 				if (*(u32 *)dPriv == 0x414u) {
-					sceKernelMemcpy(dPriv, work2, 0x414);
+					sceKernelMemcpy(dPriv, workPriv, 0x414);
 				}
 			} else {
-				memset(dPriv, 0, 0x10D);
-				strncpy((char *)dPriv, (const char *)work2 + 4, 0xD);
-				strncpy((char *)dPriv + 0xD, (const char *)work2 + 0x14, 0x100);
+				SceMsfsOldDirentPrivate *oldPriv = (SceMsfsOldDirentPrivate *)dPriv;
+				memset(oldPriv, 0, sizeof(*oldPriv));
+				strncpy(oldPriv->shortName, workPriv->shortName, sizeof(oldPriv->shortName));
+				strncpy(oldPriv->longName, workPriv->longName, sizeof(oldPriv->longName));
 			}
 		}
 		cmdRes = 1;
@@ -843,7 +877,7 @@ static int _msIoGetstat(SceIoIob *iob, const char *name, void *stat)
 	void *statWork = (u8 *)g_workBuf + (g_workSize >> 1);
 	sceKermitMemory_driver_AAF047AC(req, 1, statWork, 0x58, 2);
 
-	u64 resp = 0;
+	u64 resp;
 	int kres = sceKermit_driver_36666181(req, KERMIT_MODE_MSFS, 0xC69, 2, 0, &resp);
 	int cmdRes = kres;
 	if (kres == 0) {
@@ -890,9 +924,9 @@ static int _msIoChstat(SceIoIob *iob, const char *name, void *stat, int bits)
 	req->cmd = 0xC5D;
 	sceKermitMemory_driver_AAF047AC(req, 0, nameWork, strlen(nameWork) + 1u, 1);
 	sceKermitMemory_driver_AAF047AC(req, 1, statWork, 0x58, 1);
-	req->args[2] = (u32)bits;
+	req->argWords[2].lo = (u32)bits;
 
-	u64 resp = 0;
+	u64 resp;
 	int kres = sceKermit_driver_36666181(req, KERMIT_MODE_MSFS, 0xC5D, 3, 0, &resp);
 	int cmdRes = (kres == 0) ? (int)resp : kres;
 	res = sceKernelUnlockMutex(g_mutexId, 1);
@@ -907,24 +941,24 @@ static int _msIoRename(SceIoIob *iob, const char *oldname, const char *newname)
 	sceKernelDcacheInvalidateRange(aligned, 0x40);
 	SceKermitRequest *req = KERMIT_UNCACHED(aligned);
 	u32 half = g_workSize >> 1;
-	char *work1 = (char *)g_workBuf;
+	char *workOld = (char *)g_workBuf;
 
 	int res = sceKernelLockMutex(g_mutexId, 1, NULL);
 	if (res != 0) {
 		return res;
 	}
 
-	strncpy(work1, oldname, half);
-	work1[half - 1] = '\0';
+	strncpy(workOld, oldname, half);
+	workOld[half - 1] = '\0';
 
-	char *work2 = (char *)g_workBuf + (g_workSize >> 1);
-	strncpy(work2, newname, half);
-	work2[half - 1] = '\0';
+	char *workNew = (char *)g_workBuf + (g_workSize >> 1);
+	strncpy(workNew, newname, half);
+	workNew[half - 1] = '\0';
 
-	sceKermitMemory_driver_AAF047AC(req, 0, work1, strlen(work1) + 1u, 1);
-	sceKermitMemory_driver_AAF047AC(req, 1, work2, strlen(work2) + 1u, 1);
+	sceKermitMemory_driver_AAF047AC(req, 0, workOld, strlen(workOld) + 1u, 1);
+	sceKermitMemory_driver_AAF047AC(req, 1, workNew, strlen(workNew) + 1u, 1);
 
-	u64 resp = 0;
+	u64 resp;
 	int kres = sceKermit_driver_36666181(req, KERMIT_MODE_MSFS, 0xC68, 2, 0, &resp);
 	int cmdRes = (kres == 0) ? (int)resp : kres;
 	res = sceKernelUnlockMutex(g_mutexId, 1);
@@ -950,7 +984,7 @@ static int _msIoChdir(SceIoIob *iob, const char *name)
 	work[half - 1] = '\0';
 	sceKermitMemory_driver_AAF047AC(req, 0, work, strlen(work) + 1u, 1);
 
-	u64 resp = 0;
+	u64 resp;
 	int kres = sceKermit_driver_36666181(req, KERMIT_MODE_MSFS, 0xC6D, 1, 0, &resp);
 	int cmdRes = (kres == 0) ? (int)resp : kres;
 	res = sceKernelUnlockMutex(g_mutexId, 1);
@@ -1048,7 +1082,7 @@ static int _msIoInit(SceIoDeviceEntry *de)
 	SceKermitRequest *req = KERMIT_UNCACHED(aligned);
 
 	sceKermitMemory_driver_AAF047AC(req, 0, de, 0xC, 3);
-	u64 resp = 0;
+	u64 resp;
 	int res = sceKermit_driver_36666181(req, KERMIT_MODE_MSFS, 0xC63, 1, 0, &resp);
 	if (res != 0) {
 		return res;
@@ -1066,7 +1100,7 @@ static int _msIoExit(SceIoDeviceEntry *de)
 	SceKermitRequest *req = KERMIT_UNCACHED(aligned);
 
 	sceKermitMemory_driver_AAF047AC(req, 0, de, 0xC, 3);
-	u64 resp = 0;
+	u64 resp;
 	int res = sceKermit_driver_36666181(req, KERMIT_MODE_MSFS, 0xC6E, 1, 0, &resp);
 	if (res != 0) {
 		return res;
@@ -1125,14 +1159,15 @@ static int _msRegisterCallbackDevctl(SceIoIob *iob, const SceUID *indata, SceSiz
 		return 0x80010016;
 	}
 
-	void *cbBlock = NULL;
-	if (sceKernelGetUIDcontrolBlock(*indata, &cbBlock) != 0) {
+	void *cbRaw;
+	if (sceKernelGetUIDcontrolBlock(*indata, &cbRaw) != 0) {
 		return 0x80010016;
 	}
 
+	SceUidControlBlock *cbBlock = (SceUidControlBlock *)cbRaw;
 	u32 allowed = 2;
 	if ((pspGetK1() >> 31) != 0) {
-		allowed = *(u16 *)((u8 *)cbBlock + 0x16) & 2u;
+		allowed = cbBlock->attr & 2u;
 	}
 	if (allowed == 0) {
 		return 0x80010016;
@@ -1146,14 +1181,15 @@ static int _msUnregisterCallbackDevctl(SceIoIob *iob, const SceUID *indata, SceS
 		return 0x80010016;
 	}
 
-	void *cbBlock = NULL;
-	if (sceKernelGetUIDcontrolBlock(*indata, &cbBlock) != 0) {
+	void *cbRaw;
+	if (sceKernelGetUIDcontrolBlock(*indata, &cbRaw) != 0) {
 		return 0x80010016;
 	}
 
+	SceUidControlBlock *cbBlock = (SceUidControlBlock *)cbRaw;
 	u32 allowed = 2;
 	if ((pspGetK1() >> 31) != 0) {
-		allowed = *(u16 *)((u8 *)cbBlock + 0x16) & 2u;
+		allowed = cbBlock->attr & 2u;
 	}
 	if (allowed == 0) {
 		return 0x80010016;
@@ -1203,41 +1239,35 @@ static int _msOpenInternal(SceIoIob *iob, const char *file, int flags, int mode,
 	u32 half = g_workSize >> 1;
 	char *work = (char *)g_workBuf;
 	int res = sceKernelLockMutex(g_mutexId, 1, NULL);
-	if (res != 0) {
-		goto fail;
-	}
+	if (res == 0) {
+		strncpy(work, file, half);
+		work[half - 1] = '\0';
+		sceKermitMemory_driver_AAF047AC(req, 0, work, strlen(work) + 1u, 1);
+		req->argWords[1].lo = (u32)flags;
+		req->argWords[2].lo = (u32)mode;
+		req->argWords[3].lo = syscallRa;
 
-	strncpy(work, file, half);
-	work[half - 1] = '\0';
-	sceKermitMemory_driver_AAF047AC(req, 0, work, strlen(work) + 1u, 1);
-	req->args[1] = (u32)flags;
-	req->args[2] = (u32)mode;
-	req->args[3] = syscallRa;
-
-	u64 resp = 0;
-	res = sceKermit_driver_36666181(req, KERMIT_MODE_MSFS, cmd, 4, 0, &resp);
-	if (res != 0) {
-		int ures = sceKernelUnlockMutex(g_mutexId, 1);
-		if (ures != 0) {
-			res = ures;
+		u64 resp;
+		res = sceKermit_driver_36666181(req, KERMIT_MODE_MSFS, cmd, 4, 0, &resp);
+		if (res != 0) {
+			int ures = sceKernelUnlockMutex(g_mutexId, 1);
+			if (ures != 0) {
+				res = ures;
+			}
+		} else {
+			int kermitFd = (int)resp;
+			slot->kermitFd = kermitFd;
+			res = sceKernelUnlockMutex(g_mutexId, 1);
+			if (res == 0) {
+				sceKernelUnlockMutex(slot->mutexId, 1);
+				if (kermitFd >= 0) {
+					return kermitFd;
+				}
+				res = kermitFd;
+			}
 		}
-		goto fail;
 	}
 
-	int fd = (int)resp;
-	slot->kermitFd = fd;
-	res = sceKernelUnlockMutex(g_mutexId, 1);
-	if (res != 0) {
-		goto fail;
-	}
-
-	sceKernelUnlockMutex(slot->mutexId, 1);
-	if (fd >= 0) {
-		return fd;
-	}
-	res = fd;
-
-fail:
 	sceKernelDeleteMutex(mtx);
 	intr = sceKernelCpuSuspendIntr();
 	iob->i_private = NULL;
@@ -1270,13 +1300,13 @@ static int _msKermitDevctl(const char *dev, u32 cmd, const void *indata, u32 inl
 
 	req->cmd = 0xC60;
 	sceKermitMemory_driver_AAF047AC(req, 0, workDev, strlen(workDev) + 1u, 1);
-	req->args[1] = cmd;
+	req->argWords[1].lo = cmd;
 	sceKermitMemory_driver_AAF047AC(req, 2, workIn, inlen, 1);
-	req->args[3] = inlen;
+	req->argWords[3].lo = inlen;
 	sceKermitMemory_driver_AAF047AC(req, 4, workOut, outlen, 2);
-	req->args[5] = outlen;
+	req->argWords[5].lo = outlen;
 
-	u64 resp = 0;
+	u64 resp;
 	int kres = sceKermit_driver_36666181(req, KERMIT_MODE_MSFS, 0xC60, 6, 0, &resp);
 	if (kres == 0) {
 		kres = (int)resp;
@@ -1344,18 +1374,18 @@ static int _msQueryFreeSpace(u32 *info)
 	s32 secCount = (s32)info[4];
 	s64 clusterBytes = (s64)secCount * (s64)secSize;
 
-	s64 total0 = (s64)(u64)info[0] * clusterBytes;
-	if (total0 > 0x7FFFFFFFLL || total0 < 0) {
+	s64 totalBytes = (s64)(u64)info[0] * clusterBytes;
+	if (totalBytes > 0x7FFFFFFFLL || totalBytes < 0) {
 		info[0] = (u32)(0x7FFFFFFF / (secCount * secSize));
 	}
 
-	s64 total1 = (s64)(u64)info[1] * clusterBytes;
-	if (total1 > 0x7FFFFFFFLL || total1 < 0) {
+	s64 freeBytes = (s64)(u64)info[1] * clusterBytes;
+	if (freeBytes > 0x7FFFFFFFLL || freeBytes < 0) {
 		info[1] = (u32)(0x7FFFFFFF / (secCount * secSize));
 	}
 
-	s64 total2 = (s64)(u64)info[2] * clusterBytes;
-	if (total2 > 0x7FFFFFFFLL || total2 < 0) {
+	s64 availBytes = (s64)(u64)info[2] * clusterBytes;
+	if (availBytes > 0x7FFFFFFFLL || availBytes < 0) {
 		info[2] = (u32)(0x7FFFFFFF / (secCount * secSize));
 	}
 
@@ -1434,13 +1464,14 @@ static int _msSendCloseReq(SceIoIob *iob, u32 cmd)
 		do {
 			res = sceKernelReceiveMsgPipe(g_closeResPipeId, &reply, sizeof(reply), 0, NULL, NULL);
 			if (res < 0) {
-				goto out;
+				break;
 			}
 		} while (reply.tag != req.tag);
-		res = reply.result;
+		if (res >= 0) {
+			res = reply.result;
+		}
 	}
 
-out:
 	sceKernelUnlockMutex(g_closeMutexId, 1);
 	return res;
 }
