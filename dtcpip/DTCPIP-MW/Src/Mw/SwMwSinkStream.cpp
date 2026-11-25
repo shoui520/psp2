@@ -218,7 +218,7 @@ extern "C" struct SwMwSinkStream *SwMwSinkStreamConstruct(struct SwMwSinkStream 
 	stream->downloader = NULL;
 	stream->reader = NULL;
 	SwMwStreamEventConstruct(&stream->event);
-	stream->content = NULL;
+	stream->manager = NULL;
 	stream->receiveChunks = NULL;
 	stream->receiveCount = 0;
 	stream->receiveIndex = 0;
@@ -234,7 +234,7 @@ extern "C" struct SwMwSinkStream *SwMwSinkStreamConstruct(struct SwMwSinkStream 
 	stream->sendingMessage = 0;
 	stream->receiving = 0;
 	stream->parameterBusy = 0;
-	stream->aborted = 0;
+	stream->endOfStream = 0;
 	stream->empty = 0;
 	stream->finished = 0;
 	stream->connected = 0;
@@ -279,7 +279,7 @@ extern "C" int SwMwSinkStreamInit(struct SwMwSinkStream *stream, void *sink,
 
 	stream->sink = (int)sink;
 	stream->window = *window;
-	stream->content = (void *)SwMwCoreContentManager(*(int *)stream->sink);
+	stream->manager = (struct SwMwContentManager *)SwMwCoreContentManager(*(int *)stream->sink);
 	memset(stream->connectData, 0, 8);
 	status = SwMwSinkStreamMutexCreate(&stream->mutex);
 	failed = 0;

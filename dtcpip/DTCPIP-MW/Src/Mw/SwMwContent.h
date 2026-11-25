@@ -76,6 +76,19 @@ struct SwMwTransfer {
 	virtual int startMove(int value);		/* 0x40 */
 };
 
+/* the SWS transfer's other interface: its dispatch table's negative words name the
+ * offsets of the object's interfaces (the downloader class keeps them zero). A use site
+ * writes the adjustment out: transfer + transfer->table[-word]. */
+
+/* the SWS content manager the core keeps behind a device: only its release of a transfer
+ * object (dispatch slot +0x0c) is evidenced */
+struct SwMwContentManager {
+	virtual void destroy();					/* 0x00 */
+	virtual void dispose();					/* 0x04 */
+	virtual int size();					/* 0x08 */
+	virtual int releaseTransfer(struct SwMwTransfer *transfer);	/* 0x0c */
+};
+
 /* the content object (14 dispatch slots, in table order) */
 struct SwMwContent {
 	virtual ~SwMwContent();					/* 0x00/0x04 */

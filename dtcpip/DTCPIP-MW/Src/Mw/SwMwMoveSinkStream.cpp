@@ -41,7 +41,7 @@ extern "C" struct SwMwSinkStream *SwMwMoveSinkStreamConstruct(struct SwMwSinkStr
 	stream->downloader = NULL;
 	stream->reader = NULL;
 	SwMwMoveStreamEventConstruct(&stream->event);
-	stream->content = NULL;
+	stream->manager = NULL;
 	stream->receiveChunks = NULL;
 	stream->receiveCount = 0;
 	stream->receiveIndex = 0;
@@ -57,7 +57,7 @@ extern "C" struct SwMwSinkStream *SwMwMoveSinkStreamConstruct(struct SwMwSinkStr
 	stream->sendingMessage = 0;
 	stream->receiving = 0;
 	stream->parameterBusy = 0;
-	stream->aborted = 0;
+	stream->endOfStream = 0;
 	stream->empty = 0;
 	stream->finished = 0;
 	stream->connected = 0;
@@ -137,6 +137,59 @@ extern "C" int SwMwMoveSinkStreamPoll(struct SwMwSinkStream *stream)
 	return status;
 }
 
+/* end the transfer: release its pending bytes and reset it (0x8100a936) */
+extern "C" int SwMwMoveSinkStreamAbort(struct SwMwSinkStream *stream)
+{
+	int status;
+
+	SwMwMoveSinkStreamMutexLock(&stream->mutex);
+	if (stream->endOfStream != 0) {
+		status = 0;
+	} else if (stream->sending != 0 || stream->sendingMessage != 0) {
+		status = 12007;
+	} else if (stream->downloader == NULL) {
+		status = 12004;
+	} else {
+		stream->endOfStream = 1;
+		if (stream->sendHave != 0) {
+			stream->sendHave = 0;
+			stream->downloader->release(stream->sendConsumed);
+			stream->sendTotal += stream->sendConsumed;
+		}
+		swMwTrace("sw mw:MoveSinkStreamSetEOS: %d bytes written\n", stream->sendTotal);
+		((struct SwMwTransfer *)((unsigned char *)stream->downloader +
+					  (*(int **)(void *)stream->downloader)[-10]))->reset();
+		status = 0;
+	}
+	SwMwMoveSinkStreamMutexUnlock(&stream->mutex);
+	return status;
+}
+
+/* destroy the move stream: release its transfer, flush the sink's move and free it (0x8100a252) */
+extern "C" int SwMwMoveSinkStreamDestroy(struct SwMwSinkStream *stream)
+{
+	struct SwMwMoveSink *sink;
+	int status;
+
+	if (stream == NULL)
+		swMwTrace("[SWMW] Assertion Failed in %s:%d\n", SWMW_MOVESTREAM_SOURCE, 225);
+	if (stream != NULL) {
+		sink = (struct SwMwMoveSink *)stream->sink;
+		if (stream->downloader != NULL)
+			stream->manager->releaseTransfer(
+				(struct SwMwTransfer *)((unsigned char *)stream->downloader +
+					(*(int **)(void *)stream->downloader)[-13]));
+		if (sink->result != 0) {
+			status = sink->content->operation(&sink->uri, &sink->result);
+			sink->result = 0;
+			if (status != 0)
+				swMwTrace("[SWMW] ERROR in %s:%d\n", SWMW_MOVESTREAM_SOURCE, 239);
+		}
+		::operator delete(SwMwMoveSinkStreamDestruct(stream));
+	}
+	return 0;
+}
+
 /* the stream's gate (0x8100b7ea) */
 extern "C" struct SwMwGate *SwMwMoveSinkStreamGate(struct SwMwSinkStream *stream)
 {
@@ -159,7 +212,7 @@ extern "C" int SwMwMoveSinkStreamInit(struct SwMwSinkStream *stream, void *sink,
 
 	stream->sink = (int)sink;
 	stream->window = *window;
-	stream->content = (void *)SwMwCoreContentManager(*(int *)stream->sink);
+	stream->manager = (struct SwMwContentManager *)SwMwCoreContentManager(*(int *)stream->sink);
 	memset(stream->connectData, 0, 8);
 	status = SwMwMutexCreate(&stream->mutex);
 	failed = 0;

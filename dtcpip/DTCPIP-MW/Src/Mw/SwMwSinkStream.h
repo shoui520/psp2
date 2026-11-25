@@ -56,7 +56,7 @@ struct SwMwSinkStream {
 	struct SwMwStreamWindow window;	/* 0x014: the shared-memory windows */
 	struct SwMwStreamEvent event;	/* 0x02C: the reader's event object */
 	unsigned char work[0x498];	/* 0x040: the reader's work area */
-	void *content;			/* 0x4D8: the content manager */
+	struct SwMwContentManager *manager;	/* 0x4D8: the content manager */
 	struct SwMwStreamChunk *receiveChunks;	/* 0x4DC */
 	int receiveCount;		/* 0x4E0 */
 	int receiveIndex;		/* 0x4E4 */
@@ -73,7 +73,7 @@ struct SwMwSinkStream {
 	int sendingMessage;		/* 0x52C: a message send is in flight */
 	int receiving;			/* 0x530: a receive is in flight */
 	int parameterBusy;		/* 0x534: a parameter set is in flight */
-	int aborted;			/* 0x538 */
+	int endOfStream;		/* 0x538 */
 	int empty;			/* 0x53C */
 	int finished;			/* 0x540 */
 	int connected;			/* 0x544 */
