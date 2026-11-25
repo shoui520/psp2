@@ -24,7 +24,7 @@ extern int sceKernelStartThread(SceUID thid, SceSize arglen, void *argp);
 extern int sceKernelWaitThreadEnd(SceUID thid, SceUInt *timeout);
 extern int sceKernelTerminateDeleteThread(SceUID thid);
 
-extern int sceCertLoader_DD629A24(int a0, int a1, void ***out_list, void *buf, int buf_size, int *out_size);
+extern int sceCertLoader_DD629A24(int certType, int flags, void ***out_list, void *buf, int buf_size, int *out_size);
 
 extern int sceDNASCore_lib_15096ECD(char *host);
 extern int sceDNASCore_lib_2370130E(void);
@@ -37,7 +37,7 @@ extern int sceDNASCore_lib_8309549E(const void *buf, int len);
 extern int sceDNASCore_lib_B6C76A14(char *redirect_buf);
 extern int sceDNASCore_lib_BA0A32CA(void);
 extern int sceDNASCore_lib_BA0D27F8(void);
-extern int sceDNASCore_lib_BF6A7475(void *arg0);
+extern int sceDNASCore_lib_BF6A7475(void *authData);
 extern int sceDNASCore_lib_C54657B7(const void *buf, int len);
 extern int sceDNASCore_lib_D5E80301(void);
 extern int sceDNASCore_lib_DA5939B4(void *buf, int len);
@@ -62,17 +62,17 @@ extern int sceNetResolverStartNtoA(int rid, const char *hostname, uint32_t *addr
 extern int sceNetResolverStop(int rid);
 extern int sceNetResolverDelete(int rid);
 
-extern char *sceNet_lib_9CFBC7E3(char *dst, const char *src, unsigned int n);
-extern char *sceNet_lib_A0F16ABD(char *dst, const char *src);
+extern int sceNet_lib_9CFBC7E3(const char *lhs, const char *rhs);
+extern int sceNet_lib_A0F16ABD(const char *lhs, const char *rhs);
 extern char *sceNet_lib_BCBE14CF(const char *s, int c);
-extern int sceNet_lib_D8722983(const char *s1, const char *s2);
+extern int sceNet_lib_D8722983(const char *str);
 
 extern void *sceSsl_lib_0861D934(unsigned int size);
 extern int sceSsl_lib_0FF7BA68(void *cert, void *pubkey);
 extern void *sceSsl_lib_12C7718F(void *cert);
 extern void *sceSsl_lib_28B4DE33(int sock, int close_flag);
-extern const char *sceSsl_lib_2B7BD166(int nid1, int nid2, int flags);
-extern void sceSsl_lib_37C7B76C(void *cert, void *a1, int *out_count);
+extern const char *sceSsl_lib_2B7BD166(int oidLen, int oidPtr, int flags);
+extern void sceSsl_lib_37C7B76C(void *cert, void *extFlags, int *out_count);
 extern void sceSsl_lib_3E3133D6(void *ssl);
 extern void *sceSsl_lib_4BE9030A(void *cert);
 extern int sceSsl_lib_4C75B8E9(void *name);
@@ -81,25 +81,25 @@ extern void sceSsl_lib_529A9477(void *ssl_ctx, int (*cb)(int, void **, int, void
 extern void sceSsl_lib_54A7D8F3(void *ssl);
 extern void sceSsl_lib_588F2FE8(void *ssl_ctx);
 extern void sceSsl_lib_5E5C873A(void *ptr);
-extern void *sceSsl_lib_6038DEDE(void *a0, void **der_ptr, int der_len);
+extern void *sceSsl_lib_6038DEDE(void *outCert, void **der_ptr, int der_len);
 extern int sceSsl_lib_69F1B678(void *ssl, void *ssl_session);
-extern int sceSsl_lib_7D0E41F4(void *name1, void *name2);
+extern int sceSsl_lib_7D0E41F4(void *nameLhs, void *nameRhs);
 extern void sceSsl_lib_80608663(void *ssl);
 extern void sceSsl_lib_84833472(void *ssl);
 extern void sceSsl_lib_86D0771E(void *ssl_session);
-extern int sceSsl_lib_8D484361(void *entry, int a1, int *out_nid1, int *out_nid2, void *a4, void **out_data, int *out_len);
-extern int sceSsl_lib_9299C6CE(void *cert, void *a1, void **out_ptr, int *out_count);
+extern int sceSsl_lib_8D484361(void *entry, int idx, int *outOidLen, int *outOidPtr, void *outType, void **out_data, int *out_len);
+extern int sceSsl_lib_9299C6CE(void *cert, void *outCrit, void **out_ptr, int *out_count);
 extern void sceSsl_lib_AEBF278B(void *ssl_ctx, int depth, void *arg);
 extern int sceSsl_lib_B3B04C58(void *ssl, int ret);
 extern void *sceSsl_lib_B40D11EA(void);
-extern void sceSsl_lib_B4D78E98(void *ssl_ctx, int a1, unsigned int a2, int a3);
+extern void sceSsl_lib_B4D78E98(void *ssl_ctx, int optKind, unsigned int optMask, int optVal);
 extern int sceSsl_lib_B7CA8717(void *ssl, const void *buf, int len);
 extern void *sceSsl_lib_B87FFE37(void *cert);
 extern void sceSsl_lib_B9C8CCE6(void *ssl, void *rbio, void *wbio);
 extern void sceSsl_lib_BDAD0841(void *ssl_session);
 extern void sceSsl_lib_BF55C31C(void *ssl_ctx, int mode);
 extern void sceSsl_lib_C1A2E14B(void *cert);
-extern int sceSsl_lib_CFA2F8EB(void *cert, void *a1, int *out_pathlen, int *out_isca);
+extern int sceSsl_lib_CFA2F8EB(void *cert, void *outCrit, int *out_pathlen, int *out_isca);
 extern int sceSsl_lib_E7C29542(void *ssl, void *buf, int len);
 extern void *sceSsl_lib_EBFB0E3C(void *ssl_ctx);
 extern void *sceSsl_lib_EF5A4BD4(void *ssl);
@@ -201,7 +201,7 @@ static void *g_root_certs[5];      /* 0x4060 */
 static uint8_t g_io_buf[0x400];    /* 0x4074 */
 
 /* === sceDNAS_lib_0D560144 @ 0x0000 === */
-int sceDNAS_lib_0D560144(void *arg0, int prio)
+int sceDNAS_lib_0D560144(void *initArg, int prio)
 {
     int ret = 0;
 
@@ -214,44 +214,40 @@ int sceDNAS_lib_0D560144(void *arg0, int prio)
     g_ctx.ssl_ctx = NULL;
     g_ctx.sock = -1;
     g_ctx.rid = -1;
-    g_ctx.init_arg = arg0;
+    g_ctx.init_arg = initArg;
 
-    ret = dnasSslInit(&g_ctx);
-    if (ret < 0) {
-        goto fail;
-    }
+    do {
+        ret = dnasSslInit(&g_ctx);
+        if (ret < 0)
+            break;
 
-    ret = sceKernelCreateEventFlag("SceDNASInternal", 0x200, 0, NULL);
-    if (ret < 0) {
-        goto fail;
-    }
-    g_ctx.ef_int = ret;
+        ret = sceKernelCreateEventFlag("SceDNASInternal", 0x200, 0, NULL);
+        if (ret < 0)
+            break;
+        g_ctx.ef_int = ret;
 
-    ret = sceKernelCreateEventFlag("SceDNASExternal", 0, 0, NULL);
-    if (ret < 0) {
-        goto fail;
-    }
-    g_ctx.ef_ext = ret;
+        ret = sceKernelCreateEventFlag("SceDNASExternal", 0, 0, NULL);
+        if (ret < 0)
+            break;
+        g_ctx.ef_ext = ret;
 
-    ret = sceKernelCreateThread("SceDNAS", dnasWorkerThread, prio, 0x1c00, 0, NULL);
-    if (ret < 0) {
-        goto fail;
-    }
-    g_ctx.thid = ret;
+        ret = sceKernelCreateThread("SceDNAS", dnasWorkerThread, prio, 0x1c00, 0, NULL);
+        if (ret < 0)
+            break;
+        g_ctx.thid = ret;
 
-    {
-        DnasContext *ctx_ptr = &g_ctx;
-        ret = sceKernelStartThread(g_ctx.thid, 4, &ctx_ptr);
-    }
-    if (ret < 0) {
-        goto fail;
-    }
+        {
+            DnasContext *ctx_ptr = &g_ctx;
+            ret = sceKernelStartThread(g_ctx.thid, 4, &ctx_ptr);
+        }
+        if (ret < 0)
+            break;
 
-    ret = sceDNASCore_lib_2B6C67EA();
-    g_initialized = 1;
-    return ret;
+        ret = sceDNASCore_lib_2B6C67EA();
+        g_initialized = 1;
+        return ret;
+    } while (0);
 
-fail:
     if (g_ctx.thid >= 0) {
         sceNetFreeThreadinfo(g_ctx.thid);
         sceKernelTerminateDeleteThread(g_ctx.thid);
@@ -401,9 +397,9 @@ int sceDNAS_lib_A646E771(int *out_state, int *out_error)
 }
 
 /* === sceDNAS_lib_6929100C @ 0x0890 === */
-int sceDNAS_lib_6929100C(void *arg0)
+int sceDNAS_lib_6929100C(void *authData)
 {
-    return sceDNASCore_lib_BF6A7475(arg0);
+    return sceDNASCore_lib_BF6A7475(authData);
 }
 
 /* === dnasResetConnState @ 0x08c8 === */
@@ -669,74 +665,73 @@ static int dnasTcpConnect(DnasContext *ctx)
     unsigned int flag;
     int retry;
 
-    if (ctx->sock > 0) {
-        ret = 0x80530106;
-        goto fail;
-    }
+    do {
+        if (ctx->sock > 0) {
+            ret = 0x80530106;
+            break;
+        }
 
-    if (ctx->has_resolved == 0) {
-        addr = (uint32_t)sceNetInetInetAddr(ctx->host);
-        if (addr == 0xffffffffU) {
-            ret = sceNetResolverCreate(&ctx->rid, g_resolver_buf, sizeof(g_resolver_buf));
-            if (ret < 0) {
-                goto fail;
+        if (ctx->has_resolved == 0) {
+            addr = (uint32_t)sceNetInetInetAddr(ctx->host);
+            if (addr == 0xffffffffU) {
+                ret = sceNetResolverCreate(&ctx->rid, g_resolver_buf, sizeof(g_resolver_buf));
+                if (ret < 0)
+                    break;
+                ret = dnasCheckStopOrAbort(ctx, &flag, 0);
+                if (ret < 0) {
+                    sceNetResolverDelete(ctx->rid);
+                    ctx->rid = -1;
+                    break;
+                }
+                if (flag == 4 || flag == 2) {
+                    ret = 0x80530190;
+                    sceNetResolverDelete(ctx->rid);
+                    ctx->rid = -1;
+                    break;
+                }
+                ret = sceNetResolverStartNtoA(ctx->rid, ctx->host, (uint32_t *)&ctx->sin[4], 3000000, 5);
+                sceNetResolverDelete(ctx->rid);
+                ctx->rid = -1;
+                if (ret < 0)
+                    break;
+            } else {
+                sceKernelMemcpy(&ctx->sin[4], &addr, 4);
+            }
+            ctx->sin[1] = 2;
+            {
+                uint16_t net_port = dnasHtons(ctx->port);
+                sceKernelMemcpy(&ctx->sin[2], &net_port, 2);
+            }
+            ctx->has_resolved = 1;
+        }
+
+        for (retry = 0; retry < 5; retry++) {
+            ctx->sock = sceNetInetSocket(2, 1, 0);
+            if (ctx->sock <= 0) {
+                ret = ctx->sock;
+                break;
             }
             ret = dnasCheckStopOrAbort(ctx, &flag, 0);
             if (ret < 0) {
-                sceNetResolverDelete(ctx->rid);
-                ctx->rid = -1;
-                goto fail;
+                dnasCloseSocket(ctx);
+                break;
             }
             if (flag == 4 || flag == 2) {
                 ret = 0x80530190;
-                sceNetResolverDelete(ctx->rid);
-                ctx->rid = -1;
-                goto fail;
+                dnasCloseSocket(ctx);
+                break;
             }
-            ret = sceNetResolverStartNtoA(ctx->rid, ctx->host, (uint32_t *)&ctx->sin[4], 3000000, 5);
-            sceNetResolverDelete(ctx->rid);
-            ctx->rid = -1;
-            if (ret < 0) {
-                goto fail;
+            if (sceNetInetConnect(ctx->sock, ctx->sin, 16) == 0) {
+                return 0;
             }
-        } else {
-            sceKernelMemcpy(&ctx->sin[4], &addr, 4);
-        }
-        ctx->sin[1] = 2;
-        {
-            uint16_t net_port = dnasHtons(ctx->port);
-            sceKernelMemcpy(&ctx->sin[2], &net_port, 2);
-        }
-        ctx->has_resolved = 1;
-    }
-
-    for (retry = 0; retry < 5; retry++) {
-        ctx->sock = sceNetInetSocket(2, 1, 0);
-        if (ctx->sock <= 0) {
-            ret = ctx->sock;
-            break;
-        }
-        ret = dnasCheckStopOrAbort(ctx, &flag, 0);
-        if (ret < 0) {
+            ret = sceNetInet_8CA3A97E();
             dnasCloseSocket(ctx);
-            break;
+            if (ret != (int)0x8001006f) {
+                break;
+            }
         }
-        if (flag == 4 || flag == 2) {
-            ret = 0x80530190;
-            dnasCloseSocket(ctx);
-            break;
-        }
-        if (sceNetInetConnect(ctx->sock, ctx->sin, 16) == 0) {
-            return 0;
-        }
-        ret = sceNetInet_8CA3A97E();
-        dnasCloseSocket(ctx);
-        if (ret != (int)0x8001006f) {
-            break;
-        }
-    }
+    } while (0);
 
-fail:
     ctx->has_resolved = 0;
     return ret;
 }
@@ -821,36 +816,37 @@ static int dnasSslSetup(DnasContext *ctx)
     int ret = 0;
     void *bio;
 
-    if (ctx->ssl != NULL && ctx->ssl_session != NULL) {
-        ret = sceSsl_lib_69F1B678(ctx->ssl, ctx->ssl_session);
-        if (ret != 1) {
+    do {
+        if (ctx->ssl != NULL && ctx->ssl_session != NULL) {
+            ret = sceSsl_lib_69F1B678(ctx->ssl, ctx->ssl_session);
+            if (ret != 1) {
+                dnasSslCleanup(ctx);
+                ctx->ssl = sceSsl_lib_EBFB0E3C(ctx->ssl_ctx);
+                if (ctx->ssl == NULL) {
+                    ret = 0x80530104;
+                    break;
+                }
+            }
+        } else {
             dnasSslCleanup(ctx);
             ctx->ssl = sceSsl_lib_EBFB0E3C(ctx->ssl_ctx);
             if (ctx->ssl == NULL) {
                 ret = 0x80530104;
-                goto fail;
+                break;
             }
         }
-    } else {
-        dnasSslCleanup(ctx);
-        ctx->ssl = sceSsl_lib_EBFB0E3C(ctx->ssl_ctx);
-        if (ctx->ssl == NULL) {
+
+        bio = sceSsl_lib_28B4DE33(ctx->sock, 0);
+        if (bio == NULL) {
             ret = 0x80530104;
-            goto fail;
+            break;
         }
-    }
 
-    bio = sceSsl_lib_28B4DE33(ctx->sock, 0);
-    if (bio == NULL) {
-        ret = 0x80530104;
-        goto fail;
-    }
+        sceSsl_lib_B9C8CCE6(ctx->ssl, bio, bio);
+        sceSsl_lib_80608663(ctx->ssl);
+        return ret;
+    } while (0);
 
-    sceSsl_lib_B9C8CCE6(ctx->ssl, bio, bio);
-    sceSsl_lib_80608663(ctx->ssl);
-    return ret;
-
-fail:
     if (ctx->ssl != NULL) {
         dnasSslCleanup(ctx);
     }
@@ -862,39 +858,35 @@ static int dnasOpenHttpsConn(DnasContext *ctx)
 {
     int ret = 0;
 
-    ret = dnasLoadProxyConfig(ctx);
-    if (ret < 0) {
-        goto fail;
-    }
+    do {
+        ret = dnasLoadProxyConfig(ctx);
+        if (ret < 0)
+            break;
 
-    if (ctx->use_proxy == 0) {
-        ctx->port = 443;
-        ret = sceDNASCore_lib_15096ECD(ctx->host);
-        if (ret < 0) {
-            goto fail;
+        if (ctx->use_proxy == 0) {
+            ctx->port = 443;
+            ret = sceDNASCore_lib_15096ECD(ctx->host);
+            if (ret < 0)
+                break;
         }
-    }
 
-    ret = dnasTcpConnect(ctx);
-    if (ret < 0) {
-        goto fail;
-    }
+        ret = dnasTcpConnect(ctx);
+        if (ret < 0)
+            break;
 
-    if (ctx->use_proxy != 0) {
-        ret = dnasProxyConnect(ctx);
-        if (ret < 0) {
-            goto fail;
+        if (ctx->use_proxy != 0) {
+            ret = dnasProxyConnect(ctx);
+            if (ret < 0)
+                break;
         }
-    }
 
-    ret = dnasSslSetup(ctx);
-    if (ret < 0) {
-        goto fail;
-    }
+        ret = dnasSslSetup(ctx);
+        if (ret < 0)
+            break;
 
-    return ret;
+        return ret;
+    } while (0);
 
-fail:
     dnasCloseSocket(ctx);
     return ret;
 }
@@ -932,9 +924,9 @@ static int dnasVerifyCommonName(void *subj, const char *expected_cn)
     int i;
     int j;
     void *entry;
-    int nid1;
-    int nid2;
-    int dummy_a8;
+    int oidLen;
+    int oidPtr;
+    int attrType;
     void *val_ptr;
     int val_len;
     const char *attr_name;
@@ -947,17 +939,17 @@ static int dnasVerifyCommonName(void *subj, const char *expected_cn)
 
     for (i = 0; i < count; i++) {
         entry = sceSsl_lib_5040E836(subj, i);
-        if (sceSsl_lib_8D484361(entry, 0, &nid1, &nid2, &dummy_a8, &val_ptr, &val_len) != 0) {
-            attr_name = sceSsl_lib_2B7BD166(nid1, nid2, 0);
+        if (sceSsl_lib_8D484361(entry, 0, &oidLen, &oidPtr, &attrType, &val_ptr, &val_len) != 0) {
+            attr_name = sceSsl_lib_2B7BD166(oidLen, oidPtr, 0);
             if (attr_name == NULL) {
                 attr_name = "<UNKNOWN>";
             }
-            if (sceNet_lib_A0F16ABD((char *)attr_name, "commonName") == 0) {
+            if (sceNet_lib_A0F16ABD(attr_name, "commonName") == 0) {
                 if (val_len < 0x7f) {
                     sceKernelMemcpy(cn_buf, val_ptr, (SceSize)val_len);
                     cn_buf[val_len] = '\0';
-                    if (sceNet_lib_D8722983(expected_cn, NULL) == val_len) {
-                        if (sceNet_lib_9CFBC7E3(cn_buf, expected_cn, 0) == NULL) {
+                    if (sceNet_lib_D8722983(expected_cn) == val_len) {
+                        if (sceNet_lib_9CFBC7E3(cn_buf, expected_cn) == 0) {
                             matched = 1;
                         }
                     }
@@ -979,17 +971,18 @@ static int dnasSslVerifyCallback(int preverify_ok, void **cert_chain, int chain_
     int depth;
     int i;
     int k;
+    int foundRoot = 0;
     void *subj;
     void *root_subj;
     void *issuer;
     void *pubkey;
-    uint32_t dummy_ac;
+    uint32_t basicConstraintsCrit;
     int pathlen = 10;
     int is_ca;
     int ext_count;
     void *ext_ptr;
-    int dummy_d4;
-    int dummy_b8;
+    int extValCrit;
+    int extFlags;
     char expected_cn[0x80];
     (void)preverify_ok;
 
@@ -1004,7 +997,7 @@ static int dnasSslVerifyCallback(int preverify_ok, void **cert_chain, int chain_
     }
 
     for (depth = 0; depth < chain_len; depth++) {
-        if (sceSsl_lib_9299C6CE(cert_chain[depth], &dummy_d4, &ext_ptr, &ext_count) != 0) {
+        if (sceSsl_lib_9299C6CE(cert_chain[depth], &extValCrit, &ext_ptr, &ext_count) != 0) {
             if (ext_ptr != NULL) {
                 sceSsl_lib_5E5C873A(ext_ptr);
                 ext_ptr = NULL;
@@ -1014,7 +1007,7 @@ static int dnasSslVerifyCallback(int preverify_ok, void **cert_chain, int chain_
         if (subj == NULL) {
             *alert = 2;
         }
-        sceSsl_lib_37C7B76C(cert_chain[depth], &dummy_b8, &ext_count);
+        sceSsl_lib_37C7B76C(cert_chain[depth], &extFlags, &ext_count);
     }
 
     subj = sceSsl_lib_12C7718F(cert_chain[0]);
@@ -1026,16 +1019,19 @@ static int dnasSslVerifyCallback(int preverify_ok, void **cert_chain, int chain_
         }
     }
 
-    for (depth = 0; ; depth++) {
+    for (depth = 0; !foundRoot; depth++) {
         subj = sceSsl_lib_4BE9030A(cert_chain[depth]);
         for (i = 0; i < g_root_cert_count; i++) {
             root_subj = sceSsl_lib_4BE9030A(g_root_certs[i]);
             if (subj != NULL && root_subj != NULL) {
                 if (sceSsl_lib_7D0E41F4(root_subj, subj) == 0) {
-                    goto found_root;
+                    foundRoot = 1;
+                    break;
                 }
             }
         }
+        if (foundRoot)
+            break;
 
         if (depth + 1 >= chain_len) {
             ctx->ssl_verify_err = 0x8053018b;
@@ -1049,7 +1045,6 @@ static int dnasSslVerifyCallback(int preverify_ok, void **cert_chain, int chain_
         }
     }
 
-found_root:
     pubkey = sceSsl_lib_B87FFE37(g_root_certs[i]);
     if (pubkey == NULL) {
         ctx->ssl_verify_err = 0x80530104;
@@ -1064,7 +1059,7 @@ found_root:
 
     for (k = depth; k >= 0; k--) {
         if (k > 0) {
-            if (sceSsl_lib_CFA2F8EB(cert_chain[k], &dummy_ac, &pathlen, &is_ca) == 1) {
+            if (sceSsl_lib_CFA2F8EB(cert_chain[k], &basicConstraintsCrit, &pathlen, &is_ca) == 1) {
                 if (is_ca == 0) {
                     ctx->ssl_verify_err = 0x8053018a;
                 } else if ((unsigned int)(pathlen + 1) < (unsigned int)k) {
@@ -1151,78 +1146,78 @@ static int dnasLoadRootCerts(void)
     int der_len = 0;
     void *cert_buf = NULL;
     void *der_buf = NULL;
-    void *x509 = NULL;
+    void *certObj = NULL;
     void **cert_list = NULL;
     int i;
     void *der_ptr;
 
-    ret = sceCertLoader_DD629A24(3, 0x1f, NULL, NULL, 0, &cert_size);
-    if (ret < 0) {
-        goto fail;
-    }
-    if (cert_size != 0x1bbc) {
-        ret = 0x8053018d;
-        goto fail;
-    }
-
-    cert_buf = sceSsl_lib_0861D934((unsigned int)cert_size);
-    if (cert_buf == NULL) {
-        ret = 0x80530104;
-        goto fail;
-    }
-
-    ret = sceCertLoader_DD629A24(3, 0x1f, &cert_list, cert_buf, cert_size, &der_len);
-    if (ret < 0 || cert_list == NULL) {
-        goto fail;
-    }
-    if (ret != 5) {
-        ret = 0x8053018e;
-        goto fail;
-    }
-
-    g_root_cert_count = ret;
-    dnasFreeRootCerts();
-    sceKernelMemset(g_root_certs, 0, (SceSize)(g_root_cert_count * sizeof(void *)));
-
-    for (i = 0; cert_list != NULL; i++) {
-        ret = dnasPemToDer((const char *)cert_list[0], NULL, &cert_size, 0);
-        if (ret < 0) {
-            goto fail;
+    do {
+        ret = sceCertLoader_DD629A24(3, 0x1f, NULL, NULL, 0, &cert_size);
+        if (ret < 0)
+            break;
+        if (cert_size != 0x1bbc) {
+            ret = 0x8053018d;
+            break;
         }
 
-        der_buf = sceSsl_lib_0861D934((unsigned int)cert_size);
-        if (der_buf == NULL) {
+        cert_buf = sceSsl_lib_0861D934((unsigned int)cert_size);
+        if (cert_buf == NULL) {
             ret = 0x80530104;
-            goto fail;
+            break;
         }
 
-        ret = dnasPemToDer((const char *)cert_list[0], (uint8_t *)der_buf, &der_len, (unsigned int)cert_size);
-        if (ret < 0) {
-            goto fail;
+        ret = sceCertLoader_DD629A24(3, 0x1f, &cert_list, cert_buf, cert_size, &der_len);
+        if (ret < 0 || cert_list == NULL)
+            break;
+        if (ret != 5) {
+            ret = 0x8053018e;
+            break;
         }
 
-        der_ptr = der_buf;
-        x509 = sceSsl_lib_6038DEDE(NULL, &der_ptr, der_len);
-        if (x509 == NULL) {
-            ret = 0x80530104;
-            goto fail;
+        g_root_cert_count = ret;
+        dnasFreeRootCerts();
+        sceKernelMemset(g_root_certs, 0, (SceSize)(g_root_cert_count * sizeof(void *)));
+
+        ret = 0;
+        for (i = 0; cert_list != NULL; i++) {
+            ret = dnasPemToDer((const char *)cert_list[0], NULL, &cert_size, 0);
+            if (ret < 0)
+                break;
+
+            der_buf = sceSsl_lib_0861D934((unsigned int)cert_size);
+            if (der_buf == NULL) {
+                ret = 0x80530104;
+                break;
+            }
+
+            ret = dnasPemToDer((const char *)cert_list[0], (uint8_t *)der_buf, &der_len, (unsigned int)cert_size);
+            if (ret < 0)
+                break;
+
+            der_ptr = der_buf;
+            certObj = sceSsl_lib_6038DEDE(NULL, &der_ptr, der_len);
+            if (certObj == NULL) {
+                ret = 0x80530104;
+                break;
+            }
+
+            if (der_buf != NULL) {
+                sceSsl_lib_5E5C873A(der_buf);
+                der_buf = NULL;
+            }
+
+            g_root_certs[i] = certObj;
+            cert_list = (void **)cert_list[1];
         }
+        if (ret < 0)
+            break;
 
-        if (der_buf != NULL) {
-            sceSsl_lib_5E5C873A(der_buf);
-            der_buf = NULL;
+        if (cert_buf != NULL) {
+            sceSsl_lib_5E5C873A(cert_buf);
         }
+        return 0;
+    } while (0);
 
-        g_root_certs[i] = x509;
-        cert_list = (void **)cert_list[1];
-    }
-
-    if (cert_buf != NULL) {
-        sceSsl_lib_5E5C873A(cert_buf);
-    }
-    return 0;
-
-fail:
     dnasFreeRootCerts();
     if (cert_buf != NULL) {
         sceSsl_lib_5E5C873A(cert_buf);
@@ -1340,30 +1335,25 @@ static int dnasDoSendAuth1(DnasContext *ctx)
     int ret = 0;
 
     ret = sceDNASCore_lib_4108128B();
-    if (ret < 0) {
-        goto fail;
-    }
-
-    ret = dnasOpenHttpsConn(ctx);
-    if (ret < 0) {
-        goto fail;
-    }
-
-    for (;;) {
-        ret = sceDNASCore_lib_F0EB4367(g_io_buf, sizeof(g_io_buf));
-        if (ret == 0) {
-            return 0;
-        }
-        if (ret < 0) {
-            goto fail;
-        }
-        ret = dnasSslWrite(ctx, g_io_buf, ret);
-        if (ret < 0) {
-            goto fail;
+    if (ret >= 0) {
+        ret = dnasOpenHttpsConn(ctx);
+        if (ret >= 0) {
+            for (;;) {
+                ret = sceDNASCore_lib_F0EB4367(g_io_buf, sizeof(g_io_buf));
+                if (ret == 0) {
+                    return 0;
+                }
+                if (ret < 0) {
+                    break;
+                }
+                ret = dnasSslWrite(ctx, g_io_buf, ret);
+                if (ret < 0) {
+                    break;
+                }
+            }
         }
     }
 
-fail:
     dnasCloseSocket(ctx);
     return ret;
 }
@@ -1377,35 +1367,29 @@ static int dnasDoRecvAuth1(DnasContext *ctx, int *redirected)
     for (;;) {
         ret = dnasSslRead(ctx, g_io_buf, sizeof(g_io_buf));
         if (ret < 0) {
-            goto out;
-        }
-        ret = sceDNASCore_lib_26E1E2BD(g_io_buf, ret);
-        if (ret == 0) {
             break;
         }
-        if (ret < 0) {
-            goto out;
+        ret = sceDNASCore_lib_26E1E2BD(g_io_buf, ret);
+        if (ret <= 0) {
+            break;
         }
     }
 
-    sceKernelMemset(redirect_buf, 0, sizeof(redirect_buf));
-    ret = sceDNASCore_lib_B6C76A14(redirect_buf);
-    if (ret < 0) {
-        goto out;
-    }
-
-    if (redirect_buf[0] != '\0') {
-        if (ctx->redirect_count > 0) {
-            ret = 0x8053018f;
-            goto out;
+    if (ret >= 0) {
+        sceKernelMemset(redirect_buf, 0, sizeof(redirect_buf));
+        ret = sceDNASCore_lib_B6C76A14(redirect_buf);
+        if (ret >= 0 && redirect_buf[0] != '\0') {
+            if (ctx->redirect_count > 0) {
+                ret = 0x8053018f;
+            } else {
+                *redirected = 1;
+                ctx->redirect_count++;
+                ctx->has_resolved = 0;
+                sceKernelMemcpy(ctx->host, redirect_buf, sizeof(redirect_buf));
+            }
         }
-        *redirected = 1;
-        ctx->redirect_count++;
-        ctx->has_resolved = 0;
-        sceKernelMemcpy(ctx->host, redirect_buf, sizeof(redirect_buf));
     }
 
-out:
     dnasCloseSocket(ctx);
     return ret;
 }
@@ -1416,30 +1400,25 @@ static int dnasDoSendAuth2(DnasContext *ctx)
     int ret = 0;
 
     ret = sceDNASCore_lib_80CEC43A();
-    if (ret < 0) {
-        goto fail;
-    }
-
-    ret = dnasOpenHttpsConn(ctx);
-    if (ret < 0) {
-        goto fail;
-    }
-
-    for (;;) {
-        ret = sceDNASCore_lib_822357BB(g_io_buf, sizeof(g_io_buf));
-        if (ret == 0) {
-            return 0;
-        }
-        if (ret < 0) {
-            goto fail;
-        }
-        ret = dnasSslWrite(ctx, g_io_buf, ret);
-        if (ret < 0) {
-            goto fail;
+    if (ret >= 0) {
+        ret = dnasOpenHttpsConn(ctx);
+        if (ret >= 0) {
+            for (;;) {
+                ret = sceDNASCore_lib_822357BB(g_io_buf, sizeof(g_io_buf));
+                if (ret == 0) {
+                    return 0;
+                }
+                if (ret < 0) {
+                    break;
+                }
+                ret = dnasSslWrite(ctx, g_io_buf, ret);
+                if (ret < 0) {
+                    break;
+                }
+            }
         }
     }
 
-fail:
     dnasCloseSocket(ctx);
     return ret;
 }
@@ -1452,20 +1431,18 @@ static int dnasDoRecvAuth2(DnasContext *ctx)
     for (;;) {
         ret = dnasSslRead(ctx, g_io_buf, sizeof(g_io_buf));
         if (ret < 0) {
-            goto out;
-        }
-        ret = sceDNASCore_lib_8309549E(g_io_buf, ret);
-        if (ret == 0) {
             break;
         }
-        if (ret < 0) {
-            goto out;
+        ret = sceDNASCore_lib_8309549E(g_io_buf, ret);
+        if (ret <= 0) {
+            break;
         }
     }
 
-    ret = sceDNASCore_lib_BA0A32CA();
+    if (ret >= 0) {
+        ret = sceDNASCore_lib_BA0A32CA();
+    }
 
-out:
     dnasCloseSocket(ctx);
     return ret;
 }
@@ -1477,33 +1454,33 @@ static int dnasBase64Decode(uint8_t *dst, const char *src, int len)
 
     if (len != 0) {
         do {
-            uint8_t c0 = (uint8_t)src[0];
-            uint8_t c1 = (uint8_t)src[1];
-            uint8_t c2 = (uint8_t)src[2];
-            uint8_t c3 = (uint8_t)src[3];
-            int8_t v0, v1, v2, v3;
-            uint32_t w;
+            uint8_t chA = (uint8_t)src[0];
+            uint8_t chB = (uint8_t)src[1];
+            uint8_t chC = (uint8_t)src[2];
+            uint8_t chD = (uint8_t)src[3];
+            int8_t decA, decB, decC, decD;
+            uint32_t word;
 
-            if (c2 == '=') {
+            if (chC == '=') {
                 out_len--;
             }
-            if (c3 == '=') {
+            if (chD == '=') {
                 out_len--;
             }
 
-            v0 = g_b64_table[c0];
-            v1 = g_b64_table[c1];
-            v2 = g_b64_table[c2];
-            v3 = g_b64_table[c3];
+            decA = g_b64_table[chA];
+            decB = g_b64_table[chB];
+            decC = g_b64_table[chC];
+            decD = g_b64_table[chD];
 
-            if (v0 < 0 || v1 < 0 || v2 < 0 || v3 < 0) {
+            if (decA < 0 || decB < 0 || decC < 0 || decD < 0) {
                 return -1;
             }
 
-            w = ((uint32_t)v0 << 18) | ((uint32_t)v1 << 12) | ((uint32_t)v2 << 6) | (uint32_t)v3;
-            dst[0] = (uint8_t)(w >> 16);
-            dst[1] = (uint8_t)(w >> 8);
-            dst[2] = (uint8_t)w;
+            word = ((uint32_t)decA << 18) | ((uint32_t)decB << 12) | ((uint32_t)decC << 6) | (uint32_t)decD;
+            dst[0] = (uint8_t)(word >> 16);
+            dst[1] = (uint8_t)(word >> 8);
+            dst[2] = (uint8_t)word;
 
             src += 4;
             len -= 4;
