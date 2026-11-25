@@ -13,7 +13,7 @@ extern int sceIoRead(int fd, void *data, u32 size);
 extern int sceIoUnassign(const char *dev);
 extern int sceIoClose(int fd);
 extern int sceIoGetstat(const char *file, void *stat);
-extern int sceIoAssign(const char *dev1, const char *dev2, const char *dev3, int mode, void *unk1, long unk2);
+extern int sceIoAssign(const char *dev1, const char *dev2, const char *dev3, int mode, void *arg1, long arg2);
 extern int sceKernelExitVSHKernel(void *param);
 extern int sceKernelStartModule(int modid, u32 argsize, void *argp, int *status, void *option);
 extern int sceKernelLoadModuleForKernel(const char *path, int flags, void *option);
@@ -63,19 +63,48 @@ extern int sceKernelRegisterSysEventHandler(void *handler);
 extern int sceKernelUnregisterSysEventHandler(void *handler);
 
 int sceMeAudio_A651EA7B(int fd, void *buf, u32 offset, u32 size);
-static int sub_0c20(void);
-static int sub_0d14(u32 idx, u32 offset, void *buf, u32 size);
-static int sub_14fc(const char *path, void *vkey, void *content_id);
-static void sub_1aa0(void *arg);
-static void sub_1cb8(int res, u32 flags, u32 t_lo, u32 t_hi, u32 e_lo, u32 e_hi);
-static int sub_1d9c(const char *path, void *vkey);
-static int sub_1db8(int ev_id, char *ev_name, void *param, int *result);
-static int sub_1e78(void);
-static int sub_1e80(void);
-static int sub_1e88(void);
-static int sub_1fa4(int cmd_id, int a1, int a2);
-static int sub_2070(int cmd_id, int a1);
-static int sub_212c(int cmd_id);
+static int popsRecheckLicense(void);
+static int popsReadDiscTable(u32 idx, u32 offset, void *buf, u32 size);
+static int popsLoadLicenseKey(const char *path, void *vkey, void *content_id);
+static void popsVerifyRifCallback(void *arg);
+static void popsInvokeNp9660Callback(int res, u32 flags, u32 t_lo, u32 t_hi, u32 e_lo, u32 e_hi);
+static int popsGetIdCallback(const char *path, void *vkey);
+static int popsSysEventHandler(int ev_id, char *ev_name, void *param, int *result);
+static int popsInitStub(void);
+static int popsTermStub(void);
+static int popsInitKermitPocs(void);
+static int popsKermitSendCmd2(int cmd_id, int a1, int a2);
+static int popsKermitSendCmd1(int cmd_id, int a1);
+static int popsKermitSendCmd0(int cmd_id);
+
+typedef struct {
+    u8 reserved0[0x16];
+    u16 attr;
+} ScePopsUidCb;
+
+typedef struct {
+    u32 status;
+    u32 size;
+    u16 nextBlock;
+} ScePopsMcDirEntry;
+
+typedef struct {
+    u32 version;
+    u32 flags;
+    u8 reserved8[8];
+    char contentId[0x30];
+    u8 reserved40[0x28];
+    u32 startTimeHi;
+    u32 startTimeLo;
+    u8 reserved70[0x28];
+    u32 expireHi;
+    u32 expireLo;
+} ScePopsRif;
+
+typedef struct {
+    char contentId[0x30];
+    u32 drmFlags;
+} ScePopsCidBlock;
 
 typedef struct SceSysEventHandler {
     int size;
@@ -92,7 +121,7 @@ static SceSysEventHandler g_sys_event = {
     0x40,
     "ScePopsMan",
     0x00FFFF00,
-    sub_1db8,
+    popsSysEventHandler,
     0, 0, NULL,
     { 0, 0, 0, 0, 0, 0, 0, 0, 0 }
 };
@@ -135,7 +164,7 @@ u32 sceUsb_driver_var_3EA085BF;    /* 0x2f64 */
 u32 sceUsb_driver_var_A942D291;    /* 0x2f68 */
 
 /* 0x0000 */
-static int sub_0000(const char *path)
+static int popsInitPbpPath(const char *path)
 {
     u32 hdr[10];
     int fd;
@@ -167,7 +196,7 @@ static int sub_0000(const char *path)
 }
 
 /* 0x0124 */
-static int sub_0124(const char *path, const u8 *vkey, const char *cid)
+static int popsSetVersionKey(const char *path, const u8 *vkey, const char *cid)
 {
     int i;
     (void)path;
@@ -184,7 +213,7 @@ static int sub_0124(const char *path, const u8 *vkey, const char *cid)
 }
 
 /* 0x0190 */
-static int sub_0190(const char *cid, char *out_path)
+static int popsBuildRifPath(const char *cid, char *out_path)
 {
     char c0;
 
@@ -229,7 +258,7 @@ int sceMeAudio_A8176E49(u32 *out_offset)
     fd = sceIoOpen(g_pbp_path, 1, 0);
     if (fd > 0) {
         if (sceKernelGetUIDcontrolBlock(fd, &cb) == 0) {
-            *(u16 *)((u8 *)cb + 0x16) |= 0x15;
+            ((ScePopsUidCb *)cb)->attr |= 0x15;
         }
         *out_offset = g_psar_offset;
     }
@@ -270,8 +299,8 @@ int sceMeAudio_34F2548F(u8 *buf)
         return -1;
     }
     memcpy(g_table_2d40, buf + 0x200, 0x64);
-    g_unk_2cfc = g_psar_offset + *(u32 *)(buf + 0x3D0);
-    g_unk_2d00 = *(u32 *)(buf + 0x3D4);
+    g_unk_2cfc = g_psar_offset + ((const u32 *)buf)[0x3D0 / 4];
+    g_unk_2d00 = ((const u32 *)buf)[0x3D4 / 4];
     return g_magic_val ^ 0x4A08B53F;
 }
 
@@ -282,7 +311,7 @@ int sceMeAudio_F1502A62(u8 *buf, u32 idx)
     int res;
     u32 k1;
 
-    res = sub_0d14(idx, 0x400, buf + 0x400, 0xB3880);
+    res = popsReadDiscTable(idx, 0x400, buf + 0x400, 0xB3880);
     if (res < 0) {
         return res;
     }
@@ -299,11 +328,11 @@ int sceMeAudio_F1502A62(u8 *buf, u32 idx)
             g_table_2d40[1] = g_sdk_ver;
         }
     } else {
-        g_unk_2cfc = g_psar_offset + *(u32 *)(buf + 0x12B4);
-        g_unk_2d00 = *(u32 *)(buf + 0x12B8);
+        g_unk_2cfc = g_psar_offset + ((const u32 *)buf)[0x12B4 / 4];
+        g_unk_2d00 = ((const u32 *)buf)[0x12B8 / 4];
     }
     {
-        u64 base = (u64)g_psar_offset + ((u64)*(u32 *)(buf + 0x1224) << 32) + *(u32 *)(buf + 0x1220);
+        u64 base = (u64)g_psar_offset + ((u64)((const u32 *)buf)[0x1224 / 4] << 32) + ((const u32 *)buf)[0x1220 / 4];
         g_unk_2ce8 = (u32)base;
         g_unk_2cec = (u32)(base >> 32);
     }
@@ -313,7 +342,7 @@ int sceMeAudio_F1502A62(u8 *buf, u32 idx)
 }
 
 /* 0x067c */
-int sub_067c(void *buf)
+int popsReadDocData(void *buf)
 {
     u32 k1, size, off;
     int fd, res;
@@ -335,7 +364,7 @@ int sub_067c(void *buf)
         }
     }
     if (g_sdk_ver <= 0x0601FFFF) {
-        sub_1e80();
+        popsTermStub();
     }
     if (fd < 0) {
         __asm__ volatile ("move $k1, %0" : : "r"(k1));
@@ -348,7 +377,7 @@ int sub_067c(void *buf)
 }
 
 /* 0x0e84 */
-static int sub_0e84(u8 *base, u8 *entry, u8 *block, u32 skip, int mode)
+static int popsMacMemcardChain(u8 *base, u8 *entry, u8 *block, u32 skip, int mode)
 {
     u8 mkey[48];
     u8 *cur_entry = entry;
@@ -361,7 +390,7 @@ static int sub_0e84(u8 *base, u8 *entry, u8 *block, u32 skip, int mode)
             return -1;
         }
         skip = 0;
-        u16 next = *(u16 *)(cur_entry + 8);
+        u16 next = ((const ScePopsMcDirEntry *)cur_entry)->nextBlock;
         if (next == 0xFFFF) {
             cur_entry = NULL;
         } else {
@@ -381,7 +410,7 @@ static int sub_0e84(u8 *base, u8 *entry, u8 *block, u32 skip, int mode)
 }
 
 /* 0x0f90 */
-static int sub_0f90(u8 *base, u8 *entry, u8 *block, u32 skip, int mode)
+static int popsCipherMemcardChain(u8 *base, u8 *entry, u8 *block, u32 skip, int mode)
 {
     u8 ckey[48];
     u8 *cur_entry = entry;
@@ -394,7 +423,7 @@ static int sub_0f90(u8 *base, u8 *entry, u8 *block, u32 skip, int mode)
             return -1;
         }
         skip = 0;
-        u16 next = *(u16 *)(cur_entry + 8);
+        u16 next = ((const ScePopsMcDirEntry *)cur_entry)->nextBlock;
         if (next == 0xFFFF) {
             cur_entry = NULL;
         } else {
@@ -411,7 +440,7 @@ static int sub_0f90(u8 *base, u8 *entry, u8 *block, u32 skip, int mode)
 }
 
 /* 0x0804 */
-int sub_0804(u8 *base, u32 idx, int flag)
+int popsCryptMemcardBlock(u8 *base, u32 idx, int flag)
 {
     u32 k1;
     u8 *entry, *block;
@@ -444,17 +473,17 @@ int sub_0804(u8 *base, u32 idx, int flag)
                 return -1;
             }
         }
-        if (sub_0f90(base, entry, block, skip, 1) != 0) {
+        if (popsCipherMemcardChain(base, entry, block, skip, 1) != 0) {
             __asm__ volatile ("move $k1, %0" : : "r"(k1));
             return -1;
         }
-        res = sub_0e84(base, entry, block, skip, 1);
+        res = popsMacMemcardChain(base, entry, block, skip, 1);
         __asm__ volatile ("move $k1, %0" : : "r"(k1));
         return res;
     } else {
         u32 *hdr_key = (u32 *)(entry + 0x20);
-        if (sub_0e84(base, entry, block, skip, 2) != 0 ||
-            sub_0f90(base, entry, block, skip, 2) != 0) {
+        if (popsMacMemcardChain(base, entry, block, skip, 2) != 0 ||
+            popsCipherMemcardChain(base, entry, block, skip, 2) != 0) {
             __asm__ volatile ("move $k1, %0" : : "r"(k1));
             return -1;
         }
@@ -467,7 +496,7 @@ int sub_0804(u8 *base, u32 idx, int flag)
 }
 
 /* 0x09b0 */
-u64 sub_09b0(void)
+u64 popsGetDiscBaseOffset(void)
 {
     if (g_unk_2ce8 == g_psar_offset && g_unk_2cec == 0) {
         return 0;
@@ -476,7 +505,7 @@ u64 sub_09b0(void)
 }
 
 /* 0x0a00 */
-int sub_0a00(void *buf, void *mac, int size)
+int popsVerifyMac(void *buf, void *mac, int size)
 {
     u8 mkey[48];
     int res;
@@ -516,11 +545,11 @@ int sceMeAudio_6FCDD82D(void *buf, void *mac, u32 size)
 }
 
 /* 0x0b60 */
-static int sub_0b60(u32 args, void *argp)
+static int popsResumeThread(u32 args, void *argp)
 {
     (void)args;
     (void)argp;
-    while (sub_0c20() != 0) {
+    while (popsRecheckLicense() != 0) {
         sceDisplayWaitVblankStartCB();
     }
     g_resume_thid = 0;
@@ -529,25 +558,25 @@ static int sub_0b60(u32 args, void *argp)
 }
 
 /* 0x0ba4 */
-static void sub_0ba4(void)
+static void popsCheckRifLicense(void)
 {
     u32 k1;
     __asm__ volatile ("move %0, $k1" : "=r"(k1));
     __asm__ volatile ("sll $k1, $k1, 11");
-    g_rif_status = sceKernelExtendKernelStack(0x800, sub_1aa0, g_content_id);
+    g_rif_status = sceKernelExtendKernelStack(0x800, popsVerifyRifCallback, g_content_id);
     __asm__ volatile ("move $k1, %0" : : "r"(k1));
 }
 
 /* 0x0bec */
 int sceMeAudio_83609AC9(u8 *hdr, u32 idx, void *buf)
 {
-    u32 count = *(u32 *)(hdr + 0x12D8);
-    u32 offset = *(u32 *)(hdr + 0x12D4);
-    return sub_0d14(idx, offset, buf, count * 12);
+    u32 count = ((const u32 *)hdr)[0x12D8 / 4];
+    u32 offset = ((const u32 *)hdr)[0x12D4 / 4];
+    return popsReadDiscTable(idx, offset, buf, count * 12);
 }
 
 /* 0x0c20 */
-static int sub_0c20(void)
+static int popsRecheckLicense(void)
 {
     char cid[48];
     u8 vkey[16];
@@ -556,7 +585,7 @@ static int sub_0c20(void)
     if (g_need_recheck == 0) {
         return 0;
     }
-    if (sub_14fc(g_pbp_path, vkey, cid) < 0) {
+    if (popsLoadLicenseKey(g_pbp_path, vkey, cid) < 0) {
         return 1;
     }
     if (g_resume_state == 0 || g_rif_status != (int)0x80550914) {
@@ -577,7 +606,7 @@ static int sub_0c20(void)
 }
 
 /* 0x0d14 */
-static int sub_0d14(u32 idx, u32 offset, void *buf, u32 size)
+static int popsReadDiscTable(u32 idx, u32 offset, void *buf, u32 size)
 {
     u32 k1, file_off;
     int fd, res;
@@ -632,7 +661,7 @@ int scePopsMan_29B3FB24(const char *path, int mode)
         __builtin_trap();
     }
     snprintf((char *)0x00013F80, 0x80, "branches/pops-for-vita-350/pops/popsman4vita(r%d)", 0x3661);
-    if (sub_0000(path) < 0) {
+    if (popsInitPbpPath(path) < 0) {
         __asm__ volatile ("move $k1, %0" : : "r"(k1));
         return -1;
     }
@@ -694,12 +723,12 @@ int module_start(SceSize args, void *argp)
     (void)args;
     (void)argp;
     g_pbp_path[0] = 0;
-    if (sub_149c() == 1) {
+    if (popsCheckAppAndRegisterIdFunc() == 1) {
         return 1;
     }
     sceKernelRegisterSysEventHandler(&g_sys_event);
-    sub_1e88();
-    sub_1e78();
+    popsInitKermitPocs();
+    popsInitStub();
     return 0;
 }
 
@@ -709,7 +738,7 @@ int module_reboot_before(SceSize args, void *argp)
     (void)args;
     (void)argp;
     sceKernelUnregisterSysEventHandler(&g_sys_event);
-    sub_1e80();
+    popsTermStub();
     return 0;
 }
 
@@ -771,18 +800,18 @@ int sceMeAudio_C4169D0F(int a0, int a1, int a2, int a3)
 }
 
 /* 0x149c */
-int sub_149c(void)
+int popsCheckAppAndRegisterIdFunc(void)
 {
     int boot_from = sceKernelBootFrom();
     int app_type = sceKernelApplicationType();
     if (app_type != 0x300 && (boot_from != 0x40 || app_type != 0x200)) {
         return 1;
     }
-    return (sceKernelRegisterGetIdFunc(sub_1d9c) < 0) ? 1 : 0;
+    return (sceKernelRegisterGetIdFunc(popsGetIdCallback) < 0) ? 1 : 0;
 }
 
 /* 0x14fc */
-static int sub_14fc(const char *path, void *vkey, void *content_id)
+static int popsLoadLicenseKey(const char *path, void *vkey, void *content_id)
 {
     u32 stat_buf[24];
     int fpl, fd, res;
@@ -811,10 +840,10 @@ static int sub_14fc(const char *path, void *vkey, void *content_id)
         res = sceIoRead(fd, pbp_hdr, 0x200);
         if (res >= 0) {
             if (pbp_hdr[0] == 0 && pbp_hdr[1] == 'P' && pbp_hdr[2] == 'B' && pbp_hdr[3] == 'P') {
-                u32 psar_off = *(u32 *)(pbp_hdr + 0x20) + 0x560;
+                u32 psar_off = ((const u32 *)pbp_hdr)[8] + 0x560;
                 if (sceIoLseek(fd, psar_off, 0) >= 0 &&
                     sceIoRead(fd, cid_buf, 0x34) >= 0) {
-                    *(u32 *)(cid_buf + 0x30) = __builtin_bswap32(*(u32 *)(cid_buf + 0x30));
+                    ((ScePopsCidBlock *)cid_buf)->drmFlags = __builtin_bswap32(((ScePopsCidBlock *)cid_buf)->drmFlags);
                     res = 0;
                 } else {
                     res = 0x80020148;
@@ -830,11 +859,11 @@ static int sub_14fc(const char *path, void *vkey, void *content_id)
     if (res < 0) {
         goto cleanup;
     }
-    res = sub_0000(path);
+    res = popsInitPbpPath(path);
     if (res < 0) {
         goto cleanup;
     }
-    res = sub_0190((const char *)cid_buf, (char *)rif_path);
+    res = popsBuildRifPath((const char *)cid_buf, (char *)rif_path);
     if (res < 0) {
         goto cleanup;
     }
@@ -855,8 +884,8 @@ static int sub_14fc(const char *path, void *vkey, void *content_id)
         sceIoClose(fd);
         if (res >= 0) {
             if (res < 0xA0) {
-                *(u32 *)(rif_buf + 0x98) = 0;
-                *(u32 *)(rif_buf + 0x9C) = 0;
+                ((ScePopsRif *)rif_buf)->expireHi = 0;
+                ((ScePopsRif *)rif_buf)->expireLo = 0;
             }
             if (strncmp((const char *)(rif_buf + 0x10), (const char *)cid_buf, 0x30) != 0) {
                 res = 0x80010016;
@@ -870,7 +899,7 @@ static int sub_14fc(const char *path, void *vkey, void *content_id)
     if (res < 0) {
         goto cleanup;
     }
-    if (__builtin_bswap32(*(u32 *)(rif_buf + 4)) != 3) {
+    if (__builtin_bswap32(((ScePopsRif *)rif_buf)->flags) != 3) {
         int app_type;
         g_act_path[0] = 0x73616C66; /* "flas" */
         g_act_path[1] = 0x2F3A3268; /* "h2:/" */
@@ -927,7 +956,7 @@ clear_paths:
     } else {
         work = NULL;
     }
-    res = sceNpDrmGetVersionKey(tmp_vkey, work, rif_buf, *(u32 *)(cid_buf + 0x30));
+    res = sceNpDrmGetVersionKey(tmp_vkey, work, rif_buf, ((ScePopsCidBlock *)cid_buf)->drmFlags);
     if (res < 0) {
         if (res != (int)0x80000001 && res != (int)0x8001003E) {
             res = 0x80020148;
@@ -938,12 +967,12 @@ clear_paths:
     if (content_id != NULL) {
         memcpy(content_id, cid_buf, 0x30);
     }
-    res = sub_0124(path, tmp_vkey, (const char *)cid_buf);
+    res = popsSetVersionKey(path, tmp_vkey, (const char *)cid_buf);
     if (res < 0) {
         sceKernelMemset(vkey, 0, 16);
         goto cleanup;
     }
-    sub_0ba4();
+    popsCheckRifLicense();
     res = 0;
 
 cleanup:
@@ -953,7 +982,7 @@ cleanup:
 }
 
 /* 0x1aa0 */
-static void sub_1aa0(void *arg)
+static void popsVerifyRifCallback(void *arg)
 {
     u8 rif_buf[0xA0];
     char rif_path[0x40];
@@ -961,7 +990,7 @@ static void sub_1aa0(void *arg)
     int fd, res;
     u32 flags = 0, t_lo = 0, t_hi = 0, e_lo = 0, e_hi = 0;
 
-    res = sub_0190((const char *)arg, rif_path);
+    res = popsBuildRifPath((const char *)arg, rif_path);
     if (res >= 0) {
         res = sceIoGetstat(rif_path, stat_buf);
         if (res >= 0) {
@@ -977,8 +1006,8 @@ static void sub_1aa0(void *arg)
                     sceIoClose(fd);
                     if (res >= 0) {
                         if (res < 0xA0) {
-                            *(u32 *)(rif_buf + 0x98) = 0;
-                            *(u32 *)(rif_buf + 0x9C) = 0;
+                            ((ScePopsRif *)rif_buf)->expireHi = 0;
+                            ((ScePopsRif *)rif_buf)->expireLo = 0;
                         }
                         if (strncmp((const char *)(rif_buf + 0x10), (const char *)arg, 0x30) != 0) {
                             res = 0x80010016;
@@ -993,23 +1022,23 @@ static void sub_1aa0(void *arg)
         }
     }
     if (res >= 0) {
-        u32 r68 = *(u32 *)(rif_buf + 0x68);
-        u32 r6c = *(u32 *)(rif_buf + 0x6C);
+        u32 r68 = ((ScePopsRif *)rif_buf)->startTimeHi;
+        u32 r6c = ((ScePopsRif *)rif_buf)->startTimeLo;
         if (r68 | r6c) {
             u64 ts = (((u64)__builtin_bswap32(r68) << 32) | __builtin_bswap32(r6c)) * 1000ULL + 0x00DCBFFEFF2BC000ULL;
             t_lo = (u32)ts;
             t_hi = (u32)(ts >> 32);
         }
-        flags = __builtin_bswap32(*(u32 *)(rif_buf + 4));
-        e_lo = __builtin_bswap32(*(u32 *)(rif_buf + 0x9C));
-        e_hi = __builtin_bswap32(*(u32 *)(rif_buf + 0x98));
+        flags = __builtin_bswap32(((ScePopsRif *)rif_buf)->flags);
+        e_lo = __builtin_bswap32(((ScePopsRif *)rif_buf)->expireLo);
+        e_hi = __builtin_bswap32(((ScePopsRif *)rif_buf)->expireHi);
         res = sceNpDrmCheckRifTimeLimit(rif_buf);
     }
-    sub_1cb8(res, flags, t_lo, t_hi, e_lo, e_hi);
+    popsInvokeNp9660Callback(res, flags, t_lo, t_hi, e_lo, e_hi);
 }
 
 /* 0x1cb8 */
-static void sub_1cb8(int res, u32 flags, u32 t_lo, u32 t_hi, u32 e_lo, u32 e_hi)
+static void popsInvokeNp9660Callback(int res, u32 flags, u32 t_lo, u32 t_hi, u32 e_lo, u32 e_hi)
 {
     if (g_np9660_cb != NULL) {
         u32 old_gp;
@@ -1051,13 +1080,13 @@ int sceNp9660_driver_7A05EB3C(u32 *out)
 }
 
 /* 0x1d9c */
-static int sub_1d9c(const char *path, void *vkey)
+static int popsGetIdCallback(const char *path, void *vkey)
 {
-    return sub_14fc(path, vkey, NULL);
+    return popsLoadLicenseKey(path, vkey, NULL);
 }
 
 /* 0x1db8 */
-static int sub_1db8(int ev_id, char *ev_name, void *param, int *result)
+static int popsSysEventHandler(int ev_id, char *ev_name, void *param, int *result)
 {
     (void)ev_name;
     (void)param;
@@ -1072,7 +1101,7 @@ static int sub_1db8(int ev_id, char *ev_name, void *param, int *result)
             g_unk_2e40 = 0;
         }
         if (g_resume_thid == 0) {
-            int thid = sceKernelCreateThread("resumeProc", sub_0b60, 0x10, 0x800, 0x00200000, NULL);
+            int thid = sceKernelCreateThread("resumeProc", popsResumeThread, 0x10, 0x800, 0x00200000, NULL);
             g_resume_thid = thid;
             sceKernelStartThread(thid, 0, NULL);
         }
@@ -1081,19 +1110,19 @@ static int sub_1db8(int ev_id, char *ev_name, void *param, int *result)
 }
 
 /* 0x1e78 */
-static int sub_1e78(void)
+static int popsInitStub(void)
 {
     return 0;
 }
 
 /* 0x1e80 */
-static int sub_1e80(void)
+static int popsTermStub(void)
 {
     return 0;
 }
 
 /* 0x1e88 */
-static int sub_1e88(void)
+static int popsInitKermitPocs(void)
 {
     int mtx;
     sceKernelMemset((void *)0xABD40000, 0, 0x8000);
@@ -1108,35 +1137,35 @@ static int sub_1e88(void)
 /* 0x1f08 */
 int sceMeAudio_9FBE4AD3(int a0, int a1)
 {
-    return sub_1fa4(0xF03, a0, a1 & 0xFF);
+    return popsKermitSendCmd2(0xF03, a0, a1 & 0xFF);
 }
 
 /* 0x1f30 */
 int sceMeAudio_10DABACD(int a0)
 {
-    return sub_2070(0xF05, a0);
+    return popsKermitSendCmd1(0xF05, a0);
 }
 
 /* 0x1f50 */
 int sceMeAudio_7AA3E14B(void)
 {
-    return sub_212c(0xF04);
+    return popsKermitSendCmd0(0xF04);
 }
 
 /* 0x1f6c */
 int sceMeAudio_C47D3670(void)
 {
-    return sub_212c(0xF06);
+    return popsKermitSendCmd0(0xF06);
 }
 
 /* 0x1f88 */
 int sceMeAudio_13099620(void)
 {
-    return sub_212c(0xF02);
+    return popsKermitSendCmd0(0xF02);
 }
 
 /* 0x1fa4 */
-static int sub_1fa4(int cmd_id, int a1, int a2)
+static int popsKermitSendCmd2(int cmd_id, int a1, int a2)
 {
     u8 buf[0x80];
     u64 resp;
@@ -1157,7 +1186,7 @@ static int sub_1fa4(int cmd_id, int a1, int a2)
 }
 
 /* 0x2070 */
-static int sub_2070(int cmd_id, int a1)
+static int popsKermitSendCmd1(int cmd_id, int a1)
 {
     u8 buf[0x80];
     u64 resp;
@@ -1177,7 +1206,7 @@ static int sub_2070(int cmd_id, int a1)
 }
 
 /* 0x212c */
-static int sub_212c(int cmd_id)
+static int popsKermitSendCmd0(int cmd_id)
 {
     u8 buf[0x80];
     u64 resp;

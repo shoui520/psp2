@@ -3,16 +3,7 @@
  * Software ATRAC3 / ATRAC3plus audio codec library
  */
 
-#ifndef NULL
-#define NULL ((void *)0)
-#endif
-
-typedef unsigned char u8;
-typedef signed char s8;
-typedef unsigned short u16;
-typedef signed short s16;
-typedef unsigned int u32;
-typedef signed int s32;
+#include <common/types.h>
 
 extern void *sceKernelMemset(void *dst, int c, u32 size);
 
@@ -641,63 +632,87 @@ static inline s32 round_w_s(float x) {
     return res;
 }
 
-static void *sub_276c(void *dst, int c, u32 size);
-static s32 sub_26a8(u32 *work);
-static u32 sub_273c(u32 mode);
-static s32 sub_0000(s32 channels, s32 joint_stereo, s32 frame_bytes, u8 *ctx);
-static void sub_013c(u8 *ctx, u8 *huff_info, s32 tbl_idx, float *out, float *end, float scale);
-static s32 sub_03c4(u8 *in_buf, s32 **out_ch_ptrs, u8 *ctx);
-static s32 sub_253c(u32 *work);
-static s32 sub_25bc(u32 *work);
+typedef struct {
+    u8 *lenTbl[7];
+    u8 *valTbl[7];
+    s8 maxBits[8];
+} Atrac3HuffInfo;
+
+typedef struct {
+    s32 isJointStereo;          /* 0x0000 */
+    s32 activeQmf;              /* 0x0004 */
+    float pcmWork[1162];        /* 0x0008..0x122F (band PCM starts at +138 = 0x230, hist at +1024 = 0x1008) */
+    float overlap[4][128];      /* 0x1230..0x1A2F */
+    s32 bandCfg[4][16];         /* 0x1A30..0x1B2F */
+} Atrac3ChannelCtx;             /* size 0x1B30 */
+
+typedef struct {
+    const float *jsWeights[4];      /* 0x00 */
+    const float *jsScale;           /* 0x10 */
+    s32 jsNumQmf;                   /* 0x14 */
+    const float *prevJsWeights[4];  /* 0x18 */
+    const float *prevJsScale;       /* 0x28 */
+    s32 prevJsNumQmf;               /* 0x2C */
+    s32 channels;                   /* 0x30 */
+    s32 frameBytes;                 /* 0x34 */
+    s32 varFrameFlag;               /* 0x38 */
+    u8 *bitstream;                  /* 0x3C */
+    s32 bitpos;                     /* 0x40 */
+    s32 errCode;                    /* 0x44 */
+    Atrac3ChannelCtx ch[2];         /* 0x48..0x36A7 */
+} Atrac3Ctx;
+
+static void *atrac3Memset(void *dst, int c, u32 size);
+static s32 atrac3ParseMode(u32 *work);
+static u32 atrac3ModeToJointStereo(u32 mode);
+static s32 atrac3InitCtx(s32 channels, s32 joint_stereo, s32 frame_bytes, Atrac3Ctx *ctx);
+static void atrac3DecodeSpectrum(Atrac3Ctx *ctx, const Atrac3HuffInfo *huff_info, s32 tbl_idx, float *out, float *end, float scale);
+static s32 atrac3DecodeFrame(u8 *in_buf, s32 **out_ch_ptrs, Atrac3Ctx *ctx);
+static s32 atrac3CodecInit(u32 *work);
+static s32 atrac3CodecDecode(u32 *work);
 
 /* 0x0000 */
-static __attribute__((noinline)) s32 sub_0000(s32 channels, s32 joint_stereo, s32 frame_bytes, u8 *ctx)
+static __attribute__((noinline)) s32 atrac3InitCtx(s32 channels, s32 joint_stereo, s32 frame_bytes, Atrac3Ctx *ctx)
 {
     if (frame_bytes > 0x100 || ctx == NULL)
         return 0;
     s32 extra_ch = max_s32(channels - 2, 0);
-    sub_276c(ctx, 0, (u32)(extra_ch * 0x1b30 + 0x36a8));
-    *(s32 *)(ctx + 0x30) = channels;
+    atrac3Memset(ctx, 0, (u32)(extra_ch * sizeof(Atrac3ChannelCtx) + sizeof(Atrac3Ctx)));
+    ctx->channels = channels;
     if (joint_stereo != 0)
         frame_bytes *= channels;
-    *(s32 *)(ctx + 0x34) = frame_bytes;
-    *(s32 *)(ctx + 0x14) = 4;
-    void *p2948 = RODATA_PTR(0x2948);
+    ctx->frameBytes = frame_bytes;
+    ctx->jsNumQmf = 4;
+    const float *p2948 = (const float *)RODATA_PTR(0x2948);
     for (s32 b = 0; b < 4; b++) {
-        *(void **)(ctx + b * 4) = p2948;
-        if (channels > 0) {
-            u8 *p = ctx + 0x1a70 + b * 0x40 + 0x0c;
-            for (s32 ch = 0; ch < channels; ch++) {
-                *(s32 *)(p - 4) = 0xff;
-                *(s32 *)(p + 0) = 4;
-                p += 0x1b30;
-            }
+        ctx->jsWeights[b] = p2948;
+        for (s32 ch = 0; ch < channels; ch++) {
+            ctx->ch[ch].bandCfg[b][0] = 0xff;
+            ctx->ch[ch].bandCfg[b][1] = 4;
         }
     }
-    *(s32 *)(ctx + 0x1b78) = joint_stereo;
-    *(u32 *)(ctx + 0x18) = *(u32 *)(ctx + 0x00);
-    *(u32 *)(ctx + 0x1c) = *(u32 *)(ctx + 0x04);
-    *(u32 *)(ctx + 0x20) = *(u32 *)(ctx + 0x08);
-    *(u32 *)(ctx + 0x24) = *(u32 *)(ctx + 0x0c);
-    *(u32 *)(ctx + 0x28) = *(u32 *)(ctx + 0x10);
-    *(u32 *)(ctx + 0x2c) = *(u32 *)(ctx + 0x14);
+    ctx->ch[1].isJointStereo = joint_stereo;
+    for (s32 b = 0; b < 4; b++)
+        ctx->prevJsWeights[b] = ctx->jsWeights[b];
+    ctx->prevJsScale = ctx->jsScale;
+    ctx->prevJsNumQmf = ctx->jsNumQmf;
     return (s32)(u32)ctx;
 }
 
 /* 0x0130 */
-static __attribute__((noinline, used)) s32 sub_0130(void)
+static __attribute__((noinline, used)) s32 atrac3GetVersion(void)
 {
     return 0x10600;
 }
 
 /* 0x013c */
-static __attribute__((noinline)) void sub_013c(u8 *ctx, u8 *huff_info, s32 tbl_idx, float *out, float *end, float scale)
+static __attribute__((noinline)) void atrac3DecodeSpectrum(Atrac3Ctx *ctx, const Atrac3HuffInfo *huff_info, s32 tbl_idx, float *out, float *end, float scale)
 {
-    u8 *val_tbl = *(u8 **)(huff_info + tbl_idx * 4 + 0x1c);
-    s32 max_bits = *(s8 *)(huff_info + tbl_idx + 0x38);
-    u8 *len_tbl = *(u8 **)(huff_info + tbl_idx * 4);
-    s32 bitpos = *(s32 *)(ctx + 0x40);
-    u8 *bs = *(u8 **)(ctx + 0x3c);
+    u8 *val_tbl = huff_info->valTbl[tbl_idx];
+    s32 max_bits = huff_info->maxBits[tbl_idx];
+    u8 *len_tbl = huff_info->lenTbl[tbl_idx];
+    s32 bitpos = ctx->bitpos;
+    u8 *bs = ctx->bitstream;
 
     if (tbl_idx == 0) {
         u32 mask = 0xffffffffu >> max_bits;
@@ -713,7 +728,7 @@ static __attribute__((noinline)) void sub_013c(u8 *ctx, u8 *huff_info, s32 tbl_i
                 u32 code = ((u32)((s32)word >> shift)) & mask;
                 s32 sym = (s8)val_tbl[code];
                 if (sym < 0) {
-                    *(s32 *)(ctx + 0x44) = 0x189;
+                    ctx->errCode = 0x189;
                     return;
                 }
                 const float *pair = &pair_tbl[sym];
@@ -724,9 +739,9 @@ static __attribute__((noinline)) void sub_013c(u8 *ctx, u8 *huff_info, s32 tbl_i
             bitpos += (max_bits - shift);
             out += 8;
         } while (out < end);
-        *(s32 *)(ctx + 0x40) = bitpos;
+        ctx->bitpos = bitpos;
     } else {
-        const float *flt_tbl = *(const float **)(RODATA_PTR(0x2de0) + tbl_idx * 4 - 4);
+        const float *flt_tbl = ((const float *const *)RODATA_PTR(0x2de0))[tbl_idx - 1];
         u32 mask = (u32)(0xffff >> max_bits);
         while (out < end) {
             s32 byte_off = bitpos >> 3;
@@ -735,29 +750,29 @@ static __attribute__((noinline)) void sub_013c(u8 *ctx, u8 *huff_info, s32 tbl_i
             u32 code = (word >> shift) & mask;
             s32 sym = (s8)val_tbl[code];
             if (sym < 0) {
-                *(s32 *)(ctx + 0x44) = 0x189;
+                ctx->errCode = 0x189;
                 return;
             }
             *out += flt_tbl[sym] * scale;
             bitpos += (s8)len_tbl[sym];
             out++;
         }
-        *(s32 *)(ctx + 0x40) = bitpos;
+        ctx->bitpos = bitpos;
     }
 }
 
 /* 0x03c4 */
-static __attribute__((noinline)) s32 sub_03c4(u8 *in_buf, s32 **out_ch_ptrs, u8 *ctx)
+static __attribute__((noinline)) s32 atrac3DecodeFrame(u8 *in_buf, s32 **out_ch_ptrs, Atrac3Ctx *ctx)
 {
-    s32 frame_bytes = *(s32 *)(ctx + 0x34);
-    s32 channels = *(s32 *)(ctx + 0x30);
-    *(u8 **)(ctx + 0x3c) = in_buf;
-    *(s32 *)(ctx + 0x44) = 0;
+    s32 frame_bytes = ctx->frameBytes;
+    s32 channels = ctx->channels;
+    ctx->bitstream = in_buf;
+    ctx->errCode = 0;
     if (channels <= 0)
         return 0;
 
     for (s32 ch = 0; ch < channels; ch++) {
-        out_ch_ptrs[ch] = (s32 *)(ctx + 0x50 + ch * 0x1b30);
+        out_ch_ptrs[ch] = (s32 *)ctx->ch[ch].pcmWork;
     }
 
     s32 sp_band_cfg[64];
@@ -767,9 +782,9 @@ static __attribute__((noinline)) s32 sub_03c4(u8 *in_buf, s32 **out_ch_ptrs, u8 
 
     s32 total_consumed = 0;
     for (s32 ch = 0; ch < channels; ch++) {
-        u8 *ch_ctx = ctx + 0x48 + ch * 0x1b30;
-        s32 is_joint_ch = *(s32 *)ch_ctx;
-        u8 *bs = *(u8 **)(ctx + 0x3c);
+        Atrac3ChannelCtx *ch_ctx = &ctx->ch[ch];
+        s32 is_joint_ch = ch_ctx->isJointStereo;
+        u8 *bs = ctx->bitstream;
         s32 avail_bytes = frame_bytes;
         s32 bitpos = 0;
 
@@ -778,7 +793,7 @@ static __attribute__((noinline)) s32 sub_03c4(u8 *in_buf, s32 **out_ch_ptrs, u8 
             while (end_p > bs && *end_p == 0xf8) {
                 end_p--;
             }
-            s32 prev_bytes = (*(s32 *)(ctx + 0x40) + 7) >> 3;
+            s32 prev_bytes = (ctx->bitpos + 7) >> 3;
             avail_bytes = (s32)(end_p - bs) - prev_bytes + 1;
             for (u8 *l = bs, *r = bs + frame_bytes - 1; l < r; l++, r--) {
                 u8 tmp = *l;
@@ -786,18 +801,18 @@ static __attribute__((noinline)) s32 sub_03c4(u8 *in_buf, s32 **out_ch_ptrs, u8 
                 *r = tmp;
             }
             if ((bs[1] & 0x0c) != 0x0c) {
-                *(s32 *)(ctx + 0x40) = 16;
-                *(s32 *)(ctx + 0x44) = 0x183;
+                ctx->bitpos = 16;
+                ctx->errCode = 0x183;
                 goto frame_advance;
             }
             bitpos = 16;
-            *(s32 *)(ctx + 0x40) = 16;
+            ctx->bitpos = 16;
         } else {
             u8 hdr = bs[total_consumed];
             bitpos = (total_consumed << 3) + 8;
-            *(s32 *)(ctx + 0x40) = bitpos;
+            ctx->bitpos = bitpos;
             if ((hdr & 0xfc) != 0xa0) {
-                *(s32 *)(ctx + 0x44) = 0x182;
+                ctx->errCode = 0x182;
                 goto frame_advance;
             }
         }
@@ -807,7 +822,7 @@ static __attribute__((noinline)) s32 sub_03c4(u8 *in_buf, s32 **out_ch_ptrs, u8 
             u32 w = ((u32)bs[bitpos >> 3] << 8) | bs[(bitpos >> 3) + 1];
             s32 n_regions = (w >> (13 - (bitpos & 7))) & 7;
             bitpos += 3;
-            *(s32 *)(ctx + 0x40) = bitpos;
+            ctx->bitpos = bitpos;
             s32 r = 0;
             for (; r < n_regions; r++) {
                 u32 w1 = ((u32)bs[bitpos >> 3] << 8) | bs[(bitpos >> 3) + 1];
@@ -819,12 +834,12 @@ static __attribute__((noinline)) s32 sub_03c4(u8 *in_buf, s32 **out_ch_ptrs, u8 
                 sp_band_cfg[b * 16 + r * 2 + 1] = g_val;
                 bitpos += 9;
                 if (r > 0 && sp_band_cfg[b * 16 + (r - 1) * 2] >= loc_val) {
-                    *(s32 *)(ctx + 0x40) = bitpos;
-                    *(s32 *)(ctx + 0x44) = 0x185;
+                    ctx->bitpos = bitpos;
+                    ctx->errCode = 0x185;
                     goto frame_advance;
                 }
             }
-            *(s32 *)(ctx + 0x40) = bitpos;
+            ctx->bitpos = bitpos;
             sp_band_cfg[b * 16 + r * 2 + 0] = 0xff;
             sp_band_cfg[b * 16 + r * 2 + 1] = 4;
         }
@@ -840,17 +855,17 @@ static __attribute__((noinline)) s32 sub_03c4(u8 *in_buf, s32 **out_ch_ptrs, u8 
         u32 w_tonal = ((u32)bs[bitpos >> 3] << 8) | bs[(bitpos >> 3) + 1];
         s32 n_tonal_groups = (w_tonal >> (11 - (bitpos & 7))) & 0x1f;
         bitpos += 5;
-        *(s32 *)(ctx + 0x40) = bitpos;
+        ctx->bitpos = bitpos;
         s32 max_spec_pos = 0;
 
         if (n_tonal_groups != 0) {
             u32 w_mode = ((u32)bs[bitpos >> 3] << 8) | bs[(bitpos >> 3) + 1];
             s32 t_mode = (w_mode >> (14 - (bitpos & 7))) & 3;
             bitpos += 2;
-            *(s32 *)(ctx + 0x40) = bitpos;
+            ctx->bitpos = bitpos;
             if (t_mode >= 2) {
                 if (t_mode != 3) {
-                    *(s32 *)(ctx + 0x44) = 0x184;
+                    ctx->errCode = 0x184;
                     goto subband_decode;
                 }
             }
@@ -866,18 +881,18 @@ static __attribute__((noinline)) s32 sub_03c4(u8 *in_buf, s32 **out_ch_ptrs, u8 
                 s32 vals_per_comp = ((raw_mask - band_bits) >> shift_s) + 1;
                 s32 huff_num = raw_len - 1;
                 bitpos += num_qmf + 7;
-                *(s32 *)(ctx + 0x40) = bitpos;
+                ctx->bitpos = bitpos;
                 if (huff_num <= 0) {
-                    *(s32 *)(ctx + 0x44) = 0x181;
+                    ctx->errCode = 0x181;
                     goto subband_decode;
                 }
                 s32 h_table_sel = t_mode;
                 if (t_mode >= 2) {
                     h_table_sel = (bs[bitpos >> 3] >> ((~bitpos) & 7)) & 1;
                     bitpos += 1;
-                    *(s32 *)(ctx + 0x40) = bitpos;
+                    ctx->bitpos = bitpos;
                 }
-                u8 *huff_info = RODATA_PTR(0x29d0) + (h_table_sel << 6);
+                const Atrac3HuffInfo *huff_info = &((const Atrac3HuffInfo *)RODATA_PTR(0x29d0))[h_table_sel];
                 for (s32 sub_off = 0; ; ) {
                     if ((sub_off & 0xff) == 0) {
                         do {
@@ -892,12 +907,12 @@ static __attribute__((noinline)) s32 sub_03c4(u8 *in_buf, s32 **out_ch_ptrs, u8 
                     u32 wc = ((u32)bs[bitpos >> 3] << 8) | bs[(bitpos >> 3) + 1];
                     s32 n_comps = ((wc >> (13 - (bitpos & 7))) & 7) - 1;
                     bitpos += 3;
-                    *(s32 *)(ctx + 0x40) = bitpos;
+                    ctx->bitpos = bitpos;
                     for (s32 c = 0; c <= n_comps; c++) {
                         s32 bp_pos = bitpos;
                         s32 bp_sf = bitpos + 6;
                         bitpos += 12;
-                        *(s32 *)(ctx + 0x40) = bitpos;
+                        ctx->bitpos = bitpos;
                         u32 wp = ((u32)bs[bp_pos >> 3] << 8) | bs[(bp_pos >> 3) + 1];
                         u32 ws = ((u32)bs[bp_sf >> 3] << 8) | bs[(bp_sf >> 3) + 1];
                         s32 rel_pos = (ws >> (10 - (bp_sf & 7))) & 0x3f;
@@ -906,11 +921,11 @@ static __attribute__((noinline)) s32 sub_03c4(u8 *in_buf, s32 **out_ch_ptrs, u8 
                         s32 sf_idx = (wp >> (10 - (bp_pos & 7))) & 0x3f;
                         max_spec_pos = max_s32(max_spec_pos, end_pos);
                         if (c == 64) {
-                            *(s32 *)(ctx + 0x44) = 0x180;
+                            ctx->errCode = 0x180;
                             goto subband_decode;
                         }
-                        sub_013c(ctx, huff_info, huff_num, &sp_spec[abs_pos], &sp_spec[end_pos], sf_tbl[sf_idx]);
-                        bitpos = *(s32 *)(ctx + 0x40);
+                        atrac3DecodeSpectrum(ctx, huff_info, huff_num, &sp_spec[abs_pos], &sp_spec[end_pos], sf_tbl[sf_idx]);
+                        bitpos = ctx->bitpos;
                     }
                     sub_off += 0x40;
                 }
@@ -924,42 +939,42 @@ static __attribute__((noinline)) s32 sub_03c4(u8 *in_buf, s32 **out_ch_ptrs, u8 
             u32 w_sb = ((u32)bs[bitpos >> 3] << 8) | bs[(bitpos >> 3) + 1];
             u8 b_tbl = bs[bp_sb >> 3];
             bitpos += 6;
-            *(s32 *)(ctx + 0x40) = bitpos;
+            ctx->bitpos = bitpos;
             s32 h_sel = (b_tbl >> ((~bp_sb) & 7)) & 1;
             s32 n_subbands = ((w_sb >> (11 - ((bitpos - 6) & 7))) & 0x1f) + 1;
-            u8 *huff_info = RODATA_PTR(0x29d0) + (h_sel << 6);
-            s32 *sb_huff = (s32 *)(ch_ctx + 8);
+            const Atrac3HuffInfo *huff_info = &((const Atrac3HuffInfo *)RODATA_PTR(0x29d0))[h_sel];
+            s32 *sb_huff = (s32 *)ch_ctx->pcmWork;
             s32 num_coded = 0;
             for (s32 s = 0; s < n_subbands; s++) {
                 u32 wh = ((u32)bs[bitpos >> 3] << 8) | bs[(bitpos >> 3) + 1];
                 s32 h_idx = ((wh >> (13 - (bitpos & 7))) & 7) - 1;
                 bitpos += 3;
-                *(s32 *)(ctx + 0x40) = bitpos;
+                ctx->bitpos = bitpos;
                 sb_huff[s] = h_idx;
                 if (h_idx >= 0)
                     num_coded += 6;
             }
             s32 sf_bitpos = bitpos;
             bitpos += num_coded;
-            *(s32 *)(ctx + 0x40) = bitpos;
+            ctx->bitpos = bitpos;
             for (s32 s = 0; s < n_subbands; s++) {
                 s32 h_idx = sb_huff[s];
                 if (h_idx >= 0) {
                     u32 w_sf = ((u32)bs[sf_bitpos >> 3] << 8) | bs[(sf_bitpos >> 3) + 1];
                     s32 sf_idx = (w_sf >> (10 - (sf_bitpos & 7))) & 0x3f;
                     sf_bitpos += 6;
-                    sub_013c(ctx, huff_info, h_idx, &sp_spec[bsize_tbl[s]], &sp_spec[bsize_tbl[s + 1]], sf_tbl[sf_idx]);
+                    atrac3DecodeSpectrum(ctx, huff_info, h_idx, &sp_spec[bsize_tbl[s]], &sp_spec[bsize_tbl[s + 1]], sf_tbl[sf_idx]);
                 }
             }
             s32 max_pos = max_s32(bsize_tbl[n_subbands], max_spec_pos);
             s32 active_qmf = (max_pos + 0xff) >> 8;
-            s32 prev_active = *(s32 *)(ch_ctx + 4);
-            *(s32 *)(ch_ctx + 4) = active_qmf;
+            s32 prev_active = ch_ctx->activeQmf;
+            ch_ctx->activeQmf = active_qmf;
             s32 run_qmf = max_s32(prev_active, active_qmf);
 
-            float *hist = (float *)(ch_ctx + 0x1008);
+            float *hist = &ch_ctx->pcmWork[1024];
             for (int i = 0; i < 138; i++) {
-                *(float *)(ch_ctx + 8 + i * 4) = hist[i];
+                ch_ctx->pcmWork[i] = hist[i];
             }
 
             const float *win_tbl = (const float *)DATA_PTR(0x43c0);
@@ -1016,8 +1031,8 @@ static __attribute__((noinline)) s32 sub_03c4(u8 *in_buf, s32 **out_ch_ptrs, u8 
                 }
 
                 float g_init = gain_step_tbl[sp_band_cfg[b * 16 + 1]];
-                float *overlap_base = (float *)(ch_ctx + 0x1230 + b * 512);
-                float *pcm_band = (float *)(ch_ctx + 0x230 + b * 4);
+                float *overlap_base = ch_ctx->overlap[b];
+                float *pcm_band = &ch_ctx->pcmWork[138 + b];
                 for (int pair = 0; pair < 64; pair++) {
                     for (int sub = 0; sub < 2; sub++) {
                         u32 byte_idx = imdct_idx_tbl[pair * 2 + sub];
@@ -1027,10 +1042,10 @@ static __attribute__((noinline)) s32 sub_03c4(u8 *in_buf, s32 **out_ch_ptrs, u8 
                         float d = (s_even - s_odd) - tw[3] * s_odd;
                         float s = (s_even - s_odd) + tw[3] * s_odd;
                         float v0 = d * (tw[2] * g_init);
-                        float prev_ov = *(float *)((u8 *)overlap_base + byte_idx);
-                        *(float *)((u8 *)overlap_base + byte_idx) = s * tw[1];
-                        *(float *)((u8 *)pcm_band + (0x7f0 - (byte_idx << 2))) = prev_ov - tw[0] * v0;
-                        *(float *)((u8 *)pcm_band + (byte_idx << 2) + 0x800) = prev_ov * tw[0] + v0;
+                        float prev_ov = overlap_base[byte_idx >> 2];
+                        overlap_base[byte_idx >> 2] = s * tw[1];
+                        pcm_band[(0x7f0 >> 2) - byte_idx] = prev_ov - tw[0] * v0;
+                        pcm_band[byte_idx + (0x800 >> 2)] = prev_ov * tw[0] + v0;
                     }
                 }
 
@@ -1056,8 +1071,8 @@ static __attribute__((noinline)) s32 sub_03c4(u8 *in_buf, s32 **out_ch_ptrs, u8 
                         s32 step_idx = (cur_g << 5) + ((next_g - cur_g) << 2);
                         for (int k = 0; k < 7 && cur_p < end_p; k++) {
                             step_idx += (next_g - cur_g) << 2;
-                            float g1 = *(const float *)(RODATA_PTR(0x28dc) + (step_idx & 0x1c) + 0x40);
-                            float g2 = *(const float *)(RODATA_PTR(0x28dc) + ((step_idx & 0x1e0) >> 3));
+                            float g1 = gain_step_tbl[((step_idx & 0x1c) + 0x40) >> 2];
+                            float g2 = gain_step_tbl[(step_idx & 0x1e0) >> 5];
                             *cur_p *= g1 * g2;
                             cur_p += 4;
                         }
@@ -1066,33 +1081,34 @@ static __attribute__((noinline)) s32 sub_03c4(u8 *in_buf, s32 **out_ch_ptrs, u8 
             }
 
             for (s32 b = run_qmf; b < 4; b++) {
-                sub_276c(ch_ctx + 0x1230 + b * 512, 0, 512);
+                atrac3Memset(ch_ctx->overlap[b], 0, sizeof(ch_ctx->overlap[b]));
                 for (int i = 0; i < 256; i++) {
-                    *(float *)(ch_ctx + 0x230 + b * 4 + i * 16) = 0.0f;
+                    ch_ctx->pcmWork[138 + b + i * 4] = 0.0f;
                 }
             }
 
             if (is_joint_ch != 0) {
                 float c_quarter = *(const float *)RODATA_PTR(0x40b4);
                 float c_two = *(const float *)RODATA_PTR(0x40b0);
-                s32 m_prev = *(s32 *)(ctx + 0x2c);
-                s32 m_cur = *(s32 *)(ctx + 0x14);
+                s32 m_prev = ctx->prevJsNumQmf;
+                s32 m_cur = ctx->jsNumQmf;
                 for (s32 b = 0; b < 4; b++) {
                     float p0 = c_two, p1 = c_two;
                     if (b > m_prev) {
-                        const float *pt = *(const float **)(ctx + 0x28);
+                        const float *pt = ctx->prevJsScale;
                         p0 = pt[0];
                         p1 = pt[1];
                     }
                     float c0 = c_two, c1 = c_two;
                     if (b > m_cur) {
-                        const float *ct = *(const float **)(ctx + 0x10);
+                        const float *ct = ctx->jsScale;
                         c0 = ct[0];
                         c1 = ct[1];
                     }
-                    const float *w_cur = *(const float **)(ctx + b * 4);
-                    const float *w_prev = *(const float **)(ctx + 0x18 + b * 4);
-                    float *ch0_p = (float *)(ctx + 0x278 + b * 4);
+                    const float *w_cur = ctx->jsWeights[b];
+                    const float *w_prev = ctx->prevJsWeights[b];
+                    float *ch0_p = &ctx->ch[0].pcmWork[138 + b];
+                    float *ch1_p = &ctx->ch[1].pcmWork[138 + b];
                     s32 k = 0;
                     if (c0 != p0 || w_cur != w_prev) {
                         float dp0 = (c0 - p0) * c_quarter;
@@ -1106,57 +1122,55 @@ static __attribute__((noinline)) s32 sub_03c4(u8 *in_buf, s32 **out_ch_ptrs, u8 
                             float s0 = c0 + dp0 * t;
                             float s1 = c1 + dp1 * t;
                             float l = ch0_p[k * 4];
-                            float r = *(float *)((u8 *)&ch0_p[k * 4] + 0x1b30);
+                            float r = ch1_p[k * 4];
                             float m = l * w0 + r * w1;
                             ch0_p[k * 4] = m * s0;
-                            *(float *)((u8 *)&ch0_p[k * 4] + 0x1b30) = (l - m) * s1;
+                            ch1_p[k * 4] = (l - m) * s1;
                         }
                     }
                     for (; k < 256; k++) {
                         float l = ch0_p[k * 4];
-                        float r = *(float *)((u8 *)&ch0_p[k * 4] + 0x1b30);
+                        float r = ch1_p[k * 4];
                         float m = l * w_cur[0] + r * w_cur[1];
                         ch0_p[k * 4] = c0 * m;
-                        *(float *)((u8 *)&ch0_p[k * 4] + 0x1b30) = c1 * (l - m);
+                        ch1_p[k * 4] = c1 * (l - m);
                     }
                 }
-                *(u32 *)(ctx + 0x18) = *(u32 *)(ctx + 0x00);
-                *(u32 *)(ctx + 0x1c) = *(u32 *)(ctx + 0x04);
-                *(u32 *)(ctx + 0x20) = *(u32 *)(ctx + 0x08);
-                *(u32 *)(ctx + 0x24) = *(u32 *)(ctx + 0x0c);
-                *(u32 *)(ctx + 0x28) = *(u32 *)(ctx + 0x10);
-                *(u32 *)(ctx + 0x2c) = *(u32 *)(ctx + 0x14);
-                *(s32 *)(ctx + 0x14) = num_qmf;
+                for (s32 b = 0; b < 4; b++)
+                    ctx->prevJsWeights[b] = ctx->jsWeights[b];
+                ctx->prevJsScale = ctx->jsScale;
+                ctx->prevJsNumQmf = ctx->jsNumQmf;
+                ctx->jsNumQmf = num_qmf;
                 u8 b0 = bs[0];
-                *(void **)(ctx + 0x10) = RODATA_PTR(0x2950) + ((b0 >> 4) << 3);
+                ctx->jsScale = (const float *)(RODATA_PTR(0x2950) + ((b0 >> 4) << 3));
                 s32 js_bits = (((s32)b0 << 8) | bs[1]) >> 4;
                 for (s32 b = 3; b >= 0; b--) {
                     s32 sel = js_bits & 3;
                     if (sel == 2) {
-                        *(s32 *)(ctx + 0x44) = 0x18a;
+                        ctx->errCode = 0x18a;
                         goto frame_advance;
                     }
-                    *(void **)(ctx + b * 4) = RODATA_PTR(0x293c) + (sel << 2);
+                    ctx->jsWeights[b] = (const float *)(RODATA_PTR(0x293c) + (sel << 2));
                     js_bits >>= 2;
                 }
             }
 
             for (int i = 0; i < 64; i++) {
-                *(s32 *)(ch_ctx + 0x1a30 + i * 4) = sp_band_cfg[i];
+                ((s32 *)ch_ctx->bandCfg)[i] = sp_band_cfg[i];
             }
-            bitpos = *(s32 *)(ctx + 0x40);
+            bitpos = ctx->bitpos;
         }
 
     frame_advance:;
-        bitpos = *(s32 *)(ctx + 0x40);
+        bitpos = ctx->bitpos;
         if ((avail_bytes << 3) + 16 < bitpos) {
-            *(s32 *)(ctx + 0x44) = 0x18b;
+            ctx->errCode = 0x18b;
         }
-        frame_bytes = *(s32 *)(ctx + 0x34);
-        if (*(s32 *)(ctx + 0x38) != 0) {
+        frame_bytes = ctx->frameBytes;
+        if (ctx->varFrameFlag != 0) {
             s32 used_bytes = (bitpos + 7) >> 3;
-            if (*(s32 *)(ctx + 0x1b78) != 0) {
-                *(s32 *)(ctx + 0x44) = 1;
+            if (ctx->ch[1].isJointStereo != 0) {
+                ctx->errCode = 1;
             }
             if (used_bytes < frame_bytes) {
                 total_consumed = used_bytes;
@@ -1168,20 +1182,20 @@ static __attribute__((noinline)) s32 sub_03c4(u8 *in_buf, s32 **out_ch_ptrs, u8 
             }
         } else {
             total_consumed += frame_bytes;
-            if (*(s32 *)(ctx + 0x1b78) == 0) {
+            if (ctx->ch[1].isJointStereo == 0) {
                 avail_bytes += frame_bytes;
             }
         }
     }
 
-    s32 err = *(s32 *)(ctx + 0x44);
+    s32 err = ctx->errCode;
     if (err != 0 && err != 0x18b) {
         return -err;
     }
 
     const float *qmf_c = (const float *)RODATA_PTR(0x2880);
     for (s32 ch = 0; ch < channels; ch++) {
-        float *p = (float *)(ctx + 0x50 + ch * 0x1b30);
+        float *p = ctx->ch[ch].pcmWork;
         float *end_p = p + 1024;
         while (p != end_p) {
             p += 4;
@@ -1246,8 +1260,8 @@ static __attribute__((noinline)) s32 sub_03c4(u8 *in_buf, s32 **out_ch_ptrs, u8 
         }
     }
 
-    if (*(s32 *)(ctx + 0x44) != 0) {
-        return -(*(s32 *)(ctx + 0x44));
+    if (ctx->errCode != 0) {
+        return -(ctx->errCode);
     }
     return total_consumed;
 }
@@ -1268,7 +1282,7 @@ s32 sceAudiocodec2_E063D402(u32 *work, s32 type)
 {
     if (work == NULL || work[3] == 0 || type != 0x1001)
         return (s32)0x807f00ff;
-    return sub_253c(work);
+    return atrac3CodecInit(work);
 }
 
 /* 0x24c4 */
@@ -1276,29 +1290,29 @@ s32 sceAudiocodec2_21D5A83F(u32 *work, s32 type)
 {
     if (work == NULL || work[3] == 0 || work[6] == 0 || work[8] == 0 || type != 0x1001)
         return (s32)0x807f00ff;
-    return sub_25bc(work);
+    return atrac3CodecDecode(work);
 }
 
 /* 0x253c */
-static __attribute__((noinline)) s32 sub_253c(u32 *work)
+static __attribute__((noinline)) s32 atrac3CodecInit(u32 *work)
 {
-    s32 res = sub_26a8(work);
+    s32 res = atrac3ParseMode(work);
     if (res != 0)
         return res;
-    u32 js = sub_273c(work[10]);
+    u32 js = atrac3ModeToJointStereo(work[10]);
     if (js == 0x270f)
         return (s32)0x807f00ff;
     u32 ch = work[13];
     u32 fbytes = work[12] / ch;
-    s32 ptr = sub_0000((s32)ch, (s32)js, (s32)fbytes, (u8 *)work[3]);
+    s32 ptr = atrac3InitCtx((s32)ch, (s32)js, (s32)fbytes, (Atrac3Ctx *)work[3]);
     return (ptr != 0) ? 0 : (s32)0x807f00fd;
 }
 
 /* 0x25bc */
-static __attribute__((noinline)) s32 sub_25bc(u32 *work)
+static __attribute__((noinline)) s32 atrac3CodecDecode(u32 *work)
 {
     s32 *ch_ptrs[4];
-    s32 res = sub_03c4((u8 *)work[6], ch_ptrs, (u8 *)work[3]);
+    s32 res = atrac3DecodeFrame((u8 *)work[6], ch_ptrs, (Atrac3Ctx *)work[3]);
     if (res < 0) {
         work[2] = (u32)(-res);
         return (s32)0x807f00fd;
@@ -1325,7 +1339,7 @@ static __attribute__((noinline)) s32 sub_25bc(u32 *work)
 }
 
 /* 0x26a8 */
-static __attribute__((noinline)) s32 sub_26a8(u32 *work)
+static __attribute__((noinline)) s32 atrac3ParseMode(u32 *work)
 {
     u32 mode = work[10];
     if (mode != 6) {
@@ -1346,7 +1360,7 @@ static __attribute__((noinline)) s32 sub_26a8(u32 *work)
 }
 
 /* 0x273c */
-static __attribute__((noinline)) u32 sub_273c(u32 mode)
+static __attribute__((noinline)) u32 atrac3ModeToJointStereo(u32 mode)
 {
     if (mode == 6)
         return 0;
@@ -1362,7 +1376,7 @@ static __attribute__((noinline)) u32 sub_273c(u32 mode)
 }
 
 /* 0x276c */
-static __attribute__((noinline)) void *sub_276c(void *dst, int c, u32 size)
+static __attribute__((noinline)) void *atrac3Memset(void *dst, int c, u32 size)
 {
     sceKernelMemset(dst, c, size);
     return dst;

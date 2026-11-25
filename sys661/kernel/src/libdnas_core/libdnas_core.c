@@ -64,11 +64,11 @@ typedef struct DnasCtx {
 	int mc_res_len;          /* 0x808 (0x3800) */
 	uint8_t key1[0x14];      /* 0x80c (0x3804) */
 	uint32_t flag_be;        /* 0x820 (0x3818) */
-	uint8_t pad_824[0x08];   /* 0x824 */
+	uint8_t reserved824[0x08];   /* 0x824 */
 	uint8_t key2[0x18];      /* 0x82c (0x3824) */
 	uint8_t game_id[0x10];   /* 0x844 (0x383c) */
 	uint8_t game_key[0x10];  /* 0x854 (0x384c) */
-	uint8_t pad_864[0x08];   /* 0x864 */
+	uint8_t reserved864[0x08];   /* 0x864 */
 	uint8_t key3[0x08];      /* 0x86c (0x3864) */
 	uint8_t game_param[0x08];/* 0x874 (0x386c) */
 	int chkreg_modid;        /* 0x87c (0x3874) */
@@ -85,16 +85,16 @@ static char g_proxy_buf[0x80];   /* 0x3878..0x38f8 */
 static uint8_t g_io_buf[0x1000]; /* 0x38f8..0x48f8 */
 static uint8_t g_rtc_buf[0x1d0]; /* 0x48f8..0x50c8 */
 
-static int sub_174c(DnasCtx *ctx, int content_len, char *out_buf, uint32_t max_len);
-static int sub_1a04(DnasRespHeader *resp, char *in_buf, uint32_t in_len);
-static int sub_1e00(int expected_state, DnasCtx *ctx, const uint8_t *pkt, uint32_t *out_val);
-static void sub_20f0(uint8_t *pkt_out, uint32_t hdr_flags, const uint8_t *sess_id, uint32_t payload_len);
-static int sub_22f0(int state, DnasCtx *ctx, char *buf, uint32_t len);
-static int sub_24bc(DnasCtx *ctx, char *buf, uint32_t max_len);
-static int sub_256c(DnasCtx *ctx, const char *buf, uint32_t len);
-static int sub_25cc(DnasCtx *ctx, char *buf, uint32_t max_len);
-static int sub_2768(int state, DnasCtx *ctx, char *buf, uint32_t len);
-static int sub_28e8(DnasCtx *ctx, char *buf, uint32_t max_len);
+static int dnasBuildHttpHeader(DnasCtx *ctx, int content_len, char *out_buf, uint32_t max_len);
+static int dnasParseHttpResponse(DnasRespHeader *resp, char *in_buf, uint32_t in_len);
+static int dnasParsePacketHeader(int expected_state, DnasCtx *ctx, const uint8_t *pkt, uint32_t *out_val);
+static void dnasWritePacketHeader(uint8_t *pkt_out, uint32_t hdr_flags, const uint8_t *sess_id, uint32_t payload_len);
+static int dnasProcessFinalResponse(int state, DnasCtx *ctx, char *buf, uint32_t len);
+static int dnasBuildProxyConnect(DnasCtx *ctx, char *buf, uint32_t max_len);
+static int dnasCheckProxyResponse(DnasCtx *ctx, const char *buf, uint32_t len);
+static int dnasBuildAuthRequest1(DnasCtx *ctx, char *buf, uint32_t max_len);
+static int dnasProcessAuthResponse1(int state, DnasCtx *ctx, char *buf, uint32_t len);
+static int dnasBuildAuthRequest2(DnasCtx *ctx, char *buf, uint32_t max_len);
 
 int sceDNASCore_lib_BF6A7475(uint16_t *out_code)
 {
@@ -149,7 +149,7 @@ int sceDNASCore_lib_BA0D27F8(void)
 	uint32_t k1 = pspGetK1();
 	pspSetK1(k1 << 11);
 
-	int res = sub_24bc(&g_ctx, g_proxy_buf, 0x80);
+	int res = dnasBuildProxyConnect(&g_ctx, g_proxy_buf, 0x80);
 	if (res >= 0) {
 		g_proxy_len = res;
 		g_proxy_off = 0;
@@ -169,7 +169,7 @@ int sceDNASCore_lib_2370130E(void)
 
 	pspSetK1(k1 << 11);
 	if (len < 0x80) {
-		res = sub_256c(&g_ctx, g_proxy_buf, len);
+		res = dnasCheckProxyResponse(&g_ctx, g_proxy_buf, len);
 		if (res >= 0) {
 			pspSetK1(k1);
 			return res;
@@ -188,7 +188,7 @@ int sceDNASCore_lib_4108128B(void)
 	pspSetK1(k1 << 11);
 
 	if (g_state == 2) {
-		res = sub_25cc(&g_ctx, (char *)g_io_buf, 0x1000);
+		res = dnasBuildAuthRequest1(&g_ctx, (char *)g_io_buf, 0x1000);
 		if (res >= 0) {
 			g_state = 3;
 			g_buf_off = 0;
@@ -209,7 +209,7 @@ int sceDNASCore_lib_80CEC43A(void)
 	pspSetK1(k1 << 11);
 
 	if (g_state == 8) {
-		res = sub_28e8(&g_ctx, (char *)g_io_buf, 0x1000);
+		res = dnasBuildAuthRequest2(&g_ctx, (char *)g_io_buf, 0x1000);
 		if (res >= 0) {
 			g_state = 9;
 			g_buf_off = 0;
@@ -230,7 +230,7 @@ int sceDNASCore_lib_BA0A32CA(void)
 	pspSetK1(k1 << 11);
 
 	if (g_state == 13) {
-		res = sub_22f0(13, &g_ctx, (char *)g_io_buf, g_buf_len);
+		res = dnasProcessFinalResponse(13, &g_ctx, (char *)g_io_buf, g_buf_len);
 		if (res >= 0) {
 			sceKernelSetDNAS(1);
 		} else {
@@ -394,7 +394,7 @@ int sceDNASCore_lib_B6C76A14(char *out_host)
 	}
 
 	memset(out_host, 0, 0x80);
-	int res = sub_2768(g_state, &g_ctx, (char *)g_io_buf, g_buf_len);
+	int res = dnasProcessAuthResponse1(g_state, &g_ctx, (char *)g_io_buf, g_buf_len);
 	if (res != (int)0x80530421) {
 		if (res < 0) {
 			g_state = 1;
@@ -819,7 +819,7 @@ int sceDNASCore_lib_F0EB4367(void *buf, uint32_t len)
 	return copy_len;
 }
 
-static int sub_174c(DnasCtx *ctx, int content_len, char *out_buf, uint32_t max_len)
+static int dnasBuildHttpHeader(DnasCtx *ctx, int content_len, char *out_buf, uint32_t max_len)
 {
 	if (strlen(ctx->path) + 0x10 >= max_len) {
 		return 0x80530404;
@@ -905,7 +905,7 @@ static int sub_174c(DnasCtx *ctx, int content_len, char *out_buf, uint32_t max_l
 	return off + 2;
 }
 
-static int sub_1a04(DnasRespHeader *resp, char *in_buf, uint32_t in_len)
+static int dnasParseHttpResponse(DnasRespHeader *resp, char *in_buf, uint32_t in_len)
 {
 	if (in_len >= 0x1000) {
 		return 0x80530404;
@@ -1013,7 +1013,7 @@ static int sub_1a04(DnasRespHeader *resp, char *in_buf, uint32_t in_len)
 	return (int)in_len - rem;
 }
 
-static int sub_1e00(int expected_state, DnasCtx *ctx, const uint8_t *pkt, uint32_t *out_val)
+static int dnasParsePacketHeader(int expected_state, DnasCtx *ctx, const uint8_t *pkt, uint32_t *out_val)
 {
 	uint32_t magic;
 	memcpy(&magic, pkt, 4);
@@ -1076,7 +1076,7 @@ static int sub_1e00(int expected_state, DnasCtx *ctx, const uint8_t *pkt, uint32
 	return 0x80530444;
 }
 
-static void sub_20f0(uint8_t *pkt_out, uint32_t hdr_flags, const uint8_t *sess_id, uint32_t payload_len)
+static void dnasWritePacketHeader(uint8_t *pkt_out, uint32_t hdr_flags, const uint8_t *sess_id, uint32_t payload_len)
 {
 	uint32_t magic = 0xeddefffaU;
 	memcpy(pkt_out, &magic, 4);
@@ -1089,12 +1089,12 @@ static void sub_20f0(uint8_t *pkt_out, uint32_t hdr_flags, const uint8_t *sess_i
 	memcpy(pkt_out + 0x2c, &payload_len, 4);
 }
 
-static int sub_22f0(int state, DnasCtx *ctx, char *buf, uint32_t len)
+static int dnasProcessFinalResponse(int state, DnasCtx *ctx, char *buf, uint32_t len)
 {
 	uint32_t k1 = pspGetK1();
 	pspSetK1(k1 << 11);
 
-	int hdr_len = sub_1a04(&ctx->resp, buf, len);
+	int hdr_len = dnasParseHttpResponse(&ctx->resp, buf, len);
 	if (hdr_len < 0) {
 		pspSetK1(k1);
 		return hdr_len;
@@ -1111,7 +1111,7 @@ static int sub_22f0(int state, DnasCtx *ctx, char *buf, uint32_t len)
 		return 0x8053042c;
 	}
 
-	int pkt_len = sub_1e00(state, ctx, body, NULL);
+	int pkt_len = dnasParsePacketHeader(state, ctx, body, NULL);
 	if (pkt_len < 0) {
 		pspSetK1(k1);
 		return pkt_len;
@@ -1148,7 +1148,7 @@ static int sub_22f0(int state, DnasCtx *ctx, char *buf, uint32_t len)
 	return res;
 }
 
-static int sub_24bc(DnasCtx *ctx, char *buf, uint32_t max_len)
+static int dnasBuildProxyConnect(DnasCtx *ctx, char *buf, uint32_t max_len)
 {
 	uint32_t k1 = pspGetK1();
 	pspSetK1(k1 << 11);
@@ -1167,7 +1167,7 @@ static int sub_24bc(DnasCtx *ctx, char *buf, uint32_t max_len)
 	return res;
 }
 
-static int sub_256c(DnasCtx *ctx, const char *buf, uint32_t len)
+static int dnasCheckProxyResponse(DnasCtx *ctx, const char *buf, uint32_t len)
 {
 	(void)ctx;
 	uint32_t k1 = pspGetK1();
@@ -1183,13 +1183,13 @@ static int sub_256c(DnasCtx *ctx, const char *buf, uint32_t len)
 	return (cmp == 0) ? 0 : (int)0x80530412;
 }
 
-static int sub_25cc(DnasCtx *ctx, char *buf, uint32_t max_len)
+static int dnasBuildAuthRequest1(DnasCtx *ctx, char *buf, uint32_t max_len)
 {
 	uint32_t k1 = pspGetK1();
 	pspSetK1(k1 << 11);
 
 	memset(&ctx->resp, 0, sizeof(ctx->resp));
-	int hdr_len = sub_174c(ctx, 0xe0, buf, max_len);
+	int hdr_len = dnasBuildHttpHeader(ctx, 0xe0, buf, max_len);
 	if (hdr_len < 0) {
 		pspSetK1(k1);
 		return hdr_len;
@@ -1202,7 +1202,7 @@ static int sub_25cc(DnasCtx *ctx, char *buf, uint32_t max_len)
 
 	uint8_t zero_sess[0x20];
 	memset(zero_sess, 0, sizeof(zero_sess));
-	sub_20f0((uint8_t *)buf + hdr_len, 0, zero_sess, 0xb0);
+	dnasWritePacketHeader((uint8_t *)buf + hdr_len, 0, zero_sess, 0xb0);
 
 	uint8_t mc_out[0xb0];
 	int res = sceMcctrl_1EDFD6BB(ctx->mc_ctx, mc_out);
@@ -1216,12 +1216,12 @@ static int sub_25cc(DnasCtx *ctx, char *buf, uint32_t max_len)
 	return hdr_len + 0xe0;
 }
 
-static int sub_2768(int state, DnasCtx *ctx, char *buf, uint32_t len)
+static int dnasProcessAuthResponse1(int state, DnasCtx *ctx, char *buf, uint32_t len)
 {
 	uint32_t k1 = pspGetK1();
 	pspSetK1(k1 << 11);
 
-	int hdr_len = sub_1a04(&ctx->resp, buf, len);
+	int hdr_len = dnasParseHttpResponse(&ctx->resp, buf, len);
 	if (hdr_len < 0) {
 		pspSetK1(k1);
 		return hdr_len;
@@ -1242,7 +1242,7 @@ static int sub_2768(int state, DnasCtx *ctx, char *buf, uint32_t len)
 		return 0x8053042d;
 	}
 
-	int res = sub_1e00(state, ctx, body, NULL);
+	int res = dnasParsePacketHeader(state, ctx, body, NULL);
 	if (res < 0) {
 		pspSetK1(k1);
 		return res;
@@ -1255,12 +1255,12 @@ static int sub_2768(int state, DnasCtx *ctx, char *buf, uint32_t len)
 	return res;
 }
 
-static int sub_28e8(DnasCtx *ctx, char *buf, uint32_t max_len)
+static int dnasBuildAuthRequest2(DnasCtx *ctx, char *buf, uint32_t max_len)
 {
 	uint32_t k1 = pspGetK1();
 	pspSetK1(k1 << 11);
 
-	int hdr_len = sub_174c(ctx, 0x160, buf, max_len);
+	int hdr_len = dnasBuildHttpHeader(ctx, 0x160, buf, max_len);
 	if (hdr_len < 0) {
 		pspSetK1(k1);
 		return hdr_len;
@@ -1273,7 +1273,7 @@ static int sub_28e8(DnasCtx *ctx, char *buf, uint32_t max_len)
 
 	uint8_t sess_copy[0x20];
 	memcpy(sess_copy, ctx->session_id, 0x20);
-	sub_20f0((uint8_t *)buf + hdr_len, 0x01000000U, sess_copy, 0x130);
+	dnasWritePacketHeader((uint8_t *)buf + hdr_len, 0x01000000U, sess_copy, 0x130);
 	memcpy(buf + hdr_len + 0x30, ctx->token, 0x130);
 
 	pspSetK1(k1);
