@@ -25,7 +25,7 @@ extern int sceChkregGetPsCode(u8 *buf);
 s32 sceHttpStorage_driver_24AA94F4(u32 id, const void *buf, SceSize size) __attribute__((alias("sceHttpStorageWrite")));
 s32 sceHttpStorage_driver_2D8DAE58(s32 id, SceIoStat *stat) __attribute__((alias("sceHttpStorageGetstat")));
 s32 sceHttpStorage_driver_700AAD44(u32 id, s32 flags, s32 mode) __attribute__((alias("sceHttpStorageOpen")));
-s32 sceHttpStorage_driver_B33389CE(u32 id) __attribute__((alias("sceHttpStorageLseek")));
+s32 sceHttpStorage_driver_B33389CE(u32 id, s64 offset, s32 whence) __attribute__((alias("sceHttpStorageLseek")));
 s32 sceHttpStorage_driver_CDA3D8F6(u32 id) __attribute__((alias("sceHttpStorageClose")));
 s32 sceHttpStorage_driver_CDDF1103(u32 id, void *buf, SceSize size) __attribute__((alias("sceHttpStorageRead")));
 s32 sceHttpStorage_driver_C59AC98A(void) __attribute__((alias("sceHttpStorageEnd")));
@@ -44,14 +44,20 @@ s32 sceHttpStorageOpen(u32 id, s32 flags, s32 mode)
         return 0x80000020;
     }
 
-    const char *path = (id != 0) ? "flash1:/net/http/cookie.dat" : "flash1:/net/http/auth.dat";
-    SceUID fd = sceIoOpen(path, (flags & 0x02000603) | 0x04000000, mode & 0x1A4);
-    if (fd < 0) {
+    s32 fileDesc;
+    if (id == 0) {
+        fileDesc = sceIoOpen("flash1:/net/http/auth.dat", (flags & 0x02000603) | 0x04000000, mode & 0x1A4);
+    } else if (id == 1) {
+        fileDesc = sceIoOpen("flash1:/net/http/cookie.dat", (flags & 0x02000603) | 0x04000000, mode & 0x1A4);
+    } else {
+        fileDesc = 0x80000100;
+    }
+    if (fileDesc < 0) {
         pspSetK1(oldk1);
-        return fd;
+        return fileDesc;
     }
 
-    g_fd[id] = fd;
+    g_fd[id] = fileDesc;
     pspSetK1(oldk1);
     return 0;
 }
@@ -113,7 +119,7 @@ s32 sceHttpStorageWrite(u32 id, const void *buf, SceSize size)
     return ret;
 }
 
-s32 sceHttpStorageLseek(u32 id)
+s32 sceHttpStorageLseek(u32 id, s64 offset, s32 whence)
 {
     s32 oldk1 = pspShiftK1();
     if (id >= 2) {
@@ -124,7 +130,7 @@ s32 sceHttpStorageLseek(u32 id)
         pspSetK1(oldk1);
         return 0x80000001;
     }
-    s32 ret = (s32)sceIoLseek(g_fd[id], 0, SEEK_END);
+    s32 ret = (s32)sceIoLseek(g_fd[id], offset, whence);
     pspSetK1(oldk1);
     return ret;
 }
@@ -185,7 +191,7 @@ s32 sceHttpStorage_bridge_04EF00F8(u8 *psCode)
     }
 
     s32 modid = sceKernelSearchModuleByName("sceChkreg");
-    s32 res;
+    s32 res = 0;
     if (modid == (s32)0x8002012E) {
         modid = sceKernelLoadModuleForKernel("flash0:/kd/chkreg.prx", 0, NULL);
         if (modid < 0) {
@@ -194,23 +200,20 @@ s32 sceHttpStorage_bridge_04EF00F8(u8 *psCode)
         }
         loadedMod = modid;
         res = sceKernelStartModule(modid, 0, NULL, &status, NULL);
-        if (res < 0) {
-            goto cleanup;
-        }
     } else if (modid < 0) {
         pspSetK1(oldk1);
         return modid;
     }
 
-    res = sceChkregGetPsCode(psCode);
+    if (res >= 0) {
+        res = sceChkregGetPsCode(psCode);
+    }
 
-cleanup:
     if (loadedMod >= 0) {
         sceKernelStopModule(loadedMod, 0, NULL, NULL, NULL);
         s32 ures = sceKernelUnloadModule(loadedMod);
         if (ures < 0) {
-            pspSetK1(oldk1);
-            return ures;
+            res = ures;
         }
     }
     pspSetK1(oldk1);
@@ -234,10 +237,10 @@ s32 sceHttpStorage_bridge_EFE06A20(s32 type, char *buf, u32 size)
             pspSetK1(oldk1);
             return 0x80000104;
         }
-        if (((const char *)info)[180] == '\0') {
-            strncpy(buf, (const char *)info + 68, 13);
+        if ((u8)info->param_gamedata_id[0] == 0) {
+            strncpy(buf, (const char *)info->param_product_string, 13);
         } else {
-            strncpy(buf, (const char *)info + 180, 10);
+            strncpy(buf, info->param_gamedata_id, 10);
         }
         pspSetK1(oldk1);
         return 0;
@@ -246,7 +249,7 @@ s32 sceHttpStorage_bridge_EFE06A20(s32 type, char *buf, u32 size)
             pspSetK1(oldk1);
             return 0x80000104;
         }
-        strncpy(buf, (const char *)info + 196, 7);
+        strncpy(buf, info->param_app_ver, 7);
         pspSetK1(oldk1);
         return 0;
     case 3:
@@ -254,7 +257,7 @@ s32 sceHttpStorage_bridge_EFE06A20(s32 type, char *buf, u32 size)
             pspSetK1(oldk1);
             return 0x80000104;
         }
-        strncpy(buf, (const char *)info + 88, 7);
+        strncpy(buf, info->vsh_version, 7);
         pspSetK1(oldk1);
         return 0;
     default:

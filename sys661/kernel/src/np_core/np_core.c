@@ -58,7 +58,7 @@ static const SceNpHeaderPair g_reqHeaders[3] = {
     { "Accept-Language", "ja, en, fr, es, de, it, nl, pt, ru, ko, zh, ch" },
 };
 
-static const SceNpHeaderPair g_respHeaders[3] = {
+static SceNpHeaderPair g_respHeaders[3] = {
     { "Content-Type", "application/x-i-5-ticket" },
     { "X-I-5-Version", "2.1" },
     { "X-I-5-Status", "OK" },
@@ -107,7 +107,7 @@ s32 sceNpCore_8AFAB4A0(const s32 *param, char *buf, u32 size)
     s32 oldk1 = pspShiftK1();
     u32 paddr = (u32)param;
     u32 baddr = (u32)buf;
-    if (param != NULL && buf != NULL
+    if (((param == NULL) | (buf == NULL)) == 0
         && (s32)(((paddr + 12) | paddr) & (oldk1 << 11)) >= 0
         && (s32)((oldk1 << 11) & ((baddr + size) | baddr | size)) >= 0) {
         s32 res = getNpServiceEntry(param, buf, size);
@@ -293,18 +293,20 @@ static s32 getNpVersionInfo(char *nameBuf, u32 nameSize, char *valBuf, u32 valSi
     if (valSize < 3) {
         return 0x80550202;
     }
-    valBuf[0] = 'P';
-    valBuf[1] = 'S';
-    valBuf[2] = 'P';
+    const char *ver = "PSP";
+    valBuf[0] = ver[0];
+    valBuf[1] = ver[1];
+    valBuf[2] = ver[2];
     return 0;
 }
 
 static s32 formatNpAuthUrl(char *buf, u32 size)
 {
+    s32 res = 0x80550202;
     if (size >= 50) {
-        return sprintf(buf, "https://auth.%s.ac.playstation.net/nav/auth", g_npEnv);
+        res = sprintf(buf, "https://auth.%s.ac.playstation.net/nav/auth", g_npEnv);
     }
-    return 0x80550202;
+    return res;
 }
 
 static s32 getNpTitleInfo(char *buf, u32 size)
@@ -339,24 +341,23 @@ static s32 getNpHeaderName(u32 idx, char *buf, u32 size)
     if (idx >= 3) {
         return 0x80550203;
     }
-    const char *name = g_respHeaders[idx].name;
-    if (strlen(name) >= size) {
+    if (strlen(g_respHeaders[idx].name) >= size) {
         return 0x80550202;
     }
-    strcpy(buf, name);
+    strcpy(buf, g_respHeaders[idx].name);
     return (idx + 1 >= 3) ? 1 : 0;
 }
 
 static s32 parseNpStatusHeader(const char *str, u32 len)
 {
-    if (len < g_ngPrefix.len + 1) {
+    if (len < g_ngPrefix.len + 2) {
         return 0;
     }
     if (strncmp(str, g_ngPrefix.str, g_ngPrefix.len) != 0) {
         return 0;
     }
     const char *numStr = str + g_ngPrefix.len;
-    char *endPtr = NULL;
+    char *endPtr;
     u32 val = (u32)strtol(numStr, &endPtr, 16);
     if (numStr == endPtr) {
         return (s32)val;

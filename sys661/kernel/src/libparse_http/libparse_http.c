@@ -27,12 +27,14 @@ static u8 g_ctype[129] = {
 
 #define CTYPE_TABLE (&g_ctype[1])
 
-static s32 __attribute__((noipa)) parse_version(const char *buf, u32 len, s32 *ver_major, s32 *ver_minor);
-static s32 __attribute__((noipa)) parse_status_code(const char *buf, u32 len, s32 *status_code);
-static s32 __attribute__((noipa)) parse_strncasecmp(const char *s1, const char *s2, u32 n);
-static s32 __attribute__((noipa)) parse_reason_phrase(const char *buf, u32 len, const char **phrase_out, u32 *phrase_len_out);
-static u32 __attribute__((noipa)) parse_strlen(const char *s);
-static s32 __attribute__((noipa)) parse_strncmp(const char *s1, const char *s2, s32 n);
+extern s32 sceKernelCheckThreadStack(void);
+
+static s32 __attribute__((noinline)) parse_version(const char *buf, u32 len, s32 *ver_major, s32 *ver_minor);
+static s32 __attribute__((noinline)) parse_status_code(const char *buf, u32 len, s32 *status_code);
+static s32 __attribute__((noinline)) parse_strncasecmp(const char *s1, const char *s2, u32 n);
+static s32 __attribute__((noinline)) parse_reason_phrase(const char *buf, u32 len, const char **phrase_out, u32 *phrase_len_out);
+static u32 __attribute__((noinline)) parse_strlen(const char *s);
+static s32 __attribute__((noinline)) parse_strncmp(const char *s1, const char *s2, s32 n);
 
 s32 sceParseHttp_8077A433(const char *buf, u32 len, s32 *ver_major, s32 *ver_minor,
                           s32 *status_code, const char **reason_phrase, u32 *reason_len)
@@ -41,8 +43,9 @@ s32 sceParseHttp_8077A433(const char *buf, u32 len, s32 *ver_major, s32 *ver_min
         return 0x80410005;
     if (buf == NULL)
         return 0x80432060;
-    if (ver_major == NULL || ver_minor == NULL || status_code == NULL ||
-        reason_phrase == NULL || reason_len == NULL)
+    if (((ver_major == NULL) | (ver_minor == NULL)) ||
+        ((status_code == NULL) | (reason_phrase == NULL)) ||
+        reason_len == NULL)
         return 0x804321fe;
 
     s32 res = parse_version(buf, len, ver_major, ver_minor);
@@ -78,6 +81,7 @@ s32 sceParseHttp_AD7BFDEF(const char *buf, u32 len, const char *field_name,
         return 0x80432025;
 
     s32 at_line_start = 1;
+    s32 found = 0;
     u32 i = 0;
     while (i < len) {
         const char *cur = buf + i;
@@ -91,7 +95,8 @@ s32 sceParseHttp_AD7BFDEF(const char *buf, u32 len, const char *field_name,
                         u32 flen3 = parse_strlen(field_name);
                         if (buf[i + flen3] == ':') {
                             i += parse_strlen(field_name);
-                            goto found_field;
+                            found = 1;
+                            break;
                         }
                     }
                 }
@@ -102,9 +107,9 @@ s32 sceParseHttp_AD7BFDEF(const char *buf, u32 len, const char *field_name,
         if (ch == '\n')
             at_line_start = 1;
     }
-    return 0x80432025;
+    if (!found)
+        return 0x80432025;
 
-found_field:
     while (i <= len) {
         if (buf[i] == ':') {
             i++;
@@ -137,7 +142,7 @@ found_field:
     return 0x80432025;
 }
 
-static s32 __attribute__((noipa)) parse_version(const char *buf, u32 len, s32 *ver_major, s32 *ver_minor)
+static s32 __attribute__((noinline)) parse_version(const char *buf, u32 len, s32 *ver_major, s32 *ver_minor)
 {
     *ver_major = 0;
     *ver_minor = 0;
@@ -168,7 +173,7 @@ static s32 __attribute__((noipa)) parse_version(const char *buf, u32 len, s32 *v
     return (buf[idx] == ' ') ? (s32)(idx + 1) : (s32)0x80432060;
 }
 
-static s32 __attribute__((noipa)) parse_status_code(const char *buf, u32 len, s32 *status_code)
+static s32 __attribute__((noinline)) parse_status_code(const char *buf, u32 len, s32 *status_code)
 {
     if (len < 4)
         return 0x80432060;
@@ -186,7 +191,7 @@ static s32 __attribute__((noipa)) parse_status_code(const char *buf, u32 len, s3
     return 3;
 }
 
-static s32 __attribute__((noipa)) parse_strncasecmp(const char *s1, const char *s2, u32 n)
+static s32 __attribute__((noinline)) parse_strncasecmp(const char *s1, const char *s2, u32 n)
 {
     if (n == 0)
         return 0;
@@ -204,7 +209,7 @@ static s32 __attribute__((noipa)) parse_strncasecmp(const char *s1, const char *
     return 0;
 }
 
-static s32 __attribute__((noipa)) parse_reason_phrase(const char *buf, u32 len,
+static s32 __attribute__((noinline)) parse_reason_phrase(const char *buf, u32 len,
                                                       const char **phrase_out, u32 *phrase_len_out)
 {
     u32 i = 0;
@@ -222,7 +227,7 @@ static s32 __attribute__((noipa)) parse_reason_phrase(const char *buf, u32 len,
     return 0x80432060;
 }
 
-static u32 __attribute__((noipa)) parse_strlen(const char *s)
+static u32 __attribute__((noinline)) parse_strlen(const char *s)
 {
     if (s == NULL)
         return 0;
@@ -232,7 +237,7 @@ static u32 __attribute__((noipa)) parse_strlen(const char *s)
     return len;
 }
 
-static s32 __attribute__((noipa)) parse_strncmp(const char *s1, const char *s2, s32 n)
+static s32 __attribute__((noinline)) parse_strncmp(const char *s1, const char *s2, s32 n)
 {
     if (s1 == NULL || s2 == NULL) {
         if (s1 == s2)
