@@ -196,6 +196,8 @@ int locationSvcDenyApplication(int appId, SceLocationHandle handle);
 int locationSvcSetGpsEmulationFile(const char *path);
 int locationSvcDebugCmd(int appId, int cmd, const int *inArg, void *outBuf);
 int locationSvcNotifyPermissionChanged(int appId, SceLocationHandle handle);
+int locationSvcSetPermissionMode(int mode);
+int locationSvcSetAppPermission(const char *titleId, bool reload);
 int locationSvcGetValue(SceUInt32 *value);
 
 #endif
