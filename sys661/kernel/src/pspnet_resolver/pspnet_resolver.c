@@ -557,6 +557,7 @@ static int resolverQuery(ResolverNode *node, int type, const void *name_or_addr,
     int ret;
     u32 rem_buflen = node->buflen;
     char *qname;
+    u8 *qname_end;
     u8 *pkt_buf;
     int r_idx, d_idx;
 
@@ -581,9 +582,11 @@ static int resolverQuery(ResolverNode *node, int type, const void *name_or_addr,
             sceNet_lib_B5CE388A(qname, hname, hlen - 1);
             qname[hlen - 1] = 0;
             pkt_buf = (u8 *)(qname + hlen);
+            qname_end = pkt_buf;
             rem_buflen -= hlen;
         } else {
             qname = (char *)hname;
+            qname_end = (u8 *)(hname + hlen + 1);
             pkt_buf = node->buf;
         }
     } else if (type == 1) {
@@ -603,6 +606,7 @@ static int resolverQuery(ResolverNode *node, int type, const void *name_or_addr,
         SceSize total_qlen = (SceSize)(p - (char *)node->buf) + arpa_len + 1;
         qname = (char *)node->buf;
         pkt_buf = node->buf + total_qlen;
+        qname_end = pkt_buf;
         rem_buflen -= total_qlen;
     } else {
         ret = 0x80410417;
@@ -616,7 +620,7 @@ static int resolverQuery(ResolverNode *node, int type, const void *name_or_addr,
         r_idx = node->async->retry_idx;
     }
 
-    for (; r_idx <= retry; r_idx++) {
+    for (; r_idx < retry; r_idx++) {
         if ((node->flags & 4) && node->async != 0) {
             if (node->async->retry_idx != r_idx) {
                 d_idx = 0;
@@ -643,7 +647,7 @@ static int resolverQuery(ResolverNode *node, int type, const void *name_or_addr,
 
             int cur_d = d_idx++;
             done = 0;
-            ret = dnsExchange(node, pkt_buf, pkt_len, qname, pkt_buf, out_buf, timeout, &dns_ips[cur_d], (int)name_or_addr, out_len, &done, txid, type);
+            ret = dnsExchange(node, pkt_buf, pkt_len, qname, qname_end, out_buf, timeout, &dns_ips[cur_d], (int)name_or_addr, out_len, &done, txid, type);
             if (done <= 0)
                 goto cleanup;
         }

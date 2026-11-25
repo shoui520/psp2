@@ -993,7 +993,7 @@ static int _flashGetPathPerm(int unit, const char *path)
 		return 0x27;
 	}
 	if (unit >= 2) {
-		return 2;
+		return 0x27;
 	}
 	if (unit != 0) {
 		return 0x27;
