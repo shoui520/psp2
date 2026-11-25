@@ -397,65 +397,50 @@ int dtcpIpSysCloseStream(void *object)
 	struct SceDtcpIpIpcMessage message;
 	int acquired[2] = { 0, 0 };
 	int ret;
+	int result = 0;
+	int channelResult;
 
 	if (stream == NULL)
 		return 2;
 	if (dtcpIpSwAcquireStream(&acquired, stream, 2) != 0) {
 		if (acquired[0] != 0) {
-		sceKernelLockLwMutex((SceKernelLwMutexWork *)(acquired[0] + 24), 1, NULL);
-		*(int *)(acquired[0] + 60) &= ~acquired[1];
-		sceKernelUnlockLwMutex((SceKernelLwMutexWork *)(acquired[0] + 24), 1);
-	}
+			sceKernelLockLwMutex((SceKernelLwMutexWork *)(acquired[0] + 24), 1, NULL);
+			*(int *)(acquired[0] + 60) &= ~acquired[1];
+			sceKernelUnlockLwMutex((SceKernelLwMutexWork *)(acquired[0] + 24), 1);
+		}
 		return 3;
 	}
-	message.command = SW_SYS_CLOSE_STREAM;
+	message.command = 10247;
+	message.channel = 0;
+	message.size = 0;
 	message.value0 = stream->id;
-	ret = dtcpIpIpcRequest(stream->channel, &message);
-	if (ret == 0) {
-		ret = message.result;
-		if (message.result == 0 || message.result == SW_SYS_STATUS_LATER) {
-			if (message.result != SW_SYS_STATUS_LATER) {
-				if (acquired[0] != 0) {
-		sceKernelLockLwMutex((SceKernelLwMutexWork *)(acquired[0] + 24), 1, NULL);
-		*(int *)(acquired[0] + 60) &= ~acquired[1];
-		sceKernelUnlockLwMutex((SceKernelLwMutexWork *)(acquired[0] + 24), 1);
+	if (dtcpIpIpcRequest(stream->channel, &message) != 0) {
+		dtcpIpMapIpcStatus2(0);
+		ret = acquired[0];
+		if (acquired[0] != 0)
+			goto release;
+	} else if (message.result != 0) {
+		dtcpIpMapIpcStatus2(message.result);
+		ret = acquired[0];
+		if (acquired[0] != 0)
+			goto release;
+	} else {
+		ret = acquired[0];
+		if (acquired[0] != 0)
+			goto release;
 	}
-				return 0;
-			}
-			for (;;) {
-				message.command = SW_SYS_CLOSE_STREAM;
-				message.value0 = stream->id;
-				ret = dtcpIpIpcRequest(stream->channel, &message);
-				if (ret != 0)
-					break;
-				ret = message.result;
-				if (message.result == 0) {
-					if (acquired[0] != 0) {
-		sceKernelLockLwMutex((SceKernelLwMutexWork *)(acquired[0] + 24), 1, NULL);
-		*(int *)(acquired[0] + 60) &= ~acquired[1];
-		sceKernelUnlockLwMutex((SceKernelLwMutexWork *)(acquired[0] + 24), 1);
-	}
-					return 0;
-				}
-				if (message.result != SW_SYS_STATUS_LATER)
-					break;
-				sceKernelDelayThread(1000);
-			}
-		}
-	}
-	stream->status = ret;
-	dtcpIpMapIpcStatus2(ret);
-	if (acquired[0] != 0) {
-		sceKernelLockLwMutex((SceKernelLwMutexWork *)(acquired[0] + 24), 1, NULL);
-		*(int *)(acquired[0] + 60) &= ~acquired[1];
-		sceKernelUnlockLwMutex((SceKernelLwMutexWork *)(acquired[0] + 24), 1);
-	}
+	goto freed;
+release:
+	sceKernelLockLwMutex((SceKernelLwMutexWork *)(acquired[0] + 24), 1, NULL);
+	*(int *)(acquired[0] + 60) &= ~acquired[1];
+	sceKernelUnlockLwMutex((SceKernelLwMutexWork *)(acquired[0] + 24), 1);
+freed:
+	channelResult = dtcpIpIpcFiniStream(stream->channel, ret);
 	sceKernelDeleteLwMutex(&stream->mutex);
 	dtcpIpFree(stream);
-	return 0;
+	return channelResult;
 }
 
-/* get the stream's info from the middleware (the caller's 576-byte buffer) */
 int dtcpIpSysGetInfo(void *object, void *info)
 {
 	struct SwSysStream *stream = object;
