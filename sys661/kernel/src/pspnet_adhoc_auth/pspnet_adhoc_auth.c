@@ -73,7 +73,7 @@ typedef struct SceNetAdhocAuthMbxMsg {
     uint32_t prio;   /* 0x04 */
     uint32_t type;   /* 0x08 */
     uint8_t mac[6];  /* 0x0c */
-    uint16_t pad_12; /* 0x12 */
+    uint16_t reserved_12; /* 0x12 */
 } SceNetAdhocAuthMbxMsg; /* 0x14 */
 
 typedef struct SceNetAdhocAuthPeer {
@@ -85,7 +85,7 @@ typedef struct SceNetAdhocAuthPeer {
     struct SceNetAdhocAuthPeer *hash_next; /* 0xc0 */
     void *hash_prev_ptr;                   /* 0xc4 */
     uint8_t hash_mac[6];                   /* 0xc8 (offset 0xd8 in peer) */
-    uint16_t pad_de;                       /* 0xce */
+    uint16_t reserved_de;                       /* 0xce */
     uint64_t timestamp;                    /* 0xd0 (offset 0xe0 in peer) */
     uint8_t ibss[0x80];                    /* 0xd8 (offset 0xe8 in peer) */
     uint8_t msg1_data[0x120];              /* 0x158 (offset 0x168 in peer) */
@@ -100,7 +100,7 @@ typedef struct SceNetAdhocAuthPeer {
     uint32_t peer_devkit_ver;              /* 0x4a0 (offset 0x4b0 in peer) */
     uint32_t peer_sdk_ver;                 /* 0x4a4 (offset 0x4b4 in peer) */
     uint32_t peer_model;                   /* 0x4a8 (offset 0x4b8 in peer) */
-    uint32_t pad_4bc;                      /* 0x4ac (offset 0x4bc in peer) */
+    uint32_t reserved_4bc;                      /* 0x4ac (offset 0x4bc in peer) */
 } SceNetAdhocAuthPeer; /* 0x4c0 */
 
 typedef struct SceNetAdhocAuthCtx {
@@ -114,7 +114,7 @@ typedef struct SceNetAdhocAuthCtx {
     void *ifp;                            /* 0x1c */
     uint8_t local_mac[6];                 /* 0x20 */
     uint8_t ibss[0x80];                   /* 0x26 */
-    uint16_t pad_a6;                      /* 0xa6 */
+    uint16_t reserved_a6;                      /* 0xa6 */
     int max_peers;                        /* 0xa8 */
     SceNetAdhocAuthMbxMsg rx_mbx_msg;     /* 0xac..0xc0 */
     uint32_t beacon_interval;             /* 0xc0 */
@@ -143,7 +143,7 @@ typedef struct SceNetAdhocAuthMbufQueue {
     void *tail;     /* 0x04 */
     int count;      /* 0x08 */
     int max_count;  /* 0x0c */
-    uint32_t unk10; /* 0x10 */
+    uint32_t reserved10; /* 0x10 */
 } SceNetAdhocAuthMbufQueue;
 
 /* .rodata constants */
@@ -168,49 +168,91 @@ static uint32_t g_key_len;                           /* 0x4a88 */
 static uint8_t g_key_buf[16];                        /* 0x4a8c */
 static SceNetAdhocAuthMbufQueue g_rx_queue;          /* 0x4a9c (0x14 bytes) */
 
+typedef struct SceAuthMbuf {
+    struct SceAuthMbuf *m_next;     /* 0x00 */
+    struct SceAuthMbuf *m_nextpkt;  /* 0x04 */
+    uint8_t *m_data;                /* 0x08 */
+    int m_len;                      /* 0x0c */
+    uint16_t m_type;                /* 0x10 */
+    uint16_t m_flags;               /* 0x12 */
+    uint32_t m_pkthdr_rcvif;        /* 0x14 */
+    int m_pkthdr_len;               /* 0x18 */
+    uint32_t m_reserved1c;          /* 0x1c */
+    uint32_t m_reserved20[4];       /* 0x20..0x2f */
+    void *m_ext_buf;                /* 0x30 */
+    uint32_t m_ext_free;            /* 0x34 */
+    uint32_t m_ext_arg;             /* 0x38 */
+    uint32_t m_ext_size;            /* 0x3c */
+    uint32_t m_ext_type;            /* 0x40 */
+    struct SceAuthMbuf *m_ext_next; /* 0x44 */
+    struct SceAuthMbuf *m_ext_prev; /* 0x48 */
+} SceAuthMbuf;
+
+typedef struct SceAuthIfQueue {
+    uint8_t reserved00[0x18];
+    SceAuthMbuf *head;              /* 0x18 */
+    SceAuthMbuf *tail;              /* 0x1c */
+    uint32_t count;                 /* 0x20 */
+} SceAuthIfQueue;
+
+typedef struct SceMemabHashNode {
+    uint8_t data[0xc0];
+    struct SceMemabHashNode *next;   /* 0xc0 */
+    struct SceMemabHashNode **pprev; /* 0xc4 */
+    uint8_t mac[6];                  /* 0xc8 */
+    uint8_t reserved_ce[2];               /* 0xce */
+    uint64_t timestamp;              /* 0xd0 */
+} SceMemabHashNode;
+
+typedef struct SceAuthPeerOut {
+    struct SceAuthPeerOut *next;     /* 0x00 */
+    uint8_t data[0x8c];              /* 0x04..0x8f */
+    uint64_t timestamp;              /* 0x90 */
+} SceAuthPeerOut;
+
 /* Forward declarations */
-static int __attribute__((noinline)) sub_008c(void *mbuf);
-static int __attribute__((noinline)) sub_01b4(void *mbuf);
-static int __attribute__((noinline)) sub_0444(void);
-static int __attribute__((noinline)) sub_0468(void *mbuf);
-static int __attribute__((noinline)) sub_072c(void);
-static int __attribute__((noinline)) sub_1854(void);
-static void __attribute__((noinline)) sub_18d4(void);
-static uint8_t *__attribute__((noinline)) sub_1910(const uint8_t *mac);
-static int __attribute__((noinline)) sub_1980(uint8_t *memab_ctx);
-static int __attribute__((noinline)) sub_1a68(uint8_t *memab_ctx);
-static int __attribute__((noinline)) sub_1b60(void);
-static void __attribute__((noinline)) sub_1b94(void);
-static int __attribute__((noinline)) sub_1e0c(uint32_t arglen, void *argp);
-static void *__attribute__((noinline)) sub_1f84(SceNetAdhocAuthCtx *ctx, int pkt_type,
+static int __attribute__((noinline)) adhocAuthEncryptTxPacket(void *mbuf);
+static int __attribute__((noinline)) adhocAuthDecryptRxPacket(void *mbuf);
+static int __attribute__((noinline)) adhocAuthInitGlobal(void);
+static int __attribute__((noinline)) adhocAuthEnqueueRxPacket(void *mbuf);
+static int __attribute__((noinline)) adhocAuthTermGlobal(void);
+static int __attribute__((noinline)) adhocAuthHashInit(void);
+static void __attribute__((noinline)) adhocAuthHashTerm(void);
+static uint8_t *__attribute__((noinline)) adhocAuthHashFind(const uint8_t *mac);
+static int __attribute__((noinline)) adhocAuthHashInsert(uint8_t *memab_ctx);
+static int __attribute__((noinline)) adhocAuthHashRemove(uint8_t *memab_ctx);
+static int __attribute__((noinline)) adhocAuthClearKey(void);
+static void __attribute__((noinline)) adhocAuthNoop(void);
+static int __attribute__((noinline)) adhocAuthWorkerThread(uint32_t arglen, void *argp);
+static void *__attribute__((noinline)) adhocAuthBuildPacket(SceNetAdhocAuthCtx *ctx, int pkt_type,
                                                 const void *hdr_data, const void *extra_data,
                                                 uint32_t extra_len);
-static void __attribute__((noinline)) sub_2130(SceNetAdhocAuthCtx *ctx, const uint8_t *dst_mac, void *mbuf);
-static void __attribute__((noinline)) sub_2260(SceNetAdhocAuthCtx *ctx);
-static void __attribute__((noinline)) sub_2324(SceNetAdhocAuthCtx *ctx, SceNetAdhocAuthPeer *peer);
-static void __attribute__((noinline)) sub_23e8(SceNetAdhocAuthCtx *ctx, SceNetAdhocAuthPeer *peer);
-static void __attribute__((noinline)) sub_255c(SceNetAdhocAuthCtx *ctx, SceNetAdhocAuthPeer *peer);
-static void __attribute__((noinline)) sub_26c8(SceNetAdhocAuthCtx *ctx);
-static void __attribute__((noinline)) sub_378c(SceNetAdhocAuthCtx *ctx);
-static uint32_t __attribute__((noinline)) sub_389c(void *common);
-static uint32_t __attribute__((noinline)) sub_38e4(void *common);
-static uint32_t __attribute__((noinline)) sub_395c(void *common);
-static uint32_t __attribute__((noinline)) sub_39d4(void *common);
-static void __attribute__((noinline)) sub_3a4c(SceNetAdhocAuthCtx *ctx, SceNetAdhocAuthPeer *peer,
+static void __attribute__((noinline)) adhocAuthSendPacket(SceNetAdhocAuthCtx *ctx, const uint8_t *dst_mac, void *mbuf);
+static void __attribute__((noinline)) adhocAuthSendBeacon(SceNetAdhocAuthCtx *ctx);
+static void __attribute__((noinline)) adhocAuthSendChallenge(SceNetAdhocAuthCtx *ctx, SceNetAdhocAuthPeer *peer);
+static void __attribute__((noinline)) adhocAuthSendResponse(SceNetAdhocAuthCtx *ctx, SceNetAdhocAuthPeer *peer);
+static void __attribute__((noinline)) adhocAuthRetryPeer(SceNetAdhocAuthCtx *ctx, SceNetAdhocAuthPeer *peer);
+static void __attribute__((noinline)) adhocAuthProcessRxQueue(SceNetAdhocAuthCtx *ctx);
+static void __attribute__((noinline)) adhocAuthHandleTimeout(SceNetAdhocAuthCtx *ctx);
+static uint32_t __attribute__((noinline)) adhocAuthBeaconAlarmCb(void *common);
+static uint32_t __attribute__((noinline)) adhocAuthPeerRetryAlarmCb(void *common);
+static uint32_t __attribute__((noinline)) adhocAuthPeerExpireAlarmCb(void *common);
+static uint32_t __attribute__((noinline)) adhocAuthPeerRekeyAlarmCb(void *common);
+static void __attribute__((noinline)) adhocAuthInitPeer(SceNetAdhocAuthCtx *ctx, SceNetAdhocAuthPeer *peer,
                                                const uint8_t *mac, const uint8_t *ibss);
-static SceNetAdhocAuthPeer *__attribute__((noinline)) sub_3bb0(SceNetAdhocAuthCtx *ctx, const uint8_t *mac);
-static void __attribute__((noinline)) sub_3c08(SceNetAdhocAuthCtx *ctx, SceNetAdhocAuthPeer *peer);
-static void __attribute__((noinline)) sub_3d2c(SceNetAdhocAuthCtx *ctx, SceNetAdhocAuthPeer *peer, int new_state);
-static void __attribute__((noinline)) sub_3e00(SceNetAdhocAuthCtx *ctx, int state);
-static int __attribute__((noinline)) sub_3e08(void);
-static int __attribute__((noinline)) sub_3e5c(void);
-static int __attribute__((noinline)) sub_3e98(void);
-static void __attribute__((noinline)) sub_3f18(int locked);
-static void __attribute__((noinline)) sub_3f40(void);
-static SceNetAdhocAuthMbxMsg *__attribute__((noinline)) sub_3f64(SceNetAdhocAuthCtx *ctx);
-static void __attribute__((noinline)) sub_3fac(SceNetAdhocAuthCtx *ctx, SceNetAdhocAuthMbxMsg *msg);
-static void __attribute__((noinline)) sub_3ff8(SceNetAdhocAuthPeer *peer, const uint8_t *buf, int len);
-static void __attribute__((noinline)) sub_412c(SceNetAdhocAuthCtx *ctx, uint8_t *dst, uint32_t *out_len);
+static SceNetAdhocAuthPeer *__attribute__((noinline)) adhocAuthFindPeerByMac(SceNetAdhocAuthCtx *ctx, const uint8_t *mac);
+static void __attribute__((noinline)) adhocAuthDestroyPeer(SceNetAdhocAuthCtx *ctx, SceNetAdhocAuthPeer *peer);
+static void __attribute__((noinline)) adhocAuthSetPeerState(SceNetAdhocAuthCtx *ctx, SceNetAdhocAuthPeer *peer, int new_state);
+static void __attribute__((noinline)) adhocAuthSetCtxState(SceNetAdhocAuthCtx *ctx, int state);
+static int __attribute__((noinline)) adhocAuthCreateLock(void);
+static int __attribute__((noinline)) adhocAuthDeleteLock(void);
+static int __attribute__((noinline)) adhocAuthLock(void);
+static void __attribute__((noinline)) adhocAuthUnlock(int locked);
+static void __attribute__((noinline)) adhocAuthSignalLock(void);
+static SceNetAdhocAuthMbxMsg *__attribute__((noinline)) adhocAuthAllocMsg(SceNetAdhocAuthCtx *ctx);
+static void __attribute__((noinline)) adhocAuthFreeMsg(SceNetAdhocAuthCtx *ctx, SceNetAdhocAuthMbxMsg *msg);
+static void __attribute__((noinline)) adhocAuthParsePeerTlv(SceNetAdhocAuthPeer *peer, const uint8_t *buf, int len);
+static void __attribute__((noinline)) adhocAuthBuildSelfTlv(SceNetAdhocAuthCtx *ctx, uint8_t *dst, uint32_t *out_len);
 
 /* 0x0000 */
 int sceNetAdhocAuth_lib_6074D8F1(void)
@@ -220,9 +262,9 @@ int sceNetAdhocAuth_lib_6074D8F1(void)
 
     if (g_inited > 0) {
         sceNetIfhandle_driver_773FC77C();
-        sub_1b94();
-        sub_072c();
-        sub_18d4();
+        adhocAuthNoop();
+        adhocAuthTermGlobal();
+        adhocAuthHashTerm();
         g_inited = 0;
     }
 
@@ -235,21 +277,21 @@ int sceNetAdhocAuth_driver_6074D8F1(void)
 /* 0x0064 */
 int module_reboot_before(void)
 {
-    sub_3f40();
+    adhocAuthSignalLock();
     sceNetAdhocAuth_lib_6074D8F1();
     return 0;
 }
 
 /* 0x008c */
-static int __attribute__((noinline)) sub_008c(void *mbuf)
+static int __attribute__((noinline)) adhocAuthEncryptTxPacket(void *mbuf)
 {
     uint8_t *m = (uint8_t *)mbuf;
-    uint8_t *data = *(uint8_t **)(m + 0x08);
+    uint8_t *data = ((SceAuthMbuf *)m)->m_data;
     if ((intptr_t)data < 0) {
         return -1;
     }
-    uint16_t flags = *(uint16_t *)(m + 0x12);
-    int pkt_len = *(int *)(m + 0x18);
+    uint16_t flags = ((SceAuthMbuf *)m)->m_flags;
+    int pkt_len = ((SceAuthMbuf *)m)->m_pkthdr_len;
     if ((flags & 0x100) != 0) {
         if (sceMemab_driver_F742F283(data + 0x30, pkt_len - 0x30, data + 0x10, 1) < 0) {
             return -1;
@@ -261,7 +303,7 @@ static int __attribute__((noinline)) sub_008c(void *mbuf)
     }
 
     sceKernelWaitSema(g_hash_sema, 1, NULL);
-    uint8_t *ctx = sub_1910(data);
+    uint8_t *ctx = adhocAuthHashFind(data);
     if (ctx == NULL ||
         sceMemab_driver_3C15BC8C(ctx, data + 0x30, pkt_len - 0x30, data + 0x10, 1) < 0) {
         sceKernelSignalSema(g_hash_sema, 1);
@@ -272,10 +314,10 @@ static int __attribute__((noinline)) sub_008c(void *mbuf)
 }
 
 /* 0x01b4 */
-static int __attribute__((noinline)) sub_01b4(void *mbuf)
+static int __attribute__((noinline)) adhocAuthDecryptRxPacket(void *mbuf)
 {
     uint8_t *m = (uint8_t *)mbuf;
-    uint8_t *data = *(uint8_t **)(m + 0x08);
+    uint8_t *data = ((SceAuthMbuf *)m)->m_data;
     void * bounce_buf = NULL;
     uint8_t *hdr_ptr;
 
@@ -285,8 +327,8 @@ static int __attribute__((noinline)) sub_01b4(void *mbuf)
         return -1;
     }
 
-    int pkt_len = *(int *)(m + 0x18);
-    int first_len = *(int *)(m + 0x0c);
+    int pkt_len = ((SceAuthMbuf *)m)->m_pkthdr_len;
+    int first_len = ((SceAuthMbuf *)m)->m_len;
     hdr_ptr = data + 0x10;
     if (pkt_len != first_len) {
         bounce_buf = sceNetIfhandle_driver_15CFE3C0(pkt_len - 0x10);
@@ -297,24 +339,24 @@ static int __attribute__((noinline)) sub_01b4(void *mbuf)
     }
 
     sceKernelWaitSema(g_hash_sema, 1, NULL);
-    uint8_t *ctx = sub_1910(data + 6);
+    uint8_t *ctx = adhocAuthHashFind(data + 6);
     if (ctx != NULL) {
-        uint16_t flags = *(uint16_t *)(m + 0x12);
+        uint16_t flags = ((SceAuthMbuf *)m)->m_flags;
         int res;
         if ((flags & 0x100) != 0) {
-            res = sceMemab_driver_CB5D3916(ctx, hdr_ptr + 0x20, *(int *)(m + 0x18) - 0x30, hdr_ptr, 1, 1);
+            res = sceMemab_driver_CB5D3916(ctx, hdr_ptr + 0x20, ((SceAuthMbuf *)m)->m_pkthdr_len - 0x30, hdr_ptr, 1, 1);
         } else if ((flags & 0x200) == 0) {
-            res = sceMemab_driver_D47A50B1(ctx, hdr_ptr + 0x20, *(int *)(m + 0x18) - 0x30, hdr_ptr, 1, 1);
+            res = sceMemab_driver_D47A50B1(ctx, hdr_ptr + 0x20, ((SceAuthMbuf *)m)->m_pkthdr_len - 0x30, hdr_ptr, 1, 1);
         } else {
             res = -1;
         }
         if (res >= 0) {
             if (bounce_buf != NULL) {
-                sceNetIfhandle_driver_1560F143(m, 0x30, *(int *)(m + 0x18) - 0x30, hdr_ptr);
+                sceNetIfhandle_driver_1560F143(m, 0x30, ((SceAuthMbuf *)m)->m_pkthdr_len - 0x30, hdr_ptr);
                 sceNetIfhandle_driver_76BAD213(bounce_buf);
             }
             uint64_t now = sceKernelGetSystemTimeWide();
-            *(uint64_t *)(ctx + 0xd0) = now;
+            ((SceMemabHashNode *)ctx)->timestamp = now;
             sceKernelSignalSema(g_hash_sema, 1);
             return 0;
         }
@@ -336,27 +378,27 @@ sceNetAdhocAuth_lib_86004235(void)
 
     int res = 0x80410601;
     if (g_inited <= 0) {
-        res = sub_1854();
+        res = adhocAuthHashInit();
         if (res >= 0) {
-            res = sub_0444();
+            res = adhocAuthInitGlobal();
             if (res >= 0) {
-                res = sub_1b60();
+                res = adhocAuthClearKey();
                 if (res >= 0) {
-                    res = sceNetIfhandle_driver_0542835F(sub_01b4, sub_008c, sub_0468);
+                    res = sceNetIfhandle_driver_0542835F(adhocAuthDecryptRxPacket, adhocAuthEncryptTxPacket, adhocAuthEnqueueRxPacket);
                     if (res >= 0) {
                         g_inited = 1;
                         res = 0;
                     } else {
-                        sub_1b94();
-                        sub_072c();
-                        sub_18d4();
+                        adhocAuthNoop();
+                        adhocAuthTermGlobal();
+                        adhocAuthHashTerm();
                     }
                 } else {
-                    sub_072c();
-                    sub_18d4();
+                    adhocAuthTermGlobal();
+                    adhocAuthHashTerm();
                 }
             } else {
-                sub_18d4();
+                adhocAuthHashTerm();
             }
         }
     }
@@ -368,23 +410,23 @@ int sceNetAdhocAuth_driver_86004235(void)
     __attribute__((alias("sceNetAdhocAuth_lib_86004235")));
 
 /* 0x0444 */
-static int __attribute__((noinline)) sub_0444(void)
+static int __attribute__((noinline)) adhocAuthInitGlobal(void)
 {
-    int res = sub_3e08();
+    int res = adhocAuthCreateLock();
     return (res < 0) ? res : 0;
 }
 
 /* 0x0468 */
-static int __attribute__((noinline)) sub_0468(void *mbuf)
+static int __attribute__((noinline)) adhocAuthEnqueueRxPacket(void *mbuf)
 {
     uint8_t *m = (uint8_t *)mbuf;
-    if (*(int *)(m + 0x18) < 0x14) {
+    if (((SceAuthMbuf *)m)->m_pkthdr_len < 0x14) {
         return -1;
     }
 
     int intr = sceKernelCpuSuspendIntr();
     if (g_ctx != NULL && g_rx_queue.count < g_rx_queue.max_count) {
-        *(void **)(m + 0x04) = NULL;
+        ((SceAuthMbuf *)m)->m_nextpkt = NULL;
         if (g_rx_queue.tail == NULL) {
             g_rx_queue.head = m;
         } else {
@@ -430,7 +472,7 @@ int sceNetAdhocAuth_lib_2E6AA271(void)
     sceKernelTerminateThread(g_ctx->thid);
     sceKernelDeleteThread(g_ctx->thid);
 
-    int locked = sub_3e98();
+    int locked = adhocAuthLock();
     int intr = sceKernelCpuSuspendIntr();
     if (g_ctx->beacon_alarm > 0) {
         sceKernelCancelAlarm(g_ctx->beacon_alarm);
@@ -443,19 +485,19 @@ int sceNetAdhocAuth_lib_2E6AA271(void)
     intr = sceKernelCpuSuspendIntr();
     while (g_rx_queue.head != NULL) {
         uint8_t *m = (uint8_t *)g_rx_queue.head;
-        void *next = *(void **)(m + 0x04);
+        void *next = ((SceAuthMbuf *)m)->m_nextpkt;
         g_rx_queue.head = next;
         if (next == NULL) {
             g_rx_queue.tail = NULL;
         }
-        *(void **)(m + 0x04) = NULL;
+        ((SceAuthMbuf *)m)->m_nextpkt = NULL;
         g_rx_queue.count--;
         sceNetIfhandle_driver_F56FAC82(m);
     }
     g_ctx = NULL;
     sceKernelCpuResumeIntr(intr);
 
-    sub_3f18(locked);
+    adhocAuthUnlock(locked);
     __asm__ volatile("move $k1, %0" : : "r"(k1));
     return 0;
 }
@@ -463,10 +505,10 @@ int sceNetAdhocAuth_driver_2E6AA271(void)
     __attribute__((alias("sceNetAdhocAuth_lib_2E6AA271")));
 
 /* 0x072c */
-static int __attribute__((noinline)) sub_072c(void)
+static int __attribute__((noinline)) adhocAuthTermGlobal(void)
 {
     sceNetAdhocAuth_lib_2E6AA271();
-    return sub_3e5c();
+    return adhocAuthDeleteLock();
 }
 
 /* 0x0748 */
@@ -488,7 +530,7 @@ int sceNetAdhocAuth_lib_6CE209A3(void)
         return 0;
     }
 
-    int locked = sub_3e98();
+    int locked = adhocAuthLock();
     int intr = sceKernelCpuSuspendIntr();
     if (g_ctx->beacon_alarm > 0) {
         sceKernelCancelAlarm(g_ctx->beacon_alarm);
@@ -516,8 +558,8 @@ int sceNetAdhocAuth_lib_6CE209A3(void)
         peer = peer->next;
     }
 
-    sub_3e00(g_ctx, 2);
-    sub_3f18(locked);
+    adhocAuthSetCtxState(g_ctx, 2);
+    adhocAuthUnlock(locked);
     __asm__ volatile("move $k1, %0" : : "r"(k1));
     return 0;
 }
@@ -543,13 +585,13 @@ int sceNetAdhocAuth_lib_2AD8C677(void)
         return 0;
     }
 
-    int locked = sub_3e98();
+    int locked = adhocAuthLock();
     int intr = sceKernelCpuSuspendIntr();
     if (g_ctx->beacon_alarm > 0) {
         sceKernelCancelAlarm(g_ctx->beacon_alarm);
         g_ctx->beacon_alarm = 0;
     }
-    g_ctx->beacon_alarm = sceKernelSetAlarm(g_ctx->beacon_interval, sub_389c, g_ctx);
+    g_ctx->beacon_alarm = sceKernelSetAlarm(g_ctx->beacon_interval, adhocAuthBeaconAlarmCb, g_ctx);
     sceKernelCpuResumeIntr(intr);
 
     SceNetAdhocAuthPeer *peer = g_ctx->peer_head;
@@ -560,7 +602,7 @@ int sceNetAdhocAuth_lib_2AD8C677(void)
                 sceKernelCancelAlarm(peer->keepalive_rx_alarm);
                 peer->keepalive_rx_alarm = 0;
             }
-            peer->keepalive_rx_alarm = sceKernelSetAlarm(g_ctx->keepalive_rx_interval, sub_395c, peer);
+            peer->keepalive_rx_alarm = sceKernelSetAlarm(g_ctx->keepalive_rx_interval, adhocAuthPeerExpireAlarmCb, peer);
             sceKernelCpuResumeIntr(intr);
 
             intr = sceKernelCpuSuspendIntr();
@@ -568,14 +610,14 @@ int sceNetAdhocAuth_lib_2AD8C677(void)
                 sceKernelCancelAlarm(peer->keepalive_tx_alarm);
                 peer->keepalive_tx_alarm = 0;
             }
-            peer->keepalive_tx_alarm = sceKernelSetAlarm(g_ctx->keepalive_tx_interval, sub_39d4, peer);
+            peer->keepalive_tx_alarm = sceKernelSetAlarm(g_ctx->keepalive_tx_interval, adhocAuthPeerRekeyAlarmCb, peer);
             sceKernelCpuResumeIntr(intr);
         }
         peer = peer->next;
     }
 
-    sub_3e00(g_ctx, 1);
-    sub_3f18(locked);
+    adhocAuthSetCtxState(g_ctx, 1);
+    adhocAuthUnlock(locked);
     __asm__ volatile("move $k1, %0" : : "r"(k1));
     return 0;
 }
@@ -605,14 +647,14 @@ int sceNetAdhocAuth_lib_89F2A732(const char *ifname, int prio, int stack_size,
         return 0x80410683;
     }
 
-    int locked = sub_3e98();
+    int locked = adhocAuthLock();
     int intr = sceKernelCpuSuspendIntr();
     memset(&g_ctx_buf, 0, sizeof(g_ctx_buf));
     g_ctx = &g_ctx_buf;
     g_rx_queue.max_count = 0x32;
     g_rx_queue.tail = NULL;
     g_rx_queue.count = 0;
-    g_rx_queue.unk10 = 0;
+    g_rx_queue.reserved10 = 0;
     g_rx_queue.head = NULL;
     sceKernelCpuResumeIntr(intr);
 
@@ -643,7 +685,7 @@ int sceNetAdhocAuth_lib_89F2A732(const char *ifname, int prio, int stack_size,
     g_ctx->devkit_ver = sceKernelDevkitVersion();
     g_ctx->sdk_ver = sceKernelGetCompiledSdkVersion();
     g_ctx->model = sceKernelGetModel();
-    sub_412c(g_ctx, g_ctx->tlv_buf, &g_ctx->tlv_len);
+    adhocAuthBuildSelfTlv(g_ctx, g_ctx->tlv_buf, &g_ctx->tlv_len);
 
     g_ctx->mbx_id = sceKernelCreateMbx("SceNetAdhocAuth", 1, NULL);
     if (g_ctx->mbx_id < 0) {
@@ -651,7 +693,7 @@ int sceNetAdhocAuth_lib_89F2A732(const char *ifname, int prio, int stack_size,
         goto fail_cleanup;
     }
 
-    g_ctx->thid = sceKernelCreateThread("SceNetAdhocAuth", sub_1e0c, prio, stack_size, 0x200001, NULL);
+    g_ctx->thid = sceKernelCreateThread("SceNetAdhocAuth", adhocAuthWorkerThread, prio, stack_size, 0x200001, NULL);
     if (g_ctx->thid < 0) {
         res = g_ctx->thid;
         sceKernelDeleteMbx(g_ctx->mbx_id);
@@ -670,11 +712,11 @@ int sceNetAdhocAuth_lib_89F2A732(const char *ifname, int prio, int stack_size,
         sceKernelCancelAlarm(g_ctx->beacon_alarm);
         g_ctx->beacon_alarm = 0;
     }
-    g_ctx->beacon_alarm = sceKernelSetAlarm(g_ctx->beacon_interval, sub_389c, g_ctx);
+    g_ctx->beacon_alarm = sceKernelSetAlarm(g_ctx->beacon_interval, adhocAuthBeaconAlarmCb, g_ctx);
     sceKernelCpuResumeIntr(intr);
 
-    sub_3e00(g_ctx, 1);
-    sub_3f18(locked);
+    adhocAuthSetCtxState(g_ctx, 1);
+    adhocAuthUnlock(locked);
     __asm__ volatile("move $k1, %0" : : "r"(k1));
     return 0;
 
@@ -682,18 +724,18 @@ fail_cleanup:
     intr = sceKernelCpuSuspendIntr();
     while (g_rx_queue.head != NULL) {
         uint8_t *m = (uint8_t *)g_rx_queue.head;
-        void *next = *(void **)(m + 0x04);
+        void *next = ((SceAuthMbuf *)m)->m_nextpkt;
         g_rx_queue.head = next;
         if (next == NULL) {
             g_rx_queue.tail = NULL;
         }
-        *(void **)(m + 0x04) = NULL;
+        ((SceAuthMbuf *)m)->m_nextpkt = NULL;
         g_rx_queue.count--;
         sceNetIfhandle_driver_F56FAC82(m);
     }
     g_ctx = NULL;
     sceKernelCpuResumeIntr(intr);
-    sub_3f18(locked);
+    adhocAuthUnlock(locked);
     __asm__ volatile("move $k1, %0" : : "r"(k1));
     return res;
 }
@@ -726,14 +768,14 @@ int sceNetAdhocAuth_lib_1F9A90B8(const uint8_t *ibss, uint32_t *buflen, uint8_t 
         return 0x80410681;
     }
 
-    int locked = sub_3e98();
+    int locked = adhocAuthLock();
     if (locked < 0) {
         __asm__ volatile("move $k1, %0" : : "r"(k1));
         return locked;
     }
 
     if (g_ctx == NULL) {
-        sub_3f18(locked);
+        adhocAuthUnlock(locked);
         *buflen = 0;
         __asm__ volatile("move $k1, %0" : : "r"(k1));
         return 0x80410682;
@@ -752,7 +794,7 @@ int sceNetAdhocAuth_lib_1F9A90B8(const uint8_t *ibss, uint32_t *buflen, uint8_t 
                     break;
                 }
                 uint8_t *cur = buf + total_len;
-                *(void **)(cur + 0x00) = NULL;
+                ((SceAuthPeerOut *)cur)->next = NULL;
                 memcpy(cur + 0x84, peer->hash_mac, 6);
                 memcpy(cur + 0x04, peer->ibss, 0x80);
                 if (prev != NULL) {
@@ -765,7 +807,7 @@ int sceNetAdhocAuth_lib_1F9A90B8(const uint8_t *ibss, uint32_t *buflen, uint8_t 
         peer = peer->next;
     }
 
-    sub_3f18(locked);
+    adhocAuthUnlock(locked);
     *buflen = total_len;
     int res = (count != 0) ? 0 : (int)0x80410716;
     __asm__ volatile("move $k1, %0" : : "r"(k1));
@@ -790,13 +832,13 @@ int sceNetAdhocAuth_lib_76F26AB0(const uint8_t *mac, uint8_t *ibss_out)
         return 0x80410681;
     }
 
-    int locked = sub_3e98();
+    int locked = adhocAuthLock();
     if (locked < 0) {
         __asm__ volatile("move $k1, %0" : : "r"(k1));
         return locked;
     }
     if (g_ctx == NULL) {
-        sub_3f18(locked);
+        adhocAuthUnlock(locked);
         __asm__ volatile("move $k1, %0" : : "r"(k1));
         return 0x80410682;
     }
@@ -805,14 +847,14 @@ int sceNetAdhocAuth_lib_76F26AB0(const uint8_t *mac, uint8_t *ibss_out)
     while (peer != NULL) {
         if (peer->state == 4 && memcmp(peer->hash_mac, mac, 6) == 0) {
             memcpy(ibss_out, peer->ibss, 0x80);
-            sub_3f18(locked);
+            adhocAuthUnlock(locked);
             __asm__ volatile("move $k1, %0" : : "r"(k1));
             return 0;
         }
         peer = peer->next;
     }
 
-    sub_3f18(locked);
+    adhocAuthUnlock(locked);
     __asm__ volatile("move $k1, %0" : : "r"(k1));
     return 0x80410716;
 }
@@ -843,14 +885,14 @@ int sceNetAdhocAuth_lib_BD144DA6(uint32_t *buflen, uint8_t *buf)
         return 0x80410681;
     }
 
-    int locked = sub_3e98();
+    int locked = adhocAuthLock();
     if (locked < 0) {
         __asm__ volatile("move $k1, %0" : : "r"(k1));
         return locked;
     }
 
     if (g_ctx == NULL) {
-        sub_3f18(locked);
+        adhocAuthUnlock(locked);
         *buflen = 0;
         __asm__ volatile("move $k1, %0" : : "r"(k1));
         return 0x80410682;
@@ -867,10 +909,10 @@ int sceNetAdhocAuth_lib_BD144DA6(uint32_t *buflen, uint8_t *buf)
                     break;
                 }
                 uint8_t *cur = buf + total_len;
-                *(void **)(cur + 0x00) = NULL;
+                ((SceAuthPeerOut *)cur)->next = NULL;
                 memcpy(cur + 0x84, peer->hash_mac, 6);
                 memcpy(cur + 0x04, peer->ibss, 0x80);
-                *(uint64_t *)(cur + 0x90) = peer->timestamp;
+                ((SceAuthPeerOut *)cur)->timestamp = peer->timestamp;
                 if (prev != NULL) {
                     *(void **)prev = cur;
                 }
@@ -881,7 +923,7 @@ int sceNetAdhocAuth_lib_BD144DA6(uint32_t *buflen, uint8_t *buf)
         peer = peer->next;
     }
 
-    sub_3f18(locked);
+    adhocAuthUnlock(locked);
     *buflen = total_len;
     __asm__ volatile("move $k1, %0" : : "r"(k1));
     return 0;
@@ -906,14 +948,14 @@ int sceNetAdhocAuth_lib_CF4D9BED(const uint8_t *mac, uint32_t buflen, uint8_t *b
         return 0x80410681;
     }
 
-    int locked = sub_3e98();
+    int locked = adhocAuthLock();
     if (locked < 0) {
         __asm__ volatile("move $k1, %0" : : "r"(k1));
         return locked;
     }
 
     if (g_ctx == NULL) {
-        sub_3f18(locked);
+        adhocAuthUnlock(locked);
         __asm__ volatile("move $k1, %0" : : "r"(k1));
         return 0x80410682;
     }
@@ -925,20 +967,20 @@ int sceNetAdhocAuth_lib_CF4D9BED(const uint8_t *mac, uint32_t buflen, uint8_t *b
             if (buflen < 0x98) {
                 res = 0x80410704;
             } else {
-                *(void **)(buf + 0x00) = NULL;
+                ((SceAuthPeerOut *)buf)->next = NULL;
                 memcpy(buf + 0x84, peer->hash_mac, 6);
                 memcpy(buf + 0x04, peer->ibss, 0x80);
-                *(uint64_t *)(buf + 0x90) = peer->timestamp;
+                ((SceAuthPeerOut *)buf)->timestamp = peer->timestamp;
                 res = 0;
             }
-            sub_3f18(locked);
+            adhocAuthUnlock(locked);
             __asm__ volatile("move $k1, %0" : : "r"(k1));
             return res;
         }
         peer = peer->next;
     }
 
-    sub_3f18(locked);
+    adhocAuthUnlock(locked);
     __asm__ volatile("move $k1, %0" : : "r"(k1));
     return 0x80410716;
 }
@@ -946,7 +988,7 @@ int sceNetAdhocAuth_driver_CF4D9BED(const uint8_t *mac, uint32_t buflen, uint8_t
     __attribute__((alias("sceNetAdhocAuth_lib_CF4D9BED")));
 
 /* 0x1854 */
-static int __attribute__((noinline)) sub_1854(void)
+static int __attribute__((noinline)) adhocAuthHashInit(void)
 {
     if (sceMemab_driver_6DD7339A() < 0) {
         return 0x80410688;
@@ -964,7 +1006,7 @@ static int __attribute__((noinline)) sub_1854(void)
 }
 
 /* 0x18d4 */
-static void __attribute__((noinline)) sub_18d4(void)
+static void __attribute__((noinline)) adhocAuthHashTerm(void)
 {
     if (g_hash_sema >= 0) {
         sceKernelDeleteSema(g_hash_sema);
@@ -974,7 +1016,7 @@ static void __attribute__((noinline)) sub_18d4(void)
 }
 
 /* 0x1910 */
-static uint8_t *__attribute__((noinline)) sub_1910(const uint8_t *mac)
+static uint8_t *__attribute__((noinline)) adhocAuthHashFind(const uint8_t *mac)
 {
     uint32_t idx = mac[5] & 0xf;
     uint8_t *cur = g_hash_buckets[idx].head;
@@ -982,13 +1024,13 @@ static uint8_t *__attribute__((noinline)) sub_1910(const uint8_t *mac)
         if (memcmp(cur + 0xc8, mac, 6) == 0) {
             return cur;
         }
-        cur = *(uint8_t **)(cur + 0xc0);
+        cur = (uint8_t *)((SceMemabHashNode *)cur)->next;
     }
     return NULL;
 }
 
 /* 0x1980 */
-static int __attribute__((noinline)) sub_1980(uint8_t *memab_ctx)
+static int __attribute__((noinline)) adhocAuthHashInsert(uint8_t *memab_ctx)
 {
     uint8_t *mac = memab_ctx + 0xc8;
     uint32_t idx = mac[5] & 0xf;
@@ -997,23 +1039,23 @@ static int __attribute__((noinline)) sub_1980(uint8_t *memab_ctx)
         if (memcmp(cur + 0xc8, mac, 6) == 0) {
             return 0x80410686;
         }
-        cur = *(uint8_t **)(cur + 0xc0);
+        cur = (uint8_t *)((SceMemabHashNode *)cur)->next;
     }
 
     SceNetAdhocAuthHashBucket *b = &g_hash_buckets[memab_ctx[0xcd] & 0xf];
-    *(uint8_t **)(memab_ctx + 0xc0) = b->head;
+    ((SceMemabHashNode *)memab_ctx)->next = (SceMemabHashNode *)b->head;
     if (b->head != NULL) {
-        *(void **)(b->head + 0xc4) = memab_ctx + 0xc0;
+        ((SceMemabHashNode *)b->head)->pprev = &((SceMemabHashNode *)memab_ctx)->next;
     } else {
         b->tail_ptr = (uint8_t **)(memab_ctx + 0xc0);
     }
-    *(void **)(memab_ctx + 0xc4) = &b->head;
+    ((SceMemabHashNode *)memab_ctx)->pprev = (SceMemabHashNode **)&b->head;
     b->head = memab_ctx;
     return 0;
 }
 
 /* 0x1a68 */
-static int __attribute__((noinline)) sub_1a68(uint8_t *memab_ctx)
+static int __attribute__((noinline)) adhocAuthHashRemove(uint8_t *memab_ctx)
 {
     uint8_t *mac = memab_ctx + 0xc8;
     uint32_t idx = mac[5] & 0xf;
@@ -1021,23 +1063,23 @@ static int __attribute__((noinline)) sub_1a68(uint8_t *memab_ctx)
     while (cur != NULL) {
         if (memcmp(cur + 0xc8, mac, 6) == 0) {
             SceNetAdhocAuthHashBucket *b = &g_hash_buckets[memab_ctx[0xcd] & 0xf];
-            uint8_t *next = *(uint8_t **)(memab_ctx + 0xc0);
-            uint8_t **prev_ptr = *(uint8_t ***)(memab_ctx + 0xc4);
+            uint8_t *next = (uint8_t *)((SceMemabHashNode *)memab_ctx)->next;
+            uint8_t **prev_ptr = (uint8_t **)((SceMemabHashNode *)memab_ctx)->pprev;
             if (next != NULL) {
-                *(uint8_t ***)(next + 0xc4) = prev_ptr;
+                ((SceMemabHashNode *)next)->pprev = (SceMemabHashNode **)prev_ptr;
             } else {
                 b->tail_ptr = prev_ptr;
             }
             *prev_ptr = next;
             return 0;
         }
-        cur = *(uint8_t **)(cur + 0xc0);
+        cur = (uint8_t *)((SceMemabHashNode *)cur)->next;
     }
     return 0x80410685;
 }
 
 /* 0x1b60 */
-static int __attribute__((noinline)) sub_1b60(void)
+static int __attribute__((noinline)) adhocAuthClearKey(void)
 {
     g_key_len = 0;
     memset(g_key_buf, 0, 0x10);
@@ -1045,7 +1087,7 @@ static int __attribute__((noinline)) sub_1b60(void)
 }
 
 /* 0x1b94 */
-static void __attribute__((noinline)) sub_1b94(void)
+static void __attribute__((noinline)) adhocAuthNoop(void)
 {
 }
 
@@ -1145,7 +1187,7 @@ int sceNetAdhocAuth_driver_AAB06250(void *dst, uint32_t len)
     __attribute__((alias("sceNetAdhocAuth_lib_AAB06250")));
 
 /* 0x1e0c */
-static int __attribute__((noinline)) sub_1e0c(uint32_t arglen, void *argp)
+static int __attribute__((noinline)) adhocAuthWorkerThread(uint32_t arglen, void *argp)
 {
     (void)arglen;
     SceNetAdhocAuthCtx *ctx = *(SceNetAdhocAuthCtx **)argp;
@@ -1155,9 +1197,9 @@ static int __attribute__((noinline)) sub_1e0c(uint32_t arglen, void *argp)
         uint32_t type = msg->type;
         SceNetAdhocAuthPeer *peer = NULL;
         if (type < 6 && ((1U << type) & 0x32U) != 0) {
-            peer = sub_3bb0(ctx, msg->mac);
+            peer = adhocAuthFindPeerByMac(ctx, msg->mac);
             int intr = sceKernelCpuSuspendIntr();
-            sub_3fac(ctx, msg);
+            adhocAuthFreeMsg(ctx, msg);
             sceKernelCpuResumeIntr(intr);
             if (peer == NULL) {
                 continue;
@@ -1169,11 +1211,11 @@ static int __attribute__((noinline)) sub_1e0c(uint32_t arglen, void *argp)
             int intr = sceKernelCpuSuspendIntr();
             ctx->flags &= ~1U;
             sceKernelCpuResumeIntr(intr);
-            sub_26c8(ctx);
+            adhocAuthProcessRxQueue(ctx);
             break;
         }
         case 1:
-            sub_255c(ctx, peer);
+            adhocAuthRetryPeer(ctx, peer);
             break;
         case 2:
             goto done;
@@ -1181,17 +1223,17 @@ static int __attribute__((noinline)) sub_1e0c(uint32_t arglen, void *argp)
             int intr = sceKernelCpuSuspendIntr();
             ctx->flags &= ~2U;
             sceKernelCpuResumeIntr(intr);
-            sub_378c(ctx);
+            adhocAuthHandleTimeout(ctx);
             break;
         }
         case 4:
-            sub_23e8(ctx, peer);
+            adhocAuthSendResponse(ctx, peer);
             break;
         case 5:
-            sub_2324(ctx, peer);
+            adhocAuthSendChallenge(ctx, peer);
             break;
         case 6:
-            sub_2260(ctx);
+            adhocAuthSendBeacon(ctx);
             goto done;
         default:
             break;
@@ -1203,7 +1245,7 @@ done:
 }
 
 /* 0x1f84 */
-static void *__attribute__((noinline)) sub_1f84(SceNetAdhocAuthCtx *ctx, int pkt_type,
+static void *__attribute__((noinline)) adhocAuthBuildPacket(SceNetAdhocAuthCtx *ctx, int pkt_type,
                                                 const void *hdr_data, const void *extra_data,
                                                 uint32_t extra_len)
 {
@@ -1215,41 +1257,41 @@ static void *__attribute__((noinline)) sub_1f84(SceNetAdhocAuthCtx *ctx, int pkt
         return NULL;
     }
 
-    *(uint32_t *)(m + 0x1c) = 0;
-    *(uint16_t *)(m + 0x10) = 1;
-    *(uint16_t *)(m + 0x12) = 2;
-    *(uint32_t *)(m + 0x00) = 0;
-    *(uint32_t *)(m + 0x04) = 0;
+    ((SceAuthMbuf *)m)->m_reserved1c = 0;
+    ((SceAuthMbuf *)m)->m_type = 1;
+    ((SceAuthMbuf *)m)->m_flags = 2;
+    ((SceAuthMbuf *)m)->m_next = NULL;
+    ((SceAuthMbuf *)m)->m_nextpkt = NULL;
     uint8_t *data = m + 0x30;
-    *(uint8_t **)(m + 0x08) = data;
+    ((SceAuthMbuf *)m)->m_data = data;
 
     if (hdr_len + extra_len + 0x14 >= 0xd1) {
         void *ext = sceNetIfhandle_driver_15CFE3C0(0x800);
-        *(void **)(m + 0x30) = ext;
+        ((SceAuthMbuf *)m)->m_ext_buf = ext;
         if (ext == NULL) {
             ext = sceNetIfhandle_driver_15CFE3C0(0x800);
-            *(void **)(m + 0x30) = ext;
+            ((SceAuthMbuf *)m)->m_ext_buf = ext;
         }
-        uint16_t fl = *(uint16_t *)(m + 0x12);
+        uint16_t fl = ((SceAuthMbuf *)m)->m_flags;
         if (ext != NULL) {
-            *(void **)(m + 0x08) = ext;
+            ((SceAuthMbuf *)m)->m_data = (uint8_t *)ext;
             fl |= 9;
-            *(uint16_t *)(m + 0x12) = fl;
-            *(uint32_t *)(m + 0x3c) = 0x800;
-            *(uint32_t *)(m + 0x34) = 0;
-            *(uint32_t *)(m + 0x38) = 0;
-            *(void **)(m + 0x48) = m;
-            *(void **)(m + 0x44) = m;
+            ((SceAuthMbuf *)m)->m_flags = fl;
+            ((SceAuthMbuf *)m)->m_ext_size = 0x800;
+            ((SceAuthMbuf *)m)->m_ext_free = 0;
+            ((SceAuthMbuf *)m)->m_ext_arg = 0;
+            ((SceAuthMbuf *)m)->m_ext_prev = (SceAuthMbuf *)m;
+            ((SceAuthMbuf *)m)->m_ext_next = (SceAuthMbuf *)m;
         }
         if ((fl & 1) == 0) {
             sceNetIfhandle_driver_F8825DC4(m);
             return NULL;
         }
-        data = *(uint8_t **)(m + 0x08);
+        data = ((SceAuthMbuf *)m)->m_data;
     }
 
     uint32_t total_len = hdr_len + extra_len + 0x14;
-    *(uint32_t *)(m + 0x0c) = total_len;
+    ((SceAuthMbuf *)m)->m_len = (int)total_len;
     if ((intptr_t)data < 0) {
         sceNetIfhandle_driver_F8825DC4(m);
         return NULL;
@@ -1266,16 +1308,16 @@ static void *__attribute__((noinline)) sub_1f84(SceNetAdhocAuthCtx *ctx, int pkt
     data[0x11] = type_byte;
     data[0x12] = (uint8_t)(hdr_len >> 8);
     data[0x13] = (uint8_t)(hdr_len & 0xff);
-    *(uint32_t *)(m + 0x14) = 0;
-    *(uint32_t *)(m + 0x18) = *(uint32_t *)(m + 0x0c);
+    ((SceAuthMbuf *)m)->m_pkthdr_rcvif = 0;
+    ((SceAuthMbuf *)m)->m_pkthdr_len = ((SceAuthMbuf *)m)->m_len;
     return m;
 }
 
 /* 0x2130 */
-static void __attribute__((noinline)) sub_2130(SceNetAdhocAuthCtx *ctx, const uint8_t *dst_mac, void *mbuf)
+static void __attribute__((noinline)) adhocAuthSendPacket(SceNetAdhocAuthCtx *ctx, const uint8_t *dst_mac, void *mbuf)
 {
     uint8_t *m = (uint8_t *)mbuf;
-    uint8_t *data = *(uint8_t **)(m + 0x08);
+    uint8_t *data = ((SceAuthMbuf *)m)->m_data;
     if ((intptr_t)data < 0) {
         return;
     }
@@ -1289,15 +1331,15 @@ static void __attribute__((noinline)) sub_2130(SceNetAdhocAuthCtx *ctx, const ui
 
     int intr = sceKernelCpuSuspendIntr();
     uint8_t *ifp = (uint8_t *)ctx->ifp;
-    *(void **)(m + 0x04) = NULL;
-    void *tail = *(void **)(ifp + 0x1c);
+    ((SceAuthMbuf *)m)->m_nextpkt = NULL;
+    void *tail = ((SceAuthIfQueue *)ifp)->tail;
     if (tail == NULL) {
-        *(void **)(ifp + 0x18) = m;
+        ((SceAuthIfQueue *)ifp)->head = (SceAuthMbuf *)m;
     } else {
         *(void **)((uint8_t *)tail + 0x04) = m;
     }
-    *(void **)(ifp + 0x1c) = m;
-    (*(uint32_t *)(ifp + 0x20))++;
+    ((SceAuthIfQueue *)ifp)->tail = (SceAuthMbuf *)m;
+    ((SceAuthIfQueue *)ifp)->count++;
     sceKernelCpuResumeIntr(intr);
 
     void (*start_fn)(void *) = *(void (**)(void *))((uint8_t *)ctx->ifp + 0x10);
@@ -1305,49 +1347,49 @@ static void __attribute__((noinline)) sub_2130(SceNetAdhocAuthCtx *ctx, const ui
 }
 
 /* 0x2260 */
-static void __attribute__((noinline)) sub_2260(SceNetAdhocAuthCtx *ctx)
+static void __attribute__((noinline)) adhocAuthSendBeacon(SceNetAdhocAuthCtx *ctx)
 {
     uint8_t hdr[0x20];
-    int locked = sub_3e98();
+    int locked = adhocAuthLock();
     if (sceMemab_driver_F742F283(NULL, 0, hdr, 0) >= 0) {
-        uint8_t *m = (uint8_t *)sub_1f84(ctx, 7, hdr, NULL, 0);
+        uint8_t *m = (uint8_t *)adhocAuthBuildPacket(ctx, 7, hdr, NULL, 0);
         if (m != NULL) {
-            *(uint16_t *)(m + 0x12) |= 0x100;
-            sub_2130(ctx, g_bcast_mac, m);
+            ((SceAuthMbuf *)m)->m_flags |= 0x100;
+            adhocAuthSendPacket(ctx, g_bcast_mac, m);
         }
     }
     while (ctx->peer_head != NULL) {
         SceNetAdhocAuthPeer *peer = ctx->peer_head;
-        sub_3d2c(ctx, peer, 0);
-        sub_3c08(ctx, peer);
+        adhocAuthSetPeerState(ctx, peer, 0);
+        adhocAuthDestroyPeer(ctx, peer);
     }
-    sub_3f18(locked);
+    adhocAuthUnlock(locked);
 }
 
 /* 0x2324 */
-static void __attribute__((noinline)) sub_2324(SceNetAdhocAuthCtx *ctx, SceNetAdhocAuthPeer *peer)
+static void __attribute__((noinline)) adhocAuthSendChallenge(SceNetAdhocAuthCtx *ctx, SceNetAdhocAuthPeer *peer)
 {
     uint8_t hdr[0x20];
-    int locked = sub_3e98();
+    int locked = adhocAuthLock();
     if (peer != NULL && ctx->state != 2) {
         if (sceMemab_driver_3C15BC8C(peer->memab_ctx, NULL, 0, hdr, 0) >= 0) {
-            void *m = sub_1f84(ctx, 7, hdr, NULL, 0);
+            void *m = adhocAuthBuildPacket(ctx, 7, hdr, NULL, 0);
             if (m != NULL) {
-                sub_2130(ctx, peer->hash_mac, m);
+                adhocAuthSendPacket(ctx, peer->hash_mac, m);
             }
         }
-        sub_3d2c(ctx, peer, 0);
-        sub_3c08(ctx, peer);
+        adhocAuthSetPeerState(ctx, peer, 0);
+        adhocAuthDestroyPeer(ctx, peer);
     }
-    sub_3f18(locked);
+    adhocAuthUnlock(locked);
 }
 
 /* 0x23e8 */
-static void __attribute__((noinline)) sub_23e8(SceNetAdhocAuthCtx *ctx, SceNetAdhocAuthPeer *peer)
+static void __attribute__((noinline)) adhocAuthSendResponse(SceNetAdhocAuthCtx *ctx, SceNetAdhocAuthPeer *peer)
 {
     uint8_t hdr[0x20];
     uint32_t payload[4];
-    int locked = sub_3e98();
+    int locked = adhocAuthLock();
     if (peer != NULL && peer->state == 4 && ctx->state != 2) {
         uint32_t seq = peer->tx_seq + 1;
         peer->tx_seq = seq;
@@ -1357,9 +1399,9 @@ static void __attribute__((noinline)) sub_23e8(SceNetAdhocAuthCtx *ctx, SceNetAd
         payload[3] = 0;
         memset(hdr, 0, sizeof(hdr));
         if (sceMemab_driver_3C15BC8C(peer->memab_ctx, payload, 0x10, hdr, 1) >= 0) {
-            void *m = sub_1f84(ctx, 8, hdr, NULL, 0);
+            void *m = adhocAuthBuildPacket(ctx, 8, hdr, NULL, 0);
             if (m != NULL) {
-                sub_2130(ctx, peer->hash_mac, m);
+                adhocAuthSendPacket(ctx, peer->hash_mac, m);
             }
         }
         int intr = sceKernelCpuSuspendIntr();
@@ -1367,37 +1409,37 @@ static void __attribute__((noinline)) sub_23e8(SceNetAdhocAuthCtx *ctx, SceNetAd
             sceKernelCancelAlarm(peer->keepalive_tx_alarm);
             peer->keepalive_tx_alarm = 0;
         }
-        peer->keepalive_tx_alarm = sceKernelSetAlarm(ctx->keepalive_tx_interval, sub_39d4, peer);
+        peer->keepalive_tx_alarm = sceKernelSetAlarm(ctx->keepalive_tx_interval, adhocAuthPeerRekeyAlarmCb, peer);
         sceKernelCpuResumeIntr(intr);
     }
-    sub_3f18(locked);
+    adhocAuthUnlock(locked);
 }
 
 /* 0x255c */
-static void __attribute__((noinline)) sub_255c(SceNetAdhocAuthCtx *ctx, SceNetAdhocAuthPeer *peer)
+static void __attribute__((noinline)) adhocAuthRetryPeer(SceNetAdhocAuthCtx *ctx, SceNetAdhocAuthPeer *peer)
 {
-    int locked = sub_3e98();
+    int locked = adhocAuthLock();
     if (peer == NULL || (uint32_t)(peer->state - 1) >= 3U) {
-        sub_3f18(locked);
+        adhocAuthUnlock(locked);
         return;
     }
 
     if (peer->retry_count >= ctx->max_retries || ctx->state == 2) {
-        sub_3d2c(ctx, peer, 0);
-        sub_3c08(ctx, peer);
-        sub_3f18(locked);
+        adhocAuthSetPeerState(ctx, peer, 0);
+        adhocAuthDestroyPeer(ctx, peer);
+        adhocAuthUnlock(locked);
         return;
     }
 
     if (peer->state == 1) {
-        void *m = sub_1f84(ctx, 3, peer->msg1_data, ctx->tlv_buf, ctx->tlv_len);
+        void *m = adhocAuthBuildPacket(ctx, 3, peer->msg1_data, ctx->tlv_buf, ctx->tlv_len);
         if (m != NULL) {
-            sub_2130(ctx, peer->hash_mac, m);
+            adhocAuthSendPacket(ctx, peer->hash_mac, m);
         }
     } else if (peer->state == 2) {
-        void *m = sub_1f84(ctx, 5, peer->msg5_data, NULL, 0);
+        void *m = adhocAuthBuildPacket(ctx, 5, peer->msg5_data, NULL, 0);
         if (m != NULL) {
-            sub_2130(ctx, peer->hash_mac, m);
+            adhocAuthSendPacket(ctx, peer->hash_mac, m);
         }
     }
 
@@ -1407,13 +1449,13 @@ static void __attribute__((noinline)) sub_255c(SceNetAdhocAuthCtx *ctx, SceNetAd
         sceKernelCancelAlarm(peer->retry_alarm);
         peer->retry_alarm = 0;
     }
-    peer->retry_alarm = sceKernelSetAlarm(ctx->retry_interval, sub_38e4, peer);
+    peer->retry_alarm = sceKernelSetAlarm(ctx->retry_interval, adhocAuthPeerRetryAlarmCb, peer);
     sceKernelCpuResumeIntr(intr);
-    sub_3f18(locked);
+    adhocAuthUnlock(locked);
 }
 
 /* 0x26c8 */
-static void __attribute__((noinline)) sub_26c8(SceNetAdhocAuthCtx *ctx)
+static void __attribute__((noinline)) adhocAuthProcessRxQueue(SceNetAdhocAuthCtx *ctx)
 {
     uint8_t tmp_ctx[0xc0];
     uint8_t out_buf[0x220];
@@ -1422,12 +1464,12 @@ static void __attribute__((noinline)) sub_26c8(SceNetAdhocAuthCtx *ctx)
         int intr = sceKernelCpuSuspendIntr();
         uint8_t *m = (uint8_t *)g_rx_queue.head;
         if (m != NULL) {
-            void *next = *(void **)(m + 0x04);
+            void *next = ((SceAuthMbuf *)m)->m_nextpkt;
             g_rx_queue.head = next;
             if (next == NULL) {
                 g_rx_queue.tail = NULL;
             }
-            *(void **)(m + 0x04) = NULL;
+            ((SceAuthMbuf *)m)->m_nextpkt = NULL;
             g_rx_queue.count--;
         }
         sceKernelCpuResumeIntr(intr);
@@ -1436,9 +1478,9 @@ static void __attribute__((noinline)) sub_26c8(SceNetAdhocAuthCtx *ctx)
             break;
         }
 
-        int pkt_len = *(int *)(m + 0x18);
-        int first_len = *(int *)(m + 0x0c);
-        uint8_t *raw = *(uint8_t **)(m + 0x08);
+        int pkt_len = ((SceAuthMbuf *)m)->m_pkthdr_len;
+        int first_len = ((SceAuthMbuf *)m)->m_len;
+        uint8_t *raw = ((SceAuthMbuf *)m)->m_data;
         if (pkt_len != first_len) {
             raw = (uint8_t *)sceNetIfhandle_driver_15CFE3C0(pkt_len);
             if (raw == NULL) {
@@ -1446,7 +1488,7 @@ static void __attribute__((noinline)) sub_26c8(SceNetAdhocAuthCtx *ctx)
                 continue;
             }
             sceNetIfhandle_driver_9A6261EC(m, 0, pkt_len, raw);
-            pkt_len = *(int *)(m + 0x18);
+            pkt_len = ((SceAuthMbuf *)m)->m_pkthdr_len;
         } else if ((intptr_t)raw < 0) {
             sceNetIfhandle_driver_F56FAC82(m);
             continue;
@@ -1459,8 +1501,8 @@ static void __attribute__((noinline)) sub_26c8(SceNetAdhocAuthCtx *ctx)
                 uint16_t hdr_len = ((uint16_t)raw[0x12] << 8) | raw[0x13];
                 if (hdr_len == g_pkt_hdr_sizes[pkt_type] && pkt_len >= (int)hdr_len + 0x14) {
                     int extra_len = pkt_len - hdr_len - 0x14;
-                    int locked = sub_3e98();
-                    SceNetAdhocAuthPeer *peer = sub_3bb0(ctx, src_mac);
+                    int locked = adhocAuthLock();
+                    SceNetAdhocAuthPeer *peer = adhocAuthFindPeerByMac(ctx, src_mac);
                     if (peer != NULL && peer->state == 4) {
                         peer->timestamp = sceKernelGetSystemTimeWide();
                     }
@@ -1470,16 +1512,16 @@ static void __attribute__((noinline)) sub_26c8(SceNetAdhocAuthCtx *ctx)
                         if (ctx->state == 1 && ctx->peer_count < ctx->max_peers && peer == NULL) {
                             peer = (SceNetAdhocAuthPeer *)sceNetIfhandle_driver_15CFE3C0(sizeof(SceNetAdhocAuthPeer));
                             if (peer != NULL) {
-                                sub_3a4c(ctx, peer, src_mac, raw + 0x14);
-                                sub_3ff8(peer, raw + 0x94, extra_len);
+                                adhocAuthInitPeer(ctx, peer, src_mac, raw + 0x14);
+                                adhocAuthParsePeerTlv(peer, raw + 0x94, extra_len);
                                 if (sceMemab_driver_4B54EAAD(peer->memab_ctx, out_buf) < 0) {
-                                    sub_3c08(ctx, peer);
+                                    adhocAuthDestroyPeer(ctx, peer);
                                 } else {
                                     memcpy(out_buf + 0xa0, ctx->ibss, 0x80);
-                                    void *tx_m = sub_1f84(ctx, 3, out_buf, ctx->tlv_buf, ctx->tlv_len);
+                                    void *tx_m = adhocAuthBuildPacket(ctx, 3, out_buf, ctx->tlv_buf, ctx->tlv_len);
                                     memcpy(peer->msg1_data, out_buf, 0x120);
                                     if (tx_m != NULL) {
-                                        sub_2130(ctx, peer->hash_mac, tx_m);
+                                        adhocAuthSendPacket(ctx, peer->hash_mac, tx_m);
                                     }
                                     peer->retry_count = 0;
                                     int s = sceKernelCpuSuspendIntr();
@@ -1487,9 +1529,9 @@ static void __attribute__((noinline)) sub_26c8(SceNetAdhocAuthCtx *ctx)
                                         sceKernelCancelAlarm(peer->retry_alarm);
                                         peer->retry_alarm = 0;
                                     }
-                                    peer->retry_alarm = sceKernelSetAlarm(ctx->retry_interval, sub_38e4, peer);
+                                    peer->retry_alarm = sceKernelSetAlarm(ctx->retry_interval, adhocAuthPeerRetryAlarmCb, peer);
                                     sceKernelCpuResumeIntr(s);
-                                    sub_3d2c(ctx, peer, 1);
+                                    adhocAuthSetPeerState(ctx, peer, 1);
                                 }
                             }
                         }
@@ -1502,8 +1544,8 @@ static void __attribute__((noinline)) sub_26c8(SceNetAdhocAuthCtx *ctx)
                                 if (peer == NULL) {
                                     break;
                                 }
-                                sub_3a4c(ctx, peer, src_mac, raw + 0xb4);
-                                sub_3ff8(peer, raw + 0x134, extra_len);
+                                adhocAuthInitPeer(ctx, peer, src_mac, raw + 0xb4);
+                                adhocAuthParsePeerTlv(peer, raw + 0x134, extra_len);
                             } else {
                                 if (peer->state == 3) {
                                     if (memcmp(peer->msg1_data, raw + 0x14, 0x120) != 0) {
@@ -1513,7 +1555,7 @@ static void __attribute__((noinline)) sub_26c8(SceNetAdhocAuthCtx *ctx)
                                             peer->retry_alarm = 0;
                                         }
                                         sceKernelCpuResumeIntr(s);
-                                        sub_3d2c(ctx, peer, 0);
+                                        adhocAuthSetPeerState(ctx, peer, 0);
                                     }
                                 } else if (peer->state == 1) {
                                     for (int i = 0; i < 6; i++) {
@@ -1527,7 +1569,7 @@ static void __attribute__((noinline)) sub_26c8(SceNetAdhocAuthCtx *ctx)
                                                 peer->retry_alarm = 0;
                                             }
                                             sceKernelCpuResumeIntr(s);
-                                            sub_3d2c(ctx, peer, 0);
+                                            adhocAuthSetPeerState(ctx, peer, 0);
                                             break;
                                         }
                                     }
@@ -1538,7 +1580,7 @@ static void __attribute__((noinline)) sub_26c8(SceNetAdhocAuthCtx *ctx)
                                         peer->retry_alarm = 0;
                                     }
                                     sceKernelCpuResumeIntr(s);
-                                    sub_3d2c(ctx, peer, 0);
+                                    adhocAuthSetPeerState(ctx, peer, 0);
                                 } else if (peer->state == 4) {
                                     int s = sceKernelCpuSuspendIntr();
                                     if (peer->keepalive_rx_alarm > 0) {
@@ -1558,17 +1600,17 @@ static void __attribute__((noinline)) sub_26c8(SceNetAdhocAuthCtx *ctx)
                                         peer->retry_alarm = 0;
                                     }
                                     sceKernelCpuResumeIntr(s);
-                                    sub_3d2c(ctx, peer, 0);
+                                    adhocAuthSetPeerState(ctx, peer, 0);
                                 }
                                 memcpy(peer->ibss, raw + 0xb4, 0x80);
-                                sub_3ff8(peer, raw + 0x134, extra_len);
+                                adhocAuthParsePeerTlv(peer, raw + 0x134, extra_len);
                             }
 
                             if (peer->state == 0) {
                                 memcpy(peer->memab_ctx, tmp_ctx, 0xc0);
-                                void *tx_m = sub_1f84(ctx, 4, out_buf, NULL, 0);
+                                void *tx_m = adhocAuthBuildPacket(ctx, 4, out_buf, NULL, 0);
                                 if (tx_m != NULL) {
-                                    sub_2130(ctx, peer->hash_mac, tx_m);
+                                    adhocAuthSendPacket(ctx, peer->hash_mac, tx_m);
                                 }
                                 peer->retry_count = 0;
                                 int s = sceKernelCpuSuspendIntr();
@@ -1576,15 +1618,15 @@ static void __attribute__((noinline)) sub_26c8(SceNetAdhocAuthCtx *ctx)
                                     sceKernelCancelAlarm(peer->retry_alarm);
                                     peer->retry_alarm = 0;
                                 }
-                                peer->retry_alarm = sceKernelSetAlarm(ctx->retry_interval, sub_38e4, peer);
+                                peer->retry_alarm = sceKernelSetAlarm(ctx->retry_interval, adhocAuthPeerRetryAlarmCb, peer);
                                 sceKernelCpuResumeIntr(s);
                                 memcpy(peer->msg1_data, raw + 0x14, 0x120);
                                 memcpy(peer->msg4_data, out_buf, 0x110);
-                                sub_3d2c(ctx, peer, 3);
+                                adhocAuthSetPeerState(ctx, peer, 3);
                             } else if (peer->state == 3) {
-                                void *tx_m = sub_1f84(ctx, 4, peer->msg4_data, NULL, 0);
+                                void *tx_m = adhocAuthBuildPacket(ctx, 4, peer->msg4_data, NULL, 0);
                                 if (tx_m != NULL) {
-                                    sub_2130(ctx, peer->hash_mac, tx_m);
+                                    adhocAuthSendPacket(ctx, peer->hash_mac, tx_m);
                                 }
                                 peer->retry_count = 0;
                                 int s = sceKernelCpuSuspendIntr();
@@ -1592,7 +1634,7 @@ static void __attribute__((noinline)) sub_26c8(SceNetAdhocAuthCtx *ctx)
                                     sceKernelCancelAlarm(peer->retry_alarm);
                                     peer->retry_alarm = 0;
                                 }
-                                peer->retry_alarm = sceKernelSetAlarm(ctx->retry_interval, sub_38e4, peer);
+                                peer->retry_alarm = sceKernelSetAlarm(ctx->retry_interval, adhocAuthPeerRetryAlarmCb, peer);
                                 sceKernelCpuResumeIntr(s);
                             }
                         }
@@ -1608,10 +1650,10 @@ static void __attribute__((noinline)) sub_26c8(SceNetAdhocAuthCtx *ctx)
                                 }
                                 sceKernelCpuResumeIntr(s);
                                 memcpy(peer->memab_ctx, tmp_ctx, 0xc0);
-                                void *tx_m = sub_1f84(ctx, 5, out_buf, NULL, 0);
+                                void *tx_m = adhocAuthBuildPacket(ctx, 5, out_buf, NULL, 0);
                                 memcpy(peer->msg5_data, out_buf, 0x100);
                                 if (tx_m != NULL) {
-                                    sub_2130(ctx, peer->hash_mac, tx_m);
+                                    adhocAuthSendPacket(ctx, peer->hash_mac, tx_m);
                                 }
                                 peer->retry_count = 0;
                                 s = sceKernelCpuSuspendIntr();
@@ -1619,9 +1661,9 @@ static void __attribute__((noinline)) sub_26c8(SceNetAdhocAuthCtx *ctx)
                                     sceKernelCancelAlarm(peer->retry_alarm);
                                     peer->retry_alarm = 0;
                                 }
-                                peer->retry_alarm = sceKernelSetAlarm(ctx->retry_interval, sub_38e4, peer);
+                                peer->retry_alarm = sceKernelSetAlarm(ctx->retry_interval, adhocAuthPeerRetryAlarmCb, peer);
                                 sceKernelCpuResumeIntr(s);
-                                sub_3d2c(ctx, peer, 2);
+                                adhocAuthSetPeerState(ctx, peer, 2);
                             }
                         }
                         break;
@@ -1636,18 +1678,18 @@ static void __attribute__((noinline)) sub_26c8(SceNetAdhocAuthCtx *ctx)
                                 }
                                 sceKernelCpuResumeIntr(s);
                                 memcpy(peer->memab_ctx, tmp_ctx, 0xc0);
-                                void *tx_m = sub_1f84(ctx, 6, out_buf, NULL, 0);
+                                void *tx_m = adhocAuthBuildPacket(ctx, 6, out_buf, NULL, 0);
                                 peer->tx_seq = 0;
                                 peer->rx_seq = 0;
                                 if (tx_m != NULL) {
-                                    sub_2130(ctx, peer->hash_mac, tx_m);
+                                    adhocAuthSendPacket(ctx, peer->hash_mac, tx_m);
                                 }
                                 s = sceKernelCpuSuspendIntr();
                                 if (peer->keepalive_rx_alarm > 0) {
                                     sceKernelCancelAlarm(peer->keepalive_rx_alarm);
                                     peer->keepalive_rx_alarm = 0;
                                 }
-                                peer->keepalive_rx_alarm = sceKernelSetAlarm(ctx->keepalive_rx_interval, sub_395c, peer);
+                                peer->keepalive_rx_alarm = sceKernelSetAlarm(ctx->keepalive_rx_interval, adhocAuthPeerExpireAlarmCb, peer);
                                 sceKernelCpuResumeIntr(s);
 
                                 s = sceKernelCpuSuspendIntr();
@@ -1655,9 +1697,9 @@ static void __attribute__((noinline)) sub_26c8(SceNetAdhocAuthCtx *ctx)
                                     sceKernelCancelAlarm(peer->keepalive_tx_alarm);
                                     peer->keepalive_tx_alarm = 0;
                                 }
-                                peer->keepalive_tx_alarm = sceKernelSetAlarm(ctx->keepalive_tx_interval, sub_39d4, peer);
+                                peer->keepalive_tx_alarm = sceKernelSetAlarm(ctx->keepalive_tx_interval, adhocAuthPeerRekeyAlarmCb, peer);
                                 sceKernelCpuResumeIntr(s);
-                                sub_3d2c(ctx, peer, 4);
+                                adhocAuthSetPeerState(ctx, peer, 4);
                             }
                         }
                         break;
@@ -1680,7 +1722,7 @@ static void __attribute__((noinline)) sub_26c8(SceNetAdhocAuthCtx *ctx)
                                     sceKernelCancelAlarm(peer->keepalive_rx_alarm);
                                     peer->keepalive_rx_alarm = 0;
                                 }
-                                peer->keepalive_rx_alarm = sceKernelSetAlarm(ctx->keepalive_rx_interval, sub_395c, peer);
+                                peer->keepalive_rx_alarm = sceKernelSetAlarm(ctx->keepalive_rx_interval, adhocAuthPeerExpireAlarmCb, peer);
                                 sceKernelCpuResumeIntr(s);
 
                                 s = sceKernelCpuSuspendIntr();
@@ -1688,9 +1730,9 @@ static void __attribute__((noinline)) sub_26c8(SceNetAdhocAuthCtx *ctx)
                                     sceKernelCancelAlarm(peer->keepalive_tx_alarm);
                                     peer->keepalive_tx_alarm = 0;
                                 }
-                                peer->keepalive_tx_alarm = sceKernelSetAlarm(ctx->keepalive_tx_interval, sub_39d4, peer);
+                                peer->keepalive_tx_alarm = sceKernelSetAlarm(ctx->keepalive_tx_interval, adhocAuthPeerRekeyAlarmCb, peer);
                                 sceKernelCpuResumeIntr(s);
-                                sub_3d2c(ctx, peer, 4);
+                                adhocAuthSetPeerState(ctx, peer, 4);
                             }
                         }
                         break;
@@ -1703,8 +1745,8 @@ static void __attribute__((noinline)) sub_26c8(SceNetAdhocAuthCtx *ctx)
                                 verify_res = sceMemab_driver_D47A50B1(peer->memab_ctx, NULL, 0, raw + 0x14, 0, 0);
                             }
                             if (verify_res >= 0) {
-                                sub_3d2c(ctx, peer, 0);
-                                sub_3c08(ctx, peer);
+                                adhocAuthSetPeerState(ctx, peer, 0);
+                                adhocAuthDestroyPeer(ctx, peer);
                             }
                         }
                         break;
@@ -1721,7 +1763,7 @@ static void __attribute__((noinline)) sub_26c8(SceNetAdhocAuthCtx *ctx)
                                         sceKernelCancelAlarm(peer->keepalive_rx_alarm);
                                         peer->keepalive_rx_alarm = 0;
                                     }
-                                    peer->keepalive_rx_alarm = sceKernelSetAlarm(ctx->keepalive_rx_interval, sub_395c, peer);
+                                    peer->keepalive_rx_alarm = sceKernelSetAlarm(ctx->keepalive_rx_interval, adhocAuthPeerExpireAlarmCb, peer);
                                     sceKernelCpuResumeIntr(s);
                                 }
                             }
@@ -1730,12 +1772,12 @@ static void __attribute__((noinline)) sub_26c8(SceNetAdhocAuthCtx *ctx)
                     default:
                         break;
                     }
-                    sub_3f18(locked);
+                    adhocAuthUnlock(locked);
                 }
             }
         }
 
-        if (*(int *)(m + 0x18) != *(int *)(m + 0x0c)) {
+        if (((SceAuthMbuf *)m)->m_pkthdr_len != ((SceAuthMbuf *)m)->m_len) {
             sceNetIfhandle_driver_76BAD213(raw);
         }
         sceNetIfhandle_driver_F56FAC82(m);
@@ -1743,23 +1785,23 @@ static void __attribute__((noinline)) sub_26c8(SceNetAdhocAuthCtx *ctx)
 }
 
 /* 0x378c */
-static void __attribute__((noinline)) sub_378c(SceNetAdhocAuthCtx *ctx)
+static void __attribute__((noinline)) adhocAuthHandleTimeout(SceNetAdhocAuthCtx *ctx)
 {
-    int locked = sub_3e98();
+    int locked = adhocAuthLock();
     if (ctx->state != 1) {
-        sub_3f18(locked);
+        adhocAuthUnlock(locked);
         return;
     }
 
     void *m;
     if (ctx->peer_count < ctx->max_peers) {
-        m = sub_1f84(ctx, 2, ctx->ibss, ctx->tlv_buf, ctx->tlv_len);
+        m = adhocAuthBuildPacket(ctx, 2, ctx->ibss, ctx->tlv_buf, ctx->tlv_len);
     } else {
-        m = sub_1f84(ctx, 1, NULL, NULL, 0);
+        m = adhocAuthBuildPacket(ctx, 1, NULL, NULL, 0);
     }
     if (m != NULL) {
         *(uint16_t *)((uint8_t *)m + 0x12) |= 0x100;
-        sub_2130(ctx, g_bcast_mac, m);
+        adhocAuthSendPacket(ctx, g_bcast_mac, m);
     }
 
     int intr = sceKernelCpuSuspendIntr();
@@ -1767,13 +1809,13 @@ static void __attribute__((noinline)) sub_378c(SceNetAdhocAuthCtx *ctx)
         sceKernelCancelAlarm(ctx->beacon_alarm);
         ctx->beacon_alarm = 0;
     }
-    ctx->beacon_alarm = sceKernelSetAlarm(ctx->beacon_interval, sub_389c, ctx);
+    ctx->beacon_alarm = sceKernelSetAlarm(ctx->beacon_interval, adhocAuthBeaconAlarmCb, ctx);
     sceKernelCpuResumeIntr(intr);
-    sub_3f18(locked);
+    adhocAuthUnlock(locked);
 }
 
 /* 0x389c */
-static uint32_t __attribute__((noinline)) sub_389c(void *common)
+static uint32_t __attribute__((noinline)) adhocAuthBeaconAlarmCb(void *common)
 {
     SceNetAdhocAuthCtx *ctx = (SceNetAdhocAuthCtx *)common;
     if ((ctx->flags & 2) == 0) {
@@ -1785,10 +1827,10 @@ static uint32_t __attribute__((noinline)) sub_389c(void *common)
 }
 
 /* 0x38e4 */
-static uint32_t __attribute__((noinline)) sub_38e4(void *common)
+static uint32_t __attribute__((noinline)) adhocAuthPeerRetryAlarmCb(void *common)
 {
     SceNetAdhocAuthPeer *peer = (SceNetAdhocAuthPeer *)common;
-    SceNetAdhocAuthMbxMsg *msg = sub_3f64(peer->ctx);
+    SceNetAdhocAuthMbxMsg *msg = adhocAuthAllocMsg(peer->ctx);
     if (msg != NULL) {
         msg->type = 1;
         memcpy(msg->mac, peer->hash_mac, 6);
@@ -1799,10 +1841,10 @@ static uint32_t __attribute__((noinline)) sub_38e4(void *common)
 }
 
 /* 0x395c */
-static uint32_t __attribute__((noinline)) sub_395c(void *common)
+static uint32_t __attribute__((noinline)) adhocAuthPeerExpireAlarmCb(void *common)
 {
     SceNetAdhocAuthPeer *peer = (SceNetAdhocAuthPeer *)common;
-    SceNetAdhocAuthMbxMsg *msg = sub_3f64(peer->ctx);
+    SceNetAdhocAuthMbxMsg *msg = adhocAuthAllocMsg(peer->ctx);
     if (msg != NULL) {
         msg->type = 5;
         memcpy(msg->mac, peer->hash_mac, 6);
@@ -1813,10 +1855,10 @@ static uint32_t __attribute__((noinline)) sub_395c(void *common)
 }
 
 /* 0x39d4 */
-static uint32_t __attribute__((noinline)) sub_39d4(void *common)
+static uint32_t __attribute__((noinline)) adhocAuthPeerRekeyAlarmCb(void *common)
 {
     SceNetAdhocAuthPeer *peer = (SceNetAdhocAuthPeer *)common;
-    SceNetAdhocAuthMbxMsg *msg = sub_3f64(peer->ctx);
+    SceNetAdhocAuthMbxMsg *msg = adhocAuthAllocMsg(peer->ctx);
     if (msg != NULL) {
         msg->type = 4;
         memcpy(msg->mac, peer->hash_mac, 6);
@@ -1827,7 +1869,7 @@ static uint32_t __attribute__((noinline)) sub_39d4(void *common)
 }
 
 /* 0x3a4c */
-static void __attribute__((noinline)) sub_3a4c(SceNetAdhocAuthCtx *ctx, SceNetAdhocAuthPeer *peer,
+static void __attribute__((noinline)) adhocAuthInitPeer(SceNetAdhocAuthCtx *ctx, SceNetAdhocAuthPeer *peer,
                                                const uint8_t *mac, const uint8_t *ibss)
 {
     memset(peer, 0, sizeof(SceNetAdhocAuthPeer));
@@ -1843,7 +1885,7 @@ static void __attribute__((noinline)) sub_3a4c(SceNetAdhocAuthCtx *ctx, SceNetAd
 }
 
 /* 0x3bb0 */
-static SceNetAdhocAuthPeer *__attribute__((noinline)) sub_3bb0(SceNetAdhocAuthCtx *ctx, const uint8_t *mac)
+static SceNetAdhocAuthPeer *__attribute__((noinline)) adhocAuthFindPeerByMac(SceNetAdhocAuthCtx *ctx, const uint8_t *mac)
 {
     SceNetAdhocAuthPeer *peer = ctx->peer_head;
     while (peer != NULL) {
@@ -1856,7 +1898,7 @@ static SceNetAdhocAuthPeer *__attribute__((noinline)) sub_3bb0(SceNetAdhocAuthCt
 }
 
 /* 0x3c08 */
-static void __attribute__((noinline)) sub_3c08(SceNetAdhocAuthCtx *ctx, SceNetAdhocAuthPeer *peer)
+static void __attribute__((noinline)) adhocAuthDestroyPeer(SceNetAdhocAuthCtx *ctx, SceNetAdhocAuthPeer *peer)
 {
     if (peer == NULL) {
         return;
@@ -1895,31 +1937,31 @@ static void __attribute__((noinline)) sub_3c08(SceNetAdhocAuthCtx *ctx, SceNetAd
 }
 
 /* 0x3d2c */
-static void __attribute__((noinline)) sub_3d2c(SceNetAdhocAuthCtx *ctx, SceNetAdhocAuthPeer *peer, int new_state)
+static void __attribute__((noinline)) adhocAuthSetPeerState(SceNetAdhocAuthCtx *ctx, SceNetAdhocAuthPeer *peer, int new_state)
 {
     (void)ctx;
     sceKernelWaitSema(g_hash_sema, 1, NULL);
     int old_state = peer->state;
     if (old_state != 4 && new_state == 4) {
-        sub_1980(peer->memab_ctx);
+        adhocAuthHashInsert(peer->memab_ctx);
         peer->timestamp = sceKernelGetSystemTimeWide();
         old_state = peer->state;
     }
     if (old_state == 4 && new_state != 4) {
-        sub_1a68(peer->memab_ctx);
+        adhocAuthHashRemove(peer->memab_ctx);
     }
     sceKernelSignalSema(g_hash_sema, 1);
     peer->state = new_state;
 }
 
 /* 0x3e00 */
-static void __attribute__((noinline)) sub_3e00(SceNetAdhocAuthCtx *ctx, int state)
+static void __attribute__((noinline)) adhocAuthSetCtxState(SceNetAdhocAuthCtx *ctx, int state)
 {
     ctx->state = state;
 }
 
 /* 0x3e08 */
-static int __attribute__((noinline)) sub_3e08(void)
+static int __attribute__((noinline)) adhocAuthCreateLock(void)
 {
     int sema = sceKernelCreateSema("SceNetAdhocAuthLock", 1, 1, 1, NULL);
     if (sema < 0) {
@@ -1931,7 +1973,7 @@ static int __attribute__((noinline)) sub_3e08(void)
 }
 
 /* 0x3e5c */
-static int __attribute__((noinline)) sub_3e5c(void)
+static int __attribute__((noinline)) adhocAuthDeleteLock(void)
 {
     if (g_lock_sema >= 0) {
         sceKernelDeleteSema(g_lock_sema);
@@ -1941,7 +1983,7 @@ static int __attribute__((noinline)) sub_3e5c(void)
 }
 
 /* 0x3e98 */
-static int __attribute__((noinline)) sub_3e98(void)
+static int __attribute__((noinline)) adhocAuthLock(void)
 {
     int thid = sceKernelGetThreadId();
     if (thid < 0) {
@@ -1959,7 +2001,7 @@ static int __attribute__((noinline)) sub_3e98(void)
 }
 
 /* 0x3f18 */
-static void __attribute__((noinline)) sub_3f18(int locked)
+static void __attribute__((noinline)) adhocAuthUnlock(int locked)
 {
     if (locked != 0) {
         g_lock_owner_thid = -1;
@@ -1968,7 +2010,7 @@ static void __attribute__((noinline)) sub_3f18(int locked)
 }
 
 /* 0x3f40 */
-static void __attribute__((noinline)) sub_3f40(void)
+static void __attribute__((noinline)) adhocAuthSignalLock(void)
 {
     if (g_lock_sema >= 0) {
         sceKernelSignalSema(g_lock_sema, 1);
@@ -1976,7 +2018,7 @@ static void __attribute__((noinline)) sub_3f40(void)
 }
 
 /* 0x3f64 */
-static SceNetAdhocAuthMbxMsg *__attribute__((noinline)) sub_3f64(SceNetAdhocAuthCtx *ctx)
+static SceNetAdhocAuthMbxMsg *__attribute__((noinline)) adhocAuthAllocMsg(SceNetAdhocAuthCtx *ctx)
 {
     uint32_t bitmap = ctx->msg_pool_bitmap;
     for (int i = 0; i < 16; i++) {
@@ -1990,7 +2032,7 @@ static SceNetAdhocAuthMbxMsg *__attribute__((noinline)) sub_3f64(SceNetAdhocAuth
 }
 
 /* 0x3fac */
-static void __attribute__((noinline)) sub_3fac(SceNetAdhocAuthCtx *ctx, SceNetAdhocAuthMbxMsg *msg)
+static void __attribute__((noinline)) adhocAuthFreeMsg(SceNetAdhocAuthCtx *ctx, SceNetAdhocAuthMbxMsg *msg)
 {
     for (int i = 0; i < 16; i++) {
         if (&ctx->msg_pool[i] == msg) {
@@ -2001,7 +2043,7 @@ static void __attribute__((noinline)) sub_3fac(SceNetAdhocAuthCtx *ctx, SceNetAd
 }
 
 /* 0x3ff8 */
-static void __attribute__((noinline)) sub_3ff8(SceNetAdhocAuthPeer *peer, const uint8_t *buf, int len)
+static void __attribute__((noinline)) adhocAuthParsePeerTlv(SceNetAdhocAuthPeer *peer, const uint8_t *buf, int len)
 {
     if (len <= 1) {
         return;
@@ -2037,7 +2079,7 @@ static void __attribute__((noinline)) sub_3ff8(SceNetAdhocAuthPeer *peer, const 
 }
 
 /* 0x412c */
-static void __attribute__((noinline)) sub_412c(SceNetAdhocAuthCtx *ctx, uint8_t *dst, uint32_t *out_len)
+static void __attribute__((noinline)) adhocAuthBuildSelfTlv(SceNetAdhocAuthCtx *ctx, uint8_t *dst, uint32_t *out_len)
 {
     dst[0] = 1;
     dst[1] = 4;
