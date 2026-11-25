@@ -11,6 +11,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <kernel/threadmgr.h>
+#include <kernel/error.h>
 #include <kernel/sysmem/memblock.h>
 #include <appmgr.h>
 #include <libnetctl.h>
@@ -119,4 +120,135 @@ extern "C" int SwMwCommServerCheckAppEvent(void)
 		}
 	}
 	return quit;
+}
+
+/*
+ * The server's IPC primitives: the kernel objects the library reaches by name (the control
+ * mutex "SW_IPC_Sys_Mutex", the request pipes "SW_IPC_Sys_Pipe_CtoS"/"StoC") and the
+ * message-pipe event protocol the two sides share.
+ */
+
+/* the status the server answers with when a kernel object cannot be had */
+#define SWMW_IPC_ERROR			12011
+/* the status it answers with when a wait timed out */
+#define SWMW_IPC_ERROR_TIMEOUT		12017
+
+/* the message pipe's event bits */
+#define SWMW_IPC_EVENT_DATA		0x002
+#define SWMW_IPC_EVENT_CLOSED		0x008
+#define SWMW_IPC_EVENT_CONNECT		0x010
+#define SWMW_IPC_EVENT_ERROR		0x200
+
+/* the bits a stream request's wait takes */
+#define SWMW_IPC_WAIT_MASK		792
+
+/* the message pipe the server creates: its stack, its buffer and its options */
+#define SWMW_IPC_PIPE_STACK		64
+#define SWMW_IPC_PIPE_ATTRIBUTE		387
+#define SWMW_IPC_PIPE_BUFFER		0x1000
+#define SWMW_IPC_MESSAGE_SIZE		0x20
+
+/* take the control mutex: the created one, or the middleware's by name */
+extern "C" int SwMwIpcOpenMutex(SceUID *mutex, const char *name, int create)
+{
+	SceUID handle;
+
+	if (create != 0)
+		handle = sceKernelCreateMutex(name, 0x2080, 0, NULL);
+	else
+		handle = sceKernelOpenMutex(name);
+	if (handle < 0)
+		return SWMW_IPC_ERROR;
+	*mutex = handle;
+	return 0;
+}
+
+/* release the control mutex */
+extern "C" int SwMwIpcCloseMutex(SceUID mutex, int destroy)
+{
+	if (destroy != 0)
+		sceKernelDeleteMutex(mutex);
+	else
+		sceKernelCloseMutex(mutex);
+	return 0;
+}
+
+/* create the pipe the library sends its requests on */
+extern "C" int SwMwIpcCreatePipe(const char *name, SceUID *pipe)
+{
+	SceKernelMsgPipeOptParam option = {
+		.size = 20,
+		.attr = 1,
+		.reserved = { 133, 0 },
+		.openLimit = 0,
+	};
+	SceUID handle;
+
+	handle = sceKernelCreateMsgPipe(name, SWMW_IPC_PIPE_STACK, SWMW_IPC_PIPE_ATTRIBUTE,
+					SWMW_IPC_PIPE_BUFFER, &option);
+	if (handle < 0)
+		return SWMW_IPC_ERROR;
+	*pipe = handle;
+	return 0;
+}
+
+/* delete a pipe the server created */
+extern "C" int SwMwIpcDeletePipe(SceUID pipe)
+{
+	sceKernelDeleteMsgPipe(pipe);
+	return 0;
+}
+
+/* open the pipe the library created for the server's replies */
+extern "C" int SwMwIpcOpenPipe(const char *name, SceUID *pipe)
+{
+	SceUID handle;
+
+	handle = sceKernelOpenMsgPipe(name);
+	if (handle < 0)
+		return SWMW_IPC_ERROR;
+	*pipe = handle;
+	return 0;
+}
+
+/* close a pipe the library created */
+extern "C" int SwMwIpcClosePipe(SceUID pipe)
+{
+	sceKernelCloseMsgPipe(pipe);
+	return 0;
+}
+
+/*
+ * wait on a pipe's event: the caller's timeout pointer is passed only when it is nonzero
+ * (a zero timeout waits forever), and a timed-out wait is the protocol's own status.
+ */
+extern "C" int SwMwIpcWaitEvent(SceUID event, int timeout)
+{
+	SceUInt32 timeoutValue = timeout;
+	SceUInt32 flags = 0;
+	SceUInt64 eventValue = 0;
+	int result;
+
+	result = sceKernelWaitEvent(event, SWMW_IPC_WAIT_MASK, &flags, &eventValue,
+				    timeout != 0 ? &timeoutValue : NULL);
+	if (result != 0) {
+		if (result == SCE_KERNEL_ERROR_WAIT_TIMEOUT)
+			return SWMW_IPC_ERROR_TIMEOUT;
+		return SWMW_IPC_ERROR;
+	}
+	if ((flags & 0x100) != 0)
+		return 0;
+	return SWMW_IPC_ERROR;
+}
+
+/* send one 0x20-byte message block over a pipe */
+extern "C" int SwMwIpcSend(SceUID pipe, const void *message)
+{
+	unsigned int sent = 0;
+
+	if (sceKernelSendMsgPipe(pipe, (void *)message, SWMW_IPC_MESSAGE_SIZE, 1, &sent, NULL) != 0)
+		return SWMW_IPC_ERROR;
+	if (sent == SWMW_IPC_MESSAGE_SIZE)
+		return 0;
+	return SWMW_IPC_ERROR;
 }
