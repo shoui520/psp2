@@ -88,9 +88,9 @@ static int hex_char_to_val(u8 c);
 static char uri_tolower(char c);
 static s8 get_ctype(int c);
 static char *uri_strcat(char *dst, const char *src);
-static int uri_strcasecmp(const char *s1, const char *s2);
+static int uri_strcasecmp(const char *lhs, const char *rhs);
 static u32 uri_strlen(const char *s);
-static int uri_strncmp(const char *s1, const char *s2, int n);
+static int uri_strncmp(const char *lhs, const char *rhs, int n);
 static char *uri_strchr(const char *s, char c);
 static char *uri_strrchr(const char *s, char c);
 static char *uri_strcpy(char *dst, const char *src);
@@ -128,35 +128,31 @@ int sceParseUri_49E950EC(char *escaped, u32 *escapedLenOut, u32 escapedBufSize, 
     }
 
     u8 c = (u8)*src;
-    if (c != 0) {
-        while (c != 0) {
-            s8 action = g_uri_escape_table[c];
-            if (action == 3) {
-                totalLen += 3;
-                if (doCopy == 1 && escapedBufSize < totalLen) {
-                    err = 0x80433022;
-                    goto done;
-                }
-                if (doCopy == 1) {
-                    u8 b = (u8)*src;
-                    escaped[0] = '%';
-                    escaped[1] = g_hex_upper[b >> 4];
-                    escaped[2] = g_hex_upper[b & 0x0F];
-                    escaped += 3;
-                }
-            } else {
-                totalLen += 1;
-                if (doCopy == 1 && escapedBufSize < totalLen) {
-                    err = 0x80433022;
-                    goto done;
-                }
-                if (doCopy == 1) {
-                    *escaped++ = (char)c;
-                }
+    while (c != 0) {
+        s8 action = g_uri_escape_table[c];
+        if (action == 3) {
+            totalLen += 3;
+            if (doCopy == 1 && escapedBufSize < totalLen) {
+                return 0x80433022;
             }
-            src++;
-            c = (u8)*src;
+            if (doCopy == 1) {
+                u8 b = (u8)*src;
+                escaped[0] = '%';
+                escaped[1] = g_hex_upper[b >> 4];
+                escaped[2] = g_hex_upper[b & 0x0F];
+                escaped += 3;
+            }
+        } else {
+            totalLen += 1;
+            if (doCopy == 1 && escapedBufSize < totalLen) {
+                return 0x80433022;
+            }
+            if (doCopy == 1) {
+                *escaped++ = (char)c;
+            }
         }
+        src++;
+        c = (u8)*src;
     }
 
     totalLen += 1;
@@ -170,7 +166,6 @@ int sceParseUri_49E950EC(char *escaped, u32 *escapedLenOut, u32 escapedBufSize, 
         *escapedLenOut = totalLen;
     }
 
-done:
     return err;
 }
 
@@ -262,14 +257,15 @@ int sceParseUri_568518C9(SceParsedUri *parsedArea, const char *url, void *workAr
         sceKernelMemset(parsedArea, 0, sizeof(SceParsedUri));
     }
 
-    int len = parse_scheme((char *)workArea, url, &elemSize, workAreaSize, doCopy);
+    char *workBuf = (char *)workArea;
+    int len = parse_scheme(workBuf, url, &elemSize, workAreaSize, doCopy);
     if (len < 0) {
         return len;
     }
 
     int hasScheme = 0;
     if (doCopy == 1) {
-        parsedArea->scheme = (char *)workArea;
+        parsedArea->scheme = workBuf;
     }
     if (len != 0) {
         hasScheme = 1;
@@ -298,20 +294,20 @@ int sceParseUri_568518C9(SceParsedUri *parsedArea, const char *url, void *workAr
         }
     }
 
-    char *workPtr = (char *)workArea + curWorkOffset;
+    char *workPtr = workBuf + curWorkOffset;
     len = parse_userinfo(p, workPtr, workAreaSize - curWorkOffset, &userSize, &passSize, doCopy);
     if (len < 0) {
         return len;
     }
     if (doCopy == 1) {
         parsedArea->userInfoUserName = workPtr;
-        parsedArea->userInfoPassword = (char *)workArea + curWorkOffset + userSize;
+        parsedArea->userInfoPassword = workBuf + curWorkOffset + userSize;
     }
 
     curOffset += len;
     p = url + curOffset;
     curWorkOffset += userSize + passSize;
-    workPtr = (char *)workArea + curWorkOffset;
+    workPtr = workBuf + curWorkOffset;
 
     len = parse_host(p, workPtr, &elemSize, workAreaSize - curWorkOffset, doCopy);
     if (len < 0) {
@@ -354,7 +350,7 @@ int sceParseUri_568518C9(SceParsedUri *parsedArea, const char *url, void *workAr
         }
     }
 
-    workPtr = (char *)workArea + curWorkOffset;
+    workPtr = workBuf + curWorkOffset;
     len = parse_path(p, workPtr, &elemSize, workAreaSize - curWorkOffset, doCopy);
     if (len < 0) {
         return len;
@@ -366,7 +362,7 @@ int sceParseUri_568518C9(SceParsedUri *parsedArea, const char *url, void *workAr
     curOffset += len;
     p = url + curOffset;
     curWorkOffset += elemSize;
-    workPtr = (char *)workArea + curWorkOffset;
+    workPtr = workBuf + curWorkOffset;
 
     len = parse_query(p, workPtr, &elemSize, workAreaSize - curWorkOffset, doCopy);
     if (len < 0) {
@@ -379,7 +375,7 @@ int sceParseUri_568518C9(SceParsedUri *parsedArea, const char *url, void *workAr
     curOffset += len;
     p = url + curOffset;
     curWorkOffset += elemSize;
-    workPtr = (char *)workArea + curWorkOffset;
+    workPtr = workBuf + curWorkOffset;
 
     len = parse_fragment(p, workPtr, &elemSize, workAreaSize - curWorkOffset, doCopy);
     if (len < 0) {
@@ -562,8 +558,8 @@ int sceParseUri_7EE318AF(char *url, u32 *urlLenOut, u32 urlBufSize, const ScePar
 int sceParseUri_8AA55D17(char *workArea, const char *baseUri, const char *relUri, u32 *workAreaSizeOut, u32 workAreaSize, u32 flags)
 {
     SceParsedUri parsed;
-    u32 baseWorkSize = 0;
-    u32 relWorkSize = 0;
+    u32 baseWorkSize;
+    u32 relWorkSize;
 
     if (_sceKernelCheckThreadStack() < 0x390) {
         return 0x80410005;
@@ -590,7 +586,8 @@ int sceParseUri_8AA55D17(char *workArea, const char *baseUri, const char *relUri
     if (workArea == NULL) {
         return 0;
     }
-    if (workAreaSize < reqSize) {
+    /* Matches 6.61 binary inverted size comparison. */
+    if (reqSize < workAreaSize) {
         return 0x80433022;
     }
 
@@ -654,18 +651,18 @@ static int get_unescaped_len(const char *str)
     s8 c = *str;
     while (c != 0) {
         if (c == '%') {
-            u8 c1 = (u8)str[1];
-            if (c1 == 0) {
+            u8 hiChar = (u8)str[1];
+            if (hiChar == 0) {
                 return -1;
             }
-            if (!((u32)(c1 - '0') < 10 || (u32)(c1 - 'A') < 6 || (u32)(c1 - 'a') < 6)) {
+            if (!((u32)(hiChar - '0') < 10 || (u32)(hiChar - 'A') < 6 || (u32)(hiChar - 'a') < 6)) {
                 return -1;
             }
-            u8 c2 = (u8)str[2];
-            if (c2 == 0) {
+            u8 loChar = (u8)str[2];
+            if (loChar == 0) {
                 return -1;
             }
-            if (!((u32)(c2 - '0') < 10 || (u32)(c2 - 'A') < 6 || (u32)(c2 - 'a') < 6)) {
+            if (!((u32)(loChar - '0') < 10 || (u32)(loChar - 'A') < 6 || (u32)(loChar - 'a') < 6)) {
                 return -1;
             }
             count += 3;
@@ -957,7 +954,7 @@ static int parse_port(const char *str, u16 *portOut)
     while (idx < 6) {
         s8 ch = str[idx];
         if ((g_ctype_table[(u8)ch + 1] & 4) == 0) {
-            if (val > 0xFFFF || (ch != '/' && ch != '\0')) {
+            if (val > 0x10000 || (ch != '/' && ch != '\0')) {
                 return 0x80433060;
             }
             *portOut = (u16)val;
@@ -1123,24 +1120,24 @@ static char *uri_strcat(char *dst, const char *src)
 }
 
 /* 0x1c08 */
-static int uri_strcasecmp(const char *s1, const char *s2)
+static int uri_strcasecmp(const char *lhs, const char *rhs)
 {
-    if (s1 == NULL || s2 == NULL) {
-        if (s1 == s2) {
+    if (lhs == NULL || rhs == NULL) {
+        if (lhs == rhs) {
             return 0;
         }
-        return (s1 != NULL) ? 1 : -1;
+        return (lhs != NULL) ? 1 : -1;
     }
     while (1) {
-        char c1 = uri_tolower(*s1);
-        char c2 = uri_tolower(*s2++);
-        if (c1 != c2) {
-            return uri_tolower(*s1) - uri_tolower(s2[-1]);
+        char chA = uri_tolower(*lhs);
+        char chB = uri_tolower(*rhs++);
+        if (chA != chB) {
+            return uri_tolower(*lhs) - uri_tolower(rhs[-1]);
         }
-        if (*s1 == '\0') {
+        if (*lhs == '\0') {
             return 0;
         }
-        s1++;
+        lhs++;
     }
 }
 
@@ -1158,24 +1155,24 @@ static u32 uri_strlen(const char *s)
 }
 
 /* 0x1ce8 */
-static int uri_strncmp(const char *s1, const char *s2, int n)
+static int uri_strncmp(const char *lhs, const char *rhs, int n)
 {
-    if (s1 == NULL || s2 == NULL) {
-        if (s1 == s2) {
+    if (lhs == NULL || rhs == NULL) {
+        if (lhs == rhs) {
             return 0;
         }
-        return (s1 != NULL) ? 1 : -1;
+        return (lhs != NULL) ? 1 : -1;
     }
     while (--n >= 0) {
-        s8 c1 = *s1;
-        s8 c2 = *s2++;
-        if (c1 != c2) {
-            return *s1 - s2[-1];
+        s8 chA = *lhs;
+        s8 chB = *rhs++;
+        if (chA != chB) {
+            return *lhs - rhs[-1];
         }
-        if (c1 == 0) {
+        if (chA == 0) {
             return 0;
         }
-        s1++;
+        lhs++;
     }
     return 0;
 }
@@ -1272,230 +1269,245 @@ static int uri_vformat(void (*put_fn)(void *, int), void *ctx, const char *fmt, 
         int numPrec = 0;
         int signChar = 0;
         const char *hexDigits = g_hex_lower;
+        int ended = 0;
+        int parsingSpec = 1;
+        int emitStr = 0;
+        const char *sPtr = NULL;
+        int sLen = 0;
 
-    next_spec:
-        fmt++;
-        char c = *fmt;
-        switch (c) {
-        case '\0':
-            goto done;
-        case ' ':
-            if (signChar == 0) {
-                signChar = ' ';
-            }
-            goto next_spec;
-        case '#':
-            flags |= 0x08;
-            goto next_spec;
-        case '*':
-            width = va_arg(ap, int);
-            if (width < 0) {
-                width = -width;
-                flags |= 0x10;
-            }
-            goto next_spec;
-        case '+':
-            signChar = '+';
-            goto next_spec;
-        case '-':
-            flags |= 0x10;
-            goto next_spec;
-        case '.':
+        while (parsingSpec) {
             fmt++;
-            if (*fmt == '*') {
-                prec = va_arg(ap, int);
-            } else {
-                prec = 0;
-                while (*fmt >= 0 && (get_ctype(*fmt) & 4) != 0) {
-                    prec = prec * 10 + (*fmt - '0');
-                    fmt++;
+            char c = *fmt;
+            switch (c) {
+            case '\0':
+                ended = 1;
+                parsingSpec = 0;
+                break;
+            case ' ':
+                if (signChar == 0) {
+                    signChar = ' ';
                 }
-                fmt--;
-            }
-            if (prec < -1) {
-                prec = -1;
-            }
-            goto next_spec;
-        case '0':
-            flags |= 0x20;
-            goto next_spec;
-        case '1': case '2': case '3': case '4':
-        case '5': case '6': case '7': case '8': case '9':
-            width = 0;
-            do {
-                width = width * 10 + (*fmt - '0');
+                break;
+            case '#':
+                flags |= 0x08;
+                break;
+            case '*':
+                width = va_arg(ap, int);
+                if (width < 0) {
+                    width = -width;
+                    flags |= 0x10;
+                }
+                break;
+            case '+':
+                signChar = '+';
+                break;
+            case '-':
+                flags |= 0x10;
+                break;
+            case '.':
                 fmt++;
-            } while (*fmt >= 0 && (get_ctype(*fmt) & 4) != 0);
-            fmt--;
-            goto next_spec;
-        case 'h':
-            flags |= 0x04;
-            goto next_spec;
-        case 'l':
-            flags |= 0x01;
-            goto next_spec;
-        case 'L':
-            flags |= 0x02;
-            goto next_spec;
-        case 'D':
-        case 'O':
-        case 'U':
-            flags |= 0x01;
-            /* fallthrough */
-        case 'd':
-        case 'i':
-        case 'o':
-        case 'u':
-        case 'X':
-        case 'x':
-        case 'p': {
-            u32 uval;
-            u32 base = 10;
-            if (c == 'd' || c == 'i' || c == 'D') {
-                s32 sval = va_arg(ap, s32);
-                if (sval < 0) {
-                    signChar = '-';
-                    uval = (u32)(-sval);
+                if (*fmt == '*') {
+                    prec = va_arg(ap, int);
                 } else {
-                    uval = (u32)sval;
+                    prec = 0;
+                    while (*fmt >= 0 && (get_ctype(*fmt) & 4) != 0) {
+                        prec = prec * 10 + (*fmt - '0');
+                        fmt++;
+                    }
+                    fmt--;
                 }
-            } else if (c == 'o' || c == 'O') {
-                uval = va_arg(ap, u32);
-                base = 8;
-                signChar = 0;
-            } else if (c == 'u' || c == 'U') {
-                uval = va_arg(ap, u32);
-                base = 10;
-                signChar = 0;
-            } else if (c == 'p') {
-                uval = va_arg(ap, u32);
-                base = 16;
-                signChar = 0;
-            } else {
-                if (c == 'X') {
-                    hexDigits = g_hex_upper;
+                if (prec < -1) {
+                    prec = -1;
                 }
-                uval = va_arg(ap, u32);
-                base = 16;
-                if ((flags & 0x08) != 0 && uval != 0) {
-                    flags |= 0x40;
-                }
-                signChar = 0;
-            }
-
-            numPrec = prec;
-            if (prec >= 0) {
-                flags &= ~0x20;
-            }
-
-            char *pNum = &numBuf[21];
-            if (uval != 0 || prec != 0) {
+                break;
+            case '0':
+                flags |= 0x20;
+                break;
+            case '1': case '2': case '3': case '4':
+            case '5': case '6': case '7': case '8': case '9':
+                width = 0;
                 do {
-                    *--pNum = hexDigits[uval % base];
-                    uval /= base;
-                } while (uval != 0);
-                if ((flags & 0x08) != 0 && base == 8 && *pNum != '0') {
-                    *--pNum = '0';
-                }
-            }
-            int sLen = (int)(&numBuf[21] - pNum);
-            const char *sPtr = pNum;
-            goto format_str;
-        }
-        case 'c': {
-            numBuf[0] = (char)va_arg(ap, int);
-            const char *sPtr = numBuf;
-            int sLen = 1;
-            signChar = 0;
-            goto format_str;
-        }
-        case 's': {
-            const char *sPtr = va_arg(ap, const char *);
-            if (sPtr == NULL) {
-                sPtr = "(null)";
-            }
-            int sLen;
-            if (prec >= 0) {
-                const char *end = uri_memchr(sPtr, 0, prec);
-                if (end != NULL && (end - sPtr) < prec) {
-                    sLen = (int)(end - sPtr);
+                    width = width * 10 + (*fmt - '0');
+                    fmt++;
+                } while (*fmt >= 0 && (get_ctype(*fmt) & 4) != 0);
+                fmt--;
+                break;
+            case 'h':
+                flags |= 0x04;
+                break;
+            case 'l':
+                flags |= 0x01;
+                break;
+            case 'L':
+                flags |= 0x02;
+                break;
+            case 'D':
+            case 'O':
+            case 'U':
+                flags |= 0x01;
+                /* fallthrough */
+            case 'd':
+            case 'i':
+            case 'o':
+            case 'u':
+            case 'X':
+            case 'x':
+            case 'p': {
+                u32 uval;
+                u32 base = 10;
+                if (c == 'd' || c == 'i' || c == 'D') {
+                    s32 sval = va_arg(ap, s32);
+                    if (sval < 0) {
+                        signChar = '-';
+                        uval = (u32)(-sval);
+                    } else {
+                        uval = (u32)sval;
+                    }
+                } else if (c == 'o' || c == 'O') {
+                    uval = va_arg(ap, u32);
+                    base = 8;
+                    signChar = 0;
+                } else if (c == 'u' || c == 'U') {
+                    uval = va_arg(ap, u32);
+                    base = 10;
+                    signChar = 0;
+                } else if (c == 'p') {
+                    uval = va_arg(ap, u32);
+                    base = 16;
+                    signChar = 0;
                 } else {
-                    sLen = prec;
+                    if (c == 'X') {
+                        hexDigits = g_hex_upper;
+                    }
+                    uval = va_arg(ap, u32);
+                    base = 16;
+                    if ((flags & 0x08) != 0 && uval != 0) {
+                        flags |= 0x40;
+                    }
+                    signChar = 0;
                 }
-            } else {
-                sLen = (int)uri_strlen(sPtr);
+
+                numPrec = prec;
+                if (prec >= 0) {
+                    flags &= ~0x20;
+                }
+
+                char *pNum = &numBuf[21];
+                if (uval != 0 || prec != 0) {
+                    do {
+                        *--pNum = hexDigits[uval % base];
+                        uval /= base;
+                    } while (uval != 0);
+                    if ((flags & 0x08) != 0 && base == 8 && *pNum != '0') {
+                        *--pNum = '0';
+                    }
+                }
+                sLen = (int)(&numBuf[21] - pNum);
+                sPtr = pNum;
+                emitStr = 1;
+                parsingSpec = 0;
+                break;
             }
-            signChar = 0;
-        format_str:
-            {
-                int fullLen = sLen;
-                if (signChar != 0) {
-                    fullLen++;
+            case 'c':
+                numBuf[0] = (char)va_arg(ap, int);
+                sPtr = numBuf;
+                sLen = 1;
+                signChar = 0;
+                emitStr = 1;
+                parsingSpec = 0;
+                break;
+            case 's':
+                sPtr = va_arg(ap, const char *);
+                if (sPtr == NULL) {
+                    sPtr = "(null)";
                 }
-                if ((flags & 0x40) != 0) {
-                    fullLen += 2;
-                }
-                int padLen = (fullLen > numPrec) ? fullLen : numPrec;
-                if ((flags & 0x30) == 0 && padLen < width) {
-                    int n = width - padLen;
-                    while (n-- > 0) {
-                        put_fn(ctx, ' ');
+                if (prec >= 0) {
+                    const char *end = uri_memchr(sPtr, 0, prec);
+                    if (end != NULL && (end - sPtr) < prec) {
+                        sLen = (int)(end - sPtr);
+                    } else {
+                        sLen = prec;
                     }
+                } else {
+                    sLen = (int)uri_strlen(sPtr);
                 }
-                if (signChar != 0) {
-                    put_fn(ctx, signChar);
+                signChar = 0;
+                emitStr = 1;
+                parsingSpec = 0;
+                break;
+            case 'n':
+                if ((flags & 0x01) != 0) {
+                    s32 *p = va_arg(ap, s32 *);
+                    *p = count;
+                } else if ((flags & 0x04) != 0) {
+                    s16 *p = va_arg(ap, s16 *);
+                    *p = (s16)count;
+                } else {
+                    s32 *p = va_arg(ap, s32 *);
+                    *p = count;
                 }
-                if ((flags & 0x40) != 0) {
-                    put_fn(ctx, '0');
-                    put_fn(ctx, *fmt);
-                }
-                if ((flags & 0x30) == 0x20 && padLen < width) {
-                    int n = width - padLen;
-                    while (n-- > 0) {
-                        put_fn(ctx, '0');
-                    }
-                }
-                if (fullLen < numPrec) {
-                    int n = numPrec - fullLen;
-                    while (n-- > 0) {
-                        put_fn(ctx, '0');
-                    }
-                }
-                int i = sLen;
-                while (--i >= 0) {
-                    put_fn(ctx, *sPtr++);
-                }
-                if ((flags & 0x10) != 0 && padLen < width) {
-                    int n = width - padLen;
-                    while (n-- > 0) {
-                        put_fn(ctx, ' ');
-                    }
-                }
-                count += (padLen > width) ? padLen : width;
+                parsingSpec = 0;
+                break;
+            default:
+                put_fn(ctx, c);
+                count++;
+                parsingSpec = 0;
+                break;
             }
+        }
+
+        if (ended) {
             break;
         }
-        case 'n':
-            if ((flags & 0x01) != 0) {
-                s32 *p = va_arg(ap, s32 *);
-                *p = count;
-            } else if ((flags & 0x04) != 0) {
-                s16 *p = va_arg(ap, s16 *);
-                *p = (s16)count;
-            } else {
-                s32 *p = va_arg(ap, s32 *);
-                *p = count;
+        if (emitStr) {
+            int fullLen = sLen;
+            if (signChar != 0) {
+                fullLen++;
             }
-            break;
-        default:
-            put_fn(ctx, c);
-            count++;
-            break;
+            if ((flags & 0x40) != 0) {
+                fullLen += 2;
+            }
+            int padLen = (fullLen > numPrec) ? fullLen : numPrec;
+            if ((flags & 0x30) == 0 && padLen < width) {
+                int n = width - padLen;
+                while (n-- > 0) {
+                    put_fn(ctx, ' ');
+                }
+            }
+            if (signChar != 0) {
+                put_fn(ctx, signChar);
+            }
+            if ((flags & 0x40) != 0) {
+                put_fn(ctx, '0');
+                put_fn(ctx, *fmt);
+            }
+            if ((flags & 0x30) == 0x20 && padLen < width) {
+                int n = width - padLen;
+                while (n-- > 0) {
+                    put_fn(ctx, '0');
+                }
+            }
+            if (fullLen < numPrec) {
+                int n = numPrec - fullLen;
+                while (n-- > 0) {
+                    put_fn(ctx, '0');
+                }
+            }
+            int i = sLen;
+            while (--i >= 0) {
+                put_fn(ctx, *sPtr++);
+            }
+            if ((flags & 0x10) != 0 && padLen < width) {
+                int n = width - padLen;
+                while (n-- > 0) {
+                    put_fn(ctx, ' ');
+                }
+            }
+            count += (padLen > width) ? padLen : width;
         }
         fmt++;
     }
 
-done:
     put_fn(ctx, 0x201);
     return count;
 }
