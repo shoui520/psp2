@@ -632,16 +632,12 @@ static int gameUpdateHttpCloseRequest(void)
 	if (g_http.req_id >= 0) {
 		int r = sceHttpDeleteRequest(g_http.req_id);
 		g_http.req_id = -1;
-		if (r < 0) {
-			res = r;
-		}
+		res = (r > 0) ? r : 0;
 	}
 	if (g_http.conn_id >= 0) {
 		int r = sceHttpDeleteConnection(g_http.conn_id);
 		g_http.conn_id = -1;
-		if (r < 0) {
-			res = r;
-		}
+		res = (r > 0) ? r : 0;
 	}
 	return res;
 }
@@ -720,9 +716,7 @@ static int gameUpdateHttpTermTemplate(void)
 	if (g_http.tmpl_id >= 0) {
 		int r = sceHttpDeleteTemplate(g_http.tmpl_id);
 		g_http.tmpl_id = -1;
-		if (r < 0) {
-			res = r;
-		}
+		res = (r > 0) ? r : 0;
 	}
 	return res;
 }
@@ -1140,7 +1134,7 @@ static int xmlParserFeed(XmlParser *p, const char *buf, int len)
 
 		case 2: {
 			uint8_t ch = (uint8_t)*cur;
-			if (ch == '\t' || ch == '\n' || ch == '\r' || ch == ' ') {
+			if (ch == '\t' || ch == '\n' || ch == '\r' || ch == ' ' || ch == '/') {
 				cur++;
 				pos = (int)(cur - buf);
 			} else if (ch == '>') {

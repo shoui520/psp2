@@ -352,9 +352,6 @@ int sceNpAuth_A1DE86F8(uint32_t pool_size, uint32_t stack_size, int prio)
 	g_stack_size = stack_size;
 	opt[0] = 8;
 	opt[1] = mem_info[0];
-	if (stack_size == 0x7fffffff) {
-		npAuthWorkerThread(0, NULL);
-	}
 	res = sceKernelCreateThread("SceNpAuthWorker", npAuthWorkerThread, prio, (int)stack_size, 0, opt);
 	if (res < 0) {
 		goto cleanup_vpl;

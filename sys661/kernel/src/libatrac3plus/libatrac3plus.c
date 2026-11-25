@@ -20,7 +20,7 @@ typedef struct
 } SceAtracModeEntry;
 
 // 3E74
-SceAtracModeEntry g_3E74[] = {
+SceAtracModeEntry g_at3ModeTable[] = {
     { 0x00C0, 0x1, 0xE },
     { 0x0098, 0x1, 0xF },
     { 0x0180, 0x2, 0x4 },
@@ -29,7 +29,7 @@ SceAtracModeEntry g_3E74[] = {
 };
 
 // 3E88
-SceAtracModeEntry g_3E88[] = {
+SceAtracModeEntry g_at3PlusModeTable[] = {
     { 0x00C0, 0x1, 0x0 },
     { 0x1724, 0x0, 0x0 },
     { 0x0118, 0x1, 0x0 },
@@ -71,7 +71,7 @@ u8 g_at3PlusGUID[] = { 0xBF, 0xAA, 0x23, 0xE9, 0x58, 0xCB, 0x71, 0x44,
                        0xA1, 0x19, 0xFF, 0xFA, 0x01, 0xE4, 0xCE, 0x62 };
 
 // 3F08
-SceAtracModeEntry g_3F08[] = {
+SceAtracModeEntry g_at3WaveModeTable[] = {
     { 0x0180, 0x4, 0 },
     { 0x0130, 0x6, 0 },
     { 0x00C0, 0xB, 1 },
@@ -1240,7 +1240,7 @@ int setBuffer(SceAtracId *id, u8 *buffer, u32 readByte, u32 bufferByte, SceAtrac
         if (id->info.codec == 0x1001) // AT3
         {
             // 25BC
-            SceAtracModeEntry *cur = &g_3F08[4];
+            SceAtracModeEntry *cur = &g_at3WaveModeTable[4];
             // 25D4
             int i;
             for (i = 0; i < 5; i++)
@@ -1308,11 +1308,11 @@ int initDecoder(SceAtracId *info, void *arg1)
 int initAT3Decoder(SceAudiocodecCodec *codec, void *arg1)
 {
     int sp[8];
-    int *cur = (int*)&g_3E74[0];
-    int *curEnd = (int*)&g_3E74[4];
+    int *cur = (int*)&g_at3ModeTable[0];
+    int *curEnd = (int*)&g_at3ModeTable[4];
     int *curSp = sp;
     int *end = curEnd;
-    if (((int)g_3E74 & 3) == 0)
+    if (((int)g_at3ModeTable & 3) == 0)
     {
         // 27C0
         for (;;)
@@ -1367,7 +1367,7 @@ int initAT3Decoder(SceAudiocodecCodec *codec, void *arg1)
         return ret;
     // 2778
     int i;
-    SceAtracModeEntry *tmpVal = &g_3E74[4];
+    SceAtracModeEntry *tmpVal = &g_at3ModeTable[4];
     for (i = 0; i < 5; i++)
     {
         if (tmpVal->frameSize == *(int*)(arg1 + 8) && tmpVal->channels == *(int*)(arg1 + 0)) { // 27A0
@@ -1385,10 +1385,10 @@ int initAT3Decoder(SceAudiocodecCodec *codec, void *arg1)
 int initAT3plusDecoder(SceAudiocodecCodec *codec, void *arg1)
 {
     int sp[28];
-    int *cur = (int*)&g_3E88[0];
+    int *cur = (int*)&g_at3PlusModeTable[0];
     int *curSp = sp;
-    int *end = (int*)&g_3E88[28];
-    if (((int)g_3E88 & 3) == 0)
+    int *end = (int*)&g_at3PlusModeTable[28];
+    if (((int)g_at3PlusModeTable & 3) == 0)
     {
         // 2918
         do

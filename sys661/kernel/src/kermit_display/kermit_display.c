@@ -1097,20 +1097,20 @@ int sceDisplayGetFrameBuf(void **topaddr, int *bufferwidth, int *pixelformat, in
 }
 
 /* 0x197C */
-int sceDisplayGetBacklightSel(int *psel, int *punk)
+int sceDisplayGetBacklightSel(int *psel, int *pmode)
 {
 	u32 oldK1 = pspShiftK1();
 	u32 k1 = pspGetK1();
 
-	if ((s32)(k1 & (u32)psel) < 0 || (s32)(k1 & (u32)punk) < 0) {
+	if ((s32)(k1 & (u32)psel) < 0 || (s32)(k1 & (u32)pmode) < 0) {
 		pspSetK1(oldK1);
 		return SCE_ERROR_PRIV_REQUIRED;
 	}
 
 	if (psel != NULL)
 		*psel = g_display.backlightSel;
-	if (punk != NULL)
-		*punk = 0;
+	if (pmode != NULL)
+		*pmode = 0;
 
 	pspSetK1(oldK1);
 	return 0;
