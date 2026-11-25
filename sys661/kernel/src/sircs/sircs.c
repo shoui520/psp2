@@ -25,7 +25,7 @@ typedef struct IrdaContext {
     int open_count;     /* 0x04 (0x2804) */
     int sircs_lock;     /* 0x08 (0x2808) */
     int (*sircs_cb)(void); /* 0x0c (0x280c) */
-    u32 baudrate;       /* 0x10 (0x2810) */
+    int baudrate;       /* 0x10 (0x2810) */
     u32 alarm_usec;     /* 0x14 (0x2814) */
     int mode;           /* 0x18 (0x2818) */
     int power_locked;   /* 0x1c (0x281c) */
@@ -48,7 +48,7 @@ extern int sceKernelCpuSuspendIntr(void);
 extern int sceKernelCpuResumeIntr(int intr);
 extern int sceKernelEnableIntr(int intr);
 extern int sceKernelDisableIntr(int intr);
-extern int sceKernelRegisterIntrHandler(int intr, int no, void *handler, void *arg1, void *arg2);
+extern int sceKernelRegisterIntrHandler(int intr, int no, void *handler, void *common, void *opt);
 extern int sceKernelReleaseIntrHandler(int intr);
 extern int sceKernelIsIntrContext(void);
 extern int sceIoAddDrv(void *drv);
@@ -96,9 +96,9 @@ static int sircsIsBusy(void);
 static u32 sircsEncodePulses(SircsData *sd, u32 *out);
 static int sircsDecodePulses(SircsData *sd, u32 *in, u32 count);
 
-static int irdaIoIoctl(void *arg, const char *devname, unsigned int cmd, void *indata, int inlen, void *outdata, int outlen);
-static int irdaIoDevctl(void *arg, unsigned int cmd, void *indata, int inlen, void *outdata, int outlen);
-static int irdaSetBaudrate(u32 baud);
+static int irdaIoIoctl(void *arg, int cmd, void *indata, int inlen, void *outdata, int outlen);
+static int irdaIoDevctl(void *arg, const char *devname, int cmd, void *indata, int inlen, void *outdata, int outlen);
+static int irdaSetBaudrate(int baud);
 static int irdaGetRxCount(u32 *out);
 static int irdaWaitRxReady(void);
 static int irdaFlushRx(void);
@@ -166,7 +166,7 @@ static struct {
     const char *name;
     int type_mask;
     int (*handler)(int ev_id, char *ev_name, void *param, int *result);
-    int r28;
+    int gpVal;
     int busy;
     void *next;
     int reserved[9];
@@ -204,11 +204,11 @@ int sceSircs_driver_62411801(void)
         return ret;
 
     ret = sceKernelCreateSema("SceSIRCS", 1, 1, 1, 0);
-    g_sircs.sema_id = ret;
     if (ret < 0) {
         sceKernelReleaseIntrHandler(14);
         return ret;
     }
+    g_sircs.sema_id = ret;
 
     ret = sceKernelCreateEventFlag("SceSIRCS", 1, 0, 0);
     if (ret < 0) {
@@ -372,10 +372,10 @@ int sceSircsSend(SircsData *sd, int count)
                 g_sircs.tx_buf = p;
             }
 
-            u32 t0 = sceKernelGetSystemTimeLow();
+            u32 startTime = sceKernelGetSystemTimeLow();
             *(volatile u32 *)0xbe340000 |= 0x1200;
             sceKernelWaitEventFlag(g_sircs.evf_id, 1, 0x11, &outbits, 0);
-            u32 dt = sceKernelGetSystemTimeLow() - t0;
+            u32 dt = sceKernelGetSystemTimeLow() - startTime;
             sysclock = dt;
             sceKernelSysClock2USec(&sysclock, &sec, &usec);
             if (usec <= 0xafc7)
@@ -607,68 +607,68 @@ static int sircsDecodePulses(SircsData *sd, u32 *in, u32 count)
     u8 cmd = 0;
     u16 dev = 0;
     int i, diff;
-    u32 v0, v1;
+    u32 lowPulse, highPulse;
 
     (void)count;
-    v0 = *in;
-    if ((v0 & 0x10000) == 0)
+    lowPulse = *in;
+    if ((lowPulse & 0x10000) == 0)
         return 0x80290310;
-    diff = (int)(v0 & 0xffff) - 0x60;
+    diff = (int)(lowPulse & 0xffff) - 0x60;
     if (diff < 0)
-        diff = 0x60 - (int)(v0 & 0xffff);
+        diff = 0x60 - (int)(lowPulse & 0xffff);
     if (diff >= 5)
         return 0x80290310;
     in++;
 
     for (i = 0; i < 7; i++, in += 2) {
-        v0 = in[0];
-        if (v0 & 0x10000)
+        lowPulse = in[0];
+        if (lowPulse & 0x10000)
             return 0x80290311;
-        diff = (int)(v0 & 0xffff) - 0x18;
+        diff = (int)(lowPulse & 0xffff) - 0x18;
         if (diff < 0)
-            diff = 0x18 - (int)(v0 & 0xffff);
+            diff = 0x18 - (int)(lowPulse & 0xffff);
         if (diff >= 5)
             return 0x80290311;
 
-        v1 = in[1];
-        if ((v1 & 0x10000) == 0)
+        highPulse = in[1];
+        if ((highPulse & 0x10000) == 0)
             return 0x80290311;
-        diff = (int)(v1 & 0xffff) - 0x30;
+        diff = (int)(highPulse & 0xffff) - 0x30;
         if (diff < 0)
-            diff = 0x30 - (int)(v1 & 0xffff);
+            diff = 0x30 - (int)(highPulse & 0xffff);
         if (diff < 5) {
             cmd |= (1 << i);
         } else {
-            diff = (int)(v1 & 0xffff) - 0x18;
+            diff = (int)(highPulse & 0xffff) - 0x18;
             if (diff < 0)
-                diff = 0x18 - (int)(v1 & 0xffff);
+                diff = 0x18 - (int)(highPulse & 0xffff);
             if (diff >= 5)
                 return 0x80290311;
         }
     }
 
     for (i = 0; i < 16; i++, in += 2) {
-        v0 = in[0];
-        v1 = in[1];
-        if (v0 & 0x10000)
+        lowPulse = in[0];
+        highPulse = in[1];
+        if (lowPulse & 0x10000)
             break;
-        diff = (int)(v0 & 0xffff) - 0x18;
+        diff = (int)(lowPulse & 0xffff) - 0x18;
         if (diff < 0)
-            diff = 0x18 - (int)(v0 & 0xffff);
+            diff = 0x18 - (int)(lowPulse & 0xffff);
         if (diff >= 5)
             break;
 
-        if ((v1 & 0x10000) == 0)
+        if ((highPulse & 0x10000) == 0)
             return 0x80290312;
-        diff = (int)(v1 & 0xffff) - 0x30;
+        diff = (int)(highPulse & 0xffff) - 0x30;
         if (diff < 0)
-            diff = 0x30 - (int)(v1 & 0xffff);
+            diff = 0x30 - (int)(highPulse & 0xffff);
         if (diff < 5) {
             dev |= (1 << i);
         } else {
-            diff = (int)(v1 & 0xffff) - 0x18;
+            diff = (int)(highPulse & 0xffff) - 0x18;
             if (diff < 0)
-                diff = 0x18 - (int)(v1 & 0xffff);
+                diff = 0x18 - (int)(highPulse & 0xffff);
             if (diff >= 5)
                 return 0x80290312;
         }
@@ -677,11 +677,11 @@ static int sircsDecodePulses(SircsData *sd, u32 *in, u32 count)
     if (i == 16)
         return 0x80290301;
 
-    if ((v1 & 0x10000) == 0)
+    if ((highPulse & 0x10000) == 0)
         return 0x80290313;
-    diff = (int)(v1 & 0xffff) - 0x60;
+    diff = (int)(highPulse & 0xffff) - 0x60;
     if (diff < 0)
-        diff = 0x60 - (int)(v1 & 0xffff);
+        diff = 0x60 - (int)(highPulse & 0xffff);
     if (diff >= 5)
         return 0x80290313;
 
@@ -691,10 +691,9 @@ static int sircsDecodePulses(SircsData *sd, u32 *in, u32 count)
     return 0;
 }
 
-static int irdaIoIoctl(void *arg, const char *devname, unsigned int cmd, void *indata, int inlen, void *outdata, int outlen)
+static int irdaIoIoctl(void *arg, int cmd, void *indata, int inlen, void *outdata, int outlen)
 {
     (void)arg;
-    (void)devname;
 
     switch (cmd) {
     case 0x05000004:
@@ -711,7 +710,7 @@ static int irdaIoIoctl(void *arg, const char *devname, unsigned int cmd, void *i
     case 0x05010001:
         if (indata == 0 || inlen != 4)
             return 0x80020324;
-        return irdaSetBaudrate(*(u32 *)indata);
+        return irdaSetBaudrate(*(int *)indata);
     case 0x05020002:
         if (outdata == 0 || outlen != 4)
             return 0x80020324;
@@ -725,9 +724,10 @@ static int irdaIoIoctl(void *arg, const char *devname, unsigned int cmd, void *i
     }
 }
 
-static int irdaIoDevctl(void *arg, unsigned int cmd, void *indata, int inlen, void *outdata, int outlen)
+static int irdaIoDevctl(void *arg, const char *devname, int cmd, void *indata, int inlen, void *outdata, int outlen)
 {
     (void)arg;
+    (void)devname;
 
     switch (cmd) {
     case 0x05110001:
@@ -771,7 +771,7 @@ static int irdaIoDevctl(void *arg, unsigned int cmd, void *indata, int inlen, vo
     }
 }
 
-static int irdaSetBaudrate(u32 baud)
+static int irdaSetBaudrate(int baud)
 {
     volatile u32 *uart_regs = (volatile u32 *)0xbe540000;
     int intr;
@@ -788,10 +788,10 @@ static int irdaSetBaudrate(u32 baud)
     uart_regs[12] = cr;
     u32 lcr = *(volatile u32 *)0xbe54002c;
 
-    u32 div16 = baud << 4;
+    int div16 = baud << 4;
     uart_regs[9] = 0x16e3600 / div16;
     if (g_irda.mode == 0) {
-        int fbrd = (int)(0x5b8d8000U / div16);
+        int fbrd = 0x5b8d8000 / div16;
         uart_regs[10] = fbrd % 64;
     } else {
         uart_regs[10] = 0;
@@ -900,10 +900,10 @@ static int irdaHwEnable(void)
     sceSysregUartClkEnable(5);
     uart_regs[12] = 0x300;
 
-    u32 div16 = g_irda.baudrate << 4;
+    int div16 = g_irda.baudrate << 4;
     uart_regs[9] = 0x16e3600 / div16;
     if (g_irda.mode == 0) {
-        int fbrd = (int)(0x5b8d8000U / div16);
+        int fbrd = 0x5b8d8000 / div16;
         uart_regs[10] = fbrd % 64;
     } else {
         uart_regs[10] = 0;
@@ -975,7 +975,9 @@ static int irdaStartTxAlarm(IrdaContext *ctx)
     if (ctx->alarm_id == 0) {
         irdaEnableTxHardware();
         SceUID id = sceKernelSetAlarm(100, irdaTxAlarmHandler, ctx);
-        ctx->alarm_id = id >= 0 ? id : 0;
+        ctx->alarm_id = id;
+        if (id < 0)
+            ctx->alarm_id = 0;
     }
     return 0;
 }
@@ -1106,8 +1108,6 @@ static int irdaSysEventHandler(int ev_id, char *ev_name, void *param, int *resul
 
 static int irdaOpen(void)
 {
-    int ret = 0;
-
     if (g_irda.open_count > 0)
         return 0x802a0004;
 
@@ -1118,29 +1118,23 @@ static int irdaOpen(void)
         int intr = sceKernelCpuSuspendIntr();
         if (g_irda.sircs_cb != 0 && g_irda.sircs_cb() != 0) {
             sceKernelCpuResumeIntr(intr);
-            ret = 0x802a0007;
-            goto err;
+            irdaPowerUnlock();
+            return 0x802a0007;
         }
         g_irda.sircs_lock = 1;
         sceKernelCpuResumeIntr(intr);
         irdaHwEnable();
         if (irdaAllocResources() < 0) {
-            ret = 0x802a0006;
-            goto err;
+            irdaHwDisable();
+            irdaFreeResources();
+            g_irda.sircs_lock = 0;
+            irdaPowerUnlock();
+            return 0x802a0006;
         }
     }
     g_irda.open_count++;
     irdaPowerUnlock();
     return 0;
-
-err:
-    if (ret != (int)0x802a0007) {
-        irdaHwDisable();
-        irdaFreeResources();
-        g_irda.sircs_lock = 0;
-    }
-    irdaPowerUnlock();
-    return ret;
 }
 
 static int irdaClose(void)
