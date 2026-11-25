@@ -157,8 +157,13 @@ struct SceDtcpIpSession {
 	int stream;		/* the stream's state: 0 none, 1 seek pending, 2 open, 3 done */
 	int buffer;		/* the stream buffer's status */
 	int status;		/* the last middleware status an IPC error reported */
-	int cancelled;		/* the API asked to cancel what it is holding out on */
-	int closed;		/* the session was closed (the RESET export) */
+#if FW_VERSION == 0x03630011
+	int closed;		/* 0x10: the session was closed (the RESET export) */
+	int reserved;		/* 0x14: the 3.630 block keeps the http thread here */
+#else
+	int cancelled;		/* 0x10: the API asked to cancel what it is holding out on */
+	int closed;		/* 0x14: the session was closed (the RESET export) */
+#endif
 	char *moveUri;		/* the move sink's uri, until its manager closes */
 	unsigned short movePort;	/* the move sink's port */
 };
