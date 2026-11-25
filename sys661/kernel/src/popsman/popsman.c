@@ -7,13 +7,13 @@ extern int sceKernelCpuSuspendIntr(void);
 extern void sceKernelCpuResumeIntrWithSync(int intr);
 extern void sceKernelCpuResumeIntr(int intr);
 extern int sceIoOpen(const char *file, int flags, int mode);
-extern s64 sceIoLseek(int fd, s64 offset, int whence);
-extern int sceIoIoctl(int fd, u32 cmd, void *indata, int inlen, void *outdata, int outlen);
-extern int sceIoRead(int fd, void *data, u32 size);
+extern s64 sceIoLseek(int fileDesc, s64 offset, int whence);
+extern int sceIoIoctl(int fileDesc, u32 cmd, void *indata, int inlen, void *outdata, int outlen);
+extern int sceIoRead(int fileDesc, void *data, u32 size);
 extern int sceIoUnassign(const char *dev);
-extern int sceIoClose(int fd);
+extern int sceIoClose(int fileDesc);
 extern int sceIoGetstat(const char *file, void *stat);
-extern int sceIoAssign(const char *dev1, const char *dev2, const char *dev3, int mode, void *arg1, long arg2);
+extern int sceIoAssign(const char *devAlias, const char *blockDev, const char *fsDev, int mode, void *fsArg, long fsArgLen);
 extern int sceKernelExitVSHKernel(void *param);
 extern int sceKernelStartModule(int modid, u32 argsize, void *argp, int *status, void *option);
 extern int sceKernelLoadModuleForKernel(const char *path, int flags, void *option);
@@ -22,7 +22,7 @@ extern void *sceKernelMemset(void *dst, int c, u32 size);
 extern int sceKernelGetCompiledSdkVersion(void);
 extern int sceKernelGetUIDcontrolBlock(int uid, void **block);
 extern void *sceKernelGetBlockHeadAddr(int blockid);
-extern int strncmp(const char *s1, const char *s2, u32 n);
+extern int strncmp(const char *lhs, const char *rhs, u32 n);
 extern u32 strnlen(const char *s, u32 maxlen);
 extern void *memcpy(void *dst, const void *src, u32 n);
 extern char *strncpy(char *dst, const char *src, u32 n);
@@ -32,7 +32,7 @@ extern int sceKernelUnlockMutex(int mutexid, int unlockCount);
 extern int sceKernelExitDeleteThread(int status);
 extern int sceKernelLockMutex(int mutexid, int lockCount, u32 *timeout);
 extern int sceKernelCreateMutex(const char *name, u32 attr, int initCount, void *option);
-extern int sceKernelExtendKernelStack(int size, void (*cb)(void *), void *arg);
+extern int sceKernelExtendKernelStack(int size, int (*cb)(void *), void *arg);
 extern int sceKernelCreateFpl(const char *name, int part, int attr, u32 size, u32 blocks, void *opt);
 extern int sceKernelDelayThread(u32 delay);
 extern int sceKernelAllocateFpl(int uid, void **data, u32 *timeout);
@@ -46,13 +46,13 @@ extern int sceDrmBBMacUpdate(void *mkey, void *buf, int size);
 extern int sceDrmBBCipherFinal(void *ckey);
 extern int sceDrmBBMacFinal(void *mkey, void *buf, void *vkey);
 extern int sceDrmBBMacFinal2(void *mkey, void *out, void *vkey);
-extern int sceCtrl_driver_6C86AF22(int a0);
+extern int sceCtrl_driver_6C86AF22(int mode);
 extern int sceDisplaySetResumeMode(int mode);
 extern int sceDisplayWaitVblankStartCB(void);
 extern int sceGeListSync(int qid, int syncType);
 extern int sceGeListEnQueue(const void *list, void *stall, int cbid, void *arg);
-extern int sceImpose_driver_DC3BECFF(int a0);
-extern int sceKermitPeripheral_driver_8C7903E7(int a0, int a1, int a2, int a3);
+extern int sceImpose_driver_DC3BECFF(int item);
+extern int sceKermitPeripheral_driver_8C7903E7(int key, int offset, int buf, int len);
 extern int sceKermit_driver_36666181(void *cmd, int bus, int cmd_id, int argc, int allow_callback, u64 *resp);
 extern int sceNpDrmGetVersionKey(void *vkey, void *act, void *rif, u32 flags);
 extern int sceNpDrmCheckRifTimeLimit(void *rif);
@@ -62,23 +62,24 @@ extern int sceKernelPowerLock(int lockType);
 extern int sceKernelRegisterSysEventHandler(void *handler);
 extern int sceKernelUnregisterSysEventHandler(void *handler);
 
-int sceMeAudio_A651EA7B(int fd, void *buf, u32 offset, u32 size);
+int sceMeAudio_A651EA7B(int fileDesc, void *buf, u32 offset, u32 size);
+int popsCheckAppAndRegisterIdFunc(void);
 static int popsRecheckLicense(void);
 static int popsReadDiscTable(u32 idx, u32 offset, void *buf, u32 size);
 static int popsLoadLicenseKey(const char *path, void *vkey, void *content_id);
-static void popsVerifyRifCallback(void *arg);
+static int popsVerifyRifCallback(void *arg);
 static void popsInvokeNp9660Callback(int res, u32 flags, u32 t_lo, u32 t_hi, u32 e_lo, u32 e_hi);
 static int popsGetIdCallback(const char *path, void *vkey);
 static int popsSysEventHandler(int ev_id, char *ev_name, void *param, int *result);
 static int popsInitStub(void);
 static int popsTermStub(void);
 static int popsInitKermitPocs(void);
-static int popsKermitSendCmd2(int cmd_id, int a1, int a2);
-static int popsKermitSendCmd1(int cmd_id, int a1);
-static int popsKermitSendCmd0(int cmd_id);
+static int popsKermitSendTwoArgs(int cmd_id, int firstArg, int secondArg);
+static int popsKermitSendOneArg(int cmd_id, int firstArg);
+static int popsKermitSendNoArg(int cmd_id);
 
 typedef struct {
-    u8 reserved0[0x16];
+    u8 headerBytes[0x16];
     u16 attr;
 } ScePopsUidCb;
 
@@ -91,12 +92,12 @@ typedef struct {
 typedef struct {
     u32 version;
     u32 flags;
-    u8 reserved8[8];
+    u8 accountId[8];
     char contentId[0x30];
-    u8 reserved40[0x28];
+    u8 keyBlock[0x28];
     u32 startTimeHi;
     u32 startTimeLo;
-    u8 reserved70[0x28];
+    u8 signatureBlock[0x28];
     u32 expireHi;
     u32 expireLo;
 } ScePopsRif;
@@ -106,12 +107,40 @@ typedef struct {
     u32 drmFlags;
 } ScePopsCidBlock;
 
+typedef struct {
+    u32 magic;
+    u32 version;
+    u32 paramSfoOffset;
+    u32 iconPngOffset;
+    u32 iconPmfOffset;
+    u32 picZeroOffset;
+    u32 picOneOffset;
+    u32 sndAtOffset;
+    u32 dataPspOffset;
+    u32 dataPsarOffset;
+} ScePopsPbpHeader;
+
+typedef struct {
+    u8 leadingData[0x3D0];
+    u32 docOffset;
+    u32 docSize;
+    u8 middleData[0x1220 - 0x3D8];
+    u32 discBaseLo;
+    u32 discBaseHi;
+    u8 discMetaGap[0x12B4 - 0x1228];
+    u32 altDocOffset;
+    u32 altDocSize;
+    u8 tableMetaGap[0x12D4 - 0x12BC];
+    u32 indexTableOffset;
+    u32 indexTableCount;
+} ScePopsPsarHeader;
+
 typedef struct SceSysEventHandler {
     int size;
     char *name;
     int type_mask;
     int (*handler)(int ev_id, char *ev_name, void *param, int *result);
-    int r28;
+    int gpVal;
     int busy;
     struct SceSysEventHandler *next;
     int reserved[9];
@@ -167,7 +196,7 @@ u32 sceUsb_driver_var_A942D291;    /* 0x2f68 */
 static int popsInitPbpPath(const char *path)
 {
     u32 hdr[10];
-    int fd;
+    int fileDesc;
     int res;
 
     if (g_pbp_path[0] != 0) {
@@ -178,16 +207,16 @@ static int popsInitPbpPath(const char *path)
         return -1;
     }
     strncpy(g_pbp_path, path, 0xFF);
-    fd = sceIoOpen(path, 1, 0);
-    if (fd <= 0) {
+    fileDesc = sceIoOpen(path, 1, 0);
+    if (fileDesc <= 0) {
         return -1;
     }
-    if (sceIoRead(fd, hdr, 0x28) != 0x28) {
-        sceIoClose(fd);
+    if (sceIoRead(fileDesc, hdr, 0x28) != 0x28) {
+        sceIoClose(fileDesc);
         return -1;
     }
-    res = sceMeAudio_A651EA7B(fd, &g_magic_val, hdr[8], 4);
-    sceIoClose(fd);
+    res = sceMeAudio_A651EA7B(fileDesc, &g_magic_val, hdr[8], 4);
+    sceIoClose(fileDesc);
     if (res != 4 || hdr[0] != 0x50425000) {
         return -1;
     }
@@ -215,13 +244,13 @@ static int popsSetVersionKey(const char *path, const u8 *vkey, const char *cid)
 /* 0x0190 */
 static int popsBuildRifPath(const char *cid, char *out_path)
 {
-    char c0;
+    char driveChar;
 
     if (cid == NULL || out_path == NULL) {
         return 0x80010016;
     }
-    c0 = g_pbp_path[0];
-    if (c0 != 'e' && c0 != 'm') {
+    driveChar = g_pbp_path[0];
+    if (driveChar != 'e' && driveChar != 'm') {
         return 0x80010016;
     }
     if (strnlen(cid, 0x25) != 0x24) {
@@ -240,7 +269,7 @@ static int popsBuildRifPath(const char *cid, char *out_path)
 int sceMeAudio_A8176E49(u32 *out_offset)
 {
     u32 k1;
-    int fd;
+    int fileDesc;
     void *cb;
 
     __asm__ volatile ("move %0, $k1" : "=r"(k1));
@@ -255,15 +284,15 @@ int sceMeAudio_A8176E49(u32 *out_offset)
             return -1;
         }
     }
-    fd = sceIoOpen(g_pbp_path, 1, 0);
-    if (fd > 0) {
-        if (sceKernelGetUIDcontrolBlock(fd, &cb) == 0) {
+    fileDesc = sceIoOpen(g_pbp_path, 1, 0);
+    if (fileDesc > 0) {
+        if (sceKernelGetUIDcontrolBlock(fileDesc, &cb) == 0) {
             ((ScePopsUidCb *)cb)->attr |= 0x15;
         }
         *out_offset = g_psar_offset;
     }
     __asm__ volatile ("move $k1, %0" : : "r"(k1));
-    return fd;
+    return fileDesc;
 }
 
 /* 0x0358 */
@@ -271,7 +300,7 @@ int sceMeAudio_34F2548F(u8 *buf)
 {
     u32 k1;
     u32 off;
-    int fd, res;
+    int fileDesc, res;
 
     __asm__ volatile ("move %0, $k1" : "=r"(k1));
     __asm__ volatile ("sll $k1, $k1, 11");
@@ -280,27 +309,28 @@ int sceMeAudio_34F2548F(u8 *buf)
         return 0x80000023;
     }
     off = g_psar_offset + 0x200;
-    fd = sceIoOpen(g_pbp_path, 0x40000001, 0);
-    if (fd >= 0) {
-        res = sceIoIoctl(fd, 0x04100002, &off, 4, NULL, 0);
-        if (res < 0 || (res = sceIoIoctl(fd, 0x04100001, g_version_key, 16, NULL, 0)) < 0) {
-            sceIoClose(fd);
-            fd = res;
+    fileDesc = sceIoOpen(g_pbp_path, 0x40000001, 0);
+    if (fileDesc >= 0) {
+        res = sceIoIoctl(fileDesc, 0x04100002, &off, 4, NULL, 0);
+        if (res < 0 || (res = sceIoIoctl(fileDesc, 0x04100001, g_version_key, 16, NULL, 0)) < 0) {
+            sceIoClose(fileDesc);
+            fileDesc = res;
         }
     }
-    if (fd < 0) {
+    if (fileDesc < 0) {
         __asm__ volatile ("move $k1, %0" : : "r"(k1));
-        return fd;
+        return fileDesc;
     }
-    res = sceIoRead(fd, buf + 0x200, 0x200);
-    sceIoClose(fd);
+    res = sceIoRead(fileDesc, buf + 0x200, 0x200);
+    sceIoClose(fileDesc);
     __asm__ volatile ("move $k1, %0" : : "r"(k1));
     if (res != 0x200) {
         return -1;
     }
+    const ScePopsPsarHeader *psarHdr = (const ScePopsPsarHeader *)buf;
     memcpy(g_disc_table, buf + 0x200, 0x64);
-    g_doc_offset = g_psar_offset + ((const u32 *)buf)[0x3D0 / 4];
-    g_doc_size = ((const u32 *)buf)[0x3D4 / 4];
+    g_doc_offset = g_psar_offset + psarHdr->docOffset;
+    g_doc_size = psarHdr->docSize;
     return g_magic_val ^ 0x4A08B53F;
 }
 
@@ -310,6 +340,7 @@ int sceMeAudio_F1502A62(u8 *buf, u32 idx)
     u8 mkey[48];
     int res;
     u32 k1;
+    const ScePopsPsarHeader *psarHdr = (const ScePopsPsarHeader *)buf;
 
     res = popsReadDiscTable(idx, 0x400, buf + 0x400, 0xB3880);
     if (res < 0) {
@@ -328,11 +359,11 @@ int sceMeAudio_F1502A62(u8 *buf, u32 idx)
             g_disc_table[1] = g_sdk_ver;
         }
     } else {
-        g_doc_offset = g_psar_offset + ((const u32 *)buf)[0x12B4 / 4];
-        g_doc_size = ((const u32 *)buf)[0x12B8 / 4];
+        g_doc_offset = g_psar_offset + psarHdr->altDocOffset;
+        g_doc_size = psarHdr->altDocSize;
     }
     {
-        u64 base = (u64)g_psar_offset + ((u64)((const u32 *)buf)[0x1224 / 4] << 32) + ((const u32 *)buf)[0x1220 / 4];
+        u64 base = (u64)g_psar_offset + ((u64)psarHdr->discBaseHi << 32) + psarHdr->discBaseLo;
         g_disc_base_lo = (u32)base;
         g_disc_base_hi = (u32)(base >> 32);
     }
@@ -345,7 +376,7 @@ int sceMeAudio_F1502A62(u8 *buf, u32 idx)
 int popsReadDocData(void *buf)
 {
     u32 k1, size, off;
-    int fd, res;
+    int fileDesc, res;
 
     __asm__ volatile ("move %0, $k1" : "=r"(k1));
     __asm__ volatile ("sll $k1, $k1, 11");
@@ -355,23 +386,23 @@ int popsReadDocData(void *buf)
         return 0x80000023;
     }
     off = g_doc_offset;
-    fd = sceIoOpen(g_pbp_path, 0x40000001, 0);
-    if (fd >= 0) {
-        res = sceIoIoctl(fd, 0x04100002, &off, 4, NULL, 0);
-        if (res < 0 || (res = sceIoIoctl(fd, 0x04100001, g_version_key, 16, NULL, 0)) < 0) {
-            sceIoClose(fd);
-            fd = res;
+    fileDesc = sceIoOpen(g_pbp_path, 0x40000001, 0);
+    if (fileDesc >= 0) {
+        res = sceIoIoctl(fileDesc, 0x04100002, &off, 4, NULL, 0);
+        if (res < 0 || (res = sceIoIoctl(fileDesc, 0x04100001, g_version_key, 16, NULL, 0)) < 0) {
+            sceIoClose(fileDesc);
+            fileDesc = res;
         }
     }
     if (g_sdk_ver <= 0x0601FFFF) {
         popsTermStub();
     }
-    if (fd < 0) {
+    if (fileDesc < 0) {
         __asm__ volatile ("move $k1, %0" : : "r"(k1));
-        return fd;
+        return fileDesc;
     }
-    res = sceIoRead(fd, buf, g_doc_size);
-    sceIoClose(fd);
+    res = sceIoRead(fileDesc, buf, g_doc_size);
+    sceIoClose(fileDesc);
     __asm__ volatile ("move $k1, %0" : : "r"(k1));
     return ((u32)res == g_doc_size) ? res : -1;
 }
@@ -570,8 +601,9 @@ static void popsCheckRifLicense(void)
 /* 0x0bec */
 int sceMeAudio_83609AC9(u8 *hdr, u32 idx, void *buf)
 {
-    u32 count = ((const u32 *)hdr)[0x12D8 / 4];
-    u32 offset = ((const u32 *)hdr)[0x12D4 / 4];
+    const ScePopsPsarHeader *psarHdr = (const ScePopsPsarHeader *)hdr;
+    u32 count = psarHdr->indexTableCount;
+    u32 offset = psarHdr->indexTableOffset;
     return popsReadDiscTable(idx, offset, buf, count * 12);
 }
 
@@ -609,7 +641,7 @@ static int popsRecheckLicense(void)
 static int popsReadDiscTable(u32 idx, u32 offset, void *buf, u32 size)
 {
     u32 k1, file_off;
-    int fd, res;
+    int fileDesc, res;
 
     __asm__ volatile ("move %0, $k1" : "=r"(k1));
     __asm__ volatile ("sll $k1, $k1, 11");
@@ -622,20 +654,20 @@ static int popsReadDiscTable(u32 idx, u32 offset, void *buf, u32 size)
         return -1;
     }
     file_off = g_psar_offset + g_disc_table[idx] + offset;
-    fd = sceIoOpen(g_pbp_path, 0x40000001, 0);
-    if (fd >= 0) {
-        res = sceIoIoctl(fd, 0x04100002, &file_off, 4, NULL, 0);
-        if (res < 0 || (res = sceIoIoctl(fd, 0x04100001, g_version_key, 16, NULL, 0)) < 0) {
-            sceIoClose(fd);
-            fd = res;
+    fileDesc = sceIoOpen(g_pbp_path, 0x40000001, 0);
+    if (fileDesc >= 0) {
+        res = sceIoIoctl(fileDesc, 0x04100002, &file_off, 4, NULL, 0);
+        if (res < 0 || (res = sceIoIoctl(fileDesc, 0x04100001, g_version_key, 16, NULL, 0)) < 0) {
+            sceIoClose(fileDesc);
+            fileDesc = res;
         }
     }
-    if (fd < 0) {
+    if (fileDesc < 0) {
         __asm__ volatile ("move $k1, %0" : : "r"(k1));
-        return fd;
+        return fileDesc;
     }
-    res = sceIoRead(fd, buf, size);
-    sceIoClose(fd);
+    res = sceIoRead(fileDesc, buf, size);
+    sceIoClose(fileDesc);
     __asm__ volatile ("move $k1, %0" : : "r"(k1));
     return ((u32)res == size) ? 0 : -1;
 }
@@ -680,13 +712,13 @@ int scePopsMan_29B3FB24(const char *path, int mode)
 }
 
 /* 0x118c */
-int scePopsMan_0090B2C8(u32 a0)
+int scePopsMan_0090B2C8(u32 exitCode)
 {
     int i, chunk_id;
     u32 *chunk_ptr;
 
     __asm__ volatile ("sll $k1, $k1, 11");
-    *(volatile u32 *)0x49FE01AC = a0;
+    *(volatile u32 *)0x49FE01AC = exitCode;
     for (i = 0; i < 12; i++) {
         g_vsh_param[i] = 0;
     }
@@ -701,7 +733,7 @@ int scePopsMan_0090B2C8(u32 a0)
         chunk_ptr = g_chunk_param;
     }
     chunk_ptr[0] = 0x20;
-    chunk_ptr[6] = a0;
+    chunk_ptr[6] = exitCode;
     chunk_ptr[1] = 0x20;
     chunk_ptr[2] = 0;
     chunk_ptr[4] = 0;
@@ -755,24 +787,24 @@ void sceMeAudio_EB52DFE0(void)
 }
 
 /* 0x1324 */
-int sceMeAudio_A651EA7B(int fd, void *buf, u32 offset, u32 size)
+int sceMeAudio_A651EA7B(int fileDesc, void *buf, u32 offset, u32 size)
 {
-    if (sceIoLseek(fd, offset, 0) != (s64)offset) {
+    if (sceIoLseek(fileDesc, offset, 0) != (s64)offset) {
         return -1;
     }
-    return sceIoRead(fd, buf, size);
+    return sceIoRead(fileDesc, buf, size);
 }
 
 /* 0x13ac */
-int sceMeAudio_59759606(int fd, void *buf, u32 offset)
+int sceMeAudio_59759606(int fileDesc, void *buf, u32 offset)
 {
     if (g_sdk_ver > 0x0302FFFF) {
         return 0;
     }
-    if (sceIoLseek(fd, offset, 0) != (s64)offset) {
+    if (sceIoLseek(fileDesc, offset, 0) != (s64)offset) {
         return -1;
     }
-    return sceIoRead(fd, buf, 0x9300);
+    return sceIoRead(fileDesc, buf, 0x9300);
 }
 
 /* 0x1444 */
@@ -788,13 +820,13 @@ int sceMeAudio_F7CD1362(int lockType)
 }
 
 /* 0x1470 */
-int sceMeAudio_C4169D0F(int a0, int a1, int a2, int a3)
+int sceMeAudio_C4169D0F(int key, int offset, int buf, int len)
 {
     u32 k1;
     int res;
     __asm__ volatile ("move %0, $k1" : "=r"(k1));
     __asm__ volatile ("sll $k1, $k1, 11");
-    res = sceKermitPeripheral_driver_8C7903E7(a0, a1, a2, a3);
+    res = sceKermitPeripheral_driver_8C7903E7(key, offset, buf, len);
     __asm__ volatile ("move $k1, %0" : : "r"(k1));
     return res;
 }
@@ -814,7 +846,7 @@ int popsCheckAppAndRegisterIdFunc(void)
 static int popsLoadLicenseKey(const char *path, void *vkey, void *content_id)
 {
     u32 stat_buf[24];
-    int fpl, fd, res;
+    int fpl, fileDesc, res;
     u8 *work, *rif_buf, *cid_buf, *rif_path, *pbp_hdr, *tmp_vkey;
 
     if (path == NULL || vkey == NULL) {
@@ -835,160 +867,163 @@ static int popsLoadLicenseKey(const char *path, void *vkey, void *content_id)
     pbp_hdr = work + 0x1210;
     tmp_vkey = work + 0x1410;
 
-    fd = sceIoOpen(path, 1, 0);
-    if (fd >= 0) {
-        res = sceIoRead(fd, pbp_hdr, 0x200);
-        if (res >= 0) {
-            if (pbp_hdr[0] == 0 && pbp_hdr[1] == 'P' && pbp_hdr[2] == 'B' && pbp_hdr[3] == 'P') {
-                u32 psar_off = ((const u32 *)pbp_hdr)[8] + 0x560;
-                s64 seek_res = sceIoLseek(fd, psar_off, 0);
-                res = (int)seek_res;
-                if (seek_res >= 0) {
-                    res = sceIoRead(fd, cid_buf, 0x34);
-                    if (res >= 0) {
-                        ((ScePopsCidBlock *)cid_buf)->drmFlags = __builtin_bswap32(((ScePopsCidBlock *)cid_buf)->drmFlags);
-                        res = 0;
+    do {
+        fileDesc = sceIoOpen(path, 1, 0);
+        if (fileDesc >= 0) {
+            res = sceIoRead(fileDesc, pbp_hdr, 0x200);
+            if (res >= 0) {
+                if (pbp_hdr[0] == 0 && pbp_hdr[1] == 'P' && pbp_hdr[2] == 'B' && pbp_hdr[3] == 'P') {
+                    u32 psar_off = ((const ScePopsPbpHeader *)pbp_hdr)->dataPspOffset + 0x560;
+                    s64 seek_res = sceIoLseek(fileDesc, psar_off, 0);
+                    res = (int)seek_res;
+                    if (seek_res >= 0) {
+                        res = sceIoRead(fileDesc, cid_buf, 0x34);
+                        if (res >= 0) {
+                            ((ScePopsCidBlock *)cid_buf)->drmFlags = __builtin_bswap32(((ScePopsCidBlock *)cid_buf)->drmFlags);
+                            res = 0;
+                        }
                     }
+                } else {
+                    res = 0x80020148;
                 }
-            } else {
-                res = 0x80020148;
             }
+            sceIoClose(fileDesc);
+        } else {
+            res = fileDesc;
         }
-        sceIoClose(fd);
-    } else {
-        res = fd;
-    }
-    if (res < 0) {
-        goto cleanup;
-    }
-    res = popsInitPbpPath(path);
-    if (res < 0) {
-        goto cleanup;
-    }
-    res = popsBuildRifPath((const char *)cid_buf, (char *)rif_path);
-    if (res < 0) {
-        goto cleanup;
-    }
-    res = sceIoGetstat((const char *)rif_path, stat_buf);
-    if (res < 0) {
-        goto cleanup;
-    }
-    if ((s64)(((u64)stat_buf[3] << 32) | stat_buf[2]) < 0x98) {
-        res = 0x80010016;
-        goto cleanup;
-    }
-    fd = sceIoOpen((const char *)rif_path, 1, 0);
-    if (fd >= 0) {
-        res = sceIoRead(fd, rif_buf, 0xA0);
-        if (res >= 0 && res < 0x98) {
+        if (res < 0) {
+            break;
+        }
+        res = popsInitPbpPath(path);
+        if (res < 0) {
+            break;
+        }
+        res = popsBuildRifPath((const char *)cid_buf, (char *)rif_path);
+        if (res < 0) {
+            break;
+        }
+        res = sceIoGetstat((const char *)rif_path, stat_buf);
+        if (res < 0) {
+            break;
+        }
+        if ((s64)(((u64)stat_buf[3] << 32) | stat_buf[2]) < 0x98) {
             res = 0x80010016;
+            break;
         }
-        sceIoClose(fd);
-        if (res >= 0) {
-            if (res < 0xA0) {
-                ((ScePopsRif *)rif_buf)->expireHi = 0;
-                ((ScePopsRif *)rif_buf)->expireLo = 0;
-            }
-            if (strncmp((const char *)(rif_buf + 0x10), (const char *)cid_buf, 0x30) != 0) {
+        fileDesc = sceIoOpen((const char *)rif_path, 1, 0);
+        if (fileDesc >= 0) {
+            res = sceIoRead(fileDesc, rif_buf, 0xA0);
+            if (res >= 0 && res < 0x98) {
                 res = 0x80010016;
-                goto cleanup;
             }
-            res = 0;
-        }
-    } else {
-        res = fd;
-    }
-    if (res < 0) {
-        goto cleanup;
-    }
-    void *act_buf = work;
-    if (__builtin_bswap32(((ScePopsRif *)rif_buf)->flags) != 3) {
-        int app_type;
-        g_act_path[0] = 0x73616C66; /* "flas" */
-        g_act_path[1] = 0x2F3A3268; /* "h2:/" */
-        g_act_path[2] = 0x2E746361; /* "act." */
-        g_act_path[3] = 0x00746164; /* "dat\0" */
-        app_type = sceKernelApplicationType();
-        g_lfl_dev[0] = 0x616C666C;  /* "lfla" */
-        g_lfl_dev[1] = 0x3A306873;  /* "sh0:" */
-        g_lfl_dev[2] = 0x00322C30;  /* "0,2\0" */
-        g_flf_dev[0] = 0x73616C66;  /* "flas" */
-        g_flf_dev[1] = 0x74616668;  /* "hfat" */
-        g_flf_dev[2] = 0x00003A32;  /* "2:\0\0" */
-        g_fl2_dev[0] = 0x73616C66;  /* "flas" */
-        g_fl2_dev[1] = 0x003A3268;  /* "h2:\0" */
-        if (app_type == 0x300) {
-            if (sceIoAssign((const char *)g_fl2_dev, (const char *)g_lfl_dev, (const char *)g_flf_dev, 1, NULL, 0) < 0) {
-                res = 0x80020327;
-                goto cleanup;
+            sceIoClose(fileDesc);
+            if (res >= 0) {
+                if (res < 0xA0) {
+                    ((ScePopsRif *)rif_buf)->expireHi = 0;
+                    ((ScePopsRif *)rif_buf)->expireLo = 0;
+                }
+                if (strncmp((const char *)(rif_buf + 0x10), (const char *)cid_buf, 0x30) != 0) {
+                    res = 0x80010016;
+                    break;
+                }
+                res = 0;
             }
+        } else {
+            res = fileDesc;
         }
-        res = sceIoGetstat((const char *)g_act_path, stat_buf);
-        if (res >= 0) {
-            if (stat_buf[2] == 0x1038 && stat_buf[3] == 0) {
-                fd = sceIoOpen((const char *)g_act_path, 1, 0);
-                if (fd >= 0) {
-                    res = sceIoRead(fd, work, 0x1038);
-                    sceIoClose(fd);
-                    if (res < 0x1038) {
+        if (res < 0) {
+            break;
+        }
+        void *act_buf = work;
+        if (__builtin_bswap32(((ScePopsRif *)rif_buf)->flags) != 3) {
+            int app_type;
+            /* "flash2:/act.dat" */
+            g_act_path[0] = 0x73616C66;
+            g_act_path[1] = 0x2F3A3268;
+            g_act_path[2] = 0x2E746361;
+            g_act_path[3] = 0x00746164;
+            app_type = sceKernelApplicationType();
+            /* "lflash0:0,2", "flashfat2:", "flash2:" */
+            g_lfl_dev[0] = 0x616C666C;
+            g_lfl_dev[1] = 0x3A306873;
+            g_lfl_dev[2] = 0x00322C30;
+            g_flf_dev[0] = 0x73616C66;
+            g_flf_dev[1] = 0x74616668;
+            g_flf_dev[2] = 0x00003A32;
+            g_fl2_dev[0] = 0x73616C66;
+            g_fl2_dev[1] = 0x003A3268;
+            if (app_type == 0x300) {
+                if (sceIoAssign((const char *)g_fl2_dev, (const char *)g_lfl_dev, (const char *)g_flf_dev, 1, NULL, 0) < 0) {
+                    res = 0x80020327;
+                    break;
+                }
+            }
+            res = sceIoGetstat((const char *)g_act_path, stat_buf);
+            if (res >= 0) {
+                if (stat_buf[2] == 0x1038 && stat_buf[3] == 0) {
+                    fileDesc = sceIoOpen((const char *)g_act_path, 1, 0);
+                    if (fileDesc >= 0) {
+                        res = sceIoRead(fileDesc, work, 0x1038);
+                        sceIoClose(fileDesc);
+                        if (res < 0x1038) {
+                            res = 0x80020327;
+                        }
+                    } else {
                         res = 0x80020327;
                     }
                 } else {
-                    res = 0x80020327;
+                    res = 0x80010016;
                 }
-            } else {
-                res = 0x80010016;
-            }
-        } else if (res != (int)0x80010002) {
-            res = 0x80020327;
-        }
-        if (app_type == 0x300) {
-            int ures = sceIoUnassign((const char *)g_fl2_dev);
-            if (ures < 0) {
+            } else if (res != (int)0x80010002) {
                 res = 0x80020327;
             }
+            if (app_type == 0x300) {
+                int ures = sceIoUnassign((const char *)g_fl2_dev);
+                if (ures < 0) {
+                    res = 0x80020327;
+                }
+            }
+            g_act_path[0] = 0; g_act_path[1] = 0; g_act_path[2] = 0; g_act_path[3] = 0;
+            g_fl2_dev[0] = 0; g_fl2_dev[1] = 0;
+            g_lfl_dev[0] = 0; g_lfl_dev[1] = 0; g_lfl_dev[2] = 0;
+            g_flf_dev[0] = 0; g_flf_dev[1] = 0; g_flf_dev[2] = 0;
+            if (res < 0) {
+                break;
+            }
+        } else {
+            act_buf = NULL;
         }
-        g_act_path[0] = 0; g_act_path[1] = 0; g_act_path[2] = 0; g_act_path[3] = 0;
-        g_fl2_dev[0] = 0; g_fl2_dev[1] = 0;
-        g_lfl_dev[0] = 0; g_lfl_dev[1] = 0; g_lfl_dev[2] = 0;
-        g_flf_dev[0] = 0; g_flf_dev[1] = 0; g_flf_dev[2] = 0;
+        res = sceNpDrmGetVersionKey(tmp_vkey, act_buf, rif_buf, ((ScePopsCidBlock *)cid_buf)->drmFlags);
         if (res < 0) {
-            goto cleanup;
+            if (res != (int)0x80000001 && res != (int)0x8001003E) {
+                res = 0x80020148;
+            }
+            break;
         }
-    } else {
-        act_buf = NULL;
-    }
-    res = sceNpDrmGetVersionKey(tmp_vkey, act_buf, rif_buf, ((ScePopsCidBlock *)cid_buf)->drmFlags);
-    if (res < 0) {
-        if (res != (int)0x80000001 && res != (int)0x8001003E) {
-            res = 0x80020148;
+        memcpy(vkey, tmp_vkey, 16);
+        if (content_id != NULL) {
+            memcpy(content_id, cid_buf, 0x30);
         }
-        goto cleanup;
-    }
-    memcpy(vkey, tmp_vkey, 16);
-    if (content_id != NULL) {
-        memcpy(content_id, cid_buf, 0x30);
-    }
-    res = popsSetVersionKey(path, tmp_vkey, (const char *)cid_buf);
-    if (res < 0) {
-        sceKernelMemset(vkey, 0, 16);
-        goto cleanup;
-    }
-    res = 0;
+        res = popsSetVersionKey(path, tmp_vkey, (const char *)cid_buf);
+        if (res < 0) {
+            sceKernelMemset(vkey, 0, 16);
+            break;
+        }
+        res = 0;
+    } while (0);
 
-cleanup:
     sceKernelMemset(work, 0, 0x1420);
     sceKernelDeleteFpl(fpl);
     return res;
 }
 
 /* 0x1aa0 */
-static void popsVerifyRifCallback(void *arg)
+static int popsVerifyRifCallback(void *arg)
 {
     u8 rif_buf[0xA0];
     char rif_path[0x40];
     u32 stat_buf[24];
-    int fd, res;
+    int fileDesc, res;
     u32 flags = 0, t_lo = 0, t_hi = 0, e_lo = 0, e_hi = 0;
 
     res = popsBuildRifPath((const char *)arg, rif_path);
@@ -998,13 +1033,13 @@ static void popsVerifyRifCallback(void *arg)
             if ((s64)(((u64)stat_buf[3] << 32) | stat_buf[2]) < 0x98) {
                 res = 0x80010016;
             } else {
-                fd = sceIoOpen(rif_path, 1, 0);
-                if (fd >= 0) {
-                    res = sceIoRead(fd, rif_buf, 0xA0);
+                fileDesc = sceIoOpen(rif_path, 1, 0);
+                if (fileDesc >= 0) {
+                    res = sceIoRead(fileDesc, rif_buf, 0xA0);
                     if (res >= 0 && res < 0x98) {
                         res = 0x80010016;
                     }
-                    sceIoClose(fd);
+                    sceIoClose(fileDesc);
                     if (res >= 0) {
                         if (res < 0xA0) {
                             ((ScePopsRif *)rif_buf)->expireHi = 0;
@@ -1017,16 +1052,16 @@ static void popsVerifyRifCallback(void *arg)
                         }
                     }
                 } else {
-                    res = fd;
+                    res = fileDesc;
                 }
             }
         }
     }
     if (res >= 0) {
-        u32 r68 = ((ScePopsRif *)rif_buf)->startTimeHi;
-        u32 r6c = ((ScePopsRif *)rif_buf)->startTimeLo;
-        if (r68 | r6c) {
-            u64 ts = (((u64)__builtin_bswap32(r68) << 32) | __builtin_bswap32(r6c)) * 1000ULL + 0x00DCBFFEFF2BC000ULL;
+        u32 startHiBe = ((ScePopsRif *)rif_buf)->startTimeHi;
+        u32 startLoBe = ((ScePopsRif *)rif_buf)->startTimeLo;
+        if (startHiBe | startLoBe) {
+            u64 ts = (((u64)__builtin_bswap32(startHiBe) << 32) | __builtin_bswap32(startLoBe)) * 1000ULL + 0x00DCBFFEFF2BC000ULL;
             t_lo = (u32)ts;
             t_hi = (u32)(ts >> 32);
         }
@@ -1036,6 +1071,7 @@ static void popsVerifyRifCallback(void *arg)
         res = sceNpDrmCheckRifTimeLimit(rif_buf);
     }
     popsInvokeNp9660Callback(res, flags, t_lo, t_hi, e_lo, e_hi);
+    return res;
 }
 
 /* 0x1cb8 */
@@ -1135,37 +1171,37 @@ static int popsInitKermitPocs(void)
 }
 
 /* 0x1f08 */
-int sceMeAudio_9FBE4AD3(int a0, int a1)
+int sceMeAudio_9FBE4AD3(int firstArg, int secondArg)
 {
-    return popsKermitSendCmd2(0xF03, a0, a1 & 0xFF);
+    return popsKermitSendTwoArgs(0xF03, firstArg, secondArg & 0xFF);
 }
 
 /* 0x1f30 */
-int sceMeAudio_10DABACD(int a0)
+int sceMeAudio_10DABACD(int firstArg)
 {
-    return popsKermitSendCmd1(0xF05, a0);
+    return popsKermitSendOneArg(0xF05, firstArg);
 }
 
 /* 0x1f50 */
 int sceMeAudio_7AA3E14B(void)
 {
-    return popsKermitSendCmd0(0xF04);
+    return popsKermitSendNoArg(0xF04);
 }
 
 /* 0x1f6c */
 int sceMeAudio_C47D3670(void)
 {
-    return popsKermitSendCmd0(0xF06);
+    return popsKermitSendNoArg(0xF06);
 }
 
 /* 0x1f88 */
 int sceMeAudio_13099620(void)
 {
-    return popsKermitSendCmd0(0xF02);
+    return popsKermitSendNoArg(0xF02);
 }
 
 /* 0x1fa4 */
-static int popsKermitSendCmd2(int cmd_id, int a1, int a2)
+static int popsKermitSendTwoArgs(int cmd_id, int firstArg, int secondArg)
 {
     u8 buf[0x80];
     u64 resp;
@@ -1177,8 +1213,8 @@ static int popsKermitSendCmd2(int cmd_id, int a1, int a2)
     sceKernelDcacheInvalidateRangeForUser(cmd, 0x40);
     cmd = (u32 *)((u32)cmd | ((((s32)cmd >> 31) + 2) << 29));
     sceKernelLockMutex(g_pocs_mutex, 1, NULL);
-    cmd[4] = a1;
-    cmd[6] = a2;
+    cmd[4] = firstArg;
+    cmd[6] = secondArg;
     sceKermit_driver_36666181(cmd, 8, cmd_id, 2, 0, &resp);
     sceKernelUnlockMutex(g_pocs_mutex, 1);
     __asm__ volatile ("move $k1, %0" : : "r"(k1));
@@ -1186,7 +1222,7 @@ static int popsKermitSendCmd2(int cmd_id, int a1, int a2)
 }
 
 /* 0x2070 */
-static int popsKermitSendCmd1(int cmd_id, int a1)
+static int popsKermitSendOneArg(int cmd_id, int firstArg)
 {
     u8 buf[0x80];
     u64 resp;
@@ -1198,7 +1234,7 @@ static int popsKermitSendCmd1(int cmd_id, int a1)
     sceKernelDcacheInvalidateRangeForUser(cmd, 0x40);
     cmd = (u32 *)((u32)cmd | ((((s32)cmd >> 31) + 2) << 29));
     sceKernelLockMutex(g_pocs_mutex, 1, NULL);
-    cmd[4] = a1;
+    cmd[4] = firstArg;
     sceKermit_driver_36666181(cmd, 8, cmd_id, 1, 0, &resp);
     sceKernelUnlockMutex(g_pocs_mutex, 1);
     __asm__ volatile ("move $k1, %0" : : "r"(k1));
@@ -1206,7 +1242,7 @@ static int popsKermitSendCmd1(int cmd_id, int a1)
 }
 
 /* 0x212c */
-static int popsKermitSendCmd0(int cmd_id)
+static int popsKermitSendNoArg(int cmd_id)
 {
     u8 buf[0x80];
     u64 resp;
@@ -1244,10 +1280,10 @@ int sceMeAudio_D96DC042(int qid, u32 addr)
     int i, res;
 
     __asm__ volatile (
-        ".word 0x70040024\n\t" /* mfic $a0, $0 */
-        ".word 0x70000026\n\t" /* mtic $zero, $0 */
-        "move %0, $a0"
-        : "=r"(intr) : : "a0"
+        ".word 0x70040024\n\t" /* mfic $4, $0 */
+        ".word 0x70000026\n\t" /* mtic $0, $0 */
+        "move %0, $4"
+        : "=r"(intr) : : "$4"
     );
     addr &= 0x1FFFFFFF;
     uncached = (u32 *)(addr | 0x40000000);
