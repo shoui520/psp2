@@ -1,0 +1,112 @@
+name: mp4msv_module
+attributes: 0x0000
+version: [1, 1]
+sdk_version: 0x06060110
+exports:
+  - name: syslib
+    version: [0, 0]
+    attributes: 0x8000
+    variables:
+      - module_info: 0xf01d73a7
+      - module_sdk_version: 0x11b97506
+  - name: mp4msv
+    version: [0, 17]
+    attributes: 0x0009
+    len: 5
+    pad: 1
+    extra_words: [0x00040000]
+    bucket_words: [0x00010000, 0x00040002, 0x00090009, 0x000c000a, 0x000e000c, 0x0015000f, 0x00170015, 0x00180018, 0x001d001c, 0x001f001e, 0x00220020, 0x00250025, 0x00270026, 0x002c0029, 0x002d002d, 0x002d002d, 0x002d002d, 0x0030002d, 0x00340033, 0x003a0036, 0x003e003c, 0x00440041, 0x00450045, 0x00460045, 0x004a0049, 0x004b004a, 0x0050004e, 0x00520051, 0x00540053, 0x00580057, 0x005a005a, 0x005c005c]
+    functions:
+      - mp4msv_032F3500: 0x032f3500
+      - mp4msv_07C60A23: 0x07c60a23
+      - mp4msv_089364A9: 0x089364a9
+      - mp4msv_08F96BE2: 0x08f96be2
+      - mp4msv_0C06DACB: 0x0c06dacb
+      - mp4msv_0C0843B0: 0x0c0843b0
+      - mp4msv_0D32271B: 0x0d32271b
+      - mp4msv_0D6843EA: 0x0d6843ea
+      - mp4msv_0DF0B9AD: 0x0df0b9ad
+      - mp4msv_162503F3: 0x162503f3
+      - mp4msv_182FF541: 0x182ff541
+      - mp4msv_190E442D: 0x190e442d
+      - mp4msv_21BD7274: 0x21bd7274
+      - mp4msv_21BE7D96: 0x21be7d96
+      - mp4msv_27412E93: 0x27412e93
+      - mp4msv_287B3FDA: 0x287b3fda
+      - mp4msv_2A296DDA: 0x2a296dda
+      - mp4msv_2A2D949A: 0x2a2d949a
+      - mp4msv_2B1B8D23: 0x2b1b8d23
+      - mp4msv_2BAF7C25: 0x2baf7c25
+      - mp4msv_2BFE233D: 0x2bfe233d
+      - mp4msv_3149D53B: 0x3149d53b
+      - mp4msv_32AB9DCB: 0x32ab9dcb
+      - mp4msv_35144B9C: 0x35144b9c
+      - mp4msv_3C2183C7: 0x3c2183c7
+      - mp4msv_3D57BA52: 0x3d57ba52
+      - mp4msv_3D8D41A0: 0x3d8d41a0
+      - mp4msv_3F6B6C59: 0x3f6b6c59
+      - mp4msv_4154992A: 0x4154992a
+      - mp4msv_46186C26: 0x46186c26
+      - mp4msv_4A7AD789: 0x4a7ad789
+      - mp4msv_4C677A7E: 0x4c677a7e
+      - mp4msv_5087548E: 0x5087548e
+      - mp4msv_509B3BAC: 0x509b3bac
+      - mp4msv_54410730: 0x54410730
+      - mp4msv_5565A318: 0x5565a318
+      - mp4msv_576C693B: 0x576c693b
+      - mp4msv_5EE48079: 0x5ee48079
+      - mp4msv_63752099: 0x63752099
+      - mp4msv_65C17387: 0x65c17387
+      - mp4msv_67AF9E0F: 0x67af9e0f
+      - mp4msv_68FBFBE1: 0x68fbfbe1
+      - mp4msv_6AE9B944: 0x6ae9b944
+      - mp4msv_6B94A29D: 0x6b94a29d
+      - mp4msv_6D619263: 0x6d619263
+      - mp4msv_886CFC3D: 0x886cfc3d
+      - mp4msv_888C1115: 0x888c1115
+      - mp4msv_8A0FD93F: 0x8a0fd93f
+      - mp4msv_8C998600: 0x8c998600
+      - mp4msv_8D564A92: 0x8d564a92
+      - mp4msv_8FD8E0A4: 0x8fd8e0a4
+      - mp4msv_9076AA02: 0x9076aa02
+      - mp4msv_9501780A: 0x9501780a
+      - mp4msv_9632797F: 0x9632797f
+      - mp4msv_9878A6B3: 0x9878a6b3
+      - mp4msv_98ADC323: 0x98adc323
+      - mp4msv_9A8B21D2: 0x9a8b21d2
+      - mp4msv_9BB5E338: 0x9bb5e338
+      - mp4msv_9CA13D1A: 0x9ca13d1a
+      - mp4msv_9D56A7CC: 0x9d56a7cc
+      - mp4msv_A09878FC: 0xa09878fc
+      - mp4msv_A2AE6F30: 0xa2ae6f30
+      - mp4msv_A418509D: 0xa418509d
+      - mp4msv_A41C1F5F: 0xa41c1f5f
+      - mp4msv_A55AF94C: 0xa55af94c
+      - mp4msv_A824645B: 0xa824645b
+      - mp4msv_A9FD62E2: 0xa9fd62e2
+      - mp4msv_AADD18E7: 0xaadd18e7
+      - mp4msv_AD3AF34E: 0xad3af34e
+      - mp4msv_B919743C: 0xb919743c
+      - mp4msv_BD23D34A: 0xbd23d34a
+      - mp4msv_BE203EA3: 0xbe203ea3
+      - mp4msv_BE558D75: 0xbe558d75
+      - mp4msv_C38F9765: 0xc38f9765
+      - mp4msv_C9D3D397: 0xc9d3d397
+      - mp4msv_CD733822: 0xcd733822
+      - mp4msv_CE9C6D39: 0xce9c6d39
+      - mp4msv_CFF25FAC: 0xcff25fac
+      - mp4msv_D070C0AA: 0xd070c0aa
+      - mp4msv_D3505C12: 0xd3505c12
+      - mp4msv_D5936DBD: 0xd5936dbd
+      - mp4msv_D8BA6AFE: 0xd8ba6afe
+      - mp4msv_DEBFCBCA: 0xdebfcbca
+      - mp4msv_E042AB3C: 0xe042ab3c
+      - mp4msv_E4AFDAD3: 0xe4afdad3
+      - mp4msv_E5C33D61: 0xe5c33d61
+      - mp4msv_E641D779: 0xe641d779
+      - mp4msv_E8DE0EB8: 0xe8de0eb8
+      - mp4msv_EE62F96D: 0xee62f96d
+      - mp4msv_EF6D76BC: 0xef6d76bc
+      - mp4msv_F50268BF: 0xf50268bf
+      - mp4msv_F595F917: 0xf595f917
+      - mp4msv_FF9E6F58: 0xff9e6f58
