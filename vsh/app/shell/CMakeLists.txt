@@ -476,6 +476,16 @@ psp2_module(vs0_vsh_shell_shell KIND user COMPILER snc PARTIAL SOURCES
 	src/telephony_plugin/src/bbmc/src/bbmc_adaptor_loopback/tel_bbmc_adapter_periodic_thread.cpp
 	src/telephony_plugin/src/bbmc/src/bbmc_adaptor_loopback/tel_bbmc_adapter_loopback_core.cpp
 	src/telephony_plugin/src/bbmc/src/bbmc_adaptor_loopback/tel_bbmc_adapter_loopback.cpp
+	src/telephony_plugin/src/telephony_plugin.cpp
+	src/telephony_plugin/src/attribute/tel_sms_manager_registory_attribute.cpp
+	src/telephony_plugin/src/sms/tel_sms_manager_attribute_factory.cpp
+	src/telephony_plugin/src/tel_logic_factory.cpp
+	src/telephony_plugin/src/sms/tel_sms_logic_gui.cpp
+	src/telephony_plugin/src/sms/tel_sms_logic_mediator.cpp
+	src/telephony_plugin/src/sms/tel_sms_logic_mediator_sm.cpp
+	src/telephony_plugin/src/sms/tel_sms_receiver.cpp
+	src/telephony_plugin/src/sms/tel_sms_sender.cpp
+	src/telephony_plugin/src/general/tel_general_logic_gui.cpp
 	shell.c
 )
 target_include_directories(vs0_vsh_shell_shell PRIVATE "${PSP2_SRC}/vsh/paf/include"
