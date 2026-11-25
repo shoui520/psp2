@@ -397,6 +397,11 @@ psp2_module(vs0_vsh_shell_shell KIND user COMPILER snc PARTIAL SOURCES
 	src/musiccore_plugin/src/musiccore_filter_base.cpp
 	src/musiccore_plugin/src/musiccore_codec_decoders.cpp
 	src/musiccore_plugin/src/musiccore_ipc_service.cpp
+	src/netctl/netctl_ipc_server.cpp
+	src/netctl/netctl_api.cpp
+	src/netctl/netctl_core.cpp
+	src/netctl/netctl_config.cpp
+	src/netctl/netctl_icm.cpp
 	src/netctl/net_stun.cpp
 	src/netctl/net_upnp.cpp
 	src/netctl/net_wispr.cpp
