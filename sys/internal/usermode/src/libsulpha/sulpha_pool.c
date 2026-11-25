@@ -110,10 +110,10 @@ void sulphaHeapInit(SulphaHeap *heap, void *buf, SceUInt32 size)
 
 	heap->base = blocks;
 	heap->freeHead = NULL;
-	heap->reserved0 = 0;
+	heap->reserved = 0;
 	heap->totalBlocks = totalBlocks;
 	heap->allocCount = 0;
-	heap->reserved1 = 0;
+	heap->pad = 0;
 
 	if (blocks != NULL) {
 		SulphaHeapBlock *sentinel = (SulphaHeapBlock *)((SceUInt8 *)blocks + (totalBlocks << 4));

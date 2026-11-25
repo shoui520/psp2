@@ -35,7 +35,7 @@ SceSize ngsStrnlen(const char *s, SceSize maxLen)
 	return sceClibStrnlen(s, maxLen);
 }
 
-int ngsMemcmp(const void *s1, const void *s2, SceSize len)
+int ngsMemcmp(const void *lhs, const void *rhs, SceSize len)
 {
-	return sceClibMemcmp(s1, s2, len);
+	return sceClibMemcmp(lhs, rhs, len);
 }

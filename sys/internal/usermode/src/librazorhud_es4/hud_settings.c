@@ -70,60 +70,60 @@ static const HudConfigKeyEntry g_hudConfigKeys[29] = {
 
 int hudMgrGetPerfMode(void *mgr)
 {
-	return *(int *)((uint8_t *)mgr + 188);
+	return ((HudManager *)mgr)->perfMode;
 }
 
 int hudMgrSetPerfMode(void *mgr, int mode)
 {
 	if ((uint32_t)(mode - 1) > 3U)
 		return HUD_ERR_INVALID_PARAM;
-	*(int *)((uint8_t *)mgr + 188) = mode;
+	((HudManager *)mgr)->perfMode = mode;
 	return 0;
 }
 
 void hudMgrSetParamBufSize(void *mgr, uint32_t val)
 {
-	*(uint32_t *)((uint8_t *)mgr + 176) = val;
+	((HudManager *)mgr)->paramBufSize = val;
 }
 
-void hudMgrSetGxmVersions(void *mgr, uint32_t v0, uint32_t v1)
+void hudMgrSetGxmVersions(void *mgr, uint32_t texVA, uint32_t texVB)
 {
-	*(uint32_t *)((uint8_t *)mgr + 180) = v0;
-	*(uint32_t *)((uint8_t *)mgr + 184) = v1;
+	((HudManager *)mgr)->gxmVerMajor = texVA;
+	((HudManager *)mgr)->gxmVerMinor = texVB;
 }
 
-void hudMgrGetGxmVersions(void *mgr, uint32_t *v0, uint32_t *v1)
+void hudMgrGetGxmVersions(void *mgr, uint32_t *texVA, uint32_t *texVB)
 {
-	if (v0 != NULL)
-		*v0 = *(uint32_t *)((uint8_t *)mgr + 180);
-	if (v1 != NULL)
-		*v1 = *(uint32_t *)((uint8_t *)mgr + 184);
+	if (texVA != NULL)
+		*texVA = ((HudManager *)mgr)->gxmVerMajor;
+	if (texVB != NULL)
+		*texVB = ((HudManager *)mgr)->gxmVerMinor;
 }
 
 void hudMgrSetTraceConfig(void *mgr, const void *counters, uint64_t mask, uint32_t rate, uint32_t bufSize, uint32_t stopFrame)
 {
-	uint8_t *m = (uint8_t *)mgr;
-	sceClibMemcpy_safe(m + 1388, counters, 0x40U);
-	*(uint64_t *)(m + 1456) = mask;
-	*(uint32_t *)(m + 1464) = rate;
-	*(uint32_t *)(m + 1468) = bufSize;
-	*(uint32_t *)(m + 1472) = stopFrame;
-	*(uint32_t *)(m + 280) = 0;
+	HudManager *hm = (HudManager *)mgr;
+	sceClibMemcpy_safe(hm->traceCounters, counters, 0x40U);
+	hm->traceMask = mask;
+	hm->traceRate = rate;
+	hm->traceBufSize = bufSize;
+	hm->traceStopFrame = stopFrame;
+	hm->swapCount = 0;
 }
 
 void hudMgrGetTraceConfig(void *mgr, void *counters, uint64_t *mask, uint32_t *rate, uint32_t *bufSize, uint32_t *stopFrame)
 {
-	uint8_t *m = (uint8_t *)mgr;
-	sceClibMemcpy_safe(counters, m + 1388, 0x40U);
-	*mask = *(uint64_t *)(m + 1456);
-	*rate = *(uint32_t *)(m + 1464);
-	*bufSize = *(uint32_t *)(m + 1468);
-	*stopFrame = *(uint32_t *)(m + 1472);
+	HudManager *hm = (HudManager *)mgr;
+	sceClibMemcpy_safe(counters, hm->traceCounters, 0x40U);
+	*mask = hm->traceMask;
+	*rate = hm->traceRate;
+	*bufSize = hm->traceBufSize;
+	*stopFrame = hm->traceStopFrame;
 }
 
 char *hudMgrSetTxtFilename(void *mgr, const char *name)
 {
-	char *dst = (char *)mgr + 356;
+	char *dst = ((HudManager *)mgr)->txtFilename;
 	char *ret = sceClibStrncpy(dst, name, 255U);
 	dst[255] = '\0';
 	return ret;
@@ -131,14 +131,14 @@ char *hudMgrSetTxtFilename(void *mgr, const char *name)
 
 char *hudMgrGetTxtFilename(void *mgr, char *dst, int size)
 {
-	char *ret = sceClibStrncpy(dst, (const char *)mgr + 356, (uint32_t)(size - 1));
+	char *ret = sceClibStrncpy(dst, ((HudManager *)mgr)->txtFilename, (uint32_t)(size - 1));
 	dst[size - 1] = '\0';
 	return ret;
 }
 
 char *hudMgrSetCsvFilename(void *mgr, const char *name)
 {
-	char *dst = (char *)mgr + 612;
+	char *dst = ((HudManager *)mgr)->csvFilename;
 	char *ret = sceClibStrncpy(dst, name, 255U);
 	dst[255] = '\0';
 	return ret;
@@ -146,14 +146,14 @@ char *hudMgrSetCsvFilename(void *mgr, const char *name)
 
 char *hudMgrGetCsvFilename(void *mgr, char *dst, int size)
 {
-	char *ret = sceClibStrncpy(dst, (const char *)mgr + 612, (uint32_t)(size - 1));
+	char *ret = sceClibStrncpy(dst, ((HudManager *)mgr)->csvFilename, (uint32_t)(size - 1));
 	dst[size - 1] = '\0';
 	return ret;
 }
 
 char *hudMgrSetXmlFilename(void *mgr, const char *name)
 {
-	char *dst = (char *)mgr + 868;
+	char *dst = ((HudManager *)mgr)->xmlFilename;
 	char *ret = sceClibStrncpy(dst, name, 255U);
 	dst[255] = '\0';
 	return ret;
@@ -161,7 +161,7 @@ char *hudMgrSetXmlFilename(void *mgr, const char *name)
 
 char *hudMgrGetXmlFilename(void *mgr, char *dst, int size)
 {
-	char *ret = sceClibStrncpy(dst, (const char *)mgr + 868, (uint32_t)(size - 1));
+	char *ret = sceClibStrncpy(dst, ((HudManager *)mgr)->xmlFilename, (uint32_t)(size - 1));
 	dst[size - 1] = '\0';
 	return ret;
 }
@@ -169,116 +169,116 @@ char *hudMgrGetXmlFilename(void *mgr, char *dst, int size)
 void hudMgrSetRenderTargetSize(void *mgr, uint32_t w, uint32_t h)
 {
 	if (w != 0)
-		*(uint32_t *)((uint8_t *)mgr + 236) = w;
+		((HudManager *)mgr)->rtWidth = w;
 	if (h != 0)
-		*(uint32_t *)((uint8_t *)mgr + 240) = h;
+		((HudManager *)mgr)->rtHeight = h;
 }
 
 void hudMgrGetRenderTargetSize(void *mgr, uint32_t *w, uint32_t *h)
 {
-	*w = *(uint32_t *)((uint8_t *)mgr + 236);
-	*h = *(uint32_t *)((uint8_t *)mgr + 240);
+	*w = ((HudManager *)mgr)->rtWidth;
+	*h = ((HudManager *)mgr)->rtHeight;
 }
 
 void hudMgrSetCoreCounts(void *mgr, uint32_t cores, uint32_t firmware)
 {
-	*(uint32_t *)((uint8_t *)mgr + 148) = cores;
-	*(uint32_t *)((uint8_t *)mgr + 152) = firmware;
+	((HudManager *)mgr)->hudCores = cores;
+	((HudManager *)mgr)->hudFirmware = firmware;
 }
 
 void hudMgrGetCoreCounts(void *mgr, uint32_t *cores, uint32_t *firmware)
 {
-	*cores = *(uint32_t *)((uint8_t *)mgr + 148);
-	*firmware = *(uint32_t *)((uint8_t *)mgr + 152);
+	*cores = ((HudManager *)mgr)->hudCores;
+	*firmware = ((HudManager *)mgr)->hudFirmware;
 }
 
 int hudMgrPollHostTool(void *mgr)
 {
-	uint8_t *m = (uint8_t *)mgr;
-	char *pathBuf = (char *)(m + 1484);
+	HudManager *hm = (HudManager *)mgr;
+	char *pathBuf = hm->hostConfigPath;
 
 	if (hudHostToolPollStart(pathBuf, 512U) != 0) {
-		void *saved = *(void **)(m + 1996);
+		void *saved = hm->savedConfig;
 		if (saved != NULL)
 			hudDelete(saved);
 		saved = hudNew(sizeof(HudConfig));
 		hudConfigCtor(saved);
-		*(void **)(m + 1996) = saved;
+		hm->savedConfig = saved;
 		hudConfigSaveFromManager(saved, mgr);
 		sceClibPrintf("[SceRazorHud]:Starting GPU trace requested from Razor host tool.\n");
 		hudReloadConfigPath(pathBuf);
-		m[1480] = 1;
-		m[1481] = 0;
+		hm->traceNeedStart = 1;
+		hm->traceTriggered = 0;
 	}
 	if (hudHostToolPollTrigger() != 0) {
 		sceClibPrintf("[SceRazorHud]:GPU trace triggered from Razor host tool.\n");
-		m[1481] = 1;
+		hm->traceTriggered = 1;
 	}
 	if (hudHostToolPollCancel() != 0) {
-		void *saved = *(void **)(m + 1996);
+		void *saved = hm->savedConfig;
 		sceClibPrintf("[SceRazorHud]:GPU trace cancelled by Razor host tool.\n");
 		if (saved != NULL) {
 			hudConfigApplyToManager(saved, mgr);
-			hudDelete(*(void **)(m + 1996));
-			*(void **)(m + 1996) = NULL;
+			hudDelete(hm->savedConfig);
+			hm->savedConfig = NULL;
 		}
-		m[1480] = 1;
-		m[1481] = 0;
+		hm->traceNeedStart = 1;
+		hm->traceTriggered = 0;
 		hudHostToolNotifyDone(0);
 		return 1;
 	}
 	return 0;
 }
 
-void hudMgrOnRingOverflow(void *mgr, int a1, int a2, int a3, int a4)
+void hudMgrOnRingOverflow(void *mgr, int ringArgA, int ringArgB, int ringArgC, int ringArgD)
 {
-	void *bufSrc = *(void **)((uint8_t *)mgr + 300);
-	void *gpuTl = *(void **)((uint8_t *)mgr + 288);
+	void *bufSrc = ((HudManager *)mgr)->gpuBufSrc;
+	void *gpuTl = ((HudManager *)mgr)->gpuTimelineSrc;
 	if (bufSrc != NULL)
-		hudGpuBufSrcOnOverflow(bufSrc, a1, a2, a3, (uint8_t)a4);
+		hudGpuBufSrcOnOverflow(bufSrc, ringArgA, ringArgB, ringArgC, (uint8_t)ringArgD);
 	if (gpuTl != NULL)
 		hudGpuTimelineNull4();
 }
 
-void hudMgrOnRingInit(void *mgr, int a1, int a2, int a3, int a4)
+void hudMgrOnRingInit(void *mgr, int ringArgA, int ringArgB, int ringArgC, int ringArgD)
 {
-	void *bufSrc = *(void **)((uint8_t *)mgr + 300);
-	void *gpuTl = *(void **)((uint8_t *)mgr + 288);
+	void *bufSrc = ((HudManager *)mgr)->gpuBufSrc;
+	void *gpuTl = ((HudManager *)mgr)->gpuTimelineSrc;
 	if (bufSrc != NULL)
-		hudGpuBufSrcOnInit(bufSrc, (uint32_t)a1, (uint32_t)a2, (uint32_t)a3, (uint32_t)a4);
+		hudGpuBufSrcOnInit(bufSrc, (uint32_t)ringArgA, (uint32_t)ringArgB, (uint32_t)ringArgC, (uint32_t)ringArgD);
 	if (gpuTl != NULL)
 		hudGpuTimelineNull2();
 }
 
-void hudMgrOnRingUpdate(void *mgr, int a1, int a2, int a3, int a4)
+void hudMgrOnRingUpdate(void *mgr, int ringArgA, int ringArgB, int ringArgC, int ringArgD)
 {
-	void *bufSrc = *(void **)((uint8_t *)mgr + 300);
-	void *gpuTl = *(void **)((uint8_t *)mgr + 288);
+	void *bufSrc = ((HudManager *)mgr)->gpuBufSrc;
+	void *gpuTl = ((HudManager *)mgr)->gpuTimelineSrc;
 	if (bufSrc != NULL)
-		hudGpuBufSrcOnUpdate(bufSrc, (uint32_t)a1, (uint32_t)a2, (uint32_t)a3, (uint32_t)a4);
+		hudGpuBufSrcOnUpdate(bufSrc, (uint32_t)ringArgA, (uint32_t)ringArgB, (uint32_t)ringArgC, (uint32_t)ringArgD);
 	if (gpuTl != NULL)
 		hudGpuTimelineNull3();
 }
 
 int hudMgrTraceTrigger(void *mgr)
 {
-	uint8_t *m = (uint8_t *)mgr;
-	if (*(int *)(m + 188) != 2)
+	HudManager *hm = (HudManager *)mgr;
+	if (hm->perfMode != 2)
 		return HUD_ERR_WRONG_MODE;
-	*(uint32_t *)(m + 1472) = 0;
-	m[1481] = 1;
+	hm->traceStopFrame = 0;
+	hm->traceTriggered = 1;
 	return 0;
 }
 
 int hudMgrTraceRingBufferSize(void *mgr)
 {
-	uint8_t *m = (uint8_t *)mgr;
+	HudManager *hm = (HudManager *)mgr;
 	uint32_t info[2];
 	void *pa;
 
-	if (*(int *)(m + 188) != 2)
+	if (hm->perfMode != 2)
 		return HUD_ERR_WRONG_MODE;
-	pa = *(void **)(m + 1384);
+	pa = hm->paMgr;
 	if (pa == NULL)
 		return HUD_ERR_INTERNAL;
 	hudPaGetBufferInfo(pa, info);
@@ -287,12 +287,12 @@ int hudMgrTraceRingBufferSize(void *mgr)
 
 int hudMgrTraceRingBufferUsed(void *mgr)
 {
-	uint8_t *m = (uint8_t *)mgr;
+	HudManager *hm = (HudManager *)mgr;
 	void *pa;
 
-	if (*(int *)(m + 188) != 2)
+	if (hm->perfMode != 2)
 		return HUD_ERR_WRONG_MODE;
-	pa = *(void **)(m + 1384);
+	pa = hm->paMgr;
 	if (pa == NULL)
 		return HUD_ERR_INTERNAL;
 	return hudPaGetTraceUsed(pa);
@@ -360,7 +360,8 @@ int hudConfigLookupMetricsGroup(uint32_t group, void *dst)
 	if (dst == NULL || group > 53U)
 		return HUD_ERR_INVALID_PARAM;
 	sceClibMemcpy_safe(dst, &g_gpuTraceMetricsTable[group][2], 0x20U);
-	sceClibMemcpy_safe((uint8_t *)dst + 32, &g_gpuTraceMetricsTable[group][10], 0x20U);
+	uint32_t *dstWords = (uint32_t *)dst;
+	sceClibMemcpy_safe(&dstWords[8], &g_gpuTraceMetricsTable[group][10], 0x20U);
 	return 0;
 }
 

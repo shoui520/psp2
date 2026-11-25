@@ -171,10 +171,10 @@ float voiceExpf(float x)
 		scale = (float)((double)scale * 0.367879441);
 	}
 
-	double x2 = (double)(x * x);
+	double xSq = (double)(x * x);
 	double xd = (double)x;
-	double inner = 1.0 + x2 / (60.0 * (1.0 + x2 / 140.0));
-	double frac = (2.0 * xd) / ((2.0 - xd) + (x2 / 6.0) / inner);
+	double inner = 1.0 + xSq / (60.0 * (1.0 + xSq / 140.0));
+	double frac = (2.0 * xd) / ((2.0 - xd) + (xSq / 6.0) / inner);
 	return (float)((1.0 + frac) * (double)scale);
 }
 
@@ -221,11 +221,11 @@ float voiceSinf(float x)
 		xd = (double)x;
 	}
 
-	float x2 = x * x;
-	double c3 = (double)(42.0f - x2);
-	double c2 = (double)(20.0f - x2) + (double)(20.0f * x * x) / c3;
-	double c1 = (double)(6.0f - x2) + (double)(6.0f * x * x) / c2;
-	double denom = 1.0 + (double)x2 / c1;
+	float xSq = x * x;
+	double cfOuter = (double)(42.0f - xSq);
+	double cfMid = (double)(20.0f - xSq) + (double)(20.0f * x * x) / cfOuter;
+	double cfInner = (double)(6.0f - xSq) + (double)(6.0f * x * x) / cfMid;
+	double denom = 1.0 + (double)xSq / cfInner;
 	return (float)((double)sign * (xd / denom));
 }
 

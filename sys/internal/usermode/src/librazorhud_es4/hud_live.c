@@ -31,7 +31,7 @@ typedef struct HudLiveSession {
 
 int hudMgrLiveGetMetricsGroup(void *mgr)
 {
-	void *live = *(void **)((uint8_t *)mgr + 1476);
+	void *live = ((HudManager *)mgr)->liveSession;
 	if (live != NULL)
 		return hudLiveGetMetricsGroup(live);
 	return 0;
@@ -39,8 +39,8 @@ int hudMgrLiveGetMetricsGroup(void *mgr)
 
 int hudMgrLiveSetMetricsGroup(void *mgr, int internal, uint32_t group)
 {
-	uint8_t *m = (uint8_t *)mgr;
-	int mode = *(int *)(m + 188);
+	HudManager *hm = (HudManager *)mgr;
+	int mode = hm->perfMode;
 	void *live;
 
 	if (mode == 4) {
@@ -49,7 +49,7 @@ int hudMgrLiveSetMetricsGroup(void *mgr, int internal, uint32_t group)
 	} else if (mode != 3) {
 		return HUD_ERR_WRONG_MODE;
 	}
-	live = *(void **)(m + 1476);
+	live = hm->liveSession;
 	if (live != NULL)
 		return hudLiveSetMetricsGroup(live, group);
 	return HUD_ERR_NOT_INITIALIZED;
@@ -57,103 +57,103 @@ int hudMgrLiveSetMetricsGroup(void *mgr, int internal, uint32_t group)
 
 int hudMgrLiveStart(void *mgr, int internal)
 {
-	uint8_t *m = (uint8_t *)mgr;
-	if ((*(uint32_t *)(m + 144) & 0x10U) != 0) {
+	HudManager *hm = (HudManager *)mgr;
+	if ((hm->flags & 0x10U) != 0) {
 		if (internal == 0)
 			return HUD_ERR_WRONG_MODE;
-	} else if (*(int *)(m + 188) != 3) {
+	} else if (hm->perfMode != 3) {
 		return HUD_ERR_WRONG_MODE;
 	}
-	if (*(void **)(m + 1384) != NULL && *(void **)(m + 1476) != NULL)
-		return hudLiveStart(*(void **)(m + 1476));
+	if (hm->paMgr != NULL && hm->liveSession != NULL)
+		return hudLiveStart(hm->liveSession);
 	return HUD_ERR_NOT_INITIALIZED;
 }
 
 int hudMgrLiveIsRunning(void *mgr)
 {
-	uint8_t *m = (uint8_t *)mgr;
-	if (*(void **)(m + 1384) == NULL)
+	HudManager *hm = (HudManager *)mgr;
+	if (hm->paMgr == NULL)
 		return 0;
-	if (*(void **)(m + 1476) != NULL)
-		return hudLiveIsRunning(*(void **)(m + 1476));
+	if (hm->liveSession != NULL)
+		return hudLiveIsRunning(hm->liveSession);
 	return 0;
 }
 
 int hudMgrLiveStop(void *mgr, int internal)
 {
-	uint8_t *m = (uint8_t *)mgr;
-	if ((*(uint32_t *)(m + 144) & 0x10U) != 0) {
+	HudManager *hm = (HudManager *)mgr;
+	if ((hm->flags & 0x10U) != 0) {
 		if (internal == 0)
 			return HUD_ERR_WRONG_MODE;
-	} else if (*(int *)(m + 188) != 3) {
+	} else if (hm->perfMode != 3) {
 		return HUD_ERR_WRONG_MODE;
 	}
-	if (*(void **)(m + 1476) != NULL && *(void **)(m + 1384) != NULL)
-		return hudLiveStop(*(void **)(m + 1476));
+	if (hm->liveSession != NULL && hm->paMgr != NULL)
+		return hudLiveStop(hm->liveSession);
 	return HUD_ERR_NOT_INITIALIZED;
 }
 
 int hudMgrLiveSetBuffer(void *mgr, int internal, void *buf, uint32_t size, void *results)
 {
-	uint8_t *m = (uint8_t *)mgr;
-	if ((*(uint32_t *)(m + 144) & 0x10U) != 0) {
+	HudManager *hm = (HudManager *)mgr;
+	if ((hm->flags & 0x10U) != 0) {
 		if (internal == 0)
 			return HUD_ERR_WRONG_MODE;
-	} else if (*(int *)(m + 188) == 3) {
+	} else if (hm->perfMode == 3) {
 		if (internal == 0 && (results == NULL || buf == NULL))
 			return HUD_ERR_NULL_POINTER;
 	} else {
 		return HUD_ERR_WRONG_MODE;
 	}
-	if (*(void **)(m + 1476) != NULL && *(void **)(m + 1384) != NULL)
-		return hudLiveSetBuffer(*(void **)(m + 1476), buf, size, results);
+	if (hm->liveSession != NULL && hm->paMgr != NULL)
+		return hudLiveSetBuffer(hm->liveSession, buf, size, results);
 	return HUD_ERR_NOT_INITIALIZED;
 }
 
 int hudMgrLiveDump(void *mgr, int internal, const char *path)
 {
-	uint8_t *m = (uint8_t *)mgr;
-	if ((*(uint32_t *)(m + 144) & 0x10U) != 0) {
+	HudManager *hm = (HudManager *)mgr;
+	if ((hm->flags & 0x10U) != 0) {
 		if (internal == 0)
 			return HUD_ERR_WRONG_MODE;
-	} else if (*(int *)(m + 188) != 3) {
+	} else if (hm->perfMode != 3) {
 		return HUD_ERR_WRONG_MODE;
 	}
-	if (*(void **)(m + 1476) != NULL && *(void **)(m + 1384) != NULL)
-		return hudLiveDump(*(void **)(m + 1476), path);
+	if (hm->liveSession != NULL && hm->paMgr != NULL)
+		return hudLiveDump(hm->liveSession, path);
 	return HUD_ERR_NOT_INITIALIZED;
 }
 
 void hudMgrGxmFinish(void *mgr)
 {
-	SceGxmContext *ctx = *(SceGxmContext **)((uint8_t *)mgr + 196);
+	SceGxmContext *ctx = ((HudManager *)mgr)->gxmContext;
 	if (ctx != NULL)
 		sceGxmFinish(ctx);
 }
 
 int hudMgrTraceSetFilename(void *mgr, const char *filename, uint32_t countLen)
 {
-	uint8_t *m = (uint8_t *)mgr;
+	HudManager *hm = (HudManager *)mgr;
 	if (filename == NULL || countLen > 16U)
 		return HUD_ERR_INVALID_PARAM;
-	sceClibStrncpy((char *)(m + 1124), filename, 255U);
-	*(uint32_t *)(m + 1380) = countLen;
-	m[1379] = '\0';
+	sceClibStrncpy(hm->traceFilename, filename, 255U);
+	hm->traceCountLen = countLen;
+	hm->traceFilename[255] = '\0';
 	return 0;
 }
 
 char *hudMgrTraceGetFilename(void *mgr, char *dst, int size, uint32_t *countLen)
 {
-	uint8_t *m = (uint8_t *)mgr;
-	char *ret = sceClibStrncpy(dst, (const char *)(m + 1124), (uint32_t)(size - 1));
+	HudManager *hm = (HudManager *)mgr;
+	char *ret = sceClibStrncpy(dst, hm->traceFilename, (uint32_t)(size - 1));
 	dst[size - 1] = '\0';
-	*countLen = *(uint32_t *)(m + 1380);
+	*countLen = hm->traceCountLen;
 	return ret;
 }
 
 int hudMgrSetDisplayEnabled(void *mgr, uint8_t enabled)
 {
-	*((uint8_t *)mgr + 2000) = enabled;
+	((HudManager *)mgr)->displayEnabled = enabled;
 	return 0;
 }
 
@@ -161,41 +161,41 @@ int hudMgrSetDisplayFrameCount(void *mgr, int count)
 {
 	if (count <= 0)
 		return HUD_ERR_INVALID_PARAM;
-	*(int *)((uint8_t *)mgr + 2072) = count;
+	((HudManager *)mgr)->displayFrames = count;
 	return 0;
 }
 
 int hudMgrGetDisplayFrameCount(void *mgr)
 {
-	return *(int *)((uint8_t *)mgr + 2072);
+	return ((HudManager *)mgr)->displayFrames;
 }
 
 int hudMgrSetSceneColorMode(void *mgr, int mode)
 {
-	*(int *)((uint8_t *)mgr + 156) = mode;
+	((HudManager *)mgr)->sceneColorMode = mode;
 	return 0;
 }
 
 int hudMgrGetSceneColorMode(void *mgr)
 {
-	return *(int *)((uint8_t *)mgr + 156);
+	return ((HudManager *)mgr)->sceneColorMode;
 }
 
 int hudMgrTraceSetMetricsGroup(void *mgr, int group)
 {
-	uint8_t *m = (uint8_t *)mgr;
+	HudManager *hm = (HudManager *)mgr;
 	int ret;
 
-	if (*(int *)(m + 188) != 2)
+	if (hm->perfMode != 2)
 		return HUD_ERR_WRONG_MODE;
 	if (group < 0)
 		return HUD_ERR_INVALID_PARAM;
-	ret = hudConfigLookupMetricsGroup((uint32_t)group, m + 1388);
+	ret = hudConfigLookupMetricsGroup((uint32_t)group, hm->traceCounters);
 	if (ret == 0) {
-		void *pa = *(void **)(m + 1384);
+		void *pa = hm->paMgr;
 		if (pa != NULL)
 			hudPaStop(pa);
-		m[1480] = 1;
+		hm->traceNeedStart = 1;
 	}
 	return ret;
 }
@@ -471,7 +471,8 @@ int hudLiveGetCounters(void *objPtr, void *dst)
 	HudLiveSession *sess = (HudLiveSession *)objPtr;
 	uint32_t grp = sess->state->metricsGroup;
 	sceClibMemcpy_safe(dst, &g_gpuLiveMetricsTable[grp][2], 0x20U);
-	sceClibMemcpy_safe((uint8_t *)dst + 32, &g_gpuLiveMetricsTable[grp][10], 0x20U);
+	uint32_t *dstWords = (uint32_t *)dst;
+	sceClibMemcpy_safe(&dstWords[8], &g_gpuLiveMetricsTable[grp][10], 0x20U);
 	return 0;
 }
 

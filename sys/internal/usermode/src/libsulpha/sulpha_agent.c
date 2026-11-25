@@ -556,13 +556,13 @@ SceInt32 sulphaAgentNodeDelete(SulphaAgent *agent, SulphaNode *node, SceUInt8 ev
 		if (ev != NULL) {
 			SulphaBerStream stream;
 			SulphaBerMarker msgMarker, bodyMarker, nodeMarker;
-			SceUInt8 dummyByte;
+			SceUInt8 emptyPayload;
 
 			ev->queueNode.next = NULL;
 			ev->queueNode.reserved = 0;
 			ev->agent = agent;
 			ev->dataSize = 0;
-			ev->payload = &dummyByte;
+			ev->payload = &emptyPayload;
 
 			sulphaSpinLockAcquire(&server->heapLock);
 			void *buf = sulphaHeapAlloc(&agent->heap, 64);

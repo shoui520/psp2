@@ -71,12 +71,12 @@ void *sgxRtStateInit(void *rtState, const uint32_t *words)
 
 uint32_t sgxRtCalcByteSize(const uint32_t *rtState)
 {
-	uint32_t w1 = rtState[1];
+	uint32_t wordB = rtState[1];
 	uint32_t height;
-	uint32_t fmt = w1 & 0xF1800000U;
+	uint32_t fmt = wordB & 0xF1800000U;
 	const SgxRtFormatEntry *e;
 
-	if (((w1 >> 26) & 3U) == 1U)
+	if (((wordB >> 26) & 3U) == 1U)
 		height = (((rtState[6] >> 12) & 0xFFFU) + 32U) & 0x1FE0U;
 	else
 		height = ((rtState[6] >> 12) & 0xFFFU) + 1U;
@@ -98,20 +98,20 @@ void *sgxDepthStateInit(void *depthState, const void *src)
 
 int sgxDepthIsDepthEnabled(const uint32_t **depthState, int isStore)
 {
-	uint32_t w0 = (*depthState)[0];
+	uint32_t wordA = (*depthState)[0];
 
 	if (isStore)
-		return (w0 & 0x40000U) != 0;
-	return (w0 & 0x4000U) != 0;
+		return (wordA & 0x40000U) != 0;
+	return (wordA & 0x4000U) != 0;
 }
 
 int sgxDepthIsStencilEnabled(const uint32_t **depthState, int isStore)
 {
-	uint32_t w0 = (*depthState)[0];
+	uint32_t wordA = (*depthState)[0];
 
 	if (isStore)
-		return (w0 & 0x20000U) != 0;
-	return (w0 & 0x2000U) != 0;
+		return (wordA & 0x20000U) != 0;
+	return (wordA & 0x2000U) != 0;
 }
 
 uint32_t sgxDepthGetDepthAddr(const uint32_t **depthState, int isStore)
@@ -126,8 +126,8 @@ uint32_t sgxDepthGetDepthAddr(const uint32_t **depthState, int isStore)
 uint32_t sgxDepthGetStencilAddr(const uint32_t **depthState, int isStore)
 {
 	const uint32_t *ds = *depthState;
-	uint32_t w0 = ds[0];
-	uint32_t fmt = isStore ? ((w0 >> 24) & 7U) : ((w0 >> 21) & 7U);
+	uint32_t wordA = ds[0];
+	uint32_t fmt = isStore ? ((wordA >> 24) & 7U) : ((wordA >> 21) & 7U);
 
 	if (fmt == 1U)
 		return isStore ? ds[4] : ds[6];
@@ -137,9 +137,9 @@ uint32_t sgxDepthGetStencilAddr(const uint32_t **depthState, int isStore)
 uint32_t sgxDepthCalcDepthSize(const uint32_t **depthState, int isStore)
 {
 	const uint32_t *ds = *depthState;
-	uint32_t w0 = ds[0];
-	uint32_t samples = ((w0 >> 3) & 0xFFU) + 1U;
-	uint32_t fmt = isStore ? ((w0 >> 24) & 7U) : ((w0 >> 21) & 7U);
+	uint32_t wordA = ds[0];
+	uint32_t samples = ((wordA >> 3) & 0xFFU) + 1U;
+	uint32_t fmt = isStore ? ((wordA >> 24) & 7U) : ((wordA >> 21) & 7U);
 	uint32_t bpp;
 
 	if (fmt <= 1U)
@@ -149,15 +149,15 @@ uint32_t sgxDepthCalcDepthSize(const uint32_t **depthState, int isStore)
 	else
 		bpp = 0U;
 
-	return bpp * samples * ((ds[2] + 31U) & 0xFFFFFFE0U) * 32U * ((const uint16_t *)ds)[7];
+	return bpp * samples * ((ds[2] + 31U) & 0xFFFFFFE0U) * 32U * (ds[3] >> 16);
 }
 
 uint32_t sgxDepthCalcStencilSize(const uint32_t **depthState, int isStore)
 {
 	const uint32_t *ds = *depthState;
-	uint32_t w0 = ds[0];
-	uint32_t samples = ((w0 >> 3) & 0xFFU) + 1U;
-	uint32_t fmt = isStore ? ((w0 >> 24) & 7U) : ((w0 >> 21) & 7U);
+	uint32_t wordA = ds[0];
+	uint32_t samples = ((wordA >> 3) & 0xFFU) + 1U;
+	uint32_t fmt = isStore ? ((wordA >> 24) & 7U) : ((wordA >> 21) & 7U);
 	uint32_t bpp;
 
 	if (fmt == 1U)
@@ -165,7 +165,7 @@ uint32_t sgxDepthCalcStencilSize(const uint32_t **depthState, int isStore)
 	else
 		bpp = (fmt == 0U) ? 1U : 0U;
 
-	return bpp * samples * ((ds[2] + 31U) & 0xFFFFFFE0U) * 32U * ((const uint16_t *)ds)[7];
+	return bpp * samples * ((ds[2] + 31U) & 0xFFFFFFE0U) * 32U * (ds[3] >> 16);
 }
 
 /* --- Texture format lookup & YUV layout --- */
@@ -254,7 +254,7 @@ int sgxCalcYuvLayout(uint32_t width, uint32_t height, uint32_t stride, uint32_t 
 		     uint8_t useStride, uint8_t planes, uint32_t *outPlanes, int *outSize1, int *outSize2)
 {
 	uint32_t yStride, yHeight, uvStride, uvHeight, yAlignW, uvAlignW;
-	uint32_t off1, off2, pitch1, pitch2, size1, size2;
+	uint32_t offsetA, offsetB, pitch1, pitch2, size1, size2;
 
 	if (outSize1 != NULL)
 		*outSize1 = 0;
@@ -291,28 +291,28 @@ int sgxCalcYuvLayout(uint32_t width, uint32_t height, uint32_t stride, uint32_t 
 		uvAlignW = 8U;
 
 	if (planes == 2U) {
-		off1 = yStride * yHeight;
-		off2 = 0U;
+		offsetA = yStride * yHeight;
+		offsetB = 0U;
 		pitch1 = 2U * uvAlignW;
 		pitch2 = 0U;
-		size1 = off1 + 2U * uvAlignW * uvHeight;
-		size2 = off1 + 2U * uvStride * uvHeight;
+		size1 = offsetA + 2U * uvAlignW * uvHeight;
+		size2 = offsetA + 2U * uvStride * uvHeight;
 	} else if (planes == 3U) {
 		uint32_t uvPlane = uvStride * uvHeight;
-		off1 = yStride * yHeight;
-		off2 = off1 + uvPlane;
+		offsetA = yStride * yHeight;
+		offsetB = offsetA + uvPlane;
 		pitch1 = uvAlignW;
 		pitch2 = uvAlignW;
-		size1 = off2 + uvAlignW * uvHeight;
-		size2 = off2 + uvPlane;
+		size1 = offsetB + uvAlignW * uvHeight;
+		size2 = offsetB + uvPlane;
 	} else {
 		return 0;
 	}
 
 	if (outPlanes != NULL) {
 		outPlanes[0] = 0U;
-		outPlanes[1] = off1;
-		outPlanes[2] = off2;
+		outPlanes[1] = offsetA;
+		outPlanes[2] = offsetB;
 		outPlanes[3] = yAlignW;
 		outPlanes[4] = pitch1;
 		outPlanes[5] = pitch2;
@@ -607,11 +607,11 @@ int sgxScanUsseProgram(SgxUsseProgramInfo *outInfo, uint64_t *entryPtr, uint32_t
 	return 0;
 }
 
-void sgxFindUsseTexSamples(const SgxUsseProgramInfo *info, int *outOffsets, int isSecondary)
+void sgxFindUsseTexSamples(const SgxUsseProgramInfo *info, int *outOffsets, int isSecondPass)
 {
 	uint32_t count = info->insnCount;
 	const uint32_t *insns = (const uint32_t *)info->startPtr;
-	int targetBank = isSecondary ? 3 : 2;
+	int targetBank = isSecondPass ? 3 : 2;
 	uint32_t i;
 
 	for (i = 0; i < count; i++) {
@@ -839,12 +839,12 @@ void sgxUsseVmExecMov(SgxUsseVm *vm, const uint32_t *insn)
 		int testPred = sgxUsseInsnGetTestPred(insn);
 
 		for (lane = 0; lane < repeat; lane++) {
-			int r0 = sgxUsseResolveRegIndex(&vm->idx, src0Reg, (int)lane, src0Bank);
-			uint32_t v0 = sgxUsseVmReadReg(vm, (uint32_t)r0, (uint32_t)src0Reg, src0Bank);
-			int r1 = sgxUsseResolveRegIndex(&vm->idx, src1Reg, (int)lane, src1Bank);
-			uint32_t v1 = sgxUsseVmReadReg(vm, (uint32_t)r1, (uint32_t)src1Reg, src1Bank);
-			int r2 = sgxUsseResolveRegIndex(&vm->idx, src2Reg, (int)lane, src2Bank);
-			uint32_t v2 = sgxUsseVmReadReg(vm, (uint32_t)r2, (uint32_t)src2Reg, src2Bank);
+			int regA = sgxUsseResolveRegIndex(&vm->idx, src0Reg, (int)lane, src0Bank);
+			uint32_t valA = sgxUsseVmReadReg(vm, (uint32_t)regA, (uint32_t)src0Reg, src0Bank);
+			int regB = sgxUsseResolveRegIndex(&vm->idx, src1Reg, (int)lane, src1Bank);
+			uint32_t valB = sgxUsseVmReadReg(vm, (uint32_t)regB, (uint32_t)src1Reg, src1Bank);
+			int regC = sgxUsseResolveRegIndex(&vm->idx, src2Reg, (int)lane, src2Bank);
+			uint32_t valC = sgxUsseVmReadReg(vm, (uint32_t)regC, (uint32_t)src2Reg, src2Bank);
 			int rd = sgxUsseResolveRegIndex(&vm->idx, dstReg, (int)lane, dstBank);
 			uint8_t cond[4];
 
@@ -853,12 +853,12 @@ void sgxUsseVmExecMov(SgxUsseVm *vm, const uint32_t *insn)
 				uint32_t res = 0;
 				int b;
 				for (b = 0; b < 4; b++) {
-					int8_t sv = (int8_t)((v0 >> (b * 8)) & 0xFFU);
+					int8_t sv = (int8_t)((valA >> (b * 8)) & 0xFFU);
 					cond[0] = (sv == 0);
 					cond[1] = (sv != 0);
 					cond[2] = (sv < 0);
 					cond[3] = (sv >= 0);
-					res |= (cond[testPred] ? v1 : v2) & (0xFFU << (b * 8));
+					res |= (cond[testPred] ? valB : valC) & (0xFFU << (b * 8));
 				}
 				sgxUsseVmWriteReg(vm, (uint32_t)rd, dstBank, res);
 				break;
@@ -867,33 +867,33 @@ void sgxUsseVmExecMov(SgxUsseVm *vm, const uint32_t *insn)
 				uint32_t res = 0;
 				int h;
 				for (h = 0; h < 2; h++) {
-					int16_t sv = (int16_t)((v0 >> (h * 16)) & 0xFFFFU);
+					int16_t sv = (int16_t)((valA >> (h * 16)) & 0xFFFFU);
 					cond[0] = (sv == 0);
 					cond[1] = (sv != 0);
 					cond[2] = (sv < 0);
 					cond[3] = (sv >= 0);
-					res |= (cond[testPred] ? v1 : v2) & (0xFFFFU << (h * 16));
+					res |= (cond[testPred] ? valB : valC) & (0xFFFFU << (h * 16));
 				}
 				sgxUsseVmWriteReg(vm, (uint32_t)rd, dstBank, res);
 				break;
 			}
 			case 3: {
-				int32_t sv = (int32_t)v0;
+				int32_t sv = (int32_t)valA;
 				cond[0] = (sv == 0);
 				cond[1] = (sv != 0);
 				cond[2] = (sv < 0);
 				cond[3] = (sv >= 0);
-				sgxUsseVmWriteReg(vm, (uint32_t)rd, dstBank, cond[testPred] ? v1 : v2);
+				sgxUsseVmWriteReg(vm, (uint32_t)rd, dstBank, cond[testPred] ? valB : valC);
 				break;
 			}
 			case 4: {
 				union { uint32_t u; float f; } fv;
-				fv.u = v0;
-				cond[0] = (v0 == 0U);
-				cond[1] = (v0 != 0U);
+				fv.u = valA;
+				cond[0] = (valA == 0U);
+				cond[1] = (valA != 0U);
 				cond[2] = (fv.f < 0.0f);
 				cond[3] = (fv.f >= 0.0f);
-				sgxUsseVmWriteReg(vm, (uint32_t)rd, dstBank, cond[testPred] ? v1 : v2);
+				sgxUsseVmWriteReg(vm, (uint32_t)rd, dstBank, cond[testPred] ? valB : valC);
 				break;
 			}
 			case 5:
@@ -916,9 +916,9 @@ void sgxUsseVmExecEmit(SgxUsseVm *vm, const uint32_t *insn)
 	uint32_t src2Reg = lo & 0x7FU;
 	int src1Bank = sgxUsseDecodeSrc1Bank((int)(lo >> 30), (hi & 0x20000U) != 0);
 	int src2Bank = sgxUsseDecodeSrc2Bank((int)((lo >> 28) & 3U), (hi & 0x10000U) != 0);
-	uint32_t v0 = sgxUsseVmReadReg(vm, src0Reg, src0Reg, src0Bank);
-	uint32_t v1 = sgxUsseVmReadReg(vm, src1Reg, src1Reg, src1Bank);
-	uint32_t v2 = sgxUsseVmReadReg(vm, src2Reg, src2Reg, src2Bank);
+	uint32_t valA = sgxUsseVmReadReg(vm, src0Reg, src0Reg, src0Bank);
+	uint32_t valB = sgxUsseVmReadReg(vm, src1Reg, src1Reg, src1Bank);
+	uint32_t valC = sgxUsseVmReadReg(vm, src2Reg, src2Reg, src2Bank);
 	uint32_t emitType = (hi >> 14) & 3U;
 
 	if (emitType == 0U) {
@@ -947,9 +947,9 @@ void sgxUsseVmExecEmit(SgxUsseVm *vm, const uint32_t *insn)
 				razorMemcpy(dst, tagBuf, 0x78U);
 				emitList[0] = count + 1U;
 				sgxTagStateInit(dst, vm->outRegs);
-				dst[26] = v0;
-				dst[27] = v1;
-				dst[28] = v2;
+				dst[26] = valA;
+				dst[27] = valB;
+				dst[28] = valC;
 				dst[29] = (((hi >> 3) & 0x3FU) << 6) |
 					  (((hi >> 22) & 3U) << 12) |
 					  ((lo >> 22) & 0x3FU);
@@ -977,12 +977,12 @@ void sgxUsseVmExecBitwise(SgxUsseVm *vm, const uint32_t *insn)
 	}
 
 	for (lane = 0; lane < repeat; lane++) {
-		int r1 = sgxUsseResolveRegIndex(&vm->idx, src1Reg, (int)lane, src1Bank);
-		int r2 = sgxUsseResolveRegIndex(&vm->idx, src2Reg, (int)lane, src2Bank);
-		uint32_t v1 = sgxUsseVmReadReg(vm, (uint32_t)r1, (uint32_t)src1Reg, src1Bank);
-		uint32_t v2 = sgxUsseVmReadReg(vm, (uint32_t)r2, (uint32_t)src2Reg, src2Bank);
+		int regB = sgxUsseResolveRegIndex(&vm->idx, src1Reg, (int)lane, src1Bank);
+		int regC = sgxUsseResolveRegIndex(&vm->idx, src2Reg, (int)lane, src2Bank);
+		uint32_t valB = sgxUsseVmReadReg(vm, (uint32_t)regB, (uint32_t)src1Reg, src1Bank);
+		uint32_t valC = sgxUsseVmReadReg(vm, (uint32_t)regC, (uint32_t)src2Reg, src2Bank);
 		int rd = sgxUsseResolveRegIndex(&vm->idx, dstReg, (int)lane, dstBank);
-		sgxUsseVmWriteReg(vm, (uint32_t)rd, dstBank, v1 | v2);
+		sgxUsseVmWriteReg(vm, (uint32_t)rd, dstBank, valB | valC);
 	}
 }
 
@@ -1068,47 +1068,47 @@ uint32_t sgxUsseVmRun(SgxUsseVm *vm, void *emitOut)
 	vm->idx.wrapSize = 1023;
 
 	while (1) {
-		union { uint64_t u64; uint32_t u32[2]; } insn;
+		union { uint64_t qwordVal; uint32_t wordVal[2]; } insn;
 		uint32_t op;
 		int execute = 1;
 
-		insn.u64 = *pc;
+		insn.qwordVal = *pc;
 		vm->pc = pc + 1;
-		op = insn.u32[1] >> 27;
+		op = insn.wordVal[1] >> 27;
 
 		if (op - 16U <= 9U) {
 			uint8_t ptab[4] = { 1, vm->pred[0], vm->pred[1], (uint8_t)(vm->pred[0] ^ 1) };
-			execute = ptab[(insn.u32[1] >> 25) & 3U];
+			execute = ptab[(insn.wordVal[1] >> 25) & 3U];
 		} else if (op <= 15U || (op >= 28U && op <= 30U)) {
 			uint8_t ptab[8] = {
 				1, vm->pred[0], vm->pred[1], vm->pred[2],
 				vm->pred[3], (uint8_t)(vm->pred[0] ^ 1), (uint8_t)(vm->pred[1] ^ 1), 1
 			};
-			execute = ptab[(insn.u32[1] >> 24) & 7U];
+			execute = ptab[(insn.wordVal[1] >> 24) & 7U];
 		}
 
 		if (execute) {
 			switch (op) {
 			case 5U:
-				sgxUsseVmExecMov(vm, insn.u32);
+				sgxUsseVmExecMov(vm, insn.wordVal);
 				break;
 			case 7U:
-				sgxUsseVmExecSmp(vm, insn.u32);
+				sgxUsseVmExecSmp(vm, insn.wordVal);
 				break;
 			case 10U:
-				sgxUsseVmExecBitwise(vm, insn.u32);
+				sgxUsseVmExecBitwise(vm, insn.wordVal);
 				break;
 			case 31U: {
-				uint32_t sub = (insn.u32[1] >> 20) & 3U;
+				uint32_t sub = (insn.wordVal[1] >> 20) & 3U;
 				if (sub == 2U) {
-					if (((insn.u32[1] >> 24) & 7U) == 3U)
-						sgxUsseVmExecEmit(vm, insn.u32);
+					if (((insn.wordVal[1] >> 24) & 7U) == 3U)
+						sgxUsseVmExecEmit(vm, insn.wordVal);
 					else
 						vm->errorFlags |= 8U;
 				} else if (sub != 0U) {
 					vm->errorFlags |= 8U;
-				} else if (!(((insn.u32[1] & 0x400000U) != 0U && ((insn.u32[1] >> 24) & 7U) == 2U) ||
-					     (((insn.u32[1] >> 6) & 7U) == 5U))) {
+				} else if (!(((insn.wordVal[1] & 0x400000U) != 0U && ((insn.wordVal[1] >> 24) & 7U) == 2U) ||
+					     (((insn.wordVal[1] >> 6) & 7U) == 5U))) {
 					vm->errorFlags |= 1U;
 				}
 				break;
@@ -1118,7 +1118,7 @@ uint32_t sgxUsseVmRun(SgxUsseVm *vm, void *emitOut)
 			}
 		}
 
-		if (sgxUsseInsnHasEndFlag(insn.u32))
+		if (sgxUsseInsnHasEndFlag(insn.wordVal))
 			return vm->errorFlags;
 		pc = vm->pc;
 	}

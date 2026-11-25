@@ -138,10 +138,10 @@ typedef struct SulphaHeapBlock {
 typedef struct SulphaHeap {
 	SulphaHeapBlock *base;
 	SulphaHeapBlock *freeHead;
-	SceUInt32 reserved0;
+	SceUInt32 reserved;
 	SceUInt32 totalBlocks;
 	SceUInt32 allocCount;
-	SceUInt32 reserved1;
+	SceUInt32 pad;
 } SulphaHeap;
 _Static_assert(sizeof(SulphaHeap) == 24, "SulphaHeap size");
 
@@ -317,7 +317,7 @@ typedef struct SulphaAgentCallbacks {
 
 struct SulphaAgentConfig {
 	SceUInt32 agentTypeId;
-	SceUInt32 reserved0;
+	SceUInt32 reserved;
 	SceUInt32 version;
 	const SulphaAgentCallbacks *callbacks;
 };

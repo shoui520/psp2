@@ -99,21 +99,21 @@ typedef struct JpegArmMcuCheckpoint {
 	uint8_t pad;
 	uint16_t eobRun;
 	int16_t dcPred0;
-	uint16_t pad0;
-	uint8_t *outPtr0;
-	int16_t *coefPtr0;
+	uint16_t padAlpha;
+	uint8_t *outPlaneA;
+	int16_t *coefPlaneA;
 	int16_t dcPred1;
-	uint16_t pad1;
-	uint8_t *outPtr1;
-	int16_t *coefPtr1;
+	uint16_t padBeta;
+	uint8_t *outPlaneB;
+	int16_t *coefPlaneB;
 	int16_t dcPred2;
-	uint16_t pad2;
-	uint8_t *outPtr2;
-	int16_t *coefPtr2;
+	uint16_t padGamma;
+	uint8_t *outPlaneC;
+	int16_t *coefPlaneC;
 	int16_t dcPred3;
-	uint16_t pad3;
-	uint8_t *outPtr3;
-	int16_t *coefPtr3;
+	uint16_t padDelta;
+	uint8_t *outPlaneD;
+	int16_t *coefPlaneD;
 } JpegArmMcuCheckpoint;
 
 /* Main decoder context (128-byte aligned, 7428 bytes) */
@@ -229,7 +229,7 @@ int jpegArmDecodeMcuRow(void *ctxBuf);
 int jpegArmParseHeaderAndSos(void *ctxBuf, SceSize *coefSizeOut);
 int jpegArmInitAndParseHeader(void *ctxBuf, const uint8_t *jpegBuf, SceSize jpegSize,
 	int downscale, uint8_t flags, int isSplit, SceSize *coefSizeOut);
-int jpegArmBeginDecodeOutput(void *ctxBuf, uint8_t *outBuf, int x0, int y0, int x1, int y1, void *coefBuf);
+int jpegArmBeginDecodeOutput(void *ctxBuf, uint8_t *outBuf, int valA, int posYA, int valB, int posYB, void *coefBuf);
 int jpegArmDecodeFullFrame(const uint8_t *jpegBuf, SceSize jpegSize, uint8_t *outBuf, SceSize outSize,
 	uint8_t flags, int downscale, int *outColorSpace, void *coefBuf, SceSize coefSize);
 int jpegArmGetSplitWriteBuffer(void *ctxBuf, uint8_t **writePtrOut, SceSize *writeSizeOut);

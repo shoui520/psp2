@@ -167,13 +167,14 @@ static inline void writeStringWordsToPa(volatile SceUInt32 *paReg, const char *s
 {
 	if (((SceUIntPtr)str & 3U) != 0) {
 		for (;;) {
-			SceInt32 b0 = (SceInt8)str[0];
-			SceInt32 b1 = (SceInt8)str[1];
-			SceInt32 b2 = (SceInt8)str[2];
-			SceInt32 b3 = (SceInt8)str[3];
+			SceInt32 firstByte = (SceInt8)str[0];
+			SceInt32 secondByte = (SceInt8)str[1];
+			SceInt32 thirdByte = (SceInt8)str[2];
+			SceInt32 fourthByte = (SceInt8)str[3];
 
-			*paReg = (SceUInt32)((b0 << 24) | (b1 << 16) | (b2 << 8) | b3);
-			if (b0 == 0 || b1 == 0 || b2 == 0 || b3 == 0)
+			*paReg = (SceUInt32)((firstByte << 24) | (secondByte << 16) |
+					     (thirdByte << 8) | fourthByte);
+			if (firstByte == 0 || secondByte == 0 || thirdByte == 0 || fourthByte == 0)
 				break;
 			str += 4;
 		}

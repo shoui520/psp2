@@ -203,35 +203,35 @@ int sgxDmaFindReg(const uint32_t *dmaEntry, uint32_t regIdx, uint32_t *outOffset
 
 /* --- SGX texture layout / size calculators --- */
 
-static inline __attribute__((always_inline)) uint32_t sgxTexWidth(uint32_t w1)
+static inline __attribute__((always_inline)) uint32_t sgxTexWidth(uint32_t wordB)
 {
-	switch (w1 & 0xE0000000U) {
+	switch (wordB & 0xE0000000U) {
 	case 0x00000000U:
 	case 0x40000000U:
-		return 1U << ((w1 >> 16) & 0xFU);
+		return 1U << ((wordB >> 16) & 0xFU);
 	case 0x60000000U:
 	case 0x80000000U:
 	case 0xA0000000U:
 	case 0xC0000000U:
 	case 0xE0000000U:
-		return ((w1 >> 12) & 0xFFFU) + 1U;
+		return ((wordB >> 12) & 0xFFFU) + 1U;
 	default:
 		return 0U;
 	}
 }
 
-static inline __attribute__((always_inline)) uint32_t sgxTexHeight(uint32_t w1)
+static inline __attribute__((always_inline)) uint32_t sgxTexHeight(uint32_t wordB)
 {
-	switch (w1 & 0xE0000000U) {
+	switch (wordB & 0xE0000000U) {
 	case 0x00000000U:
 	case 0x40000000U:
-		return 1U << (w1 & 0xFU);
+		return 1U << (wordB & 0xFU);
 	case 0x60000000U:
 	case 0x80000000U:
 	case 0xA0000000U:
 	case 0xC0000000U:
 	case 0xE0000000U:
-		return (w1 & 0xFFFU) + 1U;
+		return (wordB & 0xFFFU) + 1U;
 	default:
 		return 0U;
 	}
@@ -242,9 +242,9 @@ int sgxCalcTexLevelSize(const void *texWordsVoid, uint32_t mipCount, void *outLe
 	const uint32_t *tw = (const uint32_t *)texWordsVoid;
 	uint32_t *levels = (uint32_t *)outLevelsVoid;
 	const uint8_t *fmtInfo;
-	uint32_t w0 = tw[0];
-	uint32_t w1 = tw[1];
-	uint32_t typeBits = w1 & 0xE0000000U;
+	uint32_t wordA = tw[0];
+	uint32_t wordB = tw[1];
+	uint32_t typeBits = wordB & 0xE0000000U;
 	uint32_t height, width, bpp, layoutType;
 	uint32_t potW, potH, minW, minH;
 	uint32_t offset = 0;
@@ -254,11 +254,11 @@ int sgxCalcTexLevelSize(const void *texWordsVoid, uint32_t mipCount, void *outLe
 	if (levels != NULL)
 		sceClibMemset(levels, 0, 36U * mipCount);
 
-	fmtInfo = (const uint8_t *)sgxLookupTexFormat(w1 & 0x1F000000U, (int)(w0 >> 31));
-	useMipStride = (typeBits != 0xC0000000U) && (((w0 >> 17) & 0xFU) != 15U);
-	height = sgxTexHeight(w1);
-	width = sgxTexWidth(w1);
-	bpp = *(const uint16_t *)(fmtInfo + 4);
+	fmtInfo = (const uint8_t *)sgxLookupTexFormat(wordB & 0x1F000000U, (int)(wordA >> 31));
+	useMipStride = (typeBits != 0xC0000000U) && (((wordA >> 17) & 0xFU) != 15U);
+	height = sgxTexHeight(wordB);
+	width = sgxTexWidth(wordB);
+	bpp = *(const uint16_t *)&fmtInfo[4];
 
 	switch (typeBits) {
 	case 0x00000000U: layoutType = 0; break;
@@ -276,8 +276,8 @@ int sgxCalcTexLevelSize(const void *texWordsVoid, uint32_t mipCount, void *outLe
 	minH = fmtInfo[10] & 0xFU;
 	minW = fmtInfo[10] >> 4;
 
-	if ((sgxIsSwizzledTexType((int)((w0 >> 6) & 7U)) ||
-	     sgxIsSwizzledTexType((int)((w0 >> 3) & 7U))) &&
+	if ((sgxIsSwizzledTexType((int)((wordA >> 6) & 7U)) ||
+	     sgxIsSwizzledTexType((int)((wordA >> 3) & 7U))) &&
 	    ((fmtInfo[6] & 1U) == 0U)) {
 		uint32_t logW = 0, logH = 0, maxLog, t;
 		offset = (52U * bpp) >> 3;
@@ -340,9 +340,9 @@ int sgxCalcTexLevelSize(const void *texWordsVoid, uint32_t mipCount, void *outLe
 				break;
 			}
 			case 4:
-				pitch = 4U * (((((w0 >> 1) & 3U) << 13) |
-					       ((((w0 >> 17) & 0x3FFU) << 3)) |
-					       ((w0 >> 9) & 7U)) + 1U);
+				pitch = 4U * (((((wordA >> 1) & 3U) << 13) |
+					       ((((wordA >> 17) & 0x3FFU) << 3)) |
+					       ((wordA >> 9) & 7U)) + 1U);
 				levelSize = pitch * height;
 				stepSize = levelSize;
 				break;
@@ -408,9 +408,9 @@ int sgxTexGetPalette(const void *texWordsVoid, uint32_t *outGpuAddr, int *outEnt
 uint32_t sgxTexMaxMipLevels(const void *texWordsVoid)
 {
 	const uint32_t *tw = (const uint32_t *)texWordsVoid;
-	uint32_t w1 = tw[1];
-	uint32_t h = sgxTexHeight(w1);
-	uint32_t w = sgxTexWidth(w1);
+	uint32_t wordB = tw[1];
+	uint32_t h = sgxTexHeight(wordB);
+	uint32_t w = sgxTexWidth(wordB);
 	uint32_t maxDim = (h >= w) ? h : w;
 	uint32_t levels = 0;
 
@@ -424,11 +424,11 @@ uint32_t sgxTexMaxMipLevels(const void *texWordsVoid)
 uint32_t sgxCalcCubemapLayout(const void *texWordsVoid, uint32_t *outFaceOffsets, uint32_t *outTotal)
 {
 	const uint32_t *tw = (const uint32_t *)texWordsVoid;
-	uint32_t w0 = tw[0];
-	uint32_t w1 = tw[1];
-	uint32_t typeBits = w1 & 0xE0000000U;
-	uint32_t w = sgxTexWidth(w1);
-	uint32_t h = sgxTexHeight(w1);
+	uint32_t wordA = tw[0];
+	uint32_t wordB = tw[1];
+	uint32_t typeBits = wordB & 0xE0000000U;
+	uint32_t w = sgxTexWidth(wordB);
+	uint32_t h = sgxTexHeight(wordB);
 	uint32_t mipCount;
 	const uint8_t *fmtInfo;
 	int alignedFaces = 0;
@@ -437,11 +437,11 @@ uint32_t sgxCalcCubemapLayout(const void *texWordsVoid, uint32_t *outFaceOffsets
 	if (typeBits == 0xC0000000U) {
 		mipCount = 1U;
 	} else {
-		uint32_t m = (w0 >> 17) & 0xFU;
+		uint32_t m = (wordA >> 17) & 0xFU;
 		mipCount = (m == 15U) ? 1U : (m + 1U);
 	}
 
-	fmtInfo = (const uint8_t *)sgxLookupTexFormat(w1 & 0x1F000000U, (int)(w0 >> 31));
+	fmtInfo = (const uint8_t *)sgxLookupTexFormat(wordB & 0x1F000000U, (int)(wordA >> 31));
 	switch (fmtInfo[8]) {
 	case 0: alignedFaces = 1; break;
 	case 1:
@@ -452,7 +452,7 @@ uint32_t sgxCalcCubemapLayout(const void *texWordsVoid, uint32_t *outFaceOffsets
 	default: alignedFaces = 0; break;
 	}
 
-	if (typeBits == 0xC0000000U || ((w0 >> 17) & 0xFU) == 15U || !alignedFaces) {
+	if (typeBits == 0xC0000000U || ((wordA >> 17) & 0xFU) == 15U || !alignedFaces) {
 		uint32_t faceSize = 0;
 		sgxCalcTexLevelSize(tw, mipCount, NULL, &faceSize);
 		total = 6U * faceSize;
@@ -467,22 +467,22 @@ uint32_t sgxCalcCubemapLayout(const void *texWordsVoid, uint32_t *outFaceOffsets
 	} else {
 		uint32_t maxLevels = sgxTexMaxMipLevels(tw);
 		uint32_t faceSize = 0;
-		uint32_t f1, f2, f3, f4, f5;
+		uint32_t fmtA, fmtB, fmtC, fmtD, fmtE;
 
 		sgxCalcTexLevelSize(tw, maxLevels, NULL, &faceSize);
-		f1 = (faceSize + 2047U) & ~2047U;
-		f2 = (faceSize + 2047U + f1) & ~2047U;
-		f3 = (faceSize + 2047U + f2) & ~2047U;
-		f4 = (faceSize + 2047U + f3) & ~2047U;
-		f5 = (faceSize + 2047U + f4) & ~2047U;
-		total = f5 + faceSize;
+		fmtA = (faceSize + 2047U) & ~2047U;
+		fmtB = (faceSize + 2047U + fmtA) & ~2047U;
+		fmtC = (faceSize + 2047U + fmtB) & ~2047U;
+		fmtD = (faceSize + 2047U + fmtC) & ~2047U;
+		fmtE = (faceSize + 2047U + fmtD) & ~2047U;
+		total = fmtE + faceSize;
 		if (outFaceOffsets != NULL) {
 			outFaceOffsets[0] = 0U;
-			outFaceOffsets[1] = f1;
-			outFaceOffsets[2] = f2;
-			outFaceOffsets[3] = f3;
-			outFaceOffsets[4] = f4;
-			outFaceOffsets[5] = f5;
+			outFaceOffsets[1] = fmtA;
+			outFaceOffsets[2] = fmtB;
+			outFaceOffsets[3] = fmtC;
+			outFaceOffsets[4] = fmtD;
+			outFaceOffsets[5] = fmtE;
 		}
 	}
 
@@ -657,22 +657,22 @@ int sgxPdsOpAdd(SgxPdsVm *vm, const uint32_t *insn)
 	uint32_t src1Idx = (w >> 9) & 0x3FU;
 	int dstIsConst = (w & 0x40U) != 0U;
 	uint32_t dstIdx = w & 0x3FU;
-	uint32_t v0;
+	uint32_t valA;
 
 	if ((w & 0x800000U) == 0U) {
-		v0 = vm->tempRegs[src0Idx];
+		valA = vm->tempRegs[src0Idx];
 	} else if (src0Idx == 0U) {
-		v0 = vm->ir0;
+		valA = vm->ir0;
 	} else if (src0Idx == 1U) {
-		v0 = vm->ir1;
+		valA = vm->ir1;
 	} else {
-		v0 = 0U;
+		valA = 0U;
 	}
 
 	if (dstIsConst)
-		vm->constRegs[dstIdx] = v0 + vm->constRegs[src1Idx];
+		vm->constRegs[dstIdx] = valA + vm->constRegs[src1Idx];
 	else
-		vm->tempRegs[dstIdx] = v0 + vm->constRegs[src1Idx];
+		vm->tempRegs[dstIdx] = valA + vm->constRegs[src1Idx];
 	return 0;
 }
 
@@ -683,25 +683,25 @@ int sgxPdsOpMul(SgxPdsVm *vm, const uint32_t *insn)
 	uint32_t src1Idx = (w >> 8) & 0x7FU;
 	int dstIsConst = (w & 0x40U) != 0U;
 	uint32_t dstIdx = w & 0x3FU;
-	int32_t v0, v1;
+	int32_t valA, valB;
 
 	if ((w & 0x800000U) != 0U) {
 		const uint16_t *ir16 = (const uint16_t *)&vm->ir0;
-		v0 = (src0Idx < 4U) ? (int32_t)ir16[src0Idx] : 0;
+		valA = (src0Idx < 4U) ? (int32_t)ir16[src0Idx] : 0;
 	} else {
-		v0 = (int32_t)((const uint16_t *)vm->tempRegs)[src0Idx];
+		valA = (int32_t)((const uint16_t *)vm->tempRegs)[src0Idx];
 	}
 
-	v1 = (int32_t)((const uint16_t *)vm->constRegs)[src1Idx];
+	valB = (int32_t)((const uint16_t *)vm->constRegs)[src1Idx];
 	if (vm->flags < 0) {
-		v0 = (int16_t)v0;
-		v1 = (int16_t)v1;
+		valA = (int16_t)valA;
+		valB = (int16_t)valB;
 	}
 
 	if (dstIsConst)
-		vm->constRegs[dstIdx] = (uint32_t)(v0 * v1);
+		vm->constRegs[dstIdx] = (uint32_t)(valA * valB);
 	else
-		vm->tempRegs[dstIdx] = (uint32_t)(v0 * v1);
+		vm->tempRegs[dstIdx] = (uint32_t)(valA * valB);
 	return 0;
 }
 

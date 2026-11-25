@@ -1281,7 +1281,7 @@ SceInt32 ngsPcmCaptureCreateSource(SceUInt64 agentHandle, const SceUInt32 *snaps
 	rec->sulphaNode = obj->sulphaNode;
 	rec->handle = snapshotData[0];
 	rec->bufferCount = (SceUInt8)snapshotData[5];
-	rec->currentBuffer = (SceInt8)((const SceUInt8 *)snapshotData)[30];
+	rec->currentBuffer = (SceInt8)((snapshotData[7] >> 16) & 0xFFU);
 	rec->position = snapshotData[6];
 	rec->loopCount = (SceInt16)(snapshotData[7] & 0xFFFFU);
 
@@ -1362,7 +1362,7 @@ SceInt32 ngsPcmCaptureUpdateSource(SceUInt64 agentHandle, const SceUInt32 *snaps
 	NgsSulphaPcmSourceRecord *rec = (NgsSulphaPcmSourceRecord *)obj->agentRecord;
 	if (rec->handle == snapshotData[0]) {
 		rec->bufferCount = (SceUInt8)snapshotData[5];
-		rec->currentBuffer = (SceInt8)((const SceUInt8 *)snapshotData)[30];
+		rec->currentBuffer = (SceInt8)((snapshotData[7] >> 16) & 0xFFU);
 		rec->position = snapshotData[6];
 		rec->loopCount = (SceInt16)(snapshotData[7] & 0xFFFFU);
 		if (state->started != 0) {

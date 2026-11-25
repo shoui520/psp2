@@ -170,8 +170,8 @@ const NgsSulphaAgentsConfig *ngsSulphaBuildAgentsConfig(const SceSulphaNgsConfig
 	ngsGetApiTraceTable(&g_ngsSulphaApiTable, &g_ngsSulphaApiCount);
 	g_ngsApiTraceCfg.eventCount = g_ngsSulphaApiCount;
 	g_ngsApiTraceCfg.events = g_ngsSulphaApiTable;
-	g_ngsApiTraceCfg.reserved0 = 0;
-	g_ngsApiTraceCfg.reserved1 = 0;
+	g_ngsApiTraceCfg.reserved = 0;
+	g_ngsApiTraceCfg.pad = 0;
 
 	g_ngsPcmCaptureCfg.header.typeId = NGS_SULPHA_AGENT_PCM_CAPTURE;
 	g_ngsPcmCaptureCfg.header.configSize = sizeof(g_ngsPcmCaptureCfg);

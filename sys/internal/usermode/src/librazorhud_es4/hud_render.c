@@ -74,100 +74,6 @@ typedef struct HudTimelineWidget {
 	float rowHeight;               /* 16248 */
 } HudTimelineWidget;
 
-typedef struct HudManager {
-	void *views[20];               /* 0..79 */
-	uint32_t viewCount;            /* 80 */
-	void *dataSources[10];         /* 84..123 */
-	uint32_t dataSourceCount;      /* 124 */
-	float orthoLeft;               /* 128 */
-	float orthoRight;              /* 132 */
-	float orthoTop;                /* 136 */
-	float orthoBottom;             /* 140 */
-	uint32_t flags;                /* 144 */
-	uint32_t hudCores;             /* 148 */
-	uint32_t hudFirmware;          /* 152 */
-	uint32_t sceneColorMode;       /* 156 */
-	void *userMarkerBuf;           /* 160 */
-	void *activityBuf;             /* 164 */
-	uint32_t activityPackets;      /* 168 */
-	uint32_t userMarkerPackets;    /* 172 */
-	uint32_t paramBufSize;         /* 176 */
-	uint32_t gxmVer0;              /* 180 */
-	uint32_t gxmVer1;              /* 184 */
-	int32_t perfMode;              /* 188 */
-	void *gxmHostMem;              /* 192 */
-	SceGxmContext *gxmContext;     /* 196 */
-	SceGxmShaderPatcher *patcher;  /* 200 */
-	SceGxmShaderPatcherId vpId;    /* 204 */
-	SceGxmShaderPatcherId fpColorId; /* 208 */
-	SceGxmShaderPatcherId fpTexId; /* 212 */
-	SceGxmVertexProgram *vp;       /* 216 */
-	SceGxmFragmentProgram *fpTex;  /* 220 */
-	SceGxmFragmentProgram *fpColor;/* 224 */
-	const SceGxmProgramParameter *wvpParam; /* 228 */
-	SceGxmRenderTarget *rt;        /* 232 */
-	uint32_t rtWidth;              /* 236 */
-	uint32_t rtHeight;             /* 240 */
-	uint32_t msaaMode;             /* 244 */
-	uint32_t clipXMin;             /* 248 */
-	uint32_t clipYMin;             /* 252 */
-	uint32_t clipXMax;             /* 256 */
-	uint32_t clipYMax;             /* 260 */
-	SceGxmNotification notify[2];  /* 264..279 */
-	uint32_t swapCount;            /* 280 */
-	void *cpuMarkersSrc;           /* 284 */
-	void *gpuTimelineSrc;          /* 288 */
-	void *gpuFrameSrc;             /* 292 */
-	void *cpuActSrc;               /* 296 */
-	void *gpuBufSrc;               /* 300 */
-	void *gpuTimelineWidget;       /* 304 */
-	void *gpuFrameWidget;          /* 308 */
-	void *cpuMarkersWidget;        /* 312 */
-	void *cpuUtilWidget;           /* 316 */
-	void *cpuFpsWidget;            /* 320 */
-	void *cpuCoreWidgets[4];       /* 324..339 */
-	void *gpuBufWidget;            /* 340 */
-	void *txtLogView;              /* 344 */
-	void *csvLogView;              /* 348 */
-	void *xmlLogView;              /* 352 */
-	char txtFilename[256];         /* 356..611 */
-	char csvFilename[256];         /* 612..867 */
-	char xmlFilename[256];         /* 868..1123 */
-	char traceFilename[256];       /* 1124..1379 */
-	uint32_t traceCountLen;        /* 1380 */
-	void *paMgr;                   /* 1384 */
-	uint32_t traceCounters[16];    /* 1388..1451 */
-	uint32_t counterPad;              /* 1452 */
-	uint64_t traceMask;            /* 1456 */
-	uint32_t traceRate;            /* 1464 */
-	uint32_t traceBufSize;         /* 1468 */
-	uint32_t traceStopFrame;       /* 1472 */
-	void *liveSession;             /* 1476 */
-	uint8_t traceNeedStart;        /* 1480 */
-	uint8_t traceTriggered;        /* 1481 */
-	uint8_t perfLoaded;            /* 1482 */
-	uint8_t widgetsBuilt;          /* 1483 */
-	char hostConfigPath[512];      /* 1484..1995 */
-	void *savedConfig;             /* 1996 */
-	uint8_t displayEnabled;        /* 2000 */
-	uint8_t displayPad[7];
-	uint64_t paTime;               /* 2008 */
-	uint32_t tbFreq;               /* 2016 */
-	uint32_t tbFreqHi;             /* 2020 */
-	uint64_t gpuBaseUs;            /* 2024 */
-	uint64_t cpuBaseUs;            /* 2032 */
-	float gpuWinStart;             /* 2040 */
-	float gpuWinEnd;               /* 2044 */
-	float cpuWinStart;             /* 2048 */
-	float cpuWinEnd;               /* 2052 */
-	float cpuScale;                /* 2056 */
-	float gpuScale;                /* 2060 */
-	uint32_t sampleInterval;       /* 2064 */
-	uint32_t frameCounter;         /* 2068 */
-	uint32_t displayFrames;        /* 2072 */
-	uint32_t useCpuBase;           /* 2076 */
-} HudManager;
-
 static const HudWidgetVtable g_widgetBaseVtable = {
 	hudWidgetBaseDtor,
 	hudWidgetBaseDeletingDtor,
@@ -356,7 +262,7 @@ void *hudMgrCtor(void *mgrPtr)
 	m->activityPackets = 4096U;
 	m->userMarkerPackets = 16384U;
 	m->displayEnabled = 1;
-	m->gxmVer1 = 0;
+	m->gxmVerMinor = 0;
 	m->perfMode = 1;
 	m->txtFilename[0] = '\0';
 	m->traceFilename[0] = '\0';
@@ -365,7 +271,7 @@ void *hudMgrCtor(void *mgrPtr)
 	m->perfLoaded = 0;
 	m->widgetsBuilt = 0;
 	m->paramBufSize = 0;
-	m->gxmVer0 = 0;
+	m->gxmVerMajor = 0;
 	m->cpuCoreWidgets[0] = NULL;
 	m->cpuCoreWidgets[1] = NULL;
 	m->cpuCoreWidgets[2] = NULL;
@@ -1208,11 +1114,11 @@ void hudWidgetSetTitleStyle(void *objPtr, uint32_t style, float fontSize)
 	w->titleFontSize = fontSize;
 }
 
-void hudWidgetAddRect(void *objPtr, float x0, float y0, float x1, float y1, uint32_t color)
+void hudWidgetAddRect(void *objPtr, float posXA, float posYA, float posXB, float posYB, uint32_t color)
 {
 	HudWidgetBase *w = (HudWidgetBase *)objPtr;
 	uint32_t dark;
-	float rx1 = (x0 + 2.0f > x1) ? (x0 + 2.0f) : x1;
+	float rx1 = (posXA + 2.0f > posXB) ? (posXA + 2.0f) : posXB;
 
 	hudWidgetEnsureCmd(w, 0x0C000000U, 2U);
 	dark = (color & 0xFF000000U) |
@@ -1220,20 +1126,20 @@ void hudWidgetAddRect(void *objPtr, float x0, float y0, float x1, float y1, uint
 	       ((((color >> 8) & 0xFFU) >> 1) << 8) |
 	       ((((color >> 16) & 0xFFU) >> 1) << 16);
 
-	hudWidgetEmitVert(w, x0,  y0, color, 0, 0);
-	hudWidgetEmitVert(w, x0,  y0, color, 0, 0);
-	hudWidgetEmitVert(w, x0,  y1, dark,  0, 0);
-	hudWidgetEmitVert(w, rx1, y0, color, 0, 0);
-	hudWidgetEmitVert(w, rx1, y1, dark,  0, 0);
-	hudWidgetEmitVert(w, rx1, y1, dark,  0, 0);
+	hudWidgetEmitVert(w, posXA,  posYA, color, 0, 0);
+	hudWidgetEmitVert(w, posXA,  posYA, color, 0, 0);
+	hudWidgetEmitVert(w, posXA,  posYB, dark,  0, 0);
+	hudWidgetEmitVert(w, rx1, posYA, color, 0, 0);
+	hudWidgetEmitVert(w, rx1, posYB, dark,  0, 0);
+	hudWidgetEmitVert(w, rx1, posYB, dark,  0, 0);
 }
 
-void hudWidgetAddLine(void *objPtr, float x0, float y0, float x1, float y1, uint32_t color)
+void hudWidgetAddLine(void *objPtr, float posXA, float posYA, float posXB, float posYB, uint32_t color)
 {
 	HudWidgetBase *w = (HudWidgetBase *)objPtr;
 	hudWidgetEnsureCmd(w, 0x04000000U, 2U);
-	hudWidgetEmitVert(w, x0, y0, color, 0, 0);
-	hudWidgetEmitVert(w, x1, y1, color, 0, 0);
+	hudWidgetEmitVert(w, posXA, posYA, color, 0, 0);
+	hudWidgetEmitVert(w, posXB, posYB, color, 0, 0);
 }
 
 int hudWidgetAddText(void *objPtr, float x, float y, const char *fmt, ...)
@@ -1254,14 +1160,14 @@ int hudWidgetAddText(void *objPtr, float x, float y, const char *fmt, ...)
 	hudWidgetEnsureCmd(w, 0x0C000000U, 0U);
 	for (i = 0; i < len; i++) {
 		int ch = (int)(int8_t)(buf[i] - 32);
-		float u0 = (float)(ch % 16) * 0.0625f;
-		float v0 = (float)(ch / 16) * 0.125f;
-		float u1 = u0 + 0.0625f;
-		float v1 = v0 + 0.125f;
-		uint16_t hu0 = hudFloatToHalf(hudFloatBits(u0));
-		uint16_t hv0 = hudFloatToHalf(hudFloatBits(v0));
-		uint16_t hu1 = hudFloatToHalf(hudFloatBits(u1));
-		uint16_t hv1 = hudFloatToHalf(hudFloatBits(v1));
+		float texUA = (float)(ch % 16) * 0.0625f;
+		float texVA = (float)(ch / 16) * 0.125f;
+		float texUB = texUA + 0.0625f;
+		float texVB = texVA + 0.125f;
+		uint16_t hu0 = hudFloatToHalf(hudFloatBits(texUA));
+		uint16_t hv0 = hudFloatToHalf(hudFloatBits(texVA));
+		uint16_t hu1 = hudFloatToHalf(hudFloatBits(texUB));
+		uint16_t hv1 = hudFloatToHalf(hudFloatBits(texVB));
 		float cw = w->fontWidth;
 		float chh = w->fontHeight;
 		uint32_t col = w->textColor;
@@ -1281,7 +1187,7 @@ void hudWidgetDrawFrame(void *objPtr)
 {
 	HudWidgetBase *w = (HudWidgetBase *)objPtr;
 	uint32_t len;
-	float fsz, baseX, y0 = 0.0f, y1 = 0.0f, textY = 0.0f;
+	float fsz, baseX, posYA = 0.0f, posYB = 0.0f, textY = 0.0f;
 	uint32_t topCol = 0, botCol = 0;
 
 	hudWidgetAddRect(w, w->x, w->y, w->x + w->w, w->y + w->h, 0x40010000U);
@@ -1296,17 +1202,17 @@ void hudWidgetDrawFrame(void *objPtr)
 		topCol = (c & 0xFF000000U) | (((c & 0xFFU) >> 1) & 0xFFU) |
 			((((c >> 8) & 0xFFU) >> 1) << 8) | ((((c >> 16) & 0xFFU) >> 1) << 16);
 		botCol = c;
-		y0 = w->y;
-		y1 = w->y - fsz;
-		textY = y1;
+		posYA = w->y;
+		posYB = w->y - fsz;
+		textY = posYB;
 	} else if (w->titleStyle == 2) {
 		uint32_t c = w->titleBgColor;
 		topCol = c;
 		botCol = (c & 0xFF000000U) | (((c & 0xFFU) >> 1) & 0xFFU) |
 			((((c >> 8) & 0xFFU) >> 1) << 8) | ((((c >> 16) & 0xFFU) >> 1) << 16);
-		y0 = w->y + w->h;
-		y1 = y0 + fsz;
-		textY = y0;
+		posYA = w->y + w->h;
+		posYB = posYA + fsz;
+		textY = posYA;
 	}
 
 	hudWidgetEnsureCmd(w, 0x0C000000U, 2U);
@@ -1314,12 +1220,12 @@ void hudWidgetDrawFrame(void *objPtr)
 		float xStart = baseX + fsz;
 		float xMid = xStart + (fsz * (float)len) * 0.64f;
 		float xEnd = xMid + fsz;
-		hudWidgetEmitVert(w, xStart, y1, topCol, 0, 0);
-		hudWidgetEmitVert(w, xStart, y1, topCol, 0, 0);
-		hudWidgetEmitVert(w, baseX,  y0, botCol, 0, 0);
-		hudWidgetEmitVert(w, xMid,   y1, topCol, 0, 0);
-		hudWidgetEmitVert(w, xEnd,   y0, botCol, 0, 0);
-		hudWidgetEmitVert(w, xEnd,   y0, botCol, 0, 0);
+		hudWidgetEmitVert(w, xStart, posYB, topCol, 0, 0);
+		hudWidgetEmitVert(w, xStart, posYB, topCol, 0, 0);
+		hudWidgetEmitVert(w, baseX,  posYA, botCol, 0, 0);
+		hudWidgetEmitVert(w, xMid,   posYB, topCol, 0, 0);
+		hudWidgetEmitVert(w, xEnd,   posYA, botCol, 0, 0);
+		hudWidgetEmitVert(w, xEnd,   posYA, botCol, 0, 0);
 	}
 	w->fontWidth = fsz;
 	w->fontHeight = fsz;
@@ -1393,9 +1299,9 @@ void hudLineGraphBuild(void *objPtr)
 			float x = gx0 + dx;
 			for (i = 1U; i < cnt; i++) {
 				float curV = *hudSeriesSrcGetSample(src, s, i);
-				float y0 = gy1 - ((prevV - minV) / (maxV - minV)) * (gy1 - gy0);
-				float y1 = gy1 - ((curV  - minV) / (maxV - minV)) * (gy1 - gy0);
-				hudWidgetAddLine(w, x - dx, y0, x, y1, col);
+				float posYA = gy1 - ((prevV - minV) / (maxV - minV)) * (gy1 - gy0);
+				float posYB = gy1 - ((curV  - minV) / (maxV - minV)) * (gy1 - gy0);
+				hudWidgetAddLine(w, x - dx, posYA, x, posYB, col);
 				prevV = curV;
 				x += dx;
 			}
@@ -1477,9 +1383,9 @@ void hudBarGraphBuild(void *objPtr)
 				float curV = *hudSeriesSrcGetSample(src, s, i);
 				if (bw->mode != 0) {
 					float prevV = *hudSeriesSrcGetSample(src, s, i - 1U);
-					float y0 = gy1 - ((prevV - minV) / (maxV - minV)) * (gy1 - gy0);
-					float y1 = gy1 - ((curV  - minV) / (maxV - minV)) * (gy1 - gy0);
-					hudWidgetAddLine(w, x - dx, y0, x, y1, col);
+					float posYA = gy1 - ((prevV - minV) / (maxV - minV)) * (gy1 - gy0);
+					float posYB = gy1 - ((curV  - minV) / (maxV - minV)) * (gy1 - gy0);
+					hudWidgetAddLine(w, x - dx, posYA, x, posYB, col);
 				} else {
 					float nextY = baseY + ((gy0 - gy1) * curV) / (maxV - minV);
 					hudWidgetAddRect(w, x - dx, nextY, x, baseY, col);

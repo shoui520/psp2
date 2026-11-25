@@ -71,22 +71,22 @@ static int hudCbTraceTrigger(void)
 	return 0;
 }
 
-static void hudCbRingOverflow(int a1, int a2, int a3, int a4)
+static void hudCbRingOverflow(int ringArgA, int ringArgB, int ringArgC, int ringArgD)
 {
 	if (g_hudManager != NULL)
-		hudMgrOnRingOverflow(g_hudManager, a1, a2, a3, a4);
+		hudMgrOnRingOverflow(g_hudManager, ringArgA, ringArgB, ringArgC, ringArgD);
 }
 
-static void hudCbRingUpdate(int a1, int a2, int a3, int a4)
+static void hudCbRingUpdate(int ringArgA, int ringArgB, int ringArgC, int ringArgD)
 {
 	if (g_hudManager != NULL)
-		hudMgrOnRingUpdate(g_hudManager, a1, a2, a3, a4);
+		hudMgrOnRingUpdate(g_hudManager, ringArgA, ringArgB, ringArgC, ringArgD);
 }
 
-static void hudCbRingInit(int a1, int a2, int a3, int a4)
+static void hudCbRingInit(int ringArgA, int ringArgB, int ringArgC, int ringArgD)
 {
 	if (g_hudManager != NULL)
-		hudMgrOnRingInit(g_hudManager, a1, a2, a3, a4);
+		hudMgrOnRingInit(g_hudManager, ringArgA, ringArgB, ringArgC, ringArgD);
 }
 
 static void hudCbOnSwap(const SceGxmColorSurface *surf, SceGxmSyncObject *sync)
@@ -101,10 +101,10 @@ static void hudCbPollHostTool(void)
 		hudMgrPollHostTool(g_hudManager);
 }
 
-static void hudCbSetGxmVersions(uint32_t v0, uint32_t v1)
+static void hudCbSetGxmVersions(uint32_t texVA, uint32_t texVB)
 {
 	if (g_hudManager != NULL)
-		hudMgrSetGxmVersions(g_hudManager, v0, v1);
+		hudMgrSetGxmVersions(g_hudManager, texVA, texVB);
 }
 
 static void hudCbTerm(void)

@@ -168,8 +168,8 @@ typedef struct NgsSulphaApiTraceConfig {
 	NgsSulphaAgentHeader header;
 	SceUInt32 eventCount;
 	const NgsSulphaApiTraceEventDesc *events;
-	SceUInt32 reserved0;
-	SceUInt32 reserved1;
+	SceUInt32 reserved;
+	SceUInt32 pad;
 	SceUInt32 maxEvents;
 } NgsSulphaApiTraceConfig;
 _Static_assert(sizeof(NgsSulphaApiTraceConfig) == 36, "NgsSulphaApiTraceConfig size");
@@ -281,7 +281,7 @@ typedef struct NgsSulphaModuleQuery {
 	SceUInt32 minVal;
 	SceUInt32 maxVal;
 	SceUInt32 defaultVal;
-	SceUInt32 reserved0[8];
+	SceUInt32 reserved[8];
 	SceUInt32 sectionCount;
 	SceUInt32 moduleId;
 	SceUInt32 sectionIndex;
@@ -567,7 +567,7 @@ SceUID sceKernelGetProcessId(void);
 int sceKernelDelayThread(SceUInt32 delay);
 void *sceClibMemcpy_safe(void *dst, const void *src, SceSize len);
 void *sceClibMemset(void *dst, int ch, SceSize len);
-int sceClibMemcmp(const void *s1, const void *s2, SceSize len);
+int sceClibMemcmp(const void *lhs, const void *rhs, SceSize len);
 char *sceClibStrncpy(char *dst, const char *src, SceSize len);
 SceSize sceClibStrnlen(const char *s, SceSize maxLen);
 int sceClibVsnprintf(char *buf, SceSize size, const char *fmt, va_list ap);
@@ -715,7 +715,7 @@ void *ngsMemset(void *dst, int ch, SceSize len);
 int ngsVsnprintf(char *buf, SceSize size, const char *fmt, va_list ap);
 char *ngsStrncpy(char *dst, const char *src, SceSize len);
 SceSize ngsStrnlen(const char *s, SceSize maxLen);
-int ngsMemcmp(const void *s1, const void *s2, SceSize len);
+int ngsMemcmp(const void *lhs, const void *rhs, SceSize len);
 
 /* ngs_at9.c */
 SceInt32 ngsAt9GetSectionDetailsImpl(SceInt32 startSampleOffset, SceInt32 numSamples,

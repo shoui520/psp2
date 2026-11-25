@@ -13,7 +13,7 @@ extern void razorAnalyseSinglePds(void *ctx, uint32_t gpuAddr, uint32_t dataSize
 extern void razorPageDirClear(RazorPageBlock **pageDir);
 extern uint64_t razorCaptureFileOpen(RazorCaptureFile *file, const char *filename, const void *initData);
 extern int razorCaptureFileClose(RazorCaptureFile *file);
-extern int razorCaptureFileWriteFrameInfo(RazorCaptureFile *file, uint32_t a2, uint32_t a3);
+extern int razorCaptureFileWriteFrameInfo(RazorCaptureFile *file, uint32_t argB, uint32_t argC);
 extern uint64_t razorCaptureFileFlushMemory(RazorCaptureFile *file, int captureAll);
 extern int razorCaptureFileWriteSync(RazorCaptureFile *file);
 extern int razorCaptureFileWriteColorSurface(RazorCaptureFile *file, uint32_t surfaceId, const uint32_t *rtWords,
@@ -118,12 +118,12 @@ int razorCaptureIsSalvageCb(void)
 	return s_salvageActive;
 }
 
-void razorCaptureSetInitParamsCb(uint32_t p0, uint32_t p1, uint32_t p2)
+void razorCaptureSetInitParamsCb(uint32_t partA, uint32_t partB, uint32_t partC)
 {
 	if (s_statePtr != NULL) {
-		s_statePtr->initParams[0] = p0;
-		s_statePtr->initParams[1] = p1;
-		s_statePtr->initParams[2] = p2;
+		s_statePtr->initParams[0] = partA;
+		s_statePtr->initParams[1] = partB;
+		s_statePtr->initParams[2] = partC;
 		s_statePtr->initParams[3] = 0;
 	}
 }

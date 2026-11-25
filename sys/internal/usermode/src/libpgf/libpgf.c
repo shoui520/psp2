@@ -9,7 +9,7 @@
 
 extern void *sceClibMemcpy_safe(void *dst, const void *src, SceSize len);
 extern void *sceClibMemset(void *dst, int c, SceSize len);
-extern int sceClibStrncmp(const char *s1, const char *s2, SceSize n);
+extern int sceClibStrncmp(const char *lhs, const char *rhs, SceSize maxLen);
 extern char *sceClibStrncpy(char *dst, const char *src, SceSize n);
 extern char *sceClibStrncat(char *dst, const char *src, SceSize n);
 
@@ -66,7 +66,7 @@ struct PgfFontData {
 	uint8_t inUse;				/* +0x04C */
 	uint8_t refCount;			/* +0x04D */
 	uint8_t loaded;				/* +0x04E */
-	uint8_t reserved4F;			/* +0x04F */
+	uint8_t loadStatePad;			/* +0x04F */
 	void *streamHandle;			/* +0x050 */
 	uint32_t revision;			/* +0x054 */
 	uint32_t disabledFlag;			/* +0x058 */
@@ -78,7 +78,7 @@ struct PgfFontData {
 	uint16_t version;			/* +0x064 */
 	uint16_t headerVersion;			/* +0x066 */
 	uint8_t headerFlags[3];			/* +0x068 */
-	uint8_t headerPad6B;			/* +0x06B */
+	uint8_t headerFlagsPad;			/* +0x06B */
 	uint32_t charMapLen;			/* +0x06C */
 	uint32_t charPtrLen;			/* +0x070 */
 	uint32_t charMapBpe;			/* +0x074 */
@@ -86,7 +86,7 @@ struct PgfFontData {
 	uint8_t charMapAlign;			/* +0x07C */
 	uint8_t charPtrAlign;			/* +0x07D */
 	uint8_t bpp;				/* +0x07E */
-	uint8_t headerPad7F;			/* +0x07F */
+	uint8_t bppPad;				/* +0x07F */
 	uint32_t hSize64;			/* +0x080 */
 	uint32_t vSize64;			/* +0x084 */
 	uint32_t hRes64;			/* +0x088 */
@@ -94,10 +94,10 @@ struct PgfFontData {
 	uint8_t styleFlags;			/* +0x090 */
 	char fontName[64];			/* +0x091 */
 	char fontType[64];			/* +0x0D1 */
-	uint8_t headerPad111;			/* +0x111 */
+	uint8_t fontTypePad;			/* +0x111 */
 	uint16_t firstGlyph;			/* +0x112 */
 	uint16_t lastGlyph;			/* +0x114 */
-	uint16_t headerPad116;			/* +0x116 */
+	uint16_t glyphRangePad;			/* +0x116 */
 	uint32_t maxMetricExtra[6];		/* +0x118 */
 	int32_t maxGlyphAscender64;		/* +0x130 */
 	int32_t maxGlyphDescender64;		/* +0x134 */
@@ -117,12 +117,12 @@ struct PgfFontData {
 	uint8_t yAdjustTableLen;		/* +0x160 */
 	uint8_t advanceTableLen;		/* +0x161 */
 	uint8_t reservedHeader[100];		/* +0x162 */
-	uint16_t headerPad1C6;			/* +0x1C6 */
+	uint16_t headerTailPad;			/* +0x1C6 */
 	uint32_t shadowMapLen;			/* +0x1C8 */
 	uint32_t shadowMapBpe;			/* +0x1CC */
 	uint8_t shadowMapAlign;			/* +0x1D0 */
-	uint8_t shadowMapPad1D1;		/* +0x1D1 */
-	uint16_t shadowMapPad1D2;		/* +0x1D2 */
+	uint8_t shadowMapFlags;			/* +0x1D1 */
+	uint16_t shadowMapAlignPad;		/* +0x1D2 */
 	uint32_t shadowScaleX;			/* +0x1D4 */
 	uint32_t shadowScaleY;			/* +0x1D8 */
 	uint32_t shadowScaleX2;			/* +0x1DC */
@@ -130,13 +130,13 @@ struct PgfFontData {
 	uint32_t compCharMapBpe1;		/* +0x1E4 */
 	uint16_t compCharMapLen1;		/* +0x1E8 */
 	uint8_t compCharMapAlign1;		/* +0x1EA */
-	uint8_t compCharMapPad1EB;		/* +0x1EB */
+	uint8_t compCharMapFirstPad;		/* +0x1EB */
 	uint32_t compCharMapBpe2;		/* +0x1EC */
 	uint16_t compCharMapLen2;		/* +0x1F0 */
 	uint8_t compCharMapAlign2;		/* +0x1F2 */
-	uint8_t compCharMapPad1F3;		/* +0x1F3 */
+	uint8_t compCharMapSecondPad;		/* +0x1F3 */
 	uint16_t compGlyphCount;		/* +0x1F4 */
-	uint16_t compGlyphPad1F6;		/* +0x1F6 */
+	uint16_t compGlyphPad;			/* +0x1F6 */
 	/* Pointers and state (+0x1F8 .. +0x233) */
 	PgfTablePair *dimTable;			/* +0x1F8 */
 	PgfTablePair *xAdjustTable;		/* +0x1FC */
@@ -156,7 +156,7 @@ struct PgfFontData {
 
 struct PgfFontHandle {
 	uint8_t inUse;				/* +0x00 */
-	uint8_t pad01;				/* +0x01 */
+	uint8_t handlePad;			/* +0x01 */
 	uint16_t currentCharCode;		/* +0x02 */
 	PgfFontData *fontData;			/* +0x04 */
 	uint8_t *glyphRawBuf;			/* +0x08 */
@@ -175,7 +175,7 @@ struct PgfLib {
 	int32_t numSystemFonts;			/* +0x40 */
 	void *extraAlloc;			/* +0x44 */
 	uint16_t altCharCode;			/* +0x48 */
-	uint16_t pad4A;				/* +0x4A */
+	uint16_t altCharPad;			/* +0x4A */
 };
 
 _Static_assert(sizeof(PgfFontData) == 564, "PgfFontData size");
@@ -205,8 +205,8 @@ static SceFont_t_fontStyleInfo g_pgfSystemFonts[PGF_NUM_SYSTEM_FONTS] = {
 
 static char g_pgfEmptyName[8];
 static char g_pgfFontDir[1024];
-static uint32_t g_pgfCacheDummyComp[2];
-static uint32_t g_pgfCacheDummyNormal[2];
+static uint32_t g_pgfCacheEmptyComp[2];
+static uint32_t g_pgfCacheEmptyNormal[2];
 
 static inline int pgfFloatApproxEq(float a, float b)
 {
@@ -457,15 +457,15 @@ int pgfDrawGlyphDirect8(const uint8_t *src, int width, int height,
 					{
 						uint32_t pix8 = *sp | ((uint32_t)*sp << 4);
 						uint32_t spill = ((uint32_t)subX * pix8) >> 6;
-						uint32_t v0 = dst[0] + pix8 - spill;
-						if (v0 > 255U)
-							v0 = 255U;
-						dst[0] = (uint8_t)v0;
+						uint32_t firstPix = dst[0] + pix8 - spill;
+						if (firstPix > 255U)
+							firstPix = 255U;
+						dst[0] = (uint8_t)firstPix;
 						if (x + 1 < (int)img->rect.width) {
-							uint32_t v1 = dst[1] + spill;
-							if (v1 > 255U)
-								v1 = 255U;
-							dst[1] = (uint8_t)v1;
+							uint32_t nextPix = dst[1] + spill;
+							if (nextPix > 255U)
+								nextPix = 255U;
+							dst[1] = (uint8_t)nextPix;
 						}
 					}
 				}
@@ -769,6 +769,38 @@ void pgfDecodeGlyphBitmap(const uint8_t *src, uint8_t *dst, int width, int heigh
 	}
 }
 
+static inline __attribute__((always_inline)) PgfFontData *pgfAbortFontOpen(
+	PgfLib *lib, PgfFontData *fd, int freeTables)
+{
+	if (freeTables) {
+		if (fd->shadowMap != NULL) {
+			lib->initRec.freeFunc(lib->initRec.userData, fd->shadowMap);
+			fd->shadowMap = NULL;
+		}
+		if (fd->compCharMap1 != NULL) {
+			lib->initRec.freeFunc(lib->initRec.userData, fd->compCharMap1);
+			fd->compCharMap1 = NULL;
+		}
+		if (fd->compCharMap2 != NULL) {
+			lib->initRec.freeFunc(lib->initRec.userData, fd->compCharMap2);
+			fd->compCharMap2 = NULL;
+		}
+		if (fd->charMap != NULL) {
+			lib->initRec.freeFunc(lib->initRec.userData, fd->charMap);
+			fd->charMap = NULL;
+		}
+		if (fd->charPtrTable != NULL) {
+			lib->initRec.freeFunc(lib->initRec.userData, fd->charPtrTable);
+			fd->charPtrTable = NULL;
+		}
+	}
+	fd->inUse = 1;
+	lib->openDataCount++;
+	fd->refCount++;
+	pgfCloseFontData(fd);
+	return NULL;
+}
+
 /* 0x81001554 */
 PgfFontData *pgfOpenFontData(PgfLib *lib, int32_t fontIndex, const char *userFile,
 			     uintptr_t userMem, uint32_t userMemSize,
@@ -904,7 +936,7 @@ PgfFontData *pgfOpenFontData(PgfLib *lib, int32_t fontIndex, const char *userFil
 			*err = SCE_FONT_ERROR_FILEOPEN;
 			return NULL;
 		}
-		if (sceIoRead(iofd, (uint8_t *)ms + 12, (SceSize)st.size) < st.size)
+		if (sceIoRead(iofd, ms + 1, (SceSize)st.size) < st.size)
 			*err = SCE_FONT_ERROR_FILEOPEN;
 		sceIoClose(iofd);
 		if (*err != 0) {
@@ -914,7 +946,7 @@ PgfFontData *pgfOpenFontData(PgfLib *lib, int32_t fontIndex, const char *userFil
 		}
 		ms->size = (uint32_t)st.size;
 		ms->pos = 0;
-		ms->data = (uintptr_t)((uint8_t *)ms + 12);
+		ms->data = (uintptr_t)(ms + 1);
 		stream = ms;
 		break;
 	}
@@ -1002,12 +1034,12 @@ PgfFontData *pgfOpenFontData(PgfLib *lib, int32_t fontIndex, const char *userFil
 
 	if (pgfStreamSeek(lib, mode, stream, 0) != 0) {
 		*err = SCE_FONT_ERROR_FILESEEK;
-		goto fail_close;
+		return pgfAbortFontOpen(lib, fd, 0);
 	}
 
 	if (pgfStreamRead(lib, mode, stream, hdr12, 12U, 1U, &ioErr) == 0 || ioErr != 0) {
 		*err = SCE_FONT_ERROR_FILEREAD;
-		goto fail_close;
+		return pgfAbortFontOpen(lib, fd, 0);
 	}
 
 	{
@@ -1019,12 +1051,12 @@ PgfFontData *pgfOpenFontData(PgfLib *lib, int32_t fontIndex, const char *userFil
 			bodySz = 380U;
 		} else {
 			*err = SCE_FONT_ERROR_ILLEGALVERSION;
-			goto fail_close;
+			return pgfAbortFontOpen(lib, fd, 0);
 		}
 
 		if (pgfStreamRead(lib, mode, stream, hdrBody, bodySz, 1U, &ioErr) == 0 || ioErr != 0) {
 			*err = SCE_FONT_ERROR_FILEREAD;
-			goto fail_close;
+			return pgfAbortFontOpen(lib, fd, 0);
 		}
 
 		fd->bigEndian = hdr12[0];
@@ -1068,7 +1100,7 @@ PgfFontData *pgfOpenFontData(PgfLib *lib, int32_t fontIndex, const char *userFil
 		sceClibMemcpy_safe(&fd->shadowMapLen, hdrBody + 352, 4);
 		sceClibMemcpy_safe(&fd->shadowMapBpe, hdrBody + 356, 4);
 		fd->shadowMapAlign = hdrBody[360];
-		fd->shadowMapPad1D1 = hdrBody[361];
+		fd->shadowMapFlags = hdrBody[361];
 		sceClibMemcpy_safe(&fd->shadowScaleX, hdrBody + 364, 4);
 		sceClibMemcpy_safe(&fd->shadowScaleY, hdrBody + 368, 4);
 		sceClibMemcpy_safe(&fd->shadowScaleX2, hdrBody + 372, 4);
@@ -1114,17 +1146,17 @@ PgfFontData *pgfOpenFontData(PgfLib *lib, int32_t fontIndex, const char *userFil
 
 	if (pgfStreamSeek(lib, mode, stream, hdrTotal) != 0) {
 		*err = SCE_FONT_ERROR_FILESEEK;
-		goto fail_close;
+		return pgfAbortFontOpen(lib, fd, 0);
 	}
 	if (fd->revision <= 2U) {
 		if (pgfStreamSeek(lib, mode, stream, 392U) != 0) {
 			*err = SCE_FONT_ERROR_FILESEEK;
-			goto fail_close;
+			return pgfAbortFontOpen(lib, fd, 0);
 		}
 	} else if (fd->revision == 3U) {
 		if (pgfStreamSeek(lib, mode, stream, 412U) != 0) {
 			*err = SCE_FONT_ERROR_FILESEEK;
-			goto fail_close;
+			return pgfAbortFontOpen(lib, fd, 0);
 		}
 	}
 
@@ -1146,23 +1178,23 @@ PgfFontData *pgfOpenFontData(PgfLib *lib, int32_t fontIndex, const char *userFil
 		if (fd->dimTable == NULL || fd->xAdjustTable == NULL ||
 		    fd->yAdjustTable == NULL || fd->advanceTable == NULL) {
 			*err = SCE_FONT_ERROR_NOMEMORY;
-			goto fail_close;
+			return pgfAbortFontOpen(lib, fd, 0);
 		}
 		if (pgfStreamRead(lib, mode, stream, fd->dimTable, 8U, fd->dimTableLen, &ioErr) < fd->dimTableLen || ioErr != 0) {
 			*err = SCE_FONT_ERROR_FILEREAD;
-			goto fail_close;
+			return pgfAbortFontOpen(lib, fd, 0);
 		}
 		if (pgfStreamRead(lib, mode, stream, fd->xAdjustTable, 8U, fd->xAdjustTableLen, &ioErr) < fd->xAdjustTableLen || ioErr != 0) {
 			*err = SCE_FONT_ERROR_FILEREAD;
-			goto fail_close;
+			return pgfAbortFontOpen(lib, fd, 0);
 		}
 		if (pgfStreamRead(lib, mode, stream, fd->yAdjustTable, 8U, fd->yAdjustTableLen, &ioErr) < fd->yAdjustTableLen || ioErr != 0) {
 			*err = SCE_FONT_ERROR_FILEREAD;
-			goto fail_close;
+			return pgfAbortFontOpen(lib, fd, 0);
 		}
 		if (pgfStreamRead(lib, mode, stream, fd->advanceTable, 8U, fd->advanceTableLen, &ioErr) < fd->advanceTableLen || ioErr != 0) {
 			*err = SCE_FONT_ERROR_FILEREAD;
-			goto fail_close;
+			return pgfAbortFontOpen(lib, fd, 0);
 		}
 	}
 
@@ -1172,20 +1204,20 @@ PgfFontData *pgfOpenFontData(PgfLib *lib, int32_t fontIndex, const char *userFil
 			    fd->yAdjustTableLen + fd->advanceTableLen);
 	if (pgfStreamSeek(lib, mode, stream, fd->headerTotalSize + metricBytes) != 0) {
 		*err = SCE_FONT_ERROR_FILESEEK;
-		goto fail_close;
+		return pgfAbortFontOpen(lib, fd, 0);
 	}
 
 	if (fd->revision > 1U) {
-		uint32_t a0 = fd->shadowMapAlign;
-		shadowBytes = pgfUdiv((((fd->shadowMapLen * fd->shadowMapBpe) + 7U) >> 3) + a0 - 1U, a0) * a0;
+		uint32_t shadowAlign = fd->shadowMapAlign;
+		shadowBytes = pgfUdiv((((fd->shadowMapLen * fd->shadowMapBpe) + 7U) >> 3) + shadowAlign - 1U, shadowAlign) * shadowAlign;
 		if (fd->revision == 2U) {
 			comp1Bytes = 0;
 			comp2Bytes = 0;
 		} else {
-			uint32_t a1 = fd->compCharMapAlign1;
-			uint32_t a2 = fd->compCharMapAlign2;
-			comp1Bytes = pgfUdiv((2U * ((((uint32_t)fd->compCharMapLen1 * fd->compCharMapBpe1) + 7U) >> 3)) + a1 - 1U, a1) * a1;
-			comp2Bytes = pgfUdiv((2U * ((((uint32_t)fd->compCharMapLen2 * fd->compCharMapBpe2) + 7U) >> 3)) + a2 - 1U, a2) * a2;
+			uint32_t compAlignFirst = fd->compCharMapAlign1;
+			uint32_t compAlignSecond = fd->compCharMapAlign2;
+			comp1Bytes = pgfUdiv((2U * ((((uint32_t)fd->compCharMapLen1 * fd->compCharMapBpe1) + 7U) >> 3)) + compAlignFirst - 1U, compAlignFirst) * compAlignFirst;
+			comp2Bytes = pgfUdiv((2U * ((((uint32_t)fd->compCharMapLen2 * fd->compCharMapBpe2) + 7U) >> 3)) + compAlignSecond - 1U, compAlignSecond) * compAlignSecond;
 		}
 	} else {
 		fd->shadowMapLen = 0;
@@ -1217,57 +1249,57 @@ PgfFontData *pgfOpenFontData(PgfLib *lib, int32_t fontIndex, const char *userFil
 		fd->shadowMap = lib->initRec.allocFunc(lib->initRec.userData, shadowBytes);
 		if (fd->shadowMap == NULL) {
 			*err = SCE_FONT_ERROR_NOMEMORY;
-			goto fail_tables;
+			return pgfAbortFontOpen(lib, fd, 1);
 		}
 		if ((int32_t)shadowBytes > 0) {
 			if (pgfStreamRead(lib, mode, stream, fd->shadowMap, shadowBytes, 1U, &ioErr) == 0 || ioErr != 0) {
 				*err = SCE_FONT_ERROR_FILEREAD;
-				goto fail_tables;
+				return pgfAbortFontOpen(lib, fd, 1);
 			}
 		}
 
 		fd->compCharMap1 = (PgfCompRange *)lib->initRec.allocFunc(lib->initRec.userData, comp1Bytes);
 		if (fd->compCharMap1 == NULL) {
 			*err = SCE_FONT_ERROR_NOMEMORY;
-			goto fail_tables;
+			return pgfAbortFontOpen(lib, fd, 1);
 		}
 		if ((int32_t)comp1Bytes > 0) {
 			if (pgfStreamRead(lib, mode, stream, fd->compCharMap1, comp1Bytes, 1U, &ioErr) == 0 || ioErr != 0) {
 				*err = SCE_FONT_ERROR_FILEREAD;
-				goto fail_tables;
+				return pgfAbortFontOpen(lib, fd, 1);
 			}
 		}
 
 		fd->compCharMap2 = (PgfCompRange *)lib->initRec.allocFunc(lib->initRec.userData, comp2Bytes);
 		if (fd->compCharMap2 == NULL) {
 			*err = SCE_FONT_ERROR_NOMEMORY;
-			goto fail_tables;
+			return pgfAbortFontOpen(lib, fd, 1);
 		}
 		if ((int32_t)comp2Bytes > 0) {
 			if (pgfStreamRead(lib, mode, stream, fd->compCharMap2, comp2Bytes, 1U, &ioErr) == 0 || ioErr != 0) {
 				*err = SCE_FONT_ERROR_FILEREAD;
-				goto fail_tables;
+				return pgfAbortFontOpen(lib, fd, 1);
 			}
 		}
 
 		fd->charMap = (uint8_t *)lib->initRec.allocFunc(lib->initRec.userData, charMapBytes);
 		if (fd->charMap == NULL) {
 			*err = SCE_FONT_ERROR_NOMEMORY;
-			goto fail_tables;
+			return pgfAbortFontOpen(lib, fd, 1);
 		}
 		if (pgfStreamRead(lib, mode, stream, fd->charMap, charMapBytes, 1U, &ioErr) == 0 || ioErr != 0) {
 			*err = SCE_FONT_ERROR_FILEREAD;
-			goto fail_tables;
+			return pgfAbortFontOpen(lib, fd, 1);
 		}
 
 		fd->charPtrTable = (uint8_t *)lib->initRec.allocFunc(lib->initRec.userData, charPtrBytes);
 		if (fd->charPtrTable == NULL) {
 			*err = SCE_FONT_ERROR_NOMEMORY;
-			goto fail_tables;
+			return pgfAbortFontOpen(lib, fd, 1);
 		}
 		if (pgfStreamRead(lib, mode, stream, fd->charPtrTable, charPtrBytes, 1U, &ioErr) == 0 || ioErr != 0) {
 			*err = SCE_FONT_ERROR_FILEREAD;
-			goto fail_tables;
+			return pgfAbortFontOpen(lib, fd, 1);
 		}
 	}
 
@@ -1277,34 +1309,6 @@ PgfFontData *pgfOpenFontData(PgfLib *lib, int32_t fontIndex, const char *userFil
 	fd->charDataOffset = fd->headerTotalSize + metricBytes + shadowBytes + comp1Bytes + comp2Bytes + charMapBytes + charPtrBytes;
 	lib->openDataCount++;
 	return fd;
-
-fail_tables:
-	if (fd->shadowMap != NULL) {
-		lib->initRec.freeFunc(lib->initRec.userData, fd->shadowMap);
-		fd->shadowMap = NULL;
-	}
-	if (fd->compCharMap1 != NULL) {
-		lib->initRec.freeFunc(lib->initRec.userData, fd->compCharMap1);
-		fd->compCharMap1 = NULL;
-	}
-	if (fd->compCharMap2 != NULL) {
-		lib->initRec.freeFunc(lib->initRec.userData, fd->compCharMap2);
-		fd->compCharMap2 = NULL;
-	}
-	if (fd->charMap != NULL) {
-		lib->initRec.freeFunc(lib->initRec.userData, fd->charMap);
-		fd->charMap = NULL;
-	}
-	if (fd->charPtrTable != NULL) {
-		lib->initRec.freeFunc(lib->initRec.userData, fd->charPtrTable);
-		fd->charPtrTable = NULL;
-	}
-fail_close:
-	fd->inUse = 1;
-	lib->openDataCount++;
-	fd->refCount++;
-	pgfCloseFontData(fd);
-	return NULL;
 }
 
 /* 0x810032b8 */
@@ -1375,24 +1379,21 @@ int pgfLoadGlyph(PgfFontHandle *fh, uint32_t charCode, int loadBitmap)
 
 	fh->currentCharCode = (uint16_t)charCode;
 	glyphOff = pgfLookupGlyphOffset((int32_t)charCode, fd);
-	if (glyphOff == 0) {
-		if (charCode <= 0x1FU)
-			goto empty_glyph;
+	if (glyphOff == 0 && charCode > 0x1FU) {
 		fh->currentCharCode = lib->altCharCode;
 		glyphOff = pgfLookupGlyphOffset((int32_t)fh->currentCharCode, fd);
-		if (glyphOff == 0) {
-		empty_glyph:
-			sceClibMemset(&fh->charInfo, 0, sizeof(fh->charInfo));
-			if (fh->glyphRawBuf != NULL) {
-				lib->initRec.freeFunc(lib->initRec.userData, fh->glyphRawBuf);
-				fh->glyphRawBuf = NULL;
-			}
-			if (fh->glyphBitmapBuf != NULL) {
-				lib->initRec.freeFunc(lib->initRec.userData, fh->glyphBitmapBuf);
-				fh->glyphBitmapBuf = NULL;
-			}
-			return 0;
+	}
+	if (glyphOff == 0) {
+		sceClibMemset(&fh->charInfo, 0, sizeof(fh->charInfo));
+		if (fh->glyphRawBuf != NULL) {
+			lib->initRec.freeFunc(lib->initRec.userData, fh->glyphRawBuf);
+			fh->glyphRawBuf = NULL;
 		}
+		if (fh->glyphBitmapBuf != NULL) {
+			lib->initRec.freeFunc(lib->initRec.userData, fh->glyphBitmapBuf);
+			fh->glyphBitmapBuf = NULL;
+		}
+		return 0;
 	}
 
 	if (fd->useExternalCache != 0 && lib->initRec.cache != NULL) {
@@ -1454,13 +1455,13 @@ int pgfLoadGlyph(PgfFontHandle *fh, uint32_t charCode, int loadBitmap)
 		fh->charInfo.reserved0[1] = 0;
 		fh->charInfo.reserved1 = 0;
 	} else {
-		uint8_t f0 = rawHdr[6] & 3U;
-		uint8_t f1 = (rawHdr[6] >> 2) & 3U;
-		uint8_t f2 = (rawHdr[6] >> 4) & 7U;
-		uint8_t f3 = (uint8_t)((rawHdr[6] >> 7) | ((rawHdr[7] & 0x7FU) << 1));
-		fh->charInfo.reserved0[0] = (uint8_t)((f0 << 5) | (f1 << 3) | f2);
+		uint8_t shadowBitsLow = rawHdr[6] & 3U;
+		uint8_t shadowBitsMid = (rawHdr[6] >> 2) & 3U;
+		uint8_t shadowBitsHigh = (rawHdr[6] >> 4) & 7U;
+		uint8_t shadowId = (uint8_t)((rawHdr[6] >> 7) | ((rawHdr[7] & 0x7FU) << 1));
+		fh->charInfo.reserved0[0] = (uint8_t)((shadowBitsLow << 5) | (shadowBitsMid << 3) | shadowBitsHigh);
 		fh->charInfo.reserved0[1] = 0;
-		fh->charInfo.reserved1 = f3;
+		fh->charInfo.reserved1 = shadowId;
 	}
 
 	if (fh->glyphRawBuf != NULL) {
@@ -1556,8 +1557,8 @@ int pgfLoadGlyph(PgfFontHandle *fh, uint32_t charCode, int loadBitmap)
 			cache->unlockFunc(*cache->cacheInstance);
 		fd->isCompositeGlyph = 1;
 		if (cacheEntry != NULL && !cacheHit) {
-			cache->write2ToCacheFunc(*cache->cacheInstance, cacheEntry, g_pgfCacheDummyComp, 0);
-			cache->write3ToCacheFunc(*cache->cacheInstance, cacheEntry, g_pgfCacheDummyComp, 0);
+			cache->write2ToCacheFunc(*cache->cacheInstance, cacheEntry, g_pgfCacheEmptyComp, 0);
+			cache->write3ToCacheFunc(*cache->cacheInstance, cacheEntry, g_pgfCacheEmptyComp, 0);
 		}
 		return 0;
 	}
@@ -1573,8 +1574,8 @@ int pgfLoadGlyph(PgfFontHandle *fh, uint32_t charCode, int loadBitmap)
 				     (int)direction, bitOff);
 	}
 	if (cacheEntry != NULL && !cacheHit) {
-		cache->write2ToCacheFunc(*cache->cacheInstance, cacheEntry, g_pgfCacheDummyNormal, 0);
-		cache->write3ToCacheFunc(*cache->cacheInstance, cacheEntry, g_pgfCacheDummyNormal, 0);
+		cache->write2ToCacheFunc(*cache->cacheInstance, cacheEntry, g_pgfCacheEmptyNormal, 0);
+		cache->write3ToCacheFunc(*cache->cacheInstance, cacheEntry, g_pgfCacheEmptyNormal, 0);
 	}
 	if (cache != NULL)
 		cache->unlockFunc(*cache->cacheInstance);

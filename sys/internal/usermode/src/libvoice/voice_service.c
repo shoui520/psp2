@@ -288,7 +288,8 @@ void *sysVoiceInstanceAllocSharedTable(SysVoiceInstance *inst)
 	if (table != NULL) {
 		voiceMemset(table, 0, sizeof(VoiceSharedPortTable));
 		table->maxPorts = VOICE_MAX_PORTS;
-		VoiceSharedPortTable *userTable = (VoiceSharedPortTable *)((uint8_t *)table + delta);
+		uint8_t *tableBytes = (uint8_t *)table;
+		VoiceSharedPortTable *userTable = (VoiceSharedPortTable *)(tableBytes + delta);
 		inst->libInstance->sharedPortTable = userTable;
 		userTable->maxPorts = table->maxPorts;
 	}

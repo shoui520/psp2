@@ -29,45 +29,45 @@ uint32_t jpegArmRefillBitBuf(const uint8_t **streamCur, const uint8_t *streamEnd
 	if (ptr >= endMinus1)
 		return bits;
 
-	uint8_t b0 = ptr[0];
-	uint8_t b1 = ptr[1];
+	uint8_t byteA = ptr[0];
+	uint8_t byteB = ptr[1];
 	ptr++;
-	bits = (bits & 0xFFFF00FFU) | ((uint32_t)b0 << 8);
+	bits = (bits & 0xFFFF00FFU) | ((uint32_t)byteA << 8);
 
-	if (b0 == 0xFF) {
-		if (b1 != 0x00) {
+	if (byteA == 0xFF) {
+		if (byteB != 0x00) {
 			*streamCur = ptr - 1;
 			return bits;
 		}
 		if (ptr < endMinus1)
 			ptr++;
-		b1 = *ptr;
+		byteB = *ptr;
 	}
 
-	bits = (bits & 0xFFFFFF00U) | (uint32_t)b1;
-	uint8_t b2;
+	bits = (bits & 0xFFFFFF00U) | (uint32_t)byteB;
+	uint8_t byteC;
 	if (ptr >= endMinus1) {
-		b2 = b1;
+		byteC = byteB;
 	} else {
 		ptr++;
-		b2 = *ptr;
+		byteC = *ptr;
 	}
 
-	if (b1 == 0xFF) {
-		if (b2 != 0x00) {
+	if (byteB == 0xFF) {
+		if (byteC != 0x00) {
 			*streamCur = ptr - 1;
 			return bits;
 		}
 		if (ptr < endMinus1)
 			ptr++;
-		b2 = *ptr;
+		byteC = *ptr;
 	}
 
 	if (ptr < endMinus1)
 		ptr++;
-	bits = (bits & 0x00FFFFFFU) | ((uint32_t)b2 << 24);
+	bits = (bits & 0x00FFFFFFU) | ((uint32_t)byteC << 24);
 
-	if (b2 == 0xFF) {
+	if (byteC == 0xFF) {
 		if (*ptr == 0x00) {
 			if (ptr < endMinus1)
 				ptr++;
@@ -87,29 +87,29 @@ static inline uint32_t refillThreeBytes(const uint8_t **streamCur, const uint8_t
 		return jpegArmRefillBitBuf(streamCur, streamEnd, curBits);
 
 	uint32_t bits = (curBits & 0xFFFF00FFU) | ((uint32_t)ptr[0] << 8);
-	uint8_t b1 = ptr[1];
+	uint8_t byteB = ptr[1];
 
 	if (ptr[0] == 0xFF) {
-		if (b1 != 0x00)
+		if (byteB != 0x00)
 			return bits;
 		ptr++;
-		b1 = ptr[1];
+		byteB = ptr[1];
 	}
 
-	bits = (bits & 0xFFFFFF00U) | (uint32_t)b1;
-	uint8_t b2 = ptr[2];
+	bits = (bits & 0xFFFFFF00U) | (uint32_t)byteB;
+	uint8_t byteC = ptr[2];
 
-	if (b1 == 0xFF) {
+	if (byteB == 0xFF) {
 		ptr++;
-		if (b2 != 0x00) {
+		if (byteC != 0x00) {
 			*streamCur = ptr;
 			return bits;
 		}
-		b2 = ptr[2];
+		byteC = ptr[2];
 	}
 
-	bits = (bits & 0x00FFFFFFU) | ((uint32_t)b2 << 24);
-	if (b2 == 0xFF) {
+	bits = (bits & 0x00FFFFFFU) | ((uint32_t)byteC << 24);
+	if (byteC == 0xFF) {
 		if (ptr[3] == 0x00)
 			ptr++;
 	}
@@ -186,17 +186,17 @@ static inline void saveCheckpoint(const JpegArmDecoder *dec, JpegArmMcuCheckpoin
 	cp->bitCount = dec->bitCount;
 	cp->eobRun = dec->progEobRun;
 	cp->dcPred0 = dec->components[0].dcPred;
-	cp->outPtr0 = dec->components[0].outPtr;
-	cp->coefPtr0 = dec->components[0].coefPtr;
+	cp->outPlaneA = dec->components[0].outPtr;
+	cp->coefPlaneA = dec->components[0].coefPtr;
 	cp->dcPred1 = dec->components[1].dcPred;
-	cp->outPtr1 = dec->components[1].outPtr;
-	cp->coefPtr1 = dec->components[1].coefPtr;
+	cp->outPlaneB = dec->components[1].outPtr;
+	cp->coefPlaneB = dec->components[1].coefPtr;
 	cp->dcPred2 = dec->components[2].dcPred;
-	cp->outPtr2 = dec->components[2].outPtr;
-	cp->coefPtr2 = dec->components[2].coefPtr;
+	cp->outPlaneC = dec->components[2].outPtr;
+	cp->coefPlaneC = dec->components[2].coefPtr;
 	cp->dcPred3 = dec->components[3].dcPred;
-	cp->outPtr3 = dec->components[3].outPtr;
-	cp->coefPtr3 = dec->components[3].coefPtr;
+	cp->outPlaneD = dec->components[3].outPtr;
+	cp->coefPlaneD = dec->components[3].coefPtr;
 }
 
 int jpegArmDecodeBlockBaseline(JpegArmDecoder *dec, int skipOutput)
@@ -271,7 +271,7 @@ int jpegArmDecodeBlockBaseline(JpegArmDecoder *dec, int skipOutput)
 				int byteOff = g_jpegArmZigzagByteOffset[k - 1];
 				if (byteOff > maxOffset)
 					maxOffset = byteOff;
-				*(int16_t *)((uint8_t *)block + byteOff) = acTbl->fastVal[top8];
+				block[byteOff >> 1] = acTbl->fastVal[top8];
 				if (bitCount > 0)
 					ensureBits(&bitBuf, &bitCount, &streamCur, streamEnd);
 				continue;
@@ -312,7 +312,7 @@ int jpegArmDecodeBlockBaseline(JpegArmDecoder *dec, int skipOutput)
 			int byteOff = g_jpegArmZigzagByteOffset[k - 1];
 			if (byteOff > maxOffset)
 				maxOffset = byteOff;
-			*(int16_t *)((uint8_t *)block + byteOff) = (int16_t)coeff;
+			block[byteOff >> 1] = (int16_t)coeff;
 		}
 
 		if (dec->splitState != 0 && streamCur + 4 >= streamEnd)
@@ -367,17 +367,17 @@ int jpegArmRestoreMcuCheckpoint(JpegArmDecoder *dec, int err, int16_t mcuCol, co
 			dec->bitCount = cp->bitCount;
 			dec->progEobRun = cp->eobRun;
 			dec->components[0].dcPred = cp->dcPred0;
-			dec->components[0].outPtr = cp->outPtr0;
-			dec->components[0].coefPtr = cp->coefPtr0;
+			dec->components[0].outPtr = cp->outPlaneA;
+			dec->components[0].coefPtr = cp->coefPlaneA;
 			dec->components[1].dcPred = cp->dcPred1;
-			dec->components[1].outPtr = cp->outPtr1;
-			dec->components[1].coefPtr = cp->coefPtr1;
+			dec->components[1].outPtr = cp->outPlaneB;
+			dec->components[1].coefPtr = cp->coefPlaneB;
 			dec->components[2].dcPred = cp->dcPred2;
-			dec->components[2].outPtr = cp->outPtr2;
-			dec->components[2].coefPtr = cp->coefPtr2;
+			dec->components[2].outPtr = cp->outPlaneC;
+			dec->components[2].coefPtr = cp->coefPlaneC;
 			dec->components[3].dcPred = cp->dcPred3;
-			dec->components[3].outPtr = cp->outPtr3;
-			dec->components[3].coefPtr = cp->coefPtr3;
+			dec->components[3].outPtr = cp->outPlaneD;
+			dec->components[3].coefPtr = cp->coefPlaneD;
 			dec->mcuColOffset = mcuCol;
 		} else {
 			dec->curMcuRow = -1;
@@ -531,7 +531,7 @@ int jpegArmDecodeRowProgressiveDcFirst(JpegArmDecoder *dec)
 				dstCoef[i] = 0;
 			dstCoef[0] = (int16_t)(dcVal << approxLow);
 
-			comp->coefPtr = (int16_t *)((uint8_t *)dstCoef + dec->coefBlockSteps[blockIdx]);
+			comp->coefPtr = dstCoef + (dec->coefBlockSteps[blockIdx] >> 1);
 			blockIdx++;
 			comp = dec->mcuCompPtrs[blockIdx];
 		}
@@ -676,7 +676,7 @@ int jpegArmDecodeRowProgressiveAcFirst(JpegArmDecoder *dec)
 			}
 
 			dec->streamCur = streamCur;
-			comp->coefPtr = (int16_t *)((uint8_t *)dstCoef + dec->coefBlockSteps[blockIdx]);
+			comp->coefPtr = dstCoef + (dec->coefBlockSteps[blockIdx] >> 1);
 			blockIdx++;
 			comp = dec->mcuCompPtrs[blockIdx];
 		}
@@ -1018,7 +1018,7 @@ int jpegArmDecodeRowProgressiveAcRefine(JpegArmDecoder *dec)
 			}
 
 			dec->streamCur = streamCur;
-			comp->coefPtr = (int16_t *)((uint8_t *)dstCoef + dec->coefBlockSteps[blockIdx]);
+			comp->coefPtr = dstCoef + (dec->coefBlockSteps[blockIdx] >> 1);
 			blockIdx++;
 			comp = dec->mcuCompPtrs[blockIdx];
 		}

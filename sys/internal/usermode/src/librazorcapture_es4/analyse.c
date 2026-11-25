@@ -95,7 +95,7 @@ typedef struct RazorTagEmitList {
 	SgxTagState entries[3];
 } RazorTagEmitList;
 
-/* Exact layout matching offsets in sub_81002830 / sub_81003ED0 / sub_810040EC */
+/* Exact layout matching TA/3D analyser state */
 typedef struct RazorAnalyserCtx {
 	uint32_t jobId;                  /* +0 */
 	uint32_t jobFlags;               /* +4 */
@@ -201,13 +201,13 @@ void razorProcessPdsOutput(const RazorPdsResult *pdsOut, RazorUsseProgList *usse
 		ctx->errorFlags |= razorCaptureFileMarkTexture(&ctx->file, pdsOut->doutu[i]);
 
 	for (i = 0; i < pdsOut->doutaCount; i++) {
-		uint32_t w0 = pdsOut->douta[i][0];
-		uint32_t base = ctx->useBaseGpuAddrs[w0 & 0xFU];
+		uint32_t doutWord = pdsOut->douta[i][0];
+		uint32_t base = ctx->useBaseGpuAddrs[doutWord & 0xFU];
 		uint32_t gpuAddr, cpuAddr;
 
 		if (base == 0U)
 			continue;
-		gpuAddr = base + 8U * ((w0 >> 4) & 0xFFFFFU);
+		gpuAddr = base + 8U * ((doutWord >> 4) & 0xFFFFFU);
 		cpuAddr = razorCaptureFileGpuToCpu(&ctx->file, gpuAddr);
 		if (cpuAddr == 0U) {
 			ctx->errorFlags |= 1ULL;
@@ -325,26 +325,26 @@ void razorAnalyseVdmStream(RazorAnalyserCtx *ctx, const uint32_t *jobDesc)
 					sgxTagStateMerge(ts, ctx->mergedTagState);
 
 					if (ts->words[0] & 0x40U) {
-						uint32_t w8 = ts->words[8];
-						uint32_t w9 = ts->words[9];
-						uint32_t w7 = ts->words[7];
-						uint32_t off0 = 16U * (w9 & 0x7FFFFFFU);
-						uint32_t off1 = 16U * (w7 & 0x7FFFFFFU);
+						uint32_t ctrlWord = ts->words[8];
+						uint32_t primaryWord = ts->words[9];
+						uint32_t secondWord = ts->words[7];
+						uint32_t firstOff = 16U * (primaryWord & 0x7FFFFFFU);
+						uint32_t secondOff = 16U * (secondWord & 0x7FFFFFFU);
 
-						if (((w8 & 0x2000U) != 0U || off0 != 0U) &&
-						    ((w8 & 0x4000U) != 0U || off1 != 0U)) {
+						if (((ctrlWord & 0x2000U) != 0U || firstOff != 0U) &&
+						    ((ctrlWord & 0x4000U) != 0U || secondOff != 0U)) {
 							uint32_t addrs[2];
 							uint32_t dataSizes[2];
 							int pass;
 
-							if (w8 & 0x2000U)
-								off0 |= 0x80000000U;
-							if (w8 & 0x4000U)
-								off1 |= 0x80000000U;
-							addrs[0] = off0 + ctx->pdsBaseGpuAddr;
-							addrs[1] = off1 + ctx->pdsBaseGpuAddr;
-							dataSizes[0] = 16U * (w9 >> 27);
-							dataSizes[1] = 16U * (w7 >> 27);
+							if (ctrlWord & 0x2000U)
+								firstOff |= 0x80000000U;
+							if (ctrlWord & 0x4000U)
+								secondOff |= 0x80000000U;
+							addrs[0] = firstOff + ctx->pdsBaseGpuAddr;
+							addrs[1] = secondOff + ctx->pdsBaseGpuAddr;
+							dataSizes[0] = 16U * (primaryWord >> 27);
+							dataSizes[1] = 16U * (secondWord >> 27);
 
 							for (pass = 1; pass >= 0; pass--) {
 								uint32_t fragCpu = razorCaptureFileGpuToCpu(&ctx->file, addrs[pass]);
@@ -599,31 +599,32 @@ void razorAnalyseVdmStream(RazorAnalyserCtx *ctx, const uint32_t *jobDesc)
 int razorAnalyseWrite3dState(RazorAnalyserCtx *ctx, const uint8_t *kickInfo)
 {
 	uint32_t dst[22];
+	const uint32_t *kickWords = (const uint32_t *)kickInfo;
+	const uint16_t *kickHalfs = (const uint16_t *)kickInfo;
 
 	sceClibMemset(dst, 0, sizeof(dst));
-	dst[0] = *(const uint32_t *)(kickInfo + 124);
-	dst[1] = *(const uint32_t *)(kickInfo + 128);
-	dst[2] = *(const uint32_t *)(kickInfo + 132);
-	dst[3] = *(const uint32_t *)(kickInfo + 136);
-	dst[4] = *(const uint32_t *)(kickInfo + 156);
-	dst[5] = *(const uint32_t *)(kickInfo + 164);
-	dst[6] = *(const uint32_t *)(kickInfo + 140);
-	dst[7] = *(const uint32_t *)(kickInfo + 144);
-	dst[8] = *(const uint32_t *)(kickInfo + 148);
-	dst[9] = *(const uint32_t *)(kickInfo + 152);
-	dst[10] = *(const uint32_t *)(kickInfo + 160);
-	dst[11] = *(const uint32_t *)(kickInfo + 168);
-	dst[12] = *(const uint32_t *)(kickInfo + 228);
-	((uint16_t *)dst)[26] = *(const uint16_t *)(kickInfo + 32);
-	((uint16_t *)dst)[27] = *(const uint16_t *)(kickInfo + 34);
-	dst[14] = *(const uint32_t *)(kickInfo + 100);
-	dst[15] = *(const uint32_t *)(kickInfo + 60);
-	dst[16] = *(const uint32_t *)(kickInfo + 64);
-	dst[17] = *(const uint32_t *)(kickInfo + 44);
-	dst[18] = *(const uint32_t *)(kickInfo + 48);
-	dst[19] = *(const uint32_t *)(kickInfo + 52);
-	dst[20] = *(const uint32_t *)(kickInfo + 96);
-	dst[21] = *(const uint32_t *)(kickInfo + 120);
+	dst[0] = kickWords[31];
+	dst[1] = kickWords[32];
+	dst[2] = kickWords[33];
+	dst[3] = kickWords[34];
+	dst[4] = kickWords[39];
+	dst[5] = kickWords[41];
+	dst[6] = kickWords[35];
+	dst[7] = kickWords[36];
+	dst[8] = kickWords[37];
+	dst[9] = kickWords[38];
+	dst[10] = kickWords[40];
+	dst[11] = kickWords[42];
+	dst[12] = kickWords[57];
+	dst[13] = (uint32_t)kickHalfs[16] | ((uint32_t)kickHalfs[17] << 16);
+	dst[14] = kickWords[25];
+	dst[15] = kickWords[15];
+	dst[16] = kickWords[16];
+	dst[17] = kickWords[11];
+	dst[18] = kickWords[12];
+	dst[19] = kickWords[13];
+	dst[20] = kickWords[24];
+	dst[21] = kickWords[30];
 	return razorCaptureFileWriteDrawState(&ctx->file, dst);
 }
 
@@ -631,20 +632,20 @@ int razorAnalyseWrite3dState(RazorAnalyserCtx *ctx, const uint8_t *kickInfo)
 
 int razorAnalyse3dPdsState(RazorAnalyserCtx *ctx, const uint32_t *kickInfo)
 {
-	uint32_t w60 = kickInfo[60];
-	uint32_t w58 = kickInfo[58];
-	uint32_t w59 = kickInfo[59];
-	uint32_t off0 = (16U * (w60 & 0x7FFFFFFU)) | ((w59 & 0x2000U) ? 0x80000000U : 0U);
-	uint32_t off1 = (16U * (w58 & 0x7FFFFFFU)) | ((w59 & 0x4000U) ? 0x80000000U : 0U);
-	uint32_t ds0 = 16U * (w60 >> 27);
-	uint32_t ds1 = 16U * (w58 >> 27);
+	uint32_t bgWord = kickInfo[60];
+	uint32_t evWord = kickInfo[58];
+	uint32_t ctrlWord = kickInfo[59];
+	uint32_t bgOff = (16U * (bgWord & 0x7FFFFFFU)) | ((ctrlWord & 0x2000U) ? 0x80000000U : 0U);
+	uint32_t evOff = (16U * (evWord & 0x7FFFFFFU)) | ((ctrlWord & 0x4000U) ? 0x80000000U : 0U);
+	uint32_t bgDataSize = 16U * (bgWord >> 27);
+	uint32_t evDataSize = 16U * (evWord >> 27);
 	int pass;
 	uint32_t jobInfo[19];
 	uint32_t pdsChunk[12];
 
 	for (pass = 0; pass < 2; pass++) {
-		uint32_t gpuAddr = ctx->pdsBaseGpuAddr + ((pass == 0) ? off0 : off1);
-		uint32_t dataSize = (pass == 0) ? ds0 : ds1;
+		uint32_t gpuAddr = ctx->pdsBaseGpuAddr + ((pass == 0) ? bgOff : evOff);
+		uint32_t dataSize = (pass == 0) ? bgDataSize : evDataSize;
 		uint32_t cpuAddr = razorCaptureFileGpuToCpu(&ctx->file, gpuAddr);
 
 		if (cpuAddr != 0U) {

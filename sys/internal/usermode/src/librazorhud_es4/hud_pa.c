@@ -141,7 +141,8 @@ int hudGpuSetPerfCounters(const void *counters)
 	req[0] = 3U;
 	req[2] = 3U;
 	sceClibMemcpy_safe(&req[3], counters, 0x20U);
-	sceClibMemcpy_safe(&req[11], (const uint8_t *)counters + 32, 0x20U);
+	const uint32_t *counterWords = (const uint32_t *)counters;
+	sceClibMemcpy_safe(&req[11], &counterWords[8], 0x20U);
 	if (SceGpuEs4User_09BB98B2(ctx, req) != 0)
 		return HUD_ERR_INTERNAL;
 	return 0;
@@ -306,8 +307,8 @@ int hudPaWritePmonFile(void *paPtr, uint32_t gpuFreq, const char *path)
 		char name[32];
 		uint32_t hwRev;
 		uint32_t gxmBuild;
-		uint32_t gxmVer0;
-		uint32_t gxmVer1;
+		uint32_t gxmVerMajor;
+		uint32_t gxmVerMinor;
 	} procChunk;
 	struct {
 		uint32_t ids[8];
@@ -454,7 +455,7 @@ int hudPaWritePmonFile(void *paPtr, uint32_t gpuFreq, const char *path)
 	sceKernelGetProcessName(procChunk.name, sizeof(procChunk.name));
 	procChunk.hwRev = SceLibKernel_9F793F84();
 	procChunk.gxmBuild = (sceGxmIsDebugVersion() != 0) ? 2U : 1U;
-	hudMgrGetGxmVersions(pa->hudMgr, &procChunk.gxmVer0, &procChunk.gxmVer1);
+	hudMgrGetGxmVersions(pa->hudMgr, &procChunk.gxmVerMajor, &procChunk.gxmVerMinor);
 	writeIffChunk(fd, 0x1C2B07U, &procChunk, sizeof(procChunk));
 
 	SceGpuEs4User_C0D16CE5(topCtx, &sceneRaw);
@@ -653,21 +654,19 @@ void hudPaSetBuffer(void *paPtr, int usePool, uint32_t size)
 		aligned = 0x20000000U;
 
 	if (usePool == 1) {
-		if (pa->poolBuf != NULL) {
-			if (pa->poolBufSize == aligned)
-				goto update_hdr;
-			hudPoolFree(0U, pa->poolBuf);
+		if (pa->poolBuf == NULL || pa->poolBufSize != aligned) {
+			if (pa->poolBuf != NULL)
+				hudPoolFree(0U, pa->poolBuf);
+			pa->poolBufSize = aligned;
+			pa->poolBuf = hudPoolAlloc(0U, aligned, 128U);
+			pa->traceBufAddr = (uint32_t)(uintptr_t)pa->poolBuf;
 		}
-		pa->poolBufSize = aligned;
-		pa->poolBuf = hudPoolAlloc(0U, aligned, 128U);
-		pa->traceBufAddr = (uint32_t)(uintptr_t)pa->poolBuf;
 	} else {
 		pa->traceBufAddr = 0x40000000U;
 		if (pa->poolBuf != NULL)
 			hudPoolFree(0U, pa->poolBuf);
 		pa->poolBufSize = 0;
 	}
-update_hdr:
 	pa->hdr->bufSize = aligned;
 	pa->hdr->bufParams[2] = aligned;
 	pa->hdr->bufParams[1] = pa->traceBufAddr;
@@ -902,7 +901,8 @@ void hudPaDecoderEmitJob(void *decPtr, int isEnd, void *outCtxPtr, void *jobPtr)
 	if (isEnd != 0) {
 		if ((uint32_t)(ctx->cur - ctx->base) - 1U < ctx->capacity) {
 			*(uint16_t *)(ctx->cur) = 0xFFFFU;
-			*(uint16_t *)(ctx->cur + 2) = (uint16_t)isEnd;
+			uint16_t *curHalf = (uint16_t *)ctx->cur;
+			curHalf[1] = (uint16_t)isEnd;
 			ctx->cur += 72;
 			ctx->written += 72;
 			(*ctx->entryCount)++;
@@ -993,12 +993,12 @@ int hudPaDecoderProcessCounters(void *decPtr, void *outCtx)
 						(float)(s[3] + s[0]);
 				} else {
 					float dur = hudU64ToFloat(fSlot->entry.endTime - fSlot->entry.startTime);
-					uint64_t u0 = ((uint64_t)fSlot->accumFragCycles * 1000000ULL) / (uint64_t)dec->gpuFreq;
-					uint64_t u1 = ((uint64_t)(uint32_t)fSlot->entry.jobValues.fragmentValues1.usseDependentTextureReadRequest * 1000000ULL) / (uint64_t)dec->gpuFreq;
-					uint64_t u2 = ((uint64_t)(uint32_t)fSlot->entry.jobValues.fragmentValues1.usseNonDependentTextureReadRequest * 1000000ULL) / (uint64_t)dec->gpuFreq;
-					fSlot->entry.jobValues.fragmentValues1.usseFragmentProcessing = (hudU64ToFloat(u0) * 25.0f) / dur;
-					fSlot->entry.jobValues.fragmentValues1.usseDependentTextureReadRequest = (hudU64ToFloat(u1) * 25.0f) / dur;
-					fSlot->entry.jobValues.fragmentValues1.usseNonDependentTextureReadRequest = (hudU64ToFloat(u2) * 50.0f) / dur;
+					uint64_t texUA = ((uint64_t)fSlot->accumFragCycles * 1000000ULL) / (uint64_t)dec->gpuFreq;
+					uint64_t texUB = ((uint64_t)(uint32_t)fSlot->entry.jobValues.fragmentValues1.usseDependentTextureReadRequest * 1000000ULL) / (uint64_t)dec->gpuFreq;
+					uint64_t texUC = ((uint64_t)(uint32_t)fSlot->entry.jobValues.fragmentValues1.usseNonDependentTextureReadRequest * 1000000ULL) / (uint64_t)dec->gpuFreq;
+					fSlot->entry.jobValues.fragmentValues1.usseFragmentProcessing = (hudU64ToFloat(texUA) * 25.0f) / dur;
+					fSlot->entry.jobValues.fragmentValues1.usseDependentTextureReadRequest = (hudU64ToFloat(texUB) * 25.0f) / dur;
+					fSlot->entry.jobValues.fragmentValues1.usseNonDependentTextureReadRequest = (hudU64ToFloat(texUC) * 50.0f) / dur;
 					hudPaDecoderEmitJob(dec, 0, outCtx, fSlot);
 				}
 			}
@@ -1155,7 +1155,8 @@ int hudPaDecoderProcessBlock(void *decPtr, const uint16_t *block, void *outCtx)
 					return ret;
 			}
 		} else if (pktType == 0x7F) {
-			if ((((const uint8_t *)payload)[11] & 0x1FU) == 0x12U) {
+			const uint8_t *payloadBytes = (const uint8_t *)payload;
+			if ((payloadBytes[11] & 0x1FU) == 0x12U) {
 				uint32_t val = payload32[3];
 				uint32_t cmd = val & 0xF0000000U;
 				int c;

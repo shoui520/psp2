@@ -131,11 +131,11 @@ uint64_t razorCaptureFileOpen(RazorCaptureFile *file, const char *filename, cons
 			uint32_t platform;
 			uint16_t gpuFreq;
 			uint16_t wireless;
-			uint32_t reserved0;
-			uint32_t reserved1;
-			uint32_t reserved2;
+			uint32_t padAlpha;
+			uint32_t padBeta;
+			uint32_t padGamma;
 			uint32_t sdkVersion;
-			uint32_t reserved3;
+			uint32_t padDelta;
 			uint32_t hardwareId;
 			uint16_t majorVer;
 			uint16_t minorVer;
@@ -153,11 +153,11 @@ uint64_t razorCaptureFileOpen(RazorCaptureFile *file, const char *filename, cons
 			sysInfo.gpuFreq = (uint16_t)gpuFreq;
 			sysInfo.wireless = (uint16_t)wireless;
 		}
-		sysInfo.reserved0 = 0U;
-		sysInfo.reserved1 = 0U;
-		sysInfo.reserved2 = 0U;
+		sysInfo.padAlpha = 0U;
+		sysInfo.padBeta = 0U;
+		sysInfo.padGamma = 0U;
 		sysInfo.sdkVersion = FW_VERSION | 0x11U;
-		sysInfo.reserved3 = 0U;
+		sysInfo.padDelta = 0U;
 		sysInfo.hardwareId = 0x13A5U;
 		sysInfo.majorVer = 1U;
 		sysInfo.minorVer = 7U;
@@ -180,14 +180,14 @@ int razorCaptureFileClose(RazorCaptureFile *file)
 	return razorFileWriterClose(&file->writer);
 }
 
-int razorCaptureFileWriteFrameInfo(RazorCaptureFile *file, uint32_t a2, uint32_t a3)
+int razorCaptureFileWriteFrameInfo(RazorCaptureFile *file, uint32_t argB, uint32_t argC)
 {
 	uint32_t payload[2];
 	uint32_t hdr[2];
 	int res;
 
-	payload[0] = a2;
-	payload[1] = a3;
+	payload[0] = argB;
+	payload[1] = argC;
 	hdr[0] = 0x801A2B13U;
 	hdr[1] = 16U;
 	res = razorFileWriterWrite(&file->writer, hdr, 8U);
@@ -204,13 +204,14 @@ int razorCaptureFileWriteJobHeader(RazorCaptureFile *file, const void *jobMeta, 
 	{
 		struct {
 			uint32_t jobId;
-			uint8_t flags0;
-			uint8_t flags1;
+			uint8_t versionFlag;
+			uint8_t jobTypeFlag;
 			uint16_t pad;
 		} meta;
 		meta.jobId = *(const uint32_t *)jobMeta;
-		meta.flags0 = 1;
-		meta.flags1 = ((const uint8_t *)jobMeta)[4];
+		meta.versionFlag = 1;
+		const uint8_t *metaBytes = (const uint8_t *)jobMeta;
+		meta.jobTypeFlag = metaBytes[4];
 		meta.pad = 0;
 		razorWriteChunk(file, 0x1A2B01U, &meta, 8U);
 	}
@@ -773,74 +774,77 @@ int razorCaptureSerializeProgram(RazorProgramCache *progCache, RazorRangeList *r
 		meta[27] = prog32[23];
 		meta[28] = prog32[5] & 2U;
 
+		int extOk = 1;
 		if (prog32[5] & 1U) {
 			uint32_t extOff = prog32[11];
 			if (extOff == 0U) {
 				err = 16;
-				goto serialize_uniforms;
-			}
-			{
-				const uint16_t *ext = (const uint16_t *)((const char *)program + extOff + 44);
+				extOk = 0;
+			} else {
+				const uint8_t *progBytes = (const uint8_t *)program;
+				const uint16_t *ext = (const uint16_t *)&progBytes[extOff + 44];
 				meta[26] = ext[4];
 				meta[30] = ext[6];
 				meta[31] = ext[7];
 			}
 		}
 
-		progSize = sceGxmProgramGetSize(program);
-		razorCaptureFileWriteProgram(file, meta, (uint32_t)(uintptr_t)program, progSize);
+		if (extOk) {
+			progSize = sceGxmProgramGetSize(program);
+			razorCaptureFileWriteProgram(file, meta, (uint32_t)(uintptr_t)program, progSize);
 
-		paramCount = prog32[9];
-		for (i = 0; i < paramCount; i++) {
-			const SceGxmProgramParameter *param = sceGxmProgramGetParameter(program, i);
-			uint32_t pword = ((const uint32_t *)param)[1];
-			uint32_t cat = pword & 0xFU;
-			uint32_t type = (pword >> 4) & 0xFU;
-			uint32_t compCount = (pword >> 8) & 0xFU;
-			uint32_t container = (pword >> 12) & 0xFU;
-			uint32_t arrSize = sceGxmProgramParameterGetArraySize(param);
-			uint32_t resIdx = sceGxmProgramParameterGetResourceIndex(param);
-			uint32_t sem = (pword >> 24) & 0xFU;
-			uint32_t isRef = (pword & 0x10000000U) != 0U;
-			uint8_t semanticIdx = 0;
-			uint8_t isBuf = 0;
-			uint8_t isTex = 0;
-			struct {
-				uint32_t progPtr;
-				uint32_t paramIdx;
-				uint8_t catType;
-				uint8_t compCont;
-				uint8_t semIdx;
-				uint8_t flags;
-				uint32_t arraySize;
-				uint32_t resourceIndex;
-				uint32_t pad;
-			} pmeta;
-			const char *pname;
+			paramCount = prog32[9];
+			for (i = 0; i < paramCount; i++) {
+				const SceGxmProgramParameter *param = sceGxmProgramGetParameter(program, i);
+				const uint32_t *paramWords = (const uint32_t *)param;
+				uint32_t pword = paramWords[1];
+				uint32_t cat = pword & 0xFU;
+				uint32_t type = (pword >> 4) & 0xFU;
+				uint32_t compCount = (pword >> 8) & 0xFU;
+				uint32_t container = (pword >> 12) & 0xFU;
+				uint32_t arrSize = sceGxmProgramParameterGetArraySize(param);
+				uint32_t resIdx = sceGxmProgramParameterGetResourceIndex(param);
+				uint32_t sem = (pword >> 24) & 0xFU;
+				uint32_t isRef = (pword & 0x10000000U) != 0U;
+				uint8_t semanticIdx = 0;
+				uint8_t isBuf = 0;
+				uint8_t isTex = 0;
+				struct {
+					uint32_t progPtr;
+					uint32_t paramIdx;
+					uint8_t catType;
+					uint8_t compCont;
+					uint8_t semIdx;
+					uint8_t flags;
+					uint32_t arraySize;
+					uint32_t resourceIndex;
+					uint32_t pad;
+				} pmeta;
+				const char *pname;
 
-			if (cat == 0U) {
-				semanticIdx = (uint8_t)((pword >> 16) & 0xFFU);
-			} else if (cat == 4U) {
-				isBuf = (pword & 0x10000U) != 0U;
-				isTex = (pword & 0x20000U) != 0U;
+				if (cat == 0U) {
+					semanticIdx = (uint8_t)((pword >> 16) & 0xFFU);
+				} else if (cat == 4U) {
+					isBuf = (pword & 0x10000U) != 0U;
+					isTex = (pword & 0x20000U) != 0U;
+				}
+
+				pmeta.progPtr = meta[0];
+				pmeta.paramIdx = i;
+				pmeta.catType = (uint8_t)((cat & 0xFU) | ((type & 0xFU) << 4));
+				pmeta.compCont = (uint8_t)((compCount & 0xFU) | ((container & 0xFU) << 4));
+				pmeta.semIdx = semanticIdx;
+				pmeta.flags = (uint8_t)((sem & 0xFU) | (isRef << 4) | (isBuf << 5) | (isTex << 6));
+				pmeta.arraySize = arrSize;
+				pmeta.resourceIndex = resIdx;
+				pmeta.pad = 0;
+
+				pname = sceGxmProgramParameterGetName(param);
+				razorCaptureFileWriteProgramParam(file, &pmeta, pname);
 			}
-
-			pmeta.progPtr = meta[0];
-			pmeta.paramIdx = i;
-			pmeta.catType = (uint8_t)((cat & 0xFU) | ((type & 0xFU) << 4));
-			pmeta.compCont = (uint8_t)((compCount & 0xFU) | ((container & 0xFU) << 4));
-			pmeta.semIdx = semanticIdx;
-			pmeta.flags = (uint8_t)((sem & 0xFU) | (isRef << 4) | (isBuf << 5) | (isTex << 6));
-			pmeta.arraySize = arrSize;
-			pmeta.resourceIndex = resIdx;
-			pmeta.pad = 0;
-
-			pname = sceGxmProgramParameterGetName(param);
-			razorCaptureFileWriteProgramParam(file, &pmeta, pname);
 		}
 	}
 
-serialize_uniforms:
 	if (pdsOut == NULL)
 		return err;
 
@@ -857,7 +861,8 @@ serialize_uniforms:
 			} else if (litCount == 0U || litOff == 0U) {
 				bufErr = 16;
 			} else {
-				const uint16_t *litTable = (const uint16_t *)((const char *)program + litOff + 148);
+				const uint8_t *progBytesLit = (const uint8_t *)program;
+				const uint16_t *litTable = (const uint16_t *)&progBytesLit[litOff + 148];
 				const uint16_t *litEnd = litTable + 4U * litCount;
 				const uint16_t *baseEntry = NULL;
 				const uint16_t *curLit;
@@ -872,13 +877,15 @@ serialize_uniforms:
 					bufErr = 16;
 				} else {
 					uint16_t baseReg = baseEntry[2];
-					const uint8_t *depPtr = (const uint8_t *)program + depOff + 124;
+					const uint8_t *depPtr = &progBytesLit[depOff + 124];
 					const uint8_t *depEnd = depPtr + 8U * depCount;
 
 					for (; depPtr < depEnd; depPtr += 8) {
-						uint16_t bufIdx = *(const uint16_t *)(depPtr + 0);
-						uint16_t regOff = *(const uint16_t *)(depPtr + 2);
-						uint32_t byteOff = *(const uint32_t *)(depPtr + 4);
+						const uint16_t *depHalfs = (const uint16_t *)depPtr;
+						const uint32_t *depWords = (const uint32_t *)depPtr;
+						uint16_t bufIdx = depHalfs[0];
+						uint16_t regOff = depHalfs[1];
+						uint32_t byteOff = depWords[1];
 						uint32_t regVal = 0;
 						uint32_t outType = 0;
 						uint32_t outSize = 0;
@@ -903,7 +910,7 @@ serialize_uniforms:
 							}
 							{
 								const uint8_t *pbase = (prog32[10] != 0U)
-									? ((const uint8_t *)program + prog32[10] + 40)
+									? &progBytesLit[prog32[10] + 40]
 									: NULL;
 								uint32_t pcnt = prog32[9];
 								uint32_t k;
@@ -912,11 +919,12 @@ serialize_uniforms:
 								for (k = 0; k < pcnt; k++) {
 									const SceGxmProgramParameter *pp =
 										(const SceGxmProgramParameter *)(pbase + 16U * k);
-									uint32_t pw = ((const uint32_t *)pp)[1];
+									const uint32_t *ppWords = (const uint32_t *)pp;
+									uint32_t pw = ppWords[1];
 									if ((pw & 0xFU) == 4U &&
 									    sceGxmProgramParameterGetResourceIndex(pp) == bufIdx) {
 										outType = bufIdx + 256U;
-										outSize = ((const uint32_t *)pp)[2];
+										outSize = ppWords[2];
 										clampRange = (pw & 0x10000U) != 0U;
 										clampMap = 1;
 										found = 1;

@@ -245,7 +245,7 @@ void *hudDataSrcBaseDtor(void *objPtr)
 
 void hudDataSrcBaseReset(void *objPtr)
 {
-	*((uint8_t *)objPtr + 4) = 0;
+	((HudSeriesDataSrc *)objPtr)->dirty = 0;
 }
 
 void *hudDataSrcBaseDeletingDtor(void *objPtr)
@@ -257,7 +257,7 @@ void *hudDataSrcBaseDeletingDtor(void *objPtr)
 
 void *hudDataSrcBaseCtor(void *objPtr)
 {
-	*((uint8_t *)objPtr + 4) = 0;
+	((HudSeriesDataSrc *)objPtr)->dirty = 0;
 	*(const HudDataSrcVtable **)objPtr = &g_dataSrcBaseVtable;
 	return objPtr;
 }
@@ -321,23 +321,23 @@ void *hudGpuBufSrcCtor(void *objPtr)
 	return s;
 }
 
-void hudGpuBufSrcOnOverflow(void *objPtr, int a1, int a2, int a3, uint8_t a4)
+void hudGpuBufSrcOnOverflow(void *objPtr, int ringArgA, int ringArgB, int ringArgC, uint8_t ringArgD)
 {
 	HudGpuBufDataSrc *s = (HudGpuBufDataSrc *)objPtr;
-	if (a1 != 0) s->rings[0].overflows++;
-	if (a2 != 0) s->rings[1].overflows++;
-	if (a3 != 0) s->rings[2].overflows++;
-	if (a4 != 0) s->rings[3].overflows++;
+	if (ringArgA != 0) s->rings[0].overflows++;
+	if (ringArgB != 0) s->rings[1].overflows++;
+	if (ringArgC != 0) s->rings[2].overflows++;
+	if (ringArgD != 0) s->rings[3].overflows++;
 }
 
-void hudGpuBufSrcOnInit(void *objPtr, uint32_t a1, uint32_t a2, uint32_t a3, uint32_t a4)
+void hudGpuBufSrcOnInit(void *objPtr, uint32_t ringArgA, uint32_t ringArgB, uint32_t ringArgC, uint32_t ringArgD)
 {
 	HudGpuBufDataSrc *s = (HudGpuBufDataSrc *)objPtr;
 	int i;
-	s->rings[0].capacity = a1;
-	s->rings[1].capacity = a2;
-	s->rings[2].capacity = a3;
-	s->rings[3].capacity = a4;
+	s->rings[0].capacity = ringArgA;
+	s->rings[1].capacity = ringArgB;
+	s->rings[2].capacity = ringArgC;
+	s->rings[3].capacity = ringArgD;
 	for (i = 0; i < 4; i++) {
 		s->rings[i].used = 0;
 		s->rings[i].overflows = 0;
@@ -345,16 +345,16 @@ void hudGpuBufSrcOnInit(void *objPtr, uint32_t a1, uint32_t a2, uint32_t a3, uin
 	}
 }
 
-void hudGpuBufSrcOnUpdate(void *objPtr, uint32_t a1, uint32_t a2, uint32_t a3, uint32_t a4)
+void hudGpuBufSrcOnUpdate(void *objPtr, uint32_t ringArgA, uint32_t ringArgB, uint32_t ringArgC, uint32_t ringArgD)
 {
 	HudGpuBufDataSrc *s = (HudGpuBufDataSrc *)objPtr;
 	uint32_t deltas[4];
 	int i;
 
-	deltas[0] = a1;
-	deltas[1] = a2;
-	deltas[2] = a3;
-	deltas[3] = a4;
+	deltas[0] = ringArgA;
+	deltas[1] = ringArgB;
+	deltas[2] = ringArgC;
+	deltas[3] = ringArgD;
 	for (i = 0; i < 4; i++) {
 		float pct;
 		s->rings[i].used += deltas[i];
@@ -1453,9 +1453,9 @@ void hudGpuTimelineSrcProcess(void *objPtr)
 			tm->gpuWinEnd   = hudI64ToFloat((int64_t)s->curPaTimeUs  - baseUs) / 1000.0f;
 		}
 		if (s->frameStartCount > 1U) {
-			float f0 = hudI64ToFloat((int64_t)s->frameStarts[0] - baseUs) / 1000.0f;
-			float f1 = hudI64ToFloat((int64_t)s->frameStarts[1] - baseUs) / 1000.0f;
-			s->lastFrameMs = f1 - f0;
+			float fracA = hudI64ToFloat((int64_t)s->frameStarts[0] - baseUs) / 1000.0f;
+			float fracB = hudI64ToFloat((int64_t)s->frameStarts[1] - baseUs) / 1000.0f;
+			s->lastFrameMs = fracB - fracA;
 		} else {
 			s->lastFrameMs = 0.0f;
 		}

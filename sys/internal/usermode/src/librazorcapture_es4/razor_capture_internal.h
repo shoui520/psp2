@@ -200,7 +200,7 @@ int sgxCalcYuvLayout(uint32_t width, uint32_t height, uint32_t stride, uint32_t 
 int sgxIsSwizzledTexType(int texType);
 int sgxScanUsseProgram(SgxUsseProgramInfo *outInfo, uint64_t *entryPtr, uint32_t gpuEntryAddr,
 		       int minBytes, int maxBytes, uint8_t checkFooter);
-void sgxFindUsseTexSamples(const SgxUsseProgramInfo *info, int *outOffsets, int isSecondary);
+void sgxFindUsseTexSamples(const SgxUsseProgramInfo *info, int *outOffsets, int isSecondPass);
 int sgxUsseGetFooter(const SgxUsseProgramInfo *info, uint32_t *outHash, uint8_t *outHasProg, uint32_t *outProg);
 
 /* capture_file.c */
@@ -208,7 +208,7 @@ void razorCaptureFileReset(RazorCaptureFile *file);
 RazorCaptureFile *razorCaptureFileInit(RazorCaptureFile *file);
 uint64_t razorCaptureFileOpen(RazorCaptureFile *file, const char *filename, const void *initData);
 int razorCaptureFileClose(RazorCaptureFile *file);
-int razorCaptureFileWriteFrameInfo(RazorCaptureFile *file, uint32_t a2, uint32_t a3);
+int razorCaptureFileWriteFrameInfo(RazorCaptureFile *file, uint32_t argB, uint32_t argC);
 int razorCaptureFileWriteJobHeader(RazorCaptureFile *file, const void *jobMeta, const void *regs, const uint32_t *kickInfo);
 uint64_t razorCaptureFileFlushMemory(RazorCaptureFile *file, int captureAll);
 void razorCaptureFileClearPages(RazorCaptureFile *file);

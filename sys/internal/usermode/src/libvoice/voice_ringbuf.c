@@ -34,22 +34,24 @@ void voiceRingReset(VoiceRingBuffer *ring)
 
 uint32_t voiceRingWriteAt(VoiceRingBuffer *ring, uint32_t offset, const void *src, uint32_t size)
 {
+	const uint8_t *srcBytes = (const uint8_t *)src;
 	uint32_t capacity = ring->capacity;
 	uint32_t freeBytes = (uint16_t)(capacity - (uint16_t)(ring->writeCount - ring->readCount));
 	uint32_t toWrite = (freeBytes >= size) ? size : freeBytes;
 
 	if (offset + toWrite > capacity) {
 		uint32_t firstPart = capacity - offset;
-		voiceMemcpy(ring->buffer + offset, src, firstPart);
-		voiceMemcpy(ring->buffer, (const uint8_t *)src + firstPart, toWrite - firstPart);
+		voiceMemcpy(ring->buffer + offset, srcBytes, firstPart);
+		voiceMemcpy(ring->buffer, srcBytes + firstPart, toWrite - firstPart);
 	} else {
-		voiceMemcpy(ring->buffer + offset, src, toWrite);
+		voiceMemcpy(ring->buffer + offset, srcBytes, toWrite);
 	}
 	return toWrite;
 }
 
 uint32_t voiceRingRead(VoiceRingBuffer *ring, void *dst, uint32_t size)
 {
+	uint8_t *dstBytes = (uint8_t *)dst;
 	uint32_t capacity = ring->capacity;
 	uint32_t usedBytes = (uint16_t)(ring->writeCount - ring->readCount);
 	uint32_t toRead = (usedBytes >= size) ? size : usedBytes;
@@ -57,10 +59,10 @@ uint32_t voiceRingRead(VoiceRingBuffer *ring, void *dst, uint32_t size)
 
 	if (readPos + toRead > capacity) {
 		uint32_t firstPart = capacity - readPos;
-		voiceMemcpy(dst, ring->buffer + readPos, firstPart);
-		voiceMemcpy((uint8_t *)dst + firstPart, ring->buffer, toRead - firstPart);
+		voiceMemcpy(dstBytes, ring->buffer + readPos, firstPart);
+		voiceMemcpy(dstBytes + firstPart, ring->buffer, toRead - firstPart);
 	} else {
-		voiceMemcpy(dst, ring->buffer + readPos, toRead);
+		voiceMemcpy(dstBytes, ring->buffer + readPos, toRead);
 	}
 
 	ring->readIdx = (uint16_t)((ring->readIdx + toRead) % ring->capacity);
@@ -70,6 +72,7 @@ uint32_t voiceRingRead(VoiceRingBuffer *ring, void *dst, uint32_t size)
 
 uint32_t voiceRingWrite(VoiceRingBuffer *ring, const void *src, uint32_t size)
 {
+	const uint8_t *srcBytes = (const uint8_t *)src;
 	uint32_t capacity = ring->capacity;
 	uint32_t freeBytes = (uint16_t)(capacity - (uint16_t)(ring->writeCount - ring->readCount));
 	uint32_t toWrite = (freeBytes >= size) ? size : freeBytes;
@@ -77,10 +80,10 @@ uint32_t voiceRingWrite(VoiceRingBuffer *ring, const void *src, uint32_t size)
 
 	if (writePos + toWrite > capacity) {
 		uint32_t firstPart = capacity - writePos;
-		voiceMemcpy(ring->buffer + writePos, src, firstPart);
-		voiceMemcpy(ring->buffer, (const uint8_t *)src + firstPart, toWrite - firstPart);
+		voiceMemcpy(ring->buffer + writePos, srcBytes, firstPart);
+		voiceMemcpy(ring->buffer, srcBytes + firstPart, toWrite - firstPart);
 	} else {
-		voiceMemcpy(ring->buffer + writePos, src, toWrite);
+		voiceMemcpy(ring->buffer + writePos, srcBytes, toWrite);
 	}
 
 	ring->writeIdx = (uint16_t)((ring->writeIdx + toWrite) % ring->capacity);

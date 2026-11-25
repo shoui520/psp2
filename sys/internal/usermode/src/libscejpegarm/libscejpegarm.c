@@ -512,12 +512,12 @@ int jpegArmSetupYCbCrPlanes(JpegArmDecoder *dec, uint8_t *outBuf)
 
 	if (outBuf != NULL) {
 		dec->components[0].outPtr = outBuf;
-		uint8_t *p1 = outBuf + dec->components[0].outStride * dec->components[0].outHeight;
-		uint8_t *p2 = p1 + dec->components[1].outStride * dec->components[1].outHeight;
-		uint8_t *p3 = p2 + dec->components[2].outStride * dec->components[2].outHeight;
-		dec->components[1].outPtr = p1;
-		dec->components[2].outPtr = p2;
-		dec->components[3].outPtr = p3;
+		uint8_t *partB = outBuf + dec->components[0].outStride * dec->components[0].outHeight;
+		uint8_t *partC = partB + dec->components[1].outStride * dec->components[1].outHeight;
+		uint8_t *partD = partC + dec->components[2].outStride * dec->components[2].outHeight;
+		dec->components[1].outPtr = partB;
+		dec->components[2].outPtr = partC;
+		dec->components[3].outPtr = partD;
 	}
 
 	return 0;
@@ -1078,7 +1078,7 @@ int jpegArmInitAndParseHeader(void *ctxBuf, const uint8_t *jpegBuf, SceSize jpeg
 	return jpegArmParseHeaderAndSos(dec, coefSizeOut);
 }
 
-int jpegArmBeginDecodeOutput(void *ctxBuf, uint8_t *outBuf, int x0, int y0, int x1, int y1, void *coefBuf)
+int jpegArmBeginDecodeOutput(void *ctxBuf, uint8_t *outBuf, int valA, int posYA, int valB, int posYB, void *coefBuf)
 {
 	JpegArmDecoder *dec = alignDecoderCtx(ctxBuf);
 	if (outBuf == NULL)
@@ -1094,14 +1094,14 @@ int jpegArmBeginDecodeOutput(void *ctxBuf, uint8_t *outBuf, int x0, int y0, int 
 	if (dec->curMcuRow != 0 || (dec->splitState != 0 && dec->splitState != 3))
 		return SCE_JPEGARM_ERROR_INVALID_STATE;
 
-	if ((x0 | y0 | x1 | y1) != 0) {
-		if ((x0 | y0) < 0 || x1 > (int)dec->mcuCols || y1 > (int)dec->mcuRows || x0 >= x1 || y0 >= y1)
+	if ((valA | posYA | valB | posYB) != 0) {
+		if ((valA | posYA) < 0 || valB > (int)dec->mcuCols || posYB > (int)dec->mcuRows || valA >= valB || posYA >= posYB)
 			return SCE_JPEGARM_ERROR_INVALID_REGION;
-		dec->regionStartX = (uint16_t)x0;
-		dec->regionStartY = (uint16_t)y0;
-		dec->regionWidthMcu = (uint16_t)(x1 - x0);
-		dec->regionEndY = (uint16_t)y1;
-		dec->mcuColOffset = (dec->isProgressive != 0) ? 0 : (int16_t)(-x0);
+		dec->regionStartX = (uint16_t)valA;
+		dec->regionStartY = (uint16_t)posYA;
+		dec->regionWidthMcu = (uint16_t)(valB - valA);
+		dec->regionEndY = (uint16_t)posYB;
+		dec->mcuColOffset = (dec->isProgressive != 0) ? 0 : (int16_t)(-valA);
 	}
 
 	if ((dec->flags & JPEGARM_FLAG_OUTPUT_RGBA) != 0)
@@ -1387,7 +1387,7 @@ int jpegArmParseDht(JpegArmDecoder *dec, int markerLen)
 					code = spanEnd;
 					fastEnd = code;
 				} else {
-					((uint8_t *)tbl)[759 + slowPos - i] = isAc ? sym : (uint8_t)(-cat);
+					tbl->slowSym[slowPos - i - 1] = isAc ? sym : (uint8_t)(-cat);
 					if (bitLen > maxBits) {
 						if (maxBits == 8) {
 							for (int b = 9; b < bitLen; b++)
