@@ -45,7 +45,7 @@ typedef struct {
     s32 curChannel; // 56
     u32 sumDecodedSample; // 60
     s32 sampleRate; // 64
-    u8 padding[8];
+    u8 padding[4];
 } SceAacIdInfo; // size 72
 
 typedef struct {
@@ -72,7 +72,7 @@ void updateStreamBuffer(s32 id)
         return;
     }
 
-    if (id < 0 || id >= g_nbr) {
+    if ((id < 0) | (id >= g_nbr)) {
         return;
     }
 
@@ -82,7 +82,7 @@ void updateStreamBuffer(s32 id)
         return;
     }
 
-    if (((u32)p->info.encBuf + 2 * p->info.halfEncSize - (u32)p->codec.inBuf + 1600) < 1536) {
+    if ((s32)((u32)p->info.encBuf + 2 * p->info.halfEncSize - (u32)p->codec.inBuf + 1600) < 1536) {
         compactInputBuffer(id);
     }
 
@@ -112,7 +112,7 @@ void compactInputBuffer(s32 id) {
         return;
     }
 
-    if (id < 0 || id >= g_nbr) {
+    if ((id < 0) | (id >= g_nbr)) {
         return;
     }
 
@@ -152,7 +152,7 @@ s32 sceAacEndEntry(void) {
             break;
         }
 
-        if (i<0 || i>=g_nbr) {
+        if ((i < 0) | (i >= g_nbr)) {
             break;
         }
 
@@ -168,9 +168,7 @@ s32 sceAacEndEntry(void) {
     }
 
     // sceAac_23D35CAE
-    sceAacTermResource();
-
-    return SCE_ERROR_OK;
+    return sceAacTermResource();
 }
 
 // sceAac_5CFFC57C
@@ -281,7 +279,7 @@ s32 sceAacInit(SceAacInitArg *arg)
     s32 intr;
     s32 i;
     s32 offset;
-    SceAacId *p;
+    SceAacId *p = NULL;
     s32 id;
     s32 ret;
 
@@ -351,12 +349,12 @@ s32 sceAacInit(SceAacInitArg *arg)
     p->info.reset = 0;
     p->info.streamEnd = arg->streamEnd;
     p->info.bufIdx = 1;
-    p->info.halfEncSize = (arg->encSize - 1600 + ((arg->encSize - 1600) < 0)) >> 1; // wtf?
+    p->info.halfEncSize = (arg->encSize - 1600) / 2;
     p->info.streamRemaining = arg->streamEnd - arg->streamStart;
     p->info.availBytes = 0;
     p->info.curChannel = 0;
     p->info.writePtr = arg->encBuf + 1600;
-    p->info.decSize = (arg->decSize + (arg->decSize < 0)) >> 1;
+    p->info.decSize = arg->decSize / 2;
     p->info.encBuf = arg->encBuf;
     p->info.sumDecodedSample = 0;
 
@@ -386,7 +384,7 @@ s32 sceAac_E955E83A(s32 *sampleRate)
     s32 intr;
     s32 i;
     s32 offset;
-    SceAacId *p;
+    SceAacId *p = NULL;
     s32 id;
     s32 ret;
 
@@ -457,7 +455,7 @@ s32 sceAacExit(s32 id)
         return 0x80691503;
     }
 
-    if (id < 0 || id >= g_nbr) {
+    if ((id < 0) | (id >= g_nbr)) {
         return 0x80691503;
     }
 
@@ -519,7 +517,7 @@ s32 sceAacDecode(s32 id, void** src)
         // Kernel_Library_A089ECA4
         sceKernelMemset(p->codec.outBuf, 0, p->info.decSize);
 
-        p->info.curChannel = !p->info.curChannel;
+        p->info.curChannel ^= 1;
         p->codec.outBuf = p->info.decBuf + p->info.decSize * p->info.curChannel;
 
         return 0;
@@ -538,9 +536,9 @@ s32 sceAacDecode(s32 id, void** src)
         p->codec.inBuf += p->codec.readSample;
         p->info.streamRemaining -= p->codec.readSample;
 
-        p->codec.outBuf = p->info.decBuf + p->info.decSize * !p->info.curChannel;
+        p->codec.outBuf = p->info.decBuf + p->info.decSize * (p->info.curChannel ^ 1);
         p->info.sumDecodedSample += p->codec.decodedSample;
-        p->info.curChannel = !p->info.curChannel;
+        p->info.curChannel ^= 1;
 
         handleAacLoop(id);
 
@@ -550,16 +548,17 @@ s32 sceAacDecode(s32 id, void** src)
     // Kernel_Library_A089ECA4
     sceKernelMemset(p->codec.outBuf, 0, p->info.decSize);
 
-    p->info.curChannel = !p->info.curChannel;
+    p->info.curChannel ^= 1;
     p->codec.outBuf = p->info.decBuf + p->info.decSize * p->info.curChannel;
 
     return p->info.decSize;
 }
 
 // sceAac_FA01FCB6
-s32 sceAac_FA01FCB6(s32 id, void *arg1, s32 *arg2, void *arg3, s32 *arg4)
+s32 sceAac_FA01FCB6(s32 id, void *inBuf, s32 *readBytesOut, void *outBuf, s32 *decodedBytesOut)
 {
-    dbg_printf("sceAac_FA01FCB6(id=%d, arg1=%p, arg2=%p, arg3=%p, arg4=%p)\n", id, arg1, arg2, arg3, arg4);
+    dbg_printf("sceAac_FA01FCB6(id=%d, inBuf=%p, readBytesOut=%p, outBuf=%p, decodedBytesOut=%p)\n",
+               id, inBuf, readBytesOut, outBuf, decodedBytesOut);
 
     SceAacId *p;
 
@@ -581,20 +580,20 @@ s32 sceAac_FA01FCB6(s32 id, void *arg1, s32 *arg2, void *arg3, s32 *arg4)
         return 0x80691103;
     }
 
-    if (arg1 == NULL || arg3 == NULL) {
+    if ((inBuf == NULL) | (outBuf == NULL)) {
         return 0x80691002;
     }
 
-    p->codec.inBuf = arg1;
-    p->codec.outBuf = arg3;
+    p->codec.inBuf = inBuf;
+    p->codec.outBuf = outBuf;
 
     // sceAudiocodec_70A703F8
     if (sceAudiocodecDecode(&p->codec, 0x1003) != 0) {
         return 0x80691401;
     }
 
-    *arg2 = p->codec.readSample;
-    *arg4 = p->codec.decodedSample;
+    *readBytesOut = p->codec.readSample;
+    *decodedBytesOut = p->codec.decodedSample;
 
     return SCE_ERROR_OK;
 }
@@ -632,9 +631,10 @@ s32 sceAacCheckStreamDataNeeded(s32 id)
 }
 
 // sceAac_02098C69
-s32 sceAacGetInfoToAddStreamData(s32 id, s32 **arg1, s32 *arg2, s32 *arg3)
+s32 sceAacGetInfoToAddStreamData(s32 id, s32 **writeBufOut, s32 *writableBytesOut, s32 *readOffsetOut)
 {
-    dbg_printf("sceAacGetInfoToAddStreamData(id=%d, arg1=%p, arg2=%p, arg3=%p)\n", id, arg1, arg2, arg3);
+    dbg_printf("sceAacGetInfoToAddStreamData(id=%d, writeBufOut=%p, writableBytesOut=%p, readOffsetOut=%p)\n",
+               id, writeBufOut, writableBytesOut, readOffsetOut);
 
     SceAacId *p;
 
@@ -658,29 +658,29 @@ s32 sceAacGetInfoToAddStreamData(s32 id, s32 **arg1, s32 *arg2, s32 *arg3)
 
     // sceAac_D7C51541
     if (!sceAacCheckStreamDataNeeded(id)) {
-        if (arg3 != NULL) {
-            *arg3 = 0;
+        if (readOffsetOut != NULL) {
+            *readOffsetOut = 0;
         }
 
-        if (arg1 != NULL) {
-            *arg1 = 0;
+        if (writeBufOut != NULL) {
+            *writeBufOut = 0;
         }
 
-        if (arg2 != NULL) {
-            *arg2 = 0;
+        if (writableBytesOut != NULL) {
+            *writableBytesOut = 0;
         }
     }
     else {
-        if (arg3 != NULL) {
-            *arg3 = p->info.streamCur;
+        if (readOffsetOut != NULL) {
+            *readOffsetOut = p->info.streamCur;
         }
 
-        if (arg1 != NULL) {
-            *arg1 = p->info.writePtr;
+        if (writeBufOut != NULL) {
+            *writeBufOut = p->info.writePtr;
         }
 
-        if (arg2 != NULL) {
-            *arg2 = (p->info.encBuf + p->info.halfEncSize * (p->info.bufIdx + 1) + 1600) - p->info.writePtr;
+        if (writableBytesOut != NULL) {
+            *writableBytesOut = (p->info.encBuf + p->info.halfEncSize * (p->info.bufIdx + 1) + 1600) - p->info.writePtr;
         }
     }
 
@@ -713,8 +713,8 @@ s32 sceAacNotifyAddStreamData(s32 id, s32 size)
         return 0x80691102;
     }
 
-    if (size < 0 &&
-        (p->info.encBuf + p->info.halfEncSize * (p->info.bufIdx + 1) + 1600 - p->info.writePtr) < size) {
+    if ((size < 0) &
+        ((p->info.encBuf + p->info.halfEncSize * (p->info.bufIdx + 1) + 1600 - p->info.writePtr) < size)) {
         return 0x80691003;
     }
 
@@ -747,13 +747,13 @@ s32 sceAacResetPlayPosition(s32 id)
         return 0x80691503;
     }
 
-    if (id < 0 || id >= g_nbr) {
+    if ((id < 0) | (id >= g_nbr)) {
         return 0x80691503;
     }
 
     p = &g_pool[id];
 
-    if (g_pool == NULL) {
+    if (p == NULL) {
         return 0x80691503;
     }
 
@@ -860,7 +860,7 @@ s32 sceAacGetSumDecodedSample(s32 id)
         return 0x80691503;
     }
 
-    if (id < 0 || id >= g_nbr) {
+    if ((id < 0) | (id >= g_nbr)) {
         return 0x80691503;
     }
 
@@ -930,7 +930,7 @@ s32 initAacCodec(s32 id)
         return 0x80691503;
     }
 
-    if (id < 0 || id >= g_nbr) {
+    if ((id < 0) | (id >= g_nbr)) {
         return 0x80691503;
     }
 
@@ -974,7 +974,7 @@ void handleAacLoop(s32 id)
         return;
     }
 
-    if (id < 0 || id >= g_nbr) {
+    if ((id < 0) | (id >= g_nbr)) {
         return;
     }
 
@@ -986,10 +986,7 @@ void handleAacLoop(s32 id)
 
     if (p->info.streamCur == p->info.streamEnd && p->info.streamRemaining <= 0) {
         if (p->info.loopNum != 0) {
-            if (p->info.loopNum > 0) {
-                p->info.loopNum--;
-            }
-
+            p->info.loopNum -= (p->info.loopNum > 0);
             sceAacResetPlayPosition(id);
         }
         else {

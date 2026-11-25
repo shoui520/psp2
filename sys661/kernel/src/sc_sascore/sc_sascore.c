@@ -592,7 +592,7 @@ int sceSasCore_4AA9EAD6(SceSasCore *sasCore, int vnum, void *atrac3Context)
 	SceSasVoice *v = &sasCore->voices[vnum];
 	u8 t = v->type;
 	u8 pause_bits = t & 0x30;
-	if ((u8)(t - pause_bits) == 6) {
+	if (pause_bits == (u8)(t - 6)) {
 		sceKernelSignalSema(g_sas_sema, 1);
 		pspSdkSetK1(old_k1);
 		return 0x80420040;
@@ -718,9 +718,9 @@ int sceSasCore_B7660A23(SceSasCore *sasCore, int vnum, int freq)
 	u8 pause_bits = v->type & 0x30;
 	v->type = pause_bits + 2;
 	v->src_addr = 0xFFFFFFFF;
-	s32 step = 0x4000 >> (freq >> 2);
+	s32 step = 0x4000 >> ((u32)freq >> 2);
+	v->loop_addr = step;
 	if (step != 0) {
-		v->loop_addr = step;
 		u32 b = (0xFFFFEEAAu >> ((freq & 3) << 2)) & 0xFF;
 		v->src_addr = b * 0x01010101u;
 	} else {
@@ -867,7 +867,7 @@ int sceSasCore_9EC3676A(SceSasCore *sasCore, int vnum, int flag, int am, int dm,
 	SceSasVoice *v = &sasCore->voices[vnum];
 	u32 cm = v->curve_mode;
 	if (flag & 1) {
-		if ((u32)am >= 32 || !((0x15 >> am) & 1)) {
+		if (am >= 32 || !((0x15 >> am) & 1)) {
 			sceKernelSignalSema(g_sas_sema, 1);
 			pspSdkSetK1(old_k1);
 			return 0x80420013;
@@ -875,7 +875,7 @@ int sceSasCore_9EC3676A(SceSasCore *sasCore, int vnum, int flag, int am, int dm,
 		cm = (cm & ~0xFFu) | (am & 0xFFu);
 	}
 	if (flag & 2) {
-		if ((u32)dm >= 32 || !((0x2A >> dm) & 1)) {
+		if (dm >= 32 || !((0x2A >> dm) & 1)) {
 			sceKernelSignalSema(g_sas_sema, 1);
 			pspSdkSetK1(old_k1);
 			return 0x80420013;
@@ -883,7 +883,7 @@ int sceSasCore_9EC3676A(SceSasCore *sasCore, int vnum, int flag, int am, int dm,
 		cm = (cm & ~0xFF00u) | ((dm & 0xFFu) << 8);
 	}
 	if (flag & 4) {
-		if ((u32)sm >= 32 || !((0x3F >> sm) & 1)) {
+		if (sm >= 32 || !((0x3F >> sm) & 1)) {
 			sceKernelSignalSema(g_sas_sema, 1);
 			pspSdkSetK1(old_k1);
 			return 0x80420013;
@@ -891,7 +891,7 @@ int sceSasCore_9EC3676A(SceSasCore *sasCore, int vnum, int flag, int am, int dm,
 		cm = (cm & ~0xFF0000u) | ((sm & 0xFFu) << 16);
 	}
 	if (flag & 8) {
-		if ((u32)rm >= 32 || !((0x2A >> rm) & 1)) {
+		if (rm >= 32 || !((0x2A >> rm) & 1)) {
 			sceKernelSignalSema(g_sas_sema, 1);
 			pspSdkSetK1(old_k1);
 			return 0x80420013;
@@ -950,8 +950,8 @@ int sceSasCore_07F58C24(SceSasCore *sasCore, int *heights)
 {
 	u32 old_k1 = pspSdkGetK1();
 	u32 k1_check = old_k1 << 11;
-	if ((s32)(((u32)sasCore | ((u32)sasCore + 0xE20)) & k1_check) < 0 ||
-	    (s32)(((u32)heights | ((u32)heights + 0x80)) & k1_check) < 0) {
+	if (((s32)(((u32)sasCore | ((u32)sasCore + 0xE20)) & k1_check) < 0) |
+	    ((s32)(((u32)heights | ((u32)heights + 0x80)) & k1_check) < 0)) {
 		return 0x80000023;
 	}
 	for (int i = 0; i < 32; i++) {
@@ -1079,7 +1079,7 @@ int sceSasCore_D1E0A01E(SceSasCore *sasCore, int grain)
 		pspSdkSetK1(old_k1);
 		return 0x80420005;
 	}
-	if ((grain & 0x1F) != 0 || grain < 0x40 || grain > 0x800) {
+	if ((((grain & 0x1F) != 0) | (grain < 0x40)) || grain > 0x800) {
 		pspSdkSetK1(old_k1);
 		return 0x80420001;
 	}
@@ -1238,7 +1238,7 @@ int sceSasCore_F983B186(SceSasCore *sasCore, int dry, int wet)
 	}
 	int res = sceKernelWaitSema(g_sas_sema, 1, NULL);
 	if (res >= 0) {
-		sasCore->wet_dry = (u8)(((wet != 0) ? 2 : 0) + ((dry != 0) ? 1 : 0));
+		sasCore->wet_dry = (u8)(((wet != 0) << 1) + (dry != 0));
 		*((u8 *)&sasCore->flags + 1) |= 8;
 		sceKernelSignalSema(g_sas_sema, 1);
 	}
@@ -1257,7 +1257,7 @@ int sceSasCore_D5A229C9(SceSasCore *sasCore, int lv, int rv)
 		return 0x80000023;
 	}
 	if (sceKernelGetCompiledSdkVersion() > 0x0300FFFF) {
-		if ((u32)lv > 0x1000 || (u32)rv > 0x1000) {
+		if (((u32)lv > 0x1000) | ((u32)rv > 0x1000)) {
 			pspSdkSetK1(old_k1);
 			return 0x80420023;
 		}
@@ -1269,9 +1269,9 @@ int sceSasCore_D5A229C9(SceSasCore *sasCore, int lv, int rv)
 	}
 	int res = sceKernelWaitSema(g_sas_sema, 1, NULL);
 	if (res >= 0) {
-		sasCore->rev_vol_l = (u16)lv;
 		sasCore->rev_vol_r = (u16)rv;
 		*((u8 *)&sasCore->flags + 1) |= 8;
+		sasCore->rev_vol_l = (u16)lv;
 		sceKernelSignalSema(g_sas_sema, 1);
 	}
 	pspSdkSetK1(old_k1);
@@ -1432,8 +1432,10 @@ int sceP3da_013016F3(u32 *work, u32 numChannels, u32 numSamples, u32 *inBufs, vo
 		return 0x80470003;
 	}
 	if (numChannels != 0) {
-		for (int i = (int)numChannels - 1; i >= 0; i--) {
-			if (!check_valid_ram(inBufs[i], 0x00220202)) {
+		u32 cnt = numChannels;
+		u32 *cur = inBufs + cnt;
+		while (cnt-- != 0) {
+			if (!check_valid_ram(*--cur, 0x00220202)) {
 				return 0x80470003;
 			}
 		}
@@ -1457,8 +1459,10 @@ int sceP3da_013016F3(u32 *work, u32 numChannels, u32 numSamples, u32 *inBufs, vo
 		return 0x80000023;
 	}
 	if (numChannels != 0) {
-		for (int i = (int)numChannels - 1; i >= 0; i--) {
-			u32 ch_buf = inBufs[i];
+		u32 cnt = numChannels;
+		u32 *cur = inBufs + cnt;
+		while (cnt-- != 0) {
+			u32 ch_buf = *--cur;
 			u32 ch_size = numSamples << 1;
 			if (ch_buf != 0) {
 				if ((s32)(((ch_buf + ch_size) | ch_buf | ch_size) & k1_check) < 0) {
@@ -1483,11 +1487,11 @@ int sceP3da_013016F3(u32 *work, u32 numChannels, u32 numSamples, u32 *inBufs, vo
 }
 
 /* 0x2A38: sceP3da_driver_374500A5 */
-int sceP3da_driver_374500A5(int a0, int a1)
+int sceP3da_driver_374500A5(int mode, int param)
 {
 	u32 old_k1 = pspSdkGetK1();
 	pspSdkSetK1(old_k1 << 11);
-	int ret = sceMeCore_driver_635397BB(0x108, a0, a1);
+	int ret = sceMeCore_driver_635397BB(0x108, mode, param);
 	pspSdkSetK1(old_k1);
 	return ret;
 }

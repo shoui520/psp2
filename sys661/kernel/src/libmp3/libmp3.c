@@ -215,7 +215,7 @@ int module_start(SceSize args, void *argp) __attribute__((alias("sceMp3_8AB81558
 int sceMp3_8AB81558(SceSize args, void *argp)
 {
     s32 param = 1;
-    if (args == 4 && argp != NULL) {
+    if ((args == 4) & (argp != NULL)) {
         param = *(s32 *)argp;
     }
     g_initParam = param;
@@ -336,12 +336,7 @@ int sceMp3Decode(int handle, void **pcmOut)
         return 0;
     }
 
-    if (info->streamPos == info->streamEnd) {
-        if (info->dataAvailable <= 0) {
-            goto zero_fill;
-        }
-    } else if (st->bufferedBytes < 0x5A1) {
-    zero_fill:
+    if ((info->streamPos == info->streamEnd) ? (info->dataAvailable <= 0) : (st->bufferedBytes < 0x5A1)) {
         sceKernelMemset((void *)ctx->codecWork[8], 0, st->pcmHalfSize);
         s32 nextHalf = st->pcmHalfIdx ^ 1;
         st->pcmHalfIdx = nextHalf;
@@ -431,7 +426,7 @@ int sceMp3NotifyAddStreamData(int handle, int size)
     u8 *writeLimit = st->mp3Buf + st->mp3HalfSize * (st->writeHalfIdx + 1) + 0x5C0;
     s32 maxWrite = (s32)(writeLimit - st->writePtr);
     s32 remStream = info->streamEnd - info->streamPos;
-    if (size < 0 || size > maxWrite) {
+    if ((size < 0) & (size > maxWrite)) {
         return 0x80671003;
     }
 
@@ -541,7 +536,7 @@ int sceMp3LowLevelDecode(int handle, const void *src, s32 *srcConsumed, void *ds
     if (ctx->state.lowLevelStatus < 3) {
         return 0x80671103;
     }
-    if (src == NULL || dst == NULL) {
+    if ((src == NULL) | (dst == NULL)) {
         return 0x80671002;
     }
     if (((u32)dst & 1) != 0) {
@@ -743,7 +738,7 @@ static int manage_resources(int count)
         ctx->state.streamStatus = 0;
         ctx->codecWork[3] = g_edramAddr + g_edramHalfSize * i;
         ctx->state.lowLevelStatus = 0;
-        sceKernelMemset(&ctx->info, 0, sizeof(Mp3Info));
+        sceKernelMemset(&ctx->info, 0, 0xCC);
         sceKernelMemset(&ctx->state, 0, 0x2C);
         ctx->info.fplId = -1;
     }
@@ -774,7 +769,7 @@ static int reserve_handle_internal(const SceMp3InitArg *arg)
     Mp3Info *info = &ctx->info;
 
     if (arg != NULL) {
-        sceKernelMemset(info, 0, sizeof(Mp3Info));
+        sceKernelMemset(info, 0, 0xCC);
         info->fplId = -1;
         info->dataAvailable = (s32)(arg->mp3StreamEnd - arg->mp3StreamStart);
         info->streamStart = (s32)arg->mp3StreamStart;
@@ -798,7 +793,7 @@ static int reserve_handle_internal(const SceMp3InitArg *arg)
         ctx->codecWork[8] = (u32)st->pcmBuf;
         st->streamStatus = 2;
     } else {
-        sceKernelMemset(info, 0, sizeof(Mp3Info));
+        sceKernelMemset(info, 0, 0xCC);
         sceKernelMemset(st, 0, 0x2C);
         info->fplId = -1;
         st->lowLevelStatus = 2;
@@ -875,9 +870,7 @@ static void check_stream_loop_or_advance(int handle)
             st->endReached = 1;
             return;
         }
-        if (loop > 0) {
-            st->loopNum = loop - 1;
-        }
+        st->loopNum = loop - (loop > 0);
         sceMp3ResetPlayPosition(handle);
         return;
     }
@@ -1072,7 +1065,7 @@ static s64 calc_xing_frame_offset(int handle, int frame)
     Mp3Info *info = &g_mp3Ctx[handle].info;
     u32 totalFrames = (u32)info->frameNum;
     if (totalFrames == 0) {
-        return (s64)(s32)0x800001FE;
+        return (s64)(u32)0x800001FEU;
     }
     u32 scaled = (u32)(frame * 100);
     u32 tocIdx = scaled / totalFrames;
@@ -1093,11 +1086,11 @@ static s64 calc_vbri_frame_offset(int handle, int frame)
     Mp3Info *info = &g_mp3Ctx[handle].info;
     u32 entryFrames = info->vbriEntryFrames;
     if (entryFrames == 0) {
-        return (s64)(s32)0x800001FE;
+        return (s64)(u32)0x800001FEU;
     }
     u32 *toc = info->vbriToc;
     if (toc == NULL) {
-        return (s64)(s32)0x80000103;
+        return (s64)(u32)0x80000103U;
     }
     u32 count = (u32)info->vbriTocEntries + 1;
     u32 curFrame = 0;
@@ -1128,7 +1121,7 @@ static s64 calc_cbr_frame_offset(int handle, int frame)
 {
     Mp3Info *info = &g_mp3Ctx[handle].info;
     if (info->samplingRate == 0) {
-        return (s64)(s32)0x800001FE;
+        return (s64)(u32)0x800001FEU;
     }
     s64 numer = (s64)frame * (s64)info->maxSample * (s64)info->bitRate * 1000LL;
     s64 denom = (s64)info->samplingRate * 8LL;
