@@ -2,7 +2,7 @@
 
 /* Imports */
 extern int sceNetGetLocalEtherAddr(u8 *mac);
-extern int sceNet_lib_E0A81C7C(const void *s1, const void *s2, u32 n);
+extern int sceNet_lib_E0A81C7C(const void *lhs, const void *rhs, u32 n);
 
 extern int sceNetAdhocPtpOpen(const u8 *srcmac, u16 srcport, const u8 *destmac, u16 destport, u32 bufsize, u32 delay, int count, int flag);
 extern int sceNetAdhocPtpConnect(int id, u32 timeout, int flag);
@@ -93,69 +93,81 @@ __attribute__((noinline))
 static int ptpSendStream(int *ptp_out, const u8 *destmac, int total_size, void *arg, int (*cb)(void *, void **, u32 *))
 {
     u8 srcmac[16];
-    int s2 = 20;
-    int s1;
-    int s0 = sceNetGetLocalEtherAddr(srcmac);
-    if (s0 < 0)
-        return s0;
+    int retries = 20;
+    int ptpId = -1;
+    int ret = sceNetGetLocalEtherAddr(srcmac);
+    if (ret < 0)
+        return ret;
 
-    for (;;) {
-        s1 = sceNetAdhocPtpOpen(srcmac, 0x15, destmac, 0x15, 0x2d20, 0x30d40, 0x32, 0);
-        if (s1 < 0) {
-            s0 = s1;
-            goto cleanup;
+    do {
+        for (;;) {
+            ptpId = sceNetAdhocPtpOpen(srcmac, 0x15, destmac, 0x15, 0x2d20, 0x30d40, 0x32, 0);
+            if (ptpId < 0) {
+                ret = ptpId;
+                break;
+            }
+            *ptp_out = ptpId;
+            ret = sceNetAdhocPtpConnect(ptpId, 0x4c4b40, 0);
+            if (ret >= 0)
+                break;
+            if (ret != (int)0x80410718 || retries <= 0)
+                break;
+            retries--;
+            sceNetAdhocPtpClose(ptpId, 0);
+            sceKernelDelayThread(0x7a120);
         }
-        *ptp_out = s1;
-        s0 = sceNetAdhocPtpConnect(s1, 0x4c4b40, 0);
-        if (s0 >= 0)
+        if (ret < 0)
             break;
-        if (s0 != (int)0x80410718 || s2 <= 0)
-            goto cleanup;
-        s2--;
-        sceNetAdhocPtpClose(s1, 0);
-        sceKernelDelayThread(0x7a120);
-    }
 
-    u32 swapped_size = __builtin_bswap32((u32)total_size);
-    int send_len = 4;
-    s0 = sceNetAdhocPtpSend(s1, &swapped_size, &send_len, 0, 0);
-    if (s0 < 0)
-        goto cleanup;
+        u32 swapped_size = __builtin_bswap32((u32)total_size);
+        int send_len = 4;
+        ret = sceNetAdhocPtpSend(ptpId, &swapped_size, &send_len, 0, 0);
+        if (ret < 0)
+            break;
 
-    s0 = sceNetAdhocPtpFlush(s1, 0, 0);
-    if (s0 < 0)
-        goto cleanup;
+        ret = sceNetAdhocPtpFlush(ptpId, 0, 0);
+        if (ret < 0)
+            break;
 
-    int rem = total_size;
-    while (rem > 0) {
-        void *chunk_ptr = NULL;
-        u32 chunk_size = 0;
-        if (cb(arg, &chunk_ptr, &chunk_size) < 0) {
-            s0 = 0x8041110b;
-            goto cleanup;
+        int rem = total_size;
+        int sendFailed = 0;
+        while (rem > 0) {
+            void *chunk_ptr = NULL;
+            u32 chunk_size = 0;
+            if (cb(arg, &chunk_ptr, &chunk_size) < 0) {
+                ret = 0x8041110b;
+                sendFailed = 1;
+                break;
+            }
+            const u8 *chunkBytes = (const u8 *)chunk_ptr;
+            u32 sent = 0;
+            while (sent < chunk_size) {
+                u32 cur = chunk_size - sent;
+                if (cur >= 0x5a5)
+                    cur = 0x5a4;
+                send_len = (int)cur;
+                ret = sceNetAdhocPtpSend(ptpId, chunkBytes + sent, &send_len, 0, 0);
+                sent += 0x5a4;
+                if (ret < 0) {
+                    sendFailed = 1;
+                    break;
+                }
+            }
+            if (sendFailed)
+                break;
+            rem -= (int)chunk_size;
         }
-        u32 sent = 0;
-        while (sent < chunk_size) {
-            u32 cur = chunk_size - sent;
-            if (cur >= 0x5a5)
-                cur = 0x5a4;
-            send_len = (int)cur;
-            s0 = sceNetAdhocPtpSend(s1, (const u8 *)chunk_ptr + sent, &send_len, 0, 0);
-            sent += 0x5a4;
-            if (s0 < 0)
-                goto cleanup;
-        }
-        rem -= (int)chunk_size;
-    }
+        if (sendFailed)
+            break;
 
-    s0 = sceNetAdhocPtpFlush(s1, 0, 0);
+        ret = sceNetAdhocPtpFlush(ptpId, 0, 0);
+    } while (0);
 
-cleanup:
-    if (s1 >= 0) {
+    if (ptpId >= 0) {
         *ptp_out = -1;
-        sceNetAdhocPtpClose(s1, 0);
+        sceNetAdhocPtpClose(ptpId, 0);
     }
-    return s0;
+    return ret;
 }
 
 __attribute__((noinline))
@@ -163,61 +175,64 @@ static int ptpRecvStream(int *ptp_out, const u8 *target_mac, void *buf, u32 bufs
 {
     u8 mac[16];
     u16 port;
-    int s0 = sceNetGetLocalEtherAddr(mac);
-    if (s0 < 0)
-        return s0;
+    int ret = sceNetGetLocalEtherAddr(mac);
+    if (ret < 0)
+        return ret;
 
-    int s1 = sceNetAdhocPtpListen(mac, 0x15, 0xb480, 0x30d40, 0x32, 1, 0);
-    s0 = s1;
-    if (s1 < 0)
-        goto cleanup;
-
-    *ptp_out = s1;
-    while (g_abort_flag <= 0) {
-        s0 = sceNetAdhocPtpAccept(s1, mac, &port, 0x4c4b40, 0);
-        if (s0 < 0)
-            goto cleanup;
-        if (sceNet_lib_E0A81C7C(mac, target_mac, 6) == 0 && port == 0x15) {
-            *ptp_out = s0;
-            sceNetAdhocPtpClose(s1, 0);
-            s1 = s0;
-            if (g_abort_flag > 0) {
-                s0 = 0x8041110a;
-                goto cleanup;
+    int ptpId = sceNetAdhocPtpListen(mac, 0x15, 0xb480, 0x30d40, 0x32, 1, 0);
+    ret = ptpId;
+    if (ptpId >= 0) {
+        *ptp_out = ptpId;
+        int matched = 0;
+        while (g_abort_flag <= 0) {
+            ret = sceNetAdhocPtpAccept(ptpId, mac, &port, 0x4c4b40, 0);
+            if (ret < 0) {
+                matched = 1;
+                break;
             }
-            u32 net_total = 0;
-            int recv_len = 4;
-            s0 = sceNetAdhocPtpRecv(s1, &net_total, &recv_len, 0x4c4b40, 0);
-            if (s0 < 0)
-                goto cleanup;
-            u32 total = __builtin_bswap32(net_total);
-            if (total == 0)
-                goto cleanup;
-            u32 recvd = 0;
-            do {
-                int chunk = (int)bufsize;
-                s0 = sceNetAdhocPtpRecv(s1, buf, &chunk, 0x4c4b40, 0);
-                if (s0 < 0)
-                    goto cleanup;
-                if (cb(arg, total, buf, (u32)chunk) < 0) {
-                    s0 = 0x8041110c;
-                    goto cleanup;
+            if (sceNet_lib_E0A81C7C(mac, target_mac, 6) == 0 && port == 0x15) {
+                matched = 1;
+                *ptp_out = ret;
+                sceNetAdhocPtpClose(ptpId, 0);
+                ptpId = ret;
+                if (g_abort_flag > 0) {
+                    ret = 0x8041110a;
+                    break;
                 }
-                recvd += (u32)chunk;
-            } while (recvd < total);
-            goto cleanup;
+                u32 net_total = 0;
+                int recv_len = 4;
+                ret = sceNetAdhocPtpRecv(ptpId, &net_total, &recv_len, 0x4c4b40, 0);
+                if (ret < 0)
+                    break;
+                u32 total = __builtin_bswap32(net_total);
+                if (total == 0)
+                    break;
+                u32 recvd = 0;
+                do {
+                    int chunk = (int)bufsize;
+                    ret = sceNetAdhocPtpRecv(ptpId, buf, &chunk, 0x4c4b40, 0);
+                    if (ret < 0)
+                        break;
+                    if (cb(arg, total, buf, (u32)chunk) < 0) {
+                        ret = 0x8041110c;
+                        break;
+                    }
+                    recvd += (u32)chunk;
+                } while (recvd < total);
+                break;
+            }
+            sceNetAdhocPtpClose(ret, 0);
         }
-        sceNetAdhocPtpClose(s0, 0);
+        if (!matched)
+            ret = 0x8041110a;
     }
-    s0 = 0x8041110a;
 
-cleanup:
-    if (s1 >= 0) {
+    if (ptpId >= 0) {
         *ptp_out = -1;
-        sceNetAdhocPtpClose(s1, 0);
+        sceNetAdhocPtpClose(ptpId, 0);
     }
     g_abort_flag = 0;
-    return s0;
+    return ret;
 }
 
 __attribute__((noinline))
@@ -248,7 +263,7 @@ __attribute__((noinline))
 static void *transPoolAlloc(u32 size)
 {
     u32 info[16];
-    void *ptr = NULL;
+    void *ptr;
     if (sceKernelTryAllocateVpl(g_vpl_id, size, &ptr) < 0)
         return NULL;
     info[0] = 0x34;
@@ -350,13 +365,12 @@ int sceNetAdhocTransInt_69F19666(u32 optlen, const void *optdata)
     g_reply_sess.optlen = optlen;
     g_reply_sess.optdata = NULL;
     if (optlen != 0) {
-        void *buf = transPoolAlloc(optlen);
-        g_reply_sess.optdata = buf;
-        if (!buf) {
+        g_reply_sess.optdata = transPoolAlloc(optlen);
+        if (!g_reply_sess_ptr->optdata) {
             g_reply_sess_ptr = NULL;
             return 0x80411106;
         }
-        sceKernelMemcpy(buf, optdata, g_reply_sess_ptr->optlen);
+        sceKernelMemcpy(g_reply_sess_ptr->optdata, optdata, g_reply_sess_ptr->optlen);
     }
     sceKernelMemset(g_reply_sess_ptr->peer_mac, 0, 6);
     int mid = sceNetAdhocMatchingCreate(1, 2, 0x15, 0x800, 0xf4240, 0x1c9c380, 3, 0xf4240, replyMatchingCallback);
@@ -423,14 +437,15 @@ int sceNetAdhocTransInt_AD0E88C6(const u8 *mac, int mode)
                 ret = 0x80411108;
             return ret;
         }
-        u32 outbits = 0;
+        u32 outbits;
         sceKernelWaitEventFlag(g_reply_sess_ptr->evf_id, 3, 0x11, &outbits, NULL);
         sceKernelDeleteEventFlag(g_reply_sess_ptr->evf_id);
         if (outbits & 2)
             return 0x8041110a;
-        int final_ret = (g_reply_sess_ptr->state != 3) ? (int)0x80411108 : 0;
+        if (g_reply_sess_ptr->state != 3)
+            ret = 0x80411108;
         sceKernelMemcpy(g_reply_sess_ptr->peer_mac, mac, 6);
-        return final_ret;
+        return ret;
     } else if (mode == 0) {
         int ret = sceNetAdhocMatchingCancelTarget(g_reply_sess_ptr->matching_id, mac);
         if (ret == (int)0x8041080c)
@@ -663,6 +678,7 @@ static int childPeerInit(TransPeerNode *node, const u8 *mac, u32 optlen, const v
         if (!buf)
             return -1;
     }
+    node->optlen = optlen;
     sceKernelMemcpy(node->optdata, optdata, optlen);
     sceKernelMemcpy(node->mac, mac, 6);
     return 0;
@@ -722,13 +738,12 @@ int sceNetAdhocTransInt_CD9F1D46(u32 optlen, const void *optdata)
     g_req_sess.optlen = optlen;
     g_req_sess.optdata = NULL;
     if (optlen != 0) {
-        void *buf = transPoolAlloc(optlen);
-        g_req_sess.optdata = buf;
-        if (!buf) {
+        g_req_sess.optdata = transPoolAlloc(optlen);
+        if (!g_req_sess_ptr->optdata) {
             g_req_sess_ptr = NULL;
             return 0x80411106;
         }
-        sceKernelMemcpy(buf, optdata, g_req_sess_ptr->optlen);
+        sceKernelMemcpy(g_req_sess_ptr->optdata, optdata, g_req_sess_ptr->optlen);
     }
     sceKernelMemset(g_req_sess_ptr->peer_mac, 0, 6);
     int mid = sceNetAdhocMatchingCreate(2, 2, 0x15, 0x800, 0xf4240, 0x1c9c380, 3, 0xf4240, reqMatchingCallback);
@@ -807,7 +822,7 @@ int sceNetAdhocTransInt_0CAE4A7B(const u8 *mac)
         sceKernelDeleteEventFlag(g_req_sess_ptr->evf_id);
         return ret;
     }
-    u32 outbits = 0;
+    u32 outbits;
     sceKernelWaitEventFlag(g_req_sess_ptr->evf_id, 3, 0x11, &outbits, NULL);
     sceKernelDeleteEventFlag(g_req_sess_ptr->evf_id);
     if (outbits & 2)
