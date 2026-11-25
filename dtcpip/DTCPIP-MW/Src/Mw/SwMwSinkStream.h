@@ -80,7 +80,8 @@ struct SwMwSinkStream {
 	int emptyStatus;		/* 0x54C: 12401 */
 	char name[0x100];		/* 0x550: the stream's name */
 	int resume;			/* 0x650 */
-	unsigned char connectData[12];	/* 0x654 */
+	unsigned char connectData[8];	/* 0x654 */
+	int eventArgument;		/* 0x65C: the reader's event argument */
 	struct SwMwGate gate;		/* 0x660 */
 };
 

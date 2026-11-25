@@ -13,6 +13,17 @@
 #include "SwMwSync.h"
 
 extern "C" {
+struct SwMwSinkStream *SwMwMoveSinkStreamConstruct(struct SwMwSinkStream *stream);
+struct SwMwSinkStream *SwMwMoveSinkStreamDestruct(struct SwMwSinkStream *stream);
+int SwMwMoveSinkStreamInit(struct SwMwSinkStream *stream, void *sink,
+			   const struct SwMwStreamWindow *window);
+int SwMwMoveSinkStreamCreate(struct SwMwSinkStream **stream, void *sink,
+			     const struct SwMwStreamWindow *window);
+int SwMwMoveSinkStreamDestroy(struct SwMwSinkStream *stream);
+int SwMwMoveSinkStreamEventSet(struct SwMwSinkStream *stream, void *handler, void *argument);
+int SwMwMoveSinkStreamOnEvent(struct SwMwSinkStream *stream, int *message);
+int SwMwMoveSinkStreamKxExpiring(void);
+struct SwMwSinkStream *SwMwMoveSinkStreamConstruct(struct SwMwSinkStream *stream);
 int SwMwMoveSinkStreamGetWindow(struct SwMwSinkStream *stream, int *window);
 int SwMwMoveSinkStreamMutexLock(SceKernelLwMutexWork *mutex);
 int SwMwMoveSinkStreamMutexUnlock(SceKernelLwMutexWork *mutex);
