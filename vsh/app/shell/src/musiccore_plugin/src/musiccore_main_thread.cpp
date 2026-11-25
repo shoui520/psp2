@@ -1,0 +1,1807 @@
+/*
+ * SceShell musiccore_plugin: main worker thread, command dispatch, and converters
+ * (0x811CE626 - 0x811D2030)
+ */
+
+#include <stddef.h>
+#include <scetypes.h>
+#include <std/string.h>
+#include <kernel.h>
+#include <thread/thread.h>
+#include <plugin.h>
+#include <system/system.h>
+#include <inputdevice/inputdevice.h>
+
+extern "C" {
+extern int sceAppMgrGetStatusByName(const char *name, void *status);
+extern int sceAppMgrGetStatusByAppId(SceUID appId, void *status);
+extern int appmgrGetAppIdByAppIdSyscall(int target);
+extern int sceBtAvrcpSetPlayStatus(int status);
+extern int sceBtAvrcpSetTitle(const char *title, SceSize len);
+}
+
+extern void *musicCoreHeapAlloc(SceSize size);			/* 0x811D3490 */
+extern void musicCoreHeapFree(void *ptr);			/* 0x811D34AA */
+extern SceSize musicCoreQueueGetSize(SceSize itemSz, int count, int mode); /* 0x811D3A26 */
+extern void *musicCoreQueueCreate(void *mem, const char *name, SceSize itemSz,
+	int count, int mode, int *outErr, SceSize bufSize);	/* 0x811D3A50 */
+extern int musicCoreQueueSend(void *queue, int seqId, SceUInt32 cmd,
+	const void *payload, SceSize payloadSize);		/* 0x811D3C80 */
+extern int musicCoreQueueRecv(void *queue, void **outMsg, SceUInt *timeout); /* 0x811D499E */
+extern int musicCoreQueueRelease(void *queue, void *msg);	/* 0x811D4AAA */
+
+extern int musicCoreCtrlInit(void);				/* 0x811D2030 */
+extern int musicCoreCtrlFini(void);				/* 0x811D2114 */
+extern int musicCoreCtrlOpenChannel(int seqId, SceUInt8 chType, int priority, SceUInt8 *outSlot); /* 0x811D2174 */
+extern int musicCoreCtrlOpenExChannel(int seqId, SceUInt8 chType, int priority, SceUInt8 *outSlot, void *param); /* 0x811D2226 */
+extern int musicCoreCtrlCloseChannel(int seqId);		/* 0x811D22F4 */
+extern int musicCoreCtrlSetActiveSlot(int seqId, SceUInt8 slot); /* 0x811D2372 */
+extern int musicCoreCtrlSetContent(int seqId);			/* 0x811D23E4 */
+extern int musicCoreCtrlOpenUri(int seqId);			/* 0x811D24A2 */
+extern int musicCoreCtrlResumeAudio(int flags, int mode);	/* 0x811D2564 */
+extern int musicCoreCtrlPlay(int seqId, SceUInt8 slot, int param); /* 0x811D25D6 */
+extern int musicCoreCtrlPause(int seqId, SceUInt8 slot, int mode, int param); /* 0x811D2658 */
+extern int musicCoreCtrlControl(int seqId);			/* 0x811D26E0 */
+extern int musicCoreCtrlSetRepeat(int seqId);			/* 0x811D27B2 */
+extern int musicCoreCtrlSetShuffle(int seqId);			/* 0x811D2834 */
+extern int musicCoreCtrlSetVolume(int seqId);			/* 0x811D2902 */
+extern int musicCoreCtrlSetEq(int seqId);			/* 0x811D298C */
+extern int musicCoreCtrlSetAvls(int seqId);			/* 0x811D2A3E */
+extern int musicCoreCtrlSetStatusCb(int mode, void *cb);	/* 0x811D2AC0 */
+extern int musicCoreCtrlSetCapCb(int mode, void *cb);		/* 0x811D2B3A */
+extern int musicCoreCtrlSetMediaCb(int mode, void *cb);		/* 0x811D2BB4 */
+extern int musicCoreCtrlSetNotifyCb(int mode, void *cb);	/* 0x811D2C30 */
+extern int musicCoreCtrlSetTimeCb(int mode, void *cb, int interval); /* 0x811D2CAA */
+extern int musicCoreCtrlSetExtraCb(int mode, void *cb);		/* 0x811D2D2E */
+extern int musicCoreCtrlCmd15(int seqId);			/* 0x811D2DA8 */
+extern int musicCoreCtrlCmd16(int seqId, int flag);		/* 0x811D2E20 */
+extern int musicCoreCtrlCmd17(int seqId);			/* 0x811D2E9C */
+extern int musicCoreCtrlCmd19(int seqId, const void *buf, int mode, int opt); /* 0x811D2F04 */
+extern int musicCoreCtrlGetMeta(SceUInt8 ch, void *metaDesc);	/* 0x811D2F86 */
+extern int musicCoreCtrlGetSlotStatus(SceUInt8 slot, void *outRaw, int *outTime, SceUInt8 *outValid); /* 0x811D305A */
+extern int musicCoreCtrlGetSlotUri(SceUInt8 slot, int mode, int *outType, void *outUri, SceUInt8 *outValid); /* 0x811D317A */
+extern int musicCoreCtrlSetAvrcp(SceUInt8 enable, SceUInt8 *outPrev); /* 0x811D321A */
+extern int musicCoreCtrlSuspendAudio(int flags, int mode);	/* 0x811D325A */
+extern int musicCoreCtrlSeek(void);				/* 0x811D32CC */
+extern int musicCoreCtrlStop(void);				/* 0x811D336C */
+extern int musicCoreCtrlClearAudio(int flags, int mode);	/* 0x811D33DE */
+
+typedef void (*MusicCoreNotifyCb)(const void *ctx, SceUInt16 eventId, const int *err, const void *status);
+
+struct MusicCoreAppSlot {
+	int seqId;						/* +0 */
+	SceUInt8 focusState;					/* +4 */
+	SceUInt8 slotId;					/* +5 */
+	SceUInt8 reserved[2];					/* +6 */
+	int appId;						/* +8 */
+	char titleId[32];					/* +12 */
+	SceUInt8 active;					/* +44 */
+	SceUInt8 bgmAllowed;					/* +45 */
+	SceUInt8 lastCtrl;					/* +46 */
+	SceUInt8 pad47;						/* +47 */
+};
+
+struct MusicCoreErrorRing {
+	SceUInt32 writeIdx;					/* +0 */
+	SceUInt32 readIdx;					/* +4 */
+	int errors[10];						/* +8 */
+};
+
+struct MusicCorePlayTimeEntry {
+	int cmdId;						/* +0 */
+	int errCode;						/* +4 */
+	int extra;						/* +8 */
+};
+
+struct MusicCoreQueueMsg {
+	int header[2];						/* +0 */
+	int seqId;						/* +8 */
+	SceUInt8 channel;					/* +12 */
+	SceUInt8 pad13;						/* +13 */
+	SceUInt16 cmdId;					/* +14 */
+	const void *payload;					/* +16 */
+	SceSize payloadSize;					/* +20 */
+};
+
+struct MusicCoreClientReq {
+	int seqId;						/* +0 */
+	SceUInt8 channel;					/* +4 */
+	SceUInt8 subMode;					/* +5 */
+	SceUInt8 reserved[2];					/* +6 */
+	int pid;						/* +8 */
+	int appId;						/* +12 */
+};
+
+struct MusicCoreMetaDesc {
+	void *artistBuf;
+	SceSize artistSize;
+	void *titleBuf;
+	SceSize titleSize;
+	void *albumBuf;
+	SceSize albumSize;
+};
+
+static MusicCoreNotifyCb s_notifyCb = NULL;			/* 0x8156B938 */
+static SceUInt8 s_capData[72];					/* 0x8156B93C */
+static SceUInt8 s_rawStatusCh0[144];				/* 0x8156B988 */
+static SceUInt8 s_rawStatusCh1[144];				/* 0x8156BA18 */
+static SceUInt8 s_rawStatusCh2[144];				/* 0x8156BAA8 */
+static int s_playTimeCh1 = 0;					/* 0x8156BB38 */
+static int s_playTimeCh2 = 0;					/* 0x8156BB3C */
+static SceUInt8 s_extraState[3][8];				/* 0x8156BB40..BB57 */
+static SceUInt8 s_playTimeCh0Slot = 0;				/* 0x8156BB58 */
+static int s_playTimeCh0Val = 0;				/* 0x8156BB5C */
+static SceUInt8 s_trackInfoBuf[0x828];				/* 0x8156BB68 */
+static SceUInt8 s_exOpenParam[20];				/* 0x8156C390 */
+static char s_uriCh1[0x401];					/* 0x8156C3A4 */
+static char s_uriCh0[0x401];					/* 0x8156C7A5 */
+static char s_uriCh2[0x401];					/* 0x8156CBA6 */
+static MusicCoreErrorRing s_errRingCh1;				/* 0x8156CFA8 */
+static MusicCoreErrorRing s_errRingCh0[8];			/* 0x8156CFD8 */
+static MusicCoreErrorRing s_errRingCh2;				/* 0x8156D158 */
+static MusicCoreMetaDesc s_metaDesc;				/* 0x8156D188 */
+static char s_metaArtist[2048];					/* 0x8156D1A0 */
+static char s_metaTitle[2048];					/* 0x8156D9A0 */
+static char s_metaAlbum[2048];					/* 0x8156E1A0 */
+static MusicCorePlayTimeEntry s_ptCh1;				/* 0x8156E9A0 */
+static MusicCorePlayTimeEntry s_ptCh1Prev;			/* 0x8156E9AC */
+static MusicCorePlayTimeEntry s_ptCh0[8];			/* 0x8156E9B8 */
+static MusicCorePlayTimeEntry s_ptCh2;				/* 0x8156EA18 */
+static MusicCoreAppSlot s_bgmSlot;				/* 0x8156EA24 */
+static MusicCoreAppSlot s_appSlots[8];				/* 0x8156EA54 */
+static SceUInt8 s_exSlotId = 0;					/* 0x8156EBD9 */
+static int s_exAppId = -1;					/* 0x8156EBDC */
+static int s_avrcpState0 = -1;					/* 0x8156EC04 */
+static int s_avrcpState1 = -1;					/* 0x8156EC08 */
+static int s_avrcpPlayStatus = 0;				/* 0x8156EC0C */
+static char s_curAppTitle[32];					/* 0x8156EC10 */
+static char s_prevAppTitle[32];					/* 0x8156EC30 */
+static char s_curParentTitle[32];				/* 0x8156EC50 */
+static char s_prevParentTitle[32];				/* 0x8156EC70 */
+static SceUInt8 s_muteFlag1 = 0;				/* 0x8156EC90 */
+static SceUInt8 s_muteFlag2 = 0;				/* 0x8156EC91 */
+static SceUInt8 s_sysPauseFlag = 0;				/* 0x8156EC92 */
+static SceUInt8 s_powerPauseFlag = 0;				/* 0x8156EC93 */
+static SceUInt8 s_btrmOwned = 0;				/* 0x8156EC94 */
+static SceUInt8 s_titleDirty = 0;				/* 0x8156EC95 */
+
+/* Forward declarations for internal callbacks */
+static int musicCoreOnCapCb(const void *cap);			/* 0x811D16FE */
+static int musicCoreOnStatusCb(const void *raw, SceUInt16 eventId, SceUInt32 cmd, int err); /* 0x811D18B0 */
+static int musicCoreOnExtraCb(const void *data);		/* 0x811D1E06 */
+static int musicCoreOnTimeCb(const void *data);			/* 0x811D1E82 */
+static int musicCoreOnMediaCb(int kind, const void *rawStatus, const void *data); /* 0x811D1F18 */
+
+class MusicCoreMain {
+public:
+	MusicCoreMain(int *outErr);				/* 0x811CE626 */
+	~MusicCoreMain();					/* 0x811CE882 */
+
+	int SendCmd(SceUInt32 cmdTag, int seqId, SceUInt32 packedCmd,
+		const void *payload, SceSize payloadSize);	/* 0x811CE796 */
+	int InitController();					/* 0x811CE940 */
+	int SetCallback(MusicCoreNotifyCb cb);			/* 0x811CEB88 */
+	int ClearCallback(MusicCoreNotifyCb cb);		/* 0x811CEB9A */
+	int ParseMsgHeader(const MusicCoreQueueMsg *msg, int *outSeq, SceUInt8 *outCh); /* 0x811CEBA8 */
+	int ResolveSlot(SceUInt32 chType, int appId, SceUInt8 *outSlot); /* 0x811CEC06 */
+	int SetSlotBgmAllowed(SceUInt32 chType, int appId, SceUInt8 allowed); /* 0x811CEC72 */
+	int SetSlotLastCtrl(SceUInt32 chType, int appId, SceUInt8 ctrl); /* 0x811CECCA */
+	int CheckSlotPaused(SceUInt32 chType, int appId, SceUInt8 *outState); /* 0x811CED22 */
+
+	int HandleSetContent(const MusicCoreQueueMsg *msg);	/* 0x811CEDC4 */
+	int HandleControl(const MusicCoreQueueMsg *msg);	/* 0x811CEF6C */
+	int HandleSetRepeat(const MusicCoreQueueMsg *msg);	/* 0x811CF388 */
+	int HandleSetShuffle(const MusicCoreQueueMsg *msg);	/* 0x811CF428 */
+	int HandleSetAvls(const MusicCoreQueueMsg *msg);	/* 0x811CF4B8 */
+	int HandleOpenChannel(const MusicCoreQueueMsg *msg);	/* 0x811CF548 */
+	int HandleCloseChannel(const MusicCoreQueueMsg *msg);	/* 0x811CF6A8 */
+	int HandleSetEq(const MusicCoreQueueMsg *msg);		/* 0x811CF7AC */
+	int HandleCmd19(const MusicCoreQueueMsg *msg);		/* 0x811CF850 */
+	int HandleAppFocusChange(const MusicCoreQueueMsg *msg);	/* 0x811CF8E2 */
+	int HandleSystemPause(const MusicCoreQueueMsg *msg);	/* 0x811CFE7C */
+	int HandlePowerSuspend(const MusicCoreQueueMsg *msg);	/* 0x811D0016 */
+	int HandlePowerResume(const MusicCoreQueueMsg *msg);	/* 0x811D015C */
+
+	int GetStatus(const MusicCoreClientReq *req, void *outRaw); /* 0x811D02D2 */
+	int GetError(const MusicCoreClientReq *req, int *outErr); /* 0x811D038A */
+	int GetTrackInfo(const MusicCoreClientReq *req, void *outTrack, void *outRaw); /* 0x811D04AC */
+	int GetUri(const MusicCoreClientReq *req, void *outUri); /* 0x811D04FA */
+	int GetPlayTimeFlag(const MusicCoreClientReq *req, int *outVal); /* 0x811D05CE */
+	int GetCap(const MusicCoreClientReq *req, void *outCap); /* 0x811D068A */
+	int GetMeta(const MusicCoreClientReq *req, char *outMeta); /* 0x811D06A0 */
+	int GetPlayTimeEntry(const MusicCoreClientReq *req, void *outEntry); /* 0x811D06FE */
+	int GetAllAppSlots(int unused, void *outSlots);		/* 0x811D07D6 */
+	int GetBgmSlot(int unused, void *outSlot);		/* 0x811D07EE */
+	int SetAvrcpActive(const MusicCoreClientReq *req, SceUInt8 enable); /* 0x811D0804 */
+	int SetMuteFlag1(const MusicCoreClientReq *req, SceUInt8 mute); /* 0x811D082E */
+	int ClearMuteFlag1(const MusicCoreClientReq *req, SceUInt8 mute); /* 0x811D087C */
+
+	int DispatchMsg(const MusicCoreQueueMsg *msg);		/* 0x811D08CE */
+	int MainLoop();						/* 0x811D0FBA */
+	static int ThreadEntry(SceSize args, void *argp);	/* 0x811D1174 */
+
+	SceUID m_threadId;					/* +0 */
+	SceUID m_semaId;					/* +4 */
+	int m_initResult;					/* +8 */
+	int m_reserved12;					/* +12 */
+	int m_state;						/* +16 */
+	int m_reserved20;					/* +20 */
+	paf::thread::Mutex m_mutex;				/* +24 */
+	paf::thread::Cond m_cond;				/* +56 */
+	void *m_ackVtbl;					/* +76 */
+	paf::thread::Cond *m_ackCond;				/* +80 */
+	paf::thread::Mutex *m_ackMutex;				/* +84 */
+	int m_ackState;						/* +88 */
+	void *m_queue;						/* +92 */
+	SceUInt8 m_initialized;					/* +96 */
+	SceUInt8 m_stopping;					/* +97 */
+};
+
+/* 0x811CE626 */
+MusicCoreMain::MusicCoreMain(int *outErr)
+	: m_threadId(-1), m_semaId(-1), m_initResult((int)0x8FFF0002),
+	  m_reserved12(0), m_state((int)0x8FFF0002), m_reserved20(0),
+	  m_mutex("SceShellMusicCorePluginMainAckWait", 0),
+	  m_cond(m_mutex, "SceShellMusicCorePluginMainAckWait", 0),
+	  m_ackVtbl(NULL), m_ackCond(&m_cond), m_ackMutex(&m_mutex),
+	  m_ackState(0), m_queue(NULL), m_initialized(0), m_stopping(0)
+{
+	s_notifyCb = NULL;
+	*outErr = (int)0x8FFF0002;
+	*(SceInt64 *)(s_rawStatusCh1 + 40) = -1;
+
+	SceUID sema = sceKernelCreateSema("SceShellMusicCorePluginMainWait", 0, 0, 1, NULL);
+	if (sema < 0) {
+		*outErr = sema;
+		return;
+	}
+	m_semaId = sema;
+
+	SceSize qSize = musicCoreQueueGetSize(2304, 4, 1);
+	void *qMem = musicCoreHeapAlloc(qSize);
+	if (qMem == NULL) {
+		*outErr = (int)0x8FFF0004;
+		return;
+	}
+	void *q = musicCoreQueueCreate(qMem, "SceShellMusicCorePluginMainThr", 2304, 4, 1, outErr, qSize);
+	if (q == NULL) {
+		*outErr = (int)0x8FFF0004;
+		return;
+	}
+	if (*outErr != 0)
+		return;
+	m_queue = q;
+
+	SceUID tid = sceKernelCreateThread("SceShellMusicCorePluginMain",
+		(SceKernelThreadEntry)ThreadEntry, 0x100000E6, 0x4000, 0, 0, NULL);
+	if (tid < 0) {
+		*outErr = tid;
+		return;
+	}
+	m_threadId = tid;
+	MusicCoreMain *self = this;
+	int st = sceKernelStartThread(tid, 4, &self);
+	if (st != 0) {
+		*outErr = st;
+		return;
+	}
+	if (*outErr == 0) {
+		int wr = sceKernelWaitSema(m_semaId, 1, NULL);
+		*outErr = (wr >= 0) ? m_initResult : wr;
+	}
+}
+
+/* 0x811CE796 */
+int MusicCoreMain::SendCmd(SceUInt32 cmdTag, int seqId, SceUInt32 packedCmd,
+	const void *payload, SceSize payloadSize)
+{
+	(void)cmdTag;
+	if (m_threadId == -1 || m_queue == NULL)
+		return (int)0x8FFF0002;
+	if (payloadSize != 0 && payload == NULL)
+		return (int)0x8FFF0005;
+	int ret = musicCoreQueueSend(m_queue, seqId, packedCmd, payload, payloadSize);
+	return (ret == 0) ? (int)0x8FFF0002 : ret;
+}
+
+/* 0x811CE882 */
+MusicCoreMain::~MusicCoreMain()
+{
+	if (m_threadId != -1) {
+		SceUInt8 dummy[20];
+		SendCmd(0, -1, 0x80008000u, dummy, sizeof(dummy));
+		if (sceKernelWaitThreadEnd(m_threadId, NULL, NULL) >= 0)
+			sceKernelDeleteThread(m_threadId);
+		m_threadId = -1;
+	}
+	if (m_queue != NULL) {
+		typedef void (*DtorFn)(void *);
+		(*(DtorFn **)(*(void **)m_queue))[1](m_queue);
+		void *q = m_queue;
+		m_queue = NULL;
+		musicCoreHeapFree(q);
+	}
+	s_notifyCb = NULL;
+	sceKernelDeleteSema(m_semaId);
+}
+
+/* 0x811CE940 */
+int MusicCoreMain::InitController()
+{
+	sce_paf_memset(&s_errRingCh1, 0, sizeof(s_errRingCh1));
+	sce_paf_memset(s_errRingCh0, 0, sizeof(s_errRingCh0));
+	sce_paf_memset(&s_errRingCh2, 0, sizeof(s_errRingCh2));
+	sce_paf_memset(&s_bgmSlot, 0, sizeof(s_bgmSlot));
+	sce_paf_memset(s_appSlots, 0, sizeof(s_appSlots));
+	s_bgmSlot.appId = -1;
+	for (int i = 0; i < 8; ++i) {
+		s_appSlots[i].appId = -1;
+		s_appSlots[i].lastCtrl = 1;
+	}
+
+	sce_paf_memset(&s_ptCh1, 0, sizeof(s_ptCh1));
+	sce_paf_memset(&s_ptCh1Prev, 0, sizeof(s_ptCh1Prev));
+	sce_paf_memset(s_ptCh0, 0, sizeof(s_ptCh0));
+	sce_paf_memset(&s_ptCh2, 0, sizeof(s_ptCh2));
+	s_avrcpState0 = -1;
+	s_avrcpState1 = -1;
+	s_muteFlag1 = 0;
+	s_muteFlag2 = 0;
+	s_sysPauseFlag = 0;
+	s_powerPauseFlag = 0;
+	s_btrmOwned = 0;
+	s_titleDirty = 0;
+	sce_paf_memset(s_trackInfoBuf, 0, sizeof(s_trackInfoBuf));
+	*(int *)(s_trackInfoBuf + 0x818) = -1;
+	*(int *)(s_trackInfoBuf + 0x81C) = -1;
+	sce_paf_memset(s_curAppTitle, 0, sizeof(s_curAppTitle));
+	sce_paf_memset(s_prevAppTitle, 0, sizeof(s_prevAppTitle));
+	sce_paf_strncpy(s_curAppTitle, "NPXS19999", sce_paf_strlen("NPXS19999"));
+	sce_paf_strncpy(s_prevAppTitle, "NPXS19999", sce_paf_strlen("NPXS19999"));
+
+	int ret = musicCoreCtrlInit();
+	if (ret != 0) return ret;
+	ret = musicCoreCtrlSetStatusCb(0, (void *)musicCoreOnStatusCb);
+	if (ret != 0) return ret;
+	ret = musicCoreCtrlSetCapCb(0, (void *)musicCoreOnCapCb);
+	if (ret != 0) return ret;
+	ret = musicCoreCtrlSetMediaCb(0, (void *)musicCoreOnMediaCb);
+	if (ret != 0) return ret;
+	ret = musicCoreCtrlSetNotifyCb(0, (void *)musicCoreOnExtraCb);
+	if (ret != 0) return ret;
+	ret = musicCoreCtrlSetExtraCb(0, (void *)musicCoreOnExtraCb);
+	if (ret != 0) return ret;
+	ret = musicCoreCtrlSetTimeCb(0, (void *)musicCoreOnTimeCb, 90000);
+	if (ret != 0) return ret;
+
+	m_initialized = 1;
+	SceUInt8 slot = 0xFF;
+	return musicCoreCtrlOpenChannel(0, 1, 128, &slot);
+}
+
+/* 0x811CEB88 */
+int MusicCoreMain::SetCallback(MusicCoreNotifyCb cb)
+{
+	if (s_notifyCb == NULL)
+		s_notifyCb = cb;
+	return 0;
+}
+
+/* 0x811CEB9A */
+int MusicCoreMain::ClearCallback(MusicCoreNotifyCb cb)
+{
+	(void)cb;
+	s_notifyCb = NULL;
+	return 0;
+}
+
+/* 0x811CEBA8 */
+int MusicCoreMain::ParseMsgHeader(const MusicCoreQueueMsg *msg, int *outSeq, SceUInt8 *outCh)
+{
+	*outSeq = msg->seqId;
+	if (msg->channel == 0) {
+		*outCh = 1;
+		return 0;
+	}
+	if (msg->channel == 1) {
+		*outCh = 0;
+		return 0;
+	}
+	if (msg->channel == 2) {
+		*outCh = 2;
+		return 0;
+	}
+	return (int)0x80100D01;
+}
+
+/* 0x811CEC06 */
+int MusicCoreMain::ResolveSlot(SceUInt32 chType, int appId, SceUInt8 *outSlot)
+{
+	if (chType == 1) {
+		*outSlot = 1;
+		return 0;
+	}
+	if (chType == 2) {
+		*outSlot = s_exSlotId;
+		return 0;
+	}
+	if (chType != 0)
+		return (int)0x80100D01;
+	for (int i = 0; i < 8; ++i) {
+		if (s_appSlots[i].appId == appId) {
+			*outSlot = s_appSlots[i].slotId;
+			return (i < 7) ? 0 : (int)0x80100D01;
+		}
+	}
+	return (int)0x80100D01;
+}
+
+/* 0x811CEC72 */
+int MusicCoreMain::SetSlotBgmAllowed(SceUInt32 chType, int appId, SceUInt8 allowed)
+{
+	if (chType == 1 || chType == 2)
+		return 0;
+	if (chType != 0)
+		return (int)0x80100D01;
+	for (int i = 0; i < 8; ++i) {
+		if (s_appSlots[i].appId == appId) {
+			s_appSlots[i].bgmAllowed = allowed;
+			return (i < 7) ? 0 : (int)0x80100D01;
+		}
+	}
+	return (int)0x80100D01;
+}
+
+/* 0x811CECCA */
+int MusicCoreMain::SetSlotLastCtrl(SceUInt32 chType, int appId, SceUInt8 ctrl)
+{
+	if (chType == 1 || chType == 2)
+		return 0;
+	if (chType != 0)
+		return (int)0x80100D01;
+	for (int i = 0; i < 8; ++i) {
+		if (s_appSlots[i].appId == appId) {
+			s_appSlots[i].lastCtrl = ctrl;
+			return (i < 7) ? 0 : (int)0x80100D01;
+		}
+	}
+	return (int)0x80100D01;
+}
+
+/* 0x811CED22 */
+int MusicCoreMain::CheckSlotPaused(SceUInt32 chType, int appId, SceUInt8 *outState)
+{
+	*outState = 18;
+	if (chType == 1 || chType == 2)
+		return 0;
+	if (chType != 0)
+		return (int)0x80100D01;
+	for (int i = 0; i < 8; ++i) {
+		if (s_appSlots[i].appId == appId) {
+			if (s_appSlots[i].bgmAllowed == 0) {
+				SceUInt8 lc = s_appSlots[i].lastCtrl;
+				if (lc == 0 || (lc >= 11 && lc <= 16)) {
+					*outState = (s_sysPauseFlag != 0 || s_powerPauseFlag != 0) ? 1 : 0;
+				}
+			}
+			return (i < 7) ? 0 : (int)0x80100D01;
+		}
+	}
+	return (int)0x80100D01;
+}
+
+/* 0x811CEDC4 */
+int MusicCoreMain::HandleSetContent(const MusicCoreQueueMsg *msg)
+{
+	int seqId = 0;
+	SceUInt8 ch = 0;
+	int ret = ParseMsgHeader(msg, &seqId, &ch);
+	if (ret != 0)
+		return ret;
+
+	SceUInt32 buf[524];
+	sce_paf_memset(buf, 0, sizeof(buf));
+	sce_paf_memcpy(buf, msg->payload, msg->payloadSize);
+	s_ptCh1.extra = 117;
+
+	if (buf[518] > 2)
+		return (int)0x80100D01;
+	SceUInt32 mode = buf[519];
+	if (mode != 0 && mode != 2 && mode != 18)
+		return (int)0x80100D01;
+	if (buf[520] > 2)
+		return (int)0x80100D01;
+
+	SceUInt8 slot = 0;
+	ret = ResolveSlot(ch, (int)buf[523], &slot);
+	if (ret == 0)
+		return musicCoreCtrlSetContent(seqId);
+	return ret;
+}
+
+/* 0x811CEF6C */
+int MusicCoreMain::HandleControl(const MusicCoreQueueMsg *msg)
+{
+	int seqId = 0;
+	SceUInt8 ch = 0;
+	int ret = ParseMsgHeader(msg, &seqId, &ch);
+	if (ret != 0)
+		return ret;
+
+	int payload[5];
+	sce_paf_memset(payload, 0, sizeof(payload));
+	sce_paf_memcpy(payload, msg->payload, msg->payloadSize);
+
+	int appId = payload[4];
+	ret = SetSlotLastCtrl(ch, appId, (SceUInt8)payload[0]);
+	if (ret != 0)
+		return ret;
+
+	SceUInt8 paused = 0;
+	CheckSlotPaused(ch, appId, &paused);
+	SceUInt8 slot = 0;
+	ret = ResolveSlot(ch, appId, &slot);
+	if (ret != 0)
+		return ret;
+
+	if (seqId == 156) {
+		if (s_muteFlag1 != 1)
+			return 0;
+		if (s_capData[32] == 0 && payload[0] != 17) {
+			paf::Plugin *impose = paf::Plugin::Find("impose_plugin");
+			if (impose != NULL) {
+				void *iface = impose->GetInterface(1);
+				if (iface != NULL) {
+					SceUInt32 notice[16];
+					sce_paf_memset(notice, 0, sizeof(notice));
+					paf::IDParam iconId(0xA8CC07F6u);
+					typedef int (*GetTexFn)(const paf::IDParam *);
+					notice[11] = (SceUInt32)(*(GetTexFn *)((char *)iface + 8))(&iconId);
+					notice[7] = 639083309u;
+					typedef void (*ShowNoticeFn)(const void *);
+					(*(ShowNoticeFn *)iface)(notice);
+				}
+			}
+			return 0;
+		}
+		if ((SceUInt64)(*(SceInt64 *)(s_rawStatusCh1 + 40)) >= 0xFFFFFFFFFFFFFFFEULL)
+			return 0;
+	}
+
+	switch (payload[0]) {
+	case 0:
+		ret = musicCoreCtrlControl(seqId);
+		if (ret == 0) {
+			ret = musicCoreCtrlPlay(seqId, slot, payload[1]);
+			if (paused != 0)
+				ret = musicCoreCtrlPause(seqId, slot, 1, 0);
+		}
+		break;
+	case 1:
+		ret = musicCoreCtrlPause(seqId, slot, 1, payload[1]);
+		break;
+	case 2:
+		ret = musicCoreCtrlPause(seqId, slot, 0, 0);
+		break;
+	case 3:
+	case 4:
+	case 5: case 6: case 7: case 8: case 9: case 10:
+		ret = musicCoreCtrlControl(seqId);
+		break;
+	case 11: case 12: case 13: case 14: case 15: case 16:
+		ret = musicCoreCtrlSeek();
+		if (paused != 0)
+			ret = musicCoreCtrlPause(seqId, slot, 1, 0);
+		break;
+	case 17:
+		ret = musicCoreCtrlStop();
+		break;
+	default:
+		return (int)0x80100D01;
+	}
+
+	if (s_capData[9] != 0)
+		ret = 0;
+	return ret;
+}
+
+/* 0x811CF388 */
+int MusicCoreMain::HandleSetRepeat(const MusicCoreQueueMsg *msg)
+{
+	int seqId = 0;
+	SceUInt8 ch = 0;
+	int ret = ParseMsgHeader(msg, &seqId, &ch);
+	if (ret != 0)
+		return ret;
+	SceUInt32 payload[5];
+	sce_paf_memset(payload, 0, sizeof(payload));
+	sce_paf_memcpy(payload, msg->payload, msg->payloadSize);
+	if (payload[0] > 2)
+		return (int)0x80100D01;
+	SceUInt8 slot = 0;
+	ret = ResolveSlot(ch, (int)payload[4], &slot);
+	if (ret == 0)
+		return musicCoreCtrlSetRepeat(seqId);
+	return ret;
+}
+
+/* 0x811CF428 */
+int MusicCoreMain::HandleSetShuffle(const MusicCoreQueueMsg *msg)
+{
+	int seqId = 0;
+	SceUInt8 ch = 0;
+	int ret = ParseMsgHeader(msg, &seqId, &ch);
+	if (ret != 0)
+		return ret;
+	SceUInt32 payload[5];
+	sce_paf_memset(payload, 0, sizeof(payload));
+	sce_paf_memcpy(payload, msg->payload, msg->payloadSize);
+	if (payload[0] >= 2)
+		return (int)0x80100D01;
+	SceUInt8 slot = 0;
+	ret = ResolveSlot(ch, (int)payload[4], &slot);
+	if (ret == 0)
+		return musicCoreCtrlSetShuffle(seqId);
+	return ret;
+}
+
+/* 0x811CF4B8 */
+int MusicCoreMain::HandleSetAvls(const MusicCoreQueueMsg *msg)
+{
+	int seqId = 0;
+	SceUInt8 ch = 0;
+	int ret = ParseMsgHeader(msg, &seqId, &ch);
+	if (ret != 0)
+		return ret;
+	SceUInt32 payload[5];
+	sce_paf_memset(payload, 0, sizeof(payload));
+	sce_paf_memcpy(payload, msg->payload, msg->payloadSize);
+	if (payload[0] >= 2)
+		return (int)0x80100D01;
+	SceUInt8 slot = 0;
+	ret = ResolveSlot(ch, (int)payload[4], &slot);
+	if (ret == 0)
+		return musicCoreCtrlSetAvls(seqId);
+	return ret;
+}
+
+/* 0x811CF548 */
+int MusicCoreMain::HandleOpenChannel(const MusicCoreQueueMsg *msg)
+{
+	int seqId = 0;
+	SceUInt8 ch = 0;
+	int ret = ParseMsgHeader(msg, &seqId, &ch);
+	if (ret != 0)
+		return ret;
+	int payload[5];
+	sce_paf_memset(payload, 0, sizeof(payload));
+	sce_paf_memcpy(payload, msg->payload, msg->payloadSize);
+	int appId = payload[4];
+
+	if (ch == 1 || (ch != 0 && ch != 2))
+		return (int)0x80100D01;
+	int priority = (ch == 2) ? 0x7FFFFFFF : 0;
+
+	int freeIdx = -1;
+	for (int i = 0; i < 8; ++i) {
+		if (s_appSlots[i].appId == -1) {
+			freeIdx = i;
+			break;
+		}
+	}
+	if (freeIdx < 0 || freeIdx >= 7)
+		return (int)0x80100D01;
+
+	SceUInt8 slotId = 0xFF;
+	ret = musicCoreCtrlOpenChannel(seqId, ch, priority, &slotId);
+	if (ret != 0)
+		return ret;
+
+	MusicCoreAppSlot *slot = &s_appSlots[freeIdx];
+	slot->appId = appId;
+	slot->slotId = slotId;
+
+	int activeApp = appmgrGetAppIdByAppIdSyscall(-4);
+	int fallbackApp = appmgrGetAppIdByAppIdSyscall(-2);
+	SceUInt8 status[0x80];
+	sce_paf_memset(status, 0, sizeof(status));
+	ret = sceAppMgrGetStatusByAppId(appId, status);
+	if (ret != 0)
+		return ret;
+	sce_paf_memcpy(slot->titleId, status + 12, 32);
+	slot->active = 1;
+
+	if (appId == activeApp || (activeApp == -1 && appId == fallbackApp)) {
+		slot->focusState = 1;
+		if (ch == 0)
+			return musicCoreCtrlSetActiveSlot(seqId, slotId);
+	} else {
+		slot->focusState = 2;
+	}
+	return 0;
+}
+
+/* 0x811CF6A8 */
+int MusicCoreMain::HandleCloseChannel(const MusicCoreQueueMsg *msg)
+{
+	int seqId = 0;
+	SceUInt8 ch = 0;
+	int ret = ParseMsgHeader(msg, &seqId, &ch);
+	if (ret != 0)
+		return ret;
+	int payload[5];
+	sce_paf_memset(payload, 0, sizeof(payload));
+	sce_paf_memcpy(payload, msg->payload, msg->payloadSize);
+	int appId = payload[4];
+
+	if (ch != 0)
+		return (int)0x80100D01;
+	SceUInt8 slotId = 0;
+	ret = ResolveSlot(ch, appId, &slotId);
+	if (ret != 0)
+		return ret;
+
+	for (int i = 0; i < 8; ++i) {
+		if (s_appSlots[i].appId == appId) {
+			ret = musicCoreCtrlCloseChannel(seqId);
+			if (ret != 0)
+				return ret;
+			s_appSlots[i].appId = -1;
+			s_appSlots[i].seqId = 0;
+			s_appSlots[i].slotId = 0xFF;
+			s_appSlots[i].focusState = 0;
+			sce_paf_memset(s_appSlots[i].titleId, 0, 32);
+			s_appSlots[i].active = 0;
+			s_appSlots[i].bgmAllowed = 0;
+			s_appSlots[i].lastCtrl = 1;
+			return (i < 7) ? 0 : (int)0x80100D01;
+		}
+	}
+	return (int)0x80100D01;
+}
+
+/* 0x811CF7AC */
+int MusicCoreMain::HandleSetEq(const MusicCoreQueueMsg *msg)
+{
+	int seqId = 0;
+	SceUInt8 ch = 0;
+	int ret = ParseMsgHeader(msg, &seqId, &ch);
+	if (ret != 0)
+		return ret;
+	int payload[5];
+	sce_paf_memset(payload, 0, sizeof(payload));
+	sce_paf_memcpy(payload, msg->payload, msg->payloadSize);
+	if (payload[0] < 0 || payload[0] > 4)
+		return (int)0x80100D01;
+	SceUInt8 slot = 0;
+	ret = ResolveSlot(ch, payload[4], &slot);
+	if (ret == 0)
+		return musicCoreCtrlSetEq(seqId);
+	return ret;
+}
+
+/* 0x811CF850 */
+int MusicCoreMain::HandleCmd19(const MusicCoreQueueMsg *msg)
+{
+	int seqId = 0;
+	SceUInt8 ch = 0;
+	int ret = ParseMsgHeader(msg, &seqId, &ch);
+	if (ret != 0)
+		return ret;
+	SceUInt8 buf[184];
+	sce_paf_memset(buf, 0, sizeof(buf));
+	sce_paf_memcpy(buf, msg->payload, msg->payloadSize);
+	SceUInt8 data[160];
+	sce_paf_memcpy(data, buf + 8, sizeof(data));
+	SceUInt32 opt = *(SceUInt32 *)(buf + 168);
+	if (opt > 2)
+		return (int)0x80100D01;
+	return musicCoreCtrlCmd19(seqId, data, *(int *)buf, (int)opt);
+}
+
+static void applyPauseToTitleSlots(MusicCoreMain *self, bool forceStop)
+{
+	int foundIdx = -1;
+	for (int i = 0; i < 8; ++i) {
+		if (sce_paf_strncmp(s_curAppTitle, s_appSlots[i].titleId, sce_paf_strlen(s_curAppTitle)) == 0) {
+			foundIdx = i;
+			break;
+		}
+	}
+	if (foundIdx >= 0) {
+		SceUInt8 st = 0;
+		self->CheckSlotPaused(0, s_appSlots[foundIdx].appId, &st);
+		if (forceStop) {
+			if (st == 0 || st == 1)
+				musicCoreCtrlPause(s_appSlots[foundIdx].seqId, s_appSlots[foundIdx].slotId, 0, 0);
+		} else {
+			if (st == 0)
+				musicCoreCtrlPlay(s_appSlots[foundIdx].seqId, s_appSlots[foundIdx].slotId, 0);
+			if (st == 1)
+				musicCoreCtrlPause(s_appSlots[foundIdx].seqId, s_appSlots[foundIdx].slotId, 1, 0);
+		}
+	}
+	if (foundIdx < 0 || foundIdx >= 7) {
+		for (int i = 0; i < 8; ++i) {
+			if (sce_paf_strncmp(s_curParentTitle, s_appSlots[i].titleId, sce_paf_strlen(s_curParentTitle)) == 0) {
+				SceUInt8 st = 0;
+				self->CheckSlotPaused(0, s_appSlots[i].appId, &st);
+				if (forceStop) {
+					if (st == 0 || st == 1)
+						musicCoreCtrlPause(s_appSlots[i].seqId, s_appSlots[i].slotId, 0, 0);
+				} else {
+					if (st == 0)
+						musicCoreCtrlPlay(s_appSlots[i].seqId, s_appSlots[i].slotId, 0);
+					if (st == 1)
+						musicCoreCtrlPause(s_appSlots[i].seqId, s_appSlots[i].slotId, 1, 0);
+				}
+				break;
+			}
+		}
+	}
+}
+
+/* 0x811CF8E2 */
+int MusicCoreMain::HandleAppFocusChange(const MusicCoreQueueMsg *msg)
+{
+	int payload[9];
+	sce_paf_memset(payload, 0, sizeof(payload));
+	sce_paf_memcpy(payload, msg->payload, msg->payloadSize);
+
+	int evType = payload[0];
+	char title[32];
+	sce_paf_memcpy(title, (const char *)payload + 4, 32);
+
+	char parentBuf[128];
+	sce_paf_memset(parentBuf, 0, sizeof(parentBuf));
+	char *parentTitle = parentBuf + 80;
+	if (evType == 2) {
+		sce_paf_memset(parentTitle, 0, 32);
+	} else if (evType == 3) {
+		sce_paf_strncpy(parentTitle, "NPXS19999", sce_paf_strlen("NPXS19999"));
+	} else {
+		int ret = sceAppMgrGetStatusByName(title, parentBuf);
+		if (ret != 0)
+			return ret;
+	}
+
+	sce_paf_memcpy(s_prevAppTitle, s_curAppTitle, 32);
+	sce_paf_memcpy(s_curAppTitle, title, 32);
+	sce_paf_memcpy(s_prevParentTitle, s_curParentTitle, 32);
+	sce_paf_memcpy(s_curParentTitle, parentTitle, 32);
+
+	if (sce_paf_strncmp(s_prevAppTitle, "NPXS10009", sce_paf_strlen(s_prevAppTitle)) == 0 &&
+	    sce_paf_strncmp(s_curAppTitle, "NPXS19999", sce_paf_strlen(s_curAppTitle)) == 0 &&
+	    (SceUInt64)(*(SceInt64 *)(s_rawStatusCh1 + 40)) >= 0xFFFFFFFFFFFFFFFEULL) {
+		musicCoreCtrlPause(0, 1, 0, 0);
+	}
+
+	int ret = 0;
+	if (sce_paf_strncmp(s_prevAppTitle, s_bgmSlot.titleId, sce_paf_strlen(s_prevAppTitle)) == 0)
+		ret = musicCoreCtrlSuspendAudio(512, 1);
+
+	if (sce_paf_strncmp(s_prevAppTitle, s_curAppTitle, sce_paf_strlen(s_curAppTitle)) != 0) {
+		for (int i = 0; i < 8; ++i) {
+			if (sce_paf_strncmp(s_prevAppTitle, s_appSlots[i].titleId, sce_paf_strlen(s_prevAppTitle)) == 0) {
+				s_appSlots[i].focusState = 2;
+				SceUInt8 sl = 0xFF;
+				if (ResolveSlot(0, s_appSlots[i].appId, &sl) == 0)
+					ret = musicCoreCtrlSetActiveSlot(257, 255);
+				break;
+			}
+		}
+		for (int i = 0; i < 8; ++i) {
+			if (sce_paf_strncmp(s_curAppTitle, s_appSlots[i].titleId, sce_paf_strlen(s_curAppTitle)) == 0) {
+				SceUInt8 st = 0;
+				CheckSlotPaused(0, s_appSlots[i].appId, &st);
+				if (st == 0)
+					musicCoreCtrlPlay(s_appSlots[i].seqId, s_appSlots[i].slotId, 0);
+				else
+					musicCoreCtrlPause(s_appSlots[i].seqId, s_appSlots[i].slotId, 0, 0);
+				s_appSlots[i].focusState = 1;
+				SceUInt8 sl = 0;
+				int r2 = ResolveSlot(0, s_appSlots[i].appId, &sl);
+				if (r2 == 0)
+					return musicCoreCtrlSetActiveSlot(256, sl);
+				return r2;
+			}
+		}
+	}
+	return ret;
+}
+
+/* 0x811CFE7C */
+int MusicCoreMain::HandleSystemPause(const MusicCoreQueueMsg *msg)
+{
+	SceUInt32 payload[5];
+	sce_paf_memset(payload, 0, sizeof(payload));
+	sce_paf_memcpy(payload, msg->payload, msg->payloadSize);
+	if (payload[0] > 1)
+		return (int)0x80100D01;
+	s_sysPauseFlag = (SceUInt8)payload[0];
+	applyPauseToTitleSlots(this, false);
+	return 0;
+}
+
+/* 0x811D0016 */
+int MusicCoreMain::HandlePowerSuspend(const MusicCoreQueueMsg *msg)
+{
+	SceUInt32 payload[5];
+	sce_paf_memset(payload, 0, sizeof(payload));
+	sce_paf_memcpy(payload, msg->payload, msg->payloadSize);
+	s_powerPauseFlag = 1;
+	applyPauseToTitleSlots(this, true);
+	return 0;
+}
+
+/* 0x811D015C */
+int MusicCoreMain::HandlePowerResume(const MusicCoreQueueMsg *msg)
+{
+	SceUInt32 payload[5];
+	sce_paf_memset(payload, 0, sizeof(payload));
+	sce_paf_memcpy(payload, msg->payload, msg->payloadSize);
+	s_powerPauseFlag = 0;
+	applyPauseToTitleSlots(this, false);
+	return 0;
+}
+
+/* 0x811D02D2 */
+int MusicCoreMain::GetStatus(const MusicCoreClientReq *req, void *outRaw)
+{
+	if (req->channel == 0) {
+		sce_paf_memcpy(outRaw, s_rawStatusCh1, 144);
+		return 0;
+	}
+	if (req->channel == 1) {
+		SceUInt8 slot = 0;
+		int ret = ResolveSlot(0, req->appId, &slot);
+		if (ret != 0)
+			return ret;
+		if (slot == s_rawStatusCh0[0]) {
+			sce_paf_memcpy(outRaw, s_rawStatusCh0, 144);
+			return 0;
+		}
+		SceUInt8 tmp[144];
+		int tm = 0;
+		SceUInt8 valid = 0;
+		ret = musicCoreCtrlGetSlotStatus(slot, tmp, &tm, &valid);
+		if (ret == 0)
+			sce_paf_memcpy(outRaw, tmp, 144);
+		return ret;
+	}
+	if (req->channel == 2) {
+		sce_paf_memcpy(outRaw, s_rawStatusCh2, 144);
+		return 0;
+	}
+	return (int)0x80100D01;
+}
+
+static int popRingError(MusicCoreErrorRing *ring)
+{
+	int err = ring->errors[ring->readIdx];
+	ring->errors[ring->readIdx] = 0;
+	ring->readIdx++;
+	if (ring->readIdx >= 10)
+		ring->readIdx = 0;
+	return err;
+}
+
+/* 0x811D038A */
+int MusicCoreMain::GetError(const MusicCoreClientReq *req, int *outErr)
+{
+	if (req->channel == 0) {
+		*outErr = popRingError(&s_errRingCh1);
+		return 0;
+	}
+	if (req->channel == 1) {
+		SceUInt8 slot = 0;
+		int ret = ResolveSlot(0, req->appId, &slot);
+		if (ret != 0)
+			return ret;
+		for (int i = 0; i < 8; ++i) {
+			if (s_appSlots[i].slotId == slot) {
+				*outErr = popRingError(&s_errRingCh0[i]);
+				return 0;
+			}
+		}
+		return (int)0x80100D01;
+	}
+	if (req->channel == 2) {
+		*outErr = popRingError(&s_errRingCh2);
+		return 0;
+	}
+	return (int)0x80100D01;
+}
+
+/* 0x811D04AC */
+int MusicCoreMain::GetTrackInfo(const MusicCoreClientReq *req, void *outTrack, void *outRaw)
+{
+	if (req->channel == 0) {
+		sce_paf_memcpy(outTrack, s_trackInfoBuf, sizeof(s_trackInfoBuf));
+		return GetStatus(req, outRaw);
+	}
+	if (req->channel > 2)
+		return (int)0x80100D01;
+	return 0;
+}
+
+/* 0x811D04FA */
+int MusicCoreMain::GetUri(const MusicCoreClientReq *req, void *outUri)
+{
+	if (req->channel == 0) {
+		sce_paf_memcpy(outUri, s_uriCh1, 0x401);
+		return 0;
+	}
+	if (req->channel == 1) {
+		SceUInt8 slot = 0;
+		int ret = ResolveSlot(0, req->appId, &slot);
+		if (ret != 0)
+			return ret;
+		if (slot == s_rawStatusCh0[0]) {
+			sce_paf_memcpy(outUri, s_uriCh0, 0x401);
+			return 0;
+		}
+		int kind = 0;
+		SceUInt8 buf[0x828];
+		SceUInt8 valid = 0;
+		ret = musicCoreCtrlGetSlotUri(slot, 0, &kind, buf, &valid);
+		if (ret == 0 && kind == 1)
+			sce_paf_memcpy(outUri, buf, 0x401);
+		return ret;
+	}
+	if (req->channel == 2) {
+		sce_paf_memcpy(outUri, s_uriCh2, 0x401);
+		return 0;
+	}
+	return (int)0x80100D01;
+}
+
+/* 0x811D05CE */
+int MusicCoreMain::GetPlayTimeFlag(const MusicCoreClientReq *req, int *outVal)
+{
+	if (req->channel == 0) {
+		*outVal = s_playTimeCh1;
+		return 0;
+	}
+	if (req->channel == 1) {
+		SceUInt8 slot = 0;
+		int ret = ResolveSlot(0, req->appId, &slot);
+		if (ret != 0)
+			return ret;
+		if (slot == s_playTimeCh0Slot) {
+			*outVal = s_playTimeCh0Val;
+			return 0;
+		}
+		SceUInt8 tmp[144];
+		int tm = 0;
+		SceUInt8 valid = 0;
+		ret = musicCoreCtrlGetSlotStatus(slot, tmp, &tm, &valid);
+		if (ret == 0)
+			*outVal = (valid != 0) ? tm : 0;
+		return ret;
+	}
+	if (req->channel == 2) {
+		*outVal = s_playTimeCh2;
+		return 0;
+	}
+	return (int)0x80100D01;
+}
+
+/* 0x811D068A */
+int MusicCoreMain::GetCap(const MusicCoreClientReq *req, void *outCap)
+{
+	(void)req;
+	sce_paf_memcpy(outCap, s_capData, sizeof(s_capData));
+	return 0;
+}
+
+/* 0x811D06A0 */
+int MusicCoreMain::GetMeta(const MusicCoreClientReq *req, char *outMeta)
+{
+	if (req->channel == 0) {
+		sce_paf_memcpy(outMeta, s_metaArtist, 2048);
+		sce_paf_memcpy(outMeta + 2048, s_metaTitle, 2048);
+		sce_paf_memcpy(outMeta + 4096, s_metaAlbum, 2048);
+		return 0;
+	}
+	if (req->channel > 2)
+		return (int)0x80100D01;
+	return 0;
+}
+
+/* 0x811D06FE */
+int MusicCoreMain::GetPlayTimeEntry(const MusicCoreClientReq *req, void *outEntry)
+{
+	if (req->channel == 0) {
+		sce_paf_memcpy(outEntry, &s_ptCh1, sizeof(s_ptCh1));
+		s_ptCh1Prev.errCode = s_ptCh1.errCode;
+		s_ptCh1.errCode = 0;
+		return 0;
+	}
+	if (req->channel == 1) {
+		SceUInt8 slot = 0;
+		int ret = ResolveSlot(0, req->appId, &slot);
+		if (ret != 0)
+			return ret;
+		for (int i = 0; i < 8; ++i) {
+			if (s_appSlots[i].slotId == slot) {
+				sce_paf_memcpy(outEntry, &s_ptCh0[i], sizeof(MusicCorePlayTimeEntry));
+				return 0;
+			}
+		}
+		return (int)0x80100D01;
+	}
+	if (req->channel == 2) {
+		sce_paf_memcpy(outEntry, &s_ptCh2, sizeof(s_ptCh2));
+		return 0;
+	}
+	return (int)0x80100D01;
+}
+
+/* 0x811D07D6 */
+int MusicCoreMain::GetAllAppSlots(int unused, void *outSlots)
+{
+	(void)unused;
+	sce_paf_memcpy(outSlots, s_appSlots, sizeof(s_appSlots));
+	return 0;
+}
+
+/* 0x811D07EE */
+int MusicCoreMain::GetBgmSlot(int unused, void *outSlot)
+{
+	(void)unused;
+	sce_paf_memcpy(outSlot, &s_bgmSlot, sizeof(s_bgmSlot));
+	return 0;
+}
+
+/* 0x811D0804 */
+int MusicCoreMain::SetAvrcpActive(const MusicCoreClientReq *req, SceUInt8 enable)
+{
+	(void)req;
+	SceUInt8 prev = 0;
+	return musicCoreCtrlSetAvrcp(enable, &prev);
+}
+
+/* 0x811D082E */
+int MusicCoreMain::SetMuteFlag1(const MusicCoreClientReq *req, SceUInt8 mute)
+{
+	(void)req;
+	if (mute == 0)
+		s_muteFlag1 = 1;
+	else if (mute == 1)
+		s_muteFlag2 = 1;
+	else
+		return (int)0x80100D01;
+	sce_paf_memset(&s_errRingCh1, 0, sizeof(s_errRingCh1));
+	return 0;
+}
+
+/* 0x811D087C */
+int MusicCoreMain::ClearMuteFlag1(const MusicCoreClientReq *req, SceUInt8 mute)
+{
+	(void)req;
+	sce_paf_memset(&s_errRingCh1, 0, sizeof(s_errRingCh1));
+	if (mute == 0)
+		s_muteFlag1 = 0;
+	else if (mute == 1)
+		s_muteFlag2 = 0;
+	else
+		return (int)0x80100D01;
+	return 0;
+}
+
+/* 0x811D08CC */
+void musicCoreMainNoop(void)
+{
+}
+
+/* 0x811D08CE */
+int MusicCoreMain::DispatchMsg(const MusicCoreQueueMsg *msg)
+{
+	s_ptCh1.extra = 0;
+	int seqId = 0;
+	SceUInt8 ch = 0;
+	SceUInt8 slot = 0;
+	int payload[7];
+
+	switch (msg->cmdId) {
+	case 1:  return HandleSetContent(msg);
+	case 2:  return HandleControl(msg);
+	case 3:
+		if (ParseMsgHeader(msg, &seqId, &ch) != 0) return (int)0x80100D01;
+		sce_paf_memset(payload, 0, 20);
+		sce_paf_memcpy(payload, msg->payload, msg->payloadSize);
+		if (ResolveSlot(ch, payload[4], &slot) != 0) return (int)0x80100D01;
+		return musicCoreCtrlSetVolume(seqId);
+	case 4:  return HandleSetRepeat(msg);
+	case 5:  return HandleSetShuffle(msg);
+	case 6:
+	case 7:
+	case 8:
+	case 14:
+		if (ParseMsgHeader(msg, &seqId, &ch) != 0) return (int)0x80100D01;
+		sce_paf_memset(payload, 0, 20);
+		sce_paf_memcpy(payload, msg->payload, msg->payloadSize);
+		if (ResolveSlot(ch, payload[4], &slot) != 0) return (int)0x80100D01;
+		return musicCoreCtrlControl(seqId);
+	case 9:  return HandleSetAvls(msg);
+	case 10: return HandleOpenChannel(msg);
+	case 11: return HandleCloseChannel(msg);
+	case 12: {
+		int ret = ParseMsgHeader(msg, &seqId, &ch);
+		if (ret != 0) return ret;
+		SceUInt8 uriPayload[1052];
+		sce_paf_memset(uriPayload, 0, sizeof(uriPayload));
+		sce_paf_memcpy(uriPayload, msg->payload, msg->payloadSize);
+		int appId = *(int *)(uriPayload + 1048);
+		s_ptCh1.extra = 119;
+		ret = SetSlotBgmAllowed(ch, appId, uriPayload[1032]);
+		if (ret != 0) return ret;
+		ret = ResolveSlot(ch, appId, &slot);
+		if (ret != 0) return ret;
+		return musicCoreCtrlOpenUri(seqId);
+	}
+	case 13: return HandleSetEq(msg);
+	case 15:
+		if (ParseMsgHeader(msg, &seqId, &ch) != 0) return (int)0x80100D01;
+		return musicCoreCtrlCmd15(seqId);
+	case 16:
+		if (ParseMsgHeader(msg, &seqId, &ch) != 0) return (int)0x80100D01;
+		sce_paf_memset(payload, 0, 20);
+		sce_paf_memcpy(payload, msg->payload, msg->payloadSize);
+		return musicCoreCtrlCmd16(seqId, payload[0] != 0);
+	case 17:
+	case 18:
+		if (ParseMsgHeader(msg, &seqId, &ch) != 0) return (int)0x80100D01;
+		return musicCoreCtrlCmd17(seqId);
+	case 19: return HandleCmd19(msg);
+	case 20: {
+		int ret = ParseMsgHeader(msg, &seqId, &ch);
+		if (ret != 0) return ret;
+		sce_paf_memset(payload, 0, 20);
+		sce_paf_memcpy(payload, msg->payload, msg->payloadSize);
+		SceUInt8 st[0x80];
+		sce_paf_memset(st, 0, sizeof(st));
+		ret = sceAppMgrGetStatusByAppId(payload[4], st);
+		if (ret == 0) {
+			sce_paf_memcpy(s_bgmSlot.titleId, st + 12, 32);
+			s_bgmSlot.appId = payload[4];
+			s_bgmSlot.seqId = payload[3];
+			s_bgmSlot.focusState = 1;
+		}
+		return ret;
+	}
+	case 21:
+		if (ParseMsgHeader(msg, &seqId, &ch) != 0) return (int)0x80100D01;
+		sce_paf_memset(s_bgmSlot.titleId, 0, 32);
+		s_bgmSlot.seqId = 0;
+		s_bgmSlot.focusState = 0;
+		s_bgmSlot.appId = -1;
+		return 0;
+	case 22: {
+		int ret = ParseMsgHeader(msg, &seqId, &ch);
+		if (ret != 0) return ret;
+		sce_paf_memset(payload, 0, sizeof(payload));
+		sce_paf_memcpy(payload, msg->payload, msg->payloadSize);
+		sce_paf_memcpy(s_exOpenParam, payload, 20);
+		SceUInt8 exSlot = 0xFF;
+		ret = musicCoreCtrlOpenExChannel(seqId, 2, 0x7FFFFFFF, &exSlot, s_exOpenParam);
+		if (ret == 0) {
+			s_exAppId = payload[6];
+			s_exSlotId = exSlot;
+		}
+		return ret;
+	}
+	case 23: {
+		int ret = ParseMsgHeader(msg, &seqId, &ch);
+		if (ret != 0) return ret;
+		sce_paf_memset(payload, 0, sizeof(payload));
+		sce_paf_memcpy(payload, msg->payload, msg->payloadSize);
+		ret = ResolveSlot(ch, payload[6], &slot);
+		if (ret == 0)
+			return musicCoreCtrlCloseChannel(seqId);
+		return ret;
+	}
+	case 24: return HandleAppFocusChange(msg);
+	case 25: return musicCoreCtrlSuspendAudio(512, 1);
+	case 26: return HandleSystemPause(msg);
+	case 27: return HandlePowerSuspend(msg);
+	case 28: return HandlePowerResume(msg);
+	case 29: return musicCoreCtrlResumeAudio(512, 1);
+	case 30:
+		if (paf::system::Model::GetType() == 1 ||
+		    (SceUInt64)(*(SceInt64 *)(s_rawStatusCh1 + 40)) >= 0xFFFFFFFFFFFFFFFEULL)
+			return HandleControl(msg);
+		return 0;
+	case 31: return musicCoreCtrlClearAudio(512, 1);
+	default: return 0;
+	}
+}
+
+/* 0x811D0FBA */
+int MusicCoreMain::MainLoop()
+{
+	SceInt64 lastTrackId = -1;
+	InitController();
+	m_initResult = 0;
+	if (sceKernelSignalSema(m_semaId, 1) >= 0) {
+		m_stopping = 0;
+		do {
+			SceInt64 curTrackId = *(SceInt64 *)(s_rawStatusCh1 + 40);
+			if (curTrackId == -1 || curTrackId == -2) {
+				if (s_btrmOwned != 0)
+					paf::inputdevice::ReleaseBtrmOwnership();
+				s_btrmOwned = 0;
+			} else {
+				sceBtAvrcpSetPlayStatus(s_avrcpPlayStatus);
+				if (curTrackId != lastTrackId || s_btrmOwned == 0) {
+					paf::inputdevice::GetBtrmOwnership();
+					sceBtAvrcpSetTitle(s_metaTitle, sce_paf_strlen(s_metaTitle));
+				}
+				s_btrmOwned = 1;
+			}
+			lastTrackId = curTrackId;
+
+			void *msgPtr = NULL;
+			SceUInt timeout = 100000;
+			int r = musicCoreQueueRecv(m_queue, &msgPtr, &timeout);
+			if (r != 0 && r != (int)0x8FFF0003 && r != (int)0x8FFF000E)
+				break;
+			if (msgPtr != NULL) {
+				MusicCoreQueueMsg *msg = (MusicCoreQueueMsg *)msgPtr;
+				if ((msg->cmdId & 0x8000u) == 0) {
+					DispatchMsg(msg);
+					musicCoreQueueRelease(m_queue, msgPtr);
+				} else if (msg->cmdId == 0x8000u) {
+					m_stopping = 1;
+					musicCoreQueueRelease(m_queue, msgPtr);
+				}
+			}
+		} while (m_stopping != 1);
+	}
+	m_initialized = 0;
+	musicCoreCtrlFini();
+	m_initResult = (int)0x8FFF0002;
+	return 0;
+}
+
+/* 0x811D1174 */
+int MusicCoreMain::ThreadEntry(SceSize args, void *argp)
+{
+	(void)args;
+	if (argp != NULL)
+		(*(MusicCoreMain **)argp)->MainLoop();
+	sceKernelExitThread(1);
+	return 0;
+}
+
+/* 0x811D1188 */
+int musicCoreConvertPlayMode(SceInt8 raw, int *outMode)
+{
+	switch (raw) {
+	case 0: *outMode = 3; return 0;
+	case 1: *outMode = 2; return 0;
+	case 2: *outMode = 1; return 0;
+	case 3: *outMode = 0; return 0;
+	default: return (int)0x80100D01;
+	}
+}
+
+/* 0x811D11C6 */
+int musicCoreConvertSampleRate(int raw, int *outRate)
+{
+	switch (raw) {
+	case 8:  *outRate = 1; break;
+	case 9:  *outRate = 2; break;
+	case 12: *outRate = 3; break;
+	case 13: *outRate = 4; break;
+	case 14: *outRate = 5; break;
+	case 29: *outRate = 6; break;
+	default: *outRate = 0; break;
+	}
+	return 0;
+}
+
+/* 0x811D1214 */
+int musicCoreConvertRepeat(int raw, int *outVal)
+{
+	if (raw == 0) { *outVal = 2; return 0; }
+	if (raw == 1) { *outVal = 0; return 0; }
+	if (raw == 2) { *outVal = 1; return 0; }
+	return (int)0x80100D01;
+}
+
+/* 0x811D1248 */
+int musicCoreConvertShuffle(SceUInt32 raw, int *outVal)
+{
+	if (raw > 1)
+		return (int)0x80100D01;
+	*outVal = (int)raw;
+	return 0;
+}
+
+/* 0x811D126C */
+int musicCoreConvertEq(int raw, int *outVal)
+{
+	if (raw == 0 || raw == 1) {
+		*outVal = raw;
+		return 0;
+	}
+	return (int)0x80100D01;
+}
+
+/* 0x811D1298 */
+int musicCoreConvertAvls(int raw, int unused2, int unused3, int unused4, int *outVal)
+{
+	(void)unused2; (void)unused3; (void)unused4;
+	if (raw < 0 || raw > 4)
+		return (int)0x80100D01;
+	*outVal = raw;
+	return 0;
+}
+
+/* 0x811D12E2 */
+int musicCoreConvertVolumeMode(SceUInt32 raw, int *outVal)
+{
+	if (raw <= 2) {
+		*outVal = (int)raw;
+		return 0;
+	}
+	if (raw == (SceUInt32)-1) {
+		*outVal = 0;
+		return 0;
+	}
+	return (int)0x80100D01;
+}
+
+/* 0x811D131E */
+void musicCoreConvertNoop(void)
+{
+}
+
+/* 0x811D1320 */
+int musicCoreConvertStatus(const SceUInt8 *raw, int *outStatus, int playTime, const SceUInt8 *cap)
+{
+	SceInt8 chType = (SceInt8)raw[1];
+	if (chType == 0)
+		outStatus[0] = 1;
+	else if (chType == 1)
+		outStatus[0] = 0;
+	else if (chType == 2)
+		outStatus[0] = 2;
+	else
+		return (int)0x80100D01;
+
+	const int *rawWords = (const int *)raw;
+	outStatus[1] = rawWords[5];
+	outStatus[2] = rawWords[6];
+	outStatus[5] = 0;
+
+	if (outStatus[0] == 0) {
+		for (int i = 0; i < 10; ++i) {
+			if (s_errRingCh1.errors[i] != 0) {
+				outStatus[5] = 1;
+				break;
+			}
+		}
+	} else if (outStatus[0] == 1) {
+		int idx = -1;
+		for (int i = 0; i < 8; ++i) {
+			if (s_appSlots[i].slotId == raw[0]) {
+				idx = i;
+				break;
+			}
+		}
+		if (idx < 0)
+			return (int)0x80100D01;
+		for (int i = 0; i < 10; ++i) {
+			if (s_errRingCh0[idx].errors[i] != 0) {
+				outStatus[5] = 1;
+				break;
+			}
+		}
+	} else {
+		for (int i = 0; i < 10; ++i) {
+			if (s_errRingCh2.errors[i] != 0) {
+				outStatus[5] = 1;
+				break;
+			}
+		}
+	}
+
+	int ret = musicCoreConvertPlayMode((SceInt8)raw[2], &outStatus[8]);
+	if (ret != 0) return ret;
+	outStatus[9] = (SceInt8)raw[3];
+	outStatus[10] = rawWords[1];
+	outStatus[11] = raw[8];
+	*(SceInt64 *)(outStatus + 12) = *(const SceInt64 *)(raw + 40);
+	outStatus[14] = rawWords[16];
+	outStatus[15] = playTime;
+	outStatus[16] = rawWords[19];
+	outStatus[17] = rawWords[20];
+	outStatus[18] = rawWords[21];
+	outStatus[19] = rawWords[22];
+	outStatus[20] = rawWords[23];
+	outStatus[21] = rawWords[24];
+	outStatus[22] = rawWords[18];
+	outStatus[23] = rawWords[17];
+	outStatus[24] = rawWords[28];
+
+	ret = musicCoreConvertSampleRate(rawWords[20], &outStatus[17]);
+	if (ret != 0) return ret;
+	ret = musicCoreConvertRepeat(rawWords[25], &outStatus[26]);
+	if (ret != 0) return ret;
+	ret = musicCoreConvertShuffle((SceUInt32)rawWords[26], &outStatus[25]);
+	if (ret != 0) return ret;
+	ret = musicCoreConvertEq(rawWords[33], &outStatus[27]);
+	if (ret != 0) return ret;
+	if (rawWords[29] < 0 || rawWords[29] > 4)
+		return (int)0x80100D01;
+	outStatus[28] = rawWords[29];
+	ret = musicCoreConvertVolumeMode((SceUInt32)rawWords[8], &outStatus[29]);
+	if (ret != 0) return ret;
+
+	*(SceInt64 *)(outStatus + 30) = *(const SceInt64 *)(raw + 48);
+	*(SceInt64 *)(outStatus + 32) = *(const SceInt64 *)(raw + 56);
+	outStatus[35] = rawWords[3];
+	if (outStatus[0] == 0)
+		outStatus[34] = (cap[50] != 0);
+	else if (outStatus[0] == 1)
+		outStatus[34] = (cap[30] != 0);
+	else
+		outStatus[34] = (cap[70] != 0);
+	return 0;
+}
+
+/* 0x811D1608 */
+int musicCoreConvertTrackInfo(const char *rawTrack, const void *rawStatus, char *outInfo)
+{
+	sce_paf_strncpy(outInfo, rawTrack, 0x801);
+	const int *srcW = (const int *)rawTrack;
+	const int *stW = (const int *)rawStatus;
+	int *dstW = (int *)outInfo;
+	dstW[513] = srcW[513];
+	dstW[514] = stW[16];
+	*(SceInt64 *)(outInfo + 2064) = *(const SceInt64 *)((const char *)rawStatus + 40);
+
+	SceUInt32 flag1 = (SceUInt32)srcW[518];
+	if (flag1 <= 1)
+		dstW[518] = (int)flag1;
+	else if (flag1 == (SceUInt32)-1)
+		dstW[518] = 2;
+	else
+		return (int)0x80100D01;
+
+	SceUInt32 flag2 = (SceUInt32)srcW[519];
+	if (flag2 == 1)
+		dstW[519] = 0;
+	else if (flag2 == 2)
+		dstW[519] = 2;
+	else if (flag2 == (SceUInt32)-1)
+		dstW[519] = 18;
+	else
+		return (int)0x80100D01;
+	return 0;
+}
+
+/* 0x811D16B2 */
+int musicCoreConvertUri(const char *rawUri, char *outUri)
+{
+	sce_paf_strncpy(outUri, rawUri, 0x401);
+	return 0;
+}
+
+/* 0x811D16C6 */
+int musicCoreConvertCapFlag(SceInt8 capByte, int *outVal)
+{
+	switch (capByte) {
+	case 0: case 4: *outVal = 0; return 0;
+	case 1: *outVal = 1; return 0;
+	case 2: *outVal = 3; return 0;
+	case 3: *outVal = 2; return 0;
+	default: return (int)0x80100D01;
+	}
+}
+
+/* 0x811D16FE */
+static int musicCoreOnCapCb(const void *cap)
+{
+	sce_paf_memcpy(s_capData, cap, sizeof(s_capData));
+	return 0;
+}
+
+/* 0x811D1740 */
+int musicCoreSetImposePausedNotice(int mode, const char *text, SceUInt8 show)
+{
+	paf::Plugin *impose = paf::Plugin::Find("impose_plugin");
+	if (impose == NULL)
+		return (int)0x80100D00;
+	void *iface = impose->GetInterface(1);
+	if (iface == NULL)
+		return (int)0x80100D00;
+	if (mode != 0)
+		return (int)0x80100D01;
+	if (text == NULL)
+		return (int)0x80100D01;
+
+	SceUInt32 notice[14];
+	sce_paf_memset(notice, 0, sizeof(notice));
+	notice[0] = (SceUInt32)(SceUIntPtr)"SceShellMusicCorePaused";
+	int ok = 0;
+	if (show == 1) {
+		paf::IDParam iconId(0xA11603D2u);
+		typedef int (*GetTexFn)(const paf::IDParam *);
+		notice[10] = (SceUInt32)(*(GetTexFn *)((char *)iface + 8))(&iconId);
+		notice[8] = (SceUInt32)(SceUIntPtr)text;
+		notice[9] = 1;
+		typedef int (*ShowFn)(const void *);
+		ok = (*(ShowFn *)iface)(notice);
+	} else {
+		typedef int (*HideFn)(const void *);
+		ok = (*(HideFn *)((char *)iface + 4))(notice);
+	}
+	return (ok == 1) ? 0 : (int)0x80100D00;
+}
+
+static void pushRingError(MusicCoreErrorRing *ring, int err)
+{
+	if (err == 0)
+		return;
+	SceUInt32 prev = (ring->writeIdx == 0) ? 9 : (ring->writeIdx - 1);
+	if (ring->errors[prev] != err) {
+		ring->errors[ring->writeIdx] = err;
+		ring->writeIdx++;
+		if (ring->writeIdx >= 10)
+			ring->writeIdx = 0;
+	}
+}
+
+/* 0x811D18B0 */
+static int musicCoreOnStatusCb(const void *raw, SceUInt16 eventId, SceUInt32 cmd, int err)
+{
+	const SceUInt8 *rawBytes = (const SceUInt8 *)raw;
+	SceInt8 chType = (SceInt8)rawBytes[1];
+	int converted[36];
+	sce_paf_memset(converted, 0, sizeof(converted));
+	MusicCoreClientReq ctx;
+	sce_paf_memset(&ctx, 0, sizeof(ctx));
+	ctx.seqId = (int)cmd;
+	ctx.channel = (SceUInt8)chType;
+
+	if (chType == 1) {
+		SceInt64 prevTrack = *(SceInt64 *)(s_rawStatusCh1 + 40);
+		SceInt64 newTrack = *(const SceInt64 *)(rawBytes + 40);
+		if (cmd == 0 && s_muteFlag2 == 0) {
+			if (s_muteFlag1 == 0 || err == (int)0x80100D06 || err == (int)0x80100D07)
+				pushRingError(&s_errRingCh1, err);
+		}
+		if ((cmd >> 16) == 1) {
+			s_ptCh1.cmdId = (int)cmd;
+			if (s_ptCh1Prev.errCode != err)
+				s_ptCh1.errCode = err;
+		}
+		if (newTrack != prevTrack) {
+			sce_paf_memset(&s_metaDesc, 0, sizeof(s_metaDesc));
+			sce_paf_memset(s_metaArtist, 0, 3 * 2048);
+			s_metaDesc.artistBuf = s_metaArtist;
+			s_metaDesc.artistSize = 2048;
+			s_metaDesc.titleBuf = s_metaTitle;
+			s_metaDesc.titleSize = 2048;
+			s_metaDesc.albumBuf = s_metaAlbum;
+			s_metaDesc.albumSize = 2048;
+			int ret = musicCoreCtrlGetMeta((SceUInt8)chType, &s_metaDesc);
+			if (ret != 0)
+				return ret;
+			s_titleDirty = 1;
+		}
+		if (newTrack == -1 && s_titleDirty != 0) {
+			char blank[4];
+			sce_paf_strncpy(blank, " ", 1);
+			sceBtAvrcpSetTitle(blank, 1);
+			s_titleDirty = 0;
+		}
+		sce_paf_memcpy(s_rawStatusCh1, rawBytes, 144);
+		int ret = musicCoreConvertStatus(s_rawStatusCh1, converted, s_playTimeCh1, s_capData);
+		if (ret == 0 && s_notifyCb != NULL)
+			s_notifyCb(&ctx, eventId, &err, converted);
+		return ret;
+	}
+	if (chType == 2) {
+		if (cmd == 0)
+			pushRingError(&s_errRingCh2, err);
+		if ((cmd >> 16) == 2 || (cmd >> 16) == 3) {
+			s_ptCh2.cmdId = (int)cmd;
+			s_ptCh2.errCode = err;
+		}
+		sce_paf_memcpy(s_rawStatusCh2, rawBytes, 144);
+		int ret = musicCoreConvertStatus(s_rawStatusCh2, converted, s_playTimeCh2, s_capData);
+		if (ret == 0 && s_notifyCb != NULL)
+			s_notifyCb(&ctx, eventId, &err, converted);
+		return ret;
+	}
+	if (chType == 0) {
+		int idx = -1;
+		for (int i = 0; i < 8; ++i) {
+			if (s_appSlots[i].slotId == rawBytes[0]) {
+				idx = i;
+				break;
+			}
+		}
+		if (idx < 0)
+			return (int)0x80100D01;
+		if (cmd == 0)
+			pushRingError(&s_errRingCh0[idx], err);
+		if ((cmd >> 16) == 2 || (cmd >> 16) == 3) {
+			s_ptCh0[idx].cmdId = (int)cmd;
+			s_ptCh0[idx].errCode = err;
+		}
+		sce_paf_memcpy(s_rawStatusCh0, rawBytes, 144);
+		int ret = musicCoreConvertStatus(s_rawStatusCh0, converted, s_playTimeCh0Val, s_capData);
+		if (ret == 0 && s_notifyCb != NULL)
+			s_notifyCb(&ctx, eventId, &err, converted);
+		return ret;
+	}
+	return (int)0x80100D01;
+}
+
+/* 0x811D1E06 */
+static int musicCoreOnExtraCb(const void *data)
+{
+	SceInt8 chType = ((const SceInt8 *)data)[1];
+	if (chType < 0 || chType > 2)
+		return (int)0x80100D01;
+	sce_paf_memcpy(s_extraState[chType], data, 8);
+	return 0;
+}
+
+/* 0x811D1E82 */
+static int musicCoreOnTimeCb(const void *data)
+{
+	const SceUInt8 *bytes = (const SceUInt8 *)data;
+	SceInt8 chType = (SceInt8)bytes[1];
+	int timeVal = *(const int *)(bytes + 4);
+	SceInt64 trackId = *(const SceInt64 *)(bytes + 8);
+	if (chType == 0) {
+		s_playTimeCh0Slot = bytes[0];
+		s_playTimeCh0Val = timeVal;
+		return 0;
+	}
+	if (chType == 1) {
+		if (trackId == *(SceInt64 *)(s_rawStatusCh1 + 40))
+			s_playTimeCh1 = timeVal;
+		return 0;
+	}
+	if (chType == 2) {
+		s_playTimeCh2 = timeVal;
+		return 0;
+	}
+	return (int)0x80100D01;
+}
+
+/* 0x811D1F18 */
+static int musicCoreOnMediaCb(int kind, const void *rawStatus, const void *data)
+{
+	SceInt8 chType = ((const SceInt8 *)rawStatus)[1];
+	if (chType == 0) {
+		if (kind == 1)
+			sce_paf_memcpy(s_uriCh0, data, 0x401);
+		return 0;
+	}
+	if (chType == 1) {
+		if (kind == 2) {
+			sce_paf_memcpy(s_trackInfoBuf, data, sizeof(s_trackInfoBuf));
+			*(int *)(s_trackInfoBuf + 0x810) = *(const int *)((const char *)rawStatus + 40);
+			*(int *)(s_trackInfoBuf + 0x814) = *(const int *)((const char *)rawStatus + 44);
+			*(int *)(s_trackInfoBuf + 0x808) = *(const int *)((const char *)rawStatus + 64);
+		} else if (kind == 1) {
+			sce_paf_memcpy(s_uriCh1, data, 0x401);
+		}
+		return 0;
+	}
+	if (chType == 2) {
+		if (kind == 1)
+			sce_paf_memcpy(s_uriCh2, data, 0x401);
+		return 0;
+	}
+	return (int)0x80100D01;
+}

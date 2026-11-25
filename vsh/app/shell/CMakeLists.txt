@@ -357,6 +357,21 @@ psp2_module(vs0_vsh_shell_shell KIND user COMPILER snc PARTIAL SOURCES
 	src/shell_svc/src/shell_svc_patchcheck.cpp
 	src/shell_svc/src/shell_svc_patchcheck_dispatch.cpp
 	src/shell_svc/src/shell_svc_patchcheck_jobs.cpp
+	src/lsdb_job/src/lsdb_job_mgr.cpp
+	src/lsdb_job/src/lsdb_jobs.cpp
+	src/mail_resident_plugin/src/mail_resident_plugin.cpp
+	src/mail_resident_plugin/src/mail_resident_app.cpp
+	src/mail_resident_plugin/src/mail_resident_session.cpp
+	src/mail_resident_plugin/src/mail_resident_mw.cpp
+	src/media_detect/src/media_detect_mgr.cpp
+	src/mtp/src/mtp_event_handler.cpp
+	src/mtp/src/mtp_dialog.cpp
+	src/musiccore_plugin/src/musiccore_plugin.cpp
+	src/musiccore_plugin/src/musiccore_main_thread.cpp
+	src/musiccore_plugin/src/musiccore_ctrl_client.cpp
+	src/musiccore_plugin/src/musiccore_heap.cpp
+	src/musiccore_plugin/src/musiccore_queue.cpp
+	src/musiccore_plugin/src/musiccore_factory.cpp
 	shell.c
 )
 target_include_directories(vs0_vsh_shell_shell PRIVATE "${PSP2_SRC}/vsh/paf/include"
