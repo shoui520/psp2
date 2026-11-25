@@ -535,12 +535,12 @@ static int updownEvalKvPairs(KvNode *head, ParsedLine *parsed, uint32_t *compat_
 	}
 
 	if (has_compat_ver == 1) {
-		if (min_ver <= g_cur_build && g_cur_build <= max_ver) {
+		if (max_ver <= g_cur_build && g_cur_build <= min_ver) {
 			*compat_flag = has_compat_ver;
 		}
 	}
 	if (has_compat_sysver == 1) {
-		if (min_ver <= g_cur_sysver && g_cur_sysver <= max_ver) {
+		if (max_ver <= g_cur_sysver && g_cur_sysver <= min_ver) {
 			*compat_flag = has_compat_sysver;
 		}
 	}
@@ -1577,7 +1577,7 @@ int sceLibUpdateDL_FD675E8D(uint32_t *out_size, int *out_err)
 	}
 
 	if ((uint32_t)(res - 0x805f0007U) < 2) {
-		if (updownIsProxyEnabled() != 1) {
+		if (updownIsProxyEnabled() == 1) {
 			res = 0x805f0006;
 		}
 	}
@@ -1591,7 +1591,7 @@ int sceLibUpdateDL_FA9AA797(void *buf, uint32_t size, int *out_err)
 		res = updownReadDownloadData(buf, size, out_err);
 	}
 	if ((uint32_t)(res - 0x805f0007U) < 2) {
-		if (updownIsProxyEnabled() != 1) {
+		if (updownIsProxyEnabled() == 1) {
 			res = 0x805f0006;
 		}
 	}

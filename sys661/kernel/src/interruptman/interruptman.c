@@ -166,9 +166,9 @@ s32 sceKernelRegisterIntrHandler(s32 intrNum, s32 arg1, void *func, void *arg3, 
         return SCE_ERROR_KERNEL_INVALID_INTERRUPT_ARGUMENT;
     // 12B8
     s32 oldIc = sceKernelCpuSuspendIntr();
-    if (handler != NULL && handler->size > 0 && intInfo.subIntrMemoryPoolId == 0) {
+    if (handler != NULL && handler->attr > 0 && intInfo.subIntrMemoryPoolId == 0) {
         // 1468
-        s32 ret = sceKernelCreateHeap(1, 1, 0x800, "SceInterruptManager");
+        s32 ret = sceKernelCreateHeap(1, 0x800, 1, "SceInterruptManager");
         if (ret > 0)
             intInfo.subIntrMemoryPoolId = ret;
         if (ret < 0) {
@@ -198,9 +198,10 @@ s32 sceKernelRegisterIntrHandler(s32 intrNum, s32 arg1, void *func, void *arg3, 
             intr->subIntrs = NULL;
         }
     } else {
-        SubInterrupt *subIntrs = sceKernelAllocHeapMemory(intInfo.subIntrMemoryPoolId, size); // Allocate space to store the subIntrs
+        s32 allocSize = size << 6;
+        SubInterrupt *subIntrs = sceKernelAllocHeapMemory(intInfo.subIntrMemoryPoolId, allocSize); // Allocate space to store the subIntrs
         if (subIntrs != NULL)
-            mymemset(subIntrs, 0, sizeof(*subIntrs));
+            mymemset(subIntrs, 0, allocSize);
         // 13A4
         intr->subIntrs = subIntrs;
         if (subIntrs == NULL) {
@@ -229,7 +230,7 @@ s32 sceKernelRegisterIntrHandler(s32 intrNum, s32 arg1, void *func, void *arg3, 
         *(s8*)&intr->v48 = *(s8*)&handler->attr;
     // 1420
     intr->v48 = ((intr->v48 & 0x7FFF7FFF) | ((intInfo.opt << 15) & 0x8000)) & 0x7FFFFFFF;
-    *(s8*)(&intr->v48 + 2) = intrNum;
+    *((s8*)&intr->v48 + 2) = intrNum;
     sceKernelCpuResumeIntr(oldIc);
     return 0;
 }
@@ -327,7 +328,7 @@ s32 sceKernelSetIntrLevel(s32 intrNum, s32 num)
         sceKernelCpuResumeIntr(oldIntr);
         return SCE_ERROR_KERNEL_INVALID_INTERRUPT_LEVEL;
     }
-    if (((intInfo.grpsOpt[(intrNum >> 5) + 24] >> (intrNum & 0x1F)) & 1) == 0) {
+    if (((intInfo.grpsOpt[(intrNum >> 5) + 6] >> (intrNum & 0x1F)) & 1) == 0) {
         // 17F4
         intr->v48 = (intr->v48 & 0xFFFFFCFF) | ((num << 8) & 0x00000300);
     } else {
@@ -387,7 +388,7 @@ s32 sceKernelEnableIntr(s32 intNum)
         v = 0x200;
     else if (intNum == 66)
         v = 0x1000;
-    else if ((intNum & 0x43) == 0)
+    else if (intNum == 67)
         v = 0x8000;
     else
         v = 0;
@@ -422,9 +423,9 @@ s32 sceKernelSuspendIntr(s32 arg0, s32 *arg1)
         if (arg1 != NULL) {
             if (arg0 >= 64) {
                 // 1AA8
-                *arg1 = (pspCop0StateGet(COP0_STATE_STATUS) & 0xFF00) | mask;
+                *arg1 = (pspCop0StateGet(COP0_STATE_STATUS) & 0xFF00) & mask;
             } else
-                *arg1 = (intInfo.grpsOpt[(arg0 >> 5) + 24] >> (arg0 & 0x1F)) & 1;
+                *arg1 = (intInfo.grpsOpt[(arg0 >> 5) + 6] >> (arg0 & 0x1F)) & 1;
         }
     } else {
         ret = SCE_ERROR_KERNEL_HANDLER_NOTFOUND;
@@ -485,12 +486,12 @@ s32 sceKernelResumeIntr(s32 intrNum, s32 arg1)
         sceKernelCpuResumeIntr(oldIntr);
         return SCE_ERROR_KERNEL_HANDLER_NOTFOUND;
     } else {
-        pspCop0StateSet(COP0_STATE_STATUS, pspCop0StateGet(COP0_STATE_STATUS) | ~(mask & 0xFF00));
+        pspCop0StateSet(COP0_STATE_STATUS, pspCop0StateGet(COP0_STATE_STATUS) & ~(mask & 0xFF00));
         sceKernelCpuResumeIntr(oldIntr);
         return SCE_ERROR_KERNEL_HANDLER_NOTFOUND;
     }
     // 1B5C
-    pspCop0StateSet(COP0_STATE_STATUS, pspCop0StateGet(COP0_STATE_STATUS) | ~(mask & 0xFF00));
+    pspCop0StateSet(COP0_STATE_STATUS, pspCop0StateGet(COP0_STATE_STATUS) & ~(mask & 0xFF00));
     sceKernelCpuResumeIntr(oldIntr);
     return 0;
 }
@@ -572,18 +573,20 @@ s32 sceKernelRegisterSubIntrHandler(s32 intrNum, s32 subIntrNum, void *handler, 
         return SCE_ERROR_KERNEL_HANDLER_NOTFOUND;
     }
     // 1ED4
-    if (((s32)handler >> 31) == 0 && pspK1IsUserMode()) { // 200C
-        sceKernelCpuResumeIntr(oldIntr);
-        pspSetK1(oldK1);
-        return SCE_ERROR_KERNEL_INVALID_INTERRUPT;
-    } else {
-        if (intInfo.intrStack == 0)
+    if (((s32)handler >> 31) == 0) {
+        if (intInfo.intrStack == 0) {
+            pspSetK1(oldK1);
             return SCE_ERROR_KERNEL_INVALID_INTERRUPT;
+        }
         if (((intr->v48 >> 11) & 1) == 0) {
             sceKernelCpuResumeIntr(oldIntr);
             pspSetK1(oldK1);
             return SCE_ERROR_KERNEL_INVALID_INTERRUPT;
         }
+    } else if (pspK1IsUserMode()) { // 200C
+        sceKernelCpuResumeIntr(oldIntr);
+        pspSetK1(oldK1);
+        return SCE_ERROR_KERNEL_INVALID_INTERRUPT;
     }
     // 1F00
     if (subIntrNum < 0 || subIntrNum >= (intr->v48 & 0xFF)) {
@@ -598,7 +601,7 @@ s32 sceKernelRegisterSubIntrHandler(s32 intrNum, s32 subIntrNum, void *handler, 
         return SCE_ERROR_KERNEL_HANDLER_ALREADY_EXISTS;
     }
     // 1F3C
-    if (((s32)handler >> 31) == 0 && (((subIntr->v48 & 0xFF) >> 10) & 1) == 0) {
+    if (((s32)handler >> 31) == 0 && ((subIntr->v48 >> 10) & 1) == 0) {
         sceKernelCpuResumeIntr(oldIntr);
         pspSetK1(oldK1);
         return SCE_ERROR_KERNEL_INVALID_INTERRUPT;
@@ -903,7 +906,7 @@ s32 sceKernelQueryIntrHandlerInfo(s32 intrNum, s32 subIntrNum, s32 out)
         // 2908
         *(s16*)(out + 22) = (st & mask) != 0;
     } else {
-        s8 bit = (intInfo.grpsOpt[(intrNum >> 5) + 24] >> (intrNum & 0x1F)) & 1;
+        s8 bit = (intInfo.grpsOpt[(intrNum >> 5) + 6] >> (intrNum & 0x1F)) & 1;
         *(s16*)(out + 22) = bit;
         if ((bit & (~subIntrNum >> 31)) != 0) {
             if (intr->handler != 0) {
@@ -952,7 +955,7 @@ void InterruptDisableInTable(s32 intrNum)
     dbg_printf("Called %s\n", __FUNCTION__);
     s32 mask = ~(1 << (intrNum & 0x1F));
     s32 *ptr = &intInfo.grpsOpt[intrNum >> 5];
-    s32 i = 4;
+    s32 i = 3;
     // 2990
     while ((i--) >= 0) {
         *ptr &= mask;
@@ -987,7 +990,7 @@ void AllLevelInterruptDisable(s32 intrNum)
     s32 mask = ~(1 << (intrNum & 0x1F));
     s32 i = 11;
     // 2A78
-    while ((--i) >= 0) {
+    while ((i--) >= 0) {
         *ptr &= mask;
         ptr += 2;
     }

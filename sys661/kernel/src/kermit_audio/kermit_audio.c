@@ -122,7 +122,7 @@ typedef struct SceAudio {
 	u8 flags;               /* 0x554 */
 	s8 volumeOffset;        /* 0x555 */
 	u8 delayShift;          /* 0x556 */
-	u8 pad557;              /* 0x557 */
+	u8 reserved;            /* 0x557 */
 	s64 srcLastTime;        /* 0x558 */
 	u16 srcChFreq;          /* 0x560 */
 	u16 srcChSampleCnt;     /* 0x562 */
@@ -132,18 +132,18 @@ typedef struct SceAudio {
 	u32 inputOrigSampleCnt; /* 0x568 */
 	u32 inputCurSampleCnt;  /* 0x56C */
 	u16 *inputBuf;          /* 0x570 */
-	s8 unkInput0;           /* 0x574 */
+	s8 inputParam0;         /* 0x574 */
 	s8 inputGain;           /* 0x575 */
-	s8 unkInput2;           /* 0x576 */
-	s8 unkInput3;           /* 0x577 */
-	s8 unkInput4;           /* 0x578 */
-	s8 unkInput5;           /* 0x579 */
+	s8 inputParam2;         /* 0x576 */
+	s8 inputParam3;         /* 0x577 */
+	s8 inputParam4;         /* 0x578 */
+	s8 inputParam5;         /* 0x579 */
 	u8 inputHwFreq;         /* 0x57A */
 	s8 inputIsWaiting;      /* 0x57B */
 	s8 inputInited;         /* 0x57C */
-	s8 unkCodecArg;         /* 0x57D */
-	s8 unkCodecRet;         /* 0x57E */
-	s8 unkCodecArgSet;      /* 0x57F */
+	s8 inputCodecMode;      /* 0x57D */
+	s8 inputChannelOffset;  /* 0x57E */
+	s8 inputModeChanged;    /* 0x57F */
 } SceAudio;
 
 /* Forward declarations */
@@ -183,9 +183,9 @@ static SceSysEventHandler g_audioEvent = {
 	{ 0, 0, 0, 0, 0, 0, 0, 0, 0 }
 };
 
-static int g_srcReleaseCheckBusy = 1;            /* 0x33C0 */
+static int g_srcReleaseAllowBusy = 1;            /* 0x33C0 */
 static int g_mixerBufIdx;                        /* 0x33D0 */
-static int g_clearUnk10OnBusy;                   /* 0x33D4 */
+static int g_clearBusyOnPanned;                  /* 0x33D4 */
 static int g_srcRestTimeOffset;                  /* 0x33D8 */
 static int g_restLenDelayUs;                     /* 0x33DC */
 static int g_output2DelayUs;                     /* 0x33E0 */
@@ -251,11 +251,10 @@ static int audioMixerThread(SceSize args, void *argp)
 					mixBuf[i + 1] += ((s32)r * (s32)rightVol) >> 7;
 				}
 
+				chan->curSampleCnt = rem;
 				if (rem == 0) {
 					doneFlags |= 1u << j;
 					buf = NULL;
-				} else {
-					chan->curSampleCnt = rem;
 				}
 				chan->buf = buf;
 			}
@@ -392,7 +391,7 @@ int sceAudioOutputPannedBlocking(u32 chanId, int leftVol, int rightVol, void *bu
 
 	int intr = sceKernelCpuSuspendIntr();
 	int ret = audioOutput(chan, leftVol, rightVol, buf);
-	if (chan->busyState != 0 && g_clearUnk10OnBusy != 0)
+	if (chan->busyState != 0 && g_clearBusyOnPanned != 0)
 		chan->busyState = 0;
 
 	if ((u32)ret == SCE_AUDIO_ERROR_OUTPUT_BUSY) {
@@ -731,7 +730,7 @@ int sceAudioOutput2GetRestSample(void)
 }
 
 /* 0x1158..0x1194: Debug parameter setters */
-static void setAudioParam1(int val) { g_clearUnk10OnBusy = val; }
+static void setAudioParam1(int val) { g_clearBusyOnPanned = val; }
 static void setAudioParam2(int val) { g_srcRestTimeOffset = val; }
 static void setAudioParam3(int val) { g_restLenDelayUs = val; }
 static void setAudioParam4(int val) { g_output2DelayUs = val; }
@@ -807,7 +806,7 @@ int sceAudioSetFrequency(int freq)
 
 /* 0x1CEC, 0x1CF8 */
 static void setAudioParam7(int val) { g_srcDelayFactor = val; }
-static void setAudioParam8(void) { g_srcReleaseCheckBusy = 0; }
+static void setAudioParam8(void) { g_srcReleaseAllowBusy = 0; }
 
 /* 0x1360 */
 int sceAudio_driver_95AE5A2B(u32 id, int val)
@@ -909,8 +908,8 @@ int sceAudioInit(SceSize args, void *argp)
 
 	sceKernelRegisterSysEventHandler(&g_audioEvent);
 	sceKernelDcacheWritebackInvalidateRange(&g_audio, sizeof(g_audio));
-	g_audio.unkCodecArg = 1;
-	g_audio.unkCodecArgSet = 0;
+	g_audio.inputCodecMode = 1;
+	g_audio.inputModeChanged = 0;
 	g_audio.inputInited = 0;
 	return 0;
 }
@@ -1039,9 +1038,6 @@ int sceAudioSRCChReserve(int sampleCount, int freq, int numChans)
 		case 32000:
 			hwFreq = 64;
 			break;
-		case 48000:
-			hwFreq = 256;
-			break;
 		default:
 			return SCE_AUDIO_ERROR_INVALID_FREQUENCY;
 		}
@@ -1075,7 +1071,7 @@ int sceAudioSRCChRelease(void)
 		return SCE_AUDIO_ERROR_NOT_RESERVED;
 	}
 
-	if (audioSRCGetRestDelay() != 0 && g_srcReleaseCheckBusy != 0) {
+	if (audioSRCGetRestDelay() != 0 && g_srcReleaseAllowBusy == 0) {
 		sceKernelCpuResumeIntr(intr);
 		return SCE_AUDIO_ERROR_SRC_RESERVED;
 	}
@@ -1205,7 +1201,7 @@ static int audioInputThread(SceSize args, void *argp)
 		u8 inputHwFreq = g_audio.inputHwFreq;
 
 		if (curSampleCnt == 0) {
-			if (g_audio.inputIsWaiting == 0 && g_audio.unkCodecArgSet == 0) {
+			if (g_audio.inputIsWaiting == 0 && g_audio.inputModeChanged == 0) {
 				kermitAudioInTransfer(NULL);
 				int intr = sceKernelCpuSuspendIntr();
 				g_audio.flags &= ~4u;
@@ -1216,7 +1212,7 @@ static int audioInputThread(SceSize args, void *argp)
 			g_inputReadBufIdx = readIdx + 1;
 
 			if (dst != NULL) {
-				if (g_audio.unkCodecRet != 0)
+				if (g_audio.inputChannelOffset != 0)
 					src++;
 				int shift = inputHwFreq >> 2;
 				int i;
@@ -1289,15 +1285,15 @@ int sceAudioInputInitEx(SceAudioInputParams *param)
 	if (!ok)
 		return SCE_AUDIO_ERROR_PRIV_REQUIRED;
 
-	g_audio.unkInput0 = (s8)pspMin(pspMax(param->param0, -29), 0);
+	g_audio.inputParam0 = (s8)pspMin(pspMax(param->param0, -29), 0);
 	g_audio.inputGain = (s8)pspMin(pspMax(param->gain, -18), 30);
-	g_audio.unkInput2 = (s8)pspMin(pspMax(param->param2, -76), 0);
-	g_audio.unkInput3 = (s8)pspMin(pspMax(param->param3, 0), 15);
-	g_audio.unkInput4 = (s8)pspMin(pspMax(param->param4, 0), 10);
-	g_audio.unkInput5 = (s8)pspMin(pspMax(param->param5, 0), 10);
+	g_audio.inputParam2 = (s8)pspMin(pspMax(param->param2, -76), 0);
+	g_audio.inputParam3 = (s8)pspMin(pspMax(param->param3, 0), 15);
+	g_audio.inputParam4 = (s8)pspMin(pspMax(param->param4, 0), 10);
+	g_audio.inputParam5 = (s8)pspMin(pspMax(param->param5, 0), 10);
 	g_audio.inputInited = 1;
 	g_audio.inputCurSampleCnt = 0;
-	g_audio.unkCodecRet = 0;
+	g_audio.inputChannelOffset = 0;
 	g_audio.inputOrigSampleCnt = 0;
 	return 0;
 }
@@ -1306,15 +1302,15 @@ int sceAudioInputInitEx(SceAudioInputParams *param)
 int sceAudioInputInit(int arg0, int gain, int arg2)
 {
 	u32 oldK1 = pspShiftK1();
-	g_audio.unkInput0 = (s8)pspMin(pspMax(arg0, -29), 0);
+	g_audio.inputParam0 = (s8)pspMin(pspMax(arg0, -29), 0);
 	g_audio.inputGain = (s8)pspMin(pspMax(gain, -18), 30);
-	g_audio.unkInput2 = (s8)pspMin(pspMax(arg2, -76), 0);
-	g_audio.unkInput3 = 0;
-	g_audio.unkInput4 = 3;
-	g_audio.unkInput5 = 2;
+	g_audio.inputParam2 = (s8)pspMin(pspMax(arg2, -76), 0);
+	g_audio.inputParam3 = 0;
+	g_audio.inputParam4 = 3;
+	g_audio.inputParam5 = 2;
 	g_audio.inputInited = 1;
 	g_audio.inputCurSampleCnt = 0;
-	g_audio.unkCodecRet = 0;
+	g_audio.inputChannelOffset = 0;
 	g_audio.inputOrigSampleCnt = 0;
 	pspSetK1(oldK1);
 	return 0;
@@ -1355,9 +1351,9 @@ int sceAudioPollInputEnd(void)
 /* 0x239C */
 int sceAudio_driver_5182B550(int arg)
 {
-	if (g_audio.unkCodecArg != arg) {
-		g_audio.unkCodecArgSet = 1;
-		g_audio.unkCodecArg = (s8)arg;
+	if (g_audio.inputCodecMode != arg) {
+		g_audio.inputModeChanged = 1;
+		g_audio.inputCodecMode = (s8)arg;
 	}
 	return 0;
 }
@@ -1425,8 +1421,8 @@ static int audioInput(int sampleCount, int freq, void *buf)
 		}
 	}
 
-	if (g_audio.unkCodecArgSet != 0)
-		g_audio.unkCodecRet = (s8)(ret & 1);
+	if (g_audio.inputModeChanged != 0)
+		g_audio.inputChannelOffset = (s8)(ret & 1);
 	if (ret >= 0)
 		ret = sampleCount;
 
