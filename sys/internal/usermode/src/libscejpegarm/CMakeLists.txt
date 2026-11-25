@@ -1,4 +1,5 @@
-# generated skeleton (T2): stub bodies, original module/export/import tables
-psp2_module(vs0_sys_external_libscejpegarm KIND user SKELETON SOURCES
+psp2_module(${PSP2_TARGET} KIND user COMPILER gcc48 SOURCES
 	libscejpegarm.c
+	jpegarm_idct_csc.c
+	jpegarm_entropy.c
 )
