@@ -486,6 +486,13 @@ psp2_module(vs0_vsh_shell_shell KIND user COMPILER snc PARTIAL SOURCES
 	src/telephony_plugin/src/sms/tel_sms_receiver.cpp
 	src/telephony_plugin/src/sms/tel_sms_sender.cpp
 	src/telephony_plugin/src/general/tel_general_logic_gui.cpp
+	src/telephony_plugin/src/general/tel_general_logic_netctl.cpp
+	src/telephony_plugin/src/general/tel_general_logic_comfailure.cpp
+	src/telephony_plugin/src/general/tel_general_logic_action_api_param.cpp
+	src/telephony_plugin/src/general/tel_general_logic_action_event_param.cpp
+	src/telephony_plugin/src/general/tel_general_logic_sm.cpp
+	src/telephony_plugin/src/general/tel_general_logic_mediator_mini.cpp
+	src/telephony_plugin/src/general/tel_general_logic_mediator_mini2.cpp
 	shell.c
 )
 target_include_directories(vs0_vsh_shell_shell PRIVATE "${PSP2_SRC}/vsh/paf/include"

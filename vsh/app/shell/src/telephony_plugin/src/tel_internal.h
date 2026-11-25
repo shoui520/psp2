@@ -537,11 +537,72 @@ private:
  * General logic interfaces, GUI dialog manager, and NetCtl factory
  * ------------------------------------------------------------------ */
 
-class TelGeneralLogicNetCtl {
+/* Flat event record forwarded to legacy C-style general event callbacks */
+struct TelGeneralLegacyEventRecord {
+	int category;
+	int eventId;
+	int eventArg;
+	int eventResult;
+};
+
+typedef void (*TelGeneralEventCallback)(const TelEventInfo &event, void *userData);
+typedef void (*TelGeneralLegacyCallback)(const TelGeneralLegacyEventRecord *record, void *userData);
+
+/* Condition error codes reported by GetConditionError (0x81516014) */
+enum TelGeneralConditionError {
+	TEL_COND_ERR_COM_FAILURE = -2146424655,		/* 0x801028B1 */
+	TEL_COND_ERR_SIM_DISABLED = -2146424654,	/* 0x801028B2 */
+	TEL_COND_ERR_SIM_BLOCKED = -2146424653,		/* 0x801028B3 */
+	TEL_COND_ERR_HIGH_TEMP = -2146424652,		/* 0x801028B4 */
+	TEL_COND_ERR_SIM_UNUSABLE = -2146424651,	/* 0x801028B5 */
+	TEL_COND_ERR_COM_BOOT_TEMP = -2146424650,	/* 0x801028B6 */
+	TEL_COND_ERR_LOW_BATTERY = -2146424649,		/* 0x801028B7 */
+	TEL_COND_ERR_COM_BOOT_OTHER = -2146424648,	/* 0x801028B8 */
+	TEL_COND_ERR_ATTRIBUTE = -2146424646,		/* 0x801028BA */
+	TEL_COND_ERR_BBMC = -2146424645			/* 0x801028BB */
+};
+
+/* NetCtl / product operator spec error codes */
+enum TelNetCtlErrorCode {
+	TEL_NETCTL_ERR_DENIED = -2136014844,		/* 0x80AF0004 */
+	TEL_NETCTL_ERR_INVALID_SERVICE = -2136014705	/* 0x80AF008F */
+};
+
+/* Product target operator identifiers (TEL_ATTR_PRODUCT_TARGET_OPERATOR = 0x60002) */
+enum TelProductTargetOperator {
+	TEL_OPERATOR_DEFAULT = 0,
+	TEL_OPERATOR_ATT = 1,
+	TEL_OPERATOR_DOCOMO = 2,
+	TEL_OPERATOR_VODAFONE = 4,
+	TEL_OPERATOR_CANADA = 5,
+	TEL_OPERATOR_REGION_ALT = 6
+};
+
+class TelGeneralLogicNetCtl : public TelObservable {
 public:
+	TelGeneralLogicNetCtl() : TelObservable("SceTelGenProductOpSpecIf") {}
 	virtual ~TelGeneralLogicNetCtl() {}
+
+	virtual TelephonyResult SetBbmcAdapter(TelBbmcAdapterInterface *bbmcAdapter) = 0;
 	virtual TelephonyResult Initialize() = 0;
-	virtual TelephonyResult Terminate() = 0;
+	virtual TelephonyResult SetSimActivationState(const int *activationState) = 0;
+	virtual TelephonyResult GetSimActivationState(int *outActivationState) = 0;
+	virtual bool IsSimCardMatchOperator(const TelephonyPlmn &plmn) = 0;
+	virtual TelephonyResult IsApnMatchOperator(const paf::vector<TelephonyPlmn> &plmns,
+						   bool *outMatched) = 0;
+	virtual TelephonyResult IsOperatorRestrictedApn(const paf::vector<TelephonyPlmn> &plmns,
+							bool *outRestricted) = 0;
+	virtual TelephonyResult UpdateRoamingOverride() = 0;
+	virtual TelephonyResult IsDomesticRoamingAllowed(bool *outAllowed) = 0;
+	virtual TelephonyResult IsApnEditAllowed(bool *outAllowed) = 0;
+	virtual TelephonyResult IsManualOperatorSelectionAllowed(bool *outAllowed) = 0;
+	virtual TelephonyResult GetOperatorAppTitleId(const char **outTitleId) = 0;
+	virtual TelephonyResult CheckContentDownloadAllowed(int serviceType) = 0;
+	virtual TelephonyResult GetDownloadSizeLimit(unsigned int serviceType,
+						     SceInt64 *outLimitBytes) = 0;
+	virtual TelephonyResult CheckRoamingDownloadAllowed(unsigned int serviceType) = 0;
+	virtual TelephonyResult GetUpdateListUrl(paf::string *outUrl) = 0;
+	virtual TelephonyResult Terminate() { return TelephonyResult(TEL_OK); }
 };
 
 class TelGeneralLogicNetCtlFactory {
@@ -550,6 +611,13 @@ public:
 				      TelGeneralLogicNetCtl **outNetCtl);
 	static TelephonyResult Destroy(TelGeneralLogicNetCtl *netCtl);
 };
+
+/* Shared product operator utilities (0x81260038..0x81260677) */
+TelephonyResult telGetProductTargetOperator(int *outOperator);
+TelephonyResult telLoadSupportedOperatorPlmns(paf::vector<TelephonyPlmn> *outPlmns);
+bool telIsPlmnSupportedByOperator(int operatorId, const TelephonyPlmn &plmn);
+bool telIsApnInOperatorPlmnList(const paf::string &apnName,
+				const paf::vector<TelephonyPlmn> &plmns);
 
 class TelGeneralLogicMediatorBase : public TelObservable {
 public:
