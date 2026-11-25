@@ -517,6 +517,21 @@ psp2_module(vs0_vsh_shell_shell KIND user COMPILER snc PARTIAL SOURCES
 	src/patch_chk_plugin/patch_chk_sysupchk.cpp
 	src/patch_chk_plugin/patch_chk_changeinfo.cpp
 	src/patch_chk_plugin/patch_chk_jobs.cpp
+	src/topmenu_plugin/src/topmenu_plugin.cpp
+	src/topmenu_plugin/src/topmenu_heap.cpp
+	src/topmenu_plugin/src/topmenu_interface.cpp
+	src/topmenu_plugin/src/topmenu_plane.cpp
+	src/topmenu_plugin/src/top_tab_cache_manager.cpp
+	src/topmenu_plugin/src/topmenu_dialog_mgr.cpp
+	src/topmenu_plugin/src/topmenu_help.cpp
+	src/topmenu_plugin/src/import_savedata_launcher.cpp
+	src/topmenu_plugin/src/chk_ux0_free_space_job.cpp
+	src/topmenu_plugin/src/np_comm_id_search_job.cpp
+	src/topmenu_plugin/src/online_storage_launcher.cpp
+	src/topmenu_plugin/src/topmenu_input_listener.cpp
+	src/topmenu_plugin/src/patch_chk_launcher.cpp
+	src/topmenu_plugin/src/topmenu_gesture_listener.cpp
+	src/topmenu_plugin/src/topmenu_lsdb_sync.cpp
 	shell.c
 )
 target_include_directories(vs0_vsh_shell_shell PRIVATE "${PSP2_SRC}/vsh/paf/include"
