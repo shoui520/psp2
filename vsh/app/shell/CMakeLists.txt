@@ -421,6 +421,7 @@ psp2_module(vs0_vsh_shell_shell KIND user COMPILER snc PARTIAL SOURCES
 	src/nsx/nsx_xml_http.cpp
 	parental_control_mgr.cpp
 	playlog.cpp
+	process_event_server.cpp
 	shell.c
 )
 target_include_directories(vs0_vsh_shell_shell PRIVATE "${PSP2_SRC}/vsh/paf/include"
@@ -428,6 +429,7 @@ target_include_directories(vs0_vsh_shell_shell PRIVATE "${PSP2_SRC}/vsh/paf/incl
 	"${PSP2_SRC}/sys/internal/usermode/src" "${PSP2_SRC}/vsh/lowlayer/src")
 # SNC's inlining budget: map::operator[] (0x814096ac) stays out of line in Sony's callers
 set_source_files_properties(boot.cpp lsdb_start.cpp net.cpp event_server.cpp app_event_server.cpp
+	process_event_server.cpp
 	exclusive_func_net.cpp
 	exclusive_func_photo_import.cpp
 	exclusive_func_tel_init.cpp
