@@ -207,10 +207,32 @@ int moveSinkTeardown(void)
 }
 
 /* set the move sink's parameter string */
+#if FW_VERSION == 0x03630011
+/* the 3.630 build opens the middleware session itself, with the move sink's entry */
+int moveSinkSetParameter(const char *parameter)
+{
+	int sessionInfo[2];
+	int ret;
+
+	if (g_session.closed != 0)
+		return SCE_DTCP_IP_ERROR_KEY_NEED_ACTIVATE;
+	sessionInfo[0] = 1;
+	sessionInfo[1] = 1;
+	ret = dtcpIpIpcCreate((int *)&g_session.connection, sessionInfo, g_dtcpIpIpcConfig, 140);
+	if (ret == 22)
+		ret = dtcpIpIpcCreate((int *)&g_session.connection, sessionInfo,
+				      g_dtcpIpActivateConfig, 140);
+	ret = dtcpIpMapError(ret);
+	if (ret >= 0)
+		ret = sinkHttpCreateTemplate(parameter);
+	return ret;
+}
+#else
 int moveSinkSetParameter(const char *parameter)
 {
 	return sinkSetParameterInternal(1, parameter);
 }
+#endif
 
 /* set the move sink's uri: the move sink keeps its own copy until it closes */
 int moveSinkSetUri(const char *uri, unsigned short port)

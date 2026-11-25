@@ -240,6 +240,27 @@ int sinkTeardown(void)
  * minute: the middleware activates itself first), then create the http template with
  * the parameter. isMove picks the move sink's session entry.
  */
+#if FW_VERSION == 0x03630011
+/* the 3.630 build opens the middleware session itself, without the ready wait */
+int sinkSetParameter(const char *parameter)
+{
+	int sessionInfo[2];
+	int ret;
+
+	if (g_session.closed != 0)
+		return SCE_DTCP_IP_ERROR_KEY_NEED_ACTIVATE;
+	sessionInfo[0] = 1;
+	sessionInfo[1] = 0;
+	ret = dtcpIpIpcCreate((int *)&g_session.connection, sessionInfo, g_dtcpIpIpcConfig, 140);
+	if (ret == 22)
+		ret = dtcpIpIpcCreate((int *)&g_session.connection, sessionInfo,
+				      g_dtcpIpActivateConfig, 140);
+	ret = dtcpIpMapError(ret);
+	if (ret >= 0)
+		ret = sinkHttpCreateTemplate(parameter);
+	return ret;
+}
+#else
 int sinkSetParameterInternal(int isMove, const char *parameter)
 {
 	int config[4];
@@ -249,7 +270,7 @@ int sinkSetParameterInternal(int isMove, const char *parameter)
 	int status;
 
 	if (g_session.closed != 0)
-		return -2146404597;	/* 0x8010771B: the session was closed */
+		return SCE_DTCP_IP_ERROR_KEY_NEED_ACTIVATE;
 
 	config[2] = 0;
 	config[0] = 1;
@@ -327,6 +348,7 @@ int sinkSetParameter(const char *parameter)
 {
 	return sinkSetParameterInternal(0, parameter);
 }
+#endif
 
 /* set the sink's uri and port: the middleware session gets them */
 int sinkSetUri(const char *uri, unsigned short port)

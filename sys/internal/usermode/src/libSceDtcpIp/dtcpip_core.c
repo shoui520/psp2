@@ -251,7 +251,7 @@ int dtcpIpOpenMwSession(void)
 	int ipcError;
 
 	if (g_session.closed != 0)
-		return -2146404597;	/* 0x8010771B: the session was closed */
+		return SCE_DTCP_IP_ERROR_KEY_NEED_ACTIVATE;
 
 	ipcError = dtcpIpIpcConnect(&g_session.connection);
 	if (ipcError == 0) {

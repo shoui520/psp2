@@ -11,6 +11,7 @@
 #include <scetypes.h>
 #include <kernel/threadmgr.h>
 #include <libkernel/libkernel.h>
+#include <dtcpip/error.h>
 
 /* the library's states (the state word of the context) */
 #define SCE_DTCP_IP_STATE_STOPPED		0
