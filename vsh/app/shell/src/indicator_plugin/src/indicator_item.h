@@ -14,6 +14,8 @@
 #include <std/list>
 #include <std/vector>
 #include <std/memory>
+#include <common/shared_ptr.h>
+#include <job/job.h>
 #include <math/ngp/v4.h>
 #include <widget/core/widget.h>
 #include <widget/w_text.h>
@@ -276,47 +278,87 @@ void indicatorTelGeneralNetworkTypeCB(int event, int result, const int *value, i
 /* the plugin (indicator_interface.cpp) */
 extern paf::Plugin *g_indicatorPlugin;
 
+/* the Dolce's own look (indicator.cpp, 0x8115BF9A) and the plugin's strings (indicator_util.cpp,
+   0x81182420) */
+bool indicatorIsDolceDefault(void);
+const wchar_t *indicatorGetString(const paf::IDParam &id);
+
+/* the Bluetooth icon (indicator_bluetooth.cpp, 24 bytes; PLACEHOLDER name) */
+class IndicatorBluetooth : public IndicatorItem {
+public:
+	IndicatorBluetooth(paf::Plugin *plugin, paf::ui::Widget *widget);	/* (0x8118365A) */
+	virtual ~IndicatorBluetooth();						/* (0x81183774) */
+	virtual void OnStatus(IndicatorStatus status);				/* (0x81183B50) */
+
+	paf::ui::Widget *m_root;
+	paf::common::SharedPtr<paf::job::JobItem> m_job;
+	paf::Plugin *m_plugin;
+};
+
+/* the busy indicator (indicator_busy.cpp, 16 bytes; PLACEHOLDER name) */
+class IndicatorBusy : public IndicatorItem {
+public:
+	IndicatorBusy(paf::Plugin *plugin, paf::ui::Widget *widget);		/* (0x81183B60) */
+	virtual ~IndicatorBusy();						/* (0x81183CC2) */
+	virtual void OnStatus(IndicatorStatus status);				/* (0x81183D54) */
+
+	int Stop();								/* (0x81183C84) */
+	int Start();								/* (0x81183D16) */
+
+	paf::ui::Widget *m_root;
+	paf::Plugin *m_plugin;
+};
+
+/* the battery icon (indicator_battery.cpp, 32 bytes, not on the Dolce; PLACEHOLDER name) */
 class IndicatorBattery : public IndicatorItem {
 public:
-	IndicatorBattery(paf::Plugin *plugin, paf::ui::Widget *widget);		/* (0x8118365A) */
+	IndicatorBattery(paf::Plugin *plugin, paf::ui::Widget *widget);		/* (0x81184D68) */
+	virtual ~IndicatorBattery();						/* (0x8118502A) */
+
+	/* kept at near-white (246/255) regardless of the theme's icon color (0x8141F1C0) */
+	virtual void UpdateColor(IndicatorStatus status)
+	{
+		paf::math::v4 color = paf::math::v4(246.0f, 246.0f, 246.0f, 0.0f) * (1.0f / 255.0f);
+
+		color.set_w(m_widget->m_color_alpha);
+		m_widget->SetColor(color, NULL, paf::ui::Widget::ANIM_COLOR, 0);
+	}
+
+	int ShowLowNotice(int low);						/* (0x81184484) */
+	void Update(bool animate);						/* (0x811845B8) */
+	void AnimateCharge();							/* (0x81184BA8) */
+
 	paf::ui::Widget *m_root;
-	int m_reserved[2];
 	paf::Plugin *m_plugin;
+	paf::ui::Widget *m_barWidget;
+	paf::ui::Widget *m_chargeWidget;
+	int m_reserved;
+	int m_charging;
 };
 
+struct IndicatorClockTime;
+
+/* the clock (indicator_clock.cpp, 12 bytes; PLACEHOLDER name) */
 class IndicatorClock : public IndicatorItem {
 public:
-	IndicatorClock(paf::Plugin *plugin, paf::ui::Widget *widget);		/* (0x81183B60) */
-	paf::ui::Widget *m_root;
-	paf::Plugin *m_plugin;
-};
+	IndicatorClock(paf::Plugin *plugin, paf::ui::Widget *widget);		/* (0x81183D68) */
+	virtual ~IndicatorClock();						/* (0x81183E8E) */
+	virtual void OnStatus(IndicatorStatus status);				/* (0x811841B8) */
 
-/*
- * The right group's items (PLACEHOLDER names and fields, from what their constructors store,
- * until each one's file is written): an icon with two children on a timer, told the shell's
- * events 13 and 14 (32 bytes, not on the Dolce), the item started at once (12 bytes, the one
- * made kept at 0x81566BD8), the item using impose_plugin's interface (16 bytes) and the notices'
- * icon (28 bytes).
- */
-class IndicatorTimedIcon : public IndicatorItem {
-public:
-	IndicatorTimedIcon(paf::Plugin *plugin, paf::ui::Widget *widget);	/* (0x81184D68) */
-	paf::ui::Widget *m_root;
-	paf::Plugin *m_plugin;
-	paf::ui::Widget *m_child[2];
-	int m_state[2];
-};
+	void Start(IndicatorClockTime *lastTime);				/* (0x811840C8) */
+	void Start();								/* (0x811841A8) */
 
-class IndicatorStartedItem : public IndicatorItem {
-public:
-	IndicatorStartedItem(paf::Plugin *plugin, paf::ui::Widget *widget);	/* (0x81183D68) */
-	void Start();							/* (0x811841A8) */
 	paf::ui::Widget *m_root;
 };
 
+/* the volume-fixed icon (indicator_impose_item.cpp, 16 bytes; PLACEHOLDER name) */
 class IndicatorImposeItem : public IndicatorItem {
 public:
 	IndicatorImposeItem(paf::Plugin *plugin, paf::ui::Widget *widget);	/* (0x811834BE) */
+	virtual void OnStatus(IndicatorStatus status);				/* (0x8118364E) */
+
+	void Update(int on);							/* (0x811831D8) */
+
 	paf::ui::Widget *m_root;
 	paf::Plugin *m_plugin;
 };

@@ -37,7 +37,7 @@ IndicatorRightGroup::IndicatorRightGroup(Plugin *plugin, ui::Widget *widget)
 	if (!imposeIsDolce()) {
 		ui::Widget *parent = m_widget;
 		Plugin *owner = g_indicatorPlugin;
-		IndicatorItem *item = new IndicatorTimedIcon(owner, parent);
+		IndicatorItem *item = new IndicatorBattery(owner, parent);
 
 		if (item != NULL)
 			m_items.push_back(item);
@@ -45,11 +45,11 @@ IndicatorRightGroup::IndicatorRightGroup(Plugin *plugin, ui::Widget *widget)
 
 	ui::Widget *parent = m_widget;
 	Plugin *owner = g_indicatorPlugin;
-	IndicatorStartedItem *started = new IndicatorStartedItem(owner, parent);
+	IndicatorClock *clock = new IndicatorClock(owner, parent);
 
-	if (started != NULL) {
-		started->Start();
-		m_items.push_back(started);
+	if (clock != NULL) {
+		clock->Start();
+		m_items.push_back(clock);
 	}
 
 	parent = m_widget;

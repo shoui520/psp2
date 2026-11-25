@@ -349,11 +349,11 @@ IndicatorLeftGroup::IndicatorLeftGroup(Plugin *plugin, ui::Widget *widget)
 	if (item != NULL)
 		m_items.push_back(item);
 	if (!imposeIsDolce()) {
-		item = new IndicatorBattery(plugin, m_widget);
+		item = new IndicatorBluetooth(plugin, m_widget);
 		if (item != NULL)
 			m_items.push_back(item);
 	}
-	item = new IndicatorClock(plugin, m_widget);
+	item = new IndicatorBusy(plugin, m_widget);
 	if (item != NULL)
 		m_items.push_back(item);
 }
