@@ -1,8 +1,9 @@
 #include <kermit.h>
 
-#define SCE_ERROR_NOT_FOUND		0x80000001
+#define SCE_ERROR_ERROR			0x80000001
 #define SCE_ERROR_ALREADY		0x80000020
 #define SCE_ERROR_PRIV_REQUIRED		0x80000023
+#define SCE_ERROR_NOT_FOUND		0x80000025
 #define SCE_ERROR_INVALID_ID		0x80000100
 #define SCE_ERROR_INVALID_POINTER	0x80000103
 #define SCE_ERROR_INVALID_VALUE		0x800001FE
@@ -46,10 +47,10 @@ s64 sceKernelGetSystemTimeWide(void);
 #define RTC_WIN32_EPOCH_TICK		0x00b36168b6a58000ULL
 
 typedef struct {
-	u32 aUnk;			/* 0x00 */
-	u32 bUnk;			/* 0x04 */
-	s32 cUnk;			/* 0x08 */
-	s32 dUnk;			/* 0x0c */
+	u32 dateFormat;			/* 0x00 */
+	u32 timeFormat;			/* 0x04 */
+	s32 tzOffsetMin;		/* 0x08 */
+	s32 dstOffsetMin;		/* 0x0c */
 	u32 currPresent;		/* 0x10 */
 	u32 securePresent;		/* 0x14 */
 	u32 tickCleared;		/* 0x18 */
@@ -66,6 +67,29 @@ typedef struct {
 	u32 accumHighSec;		/* 0x68 */
 	SceUID rtcCbId;			/* 0x6c */
 } SceRtcContext;
+
+typedef struct {
+	u64 savedHeader[2];
+	u64 currentTick;
+	u64 alarmTick;
+} SceRtcSuspendTicks;
+
+typedef struct {
+	u32 size;
+	u32 powerFlags;
+	u32 pad[3];
+	SceRtcSuspendTicks *ticks;
+} SceRtcSuspendEventParam;
+
+typedef struct {
+	u32 status;
+	u32 resumeReason;
+} SceRtcResumeStatus;
+
+typedef struct {
+	u32 size;
+	SceRtcResumeStatus *resumeStatus;
+} SceRtcResumeEventParam;
 
 typedef struct {
 	u8 offset;
@@ -174,10 +198,11 @@ static int rtcSysEventHandler(int ev_id, char *ev_name, void *param, int *result
 	(void)result;
 
 	if (ev_id == 0x1000) {
-		u8 *p = *(u8 **)((u8 *)param + 0x14);
-		sceRtcGetCurrentTick((u64 *)(p + 0x10));
-		sceRtc_driver_366669D6((u64 *)(p + 0x18));
-		if (((u32 *)param)[1] != 0) {
+		SceRtcSuspendEventParam *ev = (SceRtcSuspendEventParam *)param;
+		SceRtcSuspendTicks *ticks = ev->ticks;
+		sceRtcGetCurrentTick(&ticks->currentTick);
+		sceRtc_driver_366669D6(&ticks->alarmTick);
+		if (ev->powerFlags != 0) {
 			if (sceKernelApplicationType() == 0x200) {
 				sceRtc_driver_366669D6(&g_rtc_ctx.savedAlarmTick);
 				sceRtc_driver_E09880CF(NULL);
@@ -187,11 +212,10 @@ static int rtcSysEventHandler(int ev_id, char *ev_name, void *param, int *result
 		if (ev_id == 0x200)
 			g_rtc_ctx.callbackPending = 1;
 	} else if (ev_id == 0x100000) {
-		u32 *sub;
+		SceRtcResumeEventParam *ev = (SceRtcResumeEventParam *)param;
 
 		sceRtc_driver_852255B8();
-		sub = ((u32 **)param)[1];
-		if (sub[1] == 0x80000000U) {
+		if (ev->resumeStatus->resumeReason == 0x80000000U) {
 			g_rtc_ctx.tickCleared = 0;
 			sceRtc_driver_E09880CF(&g_rtc_ctx.savedAlarmTick);
 		}
@@ -207,10 +231,10 @@ static int rtcSysEventHandler(int ev_id, char *ev_name, void *param, int *result
 
 s32 sceRtc_driver_852255B8(void)
 {
-	u64 curTick = 0;
-	u64 curOffset = 0;
-	u64 secTickRaw = 0;
-	u64 secOffset = 0;
+	u64 curTick;
+	u64 curOffset;
+	u64 secTickRaw;
+	u64 secOffset;
 	u64 shifted = 0;
 	u64 intOffset;
 	u64 accum;
@@ -394,13 +418,13 @@ s32 sceRtc_driver_E09880CF(const u64 *tick)
 	if (tick != NULL && *tick != 0 && g_rtc_ctx.baseCurrentTick != 0) {
 		sceRtcGetCurrentTick(&curTick);
 		if (*tick < curTick) {
-			if (oldK1 < 0) {
+			if ((s32)pspGetK1() < 0) {
 				pspSetK1(oldK1);
 				return SCE_ERROR_INVALID_VALUE;
 			}
 		} else {
 			u64 target = *tick;
-			if (oldK1 < 0) {
+			if ((s32)pspGetK1() < 0) {
 				u64 diff = target - curTick;
 				if (diff > 0x000000141dd75fffULL) {
 					pspSetK1(oldK1);
@@ -493,7 +517,7 @@ s32 sceRtcGetCurrentTick(u64 *tick)
 	if (g_rtc_ctx.currPresent == 0) {
 		*tick = RTC_DEFAULT_TICK;
 		pspSetK1(oldK1);
-		return SCE_ERROR_NOT_FOUND;
+		return SCE_ERROR_ERROR;
 	}
 
 	*tick = g_rtc_ctx.currentTickOffset + (u64)sceKernelGetSystemTimeWide();
@@ -512,7 +536,7 @@ s32 sceRtc_driver_CEEF238F(u64 *tick)
 	if (g_rtc_ctx.securePresent == 0) {
 		*tick = RTC_DEFAULT_TICK;
 		pspSetK1(oldK1);
-		return SCE_ERROR_NOT_FOUND;
+		return SCE_ERROR_ERROR;
 	}
 
 	*tick = g_rtc_ctx.secureTickOffset + (u64)sceKernelGetSystemTimeWide();
@@ -531,7 +555,7 @@ s32 sceRtc_driver_ED15334F(u64 *tick)
 	if (g_rtc_ctx.tickCleared == 0) {
 		*tick = 0;
 		pspSetK1(oldK1);
-		return SCE_ERROR_NOT_FOUND;
+		return SCE_ERROR_ERROR;
 	}
 
 	*tick = g_rtc_ctx.internalTickOffset + (u64)sceKernelGetSystemTimeWide();
@@ -574,7 +598,7 @@ s32 sceRtc_driver_7C6E9610(u64 *tick)
 	if (g_rtc_ctx.currPresent == 0) {
 		*tick = RTC_DEFAULT_TICK;
 		pspSetK1(oldK1);
-		return SCE_ERROR_NOT_FOUND;
+		return SCE_ERROR_ERROR;
 	}
 
 	*tick = ((g_rtc_ctx.currentTickOffset + g_rtc_ctx.lastSysTime) - g_rtc_ctx.accumBaseTick) -
@@ -594,7 +618,7 @@ s32 sceRtc_driver_E98FEC46(u64 *tick)
 	if (g_rtc_ctx.currPresent == 0) {
 		*tick = RTC_DEFAULT_TICK;
 		pspSetK1(oldK1);
-		return SCE_ERROR_NOT_FOUND;
+		return SCE_ERROR_ERROR;
 	}
 
 	*tick = (g_rtc_ctx.currentTickOffset + g_rtc_ctx.lastSysTime) - g_rtc_ctx.accumBaseTick;
@@ -609,10 +633,10 @@ int module_start(SceSize args, void *argp)
 
 	memset(&g_rtc_ctx, 0, sizeof(g_rtc_ctx));
 	g_rtc_ctx.rtcCbId = -1;
-	g_rtc_ctx.aUnk = 0;
-	g_rtc_ctx.cUnk = 0;
-	g_rtc_ctx.bUnk = 0;
-	g_rtc_ctx.dUnk = 0;
+	g_rtc_ctx.dateFormat = 0;
+	g_rtc_ctx.tzOffsetMin = 0;
+	g_rtc_ctx.timeFormat = 0;
+	g_rtc_ctx.dstOffsetMin = 0;
 	sceRtc_driver_852255B8();
 	registerRtcFunctions();
 	sceKernelRegisterSysEventHandler(&g_rtc_sys_event);
@@ -631,10 +655,10 @@ s32 sceRtcInit(void)
 {
 	memset(&g_rtc_ctx, 0, sizeof(g_rtc_ctx));
 	g_rtc_ctx.rtcCbId = -1;
-	g_rtc_ctx.aUnk = 0;
-	g_rtc_ctx.cUnk = 0;
-	g_rtc_ctx.bUnk = 0;
-	g_rtc_ctx.dUnk = 0;
+	g_rtc_ctx.dateFormat = 0;
+	g_rtc_ctx.tzOffsetMin = 0;
+	g_rtc_ctx.timeFormat = 0;
+	g_rtc_ctx.dstOffsetMin = 0;
 	sceRtc_driver_852255B8();
 	registerRtcFunctions();
 	sceKernelRegisterSysEventHandler(&g_rtc_sys_event);
@@ -666,13 +690,13 @@ s32 sceRtc_driver_1C1859DF(void)
 	return 0;
 }
 
-s32 sceRtc_driver_DFF30673(u32 a0, u32 a1, s32 a2, s32 a3)
+s32 sceRtc_driver_DFF30673(u32 dateFormat, u32 timeFormat, s32 dstOffsetMin, s32 tzOffsetMin)
 {
 	int intr = sceKernelCpuSuspendIntr();
-	g_rtc_ctx.cUnk = a3;
-	g_rtc_ctx.bUnk = a1;
-	g_rtc_ctx.dUnk = a2;
-	g_rtc_ctx.aUnk = a0;
+	g_rtc_ctx.tzOffsetMin = tzOffsetMin;
+	g_rtc_ctx.timeFormat = timeFormat;
+	g_rtc_ctx.dstOffsetMin = dstOffsetMin;
+	g_rtc_ctx.dateFormat = dateFormat;
 	sceKernelCpuResumeIntr(intr);
 	return 0;
 }
@@ -693,8 +717,8 @@ s32 sceRtcGetCurrentClock(pspTime *time, int tz)
 	s32 res = SCE_ERROR_PRIV_REQUIRED;
 
 	if (pspK1PtrOk(time)) {
-		sceRtcGetCurrentTick(&tick);
-		res = sceRtc_driver_77138347(&tick, &tick, (s64)tz);
+		res = sceRtcGetCurrentTick(&tick);
+		sceRtc_driver_77138347(&tick, &tick, (s64)tz);
 		sceRtcSetTick(time, &tick);
 	}
 
@@ -708,7 +732,7 @@ s32 sceRtc_driver_9012B140(pspTime *time)
 	s32 res = SCE_ERROR_PRIV_REQUIRED;
 
 	if (pspK1PtrOk(time))
-		res = sceRtcGetCurrentClock(time, g_rtc_ctx.dUnk + g_rtc_ctx.cUnk);
+		res = sceRtcGetCurrentClock(time, g_rtc_ctx.dstOffsetMin + g_rtc_ctx.tzOffsetMin);
 
 	pspSetK1(oldK1);
 	return res;
@@ -716,12 +740,12 @@ s32 sceRtc_driver_9012B140(pspTime *time)
 
 s32 sceRtc_driver_4E267E02(const u64 *tickUTC, u64 *tickLocal)
 {
-	return sceRtc_driver_77138347(tickLocal, tickUTC, (s64)(g_rtc_ctx.dUnk + g_rtc_ctx.cUnk));
+	return sceRtc_driver_77138347(tickLocal, tickUTC, (s64)(g_rtc_ctx.dstOffsetMin + g_rtc_ctx.tzOffsetMin));
 }
 
 s32 sceRtc_driver_3E66CB7E(const u64 *tickLocal, u64 *tickUTC)
 {
-	return sceRtc_driver_77138347(tickUTC, tickLocal, (s64)(-(g_rtc_ctx.dUnk + g_rtc_ctx.cUnk)));
+	return sceRtc_driver_77138347(tickUTC, tickLocal, (s64)(-(g_rtc_ctx.dstOffsetMin + g_rtc_ctx.tzOffsetMin)));
 }
 
 s32 sceRtc_driver_00F66D06(int year)
@@ -749,7 +773,7 @@ s32 sceRtcCheckValid(const pspTime *date)
 {
 	s32 days;
 
-	if (!pspK1PtrOk(date))
+	if (((s32)((pspGetK1() << 11) & (u32)date)) < 0)
 		return SCE_ERROR_PRIV_REQUIRED;
 	if (date->year == 0 || date->year >= 10000)
 		return -1;
@@ -830,26 +854,26 @@ s32 sceRtc_driver_B2B6578C(const pspTime *date, u64 *win32Time)
 	return 0;
 }
 
-s32 sceRtc_driver_94225550(const pspTime *date, u64 *time64)
+s32 sceRtc_driver_94225550(const pspTime *date, u64 *unixTime)
 {
 	u64 tick;
 	int oldK1 = pspShiftK1();
 
-	if (!pspK1PtrOk(date) || !pspK1PtrOk(time64)) {
+	if (!pspK1PtrOk(date) || !pspK1PtrOk(unixTime)) {
 		pspSetK1(oldK1);
 		return SCE_ERROR_PRIV_REQUIRED;
 	}
 
 	sceRtcGetTick(date, &tick);
 	if (tick < RTC_UNIX_EPOCH_TICK) {
-		if (time64 != NULL)
-			*time64 = 0;
+		if (unixTime != NULL)
+			*unixTime = 0;
 		pspSetK1(oldK1);
 		return SCE_ERROR_INVALID_VALUE;
 	}
 
-	if (time64 != NULL)
-		*time64 = (tick - RTC_UNIX_EPOCH_TICK) / RTC_TICKS_PER_SECOND;
+	if (unixTime != NULL)
+		*unixTime = (tick - RTC_UNIX_EPOCH_TICK) / RTC_TICKS_PER_SECOND;
 
 	pspSetK1(oldK1);
 	return 0;
@@ -917,23 +941,23 @@ s32 sceRtcSetTick(pspTime *date, const u64 *tick)
 	date->hour = (u16)(hourTotal % 24);
 
 	if (days > 146096) {
-		s32 c400 = days / 146097;
-		year = c400 * 400 + 1;
-		days -= c400 * 146097;
+		s32 quadCenturies = days / 146097;
+		year = quadCenturies * 400 + 1;
+		days -= quadCenturies * 146097;
 	}
 	if (days > 36523) {
-		s32 c100 = days / 36524;
-		days -= c100 * 36524;
-		year += c100 * 100;
+		s32 centuries = days / 36524;
+		days -= centuries * 36524;
+		year += centuries * 100;
 		if (days == 0) {
 			days = 365;
 			year--;
 		}
 	}
 	if (days >= 1461) {
-		s32 c4 = days / 1461;
-		year += c4 * 4;
-		days -= c4 * 1461;
+		s32 quadYears = days / 1461;
+		year += quadYears * 4;
+		days -= quadYears * 1461;
 	}
 
 	for (;;) {
@@ -1064,22 +1088,22 @@ s32 sceRtc_driver_AAAE90FF(u64 *destTick, const u64 *srcTick, int numYears)
 	return 0;
 }
 
-s32 sceRtc_driver_281144FE(const u64 *tick1, const u64 *tick2)
+s32 sceRtc_driver_281144FE(const u64 *lhsTick, const u64 *rhsTick)
 {
 	int oldK1 = pspShiftK1();
-	u64 t1, t2;
+	u64 lhsVal, rhsVal;
 
-	if (!pspK1PtrOk(tick1) || !pspK1PtrOk(tick2)) {
+	if (!pspK1PtrOk(lhsTick) || !pspK1PtrOk(rhsTick)) {
 		pspSetK1(oldK1);
 		return SCE_ERROR_PRIV_REQUIRED;
 	}
 
-	t1 = *tick1;
-	t2 = *tick2;
+	lhsVal = *lhsTick;
+	rhsVal = *rhsTick;
 	pspSetK1(oldK1);
-	if (t1 < t2)
+	if (lhsVal < rhsVal)
 		return -1;
-	if (t1 > t2)
+	if (lhsVal > rhsVal)
 		return 1;
 	return 0;
 }
@@ -1142,7 +1166,7 @@ s32 sceRtc_driver_CEF8FE8E(pspTime *date, u64 win32Time)
 	return 0;
 }
 
-s32 sceRtc_driver_CF4E0EE0(pspTime *date, u64 time64)
+s32 sceRtc_driver_CF4E0EE0(pspTime *date, u64 unixTime)
 {
 	u64 tick;
 	int oldK1 = pspShiftK1();
@@ -1152,15 +1176,15 @@ s32 sceRtc_driver_CF4E0EE0(pspTime *date, u64 time64)
 		return SCE_ERROR_PRIV_REQUIRED;
 	}
 
-	tick = time64 * 1000000ULL + RTC_UNIX_EPOCH_TICK;
+	tick = unixTime * 1000000ULL + RTC_UNIX_EPOCH_TICK;
 	sceRtcSetTick(date, &tick);
 	pspSetK1(oldK1);
 	return 0;
 }
 
-s32 sceRtc_driver_40B07E72(pspTime *date, u32 time32)
+s32 sceRtc_driver_40B07E72(pspTime *date, u32 unixTimeSec)
 {
-	return sceRtc_driver_CF4E0EE0(date, (u64)time32);
+	return sceRtc_driver_CF4E0EE0(date, (u64)unixTimeSec);
 }
 
 s32 sceRtcTickAddTicks(u64 *destTick, const u64 *srcTick, u64 numTicks)
@@ -1300,19 +1324,19 @@ static s32 parse4Digits(const char *s)
 
 static const char *parse1Or2Digits(const char *s, s32 *outVal)
 {
-	s32 d0 = s[0] - '0';
-	s32 d1;
+	s32 tensDigit = s[0] - '0';
+	s32 onesDigit;
 
-	if ((u32)(d0 & 0xff) >= 10U) {
+	if ((u32)(tensDigit & 0xff) >= 10U) {
 		*outVal = -1;
 		return NULL;
 	}
-	d1 = s[1] - '0';
-	if ((u32)d1 < 10U) {
-		*outVal = d0 * 10 + d1;
+	onesDigit = s[1] - '0';
+	if ((u32)onesDigit < 10U) {
+		*outVal = tensDigit * 10 + onesDigit;
 		return s + 2;
 	}
-	*outVal = d0;
+	*outVal = tensDigit;
 	return s + 1;
 }
 
@@ -1485,7 +1509,7 @@ s32 sceRtc_driver_C3A806EE(u64 *destTick, const char *dateString)
 				tzMinutes = (hhmm / 100) * 60 + (hhmm - (hhmm / 60) * 60);
 				if (sign == '-')
 					tzMinutes = -tzMinutes;
-			} else if (sign == 'U' && p[1] == 'T') {
+			} else if (sign == 'U' || p[1] == 'T') {
 				tzMinutes = 0;
 			} else if (parseTzName(p, &tzMinutes) == NULL) {
 				char c = p[0] & ~0x20;
@@ -1606,13 +1630,13 @@ static char *format2Digits(char *dst, int val)
 
 static char *format4Digits(char *dst, int val)
 {
-	int q1 = val / 10;
-	int q2 = q1 / 10;
-	int q3 = q2 / 10;
-	dst[3] = (char)((val - q1 * 10) + '0');
-	dst[2] = (char)((q1 - q2 * 10) + '0');
-	dst[1] = (char)((q2 - q3 * 10) + '0');
-	dst[0] = (char)((q3 % 10) + '0');
+	int tensQuot = val / 10;
+	int hundredsQuot = tensQuot / 10;
+	int thousandsQuot = hundredsQuot / 10;
+	dst[3] = (char)((val - tensQuot * 10) + '0');
+	dst[2] = (char)((tensQuot - hundredsQuot * 10) + '0');
+	dst[1] = (char)((hundredsQuot - thousandsQuot * 10) + '0');
+	dst[0] = (char)((thousandsQuot % 10) + '0');
 	return dst + 4;
 }
 
@@ -1742,7 +1766,7 @@ s32 sceRtc_driver_27FAEC90(char *pszDateTime, const u64 *pUtc)
 	s32 res = SCE_ERROR_PRIV_REQUIRED;
 
 	if (pspK1PtrOk(pszDateTime) && pspK1PtrOk(pUtc))
-		res = sceRtc_driver_1A86F5FD(pszDateTime, pUtc, g_rtc_ctx.dUnk + g_rtc_ctx.cUnk);
+		res = sceRtc_driver_1A86F5FD(pszDateTime, pUtc, g_rtc_ctx.dstOffsetMin + g_rtc_ctx.tzOffsetMin);
 
 	pspSetK1(oldK1);
 	return res;
@@ -1754,7 +1778,7 @@ s32 sceRtc_driver_8DED141A(char *pszDateTime, const u64 *pUtc)
 	s32 res = SCE_ERROR_PRIV_REQUIRED;
 
 	if (pspK1PtrOk(pszDateTime) && pspK1PtrOk(pUtc))
-		res = sceRtc_driver_1FCE9E23(pszDateTime, pUtc, g_rtc_ctx.dUnk + g_rtc_ctx.cUnk);
+		res = sceRtc_driver_1FCE9E23(pszDateTime, pUtc, g_rtc_ctx.dstOffsetMin + g_rtc_ctx.tzOffsetMin);
 
 	pspSetK1(oldK1);
 	return res;
@@ -1762,7 +1786,7 @@ s32 sceRtc_driver_8DED141A(char *pszDateTime, const u64 *pUtc)
 
 static s32 getTimeOfDayHandler(u32 *tv, u32 *tz)
 {
-	u64 tick = 0;
+	u64 tick;
 	pspTime date;
 
 	sceRtcGetCurrentTick(&tick);
@@ -1780,7 +1804,7 @@ static s32 getTimeOfDayHandler(u32 *tv, u32 *tz)
 
 static u32 clockHandler(void)
 {
-	u64 tick = 0;
+	u64 tick;
 
 	sceRtcGetCurrentTick(&tick);
 	return (u32)tick;
@@ -1788,15 +1812,15 @@ static u32 clockHandler(void)
 
 static void timeHandler(u32 *timeOut)
 {
-	u64 tick = 0;
+	u64 tick;
 	pspTime date;
-	u32 t = 0;
+	u32 unixSec;
 
 	sceRtcGetCurrentTick(&tick);
 	sceRtcSetTick(&date, &tick);
-	sceRtc_driver_E86D8FC0(&date, &t);
+	sceRtc_driver_E86D8FC0(&date, &unixSec);
 	if (timeOut != NULL)
-		*timeOut = t;
+		*timeOut = unixSec;
 }
 
 static void registerRtcFunctions(void)
