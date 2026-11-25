@@ -107,45 +107,45 @@ static int __attribute__((noinline)) npdrmAesDecryptBlock(const uint32_t *ctx, c
 static int __attribute__((noinline)) npdrmAesSetKey(uint32_t *ctx, int block_bits, int key_bits, const uint8_t *key);
 
 /* .rodata constants */
-static const uint8_t g_keys_3690[3][16] = {
+static const uint8_t g_versionKeySeeds[3][16] = {
     { 0x07, 0x3d, 0x9e, 0x9d, 0xa8, 0xfd, 0x3b, 0x2f, 0x63, 0x18, 0x93, 0x2e, 0xf8, 0x57, 0xa6, 0x64 },
     { 0x37, 0x49, 0xb7, 0x01, 0xca, 0xe2, 0xe0, 0xc5, 0x44, 0x2e, 0x06, 0xb6, 0x1e, 0xff, 0x84, 0xf2 },
     { 0x9d, 0x31, 0xb8, 0x5a, 0xc8, 0xfa, 0x16, 0x80, 0x73, 0x60, 0x18, 0x82, 0x18, 0x77, 0x91, 0x9d },
 };
 
-static const uint8_t g_pubkey_36c0[40] = {
+static const uint8_t g_rifEcdsaPubKey[40] = {
     0x62, 0x27, 0xb0, 0x0a, 0x02, 0x85, 0x6f, 0xb0, 0x41, 0x08, 0x87, 0x67, 0x19, 0xe0, 0xa0, 0x18,
     0x32, 0x91, 0xee, 0xb9, 0x6e, 0x73, 0x6a, 0xbf, 0x81, 0xf7, 0x0e, 0xe9, 0x16, 0x1b, 0x0d, 0xde,
     0xb0, 0x26, 0x76, 0x1a, 0xff, 0x7b, 0xc8, 0x5b,
 };
 
-static const uint8_t g_pubkey_36e8[40] = {
+static const uint8_t g_actEcdsaPubKey[40] = {
     0x1f, 0x07, 0x2b, 0xcc, 0xc1, 0x62, 0xf2, 0xcf, 0xae, 0xa0, 0xe7, 0xf4, 0xcd, 0xfd, 0x9c, 0xae,
     0xc6, 0xc4, 0x55, 0x21, 0x53, 0x01, 0xf4, 0xe3, 0x70, 0xc3, 0xed, 0xe2, 0xd4, 0xf5, 0xdb, 0xc3,
     0xa7, 0xde, 0x8c, 0xaa, 0xe8, 0xad, 0x5b, 0x7d,
 };
 
-static const uint8_t g_key_3710[16] = {
+static const uint8_t g_rifIdxKey[16] = {
     0xda, 0x7d, 0x4b, 0x5e, 0x49, 0x9a, 0x4f, 0x53, 0xb1, 0xc1, 0xa1, 0x4a, 0x74, 0x84, 0x44, 0x3b,
 };
 
-static const uint8_t g_key_3720[16] = {
+static const uint8_t g_actMasterSeed[16] = {
     0x5e, 0x06, 0xe0, 0x4f, 0xd9, 0x4a, 0x71, 0xbf, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01,
 };
 
-static const uint8_t g_key_3730[16] = {
+static const uint8_t g_freeRifKey[16] = {
     0x69, 0xb4, 0x53, 0xf2, 0xe4, 0x21, 0x89, 0x8e, 0x53, 0xe4, 0xa3, 0x5a, 0x5b, 0x91, 0x79, 0x51,
 };
 
-static const uint8_t g_key_3740[16] = {
+static const uint8_t g_edataKeySeed[16] = {
     0xba, 0x87, 0xe4, 0xab, 0x2c, 0x60, 0x5f, 0x59, 0xb8, 0x3b, 0xdb, 0xa6, 0x82, 0xfd, 0xae, 0x14,
 };
 
-static const uint8_t g_key_3750[16] = {
+static const uint8_t g_fixedKeyMacKey[16] = {
     0x38, 0x20, 0xd0, 0x11, 0x07, 0xa3, 0xff, 0x3e, 0x0a, 0x4c, 0x20, 0x85, 0x39, 0x10, 0xb5, 0x54,
 };
 
-static const uint8_t g_key_37dc[16] = {
+static const uint8_t g_edataFallbackKey[16] = {
     0xeb, 0x71, 0x5d, 0xb8, 0xd3, 0x73, 0xce, 0xa4, 0x6f, 0xe7, 0x1d, 0xcf, 0xff, 0x63, 0xfa, 0xea,
 };
 
@@ -439,7 +439,7 @@ int sceNpDrmVerifyAct(const uint8_t *act)
         return 0x80550906;
     }
 
-    int res = npdrmVerifyEcdsaSig(act + 0x1010, g_pubkey_36c0, act, 0x1010);
+    int res = npdrmVerifyEcdsaSig(act + 0x1010, g_rifEcdsaPubKey, act, 0x1010);
     return (res < 0) ? (int)0x80550903 : 0;
 }
 
@@ -544,7 +544,7 @@ int sceNpDrmGetFixedKey(uint8_t *key_out, const char *content_id, int type)
         return res;
     }
 
-    res = sceDrmBBMacFinal(bbmac_ctx, key_out, g_key_3750);
+    res = sceDrmBBMacFinal(bbmac_ctx, key_out, g_fixedKeyMacKey);
     if (res != 0) {
         return 0x80550902;
     }
@@ -596,7 +596,7 @@ static int __attribute__((noinline)) npdrmTransformKeyByType(uint8_t *key, int t
         return 0x80550901;
     }
 
-    int res = npdrmAes128EncryptBlock(key, key, g_keys_3690[idx - 1]);
+    int res = npdrmAes128EncryptBlock(key, key, g_versionKeySeeds[idx - 1]);
     return (res < 0) ? (int)0x80550902 : 0;
 }
 
@@ -610,7 +610,7 @@ static int __attribute__((noinline)) npdrmDecryptEdataKey(uint8_t *key_out, cons
         return 0x80550901;
     }
 
-    int res = npdrmVerifyEcdsaSig(edata_hdr + 0x58, g_pubkey_36e8, edata_hdr, 0x58);
+    int res = npdrmVerifyEcdsaSig(edata_hdr + 0x58, g_actEcdsaPubKey, edata_hdr, 0x58);
     if (res < 0) {
         return 0x80550913;
     }
@@ -682,7 +682,7 @@ static int __attribute__((noinline)) npdrmDecryptEdataKey(uint8_t *key_out, cons
         }
     }
 
-    res = npdrmAes128DecryptBlock(key_out, key_out, g_key_3740);
+    res = npdrmAes128DecryptBlock(key_out, key_out, g_edataKeySeed);
     return (res < 0) ? res : 0;
 }
 
@@ -759,7 +759,7 @@ static int __attribute__((noinline)) npdrmDecryptActBlocks(const uint8_t *src, u
 
     int res = sceNpDrmGetIDps(idps);
     if (res >= 0) {
-        res = npdrmAes128EncryptBlock(g_key_3720, master_key, idps);
+        res = npdrmAes128EncryptBlock(g_actMasterSeed, master_key, idps);
         if (res >= 0) {
             int total = count << 4;
             for (int off = 0; off < total; off += 0x10) {
@@ -804,7 +804,7 @@ static int __attribute__((noinline)) npdrmDecryptRifWithAct(uint8_t *key_out, co
         return 0x80550911;
     }
 
-    res = npdrmAes128DecryptBlock(rif + 0x40, dec_idx_buf, g_key_3710);
+    res = npdrmAes128DecryptBlock(rif + 0x40, dec_idx_buf, g_rifIdxKey);
     if (res < 0) {
         goto cleanup;
     }
@@ -854,7 +854,7 @@ static int __attribute__((noinline)) npdrmDecryptFreeRif(uint8_t *key_out, const
         goto cleanup;
     }
 
-    res = npdrmAes128EncryptBlock(ms_key, ms_key, g_key_3730);
+    res = npdrmAes128EncryptBlock(ms_key, ms_key, g_freeRifKey);
     if (res < 0) {
         res = 0x80550902;
         goto cleanup;
@@ -897,7 +897,7 @@ static int __attribute__((noinline)) npdrmVerifyMsRif(const uint8_t *rif, uint8_
         goto cleanup;
     }
 
-    res = npdrmAes128DecryptBlock(rif + 0x40, dec_buf, g_key_3710);
+    res = npdrmAes128DecryptBlock(rif + 0x40, dec_buf, g_rifIdxKey);
     if (res < 0) {
         goto cleanup;
     }
@@ -999,11 +999,11 @@ static int __attribute__((noinline)) npdrmVerifyRifHeader(const uint8_t *rif)
         if (res < 0) {
             return res;
         }
-        res = npdrmVerifyEcdsaSig(rif + 0x70, g_pubkey_36c0, buf, 0x90);
+        res = npdrmVerifyEcdsaSig(rif + 0x70, g_rifEcdsaPubKey, buf, 0x90);
         sceKernelMemset(buf, 0, 0x90);
         err_code = 0x80550918;
     } else {
-        res = npdrmVerifyEcdsaSig(rif + 0x70, g_pubkey_36c0, rif, 0x70);
+        res = npdrmVerifyEcdsaSig(rif + 0x70, g_rifEcdsaPubKey, rif, 0x70);
         err_code = 0x80550904;
     }
 
@@ -1168,7 +1168,7 @@ int sceNpDrmRenameCheck(const char *path)
             size_t len = strlen(base);
             res = sceDrmBBMacUpdate(bbmac_ctx, base, (int)len);
             if (res >= 0) {
-                res = sceDrmBBMacFinal2(bbmac_ctx, hdr + 0x40, g_key_37dc);
+                res = sceDrmBBMacFinal2(bbmac_ctx, hdr + 0x40, g_edataFallbackKey);
                 if (res < 0) {
                     res = 0x80550917;
                 }
