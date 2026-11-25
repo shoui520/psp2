@@ -12,11 +12,13 @@ psp2_module(vs0_app_NPXS10080_eboot KIND user COMPILER snc PARTIAL SOURCES
 	DTCPIP-MW/Src/Mw/dtcpip_download.c
 	DTCPIP-MW/Src/Mw/SwMwMain.cpp
 	DTCPIP-MW/Src/Mw/SwMwManagerDispatch.cpp
+	DTCPIP-MW/Src/Mw/SwMwSinkDispatch.cpp
+	DTCPIP-MW/Src/Mw/SwMwSync.cpp
 	DTCPIP-MW/Src/Mw/SwMwTrace.c
 )
 
 # The app's own code is SNC's -O0 (every local in its stack slot, every call result stored
-# and reloaded, SNC's r0 accumulator walking the expressions). The SDK's start code, whose
+# and reloaded, SNC's accumulator register walking the expressions). The SDK's start code, whose
 # object ships precompiled, is SNC's -O2 instead.
 target_compile_options(vs0_app_NPXS10080_eboot PRIVATE -O0)
 set_source_files_properties(crt0.c PROPERTIES COMPILE_OPTIONS "-O2")
