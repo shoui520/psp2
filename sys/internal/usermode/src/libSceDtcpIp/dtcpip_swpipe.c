@@ -323,7 +323,7 @@ __attribute__((noinline)) int dtcpIpSwWait(SceUID event, int *outValue, int time
  * parameter (the 32 bytes of the caller's status at +12), and the launch handle keeps
  * the application alive while the library works.
  */
-__attribute__((noinline)) int dtcpIpIpcLaunchMiddleware(void **outLaunch)
+__attribute__((noinline)) int dtcpIpIpcLaunchMiddleware(void **outLaunch, int launchConfig)
 {
 	struct {
 		SceAppMgrAppStatus status;	/* 0x00: the caller's own status */
@@ -333,6 +333,7 @@ __attribute__((noinline)) int dtcpIpIpcLaunchMiddleware(void **outLaunch)
 	void *handle;
 	int ret;
 
+	(void)launchConfig;
 	handle = dtcpIpAlloc(4);
 	if (handle == NULL)
 		return 0;	/* Sony's path returns 0 here, with no handle */
@@ -473,7 +474,7 @@ int dtcpIpIpcInitSession(struct SceDtcpIpIpcObject *object, const unsigned int *
 		return 12003;
 
 	object->session = NULL;
-	client = dtcpIpAlloc(sizeof(*client));
+	client = dtcpIpMalloc(sizeof(*client));
 	if (client == NULL)
 		return 12008;
 
@@ -483,7 +484,7 @@ int dtcpIpIpcInitSession(struct SceDtcpIpIpcObject *object, const unsigned int *
 	ret = dtcpIpSwCreatePipe("SW_IPC_Sys_Pipe_CtoS", &client->pipeCtoS);
 	if (ret == 0) {
 		for (channel = 0; channel < 3; ++channel) {
-			ret = dtcpIpIpcLaunchMiddleware(&client->launch);
+			ret = dtcpIpIpcLaunchMiddleware(&client->launch, config[0]);
 			if (ret != 0)
 				continue;
 			for (tries = 0; tries < 70; ++tries) {
@@ -518,7 +519,7 @@ int dtcpIpIpcInitSession(struct SceDtcpIpIpcObject *object, const unsigned int *
 							ch->bufferSize = 0;
 							ch->shared = NULL;
 							ch++;
-							((struct SwIpcChannelShared *)base)[index - 1].inUse = 0;
+							((struct SwIpcChannelShared *)client->sharedBase)[index - 1].inUse = 0;
 						} while (index < 2);
 						message.kind = 1;
 						message.result = 0;
@@ -757,7 +758,7 @@ __attribute__((noinline)) int dtcpIpIpcFiniStream(void *stream, int status)
 	message.command = 0;
 	message.channel = 255;
 	message.size = 0;
-	message.value0 = 0;
+	message.payload = NULL;
 	if (channel->size != 0) {
 		for (i = 0; i < 4; ++i) {
 			ret = dtcpIpSwRequest(channel, &message, channel->pipe[i].ctoS);
