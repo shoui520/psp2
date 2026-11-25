@@ -107,7 +107,7 @@ struct SwIpcMemBlockOpt {
 };
 
 /* copy a shared memory object's words (its memblock and its base) */
-int dtcpIpIpcInitShared(void *stream, int *outShared)
+__attribute__((noinline)) int dtcpIpIpcInitShared(void *stream, int *outShared)
 {
 	int *shared = stream;
 
@@ -118,7 +118,7 @@ int dtcpIpIpcInitShared(void *stream, int *outShared)
 }
 
 /* take the protocol's mutex: the created object, or one the middleware owns by name */
-int dtcpIpSwCreateMutex(SceUID *outMutex, const char *name, int create)
+__attribute__((noinline)) int dtcpIpSwCreateMutex(SceUID *outMutex, const char *name, int create)
 {
 	SceUID mutex;
 
@@ -132,7 +132,7 @@ int dtcpIpSwCreateMutex(SceUID *outMutex, const char *name, int create)
 	return 0;
 }
 
-int dtcpIpSwDeleteMutex(SceUID mutex, int destroy)
+__attribute__((noinline)) int dtcpIpSwDeleteMutex(SceUID mutex, int destroy)
 {
 	if (destroy != 0)
 		sceKernelDeleteMutex(mutex);
@@ -141,14 +141,14 @@ int dtcpIpSwDeleteMutex(SceUID mutex, int destroy)
 	return 0;
 }
 
-int dtcpIpSwLock(SceUID mutex)
+__attribute__((noinline)) int dtcpIpSwLock(SceUID mutex)
 {
 	if (sceKernelLockMutex(mutex, 1, NULL) != 0)
 		return SW_IPC_ERROR_PIPE;
 	return 0;
 }
 
-int dtcpIpSwUnlock(SceUID mutex)
+__attribute__((noinline)) int dtcpIpSwUnlock(SceUID mutex)
 {
 	if (sceKernelUnlockMutex(mutex, 1) != 0)
 		return SW_IPC_ERROR_PIPE;
@@ -156,7 +156,7 @@ int dtcpIpSwUnlock(SceUID mutex)
 }
 
 /* create a request pipe the middleware opens by name */
-int dtcpIpSwCreatePipe(const char *name, SceUID *outPipe)
+__attribute__((noinline)) int dtcpIpSwCreatePipe(const char *name, SceUID *outPipe)
 {
 	struct SwIpcPipeOpt option;
 	SceUID pipe;
@@ -171,14 +171,14 @@ int dtcpIpSwCreatePipe(const char *name, SceUID *outPipe)
 	return 0;
 }
 
-int dtcpIpSwDeletePipe(SceUID pipe)
+__attribute__((noinline)) int dtcpIpSwDeletePipe(SceUID pipe)
 {
 	sceKernelDeleteMsgPipe(pipe);
 	return 0;
 }
 
 /* open a request pipe the middleware created */
-int dtcpIpSwOpenPipe(const char *name, SceUID *outPipe)
+__attribute__((noinline)) int dtcpIpSwOpenPipe(const char *name, SceUID *outPipe)
 {
 	SceUID pipe;
 
@@ -189,14 +189,14 @@ int dtcpIpSwOpenPipe(const char *name, SceUID *outPipe)
 	return 0;
 }
 
-int dtcpIpSwClosePipe(SceUID pipe)
+__attribute__((noinline)) int dtcpIpSwClosePipe(SceUID pipe)
 {
 	sceKernelCloseMsgPipe(pipe);
 	return 0;
 }
 
 /* send a 0x20-byte message block over a pipe */
-int dtcpIpSwSend(SceUID pipe, const void *message)
+__attribute__((noinline)) int dtcpIpSwSend(SceUID pipe, const void *message)
 {
 	unsigned int sent = 0;
 
@@ -212,7 +212,7 @@ int dtcpIpSwSend(SceUID pipe, const void *message)
  * (data, the peer's close, its connect, an error); the timeout argument is the wait
  * time in microseconds (0 waits forever).
  */
-int dtcpIpSwReceive(SceUID pipe, void *message, int timeout)
+__attribute__((noinline)) int dtcpIpSwReceive(SceUID pipe, void *message, int timeout)
 {
 	int waitTime = timeout;
 	int sent = 0;
@@ -247,7 +247,7 @@ int dtcpIpSwReceive(SceUID pipe, void *message, int timeout)
 }
 
 /* signal the peer's event flag */
-int dtcpIpSwSignal(SceUID event, int value)
+__attribute__((noinline)) int dtcpIpSwSignal(SceUID event, int value)
 {
 	/* the value travels as the event's user data (its high word) */
 	if (sceKernelSetEvent(event, SW_IPC_EVENT_SIGNAL, (SceUInt64)value << 32) != 0)
@@ -256,7 +256,7 @@ int dtcpIpSwSignal(SceUID event, int value)
 }
 
 /* wait for the peer's event flag */
-int dtcpIpSwWait(SceUID event, int *outValue, int timeout)
+__attribute__((noinline)) int dtcpIpSwWait(SceUID event, int *outValue, int timeout)
 {
 	int waitTime = timeout;
 	int eventValue = 0;
@@ -325,7 +325,7 @@ fail:
 }
 
 /* release a launch handle's slot */
-int dtcpIpSwFreeLaunch(void *launch, int *slot)
+__attribute__((noinline)) int dtcpIpSwFreeLaunch(void *launch, int *slot)
 {
 	*slot = 0;
 	if (launch != NULL)
@@ -406,7 +406,7 @@ int dtcpIpSwOpenShared(struct SwIpcShared **outShared, const char *name, SceSize
 }
 
 /* close a shared memory block */
-int dtcpIpSwCloseShared(struct SwIpcShared *shared)
+__attribute__((noinline)) int dtcpIpSwCloseShared(struct SwIpcShared *shared)
 {
 	sceKernelCloseMemBlock(shared->memBlock);
 	dtcpIpFree(shared);
@@ -750,5 +750,125 @@ int dtcpIpIpcFiniStream(void *stream, int status)
 			}
 		}
 	}
+	return ret;
+}
+
+/*
+ * create a stream channel on a client: take a free channel slot, create its request
+ * pipes (four per stream, or one), tell the middleware the channel opens (kind 4; the
+ * reply's kind 5 and value 0), attach the stream's shared memory, and open the four
+ * StoC pipes. The caller's a3 is reserved (zero) and a6 travels as the open message's
+ * value3 (the stream's affinity).
+ */
+int dtcpIpIpcInitStream(void **outChannel, void *session, int reserved, int bufferSize,
+			int streams, int affinity)
+{
+	struct SwIpcClient *client = session;
+	struct SwIpcChannel *channel;
+	struct SwIpcWireMessage message;
+	struct SwIpcShared *shared;
+	char name[40];
+	void *base;
+	int ret = 0;
+	int index;
+	int i;
+	unsigned int pipeIndex;
+	int freeSlot;
+
+	if (reserved != 0)
+		return 12003;
+
+	dtcpIpSwLock(client->mutex);
+	freeSlot = 0;
+	index = 0;
+	for (i = 0; i < 2; ++i) {
+		if (*(unsigned char *)((char *)client->sharedBase + i * 16520) == 0) {
+			*(unsigned char *)((char *)client->sharedBase + i * 16520) = 1;
+			freeSlot = i;
+			index = 1;
+			break;
+		}
+	}
+	dtcpIpSwUnlock(client->mutex);
+	if (index == 0)
+		return 12002;
+
+	channel = &client->channels[freeSlot];
+	channel->size = streams;
+	channel->pipeSingle = -1;
+	for (i = 0; i < 4; ++i) {
+		channel->pipeStoC[i] = -1;
+		channel->pipeCtoS[i] = -1;
+	}
+	if (streams != 0) {
+		for (pipeIndex = 0; pipeIndex < 4; ++pipeIndex) {
+			dtcpIpSnprintf(name, "%s_%02d_%02d", "SW_IPC_Strm_Pipe_CtoS",
+				       channel->index, pipeIndex);
+			if (dtcpIpSwCreatePipe(name, &channel->pipeCtoS[pipeIndex]) != 0)
+				goto pipesFailed;
+		}
+	} else {
+		dtcpIpSnprintf(name, "%s_%02d", "SW_IPC_Strm_Pipe_CtoS", channel->index);
+		if (dtcpIpSwCreatePipe(name, &channel->pipeSingle) != 0)
+			goto pipesFailed;
+	}
+	goto openChannel;
+
+pipesFailed:
+	if (channel->pipeSingle != -1) {
+		dtcpIpSwDeletePipe(channel->pipeSingle);
+		channel->pipeSingle = -1;
+	}
+	for (i = 0; i < 4; ++i) {
+		if (channel->pipeCtoS[i] != -1) {
+			dtcpIpSwClosePipe(channel->pipeCtoS[i]);
+			channel->pipeCtoS[i] = -1;
+		}
+	}
+	ret = 12009;
+	goto fail;
+
+openChannel:
+	message.kind = 4;
+	message.result = 0;
+	message.value0 = streams;
+	message.value1 = freeSlot;
+	message.value2 = bufferSize;
+	message.value3 = affinity;
+	ret = dtcpIpSwSend(client->pipeCtoS, &message);
+	if (ret != 0 || (ret = dtcpIpSwReceive(client->pipeStoC, &message, 1000000)) != 0)
+		goto failChannel;
+	if (message.kind != 5 || message.result != 0) {
+		ret = 12004;
+		goto failChannel;
+	}
+	if (bufferSize != 0) {
+		dtcpIpSnprintf(name, "%s_%02d", "SW_IPC_Strm_ShMem", channel->index);
+		if (dtcpIpSwOpenShared(&shared, name, bufferSize, &base) != 0) {
+			dtcpIpIpcFiniStream(channel, 0);
+			return 12004;
+		}
+		channel->shared = shared;
+		channel->sharedBase = base;
+	} else {
+		channel->sharedBase = NULL;
+	}
+	channel->reserved0 = bufferSize;
+	for (i = 0; i < 4; ++i) {
+		dtcpIpSnprintf(name, "%s_%02d_%02d", "SW_IPC_Strm_Pipe_StoC", freeSlot, i);
+		if (dtcpIpSwOpenPipe(name, &channel->pipeStoC[i]) != 0) {
+			dtcpIpIpcFiniStream(channel, 0);
+			return 12004;
+		}
+	}
+	*outChannel = channel;
+	return 0;
+
+failChannel:
+	dtcpIpSwFiniChannel(channel);
+fail:
+	dtcpIpSwLock(client->mutex);
+	*(unsigned char *)((char *)client->sharedBase + freeSlot * 16520) = 0;
+	dtcpIpSwUnlock(client->mutex);
 	return ret;
 }

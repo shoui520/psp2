@@ -822,7 +822,7 @@ int dtcpIpSysClose(void *object)
 
 	if (stream == NULL)
 		return 2;
-	if (dtcpIpSwAcquireStream(&acquired, stream, 2) != 0) {
+	if (dtcpIpSwAcquireStream(&acquired, stream, 8) != 0) {
 		if (acquired[0] != 0) {
 		sceKernelLockLwMutex((SceKernelLwMutexWork *)(acquired[0] + 24), 1, NULL);
 		*(int *)(acquired[0] + 60) &= ~acquired[1];
