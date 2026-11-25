@@ -62,31 +62,31 @@ static int g_cam_type;         /* 0x20a0 */
 static int g_cb_id;            /* 0x20a4 */
 static int g_mic_thid;         /* 0x20a8 */
 
-static int sub_1014(u32 args, void *argp);
-static void sub_1084(void);
-static int sub_10c8(int idx);
-static int sub_11a4(int idx);
-static int sub_125c(int cmd, int val, int *store);
-static int sub_12c8(int *out, int val);
-static int sub_17e8(void);
-static int sub_184c(void);
-static int sub_1888(u32 args, void *argp);
+static int usbCamFrameThread(u32 args, void *argp);
+static void usbCamLensEventHandler(void);
+static int usbCamWaitFrameThread(int idx);
+static int usbCamPollFrameThread(int idx);
+static int usbCamSetParam(int cmd, int val, int *store);
+static int usbCamGetParam(int *out, int val);
+static int usbCamInitMic(void);
+static int usbCamTermMic(void);
+static int usbCamMicThread(u32 args, void *argp);
 
 int module_start(SceSize args, void *argp)
 {
     (void)args;
     (void)argp;
-    sub_17e8();
+    usbCamInitMic();
     if (sceUsb_driver_C99E1766(1, NULL) < 0)
         return 1;
     for (int i = 0; i < 2; i++) {
-        int thid = sceKernelCreateThread(g_cam_thread_names[i], sub_1014, 0x10, 0xf000, 0x00100001, NULL);
+        int thid = sceKernelCreateThread(g_cam_thread_names[i], usbCamFrameThread, 0x10, 0xf000, 0x00100001, NULL);
         g_cam_thids[i] = thid;
         if (thid < 0)
             return 1;
     }
     g_lens_dir = (sceUsb_driver_E09431A0() == 0) ? 1 : 0;
-    if (sceKermit_driver_5280B410(0x0b, sub_1084) != 0)
+    if (sceKermit_driver_5280B410(0x0b, usbCamLensEventHandler) != 0)
         return 1;
 
     g_cb_id = -1;
@@ -402,7 +402,7 @@ int module_stop(SceSize args, void *argp)
     sceKermit_driver_5280B410(0x0b, NULL);
     if (sceUsb_driver_6C68EE25(1, NULL) < 0)
         return 1;
-    sub_184c();
+    usbCamTermMic();
     for (int i = 0; i < 2; i++)
         sceKernelTerminateDeleteThread(g_cam_thids[i]);
     return 0;
@@ -434,12 +434,12 @@ int sceUsbCamStopVideo(void)
 
 int sceUsbCamWaitReadVideoFrameEnd(void)
 {
-    return sub_10c8(0);
+    return usbCamWaitFrameThread(0);
 }
 
 int sceUsbCamPollReadVideoFrameEnd(void)
 {
-    return sub_11a4(0);
+    return usbCamPollFrameThread(0);
 }
 
 int sceUsbCamGetReadVideoFrameSize(void)
@@ -458,12 +458,12 @@ int sceUsbCamSetupStillEx(void *param)
 
 int sceUsbCamStillWaitInputEnd(void)
 {
-    return sub_10c8(1);
+    return usbCamWaitFrameThread(1);
 }
 
 int sceUsbCamStillPollInputEnd(void)
 {
-    return sub_11a4(1);
+    return usbCamPollFrameThread(1);
 }
 
 int sceUsbCamStillGetInputLength(void)
@@ -474,14 +474,14 @@ int sceUsbCamStillGetInputLength(void)
     return ret;
 }
 
-static int sub_125c(int cmd, int val, int *store);
-static int sub_12c8(int *out, int val);
+static int usbCamSetParam(int cmd, int val, int *store);
+static int usbCamGetParam(int *out, int val);
 
 extern int sceUsb_driver_var_3EA085BF;
 extern int sceUsb_driver_var_A942D291;
 
 __attribute__((noinline))
-static int sub_125c(int cmd, int val, int *store)
+static int usbCamSetParam(int cmd, int val, int *store)
 {
     if (sceUsb_driver_D9EE03ED() == 0)
         return 0x80243908;
@@ -492,7 +492,7 @@ static int sub_125c(int cmd, int val, int *store)
 }
 
 __attribute__((noinline))
-static int sub_12c8(int *out, int val)
+static int usbCamGetParam(int *out, int val)
 {
     if (sceUsb_driver_D9EE03ED() == 0)
         return 0x80243908;
@@ -507,7 +507,7 @@ int sceUsbCamSetSaturation(int val)
     if (sceUsb_driver_var_3EA085BF == 2)
         val += 0x0b;
     u32 k1 = pspShiftK1();
-    int ret = sub_125c(0x15a, val, &g_saturation);
+    int ret = usbCamSetParam(0x15a, val, &g_saturation);
     pspSetK1(k1);
     return ret;
 }
@@ -515,7 +515,7 @@ int sceUsbCamSetSaturation(int val)
 int sceUsbCamGetSaturation(int *out)
 {
     u32 k1 = pspShiftK1();
-    int ret = sub_12c8(out, g_saturation);
+    int ret = usbCamGetParam(out, g_saturation);
     if (ret == 0 && sceUsb_driver_var_3EA085BF == 2)
         *out -= 0x0b;
     pspSetK1(k1);
@@ -531,7 +531,7 @@ int sceUsbCamSetBrightness(int val)
     else if (mode == 1)
         adj = ((val - 0x80) / 2) + 0x80;
     u32 k1 = pspShiftK1();
-    int ret = sub_125c(0x178, adj, &g_brightness);
+    int ret = usbCamSetParam(0x178, adj, &g_brightness);
     pspSetK1(k1);
     return ret;
 }
@@ -539,7 +539,7 @@ int sceUsbCamSetBrightness(int val)
 int sceUsbCamGetBrightness(int *out)
 {
     u32 k1 = pspShiftK1();
-    int ret = sub_12c8(out, g_brightness);
+    int ret = usbCamGetParam(out, g_brightness);
     if (ret == 0) {
         int mode = sceUsb_driver_var_3EA085BF;
         if (mode == 1)
@@ -554,7 +554,7 @@ int sceUsbCamGetBrightness(int *out)
 int sceUsbCamSetContrast(int val)
 {
     u32 k1 = pspShiftK1();
-    int ret = sub_125c(0x161, val, &g_contrast);
+    int ret = usbCamSetParam(0x161, val, &g_contrast);
     pspSetK1(k1);
     return ret;
 }
@@ -562,7 +562,7 @@ int sceUsbCamSetContrast(int val)
 int sceUsbCamGetContrast(int *out)
 {
     u32 k1 = pspShiftK1();
-    int ret = sub_12c8(out, g_contrast);
+    int ret = usbCamGetParam(out, g_contrast);
     pspSetK1(k1);
     return ret;
 }
@@ -570,7 +570,7 @@ int sceUsbCamGetContrast(int *out)
 int sceUsbCamSetSharpness(int val)
 {
     u32 k1 = pspShiftK1();
-    int ret = sub_125c(0x179, val, &g_sharpness);
+    int ret = usbCamSetParam(0x179, val, &g_sharpness);
     pspSetK1(k1);
     return ret;
 }
@@ -578,7 +578,7 @@ int sceUsbCamSetSharpness(int val)
 int sceUsbCamGetSharpness(int *out)
 {
     u32 k1 = pspShiftK1();
-    int ret = sub_12c8(out, g_sharpness);
+    int ret = usbCamGetParam(out, g_sharpness);
     pspSetK1(k1);
     return ret;
 }
@@ -586,7 +586,7 @@ int sceUsbCamGetSharpness(int *out)
 int sceUsbCamSetZoom(int val)
 {
     u32 k1 = pspShiftK1();
-    int ret = sub_125c(0x167, val, &g_zoom);
+    int ret = usbCamSetParam(0x167, val, &g_zoom);
     pspSetK1(k1);
     return ret;
 }
@@ -594,7 +594,7 @@ int sceUsbCamSetZoom(int val)
 int sceUsbCamGetZoom(int *out)
 {
     u32 k1 = pspShiftK1();
-    int ret = sub_12c8(out, g_zoom);
+    int ret = usbCamGetParam(out, g_zoom);
     pspSetK1(k1);
     return ret;
 }
@@ -602,7 +602,7 @@ int sceUsbCamGetZoom(int *out)
 int sceUsbCam_6784E6A8(int val)
 {
     u32 k1 = pspShiftK1();
-    int ret = sub_125c(0x15e, val, &g_val_208c);
+    int ret = usbCamSetParam(0x15e, val, &g_val_208c);
     pspSetK1(k1);
     return ret;
 }
@@ -612,7 +612,7 @@ int sceUsbCam_driver_6784E6A8(int val) __attribute__((alias("sceUsbCam_6784E6A8"
 int sceUsbCam_AA7D94BA(int *out)
 {
     u32 k1 = pspShiftK1();
-    int ret = sub_12c8(out, g_val_208c);
+    int ret = usbCamGetParam(out, g_val_208c);
     pspSetK1(k1);
     return ret;
 }
@@ -622,7 +622,7 @@ int sceUsbCam_driver_AA7D94BA(int *out) __attribute__((alias("sceUsbCam_AA7D94BA
 int sceUsbCamSetReverseMode(int val)
 {
     u32 k1 = pspShiftK1();
-    int ret = sub_125c(0x16c, val, &g_reverse_mode);
+    int ret = usbCamSetParam(0x16c, val, &g_reverse_mode);
     pspSetK1(k1);
     return ret;
 }
@@ -630,7 +630,7 @@ int sceUsbCamSetReverseMode(int val)
 int sceUsbCamSetEvLevel(int val)
 {
     u32 k1 = pspShiftK1();
-    int ret = sub_125c(0x162, val, &g_ev_level);
+    int ret = usbCamSetParam(0x162, val, &g_ev_level);
     pspSetK1(k1);
     return ret;
 }
@@ -638,7 +638,7 @@ int sceUsbCamSetEvLevel(int val)
 int sceUsbCamGetEvLevel(int *out)
 {
     u32 k1 = pspShiftK1();
-    int ret = sub_12c8(out, g_ev_level);
+    int ret = usbCamGetParam(out, g_ev_level);
     pspSetK1(k1);
     return ret;
 }
@@ -646,7 +646,7 @@ int sceUsbCamGetEvLevel(int *out)
 int sceUsbCamSetImageEffectMode(int val)
 {
     u32 k1 = pspShiftK1();
-    int ret = sub_125c(0x170, val, &g_effect_mode);
+    int ret = usbCamSetParam(0x170, val, &g_effect_mode);
     pspSetK1(k1);
     return ret;
 }
@@ -654,7 +654,7 @@ int sceUsbCamSetImageEffectMode(int val)
 int sceUsbCamGetImageEffectMode(int *out)
 {
     u32 k1 = pspShiftK1();
-    int ret = sub_12c8(out, g_effect_mode);
+    int ret = usbCamGetParam(out, g_effect_mode);
     pspSetK1(k1);
     return ret;
 }
@@ -714,7 +714,7 @@ int sceUsbCam_41EE8797(void)
 int sceUsbCam_driver_41EE8797(void) __attribute__((alias("sceUsbCam_41EE8797")));
 
 __attribute__((noinline))
-static int sub_1014(u32 args, void *argp)
+static int usbCamFrameThread(u32 args, void *argp)
 {
     if (args != 0x0c)
         return 0x80000104;
@@ -728,7 +728,7 @@ static int sub_1014(u32 args, void *argp)
     return ret;
 }
 
-static void sub_1084(void)
+static void usbCamLensEventHandler(void)
 {
     g_lens_dir = (g_lens_dir == 0) ? 1 : 0;
     if (g_cb_id > 0)
@@ -736,7 +736,7 @@ static void sub_1084(void)
 }
 
 __attribute__((noinline))
-static int sub_10c8(int idx)
+static int usbCamWaitFrameThread(int idx)
 {
     u32 k1 = pspShiftK1();
     u32 timeout = 0x2dc6c0;
@@ -765,7 +765,7 @@ out:
 }
 
 __attribute__((noinline))
-static int sub_11a4(int idx)
+static int usbCamPollFrameThread(int idx)
 {
     u32 k1 = pspShiftK1();
     int ret;
@@ -991,16 +991,16 @@ int sceUsbCam_08AEE98A(int arg)
 
 int sceUsbCam_driver_08AEE98A(int arg) __attribute__((alias("sceUsbCam_08AEE98A")));
 
-static int sub_17e8(void)
+static int usbCamInitMic(void)
 {
     if (sceUsb_driver_C99E1766(2, NULL) < 0)
         return 1;
-    int thid = sceKernelCreateThread("SceUsbCamMic", sub_1888, 0x10, 0xf000, 0x00100001, NULL);
+    int thid = sceKernelCreateThread("SceUsbCamMic", usbCamMicThread, 0x10, 0xf000, 0x00100001, NULL);
     g_mic_thid = thid;
     return (thid < 0) ? 1 : 0;
 }
 
-static int sub_184c(void)
+static int usbCamTermMic(void)
 {
     if (sceUsb_driver_6C68EE25(2, NULL) < 0)
         return 1;
@@ -1008,7 +1008,7 @@ static int sub_184c(void)
     return 0;
 }
 
-static int sub_1888(u32 args, void *argp)
+static int usbCamMicThread(u32 args, void *argp)
 {
     if (args != 8)
         return 0x80000104;

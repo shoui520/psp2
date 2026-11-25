@@ -220,7 +220,7 @@ static int check_whitelist(u8 *prx, u32 prx_size, const u8 *whitelist, u32 white
 }
 
 /* 0x0000020C */
-static int sub_0000020C(u8 *prx, u32 size, u32 *newsize, u32 sync)
+static int decryptPrxModule(u8 *prx, u32 size, u32 *newsize, u32 sync)
 {
     int ret;
     u32 i;
@@ -553,7 +553,7 @@ cleanup:
 s32 memlmd_EF73E85B(u8 *prx, u32 size, u32 *newsize)
 {
     sceKernelPowerLockForUser(0);
-    s32 ret = sub_0000020C(prx, size, newsize, 0);
+    s32 ret = decryptPrxModule(prx, size, newsize, 0);
     sceKernelPowerUnlockForUser(0);
     return ret;
 }
@@ -562,7 +562,7 @@ s32 memlmd_EF73E85B(u8 *prx, u32 size, u32 *newsize)
 s32 memlmd_CF03556B(u8 *prx, u32 size, u32 *newsize)
 {
     sceKernelPowerLockForUser(0);
-    s32 ret = sub_0000020C(prx, size, newsize, 1);
+    s32 ret = decryptPrxModule(prx, size, newsize, 1);
     sceKernelPowerUnlockForUser(0);
     return ret;
 }
@@ -654,11 +654,11 @@ s32 memlmd_EA94592C(u8 *addr, u32 size)
 }
 
 /* 0x00001264 */
-s32 memlmd_F26A33C3(u32 unk, vs32 *hashAddr)
+s32 memlmd_F26A33C3(u32 mode, vs32 *hashAddr)
 {
     const volatile u8 *hash_addr = (const volatile u8 *)hashAddr;
     u32 i;
-    if (unk != 0)
+    if (mode != 0)
         return -207;
 
     for (i = 0; i < 16; i++) {
@@ -676,10 +676,10 @@ s32 memlmd_F26A33C3(u32 unk, vs32 *hashAddr)
 }
 
 /* 0x00001310 */
-s32 memlmd_76B7E315(u32 unk)
+s32 memlmd_76B7E315(u32 mode)
 {
     u32 i;
-    if (unk != 0)
+    if (mode != 0)
         return -207;
 
     sceKernelPowerLockForUser(0);
@@ -690,23 +690,23 @@ s32 memlmd_76B7E315(u32 unk)
 }
 
 /* 0x0000139C */
-s32 memlmd_2AE425D2(u32 unk)
+s32 memlmd_2AE425D2(u32 tag)
 {
-    unk &= 0xFFFF0000;
-    return (0xF099FFFFU < unk);
+    tag &= 0xFFFF0000;
+    return (0xF099FFFFU < tag);
 }
 
 /* 0x000013B0 */
-s32 memlmd_9D36A439(u32 unk)
+s32 memlmd_9D36A439(u32 tag)
 {
-    unk &= 0xFFFF0000;
-    return (0xF0A0FFFFU < unk);
+    tag &= 0xFFFF0000;
+    return (0xF0A0FFFFU < tag);
 }
 
 /* 0x000013C4 */
-static int InterruptHandler(int unk1, GlobalSysParam *my_sys)
+static int InterruptHandler(int intrNum, GlobalSysParam *my_sys)
 {
-    (void)unk1;
+    (void)intrNum;
     if (my_sys->operation == OP_ASYNC_SEMA) {
         my_sys->result = KIRK_GET_PROCESSING_RESULT();
         my_sys->operation = OP_IDLE;

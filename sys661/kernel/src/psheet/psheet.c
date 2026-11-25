@@ -42,46 +42,98 @@ extern int sceUtilsPrepareGetLoadModuleRLength(void *buf, int size, void *out);
 
 /* .data @ 0x2a40..0x2a80 */
 SceUID semaID = 0;          /* 0x2a40 */
-SceUID unk1 = 0;            /* 0x2a44 */
+SceUID auxSemaID = 0;            /* 0x2a44 */
 SceUInt semaTimeout = 0;    /* 0x2a48 */
-int unk3 = 0;               /* 0x2a4c */
+int totalBytes = 0;               /* 0x2a4c */
 int buf[4] = {0, 0, 0, 0};  /* 0x2a50..0x2a5c */
 u32 g_pkgKey[8] = {         /* 0x2a60..0x2a7c */
     0x2d5de2ed, 0xe512f8bb, 0x32595c3c, 0x43e2e3fa,
     0xebfb7427, 0xd701a0a4, 0x339e5602, 0x8357198c,
 };
 
+typedef struct {
+    u8 magic[4];            /* 0x00 */
+    u32 version;            /* 0x04 */
+    u32 keyIndex;           /* 0x08 */
+    u32 reserved0C;         /* 0x0C */
+    u8 headerKey[0x10];     /* 0x10 */
+    u8 pathMac[0x10];       /* 0x20 */
+    u8 dataKey[0x10];       /* 0x30 */
+    u32 dataOffset;         /* 0x40 */
+    u32 dataSize;           /* 0x44 */
+    u32 blockSize;          /* 0x48 */
+    u32 headerSize;         /* 0x4C */
+    u8 reserved50[0x10];    /* 0x50 */
+    u8 tableMac[0x10];      /* 0x60 */
+    u8 headerMac1[0x10];    /* 0x70 */
+    u8 headerMac2[0x10];    /* 0x80 */
+} ScePsheetPgdHeader;
+
+typedef struct {
+    u32 flags;
+    u32 size;
+    char name[0x100];
+} ScePsheetFileInfo;
+
+typedef struct {
+    u8 ioBuf[0x400];            /* 0x000 */
+    struct {
+        u16 nameOff;            /* 0x400 */
+        u16 nameLen;            /* 0x402 */
+        u32 dataOff;            /* 0x404 */
+        u32 dataSize;           /* 0x408 */
+        u32 flags;              /* 0x40C */
+    } arcHdr;
+    u8 coreHeaderKey[0x10];     /* 0x410 */
+    u8 paramKey[0x10];          /* 0x420 */
+    u8 dataKey[0x10];           /* 0x430 */
+    u32 version;                /* 0x440 */
+    u32 targetArch;             /* 0x444 */
+    u32 pkgType;                /* 0x448 */
+    u32 reserved44C;            /* 0x44C */
+    u32 paramOff;               /* 0x450 */
+    u32 paramCount;             /* 0x454 */
+    u32 dataOff;                /* 0x458 */
+    u32 dataSize;               /* 0x45C */
+    u8 coreMac[0x10];           /* 0x460 */
+    u8 decryptCtx[0x18];        /* 0x470 */
+    u8 encryptCtx[0x18];        /* 0x488 */
+    u8 macCtx[0x28];            /* 0x4A0 */
+    u32 coreOff;                /* 0x4C8 */
+    u32 coreSize;               /* 0x4CC */
+} ScePsheetWork;
+
 /* .bss @ 0x2a80..0x2f50 (0x4d0 bytes) */
-u8 g_unkP[0x4D0];
+ScePsheetWork g_work;
 
 int getSemaIdStatus(SceUInt *sTimeout);
 int getSemaIdStatusIncrement(SceUInt sTimeout);
 int getSemaIdStatusUsingTimeout(int timeout, int a1);
 int getSemaIdStatusUsingBuf(void);
-int sub_01410(int a0);
-int sub_014A8(char *file);
-int sub_015D8(SceUID a0, int a1);
-int sub_72C(int a0, int a1, void *a2);
-int sub_864(int a0, int a1, int a2, void *a3);
-int sub_9EC(SceUID fd, char *path, int vkey, int a3);
-int sub_17C0(SceUID fd, int vkey, int idx, char *outName, u32 maxLen);
-int sub_1998(SceUID fd, int vkey, u32 *params, u32 count);
-int sub_1B3C(SceUID fd, int vkey, u32 desc, char *outStr, u32 maxLen);
-int sub_1CEC(char *path, const char *newName);
-int sub_1E14(char *path, u32 startOff);
-int sub_1EF0(void *pgdHdr);
-int sub_01F4C(void *a0, int a1, void *a2, void *a3);
-int sub_2000(void *a0, int a1, void *a2, void *a3);
-int sub_20C8(void *a0, int a1, void *a2, void *a3, void *t0);
-int sub_2134(void *a0, int a1, int a2, void *a3, void *t0);
-int sub_21F0(SceUID fd, int offset, int size, void *vkey, void *mac);
+int set_state(int a0);
+int open_and_mac_check(char *file);
+int get_core_header(SceUID a0, int a1);
+int get_package_info(int a0, int a1, void *a2);
+int get_file_info(int a0, int a1, int a2, void *a3);
+int install_package(SceUID fd, char *path, int vkey, int a3);
+int get_archive_header(SceUID fd, int vkey, int idx, char *outName, u32 maxLen);
+int get_params(SceUID fd, int vkey, u32 *params, u32 count);
+int get_string(SceUID fd, int vkey, u32 desc, char *outStr, u32 maxLen);
+int rename_in_dir(char *path, const char *newName);
+int recursive_mkdir(char *path, u32 startOff);
+int init_pgd_header(void *pgdHdr);
+int data_encrypt(void *a0, int a1, void *a2, void *a3);
+int create_mac(void *a0, int a1, void *a2, void *a3);
+int encrypt_and_mac(void *a0, int a1, void *a2, void *a3, void *t0);
+int drmbb_decrypt(void *a0, int a1, int a2, void *a3, void *t0);
+int verify_file_mac(SceUID fd, int offset, int size, void *vkey, void *mac);
 
 /* 0x0000: sceDRMInstallInit */
 int sceDRMInstallInit(int address, int size)
 {
     int k1 = pspSdkGetK1();
     pspSdkSetK1(k1 << 11);
-    sceKernelMemset(g_unkP, 0, 0x4D0);
+    sceKernelMemset(&g_work, 0, sizeof(g_work));
 
     if (((address | size | (address + size)) & (k1 << 11)) < 0) {
         pspSdkSetK1(k1);
@@ -89,7 +141,7 @@ int sceDRMInstallInit(int address, int size)
     }
 
     getSemaIdStatusUsingTimeout(0, 1);
-    sub_01410(0);
+    set_state(0);
     buf[0] = address;
     buf[1] = size;
 
@@ -124,17 +176,17 @@ int sceDRMInstallGetPkgInfo(int address, int size, int a2)
         ret = SCE_PSHEET_ERROR_ILLEGAL_ADDRESS;
         goto end;
     }
-    sub_01410(0);
-    fd = sub_014A8((char *)address);
+    set_state(0);
+    fd = open_and_mac_check((char *)address);
     if (fd < 0) {
         ret = fd;
         goto end;
     }
-    ret = sub_72C(fd, size, (void *)a2);
+    ret = get_package_info(fd, size, (void *)a2);
     sceIoClose(fd);
 
 end:
-    sceKernelMemset(g_unkP, 0, 0x4D0);
+    sceKernelMemset(&g_work, 0, sizeof(g_work));
     pspSdkSetK1(k1);
     return ret;
 }
@@ -167,12 +219,12 @@ int sceDRMInstallGetFileInfo(char *file, int size, int a2, int a3)
         ret = fd;
         goto end;
     }
-    sub_01410(0);
-    ret = sub_864(fd, size, a2, (void *)a3);
+    set_state(0);
+    ret = get_file_info(fd, size, a2, (void *)a3);
     sceIoClose(fd);
 
 end:
-    sceKernelMemset(g_unkP, 0, 0x4D0);
+    sceKernelMemset(&g_work, 0, sizeof(g_work));
     pspSdkSetK1(k1);
     return ret;
 }
@@ -201,10 +253,10 @@ int sceDRMInstallInstall(const char *path, int vkey, int a2)
         goto end;
     }
 
-    sub_01410(0);
+    set_state(0);
     sceKernelMemset(localPath, 0, sizeof(localPath));
     strncpy(localPath, path, 0xFE);
-    ret = sub_1CEC(localPath, "_EBOOT.PBP");
+    ret = rename_in_dir(localPath, "_EBOOT.PBP");
     if (ret < 0) {
         goto end;
     }
@@ -213,13 +265,13 @@ int sceDRMInstallInstall(const char *path, int vkey, int a2)
         ret = SCE_PSHEET_ERROR_ILLEGAL_ADDRESS;
         goto end;
     }
-    fd = sub_014A8(localPath);
+    fd = open_and_mac_check(localPath);
     if (fd < 0) {
         ret = fd;
         goto end;
     }
     localPath[dirLen] = '\0';
-    ret = sub_9EC(fd, localPath, vkey, a2);
+    ret = install_package(fd, localPath, vkey, a2);
     if (ret < 0) {
         goto end;
     }
@@ -234,13 +286,13 @@ int sceDRMInstallInstall(const char *path, int vkey, int a2)
         goto end;
     }
     sceKernelMemcpy(localPath + dirLen, "_TEMP.PBP", 10);
-    ret = sub_1CEC(localPath, "EBOOT.PBP");
+    ret = rename_in_dir(localPath, "EBOOT.PBP");
     if (ret > 0) {
         ret = 0;
     }
 
 end:
-    sceKernelMemset(g_unkP, 0, 0x4D0);
+    sceKernelMemset(&g_work, 0, sizeof(g_work));
     if (fd >= 0) {
         sceIoClose(fd);
     }
@@ -257,11 +309,11 @@ int module_start(SceSize argc __attribute__((unused)), void *argp __attribute__(
         sceDRMInstallInit(0, 0);
         return 0;
     }
-    if (unk1 > 0) {
-        sceKernelDeleteSema(unk1);
+    if (auxSemaID > 0) {
+        sceKernelDeleteSema(auxSemaID);
     }
     sceKernelMemset(&semaID, 0, 64);
-    sceKernelMemset(g_unkP, 0, 0x4D0);
+    sceKernelMemset(&g_work, 0, sizeof(g_work));
     return (s0 < -1) ? s0 : -1;
 }
 
@@ -271,11 +323,11 @@ int module_reboot_before(SceSize args __attribute__((unused)), void *argp __attr
     if (semaID > 0) {
         sceKernelDeleteSema(semaID);
     }
-    if (unk1 > 0) {
-        sceKernelDeleteSema(unk1);
+    if (auxSemaID > 0) {
+        sceKernelDeleteSema(auxSemaID);
     }
     sceKernelMemset(&semaID, 0, 64);
-    sceKernelMemset(g_unkP, 0, 0x4D0);
+    sceKernelMemset(&g_work, 0, sizeof(g_work));
     return 0;
 }
 
@@ -309,70 +361,66 @@ void sceDRMInstallAbort(void)
 {
     int k1 = pspSdkGetK1();
     pspSdkSetK1(k1 << 11);
-    sub_01410(1);
+    set_state(1);
     pspSdkSetK1(k1);
 }
 
-/* 0x072c: sub_072c (get_package_info) */
-int sub_72C(int a0, int a1, void *a2)
+/* 0x072c: get_package_info (get_package_info) */
+int get_package_info(int a0, int a1, void *a2)
 {
     u32 lbuf[4];
     u32 *s1 = (u32 *)a2;
-    u8 *s4 = g_unkP;
-    sceKernelMemset(s4, 0, 0x4D0);
+    sceKernelMemset(&g_work, 0, sizeof(g_work));
     sceKernelMemset(s1, 0, 0x10);
-    int res = sub_015D8(a0, a1);
+    int res = get_core_header(a0, a1);
     if (res >= 0) {
         sceKernelMemset(lbuf, 0, 0x10);
         lbuf[0] = 0x01010100;
         lbuf[2] = 0x01050200;
-        sub_1998(a0, a1, lbuf, 2);
-        s1[0] = *(u32 *)(s4 + 0x448);
+        get_params(a0, a1, lbuf, 2);
+        s1[0] = g_work.pkgType;
         s1[1] = lbuf[1];
-        sub_1B3C(a0, a1, lbuf[3], (char *)(s1 + 2), 7);
+        get_string(a0, a1, lbuf[3], (char *)(s1 + 2), 7);
         return 0;
     }
-    if (*(u32 *)(s4 + 0x4CC) == 0) {
+    if (g_work.coreSize == 0) {
         res = SCE_PSHEET_ERROR_P;
     }
     Kprintf("%s: %s(): error 0x%08X\n", "bbox_api_raw.c", "get_package_info", res);
     return (res < 0) ? res : (int)SCE_PSHEET_ERROR_P2;
 }
 
-/* 0x0864: sub_0864 (get_file_info) */
-int sub_864(int a0, int a1, int a2, void *a3)
+/* 0x0864: get_file_info (get_file_info) */
+int get_file_info(int a0, int a1, int a2, void *a3)
 {
     u32 lbuf[2];
-    char *s3 = (char *)a3;
-    char *s5;
-    u8 *s6 = g_unkP;
-    sceKernelMemset(s6, 0, 0x4D0);
-    sceKernelMemset(s3, 0, 0x108);
-    int res = sub_015D8(a0, a1);
+    ScePsheetFileInfo *info = (ScePsheetFileInfo *)a3;
+    sceKernelMemset(&g_work, 0, sizeof(g_work));
+    sceKernelMemset(info, 0, sizeof(*info));
+    int res = get_core_header(a0, a1);
     if (res >= 0) {
-        s5 = s3 + 8;
         sceKernelMemset(lbuf, 0, 8);
         lbuf[0] = 0x01010100;
-        sub_1998(a0, a1, lbuf, 1);
+        get_params(a0, a1, lbuf, 1);
         res = SCE_PSHEET_ERROR_ILLEGAL_ADDRESS;
         if ((u32)a2 >= lbuf[1]) {
             goto Loc;
         }
-        res = sub_17C0(a0, a1, a2, s5, 0xFF);
+        res = get_archive_header(a0, a1, a2, info->name, 0xFF);
         if (res < 0) {
             goto Loc;
         }
-        *(u32 *)s3 = *(u32 *)(s6 + 0x40C);
-        int cmp = strcmp(s5, "EBOOT.PBP");
-        u32 t5 = *(u32 *)(s6 + 0x408);
+        info->flags = g_work.arcHdr.flags;
+        int cmp = strcmp(info->name, "EBOOT.PBP");
+        u32 t5 = g_work.arcHdr.dataSize;
         if (cmp != 0) {
             u32 t2 = (t5 + 15) & ~0xFU;
             u32 t4 = (t2 + 1023) & ~0x3FFU;
             u32 t3 = t4 >> 6;
-            *(u32 *)(s3 + 4) = t2 + t3 + 0x90;
+            info->size = t2 + t3 + 0x90;
             return 0;
         }
-        *(u32 *)(s3 + 4) = t5;
+        info->size = t5;
         return 0;
     }
 Loc:
@@ -380,12 +428,12 @@ Loc:
     return (res < 0) ? res : (int)SCE_PSHEET_ERROR_P2;
 }
 
-/* 0x09ec: sub_09ec (install) */
-int sub_9EC(SceUID fd, char *path, int vkey, int a3 __attribute__((unused)))
+/* 0x09ec: install_package (install) */
+int install_package(SceUID fd, char *path, int vkey, int a3 __attribute__((unused)))
 {
     u8 macKey[0x30];
     u32 params[2];
-    u8 pgdHdr[0x90];
+    ScePsheetPgdHeader pgdHdr;
     u32 pathLen = strlen(path);
     u32 remLen = 0xFF - pathLen;
     u32 workSize = (u32)buf[1];
@@ -393,29 +441,29 @@ int sub_9EC(SceUID fd, char *path, int vkey, int a3 __attribute__((unused)))
     SceUID outFd = 0;
     int res;
 
-    sceKernelMemset(g_unkP, 0, 0x4D0);
+    sceKernelMemset(&g_work, 0, sizeof(g_work));
     getSemaIdStatusUsingTimeout(0, 1);
-    res = sub_015D8(fd, vkey);
+    res = get_core_header(fd, vkey);
     if (res < 0) {
         goto err;
     }
 
     sceKernelMemset(params, 0, 8);
     params[0] = 0x01010100;
-    sub_1998(fd, vkey, params, 1);
+    get_params(fd, vkey, params, 1);
     u32 fileCount = params[1];
     for (u32 idx = 0; idx < fileCount; idx++) {
         sceKernelMemset(filePart, 0, remLen);
-        res = sub_17C0(fd, vkey, idx, filePart, remLen);
+        res = get_archive_header(fd, vkey, idx, filePart, remLen);
         if (res < 0) {
             goto err;
         }
         if (idx == 0) {
-            u32 totalWork = (*(u32 *)(g_unkP + 0x45C) - *(u32 *)(g_unkP + 0x404)) + 0x10;
+            u32 totalWork = (g_work.dataSize - g_work.arcHdr.dataOff) + 0x10;
             getSemaIdStatusUsingTimeout(0, totalWork);
         }
 
-        u32 fileOff = *(u32 *)(g_unkP + 0x4C8) + *(u32 *)(g_unkP + 0x458) + *(u32 *)(g_unkP + 0x404);
+        u32 fileOff = g_work.coreOff + g_work.dataOff + g_work.arcHdr.dataOff;
         res = sceIoLseek32(fd, fileOff, PSP_SEEK_SET);
         if (res < 0) {
             goto err;
@@ -438,7 +486,7 @@ int sub_9EC(SceUID fd, char *path, int vkey, int a3 __attribute__((unused)))
             }
         }
 
-        res = sub_1E14(path, pathLen);
+        res = recursive_mkdir(path, pathLen);
         if (res < 0) {
             goto err;
         }
@@ -449,20 +497,20 @@ int sub_9EC(SceUID fd, char *path, int vkey, int a3 __attribute__((unused)))
         }
 
         if (fileType != 0) {
-            sceKernelMemset(pgdHdr, 0, 0x90);
-            sceIoWrite(outFd, pgdHdr, 0x90);
-            sub_1EF0(pgdHdr);
-            *(u32 *)(pgdHdr + 0x44) = *(u32 *)(g_unkP + 0x408);
-            *(u32 *)(pgdHdr + 0x48) = 0x400;
-            *(u32 *)(pgdHdr + 0x40) = 0;
-            res = sub_2000(path, strlen(path), (void *)vkey, pgdHdr + 0x20);
-            res = sceDrmBBCipherInit(g_unkP + 0x488, 2, 1, pgdHdr + 0x30, (void *)vkey, 0);
+            sceKernelMemset(&pgdHdr, 0, sizeof(pgdHdr));
+            sceIoWrite(outFd, &pgdHdr, sizeof(pgdHdr));
+            init_pgd_header(&pgdHdr);
+            pgdHdr.dataSize = g_work.arcHdr.dataSize;
+            pgdHdr.blockSize = 0x400;
+            pgdHdr.dataOffset = 0;
+            res = create_mac(path, strlen(path), (void *)vkey, pgdHdr.pathMac);
+            res = sceDrmBBCipherInit(g_work.encryptCtx, 2, 1, pgdHdr.dataKey, (void *)vkey, 0);
             if (res < 0) {
                 goto err;
             }
         }
 
-        u32 dataLen = *(u32 *)(g_unkP + 0x408);
+        u32 dataLen = g_work.arcHdr.dataSize;
         u32 done = 0;
         while (done < dataLen) {
             u32 rem = dataLen - done;
@@ -479,18 +527,18 @@ int sub_9EC(SceUID fd, char *path, int vkey, int a3 __attribute__((unused)))
                 goto err;
             }
             for (u32 blk = 0; blk < readLen; blk += 0x400) {
-                u32 seed = (*(u32 *)(g_unkP + 0x404) + done + blk) >> 4;
-                sceKernelMemcpy(g_unkP, (u8 *)buf[0] + blk, 0x400);
-                res = sub_2134(g_unkP, 0x400, seed, (void *)vkey, g_unkP + 0x430);
+                u32 seed = (g_work.arcHdr.dataOff + done + blk) >> 4;
+                sceKernelMemcpy(g_work.ioBuf, (u8 *)buf[0] + blk, 0x400);
+                res = drmbb_decrypt(g_work.ioBuf, 0x400, seed, (void *)vkey, g_work.dataKey);
                 if (res < 0) {
                     goto err;
                 }
                 if (fileType == 2 && (done + blk) == 0 && readLen >= 0x400) {
-                    res = sceUtilsPrepareGetLoadModuleRLength(g_unkP, 0x400, (void *)vkey);
+                    res = sceUtilsPrepareGetLoadModuleRLength(g_work.ioBuf, 0x400, (void *)vkey);
                     if (res < 0) {
                         if (sceKernelIsToolMode() != 0) {
                             Kprintf("Smode\n");
-                            res = sceUtilsPrepareGetLoadModuleSLength(g_unkP, 0x400, (void *)vkey);
+                            res = sceUtilsPrepareGetLoadModuleSLength(g_work.ioBuf, 0x400, (void *)vkey);
                         }
                         if (res < 0) {
                             Kprintf("low level error = %d\n", res);
@@ -500,12 +548,12 @@ int sub_9EC(SceUID fd, char *path, int vkey, int a3 __attribute__((unused)))
                     }
                 }
                 if (fileType != 0) {
-                    res = sceDrmBBCipherUpdate(g_unkP + 0x488, g_unkP, 0x400);
+                    res = sceDrmBBCipherUpdate(g_work.encryptCtx, g_work.ioBuf, 0x400);
                     if (res < 0) {
                         goto err;
                     }
                 }
-                sceKernelMemcpy((u8 *)buf[0] + blk, g_unkP, 0x400);
+                sceKernelMemcpy((u8 *)buf[0] + blk, g_work.ioBuf, 0x400);
             }
 
             res = sceIoWrite(outFd, (void *)buf[0], writeLen);
@@ -524,7 +572,7 @@ int sub_9EC(SceUID fd, char *path, int vkey, int a3 __attribute__((unused)))
         }
 
         if (fileType != 0) {
-            res = sceDrmBBCipherFinal(g_unkP + 0x488);
+            res = sceDrmBBCipherFinal(g_work.encryptCtx);
             if (res < 0) {
                 goto err;
             }
@@ -550,12 +598,12 @@ int sub_9EC(SceUID fd, char *path, int vkey, int a3 __attribute__((unused)))
                 }
                 for (u32 blk = 0; blk < rem; blk += 0x400) {
                     u32 bsz = (rem - blk > 0x400) ? 0x400 : (rem - blk);
-                    res = sub_2000((u8 *)buf[0] + blk, bsz, (void *)vkey, g_unkP + ((blk / 0x400) << 4));
+                    res = create_mac((u8 *)buf[0] + blk, bsz, (void *)vkey, g_work.ioBuf + ((blk / 0x400) << 4));
                     if (res < 0) {
                         goto err;
                     }
                 }
-                res = sceDrmBBMacUpdate(macKey, g_unkP, macBytes);
+                res = sceDrmBBMacUpdate(macKey, g_work.ioBuf, macBytes);
                 if (res < 0) {
                     sceKernelMemset(macKey, 0, 0x28);
                     return res;
@@ -564,26 +612,26 @@ int sub_9EC(SceUID fd, char *path, int vkey, int a3 __attribute__((unused)))
                 if (res < 0) {
                     goto err;
                 }
-                res = sceIoWrite(outFd, g_unkP, macBytes);
+                res = sceIoWrite(outFd, g_work.ioBuf, macBytes);
                 if (res < (int)macBytes) {
                     goto err;
                 }
                 done += chunkLim;
             }
-            res = sceDrmBBMacFinal(macKey, pgdHdr + 0x60, (void *)vkey);
+            res = sceDrmBBMacFinal(macKey, pgdHdr.tableMac, (void *)vkey);
             if (res < 0) {
                 sceKernelMemset(macKey, 0, 0x28);
                 return res;
             }
-            res = sub_01F4C(pgdHdr + 0x30, 0x30, (void *)vkey, pgdHdr + 0x10);
+            res = data_encrypt(pgdHdr.dataKey, 0x30, (void *)vkey, pgdHdr.headerKey);
             if (res < 0) {
                 goto err;
             }
-            res = sub_2000(pgdHdr, 0x70, (void *)vkey, pgdHdr + 0x70);
+            res = create_mac(&pgdHdr, 0x70, (void *)vkey, pgdHdr.headerMac1);
             if (res < 0) {
                 goto err;
             }
-            res = sub_2000(pgdHdr, 0x80, keyPtr, pgdHdr + 0x80);
+            res = create_mac(&pgdHdr, 0x80, keyPtr, pgdHdr.headerMac2);
             if (res < 0) {
                 goto err;
             }
@@ -591,7 +639,7 @@ int sub_9EC(SceUID fd, char *path, int vkey, int a3 __attribute__((unused)))
             if (res < 0) {
                 goto err;
             }
-            res = sceIoWrite(outFd, pgdHdr, 0x90);
+            res = sceIoWrite(outFd, &pgdHdr, sizeof(pgdHdr));
             if (res < 0x90) {
                 goto err;
             }
@@ -626,7 +674,7 @@ int getSemaIdStatus(SceUInt *sTimeout)
         return result;
     }
     sTimeout[0] = semaTimeout;
-    sTimeout[1] = unk3;
+    sTimeout[1] = totalBytes;
     result = sceKernelSignalSema(semaID, 1);
     if (result < 0) {
         return result;
@@ -656,7 +704,7 @@ int getSemaIdStatusUsingTimeout(int timeout, int a1)
     if (result < 0) {
         return result;
     }
-    unk3 = a1;
+    totalBytes = a1;
     semaTimeout = timeout;
     result = sceKernelSignalSema(semaID, 1);
     if (result < 0) {
@@ -682,8 +730,8 @@ int getSemaIdStatusUsingBuf(void)
     return result;
 }
 
-/* 0x1410: sub_01410 */
-int sub_01410(int a0)
+/* 0x1410: set_state */
+int set_state(int a0)
 {
     int lckdresult = sceKernelWaitSema(semaID, 1, 0);
     if (lckdresult < 0) {
@@ -700,8 +748,8 @@ int sub_01410(int a0)
     return result;
 }
 
-/* 0x14a8: sub_014A8 (open_and_mac_check) */
-int sub_014A8(char *file)
+/* 0x14a8: open_and_mac_check (open_and_mac_check) */
+int open_and_mac_check(char *file)
 {
     if (strncmp(file, "ms0:/", 5) != 0) {
         return SCE_PSHEET_ERROR_ILLEGAL_ADDRESS;
@@ -711,7 +759,7 @@ int sub_014A8(char *file)
     if (fd >= 0) {
         result = sceIoLseek32(fd, 0, PSP_SEEK_END);
         if (result >= 0x38) {
-            result = sub_21F0(fd, 0, result - 0x10, g_pkgKey, 0);
+            result = verify_file_mac(fd, 0, result - 0x10, g_pkgKey, 0);
             if (result >= 0) {
                 result = sceIoLseek32(fd, 0, PSP_SEEK_SET);
                 if (result >= 0) {
@@ -728,27 +776,27 @@ int sub_014A8(char *file)
     return result;
 }
 
-/* 0x15d8: sub_015D8 (get_core_header) */
-int sub_015D8(SceUID a0, int a1)
+/* 0x15d8: get_core_header (get_core_header) */
+int get_core_header(SceUID a0, int a1)
 {
-    u8 *s3 = g_unkP;
     int result = sceIoLseek32(a0, 0, PSP_SEEK_SET);
     if (result < 0) {
         goto exit;
     }
-    result = sceIoRead(a0, s3, 0x28);
+    result = sceIoRead(a0, g_work.ioBuf, 0x28);
     if (result < 0x28) {
         goto exit;
     }
-    u32 coreOff = *(u32 *)(s3 + 0x20);
-    u32 endOff = *(u32 *)(s3 + 0x24);
+    u32 *hdrWords = (u32 *)g_work.ioBuf;
+    u32 coreOff = hdrWords[8];
+    u32 endOff = hdrWords[9];
     result = SCE_PSHEET_ERROR_P6;
     if (endOff < coreOff + 0x60) {
         goto exit;
     }
-    *(u32 *)(s3 + 0x4CC) = endOff - coreOff;
-    *(u32 *)(s3 + 0x4C8) = coreOff;
-    if (sub_21F0(a0, coreOff, 0x50, (void *)a1, 0) < 0) {
+    g_work.coreSize = endOff - coreOff;
+    g_work.coreOff = coreOff;
+    if (verify_file_mac(a0, coreOff, 0x50, (void *)a1, 0) < 0) {
         result = SCE_PSHEET_ERROR_P7;
         goto exit;
     }
@@ -756,19 +804,19 @@ int sub_015D8(SceUID a0, int a1)
     if (result < (int)coreOff) {
         goto exit;
     }
-    result = sceIoRead(a0, s3 + 0x410, 0x60);
+    result = sceIoRead(a0, g_work.coreHeaderKey, 0x60);
     if (result < 0x60) {
         goto exit;
     }
-    result = sub_2134(s3 + 0x420, 0x40, 0, g_pkgKey, s3 + 0x410);
+    result = drmbb_decrypt(g_work.paramKey, 0x40, 0, g_pkgKey, g_work.coreHeaderKey);
     if (result < 0) {
         goto exit;
     }
     result = SCE_PSHEET_ERROR_P8;
-    if (*(u32 *)(s3 + 0x440) != 1 || *(u32 *)(s3 + 0x448) != 1) {
+    if (g_work.version != 1 || g_work.pkgType != 1) {
         goto exit;
     }
-    if (*(u32 *)(s3 + 0x444) == 0) {
+    if (g_work.targetArch == 0) {
         return 0;
     }
     result = sceKernelIsToolMode();
@@ -776,7 +824,7 @@ int sub_015D8(SceUID a0, int a1)
         goto exit;
     }
     u32 mask = (result == 0) ? 1 : 2;
-    u32 arch = *(u32 *)(s3 + 0x444);
+    u32 arch = g_work.targetArch;
     if ((arch & mask) == 0) {
         Kprintf("target arch: 0x%08x\n", arch);
         result = SCE_PSHEET_ERROR_P8;
@@ -792,26 +840,25 @@ exit:
     return (result < 0) ? result : (int)SCE_PSHEET_ERROR_P6;
 }
 
-/* 0x17c0: sub_17C0 (get_archive_header) */
-int sub_17C0(SceUID fd, int vkey, int idx, char *outName, u32 maxLen)
+/* 0x17c0: get_archive_header (get_archive_header) */
+int get_archive_header(SceUID fd, int vkey, int idx, char *outName, u32 maxLen)
 {
-    u8 *s4 = g_unkP;
-    u32 hdrOff = *(u32 *)(s4 + 0x4C8) + *(u32 *)(s4 + 0x458) + ((u32)idx << 4);
+    u32 hdrOff = g_work.coreOff + g_work.dataOff + ((u32)idx << 4);
     int res = sceIoLseek32(fd, hdrOff, PSP_SEEK_SET);
     if (res < (int)hdrOff) {
         goto err;
     }
-    res = sceIoRead(fd, s4 + 0x400, 0x10);
+    res = sceIoRead(fd, &g_work.arcHdr, sizeof(g_work.arcHdr));
     if (res < 0x10) {
         goto err;
     }
-    res = sub_2134(s4 + 0x400, 0x10, idx, (void *)vkey, s4 + 0x430);
+    res = drmbb_decrypt(&g_work.arcHdr, sizeof(g_work.arcHdr), idx, (void *)vkey, g_work.dataKey);
     if (res < 0) {
         goto err;
     }
-    u32 nameOff = *(u32 *)(s4 + 0x4C8) + *(u32 *)(s4 + 0x458) + *(u16 *)(s4 + 0x400);
+    u32 nameOff = g_work.coreOff + g_work.dataOff + g_work.arcHdr.nameOff;
     sceIoLseek32(fd, nameOff, PSP_SEEK_SET);
-    u32 nameLen = (u32)(*(u16 *)(s4 + 0x402)) + 1;
+    u32 nameLen = (u32)g_work.arcHdr.nameLen + 1;
     if (nameLen < maxLen) {
         maxLen = nameLen;
     }
@@ -819,15 +866,15 @@ int sub_17C0(SceUID fd, int vkey, int idx, char *outName, u32 maxLen)
     if (readLen > 0x400) {
         maxLen = 0x400;
     }
-    res = sceIoRead(fd, s4, readLen);
+    res = sceIoRead(fd, g_work.ioBuf, readLen);
     if (res < (int)readLen) {
         goto err;
     }
-    res = sub_2134(s4, readLen, *(u16 *)(s4 + 0x400) >> 4, (void *)vkey, s4 + 0x430);
+    res = drmbb_decrypt(g_work.ioBuf, readLen, g_work.arcHdr.nameOff >> 4, (void *)vkey, g_work.dataKey);
     if (res < 0) {
         goto err;
     }
-    strncpy(outName, (char *)s4, maxLen);
+    strncpy(outName, (char *)g_work.ioBuf, maxLen);
     outName[maxLen - 1] = '\0';
     return 0;
 
@@ -836,27 +883,26 @@ err:
     return (res < 0) ? res : (int)SCE_PSHEET_ERROR_P2;
 }
 
-/* 0x1998: sub_1998 (get_params) */
-int sub_1998(SceUID fd, int vkey, u32 *params, u32 count)
+/* 0x1998: get_params (get_params) */
+int get_params(SceUID fd, int vkey, u32 *params, u32 count)
 {
-    u8 *s4 = g_unkP;
     u32 found = 0;
-    sceIoLseek32(fd, *(u32 *)(s4 + 0x4C8) + *(u32 *)(s4 + 0x450), PSP_SEEK_SET);
-    u32 totalParams = *(u32 *)(s4 + 0x454);
+    sceIoLseek32(fd, g_work.coreOff + g_work.paramOff, PSP_SEEK_SET);
+    u32 totalParams = g_work.paramCount;
     for (u32 i = 0; i < totalParams; i++) {
         u32 slot = i & 0x7F;
         if (slot == 0) {
             u32 bytes = (totalParams - i) << 3;
             u32 readLen = (bytes <= 0x400) ? ((bytes + 0xF) & ~0xFU) : 0x400;
-            int res = sceIoRead(fd, s4, readLen);
+            int res = sceIoRead(fd, g_work.ioBuf, readLen);
             if (res < (int)readLen) {
                 Kprintf("%s: %s(): error 0x%08X\n", "bbox_access.c", "get_params", res);
                 return (res < 0) ? res : (int)SCE_PSHEET_ERROR_P2;
             }
-            sub_2134(s4, readLen, i >> 1, (void *)vkey, s4 + 0x420);
+            drmbb_decrypt(g_work.ioBuf, readLen, i >> 1, (void *)vkey, g_work.paramKey);
         }
         if (count > 0) {
-            u32 *entry = (u32 *)(s4 + (slot << 3));
+            u32 *entry = (u32 *)(g_work.ioBuf + (slot << 3));
             for (u32 j = 0; j < count; j++) {
                 if (params[j * 2] == entry[0]) {
                     params[j * 2 + 1] = entry[1];
@@ -872,19 +918,18 @@ int sub_1998(SceUID fd, int vkey, u32 *params, u32 count)
     return found;
 }
 
-/* 0x1b3c: sub_1B3C (get_string) */
-int sub_1B3C(SceUID fd, int vkey, u32 desc, char *outStr, u32 maxLen)
+/* 0x1b3c: get_string (get_string) */
+int get_string(SceUID fd, int vkey, u32 desc, char *outStr, u32 maxLen)
 {
     if (desc == 0) {
         outStr[0] = '\0';
         return 0;
     }
-    u8 *s3 = g_unkP;
     u32 lowOff = desc & 0xFFFF;
     u32 inBlkOff = desc & 0xF;
     u32 alignedOff = lowOff - inBlkOff;
     u32 strLen = desc >> 16;
-    u32 seekPos = *(u32 *)(s3 + 0x4C8) + *(u32 *)(s3 + 0x450) + alignedOff;
+    u32 seekPos = g_work.coreOff + g_work.paramOff + alignedOff;
     int res = sceIoLseek32(fd, seekPos, PSP_SEEK_SET);
     if (res < (int)seekPos) {
         goto err;
@@ -898,17 +943,17 @@ int sub_1B3C(SceUID fd, int vkey, u32 desc, char *outStr, u32 maxLen)
         if (rem > 0x400) {
             rem = 0x400;
         }
-        res = sceIoRead(fd, s3, readLen);
+        res = sceIoRead(fd, g_work.ioBuf, readLen);
         if (res < (int)readLen) {
             goto err;
         }
-        sub_2134(s3, readLen, alignedOff >> 4, (void *)vkey, s3 + 0x420);
+        drmbb_decrypt(g_work.ioBuf, readLen, alignedOff >> 4, (void *)vkey, g_work.paramKey);
         alignedOff += readLen;
         for (u32 k = inBlkOff; k < rem; k++) {
             if (dst == dstEnd) {
                 break;
             }
-            *dst++ = (char)s3[k];
+            *dst++ = (char)g_work.ioBuf[k];
         }
         inBlkOff = 0;
     }
@@ -919,8 +964,8 @@ err:
     return (res < 0) ? res : (int)SCE_PSHEET_ERROR_P2;
 }
 
-/* 0x1cec: sub_1CEC (rename_in_dir) */
-int sub_1CEC(char *path, const char *newName)
+/* 0x1cec: rename_in_dir (rename_in_dir) */
+int rename_in_dir(char *path, const char *newName)
 {
     char tmp[0x100];
     if (strncmp(path, "ms0:/", 5) != 0 || path[0] == '\0') {
@@ -952,8 +997,8 @@ int sub_1CEC(char *path, const char *newName)
     return dirLen;
 }
 
-/* 0x1e14: sub_1E14 (recursive_mkdir) */
-int sub_1E14(char *path, u32 startOff)
+/* 0x1e14: recursive_mkdir (recursive_mkdir) */
+int recursive_mkdir(char *path, u32 startOff)
 {
     for (u32 i = startOff; path[i] != '\0'; i++) {
         if (path[i] == '/') {
@@ -972,23 +1017,23 @@ int sub_1E14(char *path, u32 startOff)
     return 0;
 }
 
-/* 0x1ef0: sub_1EF0 */
-int sub_1EF0(void *pgdHdr)
+/* 0x1ef0: init_pgd_header */
+int init_pgd_header(void *pgdHdr)
 {
     static const u8 pgdMagic[4] = { 0x00, 'P', 'G', 'D' };
-    u8 *p = (u8 *)pgdHdr;
-    sceKernelMemset(p, 0, 0x90);
-    sceKernelMemcpy(p, pgdMagic, 4);
-    *(u32 *)(p + 0x04) = 1;
-    *(u32 *)(p + 0x48) = 0x400;
-    *(u32 *)(p + 0x4C) = 0x90;
+    ScePsheetPgdHeader *p = (ScePsheetPgdHeader *)pgdHdr;
+    sceKernelMemset(p, 0, sizeof(*p));
+    sceKernelMemcpy(p->magic, pgdMagic, 4);
+    p->version = 1;
+    p->blockSize = 0x400;
+    p->headerSize = 0x90;
     return 0;
 }
 
-/* 0x1f4c: sub_01F4C (data_encrypt) */
-int sub_01F4C(void *a0, int a1, void *a2, void *a3)
+/* 0x1f4c: data_encrypt (data_encrypt) */
+int data_encrypt(void *a0, int a1, void *a2, void *a3)
 {
-    void *s2 = g_unkP + 0x488;
+    void *s2 = g_work.encryptCtx;
     int result = sceDrmBBCipherInit(s2, 2, 1, a3, a2, 0);
     if (result >= 0) {
         result = sceDrmBBCipherUpdate(s2, a0, a1);
@@ -1003,10 +1048,10 @@ int sub_01F4C(void *a0, int a1, void *a2, void *a3)
     return SCE_PSHEET_ERROR_P3;
 }
 
-/* 0x2000: sub_2000 (create_mac) */
-int sub_2000(void *a0, int a1, void *a2, void *a3)
+/* 0x2000: create_mac (create_mac) */
+int create_mac(void *a0, int a1, void *a2, void *a3)
 {
-    void *s2 = g_unkP + 0x4A0;
+    void *s2 = g_work.macCtx;
     int result = sceDrmBBMacInit(s2, 2);
     if (result >= 0) {
         result = sceDrmBBMacUpdate(s2, a0, a1);
@@ -1021,12 +1066,12 @@ int sub_2000(void *a0, int a1, void *a2, void *a3)
     return SCE_PSHEET_ERROR_P3;
 }
 
-/* 0x20c8: sub_20C8 */
-int sub_20C8(void *a0, int a1, void *a2, void *a3, void *t0)
+/* 0x20c8: encrypt_and_mac */
+int encrypt_and_mac(void *a0, int a1, void *a2, void *a3, void *t0)
 {
-    int res = sub_01F4C(a0, a1, a2, a3);
+    int res = data_encrypt(a0, a1, a2, a3);
     if (res >= 0) {
-        res = sub_2000(a0, a1, a2, t0);
+        res = create_mac(a0, a1, a2, t0);
         if (res > 0) {
             res = 0;
         }
@@ -1034,10 +1079,10 @@ int sub_20C8(void *a0, int a1, void *a2, void *a3, void *t0)
     return res;
 }
 
-/* 0x2134: sub_2134 (drmbb_decrypt) */
-int sub_2134(void *a0, int a1, int a2, void *a3, void *t0)
+/* 0x2134: drmbb_decrypt (drmbb_decrypt) */
+int drmbb_decrypt(void *a0, int a1, int a2, void *a3, void *t0)
 {
-    void *s2 = g_unkP + 0x470;
+    void *s2 = g_work.decryptCtx;
     int result = sceDrmBBCipherInit(s2, 1, 2, t0, a3, a2);
     if (result >= 0) {
         result = sceDrmBBCipherUpdate(s2, a0, a1);
@@ -1052,10 +1097,10 @@ int sub_2134(void *a0, int a1, int a2, void *a3, void *t0)
     return SCE_PSHEET_ERROR_P3;
 }
 
-/* 0x21f0: sub_21F0 */
-int sub_21F0(SceUID fd, int offset, int size, void *vkey, void *mac)
+/* 0x21f0: verify_file_mac */
+int verify_file_mac(SceUID fd, int offset, int size, void *vkey, void *mac)
 {
-    void *mkey = g_unkP + 0x4A0;
+    void *mkey = g_work.macCtx;
     int res = sceIoLseek32(fd, offset, PSP_SEEK_SET);
     if (res < offset) {
         goto err;

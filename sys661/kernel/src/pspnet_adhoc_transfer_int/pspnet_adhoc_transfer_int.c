@@ -4,14 +4,14 @@
 extern int sceNetGetLocalEtherAddr(u8 *mac);
 extern int sceNet_lib_E0A81C7C(const void *s1, const void *s2, u32 n);
 
-extern int sceNetAdhocPtpOpen(const u8 *srcmac, u16 srcport, const u8 *destmac, u16 destport, u32 bufsize, u32 delay, int count, int unk);
+extern int sceNetAdhocPtpOpen(const u8 *srcmac, u16 srcport, const u8 *destmac, u16 destport, u32 bufsize, u32 delay, int count, int flag);
 extern int sceNetAdhocPtpConnect(int id, u32 timeout, int flag);
-extern int sceNetAdhocPtpListen(const u8 *srcmac, u16 srcport, u32 bufsize, u32 delay, int count, int queue, int unk);
+extern int sceNetAdhocPtpListen(const u8 *srcmac, u16 srcport, u32 bufsize, u32 delay, int count, int queue, int flag);
 extern int sceNetAdhocPtpAccept(int id, u8 *mac, u16 *port, u32 timeout, int flag);
 extern int sceNetAdhocPtpSend(int id, const void *data, int *datasize, u32 timeout, int flag);
 extern int sceNetAdhocPtpRecv(int id, void *data, int *datasize, u32 timeout, int flag);
 extern int sceNetAdhocPtpFlush(int id, u32 timeout, int flag);
-extern int sceNetAdhocPtpClose(int id, int unk);
+extern int sceNetAdhocPtpClose(int id, int flag);
 extern int sceNetAdhoc_73BFD52D(int id, int flags);
 
 extern int sceNetAdhocMatchingCreate(int mode, int maxpeers, u16 port, int bufsize, u32 hellodelay, u32 pingdelay, int initcount, u32 msgdelay, void *callback);
@@ -86,11 +86,11 @@ static TransPeerNode *g_child_list;            /* 0x2470 */
 static TransReqSession g_req_sess;             /* 0x2474..0x2493 */
 static u32 g_child_mutex[8];                   /* 0x2494..0x24b3 */
 
-static void sub_0b30(int matchingid, int event, const u8 *mac, u32 optlen, const void *optdata);
-static void sub_1724(int matchingid, int event, const u8 *mac, u32 optlen, const void *optdata);
+static void replyMatchingCallback(int matchingid, int event, const u8 *mac, u32 optlen, const void *optdata);
+static void reqMatchingCallback(int matchingid, int event, const u8 *mac, u32 optlen, const void *optdata);
 
 __attribute__((noinline))
-static int sub_0000(int *ptp_out, const u8 *destmac, int total_size, void *arg, int (*cb)(void *, void **, u32 *))
+static int ptpSendStream(int *ptp_out, const u8 *destmac, int total_size, void *arg, int (*cb)(void *, void **, u32 *))
 {
     u8 srcmac[16];
     int s2 = 20;
@@ -159,7 +159,7 @@ cleanup:
 }
 
 __attribute__((noinline))
-static int sub_0218(int *ptp_out, const u8 *target_mac, void *buf, u32 bufsize, void *arg, int (*cb)(void *, u32, void *, u32))
+static int ptpRecvStream(int *ptp_out, const u8 *target_mac, void *buf, u32 bufsize, void *arg, int (*cb)(void *, u32, void *, u32))
 {
     u8 mac[16];
     u16 port;
@@ -221,14 +221,14 @@ cleanup:
 }
 
 __attribute__((noinline))
-static int sub_043c(int ptp_id)
+static int ptpAbortTransfer(int ptp_id)
 {
     g_abort_flag = 1;
     return sceNetAdhoc_73BFD52D(ptp_id, 0x3f0);
 }
 
 __attribute__((noinline))
-static int sub_0464(u32 size)
+static int transPoolCreate(u32 size)
 {
     int id = sceKernelCreateVpl("SceNetAdhocTransferMemoryPool", 2, 0, size, NULL);
     g_vpl_id = id;
@@ -236,7 +236,7 @@ static int sub_0464(u32 size)
 }
 
 __attribute__((noinline))
-static void sub_04a8(void)
+static void transPoolDelete(void)
 {
     if (g_vpl_id >= 0) {
         sceKernelDeleteVpl(g_vpl_id);
@@ -245,7 +245,7 @@ static void sub_04a8(void)
 }
 
 __attribute__((noinline))
-static void *sub_04e4(u32 size)
+static void *transPoolAlloc(u32 size)
 {
     u32 info[16];
     void *ptr = NULL;
@@ -261,13 +261,13 @@ static void *sub_04e4(u32 size)
 }
 
 __attribute__((noinline))
-static int sub_0558(void *ptr)
+static int transPoolFree(void *ptr)
 {
     return sceKernelFreeVpl(g_vpl_id, ptr);
 }
 
 __attribute__((noinline))
-static int sub_0580(u32 *info)
+static int transPoolGetStatus(u32 *info)
 {
     info[0] = 0x34;
     int ret = sceKernelReferVplStatus(g_vpl_id, info);
@@ -275,7 +275,7 @@ static int sub_0580(u32 *info)
 }
 
 __attribute__((noinline))
-static void sub_0d14(TransReplySession *sess, TransPeerNode *node)
+static void replyPeerEnqueue(TransReplySession *sess, TransPeerNode *node)
 {
     node->next = NULL;
     if (sess->tail)
@@ -286,7 +286,7 @@ static void sub_0d14(TransReplySession *sess, TransPeerNode *node)
 }
 
 __attribute__((noinline))
-static TransPeerNode *sub_0d30(TransReplySession *sess)
+static TransPeerNode *replyPeerDequeue(TransReplySession *sess)
 {
     TransPeerNode *node = sess->head;
     if (node) {
@@ -299,13 +299,13 @@ static TransPeerNode *sub_0d30(TransReplySession *sess)
 }
 
 __attribute__((noinline))
-static TransPeerNode *sub_0d58(TransReplySession *sess)
+static TransPeerNode *replyPeerPeek(TransReplySession *sess)
 {
     return sess->head;
 }
 
 __attribute__((noinline))
-static TransPeerNode *sub_0d60(TransReplySession *sess, const u8 *mac)
+static TransPeerNode *replyPeerFind(TransReplySession *sess, const u8 *mac)
 {
     TransPeerNode *cur = sess->head;
     while (cur) {
@@ -317,7 +317,7 @@ static TransPeerNode *sub_0d60(TransReplySession *sess, const u8 *mac)
 }
 
 __attribute__((noinline))
-static void sub_0db8(TransReplySession *sess, TransPeerNode *node)
+static void replyPeerRemove(TransReplySession *sess, TransPeerNode *node)
 {
     TransPeerNode *cur = sess->head;
     TransPeerNode *prev = NULL;
@@ -350,7 +350,7 @@ int sceNetAdhocTransInt_69F19666(u32 optlen, const void *optdata)
     g_reply_sess.optlen = optlen;
     g_reply_sess.optdata = NULL;
     if (optlen != 0) {
-        void *buf = sub_04e4(optlen);
+        void *buf = transPoolAlloc(optlen);
         g_reply_sess.optdata = buf;
         if (!buf) {
             g_reply_sess_ptr = NULL;
@@ -359,9 +359,9 @@ int sceNetAdhocTransInt_69F19666(u32 optlen, const void *optdata)
         sceKernelMemcpy(buf, optdata, g_reply_sess_ptr->optlen);
     }
     sceKernelMemset(g_reply_sess_ptr->peer_mac, 0, 6);
-    int mid = sceNetAdhocMatchingCreate(1, 2, 0x15, 0x800, 0xf4240, 0x1c9c380, 3, 0xf4240, sub_0b30);
+    int mid = sceNetAdhocMatchingCreate(1, 2, 0x15, 0x800, 0xf4240, 0x1c9c380, 3, 0xf4240, replyMatchingCallback);
     if (mid < 0) {
-        sub_0558(g_reply_sess_ptr->optdata);
+        transPoolFree(g_reply_sess_ptr->optdata);
         g_reply_sess_ptr = NULL;
         return mid;
     }
@@ -379,13 +379,13 @@ int sceNetAdhocTransInt_40D77905(u32 *out)
         return 0x80411107;
 
     int intr = sceKernelCpuSuspendIntr();
-    TransPeerNode *node = sub_0d58(g_reply_sess_ptr);
+    TransPeerNode *node = replyPeerPeek(g_reply_sess_ptr);
     int ret = 0;
     if (node) {
         if (!out) {
             ret = (int)(((node->optlen + 3) & ~3u) + 0x14);
         } else {
-            node = sub_0d30(g_reply_sess_ptr);
+            node = replyPeerDequeue(g_reply_sess_ptr);
             ret = 1;
             out[0] = 0;
             out[1] = node->optlen;
@@ -453,7 +453,7 @@ int sceNetAdhocTransInt_9C6EE447(int total_size, void *arg, int (*cb)(void *, vo
     if (!cb || g_reply_sess_ptr->state != 3)
         return 0x80411107;
 
-    int ret = sub_0000(&g_reply_sess_ptr->ptp_id, g_reply_sess_ptr->peer_mac, total_size, arg, cb);
+    int ret = ptpSendStream(&g_reply_sess_ptr->ptp_id, g_reply_sess_ptr->peer_mac, total_size, arg, cb);
     g_reply_sess_ptr->state = 4;
     if (ret == (int)0x80410708)
         ret = 0x8041110a;
@@ -471,14 +471,14 @@ int sceNetAdhocTransInt_6D8B0D00(void *buf, u32 bufsize, void *arg, int (*cb)(vo
     if (g_reply_sess_ptr->state != 3)
         return 0x80411107;
 
-    int ret = sub_0218(&g_reply_sess_ptr->ptp_id, g_reply_sess_ptr->peer_mac, buf, bufsize, arg, cb);
+    int ret = ptpRecvStream(&g_reply_sess_ptr->ptp_id, g_reply_sess_ptr->peer_mac, buf, bufsize, arg, cb);
     g_reply_sess_ptr->state = 4;
     if (ret == (int)0x80410708)
         ret = 0x8041110a;
     return ret;
 }
 
-static void sub_0b30(int matchingid, int event, const u8 *mac, u32 optlen, const void *optdata)
+static void replyMatchingCallback(int matchingid, int event, const u8 *mac, u32 optlen, const void *optdata)
 {
     if (g_reply_sess_ptr->matching_id != matchingid)
         return;
@@ -488,22 +488,22 @@ static void sub_0b30(int matchingid, int event, const u8 *mac, u32 optlen, const
     case 2:
         intr = sceKernelCpuSuspendIntr();
         if (g_reply_sess_ptr->state == 1) {
-            TransPeerNode *node = sub_04e4(sizeof(TransPeerNode));
+            TransPeerNode *node = transPoolAlloc(sizeof(TransPeerNode));
             if (node) {
                 node->optlen = optlen;
                 node->optdata = NULL;
                 if (optlen != 0) {
-                    void *buf = sub_04e4(optlen);
+                    void *buf = transPoolAlloc(optlen);
                     node->optdata = buf;
                     if (!buf) {
-                        sub_0558(node);
+                        transPoolFree(node);
                         sceKernelCpuResumeIntr(intr);
                         return;
                     }
                     sceKernelMemcpy(buf, optdata, optlen);
                 }
                 sceKernelMemcpy(node->mac, mac, 6);
-                sub_0d14(g_reply_sess_ptr, node);
+                replyPeerEnqueue(g_reply_sess_ptr, node);
             }
         }
         sceKernelCpuResumeIntr(intr);
@@ -525,10 +525,10 @@ static void sub_0b30(int matchingid, int event, const u8 *mac, u32 optlen, const
             g_reply_sess_ptr->state = 4;
             sceKernelSetEventFlag(g_reply_sess_ptr->evf_id, 1);
         } else if (g_reply_sess_ptr->state == 1) {
-            TransPeerNode *node = sub_0d60(g_reply_sess_ptr, mac);
+            TransPeerNode *node = replyPeerFind(g_reply_sess_ptr, mac);
             if (node) {
-                sub_0db8(g_reply_sess_ptr, node);
-                sub_0558(node);
+                replyPeerRemove(g_reply_sess_ptr, node);
+                transPoolFree(node);
             }
         }
         sceKernelCpuResumeIntr(intr);
@@ -542,7 +542,7 @@ int sceNetAdhocTransInt_552E0C4F(u32 poolsize)
 {
     if (g_parent_inited)
         return 0x80411102;
-    int ret = sub_0464(poolsize);
+    int ret = transPoolCreate(poolsize);
     if (ret >= 0) {
         g_parent_inited = 1;
         ret = 0;
@@ -594,7 +594,7 @@ int sceNetAdhocTransInt_0B1F77E1(void)
         return 0x80411105;
     if (g_reply_sess_ptr->state != 3 || g_reply_sess_ptr->ptp_id <= 0)
         return 0x80411107;
-    sub_043c(g_reply_sess_ptr->ptp_id);
+    ptpAbortTransfer(g_reply_sess_ptr->ptp_id);
     return 0;
 }
 
@@ -609,10 +609,10 @@ int sceNetAdhocTransInt_CD469448(void)
     g_reply_sess_ptr->state = 0;
     sceKernelMemset(g_reply_sess_ptr->peer_mac, 0, 6);
     for (;;) {
-        TransPeerNode *node = sub_0d30(g_reply_sess_ptr);
+        TransPeerNode *node = replyPeerDequeue(g_reply_sess_ptr);
         if (!node)
             break;
-        sub_0558(node);
+        transPoolFree(node);
     }
     return 0;
 }
@@ -627,7 +627,7 @@ int sceNetAdhocTransInt_E3707672(void)
         return 0x80411107;
 
     sceNetAdhocMatchingDelete(g_reply_sess_ptr->matching_id);
-    sub_0558(g_reply_sess_ptr->optdata);
+    transPoolFree(g_reply_sess_ptr->optdata);
     g_reply_sess_ptr = NULL;
     return 0;
 }
@@ -638,7 +638,7 @@ int sceNetAdhocTransInt_A735B9B2(void)
         return 0;
     if (g_reply_sess_ptr)
         return 0x80411104;
-    sub_04a8();
+    transPoolDelete();
     g_parent_inited = 0;
     return 0;
 }
@@ -649,16 +649,16 @@ int sceNetAdhocTransInt_B0975880(u32 *info)
         return 0x80411101;
     if (!info)
         return 0x80411103;
-    return sub_0580(info);
+    return transPoolGetStatus(info);
 }
 
 __attribute__((noinline))
-static int sub_1988(TransPeerNode *node, const u8 *mac, u32 optlen, const void *optdata)
+static int childPeerInit(TransPeerNode *node, const u8 *mac, u32 optlen, const void *optdata)
 {
     node->optlen = optlen;
     node->optdata = NULL;
     if (optlen != 0) {
-        void *buf = sub_04e4(optlen);
+        void *buf = transPoolAlloc(optlen);
         node->optdata = buf;
         if (!buf)
             return -1;
@@ -669,7 +669,7 @@ static int sub_1988(TransPeerNode *node, const u8 *mac, u32 optlen, const void *
 }
 
 __attribute__((noinline))
-static TransPeerNode *sub_1a1c(const u8 *mac)
+static TransPeerNode *childPeerFind(const u8 *mac)
 {
     TransPeerNode *cur = g_child_list;
     while (cur) {
@@ -681,7 +681,7 @@ static TransPeerNode *sub_1a1c(const u8 *mac)
 }
 
 __attribute__((noinline))
-static void sub_1a78(TransPeerNode *node)
+static void childPeerAppend(TransPeerNode *node)
 {
     if (!g_child_list) {
         g_child_list = node;
@@ -695,7 +695,7 @@ static void sub_1a78(TransPeerNode *node)
 }
 
 __attribute__((noinline))
-static void sub_1abc(TransPeerNode *node)
+static void childPeerRemove(TransPeerNode *node)
 {
     if (g_child_list == node) {
         g_child_list = node->next;
@@ -722,7 +722,7 @@ int sceNetAdhocTransInt_CD9F1D46(u32 optlen, const void *optdata)
     g_req_sess.optlen = optlen;
     g_req_sess.optdata = NULL;
     if (optlen != 0) {
-        void *buf = sub_04e4(optlen);
+        void *buf = transPoolAlloc(optlen);
         g_req_sess.optdata = buf;
         if (!buf) {
             g_req_sess_ptr = NULL;
@@ -731,9 +731,9 @@ int sceNetAdhocTransInt_CD9F1D46(u32 optlen, const void *optdata)
         sceKernelMemcpy(buf, optdata, g_req_sess_ptr->optlen);
     }
     sceKernelMemset(g_req_sess_ptr->peer_mac, 0, 6);
-    int mid = sceNetAdhocMatchingCreate(2, 2, 0x15, 0x800, 0xf4240, 0x1c9c380, 3, 0xf4240, sub_1724);
+    int mid = sceNetAdhocMatchingCreate(2, 2, 0x15, 0x800, 0xf4240, 0x1c9c380, 3, 0xf4240, reqMatchingCallback);
     if (mid < 0) {
-        sub_0558(g_req_sess_ptr->optdata);
+        transPoolFree(g_req_sess_ptr->optdata);
         g_req_sess_ptr = NULL;
         return mid;
     }
@@ -771,8 +771,8 @@ int sceNetAdhocTransInt_8897358A(int *buflen, u8 *buf)
                 prev_out->next = (TransPeerNode *)out;
             prev_out = (TransPeerNode *)out;
             g_child_list = cur->next;
-            sub_0558(cur->optdata);
-            sub_0558(cur);
+            transPoolFree(cur->optdata);
+            transPoolFree(cur);
         }
         total = next_total;
         cur = next;
@@ -824,7 +824,7 @@ int sceNetAdhocTransInt_97D389A3(int total_size, void *arg, int (*cb)(void *, vo
     if (!cb || g_req_sess_ptr->state != 3)
         return 0x80411107;
 
-    int ret = sub_0000(&g_req_sess_ptr->ptp_id, g_req_sess_ptr->peer_mac, total_size, arg, cb);
+    int ret = ptpSendStream(&g_req_sess_ptr->ptp_id, g_req_sess_ptr->peer_mac, total_size, arg, cb);
     g_req_sess_ptr->state = 4;
     if (ret == (int)0x80410708)
         ret = 0x8041110a;
@@ -842,14 +842,14 @@ int sceNetAdhocTransInt_D438691D(void *buf, u32 bufsize, void *arg, int (*cb)(vo
     if (g_req_sess_ptr->state != 3)
         return 0x80411107;
 
-    int ret = sub_0218(&g_req_sess_ptr->ptp_id, g_req_sess_ptr->peer_mac, buf, bufsize, arg, cb);
+    int ret = ptpRecvStream(&g_req_sess_ptr->ptp_id, g_req_sess_ptr->peer_mac, buf, bufsize, arg, cb);
     g_req_sess_ptr->state = 4;
     if (ret == (int)0x80410708)
         ret = 0x8041110a;
     return ret;
 }
 
-static void sub_1724(int matchingid, int event, const u8 *mac, u32 optlen, const void *optdata)
+static void reqMatchingCallback(int matchingid, int event, const u8 *mac, u32 optlen, const void *optdata)
 {
     if (g_req_sess_ptr->matching_id != matchingid)
         return;
@@ -860,27 +860,27 @@ static void sub_1724(int matchingid, int event, const u8 *mac, u32 optlen, const
         if (g_req_sess_ptr->state != 1)
             return;
         sceKernelLockLwMutex(g_child_mutex, 1, NULL);
-        TransPeerNode *node = sub_1a1c(mac);
+        TransPeerNode *node = childPeerFind(mac);
         if (node) {
             if (node->optlen == optlen && sceNet_lib_E0A81C7C(node->optdata, optdata, optlen) == 0) {
                 sceKernelUnlockLwMutex(g_child_mutex, 1);
                 return;
             }
-            sub_1abc(node);
+            childPeerRemove(node);
             if (node->optlen != 0)
-                sub_0558(node->optdata);
+                transPoolFree(node->optdata);
         } else {
-            node = sub_04e4(sizeof(TransPeerNode));
+            node = transPoolAlloc(sizeof(TransPeerNode));
             if (!node) {
                 sceKernelUnlockLwMutex(g_child_mutex, 1);
                 return;
             }
         }
         sceKernelMemset(node, 0, sizeof(TransPeerNode));
-        if (sub_1988(node, mac, optlen, optdata) < 0)
-            sub_0558(node);
+        if (childPeerInit(node, mac, optlen, optdata) < 0)
+            transPoolFree(node);
         else
-            sub_1a78(node);
+            childPeerAppend(node);
         sceKernelUnlockLwMutex(g_child_mutex, 1);
         break;
     case 6:
@@ -895,11 +895,11 @@ static void sub_1724(int matchingid, int event, const u8 *mac, u32 optlen, const
     case 10:
         if (g_req_sess_ptr->state == 1) {
             sceKernelLockLwMutex(g_child_mutex, 1, NULL);
-            TransPeerNode *n = sub_1a1c(mac);
+            TransPeerNode *n = childPeerFind(mac);
             if (n) {
-                sub_1abc(n);
-                sub_0558(n->optdata);
-                sub_0558(n);
+                childPeerRemove(n);
+                transPoolFree(n->optdata);
+                transPoolFree(n);
             }
             sceKernelUnlockLwMutex(g_child_mutex, 1);
             break;
@@ -923,12 +923,12 @@ int sceNetAdhocTransInt_75DAEB6B(u32 poolsize)
 {
     if (g_child_inited)
         return 0x80411102;
-    int ret = sub_0464(poolsize);
+    int ret = transPoolCreate(poolsize);
     if (ret < 0)
         return ret;
     ret = sceKernelCreateLwMutex(g_child_mutex, "SceNetAdhocTransferChild", 0, 0, NULL);
     if (ret < 0) {
-        sub_04a8();
+        transPoolDelete();
         return ret;
     }
     g_child_inited = 1;
@@ -979,7 +979,7 @@ int sceNetAdhocTransInt_6F595DFA(void)
         return 0x80411105;
     if (g_req_sess_ptr->state != 3 || g_req_sess_ptr->ptp_id <= 0)
         return 0x80411107;
-    sub_043c(g_req_sess_ptr->ptp_id);
+    ptpAbortTransfer(g_req_sess_ptr->ptp_id);
     return 0;
 }
 
@@ -997,8 +997,8 @@ int sceNetAdhocTransInt_645E312A(void)
     TransPeerNode *cur = g_child_list;
     while (cur) {
         TransPeerNode *next = cur->next;
-        sub_0558(cur->optdata);
-        sub_0558(cur);
+        transPoolFree(cur->optdata);
+        transPoolFree(cur);
         cur = next;
     }
     g_child_list = NULL;
@@ -1027,7 +1027,7 @@ int sceNetAdhocTransInt_541E3EAB(void)
     if (g_req_sess_ptr)
         return 0x80411104;
     sceKernelDeleteLwMutex(g_child_mutex);
-    sub_04a8();
+    transPoolDelete();
     g_child_inited = 0;
     return 0;
 }
@@ -1038,5 +1038,5 @@ int sceNetAdhocTransInt_7CFB68C9(u32 *info)
         return 0x80411101;
     if (!info)
         return 0x80411103;
-    return sub_0580(info);
+    return transPoolGetStatus(info);
 }
