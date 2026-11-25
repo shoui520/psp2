@@ -11,35 +11,47 @@ static SceSysEventHandler g_sysEventHandler = {
 
 static SceUID g_callbacks[16];
 
+typedef struct HprmUidCB {
+	u32 header[5];
+	u16 sizeAndType;
+	u16 attr;
+} HprmUidCB;
+
+static inline u32 hprmShiftK1(void)
+{
+	u32 old = pspGetK1();
+	pspSetK1(old << 11);
+	return old;
+}
+
 int sceHprm_C7154136(int slot, SceUID cbid)
 {
-	u32 old_k1 = pspGetK1();
-	s32 shifted_k1 = (s32)(old_k1 << 11);
+	u32 old_k1 = hprmShiftK1();
 
 	if ((u32)(slot + 1) >= 0x21u) {
 		pspSetK1(old_k1);
 		return 0x80000102;
 	}
-	if (shifted_k1 < 0 && slot >= 16) {
+	if ((s32)pspGetK1() < 0 && slot >= 16) {
 		pspSetK1(old_k1);
 		return 0x80000023;
 	}
 
-	pspSetK1((u32)shifted_k1);
 	if (sceKernelGetThreadmanIdType(cbid) != 8) {
 		pspSetK1(old_k1);
 		return 0x80000100;
 	}
 
-	void *cb = NULL;
-	if (sceKernelGetUIDcontrolBlock(cbid, &cb) != 0) {
+	void *cbRaw = NULL;
+	if (sceKernelGetUIDcontrolBlock(cbid, &cbRaw) != 0) {
 		pspSetK1(old_k1);
 		return 0x80000023;
 	}
+	HprmUidCB *cb = (HprmUidCB *)cbRaw;
 
 	u32 perm = 2;
-	if (((u32)shifted_k1 >> 31) != 0) {
-		perm = *(u16 *)((u8 *)cb + 0x16) & 2u;
+	if ((pspGetK1() >> 31) != 0) {
+		perm = cb->attr & 2u;
 	}
 	if (perm == 0) {
 		pspSetK1(old_k1);
@@ -55,7 +67,7 @@ int sceHprm_C7154136(int slot, SceUID cbid)
 		} else {
 			res = 0x80000020;
 		}
-	} else if (shifted_k1 >= 0) {
+	} else if ((s32)pspGetK1() >= 0) {
 		res = 0x80000004;
 	} else {
 		res = 0x80000022;
@@ -74,14 +86,13 @@ int sceHprm_C7154136(int slot, SceUID cbid)
 
 int sceHprm_444ED0B7(u32 slot)
 {
-	u32 old_k1 = pspGetK1();
-	s32 shifted_k1 = (s32)(old_k1 << 11);
+	u32 old_k1 = hprmShiftK1();
 
 	if (slot >= 0x20u) {
 		pspSetK1(old_k1);
 		return 0x80000102;
 	}
-	if (shifted_k1 < 0 && (s32)slot >= 16) {
+	if ((s32)pspGetK1() < 0 && (s32)slot >= 16) {
 		pspSetK1(old_k1);
 		return 0x80000023;
 	}
@@ -247,20 +258,17 @@ int sceHprmPeekCurrentKey(u32 *key)
 
 int sceHprmPeekLatch(u32 *latch)
 {
-	u32 old_k1 = pspGetK1();
-	s32 shifted_k1 = (s32)(old_k1 << 11);
-	pspSetK1((u32)shifted_k1);
-
+	u32 old_k1 = hprmShiftK1();
 	int intr = sceKernelCpuSuspendIntr();
-	if ((shifted_k1 & (s32)latch) < 0) {
+	if ((s32)(pspGetK1() & (u32)latch) < 0) {
 		sceKernelCpuResumeIntr(intr);
 		pspSetK1(old_k1);
 		return 0x80000023;
 	}
-	latch[3] = 0;
-	latch[0] = 0;
-	latch[1] = 0;
-	latch[2] = 0;
+	*(volatile u32 *)&latch[3] = 0;
+	*(volatile u32 *)&latch[0] = 0;
+	*(volatile u32 *)&latch[1] = 0;
+	*(volatile u32 *)&latch[2] = 0;
 	sceKernelCpuResumeIntr(intr);
 	pspSetK1(old_k1);
 	return 0;
@@ -268,20 +276,17 @@ int sceHprmPeekLatch(u32 *latch)
 
 int sceHprmReadLatch(u32 *latch)
 {
-	u32 old_k1 = pspGetK1();
-	s32 shifted_k1 = (s32)(old_k1 << 11);
-	pspSetK1((u32)shifted_k1);
-
+	u32 old_k1 = hprmShiftK1();
 	int intr = sceKernelCpuSuspendIntr();
-	if ((shifted_k1 & (s32)latch) < 0) {
+	if ((s32)(pspGetK1() & (u32)latch) < 0) {
 		sceKernelCpuResumeIntr(intr);
 		pspSetK1(old_k1);
 		return 0x80000023;
 	}
-	latch[3] = 0;
-	latch[0] = 0;
-	latch[1] = 0;
-	latch[2] = 0;
+	*(volatile u32 *)&latch[3] = 0;
+	*(volatile u32 *)&latch[0] = 0;
+	*(volatile u32 *)&latch[1] = 0;
+	*(volatile u32 *)&latch[2] = 0;
 	sceKernelCpuResumeIntr(intr);
 	pspSetK1(old_k1);
 	return 0;
@@ -302,13 +307,13 @@ int sceHprm_driver_DC895B2B(void)
 	return 0;
 }
 
-int sceHprm_driver_8C728BB4(u32 *a0, u32 *a1)
+int sceHprm_driver_8C728BB4(u32 *outFirst, u32 *outSecond)
 {
-	if (a0 != NULL) {
-		*a0 = 0;
+	if (outFirst != NULL) {
+		*outFirst = 0;
 	}
-	if (a1 != NULL) {
-		*a1 = 0;
+	if (outSecond != NULL) {
+		*outSecond = 0;
 	}
 	return 0;
 }

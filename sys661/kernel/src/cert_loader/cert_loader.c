@@ -6,9 +6,9 @@ SCE_MODULE_INFO("sceCert_Loader",
 SCE_SDK_VERSION(0x06060110);
 
 extern int sceIoOpen(const char *file, int flags, int mode);
-extern int sceIoClose(int fd);
-extern s64 sceIoLseek(int fd, s64 offset, int whence);
-extern int sceIoRead(int fd, void *data, u32 size);
+extern int sceIoClose(int fileDesc);
+extern s64 sceIoLseek(int fileDesc, s64 offset, int whence);
+extern int sceIoRead(int fileDesc, void *data, u32 size);
 extern u32 sceKernelGetCompiledSdkVersion(void);
 
 typedef struct SceCertNode {
@@ -200,25 +200,27 @@ static s32 loadCertCategoryInternal(u32 cat, u32 mask, SceCertNode **outList,
                                     u8 *buf, u32 bufSize, u32 *outSize, s32 writeMode)
 {
     u32 curK1 = pspGetK1();
-    s32 fd = sceIoOpen("flash0:/data/cert/CA_LIST.cer", 0x04000001, 0);
-    if (fd < 0) {
-        return fd;
+    s32 fileDesc = sceIoOpen("flash0:/data/cert/CA_LIST.cer", 0x04000001, 0);
+    if (fileDesc < 0) {
+        return fileDesc;
     }
 
     s32 ret = 0;
     s32 done = 0;
+    s32 failed = 0;
     s32 count = 0;
     u32 totalBytes = 0;
     SceCertNode *head = NULL;
     SceCertNode *tail = NULL;
 
-    do {
+    while (!done && !failed) {
         s64 offset = 0;
         u32 certSize = 0;
 
         if (cat >= 15 || cat == 0) {
             ret = 0x80000025;
-            goto cleanup;
+            failed = 1;
+            break;
         }
 
         switch (cat) {
@@ -316,21 +318,24 @@ static s32 loadCertCategoryInternal(u32 cat, u32 mask, SceCertNode **outList,
 
         if (done != 1) {
             u32 pad = (-(certSize + 1)) & 3u;
-            s64 seekRes = sceIoLseek(fd, offset, 0);
+            s64 seekRes = sceIoLseek(fileDesc, offset, 0);
             if (seekRes < 0) {
                 ret = (s32)seekRes;
-                goto cleanup;
+                failed = 1;
+                break;
             }
             u32 paddedSize = certSize + pad;
             u8 *certData = NULL;
             if (writeMode == 1) {
                 if (bufSize - totalBytes < paddedSize + 9) {
                     ret = 0x80000022;
-                    goto cleanup;
+                    failed = 1;
+                    break;
                 }
-                ret = sceIoRead(fd, buf, certSize);
+                ret = sceIoRead(fileDesc, buf, certSize);
                 if (ret < 0) {
-                    goto cleanup;
+                    failed = 1;
+                    break;
                 }
                 buf[certSize] = '\0';
                 certData = buf;
@@ -352,36 +357,41 @@ static s32 loadCertCategoryInternal(u32 cat, u32 mask, SceCertNode **outList,
             }
             totalBytes += sizeof(SceCertNode);
         }
-    } while (done != 1);
+    }
 
-    if (writeMode == 1) {
+    if (!failed && writeMode == 1) {
         if (*outList != NULL) {
             SceCertNode *cur = *outList;
             if ((s32)(curK1 & (u32)cur) < 0) {
                 ret = 0x80000023;
-                goto cleanup;
-            }
-            while (cur->next != NULL) {
-                if ((s32)(curK1 & (u32)cur->next) < 0) {
-                    ret = 0x80000023;
-                    goto cleanup;
+                failed = 1;
+            } else {
+                while (cur->next != NULL) {
+                    if ((s32)(curK1 & (u32)cur->next) < 0) {
+                        ret = 0x80000023;
+                        failed = 1;
+                        break;
+                    }
+                    cur = cur->next;
                 }
-                cur = cur->next;
+                if (!failed) {
+                    cur->next = head;
+                }
             }
-            cur->next = head;
         } else {
             *outList = head;
         }
     }
 
-    if (outSize != NULL) {
-        *outSize += totalBytes;
+    if (!failed) {
+        if (outSize != NULL) {
+            *outSize += totalBytes;
+        }
+        ret = count;
     }
-    ret = count;
 
-cleanup:
-    if (fd != 0) {
-        sceIoClose(fd);
+    if (fileDesc != 0) {
+        sceIoClose(fileDesc);
     }
     return ret;
 }

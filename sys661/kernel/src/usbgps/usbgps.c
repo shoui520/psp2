@@ -6,13 +6,13 @@ SCE_SDK_VERSION(0x06060110);
 
 extern s32 sceKermit_driver_5280B410(s32 cmd, void *cb);
 extern s32 sceUsb_driver_55494514(void);
-extern s32 sceUsb_driver_6C68EE25(s32 a0, s32 a1);
+extern s32 sceUsb_driver_6C68EE25(s32 driverId, s32 arg);
 extern s32 sceUsb_driver_79545577(void);
 extern s32 sceUsb_driver_7C5791D3(void);
 extern s32 sceUsb_driver_8A2D38D7(void);
 extern s32 sceUsb_driver_9009AD6B(void);
-extern s32 sceUsb_driver_AB8ADCC8(void *a0, void *a1);
-extern s32 sceUsb_driver_C99E1766(s32 a0, s32 a1);
+extern s32 sceUsb_driver_AB8ADCC8(void *gpsData, void *satData);
+extern s32 sceUsb_driver_C99E1766(s32 driverId, s32 arg);
 extern s32 sceUsb_driver_CB30E794(void);
 extern s32 sceUsb_driver_D9EE03ED(void);
 
@@ -34,8 +34,8 @@ static s32 g_usbState;
 
 s32 module_start(SceSize args, void *argp)
 {
-    g_initFlag = 0;
     g_usbState = 0;
+    g_initFlag = 0;
     if ((sceUsb_driver_9009AD6B() & 0xF) == 2)
         sceUsb_driver_55494514();
     g_state = 0;
@@ -162,43 +162,42 @@ s32 sceUsbGps_driver_934EC2B2(void *gps_data, void *sat_data)
     s32 res;
     if (sceUsb_driver_D9EE03ED() == 0) {
         res = 0x80243908;
-        goto out;
-    }
-    if ((sceUsb_driver_9009AD6B() & 0xF00) != 0x200) {
-        if (g_state != 0)
-            g_state = 1;
-        if ((sceUsb_driver_9009AD6B() & 0xF) == 2)
-            sceUsb_driver_55494514();
-    }
-    s32 st = g_state;
-    if (st == 4) {
-        s32 usb_st = g_usbState;
-        if (usb_st == 0) {
-            usb_st = sceUsb_driver_CB30E794();
-            g_usbState = usb_st;
-        }
-        if (usb_st != 1) {
-            g_state = 1;
-            sceUsb_driver_55494514();
-            res = 0x80244004;
-        } else if ((gps_data != NULL && !pspK1StaBufOk(gps_data, 0x30)) ||
-                   (sat_data != NULL && !pspK1StaBufOk(sat_data, 0x104))) {
-            res = 0x80244006;
-        } else {
-            res = sceUsb_driver_AB8ADCC8(gps_data, sat_data);
-        }
-    } else if (st == 1) {
-        res = 0x80244004;
-    } else if (st < 2) {
-        res = (st == 0) ? 0x80244002 : 0x80244010;
-    } else if (st == 2) {
-        res = 0x80243007;
-    } else if (st == 3) {
-        res = 0x80244005;
     } else {
-        res = 0x80244010;
+        if ((sceUsb_driver_9009AD6B() & 0xF00) != 0x200) {
+            if (g_state != 0)
+                g_state = 1;
+            if ((sceUsb_driver_9009AD6B() & 0xF) == 2)
+                sceUsb_driver_55494514();
+        }
+        s32 st = g_state;
+        if (st == 4) {
+            s32 usb_st = g_usbState;
+            if (usb_st == 0) {
+                usb_st = sceUsb_driver_CB30E794();
+                g_usbState = usb_st;
+            }
+            if (usb_st != 1) {
+                g_state = 1;
+                sceUsb_driver_55494514();
+                res = 0x80244004;
+            } else if ((gps_data != NULL && !pspK1StaBufOk(gps_data, 0x30)) ||
+                       (sat_data != NULL && !pspK1StaBufOk(sat_data, 0x104))) {
+                res = 0x80244006;
+            } else {
+                res = sceUsb_driver_AB8ADCC8(gps_data, sat_data);
+            }
+        } else if (st == 1) {
+            res = 0x80244004;
+        } else if (st < 2) {
+            res = (st == 0) ? 0x80244002 : 0x80244010;
+        } else if (st == 2) {
+            res = 0x80243007;
+        } else if (st == 3) {
+            res = 0x80244005;
+        } else {
+            res = 0x80244010;
+        }
     }
-out:
     pspSetK1(k1);
     return res;
 }
@@ -230,14 +229,14 @@ s32 sceUsbGps_63D1F89D(void)
     return 0;
 }
 
-s32 sceUsbGps_driver_9D8F99E8(s32 a0, s32 a1)
+s32 sceUsbGps_driver_9D8F99E8(s32 paramMode, s32 paramVal)
 {
     s32 k1 = pspShiftK1();
     s32 ok = sceUsb_driver_D9EE03ED();
     pspSetK1(k1);
     return (ok != 0) ? 0 : 0x80243908;
 }
-s32 sceUsbGps_9D8F99E8(s32 a0, s32 a1) __attribute__((alias("sceUsbGps_driver_9D8F99E8")));
+s32 sceUsbGps_9D8F99E8(s32 paramMode, s32 paramVal) __attribute__((alias("sceUsbGps_driver_9D8F99E8")));
 
 s32 sceUsbGps_driver_31F95CDE(void)
 {

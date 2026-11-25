@@ -4,8 +4,8 @@
 
 #include <kermit.h>
 
-extern s32 sceUsb_driver_C99E1766(s32 a0, s32 a1);
-extern s32 sceUsb_driver_6C68EE25(s32 a0, s32 a1);
+extern s32 sceUsb_driver_C99E1766(s32 driverId, s32 arg);
+extern s32 sceUsb_driver_6C68EE25(s32 driverId, s32 arg);
 
 s32 module_start(SceSize args, void *argp)
 {
