@@ -1,0 +1,235 @@
+name: sceNpService
+attributes: 0x0006
+version: [1, 3]
+sdk_version: 0x06060110
+stub_order: [Kernel_Library, ModuleMgrForUser, SysMemUserForUser, ThreadManForUser, sceHttp, sceNet, sceNet_lib, sceNp, sceNpAuth, sceNpCore, sceParseHttp, sceRtc]
+exports:
+  - name: syslib
+    version: [0, 0]
+    attributes: 0x8000
+    variables:
+      - module_info: 0xf01d73a7
+      - module_sdk_version: 0x11b97506
+  - name: sceNpService
+    version: [0, 17]
+    attributes: 0x0001
+    len: 5
+    pad: 3
+    extra_words: [0x00020000]
+    bucket_words: [0x00030000, 0x00080006, 0x000d0009, 0x00190014, 0x00200020, 0x00270022, 0x002d002a, 0x00340032]
+    functions:
+      - sceNpService_00041295: 0x00041295
+      - sceNpServiceTerm: 0x00acfac3
+      - sceNpServiceInit: 0x0f8f5821
+      - sceNpManagerSigninUpdateGetStatus: 0x168b8de5
+      - sceNpRosterDeleteBlockListEntry: 0x174d0d24
+      - sceNpManagerSigninUpdateInitStart: 0x1da3e950
+      - sceNpServiceGetMemoryStat: 0x250488f9
+      - sceNpManagerSigninUpdateAbort: 0x268c009d
+      - sceNpLookupNpId: 0x389a0d44
+      - sceNpService_41E99DD1: 0x41e99dd1
+      - sceNpService_43E635D2: 0x43e635d2
+      - sceNpLookupAbortTransaction: 0x4b4e4e71
+      - sceNpRosterGetFriendListEntry: 0x4e851b10
+      - sceNpRosterGetBlockListEntry: 0x506c318d
+      - sceNpService_53F01574: 0x53f01574
+      - sceNpLookupCreateTransactionCtx: 0x5494274b
+      - sceNpService_570DB15B: 0x570db15b
+      - sceNpRosterGetFriendListEntryCount: 0x58251346
+      - sceNpService_5B74DE06: 0x5b74de06
+      - sceNpRosterAbort: 0x5f5e32af
+      - sceNpService_61AB2062: 0x61ab2062
+      - sceNpService_63644C02: 0x63644c02
+      - sceNpService_66B3E216: 0x66b3e216
+      - sceNpRosterDeleteRequest: 0x66c64821
+      - sceNpService_68DE4402: 0x68de4402
+      - sceNpRosterDeleteFriendListEntry: 0x72a1ce0d
+      - sceNpRosterAcceptFriendListEntry: 0x75dacb57
+      - sceNpService_76867C01: 0x76867c01
+      - sceNpManagerSigninUpdateShutdownStart: 0x78802d5f
+      - sceNpRosterAddFriendListEntry: 0x788f2b5e
+      - sceNpService_7EF4312E: 0x7ef4312e
+      - sceNpService_7FA900FA: 0x7fa900fa
+      - sceNpLookupUserProfile: 0x90e4db6a
+      - sceNpService_9CD89895: 0x9cd89895
+      - sceNpRosterGetBlockListEntryCount: 0xa01443aa
+      - sceNpRosterGetFriendListMessage: 0xa164cacc
+      - sceNpLookupDestroyTransactionCtx: 0xa670d3a3
+      - sceNpService_A88B932E: 0xa88b932e
+      - sceNpService_AD2C0674: 0xad2c0674
+      - sceNpService_B2EA4530: 0xb2ea4530
+      - sceNpService_B9D7D1A3: 0xb9d7d1a3
+      - sceNpRosterCreateRequest: 0xbe22eea3
+      - sceNpService_C5094BE6: 0xc5094be6
+      - sceNpLookupTitleSmallStorage: 0xc76f55ed
+      - sceNpService_CAF9E5FD: 0xcaf9e5fd
+      - sceNpService_D05205D6: 0xd05205d6
+      - sceNpService_D6E95870: 0xd6e95870
+      - sceNpService_D7A0CD2D: 0xd7a0cd2d
+      - sceNpService_D97B509F: 0xd97b509f
+      - sceNpService_DD8B5E53: 0xdd8b5e53
+      - sceNpService_E00CDEBB: 0xe00cdebb
+      - sceNpService_EBC076F3: 0xebc076f3
+      - sceNpRosterAddBlockListEntry: 0xfc0bc8db
+imports:
+  - name: sceNpCore
+    version: [0, 17]
+    attributes: 0x4009
+    pad: 6
+    functions:
+      - sceNpCore_52440ABF: 0x52440abf
+  - name: SysMemUserForUser
+    version: [0, 17]
+    attributes: 0x4000
+    pad: 6
+    functions:
+      - sceKernelQueryMemoryInfo: 0x2a3e5280
+      - sceKernelGetCompiledSdkVersion: 0xfc114573
+  - name: sceRtc
+    version: [0, 17]
+    attributes: 0x4001
+    pad: 5
+    functions:
+      - sceRtcGetCurrentTick: 0x3f7ad767
+      - sceRtc_508BA64B: 0x508ba64b
+      - sceRtcParseDateTime: 0xdfbc5f16
+  - name: sceNet
+    version: [0, 17]
+    attributes: 0x0009
+    pad: 5
+    functions:
+      - sceNetFreeThreadinfo: 0x50647530
+  - name: sceNet_lib
+    version: [0, 17]
+    attributes: 0x0009
+    pad: 5
+    functions:
+      - sceNet_lib_1FB2FDDD: 0x1fb2fddd
+      - sceNet_lib_2A73ADDC: 0x2a73addc
+      - sceNet_lib_384EFE14: 0x384efe14
+      - sceNet_lib_5705F6F9: 0x5705f6f9
+      - sceNet_lib_750F705D: 0x750f705d
+      - sceNet_lib_80C9F02A: 0x80c9f02a
+      - sceNet_lib_94DCA9F0: 0x94dca9f0
+      - sceNet_lib_A0F16ABD: 0xa0f16abd
+      - sceNet_lib_B5CE388A: 0xb5ce388a
+      - sceNet_lib_B9085A96: 0xb9085a96
+      - sceNet_lib_CF705E46: 0xcf705e46
+      - sceNet_lib_D8722983: 0xd8722983
+      - sceNet_lib_E0A81C7C: 0xe0a81c7c
+  - name: sceParseHttp
+    version: [0, 17]
+    attributes: 0x0009
+    pad: 7
+    functions:
+      - sceParseHttpResponseHeader: 0xad7bfdef
+  - name: sceHttp
+    version: [0, 17]
+    attributes: 0x0009
+    pad: 4
+    functions:
+      - sceHttpGetContentLength: 0x0282a3bd
+      - sceHttpDeleteHeader: 0x15540184
+      - sceHttpSetRecvTimeOut: 0x1f0fc3e3
+      - sceHttpSetAuthInfoCallback: 0x267618f4
+      - sceHttpAddExtraHeader: 0x3eaba285
+      - sceHttpCreateRequest: 0x47347b50
+      - sceHttpGetStatusCode: 0x4cc7d78f
+      - sceHttpDeleteConnection: 0x5152773b
+      - sceHttpSetConnectTimeOut: 0x8acd1f73
+      - sceHttpCreateConnection: 0x8eefd953
+      - sceHttpSetSendTimeOut: 0x9988172d
+      - sceHttpCreateTemplate: 0x9b1f1f36
+      - sceHttpDeleteRequest: 0xa5512e01
+      - sceHttpsGetSslError: 0xab1540d5
+      - sceHttpCreateRequestWithURL: 0xb509b09e
+      - sceHttpSendRequest: 0xbb70706f
+      - sceHttpAbortRequest: 0xc10b6bd9
+      - sceHttpCreateConnectionWithURL: 0xcdf8ecb9
+      - sceHttpGetAllHeader: 0xdb266ccf
+      - sceHttpReadData: 0xedeeb999
+      - sceHttpDeleteTemplate: 0xfcf8c055
+      - sceHttp_3C478044: 0x3c478044
+      - sceHttp_87F1E666: 0x87f1e666
+  - name: sceNp
+    version: [0, 17]
+    attributes: 0x0009
+    pad: 6
+    functions:
+      - sceNp_02CA8CAA: 0x02ca8caa
+      - sceNp_0B8BEE48: 0x0b8bee48
+      - sceNp_1916432C: 0x1916432c
+      - sceNp_4B09907A: 0x4b09907a
+      - sceNp_5FA879D8: 0x5fa879d8
+      - sceNp_64F72B22: 0x64f72b22
+      - sceNp_66B86876: 0x66b86876
+      - sceNp_67BCF9E3: 0x67bcf9e3
+      - sceNp_6999EDC4: 0x6999edc4
+      - sceNp_9B87B19B: 0x9b87b19b
+      - sceNp_B2BFADB2: 0xb2bfadb2
+      - sceNp_B819A0C8: 0xb819a0c8
+      - sceNp_C0B3616C: 0xc0b3616c
+      - sceNp_C250A650: 0xc250a650
+      - sceNp_C48F2847: 0xc48f2847
+      - sceNp_CF83CC3B: 0xcf83cc3b
+      - sceNp_E24DA399: 0xe24da399
+      - sceNp_E41288E7: 0xe41288e7
+      - sceNp_E90DFBC4: 0xe90dfbc4
+      - sceNp_F2B95034: 0xf2b95034
+  - name: sceNpAuth
+    version: [0, 17]
+    attributes: 0x0009
+    pad: 6
+    functions:
+      - sceNpAuthGetTicket: 0x3f1c1f70
+      - sceNpAuthGetTicketParam: 0x5a3cb57a
+      - sceNpAuth_61BB18B3: 0x61bb18b3
+      - sceNpAuthDestroyRequest: 0x72bb0467
+      - sceNpAuth_B714FBDD: 0xb714fbdd
+      - sceNpAuth_CE85B3B8: 0xce85b3b8
+      - sceNpAuthAbortRequest: 0xd99455dd
+      - sceNpAuth_DAD65284: 0xdad65284
+  - name: Kernel_Library
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 5
+    functions:
+      - sceKernelCpuSuspendIntr: 0x092968f4
+      - sceKernelMemset: 0xa089eca4
+      - sceKernelLockLwMutex: 0xbea46419
+      - _sceKernelCheckThreadStack: 0xd13bde95
+      - sceKernelUnlockLwMutex: 0x15b6446b
+      - sceKernelMemcpy: 0x1839852a
+      - sceKernelCpuResumeIntr: 0x5f10d406
+  - name: ModuleMgrForUser
+    version: [0, 17]
+    attributes: 0x4001
+    pad: 7
+    functions:
+      - sceKernelGetModuleGPByAddress: 0xd2fbc957
+  - name: ThreadManForUser
+    version: [0, 17]
+    attributes: 0x4001
+    pad: 3
+    functions:
+      - sceKernelDelayThread: 0xceadeb47
+      - sceKernelCreateSema: 0xd6da4ba1
+      - sceKernelStartThread: 0xf475845d
+      - sceKernelDeleteMutex: 0xf8170fbe
+      - sceKernelWaitThreadEnd: 0x278c0df5
+      - sceKernelDeleteSema: 0x28b6489c
+      - sceKernelReferVplStatus: 0x39810265
+      - sceKernelSignalSema: 0x3f53e640
+      - sceKernelCreateThread: 0x446d8de6
+      - sceKernelWaitSema: 0x4e3a1105
+      - sceKernelCreateVpl: 0x56c039b5
+      - sceKernelDeleteLwMutex: 0x60107536
+      - sceKernelUnlockMutex: 0x6b30100f
+      - sceKernelDeleteVpl: 0x89b3d48c
+      - sceKernelDeleteThread: 0x9fa03cd3
+      - sceKernelExitThread: 0xaa73c935
+      - sceKernelCreateLwMutex: 0x19cff145
+      - sceKernelTryAllocateVpl: 0xaf36d708
+      - sceKernelLockMutex: 0xb011b11f
+      - sceKernelFreeVpl: 0xb736e9ff
+      - sceKernelCreateMutex: 0xb7d098c6
