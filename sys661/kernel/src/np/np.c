@@ -85,8 +85,8 @@ static void *npMemcpy(void *dst, const void *src, int len);
 static void *npMemset(void *dst, int c, int len);
 static void *npMemchr(const void *s, int c, int len);
 static int npStrlen(const char *s);
-static int npStrncmp(const char *s1, const char *s2, int n);
-static int npStrcmp(const char *s1, const char *s2);
+static int npStrncmp(const char *lhs, const char *rhs, int n);
+static int npStrcmp(const char *lhs, const char *rhs);
 int sceNp_2E4769C3(void);
 int sceNp_E24DA399(void);
 int sceNp_4556A257(char *dst, u32 dst_size, const char *src, u32 src_size, u32 *out_written, u32 *out_read);
@@ -116,18 +116,18 @@ static int npGetCtype(int c)
 }
 
 /* npMemcmp @ 0x125c */
-static int npMemcmp(const void *s1, const void *s2, int n)
+static int npMemcmp(const void *lhs, const void *rhs, int n)
 {
-    const u8 *p1 = (const u8 *)s1;
-    const u8 *p2 = (const u8 *)s2;
+    const u8 *left = (const u8 *)lhs;
+    const u8 *right = (const u8 *)rhs;
     if (n <= 0)
         return 0;
     while (n > 0) {
-        u8 c1 = *p1++;
-        u8 c2 = *p2++;
+        u8 chL = *left++;
+        u8 chR = *right++;
         n--;
-        if (c1 != c2)
-            return (c1 < c2) ? -1 : 1;
+        if (chL != chR)
+            return (chL < chR) ? -1 : 1;
     }
     return 0;
 }
@@ -219,7 +219,7 @@ int sceNp_A0BE3C4B(char *country, u32 *age)
         return 0x80550004;
     if (g_resident_init <= 0)
         return 0x80550002;
-    if (!country || !age)
+    if ((country == NULL) | (age == NULL))
         return 0x80550003;
 
     ret = sceKernelLockMutex(g_np_mutex, 1, NULL);
@@ -292,26 +292,21 @@ int sceNp_9B87B19B(void **out_ticket)
 
     if (g_resident_init <= 0) {
         ret = 0x80550002;
-        goto out;
-    }
-    if (sceNp_E24DA399() == 0 && (s8)g_online_id_buf[0] == 0) {
+    } else if (sceNp_E24DA399() == 0 && (s8)g_online_id_buf[0] == 0) {
         ret = 0x80550006;
-        goto out;
-    }
-
-    npMemcpy(&tick_saved, &g_ticket_tick, 8);
-    ret = sceRtcGetCurrentTick(&tick_now);
-    if (ret < 0)
-        goto out;
-
-    if ((tick_now - tick_saved) <= 0x11e1a2ffULL) {
-        *out_ticket = g_ticket_buf;
-        ret = g_ticket_len;
     } else {
-        ret = 0x80550007;
+        npMemcpy(&tick_saved, &g_ticket_tick, 8);
+        ret = sceRtcGetCurrentTick(&tick_now);
+        if (ret >= 0) {
+            if ((tick_now - tick_saved) <= 0x11e1a2ffULL) {
+                *out_ticket = g_ticket_buf;
+                ret = g_ticket_len;
+            } else {
+                ret = 0x80550007;
+            }
+        }
     }
 
-out:
     sceKernelUnlockMutex(g_np_mutex, 1);
     return ret;
 }
@@ -766,13 +761,13 @@ static void npSprintfPutc(char **ctx, int ch)
         char *p = *ctx;
         *p = (char)ch;
         *ctx = p + 1;
-    } else if (ch == 0x201) {
+    } else {
         **ctx = 0;
     }
 }
 
 /* npFormatCore @ 0x155c */
-static int npFormatCore(void (*out_fn)(char **, int), char **ctx, const char *fmt, u32 *args)
+static int npFormatCore(void (*out_fn)(char **, int), char **ctx, const char *fmt, __builtin_va_list ap)
 {
     static const char hex_lower[] = "0123456789abcdef";
     static const char hex_upper[] = "0123456789ABCDEF";
@@ -814,7 +809,7 @@ static int npFormatCore(void (*out_fn)(char **, int), char **ctx, const char *fm
                 continue;
             }
             if (c == '*') {
-                width = (int)*args++;
+                width = __builtin_va_arg(ap, int);
                 if (width < 0) {
                     width = -width;
                     flags |= 0x10;
@@ -845,7 +840,7 @@ static int npFormatCore(void (*out_fn)(char **, int), char **ctx, const char *fm
             if (c == '.') {
                 fmt++;
                 if (*fmt == '*') {
-                    prec = (int)*args++;
+                    prec = __builtin_va_arg(ap, int);
                 } else {
                     prec = 0;
                     while ((s8)*fmt >= 0 && (npGetCtype((s8)*fmt) & 4)) {
@@ -873,45 +868,81 @@ static int npFormatCore(void (*out_fn)(char **, int), char **ctx, const char *fm
 
             u32 base = 10;
             u32 val = 0;
+            int is_num = 0;
             if (c == 'd' || c == 'i') {
-                int sval = (int)*args++;
+                int sval = __builtin_va_arg(ap, int);
                 if (sval < 0) {
                     sign_ch = '-';
                     val = (u32)(-sval);
                 } else {
                     val = (u32)sval;
                 }
-                goto do_num;
+                is_num = 1;
             } else if (c == 'o') {
                 base = 8;
-                val = *args++;
+                val = __builtin_va_arg(ap, u32);
                 sign_ch = 0;
-                goto do_num;
+                is_num = 1;
             } else if (c == 'u') {
                 base = 10;
-                val = *args++;
+                val = __builtin_va_arg(ap, u32);
                 sign_ch = 0;
-                goto do_num;
+                is_num = 1;
             } else if (c == 'X') {
                 digits = hex_upper;
                 base = 16;
-                val = *args++;
+                val = __builtin_va_arg(ap, u32);
                 if ((flags & 8) && val != 0)
                     flags |= 0x40;
                 sign_ch = 0;
-                goto do_num;
+                is_num = 1;
             } else if (c == 'x') {
                 base = 16;
-                val = *args++;
+                val = __builtin_va_arg(ap, u32);
                 if ((flags & 8) && val != 0)
                     flags |= 0x40;
                 sign_ch = 0;
-                goto do_num;
+                is_num = 1;
             } else if (c == 'p') {
                 base = 16;
-                val = *args++;
+                val = __builtin_va_arg(ap, u32);
                 sign_ch = 0;
-            do_num:
+                is_num = 1;
+            } else if (c == 'c') {
+                num_buf[0] = (char)__builtin_va_arg(ap, int);
+                str_ptr = num_buf;
+                len = 1;
+                sign_ch = 0;
+            } else if (c == 's') {
+                str_ptr = __builtin_va_arg(ap, const char *);
+                if (!str_ptr)
+                    str_ptr = "(null)";
+                if (prec >= 0) {
+                    const char *end = (const char *)npMemchr(str_ptr, 0, prec);
+                    if (end && (end - str_ptr) < prec)
+                        len = (int)(end - str_ptr);
+                    else
+                        len = prec;
+                } else {
+                    len = npStrlen(str_ptr);
+                }
+                sign_ch = 0;
+            } else if (c == 'n') {
+                void *np = __builtin_va_arg(ap, void *);
+                if (flags & 4)
+                    *(u16 *)np = (u16)total;
+                else
+                    *(u32 *)np = (u32)total;
+                fmt++;
+                break;
+            } else {
+                out_fn(ctx, (s8)c);
+                total++;
+                fmt++;
+                break;
+            }
+
+            if (is_num) {
                 if (prec >= 0)
                     flags &= ~0x20U;
                 char *p = &num_buf[21];
@@ -926,38 +957,6 @@ static int npFormatCore(void (*out_fn)(char **, int), char **ctx, const char *fm
                 }
                 len = (int)(&num_buf[21] - p);
                 str_ptr = p;
-            } else if (c == 'c') {
-                num_buf[0] = (char)*args++;
-                str_ptr = num_buf;
-                len = 1;
-                sign_ch = 0;
-            } else if (c == 's') {
-                str_ptr = (const char *)*args++;
-                if (!str_ptr)
-                    str_ptr = "(null)";
-                if (prec >= 0) {
-                    const char *end = (const char *)npMemchr(str_ptr, 0, prec);
-                    if (end && (end - str_ptr) < prec)
-                        len = (int)(end - str_ptr);
-                    else
-                        len = prec;
-                } else {
-                    len = npStrlen(str_ptr);
-                }
-                sign_ch = 0;
-            } else if (c == 'n') {
-                void *np = (void *)*args++;
-                if (flags & 4)
-                    *(u16 *)np = (u16)total;
-                else
-                    *(u32 *)np = (u32)total;
-                fmt++;
-                break;
-            } else {
-                out_fn(ctx, (s8)c);
-                total++;
-                fmt++;
-                break;
             }
 
             int full_len = len;
@@ -1005,17 +1004,14 @@ static int npFormatCore(void (*out_fn)(char **, int), char **ctx, const char *fm
 }
 
 /* npSprintf @ 0x1510 */
-static int npSprintf(char *buf, const char *fmt, u32 a0, u32 a1, u32 a2, u32 a3, u32 a4, u32 a5)
+static int npSprintf(char *buf, const char *fmt, ...)
 {
-    u32 args[6];
+    __builtin_va_list ap;
     char *ctx = buf;
-    args[0] = a0;
-    args[1] = a1;
-    args[2] = a2;
-    args[3] = a3;
-    args[4] = a4;
-    args[5] = a5;
-    return npFormatCore(npSprintfPutc, &ctx, fmt, args);
+    __builtin_va_start(ap, fmt);
+    int ret = npFormatCore(npSprintfPutc, &ctx, fmt, ap);
+    __builtin_va_end(ap);
+    return ret;
 }
 
 /* npStrlen @ 0x1c94 */
@@ -1030,41 +1026,41 @@ static int npStrlen(const char *s)
 }
 
 /* npStrncmp @ 0x1cc8 */
-static int npStrncmp(const char *s1, const char *s2, int n)
+static int npStrncmp(const char *lhs, const char *rhs, int n)
 {
-    if (!s1 || !s2) {
-        if (s1 == s2)
+    if (!lhs || !rhs) {
+        if (lhs == rhs)
             return 0;
-        return s1 ? 1 : -1;
+        return lhs ? 1 : -1;
     }
     while (--n >= 0) {
-        s8 c1 = (s8)*s1;
-        s8 c2 = (s8)*s2++;
-        if (c1 != c2)
-            return c1 - c2;
-        if (c1 == 0)
+        s8 chL = (s8)*lhs;
+        s8 chR = (s8)*rhs++;
+        if (chL != chR)
+            return chL - chR;
+        if (chL == 0)
             return 0;
-        s1++;
+        lhs++;
     }
     return 0;
 }
 
 /* npStrcmp @ 0x1d64 */
-static int npStrcmp(const char *s1, const char *s2)
+static int npStrcmp(const char *lhs, const char *rhs)
 {
-    if (!s1 || !s2) {
-        if (s1 == s2)
+    if (!lhs || !rhs) {
+        if (lhs == rhs)
             return 0;
-        return s1 ? 1 : -1;
+        return lhs ? 1 : -1;
     }
     for (;;) {
-        int c1 = npToLower((s8)*s1);
-        int c2 = npToLower((s8)*s2++);
-        if (c1 != c2)
-            return npToLower((s8)*s1) - npToLower((s8)s2[-1]);
-        if (*s1 == 0)
+        int chL = npToLower((s8)*lhs);
+        int chR = npToLower((s8)*rhs++);
+        if (chL != chR)
+            return npToLower((s8)*lhs) - npToLower((s8)rhs[-1]);
+        if (*lhs == 0)
             return 0;
-        s1++;
+        lhs++;
     }
 }
 
@@ -1215,13 +1211,13 @@ int sceNp_1916432C(SceNpXmlContext *ctx, const char *data, int len)
                 u32 matched = 0;
                 ret = npXmlMatchOpenTag(ctx, &matched);
                 if (ret < 0)
-                    goto out_ret;
+                    return ret;
                 state = matched ? 2 : 0;
             } else if (state == 4) {
                 u32 matched = 0;
                 ret = npXmlMatchCloseTag(ctx, &matched);
                 if (ret < 0)
-                    goto out_ret;
+                    return ret;
                 if (matched == 1)
                     ctx->level--;
                 state = 0;
@@ -1377,65 +1373,66 @@ int sceNp_1916432C(SceNpXmlContext *ctx, const char *data, int len)
             }
             ret = ctx->cb(ctx, 4, ctx->level, ctx->tag_idx[ctx->level], ctx->tag_buf, ctx->val_buf, ctx->user_data);
             if (ret < 0)
-                goto out_ret;
+                return ret;
             state = 2;
             break;
         }
 
         case 6: {
             u8 c = (u8)*p;
+            int finishAttr = 1;
             if (ctx->buf_pos < 0x1fe) {
                 if (ctx->attr_flags & 2) {
                     if (c != '"' && c != '\'') {
                         ctx->val_buf[ctx->buf_pos++] = (char)c;
                         p++;
                         pos = (int)(p - data);
-                        break;
+                        finishAttr = 0;
                     }
                 }
-                if (c == '\t' || c == '\n' || c == '\r' || c == ' ' || c == '/' || c == '>') {
-                    if (!(ctx->attr_flags & 1)) {
+                if (finishAttr) {
+                    if (c == '\t' || c == '\n' || c == '\r' || c == ' ' || c == '/' || c == '>') {
+                        if (!(ctx->attr_flags & 1)) {
+                            p++;
+                            pos = (int)(p - data);
+                            finishAttr = 0;
+                        } else if (c == '/') {
+                            ctx->self_close = 1;
+                        }
+                    } else if (c == '"' || c == '\'') {
                         p++;
                         pos = (int)(p - data);
-                        break;
+                        if (ctx->attr_flags & 2)
+                            ctx->attr_flags &= ~2U;
+                        else
+                            ctx->attr_flags |= 3U;
+                        finishAttr = 0;
+                    } else {
+                        ctx->attr_flags |= 1U;
+                        ctx->val_buf[ctx->buf_pos++] = (char)c;
+                        p++;
+                        pos = (int)(p - data);
+                        finishAttr = 0;
                     }
-                    if (c == '/')
-                        ctx->self_close = 1;
-                    goto finish_attr;
-                } else if (c == '"' || c == '\'') {
-                    p++;
-                    pos = (int)(p - data);
-                    if (ctx->attr_flags & 2)
-                        ctx->attr_flags &= ~2U;
-                    else
-                        ctx->attr_flags |= 3U;
-                    break;
-                } else {
-                    ctx->attr_flags |= 1U;
-                    ctx->val_buf[ctx->buf_pos++] = (char)c;
-                    p++;
-                    pos = (int)(p - data);
-                    break;
                 }
             }
-        finish_attr:
-            ctx->val_buf[ctx->buf_pos] = 0;
-            ret = ctx->cb(ctx, 4, ctx->level, ctx->tag_idx[ctx->level], ctx->tag_buf, ctx->val_buf, ctx->user_data);
-            if (ret < 0)
-                goto out_ret;
-            state = 2;
+            if (finishAttr) {
+                ctx->val_buf[ctx->buf_pos] = 0;
+                ret = ctx->cb(ctx, 4, ctx->level, ctx->tag_idx[ctx->level], ctx->tag_buf, ctx->val_buf, ctx->user_data);
+                if (ret < 0)
+                    return ret;
+                state = 2;
+            }
             break;
         }
 
         default:
-            goto done;
+            ctx->state = state;
+            return ret;
         }
     }
-    ret = 0;
-done:
     ctx->state = state;
-out_ret:
-    return ret;
+    return 0;
 }
 
 /* sceNp_6999EDC4 @ 0x25c4 */
@@ -1534,7 +1531,7 @@ static int npParseEmailDomain(char *dst, u32 dst_size, const char *src, u32 src_
 }
 
 /* npParseNpDomain @ 0x2f40 */
-static int npParseNpDomain(const char *domain, const char **out_part1, const char **out_part2)
+static int npParseNpDomain(const char *domain, const char **out_service, const char **out_region)
 {
     if (!(npGetCtype((u8)domain[0]) & 7))
         return 0x80550604;
@@ -1542,12 +1539,12 @@ static int npParseNpDomain(const char *domain, const char **out_part1, const cha
         return 0x80550604;
     if (domain[2] != '.')
         return 0x80550604;
-    const char *p2 = domain + 3;
-    if (!(npGetCtype((u8)p2[0]) & 7))
+    const char *regionPtr = domain + 3;
+    if (!(npGetCtype((u8)regionPtr[0]) & 7))
         return 0x80550604;
-    if (!(npGetCtype((u8)p2[1]) & 7))
+    if (!(npGetCtype((u8)regionPtr[1]) & 7))
         return 0x80550604;
-    if (p2[2] != '.')
+    if (regionPtr[2] != '.')
         return 0x80550604;
 
     const char *p = domain + 6;
@@ -1561,8 +1558,8 @@ static int npParseNpDomain(const char *domain, const char **out_part1, const cha
     if (npStrncmp(p + 1, "playstation.net", 16) != 0)
         return 0x80550604;
 
-    *out_part1 = domain;
-    *out_part2 = p2;
+    *out_service = domain;
+    *out_region = regionPtr;
     return 0;
 }
 
@@ -1635,8 +1632,11 @@ int sceNp_5FA879D8(SceNpJid *jid, const char *str, char *buf, u32 buf_size, u32 
         return 0x80550604;
 
     int ret = npParseEmailUser(buf, buf_size, str + pos, str_len - pos, &len, &used, copy_flag);
-    if (ret < 0)
-        goto err;
+    if (ret < 0) {
+        if (copy_flag)
+            npMemset(jid, 0, 0x10);
+        return ret;
+    }
     if (copy_flag)
         jid->node = buf;
 
@@ -1646,8 +1646,11 @@ int sceNp_5FA879D8(SceNpJid *jid, const char *str, char *buf, u32 buf_size, u32 
 
     u32 total_used = used;
     ret = npParseEmailDomain(buf + total_used, buf_size - total_used, str + pos, str_len - pos, &len, &used, copy_flag);
-    if (ret < 0)
-        goto err;
+    if (ret < 0) {
+        if (copy_flag)
+            npMemset(jid, 0, 0x10);
+        return ret;
+    }
     if (copy_flag)
         jid->domain = buf + total_used;
 
@@ -1656,19 +1659,17 @@ int sceNp_5FA879D8(SceNpJid *jid, const char *str, char *buf, u32 buf_size, u32 
     if (res_pos < str_len)
         res_pos++;
     ret = npParseCString(buf + total_used, buf_size - total_used, str + res_pos, str_len - res_pos, &len, &used, copy_flag);
-    if (ret < 0)
-        goto err;
+    if (ret < 0) {
+        if (copy_flag)
+            npMemset(jid, 0, 0x10);
+        return ret;
+    }
     if (copy_flag)
         jid->resource = buf + total_used;
 
     if (out_req_size)
         *out_req_size = total_used + used;
     return 0;
-
-err:
-    if (copy_flag)
-        npMemset(jid, 0, 0x10);
-    return ret;
 }
 
 /* sceNp_0B8BEE48 @ 0x2ab8 */
@@ -1715,10 +1716,10 @@ int sceNp_0B8BEE48(const SceNpJid *jid, char *buf, u32 buf_size, u32 *out_len)
 /* sceNp_C0B3616C @ 0x3184 */
 int sceNp_C0B3616C(u8 *npid, const SceNpJid *jid)
 {
-    const char *p1, *p2;
+    const char *servicePtr, *regionPtr;
     u32 res_len = 0;
 
-    if (!npid || !jid)
+    if ((npid == NULL) | (jid == NULL))
         return 0x80550601;
     if (!jid->node || !jid->domain)
         return 0x80550604;
@@ -1727,7 +1728,7 @@ int sceNp_C0B3616C(u8 *npid, const SceNpJid *jid)
     if ((u32)(node_len - 1) >= 16)
         return 0x80550604;
 
-    int ret = npParseNpDomain(jid->domain, &p1, &p2);
+    int ret = npParseNpDomain(jid->domain, &servicePtr, &regionPtr);
     if (ret < 0)
         return ret;
 
@@ -1739,10 +1740,10 @@ int sceNp_C0B3616C(u8 *npid, const SceNpJid *jid)
 
     npMemset(npid, 0, 0x24);
     npMemcpy(npid, jid->node, node_len);
-    npid[0x14] = (u8)p1[0];
-    npid[0x15] = (u8)p1[1];
-    npid[0x16] = (u8)p2[0];
-    npid[0x17] = (u8)p2[1];
+    npid[0x14] = (u8)servicePtr[0];
+    npid[0x15] = (u8)servicePtr[1];
+    npid[0x16] = (u8)regionPtr[0];
+    npid[0x17] = (u8)regionPtr[1];
     if (res_len != 0)
         npMemcpy(npid + 0x18, jid->resource, res_len);
     npid[0x1c] = 1;
@@ -2015,6 +2016,7 @@ int sceNp_4556A257(char *dst, u32 dst_size, const char *src, u32 src_size, u32 *
     char tmp[16];
     int write_flag = 1;
     u32 written = 0, read_len = 0;
+    int too_short = 0;
 
     if (!src || !src_size)
         return 0x80550601;
@@ -2031,78 +2033,67 @@ int sceNp_4556A257(char *dst, u32 dst_size, const char *src, u32 src_size, u32 *
         if (c == '&') {
             if (src_size < 4) {
                 read_len = 4;
-                goto err_short;
-            }
-            if ((u8)src[1] == 'l' && (u8)src[2] == 't' && (u8)src[3] == ';') {
+                too_short = 1;
+            } else if ((u8)src[1] == 'l' && (u8)src[2] == 't' && (u8)src[3] == ';') {
                 read_len = 4;
-                goto check_copy;
-            }
-            if ((u8)src[1] == 'g' && (u8)src[2] == 't' && (u8)src[3] == ';') {
+            } else if ((u8)src[1] == 'g' && (u8)src[2] == 't' && (u8)src[3] == ';') {
                 read_len = 4;
-                goto check_copy;
-            }
-            if (src_size < 5) {
+            } else if (src_size < 5) {
                 read_len = 5;
-                goto err_short;
-            }
-            if ((u8)src[1] == 'a' && (u8)src[2] == 'm' && (u8)src[3] == 'p' && (u8)src[4] == ';') {
+                too_short = 1;
+            } else if ((u8)src[1] == 'a' && (u8)src[2] == 'm' && (u8)src[3] == 'p' && (u8)src[4] == ';') {
                 read_len = 5;
-                goto check_copy;
-            }
-            if (src_size < 6) {
+            } else if (src_size < 6) {
                 read_len = 6;
-                goto err_short;
-            }
-            if ((u8)src[1] == 'a' && (u8)src[2] == 'p' && (u8)src[3] == 'o' && (u8)src[4] == 's' && (u8)src[5] == ';') {
+                too_short = 1;
+            } else if ((u8)src[1] == 'a' && (u8)src[2] == 'p' && (u8)src[3] == 'o' && (u8)src[4] == 's' && (u8)src[5] == ';') {
                 read_len = 6;
-                goto check_copy;
-            }
-            if ((u8)src[1] == 'q' && (u8)src[2] == 'u' && (u8)src[3] == 'o' && (u8)src[4] == 't' && (u8)src[5] == ';') {
+            } else if ((u8)src[1] == 'q' && (u8)src[2] == 'u' && (u8)src[3] == 'o' && (u8)src[4] == 't' && (u8)src[5] == ';') {
                 read_len = 6;
-                goto check_copy;
             }
         }
     } else {
+        int matched = 0;
         if ((c & 0xe0) == 0xc0 && c >= 0xc2) {
             if (src_size < 2) {
                 read_len = 2;
-                goto err_short;
-            }
-            if ((src[1] & 0xc0) == 0x80) {
+                too_short = 1;
+                matched = 1;
+            } else if ((src[1] & 0xc0) == 0x80) {
                 written = 2;
                 read_len = 2;
-                goto check_copy;
+                matched = 1;
             }
         }
-        if ((c & 0xf0) == 0xe0) {
+        if (!matched && (c & 0xf0) == 0xe0) {
             if (src_size < 3) {
                 read_len = 3;
-                goto err_short;
-            }
-            if ((src[1] & 0xc0) == 0x80 && (src[2] & 0xc0) == 0x80) {
+                too_short = 1;
+                matched = 1;
+            } else if ((src[1] & 0xc0) == 0x80 && (src[2] & 0xc0) == 0x80) {
                 written = 3;
                 read_len = 3;
-                goto check_copy;
+                matched = 1;
             }
         }
-        if ((c & 0xf8) == 0xf0) {
+        if (!matched && (c & 0xf8) == 0xf0) {
             if (src_size < 4) {
                 read_len = 4;
-                goto err_short;
-            }
-            if ((src[1] & 0xc0) == 0x80 && (src[2] & 0xc0) == 0x80 && (src[3] & 0xc0) == 0x80) {
+                too_short = 1;
+                matched = 1;
+            } else if ((src[1] & 0xc0) == 0x80 && (src[2] & 0xc0) == 0x80 && (src[3] & 0xc0) == 0x80) {
                 written = 4;
                 read_len = 4;
-                goto check_copy;
+                matched = 1;
             }
         }
-        written = 1;
-        read_len = 1;
+        if (!matched) {
+            written = 1;
+            read_len = 1;
+        }
     }
 
-check_copy:
-    if (write_flag && dst_size < written) {
-    err_short:
+    if (too_short || (write_flag && dst_size < written)) {
         if (out_written)
             *out_written = written;
         if (out_read)
@@ -2189,14 +2180,14 @@ int sceNp_64F72B22(u8 *comm_id, const char *str)
 }
 
 /* sceNp_2D8E93D2 @ 0x4254 */
-int sceNp_2D8E93D2(const u8 *npid1, const u8 *npid2, int *out_order)
+int sceNp_2D8E93D2(const u8 *npidA, const u8 *npidB, int *out_order)
 {
-    if (!npid1 || !npid2)
+    if ((npidA == NULL) | (npidB == NULL))
         return 0x80550601;
-    if (npid1[0x1c] != 1 || npid2[0x1c] != 1)
+    if (npidA[0x1c] != 1 || npidB[0x1c] != 1)
         return 0x80550605;
 
-    int cmp = npStrncmp((const char *)npid1, (const char *)npid2, 16);
+    int cmp = npStrncmp((const char *)npidA, (const char *)npidB, 16);
     if (cmp < 0) {
         *out_order = -1;
         return 0;
@@ -2206,7 +2197,7 @@ int sceNp_2D8E93D2(const u8 *npid1, const u8 *npid2, int *out_order)
         return 0;
     }
 
-    cmp = npMemcmp(npid1 + 0x14, npid2 + 0x14, 4);
+    cmp = npMemcmp(npidA + 0x14, npidB + 0x14, 4);
     if (cmp < 0) {
         *out_order = -1;
         return 0;
@@ -2216,37 +2207,48 @@ int sceNp_2D8E93D2(const u8 *npid1, const u8 *npid2, int *out_order)
         return 0;
     }
 
-    const u8 *r1 = (npid1[0x18] != 0) ? (npid1 + 0x18) : (const u8 *)"ps3";
-    const u8 *r2 = (npid2[0x18] != 0) ? (npid2 + 0x18) : (const u8 *)"ps3";
-    if (npid1[0x18] == 0 && npid2[0x18] == 0) {
+    if (npidA[0x18] == 0) {
+        if (npidB[0x18] == 0) {
+            *out_order = 0;
+            return 0;
+        }
+        cmp = npMemcmp("ps3", npidB + 0x18, 4);
+    } else if (npidB[0x18] == 0) {
+        cmp = npMemcmp(npidA + 0x18, "ps3", 4);
+    } else {
+        cmp = npMemcmp(npidA + 0x18, npidB + 0x18, 4);
+    }
+    if (cmp < 0) {
+        *out_order = -1;
+    } else if (cmp > 0) {
+        *out_order = 1;
+    } else {
         *out_order = 0;
-        return 0;
     }
-    cmp = npMemcmp(r1, r2, 4);
-    *out_order = (cmp < 0) ? -1 : ((cmp > 0) ? 1 : 0);
     return 0;
 }
 
 /* sceNp_9A264EF2 @ 0x437c */
-int sceNp_9A264EF2(const u8 *npid1, const u8 *npid2)
+int sceNp_9A264EF2(const u8 *npidA, const u8 *npidB)
 {
-    if (!npid1 || !npid2)
+    if ((npidA == NULL) | (npidB == NULL))
         return 0x80550601;
-    if (npid1[0x1c] != 1 || npid2[0x1c] != 1)
+    if (npidA[0x1c] != 1 || npidB[0x1c] != 1)
         return 0x80550605;
 
-    if (npStrncmp((const char *)npid1, (const char *)npid2, 16) != 0)
+    if (npStrncmp((const char *)npidA, (const char *)npidB, 16) != 0)
         return 0x80550609;
-    if (npMemcmp(npid1 + 0x14, npid2 + 0x14, 4) != 0)
+    if (npMemcmp(npidA + 0x14, npidB + 0x14, 4) != 0)
         return 0x80550609;
-    if (npMemcmp(npid1 + 0x18, npid2 + 0x18, 4) == 0)
+    if (npMemcmp(npidA + 0x18, npidB + 0x18, 4) == 0)
         return 0;
 
-    if (npid1[0x18] == 0) {
-        if (npMemcmp("ps3", npid2 + 0x18, 4) == 0)
+    if (npidA[0x18] == 0) {
+        if (npMemcmp("ps3", npidB + 0x18, 4) == 0)
             return 0;
-    } else if (npid2[0x18] == 0) {
-        if (npMemcmp(npid1 + 0x18, "ps3", 4) == 0)
+    }
+    if (npidB[0x18] == 0) {
+        if (npMemcmp(npidA + 0x18, "ps3", 4) == 0)
             return 0;
     }
     return 0x80550609;
@@ -2256,8 +2258,8 @@ int sceNp_9A264EF2(const u8 *npid1, const u8 *npid2)
 static int npReadRegU32(const char *cat, const char *key, u32 *out_val)
 {
     u32 reg_param[0x44];
-    int h = 0, hd = 0, hk = 0;
-    u32 type = 0, size = 0;
+    int h, hd, hk;
+    u32 type, size;
 
     npMemset(reg_param, 0, 0x110);
     reg_param[0] = 1;
@@ -2292,9 +2294,14 @@ static int npReadRegU32(const char *cat, const char *key, u32 *out_val)
     }
 
     ret = sceRegGetKeyValue(hd, hk, out_val, 4);
+    if (ret != 0) {
+        sceRegCloseCategory(hd);
+        sceRegCloseRegistry(h);
+        return ret;
+    }
     sceRegCloseCategory(hd);
     sceRegCloseRegistry(h);
-    return ret;
+    return 0;
 }
 
 /* sceNp_857B47D3 @ 0x44a0 */
@@ -2340,7 +2347,7 @@ int sceNp_B4063F7A(char *ver_str)
     if (!ver_str)
         return 0x80550003;
     npMemset(ver_str, 0, 8);
-    npSprintf(ver_str, "%02d.%02d", 6, 60, 0, 0, 0, 0);
+    npSprintf(ver_str, "%02d.%02d", 6, 60);
     return 0;
 }
 
