@@ -15,6 +15,23 @@ typedef struct ResolverAsyncCtx {
     int out_len;        /* 0x2c */
 } ResolverAsyncCtx;
 
+typedef struct SceNetInetSockaddrIn {
+    u8 sin_len;
+    u8 sin_family;
+    u16 sin_port;
+    u32 sin_addr;
+    u8 sin_zero[8];
+} SceNetInetSockaddrIn;
+
+typedef struct SceDnsHeader {
+    u16 id;
+    u16 flags;
+    u16 qdcount;
+    u16 ancount;
+    u16 nscount;
+    u16 arcount;
+} SceDnsHeader;
+
 typedef struct ResolverNode {
     int rid;            /* 0x00 */
     struct ResolverNode *next; /* 0x04 */
@@ -63,7 +80,7 @@ static int resolverDeleteNode(int rid);
 static int resolverInitState(void);
 static int resolverTermState(void);
 static ResolverNode *resolverFindNode(int rid, ResolverNode **prev_out);
-static int dnsStrncasecmp(const char *s1, const char *s2, SceSize n);
+static int dnsStrncasecmp(const char *lhs, const char *rhs, SceSize n);
 static int resolverQuery(ResolverNode *node, int type, const void *name_or_addr, int out_len, void *out_buf, int timeout, int retry);
 static int dnsInitTxid(void);
 static int dnsTermTxid(void);
@@ -88,7 +105,7 @@ int sceNetResolverStartNtoA(int rid, const char *hostname, u32 *addr, unsigned i
         return 0x80410005;
     if (rid < 0)
         return 0x80410405;
-    if (hostname == 0 || addr == 0)
+    if ((hostname == 0) | (addr == 0))
         return 0x80410403;
     if (sceNet_lib_D8722983(hostname) == 0 || sceNet_lib_D8722983(hostname) >= 0x100)
         return 0x80410418;
@@ -123,47 +140,51 @@ int sceNetResolver_14C17EF9(int rid, const char *hostname, u32 *addr, unsigned i
         return 0x80410005;
     if (rid < 0)
         return 0x80410405;
-    if (hostname == 0 || addr == 0)
+    if ((hostname == 0) | (addr == 0))
         return 0x80410403;
     if (sceNet_lib_D8722983(hostname) == 0 || sceNet_lib_D8722983(hostname) >= 0x100)
         return 0x80410418;
 
     intr = sceKernelCpuSuspendIntr();
-    node = resolverFindNode(rid, 0);
-    if (node == 0) {
-        sceKernelCpuResumeIntr(intr);
-        return 0x80410408;
-    }
-    if (node->flags & 2) {
-        sceKernelCpuResumeIntr(intr);
-        return 0x80410409;
-    }
-    node->flags |= 6;
-    if (node->async != 0) {
-        if (node->async->hostname != 0) {
-            sceNetIfhandle_lib_76BAD213(node->async->hostname);
-            node->async->hostname = 0;
-        }
-    } else {
-        node->async = sceNetIfhandle_lib_15CFE3C0(sizeof(ResolverAsyncCtx));
-        if (node->async == 0) {
+    do {
+        node = resolverFindNode(rid, 0);
+        if (node == 0) {
             sceKernelCpuResumeIntr(intr);
-            return 0x80410407;
+            ret = 0x80410408;
+            break;
         }
-    }
-    sceKernelMemset(node->async, 0, sizeof(ResolverAsyncCtx));
-    node->async->addr_ptr = addr;
-    node->async->timeout = timeout;
-    node->async->retry = retry;
-    node->async->type = 0;
-    node->async->hostname = sceNetIfhandle_lib_15CFE3C0(sceNet_lib_D8722983(hostname) + 1);
-    if (node->async->hostname == 0) {
-        sceNetIfhandle_lib_76BAD213(node->async);
-        node->async = 0;
-        ret = 0x80410407;
-    } else {
-        sceNet_lib_80C9F02A(node->async->hostname, hostname);
-    }
+        if (node->flags & 2) {
+            sceKernelCpuResumeIntr(intr);
+            ret = 0x80410409;
+            break;
+        }
+        node->flags |= 6;
+        if (node->async != 0) {
+            if (node->async->hostname != 0) {
+                sceNetIfhandle_lib_76BAD213(node->async->hostname);
+                node->async->hostname = 0;
+            }
+        } else {
+            node->async = sceNetIfhandle_lib_15CFE3C0(sizeof(ResolverAsyncCtx));
+            if (node->async == 0) {
+                ret = 0x80410407;
+                break;
+            }
+        }
+        sceKernelMemset(node->async, 0, sizeof(ResolverAsyncCtx));
+        node->async->addr_ptr = addr;
+        node->async->timeout = timeout;
+        node->async->retry = retry;
+        node->async->type = 0;
+        node->async->hostname = sceNetIfhandle_lib_15CFE3C0(sceNet_lib_D8722983(hostname) + 1);
+        if (node->async->hostname == 0) {
+            sceNetIfhandle_lib_76BAD213(node->async);
+            node->async = 0;
+            ret = 0x80410407;
+        } else {
+            sceNet_lib_80C9F02A(node->async->hostname, hostname);
+        }
+    } while (0);
     sceKernelCpuResumeIntr(intr);
     return ret;
 }
@@ -177,7 +198,7 @@ int sceNetResolverStartAtoN(int rid, const u32 *addr, char *hostname, SceSize ho
         return 0x80410005;
     if (rid < 0)
         return 0x80410405;
-    if (hostname == 0 || addr == 0)
+    if ((hostname == 0) | (addr == 0))
         return 0x80410403;
 
     intr = sceKernelCpuSuspendIntr();
@@ -210,39 +231,43 @@ int sceNetResolver_AAC09184(int rid, const u32 *addr, char *hostname, SceSize ho
         return 0x80410005;
     if (rid < 0)
         return 0x80410405;
-    if (hostname == 0 || addr == 0)
+    if ((hostname == 0) | (addr == 0))
         return 0x80410403;
 
     intr = sceKernelCpuSuspendIntr();
-    node = resolverFindNode(rid, 0);
-    if (node == 0) {
-        sceKernelCpuResumeIntr(intr);
-        return 0x80410408;
-    }
-    if (node->flags & 2) {
-        sceKernelCpuResumeIntr(intr);
-        return 0x80410409;
-    }
-    node->flags |= 6;
-    if (node->async != 0) {
-        if (node->async->hostname != 0) {
-            sceNetIfhandle_lib_76BAD213(node->async->hostname);
-            node->async->hostname = 0;
-        }
-    } else {
-        node->async = sceNetIfhandle_lib_15CFE3C0(sizeof(ResolverAsyncCtx));
-        if (node->async == 0) {
+    do {
+        node = resolverFindNode(rid, 0);
+        if (node == 0) {
             sceKernelCpuResumeIntr(intr);
-            return 0x80410407;
+            ret = 0x80410408;
+            break;
         }
-    }
-    sceKernelMemset(node->async, 0, sizeof(ResolverAsyncCtx));
-    node->async->type = 1;
-    node->async->timeout = timeout;
-    node->async->retry = retry;
-    sceKernelMemcpy(&node->async->addr_ptr, addr, 4);
-    node->async->out_name = hostname;
-    node->async->out_len = hostname_len;
+        if (node->flags & 2) {
+            sceKernelCpuResumeIntr(intr);
+            ret = 0x80410409;
+            break;
+        }
+        node->flags |= 6;
+        if (node->async != 0) {
+            if (node->async->hostname != 0) {
+                sceNetIfhandle_lib_76BAD213(node->async->hostname);
+                node->async->hostname = 0;
+            }
+        } else {
+            node->async = sceNetIfhandle_lib_15CFE3C0(sizeof(ResolverAsyncCtx));
+            if (node->async == 0) {
+                ret = 0x80410407;
+                break;
+            }
+        }
+        sceKernelMemset(node->async, 0, sizeof(ResolverAsyncCtx));
+        node->async->type = 1;
+        node->async->timeout = timeout;
+        node->async->retry = retry;
+        sceKernelMemcpy(&node->async->addr_ptr, addr, 4);
+        node->async->out_name = hostname;
+        node->async->out_len = hostname_len;
+    } while (0);
     sceKernelCpuResumeIntr(intr);
     return ret;
 }
@@ -308,7 +333,7 @@ int sceNetResolverCreate(int *rid, void *buf, SceSize buflen)
 {
     if (_sceKernelCheckThreadStack() < 0x13f0)
         return 0x80410005;
-    if (rid == 0 || buf == 0)
+    if ((rid == 0) | (buf == 0))
         return 0x80410403;
     if (buflen == 0)
         return 0x80410404;
@@ -501,38 +526,38 @@ static ResolverNode *resolverFindNode(int rid, ResolverNode **prev_out)
     return cur;
 }
 
-static int dnsStrncasecmp(const char *s1, const char *s2, SceSize n)
+static int dnsStrncasecmp(const char *lhs, const char *rhs, SceSize n)
 {
     SceSize i;
-    int c1, c2;
+    int leftCh, rightCh;
 
     if (n == 0)
         return 0;
 
     for (i = 0; i < n; i++) {
-        c1 = *s1;
-        if (sceNet_lib_750F705D(c1) & 1)
-            c1 = (s8)(c1 + 0x20);
-        c2 = *s2++;
-        if (sceNet_lib_750F705D(c2) & 1)
-            c2 = (s8)(c2 + 0x20);
-        if (c1 != c2) {
-            c1 = *s1;
-            if (sceNet_lib_750F705D(c1) & 1)
-                c1 = (s8)(c1 + 0x20);
-            c2 = s2[-1];
-            if (sceNet_lib_750F705D(c2) & 1)
-                c2 = (s8)(c2 + 0x20);
-            return (c1 & 0xff) - (c2 & 0xff);
+        leftCh = *lhs;
+        if (sceNet_lib_750F705D(leftCh) & 1)
+            leftCh = (s8)(leftCh + 0x20);
+        rightCh = *rhs++;
+        if (sceNet_lib_750F705D(rightCh) & 1)
+            rightCh = (s8)(rightCh + 0x20);
+        if (leftCh != rightCh) {
+            leftCh = *lhs;
+            if (sceNet_lib_750F705D(leftCh) & 1)
+                leftCh = (s8)(leftCh + 0x20);
+            rightCh = rhs[-1];
+            if (sceNet_lib_750F705D(rightCh) & 1)
+                rightCh = (s8)(rightCh + 0x20);
+            return (leftCh & 0xff) - (rightCh & 0xff);
         }
-        if (*(const u8 *)s1 == 0)
+        if (*(const u8 *)lhs == 0)
             return 0;
-        s1++;
+        lhs++;
     }
     return 0;
 }
 
-static int fmt_octet(char *dst, u8 val)
+static inline int fmtOctet(char *dst, u8 val)
 {
     int len = 0;
     u32 d = 100;
@@ -561,99 +586,105 @@ static int resolverQuery(ResolverNode *node, int type, const void *name_or_addr,
     u8 *pkt_buf;
     int r_idx, d_idx;
 
-    ret = sceNetInet_lib_AC9D90A5(&dns_ips[0], &dns_ips[1]);
-    if (ret < 0)
-        goto cleanup;
+    do {
+        ret = sceNetInet_lib_AC9D90A5(&dns_ips[0], &dns_ips[1]);
+        if (ret < 0)
+            break;
 
-    if (dns_ips[0] == 0 || dns_ips[0] == ~0U) {
-        ret = 0x80410402;
-        goto cleanup;
-    }
+        if (dns_ips[0] == 0 || dns_ips[0] == ~0U) {
+            ret = 0x80410402;
+            break;
+        }
 
-    if (type == 0) {
-        const char *hname = (const char *)name_or_addr;
-        SceSize hlen = sceNet_lib_D8722983(hname);
-        if (hname[hlen - 1] == '.') {
-            if (hlen >= rem_buflen) {
+        if (type == 0) {
+            const char *hname = (const char *)name_or_addr;
+            SceSize hlen = sceNet_lib_D8722983(hname);
+            if (hname[hlen - 1] == '.') {
+                if (hlen >= rem_buflen) {
+                    ret = 0x8041040c;
+                    break;
+                }
+                qname = (char *)node->buf;
+                sceNet_lib_B5CE388A(qname, hname, hlen - 1);
+                qname[hlen - 1] = 0;
+                pkt_buf = (u8 *)(qname + hlen);
+                qname_end = pkt_buf;
+                rem_buflen -= hlen;
+            } else {
+                qname = (char *)hname;
+                qname_end = (u8 *)(hname + hlen + 1);
+                pkt_buf = node->buf;
+            }
+        } else if (type == 1) {
+            if (rem_buflen <= 0x1d) {
                 ret = 0x8041040c;
-                goto cleanup;
+                break;
             }
+            const u8 *ip = (const u8 *)out_buf;
+            char *p = (char *)node->buf;
+            int n;
+            n = fmtOctet(p, ip[3]); p += n; *p++ = '.';
+            n = fmtOctet(p, ip[2]); p += n; *p++ = '.';
+            n = fmtOctet(p, ip[1]); p += n; *p++ = '.';
+            n = fmtOctet(p, ip[0]); p += n; *p++ = '.';
+            SceSize arpa_len = sceNet_lib_D8722983("in-addr.arpa");
+            sceNet_lib_B5CE388A(p, "in-addr.arpa", arpa_len + 1);
+            SceSize total_qlen = (SceSize)(p - (char *)node->buf) + arpa_len + 1;
             qname = (char *)node->buf;
-            sceNet_lib_B5CE388A(qname, hname, hlen - 1);
-            qname[hlen - 1] = 0;
-            pkt_buf = (u8 *)(qname + hlen);
+            pkt_buf = node->buf + total_qlen;
             qname_end = pkt_buf;
-            rem_buflen -= hlen;
+            rem_buflen -= total_qlen;
         } else {
-            qname = (char *)hname;
-            qname_end = (u8 *)(hname + hlen + 1);
-            pkt_buf = node->buf;
+            ret = 0x80410417;
+            break;
         }
-    } else if (type == 1) {
-        if (rem_buflen <= 0x1d) {
-            ret = 0x8041040c;
-            goto cleanup;
-        }
-        const u8 *ip = (const u8 *)out_buf;
-        char *p = (char *)node->buf;
-        int n;
-        n = fmt_octet(p, ip[3]); p += n; *p++ = '.';
-        n = fmt_octet(p, ip[2]); p += n; *p++ = '.';
-        n = fmt_octet(p, ip[1]); p += n; *p++ = '.';
-        n = fmt_octet(p, ip[0]); p += n; *p++ = '.';
-        SceSize arpa_len = sceNet_lib_D8722983("in-addr.arpa") + 1;
-        sceNet_lib_B5CE388A(p, "in-addr.arpa", arpa_len);
-        SceSize total_qlen = (SceSize)(p - (char *)node->buf) + arpa_len + 1;
-        qname = (char *)node->buf;
-        pkt_buf = node->buf + total_qlen;
-        qname_end = pkt_buf;
-        rem_buflen -= total_qlen;
-    } else {
-        ret = 0x80410417;
-        goto cleanup;
-    }
 
-    r_idx = 0;
-    d_idx = 0;
-    if ((node->flags & 4) && node->async != 0) {
-        d_idx = node->async->dns_idx;
-        r_idx = node->async->retry_idx;
-    }
-
-    for (; r_idx < retry; r_idx++) {
+        r_idx = 0;
+        d_idx = 0;
         if ((node->flags & 4) && node->async != 0) {
-            if (node->async->retry_idx != r_idx) {
-                d_idx = 0;
-                node->async->state = 0;
-                node->async->retry_idx = r_idx;
-                node->async->dns_idx = 0;
-            }
-        } else {
-            d_idx = 0;
+            d_idx = node->async->dns_idx;
+            r_idx = node->async->retry_idx;
         }
 
-        while (d_idx < 2 && dns_ips[d_idx] != 0) {
-            u32 pkt_len = rem_buflen;
-            u16 txid;
+        int stop = 0;
+        for (; r_idx < retry && !stop; r_idx++) {
             if ((node->flags & 4) && node->async != 0) {
-                if (node->async->dns_idx != d_idx) {
+                if (node->async->retry_idx != r_idx) {
+                    d_idx = 0;
                     node->async->state = 0;
-                    node->async->dns_idx = d_idx;
+                    node->async->retry_idx = r_idx;
+                    node->async->dns_idx = 0;
+                }
+            } else {
+                d_idx = 0;
+            }
+
+            while (d_idx < 2 && dns_ips[d_idx] != 0) {
+                u32 pkt_len = rem_buflen;
+                u16 txid;
+                if ((node->flags & 4) && node->async != 0) {
+                    if (node->async->dns_idx != d_idx) {
+                        node->async->state = 0;
+                        node->async->dns_idx = d_idx;
+                    }
+                }
+                ret = dnsBuildQuery(type, qname, pkt_buf, &pkt_len, &txid);
+                if (ret < 0) {
+                    stop = 1;
+                    break;
+                }
+
+                int cur_d = d_idx++;
+                done = 0;
+                ret = dnsExchange(node, pkt_buf, pkt_len, qname, qname_end, out_buf, timeout, &dns_ips[cur_d], (int)name_or_addr, out_len, &done, txid, type);
+                if (done <= 0) {
+                    stop = 1;
+                    break;
                 }
             }
-            ret = dnsBuildQuery(type, qname, pkt_buf, &pkt_len, &txid);
-            if (ret < 0)
-                goto cleanup;
-
-            int cur_d = d_idx++;
-            done = 0;
-            ret = dnsExchange(node, pkt_buf, pkt_len, qname, qname_end, out_buf, timeout, &dns_ips[cur_d], (int)name_or_addr, out_len, &done, txid, type);
-            if (done <= 0)
-                goto cleanup;
         }
-    }
+    } while (0);
 
-cleanup:
     {
         int intr = sceKernelCpuSuspendIntr();
         if (node->flags & 4) {
@@ -728,51 +759,57 @@ static int dnsExchange(ResolverNode *node, u8 *rx_buf, u32 tx_len, const char *q
     u32 rx_len;
     u8 *ptr, *end;
     u16 qdcount, ancount;
+    int io_err = 0;
 
-    if ((node->flags & 4) == 0 || node->async == 0 || (u32)(node->async->state - 1) >= 2) {
-        ret = dnsSendPacket(node, rx_buf, tx_len, dns_ip, timeout);
-        if (ret < 0)
-            goto err_check;
-        if ((node->flags & 4) && node->async != 0) {
-            node->async->state = 1;
-            node->async->txid = txid;
+    do {
+        if ((node->flags & 4) == 0 || node->async == 0 || (u32)(node->async->state - 1) >= 2) {
+            ret = dnsSendPacket(node, rx_buf, tx_len, dns_ip, timeout);
+            if (ret < 0) {
+                io_err = 1;
+                break;
+            }
+            if ((node->flags & 4) && node->async != 0) {
+                node->async->state = 1;
+                node->async->txid = txid;
+            }
         }
-    }
 
-    if ((node->flags & 4) && node->async != 0)
-        txid = (u16)node->async->txid;
+        if ((node->flags & 4) && node->async != 0)
+            txid = (u16)node->async->txid;
 
-    rx_len = node->buflen - (u32)(rx_buf - node->buf);
-    ret = dnsRecvPacket(node, rx_buf, (int *)&rx_len, timeout);
-    if (ret < 0)
-        goto err_check;
+        rx_len = node->buflen - (u32)(rx_buf - node->buf);
+        ret = dnsRecvPacket(node, rx_buf, (int *)&rx_len, timeout);
+        if (ret < 0) {
+            io_err = 1;
+            break;
+        }
 
-    ptr = rx_buf;
-    end = rx_buf + rx_len;
-    ret = dnsParseHeader(&ptr, end, txid, &qdcount, &ancount, done_out);
-    if (ret >= 0) {
-        ret = dnsParseQuestions(&ptr, end, rx_buf, qname, qname_end, qdcount);
+        ptr = rx_buf;
+        end = rx_buf + rx_len;
+        ret = dnsParseHeader(&ptr, end, txid, &qdcount, &ancount, done_out);
         if (ret >= 0) {
-            ret = dnsParseAnswers(node, &ptr, end, rx_buf, qname, qname_end, out_addr, out_name, type, out_len, ancount);
+            ret = dnsParseQuestions(&ptr, end, rx_buf, qname, qname_end, qdcount);
+            if (ret >= 0) {
+                ret = dnsParseAnswers(node, &ptr, end, rx_buf, qname, qname_end, out_addr, out_name, type, out_len, ancount);
+            }
         }
-    }
-    if (ret == (int)0x8041040d) {
-        if (ptr >= node->buf + node->buflen)
-            ret = 0x8041040c;
-    }
-    goto cleanup;
+        if (ret == (int)0x8041040d) {
+            if (ptr >= node->buf + node->buflen)
+                ret = 0x8041040c;
+        }
+    } while (0);
 
-err_check:
-    if (ret != (int)0x8041040e && ret != (int)0x80410481)
-        *done_out = 1;
+    if (io_err) {
+        if (ret != (int)0x8041040e && ret != (int)0x80410481)
+            *done_out = 1;
+    }
 
-cleanup:
     if ((node->flags & 4) && node->async != 0 && (node->flags & 8) == 0) {
+        node->flags &= ~4U;
         if (node->async->hostname != 0)
             sceNetIfhandle_lib_76BAD213(node->async->hostname);
         sceNetIfhandle_lib_76BAD213(node->async);
         node->async = 0;
-        node->flags &= ~4U;
     }
     if (node->sock >= 0) {
         if ((node->flags & 4) && node->async != 0 && ret == (int)0x80410481)
@@ -785,7 +822,7 @@ cleanup:
 
 static int dnsWriteHeader(int type, u8 **ptr_io, u8 *end, u16 *txid_out)
 {
-    u8 hdr[12];
+    SceDnsHeader hdr;
     u8 *p = *ptr_io;
     int intr;
     u16 id;
@@ -794,18 +831,17 @@ static int dnsWriteHeader(int type, u8 **ptr_io, u8 *end, u16 *txid_out)
     if (end < p + 12)
         return 0x8041040c;
 
-    sceKernelMemset(hdr, 0, 12);
+    sceKernelMemset(&hdr, 0, sizeof(hdr));
     intr = sceKernelCpuSuspendIntr();
     id = g_dns_txid++;
     *txid_out = id;
     sceKernelCpuResumeIntr(intr);
 
-    *(u16 *)&hdr[0] = id;
-    hdr[2] = 1;
-    hdr[3] = 0;
-    *(u16 *)&hdr[4] = __builtin_bswap16(1);
-    sceKernelMemcpy(p, hdr, 12);
-    *ptr_io = p + 12;
+    hdr.id = id;
+    hdr.flags = 1;
+    hdr.qdcount = __builtin_bswap16(1);
+    sceKernelMemcpy(p, &hdr, sizeof(hdr));
+    *ptr_io = p + sizeof(hdr);
     return 0;
 }
 
@@ -839,48 +875,49 @@ static int dnsEncodeName(u8 **ptr_io, u8 *end, const char *qname)
 static int dnsSendPacket(ResolverNode *node, const void *buf, int len, const u32 *dns_ip, int timeout)
 {
     int s, ret;
-    u8 sin[16];
+    SceNetInetSockaddrIn sin;
 
-    if (node->flags & 1) {
-        ret = 0x8041040e;
-        goto err;
-    }
-    s = sceNetInetSocket(2, 2, 0);
-    if (s < 0) {
-        ret = 0x8041040f;
-        goto err;
-    }
-    node->sock = s;
-    if ((node->flags & 4) && node->async != 0) {
-        int val = 1;
-        if (sceNetInetSetsockopt(s, 0xffff, 0x1009, &val, 4) < 0) {
-            ret = 0x8041040f;
-            goto err;
+    do {
+        if (node->flags & 1) {
+            ret = 0x8041040e;
+            break;
         }
-        node->flags |= 8;
-    } else {
-        node->flags &= ~8U;
-    }
+        s = sceNetInetSocket(2, 2, 0);
+        if (s < 0) {
+            ret = 0x8041040f;
+            break;
+        }
+        node->sock = s;
+        if ((node->flags & 4) && node->async != 0) {
+            int val = 1;
+            if (sceNetInetSetsockopt(s, 0xffff, 0x1009, &val, 4) < 0) {
+                ret = 0x8041040f;
+                break;
+            }
+            node->flags |= 8;
+        } else {
+            node->flags &= ~8U;
+        }
 
-    if (sceNetInetSetsockopt(node->sock, 0xffff, 0x1006, &timeout, 4) < 0) {
+        if (sceNetInetSetsockopt(node->sock, 0xffff, 0x1006, &timeout, 4) < 0) {
+            ret = 0x8041040f;
+            break;
+        }
+
+        sceKernelMemset(&sin, 0, sizeof(sin));
+        sin.sin_len = sizeof(sin);
+        sin.sin_family = 2;
+        sin.sin_port = __builtin_bswap16(53);
+        sin.sin_addr = *dns_ip;
+
+        ret = sceNetInetSendto(node->sock, buf, len, 0, &sin, sizeof(sin));
+        if (ret >= 0)
+            return ret;
         ret = 0x8041040f;
-        goto err;
-    }
+    } while (0);
 
-    sceKernelMemset(sin, 0, 16);
-    sin[0] = 16;
-    sin[1] = 2;
-    *(u16 *)&sin[2] = __builtin_bswap16(53);
-    sceKernelMemcpy(&sin[4], dns_ip, 4);
-
-    ret = sceNetInetSendto(node->sock, buf, len, 0, sin, 16);
-    if (ret >= 0)
-        return ret;
-    ret = 0x8041040f;
-
-err:
     if (node->sock >= 0) {
-        if ((node->flags & 4) && node->async != 0 && ret == (int)0x80410481)
+        if ((node->flags & 4) && ((node->async == 0) | (ret != (int)0x80410481)) == 0)
             return ret;
         sceNetInetClose(node->sock);
         node->sock = 0;
@@ -935,36 +972,39 @@ static int dnsRecvPacket(ResolverNode *node, void *buf, int *len_io, int timeout
 
 static int dnsParseHeader(u8 **ptr_io, u8 *end, u16 txid, u16 *qdcount_out, u16 *ancount_out, int *done_out)
 {
-    u8 hdr[12];
+    SceDnsHeader hdr;
     u8 *p = *ptr_io;
+    u8 *next = p + sizeof(hdr);
     int ret = 0;
 
-    if (end < p + 12)
+    if (end < next) {
+        *ptr_io = next;
         return 0x8041040d;
+    }
 
-    sceKernelMemcpy(hdr, p, 12);
-    p += 12;
+    sceKernelMemcpy(&hdr, p, sizeof(hdr));
+    p = next;
 
-    if (*(u16 *)&hdr[0] != txid) {
+    if (hdr.id != txid) {
         *done_out = 1;
         *ptr_io = p;
         return 0x80410410;
     }
 
-    u16 flags = *(u16 *)&hdr[2];
+    u16 flags = hdr.flags;
     if ((flags & 0xf8) != 0x80) {
         *ptr_io = p;
         return 0x8041040d;
     }
 
-    u16 qd = __builtin_bswap16(*(u16 *)&hdr[4]);
+    u16 qd = __builtin_bswap16(hdr.qdcount);
     if (qd != 1) {
         *ptr_io = p;
         return 0x8041040d;
     }
 
     if (flags & 0x0f00) {
-        switch (hdr[3] & 0x0f) {
+        switch ((flags >> 8) & 0x0f) {
         case 1: ret = 0x80410412; break;
         case 2: *done_out = 1; ret = 0x80410413; break;
         case 3: ret = 0x80410414; break;
@@ -974,7 +1014,7 @@ static int dnsParseHeader(u8 **ptr_io, u8 *end, u16 txid, u16 *qdcount_out, u16 
         }
     } else {
         *qdcount_out = 1;
-        *ancount_out = __builtin_bswap16(*(u16 *)&hdr[6]);
+        *ancount_out = __builtin_bswap16(hdr.ancount);
     }
     *ptr_io = p;
     return ret;
@@ -1043,11 +1083,12 @@ static int dnsParseAnswers(ResolverNode *node, u8 **ptr_io, u8 *end, u8 *pkt_sta
         if (rclass == 1 && match != 0) {
             if (rtype == 5) {
                 u8 *cname_end = node->buf + node->buflen;
-                ret = dnsDecodeName(rdata, end, (char *)qname, &cname_end, pkt_start, end);
+                ret = dnsDecodeName(rdata, end, (char *)end, &cname_end, pkt_start, end);
                 if (ret < 0) {
                     *ptr_io = p;
                     return ret;
                 }
+                qname = (const char *)end;
                 qname_end = cname_end;
             } else if (rtype == 1) {
                 if (rdlen != 4) {
@@ -1118,19 +1159,19 @@ static int dnsCompareName(u8 **ptr_io, u8 *end, u8 *pkt_start, u8 *pkt_limit, co
     *match_out = 1;
     for (;;) {
         if (end < ptr + 1)
-            goto err;
+            break;
         u8 len;
         sceKernelMemcpy(&len, ptr, 1);
         u8 tag = len & 0xc0;
         if (tag == 0x10 || tag == 0x01)
-            goto err;
+            break;
         if (tag == 0xc0) {
             if (end < ptr + 2)
-                goto err;
+                break;
             u16 off = ((ptr[0] & 0x3f) << 8) | ptr[1];
             total_read += 2;
             if (total_read >= (int)(pkt_limit - pkt_start))
-                goto err;
+                break;
             if (next_ptr == 0)
                 next_ptr = ptr + 2;
             ptr = pkt_start + off;
@@ -1144,7 +1185,7 @@ static int dnsCompareName(u8 **ptr_io, u8 *end, u8 *pkt_start, u8 *pkt_limit, co
         }
         ptr++;
         if (end < ptr + len)
-            goto err;
+            break;
         total_read += 1 + len;
         if (*match_out == 1) {
             if (qname_end < (u8 *)(qname + len + 1)) {
@@ -1160,7 +1201,6 @@ static int dnsCompareName(u8 **ptr_io, u8 *end, u8 *pkt_start, u8 *pkt_limit, co
         ptr += len;
     }
 
-err:
     *ptr_io = (next_ptr != 0) ? next_ptr : (ptr + 1);
     return 0x8041040d;
 }
