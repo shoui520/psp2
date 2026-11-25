@@ -22,26 +22,26 @@ typedef struct {
 
 typedef struct {
 	SceUID cbId;
-	u32 flags4;
-	u32 flags8;
-	u32 flagsC;
+	u32 pendingEvents;
+	u32 lastNotifiedFlags;
+	u32 syncNotifyMask;
 } ScePowerCallbackSlot;
 
 typedef struct {
 	ScePowerCallbackSlot slots[32];	/* 0x000..0x1ff */
 	u32 statusFlags;		/* 0x200 */
 	u32 statusMask;			/* 0x204 */
-	u8 pad208;			/* 0x208 */
-	u8 cpuBoostActive;			/* 0x209 (0x5759) */
-	u8 voltageModeA;			/* 0x20a (0x575a) */
-	u8 voltageLimitB;			/* 0x20b (0x575b) */
-	u8 voltageLimitC;			/* 0x20c (0x575c) */
-	u8 cpuBoostMode;			/* 0x20d (0x575d) */
-	u8 voltageModeE;			/* 0x20e (0x575e) */
-	u8 pad20f[3];			/* 0x20f..0x211 */
-	u16 initPllFreq;		/* 0x212 */
-	u16 initBusFreq;		/* 0x214 */
-	u16 initCpuFreq;		/* 0x216 */
+	u8 padBeforeBoost;		/* 0x208 */
+	u8 cpuBoostActive;		/* 0x209 (0x5759) */
+	u8 voltageModeA;		/* 0x20a (0x575a) */
+	u8 voltageLimitB;		/* 0x20b (0x575b) */
+	u8 voltageLimitC;		/* 0x20c (0x575c) */
+	u8 cpuBoostMode;		/* 0x20d (0x575d) */
+	u8 voltageModeE;		/* 0x20e (0x575e) */
+	u8 padAfterVoltage[3];		/* 0x20f..0x211 */
+	s16 initPllFreq;		/* 0x212 */
+	s16 initBusFreq;		/* 0x214 */
+	s16 initCpuFreq;		/* 0x216 */
 } ScePowerCallbackContext;
 
 typedef struct {
@@ -55,18 +55,18 @@ typedef struct {
 	u32 vmemAddr;			/* 0x1c */
 	u32 vmemSize;			/* 0x20 */
 	u32 vmemLocked;			/* 0x24 */
-	u32 reqState1;			/* 0x28 */
-	u32 reqState2;			/* 0x2c */
+	u32 switchRequest;		/* 0x28 */
+	u32 powerRequest;		/* 0x2c */
 	u32 shutdownLocked;		/* 0x30 */
 	u32 coldResetMode;		/* 0x34 */
-	u32 pad38;			/* 0x38 */
-	u32 param3c;			/* 0x3c */
+	u32 reservedPad;		/* 0x38 */
+	u32 suspendModeParam;		/* 0x3c */
 	u32 resumeCount;		/* 0x40 */
 } ScePowerSuspendContext;
 
 typedef struct {
-	u32 state0;			/* 0x00 (offset +0x10 in ctx) */
-	s32 state4;			/* 0x04 (offset +0x14 in ctx) */
+	u32 tickPending;		/* 0x00 (offset +0x10 in ctx) */
+	s32 idleState;			/* 0x04 (offset +0x14 in ctx) */
 	u64 startTime;			/* 0x08 (offset +0x18 in ctx) */
 	u64 timeout;			/* 0x10 (offset +0x20 in ctx) */
 	u32 cbArg;			/* 0x18 (offset +0x28 in ctx) */
@@ -78,13 +78,18 @@ typedef struct {
 typedef struct {
 	u64 lastSysTime;		/* 0x00 */
 	u32 enabledMask;		/* 0x08 */
-	u32 pad0c;			/* 0x0c */
+	u32 reservedAlign;		/* 0x0c */
 	ScePowerIdleSlot slots[8];	/* 0x10..0x14f */
 } ScePowerIdleTimerContext;
 
+typedef struct SceSm1Operations {
+	u32 headOps[11];
+	void (*onPllChange)(int pllSel, int flag);
+} SceSm1Operations;
+
 typedef struct {
 	SceUID mutexId;			/* 0x00 (0xae5c) */
-	void *sm1Ops;			/* 0x04 (0xae60) */
+	SceSm1Operations *sm1Ops;	/* 0x04 (0xae60) */
 	s32 pllOutSelect;		/* 0x08 (0xae64) */
 	u32 pllMask;			/* 0x0c (0xae68) */
 	s32 pllFreqInt;			/* 0x10 (0xae6c) */
@@ -94,55 +99,58 @@ typedef struct {
 	float cpuFreqFloat;		/* 0x20 (0xae7c) */
 	float busFreqFloat;		/* 0x24 (0xae80) */
 	u32 savedSysreg[4];		/* 0x28..0x37 (0xae84..0xae93) */
-	s32 mode38;			/* 0x38 (0xae94) */
-	s16 val3c;			/* 0x3c (0xae98) */
-	s16 val3e;			/* 0x3e (0xae9a) */
-	s32 mode40;			/* 0x40 (0xae9c) */
-	s16 val44;			/* 0x44 (0xaea0) */
-	s16 val46;			/* 0x46 (0xaea2) */
-	s32 mode48;			/* 0x48 (0xaea4) */
-	s16 val4c;			/* 0x4c (0xaea8) */
-	s16 val4e;			/* 0x4e (0xaeaa) */
+	s32 coreVoltageHighMode;	/* 0x38 (0xae94) */
+	s16 coreVoltageHigh;		/* 0x3c (0xae98) */
+	s16 coreVoltageLow;		/* 0x3e (0xae9a) */
+	s32 pllVoltageHighMode;		/* 0x40 (0xae9c) */
+	s16 pllVoltageHigh;		/* 0x44 (0xaea0) */
+	s16 pllVoltageLow;		/* 0x46 (0xaea2) */
+	s32 ddrTimingHighMode;		/* 0x48 (0xaea4) */
+	s16 ddrTimingHigh;		/* 0x4c (0xaea8) */
+	s16 ddrTimingLow;		/* 0x4e (0xaeaa) */
 	s32 geRefreshMode;		/* 0x50 (0xaeac) */
 	s32 savedGeRefreshMode;		/* 0x54 (0xaeb0) */
-	s16 pad58;			/* 0x58 (0xaeb4) */
+	s16 padBeforeLimits;		/* 0x58 (0xaeb4) */
 	s16 cpuMin;			/* 0x5a (0xaeb6) */
 	s16 cpuMax;			/* 0x5c (0xaeb8) */
 	s16 busMin;			/* 0x5e (0xaeba) */
 	s16 busMax;			/* 0x60 (0xaebc) */
 	s16 pllMin;			/* 0x62 (0xaebe) */
 	s16 pllMax;			/* 0x64 (0xaec0) */
-	s16 pad66;			/* 0x66 (0xaec2) */
+	s16 padAfterLimits;		/* 0x66 (0xaec2) */
 } ScePowerClockContext;
 
 typedef struct {
-	u32 acState00;			/* 0x00 (0xaec4) */
-	u32 acState04;			/* 0x04 (0xaec8) */
-	u32 acState08;			/* 0x08 (0xaecc) */
-	u32 reserved0c;			/* 0x0c (0xaed0) */
-	u32 battMode10;			/* 0x10 (0xaed4) */
-	u32 reserved14;			/* 0x14 (0xaed8) */
-	u32 reserved18;			/* 0x18 (0xaedc) */
+	u32 lowBatteryThreshold;	/* 0x00 (0xaec4) */
+	u32 highBatteryThreshold;	/* 0x04 (0xaec8) */
+	u32 acAdapterState;		/* 0x08 (0xaecc) */
+	u32 padAfterAc;			/* 0x0c (0xaed0) */
+	u32 batteryMode;		/* 0x10 (0xaed4) */
+	u32 padAfterMode[2];		/* 0x14..0x1b */
 	SceUID alarmId;			/* 0x1c (0xaee0) */
-	u32 reserved20;			/* 0x20 (0xaee4) */
+	u32 padAfterAlarm;		/* 0x20 (0xaee4) */
 	u32 disabledFlag;		/* 0x24 (0xaee8) */
-	u32 reserved28;			/* 0x28 (0xaeec) */
-	u32 reserved2c;			/* 0x2c (0xaef0) */
-	s32 battStatus30;			/* 0x30 (0xaef4) */
-	u32 status34;			/* 0x34 (0xaef8) */
-	u32 state38;			/* 0x38 (0xaefc) */
-	u32 battChargingState;			/* 0x3c (0xaf00) */
+	u32 padAfterDisabled[2];	/* 0x28..0x2f */
+	s32 batteryStatus;		/* 0x30 (0xaef4) */
+	u32 eventStatusFlags;		/* 0x34 (0xaef8) */
+	u32 detectState;		/* 0x38 (0xaefc) */
+	u32 battChargingState;		/* 0x3c (0xaf00) */
 	s32 remainCap;			/* 0x40 (0xaf04) */
 	s32 lifePercent;		/* 0x44 (0xaf08) */
 	s32 fullCap;			/* 0x48 (0xaf0c) */
-	s32 battLifeTime;			/* 0x4c (0xaf10) */
+	s32 battLifeTime;		/* 0x4c (0xaf10) */
 	s32 cycleCount;			/* 0x50 (0xaf14) */
-	s32 battLowPercent;			/* 0x54 (0xaf18) */
+	s32 battLowPercent;		/* 0x54 (0xaf18) */
 	s32 temp;			/* 0x58 (0xaf1c) */
 	s32 elec;			/* 0x5c (0xaf20) */
 	s32 volt;			/* 0x60 (0xaf24) */
-	u32 pad64[27];			/* 0x64..0xcf */
+	u32 tailPad[27];		/* 0x64..0xcf */
 } ScePowerBatteryContext;
+
+typedef struct {
+	u32 headerWords[11];
+	u32 *powerInfo;
+} ScePowerRebootParam;
 
 typedef struct {
 	s32 freq;
@@ -236,7 +244,7 @@ int sceDdr_driver_00E36648(void);
 int sceDdr_driver_0BAAE4C5(void);
 int sceDdr_driver_CF07B9E2(int pllSel);
 int sceDdr_driver_E0A39D3E(int arg);
-int sceGeEdramSetRefreshParam(int mode, int arg1, int arg2, int arg3);
+int sceGeEdramSetRefreshParam(int mode, int refreshRate, int rowCycle, int burstLen);
 int sceCtrlSetButtonIntercept(int mask, int mode);
 int sceDisplayIsVblank(void);
 int sceDisplayWaitVblankStart(void);
@@ -296,17 +304,17 @@ s32 scePowerSetBusClockFrequency(int busfreq);
 s32 scePower_driver_100A77A1(int mode);
 s32 scePower_driver_C520F5DC(void);
 s32 scePower_driver_D7DD9D38(void);
-s32 scePower_driver_BADA8332(s32 *out0, s32 *out1);
-s32 scePower_driver_12F8302D(s32 a0, s32 a1);
+s32 scePower_driver_BADA8332(s32 *outHigh, s32 *outLow);
+s32 scePower_driver_12F8302D(s32 highVal, s32 lowVal);
 s32 scePower_driver_9127E5B2(void);
-s32 scePower_driver_75906F9A(s32 *out0, s32 *out1);
-s32 scePower_driver_018AB235(s32 a0, s32 a1);
+s32 scePower_driver_75906F9A(s32 *outHigh, s32 *outLow);
+s32 scePower_driver_018AB235(s32 highVal, s32 lowVal);
 s32 scePower_driver_0655D7C3(void);
-s32 scePower_driver_16F965C9(s32 *out0, s32 *out1);
-s32 scePower_driver_D13377F7(s32 a0, s32 a1);
-s32 scePower_driver_DF904CDE(s32 a0, s32 a1);
-s32 scePower_driver_EEFB2ACF(s32 a0, s32 a1);
-s32 scePower_driver_B7000C75(s32 a0, s32 a1);
+s32 scePower_driver_16F965C9(s32 *outHigh, s32 *outLow);
+s32 scePower_driver_D13377F7(s32 highVal, s32 lowVal);
+s32 scePower_driver_DF904CDE(s32 minFreq, s32 maxFreq);
+s32 scePower_driver_EEFB2ACF(s32 minFreq, s32 maxFreq);
+s32 scePower_driver_B7000C75(s32 minFreq, s32 maxFreq);
 s32 scePower_driver_13D7CCE4(u32 mask);
 s32 scePowerGetCpuClockFrequencyInt(void);
 float scePowerGetCpuClockFrequencyFloat(void);
@@ -355,11 +363,12 @@ static s32 __attribute__((noipa)) lockClockMutex(void);
 static s32 __attribute__((noipa)) unlockClockMutex(void);
 static s32 __attribute__((noipa)) clockRebootPhase(int phase);
 static s32 __attribute__((noipa)) changeClockFrequency(int pllfreq, int cpufreq, int busfreq);
-static s32 __attribute__((noipa)) initBatterySubsys(u32 a0, u32 a1);
+static s32 __attribute__((noipa)) initBatterySubsys(u32 mode, u32 disabled);
 static s32 __attribute__((noipa)) exitBatterySubsys(void);
-static s32 __attribute__((noipa)) setBatteryThresholds(u32 a0, u32 a1);
+static s32 __attribute__((noipa)) setBatteryThresholds(u32 lowThresh, u32 highThresh);
 static s32 __attribute__((noipa)) resetBatteryState(void);
 static s32 __attribute__((noipa)) updateBatteryEvent(const u32 *evData, u32 *statusFlags);
+static s32 __attribute__((noipa)) powerRequestSuspendInternal(void);
 
 static const ScePowerHandlers g_power_handlers = {
 	sizeof(ScePowerHandlers),
@@ -433,7 +442,7 @@ static s32 initCallbackFn(void *arg)
 
 	(void)arg;
 	appType = sceKernelApplicationType();
-	if (appType != 0x100 && appType != 0x300) {
+	if ((appType != 0x100) & (appType != 0x300)) {
 		changeClockFrequency(g_cb_ctx.initCpuFreq,
 				     g_cb_ctx.initPllFreq,
 				     g_cb_ctx.initBusFreq);
@@ -448,14 +457,11 @@ static int kermitPowerIntrHandler(void)
 	if ((val & 0x40U) != 0)
 		scePowerUnlock(0);
 
-	sceKernelSetEventFlag(g_susp_ctx.evfId, 0x20U);
-	return 0;
+	return powerRequestSuspendInternal();
 }
 
 s32 scePower_driver_9CE06934(void)
 {
-	int out;
-
 	initSuspendSubsys();
 	initClockSubsys();
 	sceKermit_driver_5280B410(10, kermitPowerIntrHandler);
@@ -464,9 +470,9 @@ s32 scePower_driver_9CE06934(void)
 		g_init_clocks[2] = 222;
 		g_init_clocks[0] = 222;
 	}
-	g_cb_ctx.initPllFreq = (u16)g_init_clocks[0];
-	g_cb_ctx.initBusFreq = (u16)g_init_clocks[1];
-	g_cb_ctx.initCpuFreq = (u16)g_init_clocks[2];
+	g_cb_ctx.initPllFreq = (s16)g_init_clocks[0];
+	g_cb_ctx.initBusFreq = (s16)g_init_clocks[1];
+	g_cb_ctx.initCpuFreq = (s16)g_init_clocks[2];
 	g_cb_ctx.voltageModeA = 0;
 	g_cb_ctx.voltageLimitB = 0;
 	g_cb_ctx.voltageLimitC = 0;
@@ -477,7 +483,7 @@ s32 scePower_driver_9CE06934(void)
 	g_cb_ctx.statusMask = 0xffffffffU;
 	initIdleSubsys();
 	sceKernelRegisterSysEventHandler(&g_power_sys_event);
-	sceKernelSetInitCallback(initCallbackFn, 2, &out);
+	sceKernelSetInitCallback(initCallbackFn, 2, NULL);
 	return 0;
 }
 
@@ -498,7 +504,7 @@ static int powerSysEventHandler(int ev_id, char *ev_name, void *param, int *resu
 
 			g_cb_ctx.statusFlags &= ~0x40000000U;
 			if (sceKernelGetCompiledSdkVersion() <= 0x06000000 &&
-			    (ev[8] & 0x2000U) != 0) {
+			    (ev[8] & 0x2000U) == 0) {
 				g_cb_ctx.statusFlags |= 0x40000000U;
 			}
 			g_cb_ctx.statusFlags &= ~0x80000000U;
@@ -545,9 +551,9 @@ s32 scePowerRegisterCallback(int slot, SceUID cbId)
 			res = SCE_ERROR_ALREADY;
 		} else {
 			g_cb_ctx.slots[slot].cbId = cbId;
-			g_cb_ctx.slots[slot].flags4 = 0;
-			g_cb_ctx.slots[slot].flagsC = 0;
-			g_cb_ctx.slots[slot].flags8 = g_cb_ctx.statusFlags;
+			g_cb_ctx.slots[slot].pendingEvents = 0;
+			g_cb_ctx.slots[slot].syncNotifyMask = 0;
+			g_cb_ctx.slots[slot].lastNotifiedFlags = g_cb_ctx.statusFlags;
 			sceKernelNotifyCallback(cbId,
 						(int)(g_cb_ctx.statusFlags & g_cb_ctx.statusMask));
 			res = 0;
@@ -560,9 +566,9 @@ s32 scePowerRegisterCallback(int slot, SceUID cbId)
 		for (i = 0; i < 16; i++) {
 			if (g_cb_ctx.slots[i].cbId < 0) {
 				g_cb_ctx.slots[i].cbId = cbId;
-				g_cb_ctx.slots[i].flags4 = 0;
-				g_cb_ctx.slots[i].flagsC = 0;
-				g_cb_ctx.slots[i].flags8 = g_cb_ctx.statusFlags;
+				g_cb_ctx.slots[i].pendingEvents = 0;
+				g_cb_ctx.slots[i].syncNotifyMask = 0;
+				g_cb_ctx.slots[i].lastNotifiedFlags = g_cb_ctx.statusFlags;
 				sceKernelNotifyCallback(cbId,
 							(int)(g_cb_ctx.statusFlags & g_cb_ctx.statusMask));
 				res = i;
@@ -595,7 +601,7 @@ s32 scePowerUnregisterCallback(int slot)
 	return 0;
 }
 
-s32 scePower_A9D22232(int slot, u32 flagsC)
+s32 scePower_A9D22232(int slot, u32 syncMask)
 {
 	int oldK1 = pspShiftK1();
 
@@ -611,15 +617,15 @@ s32 scePower_A9D22232(int slot, u32 flagsC)
 	if (g_cb_ctx.slots[slot].cbId < 0)
 		return SCE_ERROR_NOT_REGISTERED;
 
-	g_cb_ctx.slots[slot].flagsC = flagsC;
+	g_cb_ctx.slots[slot].syncNotifyMask = syncMask;
 	return 0;
 }
 
-s32 scePower_BAFA3DF0(int slot, u32 *outFlagsC)
+s32 scePower_BAFA3DF0(int slot, u32 *outSyncMask)
 {
 	int oldK1 = pspShiftK1();
 
-	if (!pspK1PtrOk(outFlagsC)) {
+	if (!pspK1PtrOk(outSyncMask)) {
 		pspSetK1(oldK1);
 		return SCE_ERROR_PRIV_REQUIRED;
 	}
@@ -635,8 +641,8 @@ s32 scePower_BAFA3DF0(int slot, u32 *outFlagsC)
 		pspSetK1(oldK1);
 		return SCE_ERROR_NOT_REGISTERED;
 	}
-	if (outFlagsC != NULL)
-		*outFlagsC = g_cb_ctx.slots[slot].flagsC;
+	if (outSyncMask != NULL)
+		*outSyncMask = g_cb_ctx.slots[slot].syncNotifyMask;
 
 	pspSetK1(oldK1);
 	return 0;
@@ -677,14 +683,14 @@ static void notifyPowerCallbacks(u32 clearMask, u32 setMask, u32 eventMask)
 		if (cbId >= 0) {
 			s32 cnt = sceKernelGetCallbackCount(cbId);
 			if (cnt >= 0) {
-				u32 f4, f8;
+				u32 pendingEvt, notifiedFlags;
 				if (cnt == 0)
-					g_cb_ctx.slots[i].flags4 = 0;
-				f4 = g_cb_ctx.slots[i].flags4 | eventMask;
-				f8 = flags | f4;
-				g_cb_ctx.slots[i].flags4 = f4;
-				g_cb_ctx.slots[i].flags8 = f8;
-				sceKernelNotifyCallback(cbId, (int)(f8 & g_cb_ctx.statusMask));
+					g_cb_ctx.slots[i].pendingEvents = 0;
+				pendingEvt = g_cb_ctx.slots[i].pendingEvents | eventMask;
+				notifiedFlags = flags | pendingEvt;
+				g_cb_ctx.slots[i].pendingEvents = pendingEvt;
+				g_cb_ctx.slots[i].lastNotifiedFlags = notifiedFlags;
+				sceKernelNotifyCallback(cbId, (int)(notifiedFlags & g_cb_ctx.statusMask));
 			}
 		}
 	}
@@ -698,8 +704,8 @@ static s32 checkBusyPowerCallbacks(u32 mask, SceUID *outCbId)
 
 	for (i = 0; i < 32; i++) {
 		SceUID cbId = g_cb_ctx.slots[i].cbId;
-		if (cbId >= 0 && (g_cb_ctx.slots[i].flags8 & mask) != 0 &&
-		    g_cb_ctx.slots[i].flagsC != 0) {
+		if (cbId >= 0 && (g_cb_ctx.slots[i].lastNotifiedFlags & mask) != 0 &&
+		    g_cb_ctx.slots[i].syncNotifyMask != 0) {
 			if (sceKernelGetCallbackCount(cbId) > 0) {
 				if (outCbId != NULL)
 					*outCbId = cbId;
@@ -714,14 +720,14 @@ static s32 checkBusyPowerCallbacks(u32 mask, SceUID *outCbId)
 
 s32 scePower_driver_2638EF48(void)
 {
-	s32 cpuFreq;
+	s32 pllFreq;
 
 	lockClockMutex();
-	scePower_34F9C463();
-	cpuFreq = scePowerGetCpuClockFrequencyInt();
+	pllFreq = scePower_34F9C463();
+	scePowerGetCpuClockFrequencyInt();
 	scePowerGetBusClockFrequencyInt();
-	if ((g_cb_ctx.cpuBoostMode == 1 && cpuFreq >= 223) ||
-	    (g_cb_ctx.cpuBoostMode == 2 && cpuFreq >= 267)) {
+	if (((g_cb_ctx.cpuBoostMode == 1) & (pllFreq >= 223)) ||
+	    ((g_cb_ctx.cpuBoostMode == 2) & (pllFreq >= 267))) {
 		unlockClockMutex();
 		return SCE_POWER_ERROR_CLOCK_INVALID;
 	}
@@ -734,14 +740,15 @@ s32 scePower_driver_2638EF48(void)
 
 s32 scePower_442BFBAC(void)
 {
-	u32 val = (scePowerIsPowerOnline() != 0) ? 4 : 3;
+	s32 val = (scePowerIsPowerOnline() != 0) ? 4 : 3;
 
 	if (g_cb_ctx.voltageLimitC != 0) {
-		u32 m = (val < g_cb_ctx.voltageLimitC) ? val : g_cb_ctx.voltageLimitC;
+		s32 lim = (s32)g_cb_ctx.voltageLimitC;
+		s32 clamped = (val < lim) ? val : lim;
 		if (g_cb_ctx.cpuBoostActive != 0)
-			val = m;
+			val = clamped;
 	}
-	return (s32)val;
+	return val;
 }
 
 int module_start(SceSize args, void *argp)
@@ -770,9 +777,9 @@ int module_reboot_phase(SceSize args, void *argp)
 	return 0;
 }
 
-int module_reboot_before(void *arg0)
+int module_reboot_before(ScePowerRebootParam *rebootArg)
 {
-	u32 *rebootParam = *(u32 **)((u8 *)arg0 + 0x2c);
+	u32 *rebootParam = rebootArg->powerInfo;
 
 	if (rebootParam != NULL) {
 		rebootParam[5] = scePower_driver_071160B1();
@@ -816,8 +823,8 @@ s32 scePower_driver_114B75AB(u8 val)
 
 s32 scePower_driver_E52B4362(int freq)
 {
-	if ((g_cb_ctx.cpuBoostMode == 1 && freq >= 223) ||
-	    (g_cb_ctx.cpuBoostMode == 2 && freq >= 267))
+	if (((g_cb_ctx.cpuBoostMode == 1) & (freq >= 223)) ||
+	    ((g_cb_ctx.cpuBoostMode == 2) & (freq >= 267)))
 		return SCE_POWER_ERROR_CLOCK_INVALID;
 	return 0;
 }
@@ -857,7 +864,7 @@ static s32 initSuspendSubsys(void)
 	memset(&g_susp_ctx, 0, sizeof(g_susp_ctx));
 	memset(g_lock_threads, 0, sizeof(g_lock_threads));
 	g_susp_ctx.swFlags = 2;
-	g_susp_ctx.param3c = 8;
+	g_susp_ctx.suspendModeParam = 8;
 	g_susp_ctx.evfId = sceKernelCreateEventFlag("ScePowerSw", 0x201, 0x50000, NULL);
 	g_susp_ctx.vmemSemaId = sceKernelCreateSema("ScePowerVmem", 1, 0, 1, NULL);
 	g_susp_ctx.mainThreadId = sceKernelCreateThread("ScePowerMain", powerMainThread,
@@ -899,7 +906,7 @@ s32 scePower_23C31FFE(int mode, u32 *outAddr, u32 *outSize)
 	intr = sceKernelCpuSuspendIntr();
 	if (((g_susp_ctx.vmemAddr >> 23) & 0x3fU) == 0x10U) {
 		u32 top = (g_susp_ctx.vmemAddr >> 29) & 7U;
-		if (((0x35U >> top) & 1U) != 0)
+		if (((0x35 >> top) & 1) != 0)
 			sceKernelSetDdrMemoryProtection(g_susp_ctx.vmemAddr, g_susp_ctx.vmemSize, 0xf);
 	}
 	g_susp_ctx.vmemLocked = 1;
@@ -939,7 +946,7 @@ s32 scePower_FA97A599(int mode, u32 *outAddr, u32 *outSize)
 	intr = sceKernelCpuSuspendIntr();
 	if (((g_susp_ctx.vmemAddr >> 23) & 0x3fU) == 0x10U) {
 		u32 top = (g_susp_ctx.vmemAddr >> 29) & 7U;
-		if (((0x35U >> top) & 1U) != 0)
+		if (((0x35 >> top) & 1) != 0)
 			sceKernelSetDdrMemoryProtection(g_susp_ctx.vmemAddr, g_susp_ctx.vmemSize, 0xf);
 	}
 	g_susp_ctx.vmemLocked = 1;
@@ -963,7 +970,7 @@ s32 scePower_B3EDD801(int mode)
 	intr = sceKernelCpuSuspendIntr();
 	if (((g_susp_ctx.vmemAddr >> 23) & 0x3fU) == 0x10U) {
 		u32 top = (g_susp_ctx.vmemAddr >> 29) & 7U;
-		if (((0x35U >> top) & 1U) != 0)
+		if (((0x35 >> top) & 1) != 0)
 			sceKernelSetDdrMemoryProtection(g_susp_ctx.vmemAddr, g_susp_ctx.vmemSize, 0);
 	}
 	res = sceKernelSignalSema(g_susp_ctx.vmemSemaId, 1);
@@ -1103,12 +1110,12 @@ s32 scePower_driver_C3024FE6(int mode)
 
 s32 scePower_3951AF53(void)
 {
-	u32 outBits = 0;
+	u32 outBits;
 	int oldK1 = pspShiftK1();
 	s32 res;
 
 	res = sceKernelPollEventFlag(g_susp_ctx.evfId, 0xffffffffU, 1, &outBits);
-	if (res < 0 && res != (s32)0x800201afU) {
+	if ((res < 0) & (res != (s32)0x800201afU)) {
 		pspSetK1(oldK1);
 		return res;
 	}
@@ -1124,8 +1131,12 @@ s32 scePower_3951AF53(void)
 		}
 	}
 	res = sceKernelWaitEventFlag(g_susp_ctx.evfId, 0x40000U, 1, &outBits, NULL);
+	if (res < 0) {
+		pspSetK1(oldK1);
+		return res;
+	}
 	pspSetK1(oldK1);
-	return (res < 0) ? res : 0;
+	return 0;
 }
 
 static void __attribute__((noipa)) disablePeripheralsForSuspend(void)
@@ -1178,15 +1189,16 @@ static s32 __attribute__((noipa)) executePowerTransition(int transMode)
 	spBuf[0x84 / 4] = 0x06060110U;
 	spBuf[0xb4 / 4] = (u32)sceKernelGetGameInfo();
 	spBuf[0xc4 / 4] = (u32)sceKernelInitParamSfo(&spBuf[0xc8 / 4]);
-	spBuf[0x130 / 4] = g_susp_ctx.param3c;
+	spBuf[0x130 / 4] = g_susp_ctx.suspendModeParam;
 	spBuf[0x10 / 4] = (u32)&spBuf[0x130 / 4];
 	spBuf[0x14 / 4] = (u32)&spBuf[0x80 / 4];
 
 	scePower_driver_C463E7F2();
 	if (g_kermitPeriphStatus != 0) {
-		scePower_34F9C463();
+		savedPll = scePower_34F9C463();
 		savedCpu = scePowerGetCpuClockFrequencyInt();
-		savedPll = savedCpu;
+		if (savedPll - savedCpu == 1)
+			savedCpu = savedPll;
 		savedBus = scePowerGetBusClockFrequencyInt();
 	}
 
@@ -1222,22 +1234,69 @@ static s32 __attribute__((noipa)) executePowerTransition(int transMode)
 	intr = sceKernelCpuSuspendIntr();
 	sceKernelSysEventDispatch(0xff00, 0x400, "phase1", spBuf, NULL, 0, NULL);
 	retry = 0;
-	for (;;) {
-		sceKernelSysEventDispatch(0xff00, 0x401, "phase1", spBuf, NULL, 0, NULL);
-		if (scePower_driver_var_3080D4C0 != 0 && retry == 499)
-			sceKermitPeripheral_driver_15F5C107();
-		if (sceKernelSysEventDispatch(0xff00, 0x402, "phase1", spBuf,
-					      (int *)&spBuf[0x13c / 4], 1,
-					      (SceSysEventHandler **)&spBuf[0x140 / 4]) >= 0 &&
-		    g_susp_ctx.kernelLockCount == 0 &&
-		    g_susp_ctx.vmemLocked == 0 &&
-		    checkBusyPowerCallbacks(0x90000U, (SceUID *)&spBuf[0x144 / 4]) == 0) {
+	{
+		s32 waitTicks = 0;
+		for (;;) {
+			s32 evRes;
+			sceKernelCpuResumeIntr(intr);
+			sceKernelDelayThread(10000);
+			if (waitTicks >= 0) {
+				u8 timeoutSec = scePower_driver_4E32E9B8();
+				s32 elapsedSec;
+				waitTicks++;
+				elapsedSec = waitTicks / 100;
+				if ((timeoutSec != 0 && elapsedSec > (s32)timeoutSec) ||
+				    (timeoutSec == 0 && elapsedSec >= 21)) {
+					waitTicks = -1;
+				}
+			}
+			sceKernelSysEventDispatch(0xff00, 0x401, "phase1", spBuf, NULL, 0, NULL);
+			if (scePower_driver_var_3080D4C0 != 0 && retry == 499)
+				sceKermitPeripheral_driver_15F5C107();
+			intr = sceKernelCpuSuspendIntr();
+			spBuf[0x13c / 4] = 0;
+			spBuf[0x140 / 4] = 0;
+			evRes = sceKernelSysEventDispatch(0xff00, 0x402, "phase1", spBuf,
+							  (int *)&spBuf[0x13c / 4], 1,
+							  (SceSysEventHandler **)&spBuf[0x140 / 4]);
+			if (evRes < 0) {
+				retry++;
+				if (retry == 500) {
+					SceSysEventHandler *broken = (SceSysEventHandler *)spBuf[0x140 / 4];
+					retry = 0;
+					if (broken != NULL) {
+						Kprintf("%s Busy: 0x%08X, 0x%08X, %08X\n",
+							broken->name, evRes, (u32)broken, spBuf[0x13c / 4]);
+					}
+				}
+				continue;
+			}
+			if (g_susp_ctx.kernelLockCount != 0) {
+				retry++;
+				if (retry == 500) {
+					Kprintf("Kernel Power Lock\n");
+					retry = 0;
+				}
+				continue;
+			}
+			if (g_susp_ctx.vmemLocked != 0) {
+				retry++;
+				if (retry == 500) {
+					Kprintf("Volatile Memory Lock\n");
+					retry = 0;
+				}
+				continue;
+			}
+			if (checkBusyPowerCallbacks(0x90000U, (SceUID *)&spBuf[0x144 / 4]) != 0) {
+				retry++;
+				if (retry == 500) {
+					Kprintf("Power Callback Busy: 0x%08X\n", spBuf[0x144 / 4]);
+					retry = 0;
+				}
+				continue;
+			}
 			break;
 		}
-		retry++;
-		sceKernelCpuResumeIntr(intr);
-		sceKernelDelayThread(10000);
-		intr = sceKernelCpuSuspendIntr();
 	}
 
 	sceDisplay_driver_CE8A328E();
@@ -1286,6 +1345,8 @@ static s32 __attribute__((noipa)) executePowerTransition(int transMode)
 			syncKermitDma();
 			HW(0xabd78000U) = 1;
 			syncKermitDma();
+			for (;;) {
+			}
 		}
 		UtilsForKernel_39FFB756(st);
 	} else if ((transMode & 0xf00) == 0x300) {
@@ -1297,6 +1358,14 @@ static s32 __attribute__((noipa)) executePowerTransition(int transMode)
 			sceSuspendForKernel_B2C9640B(1);
 		}
 		UtilsForKernel_39FFB756(st);
+	} else if ((transMode & 0xf00) == 0x400) {
+		if (g_susp_ctx.coldResetMode != 0) {
+			volatile u32 spin = 1000000;
+			while (spin != 0)
+				spin--;
+		}
+		for (;;) {
+		}
 	}
 
 	sceKernelDispatchResumeHandlers(0);
@@ -1321,8 +1390,28 @@ static s32 __attribute__((noipa)) executePowerTransition(int transMode)
 	sceKernelCpuResumeIntr(intr);
 
 	sceKernelSysEventDispatch(0xff0000, 0x100000, "phase1", &spBuf[0x40 / 4], NULL, 0, NULL);
-	sceKernelSysEventDispatch(0xff0000, 0x100001, "phase1", &spBuf[0x40 / 4], NULL, 0, NULL);
-	sceKernelSysEventDispatch(0xff0000, 0x100002, "phase1", &spBuf[0x40 / 4], NULL, 0, NULL);
+	retry = 0;
+	for (;;) {
+		s32 evRes;
+		spBuf[0x148 / 4] = 0;
+		spBuf[0x14c / 4] = 0;
+		retry++;
+		sceKernelSysEventDispatch(0xff0000, 0x100001, "phase1", &spBuf[0x40 / 4], NULL, 0, NULL);
+		evRes = sceKernelSysEventDispatch(0xff0000, 0x100002, "phase1", &spBuf[0x40 / 4],
+						  (int *)&spBuf[0x148 / 4], 1,
+						  (SceSysEventHandler **)&spBuf[0x14c / 4]);
+		if (evRes >= 0)
+			break;
+		if (retry == 500) {
+			SceSysEventHandler *broken = (SceSysEventHandler *)spBuf[0x14c / 4];
+			retry = 0;
+			if (broken != NULL) {
+				Kprintf("%s Busy: 0x%08X, 0x%08X, %08X\n",
+					broken->name, evRes, (u32)broken, spBuf[0x148 / 4]);
+			}
+		}
+		sceKernelDelayThread(5000);
+	}
 	sceKernelSysEventDispatch(0xff0000, 0x400000, "completed", &spBuf[0x40 / 4], NULL, 0, NULL);
 
 	if (g_kermitPeriphStatus != 0) {
@@ -1340,11 +1429,13 @@ static s32 __attribute__((noipa)) executePowerTransition(int transMode)
 
 static void __attribute__((noipa)) powerResumeEntry(u32 *arg)
 {
+	u32 scratchRegs[8];
+	int i;
+
 	if (arg != NULL) {
 		s32 len = (s32)arg[0];
 		u8 *src = (u8 *)arg;
 		u8 *dst = g_suspend_save_buf + 0x5008;
-		s32 i;
 		for (i = 0; i < len; i++)
 			dst[i] = src[i];
 		((ScePowerSuspendFooter *)(g_suspend_save_buf + 0x5000))->resumeFlag = 0;
@@ -1352,23 +1443,11 @@ static void __attribute__((noipa)) powerResumeEntry(u32 *arg)
 		if (fn != NULL)
 			fn(((ScePowerSuspendFooter *)(g_suspend_save_buf + 0x5000))->pllOut);
 	}
-	u32 r0 = HW(0xbfc00200U);
-	u32 r1 = HW(0xbfc00204U);
-	u32 r2 = HW(0xbfc00208U);
-	u32 r3 = HW(0xbfc0020cU);
-	u32 r4 = HW(0xbfc00210U);
-	u32 r5 = HW(0xbfc00214U);
-	u32 r6 = HW(0xbfc00218U);
-	u32 r7 = HW(0xbfc0021cU);
+	for (i = 0; i < 8; i++)
+		scratchRegs[i] = HW(0xbfc00200U + (u32)(i * 4));
 	g_susp_ctx.resumeCount++;
-	HW(0xbfc00200U) = r0;
-	HW(0xbfc00204U) = r1;
-	HW(0xbfc00208U) = r2;
-	HW(0xbfc0020cU) = r3;
-	HW(0xbfc00210U) = r4;
-	HW(0xbfc00214U) = r5;
-	HW(0xbfc00218U) = r6;
-	HW(0xbfc0021cU) = r7;
+	for (i = 0; i < 8; i++)
+		HW(0xbfc00200U + (u32)(i * 4)) = scratchRegs[i];
 	sceSuspendForKernel_B2C9640B(1);
 }
 
@@ -1399,21 +1478,21 @@ static int powerMainThread(SceSize args, void *argp)
 			}
 			if ((g_susp_ctx.swFlags & 2U) != 0) {
 				if ((outBits & 2U) != 0)
-					g_susp_ctx.reqState1 = 2;
+					g_susp_ctx.switchRequest = 2;
 				else
-					g_susp_ctx.reqState1 = 1;
+					g_susp_ctx.switchRequest = 1;
 			}
 		}
 
 		if ((outBits & 0x10U) != 0) {
-			g_susp_ctx.reqState2 = 1;
+			g_susp_ctx.powerRequest = 1;
 		} else if ((outBits & 0x20U) != 0) {
-			g_susp_ctx.reqState2 = 2;
+			g_susp_ctx.powerRequest = 2;
 		} else if ((outBits & 0x40U) != 0) {
-			g_susp_ctx.reqState2 = 3;
+			g_susp_ctx.powerRequest = 3;
 		} else if ((outBits & 0x80U) != 0) {
-			g_susp_ctx.reqState2 = 4;
-		} else if (g_susp_ctx.reqState1 == 0) {
+			g_susp_ctx.powerRequest = 4;
+		} else if (g_susp_ctx.switchRequest == 0) {
 			continue;
 		}
 
@@ -1432,23 +1511,23 @@ static int powerMainThread(SceSize args, void *argp)
 		if ((s32)outBits < 0)
 			break;
 		if ((outBits & 0x80U) != 0)
-			g_susp_ctx.reqState2 = 4;
+			g_susp_ctx.powerRequest = 4;
 
 		sceKernelClearEventFlag(g_susp_ctx.evfId, ~0x40000U);
 		sceKernelSetEventFlag(g_susp_ctx.evfId, 0x20000U);
 
 		if (g_susp_ctx.shutdownLocked == 0) {
-			if (g_susp_ctx.reqState1 == 1 || g_susp_ctx.reqState2 == 1) {
+			if (g_susp_ctx.switchRequest == 1 || g_susp_ctx.powerRequest == 1) {
 				executePowerTransition(0x101);
-			} else if (g_susp_ctx.reqState1 == 2 || g_susp_ctx.reqState2 == 2) {
+			} else if (g_susp_ctx.switchRequest == 2 || g_susp_ctx.powerRequest == 2) {
 				executePowerTransition(0x202);
-				g_susp_ctx.reqState1 = 0;
-				g_susp_ctx.reqState2 = 0;
-			} else if (g_susp_ctx.reqState2 == 3) {
+				g_susp_ctx.switchRequest = 0;
+				g_susp_ctx.powerRequest = 0;
+			} else if (g_susp_ctx.powerRequest == 3) {
 				executePowerTransition(0x303);
-				g_susp_ctx.reqState1 = 0;
-				g_susp_ctx.reqState2 = 0;
-			} else if (g_susp_ctx.reqState2 == 4) {
+				g_susp_ctx.switchRequest = 0;
+				g_susp_ctx.powerRequest = 0;
+			} else if (g_susp_ctx.powerRequest == 4) {
 				executePowerTransition(0x404);
 			}
 		}
@@ -1468,7 +1547,7 @@ static s32 exitSuspendSubsys(void)
 	sceKernelDeleteEventFlag(g_susp_ctx.evfId);
 	if (((g_susp_ctx.vmemAddr >> 23) & 0x3fU) == 0x10U) {
 		u32 top = (g_susp_ctx.vmemAddr >> 29) & 7U;
-		if (((0x35U >> top) & 1U) != 0)
+		if (((0x35 >> top) & 1) != 0)
 			sceKernelSetDdrMemoryProtection(g_susp_ctx.vmemAddr, g_susp_ctx.vmemSize, 0xf);
 	}
 	return 0;
@@ -1490,8 +1569,8 @@ s32 scePower_driver_1EC2D4E4(void)
 	int intr;
 
 	scePowerLock(0);
-	intr = sceKernelCpuSuspendIntr();
 	g_susp_ctx.shutdownLocked = 1;
+	intr = sceKernelCpuSuspendIntr();
 	sceKernelClearEventFlag(g_susp_ctx.evfId, ~0x10000U);
 	sceKernelSetEventFlag(g_susp_ctx.evfId, 0x40000U);
 	sceKernelCpuResumeIntr(intr);
@@ -1500,14 +1579,14 @@ s32 scePower_driver_1EC2D4E4(void)
 
 s32 scePower_7FA406DD(void)
 {
-	return (g_susp_ctx.reqState1 | g_susp_ctx.reqState2) != 0;
+	return (g_susp_ctx.switchRequest | g_susp_ctx.powerRequest) != 0;
 }
 
 u32 scePower_DB62C9CF(void)
 {
 	int intr = sceKernelCpuSuspendIntr();
-	u32 st = g_susp_ctx.reqState1;
-	g_susp_ctx.reqState1 = 0;
+	u32 st = g_susp_ctx.switchRequest;
+	g_susp_ctx.switchRequest = 0;
 	sceKernelCpuResumeIntr(intr);
 	return st;
 }
@@ -1516,6 +1595,14 @@ s32 scePowerRequestStandby(void)
 {
 	int oldK1 = pspShiftK1();
 	sceKernelSetEventFlag(g_susp_ctx.evfId, 0x10U);
+	pspSetK1(oldK1);
+	return 0;
+}
+
+static s32 powerRequestSuspendInternal(void)
+{
+	int oldK1 = pspShiftK1();
+	sceKernelSetEventFlag(g_susp_ctx.evfId, 0x20U);
 	pspSetK1(oldK1);
 	return 0;
 }
@@ -1562,7 +1649,7 @@ u32 scePower_0074EF9B(void)
 
 s32 scePower_driver_BA566CD0(u32 val)
 {
-	g_susp_ctx.param3c = val;
+	g_susp_ctx.suspendModeParam = val;
 	return 0;
 }
 
@@ -1614,24 +1701,26 @@ s32 scePower_driver_1BA2FCAE(int slot, u32 cbArg, u64 timeout,
 
 	g_idle_ctx.slots[slot].cbArg = cbArg;
 	g_idle_ctx.slots[slot].startTime = (u64)sceKernelGetSystemTimeWide();
-	g_idle_ctx.slots[slot].cbFunc = cbFunc;
-	g_idle_ctx.slots[slot].state4 = -1;
+	*(void (*volatile *)(int, u32, u32))&g_idle_ctx.slots[slot].cbFunc = cbFunc;
+	*(volatile s32 *)&g_idle_ctx.slots[slot].idleState = -1;
 	g_idle_ctx.slots[slot].timeout = timeout;
 	g_idle_ctx.slots[slot].gpFunc = getModuleGp;
 	g_idle_ctx.slots[slot].userOpt = userOpt;
-	g_idle_ctx.slots[slot].state0 = 0;
+	g_idle_ctx.slots[slot].tickPending = 0;
 	sceKernelCpuResumeIntr(intr);
 	return 0;
 }
 
-static int idleVblankSubIntr(int sub_intr, void *arg)
+static int idleVblankSubIntr(int subIntr, void *arg)
 {
 	u64 now = (u64)sceKernelGetSystemTimeWide();
+	u32 savedGp;
 	int i;
 
-	(void)sub_intr;
+	(void)subIntr;
 	(void)arg;
 
+	__asm__ volatile("move %0, $gp" : "=r"(savedGp));
 	g_idle_ctx.lastSysTime = now;
 	for (i = 0; i < 8; i++) {
 		ScePowerIdleSlot *s = &g_idle_ctx.slots[i];
@@ -1640,20 +1729,23 @@ static int idleVblankSubIntr(int sub_intr, void *arg)
 		if ((g_idle_ctx.enabledMask & (1U << i)) == 0)
 			continue;
 
-		if (s->state0 != 0) {
-			if (s->state4 != 0) {
-				s->state0 = 0;
-				s->state4 = 0;
+		if (s->tickPending != 0) {
+			if (s->idleState != 0) {
+				s->tickPending = 0;
+				s->idleState = 0;
+				__asm__ volatile("move $gp, %0" : : "r"(s->gpFunc));
 				s->cbFunc(i, 0, s->userOpt);
 			}
-		} else if (s->state4 != 1) {
+		} else if (s->idleState != 1) {
 			u64 diff = now - s->startTime;
 			if (diff >= s->timeout) {
-				s->state4 = 1;
+				s->idleState = 1;
+				__asm__ volatile("move $gp, %0" : : "r"(s->gpFunc));
 				s->cbFunc(i, (u32)diff, s->userOpt);
 			}
 		}
 	}
+	__asm__ volatile("move $gp, %0" : : "r"(savedGp));
 	return -1;
 }
 
@@ -1709,7 +1801,7 @@ s32 scePowerIdleTimerDisable(int slot)
 
 	intr = sceKernelCpuSuspendIntr();
 	prev = (g_idle_ctx.enabledMask >> slot) & 1U;
-	g_idle_ctx.enabledMask &= ~(1U << slot);
+	g_idle_ctx.enabledMask &= (~1U << slot);
 	sceKernelCpuResumeIntr(intr);
 	return (s32)prev;
 }
@@ -1742,31 +1834,31 @@ static s32 initClockSubsys(void)
 	g_clock_ctx.busFreqFloat = busF;
 
 	if (g_clock_ctx.pllOutSelect == 5) {
-		g_clock_ctx.mode48 = 1;
-		g_clock_ctx.mode38 = 1;
-		g_clock_ctx.mode40 = 1;
+		g_clock_ctx.ddrTimingHighMode = 1;
+		g_clock_ctx.coreVoltageHighMode = 1;
+		g_clock_ctx.pllVoltageHighMode = 1;
 	} else if (g_clock_ctx.pllOutSelect == 4) {
-		g_clock_ctx.mode38 = 1;
-		g_clock_ctx.mode48 = 0;
-		g_clock_ctx.mode40 = 0;
+		g_clock_ctx.coreVoltageHighMode = 1;
+		g_clock_ctx.ddrTimingHighMode = 0;
+		g_clock_ctx.pllVoltageHighMode = 0;
 	} else {
-		g_clock_ctx.mode48 = 0;
-		g_clock_ctx.mode38 = 0;
-		g_clock_ctx.mode40 = 0;
+		g_clock_ctx.ddrTimingHighMode = 0;
+		g_clock_ctx.coreVoltageHighMode = 0;
+		g_clock_ctx.pllVoltageHighMode = 0;
 	}
 
-	g_clock_ctx.val4e = -1;
-	g_clock_ctx.val44 = -1;
-	g_clock_ctx.val46 = -1;
-	g_clock_ctx.val4c = -1;
+	g_clock_ctx.ddrTimingLow = -1;
+	g_clock_ctx.pllVoltageHigh = -1;
+	g_clock_ctx.pllVoltageLow = -1;
+	g_clock_ctx.ddrTimingHigh = -1;
 
-	if (sceSysregGetTachyonVersion() <= 0x0013ffffU) {
-		g_clock_ctx.val3e = 0x400;
-		g_clock_ctx.val3c = 0;
+	if ((s32)sceSysregGetTachyonVersion() <= 0x0013ffff) {
+		g_clock_ctx.coreVoltageLow = 0x400;
+		g_clock_ctx.coreVoltageHigh = 0;
 	} else {
 		u32 fuseCfg = sceSysregGetFuseConfig();
-		g_clock_ctx.val3e = (s16)(0xb00U - ((fuseCfg & 0x3800U) >> 3));
-		g_clock_ctx.val3c = (s16)((~fuseCfg) & 0x700U);
+		g_clock_ctx.coreVoltageLow = (s16)(0xb00U - ((fuseCfg & 0x3800U) >> 3));
+		g_clock_ctx.coreVoltageHigh = (s16)((~fuseCfg) & 0x700U);
 	}
 
 	scePower_driver_100A77A1(1);
@@ -1950,14 +2042,14 @@ static s32 changeClockFrequency(int pllfreq, int cpufreq, int busfreq)
 			return res;
 		}
 
-		if (targetPllSel == 5 && g_clock_ctx.mode40 == 0)
-			g_clock_ctx.mode40 = 1;
-		if ((u32)(targetPllSel - 4) < 2U && g_clock_ctx.mode38 == 0 && g_clock_ctx.val3c >= 0)
-			g_clock_ctx.mode38 = 1;
-		if (targetPllSel == 5 && g_clock_ctx.mode48 == 0) {
-			if (g_clock_ctx.val4c >= 0 && g_clock_ctx.val4c != g_clock_ctx.val4e)
+		if (targetPllSel == 5 && g_clock_ctx.pllVoltageHighMode == 0)
+			g_clock_ctx.pllVoltageHighMode = 1;
+		if ((u32)(targetPllSel - 4) < 2U && g_clock_ctx.coreVoltageHighMode == 0 && g_clock_ctx.coreVoltageHigh >= 0)
+			g_clock_ctx.coreVoltageHighMode = 1;
+		if (targetPllSel == 5 && g_clock_ctx.ddrTimingHighMode == 0) {
+			if (g_clock_ctx.ddrTimingHigh >= 0 && g_clock_ctx.ddrTimingHigh != g_clock_ctx.ddrTimingLow)
 				sceDdr_driver_0BAAE4C5();
-			g_clock_ctx.mode48 = 1;
+			g_clock_ctx.ddrTimingHighMode = 1;
 		}
 
 		sceKernelSysEventDispatch(0x1000000, 0x1000002, "start", evParam, NULL, 0, NULL);
@@ -1966,6 +2058,8 @@ static s32 changeClockFrequency(int pllfreq, int cpufreq, int busfreq)
 		sceSysreg_driver_3F6F2CC7(0x1ff, 0x1ff);
 		sceSysreg_driver_63E1EE9C(0x1ff, 0x1ff);
 		sceKernelSysEventDispatch(0x1000000, 0x1000010, "phase0", evParam, NULL, 0, NULL);
+		if (g_clock_ctx.sm1Ops != NULL)
+			g_clock_ctx.sm1Ops->onPllChange(targetPllSel, -1);
 		sceDdr_driver_CF07B9E2(targetPllSel);
 		g_clock_ctx.pllOutSelect = targetPllSel;
 		newPllF = sceSysregPllGetFrequency();
@@ -1975,15 +2069,15 @@ static s32 changeClockFrequency(int pllfreq, int cpufreq, int busfreq)
 		sceKernelCpuResumeIntr(intr);
 		sceKernelSysEventDispatch(0x1000000, 0x1000020, "end", evParam, NULL, 0, NULL);
 
-		if (targetPllSel != 5 && g_clock_ctx.mode48 == 1) {
-			if (g_clock_ctx.val4e >= 0 && g_clock_ctx.val4c != g_clock_ctx.val4e)
+		if (targetPllSel != 5 && g_clock_ctx.ddrTimingHighMode == 1) {
+			if (g_clock_ctx.ddrTimingLow >= 0 && g_clock_ctx.ddrTimingHigh != g_clock_ctx.ddrTimingLow)
 				sceDdr_driver_0BAAE4C5();
-			g_clock_ctx.mode48 = 0;
+			g_clock_ctx.ddrTimingHighMode = 0;
 		}
-		if ((u32)(targetPllSel - 4) >= 2U && g_clock_ctx.mode38 == 1 && g_clock_ctx.val3e >= 0)
-			g_clock_ctx.mode38 = 0;
-		if (targetPllSel != 5 && g_clock_ctx.mode40 == 1)
-			g_clock_ctx.mode40 = 0;
+		if ((u32)(targetPllSel - 4) >= 2U && g_clock_ctx.coreVoltageHighMode == 1 && g_clock_ctx.coreVoltageLow >= 0)
+			g_clock_ctx.coreVoltageHighMode = 0;
+		if (targetPllSel != 5 && g_clock_ctx.pllVoltageHighMode == 1)
+			g_clock_ctx.pllVoltageHighMode = 0;
 	}
 
 	if ((pllfreq / 2) == busfreq) {
@@ -2006,31 +2100,31 @@ static s32 changeClockFrequency(int pllfreq, int cpufreq, int busfreq)
 s32 scePower_driver_100A77A1(int mode)
 {
 	int intr = sceKernelCpuSuspendIntr();
-	int arg1 = 1, arg2 = 8, arg3 = 6;
+	int refreshRate = 1, rowCycle = 8, burstLen = 6;
 	s32 res;
 
 	if (mode == 0) {
 		s32 bus = g_clock_ctx.busFreqInt;
 		if (bus >= 75) {
-			arg1 = (bus * 8000 - 75) / 1024;
-			arg2 = 1;
-			arg3 = 6;
+			refreshRate = (bus * 8000 - 75) / 1024;
+			rowCycle = 1;
+			burstLen = 6;
 		} else if (bus >= 50) {
-			arg1 = (bus * 8000 - 75) / 512;
-			arg2 = 2;
-			arg3 = 3;
+			refreshRate = (bus * 8000 - 75) / 512;
+			rowCycle = 2;
+			burstLen = 3;
 		} else if (bus >= 25) {
-			arg1 = (bus * 8000 - 75) / 384;
-			arg2 = 3;
-			arg3 = 2;
+			refreshRate = (bus * 8000 - 75) / 342;
+			rowCycle = 3;
+			burstLen = 2;
 		} else {
-			arg1 = (bus * 8000 - 75) / 192;
-			arg2 = 6;
-			arg3 = 1;
+			refreshRate = (bus * 8000 - 75) / 171;
+			rowCycle = 6;
+			burstLen = 1;
 		}
 	}
 
-	res = sceGeEdramSetRefreshParam(mode, arg1, arg2, arg3);
+	res = sceGeEdramSetRefreshParam(mode, refreshRate, rowCycle, burstLen);
 	sceKernelCpuResumeIntr(intr);
 	if (res >= 0) {
 		g_clock_ctx.geRefreshMode = mode;
@@ -2093,97 +2187,97 @@ static s32 restoreClockSysregPhase(int phase)
 
 s32 scePower_driver_D7DD9D38(void)
 {
-	return (g_clock_ctx.mode38 != 0) ? g_clock_ctx.val3c : g_clock_ctx.val3e;
+	return (g_clock_ctx.coreVoltageHighMode != 0) ? g_clock_ctx.coreVoltageHigh : g_clock_ctx.coreVoltageLow;
 }
 
-s32 scePower_driver_BADA8332(s32 *out0, s32 *out1)
+s32 scePower_driver_BADA8332(s32 *outHigh, s32 *outLow)
 {
-	if (out0 != NULL)
-		*out0 = g_clock_ctx.val3c;
-	if (out1 != NULL)
-		*out1 = g_clock_ctx.val3e;
+	if (outHigh != NULL)
+		*outHigh = g_clock_ctx.coreVoltageHigh;
+	if (outLow != NULL)
+		*outLow = g_clock_ctx.coreVoltageLow;
 	return 0;
 }
 
-s32 scePower_driver_12F8302D(s32 a0, s32 a1)
+s32 scePower_driver_12F8302D(s32 highVal, s32 lowVal)
 {
-	if (a0 != -1)
-		g_clock_ctx.val3c = (s16)a0;
-	if (a1 != -1)
-		g_clock_ctx.val3e = (s16)a1;
+	if (highVal != -1)
+		g_clock_ctx.coreVoltageHigh = (s16)highVal;
+	if (lowVal != -1)
+		g_clock_ctx.coreVoltageLow = (s16)lowVal;
 	return 0;
 }
 
 s32 scePower_driver_9127E5B2(void)
 {
-	return (g_clock_ctx.mode40 != 0) ? g_clock_ctx.val44 : g_clock_ctx.val46;
+	return (g_clock_ctx.pllVoltageHighMode != 0) ? g_clock_ctx.pllVoltageHigh : g_clock_ctx.pllVoltageLow;
 }
 
-s32 scePower_driver_75906F9A(s32 *out0, s32 *out1)
+s32 scePower_driver_75906F9A(s32 *outHigh, s32 *outLow)
 {
-	if (out0 != NULL)
-		*out0 = g_clock_ctx.val44;
-	if (out1 != NULL)
-		*out1 = g_clock_ctx.val46;
+	if (outHigh != NULL)
+		*outHigh = g_clock_ctx.pllVoltageHigh;
+	if (outLow != NULL)
+		*outLow = g_clock_ctx.pllVoltageLow;
 	return 0;
 }
 
-s32 scePower_driver_018AB235(s32 a0, s32 a1)
+s32 scePower_driver_018AB235(s32 highVal, s32 lowVal)
 {
-	if (a0 != -1)
-		g_clock_ctx.val44 = (s16)a0;
-	if (a1 != -1)
-		g_clock_ctx.val46 = (s16)a1;
+	if (highVal != -1)
+		g_clock_ctx.pllVoltageHigh = (s16)highVal;
+	if (lowVal != -1)
+		g_clock_ctx.pllVoltageLow = (s16)lowVal;
 	return 0;
 }
 
 s32 scePower_driver_0655D7C3(void)
 {
-	return (g_clock_ctx.mode48 != 0) ? g_clock_ctx.val4c : g_clock_ctx.val4e;
+	return (g_clock_ctx.ddrTimingHighMode != 0) ? g_clock_ctx.ddrTimingHigh : g_clock_ctx.ddrTimingLow;
 }
 
-s32 scePower_driver_16F965C9(s32 *out0, s32 *out1)
+s32 scePower_driver_16F965C9(s32 *outHigh, s32 *outLow)
 {
-	if (out0 != NULL)
-		*out0 = g_clock_ctx.val4c;
-	if (out1 != NULL)
-		*out1 = g_clock_ctx.val4e;
+	if (outHigh != NULL)
+		*outHigh = g_clock_ctx.ddrTimingHigh;
+	if (outLow != NULL)
+		*outLow = g_clock_ctx.ddrTimingLow;
 	return 0;
 }
 
-s32 scePower_driver_D13377F7(s32 a0, s32 a1)
+s32 scePower_driver_D13377F7(s32 highVal, s32 lowVal)
 {
-	if (a0 != -1)
-		g_clock_ctx.val4c = (s16)a0;
-	if (a1 != -1)
-		g_clock_ctx.val4e = (s16)a1;
+	if (highVal != -1)
+		g_clock_ctx.ddrTimingHigh = (s16)highVal;
+	if (lowVal != -1)
+		g_clock_ctx.ddrTimingLow = (s16)lowVal;
 	return 0;
 }
 
-s32 scePower_driver_DF904CDE(s32 a0, s32 a1)
+s32 scePower_driver_DF904CDE(s32 minFreq, s32 maxFreq)
 {
-	if (a0 != -1)
-		g_clock_ctx.cpuMin = (s16)a0;
-	if (a1 != -1)
-		g_clock_ctx.cpuMax = (s16)a1;
+	if (minFreq != -1)
+		g_clock_ctx.cpuMin = (s16)minFreq;
+	if (maxFreq != -1)
+		g_clock_ctx.cpuMax = (s16)maxFreq;
 	return 0;
 }
 
-s32 scePower_driver_EEFB2ACF(s32 a0, s32 a1)
+s32 scePower_driver_EEFB2ACF(s32 minFreq, s32 maxFreq)
 {
-	if (a0 != -1)
-		g_clock_ctx.busMin = (s16)a0;
-	if (a1 != -1)
-		g_clock_ctx.busMax = (s16)a1;
+	if (minFreq != -1)
+		g_clock_ctx.busMin = (s16)minFreq;
+	if (maxFreq != -1)
+		g_clock_ctx.busMax = (s16)maxFreq;
 	return 0;
 }
 
-s32 scePower_driver_B7000C75(s32 a0, s32 a1)
+s32 scePower_driver_B7000C75(s32 minFreq, s32 maxFreq)
 {
-	if (a0 != -1)
-		g_clock_ctx.pllMin = (s16)a0;
-	if (a1 != -1)
-		g_clock_ctx.pllMax = (s16)a1;
+	if (minFreq != -1)
+		g_clock_ctx.pllMin = (s16)minFreq;
+	if (maxFreq != -1)
+		g_clock_ctx.pllMax = (s16)maxFreq;
 	return 0;
 }
 
@@ -2257,13 +2351,13 @@ static s32 updateBatteryEvent(const u32 *evData, u32 *statusFlags)
 	u32 st = evData[9];
 
 	g_batt_ctx.battLowPercent = -1;
-	g_batt_ctx.status34 = st;
+	g_batt_ctx.eventStatusFlags = st;
 	g_batt_ctx.temp = -1;
 	g_batt_ctx.elec = -1;
 	g_batt_ctx.volt = -1;
 
 	if ((st & 2U) != 0) {
-		g_batt_ctx.state38 = 1;
+		g_batt_ctx.detectState = 1;
 		if (g_batt_ctx.disabledFlag == 0) {
 			g_batt_ctx.battChargingState = evData[10];
 			g_batt_ctx.remainCap = (s32)evData[11];
@@ -2272,10 +2366,11 @@ static s32 updateBatteryEvent(const u32 *evData, u32 *statusFlags)
 			g_batt_ctx.fullCap = (s32)evData[12];
 			g_batt_ctx.lifePercent = scePowerGetBatteryLifePercent();
 		}
-		*statusFlags = (*statusFlags & ~0x7fU) | (u32)g_batt_ctx.lifePercent | 0x80U;
+		*statusFlags &= ~0x7fU;
+		*statusFlags |= (u32)g_batt_ctx.lifePercent | 0x80U;
 	} else {
 		g_batt_ctx.battLifeTime = -1;
-		g_batt_ctx.state38 = 0;
+		g_batt_ctx.detectState = 0;
 		g_batt_ctx.battChargingState = 0;
 		g_batt_ctx.remainCap = -1;
 		g_batt_ctx.lifePercent = -1;
@@ -2295,9 +2390,9 @@ s32 scePowerGetBatteryTemp(void)
 {
 	if (g_batt_ctx.disabledFlag != 0)
 		return SCE_ERROR_NOT_FOUND;
-	if (g_batt_ctx.state38 == 0)
+	if (g_batt_ctx.detectState == 0)
 		return SCE_POWER_ERROR_NO_BATTERY;
-	if (g_batt_ctx.state38 == 1)
+	if (g_batt_ctx.detectState == 1)
 		return SCE_POWER_ERROR_DETECTING;
 	return g_batt_ctx.temp;
 }
@@ -2308,9 +2403,9 @@ s32 scePowerGetBatteryElec(s32 *outElec)
 		return SCE_ERROR_NOT_FOUND;
 	if (((s32)((pspGetK1() << 11) & (u32)outElec)) < 0)
 		return SCE_ERROR_PRIV_REQUIRED;
-	if (g_batt_ctx.state38 == 0)
+	if (g_batt_ctx.detectState == 0)
 		return SCE_POWER_ERROR_NO_BATTERY;
-	if (g_batt_ctx.state38 == 1)
+	if (g_batt_ctx.detectState == 1)
 		return SCE_POWER_ERROR_DETECTING;
 	*outElec = g_batt_ctx.elec;
 	return 0;
@@ -2320,20 +2415,20 @@ s32 scePower_CB49F5CE(void)
 {
 	if (g_batt_ctx.disabledFlag != 0)
 		return SCE_ERROR_NOT_FOUND;
-	if (g_batt_ctx.state38 == 0)
+	if (g_batt_ctx.detectState == 0)
 		return SCE_POWER_ERROR_NO_BATTERY;
-	if (g_batt_ctx.state38 == 1)
+	if (g_batt_ctx.detectState == 1)
 		return SCE_POWER_ERROR_DETECTING;
 	return g_batt_ctx.cycleCount;
 }
 
-static s32 initBatterySubsys(u32 a0, u32 a1)
+static s32 initBatterySubsys(u32 mode, u32 disabled)
 {
 	memset(&g_batt_ctx, 0, sizeof(g_batt_ctx));
-	g_batt_ctx.disabledFlag = a1;
-	g_batt_ctx.battMode10 = a0;
+	g_batt_ctx.disabledFlag = disabled;
+	g_batt_ctx.batteryMode = mode;
 	g_batt_ctx.alarmId = -1;
-	g_batt_ctx.battStatus30 = -1;
+	g_batt_ctx.batteryStatus = -1;
 	g_batt_ctx.fullCap = -1;
 	g_batt_ctx.cycleCount = -1;
 	return 0;
@@ -2348,19 +2443,19 @@ static s32 exitBatterySubsys(void)
 	return 0;
 }
 
-static s32 setBatteryThresholds(u32 a0, u32 a1)
+static s32 setBatteryThresholds(u32 lowThresh, u32 highThresh)
 {
-	g_batt_ctx.acState00 = a0;
-	g_batt_ctx.acState04 = a1;
+	g_batt_ctx.lowBatteryThreshold = lowThresh;
+	g_batt_ctx.highBatteryThreshold = highThresh;
 	return 0;
 }
 
 static s32 resetBatteryState(void)
 {
 	int intr = sceKernelCpuSuspendIntr();
-	g_batt_ctx.battStatus30 = -1;
-	g_batt_ctx.state38 = 0;
-	g_batt_ctx.acState08 = 0;
+	g_batt_ctx.batteryStatus = -1;
+	g_batt_ctx.detectState = 0;
+	g_batt_ctx.acAdapterState = 0;
 	sceKernelCpuResumeIntr(intr);
 	return 0;
 }
@@ -2448,18 +2543,18 @@ u32 scePower_driver_071160B1(void)
 
 s32 scePowerGetBatteryRemainCapacity(void)
 {
-	if (g_batt_ctx.state38 == 0)
+	if (g_batt_ctx.detectState == 0)
 		return SCE_POWER_ERROR_NO_BATTERY;
-	if (g_batt_ctx.state38 == 1)
+	if (g_batt_ctx.detectState == 1)
 		return SCE_POWER_ERROR_DETECTING;
 	return g_batt_ctx.remainCap;
 }
 
 s32 scePowerGetBatteryFullCapacity(void)
 {
-	if (g_batt_ctx.state38 == 0)
+	if (g_batt_ctx.detectState == 0)
 		return SCE_POWER_ERROR_NO_BATTERY;
-	if (g_batt_ctx.state38 == 1)
+	if (g_batt_ctx.detectState == 1)
 		return SCE_POWER_ERROR_DETECTING;
 	return g_batt_ctx.fullCap;
 }
@@ -2471,9 +2566,9 @@ s32 scePowerGetBatteryLifeTime(void)
 
 s32 scePowerGetBatteryVolt(void)
 {
-	if (g_batt_ctx.state38 == 0)
+	if (g_batt_ctx.detectState == 0)
 		return SCE_POWER_ERROR_NO_BATTERY;
-	if (g_batt_ctx.state38 == 1)
+	if (g_batt_ctx.detectState == 1)
 		return SCE_POWER_ERROR_DETECTING;
 	return g_batt_ctx.volt;
 }
