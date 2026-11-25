@@ -46,7 +46,8 @@ struct SwSysClient {
 struct SwSysStream {
 	struct SwSysClient *client;	/* 0x00: the session client */
 	void *channel;			/* 0x04: the stream channel */
-	int reserved0[4];		/* 0x08 */
+	int reserved0[3];		/* 0x08 */
+	int reserved1;			/* 0x14 */
 	SceKernelLwMutexWork mutex;	/* 0x18: "sce_sws_mutex" */
 	int status;			/* 0x38: the status of a failed request */
 	int state;			/* 0x3C: the operations in flight */
@@ -62,7 +63,6 @@ int dtcpIpMapIpcStatus2(int status);
 
 /* the stream object's state bits, at its own mutex (0x81004bc8) */
 int dtcpIpSwAcquireStream(int *outAcquired, void *object, unsigned int state);
-void dtcpIpSwReleaseStream(int *acquired);
 
 /*
  * take the stream object's mutex and its state bits: a conflicting operation already
@@ -124,29 +124,7 @@ store:
 	return 0;
 }
 
-/* release the session client's state bits (the client's own mutex, 0x810045ba) */
-void dtcpIpSwReleaseClientState(int *acquired)
-{
-	int object = acquired[0];
 
-	if (object != 0) {
-		sceKernelLockLwMutex((SceKernelLwMutexWork *)(object + 8), 1, NULL);
-		*(int *)(object + 48) &= ~acquired[1];
-		sceKernelUnlockLwMutex((SceKernelLwMutexWork *)(object + 8), 1);
-	}
-}
-
-/* release the stream object's state bits */
-void dtcpIpSwReleaseStream(int *acquired)
-{
-	int object = acquired[0];
-
-	if (object != 0) {
-		sceKernelLockLwMutex((SceKernelLwMutexWork *)(object + 24), 1, NULL);
-		*(int *)(object + 60) &= ~acquired[1];
-		sceKernelUnlockLwMutex((SceKernelLwMutexWork *)(object + 24), 1);
-	}
-}
 
 /*
  * create the session client: a 56-byte object over the connection, its mutex, and the
@@ -182,7 +160,6 @@ int dtcpIpSysInit(struct SwSysClient **outClient, struct SceDtcpIpIpcObject *con
 		goto fail;
 	}
 	client->session = 0;
-	sceClibMemset(&message, 0, sizeof(message));
 	message.command = SW_SYS_CONNECT;
 	if (dtcpIpIpcRequest(connection->stream, &message) != 0 || message.result != 0) {
 		ret = dtcpIpMapIpcStatus2(message.result);
@@ -192,13 +169,21 @@ int dtcpIpSysInit(struct SwSysClient **outClient, struct SceDtcpIpIpcObject *con
 	client->pending = 0;
 	client->ipc = connection;
 	*outClient = client;
-	dtcpIpSwReleaseClientState(&acquired);
+	if (acquired[0] != 0) {
+		sceKernelLockLwMutex((SceKernelLwMutexWork *)(acquired[0] + 8), 1, NULL);
+		*(int *)(acquired[0] + 48) &= ~acquired[1];
+		sceKernelUnlockLwMutex((SceKernelLwMutexWork *)(acquired[0] + 8), 1);
+	}
 	return 0;
 fail:
 	dtcpIpFree(client);
 	*outClient = NULL;
 	if (acquired[0] != 0)
-		dtcpIpSwReleaseClientState(&acquired);
+		if (acquired[0] != 0) {
+		sceKernelLockLwMutex((SceKernelLwMutexWork *)(acquired[0] + 8), 1, NULL);
+		*(int *)(acquired[0] + 48) &= ~acquired[1];
+		sceKernelUnlockLwMutex((SceKernelLwMutexWork *)(acquired[0] + 8), 1);
+	}
 	return ret;
 }
 
@@ -218,11 +203,14 @@ int dtcpIpSysSetUri(struct SwSysClient *client, const char *uri, unsigned short 
 	if (client == NULL)
 		return 2;
 	if (dtcpIpIpcSetState(&acquired, (int)client, 4) != 0) {
-		dtcpIpSwReleaseClientState(&acquired);
+		if (acquired[0] != 0) {
+		sceKernelLockLwMutex((SceKernelLwMutexWork *)(acquired[0] + 8), 1, NULL);
+		*(int *)(acquired[0] + 48) &= ~acquired[1];
+		sceKernelUnlockLwMutex((SceKernelLwMutexWork *)(acquired[0] + 8), 1);
+	}
 		return 3;
 	}
 	client->flushing = 0;
-	sceClibMemset(&message, 0, sizeof(message));
 	message.command = SW_SYS_SET_URI;
 	message.size = dtcpIpStrnlen(uri) + 1;
 	message.payload = (void *)uri;
@@ -233,7 +221,6 @@ int dtcpIpSysSetUri(struct SwSysClient *client, const char *uri, unsigned short 
 		ret = message.result;
 		if (message.result == 0 || message.result == SW_SYS_STATUS_LATER) {
 			for (;;) {
-				sceClibMemset(&message, 0, sizeof(message));
 				message.command = SW_SYS_GET_URI_RESULT;
 				message.value0 = client->session;
 				message.value1 = client->flushing;
@@ -244,7 +231,11 @@ int dtcpIpSysSetUri(struct SwSysClient *client, const char *uri, unsigned short 
 				if (message.result == 0) {
 					*outId = (unsigned char)message.out0;
 					client->pending = 0;
-					dtcpIpSwReleaseStream(&acquired);
+					if (acquired[0] != 0) {
+		sceKernelLockLwMutex((SceKernelLwMutexWork *)(acquired[0] + 24), 1, NULL);
+		*(int *)(acquired[0] + 60) &= ~acquired[1];
+		sceKernelUnlockLwMutex((SceKernelLwMutexWork *)(acquired[0] + 24), 1);
+	}
 					return 0;
 				}
 				if (message.result != SW_SYS_STATUS_LATER)
@@ -255,7 +246,11 @@ int dtcpIpSysSetUri(struct SwSysClient *client, const char *uri, unsigned short 
 	}
 	client->pending = ret;
 	id = dtcpIpMapIpcStatus2(ret);
-	dtcpIpSwReleaseClientState(&acquired);
+	if (acquired[0] != 0) {
+		sceKernelLockLwMutex((SceKernelLwMutexWork *)(acquired[0] + 8), 1, NULL);
+		*(int *)(acquired[0] + 48) &= ~acquired[1];
+		sceKernelUnlockLwMutex((SceKernelLwMutexWork *)(acquired[0] + 8), 1);
+	}
 	return id;
 }
 
@@ -269,23 +264,38 @@ int dtcpIpSysCloseSession(struct SwSysClient *client)
 	if (client == NULL)
 		return 2;
 	if (dtcpIpIpcSetState(&acquired, (int)client, 2) != 0) {
-		dtcpIpSwReleaseClientState(&acquired);
+		if (acquired[0] != 0) {
+		sceKernelLockLwMutex((SceKernelLwMutexWork *)(acquired[0] + 8), 1, NULL);
+		*(int *)(acquired[0] + 48) &= ~acquired[1];
+		sceKernelUnlockLwMutex((SceKernelLwMutexWork *)(acquired[0] + 8), 1);
+	}
 		return 3;
 	}
-	sceClibMemset(&message, 0, sizeof(message));
 	message.command = SW_SYS_CLOSE;
 	message.value0 = client->session;
 	if (dtcpIpIpcRequest(client->ipc->stream, &message) != 0) {
 		ret = dtcpIpMapIpcStatus2(message.result);
-		dtcpIpSwReleaseClientState(&acquired);
+		if (acquired[0] != 0) {
+		sceKernelLockLwMutex((SceKernelLwMutexWork *)(acquired[0] + 8), 1, NULL);
+		*(int *)(acquired[0] + 48) &= ~acquired[1];
+		sceKernelUnlockLwMutex((SceKernelLwMutexWork *)(acquired[0] + 8), 1);
+	}
 	} else {
 		if (message.result == 0) {
-			dtcpIpSwReleaseClientState(&acquired);
+			if (acquired[0] != 0) {
+		sceKernelLockLwMutex((SceKernelLwMutexWork *)(acquired[0] + 8), 1, NULL);
+		*(int *)(acquired[0] + 48) &= ~acquired[1];
+		sceKernelUnlockLwMutex((SceKernelLwMutexWork *)(acquired[0] + 8), 1);
+	}
 			ret = 0;
 			goto done;
 		}
 		ret = dtcpIpMapIpcStatus2(message.result);
-		dtcpIpSwReleaseClientState(&acquired);
+		if (acquired[0] != 0) {
+		sceKernelLockLwMutex((SceKernelLwMutexWork *)(acquired[0] + 8), 1, NULL);
+		*(int *)(acquired[0] + 48) &= ~acquired[1];
+		sceKernelUnlockLwMutex((SceKernelLwMutexWork *)(acquired[0] + 8), 1);
+	}
 	}
 done:
 	sceKernelDeleteLwMutex(&client->mutex);
@@ -325,7 +335,7 @@ int dtcpIpSysOpenStream(struct SwSysStream **outStream, struct SwSysClient *clie
 		return 5;
 	stream->client = client;
 	stream->channel = NULL;
-	stream->reserved2 = 0;
+	stream->reserved1 = 0;
 	stream->status = 0;
 	stream->state = 0;
 	stream->id = 0;
@@ -351,7 +361,6 @@ int dtcpIpSysOpenStream(struct SwSysStream **outStream, struct SwSysClient *clie
 		ret = 3;
 		goto fail;
 	}
-	sceClibMemset(&message, 0, sizeof(message));
 	message.command = SW_SYS_OPEN_STREAM;
 	message.size = 20;
 	message.payload = config;
@@ -363,13 +372,21 @@ int dtcpIpSysOpenStream(struct SwSysStream **outStream, struct SwSysClient *clie
 	stream->id = message.out0;
 	stream->status = 0;
 	*outStream = stream;
-	dtcpIpSwReleaseClientState(&acquired);
+	if (acquired[0] != 0) {
+		sceKernelLockLwMutex((SceKernelLwMutexWork *)(acquired[0] + 8), 1, NULL);
+		*(int *)(acquired[0] + 48) &= ~acquired[1];
+		sceKernelUnlockLwMutex((SceKernelLwMutexWork *)(acquired[0] + 8), 1);
+	}
 	return 0;
 fail:
 	dtcpIpFree(stream);
 	*outStream = NULL;
 	if (acquired[0] != 0)
-		dtcpIpSwReleaseClientState(&acquired);
+		if (acquired[0] != 0) {
+		sceKernelLockLwMutex((SceKernelLwMutexWork *)(acquired[0] + 8), 1, NULL);
+		*(int *)(acquired[0] + 48) &= ~acquired[1];
+		sceKernelUnlockLwMutex((SceKernelLwMutexWork *)(acquired[0] + 8), 1);
+	}
 	return ret;
 }
 
@@ -384,10 +401,13 @@ int dtcpIpSysCloseStream(void *object)
 	if (stream == NULL)
 		return 2;
 	if (dtcpIpSwAcquireStream(&acquired, stream, 2) != 0) {
-		dtcpIpSwReleaseStream(&acquired);
+		if (acquired[0] != 0) {
+		sceKernelLockLwMutex((SceKernelLwMutexWork *)(acquired[0] + 24), 1, NULL);
+		*(int *)(acquired[0] + 60) &= ~acquired[1];
+		sceKernelUnlockLwMutex((SceKernelLwMutexWork *)(acquired[0] + 24), 1);
+	}
 		return 3;
 	}
-	sceClibMemset(&message, 0, sizeof(message));
 	message.command = SW_SYS_CLOSE_STREAM;
 	message.value0 = stream->id;
 	ret = dtcpIpIpcRequest(stream->channel, &message);
@@ -395,11 +415,14 @@ int dtcpIpSysCloseStream(void *object)
 		ret = message.result;
 		if (message.result == 0 || message.result == SW_SYS_STATUS_LATER) {
 			if (message.result != SW_SYS_STATUS_LATER) {
-				dtcpIpSwReleaseStream(&acquired);
+				if (acquired[0] != 0) {
+		sceKernelLockLwMutex((SceKernelLwMutexWork *)(acquired[0] + 24), 1, NULL);
+		*(int *)(acquired[0] + 60) &= ~acquired[1];
+		sceKernelUnlockLwMutex((SceKernelLwMutexWork *)(acquired[0] + 24), 1);
+	}
 				return 0;
 			}
 			for (;;) {
-				sceClibMemset(&message, 0, sizeof(message));
 				message.command = SW_SYS_CLOSE_STREAM;
 				message.value0 = stream->id;
 				ret = dtcpIpIpcRequest(stream->channel, &message);
@@ -407,7 +430,11 @@ int dtcpIpSysCloseStream(void *object)
 					break;
 				ret = message.result;
 				if (message.result == 0) {
-					dtcpIpSwReleaseStream(&acquired);
+					if (acquired[0] != 0) {
+		sceKernelLockLwMutex((SceKernelLwMutexWork *)(acquired[0] + 24), 1, NULL);
+		*(int *)(acquired[0] + 60) &= ~acquired[1];
+		sceKernelUnlockLwMutex((SceKernelLwMutexWork *)(acquired[0] + 24), 1);
+	}
 					return 0;
 				}
 				if (message.result != SW_SYS_STATUS_LATER)
@@ -418,7 +445,11 @@ int dtcpIpSysCloseStream(void *object)
 	}
 	stream->status = ret;
 	dtcpIpMapIpcStatus2(ret);
-	dtcpIpSwReleaseStream(&acquired);
+	if (acquired[0] != 0) {
+		sceKernelLockLwMutex((SceKernelLwMutexWork *)(acquired[0] + 24), 1, NULL);
+		*(int *)(acquired[0] + 60) &= ~acquired[1];
+		sceKernelUnlockLwMutex((SceKernelLwMutexWork *)(acquired[0] + 24), 1);
+	}
 	sceKernelDeleteLwMutex(&stream->mutex);
 	dtcpIpFree(stream);
 	return 0;
@@ -435,10 +466,13 @@ int dtcpIpSysGetInfo(void *object, void *info)
 	if (stream == NULL)
 		return 2;
 	if (dtcpIpSwAcquireStream(&acquired, stream, 16) != 0) {
-		dtcpIpSwReleaseStream(&acquired);
+		if (acquired[0] != 0) {
+		sceKernelLockLwMutex((SceKernelLwMutexWork *)(acquired[0] + 24), 1, NULL);
+		*(int *)(acquired[0] + 60) &= ~acquired[1];
+		sceKernelUnlockLwMutex((SceKernelLwMutexWork *)(acquired[0] + 24), 1);
+	}
 		return 3;
 	}
-	sceClibMemset(&message, 0, sizeof(message));
 	message.command = SW_SYS_GET_INFO;
 	message.size = 576;
 	message.payload = info;
@@ -447,10 +481,18 @@ int dtcpIpSysGetInfo(void *object, void *info)
 	if (ret != 0 || (ret = message.result) != 0) {
 		stream->status = ret;
 		ret = dtcpIpMapIpcStatus2(ret);
-		dtcpIpSwReleaseStream(&acquired);
+		if (acquired[0] != 0) {
+		sceKernelLockLwMutex((SceKernelLwMutexWork *)(acquired[0] + 24), 1, NULL);
+		*(int *)(acquired[0] + 60) &= ~acquired[1];
+		sceKernelUnlockLwMutex((SceKernelLwMutexWork *)(acquired[0] + 24), 1);
+	}
 		return ret;
 	}
-	dtcpIpSwReleaseStream(&acquired);
+	if (acquired[0] != 0) {
+		sceKernelLockLwMutex((SceKernelLwMutexWork *)(acquired[0] + 24), 1, NULL);
+		*(int *)(acquired[0] + 60) &= ~acquired[1];
+		sceKernelUnlockLwMutex((SceKernelLwMutexWork *)(acquired[0] + 24), 1);
+	}
 	return 0;
 }
 
@@ -465,11 +507,14 @@ int dtcpIpSysSetParameter(void *object, int parameter)
 	if (stream == NULL)
 		return 2;
 	if (dtcpIpSwAcquireStream(&acquired, stream, 0x40) != 0) {
-		dtcpIpSwReleaseStream(&acquired);
+		if (acquired[0] != 0) {
+		sceKernelLockLwMutex((SceKernelLwMutexWork *)(acquired[0] + 24), 1, NULL);
+		*(int *)(acquired[0] + 60) &= ~acquired[1];
+		sceKernelUnlockLwMutex((SceKernelLwMutexWork *)(acquired[0] + 24), 1);
+	}
 		return 3;
 	}
 	for (;;) {
-		sceClibMemset(&message, 0, sizeof(message));
 		message.command = SW_SYS_SET_PARAMETER;
 		message.value0 = stream->id;
 		message.value1 = parameter;
@@ -483,12 +528,20 @@ int dtcpIpSysSetParameter(void *object, int parameter)
 	}
 	if (ret == 0) {
 		stream->status = 0;
-		dtcpIpSwReleaseStream(&acquired);
+		if (acquired[0] != 0) {
+		sceKernelLockLwMutex((SceKernelLwMutexWork *)(acquired[0] + 24), 1, NULL);
+		*(int *)(acquired[0] + 60) &= ~acquired[1];
+		sceKernelUnlockLwMutex((SceKernelLwMutexWork *)(acquired[0] + 24), 1);
+	}
 		return 0;
 	}
 	stream->status = ret;
 	ret = dtcpIpMapIpcStatus2(ret);
-	dtcpIpSwReleaseStream(&acquired);
+	if (acquired[0] != 0) {
+		sceKernelLockLwMutex((SceKernelLwMutexWork *)(acquired[0] + 24), 1, NULL);
+		*(int *)(acquired[0] + 60) &= ~acquired[1];
+		sceKernelUnlockLwMutex((SceKernelLwMutexWork *)(acquired[0] + 24), 1);
+	}
 	return ret;
 }
 
@@ -505,11 +558,14 @@ int dtcpIpSysReceive(void *object, void **buffer, SceSize *size, void *type, int
 	if (stream == NULL)
 		return 2;
 	if (dtcpIpSwAcquireStream(&acquired, stream, 512) != 0) {
-		dtcpIpSwReleaseStream(&acquired);
+		if (acquired[0] != 0) {
+		sceKernelLockLwMutex((SceKernelLwMutexWork *)(acquired[0] + 24), 1, NULL);
+		*(int *)(acquired[0] + 60) &= ~acquired[1];
+		sceKernelUnlockLwMutex((SceKernelLwMutexWork *)(acquired[0] + 24), 1);
+	}
 		return 3;
 	}
 	for (;;) {
-		sceClibMemset(&message, 0, sizeof(message));
 		message.command = SW_SYS_RECEIVE;
 		message.channel = 1;
 		message.value0 = stream->id;
@@ -524,7 +580,11 @@ int dtcpIpSysReceive(void *object, void **buffer, SceSize *size, void *type, int
 	if (ret != 0) {
 		stream->status = ret;
 		ret = dtcpIpMapIpcStatus2(ret);
-		dtcpIpSwReleaseStream(&acquired);
+		if (acquired[0] != 0) {
+		sceKernelLockLwMutex((SceKernelLwMutexWork *)(acquired[0] + 24), 1, NULL);
+		*(int *)(acquired[0] + 60) &= ~acquired[1];
+		sceKernelUnlockLwMutex((SceKernelLwMutexWork *)(acquired[0] + 24), 1);
+	}
 		return ret;
 	}
 	chunk = (char *)stream->buffer2 + message.out0;
@@ -532,7 +592,11 @@ int dtcpIpSysReceive(void *object, void **buffer, SceSize *size, void *type, int
 	*(unsigned char *)type = (unsigned char)message.out2;
 	*buffer = chunk;
 	*size = chunkSize;
-	dtcpIpSwReleaseStream(&acquired);
+	if (acquired[0] != 0) {
+		sceKernelLockLwMutex((SceKernelLwMutexWork *)(acquired[0] + 24), 1, NULL);
+		*(int *)(acquired[0] + 60) &= ~acquired[1];
+		sceKernelUnlockLwMutex((SceKernelLwMutexWork *)(acquired[0] + 24), 1);
+	}
 	return 0;
 }
 
@@ -547,10 +611,13 @@ int dtcpIpSysRelease(void *object, SceSize size)
 	if (stream == NULL)
 		return 2;
 	if (dtcpIpSwAcquireStream(&acquired, stream, 0x400) != 0) {
-		dtcpIpSwReleaseStream(&acquired);
+		if (acquired[0] != 0) {
+		sceKernelLockLwMutex((SceKernelLwMutexWork *)(acquired[0] + 24), 1, NULL);
+		*(int *)(acquired[0] + 60) &= ~acquired[1];
+		sceKernelUnlockLwMutex((SceKernelLwMutexWork *)(acquired[0] + 24), 1);
+	}
 		return 3;
 	}
-	sceClibMemset(&message, 0, sizeof(message));
 	message.command = SW_SYS_RELEASE;
 	message.channel = 1;
 	message.value0 = stream->id;
@@ -559,10 +626,18 @@ int dtcpIpSysRelease(void *object, SceSize size)
 	if (ret != 0 || (ret = message.result) != 0) {
 		stream->status = ret;
 		ret = dtcpIpMapIpcStatus2(ret);
-		dtcpIpSwReleaseStream(&acquired);
+		if (acquired[0] != 0) {
+		sceKernelLockLwMutex((SceKernelLwMutexWork *)(acquired[0] + 24), 1, NULL);
+		*(int *)(acquired[0] + 60) &= ~acquired[1];
+		sceKernelUnlockLwMutex((SceKernelLwMutexWork *)(acquired[0] + 24), 1);
+	}
 		return ret;
 	}
-	dtcpIpSwReleaseStream(&acquired);
+	if (acquired[0] != 0) {
+		sceKernelLockLwMutex((SceKernelLwMutexWork *)(acquired[0] + 24), 1, NULL);
+		*(int *)(acquired[0] + 60) &= ~acquired[1];
+		sceKernelUnlockLwMutex((SceKernelLwMutexWork *)(acquired[0] + 24), 1);
+	}
 	return 0;
 }
 
@@ -577,11 +652,14 @@ int dtcpIpSysSend(void *object, int a1, int a2, int a3)
 	if (stream == NULL)
 		return 2;
 	if (dtcpIpSwAcquireStream(&acquired, stream, 2048) != 0) {
-		dtcpIpSwReleaseStream(&acquired);
+		if (acquired[0] != 0) {
+		sceKernelLockLwMutex((SceKernelLwMutexWork *)(acquired[0] + 24), 1, NULL);
+		*(int *)(acquired[0] + 60) &= ~acquired[1];
+		sceKernelUnlockLwMutex((SceKernelLwMutexWork *)(acquired[0] + 24), 1);
+	}
 		return 3;
 	}
 	for (;;) {
-		sceClibMemset(&message, 0, sizeof(message));
 		message.command = SW_SYS_SEND;
 		message.channel = 2;
 		message.value0 = stream->id;
@@ -599,12 +677,20 @@ int dtcpIpSysSend(void *object, int a1, int a2, int a3)
 	if (ret != 0) {
 		stream->status = ret;
 		ret = dtcpIpMapIpcStatus2(ret);
-		dtcpIpSwReleaseStream(&acquired);
+		if (acquired[0] != 0) {
+		sceKernelLockLwMutex((SceKernelLwMutexWork *)(acquired[0] + 24), 1, NULL);
+		*(int *)(acquired[0] + 60) &= ~acquired[1];
+		sceKernelUnlockLwMutex((SceKernelLwMutexWork *)(acquired[0] + 24), 1);
+	}
 		return ret;
 	}
 	*(int *)a2 = message.out0;
 	*(int *)a3 = message.out0 + message.out1;
-	dtcpIpSwReleaseStream(&acquired);
+	if (acquired[0] != 0) {
+		sceKernelLockLwMutex((SceKernelLwMutexWork *)(acquired[0] + 24), 1, NULL);
+		*(int *)(acquired[0] + 60) &= ~acquired[1];
+		sceKernelUnlockLwMutex((SceKernelLwMutexWork *)(acquired[0] + 24), 1);
+	}
 	return 0;
 }
 
@@ -619,11 +705,14 @@ int dtcpIpSysSendMessage(void *object, int messageValue)
 	if (stream == NULL)
 		return 2;
 	if (dtcpIpSwAcquireStream(&acquired, stream, 0x1000) != 0) {
-		dtcpIpSwReleaseStream(&acquired);
+		if (acquired[0] != 0) {
+		sceKernelLockLwMutex((SceKernelLwMutexWork *)(acquired[0] + 24), 1, NULL);
+		*(int *)(acquired[0] + 60) &= ~acquired[1];
+		sceKernelUnlockLwMutex((SceKernelLwMutexWork *)(acquired[0] + 24), 1);
+	}
 		return 3;
 	}
 	for (;;) {
-		sceClibMemset(&message, 0, sizeof(message));
 		message.command = SW_SYS_SEND_MESSAGE;
 		message.channel = 2;
 		message.value0 = stream->id;
@@ -639,10 +728,18 @@ int dtcpIpSysSendMessage(void *object, int messageValue)
 	if (ret != 0) {
 		stream->status = ret;
 		ret = dtcpIpMapIpcStatus2(ret);
-		dtcpIpSwReleaseStream(&acquired);
+		if (acquired[0] != 0) {
+		sceKernelLockLwMutex((SceKernelLwMutexWork *)(acquired[0] + 24), 1, NULL);
+		*(int *)(acquired[0] + 60) &= ~acquired[1];
+		sceKernelUnlockLwMutex((SceKernelLwMutexWork *)(acquired[0] + 24), 1);
+	}
 		return ret;
 	}
-	dtcpIpSwReleaseStream(&acquired);
+	if (acquired[0] != 0) {
+		sceKernelLockLwMutex((SceKernelLwMutexWork *)(acquired[0] + 24), 1, NULL);
+		*(int *)(acquired[0] + 60) &= ~acquired[1];
+		sceKernelUnlockLwMutex((SceKernelLwMutexWork *)(acquired[0] + 24), 1);
+	}
 	return 0;
 }
 
@@ -657,11 +754,14 @@ int dtcpIpSysAbort(void *object)
 	if (stream == NULL)
 		return 2;
 	if (dtcpIpSwAcquireStream(&acquired, stream, 0x2000) != 0) {
-		dtcpIpSwReleaseStream(&acquired);
+		if (acquired[0] != 0) {
+		sceKernelLockLwMutex((SceKernelLwMutexWork *)(acquired[0] + 24), 1, NULL);
+		*(int *)(acquired[0] + 60) &= ~acquired[1];
+		sceKernelUnlockLwMutex((SceKernelLwMutexWork *)(acquired[0] + 24), 1);
+	}
 		return 3;
 	}
 	for (;;) {
-		sceClibMemset(&message, 0, sizeof(message));
 		message.command = SW_SYS_ABORT;
 		message.channel = 2;
 		message.value0 = stream->id;
@@ -675,12 +775,20 @@ int dtcpIpSysAbort(void *object)
 	}
 	if (ret == 0) {
 		stream->status = 0;
-		dtcpIpSwReleaseStream(&acquired);
+		if (acquired[0] != 0) {
+		sceKernelLockLwMutex((SceKernelLwMutexWork *)(acquired[0] + 24), 1, NULL);
+		*(int *)(acquired[0] + 60) &= ~acquired[1];
+		sceKernelUnlockLwMutex((SceKernelLwMutexWork *)(acquired[0] + 24), 1);
+	}
 		return 0;
 	}
 	stream->status = ret;
 	ret = dtcpIpMapIpcStatus2(ret);
-	dtcpIpSwReleaseStream(&acquired);
+	if (acquired[0] != 0) {
+		sceKernelLockLwMutex((SceKernelLwMutexWork *)(acquired[0] + 24), 1, NULL);
+		*(int *)(acquired[0] + 60) &= ~acquired[1];
+		sceKernelUnlockLwMutex((SceKernelLwMutexWork *)(acquired[0] + 24), 1);
+	}
 	return ret;
 }
 
@@ -693,7 +801,6 @@ int dtcpIpSysIsStreamOpen(void *object)
 
 	if (stream == NULL)
 		return 2;
-	sceClibMemset(&message, 0, sizeof(message));
 	message.command = SW_SYS_IS_STREAM_OPEN;
 	message.channel = 3;
 	message.value0 = stream->id;
@@ -716,10 +823,13 @@ int dtcpIpSysClose(void *object)
 	if (stream == NULL)
 		return 2;
 	if (dtcpIpSwAcquireStream(&acquired, stream, 2) != 0) {
-		dtcpIpSwReleaseStream(&acquired);
+		if (acquired[0] != 0) {
+		sceKernelLockLwMutex((SceKernelLwMutexWork *)(acquired[0] + 24), 1, NULL);
+		*(int *)(acquired[0] + 60) &= ~acquired[1];
+		sceKernelUnlockLwMutex((SceKernelLwMutexWork *)(acquired[0] + 24), 1);
+	}
 		return 3;
 	}
-	sceClibMemset(&message, 0, sizeof(message));
 	message.command = SW_SYS_CLOSE_STREAM;
 	message.value0 = stream->id;
 	ret = dtcpIpIpcRequest(stream->channel, &message);
@@ -727,11 +837,14 @@ int dtcpIpSysClose(void *object)
 		ret = message.result;
 		if (message.result == 0 || message.result == SW_SYS_STATUS_LATER) {
 			if (message.result != SW_SYS_STATUS_LATER) {
-				dtcpIpSwReleaseStream(&acquired);
+				if (acquired[0] != 0) {
+		sceKernelLockLwMutex((SceKernelLwMutexWork *)(acquired[0] + 24), 1, NULL);
+		*(int *)(acquired[0] + 60) &= ~acquired[1];
+		sceKernelUnlockLwMutex((SceKernelLwMutexWork *)(acquired[0] + 24), 1);
+	}
 				return 0;
 			}
 			for (;;) {
-				sceClibMemset(&message, 0, sizeof(message));
 				message.command = SW_SYS_CLOSE_STREAM;
 				message.value0 = stream->id;
 				ret = dtcpIpIpcRequest(stream->channel, &message);
@@ -739,7 +852,11 @@ int dtcpIpSysClose(void *object)
 					break;
 				ret = message.result;
 				if (message.result == 0) {
-					dtcpIpSwReleaseStream(&acquired);
+					if (acquired[0] != 0) {
+		sceKernelLockLwMutex((SceKernelLwMutexWork *)(acquired[0] + 24), 1, NULL);
+		*(int *)(acquired[0] + 60) &= ~acquired[1];
+		sceKernelUnlockLwMutex((SceKernelLwMutexWork *)(acquired[0] + 24), 1);
+	}
 					return 0;
 				}
 				if (message.result != SW_SYS_STATUS_LATER)
@@ -750,7 +867,11 @@ int dtcpIpSysClose(void *object)
 	}
 	stream->status = ret;
 	ret = dtcpIpMapIpcStatus2(ret);
-	dtcpIpSwReleaseStream(&acquired);
+	if (acquired[0] != 0) {
+		sceKernelLockLwMutex((SceKernelLwMutexWork *)(acquired[0] + 24), 1, NULL);
+		*(int *)(acquired[0] + 60) &= ~acquired[1];
+		sceKernelUnlockLwMutex((SceKernelLwMutexWork *)(acquired[0] + 24), 1);
+	}
 	sceKernelDeleteLwMutex(&stream->mutex);
 	dtcpIpFree(stream);
 	return ret;

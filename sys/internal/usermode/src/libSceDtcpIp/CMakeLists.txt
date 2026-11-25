@@ -14,4 +14,5 @@ psp2_module(${PSP2_TARGET} KIND user COMPILER snc PARTIAL SOURCES
 	dtcpip_swipc.c
 	dtcpip_swpipe.c
 	dtcpip_swsys.c
+	dtcpip_swstrm.c
 )
