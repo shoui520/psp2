@@ -408,3 +408,30 @@ extern "C" int SwMwCommServerCreateShared(struct SwMwSharedMemory **out, const c
 	delete shared;
 	return SWMW_SHARED_ERROR;
 }
+
+/*
+ * A stream runs in its own thread: the entry, the thread and the argument the entry gets.
+ * The channel keeps one per stream slot (and one of its own for the single-stream case).
+ */
+struct SwMwCommThread {
+	void (*entry)(void *argument);	/* 0x00: the thread's entry */
+	SceUID id;			/* 0x04: its id, once started */
+	void *argument;			/* 0x08: what the entry receives */
+};
+
+/* one stream of a channel: the pipes and the thread that carries it */
+struct SwMwCommStreamSlot {
+	SceUID createdPipe;		/* 0x00: the request pipe the server created */
+	SceUID openedPipe;		/* 0x04: the reply pipe the library opened */
+	struct SwMwCommThread thread;	/* 0x08 */
+};
+
+/* stop a stream's thread: wait for it to end, then delete it */
+extern "C" int SwMwCommStreamStop(struct SwMwCommThread *thread)
+{
+	int result;
+
+	result = sceKernelWaitThreadEnd(thread->id, NULL, NULL);
+	sceKernelDeleteThread(thread->id);
+	return result;
+}
