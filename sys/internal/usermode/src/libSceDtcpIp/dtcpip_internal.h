@@ -105,17 +105,21 @@ struct SceDtcpIpStreamClient {
 	int (*setParameter)(int parameter);
 	int (*receive)(void **buffer, SceSize *size, unsigned char *type, int timeout);
 	int (*release)(SceSize size);
-	int (*send)(int a1, int a2, int a3);
+	int (*send)(void **buffer, SceSize *size, int timeout);
 	int (*sendMessage)(int message);
 	int (*abort)(void);
-	int (*close)(void);
 	int (*isStreamOpen)(void);
+	int (*close)(void);
 	int (*isSessionOpen)(void);
 	int (*getMoveHeader)(void);
 };
 
 extern const struct SceDtcpIpStreamClient g_systemStreamClient;
 extern const struct SceDtcpIpStreamClient g_streamStreamClient;
+
+/* the tables the sink managers point the session's client at (dtcpip_stream.c) */
+const struct SceDtcpIpStreamClient *dtcpIpGetSystemStreamClient(void);
+const struct SceDtcpIpStreamClient *dtcpIpGetStreamStreamClient(void);
 
 /* the sink's stream client, set when a sink manager is created (dtcpip_sink.c) */
 extern const struct SceDtcpIpStreamClient *g_streamClient;
@@ -186,14 +190,6 @@ int dtcpIpCheckActivation(struct SceDtcpIpMwConnection *connection);
 int dtcpIpOpenMwSession(void);
 int dtcpIpCloseMwSession(struct SceDtcpIpMwConnection *connection);
 
-/* the IPC the middleware application owns (dtcpip_ipc.c) */
-int dtcpIpIpcConnect(void **outConnection);
-int dtcpIpIpcDisconnect(void *connection);
-int dtcpIpIpcGetSessionStatus(void *connection, int *outStatus);
-int dtcpIpIpcCloseSession(void *connection);
-int dtcpIpIpcOpenSession(void *connection);
-int dtcpIpMapIpcStatus(int status);
-
 /* the connection's kind (dtcpip_http.c): a WLAN that is not secured */
 int dtcpIpIsWlanConnection(int *outIsWlan, int *outIsSecured);
 
@@ -206,7 +202,7 @@ extern int g_dtcpIpIpcFlag;
 struct SceDtcpIpIpcMessage {
 	int command;		/* 0x00 */
 	unsigned char channel;	/* 0x04: the stream channel, 255 for the session */
-	unsigned char reserved0;
+	unsigned char padAfterChannel;
 	unsigned short size;	/* 0x06: the payload's size */
 	void *payload;		/* 0x08 */
 	unsigned int value0;	/* 0x0C */
@@ -215,7 +211,7 @@ struct SceDtcpIpIpcMessage {
 	unsigned int value3;	/* 0x18 */
 	int result;		/* 0x1C: the middleware's status */
 	unsigned short outSize;	/* 0x20: the reply payload's size */
-	unsigned short reserved1;
+	unsigned short padAfterOutSize;
 	void *outPayload;	/* 0x24: the reply payload in the shared memory */
 	unsigned int out0;	/* 0x28 */
 	unsigned int out1;	/* 0x2C */
@@ -233,13 +229,13 @@ struct SceDtcpIpIpcObject {
 };
 
 int dtcpIpIpcInitSession(struct SceDtcpIpIpcObject *object, const unsigned int *config, SceSize size);
-int dtcpIpIpcInitStream(void **outStream, void *session, int a2, int a3, int a4, int size);
+int dtcpIpIpcInitStream(void **outStream, void *session, int reserved, int bufferSize,
+			int streams, int affinity);
 int dtcpIpIpcFiniStream(void *stream, int status);
 int dtcpIpIpcFiniSession(void *session);
 int dtcpIpIpcInitShared(void *stream, int *outShared);
 int dtcpIpIpcRequest(void *stream, struct SceDtcpIpIpcMessage *message);
 
-int dtcpIpIpcSessionFlag(void);
 
 int dtcpIpIpcConnect(void **outConnection);
 int dtcpIpIpcDisconnect(void *connection);

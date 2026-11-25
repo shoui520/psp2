@@ -9,6 +9,8 @@
 #include <scetypes.h>
 #include <kernel/threadmgr.h>
 #include <dtcpip/error.h>
+#include <string.h>
+#include <libnetctl.h>
 #include <libkernel/libkernel.h>
 #include "dtcpip_internal.h"
 
@@ -32,40 +34,44 @@ struct SceDtcpIpStreamSession {
 static struct SceDtcpIpStreamSession g_streamSession;
 
 /* the SW IPC operations, per client (dtcpip_swipc.c) */
-int dtcpIpSysInit(struct SceDtcpIpSystemClient *client);
-int dtcpIpSysSetUri(struct SceDtcpIpSystemClient *client, const char *uri, unsigned short port,
-		    unsigned char *flag);
-int dtcpIpSysCloseSession(struct SceDtcpIpSystemClient *client);
-int dtcpIpSysFlushStart(struct SceDtcpIpSystemClient *client);
-int dtcpIpSysFlushDone(struct SceDtcpIpSystemClient *client);
+int dtcpIpSysInit(void **outClient, void *connection);
+int dtcpIpSysSetUri(void *client, const char *uri, unsigned short port, unsigned char *flag);
+int dtcpIpSysCloseSession(void *client);
+int dtcpIpSysFlushStart(void *client);
+int dtcpIpSysFlushDone(void *client);
 int dtcpIpSysOpenStream(void **outStream, void *connection, const int *config);
 int dtcpIpSysCloseStream(void *stream);
 int dtcpIpSysGetInfo(void *stream, void *info);
 int dtcpIpSysSetParameter(void *stream, int parameter);
 int dtcpIpSysReceive(void *stream, void **buffer, SceSize *size, void *type, int timeout);
 int dtcpIpSysRelease(void *stream, SceSize size);
-int dtcpIpSysSend(void *stream, int a1, int a2, int a3);
+int dtcpIpSysSend(void *stream, void **buffer, SceSize *size, int timeout);
 int dtcpIpSysSendMessage(void *stream, int message);
 int dtcpIpSysAbort(void *stream);
 int dtcpIpSysIsStreamOpen(void *stream);
 int dtcpIpSysClose(void *stream);
 
-int dtcpIpStrmInit(struct SceDtcpIpStreamSession *client);
-int dtcpIpStrmSetUri(struct SceDtcpIpStreamSession *client, const char *uri, unsigned short port);
-int dtcpIpStrmCloseSession(struct SceDtcpIpStreamSession *client);
-int dtcpIpStrmFlushStart(struct SceDtcpIpStreamSession *client);
-int dtcpIpStrmFlushDone(struct SceDtcpIpStreamSession *client);
+int dtcpIpStrmInit(void **outClient, void *connection);
+int dtcpIpStrmSetUri(void *client, const char *uri, unsigned short port);
+int dtcpIpStrmCloseSession(void *client);
+int dtcpIpStrmFlushStart(void *client);
+int dtcpIpStrmFlushDone(void *client);
 int dtcpIpStrmOpenStream(void **outStream, void *connection, const int *config);
 int dtcpIpStrmCloseStream(void *stream);
 int dtcpIpStrmGetInfo(void *stream, void *info);
 int dtcpIpStrmSetParameter(void *stream, int parameter);
 int dtcpIpStrmReceive(void *stream, void **buffer, SceSize *size, void *type, int timeout);
 int dtcpIpStrmRelease(void *stream, SceSize size);
-int dtcpIpStrmSend(void *stream, int a1, int a2, int a3);
+int dtcpIpStrmSend(void *stream, void **buffer, SceSize *size, int timeout);
 int dtcpIpStrmSendMessage(void *stream, int message);
 int dtcpIpStrmAbort(void *stream);
 int dtcpIpStrmIsStreamOpen(void *stream);
-int dtcpIpStrmClose(void *stream);
+
+/* the stream engine's client table (the sink's session points at it) */
+const struct SceDtcpIpStreamClient *dtcpIpGetStreamStreamClient(void)
+{
+	return &g_streamStreamClient;
+}
 
 /* the system client: connect, set the uri, open and close the session and stream */
 static int systemConnect(void *connection)
@@ -74,7 +80,7 @@ static int systemConnect(void *connection)
 	g_systemClient.stream = NULL;
 	g_systemClient.state = 0;
 	g_systemClient.flag = 0;
-	return dtcpIpSysInit(&g_systemClient);
+	return dtcpIpSysInit(&g_systemClient, connection);
 }
 
 static int systemSetUri(const char *uri, unsigned short port)
@@ -87,7 +93,7 @@ static int systemSetUri(const char *uri, unsigned short port)
 	oldState = g_systemClient.state;
 	g_systemClient.state = 1;
 	dtcpIpUnlock(SCE_DTCP_IP_LOCK_AUTH);
-	result = dtcpIpSysSetUri(&g_systemClient, uri, port, &g_systemClient.flag);
+	result = dtcpIpSysSetUri(g_systemClient.connection, uri, port, &g_systemClient.flag);
 	dtcpIpLock(SCE_DTCP_IP_LOCK_AUTH);
 	if (g_systemClient.state == 3) {
 		signalResult = dtcpIpSignalCond(SCE_DTCP_IP_COND_AUTH);
@@ -102,10 +108,10 @@ static int systemSetUri(const char *uri, unsigned short port)
 	return result;
 }
 
-static int systemCloseStream(void)
+static int systemCloseSession(void)
 {
 	if (g_systemClient.connection != NULL) {
-		int result = dtcpIpSysCloseSession(&g_systemClient);
+		int result = dtcpIpSysCloseSession(g_systemClient.connection);
 
 		g_systemClient.connection = NULL;
 		return result;
@@ -121,7 +127,7 @@ static int systemFlush(void)
 
 	dtcpIpLock(SCE_DTCP_IP_LOCK_AUTH);
 	if (g_systemClient.state == 1) {
-		ret = dtcpIpSysFlushStart(&g_systemClient);
+		ret = dtcpIpSysFlushStart(g_systemClient.connection);
 		g_systemClient.state = 3;
 		result = dtcpIpWaitCond(SCE_DTCP_IP_COND_AUTH, &timeout);
 		if (result < 0)
@@ -149,7 +155,7 @@ static int systemOpen(int receiveSize, int sendSize, int blockSize, SceInt32 aff
 	return dtcpIpSysOpenStream(&g_systemClient.stream, g_systemClient.connection, config);
 }
 
-static int systemCloseSession(void)
+static int systemCloseStream(void)
 {
 	if (g_systemClient.stream != NULL) {
 		int result = dtcpIpSysCloseStream(g_systemClient.stream);
@@ -169,7 +175,7 @@ static int systemGetInfo(void)
 		char buffer[512];
 	} streamInfo;
 
-	sceClibMemset(streamInfo.info, 0, 16);
+	memset(streamInfo.info, 0, 16);
 	streamInfo.info[13] = 0;
 	streamInfo.flag = g_systemClient.flag;
 	streamInfo.zero = 0;
@@ -184,7 +190,11 @@ static int systemSetParameter(int parameter)
 
 static int systemReceive(void **buffer, SceSize *size, unsigned char *type, int timeout)
 {
-	return dtcpIpSysReceive(g_systemClient.stream, buffer, size, type, timeout);
+	unsigned char receivedType[4];
+	int result = dtcpIpSysReceive(g_systemClient.stream, buffer, size, receivedType, timeout);
+
+	*type = receivedType[0];
+	return result;
 }
 
 static int systemRelease(SceSize size)
@@ -192,9 +202,9 @@ static int systemRelease(SceSize size)
 	return dtcpIpSysRelease(g_systemClient.stream, size);
 }
 
-static int systemSend(int a1, int a2, int a3)
+static int systemSend(void **buffer, SceSize *size, int timeout)
 {
-	return dtcpIpSysSend(g_systemClient.stream, a1, a2, a3);
+	return dtcpIpSysSend(g_systemClient.stream, buffer, size, timeout);
 }
 
 static int systemSendMessage(int message)
@@ -227,13 +237,55 @@ static int systemGetMoveHeader(void)
 	return g_systemClient.flag;
 }
 
+/* whether the middleware's connection is a WLAN that is not secured */
+int dtcpIpIsWlanConnection(int *outIsWlan, int *outIsSecured)
+{
+	SceNetCtlInfo info;
+	int state = 0;
+	int result;
+
+	if (outIsWlan == NULL || outIsSecured == NULL)
+		return SCE_DTCP_IP_ERROR_GENERIC;
+	*outIsWlan = 0;
+	*outIsSecured = 0;
+	result = sceNetCtlInetGetState(&state);
+	if (result >= 0 && state == SCE_NET_CTL_STATE_IPOBTAINED) {
+		result = sceNetCtlInetGetInfo(SCE_NET_CTL_INFO_DEVICE, &info);
+		if (info.device == SCE_NET_CTL_DEVICE_WIRELESS) {
+			*outIsWlan = 1;
+			result = sceNetCtlInetGetInfo(SCE_NET_CTL_INFO_WIFI_SECURITY, &info);
+			if (result >= 0) {
+				switch (info.wifi_security) {
+				case SCE_NET_CTL_WIFI_SECURITY_WEP:
+				case SCE_NET_CTL_WIFI_SECURITY_WPAPSK_WPA2PSK:
+				case SCE_NET_CTL_WIFI_SECURITY_WPAPSK_TKIP:
+				case SCE_NET_CTL_WIFI_SECURITY_WPAPSK_AES:
+				case SCE_NET_CTL_WIFI_SECURITY_WPA2PSK_TKIP:
+				case SCE_NET_CTL_WIFI_SECURITY_WPA2PSK_AES:
+					*outIsSecured = 1;
+					break;
+				default:
+					break;
+				}
+			}
+		}
+	}
+	return result;
+}
+
+/* the system engine's client table (the move sink's session points at it) */
+const struct SceDtcpIpStreamClient *dtcpIpGetSystemStreamClient(void)
+{
+	return &g_systemStreamClient;
+}
+
 /* the stream client */
 static int streamConnect(void *connection)
 {
 	g_streamSession.connection = NULL;
 	g_streamSession.stream = NULL;
 	g_streamSession.state = 0;
-	return dtcpIpStrmInit(&g_streamSession);
+	return dtcpIpStrmInit(&g_streamSession, connection);
 }
 
 static int streamSetUri(const char *uri, unsigned short port)
@@ -246,7 +298,7 @@ static int streamSetUri(const char *uri, unsigned short port)
 	oldState = g_streamSession.state;
 	g_streamSession.state = 1;
 	dtcpIpUnlock(SCE_DTCP_IP_LOCK_AUTH);
-	result = dtcpIpStrmSetUri(&g_streamSession, uri, port);
+	result = dtcpIpStrmSetUri(g_streamSession.connection, uri, port);
 	dtcpIpLock(SCE_DTCP_IP_LOCK_AUTH);
 	if (g_streamSession.state == 3) {
 		signalResult = dtcpIpSignalCond(SCE_DTCP_IP_COND_AUTH);
@@ -264,7 +316,7 @@ static int streamSetUri(const char *uri, unsigned short port)
 static int streamCloseSession(void)
 {
 	if (g_streamSession.connection != NULL) {
-		int result = dtcpIpStrmCloseSession(&g_streamSession);
+		int result = dtcpIpStrmCloseSession(g_streamSession.connection);
 
 		g_streamSession.connection = NULL;
 		return result;
@@ -280,7 +332,7 @@ static int streamFlush(void)
 
 	dtcpIpLock(SCE_DTCP_IP_LOCK_AUTH);
 	if (g_streamSession.state == 1) {
-		ret = dtcpIpStrmFlushStart(&g_streamSession);
+		ret = dtcpIpStrmFlushStart(g_streamSession.connection);
 		g_streamSession.state = 3;
 		result = dtcpIpWaitCond(SCE_DTCP_IP_COND_AUTH, &timeout);
 		if (result < 0)
@@ -324,7 +376,7 @@ static int streamGetInfo(void)
 {
 	int streamInfo[14];
 
-	sceClibMemset(streamInfo, 0, 16);
+	memset(streamInfo, 0, 16);
 	streamInfo[13] = 0;
 	return dtcpIpStrmGetInfo(g_streamSession.stream, streamInfo);
 }
@@ -336,7 +388,11 @@ static int streamSetParameter(int parameter)
 
 static int streamReceive(void **buffer, SceSize *size, unsigned char *type, int timeout)
 {
-	return dtcpIpStrmReceive(g_streamSession.stream, buffer, size, type, timeout);
+	unsigned char receivedType[4];
+	int result = dtcpIpStrmReceive(g_streamSession.stream, buffer, size, receivedType, timeout);
+
+	*type = receivedType[0];
+	return result;
 }
 
 static int streamRelease(SceSize size)
@@ -344,9 +400,9 @@ static int streamRelease(SceSize size)
 	return dtcpIpStrmRelease(g_streamSession.stream, size);
 }
 
-static int streamSend(int a1, int a2, int a3)
+static int streamSend(void **buffer, SceSize *size, int timeout)
 {
-	return dtcpIpStrmSend(g_streamSession.stream, a1, a2, a3);
+	return dtcpIpStrmSend(g_streamSession.stream, buffer, size, timeout);
 }
 
 static int streamSendMessage(int message)
@@ -364,9 +420,9 @@ static int streamIsSessionOpen(void)
 	return g_streamSession.stream != NULL;
 }
 
-static int streamClose(void)
+static int streamIsStreamOpen(void)
 {
-	return dtcpIpStrmClose(g_streamSession.stream);
+	return dtcpIpStrmIsStreamOpen(g_streamSession.stream);
 }
 
 /* the clients' tables, in the library's order */
@@ -384,8 +440,8 @@ const struct SceDtcpIpStreamClient g_systemStreamClient = {
 	systemSend,
 	systemSendMessage,
 	systemAbort,
-	systemClose,
 	systemIsStreamOpen,
+	systemClose,
 	systemIsSessionOpen,
 	systemGetMoveHeader,
 };
@@ -404,7 +460,7 @@ const struct SceDtcpIpStreamClient g_streamStreamClient = {
 	streamSend,
 	streamSendMessage,
 	streamAbort,
-	streamClose,
+	streamIsStreamOpen,
 	NULL,
 	streamIsSessionOpen,
 };

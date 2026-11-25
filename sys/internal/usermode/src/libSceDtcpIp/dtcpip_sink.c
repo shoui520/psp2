@@ -34,7 +34,7 @@ int sinkCreate(void)
 	g_session.stream = 0;
 	g_session.buffer = 0;
 	dtcpIpUnlock(SCE_DTCP_IP_LOCK_MANAGER);
-	g_streamClient = &g_streamStreamClient;
+	g_streamClient = dtcpIpGetStreamStreamClient();
 	return sinkResetHttp();
 }
 
@@ -52,7 +52,7 @@ int sinkReleaseStream(void)
 	if (g_session.stream != 0) {
 		if (g_session.stream == 2) {
 			ret = sinkAbortHttp();
-			result = g_streamClient->flush();
+			result = g_streamClient->isStreamOpen();
 			if (result != 0)
 				ret = dtcpIpMapError(result);
 		}
@@ -198,20 +198,15 @@ int sinkTeardown(void)
 			closeResult = g_streamClient->closeStream();
 			if (closeResult != 0)
 				result = dtcpIpMapError(closeResult);
-			closeResult = g_streamClient->closeSession();
-			if (closeResult != 0)
-				result = dtcpIpMapError(closeResult);
 			if (g_session.status != 0)
 				result = dtcpIpMapError(g_session.status);
 		}
 		closeResult = g_streamClient->flush();
 		if (closeResult != 0)
 			result = dtcpIpMapError(closeResult);
-		if (g_session.moveUri != NULL) {
-			dtcpIpFreeWith(dtcpIpHeapFree, g_session.moveUri);
-			g_session.moveUri = NULL;
-		}
-		g_session.movePort = 0;
+		closeResult = g_streamClient->closeSession();
+		if (closeResult != 0)
+			result = dtcpIpMapError(closeResult);
 		if (g_session.status != 0)
 			result = dtcpIpMapError(g_session.status);
 		templateResult = 1;

@@ -29,7 +29,7 @@ int moveSinkCreate(void)
 	g_session.stream = 0;
 	g_session.buffer = 0;
 	dtcpIpUnlock(SCE_DTCP_IP_LOCK_MANAGER);
-	g_streamClient = &g_systemStreamClient;
+	g_streamClient = dtcpIpGetSystemStreamClient();
 	return sinkResetHttp();
 }
 

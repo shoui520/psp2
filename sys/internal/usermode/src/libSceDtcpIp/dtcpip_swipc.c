@@ -215,7 +215,7 @@ int dtcpIpIpcCreate(int *outConnection, const int *sessionInfo, const unsigned i
 	if (sessionInfo == NULL)
 		return 2;
 
-	object = dtcpIpAlloc(20);
+	object = dtcpIpMalloc(sizeof(*object));
 	if (object == NULL)
 		return 5;
 	object->session = NULL;
@@ -225,14 +225,13 @@ int dtcpIpIpcCreate(int *outConnection, const int *sessionInfo, const unsigned i
 	    dtcpIpIpcInitShared(object->stream, &object->shared) != 0) {
 		ret = dtcpIpMapIpcStatus(0);
 	} else {
-		sceClibMemset(&message, 0, sizeof(message));
 		message.command = SCE_DTCP_IP_IPC_CONNECT;
 		message.channel = 0;
 		message.size = size;
 		message.payload = (void *)config;
 		message.value0 = sessionInfo[0];
 		message.value1 = sessionInfo[1];
-		message.value2 = dtcpIpIpcSessionFlag();
+		message.value2 = g_dtcpIpIpcFlag;
 		message.value3 = 0;
 		if (dtcpIpIpcRequest(object->stream, &message) == 0 && message.result == 0) {
 			*outConnection = (int)object;
@@ -244,7 +243,7 @@ int dtcpIpIpcCreate(int *outConnection, const int *sessionInfo, const unsigned i
 		dtcpIpIpcFiniStream(object->stream, 0);
 	if (object->session != NULL)
 		dtcpIpIpcFiniSession(object->session);
-	dtcpIpFree(object);
+	dtcpIpMspaceFree(object);
 	*outConnection = 0;
 	return ret;
 }
@@ -258,26 +257,25 @@ int dtcpIpIpcClose(int connection)
 
 	if (object == NULL)
 		return 2;
-	sceClibMemset(&message, 0, sizeof(message));
 	message.command = SCE_DTCP_IP_IPC_DISCONNECT;
 	message.channel = 0;
 	ret = dtcpIpIpcRequest(object->stream, &message);
-	if (ret != 0) {
-		if (ret == SCE_DTCP_IP_IPC_STATUS_BUSY || ret == SCE_DTCP_IP_IPC_STATUS_LATER)
-			ret = 0;
-		ret = dtcpIpMapIpcStatus(ret);
-		goto out;
+	if (ret == 0 || ret == SCE_DTCP_IP_IPC_STATUS_LATER || ret == SCE_DTCP_IP_IPC_STATUS_BUSY) {
+		if (ret == 0) {
+			ret = message.result;
+			if (ret == 0) {
+				ret = dtcpIpIpcFiniStream(object->stream, message.result);
+				if (ret == 0 || ret == SCE_DTCP_IP_IPC_STATUS_BUSY
+				    || ret == SCE_DTCP_IP_IPC_STATUS_LATER) {
+					dtcpIpIpcFiniSession(object->session);
+					dtcpIpMspaceFree(object);
+					if (ret == 0)
+						return 0;
+				}
+			}
+		}
 	}
-	dtcpIpIpcFiniStream(object->stream, 0);
-	dtcpIpFree(object);
-	return 0;
-out:
-	if (object->stream != NULL)
-		dtcpIpIpcFiniStream(object->stream, 0);
-	if (object->session != NULL)
-		dtcpIpIpcFiniSession(object->session);
-	dtcpIpFree(object);
-	return ret;
+	return dtcpIpMapIpcStatus(ret);
 }
 
 /* tell the middleware the session is being destroyed (it closes it first) */
@@ -288,7 +286,6 @@ int dtcpIpIpcDestroy(int connection)
 
 	if (connection == 0)
 		return 2;
-	sceClibMemset(&message, 0, sizeof(message));
 	message.command = SCE_DTCP_IP_IPC_DESTROY;
 	message.channel = 0;
 	if (dtcpIpIpcRequest(object->stream, &message) != 0 || message.result != 0)
@@ -308,14 +305,13 @@ int dtcpIpIpcWaitReady(int connection, int *outStatus)
 
 	if (connection == 0)
 		return 2;
-	sceClibMemset(&message, 0, sizeof(message));
 	message.command = SCE_DTCP_IP_IPC_WAIT_READY;
 	message.channel = 0;
 	ret = dtcpIpIpcRequest(object->stream, &message);
 	if (ret != 0)
 		return dtcpIpMapIpcStatus(ret);
 	if (outStatus != NULL)
-		*outStatus = message.value0;
+		*outStatus = message.out0;
 	if (message.result != SCE_DTCP_IP_IPC_STATUS_BUSY)
 		return dtcpIpMapIpcStatus(message.result);
 	return SCE_DTCP_IP_IPC_STATUS_LATER;
@@ -332,14 +328,14 @@ int dtcpIpIpcConnect(void **outConnection)
 	if (outConnection == NULL)
 		return 2;
 
-	sceClibMemset(config, 0, sizeof(config));
+	config[34] = 0;
 	config[0] = (unsigned int)&g_dtcpIpIpcConfig[35];
-	object = dtcpIpAlloc(20);
+	object = dtcpIpMalloc(sizeof(*object));
 	if (object == NULL)
 		return 5;
 	object->session = NULL;
 	object->stream = NULL;
-	if (dtcpIpIpcInitSession(object, &g_dtcpIpIpcConfig, 140) != 0 ||
+	if (dtcpIpIpcInitSession(object, config, 140) != 0 ||
 	    dtcpIpIpcInitStream(&object->stream, object->session, 0, 0, 0, 0x80000) != 0 ||
 	    dtcpIpIpcInitShared(object->stream, &object->shared) != 0) {
 		ret = dtcpIpMapIpcStatus(0);
@@ -347,7 +343,7 @@ int dtcpIpIpcConnect(void **outConnection)
 			dtcpIpIpcFiniStream(object->stream, 0);
 		if (object->session != NULL)
 			dtcpIpIpcFiniSession(object->session);
-		dtcpIpFree(object);
+		dtcpIpMspaceFree(object);
 		*outConnection = NULL;
 		return ret;
 	}
@@ -367,7 +363,7 @@ int dtcpIpIpcDisconnect(void *connection)
 	if (ret != 0)
 		return dtcpIpMapIpcStatus(ret);
 	dtcpIpIpcFiniSession(object->session);
-	dtcpIpFree(object);
+	dtcpIpMspaceFree(object);
 	return 0;
 }
 
@@ -380,19 +376,17 @@ int dtcpIpIpcGetSessionStatus(void *connection, int *outStatus)
 
 	if (connection == NULL)
 		return 2;
-	sceClibMemset(&message, 0, sizeof(message));
 	message.command = SCE_DTCP_IP_IPC_GET_SESSION;
 	message.channel = 0;
 	if (dtcpIpIpcRequest(object->stream, &message) == 0 && message.result == 0) {
 		for (;;) {
-			sceClibMemset(&message, 0, sizeof(message));
 			message.command = SCE_DTCP_IP_IPC_GET_SESSION_RESULT;
 			message.channel = 0;
 			if (dtcpIpIpcRequest(object->stream, &message) != 0)
 				break;
 			if (message.result == 0) {
 				if (outStatus != NULL)
-					*outStatus = message.value0;
+					*outStatus = message.out0;
 				return 0;
 			}
 			if (message.result != SCE_DTCP_IP_IPC_STATUS_BUSY)
@@ -401,7 +395,7 @@ int dtcpIpIpcGetSessionStatus(void *connection, int *outStatus)
 		}
 	}
 	if (outStatus != NULL)
-		*outStatus = message.value0;
+		*outStatus = message.out0;
 	return dtcpIpMapIpcStatus(message.result);
 }
 
@@ -414,12 +408,13 @@ int dtcpIpIpcCloseSession(void *connection)
 
 	if (connection == NULL)
 		return 2;
-	sceClibMemset(&message, 0, sizeof(message));
 	message.command = SCE_DTCP_IP_IPC_CLOSE_SESSION;
 	message.channel = 0;
 	ret = dtcpIpIpcRequest(object->stream, &message);
-	if (ret != 0 || message.result != 0)
+	if (ret != 0)
 		return dtcpIpMapIpcStatus(ret);
+	if (message.result != 0)
+		return dtcpIpMapIpcStatus(message.result);
 	return 0;
 }
 
@@ -431,7 +426,6 @@ int dtcpIpIpcOpenSession(void *connection)
 
 	if (connection == NULL)
 		return 2;
-	sceClibMemset(&message, 0, sizeof(message));
 	message.command = SCE_DTCP_IP_IPC_OPEN_SESSION;
 	message.channel = 0;
 	if (dtcpIpIpcRequest(object->stream, &message) != 0 || message.result != 0)
@@ -439,30 +433,232 @@ int dtcpIpIpcOpenSession(void *connection)
 	return 0;
 }
 
-/* set the session state word the middleware reads (0 none, 1 opening, 2 open) */
-int dtcpIpIpcSetState(int *session, int connection, unsigned int state)
-{
-	*session = connection;
-	session[1] = state;
-	if (connection == 0)
-		return 0;
-	sceKernelLockLwMutex((SceKernelLwMutexWork *)(connection + 8), 1, NULL);
-	{
-		int object = *session;
-		SceKernelLwMutexWork *mutex = (SceKernelLwMutexWork *)(*session + 8);
+/* the head of an SW IPC client: the mutex and the operations-in-flight word */
+struct SceDtcpIpIpcClientState {
+	void *ipc;			/* 0x00: the connection */
+	int pad;			/* 0x04 */
+	SceKernelLwMutexWork mutex;	/* 0x08: "sce_sws_mutex" */
+	int pending;			/* 0x28: the status of a failed request */
+	int flushing;			/* 0x2C: a flush is pending */
+	int state;			/* 0x30: the operations in flight */
+	int session;			/* 0x34: the middleware's session handle */
+};
 
-		if (state > 2) {
-			if (state == 4)
-				goto check;
-		} else if (state != 0) {
-check:
-			if (*(int *)(object + 48) != 0) {
-				sceKernelUnlockLwMutex(mutex, 1);
-				return 12004;
+/* take the client's state word and hold an operation bit on it (0 none, 1 opening, 2 open) */
+int dtcpIpIpcSetState(int *hold, void *connection, unsigned int state)
+{
+	struct SceDtcpIpIpcClientState *client = connection;
+	int busy = 0;
+
+	hold[0] = (int)connection;
+	hold[1] = state;
+	if (client == NULL)
+		return 0;
+	sceKernelLockLwMutex(&client->mutex, 1, NULL);
+	if (state > 2) {
+		if (state == 4)
+			busy = 1;
+	} else if (state != 0) {
+		busy = 1;
+	}
+	if (busy && client->state != 0) {
+		sceKernelUnlockLwMutex(&client->mutex, 1);
+		return 12004;
+	}
+	client->state |= hold[1];
+	sceKernelUnlockLwMutex(&client->mutex, 1);
+	return 0;
+}
+
+/*
+ * the system engine's status word, in the library's request statuses: the middleware's
+ * session statuses first, then its request statuses.
+ */
+int dtcpIpMapIpcStatus2(int status)
+{
+	int result;
+
+	if (status >= 1000 && status <= 1652) {
+		if (status > 1019) {
+			if (status == 1508)
+				return 7;
+		} else if (status > 1004) {
+			switch (status) {
+			case 1005:
+				return 7;
+			case 1006:
+			case 1007:
+			case 1008:
+			case 1009:
+			case 1010:
+			case 1011:
+			case 1012:
+			case 1013:
+			case 1014:
+			case 1015:
+			case 1017:
+			case 1018:
+				return 11;
+			case 1016:
+				result = 21;
+				break;
+			case 1019:
+				result = 33;
+				break;
+			}
+			return result;
+		}
+		return 11;
+	}
+	if (status > 12000) {
+		if (status > 12206) {
+			if (status <= 12402) {
+				if (status > 12400) {
+					if (status <= 12401)
+						return 20;
+					else
+						return 21;
+				}
+				return 5;
+			}
+			if (status <= 13000 || status > 13017)
+				return 5;
+			switch (status) {
+			case 13001:
+				result = 22;
+				break;
+			case 13002:
+				result = 23;
+				break;
+			case 13003:
+				result = 24;
+				break;
+			case 13004:
+			case 13009:
+			case 13010:
+			case 13011:
+			case 13012:
+			case 13013:
+			case 13014:
+			case 13015:
+			case 13016:
+				return 5;
+			case 13005:
+				result = 25;
+				break;
+			case 13006:
+				result = 26;
+				break;
+			case 13007:
+				result = 28;
+				break;
+			case 13008:
+				result = 27;
+				break;
+			case 13017:
+				result = 37;
+				break;
+			}
+		} else if (status <= 12017) {
+			switch (status) {
+			case 12001:
+			case 12002:
+				result = 1;
+				break;
+			case 12003:
+				result = 2;
+				break;
+			case 12004:
+				result = 3;
+				break;
+			case 12005:
+				result = 4;
+				break;
+			case 12006:
+				result = 29;
+				break;
+			case 12007:
+				result = 30;
+				break;
+			case 12008:
+			case 12009:
+			case 12010:
+			case 12012:
+			case 12013:
+			case 12014:
+				result = 5;
+				break;
+			case 12011:
+				result = 35;
+				break;
+			case 12015:
+				result = 6;
+				break;
+			case 12016:
+				return 5;
+			case 12017:
+				result = 36;
+				break;
+			}
+		} else {
+			if (status <= 12101) {
+				if (status > 12100)
+					return 7;
+				return 5;
+			}
+			if (status <= 12200)
+				return 5;
+			switch (status) {
+			case 12201:
+				result = 8;
+				break;
+			case 12202:
+				return 5;
+			case 12203:
+				result = 10;
+				break;
+			case 12204:
+				result = 11;
+				break;
+			case 12205:
+				result = 12;
+				break;
+			case 12206:
+				result = 33;
+				break;
 			}
 		}
-		*(int *)(object + 48) |= session[1];
-		sceKernelUnlockLwMutex(mutex, 1);
+	} else {
+		if (status <= 204) {
+			if (status == 0)
+				return 0;
+			return 5;
+		}
+		if (status > 11008) {
+			if (status <= 11009)
+				return 21;
+			return 5;
+		}
+		if (status > 215)
+			return 5;
+		switch (status) {
+		case 205:
+		case 207:
+		case 208:
+		case 215:
+			result = 10;
+			break;
+		case 206:
+		case 209:
+			result = 9;
+			break;
+		case 210:
+		case 211:
+		case 212:
+		case 213:
+		case 214:
+			return 5;
+		}
 	}
-	return 0;
+	return result;
 }

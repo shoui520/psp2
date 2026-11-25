@@ -37,6 +37,7 @@ extern int moveSinkCloseStream(void);
 
 extern int sinkStartStream(void);
 extern int sinkPauseStream(void);
+extern int sinkHttpReceive(void *buffer, unsigned int size, int *outSize);
 extern int sinkRead(void *buffer, SceSize size, int argument, int *outSize);
 extern int sinkSeekByte(SceUInt64 start, SceUInt64 end);
 extern int sinkSeekTime(SceUInt64 start, SceUInt64 end);
@@ -327,6 +328,91 @@ int dtcpIpStopHttpWorker(void)
 			ret = result;
 	}
 	return ret;
+}
+
+/*
+ * the HTTP worker: take a chunk buffer from the middleware, fill it from the request,
+ * report how much was read, and signal the end of the body.
+ */
+int dtcpIpHttpWorkerThread(SceSize args, void *argp)
+{
+	void *buffer;
+	SceSize size;
+	int outSize;
+	int status = 0;
+	int status2 = 0;
+	int finished = 0;
+	int result;
+	int stopRequest;
+	int (*sendMessage)(int);
+	int abortResult;
+
+	(void)args;
+	(void)argp;
+	for (;;) {
+		dtcpIpLock(SCE_DTCP_IP_LOCK_HTTP_WORKER);
+		g_httpWorker.status = status;
+		g_httpWorker.status2 = status2;
+		stopRequest = g_httpWorker.stopRequest;
+		if (g_httpWorker.stopRequest != 2) {
+			if (status2 < 0 || finished != 0 || g_httpWorker.stopRequest == 0) {
+				g_httpWorker.stopRequest = 0;
+				do {
+					g_httpWorker.running = 0;
+					result = dtcpIpSignalCond(SCE_DTCP_IP_COND_HTTP_WORKER);
+					if (result < 0)
+						break;
+					result = dtcpIpWaitCond(SCE_DTCP_IP_COND_HTTP_WORKER, NULL);
+					if (result < 0)
+						break;
+					stopRequest = g_httpWorker.stopRequest;
+				} while (g_httpWorker.stopRequest == 0);
+				if (result < 0) {
+					g_httpWorker.status2 = result;
+					dtcpIpUnlock(SCE_DTCP_IP_LOCK_HTTP_WORKER);
+					return g_httpWorker.status2;
+				}
+				status = g_httpWorker.status;
+				status2 = g_httpWorker.status2;
+			}
+		}
+		if (stopRequest == 2)
+			break;
+		g_httpWorker.running = 1;
+		dtcpIpUnlock(SCE_DTCP_IP_LOCK_HTTP_WORKER);
+		result = g_streamClient->send(&buffer, &size, 0);
+		if (result != 0) {
+			finished = 0;
+			if (result != 29)
+				status2 = dtcpIpMapError(result);
+		} else {
+			result = sinkHttpReceive(buffer, size, &outSize);
+			sendMessage = g_streamClient->sendMessage;
+			if (result >= 0) {
+				result = sendMessage(outSize);
+				finished = 0;
+				if (result != 0) {
+					status2 = dtcpIpMapError(result);
+				} else if (outSize == 0) {
+					abortResult = g_streamClient->abort();
+					if (abortResult != 0)
+						status2 = dtcpIpMapError(abortResult);
+					finished = 1;
+				}
+			} else {
+				if (result != SCE_DTCP_IP_ERROR_CANCEL) {
+					status2 = SCE_DTCP_IP_ERROR_HTTP_CONNECTION_CLOSED;
+					status = result;
+				}
+				result = sendMessage(0);
+				finished = 0;
+				if (result != 0)
+					status2 = dtcpIpMapError(result);
+			}
+		}
+	}
+	dtcpIpUnlock(SCE_DTCP_IP_LOCK_HTTP_WORKER);
+	return g_httpWorker.status2;
 }
 
 /* mark the session closed (the RESET export) */

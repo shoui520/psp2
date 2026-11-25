@@ -36,7 +36,7 @@
 /* the stream engine's session client: the connection it wraps and its request state */
 struct SwStrmClient {
 	struct SceDtcpIpIpcObject *ipc;	/* 0x00: the connection */
-	int reserved0;			/* 0x04 */
+	int pad;			/* 0x04 */
 	SceKernelLwMutexWork mutex;	/* 0x08: "sce_sws_mutex" */
 	int pending;			/* 0x28: the status of a failed request */
 	int flushing;			/* 0x2C: a flush is pending */
@@ -48,15 +48,15 @@ struct SwStrmClient {
 struct SwStrmStream {
 	struct SwStrmClient *client;	/* 0x00: the session client */
 	void *channel;			/* 0x04: the stream channel */
-	int reserved0[3];		/* 0x08 */
-	int reserved1;			/* 0x14 */
+	int padding[3];			/* 0x08 */
+	int padAfterChannel;		/* 0x14 */
 	SceKernelLwMutexWork mutex;	/* 0x18: "sce_sws_mutex" */
 	int status;			/* 0x38: the status of a failed request */
 	int state;			/* 0x3C: the operations in flight */
 	int id;				/* 0x40: the middleware's stream id */
 	void *buffer;			/* 0x44: the shared buffer */
 	void *buffer2;			/* 0x48: the stream's data area */
-	int reserved2;			/* 0x4C */
+	int trailingPad;		/* 0x4C */
 };
 
 /* the SW IPC's status, in the library's request statuses (dtcpip_swstrm.c's table) */
@@ -75,7 +75,7 @@ int dtcpIpStrmInit(struct SwStrmClient **outClient, struct SceDtcpIpIpcObject *c
 	if (connection == NULL)
 		return 2;
 
-	client = dtcpIpAlloc(56);
+	client = dtcpIpMalloc(sizeof(*client));
 	if (client == NULL)
 		return 5;
 	client->ipc = NULL;
@@ -84,8 +84,9 @@ int dtcpIpStrmInit(struct SwStrmClient **outClient, struct SceDtcpIpIpcObject *c
 	client->state = 0;
 	client->session = 0;
 	if (sceKernelCreateLwMutex(&client->mutex, "sce_sws_mutex", 0x2000, 0, NULL) < 0) {
-		ret = 5;
-		goto fail;
+		dtcpIpMspaceFree(client);
+		*outClient = NULL;
+		return 5;
 	}
 	client->flushing = 0;
 	message.command = SW_STRM_CONNECT;
@@ -98,8 +99,7 @@ int dtcpIpStrmInit(struct SwStrmClient **outClient, struct SceDtcpIpIpcObject *c
 	}
 	ret = dtcpIpMapIpcStatus3(message.result);
 	sceKernelDeleteLwMutex(&client->mutex);
-fail:
-	dtcpIpFree(client);
+	dtcpIpMspaceFree(client);
 	*outClient = NULL;
 	return ret;
 }
@@ -162,7 +162,7 @@ int dtcpIpStrmCloseSession(struct SwStrmClient *client)
 	if (dtcpIpIpcRequest(client->ipc->stream, &message) != 0 || message.result != 0)
 		result = dtcpIpMapIpcStatus3(message.result);
 	sceKernelDeleteLwMutex(&client->mutex);
-	dtcpIpFree(client);
+	dtcpIpMspaceFree(client);
 	return result;
 }
 
@@ -189,48 +189,45 @@ int dtcpIpStrmOpenStream(struct SwStrmStream **outStream, struct SwStrmClient *c
 	if (client == NULL)
 		return 2;
 
-	stream = dtcpIpAlloc(80);
+	stream = dtcpIpMalloc(sizeof(*stream));
 	if (stream == NULL)
 		return 5;
 	stream->client = NULL;
 	stream->channel = NULL;
-	stream->reserved1 = 0;
+	stream->padAfterChannel = 0;
 	stream->status = 0;
 	stream->state = 0;
 	stream->id = 0;
 	if (sceKernelCreateLwMutex(&stream->mutex, "sce_sws_mutex", 0x2000, 0, NULL) < 0) {
-		ret = 5;
-		goto fail;
+		dtcpIpMspaceFree(stream);
+		*outStream = NULL;
+		return 5;
 	}
 	stream->client = client;
 	ret = dtcpIpIpcInitStream(&stream->channel, client->ipc->session, config[0],
 				  config[1] + config[2], 1, config[5]);
 	if (ret != 0) {
 		ret = dtcpIpMapIpcStatus3(ret);
-		goto fail;
-	}
-	if (dtcpIpIpcInitShared(stream->channel, shared) != 0) {
+	} else if (dtcpIpIpcInitShared(stream->channel, shared) != 0) {
 		ret = dtcpIpMapIpcStatus3(0);
-		goto fail;
-	}
-	stream->buffer = shared[0];
-	stream->buffer2 = (char *)shared[0] + config[1];
-	message.command = SW_STRM_OPEN_STREAM;
-	message.channel = 0;
-	message.size = 24;
-	message.payload = config;
-	message.value0 = client->session;
-	if (dtcpIpIpcRequest(stream->channel, &message) != 0 || message.result != 0) {
+	} else {
+		stream->buffer = shared[0];
+		stream->buffer2 = (char *)shared[0] + config[1];
+		message.command = SW_STRM_OPEN_STREAM;
+		message.channel = 0;
+		message.size = 24;
+		message.payload = config;
+		message.value0 = client->session;
+		if (dtcpIpIpcRequest(stream->channel, &message) == 0 && message.result == 0) {
+			stream->id = message.out0;
+			stream->status = 0;
+			*outStream = stream;
+			return 0;
+		}
 		ret = dtcpIpMapIpcStatus3(message.result);
-		goto fail;
 	}
-	stream->id = message.out0;
-	stream->status = 0;
-	*outStream = stream;
-	return 0;
-fail:
 	sceKernelDeleteLwMutex(&stream->mutex);
-	dtcpIpFree(stream);
+	dtcpIpMspaceFree(stream);
 	*outStream = NULL;
 	return ret;
 }
@@ -250,7 +247,7 @@ int dtcpIpStrmCloseStream(void *object)
 		dtcpIpMapIpcStatus3(message.result);
 	ret = dtcpIpIpcFiniStream(stream->channel, 0);
 	sceKernelDeleteLwMutex(&stream->mutex);
-	dtcpIpFree(stream);
+	dtcpIpMspaceFree(stream);
 	return ret;
 }
 
@@ -481,7 +478,7 @@ int dtcpIpStrmAbort(void *object)
 }
 
 /* whether the stream is open: the middleware says so */
-int dtcpIpStrmClose(void *object)
+int dtcpIpStrmIsStreamOpen(void *object)
 {
 	struct SwStrmStream *stream = object;
 	struct SceDtcpIpIpcMessage message;
