@@ -30,6 +30,12 @@ typedef struct {
 } SceMpegLLI;
 
 typedef struct {
+    u32 words[5];
+    u16 tail;
+    u16 pad;
+} SceMpegCscCoeff;
+
+typedef struct {
     SceMpegLLI lli[100];      // 0x000..0x640
     u8 reserved[16];          // 0x640..0x650
     u8 csc_coeff[24];         // 0x650..0x668
@@ -84,11 +90,11 @@ int sceMpegbase_31007FF8(void)
 
 int sceMpegBaseCscAvc(void *rgb, void *rgb2, int width, u32 *yuv)
 {
-    int k1 = pspShiftK1();
+    int savedK1 = pspShiftK1();
     u32 k1_mask = pspGetK1();
 
     if ((s32)((((u32)yuv | ((u32)yuv + 0x30)) & k1_mask)) < 0) {
-        pspSetK1(k1);
+        pspSetK1(savedK1);
         return 0x80000023;
     }
 
@@ -111,21 +117,21 @@ int sceMpegBaseCscAvc(void *rgb, void *rgb2, int width, u32 *yuv)
         ((s32)((yuv[11] | (yuv[11] + c_size)) & k1_mask) < 0) ||
         ((s32)((((u32)rgb | ((u32)rgb + rgb_size) | rgb_size) & k1_mask)) < 0) ||
         (rgb2 != NULL && ((s32)((((u32)rgb2 | ((u32)rgb2 + rgb_size) | rgb_size) & k1_mask)) < 0))) {
-        pspSetK1(k1);
+        pspSetK1(savedK1);
         return 0x80000023;
     }
 
     int ret = sceDmacplus_driver_F652F09D(0, 0, yuv[1], yuv[0]);
     if (ret != 0) {
         Kprintf("Failed to set csc range : 0x%08x \n", ret);
-        pspSetK1(k1);
+        pspSetK1(savedK1);
         return ret;
     }
 
     if (width != 0) {
         ret = dmacplusSetCscConfig(g_mpegbase.csc_mode, width, g_mpegbase.csc_coeff);
         if (ret != 0) {
-            pspSetK1(k1);
+            pspSetK1(savedK1);
             return ret;
         }
     }
@@ -133,7 +139,7 @@ int sceMpegBaseCscAvc(void *rgb, void *rgb2, int width, u32 *yuv)
     do {
         ret = sceDmacplus_driver_D126494B(rgb, rgb2, yuv);
         if (ret != 0 && ret != (int)0x80000021) {
-            pspSetK1(k1);
+            pspSetK1(savedK1);
             return ret;
         }
         int sync_ret = sceDmacplus_driver_BF0DB45E(0, 0);
@@ -143,17 +149,17 @@ int sceMpegBaseCscAvc(void *rgb, void *rgb2, int width, u32 *yuv)
         }
     } while (ret != 0);
 
-    pspSetK1(k1);
+    pspSetK1(savedK1);
     return ret;
 }
 
 int sceMpegBaseCscVme(void *rgb, void *rgb2, int width, u32 *yuv)
 {
-    int k1 = pspShiftK1();
+    int savedK1 = pspShiftK1();
     u32 k1_mask = pspGetK1();
 
     if ((s32)((((u32)yuv | ((u32)yuv + 0x28)) & k1_mask)) < 0) {
-        pspSetK1(k1);
+        pspSetK1(savedK1);
         return 0x80000023;
     }
 
@@ -173,14 +179,14 @@ int sceMpegBaseCscVme(void *rgb, void *rgb2, int width, u32 *yuv)
         ((s32)((yuv[9] | (yuv[9] + c_size)) & k1_mask) < 0) ||
         ((s32)((((u32)rgb | ((u32)rgb + rgb_size) | rgb_size) & k1_mask)) < 0) ||
         (rgb2 != NULL && ((s32)((((u32)rgb2 | ((u32)rgb2 + rgb_size) | rgb_size) & k1_mask)) < 0))) {
-        pspSetK1(k1);
+        pspSetK1(savedK1);
         return 0x80000023;
     }
 
     if (width != 0) {
         int ret = dmacplusSetCscConfig(g_mpegbase.csc_mode, width, g_mpegbase.csc_coeff);
         if (ret != 0) {
-            pspSetK1(k1);
+            pspSetK1(savedK1);
             return ret;
         }
     }
@@ -189,7 +195,7 @@ int sceMpegBaseCscVme(void *rgb, void *rgb2, int width, u32 *yuv)
     do {
         ret = sceDmacplus_driver_9C492B9B(rgb, rgb2, yuv);
         if (ret != 0 && ret != (int)0x80000021) {
-            pspSetK1(k1);
+            pspSetK1(savedK1);
             return ret;
         }
         int sync_ret = sceDmacplus_driver_BF0DB45E(0, 0);
@@ -199,18 +205,18 @@ int sceMpegBaseCscVme(void *rgb, void *rgb2, int width, u32 *yuv)
         }
     } while (ret != 0);
 
-    pspSetK1(k1);
+    pspSetK1(savedK1);
     return ret;
 }
 
 int sceMpegBaseCscAvcRange(void *rgb, void *rgb2, u32 *range, int width, u32 *yuv)
 {
-    int k1 = pspShiftK1();
+    int savedK1 = pspShiftK1();
     u32 k1_mask = pspGetK1();
 
     if (((s32)((((u32)range | ((u32)range + 0x10)) & k1_mask)) < 0) ||
         ((s32)((((u32)yuv | ((u32)yuv + 0x30)) & k1_mask)) < 0)) {
-        pspSetK1(k1);
+        pspSetK1(savedK1);
         return 0x80000023;
     }
 
@@ -233,39 +239,39 @@ int sceMpegBaseCscAvcRange(void *rgb, void *rgb2, u32 *range, int width, u32 *yu
         ((s32)((yuv[11] | (yuv[11] + c_size)) & k1_mask) < 0) ||
         ((s32)((((u32)rgb | ((u32)rgb + rgb_size) | rgb_size) & k1_mask)) < 0) ||
         (rgb2 != NULL && ((s32)((((u32)rgb2 | ((u32)rgb2 + rgb_size) | rgb_size) & k1_mask)) < 0))) {
-        pspSetK1(k1);
+        pspSetK1(savedK1);
         return 0x80000023;
     }
 
     if (range[0] + range[2] > w || range[1] + range[3] > h) {
-        pspSetK1(k1);
+        pspSetK1(savedK1);
         return 0x800001FE;
     }
 
     int ret = sceDmacplus_driver_F652F09D(range[0], range[1], range[2], range[3]);
     if (ret != 0) {
         Kprintf("Failed to set csc range : 0x%08x \n", ret);
-        pspSetK1(k1);
+        pspSetK1(savedK1);
         return ret;
     }
 
     if (width != 0) {
         ret = dmacplusSetCscConfig(g_mpegbase.csc_mode, width, g_mpegbase.csc_coeff);
         if (ret != 0) {
-            pspSetK1(k1);
+            pspSetK1(savedK1);
             return ret;
         }
     }
 
     if (yuv[0] != range[3]) {
         ret = cscAvcPartialHeight(rgb, rgb2, range, yuv);
-        pspSetK1(k1);
+        pspSetK1(savedK1);
         return ret;
     }
 
     if (yuv[1] == range[2]) {
         ret = dmacplusCscAvcSync(rgb, rgb2, yuv);
-        pspSetK1(k1);
+        pspSetK1(savedK1);
         return ret;
     }
 
@@ -275,7 +281,7 @@ int sceMpegBaseCscAvcRange(void *rgb, void *rgb2, u32 *range, int width, u32 *yu
     u32 aligned_w = 0;
     ret = cscAvcAlignLeftEdge(&cur_rgb, &cur_rgb2, range, yuv, offsets, &aligned_w);
     if (ret != 0) {
-        pspSetK1(k1);
+        pspSetK1(savedK1);
         return ret;
     }
 
@@ -286,7 +292,7 @@ int sceMpegBaseCscAvcRange(void *rgb, void *rgb2, u32 *range, int width, u32 *yu
     tmp_yuv[3] = yuv[3];
     setupYuvPlanes(tmp_yuv, yuv, offsets, 0);
     ret = dmacplusCscAvcSync(cur_rgb, cur_rgb2, tmp_yuv);
-    pspSetK1(k1);
+    pspSetK1(savedK1);
     return ret;
 }
 
@@ -298,11 +304,11 @@ int sceMpegbase_0530BE4E(int mode)
 
 int sceMpegbase_AC9E717E(int width, const void *coeff)
 {
-    int k1 = pspShiftK1();
+    int savedK1 = pspShiftK1();
     u32 k1_mask = pspGetK1();
 
     if ((s32)((((u32)coeff | ((u32)coeff + 0x16)) & k1_mask)) < 0) {
-        pspSetK1(k1);
+        pspSetK1(savedK1);
         return 0x80000023;
     }
 
@@ -311,14 +317,14 @@ int sceMpegbase_AC9E717E(int width, const void *coeff)
     const u8 *src = (const u8 *)coeff;
     u8 *dst = g_mpegbase.csc_coeff;
     if ((((u32)src | (u32)dst) & 3) == 0) {
-        const u32 *s32 = (const u32 *)src;
-        u32 *d32 = (u32 *)dst;
-        d32[0] = s32[0];
-        d32[1] = s32[1];
-        d32[2] = s32[2];
-        d32[3] = s32[3];
-        d32[4] = s32[4];
-        *(u16 *)(d32 + 5) = *(const u16 *)(s32 + 5);
+        const SceMpegCscCoeff *srcCoeff = (const SceMpegCscCoeff *)src;
+        SceMpegCscCoeff *dstCoeff = (SceMpegCscCoeff *)dst;
+        dstCoeff->words[0] = srcCoeff->words[0];
+        dstCoeff->words[1] = srcCoeff->words[1];
+        dstCoeff->words[2] = srcCoeff->words[2];
+        dstCoeff->words[3] = srcCoeff->words[3];
+        dstCoeff->words[4] = srcCoeff->words[4];
+        dstCoeff->tail = srcCoeff->tail;
     } else {
         typedef struct __attribute__((packed)) { u32 v; } unaligned_u32;
         const unaligned_u32 *su = (const unaligned_u32 *)src;
@@ -333,15 +339,15 @@ int sceMpegbase_AC9E717E(int width, const void *coeff)
     }
 
     int ret = dmacplusSetCscConfig(0, width, g_mpegbase.csc_coeff);
-    pspSetK1(k1);
+    pspSetK1(savedK1);
     return ret;
 }
 
 int sceMpegBaseCscInit(int width)
 {
-    int k1 = pspShiftK1();
+    int savedK1 = pspShiftK1();
     int ret = sceMpegbase_AC9E717E(width, g_default_csc_coeff);
-    pspSetK1(k1);
+    pspSetK1(savedK1);
     return ret;
 }
 
@@ -415,13 +421,13 @@ int cscAvcAlignLeftEdge(void **p_rgb, void **p_rgb2, u32 *range, u32 *yuv, u32 *
         return 0;
     }
 
-    u32 h8 = (h << 4) >> 1;
-    u32 col_y0 = (h8 * half_rx_ceil) << 4;
+    u32 halfRowBlocks = (h << 4) >> 1;
+    u32 col_y0 = (halfRowBlocks * half_rx_ceil) << 4;
     offsets[0] = col_y0;
     offsets[2] = col_y0 >> 1;
 
-    u32 col_y1 = (h8 * (range[0] >> 1)) << 4;
-    u32 step_y = h8 << 4;
+    u32 col_y1 = (halfRowBlocks * (range[0] >> 1)) << 4;
+    u32 step_y = halfRowBlocks << 4;
     offsets[1] = col_y1;
     offsets[3] = col_y1 >> 1;
 
@@ -491,17 +497,17 @@ int cscAvcPartialHeight(void *rgb, void *rgb2, u32 *range, u32 *yuv)
 
 int sceMpegBasePESpacketCopy(u32 *pkt)
 {
-    int k1 = pspShiftK1();
+    int savedK1 = pspShiftK1();
     u32 k1_mask = pspGetK1();
 
     if ((s32)((u32)pkt & k1_mask) < 0) {
-        pspSetK1(k1);
+        pspSetK1(savedK1);
         return 0x80000023;
     }
 
     int ret = sceKernelWaitSema(g_mpegbase.sema_id, 1, NULL);
     if (ret < 0) {
-        pspSetK1(k1);
+        pspSetK1(savedK1);
         return ret;
     }
 
@@ -544,7 +550,7 @@ int sceMpegBasePESpacketCopy(u32 *pkt)
             } while (ret != 0);
 
             sceKernelSignalSema(g_mpegbase.sema_id, 1);
-            pspSetK1(k1);
+            pspSetK1(savedK1);
             return ret;
         }
 
@@ -558,18 +564,18 @@ int sceMpegBasePESpacketCopy(u32 *pkt)
     }
 
     sceKernelSignalSema(g_mpegbase.sema_id, 1);
-    pspSetK1(k1);
+    pspSetK1(savedK1);
     return 0x80000104;
 }
 
 int sceMpegBaseYCrCbCopy(u32 *dst, u32 *src, int flags)
 {
-    int k1 = pspShiftK1();
+    int savedK1 = pspShiftK1();
     u32 k1_mask = pspGetK1();
 
     if (((s32)((((u32)src | ((u32)src + 0x30)) & k1_mask)) < 0) ||
         ((s32)((((u32)dst | ((u32)dst + 0x30)) & k1_mask)) < 0)) {
-        pspSetK1(k1);
+        pspSetK1(savedK1);
         return 0x80000023;
     }
 
@@ -592,13 +598,13 @@ int sceMpegBaseYCrCbCopy(u32 *dst, u32 *src, int flags)
     u32 y_size = src[6] - base_y;
     u32 c_size = y_size >> 1;
     if (y_size > 0xBFF40) {
-        pspSetK1(k1);
+        pspSetK1(savedK1);
         return 0x80000104;
     }
 
     int ret = sceKernelWaitSema(g_mpegbase.sema_id, 1, NULL);
     if (ret < 0) {
-        pspSetK1(k1);
+        pspSetK1(savedK1);
         return ret;
     }
 
@@ -622,18 +628,18 @@ int sceMpegBaseYCrCbCopy(u32 *dst, u32 *src, int flags)
         ret = executeYuvCopyLli(lli);
 
     sceKernelSignalSema(g_mpegbase.sema_id, 1);
-    pspSetK1(k1);
+    pspSetK1(savedK1);
     return ret;
 }
 
 int sceMpegBaseYCrCbCopyVme(u32 *dst, u32 *src, int flags)
 {
-    int k1 = pspShiftK1();
+    int savedK1 = pspShiftK1();
     u32 k1_mask = pspGetK1();
 
     if (((s32)((((u32)src | ((u32)src + 0x28)) & k1_mask)) < 0) ||
         ((s32)((((u32)dst | ((u32)dst + 0x28)) & k1_mask)) < 0)) {
-        pspSetK1(k1);
+        pspSetK1(savedK1);
         return 0x80000023;
     }
 
@@ -645,13 +651,13 @@ int sceMpegBaseYCrCbCopyVme(u32 *dst, u32 *src, int flags)
     u32 c_size = total >> 3;
 
     if (y_size > 0xBFF40) {
-        pspSetK1(k1);
+        pspSetK1(savedK1);
         return 0x80000104;
     }
 
     int ret = sceKernelWaitSema(g_mpegbase.sema_id, 1, NULL);
     if (ret < 0) {
-        pspSetK1(k1);
+        pspSetK1(savedK1);
         return ret;
     }
 
@@ -673,7 +679,7 @@ int sceMpegBaseYCrCbCopyVme(u32 *dst, u32 *src, int flags)
         ret = executeYuvCopyLli(lli);
 
     sceKernelSignalSema(g_mpegbase.sema_id, 1);
-    pspSetK1(k1);
+    pspSetK1(savedK1);
     return ret;
 }
 
@@ -682,8 +688,7 @@ SceMpegLLI *appendYuvCopyLli(SceMpegLLI *lli, u32 dst, u32 src, u32 size)
     if (size == 0)
         return lli;
 
-    u32 k1_mask;
-    __asm__ volatile("move %0, $k1" : "=r"(k1_mask));
+    u32 k1_mask = pspGetK1();
     u32 addr_hi = (k1_mask >> 31) << 30;
 
     while (size != 0) {

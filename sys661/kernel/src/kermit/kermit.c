@@ -31,7 +31,7 @@ static inline u32 ctz32(u32 x)
 
 static int kermitIntrHandler(void)
 {
-	volatile u32 dummy;
+	volatile u32 trigReg;
 	int intr = sceKernelCpuSuspendIntr();
 	u32 pend = HW(KERMIT_REG_INTR_PEND) & ~0x4002u;
 
@@ -61,16 +61,17 @@ static int kermitIntrHandler(void)
 					u64 *dst = resp->resp_ptr;
 					SceUID sema = resp->sema_id;
 					u64 resVal = resp->result;
-					((u32 *)dst)[0] = (u32)resVal;
-					((u32 *)dst)[1] = (u32)(resVal >> 32);
+					u32 *dstWords = (u32 *)dst;
+					dstWords[0] = (u32)resVal;
+					dstWords[1] = (u32)(resVal >> 32);
 					if (sceKernelSignalSema(sema, 1) == 0) {
 						u32 mask = 1u << bit;
 						u32 trig = HW(KERMIT_REG_TRIG);
 						HW(KERMIT_REG_TRIG) = trig & ~mask;
-						dummy = HW(KERMIT_REG_TRIG);
+						trigReg = HW(KERMIT_REG_TRIG);
 						HW(KERMIT_REG_TRIG) = trig | mask;
-						dummy = HW(KERMIT_REG_TRIG);
-						(void)dummy;
+						trigReg = HW(KERMIT_REG_TRIG);
+						(void)trigReg;
 					}
 					pend >>= 1;
 					bit++;
@@ -88,7 +89,7 @@ static int kermitIntrHandler(void)
 
 int sceKermit_driver_4C3A362D(u32 channel, u32 is_cb)
 {
-	volatile u32 dummy;
+	volatile u32 trigReg;
 	int res = sceKernelPowerLockForUser(1);
 	if (res != 0) {
 		return res;
@@ -105,10 +106,10 @@ int sceKermit_driver_4C3A362D(u32 channel, u32 is_cb)
 	HW(KERMIT_REG_INTR_MASK) |= mask;
 	u32 trig = HW(KERMIT_REG_TRIG);
 	HW(KERMIT_REG_TRIG) = trig & ~mask;
-	dummy = HW(KERMIT_REG_TRIG);
+	trigReg = HW(KERMIT_REG_TRIG);
 	HW(KERMIT_REG_TRIG) = trig | mask;
-	dummy = HW(KERMIT_REG_TRIG);
-	(void)dummy;
+	trigReg = HW(KERMIT_REG_TRIG);
+	(void)trigReg;
 	sceKernelCpuResumeIntr(intr);
 
 	if (is_cb != 0) {
@@ -128,7 +129,7 @@ int sceKermit_driver_4C3A362D(u32 channel, u32 is_cb)
 
 int sceKermit_driver_D69C50BB(void)
 {
-	volatile u32 dummy;
+	volatile u32 trigReg;
 	int intr = sceKernelCpuSuspendIntr();
 
 	HW(0xBE140000u) &= ~1u;
@@ -138,10 +139,10 @@ int sceKermit_driver_D69C50BB(void)
 
 	u32 trig = HW(KERMIT_REG_TRIG);
 	HW(KERMIT_REG_TRIG) = trig & ~0x400u;
-	dummy = HW(KERMIT_REG_TRIG);
+	trigReg = HW(KERMIT_REG_TRIG);
 	HW(KERMIT_REG_TRIG) = trig | 0x400u;
-	dummy = HW(KERMIT_REG_TRIG);
-	(void)dummy;
+	trigReg = HW(KERMIT_REG_TRIG);
+	(void)trigReg;
 
 	while ((HW(KERMIT_REG_INTR_PEND) & 0x400u) == 0) {
 	}
@@ -155,7 +156,7 @@ int sceKermit_driver_D69C50BB(void)
 
 int sceKermit_driver_36666181(SceKermitRequest *req, u32 mode, u32 cmd, u32 num_args, u32 is_cb, u64 *resp)
 {
-	volatile u32 dummy;
+	volatile u32 trigReg;
 	if (g_isEnabled == 0) {
 		sceKernelDelayThread(10000);
 		*resp = 0;
@@ -196,10 +197,10 @@ int sceKermit_driver_36666181(SceKermitRequest *req, u32 mode, u32 cmd, u32 num_
 				intr = sceKernelCpuSuspendIntr();
 				u32 trig = HW(KERMIT_REG_TRIG);
 				HW(KERMIT_REG_TRIG) = trig & ~mask;
-				dummy = HW(KERMIT_REG_TRIG);
+				trigReg = HW(KERMIT_REG_TRIG);
 				HW(KERMIT_REG_TRIG) = trig | mask;
-				dummy = HW(KERMIT_REG_TRIG);
-				(void)dummy;
+				trigReg = HW(KERMIT_REG_TRIG);
+				(void)trigReg;
 				sceKernelCpuResumeIntr(intr);
 
 				if (is_cb != 0) {
@@ -210,8 +211,10 @@ int sceKermit_driver_36666181(SceKermitRequest *req, u32 mode, u32 cmd, u32 num_
 
 				res = sceKernelSendMsgPipe(g_msgPipeId, &sema_id, sizeof(sema_id), 0, NULL, NULL);
 				if (res == 0) {
-					((u32 *)resp)[0] = ((u32 *)req)[0];
-					((u32 *)resp)[1] = ((u32 *)req)[1];
+					u32 *respWords = (u32 *)resp;
+					u32 *reqWords = (u32 *)req;
+					respWords[0] = reqWords[0];
+					respWords[1] = reqWords[1];
 					res = sceKernelPowerUnlockForUser(1);
 				} else {
 					sceKernelPowerUnlockForUser(1);

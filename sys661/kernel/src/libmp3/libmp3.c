@@ -69,7 +69,7 @@ typedef struct Mp3Info {
     u16 vbriVersion;    /* 0xAC */
     u16 vbriDelay;      /* 0xAE */
     u16 vbriQuality;    /* 0xB0 */
-    u16 padB2;          /* 0xB2 */
+    u16 vbriPad;        /* 0xB2 */
     u32 vbriBytes;      /* 0xB4 */
     u32 vbriFrames;     /* 0xB8 */
     u16 vbriTocEntries; /* 0xBC */
@@ -78,7 +78,7 @@ typedef struct Mp3Info {
     u16 vbriEntryFrames;/* 0xC2 */
     u32 *vbriToc;       /* 0xC4 */
     SceUID fplId;       /* 0xC8 */
-    s32 padCC[13];      /* 0xCC..0xFF */
+    s32 infoPad[13];    /* 0xCC..0xFF */
 } Mp3Info;
 
 typedef struct Mp3State {
@@ -95,7 +95,7 @@ typedef struct Mp3State {
     u32 sumDecodedBytes;/* 0x28 */
     s32 streamStatus;   /* 0x2C (0x1AC) */
     s32 lowLevelStatus; /* 0x30 (0x1B0) */
-    s32 pad34[3];       /* 0x34..0x3F */
+    s32 statePad[3];    /* 0x34..0x3F */
 } Mp3State;
 
 typedef struct Mp3Context {
@@ -148,7 +148,7 @@ static s64 calc_xing_frame_offset(int handle, int frame);
 static s64 calc_vbri_frame_offset(int handle, int frame);
 static s64 calc_cbr_frame_offset(int handle, int frame);
 static int parse_lowlevel_info(int handle);
-static int mp3_memcmp(const void *s1, const void *s2, int n);
+static int mp3_memcmp(const void *lhs, const void *rhs, int n);
 static const u8 *read_stream_bytes(void *dst, const u8 *src, u32 size, int bigEndian);
 static int extract_codec_info(int handle);
 
@@ -1017,13 +1017,13 @@ static int parse_vbri_header(int handle)
         SceUID fpl = sceKernelCreateFpl("SceLibmp3Fpl", 2, 0, fplBlockSize, 1, NULL);
         info->fplId = fpl;
         if (fpl < 0) {
-            int r2 = free_vbri_fpl(handle);
-            return (r2 < 0) ? r2 : fpl;
+            int cleanupRet = free_vbri_fpl(handle);
+            return (cleanupRet < 0) ? cleanupRet : fpl;
         }
         ret = sceKernelAllocateFpl(fpl, (void **)&info->vbriToc, NULL);
         if (ret < 0) {
-            int r2 = free_vbri_fpl(handle);
-            return (r2 < 0) ? r2 : ret;
+            int cleanupRet = free_vbri_fpl(handle);
+            return (cleanupRet < 0) ? cleanupRet : ret;
         }
         sceKernelMemset(info->vbriToc, 0, fplBlockSize);
         u32 count = (u32)info->vbriTocEntries + 1;
@@ -1139,15 +1139,15 @@ static int parse_lowlevel_info(int handle)
 }
 
 /* 0x255c */
-static int mp3_memcmp(const void *s1, const void *s2, int n)
+static int mp3_memcmp(const void *lhs, const void *rhs, int n)
 {
     if ((u32)(n - 1) >= 0x80U) {
         return 0x80671003;
     }
-    const s8 *p1 = (const s8 *)s1;
-    const s8 *p2 = (const s8 *)s2;
+    const s8 *leftBytes = (const s8 *)lhs;
+    const s8 *rightBytes = (const s8 *)rhs;
     for (int i = 0; i < n; i++) {
-        if (p1[i] != p2[i]) {
+        if (leftBytes[i] != rightBytes[i]) {
             return -1;
         }
     }

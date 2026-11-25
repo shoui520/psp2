@@ -78,17 +78,17 @@ int sceVaudioOutputBlocking(int vol, void *buf)
 {
     int shift = (g_vaudio.half_mode > 0) ? 1 : 0;
     u32 samples = g_vaudio.sample_count >> shift;
-    u32 byte_len = (samples * g_vaudio.ch_count) << 1;
+    u32 out_bytes = (samples * g_vaudio.ch_count) << 1;
 
-    int k1 = pspShiftK1();
-    if (!pspK1DynBufOk(buf, byte_len)) {
-        pspSetK1(k1);
+    int savedK1 = pspShiftK1();
+    if (!pspK1DynBufOk(buf, out_bytes)) {
+        pspSetK1(savedK1);
         return 0x80000023;
     }
 
     if (g_vaudio.effect_vol < 0) {
         int ret = vaudioOutputInternal(vol, buf);
-        pspSetK1(k1);
+        pspSetK1(savedK1);
         return ret;
     }
 
@@ -109,7 +109,7 @@ int sceVaudioOutputBlocking(int vol, void *buf)
                 res = vaudioOutputInternal(vol, NULL);
             else
                 res = 0;
-            pspSetK1(k1);
+            pspSetK1(savedK1);
             return res;
         }
 
@@ -120,7 +120,7 @@ int sceVaudioOutputBlocking(int vol, void *buf)
                 res = vaudioOutputInternal(vol, NULL);
             else
                 res = 0;
-            pspSetK1(k1);
+            pspSetK1(savedK1);
             return res;
         }
 
@@ -131,7 +131,7 @@ int sceVaudioOutputBlocking(int vol, void *buf)
                 res = vaudioOutputInternal(vol, NULL);
             else
                 res = 0;
-            pspSetK1(k1);
+            pspSetK1(savedK1);
             return res;
         }
         prev_state = res;
@@ -140,16 +140,16 @@ int sceVaudioOutputBlocking(int vol, void *buf)
 
 int sceVaudio_E8E78DC8(int samplecount, int freq, int channels)
 {
-    int k1 = pspShiftK1();
+    int savedK1 = pspShiftK1();
     int ret = sceKernelWaitSema(g_vaudio.sema_id, 1, NULL);
     if (ret < 0) {
-        pspSetK1(k1);
+        pspSetK1(savedK1);
         return ret;
     }
 
     ret = sceMeCore_driver_635397BB(0x124, freq, samplecount);
     sceKernelSignalSema(g_vaudio.sema_id, 1);
-    pspSetK1(k1);
+    pspSetK1(savedK1);
 
     if (ret < 0)
         return ret;
@@ -159,10 +159,10 @@ int sceVaudio_E8E78DC8(int samplecount, int freq, int channels)
 
 int sceVaudioChRelease(void)
 {
-    int k1 = pspShiftK1();
+    int savedK1 = pspShiftK1();
     int ret = sceKernelWaitSema(g_vaudio.sema_id, 1, NULL);
     if (ret < 0) {
-        pspSetK1(k1);
+        pspSetK1(savedK1);
         return ret;
     }
 
@@ -170,7 +170,7 @@ int sceVaudioChRelease(void)
     ret = sceAudioSRCChRelease();
     if (ret < 0) {
         sceKernelSignalSema(g_vaudio.sema_id, 1);
-        pspSetK1(k1);
+        pspSetK1(savedK1);
         return ret;
     }
 
@@ -187,21 +187,21 @@ int sceVaudioChRelease(void)
     }
     g_vaudio.ch_count = 0;
     sceKernelSignalSema(g_vaudio.sema_id, 1);
-    pspSetK1(k1);
+    pspSetK1(savedK1);
     return ret;
 }
 
 int sceVaudio_driver_A3B71098(int effect_type, int vol)
 {
-    int k1 = pspShiftK1();
+    int savedK1 = pspShiftK1();
     if ((u32)effect_type >= 5) {
-        pspSetK1(k1);
+        pspSetK1(savedK1);
         return 0x80000102;
     }
 
     int ret = sceKernelWaitSema(g_vaudio.sema_id, 1, NULL);
     if (ret < 0) {
-        pspSetK1(k1);
+        pspSetK1(savedK1);
         return ret;
     }
 
@@ -216,21 +216,21 @@ int sceVaudio_driver_A3B71098(int effect_type, int vol)
     }
 
     sceKernelSignalSema(g_vaudio.sema_id, 1);
-    pspSetK1(k1);
+    pspSetK1(savedK1);
     return vol;
 }
 
 int sceVaudioSetAlcMode(int mode)
 {
-    int k1 = pspShiftK1();
+    int savedK1 = pspShiftK1();
     if ((u32)mode >= 2) {
-        pspSetK1(k1);
+        pspSetK1(savedK1);
         return 0x80000102;
     }
 
     int ret = sceKernelWaitSema(g_vaudio.sema_id, 1, NULL);
     if (ret < 0) {
-        pspSetK1(k1);
+        pspSetK1(savedK1);
         return ret;
     }
 
@@ -240,7 +240,7 @@ int sceVaudioSetAlcMode(int mode)
     }
 
     sceKernelSignalSema(g_vaudio.sema_id, 1);
-    pspSetK1(k1);
+    pspSetK1(savedK1);
     return 0;
 }
 
@@ -294,9 +294,9 @@ int sceVaudio_504E4745(int effect_vol)
 
 int sceVaudioSetEffectType(int effect_type, int vol)
 {
-    int k1 = pspShiftK1();
+    int savedK1 = pspShiftK1();
     int ret = sceVaudio_driver_A3B71098(effect_type, 0);
-    pspSetK1(k1);
+    pspSetK1(savedK1);
     return ret;
 }
 
@@ -407,11 +407,11 @@ int vaudioOutputInternal(int vol, void *buf)
         int shift = (g_vaudio.half_mode > 0) ? 1 : 0;
         int samples = g_vaudio.sample_count >> shift;
         int eff = g_vaudio.effect_type;
-        int param_a2 = (eff != 0) ? 0x392CCF : 0x7FFFFF;
-        u32 param_t1 = 0x03333333;
+        int dry_gain = (eff != 0) ? 0x392CCF : 0x7FFFFF;
+        u32 effect_coeff = 0x03333333;
         if (eff != 0)
-            param_t1 = g_vaudio_effect_table[g_vaudio.freq_idx][eff - 1];
-        int me_res = meVaudioSetEffect((SceVaudioMeWork *)(g_vaudio.work_buf + 0x4000), samples, param_a2, 0x7FFFFF, 0, param_t1);
+            effect_coeff = g_vaudio_effect_table[g_vaudio.freq_idx][eff - 1];
+        int me_res = meVaudioSetEffect((SceVaudioMeWork *)(g_vaudio.work_buf + 0x4000), samples, dry_gain, 0x7FFFFF, 0, effect_coeff);
         if (me_res < 0)
             ret = me_res;
     } else if (g_vaudio.effect_dirty == 2) {
@@ -432,16 +432,16 @@ int vaudioChReserveInternal(int samplecount, int freq, int channels, int half_mo
     if (channels != 2 && channels != 4)
         return 0x80000108;
 
-    int k1 = pspShiftK1();
+    int savedK1 = pspShiftK1();
     int ret = sceKernelWaitSema(g_vaudio.sema_id, 1, NULL);
     if (ret < 0) {
-        pspSetK1(k1);
+        pspSetK1(savedK1);
         return ret;
     }
 
     if (g_vaudio.ch_count != 0) {
         sceKernelSignalSema(g_vaudio.sema_id, 1);
-        pspSetK1(k1);
+        pspSetK1(savedK1);
         return 0x80000021;
     }
 
@@ -449,11 +449,11 @@ int vaudioChReserveInternal(int samplecount, int freq, int channels, int half_mo
         if (samplecount != 0x100 && samplecount != 0x240 &&
             samplecount != 0x400 && samplecount != 0x480 &&
             samplecount != 0x800) {
-            pspSetK1(k1);
+            pspSetK1(savedK1);
             return 0x80000104;
         }
         if (channels != 2) {
-            pspSetK1(k1);
+            pspSetK1(savedK1);
             return 0x80000108;
         }
     }
@@ -493,12 +493,12 @@ int vaudioChReserveInternal(int samplecount, int freq, int channels, int half_mo
     meVaudioInit((SceVaudioMeWork *)(g_vaudio.work_buf + 0x4000), channels << 3, 16, freq, samplecount);
 
     int eff = g_vaudio.effect_type;
-    int param_a2 = (eff != 0) ? 0x392CCF : 0x7FFFFF;
-    u32 param_t1 = 0x03333333;
+    int dry_gain = (eff != 0) ? 0x392CCF : 0x7FFFFF;
+    u32 effect_coeff = 0x03333333;
     if (eff != 0)
-        param_t1 = g_vaudio_effect_table[g_vaudio.freq_idx][eff - 1];
+        effect_coeff = g_vaudio_effect_table[g_vaudio.freq_idx][eff - 1];
 
-    ret = meVaudioSetEffect((SceVaudioMeWork *)(g_vaudio.work_buf + 0x4000), samplecount, param_a2, 0x7FFFFF, 0, param_t1);
+    ret = meVaudioSetEffect((SceVaudioMeWork *)(g_vaudio.work_buf + 0x4000), samplecount, dry_gain, 0x7FFFFF, 0, effect_coeff);
     if (ret >= 0) {
         ret = sceAudioSRCChReserve(actual_samples, src_freq, 2);
         if (ret >= 0)
@@ -506,7 +506,7 @@ int vaudioChReserveInternal(int samplecount, int freq, int channels, int half_mo
     }
 
     sceKernelSignalSema(g_vaudio.sema_id, 1);
-    pspSetK1(k1);
+    pspSetK1(savedK1);
     return ret;
 }
 

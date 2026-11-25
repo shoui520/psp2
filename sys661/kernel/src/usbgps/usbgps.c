@@ -48,7 +48,7 @@ s32 module_start(SceSize args, void *argp)
 
 s32 sceUsbGps_driver_9F267D34(void)
 {
-    s32 k1 = pspShiftK1();
+    s32 savedK1 = pspShiftK1();
     s32 res;
     if (sceUsb_driver_D9EE03ED() == 0) {
         res = 0x80243908;
@@ -57,14 +57,14 @@ s32 sceUsbGps_driver_9F267D34(void)
         if (res == 0)
             g_state = 1;
     }
-    pspSetK1(k1);
+    pspSetK1(savedK1);
     return res;
 }
 s32 sceUsbGps_9F267D34(void) __attribute__((alias("sceUsbGps_driver_9F267D34")));
 
 s32 sceUsbGps_driver_A8ED0BC2(u8 flag)
 {
-    s32 k1 = pspShiftK1();
+    s32 savedK1 = pspShiftK1();
     s32 res = 0;
     if (sceUsb_driver_D9EE03ED() == 0) {
         res = 0x80243908;
@@ -73,14 +73,14 @@ s32 sceUsbGps_driver_A8ED0BC2(u8 flag)
     } else {
         g_initFlag = flag;
     }
-    pspSetK1(k1);
+    pspSetK1(savedK1);
     return res;
 }
 s32 sceUsbGps_A8ED0BC2(u8 flag) __attribute__((alias("sceUsbGps_driver_A8ED0BC2")));
 
 s32 sceUsbGps_driver_5881C826(u8 *out_flag)
 {
-    s32 k1 = pspShiftK1();
+    s32 savedK1 = pspShiftK1();
     s32 res = 0;
     if (sceUsb_driver_D9EE03ED() == 0) {
         res = 0x80243908;
@@ -93,14 +93,14 @@ s32 sceUsbGps_driver_5881C826(u8 *out_flag)
     } else {
         *out_flag = g_initFlag;
     }
-    pspSetK1(k1);
+    pspSetK1(savedK1);
     return res;
 }
 s32 sceUsbGps_5881C826(u8 *out_flag) __attribute__((alias("sceUsbGps_driver_5881C826")));
 
 s32 sceUsbGps_driver_7C16AC3A(s32 *out_state)
 {
-    s32 k1 = pspShiftK1();
+    s32 savedK1 = pspShiftK1();
     s32 res = 0;
     if (out_state == NULL) {
         res = 0x80244007;
@@ -151,14 +151,14 @@ s32 sceUsbGps_driver_7C16AC3A(s32 *out_state)
             res = 0x80244010;
         }
     }
-    pspSetK1(k1);
+    pspSetK1(savedK1);
     return res;
 }
 s32 sceUsbGps_7C16AC3A(s32 *out_state) __attribute__((alias("sceUsbGps_driver_7C16AC3A")));
 
 s32 sceUsbGps_driver_934EC2B2(void *gps_data, void *sat_data)
 {
-    s32 k1 = pspShiftK1();
+    s32 savedK1 = pspShiftK1();
     s32 res;
     if (sceUsb_driver_D9EE03ED() == 0) {
         res = 0x80243908;
@@ -198,7 +198,7 @@ s32 sceUsbGps_driver_934EC2B2(void *gps_data, void *sat_data)
             res = 0x80244010;
         }
     }
-    pspSetK1(k1);
+    pspSetK1(savedK1);
     return res;
 }
 s32 sceUsbGps_934EC2B2(void *gps_data, void *sat_data) __attribute__((alias("sceUsbGps_driver_934EC2B2")));
@@ -214,11 +214,11 @@ s32 module_stop(SceSize args, void *argp)
 
 s32 sceUsbGps_driver_6EED4811(void)
 {
-    s32 k1 = pspShiftK1();
+    s32 savedK1 = pspShiftK1();
     s32 res = sceUsb_driver_79545577();
     if ((sceUsb_driver_9009AD6B() & 0xF) == 2)
         sceUsb_driver_55494514();
-    pspSetK1(k1);
+    pspSetK1(savedK1);
     g_state = 0;
     return res;
 }
@@ -231,18 +231,18 @@ s32 sceUsbGps_63D1F89D(void)
 
 s32 sceUsbGps_driver_9D8F99E8(s32 paramMode, s32 paramVal)
 {
-    s32 k1 = pspShiftK1();
+    s32 savedK1 = pspShiftK1();
     s32 ok = sceUsb_driver_D9EE03ED();
-    pspSetK1(k1);
+    pspSetK1(savedK1);
     return (ok != 0) ? 0 : 0x80243908;
 }
 s32 sceUsbGps_9D8F99E8(s32 paramMode, s32 paramVal) __attribute__((alias("sceUsbGps_driver_9D8F99E8")));
 
 s32 sceUsbGps_driver_31F95CDE(void)
 {
-    s32 k1 = pspShiftK1();
+    s32 savedK1 = pspShiftK1();
     s32 ok = sceUsb_driver_D9EE03ED();
-    pspSetK1(k1);
+    pspSetK1(savedK1);
     return (ok != 0) ? 0 : 0x80243908;
 }
 s32 sceUsbGps_31F95CDE(void) __attribute__((alias("sceUsbGps_driver_31F95CDE")));

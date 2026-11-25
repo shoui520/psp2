@@ -11,9 +11,9 @@ static SceSysEventHandler g_sysEventHandler = {
 	.handler = peripheralSysEventHandler,
 };
 
-static int g_periphParam1;
-static int g_periphParam0;
-static int g_periphParam2;
+static int g_audioRouteHeadphone;
+static int g_audioRouteSpeaker;
+static int g_audioRouteAux;
 static u32 g_watchdogCounter;
 static SceUID g_mutexId;
 static void *g_bufBase;
@@ -58,7 +58,7 @@ int sceKermitPeripheral_driver_C6F8B4E1(u32 key, u32 offset, void *buf, u32 len)
 	return (res == 0) ? kres : res;
 }
 
-int sceKermitPeripheral_driver_76BE2E28(int param0, int param1, int param2)
+int sceKermitPeripheral_driver_76BE2E28(int speakerRoute, int headphoneRoute, int auxRoute)
 {
 	u8 stack_buf[0x80];
 	SceKermitRequest *aligned = (SceKermitRequest *)(((u32)stack_buf + 0x3Fu) & ~0x3Fu);
@@ -71,26 +71,26 @@ int sceKermitPeripheral_driver_76BE2E28(int param0, int param1, int param2)
 		return res;
 	}
 
-	if (param0 >= 0) {
-		g_periphParam0 = param0;
+	if (speakerRoute >= 0) {
+		g_audioRouteSpeaker = speakerRoute;
 	} else {
-		param0 = g_periphParam0;
+		speakerRoute = g_audioRouteSpeaker;
 	}
-	if (param1 >= 0) {
-		g_periphParam1 = param1;
+	if (headphoneRoute >= 0) {
+		g_audioRouteHeadphone = headphoneRoute;
 	} else {
-		param1 = g_periphParam1;
+		headphoneRoute = g_audioRouteHeadphone;
 	}
-	if (param2 >= 0) {
-		g_periphParam2 = param2;
+	if (auxRoute >= 0) {
+		g_audioRouteAux = auxRoute;
 	} else {
-		param2 = g_periphParam2;
+		auxRoute = g_audioRouteAux;
 	}
 
 	req->cmd = 0x416;
-	*(u32 *)&req->args[0] = (u32)param0;
-	*(u32 *)&req->args[1] = (u32)param1;
-	*(u32 *)&req->args[2] = (u32)param2;
+	*(u32 *)&req->args[0] = (u32)speakerRoute;
+	*(u32 *)&req->args[1] = (u32)headphoneRoute;
+	*(u32 *)&req->args[2] = (u32)auxRoute;
 
 	u64 resp;
 	int kres = sceKermit_driver_36666181(req, KERMIT_MODE_PERIPHERAL, 0x416, 3, 0, &resp);

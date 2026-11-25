@@ -36,7 +36,7 @@ s32 sceNetAdhocctl_lib_F8BABD85(void (*handler)(s32 event, s32 error, void *arg)
 void *sceNetIfhandle_lib_15CFE3C0(s32 size);
 void sceNetIfhandle_lib_76BAD213(void *ptr);
 u32 sceNet_lib_1858883D(void);
-s32 sceNet_lib_E0A81C7C(const void *s1, const void *s2, u32 n);
+s32 sceNet_lib_E0A81C7C(const void *lhs, const void *rhs, u32 n);
 s32 sceUtilityGetSystemParamInt(s32 id, s32 *value);
 
 static s32 g_handlerId = -1;                 /* 0x10a0 */

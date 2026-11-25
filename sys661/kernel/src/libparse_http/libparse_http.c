@@ -31,10 +31,10 @@ extern s32 sceKernelCheckThreadStack(void);
 
 static s32 __attribute__((noinline)) parse_version(const char *buf, u32 len, s32 *ver_major, s32 *ver_minor);
 static s32 __attribute__((noinline)) parse_status_code(const char *buf, u32 len, s32 *status_code);
-static s32 __attribute__((noinline)) parse_strncasecmp(const char *s1, const char *s2, u32 n);
+static s32 __attribute__((noinline)) parse_strncasecmp(const char *lhs, const char *rhs, u32 n);
 static s32 __attribute__((noinline)) parse_reason_phrase(const char *buf, u32 len, const char **phrase_out, u32 *phrase_len_out);
 static u32 __attribute__((noinline)) parse_strlen(const char *s);
-static s32 __attribute__((noinline)) parse_strncmp(const char *s1, const char *s2, s32 n);
+static s32 __attribute__((noinline)) parse_strncmp(const char *lhs, const char *rhs, s32 n);
 
 s32 sceParseHttp_8077A433(const char *buf, u32 len, s32 *ver_major, s32 *ver_minor,
                           s32 *status_code, const char **reason_phrase, u32 *reason_len)
@@ -177,33 +177,33 @@ static s32 __attribute__((noinline)) parse_status_code(const char *buf, u32 len,
 {
     if (len < 4)
         return 0x80432060;
-    s8 c0 = buf[0];
-    if ((CTYPE_TABLE[c0] & 0x04) == 0)
+    s8 hundreds = buf[0];
+    if ((CTYPE_TABLE[hundreds] & 0x04) == 0)
         return 0x80432060;
-    s8 c1 = buf[1];
-    if ((CTYPE_TABLE[c1] & 0x04) == 0)
+    s8 tens = buf[1];
+    if ((CTYPE_TABLE[tens] & 0x04) == 0)
         return 0x80432060;
-    s8 c2 = buf[2];
-    if ((CTYPE_TABLE[c2] & 0x04) == 0)
+    s8 ones = buf[2];
+    if ((CTYPE_TABLE[ones] & 0x04) == 0)
         return 0x80432060;
 
-    *status_code = (c0 * 100) + (c1 * 10) + c2 - 0x14d0;
+    *status_code = (hundreds * 100) + (tens * 10) + ones - 0x14d0;
     return 3;
 }
 
-static s32 __attribute__((noinline)) parse_strncasecmp(const char *s1, const char *s2, u32 n)
+static s32 __attribute__((noinline)) parse_strncasecmp(const char *lhs, const char *rhs, u32 n)
 {
     if (n == 0)
         return 0;
     for (u32 i = 0; i < n; i++) {
-        s8 c1 = s1[i];
-        s8 c2 = s2[i];
-        s32 u1 = c1 - (((CTYPE_TABLE[c1] >> 1) & 1) << 5);
-        s32 u2 = c2 - (((CTYPE_TABLE[c2] >> 1) & 1) << 5);
-        s32 diff = u1 - u2;
+        s8 chLeft = lhs[i];
+        s8 chRight = rhs[i];
+        s32 upperLeft = chLeft - (((CTYPE_TABLE[chLeft] >> 1) & 1) << 5);
+        s32 upperRight = chRight - (((CTYPE_TABLE[chRight] >> 1) & 1) << 5);
+        s32 diff = upperLeft - upperRight;
         if (diff != 0)
             return diff;
-        if (c1 == 0)
+        if (chLeft == 0)
             return 0;
     }
     return 0;
@@ -237,21 +237,21 @@ static u32 __attribute__((noinline)) parse_strlen(const char *s)
     return len;
 }
 
-static s32 __attribute__((noinline)) parse_strncmp(const char *s1, const char *s2, s32 n)
+static s32 __attribute__((noinline)) parse_strncmp(const char *lhs, const char *rhs, s32 n)
 {
-    if (s1 == NULL || s2 == NULL) {
-        if (s1 == s2)
+    if (lhs == NULL || rhs == NULL) {
+        if (lhs == rhs)
             return 0;
-        return (s1 != NULL) ? 1 : -1;
+        return (lhs != NULL) ? 1 : -1;
     }
     while (--n >= 0) {
-        s8 c1 = *s1;
-        s8 c2 = *s2++;
-        if (c1 != c2)
-            return c1 - c2;
-        if (c1 == '\0')
+        s8 chLeft = *lhs;
+        s8 chRight = *rhs++;
+        if (chLeft != chRight)
+            return chLeft - chRight;
+        if (chLeft == '\0')
             return 0;
-        s1++;
+        lhs++;
     }
     return 0;
 }

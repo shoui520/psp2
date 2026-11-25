@@ -39,8 +39,8 @@ SCE_SDK_VERSION(SDK_VERSION);
 /* Timer modes */
 #define TIMER_MODE_HANDLER_REGISTERED   (1 << 0) /* Indicates that a time-up handler is set for the specific timer. */
 #define TIMER_MODE_IN_USE               (1 << 1) /* Indicates that the timer is in use. */
-#define TIMER_MODE_UNKNOWN              (1 << 9) /* Unknown timer mode. */
-#define TIMER_MODE_MAX                  TIMER_MODE_UNKNOWN /* Max timer mode. Keep this the last entry. */
+#define TIMER_MODE_PRESCALE             (1 << 9) /* Resets / enables hardware timer prescale state. */
+#define TIMER_MODE_MAX                  TIMER_MODE_PRESCALE /* Max timer mode. Keep this the last entry. */
 
 /* Receive the counter register value. */
 #define TIMER_GET_COUNT(data)           ((data) & TIMER_MAX_COUNTER_VALUE)
@@ -105,9 +105,9 @@ typedef struct {
     s32 intrcode;
     /* The ID of the timer. */
     s32 timid;
-    /* Unknown. */
+    /* Previous timer cycle count saved on cycle update. */
     u32 prev_tmcy;
-    /* Unknown. */
+    /* Previous interrupt overflow count saved on cycle update. */
     u32 prev_icnt;
     /* The time-up handler for the timer. */
     SceSTimerCb cb;
@@ -212,7 +212,7 @@ s32 SysTimerInit(SceSize argSize __attribute__((unused)), const void *argBlock _
     
     s32 i;
     for (i = 0; i < TIMER_NUM_HW_TIMERS; i++) {
-        g_timerCB.SYSTMR[i].regadr->timerData = TIMER_SET_MODE(TIMER_MODE_UNKNOWN) | TIMER_SET_COUNT(0);
+        g_timerCB.SYSTMR[i].regadr->timerData = TIMER_SET_MODE(TIMER_MODE_PRESCALE) | TIMER_SET_COUNT(0);
         g_timerCB.SYSTMR[i].regadr->prsclNumerator = -1;
         g_timerCB.SYSTMR[i].regadr->prsclDenominator = -1;
         //(void)g_timerCB.SYSTMR[i].regadr->timerData;
@@ -274,7 +274,7 @@ static s32 systimerhandler(s32 intrNo __attribute__((unused)), SceSTimerInfo *ti
 static void _sceSTimerStopCount(SceSTimerInfo *timer)
 {
     SceHwTimer *reg = timer->regadr;
-    reg->timerData = reg->nowData & ~((TIMER_MODE_IN_USE | TIMER_MODE_UNKNOWN) << 22);
+    reg->timerData = reg->nowData & ~((TIMER_MODE_IN_USE | TIMER_MODE_PRESCALE) << 22);
 }
 
 // 0x02b0
@@ -332,7 +332,7 @@ s32 sceSTimerAlloc(void)
     for (i = 0; i < TIMER_NUM_HW_TIMERS; i++) {
         if (g_timerCB.SYSTMR[i].timid == -1) {
             g_timerCB.SYSTMR[i].cb = NULL;
-            g_timerCB.SYSTMR[i].regadr->timerData = TIMER_SET_MODE(TIMER_MODE_UNKNOWN) | TIMER_SET_COUNT(0);
+            g_timerCB.SYSTMR[i].regadr->timerData = TIMER_SET_MODE(TIMER_MODE_PRESCALE) | TIMER_SET_COUNT(0);
             g_timerCB.SYSTMR[i].regadr->prsclNumerator = -1;
             g_timerCB.SYSTMR[i].regadr->prsclDenominator = -1;
             (void)g_timerCB.SYSTMR[i].regadr->timerData;
@@ -368,7 +368,7 @@ s32 sceSTimerFree(s32 timerId)
     
     _sceSTimerStopCount(timer);
     sceKernelDisableIntr(timer->intrcode);
-    timer->regadr->timerData = TIMER_SET_MODE(TIMER_MODE_UNKNOWN) | TIMER_SET_COUNT(0);
+    timer->regadr->timerData = TIMER_SET_MODE(TIMER_MODE_PRESCALE) | TIMER_SET_COUNT(0);
     timer->regadr->prsclNumerator = -1;
     timer->regadr->prsclDenominator = -1;
     timer->cb = NULL;
@@ -427,7 +427,7 @@ s32 sceSTimerResetCount(s32 timerId)
     s32 oldIntr = sceKernelCpuSuspendIntr();
     
     //timer->regadr->timerData |= 0x80000000;
-    timer->regadr->timerData |= TIMER_SET_MODE(TIMER_MODE_UNKNOWN);
+    timer->regadr->timerData |= TIMER_SET_MODE(TIMER_MODE_PRESCALE);
     timer->totalcount = 0;
     
     sceKernelCpuResumeIntr(oldIntr);
@@ -498,7 +498,7 @@ s32 sceSTimerSetHandler(s32 timerId, s32 compareValue, SceSTimerCb timeUpHandler
         timer->common = common;
         timer->regadr->timerData = timer->regadr->nowData & ~TIMER_MAX_COUNTER_VALUE;
         timer->regadr->timerData |= compareValue;
-        timer->regadr->timerData = timer->regadr->nowData | TIMER_SET_MODE(TIMER_MODE_UNKNOWN | TIMER_MODE_HANDLER_REGISTERED);
+        timer->regadr->timerData = timer->regadr->nowData | TIMER_SET_MODE(TIMER_MODE_PRESCALE | TIMER_MODE_HANDLER_REGISTERED);
         sceKernelEnableIntr(timer->intrcode);
     }
     sceKernelCpuResumeIntr(oldIntr);
@@ -515,13 +515,13 @@ s32 sceSTimerSetTMCY(s32 timerId, s32 cycleVal)
     s32 oldIntr = sceKernelCpuSuspendIntr();
     
     u32 now = timer->regadr->nowData;
-    u32 val = TIMER_GET_COUNT(now);
-    u32 val2 = TIMER_GET_ICNT(now);
+    u32 count = TIMER_GET_COUNT(now);
+    u32 cur_icnt = TIMER_GET_ICNT(now);
     u32 prev_icnt = timer->prev_icnt;
     
-    timer->prev_tmcy = val;
-    timer->prev_icnt = val2;
-    timer->totalcount += val * (val2 - prev_icnt);
+    timer->prev_tmcy = count;
+    timer->prev_icnt = cur_icnt;
+    timer->totalcount += count * (cur_icnt - prev_icnt);
     
     u32 tmcy = (u32)(cycleVal - 1);
     if (tmcy > TIMER_MAX_COUNTER_VALUE)

@@ -11,9 +11,8 @@
 #define SCE_NULL_POINTER 0x80550980
 #define SCE_ERROR_READ_WRITE 0x80550981
 #define SCE_ERROR_IO 0x80550982
-#define SCE_ERROR_UNKNOWN_0 0x80550983
-#define SCE_ERROR_UNKNOWN_1 0x80550984
-#define SCE_ERROR_UNKNOWN_2 0x8055098
+#define SCE_NP_INSTALL_ERROR_ALREADY_ACTIVATED 0x80550983
+#define SCE_NP_INSTALL_ERROR_CHALLENGE_COOLDOWN 0x80550984
 
 #define TIME_OUT 0x004C4B40
 
@@ -28,7 +27,7 @@ SCE_MODULE_INFO("sceNpInstall_Driver", SCE_MODULE_KIRK_SEMAPHORE_LIB | SCE_MODUL
  * 	Account ID	(0x8 - 0x10)
  * 	Data table	(0x10 - 0x1010)
  * 	Signature	(0x1010 - 0x1030)
- * 	Unknown 	(0x1030 - 0x1038)
+ * 	Footer  	(0x1030 - 0x1038)
  */
 typedef struct ActDat {
 	int version;
@@ -65,17 +64,17 @@ int g_fd;
 extern int sceKernelTerminateThread(SceUID thid);
 
 extern int sceRtc_driver_CEEF238F(u64 *tick);
-extern int sceRtc_driver_89FA4262(u64 *dst, const u64 *src, int sec, int dummy);
+extern int sceRtc_driver_89FA4262(u64 *dst, const u64 *src, int sec, int reserved);
 
 extern int sceOpenPSIDGetPSID(void *psid, int mode);
 
 extern int sceNpDrmDecActivation(void *act, void *key);
 extern int sceNpDrmVerifyAct(void *data);
 
-extern int scePcactAuth1BB(int mode, void *psid, void *req, u64 *utcMs, void *out1, void *out2);
+extern int scePcactAuth1BB(int mode, void *psid, void *req, u64 *utcMs, void *responseBuf, void *signatureBuf);
 extern int scePcactAuth2BB(void *in, void *out, void *key);
 
-s32 sceNpInstall_driver_5847D8C7(int mode, int challengeBuf, int outBufPrimary, int outBufSecondary)
+s32 sceNpInstall_driver_5847D8C7(int mode, int challengeBuf, int responseBuf, int signatureBuf)
 		__attribute__((alias("sceNpInstall_user_5847D8C7")));
 
 s32 sceNpInstall_driver_0B039B36(int actAddr, int actSize, int outBuf)
@@ -87,7 +86,7 @@ s32 sceNpInstall_driver_91F9D50D(int accountAddr)
 void sceNpInstall_driver_7AE4C8BC(void)
 		__attribute__((alias("sceNpInstall_user_7AE4C8BC")));
 
-s32 getNpChallenge(int mode, int challengeBuf, int outBufPrimary, int outBufSecondary);
+s32 getNpChallenge(int mode, int challengeBuf, int responseBuf, int signatureBuf);
 s32 installActivationDat(int addr, int size, int outBuf);
 s32 storeAccountID(int addr);
 u32 removeAct(void);
@@ -113,13 +112,13 @@ u32 module_stop(SceSize args __attribute__((unused)),
  * sceNpInstallGetChallenge
  * Address 0x00000010
  */
-s32 sceNpInstall_user_5847D8C7(int mode, int challengeBuf, int outBufPrimary, int outBufSecondary) {
+s32 sceNpInstall_user_5847D8C7(int mode, int challengeBuf, int responseBuf, int signatureBuf) {
 	s32 res = SCE_ERROR_PRIV_REQUIRED;
 	s32 oldk1 = pspShiftK1();
 	if ((((challengeBuf + 32) | challengeBuf) & (oldk1 << 11)) >= 0) {
-		if ((((outBufPrimary + 128) | outBufPrimary) & (oldk1 << 11)) >= 0) {
-			if ((((outBufSecondary + 64) | outBufSecondary) & (oldk1 << 11)) >= 0) {
-				res = getNpChallenge(mode, challengeBuf, outBufPrimary, outBufSecondary);
+		if ((((responseBuf + 128) | responseBuf) & (oldk1 << 11)) >= 0) {
+			if ((((signatureBuf + 64) | signatureBuf) & (oldk1 << 11)) >= 0) {
+				res = getNpChallenge(mode, challengeBuf, responseBuf, signatureBuf);
 			}
 		}
 	}
@@ -168,7 +167,7 @@ void sceNpInstall_user_7AE4C8BC(void) {
 	return;
 }
 
-s32 getNpChallenge(int mode, int challengeBuf, int outBufPrimary, int outBufSecondary) {
+s32 getNpChallenge(int mode, int challengeBuf, int responseBuf, int signatureBuf) {
 	u8 psid[16];
 	u8 req[48];
 	u64 curTick;
@@ -177,7 +176,7 @@ s32 getNpChallenge(int mode, int challengeBuf, int outBufPrimary, int outBufSeco
 	int authMode;
 	s32 res;
 
-	if (challengeBuf == 0 || outBufSecondary == 0 || outBufPrimary == 0)
+	if (challengeBuf == 0 || signatureBuf == 0 || responseBuf == 0)
 		return SCE_NULL_POINTER;
 
 	res = sceRtc_driver_CEEF238F(&curTick);
@@ -189,12 +188,12 @@ s32 getNpChallenge(int mode, int challengeBuf, int outBufPrimary, int outBufSeco
 		authMode = 1;
 		if (fileDesc >= 0) {
 			sceIoClose(fileDesc);
-			return SCE_ERROR_UNKNOWN_0;
+			return SCE_NP_INSTALL_ERROR_ALREADY_ACTIVATED;
 		}
 	} else if (mode == 0) {
 		authMode = 0;
 		if (curTick < g_challengeExpireTick)
-			return SCE_ERROR_UNKNOWN_1;
+			return SCE_NP_INSTALL_ERROR_CHALLENGE_COOLDOWN;
 	} else if (mode == 2) {
 		authMode = 2;
 	} else {
@@ -211,7 +210,7 @@ s32 getNpChallenge(int mode, int challengeBuf, int outBufPrimary, int outBufSeco
 	if (res < 0)
 		return res;
 
-	res = scePcactAuth1BB(authMode, psid, req, &utcMs, (void *)outBufPrimary, (void *)outBufSecondary);
+	res = scePcactAuth1BB(authMode, psid, req, &utcMs, (void *)responseBuf, (void *)signatureBuf);
 	if (mode == 1)
 		res = sceRtc_driver_89FA4262(&g_challengeExpireTick, &curTick, 30, 0);
 

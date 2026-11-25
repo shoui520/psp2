@@ -6,7 +6,7 @@ SCE_SDK_VERSION(0x06060110);
 
 typedef struct SceVideocodecCodec {
     s32 version;      /* 0x00 */
-    s32 reserved0;    /* 0x04 */
+    s32 padVersion;   /* 0x04 */
     s32 err;          /* 0x08 */
     void *meHandle;   /* 0x0c */
     void *codecInfo;  /* 0x10 */
@@ -21,10 +21,10 @@ typedef struct SceVideocodecCodec {
     void *decodeFlags;/* 0x34 */
     s32 picBufInfo;   /* 0x38 */
     u32 frameCount;   /* 0x3c */
-    s32 reserved1[4]; /* 0x40..0x4f */
+    s32 codecPad[4];  /* 0x40..0x4f */
     void *seiBuf;     /* 0x50 */
     void *extraInfoBuf;/* 0x54 */
-    s32 reserved2;    /* 0x58 */
+    s32 tailPad;      /* 0x58 */
     void *allocMem;   /* 0x5c */
 } SceVideocodecCodec;
 

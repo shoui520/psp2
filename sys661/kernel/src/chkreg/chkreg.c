@@ -102,8 +102,6 @@ s32 _sceChkregLookupUMDRegionCodeInfo(void)
         if (pUMDRegionCodeInfo[i].umdMediaTypeRegionCode == 1
             && (pUMDRegionCodeInfo[i].regionFlags == 0 || pUMDRegionCodeInfo[i].regionFlags == 0x70000000)) // 0x00000084
         {
-            // loc_000000B0
-
 			/* UMD-region-code entries available. */
 
             g_numUMDRegionCodeInfoEntries = i + 1; // 0x000000B4
