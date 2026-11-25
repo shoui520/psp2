@@ -17,7 +17,7 @@ typedef struct {
 	s32 lockCount; // 0
 	s32 thid; // 4
 	u32 flags; // 8
-	s32 unk3; // 12
+	s32 numWaitThreads; // 12
 	s32 id; // 16
 } SceLwMutex;
 

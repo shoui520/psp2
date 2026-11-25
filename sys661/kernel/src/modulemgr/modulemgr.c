@@ -874,7 +874,7 @@ static s32 _RelocateModule(SceModuleMgrParam *pModParams)
 
     pExecInfo = pModParams->pExecInfo;
     pExecInfo->apiType = pModParams->apiType; // 0x00006844
-    pExecInfo->unk12 = pModParams->unk100; // 0x00006858
+    pExecInfo->loadFlags = pModParams->unk100; // 0x00006858
 
     pMod = pModParams->pMod; // 0x0000683C
 

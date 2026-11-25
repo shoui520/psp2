@@ -116,11 +116,11 @@ static s32 ExitInit(s32 error)
     g_init->vshParam.size = sizeof(SceKernelLoadExecVSHParam);
     blkId = sceKernelGetChunk(0);
     if (blkId <= 0) {
-        blk = &g_init->unk60;
-        g_init->unk60 = 32;
-        g_init->unk64 = 32; 
-        g_init->unk68 = 0;
-        g_init->unk76 = 0;
+        blk = g_init->vshMainArg;
+        g_init->vshMainArg[0] = 32;
+        g_init->vshMainArg[1] = 32;
+        g_init->vshMainArg[2] = 0;
+        g_init->vshMainArg[4] = 0;
     } else
         blk = sceKernelGetBlockHeadAddr(blkId);
 
@@ -484,7 +484,7 @@ static s32 ClearFreeBlock(void)
 
 static u32 sub_0DD0(SceLoadCoreBootInfo *bootInfo)
 {
-    if (sceKernelIsDevelopmentToolMode() == SCE_FALSE || bootInfo->unk24 != 0)
+    if (sceKernelIsDevelopmentToolMode() == SCE_FALSE || bootInfo->bootMode != 0)
         return 0;
     return (sceKernelApplicationType() == SCE_INIT_APPLICATION_GAME);
 }
@@ -669,9 +669,9 @@ static void InitThreadEntry(SceSize args, void *argp)
     g_init->bootCallbacks2 = tmpBootCb;
     g_init->curBootCallback2 = tmpBootCb;
     
-    g_init->lptSummary = bootInfo->unk76;
+    g_init->lptSummary = bootInfo->lptSummary;
     
-    if (bootInfo->unk24 == 0) {
+    if (bootInfo->bootMode == 0) {
         SceLoadCoreBootModuleInfo *mod = &bootInfo->modules[bootInfo->numModules - 1];
         if (mod->attr & 2)
             g_init->apiType = mod->bootData;
@@ -681,7 +681,7 @@ static void InitThreadEntry(SceSize args, void *argp)
         else
             g_init->applicationType = SCE_INIT_APPLICATION_VSH;
     } else {
-        if (bootInfo->unk24 >= 3) {
+        if (bootInfo->bootMode >= 3) {
             g_init->applicationType = SCE_INIT_APPLICATION_VSH;
             StopInit(__FUNCTION__, __LINE__);
         }
@@ -935,7 +935,7 @@ s32 InitInit(SceSize argSize, const void *argBlock)
     ProtectHandling(bootInfo);
     
     SceLoadCoreBootModuleInfo *modules = bootInfo->modules;
-    if (bootInfo->unk24 == 0 && (u32)modules->modBuf <= (SCE_USERSPACE_GAME_ADDR_K0 - 1)) {
+    if (bootInfo->bootMode == 0 && (u32)modules->modBuf <= (SCE_USERSPACE_GAME_ADDR_K0 - 1)) {
         void *minStart = (void *)SCE_KERNEL_VALUE_UNITIALIZED;
         void *maxEnd = NULL;
         

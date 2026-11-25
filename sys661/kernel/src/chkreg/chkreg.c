@@ -10,12 +10,12 @@
  * The chkreg module is used as a resident library to provide several APIs to kernel modules to get hardware-specific
  * information about the calling PSP system:
  *
- *    • The Ps code (a unique 16-byte value for the PSP system including hardware information like unit type
+ *    - The Ps code (a unique 16-byte value for the PSP system including hardware information like unit type
  *      (debug/retail/...) and equipped motherboard version)
- *    • The Ps flags which, for example, indicate whether special test/debug functionalities are available in the system
+ *    - The Ps flags which, for example, indicate whether special test/debug functionalities are available in the system
  *      (QA flag)
- *    • The PSP series the PSP model belongs to (PSP-1000 series,...)
- *    • Whether or not specific region-protected UMD content can be played on the PSP system
+ *    - The PSP series the PSP model belongs to (PSP-1000 series,...)
+ *    - Whether or not specific region-protected UMD content can be played on the PSP system
  */
 
 #include <common_imp.h>
@@ -43,15 +43,15 @@ typedef struct {
 	u8 hashData[CHKREG_HASH_DATA_PAYLOAD_SIZE];
 } SceChkregHashData; // Size = 38 bytes
 
-#define CHKREG_UNK9BC_SIZE    (0x14)
-const u8 g_unk9BC[CHKREG_UNK9BC_SIZE] =
+#define CHKREG_HASH_PREFIX_SIZE    (0x14)
+const u8 g_hashPrefix[CHKREG_HASH_PREFIX_SIZE] =
 {
     0x5F, 0x7C, 0x9B, 0x91,
     0x60, 0xFF, 0xB3, 0xCE,
     0x41, 0x9E, 0xBD, 0x2A,
     0x4E, 0x4B, 0x1B, 0x15,
     0x2C, 0x2A, 0xDF, 0xA0,
-}; // 0x000009BC
+};
 
 /*
  * The number of SceIdStorageUMDRegionCodeInfo blocks existing in the IDStorage starting at leaf
@@ -70,12 +70,11 @@ SceIdStorageConsoleIdCertificate g_ConsoleIdCertificate; // 0x00001480
 
 SceUID g_semaId; // 0x00001538
 
-SceChkregHashData g_unk1540; // 0x00001540
+SceChkregHashData g_hashWorkBuffer;
 
-u8 *g_pIdStorageUMDConfig = (u8 *)&g_idStorageUMDConfig; // 0x00000A00
-SceChkregHashData *g_pWorkBuffer = &g_unk1540; // 0x00000A04
+u8 *g_pIdStorageUMDConfig = (u8 *)&g_idStorageUMDConfig;
+SceChkregHashData *g_pWorkBuffer = &g_hashWorkBuffer;
 
-// Subroutine sub_00000000 - Address 0x00000000
 /* Reads UMD-region code related info from ID-Storage. */
 s32 _sceChkregLookupUMDRegionCodeInfo(void)
 {
@@ -101,7 +100,7 @@ s32 _sceChkregLookupUMDRegionCodeInfo(void)
     for (i = 0; i < numRegionCodeInfoBlocks; i++)
     {
         if (pUMDRegionCodeInfo[i].umdMediaTypeRegionCode == 1
-            && (pUMDRegionCodeInfo[i].unk4 == 0 || pUMDRegionCodeInfo[i].unk4 == 0x70000000)) // 0x00000084
+            && (pUMDRegionCodeInfo[i].regionFlags == 0 || pUMDRegionCodeInfo[i].regionFlags == 0x70000000)) // 0x00000084
         {
             // loc_000000B0
 
@@ -117,7 +116,6 @@ s32 _sceChkregLookupUMDRegionCodeInfo(void)
     return SCE_ERROR_OUT_OF_MEMORY;
 }
 
-// Subroutine sub_00000128 - Address 0x00000128
 /* Checks whether the specified UMD-media type and region ID is valid. */
 s32 _sceChkregCheckRegion(u32 arg0, u32 umdMediaTypeRegionId)
 {
@@ -128,7 +126,7 @@ s32 _sceChkregCheckRegion(u32 arg0, u32 umdMediaTypeRegionId)
     for (i = 0; i < g_numUMDRegionCodeInfoEntries; i++)
     {
         if (pUMDRegionCodeInfo[i].umdMediaTypeRegionCode == umdMediaTypeRegionId
-            && pUMDRegionCodeInfo[i].unk4 == arg0) // 0x00000160
+            && pUMDRegionCodeInfo[i].regionFlags == arg0) // 0x00000160
         {
             return SCE_TRUE;
         }
@@ -137,7 +135,6 @@ s32 _sceChkregCheckRegion(u32 arg0, u32 umdMediaTypeRegionId)
     return SCE_FALSE;
 }
 
-// Subroutine sub_00000190 - Address 0x00000190
 /* Obtains the console-ID certificate from ID-Storage. */
 s32 _sceChkregLookupConsoleIdCertificate(void)
 {
@@ -153,7 +150,6 @@ s32 _sceChkregLookupConsoleIdCertificate(void)
     return SCE_ERROR_OK;
 }
 
-// Subroutine sub_0000020C - Address 0x0000020C
 /* Verifies the obtained console-ID certificate from ID-Storage for correctness. */
 s32 _sceChkregVerifyConsoleIdCertificate(void)
 {
@@ -303,12 +299,11 @@ s32 sceChkreg_driver_9C6E1D34(const u8 *arg0, u8 *pHash)
 	/* "Prefix" specified input data with 0x14 bytes of Chkreg specific data in the work buffer. */
 
 	// 0x00000574 - 0x0000059C
-	memcpyInline(pWorkBufferHashData, g_unk9BC, sizeof g_unk9BC);
+	memcpyInline(pWorkBufferHashData, g_hashPrefix, sizeof g_hashPrefix);
 
 	/* Copy 0x20 bytes of input data to work buffer. */
 
-	// 0x000005A0 - 0x000005C0
-	memcpyInline(pWorkBufferHashData += sizeof g_unk9BC, &arg0[0xD4], 0x10);
+	memcpyInline(pWorkBufferHashData += sizeof g_hashPrefix, &arg0[0xD4], 0x10);
 
 	// 0x000005C4 - 0x000005E4
 	memcpyInline(pWorkBufferHashData += 0x10, &arg0[0x140], 0x10);

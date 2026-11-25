@@ -138,7 +138,7 @@ typedef struct {
 
 typedef struct {
 	u32 umdMediaTypeRegionCode; // 0
-	u32 unk4; // 4
+	u32 regionFlags; // 4
 } SceIdStorageUMDRegionCodeInfo;
 
 typedef void (*sceIdStorageEnumCB)(u16 id, s32 ppn, void *opt);

@@ -360,32 +360,32 @@ s32 sceKernelProbeExecutableObject(u8 *buf, SceLoadCoreExecFileInfo *execInfo)
         }
         
         /*
-         * Accept the following API types (execInfo->unk12 & 0x10 > 0): 
+         * Accept the following API types (execInfo->loadFlags & 0x10 > 0): 
          *    0x10, 0x110, 0x112, 0x114
          * Accept the following API types when a) PSP is in Tool mode
-         * and b) execInfo->unk12 & 0x10 > 0:
+         * and b) execInfo->loadFlags & 0x10 > 0:
          *    0x44 - 0x109, 0x122
          */
         
         /* check 0x11A - MAX_API_TYPE */
         if (execInfo->apiType >= 0x11A) { //0x000045A0
-            if (execInfo->apiType == 0x122 && sceKernelIsToolMode() && execInfo->unk12 & 0x10)
+            if (execInfo->apiType == 0x122 && sceKernelIsToolMode() && execInfo->loadFlags & 0x10)
                 return SCE_ERROR_OK;              
         }        
         
         /* Check 0x44 - 0x119 */
         if (execInfo->apiType >= 0x44) { //0x000045B8
             if (execInfo->apiType == 0x110 || execInfo->apiType == 0x112 || execInfo->apiType == 0x114) { //0x00004620            
-                if (execInfo->unk12 & 0x10) //0x000045FC
+                if (execInfo->loadFlags & 0x10) //0x000045FC
                     return SCE_ERROR_OK;         
             }          
             /* check 0x44 - 0x109 */
             if (execInfo->apiType < 0x110) { //0x00004614
-                if (sceKernelIsToolMode() && execInfo->unk12 & 0x10)
+                if (sceKernelIsToolMode() && execInfo->loadFlags & 0x10)
                     return SCE_ERROR_OK;
             }
         }             
-        if (execInfo->apiType == 0x10 && execInfo->unk12 & 0x10) //0x000045EC
+        if (execInfo->apiType == 0x10 && execInfo->loadFlags & 0x10) //0x000045EC
             return SCE_ERROR_OK;
         
         execInfo->elfType = SCE_EXEC_FILE_TYPE_INVALID_ELF; //0x00004528
@@ -451,11 +451,11 @@ s32 sceKernelProbeExecutableObject(u8 *buf, SceLoadCoreExecFileInfo *execInfo)
      *    0x123, 0x124, 0x125, 0x126, 0x157, 0x158, 0x159, 0x160, 0x161,
      *    0x170, 0x171 -> when executable is decrypted
      *    0x122 -> when PSP is in Tool mode and executable is decrypted or 
-     *             execInfo->unk12 & 0x10 > 0
+     *             execInfo->loadFlags & 0x10 > 0
      */
     if (execInfo->apiType >= 0x121) { //0x0000474C                      
         if (execInfo->apiType == 0x122) { //0x00004848
-            if (sceKernelIsToolMode() && (execInfo->unk12 & 0x10 || execInfo->isDecrypted)) //0x0000479C & 0x000047AC & 000045FC
+            if (sceKernelIsToolMode() && (execInfo->loadFlags & 0x10 || execInfo->isDecrypted)) //0x0000479C & 0x000047AC & 000045FC
                 return SCE_ERROR_OK;
         }
         if ((execInfo->apiType >= 0x123 && execInfo->apiType < 0x127) ||
@@ -477,11 +477,11 @@ s32 sceKernelProbeExecutableObject(u8 *buf, SceLoadCoreExecFileInfo *execInfo)
     }   
     /*
      * This block allows the following API types:
-     *    0x110 -> when executable is decrypted or execInfo->unk12 & 0x10 > 0 
+     *    0x110 -> when executable is decrypted or execInfo->loadFlags & 0x10 > 0 
      *    0x112, 0x114 -> when PSP is in Tool mode and executable is decrypted or 
      */
     if (execInfo->apiType == 0x110) { //0x00004764
-        if (execInfo->unk12 & 0x10 || execInfo->isDecrypted) //0x000047E8 &0x000047F0
+        if (execInfo->loadFlags & 0x10 || execInfo->isDecrypted) //0x000047E8 &0x000047F0
             return SCE_ERROR_OK;
         
         execInfo->elfType = SCE_EXEC_FILE_TYPE_INVALID_ELF; //0x00004528
@@ -491,7 +491,7 @@ s32 sceKernelProbeExecutableObject(u8 *buf, SceLoadCoreExecFileInfo *execInfo)
      * This block allows the following API types between 0x111 and 0x120:
      *    0x111, 0x113, 0x115 -> when executable is decrypted
      *    0x112, 0x114 -> when PSP is in Tool mode and executable is decrypted or 
-     *                    execInfo->unk12 & 0x10 > 0 
+     *                    execInfo->loadFlags & 0x10 > 0 
      */
     if (execInfo->apiType >= 0x111) { //0x0000476C            
         if (execInfo->apiType == 0x111 || execInfo->apiType == 0x113 || execInfo->apiType == 0x115) { //0x000047D0 & 0x000047BC & 0x00004808
@@ -499,7 +499,7 @@ s32 sceKernelProbeExecutableObject(u8 *buf, SceLoadCoreExecFileInfo *execInfo)
                 return SCE_ERROR_OK;
         }
         if (execInfo->apiType == 0x112 || execInfo->apiType == 0x114) { //0x000047D8 & 0x000047C4
-            if (execInfo->unk12 & 0x10 || execInfo->isDecrypted) //0x000047E8 &0x000047F0
+            if (execInfo->loadFlags & 0x10 || execInfo->isDecrypted) //0x000047E8 &0x000047F0
                 return SCE_ERROR_OK;
         }
         execInfo->elfType = SCE_EXEC_FILE_TYPE_INVALID_ELF; //0x00004528
@@ -515,11 +515,11 @@ s32 sceKernelProbeExecutableObject(u8 *buf, SceLoadCoreExecFileInfo *execInfo)
     }
     /*
      * This block allows the following APIs:
-     *    0x70 -> when PSP is in Tool mode AND execInfo->unk12 & 0x10 > 0 
+     *    0x70 -> when PSP is in Tool mode AND execInfo->loadFlags & 0x10 > 0 
      *            OR executable is decrypted
      */
     if (execInfo->apiType == 0x70) { //0x0000478C
-        if (sceKernelIsToolMode() && (execInfo->unk12 & 0x10 || execInfo->isDecrypted)) //0x0000479C & 0x000047AC & 000045FC
+        if (sceKernelIsToolMode() && (execInfo->loadFlags & 0x10 || execInfo->isDecrypted)) //0x0000479C & 0x000047AC & 000045FC
             return SCE_ERROR_OK;
     }
     /*

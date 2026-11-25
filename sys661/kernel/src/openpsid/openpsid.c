@@ -71,8 +71,8 @@ static s32 sub_0000(u8 *buf, u32 size, u32 keyId)
     u32 totalSize = size + sizeof(KirkAESHeader);
 
     hdr->mode = 5;
-    hdr->unk4 = 0;
-    hdr->unk8 = 0;
+    hdr->reserved0 = 0;
+    hdr->reserved1 = 0;
     hdr->keyIndex = keyId;
     hdr->dataSize = size;
     g_pKirkBuf = buf;
@@ -86,8 +86,8 @@ static s32 sub_004C(u8 *buf, u32 size, u32 keyId)
     u32 totalSize = size + sizeof(KirkAESHeader);
 
     hdr->mode = 4;
-    hdr->unk4 = 0;
-    hdr->unk8 = 0;
+    hdr->reserved0 = 0;
+    hdr->reserved1 = 0;
     hdr->keyIndex = keyId;
     hdr->dataSize = size;
     g_pKirkBuf = buf;
@@ -101,8 +101,8 @@ static s32 sub_0098(u8 *buf, u32 size)
     u32 totalSize = size + sizeof(KirkAESHeader);
 
     hdr->mode = 4;
-    hdr->unk4 = 0;
-    hdr->unk8 = 0;
+    hdr->reserved0 = 0;
+    hdr->reserved1 = 0;
     hdr->keyIndex = 0x100;
     hdr->dataSize = size;
     g_pKirkBuf = buf;

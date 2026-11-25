@@ -31,8 +31,8 @@ u16 g_freqs[][4] = {
 };
 
 static s32 getBufSize(SceAudiocodecCodec *info, s32 codec);
-static s32 sub_0A40(SceAudiocodecCodec *info, s32 codec);
-static s32 sub_0B18(s32 type, s32 arg1, s32 sampleType, s32 freqType, s32 *sizePtr);
+static s32 getOutBufSize(SceAudiocodecCodec *info, s32 codec);
+static s32 calcMp3FrameSize(s32 type, s32 layer, s32 bitrateIdx, s32 freqIdx, s32 *sizePtr);
 
 s32 sceAudiocodecCheckNeedMem(SceAudiocodecCodec *info, s32 codec)
 {
@@ -43,7 +43,7 @@ s32 sceAudiocodecCheckNeedMem(SceAudiocodecCodec *info, s32 codec)
     s32 oldK1 = pspShiftK1();
     s32 ret = SCE_ERROR_PRIV_REQUIRED;
     if (pspK1StaBufOk(info, 104)) {
-        info->unk0 = 0x05100601;
+        info->version = 0x05100601;
         s32 id = sceMeAudio_driver_81956A0B(codec, info);
         ret = 0;
         if (id != 0) {
@@ -68,10 +68,10 @@ s32 sceAudiocodecInit(SceAudiocodecCodec *info, s32 codec)
         return SCE_ERROR_PRIV_REQUIRED;
     }
     if (codec == 0x1002)
-        info->unk56 = 9999;
+        info->param[2] = 9999;
     if (ADDR_IS_RAM(info->edramAddr))
         sceKernelDcacheWritebackInvalidateRange(info->edramAddr, info->neededMem);
-    info->unk0 = 0x05100601;
+    info->version = 0x05100601;
     s32 id = sceMeAudio_driver_6AD33F60(codec, info);
     s32 ret = 0;
     if (id != 0) {
@@ -95,10 +95,10 @@ s32 sceAudiocodec_3DD7EE1A(SceAudiocodecCodec *info, s32 codec)
         return SCE_ERROR_PRIV_REQUIRED;
     }
     if (codec == 0x1002)
-        info->unk56 = 9999;
+        info->param[2] = 9999;
     if (ADDR_IS_RAM(info->edramAddr))
         sceKernelDcacheWritebackInvalidateRange(info->edramAddr, info->neededMem);
-    info->unk0 = 0x05100601;
+    info->version = 0x05100601;
     s32 id = sceMeAudio_driver_B57F033A(codec, info);
     s32 ret = 0;
     if (id != 0) {
@@ -126,7 +126,7 @@ s32 sceAudiocodecDecode(SceAudiocodecCodec *info, s32 codec)
     }
     s32 size;
     if (codec == 0x1002 || codec == 0x1004) {
-        size = info->unk40.v32;
+        size = info->param0.v32;
     } else {
         size = getBufSize(info, codec);
         if (size < 0) {
@@ -135,7 +135,7 @@ s32 sceAudiocodecDecode(SceAudiocodecCodec *info, s32 codec)
         }
     }
     sceKernelDcacheWritebackRange(info->inBuf, size);
-    size = sub_0A40(info, codec);
+    size = getOutBufSize(info, codec);
     if (size < 0) {
         pspSetK1(oldK1);
         return size;
@@ -163,7 +163,7 @@ s32 sceAudiocodecGetInfo(SceAudiocodecCodec *info, s32 codec)
         pspSetK1(oldK1);
         return SCE_ERROR_PRIV_REQUIRED;
     }
-    if ((codec == 0x1002 || codec == 0x1004) && !pspK1DynBufOk(info->inBuf, info->unk40.v32)) {
+    if ((codec == 0x1002 || codec == 0x1004) && !pspK1DynBufOk(info->inBuf, info->param0.v32)) {
         pspSetK1(oldK1);
         return SCE_ERROR_PRIV_REQUIRED;
     }
@@ -180,7 +180,7 @@ s32 sceAudiocodecGetInfo(SceAudiocodecCodec *info, s32 codec)
         pspSetK1(oldK1);
         return 0;
     }
-    info->unk0 = 0x05100601;
+    info->version = 0x05100601;
     s32 id = sceMeAudio_driver_C300D466(codec, opt, info);
     s32 ret = 0;
     if (id != 0) {
@@ -203,7 +203,7 @@ s32 sceAudiocodecAlcExtendParameter(SceAudiocodecCodec *info, s32 codec, s32 *si
         pspSetK1(oldK1);
         return SCE_ERROR_PRIV_REQUIRED;
     }
-    s32 size = sub_0A40(info, codec);
+    s32 size = getOutBufSize(info, codec);
     if (size < 0) {
         pspSetK1(oldK1);
         return size;
@@ -263,52 +263,52 @@ static s32 getBufSize(SceAudiocodecCodec *info, s32 codec)
         return SCE_ERROR_NOT_SUPPORTED;
     switch (codec) {
     case 0x1000:
-        if (info->unk48 == 0)
-            return info->unk64 + 2;
+        if (info->param[0] == 0)
+            return info->param[4] + 2;
         return 0x100A;
     case 0x1001:
-        return info->unk48 * 2 + 1;
+        return info->param[0] * 2 + 1;
     case 0x1002:
-        if (info->unk56 == 9999) {
+        if (info->param[2] == 9999) {
             s32 ret = sceAudiocodecGetInfo(info, 0x1002);
             if (ret < 0)
                 return ret;
         }
-        return sub_0B18(info->unk56, info->unk60, info->unk68, info->unk72, &info->unk40.v32);
+        return calcMp3FrameSize(info->param[2], info->param[3], info->param[5], info->param[6], &info->param0.v32);
     case 0x1003:
-        if (info->unk44.v8.u44 == 0)
+        if (info->param1.v8.b0 == 0)
             return 0x600;
         return 0x609;
     case 0x1004:
-        return sub_0B18(info->unk48, info->unk52, info->unk60, info->unk64, &info->unk40.v32);
+        return calcMp3FrameSize(info->param[0], info->param[1], info->param[3], info->param[4], &info->param0.v32);
     case 0x1005:
         return 0x420D;
     }
     return SCE_ERROR_NOT_SUPPORTED;
 }
 
-static s32 sub_0A40(SceAudiocodecCodec *info, s32 codec)
+static s32 getOutBufSize(SceAudiocodecCodec *info, s32 codec)
 {
     if (codec < 0x1000 || codec >= 0x1006)
         return 0x1000;
     switch (codec) {
     case 0x1000:
-        if (info->unk56 == 1 && info->unk72 != info->unk56)
+        if (info->param[2] == 1 && info->param[6] != info->param[2])
             return 0x2000;
-        return info->unk72 << 12;
+        return info->param[6] << 12;
     case 0x1001:
         return 0x1000;
     case 0x1002:
-        if (info->unk56 == 9999) {
+        if (info->param[2] == 9999) {
             s32 ret = sceAudiocodecGetInfo(info, 0x1002);
             if (ret < 0)
                 return ret;
         }
-        if (info->unk56 == 1)
+        if (info->param[2] == 1)
             return 0x1200;
         return 0x900;
     case 0x1003:
-        if ((u8)info->unk44.v8.u45 == 0)
+        if ((u8)info->param1.v8.b1 == 0)
             return 0x1000;
         return 0x2000;
     case 0x1004:
@@ -319,16 +319,16 @@ static s32 sub_0A40(SceAudiocodecCodec *info, s32 codec)
     return 0x1000;
 }
 
-static s32 sub_0B18(s32 type, s32 arg1, s32 sampleType, s32 freqType, s32 *sizePtr)
+static s32 calcMp3FrameSize(s32 type, s32 layer, s32 bitrateIdx, s32 freqIdx, s32 *sizePtr)
 {
     u32 samples = 0;
-    if ((u32)type < 3 && sampleType >= 0 && sampleType < 15)
-        samples = (u32)g_numSamples[type & 1][sampleType] << 3;
+    if ((u32)type < 3 && bitrateIdx >= 0 && bitrateIdx < 15)
+        samples = (u32)g_numSamples[type & 1][bitrateIdx] << 3;
     u32 freq = 0;
     s32 size = 0x7C9;
-    if ((u32)type < 3 && freqType >= 0 && freqType < 4)
-        freq = g_freqs[type][freqType];
-    if (samples != 0 && freq != 0 && (u32)(arg1 - 1) < 2) {
+    if ((u32)type < 3 && freqIdx >= 0 && freqIdx < 4)
+        freq = g_freqs[type][freqIdx];
+    if (samples != 0 && freq != 0 && (u32)(layer - 1) < 2) {
         size = ((samples * 144) / freq) + 1;
         if (size > 0x7C9)
             size = 0x7C9;

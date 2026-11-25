@@ -4,8 +4,8 @@
 
 #include "common_header.h"
 
-s32 sceKernelRegisterResumeHandler(s32 reg, s32 (*handler)(s32 unk, void *param), void *param);
-s32 sceKernelRegisterSuspendHandler(s32 reg, s32 (*handler)(s32 unk, void *param), void *param);
+s32 sceKernelRegisterResumeHandler(s32 reg, s32 (*handler)(s32 event, void *param), void *param);
+s32 sceKernelRegisterSuspendHandler(s32 reg, s32 (*handler)(s32 event, void *param), void *param);
 
 #define SCE_KERNEL_POWER_LOCK_DEFAULT       (0)
 s32 sceKernelPowerLock(s32 lockType);
@@ -19,9 +19,9 @@ s32 sceKernelPowerUnlockForUser(s32 lockType);
 s32 sceKernelPowerTick(s32 tickType);
 
 #define SCE_KERNEL_VOLATILE_MEM_DEFAULT		(0)
-s32 sceKernelVolatileMemLock(s32 unk, void **ptr, s32 *size);
-s32 sceKernelVolatileMemTryLock(s32 unk, void **ptr, s32 *size);
-s32 sceKernelVolatileMemUnlock(s32 unk);
+s32 sceKernelVolatileMemLock(s32 id, void **ptr, s32 *size);
+s32 sceKernelVolatileMemTryLock(s32 id, void **ptr, s32 *size);
+s32 sceKernelVolatileMemUnlock(s32 id);
 
 s32 sceKernelPowerRebootStart(s32);
 

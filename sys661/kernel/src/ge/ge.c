@@ -3178,7 +3178,7 @@ int _sceGeQueueInitCallback()
 {
     SceKernelUsersystemLibWork *libWork = sceKernelGetUsersystemLibWork();
     if (libWork != NULL) {
-        // Pointer to the syscall in sub_00000208 (at 0x20C) in usersystemlib
+        // Pointer to the syscall in sceGeListUpdateStallAddrSyscall (at 0x20C) in usersystemlib
         u32 *syscPtr = (void*)libWork->sceGeListUpdateStallAddr_lazy + 204; // TODO: replace with a difference of two functions from usersystemlib
         *syscPtr = ALLEGREX_MAKE_SYSCALL(g_AwQueue.syscallId);
         pspCache(0x1A, syscPtr);

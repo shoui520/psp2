@@ -174,22 +174,8 @@ typedef struct {
     void *discModAddr; //8
     /** VSH parameters. Used to reboot the kernel. */
     SceKernelLoadExecVSHParam vshParam; //12
-    /** Unknown. */
-    s32 unk60;
-    /** Unknown. */
-    s32 unk64;
-    /** Unknown. */
-    s32 unk68;
-    /** Unknown. */
-    s32 unk72;
-    /** Unknown. */
-    s32 unk76;
-    /** Unknown. */
-    s32 unk80;
-    /** Unknown. */
-    s32 unk84;
-    /** Unknown. */
-    s32 unk88;
+    /** Default VSH main argument buffer. */
+    s32 vshMainArg[8]; //60
     /** The application type of the currently loaded module. One of ::SceApplicationType. */
     u32 applicationType; //92
     /** The number of power locks used by Init. */

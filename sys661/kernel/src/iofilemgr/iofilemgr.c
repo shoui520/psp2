@@ -350,7 +350,7 @@ int open_iob(SceIoIob *iob, const char *path, int flags, SceMode mode, int async
             // 1180
             if (ret < 0)
                 goto error;
-            ret = iob->unk040;
+            ret = iob->fd;
             pathbuf = NULL;
         }
     }
@@ -378,7 +378,7 @@ int open_main(SceIoIob *iob)
         ret = iob->hook.arg->hook->funcs->Open(&iob->hook, (char*)iob->asyncArgs[1], iob->asyncArgs[2], iob->asyncArgs[3]);
     // 1264
     if (ret >= 0)
-        ret = iob->unk040;
+        ret = iob->fd;
     // 1278
     if (iob->asyncArgs[0] != 0)
     {
@@ -497,7 +497,7 @@ SceUID sceIoDopen(const char *dirname)
     if (ret < 0)
         goto freeiob;
 
-    ret = iob->unk040;
+    ret = iob->fd;
     goto freepath;
 
     freeiob:
@@ -1212,7 +1212,7 @@ int sceIoGetFdList(SceUID *fds, int numFd, int *count)
             curCount++;
             if (stored < numFd) {
                 stored++;
-                *(fds++) = UID_CB_TO_DATA(cur, g_uid_type, SceIoIob)->unk040;
+                *(fds++) = UID_CB_TO_DATA(cur, g_uid_type, SceIoIob)->fd;
             }
         }
         // 2658
@@ -1693,7 +1693,7 @@ int alloc_iob(SceIoIob **outIob, int arg1)
         // 3264
         *outIob = iob;
         iob->asyncPrio = default_thread_priority;
-        iob->unk040 = ret;
+        iob->fd = ret;
         iob->i_de = &deleted_device;
         iob->curThread = sceKernelGetThreadId();
         iob->userMode = usrMode;
@@ -1740,7 +1740,7 @@ int free_iob(SceIoIob *iob)
         iob->newPath = NULL;
     }
     // 333C
-    SceUID fileId = iob->unk040;;
+    SceUID fileId = iob->fd;;
     if (fileId < 64)
         g_UIDs[fileId] = 0; // contains u32s
     // 3360
@@ -2450,7 +2450,7 @@ int create_async_thread(SceIoIob *iob)
 {
     dbg_printf("Calling %s\n", __FUNCTION__);
     int ret;
-    iob->unk050 = 0;
+    iob->asyncBusy = 0;
     int prio = iob->asyncPrio;
     if (prio < 0)
         prio = sceKernelGetThreadCurrentPriority(); // 4714
@@ -2548,7 +2548,7 @@ int do_get_async_stat(SceUID fd, SceInt64 *res, int poll, int cb, char *func)
     }
     // 4844
     *res = iob->asyncRet;
-    if (iob->unk050 == 0)
+    if (iob->asyncBusy == 0)
     {
         // 4874
         ret = sceKernelSignalSema(iob->asyncSema, 1);
@@ -3241,7 +3241,7 @@ s32 async_loop(SceSize args __attribute__((unused)), void *argp)
         {
         case 0:
             // 5C0C
-            iob->unk050 = 1;
+            iob->asyncBusy = 1;
             ret = 0;
             break;
 
@@ -3249,7 +3249,7 @@ s32 async_loop(SceSize args __attribute__((unused)), void *argp)
             // 5BA4
             ret = open_main(iob);
             if (ret < 0)
-                iob->unk050 = 1;
+                iob->asyncBusy = 1;
             break;
 
         case 2:
@@ -3262,7 +3262,7 @@ s32 async_loop(SceSize args __attribute__((unused)), void *argp)
                 ret = iob->hook.arg->hook->funcs->Close(&iob->hook);
             // 5C40
             if (ret >= 0)
-                iob->unk050 = 1;
+                iob->asyncBusy = 1;
             break;
 
         case 3:

@@ -13,12 +13,12 @@
 #include "loadcore.h"
 
 typedef struct {
-    s32 unk0; //0
+    s32 reserved0; //0
     u32 numExportLibs; //4 -- number of sysmem's export libraries - set in SysMemInit (from utopia)
     SceResidentLibraryEntryTable *kernelLibs[8]; //8 --array of sysmem's export tables set in SysMemInit (from utopia)
     u32 loadCoreAddr; // 40 -- allocated in SysMemInit (from utopia)
     u32 numKernelLibs; // 44 -- offset in export_lib at which user libraries begin - set in SysMemInit (from utopia)
-    s32 unk48; //48
+    s32 sysTableSeed; //48
     SceUID (*AllocPartitionMemory)(s32 mpid, char *name, u32 type, u32 size, u32 addr); // 52
     void * (*GetBlockHeadAddr)(SceUID id); // 56
     s32 (*ResizeMemoryBlock)(SceUID id, s32 leftShift, s32 rightShift); // 60
@@ -29,7 +29,7 @@ typedef struct {
     SceLoadCoreExecFileInfo *loadCoreExecInfo; //80 -- set in kactivate before booting loadcore (from utopia)
     s32 (*CompareSubType)(u32 tag); //84
     u32 (*CompareLatestSubType)(u32 tag); //88
-    s32 (*SetMaskFunction)(u32 unk1, vs32 *addr); //92
+    s32 (*SetMaskFunction)(u32 enable, vs32 *addr); //92
     void (*Kprintf)(const char *fmt, ...); //96 -- set by sysmem (from utopia)
     s32 (*GetLengthFunction)(u8 *file, u32 size, u32 *newSize); //100 -- set in kactivate before booting loadcore (from utopia)
     s32 (*PrepareGetLengthFunction)(u8 *buf, u32 size); //104
@@ -96,9 +96,9 @@ s32 sceKernelSetQTGP3(char *qtgp3);
 s32 sceKernelGetAllowReplaceUmd(u32 *allow);
 s32 sceKernelSetAllowReplaceUmd(u32 allow);
 s32 sceKernelSetUmdCacheOn(u32 umdCacheOn);
-s32 SysMemForKernel_40B744A4(u32 unk112);
-s32 SysMemForKernel_BFE08689(char *str116);
-s32 SysMemForKernel_2A8B8B2D(char *unk204);
+s32 SysMemForKernel_40B744A4(u32 utilityLocation);
+s32 SysMemForKernel_BFE08689(char *bootFilename);
+s32 SysMemForKernel_2A8B8B2D(char *subscriptionValidity);
 SceGameInfo *sceKernelGetGameInfo(void);
 u32 sceKernelGetCompiledSdkVersion(void);
 s32 sceKernelSetCompiledSdkVersion100(u32 ver);

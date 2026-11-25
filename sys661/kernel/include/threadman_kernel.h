@@ -170,14 +170,14 @@ int sceKernelDeleteEventFlag(int evid);
 int sceKernelReferEventFlagStatus(SceUID event, SceKernelEventFlagInfo *status);
 
 /* MsgPipe */
-SceUID sceKernelCreateMsgPipe(const char *name, int part, int attr, void *unk1, void *opt);
+SceUID sceKernelCreateMsgPipe(const char *name, int part, int attr, void *bufSize, void *opt);
 int sceKernelDeleteMsgPipe(SceUID uid);
-int sceKernelSendMsgPipe(SceUID uid, void *message, unsigned int size, int unk1, void *unk2, unsigned int *timeout);
-int sceKernelSendMsgPipeCB(SceUID uid, void *message, unsigned int size, int unk1, void *unk2, unsigned int *timeout);
-int sceKernelTrySendMsgPipe(SceUID uid, void *message, unsigned int size, int unk1, void *unk2);
-int sceKernelReceiveMsgPipe(SceUID uid, void *message, unsigned int size, int unk1, void *unk2, unsigned int *timeout);
-int sceKernelReceiveMsgPipeCB(SceUID uid, void *message, unsigned int size, int unk1, void *unk2, unsigned int *timeout);
-int sceKernelTryReceiveMsgPipe(SceUID uid, void *message, unsigned int size, int unk1, void *unk2);
+int sceKernelSendMsgPipe(SceUID uid, void *message, unsigned int size, int waitMode, void *result, unsigned int *timeout);
+int sceKernelSendMsgPipeCB(SceUID uid, void *message, unsigned int size, int waitMode, void *result, unsigned int *timeout);
+int sceKernelTrySendMsgPipe(SceUID uid, void *message, unsigned int size, int waitMode, void *result);
+int sceKernelReceiveMsgPipe(SceUID uid, void *message, unsigned int size, int waitMode, void *result, unsigned int *timeout);
+int sceKernelReceiveMsgPipeCB(SceUID uid, void *message, unsigned int size, int waitMode, void *result, unsigned int *timeout);
+int sceKernelTryReceiveMsgPipe(SceUID uid, void *message, unsigned int size, int waitMode, void *result);
 int sceKernelCancelMsgPipe(SceUID uid, int *psend, int *precv);
 
 typedef struct {

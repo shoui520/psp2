@@ -42,9 +42,9 @@ SceResidentLibraryEntryTable intrEntry = {
         (s32)sceKernelEnableSubIntr,
         (s32)sceKernelIsSubInterruptOccured
     },
-    .unk16 = 0,
-    .unk18 = 0,
-    .unk19 = 0
+    .vStubCount16 = 0,
+    .nidTableInfo = 0,
+    .nidTableCount = 0
 };
 
 // 0x3458

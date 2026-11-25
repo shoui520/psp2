@@ -146,10 +146,10 @@ int sceKernelLockMutex(SceUID mutexid, int lock_count, SceUInt *timeout);
 int sceKernelLockMutexCB(SceUID mutexid, int lock_count, SceUInt *timeout);
 int sceKernelUnlockMutex(SceUID mutexid, int unlock_count);
 
-SceUID sceKernelCreateMsgPipe(const char *name, int part, int attr, void *unk1, void *opt);
+SceUID sceKernelCreateMsgPipe(const char *name, int part, int attr, void *bufSize, void *opt);
 int sceKernelDeleteMsgPipe(SceUID uid);
-int sceKernelSendMsgPipe(SceUID uid, void *message, unsigned int size, int unk1, void *unk2, unsigned int *timeout);
-int sceKernelReceiveMsgPipe(SceUID uid, void *message, unsigned int size, int unk1, void *unk2, unsigned int *timeout);
+int sceKernelSendMsgPipe(SceUID uid, void *message, unsigned int size, int waitMode, void *result, unsigned int *timeout);
+int sceKernelReceiveMsgPipe(SceUID uid, void *message, unsigned int size, int waitMode, void *result, unsigned int *timeout);
 
 int sceKernelDelayThread(SceUInt delay);
 int sceKernelDelayThreadCB(SceUInt delay);

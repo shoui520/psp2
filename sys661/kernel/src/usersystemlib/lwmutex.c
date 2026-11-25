@@ -83,7 +83,7 @@ s32 sceKernelLockLwMutexCB(SceLwMutex *mutex, s32 count)
         return SCE_ERROR_KERNEL_CANNOT_BE_CALLED_FROM_INTERRUPT;
     }
 
-    if (!sceKernelIsCpuIntrEnable() || g_thread->unk2 != 0) {
+    if (!sceKernelIsCpuIntrEnable() || g_thread->dispatchDisabled != 0) {
         // 0x800201A7
         return SCE_ERROR_KERNEL_WAIT_CAN_NOT_WAIT;
     }
@@ -109,7 +109,7 @@ s32 sceKernelLockLwMutex(SceLwMutex *mutex, s32 count)
         return SCE_ERROR_KERNEL_CANNOT_BE_CALLED_FROM_INTERRUPT;
     }
 
-    if (!sceKernelIsCpuIntrEnable() || g_thread->unk2 != 0) {
+    if (!sceKernelIsCpuIntrEnable() || g_thread->dispatchDisabled != 0) {
         // 0x800201A7
         return SCE_ERROR_KERNEL_WAIT_CAN_NOT_WAIT;
     }
@@ -170,7 +170,7 @@ s32 sceKernelUnlockLwMutex(SceLwMutex *mutex, s32 count)
 
     mutex->lockCount = 0;
 
-    if (pspLl(&mutex->unk3) != 0) {
+    if (pspLl(&mutex->numWaitThreads) != 0) {
         mutex->lockCount = prevCount;
         // ThreadManForUser_BEED3A47
         return _sceKernelUnlockLwMutex(mutex, count);

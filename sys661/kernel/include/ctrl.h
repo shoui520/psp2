@@ -145,8 +145,8 @@ typedef struct {
  * This structure is used to copy external input data into PSP internal controller buffers. 
  */
 typedef struct {
-    /** Unknown. Is set to 0xC by Sony. */
-    s32 unk1;
+    /** Structure size (0xC). */
+    s32 size;
     /** 
 	 * Pointer to a transfer function to copy input data into a PSP internal controller buffer. 
 	 * The function should return a value >= 0 on success, < 0 otherwise.

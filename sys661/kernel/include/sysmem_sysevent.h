@@ -95,16 +95,7 @@ typedef struct {
     s64 systemTimePreSuspendOp; // 8
     u32 *pWakeupCondition; // 16
     void *pResumeData; // 20
-    u32 unk24; // 24
-    u32 unk28; // 28
-    u32 unk32; // 32
-    u32 unk36; // 36
-    u32 unk40; // 40
-    u32 unk44; // 44
-    u32 unk48; // 48
-    u32 unk52; // 52
-    u32 unk56; // 56
-    u32 unk60; // 60
+    u32 reserved[10]; // 24
 } SceSysEventSuspendPayload; // size = 64
 
 typedef struct SceSysEventHandler {

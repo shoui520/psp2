@@ -31,32 +31,32 @@ s32 memlmd_EF73E85B(u8 *prx, u32 size, u32 * newSize);
 /**	
  * Checks the param against a magic value (unknown usage)
  * 
- * @param unk Unknown param.
+ * @param tag Tag value to check.
  * 
  * @return ??.
  */
-s32 memlmd_2AE425D2(u32 unk);
+s32 memlmd_2AE425D2(u32 tag);
 
 /**	
  * Checks the param against a magic value (unknown usage)
  * 
- * @param unk Unknown param.
+ * @param tag Tag value to check.
  * 
  * @return ??.
  */
-s32 memlmd_9D36A439(u32 unk);
+s32 memlmd_9D36A439(u32 tag);
 
 /**	
  * Creates the internal set of scramble keys by XORing pre-compiled set with
  * seed provided by user
  * 
- * @param unk Unknown param. Completely not used, just pass something non-zero.
+ * @param enable Non-zero to enable key setup.
  * @param hashAddr Buffer with seeds to XOR with. Usually used hardware buffer 
  *                 at 0xBFC00200.
  * 
  * @return 0 on success.
  */
-s32 memlmd_F26A33C3(u32 unk, vs32 *hashAddr);
+s32 memlmd_F26A33C3(u32 enable, vs32 *hashAddr);
 
 /**	
  * Decrypts a module. Synced mode.

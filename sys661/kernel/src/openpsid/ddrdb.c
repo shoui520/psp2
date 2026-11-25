@@ -56,8 +56,8 @@ s32 sceDdrdbDecrypt(u8 *pSrcData, SceSize size)
         /* Set up the work area for KIRK. */
         KirkAESHeader *pAesHdr = (KirkAESHeader *)g_pWorkData;
         pAesHdr->mode = 5;
-        pAesHdr->unk4 = 0;
-        pAesHdr->unk8 = 0;
+        pAesHdr->reserved0 = 0;
+        pAesHdr->reserved1 = 0;
         pAesHdr->keyIndex = 0xB;
         pAesHdr->dataSize = size;
 
@@ -127,8 +127,8 @@ s32 sceDdrdbEncrypt(u8 *pSrcData, SceSize size)
         /* Set up the work area for KIRK. */
         KirkAESHeader *pAesHdr = (KirkAESHeader *)g_pWorkData;
         pAesHdr->mode = 4;
-        pAesHdr->unk4 = 0;
-        pAesHdr->unk8 = 0;
+        pAesHdr->reserved0 = 0;
+        pAesHdr->reserved1 = 0;
         pAesHdr->keyIndex = 0xB;
         pAesHdr->dataSize = size;
 

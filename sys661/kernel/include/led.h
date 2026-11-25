@@ -92,8 +92,8 @@ typedef struct {
     u8 numExecs;
     /** The custom LED command to execute. One of ::SceLedCmds. */
     u8 customCmd;
-    /** Unknown. */
-    u8 unk;
+    /** Reserved padding. */
+    u8 reserved;
     /** The "on" time of a LED during a blink period. */
     s32 onTime; 
     /** The "off" time of a LED during a blink period. */

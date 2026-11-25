@@ -82,8 +82,8 @@ typedef struct {
 
 typedef struct {
     s32 mode;
-    s32 unk4;
-    s32 unk8;
+    s32 reserved0;
+    s32 reserved1;
     s32 keyIndex;
     SceSize dataSize;
 } KirkAESHeader;

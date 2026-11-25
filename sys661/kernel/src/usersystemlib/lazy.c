@@ -7,7 +7,7 @@
 /*
  * Note: ge.prx patches the syscall instruction at (void *)sceGe_lazy_31129B95 + 204 (0xCC)
  * at runtime to invoke sceGeListUpdateStallAddr, so sceGe_lazy_31129B95 must be exact
- * 200 bytes (50 instructions) followed immediately by sub_00000208 (jr $ra; syscall 0).
+ * 200 bytes (50 instructions) followed immediately by sceGeListUpdateStallAddrSyscall (jr $ra; syscall 0).
  */
 __asm__(
     ".set push\n"
@@ -46,12 +46,12 @@ __asm__(
     "    beqz    $v1, 2b\n"
     "    nop\n"
     "    move    $a0, $a2\n"
-    "    jal     sub_00000208\n"
+    "    jal     sceGeListUpdateStallAddrSyscall\n"
     "    move    $a1, $a3\n"
     "    lw      $a0, 0($sp)\n"
     "    lw      $a1, 4($sp)\n"
     "3:\n"
-    "    jal     sub_00000208\n"
+    "    jal     sceGeListUpdateStallAddrSyscall\n"
     "    nop\n"
     "    bltz    $v0, 5f\n"
     "    nop\n"
@@ -71,7 +71,7 @@ __asm__(
     "    lw      $ra, 8($sp)\n"
     "    jr      $ra\n"
     "    addiu   $sp, $sp, 0x10\n"
-    "sub_00000208:\n"
+    "sceGeListUpdateStallAddrSyscall:\n"
     "    jr      $ra\n"
     "    syscall 0x0\n"
     ".set pop\n"

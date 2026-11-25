@@ -68,7 +68,7 @@ s32 sceKernelIsCpuIntrEnable(void);
  * This is NOT an exported function because it is only used by sceGe_lazy_31129B95().
  * Its syscall instruction is patched at runtime by the GE module.
  */
-s32 sub_00000208(s32 dlId, void *stall);
+s32 sceGeListUpdateStallAddrSyscall(s32 dlId, void *stall);
 
 /**
  * Updates the stall address.

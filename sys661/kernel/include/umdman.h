@@ -10,7 +10,7 @@ See the file COPYING for copying permission.
 // TODO: unfinished header
 
 typedef struct {
-    u32 unk0;
+    u32 flags;
     u32 cmd;
     u32 lbn;
     u32 lbnSize;
@@ -21,13 +21,13 @@ typedef struct {
     u32 byteSizeFirst;
     // how many bytes to read from the last read sector into not 64 bytes aligned output
     u32 byteSizeLast;
-    u32 unk20;
+    u32 reserved;
 } LbnParams;
 
 typedef struct {
-    u32 unk0;
+    u32 flags;
     u32 lbn;
-    u32 unk8;
+    u32 reserved;
     u32 lbnSize;
 } PrepareIntoCacheParams;
 

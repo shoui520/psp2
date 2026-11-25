@@ -34,18 +34,12 @@
 /** The input parameters structure, used by sceAudioInputInitEx() */
 typedef struct
 {
-    /** ? */
-    int unk0;
+    /** Reserved (must be 0). */
+    int reserved0;
     /** The input gain. */
     int gain;
-    /** ? */
-    int unk2;
-    /** ? */
-    int unk3;
-    /** ? */
-    int unk4;
-    /** ? */
-    int unk5;
+    /** Reserved (must be 0). */
+    int reserved[4];
 } SceAudioInputParams;
 
 /**

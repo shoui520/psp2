@@ -50,8 +50,8 @@
  * sceOpenPSIDGetPSID() (which returns the ConsoleId) will remain as originally named by Sony.
  */
 typedef struct {
-	/* Unknown. On retail set to 0. */
-	u16 unk0; // 0
+	/* Reserved. On retail set to 0. */
+	u16 reserved; // 0
 	/* Company code. Set to 1. */
 	u16 companyCode; // 2
 	/* Product code. One of SCE_PSP_PRODUCT_CODE_*. */

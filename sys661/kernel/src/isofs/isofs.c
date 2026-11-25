@@ -3060,8 +3060,8 @@ s32 isofsUmdPrepareIntoCache(IsofsUnit *unit, IsofsFile *file, s32 cacheSize, s3
     }
     s32 sectorSize = unit->sectorSize;
     PrepareIntoCacheParams params;
-    params.unk0 = 0;
-    params.unk8 = 0;
+    params.flags = 0;
+    params.reserved = 0;
     params.lbnSize = 0;
     u64 posLbn = __udivdi3(file->fpos, sectorSize);
     params.lbn = file->lbn + (int) posLbn;
@@ -3128,7 +3128,7 @@ s32 isofsUmdReadDirSectors(IsofsUnit *unit, s64 lbn, s32 size, void *outdata, s3
     params.lbnSize = lbnSize;
     params.size = params.byteSizeMiddle;
 doRead:
-    params.unk0 = (u32) ((cmd & 1) != 0);
+    params.flags = (u32) ((cmd & 1) != 0);
     params.cmd = (u32) ((cmd & 2) != 0);
     if ((cmd & 4) != 0) {
         params.cmd = params.cmd | 2;
@@ -3149,7 +3149,7 @@ s32 isofsUmdReadSectors(IsofsUnit *unit, IsofsFile *file, s32 size, void *outdat
     }
 
     LbnParams params;
-    params.unk0 = (u32) ((cmd & 1) != 0);
+    params.flags = (u32) ((cmd & 1) != 0);
     params.cmd = (u32) ((cmd & 2) != 0);
     params.lbn = 0;
     params.lbnSize = 0;
@@ -3157,7 +3157,7 @@ s32 isofsUmdReadSectors(IsofsUnit *unit, IsofsFile *file, s32 size, void *outdat
     params.byteSizeMiddle = 0;
     params.byteSizeFirst = 0;
     params.byteSizeLast = 0;
-    params.unk20 = 0;
+    params.reserved = 0;
     if ((cmd & 4) != 0) {
         params.cmd = params.cmd | 2;
     }

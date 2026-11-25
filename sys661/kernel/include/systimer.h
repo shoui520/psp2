@@ -25,7 +25,7 @@
  * @param timerID The ID of the timer this time-up handler belongs to.
  * @param count Counter value.
  * @param common Pass the common argument specified in ::sceSTimerSetHandler().
- * @param unk Unknown.
+ * @param extra Reserved.
  * 
  * Typically returns -1. 
  */

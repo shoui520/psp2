@@ -25,16 +25,16 @@
 /** Current number category size for libraries. */
 #define LIBRARY_VERSION_NUMBER_CATEGORY_SIZE    (2)
 
-/** The length of the old resident library entry table format (without the members unk16 - uk19). */
+/** The length of the old resident library entry table format (without vStubCount16/nidTableInfo/nidTableCount). */
 #define LIBRARY_ENTRY_TABLE_OLD_LEN             (4)
 
-/** The length of the new resident library entry table format (including the members unk16 - unk19). */
+/** The length of the new resident library entry table format (including vStubCount16/nidTableInfo/nidTableCount). */
 #define LIBRARY_ENTRY_TABLE_NEW_LEN             (5)
 
-/** The length of the old stub library entry table format (without the member unk24). */
+/** The length of the old stub library entry table format (without vStubCount16). */
 #define STUB_LIBRARY_ENTRY_TABLE_OLD_LEN        (6)
 
-/** The length of the new stub library entry table format (including the member unk24). */
+/** The length of the new stub library entry table format (including vStubCount16). */
 #define STUB_LIBRARY_ENTRY_TABLE_NEW_LEN        (7)
 
 /** The possible number of libraries with different hash values. */
@@ -244,12 +244,12 @@ typedef struct {
      * linking between a resident library and its corresponding stub libraries.
      */
     u32 *entryTable; //12
-    /** Unknown. */
-    u16  unk16; //16
-    /** Unknown. */
-    u8   unk18; //18
-    /** Unknown. */
-    u8   unk19; //19
+    /** Extended 16-bit exported variable stub count. */
+    u16  vStubCount16; //16
+    /** Packed NID table offset nibbles (low: func, high: var). */
+    u8   nidTableInfo; //18
+    /** Number of additional export groups minus one. */
+    u8   nidTableCount; //19
 } SceResidentLibraryEntryTable;
 
 /**
@@ -283,8 +283,8 @@ typedef struct {
 	SceStub *stubTable; //16
     /** Pointer to an array of imported variable stubs. */
 	SceVariableStub *vStubTable; // 20
-    /** Unknown. */
-    u16 unk24; //24
+    /** Extended 16-bit imported variable stub count. */
+    u16 vStubCount16; //24
 } SceStubLibraryEntryTable;
 
 /**
@@ -302,8 +302,8 @@ typedef struct {
  * stub library entry table internal.
  */
 typedef struct SceStubLibrary {
-    /** Unknown. */
-    u32 unk0; //0
+    /** Reserved. */
+    u32 reserved0; //0
     /** 
      * A linked list of stub libraries belonging to the same group, i.e. the same resident library.
      */
@@ -336,8 +336,8 @@ typedef struct SceStubLibrary {
     SceStub *stubTable; //24
     /** Pointer to the imported variable stubs. */
     SceVariableStub *vStubTable; //28
-    /** Unknown. */
-    u16 unk32; //32
+    /** Extended 16-bit imported variable stub count. */
+    u16 vStubCount16; //32
     /** Pointer to the corresponding stub library entry table. */
     SceStubLibraryEntryTable *libStubTable; //36
     /** 
@@ -385,16 +385,16 @@ typedef struct SceResidentLibrary {
      * and vStubCount). 
      */
     u32 numExports; //16
-    /** Unknown. */
-    u8 unk20; //20
-    /** Unknown. */
-    u8 unk21; //21
-    /** Unknown. */
-    u8 unk22; //22
-    /** Unknown. */
-    s32 unk24; //24
-    /** Unknown. */
-    u32 unk28; //28
+    /** Function export group shift. */
+    u8 funcGroupShift; //20
+    /** Variable export group shift. */
+    u8 varGroupShift; //21
+    /** Number of export groups. */
+    u8 exportGroupCount; //22
+    /** Function NID count in the current group. */
+    s32 funcNidCount; //24
+    /** Variable NID count in the current group. */
+    u32 varNidCount; //28
     /** 
      * Pointer to the resident library's array of NIDs, exported subroutine/variable entries. 
      * Every subroutine/variable entry has a corresponding NID used to identify it. The NID array 
@@ -407,16 +407,16 @@ typedef struct SceResidentLibrary {
     u32 exportsSize; //40
     /** The index into the middle of the exported functions/variables array. */
     u32 midFuncIndex; //44
-    /** Unknown. */
-    u32 unk48; //48
+    /** Stride between export group NID tables. */
+    u32 nidTableStride; //48
     /** Pointer to a linked list of corresponding loaded stub libraries. */
     SceStubLibrary *stubLibs; //52
     /** The address of the system call table block belonging to the resident library. */
     u32 sysTableEntry; //56
     /** Indicates whether the resident library lives in User land or Kernel land. */
     u32 isUserLib; //60
-    /** Unknown. */
-    u32 unk64; //64 
+    /** Reference count / flags. */
+    u32 refCount; //64
     /** The name of the library. */
     char *libName; //68 
     /** Indicates whether the library's name is located in the heap or not. */
@@ -455,12 +455,8 @@ typedef struct {
     u32 attr; // 8
     /** The partition ID of the protected info block. */
     SceUID partId; // 12
-    /** Unknown. */
-    s32 unk16;
-    /** Unknown. */
-    s32 unk20;
-    /** Unknown. */
-    s32 unk24;
+    /** Reserved. */
+    s32 reserved[3];
 } SceLoadCoreProtectInfo;
 
 /**
@@ -474,8 +470,8 @@ typedef struct {
     u8 *modBuf; //4
     /** The size of the module. */
     SceSize modSize; //8
-    /** Unknown. */
-    s32 unk12; //12
+    /** Module boot flags. */
+    s32 flags; //12
     /** Attributes. */
     u32 attr; //16
     /** 
@@ -506,10 +502,10 @@ typedef struct {
     u32 numModules; // 12
     /** The modules to boot. */
     SceLoadCoreBootModuleInfo *modules; // 16
-     /** Unknown. */
-    s32 unk20; //20
-     /** Unknown. */
-    u8 unk24; //24
+    /** Reserved. */
+    s32 reserved20; //20
+    /** Boot mode (0 = normal, >= 3 = special). */
+    u8 bootMode; //24
     /** Reserved - padding. */
     u8 reserved[3]; // ?
     /** The number of protected (?)modules.*/
@@ -520,48 +516,20 @@ typedef struct {
     SceUID modProtId;
     /** The ID of a module's arguments? */
     SceUID modArgProtId; // 40
-     /** Unknown. */
-    s32 unk44;
-     /** Unknown. */
+    /** Reserved. */
+    s32 reserved44;
+    /** Build version. */
     s32 buildVersion;
-     /** Unknown. */
-    s32 unk52;
+    /** Reserved. */
+    s32 reserved52;
     /** The path/name of a boot configuration file. */
     char *configFile; // 56
-    /** Unknown. */
-    s32 unk60;
-    /** Unknown. */
-    s32 unk64;
-    /** Unknown. */
-    s32 unk68;
-    /** Unknown. */
-    s32 unk72;
-    /** Unknown. */
-    s32 unk76;
-    /** Unknown. */
-    u32 unk80;
-    /** Unknown. */
-    u32 unk84;
-    /** Unknown. */
-    u32 unk98;
-    /** Unknown. */
-    u32 unk92;
-    /** Unknown. */
-    u32 unk96;
-    /** Unknown. */
-    u32 unk100;
-    /** Unknown. */
-    u32 unk104;
-    /** Unknown. */
-    u32 unk108;
-    /** Unknown. */
-    u32 unk112;
-    /** Unknown. */
-    u32 unk116;
-    /** Unknown. */
-    u32 unk120;
-    /** Unknown. */
-    u32 unk124;
+    /** Reserved. */
+    s32 reserved60[4]; // 60..72
+    /** LPT summary. */
+    s32 lptSummary; // 76
+    /** Reserved. */
+    u32 reserved80[12]; // 80..124
 } SceLoadCoreBootInfo; //size = 128
 
 #define SCE_KERNEL_MAX_MODULE_SEGMENT   (4) /** The maximum number of segments a module can have. */
@@ -570,14 +538,14 @@ typedef struct {
  * This structure represents executable file information used to load the file.
  */
 typedef struct {
-    /** Unknown. */
-    u32 unk0;
+    /** Reserved. */
+    u32 reserved0;
     /** The mode attribute of the executable file. One of ::SceExecFileModeAttr. */
     u32 modeAttribute; //4
     /** The API type. */
     u32 apiType; //8
-    /** Unknown. */
-    u32 unk12;
+    /** Load flags (e.g. 0x10). */
+    u32 loadFlags; //12
     /** The size of the executable, including the ~PSP header. */
     SceSize execSize; //16
     /** The maximum size needed for the decompression. */
@@ -595,8 +563,8 @@ typedef struct {
      * program's entry point. 
      */
     u32 entryAddr; //40
-    /** Unknown. */
-    u32 unk44;
+    /** Reserved. */
+    u32 reserved44;
     /** 
      * The total size of the loadable segments of the executable. Contains for example the size
      * of the .text, .data and .bss segment.
@@ -845,8 +813,8 @@ typedef struct {
     SceSyscallTable *sysCallTable; //512
     /** The seed of the system call table. Used to locate a table entry. */
     u32 sysCallTableSeed; //516
-    /** Unknown. */
-    u32 unk520;
+    /** Reserved. */
+    u32 reserved520;
     /** A linked list of loaded modules. */
     SceModule *registeredMods; //524
     /** Pointer to the latest loaded module.*/

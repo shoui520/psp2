@@ -182,8 +182,8 @@ typedef struct
 struct SceIoHookType
 {
     char *name;
-    int unk4;
-    int unk8;
+    int flags;
+    int reserved;
     char *name2;
     SceIoHookFuncs *funcs;
 };
@@ -233,12 +233,12 @@ struct SceIoIob
     // note: structure stops here in dwarf data from the official SDK
     // it might mean the next fields are only supposed to be accessed
     // by iofilemgr and not fs implementations
-    int unk036; // 36
-    int unk040; // 40
+    int reserved0; // 36
+    SceUID fd; // 40
     SceUID curThread; // 44
     char userMode; // 48
     char powerLocked; // 49
-    char unk050;
+    char asyncBusy; // 50
     char asyncPrio; // 51
     SceUID asyncThread; // 52
     SceUID asyncSema; // 56
@@ -252,7 +252,7 @@ struct SceIoIob
     int asyncCmd; // 112
     int userLevel; // 116
     SceIoHook hook; // 120
-    int unk132; // 132
+    int reserved1; // 132
     char *newPath; // 136
     int retAddr; // 140
 };
@@ -280,7 +280,7 @@ int sceIoDevctl(const char *dev, unsigned int cmd, void *indata, int inlen, void
 #define SCE_MT_ROBUST	      0x02 /** Mount in ROBUST mode. */
 #define SCE_MT_ERRCHECK       0x04 /** Set an error if there is anything abnormal in the file system when mounting. */
 
-int sceIoAssign(const char *dev, const char *blockDev, const char *fs, int mode, void* unk1, int unk2);
+int sceIoAssign(const char *dev, const char *blockDev, const char *fs, int mode, void *assignArg, int assignArgSize);
 int sceIoUnassign(const char *dev);
 int sceIoChangeThreadCwd(SceUID threadId, const char *path);
 int sceIoCancel(int fd);
@@ -324,7 +324,7 @@ int sceIoChdir(const char *path);
 
 int sceIoGetstat(const char *file, SceIoStat *stat);
 int sceIoChstat(const char *file, SceIoStat *stat, int bits);
-int sceIoSync(const char *device, unsigned int unk);
+int sceIoSync(const char *device, unsigned int flag);
 int sceIoGetDevType(SceUID fd);
 int sceIoGetThreadCwd(SceUID uid, char *dir, int len);
 int sceIoTerminateFd(char *drive);

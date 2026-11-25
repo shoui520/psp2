@@ -54,7 +54,7 @@ void *sceKernelGetTlsAddr(SceUID uid)
         return NULL;
     }
 
-    // SceThread.unk2 ?
+    // SceThread.dispatchDisabled
     if (k0[49] != 0) {
         return NULL;
     }

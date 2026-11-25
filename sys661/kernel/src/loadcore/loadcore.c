@@ -408,9 +408,9 @@ SceResidentLibraryEntryTable loadCoreKernelLib = {
     .vStubCount = 0,
     .stubCount = LOADCORE_EXPORTED_FUNCTIONS,
     .entryTable = (u32 *)g_loadCoreExportTable,
-    .unk16 = 0,
-    .unk18 = 2,
-    .unk19 = 0,
+    .vStubCount16 = 0,
+    .nidTableInfo = 2,
+    .nidTableCount = 0,
 };
 
 //sub_000000A0
@@ -565,8 +565,8 @@ static s32 aLinkVariableStub_sub(SceResidentLibrary *lib, SceStubLibraryEntryTab
         return SCE_ERROR_OK;
     
     if (stubLibEntryTable->len >= STUB_LIBRARY_ENTRY_TABLE_NEW_LEN) //0x000007D8
-        vStubCount = (stubLibEntryTable->unk24 < stubLibEntryTable->vStubCount) ? stubLibEntryTable->vStubCount : 
-                                                                                  stubLibEntryTable->unk24; //0x00000918
+        vStubCount = (stubLibEntryTable->vStubCount16 < stubLibEntryTable->vStubCount) ? stubLibEntryTable->vStubCount : 
+                                                                                  stubLibEntryTable->vStubCount16; //0x00000918
     else
         vStubCount = stubLibEntryTable->vStubCount; //0x000007E0
 
@@ -692,7 +692,7 @@ s32 loadCoreInit(SceSize argSize __attribute__((unused)), const void *argBlock)
     for (i = 0; i < LOADCORE_LIB_HASH_TABLE_SIZE; i++)
          g_loadCore.registeredLibs[i] = NULL;
     
-    seedPart1 = sysMemThreadConfig->unk48 & 0x1FF; //0x00000B60 & 0x00000B6C
+    seedPart1 = sysMemThreadConfig->sysTableSeed & 0x1FF; //0x00000B60 & 0x00000B6C
     
     //0x00000B78 - 0x00000BA4
     g_loadCore.sysCallTableSeed = seedPart1 + 0x2000;
@@ -700,7 +700,7 @@ s32 loadCoreInit(SceSize argSize __attribute__((unused)), const void *argBlock)
     g_loadCore.loadCoreHeapId = SCE_KERNEL_VALUE_UNITIALIZED;
     g_loadCore.linkedLoadCoreStubs = SCE_FALSE;
     g_loadCore.sysCallTable = NULL;
-    g_loadCore.unk520 = 0;
+    g_loadCore.reserved520 = 0;
     g_loadCore.unLinkedStubLibs = NULL;
     g_loadCore.registeredMods = NULL;
     g_loadCore.lastRegMod = NULL;
@@ -784,20 +784,20 @@ static s32 search_nid_in_entrytable(SceResidentLibrary *lib, u32 nid, u32 arg2, 
     
     if (nidSearchOption == FUNCTION_NID_SEARCH) { //0x00000EB0
         endNidPos = lib->stubCount; //0x00000FD0
-        unk2 = lib->unk20; //0x00000FD4
+        unk2 = lib->funcGroupShift; //0x00000FD4
         startIndex = 0; //0x00000FD8
         unk7 = 0; //0x00000FE0
     }
     else {
         startIndex = lib->stubCount; //0x00000EB8
         endNidPos = lib->numExports; //0x00000EBC
-        unk2 = lib->unk21; //0x00000EC0
-        unk7 = lib->unk24; //0x00000EC4
+        unk2 = lib->varGroupShift; //0x00000EC0
+        unk7 = lib->funcNidCount; //0x00000EC4
     }
     
     entryTable = (u32 *)lib->entryTable; //0x00000ECC
     unk6 = lib->exportsSize; //0x00000ED0
-    counter = lib->unk22; //0x00000EC8
+    counter = lib->exportGroupCount; //0x00000EC8
     
     unk8 = (nid >> unk2) + unk7; //0x00000EDC & 0x00000EE0
     unk10 = startIndex << 1; //0x00000EE4
@@ -809,7 +809,7 @@ static s32 search_nid_in_entrytable(SceResidentLibrary *lib, u32 nid, u32 arg2, 
     for (i = 0; i < counter; i++) {  
          unk8 = 1 << i; //0x00000EF8
          if ((arg2 & unk8) == 0) { //0x00000F00     
-             unk6 += lib->unk48; //0x00000F04 & 0x00000F84 & 0x00000F88
+             unk6 += lib->nidTableStride; //0x00000F04 & 0x00000F84 & 0x00000F88
              entryTable += unk6; //0x00000F8C
              unk6 = lib->midFuncIndex; //0x00000F94                       
              continue;
@@ -832,7 +832,7 @@ static s32 search_nid_in_entrytable(SceResidentLibrary *lib, u32 nid, u32 arg2, 
          
          unk14 = unk10 << 1; //0x00000F44
          if (nidCurIndex >= endNidPos) { //0x00000F44 & 0x00000F48      
-             unk6 += lib->unk48; //0x00000F04 & 0x00000F84 & 0x00000F88
+             unk6 += lib->nidTableStride; //0x00000F04 & 0x00000F84 & 0x00000F88
              entryTable += unk6; //0x00000F8C
              unk6 = lib->midFuncIndex; //0x00000F94                       
              continue;
@@ -2334,32 +2334,32 @@ static s32 CopyLibEnt(SceResidentLibrary *lib, SceResidentLibraryEntryTable *lib
     lib->stubCount = libEntryTable->stubCount;
     
     if (libEntryTable->len < LIBRARY_ENTRY_TABLE_NEW_LEN) { //0x0000370C
-        lib->unk22 = 1; //0x0000371C
+        lib->exportGroupCount = 1; //0x0000371C
         lib->vStubCount = libEntryTable->vStubCount;
     }
     else {        
-        lib->vStubCount = libEntryTable->unk16; //0x00003804
-        lib->vStubCount = (libEntryTable->unk16 < libEntryTable->vStubCount) 
-                           ? libEntryTable->vStubCount : libEntryTable->unk16; //0x00003820
-        lib->unk22 = libEntryTable->unk19 + 1; 
+        lib->vStubCount = libEntryTable->vStubCount16; //0x00003804
+        lib->vStubCount = (libEntryTable->vStubCount16 < libEntryTable->vStubCount) 
+                           ? libEntryTable->vStubCount : libEntryTable->vStubCount16; //0x00003820
+        lib->exportGroupCount = libEntryTable->nidTableCount + 1; 
         
-        addr += libEntryTable->unk18 & 0xF;
-        addr2 += libEntryTable->unk18 >> 4; //0x0000384C
+        addr += libEntryTable->nidTableInfo & 0xF;
+        addr2 += libEntryTable->nidTableInfo >> 4; //0x0000384C
     }
     //0x00003724
-    lib->unk20 = *(u8 *)(addr + 2);
-    lib->unk21 = *(u8 *)(addr2 + 2); //0x00003740
+    lib->funcGroupShift = *(u8 *)(addr + 2);
+    lib->varGroupShift = *(u8 *)(addr2 + 2); //0x00003740
     
     exports = lib->stubCount + lib->vStubCount; //0x00003744
     lib->exportsBaseAddr = &libEntryTable->entryTable[exports]; 
-    lib->unk24 = *(s16 *)addr; 
-    lib->unk48 = (*(s16 *)addr + *(s16 *)addr2) << 1;
+    lib->funcNidCount = *(s16 *)addr; 
+    lib->nidTableStride = (*(s16 *)addr + *(s16 *)addr2) << 1;
     lib->exportsSize = exports << 1;
     lib->midFuncIndex = exports + ((exports + 1) >> 1); //0x00003784
     lib->numExports = exports;
     lib->entryTable = libEntryTable->entryTable;
-    lib->unk28 = *(s16 *)addr2;
-    lib->unk64 = 0;
+    lib->varNidCount = *(s16 *)addr2;
+    lib->refCount = 0;
     
     /*
      * The corresponding resident library object is living in kernel land,
@@ -2426,9 +2426,9 @@ static s32 CopyLibStub(SceStubLibrary *stubLib, SceStubLibraryEntryTable *stubLi
         
     //0x00003918
     if (stubLibEntryTable->len < STUB_LIBRARY_ENTRY_TABLE_NEW_LEN)
-        stubLib->unk32 = 0;       
+        stubLib->vStubCount16 = 0;       
     else
-       stubLib->unk32 = stubLibEntryTable->unk24;
+       stubLib->vStubCount16 = stubLibEntryTable->vStubCount16;
         
     //0x00003928
     stubLib->status = 0;

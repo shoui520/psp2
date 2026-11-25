@@ -14,7 +14,7 @@
 
 typedef struct {
     SceSize size; //0
-    s32 unk4; //4
+    s32 flags; //4
     SceOff fileOffset; //8
     u8 keyData[SCE_NPDRM_LICENSEE_KEY_LEN]; //16  -- TODO: Confirm
 } SceNpDrm;
