@@ -879,6 +879,7 @@ extern "C" int SwMwSinkDispatch(struct SwMwCommChannel *channel,
 	struct SwMwManagerContextBlock context;
 	int *values;
 	int command = request->command;
+	int failed = 0;
 
 	if (channel == NULL)
 		swMwTrace("[SWMW] Assertion Failed in %s:%d\n", SWMW_SINK_SOURCE, 91);
@@ -893,117 +894,116 @@ extern "C" int SwMwSinkDispatch(struct SwMwCommChannel *channel,
 			SwMwSinkConnectLock(&held, (void *)values[2]);
 			SwMwSinkStreamConnectCommand(channel, request, argument);
 			SwMwSinkConnectUnlock(&held);
-		} else {
-			SwMwSinkReplyStatus(channel, request, 12003);
-			swMwTrace("[SWMW] Error %d in %s:%d\n", 12003, SWMW_SINK_SOURCE, 181);
+			return 0;
 		}
-		return 0;
+		failed = 1;
+	} else if (command > 0x2213) {
+		failed = 1;
+	} else {
+		switch (command) {
+		case 0x2201:
+			SwMwSinkConnectCommand(channel, request, argument);
+			break;
+		case 0x2202:
+			SwMwSinkCloseCommand(channel, request, argument);
+			break;
+		case 0x2203:
+			SwMwSinkSetUriCommand(channel, request, argument);
+			break;
+		case 0x2204:
+			SwMwSinkGetUriResultCommand(channel, request, argument);
+			break;
+		case 0x2205:
+			SwMwSinkSyncCommand(channel, request, argument);
+			break;
+		case 0x2206:
+			SwMwSinkOpenStreamCommand(channel, request, argument);
+			break;
+		case 0x2207:
+			SwMwSinkCloseStreamCommand(channel, request, argument);
+			break;
+		case 0x2208:
+		case 0x2209:
+		case 0x220A:
+			failed = 1;
+			break;
+		case 0x220B: {
+			struct SwMwGate *held;
+
+			SwMwSinkStreamLock(&held, (void *)values[2]);
+			SwMwSinkGetInfoCommand(channel, request, argument);
+			SwMwSinkStreamUnlock(&held);
+			break;
+		}
+		case 0x220C: {
+			struct SwMwGate *held;
+
+			SwMwSinkStreamLock(&held, (void *)values[2]);
+			SwMwSinkSetParameterCommand(channel, request, argument);
+			SwMwSinkStreamUnlock(&held);
+			break;
+		}
+		case 0x220D: {
+			struct SwMwGate *held;
+
+			SwMwSinkStreamLock(&held, (void *)values[2]);
+			SwMwSinkPollCommand(channel, request, argument);
+			SwMwSinkStreamUnlock(&held);
+			break;
+		}
+		case 0x220E: {
+			struct SwMwGate *held;
+
+			SwMwSinkStreamLock(&held, (void *)values[2]);
+			SwMwSinkReceiveCommand(channel, request, argument);
+			SwMwSinkStreamUnlock(&held);
+			break;
+		}
+		case 0x220F: {
+			struct SwMwGate *held;
+
+			SwMwSinkStreamLock(&held, (void *)values[2]);
+			SwMwSinkReleaseCommand(channel, request, argument);
+			SwMwSinkStreamUnlock(&held);
+			break;
+		}
+		case 0x2210: {
+			struct SwMwGate *held;
+
+			SwMwSinkStreamLock(&held, (void *)values[2]);
+			SwMwSinkSendCommand(channel, request, argument);
+			SwMwSinkStreamUnlock(&held);
+			break;
+		}
+		case 0x2211: {
+			struct SwMwGate *held;
+
+			SwMwSinkStreamLock(&held, (void *)values[2]);
+			SwMwSinkSendMessageCommand(channel, request, argument);
+			SwMwSinkStreamUnlock(&held);
+			break;
+		}
+		case 0x2212: {
+			struct SwMwGate *held;
+
+			SwMwSinkStreamLock(&held, (void *)values[2]);
+			SwMwSinkAbortCommand(channel, request, argument);
+			SwMwSinkStreamUnlock(&held);
+			break;
+		}
+		case 0x2213: {
+			struct SwMwGate *held;
+
+			SwMwSinkStreamLock(&held, (void *)values[2]);
+			SwMwSinkIsOpenCommand(channel, request, argument);
+			SwMwSinkStreamUnlock(&held);
+			break;
+		}
+		}
 	}
-	if (command > 0x2213) {
+	if (failed != 0) {
 		SwMwSinkReplyStatus(channel, request, 12003);
 		swMwTrace("[SWMW] Error %d in %s:%d\n", 12003, SWMW_SINK_SOURCE, 181);
-		return 0;
-	}
-	switch (command) {
-	case 0x2201:
-		SwMwSinkConnectCommand(channel, request, argument);
-		break;
-	case 0x2202:
-		SwMwSinkCloseCommand(channel, request, argument);
-		break;
-	case 0x2203:
-		SwMwSinkSetUriCommand(channel, request, argument);
-		break;
-	case 0x2204:
-		SwMwSinkGetUriResultCommand(channel, request, argument);
-		break;
-	case 0x2205:
-		SwMwSinkSyncCommand(channel, request, argument);
-		break;
-	case 0x2206:
-		SwMwSinkOpenStreamCommand(channel, request, argument);
-		break;
-	case 0x2207:
-		SwMwSinkCloseStreamCommand(channel, request, argument);
-		break;
-	case 0x2208:
-	case 0x2209:
-	case 0x220A:
-		SwMwSinkReplyStatus(channel, request, 12003);
-		swMwTrace("[SWMW] Error %d in %s:%d\n", 12003, SWMW_SINK_SOURCE, 181);
-		break;
-	case 0x220B: {
-		struct SwMwGate *held;
-
-		SwMwSinkStreamLock(&held, (void *)values[2]);
-		SwMwSinkGetInfoCommand(channel, request, argument);
-		SwMwSinkStreamUnlock(&held);
-		break;
-	}
-	case 0x220C: {
-		struct SwMwGate *held;
-
-		SwMwSinkStreamLock(&held, (void *)values[2]);
-		SwMwSinkSetParameterCommand(channel, request, argument);
-		SwMwSinkStreamUnlock(&held);
-		break;
-	}
-	case 0x220D: {
-		struct SwMwGate *held;
-
-		SwMwSinkStreamLock(&held, (void *)values[2]);
-		SwMwSinkPollCommand(channel, request, argument);
-		SwMwSinkStreamUnlock(&held);
-		break;
-	}
-	case 0x220E: {
-		struct SwMwGate *held;
-
-		SwMwSinkStreamLock(&held, (void *)values[2]);
-		SwMwSinkReceiveCommand(channel, request, argument);
-		SwMwSinkStreamUnlock(&held);
-		break;
-	}
-	case 0x220F: {
-		struct SwMwGate *held;
-
-		SwMwSinkStreamLock(&held, (void *)values[2]);
-		SwMwSinkReleaseCommand(channel, request, argument);
-		SwMwSinkStreamUnlock(&held);
-		break;
-	}
-	case 0x2210: {
-		struct SwMwGate *held;
-
-		SwMwSinkStreamLock(&held, (void *)values[2]);
-		SwMwSinkSendCommand(channel, request, argument);
-		SwMwSinkStreamUnlock(&held);
-		break;
-	}
-	case 0x2211: {
-		struct SwMwGate *held;
-
-		SwMwSinkStreamLock(&held, (void *)values[2]);
-		SwMwSinkSendMessageCommand(channel, request, argument);
-		SwMwSinkStreamUnlock(&held);
-		break;
-	}
-	case 0x2212: {
-		struct SwMwGate *held;
-
-		SwMwSinkStreamLock(&held, (void *)values[2]);
-		SwMwSinkAbortCommand(channel, request, argument);
-		SwMwSinkStreamUnlock(&held);
-		break;
-	}
-	case 0x2213: {
-		struct SwMwGate *held;
-
-		SwMwSinkStreamLock(&held, (void *)values[2]);
-		SwMwSinkIsOpenCommand(channel, request, argument);
-		SwMwSinkStreamUnlock(&held);
-		break;
-	}
 	}
 	return 0;
 }
