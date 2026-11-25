@@ -82,7 +82,7 @@ typedef struct XmlParser {
 	void *user_arg;           /* 0x340 */
 	uint32_t parse_state;     /* 0x344 */
 	uint32_t parse_flags;     /* 0x348 */
-	uint32_t pad_34c;         /* 0x34c */
+	uint32_t reserved34c;         /* 0x34c */
 	PackageNode cur_pkg;      /* 0x350..0x4f8 */
 } XmlParser;                      /* size 0x4f8 */
 
@@ -94,7 +94,7 @@ typedef struct GameUpdateCtx {
 	char title_id[24];        /* 0x2c..0x44 */
 	int tag_status;           /* 0x44 */
 	char tag_name[16];        /* 0x48..0x58 */
-	uint32_t pad_58;          /* 0x58 */
+	uint32_t reserved58;          /* 0x58 */
 	uint16_t cur_ver_maj;     /* 0x3c? Wait: 0x3c..0x44 overlaps title_id! */
 } GameUpdateCtxDummy;
 
@@ -200,27 +200,27 @@ typedef struct SceGameUpdateContext {
 static SceGameUpdateContext g_ctx;
 static XmlParser g_xml;
 
-static int sub_047c(int mode, const GameUpdateInitParam *param);
-static int sub_0650(GameUpdateResult *res, GameUpdateDetail *detail);
-static int sub_0918(void);
-static int sub_0a3c(void);
-static int sub_0bf4(void);
-static int sub_0c6c(void);
-static int sub_0e48(void);
-static int sub_0e7c(void);
-static int sub_0ecc(void);
-static int sub_0efc(void);
-static int sub_0f3c(const char *str, uint16_t *out_maj, uint16_t *out_min, uint32_t flags);
-static int sub_119c(void);
-static int sub_1250(const char *buf, int len);
-static int sub_127c(void *parser, int event, uint32_t depth, uint32_t tag_idx, const char *str1, const char *str2, void *user_arg);
-static int sub_1bcc(PackageNode *node);
-static int sub_1c68(XmlParser *p, const char *buf, int len);
-static int sub_23b4(XmlParser *p, const XmlSchema *schema, XmlCallback cb, void *user_arg);
-static int sub_2414(XmlParser *p, uint32_t *out_matched);
-static int sub_2520(XmlParser *p, uint32_t *out_matched);
-static int sub_2644(char *dst, uint32_t dst_size, const char *src, uint32_t src_len, uint32_t *out_len);
-static int sub_28dc(char *dst, uint32_t dst_size, const char *src, uint32_t src_len, uint32_t *out_written, uint32_t *out_consumed);
+static int gameUpdateInitInternal(int mode, const GameUpdateInitParam *param);
+static int gameUpdateCheckInternal(GameUpdateResult *res, GameUpdateDetail *detail);
+static int gameUpdateHttpInitTemplate(void);
+static int gameUpdateHttpOpenRequest(void);
+static int gameUpdateHttpCloseRequest(void);
+static int gameUpdateHttpFetchXml(void);
+static int gameUpdateHttpReset(void);
+static int gameUpdateHttpTermTemplate(void);
+static int gameUpdateHttpAbort(void);
+static int gameUpdateIsProxyEnabled(void);
+static int gameUpdateParseVersion(const char *str, uint16_t *out_maj, uint16_t *out_min, uint32_t flags);
+static int gameUpdateXmlInit(void);
+static int gameUpdateXmlFeed(const char *buf, int len);
+static int gameUpdateXmlCallback(void *parser, int event, uint32_t depth, uint32_t tag_idx, const char *str1, const char *str2, void *user_arg);
+static int gameUpdateInsertPackage(PackageNode *node);
+static int xmlParserFeed(XmlParser *p, const char *buf, int len);
+static int xmlParserInit(XmlParser *p, const XmlSchema *schema, XmlCallback cb, void *user_arg);
+static int xmlParserMatchStartTag(XmlParser *p, uint32_t *out_matched);
+static int xmlParserMatchEndTag(XmlParser *p, uint32_t *out_matched);
+static int xmlUnescapeString(char *dst, uint32_t dst_size, const char *src, uint32_t src_len, uint32_t *out_len);
+static int xmlDecodeCharOrEntity(char *dst, uint32_t dst_size, const char *src, uint32_t src_len, uint32_t *out_written, uint32_t *out_consumed);
 
 int sceGameUpdate_BB4B68DE(void)
 {
@@ -234,7 +234,7 @@ int sceGameUpdate_BB4B68DE(void)
 	}
 
 	if (g_ctx.state == 2) {
-		sub_0ecc();
+		gameUpdateHttpAbort();
 		g_ctx.state = 3;
 		goto wait_state_4;
 	} else if (g_ctx.state < 3) {
@@ -271,8 +271,8 @@ wait_state_4:
 	}
 
 cleanup:
-	sub_0bf4();
-	sub_0e7c();
+	gameUpdateHttpCloseRequest();
+	gameUpdateHttpTermTemplate();
 	g_ctx.state = 0;
 	sceKernelDeleteLwMutex(g_ctx.mutex);
 	return ret;
@@ -290,7 +290,7 @@ int sceGameUpdate_5F5D98A6(void)
 	}
 
 	if (g_ctx.state == 2) {
-		sub_0ecc();
+		gameUpdateHttpAbort();
 		g_ctx.state = 3;
 	}
 
@@ -346,7 +346,7 @@ int sceGameUpdate_CBE69FB3(int mode)
 	if (mode != 0) {
 		return 0x80560003;
 	}
-	return sub_047c(0, NULL);
+	return gameUpdateInitInternal(0, NULL);
 }
 
 int sceGameUpdate_596AD78C(GameUpdateResult *res)
@@ -357,7 +357,7 @@ int sceGameUpdate_596AD78C(GameUpdateResult *res)
 	if (res == NULL) {
 		return 0x80560003;
 	}
-	return sub_0650(res, NULL);
+	return gameUpdateCheckInternal(res, NULL);
 }
 
 int sceGameUpdate_381CB9B3(uint32_t mode, const GameUpdateInitParam *param)
@@ -368,7 +368,7 @@ int sceGameUpdate_381CB9B3(uint32_t mode, const GameUpdateInitParam *param)
 	if (mode > 0 || param == NULL) {
 		return 0x80560003;
 	}
-	return sub_047c(mode, param);
+	return gameUpdateInitInternal(mode, param);
 }
 
 int sceGameUpdate_3EBB6055(GameUpdateResult *res, GameUpdateDetail *detail)
@@ -379,10 +379,10 @@ int sceGameUpdate_3EBB6055(GameUpdateResult *res, GameUpdateDetail *detail)
 	if (res == NULL || detail == NULL) {
 		return 0x80560003;
 	}
-	return sub_0650(res, detail);
+	return gameUpdateCheckInternal(res, detail);
 }
 
-static int sub_047c(int mode, const GameUpdateInitParam *param)
+static int gameUpdateInitInternal(int mode, const GameUpdateInitParam *param)
 {
 	(void)mode;
 	char ver_buf[16];
@@ -398,12 +398,12 @@ static int sub_047c(int mode, const GameUpdateInitParam *param)
 		g_ctx.free_cb = param->free_cb;
 		sceNet_lib_B5CE388A(g_ctx.title_id, param->title_id, 13);
 		if (param->app_ver[0] != '\0') {
-			ret = sub_0f3c(param->app_ver, &g_ctx.cur_ver_maj, &g_ctx.cur_ver_min, 1);
+			ret = gameUpdateParseVersion(param->app_ver, &g_ctx.cur_ver_maj, &g_ctx.cur_ver_min, 1);
 			if (ret < 0) {
 				goto err_mutex;
 			}
 		}
-		ret = sub_0f3c(param->sys_ver, &g_ctx.cur_sysver_maj, &g_ctx.cur_sysver_min, 5);
+		ret = gameUpdateParseVersion(param->sys_ver, &g_ctx.cur_sysver_maj, &g_ctx.cur_sysver_min, 5);
 		if (ret < 0) {
 			goto err_mutex;
 		}
@@ -417,7 +417,7 @@ static int sub_047c(int mode, const GameUpdateInitParam *param)
 			goto err_mutex;
 		}
 		if (ver_buf[0] != '\0') {
-			ret = sub_0f3c(ver_buf, &g_ctx.cur_ver_maj, &g_ctx.cur_ver_min, 1);
+			ret = gameUpdateParseVersion(ver_buf, &g_ctx.cur_ver_maj, &g_ctx.cur_ver_min, 1);
 			if (ret < 0) {
 				goto err_mutex;
 			}
@@ -427,26 +427,26 @@ static int sub_047c(int mode, const GameUpdateInitParam *param)
 			goto err_mutex;
 		}
 		if (ver_buf[0] != '\0') {
-			ret = sub_0f3c(ver_buf, &g_ctx.cur_sysver_maj, &g_ctx.cur_sysver_min, 5);
+			ret = gameUpdateParseVersion(ver_buf, &g_ctx.cur_sysver_maj, &g_ctx.cur_sysver_min, 5);
 			if (ret < 0) {
 				goto err_mutex;
 			}
 		}
 	}
 
-	ret = sub_0e48();
+	ret = gameUpdateHttpReset();
 	if (ret < 0) {
 		goto err_mutex;
 	}
-	ret = sub_0918();
+	ret = gameUpdateHttpInitTemplate();
 	if (ret < 0) {
 		goto err_mutex;
 	}
-	ret = sub_0a3c();
+	ret = gameUpdateHttpOpenRequest();
 	if (ret < 0) {
 		goto err_tmpl;
 	}
-	ret = sub_119c();
+	ret = gameUpdateXmlInit();
 	if (ret < 0) {
 		goto err_conn;
 	}
@@ -455,15 +455,15 @@ static int sub_047c(int mode, const GameUpdateInitParam *param)
 	return ret;
 
 err_conn:
-	sub_0bf4();
+	gameUpdateHttpCloseRequest();
 err_tmpl:
-	sub_0e7c();
+	gameUpdateHttpTermTemplate();
 err_mutex:
 	sceKernelDeleteLwMutex(g_ctx.mutex);
 	return ret;
 }
 
-static int sub_0650(GameUpdateResult *res, GameUpdateDetail *detail)
+static int gameUpdateCheckInternal(GameUpdateResult *res, GameUpdateDetail *detail)
 {
 	int ret = sceKernelLockLwMutex(g_ctx.mutex, 1, NULL);
 	if (ret < 0) {
@@ -492,7 +492,7 @@ static int sub_0650(GameUpdateResult *res, GameUpdateDetail *detail)
 
 	int check_ret = 0x80560003;
 	if (res->size_struct == 0x10) {
-		check_ret = sub_0c6c();
+		check_ret = gameUpdateHttpFetchXml();
 		if (check_ret >= 0) {
 			if (g_ctx.tag_status == 1) {
 				res->result_code = 3;
@@ -543,7 +543,7 @@ static int sub_0650(GameUpdateResult *res, GameUpdateDetail *detail)
 	return check_ret;
 }
 
-static int sub_0918(void)
+static int gameUpdateHttpInitTemplate(void)
 {
 	int ret = sceHttpCreateTemplate("PSPGameUpdate-agent/1.0.0 libhttp/1.0.0", 1, 1);
 	if (ret < 0) {
@@ -582,7 +582,7 @@ out:
 	return ret;
 }
 
-static int sub_0a3c(void)
+static int gameUpdateHttpOpenRequest(void)
 {
 	char url[256];
 	char env[16];
@@ -626,7 +626,7 @@ out:
 	return ret;
 }
 
-static int sub_0bf4(void)
+static int gameUpdateHttpCloseRequest(void)
 {
 	int res = 0;
 	if (g_http.req_id >= 0) {
@@ -646,7 +646,7 @@ static int sub_0bf4(void)
 	return res;
 }
 
-static int sub_0c6c(void)
+static int gameUpdateHttpFetchXml(void)
 {
 	uint64_t total_read = 0;
 	int ret = sceHttpSendRequest(g_http.req_id, NULL, 0);
@@ -684,7 +684,7 @@ static int sub_0c6c(void)
 		if (n < 0) {
 			goto check_err;
 		}
-		ret = sub_1250((const char *)g_http.read_buf, n);
+		ret = gameUpdateXmlFeed((const char *)g_http.read_buf, n);
 		if (ret < 0) {
 			goto check_err;
 		}
@@ -696,7 +696,7 @@ check_err:
 		return 0x80560004;
 	}
 	if (ret < 0) {
-		if (sub_0efc() == 0) {
+		if (gameUpdateIsProxyEnabled() == 0) {
 			return 0x80560006;
 		}
 		return 0x80560007;
@@ -704,7 +704,7 @@ check_err:
 	return ret;
 }
 
-static int sub_0e48(void)
+static int gameUpdateHttpReset(void)
 {
 	g_http.tmpl_id = -1;
 	g_http.content_length = 0;
@@ -714,7 +714,7 @@ static int sub_0e48(void)
 	return 0;
 }
 
-static int sub_0e7c(void)
+static int gameUpdateHttpTermTemplate(void)
 {
 	int res = 0;
 	if (g_http.tmpl_id >= 0) {
@@ -727,7 +727,7 @@ static int sub_0e7c(void)
 	return res;
 }
 
-static int sub_0ecc(void)
+static int gameUpdateHttpAbort(void)
 {
 	if (g_http.req_id >= 0) {
 		return sceHttpAbortRequest(g_http.req_id);
@@ -735,7 +735,7 @@ static int sub_0ecc(void)
 	return 0;
 }
 
-static int sub_0efc(void)
+static int gameUpdateIsProxyEnabled(void)
 {
 	int info[32];
 	int ret = sceNetApctlGetInfo(13, info);
@@ -745,7 +745,7 @@ static int sub_0efc(void)
 	return (info[0] == 1) ? 1 : 0;
 }
 
-static int sub_0f3c(const char *str, uint16_t *out_maj, uint16_t *out_min, uint32_t flags)
+static int gameUpdateParseVersion(const char *str, uint16_t *out_maj, uint16_t *out_min, uint32_t flags)
 {
 	size_t len = sceNet_lib_D8722983(str);
 	if (len == sceNet_lib_D8722983("xx.yy") && (flags & 1)) {
@@ -805,22 +805,22 @@ parse_min:
 	return 0;
 }
 
-static int sub_119c(void)
+static int gameUpdateXmlInit(void)
 {
 	int lang = 1;
 	sceUtilityGetSystemParamInt(8, &lang);
 	g_lang_title_tag[7] = (char)(g_lang_title_tag[7] + (lang % 10));
 	g_lang_title_tag[6] = (char)(g_lang_title_tag[6] + (lang / 10));
 	sceKernelMemset(&g_xml, 0, sizeof(g_xml));
-	return sub_23b4(&g_xml, &g_xml_schema, sub_127c, NULL);
+	return xmlParserInit(&g_xml, &g_xml_schema, gameUpdateXmlCallback, NULL);
 }
 
-static int sub_1250(const char *buf, int len)
+static int gameUpdateXmlFeed(const char *buf, int len)
 {
-	return sub_1c68(&g_xml, buf, len);
+	return xmlParserFeed(&g_xml, buf, len);
 }
 
-static int sub_127c(void *parser, int event, uint32_t depth, uint32_t tag_idx, const char *str1, const char *str2, void *user_arg)
+static int gameUpdateXmlCallback(void *parser, int event, uint32_t depth, uint32_t tag_idx, const char *str1, const char *str2, void *user_arg)
 {
 	(void)parser;
 	(void)user_arg;
@@ -901,7 +901,7 @@ static int sub_127c(void *parser, int event, uint32_t depth, uint32_t tag_idx, c
 						return 0x80560081;
 					}
 					sceKernelMemcpy(node, &g_xml.cur_pkg, sizeof(PackageNode));
-					ret = sub_1bcc(node);
+					ret = gameUpdateInsertPackage(node);
 					if (ret < 0) {
 						g_ctx.free_cb(node);
 						return ret;
@@ -975,7 +975,7 @@ static int sub_127c(void *parser, int event, uint32_t depth, uint32_t tag_idx, c
 				g_xml.parse_flags |= 4;
 			} else if (sceNet_lib_B9085A96(str1, "min_system_ver", sceNet_lib_D8722983("min_system_ver") + 1) == 0) {
 				uint16_t maj, min;
-				ret = sub_0f3c(str2, &maj, &min, 5);
+				ret = gameUpdateParseVersion(str2, &maj, &min, 5);
 				if (ret < 0) {
 					return 0x8056000a;
 				}
@@ -991,7 +991,7 @@ static int sub_127c(void *parser, int event, uint32_t depth, uint32_t tag_idx, c
 				return 0x80560009;
 			}
 			if (sceNet_lib_B9085A96(str1, "version", sceNet_lib_D8722983("version") + 1) == 0) {
-				ret = sub_0f3c(str2, &g_xml.cur_pkg.ver_major, &g_xml.cur_pkg.ver_minor, 1);
+				ret = gameUpdateParseVersion(str2, &g_xml.cur_pkg.ver_major, &g_xml.cur_pkg.ver_minor, 1);
 				if (ret < 0) {
 					return 0x8056000a;
 				}
@@ -1023,7 +1023,7 @@ static int sub_127c(void *parser, int event, uint32_t depth, uint32_t tag_idx, c
 				sceNet_lib_B5CE388A(g_xml.cur_pkg.url, str2, 255);
 				g_xml.parse_flags |= 0x80;
 			} else if (sceNet_lib_B9085A96(str1, "psp_system_ver", sceNet_lib_D8722983("psp_system_ver") + 1) == 0) {
-				ret = sub_0f3c(str2, &g_xml.cur_pkg.psp_sysver_maj, &g_xml.cur_pkg.psp_sysver_min, 5);
+				ret = gameUpdateParseVersion(str2, &g_xml.cur_pkg.psp_sysver_maj, &g_xml.cur_pkg.psp_sysver_min, 5);
 				if (ret < 0) {
 					return 0x8056000a;
 				}
@@ -1035,7 +1035,7 @@ static int sub_127c(void *parser, int event, uint32_t depth, uint32_t tag_idx, c
 	return ret;
 }
 
-static int sub_1bcc(PackageNode *node)
+static int gameUpdateInsertPackage(PackageNode *node)
 {
 	PackageNode *cur = g_ctx.pkg_list;
 	PackageNode *prev = NULL;
@@ -1070,7 +1070,7 @@ static int sub_1bcc(PackageNode *node)
 	return 0;
 }
 
-static int sub_1c68(XmlParser *p, const char *buf, int len)
+static int xmlParserFeed(XmlParser *p, const char *buf, int len)
 {
 	int ret = 0;
 	int pos = 0;
@@ -1117,14 +1117,14 @@ static int sub_1c68(XmlParser *p, const char *buf, int len)
 			p->tag_buf[p->buf_pos] = '\0';
 			if (state == 1) {
 				uint32_t matched = 0;
-				ret = sub_2414(p, &matched);
+				ret = xmlParserMatchStartTag(p, &matched);
 				if (ret < 0) {
 					goto out;
 				}
 				state = (matched != 0) ? 2 : 0;
 			} else {
 				uint32_t matched = 0;
-				ret = sub_2520(p, &matched);
+				ret = xmlParserMatchEndTag(p, &matched);
 				if (ret < 0) {
 					goto out;
 				}
@@ -1196,7 +1196,7 @@ static int sub_1c68(XmlParser *p, const char *buf, int len)
 					pos = (int)(cur - buf);
 					break;
 				}
-				ret = sub_28dc(tmp, 6, p->utf8_buf, p->utf8_have, &written, &consumed);
+				ret = xmlDecodeCharOrEntity(tmp, 6, p->utf8_buf, p->utf8_have, &written, &consumed);
 				if (ret == (int)0x80550602) {
 					cur += step;
 					pos = (int)(cur - buf);
@@ -1213,7 +1213,7 @@ static int sub_1c68(XmlParser *p, const char *buf, int len)
 				}
 			} else {
 				step = (rem < 6) ? rem : 6;
-				ret = sub_28dc(tmp, 6, cur, step, &written, &consumed);
+				ret = xmlDecodeCharOrEntity(tmp, 6, cur, step, &written, &consumed);
 				if (ret == (int)0x80550602) {
 					sceKernelMemcpy(p->utf8_buf, cur, step);
 					cur += step;
@@ -1361,7 +1361,7 @@ out:
 	return ret;
 }
 
-static int sub_23b4(XmlParser *p, const XmlSchema *schema, XmlCallback cb, void *user_arg)
+static int xmlParserInit(XmlParser *p, const XmlSchema *schema, XmlCallback cb, void *user_arg)
 {
 	sceKernelMemset(p, 0, 0x344);
 	p->user_arg = user_arg;
@@ -1370,7 +1370,7 @@ static int sub_23b4(XmlParser *p, const XmlSchema *schema, XmlCallback cb, void 
 	return 0;
 }
 
-static int sub_2414(XmlParser *p, uint32_t *out_matched)
+static int xmlParserMatchStartTag(XmlParser *p, uint32_t *out_matched)
 {
 	int ret = 0;
 	if (p->depth < p->schema->max_depth) {
@@ -1393,7 +1393,7 @@ static int sub_2414(XmlParser *p, uint32_t *out_matched)
 	return ret;
 }
 
-static int sub_2520(XmlParser *p, uint32_t *out_matched)
+static int xmlParserMatchEndTag(XmlParser *p, uint32_t *out_matched)
 {
 	if (p->depth == 0) {
 		*out_matched = 0;
@@ -1422,7 +1422,7 @@ static int sub_2520(XmlParser *p, uint32_t *out_matched)
 	return p->callback(p, 2, d, idx, NULL, NULL, p->user_arg);
 }
 
-static int sub_2644(char *dst, uint32_t dst_size, const char *src, uint32_t src_len, uint32_t *out_len)
+static int xmlUnescapeString(char *dst, uint32_t dst_size, const char *src, uint32_t src_len, uint32_t *out_len)
 {
 	if (src == NULL || src_len == 0) {
 		return 0x80550601;
@@ -1501,7 +1501,7 @@ static int sub_2644(char *dst, uint32_t dst_size, const char *src, uint32_t src_
 	return 0;
 }
 
-static int sub_28dc(char *dst, uint32_t dst_size, const char *src, uint32_t src_len, uint32_t *out_written, uint32_t *out_consumed)
+static int xmlDecodeCharOrEntity(char *dst, uint32_t dst_size, const char *src, uint32_t src_len, uint32_t *out_written, uint32_t *out_consumed)
 {
 	if (src == NULL || src_len == 0) {
 		return 0x80550601;
@@ -1615,7 +1615,7 @@ check_conv:
 	}
 
 	char tmp[8];
-	ret = sub_2644(tmp, 7, src, consumed, NULL);
+	ret = xmlUnescapeString(tmp, 7, src, consumed, NULL);
 	if (ret < 0) {
 		return ret;
 	}

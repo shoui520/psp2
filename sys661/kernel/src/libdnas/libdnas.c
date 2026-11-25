@@ -128,37 +128,37 @@ typedef struct DnasContext {
 } DnasContext;
 
 /* Forward declarations */
-static void sub_08c8(DnasContext *ctx);
-static int sub_0938(DnasContext *ctx, int check_abort);
-static int sub_0a4c(SceSize args, void *argp);
-static void sub_0c38(DnasContext *ctx);
-static void sub_0de0(DnasContext *ctx);
-static void sub_0ec8(DnasContext *ctx);
-static void sub_0ff4(DnasContext *ctx);
-static void sub_10d0(DnasContext *ctx);
-static int sub_11b4(DnasContext *ctx);
-static int sub_12e4(DnasContext *ctx);
-static uint16_t sub_16cc(uint16_t val);
-static int sub_1700(DnasContext *ctx, const void *buf, int len);
-static int sub_1844(DnasContext *ctx, void *buf, int len);
-static int sub_1910(DnasContext *ctx);
-static void sub_19f4(DnasContext *ctx);
-static int sub_1aa0(DnasContext *ctx);
-static int sub_1c68(DnasContext *ctx);
-static int sub_1d7c(DnasContext *ctx);
-static void sub_1de4(void);
-static int sub_1e90(void *subj, const char *expected_cn);
-static int sub_2098(int preverify_ok, void **cert_chain, int chain_len, void *arg, int *alert);
-static int sub_25f0(const char *pem, uint8_t *out_buf, int *out_len, unsigned int max_len);
-static int sub_28c8(void);
-static int sub_2c08(DnasContext *ctx);
-static void sub_2d5c(DnasContext *ctx);
-static int sub_2de0(DnasContext *ctx);
-static int sub_3028(DnasContext *ctx);
-static int sub_3118(DnasContext *ctx, int *redirected);
-static int sub_3270(DnasContext *ctx);
-static int sub_3360(DnasContext *ctx);
-static int sub_3410(uint8_t *dst, const char *src, int len);
+static void dnasResetConnState(DnasContext *ctx);
+static int dnasCheckStopOrAbort(DnasContext *ctx, int check_abort);
+static int dnasWorkerThread(SceSize args, void *argp);
+static void dnasStateWaitStart(DnasContext *ctx);
+static void dnasStateSendAuth1(DnasContext *ctx);
+static void dnasStateRecvAuth1(DnasContext *ctx);
+static void dnasStateSendAuth2(DnasContext *ctx);
+static void dnasStateRecvAuth2(DnasContext *ctx);
+static int dnasLoadProxyConfig(DnasContext *ctx);
+static int dnasTcpConnect(DnasContext *ctx);
+static uint16_t dnasHtons(uint16_t val);
+static int dnasSslWrite(DnasContext *ctx, const void *buf, int len);
+static int dnasSslRead(DnasContext *ctx, void *buf, int len);
+static int dnasSslCleanup(DnasContext *ctx);
+static void dnasSslSaveSession(DnasContext *ctx);
+static int dnasSslSetup(DnasContext *ctx);
+static int dnasOpenHttpsConn(DnasContext *ctx);
+static int dnasCloseSocket(DnasContext *ctx);
+static void dnasFreeRootCerts(void);
+static int dnasVerifyCommonName(void *subj, const char *expected_cn);
+static int dnasSslVerifyCallback(int preverify_ok, void **cert_chain, int chain_len, void *arg, int *alert);
+static int dnasPemToDer(const char *pem, uint8_t *out_buf, int *out_len, unsigned int max_len);
+static int dnasLoadRootCerts(void);
+static int dnasSslInit(DnasContext *ctx);
+static void dnasSslTerm(DnasContext *ctx);
+static int dnasProxyConnect(DnasContext *ctx);
+static int dnasDoSendAuth1(DnasContext *ctx);
+static int dnasDoRecvAuth1(DnasContext *ctx, int *redirected);
+static int dnasDoSendAuth2(DnasContext *ctx);
+static int dnasDoRecvAuth2(DnasContext *ctx);
+static int dnasBase64Decode(uint8_t *dst, const char *src, int len);
 
 /* .rodata base64 decode table (0x3b60..0x3c60) */
 static const int8_t g_b64_table[256] = {
@@ -182,11 +182,11 @@ static const int8_t g_b64_table[256] = {
 
 /* .data (0x3c60..0x3c78) */
 static void (*g_state_handlers[5])(DnasContext *) = {
-    sub_0c38,
-    sub_0de0,
-    sub_0ec8,
-    sub_0ff4,
-    sub_10d0
+    dnasStateWaitStart,
+    dnasStateSendAuth1,
+    dnasStateRecvAuth1,
+    dnasStateSendAuth2,
+    dnasStateRecvAuth2
 };
 static int g_ssl_initialized = -1; /* 0x3c74 */
 
@@ -211,9 +211,9 @@ int sceDNAS_lib_0D560144(void *arg0, int prio)
     g_ctx.thid = -1;
     g_ctx.ef_int = -1;
     g_ctx.ef_ext = -1;
-    sub_08c8(&g_ctx);
+    dnasResetConnState(&g_ctx);
 
-    ret = sub_2c08(&g_ctx);
+    ret = dnasSslInit(&g_ctx);
     if (ret < 0) {
         goto fail;
     }
@@ -230,7 +230,7 @@ int sceDNAS_lib_0D560144(void *arg0, int prio)
     }
     g_ctx.ef_ext = ret;
 
-    ret = sceKernelCreateThread("SceDNAS", sub_0a4c, prio, 0x2000, 0, NULL);
+    ret = sceKernelCreateThread("SceDNAS", dnasWorkerThread, prio, 0x2000, 0, NULL);
     if (ret <= 0) {
         goto fail;
     }
@@ -266,7 +266,7 @@ fail:
         sceKernelDeleteEventFlag(g_ctx.ef_int);
         g_ctx.ef_int = -1;
     }
-    sub_2d5c(&g_ctx);
+    dnasSslTerm(&g_ctx);
     return ret;
 }
 
@@ -409,7 +409,7 @@ int sceDNAS_lib_BE0998D7(void)
     }
 
     sceDNASCore_lib_D5E80301();
-    sub_2d5c(&g_ctx);
+    dnasSslTerm(&g_ctx);
     g_initialized = 0;
     (void)ret;
     return 0;
@@ -437,8 +437,8 @@ int sceDNAS_lib_6929100C(void *arg0)
     return sceDNASCore_lib_BF6A7475(arg0);
 }
 
-/* === sub_08c8 @ 0x08c8 === */
-static void sub_08c8(DnasContext *ctx)
+/* === dnasResetConnState @ 0x08c8 === */
+static void dnasResetConnState(DnasContext *ctx)
 {
     ctx->sock = -1;
     ctx->rid = -1;
@@ -449,8 +449,8 @@ static void sub_08c8(DnasContext *ctx)
     ctx->ssl_session = NULL;
 }
 
-/* === sub_0938 @ 0x0938 === */
-static int sub_0938(DnasContext *ctx, int check_abort)
+/* === dnasCheckStopOrAbort @ 0x0938 === */
+static int dnasCheckStopOrAbort(DnasContext *ctx, int check_abort)
 {
     int ret = 0;
     unsigned int out_bits = 0;
@@ -478,15 +478,15 @@ static int sub_0938(DnasContext *ctx, int check_abort)
     return 0;
 }
 
-/* === sub_0a4c @ 0x0a4c === */
-static int sub_0a4c(SceSize args, void *argp)
+/* === dnasWorkerThread @ 0x0a4c === */
+static int dnasWorkerThread(SceSize args, void *argp)
 {
     DnasContext *ctx = *(DnasContext **)argp;
     int status;
     (void)args;
 
     for (;;) {
-        status = sub_0938(ctx, (ctx->state != 0) ? 1 : 0);
+        status = dnasCheckStopOrAbort(ctx, (ctx->state != 0) ? 1 : 0);
         if (status == 1) {
             break;
         }
@@ -503,7 +503,7 @@ static int sub_0a4c(SceSize args, void *argp)
             continue;
         }
 
-        status = sub_0938(ctx, (ctx->state != 0) ? 1 : 0);
+        status = dnasCheckStopOrAbort(ctx, (ctx->state != 0) ? 1 : 0);
         if (status == 1) {
             break;
         }
@@ -512,18 +512,18 @@ static int sub_0a4c(SceSize args, void *argp)
         }
 
         if (ctx->error < 0 || ctx->state == 0) {
-            sub_1910(ctx);
+            dnasSslCleanup(ctx);
             ctx->state = 0;
             sceKernelSetEventFlag(ctx->ef_ext, 1);
         }
     }
 
-    sub_1910(ctx);
+    dnasSslCleanup(ctx);
     return 0;
 }
 
-/* === sub_0c38 @ 0x0c38 === */
-static void sub_0c38(DnasContext *ctx)
+/* === dnasStateWaitStart @ 0x0c38 === */
+static void dnasStateWaitStart(DnasContext *ctx)
 {
     int ret = 0;
     unsigned int out_bits = 0;
@@ -542,7 +542,7 @@ static void sub_0c38(DnasContext *ctx)
     }
 
     ctx->error = 0;
-    sub_08c8(ctx);
+    dnasResetConnState(ctx);
     ret = sceDNASCore_lib_FA571A75(ctx->auth_arg, NULL, 0);
     if (ret < 0) {
         ctx->error = ret;
@@ -553,16 +553,16 @@ static void sub_0c38(DnasContext *ctx)
     sceKernelSetEventFlag(ctx->ef_ext, 1);
 }
 
-/* === sub_0de0 @ 0x0de0 === */
-static void sub_0de0(DnasContext *ctx)
+/* === dnasStateSendAuth1 @ 0x0de0 === */
+static void dnasStateSendAuth1(DnasContext *ctx)
 {
     int ret = 0;
 
     if (ctx->ssl_session != NULL) {
-        sub_08c8(ctx);
+        dnasResetConnState(ctx);
     }
 
-    ret = sub_3028(ctx);
+    ret = dnasDoSendAuth1(ctx);
     if (ret < 0) {
         ctx->error = ret;
         return;
@@ -572,35 +572,35 @@ static void sub_0de0(DnasContext *ctx)
     sceKernelSetEventFlag(ctx->ef_ext, 1);
 }
 
-/* === sub_0ec8 @ 0x0ec8 === */
-static void sub_0ec8(DnasContext *ctx)
+/* === dnasStateRecvAuth1 @ 0x0ec8 === */
+static void dnasStateRecvAuth1(DnasContext *ctx)
 {
     int ret = 0;
     int redirected = 0;
 
-    ret = sub_3118(ctx, &redirected);
+    ret = dnasDoRecvAuth1(ctx, &redirected);
     if (ret < 0) {
         ctx->error = ret;
         return;
     }
 
     if (redirected != 0) {
-        sub_1910(ctx);
+        dnasSslCleanup(ctx);
         ctx->state = 1;
         return;
     }
 
-    sub_19f4(ctx);
+    dnasSslSaveSession(ctx);
     ctx->state++;
     sceKernelSetEventFlag(ctx->ef_ext, 1);
 }
 
-/* === sub_0ff4 @ 0x0ff4 === */
-static void sub_0ff4(DnasContext *ctx)
+/* === dnasStateSendAuth2 @ 0x0ff4 === */
+static void dnasStateSendAuth2(DnasContext *ctx)
 {
     int ret = 0;
 
-    ret = sub_3270(ctx);
+    ret = dnasDoSendAuth2(ctx);
     if (ret < 0) {
         ctx->error = ret;
         return;
@@ -610,24 +610,24 @@ static void sub_0ff4(DnasContext *ctx)
     sceKernelSetEventFlag(ctx->ef_ext, 1);
 }
 
-/* === sub_10d0 @ 0x10d0 === */
-static void sub_10d0(DnasContext *ctx)
+/* === dnasStateRecvAuth2 @ 0x10d0 === */
+static void dnasStateRecvAuth2(DnasContext *ctx)
 {
     int ret = 0;
 
-    ret = sub_3360(ctx);
+    ret = dnasDoRecvAuth2(ctx);
     if (ret < 0) {
         ctx->error = ret;
         return;
     }
 
-    sub_08c8(ctx);
+    dnasResetConnState(ctx);
     ctx->state = 0;
     sceKernelSetEventFlag(ctx->ef_ext, 1);
 }
 
-/* === sub_11b4 @ 0x11b4 === */
-static int sub_11b4(DnasContext *ctx)
+/* === dnasLoadProxyConfig @ 0x11b4 === */
+static int dnasLoadProxyConfig(DnasContext *ctx)
 {
     int ret = 0;
 
@@ -652,8 +652,8 @@ static int sub_11b4(DnasContext *ctx)
     return 0;
 }
 
-/* === sub_12e4 @ 0x12e4 === */
-static int sub_12e4(DnasContext *ctx)
+/* === dnasTcpConnect @ 0x12e4 === */
+static int dnasTcpConnect(DnasContext *ctx)
 {
     int ret = 0;
     uint32_t addr = 0;
@@ -688,7 +688,7 @@ static int sub_12e4(DnasContext *ctx)
         sceKernelMemset(sin, 0, sizeof(sin));
         sin[0] = 16;
         sin[1] = 2;
-        *(uint16_t *)&sin[2] = sub_16cc(ctx->port);
+        *(uint16_t *)&sin[2] = dnasHtons(ctx->port);
         *(uint32_t *)&sin[4] = ctx->resolved_ip;
 
         ret = sceNetInetConnect(ctx->sock, sin, sizeof(sin));
@@ -696,7 +696,7 @@ static int sub_12e4(DnasContext *ctx)
             return 0;
         }
         ret = sceNetInet_8CA3A97E();
-        sub_1d7c(ctx);
+        dnasCloseSocket(ctx);
         if (ret != (int)0x8001006f) {
             break;
         }
@@ -712,16 +712,16 @@ out:
     return ret;
 }
 
-/* === sub_16cc @ 0x16cc === */
-static uint16_t sub_16cc(uint16_t val)
+/* === dnasHtons @ 0x16cc === */
+static uint16_t dnasHtons(uint16_t val)
 {
     uint16_t res;
     __asm__ volatile ("wsbh %0, %1" : "=r"(res) : "r"(val));
     return res;
 }
 
-/* === sub_1700 @ 0x1700 === */
-static int sub_1700(DnasContext *ctx, const void *buf, int len)
+/* === dnasSslWrite @ 0x1700 === */
+static int dnasSslWrite(DnasContext *ctx, const void *buf, int len)
 {
     int ret = 0;
     int err;
@@ -738,8 +738,8 @@ static int sub_1700(DnasContext *ctx, const void *buf, int len)
     return ret;
 }
 
-/* === sub_1844 @ 0x1844 === */
-static int sub_1844(DnasContext *ctx, void *buf, int len)
+/* === dnasSslRead @ 0x1844 === */
+static int dnasSslRead(DnasContext *ctx, void *buf, int len)
 {
     int ret = 0;
     int err;
@@ -753,8 +753,8 @@ static int sub_1844(DnasContext *ctx, void *buf, int len)
     return ret;
 }
 
-/* === sub_1910 @ 0x1910 === */
-static int sub_1910(DnasContext *ctx)
+/* === dnasSslCleanup @ 0x1910 === */
+static int dnasSslCleanup(DnasContext *ctx)
 {
     if (ctx->ssl != NULL) {
         sceSsl_lib_3E3133D6(ctx->ssl);
@@ -771,8 +771,8 @@ static int sub_1910(DnasContext *ctx)
     return 0;
 }
 
-/* === sub_19f4 @ 0x19f4 === */
-static void sub_19f4(DnasContext *ctx)
+/* === dnasSslSaveSession @ 0x19f4 === */
+static void dnasSslSaveSession(DnasContext *ctx)
 {
     if (ctx->ssl != NULL) {
         if (ctx->ssl_session != NULL) {
@@ -786,8 +786,8 @@ static void sub_19f4(DnasContext *ctx)
     }
 }
 
-/* === sub_1aa0 @ 0x1aa0 === */
-static int sub_1aa0(DnasContext *ctx)
+/* === dnasSslSetup @ 0x1aa0 === */
+static int dnasSslSetup(DnasContext *ctx)
 {
     int ret = 0;
     void *bio;
@@ -795,7 +795,7 @@ static int sub_1aa0(DnasContext *ctx)
     if (ctx->ssl != NULL && ctx->ssl_session != NULL) {
         ret = sceSsl_lib_69F1B678(ctx->ssl, ctx->ssl_session);
         if (ret != 1) {
-            sub_1910(ctx);
+            dnasSslCleanup(ctx);
             ctx->ssl = sceSsl_lib_EBFB0E3C(ctx->ssl_ctx);
             if (ctx->ssl == NULL) {
                 ret = 0x80530104;
@@ -803,7 +803,7 @@ static int sub_1aa0(DnasContext *ctx)
             }
         }
     } else {
-        sub_1910(ctx);
+        dnasSslCleanup(ctx);
         ctx->ssl = sceSsl_lib_EBFB0E3C(ctx->ssl_ctx);
         if (ctx->ssl == NULL) {
             ret = 0x80530104;
@@ -823,17 +823,17 @@ static int sub_1aa0(DnasContext *ctx)
 
 fail:
     if (ctx->ssl != NULL) {
-        sub_1910(ctx);
+        dnasSslCleanup(ctx);
     }
     return ret;
 }
 
-/* === sub_1c68 @ 0x1c68 === */
-static int sub_1c68(DnasContext *ctx)
+/* === dnasOpenHttpsConn @ 0x1c68 === */
+static int dnasOpenHttpsConn(DnasContext *ctx)
 {
     int ret = 0;
 
-    ret = sub_11b4(ctx);
+    ret = dnasLoadProxyConfig(ctx);
     if (ret < 0) {
         goto fail;
     }
@@ -846,19 +846,19 @@ static int sub_1c68(DnasContext *ctx)
         }
     }
 
-    ret = sub_12e4(ctx);
+    ret = dnasTcpConnect(ctx);
     if (ret < 0) {
         goto fail;
     }
 
     if (ctx->use_proxy != 0) {
-        ret = sub_2de0(ctx);
+        ret = dnasProxyConnect(ctx);
         if (ret < 0) {
             goto fail;
         }
     }
 
-    ret = sub_1aa0(ctx);
+    ret = dnasSslSetup(ctx);
     if (ret < 0) {
         goto fail;
     }
@@ -866,12 +866,12 @@ static int sub_1c68(DnasContext *ctx)
     return ret;
 
 fail:
-    sub_1d7c(ctx);
+    dnasCloseSocket(ctx);
     return ret;
 }
 
-/* === sub_1d7c @ 0x1d7c === */
-static int sub_1d7c(DnasContext *ctx)
+/* === dnasCloseSocket @ 0x1d7c === */
+static int dnasCloseSocket(DnasContext *ctx)
 {
     int ret = 0;
 
@@ -882,8 +882,8 @@ static int sub_1d7c(DnasContext *ctx)
     return ret;
 }
 
-/* === sub_1de4 @ 0x1de4 === */
-static void sub_1de4(void)
+/* === dnasFreeRootCerts @ 0x1de4 === */
+static void dnasFreeRootCerts(void)
 {
     int i;
 
@@ -895,8 +895,8 @@ static void sub_1de4(void)
     }
 }
 
-/* === sub_1e90 @ 0x1e90 === */
-static int sub_1e90(void *subj, const char *expected_cn)
+/* === dnasVerifyCommonName @ 0x1e90 === */
+static int dnasVerifyCommonName(void *subj, const char *expected_cn)
 {
     int count;
     int matched = 0;
@@ -943,8 +943,8 @@ static int sub_1e90(void *subj, const char *expected_cn)
     return (matched == 1) ? 0 : -1;
 }
 
-/* === sub_2098 @ 0x2098 === */
-static int sub_2098(int preverify_ok, void **cert_chain, int chain_len, void *arg, int *alert)
+/* === dnasSslVerifyCallback @ 0x2098 === */
+static int dnasSslVerifyCallback(int preverify_ok, void **cert_chain, int chain_len, void *arg, int *alert)
 {
     DnasContext *ctx = (DnasContext *)arg;
     int depth;
@@ -991,7 +991,7 @@ static int sub_2098(int preverify_ok, void **cert_chain, int chain_len, void *ar
     subj = sceSsl_lib_12C7718F(cert_chain[0]);
     if (subj != NULL && ctx->skip_cn_check != 1) {
         sceDNASCore_lib_F479F616(expected_cn);
-        if (sub_1e90(subj, expected_cn) < 0) {
+        if (dnasVerifyCommonName(subj, expected_cn) < 0) {
             ctx->ssl_verify_err = 0x80530186;
             return 0;
         }
@@ -1049,8 +1049,8 @@ found_root:
     return 1;
 }
 
-/* === sub_25f0 @ 0x25f0 === */
-static int sub_25f0(const char *pem, uint8_t *out_buf, int *out_len, unsigned int max_len)
+/* === dnasPemToDer @ 0x25f0 === */
+static int dnasPemToDer(const char *pem, uint8_t *out_buf, int *out_len, unsigned int max_len)
 {
     int ret = 0;
     int total = 0;
@@ -1093,7 +1093,7 @@ static int sub_25f0(const char *pem, uint8_t *out_buf, int *out_len, unsigned in
             if (max_len < (unsigned int)(total + chunk_len)) {
                 return 0x80530104;
             }
-            ret = sub_3410(out_buf + total, p, line_len);
+            ret = dnasBase64Decode(out_buf + total, p, line_len);
             if (ret < 0) {
                 return ret;
             }
@@ -1114,8 +1114,8 @@ static int sub_25f0(const char *pem, uint8_t *out_buf, int *out_len, unsigned in
     return 0;
 }
 
-/* === sub_28c8 @ 0x28c8 === */
-static int sub_28c8(void)
+/* === dnasLoadRootCerts @ 0x28c8 === */
+static int dnasLoadRootCerts(void)
 {
     int ret = 0;
     int cert_size = 0;
@@ -1152,11 +1152,11 @@ static int sub_28c8(void)
     }
 
     g_root_cert_count = ret;
-    sub_1de4();
+    dnasFreeRootCerts();
     sceKernelMemset(g_root_certs, 0, (SceSize)(g_root_cert_count * sizeof(void *)));
 
     for (i = 0; cert_list != NULL; i++) {
-        ret = sub_25f0((const char *)cert_list[0], NULL, &cert_size, 0);
+        ret = dnasPemToDer((const char *)cert_list[0], NULL, &cert_size, 0);
         if (ret < 0) {
             goto fail;
         }
@@ -1167,7 +1167,7 @@ static int sub_28c8(void)
             goto fail;
         }
 
-        ret = sub_25f0((const char *)cert_list[0], (uint8_t *)der_buf, &der_len, (unsigned int)cert_size);
+        ret = dnasPemToDer((const char *)cert_list[0], (uint8_t *)der_buf, &der_len, (unsigned int)cert_size);
         if (ret < 0) {
             goto fail;
         }
@@ -1194,7 +1194,7 @@ static int sub_28c8(void)
     return 0;
 
 fail:
-    sub_1de4();
+    dnasFreeRootCerts();
     if (cert_buf != NULL) {
         sceSsl_lib_5E5C873A(cert_buf);
     }
@@ -1204,8 +1204,8 @@ fail:
     return ret;
 }
 
-/* === sub_2c08 @ 0x2c08 === */
-static int sub_2c08(DnasContext *ctx)
+/* === dnasSslInit @ 0x2c08 === */
+static int dnasSslInit(DnasContext *ctx)
 {
     int ret = 0;
 
@@ -1220,22 +1220,22 @@ static int sub_2c08(DnasContext *ctx)
         }
         sceSsl_lib_B4D78E98(ctx->ssl_ctx, 0x20, 0x2000ffffU, 0);
         sceSsl_lib_AEBF278B(ctx->ssl_ctx, 5, NULL);
-        sceSsl_lib_529A9477(ctx->ssl_ctx, sub_2098, ctx);
+        sceSsl_lib_529A9477(ctx->ssl_ctx, dnasSslVerifyCallback, ctx);
         sceSsl_lib_BF55C31C(ctx->ssl_ctx, 0);
     }
 
-    ret = sub_28c8();
+    ret = dnasLoadRootCerts();
     if (ret >= 0) {
         g_ssl_initialized = 1;
     }
     return ret;
 }
 
-/* === sub_2d5c @ 0x2d5c === */
-static void sub_2d5c(DnasContext *ctx)
+/* === dnasSslTerm @ 0x2d5c === */
+static void dnasSslTerm(DnasContext *ctx)
 {
     if (g_ssl_initialized >= 0) {
-        sub_1de4();
+        dnasFreeRootCerts();
         g_root_cert_count = 0;
         if (ctx->ssl_ctx != NULL) {
             sceSsl_lib_588F2FE8(ctx->ssl_ctx);
@@ -1245,8 +1245,8 @@ static void sub_2d5c(DnasContext *ctx)
     }
 }
 
-/* === sub_2de0 @ 0x2de0 === */
-static int sub_2de0(DnasContext *ctx)
+/* === dnasProxyConnect @ 0x2de0 === */
+static int dnasProxyConnect(DnasContext *ctx)
 {
     int ret = 0;
     int total = 0;
@@ -1305,8 +1305,8 @@ static int sub_2de0(DnasContext *ctx)
     return ret;
 }
 
-/* === sub_3028 @ 0x3028 === */
-static int sub_3028(DnasContext *ctx)
+/* === dnasDoSendAuth1 @ 0x3028 === */
+static int dnasDoSendAuth1(DnasContext *ctx)
 {
     int ret = 0;
 
@@ -1315,7 +1315,7 @@ static int sub_3028(DnasContext *ctx)
         goto fail;
     }
 
-    ret = sub_1c68(ctx);
+    ret = dnasOpenHttpsConn(ctx);
     if (ret < 0) {
         goto fail;
     }
@@ -1328,25 +1328,25 @@ static int sub_3028(DnasContext *ctx)
         if (ret < 0) {
             goto fail;
         }
-        ret = sub_1700(ctx, g_io_buf, ret);
+        ret = dnasSslWrite(ctx, g_io_buf, ret);
         if (ret < 0) {
             goto fail;
         }
     }
 
 fail:
-    sub_1d7c(ctx);
+    dnasCloseSocket(ctx);
     return ret;
 }
 
-/* === sub_3118 @ 0x3118 === */
-static int sub_3118(DnasContext *ctx, int *redirected)
+/* === dnasDoRecvAuth1 @ 0x3118 === */
+static int dnasDoRecvAuth1(DnasContext *ctx, int *redirected)
 {
     int ret = 0;
     char redirect_buf[0x80];
 
     for (;;) {
-        ret = sub_1844(ctx, g_io_buf, sizeof(g_io_buf));
+        ret = dnasSslRead(ctx, g_io_buf, sizeof(g_io_buf));
         if (ret < 0) {
             goto out;
         }
@@ -1377,12 +1377,12 @@ static int sub_3118(DnasContext *ctx, int *redirected)
     }
 
 out:
-    sub_1d7c(ctx);
+    dnasCloseSocket(ctx);
     return ret;
 }
 
-/* === sub_3270 @ 0x3270 === */
-static int sub_3270(DnasContext *ctx)
+/* === dnasDoSendAuth2 @ 0x3270 === */
+static int dnasDoSendAuth2(DnasContext *ctx)
 {
     int ret = 0;
 
@@ -1391,7 +1391,7 @@ static int sub_3270(DnasContext *ctx)
         goto fail;
     }
 
-    ret = sub_1c68(ctx);
+    ret = dnasOpenHttpsConn(ctx);
     if (ret < 0) {
         goto fail;
     }
@@ -1404,24 +1404,24 @@ static int sub_3270(DnasContext *ctx)
         if (ret < 0) {
             goto fail;
         }
-        ret = sub_1700(ctx, g_io_buf, ret);
+        ret = dnasSslWrite(ctx, g_io_buf, ret);
         if (ret < 0) {
             goto fail;
         }
     }
 
 fail:
-    sub_1d7c(ctx);
+    dnasCloseSocket(ctx);
     return ret;
 }
 
-/* === sub_3360 @ 0x3360 === */
-static int sub_3360(DnasContext *ctx)
+/* === dnasDoRecvAuth2 @ 0x3360 === */
+static int dnasDoRecvAuth2(DnasContext *ctx)
 {
     int ret = 0;
 
     for (;;) {
-        ret = sub_1844(ctx, g_io_buf, sizeof(g_io_buf));
+        ret = dnasSslRead(ctx, g_io_buf, sizeof(g_io_buf));
         if (ret < 0) {
             goto out;
         }
@@ -1437,12 +1437,12 @@ static int sub_3360(DnasContext *ctx)
     ret = sceDNASCore_lib_BA0A32CA();
 
 out:
-    sub_1d7c(ctx);
+    dnasCloseSocket(ctx);
     return ret;
 }
 
-/* === sub_3410 @ 0x3410 === */
-static int sub_3410(uint8_t *dst, const char *src, int len)
+/* === dnasBase64Decode @ 0x3410 === */
+static int dnasBase64Decode(uint8_t *dst, const char *src, int len)
 {
     int out_len = 0;
 
