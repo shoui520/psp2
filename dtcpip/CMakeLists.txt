@@ -2,8 +2,21 @@
 # debug record names its files; the build-path strings name Sony's dtcpip repository
 # (DTCPIP-MW, DTCPIP-SW, SWKeyManager) and the files are placed there. The SDK's start
 # code (the 3.65 variant) links first.
-psp2_module(vs0_app_NPXS10080_eboot KIND user COMPILER gcc48 PARTIAL SOURCES
+enable_language(CXX)
+psp2_module(vs0_app_NPXS10080_eboot KIND user COMPILER snc PARTIAL SOURCES
 	crt0.c
-	main.c
+	main.cpp
 	eboot.c
+	DTCPIP-MW/Src/Activate/dtcpip_activate.c
+	DTCPIP-MW/Src/Mw/dtcpip_download.c
+	DTCPIP-MW/Src/Mw/SwMwMain.cpp
+	DTCPIP-MW/Src/Mw/SwMwTrace.c
+	DTCPIP-MW/Src/Mw/SwMwNet.c
 )
+
+# The app's own code is SNC's -O0 (every local in its stack slot, every call result stored
+# and reloaded, SNC's r0 accumulator walking the expressions). The SDK's start code, whose
+# object ships precompiled, is SNC's -O2 instead.
+target_compile_options(vs0_app_NPXS10080_eboot PRIVATE -O0)
+set_source_files_properties(crt0.c PROPERTIES COMPILE_OPTIONS "-O2")
+

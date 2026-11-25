@@ -10,13 +10,7 @@
 
 void _start(SceSize args, char *argp) __attribute__((noreturn));
 
-/* the middleware's own main (the DTCPIP-MW's SwMwMain) */
-int swagnerMain(void);
-
-int main(int argc, char *argv[]);
-
 int module_start(SceSize arglen, const void *argp)
 {
 	_start(arglen, (char *)argp);
-	return 0;
 }
