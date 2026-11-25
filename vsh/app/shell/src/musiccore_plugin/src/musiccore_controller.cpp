@@ -45,7 +45,7 @@ struct CmdAckWaiter {
 
 struct CmdNode {
     void *vtable;
-    unsigned int pad4;
+    unsigned int padAlign;
     uint32_t param;
     uint8_t targetChannel;
     uint8_t flagsByte;
@@ -102,7 +102,7 @@ struct PlayerPriorityInfo {
     unsigned char wantsPlay;
     unsigned char hasMedia;
     unsigned char hasPending;
-    unsigned char pad19;
+    unsigned char padTail;
 };
 
 struct PlayerStatusSnapshot {
@@ -112,15 +112,15 @@ struct PlayerStatusSnapshot {
     char bgmReason;
     int bgmPriority;
     unsigned char playableFlag;
-    unsigned char pad9[3];
+    unsigned char padPlayable[3];
     int seqNum;
     int16_t flags;
-    int16_t pad18;
+    int16_t padFlags;
     int cmdParam;
     int errCode;
     int playState;
     int contentType;
-    int pad36;
+    int padContent;
     int64_t trackId;
     int64_t trackItemId;
     int64_t playlistId;
@@ -143,33 +143,33 @@ struct PlayerStatusSnapshot {
     int eqBandHigh;
     int audioNormalizer;
     int extraErr;
-    int pad140;
+    int padTail;
 };
 
 struct SystemStateReport {
     unsigned char activeChannel;
     unsigned char activeKind;
     char overallStatus;
-    unsigned char pad3;
+    unsigned char padStatus;
     int bgmPriority;
     char dbState;
     unsigned char dbBusy;
     unsigned char musicChannelId;
-    unsigned char pad11;
+    unsigned char padChannel;
     PlayerPriorityInfo musicInfo;
     PlayerPriorityInfo playlistInfo;
     PlayerPriorityInfo streamInfo;
 };
 
-struct BgmState2 {
-    int reserved0;
+struct AppMgrBgmState {
+    int bgmState;
     int activePriority;
     int bgmPriority;
     int reserved[5];
 };
 
 struct AppFocusInfo {
-    int reserved0;
+    int focusKind;
     int state;
 };
 
@@ -231,15 +231,39 @@ struct BasePlayer {
 
     char playerKind;
     unsigned char channelId;
-    unsigned char pad6[58];
+    unsigned char baseMembersHead[58];
     int pendingUriCount;
+    unsigned char baseMembersTail[404];
+};
+
+struct SoundOutExclusiveParam {
+    int version;
+    int configWords[5];
+};
+
+struct ExclusivePlayer : public BasePlayer {
+    SoundOutExclusiveParam exclusiveParam;
 };
 
 struct IdleTimerTracker {
     void (*callback)(int channel, int value, int mode);
     char lastStatus;
-    unsigned char pad5[3];
+    unsigned char padStatus[3];
     uint64_t pausedSinceUs;
+};
+
+struct DecoderEventHeader {
+    int headerWord;
+    uint16_t flagsWord;
+    uint16_t subCode;
+};
+
+struct InternalMsgHeader {
+    uint32_t param;
+    uint8_t channelId;
+    uint8_t flagsByte;
+    uint16_t cmdCode;
+    uint32_t extraWord;
 };
 
 extern int makeChannelId(char type, char slot);
@@ -368,7 +392,7 @@ public:
     SceUID m_threadId;
     SceUID m_initSema;
     int m_initResult;
-    int m_pad14;
+    int m_padInit;
     paf::thread::Mutex m_ctrlMutex;
     paf::thread::Mutex m_ackMutex;
     paf::thread::Cond m_ackCond;
@@ -381,29 +405,28 @@ public:
     int (*m_metadataCb)(int type);
     int (*m_capCb)(unsigned int data);
     void (*m_systemStateCb)(SystemStateReport report);
-    int m_pad9C;
+    int m_padCallbacks;
 
-    unsigned char m_decoderMgrStorage[4752];
-    unsigned char m_dbMgrStorage[400];
+    unsigned char m_decoderMgrArena[4752];
+    unsigned char m_dbMgrArena[400];
 
-    int m_slotPad0;
-    int m_slotPad4;
+    int m_activeSlotReserved[2];
     BasePlayer *m_activePlayer;
     unsigned char m_deactivatingActive;
-    unsigned char m_pad14CD[3];
+    unsigned char m_padDeactivating[3];
     PlayerPool *m_playlistPool;
     unsigned char m_playlistChannelId;
-    unsigned char m_pad14D5[3];
+    unsigned char m_padPlaylistCh[3];
     PlayerPool *m_musicPool;
     unsigned char m_musicChannelId;
-    unsigned char m_pad14DD[3];
+    unsigned char m_padMusicCh[3];
     PlayerPool *m_streamPool;
     unsigned char m_streamChannelId;
-    unsigned char m_pad14E5[3];
+    unsigned char m_padStreamCh[3];
 
-    unsigned char m_audioOutStorage[224];
+    unsigned char m_audioOutArena[224];
     int m_grantedPriority;
-    int m_pad15CC;
+    int m_padPriority;
 
     PlayerStatusSnapshot m_playlistSnapshot;
     PlayerStatusSnapshot m_musicSnapshots[8];
@@ -411,17 +434,17 @@ public:
 
     SystemStateReport m_lastSystemReport;
     char m_dbState;
-    unsigned char m_pad1C49[3];
+    unsigned char m_padDbState[3];
     int m_dbBusyCount;
     unsigned char m_dbSuspendPending;
-    unsigned char m_pad1C51[3];
+    unsigned char m_padDbSuspend[3];
     CmdQueue *m_storedCmdQueue;
     unsigned char m_pendingChannelId;
     unsigned char m_drainStoredQueue;
-    unsigned char m_pad1C5A[6];
+    unsigned char m_padStoredQueue[6];
     IdleTimerTracker m_idleTracker;
     unsigned char m_shellSuspended;
-    unsigned char m_pad1C71[7];
+    unsigned char m_padTail[7];
 };
 
 void Controller::initStatusSnapshot(PlayerStatusSnapshot *snap)
@@ -522,9 +545,9 @@ Controller::Controller(ObjFactory *factory, int *outErr, unsigned int totalBytes
     m_ackWaiter.mutex = &m_ackMutex;
     m_ackWaiter.signalCount = 0;
 
-    initDecoderManager(m_decoderMgrStorage);
-    initDbManager(m_dbMgrStorage, 36);
-    initAudioOutput(m_audioOutStorage);
+    initDecoderManager(m_decoderMgrArena);
+    initDbManager(m_dbMgrArena, 36);
+    initAudioOutput(m_audioOutArena);
 
     initDefaultPriorityInfo(&m_lastSystemReport.musicInfo);
     initDefaultPriorityInfo(&m_lastSystemReport.playlistInfo);
@@ -702,12 +725,12 @@ int Controller::sendCommand(uint64_t cmdHeader, const void *inBuf, unsigned int 
 Controller::~Controller()
 {
     if (m_threadId != -1) {
-        stopDecoderManager(m_decoderMgrStorage);
-        stopAudioOutput(m_audioOutStorage);
-        stopDbManager(m_dbMgrStorage);
+        stopDecoderManager(m_decoderMgrArena);
+        stopAudioOutput(m_audioOutArena);
+        stopDbManager(m_dbMgrArena);
 
-        unsigned char dummy = 0;
-        sendCommand(makeCmdHeader(0, 0x81008000u), &dummy, 1, NULL, NULL);
+        unsigned char exitPayload = 0;
+        sendCommand(makeCmdHeader(0, 0x81008000u), &exitPayload, 1, NULL, NULL);
         if (sceKernelWaitThreadEnd(m_threadId, NULL, NULL) >= 0)
             sceKernelDeleteThread(m_threadId);
         m_threadId = -1;
@@ -741,9 +764,9 @@ Controller::~Controller()
     m_idleTracker.lastStatus = -1;
     m_idleTracker.pausedSinceUs = 0;
 
-    termAudioOutput(m_audioOutStorage);
-    termDbManager(m_dbMgrStorage);
-    termDecoderManager(m_decoderMgrStorage);
+    termAudioOutput(m_audioOutArena);
+    termDbManager(m_dbMgrArena);
+    termDecoderManager(m_decoderMgrArena);
 }
 
 BasePlayer *Controller::findPlayerByChannel(unsigned char channelId, unsigned char requireOpen)
@@ -792,7 +815,7 @@ char Controller::computeBgmStatus(unsigned char channelId, char *outReason, int 
     int kind = getChannelType((char)channelId);
     *outReason = 0;
 
-    BgmState2 bgmState;
+    AppMgrBgmState bgmState;
     int bgmRet = sceAppMgrGetCurrentBgmState2(&bgmState);
     *outPriority = (bgmRet == 0) ? bgmState.activePriority : 0;
 
@@ -930,7 +953,7 @@ int Controller::getStatus(unsigned char channelId, PlayerStatusSnapshot *outStat
 
 int Controller::getAudioState(unsigned char channelId)
 {
-    return audioOutputGetState(m_audioOutStorage, channelId);
+    return audioOutputGetState(m_audioOutArena, channelId);
 }
 
 BasePlayer *Controller::findFreePlayer(char kind)
@@ -1215,7 +1238,7 @@ int Controller::handleDbOpen(CmdNode *node, unsigned char *flags)
 
     if (m_dbState == 4) {
         m_dbState = 0;
-        int ret = dbManagerOpen(m_dbMgrStorage, 0, node->param, cmdHi, 0);
+        int ret = dbManagerOpen(m_dbMgrArena, 0, node->param, cmdHi, 0);
         if (ret != 0) {
             m_dbState = 4;
             return ret;
@@ -1259,7 +1282,7 @@ int Controller::handleDbQuery(CmdNode *node)
     m_dbState = 2;
     uint32_t cmdHi = (uint32_t)node->targetChannel | ((uint32_t)node->flagsByte << 8) |
                      ((uint32_t)node->cmdCode << 16);
-    int ret = dbManagerQuery(m_dbMgrStorage, payload[1], payload[2], payload[3],
+    int ret = dbManagerQuery(m_dbMgrArena, payload[1], payload[2], payload[3],
                              node->param, cmdHi, 0);
     if (ret != 0)
         m_dbState = prevState;
@@ -1430,9 +1453,9 @@ int Controller::handleAudioFocusEvent(CmdNode *node, unsigned char *flags)
         }
         int prio = cand->getPriority();
         if (prio == 0x7FFFFFFF)
-            audioOutputSetPriorityEx(m_audioOutStorage, 0x7FFFFFFF, (char *)cand + 472, 0);
+            audioOutputSetPriorityEx(m_audioOutArena, 0x7FFFFFFF, &((ExclusivePlayer *)cand)->exclusiveParam, 0);
         else
-            audioOutputSetPriority(m_audioOutStorage, prio, 0);
+            audioOutputSetPriority(m_audioOutArena, prio, 0);
         return 0;
     }
 
@@ -1454,9 +1477,9 @@ int Controller::handleAudioFocusEvent(CmdNode *node, unsigned char *flags)
             return 0;
         }
         if (prio == 0x7FFFFFFF)
-            audioOutputSetPriorityEx(m_audioOutStorage, 0x7FFFFFFF, (char *)cand + 472, 0);
+            audioOutputSetPriorityEx(m_audioOutArena, 0x7FFFFFFF, &((ExclusivePlayer *)cand)->exclusiveParam, 0);
         else
-            audioOutputSetPriority(m_audioOutStorage, prio, 0);
+            audioOutputSetPriority(m_audioOutArena, prio, 0);
         return 0;
     }
 
@@ -1475,11 +1498,11 @@ int Controller::handleAudioFocusEvent(CmdNode *node, unsigned char *flags)
     if (fallback != NULL) {
         int prio = fallback->getPriority();
         if (prio == 0x7FFFFFFF)
-            audioOutputSetPriorityEx(m_audioOutStorage, 0x7FFFFFFF, (char *)fallback + 472, 0);
+            audioOutputSetPriorityEx(m_audioOutArena, 0x7FFFFFFF, &((ExclusivePlayer *)fallback)->exclusiveParam, 0);
         else
-            audioOutputSetPriority(m_audioOutStorage, prio, 0);
+            audioOutputSetPriority(m_audioOutArena, prio, 0);
     } else {
-        audioOutputSetPriority(m_audioOutStorage, -1, 0);
+        audioOutputSetPriority(m_audioOutArena, -1, 0);
     }
     return 0;
 }
@@ -1519,13 +1542,13 @@ int Controller::updateAudioFocus()
         }
 
         if (cand->getPriority() == 0x7FFFFFFF)
-            audioOutputSetPriorityEx(m_audioOutStorage, effPrio, (char *)cand + 472, 0);
+            audioOutputSetPriorityEx(m_audioOutArena, effPrio, &((ExclusivePlayer *)cand)->exclusiveParam, 0);
         else
-            audioOutputSetPriority(m_audioOutStorage, effPrio, 0);
+            audioOutputSetPriority(m_audioOutArena, effPrio, 0);
     } else if (m_shellSuspended == 1) {
-        audioOutputSetPriority(m_audioOutStorage, 128, 0);
+        audioOutputSetPriority(m_audioOutArena, 128, 0);
     } else {
-        audioOutputSetPriority(m_audioOutStorage, -1, 0);
+        audioOutputSetPriority(m_audioOutArena, -1, 0);
     }
     return 0;
 }
@@ -1585,7 +1608,7 @@ int Controller::syncActivePlayer(unsigned char *flags, uint32_t param, uint32_t 
     m_activePlayer = nextActive;
     if (nextActive != NULL) {
         int fadeMs = (nextActive->playerKind == 0) ? 100 : 0;
-        int ret = playerActivateDecoder(nextActive, fadeMs, m_decoderMgrStorage);
+        int ret = playerActivateDecoder(nextActive, fadeMs, m_decoderMgrArena);
         if (ret == 0) {
             *flags &= ~0x10u;
             m_pendingChannelId = m_activePlayer->channelId;
@@ -1607,7 +1630,7 @@ int Controller::handleControllerCmd(CmdNode *node, void *outResult, unsigned cha
         if (node->inBuf == NULL)
             return MUSICCORE_ERR_INVALID_ARG;
         const int *args = (const int *)node->inBuf;
-        notifyDecoderAudioEvent(m_decoderMgrStorage, args[1], args[2]);
+        notifyDecoderAudioEvent(m_decoderMgrArena, args[1], args[2]);
         return 0;
     }
 
@@ -1618,8 +1641,11 @@ int Controller::handleControllerCmd(CmdNode *node, void *outResult, unsigned cha
     case 0x8101: {
         if (node->inBuf == NULL)
             return MUSICCORE_ERR_INVALID_ARG;
-        typedef void (*SysStateFn)(SystemStateReport);
-        m_systemStateCb = *(const SysStateFn *)((const char *)node->inBuf + 4);
+        struct SetSysStateCbPayload {
+            int headerWord;
+            void (*cb)(SystemStateReport);
+        };
+        m_systemStateCb = ((const SetSysStateCbPayload *)node->inBuf)->cb;
         return 0;
     }
     case 0x8102:
@@ -1631,7 +1657,7 @@ int Controller::handleControllerCmd(CmdNode *node, void *outResult, unsigned cha
         if (node->inBuf == NULL)
             return MUSICCORE_ERR_INVALID_ARG;
         struct SetStatusCbPayload {
-            int pad0;
+            int headerWord;
             int (*cb)(PlayerStatusSnapshot);
         };
         m_statusCb = ((const SetStatusCbPayload *)node->inBuf)->cb;
@@ -1641,7 +1667,7 @@ int Controller::handleControllerCmd(CmdNode *node, void *outResult, unsigned cha
         if (node->inBuf == NULL)
             return MUSICCORE_ERR_INVALID_ARG;
         struct SetCapCbPayload {
-            int pad0;
+            int headerWord;
             int (*cb)(unsigned int);
         };
         m_capCb = ((const SetCapCbPayload *)node->inBuf)->cb;
@@ -1651,7 +1677,7 @@ int Controller::handleControllerCmd(CmdNode *node, void *outResult, unsigned cha
         if (node->inBuf == NULL)
             return MUSICCORE_ERR_INVALID_ARG;
         struct SetExtraCbPayload {
-            int pad0;
+            int headerWord;
             int (*cb)(unsigned int);
             unsigned int interval;
         };
@@ -1664,7 +1690,7 @@ int Controller::handleControllerCmd(CmdNode *node, void *outResult, unsigned cha
         if (node->inBuf == NULL)
             return MUSICCORE_ERR_INVALID_ARG;
         struct SetMetaCbPayload {
-            int pad0;
+            int headerWord;
             int (*cb)(int);
         };
         m_metadataCb = ((const SetMetaCbPayload *)node->inBuf)->cb;
@@ -1679,7 +1705,7 @@ int Controller::handleControllerCmd(CmdNode *node, void *outResult, unsigned cha
             return MUSICCORE_ERR_BUSY;
         if (m_dbState == 4)
             return 0;
-        return dbManagerClose(m_dbMgrStorage);
+        return dbManagerClose(m_dbMgrArena);
     case 0x8109:
         return handleDbQuery(node);
     case 0x810A:
@@ -1692,7 +1718,7 @@ int Controller::handleControllerCmd(CmdNode *node, void *outResult, unsigned cha
         if (node->inBuf == NULL)
             return MUSICCORE_ERR_INVALID_ARG;
         struct SetIdleCbPayload {
-            int pad0;
+            int headerWord;
             void (*cb)(int, int, int);
         };
         m_idleTracker.callback = ((const SetIdleCbPayload *)node->inBuf)->cb;
@@ -1767,9 +1793,9 @@ int Controller::prepareUriWorkBuf(CmdNode *node)
 
     if (node->cmdCode == 0x3112) {
         struct SetUriStrPayload {
-            int pad0;
+            int headerWord;
             void *workBuf;
-            int pad8;
+            int uriReserved;
             char *uri;
             int flags;
         };
@@ -1872,23 +1898,23 @@ int Controller::runMainLoop()
         audioParams.grain = grain & ~1023;
     }
 
-    int initErr = audioOutputStart(m_audioOutStorage, &audioParams, 0);
+    int initErr = audioOutputStart(m_audioOutArena, &audioParams, 0);
     if (initErr == 0)
-        initErr = audioOutputSetCallbacks(m_audioOutStorage, (void *)onAudioFocusCb,
+        initErr = audioOutputSetCallbacks(m_audioOutArena, (void *)onAudioFocusCb,
                                           (void *)onAudioErrorCb, this);
     if (initErr == 0) {
         DecoderCallbacks decCbs;
         decCbs.onEvent = onDecoderEvent;
         decCbs.onMessage = onDecoderMessage;
         decCbs.userData = this;
-        initErr = startDecoderManager(m_decoderMgrStorage, &decCbs, m_audioOutStorage);
+        initErr = startDecoderManager(m_decoderMgrArena, &decCbs, m_audioOutArena);
     }
     if (initErr == 0) {
         DbCallbacks dbCbs;
         dbCbs.onEvent = onDbEvent;
         dbCbs.onMessage = onDbMessage;
         dbCbs.userData = this;
-        initErr = startDbManager(m_dbMgrStorage, &dbCbs);
+        initErr = startDbManager(m_dbMgrArena, &dbCbs);
     }
     if (initErr == 0) {
         PlayerCallbacks plCbs;
@@ -1902,19 +1928,19 @@ int Controller::runMainLoop()
             BasePlayer *p = findPlayerByKindSlot(0, (unsigned char)i, 0);
             if (p != NULL)
                 initErr = p->attach((unsigned char)makeChannelId(0, (char)i),
-                                    &plCbs, m_dbMgrStorage, m_audioOutStorage);
+                                    &plCbs, m_dbMgrArena, m_audioOutArena);
         }
         if (initErr == 0) {
             BasePlayer *p = findPlayerByKindSlot(1, 0, 0);
             if (p != NULL)
                 initErr = p->attach((unsigned char)makeChannelId(1, 0),
-                                    &plCbs, m_dbMgrStorage, m_audioOutStorage);
+                                    &plCbs, m_dbMgrArena, m_audioOutArena);
         }
         for (int i = 0; i < 2 && initErr == 0; ++i) {
             BasePlayer *p = findPlayerByKindSlot(2, (unsigned char)i, 0);
             if (p != NULL)
                 initErr = p->attach((unsigned char)makeChannelId(2, (char)i),
-                                    &plCbs, m_dbMgrStorage, m_audioOutStorage);
+                                    &plCbs, m_dbMgrArena, m_audioOutArena);
         }
     }
     if (initErr == 0) {
@@ -1925,9 +1951,9 @@ int Controller::runMainLoop()
     if (initErr != 0) {
         SceShell_D4C7D2B7(2, (void *)onShellSuspendEvent, NULL);
         SceShell_D4C7D2B7(3, (void *)onShellResumeEvent, NULL);
-        stopDecoderManager(m_decoderMgrStorage);
-        stopAudioOutput(m_audioOutStorage);
-        stopDbManager(m_dbMgrStorage);
+        stopDecoderManager(m_decoderMgrArena);
+        stopAudioOutput(m_audioOutArena);
+        stopDbManager(m_dbMgrArena);
         for (int i = 0; i < 8; ++i) {
             BasePlayer *p = findPlayerByKindSlot(0, (unsigned char)i, 0);
             if (p != NULL)
@@ -2038,7 +2064,7 @@ int Controller::runMainLoop()
         }
 
         if (node->cmdCode == 0x3200) {
-            uint16_t subCode = *(const uint16_t *)((const char *)node->inBuf + 6);
+            uint16_t subCode = ((const DecoderEventHeader *)node->inBuf)->subCode;
             if (subCode == 0x1205) {
                 m_drainStoredQueue = 1;
                 if (m_activePlayer != NULL && m_activePlayer->channelId == node->targetChannel) {
@@ -2171,14 +2197,15 @@ int Controller::onDecoderMessage(const int *msg, void *ctrlPtr, SceUInt *timeout
         return MUSICCORE_ERR_INVALID_ARG;
 
     Controller *ctrl = (Controller *)ctrlPtr;
+    const InternalMsgHeader *hdr = (const InternalMsgHeader *)msg;
     unsigned char chId = (ctrl->m_activePlayer != NULL) ? ctrl->m_activePlayer->channelId : 0xFF;
-    uint16_t cmdCode = ((const uint16_t *)msg)[3];
+    uint16_t cmdCode = hdr->cmdCode;
     uint32_t hi = ((uint32_t)cmdCode << 16) | 0x8000u | chId;
 
     unsigned char buf[176];
     sce_paf_memset(buf, 0, sizeof(buf));
     sce_paf_memcpy(buf, msg, 172);
-    return ctrl->sendCommand(makeCmdHeader((uint32_t)msg[0], hi), buf, sizeof(buf), timeout, NULL);
+    return ctrl->sendCommand(makeCmdHeader(hdr->param, hi), buf, sizeof(buf), timeout, NULL);
 }
 
 int Controller::onAudioFocusCb(void *ctrlPtr, int priority, char granted)
@@ -2239,9 +2266,10 @@ int Controller::onDbMessage(const void *msg, void *ctrlPtr)
         return MUSICCORE_ERR_INVALID_ARG;
 
     Controller *ctrl = (Controller *)ctrlPtr;
+    const InternalMsgHeader *hdr = (const InternalMsgHeader *)msg;
     const uint32_t *words = (const uint32_t *)msg;
-    unsigned char chId = ((const unsigned char *)msg)[4];
-    uint16_t cmdCode = ((const uint16_t *)msg)[3];
+    unsigned char chId = hdr->channelId;
+    uint16_t cmdCode = hdr->cmdCode;
     uint32_t hi = ((uint32_t)cmdCode << 16) | 0x8000u | chId;
 
     uint32_t buf[4];
@@ -2479,7 +2507,7 @@ int Controller::onShellSuspendEvent(int eventType, int eventParam, int eventExtr
     ctrl->m_shellSuspended = 1;
     BasePlayer *active = ctrl->findPlayerByChannel(0xEF, 1);
     if (active == NULL || active->playerKind != 2)
-        return audioOutputSetPriority(ctrl->m_audioOutStorage, 128, 0);
+        return audioOutputSetPriority(ctrl->m_audioOutArena, 128, 0);
     return active->playerKind;
 }
 
@@ -2501,7 +2529,7 @@ int Controller::onShellResumeEvent(int eventType, int eventParam, int eventExtra
         BasePlayer *playlist = ctrl->findPlayerByChannel(ctrl->m_playlistChannelId, 1);
         if (playlist != NULL)
             playlist->setAudioFocus(0);
-        return audioOutputSetPriority(ctrl->m_audioOutStorage, -1, 0);
+        return audioOutputSetPriority(ctrl->m_audioOutArena, -1, 0);
     }
     return active->playerKind;
 }

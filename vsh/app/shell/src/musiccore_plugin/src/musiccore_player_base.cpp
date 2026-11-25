@@ -25,7 +25,7 @@ namespace MusicCore {
 
 struct CmdNode {
     void *vtable;
-    unsigned int pad4;
+    unsigned int padAlign;
     uint32_t param;
     uint8_t targetChannel;
     uint8_t flagsByte;
@@ -56,7 +56,7 @@ struct PlayerPriorityInfo {
     unsigned char wantsPlay;
     unsigned char hasMedia;
     unsigned char hasPending;
-    unsigned char pad19;
+    unsigned char padTail;
 };
 
 struct PlayerStatusSnapshot {
@@ -66,15 +66,15 @@ struct PlayerStatusSnapshot {
     char bgmReason;
     int bgmPriority;
     unsigned char playableFlag;
-    unsigned char pad9[3];
+    unsigned char padPlayable[3];
     int seqNum;
     int16_t flags;
-    int16_t pad18;
+    int16_t padFlags;
     int cmdParam;
     int errCode;
     int playState;
     int contentType;
-    int pad36;
+    int padContent;
     int64_t trackId;
     int64_t trackItemId;
     int64_t playlistId;
@@ -97,11 +97,11 @@ struct PlayerStatusSnapshot {
     int eqBandHigh;
     int audioNormalizer;
     int extraErr;
-    int pad140;
+    int padTail;
 };
 
 struct DecoderMediaState {
-    int pad0;
+    int stateId;
     int playState;
     int64_t playlistId;
     int64_t trackId;
@@ -153,14 +153,14 @@ struct PlayerCallbacks {
 };
 
 struct UriWorkHeader {
-    int pad0;
+    void *vtablePtr;
     int mode;
-    int pad8[2];
+    int headerWords[2];
     char uriStr[2048];
-    int pad2064;
+    int padUriTail;
     int listIndex;
     int trackIndex;
-    int pad2076;
+    int padTrackId;
     int trackIdLo;
     int trackIdHi;
     int contentKind;
@@ -168,50 +168,53 @@ struct UriWorkHeader {
 };
 
 struct UriWorkStrMode {
-    int pad0;
+    void *vtablePtr;
     int mode;
-    int pad8[4];
+    int headerWords[4];
     const char *uriPtr;
 };
 
 struct MediaItemHandle {
     virtual ~MediaItemHandle() {}
-    virtual void onReserved04() {}
-    virtual void onReserved08() {}
-    virtual void onReserved0C() {}
-    virtual void onReserved10() {}
+    virtual int checkOrderListStatus(int *outPrevId, unsigned char *outFlag) { (void)outPrevId; (void)outFlag; return 0; }
+    virtual int releaseOrderList(unsigned char clearOwner) { (void)clearOwner; return 0; }
+    virtual int getListId() const { return 0; }
     virtual void *getWorkBuf() = 0;
-    virtual void onReserved18() {}
-    virtual void onReserved1C() {}
-    virtual void onReserved20() {}
-    virtual void onReserved24() {}
-    virtual void onReserved28() {}
-    virtual void onReserved2C() {}
-    virtual void onReserved30() {}
-    virtual void onReserved34() {}
+    virtual int navigateTo(int navTarget, unsigned char *outValid) { (void)navTarget; (void)outValid; return 0; }
+    virtual unsigned int resolveErrorNavigation(int curIdx, int wrapMode, int dir, unsigned int *ioTried, int *ioErr, unsigned char *outEnd, unsigned char *outWrap) {
+        (void)curIdx; (void)wrapMode; (void)dir; (void)ioTried; (void)ioErr; (void)outEnd; (void)outWrap; return 0;
+    }
+    virtual int resolveCurrentTrackId(int64_t *outTrackId) { (void)outTrackId; return 0; }
     virtual void setTrackPosition(int pos, int64_t *trackId) = 0;
+    virtual int checkChangedFlag(unsigned char *outChanged, unsigned char queryLive) { (void)outChanged; (void)queryLive; return 0; }
+    virtual int checkValid() { return 0; }
+    virtual int checkPlayableAt(int index, int *outStatus) { (void)index; (void)outStatus; return 0; }
+    virtual int getListStatus(void *outStatus) { (void)outStatus; return 0; }
     virtual int getContentType() = 0;
     virtual int getPlayState() = 0;
     virtual int getTrackIndex() = 0;
     virtual int64_t getTrackKey() = 0;
-    virtual void onReserved48() {}
-    virtual void onReserved4C() {}
-    virtual void onReserved50() {}
+    virtual int rebuildOrderList(int shuffleSeed, int64_t anchorRowId, unsigned char *outChanged, unsigned char forceRebuild) {
+        (void)shuffleSeed; (void)anchorRowId; (void)outChanged; (void)forceRebuild; return 0;
+    }
+    virtual int unlockOrderList(int flag) { (void)flag; return 0; }
+    virtual int refreshOrderBuffer() { return 0; }
     virtual void populateMetadata(MetadataBuffers *meta) = 0;
 };
 
 struct DecoderSession {
     virtual ~DecoderSession() {}
-    virtual void onReserved04() {}
-    virtual void onReserved08() {}
-    virtual void onReserved0C() {}
-    virtual void onReserved10() {}
-    virtual void onReserved14() {}
-    virtual void onReserved18() {}
-    virtual void onReserved1C() {}
-    virtual void onReserved20() {}
-    virtual void onReserved24() {}
-    virtual void onReserved28() {}
+    virtual int onTrackInfoCallback(const void *info) { (void)info; return 0; }
+    virtual int onAudioErrorCallback(int errCode) { (void)errCode; return 0; }
+    virtual int onBufferReadyCallback() { return 0; }
+    virtual int onTrackReadyCallback() { return 0; }
+    virtual int onStreamEndCallback(int val) { (void)val; return 0; }
+    virtual int onMediaChangedCallback(unsigned char hasNew, void *newMedia, unsigned char hasUri, const void *state, void **ioOld, unsigned char decUri) {
+        (void)hasNew; (void)newMedia; (void)hasUri; (void)state; (void)ioOld; (void)decUri; return 0;
+    }
+    virtual int forwardNotifyMetadata() { return 0; }
+    virtual int start(const void *cbs, const int *audioCfg) { (void)cbs; (void)audioCfg; return 0; }
+    virtual int stopSession() { return 0; }
     virtual int activate(DecoderMediaState *state, MetadataBuffers *meta, int fadeMs) = 0;
     virtual int deactivate(int fadeMs, uint32_t param, uint32_t cmdHi, unsigned char sync, int extraFlags) = 0;
     virtual int seek(const int *seekParams, uint32_t param, uint32_t cmdHi, unsigned char flag) = 0;
@@ -233,14 +236,21 @@ struct DecoderSession {
     virtual int onTrackInfo() = 0;
     virtual int onBufferReady() = 0;
     virtual int onStreamEnd() = 0;
-    virtual int onReserved7C() = 0;
+    virtual int onAudioPortEvent(int flagA, int flagB, uint32_t origParam, uint32_t origCmdHi, unsigned char isAsync) = 0;
     virtual int suspendForDb() = 0;
+
+    SceUID m_initSema;
+    SceUID m_threadId;
+    void *m_cmdQueue;
+    void *m_callbacks[3];
+    int m_padAlign;
+    unsigned char m_stateMachine[4600];
 };
 
 struct TimeReport {
     unsigned char channelId;
     unsigned char playerKind;
-    unsigned char pad2[2];
+    unsigned char padHeader[2];
     int positionMs;
     int64_t trackId;
 };
@@ -248,8 +258,30 @@ struct TimeReport {
 struct CapReport {
     unsigned char channelId;
     unsigned char playerKind;
-    unsigned char pad2[2];
+    unsigned char padHeader[2];
     int code;
+};
+
+struct OpenPlayerParam {
+    uint32_t headerWords[2];
+    int priority;
+};
+
+struct PlayCmdPayload {
+    int headerWord;
+    int playParam;
+};
+
+struct PauseCmdPayload {
+    int headerWord;
+    unsigned char resetPos;
+    unsigned char padReset[3];
+    int pauseParam;
+};
+
+struct SeekCmdPayload {
+    int headerWord;
+    int seekParams[5];
 };
 
 extern unsigned int calcMediaQueueSize(int capacity, int a, int b, int c);
@@ -279,7 +311,7 @@ void *getGlobalTrackTag()
 
 static void resetMediaState(DecoderMediaState *st)
 {
-    st->pad0 = 0;
+    st->stateId = 0;
     st->playState = 0;
     st->playlistId = -1;
     st->trackId = -1;
@@ -395,7 +427,7 @@ public:
 public:
     char m_playerKind;
     unsigned char m_channelId;
-    unsigned char m_pad6[2];
+    unsigned char m_padChannel[2];
     void *m_factory;
     void (*m_statusCb)(const PlayerStatusSnapshot *, void *, int);
     int (*m_extraCb)(const void *, void *);
@@ -411,21 +443,21 @@ public:
     unsigned char m_dbAllowed;
     unsigned char m_wantsPlay;
     unsigned char m_isBusy;
-    unsigned char m_pad53[3];
+    unsigned char m_padStateFlags[3];
     int m_priority;
     int m_subPriority;
     int m_pendingUriCount;
-    int m_pad68;
+    int m_padOfflineAlign;
 
     DecoderMediaState m_offlineState;
     int m_targetState;
     int m_pendingFadeMs;
     int m_playParam;
-    int m_pad220;
+    int m_padActiveAlign;
     DecoderMediaState m_activeState;
 
     unsigned char m_isSuspended;
-    unsigned char m_pad361[7];
+    unsigned char m_padSuspended[7];
     paf::thread::Mutex m_metaMutex;
     MetadataBuffers m_metaBufs;
     paf::thread::Mutex *m_metaMutexPtr;
@@ -434,14 +466,14 @@ public:
     int m_shuffleSeed;
     void *m_lastUriWorkBuf;
     unsigned char m_uriDirty;
-    unsigned char m_pad445[3];
+    unsigned char m_padUriDirty[3];
     int m_savedTargetState;
     int m_savedSeekMode;
     int m_savedSeekParam;
     int m_pendingSeekCount;
     unsigned char m_systemSuspended;
     unsigned char m_playable;
-    unsigned char m_pad466[2];
+    unsigned char m_padPlayable[2];
     int m_seqNum;
 };
 
@@ -564,7 +596,7 @@ int BasePlayer::open(const void *param, unsigned char *flags)
     if (param == NULL)
         return MUSICCORE_ERR_INVALID_ARG;
 
-    int prio = *(const int *)((const char *)param + 8);
+    int prio = ((const OpenPlayerParam *)param)->priority;
     if (prio == -1)
         prio = m_subPriority;
     m_priority = prio;
@@ -666,7 +698,7 @@ PlayerPriorityInfo BasePlayer::getPriorityInfo()
     info.hasMedia = ((m_decoder != NULL && m_activeState.mediaHandle != NULL) ||
                      (m_decoder == NULL && m_offlineState.mediaHandle != NULL)) ? 1 : 0;
     info.hasPending = (m_pendingUriCount != -1) ? 1 : 0;
-    info.pad19 = 0;
+    info.padTail = 0;
     return info;
 }
 
@@ -827,13 +859,13 @@ int BasePlayer::flushTimeCallback()
     rep.playerKind = (unsigned char)m_playerKind;
 
     int pos = (m_decoder != NULL)
-                  ? decoderGetCurrentPos((char *)m_decoder + 32)
+                  ? decoderGetCurrentPos(m_decoder->m_stateMachine)
                   : m_offlineState.positionMs;
     if (pos == -1 || pos == -2 || pos == -3 || pos == -4)
         return 0;
 
     int64_t trackId = (m_decoder != NULL)
-                          ? decoderGetCurrentTrackId((char *)m_decoder + 32)
+                          ? decoderGetCurrentTrackId(m_decoder->m_stateMachine)
                           : m_offlineState.trackId;
     if (trackId == -2)
         trackId = -1;
@@ -852,7 +884,7 @@ int BasePlayer::getStatus(PlayerStatusSnapshot *outSnap, int *outPos, unsigned c
 
     *outPosValid = 1;
     int pos = (m_decoder != NULL)
-                  ? decoderGetCurrentPos((char *)m_decoder + 32)
+                  ? decoderGetCurrentPos(m_decoder->m_stateMachine)
                   : m_offlineState.positionMs;
     if (pos == -1 || pos == -2 || pos == -3 || pos == -4)
         *outPosValid = 0;
@@ -977,7 +1009,7 @@ int BasePlayer::cmdPlay(CmdNode *node, unsigned char *flags)
         return MUSICCORE_ERR_INVALID_ARG;
 
     int prevWant = wantsAudio();
-    int playParam = *(const int *)((const char *)node->inBuf + 4);
+    int playParam = ((const PlayCmdPayload *)node->inBuf)->playParam;
 
     if (m_decoder != NULL) {
         int ret = m_decoder->play(playParam, node->param);
@@ -1011,8 +1043,9 @@ int BasePlayer::cmdPause(CmdNode *node, unsigned char *flags)
         return MUSICCORE_ERR_INVALID_ARG;
 
     int prevWant = wantsAudio();
-    unsigned char resetPos = ((const unsigned char *)node->inBuf)[4];
-    int pauseParam = *(const int *)((const char *)node->inBuf + 8);
+    const PauseCmdPayload *pausePayload = (const PauseCmdPayload *)node->inBuf;
+    unsigned char resetPos = pausePayload->resetPos;
+    int pauseParam = pausePayload->pauseParam;
     m_savedTargetState = -1;
 
     int ret = 0;
@@ -1131,7 +1164,7 @@ int BasePlayer::cmdSeek(CmdNode *node, unsigned char *flags)
 
     uint32_t cmdHi = (uint32_t)node->targetChannel | ((uint32_t)node->flagsByte << 8) |
                      ((uint32_t)node->cmdCode << 16);
-    const int *seekParams = (const int *)((const char *)node->inBuf + 4);
+    const int *seekParams = ((const SeekCmdPayload *)node->inBuf)->seekParams;
     return applySeek(seekParams, -1, node->param, cmdHi, flags, 0, 0);
 }
 
@@ -1445,11 +1478,11 @@ int BasePlayer::onDecoderEvent(CmdNode *node, unsigned char *flags)
         return MUSICCORE_ERR_FAILED;
 
     struct DecoderEventPayload {
-        int pad0;
-        uint16_t pad4;
+        int headerWord;
+        uint16_t flagsWord;
         uint16_t subCode;
         int errCode;
-        int pad12;
+        int padErr;
         DecoderMediaState state;
         uint32_t origParam;
         uint8_t origTarget;
@@ -1529,7 +1562,7 @@ int BasePlayer::onDecoderEvent(CmdNode *node, unsigned char *flags)
             *flags &= ~0x80u;
 
         if (m_isSuspended == 1) {
-            if (ev->errCode == 0 && ev->state.pad0 == 6) {
+            if (ev->errCode == 0 && ev->state.stateId == 6) {
                 *flags &= ~0x40u;
                 m_isSuspended = 1;
             } else {
@@ -1538,7 +1571,7 @@ int BasePlayer::onDecoderEvent(CmdNode *node, unsigned char *flags)
             }
         }
     } else if (subCode == 0x1106) {
-        if (ev->errCode == 0 && ev->state.pad0 == 7) {
+        if (ev->errCode == 0 && ev->state.stateId == 7) {
             if (m_targetState == 7 || m_targetState == 5)
                 m_wantsPlay = 0;
         }
@@ -1599,7 +1632,7 @@ int BasePlayer::onDecoderTrackInfo(CmdNode *node)
         int header[8];
         int64_t playlistId;
         int64_t trackId;
-        int pad48[3];
+        int trackItemWords[3];
         int trackIndex;
         int positionMs;
         int currentTrackNum;
@@ -1609,9 +1642,9 @@ int BasePlayer::onDecoderTrackInfo(CmdNode *node)
         int bitRate;
         int channels;
         int codecType;
-        int pad96[5];
+        int playbackSettings[5];
         int volumeMode;
-        int pad120[6];
+        int audioEffectSettings[6];
         int sourceType;
     };
     const TrackInfoMsg *msg = (const TrackInfoMsg *)node->inBuf;
@@ -1693,12 +1726,12 @@ int BasePlayer::onDecoderMediaChanged(CmdNode *node)
     struct DecoderMediaUpdate {
         uint32_t origParam;
         uint32_t origCmdHi;
-        int pad8;
+        int padHeader;
         unsigned char hasNewMedia;
-        unsigned char pad13[3];
+        unsigned char padHasNew[3];
         MediaItemHandle *newMedia;
         unsigned char hasUriFlag;
-        unsigned char pad21[3];
+        unsigned char padHasUri[3];
         DecoderMediaState newState;
         MediaItemHandle *oldMedia;
         unsigned char decrementUri;
@@ -1812,44 +1845,44 @@ int BasePlayer::onDbEvent(CmdNode *node, unsigned char *flags)
         return MUSICCORE_ERR_FAILED;
 
     struct DbEventPayload {
-        int pad0;
-        uint16_t pad4;
+        int headerWord;
+        uint16_t flagsWord;
         uint16_t subCode;
         int errCode;
-        int pad12;
+        int padErr;
         uint32_t origParam;
         uint16_t origFlags;
         uint16_t origCmdCode;
         MediaItemHandle *media;
         void *workBuf;
         unsigned char dbFlag;
-        unsigned char pad33[23];
+        unsigned char padTrackHeader[23];
         int64_t playlistId;
         int64_t trackId;
         int64_t trackItemId;
-        unsigned char blob80[2052];
+        char trackPathAndFlags[2052];
         int sampleRate;
         int codecType;
         int bitRate;
         int channels;
         int durationMs;
-        int pad2152[4];
+        int trackPlayStats[4];
         int sourceType;
-        int pad2172[5];
+        int trackMediaRefs[5];
         int seekStep;
         int trackIndex;
-        int pad2200[2];
+        int64_t savedPlaylistId;
         int seekArgFirst;
         int seekArgSecond;
         uint32_t seekTarget;
         int repeatMode;
         unsigned char isNewMedia;
-        unsigned char pad2225[7];
+        unsigned char padNewMedia[7];
         int shuffleMode;
         int playMode;
         int audioNormalizer;
         int eqType;
-        int pad2248[3];
+        int eqBands[3];
         int audioBalance;
         int dbStatus;
     };
