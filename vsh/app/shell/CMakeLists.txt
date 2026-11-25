@@ -435,6 +435,7 @@ psp2_module(vs0_vsh_shell_shell KIND user COMPILER snc PARTIAL SOURCES
 	shell_handler_table.cpp
 	shell_util_server.cpp
 	shell_state_watcher.cpp
+	src/theme_plugin/src/theme_plugin.cpp
 	shell.c
 )
 target_include_directories(vs0_vsh_shell_shell PRIVATE "${PSP2_SRC}/vsh/paf/include"
