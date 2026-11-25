@@ -1,0 +1,37 @@
+name: sceASFParser
+attributes: 0x0002
+version: [2, 1]
+sdk_version: 0x06060110
+exports:
+  - name: syslib
+    version: [0, 0]
+    attributes: 0x8000
+    variables:
+      - module_info: 0xf01d73a7
+      - module_sdk_version: 0x11b97506
+  - name: sceAsfParser
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 3
+    functions:
+      - sceAsfParser_24DB62B1: 0x24db62b1
+      - sceAsfParser_2CB147F7: 0x2cb147f7
+      - sceAsfParser_320202AB: 0x320202ab
+      - sceAsfParser_3CAAC462: 0x3caac462
+      - sceAsfParser_41322F4A: 0x41322f4a
+      - sceAsfParser_685E0DA7: 0x685e0da7
+      - sceAsfParser_6B3AE857: 0x6b3ae857
+      - sceAsfParser_6DA63281: 0x6da63281
+      - sceAsfParser_91B11F3A: 0x91b11f3a
+      - sceAsfParser_95AD7B34: 0x95ad7b34
+      - sceAsfParser_BC85F4D8: 0xbc85f4d8
+      - sceAsfParser_C6D98C54: 0xc6d98c54
+      - sceAsfParser_F2306E89: 0xf2306e89
+imports:
+  - name: Kernel_Library
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 1
+    functions:
+      - sceKernelMemset: 0xa089eca4
+      - sceKernelMemcpy: 0x1839852a
