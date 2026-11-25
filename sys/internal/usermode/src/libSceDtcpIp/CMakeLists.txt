@@ -11,6 +11,7 @@ psp2_module(${PSP2_TARGET} KIND user COMPILER snc PARTIAL SOURCES
 	dtcpip_sink_base.c
 	dtcpip_stream.c
 	dtcpip_http.c
+	dtcpip_swipc.c
 	../../../../sdk/target/src/libsnc/i64ops.c
 	../../../../sdk/target/src/libsnc/i32ops.c
 	../../../../sdk/target/src/libsnc/aeabi_div0.c

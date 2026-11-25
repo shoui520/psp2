@@ -200,6 +200,46 @@ int dtcpIpIsWlanConnection(int *outIsWlan, int *outIsSecured);
 /* the SW IPC the middleware application owns (dtcpip_swipc.c) */
 extern const unsigned int g_dtcpIpIpcConfig[35];
 extern const unsigned int g_dtcpIpActivateConfig[35];
+extern int g_dtcpIpIpcFlag;
+
+/* an SW IPC request message: the header the pipe carries and its reply */
+struct SceDtcpIpIpcMessage {
+	int command;		/* 0x00 */
+	unsigned char channel;	/* 0x04: the stream channel, 255 for the session */
+	unsigned char reserved0;
+	unsigned short size;	/* 0x06: the payload's size */
+	void *payload;		/* 0x08 */
+	unsigned int value0;	/* 0x0C */
+	unsigned int value1;	/* 0x10 */
+	unsigned int value2;	/* 0x14 */
+	unsigned int value3;	/* 0x18 */
+	int result;		/* 0x1C: the middleware's status */
+	unsigned short outSize;	/* 0x20: the reply payload's size */
+	unsigned short reserved1;
+	void *outPayload;	/* 0x24: the reply payload in the shared memory */
+	unsigned int out0;	/* 0x28 */
+	unsigned int out1;	/* 0x2C */
+	unsigned int out2;	/* 0x30 */
+	unsigned int out3;	/* 0x34 */
+};
+
+/* an SW IPC session object: the two clients over one shared block */
+struct SceDtcpIpIpcObject {
+	void *session;		/* the session client's object */
+	void *stream;		/* the stream client's object */
+	int shared;		/* the shared memory's handle */
+	int sharedSize;
+	int reserved;
+};
+
+int dtcpIpIpcInitSession(struct SceDtcpIpIpcObject *object, const unsigned int *config, SceSize size);
+int dtcpIpIpcInitStream(void **outStream, void *session, int a2, int a3, int a4, int size);
+int dtcpIpIpcFiniStream(void *stream, int status);
+int dtcpIpIpcFiniSession(void *session);
+int dtcpIpIpcInitShared(void *stream, int *outShared);
+int dtcpIpIpcRequest(void *stream, struct SceDtcpIpIpcMessage *message);
+
+int dtcpIpIpcSessionFlag(void);
 
 int dtcpIpIpcConnect(void **outConnection);
 int dtcpIpIpcDisconnect(void *connection);

@@ -1,0 +1,468 @@
+/*
+ * SceDtcpIp: the SW IPC the middleware application owns. The library connects to the
+ * application's message pipes through SceLibKernel's msg pipes and a shared memory
+ * block, sends a request message and waits for the reply. The commands are the
+ * middleware's (ours, from the decompiled command numbers).
+ */
+
+#include <stddef.h>
+#include <scetypes.h>
+#include <kernel/threadmgr.h>
+#include <dtcpip/error.h>
+#include <libkernel/libkernel.h>
+#include "../../../../../internal/include/libkernel/libkernel.h"
+#include "dtcpip_internal.h"
+
+/* the SW IPC command numbers the library sends */
+#define SCE_DTCP_IP_IPC_CONNECT			8449	/* 0x2101: create the session */
+#define SCE_DTCP_IP_IPC_DISCONNECT		8450	/* 0x2102: close it */
+#define SCE_DTCP_IP_IPC_GET_SESSION		8467	/* 0x2113: ask for the session's status */
+#define SCE_DTCP_IP_IPC_GET_SESSION_RESULT	8468	/* 0x2114: poll the status reply */
+#define SCE_DTCP_IP_IPC_CLOSE_SESSION		8469	/* 0x2115 */
+#define SCE_DTCP_IP_IPC_OPEN_SESSION		8470	/* 0x2116 */
+#define SCE_DTCP_IP_IPC_WAIT_READY		8471	/* 0x2117 */
+#define SCE_DTCP_IP_IPC_DESTROY			8472	/* 0x2118 */
+
+/* the status the middleware answers while it is not ready yet */
+#define SCE_DTCP_IP_IPC_STATUS_BUSY		12007
+
+/* the status the middleware answers with "not yet"; the pollers wait on it */
+#define SCE_DTCP_IP_IPC_STATUS_LATER		30
+
+/*
+ * the middleware's status word, in the library's request statuses. The library's
+ * request layer has its own statuses; the session layer maps them again
+ * (dtcpIpMapError).
+ */
+int dtcpIpMapIpcStatus(int status)
+{
+	int result;
+
+	if (status < 1000 || status > 1652) {
+		if (status > 12000) {
+			if (status > 12205) {
+				if (status > 12402) {
+					if (status > 13000 && status <= 13019) {
+						switch (status) {
+						case 13001:
+							result = 22;
+							break;
+						case 13002:
+							result = 23;
+							break;
+						case 13003:
+							result = 24;
+							break;
+						case 13004:
+						case 13009:
+						case 13010:
+						case 13011:
+						case 13012:
+						case 13013:
+						case 13016:
+						case 13018:
+							return 5;
+						case 13005:
+							result = 25;
+							break;
+						case 13006:
+							result = 26;
+							break;
+						case 13007:
+							result = 28;
+							break;
+						case 13008:
+							result = 27;
+							break;
+						case 13014:
+						case 13015:
+						case 13017:
+							result = 37;
+							break;
+						case 13019:
+							result = 38;
+							break;
+						}
+						return result;
+					}
+				} else if (status > 12400) {
+					if (status <= 12401)
+						return 20;
+					else
+						return 21;
+				}
+			} else {
+				if (status <= 12017) {
+					switch (status) {
+					case 12001:
+					case 12002:
+						result = 1;
+						break;
+					case 12003:
+						result = 2;
+						break;
+					case 12004:
+						result = 3;
+						break;
+					case 12005:
+						result = 4;
+						break;
+					case 12006:
+						result = 29;
+						break;
+					case 12007:
+					case 12008:
+					case 12009:
+					case 12010:
+					case 12012:
+					case 12013:
+					case 12014:
+						result = 5;
+						break;
+					case 12011:
+						result = 35;
+						break;
+					case 12015:
+						result = 6;
+						break;
+					case 12016:
+						result = 34;
+						break;
+					case 12017:
+						result = 36;
+						break;
+					}
+					return result;
+				}
+				if (status > 12101) {
+					if (status > 12200) {
+						switch (status) {
+						case 12201:
+							result = 8;
+							break;
+						case 12202:
+							return 5;
+						case 12203:
+							result = 10;
+							break;
+						case 12204:
+							result = 11;
+							break;
+						case 12205:
+							result = 12;
+							break;
+						}
+						return result;
+					}
+				} else if (status > 12100) {
+					return 7;
+				}
+			}
+		} else if (status > 204) {
+			if (status > 11008) {
+				if (status <= 11009)
+					return 21;
+			} else if (status <= 215) {
+				switch (status) {
+				case 205:
+				case 207:
+				case 208:
+				case 215:
+					result = 10;
+					break;
+				case 206:
+				case 209:
+					result = 9;
+					break;
+				case 210:
+				case 211:
+				case 212:
+				case 213:
+				case 214:
+					return 5;
+				}
+				return result;
+			}
+		} else if (status == 0) {
+			return 0;
+		}
+		return 5;
+	}
+	switch (status) {
+	case 1005:
+	case 1508:
+		return 7;
+	case 1016:
+		return 21;
+	default:
+		return 11;
+	}
+}
+
+/*
+ * create an IPC session object: the two clients (the session's and the stream's) over
+ * one shared memory block, then the session request that carries the caller's config.
+ */
+int dtcpIpIpcCreate(int *outConnection, const int *sessionInfo, const unsigned int *config,
+		    SceSize size)
+{
+	struct SceDtcpIpIpcMessage message;
+	struct SceDtcpIpIpcObject *object;
+	int ret;
+
+	if (outConnection == NULL)
+		return 2;
+	if (sessionInfo == NULL)
+		return 2;
+
+	object = dtcpIpAlloc(20);
+	if (object == NULL)
+		return 5;
+	object->session = NULL;
+	object->stream = NULL;
+	if (dtcpIpIpcInitSession(object, config, size) != 0 ||
+	    dtcpIpIpcInitStream(&object->stream, object->session, 0, 0, 0, 0) != 0 ||
+	    dtcpIpIpcInitShared(object->stream, &object->shared) != 0) {
+		ret = dtcpIpMapIpcStatus(0);
+	} else {
+		sceClibMemset(&message, 0, sizeof(message));
+		message.command = SCE_DTCP_IP_IPC_CONNECT;
+		message.channel = 0;
+		message.size = size;
+		message.payload = (void *)config;
+		message.value0 = sessionInfo[0];
+		message.value1 = sessionInfo[1];
+		message.value2 = dtcpIpIpcSessionFlag();
+		message.value3 = 0;
+		if (dtcpIpIpcRequest(object->stream, &message) == 0 && message.result == 0) {
+			*outConnection = (int)object;
+			return 0;
+		}
+		ret = dtcpIpMapIpcStatus(message.result);
+	}
+	if (object->stream != NULL)
+		dtcpIpIpcFiniStream(object->stream, 0);
+	if (object->session != NULL)
+		dtcpIpIpcFiniSession(object->session);
+	dtcpIpFree(object);
+	*outConnection = 0;
+	return ret;
+}
+
+/* close an IPC session object */
+int dtcpIpIpcClose(int connection)
+{
+	struct SceDtcpIpIpcObject *object = (struct SceDtcpIpIpcObject *)connection;
+	struct SceDtcpIpIpcMessage message;
+	int ret;
+
+	if (object == NULL)
+		return 2;
+	sceClibMemset(&message, 0, sizeof(message));
+	message.command = SCE_DTCP_IP_IPC_DISCONNECT;
+	message.channel = 0;
+	ret = dtcpIpIpcRequest(object->stream, &message);
+	if (ret != 0) {
+		if (ret == SCE_DTCP_IP_IPC_STATUS_BUSY || ret == SCE_DTCP_IP_IPC_STATUS_LATER)
+			ret = 0;
+		ret = dtcpIpMapIpcStatus(ret);
+		goto out;
+	}
+	dtcpIpIpcFiniStream(object->stream, 0);
+	dtcpIpFree(object);
+	return 0;
+out:
+	if (object->stream != NULL)
+		dtcpIpIpcFiniStream(object->stream, 0);
+	if (object->session != NULL)
+		dtcpIpIpcFiniSession(object->session);
+	dtcpIpFree(object);
+	return ret;
+}
+
+/* tell the middleware the session is being destroyed (it closes it first) */
+int dtcpIpIpcDestroy(int connection)
+{
+	struct SceDtcpIpIpcObject *object = (struct SceDtcpIpIpcObject *)connection;
+	struct SceDtcpIpIpcMessage message;
+
+	if (connection == 0)
+		return 2;
+	sceClibMemset(&message, 0, sizeof(message));
+	message.command = SCE_DTCP_IP_IPC_DESTROY;
+	message.channel = 0;
+	if (dtcpIpIpcRequest(object->stream, &message) != 0 || message.result != 0)
+		return dtcpIpMapIpcStatus(0);
+	return 0;
+}
+
+/*
+ * wait for the middleware to finish opening its session: it answers 12007 while it is
+ * still working on it; the caller polls again (30 tells it to).
+ */
+int dtcpIpIpcWaitReady(int connection, int *outStatus)
+{
+	struct SceDtcpIpIpcObject *object = (struct SceDtcpIpIpcObject *)connection;
+	struct SceDtcpIpIpcMessage message;
+	int ret;
+
+	if (connection == 0)
+		return 2;
+	sceClibMemset(&message, 0, sizeof(message));
+	message.command = SCE_DTCP_IP_IPC_WAIT_READY;
+	message.channel = 0;
+	ret = dtcpIpIpcRequest(object->stream, &message);
+	if (ret != 0)
+		return dtcpIpMapIpcStatus(ret);
+	if (outStatus != NULL)
+		*outStatus = message.value0;
+	if (message.result != SCE_DTCP_IP_IPC_STATUS_BUSY)
+		return dtcpIpMapIpcStatus(message.result);
+	return SCE_DTCP_IP_IPC_STATUS_LATER;
+}
+
+/* connect to the middleware: its session and stream objects over one shared block */
+int dtcpIpIpcConnect(void **outConnection)
+{
+	struct SceDtcpIpIpcObject *object;
+	unsigned int config[35];
+	int sharedSize;
+	int ret;
+
+	if (outConnection == NULL)
+		return 2;
+
+	sceClibMemset(config, 0, sizeof(config));
+	config[0] = (unsigned int)&g_dtcpIpIpcConfig[35];
+	object = dtcpIpAlloc(20);
+	if (object == NULL)
+		return 5;
+	object->session = NULL;
+	object->stream = NULL;
+	if (dtcpIpIpcInitSession(object, &g_dtcpIpIpcConfig, 140) != 0 ||
+	    dtcpIpIpcInitStream(&object->stream, object->session, 0, 0, 0, 0x80000) != 0 ||
+	    dtcpIpIpcInitShared(object->stream, &object->shared) != 0) {
+		ret = dtcpIpMapIpcStatus(0);
+		if (object->stream != NULL)
+			dtcpIpIpcFiniStream(object->stream, 0);
+		if (object->session != NULL)
+			dtcpIpIpcFiniSession(object->session);
+		dtcpIpFree(object);
+		*outConnection = NULL;
+		return ret;
+	}
+	*outConnection = object;
+	return 0;
+}
+
+/* disconnect from the middleware */
+int dtcpIpIpcDisconnect(void *connection)
+{
+	struct SceDtcpIpIpcObject *object = connection;
+	int ret;
+
+	if (object == NULL)
+		return 2;
+	ret = dtcpIpIpcFiniStream(object->stream, 0);
+	if (ret != 0)
+		return dtcpIpMapIpcStatus(ret);
+	dtcpIpIpcFiniSession(object->session);
+	dtcpIpFree(object);
+	return 0;
+}
+
+/* the middleware's session status: ask, then poll until it answers */
+int dtcpIpIpcGetSessionStatus(void *connection, int *outStatus)
+{
+	struct SceDtcpIpIpcObject *object = connection;
+	struct SceDtcpIpIpcMessage message;
+	int ret;
+
+	if (connection == NULL)
+		return 2;
+	sceClibMemset(&message, 0, sizeof(message));
+	message.command = SCE_DTCP_IP_IPC_GET_SESSION;
+	message.channel = 0;
+	if (dtcpIpIpcRequest(object->stream, &message) == 0 && message.result == 0) {
+		for (;;) {
+			sceClibMemset(&message, 0, sizeof(message));
+			message.command = SCE_DTCP_IP_IPC_GET_SESSION_RESULT;
+			message.channel = 0;
+			if (dtcpIpIpcRequest(object->stream, &message) != 0)
+				break;
+			if (message.result == 0) {
+				if (outStatus != NULL)
+					*outStatus = message.value0;
+				return 0;
+			}
+			if (message.result != SCE_DTCP_IP_IPC_STATUS_BUSY)
+				break;
+			sceKernelDelayThread(10000);
+		}
+	}
+	if (outStatus != NULL)
+		*outStatus = message.value0;
+	return dtcpIpMapIpcStatus(message.result);
+}
+
+/* ask the middleware to close its session */
+int dtcpIpIpcCloseSession(void *connection)
+{
+	struct SceDtcpIpIpcObject *object = connection;
+	struct SceDtcpIpIpcMessage message;
+	int ret;
+
+	if (connection == NULL)
+		return 2;
+	sceClibMemset(&message, 0, sizeof(message));
+	message.command = SCE_DTCP_IP_IPC_CLOSE_SESSION;
+	message.channel = 0;
+	ret = dtcpIpIpcRequest(object->stream, &message);
+	if (ret != 0 || message.result != 0)
+		return dtcpIpMapIpcStatus(ret);
+	return 0;
+}
+
+/* ask the middleware to open its session */
+int dtcpIpIpcOpenSession(void *connection)
+{
+	struct SceDtcpIpIpcObject *object = connection;
+	struct SceDtcpIpIpcMessage message;
+
+	if (connection == NULL)
+		return 2;
+	sceClibMemset(&message, 0, sizeof(message));
+	message.command = SCE_DTCP_IP_IPC_OPEN_SESSION;
+	message.channel = 0;
+	if (dtcpIpIpcRequest(object->stream, &message) != 0 || message.result != 0)
+		return dtcpIpMapIpcStatus(0);
+	return 0;
+}
+
+/* set the session state word the middleware reads (0 none, 1 opening, 2 open) */
+int dtcpIpIpcSetState(int *session, int connection, unsigned int state)
+{
+	*session = connection;
+	session[1] = state;
+	if (connection == 0)
+		return 0;
+	sceKernelLockLwMutex((SceKernelLwMutexWork *)(connection + 8), 1, NULL);
+	{
+		int object = *session;
+		SceKernelLwMutexWork *mutex = (SceKernelLwMutexWork *)(*session + 8);
+
+		if (state > 2) {
+			if (state == 4)
+				goto check;
+		} else if (state != 0) {
+check:
+			if (*(int *)(object + 48) != 0) {
+				sceKernelUnlockLwMutex(mutex, 1);
+				return 12004;
+			}
+		}
+		*(int *)(object + 48) |= session[1];
+		sceKernelUnlockLwMutex(mutex, 1);
+	}
+	return 0;
+}
