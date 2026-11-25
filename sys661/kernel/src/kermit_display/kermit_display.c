@@ -33,25 +33,43 @@ typedef struct SceGameInfo {
 } SceGameInfo;
 
 typedef struct SceSm1Operations {
-	u32 reserved00[4];
+	u32 headOps[4];
 	int (*checkMagic)(void);
-	u32 reserved14[4];
+	u32 midOps[4];
 	void (*notifyMode)(int mode);
 } SceSm1Operations;
+
+typedef struct SceDisplaySuspendState {
+	u32 leadingWords[0x38 / 4];
+	void *frameBufTop;
+	int bufferWidth;
+	int pixelFormat;
+	u32 midWords[3];
+	int brightness;
+	u32 padWords[2];
+	int nextMode;
+} SceDisplaySuspendState;
+
+typedef struct SceDisplaySysEventParam {
+	u32 size;
+	u32 eventFlags;
+	u32 padWords[3];
+	SceDisplaySuspendState *state;
+} SceDisplaySysEventParam;
 
 int sceKernelApplicationType(void);
 int sceKernelInitApitype(void);
 int sceKernelSetInitCallback(int (*cb)(void *, int, void *), int flag, int *res);
-int sceKernelCallSubIntrHandler(int intr_code, int sub_intr_code, void *arg1, void *arg2);
+int sceKernelCallSubIntrHandler(int intr_code, int subIntrCode, void *common, void *opt);
 void sceKernelCpuResumeIntrWithSync(int state);
-int sceKernelSetUserModeIntrHanlerAcceptable(int intr_code, int sub_intr_code, int acceptable);
+int sceKernelSetUserModeIntrHanlerAcceptable(int intr_code, int subIntrCode, int acceptable);
 SceSm1Operations *sceKernelSm1ReferOperations(void);
 int sceKernelGetModel(void);
 int sceKernelMemset32(void *dst, int val, SceSize size);
 SceGameInfo *sceKernelGetGameInfo(void);
 void *memset(void *s, int c, SceSize n);
 void *memcpy(void *dst, const void *src, SceSize n);
-int strcmp(const char *s1, const char *s2);
+int strcmp(const char *lhs, const char *rhs);
 int sceKernelAllocateKTLS(SceSize size, int (*cb)(unsigned int *size, void *arg), void *arg);
 int sceKernelFreeKTLS(int id);
 void *sceKernelGetKTLS(int id);
@@ -98,7 +116,7 @@ typedef struct SceDisplayFrameBufEntry {
 } SceDisplayFrameBufEntry;
 
 typedef struct SceDisplayContext {
-	SceDisplayFrameBufEntry fb[4]; /* 0x000..0x04F */
+	SceDisplayFrameBufEntry planes[4]; /* 0x000..0x04F */
 	int hwWidth;                   /* 0x050 */
 	int hwHeight;                  /* 0x054 */
 	int hwBufferWidth;             /* 0x058 */
@@ -110,14 +128,14 @@ typedef struct SceDisplayContext {
 	s8 targetEnabled;              /* 0x067 */
 	s8 curEnabled;                 /* 0x068 */
 	s8 hasLcd;                     /* 0x069 */
-	s8 reserved6A;                      /* 0x06A */
+	s8 lcdUnused;                  /* 0x06A */
 	s8 backlightPending;           /* 0x06B */
 	s8 hasCustomLevels;            /* 0x06C */
-	u8 pad6D;                      /* 0x06D */
+	u8 lcdPad;                     /* 0x06D */
 	u16 lcdConfig;                 /* 0x06E */
 	u8 backlightSel;               /* 0x070 */
-	u8 brightnessLevels[5];        /* 0x071..0x075 */
-	u8 pad76[0x62];                /* 0x076..0x0D7 */
+	u8 brightnessLevels[101];      /* 0x071..0xD5 */
+	u8 brightnessPad[2];           /* 0x0D6..0xD7 */
 	int targetBrightness;          /* 0x0D8 */
 	int currentBrightness;         /* 0x0DC */
 	int curLcdcMode;               /* 0x0E0 */
@@ -130,7 +148,7 @@ typedef struct SceDisplayContext {
 	int resumeMode;                /* 0x0FC */
 	int suspendCountdown;          /* 0x100 */
 	int disableCountdown;          /* 0x104 */
-	int reserved108;                    /* 0x108 */
+	int suspendUnused;             /* 0x108 */
 	int brightnessHoldCount;       /* 0x10C */
 	int modeChangeCountdown;       /* 0x110 */
 	int modeChangeFlags;           /* 0x114 */
@@ -170,15 +188,13 @@ typedef struct SceDisplayFadeContext {
 } SceDisplayFadeContext;
 
 typedef struct SceDisplaySubIntrOps {
-	void *reserved0;
-	void *reserved4;
-	void *reserved8;
-	int (*disable1)(int intr_code, int sub_intr_code);
-	int (*enable)(int intr_code, int sub_intr_code);
-	int (*disable2)(int intr_code, int sub_intr_code);
-	int (*suspend)(int intr_code, int sub_intr_code, int *state);
-	int (*resume)(int intr_code, int sub_intr_code, int state);
-	void *reserved20;
+	void *unusedHead[3];
+	int (*disableFirst)(int intr_code, int subIntrCode);
+	int (*enable)(int intr_code, int subIntrCode);
+	int (*disableSecond)(int intr_code, int subIntrCode);
+	int (*suspend)(int intr_code, int subIntrCode, int *state);
+	int (*resume)(int intr_code, int subIntrCode, int state);
+	void *unusedTail;
 } SceDisplaySubIntrOps;
 
 typedef struct SceDisplayIntrOpt {
@@ -201,7 +217,7 @@ int sceDisplay_driver_F338AAE0(u32 pri, void **topaddr, int *bufferwidth, int *p
 int sceDisplay_driver_8475E040(void);
 
 static int displaySysEventHandler(int ev_id, char *ev_name, void *param, int *result);
-static int displayInitCallback(void *arg1, int arg2, void *arg3);
+static int displayInitCallback(void *cbArg, int cbFlag, void *cbOpt);
 static int displayVblankSubIntrHandler(int intr_code, void *arg);
 static void displayUpdateEnableState(void);
 static int displayApplyBrightness(int brightness);
@@ -215,10 +231,10 @@ static int displayInitVblank(void);
 static int displayEndVblank(void);
 static int displayDisableVblank(void);
 static int displayUpdateTimingParams(int mode);
-static int displaySubIntrEnable(int intr_code, int sub_intr_code);
-static int displaySubIntrDisable(int intr_code, int sub_intr_code);
-static int displaySubIntrSuspend(int intr_code, int sub_intr_code, int *state);
-static int displaySubIntrResume(int intr_code, int sub_intr_code, int state);
+static int displaySubIntrEnable(int intr_code, int subIntrCode);
+static int displaySubIntrDisable(int intr_code, int subIntrCode);
+static int displaySubIntrSuspend(int intr_code, int subIntrCode, int *state);
+static int displaySubIntrResume(int intr_code, int subIntrCode, int state);
 static int displayPseudoVsyncIntrHandler(void);
 static int displayWaitVblankImpl(int isCB);
 static int displaySetupPseudoVsyncTimer(int interval);
@@ -230,9 +246,7 @@ static int displayFinishBootFade(void);
 
 /* Rodata tables */
 static const SceDisplaySubIntrOps g_displaySubIntrOps = {
-	NULL,
-	NULL,
-	NULL,
+	{ NULL, NULL, NULL },
 	displaySubIntrDisable,
 	displaySubIntrEnable,
 	displaySubIntrDisable,
@@ -303,10 +317,10 @@ int module_reboot_before(SceSize args, void *argp)
 	if (curMode == 0 || curMode == 0x6D1 || curMode == 0x7D1 ||
 	    curMode == 0x2D2 || curMode == 0x3D2 || curMode == 0x2E2) {
 		void *hwFb = sceDmacplus_driver_CCCF6069();
-		void *fb1 = g_display.fb[1].topAddr;
-		if (fb1 == hwFb) {
-			if ((((u32)fb1 >> 23) & 0x3Fu) == 8 &&
-			    ((0x35 >> (((u32)fb1 >> 29) & 7)) & 1) != 0) {
+		void *planeOne = g_display.planes[1].topAddr;
+		if (planeOne == hwFb) {
+			if ((((u32)planeOne >> 23) & 0x3Fu) == 8 &&
+			    ((0x35 >> (((u32)planeOne >> 29) & 7)) & 1) != 0) {
 				/* Keep current clearAction / fbAction */
 			} else {
 				clearAction = 0;
@@ -493,11 +507,11 @@ int sceDisplayInit(void)
 	displayInitVblank();
 
 	for (i = 0; i < 4; i++) {
-		g_display.fb[i].state = 0;
-		g_display.fb[i].nextAddr = NULL;
-		g_display.fb[i].topAddr = NULL;
-		g_display.fb[i].bufferWidth = 0;
-		g_display.fb[i].pixelFormat = 3;
+		g_display.planes[i].state = 0;
+		g_display.planes[i].nextAddr = NULL;
+		g_display.planes[i].topAddr = NULL;
+		g_display.planes[i].bufferWidth = 0;
+		g_display.planes[i].pixelFormat = 3;
 	}
 
 	g_display.width = 480;
@@ -537,10 +551,10 @@ int sceDisplayInit(void)
 		int fmt = SCE_ERROR_INVALID_FORMAT;
 		if ((u32)pf < 4u)
 			fmt = (0x93 >> (pf << 1)) & 3;
-		g_display.fb[2].pixelFormat = fmt;
-		g_display.fb[2].topAddr = hwFb;
-		g_display.fb[2].nextAddr = hwFb;
-		g_display.fb[2].bufferWidth = bw;
+		g_display.planes[2].pixelFormat = fmt;
+		g_display.planes[2].topAddr = hwFb;
+		g_display.planes[2].nextAddr = hwFb;
+		g_display.planes[2].bufferWidth = bw;
 		pf = fmt;
 	}
 
@@ -578,7 +592,7 @@ int sceDisplayInit(void)
 	if (gameInfo != NULL && strcmp(gameInfo->disc_id, "ULJM05007") == 0)
 		g_display.forceImmediateAddr = 1;
 
-	if (g_display.fb[2].topAddr == NULL) {
+	if (g_display.planes[2].topAddr == NULL) {
 		if (g_display.displayEnabled == 0) {
 			sceDmacplus_driver_A3AA8D00(NULL);
 			displayConfigureHw(0, 480, 272, 512, 3);
@@ -608,7 +622,7 @@ int sceDisplayEnd(void)
 }
 
 /* 0x0A04 */
-static int displayInitCallback(void *arg1, int arg2, void *arg3)
+static int displayInitCallback(void *cbArg, int cbFlag, void *cbOpt)
 {
 	int fadeState = g_display.fadeState;
 	g_display.initDone = 1;
@@ -636,11 +650,13 @@ static int displayInitCallback(void *arg1, int arg2, void *arg3)
 /* 0x0AF8 */
 static int displaySysEventHandler(int ev_id, char *ev_name, void *param, int *result)
 {
+	SceDisplaySysEventParam *evParam = (SceDisplaySysEventParam *)param;
+
 	switch (ev_id) {
 	case 0x400: {
-		u32 *p = *(u32 **)((u8 *)param + 0x14);
+		SceDisplaySuspendState *state = evParam->state;
 		g_display.suspendCountdown = 10;
-		p[0x50 / 4] = g_display.currentBrightness;
+		state->brightness = g_display.currentBrightness;
 		break;
 	}
 	case 0x402:
@@ -651,18 +667,18 @@ static int displaySysEventHandler(int ev_id, char *ev_name, void *param, int *re
 			return -1;
 		break;
 	case 0x400A: {
-		u32 *p = *(u32 **)((u8 *)param + 0x14);
-		p[0x5C / 4] = g_display.nextMode;
-		sceDisplayGetFrameBuf((void **)&p[0x38 / 4], (int *)&p[0x3C / 4], (int *)&p[0x40 / 4], 1);
-		if (((u32 *)param)[1] != 2)
+		SceDisplaySuspendState *state = evParam->state;
+		state->nextMode = g_display.nextMode;
+		sceDisplayGetFrameBuf(&state->frameBufTop, &state->bufferWidth, &state->pixelFormat, 1);
+		if (evParam->eventFlags != 2)
 			displayDisableVblank();
 		break;
 	}
 	case 0x1000A:
 		if (g_display.resumeMode != 0) {
-			g_display.fb[2].state = 1;
-			g_display.fb[2].nextAddr = NULL;
-			g_display.fb[2].topAddr = NULL;
+			g_display.planes[2].state = 1;
+			g_display.planes[2].nextAddr = NULL;
+			g_display.planes[2].topAddr = NULL;
 			if (g_display.activeFbIdx == 2)
 				g_display.activeFbIdx = -1;
 		}
@@ -730,12 +746,12 @@ static int displayVblankSubIntrHandler(int intr_code, void *arg)
 		void *bestAddr = NULL;
 
 		for (i = 0; i < 4; i++) {
-			if (g_display.fb[i].state != 0) {
-				g_display.fb[i].state = 0;
-				g_display.fb[i].topAddr = g_display.fb[i].nextAddr;
+			if (g_display.planes[i].state != 0) {
+				g_display.planes[i].state = 0;
+				g_display.planes[i].topAddr = g_display.planes[i].nextAddr;
 			}
-			if (bestIdx == -1 && g_display.fb[i].topAddr != NULL) {
-				bestAddr = g_display.fb[i].topAddr;
+			if (bestIdx == -1 && g_display.planes[i].topAddr != NULL) {
+				bestAddr = g_display.planes[i].topAddr;
 				bestIdx = i;
 			}
 		}
@@ -743,8 +759,8 @@ static int displayVblankSubIntrHandler(int intr_code, void *arg)
 		int bw = 0;
 		int pf = g_display.hwPixelFormat;
 		if (bestIdx >= 0) {
-			bw = g_display.fb[bestIdx].bufferWidth;
-			pf = g_display.fb[bestIdx].pixelFormat;
+			bw = g_display.planes[bestIdx].bufferWidth;
+			pf = g_display.planes[bestIdx].pixelFormat;
 		}
 
 		if (g_display.hwPixelFormat == pf && g_display.hwBufferWidth == bw) {
@@ -756,12 +772,12 @@ static int displayVblankSubIntrHandler(int intr_code, void *arg)
 			displayConfigureHw(g_display.nextLcdcMode, g_display.width, g_display.height, bw, pf);
 		} else {
 			if (bestIdx >= 0) {
-				g_display.fb[bestIdx].state = 2;
-				g_display.fb[bestIdx].nextAddr = g_display.fb[bestIdx].topAddr;
+				g_display.planes[bestIdx].state = 2;
+				g_display.planes[bestIdx].nextAddr = g_display.planes[bestIdx].topAddr;
 			}
 			s8 curIdx = g_display.activeFbIdx;
 			if (curIdx != -2) {
-				void *addr = (curIdx >= 0) ? g_display.fb[curIdx].topAddr : NULL;
+				void *addr = (curIdx >= 0) ? g_display.planes[curIdx].topAddr : NULL;
 				sceDmacplus_driver_A3AA8D00(addr);
 			}
 		}
@@ -935,7 +951,7 @@ int sceDisplaySetMode(int mode, int width, int height)
 	if (prevLcdcMode == lcdcMode) {
 		displayUpdateTimingParams(mode);
 	} else {
-		g_display.fb[2].state = 1;
+		g_display.planes[2].state = 1;
 		if ((prevLcdcMode == 0 && lcdcMode == 11) || (prevLcdcMode == 11 && lcdcMode == 0))
 			g_display.modeChangeCountdown = 1;
 		else
@@ -1022,7 +1038,7 @@ int sceDisplay_driver_3E17FE8D(u32 pri, void *topaddr, int bufferwidth, int pixe
 
 	u32 oldK1 = pspShiftK1();
 	int intr = sceKernelCpuSuspendIntr();
-	SceDisplayFrameBufEntry *entry = &g_display.fb[pri];
+	SceDisplayFrameBufEntry *entry = &g_display.planes[pri];
 
 	if (sync == 0) {
 		if (entry->pixelFormat != pixelformat || entry->bufferWidth != bufferwidth) {
@@ -1071,7 +1087,7 @@ int sceDisplay_driver_F338AAE0(u32 pri, void **topaddr, int *bufferwidth, int *p
 	}
 
 	int intr = sceKernelCpuSuspendIntr();
-	SceDisplayFrameBufEntry *entry = &g_display.fb[pri];
+	SceDisplayFrameBufEntry *entry = &g_display.planes[pri];
 
 	if (sync == 1 && entry->state != 0) {
 		*topaddr = entry->nextAddr;
@@ -1244,7 +1260,7 @@ int sceDisplayGetForegroundLevel(void)
 /* 0x1C10 */
 int sceDisplaySetBacklightSel(u32 sel, u32 mode)
 {
-	if (sel >= 5u)
+	if (sel >= 101u)
 		return SCE_ERROR_OUT_OF_RANGE;
 	g_display.backlightSel = (u8)sel;
 	return sceDisplay_driver_60112E07(g_display.brightnessLevels[sel], mode);
@@ -1382,22 +1398,22 @@ int sceDisplayAdjustAccumulatedHcount(int value)
 
 	int intr = sceKernelCpuSuspendIntr();
 	int tries = 1;
-	u32 t1, t2;
+	u32 firstSample, secondSample;
 	for (;;) {
 		if (tries >= 4) {
 			sceKernelCpuResumeIntr(intr);
 			return SCE_KERNEL_ERROR_ERROR;
 		}
-		t1 = HW(APB_TIMER1_BASE + 0x04);
-		t2 = HW(APB_TIMER1_BASE + 0x04);
+		firstSample = HW(APB_TIMER1_BASE + 0x04);
+		secondSample = HW(APB_TIMER1_BASE + 0x04);
 		tries++;
-		if (t1 == t2)
+		if (firstSample == secondSample)
 			break;
 	}
 
 	g_vblank.accumHcount = value;
-	g_vblank.hcountOffset = value - (int)t1;
-	g_vblank.baseTimerVal = t1;
+	g_vblank.hcountOffset = value - (int)firstSample;
+	g_vblank.baseTimerVal = firstSample;
 	sceKernelCpuResumeIntr(intr);
 	return 0;
 }
@@ -1407,24 +1423,24 @@ int sceDisplayGetAccumulatedHcount(void)
 {
 	int intr = sceKernelCpuSuspendIntr();
 	int tries = 1;
-	u32 t1, t2;
+	u32 firstSample, secondSample;
 	for (;;) {
 		if (tries >= 4) {
 			sceKernelCpuResumeIntr(intr);
 			return SCE_KERNEL_ERROR_ERROR;
 		}
-		t1 = HW(APB_TIMER1_BASE + 0x04);
-		t2 = HW(APB_TIMER1_BASE + 0x04);
+		firstSample = HW(APB_TIMER1_BASE + 0x04);
+		secondSample = HW(APB_TIMER1_BASE + 0x04);
 		tries++;
-		if (t1 == t2)
+		if (firstSample == secondSample)
 			break;
 	}
 
 	int res;
 	if (g_vblank.hcountPerVblank == 0) {
-		res = (int)t1 + g_vblank.hcountOffset;
+		res = (int)firstSample + g_vblank.hcountOffset;
 	} else {
-		u32 delta = t1 - g_vblank.baseTimerVal;
+		u32 delta = firstSample - g_vblank.baseTimerVal;
 		u32 hperiod = g_vblank.hperiod;
 		if (delta >= hperiod) {
 			u32 vblanks = 1;
@@ -1449,26 +1465,26 @@ static int displayGetRawHcount(void)
 {
 	int intr = sceKernelCpuSuspendIntr();
 	int tries = 1;
-	u32 t0, t1, t2, t3;
+	u32 latchStart, firstSample, secondSample, latchEnd;
 	for (;;) {
 		if (tries >= 4) {
 			sceKernelCpuResumeIntr(intr);
 			return SCE_KERNEL_ERROR_ERROR;
 		}
-		t0 = HW(APB_TIMER1_BASE + 0x08);
-		t1 = HW(APB_TIMER1_BASE + 0x04);
-		t2 = HW(APB_TIMER1_BASE + 0x04);
+		latchStart = HW(APB_TIMER1_BASE + 0x08);
+		firstSample = HW(APB_TIMER1_BASE + 0x04);
+		secondSample = HW(APB_TIMER1_BASE + 0x04);
 		tries++;
-		if (t2 != t1)
+		if (secondSample != firstSample)
 			continue;
-		t3 = HW(APB_TIMER1_BASE + 0x08);
+		latchEnd = HW(APB_TIMER1_BASE + 0x08);
 		tries++;
-		if (t0 == t3)
+		if (latchStart == latchEnd)
 			break;
 	}
 	sceKernelCpuResumeIntr(intr);
 
-	u32 diff = ((t1 - t0 - 1) & 0x07FFFFFFu) + 4;
+	u32 diff = ((firstSample - latchStart - 1) & 0x07FFFFFFu) + 4;
 	u32 hperiod = g_vblank.hperiod;
 	if (g_vblank.isPseudoVsyncEnabled != 0) {
 		if (diff >= hperiod)
@@ -1533,7 +1549,7 @@ static int displayDisableVblank(void)
 /* 0x24CC */
 static int displayUpdateTimingParams(int mode)
 {
-	int hsync = 0, vsync = 0, vblank = 0, hperiod = 0;
+	int hsync, vsync, vblank, hperiod;
 	int intr = sceKernelCpuSuspendIntr();
 	sceLcdc_driver_2D80BB2E(&hsync, &vsync, NULL, &vblank, &hperiod);
 	g_vblank.vblank = vblank;
@@ -1649,29 +1665,29 @@ int sceDisplayIsPseudoField(void)
 }
 
 /* 0x275C..0x27D8: Sub-interrupt controller callbacks */
-static int displaySubIntrEnable(int intr_code, int sub_intr_code)
+static int displaySubIntrEnable(int intr_code, int subIntrCode)
 {
-	g_vblank.subIntrMask |= 1u << sub_intr_code;
+	g_vblank.subIntrMask |= 1u << subIntrCode;
 	return 0;
 }
 
-static int displaySubIntrDisable(int intr_code, int sub_intr_code)
+static int displaySubIntrDisable(int intr_code, int subIntrCode)
 {
-	g_vblank.subIntrMask &= ~(1u << sub_intr_code);
+	g_vblank.subIntrMask &= ~(1u << subIntrCode);
 	return 0;
 }
 
-static int displaySubIntrSuspend(int intr_code, int sub_intr_code, int *state)
+static int displaySubIntrSuspend(int intr_code, int subIntrCode, int *state)
 {
 	if (state != NULL)
-		*state = (g_vblank.subIntrMask >> sub_intr_code) & 1;
-	g_vblank.subIntrMask &= ~(1u << sub_intr_code);
+		*state = (g_vblank.subIntrMask >> subIntrCode) & 1;
+	g_vblank.subIntrMask &= ~(1u << subIntrCode);
 	return 0;
 }
 
-static int displaySubIntrResume(int intr_code, int sub_intr_code, int state)
+static int displaySubIntrResume(int intr_code, int subIntrCode, int state)
 {
-	g_vblank.subIntrMask |= (u32)state << sub_intr_code;
+	g_vblank.subIntrMask |= (u32)state << subIntrCode;
 	return 0;
 }
 
