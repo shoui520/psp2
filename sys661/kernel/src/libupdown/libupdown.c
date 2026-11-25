@@ -37,7 +37,7 @@ extern char *sceNet_lib_5705F6F9(char *dest, const char *src); /* strcat */
 extern int sceNet_lib_750F705D(int c);                         /* ctype */
 extern char *sceNet_lib_80C9F02A(char *dest, const char *src); /* strcpy */
 extern int sceNet_lib_96EF9DA1(int c);                         /* tolower */
-extern int sceNet_lib_9CFBC7E3(const char *s1, const char *s2);/* strcmp */
+extern int sceNet_lib_9CFBC7E3(const char *lhs, const char *rhs);/* strcmp */
 extern char *sceNet_lib_BCBE14CF(const char *s, int c);        /* strchr */
 extern size_t sceNet_lib_D8722983(const char *s);              /* strlen */
 
@@ -165,10 +165,10 @@ static uint32_t mtNextRand(MtState *mt)
 		mt->index = 0;
 	}
 
-	uint32_t v0 = y ^ (y >> 11);
-	v0 ^= (v0 << 7) & 0x9d2c5680U;
-	v0 ^= (v0 << 15) & 0xefc60000U;
-	v0 ^= (v0 >> 18);
+	uint32_t tempered = y ^ (y >> 11);
+	tempered ^= (tempered << 7) & 0x9d2c5680U;
+	tempered ^= (tempered << 15) & 0xefc60000U;
+	tempered ^= (tempered >> 18);
 
 	uint32_t twist = ((y & 0x80000000U) | (next_val & 0x7fffffffU)) >> 1;
 	if (next_val & 1) {
@@ -176,7 +176,7 @@ static uint32_t mtNextRand(MtState *mt)
 	}
 	uint32_t mate = (idx < 227) ? st[397] : st[-227];
 	st[0] = twist ^ mate;
-	return v0;
+	return tempered;
 }
 
 static int updownParseUpdateList(const char *buf, uint32_t len, UriNode **out_list, int *out_err)
@@ -667,7 +667,7 @@ static int updownParseVersion(const char *ver_str, uint32_t *out_ver)
 		buf[min_len] = '\0';
 		for (uint32_t i = 0; i < 2; i++) {
 			if (i < min_len) {
-				min_val += (uint8_t)(buf[i] - '0');
+				min_val += (int8_t)buf[i] - '0';
 			}
 			min_val <<= 8;
 		}
@@ -835,88 +835,92 @@ static int updownFetchUpdateList(int *out_err)
 	int res = 0;
 
 	g_aborted = 0;
-	if (g_http_tmpl == 0) {
-		res = sceHttpCreateTemplate("PSPUpdate-agent/1.0.0 libhttp/1.0.0", 1, 1);
-		if (res < 0) {
-			*out_err = res;
-			res = 0x805f0007;
-			goto finish;
-		}
-		g_http_tmpl = res;
-	}
-
-	sceHttpSetResolveTimeOut(g_http_tmpl, 3000000);
-	sceHttpSetRecvTimeOut(g_http_tmpl, 60000000);
-	sceHttpSetSendTimeOut(g_http_tmpl, 60000000);
-	updownBuildListUrl();
-
-	if (g_active_list_url == NULL) {
-		res = 0x805f000c;
-		goto finish;
-	}
-
-	if (g_list_conn == 0) {
-		res = sceHttpCreateConnectionWithURL(g_http_tmpl, g_active_list_url, 0);
-		if (res == (int)0x80431022) {
-			res = 0x805f0001;
-			goto finish;
-		}
-		if (res < 0) {
-			*out_err = res;
-			res = 0x805f0007;
-			goto finish;
-		}
-		g_list_conn = res;
-	}
-
-	if (g_list_req != 0) {
-		sceHttpAbortRequest(g_list_req);
-		sceHttpDeleteRequest(g_list_req);
-		g_list_req = 0;
-	}
-
-	res = updownSendListRequest(&content_len, out_err);
-	if (res < 0) {
-		goto finish;
-	}
-
-	if (content_len > 0xffffULL) {
-		*out_err = 0x20000003;
-		res = 0x805f0007;
-		goto finish;
-	}
-
-	uint32_t list_size = (uint32_t)content_len;
-	res = 0x805f0001;
-	char *buf = (char *)updownAlloc(list_size);
-	if (buf != NULL) {
-		sceKernelMemset(buf, 0, list_size);
-		uint32_t read_off = 0;
-		int eof = 0;
-		while (!eof) {
-			int n = sceHttpReadData(g_list_req, buf + read_off, list_size - read_off);
-			if (n == 0) {
-				eof = 1;
-			} else if (n < 0) {
-				*out_err = n;
+	do {
+		if (g_http_tmpl == 0) {
+			res = sceHttpCreateTemplate("PSPUpdate-agent/1.0.0 libhttp/1.0.0", 1, 1);
+			if (res < 0) {
+				*out_err = res;
 				res = 0x805f0007;
-				goto free_buf;
+				break;
 			}
-			read_off += n;
+			g_http_tmpl = res;
 		}
-		if (read_off != list_size) {
-			*out_err = 0x20000004;
-		}
-		sceHttpDeleteRequest(g_list_req);
-		g_list_req = 0;
-		sceHttpDeleteConnection(g_list_conn);
-		g_list_conn = 0;
-		res = updownParseUpdateList(buf, list_size, &g_uri_list, out_err);
-free_buf:
-		updownFree(buf);
-	}
 
-finish:
+		sceHttpSetResolveTimeOut(g_http_tmpl, 3000000);
+		sceHttpSetRecvTimeOut(g_http_tmpl, 60000000);
+		sceHttpSetSendTimeOut(g_http_tmpl, 60000000);
+		updownBuildListUrl();
+
+		if (g_active_list_url == NULL) {
+			res = 0x805f000c;
+			break;
+		}
+
+		if (g_list_conn == 0) {
+			res = sceHttpCreateConnectionWithURL(g_http_tmpl, g_active_list_url, 0);
+			if (res == (int)0x80431022) {
+				res = 0x805f0001;
+				break;
+			}
+			if (res < 0) {
+				*out_err = res;
+				res = 0x805f0007;
+				break;
+			}
+			g_list_conn = res;
+		}
+
+		if (g_list_req != 0) {
+			sceHttpAbortRequest(g_list_req);
+			sceHttpDeleteRequest(g_list_req);
+			g_list_req = 0;
+		}
+
+		res = updownSendListRequest(&content_len, out_err);
+		if (res < 0) {
+			break;
+		}
+
+		if (content_len > 0xffffULL) {
+			*out_err = 0x20000003;
+			res = 0x805f0007;
+			break;
+		}
+
+		uint32_t list_size = (uint32_t)content_len;
+		res = 0x805f0001;
+		char *buf = (char *)updownAlloc(list_size);
+		if (buf != NULL) {
+			sceKernelMemset(buf, 0, list_size);
+			uint32_t read_off = 0;
+			int eof = 0;
+			int read_err = 0;
+			while (!eof) {
+				int n = sceHttpReadData(g_list_req, buf + read_off, list_size - read_off);
+				if (n == 0) {
+					eof = 1;
+				} else if (n < 0) {
+					*out_err = n;
+					res = 0x805f0007;
+					read_err = 1;
+					break;
+				}
+				read_off += n;
+			}
+			if (!read_err) {
+				if (read_off != list_size) {
+					*out_err = 0x20000004;
+				}
+				sceHttpDeleteRequest(g_list_req);
+				g_list_req = 0;
+				sceHttpDeleteConnection(g_list_conn);
+				g_list_conn = 0;
+				res = updownParseUpdateList(buf, list_size, &g_uri_list, out_err);
+			}
+			updownFree(buf);
+		}
+	} while (0);
+
 	if (g_apctl_err < 0) {
 		res = g_apctl_err;
 		*out_err = g_apctl_suberr;
@@ -939,91 +943,91 @@ static int updownStartDownload(uint32_t *out_size, int *out_err)
 	*out_err = 0;
 	if (g_aborted == 1) {
 		res = 0x805f0009;
-		goto finish;
-	}
-
-	UriNode *cur = g_uri_list;
-	if (g_data_req != 0) {
-		sceHttpDeleteRequest(g_data_req);
-		g_data_req = 0;
-	}
-	if (g_data_conn != 0) {
-		sceHttpDeleteConnection(g_data_conn);
-		g_data_conn = 0;
-	}
-
-	while (cur != NULL) {
-		res = sceHttpCreateConnectionWithURL(g_http_tmpl, cur->url, 0);
-		if (res < 0) {
-			cur = cur->next;
-			continue;
-		}
-		g_data_conn = res;
-		res = sceHttpSetConnectTimeOut(g_data_conn, cur->timeout * 1000000);
-		if (res < 0) {
-			sceHttpDeleteConnection(g_data_conn);
-			g_data_conn = 0;
-			cur = cur->next;
-			continue;
-		}
-		res = sceHttpCreateRequestWithURL(g_data_conn, 2, cur->url, 0);
-		if (res < 0) {
-			sceHttpDeleteConnection(g_data_conn);
-			g_data_conn = 0;
-			cur = cur->next;
-			continue;
-		}
-		g_data_req = res;
-		sceHttpDeleteHeader(g_data_req, "Accept-Encoding");
-		sceHttpDeleteHeader(g_data_req, "Accept");
-		res = sceHttpSendRequest(g_data_req, NULL, 0);
-		if (res < 0) {
+	} else {
+		UriNode *cur = g_uri_list;
+		if (g_data_req != 0) {
 			sceHttpDeleteRequest(g_data_req);
 			g_data_req = 0;
+		}
+		if (g_data_conn != 0) {
 			sceHttpDeleteConnection(g_data_conn);
 			g_data_conn = 0;
-			cur = cur->next;
-			continue;
 		}
-		res = sceHttpGetStatusCode(g_data_req, &status);
-		if (res >= 0 && status == 200) {
-			res = sceHttpGetContentLength(g_data_req, &content_len);
-			if (res < 0 || (content_len >> 32) != 0) {
+
+		int connected = 0;
+		while (cur != NULL) {
+			res = sceHttpCreateConnectionWithURL(g_http_tmpl, cur->url, 0);
+			if (res < 0) {
+				cur = cur->next;
+				continue;
+			}
+			g_data_conn = res;
+			res = sceHttpSetConnectTimeOut(g_data_conn, cur->timeout * 1000000);
+			if (res < 0) {
+				sceHttpDeleteConnection(g_data_conn);
+				g_data_conn = 0;
+				cur = cur->next;
+				continue;
+			}
+			res = sceHttpCreateRequestWithURL(g_data_conn, 2, cur->url, 0);
+			if (res < 0) {
+				sceHttpDeleteConnection(g_data_conn);
+				g_data_conn = 0;
+				cur = cur->next;
+				continue;
+			}
+			g_data_req = res;
+			sceHttpDeleteHeader(g_data_req, "Accept-Encoding");
+			sceHttpDeleteHeader(g_data_req, "Accept");
+			res = sceHttpSendRequest(g_data_req, NULL, 0);
+			if (res < 0) {
 				sceHttpDeleteRequest(g_data_req);
 				g_data_req = 0;
 				sceHttpDeleteConnection(g_data_conn);
 				g_data_conn = 0;
-				res = updownOpenDataRequest(&content_len);
-				if (res < 0) {
-					cur = cur->next;
-					continue;
-				}
+				cur = cur->next;
+				continue;
 			}
-			g_cur_uri = cur;
-			*out_size = (uint32_t)content_len;
+			res = sceHttpGetStatusCode(g_data_req, &status);
+			if (res >= 0 && status == 200) {
+				res = sceHttpGetContentLength(g_data_req, &content_len);
+				if (res < 0 || (content_len >> 32) != 0) {
+					sceHttpDeleteRequest(g_data_req);
+					g_data_req = 0;
+					sceHttpDeleteConnection(g_data_conn);
+					g_data_conn = 0;
+					res = updownOpenDataRequest(&content_len);
+					if (res < 0) {
+						continue;
+					}
+				}
+				g_cur_uri = cur;
+				*out_size = (uint32_t)content_len;
+				sceHttpDeleteRequest(g_data_req);
+				g_data_req = 0;
+				if (cur != NULL) {
+					connected = 1;
+				}
+				break;
+			}
 			sceHttpDeleteRequest(g_data_req);
 			g_data_req = 0;
-			if (cur != NULL) {
-				goto finish;
+			sceHttpDeleteConnection(g_data_conn);
+			g_data_conn = 0;
+			cur = cur->next;
+		}
+
+		if (!connected) {
+			*out_err = res;
+			if (res == (int)0x80431063 && g_data_req != 0) {
+				if (sceHttpGetNetworkErrno(g_data_req, out_err) == 0) {
+					*out_err |= 0x10000000;
+				}
 			}
-			break;
-		}
-		sceHttpDeleteRequest(g_data_req);
-		g_data_req = 0;
-		sceHttpDeleteConnection(g_data_conn);
-		g_data_conn = 0;
-		cur = cur->next;
-	}
-
-	*out_err = res;
-	if (res == (int)0x80431063 && g_data_req != 0) {
-		if (sceHttpGetNetworkErrno(g_data_req, out_err) == 0) {
-			*out_err |= 0x10000000;
+			res = 0x805f0007;
 		}
 	}
-	res = 0x805f0007;
 
-finish:
 	if (g_apctl_err < 0) {
 		res = g_apctl_err;
 		*out_err = g_apctl_suberr;
@@ -1043,29 +1047,64 @@ static int updownReadDownloadData(void *buf, uint32_t size, int *out_err)
 	int res = 0x805f0009;
 
 	*out_err = 0;
-	if (g_aborted == 1) {
-		goto cleanup;
-	}
-	if (g_data_conn == 0) {
-		res = 0x805f0003;
-		goto cleanup;
-	}
+	do {
+		if (g_aborted == 1) {
+			break;
+		}
+		if (g_data_conn == 0) {
+			res = 0x805f0003;
+			break;
+		}
 
-	if (g_data_req == 0) {
-		res = sceHttpCreateRequestWithURL(g_data_conn, 0, g_cur_uri->url, 0);
-		if (res == (int)0x80431022) {
-			res = 0x805f0001;
-			goto cleanup;
+		if (g_data_req == 0) {
+			res = sceHttpCreateRequestWithURL(g_data_conn, 0, g_cur_uri->url, 0);
+			if (res == (int)0x80431022) {
+				res = 0x805f0001;
+				break;
+			}
+			if (res < 0) {
+				*out_err = res;
+				res = 0x805f0007;
+				break;
+			}
+			g_data_req = res;
+			sceHttpDeleteHeader(g_data_req, "Accept-Encoding");
+			sceHttpDeleteHeader(g_data_req, "Accept");
+			res = sceHttpSendRequest(g_data_req, NULL, 0);
+			if (res == (int)0x80431063) {
+				int r = sceHttpGetNetworkErrno(g_data_req, out_err);
+				if (r < 0) {
+					*out_err = r;
+				} else {
+					*out_err |= 0x10000000;
+				}
+				res = 0x805f0007;
+				break;
+			}
+			if (res == (int)0x80431022) {
+				res = 0x805f0001;
+				break;
+			}
+			if (res < 0) {
+				*out_err = res;
+				res = 0x805f0007;
+				break;
+			}
+			if (sceHttpGetStatusCode(g_data_req, &status) < 0 || status != 200) {
+				*out_err = 0x20000001;
+				res = 0x805f0007;
+				break;
+			}
 		}
-		if (res < 0) {
-			*out_err = res;
-			res = 0x805f0007;
-			goto cleanup;
+
+		res = sceHttpReadData(g_data_req, buf, size);
+		if (res == 0) {
+			sceHttpDeleteRequest(g_data_req);
+			g_data_req = 0;
+			sceHttpDeleteConnection(g_data_conn);
+			g_data_conn = 0;
+			return 0;
 		}
-		g_data_req = res;
-		sceHttpDeleteHeader(g_data_req, "Accept-Encoding");
-		sceHttpDeleteHeader(g_data_req, "Accept");
-		res = sceHttpSendRequest(g_data_req, NULL, 0);
 		if (res == (int)0x80431063) {
 			int r = sceHttpGetNetworkErrno(g_data_req, out_err);
 			if (r < 0) {
@@ -1074,53 +1113,19 @@ static int updownReadDownloadData(void *buf, uint32_t size, int *out_err)
 				*out_err |= 0x10000000;
 			}
 			res = 0x805f0007;
-			goto cleanup;
+			break;
 		}
 		if (res == (int)0x80431022) {
 			res = 0x805f0001;
-			goto cleanup;
+			break;
 		}
-		if (res < 0) {
-			*out_err = res;
-			res = 0x805f0007;
-			goto cleanup;
+		if (res >= 0) {
+			return res;
 		}
-		if (sceHttpGetStatusCode(g_data_req, &status) < 0 || status != 200) {
-			*out_err = 0x20000001;
-			res = 0x805f0007;
-			goto cleanup;
-		}
-	}
-
-	res = sceHttpReadData(g_data_req, buf, size);
-	if (res == 0) {
-		sceHttpDeleteRequest(g_data_req);
-		g_data_req = 0;
-		sceHttpDeleteConnection(g_data_conn);
-		g_data_conn = 0;
-		return 0;
-	}
-	if (res == (int)0x80431063) {
-		int r = sceHttpGetNetworkErrno(g_data_req, out_err);
-		if (r < 0) {
-			*out_err = r;
-		} else {
-			*out_err |= 0x10000000;
-		}
+		*out_err = res;
 		res = 0x805f0007;
-		goto cleanup;
-	}
-	if (res == (int)0x80431022) {
-		res = 0x805f0001;
-		goto cleanup;
-	}
-	if (res >= 0) {
-		return res;
-	}
-	*out_err = res;
-	res = 0x805f0007;
+	} while (0);
 
-cleanup:
 	if (g_data_req != 0) {
 		sceHttpDeleteRequest(g_data_req);
 		g_data_req = 0;
@@ -1286,61 +1291,64 @@ static void updownBuildListUrl(void)
 static int updownSendListRequest(uint64_t *out_len, int *out_err)
 {
 	int status = 0;
-	int res = sceHttpCreateRequestWithURL(g_list_conn, 0, g_active_list_url, 0);
-	if (res == (int)0x80431022) {
-		res = 0x805f0001;
-		goto cleanup;
-	}
-	if (res < 0) {
-		*out_err = res;
+	int res;
+
+	do {
+		res = sceHttpCreateRequestWithURL(g_list_conn, 0, g_active_list_url, 0);
+		if (res == (int)0x80431022) {
+			res = 0x805f0001;
+			break;
+		}
+		if (res < 0) {
+			*out_err = res;
+			res = 0x805f0007;
+			break;
+		}
+
+		g_list_req = res;
+		sceHttpDeleteHeader(g_list_req, "Accept-Encoding");
+		sceHttpDeleteHeader(g_list_req, "Accept");
+		sceHttpSetConnectTimeOut(g_list_conn, 30000000);
+		res = sceHttpSendRequest(g_list_req, NULL, 0);
+		if ((((uint32_t)res >> 16) & 0xfff) == 0x41 && (((uint32_t)res >> 20) & 0xff) == 4) {
+			*out_err = res;
+			res = 0x805f0005;
+			break;
+		}
+		if (res == (int)0x80431022) {
+			res = 0x805f0001;
+			break;
+		}
+		if (res == (int)0x8043106d) {
+			res = 0x805f0009;
+			break;
+		}
+		if (res < 0) {
+			*out_err = res;
+			res = 0x805f0007;
+			break;
+		}
+
+		res = sceHttpGetStatusCode(g_list_req, &status);
+		if (res < 0) {
+			*out_err = res;
+			res = 0x805f0007;
+			break;
+		}
+		if (status != 200) {
+			*out_err = 0x20000001;
+			res = (status == 404) ? (int)0x805f0008 : (int)0x805f0007;
+			break;
+		}
+
+		res = sceHttpGetContentLength(g_list_req, out_len);
+		if (res >= 0) {
+			return res;
+		}
+		*out_err = 0x20000002;
 		res = 0x805f0007;
-		goto cleanup;
-	}
+	} while (0);
 
-	g_list_req = res;
-	sceHttpDeleteHeader(g_list_req, "Accept-Encoding");
-	sceHttpDeleteHeader(g_list_req, "Accept");
-	sceHttpSetConnectTimeOut(g_list_conn, 30000000);
-	res = sceHttpSendRequest(g_list_req, NULL, 0);
-	if ((((uint32_t)res >> 16) & 0xfff) == 0x41 && (((uint32_t)res >> 20) & 0xff) == 4) {
-		*out_err = res;
-		res = 0x805f0005;
-		goto cleanup;
-	}
-	if (res == (int)0x80431022) {
-		res = 0x805f0001;
-		goto cleanup;
-	}
-	if (res == (int)0x8043106d) {
-		res = 0x805f0009;
-		goto cleanup;
-	}
-	if (res < 0) {
-		*out_err = res;
-		res = 0x805f0007;
-		goto cleanup;
-	}
-
-	res = sceHttpGetStatusCode(g_list_req, &status);
-	if (res < 0) {
-		*out_err = res;
-		res = 0x805f0007;
-		goto cleanup;
-	}
-	if (status != 200) {
-		*out_err = 0x20000001;
-		res = (status == 404) ? (int)0x805f0008 : (int)0x805f0007;
-		goto cleanup;
-	}
-
-	res = sceHttpGetContentLength(g_list_req, out_len);
-	if (res >= 0) {
-		return res;
-	}
-	*out_err = 0x20000002;
-	res = 0x805f0007;
-
-cleanup:
 	if (g_list_req != 0) {
 		sceHttpDeleteRequest(g_list_req);
 		g_list_req = 0;
@@ -1657,7 +1665,7 @@ static int mtSeed(MtState *mt, uint32_t seed)
 		mt->state[i] = (prev ^ (prev >> 30)) * 0x6c078965U + i;
 	}
 	mt->index = 0;
-	for (int i = 622; i >= 0; i--) {
+	for (int i = 0; i < 624; i++) {
 		mtNextRand(mt);
 	}
 	return 0;
