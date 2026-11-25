@@ -31,15 +31,15 @@ extern int sceKernelDcacheWritebackInvalidateRange(const void *p, unsigned int s
 extern int sceKernelDcacheWritebackRange(const void *p, unsigned int size);
 extern int sceKernelDcacheInvalidateRangeForUser(const void *p, unsigned int size);
 
-extern int sceDmacplus_driver_282CA0D7(void *a0);
-extern int sceDmacplus_driver_47D400CB(int a0, int a1);
-extern int sceDmacplus_driver_5FCF43BD(int a0, int a1);
-extern int sceDmacplus_driver_6945F1D3(void *a0);
-extern int sceDmacplus_driver_9C492B9B(void *a0, void *a1, void *a2);
-extern int sceDmacplus_driver_B269EAC9(int a0, int a1, const void *a2);
-extern int sceDmacplus_driver_BF0DB45E(int a0, int a1);
-extern int sceDmacplus_driver_D126494B(void *a0, void *a1, void *a2);
-extern int sceDmacplus_driver_F652F09D(int a0, int a1);
+extern int sceDmacplus_driver_282CA0D7(void *lli);
+extern int sceDmacplus_driver_47D400CB(int flags, int timeout);
+extern int sceDmacplus_driver_5FCF43BD(int flags, int timeout);
+extern int sceDmacplus_driver_6945F1D3(void *lli);
+extern int sceDmacplus_driver_9C492B9B(void *rgbEven, void *rgbOdd, void *yuvDesc);
+extern int sceDmacplus_driver_B269EAC9(int mode, int width, const void *coeffs);
+extern int sceDmacplus_driver_BF0DB45E(int flags, int timeout);
+extern int sceDmacplus_driver_D126494B(void *rgbEven, void *rgbOdd, void *yuvDesc);
+extern int sceDmacplus_driver_F652F09D(u32 startY, u32 startX, u32 height, u32 width);
 
 extern int sceMeAudio_driver_6AD33F60(int codecType, void *info);
 extern int sceMeAudio_driver_81956A0B(int codecType, void *workArea);
@@ -88,9 +88,9 @@ static const int g_videoRetValues[5] = {
     0x00000000
 };
 
-static const u8 g_mp3Bitrates[2][16] = {
-    { 0, 1, 2, 3, 4, 5, 6, 7, 8, 10, 12, 14, 16, 18, 20, 0 },
-    { 0, 4, 5, 6, 7, 8, 10, 12, 14, 16, 20, 24, 28, 32, 40, 0 }
+static const u8 g_mp3Bitrates[2][15] = {
+    { 0, 1, 2, 3, 4, 5, 6, 7, 8, 10, 12, 14, 16, 18, 20 },
+    { 0, 4, 5, 6, 7, 8, 10, 12, 14, 16, 20, 24, 28, 32, 40 }
 };
 
 static const u16 g_mp3Freqs[3][4] = {
@@ -99,13 +99,13 @@ static const u16 g_mp3Freqs[3][4] = {
     { 11025, 12000, 8000,  0 }
 };
 
-static const u8 g_cscCoeffs0[24] = {
+static const u8 g_cscCoeffsJfif[24] = {
     0x80, 0x00, 0x00, 0x00, 0xB3, 0x00, 0x80, 0x00,
     0xD4, 0x03, 0xA5, 0x03, 0x80, 0x00, 0xE3, 0x00,
     0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00
 };
 
-static const u8 g_cscCoeffs1[24] = {
+static const u8 g_cscCoeffsBt601[24] = {
     0x95, 0x00, 0x00, 0x00, 0xCC, 0x00, 0x95, 0x00,
     0xCE, 0x03, 0x98, 0x03, 0x95, 0x00, 0x02, 0x01,
     0x00, 0x00, 0x10, 0x00, 0x01, 0x00, 0x00, 0x00
@@ -130,7 +130,7 @@ typedef struct {
 
 typedef struct {
     SceMpegLli lli[100];      /* 0x000..0x640 */
-    u32 reserved640[4];           /* 0x640..0x650 */
+    u32 pad[4];               /* 0x640..0x650 */
     u8 coeffs[22];            /* 0x650..0x666 */
     s16 cscMode;              /* 0x666 */
     u32 cscWidth;             /* 0x668 */
@@ -162,9 +162,9 @@ static int mpegBaseTermSync(void)
 }
 
 /* 0x00D8 */
-int sceMpegbase_119D5DDA(int a0)
+int sceMpegbase_119D5DDA(int cmd)
 {
-    return sceMeCore_driver_9EB2943B(a0);
+    return sceMeCore_driver_9EB2943B(cmd);
 }
 
 /* 0x00F4 */
@@ -216,9 +216,13 @@ int sceAudiocodecInit(u32 *workArea, int codecType)
 
     int k1 = get_k1();
     set_k1(k1 << 11);
+    if ((int)(((u32)workArea | ((u32)workArea + 0x68)) & (k1 << 11)) < 0) {
+        set_k1(k1);
+        return 0x80000023;
+    }
     u32 edram = workArea[3];
     u32 needed = workArea[4];
-    if ((int)((((u32)workArea | ((u32)workArea + 0x68)) | (edram | (edram + needed) | needed)) & (k1 << 11)) < 0) {
+    if ((int)((edram | (edram + needed) | needed) & (k1 << 11)) < 0) {
         set_k1(k1);
         return 0x80000023;
     }
@@ -248,9 +252,13 @@ int sceAudiocodec_3DD7EE1A(u32 *workArea, int codecType)
 
     int k1 = get_k1();
     set_k1(k1 << 11);
+    if ((int)(((u32)workArea | ((u32)workArea + 0x68)) & (k1 << 11)) < 0) {
+        set_k1(k1);
+        return 0x80000023;
+    }
     u32 edram = workArea[3];
     u32 needed = workArea[4];
-    if ((int)((((u32)workArea | ((u32)workArea + 0x68)) | (edram | (edram + needed) | needed)) & (k1 << 11)) < 0) {
+    if ((int)((edram | (edram + needed) | needed) & (k1 << 11)) < 0) {
         set_k1(k1);
         return 0x80000023;
     }
@@ -280,39 +288,40 @@ int sceAudiocodecDecode(u32 *workArea, int codecType)
 
     int k1 = get_k1();
     set_k1(k1 << 11);
-    int res;
-    u32 edram = workArea[3];
-    u32 needed = workArea[4];
-    u32 inBuf = workArea[6];
-    u32 outBuf = workArea[8];
-    if ((int)((((u32)workArea | ((u32)workArea + 0x68)) |
-               (edram | (edram + needed) | needed) |
-               (inBuf | (inBuf + 0x10000)) |
-               (outBuf | (outBuf + 0x10000))) & (k1 << 11)) < 0) {
-        res = 0x80000023;
-    } else {
-        int inSize;
-        if (codecType == 0x1002 || codecType == 0x1004)
-            inSize = (int)workArea[10];
-        else
-            inSize = audiocodecGetNeedMem(workArea, codecType);
+    int res = 0x80000023;
+    if ((int)(((u32)workArea | ((u32)workArea + 0x68)) & (k1 << 11)) >= 0) {
+        u32 edram = workArea[3];
+        u32 needed = workArea[4];
+        if ((int)((edram | (edram + needed) | needed) & (k1 << 11)) >= 0) {
+            u32 inBuf = workArea[6];
+            if ((int)((inBuf | (inBuf + 0x10000)) & (k1 << 11)) >= 0) {
+                u32 outBuf = workArea[8];
+                if ((int)((outBuf | (outBuf + 0x10000)) & (k1 << 11)) >= 0) {
+                    int inSize;
+                    if (codecType == 0x1002 || codecType == 0x1004)
+                        inSize = (int)workArea[10];
+                    else
+                        inSize = audiocodecGetNeedMem(workArea, codecType);
 
-        if (inSize < 0) {
-            res = inSize;
-        } else {
-            sceKernelDcacheWritebackRange((void *)workArea[6], inSize);
-            int outSize = audiocodecGetWorkSize(workArea, codecType);
-            if (outSize < 0) {
-                res = outSize;
-            } else {
-                sceKernelDcacheWritebackInvalidateRange((void *)workArea[8], outSize);
-                int ret = sceMeAudio_driver_9A9E21EE(codecType, workArea);
-                if (ret == 0) {
-                    res = 0;
-                } else {
-                    if ((u32)ret < (u32)-4)
-                        ret = 0;
-                    res = g_audioRetValues[ret + 4];
+                    if (inSize < 0) {
+                        res = inSize;
+                    } else {
+                        sceKernelDcacheWritebackRange((void *)workArea[6], inSize);
+                        int outSize = audiocodecGetWorkSize(workArea, codecType);
+                        if (outSize < 0) {
+                            res = outSize;
+                        } else {
+                            sceKernelDcacheWritebackInvalidateRange((void *)workArea[8], outSize);
+                            int ret = sceMeAudio_driver_9A9E21EE(codecType, workArea);
+                            if (ret == 0) {
+                                res = 0;
+                            } else {
+                                if ((u32)ret < (u32)-4)
+                                    ret = 0;
+                                res = g_audioRetValues[ret + 4];
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -333,37 +342,37 @@ int sceAudiocodecGetInfo(u32 *workArea, int codecType)
 
     int k1 = get_k1();
     set_k1(k1 << 11);
-    u32 edram = workArea[3];
-    u32 needed = workArea[4];
-    int res;
-    if ((int)((((u32)workArea | ((u32)workArea + 0x68)) | (edram | (edram + needed) | needed)) & (k1 << 11)) < 0) {
-        res = 0x80000023;
-    } else {
-        if (codecType == 0x1002 || codecType == 0x1004) {
-            u32 inBuf = workArea[6];
-            u32 inSize = workArea[10];
-            if ((int)((inBuf | (inBuf + inSize) | inSize) & (k1 << 11)) < 0) {
-                set_k1(k1);
-                return 0x80000023;
+    int res = 0x80000023;
+    if ((int)(((u32)workArea | ((u32)workArea + 0x68)) & (k1 << 11)) >= 0) {
+        u32 edram = workArea[3];
+        u32 needed = workArea[4];
+        if ((int)((edram | (edram + needed) | needed) & (k1 << 11)) >= 0) {
+            if (codecType == 0x1002 || codecType == 0x1004) {
+                u32 inBuf = workArea[6];
+                u32 inSize = workArea[10];
+                if ((int)((inBuf | (inBuf + inSize) | inSize) & (k1 << 11)) < 0) {
+                    set_k1(k1);
+                    return 0x80000023;
+                }
             }
-        }
-        int sz = 0;
-        if (codecType == 0x1002 || codecType == 0x1004) {
-            sz = 2;
-        } else if (codecType == 0x1000) {
-            sz = 4;
-        } else {
-            set_k1(k1);
-            return 0;
-        }
-        workArea[0] = 0x05100601;
-        int ret = sceMeAudio_driver_C300D466(codecType, sz, workArea);
-        if (ret == 0) {
-            res = 0;
-        } else {
-            if ((u32)ret < (u32)-4)
-                ret = 0;
-            res = g_audioRetValues[ret + 4];
+            int sz = 0;
+            if (codecType == 0x1002 || codecType == 0x1004) {
+                sz = 2;
+            } else if (codecType == 0x1000) {
+                sz = 4;
+            } else {
+                set_k1(k1);
+                return 0;
+            }
+            workArea[0] = 0x05100601;
+            int ret = sceMeAudio_driver_C300D466(codecType, sz, workArea);
+            if (ret == 0) {
+                res = 0;
+            } else {
+                if ((u32)ret < (u32)-4)
+                    ret = 0;
+                res = g_audioRetValues[ret + 4];
+            }
         }
     }
     set_k1(k1);
@@ -428,17 +437,18 @@ int sceAudiocodecReleaseEDRAM(u32 *workArea)
     int k1 = get_k1();
     set_k1(k1 << 11);
     int res = 0x80000023;
-    u32 edram = workArea[3];
-    u32 needed = workArea[4];
-    if ((int)(((u32)workArea | ((u32)workArea + 0x6C)) & (k1 << 11)) >= 0 &&
-        (int)((edram | (edram + needed) | needed) & (k1 << 11)) >= 0) {
-        u32 raw = workArea[26];
-        res = 0x807F0004;
-        if (raw != 0 && ((raw & 0x1FFFFFFF) <= 0x3FFFFF)) {
-            sceMeFree((void *)raw);
-            workArea[26] = 0;
-            workArea[3] = 0;
-            res = 0;
+    if ((int)(((u32)workArea | ((u32)workArea + 0x6C)) & (k1 << 11)) >= 0) {
+        u32 edram = workArea[3];
+        u32 needed = workArea[4];
+        if ((int)((edram | (edram + needed) | needed) & (k1 << 11)) >= 0) {
+            u32 raw = workArea[26];
+            res = 0x807F0004;
+            if (raw != 0 && ((raw & 0x1FFFFFFF) <= 0x3FFFFF)) {
+                sceMeFree((void *)raw);
+                workArea[26] = 0;
+                workArea[3] = 0;
+                res = 0;
+            }
         }
     }
     set_k1(k1);
@@ -478,23 +488,23 @@ static int audiocodecGetWorkSize(u32 *workArea, int codecType)
 {
     switch (codecType - 0x1000) {
     case 0: {
-        u32 v38 = workArea[14];
-        u32 v48 = workArea[18];
-        if (v38 == 1 && v48 != 1)
+        u32 sampleRateFlag = workArea[14];
+        u32 channels = workArea[18];
+        if (sampleRateFlag == 1 && channels != 1)
             return 0x2000;
-        return (int)(v48 << 12);
+        return (int)(channels << 12);
     }
     case 1:
         return 0x1000;
     case 2: {
-        u32 v38 = workArea[14];
-        if (v38 == 0x270F) {
+        u32 mpegVer = workArea[14];
+        if (mpegVer == 0x270F) {
             int res = sceAudiocodecGetInfo(workArea, 0x1002);
             if (res < 0)
                 return res;
-            v38 = workArea[14];
+            mpegVer = workArea[14];
         }
-        return (v38 == 1) ? 0x1200 : 0x900;
+        return (mpegVer == 1) ? 0x1200 : 0x900;
     }
     case 3:
         return (((u8 *)workArea)[0x2D] == 0) ? 0x1000 : 0x2000;
@@ -651,22 +661,24 @@ int sceVideocodecScanHeader(u32 *workArea, int type)
     int k1 = get_k1();
     set_k1(k1 << 11);
     int res = 0x80000023;
-    u32 p10 = workArea[4];
-    u32 p24 = workArea[9];
-    u32 p28 = workArea[10];
-    if ((int)(((u32)workArea | ((u32)workArea + 0x60)) & (k1 << 11)) >= 0 &&
-        (int)((p10 | (p10 + 0x100)) & (k1 << 11)) >= 0 &&
-        (int)((p24 | (p24 + p28) | p28) & (k1 << 11)) >= 0 &&
-        (int)(workArea[3] & (k1 << 11)) >= 0) {
-        res = 0x806201FE;
-        if ((u32)(type - 1) < 2) {
-            sceKernelDcacheWritebackInvalidateRange((void *)p10, 0x100);
-            if ((workArea[9] & 0x1FFFFFFF) > 0x3FFFFF)
-                sceKernelDcacheWritebackInvalidateRange((void *)workArea[9], workArea[10]);
-            int ret = sceMeVideo_driver_6D68B223(type, 2, workArea);
-            if ((u32)(ret - 1) < (u32)-5)
-                ret = -4;
-            res = g_videoRetValues[ret + 4];
+    if ((int)(((u32)workArea | ((u32)workArea + 0x60)) & (k1 << 11)) >= 0) {
+        u32 infoBuf = workArea[4];
+        if ((int)((infoBuf | (infoBuf + 0x100)) & (k1 << 11)) >= 0) {
+            u32 streamBuf = workArea[9];
+            u32 streamSize = workArea[10];
+            if ((int)((streamBuf | (streamBuf + streamSize) | streamSize) & (k1 << 11)) >= 0 &&
+                (int)(workArea[3] & (k1 << 11)) >= 0) {
+                res = 0x806201FE;
+                if ((u32)(type - 1) < 2) {
+                    sceKernelDcacheWritebackInvalidateRange((void *)infoBuf, 0x100);
+                    if ((workArea[9] & 0x1FFFFFFF) > 0x3FFFFF)
+                        sceKernelDcacheWritebackInvalidateRange((void *)workArea[9], workArea[10]);
+                    int ret = sceMeVideo_driver_6D68B223(type, 2, workArea);
+                    if ((u32)(ret - 1) < (u32)-5)
+                        ret = -4;
+                    res = g_videoRetValues[ret + 4];
+                }
+            }
         }
     }
     set_k1(k1);
@@ -699,16 +711,17 @@ int sceVideocodecGetSEI(u32 *workArea, int type)
     set_k1(k1 << 11);
     int res = 0x806201FE;
     if (type == 0) {
-        res = videocodecCheckWorkArea(workArea, 0);
+        res = videocodecCheckWorkArea(workArea, type);
         if (res == 0) {
-            u32 p50 = workArea[20];
-            if ((int)(((p50 | (p50 + 0xA4)) | workArea[3]) & (k1 << 11)) < 0)
+            u32 seiBuf = workArea[20];
+            if ((int)((seiBuf | (seiBuf + 0xA4)) & (k1 << 11)) < 0 ||
+                (int)(workArea[3] & (k1 << 11)) < 0)
                 res = 0x80000023;
         }
         if (res == 0) {
-            sceKernelDcacheWritebackInvalidateRange((void *)workArea[4], 0x28);
+            sceKernelDcacheWritebackInvalidateRange((void *)workArea[4], (type == 0) ? 0x28 : 0x100);
             sceKernelDcacheInvalidateRangeForUser((void *)workArea[20], 0xC0);
-            int ret = sceMeVideo_driver_6D68B223(0, 5, workArea);
+            int ret = sceMeVideo_driver_6D68B223(type, 5, workArea);
             if ((u32)(ret - 1) < (u32)-5)
                 ret = -4;
             res = g_videoRetValues[ret + 4];
@@ -725,16 +738,17 @@ int sceVideocodecGetFrameCrop(u32 *workArea, int type)
     set_k1(k1 << 11);
     int res = 0x806201FE;
     if (type == 0) {
-        res = videocodecCheckWorkArea(workArea, 0);
+        res = videocodecCheckWorkArea(workArea, type);
         if (res == 0) {
-            u32 p54 = workArea[21];
-            if ((int)(((p54 | (p54 + 0x10)) | workArea[3]) & (k1 << 11)) < 0)
+            u32 cropBuf = workArea[21];
+            if ((int)((cropBuf | (cropBuf + 0x10)) & (k1 << 11)) < 0 ||
+                (int)(workArea[3] & (k1 << 11)) < 0)
                 res = 0x80000023;
         }
         if (res == 0) {
-            sceKernelDcacheWritebackInvalidateRange((void *)workArea[4], 0x28);
+            sceKernelDcacheWritebackInvalidateRange((void *)workArea[4], (type == 0) ? 0x28 : 0x100);
             sceKernelDcacheInvalidateRangeForUser((void *)workArea[21], 0x40);
-            int ret = sceMeVideo_driver_6D68B223(0, 6, workArea);
+            int ret = sceMeVideo_driver_6D68B223(type, 6, workArea);
             if ((u32)(ret - 1) < (u32)-5)
                 ret = -4;
             res = g_videoRetValues[ret + 4];
@@ -751,14 +765,14 @@ int sceVideocodec_893B32B1(u32 *workArea, int type)
     set_k1(k1 << 11);
     int res = 0x806201FE;
     if (type == 0) {
-        res = videocodecCheckWorkArea(workArea, 0);
+        res = videocodecCheckWorkArea(workArea, type);
         if (res >= 0 && (int)(workArea[3] & (k1 << 11)) < 0) {
             set_k1(k1);
             return 0x80000023;
         }
         if (res == 0) {
-            sceKernelDcacheWritebackInvalidateRange((void *)workArea[4], 0x28);
-            int ret = sceMeVideo_driver_6D68B223(0, 7, workArea);
+            sceKernelDcacheWritebackInvalidateRange((void *)workArea[4], (type == 0) ? 0x28 : 0x100);
+            int ret = sceMeVideo_driver_6D68B223(type, 7, workArea);
             if ((u32)(ret - 1) < (u32)-5)
                 ret = -4;
             res = g_videoRetValues[ret + 4];
@@ -817,7 +831,7 @@ int sceVideocodecDelete(u32 *workArea, int type)
 {
     int k1 = get_k1();
     set_k1(k1 << 11);
-    int res = videocodecCheckWorkAreaWithCtrl(workArea, type);
+    int res = (videocodecCheckWorkAreaWithCtrl(workArea, type) != 0);
     if (res == 0) {
         sceKernelDcacheWritebackInvalidateRange((void *)workArea[4], (type == 0) ? 0x28 : 0x100);
         sceKernelPollEventFlag(g_mpegCtx.cscEvf, 1, 0x21, NULL);
@@ -871,8 +885,8 @@ static int videocodecCheckWorkArea(u32 *workArea, u32 type)
             return 0x806201FE;
         sz = 0x100;
     }
-    u32 p10 = workArea[4];
-    if ((int)((p10 | (p10 + sz) | sz) & k1) < 0)
+    u32 infoBuf = workArea[4];
+    if ((int)((infoBuf | (infoBuf + sz) | sz) & k1) < 0)
         return 0x80000023;
     return 0;
 }
@@ -883,11 +897,11 @@ static int videocodecCheckWorkAreaBuffers(u32 *workArea, u32 type)
     int k1 = get_k1();
     if ((int)(((u32)workArea | ((u32)workArea + 0x60)) & k1) < 0)
         return 0x80000023;
-    u32 p14 = workArea[5], p18 = workArea[6];
-    if ((int)((p14 | (p14 + p18) | p18) & k1) < 0)
+    u32 edramBuf = workArea[5], edramSize = workArea[6];
+    if ((int)((edramBuf | (edramBuf + edramSize) | edramSize) & k1) < 0)
         return 0x80000023;
-    u32 p1c = workArea[7], p20 = workArea[8];
-    if ((int)((p1c | (p1c + p20) | p20) & k1) < 0)
+    u32 workBuf = workArea[7], workSize = workArea[8];
+    if ((int)((workBuf | (workBuf + workSize) | workSize) & k1) < 0)
         return 0x80000023;
     u32 sz = 0x28;
     if (type != 0) {
@@ -895,8 +909,8 @@ static int videocodecCheckWorkAreaBuffers(u32 *workArea, u32 type)
             return 0x806201FE;
         sz = 0x100;
     }
-    u32 p10 = workArea[4];
-    if ((int)((p10 | (p10 + sz) | sz) & k1) < 0)
+    u32 infoBuf = workArea[4];
+    if ((int)((infoBuf | (infoBuf + sz) | sz) & k1) < 0)
         return 0x80000023;
     return 0;
 }
@@ -909,14 +923,14 @@ static int videocodecCheckDecodeBuffers(u32 *workArea, u32 type)
         return 0x80000023;
     if ((int)(workArea[3] & k1) < 0)
         return 0x80000023;
-    u32 p14 = workArea[5], p18 = workArea[6];
-    if ((int)((p14 | (p14 + p18) | p18) & k1) < 0)
+    u32 edramBuf = workArea[5], edramSize = workArea[6];
+    if ((int)((edramBuf | (edramBuf + edramSize) | edramSize) & k1) < 0)
         return 0x80000023;
-    u32 p1c = workArea[7], p20 = workArea[8];
-    if ((int)((p1c | (p1c + p20) | p20) & k1) < 0)
+    u32 workBuf = workArea[7], workSize = workArea[8];
+    if ((int)((workBuf | (workBuf + workSize) | workSize) & k1) < 0)
         return 0x80000023;
-    u32 p24 = workArea[9], p28 = workArea[10];
-    if ((int)((p24 | (p24 + p28) | p28) & k1) < 0)
+    u32 streamBuf = workArea[9], streamSize = workArea[10];
+    if ((int)((streamBuf | (streamBuf + streamSize) | streamSize) & k1) < 0)
         return 0x80000023;
 
     u32 sz = 0x28;
@@ -925,36 +939,36 @@ static int videocodecCheckDecodeBuffers(u32 *workArea, u32 type)
             return 0x806201FE;
         sz = 0x100;
     }
-    u32 p10 = workArea[4];
-    if ((int)((p10 | (p10 + sz)) & k1) < 0)
+    u32 infoBuf = workArea[4];
+    if ((int)((infoBuf | (infoBuf + sz)) & k1) < 0)
         return 0x80000023;
     if (type != 0)
         return 0;
 
     u32 count = workArea[15];
-    u32 p2c = workArea[11];
-    u32 sz2c = count * 0x2C;
-    if ((int)((p2c | (p2c + sz2c) | sz2c) & k1) < 0)
+    u32 frameInfoBuf = workArea[11];
+    u32 frameInfoSize = count * 0x2C;
+    if ((int)((frameInfoBuf | (frameInfoBuf + frameInfoSize) | frameInfoSize) & k1) < 0)
         return 0x80000023;
-    u32 p30 = workArea[12];
-    if ((int)((p30 | (p30 + 0x64)) & k1) < 0)
+    u32 picInfoBuf = workArea[12];
+    if ((int)((picInfoBuf | (picInfoBuf + 0x64)) & k1) < 0)
         return 0x80000023;
 
-    u32 p38 = workArea[14];
-    if (p38 != 0) {
-        u32 sz38 = count * 0x148;
-        if ((int)((p38 | (p38 + sz38) | sz38) & k1) < 0)
+    u32 extBuf = workArea[14];
+    if (extBuf != 0) {
+        u32 extBufSize = count * 0x148;
+        if ((int)((extBuf | (extBuf + extBufSize) | extBufSize) & k1) < 0)
             return 0x80000023;
     }
     int flags = (int)workArea[13];
     if (flags < 0) {
-        u32 p50 = workArea[20];
-        if (p50 != 0 && (int)((p50 | (p50 + 0xA4)) & k1) < 0)
+        u32 seiBuf = workArea[20];
+        if (seiBuf != 0 && (int)((seiBuf | (seiBuf + 0xA4)) & k1) < 0)
             return 0x80000023;
     }
     if (flags & 0x40000000) {
-        u32 p54 = workArea[21];
-        if (p54 != 0 && (int)((p54 | (p54 + 0x10)) & k1) < 0)
+        u32 cropBuf = workArea[21];
+        if (cropBuf != 0 && (int)((cropBuf | (cropBuf + 0x10)) & k1) < 0)
             return 0x80000023;
     }
     return 0;
@@ -1005,24 +1019,24 @@ static int videocodecCheckInitBuffers(u32 *workArea, u32 type)
             return 0x806201FE;
         sz = 0x100;
     }
-    u32 p10 = workArea[4];
-    if ((int)((p10 | (p10 + sz)) & k1) < 0)
+    u32 infoBuf = workArea[4];
+    if ((int)((infoBuf | (infoBuf + sz)) & k1) < 0)
         return 0x80000023;
     if (type != 0)
         return 0;
 
     u32 count = workArea[15];
-    u32 p2c = workArea[11];
-    u32 sz2c = count * 0x2C;
-    if ((int)((p2c | (p2c + sz2c) | sz2c) & k1) < 0)
+    u32 frameInfoBuf = workArea[11];
+    u32 frameInfoSize = count * 0x2C;
+    if ((int)((frameInfoBuf | (frameInfoBuf + frameInfoSize) | frameInfoSize) & k1) < 0)
         return 0x80000023;
-    u32 p30 = workArea[12];
-    if ((int)((p30 | (p30 + 0x64)) & k1) < 0)
+    u32 picInfoBuf = workArea[12];
+    if ((int)((picInfoBuf | (picInfoBuf + 0x64)) & k1) < 0)
         return 0x80000023;
-    u32 p38 = workArea[14];
-    if (p38 != 0) {
-        u32 sz38 = count * 0x148;
-        if ((int)((p38 | (p38 + sz38) | sz38) & k1) < 0)
+    u32 extBuf = workArea[14];
+    if (extBuf != 0) {
+        u32 extBufSize = count * 0x148;
+        if ((int)((extBuf | (extBuf + extBufSize) | extBufSize) & k1) < 0)
             return 0x80000023;
     }
     return 0;
@@ -1062,39 +1076,41 @@ static int videocodecCalcFrameBufSizes(u32 *workArea, u32 *sizes)
     if ((h & 0xF) || w == 0 || w >= 0x2D1 || h == 0 || h >= 0x241)
         return 0x806201FE;
 
-    u32 h2 = (h >> 4) << 3;
+    u32 halfHeight = (h >> 4) << 3;
     u32 wAligned = w & ~0x1F;
     if (w & 0x10) {
-        sizes[1] = (wAligned >> 1) * h2;
-        sizes[0] = ((wAligned + 0x20) >> 1) * h2;
+        sizes[1] = (wAligned >> 1) * halfHeight;
+        sizes[0] = ((wAligned + 0x20) >> 1) * halfHeight;
     } else {
-        u32 s = (wAligned >> 1) * h2;
-        sizes[1] = s;
-        sizes[0] = s;
+        u32 planeSize = (wAligned >> 1) * halfHeight;
+        sizes[1] = planeSize;
+        sizes[0] = planeSize;
     }
     sizes[2] = sizes[0] >> 1;
     sizes[3] = sizes[1] >> 1;
     u32 area = workArea[0] * workArea[1];
-    u32 area4 = area >> 2;
+    u32 chromaArea = area >> 2;
     sizes[4] = area;
-    sizes[5] = area4;
+    sizes[5] = chromaArea;
     if (((workArea[0] >> 4) & 7) == 7) {
         sizes[4] = area + (workArea[1] << 4);
-        sizes[5] = area4 + ((workArea[1] << 4) >> 2);
+        sizes[5] = chromaArea + ((workArea[1] << 4) >> 2);
     }
 
-    u32 s0 = sizes[0], s1 = sizes[1], s2 = sizes[2], s3 = sizes[3], s4 = sizes[4], s5 = sizes[5];
-    if ((int)((workArea[3] | (workArea[3] + s0) | s0) & k1) < 0 ||
-        (int)((workArea[4] | (workArea[4] + s0) | s0) & k1) < 0 ||
-        (int)((workArea[7] | (workArea[7] + s1) | s1) & k1) < 0 ||
-        (int)((workArea[8] | (workArea[8] + s1) | s1) & k1) < 0 ||
-        (int)((workArea[5] | (workArea[5] + s2) | s2) & k1) < 0 ||
-        (int)((workArea[6] | (workArea[6] + s2) | s2) & k1) < 0 ||
-        (int)((workArea[9] | (workArea[9] + s3) | s3) & k1) < 0 ||
-        (int)((workArea[10] | (workArea[10] + s3) | s3) & k1) < 0 ||
-        (int)((workArea[11] | (workArea[11] + s4) | s4) & k1) < 0 ||
-        (int)((workArea[12] | (workArea[12] + s5) | s5) & k1) < 0 ||
-        (int)((workArea[13] | (workArea[13] + s5) | s5) & k1) < 0)
+    u32 sizeYEven = sizes[0], sizeYOdd = sizes[1];
+    u32 sizeCEven = sizes[2], sizeCOdd = sizes[3];
+    u32 sizeOutY = sizes[4], sizeOutC = sizes[5];
+    if ((int)((workArea[3] | (workArea[3] + sizeYEven) | sizeYEven) & k1) < 0 ||
+        (int)((workArea[4] | (workArea[4] + sizeYEven) | sizeYEven) & k1) < 0 ||
+        (int)((workArea[7] | (workArea[7] + sizeYOdd) | sizeYOdd) & k1) < 0 ||
+        (int)((workArea[8] | (workArea[8] + sizeYOdd) | sizeYOdd) & k1) < 0 ||
+        (int)((workArea[5] | (workArea[5] + sizeCEven) | sizeCEven) & k1) < 0 ||
+        (int)((workArea[6] | (workArea[6] + sizeCEven) | sizeCEven) & k1) < 0 ||
+        (int)((workArea[9] | (workArea[9] + sizeCOdd) | sizeCOdd) & k1) < 0 ||
+        (int)((workArea[10] | (workArea[10] + sizeCOdd) | sizeCOdd) & k1) < 0 ||
+        (int)((workArea[11] | (workArea[11] + sizeOutY) | sizeOutY) & k1) < 0 ||
+        (int)((workArea[12] | (workArea[12] + sizeOutC) | sizeOutC) & k1) < 0 ||
+        (int)((workArea[13] | (workArea[13] + sizeOutC) | sizeOutC) & k1) < 0)
         return 0x80000023;
     return 0;
 }
@@ -1113,22 +1129,22 @@ int sceMpegBaseYCrCbCopy(u32 *dst, u32 *src, int flags)
         return 0x80000023;
     }
 
-    u32 s10 = src[4];
+    u32 srcBase = src[4];
     if (flags & 1) {
-        u32 d10 = dst[4];
-        dst[5] = d10 + (src[5] - s10);
-        dst[8] = d10 + (src[8] - s10);
-        dst[9] = d10 + (src[9] - s10);
+        u32 dstBase = dst[4];
+        dst[5] = dstBase + (src[5] - srcBase);
+        dst[8] = dstBase + (src[8] - srcBase);
+        dst[9] = dstBase + (src[9] - srcBase);
     }
     if (flags & 2) {
-        u32 d10 = dst[4];
-        dst[6] = d10 + (src[6] - s10);
-        dst[7] = d10 + (src[7] - s10);
-        dst[10] = d10 + (src[10] - s10);
-        dst[11] = d10 + (src[11] - s10);
+        u32 dstBase = dst[4];
+        dst[6] = dstBase + (src[6] - srcBase);
+        dst[7] = dstBase + (src[7] - srcBase);
+        dst[10] = dstBase + (src[10] - srcBase);
+        dst[11] = dstBase + (src[11] - srcBase);
     }
 
-    int blocksY = ((int)(src[6] - s10)) >> 4;
+    int blocksY = ((int)(src[6] - srcBase)) >> 4;
     if ((u32)blocksY > 0xBFF4) {
         set_k1(k1);
         return 0x80000104;
@@ -1232,15 +1248,11 @@ static int mpegBaseRunLliTransfer(SceMpegLli *endLli)
     sceKernelDcacheWritebackInvalidateRange(g_mpegCtx.lli, (u32)endLli - (u32)g_mpegCtx.lli);
     for (;;) {
         int res = sceDmacplus_driver_6945F1D3(g_mpegCtx.lli);
-        if (res == 0) {
-            res = sceDmacplus_driver_5FCF43BD(0, 0);
-            if (res == 0)
-                return 0;
-        } else if (res == (int)0x80000021) {
-            sceDmacplus_driver_5FCF43BD(0, 0);
-        } else {
+        if (res == 0)
+            return sceDmacplus_driver_5FCF43BD(0, 0);
+        if (res != (int)0x80000021)
             return res;
-        }
+        sceDmacplus_driver_5FCF43BD(0, 0);
     }
 }
 
@@ -1264,17 +1276,18 @@ int sceMpegBasePESpacketCopy(u32 *pkt)
     u32 k1Top = ((u32)(k1 << 11) >> 31) << 30;
     SceMpegLli *end = &g_mpegCtx.lli[100];
 
+    res = 0x80000104;
     for (;;) {
-        u32 s = pkt[0];
-        u32 d = pkt[1];
+        u32 srcAddr = pkt[0];
+        u32 dstAddr = pkt[1];
         u32 len = pkt[3] & 0xFFF;
         SceMpegLli *nextLli = lli + 1;
-        lli->src = k1Top | (s & 0x1FFFFFFF);
-        lli->dst = k1Top | (d & 0x1FFFFFFF);
+        lli->src = k1Top | (srcAddr & 0x1FFFFFFF);
+        lli->dst = k1Top | (dstAddr & 0x1FFFFFFF);
         if (len == 0)
-            goto err_104;
-        u32 nextPkt = pkt[2];
-        if (nextPkt == 0) {
+            break;
+        u32 hasNext = pkt[2];
+        if (hasNext == 0) {
             lli->ctrl = 0x8A909000 | len;
             lli->next = 0;
             sceKernelDcacheWritebackRange(g_mpegCtx.lli, (u32)lli + 0x10 - (u32)g_mpegCtx.lli);
@@ -1282,19 +1295,15 @@ int sceMpegBasePESpacketCopy(u32 *pkt)
                 res = sceDmacplus_driver_282CA0D7(g_mpegCtx.lli);
                 if (res == 0) {
                     res = sceDmacplus_driver_47D400CB(0, 0);
-                    if (res == 0)
-                        break;
-                } else if (res == (int)0x80000021) {
-                    sceDmacplus_driver_47D400CB(0, 0);
-                } else {
                     break;
                 }
+                if (res != (int)0x80000021)
+                    break;
+                sceDmacplus_driver_47D400CB(0, 0);
             }
-            sceKernelSignalSema(g_mpegCtx.lliSema, 1);
-            set_k1(k1);
-            return res;
+            break;
         }
-        pkt = (u32 *)nextPkt;
+        pkt += 4;
         lli->next = (u32)nextLli & 0x1FFFFFFF;
         lli->ctrl = 0x0A909000 | len;
         lli = nextLli;
@@ -1302,15 +1311,16 @@ int sceMpegBasePESpacketCopy(u32 *pkt)
             break;
     }
 
-err_104:
     sceKernelSignalSema(g_mpegCtx.lliSema, 1);
     set_k1(k1);
-    return 0x80000104;
+    return res;
 }
 
 /* === sceJpeg === */
-static int mpegBaseRunCsc(void *a0, void *a1, void *a2);
+static int mpegBaseRunCsc(void *rgbEven, void *rgbOdd, void *yuvDesc);
 static int mpegBaseConfigCsc(int mode, int width, const void *coeffs);
+int sceJpegDecodeMJpegSuccessively(const u8 *jpegbuf, u32 size, void *rgba, int mode);
+int sceJpegDecodeMJpegYCbCrSuccessively(const u8 *jpegbuf, u32 size, u8 *ycbcr, u32 ycbcrSize, int mode);
 
 /* 0x267C */
 int sceJpegInitMJpeg(void)
@@ -1323,7 +1333,7 @@ int sceJpegInitMJpeg(void)
         res = sceMeVideo_driver_E8CD3C75(3, g_jpegMeBuf);
         if (res >= 0) {
             g_jpegCtx.state = 1;
-            res = sceKernelSetEventFlag(g_mpegCtx.cscEvf, 2);
+            sceKernelSetEventFlag(g_mpegCtx.cscEvf, 2);
         } else if (res >= -9) {
             res = 0x80650042;
         }
@@ -1460,7 +1470,7 @@ int sceJpegMJpegCscWithColorOption(void *rgba, const void *ycbcr, int widthHeigh
     desc[9] = (u32)ycbcr + halfArea * 2 + quarterArea * 3;
 
     sceKernelDcacheInvalidateRangeForUser(rgba, strideBytes << 1);
-    mpegBaseConfigCsc(mode, lineWidth, (optHi == 0) ? g_cscCoeffs0 : g_cscCoeffs1);
+    mpegBaseConfigCsc(mode, lineWidth, (optHi == 0) ? g_cscCoeffsJfif : g_cscCoeffsBt601);
     int res = mpegBaseRunCsc(rgba, (u8 *)rgba + strideBytes, desc);
     sceKernelUnlockMutex(g_mpegCtx.cscMutex, 1);
     set_k1(k1);
@@ -1499,7 +1509,7 @@ int sceJpegDecodeMJpeg(const u8 *jpegbuf, u32 size, void *rgba, int mode)
     set_k1(k1);
     if (dec < 0)
         return dec;
-    if (g_jpegCtx.height < (dec & 0xFFFF) || g_jpegCtx.width < (dec >> 16))
+    if (g_jpegCtx.height < (dec & 0xFFFF) || g_jpegCtx.width < (int)((u32)dec >> 16))
         return 0x80650020;
 
     int res = sceJpegMJpegCscWithColorOption(rgba, (const void *)0x40, dec, g_jpegCtx.width, 3);
@@ -1598,7 +1608,7 @@ int sceJpegDecodeMJpegSuccessively(const u8 *jpegbuf, u32 size, void *rgba, int 
     int dec = sceJpegDecodeMJpegYCbCrSuccessively(jpegbuf, size, (u8 *)0x40, 0x100000, mode);
     if (dec < 0)
         return dec;
-    if (g_jpegCtx.height < (dec & 0xFFFF) || g_jpegCtx.width < (dec >> 16))
+    if (g_jpegCtx.height < (dec & 0xFFFF) || g_jpegCtx.width < (int)((u32)dec >> 16))
         return 0x80650020;
     int res = sceJpegMJpegCscWithColorOption(rgba, (const void *)0x40, dec, g_jpegCtx.width, 3);
     return (res < 0) ? res : dec;
@@ -1630,11 +1640,11 @@ int sceJpegGetOutputInfo(const u8 *jpegbuf, u32 size, int *colourInfo, int mode)
     int res = sceMeCore_driver_FA398D71(0x140, buf, jpegbuf, size, 1, (mode == 0) ? 0 : 2);
     if (res >= 0 && colourInfo != NULL) {
         int info = sceMeCore_driver_FA398D71(0x146, buf);
-        int c0 = info & 3;
-        int c1 = (info >> 2) & 3;
-        int c2 = (info >> 4) & 0xF;
-        *colourInfo = (c2 << 16) | ((1 << (c1 - 1)) << 8) | (1 << (c0 - 1));
-        if (c0 == 0 || (info & 0xC) == 0 || (info & 0xF0) == 0)
+        int hSample = info & 3;
+        int vSample = (info >> 2) & 3;
+        int numComp = (info >> 4) & 0xF;
+        *colourInfo = (numComp << 16) | ((1 << (vSample - 1)) << 8) | (1 << (hSample - 1));
+        if (hSample == 0 || (info & 0xC) == 0 || (info & 0xF0) == 0)
             *colourInfo = 0;
     }
     sceMeFree(buf);
@@ -1666,12 +1676,12 @@ static int jpegTermSync(void)
 
 /* === sceMpegbase (CSC) === */
 static int mpegBaseFillYuvRowArgs(u32 *dst, const u32 *src, const u32 *offsets, int mode);
-static int mpegBaseRunCscEx(void *a0, void *a1, void *a2);
-static int mpegBaseComputeRowOffsets(u32 *pRgb0, u32 *pRgb1, const u32 *range, const u32 *src, u32 *offsets, u32 *outStep);
-static int mpegBaseTransferYuvSlice(u32 rgb0, u32 rgb1, const u32 *range, const u32 *src);
+static int mpegBaseRunCscEx(void *rgbEven, void *rgbOdd, void *yuvDesc);
+static int mpegBaseComputeRowOffsets(u32 *pRgbEven, u32 *pRgbOdd, const u32 *range, const u32 *src, u32 *offsets, u32 *outStep);
+static int mpegBaseTransferYuvSlice(u32 rgbEven, u32 rgbOdd, const u32 *range, const u32 *src);
 
 /* 0x332C */
-int sceMpegBaseCscAvc(void *rgb0, void *rgb1, int width, const u32 *src)
+int sceMpegBaseCscAvc(void *rgbEven, void *rgbOdd, int width, const u32 *src)
 {
     int k1 = get_k1();
     set_k1(k1 << 11);
@@ -1682,9 +1692,9 @@ int sceMpegBaseCscAvc(void *rgb0, void *rgb1, int width, const u32 *src)
 
     u32 w = src[0];
     u32 h = src[1];
-    u32 area256 = (w * h) << 8;
-    u32 szY = area256 >> 2;
-    u32 szC = area256 >> 3;
+    u32 macroblockBytes = (w * h) << 8;
+    u32 szY = macroblockBytes >> 2;
+    u32 szC = macroblockBytes >> 3;
     u32 stride = (width != 0) ? (u32)width : g_mpegCtx.cscWidth;
     u32 szRgb = (stride * h) << 2;
 
@@ -1696,13 +1706,13 @@ int sceMpegBaseCscAvc(void *rgb0, void *rgb1, int width, const u32 *src)
         (int)((src[7] | (src[7] + szY)) & (k1 << 11)) < 0 ||
         (int)((src[9] | (src[9] + szC)) & (k1 << 11)) < 0 ||
         (int)((src[11] | (src[11] + szC)) & (k1 << 11)) < 0 ||
-        (int)(((u32)rgb0 | ((u32)rgb0 + szRgb) | szRgb) & (k1 << 11)) < 0 ||
-        (rgb1 != NULL && (int)(((u32)rgb1 | ((u32)rgb1 + szRgb) | szRgb) & (k1 << 11)) < 0)) {
+        (int)(((u32)rgbEven | ((u32)rgbEven + szRgb) | szRgb) & (k1 << 11)) < 0 ||
+        (rgbOdd != NULL && (int)(((u32)rgbOdd | ((u32)rgbOdd + szRgb) | szRgb) & (k1 << 11)) < 0)) {
         set_k1(k1);
         return 0x80000023;
     }
 
-    int res = sceDmacplus_driver_F652F09D(0, 0);
+    int res = sceDmacplus_driver_F652F09D(0, 0, h, w);
     if (res != 0) {
         Kprintf("Failed to set csc range : 0x%08x \n", res);
         set_k1(k1);
@@ -1715,16 +1725,14 @@ int sceMpegBaseCscAvc(void *rgb0, void *rgb1, int width, const u32 *src)
             res = 0x80000001;
         } else {
             for (;;) {
-                res = sceDmacplus_driver_D126494B(rgb0, rgb1, (void *)src);
+                res = sceDmacplus_driver_D126494B(rgbEven, rgbOdd, (void *)src);
                 if (res == 0) {
                     res = sceDmacplus_driver_BF0DB45E(0, 0);
-                    if (res == 0)
-                        break;
-                } else if (res == (int)0x80000021) {
-                    sceDmacplus_driver_BF0DB45E(0, 0);
-                } else {
                     break;
                 }
+                if (res != (int)0x80000021)
+                    break;
+                sceDmacplus_driver_BF0DB45E(0, 0);
             }
         }
     }
@@ -1734,7 +1742,7 @@ int sceMpegBaseCscAvc(void *rgb0, void *rgb1, int width, const u32 *src)
 }
 
 /* 0x35BC */
-int sceMpegBaseCscVme(void *rgb0, void *rgb1, int width, const u32 *src)
+int sceMpegBaseCscVme(void *rgbEven, void *rgbOdd, int width, const u32 *src)
 {
     int k1 = get_k1();
     set_k1(k1 << 11);
@@ -1759,41 +1767,37 @@ int sceMpegBaseCscVme(void *rgb0, void *rgb1, int width, const u32 *src)
         (int)((src[7] | (src[7] + szC)) & (k1 << 11)) < 0 ||
         (int)((src[8] | (src[8] + szC)) & (k1 << 11)) < 0 ||
         (int)((src[9] | (src[9] + szC)) & (k1 << 11)) < 0 ||
-        (int)(((u32)rgb0 | ((u32)rgb0 + szRgb) | szRgb) & (k1 << 11)) < 0 ||
-        (rgb1 != NULL && (int)(((u32)rgb1 | ((u32)rgb1 + szRgb) | szRgb) & (k1 << 11)) < 0)) {
+        (int)(((u32)rgbEven | ((u32)rgbEven + szRgb) | szRgb) & (k1 << 11)) < 0 ||
+        (rgbOdd != NULL && (int)(((u32)rgbOdd | ((u32)rgbOdd + szRgb) | szRgb) & (k1 << 11)) < 0)) {
         set_k1(k1);
         return 0x80000023;
     }
 
     int res = mpegBaseConfigCsc(g_mpegCtx.cscMode, width, NULL);
     if (res == 0)
-        res = mpegBaseRunCsc(rgb0, rgb1, (void *)src);
+        res = mpegBaseRunCsc(rgbEven, rgbOdd, (void *)src);
     sceKernelUnlockMutex(g_mpegCtx.cscMutex, 1);
     set_k1(k1);
     return res;
 }
 
 /* 0x3790 */
-static int mpegBaseRunCsc(void *a0, void *a1, void *a2)
+static int mpegBaseRunCsc(void *rgbEven, void *rgbOdd, void *yuvDesc)
 {
     if (sceKernelPollEventFlag(g_mpegCtx.cscEvf, 3, 1, NULL) < 0)
         return 0x80000001;
     for (;;) {
-        int res = sceDmacplus_driver_9C492B9B(a0, a1, a2);
-        if (res == 0) {
-            res = sceDmacplus_driver_BF0DB45E(0, 0);
-            if (res == 0)
-                return 0;
-        } else if (res == (int)0x80000021) {
-            sceDmacplus_driver_BF0DB45E(0, 0);
-        } else {
+        int res = sceDmacplus_driver_9C492B9B(rgbEven, rgbOdd, yuvDesc);
+        if (res == 0)
+            return sceDmacplus_driver_BF0DB45E(0, 0);
+        if (res != (int)0x80000021)
             return res;
-        }
+        sceDmacplus_driver_BF0DB45E(0, 0);
     }
 }
 
 /* 0x384C */
-int sceMpegBaseCscAvcRange(void *rgb0, void *rgb1, const u32 *range, int width, const u32 *src)
+int sceMpegBaseCscAvcRange(void *rgbEven, void *rgbOdd, const u32 *range, int width, const u32 *src)
 {
     int k1 = get_k1();
     set_k1(k1 << 11);
@@ -1820,8 +1824,8 @@ int sceMpegBaseCscAvcRange(void *rgb0, void *rgb1, const u32 *range, int width, 
         (int)((src[7] | (src[7] + szY) | szY) & (k1 << 11)) < 0 ||
         (int)((src[9] | (src[9] + szC)) & (k1 << 11)) < 0 ||
         (int)((src[11] | (src[11] + szC)) & (k1 << 11)) < 0 ||
-        (int)(((u32)rgb0 | ((u32)rgb0 + szRgb) | szRgb) & (k1 << 11)) < 0 ||
-        (rgb1 != NULL && (int)(((u32)rgb1 | ((u32)rgb1 + szRgb) | szRgb) & (k1 << 11)) < 0)) {
+        (int)(((u32)rgbEven | ((u32)rgbEven + szRgb) | szRgb) & (k1 << 11)) < 0 ||
+        (rgbOdd != NULL && (int)(((u32)rgbOdd | ((u32)rgbOdd + szRgb) | szRgb) & (k1 << 11)) < 0)) {
         set_k1(k1);
         return 0x80000023;
     }
@@ -1830,7 +1834,7 @@ int sceMpegBaseCscAvcRange(void *rgb0, void *rgb1, const u32 *range, int width, 
         return 0x800001FE;
     }
 
-    int res = sceDmacplus_driver_F652F09D(range[0], range[1]);
+    int res = sceDmacplus_driver_F652F09D(range[0], range[1], range[2], range[3]);
     if (res != 0) {
         Kprintf("Failed to set csc range : 0x%08x \n", res);
         set_k1(k1);
@@ -1839,23 +1843,23 @@ int sceMpegBaseCscAvcRange(void *rgb0, void *rgb1, const u32 *range, int width, 
     res = mpegBaseConfigCsc(g_mpegCtx.cscMode, width, NULL);
     if (res == 0) {
         if (w != range[3]) {
-            res = mpegBaseTransferYuvSlice((u32)rgb0, (u32)rgb1, range, src);
+            res = mpegBaseTransferYuvSlice((u32)rgbEven, (u32)rgbOdd, range, src);
         } else if (h != range[2]) {
-            u32 tmp[12];
+            u32 rowDesc[12];
             u32 offsets[4];
             u32 step = 0;
-            u32 r0 = (u32)rgb0, r1 = (u32)rgb1;
-            res = mpegBaseComputeRowOffsets(&r0, &r1, range, src, offsets, &step);
+            u32 curRgbEven = (u32)rgbEven, curRgbOdd = (u32)rgbOdd;
+            res = mpegBaseComputeRowOffsets(&curRgbEven, &curRgbOdd, range, src, offsets, &step);
             if (res == 0) {
-                tmp[0] = range[3];
-                tmp[1] = range[2] - step;
-                tmp[2] = src[2];
-                tmp[3] = src[3];
-                mpegBaseFillYuvRowArgs(tmp, src, offsets, 0);
-                res = mpegBaseRunCscEx((void *)r0, (void *)r1, tmp);
+                rowDesc[0] = range[3];
+                rowDesc[1] = range[2] - step;
+                rowDesc[2] = src[2];
+                rowDesc[3] = src[3];
+                mpegBaseFillYuvRowArgs(rowDesc, src, offsets, 0);
+                res = mpegBaseRunCscEx((void *)curRgbEven, (void *)curRgbOdd, rowDesc);
             }
         } else {
-            res = mpegBaseRunCscEx(rgb0, rgb1, (void *)src);
+            res = mpegBaseRunCscEx(rgbEven, rgbOdd, (void *)src);
         }
     }
     sceKernelUnlockMutex(g_mpegCtx.cscMutex, 1);
@@ -1894,61 +1898,7 @@ int sceMpegbase_AC9E717E(int width, const void *coeffs)
         return 0x80000023;
     g_mpegCtx.cscWidth = width;
     g_mpegCtx.cscMode = 0;
-    const u8 *src = (const u8 *)coeffs;
-    u8 *dst = g_mpegCtx.coeffs;
-    const u8 *end16 = src + 16;
-    if ((((u32)src | (u32)dst) & 3) == 0) {
-        const u32 *s32 = (const u32 *)src;
-        u32 *d32 = (u32 *)dst;
-        do {
-            u32 v0 = s32[0], v1 = s32[1], v2 = s32[2], v3 = s32[3];
-            d32[0] = v0;
-            d32[1] = v1;
-            d32[2] = v2;
-            d32[3] = v3;
-            s32 += 4;
-            d32 += 4;
-        } while ((const u8 *)s32 != end16);
-        d32[0] = s32[0];
-        ((u16 *)d32)[2] = ((const u16 *)s32)[2];
-    } else {
-        do {
-            u32 v0, v1, v2, v3;
-            __asm__ volatile(
-                "lwl %0, 3(%4)\n\t"
-                "lwr %0, 0(%4)\n\t"
-                "lwl %1, 7(%4)\n\t"
-                "lwr %1, 4(%4)\n\t"
-                "lwl %2, 11(%4)\n\t"
-                "lwr %2, 8(%4)\n\t"
-                "lwl %3, 15(%4)\n\t"
-                "lwr %3, 12(%4)\n\t"
-                "swl %0, 3(%5)\n\t"
-                "swr %0, 0(%5)\n\t"
-                "swl %1, 7(%5)\n\t"
-                "swr %1, 4(%5)\n\t"
-                "swl %2, 11(%5)\n\t"
-                "swr %2, 8(%5)\n\t"
-                "swl %3, 15(%5)\n\t"
-                "swr %3, 12(%5)\n\t"
-                : "=&r"(v0), "=&r"(v1), "=&r"(v2), "=&r"(v3)
-                : "r"(src), "r"(dst)
-                : "memory");
-            src += 16;
-            dst += 16;
-        } while (src != end16);
-        u32 v0;
-        __asm__ volatile(
-            "lwl %0, 3(%1)\n\t"
-            "lwr %0, 0(%1)\n\t"
-            "swl %0, 3(%2)\n\t"
-            "swr %0, 0(%2)\n\t"
-            : "=&r"(v0)
-            : "r"(src), "r"(dst)
-            : "memory");
-        dst[4] = src[4];
-        dst[5] = src[5];
-    }
+    __builtin_memcpy(g_mpegCtx.coeffs, coeffs, sizeof(g_mpegCtx.coeffs));
     set_k1(k1);
     return 0;
 }
@@ -1958,7 +1908,7 @@ int sceMpegBaseCscInit(int width)
 {
     int k1 = get_k1();
     set_k1(k1 << 11);
-    int res = sceMpegbase_AC9E717E(width, g_cscCoeffs1);
+    int res = sceMpegbase_AC9E717E(width, g_cscCoeffsBt601);
     set_k1(k1);
     return res;
 }
@@ -1992,33 +1942,30 @@ static int mpegBaseFillYuvRowArgs(u32 *dst, const u32 *src, const u32 *offsets, 
 }
 
 /* 0x3E4C */
-static int mpegBaseRunCscEx(void *a0, void *a1, void *a2)
+static int mpegBaseRunCscEx(void *rgbEven, void *rgbOdd, void *yuvDesc)
 {
     if (sceKernelPollEventFlag(g_mpegCtx.cscEvf, 3, 1, NULL) < 0)
         return 0x80000001;
     for (;;) {
-        int res = sceDmacplus_driver_D126494B(a0, a1, a2);
-        if (res == 0) {
-            res = sceDmacplus_driver_BF0DB45E(0, 0);
-            if (res == 0)
-                return 0;
-        } else if (res == (int)0x80000021) {
-            sceDmacplus_driver_BF0DB45E(0, 0);
-        } else {
+        int res = sceDmacplus_driver_D126494B(rgbEven, rgbOdd, yuvDesc);
+        if (res == 0)
+            return sceDmacplus_driver_BF0DB45E(0, 0);
+        if (res != (int)0x80000021)
             return res;
-        }
+        sceDmacplus_driver_BF0DB45E(0, 0);
     }
 }
 
 /* 0x3EFC */
-static int mpegBaseComputeRowOffsets(u32 *pRgb0, u32 *pRgb1, const u32 *range, const u32 *src, u32 *offsets, u32 *outStep)
+static int mpegBaseComputeRowOffsets(u32 *pRgbEven, u32 *pRgbOdd, const u32 *range, const u32 *src, u32 *offsets, u32 *outStep)
 {
-    u32 tmp[12];
-    tmp[1] = 0;
+    u32 rowDesc[12];
+    rowDesc[1] = 0;
     u32 rx = range[0];
     u32 sw = src[0];
+    u32 halfSw = (sw << 4) >> 1;
     if ((rx & 1) == 0) {
-        u32 offY = ((sw << 3) * (rx >> 1)) << 4;
+        u32 offY = (halfSw * (rx >> 1)) << 4;
         u32 offC = offY >> 1;
         offsets[0] = offY;
         offsets[1] = offY;
@@ -2028,70 +1975,69 @@ static int mpegBaseComputeRowOffsets(u32 *pRgb0, u32 *pRgb1, const u32 *range, c
         return 0;
     }
 
-    u32 halfSw = (sw << 4) >> 1;
-    tmp[1] = 1;
-    u32 offY0 = (halfSw * ((rx + 1) >> 1)) << 4;
-    offsets[0] = offY0;
-    offsets[2] = offY0 >> 1;
-    u32 offY1 = (halfSw * (rx >> 1)) << 4;
-    offsets[1] = offY1;
-    offsets[3] = offY1 >> 1;
+    rowDesc[1] = 1;
+    u32 offYEven = (halfSw * ((rx + 1) >> 1)) << 4;
+    offsets[0] = offYEven;
+    offsets[2] = offYEven >> 1;
+    u32 offYOdd = (halfSw * (rx >> 1)) << 4;
+    offsets[1] = offYOdd;
+    offsets[3] = offYOdd >> 1;
 
-    tmp[0] = range[3];
-    tmp[2] = src[2];
-    tmp[3] = src[3];
-    mpegBaseFillYuvRowArgs(tmp, src, offsets, 2);
-    int res = mpegBaseRunCscEx((void *)*pRgb0, (void *)*pRgb1, tmp);
+    rowDesc[0] = range[3];
+    rowDesc[2] = src[2];
+    rowDesc[3] = src[3];
+    mpegBaseFillYuvRowArgs(rowDesc, src, offsets, 2);
+    int res = mpegBaseRunCscEx((void *)*pRgbEven, (void *)*pRgbOdd, rowDesc);
     if (res == 0) {
-        *pRgb0 += 0x40;
-        if (*pRgb1 != 0)
-            *pRgb1 += 0x40;
+        *pRgbEven += 0x40;
+        if (*pRgbOdd != 0)
+            *pRgbOdd += 0x40;
         u32 stepY = halfSw << 4;
         offsets[1] += stepY;
         offsets[3] += stepY >> 1;
     }
-    *outStep = tmp[1];
+    *outStep = rowDesc[1];
     return res;
 }
 
 /* 0x4074 */
-static int mpegBaseTransferYuvSlice(u32 rgb0, u32 rgb1, const u32 *range, const u32 *src)
+static int mpegBaseTransferYuvSlice(u32 rgbEven, u32 rgbOdd, const u32 *range, const u32 *src)
 {
-    u32 tmp[12];
+    u32 rowDesc[12];
     u32 offsets[4];
     u32 step = 0;
-    u32 r0 = rgb0, r1 = rgb1;
-    int res = mpegBaseComputeRowOffsets(&r0, &r1, range, src, offsets, &step);
+    u32 curRgbEven = rgbEven, curRgbOdd = rgbOdd;
+    int res = mpegBaseComputeRowOffsets(&curRgbEven, &curRgbOdd, range, src, offsets, &step);
     if (res != 0)
         return res;
 
     u32 rem = range[2] - step;
     u32 pairs = rem >> 1;
-    tmp[0] = range[3];
-    tmp[1] = 2;
-    tmp[2] = src[2];
-    tmp[3] = src[3];
+    rowDesc[0] = range[3];
+    rowDesc[1] = 2;
+    rowDesc[2] = src[2];
+    rowDesc[3] = src[3];
 
     u32 i;
     u32 stepY = src[0] << 7;
     u32 stepC = stepY >> 1;
     for (i = 0; i < pairs; i++) {
-        mpegBaseFillYuvRowArgs(tmp, src, offsets, 0);
-        res = mpegBaseRunCscEx((void *)r0, (void *)r1, tmp);
+        mpegBaseFillYuvRowArgs(rowDesc, src, offsets, 0);
+        res = mpegBaseRunCscEx((void *)curRgbEven, (void *)curRgbOdd, rowDesc);
         if (res != 0)
             return res;
-        r0 += 0x80;
-        if (r1 != 0)
-            r1 += 0x80;
+        curRgbEven += 0x80;
+        if (curRgbOdd != 0)
+            curRgbOdd += 0x80;
         offsets[0] += stepY;
         offsets[1] += stepY;
         offsets[2] += stepC;
         offsets[3] += stepC;
     }
     if (rem & 1) {
-        tmp[1] = 1;
-        mpegBaseFillYuvRowArgs(tmp, src, offsets, 0);
-        res = mpegBaseRunCscEx((void *)r0, (void *)r1, tmp);
+        rowDesc[1] = 1;
+        mpegBaseFillYuvRowArgs(rowDesc, src, offsets, 0);
+        res = mpegBaseRunCscEx((void *)curRgbEven, (void *)curRgbOdd, rowDesc);
     }
     return res;
 }
