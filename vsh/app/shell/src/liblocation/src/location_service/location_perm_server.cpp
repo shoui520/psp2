@@ -3,17 +3,10 @@
  * "SceLocationPermissionServer"; 0x8119951C-0x81199B68).
  * The file and class names are ours (PLACEHOLDER).
  */
-#include "location_service.h"
+#include "location_internal.h"
 #include <std/string.h>
 #include <std/new>
 
-extern int locationPermSvcSetAppPerm(int unused, const char *titleId, int perm); /* 0x81199440 */
-extern int locationPermSvcGetMainPerm(int unused, int *out); /* 0x81199454 */
-extern int locationPermSvcSetMainPerm(int unused, int val); /* 0x81199464 */
-extern int locationPermSvcGetParentalPerm(int unused, int *out); /* 0x81199474 */
-extern int locationPermSvcSetParentalPerm(int unused, int val); /* 0x81199484 */
-extern int locationPermSvcSetPermissionMode(int unused, int mode); /* 0x81199494 */
-extern int locationPermSvcSetAppPermission(int unused, const char *titleId); /* 0x8119949E */
 extern int ipmiAsyncNotSupported(void);			/* 0x8115B554 */
 
 struct PermSessionSlot {
@@ -45,16 +38,14 @@ public:
 			    const IPMI::DataInfo *inList, SceUInt32 inCount,
 			    IPMI::BufferInfo *outList, SceUInt32 outCount); /* 0x81199A70 */
 
-	IPMI::Server *m_server;				/* +4 */
-	PermSessionSlot m_slots[2];			/* +8..+31 */
-	int m_sessionCount;				/* +32 */
-	SceUID m_threadId;				/* +36 */
-	SceKernelLwMutexWork m_mutex;			/* +40..+71 */
-	int m_mutexResult;				/* +72 */
-	int m_pad76;					/* +76 */
-	int m_stopped;					/* +80 */
-	void *m_workBuffer;				/* +84 */
-	SceSize m_workBufferSize;			/* +88 */
+	IPMI::Server *m_server;
+	PermSessionSlot m_slots[2];
+	int m_sessionCount;
+	SceUID m_threadId;
+	LocationLwMutex m_mutex;
+	int m_stopped;
+	void *m_workBuffer;
+	SceSize m_workBufferSize;
 };
 
 static LocationPermissionServer *s_permServer;		/* 0x81544D8C */
@@ -63,21 +54,20 @@ LocationPermissionServer::LocationPermissionServer()
 	: m_server(NULL)
 	, m_sessionCount(0)
 	, m_threadId(-1)
-	, m_mutexResult(-1)
-	, m_pad76(0)
 	, m_stopped(0)
 	, m_workBuffer(NULL)
 	, m_workBufferSize(0)
 {
+	m_mutex.result = -1;
 	sce_paf_memset(m_slots, 0, sizeof(m_slots));
 }
 
 /* 0x8119951C / 0x81199548 */
 LocationPermissionServer::~LocationPermissionServer()
 {
-	if (m_mutexResult == 0) {
-		sceKernelDeleteLwMutex(&m_mutex);
-		m_mutexResult = -1;
+	if (m_mutex.result == 0) {
+		sceKernelDeleteLwMutex(&m_mutex.work);
+		m_mutex.result = -1;
 	}
 }
 
@@ -138,7 +128,8 @@ int locationPermServerStart(void)
 	if (srv == NULL)
 		return (int)0x801012C4;
 
-	srv->m_mutexResult = sceKernelCreateLwMutex(&srv->m_mutex, "SceLocationPerm", 2, 0, NULL);
+	srv->m_mutex.result =
+		sceKernelCreateLwMutex(&srv->m_mutex.work, "SceLocationPerm", 2, 0, NULL);
 	int ret = srv->Start();
 	if (ret != 0) {
 		delete s_permServer;
@@ -178,10 +169,10 @@ int locationPermServerStop(void)
 	return ret;
 }
 
-/* 0x8119982C */
-int locationPermServerGetMask(void *p)
+/* 0x8119982C (SNC ICF-folded LocationLogger::GetLogMask) */
+SceUInt32 locationLoggerGetMask(const LocationLogger *logger)
 {
-	return *(int *)((char *)p + 4);
+	return logger->GetLogMask();
 }
 
 /* 0x81199830 */
@@ -200,7 +191,7 @@ void LocationPermissionServer::onAsyncMethodDispatch(IPMI::Session *pSession, Sc
 {
 	(void)pInList;
 	(void)inCount;
-	sceKernelLockLwMutex(&m_mutex, 1, NULL);
+	sceKernelLockLwMutex(&m_mutex.work, 1, NULL);
 	for (unsigned int i = 0; i < 2; i++) {
 		if (m_slots[i].session == pSession) {
 			m_slots[i].requestId = requestId;
@@ -208,7 +199,7 @@ void LocationPermissionServer::onAsyncMethodDispatch(IPMI::Session *pSession, Sc
 			break;
 		}
 	}
-	sceKernelUnlockLwMutex(&m_mutex, 1);
+	sceKernelUnlockLwMutex(&m_mutex.work, 1);
 	ipmiAsyncNotSupported();
 }
 
@@ -219,9 +210,9 @@ int LocationPermissionServer::onNewClient(IPMI::Server *pServer,
 {
 	(void)pParam;
 	(void)paramSize;
-	sceKernelLockLwMutex(&m_mutex, 1, NULL);
+	sceKernelLockLwMutex(&m_mutex.work, 1, NULL);
 	if (m_sessionCount == 2) {
-		sceKernelUnlockLwMutex(&m_mutex, 1);
+		sceKernelUnlockLwMutex(&m_mutex.work, 1);
 		return (int)0x801012C5;
 	}
 
@@ -237,25 +228,25 @@ int LocationPermissionServer::onNewClient(IPMI::Server *pServer,
 	void *mem = g_locationHeap->sce_paf_malloc(pConfig->bufferSize);
 	if (mem == NULL) {
 		m_sessionCount--;
-		sceKernelUnlockLwMutex(&m_mutex, 1);
+		sceKernelUnlockLwMutex(&m_mutex.work, 1);
 		return (int)0x801012C4;
 	}
 
 	if (pServer->createSession(slot, this, mem) != 0) {
 		m_sessionCount--;
 		g_locationHeap->sce_paf_free(mem);
-		sceKernelUnlockLwMutex(&m_mutex, 1);
+		sceKernelUnlockLwMutex(&m_mutex.work, 1);
 		return (int)0x801012CF;
 	}
 
-	sceKernelUnlockLwMutex(&m_mutex, 1);
+	sceKernelUnlockLwMutex(&m_mutex.work, 1);
 	return 0;
 }
 
 /* 0x81199984 */
 void LocationPermissionServer::onSessionClosedByClient(IPMI::Session *pSession)
 {
-	sceKernelLockLwMutex(&m_mutex, 1, NULL);
+	sceKernelLockLwMutex(&m_mutex.work, 1, NULL);
 	PermSessionSlot *slot = NULL;
 	for (unsigned int i = 0; i < 2; i++) {
 		if (m_slots[i].session == pSession) {
@@ -269,13 +260,13 @@ void LocationPermissionServer::onSessionClosedByClient(IPMI::Session *pSession)
 	slot->session = NULL;
 	slot->requestId = (SceUInt32)-1;
 	m_sessionCount--;
-	sceKernelUnlockLwMutex(&m_mutex, 1);
+	sceKernelUnlockLwMutex(&m_mutex.work, 1);
 }
 
 /* 0x811999E8 */
 void LocationPermissionServer::onSessionKilled(IPMI::Session *pSession)
 {
-	sceKernelLockLwMutex(&m_mutex, 1, NULL);
+	sceKernelLockLwMutex(&m_mutex.work, 1, NULL);
 	for (unsigned int i = 0; i < 2; i++) {
 		if (m_slots[i].session == pSession) {
 			pSession->destroy();
@@ -287,7 +278,7 @@ void LocationPermissionServer::onSessionKilled(IPMI::Session *pSession)
 			break;
 		}
 	}
-	sceKernelUnlockLwMutex(&m_mutex, 1);
+	sceKernelUnlockLwMutex(&m_mutex.work, 1);
 }
 
 /* 0x81199A58 */
@@ -331,12 +322,12 @@ int LocationPermissionServer::Dispatch(IPMI::Session *session, SceUInt32 methodI
 		return session->respondToSyncMethodRequest(ret, outList, outCount);
 	}
 	case 0x12340005: {
-		int ret = locationPermSvcSetPermissionMode(0, *(const int *)outList[0].pBuffer);
+		int ret = locationPermSvcGetGlobalPerm(0, (int *)outList[0].pBuffer);
 		outList[0].outSize = 4;
 		return session->respondToSyncMethodRequest(ret, outList, outCount);
 	}
 	case 0x12340006: {
-		int ret = locationPermSvcSetAppPermission(0, (const char *)outList[0].pBuffer);
+		int ret = locationPermSvcGetAppPermSetting(0, (int *)outList[0].pBuffer);
 		outList[0].outSize = 4;
 		return session->respondToSyncMethodRequest(ret, outList, outCount);
 	}

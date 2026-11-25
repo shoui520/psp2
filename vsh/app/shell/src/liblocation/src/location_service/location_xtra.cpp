@@ -17,61 +17,14 @@
 #include <std/vector>
 #include <std/string>
 #include "../../../../shell_cron.h"
-#include "location_service.h"
+#include "location_internal.h"
 
 using namespace paf;
 
-/* PLACEHOLDER externs for the rest of liblocation */
-struct LocationContext;
-struct LocationLogger;
-extern void *g_locationManager;					/* (0x815496B4) */
-extern LocationLogger *g_locationLogger;			/* (0x815496B8) */
-void *g_locationXtra;						/* (0x815496BC) */
-
-LocationContext *locationGetContext(void);			/* (0x8118BA84) */
-void locationLog(LocationLogger *logger, int level, const char *fmt, ...); /* (0x811895CC) */
-int locationTaskSchedule(void *task, int delay);		/* (0x8118A780) */
-int locationTaskCancel(void *task);				/* (0x8118A800) */
-int locationMgrRegisterTask(void *mgr, void *task);		/* (0x8118AACE) */
-int locationMgrUnregisterTask(void *mgr, void *task);		/* (0x8118AB62) */
-int locationCtxGetGpsSetting1(LocationContext *ctx, int *out);	/* (0x8118DDA6) */
-int locationCtxGetGpsSetting2(LocationContext *ctx, int *out);	/* (0x8118DE0C) */
+LocationXtra *g_locationXtra;					/* (0x815496BC) */
 
 /* the XTRA download thread ID (0x81544CE0) */
 static SceUID s_xtraThreadId = -1;
-
-class LocationXtra;
-
-class LocationXtraPowerTask {
-public:
-	virtual int OnNotify();					/* (0x81189D4C) */
-
-	int m_queued;						/* +4 */
-	int m_active;						/* +8 */
-	LocationXtra *m_xtra;					/* +12 */
-};
-
-class LocationXtra {
-public:
-	int Init();						/* (0x81189E10) */
-	int CountLocationApps(int *outCount);			/* (0x81189FA4) */
-	int DoHttpGet(const char *url, void *buf, SceUInt32 *outSize); /* (0x8118A338) */
-	int DownloadAndSave();					/* (0x8118A52C) */
-
-	static int DailyCronCB(SceUID handle, void *arg);	/* (0x8118A0EC) */
-	static void NetCtlCB(int eventType, void *arg);		/* (0x8118A248) */
-	static int ThreadEntry(SceSize args, void *argp);	/* (0x8118A6BC) */
-
-	SceUID m_cronHandle;					/* +0 */
-	int m_netCtlCid;					/* +4 */
-	int m_retryNeeded;					/* +8 */
-	int m_dayCount;						/* +12 */
-	AppInfoQClient m_lsdbClient;				/* +16 */
-	void *m_httpBuf;					/* +20 */
-	SceUInt32 m_xtraDataSize;				/* +24 */
-	int m_downloading;					/* +28 */
-	LocationXtraPowerTask m_powerTask;			/* +32..+47 */
-};
 
 /* the XTRA downloader singleton (0x81544CDC) */
 static LocationXtra *s_xtra;
@@ -101,9 +54,9 @@ int locationXtraTerm(void)
 			cron->Remove(s_xtra->m_cronHandle);
 			s_xtra->m_cronHandle = 0;
 		}
-		if (s_xtra->m_powerTask.m_queued != 0) {
-			locationTaskCancel(&s_xtra->m_powerTask);
-			locationMgrUnregisterTask(g_locationManager, &s_xtra->m_powerTask);
+		if (s_xtra->m_powerTask.m_mgr != NULL) {
+			s_xtra->m_powerTask.Cancel();
+			g_locationManager->UnregisterTask(&s_xtra->m_powerTask);
 		}
 		sceNetCtlInetUnregisterCallback(s_xtra->m_netCtlCid);
 		s_xtra->m_netCtlCid = -1;
@@ -135,7 +88,7 @@ int LocationXtra::Init()
 		LocationLogger *logger = g_locationLogger;
 
 		if (logger != NULL)
-			locationLog(logger, 3, "[XTRA] _setGpsXtraTimer() Called.\n");
+			logger->Log(3, "[XTRA] _setGpsXtraTimer() Called.\n");
 
 		ShellCronOption opt;
 
@@ -150,12 +103,12 @@ int LocationXtra::Init()
 						     SHELL_CRON_EVERY_DAY, &opt);
 
 			if (logger != NULL)
-				locationLog(logger, 3,
+				logger->Log(3,
 					    "[XTRA] registerDailyTimerCallback(cbId:0x%x) ret:0x%x\n",
 					    m_cronHandle, cronRet);
 		}
 		ret = sceNetCtlInetRegisterCallback(NetCtlCB, this, &m_netCtlCid);
-		locationMgrRegisterTask(g_locationManager, &m_powerTask);
+		g_locationManager->RegisterTask(&m_powerTask);
 	}
 	return ret;
 }
@@ -171,8 +124,8 @@ int locationProviderInit(void)
 	if (xtra != NULL) {
 		SceLsdb_A6D8772C(&xtra->m_lsdbClient);
 		new (&xtra->m_powerTask) LocationXtraPowerTask();
-		xtra->m_powerTask.m_queued = 0;
-		xtra->m_powerTask.m_active = 0;
+		xtra->m_powerTask.m_mgr = NULL;
+		xtra->m_powerTask.m_slotIndex = 0;
 		xtra->m_powerTask.m_xtra = xtra;
 		xtra->m_retryNeeded = 0;
 		xtra->m_dayCount = 0;
@@ -207,17 +160,17 @@ int LocationXtra::CountLocationApps(int *outCount)
 	cond.mask = 3;
 	cond.next = NULL;
 
-	LsdbValue val2;
+	LsdbValue denyVal;
 
-	val2.type = LSDB_VALUE_INTEGER;
-	val2.integer = 2;
-	cond.values.push_back(val2);
+	denyVal.type = LSDB_VALUE_INTEGER;
+	denyVal.integer = 2;
+	cond.values.push_back(denyVal);
 
-	LsdbValue val3;
+	LsdbValue allowVal;
 
-	val3.type = LSDB_VALUE_INTEGER;
-	val3.integer = 3;
-	cond.values.push_back(val3);
+	allowVal.type = LSDB_VALUE_INTEGER;
+	allowVal.integer = 3;
+	cond.values.push_back(allowVal);
 
 	int ret = SceLsdb_76B75713(&m_lsdbClient, &cond, &titleIds, 0);
 
@@ -232,25 +185,25 @@ int LocationXtra::DailyCronCB(SceUID handle, void *arg)
 	LocationLogger *logger = g_locationLogger;
 
 	if (logger != NULL)
-		locationLog(logger, 3, "[XTRA] cbGpsXtraCallback() Called.\n");
+		logger->Log(3, "[XTRA] cbGpsXtraCallback() Called.\n");
 
-	LocationXtra *xtra = (LocationXtra *)g_locationXtra;
-	LocationContext *ctx = locationGetContext();
+	LocationXtra *xtra = g_locationXtra;
+	PositionManager *ctx = locationGetContext();
 
 	if (ctx != NULL && xtra->m_cronHandle == handle) {
-		int setting1 = 0;
-		int setting2 = 0;
+		int mainPerm = 0;
+		int parentalPerm = 0;
 		int appCount = 0;
 
-		locationCtxGetGpsSetting1(ctx, &setting1);
-		locationCtxGetGpsSetting2(ctx, &setting2);
+		ctx->GetMainPerm(&mainPerm);
+		ctx->GetParentalPerm(&parentalPerm);
 		xtra->CountLocationApps(&appCount);
-		if ((setting1 == 1 && setting2 == 1) || appCount != 0) {
+		if ((mainPerm == 1 && parentalPerm == 1) || appCount != 0) {
 			if (xtra->m_retryNeeded == 0) {
 				xtra->m_dayCount++;
 				if (xtra->m_dayCount < 3) {
 					if (logger != NULL)
-						locationLog(logger, 3,
+						logger->Log(3,
 							    "[XTRA] cbGpsXtraCallback()  not interval days go on!!!\n");
 					return 0;
 				}
@@ -273,18 +226,18 @@ int LocationXtra::DailyCronCB(SceUID handle, void *arg)
 						sceKernelDeleteThread(s_xtraThreadId);
 						s_xtraThreadId = -1;
 					} else {
-						locationTaskSchedule(&xtra->m_powerTask, 10000);
+						xtra->m_powerTask.Schedule(10000);
 					}
 				} else {
 					xtra->m_retryNeeded = 1;
 				}
 			}
 			if (logger != NULL)
-				locationLog(logger, 3, "[XTRA] _xtraGetStart()=0x%08x\n", ret);
+				logger->Log(3, "[XTRA] _xtraGetStart()=0x%08x\n", ret);
 		}
 	}
 	if (logger != NULL)
-		locationLog(logger, 3, "[XTRA] cbGpsXtraCallback() end.\n");
+		logger->Log(3, "[XTRA] cbGpsXtraCallback() end.\n");
 	return 0;
 }
 
@@ -294,10 +247,10 @@ void LocationXtra::NetCtlCB(int eventType, void *arg)
 	LocationLogger *logger = g_locationLogger;
 
 	if (logger != NULL)
-		locationLog(logger, 3, "[XTRA] cbNetChkCallback() Called.\n");
+		logger->Log(3, "[XTRA] cbNetChkCallback() Called.\n");
 
-	LocationXtra *xtra = (LocationXtra *)g_locationXtra;
-	LocationContext *ctx = locationGetContext();
+	LocationXtra *xtra = g_locationXtra;
+	PositionManager *ctx = locationGetContext();
 
 	if (ctx != NULL && eventType == 3 && xtra->m_retryNeeded == 1) {
 		xtra->m_dayCount = 0;
@@ -316,17 +269,17 @@ void LocationXtra::NetCtlCB(int eventType, void *arg)
 					sceKernelDeleteThread(s_xtraThreadId);
 					s_xtraThreadId = -1;
 				} else {
-					locationTaskSchedule(&xtra->m_powerTask, 10000);
+					xtra->m_powerTask.Schedule(10000);
 				}
 			} else {
 				xtra->m_retryNeeded = 1;
 			}
 		}
 		if (logger != NULL)
-			locationLog(logger, 3, "[XTRA] _xtraGetStart()=0x%08x\n", ret);
+			logger->Log(3, "[XTRA] _xtraGetStart()=0x%08x\n", ret);
 	}
 	if (logger != NULL)
-		locationLog(logger, 3, "[XTRA] cbNetChkCallback() end.\n");
+		logger->Log(3, "[XTRA] cbNetChkCallback() end.\n");
 }
 
 /* (0x8118A338) */
@@ -337,7 +290,7 @@ int LocationXtra::DoHttpGet(const char *url, void *buf, SceUInt32 *outSize)
 
 	if (tmpl < 0) {
 		if (logger != NULL)
-			locationLog(logger, 3, "[XTRA] sceHttpCreateTemplate error:0x%x\n", tmpl);
+			logger->Log(3, "[XTRA] sceHttpCreateTemplate error:0x%x\n", tmpl);
 		return tmpl;
 	}
 
@@ -357,7 +310,7 @@ int LocationXtra::DoHttpGet(const char *url, void *buf, SceUInt32 *outSize)
 	}
 
 	if (logger != NULL)
-		locationLog(logger, 3, "[XTRA] Send Http GET [%d]\n", req);
+		logger->Log(3, "[XTRA] Send Http GET [%d]\n", req);
 
 	int ret = sceHttpSendRequest(req, NULL, 0);
 
@@ -367,18 +320,18 @@ int LocationXtra::DoHttpGet(const char *url, void *buf, SceUInt32 *outSize)
 		ret = sceHttpGetStatusCode(req, &statusCode);
 		if (ret >= 0) {
 			if (logger != NULL)
-				locationLog(logger, 3, "[XTRA] Status Code was [%d]\n", statusCode);
+				logger->Log(3, "[XTRA] Status Code was [%d]\n", statusCode);
 			if (statusCode == 200) {
 				SceULong64 contentLength = 0;
 				int clRet = sceHttpGetResponseContentLength(req, &contentLength);
 
 				if (clRet >= 0) {
 					if (logger != NULL)
-						locationLog(logger, 3,
+						logger->Log(3,
 							    "[XTRA] Content-Length = %lld\n",
 							    contentLength);
 				} else if (logger != NULL) {
-					locationLog(logger, 3,
+					logger->Log(3,
 						    "[XTRA] sceHttpGetContentLength() returns %x\n",
 						    clRet);
 				}
@@ -444,7 +397,7 @@ int LocationXtra::DownloadAndSave()
 		for (int i = 0; i < 3; i++) {
 			ret = DoHttpGet(s_xtraUrls[i], m_httpBuf, &m_xtraDataSize);
 			if (logger != NULL)
-				locationLog(logger, 3,
+				logger->Log(3,
 					    "[XTRA] _doHttpGet()=0x%08x, url:%s, m_xtraDataSize:%d\n",
 					    ret, s_xtraUrls[i], m_xtraDataSize);
 			if (ret != 0) {
@@ -500,7 +453,7 @@ int LocationXtra::DownloadAndSave()
 				ret = saveRet;
 				sceIoRemove("ur0:/liblocation/gps/xtra.tmp");
 				if (logger != NULL)
-					locationLog(logger, 3, "[XTRA] _saveXtraFile()=0x%08x\n",
+					logger->Log(3, "[XTRA] _saveXtraFile()=0x%08x\n",
 						    saveRet);
 			}
 			break;
@@ -523,7 +476,7 @@ int LocationXtra::ThreadEntry(SceSize args, void *argp)
 
 	xtra->m_retryNeeded = (ret != 0) ? 1 : 0;
 	s_xtraThreadId = -1;
-	locationTaskCancel(&xtra->m_powerTask);
+	xtra->m_powerTask.Cancel();
 	sceKernelExitDeleteThread(0);
 	return ret;
 }

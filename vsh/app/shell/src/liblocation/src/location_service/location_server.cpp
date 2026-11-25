@@ -22,7 +22,7 @@ static HeadingServer *s_headingServer;
 __attribute__((noinline))
 LocationServer::LocationServer()
 {
-	m_mutexResult = sceKernelCreateLwMutex(&m_mutex, "SceLocationSession", 2, 0, NULL);
+	m_mutex.result = sceKernelCreateLwMutex(&m_mutex.work, "SceLocationSession", 2, 0, NULL);
 	m_server = NULL;
 	for (int i = 0; i < LOCATION_SERVER_MAX_SESSIONS; i++) {
 		m_slots[i].session = NULL;
@@ -40,9 +40,9 @@ LocationServer::LocationServer()
 /* (0x81186956) */
 LocationServer::~LocationServer()
 {
-	if (m_mutexResult == 0) {
-		sceKernelDeleteLwMutex(&m_mutex);
-		m_mutexResult = -1;
+	if (m_mutex.result == 0) {
+		sceKernelDeleteLwMutex(&m_mutex.work);
+		m_mutex.result = -1;
 	}
 }
 
@@ -121,13 +121,13 @@ int locationServerStart(void)
 /* (0x81186BA4) */
 int LocationServer::Stop()
 {
-	sceKernelLockLwMutex(&m_mutex, 1, NULL);
+	sceKernelLockLwMutex(&m_mutex.work, 1, NULL);
 	if (m_server == NULL) {
-		sceKernelUnlockLwMutex(&m_mutex, 1);
+		sceKernelUnlockLwMutex(&m_mutex.work, 1);
 		return SCE_LOCATION_ERROR_FATAL_ERROR;
 	}
 	if (m_sessionCount != 0)
-		sceKernelUnlockLwMutex(&m_mutex, 1);
+		sceKernelUnlockLwMutex(&m_mutex.work, 1);
 	m_server->shutdownDispatcher();
 	sceKernelWaitThreadEnd(m_threadId, NULL, NULL);
 	sceKernelDeleteThread(m_threadId);
@@ -136,14 +136,14 @@ int LocationServer::Stop()
 	int ret = m_server->destroy();
 
 	if (ret != 0) {
-		sceKernelUnlockLwMutex(&m_mutex, 1);
+		sceKernelUnlockLwMutex(&m_mutex.work, 1);
 		return ret;
 	}
 	g_locationHeap->sce_paf_free(m_server);
 	m_server = NULL;
 	g_locationHeap->sce_paf_free(m_workBuffer);
 	m_workBuffer = NULL;
-	sceKernelUnlockLwMutex(&m_mutex, 1);
+	sceKernelUnlockLwMutex(&m_mutex.work, 1);
 	return 0;
 }
 
@@ -171,7 +171,7 @@ LocationServer *locationServerGetInstance(void)
 /* (0x81186C90) */
 void LocationServer::NotifyEvent(SceLocationHandle handle, int result, int eventType)
 {
-	sceKernelLockLwMutex(&m_mutex, 1, NULL);
+	sceKernelLockLwMutex(&m_mutex.work, 1, NULL);
 	for (unsigned int i = 0; i < LOCATION_SERVER_MAX_SESSIONS; i++) {
 		if (m_slots[i].handle == handle) {
 			SceUInt32 bits;
@@ -208,29 +208,29 @@ void LocationServer::NotifyEvent(SceLocationHandle handle, int result, int event
 				bits = 512;
 				break;
 			default:
-				sceKernelUnlockLwMutex(&m_mutex, 1);
+				sceKernelUnlockLwMutex(&m_mutex.work, 1);
 				return;
 			}
 			m_slots[i].session->setEventFlag(0, bits);
-			sceKernelUnlockLwMutex(&m_mutex, 1);
+			sceKernelUnlockLwMutex(&m_mutex.work, 1);
 			return;
 		}
 	}
-	sceKernelUnlockLwMutex(&m_mutex, 1);
+	sceKernelUnlockLwMutex(&m_mutex.work, 1);
 }
 
 /* (0x81186D28) */
 void LocationServer::SetEventFlag(SceLocationHandle handle, SceUInt32 pattern)
 {
-	sceKernelLockLwMutex(&m_mutex, 1, NULL);
+	sceKernelLockLwMutex(&m_mutex.work, 1, NULL);
 	for (unsigned int i = 0; i < LOCATION_SERVER_MAX_SESSIONS; i++) {
 		if (m_slots[i].handle == handle) {
 			m_slots[i].session->setEventFlag(0, pattern);
-			sceKernelUnlockLwMutex(&m_mutex, 1);
+			sceKernelUnlockLwMutex(&m_mutex.work, 1);
 			return;
 		}
 	}
-	sceKernelUnlockLwMutex(&m_mutex, 1);
+	sceKernelUnlockLwMutex(&m_mutex.work, 1);
 }
 
 /* (0x81186D72) */
@@ -238,7 +238,7 @@ int LocationServer::BindHandle(IPMI::Session *session, SceLocationHandle handle)
 {
 	int index = -1;
 
-	sceKernelLockLwMutex(&m_mutex, 1, NULL);
+	sceKernelLockLwMutex(&m_mutex.work, 1, NULL);
 	for (unsigned int i = 0; i < LOCATION_SERVER_MAX_SESSIONS; i++) {
 		if (m_slots[i].session == session) {
 			m_slots[i].handle = handle;
@@ -246,22 +246,22 @@ int LocationServer::BindHandle(IPMI::Session *session, SceLocationHandle handle)
 			break;
 		}
 	}
-	sceKernelUnlockLwMutex(&m_mutex, 1);
+	sceKernelUnlockLwMutex(&m_mutex.work, 1);
 	return index;
 }
 
 /* (0x81186DB2) */
 void LocationServer::NotifyDenied(SceLocationHandle handle)
 {
-	sceKernelLockLwMutex(&m_mutex, 1, NULL);
+	sceKernelLockLwMutex(&m_mutex.work, 1, NULL);
 	for (unsigned int i = 0; i < LOCATION_SERVER_MAX_SESSIONS; i++) {
 		if (m_slots[i].handle == handle) {
 			m_slots[i].session->setEventFlag(0, 3);
-			sceKernelUnlockLwMutex(&m_mutex, 1);
+			sceKernelUnlockLwMutex(&m_mutex.work, 1);
 			return;
 		}
 	}
-	sceKernelUnlockLwMutex(&m_mutex, 1);
+	sceKernelUnlockLwMutex(&m_mutex.work, 1);
 }
 
 /* (0x81186DF6) */
@@ -277,7 +277,7 @@ void LocationServer::onAsyncMethodDispatch(IPMI::Session *pSession, SceUInt32 re
 					   SceUInt32 methodId, const IPMI::DataInfo *pInList,
 					   SceUInt32 inCount)
 {
-	sceKernelLockLwMutex(&m_mutex, 1, NULL);
+	sceKernelLockLwMutex(&m_mutex.work, 1, NULL);
 	for (unsigned int i = 0; i < LOCATION_SERVER_MAX_SESSIONS; i++) {
 		if (m_slots[i].session == pSession) {
 			m_slots[i].requestId = requestId;
@@ -285,16 +285,16 @@ void LocationServer::onAsyncMethodDispatch(IPMI::Session *pSession, SceUInt32 re
 			break;
 		}
 	}
-	sceKernelUnlockLwMutex(&m_mutex, 1);
+	sceKernelUnlockLwMutex(&m_mutex.work, 1);
 }
 
 /* (0x81186E72) */
 int LocationServer::onNewClient(IPMI::Server *pServer, const IPMI::Session::Config *pConfig,
 				const void *pParam, SceSize paramSize)
 {
-	sceKernelLockLwMutex(&m_mutex, 1, NULL);
+	sceKernelLockLwMutex(&m_mutex.work, 1, NULL);
 	if (m_sessionCount == LOCATION_SERVER_MAX_SESSIONS) {
-		sceKernelUnlockLwMutex(&m_mutex, 1);
+		sceKernelUnlockLwMutex(&m_mutex.work, 1);
 		return SCE_LOCATION_ERROR_TOO_MANY_HANDLES;
 	}
 	m_sessionCount++;
@@ -312,23 +312,23 @@ int LocationServer::onNewClient(IPMI::Server *pServer, const IPMI::Session::Conf
 
 	if (mem == NULL) {
 		m_sessionCount--;
-		sceKernelUnlockLwMutex(&m_mutex, 1);
+		sceKernelUnlockLwMutex(&m_mutex.work, 1);
 		return SCE_LOCATION_ERROR_NO_SERVER_MEMORY;
 	}
 	if (pServer->createSession(&slot->session, this, mem) != 0) {
 		m_sessionCount--;
 		g_locationHeap->sce_paf_free(mem);
-		sceKernelUnlockLwMutex(&m_mutex, 1);
+		sceKernelUnlockLwMutex(&m_mutex.work, 1);
 		return SCE_LOCATION_ERROR_FATAL_ERROR;
 	}
-	sceKernelUnlockLwMutex(&m_mutex, 1);
+	sceKernelUnlockLwMutex(&m_mutex.work, 1);
 	return 0;
 }
 
 /* (0x81186F54) */
 void LocationServer::onSessionClosedByClient(IPMI::Session *pSession)
 {
-	sceKernelLockLwMutex(&m_mutex, 1, NULL);
+	sceKernelLockLwMutex(&m_mutex.work, 1, NULL);
 
 	LocationSessionSlot *slot = NULL;
 
@@ -345,13 +345,13 @@ void LocationServer::onSessionClosedByClient(IPMI::Session *pSession)
 	slot->requestId = -1;
 	slot->methodId = 0;
 	m_sessionCount--;
-	sceKernelUnlockLwMutex(&m_mutex, 1);
+	sceKernelUnlockLwMutex(&m_mutex.work, 1);
 }
 
 /* (0x81186FBE) */
 void LocationServer::onSessionKilled(IPMI::Session *pSession)
 {
-	sceKernelLockLwMutex(&m_mutex, 1, NULL);
+	sceKernelLockLwMutex(&m_mutex.work, 1, NULL);
 
 	LocationSessionSlot *slot = NULL;
 
@@ -371,7 +371,7 @@ void LocationServer::onSessionKilled(IPMI::Session *pSession)
 		slot->methodId = 0;
 		m_sessionCount--;
 	}
-	sceKernelUnlockLwMutex(&m_mutex, 1);
+	sceKernelUnlockLwMutex(&m_mutex.work, 1);
 }
 
 /* (0x81187042) */

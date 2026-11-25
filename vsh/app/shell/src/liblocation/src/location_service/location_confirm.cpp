@@ -3,9 +3,6 @@
  * integration, per-app dialog queue, and app focus suspend/resume; 0x81187F14-0x81188F3E).
  * The file's and internal names here are ours (PLACEHOLDER).
  */
-#include <stddef.h>
-#include <scetypes.h>
-#include <liblocation.h>
 #include <std/string.h>
 #include <std/new>
 #include <plugin.h>
@@ -13,118 +10,26 @@
 #include <datetime/datetime.h>
 #include "../../../../shell.h"
 #include "../../../../plugins.h"
-#include "location_service.h"
+#include "location_internal.h"
 
 using namespace paf;
 
-/* PLACEHOLDER externs for the rest of liblocation */
-struct LocationContext;
-extern void *g_locationManager;					/* (0x815496B4) */
-
-LocationContext *locationGetContext(void);			/* (0x8118BA84) */
-int locationCtxGetPermission(LocationContext *ctx, int appId, SceLocationHandle handle,
-			     SceLocationPermissionInfo *info);	/* (0x8118D9E4) */
-int locationCtxIsHandlePending(LocationContext *ctx, SceLocationHandle handle,
-			       bool *pending);			/* (0x8118DFF0) */
-
-/* location manager timer/task dispatch (0x8118A780-0x8118AB62) */
-int locationTaskSchedule(void *task, int delay);		/* (0x8118A780) */
-int locationTaskCancel(void *task);				/* (0x8118A800) */
-int locationMgrRegisterTask(void *mgr, void *task);		/* (0x8118AACE) */
-int locationMgrUnregisterTask(void *mgr, void *task);		/* (0x8118AB62) */
-
 /* shell location_plugin loader (0x813C4C68, 0x813C4E96) */
-typedef void (*LocationPluginDoneFn)(int result, void *arg);
-typedef void (*LocationPluginLoadedFn)(int unused, LocationPluginDoneFn doneCb, void *arg);
 int locationPluginLoad(LocationPluginLoadedFn loadedCb, LocationPluginDoneFn doneCb,
 		       void *arg);				/* (0x813C4C68) */
 int locationPluginUnload(void);					/* (0x813C4E96) */
 
-typedef void (*LocationConfirmCallback)(int appId, int handle, int dialogType, int result,
-					int canceled);
-
 struct LocationPluginInterface {
-	void *reserved[3];
-	int (*Show)(LocationPluginDoneFn doneCb, void *entry);	/* +12 */
-	int (*GetResult)(void);					/* +16 */
-	int (*GetStatus)(void);					/* +20 */
-	int (*Abort)(void);					/* +24 */
-	void *reserved28;
-	int (*Suspend)(void);					/* +32 */
-	int (*Close)(void);					/* +36 */
-};
-
-struct LocationConfirmApp {
-	int appId;						/* +0 */
-	SceLocationHandle activeHandle;				/* +4 */
-	signed char handleCount;				/* +8 */
-	SceLocationHandle handles[8];				/* +12..+43 */
-};
-
-struct LocationConfirmEntry {
-	int paused;						/* +0 */
-	int dialogType;						/* +4 */
-	unsigned char abortFlag;				/* +8 */
-	unsigned char shownPrompt;				/* +9 */
-	unsigned char reservedA;				/* +10 */
-	unsigned char padB;					/* +11 */
-	int step;						/* +12 */
-	SceLocationDialogStatus status;				/* +16 */
-	SceLocationDialogResult result;				/* +20 */
-	int appId;						/* +24 */
-	SceLocationHandle handle;				/* +28 */
-	SceUInt32 arg;						/* +32 */
-	SceUInt32 dataArg;					/* +36 */
-	char data[0x800];					/* +40..+2087 */
-	LocationConfirmCallback notifyFn;			/* +2088 */
-	int globalPerm;						/* +2092 */
-	int appPerm;						/* +2096 */
-	SceLocationPermissionInfo permInfo;			/* +2100..+2119 */
-};
-
-class LocationConfirmTask {
-public:
-	virtual int OnNotify();					/* (0x81187F20) */
-
-	int m_queued;						/* +4 */
-	int m_active;						/* +8 */
-	int m_reservedC;					/* +12 */
-	int m_dialogType;					/* +16 */
-	int m_reserved14[3];					/* +20..+28 */
-	int m_result;						/* +32 */
-	int m_appId;						/* +36 */
-	int m_handle;						/* +40 */
-	char m_pad[2088];					/* +44..+2131 */
-	int m_canceled;						/* +2132 */
-};
-
-class LocationConfirmMgr {
-public:
-	LocationConfirmMgr(LocationConfirmCallback cb);
-	~LocationConfirmMgr();
-
-	void OnAppDeactivated(int appId);
-	void OnAppActivated(int appId);
-	int AllocEntry(int appId, SceLocationHandle handle, SceUInt32 arg, SceUInt32 dataArg,
-		       const void *data);
-	int Show(int appId, SceLocationHandle handle, SceUInt32 arg, SceUInt32 dataArg,
-		 const void *data, bool allowBusy);
-	SceLocationDialogResult GetResult(int appId, SceLocationHandle handle);
-	SceLocationDialogStatus GetStatus(int appId, SceLocationHandle handle);
-	int Abort(int appId, SceLocationHandle handle);
-	int RemoveEntry(int appId, SceLocationHandle handle);
-	int CloseApp(int appId, SceLocationHandle handle);
-
-	int m_activeAppId;					/* +0 */
-	LocationConfirmApp m_apps[8];				/* +4..+355 */
-	LocationConfirmEntry m_entries[8];			/* +356..+17315 */
-	signed char m_entryCount;				/* +17316 */
-	int m_pluginState;					/* +17320 */
-	LocationConfirmCallback m_callback;			/* +17324 */
-	LocationContext *m_context;				/* +17328 */
-	LocationPluginDoneFn m_pluginDoneCb;			/* +17332 */
-	int m_lastResult;					/* +17336 */
-	LocationConfirmTask m_task;				/* +17340..+19475 */
+	int (*Open)(void);
+	int (*Dismiss)(void);
+	int (*ShowDialog)(void);
+	int (*Show)(LocationPluginDoneFn doneCb, void *entry);
+	int (*GetResult)(void);
+	int (*GetStatus)(void);
+	int (*Abort)(void);
+	int (*Cancel)(void);
+	int (*Suspend)(void);
+	int (*Close)(void);
 };
 
 /* the singleton (0x81544CD8) */
@@ -143,7 +48,8 @@ LocationConfirmMgr *locationConfirmGetInstance(void)
 /* (0x81187F20) */
 int LocationConfirmTask::OnNotify()
 {
-	s_confirmMgr->m_callback(m_appId, m_handle, m_dialogType, m_result, m_canceled);
+	s_confirmMgr->m_callback(m_entry.appId, m_entry.handle, m_entry.dialogType,
+				 m_entry.result, m_canceled);
 	return 0;
 }
 
@@ -152,8 +58,8 @@ __attribute__((noinline))
 LocationConfirmMgr::LocationConfirmMgr(LocationConfirmCallback cb)
 {
 	m_entryCount = 0;
-	m_task.m_active = 0;
-	m_task.m_queued = 0;
+	m_task.m_mgr = NULL;
+	m_task.m_slotIndex = 0;
 	m_callback = cb;
 	m_pluginState = -1;
 	m_context = locationGetContext();
@@ -169,15 +75,15 @@ LocationConfirmMgr::LocationConfirmMgr(LocationConfirmCallback cb)
 		for (signed char j = 0; j < 8; j++)
 			m_apps[i].handles[j] = (SceLocationHandle)-1;
 	}
-	locationMgrRegisterTask(g_locationManager, &m_task);
+	g_locationManager->RegisterTask(&m_task);
 }
 
 /* (0x81187FEE) */
 LocationConfirmMgr::~LocationConfirmMgr()
 {
-	if (m_task.m_queued != 0) {
-		locationTaskCancel(&m_task);
-		locationMgrUnregisterTask(g_locationManager, &m_task);
+	if (m_task.m_mgr != NULL) {
+		m_task.Cancel();
+		g_locationManager->UnregisterTask(&m_task);
 	}
 	m_pluginState = -1;
 	m_callback = NULL;
@@ -237,22 +143,22 @@ static void locationConfirmOnPluginDone(int result, void *arg)
 			entry->result = SCE_LOCATION_DIALOG_RESULT_NONE;
 			s_confirmMgr->m_lastResult = result;
 			if (entry->notifyFn != NULL) {
-				s_confirmMgr->m_task.m_result = entry->result;
-				s_confirmMgr->m_task.m_appId = entry->appId;
-				s_confirmMgr->m_task.m_handle = entry->handle;
-				s_confirmMgr->m_task.m_dialogType = entry->dialogType;
+				s_confirmMgr->m_task.m_entry.result = entry->result;
+				s_confirmMgr->m_task.m_entry.appId = entry->appId;
+				s_confirmMgr->m_task.m_entry.handle = entry->handle;
+				s_confirmMgr->m_task.m_entry.dialogType = entry->dialogType;
 				s_confirmMgr->m_task.m_canceled = 0;
-				locationTaskSchedule(&s_confirmMgr->m_task, 1);
+				s_confirmMgr->m_task.Schedule(1);
 			}
 		}
 	} else {
 		if (entry->step == 11) {
-			s_confirmMgr->m_task.m_result = entry->result;
-			s_confirmMgr->m_task.m_appId = entry->appId;
-			s_confirmMgr->m_task.m_handle = entry->handle;
-			s_confirmMgr->m_task.m_dialogType = entry->dialogType;
+			s_confirmMgr->m_task.m_entry.result = entry->result;
+			s_confirmMgr->m_task.m_entry.appId = entry->appId;
+			s_confirmMgr->m_task.m_entry.handle = entry->handle;
+			s_confirmMgr->m_task.m_entry.dialogType = entry->dialogType;
 			s_confirmMgr->m_task.m_canceled = 0;
-			locationTaskSchedule(&s_confirmMgr->m_task, 1);
+			s_confirmMgr->m_task.Schedule(1);
 		}
 		s_confirmMgr->m_lastResult = 0;
 	}
@@ -288,11 +194,10 @@ static void locationConfirmOnPluginLoaded(int unused, LocationPluginDoneFn doneC
 		int appPerm;
 		SceLocationPermissionInfo permInfo;
 
-		locationCtxGetPermission(s_confirmMgr->m_context, entry->appId, entry->handle,
-					 &permInfo);
-		locationSvcSetPermissionMode((int)(intptr_t)&globalPerm);
+		s_confirmMgr->m_context->GetPermission(entry->appId, entry->handle, &permInfo);
+		locationSvcGetGlobalPerm(&globalPerm);
 		entry->globalPerm = globalPerm;
-		locationSvcSetAppPermission((const char *)&appPerm, false);
+		locationSvcGetAppPermSetting(&appPerm, false);
 		entry->appPerm = appPerm;
 		entry->permInfo = permInfo;
 
@@ -300,7 +205,7 @@ static void locationConfirmOnPluginLoaded(int unused, LocationPluginDoneFn doneC
 			step = 1;
 			entry->step = 1;
 		} else if (permInfo.applicationstatus == SCE_LOCATION_PERMISSION_APPLICATION_INIT &&
-			   entry->reservedA == 0) {
+			   entry->skipInitialPrompt == 0) {
 			step = 2;
 			entry->step = 2;
 			entry->shownPrompt = 1;
@@ -444,7 +349,7 @@ void LocationConfirmMgr::OnAppActivated(int appId)
 		if (entry->status == SCE_LOCATION_DIALOG_STATUS_RUNNING && entry->step == 10) {
 			SceLocationPermissionInfo permInfo;
 
-			locationCtxGetPermission(m_context, appId, entry->handle, &permInfo);
+			m_context->GetPermission(appId, entry->handle, &permInfo);
 			if (permInfo.mainstatus != SCE_LOCATION_PERMISSION_DENY) {
 				if (entry->shownPrompt != 0 ||
 				    permInfo.applicationstatus !=
@@ -504,10 +409,10 @@ void LocationConfirmMgr::OnAppActivated(int appId)
 	int appPerm;
 	SceLocationPermissionInfo permInfo;
 
-	locationCtxGetPermission(m_context, appId, entry->handle, &permInfo);
+	m_context->GetPermission(appId, entry->handle, &permInfo);
 	entry->permInfo = permInfo;
-	locationSvcSetPermissionMode((int)(intptr_t)&globalPerm);
-	locationSvcSetAppPermission((const char *)&appPerm, false);
+	locationSvcGetGlobalPerm(&globalPerm);
+	locationSvcGetAppPermSetting(&appPerm, false);
 
 	int step;
 
@@ -515,7 +420,7 @@ void LocationConfirmMgr::OnAppActivated(int appId)
 		step = 1;
 		entry->step = 1;
 	} else if (permInfo.applicationstatus == SCE_LOCATION_PERMISSION_APPLICATION_INIT &&
-		   entry->reservedA == 0) {
+		   entry->skipInitialPrompt == 0) {
 		step = 2;
 		entry->step = 2;
 		entry->shownPrompt = 1;
@@ -548,24 +453,24 @@ void LocationConfirmMgr::OnAppActivated(int appId)
 		entry->dialogType = 0;
 		entry->status = SCE_LOCATION_DIALOG_STATUS_FINISHED;
 		entry->result = SCE_LOCATION_DIALOG_STATUS_ENABLE;
-		s_confirmMgr->m_task.m_result = SCE_LOCATION_DIALOG_STATUS_ENABLE;
-		s_confirmMgr->m_task.m_appId = entry->appId;
-		s_confirmMgr->m_task.m_handle = entry->handle;
-		s_confirmMgr->m_task.m_dialogType = 0;
+		s_confirmMgr->m_task.m_entry.result = SCE_LOCATION_DIALOG_STATUS_ENABLE;
+		s_confirmMgr->m_task.m_entry.appId = entry->appId;
+		s_confirmMgr->m_task.m_entry.handle = entry->handle;
+		s_confirmMgr->m_task.m_entry.dialogType = 0;
 		s_confirmMgr->m_task.m_canceled = 0;
-		locationTaskSchedule(&s_confirmMgr->m_task, 1);
+		s_confirmMgr->m_task.Schedule(1);
 	} else if (locationPluginLoad(locationConfirmOnPluginLoaded, locationConfirmOnPluginDone,
 				      entry) != 0) {
 		entry->step = 0;
 		entry->status = SCE_LOCATION_DIALOG_STATUS_IDLE;
 		entry->result = SCE_LOCATION_DIALOG_RESULT_NONE;
 		entry->dialogType = 0;
-		s_confirmMgr->m_task.m_result = SCE_LOCATION_DIALOG_RESULT_NONE;
-		s_confirmMgr->m_task.m_appId = entry->appId;
-		s_confirmMgr->m_task.m_handle = entry->handle;
-		s_confirmMgr->m_task.m_dialogType = 0;
+		s_confirmMgr->m_task.m_entry.result = SCE_LOCATION_DIALOG_RESULT_NONE;
+		s_confirmMgr->m_task.m_entry.appId = entry->appId;
+		s_confirmMgr->m_task.m_entry.handle = entry->handle;
+		s_confirmMgr->m_task.m_entry.dialogType = 0;
 		s_confirmMgr->m_task.m_canceled = 0;
-		locationTaskSchedule(&s_confirmMgr->m_task, 1);
+		s_confirmMgr->m_task.Schedule(1);
 	} else {
 		m_pluginState = 0;
 	}
@@ -574,7 +479,7 @@ void LocationConfirmMgr::OnAppActivated(int appId)
 /* (0x811887B6) */
 static void locationConfirmOnAppEvent(int event, const void *data, SceSize size, void *arg)
 {
-	int appId = ((const int *)data)[1];
+	int appId = ((const ShellAppEvent *)data)->appId;
 
 	if (event == 5)
 		s_confirmMgr->OnAppActivated(appId);
@@ -606,7 +511,7 @@ int LocationConfirmMgr::AllocEntry(int appId, SceLocationHandle handle, SceUInt3
 		entry->notifyFn = locationConfirmOnDialogNotify;
 		entry->status = SCE_LOCATION_DIALOG_STATUS_RUNNING;
 		entry->abortFlag = 0;
-		entry->reservedA = 0;
+		entry->skipInitialPrompt = 0;
 		m_activeAppId = appId;
 		m_entryCount++;
 	}
@@ -672,10 +577,10 @@ int LocationConfirmMgr::Show(int appId, SceLocationHandle handle, SceUInt32 arg,
 		if (m_entryCount < 8)
 			idx = (signed char)AllocEntry(appId, handle, arg, dataArg, data);
 	} else if (m_entries[idx].status == SCE_LOCATION_DIALOG_STATUS_RUNNING) {
-		bool pending = false;
+		unsigned char pending = 0;
 
-		locationCtxIsHandlePending(m_context, handle, &pending);
-		if (!pending && !allowBusy)
+		m_context->IsHandlePending(handle, &pending);
+		if (pending == 0 && !allowBusy)
 			return SCE_LOCATION_ERROR_MULTIPLE_CONFIRM;
 		return 0;
 	} else {
@@ -693,11 +598,11 @@ int LocationConfirmMgr::Show(int appId, SceLocationHandle handle, SceUInt32 arg,
 		int appPerm;
 		SceLocationPermissionInfo permInfo;
 
-		ret = locationSvcSetPermissionMode((int)(intptr_t)&globalPerm);
+		ret = locationSvcGetGlobalPerm(&globalPerm);
 		if (ret == 0) {
-			ret = locationSvcSetAppPermission((const char *)&appPerm, false);
+			ret = locationSvcGetAppPermSetting(&appPerm, false);
 			if (ret == 0) {
-				ret = locationCtxGetPermission(m_context, appId, handle, &permInfo);
+				ret = m_context->GetPermission(appId, handle, &permInfo);
 				if (ret == 0 || ret == SCE_LOCATION_INFO_DENIED_BY_USER) {
 					LocationConfirmEntry *entry = &m_entries[idx];
 
@@ -706,7 +611,7 @@ int LocationConfirmMgr::Show(int appId, SceLocationHandle handle, SceUInt32 arg,
 					entry->step = 0;
 					entry->abortFlag = 0;
 					entry->shownPrompt = 0;
-					entry->reservedA = 0;
+					entry->skipInitialPrompt = 0;
 					entry->permInfo = permInfo;
 					m_lastResult = 0;
 
@@ -943,10 +848,10 @@ int LocationConfirmMgr::CloseApp(int appId, SceLocationHandle handle)
 static void locationConfirmOnDialogNotify(int appId, int handle, int dialogType, int result,
 					  int canceled)
 {
-	s_confirmMgr->m_task.m_handle = handle;
-	s_confirmMgr->m_task.m_dialogType = dialogType;
-	s_confirmMgr->m_task.m_appId = appId;
-	s_confirmMgr->m_task.m_result = result;
+	s_confirmMgr->m_task.m_entry.handle = handle;
+	s_confirmMgr->m_task.m_entry.dialogType = dialogType;
+	s_confirmMgr->m_task.m_entry.appId = appId;
+	s_confirmMgr->m_task.m_entry.result = (SceLocationDialogResult)result;
 	s_confirmMgr->m_task.m_canceled = canceled;
-	locationTaskSchedule(&s_confirmMgr->m_task, 1);
+	s_confirmMgr->m_task.Schedule(1);
 }

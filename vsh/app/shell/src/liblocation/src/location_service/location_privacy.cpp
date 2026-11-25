@@ -2,83 +2,16 @@
  * location_privacy.cpp: per-application privacy/permission table ("SceLocationPrivacySettings")
  * (0x8118E9F4-0x8118F32C, sti 0x8118F2BA). The file and class names are ours (PLACEHOLDER).
  */
-#include "location_service.h"
+#include "location_internal.h"
 #include <std/string.h>
 #include <system/system.h>
 
-extern void *locationPosMgrGetInstance(void);
-extern class LocationPrivacySettings *locationPosMgrGetPrivacy(void *posMgr);
-
-extern int locationSettingGetAppTitleId(void *setting, int appId, char *titleId);
-extern int locationSettingIsDebugApp(void *setting, const char *titleId);
-extern int locationSettingGetAppPermission(void *setting, const char *titleId, int *perm,
-					   unsigned char *flag);
-extern int locationSettingSetAppPermission(void *setting, const char *titleId, int perm);
-extern int locationSettingUpdateCounter(void *setting, const char *titleId, int counter);
-extern int locationSettingGetLastCounter(void *setting, const char *titleId,
-					 SceUInt32 *lastCounter);
-extern int locationSettingGetParental(void *setting);
-extern int locationSettingIsServiceEnabled(void *setting);
-extern int locationSettingGetUpdateCounter(void *setting);
-
-struct LocationProviderCtrl {
-	virtual void vfn0();
-	virtual void vfn1();
-	virtual int Start();		/* +8 */
-	virtual int Stop();		/* +12 */
-	virtual void vfn4();
-	virtual int Resume();		/* +20 */
-	virtual int Suspend();		/* +24 */
-};
-
-struct LocationPrivacyEntry {
-	char titleId[32];		/* +0 */
-	int permission;			/* +32 */
-	unsigned char dirty;		/* +36 */
-	unsigned char pad[3];
-	int lastCounter;		/* +40 */
-	unsigned char refCount;		/* +44 */
-	unsigned char pad2[3];
-};
-
-class LocationPrivacySettings {
-public:
-	LocationPrivacySettings(void *setting);
-	virtual ~LocationPrivacySettings();
-
-	int Init();
-	signed char AddOrIncrement(const LocationPrivacyEntry *entry);
-	int OpenApp(int appId, signed char *outSlot, const SceUInt32 *lmethod);
-	int CloseApp(signed char slot);
-	signed char FindSlot(const char *titleId);
-	int GetPermission(signed char slot, int *outPerm);
-	int SetPermission(const char *titleId, int perm, signed char slot);
-	int CheckPermission(signed char slot);
-	bool IsGloballyEnabled();
-	bool HasAnyAllowedApp();
-	int ProviderStart(LocationProviderCtrl *provider);
-	int ProviderStop(LocationProviderCtrl *provider);
-	int ProviderResume(LocationProviderCtrl *provider);
-	int ProviderSuspend(LocationProviderCtrl *provider);
-	int ConfirmApp(signed char slot);
-	int NeedsConfirm(signed char slot, bool *outNeeds);
-	int SetAllPermissions(int perm);
-
-	LocationPrivacyEntry m_entries[8];	/* +4 (384 bytes -> +388) */
-	unsigned char m_count;			/* +388 */
-	int m_mutexResult;			/* +392 */
-	int m_pad396;				/* +396 */
-	SceKernelLwMutexWork m_mutex;		/* +400 */
-	void *m_setting;			/* +432 */
-	unsigned char m_providerActive;		/* +436 */
-};
-
 /* 0x8118E9F4 */
-LocationPrivacySettings::LocationPrivacySettings(void *setting)
+LocationPrivacySettings::LocationPrivacySettings(LocationSetting *setting)
 {
 	m_setting = setting;
 	sce_paf_memset(m_entries, 0, sizeof(m_entries));
-	m_providerActive = 0;
+	m_providerSuspended = 0;
 	m_count = 0;
 	m_mutexResult = -1;
 }
@@ -107,7 +40,7 @@ signed char LocationPrivacySettings::AddOrIncrement(const LocationPrivacyEntry *
 		int freeIdx = -1;
 		int found = 0;
 		if (m_count != 0) {
-			while (!found) {
+			while (!found && seen < m_count) {
 				if (m_entries[idx].refCount != 0) {
 					if (sce_paf_strncmp(m_entries[idx].titleId,
 							    entry->titleId, 32) == 0) {
@@ -120,19 +53,12 @@ signed char LocationPrivacySettings::AddOrIncrement(const LocationPrivacyEntry *
 					freeIdx = idx;
 				}
 				idx++;
-				if (seen >= m_count) {
-					if (found)
-						return result;
-					if (freeIdx != -1)
-						goto store_entry;
-					goto use_idx;
-				}
 			}
-			return result;
+			if (found)
+				return result;
 		}
-use_idx:
-		freeIdx = idx;
-store_entry:
+		if (freeIdx == -1)
+			freeIdx = idx;
 		m_entries[freeIdx] = *entry;
 		result = (signed char)freeIdx;
 		m_count++;
@@ -146,16 +72,15 @@ int LocationPrivacySettings::OpenApp(int appId, signed char *outSlot, const SceU
 	LocationPrivacyEntry entry;
 	sce_paf_memset(&entry, 0, sizeof(entry));
 
-	int ret = locationSettingGetAppTitleId(m_setting, appId, entry.titleId);
+	int ret = m_setting->GetAppTitleId(appId, entry.titleId);
 	if (ret == 0) {
-		if (locationSettingIsDebugApp(m_setting, entry.titleId) != 0)
-			*((unsigned char *)m_setting + 57) = 1;
+		if (m_setting->IsDebugApp(entry.titleId) != 0)
+			m_setting->m_debugPermEnabled = 1;
 
 		ret = sceKernelLockLwMutex(&m_mutex, 1, NULL);
 		if (ret == 0) {
 			unsigned char flag = 0;
-			ret = locationSettingGetAppPermission(m_setting, entry.titleId,
-							      &entry.permission, &flag);
+			ret = m_setting->GetAppPermission(entry.titleId, &entry.permission, &flag);
 			if (ret == 0) {
 				entry.dirty = flag;
 				if ((*lmethod & 0xF) != 0 && entry.permission == 0) {
@@ -163,9 +88,8 @@ int LocationPrivacySettings::OpenApp(int appId, signed char *outSlot, const SceU
 				} else {
 					entry.refCount = 1;
 					SceUInt32 lastCounter = 0;
-					ret = locationSettingGetLastCounter(m_setting,
-									    entry.titleId,
-									    &lastCounter);
+					ret = m_setting->GetAppLastCounter(entry.titleId,
+									   &lastCounter);
 					if (ret == 0) {
 						entry.lastCounter = (int)lastCounter;
 						signed char slot = AddOrIncrement(&entry);
@@ -193,9 +117,9 @@ int LocationPrivacySettings::CloseApp(signed char slot)
 				if (rc != 0) {
 					m_entries[slot].refCount = rc - 1;
 					if (rc == 1) {
-						if (locationSettingIsDebugApp(m_setting,
-									      m_entries[slot].titleId) != 0)
-							*((unsigned char *)m_setting + 57) = 0;
+						if (m_setting->IsDebugApp(
+							    m_entries[slot].titleId) != 0)
+							m_setting->m_debugPermEnabled = 0;
 						m_entries[slot].titleId[0] = '\0';
 						m_count--;
 					}
@@ -257,7 +181,7 @@ int LocationPrivacySettings::SetPermission(const char *titleId, int perm, signed
 {
 	int ret = sceKernelLockLwMutex(&m_mutex, 1, NULL);
 	if (ret == 0) {
-		ret = locationSettingSetAppPermission(m_setting, titleId, perm);
+		ret = m_setting->SetAppPermission(titleId, perm);
 		if (ret == 0) {
 			if (slot == -1)
 				slot = FindSlot(titleId);
@@ -286,13 +210,13 @@ int LocationPrivacySettings::CheckPermission(signed char slot)
 		return SCE_LOCATION_ERROR_DISABLE_APPLICATION;
 	if (paf::system::Model::GetType() == 1)
 		return SCE_LOCATION_INFO_DENIED_BY_USER;
-	if (*(int *)((char *)m_setting + 64) == 0)
+	if (m_setting->m_agePermit == 0)
 		return SCE_LOCATION_INFO_DENIED_BY_USER;
-	if (locationSettingGetParental(m_setting) == 0)
+	if (m_setting->GetParental() == 0)
 		return SCE_LOCATION_INFO_DENIED_BY_USER;
 	if (perm == 1)
 		return SCE_LOCATION_INFO_DENIED_BY_USER;
-	if (locationSettingIsServiceEnabled(m_setting) == 0)
+	if (!m_setting->IsServiceEnabled())
 		return SCE_LOCATION_INFO_DENIED_BY_USER;
 	if (perm == 2)
 		return SCE_LOCATION_INFO_DENIED_BY_USER;
@@ -302,9 +226,8 @@ int LocationPrivacySettings::CheckPermission(signed char slot)
 /* 0x8118EF34 */
 bool LocationPrivacySettings::IsGloballyEnabled()
 {
-	if (locationSettingGetParental(m_setting) != 0 &&
-	    locationSettingIsServiceEnabled(m_setting) != 0)
-		return *(int *)((char *)m_setting + 64) != 0;
+	if (m_setting->GetParental() != 0 && m_setting->IsServiceEnabled())
+		return m_setting->m_agePermit != 0;
 	return false;
 }
 
@@ -333,36 +256,36 @@ bool LocationPrivacySettings::HasAnyAllowedApp()
 }
 
 /* 0x8118EFAA */
-int LocationPrivacySettings::ProviderStart(LocationProviderCtrl *provider)
+int LocationPrivacySettings::ProviderStart(LocationProvider *provider)
 {
-	return provider->Start();
+	return provider->StartPeriodicLocation();
 }
 
 /* 0x8118EFB6 */
-int LocationPrivacySettings::ProviderStop(LocationProviderCtrl *provider)
+int LocationPrivacySettings::ProviderStop(LocationProvider *provider)
 {
-	return provider->Stop();
+	return provider->StopPeriodicLocation();
 }
 
 /* 0x8118EFC2 */
-int LocationPrivacySettings::ProviderResume(LocationProviderCtrl *provider)
+int LocationPrivacySettings::ProviderSuspend(LocationProvider *provider)
 {
-	if (m_providerActive != 0)
+	if (m_providerSuspended != 0)
 		return 0;
-	int ret = provider->Resume();
+	int ret = provider->Suspend();
 	if (ret == 0)
-		m_providerActive = 1;
+		m_providerSuspended = 1;
 	return ret;
 }
 
 /* 0x8118EFE4 */
-int LocationPrivacySettings::ProviderSuspend(LocationProviderCtrl *provider)
+int LocationPrivacySettings::ProviderResume(LocationProvider *provider)
 {
-	if (m_providerActive == 0)
+	if (m_providerSuspended == 0)
 		return 0;
-	int ret = provider->Suspend();
+	int ret = provider->Resume();
 	if (ret == 0)
-		m_providerActive = 0;
+		m_providerSuspended = 0;
 	return ret;
 }
 
@@ -374,9 +297,8 @@ int LocationPrivacySettings::ConfirmApp(signed char slot)
 		ret = sceKernelLockLwMutex(&m_mutex, 1, NULL);
 		if (ret == 0) {
 			if (m_entries[slot].refCount != 0) {
-				int counter = locationSettingGetUpdateCounter(m_setting);
-				ret = locationSettingUpdateCounter(m_setting,
-								   m_entries[slot].titleId,
+				int counter = m_setting->GetUpdateCounter();
+				ret = m_setting->SetAppLastCounter(m_entries[slot].titleId,
 								   counter);
 				if (ret == 0) {
 					m_entries[slot].dirty = 0;
@@ -384,27 +306,21 @@ int LocationPrivacySettings::ConfirmApp(signed char slot)
 					signed char pairedSlot = -1;
 					if (sce_paf_strncmp(m_entries[slot].titleId,
 							    "NPXS10004", 32) == 0) {
-						void *mgr = locationPosMgrGetInstance();
-						if (mgr != NULL) {
-							LocationPrivacySettings *priv =
-								locationPosMgrGetPrivacy(mgr);
-							pairedSlot = priv->FindSlot("NPXS10095");
-						}
+						PositionManager *mgr = locationGetContext();
+						if (mgr != NULL)
+							pairedSlot = mgr->GetPermMgr()->FindSlot(
+								"NPXS10095");
 					} else if (sce_paf_strncmp(m_entries[slot].titleId,
 								   "NPXS10095", 32) == 0) {
-						void *mgr = locationPosMgrGetInstance();
-						if (mgr != NULL) {
-							LocationPrivacySettings *priv =
-								locationPosMgrGetPrivacy(mgr);
-							pairedSlot = priv->FindSlot("NPXS10004");
-						}
+						PositionManager *mgr = locationGetContext();
+						if (mgr != NULL)
+							pairedSlot = mgr->GetPermMgr()->FindSlot(
+								"NPXS10004");
 					}
 					if ((unsigned int)pairedSlot < 8 &&
 					    m_entries[pairedSlot].refCount != 0) {
-						ret = locationSettingUpdateCounter(
-							m_setting,
-							m_entries[pairedSlot].titleId,
-							counter);
+						ret = m_setting->SetAppLastCounter(
+							m_entries[pairedSlot].titleId, counter);
 						if (ret == 0) {
 							m_entries[pairedSlot].dirty = 0;
 							m_entries[pairedSlot].lastCounter = counter;
@@ -430,7 +346,7 @@ int LocationPrivacySettings::NeedsConfirm(signed char slot, bool *outNeeds)
 			if (m_entries[slot].refCount != 0) {
 				*outNeeds = (m_entries[slot].dirty != 0) ||
 					    (m_entries[slot].lastCounter !=
-					     locationSettingGetUpdateCounter(m_setting));
+					     m_setting->GetUpdateCounter());
 				ret = 0;
 			} else {
 				ret = SCE_LOCATION_ERROR_FATAL_ERROR;

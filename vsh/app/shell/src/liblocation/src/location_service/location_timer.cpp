@@ -12,97 +12,11 @@
 #include <timer/timer.h>
 #include <timer/timerlistener.h>
 #include <timer/timerlistenerlist.h>
+#include "location_internal.h"
 
 extern "C" SceUInt64 sceRtcGetAccumulativeTime(void);
 
 using namespace paf;
-
-class LocationTimerMgr;
-
-class LocationTask {
-public:
-	virtual ~LocationTask()
-	{
-	}
-
-	virtual int OnNotify() = 0;
-
-	int Schedule(unsigned int delayMs);			/* (0x8118A780) */
-	int Cancel();						/* (0x8118A800) */
-
-	LocationTimerMgr *m_mgr;				/* +4 */
-	int m_slotIndex;					/* +8 */
-};
-
-class LocationTimerObserver {
-public:
-	virtual ~LocationTimerObserver()
-	{
-	}
-
-	virtual void OnResume() = 0;				/* +8 */
-	virtual void OnSuspend() = 0;				/* +12 */
-};
-
-struct LocationTimerSlot {
-	LocationTask *task;					/* +0 (+48) */
-	int pad4;						/* +4 */
-	SceUInt64 interval;					/* +8 (+56) */
-	SceUInt64 startTime;					/* +16 (+64) */
-	int state;						/* +24 (+72): 0=free, 1=idle, 2=active, 3=removing */
-	int pad1C;						/* +28 */
-};
-
-class LocationTimerListener : public TimerListener {
-public:
-	LocationTimerListener(Timer *timer, LocationTimerMgr *mgr)
-		: TimerListener(timer, NULL), m_mgr(mgr)
-	{
-	}
-
-	virtual ~LocationTimerListener()
-	{
-	}
-
-	virtual void OnTick(void *data1, void *data2);		/* (0x8118AE56) */
-	virtual void OnFinish(void *data1, void *data2);	/* (0x8118AE6A) */
-
-	LocationTimerMgr *m_mgr;				/* +12 */
-};
-
-class LocationTimerMgr {
-public:
-	LocationTimerMgr(Timer *timer);				/* (0x8118A838) */
-	~LocationTimerMgr();					/* (0x8118A930) */
-
-	int Unlock();						/* (0x8118A764) */
-	int Lock();						/* (0x8118A770) */
-	int Term();						/* (0x8118A894) */
-	int Init();						/* (0x8118A954) */
-	int RegisterTask(LocationTask *task);			/* (0x8118AACE) */
-	int UnregisterTask(LocationTask *task);			/* (0x8118AB62) */
-	int ReleaseActive();					/* (0x8118ABDC) */
-	int AcquireActive();					/* (0x8118AC32) */
-	int RegisterObserver(LocationTimerObserver *obs);	/* (0x8118AC86) */
-	int UnregisterObserver(LocationTimerObserver *obs);	/* (0x8118ACBA) */
-	void CheckTasks();					/* (0x8118ACF0) */
-
-	static int ThreadEntry(SceSize args, void *argp);	/* (0x8118AE0E) */
-
-	unsigned char m_stopping;				/* +0 */
-	int m_mutexResult;					/* +4 */
-	SceKernelLwMutexWork m_mutex;				/* +8..+39 */
-	SceUID m_threadId;					/* +40 */
-	SceUID m_eventFlag;					/* +44 */
-	LocationTimerSlot m_slots[16];				/* +48..+559 (16 * 32 = 512) */
-	int m_slotCount;					/* +560 */
-	unsigned char m_idle;					/* +564 */
-	int m_activeCount;					/* +568 */
-	LocationTimerListener m_listener;			/* +572..+587 (16 bytes) */
-	LocationTimerObserver *m_observers[1];			/* +588..+591 */
-	SceUID m_completeEvent;					/* +592 */
-	int m_reserved254;					/* +596 (total 600 bytes) */
-};
 
 /* (0x8118A764) */
 int LocationTimerMgr::Unlock()
@@ -460,15 +374,19 @@ int LocationTimerMgr::ThreadEntry(SceSize args, void *argp)
 }
 
 /* (0x8118AE56) */
-void LocationTimerListener::OnTick(void *data1, void *data2)
+void LocationTimerListener::OnTick(void *userArg, void *extraArg)
 {
+	(void)userArg;
+	(void)extraArg;
 	if (m_mgr->m_idle == 0)
 		sceKernelSetEventFlag(m_mgr->m_eventFlag, 1);
 }
 
 /* (0x8118AE6A) */
-void LocationTimerListener::OnFinish(void *data1, void *data2)
+void LocationTimerListener::OnFinish(void *userArg, void *extraArg)
 {
+	(void)userArg;
+	(void)extraArg;
 	if (m_mgr->m_idle != 0)
 		sceKernelSetEventFlag(m_mgr->m_eventFlag, 1);
 }

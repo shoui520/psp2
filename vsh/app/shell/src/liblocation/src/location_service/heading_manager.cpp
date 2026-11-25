@@ -4,7 +4,7 @@
  * calculation; 0x81194E8C-0x81196BB8, sti 0x81196B0E). The file and class names are ours
  * (PLACEHOLDER).
  */
-#include "location_service.h"
+#include "location_internal.h"
 #include <math.h>
 #include <regmgr/regmgr.h>
 #include <std/stdio.h>
@@ -19,30 +19,12 @@ float sce_paf_cosf(float x);
 float sce_paf_atan2f(float y, float x);
 int SceMotion_ACEFA121(void);
 int SceMotion_BC5C86C5(void);
-int SceMotion_AD0B62B7(void *state);
+int SceMotion_AD0B62B7(SceMotionState *state);
 int sceMotionMagnetometerOn(void);
 int sceMotionMagnetometerOff(void);
 }
 
-extern void *g_locationManager;				/* 0x815496B4 */
-extern void shellRegMgrLogError(int err, int flag);	/* 0x81345038 */
-extern int locationTaskSchedule(void *task, unsigned int delayMs); /* 0x8118A780 */
-extern int locationTaskCancel(void *task);		/* 0x8118A800 */
-extern int locationMgrRegisterTask(void *mgr, void *task); /* 0x8118AACE */
-extern int locationMgrUnregisterTask(void *mgr, void *task); /* 0x8118AB62 */
-extern int locationPosMgrUpdateHeadingState(void *pm);	/* 0x8118C108 */
-extern int locationPosMgrNotifyHeadingTimeout(void *pm, int err, unsigned int elapsed); /* 0x8118DAE4 */
-extern float locationDecodeHeadingAngle(const SceUInt32 *hmethod); /* 0x8118F3CC */
-extern int locationGetCurrentTick(SceRtcTick *tick);	/* 0x8118F49E */
-extern void wmmSetDate(void *wmm, int month, int day, int year); /* 0x8119924C */
-extern void wmmCalcDeclination(void *wmm, float lat, float lon, float alt); /* 0x8119934C */
-
-struct Quat4 {
-	float x;
-	float y;
-	float z;
-	float w;
-};
+extern void shellRegMgrLogError(int err, int flag);		/* 0x81345038 */
 
 static float wrapDeg360(float deg)
 {
@@ -54,10 +36,10 @@ static float wrapDeg360(float deg)
 	return r;
 }
 
-static Quat4 slerpHalf(const Quat4 &a, const Quat4 &b)
+static LocationQuat slerpHalf(const LocationQuat &lhs, const LocationQuat &rhs)
 {
-	float bx = b.x, by = b.y, bz = b.z, bw = b.w;
-	float dot = a.x * bx + a.w * bw + a.y * by + a.z * bz;
+	float bx = rhs.x, by = rhs.y, bz = rhs.z, bw = rhs.w;
+	float dot = lhs.x * bx + lhs.w * bw + lhs.y * by + lhs.z * bz;
 	if (dot < 0.0f) {
 		bx = -bx;
 		by = -by;
@@ -74,88 +56,16 @@ static Quat4 slerpHalf(const Quat4 &a, const Quat4 &b)
 		wa = sce_paf_sinf(theta * 0.5f) * invSin;
 		wb = sce_paf_sinf(theta * 0.5f) * invSin;
 	}
-	Quat4 out;
-	out.x = wb * bx + a.x * wa;
-	out.y = wb * by + a.y * wa;
-	out.z = wb * bz + a.z * wa;
-	out.w = wb * bw + a.w * wa;
+	LocationQuat out;
+	out.x = wb * bx + lhs.x * wa;
+	out.y = wb * by + lhs.y * wa;
+	out.z = wb * bz + lhs.z * wa;
+	out.w = wb * bw + lhs.w * wa;
 	return out;
 }
 
-class HeadingManager;
-
-class HeadingPollTask {
-public:
-	virtual ~HeadingPollTask() {}
-	virtual int OnNotify();				/* 0x81196AC6 */
-
-	int m_queued;					/* +4 */
-	int m_active;					/* +8 */
-	HeadingManager *m_mgr;				/* +12 */
-};
-
-class HeadingSusListener {
-public:
-	virtual void OnResume() = 0;			/* +0 */
-	virtual void OnSuspend() = 0;			/* +4 */
-	virtual ~HeadingSusListener() {}
-};
-
-class HeadingManager : public HeadingSusListener {
-public:
-	HeadingManager(void *posMgr);			/* 0x81194E8C */
-	virtual ~HeadingManager();			/* 0x81194F9E / 0x81195032 */
-	virtual void OnResume();			/* 0x81196AB0 */
-	virtual void OnSuspend();			/* 0x81196A9C */
-	virtual void OnHeadingConfigChanged();		/* 0x81196A90 */
-
-	int StopMotion();				/* 0x81194F14 */
-	int IsMotionStarted();				/* 0x81194F34 */
-	int Term();					/* 0x81194F38 */
-	int LoadLastLocation();				/* 0x81195042 */
-	int Init();					/* 0x81195164 */
-	int StartMotion();				/* 0x811951BE */
-	int EnableMagnetometer();			/* 0x811951E0 */
-	int DisableMagnetometer();			/* 0x81195202 */
-	int PollMotion();				/* 0x81195226 */
-	int ComputeHeadingAngle(const float *vec2, float *outHeading, const SceUInt32 *hmethod,
-				float prevHeading);	/* 0x81195AFC */
-	int RotateBasisVector(const Quat4 *q, const SceUInt32 *hmethod, float *outVec4); /* 0x81196386 */
-	int GetHeading(const SceUInt32 *hmethod, SceLocationHeadingInfo *outInfo); /* 0x811964BE */
-	int StartPolling();				/* 0x8119685E */
-	int StopPolling();				/* 0x8119688A */
-	int IsMagnetometerEnabled();			/* 0x811968B2 */
-	int SaveLastLocation();				/* 0x811968B6 */
-	void UpdateLocation(const double *latLon);	/* 0x811969CA */
-
-	void *m_posMgr;					/* +8 */
-	unsigned char m_initialized;			/* +12 */
-	signed char m_pollRefCount;			/* +13 */
-	unsigned char m_motionStarted;			/* +14 */
-	unsigned char m_magEnabled;			/* +15 */
-	double m_lastLat;				/* +16 */
-	double m_lastLon;				/* +24 */
-	int m_mutexResult;				/* +32 */
-	int m_pad36;					/* +36 */
-	SceKernelLwMutexWork m_mutex;			/* +40..+71 */
-	int m_orientation;				/* +72 */
-	char m_wmmState[784];				/* +76..+859 */
-	float m_declination;				/* +860 */
-	char m_wmmTail[8];				/* +864..+871 */
-	unsigned char m_motionState[248];		/* +872..+1119 */
-	Quat4 m_curQuat;				/* +1120..+1135 */
-	int m_valid;					/* +1136 */
-	Quat4 m_smoothQuat;				/* +1140..+1155 */
-	Quat4 m_ring[9];				/* +1156..+1299 */
-	unsigned int m_ringHead;			/* +1300 */
-	unsigned int m_ringTail;			/* +1304 */
-	unsigned int m_ringLast;			/* +1308 */
-	SceUInt64 m_lastPollTime;			/* +1312 */
-	HeadingPollTask m_pollTask;			/* +1320..+1335 */
-};
-
 /* 0x81194E8C */
-HeadingManager::HeadingManager(void *posMgr)
+HeadingManager::HeadingManager(PositionManager *posMgr)
 	: m_posMgr(posMgr)
 	, m_initialized(0)
 	, m_pollRefCount(0)
@@ -165,20 +75,20 @@ HeadingManager::HeadingManager(void *posMgr)
 	, m_lastLon(0.0)
 	, m_mutexResult(-1)
 	, m_orientation(0)
-	, m_declination(0.0f)
 	, m_valid(0)
 	, m_ringHead(0)
 	, m_ringTail(0)
 	, m_ringLast(0)
 	, m_lastPollTime(0)
 {
+	m_wmm.declination = 0.0f;
 	m_curQuat.x = 0.0f;
 	m_curQuat.y = 0.0f;
 	m_curQuat.z = 0.0f;
 	m_curQuat.w = 1.0f;
-	m_pollTask.m_queued = 0;
-	m_pollTask.m_active = 0;
-	m_pollTask.m_mgr = this;
+	m_pollTask.m_mgr = NULL;
+	m_pollTask.m_slotIndex = 0;
+	m_pollTask.m_headingMgr = this;
 }
 
 /* 0x81194F14 */
@@ -205,7 +115,7 @@ int HeadingManager::Term()
 {
 	int ret = 0;
 	if (g_locationManager != NULL)
-		locationMgrUnregisterTask(g_locationManager, &m_pollTask);
+		g_locationManager->UnregisterTask(&m_pollTask);
 	else
 		ret = SCE_LOCATION_ERROR_FATAL_ERROR;
 
@@ -262,8 +172,8 @@ int HeadingManager::LoadLastLocation()
 	if (m_lastLat != -9999.0 && m_lastLon != -9999.0) {
 		SceDateTime dt;
 		sceRtcGetCurrentClock(&dt, 0);
-		wmmSetDate(m_wmmState, dt.month, dt.day, dt.year);
-		wmmCalcDeclination(m_wmmState, (float)m_lastLat, (float)m_lastLon, 0.0f);
+		wmmSetDate(&m_wmm, dt.month, dt.day, dt.year);
+		wmmCalcDeclination(&m_wmm, (float)m_lastLat, (float)m_lastLon, 0.0f);
 	}
 	return ret;
 }
@@ -277,7 +187,7 @@ int HeadingManager::Init()
 	if (g_locationManager == NULL)
 		return SCE_LOCATION_ERROR_FATAL_ERROR;
 
-	int ret = locationMgrRegisterTask(g_locationManager, &m_pollTask);
+	int ret = g_locationManager->RegisterTask(&m_pollTask);
 	if (ret == 0) {
 		LoadLastLocation();
 		m_initialized = 1;
@@ -345,7 +255,7 @@ int HeadingManager::PollMotion()
 		return SCE_LOCATION_INFO_UNDETERMINED_HEADING;
 	}
 
-	int ret = SceMotion_AD0B62B7(m_motionState);
+	int ret = SceMotion_AD0B62B7(&m_motionState);
 	if (ret != 0) {
 		m_curQuat.x = 0.0f;
 		m_curQuat.y = 0.0f;
@@ -362,49 +272,54 @@ int HeadingManager::PollMotion()
 		return ret;
 	}
 
-	const float *m = (const float *)(m_motionState + 120);
-	float m00 = m[0], m01 = m[1], m02 = m[2];
-	float m10 = m[4], m11 = m[5], m12 = m[6];
-	float m20 = m[8], m21 = m[9], m22 = m[10];
+	float rxx = m_motionState.nedMatrix.fm.x.x;
+	float rxy = m_motionState.nedMatrix.fm.x.y;
+	float rxz = m_motionState.nedMatrix.fm.x.z;
+	float ryx = m_motionState.nedMatrix.fm.y.x;
+	float ryy = m_motionState.nedMatrix.fm.y.y;
+	float ryz = m_motionState.nedMatrix.fm.y.z;
+	float rzx = m_motionState.nedMatrix.fm.z.x;
+	float rzy = m_motionState.nedMatrix.fm.z.y;
+	float rzz = m_motionState.nedMatrix.fm.z.z;
 
-	float d0 = (m00 - m11 - m22) + 1.0f;
-	float d1 = (m11 - m00 - m22) + 1.0f;
-	float d2 = (-m00 - m11 + m22) + 1.0f;
-	float d3 = (m00 + m11 + m22) + 1.0f;
+	float diagX = (rxx - ryy - rzz) + 1.0f;
+	float diagY = (ryy - rxx - rzz) + 1.0f;
+	float diagZ = (-rxx - ryy + rzz) + 1.0f;
+	float diagW = (rxx + ryy + rzz) + 1.0f;
 
 	unsigned int idx = 0;
-	float best = d0;
-	if (d1 > best) { idx = 1; best = d1; }
-	if (d2 > best) { idx = 2; best = d2; }
-	if (d3 > best) { idx = 3; best = d3; }
+	float best = diagX;
+	if (diagY > best) { idx = 1; best = diagY; }
+	if (diagZ > best) { idx = 2; best = diagZ; }
+	if (diagW > best) { idx = 3; best = diagW; }
 
 	float s = (float)(sqrtf(best) * 0.5);
 	float inv = 0.25f / s;
-	Quat4 q;
+	LocationQuat q;
 	if (idx == 0) {
 		q.x = s;
-		q.y = (m10 + m01) * inv;
-		q.z = (m20 + m02) * inv;
-		q.w = (m21 - m12) * inv;
+		q.y = (ryx + rxy) * inv;
+		q.z = (rzx + rxz) * inv;
+		q.w = (rzy - ryz) * inv;
 	} else if (idx == 1) {
-		q.x = (m10 + m01) * inv;
+		q.x = (ryx + rxy) * inv;
 		q.y = s;
-		q.z = (m21 + m12) * inv;
-		q.w = (m02 - m20) * inv;
+		q.z = (rzy + ryz) * inv;
+		q.w = (rxz - rzx) * inv;
 	} else if (idx == 2) {
-		q.x = (m20 + m02) * inv;
-		q.y = (m21 + m12) * inv;
+		q.x = (rzx + rxz) * inv;
+		q.y = (rzy + ryz) * inv;
 		q.z = s;
-		q.w = (m10 - m01) * inv;
+		q.w = (ryx - rxy) * inv;
 	} else {
-		q.x = (m21 - m12) * inv;
-		q.y = (m02 - m20) * inv;
-		q.z = (m10 - m01) * inv;
+		q.x = (rzy - ryz) * inv;
+		q.y = (rxz - rzx) * inv;
+		q.z = (ryx - rxy) * inv;
 		q.w = s;
 	}
 
 	int isValid = 0;
-	if (m_motionState[245] != 1) {
+	if (m_motionState.dataInfo != 1) {
 		if (m_valid != 0 || q.w != m_curQuat.w || q.x != m_curQuat.x ||
 		    q.y != m_curQuat.y || q.z != m_curQuat.z)
 			isValid = 1;
@@ -429,27 +344,28 @@ int HeadingManager::PollMotion()
 
 	unsigned int count = (m_ringTail >= m_ringHead) ? (m_ringTail - m_ringHead)
 							: (m_ringTail - m_ringHead + 9);
-	Quat4 lvl1[4];
+	LocationQuat pairAvg[4];
 	for (unsigned int i = 0; i < 4; i++) {
-		unsigned int o0 = 2 * i;
-		unsigned int o1 = 2 * i + 1;
-		if (o0 >= count) o0 = count - 1;
-		if (o1 >= count) o1 = count - 1;
-		unsigned int i0 = (m_ringHead + o0) % 9;
-		unsigned int i1 = (m_ringHead + o1) % 9;
-		lvl1[i] = slerpHalf(m_ring[i0], m_ring[i1]);
+		unsigned int firstOff = 2 * i;
+		unsigned int secondOff = 2 * i + 1;
+		if (firstOff >= count) firstOff = count - 1;
+		if (secondOff >= count) secondOff = count - 1;
+		unsigned int firstIdx = (m_ringHead + firstOff) % 9;
+		unsigned int secondIdx = (m_ringHead + secondOff) % 9;
+		pairAvg[i] = slerpHalf(m_ring[firstIdx], m_ring[secondIdx]);
 	}
-	Quat4 lvl2_0 = slerpHalf(lvl1[0], lvl1[1]);
-	Quat4 lvl2_1 = slerpHalf(lvl1[2], lvl1[3]);
-	m_smoothQuat = slerpHalf(lvl2_0, lvl2_1);
+	LocationQuat quadFirst = slerpHalf(pairAvg[0], pairAvg[1]);
+	LocationQuat quadSecond = slerpHalf(pairAvg[2], pairAvg[3]);
+	m_smoothQuat = slerpHalf(quadFirst, quadSecond);
 	return ret;
 }
 
 /* 0x81195AFC */
-int HeadingManager::ComputeHeadingAngle(const float *vec2, float *outHeading,
+int HeadingManager::ComputeHeadingAngle(const float *xyVec, float *outHeading,
 					const SceUInt32 *hmethod, float prevHeading)
 {
-	float rawDeg = (float)((double)sce_paf_atan2f(vec2[1], vec2[0]) * 180.0 / 3.141592653589793);
+	float rawDeg =
+		(float)((double)sce_paf_atan2f(xyVec[1], xyVec[0]) * 180.0 / 3.141592653589793);
 	float deg;
 	switch (*hmethod & 7) {
 	case 2:
@@ -497,7 +413,8 @@ int HeadingManager::ComputeHeadingAngle(const float *vec2, float *outHeading,
 }
 
 /* 0x81196386 */
-int HeadingManager::RotateBasisVector(const Quat4 *q, const SceUInt32 *hmethod, float *outVec4)
+int HeadingManager::RotateBasisVector(const LocationQuat *quat, const SceUInt32 *hmethod,
+				      float *outVec)
 {
 	float vx = 0.0f, vy = 0.0f, vz = 0.0f;
 	switch (*hmethod & 7) {
@@ -513,16 +430,16 @@ int HeadingManager::RotateBasisVector(const Quat4 *q, const SceUInt32 *hmethod, 
 		break;
 	}
 
-	float qx = q->x, qy = q->y, qz = q->z, qw = q->w;
+	float qx = quat->x, qy = quat->y, qz = quat->z, qw = quat->w;
 	float tx = qy * vz - qz * vy + qw * vx;
 	float ty = qz * vx - qx * vz + qw * vy;
 	float tz = qx * vy - qy * vx + qw * vz;
 	float tw = -(qx * vx) - (qy * vy) - (qz * vz);
 
-	outVec4[0] = (tz * qy - ty * qz) + tx * qw - tw * qx;
-	outVec4[1] = (tx * qz - tz * qx) + ty * qw - tw * qy;
-	outVec4[2] = (ty * qx - tx * qy) + tz * qw - tw * qz;
-	outVec4[3] = 0.0f;
+	outVec[0] = (tz * qy - ty * qz) + tx * qw - tw * qx;
+	outVec[1] = (tx * qz - tz * qx) + ty * qw - tw * qy;
+	outVec[2] = (ty * qx - tx * qy) + tz * qw - tw * qz;
+	outVec[3] = 0.0f;
 	return 0;
 }
 
@@ -541,30 +458,30 @@ int HeadingManager::GetHeading(const SceUInt32 *hmethod, SceLocationHeadingInfo 
 	}
 
 	SceUInt32 method = *hmethod;
-	Quat4 q = ((method & 0x1000) != 0) ? m_smoothQuat : m_curQuat;
+	LocationQuat q = ((method & 0x1000) != 0) ? m_smoothQuat : m_curQuat;
 
 	if ((int)method >= 0) {
-		float rad = (float)((double)m_declination * 3.14159265 / 180.0);
+		float rad = (float)((double)m_wmm.declination * 3.14159265 / 180.0);
 		float c = sce_paf_cosf(rad);
 		float s = sce_paf_sinf(rad);
-		float d0 = (c - c - 1.0f) + 1.0f;
-		float d1 = (c - c - 1.0f) + 1.0f;
-		float d2 = (-c - c + 1.0f) + 1.0f;
-		float d3 = (c + c + 1.0f) + 1.0f;
+		float diagX = (c - c - 1.0f) + 1.0f;
+		float diagY = (c - c - 1.0f) + 1.0f;
+		float diagZ = (-c - c + 1.0f) + 1.0f;
+		float diagW = (c + c + 1.0f) + 1.0f;
 		unsigned int idx = 0;
-		float best = d0;
-		if (d1 > best) { idx = 1; best = d1; }
-		if (d2 > best) { idx = 2; best = d2; }
-		if (d3 > best) { idx = 3; best = d3; }
+		float best = diagX;
+		if (diagY > best) { idx = 1; best = diagY; }
+		if (diagZ > best) { idx = 2; best = diagZ; }
+		if (diagW > best) { idx = 3; best = diagW; }
 		float qs = (float)(sqrtf(best) * 0.5);
 		float inv = 0.25f / qs;
-		Quat4 rot = { 0.0f, 0.0f, 0.0f, 1.0f };
+		LocationQuat rot = { 0.0f, 0.0f, 0.0f, 1.0f };
 		if (idx == 0) { rot.x = qs; rot.y = (s - s) * inv; }
 		else if (idx == 1) { rot.x = (s - s) * inv; rot.y = qs; }
 		else if (idx == 2) { rot.z = qs; rot.w = (s + s) * inv; }
 		else { rot.z = (s + s) * inv; rot.w = qs; }
 
-		Quat4 r;
+		LocationQuat r;
 		r.x = rot.x * q.w + rot.w * q.x + rot.y * q.z - rot.z * q.y;
 		r.y = rot.y * q.w + rot.w * q.y + rot.z * q.x - rot.x * q.z;
 		r.z = rot.z * q.w + rot.w * q.z + rot.x * q.y - rot.y * q.x;
@@ -572,8 +489,8 @@ int HeadingManager::GetHeading(const SceUInt32 *hmethod, SceLocationHeadingInfo 
 		q = r;
 	}
 
-	float gx = *(const float *)(m_motionState + 188);
-	float gy = *(const float *)(m_motionState + 192);
+	float gx = m_motionState.basicOrientation.x;
+	float gy = m_motionState.basicOrientation.y;
 	if (gy != 0.0f)
 		m_orientation = 0;
 	else if (gx != 0.0f)
@@ -583,17 +500,17 @@ int HeadingManager::GetHeading(const SceUInt32 *hmethod, SceLocationHeadingInfo 
 	if ((method & 7) == 1)
 		effMethod = (method & ~7U) | ((m_orientation == 0) ? 3U : 2U);
 
-	float vec4[4];
-	RotateBasisVector(&q, &effMethod, vec4);
-	float norm = sqrtf(vec4[0] * vec4[0] + vec4[1] * vec4[1]);
-	float vec2[2] = { vec4[0] / norm, vec4[1] / norm };
-	ComputeHeadingAngle(vec2, &outInfo->heading, &effMethod, 0.0f);
+	float basisVec[4];
+	RotateBasisVector(&q, &effMethod, basisVec);
+	float norm = sqrtf(basisVec[0] * basisVec[0] + basisVec[1] * basisVec[1]);
+	float xyVec[2] = { basisVec[0] / norm, basisVec[1] / norm };
+	ComputeHeadingAngle(xyVec, &outInfo->heading, &effMethod, 0.0f);
 
 	outInfo->nedQuat.x = q.x;
 	outInfo->nedQuat.y = q.y;
 	outInfo->nedQuat.z = q.z;
 	outInfo->nedQuat.w = q.w;
-	outInfo->stability = m_motionState[244];
+	outInfo->stability = m_motionState.magnFieldStability;
 	locationGetCurrentTick(&outInfo->timestamp);
 	return 0;
 }
@@ -603,7 +520,7 @@ int HeadingManager::StartPolling()
 {
 	if (m_pollRefCount == 0) {
 		m_lastPollTime = sceRtcGetAccumulativeTimeForUser();
-		locationTaskSchedule(&m_pollTask, 0);
+		m_pollTask.Schedule(0);
 	}
 	m_pollRefCount++;
 	return 0;
@@ -615,7 +532,7 @@ int HeadingManager::StopPolling()
 	if (m_pollRefCount > 0) {
 		m_pollRefCount--;
 		if (m_pollRefCount == 0)
-			locationTaskCancel(&m_pollTask);
+			m_pollTask.Cancel();
 		return 0;
 	}
 	return SCE_LOCATION_ERROR_FATAL_ERROR;
@@ -661,8 +578,8 @@ void HeadingManager::UpdateLocation(const double *latLon)
 		if (m_lastLat != -9999.0 && m_lastLon != -9999.0) {
 			SceDateTime dt;
 			sceRtcGetCurrentClock(&dt, 0);
-			wmmSetDate(m_wmmState, dt.month, dt.day, dt.year);
-			wmmCalcDeclination(m_wmmState, (float)m_lastLat, (float)m_lastLon, 0.0f);
+			wmmSetDate(&m_wmm, dt.month, dt.day, dt.year);
+			wmmCalcDeclination(&m_wmm, (float)m_lastLat, (float)m_lastLon, 0.0f);
 		}
 	}
 }
@@ -670,30 +587,30 @@ void HeadingManager::UpdateLocation(const double *latLon)
 /* 0x81196A90 */
 void HeadingManager::OnHeadingConfigChanged()
 {
-	locationPosMgrUpdateHeadingState(m_posMgr);
+	m_posMgr->UpdateHeadingState();
 }
 
 /* 0x81196A9C */
 void HeadingManager::OnSuspend()
 {
 	if (m_pollRefCount > 0)
-		locationTaskCancel(&m_pollTask);
+		m_pollTask.Cancel();
 }
 
 /* 0x81196AB0 */
 void HeadingManager::OnResume()
 {
 	if (m_pollRefCount > 0)
-		locationTaskSchedule(&m_pollTask, 0);
+		m_pollTask.Schedule(0);
 }
 
 /* 0x81196AC6 */
 int HeadingPollTask::OnNotify()
 {
-	int err = m_mgr->PollMotion();
+	int err = m_headingMgr->PollMotion();
 	SceUInt64 now = sceRtcGetAccumulativeTimeForUser();
-	unsigned int elapsed = (unsigned int)((now - m_mgr->m_lastPollTime) / 1000U);
-	m_mgr->m_lastPollTime = now;
-	locationPosMgrNotifyHeadingTimeout(m_mgr->m_posMgr, err, elapsed);
+	unsigned int elapsed = (unsigned int)((now - m_headingMgr->m_lastPollTime) / 1000U);
+	m_headingMgr->m_lastPollTime = now;
+	m_headingMgr->m_posMgr->NotifyHeadingUpdate(err, elapsed);
 	return 1;
 }

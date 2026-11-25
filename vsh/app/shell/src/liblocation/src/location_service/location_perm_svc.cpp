@@ -3,16 +3,7 @@
  * LocationPermissionServer and PositionManager (0x81199430-0x8119951C, sti 0x811994AA).
  * The file and function names are ours (PLACEHOLDER).
  */
-#include "location_service.h"
-
-extern void *locationGetContext(void);			/* 0x8118BA84 */
-extern int locationPosMgrSetAppPermByTitleId(void *pm, const char *titleId, int perm); /* 0x8118DC8A */
-extern int locationPosMgrGetMainPerm(void *pm, int *out); /* 0x8118DDA6 */
-extern int locationPosMgrSetMainPerm(void *pm, int val); /* 0x8118DDB6 */
-extern int locationPosMgrGetParentalPerm(void *pm, int *out); /* 0x8118DE0C */
-extern int locationPosMgrSetParentalPerm(void *pm, int val); /* 0x8118DE1C */
-extern int locationPermServerStart(void);		/* 0x811996E0 */
-extern int locationPermServerStop(void);		/* 0x811997F2 */
+#include "location_internal.h"
 
 /* 0x81199430 */
 int locationPermSvcStart(void)
@@ -30,47 +21,47 @@ int locationPermSvcStop(void)
 int locationPermSvcSetAppPerm(int unused, const char *titleId, int perm)
 {
 	(void)unused;
-	return locationPosMgrSetAppPermByTitleId(locationGetContext(), titleId, perm);
+	return locationGetContext()->SetAppPermByTitleId(titleId, perm);
 }
 
 /* 0x81199454 */
 int locationPermSvcGetMainPerm(int unused, int *out)
 {
 	(void)unused;
-	return locationPosMgrGetMainPerm(locationGetContext(), out);
+	return locationGetContext()->GetMainPerm(out);
 }
 
 /* 0x81199464 */
 int locationPermSvcSetMainPerm(int unused, int val)
 {
 	(void)unused;
-	return locationPosMgrSetMainPerm(locationGetContext(), val);
+	return locationGetContext()->SetMainPerm(val);
 }
 
 /* 0x81199474 */
 int locationPermSvcGetParentalPerm(int unused, int *out)
 {
 	(void)unused;
-	return locationPosMgrGetParentalPerm(locationGetContext(), out);
+	return locationGetContext()->GetParentalPerm(out);
 }
 
 /* 0x81199484 */
 int locationPermSvcSetParentalPerm(int unused, int val)
 {
 	(void)unused;
-	return locationPosMgrSetParentalPerm(locationGetContext(), val);
+	return locationGetContext()->SetParentalPerm(val);
 }
 
 /* 0x81199494 */
-int locationPermSvcSetPermissionMode(int unused, int mode)
+int locationPermSvcGetGlobalPerm(int unused, int *out)
 {
 	(void)unused;
-	return locationSvcSetPermissionMode(mode);
+	return locationSvcGetGlobalPerm(out);
 }
 
 /* 0x8119949E */
-int locationPermSvcSetAppPermission(int unused, const char *titleId)
+int locationPermSvcGetAppPermSetting(int unused, int *out)
 {
 	(void)unused;
-	return locationSvcSetAppPermission(titleId, true);
+	return locationSvcGetAppPermSetting(out, true);
 }

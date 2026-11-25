@@ -51,6 +51,11 @@ extern paf::memory::HeapAllocator *g_locationHeap;
 #define LOCATION_SERVER_MAX_SESSIONS	9
 #define HEADING_SERVER_MAX_SESSIONS	8
 
+struct LocationLwMutex {
+	SceKernelLwMutexWork work;
+	int result;
+};
+
 struct LocationSessionSlot {
 	IPMI::Session *session;
 	SceLocationHandle handle;
@@ -86,12 +91,9 @@ public:
 	IPMI::Server *m_server;
 	LocationSessionSlot m_slots[LOCATION_SERVER_MAX_SESSIONS];
 	int m_sessionCount;
-	int m_reserved9C;
+	int m_reserved;
 	SceUID m_threadId;
-	int m_reservedA4;
-	SceKernelLwMutexWork m_mutex;
-	int m_mutexResult;
-	int m_reservedCC;
+	LocationLwMutex m_mutex;
 	int m_stopped;
 	void *m_workBuffer;
 	SceSize m_workBufferSize;
@@ -196,8 +198,8 @@ int locationSvcDenyApplication(int appId, SceLocationHandle handle);
 int locationSvcSetGpsEmulationFile(const char *path);
 int locationSvcDebugCmd(int appId, int cmd, const int *inArg, void *outBuf);
 int locationSvcNotifyPermissionChanged(int appId, SceLocationHandle handle);
-int locationSvcSetPermissionMode(int mode);
-int locationSvcSetAppPermission(const char *titleId, bool reload);
+int locationSvcGetGlobalPerm(int *out);
+int locationSvcGetAppPermSetting(int *out, bool reload);
 int locationSvcGetValue(SceUInt32 *value);
 
 #endif

@@ -3,8 +3,8 @@
  * registry watcher ("SceLocationRegWatcher") (0x8118F574-0x81190FCE, sti 0x81190F5E).
  * The file and class names are ours (PLACEHOLDER).
  */
-#include "location_service.h"
-#include <rtc.h>
+#include "location_internal.h"
+#include "../../../../plugins.h"
 #include <libnetctl.h>
 #include <appmgr/appmgr.h>
 #include <regmgr/regmgr.h>
@@ -24,111 +24,20 @@ int sceRegMgrAddRegistryCallback(SceUID cbid, const char *path);
 int sceRegMgrStartCallback(SceUID cbid);
 }
 
-extern void *g_locationManager;				/* 0x815496B4 */
-extern void shellRegMgrLogError(int err, int flag);	/* 0x81345038 */
-extern int locationTaskSchedule(void *task, unsigned int delayMs); /* 0x8118A780 */
-extern int locationMgrRegisterTask(void *mgr, void *task); /* 0x8118AACE */
-extern int locationMgrUnregisterTask(void *mgr, void *task); /* 0x8118AB62 */
-extern void *locationGetContext(void);			/* 0x8118BA84 */
-extern void *locationPosMgrGetPermMgr(void *pm);	/* 0x8118BF8C */
-extern int locationPosMgrResetAllPerms(void *pm, int perm); /* 0x8118DD5C */
-extern int locationPosMgrPollActive(void *pm);		/* 0x8118E11A */
-extern int locationGetCurrentTick(SceRtcTick *tick);	/* 0x8118F49E */
-extern int locationHelper376BDA(int a, unsigned int b, int c); /* 0x81376BDA */
-extern int locationHelper376B3C(int a, int b, int c);	/* 0x81376B3C */
+extern void shellRegMgrLogError(int err, int flag);		/* 0x81345038 */
+extern int shellUsageCounterSet(int id, int value, int flags);	/* 0x81376B3C */
 
-class LocationSetting;
+/* 0x8141F548 */
+LocationMethodState *LocationSetting::GetMethodState()
+{
+	return &m_methodState;
+}
 
-class LocationRegCallback {
-public:
-	virtual ~LocationRegCallback() {}
-	virtual int OnChanged();
-};
-
-class LocationRegWatcher {
-public:
-	virtual ~LocationRegWatcher();
-	virtual int OnNotify();				/* 0x8118F5A8 */
-
-	int Stop();					/* 0x8118F576 */
-	int HandleRegChange();				/* 0x8118F662 */
-	int OnRegChangedVirtual();			/* 0x8118F73A */
-	static int RegCallback(int notifyId, int notifyCount, int notifyArg, void *common); /* 0x8118F742 */
-
-	int m_queued;					/* +4 */
-	int m_active;					/* +8 */
-	LocationRegCallback m_cbBase;			/* +12 */
-	LocationSetting *m_setting;			/* +16 */
-	int m_state;					/* +20 */
-	SceUID m_cbId;					/* +24 */
-};
-
-class LocationMethodState {
-public:
-	virtual ~LocationMethodState() {}
-
-	int m_flags;					/* +4 */
-	SceUInt32 m_lmethod;				/* +8 */
-	SceUInt32 m_hmethod;				/* +12 */
-};
-
-class LocationSetting {
-public:
-	LocationSetting();				/* 0x8118F750 */
-	virtual ~LocationSetting();			/* 0x8118F7DC / 0x8118F86E */
-	virtual void vfn2() {}
-	virtual void vfn3() {}
-	virtual int HasGps();				/* 0x81190954 (+16) */
-	virtual int IsEmulationMode();			/* 0x811909F2 (+20) */
-	virtual int IsDeviceEnabled();			/* 0x81190A8C (+24) */
-	virtual int IsWlanOrGpsAvailable();		/* 0x81190B32 (+28) */
-	virtual int IsApInvisible();			/* 0x81190B4C (+32) */
-	virtual int GetValue(SceUInt32 *outVal);	/* 0x81190BAC (+36) */
-
-	int GetDebugPermStatus();			/* 0x8118F65C */
-	int CheckLocaleChanged();			/* 0x8118F880 */
-	int LoadRegistry();				/* 0x8118F92E */
-	int Init();					/* 0x8118FA24 */
-	int GetAppTitleId(int appId, char *outTitleId);	/* 0x8118FB08 */
-	int GetParental();				/* 0x8118FD0C */
-	int SetParental(int val);			/* 0x8118FD12 */
-	bool IsServiceEnabled();			/* 0x8118FD8A */
-	int SetServiceEnabled(int val);			/* 0x8118FDAA */
-	int IsDebugApp(const char *titleId);		/* 0x8118FE22 */
-	int GetAppPermission(const char *titleId, int *outPerm, unsigned char *outFlag); /* 0x8118FE56 */
-	int UpdateLsdbLiblocationAttr(const char *titleId, SceUInt64 mask, SceUInt64 value); /* 0x81190136 */
-	int SetAppPermission(const char *titleId, int perm); /* 0x811903C4 */
-	int SetAppLastCounter(const char *titleId, int counter); /* 0x811904FA */
-	int GetAppLastCounter(const char *titleId, SceUInt32 *outCounter); /* 0x8119062A */
-	int LoadDebugPermission();			/* 0x811908AA */
-	int GetUpdateCounter();				/* 0x81190950 */
-	int GetUserAge(int *outAge);			/* 0x81190C76 */
-	int ReloadAgePermit();				/* 0x81190D8A */
-	bool IsAdhocAllowed();				/* 0x81190E70 */
-	int Helper1(int a, unsigned int b);		/* 0x81190ED0 */
-	int Helper2(int a, int b);			/* 0x81190EDE */
-	void GetMethod(SceUInt32 *lmethod, SceUInt32 *hmethod); /* 0x81190EEC */
-	int SetLMethod(const SceUInt32 *lmethod);	/* 0x81190EFA */
-	int SetHMethod(const SceUInt32 *hmethod);	/* 0x81190F2C */
-
-	int m_mutexResult;				/* +4 */
-	SceKernelLwMutexWork m_mutex;			/* +8..+39 */
-	int m_enableService;				/* +40 */
-	int m_enableParental;				/* +44 */
-	int m_enableLocale;				/* +48 */
-	int m_updateCounter;				/* +52 */
-	unsigned char m_isDevMode;			/* +56 */
-	unsigned char m_debugPermEnabled;		/* +57 */
-	int m_debugPermStatus;				/* +60 */
-	int m_agePermit;				/* +64 */
-	AppInfoQClient m_lsdbClient;			/* +68 */
-	LocationRegWatcher m_regWatcher;		/* +72..+99 */
-	unsigned char m_hasTelephony;			/* +100 */
-	LocationMethodState m_methodState;		/* +104..+119 */
-	int m_dbgParam28;				/* +120 */
-	int m_pad7C;					/* +124 */
-	SceUInt64 m_flyingStartInterval;		/* +128 */
-};
+/* 0x810D3B64 */
+int LocationSetting::GetGpsTimeoutMs()
+{
+	return m_gpsTimeoutMs;
+}
 
 /* 0x8118F576 */
 int LocationRegWatcher::Stop()
@@ -155,7 +64,7 @@ int LocationRegWatcher::OnNotify()
 {
 	if (m_state == 0) {
 		SceUID cbId = sceKernelCreateCallback("SceLocationRegWatcher", 0,
-							     RegCallback, this);
+						      RegCallback, this);
 		int ret = cbId;
 		if (cbId >= 0) {
 			m_cbId = cbId;
@@ -221,15 +130,15 @@ int LocationRegWatcher::HandleRegChange()
 			if (cur != prev) {
 				int lastCnt = 0;
 				ret = sceRegMgrGetKeyInt("/CONFIG/LOCATION",
-								"last_update_counter", &lastCnt);
+							 "last_update_counter", &lastCnt);
 				if (ret == 0) {
 					ret = sceRegMgrSetKeyInt("/CONFIG/LOCATION",
-									"last_update_counter",
-									lastCnt & ~2);
+								 "last_update_counter",
+								 lastCnt & ~2);
 				}
 				if (ret != 0)
 					shellRegMgrLogError(ret, 1);
-				locationPosMgrResetAllPerms(locationGetContext(), cur);
+				locationGetContext()->ResetAllPerms(cur);
 			}
 		}
 	}
@@ -237,14 +146,9 @@ int LocationRegWatcher::HandleRegChange()
 }
 
 /* 0x8118F73A */
-int LocationRegWatcher::OnRegChangedVirtual()
+void LocationRegWatcher::OnResume()
 {
-	return HandleRegChange();
-}
-
-int LocationRegCallback::OnChanged()
-{
-	return 0;
+	HandleRegChange();
 }
 
 /* 0x8118F742 */
@@ -265,8 +169,8 @@ LocationSetting::LocationSetting()
 	m_hasTelephony = 0;
 	m_debugPermEnabled = 0;
 	m_isDevMode = 0;
-	m_regWatcher.m_queued = 0;
-	m_regWatcher.m_active = 0;
+	m_regWatcher.m_mgr = NULL;
+	m_regWatcher.m_slotIndex = 0;
 	m_regWatcher.m_setting = this;
 	m_regWatcher.m_state = 0;
 	m_regWatcher.m_cbId = -1;
@@ -280,15 +184,15 @@ LocationSetting::LocationSetting()
 	m_updateCounter = 0;
 	m_debugPermStatus = 0;
 	m_agePermit = 1;
-	m_dbgParam28 = 120000;
+	m_gpsTimeoutMs = 120000;
 	m_flyingStartInterval = 14400000000ULL;
 }
 
 /* 0x8118F7DC / 0x8118F86E */
 LocationSetting::~LocationSetting()
 {
-	if (m_regWatcher.m_queued != 0)
-		locationMgrUnregisterTask(g_locationManager, &m_regWatcher);
+	if (m_regWatcher.m_mgr != NULL)
+		g_locationManager->UnregisterTask(&m_regWatcher);
 	if (m_mutexResult == 0) {
 		sceKernelDeleteLwMutex(&m_mutex);
 		m_mutexResult = -1;
@@ -309,13 +213,13 @@ int LocationSetting::CheckLocaleChanged()
 
 	if (ret == 0 && prevLocale != m_enableLocale) {
 		ret = sceRegMgrSetKeyInt("/CONFIG/LOCATION", "enable_locale_last",
-						m_enableLocale);
+					 m_enableLocale);
 		if (ret != 0)
 			shellRegMgrLogError(ret, 1);
 		if (ret == 0) {
 			m_updateCounter = (m_updateCounter + 1) & 0x3FFFFFFF;
 			ret = sceRegMgrSetKeyInt("/CONFIG/LOCATION", "update_counter",
-							m_updateCounter);
+						 m_updateCounter);
 			if (ret != 0)
 				shellRegMgrLogError(ret, 1);
 		}
@@ -345,16 +249,15 @@ int LocationSetting::LoadRegistry()
 			else
 				m_enableParental = val;
 			if (ret == 0) {
-				ret = sceRegMgrGetKeyInt("/CONFIG/LOCATION",
-								"update_counter",
-								&m_updateCounter);
+				ret = sceRegMgrGetKeyInt("/CONFIG/LOCATION", "update_counter",
+							 &m_updateCounter);
 				if (ret != 0) {
 					m_updateCounter = 0;
 					shellRegMgrLogError(ret, 1);
 				}
 				if (ret == 0) {
 					ret = sceRegMgrGetKeyInt("/CONFIG/LOCATION",
-									"enable_locale", &val);
+								 "enable_locale", &val);
 					if (ret != 0)
 						shellRegMgrLogError(ret, 1);
 					else
@@ -381,28 +284,23 @@ int LocationSetting::Init()
 	}
 
 	if (vshSblAimgrIsDEX() != 0 || vshSblAimgrIsTool() != 0) {
-		ret = locationMgrRegisterTask(g_locationManager, &m_regWatcher);
+		ret = g_locationManager->RegisterTask(&m_regWatcher);
 		if (ret == 0) {
-			ret = locationTaskSchedule(&m_regWatcher, 0);
+			ret = m_regWatcher.Schedule(0);
 			if (ret != 0)
-				locationMgrUnregisterTask(g_locationManager, &m_regWatcher);
+				g_locationManager->UnregisterTask(&m_regWatcher);
 		}
 	}
 
 	paf::Plugin *plugin = paf::Plugin::Find("telephony_plugin");
-	void *iface = NULL;
+	TelephonyPluginInterface *iface = NULL;
 	if (plugin != NULL)
-		iface = plugin->GetInterface(1);
+		iface = (TelephonyPluginInterface *)plugin->GetInterface(1);
 	bool hasTel = false;
 	if (iface != NULL) {
-		typedef void *(*GetTelFn)(void *, int);
-		GetTelFn fn = *(GetTelFn *)((char *)iface + 8);
-		void *obj = fn((void *)fn, 0);
-		if (obj != NULL) {
-			typedef int (*HasGpsFn)(void *);
-			HasGpsFn hfn = *(HasGpsFn *)(*(char **)obj + 32);
-			hasTel = (hfn(obj) != 0);
-		}
+		TelephonyModem *modem = iface->getModem();
+		if (modem != NULL)
+			hasTel = (modem->vtable->needsInitialCheck(modem) != 0);
 	}
 	m_hasTelephony = hasTel ? 1 : 0;
 
@@ -464,7 +362,7 @@ int LocationSetting::SetParental(int val)
 		if (ret == 0) {
 			m_updateCounter = (m_updateCounter + 1) & 0x3FFFFFFF;
 			ret = sceRegMgrSetKeyInt("/CONFIG/LOCATION", "update_counter",
-							m_updateCounter);
+						 m_updateCounter);
 			if (ret != 0)
 				shellRegMgrLogError(ret, 1);
 		}
@@ -493,7 +391,7 @@ int LocationSetting::SetServiceEnabled(int val)
 		if (ret == 0) {
 			m_updateCounter = (m_updateCounter + 1) & 0x3FFFFFFF;
 			ret = sceRegMgrSetKeyInt("/CONFIG/LOCATION", "update_counter",
-							m_updateCounter);
+						 m_updateCounter);
 			if (ret != 0)
 				shellRegMgrLogError(ret, 1);
 		}
@@ -521,7 +419,7 @@ int LocationSetting::GetAppPermission(const char *titleId, int *outPerm, unsigne
 			*outPerm = m_debugPermStatus;
 			int lastCnt = 0;
 			int ret = sceRegMgrGetKeyInt("/CONFIG/LOCATION",
-							    "last_update_counter", &lastCnt);
+						     "last_update_counter", &lastCnt);
 			int bitSet = 1;
 			if (ret != 0) {
 				shellRegMgrLogError(ret, 1);
@@ -598,18 +496,18 @@ int LocationSetting::SetAppPermission(const char *titleId, int perm)
 		   sce_paf_strncmp(titleId, "NPXS10998", 32) == 0 ||
 		   m_debugPermEnabled != 0) {
 		int ret = sceRegMgrSetKeyInt("/CONFIG/LOCATION",
-						    "debug_permission_status", perm);
+					     "debug_permission_status", perm);
 		if (ret != 0)
 			shellRegMgrLogError(ret, 1);
 		if (ret == 0) {
 			m_debugPermStatus = perm;
 			int lastCnt = 0;
 			ret = sceRegMgrGetKeyInt("/CONFIG/LOCATION",
-							"last_update_counter", &lastCnt);
+						 "last_update_counter", &lastCnt);
 			if (ret == 0) {
 				ret = sceRegMgrSetKeyInt("/CONFIG/LOCATION",
-								"last_update_counter",
-								lastCnt & ~2);
+							 "last_update_counter",
+							 lastCnt & ~2);
 			}
 			if (ret != 0)
 				shellRegMgrLogError(ret, 1);
@@ -630,17 +528,17 @@ int LocationSetting::SetAppLastCounter(const char *titleId, int counter)
 		   sce_paf_strncmp(titleId, "NPXS10998", 32) == 0 ||
 		   m_debugPermEnabled != 0) {
 		int ret = sceRegMgrSetKeyInt("/CONFIG/LOCATION", "last_update_counter",
-						    counter * 4);
+					     counter * 4);
 		if (ret != 0)
 			shellRegMgrLogError(ret, 1);
 		if (ret == 0) {
 			int lastCnt = 0;
 			ret = sceRegMgrGetKeyInt("/CONFIG/LOCATION",
-							"last_update_counter", &lastCnt);
+						 "last_update_counter", &lastCnt);
 			if (ret == 0) {
 				ret = sceRegMgrSetKeyInt("/CONFIG/LOCATION",
-								"last_update_counter",
-								lastCnt | 2);
+							 "last_update_counter",
+							 lastCnt | 2);
 			}
 			if (ret != 0)
 				shellRegMgrLogError(ret, 1);
@@ -660,8 +558,8 @@ int LocationSetting::GetAppLastCounter(const char *titleId, SceUInt32 *outCounte
 		    m_debugPermEnabled != 0) {
 			SceUInt32 lastCnt = 0;
 			int ret = sceRegMgrGetKeyInt("/CONFIG/LOCATION",
-							    "last_update_counter",
-							    (int *)&lastCnt);
+						     "last_update_counter",
+						     (int *)&lastCnt);
 			if (ret != 0)
 				shellRegMgrLogError(ret, 1);
 			else
@@ -885,7 +783,7 @@ int LocationSetting::ReloadAgePermit()
 			sceRegMgrSetKeyInt("/CONFIG/LOCATION", "age_permit_state", m_agePermit);
 			m_updateCounter = (m_updateCounter + 1) & 0x3FFFFFFF;
 			ret = sceRegMgrSetKeyInt("/CONFIG/LOCATION", "update_counter",
-							m_updateCounter);
+						 m_updateCounter);
 			if (ret != 0)
 				shellRegMgrLogError(ret, 1);
 		}
@@ -903,26 +801,26 @@ bool LocationSetting::IsAdhocAllowed()
 	if (sceNetCtlAdhocGetState(&state) == 0) {
 		if (state == 0)
 			return true;
-		void *pm = locationGetContext();
+		PositionManager *pm = locationGetContext();
 		if (pm != NULL) {
-			void *permMgr = locationPosMgrGetPermMgr(pm);
-			if (permMgr != NULL && *((unsigned char *)permMgr + 388) != 0)
-				return locationPosMgrPollActive(pm) == 0;
+			LocationPrivacySettings *permMgr = pm->GetPermMgr();
+			if (permMgr != NULL && permMgr->m_count != 0)
+				return pm->PollActive() == 0;
 		}
 	}
 	return false;
 }
 
 /* 0x81190ED0 */
-int LocationSetting::Helper1(int a, unsigned int b)
+int LocationSetting::CountUp(int id, unsigned int delta)
 {
-	return locationHelper376BDA(a, b, 0);
+	return shellUsageCounterAdd(id, delta, 0);
 }
 
 /* 0x81190EDE */
-int LocationSetting::Helper2(int a, int b)
+int LocationSetting::SetTelemetryValue(int id, int value)
 {
-	return locationHelper376B3C(a, b, 0);
+	return shellUsageCounterSet(id, value, 0);
 }
 
 /* 0x81190EEC */

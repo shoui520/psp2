@@ -4,13 +4,9 @@
  * the IPMI dispatchers (0x81185130-0x811868F4). The file's and internal names here are ours
  * (PLACEHOLDER).
  */
-#include <stddef.h>
+#include "location_internal.h"
 #include <string.h>
-#include <scetypes.h>
-#include <liblocation.h>
-#include <rtc.h>
 #include <kernel/iofilemgr.h>
-#include <kernel/threadmgr.h>
 #include <appmgr/appmgr.h>
 #include <vshbridge/vshbridge.h>
 #include <plugin.h>
@@ -18,13 +14,10 @@
 #include <std/string.h>
 #include <std/new>
 #include <common/shared_ptr.h>
-#include <memory/heap_allocator.h>
 #include <system/system.h>
 #include <datetime/datetime.h>
-#include <timer/timer.h>
 #include "../../../../shell.h"
 #include "../../../../plugins.h"
-#include "location_service.h"
 
 extern "C" SceUInt32 vshSblQafMgrIsAllowLiblocationChangeModel(void);
 
@@ -32,136 +25,7 @@ using namespace paf;
 
 /* the private heap (0x815496B0) and location manager (0x815496B4) */
 memory::HeapAllocator *g_locationHeap;
-void *g_locationManager;
-
-/* PLACEHOLDER externs for the rest of liblocation (0x81187F14-0x81199500) */
-struct LocationLogger {
-	char reserved0[72];
-	void *fileLog;		/* +72 (0x48) */
-};
-
-struct LocationContext {
-	char reserved0[32];
-	LocationLogger *logger;	/* +32 (0x20) */
-};
-
-struct LocationConfirmMgr {
-	char reserved0[17336];
-	int lastResult;		/* +17336 (0x43B8) */
-};
-
-LocationContext *locationGetContext(void);				/* (0x8118BA84) */
-void locationLog(LocationLogger *logger, int level, const char *fmt, ...); /* (0x811895CC) */
-LocationConfirmMgr *locationConfirmGetInstance(void);			/* (0x81187F14) */
-int locationConfirmInit(void (*cb)(int, int, int, int, int));		/* (0x81188096) */
-int locationConfirmTerm(void);						/* (0x811880FE) */
-int locationConfirmShow(LocationConfirmMgr *mgr, int appId, SceLocationHandle handle,
-			SceUInt32 arg, SceUInt32 dataArg, const void *data); /* (0x81188902) */
-SceLocationDialogResult locationConfirmGetResult(LocationConfirmMgr *mgr, int appId,
-						 SceLocationHandle handle); /* (0x81188BB6) */
-SceLocationDialogStatus locationConfirmGetStatus(LocationConfirmMgr *mgr, int appId,
-						 SceLocationHandle handle); /* (0x81188C26) */
-int locationConfirmAbort(LocationConfirmMgr *mgr, int appId,
-			 SceLocationHandle handle);			/* (0x81188C98) */
-void locationConfirmCloseApp(LocationConfirmMgr *mgr, int appId,
-			     SceLocationHandle handle);			/* (0x81188DF6) */
-void *locationLogFileInit(void *mem);					/* (0x81188FE8) */
-int locationProviderInit(void);						/* (0x81189EFC) */
-void *locationMgrCtor(void *mem, Timer *timer);				/* (0x8118A838) */
-void *locationMgrDtor(void *mgr);					/* (0x8118A930) */
-int locationMgrInit(void *mgr);						/* (0x8118A954) */
-int locationPermissionInit(void);					/* (0x81199430) */
-int locationPermissionTerm(void);					/* (0x81199438) */
-int locationCoreInit(int (*locCb)(SceLocationHandle, int, int),
-		     int (*headCb)(SceLocationHandle, int));		/* (0x8118BEE0) */
-int locationCoreTerm(void);						/* (0x8118BF66) */
-
-int locationCtxUpdateFlyingStart(LocationContext *ctx);			/* (0x8118B9FC) */
-int locationCtxStopHeadingCallback(LocationContext *ctx, int appId,
-				   SceLocationHandle handle);		/* (0x8118C250) */
-int locationCtxStopLocationCallback(LocationContext *ctx, int appId,
-				    SceLocationHandle handle);		/* (0x8118C2EE) */
-int locationCtxCancelGetLocation(LocationContext *ctx, int appId,
-				 SceLocationHandle handle);		/* (0x8118C3E4) */
-int locationCtxClose(LocationContext *ctx, int appId,
-		     SceLocationHandle handle);				/* (0x8118C508) */
-int locationCtxOpen(LocationContext *ctx, int appId, SceLocationHandle *handle,
-		    SceUInt32 *lmethod, SceUInt32 *hmethod, SceUInt32 *mode); /* (0x8118C7C0) */
-int locationCtxReopen(LocationContext *ctx, int appId, SceLocationHandle handle,
-		      SceUInt32 *lmethod, SceUInt32 *hmethod);		/* (0x8118CA5C) */
-int locationCtxGetMethod(LocationContext *ctx, int appId, SceLocationHandle handle,
-			 SceUInt32 *lmethod, SceUInt32 *hmethod);	/* (0x8118CDE8) */
-int locationCtxGetQueryLocation(LocationContext *ctx, int appId, SceLocationHandle handle,
-				SceRtcTick timestamp, SceUInt32 timeout, bool option,
-				SceLocationLocationInfo *info);		/* (0x8118CF20) */
-int locationCtxGetQueryLocationCache(LocationContext *ctx, int appId, SceLocationHandle handle,
-				     SceLocationLocationInfo *info);	/* (0x8118D164) */
-int locationCtxCancelQueryLocation(LocationContext *ctx, int appId,
-				   SceLocationHandle handle);		/* (0x8118D220) */
-int locationCtxGetLocation(LocationContext *ctx, int appId, SceLocationHandle handle,
-			   SceUInt32 timeout, SceLocationLocationInfo *info,
-			   int wifiHistory);				/* (0x8118D306) */
-int locationCtxGetLocationCache(LocationContext *ctx, int appId, SceLocationHandle handle,
-				SceLocationLocationInfo *info, int wifiHistory,
-				int option);				/* (0x8118D60C) */
-int locationCtxStartLocationCallback(LocationContext *ctx, int appId, SceLocationHandle handle,
-				     SceUInt32 distance);		/* (0x8118D790) */
-int locationCtxGetHeading(LocationContext *ctx, int appId, SceLocationHandle handle,
-			  SceLocationHeadingInfo *info);		/* (0x8118D866) */
-int locationCtxStartHeadingCallback(LocationContext *ctx, int appId,
-				    SceLocationHandle handle);		/* (0x8118D936) */
-int locationCtxGetPermission(LocationContext *ctx, int appId, SceLocationHandle handle,
-			     SceLocationPermissionInfo *info);		/* (0x8118D9E4) */
-int locationCtxSetPermissionMode(LocationContext *ctx, int mode);	/* (0x8118DE68) */
-int locationCtxSetAppPermission(LocationContext *ctx, const char *titleId); /* (0x8118DE72) */
-int locationCtxReloadPermission(LocationContext *ctx);			/* (0x8118DE7C) */
-int locationCtxSetHandlePermission(LocationContext *ctx, SceLocationHandle handle,
-				   int status);				/* (0x8118DE86) */
-int locationCtxGetHandleStatus(LocationContext *ctx, int appId,
-			       SceLocationHandle handle);		/* (0x8118DEE0) */
-int locationCtxSetGpsEmulationFile(LocationContext *ctx, const char *path); /* (0x8118DF06) */
-int locationCtxNotifyPermissionChanged(LocationContext *ctx, int appId,
-				       SceLocationHandle handle);	/* (0x8118DF32) */
-int locationCtxGetValue(LocationContext *ctx, SceUInt32 *value);	/* (0x8118DF3C) */
-int locationCtxFlyingStartResume(LocationContext *ctx, const char *titleId); /* (0x8118DF46) */
-int locationCtxFlyingStartLaunch(LocationContext *ctx, const char *titleId); /* (0x8118DFA6) */
-int locationCtxIsHandlePending(LocationContext *ctx, SceLocationHandle handle,
-			       bool *pending);				/* (0x8118DFF0) */
-int locationCtxSetHandlePending(LocationContext *ctx, SceLocationHandle handle,
-				bool pending);				/* (0x8118DFFA) */
-int locationCtxResumePending(LocationContext *ctx, SceLocationHandle handle); /* (0x8118E006) */
-
-/* debug command handlers (0x8118E12C-0x8118E4C8) */
-int locationCtxDbg1(LocationContext *ctx);				/* (0x8118E12C) */
-int locationCtxDbg4a(LocationContext *ctx, void *out);			/* (0x8118E144) */
-int locationCtxDbg4b(LocationContext *ctx, void *out);			/* (0x8118E160) */
-int locationCtxDbg2(LocationContext *ctx, int arg);			/* (0x8118E17C) */
-int locationCtxDbg3(LocationContext *ctx, void *out);			/* (0x8118E1BA) */
-int locationCtxDbg5(LocationContext *ctx, int arg);			/* (0x8118E1D6) */
-int locationCtxDbg6(LocationContext *ctx, int arg);			/* (0x8118E1EE) */
-int locationCtxDbg7(LocationContext *ctx, int arg);			/* (0x8118E206) */
-int locationCtxDbg8a(LocationContext *ctx, void *out);			/* (0x8118E21E) */
-int locationCtxDbg8b(LocationContext *ctx, void *out);			/* (0x8118E242) */
-int locationCtxDbg9(LocationContext *ctx, void *out);			/* (0x8118E25E) */
-int locationCtxDbg10(LocationContext *ctx, int arg);			/* (0x8118E27A) */
-int locationCtxDbg11(LocationContext *ctx, void *out);			/* (0x8118E292) */
-int locationCtxDbg12(LocationContext *ctx);				/* (0x8118E2AE) */
-int locationCtxDbg14(LocationContext *ctx, void *out);			/* (0x8118E2C6) */
-int locationCtxDbg13(LocationContext *ctx, int arg);			/* (0x8118E2E2) */
-int locationCtxDbg15(LocationContext *ctx);				/* (0x8118E2FA) */
-int locationCtxDbg17(LocationContext *ctx, const int *inArg);		/* (0x8118E39E) */
-int locationCtxDbg16(LocationContext *ctx, void *out);			/* (0x8118E3B6) */
-int locationCtxDbg18(LocationContext *ctx, void *out);			/* (0x8118E3CE) */
-int locationCtxDbg19(LocationContext *ctx, void *out);			/* (0x8118E3E6) */
-int locationCtxDbg20(LocationContext *ctx, int arg);			/* (0x8118E3FE) */
-int locationCtxDbg21(LocationContext *ctx, int arg);			/* (0x8118E416) */
-int locationCtxDbg22(LocationContext *ctx, int arg);			/* (0x8118E42E) */
-int locationCtxDbg23(LocationContext *ctx);				/* (0x8118E446) */
-int locationCtxDbg24(LocationContext *ctx);				/* (0x8118E45E) */
-int locationCtxDbg25(LocationContext *ctx);				/* (0x8118E476) */
-int locationCtxDbg27(LocationContext *ctx, void *out1, void *out2);	/* (0x8118E48E) */
-int locationCtxDbg28(LocationContext *ctx, int arg);			/* (0x8118E4C0) */
-void locationCtxDbg31(LocationContext *ctx, int arg);			/* (0x8118E4C8) */
+LocationTimerMgr *g_locationManager;
 
 static int locationNotifyEventCB(SceLocationHandle handle, int result, int eventType);
 static int locationNotifyHeadingCB(SceLocationHandle handle, int unused);
@@ -173,15 +37,15 @@ __attribute__((noinline))
 static int locationGpsFlyingStart(const LsdbAppInfoPtr *appInfo, int event)
 {
 	int ret = 0;
-	LocationContext *ctx = locationGetContext();
+	PositionManager *ctx = locationGetContext();
 
 	if (ctx == NULL)
 		return ret;
 
-	LocationLogger *logger = ctx->logger;
+	LocationLogger *logger = ctx->m_logger;
 
 	if (logger != NULL)
-		locationLog(logger, 8, "sceLocationGpsFlyingStart() called\n");
+		logger->Log(8, "sceLocationGpsFlyingStart() called\n");
 
 	LsdbAppInfo *info = appInfo->get();
 
@@ -201,18 +65,18 @@ static int locationGpsFlyingStart(const LsdbAppInfoPtr *appInfo, int event)
 			    sce_paf_strncmp(titleId, "NPXS10859", 32) != 0 &&
 			    sce_paf_strncmp(titleId, "NPXS10861", 32) != 0) {
 				if (event == 3) {
-					locationCtxFlyingStartResume(ctx, titleId);
-					ret = locationCtxUpdateFlyingStart(ctx);
+					ctx->FlyingStartResume(titleId);
+					ret = ctx->UpdateFlyingStart();
 				} else if (event == 0) {
-					ret = locationCtxFlyingStartLaunch(ctx, titleId);
+					ret = ctx->FlyingStartLaunch(titleId);
 				} else if (event == -1) {
-					ret = locationCtxUpdateFlyingStart(ctx);
+					ret = ctx->UpdateFlyingStart();
 				}
 			}
 		}
 	}
 	if (logger != NULL)
-		locationLog(logger, 8, "sceLocationGpsFlyingStart() result:0x%08x\n", ret);
+		logger->Log(8, "sceLocationGpsFlyingStart() result:0x%08x\n", ret);
 	return ret;
 }
 
@@ -264,15 +128,14 @@ int liblocationInit(void)
 	if (timer == NULL) {
 		ret = SCE_LOCATION_ERROR_NO_SERVER_MEMORY;
 	} else {
-		void *mgrMem = operator new(600, g_locationHeap);
-		void *mgr = (mgrMem != NULL) ? locationMgrCtor(mgrMem, timer) : NULL;
+		LocationTimerMgr *mgr = new (g_locationHeap) LocationTimerMgr(timer);
 
 		if (mgr == NULL) {
 			ret = SCE_LOCATION_ERROR_NO_SERVER_MEMORY;
 		} else {
-			ret = locationMgrInit(mgr);
+			ret = mgr->Init();
 			if (ret != 0) {
-				operator delete(locationMgrDtor(mgr));
+				delete mgr;
 			} else {
 				g_locationManager = mgr;
 			}
@@ -281,7 +144,7 @@ int liblocationInit(void)
 				if (ret != 0) {
 					locationServerStop();
 					if (g_locationManager != NULL) {
-						operator delete(locationMgrDtor(g_locationManager));
+						delete g_locationManager;
 						g_locationManager = NULL;
 					}
 					if (g_locationHeap != NULL) {
@@ -296,7 +159,7 @@ int liblocationInit(void)
 					locationServerStop();
 					headingServerStop();
 					if (g_locationManager != NULL) {
-						operator delete(locationMgrDtor(g_locationManager));
+						delete g_locationManager;
 						g_locationManager = NULL;
 					}
 					if (g_locationHeap != NULL) {
@@ -306,12 +169,12 @@ int liblocationInit(void)
 				}
 			}
 			if (ret == 0) {
-				ret = locationPermissionInit();
+				ret = locationPermSvcStart();
 				if (ret != 0) {
 					locationServerStop();
 					headingServerStop();
 					if (g_locationManager != NULL) {
-						operator delete(locationMgrDtor(g_locationManager));
+						delete g_locationManager;
 						g_locationManager = NULL;
 					}
 					if (g_locationHeap != NULL) {
@@ -324,17 +187,17 @@ int liblocationInit(void)
 				ret = locationCoreInit(locationNotifyEventCB,
 						       locationNotifyHeadingCB);
 				if (ret == 0) {
-					LocationContext *ctx = locationGetContext();
+					PositionManager *ctx = locationGetContext();
 
 					if (ctx != NULL)
-						ret = locationCtxReloadPermission(ctx);
+						ret = ctx->ReloadConfig();
 				}
 				if (ret != 0) {
 					locationServerStop();
 					headingServerStop();
-					locationPermissionTerm();
+					locationPermSvcStop();
 					if (g_locationManager != NULL) {
-						operator delete(locationMgrDtor(g_locationManager));
+						delete g_locationManager;
 						g_locationManager = NULL;
 					}
 					if (g_locationHeap != NULL) {
@@ -349,9 +212,9 @@ int liblocationInit(void)
 					locationCoreTerm();
 					locationServerStop();
 					headingServerStop();
-					locationPermissionTerm();
+					locationPermSvcStop();
 					if (g_locationManager != NULL) {
-						operator delete(locationMgrDtor(g_locationManager));
+						delete g_locationManager;
 						g_locationManager = NULL;
 					}
 					if (g_locationHeap != NULL) {
@@ -371,9 +234,9 @@ int liblocationInit(void)
 				locationCoreTerm();
 				locationServerStop();
 				headingServerStop();
-				locationPermissionTerm();
+				locationPermSvcStop();
 				if (g_locationManager != NULL) {
-					operator delete(locationMgrDtor(g_locationManager));
+					delete g_locationManager;
 					g_locationManager = NULL;
 				}
 				if (g_locationHeap != NULL) {
@@ -393,15 +256,15 @@ int locationSvcOpen(int appId, SceLocationHandle *handle, SceUInt32 lmethod, Sce
 		    int *status, SceUInt32 mode)
 {
 	int ret = SCE_LOCATION_ERROR_FATAL_ERROR;
-	LocationContext *ctx = locationGetContext();
+	PositionManager *ctx = locationGetContext();
 
 	if (ctx != NULL) {
 		SceUInt32 lm = lmethod;
 		SceUInt32 hm = hmethod;
 		SceUInt32 md = mode;
 
-		ret = locationCtxOpen(ctx, appId, handle, &lm, &hm, &md);
-		*status = locationCtxGetHandleStatus(ctx, appId, *handle);
+		ret = ctx->Open(appId, handle, &lm, &hm, &md);
+		*status = ctx->GetHandleStatus(appId, *handle);
 	}
 	return ret;
 }
@@ -414,25 +277,25 @@ int locationSvcClose(int appId, SceLocationHandle handle)
 
 	if (confirm == NULL)
 		return ret;
-	locationConfirmCloseApp(confirm, appId, handle);
+	confirm->CloseApp(appId, handle);
 
-	LocationContext *ctx = locationGetContext();
+	PositionManager *ctx = locationGetContext();
 
 	if (ctx != NULL)
-		return locationCtxClose(ctx, appId, handle);
+		return ctx->Close(appId, handle);
 	return ret;
 }
 
 /* (0x81185858) */
 int locationSvcReopen(int appId, SceLocationHandle handle, SceUInt32 lmethod, SceUInt32 hmethod)
 {
-	LocationContext *ctx = locationGetContext();
+	PositionManager *ctx = locationGetContext();
 
 	if (ctx != NULL) {
 		SceUInt32 lm = lmethod;
 		SceUInt32 hm = hmethod;
 
-		return locationCtxReopen(ctx, appId, handle, &lm, &hm);
+		return ctx->Reopen(appId, handle, &lm, &hm);
 	}
 	return SCE_LOCATION_ERROR_FATAL_ERROR;
 }
@@ -444,10 +307,10 @@ int locationSvcGetMethod(int appId, SceLocationHandle handle, SceUInt32 *lmethod
 	SceUInt32 lm = 0;
 	SceUInt32 hm = 0;
 	int ret = SCE_LOCATION_ERROR_FATAL_ERROR;
-	LocationContext *ctx = locationGetContext();
+	PositionManager *ctx = locationGetContext();
 
 	if (ctx != NULL) {
-		ret = locationCtxGetMethod(ctx, appId, handle, &lm, &hm);
+		ret = ctx->GetMethod(appId, handle, &lm, &hm);
 		if (ret == 0) {
 			*lmethod = lm;
 			*hmethod = hm;
@@ -463,7 +326,7 @@ static inline void locationLogInfo(LocationLogger *logger, const char *fmt,
 		SceDateTime time;
 
 		sceRtcSetTick(&time, &info->timestamp);
-		locationLog(logger, 8, fmt,
+		logger->Log(8, fmt,
 			    info->latitude, info->longitude, info->altitude,
 			    (double)info->accuracy, (double)info->speed, (double)info->direction,
 			    info->timestamp.tick,
@@ -476,11 +339,11 @@ static inline void locationLogInfo(LocationLogger *logger, const char *fmt,
 int locationSvcGetLocation(int appId, SceLocationHandle handle, SceLocationLocationInfo *info)
 {
 	int ret = SCE_LOCATION_ERROR_FATAL_ERROR;
-	LocationContext *ctx = locationGetContext();
+	PositionManager *ctx = locationGetContext();
 
 	if (ctx != NULL) {
-		ret = locationCtxGetLocation(ctx, appId, handle, 15, info, 0);
-		locationLogInfo(ctx->logger,
+		ret = ctx->GetLocation(appId, handle, 15, info, false);
+		locationLogInfo(ctx->m_logger,
 				"[GetLocation] latitude[%f] longitude[%f] altitude[%f] accuracy[%f] "
 				"speed[%f] direction[%f] timestamp[0x%016llx]:"
 				"[%d/%02d/%02d %02d:%02d:%02d.%03d]\n",
@@ -494,11 +357,11 @@ int locationSvcGetLocationWithTimeout(int appId, SceLocationHandle handle, SceUI
 				      SceLocationLocationInfo *info)
 {
 	int ret = SCE_LOCATION_ERROR_FATAL_ERROR;
-	LocationContext *ctx = locationGetContext();
+	PositionManager *ctx = locationGetContext();
 
 	if (ctx != NULL) {
-		ret = locationCtxGetLocation(ctx, appId, handle, timeout, info, 0);
-		locationLogInfo(ctx->logger,
+		ret = ctx->GetLocation(appId, handle, timeout, info, false);
+		locationLogInfo(ctx->m_logger,
 				"[GetLocationWithTimeout] latitude[%f] longitude[%f] altitude[%f] "
 				"accuracy[%f] speed[%f] direction[%f] timestamp[0x%016llx]:"
 				"[%d/%02d/%02d %02d:%02d:%02d.%03d]\n",
@@ -512,11 +375,11 @@ int locationSvcGetLocationCache(int appId, SceLocationHandle handle,
 				SceLocationLocationInfo *info)
 {
 	int ret = SCE_LOCATION_ERROR_FATAL_ERROR;
-	LocationContext *ctx = locationGetContext();
+	PositionManager *ctx = locationGetContext();
 
 	if (ctx != NULL) {
-		ret = locationCtxGetLocationCache(ctx, appId, handle, info, 0, 0);
-		locationLogInfo(ctx->logger,
+		ret = ctx->GetLocationCache(appId, handle, info, false, false);
+		locationLogInfo(ctx->m_logger,
 				"[GetLocationCache] latitude[%f] longitude[%f] altitude[%f] "
 				"accuracy[%f] speed[%f] direction[%f] timestamp[0x%016llx]:"
 				"[%d/%02d/%02d %02d:%02d:%02d.%03d]\n",
@@ -529,13 +392,13 @@ int locationSvcGetLocationCache(int appId, SceLocationHandle handle,
 int locationSvcCancelGetLocation(int appId, SceLocationHandle handle, bool isQuery)
 {
 	int ret = SCE_LOCATION_ERROR_FATAL_ERROR;
-	LocationContext *ctx = locationGetContext();
+	PositionManager *ctx = locationGetContext();
 
 	if (ctx != NULL) {
 		if (isQuery)
-			ret = locationCtxCancelQueryLocation(ctx, appId, handle);
+			ret = ctx->CancelQueryLocation(appId, handle);
 		else
-			ret = locationCtxCancelGetLocation(ctx, appId, handle);
+			ret = ctx->CancelGetLocation(appId, handle);
 		if (ret != 0) {
 			if (ret == SCE_LOCATION_INFO_GET_LOCATION_CANCELED)
 				return 0;
@@ -555,12 +418,13 @@ int locationSvcCancelGetLocation(int appId, SceLocationHandle handle, bool isQue
 int locationSvcGetLocationWifiHistory(int appId, SceLocationHandle handle, SceUInt32 timeout,
 				      bool option, SceLocationLocationInfo *info)
 {
+	(void)option;
 	int ret = SCE_LOCATION_ERROR_FATAL_ERROR;
-	LocationContext *ctx = locationGetContext();
+	PositionManager *ctx = locationGetContext();
 
 	if (ctx != NULL) {
-		ret = locationCtxGetLocation(ctx, appId, handle, timeout, info, 1);
-		locationLogInfo(ctx->logger,
+		ret = ctx->GetLocation(appId, handle, timeout, info, true);
+		locationLogInfo(ctx->m_logger,
 				"[GetLocationWifiHistory] latitude[%f] longitude[%f] altitude[%f] "
 				"accuracy[%f] speed[%f] direction[%f] timestamp[0x%016llx]:"
 				"[%d/%02d/%02d %02d:%02d:%02d.%03d]\n",
@@ -574,11 +438,11 @@ int locationSvcGetLocationCacheWifiHistory(int appId, SceLocationHandle handle, 
 					   SceLocationLocationInfo *info)
 {
 	int ret = SCE_LOCATION_ERROR_FATAL_ERROR;
-	LocationContext *ctx = locationGetContext();
+	PositionManager *ctx = locationGetContext();
 
 	if (ctx != NULL) {
-		ret = locationCtxGetLocationCache(ctx, appId, handle, info, 1, option);
-		locationLogInfo(ctx->logger,
+		ret = ctx->GetLocationCache(appId, handle, info, true, option);
+		locationLogInfo(ctx->m_logger,
 				"[GetLocationCacheWifiHistory] latitude[%f] longitude[%f] "
 				"altitude[%f] accuracy[%f] speed[%f] direction[%f] "
 				"timestamp[0x%016llx]:[%d/%02d/%02d %02d:%02d:%02d.%03d]\n",
@@ -592,12 +456,11 @@ int locationSvcGetQueryLocation(int appId, SceLocationHandle handle, SceRtcTick 
 				SceUInt32 timeout, bool option, SceLocationLocationInfo *info)
 {
 	int ret = SCE_LOCATION_ERROR_FATAL_ERROR;
-	LocationContext *ctx = locationGetContext();
+	PositionManager *ctx = locationGetContext();
 
 	if (ctx != NULL) {
-		ret = locationCtxGetQueryLocation(ctx, appId, handle, timestamp, timeout, option,
-						  info);
-		locationLogInfo(ctx->logger,
+		ret = ctx->GetQueryLocation(appId, handle, 0, timestamp, timeout, info, option);
+		locationLogInfo(ctx->m_logger,
 				"[GetQueryLocation] latitude[%f] longitude[%f] altitude[%f] "
 				"accuracy[%f] speed[%f] direction[%f] timestamp[0x%016llx]:"
 				"[%d/%02d/%02d %02d:%02d:%02d.%03d]\n",
@@ -610,12 +473,13 @@ int locationSvcGetQueryLocation(int appId, SceLocationHandle handle, SceRtcTick 
 int locationSvcGetQueryLocationCache(int appId, SceLocationHandle handle, bool option,
 				     SceLocationLocationInfo *info)
 {
+	(void)option;
 	int ret = SCE_LOCATION_ERROR_FATAL_ERROR;
-	LocationContext *ctx = locationGetContext();
+	PositionManager *ctx = locationGetContext();
 
 	if (ctx != NULL) {
-		ret = locationCtxGetQueryLocationCache(ctx, appId, handle, info);
-		locationLogInfo(ctx->logger,
+		ret = ctx->GetQueryLocationCache(appId, handle, info);
+		locationLogInfo(ctx->m_logger,
 				"[GetQueryLocationCache] latitude[%f] longitude[%f] altitude[%f] "
 				"accuracy[%f] speed[%f] direction[%f] timestamp[0x%016llx]:"
 				"[%d/%02d/%02d %02d:%02d:%02d.%03d]\n",
@@ -627,50 +491,50 @@ int locationSvcGetQueryLocationCache(int appId, SceLocationHandle handle, bool o
 /* (0x8118603C) */
 int locationSvcStartLocationCallback(int appId, SceLocationHandle handle, SceUInt32 distance)
 {
-	LocationContext *ctx = locationGetContext();
+	PositionManager *ctx = locationGetContext();
 
 	if (ctx != NULL)
-		return locationCtxStartLocationCallback(ctx, appId, handle, distance);
+		return ctx->StartLocationCallback(appId, handle, distance);
 	return SCE_LOCATION_ERROR_FATAL_ERROR;
 }
 
 /* (0x81186068) */
 int locationSvcStopLocationCallback(int appId, SceLocationHandle handle)
 {
-	LocationContext *ctx = locationGetContext();
+	PositionManager *ctx = locationGetContext();
 
 	if (ctx != NULL)
-		return locationCtxStopLocationCallback(ctx, appId, handle);
+		return ctx->StopLocationCallback(appId, handle);
 	return SCE_LOCATION_ERROR_FATAL_ERROR;
 }
 
 /* (0x8118608C) */
 int locationSvcGetHeading(int appId, SceLocationHandle handle, SceLocationHeadingInfo *info)
 {
-	LocationContext *ctx = locationGetContext();
+	PositionManager *ctx = locationGetContext();
 
 	if (ctx != NULL)
-		return locationCtxGetHeading(ctx, appId, handle, info);
+		return ctx->GetHeading(appId, handle, info);
 	return SCE_LOCATION_ERROR_FATAL_ERROR;
 }
 
 /* (0x811860B8) */
 int locationSvcStartHeadingCallback(int appId, SceLocationHandle handle)
 {
-	LocationContext *ctx = locationGetContext();
+	PositionManager *ctx = locationGetContext();
 
 	if (ctx != NULL)
-		return locationCtxStartHeadingCallback(ctx, appId, handle);
+		return ctx->StartHeadingCallback(appId, handle);
 	return SCE_LOCATION_ERROR_FATAL_ERROR;
 }
 
 /* (0x811860EC) */
 int locationSvcStopHeadingCallback(int appId, SceLocationHandle handle)
 {
-	LocationContext *ctx = locationGetContext();
+	PositionManager *ctx = locationGetContext();
 
 	if (ctx != NULL)
-		return locationCtxStopHeadingCallback(ctx, appId, handle);
+		return ctx->StopHeadingCallback(appId, handle);
 	return SCE_LOCATION_ERROR_FATAL_ERROR;
 }
 
@@ -682,12 +546,12 @@ int locationSvcConfirm(int appId, SceLocationHandle handle, SceUInt32 arg, SceUI
 	LocationConfirmMgr *confirm = locationConfirmGetInstance();
 
 	if (confirm != NULL) {
-		ret = locationConfirmShow(confirm, appId, handle, arg, dataArg, data);
+		ret = confirm->Show(appId, handle, arg, dataArg, data, false);
 
-		LocationContext *ctx = locationGetContext();
+		PositionManager *ctx = locationGetContext();
 
-		if (ctx != NULL && ctx->logger != NULL)
-			locationLog(ctx->logger, 8, "[ConfirmDialogShow] result:0x%08x\n", ret);
+		if (ctx != NULL && ctx->m_logger != NULL)
+			ctx->m_logger->Log(8, "[ConfirmDialogShow] result:0x%08x\n", ret);
 	}
 	return ret;
 }
@@ -697,14 +561,15 @@ int locationSvcConfirmGetResult(int appId, SceLocationHandle handle,
 				SceLocationDialogResult *result)
 {
 	int ret = SCE_LOCATION_ERROR_FATAL_ERROR;
-	LocationContext *ctx = locationGetContext();
+	PositionManager *ctx = locationGetContext();
 
 	if (ctx != NULL) {
-		ret = locationCtxGetHandleStatus(ctx, appId, handle);
+		ret = ctx->GetHandleStatus(appId, handle);
 		if (ret != SCE_LOCATION_ERROR_DISABLE_APPLICATION) {
-			if (locationConfirmGetInstance() != NULL) {
-				*result = locationConfirmGetResult(locationConfirmGetInstance(),
-								   appId, handle);
+			LocationConfirmMgr *confirm = locationConfirmGetInstance();
+
+			if (confirm != NULL) {
+				*result = confirm->GetResult(appId, handle);
 				return 0;
 			}
 			return SCE_LOCATION_ERROR_FATAL_ERROR;
@@ -718,16 +583,16 @@ int locationSvcConfirmGetStatus(int appId, SceLocationHandle handle,
 				SceLocationDialogStatus *status)
 {
 	int ret = SCE_LOCATION_ERROR_FATAL_ERROR;
-	LocationContext *ctx = locationGetContext();
+	PositionManager *ctx = locationGetContext();
 
 	if (ctx != NULL) {
-		ret = locationCtxGetHandleStatus(ctx, appId, handle);
+		ret = ctx->GetHandleStatus(appId, handle);
 		if (ret != SCE_LOCATION_ERROR_DISABLE_APPLICATION) {
 			LocationConfirmMgr *confirm = locationConfirmGetInstance();
 
 			if (confirm != NULL) {
-				*status = locationConfirmGetStatus(confirm, appId, handle);
-				return confirm->lastResult;
+				*status = confirm->GetStatus(appId, handle);
+				return confirm->m_lastResult;
 			}
 			return SCE_LOCATION_ERROR_FATAL_ERROR;
 		}
@@ -739,15 +604,15 @@ int locationSvcConfirmGetStatus(int appId, SceLocationHandle handle,
 int locationSvcConfirmAbort(int appId, SceLocationHandle handle)
 {
 	int ret = SCE_LOCATION_ERROR_FATAL_ERROR;
-	LocationContext *ctx = locationGetContext();
+	PositionManager *ctx = locationGetContext();
 
 	if (ctx != NULL) {
-		ret = locationCtxGetHandleStatus(ctx, appId, handle);
+		ret = ctx->GetHandleStatus(appId, handle);
 		if (ret != SCE_LOCATION_ERROR_DISABLE_APPLICATION) {
 			LocationConfirmMgr *confirm = locationConfirmGetInstance();
 
 			if (confirm != NULL)
-				return locationConfirmAbort(confirm, appId, handle);
+				return confirm->Abort(appId, handle);
 			return SCE_LOCATION_ERROR_FATAL_ERROR;
 		}
 	}
@@ -758,20 +623,21 @@ int locationSvcConfirmAbort(int appId, SceLocationHandle handle)
 int locationSvcGetPermission(int appId, SceLocationHandle handle,
 			     SceLocationPermissionInfo *info)
 {
-	LocationContext *ctx = locationGetContext();
+	PositionManager *ctx = locationGetContext();
 
 	if (ctx != NULL)
-		return locationCtxGetPermission(ctx, appId, handle, info);
+		return ctx->GetPermission(appId, handle, info);
 	return SCE_LOCATION_ERROR_FATAL_ERROR;
 }
 
 /* (0x81186292) */
 int locationSvcDenyApplication(int appId, SceLocationHandle handle)
 {
-	LocationContext *ctx = locationGetContext();
+	(void)appId;
+	PositionManager *ctx = locationGetContext();
 
 	if (ctx != NULL)
-		return locationCtxSetHandlePermission(ctx, handle, 2);
+		return ctx->SetHandlePermission(handle, 2);
 	return SCE_LOCATION_ERROR_FATAL_ERROR;
 }
 
@@ -781,10 +647,10 @@ int locationSvcSetGpsEmulationFile(const char *path)
 	if (system::Model::GetType() == 1)
 		return SCE_LOCATION_ERROR_DISABLE_DEBUG_API;
 
-	LocationContext *ctx = locationGetContext();
+	PositionManager *ctx = locationGetContext();
 
 	if (ctx != NULL)
-		return locationCtxSetGpsEmulationFile(ctx, path);
+		return ctx->SetGpsEmulationFile(path);
 	return SCE_LOCATION_ERROR_FATAL_ERROR;
 }
 
@@ -800,7 +666,7 @@ int locationSvcDebugCmd(int appId, int cmd, const int *inArg, void *outBuf)
 	bool isSpecial = sce_paf_strncmp(state.appName, "NPXS10918", 32) == 0 ||
 			 sce_paf_strncmp(state.appName, "NPXS10859", 32) == 0;
 	bool isRestricted = sce_paf_strncmp(state.appName, "NPXS10861", 32) == 0;
-	LocationContext *ctx = locationGetContext();
+	PositionManager *ctx = locationGetContext();
 
 	if (ctx == NULL)
 		return SCE_LOCATION_ERROR_FATAL_ERROR;
@@ -810,33 +676,33 @@ int locationSvcDebugCmd(int appId, int cmd, const int *inArg, void *outBuf)
 	    (state.launchOrigin != 2 && !isSpecial)) {
 		if (!isRestricted)
 			return SCE_LOCATION_ERROR_DISABLE_DEBUG_API;
-		if (ctx->logger != NULL && ctx->logger->fileLog == NULL) {
-			void *mem = operator new(432);
-
-			ctx->logger->fileLog = (mem != NULL) ? locationLogFileInit(mem) : NULL;
-		}
+		if (ctx->m_logger != NULL && ctx->m_logger->m_debugInfo == NULL)
+			ctx->m_logger->m_debugInfo = new LocationDebugInfo();
 		switch (cmd) {
-		case 4:
-			locationCtxDbg4a(ctx, outBuf);
-			ret = locationCtxDbg4b(ctx, (char *)outBuf + 4);
+		case 4: {
+			LocationDebugCounts *counts = (LocationDebugCounts *)outBuf;
+
+			ctx->DbgGetGpsSatelliteCount(&counts->gpsSatelliteCount);
+			ret = ctx->DbgGetWifiApCount(&counts->wifiApCount);
 			break;
+		}
 		case 5:
-			ret = locationCtxDbg5(ctx, *inArg);
+			ret = ctx->DbgSetXtraAssistEnabled(*inArg);
 			break;
 		case 13:
-			ret = locationCtxDbg13(ctx, *inArg);
+			ret = ctx->DbgSetXtraLocalFileOnly(*inArg);
 			break;
 		case 14:
-			ret = locationCtxDbg14(ctx, outBuf);
+			ret = ctx->DbgGetXtraState((int *)outBuf);
 			break;
 		case 16:
-			ret = locationCtxDbg16(ctx, outBuf);
+			ret = ctx->DbgGetDopInfo((float *)outBuf);
 			break;
 		case 19:
-			ret = locationCtxDbg19(ctx, outBuf);
+			ret = ctx->DbgGetGpsSnapshot(outBuf);
 			break;
 		case 28:
-			ret = locationCtxDbg28(ctx, 1000 * *inArg);
+			ret = ctx->DbgSetGpsTimeoutMs(1000 * *inArg);
 			break;
 		case 1: case 2: case 3: case 6: case 7: case 8: case 9: case 10:
 		case 11: case 12: case 15: case 17: case 18: case 20: case 21:
@@ -850,104 +716,110 @@ int locationSvcDebugCmd(int appId, int cmd, const int *inArg, void *outBuf)
 		return ret;
 	}
 
-	if (isSpecial && ctx->logger != NULL && ctx->logger->fileLog == NULL) {
-		void *mem = operator new(432);
-
-		ctx->logger->fileLog = (mem != NULL) ? locationLogFileInit(mem) : NULL;
-	}
+	if (isSpecial && ctx->m_logger != NULL && ctx->m_logger->m_debugInfo == NULL)
+		ctx->m_logger->m_debugInfo = new LocationDebugInfo();
 
 	switch (cmd) {
 	case 1:
-		ret = locationCtxDbg1(ctx);
+		ret = ctx->DbgClearUr0Files();
 		break;
 	case 2:
-		ret = locationCtxDbg2(ctx, *inArg);
+		ret = ctx->DbgSetLogMask(*inArg);
 		break;
 	case 3:
-		ret = locationCtxDbg3(ctx, outBuf);
+		ret = ctx->DbgGetLogMask((int *)outBuf);
 		break;
-	case 4:
-		locationCtxDbg4a(ctx, outBuf);
-		ret = locationCtxDbg4b(ctx, (char *)outBuf + 4);
+	case 4: {
+		LocationDebugCounts *counts = (LocationDebugCounts *)outBuf;
+
+		ctx->DbgGetGpsSatelliteCount(&counts->gpsSatelliteCount);
+		ret = ctx->DbgGetWifiApCount(&counts->wifiApCount);
 		break;
+	}
 	case 5:
-		ret = locationCtxDbg5(ctx, *inArg);
+		ret = ctx->DbgSetXtraAssistEnabled(*inArg);
 		break;
 	case 6:
-		ret = locationCtxDbg6(ctx, *inArg);
+		ret = ctx->DbgSetFakeWifiAs3g(*inArg);
 		break;
 	case 7:
-		ret = locationCtxDbg7(ctx, *inArg);
+		ret = ctx->DbgSetLogFileIndex(*inArg);
 		break;
-	case 8:
-		locationCtxDbg8a(ctx, outBuf);
-		locationCtxDbg8b(ctx, (char *)outBuf + 11);
+	case 8: {
+		LocationDebugCallbackStatus *cbStatus = (LocationDebugCallbackStatus *)outBuf;
+
+		ctx->DbgGetCallbackTag(cbStatus->callbackTag);
+		ctx->DbgTakeSensorActiveMask(&cbStatus->sensorActiveMask);
 		break;
+	}
 	case 9:
-		ret = locationCtxDbg9(ctx, outBuf);
+		ret = ctx->DbgGetLogIoError((int *)outBuf);
 		break;
 	case 10:
-		ret = locationCtxDbg10(ctx, *inArg);
+		ret = ctx->DbgSetIntervalOverrideSec(*inArg);
 		break;
 	case 11:
-		ret = locationCtxDbg11(ctx, outBuf);
+		ret = ctx->DbgGetIntervalOverrideSec((int *)outBuf);
 		break;
 	case 12:
-		ret = locationCtxDbg12(ctx);
+		ret = ctx->DbgResetDebugPermission();
 		break;
 	case 13:
-		ret = locationCtxDbg13(ctx, *inArg);
+		ret = ctx->DbgSetXtraLocalFileOnly(*inArg);
 		break;
 	case 14:
-		ret = locationCtxDbg14(ctx, outBuf);
+		ret = ctx->DbgGetXtraState((int *)outBuf);
 		break;
 	case 15:
-		ret = locationCtxDbg15(ctx);
+		ret = ctx->DbgUnloadProvider();
 		break;
 	case 16:
-		ret = locationCtxDbg16(ctx, outBuf);
+		ret = ctx->DbgGetDopInfo((float *)outBuf);
 		break;
 	case 17:
-		ret = locationCtxDbg17(ctx, inArg);
+		ret = ctx->DbgSetDopBounds((const float *)inArg);
 		break;
 	case 18:
-		ret = locationCtxDbg18(ctx, outBuf);
+		ret = ctx->DbgCountUr0Files((int *)outBuf);
 		break;
 	case 19:
-		ret = locationCtxDbg19(ctx, outBuf);
+		ret = ctx->DbgGetGpsSnapshot(outBuf);
 		break;
 	case 20:
-		ret = locationCtxDbg20(ctx, *inArg);
+		ret = ctx->DbgSyncDatFiles(*inArg);
 		break;
 	case 21:
-		ret = locationCtxDbg21(ctx, *inArg);
+		ret = ctx->DbgSetForceXtraDownload(*inArg);
 		break;
 	case 22:
-		ret = locationCtxDbg22(ctx, *inArg);
+		ret = ctx->DbgSetXtraSourceMode(*inArg);
 		break;
 	case 23:
-		ret = locationCtxDbg23(ctx);
+		ret = ctx->DbgExportHistory();
 		break;
 	case 24:
-		ret = locationCtxDbg24(ctx);
+		ret = ctx->DbgImportHistory();
 		break;
 	case 25:
-		ret = locationCtxDbg25(ctx);
+		ret = ctx->DbgClearHistory();
 		break;
 	case 26:
 		ret = SCE_LOCATION_ERROR_DISABLE_DEBUG_API;
 		break;
-	case 27:
-		ret = locationCtxDbg27(ctx, outBuf, (char *)outBuf + 4);
+	case 27: {
+		LocationDebugCellStatus *cellStatus = (LocationDebugCellStatus *)outBuf;
+
+		ret = ctx->DbgGetCellInfo(&cellStatus->radioIf, cellStatus->cellInfo);
 		break;
+	}
 	case 28:
-		ret = locationCtxDbg28(ctx, 1000 * *inArg);
+		ret = ctx->DbgSetGpsTimeoutMs(1000 * *inArg);
 		break;
 	case 29:
-		ret = locationCtxUpdateFlyingStart(ctx);
+		ret = ctx->UpdateFlyingStart();
 		break;
 	case 31:
-		locationCtxDbg31(ctx, *inArg);
+		ctx->DbgSetFlyingStartIntervalSec(*inArg);
 		/* fallthrough */
 	default:
 		ret = SCE_LOCATION_ERROR_FATAL_ERROR;
@@ -959,46 +831,46 @@ int locationSvcDebugCmd(int appId, int cmd, const int *inArg, void *outBuf)
 /* (0x811866A4) */
 int locationSvcNotifyPermissionChanged(int appId, SceLocationHandle handle)
 {
-	LocationContext *ctx = locationGetContext();
+	PositionManager *ctx = locationGetContext();
 
 	if (ctx != NULL)
-		return locationCtxNotifyPermissionChanged(ctx, appId, handle);
+		return ctx->ConfirmHandle(appId, handle);
 	return SCE_LOCATION_ERROR_FATAL_ERROR;
 }
 
 /* (0x811866C8) */
-int locationSvcSetPermissionMode(int mode)
+int locationSvcGetGlobalPerm(int *out)
 {
-	LocationContext *ctx = locationGetContext();
+	PositionManager *ctx = locationGetContext();
 
 	if (ctx != NULL)
-		return locationCtxSetPermissionMode(ctx, mode);
+		return ctx->GetGlobalPerm(out);
 	return SCE_LOCATION_ERROR_FATAL_ERROR;
 }
 
 /* (0x811866E8) */
-int locationSvcSetAppPermission(const char *titleId, bool reload)
+int locationSvcGetAppPermSetting(int *out, bool reload)
 {
-	LocationContext *ctx = locationGetContext();
+	PositionManager *ctx = locationGetContext();
 
 	if (ctx == NULL)
 		return SCE_LOCATION_ERROR_FATAL_ERROR;
 	if (reload) {
-		int ret = locationCtxReloadPermission(ctx);
+		int ret = ctx->ReloadConfig();
 
 		if (ret != 0)
 			return ret;
 	}
-	return locationCtxSetAppPermission(ctx, titleId);
+	return ctx->GetAppPermSetting(out);
 }
 
 /* (0x81186716) */
 int locationSvcGetValue(SceUInt32 *value)
 {
-	LocationContext *ctx = locationGetContext();
+	PositionManager *ctx = locationGetContext();
 
 	if (ctx != NULL)
-		return locationCtxGetValue(ctx, value);
+		return ctx->GetValue(value);
 	return 0;
 }
 
@@ -1006,11 +878,11 @@ int locationSvcGetValue(SceUInt32 *value)
 int liblocationWaitReady(void)
 {
 	int ret = 0;
-	LocationContext *ctx = locationGetContext();
+	PositionManager *ctx = locationGetContext();
 
 	if (ctx != NULL) {
 		for (int i = 0; i < 50; i++) {
-			ret = locationCtxDbg15(ctx);
+			ret = ctx->DbgUnloadProvider();
 			if (ret != SCE_LOCATION_ERROR_DISABLE_DEBUG_API)
 				return ret;
 			sceKernelDelayThread(20000);
@@ -1047,27 +919,27 @@ static int locationNotifyHeadingCB(SceLocationHandle handle, int unused)
 /* (0x811867BC) */
 static void locationConfirmCB(int appId, int handle, int dialogType, int result, int canceled)
 {
-	LocationContext *ctx = locationGetContext();
+	PositionManager *ctx = locationGetContext();
 
 	if (ctx == NULL)
 		return;
 	if (dialogType == 2 || dialogType == 4) {
 		if (result == 2)
-			locationCtxSetHandlePermission(ctx, handle, 3);
+			ctx->SetHandlePermission(handle, 3);
 		else
-			locationCtxSetHandlePermission(ctx, handle, 2);
+			ctx->SetHandlePermission(handle, 2);
 	}
 	if (canceled == 0) {
 		if (result != 0)
-			locationCtxNotifyPermissionChanged(ctx, appId, handle);
+			ctx->ConfirmHandle(appId, handle);
 
-		bool pending = false;
+		unsigned char pending = 0;
 
-		locationCtxIsHandlePending(ctx, handle, &pending);
-		if (pending) {
-			locationCtxSetHandlePending(ctx, handle, false);
+		ctx->IsHandlePending(handle, &pending);
+		if (pending != 0) {
+			ctx->SetHandlePending(handle, 0);
 			if (result == 2) {
-				locationCtxResumePending(ctx, handle);
+				ctx->ResumePending(handle);
 			} else {
 				LocationServer *server = locationServerGetInstance();
 

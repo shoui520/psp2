@@ -3,6 +3,7 @@
  * geomagnetic field & magnetic declination calculator (0x81198C94-0x81199430).
  * The file and function names are ours (PLACEHOLDER).
  */
+#include "location_internal.h"
 #include <math.h>
 #include <std/string.h>
 
@@ -59,38 +60,31 @@ static const int s_monthDays[12] = {
 	0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334
 };
 
-struct WmmContext {
-	float gh[196];		/* +0..+783 */
-	float declination;	/* +784 */
-	int nmax;		/* +788 */
-	float decYear;		/* +792 */
-};
-
 /* 0x81198C94 */
-int wmmExtrapolate(WmmContext *ctx, int nmax1, int nmax2, float date, float baseEpoch)
+int wmmExtrapolate(WmmContext *ctx, int mainDegree, int secularDegree, float date, float baseEpoch)
 {
 	float factor = date - baseEpoch;
-	int k1 = nmax1 * (nmax1 + 2);
-	int k2 = nmax2 * (nmax2 + 2);
-	int k;
+	int mainCount = mainDegree * (mainDegree + 2);
+	int secularCount = secularDegree * (secularDegree + 2);
+	int sharedCount;
 	int nmax;
 
-	if (nmax1 == nmax2) {
-		k = k1;
-		nmax = nmax1;
-	} else if (nmax1 < nmax2) {
-		k = k1;
-		nmax = nmax2;
-		for (int i = k1 + 1; i <= k2; i++)
+	if (mainDegree == secularDegree) {
+		sharedCount = mainCount;
+		nmax = mainDegree;
+	} else if (mainDegree < secularDegree) {
+		sharedCount = mainCount;
+		nmax = secularDegree;
+		for (int i = mainCount + 1; i <= secularCount; i++)
 			ctx->gh[i] = factor * s_wmmSecular[i];
 	} else {
-		k = k2;
-		nmax = nmax1;
-		for (int i = k2 + 1; i <= k1; i++)
+		sharedCount = secularCount;
+		nmax = mainDegree;
+		for (int i = secularCount + 1; i <= mainCount; i++)
 			ctx->gh[i] = s_wmmMain[i];
 	}
 
-	for (int i = 1; i <= k; i++)
+	for (int i = 1; i <= sharedCount; i++)
 		ctx->gh[i] = s_wmmMain[i] + factor * s_wmmSecular[i];
 	return nmax;
 }
@@ -117,15 +111,15 @@ void wmmSynthField(const WmmContext *ctx, float *outX, float *outY, float *outZ,
 	sl[0] = slon;
 	cl[0] = clon;
 
-	float a2 = 40680632.0f;
-	float b2 = 40408300.0f;
-	float aa = a2 * clat * clat;
-	float bb = b2 * slat * slat;
+	float equatorialSq = 40680632.0f;
+	float polarSq = 40408300.0f;
+	float aa = equatorialSq * clat * clat;
+	float bb = polarSq * slat * slat;
 	float cc = aa + bb;
 	float dd = sqrtf(cc);
-	float r = sqrtf(alt * (alt + 2.0f * dd) + (a2 * aa + b2 * bb) / cc);
+	float r = sqrtf(alt * (alt + 2.0f * dd) + (equatorialSq * aa + polarSq * bb) / cc);
 	float cd = (alt + dd) / r;
-	float sd = (a2 - b2) / dd * slat * clat / r;
+	float sd = (equatorialSq - polarSq) / dd * slat * clat / r;
 	float ct = slat * cd - clat * sd;
 	float st = clat * cd + slat * sd;
 
@@ -164,31 +158,34 @@ void wmmSynthField(const WmmContext *ctx, float *outX, float *outY, float *outZ,
 				sl[m - 1] = sl[m - 2] * cl[0] + cl[m - 2] * sl[0];
 			} else {
 				float gmm = fn * fn - fm * fm;
-				float g1 = sqrtf(gmm);
-				float g2 = sqrtf((fn - 1.0f) * (fn - 1.0f) - fm * fm) / g1;
-				float g3 = (2.0f * fn - 1.0f) / g1;
+				float normDenom = sqrtf(gmm);
+				float prevCoeff =
+					sqrtf((fn - 1.0f) * (fn - 1.0f) - fm * fm) / normDenom;
+				float curCoeff = (2.0f * fn - 1.0f) / normDenom;
 				int i = k - n;
 				int j = k - 2 * n + 1;
-				p[k - 1] = (fn + 1.0f) * (g3 * ct / fn * p[i - 1] - g2 / (fn - 1.0f) * p[j - 1]);
-				q[k - 1] = g3 * (ct * q[i - 1] - st / fn * p[i - 1]) - g2 * q[j - 1];
+				p[k - 1] = (fn + 1.0f) * (curCoeff * ct / fn * p[i - 1] -
+							  prevCoeff / (fn - 1.0f) * p[j - 1]);
+				q[k - 1] = curCoeff * (ct * q[i - 1] - st / fn * p[i - 1]) -
+					   prevCoeff * q[j - 1];
 			}
 		}
 
-		float par = rr * ctx->gh[l];
+		float coeffTerm = rr * ctx->gh[l];
 		if (m == 0) {
 			l++;
 		} else {
-			float par2 = rr * ctx->gh[l + 1];
-			float temp = par * sl[m - 1] - par2 * cl[m - 1];
+			float secTerm = rr * ctx->gh[l + 1];
+			float azimuthTerm = coeffTerm * sl[m - 1] - secTerm * cl[m - 1];
 			if (st > 0.0f)
-				y += temp * fm * p[k - 1] / ((fn + 1.0f) * st);
+				y += azimuthTerm * fm * p[k - 1] / ((fn + 1.0f) * st);
 			else
-				y += temp * q[k - 1] * ct;
-			par = par * cl[m - 1] + par2 * sl[m - 1];
+				y += azimuthTerm * q[k - 1] * ct;
+			coeffTerm = coeffTerm * cl[m - 1] + secTerm * sl[m - 1];
 			l += 2;
 		}
-		z -= par * p[k - 1];
-		x += par * q[k - 1];
+		z -= coeffTerm * p[k - 1];
+		x += coeffTerm * q[k - 1];
 		m++;
 	}
 
@@ -214,9 +211,9 @@ void wmmCalcDeclination(WmmContext *ctx, float lat, float lon, float alt)
 {
 	float x, y, z;
 	wmmSynthField(ctx, &x, &y, &z, lat, lon, alt);
-	float h2 = x * x + y * y;
-	float f = sqrtf(h2 + z * z);
-	float h = sqrtf(h2);
+	float horizSq = x * x + y * y;
+	float f = sqrtf(horizSq + z * z);
+	float h = sqrtf(horizSq);
 	float decl;
 	if (f < 0.0001f || h < 0.0001f) {
 		decl = 0.0f;

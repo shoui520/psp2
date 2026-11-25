@@ -3,86 +3,10 @@
  * ("SceLocationDebugFlushThread", "SceLocationDebugBuffer%02d"; 0x8118AE80-0x8118B9A0).
  * The file's and internal names here are ours (PLACEHOLDER).
  */
-#include <stddef.h>
-#include <stdarg.h>
-#include <scetypes.h>
-#include <liblocation.h>
-#include <rtc.h>
-#include <kernel/threadmgr.h>
+#include "location_internal.h"
 #include <std/stdio.h>
 #include <std/string.h>
 #include <std/stdlib.h>
-
-/* PLACEHOLDER externs for LocationLogger and LocationTimer */
-struct LocationLogger;
-SceSSize locationLoggerWriteRaw(LocationLogger *logger, const void *buf,
-				SceSize size);			/* (0x81189CE0) */
-int locationLoggerSyncRaw(LocationLogger *logger);		/* (0x81189CF4) */
-int locationTaskSchedule(void *task, unsigned int delayMs);	/* (0x8118A780) */
-
-struct LocationLogParserListBase {
-	virtual ~LocationLogParserListBase();
-	virtual void Dispatch(const char *line, LocationLogger *logger) = 0;
-};
-
-class LocationDebugBuffer {
-public:
-	LocationDebugBuffer();					/* (0x8118B89C) */
-	virtual ~LocationDebugBuffer()
-	{
-	}
-
-	int Init(unsigned char index);				/* (0x8118B8B4) */
-	int Term();						/* (0x8118B914) */
-	int DeleteMutex();					/* (0x8118B930) */
-	int Append(const void *data, SceSize len);		/* (0x8118B94A) */
-	void Clear();						/* (0x8118B97C) */
-	int Lock();						/* (0x8118B984) */
-	int Unlock();						/* (0x8118B992) */
-
-	char *m_data;						/* +4 */
-	SceSize m_used;						/* +8 */
-	unsigned char m_full;					/* +12 */
-	SceKernelLwMutexWork m_mutex;				/* +16..+47 */
-	int m_mutexResult;					/* +48 */
-	int m_reserved34;					/* +52 */
-};
-
-class LocationLogWriter {
-public:
-	LocationLogWriter(LocationLogger *logger);		/* (0x8118AE80) */
-	virtual ~LocationLogWriter();				/* (0x8118AED8, 0x8118AEE6) */
-
-	int DestroySync();					/* (0x8118AEFC) */
-	int CreateSync();					/* (0x8118AFDE) */
-	int Start();						/* (0x8118B0AC) */
-	int Stop();						/* (0x8118B24A) */
-	int WriteToBuffer(const char *data, SceSize len);	/* (0x8118B2E6) */
-	int Write(const char *fmt, const char *tag, va_list args,
-		  LocationLogParserListBase *parser);		/* (0x8118B3D0) */
-	int FlushOne();						/* (0x8118B540) */
-	int FlushAll();						/* (0x8118B5DC) */
-	int FlushLoop();					/* (0x8118B716) */
-
-	static int FlushThreadEntry(SceSize args, void *argp);	/* (0x8118B890) */
-
-	LocationLogger *m_logger;				/* +4 */
-	SceUID m_threadId;					/* +8 */
-	unsigned char m_running;				/* +12 */
-	void *m_bufMem;						/* +16 */
-	int m_reserved14;					/* +20 */
-	LocationDebugBuffer m_buffers[2];			/* +24..+135 (2 * 56 = 112) */
-	char m_formatBuf[0x8000];				/* +136..+32903 */
-	unsigned char m_writeIdx;				/* +32904 (0x8088) */
-	unsigned char m_readIdx;				/* +32905 (0x8089) */
-	SceUID m_opSema;					/* +32908 (0x808C) */
-	SceUID m_freeSema;					/* +32912 (0x8090) */
-	SceUID m_flushEvent;					/* +32916 (0x8094) */
-	SceKernelLwMutexWork m_readMutex;			/* +32920 (0x8098) */
-	SceKernelLwMutexWork m_writeMutex;			/* +32952 (0x80B8) */
-	int m_readMutexResult;					/* +32984 (0x80D8) */
-	int m_writeMutexResult;					/* +32988 (0x80DC) */
-};
 
 /* (0x8118AE80) */
 LocationLogWriter::LocationLogWriter(LocationLogger *logger)
@@ -192,7 +116,7 @@ int LocationLogWriter::Start()
 {
 	int err = 0;
 
-	m_bufMem = sce_paf_malloc(0x2000);
+	m_bufMem = (char *)sce_paf_malloc(0x2000);
 	if (m_bufMem == NULL) {
 		err = SCE_LOCATION_ERROR_FATAL_ERROR;
 		m_buffers[0].Term();
@@ -209,7 +133,7 @@ int LocationLogWriter::Start()
 		if (r != 0) {
 			err = r;
 		} else {
-			m_buffers[i].m_data = (char *)m_bufMem + i * 0x1000;
+			m_buffers[i].m_data = m_bufMem + i * 0x1000;
 		}
 	}
 	m_writeIdx = 0;
@@ -271,18 +195,18 @@ int LocationLogWriter::Stop()
 
 	if (m_threadId >= 0) {
 		m_running = 0;
-		int r1 = sceKernelCancelEventFlag(m_flushEvent, 0, NULL);
-		int r2 = sceKernelWaitThreadEnd(m_threadId, NULL, NULL);
+		int cancelRet = sceKernelCancelEventFlag(m_flushEvent, 0, NULL);
+		int waitRet = sceKernelWaitThreadEnd(m_threadId, NULL, NULL);
 
-		if (r1 != 0)
-			r2 = r1;
-		int r3 = sceKernelDeleteThread(m_threadId);
+		if (cancelRet != 0)
+			waitRet = cancelRet;
+		int delRet = sceKernelDeleteThread(m_threadId);
 
-		if (r3 != 0)
-			r2 = r3;
+		if (delRet != 0)
+			waitRet = delRet;
 		m_threadId = -1;
-		if (r2 != 0)
-			ret = r2;
+		if (waitRet != 0)
+			ret = waitRet;
 	}
 
 	int r = DestroySync();
@@ -349,7 +273,7 @@ int LocationLogWriter::WriteToBuffer(const char *data, SceSize len)
 
 /* (0x8118B3D0) */
 int LocationLogWriter::Write(const char *fmt, const char *tag, va_list args,
-			     LocationLogParserListBase *parser)
+			     LocationLogParserList *parser)
 {
 	int ret = 0;
 	int r = sceKernelWaitSema(m_opSema, 1, NULL);
@@ -423,7 +347,7 @@ int LocationLogWriter::FlushOne()
 
 	if (buf->m_full == 1) {
 		int wr = 0;
-		SceSSize n = locationLoggerWriteRaw(m_logger, buf->m_data, buf->m_used);
+		SceSSize n = m_logger->WriteRaw(buf->m_data, buf->m_used);
 
 		if (n < 0)
 			wr = n;
@@ -486,8 +410,7 @@ int LocationLogWriter::FlushAll()
 					flushErr = br;
 				} else {
 					LocationDebugBuffer *buf = &m_buffers[m_writeIdx];
-					SceSSize n = locationLoggerWriteRaw(m_logger, buf->m_data,
-									    buf->m_used);
+					SceSSize n = m_logger->WriteRaw(buf->m_data, buf->m_used);
 
 					if (n < 0)
 						flushErr = n;
@@ -501,7 +424,7 @@ int LocationLogWriter::FlushAll()
 				if (flushErr != 0)
 					ret = flushErr;
 			}
-			locationLoggerSyncRaw(m_logger);
+			m_logger->SyncRaw();
 			int ur = sceKernelUnlockLwMutex(&m_readMutex, 1);
 
 			if (ur != 0)
@@ -580,13 +503,13 @@ int LocationLogWriter::FlushLoop()
 					}
 					if (cleanErr != 0)
 						ret = cleanErr;
-					int tr = locationTaskSchedule((char *)m_logger + 80, 0);
+					int tr = m_logger->m_timeoutTask.Schedule(0);
 
 					if (tr != 0)
 						ret = tr;
 				}
 			}
-			locationLoggerSyncRaw(m_logger);
+			m_logger->SyncRaw();
 			int ur = sceKernelUnlockLwMutex(&m_readMutex, 1);
 
 			if (ur != 0)

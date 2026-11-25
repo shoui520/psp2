@@ -1,175 +1,22 @@
 /*
- * location_logger.cpp: location service logger, ux0:liblocation file writer, debug log
- * state (LocationLogFile), and ur0/ux0 data/history file utilities (0x81188F3E-0x81189D4C).
+ * location_logger.cpp: location service logger, ux0:liblocation file writer, debug info
+ * state (LocationDebugInfo), and ur0/ux0 data/history file utilities (0x81188F3E-0x81189D4C).
  * The file's and internal names here are ours (PLACEHOLDER).
  */
-#include <stddef.h>
-#include <stdarg.h>
+#include "location_internal.h"
 #include <string.h>
-#include <scetypes.h>
-#include <liblocation.h>
-#include <rtc.h>
 #include <kernel/iofilemgr.h>
-#include <kernel/threadmgr.h>
 #include <regmgr/regmgr.h>
 #include <std/stdio.h>
 #include <std/string.h>
-#include <std/vector>
 #include <std/new>
-#include <memory/heap_allocator.h>
-
-using namespace paf;
-
-/* PLACEHOLDER externs for the rest of liblocation */
-extern memory::HeapAllocator *g_locationHeap;			/* (0x815496B0) */
-extern void *g_locationManager;					/* (0x815496B4) */
-int locationTaskCancel(void *task);				/* (0x8118A800) */
-int locationMgrRegisterTask(void *mgr, void *task);		/* (0x8118AACE) */
-int locationMgrUnregisterTask(void *mgr, void *task);		/* (0x8118AB62) */
-void *locationLogWriterCtor(void *mem, void *logger);		/* (0x8118AE80) */
-int locationLogWriterStart(void *writer);			/* (0x8118B0AC) */
-void locationLogWriterStop(void *writer);			/* (0x8118B24A) */
-int locationLogWriterWrite(void *writer, const char *fmt, const char *tag,
-			   va_list args, void *parser);		/* (0x8118B3D0) */
-void locationLogWriterFlush(void);				/* (0x8118B5DC) */
-const char *locationStrStr(const char *haystack, const char *needle); /* (0x8118F43C) */
 
 extern "C" int sceIoSyncByFd(SceUID fd, int flag);
-
-struct LocationLogWriterBase {
-	virtual ~LocationLogWriterBase();
-};
-
-class LocationLogger;
-
-class LocationLogParser {
-public:
-	virtual ~LocationLogParser()
-	{
-	}
-
-	virtual void Parse(const char *line, LocationLogger *logger); /* (0x81188F3E) */
-};
-
-class LocationLogParserList {
-public:
-	virtual ~LocationLogParserList()
-	{
-	}
-
-	virtual void Dispatch(const char *line, LocationLogger *logger)
-	{
-		for (size_t i = 0; i < m_parsers.size(); i++)
-			m_parsers[i]->Parse(line, logger);
-	}
-
-	vector<LocationLogParser *> m_parsers;
-};
-
-struct LocationLogFile {
-	LocationLogFile();					/* (0x81188FE8) */
-
-	int field0;						/* +0 */
-	int field4;						/* +4 */
-	int field8;						/* +8 */
-	int fieldC;						/* +12 */
-	int field10;						/* +16 */
-	char callbackTag[11];					/* +20..+30 */
-	signed char flag1F;					/* +31 */
-	int field20;						/* +32 */
-	int field24;						/* +36 */
-	char buf28[32];						/* +40..+71 */
-	char buf48[16];						/* +72..+87 */
-	char buf58[0x138];					/* +88..+399 */
-	int field190;						/* +400 */
-	int field194;						/* +404 */
-	int field198;						/* +408 */
-	int arr19C[5];						/* +412..+431 */
-};
-
-class LocationLogTimeoutTask {
-public:
-	virtual int OnNotify();					/* (0x81189D00) */
-
-	int m_queued;						/* +4 */
-	int m_active;						/* +8 */
-	LocationLogger *m_logger;				/* +12 */
-	char m_pad[16];						/* +16..+31 */
-	char m_reserved20[24];					/* +32..+55 */
-	unsigned char m_flag38;					/* +56 */
-};
-
-class LocationLogger {
-public:
-	LocationLogger();					/* (0x81189064) */
-
-	int StopLog();						/* (0x811890B6) */
-	int StartLog(SceUInt32 mask);				/* (0x811890FC) */
-	void ResetFileLog();					/* (0x81189258) */
-	int Init();						/* (0x811892B2) */
-	int Term();						/* (0x8118945E) */
-	const char *GetTag(int category);			/* (0x811894F2) */
-	int VLog(int category, const char *fmt, va_list args);	/* (0x81189548) */
-	int Log(int category, const char *fmt, ...);		/* (0x811895CC) */
-
-	int GetField0();					/* (0x8118961E) */
-	int GetField4();					/* (0x81189628) */
-	int ClearUr0Files();					/* (0x81189632) */
-	int SetField8(int val);					/* (0x811896EC) */
-	int GetField8();					/* (0x811896F6) */
-	int SetFieldC(int val);					/* (0x81189700) */
-	int SetFileIndex(int index);				/* (0x8118970C) */
-	const char *GetCallbackTag();				/* (0x81189712) */
-	int TakeFlag1F();					/* (0x81189726) */
-	void SetField10(int val);				/* (0x81189736) */
-	int GetField10();					/* (0x8118973E) */
-	int ResetDebugPermission();				/* (0x81189748) */
-	int GetField20();					/* (0x81189762) */
-	int SetField20(int val);				/* (0x8118976C) */
-	int SetField24(int val);				/* (0x81189776) */
-	int GetField24();					/* (0x81189780) */
-	int SetBuf28(const void *src);				/* (0x8118978A) */
-	int GetBuf28(void *dst);				/* (0x8118979C) */
-	int GetBuf48(void *dst);				/* (0x811897BC) */
-	int SetBuf48(const void *src);				/* (0x811897DC) */
-	int CountUr0Files(int *outCount);			/* (0x811897EE) */
-	int GetBuf58(void *dst);				/* (0x81189884) */
-	SceSSize CopyFile(const char *src, const char *dst, int unused,
-			  SceOff size);				/* (0x811898C8) */
-	int CopyDatFiles(const char *srcDir, const char *dstDir); /* (0x81189A6E) */
-	int SyncDatFiles(int fromUx0);				/* (0x81189B68) */
-	int SetField190(int val);				/* (0x81189B98) */
-	int GetField190();					/* (0x81189BA4) */
-	int SetField194(int val);				/* (0x81189BB0) */
-	int GetField194();					/* (0x81189BBC) */
-	int ExportHistoryFiles();				/* (0x81189BC8) */
-	int ImportHistoryFiles();				/* (0x81189BE0) */
-	int ClearHistoryFiles();				/* (0x81189BF8) */
-	int GetField198AndArr(int *outVal, int *outArr);	/* (0x81189CB2) */
-	SceSSize WriteRaw(const void *buf, SceSize size);	/* (0x81189CE0) */
-	int SyncRaw();						/* (0x81189CF4) */
-
-	SceUID m_fd;						/* +0 */
-	SceUInt32 m_mask;					/* +4 */
-	LocationLogWriterBase *m_writer;			/* +8 */
-	int m_fileIndex;					/* +12 */
-	unsigned char m_ioError;				/* +16 */
-	int m_mutexResult;					/* +20 */
-	SceKernelLwMutexWork m_mutex;				/* +24..+55 */
-	unsigned char m_flag38;					/* +56 */
-	int m_field3C;						/* +60 */
-	unsigned char m_flag40;					/* +64 */
-	unsigned char m_flag41;					/* +65 */
-	LocationLogParserList *m_parsers;			/* +68 */
-	LocationLogFile *m_fileLog;				/* +72 */
-	int m_field4C;						/* +76 */
-	LocationLogTimeoutTask m_timeoutTask;			/* +80..+139 */
-};
 
 /* (0x81188F3E) */
 void LocationLogParser::Parse(const char *line, LocationLogger *logger)
 {
-	const char *pos = locationStrStr(line, "O] invoking callback:");
+	const char *pos = locationStrNStr(line, "O] invoking callback:", sce_paf_strlen(line));
 
 	if (pos == NULL)
 		return;
@@ -188,32 +35,32 @@ void LocationLogParser::Parse(const char *line, LocationLogger *logger)
 		return;
 
 	sce_paf_strncpy(buf, open, (size_t)(close - open + 1));
-	if (logger->m_fileLog != NULL)
-		sce_paf_strncpy(logger->m_fileLog->callbackTag, buf, 11);
+	if (logger->m_debugInfo != NULL)
+		sce_paf_strncpy(logger->m_debugInfo->callbackTag, buf, 11);
 }
 
 /* (0x81188FE8) */
-LocationLogFile::LocationLogFile()
+LocationDebugInfo::LocationDebugInfo()
 {
-	field0 = 0;
-	field4 = 0;
-	field8 = 1;
-	fieldC = 0;
-	field10 = 0;
-	field20 = 0;
-	field24 = 0;
-	field190 = 0;
-	field194 = 0;
-	sce_paf_memset(buf28, 0, sizeof(buf28));
-	field0 = 0;
-	field4 = 0;
+	gpsSatelliteCount = 0;
+	wifiApCount = 0;
+	xtraAssistEnabled = 1;
+	fakeWifiAs3g = 0;
+	intervalOverrideSec = 0;
+	xtraState = 0;
+	xtraLocalFileOnly = 0;
+	forceXtraDownload = 0;
+	xtraSourceMode = 0;
+	sce_paf_memset(dopBounds, 0, sizeof(dopBounds));
+	gpsSatelliteCount = 0;
+	wifiApCount = 0;
 	sce_paf_strncpy(callbackTag, "(0+0+0)", 11);
-	flag1F = 0;
-	sce_paf_memset(buf48, 0, sizeof(buf48));
-	sce_paf_memset(buf58, 0, sizeof(buf58));
-	sce_paf_memset(arr19C, 0, sizeof(arr19C));
-	field198 = 0;
-	sce_paf_memset(arr19C, 0, sizeof(arr19C));
+	sensorActiveMask = 0;
+	sce_paf_memset(dopInfo, 0, sizeof(dopInfo));
+	sce_paf_memset(&gpsSnapshot, 0, sizeof(gpsSnapshot));
+	sce_paf_memset(cellInfo, 0, sizeof(cellInfo));
+	cellRadioIf = 0;
+	sce_paf_memset(cellInfo, 0, sizeof(cellInfo));
 }
 
 /* (0x81189064) */
@@ -224,17 +71,17 @@ LocationLogger::LocationLogger()
 	m_writer = NULL;
 	m_fileIndex = 0;
 	m_mutexResult = -1;
-	m_flag41 = 1;
-	m_flag40 = 1;
-	m_flag38 = 1;
-	m_field3C = 1;
-	m_fileLog = NULL;
-	m_field4C = -1;
-	m_timeoutTask.m_queued = 0;
-	m_timeoutTask.m_active = 0;
+	m_logTimestampEnabled = 1;
+	m_logPrefixEnabled = 1;
+	m_logWriteEnabled = 1;
+	m_logFlushMode = 1;
+	m_debugInfo = NULL;
+	m_logSyncFd = -1;
+	m_timeoutTask.m_mgr = NULL;
+	m_timeoutTask.m_slotIndex = 0;
 	m_timeoutTask.m_logger = this;
-	sce_paf_memset(m_timeoutTask.m_pad, 0, sizeof(m_timeoutTask.m_pad));
-	m_timeoutTask.m_flag38 = 0;
+	sce_paf_memset(&m_timeoutTask.m_startTime, 0, sizeof(m_timeoutTask.m_startTime));
+	m_timeoutExpired = 0;
 }
 
 /* (0x811890B6) */
@@ -244,8 +91,8 @@ int LocationLogger::StopLog()
 		return SCE_LOCATION_ERROR_FATAL_ERROR;
 
 	m_mask = 0;
-	locationLogWriterFlush();
-	locationLogWriterStop(m_writer);
+	m_writer->FlushAll();
+	m_writer->Stop();
 	if (m_writer != NULL)
 		delete m_writer;
 	m_writer = NULL;
@@ -291,14 +138,11 @@ int LocationLogger::StartLog(SceUInt32 mask)
 	}
 
 	if (ret >= 0) {
-		void *mem = operator new(32992, g_locationHeap);
-		LocationLogWriterBase *writer =
-			(mem != NULL) ? (LocationLogWriterBase *)locationLogWriterCtor(mem, this)
-				      : NULL;
+		LocationLogWriter *writer = new (g_locationHeap) LocationLogWriter(this);
 
 		m_writer = writer;
 		if (writer != NULL) {
-			ret = locationLogWriterStart(writer);
+			ret = writer->Start();
 			if (ret == 0)
 				m_mask = filtered;
 		}
@@ -314,18 +158,18 @@ int LocationLogger::StartLog(SceUInt32 mask)
 }
 
 /* (0x81189258) */
-void LocationLogger::ResetFileLog()
+void LocationLogger::ResetDebugInfo()
 {
-	if (m_fileLog != NULL) {
-		m_fileLog->field0 = 0;
-		m_fileLog->field4 = 0;
-		sce_paf_strncpy(m_fileLog->callbackTag, "(0+0+0)", 11);
-		m_fileLog->flag1F = 0;
-		sce_paf_memset(m_fileLog->buf48, 0, sizeof(m_fileLog->buf48));
-		sce_paf_memset(m_fileLog->buf58, 0, sizeof(m_fileLog->buf58));
-		sce_paf_memset(m_fileLog->arr19C, 0, sizeof(m_fileLog->arr19C));
-		m_fileLog->field198 = 0;
-		sce_paf_memset(m_fileLog->arr19C, 0, sizeof(m_fileLog->arr19C));
+	if (m_debugInfo != NULL) {
+		m_debugInfo->gpsSatelliteCount = 0;
+		m_debugInfo->wifiApCount = 0;
+		sce_paf_strncpy(m_debugInfo->callbackTag, "(0+0+0)", 11);
+		m_debugInfo->sensorActiveMask = 0;
+		sce_paf_memset(m_debugInfo->dopInfo, 0, sizeof(m_debugInfo->dopInfo));
+		sce_paf_memset(&m_debugInfo->gpsSnapshot, 0, sizeof(m_debugInfo->gpsSnapshot));
+		sce_paf_memset(m_debugInfo->cellInfo, 0, sizeof(m_debugInfo->cellInfo));
+		m_debugInfo->cellRadioIf = 0;
+		sce_paf_memset(m_debugInfo->cellInfo, 0, sizeof(m_debugInfo->cellInfo));
 	}
 }
 
@@ -333,7 +177,7 @@ void LocationLogger::ResetFileLog()
 int LocationLogger::Init()
 {
 	m_ioError = 0;
-	ResetFileLog();
+	ResetDebugInfo();
 
 	LocationLogParserList *list = new (g_locationHeap) LocationLogParserList();
 
@@ -354,7 +198,7 @@ int LocationLogger::Init()
 	m_mutexResult = sceKernelCreateLwMutex(&m_mutex, "SceLocationGpsData", 2, 0, NULL);
 	if (m_mutexResult == 0) {
 		if (g_locationManager != NULL)
-			return locationMgrRegisterTask(g_locationManager, &m_timeoutTask);
+			return g_locationManager->RegisterTask(&m_timeoutTask);
 		return 0;
 	}
 
@@ -365,16 +209,16 @@ int LocationLogger::Init()
 	if (enableLog != 0)
 		StopLog();
 	if (m_mutexResult == 0 && g_locationManager != NULL)
-		return locationMgrRegisterTask(g_locationManager, &m_timeoutTask);
+		return g_locationManager->RegisterTask(&m_timeoutTask);
 	return m_mutexResult;
 }
 
 /* (0x8118945E) */
 int LocationLogger::Term()
 {
-	if (m_timeoutTask.m_queued != 0 && locationTaskCancel(&m_timeoutTask) == 0 &&
+	if (m_timeoutTask.m_mgr != NULL && m_timeoutTask.Cancel() == 0 &&
 	    g_locationManager != NULL)
-		locationMgrUnregisterTask(g_locationManager, &m_timeoutTask);
+		g_locationManager->UnregisterTask(&m_timeoutTask);
 
 	if (m_mutexResult == 0) {
 		sceKernelDeleteLwMutex(&m_mutex);
@@ -387,9 +231,9 @@ int LocationLogger::Term()
 		delete m_parsers;
 		m_parsers = NULL;
 	}
-	if (m_fileLog != NULL) {
-		delete m_fileLog;
-		m_fileLog = NULL;
+	if (m_debugInfo != NULL) {
+		delete m_debugInfo;
+		m_debugInfo = NULL;
 	}
 	return ret;
 }
@@ -419,9 +263,9 @@ int LocationLogger::VLog(int category, const char *fmt, va_list args)
 {
 	if (m_writer != NULL && (m_mask & (SceUInt32)category) != 0) {
 		const char *tag = GetTag(category);
-		void *parser = (category == 1) ? (void *)m_parsers : NULL;
+		LocationLogParserList *parser = (category == 1) ? m_parsers : NULL;
 
-		return locationLogWriterWrite(m_writer, fmt, tag, args, parser);
+		return m_writer->Write(fmt, tag, args, parser);
 	}
 	if (category == 1) {
 		char buf[132];
@@ -449,18 +293,18 @@ int LocationLogger::Log(int category, const char *fmt, ...)
 }
 
 /* (0x8118961E) */
-int LocationLogger::GetField0()
+int LocationLogger::GetGpsSatelliteCount()
 {
-	if (m_fileLog != NULL)
-		return m_fileLog->field0;
+	if (m_debugInfo != NULL)
+		return m_debugInfo->gpsSatelliteCount;
 	return 0;
 }
 
 /* (0x81189628) */
-int LocationLogger::GetField4()
+int LocationLogger::GetWifiApCount()
 {
-	if (m_fileLog != NULL)
-		return m_fileLog->field4;
+	if (m_debugInfo != NULL)
+		return m_debugInfo->wifiApCount;
 	return 0;
 }
 
@@ -492,26 +336,26 @@ int LocationLogger::ClearUr0Files()
 }
 
 /* (0x811896EC) */
-int LocationLogger::SetField8(int val)
+int LocationLogger::SetXtraAssistEnabled(int enabled)
 {
-	if (m_fileLog != NULL)
-		m_fileLog->field8 = val;
+	if (m_debugInfo != NULL)
+		m_debugInfo->xtraAssistEnabled = enabled;
 	return 0;
 }
 
 /* (0x811896F6) */
-int LocationLogger::GetField8()
+int LocationLogger::GetXtraAssistEnabled()
 {
-	if (m_fileLog != NULL)
-		return m_fileLog->field8;
+	if (m_debugInfo != NULL)
+		return m_debugInfo->xtraAssistEnabled;
 	return 1;
 }
 
 /* (0x81189700) */
-int LocationLogger::SetFieldC(int val)
+int LocationLogger::SetFakeWifiAs3g(int enabled)
 {
-	if (m_fileLog != NULL)
-		m_fileLog->fieldC = val;
+	if (m_debugInfo != NULL)
+		m_debugInfo->fakeWifiAs3g = enabled;
 	return 0;
 }
 
@@ -525,35 +369,35 @@ int LocationLogger::SetFileIndex(int index)
 /* (0x81189712) */
 const char *LocationLogger::GetCallbackTag()
 {
-	if (m_fileLog != NULL)
-		return m_fileLog->callbackTag;
+	if (m_debugInfo != NULL)
+		return m_debugInfo->callbackTag;
 	return "(0+0+0)";
 }
 
 /* (0x81189726) */
-int LocationLogger::TakeFlag1F()
+int LocationLogger::TakeSensorActiveMask()
 {
-	if (m_fileLog != NULL) {
-		int val = m_fileLog->flag1F;
+	if (m_debugInfo != NULL) {
+		int val = m_debugInfo->sensorActiveMask;
 
-		m_fileLog->flag1F = 0;
+		m_debugInfo->sensorActiveMask = 0;
 		return val;
 	}
 	return 0;
 }
 
 /* (0x81189736) */
-void LocationLogger::SetField10(int val)
+void LocationLogger::SetIntervalOverrideSec(int sec)
 {
-	if (m_fileLog != NULL)
-		m_fileLog->field10 = val;
+	if (m_debugInfo != NULL)
+		m_debugInfo->intervalOverrideSec = sec;
 }
 
 /* (0x8118973E) */
-int LocationLogger::GetField10()
+int LocationLogger::GetIntervalOverrideSec()
 {
-	if (m_fileLog != NULL)
-		return m_fileLog->field10;
+	if (m_debugInfo != NULL)
+		return m_debugInfo->intervalOverrideSec;
 	return 0;
 }
 
@@ -564,70 +408,70 @@ int LocationLogger::ResetDebugPermission()
 }
 
 /* (0x81189762) */
-int LocationLogger::GetField20()
+int LocationLogger::GetXtraState()
 {
-	if (m_fileLog != NULL)
-		return m_fileLog->field20;
+	if (m_debugInfo != NULL)
+		return m_debugInfo->xtraState;
 	return 0;
 }
 
 /* (0x8118976C) */
-int LocationLogger::SetField20(int val)
+int LocationLogger::SetXtraState(int state)
 {
-	if (m_fileLog != NULL)
-		m_fileLog->field20 = val;
+	if (m_debugInfo != NULL)
+		m_debugInfo->xtraState = state;
 	return 0;
 }
 
 /* (0x81189776) */
-int LocationLogger::SetField24(int val)
+int LocationLogger::SetXtraLocalFileOnly(int enabled)
 {
-	if (m_fileLog != NULL)
-		m_fileLog->field24 = val;
+	if (m_debugInfo != NULL)
+		m_debugInfo->xtraLocalFileOnly = enabled;
 	return 0;
 }
 
 /* (0x81189780) */
-int LocationLogger::GetField24()
+int LocationLogger::GetXtraLocalFileOnly()
 {
-	if (m_fileLog != NULL)
-		return m_fileLog->field24;
+	if (m_debugInfo != NULL)
+		return m_debugInfo->xtraLocalFileOnly;
 	return 0;
 }
 
 /* (0x8118978A) */
-int LocationLogger::SetBuf28(const void *src)
+int LocationLogger::SetDopBounds(const float *bounds)
 {
-	if (m_fileLog != NULL)
-		sce_paf_memcpy(m_fileLog->buf28, src, sizeof(m_fileLog->buf28));
+	if (m_debugInfo != NULL)
+		sce_paf_memcpy(m_debugInfo->dopBounds, bounds, sizeof(m_debugInfo->dopBounds));
 	return 0;
 }
 
 /* (0x8118979C) */
-int LocationLogger::GetBuf28(void *dst)
+int LocationLogger::GetDopBounds(float *outBounds)
 {
-	if (m_fileLog != NULL)
-		sce_paf_memcpy(dst, m_fileLog->buf28, sizeof(m_fileLog->buf28));
+	if (m_debugInfo != NULL)
+		sce_paf_memcpy(outBounds, m_debugInfo->dopBounds, sizeof(m_debugInfo->dopBounds));
 	else
-		sce_paf_memset(dst, 0, sizeof(m_fileLog->buf28));
+		sce_paf_memset(outBounds, 0, sizeof(m_debugInfo->dopBounds));
 	return 0;
 }
 
 /* (0x811897BC) */
-int LocationLogger::GetBuf48(void *dst)
+int LocationLogger::GetDopInfo(float *outDop)
 {
-	if (m_fileLog != NULL)
-		sce_paf_memcpy(dst, m_fileLog->buf48, sizeof(m_fileLog->buf48));
+	if (m_debugInfo != NULL)
+		sce_paf_memcpy(outDop, m_debugInfo->dopInfo, sizeof(m_debugInfo->dopInfo));
 	else
-		sce_paf_memset(dst, 0, sizeof(m_fileLog->buf48));
+		sce_paf_memset(outDop, 0, sizeof(m_debugInfo->dopInfo));
 	return 0;
 }
 
 /* (0x811897DC) */
-int LocationLogger::SetBuf48(const void *src)
+int LocationLogger::SetDopInfo(const float *dop)
 {
-	if (m_fileLog != NULL)
-		sce_paf_memcpy(m_fileLog->buf48, src, sizeof(m_fileLog->buf48));
+	if (m_debugInfo != NULL)
+		sce_paf_memcpy(m_debugInfo->dopInfo, dop, sizeof(m_debugInfo->dopInfo));
 	return 0;
 }
 
@@ -655,15 +499,16 @@ int LocationLogger::CountUr0Files(int *outCount)
 }
 
 /* (0x81189884) */
-int LocationLogger::GetBuf58(void *dst)
+int LocationLogger::GetGpsSnapshot(void *dst)
 {
-	if (m_fileLog != NULL) {
+	if (m_debugInfo != NULL) {
 		if (sceKernelLockLwMutex(&m_mutex, 1, NULL) == 0) {
-			sce_paf_memcpy(dst, m_fileLog->buf58, sizeof(m_fileLog->buf58));
+			sce_paf_memcpy(dst, &m_debugInfo->gpsSnapshot,
+				       sizeof(m_debugInfo->gpsSnapshot));
 			sceKernelUnlockLwMutex(&m_mutex, 1);
 		}
 	} else {
-		sce_paf_memset(dst, 0, sizeof(m_fileLog->buf58));
+		sce_paf_memset(dst, 0, sizeof(m_debugInfo->gpsSnapshot));
 	}
 	return 0;
 }
@@ -757,34 +602,34 @@ int LocationLogger::SyncDatFiles(int fromUx0)
 }
 
 /* (0x81189B98) */
-int LocationLogger::SetField190(int val)
+int LocationLogger::SetForceXtraDownload(int enabled)
 {
-	if (m_fileLog != NULL)
-		m_fileLog->field190 = val;
+	if (m_debugInfo != NULL)
+		m_debugInfo->forceXtraDownload = enabled;
 	return 0;
 }
 
 /* (0x81189BA4) */
-int LocationLogger::GetField190()
+int LocationLogger::GetForceXtraDownload()
 {
-	if (m_fileLog != NULL)
-		return m_fileLog->field190;
+	if (m_debugInfo != NULL)
+		return m_debugInfo->forceXtraDownload;
 	return 0;
 }
 
 /* (0x81189BB0) */
-int LocationLogger::SetField194(int val)
+int LocationLogger::SetXtraSourceMode(int mode)
 {
-	if (m_fileLog != NULL)
-		m_fileLog->field194 = val;
+	if (m_debugInfo != NULL)
+		m_debugInfo->xtraSourceMode = mode;
 	return 0;
 }
 
 /* (0x81189BBC) */
-int LocationLogger::GetField194()
+int LocationLogger::GetXtraSourceMode()
 {
-	if (m_fileLog != NULL)
-		return m_fileLog->field194;
+	if (m_debugInfo != NULL)
+		return m_debugInfo->xtraSourceMode;
 	return 0;
 }
 
@@ -828,15 +673,15 @@ int LocationLogger::ClearHistoryFiles()
 }
 
 /* (0x81189CB2) */
-int LocationLogger::GetField198AndArr(int *outVal, int *outArr)
+int LocationLogger::GetCellInfo(int *outRadioIf, int *outCellInfo)
 {
-	if (m_fileLog != NULL) {
-		*outVal = m_fileLog->field198;
-		outArr[0] = m_fileLog->arr19C[0];
-		outArr[1] = m_fileLog->arr19C[1];
-		outArr[2] = m_fileLog->arr19C[2];
-		outArr[3] = m_fileLog->arr19C[3];
-		outArr[4] = m_fileLog->arr19C[4];
+	if (m_debugInfo != NULL) {
+		*outRadioIf = m_debugInfo->cellRadioIf;
+		outCellInfo[0] = m_debugInfo->cellInfo[0];
+		outCellInfo[1] = m_debugInfo->cellInfo[1];
+		outCellInfo[2] = m_debugInfo->cellInfo[2];
+		outCellInfo[3] = m_debugInfo->cellInfo[3];
+		outCellInfo[4] = m_debugInfo->cellInfo[4];
 	}
 	return 0;
 }
@@ -863,7 +708,7 @@ int LocationLogTimeoutTask::OnNotify()
 	if (m_logger->m_writer != NULL) {
 		m_logger->m_mask = 0;
 		sceRegMgrSetKeyInt("/CONFIG/LOCATION", "enable_log", 1);
-		locationLogWriterStop(m_logger->m_writer);
+		m_logger->m_writer->Stop();
 		if (m_logger->m_writer != NULL)
 			delete m_logger->m_writer;
 		m_logger->m_writer = NULL;

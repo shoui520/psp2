@@ -3,25 +3,11 @@
  * 0x81196BB8-0x811976D0, sti 0x811975D4). Sony's class/state names ("ProviderGpsStateMachine",
  * "PROVIDER_GPS_STATE_*") come from its log strings.
  */
-#include "location_service.h"
+#include "location_internal.h"
 #include <std/string.h>
 
-extern void *g_locationManager;				/* 0x815496B4 */
-extern void *g_locationLogger;				/* 0x815496B8 */
-extern void locationLoggerPrintf(void *logger, int level, const char *fmt, ...);
-extern int locationTaskSchedule(void *task, unsigned int delayMs); /* 0x8118A780 */
-extern int locationMgrRegisterTask(void *mgr, void *task); /* 0x8118AACE */
-extern int locationMgrUnregisterTask(void *mgr, void *task); /* 0x8118AB62 */
-
-extern void *locationDeviceGetInstance(void);		/* 0x811935AE */
-extern int gpsCtrlAddListener(void *gpsCtrl, void *listener); /* 0x81194294 */
-extern int gpsCtrlRemoveListener(void *gpsCtrl, void *listener); /* 0x811942C4 */
-extern int gpsCtrlOpen(void *gpsCtrl);			/* 0x811942F6 */
-extern int gpsCtrlStart(void *gpsCtrl, int mode);	/* 0x8119435C */
-extern int gpsCtrlStop(void *gpsCtrl);			/* 0x811943CE */
-extern int gpsCtrlClose(void *gpsCtrl);			/* 0x8119443E */
-extern int gpsDrvGetStatus(int *outStatus);		/* 0x8144FDE8 */
-extern int gpsDrvGetData(void *data, int arg);		/* 0x8144FDF0 */
+extern int gpsDrvGetStatus(int *outStatus);			/* 0x8144FDE8 */
+extern int gpsDrvGetData(GpsLocation *data, GpsSatellites *satellites); /* 0x8144FDF0 */
 
 enum ProviderGpsStateId {
 	PROVIDER_GPS_STATE_NO_DEVICE = 0,
@@ -32,27 +18,6 @@ enum ProviderGpsStateId {
 	PROVIDER_GPS_STATE_DATA_RECEIVED = 5,
 	PROVIDER_GPS_STATE_ALREADY_RECEIVED = 6,
 	PROVIDER_GPS_STATE_REQ_STOP = 7
-};
-
-class ProviderGpsStateMachine;
-class ProviderGpsEvent;
-
-class ProviderGpsResetListener {
-public:
-	virtual void OnReset() = 0;
-};
-
-class ProviderGpsState {
-public:
-	virtual int HandleEvent(ProviderGpsEvent *ev, ProviderGpsStateMachine *sm) = 0;
-	virtual int GetStateId() = 0;
-	virtual ~ProviderGpsState() {}
-};
-
-class ProviderGpsEvent {
-public:
-	virtual int Dispatch(ProviderGpsState *state, ProviderGpsStateMachine *sm) = 0;
-	virtual ~ProviderGpsEvent() {}
 };
 
 class ProviderGpsStateNoDevice : public ProviderGpsState {
@@ -112,70 +77,10 @@ static ProviderGpsStateDataRecv s_pgStateDataRecv;
 static ProviderGpsStateAlreadyRecv s_pgStateAlreadyRecv;
 static ProviderGpsStateReqStop s_pgStateReqStop;
 
-class ProviderGpsController;
-
-class ProviderGpsStateMachine {
-public:
-	virtual ~ProviderGpsStateMachine() {}
-	virtual int ChangeState(int nextState);			/* 0x81196BB8 (+8) */
-	virtual int InitState();				/* 0x81196CE0 (+12) */
-	virtual int TermState() { return 0; }			/* (+16) */
-
-	SceKernelLwMutexWork m_mutex;				/* +8 (+16 in ctrl) */
-	int m_mutexResult;					/* +40 (+48 in ctrl) */
-	ProviderGpsState *m_state;				/* +44 (+52 in ctrl) */
-	ProviderGpsController *m_ctrl;				/* +48 (+56 in ctrl) */
-};
-
-class ProviderGpsNotifyTask {
-public:
-	virtual ~ProviderGpsNotifyTask() {}
-	virtual int OnNotify();					/* 0x81197112 */
-
-	int m_queued;						/* +4 */
-	int m_active;						/* +8 */
-	int m_notifyArg;					/* +12 (+76 in ctrl) */
-	ProviderGpsController *m_ctrl;				/* +16 (+80 in ctrl) */
-};
-
-class ProviderGpsController {
-public:
-	virtual void OnGpsStateChanged(int nextState);		/* 0x8119746C */
-	virtual void OnGpsEvent(int notifyId, int notifyCount, int notifyArg); /* 0x8119749A */
-
-	int Init();						/* 0x81197138 */
-	int Term();						/* 0x8119719E */
-	int Open(SceUID cbId);					/* 0x811971EE */
-	int Start(int mode);					/* 0x8119725E */
-	int Stop();						/* 0x811972CE */
-	int Close();						/* 0x81197330 */
-	int GetData(void *data, int arg);			/* 0x8119739A */
-	int GetStatus(int *outStatus);				/* 0x811973D8 */
-	int AddResetListener(ProviderGpsResetListener *listener); /* 0x8119743E */
-
-	void *m_gpsCtrl;					/* +4 */
-	ProviderGpsStateMachine m_sm;				/* +8..+59 */
-	int m_pad60;						/* +60 */
-	ProviderGpsNotifyTask m_notifyTask;			/* +64..+83 */
-	int m_startMode;					/* +84 */
-	SceUID m_cbId;						/* +88 */
-	ProviderGpsResetListener *m_resetListener;		/* +92 */
-};
-
-static int gpsCtrlStateId(void *gpsCtrl)
-{
-	struct StateBase {
-		virtual int HandleEvent(void *, void *);
-		virtual int GetStateId();
-	};
-	StateBase *st = *(StateBase **)((char *)gpsCtrl + 60);
-	return st->GetStateId();
-}
-
 static void notifyIfNotEmu(ProviderGpsController *ctrl, int arg)
 {
-	unsigned char *dev = (unsigned char *)locationDeviceGetInstance();
-	if (ctrl->m_cbId >= 0 && dev[140] == 0)
+	DriverManager *dev = locationDeviceGetInstance();
+	if (ctrl->m_cbId >= 0 && dev->m_emuPower == 0)
 		sceKernelNotifyCallback(ctrl->m_cbId, arg);
 }
 
@@ -287,57 +192,56 @@ int ProviderGpsStateMachine::ChangeState(int nextState)
 	switch (nextState) {
 	case PROVIDER_GPS_STATE_NO_DEVICE:
 		if (g_locationLogger != NULL)
-			locationLoggerPrintf(g_locationLogger, 8,
-					     "Changing to PROVIDER_GPS_STATE_NO_DEVICE state\n");
+			g_locationLogger->Log(
+				8, "Changing to PROVIDER_GPS_STATE_NO_DEVICE state\n");
 		m_state = &s_pgStateNoDevice;
 		break;
 	case PROVIDER_GPS_STATE_WAIT_OPEN:
 		if (g_locationLogger != NULL)
-			locationLoggerPrintf(g_locationLogger, 8,
-					     "Changing to PROVIDER_GPS_STATE_WAIT_OPEN state\n");
+			g_locationLogger->Log(
+				8, "Changing to PROVIDER_GPS_STATE_WAIT_OPEN state\n");
 		m_state = &s_pgStateWaitOpen;
 		break;
 	case PROVIDER_GPS_STATE_WAIT_START:
 		if (g_locationLogger != NULL)
-			locationLoggerPrintf(g_locationLogger, 8,
-					     "Changing to PROVIDER_GPS_STATE_WAIT_START state\n");
+			g_locationLogger->Log(
+				8, "Changing to PROVIDER_GPS_STATE_WAIT_START state\n");
 		m_state = &s_pgStateWaitStart;
 		break;
 	case PROVIDER_GPS_STATE_REQ_START:
 		if (g_locationLogger != NULL)
-			locationLoggerPrintf(g_locationLogger, 8,
-					     "Changing to PROVIDER_GPS_STATE_REQ_START state\n");
+			g_locationLogger->Log(
+				8, "Changing to PROVIDER_GPS_STATE_REQ_START state\n");
 		m_state = &s_pgStateReqStart;
 		break;
 	case PROVIDER_GPS_STATE_STATE_BUSY:
 		if (g_locationLogger != NULL)
-			locationLoggerPrintf(g_locationLogger, 8,
-					     "Changing to PROVIDER_GPS_STATE_STATE_BUSY state\n");
+			g_locationLogger->Log(
+				8, "Changing to PROVIDER_GPS_STATE_STATE_BUSY state\n");
 		m_state = &s_pgStateBusy;
 		break;
 	case PROVIDER_GPS_STATE_DATA_RECEIVED:
 		if (g_locationLogger != NULL)
-			locationLoggerPrintf(g_locationLogger, 8,
-					     "Changing to PROVIDER_GPS_STATE_DATA_RECEIVED state\n");
+			g_locationLogger->Log(
+				8, "Changing to PROVIDER_GPS_STATE_DATA_RECEIVED state\n");
 		m_state = &s_pgStateDataRecv;
 		break;
 	case PROVIDER_GPS_STATE_ALREADY_RECEIVED:
 		if (g_locationLogger != NULL)
-			locationLoggerPrintf(g_locationLogger, 8,
-					     "Changing to PROVIDER_GPS_STATE_ALREADY_RECEIVED state\n");
+			g_locationLogger->Log(
+				8, "Changing to PROVIDER_GPS_STATE_ALREADY_RECEIVED state\n");
 		m_state = &s_pgStateAlreadyRecv;
 		break;
 	case PROVIDER_GPS_STATE_REQ_STOP:
 		if (g_locationLogger != NULL)
-			locationLoggerPrintf(g_locationLogger, 8,
-					     "Changing to PROVIDER_GPS_STATE_REQ_STOP state\n");
+			g_locationLogger->Log(
+				8, "Changing to PROVIDER_GPS_STATE_REQ_STOP state\n");
 		m_state = &s_pgStateReqStop;
 		break;
 	default:
 		if (g_locationLogger != NULL)
-			locationLoggerPrintf(g_locationLogger, 8,
-					     "ProviderGpsStateMachine invalid NextState %d\n",
-					     nextState);
+			g_locationLogger->Log(8, "ProviderGpsStateMachine invalid NextState %d\n",
+					      nextState);
 		return SCE_LOCATION_ERROR_FATAL_ERROR;
 	}
 	return 0;
@@ -354,28 +258,27 @@ int ProviderGpsStateMachine::InitState()
 int ProviderGpsEventOpen::Dispatch(ProviderGpsState *state, ProviderGpsStateMachine *sm)
 {
 	(void)state;
-	void *gpsCtrl = sm->m_ctrl->m_gpsCtrl;
-	SceKernelLwMutexWork *mtx = (SceKernelLwMutexWork *)((char *)gpsCtrl + 24);
-	int ret = sceKernelLockLwMutex(mtx, 1, NULL);
+	GpsCtrlManager *gpsCtrl = sm->m_ctrl->m_gpsCtrl;
+	int ret = sceKernelLockLwMutex(&gpsCtrl->m_sm.m_mutex, 1, NULL);
 	if (ret == 0) {
-		switch (gpsCtrlStateId(gpsCtrl)) {
-		case 0:
-			ret = gpsCtrlOpen(gpsCtrl);
+		switch (gpsCtrl->m_sm.m_state->GetStateId()) {
+		case GPS_CTRL_STATE_CLOSED:
+			ret = gpsCtrl->Open();
 			if (ret == 0)
 				sm->ChangeState(PROVIDER_GPS_STATE_WAIT_START);
 			break;
-		case 1:
-		case 2:
-		case 3:
+		case GPS_CTRL_STATE_OPENED:
+		case GPS_CTRL_STATE_START_REQ:
+		case GPS_CTRL_STATE_STARTED:
 			sm->ChangeState(PROVIDER_GPS_STATE_WAIT_START);
 			break;
-		case 4:
+		case GPS_CTRL_STATE_STOP_REQ:
 			ret = (int)0x8039000B;
 			break;
 		default:
 			break;
 		}
-		int uret = sceKernelUnlockLwMutex(mtx, 1);
+		int uret = sceKernelUnlockLwMutex(&gpsCtrl->m_sm.m_mutex, 1);
 		if (uret != 0)
 			return uret;
 	}
@@ -387,41 +290,40 @@ int ProviderGpsEventStart::Dispatch(ProviderGpsState *state, ProviderGpsStateMac
 {
 	(void)state;
 	ProviderGpsController *ctrl = sm->m_ctrl;
-	void *gpsCtrl = ctrl->m_gpsCtrl;
-	SceKernelLwMutexWork *mtx = (SceKernelLwMutexWork *)((char *)gpsCtrl + 24);
-	int ret = sceKernelLockLwMutex(mtx, 1, NULL);
+	GpsCtrlManager *gpsCtrl = ctrl->m_gpsCtrl;
+	int ret = sceKernelLockLwMutex(&gpsCtrl->m_sm.m_mutex, 1, NULL);
 	if (ret == 0) {
-		switch (gpsCtrlStateId(gpsCtrl)) {
-		case 0:
+		switch (gpsCtrl->m_sm.m_state->GetStateId()) {
+		case GPS_CTRL_STATE_CLOSED:
 			ret = (int)0x80390004;
 			sm->ChangeState(PROVIDER_GPS_STATE_WAIT_OPEN);
 			break;
-		case 1:
-			ret = gpsCtrlStart(gpsCtrl, m_mode);
+		case GPS_CTRL_STATE_OPENED:
+			ret = gpsCtrl->Start(m_mode);
 			if (ret == 0) {
 				sm->ChangeState(PROVIDER_GPS_STATE_REQ_START);
 				if (ctrl->m_resetListener != NULL)
 					ctrl->m_resetListener->OnReset();
 			}
 			break;
-		case 2:
-		case 4:
+		case GPS_CTRL_STATE_START_REQ:
+		case GPS_CTRL_STATE_STOP_REQ:
 			sm->ChangeState(PROVIDER_GPS_STATE_REQ_START);
 			ret = 0;
 			if (ctrl->m_resetListener != NULL)
 				ctrl->m_resetListener->OnReset();
 			break;
-		case 3:
+		case GPS_CTRL_STATE_STARTED:
 			sm->ChangeState(PROVIDER_GPS_STATE_STATE_BUSY);
 			ctrl->m_notifyTask.m_notifyArg = 0x10000;
-			ret = locationTaskSchedule(&ctrl->m_notifyTask, 1);
+			ret = ctrl->m_notifyTask.Schedule(1);
 			if (ret == 0 && ctrl->m_resetListener != NULL)
 				ctrl->m_resetListener->OnReset();
 			break;
 		default:
 			break;
 		}
-		int uret = sceKernelUnlockLwMutex(mtx, 1);
+		int uret = sceKernelUnlockLwMutex(&gpsCtrl->m_sm.m_mutex, 1);
 		if (uret != 0)
 			ret = uret;
 	}
@@ -433,14 +335,13 @@ int ProviderGpsEventStartResult::Dispatch(ProviderGpsState *state, ProviderGpsSt
 {
 	(void)state;
 	ProviderGpsController *ctrl = sm->m_ctrl;
-	SceKernelLwMutexWork *mtx = (SceKernelLwMutexWork *)((char *)ctrl->m_gpsCtrl + 24);
-	int ret = sceKernelLockLwMutex(mtx, 1, NULL);
+	int ret = sceKernelLockLwMutex(&ctrl->m_gpsCtrl->m_sm.m_mutex, 1, NULL);
 	if (ret == 0) {
 		if ((m_arg & 0xFF) != 0)
 			sm->ChangeState(PROVIDER_GPS_STATE_WAIT_START);
 		else
 			sm->ChangeState(PROVIDER_GPS_STATE_STATE_BUSY);
-		int uret = sceKernelUnlockLwMutex(mtx, 1);
+		int uret = sceKernelUnlockLwMutex(&ctrl->m_gpsCtrl->m_sm.m_mutex, 1);
 		if (uret != 0)
 			ret = uret;
 	}
@@ -470,32 +371,31 @@ int ProviderGpsEventStop::Dispatch(ProviderGpsState *state, ProviderGpsStateMach
 {
 	(void)state;
 	ProviderGpsController *ctrl = sm->m_ctrl;
-	void *gpsCtrl = ctrl->m_gpsCtrl;
-	SceKernelLwMutexWork *mtx = (SceKernelLwMutexWork *)((char *)gpsCtrl + 24);
-	int ret = sceKernelLockLwMutex(mtx, 1, NULL);
+	GpsCtrlManager *gpsCtrl = ctrl->m_gpsCtrl;
+	int ret = sceKernelLockLwMutex(&gpsCtrl->m_sm.m_mutex, 1, NULL);
 	if (ret == 0) {
-		switch (gpsCtrlStateId(gpsCtrl)) {
-		case 0:
-		case 1:
-		case 2:
-		case 3:
-			ret = gpsCtrlStop(gpsCtrl);
+		switch (gpsCtrl->m_sm.m_state->GetStateId()) {
+		case GPS_CTRL_STATE_CLOSED:
+		case GPS_CTRL_STATE_OPENED:
+		case GPS_CTRL_STATE_START_REQ:
+		case GPS_CTRL_STATE_STARTED:
+			ret = gpsCtrl->Stop();
 			if (ret == 0) {
 				sm->ChangeState(PROVIDER_GPS_STATE_REQ_STOP);
 			} else if (ret == (int)0x80390002) {
 				sm->ChangeState(PROVIDER_GPS_STATE_WAIT_START);
 				ctrl->m_notifyTask.m_notifyArg = 0x20000;
-				ret = locationTaskSchedule(&ctrl->m_notifyTask, 1);
+				ret = ctrl->m_notifyTask.Schedule(1);
 			}
 			break;
-		case 4:
+		case GPS_CTRL_STATE_STOP_REQ:
 			sm->ChangeState(PROVIDER_GPS_STATE_REQ_STOP);
 			ret = 0;
 			break;
 		default:
 			break;
 		}
-		int uret = sceKernelUnlockLwMutex(mtx, 1);
+		int uret = sceKernelUnlockLwMutex(&gpsCtrl->m_sm.m_mutex, 1);
 		if (uret != 0)
 			return uret;
 	}
@@ -506,27 +406,26 @@ int ProviderGpsEventStop::Dispatch(ProviderGpsState *state, ProviderGpsStateMach
 int ProviderGpsEventStopSimple::Dispatch(ProviderGpsState *state, ProviderGpsStateMachine *sm)
 {
 	(void)state;
-	void *gpsCtrl = sm->m_ctrl->m_gpsCtrl;
-	SceKernelLwMutexWork *mtx = (SceKernelLwMutexWork *)((char *)gpsCtrl + 24);
-	int ret = sceKernelLockLwMutex(mtx, 1, NULL);
+	GpsCtrlManager *gpsCtrl = sm->m_ctrl->m_gpsCtrl;
+	int ret = sceKernelLockLwMutex(&gpsCtrl->m_sm.m_mutex, 1, NULL);
 	if (ret == 0) {
-		switch (gpsCtrlStateId(gpsCtrl)) {
-		case 0:
-		case 1:
-		case 2:
-		case 3:
-			ret = gpsCtrlStop(gpsCtrl);
+		switch (gpsCtrl->m_sm.m_state->GetStateId()) {
+		case GPS_CTRL_STATE_CLOSED:
+		case GPS_CTRL_STATE_OPENED:
+		case GPS_CTRL_STATE_START_REQ:
+		case GPS_CTRL_STATE_STARTED:
+			ret = gpsCtrl->Stop();
 			if (ret == 0)
 				sm->ChangeState(PROVIDER_GPS_STATE_REQ_STOP);
 			break;
-		case 4:
+		case GPS_CTRL_STATE_STOP_REQ:
 			sm->ChangeState(PROVIDER_GPS_STATE_REQ_STOP);
 			ret = 0;
 			break;
 		default:
 			break;
 		}
-		int uret = sceKernelUnlockLwMutex(mtx, 1);
+		int uret = sceKernelUnlockLwMutex(&gpsCtrl->m_sm.m_mutex, 1);
 		if (uret != 0)
 			return uret;
 	}
@@ -539,7 +438,7 @@ int ProviderGpsEventRestartOnStop::Dispatch(ProviderGpsState *state, ProviderGps
 	(void)state;
 	ProviderGpsController *ctrl = sm->m_ctrl;
 	if ((m_arg & 0xFF) == 0)
-		return gpsCtrlStart(ctrl->m_gpsCtrl, ctrl->m_startMode);
+		return ctrl->m_gpsCtrl->Start(ctrl->m_startMode);
 	sm->ChangeState(PROVIDER_GPS_STATE_WAIT_START);
 	notifyIfNotEmu(ctrl, 0x10030);
 	return 0;
@@ -558,14 +457,14 @@ int ProviderGpsEventStopResult::Dispatch(ProviderGpsState *state, ProviderGpsSta
 int ProviderGpsEventCloseRaw::Dispatch(ProviderGpsState *state, ProviderGpsStateMachine *sm)
 {
 	(void)state;
-	return gpsCtrlClose(sm->m_ctrl->m_gpsCtrl);
+	return sm->m_ctrl->m_gpsCtrl->Close();
 }
 
 /* 0x8119709C */
 int ProviderGpsEventClose::Dispatch(ProviderGpsState *state, ProviderGpsStateMachine *sm)
 {
 	(void)state;
-	int ret = gpsCtrlClose(sm->m_ctrl->m_gpsCtrl);
+	int ret = sm->m_ctrl->m_gpsCtrl->Close();
 	if (ret == 0)
 		sm->ChangeState(PROVIDER_GPS_STATE_WAIT_OPEN);
 	return ret;
@@ -637,9 +536,9 @@ int ProviderGpsController::Init()
 		ret = m_sm.InitState();
 	m_resetListener = NULL;
 	if (ret == 0) {
-		ret = gpsCtrlAddListener(m_gpsCtrl, this);
+		ret = m_gpsCtrl->AddListener(this);
 		if (ret == 0)
-			return locationMgrRegisterTask(g_locationManager, &m_notifyTask);
+			return g_locationManager->RegisterTask(&m_notifyTask);
 	}
 	return ret;
 }
@@ -647,8 +546,8 @@ int ProviderGpsController::Init()
 /* 0x8119719E */
 int ProviderGpsController::Term()
 {
-	locationMgrUnregisterTask(g_locationManager, &m_notifyTask);
-	gpsCtrlRemoveListener(m_gpsCtrl, this);
+	g_locationManager->UnregisterTask(&m_notifyTask);
+	m_gpsCtrl->RemoveListener(this);
 
 	int ret = 0;
 	if (m_sm.m_mutexResult == 0) {
@@ -724,9 +623,9 @@ int ProviderGpsController::Close()
 }
 
 /* 0x8119739A */
-int ProviderGpsController::GetData(void *data, int arg)
+int ProviderGpsController::GetData(GpsLocation *data, GpsSatellites *satellites)
 {
-	int ret = gpsDrvGetData(data, arg);
+	int ret = gpsDrvGetData(data, satellites);
 	if (ret == 0) {
 		ret = sceKernelLockLwMutex(&m_sm.m_mutex, 1, NULL);
 		if (ret == 0) {
@@ -764,7 +663,7 @@ int ProviderGpsController::AddResetListener(ProviderGpsResetListener *listener)
 }
 
 /* 0x8119746C */
-void ProviderGpsController::OnGpsStateChanged(int nextState)
+void ProviderGpsController::OnStateChanged(int nextState)
 {
 	if (sceKernelLockLwMutex(&m_sm.m_mutex, 1, NULL) == 0) {
 		if (nextState == 0)

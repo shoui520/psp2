@@ -3,7 +3,7 @@
  * 0x811912F0-0x81193078, sti 0x81193006). Sony's class name
  * ("ClientManager::NotifyIfPositionConditionMet() ConfirmStart") comes from its log string.
  */
-#include "location_service.h"
+#include "location_internal.h"
 #include <appmgr/appmgr.h>
 #include <std/string.h>
 
@@ -13,173 +13,8 @@ int SceShell_6B8772A2(int pid);
 int SceShell_794BF5BE(int handle);
 }
 
-extern void *g_locationLogger;				/* 0x815496B8 */
-extern void locationLoggerPrintf(void *logger, int level, const char *fmt, ...);
-
-extern void *locationConfirmGetInstance(void);		/* 0x81187F14 */
-extern int locationConfirmShow(void *mgr, int appId, SceLocationHandle handle, SceUInt32 arg,
-			       int dataArg);		/* 0x81188902 */
-
-extern void *locationPosMgrGetPermMgr(void *pm);	/* 0x8118BF8C */
-extern void *locationPosMgrGetBridge(void *pm);		/* 0x8118BF90 */
-extern void *locationPosMgrGetHeadingMgr(void *pm);	/* 0x81409E68 */
-extern int locationPosMgrComparePriority(void *pm, SceUInt32 *a, const SceUInt32 *b); /* 0x8118CE9E */
-extern int locationPosMgrIsAppActive(void *pm, int appId, bool *outActive); /* 0x8118CEDC */
-extern int locationPosMgrNotifyEvent(void *pm, SceLocationHandle handle, int result, int type); /* 0x8118DAEE */
-extern int locationPosMgrNotifyHeading(void *pm, SceLocationHandle handle, int result); /* 0x8118DB20 */
-extern double locationPosMgrCalcDistance(void *pm, const SceLocationLocationInfo *a,
-					 const SceLocationLocationInfo *b); /* 0x8118DB2E */
-
-extern int locationPermOpenApp(void *perm, int appId, signed char *outSlot,
-			       const SceUInt32 *lmethod); /* 0x8118EB84 */
-extern int locationPermCloseApp(void *perm, signed char slot); /* 0x8118EC74 */
-extern signed char locationPermFindSlot(void *perm, const char *titleId); /* 0x8118ECF8 */
-extern int locationPermGetPermission(void *perm, signed char slot, int *outPerm); /* 0x8118ED6A */
-extern int locationPermSetPermission(void *permMgr, const char *titleId, int perm,
-				     signed char slot); /* 0x8118EDC6 */
-extern int locationPermCheckPermission(void *perm, signed char slot); /* 0x8118EEB6 */
-extern int locationPermConfirmApp(void *perm, signed char slot); /* 0x8118F006 */
-extern int locationPermNeedsConfirm(void *perm, signed char slot, bool *outNeeds); /* 0x8118F1F2 */
-
-extern int locationDecodeInterval(const SceUInt32 *lmethod); /* 0x8118F32E */
-extern int locationDecodeDistance(const SceUInt32 *lmethod); /* 0x8118F39C */
-extern int locationInitLocationInfo(SceLocationLocationInfo *info); /* 0x8118F4BC */
-extern int locationCompareTick(const SceRtcTick *a, const SceRtcTick *b); /* 0x8118F54A */
-extern SceLocationHandle locationMakeHandle(int idx);	/* 0x8118F562 */
-extern unsigned int locationHandleToIndex(SceLocationHandle handle); /* 0x8118F568 */
-
-extern int locationSettingGetAppTitleId(void *setting, int appId, char *outTitleId); /* 0x8118FB08 */
-extern int locationHeadingMgrGetHeading(void *hm, const SceUInt32 *hmethod,
-					SceLocationHeadingInfo *out); /* 0x811964BE */
-extern int locationBridgeGetDefaultHeadInterval(void *bridge); /* 0x8142AE1C */
-
-struct ClientSlot {
-	int appId;					/* +0 */
-	SceUInt32 mode;					/* +4 */
-	SceUInt32 stateFlags;				/* +8 */
-	int shellLockHandle;				/* +12 */
-	signed char privacySlot;			/* +16 */
-	unsigned char pendingConfirm;			/* +17 */
-	unsigned char pad18[6];				/* +18..+23 */
-	int pendingCmd;					/* +24 */
-	int pendingArg;					/* +28 */
-	SceRtcTick pendingTimestamp;			/* +32 */
-	int pendingError;				/* +40 */
-	int pad44;					/* +44 */
-	SceUInt32 lmethod;				/* +48 */
-	SceUInt32 distance;				/* +52 */
-	int lastLocResult;				/* +56 */
-	int pad60;					/* +60 */
-	SceUInt64 lastFailTime;				/* +64 */
-	SceUInt32 locInterval;				/* +72 */
-	SceUInt32 locElapsed;				/* +76 */
-	SceLocationLocationInfo lastLocInfo;		/* +80..+127 (48B) */
-	SceUInt64 getStartTime;				/* +128 */
-	SceUInt32 getTimeout;				/* +136 */
-	SceUInt32 getTypeFlags;				/* +140 */
-	SceRtcTick queryTimestamp;			/* +144 */
-	SceUInt64 queryStartTime;			/* +152 */
-	SceUInt32 queryTimeout;				/* +160 */
-	int pad164;					/* +164 */
-	SceLocationLocationInfo queryResultInfo;	/* +168..+215 (48B) */
-	int queryResultCode;				/* +216 */
-	int pad220;					/* +220 */
-	SceUInt32 hmethod;				/* +224 */
-	float headAngle;				/* +228 */
-	int lastHeadResult;				/* +232 */
-	SceUInt32 headInterval;				/* +236 */
-	SceUInt32 headElapsed;				/* +240 */
-	float cachedHeading;				/* +244 */
-	float lastTrueHeading;				/* +248 */
-	int pad252;					/* +252 */
-	SceLocationHeadingInfo lastHeadInfo;		/* +256..+287 (32B) */
-};
-
-struct MethodBitSummary {
-	int pad0;
-	unsigned char hasGps;				/* +4 */
-	unsigned char hasWifi;				/* +5 */
-	unsigned char has3G;				/* +6 */
-	unsigned char hasEmu;				/* +7 */
-	unsigned char pad8;
-};
-
-struct LocationSettingVtbl {
-	virtual void vfn0();
-	virtual void vfn1();
-	virtual void vfn2();
-	virtual void vfn3();
-	virtual int HasGps();
-	virtual int IsEmulationMode();
-	virtual int IsDeviceEnabled();			/* +24 */
-};
-
-class ClientManager {
-public:
-	ClientManager(void *posMgr);			/* 0x811912F0 */
-	virtual ~ClientManager();			/* 0x81191348 / 0x81191372 */
-
-	int Init();					/* 0x811913A2 */
-	int GetCount();					/* 0x811913C8 */
-	bool IsValidHandle(int appId, SceLocationHandle handle); /* 0x811913CE */
-	int Close(int appId, SceLocationHandle handle);	/* 0x811913F2 */
-	int Open(int appId, SceLocationHandle *handle, SceUInt32 *lmethod, SceUInt32 *hmethod,
-		 SceUInt32 *mode);			/* 0x81191482 */
-	int Reopen(int appId, SceLocationHandle handle, SceUInt32 *lmethod,
-		   SceUInt32 *hmethod);			/* 0x8119159A */
-	int GetMethod(int appId, SceLocationHandle handle, SceUInt32 *lmethod,
-		      SceUInt32 *hmethod);		/* 0x81191638 */
-	int SetCachedHeading(SceLocationHandle handle, float val); /* 0x811916B2 */
-	int GetCachedHeading(SceLocationHandle handle, float *out); /* 0x811916D8 */
-	static void AccumulateLMethod(MethodBitSummary *sum, const SceUInt32 *lmethod); /* 0x81191706 */
-	int GetActiveMethods(SceUInt32 *outLMethod, SceUInt32 *outHMethod); /* 0x81191748 */
-	int UpdateShellLock(ClientSlot *slot);		/* 0x811918E4 */
-	int StartLocationCallback(int appId, SceLocationHandle handle, SceUInt32 distance); /* 0x8119195E */
-	int HasActiveWifiHistory(unsigned char *out);	/* 0x811919FA */
-	int StartGetLocation(SceLocationHandle handle, SceUInt32 timeout, SceUInt32 typeFlags,
-			     const SceRtcTick *queryTs); /* 0x81191A70 */
-	int GetQueryResult(SceLocationHandle handle, SceLocationLocationInfo *outInfo); /* 0x81191B42 */
-	int StartHeadingCallback(int appId, SceLocationHandle handle, float angle); /* 0x81191BCE */
-	int StopLocationCallback(int appId, SceLocationHandle handle); /* 0x81191C60 */
-	int CancelGetLocation(SceLocationHandle handle, SceUInt32 typeFlags); /* 0x81191CF8 */
-	int StopHeadingCallback(int appId, SceLocationHandle handle); /* 0x81191DFA */
-	int CheckPositionCondition(ClientSlot *slot, const SceLocationLocationInfo *info,
-				   int result, SceUInt32 elapsed); /* 0x81191E8A */
-	int SetPendingRequest(SceLocationHandle handle, int arg, int cmd, const SceRtcTick *ts); /* 0x81191F7E */
-	int SetPendingConfirm(SceLocationHandle handle, unsigned char flag); /* 0x81191FDC */
-	int GetPendingConfirm(SceLocationHandle handle, unsigned char *outFlag); /* 0x8119201E */
-	int NeedsConfirm(SceLocationHandle handle, bool *outNeeds); /* 0x81192062 */
-	int GetMode(int appId, SceLocationHandle handle, SceUInt32 *outMode); /* 0x8119208A */
-	int NotifyIfPositionConditionMet(const SceLocationLocationInfo *info, int result,
-					 SceUInt32 elapsed, const SceRtcTick *queryTs); /* 0x811920CC */
-	int CheckHeadingCondition(ClientSlot *slot, const SceLocationHeadingInfo *info, int result); /* 0x811925EA */
-	int NotifyHeadingUpdate(int result, SceUInt32 elapsed); /* 0x81192678 */
-	int GetStateFlags(int appId, SceLocationHandle handle); /* 0x811927DA */
-	int GetTypeFlags(int appId, SceLocationHandle handle); /* 0x81192812 */
-	int CheckPermission(SceLocationHandle handle);	/* 0x8119284C */
-	int SetHandlePermission(SceLocationHandle handle, int perm); /* 0x81192874 */
-	int GetHandlePermission(SceLocationHandle handle, int *outPerm); /* 0x81192AD0 */
-	int GetPendingRequest(int *outAppId, SceLocationHandle handle, int *outArg, int *outCmd,
-			      SceRtcTick *outTs);	/* 0x81192B24 */
-	int GetPendingCmd(SceLocationHandle handle, int *outCmd); /* 0x81192BBA */
-	int SetPendingError(SceLocationHandle handle, int err); /* 0x81192BFE */
-	int GetActiveCount(int *outCount);		/* 0x81192C40 */
-	int OnPrivacySlotChanged(signed char privSlot);	/* 0x81192CFC */
-	int ClearPermissionErrors();			/* 0x81192DD2 */
-	int OnGlobalPermissionChanged();		/* 0x81192E32 */
-	int ConfirmHandle(int appId, SceLocationHandle handle); /* 0x81192F04 */
-	int AreAllAppsInactive();			/* 0x81192F72 */
-
-	void *m_posMgr;					/* +4 */
-	ClientSlot m_clients[8];			/* +8..+2311 (0x900) */
-	signed char m_count;				/* +2312 */
-	int m_mutexResult;				/* +2316 */
-	SceKernelLwMutexWork m_mutex;			/* +2320..+2351 */
-	int m_activeGetCount;				/* +2352 */
-};
-
 /* 0x811912F0 */
-ClientManager::ClientManager(void *posMgr)
+ClientManager::ClientManager(PositionManager *posMgr)
 	: m_posMgr(posMgr)
 	, m_count(0)
 	, m_mutexResult(-1)
@@ -229,7 +64,7 @@ int ClientManager::Close(int appId, SceLocationHandle handle)
 		m_count--;
 		ret = sceKernelUnlockLwMutex(&m_mutex, 1);
 		if (ret == 0)
-			return locationPermCloseApp(locationPosMgrGetPermMgr(m_posMgr), privSlot);
+			return m_posMgr->GetPermMgr()->CloseApp(privSlot);
 	}
 	return ret;
 }
@@ -242,7 +77,7 @@ int ClientManager::Open(int appId, SceLocationHandle *handle, SceUInt32 *lmethod
 		return SCE_LOCATION_ERROR_TOO_MANY_HANDLES;
 
 	signed char privSlot = -1;
-	int ret = locationPermOpenApp(locationPosMgrGetPermMgr(m_posMgr), appId, &privSlot, lmethod);
+	int ret = m_posMgr->GetPermMgr()->OpenApp(appId, &privSlot, lmethod);
 	if (ret == 0) {
 		signed char idx = 0;
 		for (; idx < 8; idx++) {
@@ -260,15 +95,15 @@ int ClientManager::Open(int appId, SceLocationHandle *handle, SceUInt32 *lmethod
 			slot->mode = *mode;
 			slot->stateFlags = 1;
 			slot->privacySlot = privSlot;
-			slot->lmethod = *lmethod;
-			slot->hmethod = *hmethod;
-			slot->locInterval = (SceUInt32)locationDecodeInterval(lmethod);
+			slot->location.lmethod = *lmethod;
+			slot->heading.hmethod = *hmethod;
+			slot->location.locInterval = (SceUInt32)locationDecodeInterval(lmethod);
 			SceUInt32 headInt = (SceUInt32)locationDecodeDistance(hmethod);
-			slot->headInterval = headInt;
+			slot->heading.headInterval = headInt;
 			if (headInt == 0)
-				slot->headInterval = (SceUInt32)locationBridgeGetDefaultHeadInterval(
-					locationPosMgrGetBridge(m_posMgr));
-			slot->cachedHeading = 0.0f;
+				slot->heading.headInterval =
+					(SceUInt32)m_posMgr->GetBridge()->m_interval;
+			slot->heading.cachedHeading = 0.0f;
 			m_count++;
 			ret = sceKernelUnlockLwMutex(&m_mutex, 1);
 			if (ret == 0) {
@@ -290,15 +125,15 @@ int ClientManager::Reopen(int appId, SceLocationHandle handle, SceUInt32 *lmetho
 
 	if (m_clients[locationHandleToIndex(handle)].appId == appId) {
 		ClientSlot *slot = &m_clients[locationHandleToIndex(handle)];
-		slot->lmethod = *lmethod;
-		slot->hmethod = *hmethod;
-		slot->locInterval = (SceUInt32)locationDecodeInterval(lmethod);
+		slot->location.lmethod = *lmethod;
+		slot->heading.hmethod = *hmethod;
+		slot->location.locInterval = (SceUInt32)locationDecodeInterval(lmethod);
 		SceUInt32 headInt = (SceUInt32)locationDecodeDistance(hmethod);
-		slot->headInterval = headInt;
+		slot->heading.headInterval = headInt;
 		if (headInt == 0)
-			slot->headInterval = (SceUInt32)locationBridgeGetDefaultHeadInterval(
-				locationPosMgrGetBridge(m_posMgr));
-		slot->cachedHeading = 0.0f;
+			slot->heading.headInterval =
+				(SceUInt32)m_posMgr->GetBridge()->m_interval;
+		slot->heading.cachedHeading = 0.0f;
 		ret = 0;
 	} else {
 		ret = SCE_LOCATION_ERROR_INVALID_HANDLE;
@@ -321,9 +156,9 @@ int ClientManager::GetMethod(int appId, SceLocationHandle handle, SceUInt32 *lme
 	if (m_clients[locationHandleToIndex(handle)].appId == appId) {
 		ClientSlot *slot = &m_clients[locationHandleToIndex(handle)];
 		if (lmethod != NULL)
-			*lmethod = slot->lmethod;
+			*lmethod = slot->location.lmethod;
 		if (hmethod != NULL)
-			*hmethod = slot->hmethod;
+			*hmethod = slot->heading.hmethod;
 		ret = 0;
 	} else {
 		ret = SCE_LOCATION_ERROR_INVALID_HANDLE;
@@ -338,7 +173,7 @@ int ClientManager::GetMethod(int appId, SceLocationHandle handle, SceUInt32 *lme
 /* 0x811916B2 */
 int ClientManager::SetCachedHeading(SceLocationHandle handle, float val)
 {
-	m_clients[locationHandleToIndex(handle)].cachedHeading = val;
+	m_clients[locationHandleToIndex(handle)].heading.cachedHeading = val;
 	return 0;
 }
 
@@ -347,7 +182,7 @@ int ClientManager::GetCachedHeading(SceLocationHandle handle, float *out)
 {
 	if (out == NULL)
 		return SCE_LOCATION_ERROR_FATAL_ERROR;
-	*out = m_clients[locationHandleToIndex(handle)].cachedHeading;
+	*out = m_clients[locationHandleToIndex(handle)].heading.cachedHeading;
 	return 0;
 }
 
@@ -395,16 +230,20 @@ int ClientManager::GetActiveMethods(SceUInt32 *outLMethod, SceUInt32 *outHMethod
 			int seen = 0;
 			for (int i = 0; seen < m_count; i++) {
 				if ((m_clients[i].stateFlags & 1) != 0) {
-					AccumulateLMethod(&sum, &m_clients[i].lmethod);
-					SceUInt32 curInt = (SceUInt32)locationDecodeInterval(&lmethod);
-					SceUInt32 slotInt = (SceUInt32)locationDecodeInterval(&m_clients[i].lmethod);
+					AccumulateLMethod(&sum, &m_clients[i].location.lmethod);
+					SceUInt32 curInt =
+						(SceUInt32)locationDecodeInterval(&lmethod);
+					SceUInt32 slotInt = (SceUInt32)locationDecodeInterval(
+						&m_clients[i].location.lmethod);
 					if (curInt > slotInt)
-						lmethod = (lmethod & ~0x70U) | (m_clients[i].lmethod & 0x70U);
-					if ((m_clients[i].lmethod & 0x100) == 0)
+						lmethod = (lmethod & ~0x70U) |
+							  (m_clients[i].location.lmethod & 0x70U);
+					if ((m_clients[i].location.lmethod & 0x100) == 0)
 						lmethod &= ~0x100U;
-					if (locationPosMgrComparePriority(m_posMgr, &hmethod,
-									  &m_clients[i].hmethod) == -1)
-						hmethod = (hmethod & ~7U) | (m_clients[i].hmethod & 7U);
+					if (m_posMgr->ComparePriority(
+						    &hmethod, &m_clients[i].heading.hmethod) == -1)
+						hmethod = (hmethod & ~7U) |
+							  (m_clients[i].heading.hmethod & 7U);
 					seen++;
 				}
 			}
@@ -438,13 +277,13 @@ int ClientManager::UpdateShellLock(ClientSlot *slot)
 	int ret = 0;
 	if (((slot->stateFlags & 8) != 0 || (slot->stateFlags & 4) != 0 ||
 	     (slot->stateFlags & 0x40) != 0) &&
-	    locationPermCheckPermission(locationPosMgrGetPermMgr(m_posMgr), slot->privacySlot) == 0 &&
+	    m_posMgr->GetPermMgr()->CheckPermission(slot->privacySlot) == 0 &&
 	    (slot->stateFlags & 2) == 0) {
 		if (slot->shellLockHandle == 0) {
 			SceAppMgrAppStatus status;
 			ret = sceAppMgrGetStatusByAppId(slot->appId, &status);
 			if (ret == 0)
-				slot->shellLockHandle = SceShell_6B8772A2(*(int *)((char *)&status + 52));
+				slot->shellLockHandle = SceShell_6B8772A2(status.processId);
 		}
 	} else {
 		if (slot->shellLockHandle != 0) {
@@ -467,11 +306,11 @@ int ClientManager::StartLocationCallback(int appId, SceLocationHandle handle, Sc
 		if ((slot->stateFlags & 8) != 0) {
 			ret = SCE_LOCATION_ERROR_MULTIPLE_CALLBACK;
 		} else {
-			slot->distance = distance;
-			slot->lastLocResult = 0;
+			slot->location.distance = distance;
+			slot->location.lastLocResult = 0;
 			slot->stateFlags |= 8;
-			slot->lastFailTime = 0;
-			slot->locElapsed = 0;
+			slot->location.lastFailTime = 0;
+			slot->location.locElapsed = 0;
 			ret = UpdateShellLock(slot);
 		}
 	} else {
@@ -493,7 +332,7 @@ int ClientManager::HasActiveWifiHistory(unsigned char *out)
 		int seen = 0;
 		for (int i = 0; seen < m_count && i < 8 && !active; i++) {
 			if ((m_clients[i].stateFlags & 1) != 0) {
-				active = (m_clients[i].getTypeFlags & 2) != 0;
+				active = (m_clients[i].location.getTypeFlags & 2) != 0;
 				seen++;
 			}
 		}
@@ -521,16 +360,16 @@ int ClientManager::StartGetLocation(SceLocationHandle handle, SceUInt32 timeout,
 		if (typeFlags == 4) {
 			slot->stateFlags |= 0x40;
 			if (queryTs != NULL)
-				slot->queryTimestamp = *queryTs;
-			slot->queryStartTime = sceRtcGetAccumulativeTimeForUser();
-			slot->queryTimeout = timeout;
+				slot->location.queryTimestamp = *queryTs;
+			slot->location.queryStartTime = sceRtcGetAccumulativeTimeForUser();
+			slot->location.queryTimeout = timeout;
 		} else {
 			slot->stateFlags |= 4;
-			slot->getStartTime = sceRtcGetAccumulativeTimeForUser();
-			slot->getTimeout = timeout;
+			slot->location.getStartTime = sceRtcGetAccumulativeTimeForUser();
+			slot->location.getTimeout = timeout;
 			m_activeGetCount++;
 		}
-		slot->getTypeFlags |= typeFlags;
+		slot->location.getTypeFlags |= typeFlags;
 		ret = UpdateShellLock(slot);
 	}
 
@@ -546,13 +385,13 @@ int ClientManager::GetQueryResult(SceLocationHandle handle, SceLocationLocationI
 	int ret = sceKernelLockLwMutex(&m_mutex, 1, NULL);
 	if (ret == 0) {
 		ClientSlot *slot = &m_clients[locationHandleToIndex(handle)];
-		if (slot->pendingError != 0) {
+		if (slot->pending.error != 0) {
 			locationInitLocationInfo(outInfo);
-			ret = slot->pendingError;
-			outInfo->timestamp = slot->pendingTimestamp;
+			ret = slot->pending.error;
+			outInfo->timestamp = slot->pending.timestamp;
 		} else {
-			*outInfo = slot->queryResultInfo;
-			ret = slot->queryResultCode;
+			*outInfo = slot->location.queryResultInfo;
+			ret = slot->location.queryResultCode;
 		}
 		int uret = sceKernelUnlockLwMutex(&m_mutex, 1);
 		if (uret < 0)
@@ -573,10 +412,10 @@ int ClientManager::StartHeadingCallback(int appId, SceLocationHandle handle, flo
 		if ((slot->stateFlags & 0x10) != 0) {
 			ret = SCE_LOCATION_ERROR_MULTIPLE_CALLBACK;
 		} else {
-			slot->headAngle = angle;
-			slot->lastHeadResult = 0;
+			slot->heading.headAngle = angle;
+			slot->heading.lastHeadResult = 0;
 			slot->stateFlags |= 0x10;
-			slot->headElapsed = 0;
+			slot->heading.headElapsed = 0;
 			ret = 0;
 		}
 	} else {
@@ -599,8 +438,9 @@ int ClientManager::StopLocationCallback(int appId, SceLocationHandle handle)
 	if (m_clients[locationHandleToIndex(handle)].appId == appId) {
 		ClientSlot *slot = &m_clients[locationHandleToIndex(handle)];
 		if ((slot->stateFlags & 8) != 0) {
-			slot->distance = 0;
-			sce_paf_memset(&slot->lastLocInfo, 0, sizeof(slot->lastLocInfo));
+			slot->location.distance = 0;
+			sce_paf_memset(&slot->location.lastLocInfo, 0,
+				       sizeof(slot->location.lastLocInfo));
 			slot->stateFlags &= ~8U;
 			ret = UpdateShellLock(slot);
 		} else {
@@ -627,25 +467,25 @@ int ClientManager::CancelGetLocation(SceLocationHandle handle, SceUInt32 typeFla
 	if ((typeFlags != 4 && (slot->stateFlags & 4) != 0) ||
 	    (typeFlags == 4 && (slot->stateFlags & 0x40) != 0)) {
 		if (typeFlags == 4) {
-			slot->queryTimestamp.tick = 0;
-			slot->getTypeFlags &= ~4U;
-			locationInitLocationInfo(&slot->queryResultInfo);
-			slot->queryResultInfo.timestamp = slot->queryTimestamp;
-			slot->queryResultCode = SCE_LOCATION_INFO_UNDETERMINED_LOCATION;
-			slot->queryStartTime = 0;
-			slot->queryTimeout = 0;
+			slot->location.queryTimestamp.tick = 0;
+			slot->location.getTypeFlags &= ~4U;
+			locationInitLocationInfo(&slot->location.queryResultInfo);
+			slot->location.queryResultInfo.timestamp = slot->location.queryTimestamp;
+			slot->location.queryResultCode = SCE_LOCATION_INFO_UNDETERMINED_LOCATION;
+			slot->location.queryStartTime = 0;
+			slot->location.queryTimeout = 0;
 			slot->stateFlags &= ~0x40U;
 		} else {
-			slot->getTimeout = 0;
-			slot->getTypeFlags &= ~3U;
-			slot->getStartTime = 0;
+			slot->location.getTimeout = 0;
+			slot->location.getTypeFlags &= ~3U;
+			slot->location.getStartTime = 0;
 			slot->stateFlags &= ~0x24U;
 			m_activeGetCount--;
 		}
-		slot->pendingCmd = 0;
-		slot->pendingArg = 0;
-		slot->pendingTimestamp.tick = 0;
-		slot->pendingError = 0;
+		slot->pending.cmd = 0;
+		slot->pending.arg = 0;
+		slot->pending.timestamp.tick = 0;
+		slot->pending.error = 0;
 		ret = UpdateShellLock(slot);
 	} else {
 		ret = SCE_LOCATION_INFO_GET_LOCATION_CANCELED;
@@ -667,8 +507,9 @@ int ClientManager::StopHeadingCallback(int appId, SceLocationHandle handle)
 	if (m_clients[locationHandleToIndex(handle)].appId == appId) {
 		ClientSlot *slot = &m_clients[locationHandleToIndex(handle)];
 		if ((slot->stateFlags & 0x10) != 0) {
-			slot->headAngle = 0.0f;
-			sce_paf_memset(&slot->lastHeadInfo, 0, sizeof(slot->lastHeadInfo));
+			slot->heading.headAngle = 0.0f;
+			sce_paf_memset(&slot->heading.lastHeadInfo, 0,
+				       sizeof(slot->heading.lastHeadInfo));
 			slot->stateFlags &= ~0x10U;
 			ret = 0;
 		} else {
@@ -688,23 +529,28 @@ int ClientManager::StopHeadingCallback(int appId, SceLocationHandle handle)
 int ClientManager::CheckPositionCondition(ClientSlot *slot, const SceLocationLocationInfo *info,
 					  int result, SceUInt32 elapsed)
 {
-	if (slot->lastLocInfo.timestamp.tick != 0 && result == slot->lastLocResult) {
+	if (slot->location.lastLocInfo.timestamp.tick != 0 &&
+	    result == slot->location.lastLocResult) {
 		if (result == 0) {
-			if (slot->distance != 0) {
-				double dist = locationPosMgrCalcDistance(m_posMgr, &slot->lastLocInfo, info);
-				return (dist >= (double)slot->distance) ? 1 : 0;
+			if (slot->location.distance != 0) {
+				double dist = m_posMgr->CalcDistance(&slot->location.lastLocInfo,
+								     info);
+				return (dist >= (double)slot->location.distance) ? 1 : 0;
 			}
-			return ((slot->locElapsed + elapsed) >= slot->locInterval) ? 1 : 0;
+			return ((slot->location.locElapsed + elapsed) >=
+				slot->location.locInterval)
+				       ? 1
+				       : 0;
 		}
 		return 0;
 	}
 
 	SceUInt64 now = sceRtcGetAccumulativeTimeForUser();
 	if ((slot->mode & 0xFF) == 0 && result == SCE_LOCATION_INFO_UNDETERMINED_LOCATION) {
-		if (slot->lastFailTime != 0) {
-			(void)((now - slot->lastFailTime) / 1000U);
+		if (slot->location.lastFailTime != 0) {
+			(void)((now - slot->location.lastFailTime) / 1000U);
 		}
-		slot->lastFailTime = now;
+		slot->location.lastFailTime = now;
 		return 0;
 	}
 	if ((slot->mode & 0xFFFFFF00U) != 0x100 || slot->pendingConfirm == 0)
@@ -721,10 +567,10 @@ int ClientManager::SetPendingRequest(SceLocationHandle handle, int arg, int cmd,
 		return ret;
 
 	ClientSlot *slot = &m_clients[locationHandleToIndex(handle)];
-	slot->pendingCmd = cmd;
-	slot->pendingArg = arg;
+	slot->pending.cmd = cmd;
+	slot->pending.arg = arg;
 	if (cmd == 8)
-		slot->pendingTimestamp = *ts;
+		slot->pending.timestamp = *ts;
 
 	int uret = sceKernelUnlockLwMutex(&m_mutex, 1);
 	if (uret < 0)
@@ -762,7 +608,7 @@ int ClientManager::GetPendingConfirm(SceLocationHandle handle, unsigned char *ou
 int ClientManager::NeedsConfirm(SceLocationHandle handle, bool *outNeeds)
 {
 	signed char privSlot = m_clients[locationHandleToIndex(handle)].privacySlot;
-	return locationPermNeedsConfirm(locationPosMgrGetPermMgr(m_posMgr), privSlot, outNeeds);
+	return m_posMgr->GetPermMgr()->NeedsConfirm(privSlot, outNeeds);
 }
 
 /* 0x8119208A */
@@ -784,7 +630,7 @@ int ClientManager::NotifyIfPositionConditionMet(const SceLocationLocationInfo *i
 		return ret;
 
 	SceUInt64 now = sceRtcGetAccumulativeTimeForUser();
-	void *permMgr = locationPosMgrGetPermMgr(m_posMgr);
+	LocationPrivacySettings *permMgr = m_posMgr->GetPermMgr();
 	int errOut = 0;
 	unsigned char seen = 0;
 
@@ -795,9 +641,7 @@ int ClientManager::NotifyIfPositionConditionMet(const SceLocationLocationInfo *i
 
 		int curRes = result;
 		if (curRes != 0) {
-			LocationSettingVtbl *setting =
-				*(LocationSettingVtbl **)((char *)m_posMgr + 24);
-			if (setting->IsDeviceEnabled() == 0) {
+			if (m_posMgr->m_config->IsDeviceEnabled() == 0) {
 				if ((slot->mode & 0xFF) != 0 || (slot->mode & 0xF0000) == 0x10000)
 					curRes = SCE_LOCATION_INFO_DISABLE_DEVICE;
 			}
@@ -806,51 +650,53 @@ int ClientManager::NotifyIfPositionConditionMet(const SceLocationLocationInfo *i
 		if ((slot->stateFlags & 4) != 0 || (slot->stateFlags & 0x40) != 0) {
 			bool fire = false;
 			if (queryTs != NULL) {
-				if ((slot->getTypeFlags & 4) != 0 &&
-				    locationCompareTick(&slot->queryTimestamp, queryTs) != 0) {
+				if ((slot->location.getTypeFlags & 4) != 0 &&
+				    locationCompareTick(&slot->location.queryTimestamp, queryTs) !=
+					    0) {
 					if (curRes != SCE_LOCATION_INFO_UNDETERMINED_LOCATION) {
 						fire = true;
-					} else if (slot->queryTimeout != 0 &&
-						   (slot->queryStartTime > now ||
-						    ((SceUInt32)(now - slot->queryStartTime) / 1000000U) >=
-							    slot->queryTimeout)) {
+					} else if (slot->location.queryTimeout != 0 &&
+						   (slot->location.queryStartTime > now ||
+						    ((SceUInt32)(now -
+								 slot->location.queryStartTime) /
+						     1000000U) >= slot->location.queryTimeout)) {
 						fire = true;
 					}
 				}
-			} else if ((slot->getTypeFlags & 4) == 0) {
+			} else if ((slot->location.getTypeFlags & 4) == 0) {
 				if (curRes == 0 || curRes == SCE_LOCATION_INFO_DISABLE_DEVICE ||
-				    (slot->getTimeout != 0 &&
-				     (slot->getStartTime > now ||
-				      ((SceUInt32)(now - slot->getStartTime) / 1000000U) >=
-					      slot->getTimeout))) {
+				    (slot->location.getTimeout != 0 &&
+				     (slot->location.getStartTime > now ||
+				      ((SceUInt32)(now - slot->location.getStartTime) / 1000000U) >=
+					      slot->location.getTimeout))) {
 					fire = true;
 				}
 			}
 
 			if (fire) {
-				if ((slot->getTypeFlags & 4) != 0) {
-					slot->queryResultInfo = *info;
-					if (slot->queryTimeout != 0 &&
-					    (slot->queryStartTime > now ||
-					     ((SceUInt32)(now - slot->queryStartTime) / 1000000U) >=
-						     slot->queryTimeout))
-						slot->queryResultCode = SCE_LOCATION_INFO_TIMEOUT;
+				if ((slot->location.getTypeFlags & 4) != 0) {
+					slot->location.queryResultInfo = *info;
+					if (slot->location.queryTimeout != 0 &&
+					    (slot->location.queryStartTime > now ||
+					     ((SceUInt32)(now - slot->location.queryStartTime) /
+					      1000000U) >= slot->location.queryTimeout))
+						slot->location.queryResultCode =
+							SCE_LOCATION_INFO_TIMEOUT;
 					else
-						slot->queryResultCode = curRes;
-					slot->queryResultInfo.timestamp = *queryTs;
-					locationPosMgrNotifyEvent(m_posMgr, locationMakeHandle(idx),
-								  slot->queryResultCode, 3);
+						slot->location.queryResultCode = curRes;
+					slot->location.queryResultInfo.timestamp = *queryTs;
+					m_posMgr->NotifyEvent(locationMakeHandle(idx),
+							      slot->location.queryResultCode, 3);
 				} else {
 					slot->stateFlags |= 0x20;
-					locationPosMgrNotifyEvent(m_posMgr, locationMakeHandle(idx),
-								  curRes, 0);
+					m_posMgr->NotifyEvent(locationMakeHandle(idx), curRes, 0);
 				}
 			}
 		}
 
 		if (queryTs == NULL && (slot->stateFlags & 8) != 0) {
-			slot->locElapsed += elapsed;
-			int permErr = locationPermCheckPermission(permMgr, slot->privacySlot);
+			slot->location.locElapsed += elapsed;
+			int permErr = permMgr->CheckPermission(slot->privacySlot);
 			if (permErr != 0)
 				curRes = permErr;
 
@@ -860,29 +706,34 @@ int ClientManager::NotifyIfPositionConditionMet(const SceLocationLocationInfo *i
 				if ((mode & 0xFFFFFF00U) == 0x100) {
 					bool needsConfirm = false;
 					bool appActive = false;
-					int activeRet = locationPosMgrIsAppActive(m_posMgr, slot->appId,
-										  &appActive);
-					if (NeedsConfirm(locationMakeHandle(idx), &needsConfirm) == 0 &&
+					int activeRet =
+						m_posMgr->IsAppActive(slot->appId, &appActive);
+					if (NeedsConfirm(locationMakeHandle(idx), &needsConfirm) ==
+						    0 &&
 					    needsConfirm && (slot->stateFlags & 2) == 0 &&
 					    activeRet == 0 && appActive) {
-						void *confirmMgr = locationConfirmGetInstance();
+						LocationConfirmMgr *confirmMgr =
+							locationConfirmGetInstance();
 						if (confirmMgr != NULL) {
 							unsigned char pend = 0;
-							if (GetPendingConfirm(locationMakeHandle(idx),
-									      &pend) != 0 ||
+							if (GetPendingConfirm(
+								    locationMakeHandle(idx),
+								    &pend) != 0 ||
 							    pend == 0) {
 								if (g_locationLogger != NULL)
-									locationLoggerPrintf(
-										g_locationLogger, 8,
+									g_locationLogger->Log(
+										8,
 										"ClientManager::NotifyIfPositionConditionMet() ConfirmStart\n");
-								locationConfirmShow(confirmMgr,
-										    slot->appId,
-										    locationMakeHandle(idx),
-										    0, 0);
-								SetPendingConfirm(locationMakeHandle(idx), 1);
-								SetPendingRequest(locationMakeHandle(idx), 0, 64, NULL);
-								locationPosMgrNotifyEvent(
-									m_posMgr,
+								confirmMgr->Show(
+									slot->appId,
+									locationMakeHandle(idx), 0,
+									0, NULL, false);
+								SetPendingConfirm(
+									locationMakeHandle(idx), 1);
+								SetPendingRequest(
+									locationMakeHandle(idx), 0,
+									64, NULL);
+								m_posMgr->NotifyEvent(
 									locationMakeHandle(idx),
 									curRes, 6);
 							}
@@ -892,15 +743,15 @@ int ClientManager::NotifyIfPositionConditionMet(const SceLocationLocationInfo *i
 			}
 
 			if (CheckPositionCondition(slot, info, curRes, elapsed) != 0) {
-				int nret = locationPosMgrNotifyEvent(m_posMgr, locationMakeHandle(idx),
-								     curRes, 1);
+				int nret = m_posMgr->NotifyEvent(locationMakeHandle(idx), curRes,
+								 1);
 				if (nret != 0)
 					errOut = nret;
-				slot->lastLocInfo = *info;
-				slot->lastLocResult = curRes;
+				slot->location.lastLocInfo = *info;
+				slot->location.lastLocResult = curRes;
 			}
-			if ((slot->locElapsed + elapsed) >= slot->locInterval)
-				slot->locElapsed = 0;
+			if ((slot->location.locElapsed + elapsed) >= slot->location.locInterval)
+				slot->location.locElapsed = 0;
 		}
 		seen++;
 	}
@@ -915,18 +766,18 @@ int ClientManager::NotifyIfPositionConditionMet(const SceLocationLocationInfo *i
 int ClientManager::CheckHeadingCondition(ClientSlot *slot, const SceLocationHeadingInfo *info,
 					 int result)
 {
-	if (result != slot->lastHeadResult)
+	if (result != slot->heading.lastHeadResult)
 		return 1;
 	if (result == 0) {
-		if (slot->headAngle == 0.0f)
+		if (slot->heading.headAngle == 0.0f)
 			return 1;
-		float diff = slot->lastHeadInfo.heading - info->heading;
+		float diff = slot->heading.lastHeadInfo.heading - info->heading;
 		if (diff < 0.0f)
 			diff = -diff;
 		double wrap = 360.0 - (double)diff;
 		if ((double)diff < wrap)
 			wrap = (double)diff;
-		if ((float)wrap >= slot->headAngle)
+		if ((float)wrap >= slot->heading.headAngle)
 			return 1;
 	}
 	return 0;
@@ -947,25 +798,24 @@ int ClientManager::NotifyHeadingUpdate(int result, SceUInt32 elapsed)
 			continue;
 
 		if ((slot->stateFlags & 0x10) != 0) {
-			slot->headElapsed += elapsed;
-			if (slot->headAngle != 0.0f ||
-			    (slot->headElapsed + elapsed) >= slot->headInterval) {
+			slot->heading.headElapsed += elapsed;
+			if (slot->heading.headAngle != 0.0f ||
+			    (slot->heading.headElapsed + elapsed) >= slot->heading.headInterval) {
 				SceLocationHeadingInfo info;
-				locationHeadingMgrGetHeading(locationPosMgrGetHeadingMgr(m_posMgr),
-							     &slot->hmethod, &info);
-				slot->lastTrueHeading = info.heading;
-				if (slot->lastHeadInfo.timestamp.tick == 0 ||
+				m_posMgr->m_headingMgr->GetHeading(&slot->heading.hmethod, &info);
+				slot->heading.lastTrueHeading = info.heading;
+				if (slot->heading.lastHeadInfo.timestamp.tick == 0 ||
 				    CheckHeadingCondition(slot, &info, result) != 0) {
-					int nret = locationPosMgrNotifyHeading(
-						m_posMgr, locationMakeHandle(idx), result);
+					int nret = m_posMgr->NotifyHeading(locationMakeHandle(idx),
+									   result);
 					if (nret != 0)
 						errOut = nret;
-					slot->lastHeadInfo = info;
-					slot->lastHeadResult = result;
+					slot->heading.lastHeadInfo = info;
+					slot->heading.lastHeadResult = result;
 				}
 			}
-			if ((slot->headElapsed + elapsed) >= slot->headInterval)
-				slot->headElapsed = 0;
+			if ((slot->heading.headElapsed + elapsed) >= slot->heading.headInterval)
+				slot->heading.headElapsed = 0;
 		}
 		seen++;
 	}
@@ -988,7 +838,7 @@ int ClientManager::GetStateFlags(int appId, SceLocationHandle handle)
 int ClientManager::GetTypeFlags(int appId, SceLocationHandle handle)
 {
 	if (m_clients[locationHandleToIndex(handle)].appId == appId)
-		return (int)m_clients[locationHandleToIndex(handle)].getTypeFlags;
+		return (int)m_clients[locationHandleToIndex(handle)].location.getTypeFlags;
 	return 0;
 }
 
@@ -996,7 +846,7 @@ int ClientManager::GetTypeFlags(int appId, SceLocationHandle handle)
 int ClientManager::CheckPermission(SceLocationHandle handle)
 {
 	signed char privSlot = m_clients[locationHandleToIndex(handle)].privacySlot;
-	return locationPermCheckPermission(locationPosMgrGetPermMgr(m_posMgr), privSlot);
+	return m_posMgr->GetPermMgr()->CheckPermission(privSlot);
 }
 
 /* 0x81192874 */
@@ -1005,13 +855,11 @@ int ClientManager::SetHandlePermission(SceLocationHandle handle, int perm)
 	int ret = sceKernelLockLwMutex(&m_mutex, 1, NULL);
 	if (ret == 0) {
 		char titleId[32];
-		void *setting = *(void **)((char *)m_posMgr + 24);
 		int appId = m_clients[locationHandleToIndex(handle)].appId;
-		ret = locationSettingGetAppTitleId(setting, appId, titleId);
+		ret = m_posMgr->m_config->GetAppTitleId(appId, titleId);
 		if (ret >= 0) {
 			signed char privSlot = m_clients[locationHandleToIndex(handle)].privacySlot;
-			ret = locationPermSetPermission(locationPosMgrGetPermMgr(m_posMgr),
-							titleId, perm, privSlot);
+			ret = m_posMgr->GetPermMgr()->SetPermission(titleId, perm, privSlot);
 			if (ret == 0) {
 				if (sceKernelLockLwMutex(&m_mutex, 1, NULL) == 0) {
 					int seen = 0;
@@ -1033,24 +881,27 @@ int ClientManager::SetHandlePermission(SceLocationHandle handle, int perm)
 					else if (sce_paf_strncmp(titleId, "NPXS10095", 32) == 0)
 						pairedTitle = "NPXS10004";
 					if (pairedTitle != NULL) {
-						signed char pairedSlot = locationPermFindSlot(
-							locationPosMgrGetPermMgr(m_posMgr),
-							pairedTitle);
+						signed char pairedSlot =
+							m_posMgr->GetPermMgr()->FindSlot(
+								pairedTitle);
 						sce_paf_strncpy(titleId, pairedTitle, 32);
-						ret = locationPermSetPermission(
-							locationPosMgrGetPermMgr(m_posMgr),
+						ret = m_posMgr->GetPermMgr()->SetPermission(
 							titleId, perm, pairedSlot);
 						if (ret == 0 &&
 						    sceKernelLockLwMutex(&m_mutex, 1, NULL) == 0) {
 							int seen = 0;
 							for (int i = 0; seen < m_count; i++) {
-								if ((m_clients[i].stateFlags & 1) != 0) {
-									if (m_clients[i].privacySlot == pairedSlot)
-										ret = UpdateShellLock(&m_clients[i]);
+								if ((m_clients[i].stateFlags & 1) !=
+								    0) {
+									if (m_clients[i].privacySlot ==
+									    pairedSlot)
+										ret = UpdateShellLock(
+											&m_clients[i]);
 									seen++;
 								}
 							}
-							int uret = sceKernelUnlockLwMutex(&m_mutex, 1);
+							int uret = sceKernelUnlockLwMutex(&m_mutex,
+											  1);
 							if (uret != 0)
 								ret = uret;
 						}
@@ -1071,7 +922,7 @@ int ClientManager::GetHandlePermission(SceLocationHandle handle, int *outPerm)
 	int ret = sceKernelLockLwMutex(&m_mutex, 1, NULL);
 	if (ret == 0) {
 		signed char privSlot = m_clients[locationHandleToIndex(handle)].privacySlot;
-		ret = locationPermGetPermission(locationPosMgrGetPermMgr(m_posMgr), privSlot, outPerm);
+		ret = m_posMgr->GetPermMgr()->GetPermission(privSlot, outPerm);
 		int uret = sceKernelUnlockLwMutex(&m_mutex, 1);
 		if (uret < 0)
 			return uret;
@@ -1087,10 +938,10 @@ int ClientManager::GetPendingRequest(int *outAppId, SceLocationHandle handle, in
 	if (ret == 0) {
 		ClientSlot *slot = &m_clients[locationHandleToIndex(handle)];
 		*outAppId = slot->appId;
-		*outArg = slot->pendingArg;
-		*outCmd = slot->pendingCmd;
-		if (slot->pendingCmd == 8)
-			*outTs = slot->pendingTimestamp;
+		*outArg = slot->pending.arg;
+		*outCmd = slot->pending.cmd;
+		if (slot->pending.cmd == 8)
+			*outTs = slot->pending.timestamp;
 		int uret = sceKernelUnlockLwMutex(&m_mutex, 1);
 		if (uret < 0)
 			return uret;
@@ -1103,7 +954,7 @@ int ClientManager::GetPendingCmd(SceLocationHandle handle, int *outCmd)
 {
 	int ret = sceKernelLockLwMutex(&m_mutex, 1, NULL);
 	if (ret == 0) {
-		*outCmd = m_clients[locationHandleToIndex(handle)].pendingCmd;
+		*outCmd = m_clients[locationHandleToIndex(handle)].pending.cmd;
 		int uret = sceKernelUnlockLwMutex(&m_mutex, 1);
 		if (uret < 0)
 			return uret;
@@ -1116,7 +967,7 @@ int ClientManager::SetPendingError(SceLocationHandle handle, int err)
 {
 	int ret = sceKernelLockLwMutex(&m_mutex, 1, NULL);
 	if (ret == 0) {
-		m_clients[locationHandleToIndex(handle)].pendingError = err;
+		m_clients[locationHandleToIndex(handle)].pending.error = err;
 		int uret = sceKernelUnlockLwMutex(&m_mutex, 1);
 		if (uret < 0)
 			return uret;
@@ -1138,7 +989,7 @@ int ClientManager::GetActiveCount(int *outCount)
 				if (sret != 0) {
 					ret = sret;
 				} else {
-					if (*(int *)((char *)&status + 60) != 0) {
+					if (status.processRunRequested != 0) {
 						count++;
 						m_clients[i].stateFlags &= ~2U;
 					} else {
@@ -1175,22 +1026,23 @@ int ClientManager::OnPrivacySlotChanged(signed char privSlot)
 			ret = uret;
 	}
 
-	int ret2 = sceKernelLockLwMutex(&m_mutex, 1, NULL);
-	if (ret2 == 0) {
+	int clearRet = sceKernelLockLwMutex(&m_mutex, 1, NULL);
+	if (clearRet == 0) {
 		int seen = 0;
 		for (int i = 0; seen < m_count; i++) {
 			if ((m_clients[i].stateFlags & 1) != 0) {
 				if (m_clients[i].privacySlot == privSlot &&
-				    m_clients[i].lastLocResult == SCE_LOCATION_INFO_DENIED_BY_USER)
-					m_clients[i].lastLocResult = 0;
+				    m_clients[i].location.lastLocResult ==
+					    SCE_LOCATION_INFO_DENIED_BY_USER)
+					m_clients[i].location.lastLocResult = 0;
 				seen++;
 			}
 		}
 		int uret = sceKernelUnlockLwMutex(&m_mutex, 1);
 		if (uret < 0)
-			ret2 = uret;
+			clearRet = uret;
 	}
-	return (ret2 != 0) ? ret2 : ret;
+	return (clearRet != 0) ? clearRet : ret;
 }
 
 /* 0x81192DD2 */
@@ -1201,8 +1053,9 @@ int ClientManager::ClearPermissionErrors()
 		int seen = 0;
 		for (int i = 0; seen < m_count; i++) {
 			if ((m_clients[i].stateFlags & 1) != 0) {
-				if (m_clients[i].lastLocResult == SCE_LOCATION_INFO_DENIED_BY_USER)
-					m_clients[i].lastLocResult = 0;
+				if (m_clients[i].location.lastLocResult ==
+				    SCE_LOCATION_INFO_DENIED_BY_USER)
+					m_clients[i].location.lastLocResult = 0;
 				seen++;
 			}
 		}
@@ -1228,9 +1081,9 @@ int ClientManager::OnGlobalPermissionChanged()
 			if (uret != 0)
 				ret = uret;
 		}
-		int ret2 = ClearPermissionErrors();
-		if (ret2 != 0)
-			ret = ret2;
+		int clearRet = ClearPermissionErrors();
+		if (clearRet != 0)
+			ret = clearRet;
 		int uret = sceKernelUnlockLwMutex(&m_mutex, 1);
 		if (uret < 0)
 			return uret;
@@ -1246,7 +1099,7 @@ int ClientManager::ConfirmHandle(int appId, SceLocationHandle handle)
 		ret = SCE_LOCATION_ERROR_INVALID_HANDLE;
 		if (m_clients[locationHandleToIndex(handle)].appId == appId) {
 			signed char privSlot = m_clients[locationHandleToIndex(handle)].privacySlot;
-			ret = locationPermConfirmApp(locationPosMgrGetPermMgr(m_posMgr), privSlot);
+			ret = m_posMgr->GetPermMgr()->ConfirmApp(privSlot);
 		}
 		int uret = sceKernelUnlockLwMutex(&m_mutex, 1);
 		if (uret < 0)
@@ -1264,7 +1117,7 @@ int ClientManager::AreAllAppsInactive()
 		for (int i = 0; seen < m_count && allInactive != 0; i++) {
 			if ((m_clients[i].stateFlags & 1) != 0) {
 				bool active = false;
-				locationPosMgrIsAppActive(m_posMgr, m_clients[i].appId, &active);
+				m_posMgr->IsAppActive(m_clients[i].appId, &active);
 				if (active)
 					allInactive = 0;
 				seen++;

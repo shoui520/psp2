@@ -3,34 +3,8 @@
  * 0x81193078-0x811932A4, sti 0x81193232). Sony's class name ("DriverController::SetPowerStatus")
  * comes from its log string.
  */
-#include "location_service.h"
+#include "location_internal.h"
 #include <std/string.h>
-
-extern void *g_locationLogger;				/* 0x815496B8 */
-extern void locationLoggerPrintf(void *logger, int level, const char *fmt, ...);
-
-extern void *locationDeviceGetInstance(void);		/* 0x811935AE */
-extern int locationDeviceSetGpsPower(void *dev, unsigned char on); /* 0x811935BA */
-extern int locationDeviceSetWifiPower(void *dev, unsigned char on); /* 0x81193606 */
-extern int locationDeviceSet3GPower(void *dev, unsigned char on); /* 0x81193646 */
-extern int locationDeviceSetEmuPower(void *dev, unsigned char on); /* 0x81193692 */
-extern int locationDeviceSetEmuFile(void *dev, const char *path); /* 0x81193A28 */
-extern int locationDeviceSetExtraPower(void *dev, unsigned char on); /* 0x81193C28 */
-
-class DriverController {
-public:
-	DriverController(void *posMgr);			/* 0x811930A4 */
-	virtual ~DriverController();			/* 0x811930FC / 0x811930E8 */
-	virtual void OnUnused();			/* 0x811930E6 */
-
-	int SetEmulationFile(const char *path);		/* 0x81193078 */
-	int SetPowerStatus(unsigned char status);	/* 0x8119310A */
-
-	void *m_posMgr;					/* +4 */
-	unsigned char m_powerStatus;			/* +8 */
-	char m_emuFile[256];				/* +9 */
-	unsigned char m_emuFileDirty;			/* +265 */
-};
 
 /* 0x81193078 */
 int DriverController::SetEmulationFile(const char *path)
@@ -42,7 +16,7 @@ int DriverController::SetEmulationFile(const char *path)
 }
 
 /* 0x811930A4 */
-DriverController::DriverController(void *posMgr)
+DriverController::DriverController(PositionManager *posMgr)
 	: m_posMgr(posMgr)
 	, m_powerStatus(0)
 {
@@ -66,49 +40,45 @@ int DriverController::SetPowerStatus(unsigned char status)
 	int emu = status & 8;
 
 	if (g_locationLogger != NULL)
-		locationLoggerPrintf(g_locationLogger, 8,
-				     "DriverController::SetPowerStatus(0x%x) current[0x%x]\n",
-				     status, m_powerStatus);
+		g_locationLogger->Log(8, "DriverController::SetPowerStatus(0x%x) current[0x%x]\n",
+				      status, m_powerStatus);
 
 	if ((m_powerStatus & 8) == 0 || emu == 0 || m_emuFileDirty != 0) {
+		DriverManager *dev = locationDeviceGetInstance();
 		if (emu != 0) {
-			int r = locationDeviceSetGpsPower(locationDeviceGetInstance(), 0);
+			int r = dev->SetGpsPower(0);
 			if (r != 0)
 				ret = r;
-			r = locationDeviceSetWifiPower(locationDeviceGetInstance(), 0);
+			r = dev->SetWifiPower(0);
 			if (r != 0)
 				ret = r;
-			r = locationDeviceSet3GPower(locationDeviceGetInstance(), 0);
+			r = dev->Set3GPower(0);
 			if (r != 0)
 				ret = r;
-			locationDeviceSetExtraPower(locationDeviceGetInstance(), 0);
-			r = locationDeviceSetEmuFile(locationDeviceGetInstance(), m_emuFile);
+			dev->SetAssistPower(0);
+			r = dev->SetEmuFile(m_emuFile);
 			if (r != 0) {
 				ret = r;
 			} else {
 				m_emuFileDirty = 0;
-				r = locationDeviceSetEmuPower(locationDeviceGetInstance(), 1);
+				r = dev->SetEmuPower(1);
 				if (r != 0)
 					ret = r;
 			}
 		} else {
-			int r = locationDeviceSetEmuPower(locationDeviceGetInstance(), 0);
+			int r = dev->SetEmuPower(0);
 			if (r != 0)
 				ret = r;
-			r = locationDeviceSetGpsPower(locationDeviceGetInstance(),
-						      (status & 1) != 0);
+			r = dev->SetGpsPower((status & 1) != 0);
 			if (r != 0)
 				ret = r;
-			r = locationDeviceSetWifiPower(locationDeviceGetInstance(),
-						       (status & 2) != 0);
+			r = dev->SetWifiPower((status & 2) != 0);
 			if (r != 0)
 				ret = r;
-			r = locationDeviceSet3GPower(locationDeviceGetInstance(),
-						     (status & 4) != 0);
+			r = dev->Set3GPower((status & 4) != 0);
 			if (r != 0)
 				ret = r;
-			locationDeviceSetExtraPower(locationDeviceGetInstance(),
-						    (status & 0x10) != 0);
+			dev->SetAssistPower((status & 0x10) != 0);
 		}
 		if (ret == 0)
 			m_powerStatus = status;
