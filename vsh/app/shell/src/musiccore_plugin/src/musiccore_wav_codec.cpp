@@ -9,6 +9,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include "musiccore_pipeline_types.h"
+
 extern "C" {
 void *sce_paf_memcpy(void *dst, const void *src, SceSize len);
 int sce_paf_strcmp(const char *lhs, const char *rhs);
@@ -36,27 +38,6 @@ static const int WAVE_ERR_UNSUPPORTED = -2144862159; /* 0x80280031 */
 static const int WAVE_ERR_CORRUPT = -2144862158;     /* 0x80280032 */
 
 extern void *allocFromHeap(size_t size);
-extern void delayWorkerThread(SceUInt delayUs);
-
-struct SyncMutexStorage {
-    void *vtablePtr;
-    SceUID semaId;
-};
-
-struct SyncCondStorage {
-    void *vtablePtr;
-    SceUID eventFlagId;
-};
-
-extern int syncMutexLock(SyncMutexStorage *mutex);
-extern int syncMutexUnlock(SyncMutexStorage *mutex);
-extern int syncCondSignal(SyncCondStorage *cond, uint32_t bits);
-
-struct MediaInfoHandle {
-    void *vtablePtr;
-    uint32_t mediaFourcc;
-    uint8_t sharedFlag;
-};
 
 extern void decoderManagerReleaseMediaInfo(MediaInfoHandle **ioHandle, int forceRelease);
 extern void *wavMediaInfoConstruct(void *mem, const char *path);
@@ -70,9 +51,9 @@ struct WavFmtHeader {
     uint16_t bitsPerSample;
 };
 
-class WavCacheIoView {
+class WavCacheIo {
 public:
-    virtual ~WavCacheIoView() {}
+    virtual ~WavCacheIo() {}
     virtual int initialize() = 0;
     virtual int open() = 0;
     virtual int close() = 0;
@@ -85,43 +66,34 @@ public:
     virtual int flushCache() = 0;
     virtual int setCacheHint(int hintMode, int extra) = 0;
 
-    uint8_t baseStorage[60];
+    void *m_cacheHandle;
+    uint8_t m_initialized;
+    uint8_t m_padInit[3];
+    char *m_filePath;
+    void *m_fileObj;
+    void *m_fileRefCount;
+    int m_priorityMode;
+    int m_padPriority;
+    int64_t m_filePos;
+    int m_chunkSize;
+    int m_blockCount;
+    uint8_t m_foundChunks;
+    uint8_t m_padChunks[3];
+    uint32_t m_fmtOffset;
+    uint32_t m_fmtSize;
+    uint32_t m_dataOffset;
     uint32_t dataSize; /* +64 */
 };
 
-extern int wavCacheScanChunks(WavCacheIoView *io, uint8_t targetMask);
-extern int wavCacheReadFmtHeader(WavCacheIoView *io, WavFmtHeader *outFmt);
-extern int wavCacheReadDataRange(WavCacheIoView *io, uint32_t offset, uint32_t size,
+extern int wavCacheScanChunks(WavCacheIo *io, uint8_t targetMask);
+extern int wavCacheReadFmtHeader(WavCacheIo *io, WavFmtHeader *outFmt);
+extern int wavCacheReadDataRange(WavCacheIo *io, uint32_t offset, uint32_t size,
                                  void **outPtr, uint32_t *outSize);
 
-struct WavMediaInfoView : public MediaInfoHandle {
-    uint8_t pathStorage[2048];
-    WavCacheIoView *cacheIo; /* +2060 */
-};
-
-extern void parserFilterBaseInit(void *self, int filterKind, const char *threadName);
-extern void parserFilterBaseDestroy(void *self);
-extern void parserFilterSetOutputPipe(void *parser, void *sink);
-extern void *createAudioOutputFilter(int grainSize, int slotCount, void *producer,
-                                     int p1, int p2, int p3, int p4, int p5);
-extern void *createDecoderPipeline(void *parser, void *pipe, void *decoder, void *audioSink);
-extern bool decoderPipelineIsReady(const void *pipeline);
-extern void *decoderPipelineGetParser(void *pipeline);
-extern void *decoderPipelineGetAudio(void *pipeline);
-
-struct FilterDestroyable {
-    virtual ~FilterDestroyable() {}
-};
-
-struct ActiveFilterAttach {
-    virtual ~ActiveFilterAttach() {}
-    virtual void setEventListener(void *listener) = 0;
-};
-
-struct FilterReadyCheck {
-    virtual ~FilterReadyCheck() {}
-    virtual void setEventListener(void *listener) = 0;
-    virtual int isReady() = 0;
+struct WavMediaInfo : public MediaInfoHandle {
+    char mediaPath[2049]; /* +9..+2057 */
+    uint8_t padPath[2];   /* +2058..+2059 */
+    WavCacheIo *cacheIo;  /* +2060 */
 };
 
 struct WavPcmPacketOut {
@@ -174,14 +146,22 @@ static int mapWavParserError(int errCode)
 
 /* ===== WavParser (0x811FA3F4 - 0x811FAE27, size 112 bytes) ===== */
 
-class WavParser {
+class WavParser : public ParserFilterBase {
 public:
     explicit WavParser(const char *threadName);
     virtual ~WavParser();
 
-    int findCachedMediaInfo(const char *path, WavMediaInfoView **outInfo);
-    int setMediaInfo(WavMediaInfoView *mediaInfo);
-    int prefetchMediaInfo(WavMediaInfoView *mediaInfo);
+    virtual int onFrameConsumed(int frameFlags) { (void)frameFlags; return 0; }
+    virtual int openStream() { return onStart(); }
+    virtual int closeStream() { return onStop(); }
+    virtual int produceFrame(MediaFrameBuffer *outBuf)
+    {
+        return readFrame(reinterpret_cast<WavPcmPacketOut *>(outBuf));
+    }
+
+    int findCachedMediaInfo(const char *path, WavMediaInfo **outInfo);
+    int setMediaInfo(WavMediaInfo *mediaInfo);
+    int prefetchMediaInfo(WavMediaInfo *mediaInfo);
     int setStartPosition(int startMs);
     int setEndPosition(int endMs);
     int resetPosition();
@@ -191,11 +171,6 @@ public:
     int onStop();
     int readFrame(WavPcmPacketOut *outPkt);
 
-    uint8_t m_basePrefix[16];          /* +4..+19 */
-    SyncMutexStorage m_mutex;          /* +20..+27 */
-    uint32_t m_baseReserved;           /* +28 */
-    int m_filterState;                 /* +32 */
-    uint8_t m_baseTail[12];            /* +36..+47 */
     int m_requestedSpeed;              /* +48 */
     int m_activeSpeed;                 /* +52 */
     int m_startPosMs;                  /* +56 */
@@ -210,15 +185,16 @@ public:
     uint32_t m_chunkBytes;             /* +84 */
     uint32_t m_lastChunkIdx;           /* +88 */
     float m_bytesPerMs;                /* +92 */
-    WavCacheIoView *m_activeCacheIo;   /* +96 */
-    WavCacheIoView *m_nextCacheIo;     /* +100 */
-    WavMediaInfoView *m_activeMedia;   /* +104 */
-    WavMediaInfoView *m_nextMedia;     /* +108 */
+    WavCacheIo *m_activeCacheIo;       /* +96 */
+    WavCacheIo *m_nextCacheIo;         /* +100 */
+    WavMediaInfo *m_activeMedia;       /* +104 */
+    WavMediaInfo *m_nextMedia;         /* +108 */
 };
 
 /* 0x811FA3F4 */
 WavParser::WavParser(const char *threadName)
-    : m_requestedSpeed(0)
+    : ParserFilterBase(1, threadName)
+    , m_requestedSpeed(0)
     , m_activeSpeed(0)
     , m_startPosMs(-1)
     , m_endPosMs(-1)
@@ -237,7 +213,6 @@ WavParser::WavParser(const char *threadName)
     , m_activeMedia(NULL)
     , m_nextMedia(NULL)
 {
-    parserFilterBaseInit(this, 1, threadName);
 }
 
 /* 0x811FA44A / 0x811FA4B0 */
@@ -255,35 +230,34 @@ WavParser::~WavParser()
         m_activeMedia = NULL;
         m_activeCacheIo = NULL;
     }
-    parserFilterBaseDestroy(this);
 }
 
 /* 0x811FA51C */
-int WavParser::findCachedMediaInfo(const char *path, WavMediaInfoView **outInfo)
+int WavParser::findCachedMediaInfo(const char *path, WavMediaInfo **outInfo)
 {
     if (path == NULL) {
         *outInfo = NULL;
         return PARSER_ERR_BAD_PARAM;
     }
 
-    syncMutexLock(&m_mutex);
+    syncMutexLock(&m_lock);
     if (m_activeCacheIo != NULL && sce_paf_strcmp(m_activeCacheIo->getPath(), path) == 0) {
-        syncMutexUnlock(&m_mutex);
+        syncMutexUnlock(&m_lock);
         *outInfo = m_activeMedia;
         return 0;
     }
     if (m_nextCacheIo != NULL && sce_paf_strcmp(m_nextCacheIo->getPath(), path) == 0) {
         *outInfo = m_nextMedia;
-        syncMutexUnlock(&m_mutex);
+        syncMutexUnlock(&m_lock);
         return 0;
     }
-    syncMutexUnlock(&m_mutex);
+    syncMutexUnlock(&m_lock);
     *outInfo = NULL;
     return 0;
 }
 
 /* 0x811FA58C */
-int WavParser::setMediaInfo(WavMediaInfoView *mediaInfo)
+int WavParser::setMediaInfo(WavMediaInfo *mediaInfo)
 {
     if (mediaInfo == NULL || mediaInfo->mediaFourcc != FOURCC_WAV) {
         return PARSER_ERR_BAD_PARAM;
@@ -294,16 +268,16 @@ int WavParser::setMediaInfo(WavMediaInfoView *mediaInfo)
         return -1;
     }
 
-    syncMutexLock(&m_mutex);
-    if (m_filterState != 2) {
-        syncMutexUnlock(&m_mutex);
+    syncMutexLock(&m_lock);
+    if (m_runState != 2) {
+        syncMutexUnlock(&m_lock);
         return PARSER_ERR_BAD_STATE;
     }
 
     const char *newPath = mediaInfo->cacheIo->getPath();
     if (m_activeCacheIo != NULL) {
         if (sce_paf_strcmp(m_activeCacheIo->getPath(), newPath) == 0) {
-            syncMutexUnlock(&m_mutex);
+            syncMutexUnlock(&m_lock);
             delayWorkerThread(20000u);
             return 0;
         }
@@ -330,7 +304,7 @@ int WavParser::setMediaInfo(WavMediaInfoView *mediaInfo)
         }
         m_nextCacheIo = NULL;
         m_nextMedia = NULL;
-        syncMutexUnlock(&m_mutex);
+        syncMutexUnlock(&m_lock);
         return 0;
     }
 
@@ -346,12 +320,12 @@ int WavParser::setMediaInfo(WavMediaInfoView *mediaInfo)
     mediaInfo->sharedFlag = 1u;
     m_activeMedia = mediaInfo;
     m_activeCacheIo = mediaInfo->cacheIo;
-    syncMutexUnlock(&m_mutex);
+    syncMutexUnlock(&m_lock);
     return 0;
 }
 
 /* 0x811FA6C4 */
-int WavParser::prefetchMediaInfo(WavMediaInfoView *mediaInfo)
+int WavParser::prefetchMediaInfo(WavMediaInfo *mediaInfo)
 {
     if (mediaInfo == NULL || mediaInfo->mediaFourcc != FOURCC_WAV) {
         return PARSER_ERR_BAD_PARAM;
@@ -360,17 +334,17 @@ int WavParser::prefetchMediaInfo(WavMediaInfoView *mediaInfo)
         return -1;
     }
 
-    syncMutexLock(&m_mutex);
+    syncMutexLock(&m_lock);
     const char *newPath = mediaInfo->cacheIo->getPath();
     if (m_nextCacheIo != NULL) {
         if (sce_paf_strcmp(m_nextCacheIo->getPath(), newPath) == 0) {
-            syncMutexUnlock(&m_mutex);
+            syncMutexUnlock(&m_lock);
             return 0;
         }
         if (sce_paf_strcmp(m_nextCacheIo->getPath(), m_activeCacheIo->getPath()) == 0) {
             m_nextCacheIo = m_activeCacheIo;
             m_nextMedia = m_activeMedia;
-            syncMutexUnlock(&m_mutex);
+            syncMutexUnlock(&m_lock);
             return 0;
         }
     }
@@ -385,12 +359,12 @@ int WavParser::prefetchMediaInfo(WavMediaInfoView *mediaInfo)
     m_nextCacheIo->setPriorityMode(1);
 
     if (m_nextCacheIo->isOpen() != 1 && m_nextCacheIo->open() < 0) {
-        syncMutexUnlock(&m_mutex);
+        syncMutexUnlock(&m_lock);
         return PARSER_ERR_OPEN_FAIL;
     }
 
     int scanErr = wavCacheScanChunks(m_nextCacheIo, 3u);
-    syncMutexUnlock(&m_mutex);
+    syncMutexUnlock(&m_lock);
     if (scanErr == 0) {
         return 0;
     }
@@ -400,41 +374,41 @@ int WavParser::prefetchMediaInfo(WavMediaInfoView *mediaInfo)
 /* 0x811FA7FA */
 int WavParser::setStartPosition(int startMs)
 {
-    syncMutexLock(&m_mutex);
-    if (m_filterState != 2) {
-        syncMutexUnlock(&m_mutex);
+    syncMutexLock(&m_lock);
+    if (m_runState != 2) {
+        syncMutexUnlock(&m_lock);
         return PARSER_ERR_BAD_STATE;
     }
     m_startPosMs = startMs;
     m_currentChunkIdx = -1;
-    syncMutexUnlock(&m_mutex);
+    syncMutexUnlock(&m_lock);
     return 0;
 }
 
 /* 0x811FA82C */
 int WavParser::setEndPosition(int endMs)
 {
-    syncMutexLock(&m_mutex);
-    if (m_filterState != 2) {
-        syncMutexUnlock(&m_mutex);
+    syncMutexLock(&m_lock);
+    if (m_runState != 2) {
+        syncMutexUnlock(&m_lock);
         return PARSER_ERR_BAD_STATE;
     }
     m_endPosMs = endMs;
     m_currentChunkIdx = -1;
-    syncMutexUnlock(&m_mutex);
+    syncMutexUnlock(&m_lock);
     return 0;
 }
 
 /* 0x811FA85E */
 int WavParser::resetPosition()
 {
-    syncMutexLock(&m_mutex);
-    if (m_filterState != 2) {
-        syncMutexUnlock(&m_mutex);
+    syncMutexLock(&m_lock);
+    if (m_runState != 2) {
+        syncMutexUnlock(&m_lock);
         return PARSER_ERR_BAD_STATE;
     }
     m_currentChunkIdx = -1;
-    syncMutexUnlock(&m_mutex);
+    syncMutexUnlock(&m_lock);
     return 0;
 }
 
@@ -478,24 +452,24 @@ int WavParser::parseWaveHeader()
 /* 0x811FA9FA */
 int WavParser::getDurationMs()
 {
-    syncMutexLock(&m_mutex);
+    syncMutexLock(&m_lock);
     if (m_activeCacheIo == NULL) {
         return 0;
     }
 
     if (m_formatTag < 0) {
         if (m_activeCacheIo->isOpen() != 1 && m_activeCacheIo->open() < 0) {
-            syncMutexUnlock(&m_mutex);
+            syncMutexUnlock(&m_lock);
             return 0;
         }
         if (parseWaveHeader() != 0) {
-            syncMutexUnlock(&m_mutex);
+            syncMutexUnlock(&m_lock);
             return 0;
         }
     }
 
     int durationMs = (int)((float)m_activeCacheIo->dataSize / m_bytesPerMs);
-    syncMutexUnlock(&m_mutex);
+    syncMutexUnlock(&m_lock);
     return durationMs;
 }
 
@@ -568,9 +542,9 @@ int WavParser::readFrame(WavPcmPacketOut *outPkt)
         }
     }
 
-    syncMutexLock(&m_mutex);
+    syncMutexLock(&m_lock);
     if (m_requestedSpeed == 0) {
-        syncMutexUnlock(&m_mutex);
+        syncMutexUnlock(&m_lock);
         return PARSER_ERR_BAD_PARAM;
     }
     if (m_requestedSpeed != m_activeSpeed) {
@@ -583,7 +557,7 @@ int WavParser::readFrame(WavPcmPacketOut *outPkt)
         }
         m_activeSpeed = m_requestedSpeed;
     }
-    syncMutexUnlock(&m_mutex);
+    syncMutexUnlock(&m_lock);
 
     uint32_t byteOffset = m_chunkBytes * (uint32_t)m_currentChunkIdx;
     void *rawData = NULL;
@@ -655,8 +629,10 @@ public:
     virtual ~WavFactory() {}
 
     int getBufferSizes(uint32_t *outParserBuf, uint32_t *outDecoderBuf, uint32_t *outAudioBuf);
-    void *createPipeline(int p1, int p2, int p3, int p4, int p5);
-    int destroyPipeline(void *pipeline);
+    PipelineEventListener *createPipeline(AudioOpenCallback openCb, AudioCloseCallback closeCb,
+                                          AudioWriteCallback writeCb, AudioFlushCallback flushCb,
+                                          void *userContext);
+    int destroyPipeline(PipelineEventListener *pipeline);
     void *createMediaInfo(const char *path);
 };
 
@@ -672,7 +648,10 @@ int WavFactory::getBufferSizes(uint32_t *outParserBuf, uint32_t *outDecoderBuf, 
 }
 
 /* 0x811FA282 */
-void *WavFactory::createPipeline(int p1, int p2, int p3, int p4, int p5)
+PipelineEventListener *WavFactory::createPipeline(AudioOpenCallback openCb,
+                                                  AudioCloseCallback closeCb,
+                                                  AudioWriteCallback writeCb,
+                                                  AudioFlushCallback flushCb, void *userContext)
 {
     void *parserMem = allocFromHeap(sizeof(WavParser));
     WavParser *parser = NULL;
@@ -683,49 +662,45 @@ void *WavFactory::createPipeline(int p1, int p2, int p3, int p4, int p5)
         return NULL;
     }
 
-    void *audio = createAudioOutputFilter(4096, 16, parser, p1, p2, p3, p4, p5);
+    AudioOutputFilter *audio = createAudioOutputFilter(4096u, 16, parser, openCb, closeCb,
+                                                       writeCb, flushCb, userContext);
     if (audio == NULL) {
         delete parser;
         return NULL;
     }
 
-    parserFilterSetOutputPipe(parser, (uint8_t *)audio + 4);
-    void *pipeline = createDecoderPipeline(parser, NULL, NULL, audio);
+    parser->setOutputPipe(static_cast<PipeInterface *>(audio));
+    PipelineEventListener *pipeline = createDecoderPipeline(parser, NULL, NULL, audio);
     if (pipeline == NULL) {
-        delete (FilterDestroyable *)audio;
+        delete audio;
         delete parser;
         return NULL;
     }
 
-    ((ActiveFilterAttach *)((uint8_t *)parser + 4))->setEventListener(pipeline);
-    ((ActiveFilterAttach *)audio)->setEventListener(pipeline);
+    static_cast<ActiveFilterBase *>(parser)->setEventListener(pipeline);
+    audio->setEventListener(pipeline);
 
-    FilterReadyCheck *audioReady = (FilterReadyCheck *)audio;
-    if (audioReady->isReady() != 0 && decoderPipelineIsReady(pipeline)) {
+    if (audio->isInitialized() && decoderPipelineIsReady(pipeline)) {
         return pipeline;
     }
 
-    delete (FilterDestroyable *)pipeline;
-    delete (FilterDestroyable *)audio;
+    delete pipeline;
+    delete audio;
     delete parser;
     return NULL;
 }
 
 /* 0x811FA36A */
-int WavFactory::destroyPipeline(void *pipeline)
+int WavFactory::destroyPipeline(PipelineEventListener *pipeline)
 {
     if (pipeline == NULL) {
         return PARSER_ERR_BAD_PARAM;
     }
-    void *parser = decoderPipelineGetParser(pipeline);
-    if (parser != NULL) {
-        delete (FilterDestroyable *)parser;
-    }
-    void *audio = decoderPipelineGetAudio(pipeline);
-    if (audio != NULL) {
-        delete (FilterDestroyable *)audio;
-    }
-    delete (FilterDestroyable *)pipeline;
+    ParserFilterBase *parser = decoderPipelineGetParser(pipeline);
+    delete parser;
+    AudioOutputFilter *audio = decoderPipelineGetAudio(pipeline);
+    delete audio;
+    delete pipeline;
     return 0;
 }
 

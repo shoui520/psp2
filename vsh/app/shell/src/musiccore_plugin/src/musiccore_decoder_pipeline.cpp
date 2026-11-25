@@ -103,7 +103,17 @@ public:
     virtual int stop() = 0;
 };
 
-class ParserFilter {
+class PipeProducerBase {
+public:
+    virtual ~PipeProducerBase() {}
+};
+
+class PipeConsumerBase {
+public:
+    virtual ~PipeConsumerBase() {}
+};
+
+class ParserFilter : public PipeProducerBase, public ActiveFilterControl {
 public:
     virtual ~ParserFilter() {}
     virtual int acquireOutputBuffer() = 0;
@@ -128,10 +138,13 @@ public:
     virtual int getForwardPositionMs() = 0;
     virtual int getReversePositionMs() = 0;
 
-    ActiveFilterControl *asActiveControl() { return (ActiveFilterControl *)((uint8_t *)this + 4); }
+    ActiveFilterControl *asActiveControl() { return static_cast<ActiveFilterControl *>(this); }
 };
 
-class DecoderFilter {
+class DecoderFilter
+    : public PipeProducerBase
+    , public PipeConsumerBase
+    , public ActiveFilterControl {
 public:
     virtual ~DecoderFilter() {}
     virtual int openDecoder() = 0;
@@ -145,7 +158,7 @@ public:
     virtual int getCodecType() = 0;
     virtual int setCodecConfig(void *configData, uint32_t configSize) = 0;
 
-    ActiveFilterControl *asActiveControl() { return (ActiveFilterControl *)((uint8_t *)this + 8); }
+    ActiveFilterControl *asActiveControl() { return static_cast<ActiveFilterControl *>(this); }
 };
 
 class BufRefPipe {

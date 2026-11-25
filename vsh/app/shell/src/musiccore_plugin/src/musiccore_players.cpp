@@ -49,8 +49,8 @@ struct SoundOutExclusiveParam {
 struct PlayerCommandPacket {
     uint32_t header;
     uint32_t sequenceId;
-    int paramPrimary;
-    int paramSecondary;
+    uint32_t origParam;
+    uint32_t origCmdHi;
     void *payload;
 };
 
@@ -66,9 +66,9 @@ struct MusicAppOpenRequest {
 
 struct MusicAppPlayCommand {
     uint32_t headerWords[2];
-    int dbParamPrimary;
-    int dbParamSecondary;
-    uint16_t reservedLow;
+    uint32_t origParam;
+    uint32_t origCmdHi;
+    uint16_t flagsLow;
     uint16_t commandType;
     void *payload;
 };
@@ -103,8 +103,8 @@ struct TrackMetadataBuffers {
     SceSize albumCapacity;
 };
 
-struct PowerManageInterface {
-    uint8_t reservedSlots[44];
+struct PowerManagePluginInterface {
+    void (*func[11])();
     void (*acquireAutoSuspendHold)();
     void (*releaseAutoSuspendHold)();
 };
@@ -118,7 +118,18 @@ struct AutoSuspendSettingProvider {
 };
 
 struct DbManagerRuntime {
-    uint8_t dbBaseStorage[280];
+    SceUID initSema;
+    SceUID threadId;
+    int initResult;
+    void *cmdQueue;
+    void *onResultCb;
+    void *onNotifyCb;
+    void *callbackUserData;
+    void *slots;
+    int activeSlotCount;
+    unsigned int capacity;
+    const char *dbPath;
+    uint8_t dbConnMembers[236];
     AutoSuspendSettingProvider *settingProvider;
 };
 
@@ -146,14 +157,14 @@ extern int playerBasePause(void *self);
 extern int playerBaseHandleNotify(void *self, const PlayerCommandPacket *cmd, int extra);
 
 extern int dbManagerOpenSession(void *dbMgr);
-extern int dbManagerReleaseList(void *dbMgr, void *mediaList, int paramPrimary,
-                                int paramSecondary, int commitFlag);
-extern int dbManagerNotifySeek(void *dbMgr, int handleId, int paramPrimary,
-                               int paramSecondary, int commitFlag);
-extern int dbManagerNotifyNext(void *dbMgr, int handleId, int paramPrimary,
-                               int paramSecondary, int commitFlag);
-extern int dbManagerNotifyShuffle(void *dbMgr, int handleId, int paramPrimary,
-                                  int paramSecondary, int commitFlag);
+extern int dbManagerReleaseList(void *dbMgr, void *mediaList, uint32_t origParam,
+                                uint32_t origCmdHi, int commitFlag);
+extern int dbManagerNotifySeek(void *dbMgr, int handleId, uint32_t origParam,
+                               uint32_t origCmdHi, int commitFlag);
+extern int dbManagerNotifyNext(void *dbMgr, int handleId, uint32_t origParam,
+                               uint32_t origCmdHi, int commitFlag);
+extern int dbManagerNotifyShuffle(void *dbMgr, int handleId, uint32_t origParam,
+                                  uint32_t origCmdHi, int commitFlag);
 extern int dbManagerNotifyRepeat(void *dbMgr);
 extern int dbManagerNotifyPrev(void *dbMgr, int handleId, int commitFlag);
 extern int dbManagerFlushRecord(void *dbMgr);
@@ -320,7 +331,7 @@ public:
 
     int closeSession();
     bool isSupportedFormatFlags(uint32_t formatFlags, uint8_t extraFlag);
-    void onReservedHook();
+    void onSessionIdle();
     int openSession(const MusicAppOpenRequest *req, uint8_t *outChangeFlags);
     int handlePlayCommand(const MusicAppPlayCommand *cmd, uint8_t *outChangeFlags);
     int handleClearPlaylist(const MusicAppPlayCommand *cmd);
@@ -411,7 +422,8 @@ MusicAppPlayer::MusicAppPlayer(void *controller, void *dbManager, int *outErr,
         return;
     }
 
-    void *factoryMem = (uint8_t *)this + alignedOffset;
+    uint8_t *selfBytes = reinterpret_cast<uint8_t *>(this);
+    void *factoryMem = selfBytes + alignedOffset;
     m_orderListFactory = orderListFactoryConstruct(factoryMem, m_heap, 2, 2, factorySize, 56);
 }
 
@@ -450,7 +462,7 @@ bool MusicAppPlayer::isSupportedFormatFlags(uint32_t formatFlags, uint8_t extraF
 }
 
 /* 0x811F555A */
-void MusicAppPlayer::onReservedHook()
+void MusicAppPlayer::onSessionIdle()
 {
 }
 
@@ -517,7 +529,7 @@ int MusicAppPlayer::handleClearPlaylist(const MusicAppPlayCommand *cmd)
         playerBaseClearActiveList(this);
         void *prevList = m_activeMediaList;
         m_activeMediaList = NULL;
-        ret = dbManagerReleaseList(m_dbManager, prevList, cmd->dbParamPrimary, cmd->dbParamSecondary, 1);
+        ret = dbManagerReleaseList(m_dbManager, prevList, cmd->origParam, cmd->origCmdHi, 1);
 
         m_currentListIndex = 0;
         m_currentListCount = 0;
@@ -556,7 +568,7 @@ int MusicAppPlayer::handleSeekCommand(const PlayerCommandPacket *cmd)
     if (m_dbManager == NULL) {
         return MC_ERR_INTERNAL;
     }
-    return dbManagerNotifySeek(m_dbManager, target->handleId, cmd->paramPrimary, cmd->paramSecondary, 1);
+    return dbManagerNotifySeek(m_dbManager, target->handleId, cmd->origParam, cmd->origCmdHi, 1);
 }
 
 /* 0x811F57F8 */
@@ -573,7 +585,7 @@ int MusicAppPlayer::handleSkipNextCommand(const PlayerCommandPacket *cmd)
     if (m_dbManager == NULL) {
         return MC_ERR_INTERNAL;
     }
-    return dbManagerNotifyNext(m_dbManager, target->handleId, cmd->paramPrimary, cmd->paramSecondary, 1);
+    return dbManagerNotifyNext(m_dbManager, target->handleId, cmd->origParam, cmd->origCmdHi, 1);
 }
 
 /* 0x811F5856 */
@@ -623,7 +635,7 @@ int MusicAppPlayer::handleSetShuffleCommand(const PlayerCommandPacket *cmd)
     if (m_dbManager == NULL) {
         return MC_ERR_INTERNAL;
     }
-    return dbManagerNotifyShuffle(m_dbManager, target->handleId, cmd->paramPrimary, cmd->paramSecondary, 1);
+    return dbManagerNotifyShuffle(m_dbManager, target->handleId, cmd->origParam, cmd->origCmdHi, 1);
 }
 
 void MusicAppPlayer::clearAutoSuspendCountdown()
@@ -652,7 +664,8 @@ int MusicAppPlayer::handleTrackEventNotify(const PlayerCommandPacket *cmd)
         && m_playPowerTickUs != 0) {
         paf::Plugin *powerPlugin = paf::Plugin::Find("power_manage_plugin");
         if (powerPlugin != NULL) {
-            PowerManageInterface *powerIf = (PowerManageInterface *)powerPlugin->GetInterface(1);
+            PowerManagePluginInterface *powerIf =
+                (PowerManagePluginInterface *)powerPlugin->GetInterface(1);
             if (powerIf != NULL && powerIf->releaseAutoSuspendHold != NULL) {
                 powerIf->releaseAutoSuspendHold();
             }
@@ -701,7 +714,8 @@ int MusicAppPlayer::handleStartOrResume()
         }
         paf::Plugin *powerPlugin = paf::Plugin::Find("power_manage_plugin");
         if (powerPlugin != NULL) {
-            PowerManageInterface *powerIf = (PowerManageInterface *)powerPlugin->GetInterface(1);
+            PowerManagePluginInterface *powerIf =
+                (PowerManagePluginInterface *)powerPlugin->GetInterface(1);
             if (powerIf != NULL && powerIf->acquireAutoSuspendHold != NULL) {
                 powerIf->acquireAutoSuspendHold();
             }
@@ -936,23 +950,23 @@ int convertMusicPath(const char *srcPath, char *dstBuf, SceSize dstCapacity, int
     }
 
     /* Ping-pong 32-byte staging buffers allow safe in-place path rewriting. */
-    uint8_t stagePrimary[32];
-    uint8_t stageSecondary[32];
-    sce_paf_memset(stagePrimary, 0, sizeof(stagePrimary));
-    sce_paf_memset(stageSecondary, 0, sizeof(stageSecondary));
+    uint8_t currChunkBuf[32];
+    uint8_t nextChunkBuf[32];
+    sce_paf_memset(currChunkBuf, 0, sizeof(currChunkBuf));
+    sce_paf_memset(nextChunkBuf, 0, sizeof(nextChunkBuf));
 
     SceSize chunkLen = 32u;
     if ((int)(srcLen - sourcePrefixLen) < 32) {
         chunkLen = srcLen - sourcePrefixLen;
     }
-    sce_paf_memcpy(stagePrimary, srcPath + sourcePrefixLen, chunkLen);
+    sce_paf_memcpy(currChunkBuf, srcPath + sourcePrefixLen, chunkLen);
 
     int readPos = (int)(sourcePrefixLen + chunkLen);
     sce_paf_memcpy(dstBuf, targetPrefix, targetPrefixLen);
 
     SceSize writeOffset = targetPrefixLen;
-    uint8_t *activeStage = stagePrimary;
-    uint8_t *nextStage = stageSecondary;
+    uint8_t *activeStage = currChunkBuf;
+    uint8_t *nextStage = nextChunkBuf;
 
     while (readPos < (int)srcLen) {
         SceSize nextLen = 32u;

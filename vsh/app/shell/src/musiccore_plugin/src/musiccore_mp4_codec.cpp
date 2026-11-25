@@ -9,6 +9,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include "musiccore_pipeline_types.h"
+
 extern "C" {
 int sce_paf_strcmp(const char *lhs, const char *rhs);
 }
@@ -42,23 +44,6 @@ static const uint32_t MP4_DECODER_HEAP_SIZE = 74752u;
 static const uint32_t MP4_IO_HEAP_SIZE = 0x4000u;
 
 extern void *allocFromHeap(size_t size);
-extern void *allocSecondaryHeap(size_t size);
-extern void freeSecondaryHeap(void *ptr);
-extern void delayWorkerThread(SceUInt delayUs);
-
-struct SyncMutexStorage {
-    void *vtablePtr;
-    SceUID semaId;
-};
-
-extern int syncMutexLock(SyncMutexStorage *mutex);
-extern int syncMutexUnlock(SyncMutexStorage *mutex);
-
-struct MediaInfoHandle {
-    void *vtablePtr;
-    uint32_t mediaFourcc;
-    uint8_t sharedFlag;
-};
 
 extern void decoderManagerReleaseMediaInfo(MediaInfoHandle **ioHandle, int forceRelease);
 extern void *mp4MediaInfoConstruct(void *mem, const char *path, int ioPriority);
@@ -77,106 +62,44 @@ struct Mp4FrameInfo {
     uint16_t trailingSkip;    /* +26 */
 };
 
-struct Mp4StreamParserView {
+struct Mp4StreamParser {
     void *vtablePtr;
     uint32_t streamState;
     uint32_t totalSamples;
     int currentSampleIndex; /* +12 */
 };
 
-extern int mp4StreamOpen(Mp4StreamParserView *stream, uint32_t *outErr);
-extern const char *mp4StreamGetPath(Mp4StreamParserView *stream);
-extern void mp4StreamSetReadMode(Mp4StreamParserView *stream, int mode, int paramPrimary,
-                                 int paramSecondary);
-extern int mp4StreamGetDurationMs(Mp4StreamParserView *stream, int *outDurationMs,
+extern int mp4StreamOpen(Mp4StreamParser *stream, uint32_t *outErr);
+extern const char *mp4StreamGetPath(Mp4StreamParser *stream);
+extern int mp4StreamSetReadDirection(Mp4StreamParser *stream, int direction);
+extern int mp4StreamGetDurationMs(Mp4StreamParser *stream, int *outDurationMs,
                                   uint32_t *outErr);
-extern int mp4StreamGetSampleRate(Mp4StreamParserView *stream, uint32_t *outSampleRate,
+extern int mp4StreamGetSampleRate(Mp4StreamParser *stream, uint32_t *outSampleRate,
                                   uint32_t *outErr);
-extern int mp4StreamGetExtSampleRate(Mp4StreamParserView *stream, uint32_t *outExtRate,
+extern int mp4StreamGetExtSampleRate(Mp4StreamParser *stream, uint32_t *outExtRate,
                                      uint32_t *outErr);
-extern int mp4StreamGetSbrFlag(Mp4StreamParserView *stream, uint8_t *outSbrFlag,
+extern int mp4StreamGetSbrFlag(Mp4StreamParser *stream, uint8_t *outSbrFlag,
                                uint32_t *outErr);
-extern int mp4StreamGetSamplesPerFrame(Mp4StreamParserView *stream, uint16_t *outSamples,
+extern int mp4StreamGetSamplesPerFrame(Mp4StreamParser *stream, uint16_t *outSamples,
                                        uint32_t *outErr);
-extern int mp4StreamReadFirstFrame(Mp4StreamParserView *stream, Mp4FrameInfo *outFrame,
+extern int mp4StreamReadFirstFrame(Mp4StreamParser *stream, Mp4FrameInfo *outFrame,
                                    uint32_t *outErr);
-extern int mp4StreamReadNextFrame(Mp4StreamParserView *stream, int skipFrames,
+extern int mp4StreamReadNextFrame(Mp4StreamParser *stream, int skipFrames,
                                   Mp4FrameInfo *outFrame, uint32_t *outErr);
-extern int mp4StreamReadPrevFrame(Mp4StreamParserView *stream, int skipFrames,
+extern int mp4StreamReadPrevFrame(Mp4StreamParser *stream, int skipFrames,
                                   Mp4FrameInfo *outFrame, uint32_t *outErr);
-extern int mp4StreamSeekAndReadFrame(Mp4StreamParserView *stream, uint32_t targetMs,
+extern int mp4StreamSeekAndReadFrame(Mp4StreamParser *stream, uint32_t targetMs,
                                      Mp4FrameInfo *outFrame, int *outFrameIndex,
                                      uint32_t *outErr);
-extern int mp4StreamQueryMetadata(Mp4StreamParserView *stream, int titleCap, int artistCap,
+extern int mp4StreamQueryMetadata(Mp4StreamParser *stream, int titleCap, int artistCap,
                                   int albumCap, int genreCap, int artCap, void *metaOut,
                                   int extraCap, uint32_t *outErr);
 
-/* Cache I/O interface matching LocalCacheIo (musiccore_sync_cache_io.cpp) */
-class LocalCacheIoInterface {
-public:
-    virtual ~LocalCacheIoInterface() {}
-    virtual int isInitialized() const = 0;
-    virtual int open() = 0;
-    virtual int close() = 0;
-    virtual int isOpen() const = 0;
-    virtual int getFileSize() const = 0;
-    virtual const char *getPath() const = 0;
-    virtual int setPath(const char *path) = 0;
-    virtual int setPriorityMode(uint32_t priorityMode) = 0;
-};
-
-struct Mp4MediaInfoView : public MediaInfoHandle {
-    uint8_t pathStorage[2052];
-    Mp4StreamParserView *streamParser; /* +2064 */
-    LocalCacheIoInterface *cacheIo;    /* +2068 */
-};
-
-/* Pipeline / filter infrastructure */
-extern void parserFilterBaseInit(void *self, int filterKind, const char *threadName);
-extern void parserFilterBaseDestroy(void *self);
-extern int activeFilterIsReady(const void *activeBase);
-extern void parserFilterSetOutputPipe(void *parser, void *pipe);
-extern void decoderFilterSetInputPipe(void *decoder, void *pipe);
-extern void decoderFilterSetOutputSink(void *decoder, void *audioSink);
-extern void *mp4DecoderConstruct(void *mem, const char *threadName);
-extern void *createBufRefPipe(int slotCount, void *producer, void *consumer);
-extern void *createAudioOutputFilter(int grainSize, int slotCount, void *producer,
-                                     int audioOptPrimary, int audioOptSecondary,
-                                     int audioOptVolume, int audioOptBalance,
-                                     int audioOptChannel);
-extern void *createDecoderPipeline(void *parser, void *pipe, void *decoder, void *audioSink);
-extern bool decoderPipelineIsReady(const void *pipeline);
-
-class FilterLifecycleIf {
-public:
-    virtual ~FilterLifecycleIf() {}
-    virtual void setEventListener(void *listener) = 0;
-    virtual int isReady() = 0;
-};
-
-class ActiveFilterListenerIf {
-public:
-    virtual ~ActiveFilterListenerIf() {}
-    virtual void setEventListener(void *listener) = 0;
-};
-
-class DecoderFilterView {
-public:
-    virtual ~DecoderFilterView() {}
-    virtual int openDecoder() = 0;
-    virtual int closeDecoder() = 0;
-    virtual int decodePacket(void *inputPacket, void *outputPcm) = 0;
-    virtual int flushDecoder() = 0;
-    virtual int resetDecoder() = 0;
-    virtual int setInputPipe(void *pipe) = 0;
-    virtual int setOutputSink(void *sink) = 0;
-    virtual int setActiveMode(int mode) = 0;
-    virtual int getCodecType() = 0;
-    virtual int setCodecConfig(void *configData, uint32_t configSize) = 0;
-    virtual int isReady() = 0;
-
-    void *asPipeConsumer() { return (uint8_t *)this + 4; }
-    ActiveFilterListenerIf *asActiveFilter() { return (ActiveFilterListenerIf *)((uint8_t *)this + 8); }
+struct Mp4MediaInfo : public MediaInfoHandle {
+    char mediaPath[2049];              /* +9..+2057 */
+    uint8_t padPath[6];                /* +2058..+2063 */
+    Mp4StreamParser *streamParser;     /* +2064 */
+    CachedStreamIo *cacheIo;           /* +2068 */
 };
 
 struct ParserPacketOut {
@@ -312,15 +235,23 @@ static int mapMp4ReadIoError(uint32_t errCode)
 
 /* ===== Mp4Parser (0x811F8F24 - 0x811FA247, size 136 bytes) ===== */
 
-class Mp4Parser {
+class Mp4Parser : public ParserFilterBase {
 public:
     Mp4Parser(const char *threadName, int playMode);
     virtual ~Mp4Parser();
 
-    bool isReady() const;
-    int findCachedMediaInfo(const char *path, Mp4MediaInfoView **outInfo);
-    int setMediaInfo(Mp4MediaInfoView *mediaInfo);
-    int prefetchMediaInfo(Mp4MediaInfoView *mediaInfo);
+    virtual int onFrameConsumed(int frameFlags) { (void)frameFlags; return 0; }
+    virtual bool isInitialized() const;
+    virtual int openStream() { return onStart(); }
+    virtual int closeStream() { return onStop(); }
+    virtual int produceFrame(MediaFrameBuffer *outBuf)
+    {
+        return readFrame(reinterpret_cast<ParserPacketOut *>(outBuf));
+    }
+
+    int findCachedMediaInfo(const char *path, Mp4MediaInfo **outInfo);
+    int setMediaInfo(Mp4MediaInfo *mediaInfo);
+    int prefetchMediaInfo(Mp4MediaInfo *mediaInfo);
     Mp4CodecConfigPayload *getCodecConfig(uint32_t *outSize);
     void setPlaySpeed(int speed);
     int setStartPosition(int startMs);
@@ -333,16 +264,6 @@ public:
     int onStop();
     int readFrame(ParserPacketOut *outPkt);
 
-    ActiveFilterListenerIf *asActiveFilter()
-    {
-        return (ActiveFilterListenerIf *)((uint8_t *)this + 4);
-    }
-
-    uint8_t m_basePrefix[16];            /* +4..+19 */
-    SyncMutexStorage m_mutex;            /* +20..+27 */
-    uint32_t m_baseStateWord;            /* +28 */
-    int m_filterState;                   /* +32 */
-    uint8_t m_baseTail[12];              /* +36..+47 */
     int m_playMode;                      /* +48 */
     int m_requestedSpeed;                /* +52 */
     int m_startPosMs;                    /* +56 */
@@ -354,12 +275,12 @@ public:
     uint8_t m_seekPending;               /* +80 */
     uint8_t m_padSeek[3];                /* +81..+83 */
     uint32_t m_unusedStreamSlot;         /* +84 */
-    LocalCacheIoInterface *m_activeCacheIo; /* +88 */
-    LocalCacheIoInterface *m_nextCacheIo;   /* +92 */
-    Mp4StreamParserView *m_activeStream; /* +96 */
-    Mp4StreamParserView *m_nextStream;   /* +100 */
-    Mp4MediaInfoView *m_activeMedia;     /* +104 */
-    Mp4MediaInfoView *m_nextMedia;       /* +108 */
+    CachedStreamIo *m_activeCacheIo;     /* +88 */
+    CachedStreamIo *m_nextCacheIo;       /* +92 */
+    Mp4StreamParser *m_activeStream;     /* +96 */
+    Mp4StreamParser *m_nextStream;       /* +100 */
+    Mp4MediaInfo *m_activeMedia;         /* +104 */
+    Mp4MediaInfo *m_nextMedia;           /* +108 */
     uint8_t m_parserInitialized;         /* +112 */
     uint8_t m_padInit[3];                /* +113..+115 */
     Mp4CodecConfigPayload m_codecConfig; /* +116..+131 */
@@ -368,7 +289,8 @@ public:
 
 /* 0x811F8F24 */
 Mp4Parser::Mp4Parser(const char *threadName, int playMode)
-    : m_playMode(playMode)
+    : ParserFilterBase(1, threadName)
+    , m_playMode(playMode)
     , m_requestedSpeed(0)
     , m_startPosMs(-1)
     , m_endPosMs(-1)
@@ -387,7 +309,6 @@ Mp4Parser::Mp4Parser(const char *threadName, int playMode)
     , m_parserInitialized(1)
     , m_trickFrameCounter(0)
 {
-    parserFilterBaseInit(this, 1, threadName);
     m_codecConfig.outputSampleRate = 0;
     m_codecConfig.coreSampleRate = 0;
     m_codecConfig.errorCode = 0;
@@ -422,45 +343,44 @@ Mp4Parser::~Mp4Parser()
     m_codecConfig.coreSampleRate = 0;
     m_codecConfig.errorCode = 0;
     m_codecConfig.outputSampleRate = 0;
-    parserFilterBaseDestroy(this);
 }
 
 /* 0x811F9020 */
-bool Mp4Parser::isReady() const
+bool Mp4Parser::isInitialized() const
 {
     if (m_parserInitialized == 0) {
         return false;
     }
-    return activeFilterIsReady((const uint8_t *)this + 4) != 0;
+    return ActiveFilterBase::isInitialized();
 }
 
 /* 0x811F903A */
-int Mp4Parser::findCachedMediaInfo(const char *path, Mp4MediaInfoView **outInfo)
+int Mp4Parser::findCachedMediaInfo(const char *path, Mp4MediaInfo **outInfo)
 {
     if (path == NULL) {
         *outInfo = NULL;
         return PARSER_ERR_BAD_PARAM;
     }
 
-    syncMutexLock(&m_mutex);
+    syncMutexLock(&m_lock);
     if (m_activeStream != NULL && sce_paf_strcmp(mp4StreamGetPath(m_activeStream), path) == 0) {
-        syncMutexUnlock(&m_mutex);
+        syncMutexUnlock(&m_lock);
         *outInfo = m_activeMedia;
         return PARSER_ERR_OK;
     }
     if (m_nextStream != NULL && sce_paf_strcmp(mp4StreamGetPath(m_nextStream), path) == 0) {
         *outInfo = m_nextMedia;
-        syncMutexUnlock(&m_mutex);
+        syncMutexUnlock(&m_lock);
         return PARSER_ERR_OK;
     }
 
-    syncMutexUnlock(&m_mutex);
+    syncMutexUnlock(&m_lock);
     *outInfo = NULL;
     return PARSER_ERR_OK;
 }
 
 /* 0x811F90A6 */
-int Mp4Parser::setMediaInfo(Mp4MediaInfoView *mediaInfo)
+int Mp4Parser::setMediaInfo(Mp4MediaInfo *mediaInfo)
 {
     if (mediaInfo == NULL || mediaInfo->mediaFourcc != FOURCC_MP4) {
         return PARSER_ERR_BAD_PARAM;
@@ -469,9 +389,9 @@ int Mp4Parser::setMediaInfo(Mp4MediaInfoView *mediaInfo)
         return -1;
     }
 
-    syncMutexLock(&m_mutex);
-    if (m_filterState != 2) {
-        syncMutexUnlock(&m_mutex);
+    syncMutexLock(&m_lock);
+    if (m_runState != 2) {
+        syncMutexUnlock(&m_lock);
         return PARSER_ERR_BAD_STATE;
     }
 
@@ -483,7 +403,7 @@ int Mp4Parser::setMediaInfo(Mp4MediaInfoView *mediaInfo)
                 m_nextCacheIo = NULL;
                 m_nextMedia = NULL;
             }
-            syncMutexUnlock(&m_mutex);
+            syncMutexUnlock(&m_lock);
             delayWorkerThread(20000u);
             return PARSER_ERR_OK;
         }
@@ -515,7 +435,7 @@ int Mp4Parser::setMediaInfo(Mp4MediaInfoView *mediaInfo)
             m_nextCacheIo = NULL;
             m_nextMedia = NULL;
             m_durationMs = -1;
-            syncMutexUnlock(&m_mutex);
+            syncMutexUnlock(&m_lock);
             return PARSER_ERR_OK;
         }
 
@@ -529,7 +449,7 @@ int Mp4Parser::setMediaInfo(Mp4MediaInfoView *mediaInfo)
     }
 
     if (m_activeMedia != NULL || m_nextMedia != NULL) {
-        syncMutexUnlock(&m_mutex);
+        syncMutexUnlock(&m_lock);
         return -1;
     }
 
@@ -538,12 +458,12 @@ int Mp4Parser::setMediaInfo(Mp4MediaInfoView *mediaInfo)
     m_activeStream = mediaInfo->streamParser;
     m_activeCacheIo = mediaInfo->cacheIo;
     m_durationMs = -1;
-    syncMutexUnlock(&m_mutex);
+    syncMutexUnlock(&m_lock);
     return PARSER_ERR_OK;
 }
 
 /* 0x811F92F6 */
-int Mp4Parser::prefetchMediaInfo(Mp4MediaInfoView *mediaInfo)
+int Mp4Parser::prefetchMediaInfo(Mp4MediaInfo *mediaInfo)
 {
     if (mediaInfo == NULL || mediaInfo->mediaFourcc != FOURCC_MP4) {
         return PARSER_ERR_BAD_PARAM;
@@ -552,16 +472,16 @@ int Mp4Parser::prefetchMediaInfo(Mp4MediaInfoView *mediaInfo)
         return -1;
     }
 
-    syncMutexLock(&m_mutex);
+    syncMutexLock(&m_lock);
     if (m_playMode == MODE_STREAM_PLAY) {
-        syncMutexUnlock(&m_mutex);
+        syncMutexUnlock(&m_lock);
         return PARSER_ERR_OK;
     }
 
     const char *newPath = mp4StreamGetPath(mediaInfo->streamParser);
     if (m_nextStream != NULL) {
         if (sce_paf_strcmp(mp4StreamGetPath(m_nextStream), newPath) == 0) {
-            syncMutexUnlock(&m_mutex);
+            syncMutexUnlock(&m_lock);
             return PARSER_ERR_OK;
         }
 
@@ -570,7 +490,7 @@ int Mp4Parser::prefetchMediaInfo(Mp4MediaInfoView *mediaInfo)
             m_nextStream = m_activeStream;
             m_nextCacheIo = m_activeCacheIo;
             m_nextMedia = m_activeMedia;
-            syncMutexUnlock(&m_mutex);
+            syncMutexUnlock(&m_lock);
             return PARSER_ERR_OK;
         }
 
@@ -586,7 +506,7 @@ int Mp4Parser::prefetchMediaInfo(Mp4MediaInfoView *mediaInfo)
     }
 
     if (m_nextMedia != NULL) {
-        syncMutexUnlock(&m_mutex);
+        syncMutexUnlock(&m_lock);
         return -1;
     }
 
@@ -599,17 +519,17 @@ int Mp4Parser::prefetchMediaInfo(Mp4MediaInfoView *mediaInfo)
     uint32_t streamErr = 0xFFFFFFFFu;
     int durationMs = 0;
     if (mp4StreamOpen(m_nextStream, &streamErr) < 0) {
-        syncMutexUnlock(&m_mutex);
+        syncMutexUnlock(&m_lock);
         return mapMp4OpenError(streamErr);
     }
 
     if (mp4StreamGetDurationMs(m_nextStream, &durationMs, &streamErr) != 0) {
-        syncMutexUnlock(&m_mutex);
+        syncMutexUnlock(&m_lock);
         return PARSER_ERR_OK;
     }
 
     int mappedErr = mapMp4ReadIoError(streamErr);
-    syncMutexUnlock(&m_mutex);
+    syncMutexUnlock(&m_lock);
     return mappedErr;
 }
 
@@ -672,48 +592,48 @@ void Mp4Parser::setPlaySpeed(int speed)
 /* 0x811F95CC */
 int Mp4Parser::setStartPosition(int startMs)
 {
-    syncMutexLock(&m_mutex);
-    if (m_filterState != 2) {
-        syncMutexUnlock(&m_mutex);
+    syncMutexLock(&m_lock);
+    if (m_runState != 2) {
+        syncMutexUnlock(&m_lock);
         return PARSER_ERR_BAD_STATE;
     }
     m_startPosMs = startMs;
     m_currentFrameIndex = -1;
-    syncMutexUnlock(&m_mutex);
+    syncMutexUnlock(&m_lock);
     return PARSER_ERR_OK;
 }
 
 /* 0x811F95FE */
 int Mp4Parser::setEndPosition(int endMs)
 {
-    syncMutexLock(&m_mutex);
-    if (m_filterState != 2) {
-        syncMutexUnlock(&m_mutex);
+    syncMutexLock(&m_lock);
+    if (m_runState != 2) {
+        syncMutexUnlock(&m_lock);
         return PARSER_ERR_BAD_STATE;
     }
     m_endPosMs = endMs;
     m_currentFrameIndex = -1;
-    syncMutexUnlock(&m_mutex);
+    syncMutexUnlock(&m_lock);
     return PARSER_ERR_OK;
 }
 
 /* 0x811F9630 */
 int Mp4Parser::getDurationMs()
 {
-    syncMutexLock(&m_mutex);
+    syncMutexLock(&m_lock);
     if (m_durationMs >= 0) {
         int cached = m_durationMs;
-        syncMutexUnlock(&m_mutex);
+        syncMutexUnlock(&m_lock);
         return cached;
     }
     if (m_activeStream == NULL) {
-        syncMutexUnlock(&m_mutex);
+        syncMutexUnlock(&m_lock);
         return -1;
     }
 
     uint32_t streamErr = 0xFFFFFFFFu;
     if (mp4StreamOpen(m_activeStream, &streamErr) < 0) {
-        syncMutexUnlock(&m_mutex);
+        syncMutexUnlock(&m_lock);
         if (streamErr == 0x80280021u) {
             return PARSER_ERR_UNSUPPORTED;
         }
@@ -725,11 +645,11 @@ int Mp4Parser::getDurationMs()
 
     if (mp4StreamGetDurationMs(m_activeStream, &m_durationMs, &streamErr) != 0) {
         int duration = m_durationMs;
-        syncMutexUnlock(&m_mutex);
+        syncMutexUnlock(&m_lock);
         return duration;
     }
 
-    syncMutexUnlock(&m_mutex);
+    syncMutexUnlock(&m_lock);
     if (streamErr == 0x80280021u || streamErr == 0x80280022u || streamErr == 0x80280028u) {
         return 0;
     }
@@ -739,9 +659,9 @@ int Mp4Parser::getDurationMs()
 /* 0x811F9706 */
 int Mp4Parser::seekPosition(int positionMs)
 {
-    syncMutexLock(&m_mutex);
-    if (m_filterState != 2) {
-        syncMutexUnlock(&m_mutex);
+    syncMutexLock(&m_lock);
+    if (m_runState != 2) {
+        syncMutexUnlock(&m_lock);
         return PARSER_ERR_BAD_STATE;
     }
 
@@ -758,20 +678,20 @@ int Mp4Parser::seekPosition(int positionMs)
         }
     }
 
-    syncMutexUnlock(&m_mutex);
+    syncMutexUnlock(&m_lock);
     return PARSER_ERR_OK;
 }
 
 /* 0x811F9794 */
 int Mp4Parser::resetPosition()
 {
-    syncMutexLock(&m_mutex);
-    if (m_filterState != 2) {
-        syncMutexUnlock(&m_mutex);
+    syncMutexLock(&m_lock);
+    if (m_runState != 2) {
+        syncMutexUnlock(&m_lock);
         return PARSER_ERR_BAD_STATE;
     }
     m_currentFrameIndex = -1;
-    syncMutexUnlock(&m_mutex);
+    syncMutexUnlock(&m_lock);
     return PARSER_ERR_OK;
 }
 
@@ -837,27 +757,27 @@ int Mp4Parser::readFrame(ParserPacketOut *outPkt)
     bool fastStreamSkip = (m_playMode == MODE_STREAM_PLAY
                            && (m_requestedSpeed > 20 || m_requestedSpeed < -20));
 
-    syncMutexLock(&m_mutex);
-    Mp4StreamParserView *stream = m_activeStream;
+    syncMutexLock(&m_lock);
+    Mp4StreamParser *stream = m_activeStream;
     if (m_requestedSpeed == 0
         || (m_playMode != MODE_DIRECT_PLAY && m_playMode != MODE_STREAM_PLAY
             && m_playMode != MODE_LOCAL_PLAY)) {
-        syncMutexUnlock(&m_mutex);
+        syncMutexUnlock(&m_lock);
         return PARSER_ERR_BAD_PARAM;
     }
 
     int playMode = m_playMode;
     if (m_requestedSpeed != m_activeSpeed) {
         if (m_requestedSpeed == 1) {
-            mp4StreamSetReadMode(stream, 1, 0, 0);
+            mp4StreamSetReadDirection(stream, 1);
         } else if (m_requestedSpeed > 0) {
-            mp4StreamSetReadMode(stream, 2, 0, 0);
+            mp4StreamSetReadDirection(stream, 2);
         } else {
-            mp4StreamSetReadMode(stream, 4, 0, 0);
+            mp4StreamSetReadDirection(stream, 4);
         }
         m_activeSpeed = m_requestedSpeed;
     }
-    syncMutexUnlock(&m_mutex);
+    syncMutexUnlock(&m_lock);
 
     stream = m_activeStream;
     int readOk = 0;
@@ -1114,10 +1034,12 @@ public:
 
     virtual uint32_t getHeapSizes(uint32_t *outParserHeap, uint32_t *outDecoderHeap,
                                   uint32_t *outIoHeap);
-    virtual void onReservedInit();
-    virtual void onReservedClose();
-    virtual void *createPipeline(int playMode, int audioOptPrimary, int audioOptSecondary,
-                                 int audioOptVolume, int audioOptBalance, int audioOptChannel);
+    virtual void initialize();
+    virtual void finalize();
+    virtual PipelineEventListener *createPipeline(int playMode, AudioOpenCallback openCb,
+                                                  AudioCloseCallback closeCb,
+                                                  AudioWriteCallback writeCb,
+                                                  AudioFlushCallback flushCb, void *userContext);
     virtual void *createMediaInfo(const char *path, int ioPriority);
 };
 
@@ -1142,18 +1064,20 @@ uint32_t Mp4Factory::getHeapSizes(uint32_t *outParserHeap, uint32_t *outDecoderH
 }
 
 /* 0x811F8C9A */
-void Mp4Factory::onReservedInit()
+void Mp4Factory::initialize()
 {
 }
 
 /* 0x811F8CAA / 0x811F8CC0 */
-void Mp4Factory::onReservedClose()
+void Mp4Factory::finalize()
 {
 }
 
 /* 0x811F8CC2 */
-void *Mp4Factory::createPipeline(int playMode, int audioOptPrimary, int audioOptSecondary,
-                                 int audioOptVolume, int audioOptBalance, int audioOptChannel)
+PipelineEventListener *Mp4Factory::createPipeline(int playMode, AudioOpenCallback openCb,
+                                                  AudioCloseCallback closeCb,
+                                                  AudioWriteCallback writeCb,
+                                                  AudioFlushCallback flushCb, void *userContext)
 {
     Mp4Parser *parser = NULL;
     void *parserMem = allocFromHeap(sizeof(Mp4Parser));
@@ -1161,10 +1085,10 @@ void *Mp4Factory::createPipeline(int playMode, int audioOptPrimary, int audioOpt
         parser = new (parserMem) Mp4Parser("SceShellMusicCoreMp4Parser", playMode);
     }
 
-    DecoderFilterView *decoder = NULL;
-    void *decoderMem = allocSecondaryHeap(0xD0u);
+    AudioDecoderBase *decoder = NULL;
+    void *decoderMem = localAlloc(0xD0u);
     if (decoderMem != NULL) {
-        decoder = (DecoderFilterView *)mp4DecoderConstruct(decoderMem, "SceShellMusicCoreMp4Decoder");
+        decoder = mp4DecoderConstruct(decoderMem, "SceShellMusicCoreMp4Decoder");
     }
 
     int pipeSlots = 0;
@@ -1176,55 +1100,46 @@ void *Mp4Factory::createPipeline(int playMode, int audioOptPrimary, int audioOpt
         return NULL;
     }
 
-    void *decoderConsumer = (decoder != NULL) ? decoder->asPipeConsumer() : NULL;
-    FilterLifecycleIf *pipe = (FilterLifecycleIf *)createBufRefPipe(pipeSlots, parser, decoderConsumer);
-    FilterLifecycleIf *audioSink = (FilterLifecycleIf *)createAudioOutputFilter(
-        0x2000, 16, decoder, audioOptPrimary, audioOptSecondary,
-        audioOptVolume, audioOptBalance, audioOptChannel);
+    PipeConsumerControl *decoderConsumer = static_cast<PipeConsumerControl *>(decoder);
+    PipeInterface *pipe = createBufRefPipe(pipeSlots, parser, decoderConsumer);
+    AudioOutputFilter *audioSink = createAudioOutputFilter(
+        0x2000u, 16, decoder, openCb, closeCb, writeCb, flushCb, userContext);
 
     if (parser != NULL) {
-        parserFilterSetOutputPipe(parser, pipe);
+        parser->setOutputPipe(pipe);
     }
     if (decoder != NULL) {
-        decoderFilterSetInputPipe(decoder, pipe);
-        void *sinkInput = (audioSink != NULL) ? (void *)((uint8_t *)audioSink + 4) : NULL;
-        decoderFilterSetOutputSink(decoder, sinkInput);
+        decoder->setInputPipe(pipe);
+        decoder->setOutputPipe(static_cast<PipeInterface *>(audioSink));
     }
 
-    FilterLifecycleIf *pipeline = (FilterLifecycleIf *)createDecoderPipeline(
-        parser, pipe, decoder, audioSink);
+    PipelineEventListener *pipeline = createDecoderPipeline(parser, pipe, decoder, audioSink);
     if (pipeline == NULL || parser == NULL || decoder == NULL || audioSink == NULL || pipe == NULL) {
-        if (pipeline != NULL) {
-            delete pipeline;
-        }
-        if (parser != NULL) {
-            delete parser;
-        }
+        delete pipeline;
+        delete parser;
         if (decoder != NULL) {
-            decoder->~DecoderFilterView();
-            freeSecondaryHeap(decoder);
+            decoder->~AudioDecoderBase();
+            localFree(decoder);
         }
-        if (audioSink != NULL) {
-            delete audioSink;
-        }
+        delete audioSink;
         return NULL;
     }
 
     if (decoderPipelineIsReady(pipeline)
-        && parser->isReady()
-        && decoder->isReady() != 0
-        && audioSink->isReady() != 0
-        && pipe->isReady() != 0) {
-        parser->asActiveFilter()->setEventListener(pipeline);
-        decoder->asActiveFilter()->setEventListener(pipeline);
+        && parser->isInitialized()
+        && static_cast<ActiveFilterBase *>(decoder)->isInitialized()
+        && audioSink->isInitialized()
+        && pipe->isInitialized()) {
+        static_cast<ActiveFilterBase *>(parser)->setEventListener(pipeline);
+        static_cast<ActiveFilterBase *>(decoder)->setEventListener(pipeline);
         audioSink->setEventListener(pipeline);
         return pipeline;
     }
 
     delete pipeline;
     delete parser;
-    decoder->~DecoderFilterView();
-    freeSecondaryHeap(decoder);
+    decoder->~AudioDecoderBase();
+    localFree(decoder);
     delete audioSink;
     delete pipe;
     return NULL;

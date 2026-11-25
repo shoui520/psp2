@@ -112,7 +112,17 @@ public:
     virtual int checkRangeReadable(int sizeBytes, int *outErr);
 
 protected:
-    uint8_t baseStorage[44];
+    void *m_cacheHandle;
+    uint8_t m_initialized;
+    uint8_t m_padInit[3];
+    char *m_filePath;
+    void *m_fileObj;
+    void *m_fileRefCount;
+    int m_priorityMode;
+    int m_padPriority;
+    int64_t m_filePos;
+    int m_chunkSize;
+    int m_blockCount;
 };
 
 extern void localCacheIoConstruct(LocalCacheIoBase *io, const char *path,

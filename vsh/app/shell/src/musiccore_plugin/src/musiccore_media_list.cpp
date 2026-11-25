@@ -356,7 +356,8 @@ UriEntryNode::UriEntryNode(const char *uriPath, int loopMode, unsigned int alloc
         return;
     }
 
-    char *dst = (char *)this + alignedOffset;
+    char *selfBytes = reinterpret_cast<char *>(this);
+    char *dst = selfBytes + alignedOffset;
     m_uriPath = dst;
     sce_paf_strncpy(dst, uriPath, uriLen);
     m_uriPath[uriLen] = '\0';
@@ -395,7 +396,8 @@ MediaEntryPool::MediaEntryPool(int minCapacity, unsigned int arenaBytes)
     uintptr_t selfAddr = (uintptr_t)this;
     uintptr_t alignedSelf = ((selfAddr - 1u) & ~(uintptr_t)7u) + 8u;
     if (arenaBytes >= minRequired && alignedSelf == selfAddr) {
-        m_arenaStart = (uint8_t *)this + 32;
+        uint8_t *selfBytes = reinterpret_cast<uint8_t *>(this);
+        m_arenaStart = selfBytes + 32u;
         m_freeBytes = arenaBytes + 32u;
     }
 }
@@ -431,7 +433,8 @@ void *MediaEntryPool::reserveSlot(int neededBytes)
     }
     size_t tailSize = m_tail->getAllocatedSize();
     unsigned int alignedTail = (((unsigned int)(tailSize - 1u)) & 0xFFFFFFF8u) + 8u;
-    return (uint8_t *)m_tail + alignedTail;
+    uint8_t *tailBytes = reinterpret_cast<uint8_t *>(m_tail);
+    return tailBytes + alignedTail;
 }
 
 /* 0x811F3582 */
@@ -606,7 +609,7 @@ struct OrderListSlotHeader {
     uint8_t inUse;
     uint8_t padSlot[7];
     int ownerListId;
-    int reservedSlot;
+    int poolPadding;
 };
 
 class OrderListFactory {
@@ -669,7 +672,8 @@ OrderListFactory::OrderListFactory(int maxItems, int slotCount, int elemBytes,
         return;
     }
 
-    m_slotsBase = (uint8_t *)this + alignedHeader;
+    uint8_t *selfBytes = reinterpret_cast<uint8_t *>(this);
+    m_slotsBase = selfBytes + alignedHeader;
     uint8_t *cursor = m_slotsBase;
     for (int idx = 0; idx < m_slotCount; ++idx) {
         OrderListSlotHeader *hdr = (OrderListSlotHeader *)cursor;
@@ -1296,7 +1300,8 @@ void *OrderListFactory::acquireOrderList(void *ownerList, int *outPrevOwnerId, S
         *outPrevOwnerId = chosenHdr->ownerListId;
         chosenHdr->ownerListId = targetOwnerId;
         chosenHdr->inUse = 1u;
-        resultBuf = (uint8_t *)chosenHdr + 16;
+        uint8_t *chosenBytes = reinterpret_cast<uint8_t *>(chosenHdr);
+        resultBuf = chosenBytes + sizeof(*chosenHdr);
     }
 
     m_lock.Unlock();
@@ -2465,12 +2470,12 @@ int DbMediaList::updateColumnsByRowId(int64_t rowId, const DbColumnBinding *colu
         sql += "=";
 
         if (columns[idx].valueType == DB_COL_INT64) {
-            int64_t val64 = *(const int64_t *)columns[idx].valuePtr;
-            sce_paf_snprintf(numBuf, 20u, "%lld", (long long)val64);
+            int64_t int64Value = *(const int64_t *)columns[idx].valuePtr;
+            sce_paf_snprintf(numBuf, 20u, "%lld", (long long)int64Value);
             sql += numBuf;
         } else if (columns[idx].valueType == DB_COL_INT32) {
-            int val32 = *(const int *)columns[idx].valuePtr;
-            sce_paf_snprintf(numBuf, 20u, "%d", val32);
+            int int32Value = *(const int *)columns[idx].valuePtr;
+            sce_paf_snprintf(numBuf, 20u, "%d", int32Value);
             sql += numBuf;
         } else if (columns[idx].valueType == DB_COL_TEXT || columns[idx].valueType == DB_COL_DATETIME) {
             sql += "'";
@@ -2691,8 +2696,8 @@ int DbMediaList::refreshAndKeepTrack(int64_t primaryRowId, int64_t fallbackRowId
     }
 
     int savedShuffleMode = m_shuffleMode;
-    uint8_t dummyChanged = 1;
-    int ret = rebuildOrderList(0, -1, &dummyChanged, 1u);
+    uint8_t listChanged = 1;
+    int ret = rebuildOrderList(0, -1, &listChanged, 1u);
     if (ret != 0) {
         m_listLock.Unlock();
         return ret;
@@ -2723,7 +2728,7 @@ int DbMediaList::refreshAndKeepTrack(int64_t primaryRowId, int64_t fallbackRowId
     }
 
     if (savedShuffleMode != 0 && keepErr == 0) {
-        if (rebuildOrderList(savedShuffleMode, *outKeptRowId, &dummyChanged, 0u) != 0) {
+        if (rebuildOrderList(savedShuffleMode, *outKeptRowId, &listChanged, 0u) != 0) {
             m_listLock.Unlock();
             return MC_ERR_INTERNAL;
         }

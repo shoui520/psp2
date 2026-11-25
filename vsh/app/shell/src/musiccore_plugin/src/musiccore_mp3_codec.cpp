@@ -9,6 +9,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include "musiccore_pipeline_types.h"
+
 extern "C" {
 int sce_paf_strcmp(const char *lhs, const char *rhs);
 }
@@ -37,23 +39,6 @@ static const int MODE_STREAM_PLAY = 5;
 static const int MODE_DIRECT_PLAY = 16;
 
 extern void *allocFromHeap(size_t size);
-extern void *allocSecondaryHeap(size_t size);
-extern void freeSecondaryHeap(void *ptr);
-extern void delayWorkerThread(SceUInt delayUs);
-
-struct SyncMutexStorage {
-    void *vtablePtr;
-    SceUID semaId;
-};
-
-extern int syncMutexLock(SyncMutexStorage *mutex);
-extern int syncMutexUnlock(SyncMutexStorage *mutex);
-
-struct MediaInfoHandle {
-    void *vtablePtr;
-    uint32_t mediaFourcc;
-    uint8_t sharedFlag;
-};
 
 extern void decoderManagerReleaseMediaInfo(MediaInfoHandle **ioHandle, int forceRelease);
 extern void *mp3MediaInfoConstruct(void *mem, const char *path, int ioPriority);
@@ -71,72 +56,28 @@ struct Mp3FramePacket {
     int frameFlags;
 };
 
-class Mp3StreamParserView {
+class Mp3StreamParser {
 public:
-    virtual ~Mp3StreamParserView() {}
+    virtual ~Mp3StreamParser() {}
     virtual int readFirstFrame(Mp3FramePacket *outPkt, int *outErr) = 0;
     virtual int readNextFrame(Mp3FramePacket *outPkt, int *outErr) = 0;
     virtual int readPrevFrame(Mp3FramePacket *outPkt, int *outErr) = 0;
     virtual int seekAndReadFrame(int targetMs, Mp3FramePacket *outPkt, int *outErr) = 0;
 };
 
-extern int mp3StreamOpen(Mp3StreamParserView *stream);
-extern const char *mp3StreamGetPath(Mp3StreamParserView *stream);
-extern void mp3StreamSetReadMode(Mp3StreamParserView *stream, int mode, int p1, int p2);
-extern int mp3StreamGetDurationMs(Mp3StreamParserView *stream, int *outDurationMs, int *outErr);
-extern int mp3StreamGetSampleRate(Mp3StreamParserView *stream, uint32_t *outSampleRate, int *outErr);
-extern int mp3StreamGetSamplesPerFrame(Mp3StreamParserView *stream, uint16_t *outSamples, int *outErr);
-extern int mp3StreamQueryTag(Mp3StreamParserView *stream, void *tagOut, void *tagOut2);
+extern int mp3StreamOpen(Mp3StreamParser *stream);
+extern const char *mp3StreamGetPath(Mp3StreamParser *stream);
+extern int mp3StreamSetReadDirection(Mp3StreamParser *stream, int direction);
+extern int mp3StreamGetDurationMs(Mp3StreamParser *stream, int *outDurationMs, int *outErr);
+extern int mp3StreamGetSampleRate(Mp3StreamParser *stream, uint32_t *outSampleRate, int *outErr);
+extern int mp3StreamGetSamplesPerFrame(Mp3StreamParser *stream, uint16_t *outSamples, int *outErr);
+extern int mp3StreamQueryTag(Mp3StreamParser *stream, void *tagOut, void *tagOut2);
 
-struct Mp3MediaInfoView : public MediaInfoHandle {
-    uint8_t pathStorage[2052];
-    Mp3StreamParserView *streamParser; /* +2064 */
-    void *cacheIo;                     /* +2068 */
-};
-
-struct CacheIoPriorityIf {
-    virtual ~CacheIoPriorityIf() {}
-    virtual int isInitialized() const = 0;
-    virtual int open() = 0;
-    virtual int close() = 0;
-    virtual int isOpen() const = 0;
-    virtual int getFileSize() const = 0;
-    virtual const char *getPath() const = 0;
-    virtual int setPath(const char *path) = 0;
-    virtual int setPriorityMode(int mode) = 0;
-};
-
-/* Pipeline / filter infrastructure (0x81206F38..0x8120825B) */
-extern void parserFilterBaseInit(void *self, int filterKind, const char *threadName);
-extern void parserFilterBaseDestroy(void *self);
-extern int activeFilterIsReady(const void *activeBase);
-extern void parserFilterSetOutputPipe(void *parser, void *pipe);
-extern void decoderFilterSetInputPipe(void *decoder, void *pipe);
-extern void decoderFilterSetOutputSink(void *decoder, void *audioSink);
-extern void *mp3DecoderConstruct(void *mem, const char *threadName);
-extern void *createBufRefPipe(int slotCount, void *producer, void *consumer);
-extern void *createAudioOutputFilter(int grainSize, int slotCount, void *producer,
-                                     int p1, int p2, int p3, int p4, int p5);
-extern void *createDecoderPipeline(void *parser, void *pipe, void *decoder, void *audioSink);
-extern bool decoderPipelineIsReady(const void *pipeline);
-extern void *decoderPipelineGetParser(void *pipeline);
-extern void *decoderPipelineGetDecoder(void *pipeline);
-extern void *decoderPipelineGetAudio(void *pipeline);
-extern void *decoderPipelineGetPipe(void *pipeline);
-
-struct FilterDestroyable {
-    virtual ~FilterDestroyable() {}
-};
-
-struct ActiveFilterAttach {
-    virtual ~ActiveFilterAttach() {}
-    virtual void setEventListener(void *listener) = 0; /* +0x08 */
-};
-
-struct FilterReadyCheck {
-    virtual ~FilterReadyCheck() {}
-    virtual void setEventListener(void *listener) = 0;
-    virtual int isReady() = 0;
+struct Mp3MediaInfo : public MediaInfoHandle {
+    char mediaPath[2049];              /* +9..+2057 */
+    uint8_t padPath[6];                /* +2058..+2063 */
+    Mp3StreamParser *streamParser;     /* +2064 */
+    CachedStreamIo *cacheIo;           /* +2068 */
 };
 
 struct ParserPacketOut {
@@ -198,16 +139,24 @@ int mapMp3ParserError(uint32_t errCode)
 
 /* ===== Mp3Parser (0x811F792C - 0x811F8C7B, size 124 bytes) ===== */
 
-class Mp3Parser {
+class Mp3Parser : public ParserFilterBase {
 public:
     Mp3Parser(const char *threadName, int playMode);
     virtual ~Mp3Parser();
 
-    bool isReady() const;
+    virtual int onFrameConsumed(int frameFlags) { (void)frameFlags; return 0; }
+    virtual bool isInitialized() const;
+    virtual int openStream() { return onStart(); }
+    virtual int closeStream() { return onStop(); }
+    virtual int produceFrame(MediaFrameBuffer *outBuf)
+    {
+        return readFrame(reinterpret_cast<ParserPacketOut *>(outBuf));
+    }
+
     int queryMetadata(void *metaOut);
-    int findCachedMediaInfo(const char *path, Mp3MediaInfoView **outInfo);
-    int setMediaInfo(Mp3MediaInfoView *mediaInfo);
-    int prefetchMediaInfo(Mp3MediaInfoView *mediaInfo);
+    int findCachedMediaInfo(const char *path, Mp3MediaInfo **outInfo);
+    int setMediaInfo(Mp3MediaInfo *mediaInfo);
+    int prefetchMediaInfo(Mp3MediaInfo *mediaInfo);
     void setPlaySpeed(int speed);
     int setStartPosition(int startMs);
     int setEndPosition(int endMs);
@@ -218,11 +167,6 @@ public:
     int onStop();
     int readFrame(ParserPacketOut *outPkt);
 
-    uint8_t m_basePrefix[16];          /* +4..+19 */
-    SyncMutexStorage m_mutex;          /* +20..+27 */
-    uint32_t m_baseReserved;           /* +28 */
-    int m_filterState;                 /* +32 */
-    uint8_t m_baseTail[12];            /* +36..+47 */
     int m_playMode;                    /* +48 */
     int m_requestedSpeed;              /* +52 */
     int m_startPosMs;                  /* +56 */
@@ -234,12 +178,12 @@ public:
     uint8_t m_seekPending;             /* +80 */
     uint8_t m_padSeek[3];              /* +81..+83 */
     uint32_t m_unusedStreamSlot;       /* +84 */
-    CacheIoPriorityIf *m_activeCacheIo;/* +88 */
-    CacheIoPriorityIf *m_nextCacheIo;  /* +92 */
-    Mp3StreamParserView *m_activeStream;/* +96 */
-    Mp3StreamParserView *m_nextStream;  /* +100 */
-    Mp3MediaInfoView *m_activeMedia;   /* +104 */
-    Mp3MediaInfoView *m_nextMedia;     /* +108 */
+    CachedStreamIo *m_activeCacheIo;   /* +88 */
+    CachedStreamIo *m_nextCacheIo;     /* +92 */
+    Mp3StreamParser *m_activeStream;   /* +96 */
+    Mp3StreamParser *m_nextStream;     /* +100 */
+    Mp3MediaInfo *m_activeMedia;       /* +104 */
+    Mp3MediaInfo *m_nextMedia;         /* +108 */
     uint8_t m_lastDiscontinuity;       /* +112 */
     uint8_t m_padDiscont[3];           /* +113..+115 */
     int m_trickFrameCounter;           /* +116 */
@@ -250,7 +194,8 @@ public:
 
 /* 0x811F792C */
 Mp3Parser::Mp3Parser(const char *threadName, int playMode)
-    : m_playMode(playMode)
+    : ParserFilterBase(1, threadName)
+    , m_playMode(playMode)
     , m_requestedSpeed(0)
     , m_startPosMs(-1)
     , m_endPosMs(-1)
@@ -271,7 +216,6 @@ Mp3Parser::Mp3Parser(const char *threadName, int playMode)
     , m_parserInitialized(1)
     , m_cachedChannels(0)
 {
-    parserFilterBaseInit(this, 1, threadName);
 }
 
 /* 0x811F7992 / 0x811F7A0A */
@@ -296,16 +240,15 @@ Mp3Parser::~Mp3Parser()
         m_activeCacheIo = NULL;
         m_activeStream = NULL;
     }
-    parserFilterBaseDestroy(this);
 }
 
 /* 0x811F7A1A */
-bool Mp3Parser::isReady() const
+bool Mp3Parser::isInitialized() const
 {
     if (m_parserInitialized == 0u) {
         return false;
     }
-    return activeFilterIsReady((const uint8_t *)this + 4) != 0;
+    return ActiveFilterBase::isInitialized();
 }
 
 /* 0x811F7A34 */
@@ -319,31 +262,31 @@ int Mp3Parser::queryMetadata(void *metaOut)
 }
 
 /* 0x811F7A88 */
-int Mp3Parser::findCachedMediaInfo(const char *path, Mp3MediaInfoView **outInfo)
+int Mp3Parser::findCachedMediaInfo(const char *path, Mp3MediaInfo **outInfo)
 {
     if (path == NULL) {
         *outInfo = NULL;
         return PARSER_ERR_BAD_PARAM;
     }
 
-    syncMutexLock(&m_mutex);
+    syncMutexLock(&m_lock);
     if (m_activeStream != NULL && sce_paf_strcmp(mp3StreamGetPath(m_activeStream), path) == 0) {
-        syncMutexUnlock(&m_mutex);
+        syncMutexUnlock(&m_lock);
         *outInfo = m_activeMedia;
         return 0;
     }
     if (m_nextStream != NULL && sce_paf_strcmp(mp3StreamGetPath(m_nextStream), path) == 0) {
         *outInfo = m_nextMedia;
-        syncMutexUnlock(&m_mutex);
+        syncMutexUnlock(&m_lock);
         return 0;
     }
-    syncMutexUnlock(&m_mutex);
+    syncMutexUnlock(&m_lock);
     *outInfo = NULL;
     return 0;
 }
 
 /* 0x811F7AF4 */
-int Mp3Parser::setMediaInfo(Mp3MediaInfoView *mediaInfo)
+int Mp3Parser::setMediaInfo(Mp3MediaInfo *mediaInfo)
 {
     if (mediaInfo == NULL || mediaInfo->mediaFourcc != FOURCC_MP3) {
         return PARSER_ERR_BAD_PARAM;
@@ -352,9 +295,9 @@ int Mp3Parser::setMediaInfo(Mp3MediaInfoView *mediaInfo)
         return -1;
     }
 
-    syncMutexLock(&m_mutex);
-    if (m_filterState != 2) {
-        syncMutexUnlock(&m_mutex);
+    syncMutexLock(&m_lock);
+    if (m_runState != 2) {
+        syncMutexUnlock(&m_lock);
         return PARSER_ERR_BAD_STATE;
     }
 
@@ -366,7 +309,7 @@ int Mp3Parser::setMediaInfo(Mp3MediaInfoView *mediaInfo)
                 m_nextCacheIo = NULL;
                 m_nextMedia = NULL;
             }
-            syncMutexUnlock(&m_mutex);
+            syncMutexUnlock(&m_lock);
             delayWorkerThread(20000u);
             return 0;
         }
@@ -396,7 +339,7 @@ int Mp3Parser::setMediaInfo(Mp3MediaInfoView *mediaInfo)
         m_nextCacheIo = NULL;
         m_nextMedia = NULL;
         m_durationMs = -1;
-        syncMutexUnlock(&m_mutex);
+        syncMutexUnlock(&m_lock);
         return 0;
     }
 
@@ -417,14 +360,14 @@ int Mp3Parser::setMediaInfo(Mp3MediaInfoView *mediaInfo)
     mediaInfo->sharedFlag = 1u;
     m_activeMedia = mediaInfo;
     m_activeStream = mediaInfo->streamParser;
-    m_activeCacheIo = (CacheIoPriorityIf *)mediaInfo->cacheIo;
+    m_activeCacheIo = (CachedStreamIo *)mediaInfo->cacheIo;
     m_durationMs = -1;
-    syncMutexUnlock(&m_mutex);
+    syncMutexUnlock(&m_lock);
     return 0;
 }
 
 /* 0x811F7D18 */
-int Mp3Parser::prefetchMediaInfo(Mp3MediaInfoView *mediaInfo)
+int Mp3Parser::prefetchMediaInfo(Mp3MediaInfo *mediaInfo)
 {
     if (mediaInfo == NULL || mediaInfo->mediaFourcc != FOURCC_MP3) {
         return PARSER_ERR_BAD_PARAM;
@@ -433,23 +376,23 @@ int Mp3Parser::prefetchMediaInfo(Mp3MediaInfoView *mediaInfo)
         return -1;
     }
 
-    syncMutexLock(&m_mutex);
+    syncMutexLock(&m_lock);
     if (m_playMode == MODE_STREAM_PLAY) {
-        syncMutexUnlock(&m_mutex);
+        syncMutexUnlock(&m_lock);
         return 0;
     }
 
     const char *newPath = mp3StreamGetPath(mediaInfo->streamParser);
     if (m_nextStream != NULL) {
         if (sce_paf_strcmp(mp3StreamGetPath(m_nextStream), newPath) == 0) {
-            syncMutexUnlock(&m_mutex);
+            syncMutexUnlock(&m_lock);
             return 0;
         }
         if (sce_paf_strcmp(mp3StreamGetPath(m_nextStream), mp3StreamGetPath(m_activeStream)) == 0) {
             m_nextStream = m_activeStream;
             m_nextCacheIo = m_activeCacheIo;
             m_nextMedia = m_activeMedia;
-            syncMutexUnlock(&m_mutex);
+            syncMutexUnlock(&m_lock);
             return 0;
         }
         if (m_activeStream == m_nextStream) {
@@ -470,23 +413,23 @@ int Mp3Parser::prefetchMediaInfo(Mp3MediaInfoView *mediaInfo)
     mediaInfo->sharedFlag = 1u;
     m_nextMedia = mediaInfo;
     m_nextStream = mediaInfo->streamParser;
-    m_nextCacheIo = (CacheIoPriorityIf *)mediaInfo->cacheIo;
+    m_nextCacheIo = (CachedStreamIo *)mediaInfo->cacheIo;
     m_nextCacheIo->setPriorityMode(1);
 
     if (mp3StreamOpen(m_nextStream) < 0) {
-        syncMutexUnlock(&m_mutex);
+        syncMutexUnlock(&m_lock);
         return PARSER_ERR_OPEN_FAIL;
     }
 
     int durationOut = 0;
     int parserErr = -1;
     if (mp3StreamGetDurationMs(m_nextStream, &durationOut, &parserErr) != 0) {
-        syncMutexUnlock(&m_mutex);
+        syncMutexUnlock(&m_lock);
         return 0;
     }
 
     int mapped = mapMp3ParserError((uint32_t)parserErr);
-    syncMutexUnlock(&m_mutex);
+    syncMutexUnlock(&m_lock);
     return mapped;
 }
 
@@ -500,59 +443,59 @@ void Mp3Parser::setPlaySpeed(int speed)
 /* 0x811F7EC0 */
 int Mp3Parser::setStartPosition(int startMs)
 {
-    syncMutexLock(&m_mutex);
-    if (m_filterState != 2) {
-        syncMutexUnlock(&m_mutex);
+    syncMutexLock(&m_lock);
+    if (m_runState != 2) {
+        syncMutexUnlock(&m_lock);
         return PARSER_ERR_BAD_STATE;
     }
     m_startPosMs = startMs;
     m_currentPosMs = -1.0f;
-    syncMutexUnlock(&m_mutex);
+    syncMutexUnlock(&m_lock);
     return 0;
 }
 
 /* 0x811F7EF4 */
 int Mp3Parser::setEndPosition(int endMs)
 {
-    syncMutexLock(&m_mutex);
-    if (m_filterState != 2) {
-        syncMutexUnlock(&m_mutex);
+    syncMutexLock(&m_lock);
+    if (m_runState != 2) {
+        syncMutexUnlock(&m_lock);
         return PARSER_ERR_BAD_STATE;
     }
     m_endPosMs = endMs;
     m_currentPosMs = -1.0f;
-    syncMutexUnlock(&m_mutex);
+    syncMutexUnlock(&m_lock);
     return 0;
 }
 
 /* 0x811F7F28 */
 int Mp3Parser::getDurationMs()
 {
-    syncMutexLock(&m_mutex);
+    syncMutexLock(&m_lock);
     if (m_durationMs >= 0) {
         int cached = m_durationMs;
-        syncMutexUnlock(&m_mutex);
+        syncMutexUnlock(&m_lock);
         return cached;
     }
     if (m_activeStream == NULL) {
-        syncMutexUnlock(&m_mutex);
+        syncMutexUnlock(&m_lock);
         return -1;
     }
 
     int openRet = mp3StreamOpen(m_activeStream);
     if (openRet < 0) {
-        syncMutexUnlock(&m_mutex);
+        syncMutexUnlock(&m_lock);
         return openRet;
     }
 
     int parserErr = -1;
     if (mp3StreamGetDurationMs(m_activeStream, &m_durationMs, &parserErr) != 0) {
         int dur = m_durationMs;
-        syncMutexUnlock(&m_mutex);
+        syncMutexUnlock(&m_lock);
         return dur;
     }
 
-    syncMutexUnlock(&m_mutex);
+    syncMutexUnlock(&m_lock);
     if ((uint32_t)parserErr == 0x80280016u || (uint32_t)parserErr == 0x80280018u) {
         return 0;
     }
@@ -562,9 +505,9 @@ int Mp3Parser::getDurationMs()
 /* 0x811F7FDA */
 int Mp3Parser::seekPosition(int positionMs)
 {
-    syncMutexLock(&m_mutex);
-    if (m_filterState != 2) {
-        syncMutexUnlock(&m_mutex);
+    syncMutexLock(&m_lock);
+    if (m_runState != 2) {
+        syncMutexUnlock(&m_lock);
         return PARSER_ERR_BAD_STATE;
     }
     if (positionMs >= 0) {
@@ -576,20 +519,20 @@ int Mp3Parser::seekPosition(int positionMs)
         m_seekPending = 1u;
         m_currentPosMs = -1.0f;
     }
-    syncMutexUnlock(&m_mutex);
+    syncMutexUnlock(&m_lock);
     return 0;
 }
 
 /* 0x811F8052 */
 int Mp3Parser::resetPosition()
 {
-    syncMutexLock(&m_mutex);
-    if (m_filterState != 2) {
-        syncMutexUnlock(&m_mutex);
+    syncMutexLock(&m_lock);
+    if (m_runState != 2) {
+        syncMutexUnlock(&m_lock);
         return PARSER_ERR_BAD_STATE;
     }
     m_currentPosMs = -1.0f;
-    syncMutexUnlock(&m_mutex);
+    syncMutexUnlock(&m_lock);
     return 0;
 }
 
@@ -635,25 +578,25 @@ int Mp3Parser::readFrame(ParserPacketOut *outPkt)
     bool fastSkipMode = (m_playMode == MODE_STREAM_PLAY
                          && (m_requestedSpeed > 20 || m_requestedSpeed < -20));
 
-    syncMutexLock(&m_mutex);
+    syncMutexLock(&m_lock);
     if (m_requestedSpeed == 0
         || (m_playMode != MODE_STREAM_PLAY && m_playMode != MODE_LOCAL_PLAY && m_playMode != MODE_DIRECT_PLAY)) {
-        syncMutexUnlock(&m_mutex);
+        syncMutexUnlock(&m_lock);
         return PARSER_ERR_BAD_PARAM;
     }
 
     int mode = m_playMode;
     if (m_requestedSpeed != m_activeSpeed) {
         if (m_requestedSpeed == 1) {
-            mp3StreamSetReadMode(m_activeStream, 1, 0, 0);
+            mp3StreamSetReadDirection(m_activeStream, 1);
         } else if (m_requestedSpeed < 0) {
-            mp3StreamSetReadMode(m_activeStream, 4, 0, 0);
+            mp3StreamSetReadDirection(m_activeStream, 4);
         } else {
-            mp3StreamSetReadMode(m_activeStream, 2, 0, 0);
+            mp3StreamSetReadDirection(m_activeStream, 2);
         }
         m_activeSpeed = m_requestedSpeed;
     }
-    syncMutexUnlock(&m_mutex);
+    syncMutexUnlock(&m_lock);
 
     Mp3FramePacket framePkt;
     framePkt.frameSize = outPkt->maxBufferSize;
@@ -902,8 +845,10 @@ public:
     virtual ~Mp3Factory() {}
 
     int getBufferSizes(uint32_t *outParserBuf, uint32_t *outDecoderBuf, uint32_t *outAudioBuf);
-    void *createPipeline(int mode, int p1, int p2, int p3, int p4, int p5);
-    int destroyPipeline(void *pipeline);
+    PipelineEventListener *createPipeline(int mode, AudioOpenCallback openCb,
+                                          AudioCloseCallback closeCb, AudioWriteCallback writeCb,
+                                          AudioFlushCallback flushCb, void *userContext);
+    int destroyPipeline(PipelineEventListener *pipeline);
     void *createMediaInfo(const char *path, int ioPriority);
     int destroyMediaInfo(void **ioMediaInfo);
 };
@@ -926,7 +871,10 @@ int Mp3Factory::getBufferSizes(uint32_t *outParserBuf, uint32_t *outDecoderBuf, 
 }
 
 /* 0x811F764A */
-void *Mp3Factory::createPipeline(int mode, int p1, int p2, int p3, int p4, int p5)
+PipelineEventListener *Mp3Factory::createPipeline(int mode, AudioOpenCallback openCb,
+                                                  AudioCloseCallback closeCb,
+                                                  AudioWriteCallback writeCb,
+                                                  AudioFlushCallback flushCb, void *userContext)
 {
     Mp3Parser *parser = NULL;
     void *parserMem = allocFromHeap(sizeof(Mp3Parser));
@@ -934,8 +882,8 @@ void *Mp3Factory::createPipeline(int mode, int p1, int p2, int p3, int p4, int p
         parser = new (parserMem) Mp3Parser("SceShellMusicCoreMp3Parser", mode);
     }
 
-    void *decoder = NULL;
-    void *decMem = allocSecondaryHeap(168u);
+    AudioDecoderBase *decoder = NULL;
+    void *decMem = localAlloc(168u);
     if (decMem != NULL) {
         decoder = mp3DecoderConstruct(decMem, "SceShellMusicCoreMp3Decoder");
     }
@@ -945,86 +893,70 @@ void *Mp3Factory::createPipeline(int mode, int p1, int p2, int p3, int p4, int p
     }
 
     int pipeSlots = (mode == MODE_STREAM_PLAY) ? 16 : 6;
-    void *decoderConsumer = (decoder != NULL) ? ((uint8_t *)decoder + 4) : NULL;
-    void *pipe = createBufRefPipe(pipeSlots, parser, decoderConsumer);
-    void *audio = createAudioOutputFilter(4608, 16, decoder, p1, p2, p3, p4, p5);
+    PipeConsumerControl *decoderConsumer = static_cast<PipeConsumerControl *>(decoder);
+    PipeInterface *pipe = createBufRefPipe(pipeSlots, parser, decoderConsumer);
+    AudioOutputFilter *audio = createAudioOutputFilter(4608u, 16, decoder, openCb, closeCb,
+                                                       writeCb, flushCb, userContext);
 
     if (parser != NULL) {
-        parserFilterSetOutputPipe(parser, pipe);
+        parser->setOutputPipe(pipe);
     }
     if (decoder != NULL) {
-        decoderFilterSetInputPipe(decoder, pipe);
-        void *audioConsumer = (audio != NULL) ? ((uint8_t *)audio + 4) : NULL;
-        decoderFilterSetOutputSink(decoder, audioConsumer);
+        decoder->setInputPipe(pipe);
+        decoder->setOutputPipe(static_cast<PipeInterface *>(audio));
     }
 
-    void *pipeline = createDecoderPipeline(parser, pipe, decoder, audio);
+    PipelineEventListener *pipeline = createDecoderPipeline(parser, pipe, decoder, audio);
     if (pipeline == NULL || parser == NULL || decoder == NULL || audio == NULL || pipe == NULL) {
-        if (pipeline != NULL) {
-            delete (FilterDestroyable *)pipeline;
-        }
-        if (parser != NULL) {
-            delete parser;
-        }
-        if (pipe != NULL) {
-            delete (FilterDestroyable *)pipe;
-        }
+        delete pipeline;
+        delete parser;
+        delete pipe;
         if (decoder != NULL) {
-            ((FilterDestroyable *)decoder)->~FilterDestroyable();
-            freeSecondaryHeap(decoder);
+            decoder->~AudioDecoderBase();
+            localFree(decoder);
         }
-        if (audio != NULL) {
-            delete (FilterDestroyable *)audio;
-        }
+        delete audio;
         return NULL;
     }
 
-    FilterReadyCheck *audioReady = (FilterReadyCheck *)audio;
-    FilterReadyCheck *pipeReady = (FilterReadyCheck *)pipe;
     if (decoderPipelineIsReady(pipeline)
-        && parser->isReady()
-        && audioReady->isReady() != 0
-        && pipeReady->isReady() != 0) {
-        ((ActiveFilterAttach *)((uint8_t *)parser + 4))->setEventListener(pipeline);
-        ((ActiveFilterAttach *)((uint8_t *)decoder + 8))->setEventListener(pipeline);
-        ((ActiveFilterAttach *)audio)->setEventListener(pipeline);
+        && parser->isInitialized()
+        && audio->isInitialized()
+        && pipe->isInitialized()) {
+        static_cast<ActiveFilterBase *>(parser)->setEventListener(pipeline);
+        static_cast<ActiveFilterBase *>(decoder)->setEventListener(pipeline);
+        audio->setEventListener(pipeline);
         return pipeline;
     }
 
-    delete (FilterDestroyable *)pipeline;
+    delete pipeline;
     delete parser;
-    ((FilterDestroyable *)decoder)->~FilterDestroyable();
-    freeSecondaryHeap(decoder);
-    delete (FilterDestroyable *)audio;
-    delete (FilterDestroyable *)pipe;
+    decoder->~AudioDecoderBase();
+    localFree(decoder);
+    delete audio;
+    delete pipe;
     return NULL;
 }
 
 /* 0x811F7860 */
-int Mp3Factory::destroyPipeline(void *pipeline)
+int Mp3Factory::destroyPipeline(PipelineEventListener *pipeline)
 {
     if (pipeline == NULL) {
         return PARSER_ERR_BAD_PARAM;
     }
 
-    void *parser = decoderPipelineGetParser(pipeline);
-    if (parser != NULL) {
-        delete (FilterDestroyable *)parser;
-    }
-    void *decoder = decoderPipelineGetDecoder(pipeline);
+    ParserFilterBase *parser = decoderPipelineGetParser(pipeline);
+    delete parser;
+    DecoderFilterBase *decoder = decoderPipelineGetDecoder(pipeline);
     if (decoder != NULL) {
-        ((FilterDestroyable *)decoder)->~FilterDestroyable();
-        freeSecondaryHeap(decoder);
+        decoder->~DecoderFilterBase();
+        localFree(decoder);
     }
-    void *audio = decoderPipelineGetAudio(pipeline);
-    if (audio != NULL) {
-        delete (FilterDestroyable *)audio;
-    }
-    void *pipe = decoderPipelineGetPipe(pipeline);
-    if (pipe != NULL) {
-        delete (FilterDestroyable *)pipe;
-    }
-    delete (FilterDestroyable *)pipeline;
+    AudioOutputFilter *audio = decoderPipelineGetAudio(pipeline);
+    delete audio;
+    PipeInterface *pipe = decoderPipelineGetPipe(pipeline);
+    delete pipe;
+    delete pipeline;
     return 0;
 }
 
@@ -1044,7 +976,7 @@ int Mp3Factory::destroyMediaInfo(void **ioMediaInfo)
     if (*ioMediaInfo == NULL) {
         return PARSER_ERR_BAD_PARAM;
     }
-    delete (FilterDestroyable *)(*ioMediaInfo);
+    delete static_cast<PipelineEventListener *>(*ioMediaInfo);
     *ioMediaInfo = NULL;
     return 0;
 }

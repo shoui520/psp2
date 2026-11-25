@@ -9,6 +9,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include "musiccore_pipeline_types.h"
+
 extern "C" {
 void *sce_paf_memset(void *dst, int ch, SceSize len);
 void *sce_paf_memcpy(void *dst, const void *src, SceSize len);
@@ -45,23 +47,6 @@ static const int MODE_STREAM_PLAY = 5;
 static const int MODE_DIRECT_PLAY = 16;
 
 extern void *allocFromHeap(size_t size);
-extern void *allocSecondaryHeap(size_t size);
-extern void freeSecondaryHeap(void *ptr);
-extern void delayWorkerThread(SceUInt delayUs);
-
-struct SyncMutexStorage {
-    void *vtablePtr;
-    SceUID semaId;
-};
-
-extern int syncMutexLock(SyncMutexStorage *mutex);
-extern int syncMutexUnlock(SyncMutexStorage *mutex);
-
-struct MediaInfoHandle {
-    void *vtablePtr;
-    uint32_t mediaFourcc;
-    uint8_t sharedFlag;
-};
 
 extern void decoderManagerReleaseMediaInfo(MediaInfoHandle **ioHandle, int forceRelease);
 extern void *at9MediaInfoConstruct(void *mem, const char *path, int loopMode);
@@ -86,9 +71,9 @@ struct At9SmplLoopInfo {
     uint32_t loopEnd;
 };
 
-class At9CacheIoView {
+class At9CacheIo {
 public:
-    virtual ~At9CacheIoView() {}
+    virtual ~At9CacheIo() {}
     virtual int initialize() = 0;
     virtual int open() = 0;
     virtual int close() = 0;
@@ -101,46 +86,35 @@ public:
     virtual int flushCache() = 0;
     virtual int setCacheHint(int hintMode, int extra) = 0;
 
-    uint8_t baseStorage[60];
+    void *m_cacheHandle;
+    uint8_t m_initialized;
+    uint8_t m_padInit[3];
+    char *m_filePath;
+    void *m_fileObj;
+    void *m_fileRefCount;
+    int m_priorityMode;
+    int m_padPriority;
+    int64_t m_filePos;
+    int m_chunkSize;
+    int m_blockCount;
+    uint8_t m_foundChunks;
+    uint8_t m_padChunks[3];
+    uint32_t m_fmtOffset;
+    uint32_t m_fmtSize;
+    uint32_t m_dataOffset;
     uint32_t dataSize; /* +64 */
 };
 
-extern int at9CacheScanChunks(At9CacheIoView *io, uint8_t targetMask);
-extern int at9CacheReadFmtHeader(At9CacheIoView *io, At9FmtHeader *outFmt);
-extern int at9CacheReadSmplLoop(At9CacheIoView *io, At9SmplLoopInfo *outLoop);
+extern int at9CacheScanChunks(At9CacheIo *io, uint8_t targetMask);
+extern int at9CacheReadFmtHeader(At9CacheIo *io, At9FmtHeader *outFmt);
+extern int at9CacheReadSmplLoop(At9CacheIo *io, At9SmplLoopInfo *outLoop);
 extern int wavCacheReadDataRange(void *io, uint32_t offset, uint32_t size,
                                  void **outPtr, uint32_t *outSize);
 
-struct At9MediaInfoView : public MediaInfoHandle {
-    uint8_t pathStorage[2052];
-    At9CacheIoView *cacheIo; /* +2064 */
-};
-
-extern void parserFilterBaseInit(void *self, int filterKind, const char *threadName);
-extern void parserFilterBaseDestroy(void *self);
-extern void parserFilterSetOutputPipe(void *parser, void *pipe);
-extern void decoderFilterSetInputPipe(void *decoder, void *pipe);
-extern void decoderFilterSetOutputSink(void *decoder, void *audioSink);
-extern void *at9DecoderConstruct(void *mem, const char *threadName);
-extern void *createFixedFramePipe(int frameSize, int slotCount, void *producer, void *consumer);
-extern void *createAudioOutputFilter(int grainSize, int slotCount, void *producer,
-                                     int p1, int p2, int p3, int p4, int p5);
-extern void *createDecoderPipeline(void *parser, void *pipe, void *decoder, void *audioSink);
-extern bool decoderPipelineIsReady(const void *pipeline);
-
-struct FilterDestroyable {
-    virtual ~FilterDestroyable() {}
-};
-
-struct ActiveFilterAttach {
-    virtual ~ActiveFilterAttach() {}
-    virtual void setEventListener(void *listener) = 0;
-};
-
-struct FilterReadyCheck {
-    virtual ~FilterReadyCheck() {}
-    virtual void setEventListener(void *listener) = 0;
-    virtual int isReady() = 0;
+struct At9MediaInfo : public MediaInfoHandle {
+    char mediaPath[2049]; /* +9..+2057 */
+    uint8_t padPath[6];   /* +2058..+2063 */
+    At9CacheIo *cacheIo;  /* +2064 */
 };
 
 struct At9PacketOut {
@@ -200,14 +174,22 @@ int mapAt9ParserError(uint32_t errCode)
 
 /* ===== At9Parser (0x811FB0FC - 0x811FBF43, size 168 bytes) ===== */
 
-class At9Parser {
+class At9Parser : public ParserFilterBase {
 public:
     At9Parser(const char *threadName, int playMode, int loopCount);
     virtual ~At9Parser();
 
-    int findCachedMediaInfo(const char *path, At9MediaInfoView **outInfo);
-    int setMediaInfo(At9MediaInfoView *mediaInfo);
-    int prefetchMediaInfo(At9MediaInfoView *mediaInfo);
+    virtual int onFrameConsumed(int frameFlags) { (void)frameFlags; return 0; }
+    virtual int openStream() { return onStart(); }
+    virtual int closeStream() { return onStop(); }
+    virtual int produceFrame(MediaFrameBuffer *outBuf)
+    {
+        return readFrame(reinterpret_cast<At9PacketOut *>(outBuf));
+    }
+
+    int findCachedMediaInfo(const char *path, At9MediaInfo **outInfo);
+    int setMediaInfo(At9MediaInfo *mediaInfo);
+    int prefetchMediaInfo(At9MediaInfo *mediaInfo);
     int setStartPosition(int startMs);
     int parseAt9Header(uint8_t scanMask);
     int setEndPosition(int endMs);
@@ -219,11 +201,6 @@ public:
     int readFrame(At9PacketOut *outPkt);
     At9CodecConfigPayload *getCodecConfig(uint32_t *outSize);
 
-    uint8_t m_basePrefix[16];          /* +4..+19 */
-    SyncMutexStorage m_mutex;          /* +20..+27 */
-    uint32_t m_baseReserved;           /* +28 */
-    int m_filterState;                 /* +32 */
-    uint8_t m_baseTail[12];            /* +36..+47 */
     int m_playMode;                    /* +48 */
     int m_requestedSpeed;              /* +52 */
     int m_activeSpeed;                 /* +56 */
@@ -249,17 +226,18 @@ public:
     uint32_t m_loopEndFrame;           /* +128 */
     int m_loopCount;                   /* +132 */
     int m_completedLoops;              /* +136 */
-    At9CacheIoView *m_activeCacheIo;   /* +140 */
-    At9CacheIoView *m_nextCacheIo;     /* +144 */
-    At9MediaInfoView *m_activeMedia;   /* +148 */
-    At9MediaInfoView *m_nextMedia;     /* +152 */
+    At9CacheIo *m_activeCacheIo;       /* +140 */
+    At9CacheIo *m_nextCacheIo;         /* +144 */
+    At9MediaInfo *m_activeMedia;       /* +148 */
+    At9MediaInfo *m_nextMedia;         /* +152 */
     uint32_t m_unusedStreamSlot;       /* +156 */
     At9CodecConfigPayload m_codecCfg;  /* +160..+167 */
 };
 
 /* 0x811FB0FC */
 At9Parser::At9Parser(const char *threadName, int playMode, int loopCount)
-    : m_playMode(playMode)
+    : ParserFilterBase(1, threadName)
+    , m_playMode(playMode)
     , m_requestedSpeed(0)
     , m_activeSpeed(0)
     , m_rawStartMs(-1)
@@ -290,7 +268,6 @@ At9Parser::At9Parser(const char *threadName, int playMode, int loopCount)
     , m_nextMedia(NULL)
     , m_unusedStreamSlot(0)
 {
-    parserFilterBaseInit(this, 1, threadName);
     m_codecCfg.status = 0;
     sce_paf_memset(m_codecCfg.configData, 0, sizeof(m_codecCfg.configData));
 }
@@ -312,35 +289,34 @@ At9Parser::~At9Parser()
     }
     m_codecCfg.status = 0;
     sce_paf_memset(m_codecCfg.configData, 0, sizeof(m_codecCfg.configData));
-    parserFilterBaseDestroy(this);
 }
 
 /* 0x811FB226 */
-int At9Parser::findCachedMediaInfo(const char *path, At9MediaInfoView **outInfo)
+int At9Parser::findCachedMediaInfo(const char *path, At9MediaInfo **outInfo)
 {
     if (path == NULL) {
         *outInfo = NULL;
         return PARSER_ERR_BAD_PARAM;
     }
 
-    syncMutexLock(&m_mutex);
+    syncMutexLock(&m_lock);
     if (m_activeCacheIo != NULL && sce_paf_strcmp(m_activeCacheIo->getPath(), path) == 0) {
-        syncMutexUnlock(&m_mutex);
+        syncMutexUnlock(&m_lock);
         *outInfo = m_activeMedia;
         return 0;
     }
     if (m_nextCacheIo != NULL && sce_paf_strcmp(m_nextCacheIo->getPath(), path) == 0) {
         *outInfo = m_nextMedia;
-        syncMutexUnlock(&m_mutex);
+        syncMutexUnlock(&m_lock);
         return 0;
     }
-    syncMutexUnlock(&m_mutex);
+    syncMutexUnlock(&m_lock);
     *outInfo = NULL;
     return 0;
 }
 
 /* 0x811FB29E */
-int At9Parser::setMediaInfo(At9MediaInfoView *mediaInfo)
+int At9Parser::setMediaInfo(At9MediaInfo *mediaInfo)
 {
     if (mediaInfo == NULL || mediaInfo->mediaFourcc != FOURCC_AT9) {
         return PARSER_ERR_BAD_PARAM;
@@ -351,16 +327,16 @@ int At9Parser::setMediaInfo(At9MediaInfoView *mediaInfo)
         return -1;
     }
 
-    syncMutexLock(&m_mutex);
-    if (m_filterState != 2) {
-        syncMutexUnlock(&m_mutex);
+    syncMutexLock(&m_lock);
+    if (m_runState != 2) {
+        syncMutexUnlock(&m_lock);
         return PARSER_ERR_BAD_STATE;
     }
 
     const char *newPath = mediaInfo->cacheIo->getPath();
     if (m_activeCacheIo != NULL) {
         if (sce_paf_strcmp(m_activeCacheIo->getPath(), newPath) == 0) {
-            syncMutexUnlock(&m_mutex);
+            syncMutexUnlock(&m_lock);
             delayWorkerThread(20000u);
             return 0;
         }
@@ -388,7 +364,7 @@ int At9Parser::setMediaInfo(At9MediaInfoView *mediaInfo)
         }
         m_nextCacheIo = NULL;
         m_nextMedia = NULL;
-        syncMutexUnlock(&m_mutex);
+        syncMutexUnlock(&m_lock);
         return 0;
     }
 
@@ -404,12 +380,12 @@ int At9Parser::setMediaInfo(At9MediaInfoView *mediaInfo)
     mediaInfo->sharedFlag = 1u;
     m_activeMedia = mediaInfo;
     m_activeCacheIo = mediaInfo->cacheIo;
-    syncMutexUnlock(&m_mutex);
+    syncMutexUnlock(&m_lock);
     return 0;
 }
 
 /* 0x811FB3FE */
-int At9Parser::prefetchMediaInfo(At9MediaInfoView *mediaInfo)
+int At9Parser::prefetchMediaInfo(At9MediaInfo *mediaInfo)
 {
     if (mediaInfo == NULL || mediaInfo->mediaFourcc != FOURCC_AT9) {
         return PARSER_ERR_BAD_PARAM;
@@ -418,23 +394,23 @@ int At9Parser::prefetchMediaInfo(At9MediaInfoView *mediaInfo)
         return -1;
     }
 
-    syncMutexLock(&m_mutex);
+    syncMutexLock(&m_lock);
     const char *newPath = mediaInfo->cacheIo->getPath();
     if (m_nextCacheIo != NULL) {
         if (sce_paf_strcmp(m_nextCacheIo->getPath(), newPath) == 0) {
-            syncMutexUnlock(&m_mutex);
+            syncMutexUnlock(&m_lock);
             return 0;
         }
         if (sce_paf_strcmp(m_nextCacheIo->getPath(), m_activeCacheIo->getPath()) == 0) {
             m_nextCacheIo = m_activeCacheIo;
             m_nextMedia = m_activeMedia;
-            syncMutexUnlock(&m_mutex);
+            syncMutexUnlock(&m_lock);
             return 0;
         }
     }
 
     if (m_nextMedia != NULL) {
-        syncMutexUnlock(&m_mutex);
+        syncMutexUnlock(&m_lock);
         return -1;
     }
 
@@ -444,12 +420,12 @@ int At9Parser::prefetchMediaInfo(At9MediaInfoView *mediaInfo)
     m_nextCacheIo->setPriorityMode(1);
 
     if (m_nextCacheIo->isOpen() != 1 && m_nextCacheIo->open() < 0) {
-        syncMutexUnlock(&m_mutex);
+        syncMutexUnlock(&m_lock);
         return PARSER_ERR_OPEN_FAIL;
     }
 
     int scanErr = at9CacheScanChunks(m_nextCacheIo, 7u);
-    syncMutexUnlock(&m_mutex);
+    syncMutexUnlock(&m_lock);
     if (scanErr == 0) {
         return 0;
     }
@@ -459,16 +435,16 @@ int At9Parser::prefetchMediaInfo(At9MediaInfoView *mediaInfo)
 /* 0x811FB554 */
 int At9Parser::setStartPosition(int startMs)
 {
-    syncMutexLock(&m_mutex);
-    if (m_filterState != 2) {
-        syncMutexUnlock(&m_mutex);
+    syncMutexLock(&m_lock);
+    if (m_runState != 2) {
+        syncMutexUnlock(&m_lock);
         return PARSER_ERR_BAD_STATE;
     }
     m_rawStartMs = startMs;
     m_clampedStartMs = (startMs >= 0) ? startMs : 0;
     m_currentFrameIdx = -1;
     m_loopJumpFrameIdx = -1;
-    syncMutexUnlock(&m_mutex);
+    syncMutexUnlock(&m_lock);
     return 0;
 }
 
@@ -534,9 +510,9 @@ int At9Parser::parseAt9Header(uint8_t scanMask)
 /* 0x811FB750 */
 int At9Parser::setEndPosition(int endMs)
 {
-    syncMutexLock(&m_mutex);
-    if (m_filterState != 2) {
-        syncMutexUnlock(&m_mutex);
+    syncMutexLock(&m_lock);
+    if (m_runState != 2) {
+        syncMutexUnlock(&m_lock);
         return PARSER_ERR_BAD_STATE;
     }
     m_rawEndMs = endMs;
@@ -549,44 +525,44 @@ int At9Parser::setEndPosition(int endMs)
             m_clampedEndMs = 0;
         }
     }
-    syncMutexUnlock(&m_mutex);
+    syncMutexUnlock(&m_lock);
     return 0;
 }
 
 /* 0x811FB7E2 */
 int At9Parser::resetPosition()
 {
-    syncMutexLock(&m_mutex);
-    if (m_filterState != 2) {
-        syncMutexUnlock(&m_mutex);
+    syncMutexLock(&m_lock);
+    if (m_runState != 2) {
+        syncMutexUnlock(&m_lock);
         return PARSER_ERR_BAD_STATE;
     }
     m_currentFrameIdx = -1;
     m_loopJumpFrameIdx = -1;
-    syncMutexUnlock(&m_mutex);
+    syncMutexUnlock(&m_lock);
     return 0;
 }
 
 /* 0x811FB812 */
 int At9Parser::getDurationMs()
 {
-    syncMutexLock(&m_mutex);
+    syncMutexLock(&m_lock);
     if (m_activeCacheIo == NULL) {
-        syncMutexUnlock(&m_mutex);
+        syncMutexUnlock(&m_lock);
         return 0;
     }
     if (m_formatTag < 0) {
         if (m_activeCacheIo->isOpen() != 1 && m_activeCacheIo->open() < 0) {
-            syncMutexUnlock(&m_mutex);
+            syncMutexUnlock(&m_lock);
             return 0;
         }
         if (parseAt9Header(7u) != 0) {
-            syncMutexUnlock(&m_mutex);
+            syncMutexUnlock(&m_lock);
             return 0;
         }
     }
     int durationMs = (int)((float)m_activeCacheIo->dataSize / m_bytesPerMs);
-    syncMutexUnlock(&m_mutex);
+    syncMutexUnlock(&m_lock);
     return durationMs;
 }
 
@@ -691,16 +667,16 @@ int At9Parser::readFrame(At9PacketOut *outPkt)
         }
     }
 
-    syncMutexLock(&m_mutex);
+    syncMutexLock(&m_lock);
     if (m_requestedSpeed == 0) {
-        syncMutexUnlock(&m_mutex);
+        syncMutexUnlock(&m_lock);
         return PARSER_ERR_BAD_PARAM;
     }
     if (m_requestedSpeed != m_activeSpeed) {
         m_activeCacheIo->setCacheHint(1, 0);
         m_activeSpeed = m_requestedSpeed;
     }
-    syncMutexUnlock(&m_mutex);
+    syncMutexUnlock(&m_lock);
 
     uint32_t byteOffset = m_blockAlign * (uint32_t)m_currentFrameIdx;
     void *rawData = NULL;
@@ -812,7 +788,10 @@ public:
     virtual ~At9Factory() {}
 
     int getBufferSizes(uint32_t *outParserBuf, uint32_t *unusedDecoderBuf, uint32_t *outAudioBuf);
-    void *createPipeline(int mode, int p1, int p2, int p3, int p4, int p5, int loopCount);
+    PipelineEventListener *createPipeline(int mode, AudioOpenCallback openCb,
+                                          AudioCloseCallback closeCb, AudioWriteCallback writeCb,
+                                          AudioFlushCallback flushCb, void *userContext,
+                                          int loopCount);
     void *createMediaInfo(const char *path, int loopMode);
 };
 
@@ -835,7 +814,11 @@ int At9Factory::getBufferSizes(uint32_t *outParserBuf, uint32_t *unusedDecoderBu
 }
 
 /* 0x811FAE64 */
-void *At9Factory::createPipeline(int mode, int p1, int p2, int p3, int p4, int p5, int loopCount)
+PipelineEventListener *At9Factory::createPipeline(int mode, AudioOpenCallback openCb,
+                                                  AudioCloseCallback closeCb,
+                                                  AudioWriteCallback writeCb,
+                                                  AudioFlushCallback flushCb, void *userContext,
+                                                  int loopCount)
 {
     At9Parser *parser = NULL;
     void *parserMem = allocFromHeap(sizeof(At9Parser));
@@ -843,72 +826,62 @@ void *At9Factory::createPipeline(int mode, int p1, int p2, int p3, int p4, int p
         parser = new (parserMem) At9Parser("SceShellMusicCoreAt9Parser", mode, loopCount);
     }
 
-    void *decoder = NULL;
-    void *decMem = allocSecondaryHeap(1196u);
+    AudioDecoderBase *decoder = NULL;
+    void *decMem = localAlloc(1196u);
     if (decMem != NULL) {
         decoder = at9DecoderConstruct(decMem, "SceShellMusicCoreAt9Decoder");
     }
 
     if (mode != MODE_LOCAL_PLAY && mode != MODE_STREAM_PLAY && mode != MODE_DIRECT_PLAY) {
-        if (parser != NULL) {
-            delete parser;
-        }
+        delete parser;
         if (decoder != NULL) {
-            ((FilterDestroyable *)decoder)->~FilterDestroyable();
-            freeSecondaryHeap(decoder);
+            decoder->~AudioDecoderBase();
+            localFree(decoder);
         }
         return NULL;
     }
 
     int pipeSlots = (mode == MODE_STREAM_PLAY) ? 64 : 6;
-    void *decoderConsumer = (decoder != NULL) ? ((uint8_t *)decoder + 4) : NULL;
-    void *pipe = createFixedFramePipe(512, pipeSlots, parser, decoderConsumer);
-    void *audio = createAudioOutputFilter(4096, 16, decoder, p1, p2, p3, p4, p5);
+    PipeConsumerControl *decoderConsumer = static_cast<PipeConsumerControl *>(decoder);
+    PipeInterface *pipe = createFixedFramePipe(512u, pipeSlots, parser, decoderConsumer);
+    AudioOutputFilter *audio = createAudioOutputFilter(4096u, 16, decoder, openCb, closeCb,
+                                                       writeCb, flushCb, userContext);
 
     if (parser != NULL) {
-        parserFilterSetOutputPipe(parser, pipe);
+        parser->setOutputPipe(pipe);
     }
     if (decoder != NULL) {
-        decoderFilterSetInputPipe(decoder, pipe);
-        void *audioConsumer = (audio != NULL) ? ((uint8_t *)audio + 4) : NULL;
-        decoderFilterSetOutputSink(decoder, audioConsumer);
+        decoder->setInputPipe(pipe);
+        decoder->setOutputPipe(static_cast<PipeInterface *>(audio));
     }
 
-    void *pipeline = createDecoderPipeline(parser, pipe, decoder, audio);
+    PipelineEventListener *pipeline = createDecoderPipeline(parser, pipe, decoder, audio);
     if (pipeline == NULL || parser == NULL || decoder == NULL || audio == NULL || pipe == NULL) {
-        if (pipeline != NULL) {
-            delete (FilterDestroyable *)pipeline;
-        }
-        if (parser != NULL) {
-            delete parser;
-        }
+        delete pipeline;
+        delete parser;
         if (decoder != NULL) {
-            ((FilterDestroyable *)decoder)->~FilterDestroyable();
-            freeSecondaryHeap(decoder);
+            decoder->~AudioDecoderBase();
+            localFree(decoder);
         }
-        if (audio != NULL) {
-            delete (FilterDestroyable *)audio;
-        }
+        delete audio;
         return NULL;
     }
 
-    FilterReadyCheck *audioReady = (FilterReadyCheck *)audio;
-    FilterReadyCheck *pipeReady = (FilterReadyCheck *)pipe;
     if (decoderPipelineIsReady(pipeline)
-        && audioReady->isReady() != 0
-        && pipeReady->isReady() != 0) {
-        ((ActiveFilterAttach *)((uint8_t *)parser + 4))->setEventListener(pipeline);
-        ((ActiveFilterAttach *)((uint8_t *)decoder + 8))->setEventListener(pipeline);
-        ((ActiveFilterAttach *)audio)->setEventListener(pipeline);
+        && audio->isInitialized()
+        && pipe->isInitialized()) {
+        static_cast<ActiveFilterBase *>(parser)->setEventListener(pipeline);
+        static_cast<ActiveFilterBase *>(decoder)->setEventListener(pipeline);
+        audio->setEventListener(pipeline);
         return pipeline;
     }
 
-    delete (FilterDestroyable *)pipeline;
+    delete pipeline;
     delete parser;
-    ((FilterDestroyable *)decoder)->~FilterDestroyable();
-    freeSecondaryHeap(decoder);
-    delete (FilterDestroyable *)audio;
-    delete (FilterDestroyable *)pipe;
+    decoder->~AudioDecoderBase();
+    localFree(decoder);
+    delete audio;
+    delete pipe;
     return NULL;
 }
 

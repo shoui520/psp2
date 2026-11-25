@@ -242,7 +242,8 @@ BufferBlock::BufferBlock(uint32_t payloadSize, uint32_t totalBytes, uint32_t hea
     uint32_t alignedHeader = ((headerSize - 1u) & 0xFFFFFFF8u) + 8u;
     uint32_t alignedPayload = ((payloadSize - 1u) & 0xFFFFFFF8u) + 8u;
     if (alignedHeader <= totalBytes && alignedHeader + alignedPayload <= totalBytes) {
-        m_payloadPtr = (uint8_t *)this + alignedHeader;
+        uint8_t *selfBytes = reinterpret_cast<uint8_t *>(this);
+        m_payloadPtr = selfBytes + alignedHeader;
     }
 }
 
@@ -312,7 +313,8 @@ BufferPool::BufferPool(uint32_t payloadSize, uint32_t blockCount,
         return;
     }
 
-    uint8_t *basePtr = (uint8_t *)this + alignedHeader;
+    uint8_t *selfBytes = reinterpret_cast<uint8_t *>(this);
+    uint8_t *basePtr = selfBytes + alignedHeader;
     m_firstBlock = (BufferBlock *)basePtr;
 
     uint8_t *cursor = basePtr;
