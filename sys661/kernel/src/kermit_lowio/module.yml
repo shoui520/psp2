@@ -234,10 +234,10 @@ exports:
       - sceDmacplus_driver_ED849260: 0xed849260
       - sceDmacplus_driver_F652F09D: 0xf652f09d
     variables:
-      - sceDmacplus_driver_var_374689B0: 0x374689b0
-      - sceDmacplus_driver_var_9D3DDDF0: 0x9d3dddf0
-      - sceDmacplus_driver_var_AA2E7E54: 0xaa2e7e54
-      - sceDmacplus_driver_var_C10B947A: 0xc10b947a
+      - g_dmacplusAttrMemcpy: 0x374689b0
+      - g_dmacplusAttrSc2Me: 0x9d3dddf0
+      - g_dmacplusAttrYuv: 0xaa2e7e54
+      - g_dmacplusAttrCsc: 0xc10b947a
   - name: sceKermitMemory_driver
     version: [0, 17]
     attributes: 0x0001

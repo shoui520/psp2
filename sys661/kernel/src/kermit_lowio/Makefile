@@ -1,4 +1,4 @@
 TARGET = kermit_lowio
-SRCS   = kermit_lowio.c sysreg.c ddr.c dmacplus.c lcdc.c
+SRCS   = sysreg.c ddr.c ddr_bootram.S kermit_lowio.c dmacplus.c lcdc.c
 
 include ../../build.mak
