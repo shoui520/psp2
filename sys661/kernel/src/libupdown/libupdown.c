@@ -106,49 +106,49 @@ static int g_started_flag;                /* 0x3f48 */
 static Allocator g_alloc;                 /* 0x3f4c..0x3f5c */
 static int g_alloc_count;                 /* 0x3f5c */
 
-static uint32_t sub_0000(MtState *mt);
-static int sub_00c0(const char *buf, uint32_t len, UriNode **out_list, int *out_err);
-static void sub_0268(KvNode *head);
-static void sub_02e8(UriNode *head);
-static uint32_t sub_034c(const char *str, uint32_t base);
-static int sub_0458(const char *line, uint32_t len, UriNode **out_list, uint32_t *compat_flag);
-static int sub_0500(const char *line, uint32_t len, uint8_t dest_code);
-static uint32_t sub_0698(const char *buf, uint32_t len);
-static uint32_t sub_0710(const char *buf, uint32_t len);
-static int sub_0768(uint8_t code);
-static int sub_077c(uint8_t *out_code);
-static int sub_0790(uint32_t build);
-static int sub_07a0(int ignore);
-static int sub_07b0(const char *ver_str);
-static int sub_07d4(const char *line, uint32_t len, KvNode **out_head);
-static int sub_0a14(KvNode *head, ParsedLine *parsed, uint32_t *compat_flag);
-static int sub_0dc8(UriNode **out_list, const ParsedLine *parsed);
-static int sub_0fb4(const char *ver_str, uint32_t *out_ver);
-static int sub_10fc(const char *range_str, uint32_t *out_min, uint32_t *out_max);
-static int sub_1228(const char *range_str, uint32_t *out_min, uint32_t *out_max);
-static void sub_136c(void);
-static int sub_13c0(const char *url);
-static void sub_1444(void);
-static int sub_1574(int *out_err);
-static int sub_1850(uint32_t *out_size, int *out_err);
-static int sub_1b84(void *buf, uint32_t size, int *out_err);
-static int sub_1e20(void);
-static int sub_1ef0(void);
-static void sub_1f30(void);
-static int sub_1f7c(uint8_t region, int mode);
-static void sub_1f98(void);
-static int sub_21f0(uint64_t *out_len, int *out_err);
-static int sub_23dc(uint64_t *out_len);
-static void sub_254c(int old_state, int new_state, int event, int error, void *arg);
-static int sub_25d8(int req, uint64_t *out_len);
-static uint32_t *sub_272c(uint32_t count);
-static void sub_2848(uint32_t seed);
-static void *sub_2880(uint32_t size);
-static void sub_2904(void *ptr);
-static uint32_t sub_2cc4(void);
-static int sub_2dd8(MtState *mt, uint32_t seed);
+static uint32_t mtNextRand(MtState *mt);
+static int updownParseUpdateList(const char *buf, uint32_t len, UriNode **out_list, int *out_err);
+static void updownFreeKvList(KvNode *head);
+static void updownFreeUriList(UriNode *head);
+static uint32_t updownStrToU32(const char *str, uint32_t base);
+static int updownParseEntryLine(const char *line, uint32_t len, UriNode **out_list, uint32_t *compat_flag);
+static int updownMatchDestLine(const char *line, uint32_t len, uint8_t dest_code);
+static uint32_t updownSkipComments(const char *buf, uint32_t len);
+static uint32_t updownSkipLine(const char *buf, uint32_t len);
+static int updownSetDestCode(uint8_t code);
+static int updownGetDestCode(uint8_t *out_code);
+static int updownSetCurBuild(uint32_t build);
+static int updownSetIgnoreCompat(int ignore);
+static int updownSetCurSysVer(const char *ver_str);
+static int updownParseKvPairs(const char *line, uint32_t len, KvNode **out_head);
+static int updownEvalKvPairs(KvNode *head, ParsedLine *parsed, uint32_t *compat_flag);
+static int updownBuildShuffledUriList(UriNode **out_list, const ParsedLine *parsed);
+static int updownParseVersion(const char *ver_str, uint32_t *out_ver);
+static int updownParseVersionRange(const char *range_str, uint32_t *out_min, uint32_t *out_max);
+static int updownParseBuildRange(const char *range_str, uint32_t *out_min, uint32_t *out_max);
+static void updownRegisterApctlHandler(void);
+static int updownSetCustomUrl(const char *url);
+static void updownCloseHttpHandles(void);
+static int updownFetchUpdateList(int *out_err);
+static int updownStartDownload(uint32_t *out_size, int *out_err);
+static int updownReadDownloadData(void *buf, uint32_t size, int *out_err);
+static int updownAbortHttp(void);
+static int updownIsProxyEnabled(void);
+static void updownUnregisterApctlHandler(void);
+static int updownSetRegion(uint8_t region, int mode);
+static void updownBuildListUrl(void);
+static int updownSendListRequest(uint64_t *out_len, int *out_err);
+static int updownOpenDataRequest(uint64_t *out_len);
+static void updownApctlCallback(int old_state, int new_state, int event, int error, void *arg);
+static int updownGetContentLength(int req, uint64_t *out_len);
+static uint32_t *updownBuildRandomPerm(uint32_t count);
+static void updownSeedRng(uint32_t seed);
+static void *updownAlloc(uint32_t size);
+static void updownFree(void *ptr);
+static uint32_t updownGetTimeSeed(void);
+static int mtSeed(MtState *mt, uint32_t seed);
 
-static uint32_t sub_0000(MtState *mt)
+static uint32_t mtNextRand(MtState *mt)
 {
 	uint32_t idx = mt->index;
 	uint32_t *st = &mt->state[idx];
@@ -179,7 +179,7 @@ static uint32_t sub_0000(MtState *mt)
 	return v0;
 }
 
-static int sub_00c0(const char *buf, uint32_t len, UriNode **out_list, int *out_err)
+static int updownParseUpdateList(const char *buf, uint32_t len, UriNode **out_list, int *out_err)
 {
 	uint32_t compat_flag = 0;
 	uint32_t matched_dest = 0;
@@ -189,13 +189,13 @@ static int sub_00c0(const char *buf, uint32_t len, UriNode **out_list, int *out_
 
 	*out_list = NULL;
 	while (off < len && !found) {
-		off += sub_0698(buf + off, len - off);
+		off += updownSkipComments(buf + off, len - off);
 		const char *line = buf + off;
 		uint32_t rem = len - off;
-		int match = sub_0500(line, rem, g_dest_code);
+		int match = updownMatchDestLine(line, rem, g_dest_code);
 		if (match == 1) {
 			matched_dest = 1;
-			res = sub_0458(line, rem, out_list, &compat_flag);
+			res = updownParseEntryLine(line, rem, out_list, &compat_flag);
 			if (res == 0) {
 				found = 1;
 			} else if (res == (int)0x805f0004) {
@@ -205,7 +205,7 @@ static int sub_00c0(const char *buf, uint32_t len, UriNode **out_list, int *out_
 				return 0x805f0004;
 			}
 		}
-		off += sub_0710(line, rem);
+		off += updownSkipLine(line, rem);
 	}
 
 	if (matched_dest != 1) {
@@ -219,39 +219,39 @@ static int sub_00c0(const char *buf, uint32_t len, UriNode **out_list, int *out_
 	return res;
 }
 
-static void sub_0268(KvNode *head)
+static void updownFreeKvList(KvNode *head)
 {
 	while (head != NULL) {
 		if (head->key != NULL) {
-			sub_2904(head->key);
+			updownFree(head->key);
 			head->key = NULL;
 		}
 		if (head->val != NULL) {
-			sub_2904(head->val);
+			updownFree(head->val);
 			head->val = NULL;
 		}
 		KvNode *next = head->next;
 		head->next = NULL;
-		sub_2904(head);
+		updownFree(head);
 		head = next;
 	}
 }
 
-static void sub_02e8(UriNode *head)
+static void updownFreeUriList(UriNode *head)
 {
 	while (head != NULL) {
 		if (head->url != NULL) {
-			sub_2904(head->url);
+			updownFree(head->url);
 			head->url = NULL;
 		}
 		UriNode *next = head->next;
 		head->next = NULL;
-		sub_2904(head);
+		updownFree(head);
 		head = next;
 	}
 }
 
-static uint32_t sub_034c(const char *str, uint32_t base)
+static uint32_t updownStrToU32(const char *str, uint32_t base)
 {
 	if (str == NULL) {
 		return 0;
@@ -290,27 +290,27 @@ static uint32_t sub_034c(const char *str, uint32_t base)
 	return acc;
 }
 
-static int sub_0458(const char *line, uint32_t len, UriNode **out_list, uint32_t *compat_flag)
+static int updownParseEntryLine(const char *line, uint32_t len, UriNode **out_list, uint32_t *compat_flag)
 {
 	ParsedLine parsed;
 	KvNode *kv_head = NULL;
 
 	sceKernelMemset(&parsed, 0, sizeof(parsed));
-	int res = sub_07d4(line, len, &kv_head);
+	int res = updownParseKvPairs(line, len, &kv_head);
 	if (res < 0) {
 		return res;
 	}
 
-	res = sub_0a14(kv_head, &parsed, compat_flag);
+	res = updownEvalKvPairs(kv_head, &parsed, compat_flag);
 	if (res >= 0) {
-		res = sub_0dc8(out_list, &parsed);
+		res = updownBuildShuffledUriList(out_list, &parsed);
 	}
 
-	sub_0268(kv_head);
+	updownFreeKvList(kv_head);
 	return res;
 }
 
-static int sub_0500(const char *line, uint32_t len, uint8_t dest_code)
+static int updownMatchDestLine(const char *line, uint32_t len, uint8_t dest_code)
 {
 	size_t tmpl_len = sceNet_lib_D8722983("Dest=XX;");
 	if (len < tmpl_len) {
@@ -339,16 +339,16 @@ static int sub_0500(const char *line, uint32_t len, uint8_t dest_code)
 	return (sceNet_lib_9CFBC7E3(prefix, expected) == 0) ? 1 : 0;
 }
 
-static uint32_t sub_0698(const char *buf, uint32_t len)
+static uint32_t updownSkipComments(const char *buf, uint32_t len)
 {
 	uint32_t off = 0;
 	while (off < len && buf[off] == '#') {
-		off += sub_0710(buf + off, len - off);
+		off += updownSkipLine(buf + off, len - off);
 	}
 	return off;
 }
 
-static uint32_t sub_0710(const char *buf, uint32_t len)
+static uint32_t updownSkipLine(const char *buf, uint32_t len)
 {
 	uint32_t off = 0;
 	while (off < len && buf[off] != '\n') {
@@ -360,37 +360,37 @@ static uint32_t sub_0710(const char *buf, uint32_t len)
 	return off;
 }
 
-static int sub_0768(uint8_t code)
+static int updownSetDestCode(uint8_t code)
 {
 	g_dest_code = code;
 	return 0;
 }
 
-static int sub_077c(uint8_t *out_code)
+static int updownGetDestCode(uint8_t *out_code)
 {
 	*out_code = g_dest_code;
 	return 0;
 }
 
-static int sub_0790(uint32_t build)
+static int updownSetCurBuild(uint32_t build)
 {
 	g_cur_build = build;
 	return 0;
 }
 
-static int sub_07a0(int ignore)
+static int updownSetIgnoreCompat(int ignore)
 {
 	g_ignore_compat = ignore;
 	return 0;
 }
 
-static int sub_07b0(const char *ver_str)
+static int updownSetCurSysVer(const char *ver_str)
 {
-	sub_0fb4(ver_str, &g_cur_sysver);
+	updownParseVersion(ver_str, &g_cur_sysver);
 	return 0;
 }
 
-static int sub_07d4(const char *line, uint32_t len, KvNode **out_head)
+static int updownParseKvPairs(const char *line, uint32_t len, KvNode **out_head)
 {
 	KvNode *head = NULL;
 	KvNode *prev = NULL;
@@ -398,10 +398,10 @@ static int sub_07d4(const char *line, uint32_t len, KvNode **out_head)
 	int first = 1;
 
 	while (pos < len && line[pos] != '\r' && line[pos] != '\n') {
-		KvNode *node = (KvNode *)sub_2880(sizeof(KvNode));
+		KvNode *node = (KvNode *)updownAlloc(sizeof(KvNode));
 		if (node == NULL) {
 			if (head != NULL) {
-				sub_0268(head);
+				updownFreeKvList(head);
 			}
 			return 0x805f0001;
 		}
@@ -416,15 +416,15 @@ static int sub_07d4(const char *line, uint32_t len, KvNode **out_head)
 		uint32_t klen = 0;
 		while (line[pos + klen] != '=') {
 			if (line[pos + klen] == '\n') {
-				sub_0268(head);
+				updownFreeKvList(head);
 				return -1;
 			}
 			klen++;
 		}
 
-		node->key = (char *)sub_2880(klen + 1);
+		node->key = (char *)updownAlloc(klen + 1);
 		if (node->key == NULL) {
-			sub_0268(head);
+			updownFreeKvList(head);
 			return 0x805f0001;
 		}
 		sceKernelMemcpy(node->key, line + pos, klen);
@@ -436,9 +436,9 @@ static int sub_07d4(const char *line, uint32_t len, KvNode **out_head)
 			vlen++;
 		}
 
-		node->val = (char *)sub_2880(vlen + 1);
+		node->val = (char *)updownAlloc(vlen + 1);
 		if (node->val == NULL) {
-			sub_0268(head);
+			updownFreeKvList(head);
 			return 0x805f0001;
 		}
 		sceKernelMemcpy(node->val, line + pos, vlen);
@@ -456,7 +456,7 @@ static int sub_07d4(const char *line, uint32_t len, KvNode **out_head)
 	return 0;
 }
 
-static int sub_0a14(KvNode *head, ParsedLine *parsed, uint32_t *compat_flag)
+static int updownEvalKvPairs(KvNode *head, ParsedLine *parsed, uint32_t *compat_flag)
 {
 	uint32_t min_ver = 0;
 	uint32_t max_ver = 0;
@@ -481,7 +481,7 @@ static int sub_0a14(KvNode *head, ParsedLine *parsed, uint32_t *compat_flag)
 				return -1;
 			}
 			has_imgver = 1;
-			parsed->image_version = sub_034c(cur->val, 16);
+			parsed->image_version = updownStrToU32(cur->val, 16);
 		} else if (sceNet_lib_9CFBC7E3(cur->key, "URI") == 0) {
 			if (uri_cnt >= 10) {
 				return -1;
@@ -498,24 +498,24 @@ static int sub_0a14(KvNode *head, ParsedLine *parsed, uint32_t *compat_flag)
 				return -1;
 			}
 			has_retry = 1;
-			parsed->retry = sub_034c(cur->val, 10);
+			parsed->retry = updownStrToU32(cur->val, 10);
 		} else if (sceNet_lib_9CFBC7E3(cur->key, "Timeout") == 0) {
 			if (has_timeout == 1) {
 				return -1;
 			}
 			has_timeout = 1;
-			parsed->timeout = sub_034c(cur->val, 10);
+			parsed->timeout = updownStrToU32(cur->val, 10);
 		} else if (sceNet_lib_9CFBC7E3(cur->key, "CDN_Timeout") == 0) {
 			if (has_cdn_timeout == 1) {
 				return -1;
 			}
 			has_cdn_timeout = 1;
-			parsed->cdn_timeout = sub_034c(cur->val, 10);
+			parsed->cdn_timeout = updownStrToU32(cur->val, 10);
 		} else if (sceNet_lib_9CFBC7E3(cur->key, "CompatibleVersion") == 0) {
 			if (has_compat_sysver || has_compat_ver) {
 				return -1;
 			}
-			int r = sub_10fc(cur->val, &min_ver, &max_ver);
+			int r = updownParseVersionRange(cur->val, &min_ver, &max_ver);
 			has_compat_ver = 1;
 			if (r < 0) {
 				return r;
@@ -524,7 +524,7 @@ static int sub_0a14(KvNode *head, ParsedLine *parsed, uint32_t *compat_flag)
 			if (has_compat_sysver || has_compat_ver) {
 				return -1;
 			}
-			int r = sub_1228(cur->val, &min_ver, &max_ver);
+			int r = updownParseBuildRange(cur->val, &min_ver, &max_ver);
 			has_compat_sysver = 1;
 			if (r < 0) {
 				return r;
@@ -563,9 +563,9 @@ static int sub_0a14(KvNode *head, ParsedLine *parsed, uint32_t *compat_flag)
 	return res;
 }
 
-static int sub_0dc8(UriNode **out_list, const ParsedLine *parsed)
+static int updownBuildShuffledUriList(UriNode **out_list, const ParsedLine *parsed)
 {
-	uint32_t *perm = sub_272c(parsed->uri_count);
+	uint32_t *perm = updownBuildRandomPerm(parsed->uri_count);
 	if (perm == NULL) {
 		return 0x805f0008;
 	}
@@ -576,10 +576,10 @@ static int sub_0dc8(UriNode **out_list, const ParsedLine *parsed)
 	int first = 1;
 
 	for (uint32_t i = 0; i < parsed->retry; i++) {
-		cur = (UriNode *)sub_2880(sizeof(UriNode));
+		cur = (UriNode *)updownAlloc(sizeof(UriNode));
 		if (cur == NULL) {
 			if (head != NULL) {
-				sub_02e8(head);
+				updownFreeUriList(head);
 			}
 			return 0x805f0001;
 		}
@@ -594,9 +594,9 @@ static int sub_0dc8(UriNode **out_list, const ParsedLine *parsed)
 
 		const char *src_url = parsed->uris[perm[i]];
 		size_t ulen = sceNet_lib_D8722983(src_url);
-		cur->url = (char *)sub_2880(ulen + 1);
+		cur->url = (char *)updownAlloc(ulen + 1);
 		if (cur->url == NULL) {
-			sub_02e8(head);
+			updownFreeUriList(head);
 			return 0x805f0001;
 		}
 		sceNet_lib_80C9F02A(cur->url, src_url);
@@ -604,10 +604,10 @@ static int sub_0dc8(UriNode **out_list, const ParsedLine *parsed)
 	}
 
 	if (parsed->cdn != NULL) {
-		cur = (UriNode *)sub_2880(sizeof(UriNode));
+		cur = (UriNode *)updownAlloc(sizeof(UriNode));
 		if (cur == NULL) {
 			if (head != NULL) {
-				sub_02e8(head);
+				updownFreeUriList(head);
 			}
 			return 0x805f0001;
 		}
@@ -618,9 +618,9 @@ static int sub_0dc8(UriNode **out_list, const ParsedLine *parsed)
 			prev->next = cur;
 		}
 		size_t ulen = sceNet_lib_D8722983(parsed->cdn);
-		cur->url = (char *)sub_2880(ulen + 1);
+		cur->url = (char *)updownAlloc(ulen + 1);
 		if (cur->url == NULL) {
-			sub_02e8(head);
+			updownFreeUriList(head);
 			return 0x805f0001;
 		}
 		sceNet_lib_80C9F02A(cur->url, parsed->cdn);
@@ -632,7 +632,7 @@ static int sub_0dc8(UriNode **out_list, const ParsedLine *parsed)
 	return 0;
 }
 
-static int sub_0fb4(const char *ver_str, uint32_t *out_ver)
+static int updownParseVersion(const char *ver_str, uint32_t *out_ver)
 {
 	if (ver_str == NULL || out_ver == NULL) {
 		return -1;
@@ -659,7 +659,7 @@ static int sub_0fb4(const char *ver_str, uint32_t *out_ver)
 	char buf[16];
 	sceKernelMemcpy(buf, ver_str, maj_len);
 	buf[maj_len] = '\0';
-	uint32_t maj = sub_034c(buf, 10);
+	uint32_t maj = updownStrToU32(buf, 10);
 
 	uint32_t min_val = 0;
 	if (dot != NULL) {
@@ -681,7 +681,7 @@ static int sub_0fb4(const char *ver_str, uint32_t *out_ver)
 	return 0;
 }
 
-static int sub_10fc(const char *range_str, uint32_t *out_min, uint32_t *out_max)
+static int updownParseVersionRange(const char *range_str, uint32_t *out_min, uint32_t *out_max)
 {
 	if (range_str == NULL || out_min == NULL || out_max == NULL) {
 		return -1;
@@ -705,7 +705,7 @@ static int sub_10fc(const char *range_str, uint32_t *out_min, uint32_t *out_max)
 	if (left_len != 0) {
 		sceKernelMemcpy(buf, range_str, left_len);
 		buf[left_len] = '\0';
-		*out_max = sub_034c(buf, 16);
+		*out_max = updownStrToU32(buf, 16);
 	} else {
 		*out_max = 0;
 	}
@@ -713,7 +713,7 @@ static int sub_10fc(const char *range_str, uint32_t *out_min, uint32_t *out_max)
 	if (right_len != 0) {
 		sceKernelMemcpy(buf, dash + 1, right_len);
 		buf[right_len] = '\0';
-		*out_min = sub_034c(buf, 16);
+		*out_min = updownStrToU32(buf, 16);
 	} else {
 		*out_min = 0xffffffffU;
 	}
@@ -721,7 +721,7 @@ static int sub_10fc(const char *range_str, uint32_t *out_min, uint32_t *out_max)
 	return 0;
 }
 
-static int sub_1228(const char *range_str, uint32_t *out_min, uint32_t *out_max)
+static int updownParseBuildRange(const char *range_str, uint32_t *out_min, uint32_t *out_max)
 {
 	if (range_str == NULL || out_min == NULL || out_max == NULL) {
 		return -1;
@@ -745,7 +745,7 @@ static int sub_1228(const char *range_str, uint32_t *out_min, uint32_t *out_max)
 	if (left_len != 0) {
 		sceKernelMemcpy(buf, range_str, left_len);
 		buf[left_len] = '\0';
-		int r = sub_0fb4(buf, out_max);
+		int r = updownParseVersion(buf, out_max);
 		if (r < 0) {
 			return r;
 		}
@@ -756,7 +756,7 @@ static int sub_1228(const char *range_str, uint32_t *out_min, uint32_t *out_max)
 	if (right_len != 0) {
 		sceKernelMemcpy(buf, dash + 1, right_len);
 		buf[right_len] = '\0';
-		int r = sub_0fb4(buf, out_min);
+		int r = updownParseVersion(buf, out_min);
 		if (r < 0) {
 			return r;
 		}
@@ -767,26 +767,26 @@ static int sub_1228(const char *range_str, uint32_t *out_min, uint32_t *out_max)
 	return 0;
 }
 
-static void sub_136c(void)
+static void updownRegisterApctlHandler(void)
 {
 	if (g_apctl_hid >= 0) {
 		sceNetApctlDelHandler(g_apctl_hid);
 		g_apctl_hid = -1;
 	}
-	int hid = sceNetApctlAddHandler((void *)sub_254c, NULL);
+	int hid = sceNetApctlAddHandler((void *)updownApctlCallback, NULL);
 	if (hid >= 0) {
 		g_apctl_hid = hid;
 	}
 }
 
-static int sub_13c0(const char *url)
+static int updownSetCustomUrl(const char *url)
 {
 	if (g_custom_url != NULL) {
-		sub_2904(g_custom_url);
+		updownFree(g_custom_url);
 		g_custom_url = NULL;
 	}
 	size_t len = sceNet_lib_D8722983(url);
-	g_custom_url = (char *)sub_2880(len + 1);
+	g_custom_url = (char *)updownAlloc(len + 1);
 	if (g_custom_url == NULL) {
 		return 0x805f0001;
 	}
@@ -794,7 +794,7 @@ static int sub_13c0(const char *url)
 	return 0;
 }
 
-static void sub_1444(void)
+static void updownCloseHttpHandles(void)
 {
 	if (g_data_req != 0) {
 		sceHttpAbortRequest(g_data_req);
@@ -820,16 +820,16 @@ static void sub_1444(void)
 	}
 	g_aborted = 0;
 	if (g_uri_list != NULL) {
-		sub_02e8(g_uri_list);
+		updownFreeUriList(g_uri_list);
 		g_uri_list = NULL;
 	}
 	if (g_custom_url != NULL) {
-		sub_2904(g_custom_url);
+		updownFree(g_custom_url);
 		g_custom_url = NULL;
 	}
 }
 
-static int sub_1574(int *out_err)
+static int updownFetchUpdateList(int *out_err)
 {
 	uint64_t content_len = 0;
 	int res = 0;
@@ -848,7 +848,7 @@ static int sub_1574(int *out_err)
 	sceHttpSetResolveTimeOut(g_http_tmpl, 3000000);
 	sceHttpSetRecvTimeOut(g_http_tmpl, 60000000);
 	sceHttpSetSendTimeOut(g_http_tmpl, 60000000);
-	sub_1f98();
+	updownBuildListUrl();
 
 	if (g_active_list_url == NULL) {
 		res = 0x805f000c;
@@ -875,7 +875,7 @@ static int sub_1574(int *out_err)
 		g_list_req = 0;
 	}
 
-	res = sub_21f0(&content_len, out_err);
+	res = updownSendListRequest(&content_len, out_err);
 	if (res < 0) {
 		goto finish;
 	}
@@ -888,7 +888,7 @@ static int sub_1574(int *out_err)
 
 	uint32_t list_size = (uint32_t)content_len;
 	res = 0x805f0001;
-	char *buf = (char *)sub_2880(list_size);
+	char *buf = (char *)updownAlloc(list_size);
 	if (buf != NULL) {
 		sceKernelMemset(buf, 0, list_size);
 		uint32_t read_off = 0;
@@ -911,9 +911,9 @@ static int sub_1574(int *out_err)
 		g_list_req = 0;
 		sceHttpDeleteConnection(g_list_conn);
 		g_list_conn = 0;
-		res = sub_00c0(buf, list_size, &g_uri_list, out_err);
+		res = updownParseUpdateList(buf, list_size, &g_uri_list, out_err);
 free_buf:
-		sub_2904(buf);
+		updownFree(buf);
 	}
 
 finish:
@@ -930,7 +930,7 @@ finish:
 	return res;
 }
 
-static int sub_1850(uint32_t *out_size, int *out_err)
+static int updownStartDownload(uint32_t *out_size, int *out_err)
 {
 	int status = 0;
 	uint64_t content_len = 0;
@@ -993,7 +993,7 @@ static int sub_1850(uint32_t *out_size, int *out_err)
 				g_data_req = 0;
 				sceHttpDeleteConnection(g_data_conn);
 				g_data_conn = 0;
-				res = sub_23dc(&content_len);
+				res = updownOpenDataRequest(&content_len);
 				if (res < 0) {
 					cur = cur->next;
 					continue;
@@ -1037,7 +1037,7 @@ finish:
 	return res;
 }
 
-static int sub_1b84(void *buf, uint32_t size, int *out_err)
+static int updownReadDownloadData(void *buf, uint32_t size, int *out_err)
 {
 	int status = 0;
 	int res = 0x805f0009;
@@ -1142,7 +1142,7 @@ cleanup:
 	return res;
 }
 
-static int sub_1e20(void)
+static int updownAbortHttp(void)
 {
 	if (g_list_req == 0 && g_data_req == 0) {
 		return 0x805f000a;
@@ -1164,7 +1164,7 @@ static int sub_1e20(void)
 	return 0;
 }
 
-static int sub_1ef0(void)
+static int updownIsProxyEnabled(void)
 {
 	uint32_t info[32];
 	if (sceNetApctlGetInfo(13, info) < 0) {
@@ -1173,7 +1173,7 @@ static int sub_1ef0(void)
 	return (info[0] == 1) ? 1 : 0;
 }
 
-static void sub_1f30(void)
+static void updownUnregisterApctlHandler(void)
 {
 	if (g_apctl_hid >= 0) {
 		sceNetApctlDelHandler(g_apctl_hid);
@@ -1183,13 +1183,13 @@ static void sub_1f30(void)
 	g_apctl_suberr = 0;
 }
 
-static int sub_1f7c(uint8_t region, int mode)
+static int updownSetRegion(uint8_t region, int mode)
 {
 	g_region_idx = region;
 	return (mode == 1) ? (int)0x805f000b : 0;
 }
 
-static void sub_1f98(void)
+static void updownBuildListUrl(void)
 {
 	if (g_custom_url != NULL) {
 		g_active_list_url = g_custom_url;
@@ -1267,7 +1267,7 @@ static void sub_1f98(void)
 	}
 
 	uint8_t code = 0;
-	sub_077c(&code);
+	updownGetDestCode(&code);
 	sceNet_lib_80C9F02A(g_url_buf, "http://");
 	sceNet_lib_5705F6F9(g_url_buf, host_prefix);
 	sceNet_lib_5705F6F9(g_url_buf, ".psp.update.playstation.org");
@@ -1283,7 +1283,7 @@ static void sub_1f98(void)
 	g_active_list_url = g_url_buf;
 }
 
-static int sub_21f0(uint64_t *out_len, int *out_err)
+static int updownSendListRequest(uint64_t *out_len, int *out_err)
 {
 	int status = 0;
 	int res = sceHttpCreateRequestWithURL(g_list_conn, 0, g_active_list_url, 0);
@@ -1348,7 +1348,7 @@ cleanup:
 	return res;
 }
 
-static int sub_23dc(uint64_t *out_len)
+static int updownOpenDataRequest(uint64_t *out_len)
 {
 	int status = 0;
 	int res = sceHttpCreateConnectionWithURL(g_http_tmpl, g_uri_list->url, 0);
@@ -1374,7 +1374,7 @@ static int sub_23dc(uint64_t *out_len)
 	if (sceHttpSendRequest(g_data_req, NULL, 0) >= 0 &&
 	    sceHttpGetStatusCode(g_data_req, &status) >= 0 &&
 	    status == 206 &&
-	    sub_25d8(g_data_req, out_len) >= 0 &&
+	    updownGetContentLength(g_data_req, out_len) >= 0 &&
 	    (*out_len >> 32) == 0) {
 		return 0;
 	}
@@ -1386,7 +1386,7 @@ static int sub_23dc(uint64_t *out_len)
 	return -1;
 }
 
-static void sub_254c(int old_state, int new_state, int event, int error, void *arg)
+static void updownApctlCallback(int old_state, int new_state, int event, int error, void *arg)
 {
 	(void)new_state;
 	(void)arg;
@@ -1399,11 +1399,11 @@ static void sub_254c(int old_state, int new_state, int event, int error, void *a
 			g_apctl_err = 0x805f0007;
 			g_apctl_suberr = error;
 		}
-		sub_1e20();
+		updownAbortHttp();
 	}
 }
 
-static int sub_25d8(int req, uint64_t *out_len)
+static int updownGetContentLength(int req, uint64_t *out_len)
 {
 	char *hdr = NULL;
 	uint32_t hdr_len = 0;
@@ -1446,7 +1446,7 @@ static int sub_25d8(int req, uint64_t *out_len)
 	return (*out_len != 0) ? 0 : -1;
 }
 
-static uint32_t *sub_272c(uint32_t count)
+static uint32_t *updownBuildRandomPerm(uint32_t count)
 {
 	if (count >= 11) {
 		return NULL;
@@ -1456,7 +1456,7 @@ static uint32_t *sub_272c(uint32_t count)
 	}
 	uint32_t rem = count;
 	for (uint32_t i = 1; i < count; i++) {
-		sub_0000(&g_mt);
+		mtNextRand(&g_mt);
 		uint32_t divisor = (0xffffffffU / rem) + 1;
 		uint32_t rnd = g_mt.state[g_mt.index];
 		uint32_t pick = rnd / divisor;
@@ -1468,13 +1468,13 @@ static uint32_t *sub_272c(uint32_t count)
 	return g_perm;
 }
 
-static void sub_2848(uint32_t seed)
+static void updownSeedRng(uint32_t seed)
 {
-	sub_2dd8(&g_mt, seed);
+	mtSeed(&g_mt, seed);
 	sceKernelMemset(g_perm, 0, sizeof(g_perm));
 }
 
-static void *sub_2880(uint32_t size)
+static void *updownAlloc(uint32_t size)
 {
 	void *ptr = NULL;
 	if (g_initialized == 1) {
@@ -1490,7 +1490,7 @@ static void *sub_2880(uint32_t size)
 	return ptr;
 }
 
-static void sub_2904(void *ptr)
+static void updownFree(void *ptr)
 {
 	if (g_initialized == 1) {
 		if (g_alloc.use_custom == 1) {
@@ -1513,8 +1513,8 @@ int sceLibUpdateDL_F6690A9A(void *(*alloc_fn)(uint32_t), void (*free_fn)(void *)
 	g_alloc.alloc_fn = alloc_fn;
 	g_alloc.free_fn = free_fn;
 	g_alloc.use_custom = 1;
-	sub_2848(sub_2cc4());
-	sub_136c();
+	updownSeedRng(updownGetTimeSeed());
+	updownRegisterApctlHandler();
 	g_initialized = 1;
 	return 0;
 }
@@ -1532,9 +1532,9 @@ int sceLibUpdateDL_FC1AB540(void)
 		return uid;
 	}
 	g_alloc.vpl_uid = uid;
-	sub_2848(sub_2cc4());
-	sub_136c();
-	sub_07a0(0);
+	updownSeedRng(updownGetTimeSeed());
+	updownRegisterApctlHandler();
+	updownSetIgnoreCompat(0);
 	g_initialized = 1;
 	return 0;
 }
@@ -1544,14 +1544,14 @@ int sceLibUpdateDL_D6A09757(void)
 	if (g_initialized != 1) {
 		return 0x805f0002;
 	}
-	sub_1444();
+	updownCloseHttpHandles();
 	if (g_alloc.use_custom == 1) {
 		g_alloc.use_custom = 0;
 	} else {
 		sceKernelDeleteVpl(g_alloc.vpl_uid);
 		g_alloc.vpl_uid = 0;
 	}
-	sub_1f30();
+	updownUnregisterApctlHandler();
 	g_initialized = 0;
 	return 0;
 }
@@ -1563,10 +1563,10 @@ int sceLibUpdateDL_FD675E8D(uint32_t *out_size, int *out_err)
 		if (out_err == NULL) {
 			res = 0x805f000b;
 		} else {
-			res = sub_1574(out_err);
+			res = updownFetchUpdateList(out_err);
 			if (res >= 0) {
 				if (out_size != NULL) {
-					res = sub_1850(out_size, out_err);
+					res = updownStartDownload(out_size, out_err);
 				}
 				if (res >= 0) {
 					g_started_flag = 1;
@@ -1577,7 +1577,7 @@ int sceLibUpdateDL_FD675E8D(uint32_t *out_size, int *out_err)
 	}
 
 	if ((uint32_t)(res - 0x805f0007U) < 2) {
-		if (sub_1ef0() != 1) {
+		if (updownIsProxyEnabled() != 1) {
 			res = 0x805f0006;
 		}
 	}
@@ -1588,10 +1588,10 @@ int sceLibUpdateDL_FA9AA797(void *buf, uint32_t size, int *out_err)
 {
 	int res = 0x805f0002;
 	if (g_initialized == 1) {
-		res = sub_1b84(buf, size, out_err);
+		res = updownReadDownloadData(buf, size, out_err);
 	}
 	if ((uint32_t)(res - 0x805f0007U) < 2) {
-		if (sub_1ef0() != 1) {
+		if (updownIsProxyEnabled() != 1) {
 			res = 0x805f0006;
 		}
 	}
@@ -1602,42 +1602,42 @@ int sceLibUpdateDL_FA9AA797(void *buf, uint32_t size, int *out_err)
 	return res;
 }
 
-static uint32_t sub_2cc4(void)
+static uint32_t updownGetTimeSeed(void)
 {
 	return sceKernelGetSystemTimeLow();
 }
 
 int sceLibUpdateDL_88FF3935(uint8_t code)
 {
-	sub_0768(code);
+	updownSetDestCode(code);
 	return 0;
 }
 
 int sceLibUpdateDL_B5DB018D(uint8_t region, int mode)
 {
-	return sub_1f7c(region, mode);
+	return updownSetRegion(region, mode);
 }
 
 int sceLibUpdateDL_F7E66CB4(const char *url)
 {
-	return sub_13c0(url);
+	return updownSetCustomUrl(url);
 }
 
 int sceLibUpdateDL_C1AF1076(uint32_t build)
 {
-	sub_0790(build);
+	updownSetCurBuild(build);
 	return 0;
 }
 
 int sceLibUpdateDL_36D8F34B(int ignore)
 {
-	sub_07a0(ignore);
+	updownSetIgnoreCompat(ignore);
 	return 0;
 }
 
 int sceLibUpdateDL_34243B86(const char *ver_str)
 {
-	sub_07b0(ver_str);
+	updownSetCurSysVer(ver_str);
 	return 0;
 }
 
@@ -1646,10 +1646,10 @@ int sceLibUpdateDL_4F49C9C1(void)
 	if (g_initialized != 1) {
 		return 0x805f0002;
 	}
-	return sub_1e20();
+	return updownAbortHttp();
 }
 
-static int sub_2dd8(MtState *mt, uint32_t seed)
+static int mtSeed(MtState *mt, uint32_t seed)
 {
 	mt->state[0] = seed;
 	for (int i = 1; i < 624; i++) {
@@ -1658,7 +1658,7 @@ static int sub_2dd8(MtState *mt, uint32_t seed)
 	}
 	mt->index = 0;
 	for (int i = 622; i >= 0; i--) {
-		sub_0000(mt);
+		mtNextRand(mt);
 	}
 	return 0;
 }

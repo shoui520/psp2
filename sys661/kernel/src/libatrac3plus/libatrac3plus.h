@@ -5,7 +5,7 @@ typedef struct
     union {
         u8 v8[2];
         u16 v16;
-    } unk4; // 4
+    } codecParam; // 4
     // padding
     u32 dataOff; // 8
     u32 factSz; // 12
@@ -26,7 +26,7 @@ typedef struct
     // 2: all the stream data on the buffer
     // 6: looping -> second buffer needed
     char state; // 21
-    char unk22;
+    char secondBufState;
     char numChan; // 23
     u16 sampleSize; // 24
     u16 codec; // 26
@@ -35,8 +35,8 @@ typedef struct
     u32 dataEnd; // 36
     int loopNum; // 40
     u32 streamDataByte; // 44
-    u32 unk48;
-    u32 unk52;
+    u32 firstBufReadOff;
+    u32 secondBufReadOff;
     u8 *buffer; // 56
     u8 *secondBuffer; // 60
     u32 bufferByte; // 64
@@ -64,17 +64,17 @@ typedef struct
 
 typedef struct
 {
-    u32 unk0;
-    u16 unk4;
-    u8 unk6, unk7;
+    u32 magic;
+    u16 frameSize;
+    u8 codingMode, reserved07;
     u32 dataOff; // 8
-    u32 unk12;
+    u32 reserved12;
     u32 dataSize; // 16
-    u32 unk20, unk24, unk28;
-    u32 unk32;
-    u32 unk36;
-    s32 unk40;
-    s32 unk44;
+    u32 reserved20, reserved24, reserved28;
+    u32 sampleRate;
+    u32 reserved36;
+    s32 loopStartSample;
+    s32 loopEndSample;
 } SceAA3File;
 
 int setHalfwayBuffer(SceAtracId *id, u8 *buffer, u32 readByte, u32 bufferByte, SceAtracFile *info);
@@ -85,7 +85,7 @@ int openAA3AndGetID(u8 *buffer, u32 readByte, int arg2, SceAtracFile *info);
 int isValidState(char state);
 int getOutputChan(SceAtracIdInfo *info, SceAudiocodecCodec *codec);
 int decodeFrame(SceAtracId *id, short *outAddr, u32 *samples, u32 *finishFlag);
-void sub_1C54(SceAtracIdInfo *info);
+void atracConsumeFrame(SceAtracIdInfo *info);
 int loadWaveFile(u32 size, SceAtracFile *info, u8 *in);
 int readWaveData(u8 *in, u32 *curOff, int size);
 int getOffFromSample(SceAtracIdInfo *info, u32 sample);
@@ -103,25 +103,25 @@ int getRemainFrame(SceAtracIdInfo *info);
 u8 *getWritePtr(SceAtracIdInfo *info);
 u32 getReadPosition(SceAtracIdInfo *info);
 u32 getWritableByte(SceAtracIdInfo *info);
-int sub_2DB8(SceAtracIdInfo *info);
-int sub_2DF8(SceAtracIdInfo *info);
-int sub_2EA4(SceAtracIdInfo *info);
-int sub_2FA8(u32 arg0, u32 arg1, u32 arg2, u32 arg3);
-u32 sub_2FEC(u32 arg0, u32 arg1, u32 arg2, u32 arg3);
-u32 sub_3004(u32 arg0, u32 arg1, u32 arg2, u32 arg3, u32 arg4);
-u32 sub_3048(SceAtracIdInfo *info);
-u32 sub_30C0(SceAtracIdInfo *info);
-u32 sub_30E0(SceAtracIdInfo *info);
-u32 sub_316C(u32 arg0, u32 arg1, u32 arg2, u32 arg3);
-u32 sub_31B4(SceAtracIdInfo *info);
-u32 sub_3230(u32 arg0, u32 arg1, u32 arg2);
+int atracGetRemainFramesLinear(SceAtracIdInfo *info);
+int atracGetRemainFramesLoop(SceAtracIdInfo *info);
+int atracCountLoopFrames(SceAtracIdInfo *info);
+int atracAdvanceRingOffset(u32 arg0, u32 arg1, u32 arg2, u32 arg3);
+u32 atracAddOffsetBounded(u32 arg0, u32 arg1, u32 arg2, u32 arg3);
+u32 atracAdvanceLoopOffset(u32 arg0, u32 arg1, u32 arg2, u32 arg3, u32 arg4);
+u32 atracGetNextWriteBytes(SceAtracIdInfo *info);
+u32 atracGetRemainDataBytes(SceAtracIdInfo *info);
+u32 atracGetLoopRemainBytes(SceAtracIdInfo *info);
+u32 atracGetContiguousWritable(u32 arg0, u32 arg1, u32 arg2, u32 arg3);
+u32 atracGetFirstBufStreamBytes(SceAtracIdInfo *info);
+u32 atracAlignBufferEnd(u32 arg0, u32 arg1, u32 arg2);
 void copyBuffer(SceAtracIdInfo *info, u32 bufferByte);
 void getBufferInfo(SceAtracIdInfo *info, u32 sample, SceBufferInfo *bufferInfo);
 int resetPlayPos(SceAtracIdInfo *info, u32 sample, u32 writeByteFirstBuf, u32 writeByteSecondBuf);
 int parseAA3(u32 readByte, SceAA3File *aa3, int arg2, u8 *buffer);
 int setAtracFileInfo(SceAA3File *aa3, SceAtracFile *info);
-int sub_3A18(u8 *buffer, u32 *curOff, u32 arg2);
-u16 sub_3AA0(u8 *buffer, u32 *curOff, u32 readByte);
-int sub_3B14(u8 *buffer, u32 *curOff, u32 readByte);
-int sub_3B54(u8 *buffer, u32 *curOff, u32 readByte);
+int aa3ReadU32LE(u8 *buffer, u32 *curOff, u32 arg2);
+u16 aa3ReadU16LE(u8 *buffer, u32 *curOff, u32 readByte);
+int aa3ReadU24BE(u8 *buffer, u32 *curOff, u32 readByte);
+int aa3ReadSyncSafeU32(u8 *buffer, u32 *curOff, u32 readByte);
 

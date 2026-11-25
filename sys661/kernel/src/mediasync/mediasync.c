@@ -25,8 +25,8 @@ typedef struct RegParam {
 	uint32_t regtype;
 	char name[256];
 	uint32_t namelen;
-	uint32_t unk2;
-	uint32_t unk3;
+	uint32_t reserved2;
+	uint32_t reserved3;
 } RegParam;
 
 typedef struct SceSysfileHeader {
@@ -178,49 +178,49 @@ static void * __attribute__((noinline)) sf_malloc(void *ctx, SceSize size);
 static void * __attribute__((noinline)) sf_vpl_malloc(void *ctx, SceSize size);
 static void __attribute__((noinline)) sf_free(void *ctx, void *ptr);
 static int __attribute__((noinline)) sf_vpl_free(void *ctx, void *ptr);
-static int __attribute__((noinline)) sub_12c0(void);
-static void __attribute__((noinline)) sub_13e8(const char *disc_id);
-static int __attribute__((noinline)) sub_14dc(void);
-static int __attribute__((noinline)) sub_1570(const char *disc_id);
-static int __attribute__((noinline)) sub_186c(const char *disc_id);
-static int __attribute__((noinline)) sub_18e0(const char *disc_id);
-static int __attribute__((noinline)) sub_1978(const char *disc_id);
-static int __attribute__((noinline)) sub_19f0(const char *disc_id);
-static int __attribute__((noinline)) sub_1a48(const char *disc_id);
-static void __attribute__((noinline)) sub_1abc(const char *disc_id);
-static int __attribute__((noinline)) sub_1c00(const char *disc_id);
-static void __attribute__((noinline)) sub_1db8(const char *disc_id);
-static int __attribute__((noinline)) sub_1e98(const char *disc_id);
-static void __attribute__((noinline)) sub_2168(const char *disc_id);
-static void __attribute__((noinline)) sub_2254(const char *disc_id);
-static void __attribute__((noinline)) sub_22a4(const char *disc_id);
-static void __attribute__((noinline)) sub_2354(const char *disc_id);
-static void __attribute__((noinline)) sub_2404(const char *disc_id);
-static int __attribute__((noinline)) sub_24d8(void);
-static void __attribute__((noinline)) sub_25f4(char *out_buf, const char *env_str);
-static int __attribute__((noinline)) sub_2734(void);
+static int __attribute__((noinline)) mediasyncCheckFlash0Hash(void);
+static void __attribute__((noinline)) mediasyncApplyModmgrQuirks(const char *disc_id);
+static int __attribute__((noinline)) mediasyncApplyGameQuirks(void);
+static int __attribute__((noinline)) mediasyncApplyUmdCacheQuirks(const char *disc_id);
+static int __attribute__((noinline)) mediasyncApplyWlanQuirks(const char *disc_id);
+static int __attribute__((noinline)) mediasyncApplyIntrQuirks(const char *disc_id);
+static int __attribute__((noinline)) mediasyncApplyAudioQuirks(const char *disc_id);
+static int __attribute__((noinline)) mediasyncApplyMeCoreCallQuirks(const char *disc_id);
+static int __attribute__((noinline)) mediasyncApplyCtrlQuirks(const char *disc_id);
+static void __attribute__((noinline)) mediasyncApplyIoQuirks(const char *disc_id);
+static int __attribute__((noinline)) mediasyncApplyMsDevctlQuirks(const char *disc_id);
+static void __attribute__((noinline)) mediasyncApplyMeCoreVarQuirks(const char *disc_id);
+static int __attribute__((noinline)) mediasyncApplyPowerQuirks(const char *disc_id);
+static void __attribute__((noinline)) mediasyncApplyDmacQuirks(const char *disc_id);
+static void __attribute__((noinline)) mediasyncApplyRtcQuirks(const char *disc_id);
+static void __attribute__((noinline)) mediasyncApplyUsbQuirks(const char *disc_id);
+static void __attribute__((noinline)) mediasyncApplyRegQuirks(const char *disc_id);
+static void __attribute__((noinline)) mediasyncApplyMsfsQuirks(const char *disc_id);
+static int __attribute__((noinline)) mediasyncLoadNpEnvFromReg(void);
+static void __attribute__((noinline)) mediasyncHashNpEnv(char *out_buf, const char *env_str);
+static int __attribute__((noinline)) mediasyncLoadAdhocPrefixFromReg(void);
 
-static int __attribute__((noinline, used)) sub_2824(SceSysfileCtx *ctx, int index, SceSysfileEntry **out_entry);
-static int __attribute__((noinline, used)) sub_2980(SceSysfileCtx *ctx, int index, void *buf, SceSize buf_size);
-static int __attribute__((noinline, used)) sub_2a14(const void *buf, SceSize size);
-static int __attribute__((noinline, used)) sub_2bd0(void *buf, SceSize size, SceSysfileCtx **out_ctx);
-static int __attribute__((noinline, used)) sub_2c80(SceSysfileCtx *ctx);
-static int __attribute__((noinline, used)) sub_2d24(SceSysfileCtx *ctx, uint32_t *out_version, uint32_t *out_count);
-static int __attribute__((noinline, used)) sub_2ed4(SceSysfileCtx *ctx, int index, void *out_val);
-static int __attribute__((noinline, used)) sub_2f8c(SceSysfileCtx *ctx, int index, void **out_ptr);
-static int __attribute__((noinline, used)) sub_3054(SceSysfileCtx *ctx, int index, void *buf, SceSize buf_size);
-static int __attribute__((noinline, used)) sub_30f4(SceSysfileCtx *ctx, int index, char *key_buf, SceSize key_buf_size, uint32_t *out_type, SceSize *out_val_size, SceSize *out_total_size);
-static int __attribute__((noinline, used)) sub_3340(SceSysfileCtx *ctx, const char *key, int *out_index);
-static int __attribute__((noinline, used)) sub_3494(SceSysfileCtx *ctx, const char *key, int start_index, int *out_index);
-static int __attribute__((noinline, used)) sub_35e4(const void *a, const void *b);
-static int __attribute__((noinline, used)) sub_3628(const void *a, const void *b, SceSize len);
-static SceSize __attribute__((noinline, used)) sub_364c(const char *s, SceSize max_len);
-static int __attribute__((noinline, used)) sub_3680(void *(*alloc_fn)(void *, SceSize), void (*free_fn)(void *, void *));
-static void * __attribute__((noinline, used)) sub_36b4(SceSize size);
-static void __attribute__((noinline, used)) sub_3708(void *ptr);
-static void * __attribute__((noinline, used)) sub_3734(void *dst, const void *src, SceSize size);
-static void * __attribute__((noinline, used)) sub_37e0(void *dst, int val, SceSize size);
-static char * __attribute__((noinline, used)) sub_3914(char *dst, const char *src);
+static int __attribute__((noinline, used)) sysfileGetEntry(SceSysfileCtx *ctx, int index, SceSysfileEntry **out_entry);
+static int __attribute__((noinline, used)) sysfileReadEntryData(SceSysfileCtx *ctx, int index, void *buf, SceSize buf_size);
+static int __attribute__((noinline, used)) sysfileValidateHeader(const void *buf, SceSize size);
+static int __attribute__((noinline, used)) sysfileOpen(void *buf, SceSize size, SceSysfileCtx **out_ctx);
+static int __attribute__((noinline, used)) sysfileClose(SceSysfileCtx *ctx);
+static int __attribute__((noinline, used)) sysfileGetInfo(SceSysfileCtx *ctx, uint32_t *out_version, uint32_t *out_count);
+static int __attribute__((noinline, used)) sysfileGetIntValue(SceSysfileCtx *ctx, int index, void *out_val);
+static int __attribute__((noinline, used)) sysfileGetDataPtr(SceSysfileCtx *ctx, int index, void **out_ptr);
+static int __attribute__((noinline, used)) sysfileGetStringValue(SceSysfileCtx *ctx, int index, void *buf, SceSize buf_size);
+static int __attribute__((noinline, used)) sysfileGetEntryInfo(SceSysfileCtx *ctx, int index, char *key_buf, SceSize key_buf_size, uint32_t *out_type, SceSize *out_val_size, SceSize *out_total_size);
+static int __attribute__((noinline, used)) sysfileFindKey(SceSysfileCtx *ctx, const char *key, int *out_index);
+static int __attribute__((noinline, used)) sysfileFindKeyFrom(SceSysfileCtx *ctx, const char *key, int start_index, int *out_index);
+static int __attribute__((noinline, used)) sysfileStrcmp(const void *a, const void *b);
+static int __attribute__((noinline, used)) sysfileMemcmp(const void *a, const void *b, SceSize len);
+static SceSize __attribute__((noinline, used)) sysfileStrnlen(const char *s, SceSize max_len);
+static int __attribute__((noinline, used)) sysfileSetAllocator(void *(*alloc_fn)(void *, SceSize), void (*free_fn)(void *, void *));
+static void * __attribute__((noinline, used)) sysfileAlloc(SceSize size);
+static void __attribute__((noinline, used)) sysfileFree(void *ptr);
+static void * __attribute__((noinline, used)) sysfileMemcpy(void *dst, const void *src, SceSize size);
+static void * __attribute__((noinline, used)) sysfileMemset(void *dst, int val, SceSize size);
+static char * __attribute__((noinline, used)) sysfileStrcpy(char *dst, const char *src);
 
 /* Globals */
 static void *(*g_sf_alloc_fn)(void *, SceSize);
@@ -727,16 +727,16 @@ int module_start(SceSize args, void *argp)
 		ptr[5] = (uint32_t)s0;
 	}
 
-	sub_12c0();
+	mediasyncCheckFlash0Hash();
 
 	if (sceKernelDipsw(0x34) == 1 && (sceKernelGetGPI() & 1) != 0)
 		SysMemForKernel_13EE28DA(1);
 	else
 		SysMemForKernel_13EE28DA(0);
 
-	sub_14dc();
-	sub_24d8();
-	sub_2734();
+	mediasyncApplyGameQuirks();
+	mediasyncLoadNpEnvFromReg();
+	mediasyncLoadAdhocPrefixFromReg();
 	return 1;
 }
 
@@ -1130,20 +1130,20 @@ static int MsSystemFile(void *buf, SceSize size, uint8_t *game_info)
 	int i;
 
 	g_heap_id = -1;
-	sub_3680(sf_malloc, sf_free);
-	res = sub_2bd0(buf, size, &ctx);
+	sysfileSetAllocator(sf_malloc, sf_free);
+	res = sysfileOpen(buf, size, &ctx);
 	if (res != 0) {
 		Kprintf("mediasync.c:%s:sceSysfileInit failed 0x%08x\n", "MsSystemFile", res);
 		goto cleanup;
 	}
 
-	res = sub_3340(ctx, "DISC_ID", &index);
+	res = sysfileFindKey(ctx, "DISC_ID", &index);
 	if (res != 0) {
 		Kprintf("mediasync.c:%s:sceSysfileSearchKey failed 0x%08x\n", "MsSystemFile", res);
 		goto cleanup;
 	}
 
-	res = sub_2980(ctx, index, disc_id, sizeof(disc_id));
+	res = sysfileReadEntryData(ctx, index, disc_id, sizeof(disc_id));
 	if (res != 0) {
 		Kprintf("mediasync.c:%s:sceSysfileGetString failed 0x%08x\n", "MsSystemFile", res);
 		goto cleanup;
@@ -1173,7 +1173,7 @@ static int MsSystemFile(void *buf, SceSize size, uint8_t *game_info)
 
 cleanup:
 	if (ctx != NULL) {
-		int r2 = sub_2c80(ctx);
+		int r2 = sysfileClose(ctx);
 		if (r2 != 0)
 			Kprintf("mediasync.c:%s:sceSysfileExit failed 0x%08x\n", "MsSystemFile", r2);
 	}
@@ -1211,7 +1211,7 @@ static void *sf_vpl_malloc(void *ctx, SceSize size)
 		return NULL;
 	if (sceKernelTryAllocateVpl(vpl, size + 0x20, &data) < 0)
 		return NULL;
-	sub_3914((char *)data, "SFV");
+	sysfileStrcpy((char *)data, "SFV");
 	((SceUID *)data)[1] = vpl;
 	return (uint8_t *)data + 0x20;
 }
@@ -1230,7 +1230,7 @@ static int sf_vpl_free(void *ctx, void *ptr)
 	int res;
 
 	(void)ctx;
-	if (sub_35e4(hdr, "SFV") != 0)
+	if (sysfileStrcmp(hdr, "SFV") != 0)
 		return -1;
 	vpl = ((SceUID *)hdr)[1];
 	res = sceKernelFreeVpl(vpl, hdr);
@@ -1239,7 +1239,7 @@ static int sf_vpl_free(void *ctx, void *ptr)
 	return res;
 }
 
-static int sub_12c0(void)
+static int mediasyncCheckFlash0Hash(void)
 {
 	SceUID dfd;
 	SceIoDirent dir;
@@ -1271,7 +1271,7 @@ static int sub_12c0(void)
 	return found;
 }
 
-static void sub_13e8(const char *disc_id)
+static void mediasyncApplyModmgrQuirks(const char *disc_id)
 {
 	int i;
 
@@ -1293,7 +1293,7 @@ static void sub_13e8(const char *disc_id)
 	}
 }
 
-static int sub_14dc(void)
+static int mediasyncApplyGameQuirks(void)
 {
 	uint8_t *game_info = sceKernelGetGameInfo();
 	const char *disc_id;
@@ -1305,22 +1305,22 @@ static int sub_14dc(void)
 	if (*disc_id == '\0')
 		return 0;
 
-	sub_18e0(disc_id);
-	sub_1570(disc_id);
-	sub_1978(disc_id);
-	sub_19f0(disc_id);
-	sub_186c(disc_id);
-	sub_1a48(disc_id);
-	sub_1abc(disc_id);
-	sub_1c00(disc_id);
-	sub_13e8(disc_id);
-	sub_1db8(disc_id);
-	sub_1e98(disc_id);
-	sub_2168(disc_id);
-	sub_2254(disc_id);
-	sub_22a4(disc_id);
-	sub_2354(disc_id);
-	sub_2404(disc_id);
+	mediasyncApplyIntrQuirks(disc_id);
+	mediasyncApplyUmdCacheQuirks(disc_id);
+	mediasyncApplyAudioQuirks(disc_id);
+	mediasyncApplyMeCoreCallQuirks(disc_id);
+	mediasyncApplyWlanQuirks(disc_id);
+	mediasyncApplyCtrlQuirks(disc_id);
+	mediasyncApplyIoQuirks(disc_id);
+	mediasyncApplyMsDevctlQuirks(disc_id);
+	mediasyncApplyModmgrQuirks(disc_id);
+	mediasyncApplyMeCoreVarQuirks(disc_id);
+	mediasyncApplyPowerQuirks(disc_id);
+	mediasyncApplyDmacQuirks(disc_id);
+	mediasyncApplyRtcQuirks(disc_id);
+	mediasyncApplyUsbQuirks(disc_id);
+	mediasyncApplyRegQuirks(disc_id);
+	mediasyncApplyMsfsQuirks(disc_id);
 	return 0;
 }
 
@@ -1343,7 +1343,7 @@ static inline __attribute__((always_inline)) void decode_packed_disc_id(const Pa
 	out[10] = '\0';
 }
 
-static int sub_1570(const char *disc_id)
+static int mediasyncApplyUmdCacheQuirks(const char *disc_id)
 {
 	char decoded[16];
 	char cur_id[16];
@@ -1398,7 +1398,7 @@ static int sub_1570(const char *disc_id)
 	return 1;
 }
 
-static int sub_186c(const char *disc_id)
+static int mediasyncApplyWlanQuirks(const char *disc_id)
 {
 	int i;
 
@@ -1409,7 +1409,7 @@ static int sub_186c(const char *disc_id)
 	return 0;
 }
 
-static int sub_18e0(const char *disc_id)
+static int mediasyncApplyIntrQuirks(const char *disc_id)
 {
 	int apptype;
 
@@ -1426,7 +1426,7 @@ static int sub_18e0(const char *disc_id)
 	return 0;
 }
 
-static int sub_1978(const char *disc_id)
+static int mediasyncApplyAudioQuirks(const char *disc_id)
 {
 	int i;
 
@@ -1437,14 +1437,14 @@ static int sub_1978(const char *disc_id)
 	return 0;
 }
 
-static int sub_19f0(const char *disc_id)
+static int mediasyncApplyMeCoreCallQuirks(const char *disc_id)
 {
 	if (strncmp(disc_id, g_mecore_call_table[0].id, 10) == 0)
 		sceMeCore_driver_4CD5B5BF(g_mecore_call_table[0].a, g_mecore_call_table[0].b);
 	return 0;
 }
 
-static int sub_1a48(const char *disc_id)
+static int mediasyncApplyCtrlQuirks(const char *disc_id)
 {
 	int i;
 
@@ -1457,7 +1457,7 @@ static int sub_1a48(const char *disc_id)
 	return 0;
 }
 
-static void sub_1abc(const char *disc_id)
+static void mediasyncApplyIoQuirks(const char *disc_id)
 {
 	int i;
 
@@ -1478,7 +1478,7 @@ static void sub_1abc(const char *disc_id)
 		sceKermitMsfs_driver_var_93B61A29 = 5000;
 }
 
-static int sub_1c00(const char *disc_id)
+static int mediasyncApplyMsDevctlQuirks(const char *disc_id)
 {
 	int i;
 
@@ -1503,7 +1503,7 @@ static int sub_1c00(const char *disc_id)
 	return 0;
 }
 
-static void sub_1db8(const char *disc_id)
+static void mediasyncApplyMeCoreVarQuirks(const char *disc_id)
 {
 	int i;
 
@@ -1525,7 +1525,7 @@ static void sub_1db8(const char *disc_id)
 		sceMeCore_driver_var_AB354CA1 = 0x3b;
 }
 
-static int sub_1e98(const char *disc_id)
+static int mediasyncApplyPowerQuirks(const char *disc_id)
 {
 	int i;
 
@@ -1597,7 +1597,7 @@ static int sub_1e98(const char *disc_id)
 	return 0;
 }
 
-static void sub_2168(const char *disc_id)
+static void mediasyncApplyDmacQuirks(const char *disc_id)
 {
 	int i;
 
@@ -1624,7 +1624,7 @@ static void sub_2168(const char *disc_id)
 	}
 }
 
-static void sub_2254(const char *disc_id)
+static void mediasyncApplyRtcQuirks(const char *disc_id)
 {
 	int i;
 
@@ -1636,7 +1636,7 @@ static void sub_2254(const char *disc_id)
 	}
 }
 
-static void sub_22a4(const char *disc_id)
+static void mediasyncApplyUsbQuirks(const char *disc_id)
 {
 	if (strncmp(disc_id, g_usb_table1[0].id, 10) == 0)
 		sceUsb_driver_var_A942D291 = (int)g_usb_table1[0].a;
@@ -1645,7 +1645,7 @@ static void sub_22a4(const char *disc_id)
 		sceUsb_driver_var_3EA085BF = 1;
 }
 
-static void sub_2354(const char *disc_id)
+static void mediasyncApplyRegQuirks(const char *disc_id)
 {
 	int i;
 
@@ -1660,7 +1660,7 @@ static void sub_2354(const char *disc_id)
 		sceReg_driver_var_5105E3FF = (int)g_reg_table2[0].a;
 }
 
-static void sub_2404(const char *disc_id)
+static void mediasyncApplyMsfsQuirks(const char *disc_id)
 {
 	int i;
 
@@ -1686,7 +1686,7 @@ static void sub_2404(const char *disc_id)
 	}
 }
 
-static int sub_24d8(void)
+static int mediasyncLoadNpEnvFromReg(void)
 {
 	RegParam reg;
 	uint32_t reg_handle = 0;
@@ -1700,8 +1700,8 @@ static int sub_24d8(void)
 
 	memset(&reg, 0, sizeof(reg));
 	reg.regtype = 1;
-	reg.unk2 = 1;
-	reg.unk3 = 1;
+	reg.reserved2 = 1;
+	reg.reserved3 = 1;
 
 	res = sceRegOpenRegistry(&reg, 2, &reg_handle);
 	if (res < 0)
@@ -1719,7 +1719,7 @@ static int sub_24d8(void)
 		res = sceRegGetKeyValue(cat_handle, key_handle, env_buf, 9);
 		if (res >= 0) {
 			out_buf[0] = '\0';
-			sub_25f4(out_buf, env_buf);
+			mediasyncHashNpEnv(out_buf, env_buf);
 			SysMemForKernel_A03CB480(out_buf);
 		}
 	}
@@ -1729,7 +1729,7 @@ static int sub_24d8(void)
 	return res;
 }
 
-static void sub_25f4(char *out_buf, const char *env_str)
+static void mediasyncHashNpEnv(char *out_buf, const char *env_str)
 {
 	char work[128];
 	uint8_t digest[16];
@@ -1765,7 +1765,7 @@ static void sub_25f4(char *out_buf, const char *env_str)
 	strncpy(out_buf, "invalid", 8);
 }
 
-static int sub_2734(void)
+static int mediasyncLoadAdhocPrefixFromReg(void)
 {
 	RegParam reg;
 	uint32_t reg_handle = 0;
@@ -1778,8 +1778,8 @@ static int sub_2734(void)
 
 	memset(&reg, 0, sizeof(reg));
 	reg.regtype = 1;
-	reg.unk2 = 1;
-	reg.unk3 = 1;
+	reg.reserved2 = 1;
+	reg.reserved3 = 1;
 
 	res = sceRegOpenRegistry(&reg, 2, &reg_handle);
 	if (res < 0)
@@ -1805,7 +1805,7 @@ static int sub_2734(void)
 	return res;
 }
 
-static int sub_2824(SceSysfileCtx *ctx, int index, SceSysfileEntry **out_entry)
+static int sysfileGetEntry(SceSysfileCtx *ctx, int index, SceSysfileEntry **out_entry)
 {
 	SceSysfileHeader *hdr;
 	SceSysfileEntry *entry;
@@ -1823,7 +1823,7 @@ static int sub_2824(SceSysfileCtx *ctx, int index, SceSysfileEntry **out_entry)
 			return (int)0x80120002;
 	}
 
-	res = sub_2a14(ctx->hdr, ctx->buf_size);
+	res = sysfileValidateHeader(ctx->hdr, ctx->buf_size);
 	if (res < 0)
 		return res;
 
@@ -1850,7 +1850,7 @@ static int sub_2824(SceSysfileCtx *ctx, int index, SceSysfileEntry **out_entry)
 		return (int)0x80090002;
 
 	key = (const char *)hdr + hdr->key_table_offset + entry->key_offset;
-	key_len = sub_364c(key, 512);
+	key_len = sysfileStrnlen(key, 512);
 	if (key_len == 0 || key_len >= 512)
 		return (int)0x80090002;
 	if (hdr->key_table_offset + entry->key_offset + key_len >= hdr->data_table_offset)
@@ -1860,7 +1860,7 @@ static int sub_2824(SceSysfileCtx *ctx, int index, SceSysfileEntry **out_entry)
 	return 0;
 }
 
-static int sub_2980(SceSysfileCtx *ctx, int index, void *buf, SceSize buf_size)
+static int sysfileReadEntryData(SceSysfileCtx *ctx, int index, void *buf, SceSize buf_size)
 {
 	SceSysfileEntry *entry = NULL;
 	int res;
@@ -1868,7 +1868,7 @@ static int sub_2980(SceSysfileCtx *ctx, int index, void *buf, SceSize buf_size)
 	if (buf == NULL || buf_size == 0)
 		return (int)0x80090001;
 
-	res = sub_2824(ctx, index, &entry);
+	res = sysfileGetEntry(ctx, index, &entry);
 	if (res < 0)
 		return res;
 
@@ -1882,7 +1882,7 @@ static int sub_2980(SceSysfileCtx *ctx, int index, void *buf, SceSize buf_size)
 	return 0;
 }
 
-static int __attribute__((noinline, used)) sub_2a14(const void *buf, SceSize size)
+static int __attribute__((noinline, used)) sysfileValidateHeader(const void *buf, SceSize size)
 {
 	const SceSysfileHeader *hdr = (const SceSysfileHeader *)buf;
 	uint8_t magic_chk[8];
@@ -1894,7 +1894,7 @@ static int __attribute__((noinline, used)) sub_2a14(const void *buf, SceSize siz
 	for (i = 0; i < 6; i++)
 		magic_chk[i] = (uint8_t)(g_sf_XorTable[i * 4] ^ g_sf_XorTable[20]);
 
-	if (sub_3628(&hdr->magic, magic_chk, 4) != 0)
+	if (sysfileMemcmp(&hdr->magic, magic_chk, 4) != 0)
 		return (int)0x80090002;
 
 	if ((hdr->version & 0xffff0000U) != 0x00000000U &&
@@ -1923,7 +1923,7 @@ static int __attribute__((noinline, used)) sub_2a14(const void *buf, SceSize siz
 	return 0;
 }
 
-static int __attribute__((noinline, used)) sub_2bd0(void *buf, SceSize size, SceSysfileCtx **out_ctx)
+static int __attribute__((noinline, used)) sysfileOpen(void *buf, SceSize size, SceSysfileCtx **out_ctx)
 {
 	int res;
 	SceSysfileCtx *ctx;
@@ -1931,15 +1931,15 @@ static int __attribute__((noinline, used)) sub_2bd0(void *buf, SceSize size, Sce
 	if (out_ctx == NULL)
 		return (int)0x80090001;
 
-	res = sub_2a14(buf, size);
+	res = sysfileValidateHeader(buf, size);
 	if (res < 0)
 		return res;
 
-	ctx = (SceSysfileCtx *)sub_36b4(sizeof(SceSysfileCtx));
+	ctx = (SceSysfileCtx *)sysfileAlloc(sizeof(SceSysfileCtx));
 	if (ctx == NULL)
 		return (int)0x80090008;
 
-	sub_37e0(ctx, 0, sizeof(SceSysfileCtx));
+	sysfileMemset(ctx, 0, sizeof(SceSysfileCtx));
 	ctx->flags = 1;
 	ctx->hdr = (SceSysfileHeader *)buf;
 	ctx->buf_size = size;
@@ -1947,33 +1947,33 @@ static int __attribute__((noinline, used)) sub_2bd0(void *buf, SceSize size, Sce
 	return 0;
 }
 
-static int __attribute__((noinline, used)) sub_2c80(SceSysfileCtx *ctx)
+static int __attribute__((noinline, used)) sysfileClose(SceSysfileCtx *ctx)
 {
 	int res;
 
 	if (ctx == NULL)
 		return (int)0x80090001;
 
-	res = sub_2a14(ctx->hdr, ctx->buf_size);
+	res = sysfileValidateHeader(ctx->hdr, ctx->buf_size);
 	if (res < 0)
 		return res;
 
 	if ((ctx->flags & 2) != 0)
-		sub_3708(ctx->hdr);
+		sysfileFree(ctx->hdr);
 
-	sub_37e0(ctx, 0, sizeof(SceSysfileCtx));
-	sub_3708(ctx);
+	sysfileMemset(ctx, 0, sizeof(SceSysfileCtx));
+	sysfileFree(ctx);
 	return 0;
 }
 
-static int __attribute__((noinline, used)) sub_2d24(SceSysfileCtx *ctx, uint32_t *out_version, uint32_t *out_count)
+static int __attribute__((noinline, used)) sysfileGetInfo(SceSysfileCtx *ctx, uint32_t *out_version, uint32_t *out_count)
 {
 	int res;
 
 	if (ctx == NULL)
 		return (int)0x80090001;
 
-	res = sub_2a14(ctx->hdr, ctx->buf_size);
+	res = sysfileValidateHeader(ctx->hdr, ctx->buf_size);
 	if (res < 0)
 		return res;
 
@@ -1984,7 +1984,7 @@ static int __attribute__((noinline, used)) sub_2d24(SceSysfileCtx *ctx, uint32_t
 	return 0;
 }
 
-static int __attribute__((noinline, used)) sub_2ed4(SceSysfileCtx *ctx, int index, void *out_val)
+static int __attribute__((noinline, used)) sysfileGetIntValue(SceSysfileCtx *ctx, int index, void *out_val)
 {
 	SceSysfileEntry *entry = NULL;
 	int res;
@@ -1992,18 +1992,18 @@ static int __attribute__((noinline, used)) sub_2ed4(SceSysfileCtx *ctx, int inde
 	if (out_val == NULL)
 		return (int)0x80090001;
 
-	res = sub_2824(ctx, index, &entry);
+	res = sysfileGetEntry(ctx, index, &entry);
 	if (res < 0)
 		return res;
 
 	if (entry->data_type != 4)
 		return (int)0x80090006;
 
-	sub_3734(out_val, (const uint8_t *)ctx->hdr + ctx->hdr->data_table_offset + entry->data_offset, 4);
+	sysfileMemcpy(out_val, (const uint8_t *)ctx->hdr + ctx->hdr->data_table_offset + entry->data_offset, 4);
 	return 0;
 }
 
-static int __attribute__((noinline, used)) sub_2f8c(SceSysfileCtx *ctx, int index, void **out_ptr)
+static int __attribute__((noinline, used)) sysfileGetDataPtr(SceSysfileCtx *ctx, int index, void **out_ptr)
 {
 	SceSysfileEntry *entry = NULL;
 	const uint8_t *data_ptr;
@@ -2012,7 +2012,7 @@ static int __attribute__((noinline, used)) sub_2f8c(SceSysfileCtx *ctx, int inde
 	if (out_ptr == NULL)
 		return (int)0x80090001;
 
-	res = sub_2824(ctx, index, &entry);
+	res = sysfileGetEntry(ctx, index, &entry);
 	if (res < 0)
 		return res;
 
@@ -2029,7 +2029,7 @@ static int __attribute__((noinline, used)) sub_2f8c(SceSysfileCtx *ctx, int inde
 	return 0;
 }
 
-static int __attribute__((noinline, used)) sub_3054(SceSysfileCtx *ctx, int index, void *buf, SceSize buf_size)
+static int __attribute__((noinline, used)) sysfileGetStringValue(SceSysfileCtx *ctx, int index, void *buf, SceSize buf_size)
 {
 	SceSysfileEntry *entry = NULL;
 	int res;
@@ -2037,7 +2037,7 @@ static int __attribute__((noinline, used)) sub_3054(SceSysfileCtx *ctx, int inde
 	if (buf == NULL || buf_size == 0)
 		return (int)0x80090001;
 
-	res = sub_2824(ctx, index, &entry);
+	res = sysfileGetEntry(ctx, index, &entry);
 	if (res < 0)
 		return res;
 
@@ -2046,27 +2046,27 @@ static int __attribute__((noinline, used)) sub_3054(SceSysfileCtx *ctx, int inde
 	if (buf_size < entry->value_size)
 		return (int)0x80090005;
 
-	sub_3734(buf, (const uint8_t *)ctx->hdr + ctx->hdr->data_table_offset + entry->data_offset, entry->value_size);
+	sysfileMemcpy(buf, (const uint8_t *)ctx->hdr + ctx->hdr->data_table_offset + entry->data_offset, entry->value_size);
 	return 0;
 }
 
-static int __attribute__((noinline, used)) sub_30f4(SceSysfileCtx *ctx, int index, char *key_buf, SceSize key_buf_size, uint32_t *out_type, SceSize *out_val_size, SceSize *out_total_size)
+static int __attribute__((noinline, used)) sysfileGetEntryInfo(SceSysfileCtx *ctx, int index, char *key_buf, SceSize key_buf_size, uint32_t *out_type, SceSize *out_val_size, SceSize *out_total_size)
 {
 	SceSysfileEntry *entry = NULL;
 	const char *key;
 	SceSize key_len;
 	int res;
 
-	res = sub_2824(ctx, index, &entry);
+	res = sysfileGetEntry(ctx, index, &entry);
 	if (res < 0)
 		return res;
 
 	if (key_buf != NULL) {
 		key = (const char *)ctx->hdr + ctx->hdr->key_table_offset + entry->key_offset;
-		key_len = sub_364c(key, 512);
+		key_len = sysfileStrnlen(key, 512);
 		if (key_buf_size < key_len + 1)
 			return (int)0x80090005;
-		sub_3734(key_buf, key, key_len + 1);
+		sysfileMemcpy(key_buf, key, key_len + 1);
 	}
 	if (out_type != NULL)
 		*out_type = entry->data_type;
@@ -2077,12 +2077,12 @@ static int __attribute__((noinline, used)) sub_30f4(SceSysfileCtx *ctx, int inde
 	return 0;
 }
 
-static int __attribute__((noinline, used)) sub_3340(SceSysfileCtx *ctx, const char *key, int *out_index)
+static int __attribute__((noinline, used)) sysfileFindKey(SceSysfileCtx *ctx, const char *key, int *out_index)
 {
-	return sub_3494(ctx, key, 0, out_index);
+	return sysfileFindKeyFrom(ctx, key, 0, out_index);
 }
 
-static int __attribute__((noinline, used)) sub_3494(SceSysfileCtx *ctx, const char *key, int start_index, int *out_index)
+static int __attribute__((noinline, used)) sysfileFindKeyFrom(SceSysfileCtx *ctx, const char *key, int start_index, int *out_index)
 {
 	SceSize key_len;
 	uint32_t num_entries;
@@ -2092,11 +2092,11 @@ static int __attribute__((noinline, used)) sub_3494(SceSysfileCtx *ctx, const ch
 	if (ctx == NULL || key == NULL || out_index == NULL || start_index < 0)
 		return (int)0x80090001;
 
-	key_len = sub_364c(key, 512);
+	key_len = sysfileStrnlen(key, 512);
 	if (key_len == 0 || key_len >= 512)
 		return (int)0x80090001;
 
-	res = sub_2a14(ctx->hdr, ctx->buf_size);
+	res = sysfileValidateHeader(ctx->hdr, ctx->buf_size);
 	if (res < 0)
 		return res;
 
@@ -2105,12 +2105,12 @@ static int __attribute__((noinline, used)) sub_3494(SceSysfileCtx *ctx, const ch
 		SceSysfileEntry *entry = NULL;
 		const char *entry_key;
 
-		res = sub_2824(ctx, i, &entry);
+		res = sysfileGetEntry(ctx, i, &entry);
 		if (res < 0)
 			return res;
 
 		entry_key = (const char *)ctx->hdr + ctx->hdr->key_table_offset + entry->key_offset;
-		if (sub_35e4(entry_key, key) == 0) {
+		if (sysfileStrcmp(entry_key, key) == 0) {
 			*out_index = i;
 			return 0;
 		}
@@ -2118,7 +2118,7 @@ static int __attribute__((noinline, used)) sub_3494(SceSysfileCtx *ctx, const ch
 	return (int)0x80090003;
 }
 
-static int __attribute__((noinline, used)) sub_35e4(const void *a, const void *b)
+static int __attribute__((noinline, used)) sysfileStrcmp(const void *a, const void *b)
 {
 	const uint8_t *p1 = (const uint8_t *)a;
 	const uint8_t *p2 = (const uint8_t *)b;
@@ -2132,7 +2132,7 @@ static int __attribute__((noinline, used)) sub_35e4(const void *a, const void *b
 	return (int)*p1 - (int)*p2;
 }
 
-static int __attribute__((noinline, used)) sub_3628(const void *a, const void *b, SceSize len)
+static int __attribute__((noinline, used)) sysfileMemcmp(const void *a, const void *b, SceSize len)
 {
 	const uint8_t *p1 = (const uint8_t *)a;
 	const uint8_t *p2 = (const uint8_t *)b;
@@ -2145,7 +2145,7 @@ static int __attribute__((noinline, used)) sub_3628(const void *a, const void *b
 	return 0;
 }
 
-static SceSize __attribute__((noinline, used)) sub_364c(const char *s, SceSize max_len)
+static SceSize __attribute__((noinline, used)) sysfileStrnlen(const char *s, SceSize max_len)
 {
 	SceSize len = 0;
 
@@ -2156,7 +2156,7 @@ static SceSize __attribute__((noinline, used)) sub_364c(const char *s, SceSize m
 	return len;
 }
 
-static int __attribute__((noinline, used)) sub_3680(void *(*alloc_fn)(void *, SceSize), void (*free_fn)(void *, void *))
+static int __attribute__((noinline, used)) sysfileSetAllocator(void *(*alloc_fn)(void *, SceSize), void (*free_fn)(void *, void *))
 {
 	if ((alloc_fn == NULL && free_fn != NULL) || (alloc_fn != NULL && free_fn == NULL))
 		return (int)0x80090001;
@@ -2173,20 +2173,20 @@ static int __attribute__((noinline, used)) sub_3680(void *(*alloc_fn)(void *, Sc
 	return 0;
 }
 
-static void * __attribute__((noinline, used)) sub_36b4(SceSize size)
+static void * __attribute__((noinline, used)) sysfileAlloc(SceSize size)
 {
 	if (size == 0 || g_sf_alloc_fn == NULL)
 		return NULL;
 	return g_sf_alloc_fn(g_sf_alloc_ctx, size);
 }
 
-static void __attribute__((noinline, used)) sub_3708(void *ptr)
+static void __attribute__((noinline, used)) sysfileFree(void *ptr)
 {
 	if (ptr != NULL && g_sf_free_fn != NULL)
 		g_sf_free_fn(g_sf_free_ctx, ptr);
 }
 
-static void * __attribute__((noinline, used)) sub_3734(void *dst, const void *src, SceSize size)
+static void * __attribute__((noinline, used)) sysfileMemcpy(void *dst, const void *src, SceSize size)
 {
 	uint8_t *d = (uint8_t *)dst;
 	const uint8_t *s = (const uint8_t *)src;
@@ -2197,7 +2197,7 @@ static void * __attribute__((noinline, used)) sub_3734(void *dst, const void *sr
 	return dst;
 }
 
-static void * __attribute__((noinline, used)) sub_37e0(void *dst, int val, SceSize size)
+static void * __attribute__((noinline, used)) sysfileMemset(void *dst, int val, SceSize size)
 {
 	uint8_t *d = (uint8_t *)dst;
 	SceSize i;
@@ -2207,7 +2207,7 @@ static void * __attribute__((noinline, used)) sub_37e0(void *dst, int val, SceSi
 	return dst;
 }
 
-static char * __attribute__((noinline, used)) sub_3914(char *dst, const char *src)
+static char * __attribute__((noinline, used)) sysfileStrcpy(char *dst, const char *src)
 {
 	char *d = dst;
 	char c;

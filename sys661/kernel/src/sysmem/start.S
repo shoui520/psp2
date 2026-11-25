@@ -69,7 +69,7 @@ loc_00000000:
     move $t4, $zr
     move $t5, $zr
     move $t6, $zr
-    bal sub_00000304
+    bal sysmemStore8Words
     move $t7, $zr
     mfc0 $t0, COP0_STATE_BAD_VADDR
     mfc0 $t1, COP0_STATE_COUNT
@@ -78,7 +78,7 @@ loc_00000000:
     mfc0 $t4, COP0_STATE_STATUS
     mfc0 $t5, COP0_STATE_CAUSE
     mfc0 $t6, COP0_STATE_EPC
-    bal sub_00000304
+    bal sysmemStore8Words
     mfc0 $t7, COP0_STATE_PRID
     move $t0, $zr
     move $t1, $zr
@@ -87,7 +87,7 @@ loc_00000000:
     move $t4, $zr
     mfc0 $t5, $21
     mfc0 $t6, $22
-    bal sub_00000304
+    bal sysmemStore8Words
     move $t7, $zr
     mfc0 $t0, $24
     mfc0 $t1, COP0_STATE_EBASE
@@ -95,7 +95,7 @@ loc_00000000:
     move $t3, $zr
     mfc0 $t5, COP0_STATE_TAG_LO
     mfc0 $t6, COP0_STATE_TAG_HI
-    bal sub_00000304
+    bal sysmemStore8Words
     mfc0 $t7, COP0_STATE_ERROR_PC
     cfc0 $t0, $0
     cfc0 $t1, $1
@@ -104,7 +104,7 @@ loc_00000000:
     cfc0 $t4, $4
     cfc0 $t5, $5
     cfc0 $t6, $6
-    bal sub_00000304
+    bal sysmemStore8Words
     cfc0 $t7, $7
     cfc0 $t0, $8
     cfc0 $t1, $9
@@ -113,7 +113,7 @@ loc_00000000:
     cfc0 $t4, $12
     cfc0 $t5, $13
     cfc0 $t6, $14
-    bal sub_00000304
+    bal sysmemStore8Words
     cfc0 $t7, $15
     cfc0 $t0, $16
     cfc0 $t1, $17
@@ -122,7 +122,7 @@ loc_00000000:
     cfc0 $t4, $20
     cfc0 $t5, $21
     cfc0 $t6, $22
-    bal sub_00000304
+    bal sysmemStore8Words
     cfc0 $t7, $23
     cfc0 $t0, $24
     cfc0 $t1, $25
@@ -131,7 +131,7 @@ loc_00000000:
     cfc0 $t4, $28
     cfc0 $t5, $29
     cfc0 $t6, $30
-    bal sub_00000304
+    bal sysmemStore8Words
     cfc0 $t7, $31
     mfc0 $v0, COP0_STATE_STATUS
     lui $t1, 0x4000
@@ -146,7 +146,7 @@ loc_00000000:
     mfvc $t4, VFPU_INF4
     move $t5, $zr
     move $t6, $zr
-    bal sub_00000304
+    bal sysmemStore8Words
     mfvc $t7, VFPU_REV
     mfvc $t0, VFPU_RCX0
     mfvc $t1, VFPU_RCX1
@@ -155,7 +155,7 @@ loc_00000000:
     mfvc $t4, VFPU_RCX4
     mfvc $t5, VFPU_RCX5
     mfvc $t6, VFPU_RCX6
-    bal sub_00000304
+    bal sysmemStore8Words
     mfvc $t7, VFPU_RCX7
     sv.q       C000, 0($t8)
     sv.q       C010, 16($t8)
@@ -195,7 +195,7 @@ loc_00000000:
     jr $t9
     move $v0, $zr
 
-sub_00000304:
+sysmemStore8Words:
     sw $t0, 0($t8)
     sw $t1, 4($t8)
     sw $t2, 8($t8)
@@ -268,22 +268,22 @@ loc_0000032C:
     lwc1 $30, 184($a0)
     lwc1 $31, 188($a0)
     addiu $t8, $a0, 192
-    bal sub_00000604
+    bal sysmemLoad8Words
     nop
-    bal sub_00000604
+    bal sysmemLoad8Words
     nop
     mtc0 $t4, COP0_STATE_STATUS
     mtc0 $t5, COP0_STATE_CAUSE
     mtc0 $t6, COP0_STATE_EPC
-    bal sub_00000604
+    bal sysmemLoad8Words
     nop
-    bal sub_00000604
+    bal sysmemLoad8Words
     nop
     mtc0 $t1, COP0_STATE_EBASE
     mtc0 $t4, COP0_STATE_TAG_LO
     mtc0 $t5, COP0_STATE_TAG_HI
     mtc0 $t6, COP0_STATE_ERROR_PC
-    bal sub_00000604
+    bal sysmemLoad8Words
     nop
     ctc0 $t0, $0
     ctc0 $t1, $1
@@ -292,7 +292,7 @@ loc_0000032C:
     ctc0 $t4, $4
     ctc0 $t5, $5
     ctc0 $t6, $6
-    bal sub_00000604
+    bal sysmemLoad8Words
     ctc0 $t7, $7
     ctc0 $t0, $8
     ctc0 $t1, $9
@@ -301,7 +301,7 @@ loc_0000032C:
     ctc0 $t4, $12
     ctc0 $t5, $13
     ctc0 $t6, $14
-    bal sub_00000604
+    bal sysmemLoad8Words
     ctc0 $t7, $15
     ctc0 $t0, $16
     ctc0 $t1, $17
@@ -310,7 +310,7 @@ loc_0000032C:
     ctc0 $t4, $20
     ctc0 $t5, $21
     ctc0 $t6, $22
-    bal sub_00000604
+    bal sysmemLoad8Words
     ctc0 $t7, $23
     ctc0 $t0, $24
     ctc0 $t1, $25
@@ -326,13 +326,13 @@ loc_0000032C:
     mtc0 $t1, COP0_STATE_STATUS
     nop
     nop
-    bal sub_00000604
+    bal sysmemLoad8Words
     nop
     mtvc $t0, VFPU_PFXS
     mtvc $t1, VFPU_PFXT
     mtvc $t2, VFPU_PFXD
     mtvc $t3, VFPU_CC
-    bal sub_00000604
+    bal sysmemLoad8Words
     mtvc $t4, VFPU_INF4
     mtvc $t0, VFPU_RCX0
     mtvc $t1, VFPU_RCX1
@@ -391,7 +391,7 @@ loc_0000032C:
     jr $ra
     move $v0, $a1
 
-sub_00000604:
+sysmemLoad8Words:
     lw $t0, 0($t8)
     lw $t1, 4($t8)
     lw $t2, 8($t8)
@@ -420,15 +420,15 @@ sceSuspendForKernel_B2C9640B:
 
     # ?
     move $t9, $ra
-    lui $ra, %hi(sub_1120)
-    addiu $ra, $ra, %lo(sub_1120)
+    lui $ra, %hi(dcacheEretReturn)
+    addiu $ra, $ra, %lo(dcacheEretReturn)
     j sceKernelL1DcacheWritebackAll
     nop
 
     # ?
     move $t9, $ra
-    lui $ra, %hi(sub_1120)
-    addiu $ra, $ra, %lo(sub_1120)
+    lui $ra, %hi(dcacheEretReturn)
+    addiu $ra, $ra, %lo(dcacheEretReturn)
 
     .globl sceKernelDcacheWritebackAll
 sceKernelDcacheWritebackAll:
@@ -491,15 +491,15 @@ loc_00000714:
 
     # ?
     move $t9, $ra
-    lui $ra, %hi(sub_1120)
-    addiu $ra, $ra, %lo(sub_1120)
+    lui $ra, %hi(dcacheEretReturn)
+    addiu $ra, $ra, %lo(dcacheEretReturn)
     j sceKernelL1DcacheWritebackInvalidateAll
     nop
 
     # ?
     move $t9, $ra
-    lui $ra, %hi(sub_1120)
-    addiu $ra, $ra, %lo(sub_1120)
+    lui $ra, %hi(dcacheEretReturn)
+    addiu $ra, $ra, %lo(dcacheEretReturn)
 
     .globl sceKernelDcacheWritebackInvalidateAll
 sceKernelDcacheWritebackInvalidateAll:
@@ -533,15 +533,15 @@ loc_00000784:
 
     # ?
     move $t9, $ra
-    lui $ra, %hi(sub_1120)
-    addiu $ra, $ra, %lo(sub_1120)
+    lui $ra, %hi(dcacheEretReturn)
+    addiu $ra, $ra, %lo(dcacheEretReturn)
     j sceKernelL1DcacheInvalidateAll
     nop
 
     # ?
     move $t9, $ra
-    lui $ra, %hi(sub_1120)
-    addiu $ra, $ra, %lo(sub_1120)
+    lui $ra, %hi(dcacheEretReturn)
+    addiu $ra, $ra, %lo(dcacheEretReturn)
 
     .globl sceKernelDcacheInvalidateAll
 sceKernelDcacheInvalidateAll:
@@ -579,15 +579,15 @@ loc_00000804:
 
     # ?
     move $t9, $ra
-    lui $ra, %hi(sub_1120)
-    addiu $ra, $ra, %lo(sub_1120)
+    lui $ra, %hi(dcacheEretReturn)
+    addiu $ra, $ra, %lo(dcacheEretReturn)
     j sceKernelL1DcacheWritebackRange
     nop
 
     # ?
     move $t9, $ra
-    lui $ra, %hi(sub_1120)
-    addiu $ra, $ra, %lo(sub_1120)
+    lui $ra, %hi(dcacheEretReturn)
+    addiu $ra, $ra, %lo(dcacheEretReturn)
 
     .globl sceKernelDcacheWritebackRange
 sceKernelDcacheWritebackRange:
@@ -668,15 +668,15 @@ loc_000008F0:
 
     # ?
     move $t9, $ra
-    lui $ra, %hi(sub_1120)
-    addiu $ra, $ra, %lo(sub_1120)
+    lui $ra, %hi(dcacheEretReturn)
+    addiu $ra, $ra, %lo(dcacheEretReturn)
     j sceKernelL1DcacheWritebackInvalidateRange
     nop
 
     # ?
     move $t9, $ra
-    lui $ra, %hi(sub_1120)
-    addiu $ra, $ra, %lo(sub_1120)
+    lui $ra, %hi(dcacheEretReturn)
+    addiu $ra, $ra, %lo(dcacheEretReturn)
 
     .globl sceKernelDcacheWritebackInvalidateRange
 sceKernelDcacheWritebackInvalidateRange:
@@ -757,15 +757,15 @@ loc_000009EC:
 
     # ?
     move $t9, $ra
-    lui $ra, %hi(sub_1120)
-    addiu $ra, $ra, %lo(sub_1120)
+    lui $ra, %hi(dcacheEretReturn)
+    addiu $ra, $ra, %lo(dcacheEretReturn)
     j sceKernelL1DcacheInvalidateRange
     nop
 
     # ?
     move $t9, $ra
-    lui $ra, %hi(sub_1120)
-    addiu $ra, $ra, %lo(sub_1120)
+    lui $ra, %hi(dcacheEretReturn)
+    addiu $ra, $ra, %lo(dcacheEretReturn)
 
     .globl sceKernelDcacheInvalidateRange
 sceKernelDcacheInvalidateRange:
@@ -845,8 +845,8 @@ loc_00000ADC:
 
     # ?
     move $t9, $ra
-    lui $ra, %hi(sub_1120)
-    addiu $ra, $ra, %lo(sub_1120)
+    lui $ra, %hi(dcacheEretReturn)
+    addiu $ra, $ra, %lo(dcacheEretReturn)
 
     .globl sceKernelDcachePurgeRange
 sceKernelDcachePurgeRange:
@@ -949,15 +949,15 @@ loc_00000C28:
 
     # ?
     move $t9, $ra
-    lui $ra, %hi(sub_1120)
-    addiu $ra, $ra, %lo(sub_1120)
+    lui $ra, %hi(dcacheEretReturn)
+    addiu $ra, $ra, %lo(dcacheEretReturn)
     j sceKernelL1DcacheProbe
     nop
 
     # ?
     move $t9, $ra
-    lui $ra, %hi(sub_1120)
-    addiu $ra, $ra, %lo(sub_1120)
+    lui $ra, %hi(dcacheEretReturn)
+    addiu $ra, $ra, %lo(dcacheEretReturn)
 
     .globl sceKernelDcacheProbe
 sceKernelDcacheProbe:
@@ -1000,8 +1000,8 @@ loc_00000CD0:
 
     # ?
     move $t9, $ra
-    lui $ra, %hi(sub_1120)
-    addiu $ra, $ra, %lo(sub_1120)
+    lui $ra, %hi(dcacheEretReturn)
+    addiu $ra, $ra, %lo(dcacheEretReturn)
 
     .globl sceKernelDcacheReadTagForUser
 sceKernelDcacheReadTagForUser:
@@ -1035,15 +1035,15 @@ sceKernelDcacheReadTag:
 
     # ?
     move $t9, $ra
-    lui $ra, %hi(sub_1120)
-    addiu $ra, $ra, %lo(sub_1120)
+    lui $ra, %hi(dcacheEretReturn)
+    addiu $ra, $ra, %lo(dcacheEretReturn)
     j sceKernelL1DcacheProbeRange
     nop
 
     # ?
     move $t9, $ra
-    lui $ra, %hi(sub_1120)
-    addiu $ra, $ra, %lo(sub_1120)
+    lui $ra, %hi(dcacheEretReturn)
+    addiu $ra, $ra, %lo(dcacheEretReturn)
 
     .globl sceKernelDcacheProbeRange
 sceKernelDcacheProbeRange:
@@ -1131,15 +1131,15 @@ loc_00000E50:
 
     # ?
     move $t9, $ra
-    lui $ra, %hi(sub_1120)
-    addiu $ra, $ra, %lo(sub_1120)
+    lui $ra, %hi(dcacheEretReturn)
+    addiu $ra, $ra, %lo(dcacheEretReturn)
     j sceKernelL1IcacheInvalidateAll
     nop
 
     # ?
     move $t9, $ra
-    lui $ra, %hi(sub_1120)
-    addiu $ra, $ra, %lo(sub_1120)
+    lui $ra, %hi(dcacheEretReturn)
+    addiu $ra, $ra, %lo(dcacheEretReturn)
 
     .globl sceKernelIcacheInvalidateAll
 sceKernelIcacheInvalidateAll:
@@ -1177,15 +1177,15 @@ loc_00000EE8:
 
     # ?
     move $t9, $ra
-    lui $ra, %hi(sub_1120)
-    addiu $ra, $ra, %lo(sub_1120)
+    lui $ra, %hi(dcacheEretReturn)
+    addiu $ra, $ra, %lo(dcacheEretReturn)
     j sceKernelL1IcacheInvalidateRange
     nop
 
     # ?
     move $t9, $ra
-    lui $ra, %hi(sub_1120)
-    addiu $ra, $ra, %lo(sub_1120)
+    lui $ra, %hi(dcacheEretReturn)
+    addiu $ra, $ra, %lo(dcacheEretReturn)
 
     .globl sceKernelIcacheInvalidateRange
 sceKernelIcacheInvalidateRange:
@@ -1272,15 +1272,15 @@ loc_00000FF8:
 
     # ?
     move $t9, $ra
-    lui $ra, %hi(sub_1120)
-    addiu $ra, $ra, %lo(sub_1120)
+    lui $ra, %hi(dcacheEretReturn)
+    addiu $ra, $ra, %lo(dcacheEretReturn)
     j sceKernelL1IcacheProbe
     nop
 
     # ?
     move $t9, $ra
-    lui $ra, %hi(sub_1120)
-    addiu $ra, $ra, %lo(sub_1120)
+    lui $ra, %hi(dcacheEretReturn)
+    addiu $ra, $ra, %lo(dcacheEretReturn)
     lui $t0, 0xA000
     or $ra, $t0, $ra
 
@@ -1324,8 +1324,8 @@ loc_00001098:
 
     # ?
     move $t9, $ra
-    lui $ra, %hi(sub_1120)
-    addiu $ra, $ra, %lo(sub_1120)
+    lui $ra, %hi(dcacheEretReturn)
+    addiu $ra, $ra, %lo(dcacheEretReturn)
 
     .globl sceKernelIcacheReadTagForUser
 sceKernelIcacheReadTagForUser:
@@ -1357,14 +1357,14 @@ sceKernelIcacheReadTag:
     jr $ra
     nop
 
-sub_1120:
+dcacheEretReturn:
     move $ra, $t9
     eret
 
     # ?
     move $t9, $ra
-    lui $ra, %hi(sub_1594)
-    addiu $ra, $ra, %lo(sub_1594)
+    lui $ra, %hi(l2cacheEretReturn)
+    addiu $ra, $ra, %lo(l2cacheEretReturn)
 
     .globl sceKernelL2cacheWritebackAll
 sceKernelL2cacheWritebackAll:
@@ -1414,8 +1414,8 @@ loc_000011A0:
 
     # ?
     move $t9, $ra
-    lui $ra, %hi(sub_1594)
-    addiu $ra, $ra, %lo(sub_1594)
+    lui $ra, %hi(l2cacheEretReturn)
+    addiu $ra, $ra, %lo(l2cacheEretReturn)
 
     .globl sceKernelL2cacheWritebackInvalidateAll
 sceKernelL2cacheWritebackInvalidateAll:
@@ -1465,8 +1465,8 @@ loc_00001240:
 
     # ?
     move $t9, $ra
-    lui $ra, %hi(sub_1594)
-    addiu $ra, $ra, %lo(sub_1594)
+    lui $ra, %hi(l2cacheEretReturn)
+    addiu $ra, $ra, %lo(l2cacheEretReturn)
 
     .globl sceKernelL2cacheInvalidateAll
 sceKernelL2cacheInvalidateAll:
@@ -1495,8 +1495,8 @@ loc_0000129C:
 
     # ?
     move $t9, $ra
-    lui $ra, %hi(sub_1594)
-    addiu $ra, $ra, %lo(sub_1594)
+    lui $ra, %hi(l2cacheEretReturn)
+    addiu $ra, $ra, %lo(l2cacheEretReturn)
 
     .globl sceKernelL2cacheWritebackRange
 sceKernelL2cacheWritebackRange:
@@ -1507,8 +1507,8 @@ sceKernelL2cacheWritebackRange:
 
     # ?
     move $t9, $ra
-    lui $ra, %hi(sub_1594)
-    addiu $ra, $ra, %lo(sub_1594)
+    lui $ra, %hi(l2cacheEretReturn)
+    addiu $ra, $ra, %lo(l2cacheEretReturn)
 
     .globl sceKernelL2cacheWritebackInvalidateRange
 sceKernelL2cacheWritebackInvalidateRange:
@@ -1519,8 +1519,8 @@ sceKernelL2cacheWritebackInvalidateRange:
 
     # ?
     move $t9, $ra
-    lui $ra, %hi(sub_1594)
-    addiu $ra, $ra, %lo(sub_1594)
+    lui $ra, %hi(l2cacheEretReturn)
+    addiu $ra, $ra, %lo(l2cacheEretReturn)
 
     .globl sceKernelL2cacheInvalidateRange
 sceKernelL2cacheInvalidateRange:
@@ -1633,8 +1633,8 @@ loc_00001458:
 
     # ?
     move $t9, $ra
-    lui $ra, %hi(sub_1594)
-    addiu $ra, $ra, %lo(sub_1594)
+    lui $ra, %hi(l2cacheEretReturn)
+    addiu $ra, $ra, %lo(l2cacheEretReturn)
 
     .globl sceKernelL2cacheProbe
 sceKernelL2cacheProbe:
@@ -1679,8 +1679,8 @@ loc_000014E0:
 
     # ?
     move $t9, $ra
-    lui $ra, %hi(sub_1594)
-    addiu $ra, $ra, %lo(sub_1594)
+    lui $ra, %hi(l2cacheEretReturn)
+    addiu $ra, $ra, %lo(l2cacheEretReturn)
 
     .globl sceKernelL2cacheProbeRange
 sceKernelL2cacheProbeRange:
@@ -1728,7 +1728,7 @@ loc_0000158C:
     jr $ra
     nop
 
-sub_1594:
+l2cacheEretReturn:
     move $ra, $t9
     eret
 
@@ -1742,8 +1742,8 @@ UtilsForKernel_A6B0A6B8:
 UtilsForKernel_39FFB756:
     lui $t0, 0xBFC0
     ori $t0, $t0, 0xF00
-    lui $t1, %hi(sub_15E8)
-    addiu $t1, $t1, %lo(sub_15E8)
+    lui $t1, %hi(dcacheInvalidateAllFromBootRam)
+    addiu $t1, $t1, %lo(dcacheInvalidateAllFromBootRam)
     li $t2, 256
 
 loc_000015BC:
@@ -1759,7 +1759,7 @@ loc_000015BC:
     jr $t0
     nop
 
-sub_15E8:
+dcacheInvalidateAllFromBootRam:
     mfic $t6, $0
     mtic $zr, $0
     mfc0 $t0, COP0_STATE_CONFIG
@@ -1856,8 +1856,8 @@ md5BlockUpdate:
     lw $t1, 4($a0)
     lw $t2, 8($a0)
     lw $t3, 12($a0)
-    lui $t7, %hi(sub_17B0)
-    addiu $t7, $t7, %lo(sub_17B0)
+    lui $t7, %hi(md5RoundChoice)
+    addiu $t7, $t7, %lo(md5RoundChoice)
     li $t8, 0
     lui $t9, %hi(g_md5Tbl)
     addiu $t9, $t9, %lo(g_md5Tbl)
@@ -1894,7 +1894,7 @@ loc_00001748:
     jr $t7
     nop
 
-sub_17B0:
+md5RoundChoice:
     xor $v0, $t2, $t3
     and $v0, $t1, $v0
     jr $ra
@@ -1960,7 +1960,7 @@ sha1BlockUpdate:
     lw $s2, 8($a1)
     lw $s3, 12($a1)
     lw $s4, 16($a1)
-    jal sub_000018E8
+    jal sha1CompressBlock
     move $s5, $a1
     sw $s0, 0($s5)
     sw $s1, 4($s5)
@@ -1978,7 +1978,7 @@ sha1BlockUpdate:
     addiu $sp, $sp, 64
     nop
 
-sub_000018E8:
+sha1CompressBlock:
     move $t0, $s0
     move $t1, $s1
     move $t2, $s2
@@ -2123,7 +2123,7 @@ loc_00001AB8:
     bnez $t0, loc_00001AB8
     addiu $t1, $t1, 4
     addiu $a1, $a1, -64
-    jal sub_000018E8
+    jal sha1CompressBlock
     nop
     bnez $a1, loc_00001AB0
     nop
@@ -2142,7 +2142,7 @@ loc_00001AF0:
     addiu $t0, $t0, 16
     sw $s6, 60($a0)
     lui $t0, 0x8000
-    jal sub_000018E8
+    jal sha1CompressBlock
     sw $t0, 0($a0)
     j loc_00001C88
     nop
@@ -2164,7 +2164,7 @@ loc_00001B3C:
     sw $t2, 0($t1)
     bnez $t0, loc_00001B3C
     addiu $t1, $t1, 4
-    jal sub_000018E8
+    jal sha1CompressBlock
     nop
     j loc_00001B28
     addiu $a1, $a1, -64
@@ -2209,7 +2209,7 @@ loc_00001BD8:
     sw $t1, 0($t0)
     bnez $v0, loc_00001BD8
     addiu $t0, $t0, 4
-    jal sub_000018E8
+    jal sha1CompressBlock
     nop
     addiu $a1, $a1, -64
     li $v0, 16
@@ -2257,7 +2257,7 @@ loc_00001C68:
     addiu $t0, $t0, 4
 
 loc_00001C80:
-    jal sub_000018E8
+    jal sha1CompressBlock
     nop
 
 loc_00001C88:
@@ -2578,21 +2578,21 @@ loc_00002048:
     sh $t2, 58($t3)
 
 loc_00002060:
-    jal sub_00002474
+    jal gzipBuildDistTable
     addiu $s4, $sp, 1212
     lh $t5, 1260($sp)
     beqz $t0, loc_00002560
     addiu $s4, $sp, 0
     ext $t5, $t5, 2, 5
     li $at, 0
-    jal sub_000022B4
+    jal gzipBuildHuffTable
     addiu $t5, $t5, 257
     beqz $t0, loc_00002560
     lh $t5, 1260($sp)
     addiu $s4, $sp, 636
     ext $t5, $t5, 7, 5
     li $at, 288
-    jal sub_000022B4
+    jal gzipBuildHuffTable
     addiu $t5, $t5, 289
 
 loc_000020A0:
@@ -2609,17 +2609,17 @@ loc_000020B8:
     sb $v0, -1($a0)
 
 loc_000020BC:
-    jal sub_00002258
+    jal gzipHuffDecodeSymbol
     addiu $t0, $sp, 2
     addiu $t0, $sp, 638
     bgez $v0, loc_000020B0
     bitrev $t2, $v0
-    bltzal $t2, sub_000021B0
+    bltzal $t2, gzipReadBitsChecked
     sra $s4, $v0, 4
     lhu $t1, 666($sp)
     subu $at, $a0, $s4
     srlv $v0, $t8, $t9
-    jal sub_00002210
+    jal gzipHuffDecodeContinue
     subu $t9, $t9, $t5
     sltu $v1, $s5, $at
     bnez $v1, loc_0000256C
@@ -2628,7 +2628,7 @@ loc_000020BC:
 
 loc_000020FC:
     addiu $t2, $t2, -30
-    bltzal $t2, sub_00002194
+    bltzal $t2, gzipReadBitsOrError
     subu $s4, $a0, $v0
     sltu $t2, $t6, $s4
     beqz $t2, loc_00002560
@@ -2674,7 +2674,7 @@ loc_00002170:
     jr $ra
     subu $s4, $s4, $v0
 
-sub_00002194:
+gzipReadBitsOrError:
     bltz $v0, loc_00002560
     subu $t9, $t9, $t2
     bgtz $t9, loc_00002170
@@ -2683,7 +2683,7 @@ sub_00002194:
     jr $ra
     subu $s4, $s4, $v0
 
-sub_000021B0:
+gzipReadBitsChecked:
     sra $t2, $t2, 28
     beq $s4, $t2, loc_000021D0
     subu $t9, $t9, $t2
@@ -2715,7 +2715,7 @@ loc_000021FC:
     jr $ra
     addiu $sp, $sp, 1344
 
-sub_00002210:
+gzipHuffDecodeContinue:
     blez $t9, loc_00002268
     sllv $v0, $v0, $t5
 
@@ -2741,7 +2741,7 @@ loc_00002244:
     jr $ra
     lh $v0, 60($v0)
 
-sub_00002258:
+gzipHuffDecodeSymbol:
     srlv $v0, $t8, $t9
     subu $t9, $t9, $t4
     bgtz $t9, loc_00002218
@@ -2774,7 +2774,7 @@ loc_000022A0:
     j loc_0000228C
     ins $v0, $t8, 0, 1
 
-sub_000022B4:
+gzipBuildHuffTable:
     sw $zr, 56($s4)
     sw $zr, 44($s4)
     move $t3, $s4
@@ -2789,7 +2789,7 @@ loc_000022D0:
     subu $t0, $t0, $t5
     bgez $t0, loc_0000239C
     lhu $t1, 1242($sp)
-    jal sub_00002258
+    jal gzipHuffDecodeSymbol
     addiu $t0, $sp, 1214
     addiu $t0, $v0, -16
     blez $t0, loc_0000232C
@@ -2922,7 +2922,7 @@ loc_00002460:
     jr $ra
     sh $at, 28($t1)
 
-sub_00002474:
+gzipBuildDistTable:
     sw $zr, 32($s4)
     move $t0, $zr
     move $t5, $s4
