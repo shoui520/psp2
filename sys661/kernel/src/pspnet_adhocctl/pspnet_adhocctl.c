@@ -132,6 +132,52 @@ struct SceNetAdhocctlScanNode {
     u8 pad[0x2e];                        /* 0x32..0x5f */
 };
 
+typedef struct SceAdhocctlRegParam {
+    u32 regtype;
+    char name[256];
+    u32 namelen;
+    u32 reserved1;
+    u32 reserved2;
+} SceAdhocctlRegParam;
+
+typedef struct SceAdhocctlScanReq {
+    u32 bss_type;
+    u8 reserved04[0x38];
+    u32 scan_type;
+    u32 min_dwell;
+    u32 max_dwell;
+    u32 probe_delay;
+} SceAdhocctlScanReq;
+
+typedef struct SceAdhocctlBssParam {
+    u8 reserved00[0x28];
+    u32 bss_type;
+    u32 beacon_period;
+    u8 reserved30[0x0e];
+    u16 capability;
+} SceAdhocctlBssParam;
+
+typedef struct SceAdhocctlScanOut {
+    u8 reserved00[0x18];
+    int mode;
+} SceAdhocctlScanOut;
+
+typedef struct SceAdhocctlGameModeParam {
+    u8 reserved00[0x2e];
+    u16 key_len;
+    u8 key[0x10];
+    u16 port_be;
+    u8 reserved42[0x08];
+    u16 active_flag;
+    u16 reserved4c;
+    u16 beacon_period;
+} SceAdhocctlGameModeParam;
+
+typedef struct SceAdhocctlJoinParam {
+    u8 reserved00[0x6c];
+    u32 auth_flag;
+} SceAdhocctlJoinParam;
+
 struct SceNetAdhocctlCtx {
     int evfid;                           /* 0x000 */
     int thid;                            /* 0x004 */
@@ -182,63 +228,63 @@ static u8 g_gm_scan_buf[0xc00];                        /* 0x7478..0x8077 */
 static int g_mutex_created;                            /* 0x8078 */
 static u8 g_mutex_work[0x20];                          /* 0x807c..0x809b */
 
-static void sub_0490(char *dst);
-static int sub_0668(const char *name, int game_type, int num_peers, const u8 *macs, u32 timeout, int flag, int min_peers);
-static void sub_11ac(char *prefix);
-static int sub_12c0(struct SceNetAdhocctlCtx *ctx);
-static int sub_1534(struct SceNetAdhocctlCtx *ctx);
-static int sub_17b4(struct SceNetAdhocctlCtx *ctx);
-static int sub_18a8(struct SceNetAdhocctlCtx *ctx);
-static int sub_1b9c(struct SceNetAdhocctlCtx *ctx);
-static int sub_1ec8(struct SceNetAdhocctlCtx *ctx);
-static int sub_20ac(struct SceNetAdhocctlCtx *ctx);
-static void sub_22b8(struct SceNetAdhocctlCtx *ctx);
-static void sub_233c(struct SceNetAdhocctlCtx *ctx);
-static int sub_2390(struct SceNetAdhocctlCtx *ctx, char *ssid, int mode_char, const char *group_name);
-static int sub_24ec(struct SceNetAdhocctlCtx *ctx, char *ssid, int *ch_out);
-static int sub_25b0(struct SceNetAdhocctlCtx *ctx, char *ssid);
-static int sub_2600(int event, int error);
-static int sub_277c(int stackSize, int priority, const void *adhoc_id);
-static int sub_2914(void (*func)(int, int, void *), void *arg, int *id_out);
-static int sub_2a04(int *buflen, void *buf);
-static int sub_2c4c(void (*func)(int, int, void *), void *arg, int *id_out);
-static int sub_2d54(int event, int error);
-static int sub_2e04(void);
-static int sub_2ed4(const char *name);
-static int sub_2f80(const char *name);
-static int sub_3014(const void *scan_info);
-static int sub_30cc(const char *name, int num_peers, const u8 *macs, const void *param, u32 timeout, int flag, int min_peers);
-static int sub_31f0(const char *name, const u8 *gc_mac, const void *param, u32 timeout, int flag);
-static int sub_32e0(void);
-static int sub_3344(void);
-static int sub_33a4(void);
-static int sub_3404(int id);
-static int sub_3470(int *state);
-static int sub_3484(void *adhoc_id);
-static int sub_34b0(void *param);
-static int sub_3544(void *info);
-static int sub_35b8(int id);
-static int sub_3624(void *param);
-static int sub_3680(const char *name);
-static int sub_3714(void);
-static int sub_3730(const char *name);
-static int sub_37c4(u32 arglen, void *argp);
-static int sub_3bf4(struct SceNetAdhocctlCtx *ctx);
-static int sub_3d0c(struct SceNetAdhocctlCtx *ctx);
-static int sub_3d2c(struct SceNetAdhocctlCtx *ctx);
-static int sub_3db4(struct SceNetAdhocctlCtx *ctx, int *ev, int *reason);
-static int sub_3f34(struct SceNetAdhocctlCtx *ctx, struct SceNetAdhocctlGameModeCtx *gm);
-static int sub_46e0(struct SceNetAdhocctlCtx *ctx, struct SceNetAdhocctlGameModeCtx *gm);
-static int sub_50fc(struct SceNetAdhocctlGameModeCtx *gm, u8 *ch_out, u8 *offset_out);
-static int sub_550c(int power_save);
-static void sub_5580(struct SceNetAdhocctlCtx *ctx, struct SceNetAdhocctlGameModeCtx *gm);
-static int sub_5658(struct SceNetAdhocctlGameModeCtx *gm, int unused, u32 start_lo, u32 start_hi, int listen_id, const void *ie_buf, int ie_len);
-static int sub_5a18(struct SceNetAdhocctlGameModeCtx *gm, int unused, u32 start_lo, u32 start_hi, int ptp_id, void *buf, int len);
-static void *sub_5b28(int tag, void *buf, u32 len, int *tag_len_out);
-static int sub_5bf4(void);
-static void sub_5c44(void);
-static int sub_5c88(void);
-static void sub_5cb0(int lock_res);
+static void adhocctlCopySsidPrefix(char *dst);
+static int adhocctlCreateGameModeInternal(const char *name, int game_type, int num_peers, const u8 *macs, u32 timeout, int flag, int min_peers);
+static void adhocctlLoadSsidPrefix(char *prefix);
+static int adhocctlDoConnect(struct SceNetAdhocctlCtx *ctx);
+static int adhocctlDoScan(struct SceNetAdhocctlCtx *ctx);
+static int adhocctlDoScanQuiet(struct SceNetAdhocctlCtx *ctx);
+static int adhocctlDoCreate(struct SceNetAdhocctlCtx *ctx);
+static int adhocctlDoJoin(struct SceNetAdhocctlCtx *ctx);
+static int adhocctlDoConnectRaw(struct SceNetAdhocctlCtx *ctx);
+static int adhocctlDoCreateRaw(struct SceNetAdhocctlCtx *ctx);
+static void adhocctlDisconnectWlan(struct SceNetAdhocctlCtx *ctx);
+static void adhocctlDetachWlan(struct SceNetAdhocctlCtx *ctx);
+static int adhocctlFormatSsid(struct SceNetAdhocctlCtx *ctx, char *ssid, int mode_char, const char *group_name);
+static int adhocctlBuildGroupSsidAndChannel(struct SceNetAdhocctlCtx *ctx, char *ssid, int *ch_out);
+static int adhocctlBuildGameModeSsid(struct SceNetAdhocctlCtx *ctx, char *ssid);
+static int adhocctlNotifyHandlers(int event, int error);
+static int adhocctlInitInternal(int stackSize, int priority, const void *adhoc_id);
+static int adhocctlAddHandlerInternal(void (*func)(int, int, void *), void *arg, int *id_out);
+static int adhocctlGetScanInfoInternal(int *buflen, void *buf);
+static int adhocctlAddGameModeHandlerInternal(void (*func)(int, int, void *), void *arg, int *id_out);
+static int adhocctlNotifyGameModeHandlers(int event, int error);
+static int adhocctlTermInternal(void);
+static int adhocctlRequestConnect(const char *name);
+static int adhocctlRequestCreate(const char *name);
+static int adhocctlRequestJoin(const void *scan_info);
+static int adhocctlRequestCreateGameMode(const char *name, int num_peers, const u8 *macs, const void *param, u32 timeout, int flag, int min_peers);
+static int adhocctlRequestJoinGameMode(const char *name, const u8 *gc_mac, const void *param, u32 timeout, int flag);
+static int adhocctlRequestScan(void);
+static int adhocctlRequestDisconnect(void);
+static int adhocctlRequestExitGameMode(void);
+static int adhocctlDelHandlerInternal(int id);
+static int adhocctlGetStateInternal(int *state);
+static int adhocctlGetAdhocIdInternal(void *adhoc_id);
+static int adhocctlGetParameterInternal(void *param);
+static int adhocctlGetGameModeInfoInternal(void *info);
+static int adhocctlDelGameModeHandlerInternal(int id);
+static int adhocctlGetGameModeParamInternal(void *param);
+static int adhocctlRequestConnectRaw(const char *name);
+static int adhocctlRequestSuspend(void);
+static int adhocctlRequestCreateRaw(const char *name);
+static int adhocctlWorkerThread(u32 arglen, void *argp);
+static int adhocctlDrainWlanEvents(struct SceNetAdhocctlCtx *ctx);
+static int adhocctlPollWlanEvent(struct SceNetAdhocctlCtx *ctx);
+static int adhocctlCheckCancelFlag(struct SceNetAdhocctlCtx *ctx);
+static int adhocctlWaitWlanEvent(struct SceNetAdhocctlCtx *ctx, int *ev, int *reason);
+static int adhocctlRunGameModeHost(struct SceNetAdhocctlCtx *ctx, struct SceNetAdhocctlGameModeCtx *gm);
+static int adhocctlRunGameModeClient(struct SceNetAdhocctlCtx *ctx, struct SceNetAdhocctlGameModeCtx *gm);
+static int adhocctlSelectGameModeChannel(struct SceNetAdhocctlGameModeCtx *gm, u8 *ch_out, u8 *offset_out);
+static int adhocctlSetWlanPowerSave(int power_save);
+static void adhocctlCleanupGameMode(struct SceNetAdhocctlCtx *ctx, struct SceNetAdhocctlGameModeCtx *gm);
+static int adhocctlAcceptGameModePeers(struct SceNetAdhocctlGameModeCtx *gm, int unused, u32 start_lo, u32 start_hi, int listen_id, const void *ie_buf, int ie_len);
+static int adhocctlRecvGameModePacket(struct SceNetAdhocctlGameModeCtx *gm, int unused, u32 start_lo, u32 start_hi, int ptp_id, void *buf, int len);
+static void *adhocctlFindIeTag(int tag, void *buf, u32 len, int *tag_len_out);
+static int adhocctlCreateLock(void);
+static void adhocctlDeleteLock(void);
+static int adhocctlLock(void);
+static void adhocctlUnlock(int lock_res);
 
 /* 0x0000 */
 int sceNetAdhocctlInit(int stackSize, int priority, const void *adhoc_id)
@@ -281,8 +327,8 @@ int sceNetAdhocctlInit(int stackSize, int priority, const void *adhoc_id)
         KprintfForUser("***********************************************\n");
     }
 
-    sub_11ac(g_ssid_prefix);
-    int res = sub_277c(stackSize, priority, adhoc_id);
+    adhocctlLoadSsidPrefix(g_ssid_prefix);
+    int res = adhocctlInitInternal(stackSize, priority, adhoc_id);
     if (res < 0) {
         g_initialized = 0;
         return res;
@@ -313,7 +359,7 @@ int sceNetAdhocctlJoin(const void *scan_info)
         if (i < 0)
             return i;
     }
-    return sub_3014(scan_info);
+    return adhocctlRequestJoin(scan_info);
 }
 
 /* 0x0238 */
@@ -381,7 +427,7 @@ int sceNetAdhocctlGetAddrByName(const char *name, int *buflen, void *buf)
 }
 
 /* 0x0490 */
-static void sub_0490(char *dst)
+static void adhocctlCopySsidPrefix(char *dst)
 {
     sceKernelMemcpy(dst, g_ssid_prefix, 3);
 }
@@ -394,7 +440,7 @@ int sceNetAdhocctlTerm(void)
     if (g_initialized == 0)
         return 0;
 
-    int res = sub_2e04();
+    int res = adhocctlTermInternal();
     if (res >= 0)
         g_initialized = 0;
     return res;
@@ -418,7 +464,7 @@ int sceNetAdhocctlConnect(const char *name)
         if (i < 0)
             return i;
     }
-    return sub_2ed4(name);
+    return adhocctlRequestConnect(name);
 }
 
 /* 0x05c0 */
@@ -439,11 +485,11 @@ int sceNetAdhocctlCreate(const char *name)
         if (i < 0)
             return i;
     }
-    return sub_2f80(name);
+    return adhocctlRequestCreate(name);
 }
 
 /* 0x0668 */
-static int sub_0668(const char *name, int game_type, int num_peers, const u8 *macs, u32 timeout, int flag, int min_peers)
+static int adhocctlCreateGameModeInternal(const char *name, int game_type, int num_peers, const u8 *macs, u32 timeout, int flag, int min_peers)
 {
     if (g_initialized == 0)
         return 0x80410b08;
@@ -464,7 +510,7 @@ static int sub_0668(const char *name, int game_type, int num_peers, const u8 *ma
     if (tmpl[0x44] < num_peers)
         return 0x80410b04;
 
-    return sub_30cc(name, num_peers, macs, tmpl, timeout, flag, min_peers);
+    return adhocctlRequestCreateGameMode(name, num_peers, macs, tmpl, timeout, flag, min_peers);
 }
 
 /* 0x07d0 */
@@ -472,7 +518,7 @@ int sceNetAdhocctlCreateEnterGameMode(const char *name, int game_type, int num_p
 {
     if (_sceKernelCheckThreadStack() < 0xbe0)
         return 0x80410005;
-    return sub_0668(name, game_type, num_peers, macs, timeout, flag, num_peers);
+    return adhocctlCreateGameModeInternal(name, game_type, num_peers, macs, timeout, flag, num_peers);
 }
 
 /* 0x086c */
@@ -480,7 +526,7 @@ int sceNetAdhocctl_B0B80E80(const char *name, int game_type, int min_peers, int 
 {
     if (_sceKernelCheckThreadStack() < 0xbe0)
         return 0x80410005;
-    return sub_0668(name, game_type, num_peers, macs, timeout, flag, min_peers);
+    return adhocctlCreateGameModeInternal(name, game_type, num_peers, macs, timeout, flag, min_peers);
 }
 
 /* 0x0914 */
@@ -503,7 +549,7 @@ int sceNetAdhocctlJoinEnterGameMode(const char *name, const u8 *gc_mac, u32 time
     if (i < 0)
         return i;
 
-    return sub_31f0(name, gc_mac, g_gm_templates[0], timeout, flag);
+    return adhocctlRequestJoinGameMode(name, gc_mac, g_gm_templates[0], timeout, flag);
 }
 
 /* 0x0a08 */
@@ -513,7 +559,7 @@ int sceNetAdhocctlScan(void)
         return 0x80410005;
     if (g_initialized == 0)
         return 0x80410b08;
-    return sub_32e0();
+    return adhocctlRequestScan();
 }
 
 /* 0x0a5c */
@@ -523,7 +569,7 @@ int sceNetAdhocctlDisconnect(void)
         return 0x80410005;
     if (g_initialized == 0)
         return 0x80410b08;
-    return sub_3344();
+    return adhocctlRequestDisconnect();
 }
 
 /* 0x0ab0 */
@@ -533,7 +579,7 @@ int sceNetAdhocctlExitGameMode(void)
         return 0x80410005;
     if (g_initialized == 0)
         return 0x80410b08;
-    return sub_33a4();
+    return adhocctlRequestExitGameMode();
 }
 
 /* 0x0b04 */
@@ -546,7 +592,7 @@ int sceNetAdhocctlAddHandler(void (*func)(int, int, void *), void *arg)
         return 0x80410b08;
     if (func == NULL)
         return 0x80410b04;
-    int res = sub_2914(func, arg, &id);
+    int res = adhocctlAddHandlerInternal(func, arg, &id);
     return (res < 0) ? res : id;
 }
 
@@ -557,7 +603,7 @@ int sceNetAdhocctlDelHandler(int id)
         return 0x80410005;
     if (g_initialized == 0)
         return 0x80410b08;
-    return sub_3404(id);
+    return adhocctlDelHandlerInternal(id);
 }
 
 /* 0x0bf0 */
@@ -569,7 +615,7 @@ int sceNetAdhocctlGetState(int *state)
         return 0x80410b08;
     if (state == NULL)
         return 0x80410b04;
-    return sub_3470(state);
+    return adhocctlGetStateInternal(state);
 }
 
 /* 0x0c5c */
@@ -581,7 +627,7 @@ int sceNetAdhocctlGetAdhocId(void *adhoc_id)
         return 0x80410b08;
     if (adhoc_id == NULL)
         return 0x80410b04;
-    return sub_3484(adhoc_id);
+    return adhocctlGetAdhocIdInternal(adhoc_id);
 }
 
 /* 0x0cc8 */
@@ -605,7 +651,7 @@ int sceNetAdhocctlGetParameter(void *param)
         return 0x80410b08;
     if (param == NULL)
         return 0x80410b04;
-    return sub_34b0(param);
+    return adhocctlGetParameterInternal(param);
 }
 
 /* 0x0dbc */
@@ -617,7 +663,7 @@ int sceNetAdhocctlGetScanInfo(int *buflen, void *buf)
         return 0x80410b08;
     if ((u32)buf & 3)
         return 0x80410b14;
-    return sub_2a04(buflen, buf);
+    return adhocctlGetScanInfoInternal(buflen, buf);
 }
 
 /* 0x0e3c */
@@ -629,7 +675,7 @@ int sceNetAdhocctlGetGameModeInfo(void *info)
         return 0x80410b08;
     if (info == NULL)
         return 0x80410b04;
-    return sub_3544(info);
+    return adhocctlGetGameModeInfoInternal(info);
 }
 
 /* 0x0ea8 */
@@ -639,7 +685,7 @@ int sceNetAdhocctl_lib_EFA6AEAF(const void *param, int num_peers, const u8 *macs
         return 0x80410b08;
     if (param == NULL)
         return 0x80410b04;
-    sub_30cc(NULL, num_peers, macs, param, timeout, flag | 1, num_peers);
+    adhocctlRequestCreateGameMode(NULL, num_peers, macs, param, timeout, flag | 1, num_peers);
     return 0;
 }
 
@@ -650,7 +696,7 @@ int sceNetAdhocctl_lib_1593C05D(const void *param, const u8 *gc_mac, u32 timeout
         return 0x80410b08;
     if (param == NULL)
         return 0x80410b04;
-    sub_31f0(NULL, gc_mac, param, timeout, flag | 1);
+    adhocctlRequestJoinGameMode(NULL, gc_mac, param, timeout, flag | 1);
     return 0;
 }
 
@@ -662,7 +708,7 @@ int sceNetAdhocctl_lib_F8BABD85(void (*func)(int, int, void *), void *arg)
         return 0x80410b08;
     if (func == NULL)
         return 0x80410b04;
-    int res = sub_2c4c(func, arg, &id);
+    int res = adhocctlAddGameModeHandlerInternal(func, arg, &id);
     return (res < 0) ? res : id;
 }
 
@@ -671,7 +717,7 @@ int sceNetAdhocctl_lib_1C679240(int id)
 {
     if (g_initialized == 0)
         return 0x80410b08;
-    return sub_35b8(id);
+    return adhocctlDelGameModeHandlerInternal(id);
 }
 
 /* 0x1008 */
@@ -681,7 +727,7 @@ int sceNetAdhocctl_lib_CDEA7ACB(void *param)
         return 0x80410b08;
     if (param == NULL)
         return 0x80410b04;
-    return sub_3624(param);
+    return adhocctlGetGameModeParamInternal(param);
 }
 
 /* 0x1044 */
@@ -702,13 +748,13 @@ int sceNetAdhocctl_lib_1A2B6D03(const char *name)
         if (i < 0)
             return i;
     }
-    return sub_3680(name);
+    return adhocctlRequestConnectRaw(name);
 }
 
 /* 0x10e8 */
 int sceNetAdhocctl_lib_1572422C(void)
 {
-    return sub_3714();
+    return adhocctlRequestSuspend();
 }
 
 /* 0x1104 */
@@ -729,20 +775,20 @@ int sceNetAdhocctl_lib_F6057CC4(const char *name)
         if (i < 0)
             return i;
     }
-    return sub_3730(name);
+    return adhocctlRequestCreateRaw(name);
 }
 
 /* 0x11ac */
-static void sub_11ac(char *prefix)
+static void adhocctlLoadSsidPrefix(char *prefix)
 {
     u8 reg_param[0x110];
     int reg_hd, cat_hd, key_hd, type;
     u32 size;
 
     sceKernelMemset(reg_param, 0, 0x110);
-    *(u32 *)(reg_param + 0x00) = 1;
-    *(u32 *)(reg_param + 0x108) = 1;
-    *(u32 *)(reg_param + 0x10c) = 1;
+    ((SceAdhocctlRegParam *)reg_param)->regtype = 1;
+    ((SceAdhocctlRegParam *)reg_param)->reserved1 = 1;
+    ((SceAdhocctlRegParam *)reg_param)->reserved2 = 1;
 
     if (sceRegOpenRegistry(reg_param, 2, &reg_hd) >= 0) {
         if (sceRegOpenCategory(reg_hd, "/CONFIG/NETWORK/ADHOC", 2, &cat_hd) >= 0) {
@@ -764,7 +810,7 @@ static void sub_11ac(char *prefix)
 }
 
 /* 0x12c0 */
-static int sub_12c0(struct SceNetAdhocctlCtx *ctx)
+static int adhocctlDoConnect(struct SceNetAdhocctlCtx *ctx)
 {
     if (ctx->state != 0)
         return 0x80410b02;
@@ -795,7 +841,7 @@ static int sub_12c0(struct SceNetAdhocctlCtx *ctx)
     char ssid[0x24];
     int ch;
     sceKernelMemset(ssid, 0, 0x21);
-    res = sub_24ec(ctx, ssid, &ch);
+    res = adhocctlBuildGroupSsidAndChannel(ctx, ssid, &ch);
     if (res < 0)
         goto fail;
     if (sceWlanGetSwitchState() == 0) {
@@ -804,7 +850,7 @@ static int sub_12c0(struct SceNetAdhocctlCtx *ctx)
     }
 
     sceNet_lib_D5B64E37("wlan", ssid, res);
-    res = sub_3d2c(ctx);
+    res = adhocctlCheckCancelFlag(ctx);
     if ((((u32)res >> 16) & 0xfff) == 0x41) {
         if (res >= 0)
             return res;
@@ -817,7 +863,7 @@ static int sub_12c0(struct SceNetAdhocctlCtx *ctx)
     res = sceUtilityGetSystemParamString(1, nickname, 0x80);
     if (res < 0)
         goto fail;
-    res = sub_3d2c(ctx);
+    res = adhocctlCheckCancelFlag(ctx);
     if (res < 0)
         goto fail;
 
@@ -847,7 +893,7 @@ fail:
 }
 
 /* 0x1534 */
-static int sub_1534(struct SceNetAdhocctlCtx *ctx)
+static int adhocctlDoScan(struct SceNetAdhocctlCtx *ctx)
 {
     int lock_res = 0;
     if (ctx->state != 0)
@@ -865,14 +911,14 @@ static int sub_1534(struct SceNetAdhocctlCtx *ctx)
             break;
         if (res < 0 && res != (int)0x80410d0e) {
             ctx->state = 0;
-            sub_5cb0(lock_res);
+            adhocctlUnlock(lock_res);
             ctx->pending_error = 0;
             return res;
         }
         if (retry >= ctx->attach_retry) {
             res = 0x80410b05;
             ctx->state = 0;
-            sub_5cb0(lock_res);
+            adhocctlUnlock(lock_res);
             ctx->pending_error = 0;
             return res;
         }
@@ -883,7 +929,7 @@ static int sub_1534(struct SceNetAdhocctlCtx *ctx)
     if (res < 0) {
         sceWlanDevDetach();
         ctx->state = 0;
-        sub_5cb0(lock_res);
+        adhocctlUnlock(lock_res);
         ctx->pending_error = 0;
         return res;
     }
@@ -896,11 +942,11 @@ static int sub_1534(struct SceNetAdhocctlCtx *ctx)
         goto detach;
     }
 
-    lock_res = sub_5c88();
+    lock_res = adhocctlLock();
     u8 scan_req[0x4c];
     sceKernelMemset(scan_req, 0, 0x4c);
     sceKernelMemset(ctx->scan_buf, 0, 0x780);
-    *(u32 *)(scan_req + 0x00) = 2;
+    ((SceAdhocctlScanReq *)scan_req)->bss_type = 2;
 
     int ch = 0;
     res = sceUtilityGetSystemParamInt(2, &ch);
@@ -924,13 +970,13 @@ static int sub_1534(struct SceNetAdhocctlCtx *ctx)
     }
 
     ctx->scan_buf_len = 0x780;
-    *(u32 *)(scan_req + 0x3c) = 1;
-    *(u32 *)(scan_req + 0x40) = 0;
-    *(u32 *)(scan_req + 0x44) = 6;
-    *(u32 *)(scan_req + 0x48) = 100;
+    ((SceAdhocctlScanReq *)scan_req)->scan_type = 1;
+    ((SceAdhocctlScanReq *)scan_req)->min_dwell = 0;
+    ((SceAdhocctlScanReq *)scan_req)->max_dwell = 6;
+    ((SceAdhocctlScanReq *)scan_req)->probe_delay = 100;
     int err = 0;
     sceNet_lib_7BA3ED91("wlan", scan_req, &ctx->scan_buf_len, ctx->scan_buf, &err);
-    res = sub_3d2c(ctx);
+    res = adhocctlCheckCancelFlag(ctx);
     if ((((u32)res >> 16) & 0xfff) != 0x41)
         res = 0;
 
@@ -939,13 +985,13 @@ detach:
     sceNet_lib_D2422E4D("wlan");
     sceWlanDevDetach();
     ctx->state = 0;
-    sub_5cb0(lock_res);
+    adhocctlUnlock(lock_res);
     ctx->pending_error = 0;
     return res;
 }
 
 /* 0x17b4 */
-static int sub_17b4(struct SceNetAdhocctlCtx *ctx)
+static int adhocctlDoScanQuiet(struct SceNetAdhocctlCtx *ctx)
 {
     if (sceWlanGetSwitchState() == 0)
         return 0x80410b03;
@@ -954,27 +1000,27 @@ static int sub_17b4(struct SceNetAdhocctlCtx *ctx)
     u8 scan_buf[0x60];
     sceKernelMemset(scan_req, 0, 0x4c);
     sceKernelMemset(scan_buf, 0, 0x60);
-    *(u32 *)(scan_req + 0x00) = 2;
+    ((SceAdhocctlScanReq *)scan_req)->bss_type = 2;
     scan_req[0x0a] = 1;
     int i;
     for (i = 1; i < 14; i++)
         scan_req[0x0a + i] = 0;
 
-    *(u32 *)(scan_req + 0x3c) = 1;
-    *(u32 *)(scan_req + 0x40) = 0;
-    *(u32 *)(scan_req + 0x44) = 6;
-    *(u32 *)(scan_req + 0x48) = 100;
+    ((SceAdhocctlScanReq *)scan_req)->scan_type = 1;
+    ((SceAdhocctlScanReq *)scan_req)->min_dwell = 0;
+    ((SceAdhocctlScanReq *)scan_req)->max_dwell = 6;
+    ((SceAdhocctlScanReq *)scan_req)->probe_delay = 100;
     int buflen = 0x60;
     int err = 0;
     sceNet_lib_7BA3ED91("wlan", scan_req, &buflen, scan_buf, &err);
-    int res = sub_3d2c(ctx);
+    int res = adhocctlCheckCancelFlag(ctx);
     if ((((u32)res >> 16) & 0xfff) == 0x41)
         return res;
     return (res < 0) ? res : 0;
 }
 
 /* 0x18a8 */
-static int sub_18a8(struct SceNetAdhocctlCtx *ctx)
+static int adhocctlDoCreate(struct SceNetAdhocctlCtx *ctx)
 {
     if (ctx->state != 0)
         return 0x80410b02;
@@ -1001,19 +1047,19 @@ static int sub_18a8(struct SceNetAdhocctlCtx *ctx)
     res = sceNet_lib_AB7DD9A5("wlan", ctx->evfid, 8);
     if (res < 0)
         goto fail;
-    res = sub_17b4(ctx);
+    res = adhocctlDoScanQuiet(ctx);
     if (res < 0)
         goto fail;
 
     char ssid[0x24];
     int ch;
     sceKernelMemset(ssid, 0, 0x21);
-    int ssid_len = sub_24ec(ctx, ssid, &ch);
+    int ssid_len = adhocctlBuildGroupSsidAndChannel(ctx, ssid, &ch);
     if (ssid_len < 0) {
         res = ssid_len;
         goto fail;
     }
-    res = sub_3d2c(ctx);
+    res = adhocctlCheckCancelFlag(ctx);
     if (res < 0)
         goto fail;
 
@@ -1022,12 +1068,12 @@ static int sub_18a8(struct SceNetAdhocctlCtx *ctx)
     sceKernelMemcpy(param + 8, ssid, ssid_len);
     param[6] = (u8)ch;
     param[7] = (u8)ssid_len;
-    *(u32 *)(param + 0x28) = 2;
-    *(u32 *)(param + 0x2c) = 100;
-    *(u16 *)(param + 0x3e) = 0x22;
+    ((SceAdhocctlBssParam *)param)->bss_type = 2;
+    ((SceAdhocctlBssParam *)param)->beacon_period = 100;
+    ((SceAdhocctlBssParam *)param)->capability = 0x22;
     int err = 0;
     sceNet_lib_03164B12("wlan", param, &err);
-    res = sub_3d2c(ctx);
+    res = adhocctlCheckCancelFlag(ctx);
     if ((((u32)res >> 16) & 0xfff) == 0x41) {
         if (res >= 0)
             return res;
@@ -1036,10 +1082,10 @@ static int sub_18a8(struct SceNetAdhocctlCtx *ctx)
     if (res < 0)
         goto fail;
 
-    res = sub_17b4(ctx);
+    res = adhocctlDoScanQuiet(ctx);
     if (res < 0)
         goto fail;
-    res = sub_3d2c(ctx);
+    res = adhocctlCheckCancelFlag(ctx);
     if (res < 0)
         goto fail;
 
@@ -1047,7 +1093,7 @@ static int sub_18a8(struct SceNetAdhocctlCtx *ctx)
     res = sceUtilityGetSystemParamString(1, nickname, 0x80);
     if (res < 0)
         goto fail;
-    res = sub_3d2c(ctx);
+    res = adhocctlCheckCancelFlag(ctx);
     if (res < 0)
         goto fail;
 
@@ -1076,7 +1122,7 @@ fail:
 }
 
 /* 0x1b9c */
-static int sub_1b9c(struct SceNetAdhocctlCtx *ctx)
+static int adhocctlDoJoin(struct SceNetAdhocctlCtx *ctx)
 {
     if (ctx->state != 0)
         return 0x80410b02;
@@ -1136,7 +1182,7 @@ static int sub_1b9c(struct SceNetAdhocctlCtx *ctx)
     sceKernelMemcpy(param, entry + 4, 0x5c);
     int err = 0;
     sceNet_lib_389728AB("wlan", param, &err);
-    res = sub_3d2c(ctx);
+    res = adhocctlCheckCancelFlag(ctx);
     if ((((u32)res >> 16) & 0xfff) == 0x41) {
         if (res >= 0)
             return res;
@@ -1145,7 +1191,7 @@ static int sub_1b9c(struct SceNetAdhocctlCtx *ctx)
     if (res < 0)
         goto fail;
 
-    res = sub_3d2c(ctx);
+    res = adhocctlCheckCancelFlag(ctx);
     if (res < 0)
         goto fail;
 
@@ -1153,7 +1199,7 @@ static int sub_1b9c(struct SceNetAdhocctlCtx *ctx)
     res = sceUtilityGetSystemParamString(1, nickname, 0x80);
     if (res < 0)
         goto fail;
-    res = sub_3d2c(ctx);
+    res = adhocctlCheckCancelFlag(ctx);
     if (res < 0)
         goto fail;
 
@@ -1182,7 +1228,7 @@ fail:
 }
 
 /* 0x1ec8 */
-static int sub_1ec8(struct SceNetAdhocctlCtx *ctx)
+static int adhocctlDoConnectRaw(struct SceNetAdhocctlCtx *ctx)
 {
     if (ctx->state != 0)
         return 0x80410b02;
@@ -1212,7 +1258,7 @@ static int sub_1ec8(struct SceNetAdhocctlCtx *ctx)
 
     char ssid[0x30];
     int ch;
-    res = sub_24ec(ctx, ssid, &ch);
+    res = adhocctlBuildGroupSsidAndChannel(ctx, ssid, &ch);
     if (res < 0)
         goto fail;
 
@@ -1228,7 +1274,7 @@ static int sub_1ec8(struct SceNetAdhocctlCtx *ctx)
         goto fail;
     }
 
-    res = sub_3d2c(ctx);
+    res = adhocctlCheckCancelFlag(ctx);
     if (res < 0)
         goto fail;
     res = sceWlanSetHostDiscover(1, hd_param);
@@ -1247,7 +1293,7 @@ fail:
 }
 
 /* 0x20ac */
-static int sub_20ac(struct SceNetAdhocctlCtx *ctx)
+static int adhocctlDoCreateRaw(struct SceNetAdhocctlCtx *ctx)
 {
     if (ctx->state != 0)
         return 0x80410b02;
@@ -1277,7 +1323,7 @@ static int sub_20ac(struct SceNetAdhocctlCtx *ctx)
 
     char ssid[0x30];
     int ch;
-    res = sub_24ec(ctx, ssid, &ch);
+    res = adhocctlBuildGroupSsidAndChannel(ctx, ssid, &ch);
     if (res < 0)
         goto fail;
 
@@ -1293,7 +1339,7 @@ static int sub_20ac(struct SceNetAdhocctlCtx *ctx)
         goto fail;
     }
 
-    res = sub_3d2c(ctx);
+    res = adhocctlCheckCancelFlag(ctx);
     if (res < 0)
         goto fail;
     res = sceWlanSetWakeUp(1, wu_param);
@@ -1317,7 +1363,7 @@ fail:
 }
 
 /* 0x22b8 */
-static void sub_22b8(struct SceNetAdhocctlCtx *ctx)
+static void adhocctlDisconnectWlan(struct SceNetAdhocctlCtx *ctx)
 {
     int err = 0;
     sceNetAdhocAuth_lib_2E6AA271();
@@ -1332,7 +1378,7 @@ static void sub_22b8(struct SceNetAdhocctlCtx *ctx)
 }
 
 /* 0x233c */
-static void sub_233c(struct SceNetAdhocctlCtx *ctx)
+static void adhocctlDetachWlan(struct SceNetAdhocctlCtx *ctx)
 {
     sceNet_lib_AB7DD9A5("wlan", 0, 0);
     sceNet_lib_D2422E4D("wlan");
@@ -1341,7 +1387,7 @@ static void sub_233c(struct SceNetAdhocctlCtx *ctx)
 }
 
 /* 0x2390 */
-static int sub_2390(struct SceNetAdhocctlCtx *ctx, char *ssid, int mode_char, const char *group_name)
+static int adhocctlFormatSsid(struct SceNetAdhocctlCtx *ctx, char *ssid, int mode_char, const char *group_name)
 {
     char mch = (char)mode_char;
     char tch;
@@ -1355,7 +1401,7 @@ static int sub_2390(struct SceNetAdhocctlCtx *ctx, char *ssid, int mode_char, co
         return 0x80410b04;
 
     char prefix[16];
-    sub_0490(prefix);
+    adhocctlCopySsidPrefix(prefix);
     sceKernelMemset(ssid, 0, 0x21);
     sceKernelMemcpy(ssid, prefix, 3);
     sceKernelMemcpy(ssid + 3, "_", 1);
@@ -1378,7 +1424,7 @@ static int sub_2390(struct SceNetAdhocctlCtx *ctx, char *ssid, int mode_char, co
 }
 
 /* 0x24ec */
-static int sub_24ec(struct SceNetAdhocctlCtx *ctx, char *ssid, int *ch_out)
+static int adhocctlBuildGroupSsidAndChannel(struct SceNetAdhocctlCtx *ctx, char *ssid, int *ch_out)
 {
     int ch;
     sceKernelMemset(ssid, 0, 0x21);
@@ -1394,20 +1440,20 @@ static int sub_24ec(struct SceNetAdhocctlCtx *ctx, char *ssid, int *ch_out)
     }
     if ((u32)(*ch_out - 1) >= 14)
         return 0x80410b81;
-    return sub_2390(ctx, ssid, 'L', ctx->group_name);
+    return adhocctlFormatSsid(ctx, ssid, 'L', ctx->group_name);
 }
 
 /* 0x25b0 */
-static int sub_25b0(struct SceNetAdhocctlCtx *ctx, char *ssid)
+static int adhocctlBuildGameModeSsid(struct SceNetAdhocctlCtx *ctx, char *ssid)
 {
     sceKernelMemset(ssid, 0, 0x21);
-    return sub_2390(ctx, ssid, 'G', ctx->group_name);
+    return adhocctlFormatSsid(ctx, ssid, 'G', ctx->group_name);
 }
 
 /* 0x2600 */
-static int sub_2600(int event, int error)
+static int adhocctlNotifyHandlers(int event, int error)
 {
-    int lock_res = sub_5c88();
+    int lock_res = adhocctlLock();
     int i;
     for (i = 0; i < 4; i++) {
         if (g_handlers[i].func != NULL) {
@@ -1437,12 +1483,12 @@ static int sub_2600(int event, int error)
             __asm__ volatile ("move $gp, %0" : : "r"(saved_gp));
         }
     }
-    sub_5cb0(lock_res);
+    adhocctlUnlock(lock_res);
     return 0;
 }
 
 /* 0x277c */
-static int sub_277c(int stackSize, int priority, const void *adhoc_id)
+static int adhocctlInitInternal(int stackSize, int priority, const void *adhoc_id)
 {
     struct SceNetAdhocctlCtx *ctx = &g_ctx;
     sceWlanDrv_lib_768E275B();
@@ -1456,7 +1502,7 @@ static int sub_277c(int stackSize, int priority, const void *adhoc_id)
         return res;
 
     sceKernelMemcpy(&ctx->adhoc_type, adhoc_id, 0x10);
-    res = sub_5bf4();
+    res = adhocctlCreateLock();
     if (res < 0) {
         sceNetAdhocAuth_lib_6074D8F1();
         return res;
@@ -1465,16 +1511,16 @@ static int sub_277c(int stackSize, int priority, const void *adhoc_id)
     ctx->evfid = sceKernelCreateEventFlag("SceNetAdhocctl", 0, 0, NULL);
     if (ctx->evfid < 0) {
         res = ctx->evfid;
-        sub_5c44();
+        adhocctlDeleteLock();
         sceNetAdhocAuth_lib_6074D8F1();
         return res;
     }
 
-    ctx->thid = sceKernelCreateThread("SceNetAdhocctl", sub_37c4, priority, stackSize, 0, NULL);
+    ctx->thid = sceKernelCreateThread("SceNetAdhocctl", adhocctlWorkerThread, priority, stackSize, 0, NULL);
     if (ctx->thid < 0) {
         res = ctx->thid;
         sceKernelDeleteEventFlag(ctx->evfid);
-        sub_5c44();
+        adhocctlDeleteLock();
         sceNetAdhocAuth_lib_6074D8F1();
         return res;
     }
@@ -1484,7 +1530,7 @@ static int sub_277c(int stackSize, int priority, const void *adhoc_id)
         sceKernelTerminateThread(ctx->thid);
         sceKernelDeleteThread(ctx->thid);
         sceKernelDeleteEventFlag(ctx->evfid);
-        sub_5c44();
+        adhocctlDeleteLock();
         sceNetAdhocAuth_lib_6074D8F1();
         return res;
     }
@@ -1495,9 +1541,9 @@ static int sub_277c(int stackSize, int priority, const void *adhoc_id)
 }
 
 /* 0x2914 */
-static int sub_2914(void (*func)(int, int, void *), void *arg, int *id_out)
+static int adhocctlAddHandlerInternal(void (*func)(int, int, void *), void *arg, int *id_out)
 {
-    int lock_res = sub_5c88();
+    int lock_res = adhocctlLock();
     if (lock_res < 0)
         return lock_res;
 
@@ -1507,7 +1553,7 @@ static int sub_2914(void (*func)(int, int, void *), void *arg, int *id_out)
             break;
     }
     if (i == 4) {
-        sub_5cb0(lock_res);
+        adhocctlUnlock(lock_res);
         return 0x80410b12;
     }
 
@@ -1520,14 +1566,14 @@ static int sub_2914(void (*func)(int, int, void *), void *arg, int *id_out)
         g_handlers[i].gp = cur_gp;
     }
     *id_out = i;
-    sub_5cb0(lock_res);
+    adhocctlUnlock(lock_res);
     return 0;
 }
 
 /* 0x2a04 */
-static int sub_2a04(int *buflen, void *buf)
+static int adhocctlGetScanInfoInternal(int *buflen, void *buf)
 {
-    int lock_res = sub_5c88();
+    int lock_res = adhocctlLock();
     if (lock_res < 0)
         return lock_res;
 
@@ -1548,7 +1594,7 @@ static int sub_2a04(int *buflen, void *buf)
 
     char prefix[4];
     sceKernelMemset(prefix, 0, 4);
-    sub_0490(prefix);
+    adhocctlCopySsidPrefix(prefix);
 
     struct SceNetAdhocctlScanNode *node = (struct SceNetAdhocctlScanNode *)g_ctx.scan_buf;
     u8 *prev = NULL;
@@ -1569,9 +1615,9 @@ static int sub_2a04(int *buflen, void *buf)
                     *(u32 *)(cur + 4) = node->channel;
                     u8 m = (u8)node->ssid[15];
                     if (m == 'L')
-                        *(u32 *)(cur + 0x18) = 0;
+                        ((SceAdhocctlScanOut *)cur)->mode = 0;
                     else
-                        *(u32 *)(cur + 0x18) = (m == 'G') ? 1 : -1;
+                        ((SceAdhocctlScanOut *)cur)->mode = (m == 'G') ? 1 : -1;
                     sceKernelMemcpy(cur + 8, node->ssid + 17, 8);
                     sceKernelMemcpy(cur + 0x10, node->bssid, 6);
                     *(u32 *)(cur + 0) = 0;
@@ -1586,20 +1632,20 @@ static int sub_2a04(int *buflen, void *buf)
     }
 
     *buflen = count * 0x1c;
-    sub_5cb0(lock_res);
+    adhocctlUnlock(lock_res);
     return 0;
 }
 
 /* 0x2c4c */
-static int sub_2c4c(void (*func)(int, int, void *), void *arg, int *id_out)
+static int adhocctlAddGameModeHandlerInternal(void (*func)(int, int, void *), void *arg, int *id_out)
 {
-    int lock_res = sub_5c88();
+    int lock_res = adhocctlLock();
     if (lock_res < 0)
         return lock_res;
 
     if (g_ctx.pending_error != 0) {
         int err = g_ctx.pending_error;
-        sub_5cb0(lock_res);
+        adhocctlUnlock(lock_res);
         return err;
     }
 
@@ -1609,7 +1655,7 @@ static int sub_2c4c(void (*func)(int, int, void *), void *arg, int *id_out)
             break;
     }
     if (i == 4) {
-        sub_5cb0(lock_res);
+        adhocctlUnlock(lock_res);
         return 0x80410b12;
     }
 
@@ -1622,14 +1668,14 @@ static int sub_2c4c(void (*func)(int, int, void *), void *arg, int *id_out)
         g_lib_handlers[i].gp = cur_gp;
     }
     *id_out = i;
-    sub_5cb0(lock_res);
+    adhocctlUnlock(lock_res);
     return 0;
 }
 
 /* 0x2d54 */
-static int sub_2d54(int event, int error)
+static int adhocctlNotifyGameModeHandlers(int event, int error)
 {
-    int lock_res = sub_5c88();
+    int lock_res = adhocctlLock();
     int i;
     for (i = 0; i < 4; i++) {
         if (g_lib_handlers[i].func != NULL) {
@@ -1640,12 +1686,12 @@ static int sub_2d54(int event, int error)
             __asm__ volatile ("move $gp, %0" : : "r"(saved_gp));
         }
     }
-    sub_5cb0(lock_res);
+    adhocctlUnlock(lock_res);
     return 0;
 }
 
 /* 0x2e04 */
-static int sub_2e04(void)
+static int adhocctlTermInternal(void)
 {
     if (g_ctx.flags & 8)
         return 0x80410b10;
@@ -1661,7 +1707,7 @@ static int sub_2e04(void)
             sceKernelDeleteEventFlag(g_ctx.evfid);
             g_ctx.evfid = -1;
         }
-        sub_5c44();
+        adhocctlDeleteLock();
         sceNetAdhocAuth_lib_6074D8F1();
         sceWlanDrv_lib_E093A922();
     }
@@ -1670,7 +1716,7 @@ static int sub_2e04(void)
 }
 
 /* 0x2ed4 */
-static int sub_2ed4(const char *name)
+static int adhocctlRequestConnect(const char *name)
 {
     if (g_ctx.flags & 1)
         return 0x80410b10;
@@ -1686,7 +1732,7 @@ static int sub_2ed4(const char *name)
 }
 
 /* 0x2f80 */
-static int sub_2f80(const char *name)
+static int adhocctlRequestCreate(const char *name)
 {
     if (g_ctx.flags & 1)
         return 0x80410b10;
@@ -1699,7 +1745,7 @@ static int sub_2f80(const char *name)
 }
 
 /* 0x3014 */
-static int sub_3014(const void *scan_info)
+static int adhocctlRequestJoin(const void *scan_info)
 {
     if (g_ctx.flags & 1)
         return 0x80410b10;
@@ -1715,7 +1761,7 @@ static int sub_3014(const void *scan_info)
 }
 
 /* 0x30cc */
-static int sub_30cc(const char *name, int num_peers, const u8 *macs, const void *param, u32 timeout, int flag, int min_peers)
+static int adhocctlRequestCreateGameMode(const char *name, int num_peers, const u8 *macs, const void *param, u32 timeout, int flag, int min_peers)
 {
     if (g_ctx.flags & 1)
         return 0x80410b10;
@@ -1727,7 +1773,7 @@ static int sub_30cc(const char *name, int num_peers, const u8 *macs, const void 
     g_gm_ctx.num_peers = num_peers;
     sceKernelMemcpy(g_gm_ctx.peers, macs, num_peers * 6);
     sceKernelMemcpy(g_gm_ctx.gm_param, param, 0x50);
-    *(u16 *)(g_gm_ctx.gm_param + 0x2e) = 0x10;
+    ((SceAdhocctlGameModeParam *)g_gm_ctx.gm_param)->key_len = 0x10;
     sceNetAdhocAuth_lib_312BD812(g_gm_ctx.gm_param + 0x30, 0x10);
     g_gm_ctx.min_peers = min_peers;
     g_gm_ctx.timeout = timeout;
@@ -1737,7 +1783,7 @@ static int sub_30cc(const char *name, int num_peers, const u8 *macs, const void 
 }
 
 /* 0x31f0 */
-static int sub_31f0(const char *name, const u8 *gc_mac, const void *param, u32 timeout, int flag)
+static int adhocctlRequestJoinGameMode(const char *name, const u8 *gc_mac, const void *param, u32 timeout, int flag)
 {
     if (g_ctx.flags & 1)
         return 0x80410b10;
@@ -1756,7 +1802,7 @@ static int sub_31f0(const char *name, const u8 *gc_mac, const void *param, u32 t
 }
 
 /* 0x32e0 */
-static int sub_32e0(void)
+static int adhocctlRequestScan(void)
 {
     if (g_ctx.flags & 1)
         return 0x80410b10;
@@ -1767,7 +1813,7 @@ static int sub_32e0(void)
 }
 
 /* 0x3344 */
-static int sub_3344(void)
+static int adhocctlRequestDisconnect(void)
 {
     if (g_ctx.state == 3)
         return 0x80410b0b;
@@ -1779,7 +1825,7 @@ static int sub_3344(void)
 }
 
 /* 0x33a4 */
-static int sub_33a4(void)
+static int adhocctlRequestExitGameMode(void)
 {
     if (g_ctx.state == 1)
         return 0x80410b0b;
@@ -1791,9 +1837,9 @@ static int sub_33a4(void)
 }
 
 /* 0x3404 */
-static int sub_3404(int id)
+static int adhocctlDelHandlerInternal(int id)
 {
-    int lock_res = sub_5c88();
+    int lock_res = adhocctlLock();
     if (lock_res < 0)
         return lock_res;
     int res = 0;
@@ -1801,26 +1847,26 @@ static int sub_3404(int id)
         res = 0x80410b06;
     else
         g_handlers[id].func = NULL;
-    sub_5cb0(lock_res);
+    adhocctlUnlock(lock_res);
     return res;
 }
 
 /* 0x3470 */
-static int sub_3470(int *state)
+static int adhocctlGetStateInternal(int *state)
 {
     *state = g_ctx.state;
     return 0;
 }
 
 /* 0x3484 */
-static int sub_3484(void *adhoc_id)
+static int adhocctlGetAdhocIdInternal(void *adhoc_id)
 {
     sceKernelMemcpy(adhoc_id, &g_ctx.adhoc_type, 0x10);
     return 0;
 }
 
 /* 0x34b0 */
-static int sub_34b0(void *param)
+static int adhocctlGetParameterInternal(void *param)
 {
     u8 bssid[0x60];
     if (g_ctx.state == 0)
@@ -1835,7 +1881,7 @@ static int sub_34b0(void *param)
 }
 
 /* 0x3544 */
-static int sub_3544(void *info)
+static int adhocctlGetGameModeInfoInternal(void *info)
 {
     if (g_ctx.state != 3)
         return 0x80410b0c;
@@ -1845,9 +1891,9 @@ static int sub_3544(void *info)
 }
 
 /* 0x35b8 */
-static int sub_35b8(int id)
+static int adhocctlDelGameModeHandlerInternal(int id)
 {
-    int lock_res = sub_5c88();
+    int lock_res = adhocctlLock();
     if (lock_res < 0)
         return lock_res;
     int res = 0;
@@ -1855,12 +1901,12 @@ static int sub_35b8(int id)
         res = 0x80410b06;
     else
         g_lib_handlers[id].func = NULL;
-    sub_5cb0(lock_res);
+    adhocctlUnlock(lock_res);
     return res;
 }
 
 /* 0x3624 */
-static int sub_3624(void *param)
+static int adhocctlGetGameModeParamInternal(void *param)
 {
     if (g_ctx.state != 3)
         return 0x80410b0c;
@@ -1869,7 +1915,7 @@ static int sub_3624(void *param)
 }
 
 /* 0x3680 */
-static int sub_3680(const char *name)
+static int adhocctlRequestConnectRaw(const char *name)
 {
     if (g_ctx.flags & 1)
         return 0x80410b10;
@@ -1882,13 +1928,13 @@ static int sub_3680(const char *name)
 }
 
 /* 0x3714 */
-static int sub_3714(void)
+static int adhocctlRequestSuspend(void)
 {
     return scePowerRequestSuspend();
 }
 
 /* 0x3730 */
-static int sub_3730(const char *name)
+static int adhocctlRequestCreateRaw(const char *name)
 {
     if (g_ctx.flags & 1)
         return 0x80410b10;
@@ -1901,7 +1947,7 @@ static int sub_3730(const char *name)
 }
 
 /* 0x37c4 */
-static int sub_37c4(u32 arglen, void *argp)
+static int adhocctlWorkerThread(u32 arglen, void *argp)
 {
     (void)arglen;
     struct SceNetAdhocctlCtx *ctx = *(struct SceNetAdhocctlCtx **)argp;
@@ -1911,40 +1957,40 @@ static int sub_37c4(u32 arglen, void *argp)
         if (bits & 0x200) {
             sceKernelClearEventFlag(ctx->evfid, ~0x200u);
             if (ctx->state == 1)
-                sub_22b8(ctx);
+                adhocctlDisconnectWlan(ctx);
             else if (ctx->state == 3)
-                sub_5580(ctx, &g_gm_ctx);
+                adhocctlCleanupGameMode(ctx, &g_gm_ctx);
             return 0;
         }
         if (bits & 8) {
             sceKernelClearEventFlag(ctx->evfid, ~8u);
             if (ctx->state == 1 || ctx->state == 4 || ctx->state == 5) {
-                int res = sub_3d0c(ctx);
+                int res = adhocctlPollWlanEvent(ctx);
                 if (res < 0) {
-                    sub_22b8(ctx);
-                    sub_2600(0, res);
+                    adhocctlDisconnectWlan(ctx);
+                    adhocctlNotifyHandlers(0, res);
                     ctx->flags &= ~1u;
                     continue;
                 }
                 if (ctx->state == 4) {
-                    sub_233c(ctx);
-                    sub_2600(6, 0);
+                    adhocctlDetachWlan(ctx);
+                    adhocctlNotifyHandlers(6, 0);
                 } else if (ctx->state == 5) {
-                    sub_233c(ctx);
+                    adhocctlDetachWlan(ctx);
                     int ev = 7;
                     if (ctx->flags & 0x10) {
                         ctx->flags &= ~0x10u;
                         ev = 8;
                     }
-                    sub_2600(ev, 0);
+                    adhocctlNotifyHandlers(ev, 0);
                 }
                 if (ctx->flags & 0x10)
                     ctx->flags &= ~0x10u;
             } else if (ctx->state == 3) {
-                int res = sub_3d0c(ctx);
+                int res = adhocctlPollWlanEvent(ctx);
                 if (res < 0) {
-                    sub_5580(ctx, &g_gm_ctx);
-                    sub_2600(0, res);
+                    adhocctlCleanupGameMode(ctx, &g_gm_ctx);
+                    adhocctlNotifyHandlers(0, res);
                     ctx->flags &= ~1u;
                     continue;
                 }
@@ -1952,83 +1998,83 @@ static int sub_37c4(u32 arglen, void *argp)
         }
         if (bits & 1) {
             sceKernelClearEventFlag(ctx->evfid, ~1u);
-            int res = sub_12c0(ctx);
+            int res = adhocctlDoConnect(ctx);
             if (res < 0)
                 goto err_out;
-            sub_2600(1, 0);
+            adhocctlNotifyHandlers(1, 0);
         }
         if (bits & 2) {
             sceKernelClearEventFlag(ctx->evfid, ~2u);
-            sub_22b8(ctx);
-            sub_2600(2, 0);
+            adhocctlDisconnectWlan(ctx);
+            adhocctlNotifyHandlers(2, 0);
         }
         if (bits & 4) {
             sceKernelClearEventFlag(ctx->evfid, ~4u);
-            int res = sub_1534(ctx);
+            int res = adhocctlDoScan(ctx);
             if (res < 0)
                 goto err_out;
-            sub_2600(3, 0);
+            adhocctlNotifyHandlers(3, 0);
         }
         if (bits & 0x10) {
             sceKernelClearEventFlag(ctx->evfid, ~0x10u);
-            int res = sub_3f34(ctx, &g_gm_ctx);
+            int res = adhocctlRunGameModeHost(ctx, &g_gm_ctx);
             if (res < 0)
                 goto err_out;
-            sub_2600(4, 0);
+            adhocctlNotifyHandlers(4, 0);
         }
         if (bits & 0x20) {
             sceKernelClearEventFlag(ctx->evfid, ~0x20u);
-            int res = sub_46e0(ctx, &g_gm_ctx);
+            int res = adhocctlRunGameModeClient(ctx, &g_gm_ctx);
             if (res < 0)
                 goto err_out;
-            sub_2600(4, 0);
+            adhocctlNotifyHandlers(4, 0);
         }
         if (bits & 0x40) {
             sceKernelClearEventFlag(ctx->evfid, ~0x40u);
-            sub_5580(ctx, &g_gm_ctx);
-            sub_2600(2, 0);
+            adhocctlCleanupGameMode(ctx, &g_gm_ctx);
+            adhocctlNotifyHandlers(2, 0);
         }
         if (bits & 0x80) {
             sceKernelClearEventFlag(ctx->evfid, ~0x80u);
-            int res = sub_18a8(ctx);
+            int res = adhocctlDoCreate(ctx);
             if (res < 0)
                 goto err_out;
-            sub_2600(1, 0);
+            adhocctlNotifyHandlers(1, 0);
         }
         if (bits & 0x100) {
             sceKernelClearEventFlag(ctx->evfid, ~0x100u);
-            int res = sub_1b9c(ctx);
+            int res = adhocctlDoJoin(ctx);
             if (res < 0)
                 goto err_out;
-            sub_2600(1, 0);
+            adhocctlNotifyHandlers(1, 0);
         }
         if (bits & 0x400) {
             sceKernelClearEventFlag(ctx->evfid, ~0x400u);
-            int res = sub_1ec8(ctx);
+            int res = adhocctlDoConnectRaw(ctx);
             if (res < 0)
                 goto err_out;
-            sub_2d54(5, 1);
+            adhocctlNotifyGameModeHandlers(5, 1);
         }
         if (bits & 0x800) {
             sceKernelClearEventFlag(ctx->evfid, ~0x800u);
-            int res = sub_20ac(ctx);
+            int res = adhocctlDoCreateRaw(ctx);
             if (res < 0) {
             err_out:;
-                int poll_res = sub_3d2c(ctx);
+                int poll_res = adhocctlCheckCancelFlag(ctx);
                 if (poll_res < 0)
                     res = poll_res;
-                sub_2600(0, res);
+                adhocctlNotifyHandlers(0, res);
                 ctx->flags &= ~1u;
                 continue;
             }
-            sub_2d54(5, 1);
+            adhocctlNotifyGameModeHandlers(5, 1);
         }
         ctx->flags &= ~1u;
     }
 }
 
 /* 0x3bf4 */
-static int sub_3bf4(struct SceNetAdhocctlCtx *ctx)
+static int adhocctlDrainWlanEvents(struct SceNetAdhocctlCtx *ctx)
 {
     int ev, reason;
     while (1) {
@@ -2054,14 +2100,14 @@ static int sub_3bf4(struct SceNetAdhocctlCtx *ctx)
 }
 
 /* 0x3d0c */
-static int sub_3d0c(struct SceNetAdhocctlCtx *ctx)
+static int adhocctlPollWlanEvent(struct SceNetAdhocctlCtx *ctx)
 {
     int ev, reason;
-    return sub_3db4(ctx, &ev, &reason);
+    return adhocctlWaitWlanEvent(ctx, &ev, &reason);
 }
 
 /* 0x3d2c */
-static int sub_3d2c(struct SceNetAdhocctlCtx *ctx)
+static int adhocctlCheckCancelFlag(struct SceNetAdhocctlCtx *ctx)
 {
     u32 out;
     int res = sceKernelPollEventFlag(ctx->evfid, 8, 1, &out);
@@ -2072,13 +2118,13 @@ static int sub_3d2c(struct SceNetAdhocctlCtx *ctx)
     if (out & 8) {
         sceKernelClearEventFlag(ctx->evfid, ~8u);
         int ev, reason;
-        res = sub_3db4(ctx, &ev, &reason);
+        res = adhocctlWaitWlanEvent(ctx, &ev, &reason);
     }
     return res;
 }
 
 /* 0x3db4 */
-static int sub_3db4(struct SceNetAdhocctlCtx *ctx, int *ev, int *reason)
+static int adhocctlWaitWlanEvent(struct SceNetAdhocctlCtx *ctx, int *ev, int *reason)
 {
     int ret = 0;
     while (1) {
@@ -2105,8 +2151,8 @@ static int sub_3db4(struct SceNetAdhocctlCtx *ctx, int *ev, int *reason)
                 sceNetAdhocAuth_lib_2E6AA271();
                 ctx->pending_error = 0x80410b84;
             }
-            sub_2d54(5, 0);
-            res = sub_3bf4(ctx);
+            adhocctlNotifyGameModeHandlers(5, 0);
+            res = adhocctlDrainWlanEvents(ctx);
             if (res < 0)
                 ret = res;
             else if (ctx->state != 5)
@@ -2119,7 +2165,7 @@ static int sub_3db4(struct SceNetAdhocctlCtx *ctx, int *ev, int *reason)
 }
 
 /* 0x3f34 */
-static int sub_3f34(struct SceNetAdhocctlCtx *ctx, struct SceNetAdhocctlGameModeCtx *gm)
+static int adhocctlRunGameModeHost(struct SceNetAdhocctlCtx *ctx, struct SceNetAdhocctlGameModeCtx *gm)
 {
     if (ctx->state != 0)
         return 0x80410b02;
@@ -2164,14 +2210,14 @@ static int sub_3f34(struct SceNetAdhocctlCtx *ctx, struct SceNetAdhocctlGameMode
     if (!(gm->flag & 1)) {
         char ssid[0x30];
         sceKernelMemset(ssid, 0, 0x21);
-        res = sub_25b0(ctx, ssid);
+        res = adhocctlBuildGameModeSsid(ctx, ssid);
         if (res < 0)
             goto fail_all;
         gm->gm_param[0x0c] = (u8)res;
         sceKernelMemcpy(gm->gm_param + 0x0e, ssid, res & 0xff);
         u8 ch, offset;
-        sub_50fc(gm, &ch, &offset);
-        res = sub_3d2c(ctx);
+        adhocctlSelectGameModeChannel(gm, &ch, &offset);
+        res = adhocctlCheckCancelFlag(ctx);
         if ((((u32)res >> 16) & 0xfff) == 0x41)
             goto done_check;
         if (res < 0)
@@ -2181,7 +2227,7 @@ static int sub_3f34(struct SceNetAdhocctlCtx *ctx, struct SceNetAdhocctlGameMode
     }
 
     if (gm->flag & 2) {
-        res = sub_550c(4);
+        res = adhocctlSetWlanPowerSave(4);
         if (res < 0)
             goto fail_all;
         g_saved_power_save = res;
@@ -2196,21 +2242,21 @@ static int sub_3f34(struct SceNetAdhocctlCtx *ctx, struct SceNetAdhocctlGameMode
     param[7] = ssid_len;
     sceKernelMemcpy(param + 8, gm->gm_param + 0x0e, ssid_len);
     param[6] = gm->gm_param[0x0d];
-    *(u32 *)(param + 0x28) = 2;
-    *(u32 *)(param + 0x2c) = *(u16 *)(gm->gm_param + 0x4e);
-    *(u16 *)(param + 0x3e) = 0x22;
+    ((SceAdhocctlBssParam *)param)->bss_type = 2;
+    ((SceAdhocctlBssParam *)param)->beacon_period = ((SceAdhocctlGameModeParam *)gm->gm_param)->beacon_period;
+    ((SceAdhocctlBssParam *)param)->capability = 0x22;
     int err = 0;
     sceNet_lib_03164B12("wlan", param, &err);
-    res = sub_3d2c(ctx);
+    res = adhocctlCheckCancelFlag(ctx);
     if ((((u32)res >> 16) & 0xfff) == 0x41)
         goto done_check;
     if (res < 0)
         goto fail_all;
 
-    res = sub_17b4(ctx);
+    res = adhocctlDoScanQuiet(ctx);
     if (res < 0)
         goto fail_all;
-    res = sub_3d2c(ctx);
+    res = adhocctlCheckCancelFlag(ctx);
     if (res < 0)
         goto fail_all;
 
@@ -2218,7 +2264,7 @@ static int sub_3f34(struct SceNetAdhocctlCtx *ctx, struct SceNetAdhocctlGameMode
     res = sceUtilityGetSystemParamString(1, nickname, 0x80);
     if (res < 0)
         goto fail_all;
-    res = sub_3d2c(ctx);
+    res = adhocctlCheckCancelFlag(ctx);
     if (res < 0)
         goto fail_all;
 
@@ -2232,7 +2278,7 @@ static int sub_3f34(struct SceNetAdhocctlCtx *ctx, struct SceNetAdhocctlGameMode
     if (res < 0)
         goto fail_all;
 
-    u16 key_len = *(u16 *)(gm->gm_param + 0x2e);
+    u16 key_len = ((SceAdhocctlGameModeParam *)gm->gm_param)->key_len;
     int payload_len = key_len + gm->num_peers * 6 + 19;
     int total_len = key_len + gm->num_peers * 6 + 25;
     g_ptp_buf[0] = 1;
@@ -2259,7 +2305,7 @@ static int sub_3f34(struct SceNetAdhocctlCtx *ctx, struct SceNetAdhocctlGameMode
     p[0] = 3;
     u16 be_two = __builtin_bswap16(2);
     sceKernelMemcpy(p + 1, &be_two, 2);
-    u16 be_a4 = __builtin_bswap16(*(u16 *)(gm->gm_param + 0x40));
+    u16 be_a4 = __builtin_bswap16(((SceAdhocctlGameModeParam *)gm->gm_param)->port_be);
     sceKernelMemcpy(p + 3, &be_a4, 2);
 
     p[5] = 4;
@@ -2278,7 +2324,7 @@ static int sub_3f34(struct SceNetAdhocctlCtx *ctx, struct SceNetAdhocctlGameMode
         goto fail_all;
     }
 
-    res = sub_5658(gm, 0, (u32)start_time, (u32)(start_time >> 32), listen_id, g_ptp_buf, total_len);
+    res = adhocctlAcceptGameModePeers(gm, 0, (u32)start_time, (u32)(start_time >> 32), listen_id, g_ptp_buf, total_len);
     if (res < 0) {
         sceNetAdhocPtpClose(listen_id, 0);
         goto done_check;
@@ -2292,29 +2338,29 @@ static int sub_3f34(struct SceNetAdhocctlCtx *ctx, struct SceNetAdhocctlGameMode
     res = sceWlanDrv_lib_56F467CA(wparam);
     if (res < 0)
         goto fail_all;
-    u16 bp = *(u16 *)(gm->gm_param + 0x4e);
+    u16 bp = ((SceAdhocctlGameModeParam *)gm->gm_param)->beacon_period;
     wparam[0] = bp - 2;
     wparam[1] = 0xff;
     wparam[2] = (1000 / (int)bp) + 1;
     res = sceWlanDrv_lib_2D0FAE4E(wparam);
     if (res < 0)
         goto fail_all;
-    res = sub_3d2c(ctx);
+    res = adhocctlCheckCancelFlag(ctx);
     if (res < 0)
         goto fail_all;
 
     sceKernelMemcpy(gm->gm_param + 6, gm->peers[0], 6);
     gm->gm_param[6] |= 3;
-    *(u16 *)(gm->gm_param + 0x4a) = 1;
+    ((SceAdhocctlGameModeParam *)gm->gm_param)->active_flag = 1;
     gm->gm_param[0x44] = (u8)gm->num_peers;
     gm->gm_param[0x43] = 0;
-    sceNetAdhocAuth_lib_72AAC6D3(*(u16 *)(gm->gm_param + 0x2e), gm->gm_param + 0x30);
-    u16 saved_klen = *(u16 *)(gm->gm_param + 0x2e);
-    *(u16 *)(gm->gm_param + 0x2e) = 0;
+    sceNetAdhocAuth_lib_72AAC6D3(((SceAdhocctlGameModeParam *)gm->gm_param)->key_len, ((SceAdhocctlGameModeParam *)gm->gm_param)->key);
+    u16 saved_klen = ((SceAdhocctlGameModeParam *)gm->gm_param)->key_len;
+    ((SceAdhocctlGameModeParam *)gm->gm_param)->key_len = 0;
     err = 0;
     sceNet_lib_0D633F53("wlan", gm->gm_param, gm->peers[0], &err);
-    *(u16 *)(gm->gm_param + 0x2e) = saved_klen;
-    res = sub_3d2c(ctx);
+    ((SceAdhocctlGameModeParam *)gm->gm_param)->key_len = saved_klen;
+    res = adhocctlCheckCancelFlag(ctx);
     if ((((u32)res >> 16) & 0xfff) == 0x41)
         goto done_check;
     if (res < 0)
@@ -2336,7 +2382,7 @@ fail_all:
     if (gm->flag & 2) {
         sceWlanDrv_lib_5BAA1FE5(0);
         if (g_saved_power_save >= 0)
-            sub_550c(g_saved_power_save);
+            adhocctlSetWlanPowerSave(g_saved_power_save);
     }
     sceNet_lib_D2422E4D("wlan");
     sceWlanDevDetach();
@@ -2344,7 +2390,7 @@ fail_all:
 }
 
 /* 0x46e0 */
-static int sub_46e0(struct SceNetAdhocctlCtx *ctx, struct SceNetAdhocctlGameModeCtx *gm)
+static int adhocctlRunGameModeClient(struct SceNetAdhocctlCtx *ctx, struct SceNetAdhocctlGameModeCtx *gm)
 {
     int ptp_id = -1;
     if (ctx->state != 0)
@@ -2390,7 +2436,7 @@ static int sub_46e0(struct SceNetAdhocctlCtx *ctx, struct SceNetAdhocctlGameMode
     if (!(gm->flag & 1)) {
         char ssid[0x30];
         sceKernelMemset(ssid, 0, 0x21);
-        res = sub_25b0(ctx, ssid);
+        res = adhocctlBuildGameModeSsid(ctx, ssid);
         if (res < 0)
             goto fail_all;
         gm->gm_param[0x0c] = (u8)res;
@@ -2398,7 +2444,7 @@ static int sub_46e0(struct SceNetAdhocctlCtx *ctx, struct SceNetAdhocctlGameMode
     }
 
     if (gm->flag & 2) {
-        res = sub_550c(4);
+        res = adhocctlSetWlanPowerSave(4);
         if (res < 0)
             goto fail_all;
         g_saved_power_save = res;
@@ -2411,12 +2457,12 @@ static int sub_46e0(struct SceNetAdhocctlCtx *ctx, struct SceNetAdhocctlGameMode
     sceKernelMemset(scan_req, 0, 0x4c);
     sceKernelMemcpy(scan_req + 0x1c, gm->gm_param + 0x0e, gm->gm_param[0x0c]);
     scan_req[0x18] = gm->gm_param[0x0c];
-    *(u32 *)(scan_req + 0x00) = 2;
+    ((SceAdhocctlScanReq *)scan_req)->bss_type = 2;
     sceKernelMemcpy(scan_req + 0x0a, g_channels, 3);
-    *(u32 *)(scan_req + 0x3c) = 1;
-    *(u32 *)(scan_req + 0x40) = 0;
-    *(u32 *)(scan_req + 0x44) = 6;
-    *(u32 *)(scan_req + 0x48) = 100;
+    ((SceAdhocctlScanReq *)scan_req)->scan_type = 1;
+    ((SceAdhocctlScanReq *)scan_req)->min_dwell = 0;
+    ((SceAdhocctlScanReq *)scan_req)->max_dwell = 6;
+    ((SceAdhocctlScanReq *)scan_req)->probe_delay = 100;
 
     struct SceNetAdhocctlScanNode *found = NULL;
     while (1) {
@@ -2424,7 +2470,7 @@ static int sub_46e0(struct SceNetAdhocctlCtx *ctx, struct SceNetAdhocctlGameMode
         int buflen = 0xc00;
         int err = 0;
         sceNet_lib_7BA3ED91("wlan", scan_req, &buflen, g_gm_scan_buf, &err);
-        res = sub_3d2c(ctx);
+        res = adhocctlCheckCancelFlag(ctx);
         if ((((u32)res >> 16) & 0xfff) == 0x41)
             goto done_check;
         if (res < 0)
@@ -2459,10 +2505,10 @@ static int sub_46e0(struct SceNetAdhocctlCtx *ctx, struct SceNetAdhocctlGameMode
     u8 join_param[0x70];
     sceKernelMemset(join_param, 0, 0x70);
     sceKernelMemcpy(join_param, (u8 *)found + 4, 0x5c);
-    *(u32 *)(join_param + 0x6c) = 1;
+    ((SceAdhocctlJoinParam *)join_param)->auth_flag = 1;
     int err = 0;
     sceNet_lib_389728AB("wlan", join_param, &err);
-    res = sub_3d2c(ctx);
+    res = adhocctlCheckCancelFlag(ctx);
     if ((((u32)res >> 16) & 0xfff) == 0x41)
         goto done_check;
     if (res < 0)
@@ -2472,7 +2518,7 @@ static int sub_46e0(struct SceNetAdhocctlCtx *ctx, struct SceNetAdhocctlGameMode
     res = sceUtilityGetSystemParamString(1, nickname, 0x80);
     if (res < 0)
         goto fail_all;
-    res = sub_3d2c(ctx);
+    res = adhocctlCheckCancelFlag(ctx);
     if (res < 0)
         goto fail_all;
 
@@ -2517,7 +2563,7 @@ static int sub_46e0(struct SceNetAdhocctlCtx *ctx, struct SceNetAdhocctlGameMode
         sceKernelDelayThread(1000000);
     }
 
-    res = sub_5a18(gm, 0, (u32)start_time, (u32)(start_time >> 32), ptp_id, g_ptp_buf, 6);
+    res = adhocctlRecvGameModePacket(gm, 0, (u32)start_time, (u32)(start_time >> 32), ptp_id, g_ptp_buf, 6);
     if (res < 0)
         goto fail_ptp;
     if ((s8)g_ptp_buf[0] != 1 || g_ptp_buf[1] != g_ptp_buf[0]) {
@@ -2533,7 +2579,7 @@ static int sub_46e0(struct SceNetAdhocctlCtx *ctx, struct SceNetAdhocctlGameMode
         goto fail_ptp;
     }
 
-    res = sub_5a18(gm, 0, (u32)start_time, (u32)(start_time >> 32), ptp_id, g_ptp_buf + 6, body_len);
+    res = adhocctlRecvGameModePacket(gm, 0, (u32)start_time, (u32)(start_time >> 32), ptp_id, g_ptp_buf + 6, body_len);
     if (res < 0)
         goto fail_ptp;
 
@@ -2543,17 +2589,17 @@ static int sub_46e0(struct SceNetAdhocctlCtx *ctx, struct SceNetAdhocctlGameMode
     ptp_id = -1;
 
     int tag_len;
-    void *val = sub_5b28(1, g_ptp_buf + 6, body_len, &tag_len);
+    void *val = adhocctlFindIeTag(1, g_ptp_buf + 6, body_len, &tag_len);
     if (val == NULL || tag_len >= 17) {
         res = 0x80410b84;
         goto fail_ptp;
     }
     u16 klen = (u16)tag_len;
-    *(u16 *)(gm->gm_param + 0x2e) = klen;
+    ((SceAdhocctlGameModeParam *)gm->gm_param)->key_len = klen;
     if (klen != 0)
         sceKernelMemcpy(gm->gm_param + 0x30, val, klen);
 
-    val = sub_5b28(2, g_ptp_buf + 6, body_len, &tag_len);
+    val = adhocctlFindIeTag(2, g_ptp_buf + 6, body_len, &tag_len);
     if (val == NULL || tag_len < 12 || tag_len >= 97 || (tag_len % 6) != 0) {
         res = 0x80410b85;
         goto fail_ptp;
@@ -2563,22 +2609,22 @@ static int sub_46e0(struct SceNetAdhocctlCtx *ctx, struct SceNetAdhocctlGameMode
     for (i = 0; i < gm->num_peers; i++)
         sceKernelMemcpy(gm->peers[i], (u8 *)val + i * 6, 6);
 
-    val = sub_5b28(3, g_ptp_buf + 6, body_len, &tag_len);
+    val = adhocctlFindIeTag(3, g_ptp_buf + 6, body_len, &tag_len);
     if (val == NULL || tag_len != 2) {
         res = 0x80410b86;
         goto fail_ptp;
     }
     sceKernelMemcpy(gm->gm_param + 0x40, val, 2);
-    *(u16 *)(gm->gm_param + 0x40) = __builtin_bswap16(*(u16 *)(gm->gm_param + 0x40));
+    ((SceAdhocctlGameModeParam *)gm->gm_param)->port_be = __builtin_bswap16(((SceAdhocctlGameModeParam *)gm->gm_param)->port_be);
 
-    val = sub_5b28(4, g_ptp_buf + 6, body_len, &tag_len);
+    val = adhocctlFindIeTag(4, g_ptp_buf + 6, body_len, &tag_len);
     if (val == NULL || tag_len != 1) {
         res = 0x80410b87;
         goto fail_ptp;
     }
     gm->gm_param[0x46] = *(u8 *)val;
 
-    val = sub_5b28(5, g_ptp_buf + 6, body_len, &tag_len);
+    val = adhocctlFindIeTag(5, g_ptp_buf + 6, body_len, &tag_len);
     if (val == NULL || tag_len != 1) {
         res = 0x80410b88;
         goto fail_ptp;
@@ -2597,28 +2643,28 @@ static int sub_46e0(struct SceNetAdhocctlCtx *ctx, struct SceNetAdhocctlGameMode
     res = sceWlanDrv_lib_2D0FAE4E(wparam);
     if (res < 0)
         goto fail_all;
-    res = sub_3d2c(ctx);
+    res = adhocctlCheckCancelFlag(ctx);
     if (res < 0)
         goto fail_all;
 
     sceKernelMemcpy(gm->gm_param + 6, gm->peers[0], 6);
     gm->gm_param[6] |= 3;
-    *(u16 *)(gm->gm_param + 0x4e) = found->beacon_period;
+    ((SceAdhocctlGameModeParam *)gm->gm_param)->beacon_period = found->beacon_period;
     int self_idx = 1;
     for (self_idx = 1; self_idx < gm->num_peers; self_idx++) {
         if (sceNet_lib_E0A81C7C(gm->peers[self_idx], local_mac, 6) == 0)
             break;
     }
-    *(u16 *)(gm->gm_param + 0x4a) = 1;
+    ((SceAdhocctlGameModeParam *)gm->gm_param)->active_flag = 1;
     gm->gm_param[0x43] = (u8)self_idx;
     gm->gm_param[0x44] = (u8)gm->num_peers;
-    sceNetAdhocAuth_lib_72AAC6D3(*(u16 *)(gm->gm_param + 0x2e), gm->gm_param + 0x30);
-    u16 saved_klen = *(u16 *)(gm->gm_param + 0x2e);
-    *(u16 *)(gm->gm_param + 0x2e) = 0;
+    sceNetAdhocAuth_lib_72AAC6D3(((SceAdhocctlGameModeParam *)gm->gm_param)->key_len, ((SceAdhocctlGameModeParam *)gm->gm_param)->key);
+    u16 saved_klen = ((SceAdhocctlGameModeParam *)gm->gm_param)->key_len;
+    ((SceAdhocctlGameModeParam *)gm->gm_param)->key_len = 0;
     err = 0;
     sceNet_lib_0D633F53("wlan", gm->gm_param, gm->peers[0], &err);
-    *(u16 *)(gm->gm_param + 0x2e) = saved_klen;
-    res = sub_3d2c(ctx);
+    ((SceAdhocctlGameModeParam *)gm->gm_param)->key_len = saved_klen;
+    res = adhocctlCheckCancelFlag(ctx);
     if ((((u32)res >> 16) & 0xfff) == 0x41)
         goto done_check;
     if (res < 0)
@@ -2644,7 +2690,7 @@ fail_all:
     if (gm->flag & 2) {
         sceWlanDrv_lib_5BAA1FE5(0);
         if (g_saved_power_save >= 0)
-            sub_550c(g_saved_power_save);
+            adhocctlSetWlanPowerSave(g_saved_power_save);
     }
     sceNet_lib_D2422E4D("wlan");
     sceWlanDevDetach();
@@ -2652,17 +2698,17 @@ fail_all:
 }
 
 /* 0x50fc */
-static int sub_50fc(struct SceNetAdhocctlGameModeCtx *gm, u8 *ch_out, u8 *offset_out)
+static int adhocctlSelectGameModeChannel(struct SceNetAdhocctlGameModeCtx *gm, u8 *ch_out, u8 *offset_out)
 {
     u8 scan_req[0x4c];
     u32 mask = 0;
     sceKernelMemset(scan_req, 0, 0x4c);
-    *(u32 *)(scan_req + 0x00) = 2;
+    ((SceAdhocctlScanReq *)scan_req)->bss_type = 2;
     sceKernelMemcpy(scan_req + 0x0a, g_channels, 3);
-    *(u32 *)(scan_req + 0x3c) = 1;
-    *(u32 *)(scan_req + 0x40) = 0;
-    *(u32 *)(scan_req + 0x44) = 6;
-    *(u32 *)(scan_req + 0x48) = 500;
+    ((SceAdhocctlScanReq *)scan_req)->scan_type = 1;
+    ((SceAdhocctlScanReq *)scan_req)->min_dwell = 0;
+    ((SceAdhocctlScanReq *)scan_req)->max_dwell = 6;
+    ((SceAdhocctlScanReq *)scan_req)->probe_delay = 500;
     sceKernelMemset(g_gm_scan_buf, 0, 0xc00);
     int buflen = 0xc00;
     int err = 0;
@@ -2748,7 +2794,7 @@ static int sub_50fc(struct SceNetAdhocctlGameModeCtx *gm, u8 *ch_out, u8 *offset
 }
 
 /* 0x550c */
-static int sub_550c(int power_save)
+static int adhocctlSetWlanPowerSave(int power_save)
 {
     u8 buf[0x18];
     sceKernelMemset(buf, 0, 0x18);
@@ -2762,7 +2808,7 @@ static int sub_550c(int power_save)
 }
 
 /* 0x5580 */
-static void sub_5580(struct SceNetAdhocctlCtx *ctx, struct SceNetAdhocctlGameModeCtx *gm)
+static void adhocctlCleanupGameMode(struct SceNetAdhocctlCtx *ctx, struct SceNetAdhocctlGameModeCtx *gm)
 {
     int err = 0;
     sceNet_lib_DA02F383("wlan", &err);
@@ -2774,7 +2820,7 @@ static void sub_5580(struct SceNetAdhocctlCtx *ctx, struct SceNetAdhocctlGameMod
     if (gm->flag & 2) {
         sceWlanDrv_lib_5BAA1FE5(0);
         if (g_saved_power_save >= 0)
-            sub_550c(g_saved_power_save);
+            adhocctlSetWlanPowerSave(g_saved_power_save);
     }
     sceNet_lib_D2422E4D("wlan");
     sceWlanDevDetach();
@@ -2783,7 +2829,7 @@ static void sub_5580(struct SceNetAdhocctlCtx *ctx, struct SceNetAdhocctlGameMod
 }
 
 /* 0x5658 */
-static int sub_5658(struct SceNetAdhocctlGameModeCtx *gm, int unused, u32 start_lo, u32 start_hi, int listen_id, const void *ie_buf, int ie_len)
+static int adhocctlAcceptGameModePeers(struct SceNetAdhocctlGameModeCtx *gm, int unused, u32 start_lo, u32 start_hi, int listen_id, const void *ie_buf, int ie_len)
 {
     (void)unused;
     u8 accepted_macs[15][6];
@@ -2890,7 +2936,7 @@ done:
 }
 
 /* 0x5a18 */
-static int sub_5a18(struct SceNetAdhocctlGameModeCtx *gm, int unused, u32 start_lo, u32 start_hi, int ptp_id, void *buf, int len)
+static int adhocctlRecvGameModePacket(struct SceNetAdhocctlGameModeCtx *gm, int unused, u32 start_lo, u32 start_hi, int ptp_id, void *buf, int len)
 {
     (void)unused;
     int res = 0;
@@ -2916,7 +2962,7 @@ static int sub_5a18(struct SceNetAdhocctlGameModeCtx *gm, int unused, u32 start_
 }
 
 /* 0x5b28 */
-static void *sub_5b28(int tag, void *buf, u32 len, int *tag_len_out)
+static void *adhocctlFindIeTag(int tag, void *buf, u32 len, int *tag_len_out)
 {
     u8 *cur = (u8 *)buf;
     u8 *end = cur + len;
@@ -2943,7 +2989,7 @@ static void *sub_5b28(int tag, void *buf, u32 len, int *tag_len_out)
 }
 
 /* 0x5bf4 */
-static int sub_5bf4(void)
+static int adhocctlCreateLock(void)
 {
     int res = sceKernelCreateLwMutex(g_mutex_work, "SceNetAdhocctl", 0x200, 0, NULL);
     if (res < 0)
@@ -2953,7 +2999,7 @@ static int sub_5bf4(void)
 }
 
 /* 0x5c44 */
-static void sub_5c44(void)
+static void adhocctlDeleteLock(void)
 {
     if (g_mutex_created != 0)
         sceKernelDeleteLwMutex(g_mutex_work);
@@ -2961,13 +3007,13 @@ static void sub_5c44(void)
 }
 
 /* 0x5c88 */
-static int sub_5c88(void)
+static int adhocctlLock(void)
 {
     return sceKernelLockLwMutex(g_mutex_work, 1, NULL);
 }
 
 /* 0x5cb0 */
-static void sub_5cb0(int lock_res)
+static void adhocctlUnlock(int lock_res)
 {
     if (lock_res == 0)
         sceKernelUnlockLwMutex(g_mutex_work, 1);

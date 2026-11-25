@@ -86,7 +86,7 @@ typedef struct MatchingPeer {
 	int state;                 /* 0x04 */
 	u8 mac[6];                 /* 0x08 */
 	u8 pad0e[2];               /* 0x0e */
-	int field_10;              /* 0x10 */
+	int stateFlags;              /* 0x10 */
 	int member_count;          /* 0x14 */
 	u8 *member_macs;           /* 0x18 */
 	void *hello_buf;           /* 0x1c */
@@ -96,7 +96,7 @@ typedef struct MatchingPeer {
 	u32 timeout_us;            /* 0x2c */
 	u32 last_send_time;        /* 0x30 */
 	u32 last_keepalive_time;   /* 0x34 */
-	int field_38;              /* 0x38 */
+	int peerState;              /* 0x38 */
 	u8 pad3c[68];              /* 0x3c..0x7f */
 	int bulk_len;              /* 0x80 */
 	void *bulk_data;           /* 0x84 */
@@ -208,39 +208,39 @@ typedef struct SendMsg {
 } SendMsg;
 
 /* Forward declarations of internal helpers */
-static int sub_11ac(int matchingId, int evPri, int evStack, int inPri, int inStack, int optLen, const void *optData);
-static int sub_1424(int matchingId, const u8 *mac, int optLen, const void *optData);
-static void *sub_1678(u32 size);
-static int sub_1710(u32 args, void *argp);
-static MatchingCtx *sub_2890(int matchingId);
-static int sub_28c8(void);
-static MatchingCtx *sub_293c(u16 port);
-static void sub_2974(MatchingCtx *ctx);
-static int sub_29d0(MatchingCtx *ctx, int event, const u8 *mac, int optLen, const void *optData);
-static int sub_2ac4(MatchingCtx *ctx, int pktType, const u8 *mac, int optLen, const void *optData);
-static int sub_2ba8(MatchingCtx *ctx, const u8 *mac, int dataLen, const void *data);
-static void sub_2d18(MatchingCtx *ctx);
-static void sub_2ddc(MatchingCtx *ctx, PeerNode *peer);
-static int sub_2e98(MatchingCtx *ctx, PeerNode *peer);
-static u32 sub_2f08(void *common);
-static u32 sub_2f68(void *common);
-static void sub_2fc8(MatchingCtx *ctx, u32 now);
-static int sub_3154(MatchingCtx *ctx);
-static void sub_3208(MatchingCtx *ctx);
-static int sub_330c(u32 args, void *argp);
-static PeerNode *sub_3d64(MatchingCtx *ctx, const u8 *mac, int optLen, const void *optData);
-static void sub_3de0(MatchingCtx *ctx, PeerNode *peer);
-static int sub_3efc(MatchingCtx *ctx, PeerNode *peer, const u8 *rxBuf, u32 rxLen);
-static void sub_4018(MatchingCtx *ctx, PeerNode *peer, u32 rxLen);
-static PeerNode *sub_40b8(MatchingCtx *ctx, const u8 *mac, int optLen, const void *optData);
-static PeerNode *sub_418c(MatchingCtx *ctx, const u8 *mac);
-static PeerNode *sub_41ec(MatchingCtx *ctx, int state);
-static int sub_4238(MatchingCtx *ctx, PeerNode *peer);
-static void sub_4294(MatchingCtx *ctx);
-static void sub_4354(MatchingCtx *ctx, int minState, u8 *dstMacs, int *pCount);
-static int sub_4404(MatchingCtx *ctx, int minState);
-static void sub_443c(MatchingCtx *ctx, int *pSize, u8 *buf);
-static int sub_4504(const PeerNode *peer);
+static int matchingStartInternal(int matchingId, int evPri, int evStack, int inPri, int inStack, int optLen, const void *optData);
+static int matchingSelectTargetInternal(int matchingId, const u8 *mac, int optLen, const void *optData);
+static void *matchingAlloc(u32 size);
+static int matchingEventThread(u32 args, void *argp);
+static MatchingCtx *matchingFindCtxById(int matchingId);
+static int matchingAllocCtxId(void);
+static MatchingCtx *matchingFindCtxByPort(u16 port);
+static void matchingUnlinkCtx(MatchingCtx *ctx);
+static int matchingPostEvent(MatchingCtx *ctx, int event, const u8 *mac, int optLen, const void *optData);
+static int matchingQueueControlPkt(MatchingCtx *ctx, int pktType, const u8 *mac, int optLen, const void *optData);
+static int matchingQueueDataPkt(MatchingCtx *ctx, const u8 *mac, int dataLen, const void *data);
+static void matchingFlushQueues(MatchingCtx *ctx);
+static void matchingDropSendMsgsForPeer(MatchingCtx *ctx, PeerNode *peer);
+static int matchingHasSendMsgsForPeer(MatchingCtx *ctx, PeerNode *peer);
+static u32 matchingHelloAlarmHandler(void *common);
+static u32 matchingKeepAliveAlarmHandler(void *common);
+static void matchingCheckPeerTimeouts(MatchingCtx *ctx, u32 now);
+static int matchingFreeOptBuffers(MatchingCtx *ctx);
+static void matchingDrainSendQueue(MatchingCtx *ctx);
+static int matchingInputThread(u32 args, void *argp);
+static PeerNode *matchingHandleHelloPeer(MatchingCtx *ctx, const u8 *mac, int optLen, const void *optData);
+static void matchingDropEventMsgsForPeer(MatchingCtx *ctx, PeerNode *peer);
+static int matchingHandleDataPacket(MatchingCtx *ctx, PeerNode *peer, const u8 *rxBuf, u32 rxLen);
+static void matchingHandleHostForward(MatchingCtx *ctx, PeerNode *peer, u32 rxLen);
+static PeerNode *matchingCreatePeer(MatchingCtx *ctx, const u8 *mac, int optLen, const void *optData);
+static PeerNode *matchingFindPeerByMac(MatchingCtx *ctx, const u8 *mac);
+static PeerNode *matchingFindParentPeer(MatchingCtx *ctx, int state);
+static int matchingRemovePeer(MatchingCtx *ctx, PeerNode *peer);
+static void matchingDestroyAllPeers(MatchingCtx *ctx);
+static void matchingCollectPeerMacs(MatchingCtx *ctx, int minState, u8 *dstMacs, int *pCount);
+static int matchingCountPeersByState(MatchingCtx *ctx, int minState);
+static void matchingExportHelloMembers(MatchingCtx *ctx, int *pSize, u8 *buf);
+static int matchingIsLocalMacLower(const PeerNode *peer);
 
 /* 0x0000: sceNetAdhocMatchingInit */
 int sceNetAdhocMatchingInit(u32 memsize)
@@ -306,19 +306,19 @@ int sceNetAdhocMatchingCreate(int mode, int maxPeers, u16 port, int bufSize, u32
 		return 0x80410807;
 
 	sceKernelLockLwMutex(&g_lock, 1, NULL);
-	if (sub_293c(port) != NULL) {
+	if (matchingFindCtxByPort(port) != NULL) {
 		sceKernelUnlockLwMutex(&g_lock, 1);
 		return 0x80410810;
 	}
 
-	MatchingCtx *ctx = (MatchingCtx *)sub_1678(0x90);
+	MatchingCtx *ctx = (MatchingCtx *)matchingAlloc(0x90);
 	if (ctx == NULL) {
 		sceKernelUnlockLwMutex(&g_lock, 1);
 		return 0x8041080c;
 	}
 	sceKernelMemset(ctx, 0, 0x90);
 
-	void *rx_buf = sub_1678(bufSize);
+	void *rx_buf = matchingAlloc(bufSize);
 	ctx->rx_buf = rx_buf;
 	if (rx_buf == NULL) {
 		sceKernelFreeVpl(g_vpl_id, ctx);
@@ -327,7 +327,7 @@ int sceNetAdhocMatchingCreate(int mode, int maxPeers, u16 port, int bufSize, u32
 	}
 	sceKernelMemset(rx_buf, 0, bufSize);
 
-	int id = sub_28c8();
+	int id = matchingAllocCtxId();
 	if (id <= 0) {
 		sceKernelFreeVpl(g_vpl_id, ctx->rx_buf);
 		sceKernelFreeVpl(g_vpl_id, ctx);
@@ -366,17 +366,17 @@ int sceNetAdhocMatchingCreate(int mode, int maxPeers, u16 port, int bufSize, u32
 }
 
 /* Helper functions factored out to match original call structure */
-static int sub_3c58(void)
+static int matchingLock(void)
 {
 	return sceKernelLockLwMutex(&g_lock, 1, NULL);
 }
 
-static void sub_3c80(int lock_ret)
+static void matchingUnlock(int lock_ret)
 {
 	sceKernelUnlockLwMutex(&g_lock, 1);
 }
 
-static void sub_32a4(MatchingCtx *ctx)
+static void matchingStopInputThread(MatchingCtx *ctx)
 {
 	if (ctx->input_thid > 0) {
 		ctx->stop_input_thread = 1;
@@ -389,7 +389,7 @@ static void sub_32a4(MatchingCtx *ctx)
 	}
 }
 
-static void sub_16ac(MatchingCtx *ctx)
+static void matchingStopEventThread(MatchingCtx *ctx)
 {
 	if (ctx->event_thid > 0) {
 		ctx->stop_event_thread = 1;
@@ -402,11 +402,11 @@ static void sub_16ac(MatchingCtx *ctx)
 	}
 }
 
-static void sub_2c10(MatchingCtx *ctx)
+static void matchingCleanupCtx(MatchingCtx *ctx)
 {
 	sceKernelCancelAlarm(ctx->alarm1_id);
 	sceKernelCancelAlarm(ctx->alarm2_id);
-	sub_2d18(ctx);
+	matchingFlushQueues(ctx);
 	sceKernelDeleteMbx(ctx->event_mbx);
 	ctx->event_mbx = 0;
 	sceKernelDeleteMbx(ctx->send_mbx);
@@ -415,7 +415,7 @@ static void sub_2c10(MatchingCtx *ctx)
 	ctx->pdp_id = 0;
 }
 
-static int sub_2d88(MatchingCtx *ctx, int optLen, const void *optData)
+static int matchingSetHelloOptInternal(MatchingCtx *ctx, int optLen, const void *optData)
 {
 	if (optLen < 0 || (optLen != 0 && optData == NULL))
 		return 0x80410805;
@@ -424,7 +424,7 @@ static int sub_2d88(MatchingCtx *ctx, int optLen, const void *optData)
 
 	void *new_buf = NULL;
 	if (optLen > 0) {
-		new_buf = sub_1678(optLen);
+		new_buf = matchingAlloc(optLen);
 		if (new_buf == NULL)
 			return 0x8041080c;
 		sceKernelMemcpy(new_buf, optData, optLen);
@@ -436,7 +436,7 @@ static int sub_2d88(MatchingCtx *ctx, int optLen, const void *optData)
 	return 0;
 }
 
-static int sub_3ea0(SceNetAdhocMatchingPoolStat *poolstat)
+static int matchingGetPoolStatInternal(SceNetAdhocMatchingPoolStat *poolstat)
 {
 	SceKernelVplInfo info;
 
@@ -456,24 +456,24 @@ static int sub_3ea0(SceNetAdhocMatchingPoolStat *poolstat)
 static void sub_443c_all(MatchingCtx *ctx, int *pSize, void *buf)
 {
 	if (ctx->mode == 2) {
-		if (sub_41ec(ctx, 7) != NULL) {
-			sub_443c(ctx, pSize, (u8 *)buf);
+		if (matchingFindParentPeer(ctx, 7) != NULL) {
+			matchingExportHelloMembers(ctx, pSize, (u8 *)buf);
 		} else {
 			*pSize = 0;
 		}
 	} else {
-		int count = sub_4404(ctx, 7);
+		int count = matchingCountPeersByState(ctx, 7);
 		if (count <= 0) {
 			*pSize = 0;
 		} else if (ctx->mode == 1) {
-			sub_443c(ctx, pSize, (u8 *)buf);
+			matchingExportHelloMembers(ctx, pSize, (u8 *)buf);
 		} else {
 			u8 *p = (u8 *)buf;
 			if (p != NULL) {
 				if (*pSize < 24) {
 					*pSize = 0;
 				} else {
-					PeerNode *peer = sub_41ec(ctx, 7);
+					PeerNode *peer = matchingFindParentPeer(ctx, 7);
 					*(void **)(p + 0) = p + 12;
 					sceKernelMemcpy(p + 4, ctx->local_mac, 6);
 					*(void **)(p + 12) = NULL;
@@ -495,17 +495,17 @@ int sceNetAdhocMatchingStop(int matchingId)
 	if (g_is_init == 0)
 		return 0x80410813;
 
-	int lret = sub_3c58();
+	int lret = matchingLock();
 	if (lret < 0)
 		return lret;
 
-	MatchingCtx *ctx = sub_2890(matchingId);
+	MatchingCtx *ctx = matchingFindCtxById(matchingId);
 	if (ctx == NULL) {
-		sub_3c80(lret);
+		matchingUnlock(lret);
 		return 0x80410807;
 	}
 	if (ctx->running == 0) {
-		sub_3c80(lret);
+		matchingUnlock(lret);
 		return 0x80410814;
 	}
 	ctx->running = 0;
@@ -513,11 +513,11 @@ int sceNetAdhocMatchingStop(int matchingId)
 	if (ctx->pdp_id > 0)
 		sceNetAdhoc_73BFD52D(ctx->pdp_id, 0);
 
-	sub_32a4(ctx);
-	sub_16ac(ctx);
-	sub_4294(ctx);
-	sub_2c10(ctx);
-	sub_3c80(lret);
+	matchingStopInputThread(ctx);
+	matchingStopEventThread(ctx);
+	matchingDestroyAllPeers(ctx);
+	matchingCleanupCtx(ctx);
+	matchingUnlock(lret);
 	return 0;
 }
 
@@ -532,7 +532,7 @@ int sceNetAdhocMatchingDelete(int matchingId)
 		return 0x80410804;
 
 	sceKernelLockLwMutex(&g_lock, 1, NULL);
-	MatchingCtx *ctx = sub_2890(matchingId);
+	MatchingCtx *ctx = matchingFindCtxById(matchingId);
 	if (ctx == NULL) {
 		sceKernelUnlockLwMutex(&g_lock, 1);
 		return 0x80410804;
@@ -542,7 +542,7 @@ int sceNetAdhocMatchingDelete(int matchingId)
 		return 0x8041080a;
 	}
 	sceKernelFreeVpl(g_vpl_id, ctx->rx_buf);
-	sub_2974(ctx);
+	matchingUnlinkCtx(ctx);
 	sceKernelFreeVpl(g_vpl_id, ctx);
 	sceKernelUnlockLwMutex(&g_lock, 1);
 	return 0;
@@ -563,7 +563,7 @@ int sceNetAdhocMatchingSelectTarget(int matchingId, const u8 *mac, int optLen, c
 		return 0x80410805;
 
 	sceKernelLockLwMutex(&g_lock, 1, NULL);
-	MatchingCtx *ctx = sub_2890(matchingId);
+	MatchingCtx *ctx = matchingFindCtxById(matchingId);
 	if (ctx == NULL) {
 		sceKernelUnlockLwMutex(&g_lock, 1);
 		return 0x80410804;
@@ -577,7 +577,7 @@ int sceNetAdhocMatchingSelectTarget(int matchingId, const u8 *mac, int optLen, c
 		return 0x80410805;
 	}
 
-	PeerNode *peer = sub_418c(ctx, mac);
+	PeerNode *peer = matchingFindPeerByMac(ctx, mac);
 	if (peer == NULL) {
 		sceKernelUnlockLwMutex(&g_lock, 1);
 		return 0x8041080e;
@@ -586,7 +586,7 @@ int sceNetAdhocMatchingSelectTarget(int matchingId, const u8 *mac, int optLen, c
 	int mode = ctx->mode;
 	int ret = 0;
 	if (mode == 2) {
-		if (sub_41ec(ctx, 1) != NULL) {
+		if (matchingFindParentPeer(ctx, 1) != NULL) {
 			sceKernelUnlockLwMutex(&g_lock, 1);
 			return 0x80410811;
 		}
@@ -594,11 +594,11 @@ int sceNetAdhocMatchingSelectTarget(int matchingId, const u8 *mac, int optLen, c
 			sceKernelUnlockLwMutex(&g_lock, 1);
 			return 0x80410811;
 		}
-		if (sub_4404(ctx, 4) != 0) {
+		if (matchingCountPeersByState(ctx, 4) != 0) {
 			sceKernelUnlockLwMutex(&g_lock, 1);
 			return 0x80410811;
 		}
-		ret = sub_2ac4(ctx, 2, mac, optLen, optData);
+		ret = matchingQueueControlPkt(ctx, 2, mac, optLen, optData);
 		if (ret == 0) {
 			peer->timeout_us = ctx->rexmt_int;
 			peer->state = 4;
@@ -609,7 +609,7 @@ int sceNetAdhocMatchingSelectTarget(int matchingId, const u8 *mac, int optLen, c
 				sceKernelUnlockLwMutex(&g_lock, 1);
 				return 0x80410811;
 			}
-			if (sub_4404(ctx, 7) >= ctx->max_peers - 1) {
+			if (matchingCountPeersByState(ctx, 7) >= ctx->max_peers - 1) {
 				sceKernelUnlockLwMutex(&g_lock, 1);
 				return 0x8041080d;
 			}
@@ -619,7 +619,7 @@ int sceNetAdhocMatchingSelectTarget(int matchingId, const u8 *mac, int optLen, c
 					sceKernelFreeVpl(g_vpl_id, ctx->join_opt_data);
 					ctx->join_opt_data = NULL;
 				}
-				void *buf = sub_1678(optLen);
+				void *buf = matchingAlloc(optLen);
 				ctx->join_opt_data = buf;
 				if (buf == NULL) {
 					sceKernelUnlockLwMutex(&g_lock, 1);
@@ -628,24 +628,24 @@ int sceNetAdhocMatchingSelectTarget(int matchingId, const u8 *mac, int optLen, c
 				sceKernelMemcpy(buf, optData, optLen);
 				ctx->join_opt_len = optLen;
 			}
-			ret = sub_2ac4(ctx, 3, mac, optLen, optData);
+			ret = matchingQueueControlPkt(ctx, 3, mac, optLen, optData);
 			if (ret == 0) {
 				peer->timeout_us = ctx->rexmt_int;
 				peer->state = 5;
 			}
 		}
 	} else if (mode == 3) {
-		if (sub_4404(ctx, 7) >= ctx->max_peers - 1) {
+		if (matchingCountPeersByState(ctx, 7) >= ctx->max_peers - 1) {
 			sceKernelUnlockLwMutex(&g_lock, 1);
 			return 0x8041080d;
 		}
 		int st = peer->state;
 		if (st == 1) {
-			if (sub_4404(ctx, 4) != 0) {
+			if (matchingCountPeersByState(ctx, 4) != 0) {
 				sceKernelUnlockLwMutex(&g_lock, 1);
 				return 0x80410811;
 			}
-			ret = sub_2ac4(ctx, 2, mac, optLen, optData);
+			ret = matchingQueueControlPkt(ctx, 2, mac, optLen, optData);
 			if (ret == 0) {
 				peer->timeout_us = ctx->rexmt_int;
 				peer->state = 4;
@@ -657,7 +657,7 @@ int sceNetAdhocMatchingSelectTarget(int matchingId, const u8 *mac, int optLen, c
 					sceKernelFreeVpl(g_vpl_id, ctx->join_opt_data);
 					ctx->join_opt_data = NULL;
 				}
-				void *buf = sub_1678(optLen);
+				void *buf = matchingAlloc(optLen);
 				ctx->join_opt_data = buf;
 				if (buf == NULL) {
 					sceKernelUnlockLwMutex(&g_lock, 1);
@@ -666,7 +666,7 @@ int sceNetAdhocMatchingSelectTarget(int matchingId, const u8 *mac, int optLen, c
 				sceKernelMemcpy(buf, optData, optLen);
 				ctx->join_opt_len = optLen;
 			}
-			ret = sub_2ac4(ctx, 3, mac, optLen, optData);
+			ret = matchingQueueControlPkt(ctx, 3, mac, optLen, optData);
 			if (ret == 0) {
 				peer->timeout_us = ctx->rexmt_int;
 				peer->state = 5;
@@ -689,22 +689,22 @@ int sceNetAdhocMatchingSetHelloOpt(int matchingId, int optLen, const void *optDa
 	if (g_is_init == 0)
 		return 0x80410813;
 
-	int lret = sub_3c58();
+	int lret = matchingLock();
 	if (lret < 0)
 		return lret;
 
 	int ret = 0x80410807;
-	MatchingCtx *ctx = sub_2890(matchingId);
+	MatchingCtx *ctx = matchingFindCtxById(matchingId);
 	if (ctx != NULL) {
 		if (ctx->mode == 2) {
 			ret = 0x80410801;
 		} else if (ctx->running == 0) {
 			ret = 0x8041080b;
 		} else {
-			ret = sub_2d88(ctx, optLen, optData);
+			ret = matchingSetHelloOptInternal(ctx, optLen, optData);
 		}
 	}
-	sub_3c80(lret);
+	matchingUnlock(lret);
 	return ret;
 }
 
@@ -721,7 +721,7 @@ int sceNetAdhocMatchingGetHelloOpt(int matchingId, int *pOptLen, void *optData)
 		return 0x8041080f;
 
 	sceKernelLockLwMutex(&g_lock, 1, NULL);
-	MatchingCtx *ctx = sub_2890(matchingId);
+	MatchingCtx *ctx = matchingFindCtxById(matchingId);
 	if (ctx == NULL) {
 		sceKernelUnlockLwMutex(&g_lock, 1);
 		return 0x80410804;
@@ -761,12 +761,12 @@ int sceNetAdhocMatchingGetMembers(int matchingId, int *pSize, void *buf)
 	if (pSize == NULL)
 		return 0x80410806;
 
-	int lret = sub_3c58();
+	int lret = matchingLock();
 	if (lret < 0)
 		return lret;
 
 	int ret = 0;
-	MatchingCtx *ctx = sub_2890(matchingId);
+	MatchingCtx *ctx = matchingFindCtxById(matchingId);
 	if (ctx == NULL) {
 		ret = 0x80410807;
 	} else if (ctx->running == 0) {
@@ -774,7 +774,7 @@ int sceNetAdhocMatchingGetMembers(int matchingId, int *pSize, void *buf)
 	} else {
 		sub_443c_all(ctx, pSize, buf);
 	}
-	sub_3c80(lret);
+	matchingUnlock(lret);
 	return ret;
 }
 
@@ -793,7 +793,7 @@ int sceNetAdhocMatchingSendData(int matchingId, const u8 *mac, int dataLen, cons
 		return 0x80410805;
 
 	sceKernelLockLwMutex(&g_lock, 1, NULL);
-	MatchingCtx *ctx = sub_2890(matchingId);
+	MatchingCtx *ctx = matchingFindCtxById(matchingId);
 	if (ctx == NULL) {
 		sceKernelUnlockLwMutex(&g_lock, 1);
 		return 0x80410804;
@@ -807,7 +807,7 @@ int sceNetAdhocMatchingSendData(int matchingId, const u8 *mac, int dataLen, cons
 		return 0x80410805;
 	}
 
-	PeerNode *peer = sub_418c(ctx, mac);
+	PeerNode *peer = matchingFindPeerByMac(ctx, mac);
 	if (peer == NULL) {
 		sceKernelUnlockLwMutex(&g_lock, 1);
 		return 0x8041080e;
@@ -823,7 +823,7 @@ int sceNetAdhocMatchingSendData(int matchingId, const u8 *mac, int dataLen, cons
 		return 0x8041080e;
 	}
 
-	if (ctx->mode == 2 && sub_41ec(ctx, 1) != NULL) {
+	if (ctx->mode == 2 && matchingFindParentPeer(ctx, 1) != NULL) {
 		u8 *p = ctx->hello_pkt + 4;
 		int found = 0;
 		for (int i = 4; i < ctx->hello_pkt_len; i += 6, p += 6) {
@@ -838,7 +838,7 @@ int sceNetAdhocMatchingSendData(int matchingId, const u8 *mac, int dataLen, cons
 		}
 	}
 
-	int ret = sub_2ba8(ctx, mac, dataLen, data);
+	int ret = matchingQueueDataPkt(ctx, mac, dataLen, data);
 	if (ret != 0) {
 		sceKernelUnlockLwMutex(&g_lock, 1);
 		return ret;
@@ -850,7 +850,7 @@ int sceNetAdhocMatchingSendData(int matchingId, const u8 *mac, int dataLen, cons
 		peer->bulk_data = NULL;
 	}
 
-	void *buf = sub_1678(dataLen);
+	void *buf = matchingAlloc(dataLen);
 	peer->bulk_data = buf;
 	if (buf == NULL) {
 		sceKernelUnlockLwMutex(&g_lock, 1);
@@ -877,7 +877,7 @@ int sceNetAdhocMatchingAbortSendData(int matchingId, const u8 *mac)
 		return 0x8041080f;
 
 	sceKernelLockLwMutex(&g_lock, 1, NULL);
-	MatchingCtx *ctx = sub_2890(matchingId);
+	MatchingCtx *ctx = matchingFindCtxById(matchingId);
 	if (ctx == NULL) {
 		sceKernelUnlockLwMutex(&g_lock, 1);
 		return 0x80410804;
@@ -887,7 +887,7 @@ int sceNetAdhocMatchingAbortSendData(int matchingId, const u8 *mac)
 		return 0x80410814;
 	}
 
-	PeerNode *peer = sub_418c(ctx, mac);
+	PeerNode *peer = matchingFindPeerByMac(ctx, mac);
 	if (peer == NULL) {
 		sceKernelUnlockLwMutex(&g_lock, 1);
 		return 0x8041080e;
@@ -904,7 +904,7 @@ int sceNetAdhocMatchingAbortSendData(int matchingId, const u8 *mac)
 		sceKernelFreeVpl(g_vpl_id, peer->bulk_data);
 		peer->bulk_data = NULL;
 	}
-	sub_2ddc(ctx, peer);
+	matchingDropSendMsgsForPeer(ctx, peer);
 	sceKernelUnlockLwMutex(&g_lock, 1);
 	return 0;
 }
@@ -946,7 +946,7 @@ int sceNetAdhocMatchingStart(int matchingId, int evPri, int evStack, int inPri, 
 	if (optLen < 0 || (optLen != 0 && optData == NULL))
 		return 0x80410805;
 
-	return sub_11ac(matchingId, evPri, evStack, inPri, inStack, optLen, optData);
+	return matchingStartInternal(matchingId, evPri, evStack, inPri, inStack, optLen, optData);
 }
 
 /* 0x0f34: sceNetAdhocMatching_E8454C65 */
@@ -965,7 +965,7 @@ int sceNetAdhocMatching_E8454C65(int matchingId, int evPri, int evStack, int inP
 	if (optLen < 0 || (optLen != 0 && optData == NULL))
 		return 0x80410805;
 
-	return sub_11ac(matchingId, evPri, evStack, inPri, inStack, optLen, optData);
+	return matchingStartInternal(matchingId, evPri, evStack, inPri, inStack, optLen, optData);
 }
 
 /* 0x0ff0: sceNetAdhocMatchingCancelTarget */
@@ -980,7 +980,7 @@ int sceNetAdhocMatchingCancelTarget(int matchingId, const u8 *mac)
 	if (mac == NULL)
 		return 0x8041080f;
 
-	return sub_1424(matchingId, mac, 0, NULL);
+	return matchingSelectTargetInternal(matchingId, mac, 0, NULL);
 }
 
 /* 0x1050: sceNetAdhocMatchingCancelTargetWithOpt */
@@ -997,7 +997,7 @@ int sceNetAdhocMatchingCancelTargetWithOpt(int matchingId, const u8 *mac, int op
 	if (optLen < 0 || (optLen != 0 && optData == NULL))
 		return 0x80410805;
 
-	return sub_1424(matchingId, mac, optLen, optData);
+	return matchingSelectTargetInternal(matchingId, mac, optLen, optData);
 }
 
 /* 0x10c8: sceNetAdhocMatchingGetPoolMaxAlloc */
@@ -1020,14 +1020,14 @@ int sceNetAdhocMatchingGetPoolStat(SceNetAdhocMatchingPoolStat *poolstat)
 	if (poolstat == NULL)
 		return 0x80410806;
 
-	return sub_3ea0(poolstat);
+	return matchingGetPoolStatInternal(poolstat);
 }
 
-/* 0x11ac: sub_11ac */
-static int sub_11ac(int matchingId, int evPri, int evStack, int inPri, int inStack, int optLen, const void *optData)
+/* 0x11ac: matchingStartInternal */
+static int matchingStartInternal(int matchingId, int evPri, int evStack, int inPri, int inStack, int optLen, const void *optData)
 {
 	sceKernelLockLwMutex(&g_lock, 1, NULL);
-	MatchingCtx *ctx = sub_2890(matchingId);
+	MatchingCtx *ctx = matchingFindCtxById(matchingId);
 	if (ctx == NULL) {
 		sceKernelUnlockLwMutex(&g_lock, 1);
 		return 0x80410804;
@@ -1065,12 +1065,12 @@ static int sub_11ac(int matchingId, int evPri, int evStack, int inPri, int inSta
 		return pdp;
 	}
 
-	ret = sub_3154(ctx);
+	ret = matchingFreeOptBuffers(ctx);
 	if (ret < 0)
 		goto fail_pdp;
 
 	if (optLen > 0) {
-		void *buf = sub_1678(optLen);
+		void *buf = matchingAlloc(optLen);
 		ctx->hello_opt_data = buf;
 		if (buf == NULL) {
 			ret = 0x8041080c;
@@ -1098,7 +1098,7 @@ static int sub_11ac(int matchingId, int evPri, int evStack, int inPri, int inSta
 	ctx->input_stack_size = inStack;
 	ctx->stop_event_thread = 0;
 
-	int th1 = sceKernelCreateThread("SceNetAdhocMatchingEvent", sub_1710, evPri, evStack, 0, NULL);
+	int th1 = sceKernelCreateThread("SceNetAdhocMatchingEvent", matchingEventThread, evPri, evStack, 0, NULL);
 	ctx->event_thid = th1;
 	if (th1 <= 0) {
 		ret = th1;
@@ -1109,7 +1109,7 @@ static int sub_11ac(int matchingId, int evPri, int evStack, int inPri, int inSta
 		goto fail_th1;
 
 	ctx->stop_input_thread = 0;
-	int th2 = sceKernelCreateThread("SceNetAdhocMatchingInput", sub_330c, inPri, inStack, 0, NULL);
+	int th2 = sceKernelCreateThread("SceNetAdhocMatchingInput", matchingInputThread, inPri, inStack, 0, NULL);
 	ctx->input_thid = th2;
 	if (th2 <= 0) {
 		ret = th2;
@@ -1150,11 +1150,11 @@ fail_pdp:
 	return ret;
 }
 
-/* 0x1424: sub_1424 */
-static int sub_1424(int matchingId, const u8 *mac, int optLen, const void *optData)
+/* 0x1424: matchingSelectTargetInternal */
+static int matchingSelectTargetInternal(int matchingId, const u8 *mac, int optLen, const void *optData)
 {
 	sceKernelLockLwMutex(&g_lock, 1, NULL);
-	MatchingCtx *ctx = sub_2890(matchingId);
+	MatchingCtx *ctx = matchingFindCtxById(matchingId);
 	if (ctx == NULL) {
 		sceKernelUnlockLwMutex(&g_lock, 1);
 		return 0x80410804;
@@ -1164,7 +1164,7 @@ static int sub_1424(int matchingId, const u8 *mac, int optLen, const void *optDa
 		return 0x80410814;
 	}
 
-	PeerNode *peer = sub_418c(ctx, mac);
+	PeerNode *peer = matchingFindPeerByMac(ctx, mac);
 	if (peer == NULL) {
 		sceKernelUnlockLwMutex(&g_lock, 1);
 		return 0x8041080e;
@@ -1196,51 +1196,51 @@ static int sub_1424(int matchingId, const u8 *mac, int optLen, const void *optDa
 		sceKernelFreeVpl(g_vpl_id, peer->bulk_data);
 		peer->bulk_data = NULL;
 	}
-	sub_2ddc(ctx, peer);
+	matchingDropSendMsgsForPeer(ctx, peer);
 
 	int ret = 0;
 	if (ctx->mode == 1 && peer->state == 3) {
-		ret = sub_2ac4(ctx, 5, mac, optLen, optData);
+		ret = matchingQueueControlPkt(ctx, 5, mac, optLen, optData);
 		if (ret == 0) {
 			peer->timeout_us = ctx->timeout_total;
 			peer->state = 2;
 		}
 	} else if (ctx->mode == 1 && peer->state == 5) {
-		ret = sub_2ac4(ctx, 6, mac, optLen, optData);
+		ret = matchingQueueControlPkt(ctx, 6, mac, optLen, optData);
 		if (ret == 0)
-			sub_4238(ctx, peer);
+			matchingRemovePeer(ctx, peer);
 	} else if (ctx->mode == 2) {
-		PeerNode *parent = sub_41ec(ctx, 1);
+		PeerNode *parent = matchingFindParentPeer(ctx, 1);
 		if (parent != NULL && parent != peer) {
 			if (peer->state == 7 || peer->state == 8) {
-				sub_4238(ctx, peer);
+				matchingRemovePeer(ctx, peer);
 			} else {
 				sceKernelUnlockLwMutex(&g_lock, 1);
 				return 0x8041080e;
 			}
 		} else {
-			ret = sub_2ac4(ctx, 6, mac, optLen, optData);
+			ret = matchingQueueControlPkt(ctx, 6, mac, optLen, optData);
 			if (ret == 0)
-				sub_4294(ctx);
+				matchingDestroyAllPeers(ctx);
 		}
 	} else if (ctx->mode == 3 && peer->state == 3) {
-		ret = sub_2ac4(ctx, 5, mac, optLen, optData);
+		ret = matchingQueueControlPkt(ctx, 5, mac, optLen, optData);
 		if (ret == 0) {
 			peer->timeout_us = ctx->timeout_total;
 			peer->state = 1;
 		}
 	} else {
-		ret = sub_2ac4(ctx, 6, mac, optLen, optData);
+		ret = matchingQueueControlPkt(ctx, 6, mac, optLen, optData);
 		if (ret == 0) {
-			sub_4238(ctx, peer);
-			int count = sub_4404(ctx, 7);
+			matchingRemovePeer(ctx, peer);
+			int count = matchingCountPeersByState(ctx, 7);
 			if (count > 0) {
 				u8 *pkt = ctx->hello_pkt;
 				int pkt_len = (count + 1) * 6 + 4;
 				ctx->hello_pkt_len = pkt_len;
 				sceKernelMemset(pkt, 0, pkt_len);
 				int actual = count;
-				sub_4354(ctx, 7, pkt + 10, &actual);
+				matchingCollectPeerMacs(ctx, 7, pkt + 10, &actual);
 				pkt[0] = 8;
 				int total_members = actual + 1;
 				pkt[2] = (u8)((u32)total_members >> 8);
@@ -1248,10 +1248,10 @@ static int sub_1424(int matchingId, const u8 *mac, int optLen, const void *optDa
 				sceKernelMemcpy(pkt + 4, ctx->local_mac, 6);
 				for (PeerNode *it = ctx->peer_list; it != NULL; it = it->next) {
 					if (it->state >= 7 && sceNet_lib_E0A81C7C(it->mac, mac) != 0)
-						sub_2ac4(ctx, 8, it->mac, 0, NULL);
+						matchingQueueControlPkt(ctx, 8, it->mac, 0, NULL);
 				}
 			} else {
-				sub_3154(ctx);
+				matchingFreeOptBuffers(ctx);
 			}
 		}
 	}
@@ -1260,8 +1260,8 @@ static int sub_1424(int matchingId, const u8 *mac, int optLen, const void *optDa
 	return ret;
 }
 
-/* 0x1678: sub_1678 */
-static void *sub_1678(u32 size)
+/* 0x1678: matchingAlloc */
+static void *matchingAlloc(u32 size)
 {
 	void *ptr;
 	SceKernelVplInfo info;
@@ -1307,14 +1307,14 @@ static void call_handler(MatchingCtx *ctx, int id, int event, void *mac, int opt
 	}
 }
 
-/* 0x1710: sub_1710 ("SceNetAdhocMatchingEvent" thread) */
-static int sub_1710(u32 args, void *argp)
+/* 0x1710: matchingEventThread ("SceNetAdhocMatchingEvent" thread) */
+static int matchingEventThread(u32 args, void *argp)
 {
 	u32 timeout;
 	EventMsg *msg;
 
 	sceKernelLockLwMutex(&g_lock, 1, NULL);
-	MatchingCtx *ctx = sub_2890(*(int *)argp);
+	MatchingCtx *ctx = matchingFindCtxById(*(int *)argp);
 	if (ctx == NULL) {
 		sceKernelUnlockLwMutex(&g_lock, 1);
 		return 0;
@@ -1330,7 +1330,7 @@ static int sub_1710(u32 args, void *argp)
 		if (ret != 0)
 			continue;
 
-		PeerNode *peer = sub_418c(ctx, msg->mac);
+		PeerNode *peer = matchingFindPeerByMac(ctx, msg->mac);
 		if (peer != NULL) {
 			int ev = msg->event;
 			int mode = ctx->mode;
@@ -1338,7 +1338,7 @@ static int sub_1710(u32 args, void *argp)
 
 			switch (ev) {
 			case 1: /* HELLO */
-				if ((mode == 2 && st == 1 && sub_41ec(ctx, 1) == NULL) ||
+				if ((mode == 2 && st == 1 && matchingFindParentPeer(ctx, 1) == NULL) ||
 				    (mode == 3 && st == 1)) {
 					int id = ctx->id;
 					int olen = msg->opt_len;
@@ -1376,18 +1376,18 @@ static int sub_1710(u32 args, void *argp)
 					sceKernelUnlockLwMutex(&g_lock, 1);
 					call_handler(ctx, id, ev, msg->mac, olen, odata);
 					sceKernelLockLwMutex(&g_lock, 1, NULL);
-					peer = sub_418c(ctx, msg->mac);
+					peer = matchingFindPeerByMac(ctx, msg->mac);
 					if (peer != NULL && (peer->state == 7 || peer->state == 8)) {
 						if (ctx->mode == 1 || ctx->mode == 3) {
-							sub_4238(ctx, peer);
-							int count = sub_4404(ctx, 7);
+							matchingRemovePeer(ctx, peer);
+							int count = matchingCountPeersByState(ctx, 7);
 							if (count > 0) {
 								u8 *pkt = ctx->hello_pkt;
 								int pkt_len = (count + 1) * 6 + 4;
 								ctx->hello_pkt_len = pkt_len;
 								sceKernelMemset(pkt, 0, pkt_len);
 								int actual = count;
-								sub_4354(ctx, 7, pkt + 10, &actual);
+								matchingCollectPeerMacs(ctx, 7, pkt + 10, &actual);
 								pkt[0] = 8;
 								int total = actual + 1;
 								pkt[2] = (u8)((u32)total >> 8);
@@ -1395,18 +1395,18 @@ static int sub_1710(u32 args, void *argp)
 								sceKernelMemcpy(pkt + 4, ctx->local_mac, 6);
 								for (PeerNode *it = ctx->peer_list; it != NULL; it = it->next) {
 									if (it->state >= 7 && sceNet_lib_E0A81C7C(it->mac, msg->mac) != 0)
-										sub_2ac4(ctx, 8, it->mac, 0, NULL);
+										matchingQueueControlPkt(ctx, 8, it->mac, 0, NULL);
 								}
 							} else {
-								sub_3154(ctx);
+								matchingFreeOptBuffers(ctx);
 							}
 						} else if (ctx->mode == 2) {
-							PeerNode *parent = sub_41ec(ctx, 1);
+							PeerNode *parent = matchingFindParentPeer(ctx, 1);
 							if (parent != NULL) {
 								if (parent == peer) {
-									sub_4294(ctx);
+									matchingDestroyAllPeers(ctx);
 								} else if (peer->state == 7 || peer->state == 8) {
-									sub_4238(ctx, peer);
+									matchingRemovePeer(ctx, peer);
 								}
 							}
 						}
@@ -1469,16 +1469,16 @@ static int sub_1710(u32 args, void *argp)
 					sceKernelUnlockLwMutex(&g_lock, 1);
 					call_handler(ctx, id, ev, msg->mac, olen, odata);
 					sceKernelLockLwMutex(&g_lock, 1, NULL);
-					peer = sub_418c(ctx, msg->mac);
+					peer = matchingFindPeerByMac(ctx, msg->mac);
 					if (peer != NULL) {
 						if (ctx->mode == 2) {
 							u8 *pmac = peer->member_macs + 6;
 							for (int i = 1; i < peer->member_count; i++, pmac += 6) {
 								if (sceNet_lib_E0A81C7C(ctx->local_mac, pmac) == 0)
 									continue;
-								PeerNode *m = sub_418c(ctx, pmac);
+								PeerNode *m = matchingFindPeerByMac(ctx, pmac);
 								if (m == NULL) {
-									m = sub_40b8(ctx, pmac, 0, NULL);
+									m = matchingCreatePeer(ctx, pmac, 0, NULL);
 									if (m == NULL)
 										break;
 								}
@@ -1503,12 +1503,12 @@ static int sub_1710(u32 args, void *argp)
 						} else if (ctx->mode == 1 || ctx->mode == 3) {
 							for (PeerNode *it = ctx->peer_list; it != NULL; it = it->next) {
 								if (it->state >= 7 && sceNet_lib_E0A81C7C(it->mac, peer->mac) != 0)
-									sub_2ac4(ctx, 7, it->mac, 0, NULL);
+									matchingQueueControlPkt(ctx, 7, it->mac, 0, NULL);
 							}
 							if (ctx->mode == 3) {
 								for (PeerNode *it = ctx->peer_list; it != NULL; it = it->next) {
 									if (it != peer && (it->state == 3 || it->state == 4 || it->state == 5)) {
-										if (sub_2ac4(ctx, 6, it->mac, 0, NULL) == 0) {
+										if (matchingQueueControlPkt(ctx, 6, it->mac, 0, NULL) == 0) {
 											it->timeout_us = ctx->timeout_total;
 											it->state = 1;
 										}
@@ -1534,29 +1534,29 @@ static int sub_1710(u32 args, void *argp)
 						sceKernelUnlockLwMutex(&g_lock, 1);
 						call_handler(ctx, id, ev, msg->mac, olen, odata);
 						sceKernelLockLwMutex(&g_lock, 1, NULL);
-						peer = sub_418c(ctx, msg->mac);
+						peer = matchingFindPeerByMac(ctx, msg->mac);
 						if (peer != NULL) {
 							int m = ctx->mode;
 							if (m == 2) {
 								int pst = msg->state;
 								if (pst == 6 || pst == 7 || pst == 8) {
-									sub_4294(ctx);
+									matchingDestroyAllPeers(ctx);
 								} else if (pst == 4) {
-									sub_4238(ctx, peer);
+									matchingRemovePeer(ctx, peer);
 								}
 							} else if (m < 2) {
 								if (m == 1) {
 									int pst = msg->state;
 									if (pst == 6 || pst == 7 || pst == 8) {
-										sub_4238(ctx, peer);
-										int count = sub_4404(ctx, 7);
+										matchingRemovePeer(ctx, peer);
+										int count = matchingCountPeersByState(ctx, 7);
 										if (count > 0) {
 											u8 *pkt = ctx->hello_pkt;
 											int pkt_len = (count + 1) * 6 + 4;
 											ctx->hello_pkt_len = pkt_len;
 											sceKernelMemset(pkt, 0, pkt_len);
 											int actual = count;
-											sub_4354(ctx, 7, pkt + 10, &actual);
+											matchingCollectPeerMacs(ctx, 7, pkt + 10, &actual);
 											pkt[0] = 8;
 											int total = actual + 1;
 											pkt[2] = (u8)((u32)total >> 8);
@@ -1564,21 +1564,21 @@ static int sub_1710(u32 args, void *argp)
 											sceKernelMemcpy(pkt + 4, ctx->local_mac, 6);
 											for (PeerNode *it = ctx->peer_list; it != NULL; it = it->next) {
 												if (it->state >= 7 && sceNet_lib_E0A81C7C(it->mac, msg->mac) != 0)
-													sub_2ac4(ctx, 8, it->mac, 0, NULL);
+													matchingQueueControlPkt(ctx, 8, it->mac, 0, NULL);
 											}
 										} else {
-											sub_3154(ctx);
+											matchingFreeOptBuffers(ctx);
 										}
 									} else if (pst == 3 || pst == 5) {
-										sub_4238(ctx, peer);
+										matchingRemovePeer(ctx, peer);
 									}
 								}
 							} else if (m == 3) {
 								int pst = msg->state;
 								if (pst == 6 || pst == 7 || pst == 8) {
-									sub_4294(ctx);
+									matchingDestroyAllPeers(ctx);
 								} else if (pst >= 3 && pst <= 5) {
-									sub_4238(ctx, peer);
+									matchingRemovePeer(ctx, peer);
 								}
 							}
 						}
@@ -1598,9 +1598,9 @@ static int sub_1710(u32 args, void *argp)
 					sceKernelUnlockLwMutex(&g_lock, 1);
 					call_handler(ctx, id, ev, msg->mac, olen, odata);
 					sceKernelLockLwMutex(&g_lock, 1, NULL);
-					peer = sub_418c(ctx, msg->mac);
+					peer = matchingFindPeerByMac(ctx, msg->mac);
 					if (peer != NULL)
-						sub_4294(ctx);
+						matchingDestroyAllPeers(ctx);
 				}
 				break;
 
@@ -1632,9 +1632,9 @@ static int sub_1710(u32 args, void *argp)
 					sceKernelUnlockLwMutex(&g_lock, 1);
 					call_handler(ctx, id, ev, msg->mac, olen, odata);
 					sceKernelLockLwMutex(&g_lock, 1, NULL);
-					peer = sub_418c(ctx, msg->mac);
+					peer = matchingFindPeerByMac(ctx, msg->mac);
 					if (peer != NULL)
-						sub_2ddc(ctx, peer);
+						matchingDropSendMsgsForPeer(ctx, peer);
 				}
 				break;
 
@@ -1661,9 +1661,9 @@ static int sub_1710(u32 args, void *argp)
 					sceKernelUnlockLwMutex(&g_lock, 1);
 					call_handler(ctx, id, 3, msg->mac, olen, odata);
 					sceKernelLockLwMutex(&g_lock, 1, NULL);
-					peer = sub_418c(ctx, msg->mac);
+					peer = matchingFindPeerByMac(ctx, msg->mac);
 					if (peer != NULL && (peer->state == 7 || peer->state == 8))
-						sub_4238(ctx, peer);
+						matchingRemovePeer(ctx, peer);
 				}
 				break;
 
@@ -1681,8 +1681,8 @@ static int sub_1710(u32 args, void *argp)
 	return 0;
 }
 
-/* 0x2890: sub_2890 */
-static MatchingCtx *sub_2890(int matchingId)
+/* 0x2890: matchingFindCtxById */
+static MatchingCtx *matchingFindCtxById(int matchingId)
 {
 	for (MatchingCtx *ctx = (MatchingCtx *)g_ctx_list; ctx != NULL; ctx = ctx->next) {
 		if (ctx->id == matchingId)
@@ -1691,8 +1691,8 @@ static MatchingCtx *sub_2890(int matchingId)
 	return NULL;
 }
 
-/* 0x28c8: sub_28c8 */
-static int sub_28c8(void)
+/* 0x28c8: matchingAllocCtxId */
+static int matchingAllocCtxId(void)
 {
 	MatchingCtx *head = (MatchingCtx *)g_ctx_list;
 	int id = 1;
@@ -1713,8 +1713,8 @@ static int sub_28c8(void)
 	return 0;
 }
 
-/* 0x293c: sub_293c */
-static MatchingCtx *sub_293c(u16 port)
+/* 0x293c: matchingFindCtxByPort */
+static MatchingCtx *matchingFindCtxByPort(u16 port)
 {
 	for (MatchingCtx *ctx = (MatchingCtx *)g_ctx_list; ctx != NULL; ctx = ctx->next) {
 		if (ctx->port == port)
@@ -1723,8 +1723,8 @@ static MatchingCtx *sub_293c(u16 port)
 	return NULL;
 }
 
-/* 0x2974: sub_2974 */
-static void sub_2974(MatchingCtx *ctx)
+/* 0x2974: matchingUnlinkCtx */
+static void matchingUnlinkCtx(MatchingCtx *ctx)
 {
 	MatchingCtx *cur = (MatchingCtx *)g_ctx_list;
 	if (cur == NULL)
@@ -1742,16 +1742,16 @@ static void sub_2974(MatchingCtx *ctx)
 	}
 }
 
-/* 0x29d0: sub_29d0 */
-static int sub_29d0(MatchingCtx *ctx, int event, const u8 *mac, int optLen, const void *optData)
+/* 0x29d0: matchingPostEvent */
+static int matchingPostEvent(MatchingCtx *ctx, int event, const u8 *mac, int optLen, const void *optData)
 {
-	EventMsg *msg = (EventMsg *)sub_1678(0x24);
+	EventMsg *msg = (EventMsg *)matchingAlloc(0x24);
 	if (msg == NULL)
 		return 0x8041080c;
 	sceKernelMemset(msg, 0, 0x24);
 
 	if (optLen > 0) {
-		void *buf = sub_1678(optLen);
+		void *buf = matchingAlloc(optLen);
 		msg->opt_data = buf;
 		if (buf == NULL) {
 			sceKernelFreeVpl(g_vpl_id, msg);
@@ -1767,7 +1767,7 @@ static int sub_29d0(MatchingCtx *ctx, int event, const u8 *mac, int optLen, cons
 	msg->opt_len = optLen;
 	msg->next = NULL;
 
-	PeerNode *peer = sub_418c(ctx, mac);
+	PeerNode *peer = matchingFindPeerByMac(ctx, mac);
 	if (peer != NULL)
 		msg->state = peer->state;
 
@@ -1775,16 +1775,16 @@ static int sub_29d0(MatchingCtx *ctx, int event, const u8 *mac, int optLen, cons
 	return 0;
 }
 
-/* 0x2ac4: sub_2ac4 */
-static int sub_2ac4(MatchingCtx *ctx, int pktType, const u8 *mac, int optLen, const void *optData)
+/* 0x2ac4: matchingQueueControlPkt */
+static int matchingQueueControlPkt(MatchingCtx *ctx, int pktType, const u8 *mac, int optLen, const void *optData)
 {
-	SendMsg *msg = (SendMsg *)sub_1678(0x20);
+	SendMsg *msg = (SendMsg *)matchingAlloc(0x20);
 	if (msg == NULL)
 		return 0x8041080c;
 	sceKernelMemset(msg, 0, 0x20);
 
 	int pkt_len = optLen + 4;
-	u8 *pkt = (u8 *)sub_1678(pkt_len);
+	u8 *pkt = (u8 *)matchingAlloc(pkt_len);
 	msg->pkt_data = pkt;
 	if (pkt == NULL) {
 		sceKernelFreeVpl(g_vpl_id, msg);
@@ -1805,16 +1805,16 @@ static int sub_2ac4(MatchingCtx *ctx, int pktType, const u8 *mac, int optLen, co
 	return 0;
 }
 
-/* 0x2ba8: sub_2ba8 */
-static int sub_2ba8(MatchingCtx *ctx, const u8 *mac, int dataLen, const void *data)
+/* 0x2ba8: matchingQueueDataPkt */
+static int matchingQueueDataPkt(MatchingCtx *ctx, const u8 *mac, int dataLen, const void *data)
 {
-	SendMsg *msg = (SendMsg *)sub_1678(0x20);
+	SendMsg *msg = (SendMsg *)matchingAlloc(0x20);
 	if (msg == NULL)
 		return 0x8041080c;
 	sceKernelMemset(msg, 0, 0x20);
 
 	int pkt_len = dataLen + 11;
-	u8 *pkt = (u8 *)sub_1678(pkt_len);
+	u8 *pkt = (u8 *)matchingAlloc(pkt_len);
 	msg->pkt_data = pkt;
 	if (pkt == NULL) {
 		sceKernelFreeVpl(g_vpl_id, msg);
@@ -1825,7 +1825,7 @@ static int sub_2ba8(MatchingCtx *ctx, const u8 *mac, int dataLen, const void *da
 	pkt[1] = (u8)((u32)dataLen >> 16);
 	pkt[2] = (u8)((u32)dataLen >> 8);
 	pkt[3] = (u8)dataLen;
-	if (ctx->mode == 2 && sub_41ec(ctx, 1) != NULL) {
+	if (ctx->mode == 2 && matchingFindParentPeer(ctx, 1) != NULL) {
 		sceKernelMemcpy(pkt + 4, mac, 6);
 		pkt[10] = 1;
 	} else {
@@ -1835,7 +1835,7 @@ static int sub_2ba8(MatchingCtx *ctx, const u8 *mac, int dataLen, const void *da
 
 	msg->pkt_type = 10;
 	if (ctx->mode == 2) {
-		PeerNode *parent = sub_41ec(ctx, 1);
+		PeerNode *parent = matchingFindParentPeer(ctx, 1);
 		if (parent != NULL)
 			mac = parent->mac;
 	}
@@ -1846,8 +1846,8 @@ static int sub_2ba8(MatchingCtx *ctx, const u8 *mac, int dataLen, const void *da
 	return 0;
 }
 
-/* 0x2d18: sub_2d18 */
-static void sub_2d18(MatchingCtx *ctx)
+/* 0x2d18: matchingFlushQueues */
+static void matchingFlushQueues(MatchingCtx *ctx)
 {
 	u32 timeout;
 	EventMsg *ev_msg;
@@ -1878,8 +1878,8 @@ static void sub_2d18(MatchingCtx *ctx)
 	}
 }
 
-/* 0x2ddc: sub_2ddc */
-static void sub_2ddc(MatchingCtx *ctx, PeerNode *peer)
+/* 0x2ddc: matchingDropSendMsgsForPeer */
+static void matchingDropSendMsgsForPeer(MatchingCtx *ctx, PeerNode *peer)
 {
 	u32 timeout;
 	SendMsg *msg;
@@ -1912,8 +1912,8 @@ static void sub_2ddc(MatchingCtx *ctx, PeerNode *peer)
 	}
 }
 
-/* 0x2e98: sub_2e98 */
-static int sub_2e98(MatchingCtx *ctx, PeerNode *peer)
+/* 0x2e98: matchingHasSendMsgsForPeer */
+static int matchingHasSendMsgsForPeer(MatchingCtx *ctx, PeerNode *peer)
 {
 	u32 timeout;
 	SendMsg *msg;
@@ -1944,23 +1944,23 @@ static int sub_2e98(MatchingCtx *ctx, PeerNode *peer)
 	return count;
 }
 
-/* 0x2f08: sub_2f08 */
-static u32 sub_2f08(void *common)
+/* 0x2f08: matchingHelloAlarmHandler */
+static u32 matchingHelloAlarmHandler(void *common)
 {
 	MatchingCtx *ctx = (MatchingCtx *)common;
 	static const u8 bcast_mac[6] = { 0xff, 0xff, 0xff, 0xff, 0xff, 0xff };
 
 	if (ctx->mode == 1) {
-		if (sub_4404(ctx, 7) < ctx->max_peers - 1)
-			sub_2ac4(ctx, 1, bcast_mac, ctx->hello_opt_len, ctx->hello_opt_data);
-	} else if (sub_4404(ctx, 4) == 0) {
-		sub_2ac4(ctx, 1, bcast_mac, ctx->hello_opt_len, ctx->hello_opt_data);
+		if (matchingCountPeersByState(ctx, 7) < ctx->max_peers - 1)
+			matchingQueueControlPkt(ctx, 1, bcast_mac, ctx->hello_opt_len, ctx->hello_opt_data);
+	} else if (matchingCountPeersByState(ctx, 4) == 0) {
+		matchingQueueControlPkt(ctx, 1, bcast_mac, ctx->hello_opt_len, ctx->hello_opt_data);
 	}
 	return ctx->hello_delay;
 }
 
-/* 0x2f68: sub_2f68 */
-static u32 sub_2f68(void *common)
+/* 0x2f68: matchingKeepAliveAlarmHandler */
+static u32 matchingKeepAliveAlarmHandler(void *common)
 {
 	MatchingCtx *ctx = (MatchingCtx *)common;
 	static const u8 bcast_mac[6] = { 0xff, 0xff, 0xff, 0xff, 0xff, 0xff };
@@ -1968,15 +1968,15 @@ static u32 sub_2f68(void *common)
 	for (PeerNode *it = ctx->peer_list; it != NULL; it = it->next) {
 		int st = it->state;
 		if ((u32)(st - 3) < 6u) {
-			sub_2ac4(ctx, 9, bcast_mac, 0, NULL);
+			matchingQueueControlPkt(ctx, 9, bcast_mac, 0, NULL);
 			return ctx->ping_delay;
 		}
 	}
 	return ctx->ping_delay;
 }
 
-/* 0x2fc8: sub_2fc8 */
-static void sub_2fc8(MatchingCtx *ctx, u32 now)
+/* 0x2fc8: matchingCheckPeerTimeouts */
+static void matchingCheckPeerTimeouts(MatchingCtx *ctx, u32 now)
 {
 	PeerNode *next;
 	for (PeerNode *peer = ctx->peer_list; peer != NULL; peer = next) {
@@ -1988,7 +1988,7 @@ static void sub_2fc8(MatchingCtx *ctx, u32 now)
 			if ((mode == 1 && (st == 1 || st == 2)) ||
 			    (mode == 2 && st == 1) ||
 			    (mode == 3 && st == 1)) {
-				sub_4238(ctx, peer);
+				matchingRemovePeer(ctx, peer);
 			} else if (st == 8) {
 				if (peer->bulk_len > 0) {
 					peer->bulk_len = 0;
@@ -1997,9 +1997,9 @@ static void sub_2fc8(MatchingCtx *ctx, u32 now)
 				}
 				peer->state = 7;
 				peer->timeout_us = ctx->keepalive_timeout;
-				sub_29d0(ctx, 12, peer->mac, 0, NULL);
+				matchingPostEvent(ctx, 12, peer->mac, 0, NULL);
 			} else {
-				sub_29d0(ctx, 8, peer->mac, 0, NULL);
+				matchingPostEvent(ctx, 8, peer->mac, 0, NULL);
 				peer->timeout_us = 0;
 			}
 		}
@@ -2011,15 +2011,15 @@ static void sub_2fc8(MatchingCtx *ctx, u32 now)
 				if (count < ctx->init_count && now - peer->last_send_time > ctx->ping_delay) {
 					int st = peer->state;
 					if (st == 5) {
-						sub_2ac4(ctx, 3, peer->mac, ctx->join_opt_len, ctx->join_opt_data);
+						matchingQueueControlPkt(ctx, 3, peer->mac, ctx->join_opt_len, ctx->join_opt_data);
 					} else if (st < 5) {
 						if (st == 4)
-							sub_2ac4(ctx, 2, peer->mac, peer->opt_len, peer->opt_data);
+							matchingQueueControlPkt(ctx, 2, peer->mac, peer->opt_len, peer->opt_data);
 					} else if (st == 6) {
-						sub_2ac4(ctx, 4, peer->mac, ctx->hello_pkt_len, ctx->hello_pkt);
+						matchingQueueControlPkt(ctx, 4, peer->mac, ctx->hello_pkt_len, ctx->hello_pkt);
 					} else if (st == 8) {
-						if (sub_2e98(ctx, peer) == 0)
-							sub_2ba8(ctx, peer->mac, peer->bulk_len, peer->bulk_data);
+						if (matchingHasSendMsgsForPeer(ctx, peer) == 0)
+							matchingQueueDataPkt(ctx, peer->mac, peer->bulk_len, peer->bulk_data);
 					}
 					peer->last_keepalive_time = now;
 				}
@@ -2028,8 +2028,8 @@ static void sub_2fc8(MatchingCtx *ctx, u32 now)
 	}
 }
 
-/* 0x3154: sub_3154 */
-static int sub_3154(MatchingCtx *ctx)
+/* 0x3154: matchingFreeOptBuffers */
+static int matchingFreeOptBuffers(MatchingCtx *ctx)
 {
 	if (ctx->hello_opt_len > 0) {
 		ctx->hello_opt_len = 0;
@@ -2043,7 +2043,7 @@ static int sub_3154(MatchingCtx *ctx)
 	}
 	int max_pkt_len = ctx->max_peers * 6 + 4;
 	if (ctx->hello_pkt == NULL) {
-		u8 *buf = (u8 *)sub_1678(max_pkt_len);
+		u8 *buf = (u8 *)matchingAlloc(max_pkt_len);
 		ctx->hello_pkt = buf;
 		if (buf == NULL)
 			return 0x8041080c;
@@ -2053,8 +2053,8 @@ static int sub_3154(MatchingCtx *ctx)
 	return 0;
 }
 
-/* 0x3208: sub_3208 */
-static void sub_3208(MatchingCtx *ctx)
+/* 0x3208: matchingDrainSendQueue */
+static void matchingDrainSendQueue(MatchingCtx *ctx)
 {
 	u32 timeout;
 	SendMsg *msg;
@@ -2085,7 +2085,7 @@ static void sub_3208(MatchingCtx *ctx)
 				for (PeerNode *it = ctx->peer_list; it != NULL; it = it->next)
 					it->last_send_time = now;
 			} else {
-				PeerNode *peer = sub_418c(ctx, msg->mac);
+				PeerNode *peer = matchingFindPeerByMac(ctx, msg->mac);
 				if (peer != NULL)
 					peer->last_send_time = now;
 			}
@@ -2096,15 +2096,15 @@ static void sub_3208(MatchingCtx *ctx)
 	}
 }
 
-/* 0x330c: sub_330c ("SceNetAdhocMatchingInput" thread) */
-static int sub_330c(u32 args, void *argp)
+/* 0x330c: matchingInputThread ("SceNetAdhocMatchingInput" thread) */
+static int matchingInputThread(u32 args, void *argp)
 {
 	u8 src_mac[8];
 	u16 src_port;
 	u32 rx_len;
 
 	sceKernelLockLwMutex(&g_lock, 1, NULL);
-	MatchingCtx *ctx = sub_2890(*(int *)argp);
+	MatchingCtx *ctx = matchingFindCtxById(*(int *)argp);
 	if (ctx == NULL) {
 		sceKernelUnlockLwMutex(&g_lock, 1);
 		return 0;
@@ -2112,8 +2112,8 @@ static int sub_330c(u32 args, void *argp)
 	sceNet_lib_1858883D(0);
 
 	if (ctx->mode != 2)
-		ctx->alarm1_id = sceKernelSetAlarm(ctx->hello_delay, sub_2f08, ctx);
-	ctx->alarm2_id = sceKernelSetAlarm(ctx->ping_delay, sub_2f68, ctx);
+		ctx->alarm1_id = sceKernelSetAlarm(ctx->hello_delay, matchingHelloAlarmHandler, ctx);
+	ctx->alarm2_id = sceKernelSetAlarm(ctx->ping_delay, matchingKeepAliveAlarmHandler, ctx);
 	sceKernelUnlockLwMutex(&g_lock, 1);
 
 	while (!ctx->stop_input_thread) {
@@ -2125,40 +2125,40 @@ static int sub_330c(u32 args, void *argp)
 		if (ret == 0 && rx_len > 0 && src_port == ctx->port) {
 			u8 *buf = (u8 *)ctx->rx_buf;
 			u8 pkt_type = buf[0];
-			PeerNode *peer = sub_418c(ctx, src_mac);
+			PeerNode *peer = matchingFindPeerByMac(ctx, src_mac);
 			int mode = ctx->mode;
 
 			switch (pkt_type) {
 			case 1: /* HELLO */
-				if ((mode == 2 && sub_4404(ctx, 4) == 0) ||
-				    (mode == 3 && sub_4404(ctx, 7) < ctx->max_peers - 1 && sub_4404(ctx, 4) == 0)) {
+				if ((mode == 2 && matchingCountPeersByState(ctx, 4) == 0) ||
+				    (mode == 3 && matchingCountPeersByState(ctx, 7) < ctx->max_peers - 1 && matchingCountPeersByState(ctx, 4) == 0)) {
 					int olen = ((u32)buf[2] << 8) | buf[3];
 					if ((u32)(olen + 4) <= rx_len) {
 						u8 *odata = (olen > 0) ? (buf + 4) : NULL;
-						peer = sub_3d64(ctx, src_mac, olen, odata);
+						peer = matchingHandleHelloPeer(ctx, src_mac, olen, odata);
 					}
 				}
 				break;
 
 			case 2: /* JOIN */
-				if ((mode == 1 || mode == 3) && sub_4404(ctx, 7) < ctx->max_peers - 1) {
+				if ((mode == 1 || mode == 3) && matchingCountPeersByState(ctx, 7) < ctx->max_peers - 1) {
 					int olen = ((u32)buf[2] << 8) | buf[3];
 					if ((u32)(olen + 4) <= rx_len) {
 						u8 *odata = (olen > 0) ? (buf + 4) : NULL;
 						if (ctx->mode == 1) {
 							if (peer == NULL) {
-								peer = sub_40b8(ctx, src_mac, olen, odata);
+								peer = matchingCreatePeer(ctx, src_mac, olen, odata);
 								if (peer != NULL) {
 									peer->state = 3;
 									peer->timeout_us = ctx->timeout_total;
-									sub_29d0(ctx, 2, src_mac, olen, odata);
+									matchingPostEvent(ctx, 2, src_mac, olen, odata);
 								}
 							} else if (peer->state == 3) {
 								peer->timeout_us = ctx->timeout_total;
 							}
 						} else if (ctx->mode == 3) {
 							if (peer == NULL) {
-								peer = sub_40b8(ctx, src_mac, olen, odata);
+								peer = matchingCreatePeer(ctx, src_mac, olen, odata);
 								if (peer == NULL)
 									break;
 							}
@@ -2166,12 +2166,12 @@ static int sub_330c(u32 args, void *argp)
 							if (st == 2 || st == 1) {
 								peer->state = 3;
 								peer->timeout_us = ctx->timeout_total;
-								sub_29d0(ctx, 2, src_mac, olen, odata);
+								matchingPostEvent(ctx, 2, src_mac, olen, odata);
 							} else if (st == 4) {
-								if (sub_4504(peer) >= 0) {
+								if (matchingIsLocalMacLower(peer) >= 0) {
 									peer->state = 3;
 									peer->timeout_us = ctx->timeout_total;
-									sub_29d0(ctx, 2, src_mac, olen, odata);
+									matchingPostEvent(ctx, 2, src_mac, olen, odata);
 								}
 							} else if (st == 3) {
 								peer->timeout_us = ctx->timeout_total;
@@ -2183,7 +2183,7 @@ static int sub_330c(u32 args, void *argp)
 
 			case 3: /* ACCEPT */
 				if (peer != NULL &&
-				    ((mode == 2 && peer->state == 4 && sub_41ec(ctx, 1) == NULL) ||
+				    ((mode == 2 && peer->state == 4 && matchingFindParentPeer(ctx, 1) == NULL) ||
 				     (mode == 3 && peer->state == 4))) {
 					int olen = ((u32)buf[2] << 8) | buf[3];
 					if ((u32)(olen + 4) <= rx_len) {
@@ -2193,25 +2193,25 @@ static int sub_330c(u32 args, void *argp)
 							sceKernelFreeVpl(g_vpl_id, peer->opt_data);
 							peer->opt_data = NULL;
 						}
-						int count = sub_4404(ctx, 7);
+						int count = matchingCountPeersByState(ctx, 7);
 						u8 *pkt = ctx->hello_pkt;
 						int pkt_len = (count + 2) * 6 + 4;
 						ctx->hello_pkt_len = pkt_len;
 						sceKernelMemset(pkt, 0, pkt_len);
 						int actual = count + 1;
-						sub_4354(ctx, 7, pkt + 10, &actual);
+						matchingCollectPeerMacs(ctx, 7, pkt + 10, &actual);
 						pkt[0] = 4;
 						int total = actual + 2;
 						pkt[2] = (u8)((u32)total >> 8);
 						pkt[3] = (u8)total;
 						sceKernelMemcpy(pkt + 4, ctx->local_mac, 6);
 						sceKernelMemcpy(pkt + 4 + (actual + 1) * 6, src_mac, 6);
-						if (sub_2ac4(ctx, 4, src_mac, ctx->hello_pkt_len, ctx->hello_pkt) == 0) {
+						if (matchingQueueControlPkt(ctx, 4, src_mac, ctx->hello_pkt_len, ctx->hello_pkt) == 0) {
 							peer->timeout_us = ctx->rexmt_int;
 							peer->state = 6;
-							sub_29d0(ctx, 6, src_mac, olen, odata);
+							matchingPostEvent(ctx, 6, src_mac, olen, odata);
 						} else {
-							sub_3154(ctx);
+							matchingFreeOptBuffers(ctx);
 						}
 					}
 				}
@@ -2228,10 +2228,10 @@ static int sub_330c(u32 args, void *argp)
 							sceKernelFreeVpl(g_vpl_id, ctx->join_opt_data);
 							ctx->join_opt_data = NULL;
 						}
-						if (sub_2ac4(ctx, 4, src_mac, 0, NULL) == 0) {
+						if (matchingQueueControlPkt(ctx, 4, src_mac, 0, NULL) == 0) {
 							if (peer->state == 5) {
 								if (ctx->mode == 1) {
-									u8 *hbuf = (u8 *)sub_1678(rx_len - 4);
+									u8 *hbuf = (u8 *)matchingAlloc(rx_len - 4);
 									peer->hello_buf = hbuf;
 									if (hbuf == NULL)
 										break;
@@ -2241,26 +2241,26 @@ static int sub_330c(u32 args, void *argp)
 								}
 								peer->state = 7;
 								peer->timeout_us = ctx->keepalive_timeout;
-								sub_29d0(ctx, 6, src_mac, ctx->join_opt_len, ctx->join_opt_data);
-								sub_29d0(ctx, 7, src_mac, 0, NULL);
+								matchingPostEvent(ctx, 6, src_mac, ctx->join_opt_len, ctx->join_opt_data);
+								matchingPostEvent(ctx, 7, src_mac, 0, NULL);
 							}
 						}
 					} else if (peer->state == 6) {
 						peer->state = 7;
 						peer->timeout_us = ctx->keepalive_timeout;
-						sub_29d0(ctx, 7, src_mac, 0, NULL);
+						matchingPostEvent(ctx, 7, src_mac, 0, NULL);
 					}
 				} else if (peer != NULL && peer->state == 6 &&
 				           (mode == 1 || mode == 2 || mode == 3)) {
 					peer->state = 7;
 					peer->timeout_us = ctx->keepalive_timeout;
-					sub_29d0(ctx, 7, src_mac, 0, NULL);
+					matchingPostEvent(ctx, 7, src_mac, 0, NULL);
 				}
 				break;
 
 			case 5: /* REJECT */
 				if (peer != NULL &&
-				    ((mode == 2 && peer->state == 4 && sub_41ec(ctx, 1) == NULL) ||
+				    ((mode == 2 && peer->state == 4 && matchingFindParentPeer(ctx, 1) == NULL) ||
 				     (mode == 3 && peer->state == 4))) {
 					int olen = ((u32)buf[2] << 8) | buf[3];
 					if ((u32)(olen + 4) <= rx_len) {
@@ -2272,7 +2272,7 @@ static int sub_330c(u32 args, void *argp)
 						}
 						peer->timeout_us = ctx->timeout_total;
 						peer->state = 1;
-						sub_29d0(ctx, 4, src_mac, olen, odata);
+						matchingPostEvent(ctx, 4, src_mac, olen, odata);
 					}
 				}
 				break;
@@ -2285,7 +2285,7 @@ static int sub_330c(u32 args, void *argp)
 					int olen = ((u32)buf[2] << 8) | buf[3];
 					if ((u32)(olen + 4) <= rx_len) {
 						u8 *odata = (olen > 0) ? (buf + 4) : NULL;
-						sub_3de0(ctx, peer);
+						matchingDropEventMsgsForPeer(ctx, peer);
 						int pst = peer->state;
 						if (pst == 3) {
 							peer->timeout_us = ctx->timeout_total;
@@ -2293,11 +2293,11 @@ static int sub_330c(u32 args, void *argp)
 							if (ctx->mode != 1)
 								next_st = (ctx->mode == 3) ? 1 : 0;
 							peer->state = next_st;
-							sub_29d0(ctx, 5, src_mac, olen, odata);
+							matchingPostEvent(ctx, 5, src_mac, olen, odata);
 						} else if (pst == 7 || pst == 8) {
-							sub_29d0(ctx, 3, src_mac, olen, odata);
+							matchingPostEvent(ctx, 3, src_mac, olen, odata);
 						} else {
-							sub_4238(ctx, peer);
+							matchingRemovePeer(ctx, peer);
 						}
 					}
 				}
@@ -2305,12 +2305,12 @@ static int sub_330c(u32 args, void *argp)
 
 			case 7: /* BIRTH (new member joined parent) */
 				if (mode == 2 && peer != NULL && (peer->state == 7 || peer->state == 8) &&
-				    peer == sub_41ec(ctx, 1) && rx_len >= 10) {
+				    peer == matchingFindParentPeer(ctx, 1) && rx_len >= 10) {
 					u8 *new_mac = buf + 4;
 					if (sceNet_lib_E0A81C7C(new_mac, ctx->local_mac) != 0) {
-						PeerNode *m = sub_418c(ctx, new_mac);
+						PeerNode *m = matchingFindPeerByMac(ctx, new_mac);
 						if (m == NULL)
-							m = sub_40b8(ctx, new_mac, 0, NULL);
+							m = matchingCreatePeer(ctx, new_mac, 0, NULL);
 						if (m != NULL) {
 							m->state = 7;
 							m->timeout_us = 0;
@@ -2321,9 +2321,9 @@ static int sub_330c(u32 args, void *argp)
 							pkt[2] = (u8)((u32)count >> 8);
 							pkt[3] = (u8)count;
 							sceKernelMemcpy(pkt + new_len - 6, new_mac, 6);
-							sub_29d0(ctx, 101, new_mac, 0, NULL);
+							matchingPostEvent(ctx, 101, new_mac, 0, NULL);
 						} else {
-							sub_29d0(ctx, 9, peer->mac, 0, NULL);
+							matchingPostEvent(ctx, 9, peer->mac, 0, NULL);
 						}
 					}
 				}
@@ -2331,7 +2331,7 @@ static int sub_330c(u32 args, void *argp)
 
 			case 8: /* DEATH (member left parent) */
 				if (mode == 2 && peer != NULL && (peer->state == 7 || peer->state == 8) &&
-				    peer == sub_41ec(ctx, 1)) {
+				    peer == matchingFindParentPeer(ctx, 1)) {
 					int mcount = (((u32)buf[2] << 8) | buf[3]) / 6;
 					if (mcount > 0 && (u32)(mcount * 6 + 8) <= rx_len) {
 						PeerNode *next_it;
@@ -2346,8 +2346,8 @@ static int sub_330c(u32 args, void *argp)
 								}
 							}
 							if (!found && (it->state == 7 || it->state == 8)) {
-								sub_3de0(ctx, it);
-								sub_29d0(ctx, 102, it->mac, 0, NULL);
+								matchingDropEventMsgsForPeer(ctx, it);
+								matchingPostEvent(ctx, 102, it->mac, 0, NULL);
 							}
 						}
 						int pkt_len = mcount * 6 + 4;
@@ -2367,12 +2367,12 @@ static int sub_330c(u32 args, void *argp)
 
 			case 10: /* DATA */
 				if (peer != NULL && (peer->state == 7 || peer->state == 8))
-					sub_3efc(ctx, peer, buf, rx_len);
+					matchingHandleDataPacket(ctx, peer, buf, rx_len);
 				break;
 
 			case 11: /* DATA ACK */
 				if (peer != NULL)
-					sub_4018(ctx, peer, rx_len);
+					matchingHandleHostForward(ctx, peer, rx_len);
 				break;
 
 			default:
@@ -2385,22 +2385,22 @@ static int sub_330c(u32 args, void *argp)
 			}
 		}
 
-		sub_2fc8(ctx, now);
-		sub_3208(ctx);
+		matchingCheckPeerTimeouts(ctx, now);
+		matchingDrainSendQueue(ctx);
 		sceKernelUnlockLwMutex(&g_lock, 1);
 	}
 
 	return 0;
 }
 
-/* 0x3d64: sub_3d64 */
-static PeerNode *sub_3d64(MatchingCtx *ctx, const u8 *mac, int optLen, const void *optData)
+/* 0x3d64: matchingHandleHelloPeer */
+static PeerNode *matchingHandleHelloPeer(MatchingCtx *ctx, const u8 *mac, int optLen, const void *optData)
 {
-	PeerNode *peer = sub_418c(ctx, mac);
+	PeerNode *peer = matchingFindPeerByMac(ctx, mac);
 	if (peer == NULL) {
-		if (sub_4404(ctx, 1) >= ctx->max_peers - 1)
+		if (matchingCountPeersByState(ctx, 1) >= ctx->max_peers - 1)
 			return NULL;
-		peer = sub_40b8(ctx, mac, optLen, optData);
+		peer = matchingCreatePeer(ctx, mac, optLen, optData);
 		if (peer == NULL)
 			return NULL;
 		peer->state = 1;
@@ -2408,12 +2408,12 @@ static PeerNode *sub_3d64(MatchingCtx *ctx, const u8 *mac, int optLen, const voi
 		return peer;
 	}
 	peer->timeout_us = ctx->timeout_total;
-	sub_29d0(ctx, 1, mac, optLen, optData);
+	matchingPostEvent(ctx, 1, mac, optLen, optData);
 	return peer;
 }
 
-/* 0x3de0: sub_3de0 */
-static void sub_3de0(MatchingCtx *ctx, PeerNode *peer)
+/* 0x3de0: matchingDropEventMsgsForPeer */
+static void matchingDropEventMsgsForPeer(MatchingCtx *ctx, PeerNode *peer)
 {
 	u32 timeout;
 	EventMsg *msg;
@@ -2430,7 +2430,7 @@ static void sub_3de0(MatchingCtx *ctx, PeerNode *peer)
 		sceKernelFreeVpl(g_vpl_id, peer->bulk_data);
 		peer->bulk_data = NULL;
 	}
-	sub_2ddc(ctx, peer);
+	matchingDropSendMsgsForPeer(ctx, peer);
 
 	for (;;) {
 		msg = NULL;
@@ -2458,8 +2458,8 @@ static void sub_3de0(MatchingCtx *ctx, PeerNode *peer)
 	}
 }
 
-/* 0x3efc: sub_3efc */
-static int sub_3efc(MatchingCtx *ctx, PeerNode *peer, const u8 *rxBuf, u32 rxLen)
+/* 0x3efc: matchingHandleDataPacket */
+static int matchingHandleDataPacket(MatchingCtx *ctx, PeerNode *peer, const u8 *rxBuf, u32 rxLen)
 {
 	if (rxLen < 12)
 		return -1;
@@ -2469,14 +2469,14 @@ static int sub_3efc(MatchingCtx *ctx, PeerNode *peer, const u8 *rxBuf, u32 rxLen
 
 	if (ctx->mode == 1 && rxBuf[10] != 0) {
 		const u8 *dest_mac = rxBuf + 4;
-		PeerNode *dest_peer = sub_418c(ctx, dest_mac);
+		PeerNode *dest_peer = matchingFindPeerByMac(ctx, dest_mac);
 		if (dest_peer == NULL)
 			return -1;
-		SendMsg *msg = (SendMsg *)sub_1678(0x20);
+		SendMsg *msg = (SendMsg *)matchingAlloc(0x20);
 		if (msg == NULL)
 			return -1;
 		sceKernelMemset(msg, 0, 0x20);
-		u8 *pkt = (u8 *)sub_1678(rxLen);
+		u8 *pkt = (u8 *)matchingAlloc(rxLen);
 		msg->pkt_data = pkt;
 		if (pkt == NULL) {
 			sceKernelFreeVpl(g_vpl_id, msg);
@@ -2498,7 +2498,7 @@ static int sub_3efc(MatchingCtx *ctx, PeerNode *peer, const u8 *rxBuf, u32 rxLen
 	int ack_opt_len = 0;
 	u8 *ack_opt_ptr = NULL;
 
-	if (ctx->mode == 2 && peer == sub_41ec(ctx, 1)) {
+	if (ctx->mode == 2 && peer == matchingFindParentPeer(ctx, 1)) {
 		ack_mac = rxBuf + 4;
 		ack_opt_ptr = ack_opt;
 		sceKernelMemcpy(ack_opt, ack_mac, 6);
@@ -2506,25 +2506,25 @@ static int sub_3efc(MatchingCtx *ctx, PeerNode *peer, const u8 *rxBuf, u32 rxLen
 		ack_opt_len = 7;
 	}
 
-	if (sub_2ac4(ctx, 11, peer->mac, ack_opt_len, ack_opt_ptr) != 0)
+	if (matchingQueueControlPkt(ctx, 11, peer->mac, ack_opt_len, ack_opt_ptr) != 0)
 		return -1;
-	sub_29d0(ctx, 10, ack_mac, dlen, rxBuf + 11);
+	matchingPostEvent(ctx, 10, ack_mac, dlen, rxBuf + 11);
 	return 0;
 }
 
-/* 0x4018: sub_4018 */
-static void sub_4018(MatchingCtx *ctx, PeerNode *peer, u32 rxLen)
+/* 0x4018: matchingHandleHostForward */
+static void matchingHandleHostForward(MatchingCtx *ctx, PeerNode *peer, u32 rxLen)
 {
 	if (ctx->mode == 1 && rxLen >= 11) {
 		u8 *rx = (u8 *)ctx->rx_buf;
 		if (rx[10] != 0) {
-			sub_2ac4(ctx, 11, rx + 4, 7, peer->mac);
+			matchingQueueControlPkt(ctx, 11, rx + 4, 7, peer->mac);
 			return;
 		}
 	}
-	if (ctx->mode == 2 && rxLen >= 11 && peer == sub_41ec(ctx, 1)) {
+	if (ctx->mode == 2 && rxLen >= 11 && peer == matchingFindParentPeer(ctx, 1)) {
 		u8 *rx = (u8 *)ctx->rx_buf;
-		peer = sub_418c(ctx, rx + 4);
+		peer = matchingFindPeerByMac(ctx, rx + 4);
 		if (peer == NULL)
 			return;
 	}
@@ -2537,19 +2537,19 @@ static void sub_4018(MatchingCtx *ctx, PeerNode *peer, u32 rxLen)
 	}
 	peer->state = 7;
 	peer->timeout_us = ctx->keepalive_timeout;
-	sub_29d0(ctx, 11, peer->mac, 0, NULL);
+	matchingPostEvent(ctx, 11, peer->mac, 0, NULL);
 }
 
-/* 0x40b8: sub_40b8 */
-static PeerNode *sub_40b8(MatchingCtx *ctx, const u8 *mac, int optLen, const void *optData)
+/* 0x40b8: matchingCreatePeer */
+static PeerNode *matchingCreatePeer(MatchingCtx *ctx, const u8 *mac, int optLen, const void *optData)
 {
-	PeerNode *peer = (PeerNode *)sub_1678(0x88);
+	PeerNode *peer = (PeerNode *)matchingAlloc(0x88);
 	if (peer == NULL)
 		return NULL;
 	sceKernelMemset(peer, 0, 0x88);
 
 	if (optLen > 0) {
-		void *buf = sub_1678(optLen);
+		void *buf = matchingAlloc(optLen);
 		peer->opt_data = buf;
 		if (buf == NULL) {
 			sceKernelFreeVpl(g_vpl_id, peer);
@@ -2578,8 +2578,8 @@ static PeerNode *sub_40b8(MatchingCtx *ctx, const u8 *mac, int optLen, const voi
 	return peer;
 }
 
-/* 0x418c: sub_418c */
-static PeerNode *sub_418c(MatchingCtx *ctx, const u8 *mac)
+/* 0x418c: matchingFindPeerByMac */
+static PeerNode *matchingFindPeerByMac(MatchingCtx *ctx, const u8 *mac)
 {
 	for (PeerNode *it = ctx->peer_list; it != NULL; it = it->next) {
 		if (sceNet_lib_E0A81C7C(it->mac, mac) == 0)
@@ -2588,8 +2588,8 @@ static PeerNode *sub_418c(MatchingCtx *ctx, const u8 *mac)
 	return NULL;
 }
 
-/* 0x41ec: sub_41ec */
-static PeerNode *sub_41ec(MatchingCtx *ctx, int state)
+/* 0x41ec: matchingFindParentPeer */
+static PeerNode *matchingFindParentPeer(MatchingCtx *ctx, int state)
 {
 	if (ctx->mode == 2 && state == 1) {
 		u8 *parent_mac = ctx->hello_pkt + 4;
@@ -2606,8 +2606,8 @@ static PeerNode *sub_41ec(MatchingCtx *ctx, int state)
 	return NULL;
 }
 
-/* 0x4238: sub_4238 */
-static int sub_4238(MatchingCtx *ctx, PeerNode *peer)
+/* 0x4238: matchingRemovePeer */
+static int matchingRemovePeer(MatchingCtx *ctx, PeerNode *peer)
 {
 	PeerNode *cur = ctx->peer_list;
 	if (cur == NULL)
@@ -2636,12 +2636,12 @@ static int sub_4238(MatchingCtx *ctx, PeerNode *peer)
 	return sceKernelFreeVpl(g_vpl_id, peer);
 }
 
-/* 0x4294: sub_4294 */
-static void sub_4294(MatchingCtx *ctx)
+/* 0x4294: matchingDestroyAllPeers */
+static void matchingDestroyAllPeers(MatchingCtx *ctx)
 {
 	PeerNode *next;
 	for (PeerNode *it = ctx->peer_list; it != NULL; it = next) {
-		sub_3de0(ctx, it);
+		matchingDropEventMsgsForPeer(ctx, it);
 		if (it->opt_len > 0)
 			sceKernelFreeVpl(g_vpl_id, it->opt_data);
 		if (it->bulk_len > 0)
@@ -2652,11 +2652,11 @@ static void sub_4294(MatchingCtx *ctx)
 		sceKernelFreeVpl(g_vpl_id, it);
 	}
 	ctx->peer_list = NULL;
-	sub_3154(ctx);
+	matchingFreeOptBuffers(ctx);
 }
 
-/* 0x4354: sub_4354 */
-static void sub_4354(MatchingCtx *ctx, int minState, u8 *dstMacs, int *pCount)
+/* 0x4354: matchingCollectPeerMacs */
+static void matchingCollectPeerMacs(MatchingCtx *ctx, int minState, u8 *dstMacs, int *pCount)
 {
 	int count = 0;
 	u8 *dst = dstMacs;
@@ -2676,8 +2676,8 @@ static void sub_4354(MatchingCtx *ctx, int minState, u8 *dstMacs, int *pCount)
 	*pCount = count;
 }
 
-/* 0x4404: sub_4404 */
-static int sub_4404(MatchingCtx *ctx, int minState)
+/* 0x4404: matchingCountPeersByState */
+static int matchingCountPeersByState(MatchingCtx *ctx, int minState)
 {
 	int count = 0;
 	for (PeerNode *it = ctx->peer_list; it != NULL; it = it->next) {
@@ -2687,8 +2687,8 @@ static int sub_4404(MatchingCtx *ctx, int minState)
 	return count;
 }
 
-/* 0x443c: sub_443c */
-static void sub_443c(MatchingCtx *ctx, int *pSize, u8 *buf)
+/* 0x443c: matchingExportHelloMembers */
+static void matchingExportHelloMembers(MatchingCtx *ctx, int *pSize, u8 *buf)
 {
 	int offset = 0;
 	u8 *prev = NULL;
@@ -2711,8 +2711,8 @@ static void sub_443c(MatchingCtx *ctx, int *pSize, u8 *buf)
 	*pSize = offset;
 }
 
-/* 0x4504: sub_4504 */
-static int sub_4504(const PeerNode *peer)
+/* 0x4504: matchingIsLocalMacLower */
+static int matchingIsLocalMacLower(const PeerNode *peer)
 {
 	u32 local_hi = ((u32)g_local_mac[0] << 16) | ((u32)g_local_mac[1] << 8) | g_local_mac[2];
 	u32 peer_hi = ((u32)peer->mac[0] << 16) | ((u32)peer->mac[1] << 8) | peer->mac[2];
