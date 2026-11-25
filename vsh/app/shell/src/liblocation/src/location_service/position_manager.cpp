@@ -169,12 +169,12 @@ int locationHandleMgrStopLocCb(void *hm, int appId, SceLocationHandle handle, Sc
 int locationHandleMgrCancelRequest(void *hm, SceLocationHandle handle, int reqType); /* (0x81191CF8) */
 int locationHandleMgrStopHeadCb(void *hm, int appId, SceLocationHandle handle); /* (0x81191DFA) */
 int locationHandleMgrSavePending(void *hm, SceLocationHandle handle, SceUInt32 timeout,
-				 int kind, SceRtcTick *ts, int a6, int a7); /* (0x81191F7E) */
+				 int kind, SceRtcTick *ts, int status, int flags); /* (0x81191F7E) */
 int locationHandleMgrSetPending(void *hm, SceLocationHandle handle, unsigned char pending); /* (0x81191FDC) */
 int locationHandleMgrIsPending(void *hm, SceLocationHandle handle, unsigned char *out); /* (0x8119201E) */
 int locationHandleMgrCanConfirm(void *hm, SceLocationHandle handle, unsigned char *out); /* (0x81192062) */
 int locationHandleMgrGetMode(void *hm, int appId, SceLocationHandle handle, SceUInt32 *out); /* (0x8119208A) */
-int locationHandleMgrOnProviderEvent(void *hm, int a1, int a2, int a3, int a4); /* (0x811920CC) */
+int locationHandleMgrOnProviderEvent(void *hm, int providerId, int eventType, int param, int status); /* (0x811920CC) */
 int locationHandleMgrCheckTimeout(void *hm);			/* (0x81192678) */
 int locationHandleMgrGetFlags(void *hm, int appId, SceLocationHandle handle); /* (0x811927DA) */
 int locationHandleMgrGetReqFlags(void *hm, int appId, SceLocationHandle handle); /* (0x81192812) */
@@ -398,7 +398,7 @@ public:
 	int Dbg31(int sec);
 
 	static int PowerCallback(int notifyId, int notifyCount, int powerInfo, void *common); /* (0x8118BA90) */
-	static int ProviderEventCB(int a1, int a2, int a3, int a4); /* (0x8118E66E) */
+	static int ProviderEventCB(int providerId, int eventType, int param, int status); /* (0x8118E66E) */
 
 	void *m_handleMgr;					/* +4 */
 	LocationProviderVtbl *m_provider;			/* +8 */
@@ -2462,10 +2462,10 @@ PositionManager::~PositionManager()
 }
 
 /* (0x8118E66E) */
-int PositionManager::ProviderEventCB(int a1, int a2, int a3, int a4)
+int PositionManager::ProviderEventCB(int providerId, int eventType, int param, int status)
 {
 	if (s_positionManager != NULL)
-		return locationHandleMgrOnProviderEvent(s_positionManager->m_handleMgr, a1, a2, a3, a4);
+		return locationHandleMgrOnProviderEvent(s_positionManager->m_handleMgr, providerId, eventType, param, status);
 	return SCE_LOCATION_ERROR_FATAL_ERROR;
 }
 

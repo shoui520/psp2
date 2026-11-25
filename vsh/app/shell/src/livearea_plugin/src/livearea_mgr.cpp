@@ -26,7 +26,7 @@ int sceAppMgrLaunchAppByName(unsigned int flags, const char *name, const char *p
 int SceShell_7FE4E732(int id, void *cb, void *arg);
 int SceShell_D4C7D2B7(int id, void *cb, void *arg);
 int SceActivityDb_F138D4E5(void);
-int SceLsdb_B51740A6(void *ctx, int a1, int a2, unsigned char a3);
+int SceLsdb_B51740A6(void *ctx, int queryId, int mode, unsigned char flags);
 int SceLsdb_DA5DC77C(void *ctx, void *vec, paf::string *outName);
 int SceLsdb_C87397C0(paf::string *name);
 const char *sceLsdbGetName(void *item);
@@ -39,7 +39,7 @@ extern void liveareaUpdaterDtor(void *u);			/* 0x811A292C */
 extern void liveareaUpdaterStart(void *u);			/* 0x811A2940 */
 extern void liveareaUpdaterStop(void *u);			/* 0x811A294A */
 extern int liveareaUpdaterSub954(void *u, void *out, const char *title, SceInt64 *ts, int mode, void *cb, int appId); /* 0x811A2954 */
-extern int liveareaUpdaterSub972(void *u, void *out, int a2, int a3, int a4, int a5); /* 0x811A2972 */
+extern int liveareaUpdaterSub972(void *u, void *out, int actCtx, int flags, int mode, int opt); /* 0x811A2972 */
 extern int liveareaUpdaterSub9C0(void *u, void *out, const char *title, int mode, void *arg, void *cb, int appId); /* 0x811A29C0 */
 extern int liveareaUpdaterSub9F0(void *u, void *out, const char *title, int mode, void *cb, int appId); /* 0x811A29F0 */
 extern int liveareaNetRegisterCb(void (*cb)(int), void *arg);	/* 0x8132781C */
@@ -50,7 +50,7 @@ extern void liveareaCb20EF44(void);				/* 0x8120EF44 */
 extern void liveareaSub34A716(void);				/* 0x8134A716 */
 extern int liveareaLaunchWithArg(const char *titleId, int arg); /* 0x811A064C */
 
-extern void *liveareaPageCtor(void *mem, int appId, const char *titleId, int a3, int a4); /* 0x8119B594 */
+extern void *liveareaPageCtor(void *mem, int appId, const char *titleId, int flags, int mode); /* 0x8119B594 */
 extern const char *liveareaPageGetTitleId(void *page);		/* 0x8119B990 */
 extern int liveareaPageScrollToContent(void *page);		/* 0x8119BD0E */
 extern void liveareaPageResetScroll(void *page, bool anim);	/* 0x8119BD32 */
@@ -63,17 +63,17 @@ extern void liveareaPageHideAllFeeds(void);			/* 0x8119C17C */
 extern void liveareaPageOnEvent4(void);				/* 0x8119C1BC */
 extern void liveareaPageOnEvent5(int appId);			/* 0x8119C234 */
 extern void liveareaPageTickAll(bool changed);			/* 0x8119C312 */
-extern int liveareaPageIfEntry5(const char *titleId, int a2, int a3); /* 0x8119C37E */
+extern int liveareaPageIfEntry5(const char *titleId, int state, int flags); /* 0x8119C37E */
 extern void liveareaPageIfEntry7(void);				/* 0x8119C406 */
 extern void liveareaPageIfEntry8(void);				/* 0x8119C4F2 */
 extern int liveareaFeedRequestUpdate(void *feed, int mode);	/* 0x8119C964 */
 
-extern int liveareaPageInnerSubAA854(void *inner, int a2);	/* 0x811AA854 */
+extern int liveareaPageInnerSubAA854(void *inner, int mode);	/* 0x811AA854 */
 extern int liveareaPageInnerSubAA9F2(void *inner);		/* 0x811AA9F2 */
-extern int liveareaPageInnerSubAAE02(void *inner, void *a2);	/* 0x811AAE02 */
-extern int liveareaPageInnerSubAAE14(void *inner, int *a2, int *a3); /* 0x811AAE14 */
+extern int liveareaPageInnerSubAAE02(void *inner, void *outData); /* 0x811AAE02 */
+extern int liveareaPageInnerSubAAE14(void *inner, int *outMode, int *outHash); /* 0x811AAE14 */
 extern void liveareaPageInnerSubAB38A(void *inner);		/* 0x811AB38A */
-extern void liveareaPageInnerSubAB5DA(void *inner, int a1);	/* 0x811AB5DA */
+extern void liveareaPageInnerSubAB5DA(void *inner, int status);	/* 0x811AB5DA */
 extern int liveareaPageInnerSubAB8F2(void *inner);		/* 0x811AB8F2 */
 extern void liveareaPageInnerSubAB944(void *inner);		/* 0x811AB944 */
 extern void liveareaPageInnerSubAB94C(void *inner);		/* 0x811AB94C */
@@ -81,28 +81,28 @@ extern void *liveareaPageInnerSubAB9B8(void *inner);		/* 0x811AB9B8 */
 extern paf::common::SharedPtr<int> liveareaSubA3426(void *inner, void *arg); /* 0x811A3426 */
 
 /* Forward declarations for interface table callbacks */
-int liveareaIfCreatePage(int appId, const char *titleId, int a3, int a4); /* 0x8119AD92 */
-int liveareaIfEntry1(int appId, int a2);			/* 0x8119ADBA */
+int liveareaIfCreatePage(int appId, const char *titleId, int flags, int mode); /* 0x8119AD92 */
+int liveareaIfEntry1(int appId, int mode);			/* 0x8119ADBA */
 int liveareaIfEntry2(int appId);				/* 0x8119ADD0 */
-int liveareaIfEntry3(int appId, void *a2);			/* 0x8119ADE2 */
+int liveareaIfEntry3(int appId, void *outData);			/* 0x8119ADE2 */
 void liveareaIfEntry15(int appId);				/* 0x8119ADFC */
 void liveareaIfEntry16(int appId);				/* 0x8119AE90 */
 int liveareaIfEntry17(int appId);				/* 0x8119AEA2 */
 int liveareaIfEntry4(int appId);				/* 0x8119AEB6 */
-int liveareaIfEntry6(int appId, int *a2, int *a3);		/* 0x8119AECA */
+int liveareaIfEntry6(int appId, int *outMode, int *outHash);	/* 0x8119AECA */
 paf::ui::Widget *liveareaIfEntry9(paf::ui::Widget *widget);	/* 0x8119AEF4 */
-int liveareaIfEntry10(int a1, int a2, int a3, int a4);		/* 0x8119B0B0 */
-int liveareaIfEntry11(const char *titleId, int a2);		/* 0x8119B110 */
+int liveareaIfEntry10(int unusedArg, int flags, int mode, int opt); /* 0x8119B0B0 */
+int liveareaIfEntry11(const char *titleId, int launchArg);	/* 0x8119B110 */
 void liveareaIfEntry12(int appId);				/* 0x8119B18E */
-void liveareaIfEntry13(int appId, int a2);			/* 0x8119B1E0 */
+void liveareaIfEntry13(int appId, int arg);			/* 0x8119B1E0 */
 void liveareaIfEntry14(int appId);				/* 0x8119B1F4 */
 int liveareaIfEntry18(int appId);				/* 0x8119B20E */
 int liveareaIfEntry19(void *item, bool force, bool flag);	/* 0x8119B222 */
 int liveareaIfEntry20(paf::string *name);			/* 0x8119B4C8 */
-void liveareaMgrOnUpdaterDone(int a1, int a2);			/* 0x8119B4EC */
+void liveareaMgrOnUpdaterDone(int status, int appId);		/* 0x8119B4EC */
 void liveareaMgrOnNetEvent(int event);				/* 0x8119B506 */
 void liveareaMgrOnShellEvent4(void);				/* 0x8119B510 */
-void liveareaMgrOnShellEvent5(int a1, int a2, int a3);		/* 0x8119B518 */
+void liveareaMgrOnShellEvent5(int eventId, int param, int appId); /* 0x8119B518 */
 void liveareaMgrMainThreadTick(void *userdata);			/* 0x8119A8EA */
 
 struct LiveAreaMgr {
@@ -234,9 +234,9 @@ void liveareaMgrMainThreadTick(void *userdata)
 }
 
 /* 0x8119A99C */
-int liveareaMgrLsdbCall(int a1, int a2, unsigned char a3)
+int liveareaMgrLsdbCall(int queryId, int mode, unsigned char flags)
 {
-	return SceLsdb_B51740A6(&g_liveareaMgr->m_lsdbCookie, a1, a2, a3);
+	return SceLsdb_B51740A6(&g_liveareaMgr->m_lsdbCookie, queryId, mode, flags);
 }
 
 /* 0x8119A9BA */
@@ -358,20 +358,20 @@ bool liveareaMgrIsPendingLaunch(const char *titleId)
 }
 
 /* 0x8119AD92 */
-int liveareaIfCreatePage(int appId, const char *titleId, int a3, int a4)
+int liveareaIfCreatePage(int appId, const char *titleId, int flags, int mode)
 {
 	void *mem = operator new(252);
 	if (mem != NULL)
-		liveareaPageCtor(mem, appId, titleId, a3, a4);
+		liveareaPageCtor(mem, appId, titleId, flags, mode);
 	return 1;
 }
 
 /* 0x8119ADBA */
-int liveareaIfEntry1(int appId, int a2)
+int liveareaIfEntry1(int appId, int mode)
 {
 	void *page = liveareaPageFindByAppId(appId);
 	if (page != NULL)
-		return liveareaPageInnerSubAA854((char *)page + 48, a2);
+		return liveareaPageInnerSubAA854((char *)page + 48, mode);
 	return 0;
 }
 
@@ -385,11 +385,11 @@ int liveareaIfEntry2(int appId)
 }
 
 /* 0x8119ADE2 */
-int liveareaIfEntry3(int appId, void *a2)
+int liveareaIfEntry3(int appId, void *outData)
 {
 	void *page = liveareaPageFindByAppId(appId);
 	if (page != NULL)
-		return liveareaPageInnerSubAAE02((char *)page + 48, a2);
+		return liveareaPageInnerSubAAE02((char *)page + 48, outData);
 	return 0;
 }
 
@@ -432,13 +432,13 @@ int liveareaIfEntry4(int appId)
 }
 
 /* 0x8119AECA */
-int liveareaIfEntry6(int appId, int *a2, int *a3)
+int liveareaIfEntry6(int appId, int *outMode, int *outHash)
 {
 	void *page = liveareaPageFindByAppId(appId);
 	if (page != NULL)
-		return liveareaPageInnerSubAAE14((char *)page + 48, a2, a3);
-	*a2 = 0;
-	*a3 = 1037226707;
+		return liveareaPageInnerSubAAE14((char *)page + 48, outMode, outHash);
+	*outMode = 0;
+	*outHash = 1037226707;
 	return 0;
 }
 
@@ -465,24 +465,24 @@ paf::ui::Widget *liveareaIfEntry9(paf::ui::Widget *widget)
 }
 
 /* 0x8119B0B0 */
-int liveareaIfEntry10(int a1, int a2, int a3, int a4)
+int liveareaIfEntry10(int unusedArg, int flags, int mode, int opt)
 {
-	(void)a1;
+	(void)unusedArg;
 	if (g_liveareaMgr == NULL)
 		return -1;
 	char outBuf[8];
 	int act = SceActivityDb_F138D4E5();
-	return liveareaUpdaterSub972(&g_liveareaMgr->m_updater, outBuf, act, a2, a3, a4);
+	return liveareaUpdaterSub972(&g_liveareaMgr->m_updater, outBuf, act, flags, mode, opt);
 }
 
 /* 0x8119B110 */
-int liveareaIfEntry11(const char *titleId, int a2)
+int liveareaIfEntry11(const char *titleId, int launchArg)
 {
 	if (g_liveareaMgr == NULL)
 		return (int)titleId;
 	liveareaPageHideAllFeeds();
-	if (a2 != 0)
-		return liveareaLaunchWithArg(titleId, a2);
+	if (launchArg != 0)
+		return liveareaLaunchWithArg(titleId, launchArg);
 
 	void *page = liveareaPageFindByTitleId(titleId);
 	if (page != NULL) {
@@ -512,11 +512,11 @@ void liveareaIfEntry12(int appId)
 }
 
 /* 0x8119B1E0 */
-void liveareaIfEntry13(int appId, int a2)
+void liveareaIfEntry13(int appId, int arg)
 {
 	void *page = liveareaPageFindByAppId(appId);
 	if (page != NULL)
-		liveareaPageSubC064(page, a2);
+		liveareaPageSubC064(page, arg);
 }
 
 /* 0x8119B1F4 */
@@ -585,11 +585,11 @@ int liveareaIfEntry20(paf::string *name)
 }
 
 /* 0x8119B4EC */
-void liveareaMgrOnUpdaterDone(int a1, int a2)
+void liveareaMgrOnUpdaterDone(int status, int appId)
 {
-	void *page = liveareaPageFindByAppId(a2);
+	void *page = liveareaPageFindByAppId(appId);
 	if (page != NULL)
-		liveareaPageInnerSubAB5DA((char *)page + 48, a1);
+		liveareaPageInnerSubAB5DA((char *)page + 48, status);
 }
 
 /* 0x8119B506 */
@@ -606,9 +606,9 @@ void liveareaMgrOnShellEvent4(void)
 }
 
 /* 0x8119B518 */
-void liveareaMgrOnShellEvent5(int a1, int a2, int a3)
+void liveareaMgrOnShellEvent5(int eventId, int param, int appId)
 {
-	(void)a1;
-	(void)a2;
-	liveareaPageOnEvent5(a3);
+	(void)eventId;
+	(void)param;
+	liveareaPageOnEvent5(appId);
 }

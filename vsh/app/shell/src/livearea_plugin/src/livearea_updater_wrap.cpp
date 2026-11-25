@@ -12,7 +12,7 @@ extern int liveareaUpdaterImplStop(LiveAreaUpdaterImpl *self);			/* 0x811A2AB0 *
 extern LiveAreaUpdaterImpl *liveareaUpdaterImplDtor(LiveAreaUpdaterImpl *self); /* 0x811A2AC4 */
 extern int liveareaUpdaterImplStart(LiveAreaUpdaterImpl *self);			/* 0x811A2AF4 */
 extern int liveareaUpdaterImplUpdateInfo(LiveAreaUpdaterImpl *self, void *out, const char *title, SceInt64 *ts, int mode, void *cb, int appId); /* 0x811A2B1A */
-extern int liveareaUpdaterImplUpdateInfo2(LiveAreaUpdaterImpl *self, void *out, int a2, int a3, int a4, int a5); /* 0x811A2B1A */
+extern int liveareaUpdaterImplUpdateInfo2(LiveAreaUpdaterImpl *self, void *out, int titleId, int flags, int mode, int opt); /* 0x811A2B1A */
 extern int liveareaUpdaterImplUpdateExt(LiveAreaUpdaterImpl *self, void *out, const char *title, int mode, void *arg, void *cb, int appId); /* 0x811A2B72 */
 extern int liveareaUpdaterImplUpdateFeed(LiveAreaUpdaterImpl *self, void *out, const char *title, int mode, void *cb, int appId); /* 0x811A2BC8 */
 extern int liveareaUpdaterImplUpdateDolce(LiveAreaUpdaterImpl *self, void *out, const char *title, int mode, void *cb, int appId); /* 0x811A2C18 */
@@ -59,9 +59,9 @@ int liveareaUpdaterSub954(LiveAreaUpdater *u, void *out, const char *title, SceI
 }
 
 /* 0x811A2972 */
-int liveareaUpdaterSub972(LiveAreaUpdater *u, void *out, int a2, int a3, int a4, int a5)
+int liveareaUpdaterSub972(LiveAreaUpdater *u, void *out, int titleId, int flags, int mode, int opt)
 {
-	return liveareaUpdaterImplUpdateInfo2(u->m_impl, out, a2, a3, a4, a5);
+	return liveareaUpdaterImplUpdateInfo2(u->m_impl, out, titleId, flags, mode, opt);
 }
 
 /* 0x811A29C0 */

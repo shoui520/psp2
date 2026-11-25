@@ -47,7 +47,7 @@ extern int SceLsdb_87EE0526(void *ctx, paf::string *titleId, paf::common::Shared
 extern SceInt64 SceLsdb_8BC2DF72(paf::common::SharedPtr<int> *row);
 extern int SceLsdb_105428BF(void *ctx, paf::string *titleId, SceRtcTickLocal *utc);
 extern int SceLsdb_315B9FD6(void *notice, int flag);
-extern int SceLsdb_95EF7C51(void *ctx, paf::string *titleId, int a3);
+extern int SceLsdb_95EF7C51(void *ctx, paf::string *titleId, int flags);
 extern const char *sceLsdbGetAppVer(paf::common::SharedPtr<int> *row);
 extern const char *SceLsdb_8FDA59EA(paf::common::SharedPtr<int> *row);
 extern const char *sceLsdbGetGameDataId(paf::common::SharedPtr<int> *row);
@@ -62,7 +62,7 @@ extern int liveareaPkgOpen(const char *dir, int flags, int mode, void *opt); /* 
 extern int liveareaPkgWrite(int handle, const void *buf, SceSize size); /* 0x8136D8F4 */
 extern int liveareaPkgClose(int handle);			/* 0x8136D828 */
 extern int liveareaHmacSha256(const void *key, SceSize keyLen, const void *data, SceSize dataLen, void *out); /* 0x8137E058 */
-extern int liveareaPatchCheckInit(void *ctx, int a2, void *param); /* 0x812A99AE */
+extern int liveareaPatchCheckInit(void *ctx, int mode, void *param); /* 0x812A99AE */
 extern int liveareaPatchCheckRun(void *ctx, void *res, void *buf); /* 0x812A9BB0 */
 extern void liveareaPatchCheckTerm(void *ctx);			/* 0x812A9708 */
 extern int liveareaCleanCacheEntry(void);			/* 0x810A36EE */
@@ -176,7 +176,7 @@ void LiveAreaRequestUpdateJob::CancelJob()
 
 class LiveAreaContentUpdateTask : public LiveAreaUpdateTaskBase {
 public:
-	LiveAreaContentUpdateTask(const char *titleId, int a3, SceUInt8 checkDevDir,
+	LiveAreaContentUpdateTask(const char *titleId, int flags, SceUInt8 checkDevDir,
 		SceUInt8 postNotice, CompleteCb cb, void *userdata, const char *localPkg);
 	virtual ~LiveAreaContentUpdateTask() {}
 	virtual int Run();
@@ -675,7 +675,7 @@ public:
 
 private:
 	int FetchActivity(ActivityUpdateResult *outRes);
-	static void OnActivityCb(int result, int a2, int a3, SceInt64 *ts,
+	static void OnActivityCb(int result, int status, int count, SceInt64 *ts,
 		const ActivityUpdateResult *info, void *userdata);
 
 	int m_actCtx;						/* +28 */

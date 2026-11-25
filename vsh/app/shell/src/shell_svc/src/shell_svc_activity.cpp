@@ -19,7 +19,7 @@ extern void *g_pafFramework;					/* 0x81488474 */
 extern "C" {
 extern int sceAppMgrGetStatusByAppId(SceUID appId, void *statusBuf);
 extern void *SceActivityDb_7B68F69D(void);
-extern int SceActivityDb_06420B18(void *db, const ShellSvcActivityRecord *rec, int a3, int a4);
+extern int SceActivityDb_06420B18(void *db, const ShellSvcActivityRecord *rec, int priority, int flags);
 }
 
 extern int shellSvcLiveAreaSyncDefault(IPMI::Session *, SceUInt32, const IPMI::DataInfo *, SceUInt32, IPMI::BufferInfo *, SceUInt32); /* 0x8115B554 */

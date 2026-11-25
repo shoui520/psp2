@@ -23,7 +23,7 @@ long long sce_paf_strtoll(const char *nptr, char **endptr, int base);
 void SceActivityDb_6C98B745(void *ctx);
 int SceActivityDb_F65C0C21(void *ctx, void *req);
 int SceActivityDb_74F96707(void *ctx, void *uids, void *outItems);
-int SceActivityDb_7ED9033C(void *ctx, void *a2, SceUInt64 *outTime, void *a4, void *a5);
+int SceActivityDb_7ED9033C(void *ctx, void *query, SceUInt64 *outTime, void *outData, void *opt);
 void SceActivityDb_6E198FFA(void *ctx);
 void SceCommonGuiDialog_696DB9C9(void *param);
 }
@@ -31,7 +31,7 @@ void SceCommonGuiDialog_696DB9C9(void *param);
 extern int liveareaCheckDialogActive(void);			/* 0x8135B002 */
 extern void liveareaCloseDialogFast(void);			/* 0x81353E16 */
 extern void liveareaStatusDlgCreateCtx(void *outA, void *outB, void *req); /* 0x8135B0BA */
-extern void *liveareaStatusDlgCtor(void *mem, int a2, paf::ui::Widget *w, paf::common::RefObj **item,
+extern void *liveareaStatusDlgCtor(void *mem, int dlgType, paf::ui::Widget *w, paf::common::RefObj **item,
 				   int type, void *ctxA, void *tsSp, void *nullRef); /* 0x811A078C */
 extern void liveareaStatusDlgSub31DA(void *dlg, int arg);	/* 0x813531DA */
 extern void liveareaStatusDlgShow(void *dlg);			/* 0x811A0B5C */

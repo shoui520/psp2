@@ -207,17 +207,17 @@ int LocationXtra::CountLocationApps(int *outCount)
 	cond.mask = 3;
 	cond.next = NULL;
 
-	LsdbValue v2;
+	LsdbValue val2;
 
-	v2.type = LSDB_VALUE_INTEGER;
-	v2.integer = 2;
-	cond.values.push_back(v2);
+	val2.type = LSDB_VALUE_INTEGER;
+	val2.integer = 2;
+	cond.values.push_back(val2);
 
-	LsdbValue v3;
+	LsdbValue val3;
 
-	v3.type = LSDB_VALUE_INTEGER;
-	v3.integer = 3;
-	cond.values.push_back(v3);
+	val3.type = LSDB_VALUE_INTEGER;
+	val3.integer = 3;
+	cond.values.push_back(val3);
 
 	int ret = SceLsdb_76B75713(&m_lsdbClient, &cond, &titleIds, 0);
 

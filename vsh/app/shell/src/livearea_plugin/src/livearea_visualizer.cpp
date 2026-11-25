@@ -37,18 +37,18 @@ extern void liveareaStatusDlgSetFlagE8(void *dlg, bool v);	/* 0x811A0F9E */
 extern void liveareaStatusDlgSetFlagE9(void *dlg, bool v);	/* 0x811A0FA6 */
 extern void liveareaStatusDlgSub31DA(void *dlg, void *item);	/* 0x813531DA */
 
-extern void liveareaBaseItemCtor(void *self, int a2, paf::Plugin *p, void *cache, void *a5); /* 0x8134DA7E */
+extern void liveareaBaseItemCtor(void *self, int itemType, paf::Plugin *p, void *cache, void *ctx); /* 0x8134DA7E */
 extern int liveareaGetItemType(void *self);			/* 0x812FEA62 */
 extern void liveareaGetItemCtx(void *outSp, void *self);	/* 0x8134D860 */
 extern int liveareaSub349C32(void);				/* 0x81349C32 */
 extern void *liveareaGetIconShader(void);			/* 0x8139303C */
 extern void liveareaBaseVisCtor(void *self, paf::Plugin *p, void *cache); /* 0x813508E8 */
-extern void liveareaBaseSubItemCtor(void *self, int a2, paf::Plugin *p, void *cache, void *a5); /* 0x8135B39E */
+extern void liveareaBaseSubItemCtor(void *self, int itemType, paf::Plugin *p, void *cache, void *ctx); /* 0x8135B39E */
 extern void liveareaBaseSubVisCtor(void *self, paf::Plugin *p, void *cache, paf::common::RefObj **item); /* 0x8135D0DC */
 
 class LiveAreaFeedItem : public paf::common::RefObj {
 public:
-	LiveAreaFeedItem(int a2, paf::common::SharedPtr<int> *a3, int a4, int a5, int a6,
+	LiveAreaFeedItem(int itemType, paf::common::SharedPtr<int> *ctxSp, int flags, int width, int height,
 			 paf::common::SharedPtr<SceUInt64> *tsSp, void **iconRef); /* 0x811A1EF4 */
 	virtual ~LiveAreaFeedItem() {}
 
@@ -72,7 +72,7 @@ public:
 	LiveAreaFeedVisualizer(paf::common::SharedPtr<SceUInt64> *tsSp, void **iconRef); /* 0x811A240E */
 	virtual ~LiveAreaFeedVisualizer();			/* 0x811A2476 / 0x811A24F0 */
 
-	void CreateItem(paf::common::RefObj **out, int a3, paf::common::SharedPtr<int> *a4, int a5, int a6); /* 0x811A2500 */
+	void CreateItem(paf::common::RefObj **out, int itemType, paf::common::SharedPtr<int> *ctxSp, int width, int height); /* 0x811A2500 */
 	void SetFlag1(bool v);					/* 0x811A25B0 */
 	bool GetFlag1();					/* 0x811A25B4 */
 	void SetFlag2(bool v);					/* 0x811A25B8 */
@@ -87,7 +87,7 @@ public:
 
 class LiveAreaSubItem : public paf::common::RefObj {
 public:
-	LiveAreaSubItem(int a2, paf::common::SharedPtr<int> *a3, int a4, int a5, int a6,
+	LiveAreaSubItem(int itemType, paf::common::SharedPtr<int> *ctxSp, int flags, int width, int height,
 			paf::common::RefObj **item, paf::common::SharedPtr<SceUInt64> *tsSp); /* 0x811A25BC */
 	virtual ~LiveAreaSubItem() {}
 
@@ -103,7 +103,7 @@ public:
 	LiveAreaSubVisualizer(paf::common::RefObj **item, paf::common::SharedPtr<SceUInt64> *tsSp); /* 0x811A272C */
 	virtual ~LiveAreaSubVisualizer();			/* 0x811A27BE / 0x811A2842 */
 
-	void CreateItem(paf::common::RefObj **out, int a3, paf::common::SharedPtr<int> *a4, int a5, int a6); /* 0x811A2852 */
+	void CreateItem(paf::common::RefObj **out, int itemType, paf::common::SharedPtr<int> *ctxSp, int width, int height); /* 0x811A2852 */
 
 	unsigned char m_base[8];				/* +0x04 */
 	paf::common::RefObj *m_item;				/* +0x0C */
@@ -111,18 +111,18 @@ public:
 };
 
 /* 0x811A1EF4 */
-LiveAreaFeedItem::LiveAreaFeedItem(int a2, paf::common::SharedPtr<int> *a3, int a4, int a5, int a6,
+LiveAreaFeedItem::LiveAreaFeedItem(int itemType, paf::common::SharedPtr<int> *ctxSp, int flags, int width, int height,
 				   paf::common::SharedPtr<SceUInt64> *tsSp, void **iconRef)
 	: m_lastReadTime(*tsSp),
 	  m_iconRef(*iconRef),
 	  m_flag78(false),
 	  m_flag79(false)
 {
-	(void)a4;
-	(void)a5;
-	(void)a6;
-	paf::common::SharedPtr<int> sp(*a3);
-	liveareaBaseItemCtor(this, a2, g_liveareaPlugin, *(void **)g_liveareaCache, &sp);
+	(void)flags;
+	(void)width;
+	(void)height;
+	paf::common::SharedPtr<int> sp(*ctxSp);
+	liveareaBaseItemCtor(this, itemType, g_liveareaPlugin, *(void **)g_liveareaCache, &sp);
 	if (m_iconRef != NULL) {
 		typedef void (*AddRefFn)(void *);
 		(*(AddRefFn **)(*(void **)m_iconRef))[6](m_iconRef);
@@ -267,15 +267,15 @@ LiveAreaFeedVisualizer::~LiveAreaFeedVisualizer()
 }
 
 /* 0x811A2500 */
-void LiveAreaFeedVisualizer::CreateItem(paf::common::RefObj **out, int a3,
-					paf::common::SharedPtr<int> *a4, int a5, int a6)
+void LiveAreaFeedVisualizer::CreateItem(paf::common::RefObj **out, int itemType,
+					paf::common::SharedPtr<int> *ctxSp, int width, int height)
 {
 	void *icon = m_iconRef;
 	if (icon != NULL) {
 		typedef void (*AddRefFn)(void *);
 		(*(AddRefFn **)(*(void **)icon))[6](icon);
 	}
-	LiveAreaFeedItem *item = new LiveAreaFeedItem(a3, a4, 0, a5, a6, &m_lastReadTime, &icon);
+	LiveAreaFeedItem *item = new LiveAreaFeedItem(itemType, ctxSp, 0, width, height, &m_lastReadTime, &icon);
 	*out = item;
 	if (item != NULL)
 		item->AddRef();
@@ -306,18 +306,18 @@ void LiveAreaFeedVisualizer::SetFlag2(bool v)
 }
 
 /* 0x811A25BC */
-LiveAreaSubItem::LiveAreaSubItem(int a2, paf::common::SharedPtr<int> *a3, int a4, int a5, int a6,
+LiveAreaSubItem::LiveAreaSubItem(int itemType, paf::common::SharedPtr<int> *ctxSp, int flags, int width, int height,
 				 paf::common::RefObj **item, paf::common::SharedPtr<SceUInt64> *tsSp)
 	: m_lastReadTime(*tsSp)
 {
-	(void)a4;
-	(void)a5;
-	(void)a6;
-	paf::common::SharedPtr<int> sp(*a3);
+	(void)flags;
+	(void)width;
+	(void)height;
+	paf::common::SharedPtr<int> sp(*ctxSp);
 	paf::common::RefObj *it = *item;
 	if (it != NULL)
 		it->AddRef();
-	liveareaBaseSubItemCtor(this, a2, g_liveareaPlugin, *(void **)g_liveareaCache, &sp);
+	liveareaBaseSubItemCtor(this, itemType, g_liveareaPlugin, *(void **)g_liveareaCache, &sp);
 	if (it != NULL)
 		it->Release();
 }
@@ -358,10 +358,10 @@ LiveAreaSubVisualizer::~LiveAreaSubVisualizer()
 }
 
 /* 0x811A2852 */
-void LiveAreaSubVisualizer::CreateItem(paf::common::RefObj **out, int a3,
-				       paf::common::SharedPtr<int> *a4, int a5, int a6)
+void LiveAreaSubVisualizer::CreateItem(paf::common::RefObj **out, int itemType,
+				       paf::common::SharedPtr<int> *ctxSp, int width, int height)
 {
-	LiveAreaSubItem *item = new LiveAreaSubItem(a3, a4, 0, a5, a6, &m_item, &m_lastReadTime);
+	LiveAreaSubItem *item = new LiveAreaSubItem(itemType, ctxSp, 0, width, height, &m_item, &m_lastReadTime);
 	*out = item;
 	if (item != NULL)
 		item->AddRef();

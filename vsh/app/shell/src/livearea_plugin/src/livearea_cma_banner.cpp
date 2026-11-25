@@ -85,8 +85,8 @@ public:
 };
 
 static int liveareaCmaOnFocusCb(void);
-static int liveareaCmaOnUnfocusCb(int a1, int pageId);
-static int liveareaCmaOnStorageEvent(int a1, const char *titleId);
+static int liveareaCmaOnUnfocusCb(int eventType, int pageId);
+static int liveareaCmaOnStorageEvent(int eventType, const char *titleId);
 static void liveareaCmaResetGlobals(void);
 static void liveareaCmaOnButtonPress(SceInt32 ev, paf::ui::Handler *h, paf::ui::Event *e, void *userdata);
 static void liveareaCmaOnTextLayout(SceInt32 ev, paf::ui::Handler *h, paf::ui::Event *e, void *userdata);

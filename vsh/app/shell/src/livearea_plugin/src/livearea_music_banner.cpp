@@ -35,7 +35,7 @@ struct MusicPlaybackInfo {
 	SceUInt32 positionMs;					/* +6168 (0x81568CC8) */
 };
 
-extern int musicPlayerSeek(int a1, int a2, int a3);		/* 0x811CBD5E */
+extern int musicPlayerSeek(int mode, int offset, int flags);		/* 0x811CBD5E */
 extern int musicPlayerCmd(int cmd, int arg);			/* 0x811CBDE6 */
 extern int musicPlayerGetInfo(MusicPlaybackInfo *info);		/* 0x811CBF10 */
 extern int musicPlayerClearFlag(void *out);			/* 0x811CC17C */

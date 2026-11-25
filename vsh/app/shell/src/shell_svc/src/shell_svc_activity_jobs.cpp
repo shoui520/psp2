@@ -43,7 +43,7 @@ extern int SceLsdb_F4325AD0(paf::common::SharedPtr<paf::map<SceUInt32, LsdbAttrV
 extern const char *sceLsdbGetStitle(paf::common::SharedPtr<paf::map<SceUInt32, LsdbAttrVal> > *row);
 extern const char *sceLsdbGetTitle(paf::common::SharedPtr<paf::map<SceUInt32, LsdbAttrVal> > *row);
 extern void *SceActivityDb_7B68F69D(void);
-extern int SceActivityDb_06420B18(void *db, const ShellSvcActivityRecord *rec, int a3, int a4);
+extern int SceActivityDb_06420B18(void *db, const ShellSvcActivityRecord *rec, int priority, int flags);
 extern int sceHttpUriEscape(char *out, SceSize *require, SceSize prepare, const char *in);
 extern SceSize sce_paf_wcsnlen(const wchar_t *s, SceSize maxlen);
 }

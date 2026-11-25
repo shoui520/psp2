@@ -35,11 +35,11 @@ const char *SceLsdb_C070E42E(void *sp);
 
 extern bool liveareaMgrIsPendingLaunch(const char *titleId);	/* 0x8119ACFC */
 extern void liveareaMgrClearPendingLaunch(void);		/* 0x8119ACE4 */
-extern void liveareaPageInnerCtor(void *inner, void *page, int a3, int a4); /* 0x811A3C72 */
+extern void liveareaPageInnerCtor(void *inner, void *page, int flags, int mode); /* 0x811A3C72 */
 extern void liveareaPageInnerDtor(void *inner);			/* 0x811A3F4E */
 extern void liveareaPageInnerInit(void *inner);			/* 0x811A417E */
-extern int liveareaPageInnerSubAACC2(void *inner, int a2, int a3); /* 0x811AACC2 */
-extern void liveareaPageInnerSubAAD60(void *inner, int a2, const char *a3); /* 0x811AAD60 */
+extern int liveareaPageInnerSubAACC2(void *inner, int state, int flags); /* 0x811AACC2 */
+extern void liveareaPageInnerSubAAD60(void *inner, int mode, const char *path); /* 0x811AAD60 */
 extern void liveareaPageInnerSubAAFB8(void *inner);		/* 0x811AAFB8 */
 extern void liveareaPageInnerSubAB056(void *inner);		/* 0x811AB056 */
 extern void liveareaPageInnerSubAB2DE(void *inner);		/* 0x811AB2DE */
@@ -55,11 +55,11 @@ extern void liveareaFeedOnNetChanged(void *feed);		/* 0x8119E788 */
 extern void liveareaFeedOnRefresh(void *feed);			/* 0x8119E84E */
 extern void liveareaLsdbUpdateTime(paf::common::SharedPtr<int> *out, void *ctx,
 				   void *mapSp, void *vec, void *optSp,
-				   int a6, int a7, int a8);	/* 0x811C6568 */
+				   int flags, int completeCb, int userData); /* 0x811C6568 */
 
 class LiveAreaPage {
 public:
-	LiveAreaPage(int appId, const char *titleId, int a3, int a4); /* 0x8119B594 */
+	LiveAreaPage(int appId, const char *titleId, int flags, int mode); /* 0x8119B594 */
 	~LiveAreaPage();					/* 0x8119B8EC */
 
 	const char *GetTitleId();				/* 0x8119B990 */
@@ -67,7 +67,7 @@ public:
 	void ScrollToContent();					/* 0x8119BD0E */
 	void ResetScroll(bool anim);				/* 0x8119BD32 */
 	bool IsAtTop();						/* 0x8119BE16 */
-	int CreateImageCache(int a2, int a3);			/* 0x8119BE9A */
+	int CreateImageCache(int width, int height);		/* 0x8119BE9A */
 	void EnsureFeed();					/* 0x8119BF26 */
 	void ScrollIfPending();					/* 0x8119BF9C */
 	void OnFocusComplete();					/* 0x8119C042 */
@@ -92,11 +92,11 @@ public:
 static paf::list<LiveAreaPage *> s_pages;			/* 0x815670F4 */
 
 static void liveareaPageOnDestroyCb(void *w, void *page);	/* 0x8119C5EC */
-static void liveareaPageOnShowCb(int a1, int a2, int a3, void *page); /* 0x8119C5FC */
-static void liveareaPageOnHideCb(int a1, int a2, int a3, void *page); /* 0x8119C654 */
-static void liveareaPageOnEvent7Cb(int a1, int a2, int a3, void *page); /* 0x8119C69C */
-static void liveareaPageOnEvent6Cb(int a1, void *ev, int a3, void *page); /* 0x8119C6C2 */
-static void liveareaPageOnScrollEvent(int a1, int a2, int a3, void *page); /* 0x8119C294 */
+static void liveareaPageOnShowCb(int eventId, int handler, int ev, void *page); /* 0x8119C5FC */
+static void liveareaPageOnHideCb(int eventId, int handler, int ev, void *page); /* 0x8119C654 */
+static void liveareaPageOnEvent7Cb(int eventId, int handler, int ev, void *page); /* 0x8119C69C */
+static void liveareaPageOnEvent6Cb(int eventId, void *ev, int flags, void *page); /* 0x8119C6C2 */
+static void liveareaPageOnScrollEvent(int eventId, int handler, int ev, void *page); /* 0x8119C294 */
 
 static void *getTopmenuIf(void)
 {
@@ -104,7 +104,7 @@ static void *getTopmenuIf(void)
 }
 
 /* 0x8119B594 */
-LiveAreaPage::LiveAreaPage(int appId, const char *titleId, int a3, int a4)
+LiveAreaPage::LiveAreaPage(int appId, const char *titleId, int flags, int mode)
 	: m_appId(appId),
 	  m_titleId(titleId),
 	  m_rootWidget(NULL),
@@ -118,7 +118,7 @@ LiveAreaPage::LiveAreaPage(int appId, const char *titleId, int a3, int a4)
 	  m_pad2F(0),
 	  m_feed(NULL)
 {
-	liveareaPageInnerCtor(m_inner, this, a3, a4);
+	liveareaPageInnerCtor(m_inner, this, flags, mode);
 
 	void *tm = getTopmenuIf();
 	typedef paf::ui::Widget *(*GetWidgetFn)(int);
@@ -238,7 +238,7 @@ bool LiveAreaPage::IsAtTop()
 }
 
 /* 0x8119BE9A */
-int LiveAreaPage::CreateImageCache(int a2, int a3)
+int LiveAreaPage::CreateImageCache(int width, int height)
 {
 	if (m_cacheRef == NULL)
 		return -1;
@@ -253,7 +253,7 @@ int LiveAreaPage::CreateImageCache(int a2, int a3)
 	*(int *)(opt + 64) = -1;
 	typedef int (*CreateFn)(void *, int, int, void *, int, int);
 	CreateFn fn = (*(CreateFn **)(*(void **)m_cacheRef))[2];
-	return fn(m_cacheRef, a2, a3, opt, 0, 0);
+	return fn(m_cacheRef, width, height, opt, 0, 0);
 }
 
 /* 0x8119BF26 */
@@ -380,11 +380,11 @@ void liveareaPageOnEvent5(int appId)
 }
 
 /* 0x8119C294 */
-static void liveareaPageOnScrollEvent(int a1, int a2, int a3, void *userdata)
+static void liveareaPageOnScrollEvent(int eventId, int handler, int ev, void *userdata)
 {
-	(void)a1;
-	(void)a2;
-	(void)a3;
+	(void)eventId;
+	(void)handler;
+	(void)ev;
 	LiveAreaPage *page = (LiveAreaPage *)userdata;
 	liveareaPageInnerSubAB2DE(page->m_inner);
 	if (page->m_feed != NULL) {
@@ -415,14 +415,14 @@ void liveareaPageTickAll(bool changed)
 }
 
 /* 0x8119C37E */
-int liveareaPageIfEntry5(const char *titleId, int a2, int a3)
+int liveareaPageIfEntry5(const char *titleId, int state, int flags)
 {
 	g_shellMutex.Lock();
 	for (paf::list<LiveAreaPage *>::iterator it = s_pages.begin();
 	     it != s_pages.end(); ++it) {
 		LiveAreaPage *page = *it;
 		if (sce_paf_strncmp(titleId, page->m_titleId.c_str(), page->m_titleId.size()) == 0) {
-			int r = liveareaPageInnerSubAACC2(page->m_inner, a2, a3);
+			int r = liveareaPageInnerSubAACC2(page->m_inner, state, flags);
 			g_shellMutex.Unlock();
 			return r;
 		}
@@ -477,11 +477,11 @@ static void liveareaPageOnDestroyCb(void *w, void *userdata)
 }
 
 /* 0x8119C5FC */
-static void liveareaPageOnShowCb(int a1, int a2, int a3, void *userdata)
+static void liveareaPageOnShowCb(int eventId, int handler, int ev, void *userdata)
 {
-	(void)a1;
-	(void)a2;
-	(void)a3;
+	(void)eventId;
+	(void)handler;
+	(void)ev;
 	LiveAreaPage *page = (LiveAreaPage *)userdata;
 	paf::math::v2 margin(0.0f, 192.0f);
 	page->m_listView->SetGenerateMargin(margin);
@@ -492,11 +492,11 @@ static void liveareaPageOnShowCb(int a1, int a2, int a3, void *userdata)
 }
 
 /* 0x8119C654 */
-static void liveareaPageOnHideCb(int a1, int a2, int a3, void *userdata)
+static void liveareaPageOnHideCb(int eventId, int handler, int ev, void *userdata)
 {
-	(void)a1;
-	(void)a2;
-	(void)a3;
+	(void)eventId;
+	(void)handler;
+	(void)ev;
 	LiveAreaPage *page = (LiveAreaPage *)userdata;
 	page->ResetScroll(false);
 	paf::math::v2 margin(-100.0f, -100.0f);
@@ -505,21 +505,21 @@ static void liveareaPageOnHideCb(int a1, int a2, int a3, void *userdata)
 }
 
 /* 0x8119C69C */
-static void liveareaPageOnEvent7Cb(int a1, int a2, int a3, void *userdata)
+static void liveareaPageOnEvent7Cb(int eventId, int handler, int ev, void *userdata)
 {
-	(void)a1;
-	(void)a2;
-	(void)a3;
+	(void)eventId;
+	(void)handler;
+	(void)ev;
 	typedef int (*CheckFn)(void);
 	if ((*(CheckFn *)((char *)getTopmenuIf() + 232))() == 0 && userdata != NULL)
 		((LiveAreaPage *)userdata)->ResetScroll(false);
 }
 
 /* 0x8119C6C2 */
-static void liveareaPageOnEvent6Cb(int a1, void *ev, int a3, void *userdata)
+static void liveareaPageOnEvent6Cb(int eventId, void *ev, int flags, void *userdata)
 {
-	(void)a1;
-	(void)a3;
+	(void)eventId;
+	(void)flags;
 	LiveAreaPage *page = (LiveAreaPage *)userdata;
 	if (page != NULL) {
 		const char *tid = *(const char **)((char *)ev + 8);

@@ -21,9 +21,9 @@ extern int liveareaCronEnqueueJob(paf::common::SharedPtr<int> *job); /* 0x81199E
 extern int *liveareaRequestUpdateJobCtor(void *mem, paf::common::SharedPtr<int> *task,
 	SceUInt64 id);						/* 0x811B3094 */
 extern int *liveareaUpdateTaskCtor(void *mem, const char *titleId, const SceUInt64 *ts,
-	SceUInt8 a4, SceUInt8 a5, int a6, int a7, int a8);	/* 0x811B31D2 */
-extern int *liveareaPromoteTaskCtor(void *mem, const char *titleId, int a3, int a4, int a5); /* 0x811B5474 */
-extern int *liveareaDeleteTaskCtor(void *mem, const char *titleId, int a3, int a4, int a5);  /* 0x811B577A */
+	SceUInt8 checkDevDir, SceUInt8 postNotice, int completeCb, int userData, int localPkg); /* 0x811B31D2 */
+extern int *liveareaPromoteTaskCtor(void *mem, const char *titleId, int mode, int completeCb, int userData); /* 0x811B5474 */
+extern int *liveareaDeleteTaskCtor(void *mem, const char *titleId, int flags, int completeCb, int userData); /* 0x811B577A */
 extern int *liveareaCleanTaskCtor(void *mem, const char *titleId); /* 0x811B6554 */
 
 struct LiveAreaUpdatorEntry {
@@ -39,19 +39,19 @@ public:
 	~LiveAreaUpdatorImpl();
 
 	int RequestUpdate(SceUInt64 *outId, const char *titleId, const SceUInt64 *ts,
-		char a5, SceUInt8 a6, SceUInt8 a7, int a8, int a9, int a10);
-	int RequestPromote(SceUInt64 *outId, const char *titleId, int a4, int a5, int a6, int a7);
-	int RequestDelete(SceUInt64 *outId, const char *titleId, int a4, int a5, int a6, int a7);
+		char unusedFlag, SceUInt8 checkDevDir, SceUInt8 postNotice, int completeCb, int userData, int localPkg);
+	int RequestPromote(SceUInt64 *outId, const char *titleId, int unusedFlag, int mode, int completeCb, int userData);
+	int RequestDelete(SceUInt64 *outId, const char *titleId, int flags, int unusedFlag, int completeCb, int userData);
 	int RequestClean(SceUInt64 *outId, const char *titleId);
 	void RemoveEntry(const LiveAreaUpdatorEntry &entry);
 	int CancelById(const SceUInt64 &id);
 
 private:
 	paf::list<LiveAreaUpdatorEntry> m_entries;		/* +0 (12 bytes) */
-	int m_pad;						/* +12 */
+	int m_reserved0;					/* +12 */
 	paf::thread::RMutex m_mutex;				/* +16 (32 bytes) */
 	int m_state;						/* +48 */
-	int m_pad2;						/* +52 */
+	int m_reserved1;					/* +52 */
 };
 
 /* 0x811B216C */
@@ -65,7 +65,7 @@ LiveAreaUpdatorImpl::~LiveAreaUpdatorImpl()
 
 /* 0x811B21C0 */
 int LiveAreaUpdatorImpl::RequestUpdate(SceUInt64 *outId, const char *titleId, const SceUInt64 *ts,
-	char, SceUInt8 a6, SceUInt8 a7, int a8, int a9, int a10)
+	char, SceUInt8 checkDevDir, SceUInt8 postNotice, int completeCb, int userData, int localPkg)
 {
 	if (!titleId)
 		return (int)0x80107C02;
@@ -74,7 +74,7 @@ int LiveAreaUpdatorImpl::RequestUpdate(SceUInt64 *outId, const char *titleId, co
 	*outId = ScePafCommon_AC2F3710();
 
 	void *tmem = operator new(40);
-	int *task = tmem ? liveareaUpdateTaskCtor(tmem, titleId, &tsCopy, a6, a7, a8, a9, a10) : NULL;
+	int *task = tmem ? liveareaUpdateTaskCtor(tmem, titleId, &tsCopy, checkDevDir, postNotice, completeCb, userData, localPkg) : NULL;
 	paf::common::SharedPtr<int> spTask(task);
 
 	void *jmem = operator new(56);
@@ -98,7 +98,7 @@ int LiveAreaUpdatorImpl::RequestUpdate(SceUInt64 *outId, const char *titleId, co
 
 /* 0x811B2532 */
 int LiveAreaUpdatorImpl::RequestPromote(SceUInt64 *outId, const char *titleId, int,
-	int a5, int a6, int a7)
+	int mode, int completeCb, int userData)
 {
 	if (!titleId)
 		return (int)0x80107C02;
@@ -106,7 +106,7 @@ int LiveAreaUpdatorImpl::RequestPromote(SceUInt64 *outId, const char *titleId, i
 	*outId = ScePafCommon_AC2F3710();
 
 	void *tmem = operator new(32);
-	int *task = tmem ? liveareaPromoteTaskCtor(tmem, titleId, a5, a6, a7) : NULL;
+	int *task = tmem ? liveareaPromoteTaskCtor(tmem, titleId, mode, completeCb, userData) : NULL;
 	paf::common::SharedPtr<int> spTask(task);
 
 	void *jmem = operator new(56);
@@ -129,8 +129,8 @@ int LiveAreaUpdatorImpl::RequestPromote(SceUInt64 *outId, const char *titleId, i
 }
 
 /* 0x811B287E */
-int LiveAreaUpdatorImpl::RequestDelete(SceUInt64 *outId, const char *titleId, int a4,
-	int, int a6, int a7)
+int LiveAreaUpdatorImpl::RequestDelete(SceUInt64 *outId, const char *titleId, int flags,
+	int, int completeCb, int userData)
 {
 	if (!titleId)
 		return (int)0x80107C02;
@@ -138,7 +138,7 @@ int LiveAreaUpdatorImpl::RequestDelete(SceUInt64 *outId, const char *titleId, in
 	*outId = ScePafCommon_AC2F3710();
 
 	void *tmem = operator new(56);
-	int *task = tmem ? liveareaDeleteTaskCtor(tmem, titleId, a4, a6, a7) : NULL;
+	int *task = tmem ? liveareaDeleteTaskCtor(tmem, titleId, flags, completeCb, userData) : NULL;
 	paf::common::SharedPtr<int> spTask(task);
 
 	void *jmem = operator new(56);

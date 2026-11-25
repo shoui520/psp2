@@ -38,7 +38,7 @@ public:
 	virtual bool IsScrolledToBottom();			/* 0x811A1DB2 */
 	virtual void OnScroll();				/* 0x811A1E4E */
 
-	static void OnScrollEvent(int a1, paf::ui::Handler *h, paf::ui::Event *ev, void *arg); /* 0x811A1E76 */
+	static void OnScrollEvent(int eventId, paf::ui::Handler *h, paf::ui::Event *ev, void *arg); /* 0x811A1E76 */
 
 	paf::ui::ListView *m_listView;				/* +0x04 */
 	int m_segIdx;						/* +0x08 */
@@ -223,9 +223,9 @@ void LiveAreaMoreCtrl::OnScroll()
 }
 
 /* 0x811A1E76 */
-void LiveAreaMoreCtrl::OnScrollEvent(int a1, paf::ui::Handler *h, paf::ui::Event *ev, void *arg)
+void LiveAreaMoreCtrl::OnScrollEvent(int eventId, paf::ui::Handler *h, paf::ui::Event *ev, void *arg)
 {
-	(void)a1;
+	(void)eventId;
 	(void)h;
 	(void)ev;
 	((LiveAreaMoreCtrl *)arg)->OnScroll();

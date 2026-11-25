@@ -13,14 +13,14 @@ class LiveAreaUpdatorImpl;
 extern LiveAreaUpdatorImpl *liveareaUpdatorImplCtor(void *mem);		/* 0x811B216C */
 extern LiveAreaUpdatorImpl *liveareaUpdatorImplDtor(LiveAreaUpdatorImpl *self); /* 0x811B21A8 */
 extern int liveareaUpdatorImplRequestUpdate(LiveAreaUpdatorImpl *self, SceUInt64 *outId,
-	const char *titleId, const SceUInt64 *ts, char a5, SceUInt8 a6, SceUInt8 a7,
-	int a8, int a9, int a10);					/* 0x811B21C0 */
+	const char *titleId, const SceUInt64 *ts, char unusedFlag, SceUInt8 checkDevDir, SceUInt8 postNotice,
+	int completeCb, int userData, int localPkg);			/* 0x811B21C0 */
 extern int liveareaUpdatorImplRequestPromote(LiveAreaUpdatorImpl *self, SceUInt64 *outId,
-	const char *titleId, SceUInt8 a4, int a5, int a6, int a7);	/* 0x811B2532 */
+	const char *titleId, SceUInt8 unusedFlag, int mode, int completeCb, int userData); /* 0x811B2532 */
 extern int liveareaUpdatorImplRequestDelete(LiveAreaUpdatorImpl *self, SceUInt64 *outId,
-	const char *titleId, int a4, int a5, int a6, int a7);		/* 0x811B287E */
+	const char *titleId, int flags, int unusedFlag, int completeCb, int userData); /* 0x811B287E */
 extern int liveareaUpdatorImplRequestClean(LiveAreaUpdatorImpl *self, SceUInt64 *outId,
-	const char *titleId, SceUInt8 a4, int a5, int a6);		/* 0x811B2BCE */
+	const char *titleId, SceUInt8 unusedFlag, int completeCb, int userData); /* 0x811B2BCE */
 
 class LiveAreaTaskMgr {
 public:
@@ -28,10 +28,10 @@ public:
 	~LiveAreaTaskMgr();
 
 	int RequestUpdate(SceUInt64 *outId, const char *titleId, const SceUInt64 *ts,
-		char a5, SceUInt8 a6, SceUInt8 a7, int a8, int a9, int a10);
-	int RequestPromote(SceUInt64 *outId, const char *titleId, SceUInt8 a4, int a5, int a6, int a7);
-	int RequestDelete(SceUInt64 *outId, const char *titleId, int a4, int a5, int a6, int a7);
-	int RequestClean(SceUInt64 *outId, const char *titleId, SceUInt8 a4, int a5, int a6);
+		char unusedFlag, SceUInt8 checkDevDir, SceUInt8 postNotice, int completeCb, int userData, int localPkg);
+	int RequestPromote(SceUInt64 *outId, const char *titleId, SceUInt8 unusedFlag, int mode, int completeCb, int userData);
+	int RequestDelete(SceUInt64 *outId, const char *titleId, int flags, int unusedFlag, int completeCb, int userData);
+	int RequestClean(SceUInt64 *outId, const char *titleId, SceUInt8 unusedFlag, int completeCb, int userData);
 
 private:
 	LiveAreaUpdatorImpl *m_impl;
@@ -55,28 +55,28 @@ LiveAreaTaskMgr::~LiveAreaTaskMgr()
 
 /* 0x811B207C */
 int LiveAreaTaskMgr::RequestUpdate(SceUInt64 *outId, const char *titleId, const SceUInt64 *ts,
-	char a5, SceUInt8 a6, SceUInt8 a7, int a8, int a9, int a10)
+	char unusedFlag, SceUInt8 checkDevDir, SceUInt8 postNotice, int completeCb, int userData, int localPkg)
 {
-	return liveareaUpdatorImplRequestUpdate(m_impl, outId, titleId, ts, a5, a6, a7, a8, a9, a10);
+	return liveareaUpdatorImplRequestUpdate(m_impl, outId, titleId, ts, unusedFlag, checkDevDir, postNotice, completeCb, userData, localPkg);
 }
 
 /* 0x811B20AC */
-int LiveAreaTaskMgr::RequestPromote(SceUInt64 *outId, const char *titleId, SceUInt8 a4,
-	int a5, int a6, int a7)
+int LiveAreaTaskMgr::RequestPromote(SceUInt64 *outId, const char *titleId, SceUInt8 unusedFlag,
+	int mode, int completeCb, int userData)
 {
-	return liveareaUpdatorImplRequestPromote(m_impl, outId, titleId, a4, a5, a6, a7);
+	return liveareaUpdatorImplRequestPromote(m_impl, outId, titleId, unusedFlag, mode, completeCb, userData);
 }
 
 /* 0x811B20C8 */
-int LiveAreaTaskMgr::RequestDelete(SceUInt64 *outId, const char *titleId, int a4,
-	int a5, int a6, int a7)
+int LiveAreaTaskMgr::RequestDelete(SceUInt64 *outId, const char *titleId, int flags,
+	int unusedFlag, int completeCb, int userData)
 {
-	return liveareaUpdatorImplRequestDelete(m_impl, outId, titleId, a4, a5, a6, a7);
+	return liveareaUpdatorImplRequestDelete(m_impl, outId, titleId, flags, unusedFlag, completeCb, userData);
 }
 
 /* 0x811B20E4 */
-int LiveAreaTaskMgr::RequestClean(SceUInt64 *outId, const char *titleId, SceUInt8 a4,
-	int a5, int a6)
+int LiveAreaTaskMgr::RequestClean(SceUInt64 *outId, const char *titleId, SceUInt8 unusedFlag,
+	int completeCb, int userData)
 {
-	return liveareaUpdatorImplRequestClean(m_impl, outId, titleId, a4, a5, a6);
+	return liveareaUpdatorImplRequestClean(m_impl, outId, titleId, unusedFlag, completeCb, userData);
 }

@@ -26,11 +26,11 @@ extern int sceLsdbGetSystemVersion(paf::common::SharedPtr<int> *row);
 extern int sceLsdbGetType(paf::common::SharedPtr<int> *row);
 extern int SceLsdb_BE72A404(const char *titleId);
 extern int *SceLsdb_D3EF2C98(void *mem);
-extern int SceLsdb_60B535FD(int sysVer, int a2);
+extern int SceLsdb_60B535FD(int sysVer, int mode);
 extern void SceLsdb_88FDC55C(paf::string *out, int sysVer);
 extern int SceLsdb_1673AD48(void);
-extern int SceLsdb_5BDC6351(void **outNode, const char *xml, SceSize len, int *a4,
-	const char *schema, int a6, SceUInt8 allowAny, int type);
+extern int SceLsdb_5BDC6351(void **outNode, const char *xml, SceSize len, int *outError,
+	const char *schema, int flags, SceUInt8 allowAny, int type);
 extern int SceLsdb_BA1D0DB8(void *ctx, paf::string *titleId, paf::string *frameId,
 	paf::string *outContent, SceUID pid);
 }
@@ -39,11 +39,11 @@ extern int shellSvcLiveAreaEnqueueUpdate(IPMI::Session *session, SceUInt32 reqId
 	const char *path, const char *titleId, const SceUInt64 *ts,
 	SceUInt8 allowAny, SceUInt8 flag);			/* 0x811B7B54 */
 extern int shellSvcLiveAreaSetContentSingle(IPMI::Session *session, SceUInt32 reqId,
-	int a3, const void *xmlData, SceUInt32 xmlSize,
+	int methodId, const void *xmlData, SceUInt32 xmlSize,
 	const char *path, int flags, const char *titleId,
 	SceUInt8 allowAny, SceUInt8 flag);			/* 0x811B7E32 */
 extern int shellSvcLiveAreaSetContentMulti(IPMI::Session *session, SceUInt32 reqId,
-	int a3, const char **xmlList, SceUInt32 count,
+	int methodId, const char **xmlList, SceUInt32 count,
 	const char *path, int flags, const char *titleId, SceUInt8 allowAny); /* 0x811B7F1C */
 extern int shellSvcLiveAreaEnqueueGetTs(IPMI::Session *session, SceUInt32 reqId,
 	const char *frameId, SceUInt8 flag);			/* 0x811B804C */

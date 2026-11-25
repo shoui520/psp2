@@ -27,7 +27,7 @@ extern LiveAreaMgr *g_liveareaMgr;				/* 0x815670A8 */
 extern "C" {
 int sceAppMgrLaunchAppByNameForShell(unsigned int flags, const char *name, const char *param);
 int sce_paf_rand(void);
-int SceLsdb_628CFBE1(void *item, int a2, unsigned char flag);
+int SceLsdb_628CFBE1(void *item, int mode, unsigned char flag);
 void *SceLsdb_92D3A2EA(void *frame, int idx);
 unsigned char SceLsdb_69B32F6C(int arg);
 void SceCommonGuiDialog_696DB9C9(void *param);
@@ -47,7 +47,7 @@ extern void *liveareaXmlVisCtor(void);				/* 0x811B7470 */
 extern void *liveareaXmlCellCtor(void);				/* 0x8135D814 */
 extern void liveareaXmlLoadJobEnqueue(paf::common::SharedPtr<int> *out, void *inner,
 				      const char *xmlPath, const char *baseDir,
-				      int a5, int a6, int flags, int a8); /* 0x811B67AA */
+				      int completeCb, int userData, int flags, int optMode); /* 0x811B67AA */
 extern void shellRecordMetric(int id, int val);			/* 0x81376D36 */
 
 static paf::IDParam s_destroyContentZoneId("__destroy_content_zone__"); /* 0x815672A4 */
@@ -769,17 +769,17 @@ int LiveAreaPageInner::HasPatchIcon()
 }
 
 /* 0x811ABE1C */
-static void liveareaOnPatchClick(int a1, int a2, int a3, LiveAreaPageInner *self)
+static void liveareaOnPatchClick(int eventId, int handler, int ev, LiveAreaPageInner *self)
 {
-	(void)a1; (void)a2; (void)a3;
+	(void)eventId; (void)handler; (void)ev;
 	typedef void (*Fn)(int);
 	(*(Fn *)((char *)getTopmenuIf() + 60))(*(int *)self->m_page);
 }
 
 /* 0x811ABE34 */
-static void liveareaOnSearchClick(int a1, int a2, int a3, LiveAreaPageInner *self)
+static void liveareaOnSearchClick(int eventId, int handler, int ev, LiveAreaPageInner *self)
 {
-	(void)a1; (void)a2; (void)a3;
+	(void)eventId; (void)handler; (void)ev;
 	typedef int (*CheckFn)(int);
 	if ((*(CheckFn *)((char *)getTopmenuIf() + 160))(*(int *)self->m_page) != 0) {
 		char uri[1024];
@@ -789,59 +789,59 @@ static void liveareaOnSearchClick(int a1, int a2, int a3, LiveAreaPageInner *sel
 }
 
 /* 0x811ABEA4 */
-static void liveareaOnOnlineHelpClick(int a1, int a2, int a3, LiveAreaPageInner *self)
+static void liveareaOnOnlineHelpClick(int eventId, int handler, int ev, LiveAreaPageInner *self)
 {
-	(void)a1; (void)a2; (void)a3;
+	(void)eventId; (void)handler; (void)ev;
 	typedef int (*CheckFn)(int);
 	if ((*(CheckFn *)((char *)getTopmenuIf() + 160))(*(int *)self->m_page) != 0)
 		sceAppMgrLaunchAppByUri(0x20000, self->m_helpUri.c_str());
 }
 
 /* 0x811ABECE */
-static void liveareaOnHelpClick(int a1, int a2, int a3, LiveAreaPageInner *self)
+static void liveareaOnHelpClick(int eventId, int handler, int ev, LiveAreaPageInner *self)
 {
-	(void)a1; (void)a2; (void)a3;
+	(void)eventId; (void)handler; (void)ev;
 	typedef void (*Fn)(int);
 	(*(Fn *)((char *)getTopmenuIf() + 56))(*(int *)self->m_page);
 }
 
 /* 0x811ABEE6 */
-static void liveareaOnVoucherClick(int a1, int a2, int a3, LiveAreaPageInner *self)
+static void liveareaOnVoucherClick(int eventId, int handler, int ev, LiveAreaPageInner *self)
 {
-	(void)a1; (void)a2; (void)a3;
+	(void)eventId; (void)handler; (void)ev;
 	typedef int (*CheckFn)(int);
 	if ((*(CheckFn *)((char *)getTopmenuIf() + 160))(*(int *)self->m_page) != 0)
 		sceAppMgrLaunchAppByUri(0x20000, "psns:redeem");
 }
 
 /* 0x811ABF14 */
-static void liveareaOnReloadClick(int a1, int a2, int a3, LiveAreaPageInner *self)
+static void liveareaOnReloadClick(int eventId, int handler, int ev, LiveAreaPageInner *self)
 {
-	(void)a1; (void)a2; (void)a3;
+	(void)eventId; (void)handler; (void)ev;
 	if (self->m_reloadCount <= 0 && self->m_xmlDoc.get() != NULL)
 		liveareaMgrUpdatePage(self, 1);
 }
 
 /* 0x811ABF2E */
-static void liveareaOnImportSaveClick(int a1, int a2, int a3, LiveAreaPageInner *self)
+static void liveareaOnImportSaveClick(int eventId, int handler, int ev, LiveAreaPageInner *self)
 {
-	(void)a1; (void)a2; (void)a3;
+	(void)eventId; (void)handler; (void)ev;
 	typedef void (*Fn)(int);
 	(*(Fn *)((char *)getTopmenuIf() + 64))(*(int *)self->m_page);
 }
 
 /* 0x811ABF46 */
-static void liveareaOnOnlineStorageClick(int a1, int a2, int a3, LiveAreaPageInner *self)
+static void liveareaOnOnlineStorageClick(int eventId, int handler, int ev, LiveAreaPageInner *self)
 {
-	(void)a1; (void)a2; (void)a3;
+	(void)eventId; (void)handler; (void)ev;
 	typedef void (*Fn)(int);
 	(*(Fn *)((char *)getTopmenuIf() + 68))(*(int *)self->m_page);
 }
 
 /* 0x811ABF5E */
-static void liveareaOnItemUriClick(int a1, int a2, int a3, void *item)
+static void liveareaOnItemUriClick(int eventId, int handler, int ev, void *item)
 {
-	(void)a1; (void)a2; (void)a3;
+	(void)eventId; (void)handler; (void)ev;
 	if (item != NULL) {
 		void *target = *((void **)item + 6);
 		if (target != NULL && *((int *)target + 3) != 0) {
@@ -853,9 +853,9 @@ static void liveareaOnItemUriClick(int a1, int a2, int a3, void *item)
 }
 
 /* 0x811ABFB8 */
-static void liveareaOnItemTrackedUriClick(int a1, int a2, int a3, void *item)
+static void liveareaOnItemTrackedUriClick(int eventId, int handler, int ev, void *item)
 {
-	(void)a1; (void)a2; (void)a3;
+	(void)eventId; (void)handler; (void)ev;
 	if (item != NULL) {
 		void *target = *((void **)item + 6);
 		if (target != NULL && *((int *)target + 3) != 0) {
@@ -879,9 +879,9 @@ static void liveareaOnItemTrackedUriClick(int a1, int a2, int a3, void *item)
 }
 
 /* 0x811AC0F4 */
-static void liveareaOnItemAppClick(int a1, paf::ui::Widget *w, int a3, void *item)
+static void liveareaOnItemAppClick(int eventId, paf::ui::Widget *w, int ev, void *item)
 {
-	(void)a1; (void)a3;
+	(void)eventId; (void)ev;
 	if (item != NULL) {
 		void *target = *((void **)item + 6);
 		if (target != NULL && *((int *)target + 3) != 0) {
@@ -894,9 +894,9 @@ static void liveareaOnItemAppClick(int a1, paf::ui::Widget *w, int a3, void *ite
 }
 
 /* 0x811AC156 */
-static void liveareaOnItemPslaClick(int a1, paf::ui::Widget *w, int a3, void *item)
+static void liveareaOnItemPslaClick(int eventId, paf::ui::Widget *w, int ev, void *item)
 {
-	(void)a1; (void)a3;
+	(void)eventId; (void)ev;
 	if (item != NULL) {
 		void *target = *((void **)item + 6);
 		if (target != NULL && *((int *)target + 3) != 0) {
@@ -911,17 +911,17 @@ static void liveareaOnItemPslaClick(int a1, paf::ui::Widget *w, int a3, void *it
 }
 
 /* 0x811AC23E */
-static void liveareaOnGateClick(int a1, int a2, int a3, int appId)
+static void liveareaOnGateClick(int eventId, int handler, int ev, int appId)
 {
-	(void)a1; (void)a2; (void)a3;
+	(void)eventId; (void)handler; (void)ev;
 	typedef void (*Fn)(int);
 	(*(Fn *)((char *)getTopmenuIf() + 156))(appId);
 }
 
 /* 0x811AC8B6 */
-static void liveareaOnIntroTimer(int a1, paf::ui::Handler *h, int a3, LiveAreaPageInner *self)
+static void liveareaOnIntroTimer(int eventId, paf::ui::Handler *h, int ev, LiveAreaPageInner *self)
 {
-	(void)a1; (void)a3;
+	(void)eventId; (void)ev;
 	self->m_introDone = true;
 	h->KillTimer(16777507);
 	typedef void (*Fn)(int);
@@ -930,17 +930,17 @@ static void liveareaOnIntroTimer(int a1, paf::ui::Handler *h, int a3, LiveAreaPa
 }
 
 /* 0x811AC8EC */
-static void liveareaOnFocusTimer(int a1, paf::ui::Handler *h, int a3, LiveAreaPageInner *self)
+static void liveareaOnFocusTimer(int eventId, paf::ui::Handler *h, int ev, LiveAreaPageInner *self)
 {
-	(void)a1; (void)a3;
+	(void)eventId; (void)ev;
 	liveareaPageOnFocusComplete(self->m_page);
 	h->KillTimer(16777509);
 }
 
 /* 0x811AC906 */
-static void liveareaOnBgClearTimer(int a1, paf::ui::Handler *h, int a3, LiveAreaPageInner *self)
+static void liveareaOnBgClearTimer(int eventId, paf::ui::Handler *h, int ev, LiveAreaPageInner *self)
 {
-	(void)a1; (void)a3;
+	(void)eventId; (void)ev;
 	if (self->m_initPhase > 0) {
 		--self->m_initPhase;
 		if (self->m_initPhase == 0)

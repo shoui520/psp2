@@ -10,12 +10,12 @@
 
 extern "C" {
 int SceNetCtl_AB1462C5(int arg);
-int SceNetCtl_6A56FC3A(int a1, int a2, int a3);
-int SceNetCtl_A840C74C(int a1, int a2);
-int SceNetCtl_1A254169(int a1, int a2, int a3, int a4);
-int sceBbmcSubscribeFeatureId(int a1, int a2, int a3);
+int SceNetCtl_6A56FC3A(int scanType, int param, int flags);
+int SceNetCtl_A840C74C(int outBuf, int maxCount);
+int SceNetCtl_1A254169(int cmd, int arg, int opt1, int opt2);
+int sceBbmcSubscribeFeatureId(int featureId, int subId, int cbId);
 int sceBbmcUnsubscribeFeature(int handle);
-int sceBbmcClearEvent(int a1, int a2);
+int sceBbmcClearEvent(int featureId, int eventMask);
 int sceBbmcResumeSubscriberCallback(int handle);
 int sceBbmcGpsCellGetLocationInfoStart(int handle);
 int sceBbmcGpsCellGetLocationInfoDone(int handle, void *outInfo);
@@ -108,9 +108,9 @@ public:
 	int GpsGetStatus();				/* 0x811939FA */
 	int GpsSetParam(int param);			/* 0x81193A10 */
 	int SetEmuFile(const char *path);		/* 0x81193A28 */
-	int WifiScanStart(int a1, int a2);		/* 0x81193AAC */
-	int WifiGetScanInfo(int a1, int a2);		/* 0x81193AF2 */
-	int WifiExtra(int a1, int a2);			/* 0x81193B44 */
+	int WifiScanStart(int scanType, int param);	/* 0x81193AAC */
+	int WifiGetScanInfo(int outBuf, int maxCount);	/* 0x81193AF2 */
+	int WifiExtra(int cmd, int arg);		/* 0x81193B44 */
 	int BbmcSubscribe(int cbId);			/* 0x81193B68 */
 	int BbmcUnsubscribe(int handle);		/* 0x81193B90 */
 	int BbmcClearEvent(int handle, int mask);	/* 0x81193BA2 */
@@ -487,25 +487,25 @@ int DriverManager::GpsCallback(int notifyId, int notifyCount, int notifyArg, voi
 }
 
 /* 0x81193AAC */
-int DriverManager::WifiScanStart(int a1, int a2)
+int DriverManager::WifiScanStart(int scanType, int param)
 {
 	LocationConfigIface *cfg = (LocationConfigIface *)g_locationConfig;
 	if (m_wifiPower == 1 && cfg != NULL && cfg->IsWifiEnabled() != 0) {
 		int ret = SceNetCtl_AB1462C5(4);
 		if (ret == 0)
-			return SceNetCtl_6A56FC3A(a1, a2, 0);
+			return SceNetCtl_6A56FC3A(scanType, param, 0);
 		return ret;
 	}
 	return (int)0x80412101;
 }
 
 /* 0x81193AF2 */
-int DriverManager::WifiGetScanInfo(int a1, int a2)
+int DriverManager::WifiGetScanInfo(int outBuf, int maxCount)
 {
 	if (m_wifiPower != 1)
 		return 0;
 
-	int ret = SceNetCtl_A840C74C(a1, a2);
+	int ret = SceNetCtl_A840C74C(outBuf, maxCount);
 	LocationConfigIface *cfg = (LocationConfigIface *)g_locationConfig;
 	if (ret < 0 || cfg->IsApInvisible() != 0) {
 		if (g_locationLogger != NULL)
@@ -519,10 +519,10 @@ int DriverManager::WifiGetScanInfo(int a1, int a2)
 }
 
 /* 0x81193B44 */
-int DriverManager::WifiExtra(int a1, int a2)
+int DriverManager::WifiExtra(int cmd, int arg)
 {
 	if (m_wifiPower == 1)
-		return SceNetCtl_1A254169(a1, a2, 0, 0);
+		return SceNetCtl_1A254169(cmd, arg, 0, 0);
 	return (int)0x80412110;
 }
 

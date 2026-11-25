@@ -21,24 +21,24 @@ extern void *g_liveareaMgr;					/* 0x815670A8 */
 extern paf::thread::RMutex g_liveareaDialogMutex;		/* 0x81467AAC */
 
 extern "C" {
-extern void *SceLsdb_800809E3(void *mem, void *a2, int a3, int a4);
-extern void SceLsdb_29B275BA(paf::string *titleId, void *a2);
+extern void *SceLsdb_800809E3(void *mem, void *client, int mode, int flags);
+extern void SceLsdb_29B275BA(paf::string *titleId, void *outInfo);
 extern void *SceLsdb_4B153968(void *parser);
-extern int SceLsdb_60B535FD(void *a1, int a2);
-extern void SceLsdb_88FDC55C(paf::string *out, void *a2);
+extern int SceLsdb_60B535FD(void *ver, int mode);
+extern void SceLsdb_88FDC55C(paf::string *out, void *ver);
 extern int SceLsdb_1673AD48(void);
-extern void SceLsdb_43495B68(void *parser, int *a2, const char *s, int a4);
+extern void SceLsdb_43495B68(void *parser, int *outVal, const char *s, int flags);
 extern int SceLsdb_BE72A404(const char *titleId);
-extern SceUInt8 SceLsdb_69B32F6C(void *a1);
+extern SceUInt8 SceLsdb_69B32F6C(void *parser);
 extern int SceLsdb_632ACD0F(void *parser);
 extern void SceCommonGuiDialog_696DB9C9(void *param);
-extern int SceCommonGuiDialog_CCFCD9A6(void *param, int a2);
+extern int SceCommonGuiDialog_CCFCD9A6(void *param, int flags);
 extern void SceCommonGuiDialog_BC311DC0(int dlgId);
 }
 
 extern const char *liveareaPageGetTitleId(void *page);		/* 0x8119B990 */
 extern int liveareaCacheGetTemplate(paf::common::SharedPtr<int> *out, paf::string *titleId, SceUInt8 isDefault); /* 0x8119A99C */
-extern int liveareaMgrDownloadContent(paf::common::SharedPtr<int> *row, int a2, int a3); /* 0x8119B222 */
+extern int liveareaMgrDownloadContent(paf::common::SharedPtr<int> *row, int flags, int mode); /* 0x8119B222 */
 extern void liveareaPageInnerOnParseComplete(void *inner, void *parsed, int reqId, paf::string *dir); /* 0x811A9D0C */
 extern void liveareaPageInnerOnParseFail(void *inner);		/* 0x811A9CE4 */
 extern void liveareaPageInnerLoadDefaultXml(void *inner);	/* 0x811AAB9E */
@@ -186,8 +186,8 @@ int LiveAreaContentParserJob::Run()
 	paf::string xmlPath;
 	SceLsdb_88FDC55C(&xmlPath, m_innerField14);
 	if (xmlPath.size() != 0) {
-		int a4 = SceLsdb_1673AD48();
-		SceLsdb_43495B68(m_lsdbParser, &val, xmlPath.c_str(), a4);
+		int parseFlags = SceLsdb_1673AD48();
+		SceLsdb_43495B68(m_lsdbParser, &val, xmlPath.c_str(), parseFlags);
 		if (m_innerField1 == 3)
 			*(int *)((char *)m_lsdbParser + 40) = SceLsdb_BE72A404(m_titleId.c_str());
 		if (m_flag52 != 0)

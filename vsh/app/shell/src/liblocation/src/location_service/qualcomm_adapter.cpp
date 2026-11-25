@@ -50,7 +50,7 @@ class QualCommAdapter {
 public:
 	QualCommAdapter();
 	virtual void OnStateChanged(int state);		/* 0x81198BA6 (+0) */
-	virtual int OnGpsNotification(int a2, int a3, int notifyArg); /* 0x81198BA8 (+4) */
+	virtual int OnGpsNotification(int notifyId, int notifyCount, int notifyArg); /* 0x81198BA8 (+4) */
 	virtual ~QualCommAdapter();			/* 0x811976D0 / 0x81197702 (+8/+12) */
 
 	int StartAGpsThread();				/* 0x8119773A */
@@ -62,7 +62,7 @@ public:
 	int DoFileGet(const char *path, void *buf, int *outSize); /* 0x81197FA8 */
 	int DoHttpGet(const unsigned char *urlEntry, void *buf, int *outSize); /* 0x811980F6 */
 	int DownloadAndInjectXtra();			/* 0x811982DA */
-	int AgpsCallback(int a2, int a3, int notifyArg); /* 0x81198B1C */
+	int AgpsCallback(int notifyId, int notifyCount, int notifyArg); /* 0x81198B1C */
 
 	static int AGpsThreadEntry(SceSize args, void *argp); /* 0x81198538 */
 	static int XtraGpsCallback(int notifyId, int notifyCount, int notifyArg, void *common); /* 0x8119863A */
@@ -829,10 +829,10 @@ int QualCommAdapter::XtraThreadEntry(SceSize args, void *argp)
 }
 
 /* 0x81198B1C */
-int QualCommAdapter::AgpsCallback(int a2, int a3, int notifyArg)
+int QualCommAdapter::AgpsCallback(int notifyId, int notifyCount, int notifyArg)
 {
-	(void)a2;
-	(void)a3;
+	(void)notifyId;
+	(void)notifyCount;
 	unsigned int hi = (unsigned int)notifyArg & 0xFFFF0000U;
 	int lo = notifyArg & 0xFF;
 	if (g_locationLogger != NULL)
@@ -867,20 +867,20 @@ void QualCommAdapter::OnStateChanged(int state)
 }
 
 /* 0x81198BA8 */
-int QualCommAdapter::OnGpsNotification(int a2, int a3, int notifyArg)
+int QualCommAdapter::OnGpsNotification(int notifyId, int notifyCount, int notifyArg)
 {
 	unsigned int hi = (unsigned int)notifyArg & 0xFFFF0000U;
 	if (hi == 0x11000000U || hi == 0x12000000U || hi == 0x13000000U || hi == 0x00060000U) {
 		if (g_locationLogger != NULL) {
 			if (locationLoggerGetField8(g_locationLogger) == 1) {
-				AgpsCallback(a2, a3, notifyArg);
+				AgpsCallback(notifyId, notifyCount, notifyArg);
 				locationLoggerPrintf(
 					g_locationLogger, 2,
 					"[COM] QualCommAdapter::OnGpsNotification() NoSendtoXps notify=0x%08x\n",
 					hi);
 			}
 		} else {
-			return AgpsCallback(a2, a3, notifyArg);
+			return AgpsCallback(notifyId, notifyCount, notifyArg);
 		}
 	}
 	return 0;

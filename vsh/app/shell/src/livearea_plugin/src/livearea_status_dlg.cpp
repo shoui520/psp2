@@ -39,7 +39,7 @@ extern void *liveareaGetIconShader(void);			/* 0x8139303C */
 extern void *liveareaCheckDialogActive(int id);			/* 0x8135B002 */
 extern void liveareaSub34C54C(void *ctx);			/* 0x8134C54C */
 
-static void liveareaStatusDlgTimerCb(int a1, int a2, int a3, int dlgId); /* 0x811A122E */
+static void liveareaStatusDlgTimerCb(int eventId, int param1, int param2, int dlgId); /* 0x811A122E */
 
 class LiveAreaStatusDlg {
 public:
@@ -281,11 +281,11 @@ const paf::IDParam &LiveAreaStatusDlg::GetId4()
 }
 
 /* 0x811A122E */
-static void liveareaStatusDlgTimerCb(int a1, int a2, int a3, int dlgId)
+static void liveareaStatusDlgTimerCb(int eventId, int param1, int param2, int dlgId)
 {
-	(void)a1;
-	(void)a2;
-	(void)a3;
+	(void)eventId;
+	(void)param1;
+	(void)param2;
 	LiveAreaStatusDlg *dlg = (LiveAreaStatusDlg *)liveareaCheckDialogActive(dlgId);
 	if (dlg == NULL)
 		return;

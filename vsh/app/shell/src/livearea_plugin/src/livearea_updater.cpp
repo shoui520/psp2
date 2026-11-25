@@ -91,10 +91,10 @@ int liveareaUpdaterImplUpdateInfo(LiveAreaUpdaterImpl *self, void *out, const ch
 
 /* 0x811A2B72 */
 int liveareaUpdaterImplUpdateExt(LiveAreaUpdaterImpl *self, void *out, const char *title,
-				 int a4, int mode)
+				 int unusedArg, int mode)
 {
 	(void)out;
-	(void)a4;
+	(void)unusedArg;
 	if (!self->m_started)
 		return (int)0x80107901;
 	if (title == NULL)

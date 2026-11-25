@@ -47,7 +47,7 @@ extern const char *liveareaPageGetTitleIdRaw(void *page);	/* 0x8119982C */
 extern void *liveareaPageFindByAppId(int appId);		/* 0x8119C0C6 */
 extern void liveareaMgrForcePoll(void);				/* 0x8119AC7A */
 extern void liveareaCb20EF44(void);				/* 0x8120EF44 */
-extern void liveareaPageInnerSubAB5DA(void *inner, int a1);	/* 0x811AB5DA */
+extern void liveareaPageInnerSubAB5DA(void *inner, int status);	/* 0x811AB5DA */
 extern int liveareaUpdaterSub9DA(void *u, void *out, const char *title, int mode, void *cb, int appId); /* 0x811A29DA */
 extern int liveareaCacheCreateImg(const paf::string &path, void *outRef, void *opt, void *q); /* 0x8119A51E */
 
@@ -170,7 +170,7 @@ public:
 	int UpdateTimestampText(SceUInt64 utcTick);		/* 0x8119EB54 */
 	void UpdateEmptyNotice(bool hasItems);			/* 0x8119ED3C */
 	void OnItemCountChanged(int count);			/* 0x8119EF64 */
-	void OnUpdateResult(int err, int a2, int mode, bool showDialog); /* 0x8119F0A6 */
+	void OnUpdateResult(int err, int subErr, int mode, bool showDialog); /* 0x8119F0A6 */
 	void StopSpinAnim();					/* 0x8119F204 */
 	void FetchMoreActivities();				/* 0x8119F39C */
 
@@ -193,16 +193,16 @@ public:
 };
 
 static void liveareaFeedOnItemCountCb(int count, int appId);	/* 0x8119F4C0 */
-static void liveareaFeedOnRefreshBtnCb(int a1, int a2, int a3, void *arg); /* 0x8119F4DC */
-static void liveareaFeedOnUpdateManualCb(int err, int a2, int appId); /* 0x8119F4E8 */
-static void liveareaFeedOnUpdateSilentCb(int err, int a2, int appId); /* 0x8119F540 */
-static void liveareaFeedOnUpdateAutoCb(int err, int a2, int appId); /* 0x8119F590 */
-static void liveareaFeedOnSysupchkDone(int a1, int a2, int a3, int a4); /* 0x8119F5EA */
+static void liveareaFeedOnRefreshBtnCb(int eventId, int handler, int ev, void *arg); /* 0x8119F4DC */
+static void liveareaFeedOnUpdateManualCb(int err, int subErr, int appId); /* 0x8119F4E8 */
+static void liveareaFeedOnUpdateSilentCb(int err, int subErr, int appId); /* 0x8119F540 */
+static void liveareaFeedOnUpdateAutoCb(int err, int subErr, int appId); /* 0x8119F590 */
+static void liveareaFeedOnSysupchkDone(int eventId, int status, int param1, int param2); /* 0x8119F5EA */
 static void liveareaFeedOnMoreClickCb(void *arg);		/* 0x8119F5FE */
-static void liveareaFeedOnMoreResultCb(int err, int a2, int appId); /* 0x8119F606 */
+static void liveareaFeedOnMoreResultCb(int err, int subErr, int appId); /* 0x8119F606 */
 static void liveareaFeedOnJobRemovedCb(uint32_t slot, paf::common::SharedPtr<paf::job::JobItem> item, void *userdata); /* 0x8119F64E */
-static void liveareaFeedOnArrowTimerCb(int a1, paf::ui::Handler *h); /* 0x8119F67C */
-static void liveareaFeedOnNewsClickCb(int a1, int a2, int a3, void *arg); /* 0x8119F806 */
+static void liveareaFeedOnArrowTimerCb(int eventId, paf::ui::Handler *h); /* 0x8119F67C */
+static void liveareaFeedOnNewsClickCb(int eventId, int handler, int ev, void *arg); /* 0x8119F806 */
 static void liveareaFeedOnSignInBtnCb(void);			/* 0x8119E9D4 */
 
 static paf::ui::ListView *feedGetListView(void *page)
@@ -712,9 +712,9 @@ void LiveAreaFeed::OnItemCountChanged(int count)
 }
 
 /* 0x8119F0A6 */
-void LiveAreaFeed::OnUpdateResult(int err, int a2, int mode, bool showDialog)
+void LiveAreaFeed::OnUpdateResult(int err, int subErr, int mode, bool showDialog)
 {
-	(void)a2;
+	(void)subErr;
 	if (err == (int)0x8055860C && *((int *)g_liveareaMgr + 5) == 0)
 		liveareaMgrForcePoll();
 	if (mode != 1 || !showDialog) {
@@ -797,16 +797,16 @@ static void liveareaFeedOnItemCountCb(int count, int appId)
 }
 
 /* 0x8119F4DC */
-static void liveareaFeedOnRefreshBtnCb(int a1, int a2, int a3, void *arg)
+static void liveareaFeedOnRefreshBtnCb(int eventId, int handler, int ev, void *arg)
 {
-	(void)a1;
-	(void)a2;
-	(void)a3;
+	(void)eventId;
+	(void)handler;
+	(void)ev;
 	((LiveAreaFeed *)arg)->RequestUpdate(2);
 }
 
 /* 0x8119F4E8 */
-static void liveareaFeedOnUpdateManualCb(int err, int a2, int appId)
+static void liveareaFeedOnUpdateManualCb(int err, int subErr, int appId)
 {
 	g_shellMutex.Lock();
 	void *page = liveareaPageFindByAppId(appId);
@@ -814,27 +814,27 @@ static void liveareaFeedOnUpdateManualCb(int err, int a2, int appId)
 		LiveAreaFeed *feed = *(LiveAreaFeed **)((char *)page + 248);
 		if (feed != NULL) {
 			feed->StopSpinAnim();
-			feed->OnUpdateResult(err, a2, 1, true);
+			feed->OnUpdateResult(err, subErr, 1, true);
 		}
 	}
 	g_shellMutex.Unlock();
 }
 
 /* 0x8119F540 */
-static void liveareaFeedOnUpdateSilentCb(int err, int a2, int appId)
+static void liveareaFeedOnUpdateSilentCb(int err, int subErr, int appId)
 {
 	g_shellMutex.Lock();
 	void *page = liveareaPageFindByAppId(appId);
 	if (page != NULL) {
 		LiveAreaFeed *feed = *(LiveAreaFeed **)((char *)page + 248);
 		if (feed != NULL)
-			feed->OnUpdateResult(err, a2, 0, false);
+			feed->OnUpdateResult(err, subErr, 0, false);
 	}
 	g_shellMutex.Unlock();
 }
 
 /* 0x8119F590 */
-static void liveareaFeedOnUpdateAutoCb(int err, int a2, int appId)
+static void liveareaFeedOnUpdateAutoCb(int err, int subErr, int appId)
 {
 	g_shellMutex.Lock();
 	void *page = liveareaPageFindByAppId(appId);
@@ -842,18 +842,18 @@ static void liveareaFeedOnUpdateAutoCb(int err, int a2, int appId)
 		liveareaPageInnerSubAB5DA((char *)page + 48, 0);
 		LiveAreaFeed *feed = *(LiveAreaFeed **)((char *)page + 248);
 		if (feed != NULL)
-			feed->OnUpdateResult(err, a2, 1, false);
+			feed->OnUpdateResult(err, subErr, 1, false);
 	}
 	g_shellMutex.Unlock();
 }
 
 /* 0x8119F5EA */
-static void liveareaFeedOnSysupchkDone(int a1, int a2, int a3, int a4)
+static void liveareaFeedOnSysupchkDone(int eventId, int status, int param1, int param2)
 {
-	(void)a1;
-	(void)a2;
-	(void)a3;
-	(void)a4;
+	(void)eventId;
+	(void)status;
+	(void)param1;
+	(void)param2;
 	paf::Plugin::UnloadAsync("sysupchk_plugin", NULL, NULL);
 }
 
@@ -864,9 +864,9 @@ static void liveareaFeedOnMoreClickCb(void *arg)
 }
 
 /* 0x8119F606 */
-static void liveareaFeedOnMoreResultCb(int err, int a2, int appId)
+static void liveareaFeedOnMoreResultCb(int err, int subErr, int appId)
 {
-	(void)a2;
+	(void)subErr;
 	g_shellMutex.Lock();
 	void *page = liveareaPageFindByAppId(appId);
 	if (page != NULL) {
@@ -891,9 +891,9 @@ static void liveareaFeedOnJobRemovedCb(uint32_t slot, paf::common::SharedPtr<paf
 }
 
 /* 0x8119F67C */
-static void liveareaFeedOnArrowTimerCb(int a1, paf::ui::Handler *h)
+static void liveareaFeedOnArrowTimerCb(int eventId, paf::ui::Handler *h)
 {
-	(void)a1;
+	(void)eventId;
 	paf::ui::Widget *w = (paf::ui::Widget *)h;
 	paf::math::v4 pos = w->GetPos(0, NULL, paf::math::v4(0.0f, 0.0f, 0.0f, 0.0f));
 
@@ -911,11 +911,11 @@ static void liveareaFeedOnArrowTimerCb(int a1, paf::ui::Handler *h)
 }
 
 /* 0x8119F806 */
-static void liveareaFeedOnNewsClickCb(int a1, int a2, int a3, void *arg)
+static void liveareaFeedOnNewsClickCb(int eventId, int handler, int ev, void *arg)
 {
-	(void)a1;
-	(void)a2;
-	(void)a3;
+	(void)eventId;
+	(void)handler;
+	(void)ev;
 	LiveAreaFeed *feed = (LiveAreaFeed *)arg;
 	paf::ui::ListView *lv = feedGetListView(feed->m_page);
 	paf::Timer *t = new paf::Timer();

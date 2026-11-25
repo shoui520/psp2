@@ -15,7 +15,7 @@
 
 extern paf::Plugin *g_liveareaPlugin;				/* 0x81566F94 */
 
-extern void shellListItemBaseCtor(void *self, int a2, paf::Plugin *plugin,
+extern void shellListItemBaseCtor(void *self, int itemType, paf::Plugin *plugin,
 	const paf::IDParam *id1, const paf::IDParam *id2);	/* 0x8134AFF6 */
 extern paf::ui::Widget *shellListItemCreateWidget(void *self, void *parent,
 	const paf::IDParam *tplId, const paf::IDParam *itemId);	/* 0x8134ADF8 */

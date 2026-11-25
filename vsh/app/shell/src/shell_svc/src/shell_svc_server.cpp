@@ -549,7 +549,7 @@ int shellSvcLiveAreaEnqueueSetContent(IPMI::Session *session, SceUInt32 reqId,
 
 /* 0x811B7E32 */
 int shellSvcLiveAreaSetContentSingle(IPMI::Session *session, SceUInt32 reqId,
-	int a3, const void *xmlData, SceUInt32 xmlSize,
+	int methodId, const void *xmlData, SceUInt32 xmlSize,
 	const char *path, int flags, const char *titleId,
 	SceUInt8 allowAny, SceUInt8 flag)
 {
@@ -559,7 +559,7 @@ int shellSvcLiveAreaSetContentSingle(IPMI::Session *session, SceUInt32 reqId,
 		r = (int)0x801040FF;
 		shellSvcLiveAreaSendSetResp(session, reqId, r);
 	} else {
-		r = shellSvcLiveAreaEnqueueSetContent(session, reqId, a3, &buf, 1, path, flags, titleId, allowAny, 0, flag);
+		r = shellSvcLiveAreaEnqueueSetContent(session, reqId, methodId, &buf, 1, path, flags, titleId, allowAny, 0, flag);
 		if (r != 0)
 			shellSvcLiveAreaSendSetResp(session, reqId, r);
 	}
@@ -568,7 +568,7 @@ int shellSvcLiveAreaSetContentSingle(IPMI::Session *session, SceUInt32 reqId,
 
 /* 0x811B7F1C */
 int shellSvcLiveAreaSetContentMulti(IPMI::Session *session, SceUInt32 reqId,
-	int a3, const char **xmlList, SceUInt32 count,
+	int methodId, const char **xmlList, SceUInt32 count,
 	const char *path, int flags, const char *titleId, SceUInt8 allowAny)
 {
 	paf::vector<paf::common::SharedPtr<paf::Buffer> > bufs;
@@ -583,7 +583,7 @@ int shellSvcLiveAreaSetContentMulti(IPMI::Session *session, SceUInt32 reqId,
 		bufs.push_back(b);
 	}
 	if (r == 0)
-		r = shellSvcLiveAreaEnqueueSetContent(session, reqId, a3,
+		r = shellSvcLiveAreaEnqueueSetContent(session, reqId, methodId,
 			bufs.size() ? &bufs[0] : NULL, bufs.size(), path, flags, titleId, allowAny, 1, 0);
 	if (r != 0)
 		shellSvcLiveAreaSendSetMultiResp(session, reqId, r);
