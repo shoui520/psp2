@@ -221,3 +221,76 @@ extern "C" int SwMwContentGetStatus(void *descriptor)
 {
 	return *(int *)descriptor;
 }
+
+/* give the sink its URI: address-literal or resolver path, then the content's start (0x8100ca52) */
+extern "C" int SwMwSinkSetUri(int handle, void *uriText, int size)
+{
+	struct SwMwSink *sink = (struct SwMwSink *)handle;
+	struct SwMwUri text;
+	unsigned short length;
+	unsigned char address[32];
+	unsigned char parsed[4];
+	int status;
+	int failed;
+	int mode;
+
+	length = (unsigned short)size;
+	if (SwMwNetParseAddress(2, (const char *)uriText, &parsed) != 0) {
+		status = SwMwNetResolveName((const char *)uriText, length, 2, &parsed);
+		failed = 0;
+		if (status != 0) {
+			swMwTrace("[SWMW] ERROR in %s:%d\n", SWMW_SINK_SOURCE, 82);
+			failed = 1;
+		}
+		if (failed != 0)
+			return 12202;
+		status = SwMwNetFormatAddress(2, &parsed, (char *)address, 32);
+		failed = 0;
+		if (status != 0) {
+			swMwTrace("[SWMW] ERROR in %s:%d\n", SWMW_SINK_SOURCE, 88);
+			failed = 1;
+		}
+		if (failed != 0)
+			return 12202;
+		uriText = address;
+	}
+	SwMwUriInit(&text, (const char *)uriText);
+	status = SwMwUriSet(&sink->uri, &text, length);
+	SwMwUriDone(&text);
+	failed = 0;
+	if (status != 0) {
+		swMwTrace("[SWMW] ERROR in %s:%d\n", SWMW_SINK_SOURCE, 96);
+		failed = 1;
+	}
+	if (failed == 0) {
+		failed = 0;
+		if (SwMwUriIsSet(&sink->uri) == 0) {
+			swMwTrace("[SWMW] ERROR in %s:%d\n", SWMW_SINK_SOURCE, 97);
+			failed = 1;
+		}
+		if (failed != 0)
+			return SwMwStatus(1);
+		sink->uriSet = 0;
+		SwMwSinkMutexLock(&sink->mutex);
+		sink->closed = 0;
+		sink->status = 0;
+		SwMwSinkMutexUnlock(&sink->mutex);
+		mode = (sink->connected != 0) ? 2 : 1;
+		status = sink->content->getState();
+		if (status == 100) {
+			status = sink->content->start(&sink->uriSet, &sink->uri, mode);
+			failed = 0;
+			if (status != 0) {
+				swMwTrace("[SWMW] ERROR in %s:%d\n", SWMW_SINK_SOURCE, 118);
+				failed = 1;
+			}
+			if (failed != 0)
+				return SwMwStatus(status);
+			sink->notified = 1;
+			return 12007;
+		}
+		if (status == 0)
+			status = 101;
+	}
+	return SwMwStatus(status);
+}
