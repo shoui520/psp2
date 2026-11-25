@@ -819,65 +819,67 @@ extern "C" int SwMwCommChannelSetup(struct SwMwCommChannel *channel, int bufferS
 	if (channel->streamCount == 0) {
 		sprintf(name, "%s_%02d", "SW_IPC_Strm_Pipe_CtoS", channel->index);
 		result = SwMwIpcOpenPipe(name, &channel->singlePipe);
-		if (result != 0) {
+		if (result != 0)
 			swMwTrace("[SWMW] Error %d in %s:%d\n", result, SWMW_COMM_SOURCE, 275);
-			goto fail;
-		}
 	}
-	for (i = 0; i < 4; ++i) {
-		channel->slots[i].pipeStoC = -1;
-		channel->slots[i].pipeCtoS = -1;
-	}
-	for (i = 0; i < 4; ++i) {
-		sprintf(name, "%s_%02d_%02d", "SW_IPC_Strm_Pipe_StoC", channel->index, i);
-		result = SwMwIpcCreatePipe(name, &channel->slots[i].pipeStoC);
-		if (result != 0) {
-			swMwTrace("[SWMW] Error %d in %s:%d\n", result, SWMW_COMM_SOURCE, 286);
-			goto fail;
+	if (result == 0) {
+		for (i = 0; i < 4; ++i) {
+			channel->slots[i].pipeStoC = -1;
+			channel->slots[i].pipeCtoS = -1;
 		}
-		if (channel->streamCount != 0) {
-			sprintf(name, "%s_%02d_%02d", "SW_IPC_Strm_Pipe_CtoS", channel->index, i);
-			result = SwMwIpcOpenPipe(name, &channel->slots[i].pipeCtoS);
+		for (i = 0; i < 4 && result == 0; ++i) {
+			sprintf(name, "%s_%02d_%02d", "SW_IPC_Strm_Pipe_StoC", channel->index, i);
+			result = SwMwIpcCreatePipe(name, &channel->slots[i].pipeStoC);
 			if (result != 0) {
-				swMwTrace("[SWMW] Error %d in %s:%d\n", result, SWMW_COMM_SOURCE, 291);
-				goto fail;
+				swMwTrace("[SWMW] Error %d in %s:%d\n", result,
+					  SWMW_COMM_SOURCE, 286);
+			} else if (channel->streamCount != 0) {
+				sprintf(name, "%s_%02d_%02d", "SW_IPC_Strm_Pipe_CtoS",
+					channel->index, i);
+				result = SwMwIpcOpenPipe(name, &channel->slots[i].pipeCtoS);
+				if (result != 0)
+					swMwTrace("[SWMW] Error %d in %s:%d\n", result,
+						  SWMW_COMM_SOURCE, 291);
 			}
 		}
 	}
-	if (bufferSize == 0) {
-		channel->sharedBase = NULL;
-		channel->bufferSize = 0;
-		return 0;
+	if (result == 0) {
+		if (bufferSize == 0) {
+			channel->sharedBase = NULL;
+			channel->bufferSize = 0;
+		} else {
+			sprintf(name, "%s_%02d", "SW_IPC_Strm_ShMem", channel->index);
+			result = SwMwCommServerCreateShared(&channel->shared, name, bufferSize,
+							    &channel->sharedBase, 0);
+			if (result != 0)
+				swMwTrace("[SWMW] Error %d in %s:%d\n", result,
+					  SWMW_COMM_SOURCE, 299);
+			else
+				channel->bufferSize = bufferSize;
+		}
 	}
-	sprintf(name, "%s_%02d", "SW_IPC_Strm_ShMem", channel->index);
-	result = SwMwCommServerCreateShared(&channel->shared, name, bufferSize,
-					    &channel->sharedBase, 0);
 	if (result != 0) {
-		swMwTrace("[SWMW] Error %d in %s:%d\n", result, SWMW_COMM_SOURCE, 299);
-		goto fail;
+		for (i = 0; i < 4; ++i) {
+			if (channel->slots[i].pipeStoC != -1) {
+				result = SwMwIpcDeletePipe(channel->slots[i].pipeStoC);
+				if (result != 0)
+					swMwTrace("[SWMW] Error %d in %s:%d\n", result,
+						  SWMW_COMM_SOURCE, 312);
+				channel->slots[i].pipeStoC = -1;
+			}
+			if (channel->slots[i].pipeCtoS != -1) {
+				result = SwMwIpcClosePipe(channel->slots[i].pipeCtoS);
+				if (result != 0)
+					swMwTrace("[SWMW] Error %d in %s:%d\n", result,
+						  SWMW_COMM_SOURCE, 317);
+				channel->slots[i].pipeCtoS = -1;
+			}
+		}
+		if (result != 0)
+			swMwTrace("[SWMW] Error %d in %s:%d\n", result, SWMW_COMM_SOURCE, 321);
+		return 12009;
 	}
-	channel->bufferSize = bufferSize;
 	return 0;
-fail:
-	for (i = 0; i < 4; ++i) {
-		if (channel->slots[i].pipeStoC != -1) {
-			result = SwMwIpcDeletePipe(channel->slots[i].pipeStoC);
-			if (result != 0)
-				swMwTrace("[SWMW] Error %d in %s:%d\n", result,
-					  SWMW_COMM_SOURCE, 312);
-			channel->slots[i].pipeStoC = -1;
-		}
-		if (channel->slots[i].pipeCtoS != -1) {
-			result = SwMwIpcClosePipe(channel->slots[i].pipeCtoS);
-			if (result != 0)
-				swMwTrace("[SWMW] Error %d in %s:%d\n", result,
-					  SWMW_COMM_SOURCE, 317);
-			channel->slots[i].pipeCtoS = -1;
-		}
-	}
-	if (result != 0)
-		swMwTrace("[SWMW] Error %d in %s:%d\n", result, SWMW_COMM_SOURCE, 321);
-	return 12009;
 }
 
 /* tear a channel down (0x81001b9c): free its shared block, then its stream pipes */
@@ -977,8 +979,7 @@ extern "C" int SwMwCommChannelOpen(struct SwMwCommServer *server,
 	}
 	if (failed == 0) {
 		if (streams != 0) {
-			i = 0;
-			while (1) {
+			for (i = 0; i < 4; ++i) {
 				argument = (struct SwMwThreadArgument *)malloc(8);
 				if (argument == NULL)
 					break;
@@ -987,21 +988,19 @@ extern "C" int SwMwCommChannelOpen(struct SwMwCommServer *server,
 				if (SwMwThreadCreate(&channel->slots[i].thread,
 						     SwMwCommServerThread, argument, 19) != 0)
 					break;
-				if (++i >= 4) {
-					control.kind = 5;
-					control.result = 0;
-					control.value0 = 0;
-					control.value1 = 0;
-					control.value2 = 0;
-					control.value3 = 0;
-					result = SwMwIpcSend(server->pipeStoC, &control);
-					if (result != 0) {
-						swMwTrace("[SWMW] Error %d in %s:%d\n", result,
-							  SWMW_COMM_SOURCE, 724);
-						goto fail;
-					}
+			}
+			if (i == 4) {
+				control.kind = 5;
+				control.result = 0;
+				control.value0 = 0;
+				control.value1 = 0;
+				control.value2 = 0;
+				control.value3 = 0;
+				result = SwMwIpcSend(server->pipeStoC, &control);
+				if (result == 0)
 					return 0;
-				}
+				swMwTrace("[SWMW] Error %d in %s:%d\n", result,
+					  SWMW_COMM_SOURCE, 724);
 			}
 		} else {
 			argument = (struct SwMwThreadArgument *)malloc(8);
@@ -1017,19 +1016,17 @@ extern "C" int SwMwCommChannelOpen(struct SwMwCommServer *server,
 					control.value2 = 0;
 					control.value3 = 0;
 					result = SwMwIpcSend(server->pipeStoC, &control);
-					if (result != 0) {
-						swMwTrace("[SWMW] Error %d in %s:%d\n", result,
-							  SWMW_COMM_SOURCE, 724);
-						goto fail;
-					}
-					return 0;
+					if (result == 0)
+						return 0;
+					swMwTrace("[SWMW] Error %d in %s:%d\n", result,
+						  SWMW_COMM_SOURCE, 724);
 				}
 			}
 		}
 	}
-fail:
 	result = SwMwCommChannelTerm(channel);
 	if (result != 0)
 		swMwTrace("[SWMW] Error %d in %s:%d\n", result, SWMW_COMM_SOURCE, 732);
 	return result;
+
 }
