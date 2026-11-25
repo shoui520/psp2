@@ -35,14 +35,21 @@ s32 sceUsbMic_2E6DCDCD(s32 maxSamples, s32 frequency, void *buf)
         ret = 0x80243804;
     } else if ((maxSamples % 64) != 0) {
         ret = 0x80243806;
-    } else if (frequency != 22050 && frequency != 11025 && frequency != 44100) {
-        ret = 0x8024380A;
     } else {
-        if (buf != NULL) {
-            sceKernelDelayThread(1000);
-            sceKernelMemset(buf, 0, maxSamples);
+        switch (frequency) {
+        case 11025:
+        case 22050:
+        case 44100:
+            if (buf != NULL) {
+                sceKernelDelayThread(1000);
+                sceKernelMemset(buf, 0, maxSamples);
+            }
+            ret = 0;
+            break;
+        default:
+            ret = 0x8024380A;
+            break;
         }
-        ret = 0;
     }
 
     pspSetK1(oldK1);
