@@ -296,7 +296,9 @@ public:
 			m_scrollIndex = -1;
 		} else if (s_singleData != NULL) {
 			s_singleData->listCache.ClearAll();
+#ifndef NP_MESSAGE_DIALOG_NO_COMMON_GUI_DIALOG
 			SceCommonGuiDialog_696DB9C9();
+#endif
 		}
 	}
 

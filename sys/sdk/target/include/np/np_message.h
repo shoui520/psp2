@@ -31,6 +31,16 @@ typedef struct SceNpMessageId {
 	SceChar8 padding[1];
 } SceNpMessageId;
 
+typedef struct SceNpMessageEntry {
+	SceNpMessageId messageId;
+	SceDateTime dateTime;
+	SceNpId from;
+	SceChar8 preview[SCE_NP_MESSAGE_MAX_PREVIEW_SIZE];
+	SceDateTime expirationDate;
+	SceUInt16 messageFlag;
+	SceChar8 reserved[30];
+} SceNpMessageEntry;
+
 #ifdef __cplusplus
 }
 #endif
