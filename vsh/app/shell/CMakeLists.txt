@@ -380,6 +380,7 @@ psp2_module(vs0_vsh_shell_shell KIND user COMPILER snc PARTIAL SOURCES
 	src/musiccore_plugin/src/musiccore_audio_output.cpp
 	src/musiccore_plugin/src/musiccore_decoder_manager.cpp
 	src/musiccore_plugin/src/musiccore_mp3_media.cpp
+	src/musiccore_plugin/src/musiccore_mp4_media.cpp
 	shell.c
 )
 target_include_directories(vs0_vsh_shell_shell PRIVATE "${PSP2_SRC}/vsh/paf/include"
