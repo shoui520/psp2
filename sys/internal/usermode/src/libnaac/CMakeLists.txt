@@ -1,4 +1,22 @@
-# generated skeleton (T2): stub bodies, original module/export/import tables
-psp2_module(vs0_sys_external_libnaac KIND user SKELETON SOURCES
-	libnaac.c
+psp2_module(vs0_sys_external_libnaac KIND user COMPILER gcc48 SOURCES
+	sce_aacenc.c
+	aacEnc/core/bitmux/enc/aac/bit_aac.c
+	aacEnc/wrappers/enc/aac/cm_utils.c
+	aacEnc/wrappers/enc/aac/prconfig.c
+	aacEnc/wrappers/enc/aac/mp2aac/aacencifc.c
+	aacEnc/core/bitmux/enc/aac/mp2aac/bit_enc.c
+	aacEnc/core/psych/enc/aac/mp2aac/psymain.c
+	aacEnc/core/quant/enc/aac/mp2aac/loopmain.c
+	aacEnc/core/bitmux/enc/aac/bit_fram.c
+	aacEnc/core/psych/enc/aac/cod_chan.c
+	aacEnc/core/psych/enc/aac/ms_chan.c
+	aacEnc/core/psych/enc/aac/psy_chan.c
+	aacEnc/core/psych/enc/aac/sw_cont.c
+	aacEnc/core/psych/enc/aac/thr_chan.c
+	aacEnc/core/psych/enc/aac/tns.c
+	aacEnc/core/psych/enc/aac/window.c
+	aacEnc/core/psych/enc/common/cb_param.c
+	aacEnc/core/psych/enc/common/fifo_buf.c
+	aacEnc/core/psych/enc/common/psyparam.c
+	aacEnc/core/psych/enc/aac/calcwindow.c
 )
