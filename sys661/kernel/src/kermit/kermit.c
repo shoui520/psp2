@@ -369,15 +369,14 @@ static void *kermitTranslateAndFlushRequest(void *addr, u32 size)
 	u32 kaddr;
 
 	if ((paddr - 0x04000000u) <= 0x007FFFFFu) {
-		kaddr = low26 + 0xAA1D0000u;
-		if ((paddr - 0x00010000u) < 0x4000u) {
-			return addr;
-		}
+		kaddr = low26 + 0xABE00000u;
+	} else if ((paddr - 0x00010000u) < 0x4000u) {
+		kaddr = low26 + 0xABD00000u;
 	} else {
-		kaddr = low26 + 0xAA1E0000u;
+		return addr;
 	}
 
-	void *uncached = (void *)(kaddr & ~0x60000000u);
+	void *uncached = (void *)(kaddr & 0x9FFFFFFFu);
 	sceKernelMemcpy(uncached, addr, size);
 	sceKernelDcacheWritebackInvalidateRange(uncached, size);
 	return (void *)kaddr;
