@@ -74,6 +74,21 @@ int sceAppMgrIsPidShellAndCrashed(SceUID pid);
 /* not in the SDK: the application of that ID ended */
 int sceAppMgrQuitApp(int appId);
 
+/*
+ * not in the SDK: the events the application manager queues (a quit request of this
+ * application's own is 0x20000001), taken one at a time, and the application of a name
+ * destroyed
+ */
+struct SceAppMgrAppEvent {
+	SceUInt32 eventId;
+	SceUInt32 appId;
+	SceUInt32 reserved[14];
+};
+
+int sceAppMgrReceiveEventNum(int *eventNum);
+int sceAppMgrReceiveEvent(struct SceAppMgrAppEvent *event);
+int sceAppMgrDestroyAppByName(const char *name);
+
 /* user mode only: the kernel declares its own (appmgr's mount.h) */
 #ifndef PSP2_KERNEL
 /*
