@@ -127,7 +127,13 @@ def linux_wrapper(program, path):
 	if SYSTEM == 'linux':
 		run = f'exec "{program}" "$@"'
 	elif SYSTEM == 'macos':
-		run = f'exec limactl shell --workdir "$PWD" {_lima_instance()} -- "{program}" "$@"'
+		inst = _lima_instance()
+		run = (f'n=0; for a in "$@"; do n=$((n + ${{#a}} + 1)); done\n'
+		       f'if [ "$n" -gt 4000 ]; then\n'
+		       f'  printf \'%s\\0\' "$@" | limactl shell --workdir "$PWD" {inst} -- xargs -0 "{program}"\n'
+		       f'  exit $?\n'
+		       f'fi\n'
+		       f'exec limactl shell --workdir "$PWD" {inst} -- "{program}" "$@"')
 	else:
 		raise HostError(f'unsupported host system: {sys.platform}')
 	path.write_text(f'#!/bin/sh\n{run}\n')
