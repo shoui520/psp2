@@ -1,5 +1,6 @@
 #include <stdint.h>
 #include <stddef.h>
+#include <common_imp.h>
 
 /* Imports */
 int sceKernelInitDiscImage(void);
@@ -11,10 +12,10 @@ int sceKernelSearchModuleByName(const char *name);
 int sceKernelGetUIDcontrolBlock(int uid, void **cb);
 void *sceKernelGetGameInfo(void);
 void *memset(void *s, int c, size_t n);
-int memcmp(const void *s1, const void *s2, size_t n);
+int memcmp(const void *lhs, const void *rhs, size_t n);
 void *memcpy(void *dst, const void *src, size_t n);
 char *strncpy(char *dst, const char *src, size_t n);
-int strcmp(const char *s1, const char *s2);
+int strcmp(const char *lhs, const char *rhs);
 int sceKernelSetEventFlag(int evf, uint32_t bits);
 int sceKernelDeleteSema(int semaid);
 int sceKernelReferVplStatus(int vplid, void *info);
@@ -27,14 +28,20 @@ int sceKernelTryAllocateVpl(int vplid, uint32_t size, void **data);
 int sceKernelFreeVpl(int vplid, void *data);
 int sceKernelCreateSema(const char *name, uint32_t attr, int init_val, int max_val, void *opt);
 int sceWlanDrv_driver_2519EAA7(void);
-int sceWlanDrv_driver_325F7172(int a0);
-int sceWlanDrv_driver_B6A9700D(void *a0, void *a1);
+int sceWlanDrv_driver_325F7172(int wlanMode);
+int sceWlanDrv_driver_B6A9700D(void *inBuf, void *outBuf);
 
 #define M_EXT       0x0001
 #define M_PKTHDR    0x0002
 #define M_RDONLY    0x0008
 #define M_BCAST     0x0100
 #define M_MCAST     0x0200
+
+typedef struct SceNetUidCB {
+	uint32_t header[5];
+	uint16_t size_and_type;
+	uint16_t attr;
+} SceNetUidCB;
 
 typedef struct SceNetMbuf {
 	struct SceNetMbuf *m_next;      /* +0x00 */
@@ -43,18 +50,41 @@ typedef struct SceNetMbuf {
 	int32_t m_len;                  /* +0x0c */
 	uint16_t m_type;                /* +0x10 */
 	uint16_t m_flags;               /* +0x12 */
-	void *pkthdr_rcvif;             /* +0x14 */
-	int32_t pkthdr_len;             /* +0x18 */
-	uint32_t pkthdr_pad[5];         /* +0x1c..0x2c */
-	uint8_t *ext_buf;               /* +0x30 */
-	void *ext_free;                 /* +0x34 */
-	void *ext_arg;                  /* +0x38 */
-	uint32_t ext_size;              /* +0x3c */
-	uint32_t ext_type;              /* +0x40 */
-	struct SceNetMbuf *ext_nextref; /* +0x44 */
-	struct SceNetMbuf *ext_prevref; /* +0x48 */
-	uint8_t pad[0x100 - 0x4c];
+	union {
+		struct {
+			void *rcvif;                    /* +0x14 */
+			int32_t len;                    /* +0x18 */
+			uint32_t pad[5];                /* +0x1c..0x2c */
+			union {
+				struct {
+					uint8_t *buf;                   /* +0x30 */
+					void *free_fn;                  /* +0x34 */
+					void *arg;                      /* +0x38 */
+					uint32_t size;                  /* +0x3c */
+					uint32_t type;                  /* +0x40 */
+					struct SceNetMbuf *nextref;     /* +0x44 */
+					struct SceNetMbuf *prevref;     /* +0x48 */
+				} ext;
+				uint8_t pktdat[0x100 - 0x30];       /* +0x30..0x100 */
+			} payload;
+		} pkt;
+		uint8_t dat[0x100 - 0x14];                  /* +0x14..0x100 */
+	} m_store;
 } SceNetMbuf;
+
+#define pkthdr_rcvif m_store.pkt.rcvif
+#define pkthdr_len   m_store.pkt.len
+#define pkthdr_pad   m_store.pkt.pad
+#define ext_buf      m_store.pkt.payload.ext.buf
+#define ext_free     m_store.pkt.payload.ext.free_fn
+#define ext_arg      m_store.pkt.payload.ext.arg
+#define ext_size     m_store.pkt.payload.ext.size
+#define ext_type     m_store.pkt.payload.ext.type
+#define ext_nextref  m_store.pkt.payload.ext.nextref
+#define ext_prevref  m_store.pkt.payload.ext.prevref
+#define MBUF_DAT(m)     ((m)->m_store.dat)
+#define MBUF_PKTDAT(m)  ((m)->m_store.pkt.payload.pktdat)
+#define MBUF_END(m)     (&(m)->m_store.dat[sizeof((m)->m_store.dat)])
 
 typedef struct SceNetIfEvent {
 	struct SceNetIfEvent *next; /* +0x00 */
@@ -64,14 +94,14 @@ typedef struct SceNetIfEvent {
 } SceNetIfEvent;
 
 typedef struct SceNetIf {
-	uint8_t pad0[0x14];
+	uint8_t header_pad[0x14];
 	char name[16];              /* +0x14 */
-	uint8_t pad1[0xec - 0x24];
+	uint8_t state_pad[0xec - 0x24];
 	uint8_t mac[6];             /* +0xec */
-	uint8_t pad2[0x100 - 0xf2];
+	uint8_t addr_pad[0x100 - 0xf2];
 	int ioctl_sema;             /* +0x100 */
 	int ioctl_ok_sema;          /* +0x104 */
-	int pad108;                 /* +0x108 */
+	int ioctl_pad;              /* +0x108 */
 	int ioctl_res;              /* +0x10c */
 	SceNetIfEvent *ev_head;     /* +0x110 */
 	SceNetIfEvent *ev_tail;     /* +0x114 */
@@ -153,27 +183,15 @@ void sceNetIfhandle_lib_F56FAC82(SceNetMbuf *m);
 SceNetMbuf *sceNetIfhandle_lib_59F0D619(int how, uint16_t type);
 void sceNetIfhandle_lib_9A6261EC(SceNetMbuf *m, int off, int len, void *cp);
 void sceNetIfhandle_lib_BFF3CEA5(SceNetMbuf *mp, int req_len);
-SceNetMbuf *sceNetIfhandle_lib_456E3146(SceNetMbuf *m, int off0, int len, int wait);
+SceNetMbuf *sceNetIfhandle_lib_456E3146(SceNetMbuf *m, int start_off, int len, int wait);
 void sceNetIfhandle_lib_35FAB6A2(void);
 void sceNetIfhandle_lib_0B258B5E(void);
 uint32_t sceNetIfhandle_lib_07505747(int idx);
 
-static inline uint32_t get_k1(void)
-{
-	uint32_t k1;
-	__asm__ volatile("move %0, $k1" : "=r"(k1));
-	return k1;
-}
-
-static inline void set_k1(uint32_t k1)
-{
-	__asm__ volatile("move $k1, %0" : : "r"(k1));
-}
-
 void sceNetIfhandle_lib_B9096E48(void)
 {
-	uint32_t old_k1 = get_k1();
-	set_k1(old_k1 << 11);
+	uint32_t old_k1 = pspGetK1();
+	pspSetK1(old_k1 << 11);
 
 	while (g_rx_queue.head != NULL) {
 		SceNetMbuf *m = g_rx_queue.head;
@@ -193,18 +211,18 @@ void sceNetIfhandle_lib_B9096E48(void)
 
 	g_net_evf_id = 0;
 	sceNetIfhandle_lib_0B258B5E();
-	set_k1(old_k1);
+	pspSetK1(old_k1);
 }
 
 void sceNetIfhandle_lib_B1F5BB87(SceNetIf *ifp, SceNetMbuf *m)
 {
-	uint32_t old_k1 = get_k1();
+	uint32_t old_k1 = pspGetK1();
 	uint32_t k1_shifted = old_k1 << 11;
-	set_k1(k1_shifted);
+	pspSetK1(k1_shifted);
 
 	if (ifp == NULL || ((int32_t)(k1_shifted & (uint32_t)ifp) < 0) ||
 	    m == NULL || ((int32_t)m < 0)) {
-		set_k1(old_k1);
+		pspSetK1(old_k1);
 		return;
 	}
 
@@ -217,7 +235,7 @@ void sceNetIfhandle_lib_B1F5BB87(SceNetIf *ifp, SceNetMbuf *m)
 		}
 	}
 	if (i == 8 || m == NULL) {
-		set_k1(old_k1);
+		pspSetK1(old_k1);
 		return;
 	}
 
@@ -227,7 +245,7 @@ void sceNetIfhandle_lib_B1F5BB87(SceNetIf *ifp, SceNetMbuf *m)
 		g_drop_counter = cur + 1;
 		if ((cur % drop_mod) != 0) {
 			sceNetIfhandle_lib_F56FAC82(m);
-			set_k1(old_k1);
+			pspSetK1(old_k1);
 			return;
 		}
 	}
@@ -244,18 +262,18 @@ void sceNetIfhandle_lib_B1F5BB87(SceNetIf *ifp, SceNetMbuf *m)
 	sceKernelCpuResumeIntr(intr);
 
 	ifh->start_tx(ifh);
-	set_k1(old_k1);
+	pspSetK1(old_k1);
 }
 
 void sceNetIfhandle_lib_0296C7D6(SceNetIf *ifp, uint32_t cmd, void *arg)
 {
-	uint32_t old_k1 = get_k1();
+	uint32_t old_k1 = pspGetK1();
 	uint32_t k1_shifted = old_k1 << 11;
-	set_k1(k1_shifted);
+	pspSetK1(k1_shifted);
 
 	if (ifp == NULL || ((int32_t)(k1_shifted & (uint32_t)ifp) < 0) ||
 	    arg == NULL || ((int32_t)(k1_shifted & (uint32_t)arg) < 0)) {
-		set_k1(old_k1);
+		pspSetK1(old_k1);
 		return;
 	}
 
@@ -268,7 +286,7 @@ void sceNetIfhandle_lib_0296C7D6(SceNetIf *ifp, uint32_t cmd, void *arg)
 		}
 	}
 	if (i == 8) {
-		set_k1(old_k1);
+		pspSetK1(old_k1);
 		return;
 	}
 
@@ -323,16 +341,16 @@ void sceNetIfhandle_lib_0296C7D6(SceNetIf *ifp, uint32_t cmd, void *arg)
 	}
 
 	if (ptrs[0] != NULL && ((int32_t)(k1_shifted & (uint32_t)ptrs[0]) < 0)) {
-		set_k1(old_k1);
+		pspSetK1(old_k1);
 		return;
 	}
 	if (ptrs[1] != NULL && ((int32_t)(k1_shifted & (uint32_t)ptrs[1]) < 0)) {
-		set_k1(old_k1);
+		pspSetK1(old_k1);
 		return;
 	}
 
 	ifh->ioctl(ifh, cmd, arg, ptrs);
-	set_k1(old_k1);
+	pspSetK1(old_k1);
 }
 
 void sceNetIfhandle_driver_263767F6(SceNetIfHandle *ifh, int type, int arg)
@@ -404,17 +422,16 @@ SceNetMbuf *sceNetIfhandle_driver_E2F4F1C9(SceNetIfHandle *ifh)
 
 int sceNetIfhandle_lib_30F69334(int evf_id)
 {
-	uint32_t old_k1 = get_k1();
-	uint32_t k1_shifted = old_k1 << 11;
-	set_k1(k1_shifted);
+	uint32_t old_k1 = pspGetK1();
+	pspSetK1(old_k1 << 11);
 
-	void *cb = NULL;
+	void *cbRaw;
 	int res = 0;
-	if (sceKernelGetUIDcontrolBlock(evf_id, &cb) != 0) {
+	if (sceKernelGetUIDcontrolBlock(evf_id, &cbRaw) != 0) {
 		res = (int)0x80410003;
 	} else {
-		uint16_t attr = *((uint16_t *)((uint8_t *)cb + 0x16));
-		uint32_t ok = (k1_shifted >> 31) ? (attr & 2) : 2;
+		SceNetUidCB *cb = (SceNetUidCB *)cbRaw;
+		uint32_t ok = (pspGetK1() >> 31) ? (cb->attr & 2u) : 2u;
 		if (ok == 0) {
 			res = (int)0x80410003;
 		} else {
@@ -431,18 +448,18 @@ int sceNetIfhandle_lib_30F69334(int evf_id)
 		}
 	}
 
-	set_k1(old_k1);
+	pspSetK1(old_k1);
 	return res;
 }
 
 static int get_attach_info(SceNetIf **out_ifp, int *out_sema)
 {
-	uint32_t old_k1 = get_k1();
+	uint32_t old_k1 = pspGetK1();
 	uint32_t k1_shifted = old_k1 << 11;
 
 	if (out_ifp == NULL || ((int32_t)(k1_shifted & (uint32_t)out_ifp) < 0) ||
 	    out_sema == NULL || ((int32_t)(k1_shifted & (uint32_t)out_sema) < 0)) {
-		set_k1(old_k1);
+		pspSetK1(old_k1);
 		return (int)0x80410003;
 	}
 
@@ -454,18 +471,18 @@ static int get_attach_info(SceNetIf **out_ifp, int *out_sema)
 		*out_sema = g_attach_sema;
 		res = 0;
 	}
-	set_k1(old_k1);
+	pspSetK1(old_k1);
 	return res;
 }
 
 static int get_detach_info(SceNetIf **out_ifp, int *out_sema)
 {
-	uint32_t old_k1 = get_k1();
+	uint32_t old_k1 = pspGetK1();
 	uint32_t k1_shifted = old_k1 << 11;
 
 	if (out_ifp == NULL || ((int32_t)(k1_shifted & (uint32_t)out_ifp) < 0) ||
 	    out_sema == NULL || ((int32_t)(k1_shifted & (uint32_t)out_sema) < 0)) {
-		set_k1(old_k1);
+		pspSetK1(old_k1);
 		return (int)0x80410003;
 	}
 
@@ -477,7 +494,7 @@ static int get_detach_info(SceNetIf **out_ifp, int *out_sema)
 		*out_sema = g_detach_sema;
 		res = 0;
 	}
-	set_k1(old_k1);
+	pspSetK1(old_k1);
 	return res;
 }
 
@@ -503,9 +520,9 @@ int sceNetIfhandle_lib_9173FD47(SceNetIf **out_ifp, int *out_sema)
 
 void sceNetIfhandle_lib_8FCB05A1(SceNetIf *ifp)
 {
-	uint32_t old_k1 = get_k1();
+	uint32_t old_k1 = pspGetK1();
 	uint32_t k1_shifted = old_k1 << 11;
-	set_k1(k1_shifted);
+	pspSetK1(k1_shifted);
 
 	if (ifp != NULL && ((int32_t)(k1_shifted & (uint32_t)ifp) >= 0)) {
 		for (int i = 0; i < 8; i++) {
@@ -516,14 +533,14 @@ void sceNetIfhandle_lib_8FCB05A1(SceNetIf *ifp)
 			}
 		}
 	}
-	set_k1(old_k1);
+	pspSetK1(old_k1);
 }
 
 void sceNetIfhandle_lib_EAD3A759(SceNetIf *ifp)
 {
-	uint32_t old_k1 = get_k1();
+	uint32_t old_k1 = pspGetK1();
 	uint32_t k1_shifted = old_k1 << 11;
-	set_k1(k1_shifted);
+	pspSetK1(k1_shifted);
 
 	if (ifp != NULL && ((int32_t)(k1_shifted & (uint32_t)ifp) >= 0)) {
 		for (int i = 0; i < 8; i++) {
@@ -534,13 +551,13 @@ void sceNetIfhandle_lib_EAD3A759(SceNetIf *ifp)
 			}
 		}
 	}
-	set_k1(old_k1);
+	pspSetK1(old_k1);
 }
 
 SceNetMbuf *sceNetIfhandle_lib_E440A7D8(void)
 {
-	uint32_t old_k1 = get_k1();
-	set_k1(old_k1 << 11);
+	uint32_t old_k1 = pspGetK1();
+	pspSetK1(old_k1 << 11);
 
 	int intr = sceKernelCpuSuspendIntr();
 	SceNetMbuf *m = g_rx_queue.head;
@@ -555,7 +572,7 @@ SceNetMbuf *sceNetIfhandle_lib_E440A7D8(void)
 	}
 	sceKernelCpuResumeIntr(intr);
 
-	set_k1(old_k1);
+	pspSetK1(old_k1);
 	return m;
 }
 
@@ -577,44 +594,44 @@ static inline __attribute__((always_inline)) int check_net_sema(int semaid)
 
 int sceNetIfhandle_lib_30602CE9(int semaid, int signal)
 {
-	uint32_t old_k1 = get_k1();
-	set_k1(old_k1 << 11);
+	uint32_t old_k1 = pspGetK1();
+	pspSetK1(old_k1 << 11);
 
 	int res = (int)0x80410003;
 	if (check_net_sema(semaid)) {
 		res = sceKernelSignalSema(semaid, signal);
 	}
 
-	set_k1(old_k1);
+	pspSetK1(old_k1);
 	return res;
 }
 
 int sceNetIfhandle_lib_D5DA7B3C(int semaid, int signal, uint32_t *timeout)
 {
-	uint32_t old_k1 = get_k1();
+	uint32_t old_k1 = pspGetK1();
 	uint32_t k1_shifted = old_k1 << 11;
-	set_k1(k1_shifted);
+	pspSetK1(k1_shifted);
 
 	int res = (int)0x80410003;
 	if (((int32_t)(k1_shifted & (uint32_t)timeout) >= 0) && check_net_sema(semaid)) {
 		res = sceKernelWaitSema(semaid, signal, timeout);
 	}
 
-	set_k1(old_k1);
+	pspSetK1(old_k1);
 	return res;
 }
 
 int sceNetIfhandle_lib_2162EE67(int semaid, int signal)
 {
-	uint32_t old_k1 = get_k1();
-	set_k1(old_k1 << 11);
+	uint32_t old_k1 = pspGetK1();
+	pspSetK1(old_k1 << 11);
 
 	int res = (int)0x80410003;
 	if (check_net_sema(semaid)) {
 		res = sceKernelPollSema(semaid, signal);
 	}
 
-	set_k1(old_k1);
+	pspSetK1(old_k1);
 	return res;
 }
 
@@ -642,20 +659,20 @@ static int alloc_ifhandle(SceNetIfHandle *ifh, uint32_t ifp_size)
 	}
 	memset(ifp, 0, ifp_size);
 
-	int s1 = sceKernelCreateSema("SceNetIoctlSema", 7, 0, 0xff, NULL);
-	if (s1 < 0) {
+	int ioctl_sema = sceKernelCreateSema("SceNetIoctlSema", 7, 0, 0xff, NULL);
+	if (ioctl_sema < 0) {
 		sceNetIfhandle_lib_76BAD213(ifh->ifp);
-		return s1;
+		return ioctl_sema;
 	}
-	ifp->ioctl_sema = s1;
+	ifp->ioctl_sema = ioctl_sema;
 
-	int s2 = sceKernelCreateSema("SceNetIoctlOKSema", 7, 1, 1, NULL);
-	if (s2 < 0) {
+	int ioctl_ok_sema = sceKernelCreateSema("SceNetIoctlOKSema", 7, 1, 1, NULL);
+	if (ioctl_ok_sema < 0) {
 		sceKernelDeleteSema(ifp->ioctl_sema);
 		sceNetIfhandle_lib_76BAD213(ifh->ifp);
-		return s2;
+		return ioctl_ok_sema;
 	}
-	ifp->ioctl_ok_sema = s2;
+	ifp->ioctl_ok_sema = ioctl_ok_sema;
 	g_if_table[slot] = ifh;
 	return 0;
 }
@@ -1079,34 +1096,34 @@ int sceNetIfhandle_driver_C5623112(SceNetIfHandle *ifh, uint8_t *mac)
 	return (int)0x80000025;
 }
 
-int sceNetIfhandle_C80181A2(void *a0, void *a1)
+int sceNetIfhandle_C80181A2(void *inBuf, void *outBuf)
 {
-	uint32_t old_k1 = get_k1();
+	uint32_t old_k1 = pspGetK1();
 	uint32_t k1_shifted = old_k1 << 11;
-	set_k1(k1_shifted);
+	pspSetK1(k1_shifted);
 
 	int res = (int)0x80410003;
-	if (a0 != NULL && ((int32_t)(k1_shifted & (uint32_t)a0) >= 0) &&
-	    a1 != NULL && ((int32_t)(k1_shifted & (uint32_t)a1) >= 0)) {
-		res = sceWlanDrv_driver_B6A9700D(a0, a1);
+	if (inBuf != NULL && ((int32_t)(k1_shifted & (uint32_t)inBuf) >= 0) &&
+	    outBuf != NULL && ((int32_t)(k1_shifted & (uint32_t)outBuf) >= 0)) {
+		res = sceWlanDrv_driver_B6A9700D(inBuf, outBuf);
 	}
-	set_k1(old_k1);
+	pspSetK1(old_k1);
 	return res;
 }
 
-int sceNetIfhandle_FD8585E1(int a0)
+int sceNetIfhandle_FD8585E1(int wlanMode)
 {
-	uint32_t old_k1 = get_k1();
-	set_k1(old_k1 << 11);
-	int res = sceWlanDrv_driver_325F7172(a0);
-	set_k1(old_k1);
+	uint32_t old_k1 = pspGetK1();
+	pspSetK1(old_k1 << 11);
+	int res = sceWlanDrv_driver_325F7172(wlanMode);
+	pspSetK1(old_k1);
 	return res;
 }
 
-int sceNetIfhandle_lib_0C391E9F(uint32_t arg0, uint32_t arg1)
+int sceNetIfhandle_lib_0C391E9F(uint32_t partOrSize, uint32_t poolSize)
 {
-	uint32_t old_k1 = get_k1();
-	set_k1(old_k1 << 11);
+	uint32_t old_k1 = pspGetK1();
+	pspSetK1(old_k1 << 11);
 
 	int modid = sceKernelSearchModuleByName("sceNet_Library");
 	uint32_t info[24];
@@ -1115,10 +1132,10 @@ int sceNetIfhandle_lib_0C391E9F(uint32_t arg0, uint32_t arg1)
 	int res = sceKernelQueryModuleInfo(modid, info);
 	if (res >= 0) {
 		int part = 2;
-		uint32_t size = arg0;
+		uint32_t size = partOrSize;
 		if ((info[16] & 0xffff0000u) != 0x01010000u) {
-			part = (int)arg0;
-			size = arg1;
+			part = (int)partOrSize;
+			size = poolSize;
 		}
 		if (part != 2 && part != 5) {
 			res = (int)0x80410103;
@@ -1131,32 +1148,32 @@ int sceNetIfhandle_lib_0C391E9F(uint32_t arg0, uint32_t arg1)
 		}
 	}
 
-	set_k1(old_k1);
+	pspSetK1(old_k1);
 	return res;
 }
 
 int sceNetIfhandle_lib_29ED84C5(void)
 {
-	uint32_t old_k1 = get_k1();
-	set_k1(old_k1 << 11);
+	uint32_t old_k1 = pspGetK1();
+	pspSetK1(old_k1 << 11);
 
 	if (g_vpl_uid > 0) {
 		sceKernelDeleteVpl(g_vpl_uid);
 		g_vpl_uid = -1;
 	}
 
-	set_k1(old_k1);
+	pspSetK1(old_k1);
 	return 0;
 }
 
 int sceNetIfhandle_lib_4C2886CB(uint32_t *stat)
 {
-	uint32_t old_k1 = get_k1();
+	uint32_t old_k1 = pspGetK1();
 	uint32_t k1_shifted = old_k1 << 11;
-	set_k1(k1_shifted);
+	pspSetK1(k1_shifted);
 
 	if (stat == NULL || ((int32_t)(k1_shifted & (uint32_t)stat) < 0)) {
-		set_k1(old_k1);
+		pspSetK1(old_k1);
 		return (int)0x80410103;
 	}
 
@@ -1164,11 +1181,11 @@ int sceNetIfhandle_lib_4C2886CB(uint32_t *stat)
 	vpl_info[0] = 0x34;
 	int res = sceKernelReferVplStatus(g_vpl_uid, vpl_info);
 	if (res < 0) {
-		set_k1(old_k1);
+		pspSetK1(old_k1);
 		return res;
 	}
 
-	set_k1(old_k1);
+	pspSetK1(old_k1);
 	stat[0] = vpl_info[10];
 	stat[1] = g_vpl_max_used;
 	stat[2] = vpl_info[11];
@@ -1177,16 +1194,16 @@ int sceNetIfhandle_lib_4C2886CB(uint32_t *stat)
 
 void *sceNetIfhandle_lib_15CFE3C0(uint32_t size)
 {
-	uint32_t old_k1 = get_k1();
-	set_k1(old_k1 << 11);
+	uint32_t old_k1 = pspGetK1();
+	pspSetK1(old_k1 << 11);
 
-	void *ptr = NULL;
+	uint32_t vpl_info[16];
+	void *ptr;
 	if (sceKernelTryAllocateVpl(g_vpl_uid, size, &ptr) < 0 || (int32_t)ptr < 0) {
-		set_k1(old_k1);
+		pspSetK1(old_k1);
 		return NULL;
 	}
 
-	uint32_t vpl_info[13];
 	vpl_info[0] = 0x34;
 	if (sceKernelReferVplStatus(g_vpl_uid, vpl_info) == 0) {
 		uint32_t used = vpl_info[10] - vpl_info[11];
@@ -1195,18 +1212,18 @@ void *sceNetIfhandle_lib_15CFE3C0(uint32_t size)
 		}
 	}
 
-	set_k1(old_k1);
+	pspSetK1(old_k1);
 	return ptr;
 }
 
 void sceNetIfhandle_lib_76BAD213(void *ptr)
 {
-	uint32_t old_k1 = get_k1();
+	uint32_t old_k1 = pspGetK1();
 	uint32_t k1_shifted = old_k1 << 11;
-	set_k1(k1_shifted);
+	pspSetK1(k1_shifted);
 
 	if (ptr == NULL || ((int32_t)(k1_shifted & (uint32_t)ptr) < 0) || (int32_t)ptr < 0) {
-		set_k1(old_k1);
+		pspSetK1(old_k1);
 		return;
 	}
 
@@ -1214,43 +1231,43 @@ void sceNetIfhandle_lib_76BAD213(void *ptr)
 	if (res < 0) {
 		Kprintf("sceNetFree: invalid ptr 0x%p, ret = 0x%08x\n", ptr, res);
 	}
-	set_k1(old_k1);
+	pspSetK1(old_k1);
 }
 
 SceNetMbuf *sceNetIfhandle_lib_59F0D619(int how, uint16_t type)
 {
 	(void)how;
-	uint32_t old_k1 = get_k1();
-	set_k1(old_k1 << 11);
+	uint32_t old_k1 = pspGetK1();
+	pspSetK1(old_k1 << 11);
 
 	SceNetMbuf *m = (SceNetMbuf *)sceNetIfhandle_lib_15CFE3C0(0x100);
 	if (m == NULL) {
-		set_k1(old_k1);
+		pspSetK1(old_k1);
 		return NULL;
 	}
 
-	uint8_t *dat = (uint8_t *)m + 0x14;
+	uint8_t *dat = MBUF_DAT(m);
 	m->m_type = type;
 	m->m_next = NULL;
 	m->m_nextpkt = NULL;
 	m->m_data = dat;
 	m->m_flags = 0;
 	if ((int32_t)dat < 0) {
-		set_k1(old_k1);
+		pspSetK1(old_k1);
 		return NULL;
 	}
 	memset(dat, 0, 0xec);
-	set_k1(old_k1);
+	pspSetK1(old_k1);
 	return m;
 }
 
 SceNetMbuf *sceNetIfhandle_lib_F8825DC4(SceNetMbuf *m)
 {
-	uint32_t old_k1 = get_k1();
-	set_k1(old_k1 << 11);
+	uint32_t old_k1 = pspGetK1();
+	pspSetK1(old_k1 << 11);
 
 	if (m == NULL || (int32_t)m < 0) {
-		set_k1(old_k1);
+		pspSetK1(old_k1);
 		return NULL;
 	}
 
@@ -1259,7 +1276,7 @@ SceNetMbuf *sceNetIfhandle_lib_F8825DC4(SceNetMbuf *m)
 	SceNetMbuf *prevref = m->ext_prevref;
 	if (flags & M_EXT) {
 		if ((int32_t)nextref < 0 || (int32_t)prevref < 0 || (int32_t)m->ext_buf < 0) {
-			set_k1(old_k1);
+			pspSetK1(old_k1);
 			return NULL;
 		}
 		if (nextref == m) {
@@ -1275,7 +1292,7 @@ SceNetMbuf *sceNetIfhandle_lib_F8825DC4(SceNetMbuf *m)
 
 	SceNetMbuf *next = m->m_next;
 	sceNetIfhandle_lib_76BAD213(m);
-	set_k1(old_k1);
+	pspSetK1(old_k1);
 	if ((int32_t)next < 0) {
 		return NULL;
 	}
@@ -1284,12 +1301,12 @@ SceNetMbuf *sceNetIfhandle_lib_F8825DC4(SceNetMbuf *m)
 
 void sceNetIfhandle_lib_F56FAC82(SceNetMbuf *m)
 {
-	uint32_t old_k1 = get_k1();
-	set_k1(old_k1 << 11);
+	uint32_t old_k1 = pspGetK1();
+	pspSetK1(old_k1 << 11);
 
 	while (m != NULL) {
 		if ((int32_t)m < 0) {
-			set_k1(old_k1);
+			pspSetK1(old_k1);
 			return;
 		}
 		uint16_t flags = m->m_flags;
@@ -1297,7 +1314,7 @@ void sceNetIfhandle_lib_F56FAC82(SceNetMbuf *m)
 		SceNetMbuf *prevref = m->ext_prevref;
 		if (flags & M_EXT) {
 			if ((int32_t)nextref < 0 || (int32_t)prevref < 0 || (int32_t)m->ext_buf < 0) {
-				set_k1(old_k1);
+				pspSetK1(old_k1);
 				return;
 			}
 			if (nextref == m) {
@@ -1315,36 +1332,36 @@ void sceNetIfhandle_lib_F56FAC82(SceNetMbuf *m)
 		m = next;
 	}
 
-	set_k1(old_k1);
+	pspSetK1(old_k1);
 }
 
 SceNetMbuf *sceNetIfhandle_lib_C3325FDC(SceNetMbuf *m, int len, int how)
 {
 	(void)how;
-	uint32_t old_k1 = get_k1();
-	set_k1(old_k1 << 11);
+	uint32_t old_k1 = pspGetK1();
+	pspSetK1(old_k1 << 11);
 
 	if (m == NULL || (int32_t)m < 0) {
-		set_k1(old_k1);
+		pspSetK1(old_k1);
 		return NULL;
 	}
 
 	SceNetMbuf *n = (SceNetMbuf *)sceNetIfhandle_lib_15CFE3C0(0x100);
 	if (n == NULL) {
 		sceNetIfhandle_lib_F56FAC82(m);
-		set_k1(old_k1);
+		pspSetK1(old_k1);
 		return NULL;
 	}
 
 	n->m_flags = 0;
-	n->m_data = (uint8_t *)n + 0x14;
+	n->m_data = MBUF_DAT(n);
 	n->m_type = m->m_type;
 	n->m_next = NULL;
 	n->m_nextpkt = NULL;
 
 	if (m->m_flags & M_PKTHDR) {
 		n->m_flags = m->m_flags & 0xfff6u;
-		n->m_data = (uint8_t *)n + 0x30;
+		n->m_data = MBUF_PKTDAT(n);
 		n->pkthdr_rcvif = m->pkthdr_rcvif;
 		n->pkthdr_len = m->pkthdr_len;
 		m->m_flags &= ~M_PKTHDR;
@@ -1358,24 +1375,24 @@ SceNetMbuf *sceNetIfhandle_lib_C3325FDC(SceNetMbuf *m, int len, int how)
 		n->m_data += ((0xd0u - (uint32_t)len) & ~3u);
 	}
 	n->m_len = len;
-	set_k1(old_k1);
+	pspSetK1(old_k1);
 	return n;
 }
 
 void sceNetIfhandle_lib_9A6261EC(SceNetMbuf *m, int off, int len, void *cp)
 {
-	uint32_t old_k1 = get_k1();
+	uint32_t old_k1 = pspGetK1();
 	uint32_t k1_shifted = old_k1 << 11;
-	set_k1(k1_shifted);
+	pspSetK1(k1_shifted);
 
 	if (cp == NULL) {
-		set_k1(old_k1);
+		pspSetK1(old_k1);
 		return;
 	}
 	uint32_t end = (uint32_t)cp + (uint32_t)len;
 	if (((int32_t)(k1_shifted & ((uint32_t)cp | end | (uint32_t)len)) < 0) ||
 	    (int32_t)cp < 0 || (int32_t)end < 0) {
-		set_k1(old_k1);
+		pspSetK1(old_k1);
 		return;
 	}
 	if ((len | off) < 0) {
@@ -1389,7 +1406,7 @@ void sceNetIfhandle_lib_9A6261EC(SceNetMbuf *m, int off, int len, void *cp)
 			for (;;) {}
 		}
 		if ((int32_t)m < 0) {
-			set_k1(old_k1);
+			pspSetK1(old_k1);
 			return;
 		}
 		if (off < m->m_len) {
@@ -1406,7 +1423,7 @@ void sceNetIfhandle_lib_9A6261EC(SceNetMbuf *m, int off, int len, void *cp)
 			for (;;) {}
 		}
 		if ((int32_t)m < 0) {
-			set_k1(old_k1);
+			pspSetK1(old_k1);
 			return;
 		}
 		int avail = m->m_len - off;
@@ -1414,7 +1431,7 @@ void sceNetIfhandle_lib_9A6261EC(SceNetMbuf *m, int off, int len, void *cp)
 		uint8_t *src = m->m_data + off;
 		len -= chunk;
 		if ((int32_t)src < 0 || (int32_t)(src + chunk) < 0) {
-			set_k1(old_k1);
+			pspSetK1(old_k1);
 			return;
 		}
 		memcpy(out, src, chunk);
@@ -1423,43 +1440,43 @@ void sceNetIfhandle_lib_9A6261EC(SceNetMbuf *m, int off, int len, void *cp)
 		off = 0;
 	}
 
-	set_k1(old_k1);
+	pspSetK1(old_k1);
 }
 
 void sceNetIfhandle_lib_3E8DD3F8(SceNetMbuf *m, SceNetMbuf *n)
 {
-	uint32_t old_k1 = get_k1();
-	set_k1(old_k1 << 11);
+	uint32_t old_k1 = pspGetK1();
+	pspSetK1(old_k1 << 11);
 
 	if (m == NULL || (int32_t)m < 0) {
-		set_k1(old_k1);
+		pspSetK1(old_k1);
 		return;
 	}
 
 	while (m->m_next != NULL) {
 		m = m->m_next;
 		if ((int32_t)m < 0) {
-			set_k1(old_k1);
+			pspSetK1(old_k1);
 			return;
 		}
 	}
 
-	uint8_t *m_end = (uint8_t *)m + 0x100;
+	uint8_t *m_end = MBUF_END(m);
 	while (n != NULL) {
 		if ((int32_t)n < 0) {
-			set_k1(old_k1);
+			pspSetK1(old_k1);
 			return;
 		}
 		if ((m->m_flags & M_EXT) || (m->m_data + m->m_len + n->m_len >= m_end)) {
 			m->m_next = n;
-			set_k1(old_k1);
+			pspSetK1(old_k1);
 			return;
 		}
 		uint8_t *dst = m->m_data + m->m_len;
 		uint8_t *src = n->m_data;
 		if ((int32_t)dst < 0 || (int32_t)(dst + n->m_len) < 0 ||
 		    (int32_t)src < 0 || (int32_t)(src + n->m_len) < 0) {
-			set_k1(old_k1);
+			pspSetK1(old_k1);
 			return;
 		}
 		memcpy(dst, src, n->m_len);
@@ -1467,12 +1484,12 @@ void sceNetIfhandle_lib_3E8DD3F8(SceNetMbuf *m, SceNetMbuf *n)
 		n = sceNetIfhandle_lib_F8825DC4(n);
 	}
 
-	set_k1(old_k1);
+	pspSetK1(old_k1);
 }
 
 void sceNetIfhandle_lib_BFF3CEA5(SceNetMbuf *mp, int req_len)
 {
-	uint32_t old_k1 = get_k1();
+	uint32_t old_k1 = pspGetK1();
 	int len = req_len;
 	SceNetMbuf *m = mp;
 	if (m == NULL || (int32_t)m < 0) {
@@ -1482,7 +1499,7 @@ void sceNetIfhandle_lib_BFF3CEA5(SceNetMbuf *mp, int req_len)
 	if (len >= 0) {
 		while (m != NULL && len > 0) {
 			if ((int32_t)m < 0) {
-				set_k1(old_k1);
+				pspSetK1(old_k1);
 				return;
 			}
 			if (m->m_len <= len) {
@@ -1498,13 +1515,13 @@ void sceNetIfhandle_lib_BFF3CEA5(SceNetMbuf *mp, int req_len)
 		if (mp->m_flags & M_PKTHDR) {
 			mp->pkthdr_len -= (req_len - len);
 		}
-		set_k1(old_k1);
+		pspSetK1(old_k1);
 	} else {
 		len = -len;
 		int count = 0;
 		for (;;) {
 			if ((int32_t)m < 0) {
-				set_k1(old_k1);
+				pspSetK1(old_k1);
 				return;
 			}
 			count += m->m_len;
@@ -1518,7 +1535,7 @@ void sceNetIfhandle_lib_BFF3CEA5(SceNetMbuf *mp, int req_len)
 			if (mp->m_flags & M_PKTHDR) {
 				mp->pkthdr_len -= len;
 			}
-			set_k1(old_k1);
+			pspSetK1(old_k1);
 			return;
 		}
 		count -= len;
@@ -1531,7 +1548,7 @@ void sceNetIfhandle_lib_BFF3CEA5(SceNetMbuf *mp, int req_len)
 		}
 		for (; m != NULL; m = m->m_next) {
 			if ((int32_t)m < 0) {
-				set_k1(old_k1);
+				pspSetK1(old_k1);
 				return;
 			}
 			if (m->m_len >= count) {
@@ -1543,64 +1560,64 @@ void sceNetIfhandle_lib_BFF3CEA5(SceNetMbuf *mp, int req_len)
 		if (m != NULL) {
 			for (m = m->m_next; m != NULL; m = m->m_next) {
 				if ((int32_t)m < 0) {
-					set_k1(old_k1);
+					pspSetK1(old_k1);
 					return;
 				}
 				m->m_len = 0;
 			}
 		}
-		set_k1(old_k1);
+		pspSetK1(old_k1);
 	}
 }
 
 SceNetMbuf *sceNetIfhandle_lib_49EDBB18(SceNetMbuf *n, int len)
 {
-	uint32_t old_k1 = get_k1();
-	set_k1(old_k1 << 11);
+	uint32_t old_k1 = pspGetK1();
+	pspSetK1(old_k1 << 11);
 
 	if (n == NULL || (int32_t)n < 0) {
-		set_k1(old_k1);
+		pspSetK1(old_k1);
 		return NULL;
 	}
 
 	SceNetMbuf *m;
 	if ((n->m_flags & M_EXT) == 0 &&
-	    (n->m_data + len < (uint8_t *)n + 0x100) &&
+	    (n->m_data + len < MBUF_END(n)) &&
 	    n->m_next != NULL) {
 		if (n->m_len >= len) {
-			set_k1(old_k1);
+			pspSetK1(old_k1);
 			return n;
 		}
 		m = n;
 		n = n->m_next;
 		len -= m->m_len;
 		if ((int32_t)n < 0) {
-			set_k1(old_k1);
+			pspSetK1(old_k1);
 			return NULL;
 		}
 	} else {
 		if ((uint32_t)len > 0xd0u) {
 			sceNetIfhandle_lib_F56FAC82(n);
 			g_pullup_drops++;
-			set_k1(old_k1);
+			pspSetK1(old_k1);
 			return NULL;
 		}
 		m = (SceNetMbuf *)sceNetIfhandle_lib_15CFE3C0(0x100);
 		if (m == NULL) {
 			sceNetIfhandle_lib_F56FAC82(n);
 			g_pullup_drops++;
-			set_k1(old_k1);
+			pspSetK1(old_k1);
 			return NULL;
 		}
 		m->m_flags = 0;
-		m->m_data = (uint8_t *)m + 0x14;
+		m->m_data = MBUF_DAT(m);
 		m->m_type = n->m_type;
 		m->m_next = NULL;
 		m->m_nextpkt = NULL;
 		m->m_len = 0;
 		if (n->m_flags & M_PKTHDR) {
 			m->m_flags = n->m_flags & 0xfff6u;
-			m->m_data = (uint8_t *)m + 0x30;
+			m->m_data = MBUF_PKTDAT(m);
 			m->pkthdr_rcvif = n->pkthdr_rcvif;
 			m->pkthdr_len = n->pkthdr_len;
 			n->m_flags &= ~M_PKTHDR;
@@ -1610,10 +1627,10 @@ SceNetMbuf *sceNetIfhandle_lib_49EDBB18(SceNetMbuf *n, int len)
 		}
 	}
 
-	int space = (int)(((uint8_t *)m + 0x100) - (m->m_data + m->m_len));
+	int space = (int)(MBUF_END(m) - (m->m_data + m->m_len));
 	do {
 		if ((int32_t)n < 0) {
-			set_k1(old_k1);
+			pspSetK1(old_k1);
 			return NULL;
 		}
 		int count = (int)g_mbuf_cfg1;
@@ -1630,7 +1647,7 @@ SceNetMbuf *sceNetIfhandle_lib_49EDBB18(SceNetMbuf *n, int len)
 		uint8_t *src = n->m_data;
 		if ((int32_t)dst < 0 || (int32_t)(dst + count) < 0 ||
 		    (int32_t)src < 0 || (int32_t)(src + count) < 0) {
-			set_k1(old_k1);
+			pspSetK1(old_k1);
 			return NULL;
 		}
 		memcpy(dst, src, count);
@@ -1649,36 +1666,37 @@ SceNetMbuf *sceNetIfhandle_lib_49EDBB18(SceNetMbuf *n, int len)
 		sceNetIfhandle_lib_F8825DC4(m);
 		sceNetIfhandle_lib_F56FAC82(n);
 		g_pullup_drops++;
-		set_k1(old_k1);
+		pspSetK1(old_k1);
 		return NULL;
 	}
 	m->m_next = n;
-	set_k1(old_k1);
+	pspSetK1(old_k1);
 	return m;
 }
 
-void sceNetIfhandle_lib_1560F143(SceNetMbuf *m0, int off, int len, const void *cp)
+void sceNetIfhandle_lib_1560F143(SceNetMbuf *head_mbuf, int off, int len, const void *cp)
 {
-	uint32_t old_k1 = get_k1();
+	uint32_t old_k1 = pspGetK1();
 	uint32_t k1_shifted = old_k1 << 11;
-	set_k1(k1_shifted);
+	pspSetK1(k1_shifted);
 
 	if (cp == NULL) {
-		set_k1(old_k1);
+		pspSetK1(old_k1);
 		return;
 	}
 	uint32_t end = (uint32_t)cp + (uint32_t)len;
 	if (((int32_t)(k1_shifted & ((uint32_t)cp | end | (uint32_t)len)) < 0) ||
-	    (int32_t)cp < 0 || (int32_t)end < 0 || m0 == NULL || (int32_t)m0 < 0) {
-		set_k1(old_k1);
+	    (int32_t)cp < 0 || (int32_t)end < 0 || head_mbuf == NULL || (int32_t)head_mbuf < 0) {
+		pspSetK1(old_k1);
 		return;
 	}
 
-	SceNetMbuf *m = m0;
+	SceNetMbuf *m = head_mbuf;
 	int totlen = 0;
+	int alloc_failed = 0;
 	while (off > m->m_len) {
 		if ((int32_t)m < 0) {
-			set_k1(old_k1);
+			pspSetK1(old_k1);
 			return;
 		}
 		off -= m->m_len;
@@ -1686,7 +1704,8 @@ void sceNetIfhandle_lib_1560F143(SceNetMbuf *m0, int off, int len, const void *c
 		if (m->m_next == NULL) {
 			SceNetMbuf *n = sceNetIfhandle_lib_59F0D619(1, m->m_type);
 			if (n == NULL) {
-				goto out;
+				alloc_failed = 1;
+				break;
 			}
 			int nlen = off + len;
 			if (nlen > 0xec) {
@@ -1699,9 +1718,9 @@ void sceNetIfhandle_lib_1560F143(SceNetMbuf *m0, int off, int len, const void *c
 	}
 
 	const uint8_t *src = (const uint8_t *)cp;
-	while (len > 0) {
+	while (!alloc_failed && len > 0) {
 		if ((int32_t)m < 0) {
-			set_k1(old_k1);
+			pspSetK1(old_k1);
 			return;
 		}
 		int mlen = m->m_len - off;
@@ -1711,7 +1730,7 @@ void sceNetIfhandle_lib_1560F143(SceNetMbuf *m0, int off, int len, const void *c
 		uint8_t *dst = m->m_data + off;
 		if ((int32_t)dst < 0 || (int32_t)(dst + mlen) < 0 ||
 		    (int32_t)src < 0 || (int32_t)(src + mlen) < 0) {
-			set_k1(old_k1);
+			pspSetK1(old_k1);
 			return;
 		}
 		memcpy(dst, src, mlen);
@@ -1729,7 +1748,7 @@ void sceNetIfhandle_lib_1560F143(SceNetMbuf *m0, int off, int len, const void *c
 				break;
 			}
 			n->m_type = m->m_type;
-			n->m_data = (uint8_t *)n + 0x14;
+			n->m_data = MBUF_DAT(n);
 			n->m_next = NULL;
 			n->m_nextpkt = NULL;
 			n->m_flags = 0;
@@ -1739,77 +1758,76 @@ void sceNetIfhandle_lib_1560F143(SceNetMbuf *m0, int off, int len, const void *c
 		m = m->m_next;
 	}
 
-out:
-	if ((m0->m_flags & M_PKTHDR) && (m0->pkthdr_len < totlen)) {
-		m0->pkthdr_len = totlen;
+	if ((head_mbuf->m_flags & M_PKTHDR) && (head_mbuf->pkthdr_len < totlen)) {
+		head_mbuf->pkthdr_len = totlen;
 	}
-	set_k1(old_k1);
+	pspSetK1(old_k1);
 }
 
 void sceNetIfhandle_lib_0FB8AE0D(void)
 {
-	uint32_t old_k1 = get_k1();
-	set_k1(old_k1 << 11);
+	uint32_t old_k1 = pspGetK1();
+	pspSetK1(old_k1 << 11);
 	g_mbuf_cfg0 = 0;
 	g_mbuf_cfg1 = 0;
 	g_mbuf_cfg2 = 0;
 	g_mbuf_cfg3 = 0;
-	set_k1(old_k1);
+	pspSetK1(old_k1);
 }
 
 SceNetMbuf *sceNetIfhandle_lib_A493AA5F(int how, uint16_t type)
 {
 	(void)how;
-	uint32_t old_k1 = get_k1();
-	set_k1(old_k1 << 11);
+	uint32_t old_k1 = pspGetK1();
+	pspSetK1(old_k1 << 11);
 
 	SceNetMbuf *m = (SceNetMbuf *)sceNetIfhandle_lib_15CFE3C0(0x100);
 	if (m != NULL) {
 		m->m_type = type;
-		m->m_data = (uint8_t *)m + 0x14;
+		m->m_data = MBUF_DAT(m);
 		m->m_flags = 0;
 		m->m_next = NULL;
 		m->m_nextpkt = NULL;
 	}
-	set_k1(old_k1);
+	pspSetK1(old_k1);
 	return m;
 }
 
 SceNetMbuf *sceNetIfhandle_lib_4CF15C43(int how, uint16_t type)
 {
 	(void)how;
-	uint32_t old_k1 = get_k1();
-	set_k1(old_k1 << 11);
+	uint32_t old_k1 = pspGetK1();
+	pspSetK1(old_k1 << 11);
 
 	SceNetMbuf *m = (SceNetMbuf *)sceNetIfhandle_lib_15CFE3C0(0x100);
 	if (m != NULL) {
 		m->m_type = type;
-		m->m_data = (uint8_t *)m + 0x30;
+		m->m_data = MBUF_PKTDAT(m);
 		m->m_flags = M_PKTHDR;
 		m->pkthdr_pad[0] = 0;
 		m->m_next = NULL;
 		m->m_nextpkt = NULL;
 	}
-	set_k1(old_k1);
+	pspSetK1(old_k1);
 	return m;
 }
 
-static SceNetMbuf *m_copym0(SceNetMbuf *m, int off0, int len, int wait, int deep_ext, int copy_pkthdr_always)
+static SceNetMbuf *m_copym0(SceNetMbuf *m, int start_off, int len, int wait, int deep_ext, int copy_pkthdr_always)
 {
 	(void)wait;
-	uint32_t old_k1 = get_k1();
-	set_k1(old_k1 << 11);
+	uint32_t old_k1 = pspGetK1();
+	pspSetK1(old_k1 << 11);
 
 	if (m == NULL || (int32_t)m < 0) {
-		set_k1(old_k1);
+		pspSetK1(old_k1);
 		return NULL;
 	}
-	if ((len | off0) < 0) {
+	if ((len | start_off) < 0) {
 		Kprintf("%s:%s()\n", "../../../../../../../devkit/internal/driver/src/net/pspnet/lib/mbuf.c", "m_copym0");
 		for (;;) {}
 	}
 
-	int off = off0;
+	int off = start_off;
 	int copyhdr = 0;
 	if ((off == 0 || copy_pkthdr_always != 0) && (m->m_flags & M_PKTHDR)) {
 		copyhdr = 1;
@@ -1821,7 +1839,7 @@ static SceNetMbuf *m_copym0(SceNetMbuf *m, int off0, int len, int wait, int deep
 			for (;;) {}
 		}
 		if ((int32_t)m < 0) {
-			set_k1(old_k1);
+			pspSetK1(old_k1);
 			return NULL;
 		}
 		if (off < m->m_len) {
@@ -1842,14 +1860,14 @@ static SceNetMbuf *m_copym0(SceNetMbuf *m, int off0, int len, int wait, int deep
 			break;
 		}
 		if ((int32_t)m < 0) {
-			set_k1(old_k1);
+			pspSetK1(old_k1);
 			return NULL;
 		}
 
 		SceNetMbuf *n = (SceNetMbuf *)sceNetIfhandle_lib_15CFE3C0(0x100);
 		if (n != NULL) {
 			n->m_type = m->m_type;
-			n->m_data = (uint8_t *)n + 0x14;
+			n->m_data = MBUF_DAT(n);
 			n->m_next = NULL;
 			n->m_nextpkt = NULL;
 			n->m_flags = 0;
@@ -1858,20 +1876,20 @@ static SceNetMbuf *m_copym0(SceNetMbuf *m, int off0, int len, int wait, int deep
 		if (n == NULL) {
 			sceNetIfhandle_lib_F56FAC82(top);
 			g_copym_drops++;
-			set_k1(old_k1);
+			pspSetK1(old_k1);
 			return NULL;
 		}
 
 		if (copyhdr) {
 			n->pkthdr_rcvif = m->pkthdr_rcvif;
 			n->m_flags = m->m_flags & 0xfff6u;
-			n->m_data = (uint8_t *)n + 0x30;
+			n->m_data = MBUF_PKTDAT(n);
 			n->pkthdr_len = m->pkthdr_len;
 			for (int i = 0; i < 5; i++) {
 				n->pkthdr_pad[i] = m->pkthdr_pad[i];
 			}
 			if (len == 1000000000) {
-				n->pkthdr_len -= off0;
+				n->pkthdr_len -= start_off;
 			} else {
 				n->pkthdr_len = len;
 			}
@@ -1894,7 +1912,7 @@ static SceNetMbuf *m_copym0(SceNetMbuf *m, int off0, int len, int wait, int deep
 				n->ext_type = m->ext_type;
 				SceNetMbuf *nextref = m->ext_nextref;
 				if ((int32_t)nextref < 0) {
-					set_k1(old_k1);
+					pspSetK1(old_k1);
 					return NULL;
 				}
 				n->ext_nextref = nextref;
@@ -1921,7 +1939,7 @@ static SceNetMbuf *m_copym0(SceNetMbuf *m, int off0, int len, int wait, int deep
 				if (n->m_flags & M_EXT) {
 					space = (int)((n->ext_buf + n->ext_size) - n->m_data);
 				} else {
-					space = (int)(((uint8_t *)n + 0x100) - n->m_data);
+					space = (int)(MBUF_END(n) - n->m_data);
 				}
 				if (space > len) {
 					space = len;
@@ -1935,7 +1953,7 @@ static SceNetMbuf *m_copym0(SceNetMbuf *m, int off0, int len, int wait, int deep
 				uint8_t *src = m->m_data + off;
 				if ((int32_t)dst < 0 || (int32_t)(dst + avail) < 0 ||
 				    (int32_t)src < 0 || (int32_t)(src + avail) < 0) {
-					set_k1(old_k1);
+					pspSetK1(old_k1);
 					return NULL;
 				}
 				memcpy(dst, src, avail);
@@ -1945,7 +1963,7 @@ static SceNetMbuf *m_copym0(SceNetMbuf *m, int off0, int len, int wait, int deep
 			uint8_t *src = m->m_data + off;
 			if ((int32_t)dst < 0 || (int32_t)(dst + n->m_len) < 0 ||
 			    (int32_t)src < 0 || (int32_t)(src + n->m_len) < 0) {
-				set_k1(old_k1);
+				pspSetK1(old_k1);
 				return NULL;
 			}
 			memcpy(dst, src, n->m_len);
@@ -1965,64 +1983,64 @@ static SceNetMbuf *m_copym0(SceNetMbuf *m, int off0, int len, int wait, int deep
 	if (top == NULL) {
 		g_copym_drops++;
 	}
-	set_k1(old_k1);
+	pspSetK1(old_k1);
 	return top;
 }
 
-SceNetMbuf *sceNetIfhandle_lib_456E3146(SceNetMbuf *m, int off0, int len, int wait)
+SceNetMbuf *sceNetIfhandle_lib_456E3146(SceNetMbuf *m, int start_off, int len, int wait)
 {
-	return m_copym0(m, off0, len, wait, 0, 0);
+	return m_copym0(m, start_off, len, wait, 0, 0);
 }
 
-SceNetMbuf *sceNetIfhandle_lib_E9BF5332(SceNetMbuf *m, int off0, int len, int wait)
+SceNetMbuf *sceNetIfhandle_lib_E9BF5332(SceNetMbuf *m, int start_off, int len, int wait)
 {
-	return m_copym0(m, off0, len, wait, 0, 1);
+	return m_copym0(m, start_off, len, wait, 0, 1);
 }
 
 __attribute__((optimize("no-thread-jumps")))
-int sceNetIfhandle_lib_5FB31C72(uint32_t *p0, uint32_t *p1, uint32_t *p2, uint32_t *p3)
+int sceNetIfhandle_lib_5FB31C72(uint32_t *outCfgA, uint32_t *outCfgB, uint32_t *outCfgC, uint32_t *outCfgD)
 {
-	uint32_t old_k1 = get_k1();
+	uint32_t old_k1 = pspGetK1();
 	uint32_t k1_shifted = old_k1 << 11;
-	set_k1(k1_shifted);
+	pspSetK1(k1_shifted);
 
-	if ((p0 != NULL && ((int32_t)(k1_shifted & (uint32_t)p0) < 0)) ||
-	    (p1 != NULL && ((int32_t)(k1_shifted & (uint32_t)p1) < 0)) ||
-	    (p2 != NULL && ((int32_t)(k1_shifted & (uint32_t)p2) < 0)) ||
-	    (p3 != NULL && ((int32_t)(k1_shifted & (uint32_t)p3) < 0))) {
-		set_k1(old_k1);
+	if ((outCfgA != NULL && ((int32_t)(k1_shifted & (uint32_t)outCfgA) < 0)) ||
+	    (outCfgB != NULL && ((int32_t)(k1_shifted & (uint32_t)outCfgB) < 0)) ||
+	    (outCfgC != NULL && ((int32_t)(k1_shifted & (uint32_t)outCfgC) < 0)) ||
+	    (outCfgD != NULL && ((int32_t)(k1_shifted & (uint32_t)outCfgD) < 0))) {
+		pspSetK1(old_k1);
 		return (int)0x80410003;
 	}
 
-	if (p0 != NULL) *p0 = g_mbuf_cfg0;
-	if (p1 != NULL) *p1 = g_mbuf_cfg1;
-	if (p2 != NULL) *p2 = g_mbuf_cfg2;
-	if (p3 != NULL) *p3 = g_mbuf_cfg3;
+	if (outCfgA != NULL) *outCfgA = g_mbuf_cfg0;
+	if (outCfgB != NULL) *outCfgB = g_mbuf_cfg1;
+	if (outCfgC != NULL) *outCfgC = g_mbuf_cfg2;
+	if (outCfgD != NULL) *outCfgD = g_mbuf_cfg3;
 
-	set_k1(old_k1);
+	pspSetK1(old_k1);
 	return 0;
 }
 
-int sceNetIfhandle_lib_62B20015(uint32_t v0, uint32_t v1, uint32_t v2, uint32_t v3)
+int sceNetIfhandle_lib_62B20015(uint32_t cfgA, uint32_t cfgB, uint32_t cfgC, uint32_t cfgD)
 {
-	uint32_t old_k1 = get_k1();
-	set_k1(old_k1 << 11);
-	g_mbuf_cfg0 = v0;
-	g_mbuf_cfg1 = v1;
-	g_mbuf_cfg2 = v2;
-	g_mbuf_cfg3 = v3;
-	set_k1(old_k1);
+	uint32_t old_k1 = pspGetK1();
+	pspSetK1(old_k1 << 11);
+	g_mbuf_cfg0 = cfgA;
+	g_mbuf_cfg1 = cfgB;
+	g_mbuf_cfg2 = cfgC;
+	g_mbuf_cfg3 = cfgD;
+	pspSetK1(old_k1);
 	return 0;
 }
 
 SceNetMbuf *sceNetIfhandle_lib_E80F00A4(SceNetMbuf *m, int off, int len, int *offp)
 {
-	uint32_t old_k1 = get_k1();
+	uint32_t old_k1 = pspGetK1();
 	uint32_t k1_shifted = old_k1 << 11;
-	set_k1(k1_shifted);
+	pspSetK1(k1_shifted);
 
 	if (m == NULL || (int32_t)m < 0 || (offp != NULL && ((int32_t)(k1_shifted & (uint32_t)offp) < 0))) {
-		set_k1(old_k1);
+		pspSetK1(old_k1);
 		return NULL;
 	}
 	if (m == NULL) {
@@ -2031,14 +2049,14 @@ SceNetMbuf *sceNetIfhandle_lib_E80F00A4(SceNetMbuf *m, int off, int len, int *of
 	}
 	if (len > 0x800) {
 		sceNetIfhandle_lib_F56FAC82(m);
-		set_k1(old_k1);
+		pspSetK1(old_k1);
 		return NULL;
 	}
 
 	SceNetMbuf *n = m;
 	while (n != NULL && off > 0) {
 		if ((int32_t)n < 0) {
-			set_k1(old_k1);
+			pspSetK1(old_k1);
 			return NULL;
 		}
 		if (off < n->m_len) {
@@ -2049,168 +2067,169 @@ SceNetMbuf *sceNetIfhandle_lib_E80F00A4(SceNetMbuf *m, int off, int len, int *of
 	}
 	while (n != NULL && n->m_len == 0) {
 		if ((int32_t)n < 0) {
-			set_k1(old_k1);
+			pspSetK1(old_k1);
 			return NULL;
 		}
 		n = n->m_next;
 	}
 	if (n == NULL) {
 		sceNetIfhandle_lib_F56FAC82(m);
-		set_k1(old_k1);
+		pspSetK1(old_k1);
 		return NULL;
 	}
 
-	if ((off == 0 || offp != NULL) && len <= n->m_len - off) {
-		goto ok;
-	}
+	do {
+		if ((off == 0 || offp != NULL) && len <= n->m_len - off) {
+			break;
+		}
 
-	int hlen = n->m_len - off;
-	if (len < hlen) {
-		SceNetMbuf *o = sceNetIfhandle_lib_456E3146(n, off, hlen, 1);
-		if (o == NULL) {
+		int hlen = n->m_len - off;
+		if (len < hlen) {
+			SceNetMbuf *o = sceNetIfhandle_lib_456E3146(n, off, hlen, 1);
+			if (o == NULL) {
+				sceNetIfhandle_lib_F56FAC82(m);
+				pspSetK1(old_k1);
+				return NULL;
+			}
+			n->m_len = off;
+			o->m_next = n->m_next;
+			n->m_next = o;
+			n = o;
+			off = 0;
+			break;
+		}
+
+		int tlen = len - hlen;
+		int tail_total = 0;
+		for (SceNetMbuf *p = n->m_next; p != NULL; p = p->m_next) {
+			if ((int32_t)p < 0) {
+				pspSetK1(old_k1);
+				return NULL;
+			}
+			tail_total += p->m_len;
+		}
+		if (hlen + tail_total < len) {
 			sceNetIfhandle_lib_F56FAC82(m);
-			set_k1(old_k1);
+			pspSetK1(old_k1);
 			return NULL;
 		}
-		n->m_len = off;
+
+		int shared = 0;
+		if (n->m_flags & M_EXT) {
+			if (n->ext_free != NULL || n->ext_nextref != n) {
+				shared = 1;
+			}
+		}
+
+		if ((off == 0 || offp != NULL) && !shared) {
+			int trailing;
+			if (n->m_flags & M_EXT) {
+				trailing = (int)((n->ext_buf + n->ext_size) - (n->m_data + n->m_len));
+			} else {
+				trailing = (int)(MBUF_END(n) - (n->m_data + n->m_len));
+			}
+			if (trailing >= tlen) {
+				sceNetIfhandle_lib_9A6261EC(n->m_next, 0, tlen, n->m_data + n->m_len);
+				n->m_len += tlen;
+				sceNetIfhandle_lib_BFF3CEA5(n->m_next, tlen);
+				break;
+			}
+		}
+
+		if ((off == 0 || offp != NULL) && !shared && n->m_next != NULL) {
+			SceNetMbuf *next = n->m_next;
+			int leading = 0;
+			if ((next->m_flags & M_EXT) == 0) {
+				if (next->m_flags & M_PKTHDR) {
+					leading = (int)(next->m_data - MBUF_PKTDAT(next));
+				} else {
+					leading = (int)(next->m_data - MBUF_DAT(next));
+				}
+				if (leading >= hlen) {
+					if ((int32_t)next < 0) {
+						pspSetK1(old_k1);
+						return NULL;
+					}
+					next->m_data -= hlen;
+					next->m_len += hlen;
+					uint8_t *src = n->m_data + off;
+					if ((int32_t)next->m_data < 0 || (int32_t)(next->m_data + hlen) < 0 ||
+					    (int32_t)src < 0 || (int32_t)(src + hlen) < 0) {
+						pspSetK1(old_k1);
+						return NULL;
+					}
+					memcpy(next->m_data, src, hlen);
+					n->m_len -= hlen;
+					n = next;
+					off = 0;
+					break;
+				}
+			}
+		}
+
+		SceNetMbuf *o = (SceNetMbuf *)sceNetIfhandle_lib_15CFE3C0(0x100);
+		if (o == NULL) {
+			sceNetIfhandle_lib_F56FAC82(m);
+			pspSetK1(old_k1);
+			return NULL;
+		}
+		o->m_type = m->m_type;
+		o->m_data = MBUF_DAT(o);
+		o->m_next = NULL;
+		o->m_nextpkt = NULL;
+		o->m_flags = 0;
+		if ((uint32_t)len > 0xd0u) {
+			uint8_t *buf = (uint8_t *)sceNetIfhandle_lib_15CFE3C0(0x800);
+			if (buf == NULL) {
+				buf = (uint8_t *)sceNetIfhandle_lib_15CFE3C0(0x800);
+			}
+			o->ext_buf = buf;
+			if (buf != NULL) {
+				o->m_data = buf;
+				o->m_flags |= (M_EXT | M_RDONLY);
+				o->ext_size = 0x800;
+				o->ext_free = NULL;
+				o->ext_arg = NULL;
+				o->ext_prevref = o;
+				o->ext_nextref = o;
+			}
+			if ((o->m_flags & M_EXT) == 0) {
+				sceNetIfhandle_lib_F56FAC82(m);
+				sceNetIfhandle_lib_F8825DC4(o);
+				pspSetK1(old_k1);
+				return NULL;
+			}
+		}
+
+		o->m_len = hlen;
+		uint8_t *src = n->m_data + off;
+		if ((int32_t)o->m_data < 0 || (int32_t)(o->m_data + hlen) < 0 ||
+		    (int32_t)src < 0 || (int32_t)(src + hlen) < 0) {
+			pspSetK1(old_k1);
+			return NULL;
+		}
+		memcpy(o->m_data, src, hlen);
+		n->m_len -= hlen;
+		sceNetIfhandle_lib_9A6261EC(n->m_next, 0, tlen, o->m_data + o->m_len);
+		o->m_len += tlen;
+		sceNetIfhandle_lib_BFF3CEA5(n->m_next, tlen);
 		o->m_next = n->m_next;
 		n->m_next = o;
 		n = o;
 		off = 0;
-		goto ok;
-	}
+	} while (0);
 
-	int tlen = len - hlen;
-	int tail_total = 0;
-	for (SceNetMbuf *p = n->m_next; p != NULL; p = p->m_next) {
-		if ((int32_t)p < 0) {
-			set_k1(old_k1);
-			return NULL;
-		}
-		tail_total += p->m_len;
-	}
-	if (hlen + tail_total < len) {
-		sceNetIfhandle_lib_F56FAC82(m);
-		set_k1(old_k1);
-		return NULL;
-	}
-
-	int shared = 0;
-	if (n->m_flags & M_EXT) {
-		if (n->ext_free != NULL || n->ext_nextref != n) {
-			shared = 1;
-		}
-	}
-
-	if ((off == 0 || offp != NULL) && !shared) {
-		int trailing;
-		if (n->m_flags & M_EXT) {
-			trailing = (int)((n->ext_buf + n->ext_size) - (n->m_data + n->m_len));
-		} else {
-			trailing = (int)(((uint8_t *)n + 0x100) - (n->m_data + n->m_len));
-		}
-		if (trailing >= tlen) {
-			sceNetIfhandle_lib_9A6261EC(n->m_next, 0, tlen, n->m_data + n->m_len);
-			n->m_len += tlen;
-			sceNetIfhandle_lib_BFF3CEA5(n->m_next, tlen);
-			goto ok;
-		}
-	}
-
-	if ((off == 0 || offp != NULL) && !shared && n->m_next != NULL) {
-		SceNetMbuf *next = n->m_next;
-		int leading = 0;
-		if ((next->m_flags & M_EXT) == 0) {
-			if (next->m_flags & M_PKTHDR) {
-				leading = (int)(next->m_data - ((uint8_t *)next + 0x30));
-			} else {
-				leading = (int)(next->m_data - ((uint8_t *)next + 0x14));
-			}
-			if (leading >= hlen) {
-				if ((int32_t)next < 0) {
-					set_k1(old_k1);
-					return NULL;
-				}
-				next->m_data -= hlen;
-				next->m_len += hlen;
-				uint8_t *src = n->m_data + off;
-				if ((int32_t)next->m_data < 0 || (int32_t)(next->m_data + hlen) < 0 ||
-				    (int32_t)src < 0 || (int32_t)(src + hlen) < 0) {
-					set_k1(old_k1);
-					return NULL;
-				}
-				memcpy(next->m_data, src, hlen);
-				n->m_len -= hlen;
-				n = next;
-				off = 0;
-				goto ok;
-			}
-		}
-	}
-
-	SceNetMbuf *o = (SceNetMbuf *)sceNetIfhandle_lib_15CFE3C0(0x100);
-	if (o == NULL) {
-		sceNetIfhandle_lib_F56FAC82(m);
-		set_k1(old_k1);
-		return NULL;
-	}
-	o->m_type = m->m_type;
-	o->m_data = (uint8_t *)o + 0x14;
-	o->m_next = NULL;
-	o->m_nextpkt = NULL;
-	o->m_flags = 0;
-	if ((uint32_t)len > 0xd0u) {
-		uint8_t *buf = (uint8_t *)sceNetIfhandle_lib_15CFE3C0(0x800);
-		if (buf == NULL) {
-			buf = (uint8_t *)sceNetIfhandle_lib_15CFE3C0(0x800);
-		}
-		o->ext_buf = buf;
-		if (buf != NULL) {
-			o->m_data = buf;
-			o->m_flags |= (M_EXT | M_RDONLY);
-			o->ext_size = 0x800;
-			o->ext_free = NULL;
-			o->ext_arg = NULL;
-			o->ext_prevref = o;
-			o->ext_nextref = o;
-		}
-		if ((o->m_flags & M_EXT) == 0) {
-			sceNetIfhandle_lib_F56FAC82(m);
-			sceNetIfhandle_lib_F8825DC4(o);
-			set_k1(old_k1);
-			return NULL;
-		}
-	}
-
-	o->m_len = hlen;
-	uint8_t *src = n->m_data + off;
-	if ((int32_t)o->m_data < 0 || (int32_t)(o->m_data + hlen) < 0 ||
-	    (int32_t)src < 0 || (int32_t)(src + hlen) < 0) {
-		set_k1(old_k1);
-		return NULL;
-	}
-	memcpy(o->m_data, src, hlen);
-	n->m_len -= hlen;
-	sceNetIfhandle_lib_9A6261EC(n->m_next, 0, tlen, o->m_data + o->m_len);
-	o->m_len += tlen;
-	sceNetIfhandle_lib_BFF3CEA5(n->m_next, tlen);
-	o->m_next = n->m_next;
-	n->m_next = o;
-	n = o;
-	off = 0;
-
-ok:
 	if (offp != NULL) {
 		*offp = off;
 	}
-	set_k1(old_k1);
+	pspSetK1(old_k1);
 	return n;
 }
 
 void sceNetIfhandle_lib_35FAB6A2(void)
 {
-	uint32_t old_k1 = get_k1();
-	set_k1(old_k1 << 11);
+	uint32_t old_k1 = pspGetK1();
+	pspSetK1(old_k1 << 11);
 
 	g_cur_game_wa = NULL;
 	uint8_t *game_info = (uint8_t *)sceKernelGetGameInfo();
@@ -2230,15 +2249,15 @@ void sceNetIfhandle_lib_35FAB6A2(void)
 		}
 	}
 
-	set_k1(old_k1);
+	pspSetK1(old_k1);
 }
 
 void sceNetIfhandle_lib_0B258B5E(void)
 {
-	uint32_t old_k1 = get_k1();
-	set_k1(old_k1 << 11);
+	uint32_t old_k1 = pspGetK1();
+	pspSetK1(old_k1 << 11);
 	g_cur_game_wa = NULL;
-	set_k1(old_k1);
+	pspSetK1(old_k1);
 }
 
 uint32_t sceNetIfhandle_lib_07505747(int idx)
