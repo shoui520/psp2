@@ -923,7 +923,7 @@ s32 sceOpenPSID_AE6DD68C(const u8 *titleId9, u8 *out256)
     s32 status;
     u32 i;
 
-    if (!pspK1PtrOk(titleId9 + 9) || !pspK1StaBufOk(out256, 0x100)) {
+    if (!pspK1StaBufOk(titleId9, 9) || !pspK1StaBufOk(out256, 0x100)) {
         pspSetK1(oldK1);
         return SCE_ERROR_PRIV_REQUIRED;
     }

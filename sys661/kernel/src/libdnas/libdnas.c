@@ -26,10 +26,10 @@ extern int sceKernelTerminateDeleteThread(SceUID thid);
 
 extern int sceCertLoader_DD629A24(int a0, int a1, void ***out_list, void *buf, int buf_size, int *out_size);
 
-extern int sceDNASCore_lib_15096ECD(char *host, uint16_t *port, const char *redirect_str);
+extern int sceDNASCore_lib_15096ECD(char *host);
 extern int sceDNASCore_lib_2370130E(void);
 extern int sceDNASCore_lib_26E1E2BD(const void *buf, int len);
-extern int sceDNASCore_lib_2B6C67EA(void *arg0, int arg1);
+extern int sceDNASCore_lib_2B6C67EA(void);
 extern int sceDNASCore_lib_4108128B(void);
 extern int sceDNASCore_lib_80CEC43A(void);
 extern int sceDNASCore_lib_822357BB(void *buf, int len);
@@ -43,7 +43,7 @@ extern int sceDNASCore_lib_D5E80301(void);
 extern int sceDNASCore_lib_DA5939B4(void *buf, int len);
 extern int sceDNASCore_lib_F0EB4367(void *buf, int len);
 extern int sceDNASCore_lib_F479F616(const char *cn);
-extern int sceDNASCore_lib_FA571A75(void *auth_arg, const char *proxy_url, uint16_t proxy_port);
+extern int sceDNASCore_lib_FA571A75(void *init_arg, void *auth_arg);
 
 extern int sceNetFreeThreadinfo(int thid);
 extern int sceNetApctlGetInfo(int code, void *pInfo);
@@ -110,7 +110,7 @@ typedef struct DnasContext {
     SceUID ef_int;            /* 0x04 */
     SceUID ef_ext;            /* 0x08 */
     int state;                /* 0x0c */
-    void *auth_arg;           /* 0x10 */
+    unsigned int event_bits;  /* 0x10 */
     int error;                /* 0x14 */
     int sock;                 /* 0x18 */
     int rid;                  /* 0x1c */
@@ -118,24 +118,26 @@ typedef struct DnasContext {
     int redirect_count;       /* 0x24 */
     int ssl_verify_err;       /* 0x28 */
     uint16_t port;            /* 0x2c */
-    char host[0x92];          /* 0x2e */
-    uint32_t resolved_ip;     /* 0xc0 */
+    char host[0x80];          /* 0x2e */
+    uint8_t sin[16];          /* 0xae */
+    uint16_t sin_pad;         /* 0xbe */
+    int has_resolved;         /* 0xc0 */
     void *ssl;                /* 0xc4 */
     void *ssl_ctx;            /* 0xc8 */
     void *ssl_session;        /* 0xcc */
-    int skip_cn_check;        /* 0xd0 */
-    void *ext_arg;            /* 0xd4 */
+    void *init_arg;           /* 0xd0 */
+    void *auth_arg;           /* 0xd4 */
 } DnasContext;
 
 /* Forward declarations */
 static void dnasResetConnState(DnasContext *ctx);
-static int dnasCheckStopOrAbort(DnasContext *ctx, int check_abort);
+static int dnasCheckStopOrAbort(DnasContext *ctx, unsigned int *out_flag, int clear_flag);
 static int dnasWorkerThread(SceSize args, void *argp);
-static void dnasStateWaitStart(DnasContext *ctx);
-static void dnasStateSendAuth1(DnasContext *ctx);
-static void dnasStateRecvAuth1(DnasContext *ctx);
-static void dnasStateSendAuth2(DnasContext *ctx);
-static void dnasStateRecvAuth2(DnasContext *ctx);
+static void dnasStateWaitStart(DnasContext *ctx, int prev_state, int *next_state, unsigned int *out_ev);
+static void dnasStateSendAuth1(DnasContext *ctx, int prev_state, int *next_state, unsigned int *out_ev);
+static void dnasStateRecvAuth1(DnasContext *ctx, int prev_state, int *next_state, unsigned int *out_ev);
+static void dnasStateSendAuth2(DnasContext *ctx, int prev_state, int *next_state, unsigned int *out_ev);
+static void dnasStateRecvAuth2(DnasContext *ctx, int prev_state, int *next_state, unsigned int *out_ev);
 static int dnasLoadProxyConfig(DnasContext *ctx);
 static int dnasTcpConnect(DnasContext *ctx);
 static uint16_t dnasHtons(uint16_t val);
@@ -181,7 +183,7 @@ static const int8_t g_b64_table[256] = {
 };
 
 /* .data (0x3c60..0x3c78) */
-static void (*g_state_handlers[5])(DnasContext *) = {
+static void (*g_state_handlers[5])(DnasContext *, int, int *, unsigned int *) = {
     dnasStateWaitStart,
     dnasStateSendAuth1,
     dnasStateRecvAuth1,
@@ -204,14 +206,15 @@ int sceDNAS_lib_0D560144(void *arg0, int prio)
     int ret = 0;
 
     if (g_initialized != 0) {
-        return 0x80530182;
+        return 0x80530105;
     }
 
     sceKernelMemset(&g_ctx, 0, sizeof(g_ctx));
-    g_ctx.thid = -1;
-    g_ctx.ef_int = -1;
-    g_ctx.ef_ext = -1;
-    dnasResetConnState(&g_ctx);
+    g_ctx.ssl = NULL;
+    g_ctx.ssl_ctx = NULL;
+    g_ctx.sock = -1;
+    g_ctx.rid = -1;
+    g_ctx.init_arg = arg0;
 
     ret = dnasSslInit(&g_ctx);
     if (ret < 0) {
@@ -219,19 +222,19 @@ int sceDNAS_lib_0D560144(void *arg0, int prio)
     }
 
     ret = sceKernelCreateEventFlag("SceDNASInternal", 0x200, 0, NULL);
-    if (ret <= 0) {
+    if (ret < 0) {
         goto fail;
     }
     g_ctx.ef_int = ret;
 
-    ret = sceKernelCreateEventFlag("SceDNASExternal", 0x200, 0, NULL);
-    if (ret <= 0) {
+    ret = sceKernelCreateEventFlag("SceDNASExternal", 0, 0, NULL);
+    if (ret < 0) {
         goto fail;
     }
     g_ctx.ef_ext = ret;
 
-    ret = sceKernelCreateThread("SceDNAS", dnasWorkerThread, prio, 0x2000, 0, NULL);
-    if (ret <= 0) {
+    ret = sceKernelCreateThread("SceDNAS", dnasWorkerThread, prio, 0x1c00, 0, NULL);
+    if (ret < 0) {
         goto fail;
     }
     g_ctx.thid = ret;
@@ -244,29 +247,26 @@ int sceDNAS_lib_0D560144(void *arg0, int prio)
         goto fail;
     }
 
-    ret = sceDNASCore_lib_2B6C67EA(arg0, 0);
-    if (ret < 0) {
-        goto fail;
-    }
-
+    ret = sceDNASCore_lib_2B6C67EA();
     g_initialized = 1;
-    return 0;
+    return ret;
 
 fail:
-    if (g_ctx.thid > 0) {
-        sceKernelTerminateDeleteThread(g_ctx.thid);
+    if (g_ctx.thid >= 0) {
         sceNetFreeThreadinfo(g_ctx.thid);
+        sceKernelTerminateDeleteThread(g_ctx.thid);
         g_ctx.thid = -1;
     }
-    if (g_ctx.ef_ext > 0) {
-        sceKernelDeleteEventFlag(g_ctx.ef_ext);
-        g_ctx.ef_ext = -1;
-    }
-    if (g_ctx.ef_int > 0) {
+    if (g_ctx.ef_int >= 0) {
         sceKernelDeleteEventFlag(g_ctx.ef_int);
         g_ctx.ef_int = -1;
     }
+    if (g_ctx.ef_ext >= 0) {
+        sceKernelDeleteEventFlag(g_ctx.ef_ext);
+        g_ctx.ef_ext = -1;
+    }
     dnasSslTerm(&g_ctx);
+    g_initialized = 0;
     return ret;
 }
 
@@ -274,28 +274,23 @@ fail:
 int sceDNAS_lib_CA8B8909(void)
 {
     int ret = 0;
+    unsigned int out_bits = 0;
 
     if (g_initialized == 0) {
-        return 0x80530181;
-    }
-    if (g_ctx.state != 0) {
-        return 0x80530183;
+        return 0x80530102;
     }
 
-    ret = sceKernelPollEventFlag(g_ctx.ef_int, 1, 0, NULL);
-    if (ret == 0) {
-        return 0x80530183;
-    }
-    if (ret != (int)0x80020192) {
-        return ret;
+    ret = sceKernelPollEventFlag(g_ctx.ef_int, 1, 1, &out_bits);
+    if (ret != 0) {
+        if (ret != (int)0x800201af && ret < 0) {
+            return ret;
+        }
+    } else if ((out_bits & 1) != 0) {
+        return 0x80530105;
     }
 
     g_ctx.auth_arg = NULL;
-    ret = sceKernelSetEventFlag(g_ctx.ef_int, 1);
-    if (ret < 0) {
-        return ret;
-    }
-
+    sceKernelSetEventFlag(g_ctx.ef_int, 1);
     return 0;
 }
 
@@ -303,88 +298,67 @@ int sceDNAS_lib_CA8B8909(void)
 int sceDNAS_lib_F3787AD8(void *auth_arg)
 {
     int ret = 0;
+    unsigned int out_bits = 0;
 
     if (g_initialized == 0) {
-        return 0x80530181;
+        return 0x80530102;
     }
     if (auth_arg == NULL) {
-        return 0x80530180;
-    }
-    if (g_ctx.state != 0) {
-        return 0x80530183;
+        return 0x80530103;
     }
 
-    ret = sceKernelPollEventFlag(g_ctx.ef_int, 1, 0, NULL);
-    if (ret == 0) {
-        return 0x80530183;
-    }
-    if (ret != (int)0x80020192) {
-        return ret;
+    ret = sceKernelPollEventFlag(g_ctx.ef_int, 1, 1, &out_bits);
+    if (ret != 0) {
+        if (ret != (int)0x800201af && ret < 0) {
+            return ret;
+        }
+    } else if ((out_bits & 1) != 0) {
+        return 0x80530105;
     }
 
     g_ctx.auth_arg = auth_arg;
-    ret = sceKernelSetEventFlag(g_ctx.ef_int, 1);
-    if (ret < 0) {
-        return ret;
-    }
-
+    sceKernelSetEventFlag(g_ctx.ef_int, 1);
     return 0;
 }
 
 /* === sceDNAS_lib_9FF48DD3 @ 0x0528 === */
 int sceDNAS_lib_9FF48DD3(void)
 {
-    int ret = 0;
-
     if (g_initialized == 0) {
-        return 0x80530181;
-    }
-    if (g_ctx.state == 0) {
-        return 0x80530184;
+        return 0x80530102;
     }
 
-    ret = sceKernelSetEventFlag(g_ctx.ef_int, 2);
-    if (ret < 0) {
-        return ret;
-    }
-
+    sceKernelSetEventFlag(g_ctx.ef_int, 2);
     if (g_ctx.rid >= 0) {
         sceNetResolverStop(g_ctx.rid);
     }
     if (g_ctx.sock >= 0) {
         sceNetInet_80A21ABD(g_ctx.sock);
     }
-
     return 0;
 }
 
 /* === sceDNAS_lib_45C1AAF5 @ 0x05f0 === */
 int sceDNAS_lib_45C1AAF5(SceUID *out_ef)
 {
-    volatile int ret = 0;
-    SceUID * volatile p = out_ef;
-
     if (g_initialized == 0) {
-        ret = 0x80530102;
-    } else if (p == NULL) {
-        ret = 0x80530103;
-    } else {
-        *p = g_ctx.ef_ext;
-        ret = 0;
+        return 0x80530102;
     }
-    return ret;
+    if (out_ef == NULL) {
+        return 0x80530103;
+    }
+    *out_ef = g_ctx.ef_ext;
+    return 0;
 }
 
 /* === sceDNAS_lib_BE0998D7 @ 0x0674 === */
 int sceDNAS_lib_BE0998D7(void)
 {
-    int ret = 0;
-
-    if (g_initialized == 0) {
-        return 0x80530181;
+    if (g_initialized <= 0) {
+        return g_initialized;
     }
 
-    ret = sceKernelSetEventFlag(g_ctx.ef_int, 4);
+    sceKernelSetEventFlag(g_ctx.ef_int, 4);
     if (g_ctx.rid >= 0) {
         sceNetResolverStop(g_ctx.rid);
     }
@@ -392,42 +366,37 @@ int sceDNAS_lib_BE0998D7(void)
         sceNetInet_80A21ABD(g_ctx.sock);
     }
 
-    if (g_ctx.thid > 0) {
-        ret = sceKernelWaitThreadEnd(g_ctx.thid, NULL);
-        ret = sceKernelTerminateDeleteThread(g_ctx.thid);
-        ret = sceNetFreeThreadinfo(g_ctx.thid);
+    if (g_ctx.thid >= 0) {
+        sceKernelWaitThreadEnd(g_ctx.thid, NULL);
+        sceNetFreeThreadinfo(g_ctx.thid);
+        sceKernelTerminateDeleteThread(g_ctx.thid);
         g_ctx.thid = -1;
     }
 
-    if (g_ctx.ef_ext > 0) {
-        ret = sceKernelDeleteEventFlag(g_ctx.ef_ext);
+    if (g_ctx.ef_ext >= 0) {
+        sceKernelDeleteEventFlag(g_ctx.ef_ext);
         g_ctx.ef_ext = -1;
     }
-    if (g_ctx.ef_int > 0) {
-        ret = sceKernelDeleteEventFlag(g_ctx.ef_int);
+    if (g_ctx.ef_int >= 0) {
+        sceKernelDeleteEventFlag(g_ctx.ef_int);
         g_ctx.ef_int = -1;
     }
 
     sceDNASCore_lib_D5E80301();
     dnasSslTerm(&g_ctx);
     g_initialized = 0;
-    (void)ret;
     return 0;
 }
 
 /* === sceDNAS_lib_A646E771 @ 0x0814 === */
 int sceDNAS_lib_A646E771(int *out_state, int *out_error)
 {
-    if (g_initialized == 0) {
-        return 0x80530181;
+    if (g_initialized <= 0) {
+        return 0x80530102;
     }
 
-    if (out_state != NULL) {
-        *out_state = g_ctx.state;
-    }
-    if (out_error != NULL) {
-        *out_error = g_ctx.error;
-    }
+    *out_state = g_ctx.state;
+    *out_error = g_ctx.error;
     return 0;
 }
 
@@ -440,41 +409,37 @@ int sceDNAS_lib_6929100C(void *arg0)
 /* === dnasResetConnState @ 0x08c8 === */
 static void dnasResetConnState(DnasContext *ctx)
 {
-    ctx->sock = -1;
-    ctx->rid = -1;
+    ctx->error = 0;
+    ctx->use_proxy = 0;
     ctx->redirect_count = 0;
+    ctx->ssl_verify_err = 0;
     sceKernelMemset(ctx->host, 0, 0x80);
-    ctx->resolved_ip = 0;
-    ctx->ssl = NULL;
-    ctx->ssl_session = NULL;
+    ctx->has_resolved = 0;
 }
 
 /* === dnasCheckStopOrAbort @ 0x0938 === */
-static int dnasCheckStopOrAbort(DnasContext *ctx, int check_abort)
+static int dnasCheckStopOrAbort(DnasContext *ctx, unsigned int *out_flag, int clear_flag)
 {
-    int ret = 0;
+    int ret;
     unsigned int out_bits = 0;
-    unsigned int mask = (check_abort != 0) ? 6 : 4;
 
-    ret = sceKernelPollEventFlag(ctx->ef_int, mask, 0x11, &out_bits);
-    if (ret == (int)0x80020192) {
-        return 0;
-    }
-    if (ret < 0) {
-        ctx->state = 0;
-        ctx->error = ret;
-        sceKernelSetEventFlag(ctx->ef_ext, 1);
-        return 2;
+    ret = sceKernelPollEventFlag(ctx->ef_int, 6, clear_flag | 1, &out_bits);
+    if (ret != 0) {
+        if (ret == (int)0x800201af) {
+            ret = 0;
+        }
+        *out_flag = 0;
+        return ret;
     }
     if ((out_bits & 4) != 0) {
-        return 1;
+        *out_flag = 4;
+        return 0;
     }
     if ((out_bits & 2) != 0) {
-        ctx->state = 0;
-        ctx->error = 0x80530106;
-        sceKernelSetEventFlag(ctx->ef_ext, 1);
-        return 2;
+        *out_flag = 2;
+        return 0;
     }
+    *out_flag = 0;
     return 0;
 }
 
@@ -482,217 +447,286 @@ static int dnasCheckStopOrAbort(DnasContext *ctx, int check_abort)
 static int dnasWorkerThread(SceSize args, void *argp)
 {
     DnasContext *ctx = *(DnasContext **)argp;
-    int status;
+    int prev_state = 0;
+    int next_state;
+    unsigned int next_ev;
+    unsigned int flag;
+    int ret;
     (void)args;
 
+    ctx->state = 0;
     for (;;) {
-        status = dnasCheckStopOrAbort(ctx, (ctx->state != 0) ? 1 : 0);
-        if (status == 1) {
-            break;
-        }
-        if (status == 2) {
-            continue;
-        }
-
-        if (ctx->state >= 0 && ctx->state < 5) {
-            g_state_handlers[ctx->state](ctx);
-        } else {
-            ctx->state = 0;
-            ctx->error = 0x80530186;
-            sceKernelSetEventFlag(ctx->ef_ext, 1);
-            continue;
-        }
-
-        status = dnasCheckStopOrAbort(ctx, (ctx->state != 0) ? 1 : 0);
-        if (status == 1) {
-            break;
-        }
-        if (status == 2) {
-            continue;
-        }
-
-        if (ctx->error < 0 || ctx->state == 0) {
+        g_state_handlers[ctx->state](ctx, prev_state, &next_state, &next_ev);
+        ret = dnasCheckStopOrAbort(ctx, &flag, 0x10);
+        if (ret < 0) {
+            next_ev = 1;
+            next_state = 0;
+            ctx->error = ret;
+        } else if (flag != 0) {
             dnasSslCleanup(ctx);
-            ctx->state = 0;
-            sceKernelSetEventFlag(ctx->ef_ext, 1);
+            if (ctx->sock >= 0) {
+                dnasCloseSocket(ctx);
+            }
+            if (ctx->rid >= 0) {
+                sceNetResolverDelete(ctx->rid);
+                ctx->rid = -1;
+            }
+            dnasResetConnState(ctx);
+            ctx->error = 0;
+            if (flag == 4) {
+                return 0;
+            }
+            if (flag == 2) {
+                next_ev = 2;
+                next_state = 0;
+            }
+        }
+        prev_state = ctx->state;
+        ctx->state = next_state;
+        ctx->event_bits = next_ev;
+        sceKernelSetEventFlag(ctx->ef_ext, ctx->event_bits);
+        if (ctx->state == 0) {
+            dnasSslCleanup(ctx);
+            sceDNASCore_lib_D5E80301();
         }
     }
-
-    dnasSslCleanup(ctx);
-    return 0;
 }
 
 /* === dnasStateWaitStart @ 0x0c38 === */
-static void dnasStateWaitStart(DnasContext *ctx)
+static void dnasStateWaitStart(DnasContext *ctx, int prev_state, int *next_state, unsigned int *out_ev)
 {
-    int ret = 0;
+    int ret;
     unsigned int out_bits = 0;
+    (void)prev_state;
 
     ret = sceKernelWaitEventFlag(ctx->ef_int, 7, 0x11, &out_bits, NULL);
     if (ret < 0) {
+        *next_state = 0;
+        *out_ev = 1;
         ctx->error = ret;
         return;
     }
     if ((out_bits & 4) != 0) {
         sceKernelSetEventFlag(ctx->ef_int, 4);
+        ctx->error = 0;
         return;
     }
     if ((out_bits & 2) != 0) {
+        dnasResetConnState(ctx);
+        *next_state = 0;
+        *out_ev = 2;
         return;
     }
-
-    ctx->error = 0;
-    dnasResetConnState(ctx);
-    ret = sceDNASCore_lib_FA571A75(ctx->auth_arg, NULL, 0);
-    if (ret < 0) {
-        ctx->error = ret;
-        return;
+    if ((out_bits & 1) != 0) {
+        ret = sceDNASCore_lib_FA571A75(ctx->init_arg, ctx->auth_arg);
+        if (ret >= 0) {
+            *next_state = 1;
+            *out_ev = 4;
+        } else {
+            *next_state = 0;
+            *out_ev = 1;
+            ctx->error = ret;
+        }
     }
-
-    ctx->state++;
-    sceKernelSetEventFlag(ctx->ef_ext, 1);
 }
 
 /* === dnasStateSendAuth1 @ 0x0de0 === */
-static void dnasStateSendAuth1(DnasContext *ctx)
+static void dnasStateSendAuth1(DnasContext *ctx, int prev_state, int *next_state, unsigned int *out_ev)
 {
-    int ret = 0;
+    int ret;
 
-    if (ctx->ssl_session != NULL) {
-        dnasResetConnState(ctx);
-    }
-
-    ret = dnasDoSendAuth1(ctx);
-    if (ret < 0) {
-        ctx->error = ret;
+    if (prev_state != 0 && prev_state != 2) {
+        *next_state = 0;
+        *out_ev = 1;
+        ctx->error = 0x80530181;
         return;
     }
-
-    ctx->state++;
-    sceKernelSetEventFlag(ctx->ef_ext, 1);
+    ret = dnasDoSendAuth1(ctx);
+    if (ret >= 0) {
+        *next_state = 2;
+        *out_ev = 8;
+        ctx->error = 0;
+    } else {
+        *next_state = 0;
+        *out_ev = 1;
+        ctx->error = ret;
+    }
 }
 
 /* === dnasStateRecvAuth1 @ 0x0ec8 === */
-static void dnasStateRecvAuth1(DnasContext *ctx)
+static void dnasStateRecvAuth1(DnasContext *ctx, int prev_state, int *next_state, unsigned int *out_ev)
 {
-    int ret = 0;
+    int ret;
     int redirected = 0;
 
+    if (prev_state != 1) {
+        *next_state = 0;
+        *out_ev = 1;
+        ctx->error = 0x80530181;
+        return;
+    }
     ret = dnasDoRecvAuth1(ctx, &redirected);
-    if (ret < 0) {
+    if (ret >= 0) {
+        if (redirected != 0) {
+            dnasSslCleanup(ctx);
+            *next_state = 1;
+            *out_ev = 128;
+        } else {
+            dnasSslSaveSession(ctx);
+            *next_state = 3;
+            *out_ev = 16;
+        }
+        ctx->error = 0;
+    } else {
+        *next_state = 0;
+        *out_ev = 1;
         ctx->error = ret;
-        return;
     }
-
-    if (redirected != 0) {
-        dnasSslCleanup(ctx);
-        ctx->state = 1;
-        return;
-    }
-
-    dnasSslSaveSession(ctx);
-    ctx->state++;
-    sceKernelSetEventFlag(ctx->ef_ext, 1);
 }
 
 /* === dnasStateSendAuth2 @ 0x0ff4 === */
-static void dnasStateSendAuth2(DnasContext *ctx)
+static void dnasStateSendAuth2(DnasContext *ctx, int prev_state, int *next_state, unsigned int *out_ev)
 {
-    int ret = 0;
+    int ret;
 
-    ret = dnasDoSendAuth2(ctx);
-    if (ret < 0) {
-        ctx->error = ret;
+    if (prev_state != 2) {
+        *next_state = 0;
+        *out_ev = 1;
+        ctx->error = 0x80530181;
         return;
     }
-
-    ctx->state++;
-    sceKernelSetEventFlag(ctx->ef_ext, 1);
+    ret = dnasDoSendAuth2(ctx);
+    if (ret >= 0) {
+        *next_state = 4;
+        *out_ev = 32;
+        ctx->error = 0;
+    } else {
+        *next_state = 0;
+        *out_ev = 1;
+        ctx->error = ret;
+    }
 }
 
 /* === dnasStateRecvAuth2 @ 0x10d0 === */
-static void dnasStateRecvAuth2(DnasContext *ctx)
+static void dnasStateRecvAuth2(DnasContext *ctx, int prev_state, int *next_state, unsigned int *out_ev)
 {
-    int ret = 0;
+    int ret;
 
-    ret = dnasDoRecvAuth2(ctx);
-    if (ret < 0) {
-        ctx->error = ret;
+    if (prev_state != 3) {
+        *next_state = 0;
+        *out_ev = 1;
+        ctx->error = 0x80530181;
         return;
     }
-
-    dnasResetConnState(ctx);
-    ctx->state = 0;
-    sceKernelSetEventFlag(ctx->ef_ext, 1);
+    ret = dnasDoRecvAuth2(ctx);
+    if (ret >= 0) {
+        dnasSslCleanup(ctx);
+        *next_state = 0;
+        *out_ev = 64;
+        ctx->error = 0;
+    } else {
+        *next_state = 0;
+        *out_ev = 1;
+        ctx->error = ret;
+    }
 }
 
 /* === dnasLoadProxyConfig @ 0x11b4 === */
 static int dnasLoadProxyConfig(DnasContext *ctx)
 {
-    int ret = 0;
+    int ret;
+    uint32_t info[32];
 
-    ret = sceNetApctlGetInfo(13, &ctx->use_proxy);
+    ret = sceNetApctlGetInfo(13, info);
     if (ret < 0) {
         return ret;
     }
-    if (ctx->use_proxy == 0) {
+    if (info[0] == 0) {
+        ctx->use_proxy = 0;
         return 0;
     }
 
-    ret = sceNetApctlGetInfo(14, ctx->host);
+    ret = sceNetApctlGetInfo(14, info);
     if (ret < 0) {
         return ret;
     }
+    sceKernelMemcpy(ctx->host, info, 0x80);
 
-    ret = sceNetApctlGetInfo(15, &ctx->port);
+    ret = sceNetApctlGetInfo(15, info);
     if (ret < 0) {
         return ret;
     }
-
-    return 0;
+    ctx->port = (uint16_t)info[0];
+    ctx->use_proxy = 1;
+    return 1;
 }
 
 /* === dnasTcpConnect @ 0x12e4 === */
 static int dnasTcpConnect(DnasContext *ctx)
 {
     int ret = 0;
-    uint32_t addr = 0;
-    uint8_t sin[16];
+    uint32_t addr;
+    unsigned int flag;
     int retry;
 
-    if (ctx->resolved_ip == 0) {
+    if (ctx->sock > 0) {
+        ret = 0x80530106;
+        goto fail;
+    }
+
+    if (ctx->has_resolved == 0) {
         addr = (uint32_t)sceNetInetInetAddr(ctx->host);
         if (addr == 0xffffffffU) {
             ret = sceNetResolverCreate(&ctx->rid, g_resolver_buf, sizeof(g_resolver_buf));
             if (ret < 0) {
-                goto out;
+                goto fail;
             }
-            ret = sceNetResolverStartNtoA(ctx->rid, ctx->host, &addr, 2000000, 4);
+            ret = dnasCheckStopOrAbort(ctx, &flag, 0);
             if (ret < 0) {
-                goto out;
+                sceNetResolverDelete(ctx->rid);
+                ctx->rid = -1;
+                goto fail;
             }
+            if (flag == 4 || flag == 2) {
+                ret = 0x80530190;
+                sceNetResolverDelete(ctx->rid);
+                ctx->rid = -1;
+                goto fail;
+            }
+            ret = sceNetResolverStartNtoA(ctx->rid, ctx->host, (uint32_t *)&ctx->sin[4], 3000000, 5);
             sceNetResolverDelete(ctx->rid);
             ctx->rid = -1;
+            if (ret < 0) {
+                goto fail;
+            }
+        } else {
+            sceKernelMemcpy(&ctx->sin[4], &addr, 4);
         }
-        ctx->resolved_ip = addr;
+        ctx->sin[1] = 2;
+        {
+            uint16_t net_port = dnasHtons(ctx->port);
+            sceKernelMemcpy(&ctx->sin[2], &net_port, 2);
+        }
+        ctx->has_resolved = 1;
     }
 
     for (retry = 0; retry < 5; retry++) {
-        ret = sceNetInetSocket(2, 1, 0);
-        if (ret < 0) {
-            ret = sceNetInet_8CA3A97E();
-            goto out;
+        ctx->sock = sceNetInetSocket(2, 1, 0);
+        if (ctx->sock <= 0) {
+            ret = ctx->sock;
+            break;
         }
-        ctx->sock = ret;
-
-        sceKernelMemset(sin, 0, sizeof(sin));
-        sin[0] = 16;
-        sin[1] = 2;
-        *(uint16_t *)&sin[2] = dnasHtons(ctx->port);
-        *(uint32_t *)&sin[4] = ctx->resolved_ip;
-
-        ret = sceNetInetConnect(ctx->sock, sin, sizeof(sin));
-        if (ret == 0) {
+        ret = dnasCheckStopOrAbort(ctx, &flag, 0);
+        if (ret < 0) {
+            dnasCloseSocket(ctx);
+            break;
+        }
+        if (flag == 4 || flag == 2) {
+            ret = 0x80530190;
+            dnasCloseSocket(ctx);
+            break;
+        }
+        if (sceNetInetConnect(ctx->sock, ctx->sin, 16) == 0) {
             return 0;
         }
         ret = sceNetInet_8CA3A97E();
@@ -702,13 +736,8 @@ static int dnasTcpConnect(DnasContext *ctx)
         }
     }
 
-    ctx->resolved_ip = 0;
-
-out:
-    if (ctx->rid >= 0) {
-        sceNetResolverDelete(ctx->rid);
-        ctx->rid = -1;
-    }
+fail:
+    ctx->has_resolved = 0;
     return ret;
 }
 
@@ -840,7 +869,7 @@ static int dnasOpenHttpsConn(DnasContext *ctx)
 
     if (ctx->use_proxy == 0) {
         ctx->port = 443;
-        ret = sceDNASCore_lib_15096ECD(ctx->host, NULL, NULL);
+        ret = sceDNASCore_lib_15096ECD(ctx->host);
         if (ret < 0) {
             goto fail;
         }
@@ -989,7 +1018,7 @@ static int dnasSslVerifyCallback(int preverify_ok, void **cert_chain, int chain_
     }
 
     subj = sceSsl_lib_12C7718F(cert_chain[0]);
-    if (subj != NULL && ctx->skip_cn_check != 1) {
+    if (subj != NULL && (int)ctx->init_arg != 1) {
         sceDNASCore_lib_F479F616(expected_cn);
         if (dnasVerifyCommonName(subj, expected_cn) < 0) {
             ctx->ssl_verify_err = 0x80530186;
@@ -1372,7 +1401,7 @@ static int dnasDoRecvAuth1(DnasContext *ctx, int *redirected)
         }
         *redirected = 1;
         ctx->redirect_count++;
-        ctx->resolved_ip = 0;
+        ctx->has_resolved = 0;
         sceKernelMemcpy(ctx->host, redirect_buf, sizeof(redirect_buf));
     }
 

@@ -1322,10 +1322,9 @@ static int _msAddCallback(SceUID cbId)
 	for (int i = 0; i < 32; i++) {
 		if (g_callbacks[i] == 0) {
 			g_callbacks[i] = cbId;
+			added = 1;
 			if (sceKernelNotifyCallback(cbId, 1) == (int)0x800201A1) {
 				g_callbacks[i] = 0;
-			} else {
-				added = 1;
 			}
 			break;
 		}

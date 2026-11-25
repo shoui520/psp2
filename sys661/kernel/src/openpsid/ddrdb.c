@@ -184,6 +184,7 @@ s32 sceDdrdbHash(u8 *pSrcData, SceSize size, u8 *pDigest)
     if (tmpStatus != SCE_ERROR_OK)
         return SCE_ERROR_SEMAPHORE;
 
+    status = SCE_DNAS_ERROR_INVALID_ARGUMENTS;
     workSize = size + sizeof(KirkSHA1Hdr); //0x00002A20
     if (size <= SCE_DNAS_USER_DATA_MAX_LEN) { //0x00002A1C
 
@@ -211,16 +212,17 @@ s32 sceDdrdbHash(u8 *pSrcData, SceSize size, u8 *pDigest)
         }
     }
 
-    /* Clear at least <KIRK_SHA1_DIGEST_LEN> bits of the working area. */
-    for (i = 0; i < KIRK_SHA1_DIGEST_LEN; i++) // 0x00002AAC
-        g_pWorkData[i] = 0; //0x00002B30
-
-    /* Use casts here to handle potential underflow situation. */
-    for (i = 0; (s32)i < (s32)(workSize - KIRK_SHA1_DIGEST_LEN); i++) // 0x00002B1C - 0x00002B30
-        g_pWorkData[KIRK_SHA1_DIGEST_LEN + i] = 0;
+    /* Clear at least <KIRK_SHA1_DIGEST_LEN> bytes of the working area. */
+    if (workSize >= KIRK_SHA1_DIGEST_LEN) {
+        for (i = 0; i < workSize; i++)
+            g_pWorkData[i] = 0;
+    } else {
+        for (i = 0; i < KIRK_SHA1_DIGEST_LEN; i++)
+            g_pWorkData[i] = 0;
+    }
 
     tmpStatus = sceKernelSignalSema(g_semaId, 1); //0x00002AD4
-    return (tmpStatus != SCE_ERROR_OK) ? SCE_ERROR_SEMAPHORE : tmpStatus; //0x00002ADC & 0x00002AE0 & 0x00002AE4
+    return (tmpStatus != SCE_ERROR_OK) ? SCE_ERROR_SEMAPHORE : status;
 }
 
 /* Subroutine sceDdrdb_driver_F970D54E - Address 0x00002570 */
@@ -279,8 +281,9 @@ s32 sceDdrdbMul2(u8 *pPrivKey, u8 *pBasePoint, u8 *pNewPoint)
     status = SCE_DNAS_ERROR_OPERATION_FAILED; //0x00002708 & 0x00002710
 
     /* Compute a new point on the elliptic curve using the provided key and curve base point. */
+    workSize = KIRK_ECDSA_PRIVATE_KEY_LEN + KIRK_ECDSA_POINT_LEN;
     tmpStatus = sceUtilsBufferCopyWithRange(g_pWorkData, KIRK_ECDSA_POINT_LEN,
-        g_pWorkData, KIRK_ECDSA_PRIVATE_KEY_LEN, 
+        g_pWorkData, workSize,
         KIRK_CMD_POINT_MULTIPLICATION_ECDSA
         ); //0x00002704
     if (tmpStatus == SCE_ERROR_OK) { //0x0000270C
@@ -291,7 +294,6 @@ s32 sceDdrdbMul2(u8 *pPrivKey, u8 *pBasePoint, u8 *pNewPoint)
 
         status = SCE_ERROR_OK;
     }
-    workSize = KIRK_ECDSA_PRIVATE_KEY_LEN + KIRK_ECDSA_POINT_LEN;
     
     /* Clear the work area. */
     for (i = 0; i < workSize; i++) //0x00002740 - 0x00002754
@@ -381,7 +383,7 @@ s32 sceDdrdbSiggen(u8 *pPrivKey, u8 *pSrcData, u8 *pSig)
         g_pWorkData[i] = pPrivKey[i];
     
     for (i = 0; i < KIRK_ECDSA_SRC_DATA_LEN; i++) //0x0000280C - 0x0000282C
-        g_pWorkData[i] = pSrcData[i];
+        g_pWorkData[32 + i] = pSrcData[i];
 
     workSize = 32 + KIRK_ECDSA_SRC_DATA_LEN;
     status = SCE_DNAS_ERROR_OPERATION_FAILED; //0x00002848 & 0x00002850
@@ -414,8 +416,8 @@ s32 sceDdrdbPrngen(u8 *pDstData)
 
     status = SCE_DNAS_ERROR_OPERATION_FAILED; //0x000028FC
     
-    status = sceKernelWaitSema(g_semaId, 1, NULL); //0x00002908
-    if (status != SCE_ERROR_OK)
+    tmpStatus = sceKernelWaitSema(g_semaId, 1, NULL); //0x00002908
+    if (tmpStatus != SCE_ERROR_OK)
         return SCE_ERROR_SEMAPHORE;
 
     /* Compute a pseudorandom number. */
