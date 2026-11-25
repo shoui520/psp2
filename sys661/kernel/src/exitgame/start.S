@@ -4,75 +4,139 @@
     .section .text, "ax", @progbits
     .align 2
 
-    .globl exc_vec_0
-    .globl exc_vec_1
-    .globl exc_vec_2
-    .globl exc_vec_3
-    .globl exc_vec_4
-    .globl exc_vec_5
-    .globl exc_vec_6
-    .globl exc_vec_7
-    .globl exc_vec_8
-    .globl exc_vec_9
+    .globl excVecAddrLoad
+    .globl excVecAddrStore
+    .globl excVecBusFetch
+    .globl excVecBusData
+    .globl excVecBreak
+    .globl excVecReservedInsn
+    .globl excVecCopUnusable
+    .globl excVecOverflow
+    .globl excVecFpu
+    .globl excVecNmi
+    .globl excVecAddrStoreEntry
+    .globl excVecBusFetchEntry
+    .globl excVecBusDataEntry
+    .globl excVecBreakEntry
+    .globl excVecReservedInsnEntry
+    .globl excVecCopUnusableEntry
+    .globl excVecOverflowEntry
+    .globl excVecFpuEntry
+    .globl excVecNmiEntry
 
-    .ent exc_vec_0
-exc_vec_0:
+    .type excVecAddrLoad, @function
+    .ent excVecAddrLoad
+excVecAddrLoad:
     nop
     nop
     j       .L_exc_common
     nop
-exc_vec_1:
+    .end excVecAddrLoad
+    .size excVecAddrLoad, .-excVecAddrLoad
+
+excVecAddrStore:
     nop
     nop
+    .type excVecAddrStoreEntry, @function
+    .ent excVecAddrStoreEntry
+excVecAddrStoreEntry:
     j       .L_exc_common
     nop
-exc_vec_2:
+    .end excVecAddrStoreEntry
+    .size excVecAddrStoreEntry, .-excVecAddrStoreEntry
+
+excVecBusFetch:
     nop
     nop
+    .type excVecBusFetchEntry, @function
+    .ent excVecBusFetchEntry
+excVecBusFetchEntry:
     j       .L_exc_common
     nop
-exc_vec_3:
+    .end excVecBusFetchEntry
+    .size excVecBusFetchEntry, .-excVecBusFetchEntry
+
+excVecBusData:
     nop
     nop
+    .type excVecBusDataEntry, @function
+    .ent excVecBusDataEntry
+excVecBusDataEntry:
     j       .L_exc_common
     nop
-exc_vec_4:
+    .end excVecBusDataEntry
+    .size excVecBusDataEntry, .-excVecBusDataEntry
+
+excVecBreak:
     nop
     nop
+    .type excVecBreakEntry, @function
+    .ent excVecBreakEntry
+excVecBreakEntry:
     j       .L_exc_common
     nop
-exc_vec_5:
+    .end excVecBreakEntry
+    .size excVecBreakEntry, .-excVecBreakEntry
+
+excVecReservedInsn:
     nop
     nop
+    .type excVecReservedInsnEntry, @function
+    .ent excVecReservedInsnEntry
+excVecReservedInsnEntry:
     j       .L_exc_common
     nop
-exc_vec_6:
+    .end excVecReservedInsnEntry
+    .size excVecReservedInsnEntry, .-excVecReservedInsnEntry
+
+excVecCopUnusable:
     nop
     nop
+    .type excVecCopUnusableEntry, @function
+    .ent excVecCopUnusableEntry
+excVecCopUnusableEntry:
     j       .L_exc_common
     nop
-exc_vec_7:
+    .end excVecCopUnusableEntry
+    .size excVecCopUnusableEntry, .-excVecCopUnusableEntry
+
+excVecOverflow:
     nop
     nop
+    .type excVecOverflowEntry, @function
+    .ent excVecOverflowEntry
+excVecOverflowEntry:
     j       .L_exc_common
     nop
-exc_vec_8:
+    .end excVecOverflowEntry
+    .size excVecOverflowEntry, .-excVecOverflowEntry
+
+excVecFpu:
     nop
     nop
+    .type excVecFpuEntry, @function
+    .ent excVecFpuEntry
+excVecFpuEntry:
     j       .L_exc_common
     nop
-exc_vec_9:
+    .end excVecFpuEntry
+    .size excVecFpuEntry, .-excVecFpuEntry
+
+excVecNmi:
     nop
     nop
-    .word   0x40423000
-    .word   0x40433800
-    .word   0x40c22000
-    .word   0x40c32800
-    .word   0x4042a000
-    .word   0x40439800
+    .type excVecNmiEntry, @function
+    .ent excVecNmiEntry
+excVecNmiEntry:
+    cfc0    $v0, $6
+    cfc0    $v1, $7
+    ctc0    $v0, $4
+    ctc0    $v1, $5
+    cfc0    $v0, $20
+    cfc0    $v1, $19
     ori     $v0, $v0, 0x7c
-    .word   0x40c21800
-    .word   0x40c31000
+    ctc0    $v0, $3
+    ctc0    $v1, $2
     j       .L_exc_common
     nop
 
@@ -81,8 +145,8 @@ exc_vec_9:
     lw      $v0, %lo(g_ctxPtr)($v0)
     sw      $k0, 0x68($v0)
     sw      $k1, 0x6c($v0)
-    .word   0x405a2000
-    .word   0x405b2800
+    cfc0    $k0, $4
+    cfc0    $k1, $5
     sw      $k0, 8($v0)
     sw      $k1, 0xc($v0)
     mfc0    $k0, $12
@@ -170,10 +234,10 @@ exc_vec_9:
     swc1    $f29, 0xf4($v0)
     swc1    $f30, 0xf8($v0)
     swc1    $f31, 0xfc($v0)
-    .word   0x40440000
-    .word   0x40450800
-    .word   0x40461000
-    .word   0x40471800
+    cfc0    $a0, $0
+    cfc0    $a1, $1
+    cfc0    $a2, $2
+    cfc0    $a3, $3
     mfc0    $t0, $8
     mfc0    $t1, $9
     mfc0    $t2, $11
@@ -226,14 +290,15 @@ exc_vec_9:
     sw      $k1, 0x18c($v0)
     lui     $sp, %hi(g_stack_end)
     addiu   $sp, $sp, %lo(g_stack_end)
-    move    $k0, $zero
-    move    $k1, $zero
+    addu    $k0, $zero, $zero
+    addu    $k1, $zero, $zero
     jal     bsod_crash_handler
     nop
     lui     $at, %hi(g_ctxPtr)
     jr      $ra
     sw      $a0, %lo(g_ctxPtr)($at)
+    .end excVecNmiEntry
+    .size excVecNmiEntry, .-excVecNmiEntry
     nop
     nop
     nop
-    .end exc_vec_0

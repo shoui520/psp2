@@ -10,16 +10,16 @@ SCE_MODULE_INFO("sceBlueScreenOfDeath",
                 1, 8);
 SCE_SDK_VERSION(0x06060110);
 
-extern void exc_vec_0(void);
-extern void exc_vec_1(void);
-extern void exc_vec_2(void);
-extern void exc_vec_3(void);
-extern void exc_vec_4(void);
-extern void exc_vec_5(void);
-extern void exc_vec_6(void);
-extern void exc_vec_7(void);
-extern void exc_vec_8(void);
-extern void exc_vec_9(void);
+extern void excVecAddrLoad(void);
+extern void excVecAddrStore(void);
+extern void excVecBusFetch(void);
+extern void excVecBusData(void);
+extern void excVecBreak(void);
+extern void excVecReservedInsn(void);
+extern void excVecCopUnusable(void);
+extern void excVecOverflow(void);
+extern void excVecFpu(void);
+extern void excVecNmi(void);
 
 const char * const g_excNames[32] = {
     "External interrupt",
@@ -60,10 +60,12 @@ void *g_ctxPtr;
 u8 g_stack[0x1FFC];
 u32 g_stack_end[3];
 
-static void __attribute__((noipa)) bsod_dead_thread_handler(void);
-static s32 __attribute__((noipa)) bsod_register_handlers(void);
-static s32 __attribute__((noipa)) bsod_release_handlers(void);
-void __attribute__((noipa)) bsod_crash_handler(void);
+extern s32 sceKernelRegisterDeadThreadHandler(void (*handler)(void));
+
+static void __attribute__((noinline)) bsod_dead_thread_handler(void);
+static s32 __attribute__((noinline)) bsod_register_handlers(void);
+static s32 __attribute__((noinline)) bsod_release_handlers(void);
+void __attribute__((noinline)) bsod_crash_handler(void);
 
 s32 module_start(SceSize args, void *argp) __attribute__((alias("module_bootstart")));
 
@@ -79,69 +81,72 @@ s32 module_reboot_before(void)
     return 0;
 }
 
-static void __attribute__((noipa)) bsod_dead_thread_handler(void)
+static void __attribute__((noinline)) bsod_dead_thread_handler(void)
 {
     bsod_crash_handler();
 }
 
-static s32 __attribute__((noipa)) bsod_register_handlers(void)
+static s32 __attribute__((noinline)) bsod_register_handlers(void)
 {
     s32 state = sceKernelCpuSuspendIntr();
-    sceKernelRegisterExceptionHandler(4, exc_vec_0);
-    sceKernelRegisterExceptionHandler(5, exc_vec_1);
-    sceKernelRegisterExceptionHandler(6, exc_vec_2);
-    sceKernelRegisterExceptionHandler(7, exc_vec_3);
-    sceKernelRegisterExceptionHandler(9, exc_vec_4);
-    sceKernelRegisterExceptionHandler(10, exc_vec_5);
-    sceKernelRegisterPriorityExceptionHandler(11, 3, exc_vec_6);
-    sceKernelRegisterExceptionHandler(12, exc_vec_7);
-    sceKernelRegisterExceptionHandler(15, exc_vec_8);
-    sceKernelRegisterExceptionHandler(31, exc_vec_9);
+    sceKernelRegisterExceptionHandler(4, excVecAddrLoad);
+    sceKernelRegisterExceptionHandler(5, excVecAddrStore);
+    sceKernelRegisterExceptionHandler(6, excVecBusFetch);
+    sceKernelRegisterExceptionHandler(7, excVecBusData);
+    sceKernelRegisterExceptionHandler(9, excVecBreak);
+    sceKernelRegisterExceptionHandler(10, excVecReservedInsn);
+    sceKernelRegisterPriorityExceptionHandler(11, 3, excVecCopUnusable);
+    sceKernelRegisterExceptionHandler(12, excVecOverflow);
+    sceKernelRegisterExceptionHandler(15, excVecFpu);
+    sceKernelRegisterExceptionHandler(31, excVecNmi);
     sceKernelRegisterDeadThreadHandler(bsod_dead_thread_handler);
     sceKernelCpuResumeIntr(state);
     return 0;
 }
 
-static s32 __attribute__((noipa)) bsod_release_handlers(void)
+static s32 __attribute__((noinline)) bsod_release_handlers(void)
 {
     s32 state = sceKernelCpuSuspendIntr();
-    sceKernelReleaseExceptionHandler(4, exc_vec_0);
-    sceKernelReleaseExceptionHandler(5, exc_vec_1);
-    sceKernelReleaseExceptionHandler(6, exc_vec_2);
-    sceKernelReleaseExceptionHandler(7, exc_vec_3);
-    sceKernelReleaseExceptionHandler(9, exc_vec_4);
-    sceKernelReleaseExceptionHandler(10, exc_vec_5);
-    sceKernelReleaseExceptionHandler(11, exc_vec_6);
-    sceKernelReleaseExceptionHandler(12, exc_vec_7);
-    sceKernelReleaseExceptionHandler(15, exc_vec_8);
-    sceKernelReleaseExceptionHandler(31, exc_vec_9);
+    sceKernelReleaseExceptionHandler(4, excVecAddrLoad);
+    sceKernelReleaseExceptionHandler(5, excVecAddrStore);
+    sceKernelReleaseExceptionHandler(6, excVecBusFetch);
+    sceKernelReleaseExceptionHandler(7, excVecBusData);
+    sceKernelReleaseExceptionHandler(9, excVecBreak);
+    sceKernelReleaseExceptionHandler(10, excVecReservedInsn);
+    sceKernelReleaseExceptionHandler(11, excVecCopUnusable);
+    sceKernelReleaseExceptionHandler(12, excVecOverflow);
+    sceKernelReleaseExceptionHandler(15, excVecFpu);
+    sceKernelReleaseExceptionHandler(31, excVecNmi);
     sceKernelRegisterDeadThreadHandler(NULL);
     sceKernelCpuResumeIntr(state);
     return 0;
 }
 
-void __attribute__((noipa)) bsod_crash_handler(void)
+void __attribute__((noinline)) bsod_crash_handler(void)
 {
-    volatile u32 dummy1, dummy2;
+    volatile u32 regReadback;
+    volatile u32 kermitStatus;
 
     sceKernelMemset((void *)0xABD48000, 0, 0x8000);
     *(volatile u32 *)0xABD48000 = 0x425;
     asm volatile("sync" ::: "memory");
 
     *(volatile u32 *)0xBD000004 = 0xF;
-    do {
-        dummy2 = *(volatile u32 *)0xBD000004;
-    } while (dummy2 != 0);
+    kermitStatus = *(volatile u32 *)0xBD000004;
+    while (kermitStatus != 0) {
+        kermitStatus = *(volatile u32 *)0xBD000004;
+    }
 
-    do {
-        dummy2 = *(volatile u32 *)0xBD000000;
-    } while (dummy2 != 0xF);
+    kermitStatus = *(volatile u32 *)0xBD000000;
+    while (kermitStatus != 0xF) {
+        kermitStatus = *(volatile u32 *)0xBD000000;
+    }
 
     u32 val = *(volatile u32 *)0xBC300050;
     *(volatile u32 *)0xBC300050 = val & ~0x200u;
-    dummy1 = *(volatile u32 *)0xBC300050;
+    regReadback = *(volatile u32 *)0xBC300050;
     *(volatile u32 *)0xBC300050 = val | 0x200u;
-    dummy1 = *(volatile u32 *)0xBC300050;
+    regReadback = *(volatile u32 *)0xBC300050;
     *(volatile u32 *)0xBC300038 |= 0x200u;
 
     for (;;) {
