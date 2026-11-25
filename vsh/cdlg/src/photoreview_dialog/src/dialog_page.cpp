@@ -125,6 +125,7 @@ void DialogPage::Hide(float timeMs)
 				    HiddenCB, this);
 }
 
+#ifndef CDLG_NO_DIALOG_PAGE_SLIDEOUT
 void DialogPage::SlideOut(int32_t direction, float timeMs)
 {
 	ui::Scene *scene;
@@ -152,6 +153,7 @@ void DialogPage::SlideOut(int32_t direction, float timeMs)
 				    ui::Widget::ANIM_META_ALPHA, 2, 0.0f, HiddenCB, this);
 	}
 }
+#endif
 
 bool DialogPage::IsOpen()
 {

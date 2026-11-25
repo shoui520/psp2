@@ -46,8 +46,10 @@ public:
 	virtual void FadeOut(float timeMs, float delayMs);
 	/* the page fades out, and then OnHidden */
 	virtual void Hide(float timeMs);
+#ifndef CDLG_NO_DIALOG_PAGE_SLIDEOUT
 	/* the page slides off the screen as it fades out, and then OnHidden */
 	virtual void SlideOut(int32_t direction, float timeMs);
+#endif
 	virtual bool IsOpen();
 
 	/* the events of the page's root and widgets */
