@@ -41,17 +41,17 @@ int scePower_driver_8C6BEFD9(void);
 /* sceNetIfhandle_driver packet and interface structures */
 typedef struct SceNetMbuf {
 	struct SceNetMbuf *next;
-	u32 unk_04;
+	u32 next_pkt;
 	u8 *data;
 	s32 len;
-	u16 unk_10;
+	u16 mbuf_type;
 	u16 flags;
-	u32 unk_14;
+	u32 mbuf_reserved14;
 	u32 total_len;
-	u32 unk_1c;
+	u32 mbuf_reserved1c;
 	s16 rssi_a;
 	s16 rssi_b;
-	u32 unk_24[3];
+	u32 mbuf_reserved24[3];
 	void *ext_buf;
 	u32 ext_34;
 	u32 ext_38;
@@ -77,6 +77,51 @@ int sceNetIfhandle_driver_F8825DC4(SceNetMbuf *m);
 int sceNetIfhandle_driver_F56FAC82(SceNetMbuf *m, int flags);
 
 /* Internal data structures */
+typedef struct SceWlanBssCfg {
+	u32 bssid_lo;       /* +0x00 */
+	u16 bssid_hi;       /* +0x04 */
+	u8 channel;         /* +0x06 */
+	u8 ssid_len;        /* +0x07 */
+	u32 ssid_words[8];  /* +0x08..+0x27 */
+	u32 bss_type;       /* +0x28 */
+	u32 beacon_period;  /* +0x2c */
+	u32 dtim_period;    /* +0x30 */
+	u8 reserved34[8];   /* +0x34..+0x3b */
+	u16 atim_window;    /* +0x3c */
+	u16 capability;     /* +0x3e */
+	u8 rates[8];        /* +0x40..+0x47 */
+	s16 rssi;           /* +0x48 */
+} SceWlanBssCfg;
+
+typedef struct SceWlanKermitBss {
+	u32 header;         /* +0x00 */
+	u32 bssid_lo;       /* +0x04 */
+	u16 bssid_hi;       /* +0x08 */
+	u16 ssid_len;       /* +0x0a */
+	u32 ssid_words[8];  /* +0x0c..+0x2b */
+	s32 rssi;           /* +0x2c */
+	u32 capability;     /* +0x30 */
+	u8 reserved34[8];   /* +0x34..+0x3b */
+	u32 beacon_period;  /* +0x3c */
+	u32 atim_window;    /* +0x40 */
+	u8 reserved44[8];   /* +0x44..+0x4b */
+	u32 freq;           /* +0x4c */
+	u8 reserved50[12];  /* +0x50..+0x5b */
+	u32 bss_type;       /* +0x5c */
+} SceWlanKermitBss;
+
+typedef struct SceWlanRssiOut {
+	u8 reserved00[0x12];
+	s16 avg_rssi;       /* +0x12 */
+	u16 sample_count;   /* +0x14 */
+} SceWlanRssiOut;
+
+typedef struct SceWlanKermitFrame {
+	u8 header[0x104];
+	u32 length;         /* +0x104 */
+	u32 flags;          /* +0x108 */
+} SceWlanKermitFrame;
+
 typedef struct SceWlanTxNode {
 	u32 busy;
 	struct SceWlanTxNode *ring_next;
@@ -99,7 +144,7 @@ typedef struct SceWlanRssiNode {
 typedef struct SceWlanMbxMsg {
 	SceKernelMsgPacket hdr;
 	u32 type;
-	u32 unk_0c;
+	u32 reserved0c;
 	void *arg_ptr;
 	u32 arg_val;
 	u32 flags;
@@ -109,51 +154,51 @@ typedef struct SceWlanMbxMsg {
 
 typedef struct SceWlanCtx {
 	u32 flags;                       /* +0x000 */
-	u32 unk_004;                     /* +0x004 */
+	u32 state_flags;                     /* +0x004 */
 	u8 conn_info[0x98];              /* +0x008..+0x09f */
-	u32 unk_0a0;                     /* +0x0a0 */
-	u32 unk_0a4;                     /* +0x0a4 */
-	u32 unk_0a8;                     /* +0x0a8 */
+	u32 scan_param0;                     /* +0x0a0 */
+	u32 scan_param1;                     /* +0x0a4 */
+	u32 scan_param2;                     /* +0x0a8 */
 	u32 rate_idx;                    /* +0x0ac */
 	u16 channel_mask;                /* +0x0b0 */
-	u8 unk_0b2;                      /* +0x0b2 */
+	u8 region_code;                      /* +0x0b2 */
 	u8 rssi_base;                    /* +0x0b3 */
-	u32 unk_0b4;                     /* +0x0b4 */
+	u32 reserved_0b4;                     /* +0x0b4 */
 	u8 mac_addr[8];                  /* +0x0b8..+0x0bf */
 	u32 power_mode;                  /* +0x0c0 */
-	u32 unk_0c4;                     /* +0x0c4 */
-	u16 unk_0c8;                     /* +0x0c8 */
-	u16 unk_0ca;                     /* +0x0ca */
-	u8 unk_0cc;                      /* +0x0cc */
-	u8 pad_0cd;                      /* +0x0cd */
-	u16 unk_0ce;                     /* +0x0ce */
-	u16 unk_0d0;                     /* +0x0d0 */
-	u16 unk_0d2;                     /* +0x0d2 */
-	u32 unk_0d4[2];                  /* +0x0d4..+0x0db */
-	u32 unk_0dc;                     /* +0x0dc */
-	u32 unk_0e0;                     /* +0x0e0 */
-	u32 unk_0e4[20];                 /* +0x0e4..+0x133 */
+	u32 conn_state;                     /* +0x0c4 */
+	u16 auth_mode;                     /* +0x0c8 */
+	u16 cipher_mode;                     /* +0x0ca */
+	u8 key_index;                      /* +0x0cc */
+	u8 reserved_0cd;                      /* +0x0cd */
+	u16 wep_flags;                     /* +0x0ce */
+	u16 beacon_interval;                     /* +0x0d0 */
+	u16 dtim_period;                     /* +0x0d2 */
+	u32 reserved_0d4[2];                  /* +0x0d4..+0x0db */
+	u32 tx_power;                     /* +0x0dc */
+	u32 sec_mode;                     /* +0x0e0 */
+	u32 sec_key_buf[20];                 /* +0x0e4..+0x133 */
 	u32 tx_buf_stride;               /* +0x134 */
 	u32 tx_node_count;               /* +0x138 */
 	SceWlanTxNode *tx_pool;          /* +0x13c */
 	SceWlanTxNode *tx_cur;           /* +0x140 */
-	u32 unk_144[4];                  /* +0x144..+0x153 */
+	u32 reserved_144[4];                  /* +0x144..+0x153 */
 	SceWlanRssiNode *rssi_pool;      /* +0x154 */
 	SceWlanRssiNode *rssi_head;      /* +0x158 */
-	u16 unk_15c;                     /* +0x15c */
-	u16 unk_15e;                     /* +0x15e */
+	u16 rssi_pool_cnt;                     /* +0x15c */
+	u16 rssi_sample_cnt;                     /* +0x15e */
 	s32 thread_running;              /* +0x160 */
-	u32 unk_164;                     /* +0x164 */
+	u32 reserved_164;                     /* +0x164 */
 	SceUID mac_thid;                 /* +0x168 */
 	SceUID worker_thid;              /* +0x16c */
 	SceUID lock_sema;                /* +0x170 */
 	SceUID mbx_id;                   /* +0x174 */
 	u8 country_str[4];               /* +0x178..+0x17b */
 	SceUID vpl_id;                   /* +0x17c */
-	u32 unk_180[2];                  /* +0x180..+0x187 */
+	u32 reserved_180[2];                  /* +0x180..+0x187 */
 	struct {
 		void *if_internal;           /* +0x188 */
-		u32 unk_18c;                 /* +0x18c */
+		u32 netif_flags;                 /* +0x18c */
 		void (*cb_up)(void *);       /* +0x190 */
 		void (*cb_down)(void *);     /* +0x194 */
 		void (*cb_tx)(void *);       /* +0x198 */
@@ -164,8 +209,8 @@ typedef struct SceWlanCtx {
 	SceWlanQueue rx_queue;           /* +0x1bc..+0x1c3 */
 	u8 *rx_buf;                      /* +0x1c4 */
 	SceUID alarm_id;                 /* +0x1c8 */
-	u32 unk_1cc;                     /* +0x1cc */
-	u32 unk_1d0;                     /* +0x1d0 */
+	u32 reserved_1cc;                     /* +0x1cc */
+	u32 suspend_state;                     /* +0x1d0 */
 	u32 version_or_mode;             /* +0x1d4 */
 	u16 idstorage_45_0;              /* +0x1d8 */
 	u8 idstorage_45_2;               /* +0x1da */
@@ -357,20 +402,20 @@ static SceWlanTxNode *wlanAllocTxNode(SceWlanCtx *ctx, u32 busy_val)
 static int wlanInitCtxDefaults(SceWlanCtx *ctx)
 {
 	ctx->flags |= 0x200;
-	ctx->unk_0a0 = 6;
-	ctx->unk_0a8 = 2;
+	ctx->scan_param0 = 6;
+	ctx->scan_param2 = 2;
 	ctx->channel_mask = 0x10;
 	ctx->power_mode = 0x63;
-	ctx->unk_0ca = 0x92a;
-	ctx->unk_0cc = 4;
-	ctx->unk_0c4 = 1;
-	ctx->unk_0ce = 3;
-	ctx->unk_0d0 = 0x64;
-	ctx->unk_0a4 = 1;
+	ctx->cipher_mode = 0x92a;
+	ctx->key_index = 4;
+	ctx->conn_state = 1;
+	ctx->wep_flags = 3;
+	ctx->beacon_interval = 0x64;
+	ctx->scan_param1 = 1;
 	ctx->rate_idx = 0;
-	ctx->unk_0c8 = 0x92a;
-	ctx->unk_0d2 = 0;
-	ctx->unk_0dc = 0;
+	ctx->auth_mode = 0x92a;
+	ctx->dtim_period = 0;
+	ctx->tx_power = 0;
 	return 0;
 }
 
@@ -710,8 +755,8 @@ static void wlanIfIoctl(void *ifp, u32 cmd, void *arg2, u32 *arg3)
 		}
 		{
 			u8 *cfg = (u8 *)((void **)arg2)[4];
-			u32 mode = *(u32 *)(cfg + 0x28);
-			u16 submode = *(u16 *)(cfg + 0x3e) & 3;
+			u32 mode = ((const SceWlanBssCfg *)cfg)->bss_type;
+			u16 submode = ((const SceWlanBssCfg *)cfg)->capability & 3;
 			if (mode == 1) {
 				if (submode != 1) {
 					((s32 *)arg2)[5] = -0x65;
@@ -785,8 +830,8 @@ static void wlanIfIoctl(void *ifp, u32 cmd, void *arg2, u32 *arg3)
 			}
 		}
 		s16 avg = (count > 0) ? (sum / count) : 0;
-		*(s16 *)(out + 0x12) = avg;
-		*(u16 *)(out + 0x14) = ctx->unk_15e;
+		((SceWlanRssiOut *)out)->avg_rssi = avg;
+		((SceWlanRssiOut *)out)->sample_count = ctx->rssi_sample_cnt;
 		u8 bar = 1;
 		if (avg > 0) {
 			if (avg < 40) {
@@ -967,9 +1012,9 @@ static void wlanHandlePowerSwitchEvent(int switch_on, SceWlanCtx *ctx)
 	}
 	if (switch_on == 0) {
 		if (ctx->alarm_id != 0) {
-			ctx->unk_1d0 = 0;
+			ctx->suspend_state = 0;
 		} else {
-			ctx->unk_1d0 = 0;
+			ctx->suspend_state = 0;
 			SceUID aid = sceKernelSetAlarm(0x186a00, wlanAlarmHandler, ctx);
 			if (aid > ctx->alarm_id) {
 				ctx->alarm_id = aid;
@@ -979,7 +1024,7 @@ static void wlanHandlePowerSwitchEvent(int switch_on, SceWlanCtx *ctx)
 			sceNetIfhandle_driver_263767F6(&ctx->netif, 4, 0);
 		}
 	} else {
-		ctx->unk_1d0 = 1;
+		ctx->suspend_state = 1;
 		if (ctx->alarm_id != 0) {
 			sceKernelCancelAlarm(ctx->alarm_id);
 			ctx->alarm_id = 0;
@@ -1057,9 +1102,9 @@ static int wlanMacThread(SceSize args, void *argp)
 					if (flags & 9) {
 						wlanFlushQueues(ctx);
 						memset(ctx->conn_info, 0, sizeof(ctx->conn_info));
-						ctx->unk_15c = 0;
+						ctx->rssi_pool_cnt = 0;
 						ctx->flags &= ~9u;
-						ctx->unk_15e = 0;
+						ctx->rssi_sample_cnt = 0;
 						wlanNotifyCallback(ctx, 0);
 					}
 					if (ctx->flags & 0x80) {
@@ -1113,9 +1158,9 @@ static int wlanMacThread(SceSize args, void *argp)
 							if (flags & 9) {
 								wlanFlushQueues(ctx);
 								memset(ctx->conn_info, 0, sizeof(ctx->conn_info));
-								ctx->unk_15c = 0;
+								ctx->rssi_pool_cnt = 0;
 								ctx->flags &= ~9u;
-								ctx->unk_15e = 0;
+								ctx->rssi_sample_cnt = 0;
 								wlanNotifyCallback(ctx, 0);
 							}
 							if (ctx->flags & 0x80) {
@@ -1140,13 +1185,13 @@ static int wlanMacThread(SceSize args, void *argp)
 								if (ctx->flags & 9) {
 									wlanFlushQueues(ctx);
 									memset(ctx->conn_info, 0, sizeof(ctx->conn_info));
-									ctx->unk_15c = 0;
+									ctx->rssi_pool_cnt = 0;
 									ctx->flags &= ~9u;
-									ctx->unk_15e = 0;
+									ctx->rssi_sample_cnt = 0;
 									wlanNotifyCallback(ctx, 0);
 								}
-								ctx->unk_0e0 = 0;
-								memset(ctx->unk_0e4, 0, sizeof(ctx->unk_0e4));
+								ctx->sec_mode = 0;
+								memset(ctx->sec_key_buf, 0, sizeof(ctx->sec_key_buf));
 								ctx->flags &= ~0x20000u;
 							}
 						} else {
@@ -1234,7 +1279,7 @@ static int wlanMacThread(SceSize args, void *argp)
 						ctx->flags |= 0x80;
 					}
 					ctx->flags &= ~0x100u;
-					ctx->unk_004 = 2;
+					ctx->state_flags = 2;
 					int intr = sceKernelCpuSuspendIntr();
 					if (ctx->netif.if_internal != NULL) {
 						sceNetIfhandle_driver_F94BAF52(&ctx->netif, 1, 0);
@@ -1986,12 +2031,12 @@ static void wlanDeliverRx(void *ifp, void *buf, u32 len, s16 rssi_a, s16 rssi_b)
 		return;
 	}
 	u32 pad = 2;
-	m->unk_10 = 1;
+	m->mbuf_type = 1;
 	m->data = (u8 *)m + 0x30;
 	m->next = NULL;
-	m->unk_04 = 0;
+	m->next_pkt = 0;
 	m->flags = 2;
-	m->unk_1c = 0;
+	m->mbuf_reserved1c = 0;
 	m->total_len = len;
 
 	if (len >= 14) {
@@ -2101,13 +2146,13 @@ static int wlanResumeOrWakeup(SceWlanCtx *ctx, int is_suspend)
 	if (ctx->flags & 9) {
 		wlanFlushQueues(ctx);
 		memset(ctx->conn_info, 0, sizeof(ctx->conn_info));
-		ctx->unk_15c = 0;
+		ctx->rssi_pool_cnt = 0;
 		ctx->flags &= ~9u;
-		ctx->unk_15e = 0;
+		ctx->rssi_sample_cnt = 0;
 		wlanNotifyCallback(ctx, 0);
 	}
-	ctx->unk_0e0 = 0;
-	memset(ctx->unk_0e4, 0, sizeof(ctx->unk_0e4));
+	ctx->sec_mode = 0;
+	memset(ctx->sec_key_buf, 0, sizeof(ctx->sec_key_buf));
 	return 0;
 }
 
@@ -2162,8 +2207,8 @@ static void wlanExportBssInfo(void *dst_ptr, const void *src_ptr, u32 ver)
 	const u8 *src = (const u8 *)src_ptr;
 	memset(dst, 0, (ver > 0x1ffff) ? 0x5c : 0x50);
 
-	*(u32 *)(dst + 0x00) = *(const u32 *)(src + 0x04);
-	*(u16 *)(dst + 0x04) = *(const u16 *)(src + 0x08);
+	((SceWlanBssCfg *)dst)->bssid_lo = ((const SceWlanKermitBss *)src)->bssid_lo;
+	((SceWlanBssCfg *)dst)->bssid_hi = ((const SceWlanKermitBss *)src)->bssid_hi;
 	u8 ssid_len = src[0x0a];
 	dst[0x07] = ssid_len;
 	if (ssid_len != 0) {
@@ -2174,12 +2219,12 @@ static void wlanExportBssInfo(void *dst_ptr, const void *src_ptr, u32 ver)
 		memcpy(dst + 0x08, src + 0x0c, ssid_len);
 	}
 
-	*(u32 *)(dst + 0x28) = (*(const u32 *)(src + 0x5c) == 0) ? 2 : 1;
-	*(u16 *)(dst + 0x3e) = src[0x30];
-	*(u32 *)(dst + 0x2c) = *(const u32 *)(src + 0x3c);
-	*(u32 *)(dst + 0x30) = src[0x32];
-	dst[0x06] = (u8)wlanFreqToChannel(*(const u32 *)(src + 0x4c));
-	*(u16 *)(dst + 0x3c) = *(const u16 *)(src + 0x40);
+	((SceWlanBssCfg *)dst)->bss_type = (((const SceWlanKermitBss *)src)->bss_type == 0) ? 2 : 1;
+	((SceWlanBssCfg *)dst)->capability = src[0x30];
+	((SceWlanBssCfg *)dst)->beacon_period = ((const SceWlanKermitBss *)src)->beacon_period;
+	((SceWlanBssCfg *)dst)->dtim_period = src[0x32];
+	dst[0x06] = (u8)wlanFreqToChannel(((const SceWlanKermitBss *)src)->freq);
+	((SceWlanBssCfg *)dst)->atim_window = (u16)((const SceWlanKermitBss *)src)->atim_window;
 
 	for (int i = 0; i < 8; i++) {
 		u8 r = src[0x61 + i * 2];
@@ -2192,7 +2237,7 @@ static void wlanExportBssInfo(void *dst_ptr, const void *src_ptr, u32 ver)
 	dst[0x4c] = src[0x82];
 	dst[0x4d] = src[0x83];
 	dst[0x4e] = src[0x84];
-	*(s16 *)(dst + 0x48) = (s8)src[0x2c];
+	((SceWlanBssCfg *)dst)->rssi = (s8)src[0x2c];
 
 	if (ver <= 0x1ffff) {
 		return;
@@ -2245,33 +2290,33 @@ static void wlanImportBssInfo(void *dst_ptr, const void *src_ptr, u32 ver)
 	u8 *dst = (u8 *)dst_ptr;
 	const u8 *src = (const u8 *)src_ptr;
 
-	*(u32 *)(dst + 0x04) = *(const u32 *)(src + 0x00);
-	*(u16 *)(dst + 0x08) = *(const u16 *)(src + 0x04);
-	*(u32 *)(dst + 0x0c) = *(const u32 *)(src + 0x08);
-	*(u32 *)(dst + 0x10) = *(const u32 *)(src + 0x0c);
-	*(u32 *)(dst + 0x14) = *(const u32 *)(src + 0x10);
-	*(u32 *)(dst + 0x18) = *(const u32 *)(src + 0x14);
-	*(u32 *)(dst + 0x1c) = *(const u32 *)(src + 0x18);
-	*(u32 *)(dst + 0x20) = *(const u32 *)(src + 0x1c);
-	*(u32 *)(dst + 0x24) = *(const u32 *)(src + 0x20);
-	*(u32 *)(dst + 0x28) = *(const u32 *)(src + 0x24);
+	((SceWlanKermitBss *)dst)->bssid_lo = ((const SceWlanBssCfg *)src)->bssid_lo;
+	((SceWlanKermitBss *)dst)->bssid_hi = ((const SceWlanBssCfg *)src)->bssid_hi;
+	((SceWlanKermitBss *)dst)->ssid_words[0] = ((const SceWlanBssCfg *)src)->ssid_words[0];
+	((SceWlanKermitBss *)dst)->ssid_words[1] = ((const SceWlanBssCfg *)src)->ssid_words[1];
+	((SceWlanKermitBss *)dst)->ssid_words[2] = ((const SceWlanBssCfg *)src)->ssid_words[2];
+	((SceWlanKermitBss *)dst)->ssid_words[3] = ((const SceWlanBssCfg *)src)->ssid_words[3];
+	((SceWlanKermitBss *)dst)->ssid_words[4] = ((const SceWlanBssCfg *)src)->ssid_words[4];
+	((SceWlanKermitBss *)dst)->ssid_words[5] = ((const SceWlanBssCfg *)src)->ssid_words[5];
+	((SceWlanKermitBss *)dst)->ssid_words[6] = ((const SceWlanBssCfg *)src)->ssid_words[6];
+	((SceWlanKermitBss *)dst)->ssid_words[7] = ((const SceWlanBssCfg *)src)->ssid_words[7];
 
 	u8 ssid_len = src[0x07];
 	if (ssid_len >= 0x21) {
 		ssid_len = 0x20;
 	}
-	*(u16 *)(dst + 0x0a) = ssid_len;
-	*(u32 *)(dst + 0x5c) = (*(const u32 *)(src + 0x28) == 2) ? 0 : 1;
+	((SceWlanKermitBss *)dst)->ssid_len = ssid_len;
+	((SceWlanKermitBss *)dst)->bss_type = (((const SceWlanBssCfg *)src)->bss_type == 2) ? 0 : 1;
 
-	u32 w30 = *(u32 *)(dst + 0x30);
-	u16 s3e = *(const u16 *)(src + 0x3e);
+	u32 w30 = ((SceWlanKermitBss *)dst)->capability;
+	u16 s3e = ((const SceWlanBssCfg *)src)->capability;
 	w30 = (w30 & ~0xffu) | (s3e & 0xffu);
-	*(u32 *)(dst + 0x30) = w30;
+	((SceWlanKermitBss *)dst)->capability = w30;
 
-	*(u32 *)(dst + 0x3c) = *(const u32 *)(src + 0x2c);
+	((SceWlanKermitBss *)dst)->beacon_period = ((const SceWlanBssCfg *)src)->beacon_period;
 	dst[0x32] = src[0x30];
-	*(u32 *)(dst + 0x4c) = wlanChannelToFreq(src[0x06]);
-	*(u32 *)(dst + 0x40) = *(const u16 *)(src + 0x3c);
+	((SceWlanKermitBss *)dst)->freq = wlanChannelToFreq(src[0x06]);
+	((SceWlanKermitBss *)dst)->atim_window = ((const SceWlanBssCfg *)src)->atim_window;
 
 	for (int i = 0; i < 8; i++) {
 		u8 r = src[0x40 + i];
@@ -2279,7 +2324,7 @@ static void wlanImportBssInfo(void *dst_ptr, const void *src_ptr, u32 ver)
 		dst[0x61 + i * 2] = r & 0x7f;
 	}
 
-	*(s32 *)(dst + 0x2c) = *(const s16 *)(src + 0x48);
+	((SceWlanKermitBss *)dst)->rssi = ((const SceWlanBssCfg *)src)->rssi;
 	if (ver <= 0x1ffff) {
 		return;
 	}
@@ -2375,8 +2420,8 @@ static int wlanHandleIoctlCmd(SceWlanCtx *ctx, u32 cmd, void *arg2, u32 *params)
 						goto done_err;
 					}
 					if (*(const u32 *)((const u8 *)bss + 0x28) != 1) {
-						if (ctx->unk_0c4 == 1) {
-							ctx->unk_0c4 = 0;
+						if (ctx->conn_state == 1) {
+							ctx->conn_state = 0;
 						}
 						err = wlanJoinIbss(ctx, arg2, bss);
 						if (err != 0) {
@@ -2420,8 +2465,8 @@ static int wlanHandleIoctlCmd(SceWlanCtx *ctx, u32 cmd, void *arg2, u32 *params)
 						err = 0x80410d04;
 						goto done_err;
 					}
-					if (ctx->unk_0c4 == 1) {
-						ctx->unk_0c4 = 0;
+					if (ctx->conn_state == 1) {
+						ctx->conn_state = 0;
 					}
 					err = wlanKermitCreateIbss(bss);
 					if (err == 0) {
@@ -2440,7 +2485,7 @@ static int wlanHandleIoctlCmd(SceWlanCtx *ctx, u32 cmd, void *arg2, u32 *params)
 				if (cmd == 4) {
 					if (ctx->flags & 9) {
 						ctx->flags |= 0x400;
-						if (ctx->unk_0c4 != 1) {
+						if (ctx->conn_state != 1) {
 							int r = wlanKermitDisconnect();
 							if (r == 0) {
 								ctx->flags &= ~8u;
@@ -2454,9 +2499,9 @@ static int wlanHandleIoctlCmd(SceWlanCtx *ctx, u32 cmd, void *arg2, u32 *params)
 					wlanFlushQueues(ctx);
 					memset(ctx->conn_info, 0, sizeof(ctx->conn_info));
 					wlanResetRssiList(ctx);
-					ctx->unk_15c = 0;
+					ctx->rssi_pool_cnt = 0;
 					ctx->flags &= ~0x400u;
-					ctx->unk_15e = 0;
+					ctx->rssi_sample_cnt = 0;
 					goto check_err;
 				}
 				/* cmd == 6 */
@@ -2880,7 +2925,7 @@ int sceWlanDrv_lib_9506F322(u32 id, void *buf, s32 len, u32 flags, void *hdr_buf
 			*hdr_len = hlen;
 		}
 		if (out_len != NULL) {
-			s32 rlen = *(s32 *)(kbuf + 0x104);
+			s32 rlen = (s32)((const SceWlanKermitFrame *)kbuf)->length;
 			if (rlen > 0 && (s32)((((u32)buf + (u32)max_len) | (u32)buf | (u32)max_len) & k1_shifted) >= 0) {
 				sceKernelMemcpy(buf, kbuf + 0x10c, rlen);
 			}
@@ -3870,8 +3915,8 @@ static int wlanKermitSendGameMode(u32 cmd, void *kbuf, u32 id, u32 total_len, u3
 		}
 	}
 
-	*(u32 *)(kb + 0x104) = total_len;
-	*(u32 *)(kb + 0x108) = flags;
+	((SceWlanKermitFrame *)kb)->length = total_len;
+	((SceWlanKermitFrame *)kb)->flags = flags;
 	req->args[0] = id;
 	req->args[1] = xfer_size;
 	sceKermitMemory_driver_AAF047AC(req, 2, kb, xfer_size, dir_flags);
@@ -3883,7 +3928,7 @@ static int wlanKermitSendGameMode(u32 cmd, void *kbuf, u32 id, u32 total_len, u3
 	}
 	int res = (int)resp;
 	if (cmd == 0x36 && out_sent != NULL) {
-		*out_sent = (res == 0) ? *(u32 *)(kb + 0x104) : 0;
+		*out_sent = (res == 0) ? ((const SceWlanKermitFrame *)kb)->length : 0;
 	}
 	return res;
 }
