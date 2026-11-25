@@ -10,20 +10,13 @@
 #include <scetypes.h>
 #include "../Comm/vita/SwMwCommServer.h"
 #include "SwMwSync.h"
+#include "SwMwMoveSink.h"
 
 #define SWMW_MOVESINK_SOURCE	"C:\\work\\svn\\psp2\\dtcpip\\trunk.365\\DTCPIP-MW\\Src\\Mw\\SwMwMoveSinkDispatch.cpp"
 
 extern "C" {
 int swMwTrace(const char *format, ...);
 int SwsSetToolMode(int value);
-
-/* the move sink object (SwMwMoveSink.cpp) */
-int SwMwMoveSinkCreate(int *sink, int device);
-int SwMwMoveSinkDestroy(int sink);
-int SwMwMoveSinkSetUri(int sink, void *uri, int size);
-int SwMwMoveSinkGetUriResult(int sink, unsigned char *result, int value);
-int SwMwMoveSinkFinalize(int sink, void *payload, int size, int label, int size2);
-int SwMwMoveSinkComplete(int sink);
 
 /* the move sink's stream object (SwMwMoveSinkStream.cpp) */
 struct SwMwGate *SwMwMoveSinkStreamGate(void *stream);
