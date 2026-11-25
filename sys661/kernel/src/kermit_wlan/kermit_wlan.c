@@ -8,7 +8,7 @@ void *memcpy(void *dst, const void *src, SceSize n);
 typedef struct SceKernelMsgPacket {
 	struct SceKernelMsgPacket *next;
 	u8 msgPriority;
-	u8 dummy[3];
+	u8 pad[3];
 } SceKernelMsgPacket;
 
 typedef SceUInt (*SceKernelAlarmHandler)(void *common);
@@ -46,19 +46,19 @@ typedef struct SceNetMbuf {
 	s32 len;
 	u16 mbuf_type;
 	u16 flags;
-	u32 mbuf_reserved14;
+	u32 hdrPad;
 	u32 total_len;
-	u32 mbuf_reserved1c;
+	u32 csumFlags;
 	s16 rssi_a;
 	s16 rssi_b;
-	u32 mbuf_reserved24[3];
+	u32 pkthdrPad[3];
 	void *ext_buf;
-	u32 ext_34;
-	u32 ext_38;
+	u32 extFreeFn;
+	u32 extFreeArg;
 	u32 ext_size;
-	u32 ext_40;
-	struct SceNetMbuf *ext_ref1;
-	struct SceNetMbuf *ext_ref2;
+	u32 extType;
+	struct SceNetMbuf *extPrevRef;
+	struct SceNetMbuf *extNextRef;
 } SceNetMbuf;
 
 int sceNetIfhandle_driver_16042084(void *ifp);
@@ -86,11 +86,24 @@ typedef struct SceWlanBssCfg {
 	u32 bss_type;       /* +0x28 */
 	u32 beacon_period;  /* +0x2c */
 	u32 dtim_period;    /* +0x30 */
-	u8 reserved34[8];   /* +0x34..+0x3b */
+	u8 padAfterDtim[8]; /* +0x34..+0x3b */
 	u16 atim_window;    /* +0x3c */
 	u16 capability;     /* +0x3e */
 	u8 rates[8];        /* +0x40..+0x47 */
 	s16 rssi;           /* +0x48 */
+	u8 gameModeFlags;   /* +0x4a */
+	u8 gameModeData[4]; /* +0x4b..+0x4e */
+	u8 padBeforeWpa;    /* +0x4f */
+	u8 wpaPresent;      /* +0x50 */
+	u8 wpaGroupCipher;  /* +0x51 */
+	u8 wpaPairCipher;   /* +0x52 */
+	u8 wpaAkmSuite;     /* +0x53 */
+	u8 padBeforeRsn[2]; /* +0x54..+0x55 */
+	u8 rsnPresent;      /* +0x56 */
+	u8 rsnGroupCipher;  /* +0x57 */
+	u8 rsnPairCipher;   /* +0x58 */
+	u8 rsnAkmSuite;     /* +0x59 */
+	u8 tailPad[2];      /* +0x5a..+0x5b */
 } SceWlanBssCfg;
 
 typedef struct SceWlanKermitBss {
@@ -101,20 +114,50 @@ typedef struct SceWlanKermitBss {
 	u32 ssid_words[8];  /* +0x0c..+0x2b */
 	s32 rssi;           /* +0x2c */
 	u32 capability;     /* +0x30 */
-	u8 reserved34[8];   /* +0x34..+0x3b */
+	u8 padAfterCap[8];  /* +0x34..+0x3b */
 	u32 beacon_period;  /* +0x3c */
 	u32 atim_window;    /* +0x40 */
-	u8 reserved44[8];   /* +0x44..+0x4b */
+	u8 padAfterAtim[8]; /* +0x44..+0x4b */
 	u32 freq;           /* +0x4c */
-	u8 reserved50[12];  /* +0x50..+0x5b */
+	u8 padAfterFreq[12];/* +0x50..+0x5b */
 	u32 bss_type;       /* +0x5c */
 } SceWlanKermitBss;
 
 typedef struct SceWlanRssiOut {
-	u8 reserved00[0x12];
+	u8 ifName[0x10];
+	u8 rssiBase;        /* +0x10 */
+	u8 linkRate;        /* +0x11 */
 	s16 avg_rssi;       /* +0x12 */
 	u16 sample_count;   /* +0x14 */
+	u8 signalBar;       /* +0x16 */
+	u8 tailPad;         /* +0x17 */
 } SceWlanRssiOut;
+
+typedef struct SceWlanIoctlReq {
+	u8 ifName[0x10];    /* +0x00..+0x0f */
+	union {
+		s32 status;     /* +0x10 */
+		u32 state;      /* +0x10 */
+		u32 subcmd;     /* +0x10 */
+		const SceWlanBssCfg *bssCfg; /* +0x10 */
+	};
+	union {
+		s32 resultCode; /* +0x14 */
+		u32 bufLen;     /* +0x14 */
+	};
+	s32 extraStatus;    /* +0x18 */
+	s32 scanStatus;     /* +0x1c */
+} SceWlanIoctlReq;
+
+typedef struct SceWlanKermitParamBuf {
+	u32 len;            /* +0x00 */
+	u32 aux;            /* +0x04 */
+	u8 data[16];        /* +0x08..+0x17 */
+} SceWlanKermitParamBuf;
+
+typedef struct SceWlanWakeupCfg {
+	u32 words[10];
+} SceWlanWakeupCfg;
 
 typedef struct SceWlanKermitFrame {
 	u8 header[0x104];
@@ -144,61 +187,61 @@ typedef struct SceWlanRssiNode {
 typedef struct SceWlanMbxMsg {
 	SceKernelMsgPacket hdr;
 	u32 type;
-	u32 reserved0c;
+	u32 pad;
 	void *arg_ptr;
 	u32 arg_val;
 	u32 flags;
-	u32 param0;
-	u32 param1;
+	u32 firstParam;
+	u32 secondParam;
 } SceWlanMbxMsg;
 
 typedef struct SceWlanCtx {
 	u32 flags;                       /* +0x000 */
-	u32 state_flags;                     /* +0x004 */
+	u32 state_flags;                 /* +0x004 */
 	u8 conn_info[0x98];              /* +0x008..+0x09f */
-	u32 scan_param0;                     /* +0x0a0 */
-	u32 scan_param1;                     /* +0x0a4 */
-	u32 scan_param2;                     /* +0x0a8 */
+	u32 scanChannel;                 /* +0x0a0 */
+	u32 scanMode;                    /* +0x0a4 */
+	u32 scanBssType;                 /* +0x0a8 */
 	u32 rate_idx;                    /* +0x0ac */
 	u16 channel_mask;                /* +0x0b0 */
-	u8 region_code;                      /* +0x0b2 */
+	u8 region_code;                  /* +0x0b2 */
 	u8 rssi_base;                    /* +0x0b3 */
-	u32 reserved_0b4;                     /* +0x0b4 */
+	u32 padAfterRssi;                /* +0x0b4 */
 	u8 mac_addr[8];                  /* +0x0b8..+0x0bf */
 	u32 power_mode;                  /* +0x0c0 */
-	u32 conn_state;                     /* +0x0c4 */
-	u16 auth_mode;                     /* +0x0c8 */
-	u16 cipher_mode;                     /* +0x0ca */
-	u8 key_index;                      /* +0x0cc */
-	u8 reserved_0cd;                      /* +0x0cd */
-	u16 wep_flags;                     /* +0x0ce */
-	u16 beacon_interval;                     /* +0x0d0 */
-	u16 dtim_period;                     /* +0x0d2 */
-	u32 reserved_0d4[2];                  /* +0x0d4..+0x0db */
-	u32 tx_power;                     /* +0x0dc */
-	u32 sec_mode;                     /* +0x0e0 */
-	u32 sec_key_buf[20];                 /* +0x0e4..+0x133 */
+	u32 conn_state;                  /* +0x0c4 */
+	u16 auth_mode;                   /* +0x0c8 */
+	u16 cipher_mode;                 /* +0x0ca */
+	u8 key_index;                    /* +0x0cc */
+	u8 padAfterKeyIndex;             /* +0x0cd */
+	u16 wep_flags;                   /* +0x0ce */
+	u16 beacon_interval;             /* +0x0d0 */
+	u16 dtim_period;                 /* +0x0d2 */
+	u32 padAfterDtim[2];             /* +0x0d4..+0x0db */
+	u32 tx_power;                    /* +0x0dc */
+	u32 sec_mode;                    /* +0x0e0 */
+	u32 sec_key_buf[20];             /* +0x0e4..+0x133 */
 	u32 tx_buf_stride;               /* +0x134 */
 	u32 tx_node_count;               /* +0x138 */
 	SceWlanTxNode *tx_pool;          /* +0x13c */
 	SceWlanTxNode *tx_cur;           /* +0x140 */
-	u32 reserved_144[4];                  /* +0x144..+0x153 */
+	u32 padAfterTxRing[4];           /* +0x144..+0x153 */
 	SceWlanRssiNode *rssi_pool;      /* +0x154 */
 	SceWlanRssiNode *rssi_head;      /* +0x158 */
-	u16 rssi_pool_cnt;                     /* +0x15c */
-	u16 rssi_sample_cnt;                     /* +0x15e */
+	u16 rssi_pool_cnt;               /* +0x15c */
+	u16 rssi_sample_cnt;             /* +0x15e */
 	s32 thread_running;              /* +0x160 */
-	u32 reserved_164;                     /* +0x164 */
+	u32 padAfterRunning;             /* +0x164 */
 	SceUID mac_thid;                 /* +0x168 */
 	SceUID worker_thid;              /* +0x16c */
 	SceUID lock_sema;                /* +0x170 */
 	SceUID mbx_id;                   /* +0x174 */
 	u8 country_str[4];               /* +0x178..+0x17b */
 	SceUID vpl_id;                   /* +0x17c */
-	u32 reserved_180[2];                  /* +0x180..+0x187 */
+	u32 padAfterVpl[2];              /* +0x180..+0x187 */
 	struct {
 		void *if_internal;           /* +0x188 */
-		u32 netif_flags;                 /* +0x18c */
+		u32 netif_flags;             /* +0x18c */
 		void (*cb_up)(void *);       /* +0x190 */
 		void (*cb_down)(void *);     /* +0x194 */
 		void (*cb_tx)(void *);       /* +0x198 */
@@ -209,21 +252,23 @@ typedef struct SceWlanCtx {
 	SceWlanQueue rx_queue;           /* +0x1bc..+0x1c3 */
 	u8 *rx_buf;                      /* +0x1c4 */
 	SceUID alarm_id;                 /* +0x1c8 */
-	u32 reserved_1cc;                     /* +0x1cc */
-	u32 suspend_state;                     /* +0x1d0 */
+	u32 padAfterAlarm;               /* +0x1cc */
+	u32 suspend_state;               /* +0x1d0 */
 	u32 version_or_mode;             /* +0x1d4 */
-	u16 idstorage_45_0;              /* +0x1d8 */
-	u8 idstorage_45_2;               /* +0x1da */
-	u8 idstorage_45_3;               /* +0x1db */
+	u16 idStorageRegionFlags;        /* +0x1d8 */
+	u8 idStorageHasType;             /* +0x1da */
+	u8 idStorageType;                /* +0x1db */
 	SceUID callback_id;              /* +0x1dc */
 } SceWlanCtx;
+
+#define WLAN_ALIGN64_PTR(buf) ((void *)(((u32)(buf) + 63u) & ~63u))
 
 /* Forward declarations */
 static int wlanSysEventHandler(int ev_id, char *ev_name, void *param, int *result);
 static void wlanIfUp(void *ifp);
 static void wlanIfDown(void *ifp);
 static void wlanIfTx(void *ifp);
-static void wlanIfIoctl(void *ifp, u32 cmd, void *arg2, u32 *arg3);
+static void wlanIfIoctl(void *ifp, u32 cmd, void *ioctlReq, u32 *ioctlParams);
 static int wlanKermitIntr7(void);
 static int wlanKermitIntr8(void);
 static SceUInt wlanAlarmHandler(void *common);
@@ -232,10 +277,10 @@ static void wlanPumpTx(SceWlanCtx *ctx);
 static void wlanDeliverRx(void *ifp, void *buf, u32 len, s16 rssi_a, s16 rssi_b);
 static u16 wlanGetChannelMaskFromIdStorage(void);
 static int wlanResumeOrWakeup(SceWlanCtx *ctx, int is_suspend);
-static int wlanHandleIoctlCmd(SceWlanCtx *ctx, u32 cmd, void *arg2, u32 *params);
+static int wlanHandleIoctlCmd(SceWlanCtx *ctx, u32 cmd, void *ioctlReq, u32 *params);
 static void wlanExportBssInfo(void *dst, const void *src, u32 ver);
 static void wlanImportBssInfo(void *dst, const void *src, u32 ver);
-static int wlanJoinIbss(SceWlanCtx *ctx, void *arg2, void *bss_info);
+static int wlanJoinIbss(SceWlanCtx *ctx, void *ioctlReq, void *bss_info);
 static void wlanQueueInit(SceWlanQueue *q);
 static void wlanQueueDestroy(SceWlanQueue *q);
 static int wlanQueuePushBack(SceWlanQueue *q, SceWlanTxNode *node);
@@ -265,7 +310,7 @@ static int wlanKermitSetHostDiscover(void *cfg);
 static int wlanKermitPollEvent(void);
 static int wlanKermitSimple1Arg(u32 cmd, u32 val);
 static int wlanKermitCmdBuf(u32 cmd, void *buf, u32 size, u32 dir_flags);
-static int wlanKermitSimple2Arg(u32 cmd, u32 arg0, u32 arg1);
+static int wlanKermitSimple2Arg(u32 cmd, u32 firstArg, u32 secondArg);
 static int wlanKermitTransferBuf(u32 cmd, void *buf, u32 size, u32 dir_flags);
 static int wlanKermitGetParam(u32 cmd, u32 id, void *buf, u32 *inout_len, u32 *out_aux);
 static int wlanKermitGetSetOpt(u32 cmd, u32 id, u32 opt, u32 flags, void *buf, u32 *inout_len);
@@ -402,8 +447,8 @@ static SceWlanTxNode *wlanAllocTxNode(SceWlanCtx *ctx, u32 busy_val)
 static int wlanInitCtxDefaults(SceWlanCtx *ctx)
 {
 	ctx->flags |= 0x200;
-	ctx->scan_param0 = 6;
-	ctx->scan_param2 = 2;
+	ctx->scanChannel = 6;
+	ctx->scanBssType = 2;
 	ctx->channel_mask = 0x10;
 	ctx->power_mode = 0x63;
 	ctx->cipher_mode = 0x92a;
@@ -411,7 +456,7 @@ static int wlanInitCtxDefaults(SceWlanCtx *ctx)
 	ctx->conn_state = 1;
 	ctx->wep_flags = 3;
 	ctx->beacon_interval = 0x64;
-	ctx->scan_param1 = 1;
+	ctx->scanMode = 1;
 	ctx->rate_idx = 0;
 	ctx->auth_mode = 0x92a;
 	ctx->dtim_period = 0;
@@ -419,12 +464,18 @@ static int wlanInitCtxDefaults(SceWlanCtx *ctx)
 	return 0;
 }
 
-/* 0x0424 */
-static int wlanSetupMacAndChannel(SceWlanCtx *ctx)
+/* 0x0e94 */
+static int __attribute__((noinline)) wlanSetupMacAndChannel(SceWlanCtx *ctx)
 {
 	wlanGetMacAddr(ctx->mac_addr);
 	ctx->channel_mask = wlanGetChannelMaskFromIdStorage();
 	return 0;
+}
+
+/* 0x0424 */
+static int __attribute__((noinline)) wlanInitHardware(SceWlanCtx *ctx)
+{
+	return wlanSetupMacAndChannel(ctx) < 0;
 }
 
 /* 0x0e14 */
@@ -448,103 +499,94 @@ int sceWlanDrv_driver_A9E6A56D(SceSize args, void *argp)
 	u32 k1 = pspGetK1();
 	pspSetK1(k1 << 11);
 
-	int status = 0;
+	int status = 1;
 	SceWlanCtx *ctx = NULL;
 
-	if (g_wlan_ctx != NULL) {
-		status = 1;
-		goto done;
-	}
+	if (g_wlan_ctx == NULL) {
+		SceUID vpl = wlanCreateHeap(0xe800);
+		if (vpl >= 0) {
+			void *mem = NULL;
+			if (sceKernelAllocateVpl(vpl, sizeof(SceWlanCtx), &mem, NULL) < 0) {
+				mem = NULL;
+			}
+			ctx = (SceWlanCtx *)mem;
+			if (ctx != NULL) {
+				status = 0;
+				memset(ctx, 0, sizeof(SceWlanCtx));
+				ctx->version_or_mode = 0x10000;
+				ctx->vpl_id = vpl;
+				ctx->lock_sema = sceKernelCreateSema("SceWlanMacIfLock", 0x101, 1, 1, NULL);
+				ctx->mbx_id = sceKernelCreateMbx("SceWlanMac", 1, NULL);
 
-	SceUID vpl = wlanCreateHeap(0xe800);
-	if (vpl < 0) {
-		status = 1;
-		goto done;
-	}
+				wlanQueueInit(&ctx->tx_queue);
+				wlanQueueInit(&ctx->rx_queue);
 
-	void *mem = NULL;
-	if (sceKernelAllocateVpl(vpl, sizeof(SceWlanCtx), &mem, NULL) < 0) {
-		mem = NULL;
-	}
-	ctx = (SceWlanCtx *)mem;
-	if (ctx == NULL) {
-		status = 1;
-		goto done;
-	}
+				SceWlanTxNode *pool = (SceWlanTxNode *)wlanAlloc(ctx, 0x79e0);
+				ctx->tx_pool = pool;
+				memset(pool, 0, 0x79e0);
 
-	memset(ctx, 0, sizeof(SceWlanCtx));
-	ctx->version_or_mode = 0x10000;
-	ctx->vpl_id = vpl;
-	ctx->lock_sema = sceKernelCreateSema("SceWlanMacIfLock", 0x101, 1, 1, NULL);
-	ctx->mbx_id = sceKernelCreateMbx("SceWlanMac", 1, NULL);
+				u8 *buf_ptr = (u8 *)pool + 0x190;
+				for (int i = 0; i < 20; i++) {
+					pool[i].busy = 0;
+					pool[i].ring_next = &pool[i + 1];
+					pool[i].buf = buf_ptr;
+					buf_ptr += 0x604;
+				}
+				pool[19].ring_next = pool;
+				ctx->tx_buf_stride = 0x604;
+				ctx->tx_node_count = 20;
+				ctx->tx_cur = pool;
 
-	wlanQueueInit(&ctx->tx_queue);
-	wlanQueueInit(&ctx->rx_queue);
+				ctx->rx_buf = (u8 *)wlanAlloc(ctx, 0x92a);
 
-	SceWlanTxNode *pool = (SceWlanTxNode *)wlanAlloc(ctx, 0x79e0);
-	ctx->tx_pool = pool;
-	memset(pool, 0, 0x79e0);
+				SceWlanRssiNode *rpool = (SceWlanRssiNode *)wlanAlloc(ctx, 0xc8);
+				ctx->rssi_pool = rpool;
+				for (int i = 0; i < 24; i++) {
+					rpool[i].flags = 0;
+					rpool[i].rssi = 0;
+					rpool[i].next = &rpool[i + 1];
+				}
+				rpool[24].flags = 0;
+				rpool[24].rssi = 0;
+				rpool[24].next = rpool;
+				ctx->rssi_head = rpool;
+				rpool[0].flags |= 2;
 
-	u8 *buf_ptr = (u8 *)pool + 0x190;
-	for (int i = 0; i < 20; i++) {
-		pool[i].busy = 0;
-		pool[i].ring_next = &pool[i + 1];
-		pool[i].buf = buf_ptr;
-		buf_ptr += 0x604;
-	}
-	pool[19].ring_next = pool;
-	ctx->tx_buf_stride = 0x604;
-	ctx->tx_node_count = 20;
-	ctx->tx_cur = pool;
+				u16 id_val = 0;
+				if (sceIdStorageLookup(0x45, 0, &id_val, 2) >= 0) {
+					ctx->idStorageRegionFlags = id_val & 0xf000;
+				} else {
+					ctx->idStorageRegionFlags = 0;
+				}
 
-	ctx->rx_buf = (u8 *)wlanAlloc(ctx, 0x92a);
+				u8 idHasVal = 0;
+				if (sceIdStorageLookup(0x45, 3, &idHasVal, 1) >= 0 && idHasVal == 1) {
+					u8 idTypeVal = 0;
+					if (sceIdStorageLookup(0x45, 4, &idTypeVal, 1) >= 0) {
+						ctx->idStorageHasType = 1;
+						ctx->idStorageType = idTypeVal;
+					} else {
+						ctx->idStorageHasType = 0;
+					}
+				} else {
+					ctx->idStorageHasType = 0;
+				}
 
-	SceWlanRssiNode *rpool = (SceWlanRssiNode *)wlanAlloc(ctx, 0xc8);
-	ctx->rssi_pool = rpool;
-	for (int i = 0; i < 24; i++) {
-		rpool[i].flags = 0;
-		rpool[i].rssi = 0;
-		rpool[i].next = &rpool[i + 1];
-	}
-	rpool[24].flags = 0;
-	rpool[24].rssi = 0;
-	rpool[24].next = rpool;
-	ctx->rssi_head = rpool;
-	rpool[0].flags |= 2;
+				if (ctx->idStorageRegionFlags == 0x1000 && ctx->idStorageHasType != 1) {
+					ctx->idStorageHasType = 1;
+					ctx->idStorageType = 2;
+				}
 
-	u16 id_val = 0;
-	if (sceIdStorageLookup(0x45, 0, &id_val, 2) >= 0) {
-		ctx->idstorage_45_0 = id_val & 0xf000;
-	} else {
-		ctx->idstorage_45_0 = 0;
-	}
-
-	u8 b_val = 0;
-	if (sceIdStorageLookup(0x45, 3, &b_val, 1) >= 0 && b_val == 1) {
-		u8 b_val2 = 0;
-		if (sceIdStorageLookup(0x45, 4, &b_val2, 1) >= 0) {
-			ctx->idstorage_45_2 = 1;
-			ctx->idstorage_45_3 = b_val2;
-		} else {
-			ctx->idstorage_45_2 = 0;
+				wlanInitCtxDefaults(ctx);
+				wlanStartMacThread(ctx);
+				sceKernelRegisterSysEventHandler(&g_sys_event_handler);
+				g_wlan_ctx = ctx;
+			}
 		}
-	} else {
-		ctx->idstorage_45_2 = 0;
 	}
 
-	if (ctx->idstorage_45_0 == 0x1000 && ctx->idstorage_45_2 != 1) {
-		ctx->idstorage_45_2 = 1;
-		ctx->idstorage_45_3 = 2;
-	}
-
-	wlanInitCtxDefaults(ctx);
-	wlanStartMacThread(ctx);
-	sceKernelRegisterSysEventHandler(&g_sys_event_handler);
-	g_wlan_ctx = ctx;
-
-done:
 	wlanKermitInit();
-	wlanSetupMacAndChannel(ctx);
+	wlanInitHardware(ctx);
 	pspSetK1(k1);
 	return status;
 }
@@ -661,7 +703,7 @@ static void wlanIfDown(void *ifp)
 }
 
 /* 0x0794 */
-static void wlanIfIoctl(void *ifp, u32 cmd, void *arg2, u32 *arg3)
+static void wlanIfIoctl(void *ifp, u32 cmd, void *ioctlReq, u32 *ioctlParams)
 {
 	SceWlanCtx *ctx = (SceWlanCtx *)sceNetIfhandle_driver_D5AD6DEA(ifp);
 	if (ctx->version_or_mode > 0x1ffff && (g_mbxMsgLinkEvent.flags & 1) != 0) {
@@ -673,309 +715,267 @@ static void wlanIfIoctl(void *ifp, u32 cmd, void *arg2, u32 *arg3)
 		return;
 	}
 
+	SceWlanIoctlReq *req = (SceWlanIoctlReq *)ioctlReq;
 	SceWlanMbxMsg *msg = (SceWlanMbxMsg *)wlanAlloc(ctx, sizeof(SceWlanMbxMsg));
 	u32 flags = ctx->flags;
 	int err = 0;
 	u32 msg_type = cmd;
+	enum { IOCTL_SEND, IOCTL_OK, IOCTL_ERR } action = IOCTL_SEND;
 
 	if (!(flags & 0x200)) {
 		err = 0x80410d0e;
-		goto check_err;
-	}
-
-	if (cmd >= 0x48) {
+		action = IOCTL_ERR;
+	} else if (cmd >= 0x48) {
 		err = 0x80410d05;
-		goto free_and_err;
-	}
-
-	switch (cmd) {
-	case 0x02:
-		msg_type = 7;
-		goto send_msg;
-	case 0x03:
-		msg_type = 8;
-		goto send_msg;
-	case 0x06:
-		msg_type = 0x0b;
-		goto send_msg;
-	case 0x07:
-		msg_type = 0x0c;
-		goto send_msg;
-	case 0x32:
-		if (flags & 4) {
-			err = 0x80410d02;
-			goto free_and_err;
-		}
-		if (flags & 1) {
-			err = 0x80410d01;
-			goto free_and_err;
-		}
-		if (flags & 8) {
-			err = 0x80410d01;
-			goto free_and_err;
-		}
-		msg_type = 0x102;
-		goto send_msg;
-	case 0x33:
-		msg_type = 0x103;
-		goto send_msg;
-	case 0x34:
-		if (!(flags & 2)) {
-			msg_type = 2;
-			goto send_msg;
-		}
-		((s32 *)arg2)[7] = -2;
-		err = 0x80410d03;
-		goto free_and_err;
-	case 0x35:
-		msg_type = 5;
-		goto check_join_ibss;
-	case 0x36:
-		msg_type = 3;
-	check_join_ibss:
-		if (flags & 2) {
-			((s32 *)arg2)[5] = -2;
-			err = 0x80410d03;
-			goto free_and_err;
-		}
-		if (flags & 4) {
-			((s32 *)arg2)[5] = -3;
-			err = 0x80410d02;
-			goto free_and_err;
-		}
-		if (flags & 1) {
-			((s32 *)arg2)[5] = -4;
-			err = 0x80410d01;
-			goto free_and_err;
-		}
-		if (flags & 8) {
-			((s32 *)arg2)[5] = -5;
-			err = 0x80410d01;
-			goto free_and_err;
-		}
-		{
-			u8 *cfg = (u8 *)((void **)arg2)[4];
-			u32 mode = ((const SceWlanBssCfg *)cfg)->bss_type;
-			u16 submode = ((const SceWlanBssCfg *)cfg)->capability & 3;
-			if (mode == 1) {
-				if (submode != 1) {
-					((s32 *)arg2)[5] = -0x65;
-					err = 0x80410d04;
-					goto free_and_err;
-				}
-				goto send_msg_keep_type;
+		action = IOCTL_ERR;
+	} else {
+		switch (cmd) {
+		case 0x02:
+			msg_type = 7;
+			break;
+		case 0x03:
+			msg_type = 8;
+			break;
+		case 0x06:
+			msg_type = 0x0b;
+			break;
+		case 0x07:
+			msg_type = 0x0c;
+			break;
+		case 0x32:
+			if (flags & 4) {
+				err = 0x80410d02;
+				action = IOCTL_ERR;
+			} else if (flags & 9) {
+				err = 0x80410d01;
+				action = IOCTL_ERR;
 			} else {
-				if (submode == 2) {
-					goto send_msg;
-				}
-				((s32 *)arg2)[5] = -0xc9;
-				err = 0x80410d04;
-				goto free_and_err;
+				msg_type = 0x102;
 			}
+			break;
+		case 0x33:
+			msg_type = 0x103;
+			break;
+		case 0x34:
+			if (!(flags & 2)) {
+				msg_type = 2;
+			} else {
+				req->scanStatus = -2;
+				err = 0x80410d03;
+				action = IOCTL_ERR;
+			}
+			break;
+		case 0x35:
+		case 0x36:
+			msg_type = (cmd == 0x35) ? 5u : 3u;
+			if (flags & 2) {
+				req->resultCode = -2;
+				err = 0x80410d03;
+				action = IOCTL_ERR;
+			} else if (flags & 4) {
+				req->resultCode = -3;
+				err = 0x80410d02;
+				action = IOCTL_ERR;
+			} else if (flags & 1) {
+				req->resultCode = -4;
+				err = 0x80410d01;
+				action = IOCTL_ERR;
+			} else if (flags & 8) {
+				req->resultCode = -5;
+				err = 0x80410d01;
+				action = IOCTL_ERR;
+			} else {
+				const SceWlanBssCfg *cfg = req->bssCfg;
+				u32 mode = cfg->bss_type;
+				u16 submode = cfg->capability & 3;
+				if (mode == 1) {
+					if (submode != 1) {
+						req->resultCode = -0x65;
+						err = 0x80410d04;
+						action = IOCTL_ERR;
+					}
+				} else if (submode != 2) {
+					req->resultCode = -0xc9;
+					err = 0x80410d04;
+					action = IOCTL_ERR;
+				}
+			}
+			break;
+		case 0x37:
+			msg_type = 0x10c;
+			if (!(ctx->flags & 9)) {
+				err = 0x80410d06;
+				action = IOCTL_ERR;
+			}
+			break;
+		case 0x38: {
+			u32 cur_flags = ctx->flags;
+			msg_type = (flags & 0x800) ? 0x301u : 4u;
+			if (!(cur_flags & 9)) {
+				err = 0x80410d06;
+				action = IOCTL_ERR;
+			} else if (cur_flags & 2) {
+				req->status = -2;
+				err = 0x80410d03;
+				action = IOCTL_ERR;
+			} else if (cur_flags & 4) {
+				req->status = -3;
+				err = 0x80410d02;
+				action = IOCTL_ERR;
+			} else if (g_quirkTxDelayMode != 0) {
+				sceKernelDelayThread(100000);
+			} else {
+				sceKernelDelayThread(500);
+				wlanPumpTx(ctx);
+				for (int i = 50; i > 0; i--) {
+					if (!wlanQueueIsNotEmpty(&ctx->tx_queue) || (ctx->flags & 0x3000)) {
+						break;
+					}
+					sceKernelDelayThread(10000);
+					wlanPumpTx(ctx);
+				}
+			}
+			break;
 		}
-	case 0x37:
-		msg_type = 0x10c;
-		if (!(ctx->flags & 9)) {
-			err = 0x80410d06;
+		case 0x39: {
+			u8 rates[5];
+			memcpy(rates, g_rate_vals, 5);
+			SceWlanRssiOut *rssiOut = (SceWlanRssiOut *)ioctlReq;
+			rssiOut->rssiBase = ctx->rssi_base;
+			rssiOut->linkRate = rates[ctx->rate_idx];
+			SceWlanRssiNode *head = ctx->rssi_head;
+			s16 count = 0;
+			s16 sum = 0;
+			for (SceWlanRssiNode *p = head->next; p != head; p = p->next) {
+				if (p->flags & 1) {
+					count++;
+					sum += p->rssi;
+				}
+			}
+			s16 avg = (count > 0) ? (sum / count) : 0;
+			rssiOut->avg_rssi = avg;
+			rssiOut->sample_count = ctx->rssi_sample_cnt;
+			u8 bar = 1;
+			if (avg > 0) {
+				if (avg < 40) {
+					bar = (u8)((avg * 100) / 40);
+				} else {
+					bar = 100;
+				}
+			}
+			rssiOut->signalBar = bar;
+			action = IOCTL_OK;
+			break;
 		}
-		goto check_err;
-	case 0x38: {
-		u32 cur_flags = ctx->flags;
-		msg_type = (flags & 0x800) ? 0x301 : 4;
-		if (!(cur_flags & 9)) {
-			err = 0x80410d06;
-			goto free_and_err;
+		case 0x3a: {
+			u32 state = 1;
+			if (flags & 2) {
+				state = 2;
+			} else if (flags & 4) {
+				state = 3;
+			} else if (flags & 9) {
+				state = 5;
+			} else if (flags & 0x400) {
+				state = 4;
+			}
+			req->state = state;
+			action = IOCTL_OK;
+			break;
 		}
-		if (cur_flags & 2) {
-			((s32 *)arg2)[4] = -2;
-			err = 0x80410d03;
-			goto free_and_err;
-		}
-		if (cur_flags & 4) {
-			((s32 *)arg2)[4] = -3;
-			err = 0x80410d02;
-			goto free_and_err;
-		}
-		if (g_quirkTxDelayMode != 0) {
-			sceKernelDelayThread(100000);
-			goto send_msg_keep_type;
-		}
-		sceKernelDelayThread(500);
-		wlanPumpTx(ctx);
-		for (int i = 50; i > 0; i--) {
-			if (!wlanQueueIsNotEmpty(&ctx->tx_queue)) {
+		case 0x3e:
+			switch (req->subcmd) {
+			case 1: msg_type = 0x101; break;
+			case 2: msg_type = 0x110; break;
+			case 3: msg_type = 0x202; break;
+			case 5: msg_type = 0x215; break;
+			case 6: msg_type = 0x213; break;
+			case 7: msg_type = 0x211; break;
+			case 8: msg_type = 0x204; break;
+			case 10: msg_type = 0x400; break;
+			default:
+				err = 0x80410d05;
+				action = IOCTL_ERR;
 				break;
 			}
-			if (ctx->flags & 0x3000) {
-				goto send_msg_keep_type;
+			break;
+		case 0x3f:
+			switch (req->subcmd) {
+			case 2: msg_type = 0x111; break;
+			case 3: msg_type = 0x201; break;
+			case 5: msg_type = 0x214; break;
+			case 6: msg_type = 0x212; break;
+			case 7: msg_type = 0x210; break;
+			case 8: msg_type = 0x203; break;
+			case 9: msg_type = 0x220; break;
+			default:
+				err = 0x80410d05;
+				action = IOCTL_ERR;
+				break;
 			}
-			sceKernelDelayThread(10000);
-			wlanPumpTx(ctx);
-		}
-		goto send_msg;
-	}
-	case 0x39: {
-		u8 rates[5];
-		memcpy(rates, g_rate_vals, 5);
-		u8 *out = (u8 *)arg2;
-		out[0x10] = ctx->rssi_base;
-		out[0x11] = rates[ctx->rate_idx];
-		SceWlanRssiNode *head = ctx->rssi_head;
-		s16 count = 0;
-		s16 sum = 0;
-		for (SceWlanRssiNode *p = head->next; p != head; p = p->next) {
-			if (p->flags & 1) {
-				count++;
-				sum += p->rssi;
-			}
-		}
-		s16 avg = (count > 0) ? (sum / count) : 0;
-		((SceWlanRssiOut *)out)->avg_rssi = avg;
-		((SceWlanRssiOut *)out)->sample_count = ctx->rssi_sample_cnt;
-		u8 bar = 1;
-		if (avg > 0) {
-			if (avg < 40) {
-				bar = (u8)((avg * 100) / 40);
+			break;
+		case 0x40:
+			if (flags & 9) {
+				err = 0x80410d01;
+				action = IOCTL_ERR;
 			} else {
-				bar = 100;
+				msg_type = 0x10a;
 			}
-		}
-		out[0x16] = bar;
-		goto free_and_ok;
-	}
-	case 0x3a: {
-		u32 state = 1;
-		if (flags & 2) {
-			state = 2;
-		} else if (flags & 4) {
-			state = 3;
-		} else if (flags & 9) {
-			state = 5;
-		} else if (flags & 0x400) {
-			state = 4;
-		}
-		((u32 *)arg2)[4] = state;
-		goto free_and_ok;
-	}
-	case 0x3e: {
-		u32 subcmd = ((u32 *)arg2)[4];
-		switch (subcmd) {
-		case 1: msg_type = 0x101; goto send_msg;
-		case 2: msg_type = 0x110; goto send_msg;
-		case 3: msg_type = 0x202; goto send_msg;
-		case 5: msg_type = 0x215; goto send_msg;
-		case 6: msg_type = 0x213; goto send_msg;
-		case 7: msg_type = 0x211; goto send_msg;
-		case 8: msg_type = 0x204; goto send_msg;
-		case 10: msg_type = 0x400; goto send_msg;
+			break;
+		case 0x42:
+			msg_type = 0x10d;
+			break;
+		case 0x43:
+			msg_type = 0x10e;
+			break;
+		case 0x44:
+			if (flags & 9) {
+				err = 0x80410d01;
+				action = IOCTL_ERR;
+			} else {
+				msg_type = 0x300;
+			}
+			break;
+		case 0x45:
+			msg_type = 0x500;
+			break;
+		case 0x46:
+			msg_type = 0x501;
+			break;
+		case 0x47:
+			if (flags & 9) {
+				err = 0x80410d01;
+				action = IOCTL_ERR;
+			} else {
+				msg_type = 0x10f;
+			}
+			break;
 		default:
 			err = 0x80410d05;
-			goto free_and_err;
+			action = IOCTL_ERR;
+			break;
 		}
-	}
-	case 0x3f: {
-		u32 subcmd = ((u32 *)arg2)[4];
-		switch (subcmd) {
-		case 2: msg_type = 0x111; goto send_msg;
-		case 3: msg_type = 0x201; goto send_msg;
-		case 5: msg_type = 0x214; goto send_msg;
-		case 6: msg_type = 0x212; goto send_msg;
-		case 7: msg_type = 0x210; goto send_msg;
-		case 8: msg_type = 0x203; goto send_msg;
-		case 9: msg_type = 0x220; goto send_msg;
-		default:
-			err = 0x80410d05;
-			goto free_and_err;
-		}
-	}
-	case 0x40:
-		if (flags & 1) {
-			err = 0x80410d01;
-			goto free_and_err;
-		}
-		if (flags & 8) {
-			err = 0x80410d01;
-			goto free_and_err;
-		}
-		msg_type = 0x10a;
-		goto send_msg;
-	case 0x42:
-		msg_type = 0x10d;
-		goto send_msg;
-	case 0x43:
-		msg_type = 0x10e;
-		goto send_msg;
-	case 0x44:
-		if (flags & 1) {
-			err = 0x80410d01;
-			goto free_and_err;
-		}
-		if (flags & 8) {
-			err = 0x80410d01;
-			goto free_and_err;
-		}
-		msg_type = 0x300;
-		goto send_msg_keep_type;
-	case 0x45:
-		msg_type = 0x500;
-		goto send_msg;
-	case 0x46:
-		msg_type = 0x501;
-		goto send_msg;
-	case 0x47:
-		if (flags & 1) {
-			err = 0x80410d01;
-			goto free_and_err;
-		}
-		if (flags & 8) {
-			err = 0x80410d01;
-			goto free_and_err;
-		}
-		msg_type = 0x10f;
-		goto send_msg;
-	default:
-		err = 0x80410d05;
-		goto free_and_err;
 	}
 
-check_err:
-	if (err == 0) {
-		goto send_msg_keep_type;
-	}
-	if (err <= 0) {
-		goto free_and_err;
+	if (action == IOCTL_SEND) {
+		msg->type = msg_type;
+		msg->arg_ptr = ioctlReq;
+		msg->flags = 0;
+		msg->firstParam = ioctlParams[0];
+		msg->secondParam = ioctlParams[1];
+		sceKernelSendMbx(ctx->mbx_id, msg);
+		return;
 	}
 
-free_and_ok:
 	wlanFree(ctx, msg);
-	{
-		int intr = sceKernelCpuSuspendIntr();
-		if (ctx->netif.if_internal != NULL) {
+	int intr = sceKernelCpuSuspendIntr();
+	if (ctx->netif.if_internal != NULL) {
+		if (action == IOCTL_OK) {
 			sceNetIfhandle_driver_F94BAF52(ifp, 3, 0);
-		}
-		sceKernelCpuResumeIntr(intr);
-	}
-	return;
-
-free_and_err:
-	wlanFree(ctx, msg);
-	{
-		int intr = sceKernelCpuSuspendIntr();
-		if (ctx->netif.if_internal != NULL) {
+		} else {
 			sceNetIfhandle_driver_F94BAF52(ifp, 4, err);
 		}
-		sceKernelCpuResumeIntr(intr);
 	}
-	return;
-
-send_msg:
-send_msg_keep_type:
-	msg->type = msg_type;
-	msg->arg_ptr = arg2;
-	msg->flags = 0;
-	msg->param0 = arg3[0];
-	msg->param1 = arg3[1];
-	sceKernelSendMbx(ctx->mbx_id, msg);
+	sceKernelCpuResumeIntr(intr);
 }
 
 /* 0x216c */
@@ -1195,7 +1195,7 @@ static int wlanMacThread(SceSize args, void *argp)
 								ctx->flags &= ~0x20000u;
 							}
 						} else {
-							wlanHandleIoctlCmd(ctx, msg->type, msg->arg_ptr, &msg->param0);
+							wlanHandleIoctlCmd(ctx, msg->type, msg->arg_ptr, &msg->firstParam);
 						}
 					} else if (type == 0x600) {
 						u32 hd_pkt[44];
@@ -1270,7 +1270,7 @@ static int wlanMacThread(SceSize args, void *argp)
 							}
 						}
 					} else {
-						wlanHandleIoctlCmd(ctx, msg->type, msg->arg_ptr, &msg->param0);
+						wlanHandleIoctlCmd(ctx, msg->type, msg->arg_ptr, &msg->firstParam);
 					}
 				}
 			} else if (type == 0x8000000au) {
@@ -1332,7 +1332,7 @@ static int wlanMacThread(SceSize args, void *argp)
 					}
 				}
 			} else if (type != 0x80000010u && type != 0xc0000000u && type != 0xc0000001u) {
-				wlanHandleIoctlCmd(ctx, msg->type, msg->arg_ptr, &msg->param0);
+				wlanHandleIoctlCmd(ctx, msg->type, msg->arg_ptr, &msg->firstParam);
 			}
 		}
 
@@ -1368,14 +1368,17 @@ int sceWlanDrv_driver_0CAB500F(int enable, const void *cfg)
 		return 0x80000103;
 	}
 
-	memset(g_wakeup_cfg, 0, sizeof(g_wakeup_cfg));
+	u32 *dstWords = (u32 *)g_wakeup_cfg;
+	for (int i = 0; i < 10; i++) {
+		dstWords[i] = 0;
+	}
 	if (enable != 0) {
 		if (ctx->flags & 0x3000) {
 			ctx->flags &= ~0x4000u;
 			pspSetK1(k1);
 			return 0x80410d16;
 		}
-		memcpy(g_wakeup_cfg, cfg, sizeof(g_wakeup_cfg));
+		*(SceWlanWakeupCfg *)g_wakeup_cfg = *(const SceWlanWakeupCfg *)cfg;
 		ctx->flags |= 0x4000;
 	} else {
 		ctx->flags &= ~0x4000u;
@@ -2036,7 +2039,7 @@ static void wlanDeliverRx(void *ifp, void *buf, u32 len, s16 rssi_a, s16 rssi_b)
 	m->next = NULL;
 	m->next_pkt = 0;
 	m->flags = 2;
-	m->mbuf_reserved1c = 0;
+	m->csumFlags = 0;
 	m->total_len = len;
 
 	if (len >= 14) {
@@ -2056,10 +2059,10 @@ static void wlanDeliverRx(void *ifp, void *buf, u32 len, s16 rssi_a, s16 rssi_b)
 			m->data = (u8 *)ext;
 			m->flags |= 9;
 			m->ext_size = 0x800;
-			m->ext_34 = 0;
-			m->ext_38 = 0;
-			m->ext_ref2 = m;
-			m->ext_ref1 = m;
+			m->extFreeFn = 0;
+			m->extFreeArg = 0;
+			m->extNextRef = m;
+			m->extPrevRef = m;
 		}
 		if (!(m->flags & 1)) {
 			sceNetIfhandle_driver_F8825DC4(m);
@@ -2132,7 +2135,7 @@ static int wlanResumeOrWakeup(SceWlanCtx *ctx, int is_suspend)
 				scePower_driver_8C6BEFD9();
 				ctx->flags &= ~0x80u;
 			}
-			wlanSetupMacAndChannel(ctx);
+			wlanInitHardware(ctx);
 			ctx->flags &= ~0x20000u;
 		}
 		if (ctx->flags & 8) {
@@ -2205,82 +2208,84 @@ static void wlanExportBssInfo(void *dst_ptr, const void *src_ptr, u32 ver)
 {
 	u8 *dst = (u8 *)dst_ptr;
 	const u8 *src = (const u8 *)src_ptr;
+	SceWlanBssCfg *dstCfg = (SceWlanBssCfg *)dst_ptr;
+	const SceWlanKermitBss *srcBss = (const SceWlanKermitBss *)src_ptr;
 	memset(dst, 0, (ver > 0x1ffff) ? 0x5c : 0x50);
 
-	((SceWlanBssCfg *)dst)->bssid_lo = ((const SceWlanKermitBss *)src)->bssid_lo;
-	((SceWlanBssCfg *)dst)->bssid_hi = ((const SceWlanKermitBss *)src)->bssid_hi;
+	dstCfg->bssid_lo = srcBss->bssid_lo;
+	dstCfg->bssid_hi = srcBss->bssid_hi;
 	u8 ssid_len = src[0x0a];
-	dst[0x07] = ssid_len;
+	dstCfg->ssid_len = ssid_len;
 	if (ssid_len != 0) {
 		if (ssid_len >= 0x21) {
 			ssid_len = 0x20;
 		}
-		dst[0x07] = ssid_len;
-		memcpy(dst + 0x08, src + 0x0c, ssid_len);
+		dstCfg->ssid_len = ssid_len;
+		memcpy(dstCfg->ssid_words, srcBss->ssid_words, ssid_len);
 	}
 
-	((SceWlanBssCfg *)dst)->bss_type = (((const SceWlanKermitBss *)src)->bss_type == 0) ? 2 : 1;
-	((SceWlanBssCfg *)dst)->capability = src[0x30];
-	((SceWlanBssCfg *)dst)->beacon_period = ((const SceWlanKermitBss *)src)->beacon_period;
-	((SceWlanBssCfg *)dst)->dtim_period = src[0x32];
-	dst[0x06] = (u8)wlanFreqToChannel(((const SceWlanKermitBss *)src)->freq);
-	((SceWlanBssCfg *)dst)->atim_window = (u16)((const SceWlanKermitBss *)src)->atim_window;
+	dstCfg->bss_type = (srcBss->bss_type == 0) ? 2 : 1;
+	dstCfg->capability = src[0x30];
+	dstCfg->beacon_period = srcBss->beacon_period;
+	dstCfg->dtim_period = src[0x32];
+	dstCfg->channel = (u8)wlanFreqToChannel(srcBss->freq);
+	dstCfg->atim_window = (u16)srcBss->atim_window;
 
 	for (int i = 0; i < 8; i++) {
 		u8 r = src[0x61 + i * 2];
 		u8 basic = (src[0x60 + i * 2] == 0) ? 0x80 : 0;
-		dst[0x40 + i] = r | basic;
+		dstCfg->rates[i] = r | basic;
 	}
 
-	dst[0x4a] = src[0x80] & 7;
-	dst[0x4b] = src[0x81];
-	dst[0x4c] = src[0x82];
-	dst[0x4d] = src[0x83];
-	dst[0x4e] = src[0x84];
-	((SceWlanBssCfg *)dst)->rssi = (s8)src[0x2c];
+	dstCfg->gameModeFlags = src[0x80] & 7;
+	dstCfg->gameModeData[0] = src[0x81];
+	dstCfg->gameModeData[1] = src[0x82];
+	dstCfg->gameModeData[2] = src[0x83];
+	dstCfg->gameModeData[3] = src[0x84];
+	dstCfg->rssi = (s8)src[0x2c];
 
 	if (ver <= 0x1ffff) {
 		return;
 	}
 
 	if (src[0x88] != 0) {
-		dst[0x50] = 1;
-		u8 b89 = src[0x89];
-		if (b89 & 1) dst[0x51] |= 1;
-		if (b89 & 2) dst[0x51] |= 2;
-		if (b89 & 4) dst[0x51] |= 4;
-		if (b89 & 8) dst[0x51] |= 8;
-		if ((s8)b89 < 0) dst[0x51] |= 0x80;
+		dstCfg->wpaPresent = 1;
+		u8 wpaGroup = src[0x89];
+		if (wpaGroup & 1) dstCfg->wpaGroupCipher |= 1;
+		if (wpaGroup & 2) dstCfg->wpaGroupCipher |= 2;
+		if (wpaGroup & 4) dstCfg->wpaGroupCipher |= 4;
+		if (wpaGroup & 8) dstCfg->wpaGroupCipher |= 8;
+		if ((s8)wpaGroup < 0) dstCfg->wpaGroupCipher |= 0x80;
 
-		u8 b8a = src[0x8a];
-		if (b8a & 4) dst[0x52] |= 4;
-		if (b8a & 8) dst[0x52] |= 8;
-		if ((s8)b8a < 0) dst[0x52] |= 0x80;
+		u8 wpaPair = src[0x8a];
+		if (wpaPair & 4) dstCfg->wpaPairCipher |= 4;
+		if (wpaPair & 8) dstCfg->wpaPairCipher |= 8;
+		if ((s8)wpaPair < 0) dstCfg->wpaPairCipher |= 0x80;
 
-		u8 b8b = src[0x8b];
-		if (b8b & 1) dst[0x53] |= 1;
-		if (b8b & 2) dst[0x53] |= 2;
-		if ((s8)b8b < 0) dst[0x53] |= 0x80;
+		u8 wpaAkm = src[0x8b];
+		if (wpaAkm & 1) dstCfg->wpaAkmSuite |= 1;
+		if (wpaAkm & 2) dstCfg->wpaAkmSuite |= 2;
+		if ((s8)wpaAkm < 0) dstCfg->wpaAkmSuite |= 0x80;
 	}
 
 	if (src[0x8e] != 0) {
-		dst[0x56] = 1;
-		u8 b8f = src[0x8f];
-		if (b8f & 1) dst[0x57] |= 1;
-		if (b8f & 2) dst[0x57] |= 2;
-		if (b8f & 4) dst[0x57] |= 4;
-		if (b8f & 8) dst[0x57] |= 8;
-		if ((s8)b8f < 0) dst[0x57] |= 0x80;
+		dstCfg->rsnPresent = 1;
+		u8 rsnGroup = src[0x8f];
+		if (rsnGroup & 1) dstCfg->rsnGroupCipher |= 1;
+		if (rsnGroup & 2) dstCfg->rsnGroupCipher |= 2;
+		if (rsnGroup & 4) dstCfg->rsnGroupCipher |= 4;
+		if (rsnGroup & 8) dstCfg->rsnGroupCipher |= 8;
+		if ((s8)rsnGroup < 0) dstCfg->rsnGroupCipher |= 0x80;
 
-		u8 b90 = src[0x90];
-		if (b90 & 4) dst[0x58] |= 4;
-		if (b90 & 8) dst[0x58] |= 8;
-		if ((s8)b90 < 0) dst[0x58] |= 0x80;
+		u8 rsnPair = src[0x90];
+		if (rsnPair & 4) dstCfg->rsnPairCipher |= 4;
+		if (rsnPair & 8) dstCfg->rsnPairCipher |= 8;
+		if ((s8)rsnPair < 0) dstCfg->rsnPairCipher |= 0x80;
 
-		u8 b91 = src[0x91];
-		if (b91 & 1) dst[0x59] |= 1;
-		if (b91 & 2) dst[0x59] |= 2;
-		if ((s8)b91 < 0) dst[0x59] |= 0x80;
+		u8 rsnAkm = src[0x91];
+		if (rsnAkm & 1) dstCfg->rsnAkmSuite |= 1;
+		if (rsnAkm & 2) dstCfg->rsnAkmSuite |= 2;
+		if ((s8)rsnAkm < 0) dstCfg->rsnAkmSuite |= 0x80;
 	}
 }
 
@@ -2288,96 +2293,99 @@ static void wlanExportBssInfo(void *dst_ptr, const void *src_ptr, u32 ver)
 static void wlanImportBssInfo(void *dst_ptr, const void *src_ptr, u32 ver)
 {
 	u8 *dst = (u8 *)dst_ptr;
-	const u8 *src = (const u8 *)src_ptr;
+	SceWlanKermitBss *dstBss = (SceWlanKermitBss *)dst_ptr;
+	const SceWlanBssCfg *srcCfg = (const SceWlanBssCfg *)src_ptr;
 
-	((SceWlanKermitBss *)dst)->bssid_lo = ((const SceWlanBssCfg *)src)->bssid_lo;
-	((SceWlanKermitBss *)dst)->bssid_hi = ((const SceWlanBssCfg *)src)->bssid_hi;
-	((SceWlanKermitBss *)dst)->ssid_words[0] = ((const SceWlanBssCfg *)src)->ssid_words[0];
-	((SceWlanKermitBss *)dst)->ssid_words[1] = ((const SceWlanBssCfg *)src)->ssid_words[1];
-	((SceWlanKermitBss *)dst)->ssid_words[2] = ((const SceWlanBssCfg *)src)->ssid_words[2];
-	((SceWlanKermitBss *)dst)->ssid_words[3] = ((const SceWlanBssCfg *)src)->ssid_words[3];
-	((SceWlanKermitBss *)dst)->ssid_words[4] = ((const SceWlanBssCfg *)src)->ssid_words[4];
-	((SceWlanKermitBss *)dst)->ssid_words[5] = ((const SceWlanBssCfg *)src)->ssid_words[5];
-	((SceWlanKermitBss *)dst)->ssid_words[6] = ((const SceWlanBssCfg *)src)->ssid_words[6];
-	((SceWlanKermitBss *)dst)->ssid_words[7] = ((const SceWlanBssCfg *)src)->ssid_words[7];
+	dstBss->bssid_lo = srcCfg->bssid_lo;
+	dstBss->bssid_hi = srcCfg->bssid_hi;
+	dstBss->ssid_words[0] = srcCfg->ssid_words[0];
+	dstBss->ssid_words[1] = srcCfg->ssid_words[1];
+	dstBss->ssid_words[2] = srcCfg->ssid_words[2];
+	dstBss->ssid_words[3] = srcCfg->ssid_words[3];
+	dstBss->ssid_words[4] = srcCfg->ssid_words[4];
+	dstBss->ssid_words[5] = srcCfg->ssid_words[5];
+	dstBss->ssid_words[6] = srcCfg->ssid_words[6];
+	dstBss->ssid_words[7] = srcCfg->ssid_words[7];
 
-	u8 ssid_len = src[0x07];
+	u8 ssid_len = srcCfg->ssid_len;
 	if (ssid_len >= 0x21) {
 		ssid_len = 0x20;
 	}
-	((SceWlanKermitBss *)dst)->ssid_len = ssid_len;
-	((SceWlanKermitBss *)dst)->bss_type = (((const SceWlanBssCfg *)src)->bss_type == 2) ? 0 : 1;
+	dstBss->ssid_len = ssid_len;
+	dstBss->bss_type = (srcCfg->bss_type == 2) ? 0 : 1;
 
-	u32 w30 = ((SceWlanKermitBss *)dst)->capability;
-	u16 s3e = ((const SceWlanBssCfg *)src)->capability;
-	w30 = (w30 & ~0xffu) | (s3e & 0xffu);
-	((SceWlanKermitBss *)dst)->capability = w30;
+	u32 capWord = dstBss->capability;
+	u16 srcCap = srcCfg->capability;
+	capWord = (capWord & ~0xffu) | (srcCap & 0xffu);
+	dstBss->capability = capWord;
 
-	((SceWlanKermitBss *)dst)->beacon_period = ((const SceWlanBssCfg *)src)->beacon_period;
-	dst[0x32] = src[0x30];
-	((SceWlanKermitBss *)dst)->freq = wlanChannelToFreq(src[0x06]);
-	((SceWlanKermitBss *)dst)->atim_window = ((const SceWlanBssCfg *)src)->atim_window;
+	dstBss->beacon_period = srcCfg->beacon_period;
+	dst[0x32] = (u8)srcCfg->dtim_period;
+	dstBss->freq = wlanChannelToFreq(srcCfg->channel);
+	dstBss->atim_window = srcCfg->atim_window;
 
 	for (int i = 0; i < 8; i++) {
-		u8 r = src[0x40 + i];
+		u8 r = srcCfg->rates[i];
 		dst[0x60 + i * 2] = (r & 0x80) ? 0 : 1;
 		dst[0x61 + i * 2] = r & 0x7f;
 	}
 
-	((SceWlanKermitBss *)dst)->rssi = ((const SceWlanBssCfg *)src)->rssi;
+	dstBss->rssi = srcCfg->rssi;
 	if (ver <= 0x1ffff) {
 		return;
 	}
 
-	if (src[0x50] == 1) {
+	if (srcCfg->wpaPresent == 1) {
 		dst[0x88] = 1;
-		u8 s51 = src[0x51];
-		if (s51 & 1) dst[0x89] |= 1;
-		if (s51 & 2) dst[0x89] |= 2;
-		if (s51 & 4) dst[0x89] |= 4;
-		if (s51 & 8) dst[0x89] |= 8;
-		if ((s8)s51 < 0) dst[0x89] |= 0x80;
+		u8 wpaGroup = srcCfg->wpaGroupCipher;
+		if (wpaGroup & 1) dst[0x89] |= 1;
+		if (wpaGroup & 2) dst[0x89] |= 2;
+		if (wpaGroup & 4) dst[0x89] |= 4;
+		if (wpaGroup & 8) dst[0x89] |= 8;
+		if ((s8)wpaGroup < 0) dst[0x89] |= 0x80;
 
-		u8 s52 = src[0x52];
-		if (s52 & 4) dst[0x8a] |= 4;
-		if (s52 & 8) dst[0x8a] |= 8;
-		if ((s8)s52 < 0) dst[0x8a] |= 0x80;
+		u8 wpaPair = srcCfg->wpaPairCipher;
+		if (wpaPair & 4) dst[0x8a] |= 4;
+		if (wpaPair & 8) dst[0x8a] |= 8;
+		if ((s8)wpaPair < 0) dst[0x8a] |= 0x80;
 
-		u8 s53 = src[0x53];
-		if (s53 & 1) dst[0x8b] |= 1;
-		if (s53 & 2) dst[0x8b] |= 2;
-		if ((s8)s53 < 0) dst[0x8b] |= 0x80;
+		u8 wpaAkm = srcCfg->wpaAkmSuite;
+		if (wpaAkm & 1) dst[0x8b] |= 1;
+		if (wpaAkm & 2) dst[0x8b] |= 2;
+		if ((s8)wpaAkm < 0) dst[0x8b] |= 0x80;
 	}
 
-	if (src[0x56] == 1) {
+	if (srcCfg->rsnPresent == 1) {
 		dst[0x8e] = 1;
-		u8 s57 = src[0x57];
-		if (s57 & 1) dst[0x8f] |= 1;
-		if (s57 & 2) dst[0x8f] |= 2;
-		if (s57 & 4) dst[0x8f] |= 4;
-		if (s57 & 8) dst[0x8f] |= 8;
-		if ((s8)s57 < 0) dst[0x8f] |= 0x80;
+		u8 rsnGroup = srcCfg->rsnGroupCipher;
+		if (rsnGroup & 1) dst[0x8f] |= 1;
+		if (rsnGroup & 2) dst[0x8f] |= 2;
+		if (rsnGroup & 4) dst[0x8f] |= 4;
+		if (rsnGroup & 8) dst[0x8f] |= 8;
+		if ((s8)rsnGroup < 0) dst[0x8f] |= 0x80;
 
-		u8 s58 = src[0x58];
-		if (s58 & 4) dst[0x90] |= 4;
-		if (s58 & 8) dst[0x90] |= 8;
-		if ((s8)s58 < 0) dst[0x90] |= 0x80;
+		u8 rsnPair = srcCfg->rsnPairCipher;
+		if (rsnPair & 4) dst[0x90] |= 4;
+		if (rsnPair & 8) dst[0x90] |= 8;
+		if ((s8)rsnPair < 0) dst[0x90] |= 0x80;
 
-		u8 s59 = src[0x59];
-		if (s59 & 1) dst[0x91] |= 1;
-		if (s59 & 2) dst[0x91] |= 2;
-		if ((s8)s59 < 0) dst[0x91] |= 0x80;
+		u8 rsnAkm = srcCfg->rsnAkmSuite;
+		if (rsnAkm & 1) dst[0x91] |= 1;
+		if (rsnAkm & 2) dst[0x91] |= 2;
+		if ((s8)rsnAkm < 0) dst[0x91] |= 0x80;
 	}
 }
 
 /* 0x3f58 */
-static int wlanJoinIbss(SceWlanCtx *ctx, void *arg2, void *bss_info)
+static int wlanJoinIbss(SceWlanCtx *ctx, void *ioctlReq, void *bss_info)
 {
+	SceWlanIoctlReq *req = (SceWlanIoctlReq *)ioctlReq;
+	const SceWlanBssCfg *bssCfg = (const SceWlanBssCfg *)bss_info;
 	ctx->flags |= 4;
 	int ret = wlanKermitJoin(bss_info);
 	if (ret == 0) {
 		ctx->flags |= 8;
-		wlanNotifyCallback(ctx, ((const u8 *)bss_info)[6]);
+		wlanNotifyCallback(ctx, bssCfg->channel);
 	} else {
 		s32 code = -1;
 		if (ret == (int)0x80410d04) {
@@ -2385,7 +2393,7 @@ static int wlanJoinIbss(SceWlanCtx *ctx, void *arg2, void *bss_info)
 		} else if (ret == (int)0x80410d11) {
 			code = -0xca;
 		}
-		((s32 *)arg2)[5] = code;
+		req->resultCode = code;
 		ret = 0x80410d0b;
 	}
 	ctx->flags &= ~4u;
@@ -2393,190 +2401,151 @@ static int wlanJoinIbss(SceWlanCtx *ctx, void *arg2, void *bss_info)
 }
 
 /* 0x3128 */
-static int wlanHandleIoctlCmd(SceWlanCtx *ctx, u32 cmd, void *arg2, u32 *params)
+static int wlanHandleIoctlCmd(SceWlanCtx *ctx, u32 cmd, void *ioctlReq, u32 *params)
 {
+	SceWlanIoctlReq *req = (SceWlanIoctlReq *)ioctlReq;
 	int err = 0;
 	wlanLock(ctx);
 
-	if (cmd == 0x10a) {
-		goto done_ok;
+	switch (cmd) {
+	case 2: {
+		u32 out_buf = params[1];
+		u32 orig_len = req->bufLen;
+		u32 scan_req = params[0];
+		ctx->flags |= 2;
+		for (int tries = 2; tries >= 0; tries--) {
+			req->bufLen = orig_len;
+			err = wlanDoScan((void *)scan_req, &req->bufLen, (void *)out_buf, ctx->version_or_mode > 0x1ffff);
+			if (err == 0 && (s32)req->bufLen > 0) {
+				break;
+			}
+		}
+		ctx->flags &= ~2u;
+		break;
 	}
-	if (cmd < 0x10b) {
-		if (cmd < 0x0a) {
-			if (cmd < 7) {
-				if (cmd == 3) {
-					void *bss = (void *)params[0];
-					if (ctx->flags & 2) {
-						err = 0x80410d03;
-						goto done_err;
-					}
-					if (ctx->flags & 4) {
-						err = 0x80410d02;
-						goto done_err;
-					}
-					u16 reg = ctx->channel_mask >> 8;
-					if (!wlanIsChannelValid(&reg, ((const u8 *)bss)[6]) || ((const u8 *)bss)[7] >= 0x21) {
-						err = 0x80410d04;
-						goto done_err;
-					}
-					if (*(const u32 *)((const u8 *)bss + 0x28) != 1) {
-						if (ctx->conn_state == 1) {
-							ctx->conn_state = 0;
-						}
-						err = wlanJoinIbss(ctx, arg2, bss);
-						if (err != 0) {
-							goto check_err;
-						}
-					}
-					memset(ctx->conn_info, 0, sizeof(ctx->conn_info));
-					wlanImportBssInfo(ctx->conn_info, bss, ctx->version_or_mode);
-					goto check_err;
-				}
-				if (cmd < 4) {
-					if (cmd == 2) {
-						u32 out_buf = params[1];
-						u32 orig_len = ((u32 *)arg2)[5];
-						u32 scan_req = params[0];
-						ctx->flags |= 2;
-						for (int tries = 2; tries >= 0; tries--) {
-							((u32 *)arg2)[5] = orig_len;
-							err = wlanDoScan((void *)scan_req, &((u32 *)arg2)[5], (void *)out_buf, ctx->version_or_mode > 0x1ffff);
-							if (err == 0 && ((s32 *)arg2)[5] > 0) {
-								break;
-							}
-						}
-						ctx->flags &= ~2u;
-						goto check_err;
-					}
-					goto done_ok;
-				}
-				if (cmd == 5) {
-					void *bss = (void *)params[0];
-					if (ctx->flags & 2) {
-						err = 0x80410d03;
-						goto done_err;
-					}
-					if (ctx->flags & 4) {
-						err = 0x80410d02;
-						goto done_err;
-					}
-					u16 reg = ctx->channel_mask >> 8;
-					if (!wlanIsChannelValid(&reg, ((const u8 *)bss)[6]) || ((const u8 *)bss)[7] >= 0x21 || *(const u32 *)((const u8 *)bss + 0x28) != 2) {
-						err = 0x80410d04;
-						goto done_err;
-					}
+	case 3: {
+		SceWlanBssCfg *bssCfg = (SceWlanBssCfg *)params[0];
+		if (ctx->flags & 2) {
+			err = 0x80410d03;
+		} else if (ctx->flags & 4) {
+			err = 0x80410d02;
+		} else {
+			u16 reg = ctx->channel_mask >> 8;
+			if (!wlanIsChannelValid(&reg, bssCfg->channel) || bssCfg->ssid_len >= 0x21) {
+				err = 0x80410d04;
+			} else {
+				if (bssCfg->bss_type != 1) {
 					if (ctx->conn_state == 1) {
 						ctx->conn_state = 0;
 					}
-					err = wlanKermitCreateIbss(bss);
-					if (err == 0) {
-						ctx->flags |= 8;
-						wlanNotifyCallback(ctx, ((const u8 *)bss)[6]);
-					}
-					ctx->flags &= ~4u;
-					if (err != 0) {
-						err = 0x80410d04;
-						goto done_err;
-					}
-					memset(ctx->conn_info, 0, sizeof(ctx->conn_info));
-					wlanImportBssInfo(ctx->conn_info, bss, ctx->version_or_mode);
-					goto check_err;
+					err = wlanJoinIbss(ctx, ioctlReq, bssCfg);
 				}
-				if (cmd == 4) {
-					if (ctx->flags & 9) {
-						ctx->flags |= 0x400;
-						if (ctx->conn_state != 1) {
-							int r = wlanKermitDisconnect();
-							if (r == 0) {
-								ctx->flags &= ~8u;
-								wlanNotifyCallback(ctx, 0);
-							} else {
-								((s32 *)arg2)[4] = (r == (int)0x80410d11) ? -0x12d : -1;
-								err = 0x80410d15;
-							}
-						}
-					}
-					wlanFlushQueues(ctx);
+				if (err == 0) {
 					memset(ctx->conn_info, 0, sizeof(ctx->conn_info));
-					wlanResetRssiList(ctx);
-					ctx->rssi_pool_cnt = 0;
-					ctx->flags &= ~0x400u;
-					ctx->rssi_sample_cnt = 0;
-					goto check_err;
+					wlanImportBssInfo(ctx->conn_info, bssCfg, ctx->version_or_mode);
 				}
-				/* cmd == 6 */
-				u32 pm = *(u32 *)arg2;
-				ctx->power_mode = pm;
-				if ((pm & 3) == 3) {
-					ctx->flags |= 0x80;
+			}
+		}
+		break;
+	}
+	case 4:
+		if (ctx->flags & 9) {
+			ctx->flags |= 0x400;
+			if (ctx->conn_state != 1) {
+				int r = wlanKermitDisconnect();
+				if (r == 0) {
+					ctx->flags &= ~8u;
+					wlanNotifyCallback(ctx, 0);
 				} else {
-					ctx->flags &= ~0x80u;
+					req->status = (r == (int)0x80410d11) ? -0x12d : -1;
+					err = 0x80410d15;
 				}
-				goto done_ok;
 			}
-			goto done_ok;
 		}
-		if (cmd == 0x0a) {
-			/* copy BSSID from conn_info + 4 (i.e. ctx + 0x0c) */
-			goto done_ok;
-		}
-		if (cmd == 0x101) {
-			u32 v = *(u32 *)arg2;
-			if (v == 1 || v == 0 || v == 2) {
-				err = -1;
-				goto done_err;
-			}
-			if (v != 3) {
+		wlanFlushQueues(ctx);
+		memset(ctx->conn_info, 0, sizeof(ctx->conn_info));
+		wlanResetRssiList(ctx);
+		ctx->rssi_pool_cnt = 0;
+		ctx->flags &= ~0x400u;
+		ctx->rssi_sample_cnt = 0;
+		break;
+	case 5: {
+		SceWlanBssCfg *bssCfg = (SceWlanBssCfg *)params[0];
+		if (ctx->flags & 2) {
+			err = 0x80410d03;
+		} else if (ctx->flags & 4) {
+			err = 0x80410d02;
+		} else {
+			u16 reg = ctx->channel_mask >> 8;
+			if (!wlanIsChannelValid(&reg, bssCfg->channel) || bssCfg->ssid_len >= 0x21 || bssCfg->bss_type != 2) {
 				err = 0x80410d04;
-				goto check_err;
+			} else {
+				if (ctx->conn_state == 1) {
+					ctx->conn_state = 0;
+				}
+				err = wlanKermitCreateIbss(bssCfg);
+				if (err == 0) {
+					ctx->flags |= 8;
+					wlanNotifyCallback(ctx, bssCfg->channel);
+				}
+				ctx->flags &= ~4u;
+				if (err != 0) {
+					err = 0x80410d04;
+				} else {
+					memset(ctx->conn_info, 0, sizeof(ctx->conn_info));
+					wlanImportBssInfo(ctx->conn_info, bssCfg, ctx->version_or_mode);
+				}
 			}
-			err = -1;
-			goto done_err;
 		}
-		goto done_ok;
+		break;
 	}
-
-	if (cmd == 0x10c) {
+	case 6: {
+		u32 pm = *(u32 *)ioctlReq;
+		ctx->power_mode = pm;
+		if ((pm & 3) == 3) {
+			ctx->flags |= 0x80;
+		} else {
+			ctx->flags &= ~0x80u;
+		}
+		break;
+	}
+	case 0x101: {
+		u32 v = *(u32 *)ioctlReq;
+		if (v == 1 || v == 0 || v == 2 || v == 3) {
+			err = -1;
+		} else {
+			err = 0x80410d04;
+		}
+		break;
+	}
+	case 0x10c:
 		wlanExportBssInfo((void *)params[0], ctx->conn_info, ctx->version_or_mode);
-		goto done_ok;
-	}
-	if (cmd == 0x400) {
+		break;
+	case 0x400:
 		for (int i = 0; i < 3; i++) {
 			int r = wlanKermitDisconnect();
 			if (r == 0) {
 				ctx->flags &= ~8u;
 				wlanNotifyCallback(ctx, 0);
 				if (i == 2) {
-					goto done_ok;
+					break;
 				}
 			}
 		}
-		goto check_err;
+		break;
+	default:
+		break;
 	}
 
-done_ok:
-	{
-		int intr = sceKernelCpuSuspendIntr();
-		if (ctx->netif.if_internal != NULL) {
+	int intr = sceKernelCpuSuspendIntr();
+	if (ctx->netif.if_internal != NULL) {
+		if (err >= 0) {
 			sceNetIfhandle_driver_F94BAF52(&ctx->netif, 3, 0);
-		}
-		sceKernelCpuResumeIntr(intr);
-	}
-	wlanUnlock(ctx);
-	return err;
-
-check_err:
-	if (err >= 0) {
-		goto done_ok;
-	}
-done_err:
-	{
-		int intr = sceKernelCpuSuspendIntr();
-		if (ctx->netif.if_internal != NULL) {
+		} else {
 			sceNetIfhandle_driver_F94BAF52(&ctx->netif, 4, err);
 		}
-		sceKernelCpuResumeIntr(intr);
 	}
+	sceKernelCpuResumeIntr(intr);
 	wlanUnlock(ctx);
 	return err;
 }
@@ -2786,9 +2755,10 @@ static void wlanInitPrng(u32 seed)
 /* 0x4624 */
 static int wlanDoScan(void *scan_req, u32 *inout_len, void *out_buf, int compact)
 {
-	u8 req_buf[128] __attribute__((aligned(64)));
-	sceKernelDcacheInvalidateRange(req_buf, 64);
-	SceKermitRequest *req = KERMIT_UNCACHED(req_buf);
+	u8 req_buf[128];
+	void *reqAligned = WLAN_ALIGN64_PTR(req_buf);
+	sceKernelDcacheInvalidateRange(reqAligned, 64);
+	SceKermitRequest *req = KERMIT_UNCACHED(reqAligned);
 
 	u32 half_size = g_kermit_net_buf_size >> 1;
 	u8 *kbuf = g_kermit_net_buf;
@@ -2803,7 +2773,7 @@ static int wlanDoScan(void *scan_req, u32 *inout_len, void *out_buf, int compact
 	sceKermitMemory_driver_AAF047AC(req, 1, kout, half_size, 2);
 	req->args[2] = *inout_len;
 
-	u64 resp = 0;
+	u64 resp;
 	int kret = sceKermit_driver_36666181(req, KERMIT_MODE_WLAN, 0x4c, 3, 0, &resp);
 	s32 res = (kret != 0) ? kret : (s32)resp;
 
@@ -2840,14 +2810,15 @@ static int wlanDoScan(void *scan_req, u32 *inout_len, void *out_buf, int compact
 }
 
 /* 0x4830: sceWlanDrv_lib_19602A86 */
-int sceWlanDrv_lib_19602A86(u32 a0, u32 a1, u32 a2, s32 *out_val)
+int sceWlanDrv_lib_19602A86(u32 family, u32 sockType, u32 protocol, s32 *out_val)
 {
-	u8 req_buf[128] __attribute__((aligned(64)));
+	u8 req_buf[128];
+	void *reqAligned = WLAN_ALIGN64_PTR(req_buf);
 	u32 k1 = pspGetK1();
 	pspSetK1(k1 << 11);
 
-	sceKernelDcacheInvalidateRange(req_buf, 64);
-	SceKermitRequest *req = KERMIT_UNCACHED(req_buf);
+	sceKernelDcacheInvalidateRange(reqAligned, 64);
+	SceKermitRequest *req = KERMIT_UNCACHED(reqAligned);
 
 	if ((s32)(pspGetK1() & (u32)out_val) < 0) {
 		pspSetK1(k1);
@@ -2866,13 +2837,13 @@ int sceWlanDrv_lib_19602A86(u32 a0, u32 a1, u32 a2, s32 *out_val)
 	}
 
 	u8 *kbuf = g_kermit_net_buf;
-	req->args[0] = a0;
-	req->args[1] = a1;
-	req->args[2] = a2;
+	req->args[0] = family;
+	req->args[1] = sockType;
+	req->args[2] = protocol;
 	req->args[3] = 4;
 	sceKermitMemory_driver_AAF047AC(req, 4, kbuf, 4, 2);
 
-	u64 resp = 0;
+	u64 resp;
 	int kret = sceKermit_driver_36666181(req, KERMIT_MODE_WLAN, 0x40, 5, 0, &resp);
 	int res = (kret != 0) ? kret : (int)resp;
 	if (kret == 0 && res == 0) {
@@ -3045,34 +3016,31 @@ int sceWlanDrv_lib_BFE46C6D(u32 id, const SceWlanIov *iov, u32 iov_cnt, u32 flag
 		total_len += len;
 		if (len >= 0x7531u || total_len >= 0x7531u) {
 			res = 0x80410d12;
-			goto unlock_out;
+			break;
 		}
 		if ((s32)((((u32)base + len) | (u32)base | len) & k1_shifted) < 0) {
 			res = 0x80410d13;
-			goto unlock_out;
+			break;
 		}
 		sceKernelMemcpy(dst, base, len);
 		dst += len;
 	}
 
-	{
+	if (res == 0) {
 		u32 hlen = hdr_len;
 		res = wlanKermitSendGameMode(0x36, kbuf, id, total_len, flags, (void *)hdr_buf, &hlen, out_sent);
 	}
 
-unlock_out:
-	{
-		int uret = sceKernelUnlockMutex(g_kermit_net_mutex, 1);
-		pspSetK1(k1);
-		return (uret != 0) ? uret : res;
-	}
+	int uret = sceKernelUnlockMutex(g_kermit_net_mutex, 1);
+	pspSetK1(k1);
+	return (uret != 0) ? uret : res;
 }
 
 /* 0x4f9c: sceWlanDrv_lib_CAC1FB0D */
 int sceWlanDrv_lib_CAC1FB0D(void *out_buf)
 {
-	u8 req1_buf[128] __attribute__((aligned(64)));
-	u8 req2_buf[128] __attribute__((aligned(64)));
+	u8 startReqBuf[128];
+	u8 stopReqBuf[128];
 	u32 k1 = pspGetK1();
 	u32 k1_shifted = k1 << 11;
 	pspSetK1(k1_shifted);
@@ -3082,15 +3050,16 @@ int sceWlanDrv_lib_CAC1FB0D(void *out_buf)
 		return 0x80410d13;
 	}
 
-	sceKernelDcacheInvalidateRange(req1_buf, 64);
-	SceKermitRequest *req1 = KERMIT_UNCACHED(req1_buf);
+	void *startAligned = WLAN_ALIGN64_PTR(startReqBuf);
+	sceKernelDcacheInvalidateRange(startAligned, 64);
+	SceKermitRequest *startReq = KERMIT_UNCACHED(startAligned);
 	int lret = sceKernelLockMutex(g_kermit_net_mutex, 1, NULL);
 	int start_res = lret;
 	if (lret == 0) {
-		req1->args[0] = 1;
-		u64 resp1 = 0;
-		int kret = sceKermit_driver_36666181(req1, KERMIT_MODE_WLAN, 0x50, 1, 0, &resp1);
-		int sres = (kret != 0) ? kret : (int)resp1;
+		startReq->args[0] = 1;
+		u64 startResp;
+		int kret = sceKermit_driver_36666181(startReq, KERMIT_MODE_WLAN, 0x50, 1, 0, &startResp);
+		int sres = (kret != 0) ? kret : (int)startResp;
 		int uret = sceKernelUnlockMutex(g_kermit_net_mutex, 1);
 		start_res = (uret != 0) ? uret : sres;
 	}
@@ -3113,12 +3082,13 @@ int sceWlanDrv_lib_CAC1FB0D(void *out_buf)
 		sceKernelDelayThread(250000);
 	}
 
-	sceKernelDcacheInvalidateRange(req2_buf, 64);
-	SceKermitRequest *req2 = KERMIT_UNCACHED(req2_buf);
+	void *stopAligned = WLAN_ALIGN64_PTR(stopReqBuf);
+	sceKernelDcacheInvalidateRange(stopAligned, 64);
+	SceKermitRequest *stopReq = KERMIT_UNCACHED(stopAligned);
 	if (sceKernelLockMutex(g_kermit_net_mutex, 1, NULL) == 0) {
-		req2->args[0] = 0;
-		u64 resp2 = 0;
-		sceKermit_driver_36666181(req2, KERMIT_MODE_WLAN, 0x50, 1, 0, &resp2);
+		stopReq->args[0] = 0;
+		u64 stopResp;
+		sceKermit_driver_36666181(stopReq, KERMIT_MODE_WLAN, 0x50, 1, 0, &stopResp);
 		sceKernelUnlockMutex(g_kermit_net_mutex, 1);
 	}
 
@@ -3166,12 +3136,13 @@ int sceWlanDrv_lib_51FF0D5F(u32 id, u32 cmd, void *buf, u32 size)
 		return 0;
 	}
 
-	u8 req_buf[128] __attribute__((aligned(64)));
+	u8 req_buf[128];
+	void *reqAligned = WLAN_ALIGN64_PTR(req_buf);
 	u32 k1 = pspGetK1();
 	u32 k1_shifted = k1 << 11;
-	sceKernelDcacheInvalidateRange(req_buf, 64);
+	sceKernelDcacheInvalidateRange(reqAligned, 64);
 	pspSetK1(k1_shifted);
-	SceKermitRequest *req = KERMIT_UNCACHED(req_buf);
+	SceKermitRequest *req = KERMIT_UNCACHED(reqAligned);
 	u8 *kbuf = g_kermit_net_buf;
 
 	if (size != 0x24 || (s32)((((u32)buf + 0x24) | (u32)buf) & k1_shifted) < 0) {
@@ -3192,7 +3163,7 @@ int sceWlanDrv_lib_51FF0D5F(u32 id, u32 cmd, void *buf, u32 size)
 	req->args[1] = cmd;
 	sceKermitMemory_driver_AAF047AC(req, 2, kbuf, 0x24, 3);
 
-	u64 resp = 0;
+	u64 resp;
 	int kret = sceKermit_driver_36666181(req, KERMIT_MODE_WLAN, 0x33, 3, 0, &resp);
 	int res = (kret != 0) ? kret : (int)resp;
 	if (kret == 0 && res == 0 && buf != NULL && (cmd & 0x40000000u) != 0) {
@@ -3207,14 +3178,15 @@ int sceWlanDrv_lib_51FF0D5F(u32 id, u32 cmd, void *buf, u32 size)
 /* 0x545c */
 static int wlanKermitGetSwitchAndPower(void)
 {
-	u8 req_buf[128] __attribute__((aligned(64)));
-	sceKernelDcacheInvalidateRange(req_buf, 64);
-	SceKermitRequest *req = KERMIT_UNCACHED(req_buf);
+	u8 req_buf[128];
+	void *reqAligned = WLAN_ALIGN64_PTR(req_buf);
+	sceKernelDcacheInvalidateRange(reqAligned, 64);
+	SceKermitRequest *req = KERMIT_UNCACHED(reqAligned);
 
 	int lret = sceKernelLockMutex(g_kermit_net_mutex, 1, NULL);
 	int res = lret;
 	if (lret == 0) {
-		u64 resp = 0;
+		u64 resp;
 		int kret = sceKermit_driver_36666181(req, KERMIT_MODE_WLAN, 0x49, 0, 0, &resp);
 		int sres = (kret != 0) ? kret : (int)resp;
 		int uret = sceKernelUnlockMutex(g_kermit_net_mutex, 1);
@@ -3229,7 +3201,8 @@ static int wlanKermitGetSwitchAndPower(void)
 /* 0x5514 */
 static int wlanKermitInit(void)
 {
-	u8 req_buf[128] __attribute__((aligned(64)));
+	u8 req_buf[128];
+	void *reqAligned = WLAN_ALIGN64_PTR(req_buf);
 	g_kermit_net_buf = (u8 *)0xabd54000u;
 	g_kermit_net_buf_size = 0x4000;
 	SceUID mtx = sceKernelCreateMutex("SceKermitNet", 0x100, 0, NULL);
@@ -3238,12 +3211,12 @@ static int wlanKermitInit(void)
 		return 1;
 	}
 
-	sceKernelDcacheInvalidateRange(req_buf, 64);
-	SceKermitRequest *req = KERMIT_UNCACHED(req_buf);
+	sceKernelDcacheInvalidateRange(reqAligned, 64);
+	SceKermitRequest *req = KERMIT_UNCACHED(reqAligned);
 	int lret = sceKernelLockMutex(g_kermit_net_mutex, 1, NULL);
 	int res = lret;
 	if (lret == 0) {
-		u64 resp = 0;
+		u64 resp;
 		int kret = sceKermit_driver_36666181(req, KERMIT_MODE_WLAN, 0x34, 0, 0, &resp);
 		int sres = (kret != 0) ? kret : (int)resp;
 		int uret = sceKernelUnlockMutex(g_kermit_net_mutex, 1);
@@ -3256,16 +3229,17 @@ static int wlanKermitInit(void)
 static int wlanKermitTerm(int arg)
 {
 	(void)arg;
-	u8 req_buf[128] __attribute__((aligned(64)));
+	u8 req_buf[128];
+	void *reqAligned = WLAN_ALIGN64_PTR(req_buf);
 	g_mac_cached = 0;
-	sceKernelDcacheInvalidateRange(req_buf, 64);
-	SceKermitRequest *req = KERMIT_UNCACHED(req_buf);
+	sceKernelDcacheInvalidateRange(reqAligned, 64);
+	SceKermitRequest *req = KERMIT_UNCACHED(reqAligned);
 
 	int lret = sceKernelLockMutex(g_kermit_net_mutex, 1, NULL);
 	if (lret != 0) {
 		return lret;
 	}
-	u64 resp = 0;
+	u64 resp;
 	int kret = sceKermit_driver_36666181(req, KERMIT_MODE_WLAN, 0x3f, 0, 0, &resp);
 	int sres = (kret != 0) ? kret : (int)resp;
 	int uret = sceKernelUnlockMutex(g_kermit_net_mutex, 1);
@@ -3313,15 +3287,16 @@ static int wlanKermitCreateIbss(void *bss)
 /* 0x5838 */
 static int wlanKermitDisconnect(void)
 {
-	u8 req_buf[128] __attribute__((aligned(64)));
-	sceKernelDcacheInvalidateRange(req_buf, 64);
-	SceKermitRequest *req = KERMIT_UNCACHED(req_buf);
+	u8 req_buf[128];
+	void *reqAligned = WLAN_ALIGN64_PTR(req_buf);
+	sceKernelDcacheInvalidateRange(reqAligned, 64);
+	SceKermitRequest *req = KERMIT_UNCACHED(reqAligned);
 
 	int lret = sceKernelLockMutex(g_kermit_net_mutex, 1, NULL);
 	if (lret != 0) {
 		return lret;
 	}
-	u64 resp = 0;
+	u64 resp;
 	int kret = sceKermit_driver_36666181(req, KERMIT_MODE_WLAN, 0x3e, 0, 0, &resp);
 	int sres = (kret != 0) ? kret : (int)resp;
 	int uret = sceKernelUnlockMutex(g_kermit_net_mutex, 1);
@@ -3361,15 +3336,16 @@ static int wlanKermitSetHostDiscover(void *cfg)
 /* 0x59ac */
 static int wlanKermitPollEvent(void)
 {
-	u8 req_buf[128] __attribute__((aligned(64)));
-	sceKernelDcacheInvalidateRange(req_buf, 64);
-	SceKermitRequest *req = KERMIT_UNCACHED(req_buf);
+	u8 req_buf[128];
+	void *reqAligned = WLAN_ALIGN64_PTR(req_buf);
+	sceKernelDcacheInvalidateRange(reqAligned, 64);
+	SceKermitRequest *req = KERMIT_UNCACHED(reqAligned);
 
 	int lret = sceKernelLockMutex(g_kermit_net_mutex, 1, NULL);
 	if (lret != 0) {
 		return lret;
 	}
-	u64 resp = 0;
+	u64 resp;
 	int kret = sceKermit_driver_36666181(req, KERMIT_MODE_WLAN, 0x30, 0, 0, &resp);
 	int sres = (kret != 0) ? kret : (int)resp;
 	int uret = sceKernelUnlockMutex(g_kermit_net_mutex, 1);
@@ -3396,16 +3372,17 @@ u32 sceWlanDrv_lib_E47015D7(void)
 /* 0x5a9c: sceWlanDrv_lib_768E275B */
 int sceWlanDrv_lib_768E275B(void)
 {
-	u8 req_buf[128] __attribute__((aligned(64)));
+	u8 req_buf[128];
+	void *reqAligned = WLAN_ALIGN64_PTR(req_buf);
 	u32 k1 = pspGetK1();
-	sceKernelDcacheInvalidateRange(req_buf, 64);
+	sceKernelDcacheInvalidateRange(reqAligned, 64);
 	pspSetK1(k1 << 11);
-	SceKermitRequest *req = KERMIT_UNCACHED(req_buf);
+	SceKermitRequest *req = KERMIT_UNCACHED(reqAligned);
 
 	int lret = sceKernelLockMutex(g_kermit_net_mutex, 1, NULL);
 	int res = lret;
 	if (lret == 0) {
-		u64 resp = 0;
+		u64 resp;
 		int kret = sceKermit_driver_36666181(req, KERMIT_MODE_WLAN, 0x46, 0, 0, &resp);
 		int sres = (kret != 0) ? kret : (int)resp;
 		int uret = sceKernelUnlockMutex(g_kermit_net_mutex, 1);
@@ -3418,16 +3395,17 @@ int sceWlanDrv_lib_768E275B(void)
 /* 0x5b5c: sceWlanDrv_lib_E093A922 */
 int sceWlanDrv_lib_E093A922(void)
 {
-	u8 req_buf[128] __attribute__((aligned(64)));
+	u8 req_buf[128];
+	void *reqAligned = WLAN_ALIGN64_PTR(req_buf);
 	u32 k1 = pspGetK1();
-	sceKernelDcacheInvalidateRange(req_buf, 64);
+	sceKernelDcacheInvalidateRange(reqAligned, 64);
 	pspSetK1(k1 << 11);
-	SceKermitRequest *req = KERMIT_UNCACHED(req_buf);
+	SceKermitRequest *req = KERMIT_UNCACHED(reqAligned);
 
 	int lret = sceKernelLockMutex(g_kermit_net_mutex, 1, NULL);
 	int res = lret;
 	if (lret == 0) {
-		u64 resp = 0;
+		u64 resp;
 		int kret = sceKermit_driver_36666181(req, KERMIT_MODE_WLAN, 0x51, 0, 0, &resp);
 		int sres = (kret != 0) ? kret : (int)resp;
 		int uret = sceKernelUnlockMutex(g_kermit_net_mutex, 1);
@@ -3458,11 +3436,11 @@ int sceWlanDrv_lib_107E61D0(u32 id, const void *buf, u32 len)
 }
 
 /* 0x5c90: sceWlanDrv_lib_A2DA9314 */
-int sceWlanDrv_lib_A2DA9314(u32 a0, u32 a1)
+int sceWlanDrv_lib_A2DA9314(u32 sockId, u32 how)
 {
 	u32 k1 = pspGetK1();
 	pspSetK1(k1 << 11);
-	int ret = wlanKermitSimple2Arg(0x3b, a0, a1);
+	int ret = wlanKermitSimple2Arg(0x3b, sockId, how);
 	pspSetK1(k1);
 	return ret;
 }
@@ -3479,21 +3457,21 @@ int sceWlanDrv_lib_5CFFAAB1(u32 id, const void *buf, u32 len)
 }
 
 /* 0x5d18: sceWlanDrv_lib_91E04A18 */
-int sceWlanDrv_lib_91E04A18(u32 a0, u32 a1)
+int sceWlanDrv_lib_91E04A18(u32 sockId, u32 backlog)
 {
 	u32 k1 = pspGetK1();
 	pspSetK1(k1 << 11);
-	int ret = wlanKermitSimple2Arg(0x42, a0, a1);
+	int ret = wlanKermitSimple2Arg(0x42, sockId, backlog);
 	pspSetK1(k1);
 	return ret;
 }
 
 /* 0x5d50: sceWlanDrv_lib_56AE09D2 */
-int sceWlanDrv_lib_56AE09D2(u32 a0, u32 a1)
+int sceWlanDrv_lib_56AE09D2(u32 sockId, u32 flags)
 {
 	u32 k1 = pspGetK1();
 	pspSetK1(k1 << 11);
-	int ret = wlanKermitSimple2Arg(0x43, a0, a1);
+	int ret = wlanKermitSimple2Arg(0x43, sockId, flags);
 	pspSetK1(k1);
 	return ret;
 }
@@ -3581,16 +3559,17 @@ int sceWlanDrv_lib_9ED787C8(u32 id, u32 level, u32 opt, void *buf, u32 len)
 /* 0x6024: sceWlanDrv_lib_78C84FEC */
 int sceWlanDrv_lib_78C84FEC(void)
 {
-	u8 req_buf[128] __attribute__((aligned(64)));
+	u8 req_buf[128];
+	void *reqAligned = WLAN_ALIGN64_PTR(req_buf);
 	u32 k1 = pspGetK1();
-	sceKernelDcacheInvalidateRange(req_buf, 64);
+	sceKernelDcacheInvalidateRange(reqAligned, 64);
 	pspSetK1(k1 << 11);
-	SceKermitRequest *req = KERMIT_UNCACHED(req_buf);
+	SceKermitRequest *req = KERMIT_UNCACHED(reqAligned);
 
 	int lret = sceKernelLockMutex(g_kermit_net_mutex, 1, NULL);
 	int res = lret;
 	if (lret == 0) {
-		u64 resp = 0;
+		u64 resp;
 		int kret = sceKermit_driver_36666181(req, KERMIT_MODE_WLAN, 0x48, 0, 0, &resp);
 		int sres = (kret != 0) ? kret : (int)resp;
 		int uret = sceKernelUnlockMutex(g_kermit_net_mutex, 1);
@@ -3603,17 +3582,18 @@ int sceWlanDrv_lib_78C84FEC(void)
 /* 0x60e4: sceWlanDrv_lib_80B7162E */
 int sceWlanDrv_lib_80B7162E(void)
 {
-	u8 req_buf[128] __attribute__((aligned(64)));
+	u8 req_buf[128];
+	void *reqAligned = WLAN_ALIGN64_PTR(req_buf);
 	u32 k1 = pspGetK1();
 	g_scan_ready = 0;
-	sceKernelDcacheInvalidateRange(req_buf, 64);
+	sceKernelDcacheInvalidateRange(reqAligned, 64);
 	pspSetK1(k1 << 11);
-	SceKermitRequest *req = KERMIT_UNCACHED(req_buf);
+	SceKermitRequest *req = KERMIT_UNCACHED(reqAligned);
 
 	int lret = sceKernelLockMutex(g_kermit_net_mutex, 1, NULL);
 	int res = lret;
 	if (lret == 0) {
-		u64 resp = 0;
+		u64 resp;
 		int kret = sceKermit_driver_36666181(req, KERMIT_MODE_WLAN, 0x4d, 0, 0, &resp);
 		int sres = (kret != 0) ? kret : (int)resp;
 		int uret = sceKernelUnlockMutex(g_kermit_net_mutex, 1);
@@ -3632,16 +3612,17 @@ int sceWlanDrv_lib_3BE42BCF(void)
 /* 0x61b8 */
 static int wlanKermitSimple1Arg(u32 cmd, u32 val)
 {
-	u8 req_buf[128] __attribute__((aligned(64)));
-	sceKernelDcacheInvalidateRange(req_buf, 64);
-	SceKermitRequest *req = KERMIT_UNCACHED(req_buf);
+	u8 req_buf[128];
+	void *reqAligned = WLAN_ALIGN64_PTR(req_buf);
+	sceKernelDcacheInvalidateRange(reqAligned, 64);
+	SceKermitRequest *req = KERMIT_UNCACHED(reqAligned);
 
 	int lret = sceKernelLockMutex(g_kermit_net_mutex, 1, NULL);
 	if (lret != 0) {
 		return lret;
 	}
 	req->args[0] = val;
-	u64 resp = 0;
+	u64 resp;
 	int kret = sceKermit_driver_36666181(req, KERMIT_MODE_WLAN, cmd, 1, 0, &resp);
 	int sres = (kret != 0) ? kret : (int)resp;
 	int uret = sceKernelUnlockMutex(g_kermit_net_mutex, 1);
@@ -3651,9 +3632,10 @@ static int wlanKermitSimple1Arg(u32 cmd, u32 val)
 /* 0x6280 */
 static int wlanKermitCmdBuf(u32 cmd, void *buf, u32 size, u32 dir_flags)
 {
-	u8 req_buf[128] __attribute__((aligned(64)));
-	sceKernelDcacheInvalidateRange(req_buf, 64);
-	SceKermitRequest *req = KERMIT_UNCACHED(req_buf);
+	u8 req_buf[128];
+	void *reqAligned = WLAN_ALIGN64_PTR(req_buf);
+	sceKernelDcacheInvalidateRange(reqAligned, 64);
+	SceKermitRequest *req = KERMIT_UNCACHED(reqAligned);
 	u8 *kbuf = g_kermit_net_buf;
 
 	int lret = sceKernelLockMutex(g_kermit_net_mutex, 1, NULL);
@@ -3670,7 +3652,7 @@ static int wlanKermitCmdBuf(u32 cmd, void *buf, u32 size, u32 dir_flags)
 		sceKermitMemory_driver_AAF047AC(req, 0, NULL, 0, dir_flags);
 	}
 
-	u64 resp = 0;
+	u64 resp;
 	int kret = sceKermit_driver_36666181(req, KERMIT_MODE_WLAN, cmd, 1, 0, &resp);
 	int res = (kret != 0) ? kret : (int)resp;
 	if (kret == 0 && res == 0 && (dir_flags & 2) != 0 && buf != NULL) {
@@ -3682,19 +3664,20 @@ static int wlanKermitCmdBuf(u32 cmd, void *buf, u32 size, u32 dir_flags)
 }
 
 /* 0x63dc */
-static int wlanKermitSimple2Arg(u32 cmd, u32 arg0, u32 arg1)
+static int wlanKermitSimple2Arg(u32 cmd, u32 firstArg, u32 secondArg)
 {
-	u8 req_buf[128] __attribute__((aligned(64)));
-	sceKernelDcacheInvalidateRange(req_buf, 64);
-	SceKermitRequest *req = KERMIT_UNCACHED(req_buf);
+	u8 req_buf[128];
+	void *reqAligned = WLAN_ALIGN64_PTR(req_buf);
+	sceKernelDcacheInvalidateRange(reqAligned, 64);
+	SceKermitRequest *req = KERMIT_UNCACHED(reqAligned);
 
 	int lret = sceKernelLockMutex(g_kermit_net_mutex, 1, NULL);
 	if (lret != 0) {
 		return lret;
 	}
-	req->args[0] = arg0;
-	req->args[1] = arg1;
-	u64 resp = 0;
+	req->args[0] = firstArg;
+	req->args[1] = secondArg;
+	u64 resp;
 	int kret = sceKermit_driver_36666181(req, KERMIT_MODE_WLAN, cmd, 2, 0, &resp);
 	int sres = (kret != 0) ? kret : (int)resp;
 	int uret = sceKernelUnlockMutex(g_kermit_net_mutex, 1);
@@ -3704,9 +3687,10 @@ static int wlanKermitSimple2Arg(u32 cmd, u32 arg0, u32 arg1)
 /* 0x64b4 */
 static int wlanKermitTransferBuf(u32 cmd, void *buf, u32 size, u32 dir_flags)
 {
-	u8 req_buf[128] __attribute__((aligned(64)));
-	sceKernelDcacheInvalidateRange(req_buf, 64);
-	SceKermitRequest *req = KERMIT_UNCACHED(req_buf);
+	u8 req_buf[128];
+	void *reqAligned = WLAN_ALIGN64_PTR(req_buf);
+	sceKernelDcacheInvalidateRange(reqAligned, 64);
+	SceKermitRequest *req = KERMIT_UNCACHED(reqAligned);
 
 	u32 total_buf_size = g_kermit_net_buf_size;
 	u8 *kbuf = g_kermit_net_buf;
@@ -3726,7 +3710,7 @@ static int wlanKermitTransferBuf(u32 cmd, void *buf, u32 size, u32 dir_flags)
 	sceKermitMemory_driver_AAF047AC(req, 0, kbuf, half_size, dir_flags);
 	req->args[1] = size;
 
-	u64 resp = 0;
+	u64 resp;
 	int kret = sceKermit_driver_36666181(req, KERMIT_MODE_WLAN, cmd, 2, 0, &resp);
 	int res = (kret != 0) ? kret : (int)resp;
 	if (kret == 0 && res > 0 && (dir_flags & 2) != 0) {
@@ -3740,11 +3724,12 @@ static int wlanKermitTransferBuf(u32 cmd, void *buf, u32 size, u32 dir_flags)
 /* 0x6628 */
 static int wlanKermitGetParam(u32 cmd, u32 id, void *buf, u32 *inout_len, u32 *out_aux)
 {
-	u8 req_buf[128] __attribute__((aligned(64)));
-	sceKernelDcacheInvalidateRange(req_buf, 64);
-	SceKermitRequest *req = KERMIT_UNCACHED(req_buf);
+	u8 req_buf[128];
+	void *reqAligned = WLAN_ALIGN64_PTR(req_buf);
+	sceKernelDcacheInvalidateRange(reqAligned, 64);
+	SceKermitRequest *req = KERMIT_UNCACHED(reqAligned);
 	u32 k1 = pspGetK1();
-	u8 *kbuf = g_kermit_net_buf;
+	SceWlanKermitParamBuf *kparam = (SceWlanKermitParamBuf *)g_kermit_net_buf;
 
 	if ((s32)(k1 & (u32)inout_len) < 0) {
 		return 0x80410d13;
@@ -3764,29 +3749,29 @@ static int wlanKermitGetParam(u32 cmd, u32 id, void *buf, u32 *inout_len, u32 *o
 
 	u32 xfer_size = 0x104;
 	if (buf != NULL) {
-		*(u32 *)kbuf = len;
+		kparam->len = len;
 		xfer_size = len + 8;
 	}
 	req->args[0] = id;
 	req->args[1] = xfer_size;
-	sceKermitMemory_driver_AAF047AC(req, 2, kbuf, xfer_size, 3);
+	sceKermitMemory_driver_AAF047AC(req, 2, kparam, xfer_size, 3);
 
-	u64 resp = 0;
+	u64 resp;
 	int kret = sceKermit_driver_36666181(req, KERMIT_MODE_WLAN, cmd, 3, 0, &resp);
 	int res = (kret != 0) ? kret : (int)resp;
 	if (kret == 0 && res == 0) {
 		if (buf != NULL) {
-			u32 rlen = *(u32 *)kbuf;
+			u32 rlen = kparam->len;
 			if (rlen >= 0x11) {
 				rlen = 0x10;
 			}
 			if (rlen != 0) {
-				sceKernelMemcpy(buf, kbuf + 8, rlen);
+				sceKernelMemcpy(buf, kparam->data, rlen);
 			}
 			*inout_len = rlen;
 		}
 		if (out_aux != NULL) {
-			*out_aux = *(u32 *)(kbuf + 4);
+			*out_aux = kparam->aux;
 		}
 	}
 
@@ -3797,9 +3782,10 @@ static int wlanKermitGetParam(u32 cmd, u32 id, void *buf, u32 *inout_len, u32 *o
 /* 0x67d4 */
 static int wlanKermitGetSetOpt(u32 cmd, u32 id, u32 opt, u32 flags, void *buf, u32 *inout_len)
 {
-	u8 req_buf[128] __attribute__((aligned(64)));
-	sceKernelDcacheInvalidateRange(req_buf, 64);
-	SceKermitRequest *req = KERMIT_UNCACHED(req_buf);
+	u8 req_buf[128];
+	void *reqAligned = WLAN_ALIGN64_PTR(req_buf);
+	sceKernelDcacheInvalidateRange(reqAligned, 64);
+	SceKermitRequest *req = KERMIT_UNCACHED(reqAligned);
 	u32 k1 = pspGetK1();
 	u32 len = *inout_len;
 	u8 *kbuf = g_kermit_net_buf;
@@ -3831,7 +3817,7 @@ static int wlanKermitGetSetOpt(u32 cmd, u32 id, u32 opt, u32 flags, void *buf, u
 	req->args[3] = xfer_size;
 	sceKermitMemory_driver_AAF047AC(req, 4, kbuf, xfer_size, dir_flags);
 
-	u64 resp = 0;
+	u64 resp;
 	int kret = sceKermit_driver_36666181(req, KERMIT_MODE_WLAN, cmd, 5, 0, &resp);
 	int res = (kret != 0) ? kret : (int)resp;
 	if (kret == 0 && res == 0 && cmd == 0x31) {
@@ -3851,9 +3837,10 @@ static int wlanKermitGetSetOpt(u32 cmd, u32 id, u32 opt, u32 flags, void *buf, u
 /* 0x69b0 */
 static int wlanKermitSetKey(u32 cmd, u32 id, const void *buf, u32 len)
 {
-	u8 req_buf[128] __attribute__((aligned(64)));
-	sceKernelDcacheInvalidateRange(req_buf, 64);
-	SceKermitRequest *req = KERMIT_UNCACHED(req_buf);
+	u8 req_buf[128];
+	void *reqAligned = WLAN_ALIGN64_PTR(req_buf);
+	sceKernelDcacheInvalidateRange(reqAligned, 64);
+	SceKermitRequest *req = KERMIT_UNCACHED(reqAligned);
 	u32 k1 = pspGetK1();
 
 	u32 orig_len = len;
@@ -3875,7 +3862,7 @@ static int wlanKermitSetKey(u32 cmd, u32 id, const void *buf, u32 len)
 	sceKernelMemcpy(kbuf, buf, len);
 	sceKermitMemory_driver_AAF047AC(req, 2, kbuf, len, 1);
 
-	u64 resp = 0;
+	u64 resp;
 	int kret = sceKermit_driver_36666181(req, KERMIT_MODE_WLAN, cmd, 3, 0, &resp);
 	int sres = (kret != 0) ? kret : (int)resp;
 	int uret = sceKernelUnlockMutex(g_kermit_net_mutex, 1);
@@ -3885,9 +3872,10 @@ static int wlanKermitSetKey(u32 cmd, u32 id, const void *buf, u32 len)
 /* 0x6b04 */
 static int wlanKermitSendGameMode(u32 cmd, void *kbuf, u32 id, u32 total_len, u32 flags, void *hdr_buf, u32 *hdr_len, u32 *out_sent)
 {
-	u8 req_buf[128] __attribute__((aligned(64)));
-	sceKernelDcacheInvalidateRange(req_buf, 64);
-	SceKermitRequest *req = KERMIT_UNCACHED(req_buf);
+	u8 req_buf[128];
+	void *reqAligned = WLAN_ALIGN64_PTR(req_buf);
+	sceKernelDcacheInvalidateRange(reqAligned, 64);
+	SceKermitRequest *req = KERMIT_UNCACHED(reqAligned);
 
 	u32 xfer_size = total_len + 0x10c;
 	if (xfer_size > (g_kermit_net_buf_size << 1)) {
@@ -3921,7 +3909,7 @@ static int wlanKermitSendGameMode(u32 cmd, void *kbuf, u32 id, u32 total_len, u3
 	req->args[1] = xfer_size;
 	sceKermitMemory_driver_AAF047AC(req, 2, kb, xfer_size, dir_flags);
 
-	u64 resp = 0;
+	u64 resp;
 	int kret = sceKermit_driver_36666181(req, KERMIT_MODE_WLAN, cmd, 3, 0, &resp);
 	if (kret != 0) {
 		return kret;
@@ -3936,9 +3924,10 @@ static int wlanKermitSendGameMode(u32 cmd, void *kbuf, u32 id, u32 total_len, u3
 /* 0x6cac */
 static int wlanKermitPollScanState(void *out_buf)
 {
-	u8 req_buf[128] __attribute__((aligned(64)));
-	sceKernelDcacheInvalidateRange(req_buf, 64);
-	SceKermitRequest *req = KERMIT_UNCACHED(req_buf);
+	u8 req_buf[128];
+	void *reqAligned = WLAN_ALIGN64_PTR(req_buf);
+	sceKernelDcacheInvalidateRange(reqAligned, 64);
+	SceKermitRequest *req = KERMIT_UNCACHED(reqAligned);
 
 	u32 half_size = g_kermit_net_buf_size >> 1;
 	u8 *kbuf = g_kermit_net_buf;
@@ -3950,7 +3939,7 @@ static int wlanKermitPollScanState(void *out_buf)
 	req->args[0] = 0x90;
 	sceKermitMemory_driver_AAF047AC(req, 1, kbuf, half_size, 2);
 
-	u64 resp = 0;
+	u64 resp;
 	int kret = sceKermit_driver_36666181(req, KERMIT_MODE_WLAN, 0x50, 2, 0, &resp);
 	int res = (kret != 0) ? kret : (int)resp;
 	if (kret == 0 && res == 4) {
