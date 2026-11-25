@@ -11,7 +11,7 @@ extern int sceDrmBBMacFinal2(void *mkey, void *out, void *vkey);
 
 extern void *sceKernelMemcpy(void *dst, const void *src, u32 n);
 extern void *sceKernelMemset(void *s, int c, u32 n);
-extern int memcmp(const void *s1, const void *s2, u32 n);
+extern int memcmp(const void *lhs, const void *rhs, u32 n);
 
 extern int sceKernelDeleteSema(int semaid);
 extern int sceKernelSignalSema(int semaid, int signal);
@@ -24,6 +24,8 @@ extern int sceKernelApplicationType(void);
 extern char *sceKernelInitDiscImage(void);
 
 typedef struct {
+    int (*init)(void *arg);
+    int (*exit)(void *arg);
     int (*open)(void *arg, char *file, int flags, int mode);
     int (*close)(void *arg);
     int (*read)(void *arg, void *data, int len);
@@ -87,7 +89,7 @@ static const u32 g_pgd_mac_key[8] = {
 static int dnasUnlock(void);
 static int dnasHookAdd(void);
 static int dnasHookRemove(void);
-static int dnasHookProbe(int a0, int a1, int flags);
+static int dnasHookProbe(void *arg, char *file, int flags);
 static int dnasLock(void);
 static int dnasHookOpen(SceIoHookArg *harg, char *file, int flags, int mode);
 static int dnasHookClose(SceIoHookArg *harg);
@@ -151,12 +153,12 @@ int module_start(SceSize args, void *argp)
     (void)argp;
     g_reboot_flag = 0;
     int semaid = sceKernelCreateSema("SceIoFilemgrDNAS1", 0, 1, 1, NULL);
+    g_state.semaid = semaid;
     if (semaid < 0) {
         sceKernelMemset(&g_state, 0, 0x330);
         sceKernelMemset(g_work_buf, 0, 0x640);
         return 1;
     }
-    g_state.semaid = semaid;
     sceIoAddHook((void *)g_hook_desc);
     return 0;
 }
@@ -184,10 +186,10 @@ static int dnasHookRemove(void)
     return 0;
 }
 
-static int dnasHookProbe(int a0, int a1, int flags)
+static int dnasHookProbe(void *arg, char *file, int flags)
 {
-    (void)a0;
-    (void)a1;
+    (void)arg;
+    (void)file;
     return ((u32)flags >> 30) & 1;
 }
 
@@ -213,45 +215,52 @@ static int dnasHookOpen(SceIoHookArg *harg, char *file, int flags, int mode)
         return 0x80510202;
     }
 
-    int fd = harg->funcs->open(harg->arg, file, flags, mode);
-    if (fd < 0) {
+    int fileDesc = harg->funcs->open(harg->arg, file, flags, mode);
+    if (fileDesc < 0) {
         dnasUnlock();
-        return fd;
+        return fileDesc;
     }
 
     g_state.open_count++;
-    int ioctl_res = harg->funcs->ioctl(harg->arg, 0x00208002, NULL, 0, NULL, 0);
-    if (ioctl_res < 0) {
-        if (harg->funcs->ioctl(harg->arg, 0x00208011, NULL, 0, NULL, 0) < 0 &&
-            harg->funcs->ioctl(harg->arg, 0x0020800c, NULL, 0, NULL, 0) < 0) {
-            ret = 0x80020146;
-            goto fail;
-        }
-    }
-
     int slot_idx = -1;
-    for (int i = 0; i < 8; i++) {
-        if (g_state.slots[i].in_use == 0) {
-            sceKernelMemset(&g_state.slots[i], 0, sizeof(SceDnasFileSlot));
-            g_state.slots[i].in_use = in_use_val;
-            slot_idx = i;
+    int ok = 0;
+
+    do {
+        int ioctl_res = harg->funcs->ioctl(harg->arg, 0x00208002, NULL, 0, NULL, 0);
+        if (ioctl_res < 0) {
+            if (harg->funcs->ioctl(harg->arg, 0x00208011, NULL, 0, NULL, 0) < 0 &&
+                harg->funcs->ioctl(harg->arg, 0x0020800c, NULL, 0, NULL, 0) < 0) {
+                ret = 0x80020146;
+                break;
+            }
+        }
+
+        for (int i = 0; i < 8; i++) {
+            if (g_state.slots[i].in_use == 0) {
+                sceKernelMemset(&g_state.slots[i], 0, sizeof(SceDnasFileSlot));
+                g_state.slots[i].in_use = in_use_val;
+                slot_idx = i;
+                break;
+            }
+        }
+
+        if (slot_idx < 0) {
+            ret = 0x80510202;
             break;
         }
+
+        SceDnasFileSlot *slot = &g_state.slots[slot_idx];
+        harg->priv = slot;
+        slot->flags = 0;
+        ok = 1;
+    } while (0);
+
+    if (ok) {
+        ret = dnasUnlock();
+        return (ret < 0) ? ret : fileDesc;
     }
 
-    if (slot_idx < 0) {
-        ret = 0x80510202;
-        goto fail;
-    }
-
-    SceDnasFileSlot *slot = &g_state.slots[slot_idx];
-    harg->priv = slot;
-    slot->flags = 0;
-    ret = dnasUnlock();
-    return (ret < 0) ? ret : fd;
-
-fail:
-    if (fd >= 0) {
+    if (fileDesc >= 0) {
         harg->funcs->close(harg->arg);
         g_state.open_count--;
         if (slot_idx >= 0)
@@ -293,18 +302,19 @@ static s64 dnasHookLseek(SceIoHookArg *harg, s64 ofs, int whence)
     } else if (whence == 2) {
         new_pos = ofs + (u64)slot->pgd_info[5];
     } else {
-        dnasUnlock();
-        return (s64)(s32)0x80510201;
+        new_pos = (s64)(s32)0x80510201;
     }
 
-    if ((s32)(new_pos >> 32) > 0)
-        new_pos = 0xFFFFFFFFLL;
-    if ((u32)new_pos > slot->pgd_info[5])
-        new_pos = (u64)slot->pgd_info[5];
-    slot->cur_pos = (u32)new_pos;
+    if (whence >= 0 && whence <= 2) {
+        if ((s32)(new_pos >> 32) > 0)
+            new_pos = 0xFFFFFFFFLL;
+        if ((u32)new_pos > slot->pgd_info[5])
+            new_pos = (u64)slot->pgd_info[5];
+        slot->cur_pos = (u32)new_pos;
+    }
 
     ret = dnasUnlock();
-    if (ret < 0)
+    if (new_pos >= 0 && ret < 0)
         return (s64)ret;
     return new_pos;
 }
@@ -317,14 +327,13 @@ static int dnasHookRead(SceIoHookArg *harg, char *data, int len)
         return ret;
 
     if ((slot->flags & 0x10) == 0) {
-        ret = 0x80510206;
-        goto err_out;
+        sceKernelMemset(g_work_buf, 0, 0x400);
+        dnasUnlock();
+        return 0x80510206;
     }
 
-    if (len == 0) {
-        ret = dnasUnlock();
-        return ret;
-    }
+    if (len == 0)
+        return dnasUnlock();
 
     u32 file_size = slot->pgd_info[5];
     u32 cur_pos = slot->cur_pos;
@@ -351,13 +360,15 @@ static int dnasHookRead(SceIoHookArg *harg, char *data, int len)
         return ret;
 
     int total_read = 0;
+    int failed = 0;
     while (cur_pos < end_pos) {
         ret = dnasLock();
         if (ret < 0)
             return ret;
         if ((slot->flags & 0x10) == 0) {
             ret = 0x80510203;
-            goto err_out;
+            failed = 1;
+            break;
         }
 
         u32 block_off = cur_pos & (block_size - 1);
@@ -383,28 +394,31 @@ static int dnasHookRead(SceIoHookArg *harg, char *data, int len)
 
         if (harg->funcs->lseek(harg->arg, (s64)(slot->data_offset + aligned_pos), 0) < 0) {
             ret = -1;
-            goto err_out;
+            failed = 1;
+            break;
         }
         int r = harg->funcs->read(harg->arg, work_ptr, read_len);
         if (r < (int)read_len) {
             ret = r;
-            goto err_out;
+            failed = 1;
+            break;
         }
 
         if (check_mac) {
             u32 blk_idx = aligned_pos / block_size;
             if (harg->funcs->lseek(harg->arg, (s64)(slot->table_offset + (blk_idx << 4)), 0) < 0) {
                 ret = -1;
-                goto err_out;
+                failed = 1;
+                break;
             }
             u32 verified = 0;
-            u32 sub_idx = 0;
+            u32 blockInBatch = 0;
             while (verified < read_len) {
                 u32 vchunk = read_len - verified;
                 if (vchunk > block_size)
                     vchunk = block_size;
-                if ((sub_idx & 0x1f) == 0) {
-                    u32 nblocks = (read_len / block_size) - sub_idx;
+                if ((blockInBatch & 0x1f) == 0) {
+                    u32 nblocks = (read_len / block_size) - blockInBatch;
                     if (nblocks == 0)
                         nblocks = 1;
                     else if (nblocks > 0x20)
@@ -413,25 +427,32 @@ static int dnasHookRead(SceIoHookArg *harg, char *data, int len)
                     int mr = harg->funcs->read(harg->arg, g_work_buf + 0x400, nblocks << 4);
                     if (mr < (int)(nblocks << 4)) {
                         ret = mr;
-                        goto err_out;
+                        failed = 1;
+                        break;
                     }
                 }
-                u8 *mac_ptr = g_work_buf + 0x400 + ((sub_idx & 0x1f) << 4);
+                u8 *mac_ptr = g_work_buf + 0x400 + ((blockInBatch & 0x1f) << 4);
                 if (slot->type < 3)
                     ret = dnasVerifyMac(work_ptr + verified, vchunk, slot->vkey, mac_ptr, mac_type);
                 else
                     ret = dnasVerifyMacXor(work_ptr + verified, vchunk, slot->vkey, mac_ptr, mac_type, aligned_pos);
-                if (ret < 0)
-                    goto err_out;
+                if (ret < 0) {
+                    failed = 1;
+                    break;
+                }
                 verified += block_size;
-                sub_idx++;
+                blockInBatch++;
             }
+            if (failed)
+                break;
         }
 
         u32 align16 = block_off & ~0x0fu;
         ret = dnasDecryptBlocks(work_ptr + align16, read_len - align16, (aligned_pos + block_off) >> 4, slot->vkey, slot, cipher_mode);
-        if (ret < 0)
-            goto err_out;
+        if (ret < 0) {
+            failed = 1;
+            break;
+        }
 
         u32 copy_len = chunk_len - block_off;
         if (work_ptr != (u8 *)data)
@@ -446,12 +467,13 @@ static int dnasHookRead(SceIoHookArg *harg, char *data, int len)
         cur_pos = aligned_pos;
     }
 
-    return total_read;
+    if (failed) {
+        sceKernelMemset(g_work_buf, 0, 0x400);
+        dnasUnlock();
+        return (ret < 0) ? ret : (int)0x80510207;
+    }
 
-err_out:
-    sceKernelMemset(g_work_buf, 0, 0x400);
-    dnasUnlock();
-    return (ret < 0) ? ret : (int)0x80510207;
+    return total_read;
 }
 
 static int dnasHookIoctl(SceIoHookArg *harg, unsigned int cmd, void *indata, int inlen, void *outdata, int outlen)
@@ -504,144 +526,155 @@ static int dnasSetKey(SceIoHookArg *harg, void *key)
     if (ret < 0)
         return ret;
 
-    slot->flags = 0;
-    s64 pos = harg->funcs->lseek(harg->arg, (s64)slot->base_offset, 0);
-    if (pos != (s64)slot->base_offset) {
-        ret = (int)pos;
-        goto fail;
-    }
-
-    int r = harg->funcs->read(harg->arg, g_work_buf, 0x90);
-    if (r < 0x90) {
-        ret = r;
-        goto fail;
-    }
-
-    ScePgdHeader *pgd = (ScePgdHeader *)g_work_buf;
-    if (memcmp(pgd->magic, "\0PGD", 4) != 0) {
-        ret = 0x80510204;
-        goto fail;
-    }
-
-    u32 version = pgd->version;
-    if (version >= 4) {
-        ret = 0x80510205;
-        goto fail;
-    }
-    slot->type = version;
-
-    if (version == 1) {
-        sceKernelMemcpy(slot->vkey, key, 0x10);
-    } else {
-        void *mkey = g_work_buf + 0x618;
-        ret = sceDrmBBMacInit(mkey, 1);
-        if (ret < 0)
-            goto fail;
-        ret = sceAmctrl_driver_9227EA79(mkey, g_pgd_mac_key, (version << 4) - 0x10);
-        if (ret < 0)
-            goto fail;
-        ret = sceDrmBBMacFinal(mkey, slot->vkey, key);
-        if (ret < 0)
-            goto fail;
-    }
-
-    u32 drm_type = pgd->drm_type;
-    int mac_type = 2;
-    int cipher_mode = 2;
-    if (drm_type == 1) {
-        slot_flags |= 4;
-        mac_type = 1;
-        cipher_mode = 1;
-        if (pgd->version >= 2) {
-            slot_flags |= 8;
-            mac_type = 3;
+    int ok = 0;
+    do {
+        slot->flags = 0;
+        s64 pos = harg->funcs->lseek(harg->arg, (s64)slot->base_offset, 0);
+        if (pos != (s64)slot->base_offset) {
+            ret = (int)pos;
+            break;
         }
-    } else if (drm_type != 0 || (slot_flags & 4) != 0) {
-        ret = 0x80510204;
-        goto fail;
-    }
 
-    const void *dnas_key = NULL;
-    if (slot_flags & 2)
-        dnas_key = g_dnas_key1;
-    if (slot_flags & 1)
-        dnas_key = g_dnas_key2;
-    if (!dnas_key) {
-        ret = 0x80510201;
-        goto fail;
-    }
-
-    if (dnasVerifyMac(g_work_buf, 0x80, dnas_key, pgd->header_mac, mac_type) < 0) {
-        ret = 0x80510204;
-        goto fail;
-    }
-    if (dnasVerifyMac(g_work_buf, 0x70, slot->vkey, pgd->data_mac, mac_type) < 0) {
-        ret = 0x80510206;
-        goto fail;
-    }
-
-    ret = dnasDecryptBlocks(pgd->pgd_info, 0x30, 0, slot->vkey, pgd->header_key, cipher_mode);
-    if (ret < 0)
-        goto fail;
-    if (pgd->pgd_info[4] != 0) {
-        ret = 0x80510205;
-        goto fail;
-    }
-    if (pgd->pgd_info[6] != 0x400) {
-        ret = 0x80510204;
-        goto fail;
-    }
-
-    slot->flags = slot_flags | 0x10;
-    sceKernelMemcpy(slot->pgd_info, pgd->pgd_info, 0x30);
-
-    u32 align_size = (slot->pgd_info[5] + 0x0f) & ~0x0fu;
-    u32 blk_size = slot->pgd_info[6];
-    u32 aligned_total = (align_size + blk_size - 1) & ~(blk_size - 1);
-    u32 table_size = aligned_total / (blk_size >> 4);
-
-    slot->data_offset = slot->pgd_info[7] + slot->base_offset;
-    slot->table_offset = align_size + 0x90 + slot->base_offset;
-
-    if (table_size <= 0x7ffff || pgd->version >= 3) {
-        u8 mac_tmp[16];
-        sceKernelMemcpy(mac_tmp, g_work_buf + 0x60, 0x10);
-        void *mkey = g_work_buf + 0x618;
-        ret = sceDrmBBMacInit(mkey, mac_type);
-        if (ret < 0)
-            goto fail;
-        if (harg->funcs->lseek(harg->arg, (s64)slot->table_offset, 0) < 0) {
-            ret = -1;
-            goto fail;
+        int r = harg->funcs->read(harg->arg, g_work_buf, 0x90);
+        if (r < 0x90) {
+            ret = r;
+            break;
         }
-        u32 done = 0;
-        while (done < table_size) {
-            u32 chunk = table_size - done;
-            if (chunk > 0x400)
-                chunk = 0x400;
-            int tr = harg->funcs->read(harg->arg, g_work_buf, chunk);
-            if (tr < (int)chunk) {
-                ret = tr;
-                goto fail;
-            }
-            done += 0x400;
-            ret = sceAmctrl_driver_9227EA79(g_work_buf + 0x618, g_work_buf, chunk);
+
+        ScePgdHeader *pgd = (ScePgdHeader *)g_work_buf;
+        if (memcmp(pgd->magic, "\0PGD", 4) != 0) {
+            ret = 0x80510204;
+            break;
+        }
+
+        u32 version = pgd->version;
+        if (version >= 4) {
+            ret = 0x80510205;
+            break;
+        }
+        slot->type = version;
+
+        if (version == 1) {
+            sceKernelMemcpy(slot->vkey, key, 0x10);
+        } else {
+            void *mkey = g_work_buf + 0x618;
+            ret = sceDrmBBMacInit(mkey, 1);
             if (ret < 0)
-                goto fail;
+                break;
+            ret = sceAmctrl_driver_9227EA79(mkey, g_pgd_mac_key, (version << 4) - 0x10);
+            if (ret < 0)
+                break;
+            ret = sceDrmBBMacFinal(mkey, slot->vkey, key);
+            if (ret < 0)
+                break;
         }
-        ret = sceDrmBBMacFinal2(g_work_buf + 0x618, mac_tmp, slot->vkey);
+
+        u32 drm_type = pgd->drm_type;
+        int mac_type = 2;
+        int cipher_mode = 2;
+        if (drm_type == 1) {
+            slot_flags |= 4;
+            mac_type = 1;
+            cipher_mode = 1;
+            if (pgd->version >= 2) {
+                slot_flags |= 8;
+                mac_type = 3;
+            }
+        } else if (drm_type != 0 || (slot_flags & 4) != 0) {
+            ret = 0x80510204;
+            break;
+        }
+
+        const void *dnas_key = NULL;
+        if (slot_flags & 2)
+            dnas_key = g_dnas_key1;
+        if (slot_flags & 1)
+            dnas_key = g_dnas_key2;
+        if (!dnas_key) {
+            ret = 0x80510201;
+            break;
+        }
+
+        if (dnasVerifyMac(g_work_buf, 0x80, dnas_key, pgd->header_mac, mac_type) < 0) {
+            ret = 0x80510204;
+            break;
+        }
+        if (dnasVerifyMac(g_work_buf, 0x70, slot->vkey, pgd->data_mac, mac_type) < 0) {
+            ret = 0x80510206;
+            break;
+        }
+
+        ret = dnasDecryptBlocks(pgd->pgd_info, 0x30, 0, slot->vkey, pgd->header_key, cipher_mode);
         if (ret < 0)
-            goto fail;
-    }
+            break;
+        if (pgd->pgd_info[4] != 0) {
+            ret = 0x80510205;
+            break;
+        }
+        if (pgd->pgd_info[6] != 0x400) {
+            ret = 0x80510204;
+            break;
+        }
 
-    if (harg->funcs->ioctl(harg->arg, 0x00208011, NULL, 0, NULL, 0) == 0 &&
-        sceKernelInitDiscImage() == NULL) {
-        slot->check_table = 1;
-    }
+        slot->flags = slot_flags | 0x10;
+        sceKernelMemcpy(slot->pgd_info, pgd->pgd_info, 0x30);
 
-    return sceKernelSignalSema(g_state.semaid, 1);
+        u32 align_size = (slot->pgd_info[5] + 0x0f) & ~0x0fu;
+        u32 blk_size = slot->pgd_info[6];
+        u32 aligned_total = (align_size + blk_size - 1) & ~(blk_size - 1);
+        u32 table_size = aligned_total / (blk_size >> 4);
 
-fail:
+        slot->data_offset = slot->pgd_info[7] + slot->base_offset;
+        slot->table_offset = align_size + 0x90 + slot->base_offset;
+
+        if (table_size <= 0x7ffff || pgd->version >= 3) {
+            u8 mac_tmp[16];
+            sceKernelMemcpy(mac_tmp, g_work_buf + 0x60, 0x10);
+            void *mkey = g_work_buf + 0x618;
+            ret = sceDrmBBMacInit(mkey, mac_type);
+            if (ret < 0)
+                break;
+            if (harg->funcs->lseek(harg->arg, (s64)slot->table_offset, 0) < 0) {
+                ret = -1;
+                break;
+            }
+            u32 done = 0;
+            int mac_fail = 0;
+            while (done < table_size) {
+                u32 chunk = table_size - done;
+                if (chunk > 0x400)
+                    chunk = 0x400;
+                int tr = harg->funcs->read(harg->arg, g_work_buf, chunk);
+                if (tr < (int)chunk) {
+                    ret = tr;
+                    mac_fail = 1;
+                    break;
+                }
+                done += 0x400;
+                ret = sceAmctrl_driver_9227EA79(g_work_buf + 0x618, g_work_buf, chunk);
+                if (ret < 0) {
+                    mac_fail = 1;
+                    break;
+                }
+            }
+            if (mac_fail)
+                break;
+            ret = sceDrmBBMacFinal2(g_work_buf + 0x618, mac_tmp, slot->vkey);
+            if (ret < 0)
+                break;
+        }
+
+        if (harg->funcs->ioctl(harg->arg, 0x00208011, NULL, 0, NULL, 0) == 0 &&
+            sceKernelInitDiscImage() == NULL) {
+            slot->check_table = 1;
+        }
+
+        ok = 1;
+    } while (0);
+
+    if (ok)
+        return sceKernelSignalSema(g_state.semaid, 1);
+
     sceKernelSignalSema(g_state.semaid, 1);
     return (ret < 0) ? ret : (int)0x80510204;
 }
