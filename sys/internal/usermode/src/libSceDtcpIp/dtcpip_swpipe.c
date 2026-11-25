@@ -123,15 +123,13 @@ struct SwIpcChannelShared {
 	unsigned char stream[SW_IPC_STREAM_COUNT][SW_IPC_STREAM_STRIDE];	/* 0x0008 */
 };
 
-/* the request block at the end of a stream's slice */
+/* the request block at the end of a stream's slice: Sony builds it as three
+ * 64-bit pair stores and reads the reply back the same way */
 struct SwIpcWireBlock {
-	unsigned int header[2];		/* 0x00: the protocol leaves them unused */
-	unsigned int channelSize;	/* 0x08: channel << 24 | payload size */
-	unsigned int command;		/* 0x0C */
-	unsigned int value1;		/* 0x10 */
-	unsigned int value0;		/* 0x14 */
-	unsigned int value3;		/* 0x18 */
-	unsigned int value2;		/* 0x1C */
+	unsigned int header[2];			/* 0x00: the protocol leaves them unused */
+	unsigned long long channelCommand;	/* 0x08: channel << 24 | size, command << 32 */
+	unsigned long long value1Value0;	/* 0x10: value1, value0 << 32 */
+	unsigned long long value3Value2;	/* 0x18: value3, value2 << 32 */
 };
 
 /* copy a shared memory object's words (its memblock and its base) */
@@ -637,7 +635,7 @@ int dtcpIpIpcFiniSession(void *session)
  */
 int dtcpIpSwRequest(struct SwIpcChannel *channel, struct SceDtcpIpIpcMessage *message, SceUID pipe)
 {
-	struct SwIpcClient *client = channel->client;
+	struct SwIpcClient *client;
 	unsigned int channelByte = message->channel;
 	unsigned short size = message->size;
 	unsigned int index = 0;
@@ -652,6 +650,7 @@ int dtcpIpSwRequest(struct SwIpcChannel *channel, struct SceDtcpIpIpcMessage *me
 
 	if (channelByte != 255 && channelByte >= 4)
 		return 12003;
+	client = channel->client;
 	if (channelByte != 255)
 		index = channelByte;
 	if (channel->size != 0)
@@ -660,15 +659,16 @@ int dtcpIpSwRequest(struct SwIpcChannel *channel, struct SceDtcpIpIpcMessage *me
 				 SW_IPC_STREAM_STRIDE * index + SW_IPC_BLOCK_OFFSET);
 	else
 		blockPointer = &block;
-	blockPointer->channelSize = (channelByte << 24) | size;
-	blockPointer->command = message->command;
-	blockPointer->value1 = message->value1;
-	blockPointer->value0 = message->value0;
-	blockPointer->value3 = message->value3;
-	blockPointer->value2 = message->value2;
+	blockPointer->channelCommand = ((unsigned long long)message->command << 32) +
+				       ((unsigned long long)(unsigned char)channelByte << 24) +
+				       (unsigned short)size;
+	blockPointer->value1Value0 = ((unsigned long long)message->value0 << 32) +
+				     (unsigned int)message->value1;
+	blockPointer->value3Value2 = ((unsigned long long)message->value2 << 32) +
+				     (unsigned int)message->value3;
 	if (size != 0 && size <= 2048 && channelByte != 255)
 		dtcpIpSwCopy((char *)client->sharedBase + SW_IPC_CHANNEL_STRIDE * channel->index +
-				SW_IPC_STREAM_STRIDE * channelByte + SW_IPC_PAYLOAD_OFFSET,
+				SW_IPC_STREAM_STRIDE * (unsigned char)channelByte + SW_IPC_PAYLOAD_OFFSET,
 				message->payload, size);
 	if (channel->size != 0)
 		ret = dtcpIpSwSignal(pipe, index);
@@ -677,7 +677,7 @@ int dtcpIpSwRequest(struct SwIpcChannel *channel, struct SceDtcpIpIpcMessage *me
 	if (ret != 0)
 		return ret;
 
-	if (channelByte == 255) {
+	if (message->channel == 255) {
 		message->result = 0;
 		message->outSize = 0;
 		message->outPayload = NULL;
@@ -700,15 +700,15 @@ int dtcpIpSwRequest(struct SwIpcChannel *channel, struct SceDtcpIpIpcMessage *me
 				return ret;
 			reply = &block;
 		}
-		message->result = reply->command;
-		outSize = (unsigned short)(reply->channelSize >> 16);
+		message->result = (int)(reply->channelCommand >> 32);
+		outSize = (unsigned short)((reply->channelCommand >> 16) & 0xFFFF);
 		message->outSize = outSize;
-		message->out0 = reply->value0;
-		message->out1 = reply->value1;
-		message->out2 = reply->value2;
-		message->out3 = reply->value3;
+		message->out1 = (unsigned int)reply->value1Value0;
+		message->out0 = (unsigned int)(reply->value1Value0 >> 32);
+		message->out3 = (unsigned int)reply->value3Value2;
+		message->out2 = (unsigned int)(reply->value3Value2 >> 32);
 		outSizeValue = outSize;
-		if (outSizeValue != 0 && outSizeValue <= 0x800 && channelByte != 255)
+		if (outSizeValue != 0 && outSizeValue <= 0x800 && message->channel != 255)
 			message->outPayload = (char *)client->sharedBase +
 					SW_IPC_CHANNEL_STRIDE * channel->index +
 					SW_IPC_STREAM_STRIDE * channelByte + SW_IPC_REPLY_OFFSET;
