@@ -13,7 +13,7 @@
 #include <string.h>
 #include <kernel/threadmgr.h>
 #include <kernel/error.h>
-#include <kernel/sysmem/memblock.h>
+#include <sysmem/memblock.h>
 #include <appmgr.h>
 #include <libnetctl.h>
 #include <net.h>
@@ -287,4 +287,56 @@ extern "C" int SwMwIpcReceive(SceUID pipe, void *message, int timeout)
 	}
 	printf("SwMwIPCReceiveEventMsgPipe : fatal error\n");
 	return SWMW_IPC_ERROR;
+}
+
+/*
+ * The shared memory block the server and the library exchange their stream buffers in: a
+ * named block of two 16520-byte channel slices. Its control object carries the block's
+ * name, its rounded size, the memblock and its base.
+ */
+struct SwMwSharedMemory {
+	char name[32];			/* 0x00: the memblock's name */
+	SceUInt32 size;			/* 0x20: its size, rounded to a page */
+	SceUID memBlock;		/* 0x24: the memblock */
+	void *base;			/* 0x28: its base */
+};
+
+/* the memory types an allocation request can name: a 256-bit set */
+#define SWMW_MEMORY_TYPE_BITS		256
+
+/* the status a memory type out of range answers with */
+#define SWMW_MEMORY_TYPE_ERROR		(-2147352571)
+
+/* clear a memory-type set */
+extern "C" int SwMwMemoryTypeClear(SceUInt32 *typeSet)
+{
+	typeSet[0] = 0;
+	typeSet[1] = 0;
+	typeSet[2] = 0;
+	typeSet[3] = 0;
+	typeSet[4] = 0;
+	typeSet[5] = 0;
+	typeSet[6] = 0;
+	typeSet[7] = 0;
+	return 0;
+}
+
+/* add one memory type to a set */
+extern "C" int SwMwMemoryTypeAdd(SceUInt32 *typeSet, int type)
+{
+	if (type < 0 || type > SWMW_MEMORY_TYPE_BITS)
+		return SWMW_MEMORY_TYPE_ERROR;
+	typeSet[type / 32] |= 1u << (type % 32);
+	return 0;
+}
+
+/* free the shared memory: close it (the library created it) or free it, then the object */
+extern "C" int SwMwSharedMemoryFree(struct SwMwSharedMemory *shared, int close)
+{
+	if (close != 0)
+		sceKernelCloseMemBlock(shared->memBlock);
+	else
+		sceKernelFreeMemBlock(shared->memBlock);
+	delete shared;
+	return 0;
 }
