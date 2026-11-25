@@ -87,6 +87,8 @@ public:
 	void SetEventResult(int result) { m_eventResult = result; }
 	void SetTimerHandle(SceUID timerId) { m_timerHandle = timerId; }
 	SceUID GetTimerHandle() const { return m_timerHandle; }
+	void SetCategory(int category) { m_timerHandle = (SceUID)category; }
+	int GetCategory() const { return (int)m_timerHandle; }
 
 protected:
 	SceUID m_timerHandle;
@@ -1094,6 +1096,7 @@ public:
 	void SetProtocolId(int protocolId) { m_protocolId = protocolId; }
 	void SetReferenceNumber(int refNum) { m_referenceNumber = refNum; }
 	int GetReferenceNumber() const { return m_referenceNumber; }
+	void SetMessageId(const TelSmsMessageId &id) { m_messageId = id; }
 	const TelSmsMessageId &GetMessageId() const { return m_messageId; }
 
 private:

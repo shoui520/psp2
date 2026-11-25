@@ -456,6 +456,12 @@ psp2_module(vs0_vsh_shell_shell KIND user COMPILER snc PARTIAL SOURCES
 	src/telephony_plugin/src/common/src/tel_phone_number_util.cpp
 	src/telephony_plugin/src/common/src/sms/tel_sms_message_helper.cpp
 	src/telephony_plugin/src/common/src/sms/tel_sms_protocol_data_unit.cpp
+	src/telephony_plugin/src/dbmanager/src/tel_sms_dbmanager_factory.cpp
+	src/telephony_plugin/src/dbmanager/src/dbmanager/tel_sms_dbmanager.cpp
+	src/telephony_plugin/src/sms_pdu_transcoder/src/tel_sms_pdu_transcoder_factory.cpp
+	src/telephony_plugin/src/sms_pdu_transcoder/src/sms_pdu_transcoder/amsslib/LibWMS.cpp
+	src/telephony_plugin/src/sms_pdu_transcoder/src/sms_pdu_transcoder/tel_sms_pdu_generator.cpp
+	src/telephony_plugin/src/sms_pdu_transcoder/src/sms_pdu_transcoder/tel_sms_pdu_parser.cpp
 	shell.c
 )
 target_include_directories(vs0_vsh_shell_shell PRIVATE "${PSP2_SRC}/vsh/paf/include"

@@ -160,6 +160,7 @@ public:
 	~TelephonyResult();
 	int GetCode() const;
 	void SetCode(int code) { m_code = code; }
+	bool IsSuccess() const { return m_code == 0; }
 
 private:
 	int m_code;
