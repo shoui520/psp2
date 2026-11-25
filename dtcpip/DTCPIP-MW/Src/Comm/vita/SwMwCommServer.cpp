@@ -1318,3 +1318,14 @@ extern "C" int SwMwCommServerReplyError(struct SwMwCommChannel *channel,
 		swMwTrace("[SWMW] Error %d in %s:%d\n", result, SWMW_COMM_SOURCE, 825);
 	return result;
 }
+
+/* answer a request with a status and no payload (0x810057e4): the result, an empty out
+ * size and no out payload, then the error reply */
+extern "C" int SwMwCommServerReplyStatus(struct SwMwCommChannel *channel,
+					 struct SwMwIpcMessage *request, int status)
+{
+	request->result = status;
+	request->outSize = 0;
+	request->outPayload = NULL;
+	return SwMwCommServerReplyError(channel, request);
+}
