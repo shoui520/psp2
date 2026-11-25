@@ -795,7 +795,7 @@ static __attribute__((noinline)) s32 atrac3DecodeFrame(u8 *in_buf, s32 **out_ch_
             }
             s32 prev_bytes = (ctx->bitpos + 7) >> 3;
             avail_bytes = (s32)(end_p - bs) - prev_bytes + 1;
-            for (u8 *l = bs, *r = bs + frame_bytes - 1; l < r; l++, r--) {
+            for (u8 *l = bs, *r = end_p; l < r; l++, r--) {
                 u8 tmp = *l;
                 *l = *r;
                 *r = tmp;
@@ -1049,32 +1049,36 @@ static __attribute__((noinline)) s32 atrac3DecodeFrame(u8 *in_buf, s32 **out_ch_
                     }
                 }
 
-                s32 *cfg_p = &sp_band_cfg[b * 16];
+                s32 *cfg_p = ch_ctx->bandCfg[b];
                 float *cur_p = pcm_band;
                 float *end_p = pcm_band + 1024;
                 while (cur_p < end_p) {
                     s32 next_loc = cfg_p[0];
                     s32 cur_g = cfg_p[1];
-                    float *lim_p = pcm_band + (next_loc << 2) - 32;
+                    float *lim_p = pcm_band + (next_loc << 2) + 4;
                     if (cur_g != 4) {
                         float g_val = gain_step_tbl[cur_g];
+                        *cur_p *= g_val;
+                        cur_p += 4;
                         while (cur_p < lim_p) {
                             *cur_p *= g_val;
                             cur_p += 4;
                         }
                     } else if (lim_p < end_p) {
                         cur_p = lim_p;
+                    } else {
+                        break;
                     }
                     cfg_p += 2;
-                    if (cur_p < end_p) {
+                    {
                         s32 next_g = cfg_p[1];
                         s32 step_idx = (cur_g << 5) + ((next_g - cur_g) << 2);
-                        for (int k = 0; k < 7 && cur_p < end_p; k++) {
-                            step_idx += (next_g - cur_g) << 2;
+                        for (int k = 0; k < 7; k++) {
                             float g1 = gain_step_tbl[((step_idx & 0x1c) + 0x40) >> 2];
                             float g2 = gain_step_tbl[(step_idx & 0x1e0) >> 5];
-                            *cur_p *= g1 * g2;
+                            *cur_p = (*cur_p * g1) * g2;
                             cur_p += 4;
+                            step_idx += (next_g - cur_g) << 2;
                         }
                     }
                 }
@@ -1088,8 +1092,8 @@ static __attribute__((noinline)) s32 atrac3DecodeFrame(u8 *in_buf, s32 **out_ch_
             }
 
             if (is_joint_ch != 0) {
-                float c_quarter = *(const float *)RODATA_PTR(0x40b4);
-                float c_two = *(const float *)RODATA_PTR(0x40b0);
+                const float c_eighth = 0.125f;
+                const float c_two = 2.0f;
                 s32 m_prev = ctx->prevJsNumQmf;
                 s32 m_cur = ctx->jsNumQmf;
                 for (s32 b = 0; b < 4; b++) {
@@ -1111,10 +1115,10 @@ static __attribute__((noinline)) s32 atrac3DecodeFrame(u8 *in_buf, s32 **out_ch_
                     float *ch1_p = &ctx->ch[1].pcmWork[138 + b];
                     s32 k = 0;
                     if (c0 != p0 || w_cur != w_prev) {
-                        float dp0 = (c0 - p0) * c_quarter;
-                        float dp1 = (c1 - p1) * c_quarter;
-                        float dw0 = (w_cur[0] - w_prev[0]) * c_quarter;
-                        float dw1 = (w_cur[1] - w_prev[1]) * c_quarter;
+                        float dp0 = (c0 - p0) * c_eighth;
+                        float dp1 = (c1 - p1) * c_eighth;
+                        float dw0 = (w_cur[0] - w_prev[0]) * c_eighth;
+                        float dw1 = (w_cur[1] - w_prev[1]) * c_eighth;
                         for (; k < 8; k++) {
                             float t = (float)(k - 8);
                             float w0 = w_cur[0] + dw0 * t;
@@ -1354,8 +1358,8 @@ static __attribute__((noinline)) s32 atrac3ParseMode(u32 *work)
             break;
     }
     work[11] = 0xac44;
-    work[12] = tbl[idx * 3 + 2];
-    work[13] = tbl[idx * 3 + 1];
+    work[12] = tbl[idx * 3 + 1];
+    work[13] = tbl[idx * 3 + 2];
     return 0;
 }
 

@@ -18,7 +18,7 @@ extern int sceKernelDeleteThread(int thid);
 
 extern int sceHttpCreateTemplate(const char *agent, int ver, int autoProxy);
 extern int sceHttpDeleteTemplate(int tmplId);
-extern int sceHttp_B3FAF831(int opt, int tmplId);
+extern int sceHttp_B3FAF831(int opt);
 extern int sceHttpCreateConnectionWithURL(int tmplId, const char *url, int enableKeepalive);
 extern int sceHttpDeleteConnection(int connId);
 extern int sceHttpCreateRequestWithURL(int connId, int method, const char *url, u64 contentLength);
@@ -199,11 +199,12 @@ int sceNetWispr_BD745B6D(void *cb, int stackSize, int prio, int initPrio, void *
 /* 0x005c */
 int sceNetWispr_BC05EC73(void)
 {
+    int ret = 0;
     if (g_initialized != 0) {
-        wisprTermCtx();
+        ret = wisprTermCtx();
         g_initialized = 0;
     }
-    return 0;
+    return ret;
 }
 
 /* 0x0094 */
@@ -412,12 +413,8 @@ static int wisprNotifyCallback(int prev_state)
     WisprCtx *ctx = &g_ctx;
     sceKernelWaitSema(ctx->semaid, 1, NULL);
     if (ctx->callback != NULL) {
-        u32 saved_gp;
-        __asm__ volatile ("move %0, $gp" : "=r"(saved_gp));
-        __asm__ volatile ("move $gp, %0" : : "r"(ctx->saved_gp));
         int err = (ctx->sub_state == 4) ? ctx->error_code : 0;
         ctx->callback(prev_state, ctx->state, ctx->sub_state, err, &ctx->respCode, ctx->cb_arg);
-        __asm__ volatile ("move $gp, %0" : : "r"(saved_gp));
     }
     sceKernelSignalSema(ctx->semaid, 1);
     return 0;
@@ -456,9 +453,8 @@ static int wisprStateRedirect(WisprCtx *ctx, int prev_state, int *next_state, in
     if (ret < 0) {
         goto err_out;
     }
-    wisprDoInitRequest(ctx, &sub);
-    ret = sceKernelPollEventFlag(ctx->evid, 2, 0x21, NULL);
-    if (ret == 0) {
+    ret = wisprDoInitRequest(ctx, &sub);
+    if (sceKernelPollEventFlag(ctx->evid, 2, 0x21, NULL) == 0) {
         *next_state = 0;
         *next_sub = 3;
     } else if (ret < 0) {
@@ -468,7 +464,7 @@ static int wisprStateRedirect(WisprCtx *ctx, int prev_state, int *next_state, in
         *next_sub = 3;
     } else if (sub == 2) {
         *next_state = 0;
-        *next_sub = 3;
+        *next_sub = 2;
     } else {
         *next_state = 2;
         *next_sub = 1;
@@ -491,9 +487,8 @@ done:
 static int wisprStateLogin(WisprCtx *ctx, int prev_state, int *next_state, int *next_sub)
 {
     int sub = 0;
-    wisprDoLoginRequest(ctx, &sub);
-    int ret = sceKernelPollEventFlag(ctx->evid, 2, 0x21, NULL);
-    if (ret == 0) {
+    int ret = wisprDoLoginRequest(ctx, &sub);
+    if (sceKernelPollEventFlag(ctx->evid, 2, 0x21, NULL) == 0) {
         *next_state = 0;
         *next_sub = 3;
     } else if (ret < 0) {
@@ -530,13 +525,15 @@ static int wisprStateLogoff(WisprCtx *ctx, int prev_state, int *next_state, int 
     if (ret < 0) {
         goto err_out;
     }
-    wisprDoLogoffRequest(ctx, &sub);
-    ret = sceKernelPollEventFlag(ctx->evid, 2, 0x21, NULL);
-    if (ret == 0 || (ret >= 0 && sub == 1)) {
+    ret = wisprDoLogoffRequest(ctx, &sub);
+    if (sceKernelPollEventFlag(ctx->evid, 2, 0x21, NULL) == 0) {
         *next_state = 0;
         *next_sub = 3;
     } else if (ret < 0) {
         goto err_out;
+    } else if (sub == 1) {
+        *next_state = 0;
+        *next_sub = 3;
     } else {
         *next_state = 0;
         *next_sub = 6;
@@ -679,6 +676,7 @@ static int wisprDoLoginRequest(WisprCtx *ctx, int *next_sub)
     u32 loc_len = 0;
     const char *abort_url = NULL;
 
+    int ret = 0x80411504;
     u32 len = sceNet_lib_D8722983("UserName");
     len += sceNet_lib_D8722983("Password");
     len += sceNet_lib_D8722983("button");
@@ -687,18 +685,17 @@ static int wisprDoLoginRequest(WisprCtx *ctx, int *next_sub)
     len += sceNet_lib_D8722983(NULL);
     len += sceNet_lib_D8722983("OriginatingServer");
     if (len + 0x209 >= 0x735) {
-        int ret = 0x80411504;
         goto cleanup_only;
     }
 
     const WisprProviderOps *ops = &g_provider_ops[ctx->provider_type];
     int body_len = ops->build_login_body(ctx, ctx->xml_buf, 0x734);
     if (body_len < 0) {
-        int ret = body_len;
+        ret = body_len;
         goto cleanup;
     }
 
-    int ret = sceHttpCreateConnectionWithURL(g_http_tmpl_id, ctx->login_url, 1);
+    ret = sceHttpCreateConnectionWithURL(g_http_tmpl_id, ctx->login_url, 1);
     if (ret < 0) {
         goto cleanup;
     }
@@ -798,14 +795,14 @@ cleanup_only:
 static int wisprDoLogoffRequest(WisprCtx *ctx, int *next_sub)
 {
     int status = 0;
+    int ret = 0x80411507;
     char *logoff_url = g_logoff_urls[ctx->provider_type];
     if (sceNet_lib_D8722983(logoff_url) == 0) {
-        int ret = 0x80411507;
         goto cleanup;
     }
 
     const WisprProviderOps *ops = &g_provider_ops[ctx->provider_type];
-    int ret = ops->setup_redirect(ctx, g_http_tmpl_id);
+    ret = ops->setup_redirect(ctx, g_http_tmpl_id);
     if (ret < 0) {
         goto cleanup;
     }
@@ -863,7 +860,7 @@ static int wisprHttpInit(WisprCtx *ctx)
     int ret = sceHttpCreateTemplate("WISPr/0.1 (PSP (PlayStation Portable); 3.00)", 0, 0);
     if (ret >= 0) {
         g_http_tmpl_id = ret;
-        ret = sceHttp_B3FAF831(0x3a, ret);
+        ret = sceHttp_B3FAF831(0x3a);
     }
     return ret;
 }
@@ -871,11 +868,12 @@ static int wisprHttpInit(WisprCtx *ctx)
 /* 0x12fc */
 static int wisprHttpTerm(WisprCtx *ctx)
 {
+    int ret = 0;
     if (g_http_tmpl_id > 0) {
-        sceHttpDeleteTemplate(g_http_tmpl_id);
+        ret = sceHttpDeleteTemplate(g_http_tmpl_id);
         g_http_tmpl_id = 0;
     }
-    return 0;
+    return ret;
 }
 
 /* 0x1334 */

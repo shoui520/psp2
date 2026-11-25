@@ -326,7 +326,7 @@ int sceMeVideo_driver_4D78330C(int codec, u32 *info)
 		}
 		return 0;
 	} else if (codec == 1) {
-		int ret = sceMeCore_driver_635397BB(0x21, info[3]);
+		int ret = sceMeCore_driver_635397BB(0x21, info[3], -1);
 		if (ret != 0) {
 			return videoCheckError1(info, ret);
 		}
@@ -413,7 +413,7 @@ int sceMeVideo_driver_6D68B223(int codec, u32 cmd, u32 *info)
 	}
 	case 3:
 		if (codec == 0) {
-			sceMeCore_driver_635397BB(6, &info[1]);
+			sceMeCore_driver_635397BB(6, &info[1], 0);
 			return 0;
 		} else if (codec == 1) {
 			info[1] = sceMeCore_driver_FA398D71(0x27);
@@ -804,7 +804,7 @@ static int sceKermitMeControlAvcPower(u32 arg0)
 	SceKermitRequest *req = KERMIT_UNCACHED(aligned);
 	req->cmd = 0x41A;
 	req->args[0] = arg0;
-	u64 resp = 0;
+	u64 resp;
 	int res = sceKermit_driver_36666181(req, KERMIT_MODE_PERIPHERAL, 0x41A, 1, 0, &resp);
 	return (res == 0) ? (int)resp : res;
 }
@@ -893,11 +893,11 @@ static int kermitMeRpc(u32 cmd, u32 a1, u32 a2, u32 a3, u32 a4, u32 a5, u32 a6, 
 
 	if (cmd == 2 && g_hasAvcTimestamp != 0) {
 		int ts_res = sceKermitMeSetAvcTimeStampInternal(g_avcTs0, g_avcTs1, g_avcTs2, g_avcTs3);
+		g_hasAvcTimestamp = 0;
 		if (ts_res < 0) {
 			Kprintf("Failed to sceKermitMeSetAvcTimeStampInternal() : 0x%08x \n", ts_res);
 			return ts_res;
 		}
-		g_hasAvcTimestamp = 0;
 	}
 
 	int res = sceKernelLockMutex(g_kermitMeMutex, 1, NULL);
@@ -1121,7 +1121,7 @@ static int sceKermitMeBootStart(void)
 	sceKernelDcacheInvalidateRange(aligned, 0x40);
 	SceKermitRequest *req = KERMIT_UNCACHED(aligned);
 	req->cmd = 0xC5E;
-	u64 resp = 0;
+	u64 resp;
 	int res = sceKermit_driver_36666181(req, KERMIT_MODE_ME, 0xC5E, 0, 0, &resp);
 	return (res == 0) ? (int)resp : res;
 }
