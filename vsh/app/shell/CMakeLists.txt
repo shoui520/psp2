@@ -421,6 +421,12 @@ psp2_module(vs0_vsh_shell_shell KIND user COMPILER snc PARTIAL SOURCES
 	src/nsx/nsx_xml_http.cpp
 	parental_control_mgr.cpp
 	playlog.cpp
+	src/power_manage_plugin/src/power_manage_plugin.cpp
+	src/power_manage_plugin/src/power_manage_menu.cpp
+	src/power_manage_plugin/src/power_manage_auth.cpp
+	src/power_manage_plugin/src/power_manage_keylock.cpp
+	src/power_manage_plugin/src/power_manage_wallpaper.cpp
+	src/power_manage_plugin/src/power_manage_passcode_screen.cpp
 	process_event_server.cpp
 	shell.c
 )

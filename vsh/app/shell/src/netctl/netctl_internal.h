@@ -151,7 +151,7 @@ int SceNetInternal_EE94BA15(int ifId, void *outStat, int clearAfterRead);
 
 /* VSH / kernel imports */
 int vshKernelCheckModelCapability(int cap);
-int vshSblAimgrIsDolce(void);
+SceUInt32 vshSblAimgrIsDolce(void);
 int _vshEventLogPut(int category, int eventId, int flags, const void *entry);
 int sceKernelGetRemoteProcessTimeForUser(SceUID processId, SceKernelSysClock *pClock);
 SceUInt64 sceKernelGetSystemTimeWideForUser(void);
