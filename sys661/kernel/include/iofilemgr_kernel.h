@@ -234,7 +234,7 @@ struct SceIoIob
     // it might mean the next fields are only supposed to be accessed
     // by iofilemgr and not fs implementations
     int reserved0; // 36
-    SceUID fd; // 40
+    SceUID fileDesc; // 40
     SceUID curThread; // 44
     char userMode; // 48
     char powerLocked; // 49

@@ -16,6 +16,12 @@
 #define STDOUT 1
 #define STDERR 2
 
+typedef struct SceStdioPrintCtx {
+    s16 fileDesc;
+    s16 count;
+    char buf[164];
+} SceStdioPrintCtx;
+
 SceSSize _sceTtyProxyDevRead(SceIoIob *iob, void *buf, SceSize size);
 SceSSize _sceTtyProxyDevWrite(SceIoIob *iob, const void *buf, SceSize size);
 int _sceTtyProxyDevInit(SceIoDeviceEntry *dev);
@@ -69,7 +75,7 @@ int g_linePos; // 6C34
 
 int sceTtyProxyInit();
 int stdoutReset(int flags, SceMode mode);
-int _sceKernelRegisterStdPipe(int fd, SceUID id);
+int _sceKernelRegisterStdPipe(int fileDesc, SceUID id);
 
 // 0000
 int StdioReInit()
@@ -79,7 +85,6 @@ int StdioReInit()
     fds[0] = &g_stdin;
     fds[1] = &g_stdout;
     fds[2] = &g_stderr;
-    // 0044
     int i;
     for (i = 0; i < 3; i++)
         *fds[i] = sceIoOpen("dummy_drv_iofile:", 3, 0x1FF);
@@ -153,93 +158,84 @@ int sceKernelStderrReset()
 int stdoutReset(int flags, SceMode mode)
 {
     dbg_printf("Calling %s\n", __FUNCTION__);
-    char openDummy = 0;
+    char useTty = 0;
     if (sceKernelDipsw(58) == 1 && !sceKernelDipsw(59))
-        openDummy = 1;
+        useTty = 1;
     else
-        openDummy = 0;
-    // 01CC
-    if (openDummy)
-    {  
-        // 0214
+        useTty = 0;
+    if (useTty)
+    {
         int ret = sceIoOpen("tty0:", flags, mode);
         if (ret >= 0)
             return ret;
     }
-    // 01E8
     return sceIoOpen("dummy_drv_iofile:", flags, mode);
 }
 
 // 0244
 void printf_char(void *ctx, int ch)
-{   
+{
+    SceStdioPrintCtx *printCtx = (SceStdioPrintCtx *)ctx;
     dbg_printf("Calling %s\n", __FUNCTION__);
-    if (ch < 0x200) dbg_printf("print %c\n", ch);
-    if (ch == 0x200) {
-        *(short*)(ctx + 2) = 0;
+    if (ch < 0x200)
+        dbg_printf("print %c\n", ch);
+    if (ch == 0x200)
+    {
+        printCtx->count = 0;
         return;
     }
     if (ch == 0x201)
-    {   
-        // 031C
-        short cnt = *(short*)(ctx + 2);
+    {
+        s16 cnt = printCtx->count;
         if (cnt <= 0)
             return;
 
         if (sceKernelDipsw(59) == 1)
-            sceKernelDebugWrite(*(short*)(ctx + 0), ctx + 4, *(short*)(ctx + 2));
+            sceKernelDebugWrite(printCtx->fileDesc, printCtx->buf, printCtx->count);
         else
-        {   
-            short fd = *(short*)(ctx + 0);
-            if (fd == STDOUT)
-                fd = g_stdout;
-            // 0348
-            if (fd == STDERR)
-                fd = g_stderr;
-            // 0354
-            sceIoWrite(fd, ctx + 4, *(short*)(ctx + 2));
+        {
+            s32 outDesc = printCtx->fileDesc;
+            if (outDesc == STDOUT)
+                outDesc = g_stdout;
+            if (outDesc == STDERR)
+                outDesc = g_stderr;
+            sceIoWrite(outDesc, printCtx->buf, printCtx->count);
         }
         return;
     }
-    if (ch == '\n') {
-        // 030C
+    if (ch == '\n')
         printf_char(ctx, '\r');
-    }
-    // 027C
-    (*(short*)(ctx + 2))++;
-    *(char*)(ctx + 3 + *(short*)(ctx + 2)) = ch;
-    if (ch == '\200')
-    {   
-        short fd = *(short*)(ctx + 0);
-        // 02AC
+
+    printCtx->count++;
+    printCtx->buf[printCtx->count - 1] = (char)ch;
+    if (printCtx->count == 128)
+    {
         if (sceKernelDipsw(59) == 1)
-        {   
-            // 02F8
-            sceKernelDebugWrite(fd, ctx + 4, *(short*)(ctx + 2));
+        {
+            sceKernelDebugWrite(printCtx->fileDesc, printCtx->buf, printCtx->count);
         }
         else
-        {   
-            if (fd == STDOUT)
-                fd = g_stdout;
-            // 02C8
-            if (fd == STDERR)
-                fd = g_stderr;
-            // 02D4
-            sceIoWrite(fd, ctx + 4, *(short*)(ctx + 2));
+        {
+            s32 outDesc = printCtx->fileDesc;
+            if (outDesc == STDOUT)
+                outDesc = g_stdout;
+            if (outDesc == STDERR)
+                outDesc = g_stderr;
+            sceIoWrite(outDesc, printCtx->buf, printCtx->count);
         }
-        *(short*)(ctx + 2) = 0;
+        printCtx->count = 0;
     }
 }
 
-int fdprintf(int fd, const char *fmt, ...)
+int fdprintf(int fileDesc, const char *fmt, ...)
 {
     dbg_printf("Calling %s\n", __FUNCTION__);
     va_list ap;
-    char sp[168];
+    SceStdioPrintCtx printCtx;
     va_start(ap, fmt);
-    *(short*)((int)sp + 0) = fd;
-    *(short*)((int)sp + 2) = 0;
-    int n = prnt(printf_char, sp, fmt, ap);
+    printCtx.fileDesc = (s16)fileDesc;
+    printCtx.count = 0;
+    int n = prnt(printf_char, &printCtx, fmt, ap);
     va_end(ap);
     return n;
 }
@@ -248,138 +244,114 @@ int printf(const char *fmt, ...)
 {
     dbg_printf("Calling %s\n", __FUNCTION__);
     va_list ap;
-    char sp[164];
+    SceStdioPrintCtx printCtx;
     va_start(ap, fmt);
-    *(short*)((int)sp + 0) = STDOUT;
-    *(short*)((int)sp + 2) = 0;
-    int n = prnt(printf_char, sp, fmt, ap);
+    printCtx.fileDesc = STDOUT;
+    printCtx.count = 0;
+    int n = prnt(printf_char, &printCtx, fmt, ap);
     va_end(ap);
     return n;
 }
 
-int fdputc(int c, int fd)
+int fdputc(int c, int fileDesc)
 {
     dbg_printf("Calling %s\n", __FUNCTION__);
-    char str[1] = {c};
+    char str[1] = { (char)c };
     if (c == '\t')
     {
-        // print tabulations, aligning the characters (a tabulation has a size of 8 spaces)
-        // 0574
-        if (sceKernelDipsw(59) == 1) {
-            // 05E4
-            sceKernelDebugWrite(fd, "        ", 8 - (g_linePos & 7));
-        }
+        if (sceKernelDipsw(59) == 1)
+            sceKernelDebugWrite(fileDesc, "        ", 8 - (g_linePos & 7));
         else
         {
-            if (fd == STDOUT)
-                fd = g_stdout;
-            // 0590
-            if (fd == STDERR)
-                fd = g_stderr;
-            // 059C
-            sceIoWrite(fd, "        ", 8 - (g_linePos & 7));
+            if (fileDesc == STDOUT)
+                fileDesc = g_stdout;
+            if (fileDesc == STDERR)
+                fileDesc = g_stderr;
+            sceIoWrite(fileDesc, "        ", 8 - (g_linePos & 7));
         }
-        // 05C4
         g_linePos = (g_linePos & 0xFFFFFFF8) + 8;
     }
     else if (c == '\n')
     {
-        // 0504
         if (sceKernelDipsw(59) == 1)
-            sceKernelDebugWrite(fd, "\r\n", 2);
+            sceKernelDebugWrite(fileDesc, "\r\n", 2);
         else
         {
-            if (fd == STDOUT)
-                fd = g_stdout;
-            // 0520
-            if (fd == STDERR)
-                fd = g_stderr;
-            // 052C
-            sceIoWrite(fd, "\r\n", 2);
+            if (fileDesc == STDOUT)
+                fileDesc = g_stdout;
+            if (fileDesc == STDERR)
+                fileDesc = g_stderr;
+            sceIoWrite(fileDesc, "\r\n", 2);
         }
-        // 0544
         g_linePos = 0;
     }
     else
     {
         if ((look_ctype_table(c) & 0x97) != 0)
             g_linePos++;
-        // 048C
-        if (sceKernelDipsw(59) == 1) {
-            // 04F0
-            sceKernelDebugWrite(fd, str, 1);
-        }
+        if (sceKernelDipsw(59) == 1)
+            sceKernelDebugWrite(fileDesc, str, 1);
         else
         {
-            if (fd == STDOUT)
-                fd = g_stdout;
-            // 04A8
-            if (fd == STDERR)
-                fd = g_stderr;
-            // 04B4
-            sceIoWrite(fd, str, 1);
+            if (fileDesc == STDOUT)
+                fileDesc = g_stdout;
+            if (fileDesc == STDERR)
+                fileDesc = g_stderr;
+            sceIoWrite(fileDesc, str, 1);
         }
     }
     return c;
 }
 
-int fdgetc(int fd)
+int fdgetc(int fileDesc)
 {
     dbg_printf("Calling %s\n", __FUNCTION__);
-    char buf[1];
+    unsigned char buf[1];
     int ret;
-    if (g_debugRead == 0) {
-        // 0660
-        ret = sceKernelDebugRead(fd, buf, 1);
-    }
-    else {
-        // 0638
-        ret = sceIoRead((fd != STDIN ? fd : g_stdin), buf, 1);
-    }
-    // 0644
-    return (ret == 1 ? buf[0] : -1);
+    if (g_debugRead == 0)
+        ret = sceKernelDebugRead(fileDesc, (char *)buf, 1);
+    else
+        ret = sceIoRead((fileDesc != STDIN ? fileDesc : g_stdin), buf, 1);
+    return (ret == 1 ? (int)buf[0] : -1);
 }
 
-char *fdgets(char *s, int fd)
+char *fdgets(char *s, int fileDesc)
 {
     dbg_printf("Calling %s\n", __FUNCTION__);
     char *end = s + 125;
     char *curS = s;
     for (;;)
     {
-        char c = (char)fdgetc(fd);
+        char c = (char)fdgetc(fileDesc);
         switch (c)
         {
         case '\026': // sync
-            // 0808
-            c = (char)fdgetc(fd);
+            c = (char)fdgetc(fileDesc);
             if (curS < end)
             {
                 *(curS++) = c;
                 if (sceKernelDebugEcho() != 0)
-                    fdputc(c, (fd != STDIN ? fd : STDOUT));
+                    fdputc(c, (fileDesc != STDIN ? fileDesc : STDOUT));
             }
             else if (sceKernelDebugEcho() != 0)
-                fdputc('\a', (fd != STDIN ? fd : STDOUT));
+                fdputc('\a', (fileDesc != STDIN ? fileDesc : STDOUT));
             break;
         case '\177': // DEL
         case '\b':
-            // 0790
-            // 0794
             if (s >= curS)
                 break;
             curS--;
             if (sceKernelDebugEcho() != 0)
             {
-                int realFd = (fd != STDIN ? fd : STDOUT);
-                fdputc('\b', realFd);
-                fdputc(' ' , realFd);
-                fdputc('\b', realFd);
+                int realDesc = (fileDesc != STDIN ? fileDesc : STDOUT);
+                fdputc('\b', realDesc);
+                fdputc(' ', realDesc);
+                fdputc('\b', realDesc);
             }
             break;
         case -1:
-            // 0740
-            if (s == curS) {
+            if (s == curS)
+            {
                 *curS = '\0';
                 return NULL;
             }
@@ -387,24 +359,22 @@ char *fdgets(char *s, int fd)
         case '\n':
             /* FALLTHRU */
         case '\r':
-            // 0748
             if (sceKernelDebugEcho() != 0)
-                fdputc('\n', (fd != STDIN ? fd : STDOUT));
+                fdputc('\n', (fileDesc != STDIN ? fileDesc : STDOUT));
             *curS = '\0';
             return s;
         case '\t':
             c = ' ';
             /* FALLTHRU */
         default:
-            // 06DC
             if ((look_ctype_table(c) & 0x97) != 0 && curS < end)
             {
                 *(curS++) = c;
                 if (sceKernelDebugEcho() != 0)
-                    fdputc(c, (fd != STDIN ? fd : STDOUT));
+                    fdputc(c, (fileDesc != STDIN ? fileDesc : STDOUT));
             }
             else if (sceKernelDebugEcho() != 0)
-                fdputc('\a', (fd != STDIN ? fd : STDOUT));
+                fdputc('\a', (fileDesc != STDIN ? fileDesc : STDOUT));
             break;
         }
     }
@@ -416,15 +386,14 @@ int putchar(int c)
     return fdputc(c, STDOUT);
 }
 
-int fdputs(const char *s, int fd)
+int fdputs(const char *s, int fileDesc)
 {
     dbg_printf("Calling %s\n", __FUNCTION__);
     char c;
-    if (s == NULL) // 089C
+    if (s == NULL)
         s = "<NULL>";
-    // 085C, 0880
     while ((c = *(s++)) != '\0')
-        fdputc(c, fd);
+        fdputc(c, fileDesc);
     return 0;
 }
 
@@ -432,9 +401,8 @@ int puts(const char *s)
 {
     dbg_printf("Calling %s\n", __FUNCTION__);
     char c;
-    if (s == NULL) // 089C
+    if (s == NULL)
         s = "<NULL>";
-    // 085C, 0880
     while ((c = *(s++)) != '\0')
         fdputc(c, STDOUT);
     return 0;
@@ -494,28 +462,28 @@ SceSSize _sceTtyProxyDevRead(SceIoIob *iob, void *buf, SceSize size)
     int oldK1 = pspShiftK1();
     int count = 0;
     int k1 = 0;
+    u8 *dst = buf;
     if (sceIoGetIobUserLevel(iob) != 8)
         k1 = 24;
-    // 09D0
     pspSetK1(k1);
-    SceSize size2 = g_pipeList.size[iob->i_unit];
+    SceSize pipeSize = g_pipeList.size[iob->i_unit];
     SceUID id = g_pipeList.id[iob->i_unit];
-    int min;
-    // 09F8
+    SceSize min;
     do
     {
-        min = size2;
-        if (size2 >= size)
+        min = pipeSize;
+        if (pipeSize >= size)
             min = size;
-        int ret = sceKernelReceiveMsgPipe(id, buf, min, 1, &cnt, 0);
-        if (ret < 0) {
+        int ret = sceKernelReceiveMsgPipe(id, dst, min, 1, &cnt, 0);
+        if (ret < 0)
+        {
             pspSetK1(oldK1);
             return ret;
         }
         size -= cnt;
-        buf += cnt;
+        dst += cnt;
         count += cnt;
-    } while (cnt >= min && size != 0);
+    } while ((SceSize)cnt >= min && size != 0);
     pspSetK1(oldK1);
     return count;
 }
@@ -527,26 +495,26 @@ SceSSize _sceTtyProxyDevWrite(SceIoIob *iob, const void *buf, SceSize size)
     int count = 0;
     int curCnt;
     int k1 = 0;
+    const u8 *src = buf;
     if (sceIoGetIobUserLevel(iob) != 8)
         k1 = 24;
-    // 0AC4
     pspSetK1(k1);
-    SceSize size2 = g_pipeList.size[iob->i_unit];
+    SceSize pipeSize = g_pipeList.size[iob->i_unit];
     SceUID id = g_pipeList.id[iob->i_unit];
-    // 0AE8
     do
     {
-        int minSize = size2;
-        if (size2 >= size)
+        SceSize minSize = pipeSize;
+        if (pipeSize >= size)
             minSize = size;
-        int ret = sceKernelSendMsgPipe(id, (void*)buf, minSize, 0, &curCnt, 0);
-        if (ret < 0) {
+        int ret = sceKernelSendMsgPipe(id, (void *)src, minSize, 0, &curCnt, 0);
+        if (ret < 0)
+        {
             pspSetK1(oldK1);
             return ret;
         }
         size -= curCnt;
         count += curCnt;
-        buf += curCnt;
+        src += curCnt;
     } while (size != 0);
     pspSetK1(oldK1);
     return count;
@@ -630,47 +598,41 @@ int _sceTtyProxyDevIoctl(SceIoIob *iob, int cmd, void *indata __attribute__((unu
 }
 
 // 0CBC
-int _sceKernelRegisterStdPipe(int fd, SceUID id)
+int _sceKernelRegisterStdPipe(int fileDesc, SceUID id)
 {
     dbg_printf("Calling %s\n", __FUNCTION__);
     if (id < 0)
-    {  
-        // 0DD8
-        g_pipeList.id[fd] = -1;
-        g_pipeList.size[fd] = 0;
-        if (fd == STDOUT) {
-            // 0E1C
+    {
+        g_pipeList.id[fileDesc] = -1;
+        g_pipeList.size[fileDesc] = 0;
+        if (fileDesc == STDOUT)
             return sceKernelStdoutReset();
-        }
-        else if (fd == STDERR)
+        else if (fileDesc == STDERR)
             return sceKernelStderrReset();
         return 0;
     }
-    if (sceKernelGetThreadmanIdType(id) == 7)
+    if (sceKernelGetThreadmanIdType(id) != 7)
         return SCE_ERROR_KERNEL_ILLEGAL_ARGUMENT;
     SceSysmemUidCB *blk;
     if (sceKernelGetUIDcontrolBlock(id, &blk) != 0)
         return SCE_ERROR_KERNEL_ILLEGAL_PERMISSION;
-    if (pspK1IsUserMode() && (blk->PARENT0->attr & 2) != 0)
+    int flag = 2;
+    if (pspK1IsUserMode())
+        flag = blk->attr & 2;
+    if (flag == 0)
         return SCE_ERROR_KERNEL_ILLEGAL_PERMISSION;
     SceKernelMppInfo mpp;
     mpp.size = 56;
     int ret = sceKernelReferMsgPipeStatus(id, &mpp);
     if (ret < 0)
         return ret;
-    if (STDOUT == 1) {
-        // 0DB8
+    if (fileDesc == STDOUT)
         ret = sceKernelStdoutReopen("ttyproxy1:", 2, 0x1FF);
-    }
-    else if (STDERR == 2) {
-        // 0DA0
+    else if (fileDesc == STDERR)
         ret = sceKernelStderrReopen("ttyproxy2:", 2, 0x1FF);
-    }
-    // 0D58
     if (ret < 0)
         return ret;
-    g_pipeList.size[fd] = mpp.bufSize;
-    g_pipeList.id[fd] = id;
+    g_pipeList.size[fileDesc] = mpp.bufSize;
+    g_pipeList.id[fileDesc] = id;
     return 0;
 }
-
