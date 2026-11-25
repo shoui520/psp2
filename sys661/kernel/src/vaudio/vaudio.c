@@ -70,8 +70,8 @@ static const u32 g_vaudio_err_table[8] = {
 int vaudioOutputInternal(int vol, void *buf);
 int vaudioChReserveInternal(int samplecount, int freq, int channels, int half_mode, int effect_vol);
 int getFreqIndex(int freq);
-int meVaudioInit(SceVaudioMeWork *work, int ch_bits, int out_bits, int freq, int samples);
-int meVaudioSetEffect(SceVaudioMeWork *work, int samples, int a2, int a3, int a4, u32 effect_param);
+int meVaudioInit(SceVaudioMeWork *work, u32 ch_bits, u32 out_bits, int freq, int samples);
+int meVaudioSetEffect(SceVaudioMeWork *work, int samples, int gain, int limit, int flags, u32 effect_param);
 int meVaudioProcess(SceVaudioMeWork *work, void *in_buf, void *out_buf, int effect_type);
 
 int sceVaudioOutputBlocking(int vol, void *buf)
@@ -209,7 +209,7 @@ int sceVaudio_driver_A3B71098(int effect_type, int vol)
         g_vaudio.effect_type = effect_type;
         g_vaudio.effect_dirty = 1;
         if (sceAudioOutput2GetRestSample() <= 0) {
-            int active = (g_vaudio.effect_type > 0) ? 1 : 0;
+            int active = (g_vaudio.effect_type != 0) ? 1 : 0;
             if (sceKernelApplicationType() == 0x100)
                 sceAudioSetVolumeOffset(active);
         }
@@ -258,7 +258,7 @@ int vaudioInitWork(void)
         return g_vaudio.fpl_id;
     }
 
-    void *block = NULL;
+    void *block;
     int ret = sceKernelAllocateFpl(fpl, &block, NULL);
     if (ret < 0) {
         sceKernelDeleteSema(g_vaudio.sema_id);
@@ -526,28 +526,32 @@ int getFreqIndex(int freq)
     }
 }
 
-int meVaudioInit(SceVaudioMeWork *work, int ch_bits, int out_bits, int freq, int samples)
+int meVaudioInit(SceVaudioMeWork *work, u32 ch_bits, u32 out_bits, int freq, int samples)
 {
     int res = sceMeCore_driver_635397BB(0x120, work->effect_ctx, ch_bits, out_bits);
-    int in_bytes = (ch_bits >> 3) << 1;
-    int out_bytes = (out_bits >> 3) << 1;
+    u32 in_bytes = (ch_bits >> 3) << 1;
+    u32 out_bytes = (out_bits >> 3) << 1;
     if (res >= 0) {
         work->in_stride = in_bytes;
         work->out_stride = out_bytes;
-        if (ch_bits == 16 && (samples & 7) == 0)
+        if ((ch_bits == 16) & ((samples & 7) == 0))
             res = sceMeCore_driver_635397BB(0x123, work->alc_ctx, samples, freq);
     }
-    if ((u32)(res + 8) < 8)
-        return g_vaudio_err_table[-1 - res];
+    if ((u32)(res + 8) < 8) {
+        const u32 *errBase = g_vaudio_err_table - 1;
+        return errBase[-res];
+    }
     return res;
 }
 
-int meVaudioSetEffect(SceVaudioMeWork *work, int samples, int a2, int a3, int a4, u32 effect_param)
+int meVaudioSetEffect(SceVaudioMeWork *work, int samples, int gain, int limit, int flags, u32 effect_param)
 {
-    int res = sceMeCore_driver_635397BB(0x121, work->effect_ctx, samples, a2, a3, a4, effect_param);
+    int res = sceMeCore_driver_635397BB(0x121, work->effect_ctx, samples, gain, limit, flags, effect_param);
     work->samples = samples;
-    if ((u32)(res + 8) < 8)
-        return g_vaudio_err_table[-1 - res];
+    if ((u32)(res + 8) < 8) {
+        const u32 *errBase = g_vaudio_err_table - 1;
+        return errBase[-res];
+    }
     return res;
 }
 
@@ -559,7 +563,9 @@ int meVaudioProcess(SceVaudioMeWork *work, void *in_buf, void *out_buf, int effe
         sceKernelDcacheInvalidateRangeForUser(out_buf, work->samples * work->out_stride);
 
     int res = sceMeCore_driver_FA398D71(0x122, work, in_buf, out_buf, effect_type);
-    if ((u32)(res + 8) < 8)
-        return g_vaudio_err_table[-1 - res];
+    if ((u32)(res + 8) < 8) {
+        const u32 *errBase = g_vaudio_err_table - 1;
+        return errBase[-res];
+    }
     return res;
 }

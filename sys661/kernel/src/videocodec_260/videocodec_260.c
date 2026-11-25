@@ -30,8 +30,8 @@ typedef struct SceVideocodecCodec {
 
 void *sceMeCalloc(u32 num, u32 size);
 void sceMeFree(void *ptr);
-s32 sceMePower_driver_984E2608(s32 arg0);
-s32 sceMePowerControlAvcPower(s32 arg0);
+s32 sceMePower_driver_984E2608(s32 enable);
+s32 sceMePowerControlAvcPower(s32 enable);
 s32 sceMeVideo_driver_4D78330C(s32 type, SceVideocodecCodec *info);
 s32 sceMeVideo_driver_6D68B223(s32 type, s32 cmd, SceVideocodecCodec *info);
 s32 sceMeVideo_driver_8768915D(s32 type, SceVideocodecCodec *info);
