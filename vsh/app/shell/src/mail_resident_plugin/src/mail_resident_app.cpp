@@ -10,6 +10,8 @@
 #include <ipmi/server.h>
 #include <ipmi/session.h>
 
+#include "shell.h"
+#include "shell_cron.h"
 #include "mail_resident.h"
 
 extern "C" {
@@ -24,11 +26,8 @@ extern int sceRegMgrAddRegistryCallback(SceUID cbId, const char *path);
 extern int sceRegMgrStartCallback(SceUID cbId);
 extern int sceRegMgrStopCallback(SceUID cbId);
 extern int sceRegMgrUnregisterCallback(SceUID cbId);
-extern int SceShell_83D16CA8(int ev, void *cb, void *arg);
-extern int SceShell_E3D3A162(int ev, void *cb, void *arg);
 }
 
-extern void *shellGetCronMgr(void);				/* 0x810FB632 */
 extern int shellRegisterPowerCb(void (*cb)(void *));		/* 0x8131F3E8 */
 extern void shellUnregisterPowerCb(void);			/* 0x8131F422 */
 extern int shellActivityIsEnabled(void);			/* 0x81326D30 */
@@ -39,9 +38,11 @@ extern void shellMailCronRegister(const char *id);		/* 0x812A4C6C */
 extern void shellMailCronIsEnabled(const char *id, bool *out);	/* 0x812A4FC8 */
 extern void shellMailCronSetCb(const char *id, void (*cb)(int, void *), void *arg); /* 0x812A5032 */
 extern int shellMailHandleCustomCmd(const void *data, int flag); /* 0x813607BE */
-extern int shellNpPushRegister1(const char *svc, int mode, void *cb, void *arg, int *outId); /* 0x813AEFFC */
-extern int shellNpPushRegister2(const char *svc, int mode, void *cb, void *arg, int *outId); /* 0x813AF03A */
-extern void shellNpPushUnregister(int id);			/* 0x813AF078 */
+extern int shellNpPushRegisterService(const char *servicePrefix, int matchMode,
+	void *callback, void *userArg, int *outHandle);		/* 0x813AEFFC */
+extern int shellNpPushRegisterTitle(const char *servicePrefix, int matchMode,
+	void *callback, void *userArg, int *outHandle);		/* 0x813AF03A */
+extern void shellNpPushUnregister(int handle);			/* 0x813AF078 */
 
 static MailResidentApp *s_mailAppInstance = NULL;		/* 0x81544E10 */
 
@@ -51,12 +52,14 @@ MailResidentApp::MailResidentApp()
 	  m_server(NULL), m_serverBuf(NULL), m_workBufSize(0),
 	  m_sessionMutex("SceMailResidentAppSession", 0),
 	  m_threadId(-1), m_evfProxy(-1), m_evfPsnMail(-1), m_evfReady(-1),
-	  m_netCbId(-1), m_cronHandle(0), m_cronFlag0(1), m_cronFlag1(0),
+	  m_netCbId(-1), m_cronHandle(0),
 	  m_queueMutex("SceMailResidentAppQueue", 0),
 	  m_queueCb(-1),
 	  m_syncMutex("SceMailResidentAppSync", 0),
 	  m_pendingPush(0), m_pendingTimer(0), m_seqNo(0)
 {
+	m_cronOption.wakeUp = true;
+	m_cronOption.persist = false;
 	s_mailAppInstance = this;
 }
 
@@ -187,18 +190,18 @@ static void mailPowerCb(void *arg)
 }
 
 /* 0x811C7C14 */
-static void mailAppEventCb(int ev, const void *info, int flags, void *arg)
+static void mailAppEventCb(int ev, const void *info, SceSize size, void *arg)
 {
-	(void)flags;
-	const SceUInt32 *p = (const SceUInt32 *)info;
-	if (ev == 0 && sce_paf_strcmp("NPXS10063", (const char *)info + 8) == 0)
+	(void)size;
+	const ShellAppEvent *appEvent = (const ShellAppEvent *)info;
+	if (ev == SHELL_APP_EVENT_ENDED && sce_paf_strcmp("NPXS10063", appEvent->titleId) == 0)
 		((MailResidentApp *)arg)->EnqueueEvent(5, 0, 0);
 	else
-		((MailResidentApp *)arg)->EnqueueEvent(4, p[0], ev);
+		((MailResidentApp *)arg)->EnqueueEvent(4, (SceUInt32)appEvent->processId, ev);
 }
 
 /* 0x811C7C4C */
-static int mailTimerCb(int handle, void *arg)
+static int mailTimerCb(SceUID handle, void *arg)
 {
 	(void)handle;
 	((MailResidentApp *)arg)->EnqueueEvent(6, 0, 0);
@@ -254,13 +257,13 @@ int MailResidentApp::Start()
 	m_initStage = 1;
 	if (shellRegisterPowerCb(mailPowerCb) < 0) return -1;
 	m_initStage = 2;
-	if (SceShell_83D16CA8(0, (void *)mailAppEventCb, this) < 0) return -1;
+	if (SceShell_83D16CA8(0, mailAppEventCb, this) < 0) return -1;
 	m_initStage = 3;
-	if (SceShell_83D16CA8(1, (void *)mailAppEventCb, this) < 0) return -1;
+	if (SceShell_83D16CA8(1, mailAppEventCb, this) < 0) return -1;
 	m_initStage = 4;
-	if (SceShell_83D16CA8(5, (void *)mailAppEventCb, this) < 0) return -1;
+	if (SceShell_83D16CA8(5, mailAppEventCb, this) < 0) return -1;
 	m_initStage = 5;
-	if (SceShell_83D16CA8(6, (void *)mailAppEventCb, this) < 0) return -1;
+	if (SceShell_83D16CA8(6, mailAppEventCb, this) < 0) return -1;
 	m_initStage = 6;
 
 	int signIn = 0;
@@ -274,10 +277,10 @@ void MailResidentApp::Stop()
 {
 	m_stopFlag = 1;
 	switch (m_initStage) {
-	case 6: SceShell_E3D3A162(6, (void *)mailAppEventCb, this); /* fallthrough */
-	case 5: SceShell_E3D3A162(5, (void *)mailAppEventCb, this); /* fallthrough */
-	case 4: SceShell_E3D3A162(1, (void *)mailAppEventCb, this); /* fallthrough */
-	case 3: SceShell_E3D3A162(0, (void *)mailAppEventCb, this); /* fallthrough */
+	case 6: SceShell_E3D3A162(6, mailAppEventCb, this); /* fallthrough */
+	case 5: SceShell_E3D3A162(5, mailAppEventCb, this); /* fallthrough */
+	case 4: SceShell_E3D3A162(1, mailAppEventCb, this); /* fallthrough */
+	case 3: SceShell_E3D3A162(0, mailAppEventCb, this); /* fallthrough */
 	case 2: shellUnregisterPowerCb(); /* fallthrough */
 	case 1: shellUnregisterNetCb(m_netCbId); break;
 	default: break;
@@ -313,9 +316,9 @@ void MailResidentApp::Stop()
 		m_evfProxy = -1;
 	}
 	if (m_cronHandle != 0) {
-		void *cron = shellGetCronMgr();
-		(*(void (**)(void *, int))(*(void ***)cron + 8))(cron, m_cronHandle);
-		(*(void (**)(void *, int))(*(void ***)cron + 5))(cron, m_cronHandle);
+		ShellCron *cron = shellCronGetInstance();
+		cron->MarkRemove(m_cronHandle);
+		cron->Remove(m_cronHandle);
 		m_cronHandle = 0;
 	}
 }
@@ -393,13 +396,14 @@ int MailResidentApp::OnNewSession(IPMI::Server *srv, const IPMI::Session::Config
 /* 0x811C7A0A */
 void MailResidentApp::ReleaseSessionKey(SceInt64 key)
 {
-	SceInt64 k1 = key | 0x0000040100000000LL;
-	SceInt64 k2 = key | 0x0000080100000000LL;
+	SceInt64 closeSessionKey = key | 0x0000040100000000LL;
+	SceInt64 flushKey = key | 0x0000080100000000LL;
 	EnsureMwRunning(key | 0x0000000100000000LL);
-	EnsureMwRunning(k2);
+	EnsureMwRunning(flushKey);
 	void *mem = mailResidentMalloc(sizeof(MailResidentMwPairEvent));
 	if (mem != NULL) {
-		MailResidentMwPairEvent *ev = new (mem) MailResidentMwPairEvent(k1, k2);
+		MailResidentMwPairEvent *ev = new (mem) MailResidentMwPairEvent(
+			closeSessionKey, flushKey);
 		pushQueueEvent(this, ev);
 	}
 }
@@ -466,9 +470,9 @@ void MailResidentApp::SendMwRequest(SceInt64 key, int evType, int method, const 
 void MailResidentApp::UpdateFetchTimer()
 {
 	if (m_cronHandle != 0) {
-		void *cron = shellGetCronMgr();
-		(*(void (**)(void *, int))(*(void ***)cron + 8))(cron, m_cronHandle);
-		(*(void (**)(void *, int))(*(void ***)cron + 5))(cron, m_cronHandle);
+		ShellCron *cron = shellCronGetInstance();
+		cron->MarkRemove(m_cronHandle);
+		cron->Remove(m_cronHandle);
 		m_cronHandle = 0;
 	}
 	if (m_netState == 0) {
@@ -481,13 +485,12 @@ void MailResidentApp::UpdateFetchTimer()
 			if (sceRegMgrGetKeyInt("/CONFIG/NP2/PSNMSG", "fetch_interval", &interval) == 0 &&
 			    interval > 0) {
 				interval *= 60;
-				void *cron = shellGetCronMgr();
-				int r = (*(int (**)(void *, int *, int (*)(int, void *), void *, int, int, SceUInt8 *))
-					(*(void ***)cron + 2))(cron, &m_cronHandle, mailTimerCb, this,
-						interval, interval, &m_cronFlag0);
+				ShellCron *cron = shellCronGetInstance();
+				int r = cron->AddInterval(&m_cronHandle, mailTimerCb, this,
+					(unsigned int)interval, (unsigned int)interval, &m_cronOption);
 				if (r < 0 && m_cronHandle != 0) {
-					(*(void (**)(void *, int))(*(void ***)cron + 8))(cron, m_cronHandle);
-					(*(void (**)(void *, int))(*(void ***)cron + 5))(cron, m_cronHandle);
+					cron->MarkRemove(m_cronHandle);
+					cron->Remove(m_cronHandle);
 					m_cronHandle = 0;
 				}
 			}
@@ -518,8 +521,8 @@ void MailResidentApp::ProcessQueue()
 				(*it)->m_state = ae->m_appState;
 				void *mem = mailResidentMalloc(sizeof(MailResidentEvent));
 				if (mem != NULL) {
-					MailResidentEvent *e2 = new (mem) MailResidentEvent(1);
-					pushQueueEvent(this, e2);
+					MailResidentEvent *refreshEv = new (mem) MailResidentEvent(1);
+					pushQueueEvent(this, refreshEv);
 				}
 				break;
 			}
@@ -553,9 +556,10 @@ void MailResidentApp::ProcessQueue()
 	}
 	case 2: {
 		MailResidentMwPairEvent *pe = (MailResidentMwPairEvent *)ev;
-		int z1 = 0, z2 = 0;
-		SendMwRequest(pe->m_key1, ev->m_type, 17, &z1, 4);
-		SendMwRequest(pe->m_key2, ev->m_type, 13, &z2, 4);
+		int closeReq = 0;
+		int flushReq = 0;
+		SendMwRequest(pe->m_closeSessionKey, ev->m_type, 17, &closeReq, 4);
+		SendMwRequest(pe->m_flushKey, ev->m_type, 13, &flushReq, 4);
 		break;
 	}
 	case 3: {
@@ -633,27 +637,29 @@ static int mailQueueCallback(int notifyId, int notifyCount, int notifyArg, void 
 }
 
 /* 0x811C82F8 */
-static void mailNpPushCb1(int eventId, int status, const char *svc, int param1, int param2, void *arg)
+static void mailNpPushServiceCb(const void *toPeer, const void *fromPeer, const char *dataType,
+	const char *data, SceSize dataLen, void *userArg)
 {
-	(void)eventId; (void)status; (void)param1; (void)param2;
-	if (arg == NULL)
+	(void)toPeer; (void)fromPeer; (void)data; (void)dataLen;
+	if (userArg == NULL)
 		return;
-	if (sce_paf_strcasecmp(svc, "np:service:groupMessaging") == 0)
-		((MailResidentApp *)arg)->EnqueueEvent(2, 1, 0);
-	else if (sce_paf_strcasecmp(svc, "np:service:systemMessage") == 0)
-		((MailResidentApp *)arg)->EnqueueEvent(2, 8, 0);
+	if (sce_paf_strcasecmp(dataType, "np:service:groupMessaging") == 0)
+		((MailResidentApp *)userArg)->EnqueueEvent(2, 1, 0);
+	else if (sce_paf_strcasecmp(dataType, "np:service:systemMessage") == 0)
+		((MailResidentApp *)userArg)->EnqueueEvent(2, 8, 0);
 }
 
 /* 0x811C8340 */
-static void mailNpPushCb2(int eventId, int status, int subType, const char *svc, int param1, int param2, void *arg)
+static void mailNpPushTitleCb(const void *toPeer, const void *fromPeer, const char *titleId,
+	const char *dataType, const char *data, SceSize dataLen, void *userArg)
 {
-	(void)eventId; (void)status; (void)subType; (void)param1; (void)param2;
-	if (arg == NULL)
+	(void)toPeer; (void)fromPeer; (void)titleId; (void)data; (void)dataLen;
+	if (userArg == NULL)
 		return;
-	if (sce_paf_strcasecmp(svc, "np:service:gameCustomData") == 0)
-		((MailResidentApp *)arg)->EnqueueEvent(2, 2, 0);
-	else if (sce_paf_strcasecmp(svc, "np:service:invitation") == 0)
-		((MailResidentApp *)arg)->EnqueueEvent(2, 4, 0);
+	if (sce_paf_strcasecmp(dataType, "np:service:gameCustomData") == 0)
+		((MailResidentApp *)userArg)->EnqueueEvent(2, 2, 0);
+	else if (sce_paf_strcasecmp(dataType, "np:service:invitation") == 0)
+		((MailResidentApp *)userArg)->EnqueueEvent(2, 4, 0);
 }
 
 /* 0x811C8388 */
@@ -671,12 +677,14 @@ void MailResidentApp::ThreadLoop()
 		regCb = -1;
 	}
 
-	int pushId1 = -1;
+	int servicePushHandle = -1;
 	if (r >= 0)
-		r = shellNpPushRegister1("np:service", 1, (void *)mailNpPushCb1, this, &pushId1);
-	int pushId2 = -1;
+		r = shellNpPushRegisterService("np:service", 1, (void *)mailNpPushServiceCb, this,
+			&servicePushHandle);
+	int titlePushHandle = -1;
 	if (r >= 0)
-		shellNpPushRegister2("np:service", 1, (void *)mailNpPushCb2, this, &pushId2);
+		shellNpPushRegisterTitle("np:service", 1, (void *)mailNpPushTitleCb, this,
+			&titlePushHandle);
 
 	SceUID pipeId = sceKernelCreateMsgPipe("SceMailResidentPipe", 64, 396, 0x460, NULL);
 	m_queueCb = sceKernelCreateCallback("ScePsnMailResidentQueue", 0,
@@ -723,8 +731,8 @@ void MailResidentApp::ThreadLoop()
 	}
 
 	mailResidentFree(workBuf);
-	if (pushId2 >= 0) shellNpPushUnregister(pushId2);
-	if (pushId1 >= 0) shellNpPushUnregister(pushId1);
+	if (titlePushHandle >= 0) shellNpPushUnregister(titlePushHandle);
+	if (servicePushHandle >= 0) shellNpPushUnregister(servicePushHandle);
 	sceKernelDeleteCallback(m_queueCb);
 	sceKernelDeleteMsgPipe(pipeId);
 	if (regCb != -1) {

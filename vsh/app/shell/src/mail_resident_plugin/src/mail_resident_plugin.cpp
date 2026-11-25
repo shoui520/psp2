@@ -6,6 +6,7 @@
 #include <stddef.h>
 #include <scetypes.h>
 #include <memory/heap_allocator.h>
+#include <plugin.h>
 
 #include "mail_resident.h"
 
@@ -31,14 +32,14 @@ void mailResidentFree(void *ptr)
 }
 
 /* 0x811C6F10 */
-void mailResidentNoop1(void)
+void mailResidentOnInit(void)
 {
 }
 
 /* 0x811C6F12 */
-void mailResidentSetPlugin(void *plugin)
+void mailResidentSetPlugin(paf::Plugin *plugin)
 {
-	s_mailResidentHeap = *(paf::memory::HeapAllocator **)((char *)plugin + 192);
+	s_mailResidentHeap = plugin->m_private_heap;
 }
 
 /* 0x811C6F22 */
@@ -66,6 +67,6 @@ void mailResidentStop(void)
 }
 
 /* 0x811C6F90 */
-void mailResidentNoop2(void)
+void mailResidentOnExit(void)
 {
 }

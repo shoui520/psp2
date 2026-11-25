@@ -12,6 +12,7 @@
 #include <ipmi/server.h>
 #include <ipmi/session.h>
 #include <thread/thread.h>
+#include "shell_cron.h"
 
 extern void *mailResidentMalloc(SceSize len);			/* 0x811C6ECC */
 extern void *mailResidentRealloc(void *ptr, SceSize len);	/* 0x811C6EE2 */
@@ -78,10 +79,11 @@ struct MailResidentSyncEvent : public MailResidentEvent {
 };
 
 struct MailResidentMwPairEvent : public MailResidentEvent {
-	SceInt64 m_key1;					/* +16 */
-	SceInt64 m_key2;					/* +24 */
-	MailResidentMwPairEvent(SceInt64 k1, SceInt64 k2)
-		: MailResidentEvent(2), m_key1(k1), m_key2(k2) {}
+	SceInt64 m_closeSessionKey;				/* +16 */
+	SceInt64 m_flushKey;					/* +24 */
+	MailResidentMwPairEvent(SceInt64 closeSessionKey, SceInt64 flushKey)
+		: MailResidentEvent(2), m_closeSessionKey(closeSessionKey),
+		  m_flushKey(flushKey) {}
 };
 
 struct MailResidentSyncReq : public paf::common::RefObj {
@@ -160,9 +162,8 @@ public:
 	SceUID m_evfPsnMail;					/* +84 */
 	SceUID m_evfReady;					/* +88 */
 	int m_netCbId;						/* +92 */
-	int m_cronHandle;					/* +96 */
-	SceUInt8 m_cronFlag0;					/* +100 */
-	SceUInt8 m_cronFlag1;					/* +101 */
+	SceUID m_cronHandle;					/* +96 */
+	ShellCronOption m_cronOption;				/* +100 */
 	paf::thread::Mutex m_queueMutex;			/* +104 */
 	paf::list<MailResidentEvent *> m_queue;			/* +136 */
 	SceUID m_queueCb;					/* +148 */
