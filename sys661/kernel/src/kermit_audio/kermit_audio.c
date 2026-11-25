@@ -90,29 +90,29 @@ static inline s32 pspMax(s32 a, s32 b)
 
 /* Audio structures */
 typedef struct SceAudioInputParams {
-	s32 param0;
+	s32 alcLevel;
 	s32 gain;
-	s32 param2;
-	s32 param3;
-	s32 param4;
-	s32 param5;
+	s32 muteLevel;
+	s32 holdTime;
+	s32 decayTime;
+	s32 attackTime;
 } SceAudioInputParams;
 
 typedef struct SceAudioChannel {
 	void *buf;              /* 0x00 */
 	s32 curSampleCnt;       /* 0x04 */
 	u16 sampleCount;        /* 0x08 */
-	u8 busyState;               /* 0x0A */
+	u8 busyState;           /* 0x0A */
 	u8 bytesPerSample;      /* 0x0B */
 	u16 leftVol;            /* 0x0C */
 	u16 rightVol;           /* 0x0E */
 } SceAudioChannel;
 
 typedef struct SceAudio {
-	u8 buf0[240];           /* 0x000 */
-	u8 buf240[272];         /* 0x0F0 */
-	u8 buf512[240];         /* 0x200 */
-	u8 buf752[272];         /* 0x2F0 */
+	u8 outMixBufA[240];     /* 0x000 */
+	u8 outMixTailA[272];    /* 0x0F0 */
+	u8 inCaptureBuf[240];   /* 0x200 */
+	u8 inCaptureTail[272];  /* 0x2F0 */
 	u32 hwBuf[48];          /* 0x400 */
 	void *dmaPtr[3];        /* 0x4C0 */
 	SceUID evFlagId;        /* 0x4CC */
@@ -132,12 +132,12 @@ typedef struct SceAudio {
 	u32 inputOrigSampleCnt; /* 0x568 */
 	u32 inputCurSampleCnt;  /* 0x56C */
 	u16 *inputBuf;          /* 0x570 */
-	s8 inputParam0;         /* 0x574 */
+	s8 inputAlcLevel;       /* 0x574 */
 	s8 inputGain;           /* 0x575 */
-	s8 inputParam2;         /* 0x576 */
-	s8 inputParam3;         /* 0x577 */
-	s8 inputParam4;         /* 0x578 */
-	s8 inputParam5;         /* 0x579 */
+	s8 inputMuteLevel;      /* 0x576 */
+	s8 inputHoldTime;       /* 0x577 */
+	s8 inputDecayTime;      /* 0x578 */
+	s8 inputAttackTime;     /* 0x579 */
 	u8 inputHwFreq;         /* 0x57A */
 	s8 inputIsWaiting;      /* 0x57B */
 	s8 inputInited;         /* 0x57C */
@@ -267,7 +267,7 @@ static int audioMixerThread(SceSize args, void *argp)
 		} else {
 			int bufIdx = g_mixerBufIdx;
 			s8 shift = g_audio.volumeOffset;
-			u32 *dstBuf = (u32 *)(uncachedAudio->buf0 + (bufIdx << 8));
+			u32 *dstBuf = (u32 *)(uncachedAudio->outMixBufA + (bufIdx << 8));
 			int i;
 
 			g_mixerBufIdx = bufIdx ^ 1;
@@ -355,7 +355,7 @@ int sceAudioOutputBlocking(u32 chanId, int vol, void *buf)
 /* 0x04FC */
 int sceAudioOutputPanned(u32 chanId, int leftVol, int rightVol, void *buf)
 {
-	if (rightVol > 0xFFFF || leftVol > 0xFFFF)
+	if ((rightVol > 0xFFFF) | (leftVol > 0xFFFF))
 		return SCE_AUDIO_ERROR_INVALID_VOLUME;
 	if (chanId >= 8)
 		return SCE_AUDIO_ERROR_INVALID_CH;
@@ -527,7 +527,7 @@ int sceAudioOneshotOutput(int chanId, int sampleCount, int fmt, int leftVol, int
 	chan->buf = buf;
 
 	if ((g_audio.flags & 1) == 0 && buf != NULL) {
-		u32 *p = (u32 *)KUNCACHED(g_audio.buf0);
+		u32 *p = (u32 *)KUNCACHED(g_audio.outMixBufA);
 		int i;
 		for (i = 0; i < 128; i++)
 			p[i] = 0;
@@ -615,7 +615,7 @@ int sceAudioSetChannelDataLen(u32 chanId, int sampleCount)
 /* 0x0DBC */
 int sceAudioChangeChannelVolume(u32 chanId, int leftVol, int rightVol)
 {
-	if (rightVol > 0xFFFF || leftVol > 0xFFFF)
+	if ((rightVol > 0xFFFF) | (leftVol > 0xFFFF))
 		return SCE_AUDIO_ERROR_INVALID_VOLUME;
 	if (chanId >= 8)
 		return SCE_AUDIO_ERROR_INVALID_CH;
@@ -730,12 +730,12 @@ int sceAudioOutput2GetRestSample(void)
 }
 
 /* 0x1158..0x1194: Debug parameter setters */
-static void setAudioParam1(int val) { g_clearBusyOnPanned = val; }
-static void setAudioParam2(int val) { g_srcRestTimeOffset = val; }
-static void setAudioParam3(int val) { g_restLenDelayUs = val; }
-static void setAudioParam4(int val) { g_output2DelayUs = val; }
-static void setAudioParam5(int val) { g_allowBusySetDataLen = val; }
-static void setAudioParam6(int val) { g_pannedBlockingDelayUs = val; }
+static void setClearBusyOnPanned(int val) { g_clearBusyOnPanned = val; }
+static void setSrcRestTimeOffset(int val) { g_srcRestTimeOffset = val; }
+static void setRestLenDelayUs(int val) { g_restLenDelayUs = val; }
+static void setOutput2DelayUs(int val) { g_output2DelayUs = val; }
+static void setAllowBusySetDataLen(int val) { g_allowBusySetDataLen = val; }
+static void setPannedBlockingDelayUs(int val) { g_pannedBlockingDelayUs = val; }
 
 /* 0x11A0 */
 int sceAudioGetChannelRestLen(u32 chanId)
@@ -785,7 +785,7 @@ static int audioOutput(SceAudioChannel *channel, int leftVol, int rightVol, void
 	channel->buf = buf;
 
 	if ((g_audio.flags & 1) == 0 && buf != NULL) {
-		u32 *p = (u32 *)KUNCACHED(g_audio.buf0);
+		u32 *p = (u32 *)KUNCACHED(g_audio.outMixBufA);
 		int i;
 		for (i = 0; i < 128; i++)
 			p[i] = 0;
@@ -805,8 +805,8 @@ int sceAudioSetFrequency(int freq)
 }
 
 /* 0x1CEC, 0x1CF8 */
-static void setAudioParam7(int val) { g_srcDelayFactor = val; }
-static void setAudioParam8(void) { g_srcReleaseAllowBusy = 0; }
+static void setSrcDelayFactor(int val) { g_srcDelayFactor = val; }
+static void clearSrcReleaseAllowBusy(void) { g_srcReleaseAllowBusy = 0; }
 
 /* 0x1360 */
 int sceAudio_driver_95AE5A2B(u32 id, int val)
@@ -819,28 +819,28 @@ int sceAudio_driver_95AE5A2B(u32 id, int val)
 		g_audio.delayShift = (val != 0) ? 2 : 0;
 		break;
 	case 2:
-		setAudioParam7(val);
+		setSrcDelayFactor(val);
 		break;
 	case 3:
-		setAudioParam1(val);
+		setClearBusyOnPanned(val);
 		break;
 	case 4:
-		setAudioParam2(val);
+		setSrcRestTimeOffset(val);
 		break;
 	case 5:
-		setAudioParam3(val);
+		setRestLenDelayUs(val);
 		break;
 	case 6:
-		setAudioParam4(val);
+		setOutput2DelayUs(val);
 		break;
 	case 7:
-		setAudioParam5(val);
+		setAllowBusySetDataLen(val);
 		break;
 	case 8:
-		setAudioParam6(val);
+		setPannedBlockingDelayUs(val);
 		break;
 	case 9:
-		setAudioParam8();
+		clearSrcReleaseAllowBusy();
 		break;
 	default:
 		break;
@@ -862,11 +862,11 @@ int sceAudioInit(SceSize args, void *argp)
 	for (i = 0; i < 4; i += 2) {
 		int shift = (i / 2) * 0x100;
 		u32 *buf = &g_audio.hwBuf[i * 4];
-		buf[0] = (u32)UCACHED(g_audio.buf0 + shift);
+		buf[0] = (u32)UCACHED(g_audio.outMixBufA + shift);
 		buf[1] = (u32)UCACHED(0xBE000060u);
 		buf[2] = (u32)UCACHED(&g_audio.hwBuf[i * 4 + 4]);
 		buf[3] = 0x0448903Cu;
-		buf[4] = (u32)UCACHED(g_audio.buf240 + shift);
+		buf[4] = (u32)UCACHED(g_audio.outMixTailA + shift);
 		buf[5] = (u32)UCACHED(0xBE000060u);
 		buf[6] = 0;
 		buf[7] = 0x84489004u;
@@ -877,11 +877,11 @@ int sceAudioInit(SceSize args, void *argp)
 		buf[22] = 0;
 
 		buf[32] = (u32)UCACHED(0xBE000080u);
-		buf[33] = (u32)UCACHED(g_audio.buf512 + shift);
+		buf[33] = (u32)UCACHED(g_audio.inCaptureBuf + shift);
 		buf[34] = (u32)UCACHED(&g_audio.hwBuf[i * 4 + 36]);
 		buf[35] = 0x0848903Cu;
 		buf[36] = (u32)UCACHED(0xBE000080u);
-		buf[37] = (u32)UCACHED(g_audio.buf752 + shift);
+		buf[37] = (u32)UCACHED(g_audio.inCaptureTail + shift);
 		buf[38] = 0;
 		buf[39] = 0x88489004u;
 	}
@@ -1038,6 +1038,9 @@ int sceAudioSRCChReserve(int sampleCount, int freq, int numChans)
 		case 32000:
 			hwFreq = 64;
 			break;
+		case 48000:
+			hwFreq = 256;
+			break;
 		default:
 			return SCE_AUDIO_ERROR_INVALID_FREQUENCY;
 		}
@@ -1052,7 +1055,7 @@ int sceAudioSRCChReserve(int sampleCount, int freq, int numChans)
 	g_audio.srcChFreq = (u16)freq;
 	g_audio.srcChSampleCnt = (u16)sampleCount;
 	if (freq != 0)
-		g_srcSampleDurationUs = (int)(((s64)sampleCount * 1000000LL) / (s64)freq);
+		g_srcSampleDurationUs = (int)(((u64)(u32)sampleCount * 1000000ULL) / (u64)(u32)freq);
 	else
 		g_srcSampleDurationUs = 0;
 
@@ -1134,18 +1137,18 @@ static int audioSRCGetRestDelay(void)
 {
 	int intr = sceKernelCpuSuspendIntr();
 	s64 lastTime = g_audio.srcLastTime;
-	int sampleDur = g_srcSampleDurationUs;
+	u32 sampleDur = (u32)g_srcSampleDurationUs;
 	s8 queued = g_audio.srcQueuedCnt;
 	sceKernelCpuResumeIntr(intr);
 
-	if (lastTime == 0 || sampleDur <= 0)
+	if (lastTime == 0 || sampleDur == 0)
 		return 0;
 
 	s64 now = sceKernelGetSystemTimeWide();
 	int factor = (g_srcDelayFactor != 0) ? g_srcDelayFactor : ((int)queued + 1);
 	u64 totalDur = (u64)(u32)(sampleDur * factor);
 	u64 elapsed = (u64)(now - lastTime);
-	if (elapsed >= totalDur)
+	if (totalDur < elapsed)
 		return 0;
 	return (int)((u32)totalDur - (u32)elapsed);
 }
@@ -1197,7 +1200,7 @@ static int audioInputThread(SceSize args, void *argp)
 
 		u8 readIdx = g_inputReadBufIdx;
 		s32 curSampleCnt = (s32)g_audio.inputCurSampleCnt;
-		s16 *src = (s16 *)KUNCACHED(&g_audio.buf512[(readIdx & 1) << 8]);
+		s16 *src = (s16 *)KUNCACHED(&g_audio.inCaptureBuf[(readIdx & 1) << 8]);
 		u8 inputHwFreq = g_audio.inputHwFreq;
 
 		if (curSampleCnt == 0) {
@@ -1245,7 +1248,7 @@ static int audioInputThread(SceSize args, void *argp)
 				sceKernelCpuResumeIntr(intr);
 				u8 reqIdx = g_inputReqBufIdx;
 				g_inputReqBufIdx = reqIdx + 1;
-				kermitAudioInTransfer(&g_audio.buf512[(reqIdx & 1) << 8]);
+				kermitAudioInTransfer(&g_audio.inCaptureBuf[(reqIdx & 1) << 8]);
 			}
 		}
 	}
@@ -1285,12 +1288,12 @@ int sceAudioInputInitEx(SceAudioInputParams *param)
 	if (!ok)
 		return SCE_AUDIO_ERROR_PRIV_REQUIRED;
 
-	g_audio.inputParam0 = (s8)pspMin(pspMax(param->param0, -29), 0);
+	g_audio.inputAlcLevel = (s8)pspMin(pspMax(param->alcLevel, -29), 0);
 	g_audio.inputGain = (s8)pspMin(pspMax(param->gain, -18), 30);
-	g_audio.inputParam2 = (s8)pspMin(pspMax(param->param2, -76), 0);
-	g_audio.inputParam3 = (s8)pspMin(pspMax(param->param3, 0), 15);
-	g_audio.inputParam4 = (s8)pspMin(pspMax(param->param4, 0), 10);
-	g_audio.inputParam5 = (s8)pspMin(pspMax(param->param5, 0), 10);
+	g_audio.inputMuteLevel = (s8)pspMin(pspMax(param->muteLevel, -76), 0);
+	g_audio.inputHoldTime = (s8)pspMin(pspMax(param->holdTime, 0), 15);
+	g_audio.inputDecayTime = (s8)pspMin(pspMax(param->decayTime, 0), 10);
+	g_audio.inputAttackTime = (s8)pspMin(pspMax(param->attackTime, 0), 10);
 	g_audio.inputInited = 1;
 	g_audio.inputCurSampleCnt = 0;
 	g_audio.inputChannelOffset = 0;
@@ -1299,15 +1302,15 @@ int sceAudioInputInitEx(SceAudioInputParams *param)
 }
 
 /* 0x225C */
-int sceAudioInputInit(int arg0, int gain, int arg2)
+int sceAudioInputInit(int alcLevel, int gain, int muteLevel)
 {
 	u32 oldK1 = pspShiftK1();
-	g_audio.inputParam0 = (s8)pspMin(pspMax(arg0, -29), 0);
+	g_audio.inputAlcLevel = (s8)pspMin(pspMax(alcLevel, -29), 0);
 	g_audio.inputGain = (s8)pspMin(pspMax(gain, -18), 30);
-	g_audio.inputParam2 = (s8)pspMin(pspMax(arg2, -76), 0);
-	g_audio.inputParam3 = 0;
-	g_audio.inputParam4 = 3;
-	g_audio.inputParam5 = 2;
+	g_audio.inputMuteLevel = (s8)pspMin(pspMax(muteLevel, -76), 0);
+	g_audio.inputHoldTime = 0;
+	g_audio.inputDecayTime = 3;
+	g_audio.inputAttackTime = 2;
 	g_audio.inputInited = 1;
 	g_audio.inputCurSampleCnt = 0;
 	g_audio.inputChannelOffset = 0;
@@ -1412,7 +1415,7 @@ static int audioInput(int sampleCount, int freq, void *buf)
 		u8 reqIdx = g_inputReqBufIdx;
 		g_inputReadBufIdx = reqIdx;
 		g_inputReqBufIdx = reqIdx + 1;
-		ret = kermitAudioInTransfer(&g_audio.buf512[(reqIdx & 1) << 8]);
+		ret = kermitAudioInTransfer(&g_audio.inCaptureBuf[(reqIdx & 1) << 8]);
 		g_audio.flags |= 4u;
 		__asm__ volatile("sync");
 		if (ret < 0) {
@@ -1500,9 +1503,9 @@ static int kermitAudioOutSRC(void *buf, u32 sampleCount, int vol, u32 freq)
 		return 0;
 
 	sceKermitMemory_driver_AAF047AC(req, 0, buf, (sampleCount << 2), 1);
-	req->args[1] = (u32)sampleCount;
-	req->args[2] = (u32)vol;
-	req->args[3] = (u32)freq;
+	req->argWords[1].lo = (u32)sampleCount;
+	req->argWords[2].lo = (u32)vol;
+	req->argWords[3].lo = (u32)freq;
 
 	int ret = sceKermit_driver_36666181(req, KERMIT_MODE_AUDIOOUT, KERMIT_AUDIOOUT_SRC_OUT, 4, 0, &resp);
 	if (ret == 0)
@@ -1580,7 +1583,7 @@ static int kermitAudioOutSRCIntrHandler(void)
 static int kermitAudioInInit(void)
 {
 	u8 req_buf[128];
-	u64 resp = 0;
+	u64 resp;
 	SceKermitRequest *req = (SceKermitRequest *)(((u32)req_buf + 0x3Fu) & ~0x3Fu);
 
 	sceKernelDcacheInvalidateRange(req, 0x40);
@@ -1606,7 +1609,7 @@ static int kermitAudioInInit(void)
 static int kermitAudioInTransfer(void *buf)
 {
 	u8 req_buf[128];
-	u64 resp = 0;
+	u64 resp;
 	SceKermitRequest *req = (SceKermitRequest *)(((u32)req_buf + 0x3Fu) & ~0x3Fu);
 
 	sceKernelDcacheInvalidateRange(req, 0x40);
