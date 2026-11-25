@@ -20,20 +20,20 @@ SCE_MODULE_INFO("sceMcctrl", 0x5006, 1, 1);
 SCE_SDK_VERSION(SDK_VERSION);
 
 //static functions
-static int sub_00000BC0(u8 *arg1, u8 *arg2, int size);
-static int sub_00000C40(u8 *arg1, u8 *arg2, int size);
-static int sub_00000D34(u8 *buf, int size, u8 *arg2);
-static int sub_00000E70(u8 *destBuf, int len);
-static void sub_00000EAC(int, int); 
-static __inline__ int sub_00000EB4(u8 *prngBuf, int len);
-static int sub_00000F68(u8 *buf);
-static int sub_00000F84(u8 buf0[40], u8 buf1[40], u8 buf2[20]);
-static int sub_00000FA8(u8 *srcBuf, int size, u8 *hash);
-static int sub_00000FC4(u8 buf[184]);
-static int sub_00000FE0(u8 *buf, u8 *srcBuf1, u8 *srcBuf2, int size);
-static int sub_00001040(u8 *destBuf, u8 *srcBuf1, u8 *srcBuf2, int size);
-static int sub_000010A0(u8 *srcBuf, u8 *encryBuf, int len);
-static int sub_000010E8(u8 *srcBuf, u8 *decryBuf, int size);
+static int encryptAndMacBlock(u8 *arg1, u8 *arg2, int size);
+static int verifyAndDecryptBlock(u8 *arg1, u8 *arg2, int size);
+static int computeMcctrlMac(u8 *buf, int size, u8 *arg2);
+static int readConsoleCert(u8 *destBuf, int len);
+static void mcctrlInitStub(int, int); 
+static __inline__ int fillRandomBytes(u8 *prngBuf, int len);
+static int ecdsaGenKeyPair(u8 *buf);
+static int ecdsaMultiply(u8 buf0[40], u8 buf1[40], u8 buf2[20]);
+static int computeSha1(u8 *srcBuf, int size, u8 *hash);
+static int verifyConsoleCert(u8 buf[184]);
+static int verifyEcdsaSignature(u8 *buf, u8 *srcBuf1, u8 *srcBuf2, int size);
+static int signEcdsaSignature(u8 *destBuf, u8 *srcBuf1, u8 *srcBuf2, int size);
+static int encryptBuffer(u8 *srcBuf, u8 *encryBuf, int len);
+static int decryptBuffer(u8 *srcBuf, u8 *decryBuf, int size);
 
 
 //global variables
@@ -43,24 +43,24 @@ u8 g_13E4[632];
 u8 g_165C[208];
 u8 g_172C[84];
 
-/* Subroutine sub_00000BC0 - Address 0x00000BC0 */
-static int sub_00000BC0(u8 *arg1, u8 *arg2, int size) {
+/* Subroutine encryptAndMacBlock - Address 0x00000BC0 */
+static int encryptAndMacBlock(u8 *arg1, u8 *arg2, int size) {
     int status;
     
     if (size & 0xF) { //0x00000BC8 & 0x00000BD4 & 0x00000BEC
         return 0x80530002; //0x00000BCC & 0x00000BF0 & 0x00000C28 -- invalid size
     }
-    status = sub_000010A0(arg1, arg2, size-16); //0x00000BF4
+    status = encryptBuffer(arg1, arg2, size-16); //0x00000BF4
     if (status < 0) { //0x00000BFC
         return 0x80530003; //0x00000C34 & 0x00000C3C
     }
-    status = sub_00000D34(arg2, size-16, (arg2+size)-16); //0x00000C0C
+    status = computeMcctrlMac(arg2, size-16, (arg2+size)-16); //0x00000C0C
     return status;
 }
 
-/* Subroutine sub_00000C40 - Address 0x00000C40 */
+/* Subroutine verifyAndDecryptBlock - Address 0x00000C40 */
 //                        srcBuf,    decryBuf
-static int sub_00000C40(u8 *arg1, u8 *arg2, int size) {
+static int verifyAndDecryptBlock(u8 *arg1, u8 *arg2, int size) {
     int status;
     int i;
     u8 buf[16];
@@ -71,7 +71,7 @@ static int sub_00000C40(u8 *arg1, u8 *arg2, int size) {
     if (size & 0xF) { //0x00000C48 & 0x00000C70
         return 0x80530002; //0x00000C44 & 0x00000C50
     }
-    status = sub_00000D34(arg1, size-16, buf); //0x00000C80
+    status = computeMcctrlMac(arg1, size-16, buf); //0x00000C80
     if (status >= 0) { //0x00000C88   
         //0x00000CA0 - 0x00000CC4
         for (i = 0; i < 16; i++) {
@@ -84,23 +84,23 @@ static int sub_00000C40(u8 *arg1, u8 *arg2, int size) {
         }
         status = 0x80530006; //0x00000CC8 & 0x00000CD0
         if (val == 0) { //0x00000CCC
-            status = sub_000010E8(arg1, arg2, size-16); //0x00000CDC
+            status = decryptBuffer(arg1, arg2, size-16); //0x00000CDC
             status = (status < 0) ? 0x80530004 : status; //0x00000CE8
         }
     }
-    sub_00000EB4(buf, 16); //0x00000D00
+    fillRandomBytes(buf, 16); //0x00000D00
     return status;
 }
 
-/* Subroutine sub_00000D34 - Address 0x00000D34 */
+/* Subroutine computeMcctrlMac - Address 0x00000D34 */
 //Thanks to Artart for RE'ing it.
-static int sub_00000D34(u8 *buf, int size, u8 *arg2) {
+static int computeMcctrlMac(u8 *buf, int size, u8 *arg2) {
     int i;
     int ret;
     char *data;
     
-    if (sub_00000FA8(buf, size, &g_172C[64]) < 0) {
-        sub_00000EB4(g_172C, 84);
+    if (computeSha1(buf, size, &g_172C[64]) < 0) {
+        fillRandomBytes(g_172C, 84);
         return 0x80530006;
     }
     
@@ -133,9 +133,9 @@ static int sub_00000D34(u8 *buf, int size, u8 *arg2) {
          g_172C[i] = data[i];
     }
     
-    ret = sub_00000FA8(g_172C, sizeof(g_172C), g_172C);
+    ret = computeSha1(g_172C, sizeof(g_172C), g_172C);
     if (ret < 0) {
-        sub_00000EB4(g_172C, sizeof(g_172C));
+        fillRandomBytes(g_172C, sizeof(g_172C));
         return 0x80530006;
     }
     
@@ -143,12 +143,12 @@ static int sub_00000D34(u8 *buf, int size, u8 *arg2) {
          arg2[i] = g_172C[i];
     }
     
-    sub_00000EB4(g_172C, sizeof(g_172C));
+    fillRandomBytes(g_172C, sizeof(g_172C));
     return ret;
 }
 
 /** 
- * Subroutine sub_00000E70 - Address 0x00000E70
+ * Subroutine readConsoleCert - Address 0x00000E70
  * 
  * Retrieves the value associated with key 256.
  * 
@@ -157,7 +157,7 @@ static int sub_00000D34(u8 *buf, int size, u8 *arg2) {
  * 
  * @return 0 on success, otherwise < 0.
  */
-static int sub_00000E70(u8 *destBuf, int len) {
+static int readConsoleCert(u8 *destBuf, int len) {
     int keyVal;
 
     len = (len > 184) ? 184 : len; //0x00000E70 & 0x00000E78
@@ -165,13 +165,13 @@ static int sub_00000E70(u8 *destBuf, int len) {
     return (keyVal > 0) ? 0 : keyVal; //0x00000E98 & 0x00000EA0
 }
 
-/* Subroutine sub_00000EAC - Address 0x00000EAC */
-static void sub_00000EAC(int arg1, int arg2) {
+/* Subroutine mcctrlInitStub - Address 0x00000EAC */
+static void mcctrlInitStub(int arg1, int arg2) {
     return;
 }
 
 /** 
- * Subroutine sub_00000E70 - Address 0x00000E70
+ * Subroutine readConsoleCert - Address 0x00000E70
  * 
  * Fill a buffer with Pseudorandom numbers.
  * 
@@ -180,7 +180,7 @@ static void sub_00000EAC(int arg1, int arg2) {
  * 
  * @return 0 on success, otherwise < 0.
  */
-static __inline__ int sub_00000EB4(u8 *prngBuf, int len) {
+static __inline__ int fillRandomBytes(u8 *prngBuf, int len) {
     u64 result;
     u32 val1;
     u32 val2;
@@ -217,16 +217,16 @@ static __inline__ int sub_00000EB4(u8 *prngBuf, int len) {
     return 0;
 }
 
-/* Subroutine sub_00000F68 - Address 0x00000F68 */
-static int sub_00000F68(u8 *buf) {
+/* Subroutine ecdsaGenKeyPair - Address 0x00000F68 */
+static int ecdsaGenKeyPair(u8 *buf) {
     int status;
     
     status = sceDdrdbMul1(buf);
     return status;
 }
 
-/* Subroutine sub_00000F84 - Address 0x00000F84 */
-static int sub_00000F84(u8 buf0[40], u8 buf1[40], u8 buf2[20]) {
+/* Subroutine ecdsaMultiply - Address 0x00000F84 */
+static int ecdsaMultiply(u8 buf0[40], u8 buf1[40], u8 buf2[20]) {
     int status;
     
     status = sceDdrdbMul2(buf2, buf1, buf0);
@@ -234,7 +234,7 @@ static int sub_00000F84(u8 buf0[40], u8 buf1[40], u8 buf2[20]) {
 }
 
 /** 
- * Subroutine sub_00000FA8 - Address 0x00000FA8
+ * Subroutine computeSha1 - Address 0x00000FA8
  * 
  * Fill a buffer with the SHA-1 hash of a source buffer.
  * 
@@ -244,7 +244,7 @@ static int sub_00000F84(u8 buf0[40], u8 buf1[40], u8 buf2[20]) {
  * 
  * @return 0 on success, otherwise < 0.
  */
-static int sub_00000FA8(u8 *srcBuf, int size, u8 *hash) {
+static int computeSha1(u8 *srcBuf, int size, u8 *hash) {
     int status;
     
     status = sceDdrdbHash(srcBuf, size, hash);
@@ -252,7 +252,7 @@ static int sub_00000FA8(u8 *srcBuf, int size, u8 *hash) {
 }
 
 /** 
- * Subroutine sub_00000FC4 - Address 0x00000FC4
+ * Subroutine verifyConsoleCert - Address 0x00000FC4
  * 
  * Verifies a certification?
  * 
@@ -260,15 +260,15 @@ static int sub_00000FA8(u8 *srcBuf, int size, u8 *hash) {
  * 
  * @return 0 on success, otherwise < 0.
  */
-static int sub_00000FC4(u8 buf[184]) {
+static int verifyConsoleCert(u8 buf[184]) {
     int status; 
     
     status = sceDdrdbCertvry(buf); //0x00000FCC
     return status;
 }
 
-/* Subroutine sub_00000FE0 - Address 0x00000FE0 */
-static int sub_00000FE0(u8 *buf, u8 *srcBuf1, u8 *srcBuf2, int size) {
+/* Subroutine verifyEcdsaSignature - Address 0x00000FE0 */
+static int verifyEcdsaSignature(u8 *buf, u8 *srcBuf1, u8 *srcBuf2, int size) {
     int status;
     u8 hash[20];
     
@@ -279,8 +279,8 @@ static int sub_00000FE0(u8 *buf, u8 *srcBuf1, u8 *srcBuf2, int size) {
     return status;
 }
 
-/* Subroutine sub_00001040 - Address 0x00001040  */
-static int sub_00001040(u8 *destBuf, u8 *srcBuf1, u8 *srcBuf2, int size) {
+/* Subroutine signEcdsaSignature - Address 0x00001040  */
+static int signEcdsaSignature(u8 *destBuf, u8 *srcBuf1, u8 *srcBuf2, int size) {
     int status;
     u8 hash[20];
     
@@ -292,7 +292,7 @@ static int sub_00001040(u8 *destBuf, u8 *srcBuf1, u8 *srcBuf2, int size) {
 }
 
 /** 
- * Subroutine sub_000010A0 - Address 0x000010A0
+ * Subroutine encryptBuffer - Address 0x000010A0
  * 
  * Encrypts a buffer.
  * 
@@ -302,7 +302,7 @@ static int sub_00001040(u8 *destBuf, u8 *srcBuf1, u8 *srcBuf2, int size) {
  * 
  * @return 0 on success, otherwise < 0.
  */
-static int sub_000010A0(u8 *srcBuf, u8 *encryBuf, int len) {
+static int encryptBuffer(u8 *srcBuf, u8 *encryBuf, int len) {
     int status;
     int i;
     
@@ -317,7 +317,7 @@ static int sub_000010A0(u8 *srcBuf, u8 *encryBuf, int len) {
 }
 
 /** 
- * Subroutine sub_000010E8 - Address 0x000010E8
+ * Subroutine decryptBuffer - Address 0x000010E8
  * 
  * Decrypts a buffer.
  * 
@@ -327,7 +327,7 @@ static int sub_000010A0(u8 *srcBuf, u8 *encryBuf, int len) {
  * 
  * @return 0 on success, otherwise < 0.
  */
-static int sub_000010E8(u8 *srcBuf, u8 *decryBuf, int size) {
+static int decryptBuffer(u8 *srcBuf, u8 *decryBuf, int size) {
     int status;
     int i;
     
@@ -347,7 +347,7 @@ static int sub_000010E8(u8 *srcBuf, u8 *decryBuf, int size) {
  */
 int sceMcctrl_3EF531DB() {
     if (g_12C0 == 0) { //0x00000028
-        sub_00000EAC(0, 0); //0x00000044
+        mcctrlInitStub(0, 0); //0x00000044
         g_12C0 = 1; //0x00000054:
     }
     return 0; //0x00000038
@@ -382,17 +382,17 @@ int sceMcctrl_1EDFD6BB(u8 *arg1, u8 *arg2) {
         }
         
         // TODO: certificate placed at &g_12C4[76]
-        retVal = sub_00000E70(&g_12C4[76], 184); //0x000000F8 - 0x00000100
+        retVal = readConsoleCert(&g_12C4[76], 184); //0x000000F8 - 0x00000100
         status = 0x80530012; //0x00000104 & 0x0000010C
         
         if (retVal == 0) { //0x00000108
             // Verify placed certificate
-            retVal = sub_00000FC4(&g_12C4[76]); //0x00000114
+            retVal = verifyConsoleCert(&g_12C4[76]); //0x00000114
             status = 0x80530012; //0x00000118 & 0x00000120
             
             if (retVal == 0) { //0x0000011C
                 // Generate (public, private)-key pair
-                retVal = sub_00000F68(&g_12C4[16]); //0x00000124
+                retVal = ecdsaGenKeyPair(&g_12C4[16]); //0x00000124
                 status = 0x80530010; //0x0000012C & 0x00000140
                 
                 if (retVal == 0) { //0x0000013C
@@ -407,20 +407,20 @@ int sceMcctrl_1EDFD6BB(u8 *arg1, u8 *arg2) {
                          g_13E4[56+i] = g_12C4[76+i]; //0x00000170 & 0x00000184
                     }
                     // Copy a 20 byte PRN into first 16 bytes of g_13e4
-                    sub_00000EB4(g_13E4, 16); //0x0000018C
-                    retVal = sub_00000BC0(g_13E4, arg2, 176); //0x0000019C
+                    fillRandomBytes(g_13E4, 16); //0x0000018C
+                    retVal = encryptAndMacBlock(g_13E4, arg2, 176); //0x0000019C
                     status = retVal; //0x000001A8
                     if (retVal == 0) { //0x000001A4
                         // Copy a 20 byte PRN into first 16 bytes of g_12c4
-                        sub_00000EB4(g_12C4, 16); //0x000001B0
-                        status = sub_00000BC0(g_12C4, arg1, 288); //0x000001C0
+                        fillRandomBytes(g_12C4, 16); //0x000001B0
+                        status = encryptAndMacBlock(g_12C4, arg1, 288); //0x000001C0
                     }                    
                 }
             }
         }  
     }
-    sub_00000EB4(g_12C4, 288); //0x000001D0
-    sub_00000EB4(g_13E4, 632); //0x000001E0
+    fillRandomBytes(g_12C4, 288); //0x000001D0
+    fillRandomBytes(g_13E4, 632); //0x000001E0
     retVal = status & 0xFFFF0000; //0x000001E8
     if (retVal == 0x80530000) { //0x000001F0
         status |= 0x80530300; //0x000001F4 & 0x0000022C
@@ -444,12 +444,12 @@ int sceMcctrl_7CAC25B2(u8 *arg1, u8 *arg2, u8 *arg3, u8 *arg4, u8 *arg5, u8 *arg
         for (i = 0; i < 304; i++) {
              g_13E4[328+i] = 0;
         }
-        status = sub_00000C40(arg2, &g_13E4[40], 288); //0x000002C0      
+        status = verifyAndDecryptBlock(arg2, &g_13E4[40], 288); //0x000002C0      
         if (status == 0) { //0x000002C8
-            status = sub_00000C40(arg1, g_12C4, 288); //0x000002D8
+            status = verifyAndDecryptBlock(arg1, g_12C4, 288); //0x000002D8
             
             if (status == 0) { //0x000002E0
-                retVal = sub_00000FC4(&g_12C4[76]); //0x000002F0 -- &g_12C4[76] == 0x00001310
+                retVal = verifyConsoleCert(&g_12C4[76]); //0x000002F0 -- &g_12C4[76] == 0x00001310
                 status  = 0x80530013; // 0x000002F4 & 0x000002FC
                 
                 if (retVal == 0) { //0x000002F8
@@ -457,7 +457,7 @@ int sceMcctrl_7CAC25B2(u8 *arg1, u8 *arg2, u8 *arg3, u8 *arg4, u8 *arg5, u8 *arg
                     for (i = 0; i < 56; i++) {
                          g_165C[i] = g_13E4[212+i]; //0x0000032C -- &g_13E4[212] == 0x000014B8
                     }
-                    retVal = sub_00000FE0(&g_13E4[40+228], &g_12C4[172], g_165C, 56); //0x00000348
+                    retVal = verifyEcdsaSignature(&g_13E4[40+228], &g_12C4[172], g_165C, 56); //0x00000348
                     status = 0x80530019; //0x0000034C & 0x00000354
                     
                     if (retVal == 0) { //0x00000350
@@ -465,7 +465,7 @@ int sceMcctrl_7CAC25B2(u8 *arg1, u8 *arg2, u8 *arg3, u8 *arg4, u8 *arg5, u8 *arg
                         for (i = 0; i < 96; i++) {
                              g_165C[i] =  g_13E4[56+i]; //0x00000380 -- &g_13E4[56] == 0x0000141C
                         }
-                        retVal = sub_00000FE0(&g_13E4[40+112], &g_13E4[40+188], g_165C, 96); //0x00000398
+                        retVal = verifyEcdsaSignature(&g_13E4[40+112], &g_13E4[40+188], g_165C, 96); //0x00000398
                         status = 0x8053001A; //0x0000039C & 0x000003A4
                         
                         if (retVal == 0) { //0x000003A0
@@ -490,7 +490,7 @@ int sceMcctrl_7CAC25B2(u8 *arg1, u8 *arg2, u8 *arg3, u8 *arg4, u8 *arg5, u8 *arg
                                 status = 0x80530028; //0x00000424 & 0x0000042C
                                 if (val == 0) { //0x00000428
                                     //&g_13E4[56] == 0x0000141C && &g_12C4[16] == 0x000012D4
-                                    retVal == sub_00000F84(g_13E4, &g_13E4[56], &g_12C4[16]); //0x00000444
+                                    retVal == ecdsaMultiply(g_13E4, &g_13E4[56], &g_12C4[16]); //0x00000444
                                     status = 0x80530011; //0x00000448 & 0x00000450
                                     if (retVal == 0) { //0x0000044C
                                         //0x00000454 - 0x00000480
@@ -501,7 +501,7 @@ int sceMcctrl_7CAC25B2(u8 *arg1, u8 *arg2, u8 *arg3, u8 *arg4, u8 *arg5, u8 *arg
                                         for (i = 0; i < 96; i++) {
                                              g_165C[20+i] = g_13E4[56+i]; //0x000004AC -- //&g_13E4[56] == 0x0000141C
                                         }
-                                        retVal = sub_00000FA8(g_165C, 116, g_165C); //0x000004C0
+                                        retVal = computeSha1(g_165C, 116, g_165C); //0x000004C0
                                         status = 0x80530020; //0x0000087C & 0x00000884
                                         if (retVal == 0) { //0x000004C8
                                             //0x000004CC - 0x000004FC
@@ -553,7 +553,7 @@ int sceMcctrl_7CAC25B2(u8 *arg1, u8 *arg2, u8 *arg3, u8 *arg4, u8 *arg5, u8 *arg
                                                 for (i = 0; i < 16; i++) {
                                                      g_165C[96+32+64+i] = g_13E4[328+268+i]; //0x000006B4
                                                 }
-                                                retVal = sub_00001040(&g_13E4[328+112], &g_12C4[212], g_165C, 208); //0x000006D0
+                                                retVal = signEcdsaSignature(&g_13E4[328+112], &g_12C4[212], g_165C, 208); //0x000006D0
                                                 status = 0x80530018; //0x000006D4 & 0x000006DC
                                                 if (retVal == 0) { //0x000006D8
                                                     //0x000006E0 - 0x00000708
@@ -564,7 +564,7 @@ int sceMcctrl_7CAC25B2(u8 *arg1, u8 *arg2, u8 *arg3, u8 *arg4, u8 *arg5, u8 *arg
                                                     for (i = 0; i < 96; i++) {
                                                          g_165C[20+i] = g_13E4[328+16+i]; //0x00000730
                                                     }
-                                                    retVal = sub_00000FA8(g_165C, 116, g_165C); //0x00000740
+                                                    retVal = computeSha1(g_165C, 116, g_165C); //0x00000740
                                                     status = 0x80530020; //0x0000087C & 0x00000884
                                                     if (retVal == 0) {
                                                         //0x00000748 - 0x0000076C
@@ -579,12 +579,12 @@ int sceMcctrl_7CAC25B2(u8 *arg1, u8 *arg2, u8 *arg3, u8 *arg4, u8 *arg5, u8 *arg
                                                         for (i = 0; i < 20; i++) {
                                                              g_12C4[16+i] = g_13E4[i]; //0x000007B4 -- &g_12C4[16] == 0x000012D4
                                                         }
-                                                        sub_00000EB4(&g_13E4[328], 16); //0x000007BC
-                                                        retVal = sub_00000BC0(&g_13E4[328], arg6, 304); //0x000007CC
+                                                        fillRandomBytes(&g_13E4[328], 16); //0x000007BC
+                                                        retVal = encryptAndMacBlock(&g_13E4[328], arg6, 304); //0x000007CC
                                                         status = retVal; //0x000007D8
                                                         if (retVal == 0) { //0x000007D4
-                                                            sub_00000EB4(g_12C4, 16); //0x000007E0
-                                                            retVal = sub_00000BC0(g_12C4, arg1, 288); //0x000007F0
+                                                            fillRandomBytes(g_12C4, 16); //0x000007E0
+                                                            retVal = encryptAndMacBlock(g_12C4, arg1, 288); //0x000007F0
                                                             status = retVal; //0x000007F8
                                                         }
                                                     }
@@ -600,9 +600,9 @@ int sceMcctrl_7CAC25B2(u8 *arg1, u8 *arg2, u8 *arg3, u8 *arg4, u8 *arg5, u8 *arg
             }
         }
     }
-    sub_00000EB4(g_12C4, 288); //0x00000804
-    sub_00000EB4(g_13E4, 632); //0x00000814
-    sub_00000EB4(g_165C, 208); //0x00000824
+    fillRandomBytes(g_12C4, 288); //0x00000804
+    fillRandomBytes(g_13E4, 632); //0x00000814
+    fillRandomBytes(g_165C, 208); //0x00000824
     
     retVal = status & 0xFFFF0000; //0x00000830
     if (retVal == 0x80530000) { //0x00000838
@@ -625,7 +625,7 @@ int sceMcctrl_9618EE57(u8 *arg1, u8 *arg2, int arg3) {
     
     status = 0x80530001; //0x000008DC & 0x000008EC
     if (g_12C0 != 0) { //0x000008E8
-        status = sub_00000C40(arg1, g_12C4, 288); //0x000008F0 - 0x000008F8
+        status = verifyAndDecryptBlock(arg1, g_12C4, 288); //0x000008F0 - 0x000008F8
         
         if (status == 0) { //0x000008FC
             //0x00000904 - 0x0000092C
@@ -653,8 +653,8 @@ int sceMcctrl_9618EE57(u8 *arg1, u8 *arg2, int arg3) {
             }
         }     
     }
-    sub_00000EB4(g_12C4, 288); //0x00000974
-    sub_00000EB4(g_13E4, 632); //0x00000980
+    fillRandomBytes(g_12C4, 288); //0x00000974
+    fillRandomBytes(g_13E4, 632); //0x00000980
     val1 = status & 0xFFFF0000; //0x0000098C
     if (val1 == 0x80530000) {
         status |= 0x80530300; //0x000009CC
@@ -679,7 +679,7 @@ int sceMcctrl_61550814(u8 *arg1, u8 *arg2, int size, u8 *arg4, int arg5) {
     
     status = 0x80530001; //0x00000A0C & 0x00000A10
     if (g_12C0 != 0) { //0x00000A1C & 0x00000A2C
-        status = sub_00000C40(arg1, g_12C4, 288); //0x00000A38
+        status = verifyAndDecryptBlock(arg1, g_12C4, 288); //0x00000A38
         if (status == 0) { //0x00000A40
             //0x00000A48 - 0x00000A70
             for (i = 0; i < 4; i++) {
@@ -703,7 +703,7 @@ int sceMcctrl_61550814(u8 *arg1, u8 *arg2, int size, u8 *arg4, int arg5) {
             val5 = val1 + 15; //0x00000A9C
             val5 &= 0xFFFFFFF0; //0x00000AA0
             if (arg5 >= val5) { //0x00000AAC
-                status = sub_00000C40(arg2+4, arg4, size-4); //0x00000ABC
+                status = verifyAndDecryptBlock(arg2+4, arg4, size-4); //0x00000ABC
                 if (status == 0) { //0x00000AC4
                     if (status < val1) { //0x00000AD0
                         val6 = 0;                    
@@ -716,7 +716,7 @@ int sceMcctrl_61550814(u8 *arg1, u8 *arg2, int size, u8 *arg4, int arg5) {
                     
                             arg4[val6] = arg4[val6] ^ g_12C4[16+val7]; //0x00000B00 & 0x00000B04 & 0x00000B10 & 0x00000B20
                             if (val7 == 15) { //0x00000B1C
-                                status = sub_000010A0(&g_12C4[17], &g_12C4[17], 16); //0x00000B0C & 0x00000B14 & 0x00000B18 & 0x00000BA4
+                                status = encryptBuffer(&g_12C4[17], &g_12C4[17], 16); //0x00000B0C & 0x00000B14 & 0x00000B18 & 0x00000BA4
                                 if (status < 0) { //0x00000BAC
                                     status = 0x80530004;
                                     break; //0x00000BB4
@@ -730,8 +730,8 @@ int sceMcctrl_61550814(u8 *arg1, u8 *arg2, int size, u8 *arg4, int arg5) {
             }
         }
     }
-    sub_00000EB4(g_12C4, 288); //0x00000B3C
-    sub_00000EB4(g_13E4, 632); //0x00000B4C
+    fillRandomBytes(g_12C4, 288); //0x00000B3C
+    fillRandomBytes(g_13E4, 632); //0x00000B4C
     if ((status & 0xFFFFFFF0)== 0x8053) { //0x00000B60
         status |= 0x80530300; //0x00000BA0
     }

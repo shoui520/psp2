@@ -6,10 +6,10 @@ extern int sceDmacplus_driver_282CA0D7(void *lli);
 extern int sceDmacplus_driver_47D400CB(int a0, int a1);
 extern int sceDmacplus_driver_5FCF43BD(int a0, int a1);
 extern int sceDmacplus_driver_6945F1D3(void *lli);
-extern int sceDmacplus_driver_9C492B9B(void *rgb, void *unk, void *yuv);
+extern int sceDmacplus_driver_9C492B9B(void *rgb, void *rgb2, void *yuv);
 extern int sceDmacplus_driver_B269EAC9(int a0, int a1, void *coeff);
 extern int sceDmacplus_driver_BF0DB45E(int a0, int a1);
-extern int sceDmacplus_driver_D126494B(void *rgb, void *unk, void *yuv);
+extern int sceDmacplus_driver_D126494B(void *rgb, void *rgb2, void *yuv);
 extern int sceDmacplus_driver_F652F09D(int x, int y, int w, int h);
 extern int sceKernelDeleteSema(SceUID semaid);
 extern int sceKernelSignalSema(SceUID semaid, int signal);
@@ -31,7 +31,7 @@ typedef struct {
 
 typedef struct {
     SceMpegLLI lli[100];      // 0x000..0x640
-    u8 pad_640[16];           // 0x640..0x650
+    u8 reserved[16];          // 0x640..0x650
     u8 csc_coeff[24];         // 0x650..0x668
     int csc_width;            // 0x668
     int csc_mode;             // 0x66C
@@ -45,13 +45,13 @@ static const u32 g_default_csc_coeff[6] = {
     0x00000095, 0x009500CC, 0x039803CE, 0x01020095, 0x00100000, 0x00000001
 };
 
-int sub_09e8(int mode, int width, void *coeff);
-int sub_0a5c(u32 *dst_yuv, u32 *src_yuv, u32 *offsets, int flags);
-int sub_0b6c(void *rgb, void *unk, void *yuv);
-int sub_0bf8(void **p_rgb, void **p_unk, u32 *range, u32 *yuv, u32 *offsets, u32 *out_aligned);
-int sub_0d70(void *rgb, void *unk, u32 *range, u32 *yuv);
-SceMpegLLI *sub_14d8(SceMpegLLI *lli, u32 src, u32 dst, u32 size);
-int sub_1558(SceMpegLLI *end_lli);
+int dmacplusSetCscConfig(int mode, int width, void *coeff);
+int setupYuvPlanes(u32 *dst_yuv, u32 *src_yuv, u32 *offsets, int flags);
+int dmacplusCscAvcSync(void *rgb, void *rgb2, void *yuv);
+int cscAvcAlignLeftEdge(void **p_rgb, void **p_rgb2, u32 *range, u32 *yuv, u32 *offsets, u32 *out_aligned);
+int cscAvcPartialHeight(void *rgb, void *rgb2, u32 *range, u32 *yuv);
+SceMpegLLI *appendYuvCopyLli(SceMpegLLI *lli, u32 src, u32 dst, u32 size);
+int executeYuvCopyLli(SceMpegLLI *end_lli);
 
 int module_start(SceSize args, void *argp)
 {
@@ -82,7 +82,7 @@ int sceMpegbase_31007FF8(void)
     return sceMeCore_driver_var_AB354CA1;
 }
 
-int sceMpegBaseCscAvc(void *rgb, void *unk, int width, u32 *yuv)
+int sceMpegBaseCscAvc(void *rgb, void *rgb2, int width, u32 *yuv)
 {
     int k1 = pspShiftK1();
     u32 k1_mask = pspGetK1();
@@ -110,7 +110,7 @@ int sceMpegBaseCscAvc(void *rgb, void *unk, int width, u32 *yuv)
         ((yuv[9] | (yuv[9] + c_size)) & k1_mask) ||
         ((yuv[11] | (yuv[11] + c_size)) & k1_mask) ||
         (((u32)rgb | ((u32)rgb + rgb_size) | rgb_size) & k1_mask) ||
-        (unk != NULL && (((u32)unk | ((u32)unk + rgb_size) | rgb_size) & k1_mask))) {
+        (rgb2 != NULL && (((u32)rgb2 | ((u32)rgb2 + rgb_size) | rgb_size) & k1_mask))) {
         pspSetK1(k1);
         return 0x80000023;
     }
@@ -123,7 +123,7 @@ int sceMpegBaseCscAvc(void *rgb, void *unk, int width, u32 *yuv)
     }
 
     if (width != 0) {
-        ret = sub_09e8(g_mpegbase.csc_mode, width, g_mpegbase.csc_coeff);
+        ret = dmacplusSetCscConfig(g_mpegbase.csc_mode, width, g_mpegbase.csc_coeff);
         if (ret != 0) {
             pspSetK1(k1);
             return ret;
@@ -131,7 +131,7 @@ int sceMpegBaseCscAvc(void *rgb, void *unk, int width, u32 *yuv)
     }
 
     do {
-        ret = sceDmacplus_driver_D126494B(rgb, unk, yuv);
+        ret = sceDmacplus_driver_D126494B(rgb, rgb2, yuv);
         if (ret != 0 && ret != (int)0x80000021) {
             pspSetK1(k1);
             return ret;
@@ -147,7 +147,7 @@ int sceMpegBaseCscAvc(void *rgb, void *unk, int width, u32 *yuv)
     return ret;
 }
 
-int sceMpegBaseCscVme(void *rgb, void *unk, int width, u32 *yuv)
+int sceMpegBaseCscVme(void *rgb, void *rgb2, int width, u32 *yuv)
 {
     int k1 = pspShiftK1();
     u32 k1_mask = pspGetK1();
@@ -172,13 +172,13 @@ int sceMpegBaseCscVme(void *rgb, void *unk, int width, u32 *yuv)
         ((yuv[8] | (yuv[8] + c_size)) & k1_mask) ||
         ((yuv[9] | (yuv[9] + c_size)) & k1_mask) ||
         (((u32)rgb | ((u32)rgb + rgb_size) | rgb_size) & k1_mask) ||
-        (unk != NULL && (((u32)unk | ((u32)unk + rgb_size) | rgb_size) & k1_mask))) {
+        (rgb2 != NULL && (((u32)rgb2 | ((u32)rgb2 + rgb_size) | rgb_size) & k1_mask))) {
         pspSetK1(k1);
         return 0x80000023;
     }
 
     if (width != 0) {
-        int ret = sub_09e8(g_mpegbase.csc_mode, width, g_mpegbase.csc_coeff);
+        int ret = dmacplusSetCscConfig(g_mpegbase.csc_mode, width, g_mpegbase.csc_coeff);
         if (ret != 0) {
             pspSetK1(k1);
             return ret;
@@ -187,7 +187,7 @@ int sceMpegBaseCscVme(void *rgb, void *unk, int width, u32 *yuv)
 
     int ret;
     do {
-        ret = sceDmacplus_driver_9C492B9B(rgb, unk, yuv);
+        ret = sceDmacplus_driver_9C492B9B(rgb, rgb2, yuv);
         if (ret != 0 && ret != (int)0x80000021) {
             pspSetK1(k1);
             return ret;
@@ -203,7 +203,7 @@ int sceMpegBaseCscVme(void *rgb, void *unk, int width, u32 *yuv)
     return ret;
 }
 
-int sceMpegBaseCscAvcRange(void *rgb, void *unk, u32 *range, int width, u32 *yuv)
+int sceMpegBaseCscAvcRange(void *rgb, void *rgb2, u32 *range, int width, u32 *yuv)
 {
     int k1 = pspShiftK1();
     u32 k1_mask = pspGetK1();
@@ -232,7 +232,7 @@ int sceMpegBaseCscAvcRange(void *rgb, void *unk, u32 *range, int width, u32 *yuv
         ((yuv[9] | (yuv[9] + c_size)) & k1_mask) ||
         ((yuv[11] | (yuv[11] + c_size)) & k1_mask) ||
         (((u32)rgb | ((u32)rgb + rgb_size) | rgb_size) & k1_mask) ||
-        (unk != NULL && (((u32)unk | ((u32)unk + rgb_size) | rgb_size) & k1_mask))) {
+        (rgb2 != NULL && (((u32)rgb2 | ((u32)rgb2 + rgb_size) | rgb_size) & k1_mask))) {
         pspSetK1(k1);
         return 0x80000023;
     }
@@ -250,7 +250,7 @@ int sceMpegBaseCscAvcRange(void *rgb, void *unk, u32 *range, int width, u32 *yuv
     }
 
     if (width != 0) {
-        ret = sub_09e8(g_mpegbase.csc_mode, width, g_mpegbase.csc_coeff);
+        ret = dmacplusSetCscConfig(g_mpegbase.csc_mode, width, g_mpegbase.csc_coeff);
         if (ret != 0) {
             pspSetK1(k1);
             return ret;
@@ -258,22 +258,22 @@ int sceMpegBaseCscAvcRange(void *rgb, void *unk, u32 *range, int width, u32 *yuv
     }
 
     if (yuv[0] != range[3]) {
-        ret = sub_0d70(rgb, unk, range, yuv);
+        ret = cscAvcPartialHeight(rgb, rgb2, range, yuv);
         pspSetK1(k1);
         return ret;
     }
 
     if (yuv[1] == range[2]) {
-        ret = sub_0b6c(rgb, unk, yuv);
+        ret = dmacplusCscAvcSync(rgb, rgb2, yuv);
         pspSetK1(k1);
         return ret;
     }
 
     void *cur_rgb = rgb;
-    void *cur_unk = unk;
+    void *cur_rgb2 = rgb2;
     u32 offsets[4];
     u32 aligned_w = 0;
-    ret = sub_0bf8(&cur_rgb, &cur_unk, range, yuv, offsets, &aligned_w);
+    ret = cscAvcAlignLeftEdge(&cur_rgb, &cur_rgb2, range, yuv, offsets, &aligned_w);
     if (ret != 0) {
         pspSetK1(k1);
         return ret;
@@ -284,8 +284,8 @@ int sceMpegBaseCscAvcRange(void *rgb, void *unk, u32 *range, int width, u32 *yuv
     tmp_yuv[1] = range[2] - aligned_w;
     tmp_yuv[2] = yuv[2];
     tmp_yuv[3] = yuv[3];
-    sub_0a5c(tmp_yuv, yuv, offsets, 0);
-    ret = sub_0b6c(cur_rgb, cur_unk, tmp_yuv);
+    setupYuvPlanes(tmp_yuv, yuv, offsets, 0);
+    ret = dmacplusCscAvcSync(cur_rgb, cur_rgb2, tmp_yuv);
     pspSetK1(k1);
     return ret;
 }
@@ -293,7 +293,7 @@ int sceMpegBaseCscAvcRange(void *rgb, void *unk, u32 *range, int width, u32 *yuv
 int sceMpegbase_0530BE4E(int mode)
 {
     g_mpegbase.csc_mode = mode;
-    return sub_09e8(mode, g_mpegbase.csc_width, g_mpegbase.csc_coeff);
+    return dmacplusSetCscConfig(mode, g_mpegbase.csc_width, g_mpegbase.csc_coeff);
 }
 
 int sceMpegbase_AC9E717E(int width, const void *coeff)
@@ -332,7 +332,7 @@ int sceMpegbase_AC9E717E(int width, const void *coeff)
         dst[21] = src[21];
     }
 
-    int ret = sub_09e8(0, width, g_mpegbase.csc_coeff);
+    int ret = dmacplusSetCscConfig(0, width, g_mpegbase.csc_coeff);
     pspSetK1(k1);
     return ret;
 }
@@ -345,7 +345,7 @@ int sceMpegBaseCscInit(int width)
     return ret;
 }
 
-int sub_09e8(int mode, int width, void *coeff)
+int dmacplusSetCscConfig(int mode, int width, void *coeff)
 {
     int ret;
     for (;;) {
@@ -356,7 +356,7 @@ int sub_09e8(int mode, int width, void *coeff)
     }
 }
 
-int sub_0a5c(u32 *dst_yuv, u32 *src_yuv, u32 *offsets, int flags)
+int setupYuvPlanes(u32 *dst_yuv, u32 *src_yuv, u32 *offsets, int flags)
 {
     if (flags & 2) {
         dst_yuv[4]  = src_yuv[5]  + offsets[1];
@@ -384,11 +384,11 @@ int sub_0a5c(u32 *dst_yuv, u32 *src_yuv, u32 *offsets, int flags)
     return 0;
 }
 
-int sub_0b6c(void *rgb, void *unk, void *yuv)
+int dmacplusCscAvcSync(void *rgb, void *rgb2, void *yuv)
 {
     int ret;
     for (;;) {
-        ret = sceDmacplus_driver_D126494B(rgb, unk, yuv);
+        ret = sceDmacplus_driver_D126494B(rgb, rgb2, yuv);
         if (ret != 0 && ret != (int)0x80000021)
             return ret;
         sceDmacplus_driver_BF0DB45E(0, 0);
@@ -397,7 +397,7 @@ int sub_0b6c(void *rgb, void *unk, void *yuv)
     }
 }
 
-int sub_0bf8(void **p_rgb, void **p_unk, u32 *range, u32 *yuv, u32 *offsets, u32 *out_aligned)
+int cscAvcAlignLeftEdge(void **p_rgb, void **p_rgb2, u32 *range, u32 *yuv, u32 *offsets, u32 *out_aligned)
 {
     u32 rx = range[0];
     u32 h = yuv[0];
@@ -430,13 +430,13 @@ int sub_0bf8(void **p_rgb, void **p_unk, u32 *range, u32 *yuv, u32 *offsets, u32
     tmp_yuv[1] = 1;
     tmp_yuv[2] = yuv[2];
     tmp_yuv[3] = yuv[3];
-    sub_0a5c(tmp_yuv, yuv, offsets, 2);
+    setupYuvPlanes(tmp_yuv, yuv, offsets, 2);
 
-    int ret = sub_0b6c(*p_rgb, *p_unk, tmp_yuv);
+    int ret = dmacplusCscAvcSync(*p_rgb, *p_rgb2, tmp_yuv);
     if (ret == 0) {
         *p_rgb = (u8 *)(*p_rgb) + 0x40;
-        if (*p_unk != NULL)
-            *p_unk = (u8 *)(*p_unk) + 0x40;
+        if (*p_rgb2 != NULL)
+            *p_rgb2 = (u8 *)(*p_rgb2) + 0x40;
         offsets[1] += step_y;
         offsets[3] += (step_y >> 1);
     }
@@ -444,14 +444,14 @@ int sub_0bf8(void **p_rgb, void **p_unk, u32 *range, u32 *yuv, u32 *offsets, u32
     return ret;
 }
 
-int sub_0d70(void *rgb, void *unk, u32 *range, u32 *yuv)
+int cscAvcPartialHeight(void *rgb, void *rgb2, u32 *range, u32 *yuv)
 {
     void *cur_rgb = rgb;
-    void *cur_unk = unk;
+    void *cur_rgb2 = rgb2;
     u32 offsets[4];
     u32 aligned_w = 0;
 
-    int ret = sub_0bf8(&cur_rgb, &cur_unk, range, yuv, offsets, &aligned_w);
+    int ret = cscAvcAlignLeftEdge(&cur_rgb, &cur_rgb2, range, yuv, offsets, &aligned_w);
     if (ret != 0)
         return ret;
 
@@ -467,13 +467,13 @@ int sub_0d70(void *rgb, void *unk, u32 *range, u32 *yuv)
         u32 step_y = yuv[0] << 7;
         u32 step_c = step_y >> 1;
         for (u32 i = 0; i < pairs; i++) {
-            sub_0a5c(tmp_yuv, yuv, offsets, 0);
-            ret = sub_0b6c(cur_rgb, cur_unk, tmp_yuv);
+            setupYuvPlanes(tmp_yuv, yuv, offsets, 0);
+            ret = dmacplusCscAvcSync(cur_rgb, cur_rgb2, tmp_yuv);
             if (ret != 0)
                 return ret;
             cur_rgb = (u8 *)cur_rgb + 0x80;
-            if (cur_unk != NULL)
-                cur_unk = (u8 *)cur_unk + 0x80;
+            if (cur_rgb2 != NULL)
+                cur_rgb2 = (u8 *)cur_rgb2 + 0x80;
             offsets[0] += step_y;
             offsets[1] += step_y;
             offsets[2] += step_c;
@@ -483,8 +483,8 @@ int sub_0d70(void *rgb, void *unk, u32 *range, u32 *yuv)
 
     if (rem_w & 1) {
         tmp_yuv[1] = 1;
-        sub_0a5c(tmp_yuv, yuv, offsets, 0);
-        ret = sub_0b6c(cur_rgb, cur_unk, tmp_yuv);
+        setupYuvPlanes(tmp_yuv, yuv, offsets, 0);
+        ret = dmacplusCscAvcSync(cur_rgb, cur_rgb2, tmp_yuv);
     }
     return ret;
 }
@@ -606,20 +606,20 @@ int sceMpegBaseYCrCbCopy(u32 *dst, u32 *src, int flags)
     SceMpegLLI *lli = g_mpegbase.lli;
 
     if (flags & 1) {
-        lli = sub_14d8(lli, dst[4], src[4], y_size);
-        lli = sub_14d8(lli, dst[5], src[5], y_size);
-        lli = sub_14d8(lli, dst[8], src[8], c_size);
-        lli = sub_14d8(lli, dst[9], src[9], c_size);
+        lli = appendYuvCopyLli(lli, dst[4], src[4], y_size);
+        lli = appendYuvCopyLli(lli, dst[5], src[5], y_size);
+        lli = appendYuvCopyLli(lli, dst[8], src[8], c_size);
+        lli = appendYuvCopyLli(lli, dst[9], src[9], c_size);
     }
     if (flags & 2) {
-        lli = sub_14d8(lli, dst[6],  src[6],  y_size);
-        lli = sub_14d8(lli, dst[7],  src[7],  y_size);
-        lli = sub_14d8(lli, dst[10], src[10], c_size);
-        lli = sub_14d8(lli, dst[11], src[11], c_size);
+        lli = appendYuvCopyLli(lli, dst[6],  src[6],  y_size);
+        lli = appendYuvCopyLli(lli, dst[7],  src[7],  y_size);
+        lli = appendYuvCopyLli(lli, dst[10], src[10], c_size);
+        lli = appendYuvCopyLli(lli, dst[11], src[11], c_size);
     }
 
     if (lli != g_mpegbase.lli)
-        ret = sub_1558(lli);
+        ret = executeYuvCopyLli(lli);
 
     sceKernelSignalSema(g_mpegbase.sema_id, 1);
     pspSetK1(k1);
@@ -659,25 +659,25 @@ int sceMpegBaseYCrCbCopyVme(u32 *dst, u32 *src, int flags)
     SceMpegLLI *lli = g_mpegbase.lli;
 
     if (flags & 1) {
-        lli = sub_14d8(lli, dst[4], src[4], y_size);
-        lli = sub_14d8(lli, dst[6], src[6], c_size);
-        lli = sub_14d8(lli, dst[7], src[7], c_size);
+        lli = appendYuvCopyLli(lli, dst[4], src[4], y_size);
+        lli = appendYuvCopyLli(lli, dst[6], src[6], c_size);
+        lli = appendYuvCopyLli(lli, dst[7], src[7], c_size);
     }
     if (flags & 2) {
-        lli = sub_14d8(lli, dst[5], src[5], y_size);
-        lli = sub_14d8(lli, dst[8], src[8], c_size);
-        lli = sub_14d8(lli, dst[9], src[9], c_size);
+        lli = appendYuvCopyLli(lli, dst[5], src[5], y_size);
+        lli = appendYuvCopyLli(lli, dst[8], src[8], c_size);
+        lli = appendYuvCopyLli(lli, dst[9], src[9], c_size);
     }
 
     if (lli != g_mpegbase.lli)
-        ret = sub_1558(lli);
+        ret = executeYuvCopyLli(lli);
 
     sceKernelSignalSema(g_mpegbase.sema_id, 1);
     pspSetK1(k1);
     return ret;
 }
 
-SceMpegLLI *sub_14d8(SceMpegLLI *lli, u32 dst, u32 src, u32 size)
+SceMpegLLI *appendYuvCopyLli(SceMpegLLI *lli, u32 dst, u32 src, u32 size)
 {
     if (size == 0)
         return lli;
@@ -701,7 +701,7 @@ SceMpegLLI *sub_14d8(SceMpegLLI *lli, u32 dst, u32 src, u32 size)
     return lli;
 }
 
-int sub_1558(SceMpegLLI *end_lli)
+int executeYuvCopyLli(SceMpegLLI *end_lli)
 {
     end_lli[-1].next = 0;
     end_lli[-1].ctrl |= 0x80000000U;

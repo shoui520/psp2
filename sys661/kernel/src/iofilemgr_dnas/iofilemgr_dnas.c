@@ -33,11 +33,24 @@ typedef struct {
 } SceIoHookFuncs;
 
 typedef struct {
-    int unk0;
+    int reserved;
     void *arg;
     SceIoHookFuncs *funcs;
     void *priv;
 } SceIoHookArg;
+
+typedef struct ScePgdHeader {
+    u8 magic[4];       /* 0x00: "\0PGD" */
+    u32 version;       /* 0x04 */
+    u32 drm_type;      /* 0x08 */
+    u32 reserved;      /* 0x0c */
+    u8 header_key[16]; /* 0x10 */
+    u8 key_pad[16];    /* 0x20 */
+    u32 pgd_info[12];  /* 0x30..0x5f */
+    u8 table_mac[16];  /* 0x60..0x6f */
+    u8 data_mac[16];   /* 0x70..0x7f */
+    u8 header_mac[16]; /* 0x80..0x8f */
+} ScePgdHeader;
 
 typedef struct {
     u32 pgd_info[12];  /* 0x00..0x2f */
@@ -71,36 +84,36 @@ static const u32 g_pgd_mac_key[8] = {
     0xdf2844b1, 0x5b14cd0a, 0x903619c8, 0x2f9942d1
 };
 
-static int sub_008c(void);
-static int sub_01a0(void);
-static int sub_01a8(void);
-static int sub_01b0(int a0, int a1, int flags);
-static int sub_01b8(void);
-static int sub_01f4(SceIoHookArg *harg, char *file, int flags, int mode);
-static int sub_0468(SceIoHookArg *harg);
-static s64 sub_04ec(SceIoHookArg *harg, s64 ofs, int whence);
-static int sub_0618(SceIoHookArg *harg, char *data, int len);
-static int sub_0aa8(SceIoHookArg *harg, unsigned int cmd, void *indata, int inlen, void *outdata, int outlen);
-static int sub_0c34(SceIoHookArg *harg, void *key);
-static int sub_1108(SceIoHookArg *harg, u32 offset);
-static int sub_1184(SceIoHookArg *harg, u32 flag);
-static int sub_11f4(SceIoHookArg *harg, void *outdata, u32 offset, int size);
-static int sub_1314(SceIoHookArg *harg);
-static int sub_1398(SceIoHookArg *harg);
-static int sub_1428(void *buf, int size, u32 block, void *vkey, void *header_key, int mode);
-static int sub_14fc(const void *buf, int size, const void *vkey, const void *mac, int type, u32 xor_val);
-static int sub_1614(const void *buf, int size, const void *vkey, const void *mac, int type);
+static int dnasUnlock(void);
+static int dnasHookAdd(void);
+static int dnasHookRemove(void);
+static int dnasHookProbe(int a0, int a1, int flags);
+static int dnasLock(void);
+static int dnasHookOpen(SceIoHookArg *harg, char *file, int flags, int mode);
+static int dnasHookClose(SceIoHookArg *harg);
+static s64 dnasHookLseek(SceIoHookArg *harg, s64 ofs, int whence);
+static int dnasHookRead(SceIoHookArg *harg, char *data, int len);
+static int dnasHookIoctl(SceIoHookArg *harg, unsigned int cmd, void *indata, int inlen, void *outdata, int outlen);
+static int dnasSetKey(SceIoHookArg *harg, void *key);
+static int dnasSetBaseOffset(SceIoHookArg *harg, u32 offset);
+static int dnasSetCheckTable(SceIoHookArg *harg, u32 flag);
+static int dnasReadRaw(SceIoHookArg *harg, void *outdata, u32 offset, int size);
+static int dnasCheckReady(SceIoHookArg *harg);
+static int dnasGetFileSize(SceIoHookArg *harg);
+static int dnasDecryptBlocks(void *buf, int size, u32 block, void *vkey, void *header_key, int mode);
+static int dnasVerifyMacXor(const void *buf, int size, const void *vkey, const void *mac, int type, u32 xor_val);
+static int dnasVerifyMac(const void *buf, int size, const void *vkey, const void *mac, int type);
 
 static const void * const g_hook_funcs[9] = {
-    sub_01a0,
-    sub_01a8,
-    sub_01b0,
-    sub_01f4,
-    sub_0468,
-    sub_0618,
+    dnasHookAdd,
+    dnasHookRemove,
+    dnasHookProbe,
+    dnasHookOpen,
+    dnasHookClose,
+    dnasHookRead,
     NULL,
-    sub_04ec,
-    sub_0aa8
+    dnasHookLseek,
+    dnasHookIoctl
 };
 
 static const void * const g_hook_desc[5] = {
@@ -119,7 +132,7 @@ int module_reboot_phase(int phase)
         return sceKernelWaitSema(g_state.semaid, 1, NULL);
     if (phase < 3) {
         if (phase == 1)
-            return sub_008c();
+            return dnasUnlock();
         return 0;
     }
     if (phase == 3)
@@ -127,7 +140,7 @@ int module_reboot_phase(int phase)
     return 0;
 }
 
-static int sub_008c(void)
+static int dnasUnlock(void)
 {
     return sceKernelSignalSema(g_state.semaid, 1);
 }
@@ -161,48 +174,48 @@ int module_reboot_before(SceSize args, void *argp)
 
 int module_stop(SceSize args, void *argp) __attribute__((alias("module_reboot_before")));
 
-static int sub_01a0(void)
+static int dnasHookAdd(void)
 {
     return 0;
 }
 
-static int sub_01a8(void)
+static int dnasHookRemove(void)
 {
     return 0;
 }
 
-static int sub_01b0(int a0, int a1, int flags)
+static int dnasHookProbe(int a0, int a1, int flags)
 {
     (void)a0;
     (void)a1;
     return ((u32)flags >> 30) & 1;
 }
 
-static int sub_01b8(void)
+static int dnasLock(void)
 {
     if (g_reboot_flag != 0)
         return 0x80000041;
     return sceKernelWaitSema(g_state.semaid, 1, NULL);
 }
 
-static int sub_01f4(SceIoHookArg *harg, char *file, int flags, int mode)
+static int dnasHookOpen(SceIoHookArg *harg, char *file, int flags, int mode)
 {
     if (flags & 2)
         return 0x80510201;
 
     int in_use_val = (((u32)flags >> 26) & 1) ? 1 : 2;
-    int ret = sub_01b8();
+    int ret = dnasLock();
     if (ret < 0)
         return ret;
 
     if ((u32)g_state.open_count >= 8) {
-        sub_008c();
+        dnasUnlock();
         return 0x80510202;
     }
 
     int fd = harg->funcs->open(harg->arg, file, flags, mode);
     if (fd < 0) {
-        sub_008c();
+        dnasUnlock();
         return fd;
     }
 
@@ -234,7 +247,7 @@ static int sub_01f4(SceIoHookArg *harg, char *file, int flags, int mode)
     SceDnasFileSlot *slot = &g_state.slots[slot_idx];
     harg->priv = slot;
     slot->flags = 0;
-    ret = sub_008c();
+    ret = dnasUnlock();
     return (ret < 0) ? ret : fd;
 
 fail:
@@ -244,31 +257,31 @@ fail:
         if (slot_idx >= 0)
             sceKernelMemset(&g_state.slots[slot_idx], 0, sizeof(SceDnasFileSlot));
     }
-    sub_008c();
+    dnasUnlock();
     return (ret < 0) ? ret : (int)0x80510204;
 }
 
-static int sub_0468(SceIoHookArg *harg)
+static int dnasHookClose(SceIoHookArg *harg)
 {
     SceDnasFileSlot *slot = (SceDnasFileSlot *)harg->priv;
     harg->funcs->close(harg->arg);
-    int ret = sub_01b8();
+    int ret = dnasLock();
     if (ret < 0)
         return ret;
     sceKernelMemset(slot, 0, sizeof(SceDnasFileSlot));
     if (g_state.open_count != 0)
         g_state.open_count--;
-    sub_008c();
+    dnasUnlock();
     return ret;
 }
 
-static s64 sub_04ec(SceIoHookArg *harg, s64 ofs, int whence)
+static s64 dnasHookLseek(SceIoHookArg *harg, s64 ofs, int whence)
 {
     SceDnasFileSlot *slot = (SceDnasFileSlot *)harg->priv;
     if ((slot->flags & 0x10) == 0)
         return (s64)(s32)0x80510206;
 
-    int ret = sub_01b8();
+    int ret = dnasLock();
     if (ret < 0)
         return (s64)ret;
 
@@ -280,7 +293,7 @@ static s64 sub_04ec(SceIoHookArg *harg, s64 ofs, int whence)
     } else if (whence == 2) {
         new_pos = ofs + (u64)slot->pgd_info[5];
     } else {
-        sub_008c();
+        dnasUnlock();
         return (s64)(s32)0x80510201;
     }
 
@@ -290,16 +303,16 @@ static s64 sub_04ec(SceIoHookArg *harg, s64 ofs, int whence)
         new_pos = (u64)slot->pgd_info[5];
     slot->cur_pos = (u32)new_pos;
 
-    ret = sub_008c();
+    ret = dnasUnlock();
     if (ret < 0)
         return (s64)ret;
     return new_pos;
 }
 
-static int sub_0618(SceIoHookArg *harg, char *data, int len)
+static int dnasHookRead(SceIoHookArg *harg, char *data, int len)
 {
     SceDnasFileSlot *slot = (SceDnasFileSlot *)harg->priv;
-    int ret = sub_01b8();
+    int ret = dnasLock();
     if (ret < 0)
         return ret;
 
@@ -309,14 +322,14 @@ static int sub_0618(SceIoHookArg *harg, char *data, int len)
     }
 
     if (len == 0) {
-        ret = sub_008c();
+        ret = dnasUnlock();
         return ret;
     }
 
     u32 file_size = slot->pgd_info[5];
     u32 cur_pos = slot->cur_pos;
     if (cur_pos >= file_size) {
-        ret = sub_008c();
+        ret = dnasUnlock();
         return (ret < 0) ? ret : 0;
     }
 
@@ -333,13 +346,13 @@ static int sub_0618(SceIoHookArg *harg, char *data, int len)
     int skip_mac = (slot->check_table == 0) ? 1 : 0;
     u32 block_size = slot->pgd_info[6];
 
-    ret = sub_008c();
+    ret = dnasUnlock();
     if (ret < 0)
         return ret;
 
     int total_read = 0;
     while (cur_pos < end_pos) {
-        ret = sub_01b8();
+        ret = dnasLock();
         if (ret < 0)
             return ret;
         if ((slot->flags & 0x10) == 0) {
@@ -405,9 +418,9 @@ static int sub_0618(SceIoHookArg *harg, char *data, int len)
                 }
                 u8 *mac_ptr = g_work_buf + 0x400 + ((sub_idx & 0x1f) << 4);
                 if (slot->type < 3)
-                    ret = sub_1614(work_ptr + verified, vchunk, slot->vkey, mac_ptr, mac_type);
+                    ret = dnasVerifyMac(work_ptr + verified, vchunk, slot->vkey, mac_ptr, mac_type);
                 else
-                    ret = sub_14fc(work_ptr + verified, vchunk, slot->vkey, mac_ptr, mac_type, aligned_pos + verified);
+                    ret = dnasVerifyMacXor(work_ptr + verified, vchunk, slot->vkey, mac_ptr, mac_type, aligned_pos + verified);
                 if (ret < 0)
                     goto err_out;
                 verified += block_size;
@@ -416,7 +429,7 @@ static int sub_0618(SceIoHookArg *harg, char *data, int len)
         }
 
         u32 align16 = block_off & ~0x0fu;
-        ret = sub_1428(work_ptr + align16, read_len - align16, (aligned_pos + block_off) >> 4, slot->vkey, slot, cipher_mode);
+        ret = dnasDecryptBlocks(work_ptr + align16, read_len - align16, (aligned_pos + block_off) >> 4, slot->vkey, slot, cipher_mode);
         if (ret < 0)
             goto err_out;
 
@@ -429,7 +442,7 @@ static int sub_0618(SceIoHookArg *harg, char *data, int len)
         data += copy_len;
         total_read += copy_len;
         aligned_pos += chunk_len;
-        sub_008c();
+        dnasUnlock();
         cur_pos = aligned_pos;
     }
 
@@ -437,11 +450,11 @@ static int sub_0618(SceIoHookArg *harg, char *data, int len)
 
 err_out:
     sceKernelMemset(g_work_buf, 0, 0x400);
-    sub_008c();
+    dnasUnlock();
     return (ret < 0) ? ret : (int)0x80510207;
 }
 
-static int sub_0aa8(SceIoHookArg *harg, unsigned int cmd, void *indata, int inlen, void *outdata, int outlen)
+static int dnasHookIoctl(SceIoHookArg *harg, unsigned int cmd, void *indata, int inlen, void *outdata, int outlen)
 {
     u32 k1 = pspGetK1();
 
@@ -449,17 +462,17 @@ static int sub_0aa8(SceIoHookArg *harg, unsigned int cmd, void *indata, int inle
     case 0:
         if (!indata || (u32)inlen < 0x10)
             return 0x80510201;
-        return sub_0c34(harg, indata);
+        return dnasSetKey(harg, indata);
     case 1:
         if (!indata || (u32)inlen < 4)
             return 0x80510201;
-        return sub_1108(harg, *(u32 *)indata);
+        return dnasSetBaseOffset(harg, *(u32 *)indata);
     case 2:
         if (sceKernelApplicationType() != 0x300)
             return 0x80510201;
-        return sub_1184(harg, 1);
+        return dnasSetCheckTable(harg, 1);
     case 3:
-        return sub_1184(harg, 0);
+        return dnasSetCheckTable(harg, 0);
     case 4: {
         if (!indata || (u32)inlen < 8 || !outdata)
             return 0x80510201;
@@ -469,18 +482,18 @@ static int sub_0aa8(SceIoHookArg *harg, unsigned int cmd, void *indata, int inle
             return 0x80510201;
         if ((s32)(k1 & (((u32)outdata + rsize) | (u32)outdata | rsize)) < 0)
             return 0x80510201;
-        return sub_11f4(harg, outdata, in32[0], rsize);
+        return dnasReadRaw(harg, outdata, in32[0], rsize);
     }
     case 5:
-        return sub_1314(harg);
+        return dnasCheckReady(harg);
     case 15:
-        return sub_1398(harg);
+        return dnasGetFileSize(harg);
     default:
         return harg->funcs->ioctl(harg->arg, cmd, indata, inlen, outdata, outlen);
     }
 }
 
-static int sub_0c34(SceIoHookArg *harg, void *key)
+static int dnasSetKey(SceIoHookArg *harg, void *key)
 {
     SceDnasFileSlot *slot = (SceDnasFileSlot *)harg->priv;
     if (!key)
@@ -504,12 +517,13 @@ static int sub_0c34(SceIoHookArg *harg, void *key)
         goto fail;
     }
 
-    if (memcmp(g_work_buf, "\0PGD", 4) != 0) {
+    ScePgdHeader *pgd = (ScePgdHeader *)g_work_buf;
+    if (memcmp(pgd->magic, "\0PGD", 4) != 0) {
         ret = 0x80510204;
         goto fail;
     }
 
-    u32 version = *(u32 *)(g_work_buf + 4);
+    u32 version = pgd->version;
     if (version >= 4) {
         ret = 0x80510205;
         goto fail;
@@ -531,14 +545,14 @@ static int sub_0c34(SceIoHookArg *harg, void *key)
             goto fail;
     }
 
-    u32 drm_type = *(u32 *)(g_work_buf + 8);
+    u32 drm_type = pgd->drm_type;
     int mac_type = 2;
     int cipher_mode = 2;
     if (drm_type == 1) {
         slot_flags |= 4;
         mac_type = 1;
         cipher_mode = 1;
-        if (*(u32 *)(g_work_buf + 4) >= 2) {
+        if (pgd->version >= 2) {
             slot_flags |= 8;
             mac_type = 3;
         }
@@ -557,29 +571,29 @@ static int sub_0c34(SceIoHookArg *harg, void *key)
         goto fail;
     }
 
-    if (sub_1614(g_work_buf, 0x80, dnas_key, g_work_buf + 0x80, mac_type) < 0) {
+    if (dnasVerifyMac(g_work_buf, 0x80, dnas_key, pgd->header_mac, mac_type) < 0) {
         ret = 0x80510204;
         goto fail;
     }
-    if (sub_1614(g_work_buf, 0x70, slot->vkey, g_work_buf + 0x70, mac_type) < 0) {
+    if (dnasVerifyMac(g_work_buf, 0x70, slot->vkey, pgd->data_mac, mac_type) < 0) {
         ret = 0x80510206;
         goto fail;
     }
 
-    ret = sub_1428(g_work_buf + 0x30, 0x30, 0, slot->vkey, g_work_buf + 0x10, cipher_mode);
+    ret = dnasDecryptBlocks(pgd->pgd_info, 0x30, 0, slot->vkey, pgd->header_key, cipher_mode);
     if (ret < 0)
         goto fail;
-    if (*(u32 *)(g_work_buf + 0x40) != 0) {
+    if (pgd->pgd_info[4] != 0) {
         ret = 0x80510205;
         goto fail;
     }
-    if (*(u32 *)(g_work_buf + 0x48) != 0x400) {
+    if (pgd->pgd_info[6] != 0x400) {
         ret = 0x80510204;
         goto fail;
     }
 
     slot->flags = slot_flags | 0x10;
-    sceKernelMemcpy(slot->pgd_info, g_work_buf + 0x30, 0x30);
+    sceKernelMemcpy(slot->pgd_info, pgd->pgd_info, 0x30);
 
     u32 align_size = (slot->pgd_info[5] + 0x0f) & ~0x0fu;
     u32 blk_size = slot->pgd_info[6];
@@ -589,7 +603,7 @@ static int sub_0c34(SceIoHookArg *harg, void *key)
     slot->data_offset = slot->pgd_info[7] + slot->base_offset;
     slot->table_offset = align_size + 0x90 + slot->base_offset;
 
-    if (table_size <= 0x7ffff || *(u32 *)(g_work_buf + 4) >= 3) {
+    if (table_size <= 0x7ffff || pgd->version >= 3) {
         u8 mac_tmp[16];
         sceKernelMemcpy(mac_tmp, g_work_buf + 0x60, 0x10);
         void *mkey = g_work_buf + 0x618;
@@ -632,7 +646,7 @@ fail:
     return (ret < 0) ? ret : (int)0x80510204;
 }
 
-static int sub_1108(SceIoHookArg *harg, u32 offset)
+static int dnasSetBaseOffset(SceIoHookArg *harg, u32 offset)
 {
     SceDnasFileSlot *slot = (SceDnasFileSlot *)harg->priv;
     if (slot->base_offset == offset)
@@ -645,7 +659,7 @@ static int sub_1108(SceIoHookArg *harg, u32 offset)
     return sceKernelSignalSema(g_state.semaid, 1);
 }
 
-static int sub_1184(SceIoHookArg *harg, u32 flag)
+static int dnasSetCheckTable(SceIoHookArg *harg, u32 flag)
 {
     SceDnasFileSlot *slot = (SceDnasFileSlot *)harg->priv;
     int ret = sceKernelWaitSema(g_state.semaid, 1, NULL);
@@ -655,7 +669,7 @@ static int sub_1184(SceIoHookArg *harg, u32 flag)
     return sceKernelSignalSema(g_state.semaid, 1);
 }
 
-static int sub_11f4(SceIoHookArg *harg, void *outdata, u32 offset, int size)
+static int dnasReadRaw(SceIoHookArg *harg, void *outdata, u32 offset, int size)
 {
     int ret = sceKernelWaitSema(g_state.semaid, 1, NULL);
     if (ret < 0)
@@ -679,7 +693,7 @@ static int sub_11f4(SceIoHookArg *harg, void *outdata, u32 offset, int size)
     return (ret < 0) ? ret : sret;
 }
 
-static int sub_1314(SceIoHookArg *harg)
+static int dnasCheckReady(SceIoHookArg *harg)
 {
     SceDnasFileSlot *slot = (SceDnasFileSlot *)harg->priv;
     int ret = sceKernelWaitSema(g_state.semaid, 1, NULL);
@@ -693,7 +707,7 @@ static int sub_1314(SceIoHookArg *harg)
     return (ret < 0) ? ret : 0;
 }
 
-static int sub_1398(SceIoHookArg *harg)
+static int dnasGetFileSize(SceIoHookArg *harg)
 {
     SceDnasFileSlot *slot = (SceDnasFileSlot *)harg->priv;
     int ret = sceKernelWaitSema(g_state.semaid, 1, NULL);
@@ -708,7 +722,7 @@ static int sub_1398(SceIoHookArg *harg)
     return (ret < 0) ? ret : size;
 }
 
-static int sub_1428(void *buf, int size, u32 block, void *vkey, void *header_key, int mode)
+static int dnasDecryptBlocks(void *buf, int size, u32 block, void *vkey, void *header_key, int mode)
 {
     void *ckey = g_work_buf + 0x600;
     int ret = sceDrmBBCipherInit(ckey, mode, 2, header_key, vkey, block);
@@ -727,7 +741,7 @@ static int sub_1428(void *buf, int size, u32 block, void *vkey, void *header_key
     return ret;
 }
 
-static int sub_14fc(const void *buf, int size, const void *vkey, const void *mac, int type, u32 xor_val)
+static int dnasVerifyMacXor(const void *buf, int size, const void *vkey, const void *mac, int type, u32 xor_val)
 {
     u32 tmp_key[4];
     void *mkey = g_work_buf + 0x618;
@@ -751,7 +765,7 @@ static int sub_14fc(const void *buf, int size, const void *vkey, const void *mac
     return ret;
 }
 
-static int sub_1614(const void *buf, int size, const void *vkey, const void *mac, int type)
+static int dnasVerifyMac(const void *buf, int size, const void *vkey, const void *mac, int type)
 {
-    return sub_14fc(buf, size, vkey, mac, type, 0);
+    return dnasVerifyMacXor(buf, size, vkey, mac, type, 0);
 }

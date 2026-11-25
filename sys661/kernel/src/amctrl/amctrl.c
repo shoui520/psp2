@@ -40,7 +40,7 @@ static u8 *g_ptr_1d48 = g_kirk_buf;
 static u8 *g_ptr_1d4c = g_kirk_buf;
 static u8 *g_ptr_1d50 = g_kirk_buf + 0x14;
 
-static int sub_0000(u32 *buf, int size, int key_idx)
+static int kirkEncryptAesCbc(u32 *buf, int size, int key_idx)
 {
     buf[0] = 4;
     buf[1] = 0;
@@ -50,7 +50,7 @@ static int sub_0000(u32 *buf, int size, int key_idx)
     return (sceUtilsBufferCopyWithRange(buf, size + 0x14, buf, size + 0x14, 4) == 0) ? 0 : (int)0x80510311;
 }
 
-static int sub_0054(u32 *buf, int size, int key_idx)
+static int kirkDecryptAesCbc(u32 *buf, int size, int key_idx)
 {
     buf[0] = 5;
     buf[1] = 0;
@@ -60,7 +60,7 @@ static int sub_0054(u32 *buf, int size, int key_idx)
     return (sceUtilsBufferCopyWithRange(buf, size + 0x14, buf, size + 0x14, 7) == 0) ? 0 : (int)0x80510311;
 }
 
-static int sub_00a8(u32 *buf, int size)
+static int kirkEncryptAesCbcFuse(u32 *buf, int size)
 {
     buf[0] = 4;
     buf[1] = 0;
@@ -70,7 +70,7 @@ static int sub_00a8(u32 *buf, int size)
     return (sceUtilsBufferCopyWithRange(buf, size + 0x14, buf, size + 0x14, 5) == 0) ? 0 : (int)0x80510312;
 }
 
-static int sub_0100(u32 *buf, int size)
+static int kirkDecryptAesCbcFuse(u32 *buf, int size)
 {
     buf[0] = 5;
     buf[1] = 0;
@@ -80,11 +80,11 @@ static int sub_0100(u32 *buf, int size)
     return (sceUtilsBufferCopyWithRange(buf, size + 0x14, buf, size + 0x14, 8) == 0) ? 0 : (int)0x80510312;
 }
 
-static int sub_0158(u8 *buf, int size, u8 *key, int key_idx)
+static int encryptCbcChain(u8 *buf, int size, u8 *key, int key_idx)
 {
     for (u32 i = 0; i < 0x10; i++)
         buf[0x14 + i] ^= key[i];
-    int ret = sub_0000((u32 *)buf, size, key_idx);
+    int ret = kirkEncryptAesCbc((u32 *)buf, size, key_idx);
     if (ret != 0)
         return ret;
     u8 *tail = buf + size;
@@ -93,13 +93,13 @@ static int sub_0158(u8 *buf, int size, u8 *key, int key_idx)
     return 0;
 }
 
-static int sub_01f8(u8 *buf, int size, u8 *key, int key_idx)
+static int decryptCbcChain(u8 *buf, int size, u8 *key, int key_idx)
 {
     u8 tmp[16];
     u8 *tail = buf + size;
     for (u32 i = 0; i < 0x10; i++)
         tmp[i] = tail[4 + i];
-    int ret = sub_0054((u32 *)buf, size, key_idx);
+    int ret = kirkDecryptAesCbc((u32 *)buf, size, key_idx);
     if (ret != 0)
         return ret;
     for (u32 i = 0; i < 0x10; i++)
@@ -109,11 +109,11 @@ static int sub_01f8(u8 *buf, int size, u8 *key, int key_idx)
     return 0;
 }
 
-int sub_02a8(u8 *buf, int size, u8 *key)
+int encryptCbcChainFuse(u8 *buf, int size, u8 *key)
 {
     for (u32 i = 0; i < 0x10; i++)
         buf[0x14 + i] ^= key[i];
-    int ret = sub_00a8((u32 *)buf, size);
+    int ret = kirkEncryptAesCbcFuse((u32 *)buf, size);
     if (ret != 0)
         return ret;
     u8 *tail = buf + size;
@@ -122,13 +122,13 @@ int sub_02a8(u8 *buf, int size, u8 *key)
     return 0;
 }
 
-int sub_0344(u8 *buf, int size, u8 *key)
+int decryptCbcChainFuse(u8 *buf, int size, u8 *key)
 {
     u8 tmp[16];
     u8 *tail = buf + size;
     for (u32 i = 0; i < 0x10; i++)
         tmp[i] = tail[4 + i];
-    int ret = sub_0100((u32 *)buf, size);
+    int ret = kirkDecryptAesCbcFuse((u32 *)buf, size);
     if (ret != 0)
         return ret;
     for (u32 i = 0; i < 0x10; i++)
@@ -138,12 +138,12 @@ int sub_0344(u8 *buf, int size, u8 *key)
     return 0;
 }
 
-static int sub_03f0(void *buf)
+static int kirkGenPrng(void *buf)
 {
     return (sceUtilsBufferCopyWithRange(buf, 0x14, NULL, 0, 0x0e) == 0) ? 0 : (int)0x80510315;
 }
 
-static int sub_0428(u8 *kbuf, u8 *data, u32 size, const u8 *key, u32 *seed, int type)
+static int bbCipherCryptUnaligned(u8 *kbuf, u8 *data, u32 size, const u8 *key, u32 *seed, int type)
 {
     u8 iv[16];
     u8 blk_hdr[16];
@@ -155,7 +155,7 @@ static int sub_0428(u8 *kbuf, u8 *data, u32 size, const u8 *key, u32 *seed, int 
     for (u32 i = 0; i < 0x10; i++)
         kbuf[0x14 + i] ^= k2[i];
 
-    int ret = (type == 2) ? sub_0100((u32 *)kbuf, 0x10) : sub_0054((u32 *)kbuf, 0x10, 0x39);
+    int ret = (type == 2) ? kirkDecryptAesCbcFuse((u32 *)kbuf, 0x10) : kirkDecryptAesCbc((u32 *)kbuf, 0x10, 0x39);
 
     const u8 *k1 = (const u8 *)g_key_1ce4;
     for (u32 i = 0; i < 0x10; i++)
@@ -192,7 +192,7 @@ static int sub_0428(u8 *kbuf, u8 *data, u32 size, const u8 *key, u32 *seed, int 
         (*seed)++;
     }
 
-    ret = sub_01f8(kbuf, size, iv, 0x63);
+    ret = decryptCbcChain(kbuf, size, iv, 0x63);
     if (ret != 0)
         return ret;
 
@@ -201,7 +201,7 @@ static int sub_0428(u8 *kbuf, u8 *data, u32 size, const u8 *key, u32 *seed, int 
     return 0;
 }
 
-static int sub_06dc(u8 *kbuf, u32 *data, u32 size, const u8 *key, u32 *seed, int type)
+static int bbCipherCryptAligned(u8 *kbuf, u32 *data, u32 size, const u8 *key, u32 *seed, int type)
 {
     u32 iv[4];
     u32 blk_hdr[4];
@@ -215,7 +215,7 @@ static int sub_06dc(u8 *kbuf, u32 *data, u32 size, const u8 *key, u32 *seed, int
     for (u32 i = 0; i < 0x10; i++)
         kbuf[0x14 + i] ^= k2[i];
 
-    int ret = (type == 2) ? sub_0100((u32 *)kbuf, 0x10) : sub_0054((u32 *)kbuf, 0x10, 0x39);
+    int ret = (type == 2) ? kirkDecryptAesCbcFuse((u32 *)kbuf, 0x10) : kirkDecryptAesCbc((u32 *)kbuf, 0x10, 0x39);
 
     const u8 *k1 = (const u8 *)g_key_1ce4;
     for (u32 i = 0; i < 0x10; i++)
@@ -246,7 +246,7 @@ static int sub_06dc(u8 *kbuf, u32 *data, u32 size, const u8 *key, u32 *seed, int
         (*seed)++;
     }
 
-    ret = sub_01f8(kbuf, size, iv8, 0x63);
+    ret = decryptCbcChain(kbuf, size, iv8, 0x63);
     if (ret != 0)
         return ret;
 
@@ -331,7 +331,7 @@ int sceDrmBBMacUpdate(SceBBMacKey *mkey, const u8 *buf, u32 size)
 
     for (u32 i = 0; i < body; i++) {
         if (cur_len == 0x800) {
-            ret = sub_0158(g_kirk_buf, 0x800, mkey->key, key_idx);
+            ret = encryptCbcChain(g_kirk_buf, 0x800, mkey->key, key_idx);
             if (ret != 0)
                 goto out;
             cur_len = 0;
@@ -340,7 +340,7 @@ int sceDrmBBMacUpdate(SceBBMacKey *mkey, const u8 *buf, u32 size)
     }
 
     if (cur_len != 0)
-        ret = sub_0158(g_kirk_buf, cur_len, mkey->key, key_idx);
+        ret = encryptCbcChain(g_kirk_buf, cur_len, mkey->key, key_idx);
 
 out:
     if (sceKernelSignalSema(g_sema_id, 1) != 0)
@@ -366,7 +366,7 @@ int sceDrmBBMacFinal(SceBBMacKey *mkey, u8 *out, const u8 *vkey)
     for (u32 i = 0; i < 0x10; i++)
         g_ptr_1d44[i] = 0;
 
-    ret = sub_0000((u32 *)g_kirk_buf, 0x10, key_idx);
+    ret = kirkEncryptAesCbc((u32 *)g_kirk_buf, 0x10, key_idx);
     if (ret != 0)
         goto out;
 
@@ -399,7 +399,7 @@ int sceDrmBBMacFinal(SceBBMacKey *mkey, u8 *out, const u8 *vkey)
     for (u32 i = 0; i < 0x10; i++)
         tmp_key[i] = mkey->key[i];
 
-    ret = sub_0158(g_kirk_buf, 0x10, tmp_key, key_idx);
+    ret = encryptCbcChain(g_kirk_buf, 0x10, tmp_key, key_idx);
     if (ret != 0)
         goto out;
 
@@ -410,10 +410,10 @@ int sceDrmBBMacFinal(SceBBMacKey *mkey, u8 *out, const u8 *vkey)
     if (mkey->type == 2) {
         for (u32 i = 0; i < 0x10; i++)
             g_ptr_1d44[i] = tmp_key[i];
-        ret = sub_00a8((u32 *)g_kirk_buf, 0x10);
+        ret = kirkEncryptAesCbcFuse((u32 *)g_kirk_buf, 0x10);
         if (ret != 0)
             goto out;
-        ret = sub_0000((u32 *)g_kirk_buf, 0x10, key_idx);
+        ret = kirkEncryptAesCbc((u32 *)g_kirk_buf, 0x10, key_idx);
         if (ret != 0)
             goto out;
         for (u32 i = 0; i < 0x10; i++)
@@ -425,7 +425,7 @@ int sceDrmBBMacFinal(SceBBMacKey *mkey, u8 *out, const u8 *vkey)
             tmp_key[i] ^= vkey[i];
         for (u32 i = 0; i < 0x10; i++)
             g_ptr_1d44[i] = tmp_key[i];
-        ret = sub_0000((u32 *)g_kirk_buf, 0x10, key_idx);
+        ret = kirkEncryptAesCbc((u32 *)g_kirk_buf, 0x10, key_idx);
         if (ret != 0)
             goto out;
         for (u32 i = 0; i < 0x10; i++)
@@ -462,7 +462,7 @@ int sceDrmBBMacFinal2(SceBBMacKey *mkey, const u8 *mac, const u8 *vkey)
     if (type == 3) {
         for (u32 i = 0; i < 0x10; i++)
             g_ptr_1d44[i] = mac[i];
-        ret = sub_0054((u32 *)g_kirk_buf, 0x10, 0x63);
+        ret = kirkDecryptAesCbc((u32 *)g_kirk_buf, 0x10, 0x63);
         if (ret != 0)
             goto out;
     } else {
@@ -532,13 +532,13 @@ int sceAmctrl_driver_9227EA79(SceBBMacKey *mkey, const u8 *buf, u32 size)
     if (body + cur_len > max_chunk) {
         pos = max_chunk - cur_len;
         sceKernelMemmove(kdata + cur_len, buf, pos);
-        ret = sub_0158(kbuf, max_chunk, mkey->key, key_idx);
+        ret = encryptCbcChain(kbuf, max_chunk, mkey->key, key_idx);
         if (ret != 0)
             goto out;
         cur_len = 0;
         while (pos + max_chunk < body) {
             sceKernelMemmove(kdata, buf + pos, max_chunk);
-            ret = sub_0158(kbuf, max_chunk, mkey->key, key_idx);
+            ret = encryptCbcChain(kbuf, max_chunk, mkey->key, key_idx);
             if (ret != 0)
                 goto out;
             pos += max_chunk;
@@ -546,7 +546,7 @@ int sceAmctrl_driver_9227EA79(SceBBMacKey *mkey, const u8 *buf, u32 size)
     }
 
     sceKernelMemmove(kdata + cur_len, buf + pos, body - pos);
-    ret = sub_0158(kbuf, (body + cur_len) - pos, mkey->key, key_idx);
+    ret = encryptCbcChain(kbuf, (body + cur_len) - pos, mkey->key, key_idx);
 
 out:
     if (sceKernelSignalSema(g_sema_id, 1) != 0)
@@ -571,7 +571,7 @@ int sceDrmBBCipherInit(SceBBCipherKey *ckey, int type, int mode, u8 *header_key,
         }
     } else if (mode == 1) {
         ckey->seed = 1;
-        ret = sub_03f0(g_ptr_1d4c);
+        ret = kirkGenPrng(g_ptr_1d4c);
         if (ret != 0)
             goto out;
         for (int i = 0x0f; i >= 0; i--)
@@ -584,9 +584,9 @@ int sceDrmBBCipherInit(SceBBCipherKey *ckey, int type, int mode, u8 *header_key,
         for (int i = 0; i < 0x10; i++)
             g_ptr_1d50[i] ^= k1[i];
         if (ckey->type == 2)
-            ret = sub_00a8((u32 *)g_ptr_1d48, 0x10);
+            ret = kirkEncryptAesCbcFuse((u32 *)g_ptr_1d48, 0x10);
         else
-            ret = sub_0000((u32 *)g_ptr_1d48, 0x10, 0x39);
+            ret = kirkEncryptAesCbc((u32 *)g_ptr_1d48, 0x10, 0x39);
         for (int i = 0; i < 0x10; i++)
             g_ptr_1d50[i] ^= k2[i];
         if (ret != 0)
@@ -623,14 +623,14 @@ int sceDrmBBCipherUpdate(SceBBCipherKey *ckey, u8 *data, u32 size)
 
     u32 off = 0;
     while (size >= 0x800) {
-        ret = sub_0428(g_ptr_1d48, data + off, 0x800, ckey->key, &ckey->seed, ckey->type);
+        ret = bbCipherCryptUnaligned(g_ptr_1d48, data + off, 0x800, ckey->key, &ckey->seed, ckey->type);
         size -= 0x800;
         off += 0x800;
         if (ret != 0)
             goto out;
     }
     if (size != 0)
-        ret = sub_0428(g_ptr_1d48, data + off, size, ckey->key, &ckey->seed, ckey->type);
+        ret = bbCipherCryptUnaligned(g_ptr_1d48, data + off, size, ckey->key, &ckey->seed, ckey->type);
 
 out:
     if (sceKernelSignalSema(g_sema_id, 1) != 0)
@@ -669,14 +669,14 @@ int sceAmctrl_driver_E04ADD4C(SceBBCipherKey *ckey, u8 *data, u32 size)
 
     u32 off = 0;
     while (size >= max_chunk) {
-        ret = sub_06dc(kbuf, (u32 *)(data + off), max_chunk, ckey->key, &ckey->seed, ckey->type);
+        ret = bbCipherCryptAligned(kbuf, (u32 *)(data + off), max_chunk, ckey->key, &ckey->seed, ckey->type);
         size -= max_chunk;
         off += max_chunk;
         if (ret != 0)
             goto out;
     }
     if (size != 0)
-        ret = sub_06dc(kbuf, (u32 *)(data + off), size, ckey->key, &ckey->seed, ckey->type);
+        ret = bbCipherCryptAligned(kbuf, (u32 *)(data + off), size, ckey->key, &ckey->seed, ckey->type);
 
 out:
     if (sceKernelSignalSema(g_sema_id, 1) != 0)
