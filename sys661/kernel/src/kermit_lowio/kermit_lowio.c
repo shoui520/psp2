@@ -129,8 +129,8 @@ s32 sceSysregAwRegBBusClockEnable(void) { return sysreg_busclk_ctrl(0x0004, 1); 
 s32 sceSysregAwRegBBusClockDisable(void) { return sysreg_busclk_ctrl(0x0004, 0); }
 s32 sceSysregAwEdramBusClockEnable(void) { return sysreg_busclk_ctrl(0x0008, 1); }
 s32 sceSysregAwEdramBusClockDisable(void) { return sysreg_busclk_ctrl(0x0008, 0); }
-static s32 sub_0280(void) { return sysreg_busclk_ctrl(0x0010, 1); }
-static s32 sub_028c(void) { return sysreg_busclk_ctrl(0x0010, 0); }
+static s32 sysregDmacplusBusClockEnable(void) { return sysreg_busclk_ctrl(0x0010, 1); }
+static s32 sysregDmacplusBusClockDisable(void) { return sysreg_busclk_ctrl(0x0010, 0); }
 s32 sceSysregKirkBusClockEnable(void) { return sysreg_busclk_ctrl(0x0080, 1); }
 s32 sceSysregKirkBusClockDisable(void) { return sysreg_busclk_ctrl(0x0080, 0); }
 s32 sceSysregAtaBusClockEnable(void) { return sysreg_busclk_ctrl(0x0100, 1); }
@@ -247,8 +247,8 @@ s32 sceSysregAudioClkDisable(s32 no)
 	if ((u32)no >= 2) return 0x80000102;
 	return sysreg_clk2_ctrl(0x10000 << no, 0);
 }
-static s32 sub_0768(void) { return sysreg_clk2_ctrl(0x40000, 1); }
-static s32 sub_0774(void) { return sysreg_clk2_ctrl(0x40000, 0); }
+static s32 sysregLcdcClkEnable(void) { return sysreg_clk2_ctrl(0x40000, 1); }
+static s32 sysregLcdcClkDisable(void) { return sysreg_clk2_ctrl(0x40000, 0); }
 s32 sceSysregSircsClkEnable(void) { return sysreg_clk2_ctrl(0x400000, 1); }
 s32 sceSysregSircsClkDisable(void) { return sysreg_clk2_ctrl(0x400000, 0); }
 s32 sceSysregGpioClkEnable(void) { return sysreg_clk2_ctrl(0x800000, 1); }
@@ -259,7 +259,7 @@ s32 sceSysreg_driver_F9C93DD4(void) { return sysreg_clk2_ctrl(0x2000000, 1); }
 s32 sceSysreg_driver_B6296512(void) { return sysreg_clk2_ctrl(0x2000000, 0); }
 
 /* Special Clock1 controls (0xBC100054) */
-__attribute__((noipa)) static s32 sub_08f8(s32 a0)
+__attribute__((noipa)) static s32 sysregSetClockMode54(s32 a0)
 {
 	s32 intr = sceKernelCpuSuspendIntr();
 	u32 val = REG32(0xBC100054);
@@ -274,11 +274,11 @@ __attribute__((noipa)) static s32 sub_08f8(s32 a0)
 	sceKernelCpuResumeIntr(intr);
 	return 0;
 }
-s32 sceSysreg_driver_FC0131A7(void) { return sub_08f8(1); }
-s32 sceSysreg_driver_C9585F8E(void) { return sub_08f8(0); }
-s32 sceSysreg_driver_68AE6434(void) { return sub_08f8(3); }
-s32 sceSysreg_driver_14EB1393(void) { return sub_08f8(2); }
-__attribute__((noipa)) static s32 sub_0984(s32 mask, s32 enable)
+s32 sceSysreg_driver_FC0131A7(void) { return sysregSetClockMode54(1); }
+s32 sceSysreg_driver_C9585F8E(void) { return sysregSetClockMode54(0); }
+s32 sceSysreg_driver_68AE6434(void) { return sysregSetClockMode54(3); }
+s32 sceSysreg_driver_14EB1393(void) { return sysregSetClockMode54(2); }
+__attribute__((noipa)) static s32 sysregSetClockMask54(s32 mask, s32 enable)
 {
 	s32 intr = sceKernelCpuSuspendIntr();
 	u32 val = REG32(0xBC100054);
@@ -291,11 +291,11 @@ __attribute__((noipa)) static s32 sub_0984(s32 mask, s32 enable)
 }
 s32 sceSysregUsbClkEnable(s32 mask)
 {
-	return sub_0984(mask, 1);
+	return sysregSetClockMask54(mask, 1);
 }
 s32 sceSysregUsbClkDisable(s32 mask)
 {
-	return sub_0984(mask, 0);
+	return sysregSetClockMask54(mask, 0);
 }
 
 /* IO controls (0xBC100078, 0xBC10007C, 0xBC100074) */
@@ -315,8 +315,8 @@ s32 sceSysregMsifIoDisable(s32 no)
 	if ((u32)no >= 2) return 0x80000102;
 	return sysreg_io_ctrl(0x0010 << no, 0);
 }
-static s32 sub_0a80(void) { return sysreg_io_ctrl(0x0040, 1); }
-static s32 sub_0a8c(void) { return sysreg_io_ctrl(0x0040, 0); }
+static s32 sysregLcdcIoEnable(void) { return sysreg_io_ctrl(0x0040, 1); }
+static s32 sysregLcdcIoDisable(void) { return sysreg_io_ctrl(0x0040, 0); }
 s32 sceSysregAudioIoEnable(s32 no)
 {
 	if ((u32)no >= 2) return 0x80000102;
@@ -363,10 +363,10 @@ s32 sceSysreg_driver_DA5B5ED9(s32 no)
 	if ((u32)no >= 2) return 0x80000102;
 	return sysreg_io_ctrl(0x00400000 << no, 0);
 }
-static s32 sub_0ca8(void) { return sysreg_io_ctrl(0x8000, 1); }
-static s32 sub_0cb4(void) { return sysreg_io_ctrl(0x8000, 0); }
-static s32 sub_0cc0(void) { return sysreg_io_ctrl(0x80000000U, 1); }
-static s32 sub_0ccc(void) { return sysreg_io_ctrl(0x80000000U, 0); }
+static s32 sysregIoBit15Enable(void) { return sysreg_io_ctrl(0x8000, 1); }
+static s32 sysregIoBit15Disable(void) { return sysreg_io_ctrl(0x8000, 0); }
+static s32 sysregIoBit31Enable(void) { return sysreg_io_ctrl(0x80000000U, 1); }
+static s32 sysregIoBit31Disable(void) { return sysreg_io_ctrl(0x80000000U, 0); }
 s32 sceSysreg_driver_0607A4C4(void) { return sysreg_io_ctrl(0x40000000, 1); }
 s32 sceSysreg_driver_803E5F37(void) { return sysreg_io_ctrl(0x40000000, 0); }
 
@@ -560,7 +560,7 @@ s32 sceSysregSetAwEdramSize(s32 enable)
 	sceKernelCpuResumeIntrWithSync(intr);
 	return prev;
 }
-static s32 sub_1b70(s32 bit)
+static s32 sysregUsbIoRefInc(s32 bit)
 {
 	s32 intr = sceKernelCpuSuspendIntr();
 	u8 mask = g_usbIoRefMask;
@@ -573,7 +573,7 @@ static s32 sub_1b70(s32 bit)
 	sceKernelCpuResumeIntr(intr);
 	return prev;
 }
-static s32 sub_1bf4(s32 bit)
+static s32 sysregUsbIoRefDec(s32 bit)
 {
 	s32 intr = sceKernelCpuSuspendIntr();
 	u8 mask = g_usbIoRefMask;
@@ -591,8 +591,8 @@ s32 sceSysreg_driver_15786501(void)
 	if (ver <= 0x004FFFFF)
 		return 0x80000004;
 	if (ver > 0x007FFFFF)
-		return sub_0cc0();
-	return sub_1b70(1);
+		return sysregIoBit31Enable();
+	return sysregUsbIoRefInc(1);
 }
 s32 sceSysreg_driver_80944C8A(void)
 {
@@ -600,8 +600,8 @@ s32 sceSysreg_driver_80944C8A(void)
 	if (ver <= 0x004FFFFF)
 		return 0x80000004;
 	if (ver > 0x007FFFFF)
-		return sub_0ccc();
-	return sub_1bf4(1);
+		return sysregIoBit31Disable();
+	return sysregUsbIoRefDec(1);
 }
 s32 sceSysreg_driver_4E5C86AA(void)
 {
@@ -634,14 +634,14 @@ u32 sceSysregGetFuseConfig(void)
 s32 sceSysreg_driver_6F3B6D7D(void)
 {
 	if (sceSysregGetTachyonVersion() > 0x007FFFFF)
-		return sub_0ca8();
-	return sub_1b70(0);
+		return sysregIoBit15Enable();
+	return sysregUsbIoRefInc(0);
 }
 s32 sceSysreg_driver_87B61303(void)
 {
 	if (sceSysregGetTachyonVersion() > 0x007FFFFF)
-		return sub_0cb4();
-	return sub_1bf4(0);
+		return sysregIoBit15Disable();
+	return sysregUsbIoRefDec(0);
 }
 
 /* PLL & Clock selects */
@@ -859,7 +859,7 @@ s32 sceSysregRequestIntr(s32 cpu, s32 intr_no)
 		sceSysregInterruptToOther();
 	return 0;
 }
-static s32 sub_28a8(s32 intr_code, void *arg, void *frame)
+static s32 sysregIpiIntrHandler(s32 intr_code, void *arg, void *frame)
 {
 	(void)arg;
 	u32 my_cpu;
@@ -877,19 +877,19 @@ static s32 sub_28a8(s32 intr_code, void *arg, void *frame)
 	sceKernelCallSubIntrHandler(intr_code, sub_intr, (void *)sub_intr, frame);
 	return -1;
 }
-static s32 sub_297c(s32 intr_code, s32 sub_intr)
+static s32 sysregSubIntrEnable(s32 intr_code, s32 sub_intr)
 {
 	(void)intr_code;
 	g_sysregSubIntrMask |= (1U << sub_intr);
 	return 0;
 }
-static s32 sub_299c(s32 intr_code, s32 sub_intr)
+static s32 sysregSubIntrDisable(s32 intr_code, s32 sub_intr)
 {
 	(void)intr_code;
 	g_sysregSubIntrMask &= ~(1U << sub_intr);
 	return 0;
 }
-static s32 sub_29c0(s32 intr_code, s32 sub_intr, u32 *prev)
+static s32 sysregSubIntrSuspend(s32 intr_code, s32 sub_intr, u32 *prev)
 {
 	(void)intr_code;
 	if (prev != NULL)
@@ -897,13 +897,13 @@ static s32 sub_29c0(s32 intr_code, s32 sub_intr, u32 *prev)
 	g_sysregSubIntrMask &= ~(1U << sub_intr);
 	return 0;
 }
-static s32 sub_29f8(s32 intr_code, s32 sub_intr, u32 prev)
+static s32 sysregSubIntrResume(s32 intr_code, s32 sub_intr, u32 prev)
 {
 	(void)intr_code;
 	g_sysregSubIntrMask |= (prev << sub_intr);
 	return 0;
 }
-static s32 sub_2a14(s32 intr_code, s32 sub_intr)
+static s32 sysregSubIntrClear(s32 intr_code, s32 sub_intr)
 {
 	(void)intr_code;
 	u32 my_cpu;
@@ -912,14 +912,14 @@ static s32 sub_2a14(s32 intr_code, s32 sub_intr)
 	return (sceSysreg_driver_1E62714E(reg) >> sub_intr) & 1;
 }
 static u32 g_sysregSubIntrCb[7] = {
-	0, (u32)sub_299c, (u32)sub_297c, (u32)sub_299c,
-	(u32)sub_29c0, (u32)sub_29f8, (u32)sub_2a14
+	0, (u32)sysregSubIntrDisable, (u32)sysregSubIntrEnable, (u32)sysregSubIntrDisable,
+	(u32)sysregSubIntrSuspend, (u32)sysregSubIntrResume, (u32)sysregSubIntrClear
 };
 static u32 g_sysregIntrOpt[3] = { 0x0C, 0x20, (u32)g_sysregSubIntrCb };
 
 s32 sceSysregIntrInit(void)
 {
-	sceKernelRegisterIntrHandler(31, 2, sub_28a8, NULL, g_sysregIntrOpt);
+	sceKernelRegisterIntrHandler(31, 2, sysregIpiIntrHandler, NULL, g_sysregIntrOpt);
 	sceKernelEnableIntr(31);
 	return 0;
 }
@@ -1041,7 +1041,7 @@ static SceSysEventHandler g_sysregEvent = {
 	0, 0, NULL,
 	{ 0, 0, 0, 0, 0, 0, 0, 0, 0 }
 };
-static s32 sub_16c8(SceSize args)
+static s32 sysregModuleStart(SceSize args)
 {
 	(void)args;
 	sceKernelUnregisterSysEventHandler(&g_sysregEvent);
@@ -1049,7 +1049,7 @@ static s32 sub_16c8(SceSize args)
 	sceKernelRegisterSysEventHandler(&g_sysregEvent);
 	return 0;
 }
-static s32 sub_1708(SceSize args)
+static s32 sysregModuleStop(SceSize args)
 {
 	(void)args;
 	return 0;
@@ -1199,7 +1199,7 @@ static const u32 g_ddrTestPattern[4] = {
 	0xA5A55A5A, 0xFFFFFFFF, 0x55AA55AA, 0xFF00FF00
 };
 
-static s32 sub_13f0(s32 idx, s32 cas, s32 saved_cnt, s32 a3, s32 t0, const u32 *test_pat)
+static s32 ddrFlushBootRamHelper(s32 idx, s32 cas, s32 saved_cnt, s32 a3, s32 t0, const u32 *test_pat)
 {
 	sceDdr_driver_6DE74D80(idx, cas);
 	if (saved_cnt >= 0)
@@ -1266,15 +1266,15 @@ s32 sceDdr_driver_CF07B9E2(s32 idx)
 	sceKernelCpuResumeIntrWithSync(intr);
 	return 0;
 }
-static s32 sub_7230(SceSize args, void *argp)
+static s32 ddrModuleStart(SceSize args, void *argp)
 {
 	(void)args;
 	(void)argp;
-	memcpy((void *)0xBFC00C00, (const void *)sub_13f0, 0x240);
+	memcpy((void *)0xBFC00C00, (const void *)ddrFlushBootRamHelper, 0x240);
 	sceKernelDmaRegisterDdrFlush(sceDdrFlush);
 	return 0;
 }
-static s32 sub_727c(SceSize args)
+static s32 ddrModuleStop(SceSize args)
 {
 	(void)args;
 	sceKernelDmaRegisterDdrFlush(NULL);
@@ -1335,77 +1335,77 @@ static u32 g_kermitDmacSmLimit;
 static SceUID g_kermitDmacMutexId;
 
 /* Forward declarations for internal DMAC functions */
-static s32 sub_2cb4(int ev_id, char *ev_name, void *param, int *result);
-static s32 sub_2d98(s32 sub_intr);
-static s32 sub_2df0(s32 sub_intr);
-static s32 sub_3078(void);
-static s32 sub_3120(void);
-static s32 sub_3224(void);
-static s32 sub_36d0(void);
-static s32 sub_3728(void);
-static s32 sub_37ac(s32 sub_intr, void *arg, s32 status);
-static s32 sub_3dcc(void);
-static s32 sub_3eac(void);
-static s32 sub_3f20(void);
-static s32 sub_3f30(void);
-static s32 sub_40c8(void);
-static s32 sub_4330(void);
-static s32 sub_43cc(void);
-static s32 sub_4440(void);
-static s32 sub_4448(void);
-static s32 sub_453c(void);
-static s32 sub_46b8(void);
-static s32 sub_4754(void);
-static s32 sub_47c8(void);
-static s32 sub_47d0(void);
-static s32 sub_497c(void);
-static s32 sub_49c0(void);
-static s32 sub_49e0(void);
-static s32 sub_4a10(void);
-static s32 sub_4a40(s32 sub_intr, void *arg, s32 status);
-static s32 sub_4a94(s32 sub_intr, void *arg, s32 status);
-static s32 sub_524c(void);
-static s32 sub_5254(u32 a0, u32 a1, u32 a2, u32 a3);
-static s32 sub_5308(const u32 *p);
-static s32 sub_547c(const u32 *p);
-static s32 sub_5600(SceDmacplusLli *lli);
-static s32 sub_56a4(SceDmacplusLli *lli);
-static s32 sub_57e4(SceDmacplusLli *lli);
-static s32 sub_5898(SceDmacplusLli *lli);
-static s32 sub_5c50(void);
-static s32 sub_5ccc(SceDmacplusLli *lli);
+static s32 dmacplusSysEventHandler(int ev_id, char *ev_name, void *param, int *result);
+static s32 dmacplusSubIntrAck(s32 sub_intr);
+static s32 dmacplusSubIntrClear(s32 sub_intr);
+static s32 dmacplusCheckBusy(void);
+static s32 dmacplusLcdcSuspend(void);
+static s32 dmacplusLcdcResume(void);
+static s32 dmacplusLcdcTerm(void);
+static s32 dmacplusLcdcResetBusy(void);
+static s32 dmacplusLcdcIntrCb(s32 sub_intr, void *arg, s32 status);
+static s32 dmacplusAvcInit(void);
+static s32 dmacplusAvcTerm(void);
+static s32 dmacplusAvcSuspend(void);
+static s32 dmacplusAvcResume(void);
+static s32 dmacplusAvcComplete(void);
+static s32 dmacplusSc2MeInit(void);
+static s32 dmacplusSc2MeTerm(void);
+static s32 dmacplusSc2MeSuspend(void);
+static s32 dmacplusSc2MeResume(void);
+static s32 dmacplusSc2MeComplete(void);
+static s32 dmacplusMe2ScInit(void);
+static s32 dmacplusMe2ScTerm(void);
+static s32 dmacplusMe2ScSuspend(void);
+static s32 dmacplusMe2ScResume(void);
+static s32 dmacplusMe2ScComplete(void);
+static s32 dmacplusSc128TryLock(void);
+static s32 dmacplusSc128Init(void);
+static s32 dmacplusSc128Term(void);
+static s32 dmacplusSc128DoneIntr(s32 sub_intr, void *arg, s32 status);
+static s32 dmacplusSc128ErrIntr(s32 sub_intr, void *arg, s32 status);
+static s32 dmacplusSc128Resume(void);
+static s32 kermitDmacplusSendCmd(u32 a0, u32 a1, u32 a2, u32 a3);
+static s32 kermitDmacplusInvalidateAvcOut(const u32 *p);
+static s32 kermitDmacplusSubmitAvc(const u32 *p);
+static s32 kermitDmacplusFinishSc2Me(SceDmacplusLli *lli);
+static s32 kermitDmacplusSubmitSc2Me(SceDmacplusLli *lli);
+static s32 kermitDmacplusFlushLli(SceDmacplusLli *lli);
+static s32 kermitDmacplusSubmitMe2Sc(SceDmacplusLli *lli);
+static s32 kermitDmacplusInitSharedMem(void);
+static s32 kermitDmacplusInvalidateMe2Sc(SceDmacplusLli *lli);
 
 static SceSysEventHandler g_dmacplusEvent = {
 	sizeof(SceSysEventHandler),
 	"SceDmacplus",
 	0x00FFFF00,
-	sub_2cb4,
+	dmacplusSysEventHandler,
 	0, 0, NULL,
 	{ 0, 0, 0, 0, 0, 0, 0, 0, 0 }
 };
 
-static s32 sub_3098(s32 intr_code, s32 sub_intr)
+static s32 dmacplusSubIntrClearCb(s32 intr_code, s32 sub_intr)
 {
 	(void)intr_code;
-	sub_2df0(sub_intr);
+	dmacplusSubIntrClear(sub_intr);
 	return 0;
 }
 
-static s32 sub_30bc(s32 intr_code, s32 sub_intr)
+static s32 dmacplusSubIntrDisableCb(s32 intr_code, s32 sub_intr)
 {
 	(void)intr_code;
 	g_dmacSubIntrMask &= ~(1U << sub_intr);
 	return 0;
 }
 
-static s32 sub_30dc(s32 intr_code, s32 sub_intr)
+static s32 dmacplusSubIntrEnableCb(s32 intr_code, s32 sub_intr)
 {
 	(void)intr_code;
 	g_dmacSubIntrMask |= (1U << sub_intr);
 	return 0;
 }
 
-static s32 sub_30fc(s32 intr_code, s32 sub_intr, u32 *prev)
+static s32 dmacplusSubIntrSuspendCb(s32 intr_code, s32 sub_intr, u32 *prev)
 {
 	(void)intr_code;
 	if (prev != NULL)
@@ -1414,14 +1414,14 @@ static s32 sub_30fc(s32 intr_code, s32 sub_intr, u32 *prev)
 	return 0;
 }
 
-static s32 sub_311c(s32 intr_code, s32 sub_intr, u32 prev)
+static s32 dmacplusSubIntrResumeCb(s32 intr_code, s32 sub_intr, u32 prev)
 {
 	(void)intr_code;
 	g_dmacSubIntrMask |= ((prev & 1) << sub_intr);
 	return 0;
 }
 
-__attribute__((noipa)) static s32 sub_2d98(s32 sub_intr)
+__attribute__((noipa)) static s32 dmacplusSubIntrAck(s32 sub_intr)
 {
 	if (sub_intr == 0)
 		return 0;
@@ -1433,7 +1433,7 @@ __attribute__((noipa)) static s32 sub_2d98(s32 sub_intr)
 	return (REG32(0xBC800018) >> shift) & 1;
 }
 
-__attribute__((noipa)) static s32 sub_2df0(s32 sub_intr)
+__attribute__((noipa)) static s32 dmacplusSubIntrClear(s32 sub_intr)
 {
 	if (sub_intr == 0)
 		return 0;
@@ -1453,7 +1453,7 @@ __attribute__((noipa)) static s32 sub_2df0(s32 sub_intr)
 	return (s32)v;
 }
 
-static s32 sub_2e90(s32 intr_code, void *arg, void *frame)
+static s32 dmacplusIntrHandler(s32 intr_code, void *arg, void *frame)
 {
 	(void)arg;
 	u32 mask = g_dmacSubIntrMask;
@@ -1479,76 +1479,76 @@ static s32 sub_2e90(s32 intr_code, void *arg, void *frame)
 }
 
 static u32 g_dmacSubIntrCb[7] = {
-	0, (u32)sub_3098, (u32)sub_30dc, (u32)sub_30bc,
-	(u32)sub_30fc, (u32)sub_311c, (u32)sub_2d98
+	0, (u32)dmacplusSubIntrClearCb, (u32)dmacplusSubIntrEnableCb, (u32)dmacplusSubIntrDisableCb,
+	(u32)dmacplusSubIntrSuspendCb, (u32)dmacplusSubIntrResumeCb, (u32)dmacplusSubIntrAck
 };
 static u32 g_dmacIntrOpt[3] = { 0x0C, 0x0A, (u32)g_dmacSubIntrCb };
 
-static s32 sub_2cb4(int ev_id, char *ev_name, void *param, int *result)
+static s32 dmacplusSysEventHandler(int ev_id, char *ev_name, void *param, int *result)
 {
 	(void)ev_name;
 	(void)param;
 	(void)result;
 	if (ev_id == 0x402) {
-		return sub_3078();
+		return dmacplusCheckBusy();
 	} else if (ev_id == 0x4004) {
-		sub_3728();
-		sub_3f20();
-		sub_4440();
-		sub_47c8();
-		return sub_49c0();
+		dmacplusLcdcResetBusy();
+		dmacplusAvcSuspend();
+		dmacplusSc2MeSuspend();
+		dmacplusMe2ScSuspend();
+		return dmacplusSc128TryLock();
 	} else if (ev_id == 0x10004) {
-		sub_0280();
-		sub_3224();
-		sub_3f30();
-		sub_4448();
-		sub_47d0();
-		sub_524c();
+		sysregDmacplusBusClockEnable();
+		dmacplusLcdcResume();
+		dmacplusAvcResume();
+		dmacplusSc2MeResume();
+		dmacplusMe2ScResume();
+		dmacplusSc128Resume();
 	}
 	return 0;
 }
 
-static s32 sub_3078(void)
+static s32 dmacplusCheckBusy(void)
 {
 	if ((g_dmacActiveFlags & 0x1E) != 0)
 		return 0x80000021;
 	return 0;
 }
 
-static s32 sub_2f98(SceSize args, void *argp)
+static s32 dmacplusModuleStart(SceSize args, void *argp)
 {
 	(void)args;
 	(void)argp;
-	sub_0280();
-	sceKernelRegisterIntrHandler(21, 2, sub_2e90, NULL, g_dmacIntrOpt);
-	sub_3120();
-	sub_3dcc();
-	sub_4330();
-	sub_46b8();
-	sub_49e0();
+	sysregDmacplusBusClockEnable();
+	sceKernelRegisterIntrHandler(21, 2, dmacplusIntrHandler, NULL, g_dmacIntrOpt);
+	dmacplusLcdcSuspend();
+	dmacplusAvcInit();
+	dmacplusSc2MeInit();
+	dmacplusMe2ScInit();
+	dmacplusSc128Init();
 	sceKernelEnableIntr(21);
 	sceKernelUnregisterSysEventHandler(&g_dmacplusEvent);
 	sceKernelRegisterSysEventHandler(&g_dmacplusEvent);
-	sub_5c50();
+	kermitDmacplusInitSharedMem();
 	return 0;
 }
 
-static s32 sub_3024(SceSize args)
+static s32 dmacplusModuleStop(SceSize args)
 {
 	(void)args;
 	sceKernelUnregisterSysEventHandler(&g_dmacplusEvent);
-	sub_4a10();
-	sub_4754();
-	sub_43cc();
-	sub_3eac();
-	sub_36d0();
+	dmacplusSc128Term();
+	dmacplusMe2ScTerm();
+	dmacplusSc2MeTerm();
+	dmacplusAvcTerm();
+	dmacplusLcdcTerm();
 	sceKernelReleaseIntrHandler(21);
-	sub_028c();
+	sysregDmacplusBusClockDisable();
 	return 0;
 }
 
 /* --- LCDC DMAC (Channel 0) --- */
-static s32 sub_3120(void)
+static s32 dmacplusLcdcSuspend(void)
 {
 	s32 intr = sceKernelCpuSuspendIntr();
 	g_lcdcDmacFrameBuf = REG32(0xBC800100);
@@ -1562,12 +1562,12 @@ static s32 sub_3120(void)
 	else
 		g_dmacActiveFlags &= ~1U;
 	sceKernelCpuResumeIntrWithSync(intr);
-	sceKernelRegisterSubIntrHandler(21, 1, sub_37ac, NULL);
+	sceKernelRegisterSubIntrHandler(21, 1, dmacplusLcdcIntrCb, NULL);
 	sceKernelEnableSubIntr(21, 1);
 	return 0;
 }
 
-static s32 sub_3224(void)
+static s32 dmacplusLcdcResume(void)
 {
 	s32 intr = sceKernelCpuSuspendIntr();
 	REG32(0xBC800100) = g_lcdcDmacFrameBuf;
@@ -1631,14 +1631,14 @@ s32 sceDmacplus_driver_ED849260(void)
 	return 0;
 }
 
-static s32 sub_36d0(void)
+static s32 dmacplusLcdcTerm(void)
 {
 	sceKernelReleaseSubIntrHandler(21, 0);
 	sceKernelReleaseSubIntrHandler(21, 1);
 	return 0;
 }
 
-static s32 sub_3728(void)
+static s32 dmacplusLcdcResetBusy(void)
 {
 	g_dmacActiveFlags &= ~1U;
 	return 0;
@@ -1664,7 +1664,7 @@ s32 sceDmacplus_driver_E9B746F9(void)
 	return 0;
 }
 
-static s32 sub_37ac(s32 sub_intr, void *arg, s32 status)
+static s32 dmacplusLcdcIntrCb(s32 sub_intr, void *arg, s32 status)
 {
 	(void)sub_intr;
 	(void)arg;
@@ -1713,13 +1713,13 @@ s32 sceDmacplus_driver_BF0DB45E(u32 mode)
 		return 0x80000021;
 	if (res < 0)
 		return res;
-	sub_5308((const u32 *)g_avcDmacSavedArg);
+	kermitDmacplusInvalidateAvcOut((const u32 *)g_avcDmacSavedArg);
 	if ((out_bits & 2) != 0)
 		return 0x80000024;
 	return 0;
 }
 
-static s32 sub_3dcc(void)
+static s32 dmacplusAvcInit(void)
 {
 	g_avcDmacBusy = 0;
 	g_dmacActiveFlags &= ~2U;
@@ -1729,13 +1729,13 @@ static s32 sub_3dcc(void)
 	g_avcEvFlagId = ev;
 	if (ev < 0)
 		return ev;
-	s32 r = sceKermit_driver_5280B410(4, sub_40c8);
+	s32 r = sceKermit_driver_5280B410(4, dmacplusAvcComplete);
 	if (r != 0)
 		Kprintf("error: %s lines %d, result = 0x%08X\n", "dmacplus.c", 1110, r);
 	return 0;
 }
 
-static s32 sub_3eac(void)
+static s32 dmacplusAvcTerm(void)
 {
 	sceKernelReleaseSubIntrHandler(21, 2);
 	sceKernelReleaseSubIntrHandler(21, 3);
@@ -1746,12 +1746,12 @@ static s32 sub_3eac(void)
 	return 0;
 }
 
-static s32 sub_3f20(void)
+static s32 dmacplusAvcSuspend(void)
 {
 	return 0;
 }
 
-static s32 sub_3f30(void)
+static s32 dmacplusAvcResume(void)
 {
 	g_avcDmacBusy = 0;
 	g_dmacActiveFlags &= ~2U;
@@ -1770,21 +1770,21 @@ s32 sceDmacplus_driver_B269EAC9(void *arg)
 	g_dmacActiveFlags |= 2;
 	g_avcDmacSavedArg = arg;
 	sceKernelCpuResumeIntrWithSync(intr);
-	sub_547c((const u32 *)arg);
+	kermitDmacplusSubmitAvc((const u32 *)arg);
 	return 0;
 }
 
 s32 sceDmacplus_driver_F652F09D(u32 a0, u32 a1, u32 a2, u32 a3)
 {
-	return sub_5254(a0 << 4, a1 << 4, a2 << 4, a3 << 4);
+	return kermitDmacplusSendCmd(a0 << 4, a1 << 4, a2 << 4, a3 << 4);
 }
 
-static s32 sub_40c8(void)
+static s32 dmacplusAvcComplete(void)
 {
 	g_avcDmacBusy = 0;
 	g_dmacActiveFlags &= ~2U;
 	if (g_avcDmacCb != NULL) {
-		sub_5308((const u32 *)g_avcDmacSavedArg);
+		kermitDmacplusInvalidateAvcOut((const u32 *)g_avcDmacSavedArg);
 		g_avcDmacCb(0, g_avcDmacCbArg);
 		return 0;
 	}
@@ -1825,11 +1825,11 @@ s32 sceDmacplus_driver_47D400CB(u32 mode, void **out_lli)
 			*out_lli = g_sc2meDmacCurLli;
 		return 0x80000024;
 	}
-	sub_5600((SceDmacplusLli *)g_sc2meDmacCurLli);
+	kermitDmacplusFinishSc2Me((SceDmacplusLli *)g_sc2meDmacCurLli);
 	return 0;
 }
 
-static s32 sub_4330(void)
+static s32 dmacplusSc2MeInit(void)
 {
 	g_sc2meDmacBusy = 0;
 	g_dmacActiveFlags &= ~4U;
@@ -1840,11 +1840,11 @@ static s32 sub_4330(void)
 	g_sc2meEvFlagId = ev;
 	if (ev < 0)
 		return ev;
-	sceKermit_driver_5280B410(5, sub_453c);
+	sceKermit_driver_5280B410(5, dmacplusSc2MeComplete);
 	return 0;
 }
 
-static s32 sub_43cc(void)
+static s32 dmacplusSc2MeTerm(void)
 {
 	sceKernelReleaseSubIntrHandler(21, 4);
 	sceKernelReleaseSubIntrHandler(21, 5);
@@ -1855,12 +1855,12 @@ static s32 sub_43cc(void)
 	return 0;
 }
 
-static s32 sub_4440(void)
+static s32 dmacplusSc2MeSuspend(void)
 {
 	return 0;
 }
 
-static s32 sub_4448(void)
+static s32 dmacplusSc2MeResume(void)
 {
 	g_sc2meDmacBusy = 0;
 	g_dmacActiveFlags &= ~4U;
@@ -1879,16 +1879,16 @@ s32 sceDmacplus_driver_9EBF7D3E(SceDmacplusLli *lli)
 	g_sc2meDmacBusy = 1;
 	g_dmacActiveFlags |= 4;
 	sceKernelCpuResumeIntrWithSync(intr);
-	sub_56a4(lli);
+	kermitDmacplusSubmitSc2Me(lli);
 	return 0;
 }
 
-static s32 sub_453c(void)
+static s32 dmacplusSc2MeComplete(void)
 {
 	g_sc2meDmacBusy = 0;
 	g_dmacActiveFlags &= ~4U;
 	if (g_sc2meDmacCb != NULL) {
-		sub_5600((SceDmacplusLli *)g_sc2meDmacCurLli);
+		kermitDmacplusFinishSc2Me((SceDmacplusLli *)g_sc2meDmacCurLli);
 		g_sc2meDmacCb(0, 0, NULL, g_sc2meDmacCbArg);
 		return 0;
 	}
@@ -1916,11 +1916,11 @@ s32 sceDmacplus_driver_5FCF43BD(u32 mode, void **out_lli)
 			*out_lli = g_me2scDmacCurLli;
 		return 0x80000024;
 	}
-	sub_5ccc((SceDmacplusLli *)g_me2scDmacCurLli);
+	kermitDmacplusInvalidateMe2Sc((SceDmacplusLli *)g_me2scDmacCurLli);
 	return 0;
 }
 
-static s32 sub_46b8(void)
+static s32 dmacplusMe2ScInit(void)
 {
 	g_me2scDmacBusy = 0;
 	g_dmacActiveFlags &= ~8U;
@@ -1931,11 +1931,11 @@ static s32 sub_46b8(void)
 	g_me2scEvFlagId = ev;
 	if (ev < 0)
 		return ev;
-	sceKermit_driver_5280B410(6, sub_497c);
+	sceKermit_driver_5280B410(6, dmacplusMe2ScComplete);
 	return 0;
 }
 
-static s32 sub_4754(void)
+static s32 dmacplusMe2ScTerm(void)
 {
 	sceKernelReleaseSubIntrHandler(21, 6);
 	sceKernelReleaseSubIntrHandler(21, 7);
@@ -1946,12 +1946,12 @@ static s32 sub_4754(void)
 	return 0;
 }
 
-static s32 sub_47c8(void)
+static s32 dmacplusMe2ScSuspend(void)
 {
 	return 0;
 }
 
-static s32 sub_47d0(void)
+static s32 dmacplusMe2ScResume(void)
 {
 	g_me2scDmacBusy = 0;
 	g_dmacActiveFlags &= ~8U;
@@ -1983,16 +1983,16 @@ s32 sceDmacplus_driver_6945F1D3(SceDmacplusLli *lli)
 	g_me2scDmacBusy = 1;
 	g_dmacActiveFlags |= 8;
 	sceKernelCpuResumeIntrWithSync(intr);
-	sub_5898(lli);
+	kermitDmacplusSubmitMe2Sc(lli);
 	return 0;
 }
 
-static s32 sub_497c(void)
+static s32 dmacplusMe2ScComplete(void)
 {
 	g_me2scDmacBusy = 0;
 	g_dmacActiveFlags &= ~8U;
 	if (g_me2scDmacCb != NULL) {
-		sub_5ccc((SceDmacplusLli *)g_me2scDmacCurLli);
+		kermitDmacplusInvalidateMe2Sc((SceDmacplusLli *)g_me2scDmacCurLli);
 		g_me2scDmacCb(0, 0, NULL, g_me2scDmacCbArg);
 		return 0;
 	}
@@ -2001,7 +2001,7 @@ static s32 sub_497c(void)
 }
 
 /* --- SC128 DMAC (Channel 4 / sceDmacMemcpy) --- */
-static s32 sub_49c0(void)
+static s32 dmacplusSc128TryLock(void)
 {
 	s32 res = sceKernelPollSema(g_sc128SemaId, 1);
 	if (res == (s32)0x800201A5)
@@ -2009,7 +2009,7 @@ static s32 sub_49c0(void)
 	return (res < 0) ? res : 0;
 }
 
-static s32 sub_49e0(void)
+static s32 dmacplusSc128Init(void)
 {
 	g_dmacActiveFlags &= ~0x10U;
 	SceUID sema = sceKernelCreateSema("SceDmacplusSc128", 1, 1, 1, NULL);
@@ -2023,14 +2023,14 @@ static s32 sub_49e0(void)
 		g_sc128SemaId = 0;
 		return ev;
 	}
-	sceKernelRegisterSubIntrHandler(21, 8, sub_4a40, NULL);
-	sceKernelRegisterSubIntrHandler(21, 9, sub_4a94, NULL);
+	sceKernelRegisterSubIntrHandler(21, 8, dmacplusSc128DoneIntr, NULL);
+	sceKernelRegisterSubIntrHandler(21, 9, dmacplusSc128ErrIntr, NULL);
 	sceKernelEnableSubIntr(21, 8);
 	sceKernelEnableSubIntr(21, 9);
 	return 0;
 }
 
-static s32 sub_4a10(void)
+static s32 dmacplusSc128Term(void)
 {
 	sceKernelReleaseSubIntrHandler(21, 8);
 	sceKernelReleaseSubIntrHandler(21, 9);
@@ -2045,7 +2045,7 @@ static s32 sub_4a10(void)
 	return 0;
 }
 
-static s32 sub_4a40(s32 sub_intr, void *arg, s32 status)
+static s32 dmacplusSc128DoneIntr(s32 sub_intr, void *arg, s32 status)
 {
 	(void)sub_intr;
 	(void)arg;
@@ -2057,7 +2057,7 @@ static s32 sub_4a40(s32 sub_intr, void *arg, s32 status)
 	return 0;
 }
 
-static s32 sub_4a94(s32 sub_intr, void *arg, s32 status)
+static s32 dmacplusSc128ErrIntr(s32 sub_intr, void *arg, s32 status)
 {
 	(void)sub_intr;
 	(void)arg;
@@ -2067,7 +2067,7 @@ static s32 sub_4a94(s32 sub_intr, void *arg, s32 status)
 	return 0;
 }
 
-static s32 sub_4b24(void *dst, const void *src, u32 size, s32 is_try)
+static s32 dmacplusSc128Copy(void *dst, const void *src, u32 size, s32 is_try)
 {
 	if (size == 0)
 		return 0x80000104;
@@ -2146,22 +2146,22 @@ static s32 sub_4b24(void *dst, const void *src, u32 size, s32 is_try)
 
 s32 sceDmacplus_driver_2C5FC1E3(void *dst, const void *src, u32 size)
 {
-	return sub_4b24(dst, src, size, 0);
+	return dmacplusSc128Copy(dst, src, size, 0);
 }
 
 s32 sceDmacMemcpy(void *dst, const void *src, u32 size)
 {
-	return sub_4b24(dst, src, size, 0);
+	return dmacplusSc128Copy(dst, src, size, 0);
 }
 
 s32 sceDmacplus_driver_D57D5BC2(void *dst, const void *src, u32 size)
 {
-	return sub_4b24(dst, src, size, 1);
+	return dmacplusSc128Copy(dst, src, size, 1);
 }
 
 s32 sceDmacTryMemcpy(void *dst, const void *src, u32 size)
 {
-	return sub_4b24(dst, src, size, 1);
+	return dmacplusSc128Copy(dst, src, size, 1);
 }
 
 s32 sceDmacplus_driver_B0EC610D(SceDmacplusLli *lli)
@@ -2195,14 +2195,14 @@ s32 sceDmacplus_driver_B0EC610D(SceDmacplusLli *lli)
 	return ((out_bits & 2) != 0) ? 0x80000024 : 0;
 }
 
-static s32 sub_524c(void)
+static s32 dmacplusSc128Resume(void)
 {
 	g_dmacActiveFlags &= ~0x10U;
 	return 0;
 }
 
 /* --- Kermit DMAC RPC helpers (0x56A, 0x56B, 0x56C, 0x569) --- */
-static s32 sub_5254(u32 a0, u32 a1, u32 a2, u32 a3)
+static s32 kermitDmacplusSendCmd(u32 a0, u32 a1, u32 a2, u32 a3)
 {
 	u8 buf[176];
 	SceKermitRequest *req_cached = (SceKermitRequest *)(((u32)buf + 63) & ~63U);
@@ -2217,7 +2217,7 @@ static s32 sub_5254(u32 a0, u32 a1, u32 a2, u32 a3)
 	return (res != 0) ? res : (s32)resp;
 }
 
-static s32 sub_5308(const u32 *p)
+static s32 kermitDmacplusInvalidateAvcOut(const u32 *p)
 {
 	if (p == NULL)
 		return 0;
@@ -2238,7 +2238,7 @@ static s32 sub_5308(const u32 *p)
 	return 0;
 }
 
-static s32 sub_547c(const u32 *p)
+static s32 kermitDmacplusSubmitAvc(const u32 *p)
 {
 	u8 buf[176];
 	SceKermitRequest *req_cached = (SceKermitRequest *)(((u32)buf + 63) & ~63U);
@@ -2255,13 +2255,13 @@ static s32 sub_547c(const u32 *p)
 	return (res != 0) ? res : (s32)resp;
 }
 
-static s32 sub_5600(SceDmacplusLli *lli)
+static s32 kermitDmacplusFinishSc2Me(SceDmacplusLli *lli)
 {
 	(void)lli;
 	return 0;
 }
 
-static s32 sub_56a4(SceDmacplusLli *lli)
+static s32 kermitDmacplusSubmitSc2Me(SceDmacplusLli *lli)
 {
 	u8 buf[176];
 	SceKermitRequest *req_cached = (SceKermitRequest *)(((u32)buf + 63) & ~63U);
@@ -2286,7 +2286,7 @@ static s32 sub_56a4(SceDmacplusLli *lli)
 	return (res != 0) ? res : (s32)resp;
 }
 
-static s32 sub_57e4(SceDmacplusLli *lli)
+static s32 kermitDmacplusFlushLli(SceDmacplusLli *lli)
 {
 	SceDmacplusLli *cur = lli;
 	while (cur != NULL) {
@@ -2297,14 +2297,14 @@ static s32 sub_57e4(SceDmacplusLli *lli)
 	return 0;
 }
 
-static s32 sub_5898(SceDmacplusLli *lli)
+static s32 kermitDmacplusSubmitMe2Sc(SceDmacplusLli *lli)
 {
 	u8 buf[176];
 	SceKermitRequest *req_cached = (SceKermitRequest *)(((u32)buf + 63) & ~63U);
 	sceKernelDcacheInvalidateRange(req_cached, 64);
 	SceKermitRequest *req = (SceKermitRequest *)KERMIT_UNCACHED(req_cached);
 	u64 resp = 0;
-	sub_57e4(lli);
+	kermitDmacplusFlushLli(lli);
 	req->args[0] = lli->src;
 	req->args[1] = lli->dst;
 	req->args[2] = lli->next;
@@ -2399,7 +2399,7 @@ int sceKermitMemory_driver_90B662D0(void *addr, u32 size)
 	return 0;
 }
 
-static s32 sub_5c50(void)
+static s32 kermitDmacplusInitSharedMem(void)
 {
 	sceKernelMemset((void *)0xABD38000, 0, 0x8000);
 	g_kermitDmacSmBase1 = 0xABD38000;
@@ -2410,7 +2410,7 @@ static s32 sub_5c50(void)
 	return (mtx < 0) ? mtx : 0;
 }
 
-static s32 sub_5ccc(SceDmacplusLli *lli)
+static s32 kermitDmacplusInvalidateMe2Sc(SceDmacplusLli *lli)
 {
 	SceDmacplusLli *cur = lli;
 	while (cur != NULL) {
@@ -2534,7 +2534,7 @@ static SceSysEventHandler g_lcdcEvent = {
 	{ 0, 0, 0, 0, 0, 0, 0, 0, 0 }
 };
 
-static s32 sub_64d8(void)
+static s32 lcdcResetApbTimer0(void)
 {
 	sceSysregApbTimerClkDisable(0);
 	sceSysregApbTimerClkSelect(0, 4);
@@ -2568,12 +2568,12 @@ static s32 sub_64d8(void)
 	return 0;
 }
 
-static s32 sub_5db4(void)
+static s32 lcdcInit(void)
 {
 	memset(&g_lcdc, 0, sizeof(g_lcdc));
 	g_lcdc.v3_0 = 1;
-	sub_0768();
-	sub_0a80();
+	sysregLcdcClkEnable();
+	sysregLcdcIoEnable();
 	g_lcdc.scale = 3;
 	g_lcdc.mobo = 0x00600000;
 	g_lcdc.v3_8 = 1;
@@ -2598,11 +2598,11 @@ static s32 sub_5db4(void)
 	return 0;
 }
 
-static s32 sub_5e8c(void)
+static s32 lcdcConfigureTiming(void)
 {
-	sub_0774();
+	sysregLcdcClkDisable();
 	sceSysreg_driver_9746F3B2(0, g_lcdcDispModeList[0].clk[1]);
-	sub_0768();
+	sysregLcdcClkEnable();
 	if (g_lcdc.mobo > 0x7FFFFF) {
 		REG32(0xBE140000) = 0;
 		REG32(0xBE140200) = 1;
@@ -2610,7 +2610,7 @@ static s32 sub_5e8c(void)
 	g_lcdc.hwCtl->syncDiff = g_lcdc.disp.syncDiff;
 	if (g_lcdc.mobo > 0x7FFFFF) {
 		if ((REG32(0xBE1401A0) & 1) == 0 && (g_lcdc.disp.flags & 1) != 0)
-			sub_64d8();
+			lcdcResetApbTimer0();
 		REG32(0xBE1401A0) = g_lcdc.disp.flags & 0xFE;
 		REG32(0xBE140180) = g_lcdc.hwData[0];
 		REG32(0xBE140184) = g_lcdc.hwData[1];
@@ -2638,16 +2638,16 @@ static s32 sub_5e8c(void)
 	sceKermit_driver_D69C50BB();
 	if (g_lcdc.v3_8 != 0)
 		g_lcdc.hwCtl->v2_112 = 1;
-	sub_0774();
+	sysregLcdcClkDisable();
 	if (g_lcdc.mobo > 0x7FFFFF) {
 		sceSysreg_driver_9746F3B2(g_lcdc.disp.clk[0], 1);
 		REG32(0xBE1401B0) = g_lcdc.disp.clk[1] - 1;
 	} else {
 		sceSysreg_driver_9746F3B2(g_lcdc.disp.clk[0], g_lcdc.disp.clk[1]);
 	}
-	sub_0768();
+	sysregLcdcClkEnable();
 	if (g_lcdc.v3_0 != 0)
-		sub_0a80();
+		sysregLcdcIoEnable();
 	return 0;
 }
 
@@ -2758,14 +2758,14 @@ static int lcdc_event_handler(int ev_id, char *ev_name, void *param, int *result
 	(void)result;
 	if (ev_id == 0x4004) {
 		if (((s32 *)param)[1] != 2) {
-			sub_0a8c();
-			sub_0774();
+			sysregLcdcIoDisable();
+			sysregLcdcClkDisable();
 		}
 	} else if (ev_id == 0x10004) {
 		if (((u32 *)((s32 *)param)[1])[1] == 0x80000000)
 			sceLcdc_driver_5DF2F52A();
 		else
-			sub_5e8c();
+			lcdcConfigureTiming();
 	}
 	return 0;
 }
@@ -2820,14 +2820,14 @@ s32 sceLcdc_driver_E9DBD35F(s32 id, s32 xres, s32 yres, s32 arg3)
 	g_lcdc.v3_28 = arg3;
 	g_lcdc.dispId = id;
 	if (*(u16 *)g_lcdc.disp.clk != *(u16 *)disp->clk) {
-		sub_0774();
+		sysregLcdcClkDisable();
 		if (g_lcdc.mobo > 0x7FFFFF) {
 			sceSysreg_driver_9746F3B2(disp->clk[0], 1);
 			REG32(0xBE1401B0) = disp->clk[1] - 1;
 		} else {
 			sceSysreg_driver_9746F3B2(disp->clk[0], disp->clk[1]);
 		}
-		sub_0768();
+		sysregLcdcClkEnable();
 	}
 	g_lcdc.disp = *disp;
 	if (g_lcdc.scale != 1) {
@@ -2943,15 +2943,15 @@ s32 sceLcdc_driver_35F45B50(void)
 	return ret;
 }
 
-static s32 sub_6f7c(SceSize args, void *argp)
+static s32 lcdcModuleStart(SceSize args, void *argp)
 {
 	(void)args;
 	(void)argp;
-	sub_5db4();
+	lcdcInit();
 	return 0;
 }
 
-static s32 sub_6f9c(SceSize args)
+static s32 lcdcModuleStop(SceSize args)
 {
 	(void)args;
 	sceKernelUnregisterSysEventHandler(&g_lcdcEvent);
@@ -2960,14 +2960,14 @@ static s32 sub_6f9c(SceSize args)
 
 s32 sceLcdc_driver_0BFF31C5(void)
 {
-	sub_0a80();
+	sysregLcdcIoEnable();
 	g_lcdc.v3_0 = 1;
 	return 0;
 }
 
 s32 sceLcdc_driver_3EDBFCB9(void)
 {
-	sub_0a8c();
+	sysregLcdcIoDisable();
 	g_lcdc.v3_0 = 0;
 	return 0;
 }
@@ -3060,18 +3060,18 @@ s32 sceLcdc_driver_90AA786C(void)
 
 s32 module_start(SceSize args, void *argp)
 {
-	sub_16c8(args);
-	sub_2f98(args, argp);
-	sub_6f7c(args, argp);
-	sub_7230(args, argp);
+	sysregModuleStart(args);
+	dmacplusModuleStart(args, argp);
+	lcdcModuleStart(args, argp);
+	ddrModuleStart(args, argp);
 	return 0;
 }
 
 s32 module_reboot_before(SceSize args)
 {
-	sub_727c(args);
-	sub_6f9c(args);
-	sub_3024(args);
-	sub_1708(args);
+	ddrModuleStop(args);
+	lcdcModuleStop(args);
+	dmacplusModuleStop(args);
+	sysregModuleStop(args);
 	return 0;
 }
