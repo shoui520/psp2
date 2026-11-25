@@ -1,4 +1,10 @@
-# generated skeleton (T2): stub bodies, original module/export/import tables
-psp2_module(vs0_app_NPXS10080_eboot KIND user SKELETON SOURCES
+# swagner (vs0:app/NPXS10080/eboot.bin), built by Sony with GCC 4.8 in C and C++. No
+# debug record names its files; the build-path strings name Sony's dtcpip repository
+# (DTCPIP-MW, DTCPIP-SW, SWKeyManager) and the files are placed there. The SDK's start
+# code (the 3.65 variant) links first.
+psp2_module(vs0_app_NPXS10080_eboot KIND user COMPILER gcc48 PARTIAL SOURCES
 	eboot.c
+	${PSP2_SRC}/sys/sdk/target/src/crt0/crt0_main.c
 )
+set_source_files_properties(${PSP2_SRC}/sys/sdk/target/src/crt0/crt0_main.c PROPERTIES
+	COMPILE_DEFINITIONS SCE_CRT0_SDK_VERSION=0x03650011)
