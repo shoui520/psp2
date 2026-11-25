@@ -746,7 +746,8 @@ int MlnImpl_8103D30C(const MlnBuffer *data, MlnRecordArray *array)
 		ret = MlnImpl_8103B4A0(copy, &record, &size);
 		if (ret != 0)
 			goto out;
-		if (copy->size < size) {
+		/* Sony's test: more left than the record took fails */
+		if (copy->size > size) {
 			ret = 5;
 			goto out;
 		}
