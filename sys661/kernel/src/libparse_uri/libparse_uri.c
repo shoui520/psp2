@@ -231,7 +231,7 @@ int sceParseUri_062BB07E(char *unescaped, u32 *unescapedLenOut, u32 unescapedBuf
     if (unescapedLenOut != NULL) {
         *unescapedLenOut = totalLen;
     }
-    return 0;
+    return check;
 }
 
 /* 0x0374: sceParseUri_568518C9 (sceUriParse) */
@@ -465,11 +465,11 @@ int sceParseUri_7EE318AF(char *url, u32 *urlLenOut, u32 urlBufSize, const ScePar
     if ((flags & 0x04) != 0) {
         if (parsedArea->scheme != NULL) {
             get_default_port(parsedArea->scheme, &defaultPort);
-            if (defaultPort == 0 && uri_strcasecmp(parsedArea->scheme, "mailto") != 0) {
-                if (parsedArea->port == defaultPort) {
+            if (defaultPort == 0) {
+                if (uri_strcasecmp(parsedArea->scheme, "mailto") == 0 && parsedArea->port == defaultPort) {
                     isDefaultPort = 1;
                 }
-            } else if (defaultPort != 0) {
+            } else {
                 if (parsedArea->port == defaultPort) {
                     isDefaultPort = 1;
                 }
@@ -625,11 +625,11 @@ int sceParseUri_8AA55D17(char *workArea, const char *baseUri, const char *relUri
         return ret;
     }
 
-    u32 pathWorkLen = uri_strlen(pathWork);
+    (void)uri_strlen(pathWork);
     u32 bLen = uri_strlen(baseUri);
     parsed.path = pathWork;
     u32 rLen = uri_strlen(relUri);
-    u32 buildSize = workAreaSize - pathWorkLen - bLen - rLen - 1;
+    u32 buildSize = workAreaSize - bLen - rLen - 1;
 
     ret = sceParseUri_7EE318AF(workArea, NULL, buildSize, &parsed, 0x3F);
     if (ret < 0) {
@@ -711,6 +711,7 @@ static int parse_userinfo(const char *str, char *workArea, u32 workAreaSize, u32
             colonPos = idx;
             hasColon = 1;
             idx++;
+            *userSizeOut = idx;
             continue;
         }
         u8 uch = (u8)ch;
@@ -1026,10 +1027,10 @@ static int normalize_path(char *dst, const char *src, u32 size)
     u32 maxIdx = size - 1;
     u32 idx = 1;
     dst[0] = '/';
-    if (idx >= maxIdx) {
+    dst[1] = '\0';
+    if (maxIdx <= 1) {
         return 0;
     }
-    dst[1] = '\0';
 
     char *outPtr = dst;
     while (idx < maxIdx) {
@@ -1268,6 +1269,7 @@ static int uri_vformat(void (*put_fn)(void *, int), void *ctx, const char *fmt, 
         u32 flags = 0;
         int width = 0;
         int prec = -1;
+        int numPrec = 0;
         int signChar = 0;
         const char *hexDigits = g_hex_lower;
 
@@ -1381,6 +1383,7 @@ static int uri_vformat(void (*put_fn)(void *, int), void *ctx, const char *fmt, 
                 signChar = 0;
             }
 
+            numPrec = prec;
             if (prec >= 0) {
                 flags &= ~0x20;
             }
@@ -1432,7 +1435,7 @@ static int uri_vformat(void (*put_fn)(void *, int), void *ctx, const char *fmt, 
                 if ((flags & 0x40) != 0) {
                     fullLen += 2;
                 }
-                int padLen = (fullLen > prec) ? fullLen : prec;
+                int padLen = (fullLen > numPrec) ? fullLen : numPrec;
                 if ((flags & 0x30) == 0 && padLen < width) {
                     int n = width - padLen;
                     while (n-- > 0) {
@@ -1452,8 +1455,8 @@ static int uri_vformat(void (*put_fn)(void *, int), void *ctx, const char *fmt, 
                         put_fn(ctx, '0');
                     }
                 }
-                if (fullLen < prec) {
-                    int n = prec - fullLen;
+                if (fullLen < numPrec) {
+                    int n = numPrec - fullLen;
                     while (n-- > 0) {
                         put_fn(ctx, '0');
                     }
@@ -1503,7 +1506,7 @@ static void sprintf_put_cb(void *ctx, int c)
     char **p = (char **)ctx;
     if (c < 0x100) {
         *(*p)++ = (char)c;
-    } else if (c == 0x201) {
+    } else {
         **p = '\0';
     }
 }

@@ -8,16 +8,16 @@ extern int sceKernelSignalSema(SceUID semaid, int signal);
 extern int sceIdStorageLookup(u16 key, u32 offset, void *buf, u32 len);
 extern int sceUtilsBufferCopyWithRange(void *outbuf, SceSize outsize, void *inbuf, int insize, int cmd);
 
-static u8 g_buf_2fc0[0x80];     /* 0x2FC0 */
-static u8 g_buf_3140[0x938];    /* 0x3140 */
-static u8 g_buf_3a80[0x14];     /* 0x3A80 */
-static u8 g_buf_3a94[0x42C];    /* 0x3A94 */
+static u8 g_sha1_buf[0x80];     /* 0x2FC0 */
+static u8 g_kirk_work_buf[0x938];    /* 0x3140 */
+static u8 g_aes_hdr_buf[0x14];     /* 0x3A80 */
+static u8 g_aes_data_buf[0x42C];    /* 0x3A94 */
 
-static u8 *g_ptr_2fc0 = g_buf_2fc0;         /* 0x2E00 */
-static u8 *g_ptr_3140 = g_buf_3140;         /* 0x2E04 */
-static u8 *g_ptr_3a80 = g_buf_3a80;         /* 0x2E08 */
-static u8 *g_ptr_3a94_0 = g_buf_3a94;       /* 0x2E0C */
-static u8 *g_ptr_3a94 = g_buf_3a94;         /* 0x2E10 */
+static u8 *g_sha1_ptr = g_sha1_buf;         /* 0x2E00 */
+static u8 *g_kirk_work_ptr = g_kirk_work_buf;         /* 0x2E04 */
+static u8 *g_aes_hdr_ptr = g_aes_hdr_buf;         /* 0x2E08 */
+static u8 *g_aes_data_ptr0 = g_aes_data_buf;       /* 0x2E0C */
+static u8 *g_aes_data_ptr = g_aes_data_buf;         /* 0x2E10 */
 
 static int g_inited;                        /* 0x2E40 */
 static u64 g_seq_counter;                   /* 0x2E48..0x2E4F */
@@ -98,7 +98,7 @@ static int kirkSha1Multi(u8 *buf, const u8 *s1, u32 l1, const u8 *s2, u32 l2,
 	if (l3 != 0) copy_bytes(p, s3, l3);
 	u32 in_sz = total + 4;
 	if (in_sz < 0x14) in_sz = 0x14;
-	int r = sceUtilsBufferCopyWithRange(buf, in_sz, buf, 0x14, 11);
+	int r = sceUtilsBufferCopyWithRange(buf, in_sz, buf, in_sz, 11);
 	return (r == 0) ? 0 : -0x102;
 }
 
@@ -373,10 +373,10 @@ int sceMemab_driver_4B54EAAD(u8 *out_plain, u8 *out_enc)
 				ret = -0x100;
 			} else {
 				packAuthBuffer(out_plain, g_rand_buf, 0x3C, g_idstorage_cert, 0x10, NULL, 0, NULL, 0);
-				ret = kirkEncryptWithPrngIv(g_buf_3140, 2, g_rand_buf + 0x14, 0x28, g_idstorage_cert, 0x60,
+				ret = kirkEncryptWithPrngIv(g_kirk_work_buf, 2, g_rand_buf + 0x14, 0x28, g_idstorage_cert, 0x60,
 				               NULL, 0, NULL, 0, NULL, 0, NULL, 0);
 				if (ret == 0) {
-					copy_bytes(out_enc, g_ptr_3140 + 0x14, 0xA0);
+					copy_bytes(out_enc, g_kirk_work_ptr + 0x14, 0xA0);
 				}
 			}
 		}
@@ -396,15 +396,15 @@ int sceMemab_driver_9BF0C95D(u8 *out_plain, const u8 *in_enc, u8 *out_enc)
 	}
 	int ret = -0x200;
 	if (g_inited != 0) {
-		ret = kirkCopyAndDecrypt(g_buf_3140, 2, in_enc, 0xA0);
+		ret = kirkCopyAndDecrypt(g_kirk_work_buf, 2, in_enc, 0xA0);
 		if (ret == 0) {
-			ret = kirkSha1Multi(g_buf_2fc0, g_ptr_3140 + 0x38, 0x38, NULL, 0, NULL, 0);
+			ret = kirkSha1Multi(g_sha1_buf, g_kirk_work_ptr + 0x38, 0x38, NULL, 0, NULL, 0);
 		}
 		if (ret == 0) {
 			ret = loadAndVerifyIdStorageCert(g_idstorage_cert);
 		}
 		if (ret == 0) {
-			if (kirkEcdsaVerify(g_ecdsa_buf, g_idstorage_cert + 0x60, g_ptr_2fc0, g_ptr_3140 + 0x70) != 0) {
+			if (kirkEcdsaVerify(g_ecdsa_buf, g_idstorage_cert + 0x60, g_sha1_ptr, g_kirk_work_ptr + 0x70) != 0) {
 				ret = -0x301;
 			}
 		}
@@ -415,38 +415,38 @@ int sceMemab_driver_9BF0C95D(u8 *out_plain, const u8 *in_enc, u8 *out_enc)
 		}
 		if (ret == 0) {
 			copy_bytes(g_ecdh_buf, g_rand_buf, 0x14);
-			copy_bytes(g_ecdh_buf + 0x14, g_ptr_3140 + 0x10, 0x28);
+			copy_bytes(g_ecdh_buf + 0x14, g_kirk_work_ptr + 0x10, 0x28);
 			if (sceUtilsBufferCopyWithRange(g_ecdh_buf, 0x3C, g_ecdh_buf, 0x3C, 13) != 0) {
 				ret = -0x103;
 			}
 		}
 		if (ret == 0) {
 			copy_bytes(sp_buf, g_rand_buf + 0x14, 0x28);
-			copy_bytes(sp_buf + 0x28, g_ptr_3140 + 0x10, 0x28);
-			copy_bytes(sp_buf + 0x50, g_ptr_3140 + 0x38, 0x10);
-			ret = kirkSha1Multi(g_buf_2fc0, sp_buf, 0x60, NULL, 0, NULL, 0);
+			copy_bytes(sp_buf + 0x28, g_kirk_work_ptr + 0x10, 0x28);
+			copy_bytes(sp_buf + 0x50, g_kirk_work_ptr + 0x38, 0x10);
+			ret = kirkSha1Multi(g_sha1_buf, sp_buf, 0x60, NULL, 0, NULL, 0);
 		}
 		if (ret == 0) {
 			ret = loadAndVerifyIdStorageCert(g_idstorage_cert);
 		}
 		if (ret == 0) {
 			copy_bytes(g_aes_buf, g_idstorage_cert + 0x88, 0x20);
-			copy_bytes(g_aes_buf + 0x20, g_ptr_2fc0, 0x14);
+			copy_bytes(g_aes_buf + 0x20, g_sha1_ptr, 0x14);
 			if (sceUtilsBufferCopyWithRange(g_aes_buf, 0x34, g_aes_buf, 0x34, 16) != 0) {
 				ret = -0x104;
 			}
 		}
 		if (ret == 0) {
-			ret = kirkSha1Multi(g_buf_2fc0, g_ecdh_buf, 0x14, sp_buf, 0x60, NULL, 0);
+			ret = kirkSha1Multi(g_sha1_buf, g_ecdh_buf, 0x14, sp_buf, 0x60, NULL, 0);
 		}
 		if (ret == 0) {
-			packAuthBuffer(out_plain, g_ptr_3140 + 0x48, 0x28, sp_buf, 0x50,
+			packAuthBuffer(out_plain, g_kirk_work_ptr + 0x48, 0x28, sp_buf, 0x50,
 			         g_idstorage_cert, 0x10, g_ecdh_buf, 0x14);
-			ret = kirkEncryptWithPrngIv(g_buf_3140, 2, sp_buf, 0x60, g_aes_buf, 0x28,
-			               g_ptr_2fc0, 0x14, g_idstorage_cert, 0x60, NULL, 0, NULL, 0);
+			ret = kirkEncryptWithPrngIv(g_kirk_work_buf, 2, sp_buf, 0x60, g_aes_buf, 0x28,
+			               g_sha1_ptr, 0x14, g_idstorage_cert, 0x60, NULL, 0, NULL, 0);
 		}
 		if (ret == 0) {
-			copy_bytes(out_enc, g_ptr_3140 + 0x14, 0x110);
+			copy_bytes(out_enc, g_kirk_work_ptr + 0x14, 0x110);
 		}
 	}
 	zero_bytes(sp_buf, 0x60);
@@ -470,29 +470,29 @@ int sceMemab_driver_C3981EE1(u8 *in_out_plain, const u8 *in_enc, u8 *out_enc)
 	}
 	int ret = -0x200;
 	if (g_inited != 0) {
-		ret = kirkCopyAndDecrypt(g_buf_3140, 2, in_enc, 0x110);
+		ret = kirkCopyAndDecrypt(g_kirk_work_buf, 2, in_enc, 0x110);
 		if (ret == 0) {
-			ret = kirkSha1Multi(g_buf_2fc0, g_ptr_3140 + 0xAC, 0x38, NULL, 0, NULL, 0);
+			ret = kirkSha1Multi(g_sha1_buf, g_kirk_work_ptr + 0xAC, 0x38, NULL, 0, NULL, 0);
 		}
 		if (ret == 0) {
 			ret = loadAndVerifyIdStorageCert(g_idstorage_cert);
 		}
 		if (ret == 0) {
-			if (kirkEcdsaVerify(g_ecdsa_buf, g_idstorage_cert + 0x60, g_ptr_2fc0, g_ptr_3140 + 0xE4) != 0) {
+			if (kirkEcdsaVerify(g_ecdsa_buf, g_idstorage_cert + 0x60, g_sha1_ptr, g_kirk_work_ptr + 0xE4) != 0) {
 				ret = -0x301;
 			}
 		}
 		if (ret == 0) {
-			ret = kirkSha1Multi(g_buf_2fc0, g_ptr_3140 + 0x10, 0x60, NULL, 0, NULL, 0);
+			ret = kirkSha1Multi(g_sha1_buf, g_kirk_work_ptr + 0x10, 0x60, NULL, 0, NULL, 0);
 		}
 		if (ret == 0) {
-			if (kirkEcdsaVerify(g_ecdsa_buf, g_ptr_3140 + 0xBC, g_ptr_2fc0, g_ptr_3140 + 0x70) != 0) {
+			if (kirkEcdsaVerify(g_ecdsa_buf, g_kirk_work_ptr + 0xBC, g_sha1_ptr, g_kirk_work_ptr + 0x70) != 0) {
 				ret = -0x303;
 			}
 		}
 		if (ret == 0) {
 			for (u32 i = 0; i < 0x28; i++) {
-				if (in_out_plain[0x14 + i] != g_ptr_3140[0x38 + i]) {
+				if (in_out_plain[0x14 + i] != g_kirk_work_ptr[0x38 + i]) {
 					ret = -0x308;
 					break;
 				}
@@ -500,7 +500,7 @@ int sceMemab_driver_C3981EE1(u8 *in_out_plain, const u8 *in_enc, u8 *out_enc)
 		}
 		if (ret == 0) {
 			for (u32 i = 0; i < 0x10; i++) {
-				if (in_out_plain[0x3C + i] != g_ptr_3140[0x60 + i]) {
+				if (in_out_plain[0x3C + i] != g_kirk_work_ptr[0x60 + i]) {
 					ret = -0x304;
 					break;
 				}
@@ -508,53 +508,53 @@ int sceMemab_driver_C3981EE1(u8 *in_out_plain, const u8 *in_enc, u8 *out_enc)
 		}
 		if (ret == 0) {
 			copy_bytes(g_ecdh_buf, in_out_plain, 0x14);
-			copy_bytes(g_ecdh_buf + 0x14, g_ptr_3140 + 0x10, 0x28);
+			copy_bytes(g_ecdh_buf + 0x14, g_kirk_work_ptr + 0x10, 0x28);
 			if (sceUtilsBufferCopyWithRange(g_ecdh_buf, 0x3C, g_ecdh_buf, 0x3C, 13) != 0) {
 				ret = -0x105;
 			}
 		}
 		if (ret == 0) {
-			ret = kirkSha1Multi(g_buf_2fc0, g_ecdh_buf, 0x14, g_ptr_3140 + 0x10, 0x60, NULL, 0);
+			ret = kirkSha1Multi(g_sha1_buf, g_ecdh_buf, 0x14, g_kirk_work_ptr + 0x10, 0x60, NULL, 0);
 		}
 		if (ret == 0) {
 			for (u32 i = 0; i < 0x14; i++) {
-				if (g_ptr_3140[0x98 + i] != g_ptr_2fc0[i]) {
+				if (g_kirk_work_ptr[0x98 + i] != g_sha1_ptr[i]) {
 					ret = -0x305;
 					break;
 				}
 			}
 		}
 		if (ret == 0) {
-			copy_bytes(sp20, g_ptr_3140 + 0x38, 0x28);
-			copy_bytes(sp20 + 0x28, g_ptr_3140 + 0x10, 0x28);
-			copy_bytes(sp20 + 0x50, g_ptr_3140 + 0xAC, 0x10);
-			ret = kirkSha1Multi(g_buf_2fc0, sp20, 0x60, NULL, 0, NULL, 0);
+			copy_bytes(sp20, g_kirk_work_ptr + 0x38, 0x28);
+			copy_bytes(sp20 + 0x28, g_kirk_work_ptr + 0x10, 0x28);
+			copy_bytes(sp20 + 0x50, g_kirk_work_ptr + 0xAC, 0x10);
+			ret = kirkSha1Multi(g_sha1_buf, sp20, 0x60, NULL, 0, NULL, 0);
 		}
 		if (ret == 0) {
 			ret = loadAndVerifyIdStorageCert(g_idstorage_cert);
 		}
 		if (ret == 0) {
 			copy_bytes(g_aes_buf, g_idstorage_cert + 0x88, 0x20);
-			copy_bytes(g_aes_buf + 0x20, g_ptr_2fc0, 0x14);
+			copy_bytes(g_aes_buf + 0x20, g_sha1_ptr, 0x14);
 			if (sceUtilsBufferCopyWithRange(g_aes_buf, 0x34, g_aes_buf, 0x34, 16) != 0) {
 				ret = -0x104;
 			}
 		}
 		if (ret == 0) {
-			ret = kirkSha1Multi(g_buf_2fc0, g_ecdh_buf, 0x14, sp20, 0x60, NULL, 0);
+			ret = kirkSha1Multi(g_sha1_buf, g_ecdh_buf, 0x14, sp20, 0x60, NULL, 0);
 		}
 		if (ret == 0) {
 			packAuthBuffer(in_out_plain, g_ecdh_buf, 0x14, NULL, 0, NULL, 0, NULL, 0);
 			copy_bytes(spb0, g_session_key, 0x20);
-			ret = ctrEncryptAndMac(g_ptr_3140, spb0, 0x20, &ctr, in_out_plain, sp90, 1);
+			ret = ctrEncryptAndMac(g_kirk_work_ptr, spb0, 0x20, &ctr, in_out_plain, sp90, 1);
 		}
 		if (ret == 0) {
 			pack_u64_le(sp80, g_seq_counter);
-			ret = kirkEncryptWithPrngIv(g_buf_3140, 2, sp20, 0x60, g_aes_buf, 0x28,
-			               g_ptr_2fc0, 0x14, spb0, 0x20, sp80, 0x08, sp90, 0x20);
+			ret = kirkEncryptWithPrngIv(g_kirk_work_buf, 2, sp20, 0x60, g_aes_buf, 0x28,
+			               g_sha1_ptr, 0x14, spb0, 0x20, sp80, 0x08, sp90, 0x20);
 		}
 		if (ret == 0) {
-			copy_bytes(out_enc, g_ptr_3140 + 0x14, 0x100);
+			copy_bytes(out_enc, g_kirk_work_ptr + 0x14, 0x100);
 		}
 	}
 	zero_bytes(sp20, 0x60);
@@ -581,18 +581,18 @@ int sceMemab_driver_23E4659B(u8 *in_out_plain, const u8 *in_enc, u8 *out_enc)
 	}
 	int ret = -0x200;
 	if (g_inited != 0) {
-		ret = kirkCopyAndDecrypt(g_buf_3140, 2, in_enc, 0x100);
+		ret = kirkCopyAndDecrypt(g_kirk_work_buf, 2, in_enc, 0x100);
 		if (ret == 0) {
-			ret = kirkSha1Multi(g_buf_2fc0, g_ptr_3140 + 0x10, 0x60, NULL, 0, NULL, 0);
+			ret = kirkSha1Multi(g_sha1_buf, g_kirk_work_ptr + 0x10, 0x60, NULL, 0, NULL, 0);
 		}
 		if (ret == 0) {
-			if (kirkEcdsaVerify(g_ecdsa_buf, in_out_plain, g_ptr_2fc0, g_ptr_3140 + 0x70) != 0) {
+			if (kirkEcdsaVerify(g_ecdsa_buf, in_out_plain, g_sha1_ptr, g_kirk_work_ptr + 0x70) != 0) {
 				ret = -0x307;
 			}
 		}
 		if (ret == 0) {
 			for (u32 i = 0; i < 0x28; i++) {
-				if (in_out_plain[0x28 + i] != g_ptr_3140[0x38 + i]) {
+				if (in_out_plain[0x28 + i] != g_kirk_work_ptr[0x38 + i]) {
 					ret = -0x30D;
 					break;
 				}
@@ -600,7 +600,7 @@ int sceMemab_driver_23E4659B(u8 *in_out_plain, const u8 *in_enc, u8 *out_enc)
 		}
 		if (ret == 0) {
 			for (u32 i = 0; i < 0x28; i++) {
-				if (in_out_plain[0x50 + i] != g_ptr_3140[0x10 + i]) {
+				if (in_out_plain[0x50 + i] != g_kirk_work_ptr[0x10 + i]) {
 					ret = -0x308;
 					break;
 				}
@@ -608,41 +608,41 @@ int sceMemab_driver_23E4659B(u8 *in_out_plain, const u8 *in_enc, u8 *out_enc)
 		}
 		if (ret == 0) {
 			for (u32 i = 0; i < 0x10; i++) {
-				if (in_out_plain[0x78 + i] != g_ptr_3140[0x60 + i]) {
+				if (in_out_plain[0x78 + i] != g_kirk_work_ptr[0x60 + i]) {
 					ret = -0x30E;
 					break;
 				}
 			}
 		}
 		if (ret == 0) {
-			ret = kirkSha1Multi(g_buf_2fc0, in_out_plain + 0x88, 0x14, g_ptr_3140 + 0x10, 0x60, NULL, 0);
+			ret = kirkSha1Multi(g_sha1_buf, in_out_plain + 0x88, 0x14, g_kirk_work_ptr + 0x10, 0x60, NULL, 0);
 		}
 		if (ret == 0) {
 			for (u32 i = 0; i < 0x14; i++) {
-				if (g_ptr_2fc0[i] != g_ptr_3140[0x98 + i]) {
+				if (g_sha1_ptr[i] != g_kirk_work_ptr[0x98 + i]) {
 					ret = -0x309;
 					break;
 				}
 			}
 		}
 		if (ret == 0) {
-			packAuthBuffer(in_out_plain, in_out_plain + 0x88, 0x14, g_ptr_3140 + 0xAC, 0x20,
-			         g_ptr_3140 + 0xCC, 0x08, NULL, 0);
-			ret = verifyMacAndCtrDecrypt(g_ptr_3140, in_out_plain + 0x14, 0x20, &ctr, &min_ctr,
-			               in_out_plain, g_ptr_3140 + 0xD4, 1, 0);
+			packAuthBuffer(in_out_plain, in_out_plain + 0x88, 0x14, g_kirk_work_ptr + 0xAC, 0x20,
+			         g_kirk_work_ptr + 0xCC, 0x08, NULL, 0);
+			ret = verifyMacAndCtrDecrypt(g_kirk_work_ptr, in_out_plain + 0x14, 0x20, &ctr, &min_ctr,
+			               in_out_plain, g_kirk_work_ptr + 0xD4, 1, 0);
 		}
 		if (ret == 0) {
 			ctr = 0;
 			copy_bytes(sp50, g_session_key, 0x20);
-			ret = ctrEncryptAndMac(g_ptr_3140, sp50, 0x20, &ctr, in_out_plain, sp30, 1);
+			ret = ctrEncryptAndMac(g_kirk_work_ptr, sp50, 0x20, &ctr, in_out_plain, sp30, 1);
 		}
 		if (ret == 0) {
 			pack_u64_le(sp20, g_seq_counter);
-			ret = kirkEncryptWithPrngIv(g_buf_3140, 2, sp50, 0x20, sp20, 0x08, sp30, 0x20,
+			ret = kirkEncryptWithPrngIv(g_kirk_work_buf, 2, sp50, 0x20, sp20, 0x08, sp30, 0x20,
 			               NULL, 0, NULL, 0, NULL, 0);
 		}
 		if (ret == 0) {
-			copy_bytes(out_enc, g_ptr_3140 + 0x14, 0x60);
+			copy_bytes(out_enc, g_kirk_work_ptr + 0x14, 0x60);
 		}
 	}
 	zero_bytes(sp20, 0x08);
@@ -667,11 +667,11 @@ int sceMemab_driver_8ABE3445(u8 *in_out_plain, const u8 *in_enc)
 	int ret = -0x200;
 	if (g_inited != 0) {
 		copy_bytes(sp10, in_enc, 0x60);
-		ret = kirkCopyAndDecrypt(g_buf_3140, 2, sp10, 0x60);
+		ret = kirkCopyAndDecrypt(g_kirk_work_buf, 2, sp10, 0x60);
 		if (ret == 0) {
-			copy_bytes(sp10, g_ptr_3140 + 0x10, 0x60);
+			copy_bytes(sp10, g_kirk_work_ptr + 0x10, 0x60);
 			packAuthBuffer(in_out_plain, in_out_plain, 0x14, sp10, 0x20, sp10 + 0x20, 0x08, NULL, 0);
-			ret = verifyMacAndCtrDecrypt(g_ptr_3140, in_out_plain + 0x14, 0x20, &ctr, &min_ctr,
+			ret = verifyMacAndCtrDecrypt(g_kirk_work_ptr, in_out_plain + 0x14, 0x20, &ctr, &min_ctr,
 			               in_out_plain, sp10 + 0x28, 1, 0);
 		}
 	}
@@ -696,7 +696,7 @@ int sceMemab_driver_3C15BC8C(u8 *ctx, u8 *data, u32 len, u8 *hdr, int do_enc)
 			ret = -0x401;
 		} else {
 			u64 ctr = unpack_u64_le(ctx + 0x3C);
-			ret = ctrEncryptAndMac(g_ptr_3140, data, len, &ctr, ctx, hdr, do_enc);
+			ret = ctrEncryptAndMac(g_kirk_work_ptr, data, len, &ctr, ctx, hdr, do_enc);
 			if (ret == 0) {
 				pack_u64_le(ctx + 0x3C, ctr);
 			}
@@ -723,7 +723,7 @@ int sceMemab_driver_D47A50B1(u8 *ctx, u8 *data, u32 len, const u8 *hdr, int do_d
 		} else {
 			u64 ctr = unpack_u64_le(hdr);
 			u64 min_ctr = unpack_u64_le(ctx + 0x44);
-			ret = verifyMacAndCtrDecrypt(g_ptr_3140, data, len, &ctr, &min_ctr, ctx, hdr, do_dec, check_seq);
+			ret = verifyMacAndCtrDecrypt(g_kirk_work_ptr, data, len, &ctr, &min_ctr, ctx, hdr, do_dec, check_seq);
 			if (ret == 0 && check_seq != 0) {
 				pack_u64_le(ctx + 0x44, ctr);
 			}
@@ -749,7 +749,7 @@ int sceMemab_driver_F742F283(u8 *data, u32 len, u8 *hdr, int do_enc)
 			ret = -0x401;
 		} else {
 			u64 ctr = g_seq_counter;
-			ret = ctrEncryptAndMac(g_ptr_3140, data, len, &ctr, g_session_key, hdr, do_enc);
+			ret = ctrEncryptAndMac(g_kirk_work_ptr, data, len, &ctr, g_session_key, hdr, do_enc);
 			if (ret == 0) {
 				g_seq_counter = ctr;
 			}
@@ -776,7 +776,7 @@ int sceMemab_driver_CB5D3916(u8 *ctx, u8 *data, u32 len, const u8 *hdr, int do_d
 		} else {
 			u64 ctr = unpack_u64_le(hdr);
 			u64 min_ctr = unpack_u64_le(ctx + 0x34);
-			ret = verifyMacAndCtrDecrypt(g_ptr_3140, data, len, &ctr, &min_ctr, ctx + 0x14, hdr, do_dec, check_seq);
+			ret = verifyMacAndCtrDecrypt(g_kirk_work_ptr, data, len, &ctr, &min_ctr, ctx + 0x14, hdr, do_dec, check_seq);
 			if (ret == 0 && check_seq != 0) {
 				pack_u64_le(ctx + 0x34, ctr);
 			}
@@ -801,7 +801,7 @@ int sceMemab_driver_9DE8C8CD(const u32 *mask, u32 *data, u32 len)
 		ret = -0x401;
 	} else {
 		u32 blocks = len >> 4;
-		u32 *work = (u32 *)g_ptr_3a94;
+		u32 *work = (u32 *)g_aes_data_ptr;
 		for (u32 i = 0; i < blocks; i++) {
 			u32 *src = data + (i * 4);
 			u32 *dst = work + (i * 4);
@@ -810,9 +810,9 @@ int sceMemab_driver_9DE8C8CD(const u32 *mask, u32 *data, u32 len)
 			dst[2] = src[2] ^ mask[2];
 			dst[3] = src[3] ^ mask[3];
 		}
-		ret = kirkEncryptInPlace(g_buf_3a80, len, 7);
+		ret = kirkEncryptInPlace(g_aes_hdr_buf, len, 7);
 		if (ret == 0) {
-			work = (u32 *)g_ptr_3a94;
+			work = (u32 *)g_aes_data_ptr;
 			for (u32 i = 0; i < blocks; i++) {
 				u32 *src = work + (i * 4);
 				u32 *dst = data + (i * 4);
@@ -842,7 +842,7 @@ int sceMemab_driver_9BF1A0A4(const u32 *mask, u32 *data, u32 len)
 		ret = -0x401;
 	} else {
 		u32 blocks = len >> 4;
-		u32 *work = (u32 *)g_ptr_3a94;
+		u32 *work = (u32 *)g_aes_data_ptr;
 		for (u32 i = 0; i < blocks; i++) {
 			u32 *src = data + (i * 4);
 			u32 *dst = work + (i * 4);
@@ -851,9 +851,9 @@ int sceMemab_driver_9BF1A0A4(const u32 *mask, u32 *data, u32 len)
 			dst[2] = src[2] ^ mask[2];
 			dst[3] = (src[3] ^ mask[3]) ^ i;
 		}
-		ret = kirkDecryptInPlace(g_buf_3a80, len, 7);
+		ret = kirkDecryptInPlace(g_aes_hdr_buf, len, 7);
 		if (ret == 0) {
-			u32 *out_work = (u32 *)g_buf_3a80;
+			u32 *out_work = (u32 *)g_aes_hdr_buf;
 			for (u32 i = 0; i < blocks; i++) {
 				u32 *src = out_work + (i * 4);
 				u32 *dst = data + (i * 4);
@@ -877,8 +877,8 @@ int sceMemab_driver_16594684(u32 *out_rand)
 		return -0x109;
 	}
 	int ret = -0x100;
-	if (sceUtilsBufferCopyWithRange(g_ptr_3a80, 0x14, NULL, 0, 14) == 0) {
-		u32 *src = (u32 *)g_buf_3a80;
+	if (sceUtilsBufferCopyWithRange(g_aes_hdr_ptr, 0x14, NULL, 0, 14) == 0) {
+		u32 *src = (u32 *)g_aes_hdr_buf;
 		for (u32 i = 0; i < 4; i++) {
 			out_rand[i] = src[i];
 		}

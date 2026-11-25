@@ -338,7 +338,7 @@ int sceDNASCore_lib_FA571A75(int mode, int region_mode)
 	if (region_mode == 1) {
 		flag = __builtin_bswap32(0x80000001);
 	} else if (region_mode == 0) {
-		flag = __builtin_bswap32(0);
+		flag = __builtin_bswap32(1);
 	} else if (region_mode == 2) {
 		flag = __builtin_bswap32(0x80000002);
 	} else if (region_mode == 3) {
@@ -1128,7 +1128,7 @@ static int dnasProcessFinalResponse(int state, DnasCtx *ctx, char *buf, uint32_t
 	}
 
 	ctx->mc_res_len = mc_res;
-	int res = sceMcctrl_61550814(ctx->mc_ctx, body + 0x30, mc_res, g_rtc_buf);
+	int res = sceMcctrl_61550814(ctx->mc_ctx, body + 0x30, pkt_len, g_rtc_buf);
 	if (res < 0) {
 		pspSetK1(k1);
 		return res;
