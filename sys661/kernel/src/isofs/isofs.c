@@ -28,12 +28,14 @@ SCE_SDK_VERSION(SDK_VERSION);
 #define DEVCTL_READ_SECTORS 0x1e380c0
 #define DEVCTL_GET_SECTOR_SIZE 0x1e280a9
 #define DEVCTL_SEEK_DISC_RAW 0x1f100a3
-#define DEVCTL_UNKNOWN_1E180D3 0x1e180d3
-#define DEVCTL_UNKNOWN_1E38034 0x1e38034
+#define DEVCTL_UMD_CTRL_EXT 0x1e180d3
+#define DEVCTL_QUERY_BLOCK_DEV 0x1e38034
 #define DEVCTL_PREPARE_INTO_CACHE 0x1f100a4
 #define DEVCTL_PREPARE_INTO_CACHE_GET_STATUS 0x1f300a5
-#define DEVCTL_UNKNOWN_1F100A8 0x1f100a8
-#define DEVCTL_UNKNOWN_1F100A9 0x1f100a9
+#define DEVCTL_CACHE_CANCEL 0x1f100a6
+#define DEVCTL_CACHE_GET_STATUS 0x1f300a7
+#define DEVCTL_CACHE_SUSPEND 0x1f100a8
+#define DEVCTL_CACHE_RESUME 0x1f100a9
 #define DEVCTL_GET_TOTAL_NUMBER_OF_SECTORS 0x1f20003
 #define DEVCTL_GET_CURRENT_LBN 0x1f20002
 
@@ -91,14 +93,13 @@ typedef struct {
     u32 dirNum;
     u32 dirLevel;
     u32 lbnSize;
-    u32 reserved34; // Unused
+    u32 reserved;
 } IsofsPath;
 
 /** Global manager data for this module. */
 typedef struct {
     s32 initialized;
-    s32 reserved04; // Unused
-    s32 reserved08; // Unused
+    s32 reserved[2];
     s32 maxUnits;
     s32 maxFiles;
     s32 fdwCount;
@@ -118,19 +119,18 @@ typedef struct {
     u8 openFlags; // 3 = raw open, 2 = normal open, 0 = available
     u8 flags;
     s8 usedFlag;
-    u8 reserved07; // Always zero
-    u16 reserved08; // Always zero
-    s16 cacheIdx; // Unknown, cache related
+    u8 reservedByte;
+    u16 reservedHalf;
+    s16 cacheIndex;
     u32 lbn;
-    u32 reserved10; // Always zero
-    u32 reserved14; // Always zero
+    u32 reservedLbnPad[2];
     SceOff size;
     SceOff fpos;
     ScePspDateTime dateTime;
-    u32 reserved38[4]; // Unused
-    ScePspDateTime dateTime2;
+    u32 reservedDatePad[4];
+    ScePspDateTime modifyDateTime;
     SceIoIob *iob;
-    IsofsFd *fd;
+    IsofsFd *fileDesc;
     char umdId[UMD_ID_SIZE];
 } IsofsFile;
 
@@ -152,23 +152,22 @@ struct IsofsDir {
 
 /** Holds a list of opened file descriptors. A single unit can have more than one list. */
 struct IsofsFd {
-    u16 reserved00; // Unused
+    u16 reservedHead;
     u16 filesCount;
     u32 idx;
-    u32 reserved08; // Unused
-    u32 reserved0C; // Unused
+    u32 reservedMid[2];
     SceUID heapId;
-    u32 reserved14; // Unused
+    u32 reservedTail;
     IsofsFile *files;
     IsofsFdw *fdw;
     IsofsUnit *unit;
 };
 
-/** Wraps IsofsFd for unknown reason. */
+/** Wraps IsofsFd with its wrapper index. */
 struct IsofsFdw {
     u32 idx;
-    u32 reserved04; // Always zero
-    IsofsFd fd;
+    u32 reserved;
+    IsofsFd fileDesc;
 };
 
 /** Represents single device capable of reading ISOs. */
@@ -176,36 +175,32 @@ struct IsofsUnit {
     char umdId[UMD_ID_SIZE];
     char blockDev[32];
     SceUID heapId;
-    u16 reserved44; // Always zero
+    u16 activeFlag;
     s16 cacheSlot; // Always -1
     s16 unitNum;
     u16 defaultFlag; // Always 1
     u16 mountFlags;
     u16 pathTableEntryCount;
     u8 fdwCount;
-    u8 reserved51; // Unused
+    u8 reservedByte;
     u16 mountState;
     u32 pathTableSize;
     SceUID semaId;
     u32 pathTableLbn;
     u32 rootDirLbn;
     u32 rootDirSize;
-    u32 unkNextLbn;
+    u32 nextLbn;
     u32 lastLbn;
-    u32 unkLbnTillEnd;
+    u32 remainingLbns;
     u32 totalSectors;
-    u32 unkCurrentLbn;
-    u32 reserved7C; // Unused
-    u32 reserved80; // Unused
-    u32 reserved84; // Unused
-    u32 reserved88; // Unused
-    u32 reserved8c; // Unused
+    u32 cachedCurrentLbn;
+    u32 reservedTail[5];
     IsofsPath *paths;
     IsofsFdw *fdw;
     IsoPath *pathTable;
     u8 *primaryVolumeDescriptor;
     u32 openState;
-    u32 currentLbn; // current UMD lbn?
+    u32 currentLbn;
     u32 sectorSize;
     s32 handlerIdx;
 };
@@ -214,42 +209,35 @@ struct IsofsUnit {
 typedef struct {
     s32 (*readDirSectors)(IsofsUnit *, s64, s32, void *, s32, u32);
     s32 (*readSectors)(IsofsUnit *, IsofsFile *, s32, void *, s32, u32);
-    void *reserved08; // Unused
+    void *reservedOp;
     s32 (*getSectorSize)(IsofsUnit *);
     s32 (*getTotalNumberOfSectors)(IsofsUnit *);
     s32 (*getCurrentLbn)(IsofsUnit *);
     s64 (*seek)(IsofsUnit *, s64);
     s32 (*devctlExt)(IsofsUnit *, s32, void *, SceSize, s32, s32);
-    s32 (*reservedOp20)();
+    s32 (*unsupportedOp)(void);
     s32 (*getUnitNum)(IsofsUnit *, void *, SceSize);
     s32 (*readPvd)(IsofsUnit *, void *, SceSize);
     s32 (*prepareIntoCache)(IsofsUnit *, IsofsFile *, s32, s32);
-    s32 (*cacheGetStatus)(IsofsUnit *, IsofsFile *, s32);
-    s32 (*reserved34)(IsofsUnit *, IsofsFile *);
-    s32 (*reserved38)(IsofsUnit *, IsofsFile *);
+    s32 (*cacheControl)(IsofsUnit *, IsofsFile *, s32);
+    s32 (*cacheSuspend)(IsofsUnit *, IsofsFile *);
+    s32 (*cacheResume)(IsofsUnit *, IsofsFile *);
 } IsofsImplFuncs;
 
 /** Definition of device reading the ISO. */
 typedef struct {
     char blockDev[32];
-    IsofsImplFuncs *funcs;
+    const IsofsImplFuncs *funcs;
 } IsofsHandler;
 
-/** ISOFS cache entry. This cache doesn't seem to be used so most fields are unknown. */
+/** ISOFS cache entry descriptor. */
 typedef struct {
-    u32 reserved00;
-    u32 reserved04;
-    u32 reserved08;
-    u32 reserved0C;
-    u32 reserved10;
-    u32 reserved14;
-    u32 reserved18;
+    u32 headerWords[7];
     u32 devctlExt;
     s8 used;
-    s8 reserved21;
-    s16 reserved22;
-    u32 reserved24;
-    u32 reserved28;
+    s8 padByte;
+    s16 padHalf;
+    u32 tailWords[2];
     void *memory;
 } IsofsCacheEntry;
 
@@ -260,8 +248,15 @@ typedef struct {
     u32 flags;
     s32 outsize;
     void *outdata;
-    u32 reserved14; // Unused, always 0
+    u32 reserved;
 } IsofsReadSectorsArgs;
+
+/** Input parameter block for ioctl 0x1010005 (seek disc to file position). */
+typedef struct {
+    SceOff offset;
+    u32 reserved;
+    s32 whence;
+} IsofsIoctlSeekParam;
 
 /**
  * Declarations
@@ -320,11 +315,11 @@ s32 isofsIoctl(SceIoIob *iob, s32 cmd, void *indata, SceSize inlen, void *outdat
 // Rather simple functions to initialize and free file descriptors related structs.
 s32 isofsInitUnitFdw(IsofsUnit *unit, u32 fdwCount, u16 filesCount);
 void isofsFreeUnitFdw(IsofsUnit *unit);
-s32 isofsInitFdw(IsofsFdw *fdw, u32 idx, u16 filesCount);
+s32 isofsInitFdw(IsofsFdw *fdw, u32 idx, u32 filesCount);
 void isofsClearFdwFiles(IsofsFdw *fdw, s32 fdwCount);
 s32 isofsClearUnitFilesFdw(IsofsUnit *unit, s32 fdwCount);
-s32 isofsInitFdFiles(IsofsFd *fd, u16 filesCount);
-s32 isofsFreeFdFiles(IsofsFd *fd);
+s32 isofsInitFdFiles(IsofsFd *fileDesc, u32 filesCount);
+s32 isofsFreeFdFiles(IsofsFd *fileDesc);
 s32 isofsFreeFiles(IsofsFile *files);
 s32 isofsClearFile(IsofsFile *file);
 
@@ -372,10 +367,7 @@ s32 isofsUpdatePathsLbnSize(IsofsUnit *unit);
 
 /** Check if the unit is already mounted. */
 s32 isofsCheckUnitMounted(IsofsUnit *unit, s32 unitNum);
-/**
- * Sets some LBN related field in the unit based on the data from device.
- * Those fields aren't read anywhere so the exact purpose is unknown.
- */
+/** Sets LBN bounds fields in the unit based on data queried from the block device. */
 s32 isofsUnitSetLbns(char *blockDev, s32 unitNum);
 /** Clear global variable with the current directory LBN. */
 void isofsClearCurrentDirLbn();
@@ -396,19 +388,19 @@ IsofsPath *isofsFindPath(IsofsUnit *unit, char *pathSplit, u32 dirLevel, int pat
 char *isofsSplitPath(char *path, u32 *outLen, u32 flag, s32 *outRet);
 
 // Simple functions delegating work to the actual device implementation.
-s32 isofsHandlerReadDirSectors(IsofsUnit *unit, s64 lbn, s32 size, void *outdata, s32 outlen, s32 cmd, u32 unkUnused);
-s32 isofsHandlerReadSectors(IsofsUnit *unit, IsofsFile *file, s32 size, void *outdata, s32 outlen, u32 unkFlags,
-                            s32 unkUnused);
+s32 isofsHandlerReadDirSectors(IsofsUnit *unit, s64 lbn, s32 size, void *outdata, s32 outlen, s32 cmd, u32 reservedParam);
+s32 isofsHandlerReadSectors(IsofsUnit *unit, IsofsFile *file, s32 size, void *outdata, s32 outlen, u32 readFlags,
+                            s32 reservedParam);
 s32 isofsHandlerGetSectorSize(IsofsUnit *unit);
 s32 isofsHandlerGetTotalNumberOfSectors(IsofsUnit *unit);
 s32 isofsHandlerGetCurrentLbn(IsofsUnit *unit);
 s64 isofsHandlerSeek(IsofsUnit *unit, s64 lbn);
-s32 isofsHandler_unk1c(IsofsUnit *unit, s32 mode, void *indata, SceSize inlen, s32 arg4, s32 arg5);
+s32 isofsHandlerDevctlExt(IsofsUnit *unit, s32 mode, void *indata, SceSize inlen, s32 outBuf, s32 outLen);
 s32 isofsHandlerReadPvd(IsofsUnit *unit, void *indata, SceSize inlen);
 s32 isofsHandlerPrepareIntoCache(IsofsUnit *unit, IsofsFile *file, s32 cacheSize, s32 getStatusFlag);
-s32 isofsHandler_unk30(IsofsUnit *unit, IsofsFile *file, s32 flag, void *outdata);
-s32 isofsHandler_unk34(IsofsUnit *unit, IsofsFile *file);
-s32 isofsHandler_unk38(IsofsUnit *unit, IsofsFile *file);
+s32 isofsHandlerCacheControl(IsofsUnit *unit, IsofsFile *file, s32 flag, void *outdata);
+s32 isofsHandlerCacheSuspend(IsofsUnit *unit, IsofsFile *file);
+s32 isofsHandlerCacheResume(IsofsUnit *unit, IsofsFile *file);
 
 // All IsofsImplFuncs for interacting with the UMD device.
 s32 isofsUmdReadDirSectors(IsofsUnit *unit, s64 lbn, s32 size, void *outdata, s32 outlen, u32 cmd);
@@ -417,14 +409,14 @@ s32 isofsUmdGetSectorSize(IsofsUnit *unit);
 s32 isofsUmdGetTotalNumberOfSectors(IsofsUnit *unit);
 s32 isofsUmdGetCurrentLbn(IsofsUnit *unit);
 s64 isofsUmdSeek(IsofsUnit *unit, s64 lbn);
-s32 isofsUmd_1e180d3(IsofsUnit *unit, s32 mode, void *indata, SceSize inlen, s32 arg4, s32 arg5);
-s32 isofsUmd_unkNotSupported();
+s32 isofsUmdDevctlExt(IsofsUnit *unit, s32 mode, void *indata, SceSize inlen, s32 outBuf, s32 outLen);
+s32 isofsUmdNotSupported(void);
 s32 isofsUmdGetUnitNum(IsofsUnit *unit, void *indata, SceSize inlen);
 s32 isofsUmdReadPvd(IsofsUnit *unit, void *indata, SceSize inlen);
 s32 isofsUmdPrepareIntoCache(IsofsUnit *unit, IsofsFile *file, s32 cacheSize, s32 getStatusFlag);
-s32 isofsUmd_1f100a6_1f100a7(IsofsUnit *unit, IsofsFile *file, s32 flag);
-s32 isofsUmd_1f100a8(IsofsUnit *unit, IsofsFile *file);
-s32 isofsUmd_1f100a9(IsofsUnit *unit, IsofsFile *file);
+s32 isofsUmdCacheControl(IsofsUnit *unit, IsofsFile *file, s32 flag);
+s32 isofsUmdCacheSuspend(IsofsUnit *unit, IsofsFile *file);
+s32 isofsUmdCacheResume(IsofsUnit *unit, IsofsFile *file);
 
 // UMD callbacks management and implementation.
 s32 isofsRegisterOnUmdMounted(IsofsUnit *unit);
@@ -472,7 +464,7 @@ SceIoDeviceFunction g_isofsDrvFuncs = {
 SceIoDeviceTable g_isofsDrv = {"isofs", 0x10, 0x800, "ISOFS", &g_isofsDrvFuncs};
 
 // 00006d74
-IsofsImplFuncs g_isofsUmdFuncs = {
+const IsofsImplFuncs g_isofsUmdFuncs = {
     isofsUmdReadDirSectors,
     isofsUmdReadSectors,
     NULL,
@@ -480,18 +472,18 @@ IsofsImplFuncs g_isofsUmdFuncs = {
     isofsUmdGetTotalNumberOfSectors,
     isofsUmdGetCurrentLbn,
     isofsUmdSeek,
-    isofsUmd_1e180d3,
-    isofsUmd_unkNotSupported,
+    isofsUmdDevctlExt,
+    isofsUmdNotSupported,
     isofsUmdGetUnitNum,
     isofsUmdReadPvd,
     isofsUmdPrepareIntoCache,
-    isofsUmd_1f100a6_1f100a7,
-    isofsUmd_1f100a8,
-    isofsUmd_1f100a9
+    isofsUmdCacheControl,
+    isofsUmdCacheSuspend,
+    isofsUmdCacheResume
 };
 
 // 00006db0
-IsofsHandler g_isofsHandlers[] = {
+const IsofsHandler g_isofsHandlers[] = {
     {{'u', 'm', 'd', '\0'}, &g_isofsUmdFuncs},
     {{'n', 'u', 'l', 'l', '\0'}, NULL},
     {{'\0'}, NULL},
@@ -511,7 +503,7 @@ u8 __attribute__((aligned(64))) g_isofsCurrentDir[4096];
 s32 g_isofsCurrentDirLbn;
 
 // 00007ec4
-s32 g_isofsMounted2;
+s32 g_isofsHasMountedOnce;
 
 // 00007ec8
 s32 g_isofsMounted;
@@ -528,6 +520,10 @@ IsofsMgr g_isofsMgr;
 /**
  * Implementation
  */
+
+static inline u32 _readLe32(const u8 *buf) {
+    return (u32) buf[0] | ((u32) buf[1] << 8) | ((u32) buf[2] << 16) | ((u32) buf[3] << 24);
+}
 
 static inline void _setUmdId(char *umdId, int value) {
     s32 *id = (s32 *) umdId;
@@ -558,13 +554,13 @@ s32 isofsInitUnits() {
         unit->pathTableSize = 0;
         unit->rootDirLbn = 0;
         unit->rootDirSize = 0;
-        unit->unkNextLbn = 0;
+        unit->nextLbn = 0;
         unit->lastLbn = 0;
-        unit->unkLbnTillEnd = 0;
+        unit->remainingLbns = 0;
         unit->pathTableLbn = 0;
         unit->totalSectors = 0;
-        unit->unkCurrentLbn = 0;
-        unit->reserved44 = 0;
+        unit->cachedCurrentLbn = 0;
+        unit->activeFlag = 0;
         unit->heapId = mgr->heapId;
         unit->cacheSlot = -1;
         unit->unitNum = -1;
@@ -578,9 +574,6 @@ s32 isofsInitUnits() {
         unit->primaryVolumeDescriptor = NULL;
         unit->openState = 0;
         _setUmdId(unit->umdId, 0);
-        if (mgr->fdwCount == 0) {
-            pspBreak(SCE_BREAKCODE_DIVZERO);
-        }
         ret = isofsInitUnitFdw(unit, mgr->fdwCount, mgr->maxFiles / mgr->fdwCount);
         if (ret != 0) {
             break;
@@ -628,8 +621,8 @@ s32 isofsInitUnitFdw(IsofsUnit *unit, u32 fdwCount, u16 filesCount) {
             return ret;
         }
         unit->fdw[i].idx = i;
-        unit->fdw[i].fd.unit = unit;
-        unit->fdw[i].reserved04 = 0;
+        unit->fdw[i].fileDesc.unit = unit;
+        unit->fdw[i].reserved = 0;
     }
     unit->fdwCount = (u8) fdwCount;
     return SCE_ERROR_OK;
@@ -638,7 +631,7 @@ s32 isofsInitUnitFdw(IsofsUnit *unit, u32 fdwCount, u16 filesCount) {
 // 000003c4
 void isofsFreeUnitFdw(IsofsUnit *unit) {
     for (u8 i = 0; i < unit->fdwCount; i++) {
-        isofsFreeFdFiles(&unit->fdw[i].fd);
+        isofsFreeFdFiles(&unit->fdw[i].fileDesc);
     }
     sceKernelFreeHeapMemory(unit->heapId, unit->fdw);
 }
@@ -666,17 +659,17 @@ s32 isofsInitCache() {
     for (u32 i = 0; i < ISOFS_CACHE_ENTRIES; i++) {
         IsofsCacheEntry *entry = &g_isofsCache[i];
         entry->used = 0;
-        entry->reserved00 = 0;
-        entry->reserved04 = 0;
-        entry->reserved08 = 0;
-        entry->reserved0C = 0;
-        entry->reserved10 = 0;
-        entry->reserved14 = 0;
-        entry->reserved18 = 0;
+        entry->headerWords[0] = 0;
+        entry->headerWords[1] = 0;
+        entry->headerWords[2] = 0;
+        entry->headerWords[3] = 0;
+        entry->headerWords[4] = 0;
+        entry->headerWords[5] = 0;
+        entry->headerWords[6] = 0;
         entry->devctlExt = 0;
-        entry->reserved22 = 0;
-        entry->reserved24 = 0;
-        entry->reserved28 = 0;
+        entry->padHalf = 0;
+        entry->tailWords[0] = 0;
+        entry->tailWords[1] = 0;
         entry->memory = NULL;
     }
     return SCE_ERROR_OK;
@@ -704,65 +697,65 @@ s32 isofsFreeCache() {
 }
 
 // 00000620
-s32 isofsInitFdw(IsofsFdw *fdw, u32 idx, u16 filesCount) {
-    fdw->fd.idx = idx;
-    fdw->fd.fdw = fdw;
-    fdw->fd.filesCount = filesCount;
-    return isofsInitFdFiles(&fdw->fd, filesCount);
+s32 isofsInitFdw(IsofsFdw *fdw, u32 idx, u32 filesCount) {
+    fdw->fileDesc.idx = idx;
+    fdw->fileDesc.fdw = fdw;
+    fdw->fileDesc.filesCount = (u16) filesCount;
+    return isofsInitFdFiles(&fdw->fileDesc, filesCount);
 }
 
 // 00000650
-s32 isofsFreeFdFiles(IsofsFd *fd) {
-    s32 ret = isofsFreeFiles(fd->files);
-    fd->files = NULL;
+s32 isofsFreeFdFiles(IsofsFd *fileDesc) {
+    s32 ret = isofsFreeFiles(fileDesc->files);
+    fileDesc->files = NULL;
     return ret;
 }
 
 // 0000067c
 void isofsClearFdwFiles(IsofsFdw *fdw, s32 fdwCount) {
-    IsofsFile *files = fdw->fd.files;
+    IsofsFile *files = fdw->fileDesc.files;
     for (int i = 0; i < fdwCount / 2; i++) {
         IsofsFile *file = &files[i];
         file->openFlags = 0;
         file->flags = 0;
-        file->reserved07 = 0;
-        file->fd = &fdw->fd;
+        file->reservedByte = 0;
+        file->fileDesc = &fdw->fileDesc;
         file->size = 0;
         file->fpos = 0;
-        file->reserved08 = 0;
-        file->cacheIdx = -1;
+        file->reservedHalf = 0;
+        file->cacheIndex = -1;
         file->readFlags = 0;
         file->lbn = 0;
-        file->reserved10 = 0;
-        file->reserved14 = 0;
+        file->reservedLbnPad[0] = 0;
+        file->reservedLbnPad[1] = 0;
         file->iob = NULL;
     }
 }
 
 // 00000718
-s32 isofsInitFdFiles(IsofsFd *fd, u16 filesCount) {
+s32 isofsInitFdFiles(IsofsFd *fileDesc, u32 filesCount) {
     IsofsMgr *mgr = isofsGetMgr();
 
-    fd->heapId = mgr->heapId;
-    fd->files = (IsofsFile *) sceKernelAllocHeapMemory(mgr->heapId, filesCount * sizeof(IsofsFile));
-    if (fd->files == NULL) {
+    fileDesc->heapId = mgr->heapId;
+    fileDesc->files = (IsofsFile *) sceKernelAllocHeapMemory(mgr->heapId, filesCount * sizeof(IsofsFile));
+    if (fileDesc->files == NULL) {
         return SCE_ERROR_ERRNO_NO_MEMORY;
     }
-    for (u16 i = 0; i < filesCount; i++) {
-        IsofsFile *file = &fd->files[i];
+    for (u32 i = 0; i < filesCount; i++) {
+        IsofsFile *file = &fileDesc->files[i];
         file->openFlags = 0;
         file->flags = 0;
         file->usedFlag = 0;
-        file->reserved07 = 0;
-        file->fd = fd;
+        file->reservedByte = 0;
+        file->fileDesc = fileDesc;
         file->size = 0;
         file->fpos = 0;
-        file->reserved08 = 0;
-        file->cacheIdx = -1;
+        file->reservedHalf = 0;
+        file->cacheIndex = -1;
         file->readFlags = 0;
         file->lbn = 0;
-        file->reserved10 = 0;
-        file->reserved14 = 0;
+        file->reservedLbnPad[0] = 0;
+        file->reservedLbnPad[1] = 0;
         file->iob = NULL;
     }
     return SCE_ERROR_OK;
@@ -832,19 +825,19 @@ IsofsFile *isofsSetFileFromDir(IsofsFile *file, IsoDirectory *isoDir, SceIoIob *
     file->size = isoDir->size;
     u16 year = isoDir->dateTime.yearsSince1900 + 1900;
     file->dateTime.year = year;
-    file->dateTime2.year = year;
+    file->modifyDateTime.year = year;
     file->dateTime.month = isoDir->dateTime.month;
-    file->dateTime2.month = isoDir->dateTime.month;
+    file->modifyDateTime.month = isoDir->dateTime.month;
     file->dateTime.day = isoDir->dateTime.day;
-    file->dateTime2.day = isoDir->dateTime.day;
+    file->modifyDateTime.day = isoDir->dateTime.day;
     file->dateTime.hour = isoDir->dateTime.hour;
-    file->dateTime2.hour = isoDir->dateTime.hour;
+    file->modifyDateTime.hour = isoDir->dateTime.hour;
     file->dateTime.minute = isoDir->dateTime.minute;
-    file->dateTime2.minute = isoDir->dateTime.minute;
+    file->modifyDateTime.minute = isoDir->dateTime.minute;
     file->dateTime.second = isoDir->dateTime.second;
-    file->dateTime2.second = isoDir->dateTime.second;
+    file->modifyDateTime.second = isoDir->dateTime.second;
     file->dateTime.microsecond = 0;
-    file->dateTime2.microsecond = 0;
+    file->modifyDateTime.microsecond = 0;
     return file;
 }
 
@@ -863,19 +856,19 @@ IsofsFile *isofsSetFileFromRaw(IsofsFile *file, SceIoIob *iob, u32 lbn, u32 size
     file->readFlags = 0;
     file->size = size;
     file->dateTime.year = 0;
-    file->dateTime2.year = 0;
+    file->modifyDateTime.year = 0;
     file->dateTime.month = 0;
-    file->dateTime2.month = 0;
+    file->modifyDateTime.month = 0;
     file->dateTime.day = 0;
-    file->dateTime2.day = 0;
+    file->modifyDateTime.day = 0;
     file->dateTime.hour = 0;
-    file->dateTime2.hour = 0;
+    file->modifyDateTime.hour = 0;
     file->dateTime.minute = 0;
-    file->dateTime2.minute = 0;
+    file->modifyDateTime.minute = 0;
     file->dateTime.second = 0;
-    file->dateTime2.second = 0;
+    file->modifyDateTime.second = 0;
     file->dateTime.microsecond = 0;
-    file->dateTime2.microsecond = 0;
+    file->modifyDateTime.microsecond = 0;
     return file;
 }
 
@@ -893,46 +886,45 @@ s32 isofsClearFile(IsofsFile *file) {
     file->openFlags = 0;
     file->usedFlag = 0;
     file->dateTime.year = 0;
-    file->dateTime2.year = 0;
+    file->modifyDateTime.year = 0;
     file->dateTime.month = 0;
-    file->dateTime2.month = 0;
+    file->modifyDateTime.month = 0;
     file->dateTime.day = 0;
-    file->dateTime2.day = 0;
+    file->modifyDateTime.day = 0;
     file->dateTime.hour = 0;
-    file->dateTime2.hour = 0;
+    file->modifyDateTime.hour = 0;
     file->dateTime.minute = 0;
-    file->dateTime2.minute = 0;
+    file->modifyDateTime.minute = 0;
     file->dateTime.second = 0;
-    file->dateTime2.second = 0;
+    file->modifyDateTime.second = 0;
     file->dateTime.microsecond = 0;
-    file->dateTime2.microsecond = 0;
-    file->cacheIdx = -1;
+    file->modifyDateTime.microsecond = 0;
+    file->cacheIndex = -1;
     return SCE_ERROR_OK;
 }
 
 // 00000cc0
 s32 isofsFreeFiles(IsofsFile *files) {
-    // bug, files accessed before null check
-    // gcc will optimize away the `files == NULL` check
-    IsofsFd *fd = files->fd;
-    if (files == NULL || fd == NULL) {
+    // Original binary dereferences files->fileDesc before checking files == NULL.
+    IsofsFd *fileDesc = files->fileDesc;
+    if (files == NULL || fileDesc == NULL) {
         return SCE_ERROR_ERRNO_INVALID_ARGUMENT;
     }
-    return sceKernelFreeHeapMemory(fd->heapId, fd->files);
+    return sceKernelFreeHeapMemory(fileDesc->heapId, fileDesc->files);
 }
 
-// Not in module. Avoids code duplication.
-static inline IsofsFile *_isofsFindUnusedFile(IsofsUnit *unit, u32 lbn, s32 *outRet) {
+// Not in module. Inlined into isofsFindUnusedFile and isofsFindUnusedFileRaw.
+static inline __attribute__((always_inline)) IsofsFile *_isofsFindUnusedFile(IsofsUnit *unit, u32 lbn, s32 *outRet) {
     *outRet = SCE_ERROR_OK;
     if (unit == NULL) {
         *outRet = SCE_ERROR_ERRNO_DEVICE_NOT_FOUND;
         return NULL;
     }
     if (unit->fdwCount == 1 && unit->totalSectors < lbn) {
-        IsofsFd fd = unit->fdw[1].fd;
-        u16 filesCount = fd.filesCount;
+        IsofsFd fileDesc = unit->fdw[1].fileDesc;
+        u16 filesCount = fileDesc.filesCount;
         for (u16 i = 0; i < filesCount; i++) {
-            IsofsFile *file = &fd.files[i];
+            IsofsFile *file = &fileDesc.files[i];
             if (file->iob == NULL && file->flags == 0) {
                 return file;
             }
@@ -941,10 +933,10 @@ static inline IsofsFile *_isofsFindUnusedFile(IsofsUnit *unit, u32 lbn, s32 *out
         return NULL;
     }
 
-    IsofsFd fd = unit->fdw[0].fd;
-    u16 filesCount = fd.filesCount;
+    IsofsFd fileDesc = unit->fdw[0].fileDesc;
+    u16 filesCount = fileDesc.filesCount;
     for (u16 i = 0; i < filesCount; i++) {
-        IsofsFile *file = &fd.files[i];
+        IsofsFile *file = &fileDesc.files[i];
         if (file->iob == NULL && file->flags == 0) {
             return file;
         }
@@ -1081,7 +1073,7 @@ s32 isofsCreatePaths(IsofsUnit *unit) {
     if (unit == NULL) {
         return SCE_ERROR_ERRNO_INVALID_ARGUMENT;
     }
-    s32 outRet;
+    s32 outRet = SCE_ERROR_OK;
     IsoPath *pathTable = isofsReadPathTable(unit, &outRet);
     unit->pathTable = pathTable;
     if (pathTable == NULL) {
@@ -1212,33 +1204,30 @@ IsofsPath *isofsParsePathTableEntries(IsofsUnit *unit, IsoPath *pathTable, s32 p
             }
         }
 
-        if (currentPath->parentNum == prevParentNum) {
-            if (memcmp(currentPath->name, &nullByte, currentPath->nameLen) == 0) {
-                dirLevelNext = dirLevel + 1;
-                currentPath->dirLevel = dirLevel;
-                currentPath->dirNum = dirNum;
-            } else {
-                goto hasName;
-            }
+        if (currentPath->parentNum == prevParentNum &&
+            memcmp(currentPath->name, &nullByte, currentPath->nameLen) == 0) {
+            dirLevelNext = dirLevel + 1;
+            currentPath->dirLevel = dirLevel;
+            currentPath->dirNum = dirNum;
         } else {
-        hasName:
-            if (currentPath->parentNum != prevParentNum || memcmp(
-                    currentPath->name, &nullByte, currentPath->nameLen) == 0) {
+            s32 updateEntry = 1;
+            if (currentPath->parentNum != prevParentNum ||
+                memcmp(currentPath->name, &nullByte, currentPath->nameLen) == 0) {
                 dirLevelNext = dirLevel;
                 if (prevParentNum == 0) {
-                    goto next;
-                }
-                if (paths[currentPath->parentNum - 1].dirLevel != paths[prevParentNum - 1].dirLevel) {
+                    updateEntry = 0;
+                } else if (paths[currentPath->parentNum - 1].dirLevel != paths[prevParentNum - 1].dirLevel) {
                     dirLevel = dirLevel + 1;
                 }
             }
-            dirNum = dirNum + 1;
-            currentPath->dirNum = dirNum;
-            currentPath->dirLevel = dirLevel;
-            dirLevelNext = dirLevel;
+            if (updateEntry) {
+                dirNum = dirNum + 1;
+                currentPath->dirNum = dirNum;
+                currentPath->dirLevel = dirLevel;
+                dirLevelNext = dirLevel;
+            }
         }
 
-    next:
         isoOffset = isoOffset + isoPathLen;
         currentPathIndex = currentPathIndex + 1;
         prevParentNum = (u32) currentPath->parentNum;
@@ -1271,26 +1260,22 @@ s32 isofsCheckPath(char *name, u32 flag) {
     if (name == NULL) {
         return SCE_ERROR_ERRNO_INVALID_ARGUMENT;
     }
-    s32 ret = SCE_ERROR_ERRNO_INVALID_ARGUMENT;
-    if (flag >= 4) {
-        ret = SCE_ERROR_ERRNO_FILE_NOT_FOUND;
+    if (flag != 1 && flag != 2 && flag != 3) {
+        return SCE_ERROR_ERRNO_FILE_NOT_FOUND;
     }
-    if (flag < 4) {
-        s32 i = 0;
-        char c;
-        u32 ctype;
-        do {
-            u32 nameLen = strlen(name);
-            c = *(name + i);
-            if ((int) nameLen <= i) {
-                return SCE_ERROR_OK;
-            }
-            i++;
-            ctype = look_ctype_table(c);
-        } while ((ctype & 7) != 0 || c == '_' || c == ';' || c == '/' || (
-                     ret = SCE_ERROR_ERRNO_FILE_NOT_FOUND, c == '.'));
+    s32 i = 0;
+    while (1) {
+        u32 nameLen = strlen(name);
+        if ((int) nameLen <= i) {
+            return SCE_ERROR_OK;
+        }
+        char ch = name[i];
+        i++;
+        u32 ctype = look_ctype_table(ch);
+        if ((ctype & 7) == 0 && ch != '_' && ch != ';' && ch != '/' && ch != '.') {
+            return SCE_ERROR_ERRNO_FILE_NOT_FOUND;
+        }
     }
-    return ret;
 }
 
 // 00001934
@@ -1396,7 +1381,7 @@ IsoDirectory *isofsReadIsoDir(IsofsUnit *unit, char *path, char *file, u32 flag,
         if (noMoreDirSectors == 0 || (s32) (dirSize - dirOffset) >= 0x1000) {
             findFlag = 2;
         } else {
-            memset(g_isofsCurrentDir + 0x200, 0, 0x800);
+            memset(g_isofsCurrentDir + 0x800, 0, 0x800);
             findFlag = 1;
         }
         foundDir = isofsFindIsoDirectory(path, (IsoDirectory *) g_isofsCurrentDir, findFlag, outRet);
@@ -1692,10 +1677,10 @@ int isofsDrvInit(SceIoDeviceEntry *entry) {
                 }
 
                 // delete already created
-                for (s32 ii = 0; ii < g_isofsMgr.maxUnits; ++ii) {
-                    IsofsUnit *unit2 = isofsGetUnit(ii);
-                    if (unit2->semaId > -1) {
-                        sceKernelDeleteSema(unit2->semaId);
+                for (s32 prevIdx = 0; prevIdx < g_isofsMgr.maxUnits; ++prevIdx) {
+                    IsofsUnit *prevUnit = isofsGetUnit(prevIdx);
+                    if (prevUnit->semaId > -1) {
+                        sceKernelDeleteSema(prevUnit->semaId);
                     }
                 }
                 sceKernelSignalSema(g_isofsMgr.semaId, 1);
@@ -1747,37 +1732,33 @@ int isofsDrvMount(SceIoIob *iob, const char *fs, const char *blockDev, int mode,
     if (ret == 0 && (ret = isofsCheckMode(mode), ret == 0)) {
         u32 blockDevLen = strlen(blockDev);
         u32 devctlRet = 0;
-        ret = sceIoDevctl(blockDev, DEVCTL_UNKNOWN_1E38034, (char *) blockDev, blockDevLen, &devctlRet,
+        ret = sceIoDevctl(blockDev, DEVCTL_QUERY_BLOCK_DEV, (char *) blockDev, blockDevLen, &devctlRet,
                           sizeof(devctlRet));
-        if (ret != 0) {
-            goto exit;
-        }
-        unit->unitNum = *(u16 *) &iob->i_unit;
-        unit->mountFlags = unit->mountFlags | 0x10;
-        unit->reserved44 = 0;
-        if (blockDevLen >= 0x20) {
-            ret = SCE_ERROR_ERRNO_NAME_TOO_LONG;
-            goto exit;
-        }
-        memcpy(unit->blockDev, blockDev, blockDevLen);
-        unit->blockDev[blockDevLen] = 0;
-        ret = isofsSetBlockDevHandler(unit);
-        if (ret < 0) {
-            goto exit;
-        }
-        if (outdataRead == 2) {
-            // bug? signal sema not called
-            return SCE_ERROR_NOT_SUPPORTED;
-        }
-        unit->mountState = 1;
-        ret = isofsRegisterOnUmdMounted(unit);
         if (ret == 0) {
-            return sceKernelSignalSema(g_isofsMgr.semaId, 1);
+            unit->unitNum = (s16) iob->i_unit;
+            unit->mountFlags = unit->mountFlags | 0x10;
+            unit->activeFlag = 0;
+            if (blockDevLen >= 0x20) {
+                ret = SCE_ERROR_ERRNO_NAME_TOO_LONG;
+            } else {
+                memcpy(unit->blockDev, blockDev, blockDevLen);
+                unit->blockDev[blockDevLen] = 0;
+                ret = isofsSetBlockDevHandler(unit);
+                if (ret >= 0) {
+                    if (outdataRead == 2) {
+                        return SCE_ERROR_NOT_SUPPORTED;
+                    }
+                    unit->mountState = 1;
+                    ret = isofsRegisterOnUmdMounted(unit);
+                    if (ret == 0) {
+                        return sceKernelSignalSema(g_isofsMgr.semaId, 1);
+                    }
+                    isofsClearUnitFilesFdw(unit, g_isofsMgr.maxFiles);
+                    isofsClearUnit(unit->unitNum);
+                }
+            }
         }
-        isofsClearUnitFilesFdw(unit, g_isofsMgr.maxFiles);
-        isofsClearUnit(unit->unitNum);
     }
-exit:
     sceKernelSignalSema(g_isofsMgr.semaId, 1);
     return sceUmd_040A7090(ret);
 }
@@ -1797,12 +1778,12 @@ s32 isofsClearUnit(s32 unitNum) {
             unit->pathTableSize = 0;
             unit->rootDirLbn = 0;
             unit->rootDirSize = 0;
-            unit->unkNextLbn = 0;
+            unit->nextLbn = 0;
             unit->lastLbn = 0;
-            unit->unkLbnTillEnd = 0;
+            unit->remainingLbns = 0;
             unit->pathTableLbn = 0;
             unit->totalSectors = 0;
-            unit->unkCurrentLbn = 0;
+            unit->cachedCurrentLbn = 0;
             unit->openState = 0;
             unit->sectorSize = 0;
             _setUmdId(unit->umdId, 0);
@@ -1812,9 +1793,9 @@ s32 isofsClearUnit(s32 unitNum) {
             unit->paths = NULL;
             unit->pathTable = NULL;
             unit->primaryVolumeDescriptor = NULL;
-            unit->reserved44 = 0;
+            unit->activeFlag = 0;
             unit->mountState = 0;
-            g_isofsMounted2 = 0;
+            g_isofsHasMountedOnce = 0;
             return SCE_ERROR_OK;
         }
     }
@@ -1864,6 +1845,7 @@ int isofsDrvDopen(SceIoIob *iob, char *path) {
                 g_isofsOpenDirs->prevDir = dir;
             }
             sceKernelCpuResumeIntr(intr);
+            s32 pathResolved = 0;
             if (strcmp(path, "/") != 0) {
                 char pathStack[257];
                 memset(pathStack, 0, 0x100);
@@ -1890,26 +1872,28 @@ int isofsDrvDopen(SceIoIob *iob, char *path) {
                         dir->paths = paths;
                         dir->lbnSize = paths->lbnSize;
                         dir->lbn = paths->lbn;
-                        goto found;
+                        pathResolved = 1;
                     }
                 } else {
                     ret = SCE_ERROR_ERRNO_NAME_TOO_LONG;
                 }
-                intr = sceKernelCpuSuspendIntr();
-                isofsUnlinkOpenedDir(dir);
-                sceKernelCpuResumeIntr(intr);
-                sceKernelFreeHeapMemory(g_isofsMgr.heapId, dir);
-                sceKernelSignalSema(unit->semaId, 1);
-                return sceUmd_040A7090(ret);
+                if (!pathResolved) {
+                    intr = sceKernelCpuSuspendIntr();
+                    isofsUnlinkOpenedDir(dir);
+                    sceKernelCpuResumeIntr(intr);
+                    sceKernelFreeHeapMemory(g_isofsMgr.heapId, dir);
+                    sceKernelSignalSema(unit->semaId, 1);
+                    return sceUmd_040A7090(ret);
+                }
+            } else {
+                dir->paths = unit->paths;
+                u32 lbnSize = 1;
+                if (0x7ff < unit->rootDirSize && (lbnSize = unit->rootDirSize >> 0xb, (unit->rootDirSize & 0x7ff) != 0)) {
+                    lbnSize = (unit->rootDirSize >> 0xb) + 1;
+                }
+                dir->lbnSize = lbnSize;
+                dir->lbn = unit->rootDirLbn;
             }
-            dir->paths = unit->paths;
-            u32 lbnSize = 1;
-            if (0x7ff < unit->rootDirSize && (lbnSize = unit->rootDirSize >> 0xb, (unit->rootDirSize & 0x7ff) != 0)) {
-                lbnSize = (unit->rootDirSize >> 0xb) + 1;
-            }
-            dir->lbnSize = lbnSize;
-            dir->lbn = unit->rootDirLbn;
-        found:
             dir->dirRecLen = 0;
             dir->fplData = NULL;
             dir->isoDir = NULL;
@@ -1943,128 +1927,98 @@ int isofsDrvDread(SceIoIob *iob, SceIoDirent *dirent) {
     }
     IsoDirectory *data = NULL;
     IsofsDir *dir = iob->i_private;
-    if (dir->compatFlag == 0) {
+    if (dir->compatFlag != 0) {
+        ret = SCE_ERROR_ERRNO_INVALID_FILE_DESCRIPTOR;
+    } else {
+        s32 ready = 1;
         memset(dirent, 0, 0x160);
-        if (dir->dirRecLen != 0) {
-            u32 lba;
-            u32 dirLbn;
-        doLoop:
-            do {
-                IsoDirectory *stat = dir->isoDir;
-            doNext:
-                if (stat->recLen != 0) {
-                    if (stat->nameLen == 1 && (stat[1].recLen == 0 || stat[1].recLen == 1)) {
-                        stat = isofsSetDirentFromIsoDirectory(dir, dirent, &ret);
-                        if (stat != NULL) {
-                            dir->isoDir = stat;
-                            ret = 1;
-                            goto doLoop;
-                        }
-                        dir->isoDir = NULL;
-                        ret = 0;
-                        goto exit;
+        if (dir->dirRecLen == 0) {
+            ret = sceKernelTryAllocateFpl(g_isofsMgr.fplId, (void **) &data);
+            if (ret < 0) {
+                ready = 0;
+            } else {
+                dir->fplData = data;
+                if (dir->dirRecLen == 0) {
+                    ret = isofsReadDir(unit, dir->lbn, data);
+                    if (ret != 0) {
+                        ready = 0;
+                    } else if (dir->compatFlag != 0) {
+                        ret = SCE_ERROR_ERRNO_INVALID_FILE_DESCRIPTOR;
+                        ready = 0;
+                    } else {
+                        dir->isoDir = data;
                     }
-                    if (stat->recLen == 0) {
-                        lba = dir->lbnSize;
-                        goto recLenZero;
-                    }
-                setFromIso:
-                    stat = isofsSetDirentFromIsoDirectory(dir, dirent, &ret);
-                    if (stat == NULL) {
-                        if (ret == (s32) SCE_ERROR_ERRNO_FILE_NOT_FOUND) {
-                            ret = 0;
-                        }
-                        dir->isoDir = NULL;
-                        goto exit;
-                    }
+                }
+            }
+        }
+        while (ready) {
+            IsoDirectory *stat = dir->isoDir;
+            if (stat->recLen != 0 && stat->nameLen == 1 && (stat->name[0] == 0 || stat->name[0] == 1)) {
+                stat = isofsSetDirentFromIsoDirectory(dir, dirent, &ret);
+                if (stat != NULL) {
                     dir->isoDir = stat;
                     ret = 1;
-                    if (dir->lbnSize == 0) {
-                        goto exit;
-                    }
-                    if (dir->dirRecLen == 0) {
-                        goto exit;
-                    }
-                    if ((dir->dirRecLen & 0xfff) != 0) {
-                        goto exit;
-                    }
-                    dir->lbn = dir->lbn + 2;
-                    memset(dir->fplData, 0, 0x1000);
-                    ret = isofsReadDir(unit, dir->lbn, dir->fplData);
-                    if (ret != 0) {
-                        dir->lbn = dir->lbn - 2;
-                        goto exit;
-                    }
-                    if (dir->compatFlag != 0) {
-                        dirLbn = dir->lbn;
-                        ret = SCE_ERROR_ERRNO_INVALID_FILE_DESCRIPTOR;
-                        dir->lbn = dirLbn - 2;
-                        goto exit;
-                    }
-                    ret = 1;
-                    dir->isoDir = (IsoDirectory *) dir->fplData;
-                    goto exit;
+                    continue;
                 }
-                lba = dir->lbnSize;
-            recLenZero:
-                if (lba < 2) {
-                    goto setFromIso;
-                }
+                dir->isoDir = NULL;
+                ret = 0;
+                break;
+            }
+            if (stat->recLen == 0 && dir->lbnSize >= 2) {
                 stat = isofsSetDirentFromIsoDirectory(dir, dirent, &ret);
                 if (stat == NULL) {
                     dir->isoDir = NULL;
                     ret = 0;
-                    goto exit;
+                    break;
                 }
                 dir->isoDir = stat;
                 ret = 1;
-                if (dir->lbnSize == 0) {
-                    goto doLoop;
-                }
-                if (dir->dirRecLen == 0) {
-                    stat = dir->isoDir;
-                    goto doNext;
-                }
-                if ((dir->dirRecLen & 0xfff) != 0) {
-                    stat = dir->isoDir;
-                    goto doNext;
+                if (dir->lbnSize == 0 || dir->dirRecLen == 0 || (dir->dirRecLen & 0xfff) != 0) {
+                    continue;
                 }
                 dir->lbn = dir->lbn + 2;
                 memset(dir->fplData, 0, 0x1000);
                 ret = isofsReadDir(unit, dir->lbn, dir->fplData);
                 if (ret != 0) {
                     dir->lbn = dir->lbn - 2;
-                    goto exit;
+                    break;
                 }
                 if (dir->compatFlag != 0) {
-                    dirLbn = dir->lbn;
                     ret = SCE_ERROR_ERRNO_INVALID_FILE_DESCRIPTOR;
-                    dir->lbn = dirLbn - 2;
-                    goto exit;
+                    dir->lbn = dir->lbn - 2;
+                    break;
                 }
                 ret = 1;
                 dir->isoDir = (IsoDirectory *) dir->fplData;
-            } while (1);
-        }
-        ret = sceKernelTryAllocateFpl(g_isofsMgr.fplId, (void **) &data);
-        if (ret < 0) {
-            goto exit;
-        }
-        dir->fplData = data;
-        if (dir->dirRecLen != 0) {
-            goto doLoop;
-        }
-        ret = isofsReadDir(unit, dir->lbn, data);
-        if (ret != 0) {
-            goto exit;
-        }
-        if (dir->compatFlag == 0) {
-            dir->isoDir = data;
-            goto doLoop;
+                continue;
+            }
+            stat = isofsSetDirentFromIsoDirectory(dir, dirent, &ret);
+            if (stat == NULL) {
+                if (ret == (s32) SCE_ERROR_ERRNO_FILE_NOT_FOUND) {
+                    ret = 0;
+                }
+                dir->isoDir = NULL;
+                break;
+            }
+            dir->isoDir = stat;
+            ret = 1;
+            if (dir->lbnSize != 0 && dir->dirRecLen != 0 && (dir->dirRecLen & 0xfff) == 0) {
+                dir->lbn = dir->lbn + 2;
+                memset(dir->fplData, 0, 0x1000);
+                ret = isofsReadDir(unit, dir->lbn, dir->fplData);
+                if (ret != 0) {
+                    dir->lbn = dir->lbn - 2;
+                } else if (dir->compatFlag != 0) {
+                    ret = SCE_ERROR_ERRNO_INVALID_FILE_DESCRIPTOR;
+                    dir->lbn = dir->lbn - 2;
+                } else {
+                    ret = 1;
+                    dir->isoDir = (IsoDirectory *) dir->fplData;
+                }
+            }
+            break;
         }
     }
-    ret = SCE_ERROR_ERRNO_INVALID_FILE_DESCRIPTOR;
-exit:
     sceKernelSignalSema(unit->semaId, 1);
     return sceUmd_040A7090(ret);
 }
@@ -2124,18 +2078,15 @@ int isofsDrvUmount(SceIoIob *iob, __attribute__((unused)) char *blockDev) {
     }
     s32 intr = sceKernelCpuSuspendIntr();
     ret = isofsUmdManUnRegisterInsertEjectUMDCallBack();
-    if (ret != 0) {
-        goto exit;
+    if (ret == 0) {
+        isofsClearBlockDevHandler(unit);
+        ret = isofsClearUnitFilesFdw(unit, g_isofsMgr.maxFiles);
+        if (ret == 0) {
+            ret = isofsClearUnit(unit->unitNum);
+            g_isofsMounted = 0;
+            sceIoTerminateFd("isofs");
+        }
     }
-    isofsClearBlockDevHandler(unit);
-    ret = isofsClearUnitFilesFdw(unit, g_isofsMgr.maxFiles);
-    if (ret != 0) {
-        goto exit;
-    }
-    ret = isofsClearUnit(unit->unitNum);
-    g_isofsMounted = 0;
-    sceIoTerminateFd("isofs");
-exit:
     sceKernelCpuResumeIntr(intr);
     sceKernelSignalSema(g_isofsMgr.semaId, 1);
     return ret;
@@ -2271,7 +2222,7 @@ int isofsDrvGetstat(SceIoIob *iob, char *name, SceIoStat *stat) {
 
 // 000036e0
 s32 isofsCheckUnitMounted(IsofsUnit *unit, s32 unitNum) {
-    if (unit->primaryVolumeDescriptor != NULL || unit->unitNum == unitNum || unit->reserved44 != 0
+    if (unit->primaryVolumeDescriptor != NULL || unit->unitNum == unitNum || unit->activeFlag != 0
         || (unit->mountFlags & 0x10) != 0) {
         return SCE_ERROR_ERRNO_DEVICE_BUSY;
     }
@@ -2411,38 +2362,26 @@ s32 isofsDrvRead(SceIoIob *iob, void *outdata, SceSize size) {
     }
     if ((file->flags & 8) != 0) {
         ret = SCE_ERROR_ERRNO_INVALID_FILE_DESCRIPTOR;
-        goto exit;
-    }
-    IsofsReadSectorsArgs readArgs;
-    readArgs.flags = file->readFlags;
-    readArgs.reserved14 = 0;
-    readArgs.unit = unit;
-    readArgs.file = file;
-    readArgs.outsize = size;
-    readArgs.outdata = outdata;
-    ret = sceKernelExtendKernelStack(0x1800, isofsHandlerReadSectorsArgs, &readArgs);
-    if ((file->flags & 8) != 0) {
-        ret = SCE_ERROR_ERRNO_INVALID_FILE_DESCRIPTOR;
-        goto exit;
-    }
-    if (ret <= -1) {
-        goto exit;
-    }
-    file->fpos += ret;
-    iob->i_fpos += ret;
-    u32 fposHi = *(u32 *) ((u32) &file->fpos + 4);
-    u32 sizeHi = *(u32 *) ((u32) &file->size + 4);
-    if (fposHi <= sizeHi) {
-        if (fposHi != sizeHi) {
-            goto exit;
-        }
-        if (*(u32 *) &file->fpos <= *(u32 *) &file->size) {
-            goto exit;
+    } else {
+        IsofsReadSectorsArgs readArgs;
+        readArgs.flags = file->readFlags;
+        readArgs.reserved = 0;
+        readArgs.unit = unit;
+        readArgs.file = file;
+        readArgs.outsize = size;
+        readArgs.outdata = outdata;
+        ret = sceKernelExtendKernelStack(0x1800, isofsHandlerReadSectorsArgs, &readArgs);
+        if ((file->flags & 8) != 0) {
+            ret = SCE_ERROR_ERRNO_INVALID_FILE_DESCRIPTOR;
+        } else if (ret >= 0) {
+            file->fpos += ret;
+            iob->i_fpos += ret;
+            if ((u64) file->fpos > (u64) file->size) {
+                file->fpos = file->size;
+                iob->i_fpos = file->size;
+            }
         }
     }
-    file->fpos = file->size;
-    iob->i_fpos = file->size;
-exit:
     sceKernelSignalSema(unit->semaId, 1);
     return sceUmd_040A7090(ret);
 }
@@ -2496,13 +2435,12 @@ int isofsDrvIoctl(SceIoIob *iob, int cmd, void *indata, SceSize inlen, void *out
     }
     if ((file->flags & 8) != 0) {
         ret = SCE_ERROR_ERRNO_INVALID_FILE_DESCRIPTOR;
-        goto exit;
+    } else {
+        ret = isofsIoctl(iob, cmd, indata, inlen, outdata, outlen);
+        if ((file->flags & 8) != 0) {
+            ret = SCE_ERROR_ERRNO_INVALID_FILE_DESCRIPTOR;
+        }
     }
-    ret = isofsIoctl(iob, cmd, indata, inlen, outdata, outlen);
-    if ((file->flags & 8) != 0) {
-        ret = SCE_ERROR_ERRNO_INVALID_FILE_DESCRIPTOR;
-    }
-exit:
     sceKernelSignalSema(unit->semaId, 1);
     return sceUmd_040A7090(ret);
 }
@@ -2553,10 +2491,9 @@ s32 isofsUmdMountedCb(int id, IsofsUnit *unit, int arg) {
                 if (ret == SCE_ERROR_OK) {
                     break;
                 }
-                // Not sure what's going on here
-                u32 ret2 = ret + 0x7fdeef60;
+                u32 umdErrDelta = ret + 0x7fdeef60;
                 if (ret + 0x7fdeffffU < 3 || ret == (s32) 0xc0210004 || ret == (s32) SCE_ERROR_ERRNO_INVALID_ARGUMENT ||
-                    (ret = SCE_UMD_ERROR_NO_MEDIUM, ret2 < 2)) {
+                    (ret = SCE_UMD_ERROR_NO_MEDIUM, umdErrDelta < 2)) {
 #ifndef INSTALLER
                     sceKernelSignalSema(g_isofsMgr.semaId, 1);
 #endif
@@ -2564,68 +2501,67 @@ s32 isofsUmdMountedCb(int id, IsofsUnit *unit, int arg) {
                 }
             }
             ret = isofsReadPvd(unit->blockDev, unit->unitNum);
-            if (ret >= 0) {
-                goto tryInitPaths;
+            if (ret < 0) {
+#ifndef INSTALLER
+                sceKernelSignalSema(g_isofsMgr.semaId, 1);
+#endif
+                return ret;
             }
+            while (1) {
+                isofsFreeUnitPaths(unit);
+                ret = isofsCreatePaths(unit);
+                if (ret == 0) {
+                    break;
+                }
+                u32 umdErrDelta = ret + 0x7fdeef60U;
+                if (ret + 0x7fdeffffU < 2 || ret == (s32) SCE_ERROR_ERRNO_INVALID_ARGUMENT ||
+                    (ret == (s32) SCE_ERROR_ERRNO_NO_MEMORY || ret == (s32) SCE_UMD_ERROR_NO_MEDIUM) ||
+                    (ret == (s32) 0xc0210004 || (ret = (s32) SCE_UMD_ERROR_NO_MEDIUM, umdErrDelta < 2))) {
+#ifndef INSTALLER
+                    sceKernelSignalSema(g_isofsMgr.semaId, 1);
+#endif
+                    return ret;
+                }
+            }
+            unit->mountState = 2;
+            if (g_isofsHasMountedOnce == 0) {
+                g_isofsHasMountedOnce = 1;
+            } else {
+                sceUmdSetDriveStatus(4);
+                s32 intr = sceKernelCpuSuspendIntr();
+                IsofsDir *openDirs = g_isofsOpenDirs;
+                if (unit->openState == 1) {
+                    unit->openState = 2;
+                    openDirs = g_isofsOpenDirs;
+                }
+                for (; openDirs != NULL; openDirs = openDirs->nextDir) {
+                    openDirs->compatFlag = (u32) (memcmp(openDirs->umdId, unit->umdId, UMD_ID_SIZE) != 0);
+                }
+                for (s32 iFdw = 0; iFdw < 2; iFdw++) {
+                    for (s32 iFile = 0; iFile < unit->fdw[iFdw].fileDesc.filesCount; iFile++) {
+                        IsofsFile *file = &unit->fdw[iFdw].fileDesc.files[iFile];
+                        if (file->flags != 0) {
+                            if (memcmp(file->umdId, unit->umdId, UMD_ID_SIZE) == 0) {
+                                file->flags = file->flags & 0xf7;
+                            } else {
+                                file->flags = file->flags | 8;
+                            }
+                        }
+                    }
+                }
+                sceKernelCpuResumeIntr(intr);
+            }
+            g_isofsMounted = 1;
 #ifndef INSTALLER
             sceKernelSignalSema(g_isofsMgr.semaId, 1);
 #endif
         } else {
-#ifndef INSTALLER            
+#ifndef INSTALLER
             sceKernelSignalSema(g_isofsMgr.semaId, 1);
 #endif
             ret = 0;
         }
     }
-    return ret;
-
-tryInitPaths:
-    isofsFreeUnitPaths(unit);
-    ret = isofsCreatePaths(unit);
-    if (ret != 0) {
-        u32 ret2 = ret + 0x7fdeef60U;
-        if (ret + 0x7fdeffffU < 2 || ret == (s32) SCE_ERROR_ERRNO_INVALID_ARGUMENT ||
-            (ret == (s32) SCE_ERROR_ERRNO_NO_MEMORY || ret == (s32) SCE_UMD_ERROR_NO_MEDIUM) ||
-            (ret == (s32) 0xc0210004 || (ret = (s32) SCE_UMD_ERROR_NO_MEDIUM, ret2 < 2))) {
-#ifndef INSTALLER 
-            sceKernelSignalSema(g_isofsMgr.semaId, 1);
-#endif            
-            return ret;
-        }
-        goto tryInitPaths;
-    }
-    unit->mountState = 2;
-    if (g_isofsMounted2 == 0) {
-        g_isofsMounted2 = 1;
-    } else {
-        sceUmdSetDriveStatus(4);
-        s32 intr = sceKernelCpuSuspendIntr();
-        IsofsDir *openDirs = g_isofsOpenDirs;
-        if (unit->openState == 1) {
-            unit->openState = 2;
-            openDirs = g_isofsOpenDirs;
-        }
-        for (; openDirs != NULL; openDirs = openDirs->nextDir) {
-            openDirs->compatFlag = (u32) (memcmp(openDirs->umdId, unit->umdId, UMD_ID_SIZE) != 0);
-        }
-        for (s32 iFdw = 0; iFdw < 2; iFdw++) {
-            for (s32 iFile = 0; iFile < unit->fdw[iFdw].fd.filesCount; iFile++) {
-                IsofsFile *file = &unit->fdw[iFdw].fd.files[iFile];
-                if (file->flags != 0) {
-                    if (memcmp(file->umdId, unit->umdId, UMD_ID_SIZE) == 0) {
-                        file->flags = file->flags & 0xf7;
-                    } else {
-                        file->flags = file->flags | 8;
-                    }
-                }
-            }
-        }
-        sceKernelCpuResumeIntr(intr);
-    }
-    g_isofsMounted = 1;
-#ifndef INSTALLER 
-    sceKernelSignalSema(g_isofsMgr.semaId, 1);
-#endif
     return ret;
 }
 
@@ -2719,9 +2655,9 @@ s32 isofsUnitSetLbns(char *blockDev, s32 unitNum) {
         unit->lastLbn = unit->totalSectors + 1;
         ret = isofsHandlerGetCurrentLbn(unit);
         if (ret > -1) {
-            unit->unkLbnTillEnd = unit->currentLbn - unit->lastLbn + 1;
-            unit->unkNextLbn = unit->currentLbn + 1;
-            unit->unkCurrentLbn = unit->currentLbn;
+            unit->remainingLbns = unit->currentLbn - unit->lastLbn + 1;
+            unit->nextLbn = unit->currentLbn + 1;
+            unit->cachedCurrentLbn = unit->currentLbn;
         }
     }
     return ret;
@@ -2764,11 +2700,11 @@ s32 isofsIoctl(SceIoIob *iob, s32 cmd, void *indata, SceSize inlen, void *outdat
             }
         } else {
             if (cmd == 0x100000e) {
-                return isofsHandler_unk38(unit, file);
+                return isofsHandlerCacheResume(unit, file);
             }
             if (cmd < 0x100000f) {
                 if (cmd == 0x100000d) {
-                    return isofsHandler_unk34(unit, file);
+                    return isofsHandlerCacheSuspend(unit, file);
                 }
             } else {
                 if (cmd == 0x1010005) {
@@ -2778,7 +2714,8 @@ s32 isofsIoctl(SceIoIob *iob, s32 cmd, void *indata, SceSize inlen, void *outdat
                     if (indata == NULL || inlen < 4) {
                         return SCE_ERROR_ERRNO_INVALID_ARGUMENT;
                     }
-                    SceOff pos = isofsLseek(file, *(s64 *) indata, *(s32 *) ((s32) indata + 0xc));
+                    const IsofsIoctlSeekParam *seekParam = (const IsofsIoctlSeekParam *) indata;
+                    SceOff pos = isofsLseek(file, seekParam->offset, seekParam->whence);
                     if ((s32) pos < 0) {
                         return pos;
                     }
@@ -2834,13 +2771,13 @@ s32 isofsIoctl(SceIoIob *iob, s32 cmd, void *indata, SceSize inlen, void *outdat
                     if (outlen < 4) {
                         return SCE_ERROR_ERRNO_INVALID_ARGUMENT;
                     }
-                    size = *(u32 *) &file->fpos;
+                    size = (u32) file->fpos;
                 }
                 *(u32 *) outdata = size;
                 return SCE_ERROR_OK;
             }
             if (cmd == 0x101000b) {
-                return isofsHandler_unk30(unit, file, 0, NULL);
+                return isofsHandlerCacheControl(unit, file, 0, NULL);
             }
             if (cmd == 0x1020001) {
                 if (outdata == NULL || outlen < 0x800) {
@@ -2855,14 +2792,14 @@ s32 isofsIoctl(SceIoIob *iob, s32 cmd, void *indata, SceSize inlen, void *outdat
                     u32 *pvdEnd = pvd32 + 0x200;
                     u32 *out32 = outdata;
                     do {
-                        u32 d0 = *pvd32;
-                        u32 d1 = *(pvd32 + 1);
-                        u32 d2 = *(pvd32 + 2);
-                        u32 d3 = *(pvd32 + 3);
-                        *out32 = d0;
-                        *(out32 + 1) = d1;
-                        *(out32 + 2) = d2;
-                        *(out32 + 3) = d3;
+                        u32 wordA = pvd32[0];
+                        u32 wordB = pvd32[1];
+                        u32 wordC = pvd32[2];
+                        u32 wordD = pvd32[3];
+                        out32[0] = wordA;
+                        out32[1] = wordB;
+                        out32[2] = wordC;
+                        out32[3] = wordD;
                         pvd32 += 4;
                         out32 += 4;
                     } while (pvd32 != pvdEnd);
@@ -2874,7 +2811,7 @@ s32 isofsIoctl(SceIoIob *iob, s32 cmd, void *indata, SceSize inlen, void *outdat
                 if (outdata == NULL || outlen < 4) {
                     return SCE_ERROR_ERRNO_INVALID_ARGUMENT;
                 }
-                return isofsHandler_unk30(unit, file, 1, outdata);
+                return isofsHandlerCacheControl(unit, file, 1, outdata);
             }
             if (cmd < 0x103000d) {
                 if (cmd == 0x1020007) {
@@ -2901,7 +2838,7 @@ s32 isofsIoctl(SceIoIob *iob, s32 cmd, void *indata, SceSize inlen, void *outdat
                     args.unit = unit;
                     args.file = file;
                     args.flags = file->readFlags | 1;
-                    args.reserved14 = 0;
+                    args.reserved = 0;
                     args.outdata = outdata;
                     args.outsize = *(s32 *) indata;
                     if (outlen < (u32) args.outsize) {
@@ -2916,18 +2853,10 @@ s32 isofsIoctl(SceIoIob *iob, s32 cmd, void *indata, SceSize inlen, void *outdat
                     }
                     file->fpos += ret;
                     iob->i_fpos += ret;
-                    u32 fposHi = *(u32 *) ((u32) &file->fpos + 4);
-                    u32 sizeHi = *(u32 *) ((u32) &file->size + 4);
-                    if (fposHi <= sizeHi) {
-                        if (fposHi != sizeHi) {
-                            return ret;
-                        }
-                        if (*(u32 *) &file->fpos <= *(u32 *) &file->size) {
-                            return ret;
-                        }
+                    if ((u64) file->fpos > (u64) file->size) {
+                        file->fpos = file->size;
+                        iob->i_fpos = file->size;
                     }
-                    file->fpos = file->size;
-                    iob->i_fpos = file->size;
                     return ret;
                 }
             } else {
@@ -2935,7 +2864,7 @@ s32 isofsIoctl(SceIoIob *iob, s32 cmd, void *indata, SceSize inlen, void *outdat
                     if (indata == NULL) {
                         return SCE_ERROR_ERRNO_INVALID_ARGUMENT;
                     }
-                    return isofsHandler_unk1c(unit, 1, indata, inlen, 0, 0);
+                    return isofsHandlerDevctlExt(unit, 1, indata, inlen, 0, 0);
                 }
                 if (cmd == 0x1138001) {
                     if (indata == NULL || 3 < inlen) {
@@ -2946,11 +2875,11 @@ s32 isofsIoctl(SceIoIob *iob, s32 cmd, void *indata, SceSize inlen, void *outdat
                         args.unit = unit;
                         args.file = file;
                         args.flags = 6;
-                        args.reserved14 = 0;
+                        args.reserved = 0;
                         args.outdata = outdata;
                         args.outsize = *(s32 *) indata;
                         if (outlen < (u32) args.outsize) {
-                            return sceKernelExtendKernelStack(0x1800, isofsHandlerReadSectorsArgs, &unit);
+                            return sceKernelExtendKernelStack(0x1800, isofsHandlerReadSectorsArgs, &args);
                         }
                         return SCE_ERROR_ERRNO_INVALID_ARGUMENT;
                     }
@@ -3009,30 +2938,30 @@ s32 isofsSetBlockDevHandler(IsofsUnit *unit) {
     if (blockDevLen > 0x100) {
         return SCE_ERROR_ERRNO_NAME_TOO_LONG;
     }
-    int n1 = 0;
+    int leadSpaces = 0;
     if (blockDevLen > 0) {
         do {
-            u32 ctype = look_ctype_table(unit->blockDev[n1]);
+            u32 ctype = look_ctype_table(unit->blockDev[leadSpaces]);
             if ((ctype & 8) == 0) {
                 break;
             }
-            n1 = n1 + 1;
+            leadSpaces = leadSpaces + 1;
             blockDev = blockDev + 1;
-        } while (n1 < blockDevLen);
+        } while (leadSpaces < blockDevLen);
     }
-    int n2 = 0;
-    if (blockDevLen - n1 > 0) {
+    int handlerNameLen = 0;
+    if (blockDevLen - leadSpaces > 0) {
         do {
-            char *blockDevOff = blockDev + n2;
+            char *blockDevOff = blockDev + handlerNameLen;
             u32 ctype = look_ctype_table(*blockDevOff);
             if ((ctype & 3) == 0) {
                 break;
             }
-            n2 = n2 + 1;
-        } while (n2 < blockDevLen - n1);
+            handlerNameLen = handlerNameLen + 1;
+        } while (handlerNameLen < blockDevLen - leadSpaces);
     }
     for (int i = 0; i < 4; i++) {
-        if (strncmp(blockDev, g_isofsHandlers[i].blockDev, n2) == 0) {
+        if (strncmp(blockDev, g_isofsHandlers[i].blockDev, handlerNameLen) == 0) {
             unit->handlerIdx = i;
             return SCE_ERROR_OK;
         }
@@ -3041,14 +2970,14 @@ s32 isofsSetBlockDevHandler(IsofsUnit *unit) {
 }
 
 // 00005048
-s32 isofsUmd_1f100a6_1f100a7(IsofsUnit *unit, IsofsFile *file, s32 flag) {
+s32 isofsUmdCacheControl(IsofsUnit *unit, IsofsFile *file, s32 flag) {
     if (unit == NULL || file == NULL) {
         return SCE_ERROR_ERRNO_INVALID_ARGUMENT;
     }
-    s32 indata = file->cacheIdx;
-    u32 cmd = 0x1f300a7;
+    s32 indata = file->cacheIndex;
+    u32 cmd = DEVCTL_CACHE_GET_STATUS;
     if (flag == 0) {
-        cmd = 0x1f100a6;
+        cmd = DEVCTL_CACHE_CANCEL;
     }
     return sceIoDevctl(unit->blockDev, cmd, &indata, sizeof(indata), NULL, 0);
 }
@@ -3068,19 +2997,13 @@ s32 isofsUmdPrepareIntoCache(IsofsUnit *unit, IsofsFile *file, s32 cacheSize, s3
     params.lbnSize = 1;
     if (cacheSize > sectorSize) {
         params.lbnSize = cacheSize / sectorSize;
-        if (sectorSize == 0) {
-            pspBreak(SCE_BREAKCODE_DIVZERO);
-        }
         if (cacheSize % sectorSize != 0) {
             params.lbnSize = params.lbnSize + 1;
-        }
-        if (sectorSize == 0) {
-            pspBreak(SCE_BREAKCODE_DIVZERO);
         }
     }
 
     if (getStatusFlag == 0) {
-        return sceIoDevctl(unit->blockDev, DEVCTL_PREPARE_INTO_CACHE, &params, sizeof(PrepareIntoCacheParams),NULL, 0);
+        return sceIoDevctl(unit->blockDev, DEVCTL_PREPARE_INTO_CACHE, &params, sizeof(PrepareIntoCacheParams), NULL, 0);
     }
     u16 statusOut[2];
     statusOut[0] = 0;
@@ -3088,7 +3011,7 @@ s32 isofsUmdPrepareIntoCache(IsofsUnit *unit, IsofsFile *file, s32 cacheSize, s3
     s32 ret = sceIoDevctl(unit->blockDev, DEVCTL_PREPARE_INTO_CACHE_GET_STATUS, &params, sizeof(PrepareIntoCacheParams),
                           statusOut, 4);
     if (ret >= 0) {
-        file->cacheIdx = statusOut[0];
+        file->cacheIndex = statusOut[0];
     }
     return ret;
 }
@@ -3103,31 +3026,27 @@ s32 isofsUmdReadDirSectors(IsofsUnit *unit, s64 lbn, s32 size, void *outdata, s3
     params.lbn = (u32) lbn;
     params.lbnSize = 0;
 
-    u32 lbnSize;
+    u32 lbnSize = 0;
+    s32 setupFields = 1;
     const u32 sectorSize = unit->sectorSize;
     if ((int) sectorSize < size) {
         lbnSize = size / (int) sectorSize;
-        if (sectorSize == 0) {
-            pspBreak(SCE_BREAKCODE_DIVZERO);
-        }
         if (size % (int) sectorSize != 0) {
-            // incomplete params setup, won't this always fail?
-            goto doRead;
-        }
-        params.byteSizeMiddle = size;
-        if (sectorSize == 0) {
-            pspBreak(SCE_BREAKCODE_DIVZERO);
+            setupFields = 0;
+        } else {
+            params.byteSizeMiddle = size;
         }
     } else {
         lbnSize = 1;
         params.byteSizeMiddle = sectorSize;
     }
 
-    params.byteSizeLast = 0;
-    params.byteSizeFirst = 0;
-    params.lbnSize = lbnSize;
-    params.size = params.byteSizeMiddle;
-doRead:
+    if (setupFields) {
+        params.byteSizeLast = 0;
+        params.byteSizeFirst = 0;
+        params.lbnSize = lbnSize;
+        params.size = params.byteSizeMiddle;
+    }
     params.flags = (u32) ((cmd & 1) != 0);
     params.cmd = (u32) ((cmd & 2) != 0);
     if ((cmd & 4) != 0) {
@@ -3165,15 +3084,14 @@ s32 isofsUmdReadSectors(IsofsUnit *unit, IsofsFile *file, s32 size, void *outdat
         params.cmd = params.cmd | 0xf0;
     }
 
-    const u32 fposHi = *(u32 *) ((u32) &file->fpos + 4);
-    const u32 fpos = *(u32 *) &file->fpos;
-    const u32 sizeHi = *(u32 *) ((u32) &file->size + 4);
-    const u32 sizeLo = *(u32 *) &file->size;
+    const u64 filePos = (u64) file->fpos;
+    const u64 fileSize = (u64) file->size;
+    const u32 fposHi = (u32) (filePos >> 32);
+    const u32 fpos = (u32) filePos;
 
-    const u32 readEnd = fpos + size;
-    const u32 readEndHi = *(int *) ((int) &file->fpos + 4) + (size >> 0x1f) + (u32) (readEnd < (u32) size);
-    if (sizeHi < readEndHi || (sizeHi == readEndHi && sizeLo < readEnd)) {
-        size = (s32) (sizeLo - fpos);
+    const u64 readEnd64 = filePos + (u64) (s64) size;
+    if (fileSize < readEnd64) {
+        size = (s32) ((u32) fileSize - fpos);
     }
     if (size == 0) {
         return SCE_ERROR_OK;
@@ -3243,14 +3161,8 @@ s32 isofsReadParamsZero(IsofsUnit *unit, IsofsFile *file, void *outdata, s32 siz
 
     // read larger than two sectors, outdata start NOT aligned, end NOT aligned
     if (size > sectorSize * 2) {
-        if (sectorSize == 0) {
-            pspBreak(SCE_BREAKCODE_DIVZERO);
-        }
         if (size % sectorSize == 0 && ((u32) outdata & 0x3f) != 0 && (outdataEnd & 0xffffffc0) != outdataEnd) {
             params->lbn = file->lbn;
-            if (sectorSize == 0) {
-                pspBreak(SCE_BREAKCODE_DIVZERO);
-            }
             params->lbnSize = size / sectorSize;
             params->size = size;
             params->byteSizeMiddle = size - sectorSize * 2;
@@ -3262,14 +3174,8 @@ s32 isofsReadParamsZero(IsofsUnit *unit, IsofsFile *file, void *outdata, s32 siz
 
     // read larger than two sectors, outdata start aligned, end NOT aligned
     if (size > sectorSize * 2) {
-        if (sectorSize == 0) {
-            pspBreak(SCE_BREAKCODE_DIVZERO);
-        }
         if (size % sectorSize == 0 && (outdataEnd & 0xffffffc0) != outdataEnd) {
             params->lbn = file->lbn;
-            if (sectorSize == 0) {
-                pspBreak(SCE_BREAKCODE_DIVZERO);
-            }
             params->lbnSize = size / sectorSize;
             params->size = size;
             params->byteSizeMiddle = size - sectorSize;
@@ -3281,14 +3187,8 @@ s32 isofsReadParamsZero(IsofsUnit *unit, IsofsFile *file, void *outdata, s32 siz
 
     // read larger than two sectors, outdata start NOT aligned, end aligned
     if (size > sectorSize * 2) {
-        if (sectorSize == 0) {
-            pspBreak(SCE_BREAKCODE_DIVZERO);
-        }
         if (size % sectorSize == 0 && ((u32) outdata & 0x3f) != 0) {
             params->lbn = file->lbn;
-            if (sectorSize == 0) {
-                pspBreak(SCE_BREAKCODE_DIVZERO);
-            }
             params->lbnSize = size / sectorSize;
             params->size = size;
             params->byteSizeMiddle = size - sectorSize;
@@ -3300,14 +3200,8 @@ s32 isofsReadParamsZero(IsofsUnit *unit, IsofsFile *file, void *outdata, s32 siz
 
     // read larger than two sectors, outdata start and end aligned
     if (size > sectorSize * 2) {
-        if (sectorSize == 0) {
-            pspBreak(SCE_BREAKCODE_DIVZERO);
-        }
         if (size % sectorSize == 0) {
             params->lbn = file->lbn;
-            if (sectorSize == 0) {
-                pspBreak(SCE_BREAKCODE_DIVZERO);
-            }
             params->lbnSize = size / sectorSize;
             params->size = size;
             params->byteSizeMiddle = size;
@@ -3319,14 +3213,8 @@ s32 isofsReadParamsZero(IsofsUnit *unit, IsofsFile *file, void *outdata, s32 siz
 
     // read larger than two sectors, size is not divisible by the sector size, outdata start NOT aligned
     if (size > sectorSize * 2) {
-        if (sectorSize == 0) {
-            pspBreak(SCE_BREAKCODE_DIVZERO);
-        }
         if (size % sectorSize != 0 && ((u32) outdata & 0x3f) != 0) {
             u32 diff = (size - sectorSize) % sectorSize;
-            if (sectorSize == 0) {
-                pspBreak(SCE_BREAKCODE_DIVZERO);
-            }
             params->lbn = file->lbn;
             params->lbnSize = size / sectorSize + 1;
             params->size = size;
@@ -3340,14 +3228,8 @@ s32 isofsReadParamsZero(IsofsUnit *unit, IsofsFile *file, void *outdata, s32 siz
     // read larger than two sectors, size is not divisible by the sector size
     if (size > sectorSize * 2) {
         u32 bytesOver = size % sectorSize;
-        if (sectorSize == 0) {
-            pspBreak(SCE_BREAKCODE_DIVZERO);
-        }
         if (bytesOver == 0) {
             return SCE_ERROR_ERRNO_INVALID_ARGUMENT;
-        }
-        if (sectorSize == 0) {
-            pspBreak(SCE_BREAKCODE_DIVZERO);
         }
         params->lbn = file->lbn;
         params->lbnSize = size / sectorSize + 1;
@@ -3371,12 +3253,13 @@ s32 isofsReadParamsInitial(IsofsUnit *unit, IsofsFile *file, __attribute__((unus
     const u32 usize = size;
     const s32 sizeMsb = (s32) usize >> 0x1f;
     const u32 sectorSize = unit->sectorSize;
-    const u32 fposHi = *(u32 *) ((u32) &file->fpos + 4);
-    const u32 fpos = *(u32 *) &file->fpos;
-    const u32 readEnd = *(s32 *) &file->fpos + usize;
+    const u64 filePos = (u64) file->fpos;
+    const u32 fposHi = (u32) (filePos >> 32);
+    const u32 fpos = (u32) filePos;
+    const u32 readEnd = fpos + usize;
     const u32 byteSizeFirst = sectorSize - fpos;
 
-    const s32 readEndHi = *(s32 *) ((s32) &file->fpos + 4) + sizeMsb + (u32) (readEnd < usize);
+    const s32 readEndHi = (s32) fposHi + sizeMsb + (u32) (readEnd < usize);
     const s32 pastFirstSector = readEndHi != 0 || readEnd > sectorSize;
     const s32 pastSecondSector = readEndHi != 0 || readEnd > sectorSize * 2;
     const s32 withinTwoSectors = readEndHi == 0 && readEnd <= sectorSize * 2;
@@ -3409,14 +3292,8 @@ s32 isofsReadParamsInitial(IsofsUnit *unit, IsofsFile *file, __attribute__((unus
     if (fposHi == 0 && fpos < sectorSize) {
         if (pastFirstSector && pastSecondSector) {
             u32 byteSizeMiddle = usize - byteSizeFirst;
-            if (sectorSize == 0) {
-                pspBreak(SCE_BREAKCODE_DIVZERO);
-            }
             if (byteSizeMiddle % sectorSize == 0) {
                 params->lbn = file->lbn;
-                if (sectorSize == 0) {
-                    pspBreak(SCE_BREAKCODE_DIVZERO);
-                }
                 params->lbnSize = byteSizeMiddle / sectorSize + 1;
                 params->size = usize;
                 params->byteSizeMiddle = byteSizeMiddle;
@@ -3431,13 +3308,7 @@ s32 isofsReadParamsInitial(IsofsUnit *unit, IsofsFile *file, __attribute__((unus
     if (fposHi == 0 && fpos < sectorSize) {
         if (pastFirstSector && pastSecondSector) {
             u32 byteSizeLast = (usize - byteSizeFirst) % sectorSize;
-            if (sectorSize == 0) {
-                pspBreak(SCE_BREAKCODE_DIVZERO);
-            }
             if (byteSizeLast != 0) {
-                if (sectorSize == 0) {
-                    pspBreak(SCE_BREAKCODE_DIVZERO);
-                }
                 u32 byteSizeMiddle = usize - (byteSizeLast + byteSizeFirst);
                 params->lbn = file->lbn;
                 params->lbnSize = byteSizeMiddle / sectorSize + 2;
@@ -3472,9 +3343,6 @@ s32 isofsReadParams(IsofsUnit *unit, IsofsFile *file, void *outdata, s32 size, L
         const u32 byteSizeFirst = sectorSize - fposRemBytes;
         const u32 byteSizeLast = size - byteSizeFirst;
         const u32 remainingBytes = byteSizeLast % sectorSize;
-        if (sectorSize == 0) {
-            pspBreak(SCE_BREAKCODE_DIVZERO);
-        }
         if (sectorSize < fposRemBytes + size) {
             if (remainingBytes != 0) {
                 if (byteSizeLast <= sectorSize && byteSizeFirst != 0) {
@@ -3487,9 +3355,6 @@ s32 isofsReadParams(IsofsUnit *unit, IsofsFile *file, void *outdata, s32 size, L
                     return SCE_ERROR_OK;
                 }
 
-                if (sectorSize == 0) {
-                    pspBreak(SCE_BREAKCODE_DIVZERO);
-                }
                 params->lbn = file->lbn + fposSectors;
                 params->lbnSize = (byteSizeLast - remainingBytes) / sectorSize + 2;
                 params->size = size;
@@ -3499,9 +3364,6 @@ s32 isofsReadParams(IsofsUnit *unit, IsofsFile *file, void *outdata, s32 size, L
                 return SCE_ERROR_OK;
             }
 
-            if (sectorSize == 0) {
-                pspBreak(SCE_BREAKCODE_DIVZERO);
-            }
             params->lbn = file->lbn + fposSectors;
             params->lbnSize = byteSizeLast / sectorSize + 1;
             params->size = size;
@@ -3528,14 +3390,8 @@ s32 isofsReadParams(IsofsUnit *unit, IsofsFile *file, void *outdata, s32 size, L
         return SCE_ERROR_OK;
     }
 
-    if (sectorSize == 0) {
-        pspBreak(SCE_BREAKCODE_DIVZERO);
-    }
     if (size % (s32) sectorSize == 0 && ((u32) outdata & 0x3f) != 0 && (outdataEnd & 0xffffffc0) != outdataEnd) {
         params->lbn = file->lbn + fposSectors;
-        if (unit->sectorSize == 0) {
-            pspBreak(SCE_BREAKCODE_DIVZERO);
-        }
         params->lbnSize = size / (s32) unit->sectorSize;
         params->size = size;
         params->byteSizeMiddle = size + unit->sectorSize * -2;
@@ -3545,14 +3401,8 @@ s32 isofsReadParams(IsofsUnit *unit, IsofsFile *file, void *outdata, s32 size, L
     }
 
     if ((s32) sectorSize < size) {
-        if (sectorSize == 0) {
-            pspBreak(SCE_BREAKCODE_DIVZERO);
-        }
         if (size % (s32) sectorSize == 0 && ((u32) outdata & 0x3f) != 0) {
             params->lbn = file->lbn + fposSectors;
-            if (unit->sectorSize == 0) {
-                pspBreak(SCE_BREAKCODE_DIVZERO);
-            }
             params->lbnSize = size / (s32) unit->sectorSize;
             params->size = size;
             params->byteSizeMiddle = size - unit->sectorSize;
@@ -3563,14 +3413,8 @@ s32 isofsReadParams(IsofsUnit *unit, IsofsFile *file, void *outdata, s32 size, L
     }
 
     if ((s32) sectorSize < size) {
-        if (sectorSize == 0) {
-            pspBreak(SCE_BREAKCODE_DIVZERO);
-        }
         if (size % (s32) sectorSize == 0 && (outdataEnd & 0xffffffc0) != outdataEnd) {
             params->lbn = file->lbn + fposSectors;
-            if (unit->sectorSize == 0) {
-                pspBreak(SCE_BREAKCODE_DIVZERO);
-            }
             params->lbnSize = size / (s32) unit->sectorSize;
             params->size = size;
             params->byteSizeMiddle = size - unit->sectorSize;
@@ -3581,14 +3425,8 @@ s32 isofsReadParams(IsofsUnit *unit, IsofsFile *file, void *outdata, s32 size, L
     }
 
     if ((s32) sectorSize < size) {
-        if (sectorSize == 0) {
-            pspBreak(SCE_BREAKCODE_DIVZERO);
-        }
         if (size % (s32) sectorSize == 0) {
             params->lbn = file->lbn + fposSectors;
-            if (unit->sectorSize == 0) {
-                pspBreak(SCE_BREAKCODE_DIVZERO);
-            }
             params->lbnSize = size / (s32) unit->sectorSize;
             params->size = size;
             params->byteSizeMiddle = size;
@@ -3600,13 +3438,7 @@ s32 isofsReadParams(IsofsUnit *unit, IsofsFile *file, void *outdata, s32 size, L
 
     if ((s32) sectorSize < size) {
         u32 byteSizeLast = size % (s32) sectorSize;
-        if (sectorSize == 0) {
-            pspBreak(SCE_BREAKCODE_DIVZERO);
-        }
         if (byteSizeLast != 0 && ((u32) outdata & 0x3f) != 0) {
-            if (sectorSize == 0) {
-                pspBreak(SCE_BREAKCODE_DIVZERO);
-            }
             params->lbn = file->lbn + fposSectors;
             params->lbnSize = size / (s32) sectorSize + 1;
             params->size = size;
@@ -3621,14 +3453,8 @@ s32 isofsReadParams(IsofsUnit *unit, IsofsFile *file, void *outdata, s32 size, L
         return SCE_ERROR_OK;
     }
     u32 byteSizeLast = size % (s32) sectorSize;
-    if (sectorSize == 0) {
-        pspBreak(SCE_BREAKCODE_DIVZERO);
-    }
     if (byteSizeLast == 0) {
         return SCE_ERROR_OK;
-    }
-    if (sectorSize == 0) {
-        pspBreak(SCE_BREAKCODE_DIVZERO);
     }
     params->lbn = file->lbn + fposSectors;
     params->lbnSize = size / (s32) sectorSize + 1;
@@ -3640,8 +3466,8 @@ s32 isofsReadParams(IsofsUnit *unit, IsofsFile *file, void *outdata, s32 size, L
 }
 
 // 00005fcc
-s32 isofsUmd_1e180d3(IsofsUnit *unit, s32 mode, void *indata, SceSize inlen, __attribute__((unused)) s32 arg4,
-                     __attribute__((unused)) s32 arg5) {
+s32 isofsUmdDevctlExt(IsofsUnit *unit, s32 mode, void *indata, SceSize inlen, __attribute__((unused)) s32 outBuf,
+                      __attribute__((unused)) s32 outLen) {
     if (unit == NULL || indata == NULL) {
         return SCE_ERROR_ERRNO_INVALID_ARGUMENT;
     }
@@ -3651,7 +3477,7 @@ s32 isofsUmd_1e180d3(IsofsUnit *unit, s32 mode, void *indata, SceSize inlen, __a
     if (inlen <= 0x17) {
         return SCE_ERROR_ERRNO_INVALID_ARGUMENT;
     }
-    return sceIoDevctl(unit->blockDev, DEVCTL_UNKNOWN_1E180D3, indata, 0x18, NULL, 0);
+    return sceIoDevctl(unit->blockDev, DEVCTL_UMD_CTRL_EXT, indata, 0x18, NULL, 0);
 }
 
 // 00006040
@@ -3665,7 +3491,7 @@ s32 isofsClearBlockDevHandler(IsofsUnit *unit) {
 
 // 00006060
 s32 isofsHandlerReadDirSectors(IsofsUnit *unit, s64 lbn, s32 size, void *outdata, s32 outlen, s32 cmd,
-                               __attribute__((unused)) u32 unkUnused) {
+                               __attribute__((unused)) u32 reservedParam) {
     if (unit == NULL || outdata == NULL) {
         return SCE_ERROR_ERRNO_INVALID_ARGUMENT;
     }
@@ -3673,12 +3499,12 @@ s32 isofsHandlerReadDirSectors(IsofsUnit *unit, s64 lbn, s32 size, void *outdata
 }
 
 // 000060c0
-s32 isofsHandlerReadSectors(IsofsUnit *unit, IsofsFile *file, s32 size, void *outdata, s32 outlen, u32 unkFlags,
-                            __attribute__((unused)) s32 unkUnused) {
+s32 isofsHandlerReadSectors(IsofsUnit *unit, IsofsFile *file, s32 size, void *outdata, s32 outlen, u32 readFlags,
+                            __attribute__((unused)) s32 reservedParam) {
     if (unit == NULL || file == NULL || outdata == NULL) {
         return SCE_ERROR_ERRNO_INVALID_ARGUMENT;
     }
-    return g_isofsHandlers[unit->handlerIdx].funcs->readSectors(unit, file, size, outdata, outlen, unkFlags);
+    return g_isofsHandlers[unit->handlerIdx].funcs->readSectors(unit, file, size, outdata, outlen, readFlags);
 }
 
 // 00006124
@@ -3714,11 +3540,11 @@ s64 isofsHandlerSeek(IsofsUnit *unit, s64 lbn) {
 }
 
 // 00006254
-s32 isofsHandler_unk1c(IsofsUnit *unit, s32 mode, void *indata, SceSize inlen, s32 arg4, s32 arg5) {
+s32 isofsHandlerDevctlExt(IsofsUnit *unit, s32 mode, void *indata, SceSize inlen, s32 outBuf, s32 outLen) {
     if (unit == NULL) {
         return SCE_ERROR_ERRNO_INVALID_ARGUMENT;
     }
-    return g_isofsHandlers[unit->handlerIdx].funcs->devctlExt(unit, mode, indata, inlen, arg4, arg5);
+    return g_isofsHandlers[unit->handlerIdx].funcs->devctlExt(unit, mode, indata, inlen, outBuf, outLen);
 }
 
 // 000062a0
@@ -3738,27 +3564,27 @@ s32 isofsHandlerPrepareIntoCache(IsofsUnit *unit, IsofsFile *file, s32 cacheSize
 }
 
 // 00006344
-s32 isofsHandler_unk30(IsofsUnit *unit, IsofsFile *file, s32 flag, __attribute__((unused)) void *outdata) {
+s32 isofsHandlerCacheControl(IsofsUnit *unit, IsofsFile *file, s32 flag, __attribute__((unused)) void *outdata) {
     if (unit == NULL || file == NULL) {
         return SCE_ERROR_ERRNO_INVALID_ARGUMENT;
     }
-    return g_isofsHandlers[unit->handlerIdx].funcs->cacheGetStatus(unit, file, flag);
+    return g_isofsHandlers[unit->handlerIdx].funcs->cacheControl(unit, file, flag);
 }
 
 // 0000639c
-s32 isofsHandler_unk34(IsofsUnit *unit, IsofsFile *file) {
+s32 isofsHandlerCacheSuspend(IsofsUnit *unit, IsofsFile *file) {
     if (unit == NULL || file == NULL) {
         return SCE_ERROR_ERRNO_INVALID_ARGUMENT;
     }
-    return g_isofsHandlers[unit->handlerIdx].funcs->reserved34(unit, file);
+    return g_isofsHandlers[unit->handlerIdx].funcs->cacheSuspend(unit, file);
 }
 
 // 000063f4
-s32 isofsHandler_unk38(IsofsUnit *unit, IsofsFile *file) {
+s32 isofsHandlerCacheResume(IsofsUnit *unit, IsofsFile *file) {
     if (unit == NULL || file == NULL) {
         return SCE_ERROR_ERRNO_INVALID_ARGUMENT;
     }
-    return g_isofsHandlers[unit->handlerIdx].funcs->reserved38(unit, file);
+    return g_isofsHandlers[unit->handlerIdx].funcs->cacheResume(unit, file);
 }
 
 // 0000644c
@@ -3789,7 +3615,7 @@ s32 isofsUmdGetCurrentLbn(IsofsUnit *unit) {
 }
 
 // 0000653c
-s32 isofsUmd_unkNotSupported() {
+s32 isofsUmdNotSupported(void) {
     return SCE_ERROR_ERRNO_NOT_SUPPORTED;
 }
 
@@ -3798,10 +3624,10 @@ s32 isofsUmdReadPvd(IsofsUnit *unit, void *indata, SceSize inlen) {
     u8 *outdata;
     sceIoDevctl(unit->blockDev, DEVCTL_GET_PVD, indata, inlen, &outdata, sizeof(outdata));
     unit->primaryVolumeDescriptor = outdata;
-    __builtin_memcpy(&unit->rootDirLbn, outdata + 0x9e, sizeof(unit->rootDirLbn));
-    __builtin_memcpy(&unit->rootDirSize, outdata + 0xa6, sizeof(unit->rootDirSize));
-    __builtin_memcpy(&unit->pathTableSize, outdata + 0x84, sizeof(unit->pathTableSize));
-    __builtin_memcpy(&unit->pathTableLbn, outdata + 0x8c, sizeof(unit->pathTableLbn));
+    unit->rootDirLbn = _readLe32(outdata + 0x9e);
+    unit->rootDirSize = _readLe32(outdata + 0xa6);
+    unit->pathTableSize = _readLe32(outdata + 0x84);
+    unit->pathTableLbn = _readLe32(outdata + 0x8c);
     __builtin_memcpy(unit->umdId, outdata + 0x373, UMD_ID_SIZE);
     return SCE_ERROR_OK;
 }
@@ -3822,20 +3648,20 @@ s32 isofsUmdGetUnitNum(IsofsUnit *unit, void *indata, SceSize inlen) {
     return sceIoDevctl(unit->blockDev, DEVCTL_GET_UNIT_NUM, indata, inlen, &unit->unitNum, sizeof(unit->unitNum));
 }
 
-//00006788
-s32 isofsUmd_1f100a8(IsofsUnit *unit, IsofsFile *file) {
-    if (unit == NULL) {
+// 00006788
+s32 isofsUmdCacheSuspend(IsofsUnit *unit, IsofsFile *file) {
+    if (unit == NULL || file == NULL) {
         return SCE_ERROR_ERRNO_INVALID_ARGUMENT;
     }
-    s32 indata = file->cacheIdx;
-    return sceIoDevctl(unit->blockDev, DEVCTL_UNKNOWN_1F100A8, &indata, sizeof(indata), NULL, 0);
+    s32 indata = file->cacheIndex;
+    return sceIoDevctl(unit->blockDev, DEVCTL_CACHE_SUSPEND, &indata, sizeof(indata), NULL, 0);
 }
 
 // 000067ec
-s32 isofsUmd_1f100a9(IsofsUnit *unit, IsofsFile *file) {
-    if (unit == NULL) {
+s32 isofsUmdCacheResume(IsofsUnit *unit, IsofsFile *file) {
+    if (unit == NULL || file == NULL) {
         return SCE_ERROR_ERRNO_INVALID_ARGUMENT;
     }
-    s32 indata = file->cacheIdx;
-    return sceIoDevctl(unit->blockDev, DEVCTL_UNKNOWN_1F100A9, &indata, sizeof(indata), NULL, 0);
+    s32 indata = file->cacheIndex;
+    return sceIoDevctl(unit->blockDev, DEVCTL_CACHE_RESUME, &indata, sizeof(indata), NULL, 0);
 }
