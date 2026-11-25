@@ -2,36 +2,22 @@
  * SceShell livearea_plugin: LiveArea task manager facade
  * 3.65-CEX: 0x811B204C - 0x811B216C (sti 0x811B20FC)
  */
-
-#include <stddef.h>
-#include <scetypes.h>
-
-#include "../../livespace_db/lsdb_keys.h"
-
-class LiveAreaUpdatorImpl;
-
-extern LiveAreaUpdatorImpl *liveareaUpdatorImplCtor(void *mem);		/* 0x811B216C */
-extern LiveAreaUpdatorImpl *liveareaUpdatorImplDtor(LiveAreaUpdatorImpl *self); /* 0x811B21A8 */
-extern int liveareaUpdatorImplRequestUpdate(LiveAreaUpdatorImpl *self, SceUInt64 *outId,
-	const char *titleId, const SceUInt64 *ts, char unusedFlag, SceUInt8 checkDevDir, SceUInt8 postNotice,
-	int completeCb, int userData, int localPkg);			/* 0x811B21C0 */
-extern int liveareaUpdatorImplRequestPromote(LiveAreaUpdatorImpl *self, SceUInt64 *outId,
-	const char *titleId, SceUInt8 unusedFlag, int mode, int completeCb, int userData); /* 0x811B2532 */
-extern int liveareaUpdatorImplRequestDelete(LiveAreaUpdatorImpl *self, SceUInt64 *outId,
-	const char *titleId, int flags, int unusedFlag, int completeCb, int userData); /* 0x811B287E */
-extern int liveareaUpdatorImplRequestClean(LiveAreaUpdatorImpl *self, SceUInt64 *outId,
-	const char *titleId, SceUInt8 unusedFlag, int completeCb, int userData); /* 0x811B2BCE */
+#include "livearea_internal.h"
 
 class LiveAreaTaskMgr {
 public:
 	LiveAreaTaskMgr();
 	~LiveAreaTaskMgr();
 
-	int RequestUpdate(SceUInt64 *outId, const char *titleId, const SceUInt64 *ts,
-		char unusedFlag, SceUInt8 checkDevDir, SceUInt8 postNotice, int completeCb, int userData, int localPkg);
-	int RequestPromote(SceUInt64 *outId, const char *titleId, SceUInt8 unusedFlag, int mode, int completeCb, int userData);
-	int RequestDelete(SceUInt64 *outId, const char *titleId, int flags, int unusedFlag, int completeCb, int userData);
-	int RequestClean(SceUInt64 *outId, const char *titleId, SceUInt8 unusedFlag, int completeCb, int userData);
+	int RequestContentUpdate(SceUInt64 *outId, const char *titleId, const SceUInt64 *timestamp,
+				 bool requireNetwork, SceUInt8 checkDevDir, SceUInt8 postNotice,
+				 void *callback, void *userdata, const char *localPkg);
+	int RequestPatchCheck(SceUInt64 *outId, const char *titleId, bool requireNetwork,
+			      int appType, void *callback, void *userdata);
+	int RequestActivityUpdate(SceUInt64 *outId, const char *titleId, int forceFlag,
+				  bool requireNetwork, void *callback, void *userdata);
+	int RequestClean(SceUInt64 *outId, const char *titleId, bool requireNetwork,
+			 void *callback, void *userdata);
 
 private:
 	LiveAreaUpdatorImpl *m_impl;
@@ -47,36 +33,89 @@ LiveAreaTaskMgr::LiveAreaTaskMgr()
 /* 0x811B2068 */
 LiveAreaTaskMgr::~LiveAreaTaskMgr()
 {
-	if (m_impl) {
+	if (m_impl != NULL) {
 		liveareaUpdatorImplDtor(m_impl);
 		operator delete(m_impl);
 	}
 }
 
 /* 0x811B207C */
-int LiveAreaTaskMgr::RequestUpdate(SceUInt64 *outId, const char *titleId, const SceUInt64 *ts,
-	char unusedFlag, SceUInt8 checkDevDir, SceUInt8 postNotice, int completeCb, int userData, int localPkg)
+int LiveAreaTaskMgr::RequestContentUpdate(SceUInt64 *outId, const char *titleId,
+					  const SceUInt64 *timestamp, bool requireNetwork,
+					  SceUInt8 checkDevDir, SceUInt8 postNotice,
+					  void *callback, void *userdata, const char *localPkg)
 {
-	return liveareaUpdatorImplRequestUpdate(m_impl, outId, titleId, ts, unusedFlag, checkDevDir, postNotice, completeCb, userData, localPkg);
+	return liveareaUpdatorImplRequestContentUpdate(m_impl, outId, titleId, timestamp,
+						       requireNetwork, checkDevDir, postNotice,
+						       callback, userdata, localPkg);
 }
 
 /* 0x811B20AC */
-int LiveAreaTaskMgr::RequestPromote(SceUInt64 *outId, const char *titleId, SceUInt8 unusedFlag,
-	int mode, int completeCb, int userData)
+int LiveAreaTaskMgr::RequestPatchCheck(SceUInt64 *outId, const char *titleId,
+				       bool requireNetwork, int appType,
+				       void *callback, void *userdata)
 {
-	return liveareaUpdatorImplRequestPromote(m_impl, outId, titleId, unusedFlag, mode, completeCb, userData);
+	return liveareaUpdatorImplRequestPatchCheck(m_impl, outId, titleId, requireNetwork,
+						    appType, callback, userdata);
 }
 
 /* 0x811B20C8 */
-int LiveAreaTaskMgr::RequestDelete(SceUInt64 *outId, const char *titleId, int flags,
-	int unusedFlag, int completeCb, int userData)
+int LiveAreaTaskMgr::RequestActivityUpdate(SceUInt64 *outId, const char *titleId,
+					   int forceFlag, bool requireNetwork,
+					   void *callback, void *userdata)
 {
-	return liveareaUpdatorImplRequestDelete(m_impl, outId, titleId, flags, unusedFlag, completeCb, userData);
+	return liveareaUpdatorImplRequestActivityUpdate(m_impl, outId, titleId, forceFlag,
+							requireNetwork, callback, userdata);
 }
 
 /* 0x811B20E4 */
-int LiveAreaTaskMgr::RequestClean(SceUInt64 *outId, const char *titleId, SceUInt8 unusedFlag,
-	int completeCb, int userData)
+int LiveAreaTaskMgr::RequestClean(SceUInt64 *outId, const char *titleId, bool requireNetwork,
+				  void *callback, void *userdata)
 {
-	return liveareaUpdatorImplRequestClean(m_impl, outId, titleId, unusedFlag, completeCb, userData);
+	return liveareaUpdatorImplRequestClean(m_impl, outId, titleId, requireNetwork,
+					       callback, userdata);
+}
+
+LiveAreaTaskMgr *liveareaTaskMgrCtor(void *mem)
+{
+	return new (mem) LiveAreaTaskMgr();
+}
+
+LiveAreaTaskMgr *liveareaTaskMgrDtor(LiveAreaTaskMgr *taskMgr)
+{
+	taskMgr->~LiveAreaTaskMgr();
+	return taskMgr;
+}
+
+int liveareaTaskMgrRequestContentUpdate(LiveAreaTaskMgr *taskMgr, SceUInt64 *outId,
+					const char *titleId, const SceUInt64 *timestamp,
+					bool requireNetwork, SceUInt8 checkDevDir,
+					SceUInt8 postNotice, void *callback,
+					void *userdata, const char *localPkg)
+{
+	return taskMgr->RequestContentUpdate(outId, titleId, timestamp, requireNetwork,
+					     checkDevDir, postNotice, callback, userdata, localPkg);
+}
+
+int liveareaTaskMgrRequestPatchCheck(LiveAreaTaskMgr *taskMgr, SceUInt64 *outId,
+				     const char *titleId, bool requireNetwork,
+				     int appType, void *callback, void *userdata)
+{
+	return taskMgr->RequestPatchCheck(outId, titleId, requireNetwork, appType,
+					  callback, userdata);
+}
+
+int liveareaTaskMgrRequestActivityUpdate(LiveAreaTaskMgr *taskMgr, SceUInt64 *outId,
+					 const char *titleId, int forceFlag,
+					 bool requireNetwork, void *callback, void *userdata)
+{
+	return taskMgr->RequestActivityUpdate(outId, titleId, forceFlag, requireNetwork,
+					      callback, userdata);
+}
+
+int liveareaTaskMgrRequestClean(LiveAreaTaskMgr *taskMgr, SceUInt64 *outId,
+				const char *titleId, bool requireNetwork,
+				void *callback, void *userdata)
+{
+	return taskMgr->RequestClean(outId, titleId, requireNetwork, callback, userdata);
 }

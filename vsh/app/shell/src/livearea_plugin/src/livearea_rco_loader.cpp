@@ -1,26 +1,17 @@
 /*
  * livearea_rco_loader.cpp: livearea_plugin per-title RCO template loader
- * (0x811ACF10-0x811AD166, sti 0x811AD0F4). The file and class names are ours (PLACEHOLDER).
+ * (0x811ACF10-0x811AD166, sti 0x811AD0F4).
  */
-#include <stddef.h>
-#include <scetypes.h>
 #include <std/stdio.h>
-#include <std/string.h>
-#include <std/string>
-#include <plugin.h>
 #include <file/localfile.h>
-#include "../../livespace_db/lsdb_keys.h"
-
-extern paf::Plugin *g_liveareaPlugin;				/* 0x81566F94 */
-extern void *liveareaPageFindByTemplate(const char *name);	/* 0x8119C078 */
-extern void liveareaPageInnerOnRcoLoaded(void *inner);		/* 0x811A9CCC */
+#include "livearea_internal.h"
 
 static void liveareaRcoOnLoad(paf::Plugin *plugin);		/* 0x811AD0D8 */
 static void liveareaRcoOnUnload(const char *name);		/* 0x811AD0EC */
-static void liveareaRcoNoop(void);				/* 0x811AD0D6 */
+static void liveareaRcoSetParamNoop(paf::Plugin::InitParam2 *param); /* 0x811AD0D6 */
 
 /* 0x811ACF10 */
-int liveareaLoadRco(const paf::string *rcoName, const paf::string *pluginName, int arg)
+int liveareaLoadRco(const paf::string *rcoName, const paf::string *pluginName, int drawPriority)
 {
 	paf::Plugin::InitParam param;
 	char path[1024];
@@ -31,9 +22,9 @@ int liveareaLoadRco(const paf::string *rcoName, const paf::string *pluginName, i
 	param.name = *pluginName;
 	param.resource_file = path;
 	param.caller_name = "__main__";
-	*(void **)((char *)&param + 24) = (void *)liveareaRcoNoop;
-	*(void **)((char *)&param + 72) = *(void **)((char *)g_liveareaPlugin + 192);
-	*(int *)((char *)&param + 84) = arg;
+	param.set_param_func = liveareaRcoSetParamNoop;
+	param.private_heap = g_liveareaPlugin->m_private_heap;
+	param.draw_priority = drawPriority;
 	paf::Plugin::LoadAsync(param, liveareaRcoOnLoad, true);
 	return 1;
 }
@@ -45,16 +36,17 @@ void liveareaUnloadRco(const paf::string *pluginName)
 }
 
 /* 0x811AD0D6 */
-static void liveareaRcoNoop(void)
+static void liveareaRcoSetParamNoop(paf::Plugin::InitParam2 *param)
 {
+	(void)param;
 }
 
 /* 0x811AD0D8 */
 static void liveareaRcoOnLoad(paf::Plugin *plugin)
 {
-	void *page = liveareaPageFindByTemplate(*(const char **)((char *)plugin + 4));
+	LiveAreaPage *page = liveareaPageFindByTemplate(plugin->GetName());
 	if (page != NULL)
-		liveareaPageInnerOnRcoLoaded((char *)page + 48);
+		page->m_inner.OnRcoLoaded();
 }
 
 /* 0x811AD0EC */

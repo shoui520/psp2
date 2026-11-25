@@ -1,86 +1,75 @@
 /*
- * livearea_updater_wrap.cpp: livearea_plugin updater wrapper
- * (0x811A2910-0x811A2A78, sti 0x811A2A08). The file and class names are ours (PLACEHOLDER).
+ * livearea_updater_wrap.cpp: livearea_plugin updater facade
+ * (0x811A2910-0x811A2A78, sti 0x811A2A08).
  */
-#include <stddef.h>
-#include <scetypes.h>
-#include "../../livespace_db/lsdb_keys.h"
-
-struct LiveAreaUpdaterImpl;
-extern LiveAreaUpdaterImpl *liveareaUpdaterImplCtor(LiveAreaUpdaterImpl *self); /* 0x811A2A78 */
-extern int liveareaUpdaterImplStop(LiveAreaUpdaterImpl *self);			/* 0x811A2AB0 */
-extern LiveAreaUpdaterImpl *liveareaUpdaterImplDtor(LiveAreaUpdaterImpl *self); /* 0x811A2AC4 */
-extern int liveareaUpdaterImplStart(LiveAreaUpdaterImpl *self);			/* 0x811A2AF4 */
-extern int liveareaUpdaterImplUpdateInfo(LiveAreaUpdaterImpl *self, void *out, const char *title, SceInt64 *ts, int mode, void *cb, int appId); /* 0x811A2B1A */
-extern int liveareaUpdaterImplUpdateInfo2(LiveAreaUpdaterImpl *self, void *out, int titleId, int flags, int mode, int opt); /* 0x811A2B1A */
-extern int liveareaUpdaterImplUpdateExt(LiveAreaUpdaterImpl *self, void *out, const char *title, int mode, void *arg, void *cb, int appId); /* 0x811A2B72 */
-extern int liveareaUpdaterImplUpdateFeed(LiveAreaUpdaterImpl *self, void *out, const char *title, int mode, void *cb, int appId); /* 0x811A2BC8 */
-extern int liveareaUpdaterImplUpdateDolce(LiveAreaUpdaterImpl *self, void *out, const char *title, int mode, void *cb, int appId); /* 0x811A2C18 */
-
-struct LiveAreaUpdater {
-	LiveAreaUpdaterImpl *m_impl;
-};
+#include "livearea_internal.h"
 
 /* 0x811A2910 */
-LiveAreaUpdater *liveareaUpdaterCtor(LiveAreaUpdater *u)
+LiveAreaUpdater *liveareaUpdaterCtor(LiveAreaUpdater *updater)
 {
 	LiveAreaUpdaterImpl *mem = (LiveAreaUpdaterImpl *)operator new(12);
-	u->m_impl = (mem != NULL) ? liveareaUpdaterImplCtor(mem) : NULL;
-	return u;
+	updater->m_impl = (mem != NULL) ? liveareaUpdaterImplCtor(mem) : NULL;
+	return updater;
 }
 
 /* 0x811A292C */
-LiveAreaUpdater *liveareaUpdaterDtor(LiveAreaUpdater *u)
+LiveAreaUpdater *liveareaUpdaterDtor(LiveAreaUpdater *updater)
 {
-	if (u->m_impl != NULL) {
-		liveareaUpdaterImplDtor(u->m_impl);
-		operator delete(u->m_impl);
+	if (updater->m_impl != NULL) {
+		liveareaUpdaterImplDtor(updater->m_impl);
+		operator delete(updater->m_impl);
 	}
-	return u;
+	return updater;
 }
 
 /* 0x811A2940 */
-int liveareaUpdaterStart(LiveAreaUpdater *u)
+int liveareaUpdaterStart(LiveAreaUpdater *updater)
 {
-	return liveareaUpdaterImplStart(u->m_impl);
+	return liveareaUpdaterImplStart(updater->m_impl);
 }
 
 /* 0x811A294A */
-int liveareaUpdaterStop(LiveAreaUpdater *u)
+int liveareaUpdaterStop(LiveAreaUpdater *updater)
 {
-	return liveareaUpdaterImplStop(u->m_impl);
+	return liveareaUpdaterImplStop(updater->m_impl);
 }
 
 /* 0x811A2954 */
-int liveareaUpdaterSub954(LiveAreaUpdater *u, void *out, const char *title, SceInt64 *ts,
-			  int mode, void *cb, int appId)
+int liveareaUpdaterRequestContentUpdate(LiveAreaUpdater *updater, SceUInt64 *outId,
+					const char *titleId, const SceUInt64 *timestamp,
+					int mode, void *callback, int pageKey)
 {
-	return liveareaUpdaterImplUpdateInfo(u->m_impl, out, title, ts, mode, cb, appId);
+	return liveareaUpdaterImplUpdateContent(updater->m_impl, outId, titleId, timestamp,
+						mode, callback, pageKey);
 }
 
 /* 0x811A2972 */
-int liveareaUpdaterSub972(LiveAreaUpdater *u, void *out, int titleId, int flags, int mode, int opt)
+int liveareaUpdaterRequestActivityRevert(LiveAreaUpdater *updater, SceUInt64 *outId,
+					 int titleId, int flags, int mode, int option)
 {
-	return liveareaUpdaterImplUpdateInfo2(u->m_impl, out, titleId, flags, mode, opt);
+	return liveareaUpdaterImplUpdateContent(updater->m_impl, outId, (const char *)titleId,
+						(const SceUInt64 *)flags, mode, (void *)option, 0);
 }
 
 /* 0x811A29C0 */
-int liveareaUpdaterSub9C0(LiveAreaUpdater *u, void *out, const char *title, int mode,
-			  void *arg, void *cb, int appId)
+int liveareaUpdaterRequestPatchCheck(LiveAreaUpdater *updater, SceUInt64 *outId,
+				     const char *titleId, int mode, int appType,
+				     void *callback, int pageKey)
 {
-	return liveareaUpdaterImplUpdateExt(u->m_impl, out, title, mode, arg, cb, appId);
+	return liveareaUpdaterImplCheckPatch(updater->m_impl, outId, titleId, mode, appType,
+					     callback, pageKey);
 }
 
 /* 0x811A29DA */
-int liveareaUpdaterSub9DA(LiveAreaUpdater *u, void *out, const char *title, int mode,
-			  void *cb, int appId)
+int liveareaUpdaterRequestFeedUpdate(LiveAreaUpdater *updater, SceUInt64 *outId,
+				     const char *titleId, int mode, void *callback, int pageKey)
 {
-	return liveareaUpdaterImplUpdateFeed(u->m_impl, out, title, mode, cb, appId);
+	return liveareaUpdaterImplUpdateFeed(updater->m_impl, outId, titleId, mode, callback, pageKey);
 }
 
 /* 0x811A29F0 */
-int liveareaUpdaterSub9F0(LiveAreaUpdater *u, void *out, const char *title, int mode,
-			  void *cb, int appId)
+int liveareaUpdaterRequestClean(LiveAreaUpdater *updater, SceUInt64 *outId,
+				const char *titleId, int mode, void *callback, int pageKey)
 {
-	return liveareaUpdaterImplUpdateDolce(u->m_impl, out, title, mode, cb, appId);
+	return liveareaUpdaterImplCleanCache(updater->m_impl, outId, titleId, mode, callback, pageKey);
 }

@@ -8,21 +8,9 @@
 #include <job/job.h>
 #include <common/main_thread_call_list.h>
 #include <std/map>
-#include "../../livespace_db/lsdb_keys.h"
+#include "../../../shell_cron.h"
+#include "livearea_internal.h"
 
-struct LiveAreaCronService {
-	virtual ~LiveAreaCronService();
-	virtual void vfn1();
-	virtual void vfn2();
-	virtual void vfn3();
-	virtual int Register(SceUInt32 *outId, int (*cb)(int, void *), void *arg,
-			     int sched, int flags, const void *opt);
-	virtual int Unregister(SceUInt32 id);
-	virtual void vfn6();
-	virtual int GetSchedule();
-};
-
-extern LiveAreaCronService *liveareaGetCronService(void);	/* 0x810FB632 */
 extern void liveareaDisableAutoSuspendCb(void *arg);		/* 0x8141FF6C */
 
 class LiveAreaDisableAutoSuspendJob : public paf::job::JobItem {
@@ -66,13 +54,13 @@ public:
 	static void UnregisterCallback(CronCallback cb);		/* 0x81199FC0 */
 	static int Start(void);						/* 0x8119A072 */
 	void EnqueueDisableAutoSuspend(void);				/* 0x8119A14E */
-	static int OnCronCallback(int arg, void *userdata);		/* 0x8119A244 */
+	static int OnCronCallback(SceUID handle, void *userdata);	/* 0x8119A244 */
 	static void OnDoneCallback(void);				/* 0x8119A346 */
 
 	paf::thread::RMutex m_mutex;				/* +0x00 */
 	paf::job::JobQueue *m_queue;				/* +0x20 */
 	SceInt64 m_reserved;					/* +0x28 */
-	SceUInt32 m_cronId;					/* +0x30 */
+	SceUID m_cronId;					/* +0x30 */
 	paf::map<CronCallback, void *> m_callbacks;		/* +0x34 */
 	bool m_running;						/* +0x40 */
 };
@@ -86,11 +74,11 @@ LiveAreaDailyCronJob::LiveAreaDailyCronJob()
 	  m_callbacks(),
 	  m_running(false)
 {
-	paf::job::JobQueue::Option opt;
-	opt.priority = 0x1000010A;
-	opt.stackSize = 0x4000;
-	opt.numThreads = 1;
-	m_queue = new paf::job::JobQueue("SceLiveAreaDailyCronJob", &opt);
+	paf::job::JobQueue::Option option;
+	option.priority = 0x1000010A;
+	option.stackSize = 0x4000;
+	option.numThreads = 1;
+	m_queue = new paf::job::JobQueue("SceLiveAreaDailyCronJob", &option);
 }
 
 /* 0x81199EC0 */
@@ -123,15 +111,16 @@ void LiveAreaDailyCronJob::UnregisterCallback(CronCallback cb)
 int LiveAreaDailyCronJob::Start(void)
 {
 	LiveAreaDailyCronJob &inst = GetInstance();
-	LiveAreaCronService *svc = liveareaGetCronService();
-	if (svc == NULL)
+	ShellCron *cron = shellCronGetInstance();
+	if (cron == NULL)
 		return (int)0x80107901;
 
-	unsigned char opt[2];
-	opt[0] = 1;
-	opt[1] = 0;
-	int sched = liveareaGetCronService()->GetSchedule();
-	int ret = svc->Register(&inst.m_cronId, OnCronCallback, &inst, sched, 127, opt);
+	ShellCronOption option;
+	option.wakeUp = true;
+	option.persist = false;
+	int secondOfDay = shellCronGetInstance()->GetDailyTime();
+	int ret = cron->AddDaily(&inst.m_cronId, OnCronCallback, &inst,
+				 secondOfDay, SHELL_CRON_EVERY_DAY, &option);
 	if (ret != 0)
 		return ret;
 	return 0;
@@ -146,9 +135,9 @@ void LiveAreaDailyCronJob::EnqueueDisableAutoSuspend(void)
 }
 
 /* 0x8119A244 */
-int LiveAreaDailyCronJob::OnCronCallback(int arg, void *userdata)
+int LiveAreaDailyCronJob::OnCronCallback(SceUID handle, void *userdata)
 {
-	(void)arg;
+	(void)handle;
 	LiveAreaDailyCronJob *self = (LiveAreaDailyCronJob *)userdata;
 	paf::map<CronCallback, void *> copy;
 
@@ -176,8 +165,8 @@ void LiveAreaDailyCronJob::OnDoneCallback(void)
 /* 0x8119A3A8 */
 LiveAreaDailyCronJob::~LiveAreaDailyCronJob()
 {
-	LiveAreaCronService *svc = liveareaGetCronService();
-	if (svc != NULL && svc->Unregister(m_cronId) == 0)
+	ShellCron *cron = shellCronGetInstance();
+	if (cron != NULL && cron->Remove(m_cronId) == 0)
 		m_cronId = 0;
 
 	if (m_queue != NULL) {

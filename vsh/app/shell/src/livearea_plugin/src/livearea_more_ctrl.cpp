@@ -1,66 +1,22 @@
 /*
  * livearea_more_ctrl.cpp: livearea_plugin "load more" footer controller
- * (0x811A1348-0x811A1EF4, sti 0x811A1E82). The file and class names are ours (PLACEHOLDER).
+ * (0x811A1348-0x811A1EF4, sti 0x811A1E82).
  */
-#include <stddef.h>
-#include <scetypes.h>
 #include <std/string.h>
-#include <std/string>
-#include <plugin.h>
-#include <common/ref_obj.h>
-#include <widget/core/widget.h>
-#include <widget/w_list_view.h>
 #include <widget/w_busyindicator.h>
 #include <timer/timer.h>
-#include "../../livespace_db/lsdb_keys.h"
-
-extern paf::Plugin *g_liveareaPlugin;				/* 0x81566F94 */
-
-extern void liveareaListSrcSetSeg(paf::common::RefObj *src, int idx, paf::common::RefObj **cell, void *param); /* 0x8134A8D2 */
-extern void liveareaListSrcRemoveSeg(paf::common::RefObj *src, int idx); /* 0x8134AAA2 */
-
-class LiveAreaMoreCtrl {
-public:
-	typedef void (*MoreCallback)(void *);
-
-	LiveAreaMoreCtrl(paf::ui::ListView *lv, int segIdx, paf::Plugin *plugin,
-			 MoreCallback cb, void *arg);		/* 0x811A1348 */
-	virtual ~LiveAreaMoreCtrl();				/* 0x811A13C4 / 0x811A13EE */
-
-	virtual void SetState(int state, paf::ui::Widget *hdr);	/* 0x811A141E */
-	virtual void Enable();					/* 0x811A1AF2 */
-	virtual void Disable();					/* 0x811A1B76 */
-	virtual void Show();					/* 0x811A1BA2 */
-	virtual void Hide();					/* 0x811A1C7C */
-	virtual void OnResult(bool hasErr);			/* 0x811A1D10 */
-	virtual paf::IDParam GetTemplateId();			/* 0x811A1D2A */
-	virtual paf::IDParam GetHeaderId();			/* 0x811A1D6E */
-	virtual bool IsScrolledToBottom();			/* 0x811A1DB2 */
-	virtual void OnScroll();				/* 0x811A1E4E */
-
-	static void OnScrollEvent(int eventId, paf::ui::Handler *h, paf::ui::Event *ev, void *arg); /* 0x811A1E76 */
-
-	paf::ui::ListView *m_listView;				/* +0x04 */
-	int m_segIdx;						/* +0x08 */
-	paf::Plugin *m_plugin;					/* +0x0C */
-	MoreCallback m_cb;					/* +0x10 */
-	void *m_arg;						/* +0x14 */
-	bool m_flag18;						/* +0x18 */
-	bool m_hasErr;						/* +0x19 */
-	unsigned char m_pad1A[2];
-	int m_state;						/* +0x1C */
-};
+#include "livearea_internal.h"
 
 /* 0x811A1348 */
-LiveAreaMoreCtrl::LiveAreaMoreCtrl(paf::ui::ListView *lv, int segIdx, paf::Plugin *plugin,
-				   MoreCallback cb, void *arg)
-	: m_listView(lv),
-	  m_segIdx(segIdx),
+LiveAreaMoreCtrl::LiveAreaMoreCtrl(paf::ui::FileList *fileList, int segmentIndex,
+				   paf::Plugin *plugin, MoreCallback callback, void *userdata)
+	: m_fileList(fileList),
+	  m_segmentIndex(segmentIndex),
 	  m_plugin(plugin),
-	  m_cb(cb),
-	  m_arg(arg),
-	  m_flag18(false),
-	  m_hasErr(false),
+	  m_callback(callback),
+	  m_userdata(userdata),
+	  m_isScrollHooked(false),
+	  m_hasError(false),
 	  m_state(0)
 {
 }
@@ -68,76 +24,76 @@ LiveAreaMoreCtrl::LiveAreaMoreCtrl(paf::ui::ListView *lv, int segIdx, paf::Plugi
 /* 0x811A13C4 / 0x811A13EE */
 LiveAreaMoreCtrl::~LiveAreaMoreCtrl()
 {
-	m_listView->DeleteEventCallback(268435457, OnScrollEvent, this);
+	m_fileList->DeleteEventCallback(268435457, OnScrollEvent, this);
 }
 
 /* 0x811A141E */
-void LiveAreaMoreCtrl::SetState(int state, paf::ui::Widget *hdr)
+void LiveAreaMoreCtrl::SetState(int state, paf::ui::Widget *header)
 {
 	if (state == m_state)
 		return;
 	m_state = state;
-	if (hdr == NULL)
-		hdr = m_listView->GetSegmentHeader(m_segIdx);
+	if (header == NULL)
+		header = m_fileList->GetSegmentHeader(m_segmentIndex);
 
 	if (state == 1) {
-		if (hdr != NULL) {
+		if (header != NULL) {
 			paf::IDParam busyId((uint32_t)-1734585631);
-			paf::ui::BusyIndicator *busy = (paf::ui::BusyIndicator *)hdr->FindChild(busyId, 0);
-			paf::IDParam id2(1750994960U);
-			paf::ui::Widget *w2 = hdr->FindChild(id2, 0);
-			paf::IDParam id3(612899877U);
-			paf::ui::Widget *w3 = hdr->FindChild(id3, 0);
+			paf::ui::BusyIndicator *busy = (paf::ui::BusyIndicator *)header->FindChild(busyId, 0);
+			paf::IDParam loadingLabelId(1750994960U);
+			paf::ui::Widget *loadingLabel = header->FindChild(loadingLabelId, 0);
+			paf::IDParam idleLabelId(612899877U);
+			paf::ui::Widget *idleLabel = header->FindChild(idleLabelId, 0);
 			if (busy != NULL)
 				busy->Stop();
-			if (w2 != NULL) {
-				paf::Timer *t = new paf::Timer();
-				t->InitTimer(0.0f, 0, -1, 0, NULL);
-				ScePafWidget_4588699E(w2, t, 2, 0.0f, NULL);
+			if (loadingLabel != NULL) {
+				paf::Timer *fadeTimer = new paf::Timer();
+				fadeTimer->InitTimer(0.0f, 0, -1, 0, NULL);
+				ScePafWidget_4588699E(loadingLabel, fadeTimer, 2, 0.0f, NULL);
 			}
-			if (w3 != NULL) {
-				paf::Timer *t = new paf::Timer();
-				t->InitTimer(0.0f, 0, -1, 0, NULL);
-				ScePafWidget_FF5BC957(w3, t, 2, 0.0f, NULL);
+			if (idleLabel != NULL) {
+				paf::Timer *fadeTimer = new paf::Timer();
+				fadeTimer->InitTimer(0.0f, 0, -1, 0, NULL);
+				ScePafWidget_FF5BC957(idleLabel, fadeTimer, 2, 0.0f, NULL);
 			}
 		}
 	} else if (state == 2) {
-		if (hdr != NULL) {
+		if (header != NULL) {
 			paf::IDParam busyId((uint32_t)-1734585631);
-			paf::ui::BusyIndicator *busy = (paf::ui::BusyIndicator *)hdr->FindChild(busyId, 0);
-			paf::IDParam id2(1750994960U);
-			paf::ui::Widget *w2 = hdr->FindChild(id2, 0);
-			paf::IDParam id3(612899877U);
-			paf::ui::Widget *w3 = hdr->FindChild(id3, 0);
+			paf::ui::BusyIndicator *busy = (paf::ui::BusyIndicator *)header->FindChild(busyId, 0);
+			paf::IDParam loadingLabelId(1750994960U);
+			paf::ui::Widget *loadingLabel = header->FindChild(loadingLabelId, 0);
+			paf::IDParam idleLabelId(612899877U);
+			paf::ui::Widget *idleLabel = header->FindChild(idleLabelId, 0);
 			if (busy != NULL)
 				busy->Start();
-			if (w2 != NULL) {
-				paf::Timer *t = new paf::Timer();
-				t->InitTimer(0.0f, 0, -1, 0, NULL);
-				ScePafWidget_FF5BC957(w2, t, 2, 0.0f, NULL);
+			if (loadingLabel != NULL) {
+				paf::Timer *fadeTimer = new paf::Timer();
+				fadeTimer->InitTimer(0.0f, 0, -1, 0, NULL);
+				ScePafWidget_FF5BC957(loadingLabel, fadeTimer, 2, 0.0f, NULL);
 			}
-			if (w3 != NULL) {
-				paf::Timer *t = new paf::Timer();
-				t->InitTimer(0.0f, 0, -1, 0, NULL);
-				ScePafWidget_4588699E(w3, t, 2, 0.0f, NULL);
+			if (idleLabel != NULL) {
+				paf::Timer *fadeTimer = new paf::Timer();
+				fadeTimer->InitTimer(0.0f, 0, -1, 0, NULL);
+				ScePafWidget_4588699E(idleLabel, fadeTimer, 2, 0.0f, NULL);
 			}
 		}
-		if (m_cb != NULL)
-			m_cb(m_arg);
+		if (m_callback != NULL)
+			m_callback(m_userdata);
 	}
 }
 
 /* 0x811A1AF2 */
 void LiveAreaMoreCtrl::Enable()
 {
-	paf::common::RefObj *segSrc = *(paf::common::RefObj **)((char *)m_listView + 1252);
+	paf::ui::filelist::SegmentSource *segSrc = m_fileList->m_segment_source.get();
 	if (segSrc != NULL) {
 		segSrc->AddRef();
 		paf::common::RefObj *nullCell = NULL;
-		unsigned char param[44];
-		sce_paf_memset(param, 0, sizeof(param));
-		param[40] = 1;
-		liveareaListSrcSetSeg(segSrc, m_segIdx, &nullCell, param);
+		paf::ui::filelist::SegmentListAccessor::OptionParam option;
+		sce_paf_memset(&option, 0, sizeof(option));
+		option.m_joined = true;
+		activityUiSegmentSetCell(segSrc, m_segmentIndex, &nullCell, &option);
 		if (nullCell != NULL)
 			nullCell->Release();
 		SetState(0, NULL);
@@ -148,10 +104,10 @@ void LiveAreaMoreCtrl::Enable()
 /* 0x811A1B76 */
 void LiveAreaMoreCtrl::Disable()
 {
-	paf::common::RefObj *segSrc = *(paf::common::RefObj **)((char *)m_listView + 1252);
+	paf::ui::filelist::SegmentSource *segSrc = m_fileList->m_segment_source.get();
 	if (segSrc != NULL) {
 		segSrc->AddRef();
-		liveareaListSrcRemoveSeg(segSrc, m_segIdx);
+		activityUiSegmentRemoveCell(segSrc, m_segmentIndex);
 		SetState(0, NULL);
 		segSrc->Release();
 	}
@@ -160,7 +116,7 @@ void LiveAreaMoreCtrl::Disable()
 /* 0x811A1BA2 */
 void LiveAreaMoreCtrl::Show()
 {
-	m_hasErr = false;
+	m_hasError = false;
 	if (m_state == 1)
 		return;
 	if (m_state == 2) {
@@ -168,25 +124,25 @@ void LiveAreaMoreCtrl::Show()
 		return;
 	}
 	paf::IDParam tmplId = GetTemplateId();
-	paf::Plugin::TemplateOpenParam op;
-	g_liveareaPlugin->TemplateOpen(m_listView, tmplId, op);
-	paf::IDParam hdrId = GetHeaderId();
-	paf::ui::Widget *child = m_listView->FindChild(hdrId, 0);
-	m_listView->SetSegmentHeader(m_segIdx, child, false, false);
+	paf::Plugin::TemplateOpenParam openParam;
+	g_liveareaPlugin->TemplateOpen(m_fileList, tmplId, openParam);
+	paf::IDParam headerId = GetHeaderId();
+	paf::ui::Widget *child = m_fileList->FindChild(headerId, 0);
+	m_fileList->SetSegmentHeader(m_segmentIndex, child, false, false);
 	SetState(1, child);
 }
 
 /* 0x811A1C7C */
 void LiveAreaMoreCtrl::Hide()
 {
-	m_listView->SetSegmentHeader(m_segIdx, NULL, false, false);
+	m_fileList->SetSegmentHeader(m_segmentIndex, NULL, false, false);
 	SetState(0, NULL);
 }
 
 /* 0x811A1D10 */
-void LiveAreaMoreCtrl::OnResult(bool hasErr)
+void LiveAreaMoreCtrl::OnResult(bool hasError)
 {
-	m_hasErr = hasErr;
+	m_hasError = hasError;
 	SetState(1, NULL);
 }
 
@@ -205,28 +161,28 @@ paf::IDParam LiveAreaMoreCtrl::GetHeaderId()
 /* 0x811A1DB2 */
 bool LiveAreaMoreCtrl::IsScrolledToBottom()
 {
-	paf::ui::Widget *hdr = m_listView->GetSegmentHeader(m_segIdx);
-	if (hdr == NULL)
+	paf::ui::Widget *header = m_fileList->GetSegmentHeader(m_segmentIndex);
+	if (header == NULL)
 		return false;
-	paf::math::v2 focus = m_listView->GetViewFocus();
-	float scrollY = -((const float *)&focus)[1];
-	float contentH = *(const float *)((const char *)m_listView + 724);
-	float viewH = ((const float *)m_listView->GetSize(0))[1];
-	return scrollY > (contentH - 10.0f) - (viewH * 0.5f);
+	float scrollY = -m_fileList->GetViewFocus().extract_y();
+	float contentHeight = m_fileList->m_view_size.extract_y();
+	float viewHeight = m_fileList->GetSize(0)->extract_y();
+	return scrollY > (contentHeight - 10.0f) - (viewHeight * 0.5f);
 }
 
 /* 0x811A1E4E */
 void LiveAreaMoreCtrl::OnScroll()
 {
-	if (m_listView->GetSegmentHeader(m_segIdx) != NULL && IsScrolledToBottom())
+	if (m_fileList->GetSegmentHeader(m_segmentIndex) != NULL && IsScrolledToBottom())
 		SetState(2, NULL);
 }
 
 /* 0x811A1E76 */
-void LiveAreaMoreCtrl::OnScrollEvent(int eventId, paf::ui::Handler *h, paf::ui::Event *ev, void *arg)
+void LiveAreaMoreCtrl::OnScrollEvent(int eventId, paf::ui::Handler *handler,
+				     paf::ui::Event *event, void *userdata)
 {
 	(void)eventId;
-	(void)h;
-	(void)ev;
-	((LiveAreaMoreCtrl *)arg)->OnScroll();
+	(void)handler;
+	(void)event;
+	((LiveAreaMoreCtrl *)userdata)->OnScroll();
 }

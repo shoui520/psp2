@@ -1,368 +1,341 @@
 /*
  * livearea_visualizer.cpp: livearea_plugin activity list item & visualizer factories
- * (0x811A1EF4-0x811A2910, sti 0x811A289E). The file and class names are ours (PLACEHOLDER).
+ * (0x811A1EF4-0x811A2910, sti 0x811A289E).
  */
-#include <stddef.h>
-#include <scetypes.h>
-#include <std/string.h>
-#include <std/string>
-#include <plugin.h>
-#include <framework.h>
-#include <common/ref_obj.h>
-#include <common/shared_ptr.h>
-#include <widget/core/widget.h>
 #include <widget/w_list_item.h>
-#include <widget/w_list_view.h>
-#include <graphics/surface/surface.h>
-#include "../../livespace_db/lsdb_keys.h"
-
-extern paf::Plugin *g_liveareaPlugin;				/* 0x81566F94 */
-struct LiveAreaMgr;
-extern LiveAreaMgr *g_liveareaMgr;				/* 0x815670A8 */
-struct LiveAreaCacheMgr;
-extern LiveAreaCacheMgr *g_liveareaCache;			/* 0x81567080 */
+#include "livearea_internal.h"
 
 extern "C" {
 int sceAppMgrLaunchAppByName(unsigned int flags, const char *name, const char *param);
 }
 
-extern void *liveareaPageFindByListView(void *lv);		/* 0x8119C0FA */
-extern void liveareaFeedSetDialogId(void *feed, int id);	/* 0x8119E790 */
-extern int liveareaIsGamePlayUri(paf::common::RefObj **item);	/* 0x8119F9EA */
-extern void *liveareaStatusDlgCtor(void *mem, int *appIdPtr, paf::ui::Widget *parent,
-				   paf::common::RefObj **item, int type, void *ctxA,
-				   void *tsSp, void **iconRef);	/* 0x811A078C */
-extern void liveareaStatusDlgShow(void *dlg);			/* 0x811A0B5C */
-extern void liveareaStatusDlgSetFlagE8(void *dlg, bool v);	/* 0x811A0F9E */
-extern void liveareaStatusDlgSetFlagE9(void *dlg, bool v);	/* 0x811A0FA6 */
-extern void liveareaStatusDlgSub31DA(void *dlg, void *item);	/* 0x813531DA */
-
-extern void liveareaBaseItemCtor(void *self, int itemType, paf::Plugin *p, void *cache, void *ctx); /* 0x8134DA7E */
-extern int liveareaGetItemType(void *self);			/* 0x812FEA62 */
-extern void liveareaGetItemCtx(void *outSp, void *self);	/* 0x8134D860 */
-extern int liveareaSub349C32(void);				/* 0x81349C32 */
-extern void *liveareaGetIconShader(void);			/* 0x8139303C */
-extern void liveareaBaseVisCtor(void *self, paf::Plugin *p, void *cache); /* 0x813508E8 */
-extern void liveareaBaseSubItemCtor(void *self, int itemType, paf::Plugin *p, void *cache, void *ctx); /* 0x8135B39E */
-extern void liveareaBaseSubVisCtor(void *self, paf::Plugin *p, void *cache, paf::common::RefObj **item); /* 0x8135D0DC */
-
-class LiveAreaFeedItem : public paf::common::RefObj {
+class LiveAreaFeedItem : public ActivityFeedItemBase {
 public:
-	LiveAreaFeedItem(int itemType, paf::common::SharedPtr<int> *ctxSp, int flags, int width, int height,
-			 paf::common::SharedPtr<SceUInt64> *tsSp, void **iconRef); /* 0x811A1EF4 */
+	LiveAreaFeedItem(int itemType, paf::common::SharedPtr<int> *feedContext,
+			 int flags, int width, int height,
+			 paf::common::SharedPtr<SceUInt64> *lastReadTime,
+			 paf::cache::CacheImageInterface **iconRef); /* 0x811A1EF4 */
 	virtual ~LiveAreaFeedItem() {}
 
 	void OnClick();						/* 0x811A2016 */
-	int SetupIcon(paf::ui::Widget *w);			/* 0x811A2196 */
+	int SetupIcon(paf::ui::Widget *widget);			/* 0x811A2196 */
 	bool IsUnread();					/* 0x811A2386 */
 	bool HasComment();					/* 0x811A23CE */
-	bool GetFlag78();					/* 0x811A2406 */
-	void Noop();						/* 0x811A240C */
+	bool GetShowUnreadBadge();				/* 0x811A2406 */
+	void OnItemUpdated();					/* 0x811A240C */
 
-	unsigned char m_base[100];				/* +0x08 */
 	paf::common::SharedPtr<SceUInt64> m_lastReadTime;	/* +0x6C */
-	void *m_iconRef;					/* +0x74 */
-	bool m_flag78;						/* +0x78 */
-	bool m_flag79;						/* +0x79 */
-	unsigned char m_pad7A[6];
+	paf::cache::CacheImageInterface *m_iconRef;		/* +0x74 */
+	bool m_showUnreadBadge;					/* +0x78 */
+	bool m_forceGameIcon;					/* +0x79 */
+	unsigned char itemFlagPadding[6];
 };
 
-class LiveAreaFeedVisualizer {
+class LiveAreaFeedVisualizer : public ActivityFeedVisualizerBase {
 public:
-	LiveAreaFeedVisualizer(paf::common::SharedPtr<SceUInt64> *tsSp, void **iconRef); /* 0x811A240E */
+	LiveAreaFeedVisualizer(paf::common::SharedPtr<SceUInt64> *lastReadTime,
+			       paf::cache::CacheImageInterface **iconRef); /* 0x811A240E */
 	virtual ~LiveAreaFeedVisualizer();			/* 0x811A2476 / 0x811A24F0 */
 
-	void CreateItem(paf::common::RefObj **out, int itemType, paf::common::SharedPtr<int> *ctxSp, int width, int height); /* 0x811A2500 */
-	void SetFlag1(bool v);					/* 0x811A25B0 */
-	bool GetFlag1();					/* 0x811A25B4 */
-	void SetFlag2(bool v);					/* 0x811A25B8 */
+	void CreateItem(paf::common::RefObj **outItem, int itemType,
+			paf::common::SharedPtr<int> *feedContext,
+			int width, int height);			/* 0x811A2500 */
+	void SetShowUnreadBadge(bool show);			/* 0x811A25B0 */
+	bool GetShowUnreadBadge();				/* 0x811A25B4 */
+	void SetForceGameIcon(bool force);			/* 0x811A25B8 */
 
-	unsigned char m_base[8];				/* +0x04 */
 	paf::common::SharedPtr<SceUInt64> m_lastReadTime;	/* +0x0C */
-	void *m_iconRef;					/* +0x14 */
-	bool m_flag1;						/* +0x18 */
-	bool m_flag2;						/* +0x19 */
-	unsigned char m_pad1A[2];
+	paf::cache::CacheImageInterface *m_iconRef;		/* +0x14 */
+	bool m_showUnreadBadge;					/* +0x18 */
+	bool m_forceGameIcon;					/* +0x19 */
+	unsigned char visFlagPadding[2];
 };
 
-class LiveAreaSubItem : public paf::common::RefObj {
+class LiveAreaSubItem : public ActivitySubItemBase {
 public:
-	LiveAreaSubItem(int itemType, paf::common::SharedPtr<int> *ctxSp, int flags, int width, int height,
-			paf::common::RefObj **item, paf::common::SharedPtr<SceUInt64> *tsSp); /* 0x811A25BC */
+	LiveAreaSubItem(int itemType, paf::common::SharedPtr<int> *feedContext,
+			int flags, int width, int height, ActivityRecord **parentRecord,
+			paf::common::SharedPtr<SceUInt64> *lastReadTime); /* 0x811A25BC */
 	virtual ~LiveAreaSubItem() {}
 
 	bool IsUnread();					/* 0x811A26E4 */
 
-	unsigned char m_base[100];				/* +0x08 */
 	paf::common::SharedPtr<SceUInt64> m_lastReadTime;	/* +0x6C */
-	unsigned char m_pad74[4];
+	unsigned char subItemPadding[4];
 };
 
-class LiveAreaSubVisualizer {
+class LiveAreaSubVisualizer : public ActivitySubVisualizerBase {
 public:
-	LiveAreaSubVisualizer(paf::common::RefObj **item, paf::common::SharedPtr<SceUInt64> *tsSp); /* 0x811A272C */
+	LiveAreaSubVisualizer(ActivityRecord **parentRecord,
+			      paf::common::SharedPtr<SceUInt64> *lastReadTime); /* 0x811A272C */
 	virtual ~LiveAreaSubVisualizer();			/* 0x811A27BE / 0x811A2842 */
 
-	void CreateItem(paf::common::RefObj **out, int itemType, paf::common::SharedPtr<int> *ctxSp, int width, int height); /* 0x811A2852 */
+	void CreateItem(paf::common::RefObj **outItem, int itemType,
+			paf::common::SharedPtr<int> *feedContext,
+			int width, int height);			/* 0x811A2852 */
 
-	unsigned char m_base[8];				/* +0x04 */
-	paf::common::RefObj *m_item;				/* +0x0C */
 	paf::common::SharedPtr<SceUInt64> m_lastReadTime;	/* +0x10 */
 };
 
 /* 0x811A1EF4 */
-LiveAreaFeedItem::LiveAreaFeedItem(int itemType, paf::common::SharedPtr<int> *ctxSp, int flags, int width, int height,
-				   paf::common::SharedPtr<SceUInt64> *tsSp, void **iconRef)
-	: m_lastReadTime(*tsSp),
+LiveAreaFeedItem::LiveAreaFeedItem(int itemType, paf::common::SharedPtr<int> *feedContext,
+				   int flags, int width, int height,
+				   paf::common::SharedPtr<SceUInt64> *lastReadTime,
+				   paf::cache::CacheImageInterface **iconRef)
+	: m_lastReadTime(*lastReadTime),
 	  m_iconRef(*iconRef),
-	  m_flag78(false),
-	  m_flag79(false)
+	  m_showUnreadBadge(false),
+	  m_forceGameIcon(false)
 {
 	(void)flags;
 	(void)width;
 	(void)height;
-	paf::common::SharedPtr<int> sp(*ctxSp);
-	liveareaBaseItemCtor(this, itemType, g_liveareaPlugin, *(void **)g_liveareaCache, &sp);
-	if (m_iconRef != NULL) {
-		typedef void (*AddRefFn)(void *);
-		(*(AddRefFn **)(*(void **)m_iconRef))[6](m_iconRef);
-	}
+	paf::common::SharedPtr<int> contextCopy(*feedContext);
+	activityUiItemBaseCtor(this, itemType, g_liveareaPlugin,
+			       g_liveareaCache->m_manager, &contextCopy);
+	if (m_iconRef != NULL)
+		m_iconRef->AddRef();
 }
 
 /* 0x811A2016 */
 void LiveAreaFeedItem::OnClick()
 {
-	paf::ui::ListItem *li = *(paf::ui::ListItem **)((char *)this + 8);
-	paf::ui::ListView *lv = li->GetListView();
-	int *page = (int *)liveareaPageFindByListView(lv);
+	paf::ui::ListItem *listItem = m_listItem;
+	paf::ui::ListView *listView = listItem->GetListView();
+	LiveAreaPage *page = liveareaPageFindByListView(listView);
 	if (page == NULL)
 		return;
 
-	if (*((int *)g_liveareaMgr + 4) == 2) {
+	if (g_liveareaMgr->m_netState == 2) {
 		sceAppMgrLaunchAppByName(0x20000, "NPXS10016", "signin");
 		return;
 	}
 
-	void *dlg = NULL;
-	void *mem = operator new(240);
-	if (mem != NULL) {
-		paf::ui::Widget *parent = *(paf::ui::Widget **)((char *)li->GetListView() + 360);
-		paf::common::RefObj *item = *(paf::common::RefObj **)((char *)this + 68);
-		if (item != NULL)
-			item->AddRef();
-		int type = liveareaGetItemType(this);
-		paf::common::SharedPtr<int> ctx;
-		liveareaGetItemCtx(&ctx, this);
-		void *icon = m_iconRef;
-		if (icon != NULL) {
-			typedef void (*AddRefFn)(void *);
-			(*(AddRefFn **)(*(void **)icon))[6](icon);
-		}
-		dlg = liveareaStatusDlgCtor(mem, page, parent, &item, type, &ctx, &m_lastReadTime, &icon);
-		if (icon != NULL) {
-			typedef void (*ReleaseFn)(void *);
-			(*(ReleaseFn **)(*(void **)icon))[7](icon);
-		}
-		if (item != NULL)
-			item->Release();
-	}
-	liveareaStatusDlgSetFlagE8(dlg, m_flag78);
-	liveareaStatusDlgSetFlagE9(dlg, m_flag79);
-	liveareaStatusDlgSub31DA(dlg, li);
-	liveareaStatusDlgShow(dlg);
-	ScePafWidget_AC0C81D5(*(paf::ui::Widget **)((char *)li->GetListView() + 360), 0.0f);
-	void *feed = *((void **)page + 62);
-	if (feed != NULL)
-		liveareaFeedSetDialogId(feed, *((int *)dlg + 1));
+	paf::ui::Widget *parent = listView->m_parent;
+	ActivityRecord *record = m_record;
+	if (record != NULL)
+		record->AddRef();
+	int displayMode = activityUiGetItemDisplayMode(this);
+	paf::common::SharedPtr<int> feedContext;
+	activityUiGetItemContext(&feedContext, this);
+	paf::cache::CacheImageInterface *iconRef = m_iconRef;
+	if (iconRef != NULL)
+		iconRef->AddRef();
+
+	LiveAreaStatusDlg *dlg = new LiveAreaStatusDlg(&page->m_pageKey, parent, &record,
+						       displayMode, &feedContext,
+						       &m_lastReadTime, &iconRef);
+	if (iconRef != NULL)
+		iconRef->Release();
+	if (record != NULL)
+		record->Release();
+
+	dlg->SetShowUnreadBadge(m_showUnreadBadge);
+	dlg->SetForceGameIcon(m_forceGameIcon);
+	activityUiStatusDlgOpen(dlg, listItem);
+	dlg->SetupIcon();
+	ScePafWidget_AC0C81D5(parent, 0.0f);
+	if (page->m_feed != NULL)
+		page->m_feed->SetDialogId(dlg->m_dialogId);
 }
 
 /* 0x811A2196 */
-int LiveAreaFeedItem::SetupIcon(paf::ui::Widget *w)
+int LiveAreaFeedItem::SetupIcon(paf::ui::Widget *widget)
 {
-	if (liveareaSub349C32() != 2)
+	if (activityUiGetCurrentCategory() != 2)
 		return 0;
-	if (!m_flag79) {
-		paf::common::RefObj *item = *(paf::common::RefObj **)((char *)this + 68);
-		if (item != NULL)
-			item->AddRef();
-		bool isPlay = (liveareaIsGamePlayUri(&item) != 0);
-		if (item != NULL)
-			item->Release();
+	if (!m_forceGameIcon) {
+		ActivityRecord *record = m_record;
+		if (record != NULL)
+			record->AddRef();
+		bool isPlay = (liveareaIsGamePlayUri(&record) != 0);
+		if (record != NULL)
+			record->Release();
 		if (!isPlay) {
-			ScePafWidget_4588699E(w, NULL, 2, 0.0f, NULL);
+			ScePafWidget_4588699E(widget, NULL, 2, 0.0f, NULL);
 			return 1;
 		}
 	}
-	if (liveareaGetItemType(this) != 1)
+	if (activityUiGetItemDisplayMode(this) != 1)
 		return 0;
 	paf::IDParam texId((uint32_t)-375432280);
 	paf::intrusive_ptr<paf::graph::Surface> surf =
 		paf::Framework::Instance()->GetCommonTexture(texId);
-	w->SetTexture(surf, 0, 0);
+	widget->SetTexture(surf, 0, 0);
 	return 1;
 }
 
 /* 0x811A2386 */
 bool LiveAreaFeedItem::IsUnread()
 {
-	paf::common::RefObj *item = *(paf::common::RefObj **)((char *)this + 68);
-	if (item != NULL)
-		item->AddRef();
-	typedef int (*GetTypeFn)(paf::common::RefObj *);
+	ActivityRecord *record = m_record;
+	if (record != NULL)
+		record->AddRef();
 	bool unread = false;
-	if ((*(GetTypeFn **)(*(void **)item))[2](item) == 1)
-		unread = (*m_lastReadTime.get() < *((SceUInt64 *)item + 6));
-	if (item != NULL)
-		item->Release();
+	if (record->GetRecordKind() == 1)
+		unread = (*m_lastReadTime.get() < record->m_updateTimestamp);
+	if (record != NULL)
+		record->Release();
 	return unread;
 }
 
 /* 0x811A23CE */
 bool LiveAreaFeedItem::HasComment()
 {
-	paf::common::RefObj *item = *(paf::common::RefObj **)((char *)this + 68);
-	if (item != NULL)
-		item->AddRef();
-	typedef int (*GetTypeFn)(paf::common::RefObj *);
-	bool res = false;
-	if ((*(GetTypeFn **)(*(void **)item))[2](item) == 1)
-		res = (*((int *)item + 30) != 0);
-	if (item != NULL)
-		item->Release();
-	return res;
+	ActivityRecord *record = m_record;
+	if (record != NULL)
+		record->AddRef();
+	bool hasComment = false;
+	if (record->GetRecordKind() == 1)
+		hasComment = (record->m_commentCount != 0);
+	if (record != NULL)
+		record->Release();
+	return hasComment;
 }
 
 /* 0x811A2406 */
-bool LiveAreaFeedItem::GetFlag78()
+bool LiveAreaFeedItem::GetShowUnreadBadge()
 {
-	return m_flag78;
+	return m_showUnreadBadge;
 }
 
 /* 0x811A240C */
-void LiveAreaFeedItem::Noop()
+void LiveAreaFeedItem::OnItemUpdated()
 {
 }
 
 /* 0x811A240E */
-LiveAreaFeedVisualizer::LiveAreaFeedVisualizer(paf::common::SharedPtr<SceUInt64> *tsSp, void **iconRef)
-	: m_lastReadTime(*tsSp),
+LiveAreaFeedVisualizer::LiveAreaFeedVisualizer(paf::common::SharedPtr<SceUInt64> *lastReadTime,
+					       paf::cache::CacheImageInterface **iconRef)
+	: m_lastReadTime(*lastReadTime),
 	  m_iconRef(*iconRef),
-	  m_flag1(false),
-	  m_flag2(false)
+	  m_showUnreadBadge(false),
+	  m_forceGameIcon(false)
 {
-	liveareaBaseVisCtor(this, g_liveareaPlugin, *(void **)g_liveareaCache);
-	if (m_iconRef != NULL) {
-		typedef void (*AddRefFn)(void *);
-		(*(AddRefFn **)(*(void **)m_iconRef))[6](m_iconRef);
-	}
+	activityUiFeedVisualizerBaseCtor(this, g_liveareaPlugin, g_liveareaCache->m_manager);
+	if (m_iconRef != NULL)
+		m_iconRef->AddRef();
 }
 
 /* 0x811A2476 / 0x811A24F0 */
 LiveAreaFeedVisualizer::~LiveAreaFeedVisualizer()
 {
-	if (m_iconRef != NULL) {
-		typedef void (*ReleaseFn)(void *);
-		(*(ReleaseFn **)(*(void **)m_iconRef))[7](m_iconRef);
-	}
+	if (m_iconRef != NULL)
+		m_iconRef->Release();
 }
 
 /* 0x811A2500 */
-void LiveAreaFeedVisualizer::CreateItem(paf::common::RefObj **out, int itemType,
-					paf::common::SharedPtr<int> *ctxSp, int width, int height)
+void LiveAreaFeedVisualizer::CreateItem(paf::common::RefObj **outItem, int itemType,
+					paf::common::SharedPtr<int> *feedContext,
+					int width, int height)
 {
-	void *icon = m_iconRef;
-	if (icon != NULL) {
-		typedef void (*AddRefFn)(void *);
-		(*(AddRefFn **)(*(void **)icon))[6](icon);
-	}
-	LiveAreaFeedItem *item = new LiveAreaFeedItem(itemType, ctxSp, 0, width, height, &m_lastReadTime, &icon);
-	*out = item;
+	paf::cache::CacheImageInterface *iconRef = m_iconRef;
+	if (iconRef != NULL)
+		iconRef->AddRef();
+	LiveAreaFeedItem *item = new LiveAreaFeedItem(itemType, feedContext, 0, width, height,
+						      &m_lastReadTime, &iconRef);
+	*outItem = item;
 	if (item != NULL)
 		item->AddRef();
-	if (icon != NULL) {
-		typedef void (*ReleaseFn)(void *);
-		(*(ReleaseFn **)(*(void **)icon))[7](icon);
-	}
-	item->m_flag78 = m_flag1;
-	item->m_flag79 = m_flag2;
+	if (iconRef != NULL)
+		iconRef->Release();
+	item->m_showUnreadBadge = m_showUnreadBadge;
+	item->m_forceGameIcon = m_forceGameIcon;
 }
 
 /* 0x811A25B0 */
-void LiveAreaFeedVisualizer::SetFlag1(bool v)
+void LiveAreaFeedVisualizer::SetShowUnreadBadge(bool show)
 {
-	m_flag1 = v;
+	m_showUnreadBadge = show;
 }
 
 /* 0x811A25B4 */
-bool LiveAreaFeedVisualizer::GetFlag1()
+bool LiveAreaFeedVisualizer::GetShowUnreadBadge()
 {
-	return m_flag1;
+	return m_showUnreadBadge;
 }
 
 /* 0x811A25B8 */
-void LiveAreaFeedVisualizer::SetFlag2(bool v)
+void LiveAreaFeedVisualizer::SetForceGameIcon(bool force)
 {
-	m_flag2 = v;
+	m_forceGameIcon = force;
 }
 
 /* 0x811A25BC */
-LiveAreaSubItem::LiveAreaSubItem(int itemType, paf::common::SharedPtr<int> *ctxSp, int flags, int width, int height,
-				 paf::common::RefObj **item, paf::common::SharedPtr<SceUInt64> *tsSp)
-	: m_lastReadTime(*tsSp)
+LiveAreaSubItem::LiveAreaSubItem(int itemType, paf::common::SharedPtr<int> *feedContext,
+				 int flags, int width, int height, ActivityRecord **parentRecord,
+				 paf::common::SharedPtr<SceUInt64> *lastReadTime)
+	: m_lastReadTime(*lastReadTime)
 {
 	(void)flags;
 	(void)width;
 	(void)height;
-	paf::common::SharedPtr<int> sp(*ctxSp);
-	paf::common::RefObj *it = *item;
-	if (it != NULL)
-		it->AddRef();
-	liveareaBaseSubItemCtor(this, itemType, g_liveareaPlugin, *(void **)g_liveareaCache, &sp);
-	if (it != NULL)
-		it->Release();
+	paf::common::SharedPtr<int> contextCopy(*feedContext);
+	ActivityRecord *parentRec = *parentRecord;
+	if (parentRec != NULL)
+		parentRec->AddRef();
+	activityUiSubItemBaseCtor(this, itemType, g_liveareaPlugin,
+				  g_liveareaCache->m_manager, &contextCopy);
+	if (parentRec != NULL)
+		parentRec->Release();
 }
 
 /* 0x811A26E4 */
 bool LiveAreaSubItem::IsUnread()
 {
-	paf::common::RefObj *item = *(paf::common::RefObj **)((char *)this + 68);
-	if (item != NULL)
-		item->AddRef();
-	typedef int (*GetTypeFn)(paf::common::RefObj *);
+	ActivityRecord *record = m_record;
+	if (record != NULL)
+		record->AddRef();
 	bool unread = false;
-	if ((*(GetTypeFn **)(*(void **)item))[2](item) == 2)
-		unread = (*m_lastReadTime.get() < *((SceUInt64 *)item + 6));
-	if (item != NULL)
-		item->Release();
+	if (record->GetRecordKind() == 2)
+		unread = (*m_lastReadTime.get() < record->m_updateTimestamp);
+	if (record != NULL)
+		record->Release();
 	return unread;
 }
 
 /* 0x811A272C */
-LiveAreaSubVisualizer::LiveAreaSubVisualizer(paf::common::RefObj **item, paf::common::SharedPtr<SceUInt64> *tsSp)
-	: m_item(NULL),
-	  m_lastReadTime(*tsSp)
+LiveAreaSubVisualizer::LiveAreaSubVisualizer(ActivityRecord **parentRecord,
+					     paf::common::SharedPtr<SceUInt64> *lastReadTime)
+	: m_lastReadTime(*lastReadTime)
 {
-	paf::common::RefObj *it = *item;
-	if (it != NULL)
-		it->AddRef();
-	liveareaBaseSubVisCtor(this, g_liveareaPlugin, *(void **)g_liveareaCache, &it);
-	if (it != NULL)
-		it->Release();
+	m_parentRecord = NULL;
+	ActivityRecord *rec = *parentRecord;
+	if (rec != NULL)
+		rec->AddRef();
+	activityUiSubVisualizerBaseCtor(this, g_liveareaPlugin, g_liveareaCache->m_manager, &rec);
+	if (rec != NULL)
+		rec->Release();
 }
 
 /* 0x811A27BE / 0x811A2842 */
 LiveAreaSubVisualizer::~LiveAreaSubVisualizer()
 {
-	if (m_item != NULL)
-		m_item->Release();
+	if (m_parentRecord != NULL)
+		m_parentRecord->Release();
 }
 
 /* 0x811A2852 */
-void LiveAreaSubVisualizer::CreateItem(paf::common::RefObj **out, int itemType,
-				       paf::common::SharedPtr<int> *ctxSp, int width, int height)
+void LiveAreaSubVisualizer::CreateItem(paf::common::RefObj **outItem, int itemType,
+				       paf::common::SharedPtr<int> *feedContext,
+				       int width, int height)
 {
-	LiveAreaSubItem *item = new LiveAreaSubItem(itemType, ctxSp, 0, width, height, &m_item, &m_lastReadTime);
-	*out = item;
+	LiveAreaSubItem *item = new LiveAreaSubItem(itemType, feedContext, 0, width, height,
+						    &m_parentRecord, &m_lastReadTime);
+	*outItem = item;
 	if (item != NULL)
 		item->AddRef();
+}
+
+LiveAreaFeedVisualizer *liveareaFeedVisualizerCtor(void *mem,
+						   paf::common::SharedPtr<SceUInt64> *lastReadTime,
+						   paf::cache::CacheImageInterface **iconRef)
+{
+	return new (mem) LiveAreaFeedVisualizer(lastReadTime, iconRef);
+}
+
+LiveAreaSubVisualizer *liveareaSubVisualizerCtor(void *mem, ActivityRecord **record,
+						 paf::common::SharedPtr<SceUInt64> *lastReadTime)
+{
+	return new (mem) LiveAreaSubVisualizer(record, lastReadTime);
 }

@@ -1,69 +1,62 @@
 /*
- * SceShell livearea_plugin: LiveAreaRequestUpdateJob & update/promote/activity/clean tasks
+ * SceShell livearea_plugin: LiveAreaRequestUpdateJob & update/patch/activity/clean tasks
  * 3.65-CEX: 0x811B307C - 0x811B6624 (sti 0x811B65B4)
  */
-
-#include <stddef.h>
-#include <scetypes.h>
 #include <std/stdio.h>
 #include <std/string.h>
 #include <std/ctype.h>
-#include <std/string>
 #include <buffer/buffer.h>
-#include <common/shared_ptr.h>
 #include <dir/dir.h>
 #include <file/file.h>
 #include <file/httpfile.h>
 #include <file/localfile.h>
-#include <job/job.h>
-#include <plugin.h>
 #include <system/system.h>
-#include <thread/thread.h>
+#include <rtc.h>
+#include <modulemgr/module_info.h>
+#include "livearea_internal.h"
 
-#include "../../livespace_db/lsdb_keys.h"
-
-struct SceRtcTickLocal {
-	SceUInt64 tick;
+struct LiveAreaPatchCheckParam {
+	void *(*allocFn)(SceSize);
+	void (*freeFn)(void *);
+	int mode;
+	char titleId[16];
+	char appVer[8];
+	char contentId[48];
+	int sysVer;
+	int pspSysVer;
+	char gameDataId[20];
 };
 
 extern "C" {
-extern int sceRtcParseDateTime(SceRtcTickLocal *out, const char *str);
-extern int sceRtcFormatRFC2822(char *out, const SceRtcTickLocal *utc, int tz);
-extern int sceRegMgrGetKeyStrForUser(const char *cat, const char *name, char *buf, SceSize size);
-extern int sceKernelGetSystemSwVersion(void *param);
-extern int sceCompatGetPspSystemSoftwareVersion(int arg);
+extern int sceRegMgrGetKeyStrForUser(const char *category, const char *name, char *buf, SceSize size);
+extern int sceCompatGetPspSystemSoftwareVersion(int mode);
 extern int vshSblSsIsDevelopmentMode(void);
 extern int vshSblUtMgrHasComTestFlag(void);
 extern const char *SceActivityDb_575DA6A6(const char *titleId);
 extern const char *SceActivityDb_E6C23731(void);
 extern void SceActivityDb_B83F0A77(void *ctx);
-extern int SceActivityDb_41E31BEF(void *ctx, void *req);
+extern int SceActivityDb_41E31BEF(void *ctx, const ActivityDbSyncParam *param);
 extern int SceActivityDb_5B44F019(void *ctx);
 extern void SceLsdb_C2B7D81B(paf::string *outEnv);
-extern int SceLsdb_D22CFA8C(void *ctx, paf::string *titleId, SceRtcTickLocal *outUtc);
-extern void SceLsdb_D322A870(void *ctx);
-extern void SceLsdb_56D8DCF0(void *ctx);
-extern int SceLsdb_87EE0526(void *ctx, paf::string *titleId, paf::common::SharedPtr<int> *row);
-extern SceInt64 SceLsdb_8BC2DF72(paf::common::SharedPtr<int> *row);
-extern int SceLsdb_105428BF(void *ctx, paf::string *titleId, SceRtcTickLocal *utc);
-extern int SceLsdb_315B9FD6(void *notice, int flag);
+extern int SceLsdb_D22CFA8C(void *ctx, paf::string *titleId, SceRtcTick *outUtc);
+extern int SceLsdb_87EE0526(AppInfoSClient *client, paf::string *titleId, LsdbAppInfoPtr *row);
+extern SceInt64 SceLsdb_8BC2DF72(LsdbAppInfoPtr *row);
+extern int SceLsdb_105428BF(void *ctx, paf::string *titleId, SceRtcTick *utc);
 extern int SceLsdb_95EF7C51(void *ctx, paf::string *titleId, int flags);
-extern const char *sceLsdbGetAppVer(paf::common::SharedPtr<int> *row);
-extern const char *SceLsdb_8FDA59EA(paf::common::SharedPtr<int> *row);
-extern const char *sceLsdbGetGameDataId(paf::common::SharedPtr<int> *row);
-extern int SceLsdb_76EC65E3(void *ctx, paf::string *titleId);
-extern int SceLiveAreaUtil_B0571F88(const char *srcDir, const char *titleId, SceRtcTickLocal *utc);
+extern const char *sceLsdbGetAppVer(LsdbAppInfoPtr *row);
+extern const char *SceLsdb_8FDA59EA(LsdbAppInfoPtr *row);
+extern const char *sceLsdbGetGameDataId(LsdbAppInfoPtr *row);
+extern int SceLsdb_76EC65E3(AppInfoSClient *client, paf::string *titleId);
+extern int SceLiveAreaUtil_B0571F88(const char *srcDir, const char *titleId, SceRtcTick *utc);
 }
 
-extern void liveareaPowerLockInc(void);				/* 0x8120EE1E */
-extern void liveareaPowerLockDec(void);				/* 0x8120EE3C */
-extern int liveareaUpdatorCancelById(void *updator, const SceUInt64 *id); /* 0x811B2FA8 */
-extern int liveareaPkgOpen(const char *dir, int flags, int mode, void *opt); /* 0x8136D6A2 */
+extern int liveareaPkgOpen(const char *dir, int flags, int mode, void *option); /* 0x8136D6A2 */
 extern int liveareaPkgWrite(int handle, const void *buf, SceSize size); /* 0x8136D8F4 */
 extern int liveareaPkgClose(int handle);			/* 0x8136D828 */
-extern int liveareaHmacSha256(const void *key, SceSize keyLen, const void *data, SceSize dataLen, void *out); /* 0x8137E058 */
-extern int liveareaPatchCheckInit(void *ctx, int mode, void *param); /* 0x812A99AE */
-extern int liveareaPatchCheckRun(void *ctx, void *res, void *buf); /* 0x812A9BB0 */
+extern int liveareaHmacSha256(const void *key, SceSize keyLen, const void *msg,
+			      SceSize msgLen, void *outDigest); /* 0x8137E058 */
+extern int liveareaPatchCheckInit(void *ctx, int mode, const LiveAreaPatchCheckParam *param); /* 0x812A99AE */
+extern int liveareaPatchCheckRun(void *ctx, SceUInt32 *statusBuf, SceUInt8 *outBuf); /* 0x812A9BB0 */
 extern void liveareaPatchCheckTerm(void *ctx);			/* 0x812A9708 */
 extern int liveareaCleanCacheEntry(void);			/* 0x810A36EE */
 
@@ -74,30 +67,11 @@ static const SceUInt8 s_liveareaHmacKeyObf[32] = {		/* 0x81544DE4 */
 	0x52, 0xE5, 0x6A, 0xEB, 0x83, 0xA7, 0x95, 0xBB
 };
 
-class LiveAreaUpdateTaskBase {
-public:
-	typedef void (*CompleteCb)(int result, void *userdata);
-
-	LiveAreaUpdateTaskBase(const char *titleId, CompleteCb cb, void *userdata)
-		: m_titleId(titleId ? titleId : ""), m_cb(cb), m_userdata(userdata), m_canceled(0)
-	{}
-
-	virtual ~LiveAreaUpdateTaskBase() {}
-	virtual int Run() = 0;
-	virtual void OnFinish(int result);			/* 0x811B307C */
-	virtual void Cancel();					/* 0x811B308E */
-
-	paf::string m_titleId;					/* +4 */
-	CompleteCb m_cb;					/* +16 */
-	void *m_userdata;					/* +20 */
-	SceUInt8 m_canceled;					/* +24 */
-};
-
 /* 0x811B307C */
 void LiveAreaUpdateTaskBase::OnFinish(int result)
 {
-	if (m_cb)
-		m_cb(result, m_userdata);
+	if (m_callback != NULL)
+		m_callback(result, m_userdata);
 }
 
 /* 0x811B308E */
@@ -108,32 +82,36 @@ void LiveAreaUpdateTaskBase::Cancel()
 
 class LiveAreaRequestUpdateJob : public paf::job::JobItem {
 public:
-	LiveAreaRequestUpdateJob(SceUInt64 id, void *updator, SceUInt8 lockPower,
-		const paf::common::SharedPtr<LiveAreaUpdateTaskBase> &task);
+	LiveAreaRequestUpdateJob(SceUInt64 id, LiveAreaUpdatorImpl *updator, SceUInt8 requireNetwork,
+				 const paf::common::SharedPtr<LiveAreaUpdateTaskBase> &task);
 	virtual ~LiveAreaRequestUpdateJob() {}
 	virtual int Run();
 	virtual void Finish(int result);
 	void CancelJob();
 
 private:
-	SceUInt64 m_id;						/* +32 */
-	void *m_updator;					/* +40 */
-	SceUInt8 m_lockPower;					/* +44 */
-	paf::common::SharedPtr<LiveAreaUpdateTaskBase> m_task;	/* +48 */
+	SceUInt64 m_id;						/* +0x20 */
+	LiveAreaUpdatorImpl *m_updator;				/* +0x28 */
+	SceUInt8 m_requireNetwork;				/* +0x2C */
+	paf::common::SharedPtr<LiveAreaUpdateTaskBase> m_task;	/* +0x30 */
 };
 
 /* 0x811B3094 */
-LiveAreaRequestUpdateJob::LiveAreaRequestUpdateJob(SceUInt64 id, void *updator, SceUInt8 lockPower,
-	const paf::common::SharedPtr<LiveAreaUpdateTaskBase> &task)
+LiveAreaRequestUpdateJob::LiveAreaRequestUpdateJob(SceUInt64 id, LiveAreaUpdatorImpl *updator,
+						   SceUInt8 requireNetwork,
+						   const paf::common::SharedPtr<LiveAreaUpdateTaskBase> &task)
 	: paf::job::JobItem("LiveAreaRequestUpdateJob", NULL),
-	  m_id(id), m_updator(updator), m_lockPower(lockPower), m_task(task)
+	  m_id(id),
+	  m_updator(updator),
+	  m_requireNetwork(requireNetwork),
+	  m_task(task)
 {}
 
 /* 0x811B30FC */
 int LiveAreaRequestUpdateJob::Run()
 {
-	if (m_lockPower != 0)
-		liveareaPowerLockInc();
+	if (m_requireNetwork != 0)
+		netCtlIntAcquire();
 
 	int res = m_task->Run();
 	if (res != 0) {
@@ -149,17 +127,17 @@ int LiveAreaRequestUpdateJob::Run()
 		}
 	}
 
-	if (m_lockPower != 0)
-		liveareaPowerLockDec();
+	if (m_requireNetwork != 0)
+		netCtlIntRelease();
 	return res;
 }
 
 /* 0x811B318A */
 void LiveAreaRequestUpdateJob::Finish(int result)
 {
-	if (m_task.get() && !IsCanceled())
+	if (m_task.get() != NULL && !IsCanceled())
 		m_task->OnFinish(result);
-	if (m_updator)
+	if (m_updator != NULL)
 		liveareaUpdatorCancelById(m_updator, &m_id);
 }
 
@@ -176,119 +154,126 @@ void LiveAreaRequestUpdateJob::CancelJob()
 
 class LiveAreaContentUpdateTask : public LiveAreaUpdateTaskBase {
 public:
-	LiveAreaContentUpdateTask(const char *titleId, int flags, SceUInt8 checkDevDir,
-		SceUInt8 postNotice, CompleteCb cb, void *userdata, const char *localPkg);
+	LiveAreaContentUpdateTask(const char *titleId, const SceUInt64 *timestamp,
+				  SceUInt8 checkDevDir, SceUInt8 postNotice,
+				  CompleteCallback callback, void *userdata, const char *localPkg);
 	virtual ~LiveAreaContentUpdateTask() {}
 	virtual int Run();
 
 private:
 	int StreamPkg(paf::File *file, int pkgHandle, SceUInt8 *outEmpty);
-	int GetLastModified(paf::File *file, SceRtcTickLocal *outUtc);
+	int GetLastModified(paf::File *file, SceRtcTick *outUtc);
 	int OpenHttp(paf::File *file);
 	int OpenSource(paf::common::SharedPtr<paf::File> *outFile);
 
-	SceUInt8 m_checkDevDir;					/* +25 */
-	SceUInt8 m_postNotice;					/* +26 */
-	paf::string m_localPkg;					/* +28 */
+	SceUInt8 m_checkDevDir;					/* +0x19 */
+	SceUInt8 m_postNotice;					/* +0x1A */
+	paf::string m_localPkg;					/* +0x1C */
 };
 
 /* 0x811B31D2 */
-LiveAreaContentUpdateTask::LiveAreaContentUpdateTask(const char *titleId, int, SceUInt8 checkDevDir,
-	SceUInt8 postNotice, CompleteCb cb, void *userdata, const char *localPkg)
-	: LiveAreaUpdateTaskBase(titleId, cb, userdata),
-	  m_checkDevDir(checkDevDir), m_postNotice(postNotice),
+LiveAreaContentUpdateTask::LiveAreaContentUpdateTask(const char *titleId,
+						     const SceUInt64 *timestamp,
+						     SceUInt8 checkDevDir, SceUInt8 postNotice,
+						     CompleteCallback callback, void *userdata,
+						     const char *localPkg)
+	: LiveAreaUpdateTaskBase(titleId, callback, userdata),
+	  m_checkDevDir(checkDevDir),
+	  m_postNotice(postNotice),
 	  m_localPkg(localPkg ? localPkg : "")
-{}
+{
+	(void)timestamp;
+}
 
 /* 0x811B3270 */
 int LiveAreaContentUpdateTask::StreamPkg(paf::File *file, int pkgHandle, SceUInt8 *outEmpty)
 {
-	paf::common::SharedPtr<paf::Buffer> bufA = paf::MallocBuffer::Allocate(0x8000);
-	paf::common::SharedPtr<paf::Buffer> bufB = paf::MallocBuffer::Allocate(0x8000);
-	if (!bufA.get() || !bufB.get())
+	paf::common::SharedPtr<paf::Buffer> readBuf = paf::MallocBuffer::Allocate(0x8000);
+	paf::common::SharedPtr<paf::Buffer> writeBuf = paf::MallocBuffer::Allocate(0x8000);
+	if (readBuf.get() == NULL || writeBuf.get() == NULL)
 		return (int)0x80107C04;
 
-	void *pA = bufA->GetAddr();
-	void *pB = bufB->GetAddr();
-	SceInt64 nread = 0;
+	void *activeReadPtr = readBuf->GetAddr();
+	void *activeWritePtr = writeBuf->GetAddr();
+	SceInt64 bytesRead = 0;
 
-	int r = file->ReadAsync(pA, 0x8000);
-	if (r != 0)
-		return r;
+	int ret = file->ReadAsync(activeReadPtr, 0x8000);
+	if (ret != 0)
+		return ret;
 
 	while (m_canceled == 0) {
-		r = file->WaitAsync(&nread);
-		if (r != 0)
-			return r;
-		if (nread < 0)
-			return (int)nread;
-		if (nread == 0)
+		ret = file->WaitAsync(&bytesRead);
+		if (ret != 0)
+			return ret;
+		if (bytesRead < 0)
+			return (int)bytesRead;
+		if (bytesRead == 0)
 			break;
 
-		void *prev = pA;
-		pA = pB;
-		pB = prev;
+		void *completedBuf = activeReadPtr;
+		activeReadPtr = activeWritePtr;
+		activeWritePtr = completedBuf;
 		*outEmpty = 0;
 
-		r = file->ReadAsync(pA, 0x8000);
-		if (r != 0)
-			return r;
+		ret = file->ReadAsync(activeReadPtr, 0x8000);
+		if (ret != 0)
+			return ret;
 
-		int wr = liveareaPkgWrite(pkgHandle, pB, (SceSize)nread);
-		if (wr < 0)
-			return wr;
-		if (nread != 0x8000)
+		int written = liveareaPkgWrite(pkgHandle, activeWritePtr, (SceSize)bytesRead);
+		if (written < 0)
+			return written;
+		if (bytesRead != 0x8000)
 			break;
 	}
 	return m_canceled ? (int)0x80107C05 : 0;
 }
 
 /* 0x811B362E */
-int LiveAreaContentUpdateTask::GetLastModified(paf::File *file, SceRtcTickLocal *outUtc)
+int LiveAreaContentUpdateTask::GetLastModified(paf::File *file, SceRtcTick *outUtc)
 {
 	if (file->GetFileType() != paf::File::Type_Http)
 		return 0;
-	paf::string hdr;
-	int r = ((paf::HttpFile *)file)->GetResponseHeader("Last-Modified", hdr);
-	if (r == 0)
-		r = sceRtcParseDateTime(outUtc, hdr.c_str());
-	return r;
+	paf::string headerValue;
+	int ret = ((paf::HttpFile *)file)->GetResponseHeader("Last-Modified", headerValue);
+	if (ret == 0)
+		ret = sceRtcParseDateTime(outUtc, headerValue.c_str());
+	return ret;
 }
 
 /* 0x811B36C8 */
 static void buildLiveAreaCdnId(paf::string *out, const char *titleId,
-	const paf::string &modelTag, const paf::string &country)
+			       const paf::string &modelTag, const paf::string &country)
 {
-	if (sce_paf_strcmp("NPXS10002", titleId) == 0) {
+	if (sce_paf_strcmp("NPXS10002", titleId) == 0)
 		*out = paf::string("LA-PN.") + modelTag + country + "-STORE";
-	} else if (sce_paf_strcmp("NPXS10010", titleId) == 0) {
+	else if (sce_paf_strcmp("NPXS10010", titleId) == 0)
 		*out = paf::string("LA-PN.") + modelTag + country + "-VDPL";
-	} else {
+	else
 		*out = titleId ? titleId : "";
-	}
 }
 
 /* 0x811B3BD2 */
-static int computeLiveAreaUrlHash(const char *env, const char *cdnId, char *outHex, SceSize outSize)
+static int computeLiveAreaUrlHash(const char *env, const char *cdnId,
+				  char *outHex, SceSize outSize)
 {
 	SceUInt8 key[32];
 	sce_paf_memcpy(key, s_liveareaHmacKeyObf, sizeof(key));
 	for (int i = 0; i < 32; ++i)
 		key[i] ^= 0x7Fu;
 
-	paf::string msg = paf::string(env ? env : "") + "_" + paf::string(cdnId ? cdnId : "");
+	paf::string message = paf::string(env ? env : "") + "_" + paf::string(cdnId ? cdnId : "");
 	SceUInt8 digest[32];
-	int r = liveareaHmacSha256(key, sizeof(key), msg.c_str(), msg.size(), digest);
-	if (r != 0)
-		return r;
+	int ret = liveareaHmacSha256(key, sizeof(key), message.c_str(), message.size(), digest);
+	if (ret != 0)
+		return ret;
 
-	if (!outHex || outSize < 65)
+	if (outHex == NULL || outSize < 65)
 		return (int)0x80107C02;
 
-	static const char hex[] = "0123456789abcdef";
+	static const char hexDigits[] = "0123456789abcdef";
 	for (SceSize i = 0; i < 32 && (2 * i + 1) < outSize; ++i) {
-		outHex[2 * i] = hex[(digest[i] >> 4) & 0xF];
-		outHex[2 * i + 1] = hex[digest[i] & 0xF];
+		outHex[2 * i] = hexDigits[(digest[i] >> 4) & 0xF];
+		outHex[2 * i + 1] = hexDigits[digest[i] & 0xF];
 	}
 	outHex[64] = '\0';
 	return 0;
@@ -297,14 +282,14 @@ static int computeLiveAreaUrlHash(const char *env, const char *cdnId, char *outH
 /* 0x811B3EF8 */
 static int buildLiveAreaPkgUrl(const paf::string *titleId, paf::string *outUrl)
 {
-	const char *mapped = SceActivityDb_575DA6A6(titleId->c_str());
+	const char *mappedTitle = SceActivityDb_575DA6A6(titleId->c_str());
 	paf::string env;
 	paf::string country;
 	paf::string cdnId;
 	paf::string modelTag(paf::system::Model::GetType() == 1 ? "DC." : "VT.");
 
-	if (sce_paf_strcmp("NPXS10010", mapped) != 0 &&
-	    sce_paf_strcmp("NPXS10002", mapped) != 0 &&
+	if (sce_paf_strcmp("NPXS10010", mappedTitle) != 0 &&
+	    sce_paf_strcmp("NPXS10002", mappedTitle) != 0 &&
 	    vshSblUtMgrHasComTestFlag() != 0) {
 		env = "e1-np";
 	} else {
@@ -312,32 +297,32 @@ static int buildLiveAreaPkgUrl(const paf::string *titleId, paf::string *outUrl)
 	}
 
 	char countryBuf[4];
-	int r = sceRegMgrGetKeyStrForUser("/CONFIG/NP", "country", countryBuf, 3);
-	if (r != 0)
-		return r;
+	int ret = sceRegMgrGetKeyStrForUser("/CONFIG/NP", "country", countryBuf, 3);
+	if (ret != 0)
+		return ret;
 
 	for (int i = 0; i < 3; ++i)
 		countryBuf[i] = (char)sce_paf_toupper(countryBuf[i]);
 	country = countryBuf;
 
-	buildLiveAreaCdnId(&cdnId, mapped, modelTag, country);
+	buildLiveAreaCdnId(&cdnId, mappedTitle, modelTag, country);
 
 	char hashHex[68];
-	r = computeLiveAreaUrlHash(env.c_str(), cdnId.c_str(), hashHex, 65);
-	if (r != 0)
-		return r;
+	ret = computeLiveAreaUrlHash(env.c_str(), cdnId.c_str(), hashHex, 65);
+	if (ret != 0)
+		return ret;
 
-	paf::common::SharedPtr<paf::Buffer> buf = paf::MallocBuffer::Allocate(0x400);
-	if (!buf.get())
+	paf::common::SharedPtr<paf::Buffer> urlBuf = paf::MallocBuffer::Allocate(0x400);
+	if (urlBuf.get() == NULL)
 		return (int)0x80107C04;
 
-	char *dst = (char *)buf->GetAddr();
-	if (sce_paf_strcmp("NPXS10010", mapped) == 0) {
+	char *dst = (char *)urlBuf->GetAddr();
+	if (sce_paf_strcmp("NPXS10010", mappedTitle) == 0) {
 		sce_paf_snprintf(dst, 0x400,
 			"http://livearea.%s.dl.playstation.net/livearea/n/info/%s/LA-PN.%s%s-VDPL/%s/LA-PN.%s%s-VDPL-0.pkg?country=%s",
 			env.c_str(), env.c_str(), modelTag.c_str(), country.c_str(),
 			hashHex, modelTag.c_str(), country.c_str(), country.c_str());
-	} else if (sce_paf_strcmp("NPXS10002", mapped) == 0) {
+	} else if (sce_paf_strcmp("NPXS10002", mappedTitle) == 0) {
 		sce_paf_snprintf(dst, 0x400,
 			"http://livearea.%s.dl.playstation.net/livearea/n/info/%s/LA-PN.%s%s-STORE/%s/LA-PN.%s%s-STORE-0.pkg?country=%s",
 			env.c_str(), env.c_str(), modelTag.c_str(), country.c_str(),
@@ -345,7 +330,7 @@ static int buildLiveAreaPkgUrl(const paf::string *titleId, paf::string *outUrl)
 	} else {
 		sce_paf_snprintf(dst, 0x400,
 			"http://livearea.%s.dl.playstation.net/livearea/e/info/%s/%s/%s/%s-0.pkg?country=%s",
-			env.c_str(), env.c_str(), mapped, hashHex, mapped, country.c_str());
+			env.c_str(), env.c_str(), mappedTitle, hashHex, mappedTitle, country.c_str());
 	}
 	*outUrl = dst;
 	return 0;
@@ -355,59 +340,60 @@ static int buildLiveAreaPkgUrl(const paf::string *titleId, paf::string *outUrl)
 int LiveAreaContentUpdateTask::OpenHttp(paf::File *file)
 {
 	paf::string url;
-	int r = buildLiveAreaPkgUrl(&m_titleId, &url);
-	if (r != 0)
-		return r;
+	int ret = buildLiveAreaPkgUrl(&m_titleId, &url);
+	if (ret != 0)
+		return ret;
 
-	SceRtcTickLocal utc;
+	SceRtcTick utc;
 	utc.tick = 0;
-	char lsdbCtx[8];
-	SceLsdb_D22CFA8C(lsdbCtx, &m_titleId, &utc);
+	char lsdbHandle[8];
+	SceLsdb_D22CFA8C(lsdbHandle, &m_titleId, &utc);
 
-	paf::HttpFile::OpenArg arg;
-	r = arg.ParseUrl(url.c_str());
-	if (r != 0)
-		return r;
+	paf::HttpFile::OpenArg openArg;
+	ret = openArg.ParseUrl(url.c_str());
+	if (ret != 0)
+		return ret;
 
 	if (utc.tick != 0) {
 		char rfcDate[64];
 		sce_paf_memset(rfcDate, 0, sizeof(rfcDate));
 		if (sceRtcFormatRFC2822(rfcDate, &utc, 0) == 0)
-			arg.AddRequestHeader("If-Modified-Since", rfcDate);
+			openArg.AddRequestHeader("If-Modified-Since", rfcDate);
 	}
-	return file->Open(&arg);
+	return file->Open(&openArg);
 }
 
 /* 0x811B465E */
 int LiveAreaContentUpdateTask::OpenSource(paf::common::SharedPtr<paf::File> *outFile)
 {
 	if (m_localPkg.size() == 0) {
-		paf::common::SharedPtr<paf::File> sp(new paf::HttpFile());
-		*outFile = sp;
+		paf::common::SharedPtr<paf::File> httpFile(new paf::HttpFile());
+		*outFile = httpFile;
 		return OpenHttp(outFile->get());
 	}
-	paf::common::SharedPtr<paf::File> sp(new paf::LocalFile());
-	*outFile = sp;
-	paf::LocalFile::OpenArg arg;
-	arg.filename = m_localPkg.c_str();
-	arg.flag = 1;
-	arg.mode = 6;
-	return (*outFile)->Open(&arg);
+	paf::common::SharedPtr<paf::File> localFile(new paf::LocalFile());
+	*outFile = localFile;
+	paf::LocalFile::OpenArg openArg;
+	openArg.filename = m_localPkg.c_str();
+	openArg.flag = 1;
+	openArg.mode = 6;
+	return (*outFile)->Open(&openArg);
 }
 
 /* 0x811B48D8 */
 static int clearDirectoryContents(const char *dirPath)
 {
 	paf::Dir dir;
-	paf::DirEnt ent;
+	paf::DirEnt entry;
 	if (dir.Open(dirPath) == 0) {
-		while (dir.Read(&ent) == 0) {
-			if (ent.name.c_str()[0] != '.') {
-				paf::string full = paf::string(dirPath ? dirPath : "") + "/" + ent.name;
-				if (ent.type != paf::DirEnt::Type_Dir)
-					paf::LocalFile::RemoveFile(full.c_str());
+		while (dir.Read(&entry) == 0) {
+			if (entry.name.c_str()[0] != '.') {
+				paf::string fullPath =
+					paf::string(dirPath ? dirPath : "") + "/" + entry.name;
+				if (entry.type != paf::DirEnt::Type_Dir)
+					paf::LocalFile::RemoveFile(fullPath.c_str());
 				else
-					paf::Dir::RemoveRecursive(full.c_str());
+					paf::Dir::RemoveRecursive(fullPath.c_str());
 			}
 		}
 	}
@@ -418,7 +404,7 @@ static int clearDirectoryContents(const char *dirPath)
 /* 0x811B4A7E */
 int LiveAreaContentUpdateTask::Run()
 {
-	SceRtcTickLocal utc;
+	SceRtcTick utc;
 	utc.tick = 0;
 	paf::string srcDir;
 
@@ -454,47 +440,47 @@ int LiveAreaContentUpdateTask::Run()
 		if (res != 0)
 			return res;
 
-		SceUInt32 pkgOpt[512];
-		sce_paf_memset(pkgOpt, 0, sizeof(pkgOpt));
-		pkgOpt[0] = 4;
-		int pkg = liveareaPkgOpen("ur0:temp/livearea/", 67074, 6, pkgOpt);
-		res = pkg;
-		if (pkg >= 0) {
-			SceUInt8 empty = 1;
-			res = StreamPkg(file.get(), pkg, &empty);
-			liveareaPkgClose(pkg);
-			if (res == 0 && empty != 0)
+		SceUInt32 pkgOption[512];
+		sce_paf_memset(pkgOption, 0, sizeof(pkgOption));
+		pkgOption[0] = 4;
+		int pkgHandle = liveareaPkgOpen("ur0:temp/livearea/", 67074, 6, pkgOption);
+		res = pkgHandle;
+		if (pkgHandle >= 0) {
+			SceUInt8 isEmpty = 1;
+			res = StreamPkg(file.get(), pkgHandle, &isEmpty);
+			liveareaPkgClose(pkgHandle);
+			if (res == 0 && isEmpty != 0)
 				res = (int)0x80107C08;
 		}
 		if (res != 0)
 			return res;
 
-		paf::common::SharedPtr<int> row(new int[3]);
-		char lsdbCtx[4];
-		SceLsdb_D322A870(lsdbCtx);
-		res = SceLsdb_87EE0526(lsdbCtx, &m_titleId, &row);
+		LsdbAppInfoPtr appInfo(new LsdbAppInfo());
+		AppInfoSClient lsdbClient;
+		SceLsdb_D322A870(&lsdbClient);
+		res = SceLsdb_87EE0526(&lsdbClient, &m_titleId, &appInfo);
 		if (res == 0) {
-			if (SceLsdb_8BC2DF72(&row) == 3)
+			if (SceLsdb_8BC2DF72(&appInfo) == 3)
 				srcDir = "ur0:temp/livearea/sce_sys/retail/livearea/contents";
 			else
 				srcDir = "ur0:temp/livearea/sce_sys/livearea/contents";
 		}
-		SceLsdb_56D8DCF0(lsdbCtx);
+		SceLsdb_56D8DCF0(&lsdbClient);
 		if (res != 0)
 			return res;
 	}
 
 	res = SceLiveAreaUtil_B0571F88(srcDir.c_str(), m_titleId.c_str(), &utc);
 	if (res != 0) {
-		char lsdbFlag;
-		SceLsdb_105428BF(&lsdbFlag, &m_titleId, &utc);
+		char lsdbStamp;
+		SceLsdb_105428BF(&lsdbStamp, &m_titleId, &utc);
 		paf::Plugin *topmenu = paf::Plugin::Find("topmenu_plugin");
-		if (topmenu) {
-			void *iface = topmenu->GetInterface(1);
-			if (iface) {
-				const char *args[3] = { m_titleId.c_str(), NULL, NULL };
-				typedef void (*NotifyFn)(const char **);
-				(*(NotifyFn *)((char *)iface + 180))(args);
+		if (topmenu != NULL) {
+			LiveAreaTopmenuInterface *topmenuIf =
+				(LiveAreaTopmenuInterface *)topmenu->GetInterface(1);
+			if (topmenuIf != NULL) {
+				const char *notifyArgs[3] = { m_titleId.c_str(), NULL, NULL };
+				topmenuIf->notifyContentUpdated(notifyArgs);
 			}
 		}
 	}
@@ -502,48 +488,20 @@ int LiveAreaContentUpdateTask::Run()
 	clearDirectoryContents("ur0:temp/livearea");
 
 	if (res == 0 && m_postNotice != 0) {
-		struct NoticeParam {
-			paf::string tag;
-			paf::string key;
-			int f24;
-			int f28;
-			int type;
-			int f36;
-			int f40;
-			SceUInt8 f44;
-			SceUInt8 f45;
-			paf::string icon;
-			int f60;
-			int f64;
-			paf::string extra[9];
-			paf::string s1;
-			paf::string s2;
-			int f180;
-			paf::string titleId;
-			paf::string s3;
-			paf::string s4;
-			int f220[4];
-		} notice;
-		notice.tag = "LAUPDATE";
-		notice.key = m_titleId;
-		notice.f24 = 0;
-		notice.f28 = 0;
-		notice.type = 2304;
-		notice.f36 = 0;
-		notice.f40 = 2;
-		notice.f44 = 1;
-		notice.f45 = 1;
-		notice.f60 = 0;
-		notice.f64 = 0;
-		notice.f180 = 0;
-		notice.titleId = m_titleId;
-		sce_paf_memset(notice.f220, 0, sizeof(notice.f220));
+		LsdbNewEvent notice;
+		notice.titleId = "LAUPDATE";
+		notice.itemId = m_titleId;
+		notice.msgType = 2304;
+		notice.actType = 2;
+		notice.newFlag = true;
+		notice.popupNo = true;
+		notice.execTitleId = m_titleId;
 
 		const char *curApp = SceActivityDb_E6C23731();
-		if (curApp && sce_paf_strcmp(m_titleId.c_str(), curApp) == 0)
-			notice.icon = paf::string("vs0:app/") + curApp + "/sce_sys/icon0.png";
+		if (curApp != NULL && sce_paf_strcmp(m_titleId.c_str(), curApp) == 0)
+			notice.iconPath = paf::string("vs0:app/") + curApp + "/sce_sys/icon0.png";
 
-		res = SceLsdb_315B9FD6(&notice, 1);
+		res = SceLsdb_315B9FD6(&notice, true);
 	}
 	return res;
 }
@@ -554,38 +512,30 @@ int LiveAreaContentUpdateTask::Run()
 
 class LiveAreaPatchCheckTask : public LiveAreaUpdateTaskBase {
 public:
-	LiveAreaPatchCheckTask(const char *titleId, int appType, CompleteCb cb, void *userdata);
+	LiveAreaPatchCheckTask(const char *titleId, int appType,
+			       CompleteCallback callback, void *userdata);
 	virtual ~LiveAreaPatchCheckTask() {}
 	virtual int Run();
 
 private:
-	int m_appType;						/* +28 */
+	int m_appType;						/* +0x1C */
 };
 
 /* 0x811B5474 */
 LiveAreaPatchCheckTask::LiveAreaPatchCheckTask(const char *titleId, int appType,
-	CompleteCb cb, void *userdata)
-	: LiveAreaUpdateTaskBase(titleId, cb, userdata), m_appType(appType)
+					       CompleteCallback callback, void *userdata)
+	: LiveAreaUpdateTaskBase(titleId, callback, userdata),
+	  m_appType(appType)
 {}
 
 /* 0x811B54E4 */
 int LiveAreaPatchCheckTask::Run()
 {
-	char lsdbCtx[4];
-	if (SceLsdb_95EF7C51(lsdbCtx, &m_titleId, 0) != 0)
+	char lsdbHandle[4];
+	if (SceLsdb_95EF7C51(lsdbHandle, &m_titleId, 0) != 0)
 		return 0;
 
-	struct PatchParam {
-		void *(*allocFn)(SceSize);
-		void (*freeFn)(void *);
-		int mode;
-		char titleId[16];
-		char appVer[8];
-		char contentId[48];
-		int sysVer;
-		int pspSysVer;
-		char gameDataId[20];
-	} param;
+	LiveAreaPatchCheckParam param;
 	sce_paf_memset(&param, 0, sizeof(param));
 	param.allocFn = sce_paf_malloc;
 	param.freeFn = sce_paf_free;
@@ -600,43 +550,44 @@ int LiveAreaPatchCheckTask::Run()
 	if (param.mode == 1)
 		param.pspSysVer = sceCompatGetPspSystemSoftwareVersion(1);
 
-	paf::common::SharedPtr<int> row(new int[3]);
-	SceLsdb_D322A870(lsdbCtx);
-	int res = SceLsdb_87EE0526(lsdbCtx, &m_titleId, &row);
+	LsdbAppInfoPtr appInfo(new LsdbAppInfo());
+	AppInfoSClient lsdbClient;
+	SceLsdb_D322A870(&lsdbClient);
+	int res = SceLsdb_87EE0526(&lsdbClient, &m_titleId, &appInfo);
 	if (res == 0) {
-		const char *appVer = sceLsdbGetAppVer(&row);
-		const char *cid = SceLsdb_8FDA59EA(&row);
-		const char *gdid = sceLsdbGetGameDataId(&row);
-		if (appVer)
+		const char *appVer = sceLsdbGetAppVer(&appInfo);
+		const char *contentId = SceLsdb_8FDA59EA(&appInfo);
+		const char *gameDataId = sceLsdbGetGameDataId(&appInfo);
+		if (appVer != NULL)
 			sce_paf_strncpy(param.appVer, appVer, 5);
-		if (cid)
-			sce_paf_strncpy(param.contentId, cid, 47);
-		if (gdid)
-			sce_paf_strncpy(param.gameDataId, gdid, 12);
+		if (contentId != NULL)
+			sce_paf_strncpy(param.contentId, contentId, 47);
+		if (gameDataId != NULL)
+			sce_paf_strncpy(param.gameDataId, gameDataId, 12);
 	}
-	SceLsdb_56D8DCF0(lsdbCtx);
+	SceLsdb_56D8DCF0(&lsdbClient);
 
 	if (res == 0) {
-		SceUInt32 swInfo[10];
-		sce_paf_memset(swInfo, 0, sizeof(swInfo));
-		swInfo[0] = 40;
-		res = sceKernelGetSystemSwVersion(swInfo);
+		SceKernelSystemSwVersion swInfo;
+		sce_paf_memset(&swInfo, 0, sizeof(swInfo));
+		swInfo.size = sizeof(swInfo);
+		res = sceKernelGetSystemSwVersion(&swInfo);
 		if (res == 0)
-			param.sysVer = (int)swInfo[8];
+			param.sysVer = (int)swInfo.version;
 	}
 	if (res == 0) {
 		SceUInt32 statusBuf[4];
-		SceUInt8 outBuf[412];
-		SceUInt32 ctx[3];
+		SceUInt8 patchBuf[412];
+		SceUInt32 checkerCtx[3];
 		sce_paf_memset(statusBuf, 0, sizeof(statusBuf));
-		sce_paf_memset(outBuf, 0, sizeof(outBuf));
-		sce_paf_memset(ctx, 0, sizeof(ctx));
+		sce_paf_memset(patchBuf, 0, sizeof(patchBuf));
+		sce_paf_memset(checkerCtx, 0, sizeof(checkerCtx));
 		statusBuf[0] = 16;
 
-		res = liveareaPatchCheckInit(ctx, 0, &param);
+		res = liveareaPatchCheckInit(checkerCtx, 0, &param);
 		if (res == 0) {
-			res = liveareaPatchCheckRun(ctx, statusBuf, outBuf);
-			liveareaPatchCheckTerm(ctx);
+			res = liveareaPatchCheckRun(checkerCtx, statusBuf, patchBuf);
+			liveareaPatchCheckTerm(checkerCtx);
 			if (res == 0) {
 				if (statusBuf[1] == 1)
 					return 2;
@@ -652,314 +603,275 @@ int LiveAreaPatchCheckTask::Run()
 /* LiveAreaActivityUpdateTask (0x811B577A - 0x811B6554)               */
 /* ------------------------------------------------------------------ */
 
-struct ActivityUpdateResult {
-	paf::string sender;					/* +0 */
-	int kind;						/* +12 */
-	SceInt64 statusUid;					/* +16 */
-	paf::string targetTitleId;				/* +24 */
-	SceUInt8 hasNew;					/* +36 */
-	SceUInt8 hasComment;					/* +37 */
-	int countA;						/* +40 */
-	int countB;						/* +44 */
-};
-
 class LiveAreaActivityUpdateTask : public LiveAreaUpdateTaskBase {
 public:
-	typedef void (*ActivityCb)(int result, SceInt64 *ts, void *userdata);
+	typedef void (*ActivityCallback)(int result, SceInt64 *timestamp, void *userdata);
 
-	LiveAreaActivityUpdateTask(const char *titleId, int forceFlag, ActivityCb cb, void *userdata);
+	LiveAreaActivityUpdateTask(const char *titleId, int forceFlag,
+				   ActivityCallback callback, void *userdata);
 	virtual ~LiveAreaActivityUpdateTask() {}
 	virtual int Run();
 	virtual void OnFinish(int result);
 	virtual void Cancel();
 
 private:
-	int FetchActivity(ActivityUpdateResult *outRes);
-	static void OnActivityCb(int result, int status, int count, SceInt64 *ts,
-		const ActivityUpdateResult *info, void *userdata);
+	int FetchActivity(ActivityDbSyncSummary *outSummary);
+	static void OnSyncComplete(int result, bool changed, const paf::string *titleId,
+				   const SceInt64 *syncedTime,
+				   const ActivityDbSyncSummary *summary, void *userdata);
 
-	int m_actCtx;						/* +28 */
-	int m_forceFlag;					/* +32 */
-	ActivityCb m_actCb;					/* +36 */
-	SceInt64 m_lastTs;					/* +40 */
-	paf::thread::Semaphore m_sem;				/* +48 */
+	int m_activityHandle;					/* +0x1C */
+	int m_forceFlag;					/* +0x20 */
+	ActivityCallback m_activityCallback;			/* +0x24 */
+	SceInt64 m_lastSyncTime;				/* +0x28 */
+	paf::thread::Semaphore m_sem;				/* +0x30 */
 };
 
-struct ActivityCbContext {
+struct ActivitySyncWaitContext {
 	LiveAreaActivityUpdateTask *task;
-	ActivityUpdateResult *outRes;
+	ActivityDbSyncSummary *outSummary;
 	int result;
 };
 
 /* 0x811B577A */
 LiveAreaActivityUpdateTask::LiveAreaActivityUpdateTask(const char *titleId, int forceFlag,
-	ActivityCb cb, void *userdata)
+						       ActivityCallback callback, void *userdata)
 	: LiveAreaUpdateTaskBase(titleId, NULL, userdata),
-	  m_forceFlag(forceFlag), m_actCb(cb), m_lastTs(0),
+	  m_forceFlag(forceFlag),
+	  m_activityCallback(callback),
+	  m_lastSyncTime(0),
 	  m_sem("SceLiveAreaUpdateActivity", 0, 2, NULL)
 {
-	SceActivityDb_B83F0A77(&m_actCtx);
+	SceActivityDb_B83F0A77(&m_activityHandle);
 }
 
 /* 0x811B5816 */
-int LiveAreaActivityUpdateTask::FetchActivity(ActivityUpdateResult *outRes)
+int LiveAreaActivityUpdateTask::FetchActivity(ActivityDbSyncSummary *outSummary)
 {
-	ActivityCbContext cbCtx;
-	cbCtx.task = this;
-	cbCtx.outRes = outRes;
-	cbCtx.result = 0;
+	ActivitySyncWaitContext waitCtx;
+	waitCtx.task = this;
+	waitCtx.outSummary = outSummary;
+	waitCtx.result = 0;
 
-	struct ActReq {
-		int mode;
-		paf::string s1;
-		paf::string titleId;
-		int f28;
-		int f32;
-		int f36;
-		int forceFlag;
-		void (*cb)(int, int, int, SceInt64 *, const ActivityUpdateResult *, void *);
-		void *cbArg;
-		SceUInt8 f52;
-	} req;
-	req.mode = (sce_paf_strcmp(m_titleId.c_str(), "NPXS10006") == 0) ? 1 : 0;
-	req.titleId = m_titleId;
-	req.f28 = 0;
-	req.f32 = 0;
-	req.f36 = 0;
-	req.forceFlag = (m_forceFlag != 0) ? 1 : 0;
-	req.cb = OnActivityCb;
-	req.cbArg = &cbCtx;
-	req.f52 = 0;
+	ActivityDbSyncParam param;
+	param.condition.type = (sce_paf_strcmp(m_titleId.c_str(), "NPXS10006") == 0)
+		? ACTIVITY_DB_QUERY_ALL
+		: ACTIVITY_DB_QUERY_TITLE;
+	param.condition.titleId = m_titleId;
+	param.condition.limit = 0;
+	param.since = 0;
+	param.keepNewComments = (m_forceFlag != 0) ? 1 : 0;
+	param.callback = OnSyncComplete;
+	param.arg = &waitCtx;
+	param.reload = false;
 
-	int r = SceActivityDb_41E31BEF(&m_actCtx, &req);
-	if (r == 0) {
+	int ret = SceActivityDb_41E31BEF(&m_activityHandle, &param);
+	if (ret == 0) {
 		m_sem.Acquire();
-		r = cbCtx.result;
+		ret = waitCtx.result;
 	}
-	return r;
+	return ret;
 }
 
 /* 0x811B58F6 */
-static int postFriendsActivityNotice(const ActivityUpdateResult *info)
+static int postFriendsActivityNotice(const ActivityDbSyncSummary *summary)
 {
-	struct NoticeParam {
-		paf::string tag;
-		paf::string key;
-		int f24;
-		int f28;
-		int type;
-		int f36;
-		int f40;
-		SceUInt8 f44;
-		SceUInt8 f45;
-		paf::string icon;
-		int f60;
-		int f64;
-		paf::string extra[9];
-		paf::string s1;
-		paf::string s2;
-		int f180;
-		paf::string titleId;
-		paf::string paramStr;
-		paf::string s4;
-		int f220[4];
-	} notice;
-
-	notice.f24 = 0;
-	notice.f28 = 0;
-	notice.type = 256;
-	notice.f36 = 0;
-	notice.f40 = 0;
-	notice.f44 = 0;
-	notice.f45 = 1;
-	notice.f60 = 0;
-	notice.f64 = 0;
-	notice.f180 = 0;
-	sce_paf_memset(notice.f220, 0, sizeof(notice.f220));
-
+	LsdbNewEvent notice;
 	char numBuf[64];
-	if (info->countA != 0) {
-		if (info->countB != 0) {
-			notice.type = 2311;
-			sce_paf_snprintf(numBuf, sizeof(numBuf), "%lld", (SceInt64)info->countA);
-			notice.extra[0] = numBuf;
-			sce_paf_snprintf(numBuf, sizeof(numBuf), "%lld", (SceInt64)info->countB);
-			notice.extra[1] = numBuf;
+
+	if (summary->addedComments != 0) {
+		if (summary->addedVotes != 0) {
+			notice.msgType = 2311;
+			sce_paf_snprintf(numBuf, sizeof(numBuf), "%lld",
+					 (SceInt64)summary->addedComments);
+			notice.msgArg[0] = numBuf;
+			sce_paf_snprintf(numBuf, sizeof(numBuf), "%lld",
+					 (SceInt64)summary->addedVotes);
+			notice.msgArg[1] = numBuf;
 		} else {
-			notice.type = 2309;
-			sce_paf_snprintf(numBuf, sizeof(numBuf), "%lld", (SceInt64)info->countA);
-			notice.extra[0] = numBuf;
-			if (info->countA == 1 && info->statusUid != 0) {
-				sce_paf_snprintf(numBuf, sizeof(numBuf), "%lld", info->statusUid);
-				notice.paramStr = paf::string("status_uid=") + numBuf;
+			notice.msgType = 2309;
+			sce_paf_snprintf(numBuf, sizeof(numBuf), "%lld",
+					 (SceInt64)summary->addedComments);
+			notice.msgArg[0] = numBuf;
+			if (summary->addedComments == 1 && summary->rowid != 0) {
+				sce_paf_snprintf(numBuf, sizeof(numBuf), "%lld", summary->rowid);
+				notice.execArg = paf::string("status_uid=") + numBuf;
 			}
 		}
-	} else if (info->countB != 0) {
-		notice.type = 2310;
-		sce_paf_snprintf(numBuf, sizeof(numBuf), "%lld", (SceInt64)info->countB);
-		notice.extra[0] = numBuf;
-		if (info->countB == 1 && info->statusUid != 0) {
-			sce_paf_snprintf(numBuf, sizeof(numBuf), "%lld", info->statusUid);
-			notice.paramStr = paf::string("status_uid=") + numBuf;
+	} else if (summary->addedVotes != 0) {
+		notice.msgType = 2310;
+		sce_paf_snprintf(numBuf, sizeof(numBuf), "%lld", (SceInt64)summary->addedVotes);
+		notice.msgArg[0] = numBuf;
+		if (summary->addedVotes == 1 && summary->rowid != 0) {
+			sce_paf_snprintf(numBuf, sizeof(numBuf), "%lld", summary->rowid);
+			notice.execArg = paf::string("status_uid=") + numBuf;
 		}
 	} else {
 		return 0;
 	}
 
-	notice.tag = "LAUPDATE";
-	notice.key = "NPXS10006";
-	notice.titleId = "NPXS10006";
-	notice.f44 = 1;
-	notice.f40 = 8;
-	return (SceLsdb_315B9FD6(&notice, 1) == 0) ? 1 : 0;
+	notice.titleId = "LAUPDATE";
+	notice.itemId = "NPXS10006";
+	notice.execTitleId = "NPXS10006";
+	notice.newFlag = true;
+	notice.actType = 8;
+	return (SceLsdb_315B9FD6(&notice, true) == 0) ? 1 : 0;
 }
 
 /* 0x811B5F40 */
-static int postTitleActivityNotice(const ActivityUpdateResult *info, const paf::string *fallbackTitleId)
+static int postTitleActivityNotice(const ActivityDbSyncSummary *summary,
+				   const paf::string *fallbackTitleId)
 {
-	int type;
-	if (info->kind == 2) {
-		if (info->hasNew)
-			type = info->hasComment ? 2308 : 2306;
-		else if (info->hasComment)
-			type = 2307;
+	int msgType;
+	if (summary->ownerType == ACTIVITY_DB_OWNER_SELF) {
+		if (summary->hasNewComments)
+			msgType = summary->hasNewVotes ? 2308 : 2306;
+		else if (summary->hasNewVotes)
+			msgType = 2307;
 		else
 			return 0;
-	} else if (info->kind == 0 && info->hasNew) {
-		type = 2305;
+	} else if (summary->ownerType == ACTIVITY_DB_OWNER_USER && summary->hasNewComments) {
+		msgType = 2305;
 	} else {
 		return 0;
 	}
 
-	char lsdbCtx[4];
-	SceLsdb_D322A870(lsdbCtx);
-	int exists = SceLsdb_76EC65E3(lsdbCtx, (paf::string *)&info->targetTitleId);
-	SceLsdb_56D8DCF0(lsdbCtx);
+	AppInfoSClient lsdbClient;
+	SceLsdb_D322A870(&lsdbClient);
+	int exists = SceLsdb_76EC65E3(&lsdbClient, (paf::string *)&summary->titleId);
+	SceLsdb_56D8DCF0(&lsdbClient);
 
-	const paf::string *tid = exists ? &info->targetTitleId : fallbackTitleId;
+	const paf::string *targetTitle = exists ? &summary->titleId : fallbackTitleId;
 
-	struct NoticeParam {
-		paf::string tag;
-		paf::string key;
-		int f24;
-		int f28;
-		SceInt64 type;
-		int f40;
-		SceUInt8 f44;
-		SceUInt8 f45;
-		paf::string icon;
-		int f60;
-		int f64;
-		paf::string extra[9];
-		paf::string s1;
-		paf::string s2;
-		int f180;
-		paf::string titleId;
-		paf::string paramStr;
-		paf::string s4;
-		int f220[4];
-	} notice;
+	LsdbNewEvent notice;
+	notice.titleId = "LAUPDATE";
+	notice.itemId = *targetTitle;
+	notice.msgType = msgType;
+	notice.actType = 8;
+	notice.newFlag = true;
+	notice.popupNo = true;
+	notice.execTitleId = *targetTitle;
 
-	notice.tag = "LAUPDATE";
-	notice.key = *tid;
-	notice.f24 = 0;
-	notice.f28 = 0;
-	notice.type = type;
-	notice.f40 = 8;
-	notice.f44 = 1;
-	notice.f45 = 1;
-	notice.f60 = 0;
-	notice.f64 = 0;
-	notice.f180 = 0;
-	notice.titleId = *tid;
-	sce_paf_memset(notice.f220, 0, sizeof(notice.f220));
-
-	if (info->statusUid != 0) {
+	if (summary->rowid != 0) {
 		char numBuf[64];
-		sce_paf_snprintf(numBuf, sizeof(numBuf), "%lld", info->statusUid);
-		notice.paramStr = paf::string("status_uid=") + numBuf;
+		sce_paf_snprintf(numBuf, sizeof(numBuf), "%lld", summary->rowid);
+		notice.execArg = paf::string("status_uid=") + numBuf;
 	}
 
-	if (type == 2305) {
-		const char *s = info->sender.c_str();
-		const char *at = sce_paf_strchr(s, '@');
-		if (at)
-			notice.extra[0] = paf::string(s, (SceSize)(at - s));
+	if (msgType == 2305) {
+		const char *sender = summary->ownerId.c_str();
+		const char *atSign = sce_paf_strchr(sender, '@');
+		if (atSign != NULL)
+			notice.msgArg[0] = paf::string(sender, (SceSize)(atSign - sender));
 		else
-			notice.extra[0] = info->sender;
+			notice.msgArg[0] = summary->ownerId;
 	}
 
-	return SceLsdb_315B9FD6(&notice, 1);
+	return SceLsdb_315B9FD6(&notice, true);
 }
 
 /* 0x811B63F4 */
 int LiveAreaActivityUpdateTask::Run()
 {
-	ActivityUpdateResult info;
-	info.kind = 3;
-	info.statusUid = 0;
-	info.hasNew = 0;
-	info.hasComment = 0;
-	info.countA = 0;
-	info.countB = 0;
-
-	int r = FetchActivity(&info);
-	if (r == 0) {
-		if (sce_paf_strcmp(m_titleId.c_str(), "NPXS10006") == 0 &&
-		    postFriendsActivityNotice(&info) != 0) {
-			return 0;
-		}
-		r = postTitleActivityNotice(&info, &m_titleId);
+	ActivityDbSyncSummary summary;
+	int res = FetchActivity(&summary);
+	if (res == 0 && m_forceFlag == 0) {
+		if (sce_paf_strcmp(m_titleId.c_str(), "NPXS10006") == 0)
+			postFriendsActivityNotice(&summary);
+		else
+			postTitleActivityNotice(&summary, &m_titleId);
 	}
-	return r;
+	return res;
 }
 
-/* 0x811B64B6 */
+/* 0x811B64D0 */
 void LiveAreaActivityUpdateTask::OnFinish(int result)
 {
-	if (m_actCb)
-		m_actCb(result, &m_lastTs, m_userdata);
+	if (m_activityCallback != NULL)
+		m_activityCallback(result, &m_lastSyncTime, m_userdata);
 }
 
-/* 0x811B64CE */
+/* 0x811B64E8 */
 void LiveAreaActivityUpdateTask::Cancel()
 {
-	m_canceled = 1;
-	if (SceActivityDb_5B44F019(&m_actCtx) == 0)
-		m_sem.Release();
+	SceActivityDb_5B44F019(&m_activityHandle);
+	LiveAreaUpdateTaskBase::Cancel();
 }
 
-/* 0x811B64EC */
-void LiveAreaActivityUpdateTask::OnActivityCb(int result, int, int, SceInt64 *ts,
-	const ActivityUpdateResult *info, void *userdata)
+/* 0x811B64F8 */
+void LiveAreaActivityUpdateTask::OnSyncComplete(int result, bool changed,
+						const paf::string *titleId,
+						const SceInt64 *syncedTime,
+						const ActivityDbSyncSummary *summary,
+						void *userdata)
 {
-	ActivityCbContext *ctx = (ActivityCbContext *)userdata;
-	if (ctx->task->m_canceled == 0) {
-		ctx->result = result;
-		ctx->task->m_lastTs = *ts;
-		*ctx->outRes = *info;
-		ctx->task->m_sem.Release();
-	}
+	(void)changed;
+	(void)titleId;
+	ActivitySyncWaitContext *waitCtx = (ActivitySyncWaitContext *)userdata;
+	waitCtx->result = result;
+	if (syncedTime != NULL)
+		waitCtx->task->m_lastSyncTime = *syncedTime;
+	if (summary != NULL && waitCtx->outSummary != NULL)
+		*waitCtx->outSummary = *summary;
+	waitCtx->task->m_sem.Release();
 }
 
 /* ------------------------------------------------------------------ */
-/* LiveAreaCleanTask (0x811B6554 - 0x811B65B4)                        */
+/* LiveAreaCleanTask (0x811B6554 - 0x811B6624)                        */
 /* ------------------------------------------------------------------ */
 
 class LiveAreaCleanTask : public LiveAreaUpdateTaskBase {
 public:
-	LiveAreaCleanTask(const char *titleId, CompleteCb cb, void *userdata);
+	LiveAreaCleanTask(const char *titleId, CompleteCallback callback, void *userdata)
+		: LiveAreaUpdateTaskBase(titleId, callback, userdata)
+	{}
 	virtual ~LiveAreaCleanTask() {}
-	virtual int Run();
+	virtual int Run()
+	{
+		return liveareaCleanCacheEntry();
+	}
 };
 
-/* 0x811B6554 */
-LiveAreaCleanTask::LiveAreaCleanTask(const char *titleId, CompleteCb cb, void *userdata)
-	: LiveAreaUpdateTaskBase(titleId, cb, userdata)
-{}
-
-/* 0x811B65AC */
-int LiveAreaCleanTask::Run()
+paf::job::JobItem *liveareaRequestUpdateJobCtor(void *mem, SceUInt64 id,
+						LiveAreaUpdatorImpl *updator,
+						SceUInt8 requireNetwork,
+						const paf::common::SharedPtr<LiveAreaUpdateTaskBase> &task)
 {
-	return liveareaCleanCacheEntry();
+	return new (mem) LiveAreaRequestUpdateJob(id, updator, requireNetwork, task);
+}
+
+LiveAreaUpdateTaskBase *liveareaContentUpdateTaskCtor(void *mem, const char *titleId,
+						      const SceUInt64 *timestamp,
+						      SceUInt8 checkDevDir, SceUInt8 postNotice,
+						      void *callback, void *userdata,
+						      const char *localPkg)
+{
+	return new (mem) LiveAreaContentUpdateTask(titleId, timestamp, checkDevDir, postNotice,
+						   (LiveAreaUpdateTaskBase::CompleteCallback)callback,
+						   userdata, localPkg);
+}
+
+LiveAreaUpdateTaskBase *liveareaPatchCheckTaskCtor(void *mem, const char *titleId,
+						   int appType, void *callback, void *userdata)
+{
+	return new (mem) LiveAreaPatchCheckTask(titleId, appType,
+						(LiveAreaUpdateTaskBase::CompleteCallback)callback,
+						userdata);
+}
+
+LiveAreaUpdateTaskBase *liveareaActivityUpdateTaskCtor(void *mem, const char *titleId,
+						       int forceFlag, void *callback,
+						       void *userdata)
+{
+	return new (mem) LiveAreaActivityUpdateTask(titleId, forceFlag,
+						    (LiveAreaActivityUpdateTask::ActivityCallback)callback,
+						    userdata);
+}
+
+LiveAreaUpdateTaskBase *liveareaCleanTaskCtor(void *mem, const char *titleId,
+					      void *callback, void *userdata)
+{
+	return new (mem) LiveAreaCleanTask(titleId,
+					   (LiveAreaUpdateTaskBase::CompleteCallback)callback,
+					   userdata);
 }

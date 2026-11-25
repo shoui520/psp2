@@ -1,38 +1,24 @@
 /*
  * livearea_updater.cpp: livearea_plugin updater implementation
- * (0x811A2A78-0x811A2CBC, sti 0x811A2C4A). The file and class names are ours (PLACEHOLDER).
+ * (0x811A2A78-0x811A2CBC, sti 0x811A2C4A).
  */
-#include <stddef.h>
-#include <scetypes.h>
-#include "../../livespace_db/lsdb_keys.h"
-
-extern void *liveareaTaskMgrCtor(void *mem);			/* 0x811B204C */
-extern void *liveareaTaskMgrDtor(void *obj);			/* 0x811B2068 */
-extern int liveareaTaskMgrSub07C(void *obj);			/* 0x811B207C */
-extern int liveareaTaskMgrSub0AC(void *obj);			/* 0x811B20AC */
-extern int liveareaTaskMgrSub0C8(void *obj);			/* 0x811B20C8 */
-extern int liveareaTaskMgrSub0E4(void *obj, void *out, const char *title, int flag, void *cb, int appId); /* 0x811B20E4 */
-
-extern void *liveareaDailyTaskCtor(void *mem, int arg);		/* 0x811A2CBC */
-extern int liveareaDailyTaskStop(void *obj);			/* 0x811A2CC8 */
-extern void *liveareaDailyTaskDtor(void *obj);			/* 0x811A2CEC */
-extern int liveareaDailyTaskStart(void *obj);			/* 0x811A2D1C */
+#include "livearea_internal.h"
 
 struct LiveAreaUpdaterImpl {
-	void *m_taskMgr;					/* +0x00 */
-	void *m_dailyTask;					/* +0x04 */
+	LiveAreaTaskMgr *m_taskMgr;				/* +0x00 */
+	LiveAreaTaskMgr *m_dailyTask;				/* +0x04 */
 	bool m_started;						/* +0x08 */
-	unsigned char m_pad[3];
+	unsigned char statePadding[3];
 };
 
 /* 0x811A2A78 */
 LiveAreaUpdaterImpl *liveareaUpdaterImplCtor(LiveAreaUpdaterImpl *self)
 {
 	self->m_started = false;
-	void *m1 = operator new(4);
-	self->m_taskMgr = (m1 != NULL) ? liveareaTaskMgrCtor(m1) : NULL;
-	void *m2 = operator new(4);
-	self->m_dailyTask = (m2 != NULL) ? liveareaDailyTaskCtor(m2, 0) : NULL;
+	void *taskMgrMem = operator new(4);
+	self->m_taskMgr = (taskMgrMem != NULL) ? liveareaTaskMgrCtor(taskMgrMem) : NULL;
+	void *dailyTaskMem = operator new(4);
+	self->m_dailyTask = (dailyTaskMem != NULL) ? liveareaDailyTaskCtor(dailyTaskMem, 0) : NULL;
 	return self;
 }
 
@@ -79,50 +65,56 @@ int liveareaUpdaterImplStart(LiveAreaUpdaterImpl *self)
 }
 
 /* 0x811A2B1A */
-int liveareaUpdaterImplUpdateInfo(LiveAreaUpdaterImpl *self, void *out, const char *title)
+int liveareaUpdaterImplUpdateContent(LiveAreaUpdaterImpl *self, SceUInt64 *outId,
+				     const char *titleId, const SceUInt64 *timestamp,
+				     int mode, void *callback, int pageKey)
 {
-	(void)out;
 	if (!self->m_started)
 		return (int)0x80107901;
-	if (title != NULL)
-		return liveareaTaskMgrSub07C(self->m_taskMgr);
+	if (titleId != NULL)
+		return liveareaTaskMgrRequestContentUpdate(self->m_taskMgr, outId, titleId, timestamp,
+							   mode == 1, 1, 0, callback,
+							   (void *)pageKey, NULL);
 	return (int)0x80107902;
 }
 
 /* 0x811A2B72 */
-int liveareaUpdaterImplUpdateExt(LiveAreaUpdaterImpl *self, void *out, const char *title,
-				 int unusedArg, int mode)
+int liveareaUpdaterImplCheckPatch(LiveAreaUpdaterImpl *self, SceUInt64 *outId,
+				  const char *titleId, int mode, int appType,
+				  void *callback, int pageKey)
 {
-	(void)out;
-	(void)unusedArg;
 	if (!self->m_started)
 		return (int)0x80107901;
-	if (title == NULL)
+	if (titleId == NULL)
 		return (int)0x80107902;
-	if (mode == 1 || mode == 2)
-		return liveareaTaskMgrSub0AC(self->m_taskMgr);
+	if (appType == 1 || appType == 2)
+		return liveareaTaskMgrRequestPatchCheck(self->m_taskMgr, outId, titleId,
+							mode == 1, appType, callback,
+							(void *)pageKey);
 	return (int)0x80107903;
 }
 
 /* 0x811A2BC8 */
-int liveareaUpdaterImplUpdateFeed(LiveAreaUpdaterImpl *self, void *out, const char *title,
-				  int mode)
+int liveareaUpdaterImplUpdateFeed(LiveAreaUpdaterImpl *self, SceUInt64 *outId,
+				  const char *titleId, int mode, void *callback, int pageKey)
 {
-	(void)out;
 	if (!self->m_started)
 		return (int)0x80107901;
-	if (title == NULL)
+	if (titleId == NULL)
 		return (int)0x80107902;
 	if (mode < 2)
-		return liveareaTaskMgrSub0C8(self->m_taskMgr);
+		return liveareaTaskMgrRequestActivityUpdate(self->m_taskMgr, outId, titleId,
+							    mode, mode == 1, callback,
+							    (void *)pageKey);
 	return (int)0x80107902;
 }
 
 /* 0x811A2C18 */
-int liveareaUpdaterImplUpdateDolce(LiveAreaUpdaterImpl *self, void *out, const char *title,
-				   int mode, void *cb, int appId)
+int liveareaUpdaterImplCleanCache(LiveAreaUpdaterImpl *self, SceUInt64 *outId,
+				  const char *titleId, int mode, void *callback, int pageKey)
 {
 	if (!self->m_started)
 		return (int)0x80107901;
-	return liveareaTaskMgrSub0E4(self->m_taskMgr, out, title, (mode == 1) ? 1 : 0, cb, appId);
+	return liveareaTaskMgrRequestClean(self->m_taskMgr, outId, titleId, mode == 1,
+					   callback, (void *)pageKey);
 }
