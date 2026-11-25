@@ -16,7 +16,7 @@
 static SceUID _loadModuleByBufferID(SceModuleMgrParam *pModParams, const SceKernelLMOption *pOption);
 static __attribute__((noinline)) s32 _checkLMOptionConditionsBuf(const SceKernelLMOption *pOption);
 static void _setupForLoadModuleBuffer(SceModuleMgrParam *pModParams, u32 apiType, void *base, 
-    SceSize modSize, u32 unk124);
+    SceSize modSize, u32 isBufferLoad);
 
 /**
 * Load a module by path specifying the api type
@@ -92,11 +92,11 @@ SceUID sceKernelLoadModuleForLoadExecForUser(s32 apiType, const char *file, s32 
     modParams.modeStart = CMD_LOAD_MODULE; // 0x000005C0
     modParams.fileBase = NULL; // 0x000005CC
     modParams.fd = fd; // 0x000005D8
-    modParams.unk124 = 0; // 0x000005E0
+    modParams.isBufferLoad = 0; // 0x000005E0
 
     status = sceIoIoctl(fd, 0x208081, NULL, 0, NULL, 0); //0x000005DC
     if (status >= SCE_ERROR_OK) //0x000005E4
-        modParams.unk100 = 0x10; // 0x000005EC
+        modParams.loadFlags = 0x10; // 0x000005EC
 
     status = _loadModuleByBufferID(&modParams, pOption); //0x000005F4
 
@@ -170,11 +170,11 @@ SceUID sceKernelLoadModule(const char *path, s32 flag, const SceKernelLMOption *
     modParams.modeStart = CMD_LOAD_MODULE; // 0x000007A8
     modParams.fileBase = NULL; // 0x000007B4
     modParams.fd = fd; // 0x000007BC
-    modParams.unk124 = 0; // 0x000007C4
+    modParams.isBufferLoad = 0; // 0x000007C4
 
     status = sceIoIoctl(fd, 0x208081, NULL, 0, NULL, 0); // 0x000007C0
     if (status >= 0) // 0x000007C8
-        modParams.unk100 = 0x10; // 0x000007CC
+        modParams.loadFlags = 0x10; // 0x000007CC
 
     status = _loadModuleByBufferID(&modParams, pOption); // 0x000007D4
 
@@ -239,11 +239,11 @@ SceUID sceKernelLoadModuleByID(SceUID inputId, s32 flag, const SceKernelLMOption
     modParams.modeStart = CMD_LOAD_MODULE; // 0x000009CC
     modParams.fileBase = NULL; // 0x000005CC
     modParams.fd = inputId; // 0x000005D8
-    modParams.unk124 = 0; // 0x000009DC
+    modParams.isBufferLoad = 0; // 0x000009DC
 
     status = sceIoIoctl(inputId, 0x208081, NULL, 0, NULL, 0); //0x000009D8
     if (status >= SCE_ERROR_OK) //0x000009E0
-        modParams.unk100 = 0x10; // 0x000009E4
+        modParams.loadFlags = 0x10; // 0x000009E4
 
     status = _loadModuleByBufferID(&modParams, pOption); //0x000009EC
 
@@ -322,11 +322,11 @@ SceUID sceKernelLoadModuleWithBlockOffset(const char *path, SceUID blockId, SceO
     modParams.modeStart = CMD_LOAD_MODULE; // 0x00000BD0
     modParams.fileBase = NULL; // 0x00000BDC
     modParams.fd = fd; // 0x00000BE4
-    modParams.unk124 = 0; // 0x00000BEC
+    modParams.isBufferLoad = 0; // 0x00000BEC
 
     status = sceIoIoctl(fd, 0x208081, NULL, 0, NULL, 0); //0x00000BE8
     if (status >= SCE_ERROR_OK) //0x00000BF0
-        modParams.unk100 = 0x10; // 0x00000BF4
+        modParams.loadFlags = 0x10; // 0x00000BF4
 
     // 0x00000BFC
     modParams.externMemBlockIdUser = blockId;
@@ -406,11 +406,11 @@ SceUID sceKernelLoadModuleByIDWithBlockOffset(SceUID inputId, SceUID blockId, Sc
     modParams.modeStart = CMD_LOAD_MODULE; // 0x00000DC0
     modParams.fileBase = NULL; // 0x00000DCC
     modParams.fd = inputId; // 0x00000DD4
-    modParams.unk124 = 0; // 0x00000DDC
+    modParams.isBufferLoad = 0; // 0x00000DDC
 
     status = sceIoIoctl(inputId, 0x208081, NULL, 0, NULL, 0); //0x00000DD8
     if (status >= SCE_ERROR_OK) //0x00000DE0
-        modParams.unk100 = 0x10; // 0x00000DE4
+        modParams.loadFlags = 0x10; // 0x00000DE4
 
     // 0x00000DEC
     modParams.externMemBlockIdUser = blockId;
@@ -495,11 +495,11 @@ SceUID sceKernelLoadModuleDNAS(const char *path, const char *secureInstallId, s3
     modParams.modeStart = CMD_LOAD_MODULE; // 0x00000F5C
     modParams.fileBase = NULL; // 0x00000F68
     modParams.fd = fd; // 0x00000F70
-    modParams.unk124 = 0; // 0x00000F78
+    modParams.isBufferLoad = 0; // 0x00000F78
 
     status = sceIoIoctl(fd, 0x208081, NULL, 0, NULL, 0); //0x00000F74
     if (status >= SCE_ERROR_OK) //0x00000F7C
-        modParams.unk100 = 0x10; // 0x00000DE4
+        modParams.loadFlags = 0x10; // 0x00000DE4
 
     memcpy(&modParams.secureInstallId, secureInstallId, SCE_SECURE_INSTALL_ID_LEN); //0x00000F90
 
@@ -591,11 +591,11 @@ SceUID sceKernelLoadModuleNpDrm(const char *path, s32 flag, const SceKernelLMOpt
     modParams.modeStart = CMD_LOAD_MODULE; // 0x00001194
     modParams.fileBase = NULL; // 0x000011A0
     modParams.fd = fd; // 0x000011A8
-    modParams.unk124 = 0;
+    modParams.isBufferLoad = 0;
 
     status = sceIoIoctl(fd, 0x208081, NULL, 0, NULL, 0); // 0x000011AC
     if (status >= SCE_ERROR_OK) // 0x000011B4
-        modParams.unk100 = 0x10; // 0x000011C0
+        modParams.loadFlags = 0x10; // 0x000011C0
 
     memcpy(modParams.secureInstallId, secureInstallId, SCE_SECURE_INSTALL_ID_LEN); //0x000011C8
 
@@ -673,11 +673,11 @@ SceUID sceKernelLoadModuleMs(const char *path, s32 flag, const SceKernelLMOption
     modParams.modeFinish = CMD_RELOCATE_MODULE; // 0x000013A4
     modParams.fileBase = NULL; // 0x000013BC
     modParams.fd = fd; // 0x000013C4
-    modParams.unk124 = 0;
+    modParams.isBufferLoad = 0;
 
     status = sceIoIoctl(fd, 0x208081, NULL, 0, NULL, 0); // 0x000013C8
     if (status >= SCE_ERROR_OK) // 0x000013D0
-        modParams.unk100 = 0x10; // 0x000013D8
+        modParams.loadFlags = 0x10; // 0x000013D8
 
     status = _loadModuleByBufferID(&modParams, pOption); // 0x000013E0
 
@@ -745,12 +745,10 @@ SceUID sceKernelLoadModuleBufferUsbWlan(SceSize size, void *base, s32 flag, cons
         return status;
     }
 
-    // sub_00008568
     if (_CheckOverride(SCE_EXEC_FILE_APITYPE_MODULE_BUFFER_USBWLAN, base, &fd) == SCE_FALSE) {
         // 0x00001608 - 0x00001640
         _setupForLoadModuleBuffer(&modParams, SCE_EXEC_FILE_APITYPE_MODULE_BUFFER_USBWLAN, base, size, 0);
 
-        // sub_000075B4
         status = _loadModuleByBufferID(&modParams, pOption); // 0x0000163C
 
         pspSetK1(oldK1);
@@ -769,13 +767,12 @@ SceUID sceKernelLoadModuleBufferUsbWlan(SceSize size, void *base, s32 flag, cons
     modParams.modeStart = CMD_LOAD_MODULE;
     modParams.fileBase = NULL;
     modParams.fd = fd;
-    modParams.unk124 = 0;
+    modParams.isBufferLoad = 0;
 
     status = sceIoIoctl(fd, 0x208081, NULL, 0, NULL, 0); // 0x000015C4
     if (status >= SCE_ERROR_OK) // 0x000015CC
-        modParams.unk100 = 0x10;
+        modParams.loadFlags = 0x10;
 
-    // sub_000075B4
     status = _loadModuleByBufferID(&modParams, pOption); // 0x000015E4
 
     sceIoClose(fd); // 0x000015F0
@@ -832,11 +829,11 @@ SceUID sceKernelLoadModuleForLoadExecVSHDisc(const char *path, s32 flag, const S
     modParams.modeFinish = CMD_RELOCATE_MODULE; // 0x00001768
     modParams.fileBase = NULL; // 0x00001780
     modParams.fd = fd;
-    modParams.unk124 = 0;
+    modParams.isBufferLoad = 0;
 
     status = sceIoIoctl(fd, 0x208081, NULL, 0, NULL, 0); // 0x0000178C
     if (status >= SCE_ERROR_OK) // 0x00001794
-        modParams.unk100 = 0x10; // 0x0000179C
+        modParams.loadFlags = 0x10; // 0x0000179C
 
     status = _loadModuleByBufferID(&modParams, pOption); // 0x000017A4
 
@@ -894,11 +891,11 @@ SceUID sceKernelLoadModuleForLoadExecVSHDiscUpdater(const char *path, s32 flag, 
     modParams.modeFinish = CMD_RELOCATE_MODULE; // 0x00001938
     modParams.fileBase = NULL; // 0x00001950
     modParams.fd = fd;
-    modParams.unk124 = 0;
+    modParams.isBufferLoad = 0;
 
     status = sceIoIoctl(fd, 0x208081, NULL, 0, NULL, 0); // 0x0000195C
     if (status >= SCE_ERROR_OK) // 0x00001964
-        modParams.unk100 = 0x10; // 0x0000196C
+        modParams.loadFlags = 0x10; // 0x0000196C
 
     status = _loadModuleByBufferID(&modParams, pOption); // 0x00001980
 
@@ -956,11 +953,11 @@ SceUID sceKernelLoadModuleForLoadExecVSHDiscDebug(const char *path, s32 flag, co
     modParams.modeFinish = CMD_RELOCATE_MODULE; // 0x00001B08
     modParams.fileBase = NULL; // 0x00001B20
     modParams.fd = fd; //0x00001B28
-    modParams.unk124 = 0;
+    modParams.isBufferLoad = 0;
 
     status = sceIoIoctl(fd, 0x208081, NULL, 0, NULL, 0); // 0x00001B2C
     if (status >= SCE_ERROR_OK) // 0x00001B34
-        modParams.unk100 = 0x10; // 0x00001B3C
+        modParams.loadFlags = 0x10; // 0x00001B3C
 
     status = _loadModuleByBufferID(&modParams, pOption); // 0x00001B44
 
@@ -1019,11 +1016,11 @@ SceUID sceKernelLoadModuleForLoadExecVSHDiscEmu(s32 apiType, const char *path, s
     modParams.modeFinish = CMD_RELOCATE_MODULE; // 0x00001CD8
     modParams.fileBase = NULL; // 0x00001CF0
     modParams.fd = fd; //0x00001CFC
-    modParams.unk124 = 0;
+    modParams.isBufferLoad = 0;
 
     status = sceIoIoctl(fd, 0x208081, NULL, 0, NULL, 0); // 0x00001D00
     if (status >= SCE_ERROR_OK) // 0x00001D08
-        modParams.unk100 = 0x10;
+        modParams.loadFlags = 0x10;
 
     status = _loadModuleByBufferID(&modParams, pOption); // 0x00001D18
     if (status > 0 && ModuleMgrForKernel_var_DB08B7FF != 0 && memcmp(path, "disc0:/PSP_GAME/SYSDIR/EBOOT.BIN", 33) == 0) {
@@ -1105,11 +1102,11 @@ SceUID ModuleMgrForKernel_C2A5E6CA(s32 apiType, const char *path, s32 flag,
     modParams.modeFinish = CMD_RELOCATE_MODULE; // 0x00001EC8
     modParams.fileBase = NULL; // 0x00001EE0
     modParams.fd = fd; //0x00001EEC
-    modParams.unk124 = 0; //0x00001EF4
+    modParams.isBufferLoad = 0; //0x00001EF4
 
     status = sceIoIoctl(fd, 0x208081, NULL, 0, NULL, 0); // 0x00001EF0
     if (status >= SCE_ERROR_OK) // 0x00001EF8
-        modParams.unk100 = 0x10;
+        modParams.loadFlags = 0x10;
 
     memcpy(modParams.secureInstallId, installId, sizeof modParams.secureInstallId); //0x00001F10
 
@@ -1170,11 +1167,11 @@ SceUID sceKernelLoadModuleForLoadExecVSHMs1(s32 apiType, const char *path, s32 f
     modParams.modeFinish = CMD_RELOCATE_MODULE; // 0x000020B8
     modParams.fileBase = NULL; // 0x000020D0
     modParams.fd = fd; //0x000020DC
-    modParams.unk124 = 0;
+    modParams.isBufferLoad = 0;
 
     status = sceIoIoctl(fd, 0x208081, NULL, 0, NULL, 0); // 0x000020E0
     if (status >= SCE_ERROR_OK) // 0x000020E8
-        modParams.unk100 = 0x10;
+        modParams.loadFlags = 0x10;
 
     status = _loadModuleByBufferID(&modParams, pOption); // 0x000020F8
 
@@ -1233,11 +1230,11 @@ SceUID sceKernelLoadModuleForLoadExecVSHMs2(s32 apiType, const char *path, s32 f
     modParams.modeFinish = CMD_RELOCATE_MODULE; // 0x00002290
     modParams.fileBase = NULL; // 0x000022A8
     modParams.fd = fd; //0x000022B4
-    modParams.unk124 = 0;
+    modParams.isBufferLoad = 0;
 
     status = sceIoIoctl(fd, 0x208081, NULL, 0, NULL, 0); // 0x000022D0
     if (status >= SCE_ERROR_OK) // 0x000022C0
-        modParams.unk100 = 0x10;
+        modParams.loadFlags = 0x10;
 
     status = _loadModuleByBufferID(&modParams, pOption); // 0x000022D0
 
@@ -1298,11 +1295,11 @@ SceUID sceKernelLoadModuleForLoadExecVSHMs3(s32 apiType, const char *path, s32 f
     modParams.modeFinish = CMD_RELOCATE_MODULE; // 0x00002480
     modParams.fileBase = NULL; // 0x00002498
     modParams.fd = fd; //0x000024A4
-    modParams.unk124 = 0;
+    modParams.isBufferLoad = 0;
 
     status = sceIoIoctl(fd, 0x208081, NULL, 0, NULL, 0); // 0x000024A8
     if (status >= SCE_ERROR_OK) // 0x000024B0
-        modParams.unk100 = 0x10;
+        modParams.loadFlags = 0x10;
 
     memcpy(modParams.secureInstallId, installId, sizeof modParams.secureInstallId); //0x000024C8
 
@@ -1363,11 +1360,11 @@ SceUID sceKernelLoadModuleForLoadExecVSHMs4(s32 apiType, const char *path, s32 f
     modParams.modeFinish = CMD_RELOCATE_MODULE; // 0x00002670
     modParams.fileBase = NULL; // 0x00002688
     modParams.fd = fd; //0x00002694
-    modParams.unk124 = 0;
+    modParams.isBufferLoad = 0;
 
     status = sceIoIoctl(fd, 0x208081, NULL, 0, NULL, 0); // 0x00002698
     if (status >= SCE_ERROR_OK)
-        modParams.unk100 = 0x10;
+        modParams.loadFlags = 0x10;
 
     status = _loadModuleByBufferID(&modParams, pOption); // 0x000026B0
 
@@ -1434,11 +1431,11 @@ SceUID sceKernelLoadModuleForLoadExecVSHMs5(s32 apiType, const char *path, s32 f
     modParams.modeFinish = CMD_RELOCATE_MODULE; // 0x0000286C
     modParams.fileBase = NULL; // 0x00002884
     modParams.fd = fd; //0x0000288C
-    modParams.unk124 = 0;
+    modParams.isBufferLoad = 0;
 
     status = sceIoIoctl(fd, 0x208081, NULL, 0, NULL, 0); // 0x00002890
     if (status >= SCE_ERROR_OK) // 0x00002898
-        modParams.unk100 = 0x10;
+        modParams.loadFlags = 0x10;
 
     memcpy(modParams.secureInstallId, installId, sizeof modParams.secureInstallId); //0x000028AC
 
@@ -1507,11 +1504,11 @@ SceUID sceKernelLoadModuleForLoadExecVSHMs6(s32 apiType, const char *path, s32 f
     modParams.modeFinish = CMD_RELOCATE_MODULE; // 0x00002A7C
     modParams.fileBase = NULL; // 0x00002A94
     modParams.fd = fd; //0x00002AA4
-    modParams.unk124 = 0;
+    modParams.isBufferLoad = 0;
 
     status = sceIoIoctl(fd, 0x208081, NULL, 0, NULL, 0); // 0x00002AA0
     if (status >= SCE_ERROR_OK) // 0x00002AA8
-        modParams.unk100 = 0x10;
+        modParams.loadFlags = 0x10;
 
     memcpy(modParams.secureInstallId, installId, sizeof modParams.secureInstallId); //0x00002ABC
 
@@ -1574,11 +1571,11 @@ SceUID ModuleMgrForKernel_8DD336D4(s32 apiType, const char *path, s32 flag,
     modParams.modeFinish = CMD_RELOCATE_MODULE; // 0x00002C80
     modParams.fileBase = NULL; // 0x00002C98
     modParams.fd = fd; //0x00002CA4
-    modParams.unk124 = 0;
+    modParams.isBufferLoad = 0;
 
     status = sceIoIoctl(fd, 0x208081, NULL, 0, NULL, 0); // 0x00002CA8
     if (status >= SCE_ERROR_OK) // 0x00002CB0
-        modParams.unk100 = 0x10;
+        modParams.loadFlags = 0x10;
 
     memcpy(modParams.secureInstallId, installId, sizeof modParams.secureInstallId); //0x00002CC8
 
@@ -1646,11 +1643,11 @@ SceUID sceKernelLoadModuleForLoadExecNpDrm(s32 apiType, const char *path, SceOff
     modParams.modeFinish = CMD_RELOCATE_MODULE; // 0x00002EB4
     modParams.fileBase = NULL; // 0x00002ECC
     modParams.fd = fd; //0x00002ED8
-    modParams.unk124 = 0;
+    modParams.isBufferLoad = 0;
 
     status = sceIoIoctl(fd, 0x208081, NULL, 0, NULL, 0); // 0x00002EDC
     if (status >= SCE_ERROR_OK) // 0x00002EE4
-        modParams.unk100 = 0x10;
+        modParams.loadFlags = 0x10;
 
     memcpy(modParams.secureInstallId, secureInstallId, sizeof modParams.secureInstallId); //0x00002EF8
 
@@ -1716,15 +1713,15 @@ SceUID sceKernelLoadModuleVSH(const char *path, s32 flag, const SceKernelLMOptio
     modParams.modeFinish = CMD_RELOCATE_MODULE; // 0x000030E0
     modParams.fileBase = NULL; // 0x000030F8
     modParams.fd = fd; // 0x00003100
-    modParams.unk124 = 0;
+    modParams.isBufferLoad = 0;
 
     status = sceIoIoctl(fd, 0x208081, NULL, 0, NULL, 0); // 0x00003104
     if (status >= SCE_ERROR_OK) // 0x0000310C
-        modParams.unk100 = 0x10;
+        modParams.loadFlags = 0x10;
 
     status = sceIoIoctl(fd, 0x208082, NULL, 0, NULL, 0); // 0x00003130
     if (status < SCE_ERROR_OK) // 0x00003138
-        modParams.unk124 = 1; //0x00003164
+        modParams.isBufferLoad = 1; //0x00003164
 
     status = _loadModuleByBufferID(&modParams, pOption); // 0x00003144
 
@@ -1786,15 +1783,15 @@ SceUID sceKernelLoadModuleVSHByID(SceUID inputId, s32 flag, const SceKernelLMOpt
     modParams.modeFinish = CMD_RELOCATE_MODULE; // 0x00003318
     modParams.fileBase = NULL; // 0x00003330
     modParams.fd = inputId; // 0x00003338
-    modParams.unk124 = 0;
+    modParams.isBufferLoad = 0;
 
     status = sceIoIoctl(inputId, 0x208081, NULL, 0, NULL, 0); // 0x0000333C
     if (status >= SCE_ERROR_OK) // 0x00003344
-        modParams.unk100 = 0x10;
+        modParams.loadFlags = 0x10;
 
     status = sceIoIoctl(inputId, 0x208082, NULL, 0, NULL, 0); // 0x00003368
     if (status < SCE_ERROR_OK) // 0x00003390
-        modParams.unk124 = 1; //0x00003164
+        modParams.isBufferLoad = 1; //0x00003164
 
     status = _loadModuleByBufferID(&modParams, pOption); // 0x0000337C
 
@@ -1847,15 +1844,15 @@ SceUID sceKernelLoadModuleForKernel(const char *path, s32 flag, const SceKernelL
     modParams.modeFinish = CMD_RELOCATE_MODULE; // 0x00003464
     modParams.fileBase = NULL; // 0x00003488
     modParams.fd = fd; // 0x00003490
-    modParams.unk124 = 0;
+    modParams.isBufferLoad = 0;
 
     status = sceIoIoctl(fd, 0x208081, NULL, 0, NULL, 0); // 0x00003494
     if (status >= SCE_ERROR_OK) // 0x0000349C
-        modParams.unk100 = 0x10; // 0x000034A4
+        modParams.loadFlags = 0x10; // 0x000034A4
 
     status = sceIoIoctl(fd, 0x208082, NULL, 0, NULL, 0); // 0x000034C0
     if (status < SCE_ERROR_OK) // 0x000034C8
-        modParams.unk124 = 1; //0x00003510
+        modParams.isBufferLoad = 1; //0x00003510
 
     status = _loadModuleByBufferID(&modParams, pOption); // 0x000034D4
 
@@ -1905,15 +1902,15 @@ SceUID sceKernelLoadModuleByIDForKernel(SceUID inputId, s32 flag, const SceKerne
     modParams.modeStart = CMD_LOAD_MODULE; // 0x000036B8
     modParams.fileBase = NULL; // 0x000036C4
     modParams.fd = inputId; // 0x000036CC
-    modParams.unk124 = 0;
+    modParams.isBufferLoad = 0;
 
     status = sceIoIoctl(inputId, 0x208081, NULL, 0, NULL, 0); //0x000036D0
     if (status >= SCE_ERROR_OK) //0x000036D8
-        modParams.unk100 = 0x10; // 0x000036E0
+        modParams.loadFlags = 0x10; // 0x000036E0
 
     status = sceIoIoctl(inputId, 0x208082, NULL, 0, NULL, 0); // 0x000036FC
     if (status < SCE_ERROR_OK) // 0x00003704
-        modParams.unk124 = 1; //0x00003724
+        modParams.isBufferLoad = 1; //0x00003724
 
     status = _loadModuleByBufferID(&modParams, pOption); //0x00003710
 
@@ -1986,11 +1983,11 @@ SceUID sceKernelLoadModuleToBlock(const char *path, SceUID blockId, SceUID *pNew
     modParams.modeStart = CMD_LOAD_MODULE; // 0x0000386C
     modParams.fileBase = NULL; // 0x00003878
     modParams.fd = fd; // 0x00003880
-    modParams.unk124 = 0;
+    modParams.isBufferLoad = 0;
 
     status = sceIoIoctl(fd, 0x208081, NULL, 0, NULL, 0); //0x00003884
     if (status >= SCE_ERROR_OK) //0x0000388C
-        modParams.unk100 = 0x10; // 0x000036E0
+        modParams.loadFlags = 0x10; // 0x000036E0
 
     SceUID nBlockId;
     modParams.externMemBlockIdKernel = blockId; // 0x0000389C
@@ -1998,7 +1995,7 @@ SceUID sceKernelLoadModuleToBlock(const char *path, SceUID blockId, SceUID *pNew
 
     status = sceIoIoctl(fd, 0x208082, NULL, 0, NULL, 0); // 0x000038BC
     if (status < SCE_ERROR_OK) // 0x000038C4
-        modParams.unk124 = 1; //0x00003924
+        modParams.isBufferLoad = 1; //0x00003924
 
     status = _loadModuleByBufferID(&modParams, pOption); //0x000038D0
     if (status >= SCE_ERROR_OK)
@@ -2057,11 +2054,11 @@ SceUID sceKernelLoadModuleBootInitConfig(const char *path, s32 flag, const SceKe
     modParams.modeStart = CMD_LOAD_MODULE; // 0x00003AE4
     modParams.fileBase = NULL; // 0x00003AF0
     modParams.fd = fd; // 0x00003AF8
-    modParams.unk124 = 0;
+    modParams.isBufferLoad = 0;
 
     status = sceIoIoctl(fd, 0x208081, NULL, 0, NULL, 0); //0x00003AFC
     if (status >= SCE_ERROR_OK) //0x00003B04
-        modParams.unk100 = 0x10;
+        modParams.loadFlags = 0x10;
 
     status = _loadModuleByBufferID(&modParams, pOption); //0x00003B14
 
@@ -2118,11 +2115,11 @@ SceUID sceKernelLoadModuleDeci(const char *path, s32 flag, const SceKernelLMOpti
     modParams.modeStart = CMD_LOAD_MODULE; // 0x00003CD0
     modParams.fileBase = NULL; // 0x00003CDC
     modParams.fd = fd; // 0x00003CE4
-    modParams.unk124 = 0;
+    modParams.isBufferLoad = 0;
 
     status = sceIoIoctl(fd, 0x208081, NULL, 0, NULL, 0); //0x00003CE8
     if (status >= SCE_ERROR_OK) //0x00003CF0
-        modParams.unk100 = 0x10;
+        modParams.loadFlags = 0x10;
 
     status = _loadModuleByBufferID(&modParams, pOption); //0x00003D00
 
@@ -2633,7 +2630,6 @@ s32 sceKernelLoadModuleBufferBootInitConfig(void)
     return SCE_ERROR_KERNEL_ILLEGAL_PERMISSION_CALL;
 }
 
-// Subroutine sub_000075B4 - Address 0x000075B4 
 static SceUID _loadModuleByBufferID(SceModuleMgrParam *pModParams, const SceKernelLMOption *pOption)
 {
     if (pOption == NULL) { // 0x000075BC
@@ -2649,26 +2645,24 @@ static SceUID _loadModuleByBufferID(SceModuleMgrParam *pModParams, const SceKern
     }
 
     // 0x000075E4
-    pModParams->unk76 = 0;
-    pModParams->unk80 = 0;
-    pModParams->unk96 = 0;
+    pModParams->reserved76 = 0;
+    pModParams->reserved80 = 0;
+    pModParams->reserved96 = 0;
     pModParams->pExecInfo = NULL;
 
     return _start_exe_thread(pModParams); // 0x000075F4
 }
 
-// Subroutine sub_00007620 - Address 0x00007620
 static __attribute__((noinline)) s32 _checkLMOptionConditionsBuf(const SceKernelLMOption *pOption)
 {
     return _checkLMOptionConditions(pOption);
 }
 
-// Subroutine sub_00007698 - Address 0x00007698
-static void _setupForLoadModuleBuffer(SceModuleMgrParam *pModParams, u32 apiType, void *base, SceSize modSize, u32 unk124)
+static void _setupForLoadModuleBuffer(SceModuleMgrParam *pModParams, u32 apiType, void *base, SceSize modSize, u32 isBufferLoad)
 {
     pspClearMemory32(pModParams, sizeof *pModParams); // 0x000076A0
 
-    pModParams->unk124 = unk124; // 0x000076AC
+    pModParams->isBufferLoad = isBufferLoad; // 0x000076AC
     pModParams->apiType = apiType; // 0x000076B0
     pModParams->modeStart = CMD_RELOCATE_MODULE; // 0x000076C0
     pModParams->modeFinish = CMD_RELOCATE_MODULE; // 0x000076B4

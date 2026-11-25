@@ -73,19 +73,19 @@ s32 LoadExecForUser_362A956B()
         return SCE_ERROR_KERNEL_ILLEGAL_ADDR;
     }
     s32 pos  = *(s32*)(argm8 + 0);
-    s32 *unk = (s32*)*(s32*)(argm8 + 4);
+    s32 *cbData = (s32*)*(s32*)(argm8 + 4);
     if ((u32)pos >= 4) {
         pspSetK1(oldK1);
         return SCE_ERROR_KERNEL_ILLEGAL_ARGUMENT;
     }
-    if (!pspK1PtrOk(unk))
+    if (!pspK1PtrOk(cbData))
         return SCE_ERROR_KERNEL_ILLEGAL_ADDR;
     pspSetK1(oldK1);
-    if (unk[0] < 12)
+    if (cbData[0] < 12)
         return SCE_ERROR_KERNEL_ILLEGAL_SIZE;
-    unk[1] = 0;
-    unk[2] = -1;
-    g_unkCbInfo[pos] = unk;
+    cbData[1] = 0;
+    cbData[2] = -1;
+    g_unkCbInfo[pos] = cbData;
     return 0;
 }
 
@@ -96,7 +96,7 @@ void copyArgsToRebootParam(SceKernelRebootParam *hwOpt, SceKernelLoadExecVSHPara
         hwOpt->args[hwOpt->curArgs].argp = opt->argp;
         hwOpt->args[hwOpt->curArgs].args = opt->args;
         hwOpt->args[hwOpt->curArgs].type = SCE_KERNEL_REBOOT_ARGTYPE_DEFAULT;
-        hwOpt->unk40 = hwOpt->curArgs;
+        hwOpt->curArgOffset = hwOpt->curArgs;
         hwOpt->curArgs++;
     }
 
@@ -239,11 +239,11 @@ void fixupArgsAddr(SceKernelRebootParam *hwOpt, SceKernelLoadExecVSHParam *opt _
         // D7C
         if ((args->type & 0xFFFF) == SCE_KERNEL_REBOOT_ARGTYPE_UNKNOWN8) {
             // DC8
-            hwOpt->unk76 = args->argp;
+            hwOpt->execArgp = args->argp;
         }
         // D84
     }
-    hwOpt->unk72 = addr;
+    hwOpt->npDrmArgAddr = addr;
 }
 
 // BD2F1094
@@ -1582,7 +1582,7 @@ s32 runReboot(RunExecParams *opt)
 
     // 2C58
     SceKernelRebootParam *hwOpt = makeRebootParam();
-    hwOpt->unk24 |= argType;
+    hwOpt->argTypeFlags |= argType;
     if (argType == SCE_KERNEL_REBOOT_ARGTYPE_FILENAME) {
         // 2F4C
         if (opt->args != 0) {
@@ -1591,7 +1591,7 @@ s32 runReboot(RunExecParams *opt)
             hwOpt->args[0].args = opt->args;
             hwOpt->args[0].type = SCE_KERNEL_REBOOT_ARGTYPE_KERNEL;
             hwOpt->curArgs = 1;
-            hwOpt->unk36 = 0;
+            hwOpt->vshParamIdx = 0;
             // 2FFC
             copyArgsToRebootParam(hwOpt, opt->vshParam);
         } else if (opt->argp != NULL) {
@@ -1607,14 +1607,14 @@ s32 runReboot(RunExecParams *opt)
                 hwOpt->args[1].args = strlen(opt->argp) + 1;
                 hwOpt->args[1].type = SCE_KERNEL_REBOOT_ARGTYPE_EMU;
                 hwOpt->curArgs = 2;
-                hwOpt->unk36 = 0;
+                hwOpt->vshParamIdx = 0;
             } else {
                 // 300C
                 hwOpt->args[0].argp = opt->argp;
                 hwOpt->args[0].args = strlen(opt->argp) + 1;
                 hwOpt->args[0].type = argType;
                 hwOpt->curArgs = 1;
-                hwOpt->unk36 = 0;
+                hwOpt->vshParamIdx = 0;
                 if (opt->apiType == SCE_EXEC_FILE_APITYPE_EMU_EBOOT_MS || opt->apiType == SCE_EXEC_FILE_APITYPE_EMU_BOOT_MS
                  || opt->apiType == SCE_EXEC_FILE_APITYPE_EMU_EBOOT_EF || opt->apiType == SCE_EXEC_FILE_APITYPE_EMU_BOOT_EF) {
                     // 3064
@@ -1662,7 +1662,7 @@ s32 runReboot(RunExecParams *opt)
                 hwOpt->args[hwOpt->curArgs].argp = (void *)blkInfo.addr;
                 hwOpt->args[hwOpt->curArgs].args = blkInfo.memSize;
                 hwOpt->args[hwOpt->curArgs].type = SCE_KERNEL_REBOOT_ARGTYPE_DEFAULT;
-                hwOpt->unk40 = hwOpt->curArgs;
+                hwOpt->curArgOffset = hwOpt->curArgs;
                 hwOpt->curArgs++;
                 ptr = hwOpt->args[hwOpt->curArgs].argp;
                 ptr[0] = hwOpt->args[hwOpt->curArgs].args;
@@ -1672,7 +1672,7 @@ s32 runReboot(RunExecParams *opt)
             hwOpt->args[hwOpt->curArgs].argp = opt->vshParam->vshmainArgp;
             hwOpt->args[hwOpt->curArgs].args = opt->vshParam->vshmainArgs;
             hwOpt->args[hwOpt->curArgs].type = SCE_KERNEL_REBOOT_ARGTYPE_DEFAULT;
-            hwOpt->unk40 = hwOpt->curArgs;
+            hwOpt->curArgOffset = hwOpt->curArgs;
             hwOpt->curArgs++;
             ptr = opt->vshParam->vshmainArgp;
             ptr[0] = opt->vshParam->vshmainArgs;
@@ -1708,7 +1708,7 @@ s32 runReboot(RunExecParams *opt)
 
     // 2CE0
     if ((opt->vshParam->flags & 0x10000) == 0)
-        *(s32*)(hwOpt->startAddr + hwOpt->unk12 * 32 - 12) = opt->apiType;
+        *(s32*)(hwOpt->startAddr + hwOpt->numLoadModules * 32 - 12) = opt->apiType;
 
     // 2D04
     fixupArgsAddr(hwOpt, opt->vshParam);
@@ -1766,20 +1766,20 @@ SceKernelRebootParam *makeRebootParam()
     opt->args      = (void*)args;
     opt->endAddr   = (void*)endAddr;
     opt->curArgs   = 0;
-    opt->unk24     = 0;
+    opt->argTypeFlags     = 0;
     opt->model     = sceKernelGetModel();
-    opt->unk60     = 0;
+    opt->reserved60     = 0;
     opt->dipswLo   = sceKernelDipswLow32();
     opt->dipswHi   = sceKernelDipswHigh32();
-    opt->unk48     = 0;
+    opt->reserved48     = 0;
 
     if (sceKernelDipsw(30) != 1)
         opt->dipswHi &= 0xFAFFFFFF;
 
     opt->addr = (void*)0x88000000;
     opt->memorySize = sceKernelSysMemRealMemorySize();
-    opt->unk40 = -1;
-    opt->unk36 = -1;
+    opt->curArgOffset = -1;
+    opt->vshParamIdx = -1;
     opt->cpTime = sceKernelDipswCpTime();
     return opt;
 }

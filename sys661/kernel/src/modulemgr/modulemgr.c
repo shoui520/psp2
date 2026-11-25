@@ -84,7 +84,6 @@ static SceBool canOverflowOccur(u32 s1, u32 s2)
     return ((s1 + s2) < s2);
 }
 
-// sub_00000000
 /*
  * Unregister the resident libraries of the module and unlink the stub libraries
  * it is using. 
@@ -337,10 +336,10 @@ s32 ModuleMgrInit(SceSize argSize __attribute__((unused)), const void *argBlock 
     g_ModuleManager.eventId = sceKernelCreateEventFlag("SceKernelModmgr", SCE_KERNEL_EW_AND, 0, NULL); // 0x000050B8
 
     g_ModuleManager.userThreadId = SCE_KERNEL_VALUE_UNITIALIZED; // 0x000050DC
-    g_ModuleManager.unk16 = SCE_KERNEL_VALUE_UNITIALIZED; // 0x000050D0
+    g_ModuleManager.initState = SCE_KERNEL_VALUE_UNITIALIZED; // 0x000050D0
 
-    g_ModuleManager.unk20 = &g_ModuleManager.unk20; // 0x000050D8
-    g_ModuleManager.unk24 = &g_ModuleManager.unk20; //0x000050F0
+    g_ModuleManager.listHead = &g_ModuleManager.listHead; // 0x000050D8
+    g_ModuleManager.listTail = &g_ModuleManager.listHead; //0x000050F0
     g_ModuleManager.npDrmGetModuleKeyFunction = NULL; // 0x000050E0
     g_ModuleManager.pModule = NULL; // 0x000050D4
 
@@ -402,7 +401,6 @@ s32 sceKernelModuleMgrMode(s32 mode)
     return SCE_ERROR_OK;
 }
 
-// sub_00005C4C
 static s32 _LoadModule(SceModuleMgrParam *pModParams)
 {
     SceOff pos;
@@ -440,7 +438,7 @@ static s32 _LoadModule(SceModuleMgrParam *pModParams)
         }
         sceIoLseek(fd, pos, SCE_SEEK_SET); // 0x00005D50
 
-        if (newFd != 0 || pModParams->unk124 != 0) // 0x00005D5C & 0x00005D68
+        if (newFd != 0 || pModParams->isBufferLoad != 0) // 0x00005D5C & 0x00005D68
             break;
 
         status = _CheckOverride(pModParams->apiType, pBlock, &newFd); //0x00005D74
@@ -451,7 +449,7 @@ static s32 _LoadModule(SceModuleMgrParam *pModParams)
             while (1) {} // 0x00005D98
 
         fd = newFd;
-        pModParams->unk124 = 1; // 0x00005D90
+        pModParams->isBufferLoad = 1; // 0x00005D90
     } while (1); // 0x00005D90
 
     /* The first 512 bytes of the file of the module to be loaded have been read into pBlock. */
@@ -479,7 +477,7 @@ static s32 _LoadModule(SceModuleMgrParam *pModParams)
         sceIoLseek(fd, pos, SCE_SEEK_SET); // 0x00005E04
     }
     pExecInfo->modeAttribute = SCE_EXEC_FILE_NO_HEADER_COMPRESSION; // 0x00005E10
-    if (pModParams->unk124 & 0x1) // 0x00005E1C
+    if (pModParams->isBufferLoad & 0x1) // 0x00005E1C
         pExecInfo->isSignChecked = SCE_TRUE;
 
     pExecInfo->secureInstallId = pModParams->secureInstallId; // 0x00005E28
@@ -719,7 +717,7 @@ static s32 _LoadModule(SceModuleMgrParam *pModParams)
         }
         // 0x0000613C
         pExecInfo->modeAttribute = SCE_EXEC_FILE_DECRYPT; // 0x00006100
-        if (pModParams->unk124 & 0x1) // 0x0000610C
+        if (pModParams->isBufferLoad & 0x1) // 0x0000610C
             pExecInfo->isSignChecked = SCE_TRUE;
 
         pExecInfo->secureInstallId = secInstallId; // 0x0000612C
@@ -862,7 +860,6 @@ static s32 _CheckKernelOnlyModulePartition(SceUID memoryPartitionId)
     return SCE_ERROR_OK;
 }
 
-// sub_00006800
 static s32 _RelocateModule(SceModuleMgrParam *pModParams)
 {
     s32 status;
@@ -874,7 +871,7 @@ static s32 _RelocateModule(SceModuleMgrParam *pModParams)
 
     pExecInfo = pModParams->pExecInfo;
     pExecInfo->apiType = pModParams->apiType; // 0x00006844
-    pExecInfo->loadFlags = pModParams->unk100; // 0x00006858
+    pExecInfo->loadFlags = pModParams->loadFlags; // 0x00006858
 
     pMod = pModParams->pMod; // 0x0000683C
 
@@ -887,7 +884,7 @@ static s32 _RelocateModule(SceModuleMgrParam *pModParams)
 
         pExecInfo->modeAttribute = SCE_EXEC_FILE_NO_HEADER_COMPRESSION; // 0x00006860
         pExecInfo->fileBase = pModParams->fileBase; // 0x00006874
-        if (pModParams->unk124 & 0x1) // 0x00006870
+        if (pModParams->isBufferLoad & 0x1) // 0x00006870
             pExecInfo->isSignChecked = SCE_TRUE; // 0x00006878
 
         pExecInfo->secureInstallId = pModParams->secureInstallId; //0x00006880
@@ -1005,7 +1002,7 @@ static s32 _RelocateModule(SceModuleMgrParam *pModParams)
 
         // 0x00006A00
         pExecInfo->modeAttribute = SCE_EXEC_FILE_DECRYPT; // 0x000068EC
-        if (pModParams->unk124 & 0x1) // 0x00006A08
+        if (pModParams->isBufferLoad & 0x1) // 0x00006A08
             pExecInfo->isSignChecked = SCE_TRUE; // 0x00006A14
 
         pExecInfo->secureInstallId = pModParams->secureInstallId; // 0x00006A18
@@ -1053,9 +1050,9 @@ static s32 _RelocateModule(SceModuleMgrParam *pModParams)
         if (pModParams->position == SCE_KERNEL_LM_POS_HIGH) // 0x00006B38
             cutBefore = SCE_TRUE;
 
-        pModParams->unk116 = sceKernelSeparateMemoryBlock(pModParams->externMemBlockIdKernel, cutBefore, pExecInfo->modCodeSize); // 0x00006B48
+        pModParams->sepMemBlockId = sceKernelSeparateMemoryBlock(pModParams->externMemBlockIdKernel, cutBefore, pExecInfo->modCodeSize); // 0x00006B48
         if (pModParams->pNewBlockId != NULL) // 0x00006B54
-            *(pModParams->pNewBlockId) = pModParams->unk116; // 0x00006B60
+            *(pModParams->pNewBlockId) = pModParams->sepMemBlockId; // 0x00006B60
 
         SceSysmemMemoryBlockInfo blkInfo;
         blkInfo.size = sizeof(SceSysmemMemoryBlockInfo);
@@ -1130,7 +1127,6 @@ static void _CleanupMemory(SceUID gzipMemId, SceLoadCoreExecFileInfo *pExecInfo)
     ClearFreePartitionMemory(pExecInfo->memBlockId); // 0x00006D28 - 0x00006D74
 }
 
-// sub_00006F80
 /*
  * Release the resident libraries of the specified module.
 */
@@ -1159,7 +1155,6 @@ static s32 _ModuleReleaseLibraries(SceModule *pMod)
     return SCE_ERROR_OK;
 }
 
-// Subroutine sub_00006FF4 - Address 0x00006FF4 
 static s32 _StartModule(SceModuleMgrParam *pModParams, SceModule *pMod, SceSize argSize, void *argp, s32 *pStatus)
 {
     s32 status;
@@ -1219,7 +1214,6 @@ static s32 _StartModule(SceModuleMgrParam *pModParams, SceModule *pMod, SceSize 
     return SCE_KERNEL_RESIDENT;
 }
 
-// Subroutine sub_0000713C - Address 0x0000713C
 static s32 _StopModule(SceModuleMgrParam *pModParams, SceModule *pMod, s32 startOp, SceUID modId, SceSize argSize,
     void *argp, s32 *pStatus)
 {
@@ -1375,7 +1369,6 @@ static s32 _StopModule(SceModuleMgrParam *pModParams, SceModule *pMod, s32 start
     }
 }
 
-// Subroutine sub_000074E4 - Address 0x000074E4 
 s32 _start_exe_thread(SceModuleMgrParam *pModParams)
 {
     SceUID threadId;
@@ -1418,7 +1411,6 @@ s32 _start_exe_thread(SceModuleMgrParam *pModParams)
     return result;
 }
 
-// sub_00007968
 static s32 _ProcessModuleExportEnt(SceModule *pMod, SceResidentLibraryEntryTable *pLib)
 {
     u32 i;
@@ -1483,7 +1475,6 @@ static s32 _ProcessModuleExportEnt(SceModule *pMod, SceResidentLibraryEntryTable
     return SCE_ERROR_OK;
 }
 
-// sub_00007C34
 static s32 allocate_module_block(SceModuleMgrParam *pModParams)
 {
     s32 status;
@@ -1572,7 +1563,6 @@ static s32 allocate_module_block(SceModuleMgrParam *pModParams)
     }
 }
 
-// sub_00007ED8
 static s32 _CheckSkipPbpHeader(SceModuleMgrParam *pModParams, SceUID fd, void *pBlock, u32 *pOffset, s32 apiType)
 {
     PBPHeader *pPbpHdr;
@@ -1618,7 +1608,6 @@ static s32 _CheckSkipPbpHeader(SceModuleMgrParam *pModParams, SceUID fd, void *p
     }
 }
 
-// sub_00007FD0
 /* 
  * Check if the target memory partitions for the module to be loaded into, 
  * specified by the user via SceKernelLMOption, match the priviledge level 
@@ -1662,7 +1651,6 @@ static s32 _PartitionCheck(SceModuleMgrParam *pModParams, SceLoadCoreExecFileInf
     return SCE_ERROR_OK;
 }
 
-// sub_00008124
 static s32 _PrologueModule(SceModuleMgrParam *pModParams, SceModule *pMod)
 {
     s32 oldGp;
@@ -1787,7 +1775,6 @@ static s32 _PrologueModule(SceModuleMgrParam *pModParams, SceModule *pMod)
     return SCE_ERROR_OK;
 }
 
-// sub_0000844C
 static s32 ModuleRegisterLibraries(SceModule *pMod)
 {
     void *pCurEntry;

@@ -1172,12 +1172,12 @@ int _sceGeInterrupt(int arg0 __attribute__ ((unused)), int arg1
 {
     int oldIntr = sceKernelCpuSuspendIntr();
     int attr = HW_GE_INTERRUPT_TYPE1;
-    int unk1 = HW_GE_UNK004;
+    int ctrlReg = HW_GE_UNK004;
     // In case an error interrupt was caught, start _sceGeErrorInterrupt
     if ((attr & HW_GE_INTERR) != 0) {
         // 2228
         HW_GE_INTERRUPT_TYPE4 = HW_GE_INTERR;
-        _sceGeErrorInterrupt(attr, unk1, arg2);
+        _sceGeErrorInterrupt(attr, ctrlReg, arg2);
     }
     // 2118
     // There cannot be both SIGNAL and FINISH at the same time
@@ -1202,7 +1202,7 @@ int _sceGeInterrupt(int arg0 __attribute__ ((unused)), int arg1
                 ;
             HW_GE_INTERRUPT_TYPE4 = HW_GE_INTSIG | HW_GE_INTEND;
             HW_GE_INTERRUPT_TYPE2 = HW_GE_INTSIG | HW_GE_INTEND;
-            _sceGeListInterrupt(attr, unk1, arg2);
+            _sceGeListInterrupt(attr, ctrlReg, arg2);
         }
     } else {
         if ((attr & HW_GE_INTEND) == 0) {
@@ -1216,7 +1216,7 @@ int _sceGeInterrupt(int arg0 __attribute__ ((unused)), int arg1
             ;
         HW_GE_INTERRUPT_TYPE4 = HW_GE_INTEND | HW_GE_INTFIN;
         HW_GE_INTERRUPT_TYPE2 = HW_GE_INTEND | HW_GE_INTFIN;
-        _sceGeFinishInterrupt(attr, unk1, arg2);
+        _sceGeFinishInterrupt(attr, ctrlReg, arg2);
     }
 
     // 2170
@@ -1655,7 +1655,7 @@ int _sceGeQueueSuspend()
             g_GeSuspend.status = HW_GE_EXEC | 0x1;
             int *stall = (int *)HW_GE_STALLADDR;
             g_GeSuspend.stallAddr = stall;
-            g_GeSuspend.unk0 = HW_GE_UNK004;
+            g_GeSuspend.ctrlReg = HW_GE_UNK004;
             g_GeSuspend.listAddr = HW_GE_LISTADDR;
             g_GeSuspend.intrType = HW_GE_INTERRUPT_TYPE1;
             g_GeSuspend.sigCmd = HW_GE_CMD(SCE_GE_CMD_SIGNAL);
@@ -1715,7 +1715,7 @@ int _sceGeQueueSuspend()
     }
     // 2CC4
     // Save all the necessary info for suspending
-    g_GeSuspend.unk0 = HW_GE_UNK004;
+    g_GeSuspend.ctrlReg = HW_GE_UNK004;
     g_GeSuspend.status = HW_GE_EXEC;
     g_GeSuspend.listAddr = HW_GE_LISTADDR;
     g_GeSuspend.stallAddr = (int *)HW_GE_STALLADDR;

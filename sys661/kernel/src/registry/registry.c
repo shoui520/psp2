@@ -2,21 +2,16 @@
  * ePSP 6.61 sceRegistry_Service (registry.prx)
  */
 
-#define NULL ((void *)0)
+#include <common/types.h>
 
-typedef unsigned char u8;
-typedef unsigned short u16;
-typedef unsigned int u32;
-typedef int s32;
-typedef unsigned int SceSize;
 typedef u32 REGHANDLE;
 
 struct RegParam {
 	u32 regtype;
 	char name[256];
 	u32 namelen;
-	u32 unk2;
-	u32 unk3;
+	u32 reserved2;
+	u32 reserved3;
 };
 
 struct RegKeyEntry {
@@ -259,17 +254,17 @@ static struct RegCatEntry g_cats[38] = {
 	/* 37 */ { "/SYSPROFILE/RESOLUTION", 0x25, &g_keys[-1904], 2, 0 },
 };
 
-static void sub_5da8(void);
-static void sub_6164(void);
-static int sub_6190(u32 cat_id);
-static int sub_61c0(u32 cat_id);
-static int sub_6204(const char *name);
-static int sub_6280(u32 cat_id, u32 *out_num);
-static int sub_62bc(int cat_id, const char *name, void *buf, u32 size);
-static int sub_08d0(u32 cat_id, const char *name, u32 *out_id, u32 *out_type, u32 *out_size);
-static int sub_0a64(int cat_id, u32 key_id, void *buf, u32 size);
-static int sub_4ce4(int cat_id, const char *name, const void *buf, u32 size);
-static int sub_5d08(u32 cat_id, char *buf, int count);
+static void regLoadDefaults(void);
+static void regCloseAllCategories(void);
+static int regIsCategoryOpen(u32 cat_id);
+static int regFlushCategory(u32 cat_id);
+static int regOpenCategoryByName(const char *name);
+static int regGetCategoryKeyCount(u32 cat_id, u32 *out_num);
+static int regGetKeyValueByName(int cat_id, const char *name, void *buf, u32 size);
+static int regFindKey(u32 cat_id, const char *name, u32 *out_id, u32 *out_type, u32 *out_size);
+static int regGetKeyValueById(int cat_id, u32 key_id, void *buf, u32 size);
+static int regSetKeyValue(int cat_id, const char *name, const void *buf, u32 size);
+static int regGetKeyNames(u32 cat_id, char *buf, int count);
 
 static inline u32 get_k1(void)
 {
@@ -312,7 +307,7 @@ int sceRegOpenCategory(REGHANDLE h, const char *name, int mode, REGHANDLE *cat_h
 		return 0x80082719;
 	if (h != 0 || g_reg_open == 0)
 		return 0x80082715;
-	*cat_h = sub_6204(name);
+	*cat_h = regOpenCategoryByName(name);
 	return 0;
 }
 
@@ -329,9 +324,9 @@ int sceRegGetKeyInfo(REGHANDLE cat_h, const char *name, REGHANDLE *key_h, u32 *t
 		return 0x8008273b;
 	if (size != NULL && check_uptr(size, 4))
 		return 0x8008273b;
-	if (sub_6190(cat_h) == 0)
+	if (regIsCategoryOpen(cat_h) == 0)
 		return 0x8008272e;
-	res = sub_08d0(cat_h, name, &raw_id, type, size);
+	res = regFindKey(cat_h, name, &raw_id, type, size);
 	*key_h = raw_id ^ 0xa0f3d97b;
 	return res;
 }
@@ -342,36 +337,36 @@ int sceRegSetKeyValue(REGHANDLE cat_h, const char *name, const void *buf, u32 si
 		return 0x8008273b;
 	if (buf == NULL || check_uptr(buf, size))
 		return 0x8008273b;
-	if (sub_6190(cat_h) == 0)
+	if (regIsCategoryOpen(cat_h) == 0)
 		return 0x8008272e;
-	return sub_4ce4(cat_h, name, buf, size);
+	return regSetKeyValue(cat_h, name, buf, size);
 }
 
 int sceRegGetKeyValue(REGHANDLE cat_h, REGHANDLE key_h, void *buf, u32 size)
 {
 	if (buf == NULL || check_uptr(buf, size))
 		return 0x8008273b;
-	if (sub_6190(cat_h) == 0)
+	if (regIsCategoryOpen(cat_h) == 0)
 		return 0x8008272e;
-	return sub_0a64(cat_h, key_h ^ 0xa0f3d97b, buf, size);
+	return regGetKeyValueById(cat_h, key_h ^ 0xa0f3d97b, buf, size);
 }
 
 int sceReg_driver_D323FC94(REGHANDLE cat_h, u32 *num)
 {
 	if (num == NULL || check_uptr(num, 4))
 		return 0x8008273b;
-	if (sub_6190(cat_h) == 0)
+	if (regIsCategoryOpen(cat_h) == 0)
 		return 0x8008272e;
-	return sub_6280(cat_h, num);
+	return regGetCategoryKeyCount(cat_h, num);
 }
 
 int sceReg_driver_BAE3371A(REGHANDLE cat_h, char *buf, int num)
 {
 	if ((u32)num >= 0x20 || buf == NULL || check_uptr(buf, (u32)(num * 27)))
 		return 0x8008273b;
-	if (sub_6190(cat_h) == 0)
+	if (regIsCategoryOpen(cat_h) == 0)
 		return 0x8008272e;
-	return sub_5d08(cat_h, buf, num);
+	return regGetKeyNames(cat_h, buf, num);
 }
 
 int sceRegGetKeyInfoByName(REGHANDLE cat_h, const char *name, u32 *type, u32 *size)
@@ -384,9 +379,9 @@ int sceRegGetKeyInfoByName(REGHANDLE cat_h, const char *name, u32 *type, u32 *si
 		return 0x8008273b;
 	if (size != NULL && check_uptr(size, 4))
 		return 0x8008273b;
-	if (sub_6190(cat_h) == 0)
+	if (regIsCategoryOpen(cat_h) == 0)
 		return 0x8008272e;
-	return sub_08d0(cat_h, name, &dummy_id, type, size);
+	return regFindKey(cat_h, name, &dummy_id, type, size);
 }
 
 int sceRegGetKeyValueByName(REGHANDLE cat_h, const char *name, void *buf, u32 size)
@@ -395,9 +390,9 @@ int sceRegGetKeyValueByName(REGHANDLE cat_h, const char *name, void *buf, u32 si
 		return 0x8008273b;
 	if (buf == NULL || check_uptr(buf, size))
 		return 0x8008273b;
-	if (sub_6190(cat_h) == 0)
+	if (regIsCategoryOpen(cat_h) == 0)
 		return 0x8008272e;
-	return sub_62bc(cat_h, name, buf, size);
+	return regGetKeyValueByName(cat_h, name, buf, size);
 }
 
 int sceRegCreateKey(REGHANDLE cat_h, const char *name, int type, u32 size)
@@ -431,7 +426,7 @@ int module_reboot_phase(int phase)
 {
 	if (phase == 2) {
 		g_reg_open = 0;
-		sub_6164();
+		regCloseAllCategories();
 	}
 	return 0;
 }
@@ -440,16 +435,16 @@ int sceReg_driver_30E567D5(SceSize args, void *argp)
 {
 	(void)args;
 	(void)argp;
-	sub_5da8();
+	regLoadDefaults();
 	g_reg_open = 0;
-	sub_6164();
+	regCloseAllCategories();
 	return 0;
 }
 
 int sceReg_driver_BDE681CF(void)
 {
 	g_reg_open = 0;
-	sub_6164();
+	regCloseAllCategories();
 	return 0;
 }
 
@@ -464,7 +459,7 @@ int sceRegCloseRegistry(REGHANDLE h)
 
 int sceRegCloseCategory(REGHANDLE cat_h)
 {
-	return sub_61c0(cat_h);
+	return regFlushCategory(cat_h);
 }
 
 int sceReg_driver_C3DEEBC6(struct RegParam *reg)
@@ -510,7 +505,7 @@ int sceReg_driver_6328E4C6(REGHANDLE h, char *buf, int num)
 	return 0;
 }
 
-static __attribute__((noinline)) int sub_08d0(u32 cat_id, const char *name, u32 *out_id, u32 *out_type, u32 *out_size)
+static __attribute__((noinline)) int regFindKey(u32 cat_id, const char *name, u32 *out_id, u32 *out_type, u32 *out_size)
 {
 	u32 i;
 	struct RegKeyEntry *ke;
@@ -549,7 +544,7 @@ static __attribute__((noinline)) int sub_08d0(u32 cat_id, const char *name, u32 
 	return 0x8008272e;
 }
 
-static __attribute__((noinline)) int sub_0a64(int cat_id, u32 key_id, void *buf, u32 size)
+static __attribute__((noinline)) int regGetKeyValueById(int cat_id, u32 key_id, void *buf, u32 size)
 {
 	switch (key_id) {
 	case 0x026:
@@ -2440,12 +2435,12 @@ static __attribute__((noinline)) int sub_0a64(int cat_id, u32 key_id, void *buf,
 	}
 }
 
-static __attribute__((noinline)) int sub_4ce4(int cat_id, const char *name, const void *buf, u32 size)
+static __attribute__((noinline)) int regSetKeyValue(int cat_id, const char *name, const void *buf, u32 size)
 {
 	u32 key_id, type, ksize;
 	int res;
 
-	res = sub_08d0(cat_id, name, &key_id, &type, &ksize);
+	res = regFindKey(cat_id, name, &key_id, &type, &ksize);
 	if (res != 0)
 		return res;
 	switch (key_id) {
@@ -4008,7 +4003,7 @@ static __attribute__((noinline)) int sub_4ce4(int cat_id, const char *name, cons
 	}
 }
 
-static __attribute__((noinline)) int sub_5d08(u32 cat_id, char *buf, int count)
+static __attribute__((noinline)) int regGetKeyNames(u32 cat_id, char *buf, int count)
 {
 	int n, i;
 	struct RegKeyEntry *ke;
@@ -4027,7 +4022,7 @@ static __attribute__((noinline)) int sub_5d08(u32 cat_id, char *buf, int count)
 	return 0;
 }
 
-static __attribute__((noinline)) void sub_5da8(void)
+static __attribute__((noinline)) void regLoadDefaults(void)
 {
 	volatile u32 *cfg = (volatile u32 *)0xa83ff000;
 
@@ -4110,7 +4105,7 @@ static __attribute__((noinline)) void sub_5da8(void)
 	g_count_psn_access = 0;
 }
 
-static __attribute__((noinline)) void sub_6164(void)
+static __attribute__((noinline)) void regCloseAllCategories(void)
 {
 	u32 i;
 
@@ -4118,21 +4113,21 @@ static __attribute__((noinline)) void sub_6164(void)
 		g_cats[i].open_flag = 0;
 }
 
-static __attribute__((noinline)) int sub_6190(u32 cat_id)
+static __attribute__((noinline)) int regIsCategoryOpen(u32 cat_id)
 {
 	if (cat_id < 0x24)
 		return g_cats[cat_id].open_flag;
 	return 0;
 }
 
-static __attribute__((noinline)) int sub_61c0(u32 cat_id)
+static __attribute__((noinline)) int regFlushCategory(u32 cat_id)
 {
 	if (cat_id < 0x24 && g_cats[cat_id].open_flag == 1)
 		return 0;
 	return 0x8008272e;
 }
 
-static __attribute__((noinline)) int sub_6204(const char *name)
+static __attribute__((noinline)) int regOpenCategoryByName(const char *name)
 {
 	u32 i;
 
@@ -4145,7 +4140,7 @@ static __attribute__((noinline)) int sub_6204(const char *name)
 	return 0x80082716;
 }
 
-static __attribute__((noinline)) int sub_6280(u32 cat_id, u32 *out_num)
+static __attribute__((noinline)) int regGetCategoryKeyCount(u32 cat_id, u32 *out_num)
 {
 	if (cat_id < 0x24) {
 		*out_num = g_cats[cat_id].num_keys;
@@ -4154,13 +4149,13 @@ static __attribute__((noinline)) int sub_6280(u32 cat_id, u32 *out_num)
 	return 0x8008272e;
 }
 
-static __attribute__((noinline)) int sub_62bc(int cat_id, const char *name, void *buf, u32 size)
+static __attribute__((noinline)) int regGetKeyValueByName(int cat_id, const char *name, void *buf, u32 size)
 {
 	u32 key_id, type, ksize;
 	int res;
 
-	res = sub_08d0(cat_id, name, &key_id, &type, &ksize);
+	res = regFindKey(cat_id, name, &key_id, &type, &ksize);
 	if (res == 0)
-		return sub_0a64(cat_id, key_id, buf, size);
+		return regGetKeyValueById(cat_id, key_id, buf, size);
 	return res;
 }

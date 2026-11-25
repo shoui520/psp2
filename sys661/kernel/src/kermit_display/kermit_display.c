@@ -33,9 +33,9 @@ typedef struct SceGameInfo {
 } SceGameInfo;
 
 typedef struct SceSm1Operations {
-	u32 unk[4];
+	u32 reserved00[4];
 	int (*checkMagic)(void);
-	u32 unk14[4];
+	u32 reserved14[4];
 	void (*notifyMode)(int mode);
 } SceSm1Operations;
 
@@ -73,7 +73,7 @@ int sceIdStorageLookup(u16 key, u32 offset, void *buf, u32 len);
 int sceKermitPeripheral_driver_D0A69002(void);
 int sceLcdc_driver_2D80BB2E(int *hsync, int *vsync, int *hblank, int *vblank, int *hperiod);
 float sceLcdc_driver_9D4FB8B1(void);
-int sceLcdc_driver_BAF165CE(int mode, int width, int height, int unk);
+int sceLcdc_driver_BAF165CE(int mode, int width, int height, int param);
 int sceLcdc_driver_E9DBD35F(int mode, int width, int height, int pixelformat);
 int sceSysreg_driver_4841B2D2(int timer);
 int sceSysreg_driver_4E5C86AA(void);
@@ -110,7 +110,7 @@ typedef struct SceDisplayContext {
 	s8 targetEnabled;              /* 0x067 */
 	s8 curEnabled;                 /* 0x068 */
 	s8 hasLcd;                     /* 0x069 */
-	s8 unk6A;                      /* 0x06A */
+	s8 reserved6A;                      /* 0x06A */
 	s8 backlightPending;           /* 0x06B */
 	s8 hasCustomLevels;            /* 0x06C */
 	u8 pad6D;                      /* 0x06D */
@@ -130,11 +130,11 @@ typedef struct SceDisplayContext {
 	int resumeMode;                /* 0x0FC */
 	int suspendCountdown;          /* 0x100 */
 	int disableCountdown;          /* 0x104 */
-	int unk108;                    /* 0x108 */
+	int reserved108;                    /* 0x108 */
 	int brightnessHoldCount;       /* 0x10C */
 	int modeChangeCountdown;       /* 0x110 */
 	int modeChangeFlags;           /* 0x114 */
-	int unk118;                    /* 0x118 */
+	int suspendBlockFlag;                    /* 0x118 */
 	int initDone;                  /* 0x11C */
 	int vshModeInfo;               /* 0x120 */
 	SceSm1Operations *sm1Ops;      /* 0x124 */
@@ -170,15 +170,15 @@ typedef struct SceDisplayFadeContext {
 } SceDisplayFadeContext;
 
 typedef struct SceDisplaySubIntrOps {
-	void *unk0;
-	void *unk4;
-	void *unk8;
+	void *reserved0;
+	void *reserved4;
+	void *reserved8;
 	int (*disable1)(int intr_code, int sub_intr_code);
 	int (*enable)(int intr_code, int sub_intr_code);
 	int (*disable2)(int intr_code, int sub_intr_code);
 	int (*suspend)(int intr_code, int sub_intr_code, int *state);
 	int (*resume)(int intr_code, int sub_intr_code, int state);
-	void *unk20;
+	void *reserved20;
 } SceDisplaySubIntrOps;
 
 typedef struct SceDisplayIntrOpt {
@@ -465,21 +465,28 @@ int sceDisplayInit(void)
 	g_display.brightnessLevels[0] = 0;
 
 	if (magic == 0x4C434470u) {
-		u16 flags = *(u16 *)(idbuf + 0x10);
-		u16 maxVal = *(u16 *)(idbuf + 0x12);
+		typedef struct {
+			u8 header[0x10];
+			u16 flags;
+			u16 maxVal;
+			u16 levels[4];
+		} SceDisplayIdStorageBright;
+		const SceDisplayIdStorageBright *idBright = (const SceDisplayIdStorageBright *)idbuf;
+		u16 flags = idBright->flags;
+		u16 maxVal = idBright->maxVal;
 		u16 cfg = ((flags & 1) ? 0 : 8) | ((flags << 3) & 0x30);
 		g_display.lcdConfig = cfg;
 		if ((flags & 8) != 0) {
 			g_display.hasCustomLevels = 1;
-			g_display.brightnessLevels[1] = (u8)(((maxVal - *(u16 *)(idbuf + 0x14)) * 100) / maxVal);
-			g_display.brightnessLevels[2] = (u8)(((maxVal - *(u16 *)(idbuf + 0x16)) * 100) / maxVal);
-			g_display.brightnessLevels[3] = (u8)(((maxVal - *(u16 *)(idbuf + 0x18)) * 100) / maxVal);
-			g_display.brightnessLevels[4] = (u8)(((maxVal - *(u16 *)(idbuf + 0x1A)) * 100) / maxVal);
+			g_display.brightnessLevels[1] = (u8)(((maxVal - idBright->levels[0]) * 100) / maxVal);
+			g_display.brightnessLevels[2] = (u8)(((maxVal - idBright->levels[1]) * 100) / maxVal);
+			g_display.brightnessLevels[3] = (u8)(((maxVal - idBright->levels[2]) * 100) / maxVal);
+			g_display.brightnessLevels[4] = (u8)(((maxVal - idBright->levels[3]) * 100) / maxVal);
 		} else {
-			g_display.brightnessLevels[1] = (u8)((*(u16 *)(idbuf + 0x14) * 100) / maxVal);
-			g_display.brightnessLevels[2] = (u8)((*(u16 *)(idbuf + 0x16) * 100) / maxVal);
-			g_display.brightnessLevels[3] = (u8)((*(u16 *)(idbuf + 0x18) * 100) / maxVal);
-			g_display.brightnessLevels[4] = (u8)((*(u16 *)(idbuf + 0x1A) * 100) / maxVal);
+			g_display.brightnessLevels[1] = (u8)((idBright->levels[0] * 100) / maxVal);
+			g_display.brightnessLevels[2] = (u8)((idBright->levels[1] * 100) / maxVal);
+			g_display.brightnessLevels[3] = (u8)((idBright->levels[2] * 100) / maxVal);
+			g_display.brightnessLevels[4] = (u8)((idBright->levels[3] * 100) / maxVal);
 		}
 	}
 
@@ -640,7 +647,7 @@ static int displaySysEventHandler(int ev_id, char *ev_name, void *param, int *re
 		if (g_display.curEnabled != g_display.targetEnabled ||
 		    g_display.suspendCountdown > 0 ||
 		    g_display.modeChangeFlags != 0 ||
-		    g_display.unk118 != 0)
+		    g_display.suspendBlockFlag != 0)
 			return -1;
 		break;
 	case 0x400A: {

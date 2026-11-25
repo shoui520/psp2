@@ -36,22 +36,22 @@ typedef struct {
     void *fileBase; // 64
     SceSize argSize; //68
     void *argp; //72
-    u32 unk76; // 76
-    u32 unk80; // 80
+    u32 reserved76; // 76
+    u32 reserved80; // 80
     s32 *pStatus; // 84
     SceUID eventId; // 88
-    u32 unk92; // 92
-    u32 unk96; // 96
-    u32 unk100; // 100
+    u32 reserved92; // 92
+    u32 reserved96; // 96
+    u32 loadFlags; // 100
     SceUID externMemBlockIdKernel; // 104
     SceUID externMemBlockPartitionId; // 108
     SceSize externMemBlockSize; // 112
-    u32 unk116; // 116
+    u32 sepMemBlockId; // 116
     void *blockGzip; // 120 
-    u32 unk124; // 124
+    u32 isBufferLoad; // 124
     char secureInstallId[SCE_SECURE_INSTALL_ID_LEN]; // 128
     SceUID externMemBlockIdUser; //144
-    u32 unk148; // 148
+    u32 reserved148; // 148
     SceOff memBlockOffset; // 152
 } SceModuleMgrParam; //size = 160
 
@@ -60,10 +60,10 @@ typedef struct {
     SceUID mutexId; // 4
     SceUID eventId; // 8
     SceUID userThreadId; // 12
-    u32 unk16;
-    void *unk20;
-    void *unk24;
-    u32 unk28;
+    u32 initState;
+    void *listHead;
+    void *listTail;
+    u32 reserved28;
     s32(*npDrmGetModuleKeyFunction)(SceUID fd, void *, void *); // 32
     /** Module whose text segment checksum can be checked with sceKernelCheckTextSegment (user). */
     SceModule *pModule;

@@ -163,15 +163,15 @@ char *g_pathbufBuf[2];
 
 int validate_fd(int fd, int arg1, int arg2, int arg3, SceIoIob **outIob);
 int alloc_iob(SceIoIob **outIob, int arg1);
-int init_iob(SceIoIob *iob, int devType, SceIoDeviceEntry *dev, int unk, int i_unit);
+int init_iob(SceIoIob *iob, int devType, SceIoDeviceEntry *dev, int userMode, int i_unit);
 int free_iob(SceIoIob *iob);
 void *alloc_pathbuf();
 void free_pathbuf(void *ptr);
 char *parsedev(const char *dev, char *outDev, int *i_unit);
-SceIoAlias *sub_35D0(const char *dev);
-SceIoAlias *sub_36C4(const char *name);
-int sub_375C(const char *path, SceIoDeviceEntry **dev, int *i_unit, char **dirNamePtr);
-int sub_3778(const char *path, SceIoDeviceEntry **dev, int *i_unit, char **dirNamePtr, int userMode);
+SceIoAlias *findAliasByDev(const char *dev);
+SceIoAlias *findAliasByName(const char *name);
+int resolvePathUser(const char *path, SceIoDeviceEntry **dev, int *i_unit, char **dirNamePtr);
+int resolvePath(const char *path, SceIoDeviceEntry **dev, int *i_unit, char **dirNamePtr, int userMode);
 int strcmp_bs(const char *s1, const char *s2);
 int open_main(SceIoIob *iob);
 int create_async_thread(SceIoIob *iob);
@@ -304,7 +304,7 @@ int open_iob(SceIoIob *iob, const char *path, int flags, SceMode mode, int async
 
     // 10A8
     realPath = pathbuf;
-    ret = sub_3778(path, &dev, &i_unit, &realPath, ((flags >> 26) ^ 1) & 1);
+    ret = resolvePath(path, &dev, &i_unit, &realPath, ((flags >> 26) ^ 1) & 1);
     if (ret < 0)
         goto error;
 
@@ -479,7 +479,7 @@ SceUID sceIoDopen(const char *dirname)
         iob->retAddr = ra;
     // 14C4
     dirName = path;
-    ret = sub_375C(dirname, &dev, &i_unit, &dirName);
+    ret = resolvePathUser(dirname, &dev, &i_unit, &dirName);
     if (ret < 0)
         goto freeiob;
 
@@ -600,7 +600,7 @@ int sceIoRemove(const char *file)
         goto freepath;
 
     realPath = path;
-    ret = sub_375C(file, &dev, &i_unit, &realPath);
+    ret = resolvePathUser(file, &dev, &i_unit, &realPath);
     if (ret < 0)
         goto freeiob;
 
@@ -660,7 +660,7 @@ int sceIoRename(const char *oldname, const char *newname)
     SceIoDeviceEntry *olddev;
     int oldi_unit;
     char *oldrealPath = buf1;
-    ret = sub_375C(oldname, &olddev, &oldi_unit, &oldrealPath);
+    ret = resolvePathUser(oldname, &olddev, &oldi_unit, &oldrealPath);
     if (ret < 0)
         goto freeiob;
     if (strchr(newname, ':') == 0)
@@ -678,7 +678,7 @@ int sceIoRename(const char *oldname, const char *newname)
         SceIoDeviceEntry *newdev;
         int newi_unit;
         char *newrealPath = buf2;
-        ret = sub_375C(newname, &newdev, &newi_unit, &newrealPath);
+        ret = resolvePathUser(newname, &newdev, &newi_unit, &newrealPath);
         if (ret < 0) {
             // 19B4
             goto freeiob;
@@ -733,7 +733,7 @@ int sceIoDevctl(const char *dev, unsigned int cmd, void *indata, int inlen, void
     return ret;
 }
 
-int sceIoAssign(const char *dev, const char *blockDev, const char *fs, int mode, void* unk1, int unk2)
+int sceIoAssign(const char *dev, const char *blockDev, const char *fs, int mode, void* mountArg, int mountArgLen)
 {
     dbg_init(0, FB_NONE, FAT_NONE);
     dbg_printf("sceIoAssign(%s, %s, %s, ...)\n", dev, blockDev, fs);
@@ -743,7 +743,7 @@ int sceIoAssign(const char *dev, const char *blockDev, const char *fs, int mode,
     int i_unit;
     SceIoIob *iob;
     int oldK1 = pspShiftK1();
-    if (!pspK1PtrOk(dev) || !pspK1PtrOk(blockDev) || !pspK1PtrOk(fs) || !pspK1DynBufOk(unk1, unk2))
+    if (!pspK1PtrOk(dev) || !pspK1PtrOk(blockDev) || !pspK1PtrOk(fs) || !pspK1DynBufOk(mountArg, mountArgLen))
     {
         // 1FE8
         pspSetK1(oldK1);
@@ -759,7 +759,7 @@ int sceIoAssign(const char *dev, const char *blockDev, const char *fs, int mode,
     }
     if (blockDev == NULL && fs == NULL)
         blockDev = "dummy_drv_iofile:";
-    if (sub_35D0(dev) != NULL)
+    if (findAliasByDev(dev) != NULL)
     {
         // 1FD8
         pspSetK1(oldK1);
@@ -910,7 +910,7 @@ int sceIoAssign(const char *dev, const char *blockDev, const char *fs, int mode,
         if (list->arg.d_dp->dt_func->df_mount == NULL)
             goto err_free_iob;
         // 1DA4
-        ret = list->arg.d_dp->dt_func->df_mount(iob, fs, blockDev, mode, unk1, unk2);
+        ret = list->arg.d_dp->dt_func->df_mount(iob, fs, blockDev, mode, mountArg, mountArgLen);
         if (ret < 0)
             goto err_free_iob;
     }
@@ -954,7 +954,7 @@ int sceIoUnassign(const char *dev)
         pspSetK1(oldK1);
         return SCE_ERROR_KERNEL_NO_SUCH_DEVICE;
     }
-    SceIoAlias *alias = sub_35D0(dev);
+    SceIoAlias *alias = findAliasByDev(dev);
     if (alias == NULL)
     {
         // 212C
@@ -1021,7 +1021,7 @@ int IoFileMgrForKernel_E5323C5B(const char *aliasName, const char *blockDev)
         pspSetK1(oldK1);
         return SCE_ERROR_KERNEL_NO_SUCH_DEVICE;
     }
-    if (sub_36C4(aliasName) != NULL)
+    if (findAliasByName(aliasName) != NULL)
     {
         // 22AC
         pspSetK1(oldK1);
@@ -1079,7 +1079,7 @@ int IoFileMgrForKernel_E972F70B(const char *name)
         pspSetK1(oldK1);
         return SCE_ERROR_KERNEL_NO_SUCH_DEVICE;
     }
-    SceIoAlias *alias = sub_36C4(name);
+    SceIoAlias *alias = findAliasByName(name);
     if (alias == NULL) {
         pspSetK1(oldK1);
         return SCE_ERROR_KERNEL_NO_SUCH_DEVICE;
@@ -1114,7 +1114,7 @@ int sceIoChangeThreadCwd(SceUID threadId, const char *path)
         return SCE_ERROR_KERNEL_NO_MEMORY;
     }
     realPath = buf;
-    int ret = sub_375C(path, &dev, &i_unit, &realPath);
+    int ret = resolvePathUser(path, &dev, &i_unit, &realPath);
     if (ret < 0)
         goto end;
     void *ktls = sceKernelGetThreadKTLS(g_ktls, threadId, 1);
@@ -1834,7 +1834,7 @@ char *parsedev(const char *dev, char *outDev, int *i_unit)
     return colon + 1;
 }
 
-SceIoAlias *sub_35D0(const char *dev)
+SceIoAlias *findAliasByDev(const char *dev)
 {
     dbg_printf("Calling %s\n", __FUNCTION__);
     // 36A8, 36B0
@@ -1867,7 +1867,7 @@ SceIoAlias *sub_35D0(const char *dev)
     return 0;
 }
 
-SceIoAlias *sub_36C4(const char *name)
+SceIoAlias *findAliasByName(const char *name)
 {
     dbg_printf("Calling %s\n", __FUNCTION__);
     char buf[32];
@@ -1884,13 +1884,13 @@ SceIoAlias *sub_36C4(const char *name)
     return lookup_alias_tbl(buf);
 }
 
-int sub_375C(const char *path, SceIoDeviceEntry **dev, int *i_unit, char **dirNamePtr)
+int resolvePathUser(const char *path, SceIoDeviceEntry **dev, int *i_unit, char **dirNamePtr)
 {
     dbg_printf("Calling %s\n", __FUNCTION__);
-    return sub_3778(path, dev, i_unit, dirNamePtr, 1);
+    return resolvePath(path, dev, i_unit, dirNamePtr, 1);
 }
 
-int sub_3778(const char *path, SceIoDeviceEntry **dev, int *i_unit, char **dirNamePtr, int userMode)
+int resolvePath(const char *path, SceIoDeviceEntry **dev, int *i_unit, char **dirNamePtr, int userMode)
 {
     dbg_printf("Calling %s\n", __FUNCTION__);
     char drive[32];
@@ -2318,11 +2318,11 @@ int sceIoChstat(const char *file, SceIoStat *stat, int bits)
     return xx_stat(file, stat, bits, 0);
 }
 
-int sceIoSync(const char *device, unsigned int unk)
+int sceIoSync(const char *device, unsigned int flags)
 {
     dbg_printf("Calling %s\n", __FUNCTION__);
     int buf[4];
-    buf[0] = unk;
+    buf[0] = flags;
     int oldK1 = pspShiftK1();
     if (!pspK1PtrOk(device)) {
         pspSetK1(oldK1);
@@ -3000,7 +3000,7 @@ int xx_dir(const char *path, SceMode mode, int action) // action: 0 = chdir, 1 =
         goto freepath;
 
     dirName = pathBuf;
-    ret = sub_375C(path, &dev, &i_unit, &dirName);
+    ret = resolvePathUser(path, &dev, &i_unit, &dirName);
     if (ret < 0)
         goto freeiob;
 
@@ -3091,7 +3091,7 @@ int xx_stat(const char *file, SceIoStat *stat, int bits, int get)
     if (ret < 0)
         goto end;
     dirNamePtr = buf;
-    ret = sub_375C(file, &dev, &i_unit, &dirNamePtr);
+    ret = resolvePathUser(file, &dev, &i_unit, &dirNamePtr);
     if (ret < 0)
         goto freeiob;
     ret = init_iob(iob, ret, dev, 0x1000000, i_unit);
@@ -3138,7 +3138,7 @@ int do_devctl(const char *dev, unsigned int cmd, void *indata, int inlen, void *
     if (ret < 0)
         goto end;
     path = buf;
-    ret = sub_3778(dev, &arg, &i_unit, &path, iob->userMode);
+    ret = resolvePath(dev, &arg, &i_unit, &path, iob->userMode);
     if (ret < 0)
         goto freeiob;
     ret = init_iob(iob, ret, arg, 0x1000000, i_unit);

@@ -79,7 +79,7 @@ typedef struct {
 } SceGeQueue;
 
 typedef struct {
-    int unk0;
+    int ctrlReg;
     int status;
     int listAddr; // 8
     int *stallAddr; // 12
