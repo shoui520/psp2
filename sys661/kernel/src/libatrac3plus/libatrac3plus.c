@@ -141,8 +141,8 @@ int sceAtracReinit(int numAT3Id, int numAT3plusId)
             }
             else
             {
-                curId->codec.param0.v8.b0 = 40;
-                curId->codec.param0.v8.b1 = 92;
+                curId->codec.param0.bytes.b0 = 40;
+                curId->codec.param0.bytes.b1 = 92;
                 curId->info.codec = 0x1000;
                 count += g_needMemAT3plus;
             }
@@ -784,8 +784,8 @@ SceAtracId *_sceAtracGetContextAddress(int atracID)
 // 182C
 int allocEdram(void)
 {
-    g_atracIds[0].codec.param0.v8.b0 = 40;
-    g_atracIds[0].codec.param0.v8.b1 = 92;
+    g_atracIds[0].codec.param0.bytes.b0 = 40;
+    g_atracIds[0].codec.param0.bytes.b1 = 92;
     int ret = sceAudiocodecCheckNeedMem(&g_atracIds[0].codec, 0x1000);
     if (ret < 0)
         return ret;
@@ -834,7 +834,7 @@ int getOutputChan(SceAtracIdInfo *info, SceAudiocodecCodec *codec)
         // 199C
         return codec->param[6];
     }
-    if (codec->param0.v32 - 0xeU < 2)
+    if (codec->param0.word - 0xeU < 2)
         return codec->param[1];
     return 2;
 }
@@ -1249,7 +1249,7 @@ int setBuffer(SceAtracId *id, u8 *buffer, u32 readByte, u32 bufferByte, SceAtrac
                 {
                     // 25F0
                     if (cur->modeId == info->codecParam.v16) {
-                        id->codec.param0.v32 = cur->channels;
+                        id->codec.param0.word = cur->channels;
                         return 0;
                     }
                 }
@@ -1258,9 +1258,9 @@ int setBuffer(SceAtracId *id, u8 *buffer, u32 readByte, u32 bufferByte, SceAtrac
             }
             return 0x80630008;
         }
-        id->codec.param0.v8.b0 = info->codecParam.v8[0];
+        id->codec.param0.bytes.b0 = info->codecParam.v8[0];
         id->codec.param[0] = 0;
-        id->codec.param0.v8.b1 = info->codecParam.v8[1];
+        id->codec.param0.bytes.b1 = info->codecParam.v8[1];
         return ret;
     }
     return 0x80630008;
@@ -1371,8 +1371,8 @@ int initAT3Decoder(SceAudiocodecCodec *codec, void *arg1)
     for (i = 0; i < 5; i++)
     {
         if (tmpVal->frameSize == *(int*)(arg1 + 8) && tmpVal->channels == *(int*)(arg1 + 0)) { // 27A0
-            codec->param0.v32 = 0;
-            codec->param0.v8.b0 = tmpVal->modeId;
+            codec->param0.word = 0;
+            codec->param0.bytes.b0 = tmpVal->modeId;
             return 0;
         }
         // 2784
@@ -1439,15 +1439,15 @@ int initAT3plusDecoder(SceAudiocodecCodec *codec, void *arg1)
             // 28D0
             if (*(u16*)((int)curSp + 2) == *(int*)(arg1 + 0))
             {
-                codec->param0.v8.b1 = *(u8*)((int)curSp + 5);
-                codec->param0.v8.b0 = *(u8*)((int)curSp + 4);
+                codec->param0.bytes.b1 = *(u8*)((int)curSp + 5);
+                codec->param0.bytes.b0 = *(u8*)((int)curSp + 4);
                 codec->param[2] = 0;
-                codec->param0.v8.b2 = 0;
-                codec->param0.v8.b3 = 0;
-                codec->param1.v8.b0 = 0;
-                codec->param1.v8.b1 = 0;
-                codec->param1.v8.b2 = 0;
-                codec->param1.v8.b3 = 0;
+                codec->param0.bytes.b2 = 0;
+                codec->param0.bytes.b3 = 0;
+                codec->param1.bytes.b0 = 0;
+                codec->param1.bytes.b1 = 0;
+                codec->param1.bytes.b2 = 0;
+                codec->param1.bytes.b3 = 0;
                 codec->param[0] = 0;
                 return 0;
             }

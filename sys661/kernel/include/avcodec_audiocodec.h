@@ -24,8 +24,8 @@ typedef struct
             s8 b1;
             s8 b2;
             s8 b3;
-        } v8;
-        s32 v32;
+        } bytes;
+        s32 word;
     } param0; // 40 (e.g. input buffer size / sample rate)
     union {
         struct {
@@ -33,12 +33,12 @@ typedef struct
             s8 b1;
             s8 b2;
             s8 b3;
-        } v8;
+        } bytes;
         struct {
             s16 h0;
             s16 h1;
-        } v16;
-        s32 v32;
+        } halves;
+        s32 word;
     } param1; // 44
     s32 param[14]; // 48..103
     void *allocMem; // 104

@@ -195,7 +195,7 @@ s32 sceG729_driver_5A409D1B(s32 idx)
 
 s32 sceG729_driver_DB7259D5(s32 idx, void *inBuf, void *outBuf)
 {
-    if (inBuf == NULL || outBuf == NULL)
+    if ((inBuf == NULL) | (outBuf == NULL))
         return 0x80680001;
     if (((u32)inBuf & 1) != 0)
         return 0x80680001;

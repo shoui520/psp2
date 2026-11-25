@@ -314,7 +314,7 @@ s32 sceNetAdhocDiscover_F7D13214(void)
     if (_sceKernelCheckThreadStack() < 0xFF0)
         return 0x80410005;
     u32 st = (u32)g_state;
-    if (st != 0 && st != 19) {
+    if ((st != 0) & (st != 19)) {
         g_canSkip = 0;
         g_eventFlags |= 0x20;
     }
@@ -326,7 +326,7 @@ s32 sceNetAdhocDiscover_A2246614(void)
     if (_sceKernelCheckThreadStack() < 0xFF0)
         return 0x80410005;
     u32 st = (u32)g_state;
-    if (st != 0 && st != 19)
+    if ((st != 0) & (st != 19))
         return 0x80411301;
     if (g_handlerId >= 0) {
         sceNetAdhocctl_lib_1C679240(g_handlerId);
@@ -374,8 +374,10 @@ static void adhocctlEventHandler(s32 event, s32 error, void *arg)
         g_eventFlags |= 0x10;
         break;
     case 5:
-        g_eventError = 0;
-        g_eventFlags |= 0x200;
+        if (error == 1) {
+            g_eventError = 0;
+            g_eventFlags |= 0x200;
+        }
         break;
     case 6:
         g_eventError = 0;
@@ -409,12 +411,18 @@ static s32 processDiscoverState(void)
         g_state = 19;
         return 0;
     }
-    if (g_subState == 1) {
+    switch (g_subState) {
+    case 1:
         g_state = 8;
-    } else if (g_subState == 2) {
+        break;
+    case 2:
         g_state = 1;
-    } else if (g_subState == 3) {
+        break;
+    case 3:
         g_state = 11;
+        break;
+    default:
+        break;
     }
     return 0;
 }

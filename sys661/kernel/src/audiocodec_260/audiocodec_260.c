@@ -47,7 +47,7 @@ s32 sceAudiocodecCheckNeedMem(SceAudiocodecCodec *info, s32 codec)
         s32 id = sceMeAudio_driver_81956A0B(codec, info);
         ret = 0;
         if (id != 0) {
-            if (id < -4 || id >= 0)
+            if ((u32)id < (u32)-4)
                 id = 0;
             ret = g_retValues[id + 4];
         }
@@ -75,7 +75,7 @@ s32 sceAudiocodecInit(SceAudiocodecCodec *info, s32 codec)
     s32 id = sceMeAudio_driver_6AD33F60(codec, info);
     s32 ret = 0;
     if (id != 0) {
-        if (id < -4 || id >= 0)
+        if ((u32)id < (u32)-4)
             id = 0;
         ret = g_retValues[id + 4];
     }
@@ -102,7 +102,7 @@ s32 sceAudiocodec_3DD7EE1A(SceAudiocodecCodec *info, s32 codec)
     s32 id = sceMeAudio_driver_B57F033A(codec, info);
     s32 ret = 0;
     if (id != 0) {
-        if (id < -4 || id >= 0)
+        if ((u32)id < (u32)-4)
             id = 0;
         ret = g_retValues[id + 4];
     }
@@ -126,7 +126,7 @@ s32 sceAudiocodecDecode(SceAudiocodecCodec *info, s32 codec)
     }
     s32 size;
     if (codec == 0x1002 || codec == 0x1004) {
-        size = info->param0.v32;
+        size = info->param0.word;
     } else {
         size = getBufSize(info, codec);
         if (size < 0) {
@@ -144,7 +144,7 @@ s32 sceAudiocodecDecode(SceAudiocodecCodec *info, s32 codec)
     s32 id = sceMeAudio_driver_9A9E21EE(codec, info);
     s32 ret = 0;
     if (id != 0) {
-        if (id < -4 || id >= 0)
+        if ((u32)id < (u32)-4)
             id = 0;
         ret = g_retValues[id + 4];
     }
@@ -163,7 +163,7 @@ s32 sceAudiocodecGetInfo(SceAudiocodecCodec *info, s32 codec)
         pspSetK1(oldK1);
         return SCE_ERROR_PRIV_REQUIRED;
     }
-    if ((codec == 0x1002 || codec == 0x1004) && !pspK1DynBufOk(info->inBuf, info->param0.v32)) {
+    if ((codec == 0x1002 || codec == 0x1004) && !pspK1DynBufOk(info->inBuf, info->param0.word)) {
         pspSetK1(oldK1);
         return SCE_ERROR_PRIV_REQUIRED;
     }
@@ -184,7 +184,7 @@ s32 sceAudiocodecGetInfo(SceAudiocodecCodec *info, s32 codec)
     s32 id = sceMeAudio_driver_C300D466(codec, opt, info);
     s32 ret = 0;
     if (id != 0) {
-        if (id < -4 || id >= 0)
+        if ((u32)id < (u32)-4)
             id = 0;
         ret = g_retValues[id + 4];
     }
@@ -274,13 +274,13 @@ static s32 getBufSize(SceAudiocodecCodec *info, s32 codec)
             if (ret < 0)
                 return ret;
         }
-        return calcMp3FrameSize(info->param[2], info->param[3], info->param[5], info->param[6], &info->param0.v32);
+        return calcMp3FrameSize(info->param[2], info->param[3], info->param[5], info->param[6], &info->param0.word);
     case 0x1003:
-        if (info->param1.v8.b0 == 0)
+        if (info->param1.bytes.b0 == 0)
             return 0x600;
         return 0x609;
     case 0x1004:
-        return calcMp3FrameSize(info->param[0], info->param[1], info->param[3], info->param[4], &info->param0.v32);
+        return calcMp3FrameSize(info->param[0], info->param[1], info->param[3], info->param[4], &info->param0.word);
     case 0x1005:
         return 0x420D;
     }
@@ -308,7 +308,7 @@ static s32 getOutBufSize(SceAudiocodecCodec *info, s32 codec)
             return 0x1200;
         return 0x900;
     case 0x1003:
-        if ((u8)info->param1.v8.b1 == 0)
+        if ((u8)info->param1.bytes.b1 == 0)
             return 0x1000;
         return 0x2000;
     case 0x1004:
@@ -334,7 +334,7 @@ static s32 calcMp3FrameSize(s32 type, s32 layer, s32 bitrateIdx, s32 freqIdx, s3
             size = 0x7C9;
     }
     if (type != 1)
-        size /= 2;
+        size >>= 1;
     *sizePtr = size;
     return size;
 }

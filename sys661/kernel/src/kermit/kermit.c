@@ -60,8 +60,9 @@ static int kermitIntrHandler(void)
 					volatile SceKermitResponse *resp = &KERMIT_RESP_BOX[bit - 7];
 					u64 *dst = resp->resp_ptr;
 					SceUID sema = resp->sema_id;
-					((u32 *)dst)[0] = (u32)resp->result;
-					((u32 *)dst)[1] = (u32)(resp->result >> 32);
+					u64 resVal = resp->result;
+					((u32 *)dst)[0] = (u32)resVal;
+					((u32 *)dst)[1] = (u32)(resVal >> 32);
 					if (sceKernelSignalSema(sema, 1) == 0) {
 						u32 mask = 1u << bit;
 						u32 trig = HW(KERMIT_REG_TRIG);
