@@ -462,6 +462,20 @@ psp2_module(vs0_vsh_shell_shell KIND user COMPILER snc PARTIAL SOURCES
 	src/telephony_plugin/src/sms_pdu_transcoder/src/sms_pdu_transcoder/amsslib/LibWMS.cpp
 	src/telephony_plugin/src/sms_pdu_transcoder/src/sms_pdu_transcoder/tel_sms_pdu_generator.cpp
 	src/telephony_plugin/src/sms_pdu_transcoder/src/sms_pdu_transcoder/tel_sms_pdu_parser.cpp
+	src/telephony_plugin/src/bbmc/src/tel_bbmc_adapter_factory.cpp
+	src/telephony_plugin/src/bbmc/src/bbmc_adaptor/tel_bbmc_sync.cpp
+	src/telephony_plugin/src/bbmc/src/bbmc_adaptor/tel_bbmc_job_items.cpp
+	src/telephony_plugin/src/bbmc/src/bbmc_adaptor/tel_bbmc_shared_data.cpp
+	src/telephony_plugin/src/bbmc/src/bbmc_adaptor/tel_bbmc_handler.cpp
+	src/telephony_plugin/src/bbmc/src/bbmc_adaptor/tel_bbmc_general_handler.cpp
+	src/telephony_plugin/src/bbmc/src/bbmc_adaptor/tel_bbmc_packet_handler.cpp
+	src/telephony_plugin/src/bbmc/src/bbmc_adaptor/tel_bbmc_sim_handler.cpp
+	src/telephony_plugin/src/bbmc/src/bbmc_adaptor/tel_bbmc_sms_handler.cpp
+	src/telephony_plugin/src/bbmc/src/bbmc_adaptor/tel_bbmc_subscriber_thread.cpp
+	src/telephony_plugin/src/bbmc/src/bbmc_adaptor/tel_bbmc_adapter.cpp
+	src/telephony_plugin/src/bbmc/src/bbmc_adaptor_loopback/tel_bbmc_adapter_periodic_thread.cpp
+	src/telephony_plugin/src/bbmc/src/bbmc_adaptor_loopback/tel_bbmc_adapter_loopback_core.cpp
+	src/telephony_plugin/src/bbmc/src/bbmc_adaptor_loopback/tel_bbmc_adapter_loopback.cpp
 	shell.c
 )
 target_include_directories(vs0_vsh_shell_shell PRIVATE "${PSP2_SRC}/vsh/paf/include"

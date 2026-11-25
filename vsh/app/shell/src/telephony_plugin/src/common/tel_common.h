@@ -41,6 +41,35 @@ enum TelErrorCode {
 	TEL_ERR_ALREADY_INIT = -2146424820,		/* 0x8010200C */
 	TEL_ERR_THREAD_START = -2146424819,		/* 0x8010200D */
 	TEL_ERR_DB_FAILED = -2146424814,		/* 0x80102012 */
+	TEL_ERR_MODEM_BUSY = -2146424799,		/* 0x80102021 */
+	TEL_ERR_NOT_AVAILABLE = -2146424798,		/* 0x80102022 */
+	TEL_ERR_BBMC_DRIVER = -2146424797,		/* 0x80102023 */
+	TEL_ERR_SCAN_ABORTED = -2146424796,		/* 0x80102024 */
+	TEL_ERR_INVALID_PIN = -2146424795,		/* 0x80102025 */
+	TEL_ERR_INVALID_PUK = -2146424794,		/* 0x80102026 */
+	TEL_ERR_NO_SIM = -2146424793,			/* 0x80102027 */
+	TEL_ERR_SIM_INIT_FAILED = -2146424792,		/* 0x80102028 */
+	TEL_ERR_MODEM_OFF = -2146424791,		/* 0x80102029 */
+	TEL_ERR_MODEM_FATAL = -2146424790,		/* 0x8010202A */
+	TEL_ERR_SIM_REMOVED = -2146424789,		/* 0x8010202B */
+	TEL_ERR_PIN_LOCKED = -2146424787,		/* 0x8010202D */
+	TEL_ERR_TIMEOUT = -2146424786,			/* 0x8010202E */
+	TEL_ERR_BBMC_REJECTED = -2146424785,		/* 0x8010202F */
+	TEL_ERR_SMS_SEND = -2146424784,			/* 0x80102030 */
+	TEL_ERR_SMS_LIST = -2146424783,			/* 0x80102031 */
+	TEL_ERR_SMS_READ = -2146424782,			/* 0x80102032 */
+	TEL_ERR_SMS_DELETE = -2146424781,		/* 0x80102033 */
+	TEL_ERR_INVALID_CK = -2146424780,		/* 0x80102034 */
+	TEL_ERR_APN_VERIFY = -2146424779,		/* 0x80102035 */
+	TEL_ERR_SMS_ACK = -2146424778,			/* 0x80102036 */
+	TEL_ERR_POWER_ON_FAILED = -2146424777,		/* 0x80102037 */
+	TEL_ERR_LOW_BATTERY = -2146424776,		/* 0x80102038 */
+	TEL_ERR_HIGH_TEMP = -2146424775,		/* 0x80102039 */
+	TEL_ERR_SIM_INVALID = -2146424774,		/* 0x8010203A */
+	TEL_ERR_PACKET_RESTRICTED = -2146424773,	/* 0x8010203B */
+	TEL_ERR_NOT_IMPLEMENTED = -2146424771,		/* 0x8010203D */
+	TEL_ERR_PDP_RELEASE_BUSY = -2146424772,		/* 0x8010203C */
+	TEL_ERR_PDP_RELEASE_STATE = -2146424771,	/* 0x8010203D */
 	TEL_ERR_PROFILE_NOT_FOUND = -2146424671		/* 0x801020A1 */
 };
 
@@ -1172,6 +1201,21 @@ private:
 
 /* Utility to find lowest set bit in a 32-bit mask (0x813DBD14) */
 int telFindFirstSetBit(SceUInt32 mask);
+
+/* Container for scanned operator list returned by TelBbmcAdapter::GetNetworkScanResult */
+class TelNetScanInfoList {
+public:
+	virtual ~TelNetScanInfoList() {}
+
+	paf::vector<TelNetScanInfo> &GetEntries() { return m_entries; }
+	const paf::vector<TelNetScanInfo> &GetEntries() const { return m_entries; }
+
+private:
+	paf::vector<TelNetScanInfo> m_entries;
+};
+
+/* BBMC runtime temporary attribute store singleton (0x81250584, implemented in attribute/) */
+TelAttributeStore *telGetBbmcAttributeStore(void);
 
 } /* namespace telephony */
 
