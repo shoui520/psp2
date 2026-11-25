@@ -12,6 +12,23 @@ typedef struct SceIoIob {
 	SceOff i_fpos;
 } SceIoIob;
 
+typedef struct SceIoStat {
+	int st_mode;
+	unsigned int st_attr;
+	SceOff st_size;
+	u16 st_ctime[8];
+	u16 st_atime[8];
+	u16 st_mtime[8];
+	unsigned int st_private[6];
+} SceIoStat;
+
+typedef struct SceIoDirent {
+	SceIoStat d_stat;
+	char d_name[256];
+	void *d_private;
+	int d_reserved;
+} SceIoDirent;
+
 typedef struct SceIoDeviceFunction {
 	int (*dt_init)(SceIoDeviceEntry *de);
 	int (*dt_exit)(SceIoDeviceEntry *de);
@@ -26,9 +43,9 @@ typedef struct SceIoDeviceFunction {
 	int (*dt_rmdir)(SceIoIob *iob, const char *name);
 	int (*dt_dopen)(SceIoIob *iob, const char *dirname);
 	int (*dt_dclose)(SceIoIob *iob);
-	int (*dt_dread)(SceIoIob *iob, void *dir);
-	int (*dt_getstat)(SceIoIob *iob, const char *name, void *stat);
-	int (*dt_chstat)(SceIoIob *iob, const char *name, void *stat, int bits);
+	int (*dt_dread)(SceIoIob *iob, SceIoDirent *dir);
+	int (*dt_getstat)(SceIoIob *iob, const char *name, SceIoStat *stat);
+	int (*dt_chstat)(SceIoIob *iob, const char *name, SceIoStat *stat, int bits);
 	int (*dt_rename)(SceIoIob *iob, const char *oldname, const char *newname);
 	int (*dt_chdir)(SceIoIob *iob, const char *name);
 	int (*dt_mount)(SceIoIob *iob);
@@ -48,7 +65,7 @@ typedef struct SceIoDeviceTable {
 typedef struct SceFlashfsFileSlot {
 	SceIoIob *iob;
 	SceUID mutexId;
-	int kermitFd;
+	int kermitHandle;
 	int flags;
 	SceOff offset;
 } SceFlashfsFileSlot;
@@ -57,9 +74,9 @@ int sceIoGetIobUserLevel(SceIoIob *iob);
 int sceIoAddDrv(const SceIoDeviceTable *drv);
 int sceIoDelDrv(const char *drv_name);
 
-u32 strlen(const char *s);
-int strncmp(const char *s1, const char *s2, u32 n);
-int memcmp(const void *b1, const void *b2, u32 len);
+u32 strlen(const char *str);
+int strncmp(const char *lhs, const char *rhs, u32 maxLen);
+int memcmp(const void *lhs, const void *rhs, u32 len);
 int snprintf(char *buf, u32 size, const char *fmt, ...);
 
 static int _flashIoInit(SceIoDeviceEntry *de);
@@ -75,9 +92,9 @@ static int _flashIoMkdir(SceIoIob *iob, const char *name, int mode);
 static int _flashIoRmdir(SceIoIob *iob, const char *name);
 static int _flashIoDopen(SceIoIob *iob, const char *dirname);
 static int _flashIoDclose(SceIoIob *iob);
-static int _flashIoDread(SceIoIob *iob, void *dir);
-static int _flashIoGetstat(SceIoIob *iob, const char *name, void *stat);
-static int _flashIoChstat(SceIoIob *iob, const char *name, void *stat, int bits);
+static int _flashIoDread(SceIoIob *iob, SceIoDirent *dir);
+static int _flashIoGetstat(SceIoIob *iob, const char *name, SceIoStat *stat);
+static int _flashIoChstat(SceIoIob *iob, const char *name, SceIoStat *stat, int bits);
 static int _flashIoRename(SceIoIob *iob, const char *oldname, const char *newname);
 static int _flashIoChdir(SceIoIob *iob, const char *name);
 static int _flashIoDevctl(SceIoIob *iob, const char *dev, int cmd, void *indata, SceSize inlen, void *outdata, SceSize outlen);
@@ -187,30 +204,30 @@ static SceSysEventHandler g_flashSysEvent = {
 
 static SceUID g_mutexId;
 static void *g_bufBase;
-static void *g_workBuf;
+static u8 *g_workBuf;
 static u32 g_workSize;
 static SceFlashfsFileSlot g_fileSlots[32];
 
-static inline int _flashIsValidBufferAddr(const void *addr)
+static __attribute__((always_inline)) inline int _flashIsValidBufferAddr(const void *addr)
 {
-	u32 a = (u32)addr;
-	if (((a >> 14) & 0x7FFFu) == 4u) {
-		if (((0x35u >> (a >> 29)) & 1u) != 0) {
+	u32 rawAddr = (u32)addr;
+	if (((rawAddr >> 14) & 0x7FFFu) == 4u) {
+		if (((0x35u >> (rawAddr >> 29)) & 1u) != 0) {
 			return 1;
 		}
 	}
-	if (((a >> 23) & 0x3Fu) == 8u) {
-		if (((0x35u >> (a >> 29)) & 1u) != 0) {
+	if (((rawAddr >> 23) & 0x3Fu) == 8u) {
+		if (((0x35u >> (rawAddr >> 29)) & 1u) != 0) {
 			return 1;
 		}
 	}
-	return ((0x00220202u >> (a >> 27)) & 1u) != 0;
+	return ((0x00220202u >> (rawAddr >> 27)) & 1u) != 0;
 }
 
 int module_start(SceSize args, void *argp)
 {
 	sceKernelMemset((void *)0xABD20000u, 0, 0x8000);
-	g_workBuf = (void *)0xABD24000u;
+	g_workBuf = (u8 *)0xABD24000u;
 	g_bufBase = (void *)0xABD20000u;
 	g_workSize = 0x4000;
 
@@ -238,14 +255,14 @@ int module_start(SceSize args, void *argp)
 
 static int _flashIoExit(SceIoDeviceEntry *de)
 {
-	u8 stack_buf[0x80];
-	SceKermitRequest *aligned = (SceKermitRequest *)(((u32)stack_buf + 0x3Fu) & ~0x3Fu);
+	u8 stackBuf[0x80];
+	SceKermitRequest *aligned = (SceKermitRequest *)(((u32)stackBuf + 0x3Fu) & ~0x3Fu);
 
 	sceKernelDcacheInvalidateRange(aligned, 0x40);
 	SceKermitRequest *req = KERMIT_UNCACHED(aligned);
 
 	sceKermitMemory_driver_AAF047AC(req, 0, de, 0xC, 3);
-	u64 resp = 0;
+	u64 resp;
 	int res = sceKermit_driver_36666181(req, KERMIT_MODE_FLASHFS, 0xC6E, 1, 0, &resp);
 	if (res != 0) {
 		return res;
@@ -256,8 +273,8 @@ static int _flashIoExit(SceIoDeviceEntry *de)
 
 static int _flashIoRead(SceIoIob *iob, char *data, SceSize len)
 {
-	u8 stack_buf[0x80];
-	SceKermitRequest *aligned = (SceKermitRequest *)(((u32)stack_buf + 0x3Fu) & ~0x3Fu);
+	u8 stackBuf[0x80];
+	SceKermitRequest *aligned = (SceKermitRequest *)(((u32)stackBuf + 0x3Fu) & ~0x3Fu);
 
 	sceKernelDcacheInvalidateRange(aligned, 0x40);
 	SceKermitRequest *req = KERMIT_UNCACHED(aligned);
@@ -279,6 +296,7 @@ static int _flashIoRead(SceIoIob *iob, char *data, SceSize len)
 	}
 
 	s32 totalRead = 0;
+	int stopRead = 0;
 	u32 unaligned = (u32)data & 0x3Fu;
 	if (unaligned != 0) {
 		int res = sceKernelLockMutex(g_mutexId, 1, NULL);
@@ -291,100 +309,100 @@ static int _flashIoRead(SceIoIob *iob, char *data, SceSize len)
 			chunk = len;
 		}
 
-		req->args[0] = (u32)slot->kermitFd;
+		req->argWords[0].lo = (u32)slot->kermitHandle;
 		sceKermitMemory_driver_AAF047AC(req, 1, work, chunk, 2);
-		req->args[2] = chunk;
+		req->argWords[2].lo = chunk;
 
-		u64 resp = 0;
+		u64 resp;
 		int kres = sceKermit_driver_36666181(req, KERMIT_MODE_FLASHFS, 0xC5E, 3, 0, &resp);
 		if (kres != 0) {
 			res = sceKernelUnlockMutex(g_mutexId, 1);
 			return (res == 0) ? kres : res;
 		}
 
-		s32 r = (s32)resp;
-		if (r <= 0) {
-			totalRead = (r < 0) ? r : 0;
+		s32 bytesRead = (s32)resp;
+		if (bytesRead <= 0) {
+			totalRead = (bytesRead < 0) ? bytesRead : 0;
 			res = sceKernelUnlockMutex(g_mutexId, 1);
 			if (res != 0) {
 				return res;
 			}
-			goto done;
-		}
-
-		sceKernelMemcpy(data, work, (u32)r);
-		totalRead = r;
-		data += r;
-		len -= (u32)r;
-		if ((u32)r != chunk) {
-			res = sceKernelUnlockMutex(g_mutexId, 1);
-			if (res != 0) {
-				return res;
+			stopRead = 1;
+		} else {
+			sceKernelMemcpy(data, work, (u32)bytesRead);
+			totalRead = bytesRead;
+			data += bytesRead;
+			len -= (u32)bytesRead;
+			if ((u32)bytesRead != chunk) {
+				res = sceKernelUnlockMutex(g_mutexId, 1);
+				if (res != 0) {
+					return res;
+				}
+				stopRead = 1;
+			} else {
+				res = sceKernelUnlockMutex(g_mutexId, 1);
+				if (res != 0) {
+					return res;
+				}
 			}
-			goto done;
-		}
-
-		res = sceKernelUnlockMutex(g_mutexId, 1);
-		if (res != 0) {
-			return res;
 		}
 	}
 
-	if (len != 0) {
+	if (!stopRead && len != 0) {
 		u32 alignedLen = len & ~0x3Fu;
 		if (alignedLen != 0) {
-			req->args[0] = (u32)slot->kermitFd;
+			req->argWords[0].lo = (u32)slot->kermitHandle;
 			sceKermitMemory_driver_AAF047AC(req, 1, data, alignedLen, 2);
-			req->args[2] = alignedLen;
+			req->argWords[2].lo = alignedLen;
 			sceKernelDcacheInvalidateRange(data, alignedLen);
 
-			u64 resp = 0;
+			u64 resp;
 			int kres = sceKermit_driver_36666181(req, KERMIT_MODE_FLASHFS, 0xC5E, 3, 0, &resp);
 			if (kres != 0) {
 				int res = sceKernelUnlockMutex(g_mutexId, 1);
 				return (res == 0) ? kres : res;
 			}
 
-			s32 r = (s32)resp;
-			if (r <= 0) {
-				if (r < 0) {
-					totalRead = r;
+			s32 bytesRead = (s32)resp;
+			if (bytesRead <= 0) {
+				if (bytesRead < 0) {
+					totalRead = bytesRead;
 				}
-				goto done;
-			}
-
-			sceKermitMemory_driver_90B662D0(data, (u32)r);
-			len -= (u32)r;
-			data += r;
-			totalRead += r;
-			if ((u32)r != alignedLen) {
-				goto done;
+				stopRead = 1;
+			} else {
+				sceKermitMemory_driver_90B662D0(data, (u32)bytesRead);
+				len -= (u32)bytesRead;
+				data += bytesRead;
+				totalRead += bytesRead;
+				if ((u32)bytesRead != alignedLen) {
+					stopRead = 1;
+				}
 			}
 		}
 
-		if (len != 0) {
+		if (!stopRead && len != 0) {
 			int res = sceKernelLockMutex(g_mutexId, 1, NULL);
 			if (res != 0) {
 				return res;
 			}
 
-			req->args[0] = (u32)slot->kermitFd;
+			req->argWords[0].lo = (u32)slot->kermitHandle;
 			sceKermitMemory_driver_AAF047AC(req, 1, work, len, 2);
-			req->args[2] = len;
+			req->argWords[2].lo = len;
 
-			u64 resp = 0;
+			u64 resp;
 			int kres = sceKermit_driver_36666181(req, KERMIT_MODE_FLASHFS, 0xC5E, 3, 0, &resp);
 			if (kres != 0) {
 				res = sceKernelUnlockMutex(g_mutexId, 1);
 				return (res == 0) ? kres : res;
 			}
 
-			s32 r = (s32)resp;
-			if (r > 0) {
-				sceKernelMemcpy(data, work, (u32)r);
-				totalRead += r;
-			} else if (r < 0) {
-				totalRead = r;
+			s32 bytesRead = (s32)resp;
+			if (bytesRead > 0) {
+				sceKernelMemcpy(data, work, (u32)bytesRead);
+				totalRead += bytesRead;
+			} else if (bytesRead < 0) {
+				totalRead = bytesRead;
 			}
 
 			res = sceKernelUnlockMutex(g_mutexId, 1);
@@ -394,7 +412,6 @@ static int _flashIoRead(SceIoIob *iob, char *data, SceSize len)
 		}
 	}
 
-done:
 	slot->offset += totalRead;
 	iob->i_fpos = slot->offset;
 	return totalRead;
@@ -426,8 +443,8 @@ static int _flashIoWrite(SceIoIob *iob, const char *data, SceSize len)
 
 static SceOff _flashIoLseek(SceIoIob *iob, SceOff ofs, int whence)
 {
-	u8 stack_buf[0x80];
-	SceKermitRequest *aligned = (SceKermitRequest *)(((u32)stack_buf + 0x3Fu) & ~0x3Fu);
+	u8 stackBuf[0x80];
+	SceKermitRequest *aligned = (SceKermitRequest *)(((u32)stackBuf + 0x3Fu) & ~0x3Fu);
 
 	sceKernelDcacheInvalidateRange(aligned, 0x40);
 	SceKermitRequest *req = KERMIT_UNCACHED(aligned);
@@ -444,30 +461,30 @@ static SceOff _flashIoLseek(SceIoIob *iob, SceOff ofs, int whence)
 		return (SceOff)0x80010009u;
 	}
 
-	req->args[0] = (u32)slot->kermitFd;
+	req->argWords[0].lo = (u32)slot->kermitHandle;
 	req->args[1] = (u64)ofs;
-	req->args[2] = (u32)whence;
+	req->argWords[2].lo = (u32)whence;
 
-	u64 resp = 0;
+	u64 resp;
 	int kres = sceKermit_driver_36666181(req, KERMIT_MODE_FLASHFS, 0xC62, 3, 0, &resp);
 	if (kres != 0) {
 		return (SceOff)kres;
 	}
 
-	s32 r = (s32)resp;
-	if (r < 0) {
-		return (SceOff)r;
+	s32 pos = (s32)resp;
+	if (pos < 0) {
+		return (SceOff)pos;
 	}
 
-	slot->offset = (SceOff)r;
-	iob->i_fpos = (SceOff)r;
+	slot->offset = (SceOff)pos;
+	iob->i_fpos = (SceOff)pos;
 	return slot->offset;
 }
 
 static int _flashIoRemove(SceIoIob *iob, const char *name)
 {
-	u8 stack_buf[0x80];
-	SceKermitRequest *aligned = (SceKermitRequest *)(((u32)stack_buf + 0x3Fu) & ~0x3Fu);
+	u8 stackBuf[0x80];
+	SceKermitRequest *aligned = (SceKermitRequest *)(((u32)stackBuf + 0x3Fu) & ~0x3Fu);
 
 	sceKernelDcacheInvalidateRange(aligned, 0x40);
 	SceKermitRequest *req = KERMIT_UNCACHED(aligned);
@@ -487,7 +504,7 @@ static int _flashIoRemove(SceIoIob *iob, const char *name)
 	work[half - 1] = '\0';
 	sceKermitMemory_driver_AAF047AC(req, 0, work, strlen(work) + 1u, 1);
 
-	u64 resp = 0;
+	u64 resp;
 	int kres = sceKermit_driver_36666181(req, KERMIT_MODE_FLASHFS, 0xC6C, 1, 0, &resp);
 	int cmdRes = (kres == 0) ? (int)resp : kres;
 	res = sceKernelUnlockMutex(g_mutexId, 1);
@@ -496,8 +513,8 @@ static int _flashIoRemove(SceIoIob *iob, const char *name)
 
 static int _flashIoMkdir(SceIoIob *iob, const char *name, int mode)
 {
-	u8 stack_buf[0x80];
-	SceKermitRequest *aligned = (SceKermitRequest *)(((u32)stack_buf + 0x3Fu) & ~0x3Fu);
+	u8 stackBuf[0x80];
+	SceKermitRequest *aligned = (SceKermitRequest *)(((u32)stackBuf + 0x3Fu) & ~0x3Fu);
 
 	sceKernelDcacheInvalidateRange(aligned, 0x40);
 	SceKermitRequest *req = KERMIT_UNCACHED(aligned);
@@ -516,9 +533,9 @@ static int _flashIoMkdir(SceIoIob *iob, const char *name, int mode)
 	snprintf(work, half, "%s%d:%s", "flash", iob->i_unit, name);
 	work[half - 1] = '\0';
 	sceKermitMemory_driver_AAF047AC(req, 0, work, strlen(work) + 1u, 1);
-	req->args[1] = (u32)mode;
+	req->argWords[1].lo = (u32)mode;
 
-	u64 resp = 0;
+	u64 resp;
 	int kres = sceKermit_driver_36666181(req, KERMIT_MODE_FLASHFS, 0xC66, 2, 0, &resp);
 	int cmdRes = (kres == 0) ? (int)resp : kres;
 	res = sceKernelUnlockMutex(g_mutexId, 1);
@@ -527,8 +544,8 @@ static int _flashIoMkdir(SceIoIob *iob, const char *name, int mode)
 
 static int _flashIoRmdir(SceIoIob *iob, const char *name)
 {
-	u8 stack_buf[0x80];
-	SceKermitRequest *aligned = (SceKermitRequest *)(((u32)stack_buf + 0x3Fu) & ~0x3Fu);
+	u8 stackBuf[0x80];
+	SceKermitRequest *aligned = (SceKermitRequest *)(((u32)stackBuf + 0x3Fu) & ~0x3Fu);
 
 	sceKernelDcacheInvalidateRange(aligned, 0x40);
 	SceKermitRequest *req = KERMIT_UNCACHED(aligned);
@@ -548,17 +565,17 @@ static int _flashIoRmdir(SceIoIob *iob, const char *name)
 	work[half - 1] = '\0';
 	sceKermitMemory_driver_AAF047AC(req, 0, work, strlen(work) + 1u, 1);
 
-	u64 resp = 0;
+	u64 resp;
 	int kres = sceKermit_driver_36666181(req, KERMIT_MODE_FLASHFS, 0xC61, 1, 0, &resp);
 	int cmdRes = (kres == 0) ? (int)resp : kres;
 	res = sceKernelUnlockMutex(g_mutexId, 1);
 	return (res == 0) ? cmdRes : res;
 }
 
-static int _flashIoDread(SceIoIob *iob, void *dir)
+static int _flashIoDread(SceIoIob *iob, SceIoDirent *dir)
 {
-	u8 stack_buf[0x80];
-	SceKermitRequest *aligned = (SceKermitRequest *)(((u32)stack_buf + 0x3Fu) & ~0x3Fu);
+	u8 stackBuf[0x80];
+	SceKermitRequest *aligned = (SceKermitRequest *)(((u32)stackBuf + 0x3Fu) & ~0x3Fu);
 
 	sceKernelDcacheInvalidateRange(aligned, 0x40);
 	SceKermitRequest *req = KERMIT_UNCACHED(aligned);
@@ -584,10 +601,10 @@ static int _flashIoDread(SceIoIob *iob, void *dir)
 	}
 
 	void *work = g_workBuf;
-	req->args[0] = (u32)slot->kermitFd;
+	req->argWords[0].lo = (u32)slot->kermitHandle;
 	sceKermitMemory_driver_AAF047AC(req, 1, work, 0x160, 2);
 
-	u64 resp = 0;
+	u64 resp;
 	int kres = sceKermit_driver_36666181(req, KERMIT_MODE_FLASHFS, 0xC65, 2, 0, &resp);
 	if (kres != 0) {
 		res = sceKernelUnlockMutex(g_mutexId, 1);
@@ -599,7 +616,7 @@ static int _flashIoDread(SceIoIob *iob, void *dir)
 	if (cmdRes > 0) {
 		iob->i_fpos++;
 		sceKernelMemcpy(dir, work, 0x160);
-		cmdRes = (s32)strlen((const char *)dir + 0x58);
+		cmdRes = (s32)strlen(dir->d_name);
 	}
 
 	res = sceKernelUnlockMutex(g_mutexId, 1);
@@ -614,10 +631,10 @@ static int _flashIoDread(SceIoIob *iob, void *dir)
 	return cmdRes;
 }
 
-static int _flashIoGetstat(SceIoIob *iob, const char *name, void *stat)
+static int _flashIoGetstat(SceIoIob *iob, const char *name, SceIoStat *stat)
 {
-	u8 stack_buf[0x80];
-	SceKermitRequest *aligned = (SceKermitRequest *)(((u32)stack_buf + 0x3Fu) & ~0x3Fu);
+	u8 stackBuf[0x80];
+	SceKermitRequest *aligned = (SceKermitRequest *)(((u32)stackBuf + 0x3Fu) & ~0x3Fu);
 
 	sceKernelDcacheInvalidateRange(aligned, 0x40);
 	SceKermitRequest *req = KERMIT_UNCACHED(aligned);
@@ -640,10 +657,10 @@ static int _flashIoGetstat(SceIoIob *iob, const char *name, void *stat)
 	work[half - 1] = '\0';
 	sceKermitMemory_driver_AAF047AC(req, 0, work, strlen(work) + 1u, 1);
 
-	void *statWork = (u8 *)g_workBuf + (g_workSize >> 1);
+	void *statWork = g_workBuf + (g_workSize >> 1);
 	sceKermitMemory_driver_AAF047AC(req, 1, statWork, 0x58, 2);
 
-	u64 resp = 0;
+	u64 resp;
 	int kres = sceKermit_driver_36666181(req, KERMIT_MODE_FLASHFS, 0xC69, 2, 0, &resp);
 	int cmdRes = kres;
 	if (kres == 0) {
@@ -660,10 +677,10 @@ static int _flashIoGetstat(SceIoIob *iob, const char *name, void *stat)
 	return (res == 0) ? cmdRes : res;
 }
 
-static int _flashIoChstat(SceIoIob *iob, const char *name, void *stat, int bits)
+static int _flashIoChstat(SceIoIob *iob, const char *name, SceIoStat *stat, int bits)
 {
-	u8 stack_buf[0x80];
-	SceKermitRequest *aligned = (SceKermitRequest *)(((u32)stack_buf + 0x3Fu) & ~0x3Fu);
+	u8 stackBuf[0x80];
+	SceKermitRequest *aligned = (SceKermitRequest *)(((u32)stackBuf + 0x3Fu) & ~0x3Fu);
 
 	sceKernelDcacheInvalidateRange(aligned, 0x40);
 	SceKermitRequest *req = KERMIT_UNCACHED(aligned);
@@ -687,16 +704,16 @@ static int _flashIoChstat(SceIoIob *iob, const char *name, void *stat, int bits)
 
 	void *statWork = NULL;
 	if (stat != NULL) {
-		statWork = (u8 *)g_workBuf + (g_workSize >> 1);
+		statWork = g_workBuf + (g_workSize >> 1);
 		sceKernelMemcpy(statWork, stat, 0x58);
 	}
 
 	req->cmd = 0xC5D;
 	sceKermitMemory_driver_AAF047AC(req, 0, nameWork, strlen(nameWork) + 1u, 1);
 	sceKermitMemory_driver_AAF047AC(req, 1, statWork, 0x58, 1);
-	req->args[2] = (u32)bits;
+	req->argWords[2].lo = (u32)bits;
 
-	u64 resp = 0;
+	u64 resp;
 	int kres = sceKermit_driver_36666181(req, KERMIT_MODE_FLASHFS, 0xC5D, 3, 0, &resp);
 	int cmdRes = (kres == 0) ? (int)resp : kres;
 	res = sceKernelUnlockMutex(g_mutexId, 1);
@@ -705,13 +722,13 @@ static int _flashIoChstat(SceIoIob *iob, const char *name, void *stat, int bits)
 
 static int _flashIoRename(SceIoIob *iob, const char *oldname, const char *newname)
 {
-	u8 stack_buf[0x80];
-	SceKermitRequest *aligned = (SceKermitRequest *)(((u32)stack_buf + 0x3Fu) & ~0x3Fu);
+	u8 stackBuf[0x80];
+	SceKermitRequest *aligned = (SceKermitRequest *)(((u32)stackBuf + 0x3Fu) & ~0x3Fu);
 
 	sceKernelDcacheInvalidateRange(aligned, 0x40);
 	SceKermitRequest *req = KERMIT_UNCACHED(aligned);
 	u32 half = g_workSize >> 1;
-	char *work1 = (char *)g_workBuf;
+	char *oldPathBuf = (char *)g_workBuf;
 
 	if (_flashCheckAccess(iob, oldname) != 0) {
 		return 0x8001000D;
@@ -725,17 +742,17 @@ static int _flashIoRename(SceIoIob *iob, const char *oldname, const char *newnam
 		return res;
 	}
 
-	snprintf(work1, half, "%s%d:%s", "flash", iob->i_unit, oldname);
-	work1[half - 1] = '\0';
+	snprintf(oldPathBuf, half, "%s%d:%s", "flash", iob->i_unit, oldname);
+	oldPathBuf[half - 1] = '\0';
 
-	char *work2 = (char *)g_workBuf + (g_workSize >> 1);
-	snprintf(work2, half, "%s%d:%s", "flash", iob->i_unit, newname);
-	work2[half - 1] = '\0';
+	char *newPathBuf = (char *)(g_workBuf + (g_workSize >> 1));
+	snprintf(newPathBuf, half, "%s%d:%s", "flash", iob->i_unit, newname);
+	newPathBuf[half - 1] = '\0';
 
-	sceKermitMemory_driver_AAF047AC(req, 0, work1, strlen(work1) + 1u, 1);
-	sceKermitMemory_driver_AAF047AC(req, 1, work2, strlen(work2) + 1u, 1);
+	sceKermitMemory_driver_AAF047AC(req, 0, oldPathBuf, strlen(oldPathBuf) + 1u, 1);
+	sceKermitMemory_driver_AAF047AC(req, 1, newPathBuf, strlen(newPathBuf) + 1u, 1);
 
-	u64 resp = 0;
+	u64 resp;
 	int kres = sceKermit_driver_36666181(req, KERMIT_MODE_FLASHFS, 0xC68, 2, 0, &resp);
 	int cmdRes = (kres == 0) ? (int)resp : kres;
 	res = sceKernelUnlockMutex(g_mutexId, 1);
@@ -744,8 +761,8 @@ static int _flashIoRename(SceIoIob *iob, const char *oldname, const char *newnam
 
 static int _flashIoChdir(SceIoIob *iob, const char *name)
 {
-	u8 stack_buf[0x80];
-	SceKermitRequest *aligned = (SceKermitRequest *)(((u32)stack_buf + 0x3Fu) & ~0x3Fu);
+	u8 stackBuf[0x80];
+	SceKermitRequest *aligned = (SceKermitRequest *)(((u32)stackBuf + 0x3Fu) & ~0x3Fu);
 
 	sceKernelDcacheInvalidateRange(aligned, 0x40);
 	SceKermitRequest *req = KERMIT_UNCACHED(aligned);
@@ -765,7 +782,7 @@ static int _flashIoChdir(SceIoIob *iob, const char *name)
 	work[half - 1] = '\0';
 	sceKermitMemory_driver_AAF047AC(req, 0, work, strlen(work) + 1u, 1);
 
-	u64 resp = 0;
+	u64 resp;
 	int kres = sceKermit_driver_36666181(req, KERMIT_MODE_FLASHFS, 0xC6D, 1, 0, &resp);
 	int cmdRes = (kres == 0) ? (int)resp : kres;
 	res = sceKernelUnlockMutex(g_mutexId, 1);
@@ -782,14 +799,14 @@ static int _flashIoDevctl(SceIoIob *iob, const char *dev, int cmd, void *indata,
 
 static int _flashIoInit(SceIoDeviceEntry *de)
 {
-	u8 stack_buf[0x80];
-	SceKermitRequest *aligned = (SceKermitRequest *)(((u32)stack_buf + 0x3Fu) & ~0x3Fu);
+	u8 stackBuf[0x80];
+	SceKermitRequest *aligned = (SceKermitRequest *)(((u32)stackBuf + 0x3Fu) & ~0x3Fu);
 
 	sceKernelDcacheInvalidateRange(aligned, 0x40);
 	SceKermitRequest *req = KERMIT_UNCACHED(aligned);
 
 	sceKermitMemory_driver_AAF047AC(req, 0, de, 0xC, 3);
-	u64 resp = 0;
+	u64 resp;
 	int res = sceKermit_driver_36666181(req, KERMIT_MODE_FLASHFS, 0xC63, 1, 0, &resp);
 	if (res != 0) {
 		return res;
@@ -813,16 +830,20 @@ static int _flashIoClose(SceIoIob *iob)
 
 static int _flashIoIoctl(SceIoIob *iob, int cmd, void *indata, SceSize inlen, void *outdata, SceSize outlen)
 {
-	if (cmd <= 0x208009) {
-		if (cmd >= 0x208006 || cmd == 0x208003) {
-			return 0;
-		}
+	switch (cmd) {
+	case 0x208003:
+	case 0x208006:
+	case 0x208007:
+	case 0x208008:
+	case 0x208009:
+	case 0x208020:
+		return 0;
+	case 0x208013:
+	case 0x208082:
+		return 0x80010016;
+	default:
 		return 0x80010016;
 	}
-	if (cmd == 0x208020) {
-		return 0;
-	}
-	return 0x80010016;
 }
 
 static int _flashIoDopen(SceIoIob *iob, const char *dirname)
@@ -855,8 +876,8 @@ static int _flashfatIoUmount(SceIoIob *iob)
 
 static int _flashOpenInternal(SceIoIob *iob, const char *file, int flags, int mode, u32 cmd)
 {
-	u8 stack_buf[0x80];
-	SceKermitRequest *aligned = (SceKermitRequest *)(((u32)stack_buf + 0x3Fu) & ~0x3Fu);
+	u8 stackBuf[0x80];
+	SceKermitRequest *aligned = (SceKermitRequest *)(((u32)stackBuf + 0x3Fu) & ~0x3Fu);
 
 	sceKernelDcacheInvalidateRange(aligned, 0x40);
 	SceKermitRequest *req = KERMIT_UNCACHED(aligned);
@@ -894,40 +915,34 @@ static int _flashOpenInternal(SceIoIob *iob, const char *file, int flags, int mo
 	u32 half = g_workSize >> 1;
 	char *work = (char *)g_workBuf;
 	int res = sceKernelLockMutex(g_mutexId, 1, NULL);
-	if (res != 0) {
-		goto fail;
-	}
+	if (res == 0) {
+		snprintf(work, half, "%s%d:%s", "flash", iob->i_unit, file);
+		work[half - 1] = '\0';
+		sceKermitMemory_driver_AAF047AC(req, 0, work, strlen(work) + 1u, 1);
+		req->argWords[1].lo = (u32)flags;
+		req->argWords[2].lo = (u32)mode;
 
-	snprintf(work, half, "%s%d:%s", "flash", iob->i_unit, file);
-	work[half - 1] = '\0';
-	sceKermitMemory_driver_AAF047AC(req, 0, work, strlen(work) + 1u, 1);
-	req->args[1] = (u32)flags;
-	req->args[2] = (u32)mode;
-
-	u64 resp = 0;
-	res = sceKermit_driver_36666181(req, KERMIT_MODE_FLASHFS, cmd, 3, 0, &resp);
-	if (res != 0) {
-		int ures = sceKernelUnlockMutex(g_mutexId, 1);
-		if (ures != 0) {
-			res = ures;
+		u64 resp;
+		res = sceKermit_driver_36666181(req, KERMIT_MODE_FLASHFS, cmd, 3, 0, &resp);
+		if (res != 0) {
+			int unlockRes = sceKernelUnlockMutex(g_mutexId, 1);
+			if (unlockRes != 0) {
+				res = unlockRes;
+			}
+		} else {
+			int kermitHandle = (int)resp;
+			slot->kermitHandle = kermitHandle;
+			res = sceKernelUnlockMutex(g_mutexId, 1);
+			if (res == 0) {
+				sceKernelUnlockMutex(slot->mutexId, 1);
+				if (kermitHandle >= 0) {
+					return kermitHandle;
+				}
+				res = kermitHandle;
+			}
 		}
-		goto fail;
 	}
 
-	int fd = (int)resp;
-	slot->kermitFd = fd;
-	res = sceKernelUnlockMutex(g_mutexId, 1);
-	if (res != 0) {
-		goto fail;
-	}
-
-	sceKernelUnlockMutex(slot->mutexId, 1);
-	if (fd >= 0) {
-		return fd;
-	}
-	res = fd;
-
-fail:
 	sceKernelDeleteMutex(mtx);
 	intr = sceKernelCpuSuspendIntr();
 	iob->i_private = NULL;
@@ -938,8 +953,8 @@ fail:
 
 static int _flashCloseInternal(SceIoIob *iob, u32 cmd)
 {
-	u8 stack_buf[0x80];
-	SceKermitRequest *aligned = (SceKermitRequest *)(((u32)stack_buf + 0x3Fu) & ~0x3Fu);
+	u8 stackBuf[0x80];
+	SceKermitRequest *aligned = (SceKermitRequest *)(((u32)stackBuf + 0x3Fu) & ~0x3Fu);
 
 	sceKernelDcacheInvalidateRange(aligned, 0x40);
 	SceKermitRequest *req = KERMIT_UNCACHED(aligned);
@@ -953,8 +968,8 @@ static int _flashCloseInternal(SceIoIob *iob, u32 cmd)
 		return 0x80010009;
 	}
 
-	req->args[0] = (u32)slot->kermitFd;
-	u64 resp = 0;
+	req->argWords[0].lo = (u32)slot->kermitHandle;
+	u64 resp;
 	int kres = sceKermit_driver_36666181(req, KERMIT_MODE_FLASHFS, cmd, 1, 0, &resp);
 	if (kres != 0) {
 		return kres;
@@ -1018,5 +1033,5 @@ static int _flashGetPathPerm(int unit, const char *path)
 	if (memcmp("/data", path, 5) == 0) {
 		return 0x27;
 	}
-	return (path[0] == '/') ? 0x21 : 0x20;
+	return ((unsigned char)path[0] == '/') ? 0x21 : 0x20;
 }
