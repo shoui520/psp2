@@ -430,6 +430,8 @@ psp2_module(vs0_vsh_shell_shell KIND user COMPILER snc PARTIAL SOURCES
 	process_event_server.cpp
 	promoter_util_server.cpp
 	shutter_sound_server.cpp
+	src/screenshot/server/screenshot_capture.cpp
+	src/screenshot/server/screenshot_ipc_server.cpp
 	shell.c
 )
 target_include_directories(vs0_vsh_shell_shell PRIVATE "${PSP2_SRC}/vsh/paf/include"
