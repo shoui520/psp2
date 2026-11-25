@@ -30,16 +30,16 @@ extern int sceHttpGetStatusCode(int reqId, int *statusCode);
 extern int sceHttpGetAllHeader(int reqId, char **header, u32 *headerSize);
 extern int sceHttpReadData(int reqId, void *data, u32 size);
 extern int sceHttpGetNetworkErrno(int reqId, int *errNum);
-extern int sceHttp_AB1540D5(int reqId, int *err1, int *err2);
+extern int sceHttp_AB1540D5(int reqId, int *sslErr, int *httpErr);
 extern int sceHttpEnableRedirect(int id);
 extern int sceHttpDisableRedirect(int id);
 
 extern int sceNetFreeThreadinfo(int thid);
 extern int sceNetApctlGetInfo(int code, void *pInfo);
 extern int sceNet_lib_2A73ADDC(const char *str, char **endptr, int base);
-extern int sceNet_lib_9CFBC7E3(const char *s1, const char *s2);
+extern int sceNet_lib_9CFBC7E3(const char *lhs, const char *rhs);
 extern char *sceNet_lib_B5CE388A(char *dst, const char *src, u32 n);
-extern int sceNet_lib_B9085A96(const char *s1, const char *s2, u32 n);
+extern int sceNet_lib_B9085A96(const char *lhs, const char *rhs, u32 n);
 extern char *sceNet_lib_BCBE14CF(const char *s, int c);
 extern int sceNet_lib_CF705E46(char *buf, const char *fmt, ...);
 extern u32 sceNet_lib_D8722983(const char *s);
@@ -69,7 +69,7 @@ typedef struct WisprXmlDoc {
 
 typedef struct WisprCtx {
     int state;              /* 0x000 */
-    int sub_state;          /* 0x004 */
+    int subState;           /* 0x004 */
     int thid;               /* 0x008 */
     int evid;               /* 0x00c */
     int semaid;             /* 0x010 */
@@ -80,7 +80,7 @@ typedef struct WisprCtx {
     char reply_msg[0x100];  /* 0x024 */
     char login_url[0x100];  /* 0x124 */
     char abort_url[0x100];  /* 0x224 */
-    void (*callback)(int prev_state, int state, int sub_state, int err, void *info, void *arg); /* 0x324 */
+    void (*callback)(int prev_state, int state, int subState, int err, void *info, void *arg); /* 0x324 */
     void *cb_arg;           /* 0x328 */
     u32 saved_gp;           /* 0x32c */
     char xml_buf[0x734];    /* 0x330 */
@@ -94,10 +94,10 @@ typedef struct WisprProviderOps {
     int (*setup_redirect)(WisprCtx *ctx, int tmpl_id);
     int (*get_init_url)(WisprCtx *ctx, const char **url);
     int (*check_init_status)(WisprCtx *ctx, int status, int *next_sub);
-    int (*parse_init_reply)(WisprCtx *ctx, int req_id, int *next_sub, const char **login_url, const char **loc_ptr, u32 *loc_len);
+    int (*parse_init_reply)(WisprCtx *ctx, int req_id, int *next_sub, const char **login_url, const char **locationPtr, u32 *locationLen);
     int (*build_login_body)(WisprCtx *ctx, char *buf, int max_len);
     int (*check_login_status)(WisprCtx *ctx, int status, int *next_sub);
-    int (*parse_login_reply)(WisprCtx *ctx, int req_id, int *next_sub, void *info, const char **reply_msg, const char **loc_ptr, u32 *loc_len, const char **abort_url);
+    int (*parse_login_reply)(WisprCtx *ctx, int req_id, int *next_sub, void *info, const char **reply_msg, const char **locationPtr, u32 *locationLen, const char **abort_url);
 } WisprProviderOps;
 
 static int g_initialized;           /* 0x2ea0 */
@@ -143,23 +143,23 @@ static int wisprXmlEndTag(int *matched);
 static int wisprXmlStoreValue(int tag_id);
 static int wisprXmlGetLoginUrl(const char **out_login_url);
 static int wisprXmlParseAuthReply(int *out_sub, int *out_resp_code, const char **out_reply_msg, const char **out_logoff_url);
-static int wisprRespCodeToError(int resp_code);
+static int wisprRespCodeToError(u32 resp_code);
 static int wisprXmlValidateDoc(WisprXmlDoc *doc, int expected_msg_tag, int expected_msg_type);
 static int wisprMsgTagToError(int msg_tag);
-static int tmobileParseInitReply(WisprCtx *ctx, int req_id, int *next_sub, const char **login_url, const char **loc_ptr, u32 *loc_len);
+static int tmobileParseInitReply(WisprCtx *ctx, int req_id, int *next_sub, const char **login_url, const char **locationPtr, u32 *locationLen);
 static int tmobileSetupRedirect(WisprCtx *ctx, int tmpl_id);
 static int tmobileGetInitUrl(WisprCtx *ctx, const char **url);
 static int tmobileCheckInitStatus(WisprCtx *ctx, int status, int *next_sub);
 static int tmobileBuildLoginBody(WisprCtx *ctx, char *buf, int max_len);
 static int tmobileCheckLoginStatus(WisprCtx *ctx, int status, int *next_sub);
-static int tmobileParseLoginReply(WisprCtx *ctx, int req_id, int *next_sub, void *info, const char **reply_msg, const char **loc_ptr, u32 *loc_len, const char **abort_url);
-static int genericParseInitReply(WisprCtx *ctx, int req_id, int *next_sub, const char **login_url, const char **loc_ptr, u32 *loc_len);
+static int tmobileParseLoginReply(WisprCtx *ctx, int req_id, int *next_sub, void *info, const char **reply_msg, const char **locationPtr, u32 *locationLen, const char **abort_url);
+static int genericParseInitReply(WisprCtx *ctx, int req_id, int *next_sub, const char **login_url, const char **locationPtr, u32 *locationLen);
 static int genericBuildLoginBody(WisprCtx *ctx, char *buf, int max_len);
 static int genericSetupRedirect(WisprCtx *ctx, int tmpl_id);
 static int genericGetInitUrl(WisprCtx *ctx, const char **url);
 static int genericCheckInitStatus(WisprCtx *ctx, int status, int *next_sub);
 static int genericCheckLoginStatus(WisprCtx *ctx, int status, int *next_sub);
-static int genericParseLoginReply(WisprCtx *ctx, int req_id, int *next_sub, void *info, const char **reply_msg, const char **loc_ptr, u32 *loc_len, const char **abort_url);
+static int genericParseLoginReply(WisprCtx *ctx, int req_id, int *next_sub, void *info, const char **reply_msg, const char **locationPtr, u32 *locationLen, const char **abort_url);
 
 int sceNetWispr_757BDC9F(void);
 
@@ -238,48 +238,46 @@ int sceNetWispr_C856AAAC(int netparam_id)
 static int wisprInitCtx(void *cb, int stackSize, int prio, int initPrio, void *cb_arg)
 {
     WisprCtx *ctx = &g_ctx;
-    int ret = wisprHttpInit(ctx);
-    if (ret < 0) {
-        goto fail;
-    }
-    sceKernelMemset(ctx, 0, sizeof(WisprCtx));
-    ctx->cb_arg = cb_arg;
-    ctx->flags |= 1;
-    ctx->thid = -1;
-    ctx->callback = cb;
-    ctx->semaid = -1;
-    ctx->evid = -1;
+    int ret;
 
-    ret = sceKernelCreateSema("SceNetWispr", 0, 1, 1, NULL);
-    if (ret < 0) {
-        goto fail;
-    }
-    ctx->semaid = ret;
+    do {
+        ret = wisprHttpInit(ctx);
+        if (ret < 0)
+            break;
+        sceKernelMemset(ctx, 0, sizeof(WisprCtx));
+        ctx->cb_arg = cb_arg;
+        ctx->flags |= 1;
+        ctx->thid = -1;
+        ctx->callback = cb;
+        ctx->semaid = -1;
+        ctx->evid = -1;
 
-    ret = sceKernelCreateEventFlag("SceNetWispr", 0, 0, NULL);
-    if (ret < 0) {
-        goto fail;
-    }
-    ctx->evid = ret;
+        ret = sceKernelCreateSema("SceNetWispr", 0, 1, 1, NULL);
+        if (ret < 0)
+            break;
+        ctx->semaid = ret;
 
-    u32 opt[2];
-    sceKernelMemset(opt, 0, 8);
-    opt[0] = 8;
-    opt[1] = (u32)stackSize;
+        ret = sceKernelCreateEventFlag("SceNetWispr", 0, 0, NULL);
+        if (ret < 0)
+            break;
+        ctx->evid = ret;
 
-    ret = sceKernelCreateThread("SceNetWispr", wisprThreadEntry, initPrio, prio, 0, opt);
-    if (ret < 0) {
-        goto fail;
-    }
-    ctx->thid = ret;
+        u32 opt[2];
+        sceKernelMemset(opt, 0, 8);
+        opt[0] = 8;
+        opt[1] = (u32)stackSize;
 
-    ret = sceKernelStartThread(ret, 4, &ctx);
-    if (ret < 0) {
-        goto fail;
-    }
-    return ret;
+        ret = sceKernelCreateThread("SceNetWispr", wisprThreadEntry, initPrio, prio, 0, opt);
+        if (ret < 0)
+            break;
+        ctx->thid = ret;
 
-fail:
+        ret = sceKernelStartThread(ret, 4, &ctx);
+        if (ret < 0)
+            break;
+        return ret;
+    } while (0);
+
     if (ctx->thid >= 0) {
         sceKernelTerminateThread(ctx->thid);
         sceKernelDeleteThread(ctx->thid);
@@ -413,8 +411,8 @@ static int wisprNotifyCallback(int prev_state)
     WisprCtx *ctx = &g_ctx;
     sceKernelWaitSema(ctx->semaid, 1, NULL);
     if (ctx->callback != NULL) {
-        int err = (ctx->sub_state == 4) ? ctx->error_code : 0;
-        ctx->callback(prev_state, ctx->state, ctx->sub_state, err, &ctx->respCode, ctx->cb_arg);
+        int err = (ctx->subState == 4) ? ctx->error_code : 0;
+        ctx->callback(prev_state, ctx->state, ctx->subState, err, &ctx->respCode, ctx->cb_arg);
     }
     sceKernelSignalSema(ctx->semaid, 1);
     return 0;
@@ -427,7 +425,7 @@ static int wisprStateIdle(WisprCtx *ctx, int prev_state, int *next_state, int *n
     sceKernelMemset(&ctx->provider_type, 0, 0x108);
     sceKernelMemset(&ctx->respCode, 0, 0x304);
 
-    u32 out_bits = 0;
+    u32 out_bits;
     sceKernelWaitEventFlag(ctx->evid, 0xffffffff, 0x21, &out_bits, NULL);
     if (out_bits & 8) {
         ctx->flags |= 2;
@@ -451,35 +449,31 @@ static int wisprStateRedirect(WisprCtx *ctx, int prev_state, int *next_state, in
     int sub = 0;
     int ret = wisprLoadNetParam(ctx);
     if (ret < 0) {
-        goto err_out;
-    }
-    ret = wisprDoInitRequest(ctx, &sub);
-    if (sceKernelPollEventFlag(ctx->evid, 2, 0x21, NULL) == 0) {
         *next_state = 0;
-        *next_sub = 3;
-    } else if (ret < 0) {
-        goto err_out;
-    } else if (sub == 1) {
-        *next_state = 0;
-        *next_sub = 3;
-    } else if (sub == 2) {
-        *next_state = 0;
-        *next_sub = 2;
+        *next_sub = 4;
+        ctx->error_code = ret;
     } else {
-        *next_state = 2;
-        *next_sub = 1;
+        ret = wisprDoInitRequest(ctx, &sub);
+        if (sceKernelPollEventFlag(ctx->evid, 2, 0x21, NULL) == 0) {
+            *next_state = 0;
+            *next_sub = 3;
+        } else if (ret < 0) {
+            *next_state = 0;
+            *next_sub = 4;
+            ctx->error_code = ret;
+        } else if (sub == 1) {
+            *next_state = 0;
+            *next_sub = 3;
+        } else if (sub == 2) {
+            *next_state = 0;
+            *next_sub = 2;
+        } else {
+            *next_state = 2;
+            *next_sub = 1;
+        }
     }
-    goto done;
-
-err_out:
-    *next_state = 0;
-    *next_sub = 4;
-    ctx->error_code = ret;
-
-done:
-    if (*next_state == 0) {
+    if (*next_state == 0)
         ctx->flags |= 1;
-    }
     return 0;
 }
 
@@ -492,28 +486,22 @@ static int wisprStateLogin(WisprCtx *ctx, int prev_state, int *next_state, int *
         *next_state = 0;
         *next_sub = 3;
     } else if (ret < 0) {
-        goto err_out;
+        *next_state = 0;
+        *next_sub = 4;
+        ctx->error_code = ret;
     } else if (sub == 1) {
         *next_state = 0;
         *next_sub = 3;
     } else if (sub == 3) {
-        ret = 0x80411513;
-        goto err_out;
+        *next_state = 0;
+        *next_sub = 4;
+        ctx->error_code = 0x80411513;
     } else {
         *next_state = 0;
         *next_sub = 2;
     }
-    goto done;
-
-err_out:
-    *next_state = 0;
-    *next_sub = 4;
-    ctx->error_code = ret;
-
-done:
-    if (*next_state == 0) {
+    if (*next_state == 0)
         ctx->flags |= 1;
-    }
     return 0;
 }
 
@@ -523,32 +511,28 @@ static int wisprStateLogoff(WisprCtx *ctx, int prev_state, int *next_state, int 
     int sub = 0;
     int ret = wisprLoadNetParam(ctx);
     if (ret < 0) {
-        goto err_out;
-    }
-    ret = wisprDoLogoffRequest(ctx, &sub);
-    if (sceKernelPollEventFlag(ctx->evid, 2, 0x21, NULL) == 0) {
         *next_state = 0;
-        *next_sub = 3;
-    } else if (ret < 0) {
-        goto err_out;
-    } else if (sub == 1) {
-        *next_state = 0;
-        *next_sub = 3;
+        *next_sub = 4;
+        ctx->error_code = ret;
     } else {
-        *next_state = 0;
-        *next_sub = 6;
+        ret = wisprDoLogoffRequest(ctx, &sub);
+        if (sceKernelPollEventFlag(ctx->evid, 2, 0x21, NULL) == 0) {
+            *next_state = 0;
+            *next_sub = 3;
+        } else if (ret < 0) {
+            *next_state = 0;
+            *next_sub = 4;
+            ctx->error_code = ret;
+        } else if (sub == 1) {
+            *next_state = 0;
+            *next_sub = 3;
+        } else {
+            *next_state = 0;
+            *next_sub = 6;
+        }
     }
-    goto done;
-
-err_out:
-    *next_state = 0;
-    *next_sub = 4;
-    ctx->error_code = ret;
-
-done:
-    if (*next_state == 0) {
+    if (*next_state == 0)
         ctx->flags |= 1;
-    }
     return 0;
 }
 
@@ -565,7 +549,7 @@ static int wisprThreadEntry(u32 arglen, void *argp)
             break;
         }
         ctx->state = next_state;
-        ctx->sub_state = next_sub;
+        ctx->subState = next_sub;
         wisprNotifyCallback(prev_state);
     }
     return 0;
@@ -576,86 +560,78 @@ static int wisprDoInitRequest(WisprCtx *ctx, int *next_sub)
 {
     const WisprProviderOps *ops = &g_provider_ops[ctx->provider_type];
     const char *url = NULL;
-    int status = 0;
+    int status;
     const char *login_url = NULL;
-    const char *loc_ptr = NULL;
-    u32 loc_len = 0;
+    const char *locationPtr = NULL;
+    u32 locationLen = 0;
+    int ret;
 
-    int ret = ops->setup_redirect(ctx, g_http_tmpl_id);
-    if (ret < 0) {
-        goto cleanup;
-    }
-    ret = ops->get_init_url(ctx, &url);
-    if (ret < 0) {
-        goto cleanup;
-    }
-    ret = sceHttpCreateConnectionWithURL(g_http_tmpl_id, url, 1);
-    if (ret < 0) {
-        goto cleanup;
-    }
-    g_http_conn_id = ret;
+    do {
+        ret = ops->setup_redirect(ctx, g_http_tmpl_id);
+        if (ret < 0)
+            break;
+        ret = ops->get_init_url(ctx, &url);
+        if (ret < 0)
+            break;
+        ret = sceHttpCreateConnectionWithURL(g_http_tmpl_id, url, 1);
+        if (ret < 0)
+            break;
+        g_http_conn_id = ret;
 
-    ret = sceHttpCreateRequestWithURL(ret, 0, url, 0);
-    if (ret < 0) {
-        goto cleanup;
-    }
-    g_http_req_id = ret;
+        ret = sceHttpCreateRequestWithURL(ret, 0, url, 0);
+        if (ret < 0)
+            break;
+        g_http_req_id = ret;
 
-    ret = sceHttpSendRequest(ret, NULL, 0);
-    if (ret < 0) {
-        if (ret == (int)0x80431063) {
-            int errNum = 0;
-            if (sceHttpGetNetworkErrno(g_http_req_id, &errNum) >= 0) {
-                ret = 0x80010000 | (errNum & 0xff);
+        ret = sceHttpSendRequest(ret, NULL, 0);
+        if (ret < 0) {
+            if (ret == (int)0x80431063) {
+                int errNum;
+                if (sceHttpGetNetworkErrno(g_http_req_id, &errNum) >= 0)
+                    ret = 0x80010000 | (errNum & 0xff);
+                else
+                    ret = 0x80431063;
+            } else if (ret == (int)0x80431075) {
+                int sslErr, httpErr;
+                int errRes = sceHttp_AB1540D5(g_http_req_id, &sslErr, &httpErr);
+                ret = (errRes >= 0) ? sslErr : errRes;
+            }
+            break;
+        }
+
+        ret = sceHttpGetStatusCode(g_http_req_id, &status);
+        if (ret < 0)
+            break;
+        ret = ops->check_init_status(ctx, status, next_sub);
+        if (ret < 0)
+            break;
+        if (*next_sub == 2) {
+            ret = 0;
+            break;
+        }
+
+        ret = wisprHttpReadXml(ctx, g_http_req_id, g_read_buf, 0x100);
+        if (ret < 0)
+            break;
+        ret = ops->parse_init_reply(ctx, g_http_req_id, next_sub, &login_url, &locationPtr, &locationLen);
+        if (ret < 0)
+            break;
+        if (*next_sub == 2) {
+            ret = 0;
+            if (locationPtr != NULL) {
+                if (locationLen >= 0x100)
+                    locationLen = 0xff;
+                sceNet_lib_B5CE388A(ctx->login_url, locationPtr, locationLen);
+                ctx->login_url[locationLen] = 0;
             } else {
-                ret = 0x80431063;
+                sceKernelMemset(ctx->login_url, 0, 0x100);
             }
-        } else if (ret == (int)0x80431075) {
-            int err1 = 0, err2 = 0;
-            int r2 = sceHttp_AB1540D5(g_http_req_id, &err1, &err2);
-            ret = (r2 >= 0) ? err1 : r2;
-        }
-        goto cleanup;
-    }
-
-    ret = sceHttpGetStatusCode(g_http_req_id, &status);
-    if (ret < 0) {
-        goto cleanup;
-    }
-    ret = ops->check_init_status(ctx, status, next_sub);
-    if (ret < 0) {
-        goto cleanup;
-    }
-    if (*next_sub == 2) {
-        ret = 0;
-        goto cleanup;
-    }
-
-    ret = wisprHttpReadXml(ctx, g_http_req_id, g_read_buf, 0x100);
-    if (ret < 0) {
-        goto cleanup;
-    }
-    ret = ops->parse_init_reply(ctx, g_http_req_id, next_sub, &login_url, &loc_ptr, &loc_len);
-    if (ret < 0) {
-        goto cleanup;
-    }
-    if (*next_sub == 2) {
-        ret = 0;
-        if (loc_ptr != NULL) {
-            if (loc_len >= 0x100) {
-                loc_len = 0xff;
-            }
-            sceNet_lib_B5CE388A(ctx->login_url, loc_ptr, loc_len);
-            ctx->login_url[loc_len] = 0;
         } else {
-            sceKernelMemset(ctx->login_url, 0, 0x100);
+            sceNet_lib_B5CE388A(ctx->login_url, login_url, 0x100);
+            ctx->login_url[0xff] = 0;
         }
-    } else {
-        sceNet_lib_B5CE388A(ctx->login_url, login_url, 0x100);
-        ctx->login_url[0xff] = 0;
-    }
+    } while (0);
 
-cleanup:
     if (g_http_req_id > 0) {
         sceHttpDeleteRequest(g_http_req_id);
         g_http_req_id = 0;
@@ -670,116 +646,106 @@ cleanup:
 /* 0x0d40 */
 static int wisprDoLoginRequest(WisprCtx *ctx, int *next_sub)
 {
-    int status = 0;
+    int status;
     const char *reply_msg = NULL;
-    const char *loc_ptr = NULL;
-    u32 loc_len = 0;
+    const char *locationPtr = NULL;
+    u32 locationLen = 0;
     const char *abort_url = NULL;
 
     int ret = 0x80411504;
-    u32 len = sceNet_lib_D8722983("UserName");
-    len += sceNet_lib_D8722983("Password");
-    len += sceNet_lib_D8722983("button");
-    len += sceNet_lib_D8722983("Login");
-    len += sceNet_lib_D8722983("FNAME");
-    len += sceNet_lib_D8722983(NULL);
-    len += sceNet_lib_D8722983("OriginatingServer");
-    if (len + 0x209 >= 0x735) {
-        goto cleanup_only;
-    }
+    do {
+        u32 len = sceNet_lib_D8722983("UserName");
+        len += sceNet_lib_D8722983("Password");
+        len += sceNet_lib_D8722983("button");
+        len += sceNet_lib_D8722983("Login");
+        len += sceNet_lib_D8722983("FNAME");
+        len += sceNet_lib_D8722983(NULL);
+        len += sceNet_lib_D8722983("OriginatingServer");
+        if (len + 0x209 >= 0x735)
+            break;
 
-    const WisprProviderOps *ops = &g_provider_ops[ctx->provider_type];
-    int body_len = ops->build_login_body(ctx, ctx->xml_buf, 0x734);
-    if (body_len < 0) {
-        ret = body_len;
-        goto cleanup;
-    }
+        const WisprProviderOps *ops = &g_provider_ops[ctx->provider_type];
+        int body_len = ops->build_login_body(ctx, ctx->xml_buf, 0x734);
+        if (body_len < 0) {
+            ret = body_len;
+            break;
+        }
 
-    ret = sceHttpCreateConnectionWithURL(g_http_tmpl_id, ctx->login_url, 1);
-    if (ret < 0) {
-        goto cleanup;
-    }
-    g_http_conn_id = ret;
+        ret = sceHttpCreateConnectionWithURL(g_http_tmpl_id, ctx->login_url, 1);
+        if (ret < 0)
+            break;
+        g_http_conn_id = ret;
 
-    ret = sceHttpCreateRequestWithURL(ret, 1, ctx->login_url, (u32)body_len);
-    if (ret < 0) {
-        goto cleanup;
-    }
-    g_http_req_id = ret;
+        ret = sceHttpCreateRequestWithURL(ret, 1, ctx->login_url, (u32)body_len);
+        if (ret < 0)
+            break;
+        g_http_req_id = ret;
 
-    ret = sceHttpAddExtraHeader(ret, "Content-Type", "application/x-www-form-urlencoded", 0);
-    if (ret < 0) {
-        goto cleanup;
-    }
+        ret = sceHttpAddExtraHeader(ret, "Content-Type", "application/x-www-form-urlencoded", 0);
+        if (ret < 0)
+            break;
 
-    ret = sceHttpSendRequest(g_http_req_id, ctx->xml_buf, body_len);
-    if (ret < 0) {
-        if (ret == (int)0x80431063) {
-            int errNum = 0;
-            if (sceHttpGetNetworkErrno(g_http_req_id, &errNum) >= 0) {
-                ret = 0x80010000 | (errNum & 0xff);
-            } else {
-                ret = 0x80431063;
+        ret = sceHttpSendRequest(g_http_req_id, ctx->xml_buf, body_len);
+        if (ret < 0) {
+            if (ret == (int)0x80431063) {
+                int errNum;
+                if (sceHttpGetNetworkErrno(g_http_req_id, &errNum) >= 0)
+                    ret = 0x80010000 | (errNum & 0xff);
+                else
+                    ret = 0x80431063;
+            } else if (ret == (int)0x80431075) {
+                int sslErr, httpErr;
+                int errRes = sceHttp_AB1540D5(g_http_req_id, &sslErr, &httpErr);
+                ret = (errRes >= 0) ? sslErr : errRes;
             }
-        } else if (ret == (int)0x80431075) {
-            int err1 = 0, err2 = 0;
-            int r2 = sceHttp_AB1540D5(g_http_req_id, &err1, &err2);
-            ret = (r2 >= 0) ? err1 : r2;
+            break;
         }
-        goto cleanup;
-    }
 
-    ret = sceHttpGetStatusCode(g_http_req_id, &status);
-    if (ret < 0) {
-        goto cleanup;
-    }
-    ret = ops->check_login_status(ctx, status, next_sub);
-    if (ret < 0) {
-        goto cleanup;
-    }
-    if (*next_sub == 2) {
-        ret = 0;
-        goto cleanup;
-    }
-
-    ret = wisprHttpReadXml(ctx, g_http_req_id, g_read_buf, 0x100);
-    if (ret < 0) {
-        goto cleanup;
-    }
-    ret = ops->parse_login_reply(ctx, g_http_req_id, next_sub, &ctx->respCode, &reply_msg, &loc_ptr, &loc_len, &abort_url);
-    if (ret < 0) {
-        goto cleanup;
-    }
-
-    if (reply_msg != NULL) {
-        sceNet_lib_B5CE388A(ctx->reply_msg, reply_msg, 0x100);
-        ctx->reply_msg[0xff] = 0;
-    } else if (*next_sub == 3) {
-        sceNet_lib_B5CE388A(ctx->reply_msg, "Authentication Failure.", 0x100);
-        ctx->reply_msg[0xff] = 0;
-    } else {
-        sceKernelMemset(ctx->reply_msg, 0, 0x100);
-    }
-
-    if (loc_ptr != NULL) {
-        if (loc_len >= 0x100) {
-            loc_len = 0xff;
+        ret = sceHttpGetStatusCode(g_http_req_id, &status);
+        if (ret < 0)
+            break;
+        ret = ops->check_login_status(ctx, status, next_sub);
+        if (ret < 0)
+            break;
+        if (*next_sub == 2) {
+            ret = 0;
+            break;
         }
-        sceNet_lib_B5CE388A(ctx->login_url, loc_ptr, loc_len);
-        ctx->login_url[loc_len] = 0;
-    } else {
-        sceKernelMemset(ctx->login_url, 0, 0x100);
-    }
 
-    if (abort_url != NULL) {
-        sceNet_lib_B5CE388A(ctx->abort_url, abort_url, 0x100);
-        ctx->abort_url[0xff] = 0;
-    } else {
-        sceKernelMemset(ctx->abort_url, 0, 0x100);
-    }
+        ret = wisprHttpReadXml(ctx, g_http_req_id, g_read_buf, 0x100);
+        if (ret < 0)
+            break;
+        ret = ops->parse_login_reply(ctx, g_http_req_id, next_sub, &ctx->respCode, &reply_msg, &locationPtr, &locationLen, &abort_url);
+        if (ret < 0)
+            break;
 
-cleanup:
-cleanup_only:
+        if (reply_msg != NULL) {
+            sceNet_lib_B5CE388A(ctx->reply_msg, reply_msg, 0x100);
+            ctx->reply_msg[0xff] = 0;
+        } else if (*next_sub == 3) {
+            sceNet_lib_B5CE388A(ctx->reply_msg, "Authentication Failure.", 0x100);
+            ctx->reply_msg[0xff] = 0;
+        } else {
+            sceKernelMemset(ctx->reply_msg, 0, 0x100);
+        }
+
+        if (locationPtr != NULL) {
+            if (locationLen >= 0x100)
+                locationLen = 0xff;
+            sceNet_lib_B5CE388A(ctx->login_url, locationPtr, locationLen);
+            ctx->login_url[locationLen] = 0;
+        } else {
+            sceKernelMemset(ctx->login_url, 0, 0x100);
+        }
+
+        if (abort_url != NULL) {
+            sceNet_lib_B5CE388A(ctx->abort_url, abort_url, 0x100);
+            ctx->abort_url[0xff] = 0;
+        } else {
+            sceKernelMemset(ctx->abort_url, 0, 0x100);
+        }
+    } while (0);
+
     if (g_http_req_id > 0) {
         sceHttpDeleteRequest(g_http_req_id);
         g_http_req_id = 0;
@@ -794,54 +760,50 @@ cleanup_only:
 /* 0x10d8 */
 static int wisprDoLogoffRequest(WisprCtx *ctx, int *next_sub)
 {
-    int status = 0;
+    int status;
     int ret = 0x80411507;
     char *logoff_url = g_logoff_urls[ctx->provider_type];
-    if (sceNet_lib_D8722983(logoff_url) == 0) {
-        goto cleanup;
-    }
 
-    const WisprProviderOps *ops = &g_provider_ops[ctx->provider_type];
-    ret = ops->setup_redirect(ctx, g_http_tmpl_id);
-    if (ret < 0) {
-        goto cleanup;
-    }
-    ret = sceHttpCreateConnectionWithURL(g_http_tmpl_id, logoff_url, 1);
-    if (ret < 0) {
-        goto cleanup;
-    }
-    g_http_conn_id = ret;
+    do {
+        if (sceNet_lib_D8722983(logoff_url) == 0)
+            break;
 
-    ret = sceHttpCreateRequestWithURL(ret, 0, logoff_url, 0);
-    if (ret < 0) {
-        goto cleanup;
-    }
-    g_http_req_id = ret;
+        const WisprProviderOps *ops = &g_provider_ops[ctx->provider_type];
+        ret = ops->setup_redirect(ctx, g_http_tmpl_id);
+        if (ret < 0)
+            break;
+        ret = sceHttpCreateConnectionWithURL(g_http_tmpl_id, logoff_url, 1);
+        if (ret < 0)
+            break;
+        g_http_conn_id = ret;
 
-    ret = sceHttpSendRequest(ret, NULL, 0);
-    if (ret < 0) {
-        if (ret == (int)0x80431063) {
-            int errNum = 0;
-            if (sceHttpGetNetworkErrno(g_http_req_id, &errNum) >= 0) {
-                ret = 0x80010000 | (errNum & 0xff);
-            } else {
-                ret = 0x80431063;
+        ret = sceHttpCreateRequestWithURL(ret, 0, logoff_url, 0);
+        if (ret < 0)
+            break;
+        g_http_req_id = ret;
+
+        ret = sceHttpSendRequest(ret, NULL, 0);
+        if (ret < 0) {
+            if (ret == (int)0x80431063) {
+                int errNum;
+                if (sceHttpGetNetworkErrno(g_http_req_id, &errNum) >= 0)
+                    ret = 0x80010000 | (errNum & 0xff);
+                else
+                    ret = 0x80431063;
+            } else if (ret == (int)0x80431075) {
+                int sslErr, httpErr;
+                int errRes = sceHttp_AB1540D5(g_http_req_id, &sslErr, &httpErr);
+                ret = (errRes >= 0) ? sslErr : errRes;
             }
-        } else if (ret == (int)0x80431075) {
-            int err1 = 0, err2 = 0;
-            int r2 = sceHttp_AB1540D5(g_http_req_id, &err1, &err2);
-            ret = (r2 >= 0) ? err1 : r2;
+            break;
         }
-        goto cleanup;
-    }
 
-    ret = sceHttpGetStatusCode(g_http_req_id, &status);
-    if (ret < 0) {
-        goto cleanup;
-    }
-    ret = wisprHttpReadXml(ctx, g_http_req_id, g_read_buf, 0x100);
+        ret = sceHttpGetStatusCode(g_http_req_id, &status);
+        if (ret < 0)
+            break;
+        ret = wisprHttpReadXml(ctx, g_http_req_id, g_read_buf, 0x100);
+    } while (0);
 
-cleanup:
     if (g_http_req_id > 0) {
         sceHttpDeleteRequest(g_http_req_id);
         g_http_req_id = 0;
@@ -897,16 +859,16 @@ static int wisprHttpReadXml(WisprCtx *ctx, int req_id, char *buf, u32 buf_size)
         int n = sceHttpReadData(req_id, buf, buf_size);
         if (n < 0) {
             if (n == (int)0x80431063) {
-                int errNum = 0;
+                int errNum;
                 if (sceHttpGetNetworkErrno(req_id, &errNum) >= 0) {
                     n = 0x80010000 | (errNum & 0xff);
                 } else {
                     n = 0x80431063;
                 }
             } else if (n == (int)0x80431075) {
-                int err1 = 0, err2 = 0;
-                int r2 = sceHttp_AB1540D5(req_id, &err1, &err2);
-                n = (r2 >= 0) ? err1 : r2;
+                int sslErr, httpErr;
+                int errRes = sceHttp_AB1540D5(req_id, &sslErr, &httpErr);
+                n = (errRes >= 0) ? sslErr : errRes;
             }
             return n;
         }
@@ -1107,7 +1069,7 @@ static int wisprXmlStoreValue(int tag_id)
 static int wisprXmlGetLoginUrl(const char **out_login_url)
 {
     *out_login_url = NULL;
-    WisprXmlDoc *doc = NULL;
+    WisprXmlDoc *doc;
     int ret = wisprXmlGetDoc(&doc);
     if (ret < 0) {
         return ret;
@@ -1135,7 +1097,7 @@ static int wisprXmlParseAuthReply(int *out_sub, int *out_resp_code, const char *
 {
     *out_reply_msg = NULL;
     *out_logoff_url = NULL;
-    WisprXmlDoc *doc = NULL;
+    WisprXmlDoc *doc;
     int ret = wisprXmlGetDoc(&doc);
     if (ret < 0) {
         return ret;
@@ -1175,7 +1137,7 @@ static int wisprXmlParseAuthReply(int *out_sub, int *out_resp_code, const char *
 }
 
 /* 0x1c74 */
-static int wisprRespCodeToError(int resp_code)
+static int wisprRespCodeToError(u32 resp_code)
 {
     switch (resp_code) {
     case 0:   return 0x8041152e;
@@ -1233,18 +1195,18 @@ static int wisprMsgTagToError(int msg_tag)
 }
 
 /* 0x1ebc */
-static int tmobileParseInitReply(WisprCtx *ctx, int req_id, int *next_sub, const char **login_url, const char **loc_ptr, u32 *loc_len)
+static int tmobileParseInitReply(WisprCtx *ctx, int req_id, int *next_sub, const char **login_url, const char **locationPtr, u32 *locationLen)
 {
     *login_url = NULL;
-    *loc_ptr = NULL;
+    *locationPtr = NULL;
     int ret = wisprXmlGetLoginUrl(login_url);
     if (ret == (int)0x80411512) {
-        *loc_ptr = NULL;
-        char *hdr = NULL;
-        u32 hdr_len = 0;
+        *locationPtr = NULL;
+        char *hdr;
+        u32 hdr_len;
         ret = sceHttpGetAllHeader(req_id, &hdr, &hdr_len);
         if (ret >= 0) {
-            ret = sceParseHttp_AD7BFDEF(hdr, hdr_len, "Location", loc_ptr, loc_len);
+            ret = sceParseHttp_AD7BFDEF(hdr, hdr_len, "Location", locationPtr, locationLen);
         }
         if (ret >= 0) {
             *next_sub = 2;
@@ -1268,8 +1230,7 @@ static int tmobileParseInitReply(WisprCtx *ctx, int req_id, int *next_sub, const
     if ((int)(slash - u) < (int)sceNet_lib_D8722983(domain)) {
         return 0x80411515;
     }
-    u32 dlen = sceNet_lib_D8722983(domain);
-    if (sceNet_lib_B9085A96(slash - dlen, domain, dlen) != 0) {
+    if (sceNet_lib_B9085A96(slash - sceNet_lib_D8722983(domain), domain, sceNet_lib_D8722983(domain)) != 0) {
         return 0x80411516;
     }
     return 0;
@@ -1304,10 +1265,10 @@ static int tmobileCheckInitStatus(WisprCtx *ctx, int status, int *next_sub)
 /* 0x209c */
 static int tmobileBuildLoginBody(WisprCtx *ctx, char *buf, int max_len)
 {
-    char ssid[0x80];
     u8 mac[8];
-    int n1 = sceNet_lib_CF705E46(buf, "UserName=%s&", ctx->username);
-    char *p = buf + n1;
+    char ssid[0x80];
+    int userLen = sceNet_lib_CF705E46(buf, "UserName=%s&", ctx->username);
+    char *p = buf + userLen;
     int ret = sceNetApctlGetInfo(8, ssid);
     if (ret < 0) {
         return ret;
@@ -1316,11 +1277,11 @@ static int tmobileBuildLoginBody(WisprCtx *ctx, char *buf, int max_len)
     if (ret < 0) {
         return ret;
     }
-    int n2 = sceNet_lib_CF705E46(p, "Password=0101/C/%s/%02x%02x%02x%02x%02x%02x/%s&",
-                                 ssid, mac[0], mac[1], mac[2], mac[3], mac[4], mac[5], ctx->password);
-    p += n2;
-    int n3 = sceNet_lib_CF705E46(p, "button=Login&FNAME=0&OriginatingServer=%s", "http://welcome.hotspot.t-mobile.com/");
-    return (p + n3) - buf;
+    int passLen = sceNet_lib_CF705E46(p, "Password=0101/C/%s/%02x%02x%02x%02x%02x%02x/%s&",
+                                      ssid, mac[0], mac[1], mac[2], mac[3], mac[4], mac[5], ctx->password);
+    p += passLen;
+    int tailLen = sceNet_lib_CF705E46(p, "button=Login&FNAME=0&OriginatingServer=%s", "http://welcome.hotspot.t-mobile.com/");
+    return (p + tailLen) - buf;
 }
 
 /* 0x2170 */
@@ -1337,10 +1298,10 @@ static int tmobileCheckLoginStatus(WisprCtx *ctx, int status, int *next_sub)
 }
 
 /* 0x21a4 */
-static int tmobileParseLoginReply(WisprCtx *ctx, int req_id, int *next_sub, void *info, const char **reply_msg, const char **loc_ptr, u32 *loc_len, const char **abort_url)
+static int tmobileParseLoginReply(WisprCtx *ctx, int req_id, int *next_sub, void *info, const char **reply_msg, const char **locationPtr, u32 *locationLen, const char **abort_url)
 {
     *reply_msg = NULL;
-    *loc_ptr = NULL;
+    *locationPtr = NULL;
     *abort_url = NULL;
     int ret = wisprXmlParseAuthReply(next_sub, (int *)info, reply_msg, abort_url);
     if (ret < 0) {
@@ -1349,21 +1310,21 @@ static int tmobileParseLoginReply(WisprCtx *ctx, int req_id, int *next_sub, void
     if (*next_sub != 0) {
         return ret;
     }
-    *loc_ptr = NULL;
-    char *hdr = NULL;
-    u32 hdr_len = 0;
+    *locationPtr = NULL;
+    char *hdr;
+    u32 hdr_len;
     ret = sceHttpGetAllHeader(req_id, &hdr, &hdr_len);
     if (ret >= 0) {
-        ret = sceParseHttp_AD7BFDEF(hdr, hdr_len, "Location", loc_ptr, loc_len);
+        ret = sceParseHttp_AD7BFDEF(hdr, hdr_len, "Location", locationPtr, locationLen);
     }
     return ret;
 }
 
 /* 0x225c */
-static int genericParseInitReply(WisprCtx *ctx, int req_id, int *next_sub, const char **login_url, const char **loc_ptr, u32 *loc_len)
+static int genericParseInitReply(WisprCtx *ctx, int req_id, int *next_sub, const char **login_url, const char **locationPtr, u32 *locationLen)
 {
     *login_url = NULL;
-    *loc_ptr = NULL;
+    *locationPtr = NULL;
     int ret = wisprXmlGetLoginUrl(login_url);
     if (ret == (int)0x80411512) {
         *next_sub = 2;
@@ -1373,7 +1334,8 @@ static int genericParseInitReply(WisprCtx *ctx, int req_id, int *next_sub, const
         return ret;
     }
     const char *https = "https://";
-    if (sceNet_lib_B9085A96(https, *login_url, sceNet_lib_D8722983(https)) != 0) {
+    const char *url = *login_url;
+    if (sceNet_lib_B9085A96(https, url, sceNet_lib_D8722983(https)) != 0) {
         return 0x80411514;
     }
     return 0;
@@ -1396,8 +1358,8 @@ static int genericBuildLoginBody(WisprCtx *ctx, char *buf, int max_len)
     if (ret < 0) {
         return ret;
     }
-    int n1 = sceNet_lib_CF705E46(buf, "UserName=%s&", enc_buf);
-    char *p = buf + n1;
+    int userLen = sceNet_lib_CF705E46(buf, "UserName=%s&", enc_buf);
+    char *p = buf + userLen;
 
     ret = sceUtility_EF3582B2(pass_buf);
     if (ret < 0) {
@@ -1407,15 +1369,15 @@ static int genericBuildLoginBody(WisprCtx *ctx, char *buf, int max_len)
     if (ret < 0) {
         return ret;
     }
-    int n2 = sceNet_lib_CF705E46(p, "Password=%s&", enc_buf);
-    p += n2;
+    int passLen = sceNet_lib_CF705E46(p, "Password=%s&", enc_buf);
+    p += passLen;
 
     ret = sceParseUri_49E950EC(enc_buf, NULL, 0x180, "http://www.playstation.com/");
     if (ret < 0) {
         return ret;
     }
-    int n3 = sceNet_lib_CF705E46(p, "button=Login&FNAME=0&OriginatingServer=%s", enc_buf);
-    return (p + n3) - buf;
+    int tailLen = sceNet_lib_CF705E46(p, "button=Login&FNAME=0&OriginatingServer=%s", enc_buf);
+    return (p + tailLen) - buf;
 }
 
 /* 0x23f8 */
@@ -1444,10 +1406,10 @@ static int genericCheckLoginStatus(WisprCtx *ctx, int status, int *next_sub)
 }
 
 /* 0x2450 */
-static int genericParseLoginReply(WisprCtx *ctx, int req_id, int *next_sub, void *info, const char **reply_msg, const char **loc_ptr, u32 *loc_len, const char **abort_url)
+static int genericParseLoginReply(WisprCtx *ctx, int req_id, int *next_sub, void *info, const char **reply_msg, const char **locationPtr, u32 *locationLen, const char **abort_url)
 {
     *reply_msg = NULL;
-    *loc_ptr = NULL;
+    *locationPtr = NULL;
     *abort_url = NULL;
     return wisprXmlParseAuthReply(next_sub, (int *)info, reply_msg, abort_url);
 }
