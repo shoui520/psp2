@@ -90,7 +90,7 @@ int sceSasCore_A3589D81(SceSasCore *sasCore, void *sasOut)
 		return 0x80420005;
 	}
 	if (!check_valid_ram((u32)sasCore, 0x00220202) ||
-	    !check_valid_ram((u32)sasOut, 0x80420202)) {
+	    !check_valid_ram((u32)sasOut, 0x00220202)) {
 		return 0x80420005;
 	}
 
@@ -201,7 +201,7 @@ int sceSasCore_50A14DFC(SceSasCore *sasCore, void *sasInOut, int leftVol, int ri
 		return 0x80420005;
 	}
 	if (!check_valid_ram((u32)sasCore, 0x00220202) ||
-	    !check_valid_ram((u32)sasInOut, 0x80420202)) {
+	    !check_valid_ram((u32)sasInOut, 0x00220202)) {
 		return 0x80420005;
 	}
 
@@ -500,7 +500,7 @@ int sceSasCore_99944089(SceSasCore *sasCore, int vnum, void *vagAddr, int size, 
 	u8 t = v->type;
 	u8 pause_bits = t & 0x30;
 	u8 base_type = t - pause_bits;
-	if (base_type != 1) {
+	if (base_type != 1 && base_type != 0) {
 		if (base_type == 6) {
 			sceKernelSignalSema(g_sas_sema, 1);
 			pspSdkSetK1(old_k1);
@@ -553,7 +553,7 @@ int sceSasCore_E1CD9561(SceSasCore *sasCore, int vnum, void *pcmBuf, int size, i
 	u8 t = v->type;
 	u8 pause_bits = t & 0x30;
 	u8 base_type = t - pause_bits;
-	if (base_type != 5) {
+	if (base_type != 5 && base_type != 0) {
 		if (base_type == 6) {
 			sceKernelSignalSema(g_sas_sema, 1);
 			pspSdkSetK1(old_k1);

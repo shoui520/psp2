@@ -76,6 +76,9 @@ SceNpDrm g_npDrmData;
 /* A copy of the module's boot information used by Init to boot the module. */
 SceLoadCoreBootModuleInfo g_mod;
 
+/* Flag tracking whether CleanupPhase1 has already run. */
+static s32 g_cleanupPhase1Done;
+
 /* Initialize Init's control block. */
 static void InitCBInit(const SceLoadCoreBootInfo *bootInfo)
 {   
@@ -260,10 +263,10 @@ static s32 CleanupPhase1(SceLoadCoreBootInfo *bootInfo)
     SceUID blkId;
     s32 status;
     
-    if ((u32)g_init->discModAddr > 0)
+    if (g_cleanupPhase1Done > 0)
         return SCE_ERROR_OK;
     
-    g_init->discModAddr += 1;
+    g_cleanupPhase1Done += 1;
     
     s32 i;
     for (i = 0; i < bootInfo->numProtects; i++) {
@@ -319,10 +322,10 @@ static s32 CleanupPhase2(SceLoadCoreBootInfo *bootInfo)
         if (status < SCE_ERROR_OK)
             return status;
         
-        sceKernelFreePartitionMemory(partId);
+        sceKernelFreePartitionMemory(blkId);
     }
     sceKernelQueryMemoryInfo((u32)bootInfo, &partId, &blkId);
-    sceKernelFreePartitionMemory(partId);
+    sceKernelFreePartitionMemory(blkId);
     return SCE_ERROR_OK;
 }
 
@@ -456,7 +459,7 @@ static SceBool isModuleInScUserPartition(SceLoadCoreBootModuleInfo *mod)
     partInfo.size = sizeof(SceSysmemPartitionInfo);
     sceKernelQueryMemoryPartitionInfo(SCE_KERNEL_SC_USER_PARTITION, &partInfo);
     
-    return ((u32)UCACHED(mod->modBuf + mod->modSize)) >= partInfo.startAddr;
+    return (((u32)(mod->modBuf + mod->modSize)) & 0x1FFFFFFF) >= partInfo.startAddr;
 }
 
 /* Clear memory blocks used by booted modules. */
@@ -523,7 +526,7 @@ static SceUID LoadModuleAnchorInBtcnf(char *file)
             status = sceKernelLoadModuleForLoadExecVSHDiscDebug(file, 0, NULL);
         break;
     case SCE_EXEC_FILE_APITYPE_DISC_EMU_MS1: 
-    case SCE_EXEC_FILE_APITYPE_DISC_EMU_EF1: 
+    case SCE_EXEC_FILE_APITYPE_DISC_EMU_EF1:
     case SCE_EXEC_FILE_APITYPE_MLNAPP_MS: 
     case SCE_EXEC_FILE_APITYPE_MLNAPP_EF:
         status = sceKernelLoadModuleForLoadExecVSHDiscEmu(g_init->apiType, file, 0, NULL);
@@ -720,7 +723,8 @@ static void InitThreadEntry(SceSize args, void *argp)
     }
     switch (g_init->apiType) {
     case SCE_EXEC_FILE_APITYPE_EMU_EBOOT_EF: case SCE_EXEC_FILE_APITYPE_EMU_BOOT_EF: case SCE_EXEC_FILE_APITYPE_NPDRM_EF: 
-    case SCE_EXEC_FILE_APITYPE_DISC_EMU_EF1: 
+    case SCE_EXEC_FILE_APITYPE_DISC_EMU_EF1:
+    case SCE_EXEC_FILE_APITYPE_DISC_EMU_EF2:
     case SCE_EXEC_FILE_APITYPE_UNK132: case SCE_EXEC_FILE_APITYPE_UNK133:
     case SCE_EXEC_FILE_APITYPE_EF2: case SCE_EXEC_FILE_APITYPE_EF3: case SCE_EXEC_FILE_APITYPE_EF4: 
     case SCE_EXEC_FILE_APITYPE_EF5: case SCE_EXEC_FILE_APITYPE_EF6: 
@@ -745,7 +749,7 @@ static void InitThreadEntry(SceSize args, void *argp)
                 break;
             }
         }
-        void *buf = UCACHED(partInfo.startAddr);
+        void *buf = (void *)(partInfo.startAddr & 0x1FFFFFFF);
         SceLoadCoreBootModuleInfo *mod;
         for (i = curMod; i < (s32)bootInfo->numModules; i++) {
             mod = &bootInfo->modules[i];
@@ -756,7 +760,7 @@ static void InitThreadEntry(SceSize args, void *argp)
             }
         }
         
-        for (i = bootInfo->numModules - 1; i >= 0; i--) {
+        for (i = bootInfo->numModules - 1; i >= curMod; i--) {
             SceLoadCoreBootModuleInfo *mod = &bootInfo->modules[i];
             if (mod->attr & 2) {
                 foundMod = SCE_TRUE;
@@ -808,11 +812,11 @@ static void InitThreadEntry(SceSize args, void *argp)
                 SceIoStat stat;
                 if (argp != NULL && sceIoGetstat((char *)opnssmpFile, &stat) >= SCE_ERROR_OK) {
                     SceUID modId = sceKernelLoadModuleForKernel((char *)opnssmpFile, 0, NULL);
-                    if (modId >= SCE_ERROR_OK) {
-                        if (sceKernelStartModule(modId, sizeof argp, &argp, &modStatus1, NULL) < SCE_ERROR_OK) {
-                            sceKernelUnloadModule(modId);
-                            sceIoRemove((char *)opnssmpFile);
-                        }
+                    if (modId < SCE_ERROR_OK) {
+                        sceIoRemove((char *)opnssmpFile);
+                    } else if (sceKernelStartModule(modId, sizeof argp, &argp, &modStatus1, NULL) < SCE_ERROR_OK) {
+                        sceKernelUnloadModule(modId);
+                        sceIoRemove((char *)opnssmpFile);
                     }
                 }
             }
@@ -841,14 +845,15 @@ static void InitThreadEntry(SceSize args, void *argp)
                 
                 CleanupPhase1(bootInfo);
                 ExitCheck();
+                mod = &g_mod;
                 
                 if (isDevkitGameColdBoot(bootInfo) == 0) {
-                    if (g_mod.attr & 4)
-                        modId = LoadModuleAnchorInBtcnf((char *)g_mod.modBuf); //TODO: Shouldn't it be g_mod.modPath?
+                    if (mod->attr & 4)
+                        modId = LoadModuleAnchorInBtcnf((char *)mod->modBuf);
                     else {
-                        modId = LoadModuleBufferAnchorInBtcnf(g_mod.modBuf, (mod->attr >> 8) & 1);
+                        modId = LoadModuleBufferAnchorInBtcnf(mod->modBuf, (mod->attr >> 8) & 1);
                         if (modId > SCE_ERROR_OK)
-                            sceKernelMemset32(g_mod.modBuf, 0, g_mod.modSize);
+                            sceKernelMemset32(mod->modBuf, 0, mod->modSize);
                     }
                     if (modId < SCE_ERROR_OK)
                         ExitInit(modId);

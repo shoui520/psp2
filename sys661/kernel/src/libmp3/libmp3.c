@@ -187,7 +187,7 @@ static void check_and_flip_stream_buf(int handle)
         compact_stream_buf(handle);
         halfSize = st->mp3HalfSize;
     }
-    if (st->bufferedBytes < halfSize) {
+    if (st->bufferedBytes <= halfSize) {
         if (st->writePtr == nextWriteEnd) {
             s32 newIdx = st->writeHalfIdx ^ 1;
             st->writeHalfIdx = newIdx;
@@ -245,19 +245,16 @@ int sceMp3ReserveMp3Handle(const SceMp3InitArg *arg)
         if (arg->mp3Buf == NULL || arg->pcmBuf == NULL) {
             return 0x80671002;
         }
-        s32 start = (s32)arg->mp3StreamStart;
-        if (start < 0) {
+        s32 startHi = (s32)arg->mp3StreamStartHi;
+        if (startHi < 0) {
             return 0x80671003;
         }
-        s32 end = (s32)arg->mp3StreamEnd;
-        if (start > end) {
+        s32 endHi = (s32)arg->mp3StreamEndHi;
+        if (startHi > endHi) {
             return 0x80671003;
         }
-        if (start == end && (u32)arg->mp3StreamStart >= (u32)arg->mp3StreamEnd) {
-            /* Note: checks arg->mp3StreamStartHi vs arg->mp3StreamEndHi for 64-bit stream offset */
-            if (arg->mp3StreamStartHi >= arg->mp3StreamEndHi) {
-                return 0x80671003;
-            }
+        if (startHi == endHi && (u32)arg->mp3StreamStart >= (u32)arg->mp3StreamEnd) {
+            return 0x80671003;
         }
         if (arg->mp3BufSize < 0x2000 || arg->pcmBufSize < 0x2400) {
             return 0x80671003;
@@ -1106,7 +1103,9 @@ static s64 calc_vbri_frame_offset(int handle, int frame)
     u32 curFrame = 0;
     u64 sumBytes = 0;
     u32 idx = 0;
+    u32 lastIdx = 0;
     while (idx < count) {
+        lastIdx = idx;
         u32 entryBytes = toc[idx];
         curFrame += entryFrames;
         sumBytes += entryBytes;
@@ -1114,8 +1113,9 @@ static s64 calc_vbri_frame_offset(int handle, int frame)
         if (curFrame >= (u32)frame) {
             break;
         }
+        lastIdx = idx;
     }
-    u32 lastBytes = toc[idx];
+    u32 lastBytes = toc[lastIdx];
     u32 prevFrame = curFrame - entryFrames;
     u32 remFrames = (u32)frame - prevFrame;
     sumBytes -= lastBytes;
