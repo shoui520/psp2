@@ -1,5 +1,65 @@
 #include <common_imp.h>
 
+#define SCE_USBCAM_ERROR_NOT_AVAILABLE     ((int)0x80243902)
+#define SCE_USBCAM_ERROR_INVALID_SIZE      ((int)0x80243903)
+#define SCE_USBCAM_ERROR_PRIV_REQUIRED     ((int)0x80243904)
+#define SCE_USBCAM_ERROR_INVALID_ID        ((int)0x80243905)
+#define SCE_USBCAM_ERROR_INVALID_VALUE     ((int)0x80243907)
+#define SCE_USBCAM_ERROR_NOT_STARTED       ((int)0x80243908)
+#define SCE_USBCAM_ERROR_INPUT_BUSY        ((int)0x80243909)
+#define SCE_USBCAM_ERROR_BUFFER_SIZE       ((int)0x8024390A)
+#define SCE_USBCAM_ERROR_INVALID_FREQUENCY ((int)0x8024390B)
+#define SCE_USBCAM_ERROR_NOT_START_READ    ((int)0x8024390C)
+#define SCE_USBCAM_ERROR_NOT_READ_DONE     ((int)0x8024390E)
+#define SCE_USBCAM_ERROR_NO_REG_CB         ((int)0x8024390F)
+#define SCE_USBCAM_ERROR_ALREADY_REG_CB    ((int)0x80243910)
+
+#define SCE_USBCAM_FRAME_BUFFER_ADDR       ((void *)0xA8300000)
+
+typedef struct SceUsbCamVideoParam {
+    int size;
+    int resolution;
+    int frame_rate;
+    int white_balance;
+    int saturation;
+    int brightness;
+    int contrast;
+    int sharpness;
+    int effect_mode;
+    u32 target_file_size;
+    int sensitivity;
+    int evlevel;
+    int zoom;
+} SceUsbCamVideoParam;
+
+typedef struct SceUsbCamStillParam {
+    int size;
+    int resolution;
+    u32 target_size;
+    int flip_mirror;
+    int self_timer;
+    int comp_qs;
+} SceUsbCamStillParam;
+
+typedef struct SceUsbCamMicParam {
+    int size;
+    int alc;
+    int gain;
+    int noiz;
+    int freq;
+} SceUsbCamMicParam;
+
+typedef struct SceUsbCamFrameArgs {
+    void *buf;
+    u32 size;
+    int (*readFunc)(void);
+} SceUsbCamFrameArgs;
+
+typedef struct SceUsbCamMicArgs {
+    void *buf;
+    u32 size;
+} SceUsbCamMicArgs;
+
 extern int sceUsb_driver_1159202A(void);
 extern int sceUsb_driver_18DB54DC(void);
 extern int sceUsb_driver_292740A2(int cmd);
@@ -9,17 +69,17 @@ extern int sceUsb_driver_469C73EB(void);
 extern int sceUsb_driver_63E55EBE(void);
 extern int sceUsb_driver_6C68EE25(int id, void *cb);
 extern int sceUsb_driver_8839766F(int cmd, int val);
-extern int sceUsb_driver_8C079564(void *param);
+extern int sceUsb_driver_8C079564(SceUsbCamStillParam *param);
 extern int sceUsb_driver_96A32FBC(void);
 extern int sceUsb_driver_A119F065(void);
 extern int sceUsb_driver_A229F2CF(void);
 extern int sceUsb_driver_B3E9ABCE(void);
-extern int sceUsb_driver_BDA21CF7(void *param);
+extern int sceUsb_driver_BDA21CF7(SceUsbCamVideoParam *param);
 extern int sceUsb_driver_BFCDFDD1(void);
 extern int sceUsb_driver_C99E1766(int id, void *cb);
-extern int sceUsb_driver_CCA3CDF7(void *param);
+extern int sceUsb_driver_CCA3CDF7(SceUsbCamMicParam *param);
 extern int sceUsb_driver_D1F264A2(void);
-extern int sceUsb_driver_D27EDB31(int arg);
+extern int sceUsb_driver_D27EDB31(int gain);
 extern int sceUsb_driver_D9EE03ED(void);
 extern int sceUsb_driver_E09431A0(void);
 extern int sceUsb_driver_ED8C8695(void);
@@ -33,7 +93,7 @@ extern int sceKernelGetThreadExitStatus(int thid);
 extern int sceKernelCreateThread(const char *name, void *entry, int initPriority, int stackSize, u32 attr, void *option);
 extern int sceKernelGetThreadmanIdType(int uid);
 extern int sceKernelTerminateThread(int thid);
-extern int sceKernelNotifyCallback(int cbid, int arg2);
+extern int sceKernelNotifyCallback(int cbid, int notifyArg);
 extern int sceKernelStartThread(int thid, u32 arglen, void *argp);
 
 extern int sceKernelCpuSuspendIntr(void);
@@ -47,20 +107,20 @@ static const char *g_cam_thread_names[2] = {
     "SceUsbCamStillFrame"
 };
 
-static int g_cam_thids[2];     /* 0x2070, 0x2074 */
-static int g_saturation;       /* 0x2078 */
-static int g_brightness;       /* 0x207c */
-static int g_contrast;         /* 0x2080 */
-static int g_sharpness;        /* 0x2084 */
-static int g_zoom;             /* 0x2088 */
-static int g_anti_flicker;     /* 0x208c */
-static int g_reverse_mode;     /* 0x2090 */
-static int g_ev_level;         /* 0x2094 */
-static int g_effect_mode;      /* 0x2098 */
-static int g_lens_dir;         /* 0x209c */
-static int g_cam_type;         /* 0x20a0 */
-static int g_cb_id;            /* 0x20a4 */
-static int g_mic_thid;         /* 0x20a8 */
+static int g_cam_thids[2];
+static int g_saturation;
+static int g_brightness;
+static int g_contrast;
+static int g_sharpness;
+static int g_zoom;
+static int g_anti_flicker;
+static int g_reverse_mode;
+static int g_ev_level;
+static int g_effect_mode;
+static int g_lens_dir;
+static int g_cam_type;
+static int g_cb_id;
+static int g_mic_thid;
 
 static int usbCamFrameThread(u32 args, void *argp);
 static void usbCamLensEventHandler(void);
@@ -103,47 +163,34 @@ int module_start(SceSize args, void *argp)
     return 0;
 }
 
-int sceUsbCamSetupVideo(void *param, void *workarea, int wasize)
+int sceUsbCamSetupVideo(SceUsbCamVideoParam *param, void *workarea, int wasize)
 {
     u32 k1 = pspShiftK1();
     int ret;
 
     if (sceUsb_driver_D9EE03ED() == 0) {
-        ret = 0x80243908;
-        goto out;
-    }
-    if (sceUsbAccGetAuthStat() < 0) {
-        ret = 0x80243902;
-        goto out;
-    }
-    if (!param) {
-        ret = 0x80243907;
-        goto out;
-    }
-    if ((s32)((((u32)param + 0x34) | (u32)param) & pspGetK1()) < 0) {
-        ret = 0x80243904;
-        goto out;
-    }
-    if ((s32)(pspGetK1() & (((u32)workarea + (u32)wasize) | (u32)workarea | (u32)wasize)) < 0) {
-        ret = 0x80243904;
-        goto out;
-    }
-    if (wasize & 0x3f) {
-        ret = 0x80243903;
-        goto out;
+        ret = SCE_USBCAM_ERROR_NOT_STARTED;
+    } else if (sceUsbAccGetAuthStat() < 0) {
+        ret = SCE_USBCAM_ERROR_NOT_AVAILABLE;
+    } else if (!param) {
+        ret = SCE_USBCAM_ERROR_INVALID_VALUE;
+    } else if ((s32)((((u32)param + sizeof(SceUsbCamVideoParam)) | (u32)param) & pspGetK1()) < 0) {
+        ret = SCE_USBCAM_ERROR_PRIV_REQUIRED;
+    } else if ((s32)(pspGetK1() & (((u32)workarea + (u32)wasize) | (u32)workarea | (u32)wasize)) < 0) {
+        ret = SCE_USBCAM_ERROR_PRIV_REQUIRED;
+    } else if (wasize & 0x3f) {
+        ret = SCE_USBCAM_ERROR_INVALID_SIZE;
+    } else {
+        g_effect_mode = param->effect_mode;
+        g_saturation = param->saturation;
+        g_brightness = param->brightness;
+        g_contrast = param->contrast;
+        g_sharpness = param->sharpness;
+        g_zoom = param->zoom;
+        g_ev_level = param->evlevel;
+        ret = sceUsb_driver_BDA21CF7(param);
     }
 
-    int *p = (int *)param;
-    g_effect_mode = p[8];
-    g_saturation = p[4];
-    g_brightness = p[5];
-    g_contrast = p[6];
-    g_sharpness = p[7];
-    g_zoom = p[12];
-    g_ev_level = p[11];
-    ret = sceUsb_driver_BDA21CF7(param);
-
-out:
     pspSetK1(k1);
     return ret;
 }
@@ -151,38 +198,28 @@ out:
 int sceUsbCamReadVideoFrame(void *buf, u32 size)
 {
     u32 k1 = pspShiftK1();
-    u32 args[3];
+    SceUsbCamFrameArgs frameArgs;
     int ret;
 
     if (sceUsb_driver_D9EE03ED() == 0) {
-        ret = 0x80243908;
-        goto out;
-    }
-    if (!buf) {
-        ret = 0x80243907;
-        goto out;
-    }
-    if ((s32)(pspGetK1() & (((u32)buf + size) | (u32)buf | size)) < 0) {
-        ret = 0x80243904;
-        goto out;
-    }
-    if (size > 0x8000) {
-        ret = 0x80243903;
-        goto out;
-    }
-    if (g_cam_type != 0) {
-        ret = 0x80243902;
-        goto out;
+        ret = SCE_USBCAM_ERROR_NOT_STARTED;
+    } else if (!buf) {
+        ret = SCE_USBCAM_ERROR_INVALID_VALUE;
+    } else if ((s32)(pspGetK1() & (((u32)buf + size) | (u32)buf | size)) < 0) {
+        ret = SCE_USBCAM_ERROR_PRIV_REQUIRED;
+    } else if (size > 0x8000) {
+        ret = SCE_USBCAM_ERROR_INVALID_SIZE;
+    } else if (g_cam_type != 0) {
+        ret = SCE_USBCAM_ERROR_NOT_AVAILABLE;
+    } else {
+        frameArgs.buf = buf;
+        frameArgs.size = size;
+        frameArgs.readFunc = sceUsb_driver_18DB54DC;
+        ret = sceKernelStartThread(g_cam_thids[0], sizeof(frameArgs), &frameArgs);
+        if (ret < 0)
+            ret = SCE_USBCAM_ERROR_INPUT_BUSY;
     }
 
-    args[0] = (u32)buf;
-    args[1] = size;
-    args[2] = (u32)sceUsb_driver_18DB54DC;
-    ret = sceKernelStartThread(g_cam_thids[0], 0x0c, args);
-    if (ret < 0)
-        ret = 0x80243909;
-
-out:
     pspSetK1(k1);
     return ret;
 }
@@ -193,59 +230,42 @@ int sceUsbCamReadVideoFrameBlocking(void *buf, u32 size)
     int ret;
 
     if (sceUsb_driver_D9EE03ED() == 0) {
-        ret = 0x80243908;
-        goto out;
-    }
-    if (!buf) {
-        ret = 0x80243907;
-        goto out;
-    }
-    if ((s32)(pspGetK1() & (((u32)buf + size) | (u32)buf | size)) < 0) {
-        ret = 0x80243904;
-        goto out;
-    }
-    if (size > 0x8000) {
-        ret = 0x80243903;
-        goto out;
-    }
-    if (g_cam_type != 0) {
-        ret = 0x80243902;
-        goto out;
+        ret = SCE_USBCAM_ERROR_NOT_STARTED;
+    } else if (!buf) {
+        ret = SCE_USBCAM_ERROR_INVALID_VALUE;
+    } else if ((s32)(pspGetK1() & (((u32)buf + size) | (u32)buf | size)) < 0) {
+        ret = SCE_USBCAM_ERROR_PRIV_REQUIRED;
+    } else if (size > 0x8000) {
+        ret = SCE_USBCAM_ERROR_INVALID_SIZE;
+    } else if (g_cam_type != 0) {
+        ret = SCE_USBCAM_ERROR_NOT_AVAILABLE;
+    } else {
+        ret = sceUsb_driver_18DB54DC();
+        if (ret >= 0)
+            memcpy(buf, SCE_USBCAM_FRAME_BUFFER_ADDR, size);
     }
 
-    ret = sceUsb_driver_18DB54DC();
-    if (ret >= 0)
-        memcpy(buf, (void *)0xA8300000, size);
-
-out:
     pspSetK1(k1);
     return ret;
 }
 
-int sceUsbCamSetupStill(void *param)
+int sceUsbCamSetupStill(SceUsbCamStillParam *param)
 {
     u32 k1 = pspShiftK1();
     int ret;
 
     if (sceUsb_driver_D9EE03ED() == 0) {
-        ret = 0x80243908;
-        goto out;
+        ret = SCE_USBCAM_ERROR_NOT_STARTED;
+    } else if (!param) {
+        ret = SCE_USBCAM_ERROR_INVALID_VALUE;
+    } else if ((s32)((((u32)param + sizeof(SceUsbCamStillParam)) | (u32)param) & pspGetK1()) < 0) {
+        ret = SCE_USBCAM_ERROR_PRIV_REQUIRED;
+    } else if ((u32)(param->size - 0x14) >= 5) {
+        ret = SCE_USBCAM_ERROR_INVALID_VALUE;
+    } else {
+        ret = sceUsb_driver_8C079564(param);
     }
-    if (!param) {
-        ret = 0x80243907;
-        goto out;
-    }
-    if ((s32)((((u32)param + 0x18) | (u32)param) & pspGetK1()) < 0) {
-        ret = 0x80243904;
-        goto out;
-    }
-    if ((u32)(*(int *)param - 0x14) >= 5) {
-        ret = 0x80243907;
-        goto out;
-    }
-    ret = sceUsb_driver_8C079564(param);
 
-out:
     pspSetK1(k1);
     return ret;
 }
@@ -253,42 +273,30 @@ out:
 int sceUsbCamStillInput(void *buf, u32 size)
 {
     u32 k1 = pspShiftK1();
-    u32 args[3];
+    SceUsbCamFrameArgs frameArgs;
     int ret;
 
     if (sceUsb_driver_D9EE03ED() == 0) {
-        ret = 0x80243908;
-        goto out;
-    }
-    if (!buf) {
-        ret = 0x80243907;
-        goto out;
-    }
-    if (size < 0x40) {
-        ret = 0x80243903;
-        goto out;
-    }
-    if ((s32)(pspGetK1() & (((u32)buf + size) | (u32)buf | size)) < 0) {
-        ret = 0x80243904;
-        goto out;
-    }
-    if (size > 0x80000) {
-        ret = 0x80243903;
-        goto out;
-    }
-    if (g_cam_type != 0) {
-        ret = 0x80243902;
-        goto out;
+        ret = SCE_USBCAM_ERROR_NOT_STARTED;
+    } else if (!buf) {
+        ret = SCE_USBCAM_ERROR_INVALID_VALUE;
+    } else if (size < 0x40) {
+        ret = SCE_USBCAM_ERROR_INVALID_SIZE;
+    } else if ((s32)(pspGetK1() & (((u32)buf + size) | (u32)buf | size)) < 0) {
+        ret = SCE_USBCAM_ERROR_PRIV_REQUIRED;
+    } else if (size > 0x80000) {
+        ret = SCE_USBCAM_ERROR_INVALID_SIZE;
+    } else if (g_cam_type != 0) {
+        ret = SCE_USBCAM_ERROR_NOT_AVAILABLE;
+    } else {
+        frameArgs.buf = buf;
+        frameArgs.size = size;
+        frameArgs.readFunc = sceUsb_driver_D1F264A2;
+        ret = sceKernelStartThread(g_cam_thids[1], sizeof(frameArgs), &frameArgs);
+        if (ret < 0)
+            ret = SCE_USBCAM_ERROR_INPUT_BUSY;
     }
 
-    args[0] = (u32)buf;
-    args[1] = size;
-    args[2] = (u32)sceUsb_driver_D1F264A2;
-    ret = sceKernelStartThread(g_cam_thids[1], 0x0c, args);
-    if (ret < 0)
-        ret = 0x80243909;
-
-out:
     pspSetK1(k1);
     return ret;
 }
@@ -299,35 +307,25 @@ int sceUsbCamStillInputBlocking(void *buf, u32 size)
     int ret;
 
     if (sceUsb_driver_D9EE03ED() == 0) {
-        ret = 0x80243908;
-        goto out;
-    }
-    if (!buf) {
-        ret = 0x80243907;
-        goto out;
-    }
-    if (size < 0x40) {
-        ret = 0x80243903;
-        goto out;
-    }
-    if ((s32)(pspGetK1() & (((u32)buf + size) | (u32)buf | size)) < 0) {
-        ret = 0x80243904;
-        goto out;
-    }
-    if (size > 0x80000) {
-        ret = 0x80243903;
-        goto out;
-    }
-
-    ret = sceUsb_driver_63E55EBE();
-    if (ret >= 0) {
-        ret = sceUsb_driver_D1F264A2();
-        if (ret >= 0)
-            memcpy(buf, (void *)0xA8300000, size);
-        sceUsb_driver_ED8C8695();
+        ret = SCE_USBCAM_ERROR_NOT_STARTED;
+    } else if (!buf) {
+        ret = SCE_USBCAM_ERROR_INVALID_VALUE;
+    } else if (size < 0x40) {
+        ret = SCE_USBCAM_ERROR_INVALID_SIZE;
+    } else if ((s32)(pspGetK1() & (((u32)buf + size) | (u32)buf | size)) < 0) {
+        ret = SCE_USBCAM_ERROR_PRIV_REQUIRED;
+    } else if (size > 0x80000) {
+        ret = SCE_USBCAM_ERROR_INVALID_SIZE;
+    } else {
+        ret = sceUsb_driver_63E55EBE();
+        if (ret >= 0) {
+            ret = sceUsb_driver_D1F264A2();
+            if (ret >= 0)
+                memcpy(buf, SCE_USBCAM_FRAME_BUFFER_ADDR, size);
+            sceUsb_driver_ED8C8695();
+        }
     }
 
-out:
     pspSetK1(k1);
     return ret;
 }
@@ -338,17 +336,16 @@ int sceUsbCamStillCancelInput(void)
     int ret;
 
     if (sceUsb_driver_D9EE03ED() == 0) {
-        ret = 0x80243908;
-        goto out;
-    }
-    ret = sceUsb_driver_BFCDFDD1();
-    if (ret >= 0) {
-        ret = sceKernelTerminateThread(g_cam_thids[1]);
-        if (ret == (int)0x800201a2)
-            ret = 0x80243908;
+        ret = SCE_USBCAM_ERROR_NOT_STARTED;
+    } else {
+        ret = sceUsb_driver_BFCDFDD1();
+        if (ret >= 0) {
+            ret = sceKernelTerminateThread(g_cam_thids[1]);
+            if (ret == (int)0x800201a2)
+                ret = SCE_USBCAM_ERROR_NOT_STARTED;
+        }
     }
 
-out:
     pspSetK1(k1);
     return ret;
 }
@@ -359,9 +356,9 @@ int sceUsbCamGetReverseMode(int *out)
     int ret;
 
     if (sceUsb_driver_D9EE03ED() == 0) {
-        ret = 0x80243908;
+        ret = SCE_USBCAM_ERROR_NOT_STARTED;
     } else if ((s32)((((u32)out + 4) | (u32)out) & pspGetK1()) < 0) {
-        ret = 0x80243904;
+        ret = SCE_USBCAM_ERROR_PRIV_REQUIRED;
     } else {
         *out = sceUsb_driver_292740A2(0x17c);
         ret = 0;
@@ -377,11 +374,11 @@ int sceUsbCam_D293A100(int cbid)
     int ret = 0;
 
     if (sceKernelGetThreadmanIdType(cbid) != 8) {
-        ret = 0x80243905;
+        ret = SCE_USBCAM_ERROR_INVALID_ID;
     } else {
         int intr = sceKernelCpuSuspendIntr();
         if (g_cb_id > 0) {
-            ret = 0x80243910;
+            ret = SCE_USBCAM_ERROR_ALREADY_REG_CB;
             g_cb_id = -1;
         } else {
             g_cb_id = cbid;
@@ -419,7 +416,7 @@ int sceUsbCamSetupVideoEx(void *param, void *workarea, int wasize)
 int sceUsbCamStartVideo(void)
 {
     u32 k1 = pspShiftK1();
-    int ret = (sceUsb_driver_D9EE03ED() != 0) ? sceUsb_driver_63E55EBE() : (int)0x80243908;
+    int ret = (sceUsb_driver_D9EE03ED() != 0) ? sceUsb_driver_63E55EBE() : SCE_USBCAM_ERROR_NOT_STARTED;
     pspSetK1(k1);
     return ret;
 }
@@ -445,7 +442,7 @@ int sceUsbCamPollReadVideoFrameEnd(void)
 int sceUsbCamGetReadVideoFrameSize(void)
 {
     u32 k1 = pspShiftK1();
-    int ret = (sceUsb_driver_D9EE03ED() != 0) ? sceUsb_driver_A119F065() : (int)0x80243908;
+    int ret = (sceUsb_driver_D9EE03ED() != 0) ? sceUsb_driver_A119F065() : SCE_USBCAM_ERROR_NOT_STARTED;
     pspSetK1(k1);
     return ret;
 }
@@ -469,13 +466,10 @@ int sceUsbCamStillPollInputEnd(void)
 int sceUsbCamStillGetInputLength(void)
 {
     u32 k1 = pspShiftK1();
-    int ret = (sceUsb_driver_D9EE03ED() != 0) ? sceUsb_driver_3B578B06() : (int)0x80243908;
+    int ret = (sceUsb_driver_D9EE03ED() != 0) ? sceUsb_driver_3B578B06() : SCE_USBCAM_ERROR_NOT_STARTED;
     pspSetK1(k1);
     return ret;
 }
-
-static int usbCamSetParam(int cmd, int val, int *store);
-static int usbCamGetParam(int *out, int val);
 
 extern int sceUsb_driver_var_3EA085BF;
 extern int sceUsb_driver_var_A942D291;
@@ -484,7 +478,7 @@ __attribute__((noinline))
 static int usbCamSetParam(int cmd, int val, int *store)
 {
     if (sceUsb_driver_D9EE03ED() == 0)
-        return 0x80243908;
+        return SCE_USBCAM_ERROR_NOT_STARTED;
     int ret = sceUsb_driver_8839766F(cmd, val);
     if (ret == 0)
         *store = val;
@@ -495,9 +489,9 @@ __attribute__((noinline))
 static int usbCamGetParam(int *out, int val)
 {
     if (sceUsb_driver_D9EE03ED() == 0)
-        return 0x80243908;
+        return SCE_USBCAM_ERROR_NOT_STARTED;
     if ((s32)((((u32)out + 4) | (u32)out) & pspGetK1()) < 0)
-        return 0x80243904;
+        return SCE_USBCAM_ERROR_PRIV_REQUIRED;
     *out = val;
     return 0;
 }
@@ -676,7 +670,7 @@ int sceUsbCam_driver_D865997B(void) __attribute__((alias("sceUsbCam_D865997B")))
 int sceUsbCamAutoImageReverseSW(int sw)
 {
     u32 k1 = pspShiftK1();
-    int ret = (sceUsb_driver_D9EE03ED() != 0) ? sceUsb_driver_F183B4EF(sw) : (int)0x80243908;
+    int ret = (sceUsb_driver_D9EE03ED() != 0) ? sceUsb_driver_F183B4EF(sw) : SCE_USBCAM_ERROR_NOT_STARTED;
     pspSetK1(k1);
     return ret;
 }
@@ -684,7 +678,7 @@ int sceUsbCamAutoImageReverseSW(int sw)
 int sceUsbCamGetAutoImageReverseState(void)
 {
     u32 k1 = pspShiftK1();
-    int ret = (sceUsb_driver_D9EE03ED() != 0) ? sceUsb_driver_A229F2CF() : (int)0x80243908;
+    int ret = (sceUsb_driver_D9EE03ED() != 0) ? sceUsb_driver_A229F2CF() : SCE_USBCAM_ERROR_NOT_STARTED;
     pspSetK1(k1);
     return ret;
 }
@@ -703,7 +697,7 @@ int sceUsbCam_41EE8797(void)
     int intr = sceKernelCpuSuspendIntr();
     int ret = g_cb_id;
     if (ret < 0)
-        ret = 0x8024390f;
+        ret = SCE_USBCAM_ERROR_NO_REG_CB;
     else
         g_cb_id = -1;
     sceKernelCpuResumeIntr(intr);
@@ -716,15 +710,15 @@ int sceUsbCam_driver_41EE8797(void) __attribute__((alias("sceUsbCam_41EE8797")))
 __attribute__((noinline))
 static int usbCamFrameThread(u32 args, void *argp)
 {
-    if (args != 0x0c)
+    if (args != sizeof(SceUsbCamFrameArgs))
         return 0x80000104;
-    u32 *p = (u32 *)argp;
-    void *buf = (void *)p[0];
-    u32 size = p[1];
-    int (*fn)(void) = (int (*)(void))p[2];
-    int ret = fn();
+    SceUsbCamFrameArgs *frameArgs = (SceUsbCamFrameArgs *)argp;
+    void *buf = frameArgs->buf;
+    u32 size = frameArgs->size;
+    int (*readFunc)(void) = frameArgs->readFunc;
+    int ret = readFunc();
     if (ret >= 0)
-        memcpy(buf, (void *)0xA8300000, size);
+        memcpy(buf, SCE_USBCAM_FRAME_BUFFER_ADDR, size);
     return ret;
 }
 
@@ -743,23 +737,27 @@ static int usbCamWaitFrameThread(int idx)
     int ret;
 
     if (sceUsb_driver_D9EE03ED() == 0) {
-        ret = 0x80243908;
-        goto out;
-    }
-    if (g_cam_type != 0) {
-        ret = 0x80243902;
-        goto out;
+        ret = SCE_USBCAM_ERROR_NOT_STARTED;
+    } else if (g_cam_type != 0) {
+        ret = SCE_USBCAM_ERROR_NOT_AVAILABLE;
+    } else {
+        ret = sceKernelWaitThreadEnd(g_cam_thids[idx], &timeout);
+        if (ret < 0) {
+            switch (ret) {
+            case (int)0x800201a2:
+            case (int)0x800201a7:
+            case (int)0x800201ac:
+                ret = SCE_USBCAM_ERROR_NOT_START_READ;
+                break;
+            case (int)0x800201a8:
+                ret = SCE_USBCAM_ERROR_NOT_AVAILABLE;
+                break;
+            default:
+                break;
+            }
+        }
     }
 
-    ret = sceKernelWaitThreadEnd(g_cam_thids[idx], &timeout);
-    if (ret < 0) {
-        if (ret == (int)0x800201a7 || ret == (int)0x800201a2 || ret == (int)0x800201ac)
-            ret = 0x8024390c;
-        else if (ret == (int)0x800201a8)
-            ret = 0x80243902;
-    }
-
-out:
     pspSetK1(k1);
     return ret;
 }
@@ -771,59 +769,44 @@ static int usbCamPollFrameThread(int idx)
     int ret;
 
     if (sceUsb_driver_D9EE03ED() == 0) {
-        ret = 0x80243908;
-        goto out;
-    }
-    if (g_cam_type != 0) {
-        ret = 0x80243902;
-        goto out;
-    }
-
-    ret = sceKernelGetThreadExitStatus(g_cam_thids[idx]);
-    if (ret < 0) {
-        if (ret == (int)0x800201a2)
-            ret = 0x8024390c;
-        else if (ret == (int)0x800201a4)
-            ret = 0x8024390e;
-        else
-            ret = 0x80243902;
+        ret = SCE_USBCAM_ERROR_NOT_STARTED;
+    } else if (g_cam_type != 0) {
+        ret = SCE_USBCAM_ERROR_NOT_AVAILABLE;
+    } else {
+        ret = sceKernelGetThreadExitStatus(g_cam_thids[idx]);
+        if (ret < 0) {
+            if (ret == (int)0x800201a2)
+                ret = SCE_USBCAM_ERROR_NOT_START_READ;
+            else if (ret == (int)0x800201a4)
+                ret = SCE_USBCAM_ERROR_NOT_READ_DONE;
+            else
+                ret = SCE_USBCAM_ERROR_NOT_AVAILABLE;
+        }
     }
 
-out:
     pspSetK1(k1);
     return ret;
 }
 
-int sceUsbCamSetupMic(void *param, void *workarea, int wasize)
+int sceUsbCamSetupMic(SceUsbCamMicParam *param, void *workarea, int wasize)
 {
     u32 k1 = pspShiftK1();
     int ret;
 
     if (sceUsb_driver_D9EE03ED() == 0) {
-        ret = 0x80243908;
-        goto out;
-    }
-    if ((u32)wasize < 0x108) {
-        ret = 0x8024390a;
-        goto out;
-    }
-    if (!param || (s32)((((u32)param + 0x14) | (u32)param) & pspGetK1()) < 0) {
-        ret = 0x80243904;
-        goto out;
-    }
-    if (!workarea || (s32)(pspGetK1() & (((u32)workarea + (u32)wasize) | (u32)workarea | (u32)wasize)) < 0) {
-        ret = 0x80243904;
-        goto out;
+        ret = SCE_USBCAM_ERROR_NOT_STARTED;
+    } else if ((u32)wasize < 0x108) {
+        ret = SCE_USBCAM_ERROR_BUFFER_SIZE;
+    } else if (!param || (s32)((((u32)param + sizeof(SceUsbCamMicParam)) | (u32)param) & pspGetK1()) < 0) {
+        ret = SCE_USBCAM_ERROR_PRIV_REQUIRED;
+    } else if (!workarea || (s32)(pspGetK1() & (((u32)workarea + (u32)wasize) | (u32)workarea | (u32)wasize)) < 0) {
+        ret = SCE_USBCAM_ERROR_PRIV_REQUIRED;
+    } else if (param->freq != 44100 && param->freq != 22050 && param->freq != 11025) {
+        ret = SCE_USBCAM_ERROR_INVALID_FREQUENCY;
+    } else {
+        ret = sceUsb_driver_CCA3CDF7(param);
     }
 
-    int freq = *((int *)param + 4);
-    if (freq != 44100 && freq != 22050 && freq != 11025) {
-        ret = 0x8024390b;
-        goto out;
-    }
-    ret = sceUsb_driver_CCA3CDF7(param);
-
-out:
     pspSetK1(k1);
     return ret;
 }
@@ -831,33 +814,25 @@ out:
 int sceUsbCam_3DC0088E(void *buf, u32 size)
 {
     u32 k1 = pspShiftK1();
-    u32 args[2];
+    SceUsbCamMicArgs micArgs;
     int ret;
 
     if (sceUsb_driver_D9EE03ED() == 0) {
-        ret = 0x80243908;
-        goto out;
-    }
-    if (!buf) {
-        ret = 0x80243907;
-        goto out;
-    }
-    if ((s32)(pspGetK1() & (((u32)buf + size) | (u32)buf | size)) < 0) {
-        ret = 0x80243904;
-        goto out;
-    }
-    if (sceUsb_driver_B3E9ABCE() < 0) {
-        ret = 0x80243902;
-        goto out;
+        ret = SCE_USBCAM_ERROR_NOT_STARTED;
+    } else if (!buf) {
+        ret = SCE_USBCAM_ERROR_INVALID_VALUE;
+    } else if ((s32)(pspGetK1() & (((u32)buf + size) | (u32)buf | size)) < 0) {
+        ret = SCE_USBCAM_ERROR_PRIV_REQUIRED;
+    } else if (sceUsb_driver_B3E9ABCE() < 0) {
+        ret = SCE_USBCAM_ERROR_NOT_AVAILABLE;
+    } else {
+        micArgs.buf = buf;
+        micArgs.size = size;
+        ret = sceKernelStartThread(g_mic_thid, sizeof(micArgs), &micArgs);
+        if (ret < 0)
+            ret = SCE_USBCAM_ERROR_INPUT_BUSY;
     }
 
-    args[0] = (u32)buf;
-    args[1] = size;
-    ret = sceKernelStartThread(g_mic_thid, 8, args);
-    if (ret < 0)
-        ret = 0x80243909;
-
-out:
     pspSetK1(k1);
     return ret;
 }
@@ -870,11 +845,11 @@ int sceUsbCam_36636925(void *buf, u32 size)
     int ret;
 
     if (sceUsb_driver_D9EE03ED() == 0) {
-        ret = 0x80243908;
+        ret = SCE_USBCAM_ERROR_NOT_STARTED;
     } else if (!buf) {
-        ret = 0x80243907;
+        ret = SCE_USBCAM_ERROR_INVALID_VALUE;
     } else if ((s32)(pspGetK1() & (((u32)buf + size) | (u32)buf | size)) < 0) {
-        ret = 0x80243904;
+        ret = SCE_USBCAM_ERROR_PRIV_REQUIRED;
     } else {
         ret = sceUsb_driver_32627D8F(buf, size);
     }
@@ -892,23 +867,27 @@ int sceUsbCam_B048A67D(void)
     int ret;
 
     if (sceUsb_driver_D9EE03ED() == 0) {
-        ret = 0x80243908;
-        goto out;
-    }
-    if (sceUsb_driver_B3E9ABCE() < 0) {
-        ret = 0x80243902;
-        goto out;
+        ret = SCE_USBCAM_ERROR_NOT_STARTED;
+    } else if (sceUsb_driver_B3E9ABCE() < 0) {
+        ret = SCE_USBCAM_ERROR_NOT_AVAILABLE;
+    } else {
+        ret = sceKernelWaitThreadEnd(g_mic_thid, &timeout);
+        if (ret < 0) {
+            switch (ret) {
+            case (int)0x800201a2:
+            case (int)0x800201a7:
+            case (int)0x800201ac:
+                ret = SCE_USBCAM_ERROR_NOT_START_READ;
+                break;
+            case (int)0x800201a8:
+                ret = SCE_USBCAM_ERROR_NOT_AVAILABLE;
+                break;
+            default:
+                break;
+            }
+        }
     }
 
-    ret = sceKernelWaitThreadEnd(g_mic_thid, &timeout);
-    if (ret < 0) {
-        if (ret == (int)0x800201a7 || ret == (int)0x800201a2 || ret == (int)0x800201ac)
-            ret = 0x8024390c;
-        else if (ret == (int)0x800201a8)
-            ret = 0x80243902;
-    }
-
-out:
     pspSetK1(k1);
     return ret;
 }
@@ -921,23 +900,19 @@ int sceUsbCam_F8847F60(void)
     int ret;
 
     if (sceUsb_driver_D9EE03ED() == 0) {
-        ret = 0x80243908;
-        goto out;
-    }
-    if (sceUsb_driver_B3E9ABCE() < 0) {
-        ret = 0x80243902;
-        goto out;
-    }
-
-    ret = sceKernelGetThreadExitStatus(g_mic_thid);
-    if (ret < 0) {
-        if (ret == (int)0x800201a2)
-            ret = 0x8024390c;
-        else if (ret == (int)0x800201a4)
-            ret = 0x8024390e;
+        ret = SCE_USBCAM_ERROR_NOT_STARTED;
+    } else if (sceUsb_driver_B3E9ABCE() < 0) {
+        ret = SCE_USBCAM_ERROR_NOT_AVAILABLE;
+    } else {
+        ret = sceKernelGetThreadExitStatus(g_mic_thid);
+        if (ret < 0) {
+            if (ret == (int)0x800201a2)
+                ret = SCE_USBCAM_ERROR_NOT_START_READ;
+            else if (ret == (int)0x800201a4)
+                ret = SCE_USBCAM_ERROR_NOT_READ_DONE;
+        }
     }
 
-out:
     pspSetK1(k1);
     return ret;
 }
@@ -954,7 +929,7 @@ int sceUsbCam_driver_2E930264(void) __attribute__((alias("sceUsbCam_2E930264")))
 int sceUsbCam_82A64030(void)
 {
     u32 k1 = pspShiftK1();
-    int ret = (sceUsb_driver_D9EE03ED() != 0) ? sceUsb_driver_1159202A() : (int)0x80243908;
+    int ret = (sceUsb_driver_D9EE03ED() != 0) ? sceUsb_driver_1159202A() : SCE_USBCAM_ERROR_NOT_STARTED;
     pspSetK1(k1);
     return ret;
 }
@@ -974,22 +949,22 @@ int sceUsbCam_driver_5145868A(void) __attribute__((alias("sceUsbCam_5145868A")))
 int sceUsbCam_5778B452(void)
 {
     u32 k1 = pspShiftK1();
-    int ret = (sceUsb_driver_D9EE03ED() != 0) ? sceUsb_driver_96A32FBC() : (int)0x80243908;
+    int ret = (sceUsb_driver_D9EE03ED() != 0) ? sceUsb_driver_96A32FBC() : SCE_USBCAM_ERROR_NOT_STARTED;
     pspSetK1(k1);
     return ret;
 }
 
 int sceUsbCam_driver_5778B452(void) __attribute__((alias("sceUsbCam_5778B452")));
 
-int sceUsbCam_08AEE98A(int arg)
+int sceUsbCam_08AEE98A(int gain)
 {
     u32 k1 = pspShiftK1();
-    int ret = (sceUsb_driver_D9EE03ED() != 0) ? sceUsb_driver_D27EDB31(arg) : (int)0x80243908;
+    int ret = (sceUsb_driver_D9EE03ED() != 0) ? sceUsb_driver_D27EDB31(gain) : SCE_USBCAM_ERROR_NOT_STARTED;
     pspSetK1(k1);
     return ret;
 }
 
-int sceUsbCam_driver_08AEE98A(int arg) __attribute__((alias("sceUsbCam_08AEE98A")));
+int sceUsbCam_driver_08AEE98A(int gain) __attribute__((alias("sceUsbCam_08AEE98A")));
 
 static int usbCamInitMic(void)
 {
@@ -1010,8 +985,8 @@ static int usbCamTermMic(void)
 
 static int usbCamMicThread(u32 args, void *argp)
 {
-    if (args != 8)
+    if (args != sizeof(SceUsbCamMicArgs))
         return 0x80000104;
-    u32 *p = (u32 *)argp;
-    return sceUsb_driver_32627D8F((void *)p[0], p[1]);
+    SceUsbCamMicArgs *micArgs = (SceUsbCamMicArgs *)argp;
+    return sceUsb_driver_32627D8F(micArgs->buf, micArgs->size);
 }
