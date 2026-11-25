@@ -57,27 +57,27 @@ static int g_next_rid;
 static ResolverNode *g_resolver_list;
 static u16 g_dns_txid;
 
-static int sub_09cc(int rid, int *out, int is_nonblock);
-static int sub_0b60(void *buf, SceSize buflen, int *rid);
-static int sub_0cb4(int rid);
-static int sub_0dc4(void);
-static int sub_0e18(void);
-static ResolverNode *sub_0e38(int rid, ResolverNode **prev_out);
-static int sub_0e74(const char *s1, const char *s2, SceSize n);
-static int sub_0f9c(ResolverNode *node, int type, const void *name_or_addr, int out_len, void *out_buf, int timeout, int retry);
-static int sub_15f4(void);
-static int sub_1638(void);
-static int sub_1640(int type, const char *qname, u8 *pkt_buf, u32 *pkt_len_out, u16 *txid_out);
-static int sub_1758(ResolverNode *node, u8 *rx_buf, u32 tx_len, const char *qname, u8 *qname_end, void *out_addr, int timeout, const u32 *dns_ip, int out_name, int out_len, int *done_out, u16 txid, int type);
-static int sub_1a28(int type, u8 **ptr_io, u8 *end, u16 *txid_out);
-static int sub_1b10(u8 **ptr_io, u8 *end, const char *qname);
-static int sub_1c14(ResolverNode *node, const void *buf, int len, const u32 *dns_ip, int timeout);
-static int sub_1db8(ResolverNode *node, void *buf, int *len_io, int timeout);
-static int sub_1f74(u8 **ptr_io, u8 *end, u16 txid, u16 *qdcount_out, u16 *ancount_out, int *done_out);
-static int sub_20d0(u8 **ptr_io, u8 *end, u8 *pkt_start, const char *qname, u8 *qname_end, u16 qdcount);
-static int sub_21c0(ResolverNode *node, u8 **ptr_io, u8 *end, u8 *pkt_start, const char *qname, u8 *qname_end, void *out_addr, int out_name, int type, int out_len, u16 ancount);
-static int sub_2418(u8 *ptr, u8 *end, char *out_name, u8 **out_end_io, u8 *pkt_start, u8 *pkt_limit);
-static int sub_25a4(u8 **ptr_io, u8 *end, u8 *pkt_start, u8 *pkt_limit, const char *qname, u8 *qname_end, int *match_out);
+static int resolverPollAsync(int rid, int *out, int is_nonblock);
+static int resolverCreateNode(void *buf, SceSize buflen, int *rid);
+static int resolverDeleteNode(int rid);
+static int resolverInitState(void);
+static int resolverTermState(void);
+static ResolverNode *resolverFindNode(int rid, ResolverNode **prev_out);
+static int dnsStrncasecmp(const char *s1, const char *s2, SceSize n);
+static int resolverQuery(ResolverNode *node, int type, const void *name_or_addr, int out_len, void *out_buf, int timeout, int retry);
+static int dnsInitTxid(void);
+static int dnsTermTxid(void);
+static int dnsBuildQuery(int type, const char *qname, u8 *pkt_buf, u32 *pkt_len_out, u16 *txid_out);
+static int dnsExchange(ResolverNode *node, u8 *rx_buf, u32 tx_len, const char *qname, u8 *qname_end, void *out_addr, int timeout, const u32 *dns_ip, int out_name, int out_len, int *done_out, u16 txid, int type);
+static int dnsWriteHeader(int type, u8 **ptr_io, u8 *end, u16 *txid_out);
+static int dnsEncodeName(u8 **ptr_io, u8 *end, const char *qname);
+static int dnsSendPacket(ResolverNode *node, const void *buf, int len, const u32 *dns_ip, int timeout);
+static int dnsRecvPacket(ResolverNode *node, void *buf, int *len_io, int timeout);
+static int dnsParseHeader(u8 **ptr_io, u8 *end, u16 txid, u16 *qdcount_out, u16 *ancount_out, int *done_out);
+static int dnsParseQuestions(u8 **ptr_io, u8 *end, u8 *pkt_start, const char *qname, u8 *qname_end, u16 qdcount);
+static int dnsParseAnswers(ResolverNode *node, u8 **ptr_io, u8 *end, u8 *pkt_start, const char *qname, u8 *qname_end, void *out_addr, int out_name, int type, int out_len, u16 ancount);
+static int dnsDecodeName(u8 *ptr, u8 *end, char *out_name, u8 **out_end_io, u8 *pkt_start, u8 *pkt_limit);
+static int dnsCompareName(u8 **ptr_io, u8 *end, u8 *pkt_start, u8 *pkt_limit, const char *qname, u8 *qname_end, int *match_out);
 
 int sceNetResolverStartNtoA(int rid, const char *hostname, u32 *addr, unsigned int timeout, int retry)
 {
@@ -94,7 +94,7 @@ int sceNetResolverStartNtoA(int rid, const char *hostname, u32 *addr, unsigned i
         return 0x80410418;
 
     intr = sceKernelCpuSuspendIntr();
-    node = sub_0e38(rid, 0);
+    node = resolverFindNode(rid, 0);
     if (node == 0) {
         sceKernelCpuResumeIntr(intr);
         return 0x80410408;
@@ -111,7 +111,7 @@ int sceNetResolverStartNtoA(int rid, const char *hostname, u32 *addr, unsigned i
         node->async = 0;
     }
     sceKernelCpuResumeIntr(intr);
-    return sub_0f9c(node, 0, hostname, 0, addr, timeout, retry);
+    return resolverQuery(node, 0, hostname, 0, addr, timeout, retry);
 }
 
 int sceNetResolver_14C17EF9(int rid, const char *hostname, u32 *addr, unsigned int timeout, int retry)
@@ -129,7 +129,7 @@ int sceNetResolver_14C17EF9(int rid, const char *hostname, u32 *addr, unsigned i
         return 0x80410418;
 
     intr = sceKernelCpuSuspendIntr();
-    node = sub_0e38(rid, 0);
+    node = resolverFindNode(rid, 0);
     if (node == 0) {
         sceKernelCpuResumeIntr(intr);
         return 0x80410408;
@@ -181,7 +181,7 @@ int sceNetResolverStartAtoN(int rid, const u32 *addr, char *hostname, SceSize ho
         return 0x80410403;
 
     intr = sceKernelCpuSuspendIntr();
-    node = sub_0e38(rid, 0);
+    node = resolverFindNode(rid, 0);
     if (node == 0) {
         sceKernelCpuResumeIntr(intr);
         return 0x80410408;
@@ -198,7 +198,7 @@ int sceNetResolverStartAtoN(int rid, const u32 *addr, char *hostname, SceSize ho
         node->async = 0;
     }
     sceKernelCpuResumeIntr(intr);
-    return sub_0f9c(node, 1, hostname, hostname_len, (void *)addr, timeout, retry);
+    return resolverQuery(node, 1, hostname, hostname_len, (void *)addr, timeout, retry);
 }
 
 int sceNetResolver_AAC09184(int rid, const u32 *addr, char *hostname, SceSize hostname_len, unsigned int timeout, int retry)
@@ -214,7 +214,7 @@ int sceNetResolver_AAC09184(int rid, const u32 *addr, char *hostname, SceSize ho
         return 0x80410403;
 
     intr = sceKernelCpuSuspendIntr();
-    node = sub_0e38(rid, 0);
+    node = resolverFindNode(rid, 0);
     if (node == 0) {
         sceKernelCpuResumeIntr(intr);
         return 0x80410408;
@@ -258,7 +258,7 @@ int sceNetResolverStop(int rid)
         return 0x80410405;
 
     intr = sceKernelCpuSuspendIntr();
-    node = sub_0e38(rid, 0);
+    node = resolverFindNode(rid, 0);
     if (node == 0) {
         sceKernelCpuResumeIntr(intr);
         return 0x80410408;
@@ -281,12 +281,12 @@ int sceNetResolverInit(void)
     if (_sceKernelCheckThreadStack() < 0x13f0)
         return 0x80410005;
     if (g_initialized > 0) {
-        sub_0e18();
+        resolverTermState();
         return 0x80000020;
     }
-    ret = sub_0dc4();
+    ret = resolverInitState();
     if (ret < 0) {
-        sub_0e18();
+        resolverTermState();
         return ret;
     }
     g_initialized = 1;
@@ -298,7 +298,7 @@ int sceNetResolverTerm(void)
     if (_sceKernelCheckThreadStack() < 0x13f0)
         return 0x80410005;
     if (g_initialized != 0) {
-        sub_0e18();
+        resolverTermState();
         g_initialized = 0;
     }
     return 0;
@@ -312,7 +312,7 @@ int sceNetResolverCreate(int *rid, void *buf, SceSize buflen)
         return 0x80410403;
     if (buflen == 0)
         return 0x80410404;
-    return sub_0b60(buf, buflen, rid);
+    return resolverCreateNode(buf, buflen, rid);
 }
 
 int sceNetResolverDelete(int rid)
@@ -321,7 +321,7 @@ int sceNetResolverDelete(int rid)
         return 0x80410005;
     if (rid < 0)
         return 0x80410405;
-    return sub_0cb4(rid);
+    return resolverDeleteNode(rid);
 }
 
 int sceNetResolver_4EE99358(int rid, int *out)
@@ -330,7 +330,7 @@ int sceNetResolver_4EE99358(int rid, int *out)
         return 0x80410005;
     if (rid < 0)
         return 0x80410405;
-    return sub_09cc(rid, out, 0);
+    return resolverPollAsync(rid, out, 0);
 }
 
 int sceNetResolver_12748EB9(int rid, int *out)
@@ -339,17 +339,17 @@ int sceNetResolver_12748EB9(int rid, int *out)
         return 0x80410005;
     if (rid < 0)
         return 0x80410405;
-    return sub_09cc(rid, out, 1);
+    return resolverPollAsync(rid, out, 1);
 }
 
-static int sub_09cc(int rid, int *out, int is_nonblock)
+static int resolverPollAsync(int rid, int *out, int is_nonblock)
 {
     int intr, ret;
     ResolverNode *node;
 
     (void)out;
     intr = sceKernelCpuSuspendIntr();
-    node = sub_0e38(rid, 0);
+    node = resolverFindNode(rid, 0);
     if (node == 0) {
         sceKernelCpuResumeIntr(intr);
         return 0x80410408;
@@ -377,9 +377,9 @@ static int sub_09cc(int rid, int *out, int is_nonblock)
 
     ResolverAsyncCtx *async = node->async;
     if (async->type == 0) {
-        ret = sub_0f9c(node, 0, async->hostname, 0, async->addr_ptr, async->timeout, async->retry);
+        ret = resolverQuery(node, 0, async->hostname, 0, async->addr_ptr, async->timeout, async->retry);
     } else if (async->type == 1) {
-        ret = sub_0f9c(node, 1, async->out_name, async->out_len, &async->addr_ptr, async->timeout, async->retry);
+        ret = resolverQuery(node, 1, async->out_name, async->out_len, &async->addr_ptr, async->timeout, async->retry);
     } else {
         ret = 0x80410419;
     }
@@ -391,7 +391,7 @@ static int sub_09cc(int rid, int *out, int is_nonblock)
     return ret;
 }
 
-static int sub_0b60(void *buf, SceSize buflen, int *rid)
+static int resolverCreateNode(void *buf, SceSize buflen, int *rid)
 {
     ResolverNode *node;
     int intr, id, start_id;
@@ -431,7 +431,7 @@ static int sub_0b60(void *buf, SceSize buflen, int *rid)
     return 0x80410406;
 }
 
-static int sub_0cb4(int rid)
+static int resolverDeleteNode(int rid)
 {
     int intr;
     ResolverNode *node, *prev = 0;
@@ -467,11 +467,11 @@ static int sub_0cb4(int rid)
     return 0;
 }
 
-static int sub_0dc4(void)
+static int resolverInitState(void)
 {
-    int ret = sub_15f4();
+    int ret = dnsInitTxid();
     if (ret < 0) {
-        sub_1638();
+        dnsTermTxid();
         return ret;
     }
     g_resolver_list = 0;
@@ -479,13 +479,13 @@ static int sub_0dc4(void)
     return 0;
 }
 
-static int sub_0e18(void)
+static int resolverTermState(void)
 {
-    sub_1638();
+    dnsTermTxid();
     return 0;
 }
 
-static ResolverNode *sub_0e38(int rid, ResolverNode **prev_out)
+static ResolverNode *resolverFindNode(int rid, ResolverNode **prev_out)
 {
     ResolverNode *cur = g_resolver_list;
     ResolverNode *prev = 0;
@@ -501,7 +501,7 @@ static ResolverNode *sub_0e38(int rid, ResolverNode **prev_out)
     return cur;
 }
 
-static int sub_0e74(const char *s1, const char *s2, SceSize n)
+static int dnsStrncasecmp(const char *s1, const char *s2, SceSize n)
 {
     SceSize i;
     int c1, c2;
@@ -550,7 +550,7 @@ static int fmt_octet(char *dst, u8 val)
     return len;
 }
 
-static int sub_0f9c(ResolverNode *node, int type, const void *name_or_addr, int out_len, void *out_buf, int timeout, int retry)
+static int resolverQuery(ResolverNode *node, int type, const void *name_or_addr, int out_len, void *out_buf, int timeout, int retry)
 {
     u32 dns_ips[2];
     int done = 0;
@@ -637,13 +637,13 @@ static int sub_0f9c(ResolverNode *node, int type, const void *name_or_addr, int 
                     node->async->dns_idx = d_idx;
                 }
             }
-            ret = sub_1640(type, qname, pkt_buf, &pkt_len, &txid);
+            ret = dnsBuildQuery(type, qname, pkt_buf, &pkt_len, &txid);
             if (ret < 0)
                 goto cleanup;
 
             int cur_d = d_idx++;
             done = 0;
-            ret = sub_1758(node, pkt_buf, pkt_len, qname, pkt_buf, out_buf, timeout, &dns_ips[cur_d], (int)name_or_addr, out_len, &done, txid, type);
+            ret = dnsExchange(node, pkt_buf, pkt_len, qname, pkt_buf, out_buf, timeout, &dns_ips[cur_d], (int)name_or_addr, out_len, &done, txid, type);
             if (done <= 0)
                 goto cleanup;
         }
@@ -672,7 +672,7 @@ cleanup:
     return ret;
 }
 
-static int sub_15f4(void)
+static int dnsInitTxid(void)
 {
     u16 sys_time[4];
     sceKernelGetSystemTime(sys_time);
@@ -681,22 +681,22 @@ static int sub_15f4(void)
     return 0;
 }
 
-static int sub_1638(void)
+static int dnsTermTxid(void)
 {
     return 0;
 }
 
-static int sub_1640(int type, const char *qname, u8 *pkt_buf, u32 *pkt_len_io, u16 *txid_out)
+static int dnsBuildQuery(int type, const char *qname, u8 *pkt_buf, u32 *pkt_len_io, u16 *txid_out)
 {
     u8 *ptr = pkt_buf;
     u8 *end = pkt_buf + *pkt_len_io;
     int ret;
     u16 qtype, qclass;
 
-    ret = sub_1a28(type, &ptr, end, txid_out);
+    ret = dnsWriteHeader(type, &ptr, end, txid_out);
     if (ret < 0)
         return ret;
-    ret = sub_1b10(&ptr, end, qname);
+    ret = dnsEncodeName(&ptr, end, qname);
     if (ret < 0)
         return ret;
     if (end < ptr + 4)
@@ -718,7 +718,7 @@ static int sub_1640(int type, const char *qname, u8 *pkt_buf, u32 *pkt_len_io, u
     return ret;
 }
 
-static int sub_1758(ResolverNode *node, u8 *rx_buf, u32 tx_len, const char *qname, u8 *qname_end, void *out_addr, int timeout, const u32 *dns_ip, int out_name, int out_len, int *done_out, u16 txid, int type)
+static int dnsExchange(ResolverNode *node, u8 *rx_buf, u32 tx_len, const char *qname, u8 *qname_end, void *out_addr, int timeout, const u32 *dns_ip, int out_name, int out_len, int *done_out, u16 txid, int type)
 {
     int ret;
     u32 rx_len;
@@ -726,7 +726,7 @@ static int sub_1758(ResolverNode *node, u8 *rx_buf, u32 tx_len, const char *qnam
     u16 qdcount, ancount;
 
     if ((node->flags & 4) == 0 || node->async == 0 || (u32)(node->async->state - 1) >= 2) {
-        ret = sub_1c14(node, rx_buf, tx_len, dns_ip, timeout);
+        ret = dnsSendPacket(node, rx_buf, tx_len, dns_ip, timeout);
         if (ret < 0)
             goto err_check;
         if ((node->flags & 4) && node->async != 0) {
@@ -739,17 +739,17 @@ static int sub_1758(ResolverNode *node, u8 *rx_buf, u32 tx_len, const char *qnam
         txid = (u16)node->async->txid;
 
     rx_len = node->buflen - (u32)(rx_buf - node->buf);
-    ret = sub_1db8(node, rx_buf, (int *)&rx_len, timeout);
+    ret = dnsRecvPacket(node, rx_buf, (int *)&rx_len, timeout);
     if (ret < 0)
         goto err_check;
 
     ptr = rx_buf;
     end = rx_buf + rx_len;
-    ret = sub_1f74(&ptr, end, txid, &qdcount, &ancount, done_out);
+    ret = dnsParseHeader(&ptr, end, txid, &qdcount, &ancount, done_out);
     if (ret >= 0) {
-        ret = sub_20d0(&ptr, end, rx_buf, qname, qname_end, qdcount);
+        ret = dnsParseQuestions(&ptr, end, rx_buf, qname, qname_end, qdcount);
         if (ret >= 0) {
-            ret = sub_21c0(node, &ptr, end, rx_buf, qname, qname_end, out_addr, out_name, type, out_len, ancount);
+            ret = dnsParseAnswers(node, &ptr, end, rx_buf, qname, qname_end, out_addr, out_name, type, out_len, ancount);
         }
     }
     if (ret == (int)0x8041040d) {
@@ -779,7 +779,7 @@ cleanup:
     return ret;
 }
 
-static int sub_1a28(int type, u8 **ptr_io, u8 *end, u16 *txid_out)
+static int dnsWriteHeader(int type, u8 **ptr_io, u8 *end, u16 *txid_out)
 {
     u8 hdr[12];
     u8 *p = *ptr_io;
@@ -805,7 +805,7 @@ static int sub_1a28(int type, u8 **ptr_io, u8 *end, u16 *txid_out)
     return 0;
 }
 
-static int sub_1b10(u8 **ptr_io, u8 *end, const char *qname)
+static int dnsEncodeName(u8 **ptr_io, u8 *end, const char *qname)
 {
     u8 *p = *ptr_io;
     int last = 0;
@@ -832,7 +832,7 @@ static int sub_1b10(u8 **ptr_io, u8 *end, const char *qname)
     return 0;
 }
 
-static int sub_1c14(ResolverNode *node, const void *buf, int len, const u32 *dns_ip, int timeout)
+static int dnsSendPacket(ResolverNode *node, const void *buf, int len, const u32 *dns_ip, int timeout)
 {
     int s, ret;
     u8 sin[16];
@@ -884,7 +884,7 @@ err:
     return ret;
 }
 
-static int sub_1db8(ResolverNode *node, void *buf, int *len_io, int timeout)
+static int dnsRecvPacket(ResolverNode *node, void *buf, int *len_io, int timeout)
 {
     u8 from[20];
     int fromlen;
@@ -929,7 +929,7 @@ static int sub_1db8(ResolverNode *node, void *buf, int *len_io, int timeout)
     return 0x80410410;
 }
 
-static int sub_1f74(u8 **ptr_io, u8 *end, u16 txid, u16 *qdcount_out, u16 *ancount_out, int *done_out)
+static int dnsParseHeader(u8 **ptr_io, u8 *end, u16 txid, u16 *qdcount_out, u16 *ancount_out, int *done_out)
 {
     u8 hdr[12];
     u8 *p = *ptr_io;
@@ -976,14 +976,14 @@ static int sub_1f74(u8 **ptr_io, u8 *end, u16 txid, u16 *qdcount_out, u16 *ancou
     return ret;
 }
 
-static int sub_20d0(u8 **ptr_io, u8 *end, u8 *pkt_start, const char *qname, u8 *qname_end, u16 qdcount)
+static int dnsParseQuestions(u8 **ptr_io, u8 *end, u8 *pkt_start, const char *qname, u8 *qname_end, u16 qdcount)
 {
     u8 *p = *ptr_io;
     int match = 0;
     int i, ret = 0;
 
     for (i = 0; i < qdcount; i++) {
-        ret = sub_25a4(&p, end, pkt_start, end, qname, qname_end, &match);
+        ret = dnsCompareName(&p, end, pkt_start, end, qname, qname_end, &match);
         if (ret < 0) {
             *ptr_io = p;
             return ret;
@@ -1000,7 +1000,7 @@ static int sub_20d0(u8 **ptr_io, u8 *end, u8 *pkt_start, const char *qname, u8 *
     return ret;
 }
 
-static int sub_21c0(ResolverNode *node, u8 **ptr_io, u8 *end, u8 *pkt_start, const char *qname, u8 *qname_end, void *out_addr, int out_name, int type, int out_len, u16 ancount)
+static int dnsParseAnswers(ResolverNode *node, u8 **ptr_io, u8 *end, u8 *pkt_start, const char *qname, u8 *qname_end, void *out_addr, int out_name, int type, int out_len, u16 ancount)
 {
     u8 *p = *ptr_io;
     int i, ret = 0;
@@ -1013,7 +1013,7 @@ static int sub_21c0(ResolverNode *node, u8 **ptr_io, u8 *end, u8 *pkt_start, con
     }
 
     for (i = 0; i < ancount; i++) {
-        ret = sub_25a4(&p, end, pkt_start, end, qname, qname_end, &match);
+        ret = dnsCompareName(&p, end, pkt_start, end, qname, qname_end, &match);
         if (ret < 0) {
             *ptr_io = p;
             return ret;
@@ -1039,7 +1039,7 @@ static int sub_21c0(ResolverNode *node, u8 **ptr_io, u8 *end, u8 *pkt_start, con
         if (rclass == 1 && match != 0) {
             if (rtype == 5) {
                 u8 *cname_end = node->buf + node->buflen;
-                ret = sub_2418(rdata, end, (char *)qname, &cname_end, pkt_start, end);
+                ret = dnsDecodeName(rdata, end, (char *)qname, &cname_end, pkt_start, end);
                 if (ret < 0) {
                     *ptr_io = p;
                     return ret;
@@ -1055,7 +1055,7 @@ static int sub_21c0(ResolverNode *node, u8 **ptr_io, u8 *end, u8 *pkt_start, con
                 return ret;
             } else if (rtype == 12) {
                 u8 *name_end = (u8 *)(out_name + out_len);
-                ret = sub_2418(rdata, end, (char *)out_name, &name_end, pkt_start, end);
+                ret = dnsDecodeName(rdata, end, (char *)out_name, &name_end, pkt_start, end);
                 *ptr_io = p;
                 return ret;
             }
@@ -1065,7 +1065,7 @@ static int sub_21c0(ResolverNode *node, u8 **ptr_io, u8 *end, u8 *pkt_start, con
     return 0x80410411;
 }
 
-static int sub_2418(u8 *ptr, u8 *end, char *out_name, u8 **out_end_io, u8 *pkt_start, u8 *pkt_limit)
+static int dnsDecodeName(u8 *ptr, u8 *end, char *out_name, u8 **out_end_io, u8 *pkt_start, u8 *pkt_limit)
 {
     int total_read = 0;
 
@@ -1105,7 +1105,7 @@ static int sub_2418(u8 *ptr, u8 *end, char *out_name, u8 **out_end_io, u8 *pkt_s
     }
 }
 
-static int sub_25a4(u8 **ptr_io, u8 *end, u8 *pkt_start, u8 *pkt_limit, const char *qname, u8 *qname_end, int *match_out)
+static int dnsCompareName(u8 **ptr_io, u8 *end, u8 *pkt_start, u8 *pkt_limit, const char *qname, u8 *qname_end, int *match_out)
 {
     u8 *ptr = *ptr_io;
     u8 *next_ptr = 0;
@@ -1145,7 +1145,7 @@ static int sub_25a4(u8 **ptr_io, u8 *end, u8 *pkt_start, u8 *pkt_limit, const ch
         if (*match_out == 1) {
             if (qname_end < (u8 *)(qname + len + 1)) {
                 *match_out = 0;
-            } else if (sub_0e74(qname, (const char *)ptr, len) != 0) {
+            } else if (dnsStrncasecmp(qname, (const char *)ptr, len) != 0) {
                 *match_out = 0;
             } else if (qname[len] != '.' && qname[len] != 0) {
                 *match_out = 0;

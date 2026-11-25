@@ -81,7 +81,7 @@ typedef struct SceCtrl {
 	u32 updateCycle;
 	u8 samplingMode[2];
 	u8 cableTypeReq;
-	s8 unk15;
+	s8 cableTypeState;
 	union {
 		struct {
 			u8 intr1;
@@ -114,8 +114,8 @@ typedef struct SceCtrl {
 		u32 analogWord;
 	};
 	u8 pad248[2];
-	u8 unk582;
-	u8 unk583;
+	u8 idleSkipCount;
+	u8 idleSkipReload;
 	SceCtrlEmulationData emulationData[4];
 	u32 userModeButtons;
 	u32 maskSupportButtons;
@@ -209,7 +209,7 @@ s32 sceCtrlInit(void)
 	}
 	g_ctrl.timerID = timerId;
 	sceSTimerSetPrscl(timerId, 1, 48);
-	g_ctrl.unk15 = -1;
+	g_ctrl.cableTypeState = -1;
 
 	sceKernelRegisterSysEventHandler(&g_ctrlSysEvent);
 
@@ -292,7 +292,7 @@ static int _sceCtrlSysEventHandler(int ev_id, char *ev_name, void *param, int *r
 		return 0;
 	}
 	if (ev_id == 0x1000C) {
-		g_ctrl.unk15 = -1;
+		g_ctrl.cableTypeState = -1;
 		if (g_ctrl.updateCycle == 0) {
 			sceKernelEnableSubIntr(0x1E, 0x13);
 		} else {
@@ -497,11 +497,11 @@ static int _sceCtrlUpdateButtons(u32 rawButtons, const u8 *axes)
 	}
 
 	if ((changedButtons & 0x00020000u) != 0) {
-		g_ctrl.unk582 = g_ctrl.unk583;
+		g_ctrl.idleSkipCount = g_ctrl.idleSkipReload;
 	}
-	if (g_ctrl.unk582 != 0) {
+	if (g_ctrl.idleSkipCount != 0) {
 		updatedButtons &= 0x00010000u;
-		g_ctrl.unk582--;
+		g_ctrl.idleSkipCount--;
 		changedButtons = g_ctrl.userButtons ^ updatedButtons;
 	}
 	userBuf->buttons = updatedButtons;
@@ -799,7 +799,7 @@ s32 sceCtrlSuspend(void)
 
 s32 sceCtrlResume(void)
 {
-	g_ctrl.unk15 = -1;
+	g_ctrl.cableTypeState = -1;
 	if (g_ctrl.updateCycle == 0) {
 		sceKernelEnableSubIntr(0x1E, 0x13);
 	} else {
@@ -811,7 +811,7 @@ s32 sceCtrlResume(void)
 
 u32 sceCtrl_driver_5886194C(u8 arg1)
 {
-	g_ctrl.unk583 = arg1;
+	g_ctrl.idleSkipReload = arg1;
 	return 0;
 }
 

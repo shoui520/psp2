@@ -44,9 +44,9 @@ typedef struct SceSasVoice {
 	s32 rr;            /* 0x24 (+0x38 in core) */
 	s32 sl;            /* 0x28 (+0x3C in core) */
 	u32 curve_mode;    /* 0x2C (+0x40 in core) */
-	u8 unk30;          /* 0x30 (+0x44 in core) */
-	u8 unk31;          /* 0x31 (+0x45 in core) */
-	u8 unk32;          /* 0x32 (+0x46 in core) */
+	u8 mixParam0;          /* 0x30 (+0x44 in core) */
+	u8 mixParam1;          /* 0x31 (+0x45 in core) */
+	u8 reserved32;          /* 0x32 (+0x46 in core) */
 	s8 env_state;      /* 0x33 (+0x47 in core) */
 	s32 env_height;    /* 0x34 (+0x48 in core) */
 } SceSasVoice; /* size = 0x38 */
@@ -65,10 +65,10 @@ typedef struct SceSasCore {
 	SceSasVoice voices_bak[32]; /* 0x714..0xE14 */
 	u32 end_flags_bak;          /* 0xE14 */
 	u8 wet_dry_bak;             /* 0xE18 */
-	u8 pad_e19;                 /* 0xE19 */
+	u8 reservedE19;                 /* 0xE19 */
 	u16 rev_vol_l_bak;          /* 0xE1A */
 	u16 rev_vol_r_bak;          /* 0xE1C */
-	u16 pad_e1e;                /* 0xE1E */
+	u16 reservedE1E;                /* 0xE1E */
 } SceSasCore; /* size = 0xE20 */
 
 static const s8 g_keyon_state[8] = { -2, -2, 0, 1, 2, 5, 5, 5 };
@@ -641,13 +641,14 @@ int sceSasCore_7497EA85(SceSasCore *sasCore, int vnum, void *buf, int len)
 		pspSdkSetK1(old_k1);
 		return 0x80000023;
 	}
-	if (*(s32 *)(ctx + 0xBC) != -1) {
+	struct { u8 reserved0[0xBC]; s32 dataBuf; u32 reservedC0; u32 dataLen; } *atrac = (void *)ctx;
+	if (atrac->dataBuf != -1) {
 		sceKernelSignalSema(g_sas_sema, 1);
 		pspSdkSetK1(old_k1);
 		return 0x80420042;
 	}
-	*(u32 *)(ctx + 0xBC) = (u32)buf;
-	*(u32 *)(ctx + 0xC4) = (u32)len;
+	atrac->dataBuf = (s32)(u32)buf;
+	atrac->dataLen = (u32)len;
 	sceKernelDcacheWritebackRange(buf, len);
 	sceKernelSignalSema(g_sas_sema, 1);
 	pspSdkSetK1(old_k1);
@@ -1173,8 +1174,8 @@ int sceSasCore_42778A9F(SceSasCore *sasCore, int grainSamples, int maxVoices, in
 		me_ptr += 0x4C;
 		v->env_state = -1;
 		v->curve_mode = 0x01010100;
-		v->unk30 = 7;
-		v->unk31 = 7;
+		v->mixParam0 = 7;
+		v->mixParam1 = 7;
 		v->pitch = 0x1000;
 		v->vol_l = 0x1000;
 		v->vol_r = 0x1000;

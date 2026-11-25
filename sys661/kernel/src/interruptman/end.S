@@ -29,7 +29,7 @@ sceKernelCpuResumeIntr:
     j loc_3154
     nop
 
-sub_3230:
+syscallMonitorTrampoline:
     addiu      $sp, $sp, -64
     sw         $t7, 8($sp)
     addiu      $t4, $sp, 64
@@ -86,8 +86,8 @@ mod_32D4:
 
     .globl InterruptManagerForKernel_2F3C4DCD
 InterruptManagerForKernel_2F3C4DCD:
-    lui        $t0, %hi(sub_3230)
-    addiu      $t0, $t0, %lo(sub_3230)
+    lui        $t0, %hi(syscallMonitorTrampoline)
+    addiu      $t0, $t0, %lo(syscallMonitorTrampoline)
     ext        $a0, $a0, 2, 26
     ext        $a1, $a1, 2, 26
     ext        $t0, $t0, 2, 26

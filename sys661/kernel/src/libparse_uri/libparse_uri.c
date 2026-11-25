@@ -99,7 +99,7 @@ static int uri_vformat(void (*put_fn)(void *, int), void *ctx, const char *fmt, 
 static void sprintf_put_cb(void *ctx, int c);
 static const char *uri_memchr(const char *s, int c, int n);
 
-/* 0x0000: sub_0000 */
+/* 0x0000 */
 static int is_scheme_char(u8 c)
 {
     u8 flags = g_ctype_table[c + 1];
@@ -647,7 +647,7 @@ int sceParseUri_8885A782(char *dst, const char *src, u32 size)
     return normalize_path(dst, src, size);
 }
 
-/* 0x0ec0: sub_0ec0 */
+/* 0x0ec0 */
 static int get_unescaped_len(const char *str)
 {
     int count = 0;
@@ -685,7 +685,7 @@ static int get_unescaped_len(const char *str)
     return count;
 }
 
-/* 0x0f94: sub_0f94 */
+/* 0x0f94 */
 static int parse_userinfo(const char *str, char *workArea, u32 workAreaSize, u32 *userSizeOut, u32 *passSizeOut, int copyFlag)
 {
     int hasAt = 0;
@@ -772,7 +772,7 @@ static int parse_userinfo(const char *str, char *workArea, u32 workAreaSize, u32
     return atPos;
 }
 
-/* 0x1248: sub_1248 */
+/* 0x1248 */
 static int parse_scheme(char *workArea, const char *uri, u32 *sizeOut, u32 workAreaSize, int copyFlag)
 {
     if (uri == NULL) {
@@ -810,7 +810,7 @@ static int parse_scheme(char *workArea, const char *uri, u32 *sizeOut, u32 workA
     return 0;
 }
 
-/* 0x1394: sub_1394 */
+/* 0x1394 */
 static int parse_host(const char *str, char *workArea, u32 *sizeOut, u32 workAreaSize, int copyFlag)
 {
     if (str == NULL) {
@@ -843,7 +843,7 @@ static int parse_host(const char *str, char *workArea, u32 *sizeOut, u32 workAre
     return idx;
 }
 
-/* 0x1490: sub_1490 */
+/* 0x1490 */
 static void get_default_port(const char *scheme, u16 *portOut)
 {
     char upperBuf[128];
@@ -890,7 +890,7 @@ static void get_default_port(const char *scheme, u16 *portOut)
     }
 }
 
-/* 0x160c: sub_160c */
+/* 0x160c */
 static int parse_path(const char *str, char *workArea, u32 *sizeOut, u32 workAreaSize, int copyFlag)
 {
     if (str == NULL) {
@@ -917,7 +917,7 @@ static int parse_path(const char *str, char *workArea, u32 *sizeOut, u32 workAre
     return idx;
 }
 
-/* 0x16ec: sub_16ec */
+/* 0x16ec */
 static int parse_fragment(const char *str, char *workArea, u32 *sizeOut, u32 workAreaSize, int copyFlag)
 {
     if (str == NULL) {
@@ -943,7 +943,7 @@ static int parse_fragment(const char *str, char *workArea, u32 *sizeOut, u32 wor
     return idx;
 }
 
-/* 0x1790: sub_1790 */
+/* 0x1790 */
 static int parse_port(const char *str, u16 *portOut)
 {
     *portOut = 0;
@@ -968,7 +968,7 @@ static int parse_port(const char *str, u16 *portOut)
     return 0x80433060;
 }
 
-/* 0x1830: sub_1830 */
+/* 0x1830 */
 static int parse_query(const char *str, char *workArea, u32 *sizeOut, u32 workAreaSize, int copyFlag)
 {
     if (str == NULL) {
@@ -994,7 +994,7 @@ static int parse_query(const char *str, char *workArea, u32 *sizeOut, u32 workAr
     return idx;
 }
 
-/* 0x18e4: sub_18e4 */
+/* 0x18e4 */
 static int append_rel_path(char *basePath, const char *relPath)
 {
     char *slash = uri_strrchr(basePath, '/');
@@ -1011,7 +1011,7 @@ static int append_rel_path(char *basePath, const char *relPath)
     return 0;
 }
 
-/* 0x1968: sub_1968 */
+/* 0x1968 */
 static int normalize_path(char *dst, const char *src, u32 size)
 {
     if (size == 0) {
@@ -1066,7 +1066,7 @@ static int normalize_path(char *dst, const char *src, u32 size)
     return 0;
 }
 
-/* 0x1ae8: sub_1ae8 */
+/* 0x1ae8 */
 static int hex_char_to_val(u8 c)
 {
     if ((u32)((c - '0') & 0xFF) < 10) {
@@ -1081,7 +1081,7 @@ static int hex_char_to_val(u8 c)
     return -1;
 }
 
-/* 0x1b28: sub_1b28 */
+/* 0x1b28 */
 static char uri_tolower(char c)
 {
     if ((g_ctype_table[(s8)c + 1] & 1) != 0) {
@@ -1090,13 +1090,13 @@ static char uri_tolower(char c)
     return c;
 }
 
-/* 0x1b54: sub_1b54 */
+/* 0x1b54 */
 static s8 get_ctype(int c)
 {
     return (s8)g_ctype_table[c + 1];
 }
 
-/* 0x1b68: sub_1b68 */
+/* 0x1b68 */
 static char *uri_strcat(char *dst, const char *src)
 {
     if (dst == NULL || src == NULL) {
@@ -1121,7 +1121,7 @@ static char *uri_strcat(char *dst, const char *src)
     return dst;
 }
 
-/* 0x1c08: sub_1c08 */
+/* 0x1c08 */
 static int uri_strcasecmp(const char *s1, const char *s2)
 {
     if (s1 == NULL || s2 == NULL) {
@@ -1143,7 +1143,7 @@ static int uri_strcasecmp(const char *s1, const char *s2)
     }
 }
 
-/* 0x1cb4: sub_1cb4 */
+/* 0x1cb4 */
 static u32 uri_strlen(const char *s)
 {
     if (s == NULL) {
@@ -1156,7 +1156,7 @@ static u32 uri_strlen(const char *s)
     return len;
 }
 
-/* 0x1ce8: sub_1ce8 */
+/* 0x1ce8 */
 static int uri_strncmp(const char *s1, const char *s2, int n)
 {
     if (s1 == NULL || s2 == NULL) {
@@ -1179,7 +1179,7 @@ static int uri_strncmp(const char *s1, const char *s2, int n)
     return 0;
 }
 
-/* 0x1d84: sub_1d84 */
+/* 0x1d84 */
 static char *uri_strchr(const char *s, char c)
 {
     if (s == NULL) {
@@ -1197,7 +1197,7 @@ static char *uri_strchr(const char *s, char c)
     }
 }
 
-/* 0x1db4: sub_1db4 */
+/* 0x1db4 */
 static char *uri_strrchr(const char *s, char c)
 {
     if (s == NULL) {
@@ -1219,7 +1219,7 @@ static char *uri_strrchr(const char *s, char c)
     return NULL;
 }
 
-/* 0x1dfc: sub_1dfc */
+/* 0x1dfc */
 static char *uri_strcpy(char *dst, const char *src)
 {
     if (dst == NULL || src == NULL) {
@@ -1236,7 +1236,7 @@ static char *uri_strcpy(char *dst, const char *src)
     return dst;
 }
 
-/* 0x1e34: sub_1e34 */
+/* 0x1e34 */
 static int uri_sprintf(char *buf, const char *fmt, ...)
 {
     char *p = buf;
@@ -1247,7 +1247,7 @@ static int uri_sprintf(char *buf, const char *fmt, ...)
     return ret;
 }
 
-/* 0x1e80: sub_1e80 */
+/* 0x1e80 */
 static int uri_vformat(void (*put_fn)(void *, int), void *ctx, const char *fmt, va_list ap)
 {
     char numBuf[22];
@@ -1497,7 +1497,7 @@ done:
     return count;
 }
 
-/* 0x2590: sub_2590 */
+/* 0x2590 */
 static void sprintf_put_cb(void *ctx, int c)
 {
     char **p = (char **)ctx;
@@ -1508,7 +1508,7 @@ static void sprintf_put_cb(void *ctx, int c)
     }
 }
 
-/* 0x25b8: sub_25b8 */
+/* 0x25b8 */
 static const char *uri_memchr(const char *s, int c, int n)
 {
     if (s == NULL || n <= 0) {

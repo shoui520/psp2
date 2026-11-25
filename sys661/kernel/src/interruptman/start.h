@@ -2,33 +2,33 @@
    See the file COPYING for copying permission.
 */
 
-void sub_0000();
+void cp0TimerIntrHandler();
 void intrExcepHandler(void);
 void SaveThreadContext();
-void sub_0864();
-s32 sub_091C();
+void returnFromUserIntrHandler();
+s32 defaultContextHook();
 void intrExcepHandler2(void);
-void sub_0CC0();
+void invalidSyscallHandler();
 void syscallExcepHandler(void);
 void loc_00000DDC();
-void sub_0EC0();
-void sub_0ECC();
-void sub_0EF8();
-void sub_0F20();
-void sub_0F58();
-void sub_0F64();
-void sub_0FA4();
-void sub_0FE4();
-void sub_0FF0();
-void sub_0FF8();
-void sub_1000();
-void sub_1008();
-void sub_1010();
-void sub_1020();
-void sub_1030();
-void sub_1050(s32*);
-void sub_1080(s32*);
-void sub_10A8(s32*);
+void syscallIsCop2Enabled();
+void syscallCpuSuspendIntr();
+void syscallCpuResumeIntr();
+void syscallCpuResumeIntrWithSync();
+void syscallInvertIntrBit();
+void syscallSuspendIntrAndDisableCache();
+void syscallResumeIntrAndEnableCache();
+void syscallIsIntrContext();
+void syscallGetIntrState();
+void syscallGetCpuClockCounter();
+void syscallGetCpuPrid();
+void syscallGetCpuId();
+void syscallIsKernelMode();
+void syscallUnsupportedError();
+void intcMaskAll();
+void intcGetPending(s32*);
+void intcGetMask(s32*);
+void intcSetMask(s32*);
 
 extern s32 mod_0400;
 extern s32 mod_0468;

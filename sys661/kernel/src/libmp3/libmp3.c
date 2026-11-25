@@ -37,9 +37,9 @@ extern int sceKernelGetCompiledSdkVersion(void);
 
 typedef struct SceMp3InitArg {
     u32 mp3StreamStart;
-    u32 unk1;
+    u32 mp3StreamStartHi;
     u32 mp3StreamEnd;
-    u32 unk2;
+    u32 mp3StreamEndHi;
     void *mp3Buf;
     s32 mp3BufSize;
     void *pcmBuf;
@@ -152,7 +152,7 @@ static int mp3_memcmp(const void *s1, const void *s2, int n);
 static const u8 *read_stream_bytes(void *dst, const u8 *src, u32 size, int bigEndian);
 static int extract_codec_info(int handle);
 
-/* 0x05d4: sub_05d4 */
+/* 0x05d4 */
 static int alloc_edram(void)
 {
     u32 *work = g_mp3Ctx[0].codecWork;
@@ -171,7 +171,7 @@ static int alloc_edram(void)
     return 0;
 }
 
-/* 0x0650: sub_0650 */
+/* 0x0650 */
 static void check_and_flip_stream_buf(int handle)
 {
     Mp3Context *ctx = &g_mp3Ctx[handle];
@@ -196,7 +196,7 @@ static void check_and_flip_stream_buf(int handle)
     }
 }
 
-/* 0x0720: sub_0720 */
+/* 0x0720 */
 static void compact_stream_buf(int handle)
 {
     Mp3Context *ctx = &g_mp3Ctx[handle];
@@ -254,8 +254,8 @@ int sceMp3ReserveMp3Handle(const SceMp3InitArg *arg)
             return 0x80671003;
         }
         if (start == end && (u32)arg->mp3StreamStart >= (u32)arg->mp3StreamEnd) {
-            /* Note: checks arg->unk1 vs arg->unk2 for 64-bit stream offset */
-            if (arg->unk1 >= arg->unk2) {
+            /* Note: checks arg->mp3StreamStartHi vs arg->mp3StreamEndHi for 64-bit stream offset */
+            if (arg->mp3StreamStartHi >= arg->mp3StreamEndHi) {
                 return 0x80671003;
             }
         }
@@ -702,7 +702,7 @@ int sceMp3GetMp3ChannelNum(int handle)
     return ctx->info.channelNum;
 }
 
-/* 0x1510: sub_1510 */
+/* 0x1510 */
 static int manage_resources(int count)
 {
     if (count >= 3) {
@@ -753,7 +753,7 @@ static int manage_resources(int count)
     return 0;
 }
 
-/* 0x16f0: sub_16f0 */
+/* 0x16f0 */
 static int reserve_handle_internal(const SceMp3InitArg *arg)
 {
     int handle = -1;
@@ -810,7 +810,7 @@ static int reserve_handle_internal(const SceMp3InitArg *arg)
     return handle;
 }
 
-/* 0x18b8: sub_18b8 */
+/* 0x18b8 */
 static int check_stream_header(int handle)
 {
     Mp3Context *ctx = &g_mp3Ctx[handle];
@@ -843,7 +843,7 @@ static int check_stream_header(int handle)
     return 0;
 }
 
-/* 0x1994: sub_1994 */
+/* 0x1994 */
 static int resync_next_frame(int handle)
 {
     Mp3Context *ctx = &g_mp3Ctx[handle];
@@ -866,7 +866,7 @@ static int resync_next_frame(int handle)
     return found;
 }
 
-/* 0x1a44: sub_1a44 */
+/* 0x1a44 */
 static void check_stream_loop_or_advance(int handle)
 {
     Mp3Context *ctx = &g_mp3Ctx[handle];
@@ -887,7 +887,7 @@ static void check_stream_loop_or_advance(int handle)
     check_and_flip_stream_buf(handle);
 }
 
-/* 0x1ac8: sub_1ac8 */
+/* 0x1ac8 */
 static int parse_stream_info(int handle)
 {
     Mp3Context *ctx = &g_mp3Ctx[handle];
@@ -914,7 +914,7 @@ static int parse_stream_info(int handle)
     return 0;
 }
 
-/* 0x1bd0: sub_1bd0 */
+/* 0x1bd0 */
 static int free_vbri_fpl(int handle)
 {
     Mp3Info *info = &g_mp3Ctx[handle].info;
@@ -936,7 +936,7 @@ static int free_vbri_fpl(int handle)
     return err;
 }
 
-/* 0x1c60: sub_1c60 */
+/* 0x1c60 */
 static int parse_xing_header(int handle)
 {
     Mp3Context *ctx = &g_mp3Ctx[handle];
@@ -980,7 +980,7 @@ static int parse_xing_header(int handle)
     return 0;
 }
 
-/* 0x1e5c: sub_1e5c */
+/* 0x1e5c */
 static int parse_vbri_header(int handle)
 {
     Mp3Context *ctx = &g_mp3Ctx[handle];
@@ -1048,7 +1048,7 @@ static int parse_vbri_header(int handle)
     return 0;
 }
 
-/* 0x2168: sub_2168 */
+/* 0x2168 */
 static s64 calc_frame_offset(int handle, int frame)
 {
     Mp3Info *info = &g_mp3Ctx[handle].info;
@@ -1069,7 +1069,7 @@ static s64 calc_frame_offset(int handle, int frame)
     return (s64)info->streamStart + relOffset;
 }
 
-/* 0x2224: sub_2224 */
+/* 0x2224 */
 static s64 calc_xing_frame_offset(int handle, int frame)
 {
     Mp3Info *info = &g_mp3Ctx[handle].info;
@@ -1090,7 +1090,7 @@ static s64 calc_xing_frame_offset(int handle, int frame)
     return numer / denom;
 }
 
-/* 0x2308: sub_2308 */
+/* 0x2308 */
 static s64 calc_vbri_frame_offset(int handle, int frame)
 {
     Mp3Info *info = &g_mp3Ctx[handle].info;
@@ -1123,7 +1123,7 @@ static s64 calc_vbri_frame_offset(int handle, int frame)
     return (s64)(sumBytes + interp);
 }
 
-/* 0x2434: sub_2434 */
+/* 0x2434 */
 static s64 calc_cbr_frame_offset(int handle, int frame)
 {
     Mp3Info *info = &g_mp3Ctx[handle].info;
@@ -1139,13 +1139,13 @@ static s64 calc_cbr_frame_offset(int handle, int frame)
     return res;
 }
 
-/* 0x2540: sub_2540 */
+/* 0x2540 */
 static int parse_lowlevel_info(int handle)
 {
     return extract_codec_info(handle);
 }
 
-/* 0x255c: sub_255c */
+/* 0x255c */
 static int mp3_memcmp(const void *s1, const void *s2, int n)
 {
     if ((u32)(n - 1) >= 0x80U) {
@@ -1161,7 +1161,7 @@ static int mp3_memcmp(const void *s1, const void *s2, int n)
     return 0;
 }
 
-/* 0x25cc: sub_25cc */
+/* 0x25cc */
 static const u8 *read_stream_bytes(void *dst, const u8 *src, u32 size, int bigEndian)
 {
     u8 *d = (u8 *)dst;
@@ -1205,7 +1205,7 @@ static const u8 *read_stream_bytes(void *dst, const u8 *src, u32 size, int bigEn
     return src + size;
 }
 
-/* 0x26fc: sub_26fc */
+/* 0x26fc */
 static int extract_codec_info(int handle)
 {
     u32 maxOutBytes = 0;

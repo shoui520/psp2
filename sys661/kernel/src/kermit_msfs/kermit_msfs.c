@@ -747,7 +747,8 @@ static int _msIoDread(SceIoIob *iob, void *dir)
 	req->args[0] = (u32)slot->kermitFd;
 	u8 *work1 = (u8 *)g_workBuf;
 	u8 *work2 = work1 + (g_workSize >> 1);
-	void *dPriv = *(void **)((u8 *)dir + 0x158);
+	typedef struct { u8 data[0x158]; void *d_private; } SceMsfsDirent;
+	void *dPriv = ((SceMsfsDirent *)dir)->d_private;
 
 	if (useOldShortName == 0) {
 		if (((u32)dPriv & 3u) != 0) {
@@ -777,7 +778,7 @@ static int _msIoDread(SceIoIob *iob, void *dir)
 		if (useOldShortName != 0) {
 			*(u32 *)work2 = 0x414u;
 		}
-		*(void **)(work1 + 0x158) = work2;
+		((SceMsfsDirent *)work1)->d_private = work2;
 	}
 
 	sceKermitMemory_driver_AAF047AC(req, 1, work1, 0x160, 3);
@@ -795,7 +796,7 @@ static int _msIoDread(SceIoIob *iob, void *dir)
 	s32 cmdRes = (s32)resp;
 	if (cmdRes > 0) {
 		iob->i_fpos++;
-		*(void **)(work1 + 0x158) = *(void **)((u8 *)dir + 0x158);
+		((SceMsfsDirent *)work1)->d_private = ((SceMsfsDirent *)dir)->d_private;
 		sceKernelMemcpy(dir, work1, 0x160);
 		if (dPriv != NULL) {
 			if (useOldShortName == 0) {

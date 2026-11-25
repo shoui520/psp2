@@ -4,11 +4,11 @@
 #include "common_asm.h"
 
 ##
-# sub_0000
+# cp0TimerIntrHandler
 ##
 
-    .globl sub_0000
-sub_0000:
+    .globl cp0TimerIntrHandler
+cp0TimerIntrHandler:
     mfc0  $v0, $11
     lui   $v1, 0x8000
     addu  $v1, $v1, $v0
@@ -315,7 +315,7 @@ loc_03A4:
 
     .globl mod_0400
 mod_0400:
-    jal   sub_091C
+    jal   defaultContextHook
     li    $k1, 3
     beqz  $v0, _InterruptManagerForKernel_551097F2
     lw    $a0, 12($sp)
@@ -346,7 +346,7 @@ loc_0444:
 
     .globl mod_0468
 mod_0468:
-    jal   sub_091C
+    jal   defaultContextHook
 
     move  $a1, $0
     j     _InterruptManagerForKernel_551097F2
@@ -632,8 +632,8 @@ loc_07AC:
     move       $sp, $t1
     eret
 
-    .globl sub_0864
-sub_0864:
+    .globl returnFromUserIntrHandler
+returnFromUserIntrHandler:
     cfc0       $t4, $13
     beqz       $t4, loc_00000914
     cfc0       $v0, $4
@@ -685,8 +685,8 @@ loc_00000914:
     j          loc_00000914
     break      0x003, 0x3FF  # (0x00FFF)
 
-    .globl sub_091C
-sub_091C:
+    .globl defaultContextHook
+defaultContextHook:
     jr    $ra
     move  $v0, $0
 
@@ -782,10 +782,10 @@ loc_00000978:
     lw         $sp, 180($sp)
 
 ##
-# sub_0A74
+# intrMonitorTrampoline
 ##
 
-sub_0A74:
+intrMonitorTrampoline:
     cache      0x18, -64($sp)
     addiu      $sp, $sp, -64
     lh         $a3, 48($k0)
@@ -923,8 +923,8 @@ loc_00000C00:
 
     .globl InterruptManagerForKernel_A6978B70
 InterruptManagerForKernel_A6978B70:
-    lui        $t0, %hi(sub_0A74)
-    addiu      $t0, $t0, %lo(sub_0A74)
+    lui        $t0, %hi(intrMonitorTrampoline)
+    addiu      $t0, $t0, %lo(intrMonitorTrampoline)
     ext        $a0, $a0, 2, 26
     ext        $a1, $a1, 2, 26
     ext        $t0, $t0, 2, 26
@@ -963,9 +963,9 @@ InterruptManagerForKernel_1373F20E:
     nop
     nop
 
-_sub_0CC0:
-    .globl sub_0CC0
-sub_0CC0:
+_invalidSyscallHandler:
+    .globl invalidSyscallHandler
+invalidSyscallHandler:
     cfc0       $v0, $0
     mtc0       $v0, $14
     lui        $v0, %hi(syscallExcepHandler)
@@ -1013,7 +1013,7 @@ loc_00000D40:
     lw         $t5, 4($t4)
     mtc0       $v0, $14
     lw         $t6, 8($t4)
-    beqz       $t5, _sub_0CC0
+    beqz       $t5, _invalidSyscallHandler
     subu       $t5, $t7, $t5
     sltu       $at, $t5, $t6
     beqzl      $at, loc_00000D40
@@ -1131,14 +1131,14 @@ loc_00000E98:
 # Mini-funcs
 ##
 
-    .globl sub_0EC0
-sub_0EC0:
+    .globl syscallIsCop2Enabled
+syscallIsCop2Enabled:
     mfc0       $v0, $12
     ext        $v0, $v0, 30, 1
     eret
 
-    .globl sub_0ECC
-sub_0ECC:
+    .globl syscallCpuSuspendIntr
+syscallCpuSuspendIntr:
     mfic       $v0, $0
     mtic       $0, $0
     nop
@@ -1151,8 +1151,8 @@ sub_0ECC:
     nop
     eret
 
-    .globl sub_0EF8
-sub_0EF8:
+    .globl syscallCpuResumeIntr
+syscallCpuResumeIntr:
     mtic       $a0, $0
     nop
     nop
@@ -1164,8 +1164,8 @@ sub_0EF8:
     nop
     eret
 
-    .globl sub_0F20
-sub_0F20:
+    .globl syscallCpuResumeIntrWithSync
+syscallCpuResumeIntrWithSync:
     sync
     nop
     sync
@@ -1181,14 +1181,14 @@ sub_0F20:
     nop
     eret
 
-    .globl sub_0F58
-sub_0F58:
+    .globl syscallInvertIntrBit
+syscallInvertIntrBit:
     xori       $v0, $a0, 0x1
     andi       $v0, $v0, 0x1
     eret
 
-    .globl sub_0F64
-sub_0F64:
+    .globl syscallSuspendIntrAndDisableCache
+syscallSuspendIntrAndDisableCache:
     mfic       $v0, $0
     mtic       $0, $0
     nop                                                                                                     
@@ -1206,8 +1206,8 @@ sub_0F64:
     eret
     nop
 
-    .globl sub_0FA4
-sub_0FA4:
+    .globl syscallResumeIntrAndEnableCache
+syscallResumeIntrAndEnableCache:
     mfc0       $v0, $12
     lui        $v1, 0xFFBF
     ori        $v1, $v1, 0xFFFF
@@ -1225,48 +1225,48 @@ sub_0FA4:
     nop
     eret
 
-    .globl sub_0FE4
-sub_0FE4:
+    .globl syscallIsIntrContext
+syscallIsIntrContext:
     cfc0       $v0, $13
     eret
     nop
 
-    .globl sub_0FF0
-sub_0FF0:
+    .globl syscallGetIntrState
+syscallGetIntrState:
     mfic       $v0, $0
     eret
 
-    .globl sub_0FF8
-sub_0FF8:
+    .globl syscallGetCpuClockCounter
+syscallGetCpuClockCounter:
     mfc0       $v0, $9
     eret
 
-    .globl sub_1000
-sub_1000:
+    .globl syscallGetCpuPrid
+syscallGetCpuPrid:
     mfc0       $v0, $15
     eret
 
-    .globl sub_1008
-sub_1008:
+    .globl syscallGetCpuId
+syscallGetCpuId:
     mfc0       $v0, $22
     eret                                                                                                    
 
-    .globl sub_1010
-sub_1010:
+    .globl syscallIsKernelMode
+syscallIsKernelMode:
     mfc0       $v0, $12
     andi       $v0, $v0, 0x18
     slti       $v0, $v0, 1
     eret
 
-    .globl sub_1020
-sub_1020:
+    .globl syscallUnsupportedError
+syscallUnsupportedError:
     mtc0       $ra, $14
     lui        $v0, 0x8002
     addiu      $v0, $v0, 314
     eret
 
-    .globl sub_1030
-sub_1030:
+    .globl intcMaskAll
+intcMaskAll:
     lui        $at, 0xBC30
     lui        $v0, 0x2000
     ori        $v0, $v0, 0xF
@@ -1276,8 +1276,8 @@ sub_1030:
     jr         $ra
     sync
 
-    .globl sub_1050
-sub_1050:
+    .globl intcGetPending
+intcGetPending:
     lui        $at, 0xBC30
     lw         $v0, 4($at)
     lw         $v1, 20($at)
@@ -1291,8 +1291,8 @@ sub_1050:
     jr         $ra
     sw         $v1, 4($a0)
 
-    .globl sub_1080
-sub_1080:
+    .globl intcGetMask
+intcGetMask:
     lui        $at, 0xBC30
     lw         $v0, 8($at)
     lw         $v1, 24($at)
@@ -1304,8 +1304,8 @@ sub_1080:
     jr         $ra
     sw         $v1, 4($a0)
 
-    .globl sub_10A8
-sub_10A8:
+    .globl intcSetMask
+intcSetMask:
     lw         $v0, 0($a0)
     lw         $v1, 4($a0)
     lui        $at, 0x2000

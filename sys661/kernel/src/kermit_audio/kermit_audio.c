@@ -90,19 +90,19 @@ static inline s32 pspMax(s32 a, s32 b)
 
 /* Audio structures */
 typedef struct SceAudioInputParams {
-	s32 unk0;
+	s32 param0;
 	s32 gain;
-	s32 unk2;
-	s32 unk3;
-	s32 unk4;
-	s32 unk5;
+	s32 param2;
+	s32 param3;
+	s32 param4;
+	s32 param5;
 } SceAudioInputParams;
 
 typedef struct SceAudioChannel {
 	void *buf;              /* 0x00 */
 	s32 curSampleCnt;       /* 0x04 */
 	u16 sampleCount;        /* 0x08 */
-	u8 unk10;               /* 0x0A */
+	u8 busyState;               /* 0x0A */
 	u8 bytesPerSample;      /* 0x0B */
 	u16 leftVol;            /* 0x0C */
 	u16 rightVol;           /* 0x0E */
@@ -333,8 +333,8 @@ int sceAudioOutputBlocking(u32 chanId, int vol, void *buf)
 	int intr = sceKernelCpuSuspendIntr();
 	int ret = audioOutput(chan, vol, vol, buf);
 	if ((u32)ret == SCE_AUDIO_ERROR_OUTPUT_BUSY) {
-		if (chan->unk10 == 0) {
-			chan->unk10 = (buf == NULL) ? 0xFF : 1;
+		if (chan->busyState == 0) {
+			chan->busyState = (buf == NULL) ? 0xFF : 1;
 			do {
 				sceKernelCpuResumeIntr(intr);
 				int waitRet = sceKernelWaitEventFlag(g_audio.evFlagId, 1u << chanId, 0x20, NULL, NULL);
@@ -345,7 +345,7 @@ int sceAudioOutputBlocking(u32 chanId, int vol, void *buf)
 				intr = sceKernelCpuSuspendIntr();
 				ret = audioOutput(chan, vol, vol, buf);
 			} while ((u32)ret == SCE_AUDIO_ERROR_OUTPUT_BUSY);
-			chan->unk10 = 0;
+			chan->busyState = 0;
 		}
 	}
 	sceKernelCpuResumeIntr(intr);
@@ -392,12 +392,12 @@ int sceAudioOutputPannedBlocking(u32 chanId, int leftVol, int rightVol, void *bu
 
 	int intr = sceKernelCpuSuspendIntr();
 	int ret = audioOutput(chan, leftVol, rightVol, buf);
-	if (chan->unk10 != 0 && g_clearUnk10OnBusy != 0)
-		chan->unk10 = 0;
+	if (chan->busyState != 0 && g_clearUnk10OnBusy != 0)
+		chan->busyState = 0;
 
 	if ((u32)ret == SCE_AUDIO_ERROR_OUTPUT_BUSY) {
-		if (chan->unk10 == 0) {
-			chan->unk10 = (buf == NULL) ? 0xFF : 1;
+		if (chan->busyState == 0) {
+			chan->busyState = (buf == NULL) ? 0xFF : 1;
 			do {
 				sceKernelCpuResumeIntr(intr);
 				int waitRet = sceKernelWaitEventFlag(g_audio.evFlagId, 1u << chanId, 0x20, NULL, NULL);
@@ -408,7 +408,7 @@ int sceAudioOutputPannedBlocking(u32 chanId, int leftVol, int rightVol, void *bu
 				intr = sceKernelCpuSuspendIntr();
 				ret = audioOutput(chan, leftVol, rightVol, buf);
 			} while ((u32)ret == SCE_AUDIO_ERROR_OUTPUT_BUSY);
-			chan->unk10 = 0;
+			chan->busyState = 0;
 		}
 	}
 
@@ -555,7 +555,7 @@ int sceAudioChRelease(u32 channel)
 		pspSetK1(oldK1);
 		return SCE_AUDIO_ERROR_NOT_RESERVED;
 	}
-	if (chan->unk10 != 0) {
+	if (chan->busyState != 0) {
 		sceKernelCpuResumeIntr(intr);
 		pspSetK1(oldK1);
 		return SCE_AUDIO_ERROR_OUTPUT_BUSY;
@@ -577,7 +577,7 @@ int sceAudioGetChannelRestLength(u32 chanId)
 	int ret = 0;
 	if (chan->buf != NULL)
 		ret = chan->curSampleCnt;
-	if (chan->unk10 != 0)
+	if (chan->busyState != 0)
 		ret += chan->sampleCount;
 	if (g_restLenDelayUs != 0)
 		sceKernelDelayThread(g_restLenDelayUs);
@@ -596,7 +596,7 @@ int sceAudioSetChannelDataLen(u32 chanId, int sampleCount)
 	int intr = sceKernelCpuSuspendIntr();
 	SceAudioChannel *chan = &g_audio.chans[chanId];
 
-	if (chan->unk10 != 0) {
+	if (chan->busyState != 0) {
 		sceKernelCpuResumeIntr(intr);
 		pspSetK1(oldK1);
 		return (g_allowBusySetDataLen != 0) ? 0 : SCE_AUDIO_ERROR_OUTPUT_BUSY;
@@ -645,7 +645,7 @@ int sceAudioChangeChannelConfig(u32 chanId, int format)
 	int intr = sceKernelCpuSuspendIntr();
 	SceAudioChannel *chan = &g_audio.chans[chanId];
 
-	if (chan->unk10 != 0) {
+	if (chan->busyState != 0) {
 		sceKernelCpuResumeIntr(intr);
 		pspSetK1(oldK1);
 		return SCE_AUDIO_ERROR_OUTPUT_BUSY;
@@ -745,7 +745,7 @@ int sceAudioGetChannelRestLen(u32 chanId)
 		return SCE_AUDIO_ERROR_INVALID_CH;
 
 	SceAudioChannel *chan = &g_audio.chans[chanId];
-	if (chan->unk10 == 0)
+	if (chan->busyState == 0)
 		return chan->curSampleCnt;
 	return chan->curSampleCnt + chan->sampleCount;
 }
@@ -1289,12 +1289,12 @@ int sceAudioInputInitEx(SceAudioInputParams *param)
 	if (!ok)
 		return SCE_AUDIO_ERROR_PRIV_REQUIRED;
 
-	g_audio.unkInput0 = (s8)pspMin(pspMax(param->unk0, -29), 0);
+	g_audio.unkInput0 = (s8)pspMin(pspMax(param->param0, -29), 0);
 	g_audio.inputGain = (s8)pspMin(pspMax(param->gain, -18), 30);
-	g_audio.unkInput2 = (s8)pspMin(pspMax(param->unk2, -76), 0);
-	g_audio.unkInput3 = (s8)pspMin(pspMax(param->unk3, 0), 15);
-	g_audio.unkInput4 = (s8)pspMin(pspMax(param->unk4, 0), 10);
-	g_audio.unkInput5 = (s8)pspMin(pspMax(param->unk5, 0), 10);
+	g_audio.unkInput2 = (s8)pspMin(pspMax(param->param2, -76), 0);
+	g_audio.unkInput3 = (s8)pspMin(pspMax(param->param3, 0), 15);
+	g_audio.unkInput4 = (s8)pspMin(pspMax(param->param4, 0), 10);
+	g_audio.unkInput5 = (s8)pspMin(pspMax(param->param5, 0), 10);
 	g_audio.inputInited = 1;
 	g_audio.inputCurSampleCnt = 0;
 	g_audio.unkCodecRet = 0;
