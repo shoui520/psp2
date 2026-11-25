@@ -49,13 +49,6 @@ void SwMwDeviceKeepalive(void *device);
 #define SWMW_TRACE_ERROR(result, line)						\
 	swMwTrace("[SWMW] Error %d in %s:%d\n", result, SWMW_SOURCE, line)
 
-/* the dispatch context: the channel, its request view's three words and 256-byte body */
-struct SwMwManagerContextBlock {
-	struct SwMwCommChannel *channel;	/* 0x00 */
-	int head[3];				/* 0x04 */
-	unsigned char body[256];		/* 0x10 */
-};
-
 /* fill the dispatch context from the channel's request view (0x8107b0d8) */
 extern "C" __attribute__((noinline)) void SwMwManagerBuildContext(void *context, void *channelArgument)
 {

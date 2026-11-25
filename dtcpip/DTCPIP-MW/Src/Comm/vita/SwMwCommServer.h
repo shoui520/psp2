@@ -40,3 +40,24 @@ struct SwMwCommRequest {
 	unsigned char payload[256];	/* 0x10 */
 };
 
+/* the dispatch context (SwMwMain.cpp's dispatcher): the channel word, its request view's
+ * three words and the 256-byte body the request handlers read and write back */
+struct SwMwManagerContextBlock {
+	void *channel;				/* 0x00 */
+	int head[3];				/* 0x04 */
+	unsigned char body[256];		/* 0x10 */
+};
+
+struct SwMwCommChannel;
+struct SwMwIpcMessage;
+
+/* the context helpers and the server's replies keep C linkage */
+extern "C" {
+/* fill the context from the channel's request view and return its device words */
+void SwMwManagerBuildContext(void *context, void *channel);
+int *SwMwManagerContextValues(void *context);
+int SwMwCommServerReplyError(struct SwMwCommChannel *channel, struct SwMwIpcMessage *request);
+int SwMwCommServerReplyStatus(struct SwMwCommChannel *channel, struct SwMwIpcMessage *request,
+			      int status);
+int SwMwCommServerSetRequestValue(struct SwMwCommRequest *request, const void *value);
+}
