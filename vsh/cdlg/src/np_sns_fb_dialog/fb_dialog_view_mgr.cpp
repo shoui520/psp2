@@ -74,34 +74,34 @@ int FbViewBase::OnBgAction()
 	return 0;
 }
 
-void FbViewBase::SetParamInt1(int value)
+void FbViewBase::SetDialogCode(int code)
 {
-	(void)value;
+	(void)code;
 }
 
-void FbViewBase::SetParamInt2(int value)
+void FbViewBase::SetSubCode(int subCode)
 {
-	(void)value;
+	(void)subCode;
 }
 
-void FbViewBase::SetParamPtr1(const void *ptr)
+void FbViewBase::SetPermissionList(const void *permList)
 {
-	(void)ptr;
+	(void)permList;
 }
 
-void FbViewBase::SetParamPtr2(const void *ptr)
+void FbViewBase::SetTitleName(const void *titleName)
 {
-	(void)ptr;
+	(void)titleName;
 }
 
-void FbViewBase::SetParamPtr3(const void *ptr)
+void FbViewBase::SetAccount(const void *account)
 {
-	(void)ptr;
+	(void)account;
 }
 
-void FbViewBase::SetParamPtr4(const void *ptr)
+void FbViewBase::SetPassword(const void *password)
 {
-	(void)ptr;
+	(void)password;
 }
 
 /* FbViewManager */
@@ -332,19 +332,19 @@ int FbViewManager::OpenBg()
 	return FB_DIALOG_ERROR_INVALID_STATE;
 }
 
-int FbViewManager::ShowView(const IDParam &id, int p1, int p2, const void *p3, const void *p4,
-			    const void *p5, const void *p6)
+int FbViewManager::ShowView(const IDParam &id, int dialogCode, int subCode, const void *permList,
+			    const void *titleName, const void *account, const void *password)
 {
 	FbViewBase *v = FindView(id.GetIDHash());
 
 	if (v == NULL)
 		return FB_DIALOG_ERROR_INVALID_STATE;
-	v->SetParamInt1(p1);
-	v->SetParamInt2(p2);
-	v->SetParamPtr1(p3);
-	v->SetParamPtr2(p4);
-	v->SetParamPtr3(p5);
-	v->SetParamPtr4(p6);
+	v->SetDialogCode(dialogCode);
+	v->SetSubCode(subCode);
+	v->SetPermissionList(permList);
+	v->SetTitleName(titleName);
+	v->SetAccount(account);
+	v->SetPassword(password);
 	int isOverlay = v->IsOverlay();
 
 	if (m_stackDepth == 0 || m_stackDepth == 1) {

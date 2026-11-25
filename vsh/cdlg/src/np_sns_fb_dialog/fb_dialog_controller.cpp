@@ -27,7 +27,7 @@ typedef struct FbFeedDataHeader {
 	int32_t countOrVis;
 } FbFeedDataHeader;
 
-typedef struct FbFeedDataType1 {
+typedef struct FbFeedTrophyData {
 	FbFeedDataHeader hdr;
 	char story[257];
 	char caption[183];
@@ -35,14 +35,24 @@ typedef struct FbFeedDataType1 {
 	char comment[260];
 	int32_t trophyGrade;
 	int32_t trophyFlags;
-} FbFeedDataType1;
+} FbFeedTrophyData;
 
-typedef struct FbFeedDataType2 {
+typedef struct FbFeedActivityData {
 	FbFeedDataHeader hdr;
 	char story[257];
 	char comment[259];
 	int32_t activityFlags;
-} FbFeedDataType2;
+} FbFeedActivityData;
+
+typedef struct FbFeedBatchTrophyPayload {
+	FbFeedDataHeader hdr;
+	FbFeedBatchTrophyItem items[16];
+} FbFeedBatchTrophyPayload;
+
+typedef struct FbFeedBatchActivityPayload {
+	FbFeedDataHeader hdr;
+	FbFeedBatchActivityItem items[16];
+} FbFeedBatchActivityPayload;
 
 /* FbDialogBase */
 FbDialogBase::FbDialogBase()
@@ -108,7 +118,7 @@ int FbDialogBase::OnFinishTrigger()
 	return FB_DIALOG_ERROR_INVALID_STATE;
 }
 
-int FbDialogBase::OnJobDummyDone()
+int FbDialogBase::OnJobSyncDone()
 {
 	return FB_DIALOG_ERROR_INVALID_STATE;
 }
@@ -335,7 +345,7 @@ int FbDialogControllerBase::WaitEnd()
 
 int FbDialogControllerBase::OnFinishTrigger()
 {
-	return m_jobMgr->StartDummy();
+	return m_jobMgr->StartSyncBarrier();
 }
 
 int FbDialogControllerBase::SetDefaultBgColor()
@@ -447,7 +457,7 @@ int FbAccessTokenController::Start(const FbPluginStartParam *param, Plugin *plug
 	return ShowNotice(plugin);
 }
 
-int FbAccessTokenController::OnJobDummyDone()
+int FbAccessTokenController::OnJobSyncDone()
 {
 	if (m_aborting != 0) {
 		SetState(FB_STATE_DONE);
@@ -1017,9 +1027,9 @@ FbFeedController::FbFeedController()
 	sce_paf_memset(m_caption, 0, 181);
 	sce_paf_memset(m_comment, 0, 257);
 	for (int i = 0; i < 16; ++i)
-		sce_paf_memset(&m_batchItems3[i], 0, sizeof(m_batchItems3[i]));
+		sce_paf_memset(&m_batchTrophyItems[i], 0, sizeof(m_batchTrophyItems[i]));
 	for (int i = 0; i < 16; ++i)
-		sce_paf_memset(&m_batchItems4[i], 0, sizeof(m_batchItems4[i]));
+		sce_paf_memset(&m_batchActivityItems[i], 0, sizeof(m_batchActivityItems[i]));
 }
 
 FbFeedController::~FbFeedController()
@@ -1035,7 +1045,7 @@ int FbFeedController::StartFeedJob()
 	}
 	if (m_postType == 3 || m_postType == 4) {
 		return m_jobMgr->StartBatchPost(m_feedDataType, m_postType, m_batchCount,
-						m_batchItems3, m_batchItems4);
+						m_batchTrophyItems, m_batchActivityItems);
 	}
 	return FB_DIALOG_ERROR_INVALID_STATE;
 }
@@ -1084,44 +1094,46 @@ int FbFeedController::Start(const FbPluginStartParam *param, Plugin *plugin,
 
 	m_postType = hdr->postType;
 	if (m_postType == 1) {
-		const FbFeedDataType1 *d1 = (const FbFeedDataType1 *)param->feedData;
+		const FbFeedTrophyData *trophyData = (const FbFeedTrophyData *)param->feedData;
 
 		m_visibility = hdr->countOrVis;
-		sce_paf_strncpy(m_story, d1->story, 256);
-		sce_paf_strncpy(m_caption, d1->caption, 180);
-		m_rating = d1->rating;
-		sce_paf_strncpy(m_comment, d1->comment, 256);
-		m_trophyGrade = d1->trophyGrade;
-		m_trophyFlags = d1->trophyFlags;
+		sce_paf_strncpy(m_story, trophyData->story, 256);
+		sce_paf_strncpy(m_caption, trophyData->caption, 180);
+		m_rating = trophyData->rating;
+		sce_paf_strncpy(m_comment, trophyData->comment, 256);
+		m_trophyGrade = trophyData->trophyGrade;
+		m_trophyFlags = trophyData->trophyFlags;
 	} else if (m_postType == 2) {
-		const FbFeedDataType2 *d2 = (const FbFeedDataType2 *)param->feedData;
+		const FbFeedActivityData *activityData = (const FbFeedActivityData *)param->feedData;
 
 		m_visibility = hdr->countOrVis;
-		sce_paf_strncpy(m_story, d2->story, 256);
-		sce_paf_strncpy(m_comment, d2->comment, 256);
-		m_activityFlags = d2->activityFlags;
+		sce_paf_strncpy(m_story, activityData->story, 256);
+		sce_paf_strncpy(m_comment, activityData->comment, 256);
+		m_activityFlags = activityData->activityFlags;
 	} else if (m_postType == 3) {
 		int count = hdr->countOrVis;
 
 		if (count <= 0 || count > 16)
 			return FB_DIALOG_ERROR_INVALID_STATE;
 		m_batchCount = count;
-		const FbFeedBatchItem3 *src =
-			(const FbFeedBatchItem3 *)((const uint8_t *)param->feedData + 16);
+		const FbFeedBatchTrophyPayload *payload =
+			(const FbFeedBatchTrophyPayload *)param->feedData;
 
 		for (int i = 0; i < count; ++i)
-			sce_paf_memcpy(&m_batchItems3[i], &src[i], sizeof(FbFeedBatchItem3));
+			sce_paf_memcpy(&m_batchTrophyItems[i], &payload->items[i],
+				       sizeof(FbFeedBatchTrophyItem));
 	} else if (m_postType == 4) {
 		int count = hdr->countOrVis;
 
 		if (count <= 0 || count > 16)
 			return FB_DIALOG_ERROR_INVALID_STATE;
 		m_batchCount = count;
-		const FbFeedBatchItem4 *src =
-			(const FbFeedBatchItem4 *)((const uint8_t *)param->feedData + 16);
+		const FbFeedBatchActivityPayload *payload =
+			(const FbFeedBatchActivityPayload *)param->feedData;
 
 		for (int i = 0; i < count; ++i)
-			sce_paf_memcpy(&m_batchItems4[i], &src[i], sizeof(FbFeedBatchItem4));
+			sce_paf_memcpy(&m_batchActivityItems[i], &payload->items[i],
+				       sizeof(FbFeedBatchActivityItem));
 	} else {
 		return FB_DIALOG_ERROR_INVALID_STATE;
 	}
@@ -1136,7 +1148,7 @@ int FbFeedController::Start(const FbPluginStartParam *param, Plugin *plugin,
 	return ret;
 }
 
-int FbFeedController::OnJobDummyDone()
+int FbFeedController::OnJobSyncDone()
 {
 	if (m_aborting != 0) {
 		SetState(FB_STATE_DONE);

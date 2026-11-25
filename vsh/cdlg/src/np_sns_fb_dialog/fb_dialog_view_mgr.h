@@ -47,12 +47,12 @@ public:
 	virtual int IsOverlay() const;
 	virtual int SetBgColor(const paf::math::v4 &color);
 	virtual int OnBgAction();
-	virtual void SetParamInt1(int value);
-	virtual void SetParamInt2(int value);
-	virtual void SetParamPtr1(const void *ptr);
-	virtual void SetParamPtr2(const void *ptr);
-	virtual void SetParamPtr3(const void *ptr);
-	virtual void SetParamPtr4(const void *ptr);
+	virtual void SetDialogCode(int code);
+	virtual void SetSubCode(int subCode);
+	virtual void SetPermissionList(const void *permList);
+	virtual void SetTitleName(const void *titleName);
+	virtual void SetAccount(const void *account);
+	virtual void SetPassword(const void *password);
 
 	FbEventBus *m_bus;
 	paf::Plugin *m_plugin;
@@ -79,8 +79,8 @@ public:
 	int CloseBg();
 	int CloseAll();
 	int OpenBg();
-	int ShowView(const paf::IDParam &id, int p1, int p2, const void *p3, const void *p4,
-		     const void *p5, const void *p6);
+	int ShowView(const paf::IDParam &id, int dialogCode, int subCode, const void *permList,
+		     const void *titleName, const void *account, const void *password);
 
 	int ShowLogin(const void *titleName, const void *account, const void *password);
 	int ShowConfirmBind(const void *titleName);

@@ -110,7 +110,7 @@ FbScopedLock::~FbScopedLock()
 		m_mutex->Unlock();
 }
 
-/* Base FbDialogJob (also serves as DummyJob) */
+/* Base FbDialogJob (also serves as sync barrier job) */
 FbDialogJob::FbDialogJob(FbEventBus *bus)
 	: job::JobItem("FbDialogJob", NULL), m_bus(bus), m_requestId(0)
 {
@@ -316,143 +316,154 @@ public:
 		sce_paf_memset(&descResp, 0, sizeof(descResp));
 		sce_paf_memset(&shortTok, 0, sizeof(shortTok));
 
-		{
-			FbScopedLock lock(m_mutex);
+		do {
+			{
+				FbScopedLock lock(m_mutex);
 
-			if (IsCanceled()) {
-				ret = SNSFB_ERR_ABORTED;
-				goto out;
+				if (IsCanceled()) {
+					ret = SNSFB_ERR_ABORTED;
+					break;
+				}
+				if (m_requestId <= 0) {
+					ret = FB_DIALOG_ERROR_INVALID_STATE;
+					break;
+				}
 			}
-			if (m_requestId <= 0) {
-				ret = FB_DIALOG_ERROR_INVALID_STATE;
-				goto out;
+
+			sce_paf_memset(appIdStr, 0, sizeof(appIdStr));
+			sce_paf_snprintf(appIdStr, sizeof(appIdStr), "%llu", m_appId);
+
+			if (m_shortMode != 0) {
+				ret = SceNpSnsFacebook_B22D89FD(m_requestId, appIdStr, m_titleId,
+								NULL, &shortTok);
+				if (ret < 0)
+					break;
+				sce_paf_memset(m_tokenOut, 0, sizeof(*m_tokenOut));
+				m_tokenOut->expiration = shortTok.expiration;
+				sce_paf_strncpy(m_tokenOut->accessToken, shortTok.accessToken, 255);
+			} else {
+				ret = SceNpSnsFacebook_FD842B21(m_requestId, appIdStr, m_titleId,
+								NULL, m_tokenOut);
 			}
-		}
-
-		sce_paf_memset(appIdStr, 0, sizeof(appIdStr));
-		sce_paf_snprintf(appIdStr, sizeof(appIdStr), "%llu", m_appId);
-
-		if (m_shortMode != 0) {
-			ret = SceNpSnsFacebook_B22D89FD(m_requestId, appIdStr, m_titleId, NULL,
-							&shortTok);
 			if (ret < 0)
-				goto out;
-			sce_paf_memset(m_tokenOut, 0, sizeof(*m_tokenOut));
-			m_tokenOut->expiration = shortTok.expiration;
-			sce_paf_strncpy(m_tokenOut->accessToken, shortTok.accessToken, 255);
-		} else {
-			ret = SceNpSnsFacebook_FD842B21(m_requestId, appIdStr, m_titleId, NULL,
-							m_tokenOut);
-		}
-		if (ret < 0)
-			goto out;
+				break;
 
-		ret = SceNpSnsFacebook_C9ACC1C1(m_requestId);
-		if (ret < 0)
-			goto out;
-		m_requestId = 0;
-
-		if (m_permissions[0] == '\0') {
-			m_needPerms = 0;
-			goto check_cancel;
-		}
-
-		{
-			FbScopedLock lock(m_mutex);
-
-			if (IsCanceled()) {
-				ret = SNSFB_ERR_ABORTED;
-				goto out;
-			}
-			ret = CreateRequest(0);
+			ret = SceNpSnsFacebook_C9ACC1C1(m_requestId);
 			if (ret < 0)
-				goto out;
-		}
+				break;
+			m_requestId = 0;
 
-		ret = SceNpSnsFacebook_CB2ED352(m_requestId, m_tokenOut, m_permissions, &checkResp);
-		if (ret < 0)
-			goto out;
+			if (m_permissions[0] == '\0') {
+				m_needPerms = 0;
+				if (IsCanceled())
+					ret = SNSFB_ERR_ABORTED;
+				break;
+			}
 
-		ret = SceNpSnsFacebook_C9ACC1C1(m_requestId);
-		if (ret < 0)
-			goto out;
-		m_requestId = 0;
+			{
+				FbScopedLock lock(m_mutex);
 
-		if (sceClibStrnlen(checkResp.missing, sizeof(checkResp.missing)) != 0) {
-			m_needPerms = 1;
-			sce_paf_strncpy(m_missingPermsOut, checkResp.missing, 255);
-		}
+				if (IsCanceled()) {
+					ret = SNSFB_ERR_ABORTED;
+					break;
+				}
+				ret = CreateRequest(0);
+				if (ret < 0)
+					break;
+			}
 
-		if (m_needPerms != 0) {
-			const char *cursor = checkResp.missing;
-			int done = 0;
+			ret = SceNpSnsFacebook_CB2ED352(m_requestId, m_tokenOut, m_permissions,
+							&checkResp);
+			if (ret < 0)
+				break;
 
-			while (!done) {
-				{
-					FbScopedLock lock(m_mutex);
+			ret = SceNpSnsFacebook_C9ACC1C1(m_requestId);
+			if (ret < 0)
+				break;
+			m_requestId = 0;
 
-					if (IsCanceled()) {
-						ret = SNSFB_ERR_ABORTED;
-						goto out;
+			if (sceClibStrnlen(checkResp.missing, sizeof(checkResp.missing)) != 0) {
+				m_needPerms = 1;
+				sce_paf_strncpy(m_missingPermsOut, checkResp.missing, 255);
+			}
+
+			if (m_needPerms != 0) {
+				const char *cursor = checkResp.missing;
+				int done = 0;
+
+				while (!done) {
+					{
+						FbScopedLock lock(m_mutex);
+
+						if (IsCanceled()) {
+							ret = SNSFB_ERR_ABORTED;
+							break;
+						}
+						ret = CreateRequest(0);
+						if (ret < 0)
+							break;
 					}
-					ret = CreateRequest(0);
+
+					int locale = 1;
+					Framework *fw = Framework::Instance();
+
+					if (fw != NULL)
+						locale = fw->GetLocale();
+					ret = SceNpSnsFacebook_4A453D97(m_requestId, locale,
+									m_tokenOut, cursor,
+									&descResp);
 					if (ret < 0)
-						goto out;
-				}
-
-				int locale = 1;
-				Framework *fw = Framework::Instance();
-
-				if (fw != NULL)
-					locale = fw->GetLocale();
-				ret = SceNpSnsFacebook_4A453D97(m_requestId, locale, m_tokenOut,
-								cursor, &descResp);
-				if (ret < 0)
-					goto out;
-				ret = SceNpSnsFacebook_C9ACC1C1(m_requestId);
-				if (ret < 0)
-					goto out;
-				m_requestId = 0;
-
-				for (int i = 0; i < descResp.count; ++i) {
-					FbPermissionDesc item;
-
-					sce_paf_strncpy(item.name, descResp.items[i].name, 255);
-					sce_paf_strncpy(item.desc, descResp.items[i].desc, 255);
-					item.flag = descResp.items[i].flag;
-					m_permListOut->push_back(item);
-				}
-
-				int skipped = 0;
-
-				while (skipped < 12) {
-					int len = 0;
-
-					while (cursor[len] != '\0' &&
-					       (sceClibLookCtypeTable(cursor[len]) & 8) == 0 &&
-					       cursor[len] != ',')
-						++len;
-					if (cursor[len] == '\0') {
-						done = 1;
 						break;
-					}
-					while ((sceClibLookCtypeTable(cursor[len]) & 8) != 0 ||
-					       cursor[len] == ',')
-						++len;
-					if (cursor[len] == '\0') {
-						done = 1;
+					ret = SceNpSnsFacebook_C9ACC1C1(m_requestId);
+					if (ret < 0)
 						break;
+					m_requestId = 0;
+
+					for (int i = 0; i < descResp.count; ++i) {
+						FbPermissionDesc item;
+
+						sce_paf_strncpy(item.name, descResp.items[i].name,
+								255);
+						sce_paf_strncpy(item.desc, descResp.items[i].desc,
+								255);
+						item.flag = descResp.items[i].flag;
+						m_permListOut->push_back(item);
 					}
-					cursor += len;
-					++skipped;
+
+					int skipped = 0;
+
+					while (skipped < 12) {
+						int len = 0;
+
+						while (cursor[len] != '\0' &&
+						       (sceClibLookCtypeTable(cursor[len]) & 8) ==
+							       0 &&
+						       cursor[len] != ',')
+							++len;
+						if (cursor[len] == '\0') {
+							done = 1;
+							break;
+						}
+						while ((sceClibLookCtypeTable(cursor[len]) & 8) !=
+							       0 ||
+						       cursor[len] == ',')
+							++len;
+						if (cursor[len] == '\0') {
+							done = 1;
+							break;
+						}
+						cursor += len;
+						++skipped;
+					}
 				}
+				if (ret < 0)
+					break;
 			}
-		}
 
-check_cancel:
-		if (IsCanceled())
-			ret = SNSFB_ERR_ABORTED;
-out:
+			if (IsCanceled())
+				ret = SNSFB_ERR_ABORTED;
+		} while (0);
+
 		if (m_requestId > 0)
 			SceNpSnsFacebook_C9ACC1C1(m_requestId);
 		return ret;
@@ -513,32 +524,33 @@ public:
 		int ret;
 
 		sce_paf_memset(&shortTok, 0, sizeof(shortTok));
-		if (m_requestId <= 0) {
-			ret = FB_DIALOG_ERROR_INVALID_STATE;
-			goto out;
-		}
-		sce_paf_memset(appIdStr, 0, sizeof(appIdStr));
-		sce_paf_snprintf(appIdStr, sizeof(appIdStr), "%llu", m_appId);
-		if (m_shortMode != 0) {
-			ret = SceNpSnsFacebook_B22D89FD(m_requestId, appIdStr, m_titleId,
-							m_permissions, &shortTok);
-			if (ret < 0)
-				goto out;
-			sce_paf_memset(m_tokenOut, 0, sizeof(*m_tokenOut));
-			m_tokenOut->expiration = shortTok.expiration;
-			sce_paf_strncpy(m_tokenOut->accessToken, shortTok.accessToken, 255);
-		} else {
-			ret = SceNpSnsFacebook_FD842B21(m_requestId, appIdStr, m_titleId,
-							m_permissions, m_tokenOut);
-		}
-		if (ret >= 0) {
-			ret = SceNpSnsFacebook_C9ACC1C1(m_requestId);
-			if (ret >= 0) {
-				m_requestId = 0;
-				return ret;
+		do {
+			if (m_requestId <= 0) {
+				ret = FB_DIALOG_ERROR_INVALID_STATE;
+				break;
 			}
-		}
-out:
+			sce_paf_memset(appIdStr, 0, sizeof(appIdStr));
+			sce_paf_snprintf(appIdStr, sizeof(appIdStr), "%llu", m_appId);
+			if (m_shortMode != 0) {
+				ret = SceNpSnsFacebook_B22D89FD(m_requestId, appIdStr, m_titleId,
+								m_permissions, &shortTok);
+				if (ret < 0)
+					break;
+				sce_paf_memset(m_tokenOut, 0, sizeof(*m_tokenOut));
+				m_tokenOut->expiration = shortTok.expiration;
+				sce_paf_strncpy(m_tokenOut->accessToken, shortTok.accessToken, 255);
+			} else {
+				ret = SceNpSnsFacebook_FD842B21(m_requestId, appIdStr, m_titleId,
+								m_permissions, m_tokenOut);
+			}
+			if (ret >= 0) {
+				ret = SceNpSnsFacebook_C9ACC1C1(m_requestId);
+				if (ret >= 0) {
+					m_requestId = 0;
+					return ret;
+				}
+			}
+		} while (0);
 		if (m_requestId > 0)
 			SceNpSnsFacebook_C9ACC1C1(m_requestId);
 		return ret;
@@ -595,35 +607,38 @@ public:
 	{
 		int ret = 0;
 
-		if (m_requestId <= 0) {
-			ret = FB_DIALOG_ERROR_INVALID_STATE;
-			goto out;
-		}
-		if (m_postType == 1) {
-			typedef int (*Post1Fn)(int, int, int, const char *, const char *, int,
-					       const char *, int, int, int *);
-			ret = ((Post1Fn)SceNpSnsFacebook_9DE0B1BC)(
-				m_index, m_requestId, m_visibility, m_story, m_caption, m_rating,
-				m_comment, m_trophyGrade, m_trophyFlags, &m_subResult);
-			if (ret < 0)
-				goto out;
-		} else if (m_postType == 2) {
-			typedef int (*Post2Fn)(int, int, int, const char *, const char *, int,
-					       int *);
-			ret = ((Post2Fn)SceNpSnsFacebook_C10D390C)(
-				m_index, m_requestId, m_visibility, m_story, m_comment,
-				m_activityFlags, &m_subResult);
-			if (ret < 0)
-				goto out;
-		} else {
-			goto out;
-		}
-		ret = SceNpSnsFacebook_8770E114(m_index, m_requestId);
-		if (ret >= 0) {
-			m_requestId = 0;
-			return ret;
-		}
-out:
+		do {
+			if (m_requestId <= 0) {
+				ret = FB_DIALOG_ERROR_INVALID_STATE;
+				break;
+			}
+			if (m_postType == 1) {
+				typedef int (*PostTrophyFn)(int, int, int, const char *,
+							    const char *, int, const char *, int,
+							    int, int *);
+				ret = ((PostTrophyFn)SceNpSnsFacebook_9DE0B1BC)(
+					m_index, m_requestId, m_visibility, m_story, m_caption,
+					m_rating, m_comment, m_trophyGrade, m_trophyFlags,
+					&m_subResult);
+				if (ret < 0)
+					break;
+			} else if (m_postType == 2) {
+				typedef int (*PostActivityFn)(int, int, int, const char *,
+							      const char *, int, int *);
+				ret = ((PostActivityFn)SceNpSnsFacebook_C10D390C)(
+					m_index, m_requestId, m_visibility, m_story, m_comment,
+					m_activityFlags, &m_subResult);
+				if (ret < 0)
+					break;
+			} else {
+				break;
+			}
+			ret = SceNpSnsFacebook_8770E114(m_index, m_requestId);
+			if (ret >= 0) {
+				m_requestId = 0;
+				return ret;
+			}
+		} while (0);
 		if (m_requestId > 0)
 			SceNpSnsFacebook_8770E114(m_index, m_requestId);
 		return ret;
@@ -654,10 +669,13 @@ out:
 /* Job 4b: Batch feed post (up to 16 items) */
 class FbBatchPostJob : public FbDialogJob {
 public:
-	__attribute__((noinline)) FbBatchPostJob(FbEventBus *bus, FbMutex *mutex, int index, int postType, int count,
-		       const FbFeedBatchItem3 *items3, const FbFeedBatchItem4 *items4)
+	__attribute__((noinline)) FbBatchPostJob(FbEventBus *bus, FbMutex *mutex, int index,
+						 int postType, int count,
+						 const FbFeedBatchTrophyItem *trophyItems,
+						 const FbFeedBatchActivityItem *activityItems)
 		: FbDialogJob(bus), m_mutex(mutex), m_index(index), m_postType(postType),
-		  m_count(count), m_items3(items3), m_items4(items4), m_subResult(0)
+		  m_count(count), m_trophyItems(trophyItems), m_activityItems(activityItems),
+		  m_subResult(0)
 	{
 	}
 
@@ -673,13 +691,13 @@ public:
 
 	virtual int Run()
 	{
-		int ret;
+		int ret = 0;
 
 		if (m_postType == 3) {
-			if (m_count <= 0 || m_count > 16 || m_items3 == NULL)
+			if (m_count <= 0 || m_count > 16 || m_trophyItems == NULL)
 				return FB_DIALOG_ERROR_INVALID_STATE;
 		} else if (m_postType == 4) {
-			if (m_count <= 0 || m_count > 16 || m_items4 == NULL)
+			if (m_count <= 0 || m_count > 16 || m_activityItems == NULL)
 				return FB_DIALOG_ERROR_INVALID_STATE;
 		} else {
 			return FB_DIALOG_ERROR_INVALID_STATE;
@@ -691,46 +709,46 @@ public:
 
 				if (IsCanceled()) {
 					ret = SNSFB_ERR_ABORTED;
-					goto out;
+					break;
 				}
 				ret = CreateRequest(m_index);
 				if (ret < 0)
-					goto out;
+					break;
 			}
 			if (m_postType == 3) {
-				typedef int (*Post1Fn)(int, int, int, const char *, const char *,
-						       int, const char *, int, int, int *);
-				const FbFeedBatchItem3 *it = &m_items3[i];
+				typedef int (*PostTrophyFn)(int, int, int, const char *,
+							    const char *, int, const char *, int,
+							    int, int *);
+				const FbFeedBatchTrophyItem *it = &m_trophyItems[i];
 
-				ret = ((Post1Fn)SceNpSnsFacebook_9DE0B1BC)(
+				ret = ((PostTrophyFn)SceNpSnsFacebook_9DE0B1BC)(
 					m_index, m_requestId, it->visibility, it->story,
 					it->caption, it->rating, it->comment, it->trophyGrade,
 					it->trophyFlags, &m_subResult);
 				if (ret < 0)
-					goto out;
+					break;
 			} else if (m_postType == 4) {
-				typedef int (*Post2Fn)(int, int, int, const char *, const char *,
-						       int, int *);
-				const FbFeedBatchItem4 *it = &m_items4[i];
+				typedef int (*PostActivityFn)(int, int, int, const char *,
+							      const char *, int, int *);
+				const FbFeedBatchActivityItem *it = &m_activityItems[i];
 
-				ret = ((Post2Fn)SceNpSnsFacebook_C10D390C)(
+				ret = ((PostActivityFn)SceNpSnsFacebook_C10D390C)(
 					m_index, m_requestId, it->visibility, it->story,
 					it->comment, it->activityFlags, &m_subResult);
 				if (ret < 0)
-					goto out;
+					break;
 			} else {
 				ret = FB_DIALOG_ERROR_INVALID_STATE;
-				goto out;
+				break;
 			}
 			ret = SceNpSnsFacebook_8770E114(m_index, m_requestId);
 			if (ret < 0)
-				goto out;
+				break;
 			m_requestId = 0;
 		}
 
-		if (IsCanceled())
+		if (ret >= 0 && IsCanceled())
 			ret = SNSFB_ERR_ABORTED;
-out:
 		if (m_requestId > 0)
 			SceNpSnsFacebook_8770E114(m_index, m_requestId);
 		return ret;
@@ -749,8 +767,8 @@ out:
 	int m_index;
 	int m_postType;
 	int m_count;
-	const FbFeedBatchItem3 *m_items3;
-	const FbFeedBatchItem4 *m_items4;
+	const FbFeedBatchTrophyItem *m_trophyItems;
+	const FbFeedBatchActivityItem *m_activityItems;
 	int m_subResult;
 };
 
@@ -859,19 +877,20 @@ int FbJobManager::StartPostFeed(int index, int postType, int visibility, const c
 }
 
 int FbJobManager::StartBatchPost(int index, int postType, int count,
-				 const FbFeedBatchItem3 *items3, const FbFeedBatchItem4 *items4)
+				 const FbFeedBatchTrophyItem *trophyItems,
+				 const FbFeedBatchActivityItem *activityItems)
 {
 	if (m_busy != 0)
 		return FB_DIALOG_ERROR_INVALID_STATE;
-	common::SharedPtr<job::JobItem> item(
-		new FbBatchPostJob(m_bus, m_mutex, index, postType, count, items3, items4));
+	common::SharedPtr<job::JobItem> item(new FbBatchPostJob(
+		m_bus, m_mutex, index, postType, count, trophyItems, activityItems));
 
 	m_queue->Enqueue(item);
 	m_busy = 1;
 	return 0;
 }
 
-int FbJobManager::StartDummy()
+int FbJobManager::StartSyncBarrier()
 {
 	if (m_busy != 0)
 		return FB_DIALOG_ERROR_INVALID_STATE;
@@ -906,7 +925,7 @@ int FbJobManager::OnEvent(int event, void *arg)
 		return m_owner->OnJobPostFeedDone(a[0], a[1]);
 	case 5:
 		m_busy = 0;
-		return m_owner->OnJobDummyDone();
+		return m_owner->OnJobSyncDone();
 	default:
 		return 0;
 	}

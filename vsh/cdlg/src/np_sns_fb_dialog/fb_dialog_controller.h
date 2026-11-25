@@ -47,7 +47,7 @@ public:
 	virtual int Abort();
 	virtual int WaitEnd();
 	virtual int OnFinishTrigger();
-	virtual int OnJobDummyDone();
+	virtual int OnJobSyncDone();
 	virtual int OnBgAction();
 	virtual int OnLoginCancel();
 	virtual int OnLoginSubmit(const FbAccountId *account, const char *password);
@@ -116,7 +116,7 @@ public:
 
 	virtual int Start(const FbPluginStartParam *param, paf::Plugin *plugin,
 			  FbDialogFinishCallback cb);
-	virtual int OnJobDummyDone();
+	virtual int OnJobSyncDone();
 	virtual int OnBgAction();
 	virtual int OnLoginCancel();
 	virtual int OnLoginSubmit(const FbAccountId *account, const char *password);
@@ -174,7 +174,7 @@ public:
 
 	virtual int Start(const FbPluginStartParam *param, paf::Plugin *plugin,
 			  FbDialogFinishCallback cb);
-	virtual int OnJobDummyDone();
+	virtual int OnJobSyncDone();
 	virtual int OnInputCancel();
 	virtual int OnInputSubmit(const FbAccountId *account, const char *password);
 	virtual int OnWaitCancel();
@@ -206,8 +206,8 @@ public:
 	int m_trophyFlags;
 	int m_activityFlags;
 	int m_batchCount;
-	FbFeedBatchItem3 m_batchItems3[16];
-	FbFeedBatchItem4 m_batchItems4[16];
+	FbFeedBatchTrophyItem m_batchTrophyItems[16];
+	FbFeedBatchActivityItem m_batchActivityItems[16];
 };
 
 /* Long access token controller (vtable 0x81010800) */

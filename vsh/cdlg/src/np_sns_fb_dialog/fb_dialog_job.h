@@ -73,7 +73,7 @@ typedef struct FbPermissionDesc {
 } FbPermissionDesc;
 
 /* Batch feed post items (716 bytes and 524 bytes) */
-typedef struct FbFeedBatchItem3 {
+typedef struct FbFeedBatchTrophyItem {
 	int32_t visibility;
 	char story[257];
 	char caption[183];
@@ -81,14 +81,14 @@ typedef struct FbFeedBatchItem3 {
 	char comment[260];
 	int32_t trophyGrade;
 	int32_t trophyFlags;
-} FbFeedBatchItem3;
+} FbFeedBatchTrophyItem;
 
-typedef struct FbFeedBatchItem4 {
+typedef struct FbFeedBatchActivityItem {
 	int32_t visibility;
 	char story[257];
 	char comment[259];
 	int32_t activityFlags;
-} FbFeedBatchItem4;
+} FbFeedBatchActivityItem;
 
 /* Base async job item ("FbDialogJob") */
 class FbDialogJob : public paf::job::JobItem {
@@ -126,9 +126,10 @@ public:
 	int StartPostFeed(int index, int postType, int visibility, const char *story,
 			  const char *caption, const char *comment, int rating, int trophyGrade,
 			  int trophyFlags, int activityFlags);
-	int StartBatchPost(int index, int postType, int count, const FbFeedBatchItem3 *items3,
-			   const FbFeedBatchItem4 *items4);
-	int StartDummy();
+	int StartBatchPost(int index, int postType, int count,
+			   const FbFeedBatchTrophyItem *trophyItems,
+			   const FbFeedBatchActivityItem *activityItems);
+	int StartSyncBarrier();
 
 	int m_aborting;
 	FbEventBus *m_bus;
@@ -142,7 +143,7 @@ public:
 class FbJobCallbackTarget {
 public:
 	virtual ~FbJobCallbackTarget() {}
-	virtual int OnJobDummyDone() = 0;
+	virtual int OnJobSyncDone() = 0;
 	virtual int OnJobAuthCheckDone(int result, int signedIn, int chatAllowed) = 0;
 	virtual int OnJobBindDone(int result, int step) = 0;
 	virtual int OnJobCheckPermissionsDone(int result, int needPerms) = 0;

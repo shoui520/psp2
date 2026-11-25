@@ -196,12 +196,12 @@ public:
 		return 0;
 	}
 
-	virtual void SetParamPtr3(const void *ptr)
+	virtual void SetAccount(const void *ptr)
 	{
 		m_accountParam = (const FbAccountId *)ptr;
 	}
 
-	virtual void SetParamPtr4(const void *ptr)
+	virtual void SetPassword(const void *ptr)
 	{
 		m_passwordParam = (const char *)ptr;
 	}
@@ -561,7 +561,7 @@ public:
 		return ret;
 	}
 
-	virtual void SetParamPtr2(const void *ptr)
+	virtual void SetTitleName(const void *ptr)
 	{
 		if (ptr != NULL)
 			sce_paf_strncpy(m_titleName, (const char *)ptr, sizeof(m_titleName) - 1);
@@ -755,12 +755,12 @@ public:
 		return 0;
 	}
 
-	virtual void SetParamPtr1(const void *ptr)
+	virtual void SetPermissionList(const void *ptr)
 	{
 		m_permList = (const vector<FbPermissionDesc> *)ptr;
 	}
 
-	virtual void SetParamPtr2(const void *ptr)
+	virtual void SetTitleName(const void *ptr)
 	{
 		if (ptr != NULL)
 			sce_paf_strncpy(m_titleName, (const char *)ptr, sizeof(m_titleName) - 1);
@@ -862,7 +862,7 @@ public:
 		return 0;
 	}
 
-	virtual void SetParamPtr2(const void *ptr)
+	virtual void SetTitleName(const void *ptr)
 	{
 		if (ptr != NULL)
 			sce_paf_strncpy(m_titleName, (const char *)ptr, sizeof(m_titleName) - 1);
@@ -1048,7 +1048,7 @@ public:
 		return 1;
 	}
 
-	virtual void SetParamInt1(int value)
+	virtual void SetDialogCode(int value)
 	{
 		m_error = value;
 	}
@@ -1076,7 +1076,7 @@ public:
 	};
 
 	FbRetryServerView(FbEventBus *bus, Plugin *plugin)
-		: FbViewBase(bus, plugin), m_dialogId(0), m_error(0), m_param2(0)
+		: FbViewBase(bus, plugin), m_dialogId(0), m_error(0), m_subCode(0)
 	{
 		m_id = IDParam(s_empty, FB_VIEW_RETRY_SERVER_ID);
 	}
@@ -1131,19 +1131,19 @@ public:
 		return 1;
 	}
 
-	virtual void SetParamInt1(int value)
+	virtual void SetDialogCode(int value)
 	{
 		m_error = value;
 	}
 
-	virtual void SetParamInt2(int value)
+	virtual void SetSubCode(int value)
 	{
-		m_param2 = value;
+		m_subCode = value;
 	}
 
 	int m_dialogId;
 	int m_error;
-	int m_param2;
+	int m_subCode;
 };
 
 class FbFeedConfirmView : public FbViewBase {
@@ -1220,12 +1220,12 @@ public:
 		return 1;
 	}
 
-	virtual void SetParamInt1(int value)
+	virtual void SetDialogCode(int value)
 	{
 		m_error = value;
 	}
 
-	virtual void SetParamInt2(int value)
+	virtual void SetSubCode(int value)
 	{
 		m_step = value;
 	}
@@ -1254,7 +1254,7 @@ public:
 	};
 
 	FbRetryAuthView(FbEventBus *bus, Plugin *plugin)
-		: FbViewBase(bus, plugin), m_dialogId(0), m_error(0), m_param2(0)
+		: FbViewBase(bus, plugin), m_dialogId(0), m_error(0), m_subCode(0)
 	{
 		m_id = IDParam(s_empty, FB_VIEW_RETRY_AUTH_ID);
 	}
@@ -1309,19 +1309,19 @@ public:
 		return 1;
 	}
 
-	virtual void SetParamInt1(int value)
+	virtual void SetDialogCode(int value)
 	{
 		m_error = value;
 	}
 
-	virtual void SetParamInt2(int value)
+	virtual void SetSubCode(int value)
 	{
-		m_param2 = value;
+		m_subCode = value;
 	}
 
 	int m_dialogId;
 	int m_error;
-	int m_param2;
+	int m_subCode;
 };
 
 class FbChatRestrictView : public FbViewBase {
@@ -1398,7 +1398,7 @@ public:
 		return 1;
 	}
 
-	virtual void SetParamInt1(int value)
+	virtual void SetDialogCode(int value)
 	{
 		m_error = value;
 	}
@@ -1429,7 +1429,7 @@ public:
 	};
 
 	FbNoticeView(FbEventBus *bus, Plugin *plugin)
-		: FbViewBase(bus, plugin), m_dialogId(0), m_error((SceInt32)0x80106101), m_param2(0)
+		: FbViewBase(bus, plugin), m_dialogId(0), m_error((SceInt32)0x80106101), m_subCode(0)
 	{
 		m_id = IDParam(s_empty, FB_VIEW_NOTICE_ID);
 	}
@@ -1483,19 +1483,19 @@ public:
 		return 1;
 	}
 
-	virtual void SetParamInt1(int value)
+	virtual void SetDialogCode(int value)
 	{
 		m_error = value;
 	}
 
-	virtual void SetParamInt2(int value)
+	virtual void SetSubCode(int value)
 	{
-		m_param2 = value;
+		m_subCode = value;
 	}
 
 	int m_dialogId;
 	int m_error;
-	int m_param2;
+	int m_subCode;
 };
 
 /* View factories */
