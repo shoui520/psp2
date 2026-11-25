@@ -2213,18 +2213,25 @@ s32 sceImpose_driver_24FD7BCF(s32 *lang, s32 *button) __attribute__((alias("sceI
 
 s32 sceImposeSetLanguageMode(s32 lang, s32 button)
 {
-    if ((u32)lang >= 12u || (u32)button >= 2u) {
-        return (s32)0x80000107;
+    if ((u32)lang >= 12u) {
+        lang = IMP(0x100);
     }
-    s32 intr = sceKernelCpuSuspendIntr();
-    IMP(0x314) = lang;
-    IMP(0x318) = button;
-    if (IMP(0x104) == 0 && (IMP(0x20) != lang || IMP(0x24) != button)) {
-        IMP(0x100) = lang;
-        IMP(0x24) = button;
-        imposeSetEventFlag(0x200);
+    if ((u32)button >= 2u) {
+        return (s32)0x800001FE;
     }
-    sceKernelCpuResumeIntr(intr);
+    if (IMP(0x310) == 1) {
+        if (IMP(0x314) != lang || IMP(0x318) != button) {
+            IMP(0x310) = 1;
+            IMP(0x314) = lang;
+            IMP(0x318) = button;
+        }
+    } else {
+        if (IMP(0x20) != lang || IMP(0x24) != button) {
+            IMP(0x310) = 1;
+            IMP(0x314) = lang;
+            IMP(0x318) = button;
+        }
+    }
     return 0;
 }
 

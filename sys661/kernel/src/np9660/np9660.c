@@ -306,11 +306,11 @@ int sceNp9660_driver_B925CA6C(void);
 int sceNp9660_driver_7A05EB3C(int *out);
 
 /* .rodata tables */
-static const u8 g_ro_8690[12] = {
+static const u8 g_npumdSectorMap[12] = {
     0x10, 0x00, 0x00, 0x00, 0x11, 0x10, 0x7c, 0x11, 0x11, 0x7d, 0x00, 0x00
 };
 
-static const u8 g_npumd_pub_8784[40] = {
+static const u8 g_npumd_pub[40] = {
     0x01, 0x21, 0xea, 0x6e, 0xcd, 0xb2, 0x3a, 0x3e,
     0x23, 0x75, 0x67, 0x1c, 0x53, 0x62, 0xe8, 0xe2,
     0x8b, 0x1e, 0x78, 0x3b, 0x1a, 0x27, 0x32, 0x15,
@@ -318,7 +318,7 @@ static const u8 g_npumd_pub_8784[40] = {
     0xac, 0x3b, 0x11, 0x06, 0xaf, 0xb4, 0xec, 0x3b,
 };
 
-static const u8 g_clz_tab_87d4[256] = {
+static const u8 g_clz_tab[256] = {
     0,1,2,2,3,3,3,3,4,4,4,4,4,4,4,4,
     5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,
     6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,
@@ -337,11 +337,11 @@ static const u8 g_clz_tab_87d4[256] = {
     8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,
 };
 
-static const char g_dummy_disc_id_8940[36] = "ULJS-00001|CCCD9317C815B9F5|0001";
+static const char g_dummy_disc_id[36] = "ULJS-00001|CCCD9317C815B9F5|0001";
 
 /* .data */
-static int g_data_89c0 = 2;
-static int g_data_89c4 = 1;
+static int g_np9660InitMode = 2;
+static int g_np9660GlobalFlag = 1;
 static struct {
     int size;
     const char *name;
@@ -351,7 +351,7 @@ static struct {
     int busy;
     void *next;
     int reserved[9];
-} g_sysevent_89c8 = {
+} g_sysevent = {
     0x40,
     "SceUmdMedia",
     0x00ffff00,
@@ -361,54 +361,54 @@ static struct {
     NULL,
     { 0, 0, 0, 0, 0, 0, 0, 0, 0 }
 };
-static int g_data_8a08 = 0x0006c0bf;
-static int g_data_8a0c = 0x0006c0bf;
-static int g_data_8a10 = 0x70;
-static int g_data_8a14 = 0x6ed;
-static int g_data_8a18 = 0x23d;
+static int g_np9660EmuParam0 = 0x0006c0bf;
+static int g_np9660EmuParam1 = 0x0006c0bf;
+static int g_np9660EmuParam2 = 0x70;
+static int g_np9660EmuParam3 = 0x6ed;
+static int g_np9660EmuParam4 = 0x23d;
 
 /* .bss */
-static u32 *g_bss_8a20;
-static int g_bss_8a24;
-static void *g_bss_8a28;
-static u8 g_bss_8a2c[64];
-static u8 g_bss_8a6c[16];
-static u8 g_bss_8a7c[16];
-static int g_bss_8a8c;
-static int g_bss_8a90;
-static int g_bss_8a94;
-static int g_bss_8a98;
-static int g_active_mode_8a9c;
-static int g_drive_status_8aa0;
-static int g_error_status_8aa4;
-static SceUID g_umd_cbid_8aa8;
-static SceUID g_mediaman_evf_8aac;
-static char g_assign_dev_8ab0[32];
-static int g_umdman_suspend_err_8ad0;
-static int g_umdman_init_res_8ad4;
-static SceUID g_mount_thid_8ad8;
-static SceUID g_umdman_evf_8adc;
-static int g_sysevent_reg_8ae0;
-static int g_umdman_resume_flag_8ae4;
-static int g_umdman_state_8ae8;
-static int g_ins_ej_id_8aec;
-static int g_ins_ej_gp_8af0;
-static void *g_ins_ej_arg_8af4;
-static int (*g_ins_ej_cb_8af8)(int, void *, int);
-static int g_umdman_cb_gp_8afc;
-static void *g_umdman_cb_arg_8b00;
-static void (*g_umdman_cb_8b04)(int);
-static int g_np9660_cb_gp_8b08;
-static void (*g_np9660_cb_8b0c)(u32, u32, u32, u32, u32, u32);
-static u32 g_np9660_err_8b10[6];
-static int g_mount_status_8b28;
-static int g_replace_permit_8b2c;
-static int g_last_mount_err_8b30;
-static SceUID g_cur_mutex_8b34;
-static SceUID g_nc_mutex_8b38;
-static SceUID g_main_mutex_8b3c;
-static SceUID g_fpl_8b40;
-static void *g_fpl_block_8b44;
+static u32 *g_np9660TablePtr;
+static int g_np9660TableSize;
+static void *g_np9660IoBuf;
+static u8 g_np9660WorkBuf[64];
+static u8 g_np9660KeyA[16];
+static u8 g_np9660KeyB[16];
+static int g_np9660StateA;
+static int g_np9660StateB;
+static int g_np9660StateC;
+static int g_np9660StateD;
+static int g_active_mode;
+static int g_drive_status;
+static int g_error_status;
+static SceUID g_umd_cbid;
+static SceUID g_mediaman_evf;
+static char g_assign_dev[32];
+static int g_umdman_suspend_err;
+static int g_umdman_init_res;
+static SceUID g_mount_thid;
+static SceUID g_umdman_evf;
+static int g_sysevent_reg;
+static int g_umdman_resume_flag;
+static int g_umdman_state;
+static int g_ins_ej_id;
+static int g_ins_ej_gp;
+static void *g_ins_ej_arg;
+static int (*g_ins_ej_cb)(int, void *, int);
+static int g_umdman_cb_gp;
+static void *g_umdman_cb_arg;
+static void (*g_umdman_cb)(int);
+static int g_np9660_cb_gp;
+static void (*g_np9660_cb)(u32, u32, u32, u32, u32, u32);
+static u32 g_np9660_err[6];
+static int g_mount_status;
+static int g_replace_permit;
+static int g_last_mount_err;
+static SceUID g_cur_mutex;
+static SceUID g_nc_mutex;
+static SceUID g_main_mutex;
+static SceUID g_fpl;
+static void *g_fpl_block;
 static struct {
     int fd;              /* 0x00 (0x8b48) */
     int total_sectors;   /* 0x04 (0x8b4c) */
@@ -428,69 +428,69 @@ static struct {
     u8 flags_42;         /* 0x42 (0x8b8a) */
     u8 reserved_43;           /* 0x43 (0x8b8b) */
     u32 reserved_44[5];       /* 0x44..0x57 (0x8b8c..0x8b9f) */
-} g_umd_ctx_8b48;
+} g_umd_ctx;
 static struct {
     int in_use;
     int flags;
-} g_handles_8ba0[8];
-static int g_mutex_owner_pri_8be0;
-static u32 g_part_info_8be4[4];
-static void *g_cache_buf_8bf4;
-static int g_cached_blk_8bf8;
+} g_handles[8];
+static int g_mutex_owner_pri;
+static u32 g_part_info[4];
+static void *g_cache_buf;
+static int g_cached_blk;
 
-static u32 g_emu_8bfc;
-static u32 g_emu_8c00;
-static u32 g_emu_8c04;
-static s64 g_emu_time_8c08;
-static s64 g_emu_time_8c10;
-static s64 g_emu_time_8c18;
-static u32 g_emu_8c20;
-static int g_emu_8c24;
-static u32 g_emu_8c28;
-static int g_emu_8c2c;
-static u32 g_emu_8c30;
-static u8 g_emu_flags_8c34;
-static u8 g_pvd_buf_8c38[0x800];
-static SceUID g_dec_thid_9438;
-static SceUID g_dec_mbx_943c;
-static SceUID g_dec_evf_9440;
-static int g_ring0_idx_9444;
-static int g_ring1_idx_9448;
-static u32 g_ring_elapsed_lo_9450;
-static int g_ring_elapsed_hi_9454;
+static u32 g_emuReadStateA;
+static u32 g_emuReadStateB;
+static u32 g_emuReadStateC;
+static s64 g_emuTimeStart;
+static s64 g_emuTimeLast;
+static s64 g_emuTimeAccum;
+static u32 g_emuSeekParamA;
+static int g_emuSeekParamB;
+static u32 g_emuSeekParamC;
+static int g_emuSeekParamD;
+static u32 g_emuSeekParamE;
+static u8 g_emu_flags;
+static u8 g_pvd_buf[0x800];
+static SceUID g_dec_thid;
+static SceUID g_dec_mbx;
+static SceUID g_dec_evf;
+static int g_ring0_idx;
+static int g_ring1_idx;
+static u32 g_ring_elapsed_lo;
+static int g_ring_elapsed_hi;
 static struct {
     u8 valid;
     u8 pad[3];
     u32 lba;
-} g_ring0_9480[0xe8];
+} g_ring0[0xe8];
 static struct {
     u8 valid;
     u8 pad[3];
     u32 lba;
-} g_ring1_9bc0[8];
-static u32 g_emu_9c00;
-static int g_emu_9c04;
-static u32 g_emu_9c08;
-static u32 g_emu_9c0c;
-static s64 g_emu_time_9c10;
-static s64 g_emu_time_9c18;
-static u16 g_emu_rate1_9c20;
-static u16 g_emu_rate2_9c22;
-static int g_emu_9c24;
+} g_ring1[8];
+static u32 g_emuStatA;
+static int g_emuStatB;
+static u32 g_emuStatC;
+static u32 g_emuStatD;
+static s64 g_emuStatTimeA;
+static s64 g_emuStatTimeB;
+static u16 g_emu_rate1;
+static u16 g_emu_rate2;
+static int g_emuStatE;
 
 /* 0x0000 */
 int NOINLINE np9660OpenImage(const char *path, int flag, int *out_err)
 {
     u32 info[6];
     sceKernelMemset(info, 0, sizeof(info));
-    g_bss_8a20 = info;
+    g_np9660TablePtr = info;
     int r = np9660OpenImageInternal(path, flag);
     if (r != 0) {
         if (info[0] == 0 || (info[0] == 0x80550914U && flag != 0)) {
             info[0] = (u32)r;
         }
     }
-    g_bss_8a20 = NULL;
+    g_np9660TablePtr = NULL;
     if (out_err != NULL) {
         *out_err = (int)info[1];
     }
@@ -513,7 +513,7 @@ static NOINLINE int np9660OpenImageInternal(const char *path, int flag)
     void *work_buf;
 
     for (int i = 0; i < 0x28; i++) {
-        pub[i] = g_npumd_pub_8784[i];
+        pub[i] = g_npumd_pub[i];
     }
     work_buf = np9660GetFplBlock();
     int s4 = -1;
@@ -566,10 +566,10 @@ static NOINLINE int np9660OpenImageInternal(const char *path, int flag)
         goto fail;
     }
     int cached_match = 0;
-    if (memcmp(g_bss_8a2c, hdr + 0x10, 0x30) == 0 && memcmp(g_bss_8a7c, hdr + 0xa0, 0x10) == 0) {
+    if (memcmp(g_np9660WorkBuf, hdr + 0x10, 0x30) == 0 && memcmp(g_np9660KeyB, hdr + 0xa0, 0x10) == 0) {
         cached_match = 1;
     } else {
-        if (g_bss_8a2c[0] != 0) {
+        if (g_np9660WorkBuf[0] != 0) {
             if (np9660GetReplacePermit() != 1) {
                 s0 = (int)0x80210007;
                 goto fail;
@@ -581,15 +581,15 @@ static NOINLINE int np9660OpenImageInternal(const char *path, int flag)
     }
     s0 = np9660LoadRifKey(vkey, ((const SceNp9660ImgHdr *)hdr)->content_id, ((const SceNp9660ImgHdr *)hdr)->flags, work_buf);
     if (s0 < 0) {
-        *g_bss_8a20 = (u32)s0;
+        *g_np9660TablePtr = (u32)s0;
         if (cached_match != 0 && s0 == (int)0x80550914 && flag != 0) {
-            sceKernelMemcpy(vkey, g_bss_8a6c, 0x10);
+            sceKernelMemcpy(vkey, g_np9660KeyA, 0x10);
         } else {
             goto fail;
         }
     }
     if (cached_match != 0) {
-        if (memcmp(vkey, g_bss_8a6c, 0x10) != 0) {
+        if (memcmp(vkey, g_np9660KeyA, 0x10) != 0) {
             s0 = (int)0x80210007;
             goto fail;
         }
@@ -725,22 +725,22 @@ static NOINLINE int np9660OpenImageInternal(const char *path, int flag)
     ((SceNp9660CtxInfo *)ctx_info)->sector_param1 = ((const SceNp9660ImgHdr *)hdr)->sector_param1;
     sceKernelMemcpy(ctx_info + 0x40, hdr + 0x88, 0x18);
 
-    g_bss_8a8c = (int)psar_off;
-    g_bss_8a90 = (int)tbl_rel;
-    g_bss_8a94 = (int)((const SceNp9660ImgHdr *)hdr)->idps_mask;
-    g_bss_8a98 = (int)hdr[0x89];
-    sceKernelMemcpy(g_bss_8a2c + 0x00, hdr + 0x10, 0x30);
-    sceKernelMemcpy(g_bss_8a2c + 0x30, hdr + 0x70, 0x10);
-    sceKernelMemcpy(g_bss_8a6c, vkey, 0x10);
-    sceKernelMemcpy(g_bss_8a7c, hdr + 0xa0, 0x10);
+    g_np9660StateA = (int)psar_off;
+    g_np9660StateB = (int)tbl_rel;
+    g_np9660StateC = (int)((const SceNp9660ImgHdr *)hdr)->idps_mask;
+    g_np9660StateD = (int)hdr[0x89];
+    sceKernelMemcpy(g_np9660WorkBuf + 0x00, hdr + 0x10, 0x30);
+    sceKernelMemcpy(g_np9660WorkBuf + 0x30, hdr + 0x70, 0x10);
+    sceKernelMemcpy(g_np9660KeyA, vkey, 0x10);
+    sceKernelMemcpy(g_np9660KeyB, hdr + 0xa0, 0x10);
 
     s0 = np9660SubmitRead(ctx_info);
     sceKernelMemset(ctx_info, 0, 0x58);
     if (s0 < 0) {
         goto fail;
     }
-    SysMemForKernel_F3BDB718(g_bss_8a2c + 0x30);
-    sceKernelSetQTGP3(g_bss_8a2c + 0x30);
+    SysMemForKernel_F3BDB718(g_np9660WorkBuf + 0x30);
+    sceKernelSetQTGP3(g_np9660WorkBuf + 0x30);
     sceKernelMemset(idps, 0, 0x10);
     sceKernelMemset(vkey, 0, 0x10);
     sceKernelMemset(hdr, 0, 0x100);
@@ -809,7 +809,7 @@ static NOINLINE int np9660DecryptBlockSpan(void *buf, u32 base_file_off, u32 tot
         }
         if (((const SceNp9660TblEntry *)s1)->flags & 4U) {
             if (span_start != 0) {
-                r = np9660CipherDecrypt((u8 *)buf + span_start - base_file_off, (int)(span_end - span_start), (span_start - (u32)g_bss_8a8c) >> 4);
+                r = np9660CipherDecrypt((u8 *)buf + span_start - base_file_off, (int)(span_end - span_start), (span_start - (u32)g_np9660StateA) >> 4);
                 span_start = 0;
                 span_end = 0;
                 if (r < 0) {
@@ -826,7 +826,7 @@ static NOINLINE int np9660DecryptBlockSpan(void *buf, u32 base_file_off, u32 tot
         }
     }
     if (span_start != 0) {
-        int r = np9660CipherDecrypt((u8 *)buf + span_start - base_file_off, (int)(span_end - span_start), (span_start - (u32)g_bss_8a8c) >> 4);
+        int r = np9660CipherDecrypt((u8 *)buf + span_start - base_file_off, (int)(span_end - span_start), (span_start - (u32)g_np9660StateA) >> 4);
         if (r < 0) {
             return r;
         }
@@ -837,22 +837,22 @@ static NOINLINE int np9660DecryptBlockSpan(void *buf, u32 base_file_off, u32 tot
 /* 0x0c38 */
 static NOINLINE void np9660InvalidateTableCache(void)
 {
-    g_bss_8a24 = -1;
+    g_np9660TableSize = -1;
 }
 
 /* 0x0c4c */
 static NOINLINE int np9660GetBlockTableEntry(void *a0, int a1)
 {
-    int s1 = g_bss_8a24;
+    int s1 = g_np9660TableSize;
     if (s1 == -1 || (u32)a1 < (u32)s1 || (u32)a1 >= (u32)(s1 + 16)) {
         s1 = a1 & ~15;
-        u32 off = (u32)g_bss_8a8c + (u32)g_bss_8a90 + ((u32)s1 << 5);
-        int rd = np9660ReadImageFile(g_bss_8a28, off, 0, 0x200);
+        u32 off = (u32)g_np9660StateA + (u32)g_np9660StateB + ((u32)s1 << 5);
+        int rd = np9660ReadImageFile(g_np9660IoBuf, off, 0, 0x200);
         if (rd < 0) {
-            g_bss_8a24 = -1;
+            g_np9660TableSize = -1;
             return rd;
         }
-        u32 *words = (u32 *)g_bss_8a28;
+        u32 *words = (u32 *)g_np9660IoBuf;
         for (int i = 15; i >= 0; i--, words += 8) {
             u32 w0 = words[0];
             u32 w1 = words[1];
@@ -863,11 +863,11 @@ static NOINLINE int np9660GetBlockTableEntry(void *a0, int a1)
             words[6] ^= w1 ^ w0;
             words[7] ^= w0 ^ w3;
         }
-        g_bss_8a24 = s1;
+        g_np9660TableSize = s1;
     }
-    u8 *src = (u8 *)g_bss_8a28 + (((u32)(a1 - s1)) << 5);
+    u8 *src = (u8 *)g_np9660IoBuf + (((u32)(a1 - s1)) << 5);
     sceKernelMemcpy((u8 *)a0 + 8, src, 0x20);
-    ((SceNp9660BlockRef *)a0)->file_off = (u32)g_bss_8a8c + ((const SceNp9660TblEntry *)src)->rel_off;
+    ((SceNp9660BlockRef *)a0)->file_off = (u32)g_np9660StateA + ((const SceNp9660TblEntry *)src)->rel_off;
     ((SceNp9660BlockRef *)a0)->comp_size = ((const SceNp9660TblEntry *)src)->comp_size;
     return 0;
 }
@@ -878,8 +878,8 @@ static NOINLINE int np9660SetTableCacheBuf(void *buf, int size)
     if (size != 0x200) {
         return (int)0x80010016;
     }
-    g_bss_8a28 = buf;
-    g_bss_8a24 = -1;
+    g_np9660IoBuf = buf;
+    g_np9660TableSize = -1;
     return 0;
 }
 
@@ -900,7 +900,7 @@ static NOINLINE int np9660LoadRifKey(void *vkey, const char *cid, int flags, voi
         return (int)0x80550912;
     }
     if ((flags & 0x01000000) != 0) {
-        g_bss_8a20[1] = 0x01000003U;
+        g_np9660TablePtr[1] = 0x01000003U;
         return sceNpDrmGetFixedKey(vkey, cid, 0x01000003);
     }
     if (strlen(cid) >= 0x2aU) {
@@ -926,16 +926,16 @@ static NOINLINE int np9660LoadRifKey(void *vkey, const char *cid, int flags, voi
         return (int)0x80550909;
     }
     u32 rtype = __builtin_bswap32(((const SceNp9660RifHdr *)rif)->type_be);
-    g_bss_8a20[1] = rtype;
-    g_bss_8a20[4] = __builtin_bswap32(ext_words[1]);
-    g_bss_8a20[5] = __builtin_bswap32(ext_words[0]);
+    g_np9660TablePtr[1] = rtype;
+    g_np9660TablePtr[4] = __builtin_bswap32(ext_words[1]);
+    g_np9660TablePtr[5] = __builtin_bswap32(ext_words[0]);
     u32 t_lo = ((const SceNp9660RifHdr *)rif)->end_time_lo;
     u32 t_hi = ((const SceNp9660RifHdr *)rif)->end_time_hi;
     if ((t_lo | t_hi) != 0) {
         u64 t = ((u64)__builtin_bswap32(t_lo) << 32) | (u64)__builtin_bswap32(t_hi);
         t = t * 1000ULL + 0x00dcbffeff2bc000ULL;
-        g_bss_8a20[2] = (u32)t;
-        g_bss_8a20[3] = (u32)(t >> 32);
+        g_np9660TablePtr[2] = (u32)t;
+        g_np9660TablePtr[3] = (u32)(t >> 32);
     }
     if (rtype == 3U) {
         sceKernelMemset(act_buf, 0, 0x1038);
@@ -958,11 +958,11 @@ static NOINLINE int np9660LoadRifKey(void *vkey, const char *cid, int flags, voi
 static NOINLINE int np9660CipherDecrypt(void *buf, int size, u32 seed)
 {
     u8 ckey[32];
-    int r = sceDrmBBCipherInit(ckey, 1, 2, g_bss_8a7c, g_bss_8a6c, seed);
+    int r = sceDrmBBCipherInit(ckey, 1, 2, g_np9660KeyB, g_np9660KeyA, seed);
     if (r < 0) {
         return r;
     }
-    if ((g_bss_8a98 != 0) && (((u32)buf & 3U) == 0)) {
+    if ((g_np9660StateD != 0) && (((u32)buf & 3U) == 0)) {
         r = sceAmctrl_driver_E04ADD4C(ckey, buf, size);
     } else {
         r = sceDrmBBCipherUpdate(ckey, buf, size);
@@ -982,7 +982,7 @@ static NOINLINE int np9660VerifyMac(const void *buf, int size, const void *hash)
     if (r < 0) {
         return r;
     }
-    if ((g_bss_8a98 != 0) && (((u32)buf & 3U) == 0)) {
+    if ((g_np9660StateD != 0) && (((u32)buf & 3U) == 0)) {
         r = sceAmctrl_driver_9227EA79(mkey, buf, size);
     } else {
         r = sceDrmBBMacUpdate(mkey, buf, size);
@@ -990,7 +990,7 @@ static NOINLINE int np9660VerifyMac(const void *buf, int size, const void *hash)
     if (r < 0) {
         return r;
     }
-    r = sceDrmBBMacFinal2(mkey, hash, g_bss_8a6c);
+    r = sceDrmBBMacFinal2(mkey, hash, g_np9660KeyA);
     return r < 0 ? r : 0;
 }
 
@@ -1326,9 +1326,9 @@ static NOINLINE s64 np9660Div64(s64 a, s64 b)
     if (hi_b == 0) {
         u32 hi_a = (u32)(ua >> 32);
         u32 lo_a = (u32)ua;
-        u32 b_top = lo_b >> 24 ? g_clz_tab_87d4[lo_b >> 24] + 24 :
-                    (lo_b >> 16 ? g_clz_tab_87d4[lo_b >> 16] + 16 :
-                    (lo_b >> 8 ? g_clz_tab_87d4[lo_b >> 8] + 8 : g_clz_tab_87d4[lo_b]));
+        u32 b_top = lo_b >> 24 ? g_clz_tab[lo_b >> 24] + 24 :
+                    (lo_b >> 16 ? g_clz_tab[lo_b >> 16] + 16 :
+                    (lo_b >> 8 ? g_clz_tab[lo_b >> 8] + 8 : g_clz_tab[lo_b]));
         (void)b_top;
         u32 q1 = hi_a / lo_b;
         u32 r1 = hi_a % lo_b;
@@ -1361,7 +1361,7 @@ static int umd_io_read(void *iot, char *data, int len);
 static int umd_io_ioctl(void *iot, unsigned int cmd, void *indata, int inlen, void *outdata, int outlen);
 static int umd_io_devctl(void *iot, const char *dev, unsigned int cmd, void *indata, int inlen, void *outdata, int outlen);
 
-static const void * const g_umd_drv_funcs_88d4[22] = {
+static const void * const g_umd_drv_funcs[22] = {
     umd_io_init,
     umd_io_exit,
     umd_io_open,
@@ -1392,12 +1392,12 @@ static const struct {
     u32 arg2;
     const char *desc;
     const void *funcs;
-} g_umd_drv_892c = {
+} g_umd_drv = {
     "umd",
     0x4,
     0x800,
     "NP9660",
-    g_umd_drv_funcs_88d4,
+    g_umd_drv_funcs,
 };
 
 /* 0x210c */
@@ -1409,7 +1409,7 @@ int module_start(SceSize args, void *argp)
     if (r >= 0) {
         r = np9660MountNoop();
         if (r >= 0) {
-            r = sceIoAddDrv(&g_umd_drv_892c);
+            r = sceIoAddDrv(&g_umd_drv);
             if (r >= 0) {
                 r = np9660MediaManMount();
                 if (r >= 0) {
@@ -1442,13 +1442,12 @@ int module_reboot_phase(int phase, void *argp, u32 arg1, u32 arg2)
     (void)argp;
     (void)arg1;
     (void)arg2;
-    int r = 0;
     if (phase == 1) {
-        r = np9660UnlockMutex();
+        np9660UnlockMutex();
     } else if (phase == 2) {
-        r = np9660LockMutex();
+        np9660LockMutex();
     }
-    return r < 0 ? r : 0;
+    return 0;
 }
 
 /* 0x220c */
@@ -1548,7 +1547,7 @@ int sceUmdActivate(int mode, const char *aliasname)
         strcmp(aliasname, "disc0:") == 0) {
         int res = np9660AssignIsofs(mode, aliasname);
         int intr = sceKernelCpuSuspendIntr();
-        g_error_status_8aa4 = res;
+        g_error_status = res;
         sceKernelCpuResumeIntr(intr);
         r = 0;
     }
@@ -1559,24 +1558,24 @@ int sceUmdActivate(int mode, const char *aliasname)
 /* 0x2408 */
 static NOINLINE int np9660AssignIsofs(int mode, const char *aliasname)
 {
-    if (strcmp(g_assign_dev_8ab0, aliasname) != 0) {
+    if (strcmp(g_assign_dev, aliasname) != 0) {
         int ronly = 1;
-        if (g_active_mode_8a9c != 0) {
+        if (g_active_mode != 0) {
             return (int)0x80010010;
         }
         int r = sceIoAssign(aliasname, "umd0:", "isofs0:", 1, &ronly, 4);
         if (r != 0) {
-            g_active_mode_8a9c = 0;
+            g_active_mode = 0;
             return r;
         }
     }
     int r = np9660DeactivateDrive(mode);
     if (r == 0) {
-        strncpy(g_assign_dev_8ab0, aliasname, 0x20);
-        g_active_mode_8a9c = 2;
+        strncpy(g_assign_dev, aliasname, 0x20);
+        g_active_mode = 2;
         return 0;
     }
-    g_active_mode_8a9c = 0;
+    g_active_mode = 0;
     return r;
 }
 
@@ -1594,7 +1593,7 @@ int sceUmdRegisterUMDCallBack(SceUID cbid)
         }
         if (ok != 0) {
             int intr = sceKernelCpuSuspendIntr();
-            g_umd_cbid_8aa8 = cbid;
+            g_umd_cbid = cbid;
             sceKernelCpuResumeIntr(intr);
             r = 0;
         }
@@ -1614,9 +1613,9 @@ int sceUmdUnRegisterUMDCallBack(SceUID cbid)
         if (((u32)(k1 << 11) >> 31) != 0) {
             ok = *(u16 *)((u8 *)cb + 0x16) & 2;
         }
-        if (ok != 0 && g_umd_cbid_8aa8 == cbid) {
+        if (ok != 0 && g_umd_cbid == cbid) {
             int intr = sceKernelCpuSuspendIntr();
-            g_umd_cbid_8aa8 = 0;
+            g_umd_cbid = 0;
             sceKernelCpuResumeIntr(intr);
             int sdk = sceKernelGetCompiledSdkVersion();
             r = (sdk > 0x03000000) ? 0 : cbid;
@@ -1629,11 +1628,11 @@ int sceUmdUnRegisterUMDCallBack(SceUID cbid)
 /* 0x2640 */
 static NOINLINE int np9660MediaManInit(void)
 {
-    strncpy(g_assign_dev_8ab0, ":DMU", 0x20);
+    strncpy(g_assign_dev, ":DMU", 0x20);
     SceUID evf = sceKernelCreateEventFlag("SceMediaManUser", 0x201, 0, NULL);
     if (evf >= 0) {
-        g_active_mode_8a9c = 0;
-        g_mediaman_evf_8aac = evf;
+        g_active_mode = 0;
+        g_mediaman_evf = evf;
         return 0;
     }
     return evf;
@@ -1642,9 +1641,9 @@ static NOINLINE int np9660MediaManInit(void)
 /* 0x26a4 */
 static NOINLINE int np9660MediaManTerm(void)
 {
-    if (g_mediaman_evf_8aac > 0) {
-        sceKernelDeleteEventFlag(g_mediaman_evf_8aac);
-        g_mediaman_evf_8aac = 0;
+    if (g_mediaman_evf > 0) {
+        sceKernelDeleteEventFlag(g_mediaman_evf);
+        g_mediaman_evf = 0;
     }
     return 0;
 }
@@ -1652,15 +1651,15 @@ static NOINLINE int np9660MediaManTerm(void)
 /* 0x26e0 */
 int NOINLINE sceUmdGetDriveStatus(void)
 {
-    return g_drive_status_8aa0;
+    return g_drive_status;
 }
 
 /* 0x26ec */
 void NOINLINE sceUmdSetDriveStatus(int stat)
 {
     int intr = sceKernelCpuSuspendIntr();
-    g_drive_status_8aa0 |= stat;
-    sceKernelSetEventFlag(g_mediaman_evf_8aac, (u32)stat);
+    g_drive_status |= stat;
+    sceKernelSetEventFlag(g_mediaman_evf, (u32)stat);
     sceKernelCpuResumeIntr(intr);
 }
 
@@ -1669,29 +1668,29 @@ void NOINLINE sceUmdClearDriveStatus(int stat)
 {
     int intr = sceKernelCpuSuspendIntr();
     int mask = ~stat;
-    sceKernelClearEventFlag(g_mediaman_evf_8aac, (u32)mask);
-    g_drive_status_8aa0 &= mask;
+    sceKernelClearEventFlag(g_mediaman_evf, (u32)mask);
+    g_drive_status &= mask;
     sceKernelCpuResumeIntr(intr);
 }
 
 /* 0x27a0 */
 int sceUmdGetErrorStatus(void)
 {
-    return g_error_status_8aa4;
+    return g_error_status;
 }
 
 /* 0x27ac */
 void NOINLINE sceUmdSetErrorStatus(int err)
 {
     int intr = sceKernelCpuSuspendIntr();
-    g_error_status_8aa4 = err;
+    g_error_status = err;
     sceKernelCpuResumeIntr(intr);
 }
 
 /* 0x27e0 */
 static NOINLINE void np9660NotifyUmdCallback(int stat)
 {
-    SceUID cbid = g_umd_cbid_8aa8;
+    SceUID cbid = g_umd_cbid;
     if (cbid != 0) {
         sceKernelNotifyCallback(cbid, stat);
     }
@@ -1714,7 +1713,7 @@ int sceUmdDeactivate(int mode, const char *aliasname)
     if (((k1 << 11) & (int)aliasname) >= 0) {
         r = np9660ActivateDrive(mode, aliasname);
         int intr = sceKernelCpuSuspendIntr();
-        g_error_status_8aa4 = r;
+        g_error_status = r;
         sceKernelCpuResumeIntr(intr);
     }
     pspSdkSetK1(k1);
@@ -1739,7 +1738,7 @@ int sceUmdGetDiscInfo(u32 *info)
 int sceUmdGetDriveStat(void)
 {
     int k1 = pspSdkSetK1(0);
-    int r = g_drive_status_8aa0;
+    int r = g_drive_status;
     pspSdkSetK1(k1);
     return r;
 }
@@ -1748,7 +1747,7 @@ int sceUmdGetDriveStat(void)
 int sceUmdGetErrorStat(void)
 {
     int k1 = pspSdkSetK1(0);
-    int r = sceUmd_040A7090(g_error_status_8aa4);
+    int r = sceUmd_040A7090(g_error_status);
     pspSdkSetK1(k1);
     return r;
 }
@@ -1778,7 +1777,7 @@ int sceUmdWaitDriveStat(int stat)
     u32 out;
     int r = (int)0x80010016;
     if ((stat & 0x3b) != 0) {
-        r = sceKernelWaitEventFlag(g_mediaman_evf_8aac, (u32)stat, 1, &out, NULL);
+        r = sceKernelWaitEventFlag(g_mediaman_evf, (u32)stat, 1, &out, NULL);
     }
     pspSdkSetK1(k1);
     return r;
@@ -1792,7 +1791,7 @@ int sceUmdWaitDriveStatWithTimer(int stat, u32 timeout)
     u32 out;
     int r = (int)0x80010016;
     if ((stat & 0x3b) != 0) {
-        r = sceKernelWaitEventFlag(g_mediaman_evf_8aac, (u32)stat, 1, &out, timeout ? &to : NULL);
+        r = sceKernelWaitEventFlag(g_mediaman_evf, (u32)stat, 1, &out, timeout ? &to : NULL);
     }
     pspSdkSetK1(k1);
     return r;
@@ -1806,7 +1805,7 @@ int sceUmdWaitDriveStatCB(int stat, u32 timeout)
     u32 out;
     int r = (int)0x80010016;
     if ((stat & 0x3b) != 0) {
-        r = sceKernelWaitEventFlagCB(g_mediaman_evf_8aac, (u32)stat, 1, &out, timeout ? &to : NULL);
+        r = sceKernelWaitEventFlagCB(g_mediaman_evf, (u32)stat, 1, &out, timeout ? &to : NULL);
     }
     pspSdkSetK1(k1);
     return r;
@@ -1816,7 +1815,7 @@ int sceUmdWaitDriveStatCB(int stat, u32 timeout)
 int sceUmdCancelWaitDriveStat(void)
 {
     int k1 = pspSdkSetK1(0);
-    int r = sceKernelCancelEventFlag(g_mediaman_evf_8aac, (u32)g_drive_status_8aa0, NULL);
+    int r = sceKernelCancelEventFlag(g_mediaman_evf, (u32)g_drive_status, NULL);
     pspSdkSetK1(k1);
     return r;
 }
@@ -1827,7 +1826,7 @@ static NOINLINE int np9660ActivateDrive(int mode, const char *aliasname)
     if ((u32)mode >= 3U || (mode == 2 && aliasname == NULL)) {
         return (int)0x80010016;
     }
-    if (g_active_mode_8a9c == 0) {
+    if (g_active_mode == 0) {
         return 0;
     }
     int r = sceIoUnassign(aliasname);
@@ -1835,32 +1834,32 @@ static NOINLINE int np9660ActivateDrive(int mode, const char *aliasname)
         return r;
     }
     np9660UnmountDrive(mode);
-    g_active_mode_8a9c = 0;
-    memset(g_assign_dev_8ab0, 0, 0x20);
-    __builtin_memcpy(g_assign_dev_8ab0, "UMD:", 5);
+    g_active_mode = 0;
+    memset(g_assign_dev, 0, 0x20);
+    __builtin_memcpy(g_assign_dev, "UMD:", 5);
     return 0;
 }
 
 /* 0x2bf0 */
 static NOINLINE int np9660MediaManMount(void)
 {
-    g_umdman_state_8ae8 = 0x20;
+    g_umdman_state = 0x20;
     sceUmdClearDriveStatus(0x3e);
     sceUmdSetDriveStatus(1);
-    int r = sceKernelRegisterSysEventHandler(&g_sysevent_89c8);
+    int r = sceKernelRegisterSysEventHandler(&g_sysevent);
     if (r != 0) {
         np9660MediaManSetError();
         return r;
     }
-    g_sysevent_reg_8ae0 = 1;
+    g_sysevent_reg = 1;
     SceUID evf = sceKernelCreateEventFlag("SceUmdManState", 0x201, 0, NULL);
-    g_umdman_evf_8adc = evf;
+    g_umdman_evf = evf;
     if (evf < 0) {
         np9660MediaManSetError();
         return evf;
     }
     SceUID th = sceKernelCreateThread("SceNpUmdMount", np9660MediaManThread, 0x0f, 0x1000, 0x00100001, NULL);
-    g_mount_thid_8ad8 = th;
+    g_mount_thid = th;
     if (th < 0) {
         np9660MediaManSetError();
         return th;
@@ -1870,12 +1869,12 @@ static NOINLINE int np9660MediaManMount(void)
         np9660MediaManSetError();
         return r;
     }
-    r = sceKernelWaitEventFlagCB(g_umdman_evf_8adc, 0x40, 0x21, NULL, NULL);
-    if (r >= 0 && g_umdman_init_res_8ad4 >= 0) {
+    r = sceKernelWaitEventFlagCB(g_umdman_evf, 0x40, 0x21, NULL, NULL);
+    if (r >= 0 && g_umdman_init_res >= 0) {
         return 0;
     }
     np9660MediaManSetError();
-    return (r < 0) ? r : g_umdman_init_res_8ad4;
+    return (r < 0) ? r : g_umdman_init_res;
 }
 
 /* 0x2d28 */
@@ -1883,19 +1882,19 @@ static NOINLINE int np9660MediaManSetError(void)
 {
     np9660SetUmdManState(0x80);
     sceUmdSetErrorStatus((int)0x80210003);
-    if (g_mount_thid_8ad8 != 0) {
-        sceKernelSetEventFlag(g_umdman_evf_8adc, 0x80);
-        sceKernelWaitThreadEnd(g_mount_thid_8ad8, NULL);
-        sceKernelDeleteThread(g_mount_thid_8ad8);
-        g_mount_thid_8ad8 = 0;
+    if (g_mount_thid != 0) {
+        sceKernelSetEventFlag(g_umdman_evf, 0x80);
+        sceKernelWaitThreadEnd(g_mount_thid, NULL);
+        sceKernelDeleteThread(g_mount_thid);
+        g_mount_thid = 0;
     }
-    if (g_umdman_evf_8adc != 0) {
-        sceKernelDeleteEventFlag(g_umdman_evf_8adc);
-        g_umdman_evf_8adc = 0;
+    if (g_umdman_evf != 0) {
+        sceKernelDeleteEventFlag(g_umdman_evf);
+        g_umdman_evf = 0;
     }
-    if (g_sysevent_reg_8ae0 != 0) {
-        sceKernelUnregisterSysEventHandler(&g_sysevent_89c8);
-        g_sysevent_reg_8ae0 = 0;
+    if (g_sysevent_reg != 0) {
+        sceKernelUnregisterSysEventHandler(&g_sysevent);
+        g_sysevent_reg = 0;
     }
     return 0;
 }
@@ -1909,20 +1908,20 @@ static NOINLINE int np9660DeactivateDrive(int mode)
         return r;
     }
     int intr = sceKernelCpuSuspendIntr();
-    int prev = g_data_89c0;
+    int prev = g_np9660InitMode;
     int st = np9660GetUmdManState();
-    g_data_89c0 = 2;
+    g_np9660InitMode = 2;
     if ((st & 0xc0) == 0) {
         if (st == 0x20) {
             np9660SetUmdManState(0x20);
         } else if (prev == 0) {
             np9660SetUmdManState(1);
             sceUmdSetErrorStatus(0);
-            sceKernelSetEventFlag(g_umdman_evf_8adc, 1);
+            sceKernelSetEventFlag(g_umdman_evf, 1);
         } else if (prev == 1) {
             if (st == 1) {
                 np9660SetUmdManState(4);
-                sceKernelSetEventFlag(g_umdman_evf_8adc, 1);
+                sceKernelSetEventFlag(g_umdman_evf, 1);
             } else if (st != prev) {
                 np9660SetUmdManState(0x10);
             }
@@ -1944,7 +1943,7 @@ static NOINLINE int np9660UnmountDrive(int mode)
         return r;
     }
     int intr = sceKernelCpuSuspendIntr();
-    int prev = g_data_89c0;
+    int prev = g_np9660InitMode;
     int st = np9660GetUmdManState();
     int next_mode;
     if (mode == 1) {
@@ -1956,8 +1955,8 @@ static NOINLINE int np9660UnmountDrive(int mode)
     } else {
         next_mode = 0;
     }
-    g_data_89c0 = next_mode;
-    g_data_89c4 = 1;
+    g_np9660InitMode = next_mode;
+    g_np9660GlobalFlag = 1;
     if ((st & 0xc0) == 0) {
         if (st == 0x20) {
             np9660SetUmdManState(0x20);
@@ -1965,7 +1964,7 @@ static NOINLINE int np9660UnmountDrive(int mode)
             if (prev == 0) {
                 np9660SetUmdManState(1);
                 sceUmdSetErrorStatus(0);
-                sceKernelSetEventFlag(g_umdman_evf_8adc, 1);
+                sceKernelSetEventFlag(g_umdman_evf, 1);
             } else if ((st & 0x0e) != 0) {
                 np9660SetUmdManState(2);
             } else if (st != 1) {
@@ -1986,15 +1985,15 @@ static NOINLINE int np9660UnmountDrive(int mode)
 /* 0x303c */
 static NOINLINE int np9660GetUmdManState(void)
 {
-    return g_umdman_state_8ae8;
+    return g_umdman_state;
 }
 
 /* 0x3048 */
 static NOINLINE void np9660SetUmdManState(int state)
 {
     int intr = sceKernelCpuSuspendIntr();
-    int prev = g_umdman_state_8ae8;
-    g_umdman_state_8ae8 = state;
+    int prev = g_umdman_state;
+    g_umdman_state = state;
     if (state == 8) {
         sceUmdClearDriveStatus(9);
         sceUmdSetDriveStatus(0x32);
@@ -2049,24 +2048,24 @@ static int np9660SysEventHandler(int ev_id, char *ev_name, void *param, int *res
     (void)param;
     (void)result;
     if (ev_id == 0x402) {
-        return g_umdman_suspend_err_8ad0;
+        return g_umdman_suspend_err;
     }
     if (ev_id < 0x403) {
         if (ev_id == 0x400) {
-            g_umdman_suspend_err_8ad0 = (int)0x80000021;
+            g_umdman_suspend_err = (int)0x80000021;
             np9660SetUmdManState(0x40);
             sceUmdSetErrorStatus((int)0x80210003);
-            sceKernelSetEventFlag(g_umdman_evf_8adc, 0x10);
+            sceKernelSetEventFlag(g_umdman_evf, 0x10);
         }
         return 0;
     }
     if (ev_id == 0x10009) {
-        g_umdman_resume_flag_8ae4 = 1;
+        g_umdman_resume_flag = 1;
         np9660SetUmdManState(0x20);
         return 0;
     }
     if (ev_id == 0x400000) {
-        sceKernelSetEventFlag(g_umdman_evf_8adc, 0x20);
+        sceKernelSetEventFlag(g_umdman_evf, 0x20);
     }
     return 0;
 }
@@ -2086,14 +2085,14 @@ static int np9660MediaManThread(SceSize args, void *argp)
             sceKernelDeleteCallback(cbid);
         }
     }
-    g_umdman_init_res_8ad4 = r;
-    sceKernelSetEventFlag(g_umdman_evf_8adc, 0x40);
+    g_umdman_init_res = r;
+    sceKernelSetEventFlag(g_umdman_evf, 0x40);
     if (r < 0) {
         return 0;
     }
     for (;;) {
         u32 out = 0;
-        if (sceKernelWaitEventFlagCB(g_umdman_evf_8adc, 0xb3, 0x21, &out, NULL) < 0) {
+        if (sceKernelWaitEventFlagCB(g_umdman_evf, 0xb3, 0x21, &out, NULL) < 0) {
             break;
         }
         if ((out & 0x80U) != 0) {
@@ -2108,9 +2107,9 @@ static int np9660MediaManThread(SceSize args, void *argp)
             int intr = sceKernelCpuSuspendIntr();
             int st = np9660GetUmdManState();
             if (st == 1) {
-                int r_flag = g_umdman_resume_flag_8ae4;
-                g_umdman_resume_flag_8ae4 = 0;
-                if (g_data_89c0 == 0) {
+                int r_flag = g_umdman_resume_flag;
+                g_umdman_resume_flag = 0;
+                if (g_np9660InitMode == 0) {
                     np9660SetUmdManState(0x10);
                     sceUmdSetErrorStatus((int)0xc0210006);
                     if (np9660GetMountStatus() != (int)0x80210003) {
@@ -2136,7 +2135,7 @@ static int np9660MediaManThread(SceSize args, void *argp)
                     sceKernelCpuResumeIntr(intr);
                     goto check_10;
                 }
-                if (g_data_89c0 != 2) {
+                if (g_np9660InitMode != 2) {
                     np9660SetUmdManState(2);
                     sceKernelCpuResumeIntr(intr);
                     goto check_10;
@@ -2145,7 +2144,7 @@ static int np9660MediaManThread(SceSize args, void *argp)
                 st = 4;
             }
             if (st == 4) {
-                int arg1 = g_data_89c4;
+                int arg1 = g_np9660GlobalFlag;
                 sceKernelCpuResumeIntr(intr);
                 int cb_res = np9660NotifyInsertEject(0x20, arg1);
                 if (cb_res != (int)0x80010002) {
@@ -2157,7 +2156,7 @@ static int np9660MediaManThread(SceSize args, void *argp)
                             sceUmdSetErrorStatus((int)0x80210001);
                         }
                     } else if (st == 4) {
-                        g_data_89c4 = 0;
+                        g_np9660GlobalFlag = 0;
                         np9660SetUmdManState(8);
                         sceUmdSetErrorStatus(0);
                     } else {
@@ -2174,7 +2173,7 @@ check_10:
             if (np9660GetMountStatus() != (int)0x80210003) {
                 np9660CloseMountedImage();
             }
-            g_umdman_suspend_err_8ad0 = 0;
+            g_umdman_suspend_err = 0;
         } else if (np9660UnlockMutex() < 0) {
             break;
         }
@@ -2188,7 +2187,7 @@ check_10:
 /* 0x3634 */
 static NOINLINE int np9660GetUmdManEvf(void)
 {
-    return g_umdman_evf_8adc;
+    return g_umdman_evf;
 }
 
 /* 0x3640 */
@@ -2219,7 +2218,7 @@ static NOINLINE int np9660CheckDriveReady(void)
 /* 0x36f8 */
 static NOINLINE void np9660SetGlobalFlag(int val)
 {
-    g_data_89c4 = val;
+    g_np9660GlobalFlag = val;
 }
 
 /* 0x3704 */
@@ -2234,7 +2233,7 @@ static int np9660UmdCallbackHandler(int cbid, int count, void *arg)
         if (np9660GetUmdManState() != 1) {
             np9660SetUmdManState(1);
             sceUmdSetErrorStatus(0);
-            sceKernelSetEventFlag(g_umdman_evf_8adc, 1);
+            sceKernelSetEventFlag(g_umdman_evf, 1);
         }
     } else if (count == 2) {
         np9660CloseMountedImage();
@@ -2255,13 +2254,13 @@ int sceUmdManRegisterInsertEjectUMDCallBack(int id, void *cb, void *arg)
 {
     int intr = sceKernelCpuSuspendIntr();
     int r = (int)0x8001000c;
-    if (g_ins_ej_id_8aec == 0) {
+    if (g_ins_ej_id == 0) {
         u32 gp_val;
         __asm__ volatile ("move %0, $gp" : "=r"(gp_val));
-        g_ins_ej_id_8aec = id;
-        g_ins_ej_gp_8af0 = gp_val;
-        g_ins_ej_arg_8af4 = arg;
-        g_ins_ej_cb_8af8 = (int (*)(int, void *, int))cb;
+        g_ins_ej_id = id;
+        g_ins_ej_gp = gp_val;
+        g_ins_ej_arg = arg;
+        g_ins_ej_cb = (int (*)(int, void *, int))cb;
         r = 0;
     }
     sceKernelCpuResumeIntr(intr);
@@ -2280,10 +2279,10 @@ int sceUmdManRegisterInsertEjectUMDCallBack(int id, void *cb, void *arg)
 static NOINLINE int np9660NotifyInsertEject(int mask, int arg2)
 {
     int r = (int)0x80010002;
-    if (g_ins_ej_cb_8af8 != NULL && (g_ins_ej_id_8aec & mask) != 0) {
+    if (g_ins_ej_cb != NULL && (g_ins_ej_id & mask) != 0) {
         u32 saved_gp;
-        __asm__ volatile ("move %0, $gp\n\tmove $gp, %1" : "=r"(saved_gp) : "r"(g_ins_ej_gp_8af0));
-        r = g_ins_ej_cb_8af8(g_ins_ej_id_8aec, g_ins_ej_arg_8af4, arg2);
+        __asm__ volatile ("move %0, $gp\n\tmove $gp, %1" : "=r"(saved_gp) : "r"(g_ins_ej_gp));
+        r = g_ins_ej_cb(g_ins_ej_id, g_ins_ej_arg, arg2);
         __asm__ volatile ("move $gp, %0" : : "r"(saved_gp));
     }
     return r;
@@ -2294,11 +2293,11 @@ int sceUmdManUnRegisterInsertEjectUMDCallBack(int id)
 {
     int intr = sceKernelCpuSuspendIntr();
     int r = (int)0x80010002;
-    if (g_ins_ej_id_8aec == id) {
-        g_ins_ej_id_8aec = 0;
-        g_ins_ej_gp_8af0 = 0;
-        g_ins_ej_arg_8af4 = NULL;
-        g_ins_ej_cb_8af8 = NULL;
+    if (g_ins_ej_id == id) {
+        g_ins_ej_id = 0;
+        g_ins_ej_gp = 0;
+        g_ins_ej_arg = NULL;
+        g_ins_ej_cb = NULL;
         r = 0;
     }
     sceKernelCpuResumeIntr(intr);
@@ -2311,9 +2310,9 @@ int sceUmdMan_driver_80D31D5D(void *cb, void *arg)
     int intr = sceKernelCpuSuspendIntr();
     u32 gp_val;
     __asm__ volatile ("move %0, $gp" : "=r"(gp_val));
-    g_umdman_cb_gp_8afc = gp_val;
-    g_umdman_cb_arg_8b00 = arg;
-    g_umdman_cb_8b04 = (void (*)(int))cb;
+    g_umdman_cb_gp = gp_val;
+    g_umdman_cb_arg = arg;
+    g_umdman_cb = (void (*)(int))cb;
     sceKernelCpuResumeIntr(intr);
     return 0;
 }
@@ -2322,9 +2321,9 @@ int sceUmdMan_driver_80D31D5D(void *cb, void *arg)
 int sceUmdMan_driver_34375DB0(void)
 {
     int intr = sceKernelCpuSuspendIntr();
-    g_umdman_cb_gp_8afc = 0;
-    g_umdman_cb_arg_8b00 = NULL;
-    g_umdman_cb_8b04 = NULL;
+    g_umdman_cb_gp = 0;
+    g_umdman_cb_arg = NULL;
+    g_umdman_cb = NULL;
     sceKernelCpuResumeIntr(intr);
     return 0;
 }
@@ -2332,10 +2331,10 @@ int sceUmdMan_driver_34375DB0(void)
 /* 0x3a24 */
 static NOINLINE void np9660InvokeUmdManCb(void)
 {
-    if (g_umdman_cb_8b04 != NULL) {
+    if (g_umdman_cb != NULL) {
         u32 saved_gp;
-        __asm__ volatile ("move %0, $gp\n\tmove $gp, %1" : "=r"(saved_gp) : "r"(g_umdman_cb_gp_8afc));
-        g_umdman_cb_8b04(1);
+        __asm__ volatile ("move %0, $gp\n\tmove $gp, %1" : "=r"(saved_gp) : "r"(g_umdman_cb_gp));
+        g_umdman_cb(1);
         __asm__ volatile ("move $gp, %0" : : "r"(saved_gp));
     }
 }
@@ -2346,11 +2345,11 @@ int sceNp9660_driver_8EF69DC6(void (*cb)(u32, u32, u32, u32, u32, u32))
     int intr = sceKernelCpuSuspendIntr();
     u32 gp_val;
     __asm__ volatile ("move %0, $gp" : "=r"(gp_val));
-    g_np9660_cb_8b0c = cb;
-    g_np9660_cb_gp_8b08 = gp_val;
+    g_np9660_cb = cb;
+    g_np9660_cb_gp = gp_val;
     sceKernelCpuResumeIntr(intr);
-    cb(g_np9660_err_8b10[0], g_np9660_err_8b10[1], g_np9660_err_8b10[2],
-       g_np9660_err_8b10[3], g_np9660_err_8b10[4], g_np9660_err_8b10[5]);
+    cb(g_np9660_err[0], g_np9660_err[1], g_np9660_err[2],
+       g_np9660_err[3], g_np9660_err[4], g_np9660_err[5]);
     return 0;
 }
 
@@ -2358,8 +2357,8 @@ int sceNp9660_driver_8EF69DC6(void (*cb)(u32, u32, u32, u32, u32, u32))
 int sceNp9660_driver_B925CA6C(void)
 {
     int intr = sceKernelCpuSuspendIntr();
-    g_np9660_cb_gp_8b08 = 0;
-    g_np9660_cb_8b0c = NULL;
+    g_np9660_cb_gp = 0;
+    g_np9660_cb = NULL;
     sceKernelCpuResumeIntr(intr);
     return 0;
 }
@@ -2368,17 +2367,17 @@ int sceNp9660_driver_B925CA6C(void)
 static NOINLINE void np9660RecordError(u32 a0, u32 a1, u32 a2, u32 a3, u32 t0, u32 t1)
 {
     int intr = sceKernelCpuSuspendIntr();
-    g_np9660_err_8b10[0] = a0;
-    g_np9660_err_8b10[1] = a1;
-    g_np9660_err_8b10[2] = a2;
-    g_np9660_err_8b10[3] = a3;
-    g_np9660_err_8b10[4] = t0;
-    g_np9660_err_8b10[5] = t1;
+    g_np9660_err[0] = a0;
+    g_np9660_err[1] = a1;
+    g_np9660_err[2] = a2;
+    g_np9660_err[3] = a3;
+    g_np9660_err[4] = t0;
+    g_np9660_err[5] = t1;
     sceKernelCpuResumeIntr(intr);
-    if (g_np9660_cb_8b0c != NULL) {
+    if (g_np9660_cb != NULL) {
         u32 saved_gp;
-        __asm__ volatile ("move %0, $gp\n\tmove $gp, %1" : "=r"(saved_gp) : "r"(g_np9660_cb_gp_8b08));
-        g_np9660_cb_8b0c(a0, a1, a2, a3, t0, t1);
+        __asm__ volatile ("move %0, $gp\n\tmove $gp, %1" : "=r"(saved_gp) : "r"(g_np9660_cb_gp));
+        g_np9660_cb(a0, a1, a2, a3, t0, t1);
         __asm__ volatile ("move $gp, %0" : : "r"(saved_gp));
     }
 }
@@ -2402,7 +2401,7 @@ static NOINLINE int np9660MountImage(int resume_flag)
         return r;
     }
     int intr = sceKernelCpuSuspendIntr();
-    g_last_mount_err_8b30 = err_out;
+    g_last_mount_err = err_out;
     sceKernelCpuResumeIntr(intr);
     np9660SetMountStatus(1);
     return 0;
@@ -2412,14 +2411,14 @@ static NOINLINE int np9660MountImage(int resume_flag)
 static NOINLINE void np9660SetMountStatus(int val)
 {
     int intr = sceKernelCpuSuspendIntr();
-    g_mount_status_8b28 = val;
+    g_mount_status = val;
     sceKernelCpuResumeIntr(intr);
 }
 
 /* 0x3d04 */
 static NOINLINE int np9660GetMountStatus(void)
 {
-    return g_mount_status_8b28;
+    return g_mount_status;
 }
 
 /* 0x3d10 */
@@ -2439,7 +2438,7 @@ static NOINLINE int np9660ForceUnmount(void)
 static NOINLINE int np9660SetReplacePermit(int val)
 {
     int intr = sceKernelCpuSuspendIntr();
-    g_replace_permit_8b2c = val;
+    g_replace_permit = val;
     sceKernelCpuResumeIntr(intr);
     return 0;
 }
@@ -2447,14 +2446,14 @@ static NOINLINE int np9660SetReplacePermit(int val)
 /* 0x3d70 */
 static NOINLINE int np9660GetReplacePermit(void)
 {
-    return g_replace_permit_8b2c;
+    return g_replace_permit;
 }
 
 /* 0x3d7c */
 int NOINLINE sceNp9660_driver_7A05EB3C(int *out)
 {
     if (out != NULL) {
-        *out = g_last_mount_err_8b30;
+        *out = g_last_mount_err;
     }
     return 0;
 }
@@ -2465,13 +2464,13 @@ static int umd_io_init(void *arg)
     (void)arg;
     u32 opt[2];
     void *blk = NULL;
-    memset(&g_umd_ctx_8b48, 0, 0x58);
+    memset(&g_umd_ctx, 0, 0x58);
     SceUID fpl = sceKernelCreateFpl("SceNp9660", 1, 0x100, 0x10200, 1, NULL);
     if (fpl >= 0) {
-        g_fpl_8b40 = fpl;
+        g_fpl = fpl;
         int r = sceKernelTryAllocateFpl(fpl, &blk);
         if (r >= 0) {
-            g_fpl_block_8b44 = blk;
+            g_fpl_block = blk;
             u8 *p1 = (u8 *)blk + 0x8000;
             r = np9660SetBlockCacheBuf(p1, 0x8000);
             if (r >= 0) {
@@ -2480,18 +2479,18 @@ static int umd_io_init(void *arg)
                 if (r >= 0) {
                     SceUID mtx1 = sceKernelCreateMutex("SceNp9660NC", 0x201, 0, NULL);
                     if (mtx1 >= 0) {
-                        g_nc_mutex_8b38 = mtx1;
+                        g_nc_mutex = mtx1;
                         opt[0] = 8;
                         opt[1] = 0x0f;
                         SceUID mtx2 = sceKernelCreateMutex("SceNp9660", 0x601, 0, opt);
                         if (mtx2 >= 0) {
-                            g_main_mutex_8b3c = mtx2;
-                            g_cur_mutex_8b34 = mtx2;
+                            g_main_mutex = mtx2;
+                            g_cur_mutex = mtx2;
                             r = np9660InitDecThread();
                             if (r >= 0) {
-                                g_part_info_8be4[0] = 0x10;
-                                sceKernelQueryMemoryPartitionInfo(5, g_part_info_8be4);
-                                g_part_info_8be4[1] &= 0x1fffffffU;
+                                g_part_info[0] = 0x10;
+                                sceKernelQueryMemoryPartitionInfo(5, g_part_info);
+                                g_part_info[1] &= 0x1fffffffU;
                                 return 0;
                             }
                         } else {
@@ -2504,28 +2503,28 @@ static int umd_io_init(void *arg)
             }
         }
         np9660TermDecThread();
-        if (g_cur_mutex_8b34 > 0) {
-            sceKernelDeleteMutex(g_cur_mutex_8b34);
-            g_cur_mutex_8b34 = 0;
+        if (g_cur_mutex > 0) {
+            sceKernelDeleteMutex(g_cur_mutex);
+            g_cur_mutex = 0;
         }
         np9660CloseImage();
         np9660ResetBlockCache();
-        if (g_fpl_8b40 > 0) {
-            sceKernelDeleteFpl(g_fpl_8b40);
-            g_fpl_8b40 = 0;
+        if (g_fpl > 0) {
+            sceKernelDeleteFpl(g_fpl);
+            g_fpl = 0;
         }
         return r;
     }
     np9660TermDecThread();
-    if (g_cur_mutex_8b34 > 0) {
-        sceKernelDeleteMutex(g_cur_mutex_8b34);
-        g_cur_mutex_8b34 = 0;
+    if (g_cur_mutex > 0) {
+        sceKernelDeleteMutex(g_cur_mutex);
+        g_cur_mutex = 0;
     }
     np9660CloseImage();
     np9660ResetBlockCache();
-    if (g_fpl_8b40 > 0) {
-        sceKernelDeleteFpl(g_fpl_8b40);
-        g_fpl_8b40 = 0;
+    if (g_fpl > 0) {
+        sceKernelDeleteFpl(g_fpl);
+        g_fpl = 0;
     }
     return fpl;
 }
@@ -2535,24 +2534,24 @@ static int umd_io_exit(void *arg)
 {
     (void)arg;
     np9660TermDecThread();
-    if (g_cur_mutex_8b34 > 0) {
-        sceKernelDeleteMutex(g_cur_mutex_8b34);
-        g_cur_mutex_8b34 = 0;
+    if (g_cur_mutex > 0) {
+        sceKernelDeleteMutex(g_cur_mutex);
+        g_cur_mutex = 0;
     }
-    if (g_nc_mutex_8b38 > 0) {
-        sceKernelDeleteMutex(g_nc_mutex_8b38);
-        g_nc_mutex_8b38 = 0;
+    if (g_nc_mutex > 0) {
+        sceKernelDeleteMutex(g_nc_mutex);
+        g_nc_mutex = 0;
     }
-    if (g_main_mutex_8b3c > 0) {
-        sceKernelDeleteMutex(g_main_mutex_8b3c);
-        g_main_mutex_8b3c = 0;
+    if (g_main_mutex > 0) {
+        sceKernelDeleteMutex(g_main_mutex);
+        g_main_mutex = 0;
     }
-    memset(&g_umd_ctx_8b48, 0, 0x58);
+    memset(&g_umd_ctx, 0, 0x58);
     np9660CloseImage();
     np9660ResetBlockCache();
-    if (g_fpl_8b40 > 0) {
-        sceKernelDeleteFpl(g_fpl_8b40);
-        g_fpl_8b40 = 0;
+    if (g_fpl > 0) {
+        sceKernelDeleteFpl(g_fpl);
+        g_fpl = 0;
     }
     return 0;
 }
@@ -2573,10 +2572,10 @@ static int umd_io_open(void *iot, char *file, int flags, int mode)
     int intr = sceKernelCpuSuspendIntr();
     int r = (int)0x80010018;
     for (int i = 0; i < 8; i++) {
-        if (g_handles_8ba0[i].in_use == 0) {
-            g_handles_8ba0[i].in_use = 1;
-            g_handles_8ba0[i].flags = (flags & 0x4000) ? 0xf0 : 0;
-            *(void **)((u8 *)iot + 0x10) = &g_handles_8ba0[i];
+        if (g_handles[i].in_use == 0) {
+            g_handles[i].in_use = 1;
+            g_handles[i].flags = (flags & 0x4000) ? 0xf0 : 0;
+            *(void **)((u8 *)iot + 0x10) = &g_handles[i];
             *(u32 *)((u8 *)iot + 0x18) = 0;
             *(u32 *)((u8 *)iot + 0x1c) = 0;
             r = 0;
@@ -2630,12 +2629,12 @@ static NOINLINE SceOff np9660IoLseek(void *iot, SceOff ofs, int whence)
             return (SceOff)(int)0x80010016;
         }
     } else if (whence == 2) {
-        target = (SceOff)(u64)g_umd_ctx_8b48.last_lba + ofs;
+        target = (SceOff)(u64)g_umd_ctx.last_lba + ofs;
     } else {
         return (SceOff)(int)0x80010016;
     }
-    if (target < (SceOff)(u64)g_umd_ctx_8b48.lba_param ||
-        target > (SceOff)(u64)g_umd_ctx_8b48.last_lba) {
+    if (target < (SceOff)(u64)g_umd_ctx.lba_param ||
+        target > (SceOff)(u64)g_umd_ctx.last_lba) {
         return (SceOff)(int)0x80210002;
     }
     *(SceOff *)((u8 *)iot + 0x18) = target;
@@ -2710,12 +2709,12 @@ static NOINLINE int np9660ReadBytesOnKernelStack(void *arg)
     u32 byte_pos = req[0];
     u8 *cur_dst = (u8 *)req[1];
     u32 byte_len = req[2];
-    u32 basis = g_umd_ctx_8b48.block_basis;
+    u32 basis = g_umd_ctx.block_basis;
     u32 block_bytes = basis << 11;
     u32 in_blk_off = byte_pos % block_bytes;
     u32 start_sec = byte_pos >> 11;
-    u32 lba_param = g_umd_ctx_8b48.lba_param;
-    u32 last_lba = g_umd_ctx_8b48.last_lba;
+    u32 lba_param = g_umd_ctx.lba_param;
+    u32 last_lba = g_umd_ctx.last_lba;
     u32 done_bytes = 0;
 
     if (start_sec < lba_param || start_sec > last_lba) {
@@ -2739,7 +2738,7 @@ static NOINLINE int np9660ReadBytesOnKernelStack(void *arg)
                 basis = (total_rel_secs % basis) + 1U;
             }
             if (in_blk_off == 0 && (((u32)cur_dst & 15U) == 0)) {
-                u32 cur_blk_bytes = g_umd_ctx_8b48.block_basis << 11;
+                u32 cur_blk_bytes = g_umd_ctx.block_basis << 11;
                 u32 rem_bytes = byte_len - done_bytes;
                 if (rem_bytes >= cur_blk_bytes) {
                     r = np9660LookupBlockCache(&cache_ptr, (int)blk);
@@ -2760,7 +2759,7 @@ static NOINLINE int np9660ReadBytesOnKernelStack(void *arg)
                             }
                             fp_mode = 0;
                         } else {
-                            u32 two_blks = g_umd_ctx_8b48.block_basis << 12;
+                            u32 two_blks = g_umd_ctx.block_basis << 12;
                             fp_mode = (rem_bytes < two_blks) ? 2 : 3;
                             cache_ptr = cur_dst;
                         }
@@ -2784,7 +2783,7 @@ static NOINLINE int np9660ReadBytesOnKernelStack(void *arg)
 
 process_blk:
             if (fp_mode == 3) {
-                u32 b_bytes = g_umd_ctx_8b48.block_basis << 11;
+                u32 b_bytes = g_umd_ctx.block_basis << 11;
                 u32 span_blks = (byte_len - done_bytes) / b_bytes;
                 u32 span_last = blk + span_blks - 1U;
                 u32 first_off = ((const SceNp9660BlockRef *)entry)->file_off;
@@ -2794,7 +2793,7 @@ process_blk:
                 }
                 u32 raw_span = (((const SceNp9660BlockRef *)entry)->file_off + ((const SceNp9660BlockRef *)entry)->comp_size) - first_off;
                 u32 aligned_span = (raw_span + 15U) & ~15U;
-                u32 total_span_bytes = (span_blks * g_umd_ctx_8b48.block_basis) << 11;
+                u32 total_span_bytes = (span_blks * g_umd_ctx.block_basis) << 11;
                 u8 *read_ptr = (u8 *)(((u32)((u8 *)cache_ptr + total_span_bytes - aligned_span)) & ~15U);
                 r = np9660ReadImageFile(read_ptr, first_off, 0, (int)aligned_span);
                 if (r < 0) {
@@ -2804,31 +2803,31 @@ process_blk:
                 if (r < 0) {
                     goto cleanup;
                 }
-                if (raw_span < ((span_blks * g_umd_ctx_8b48.block_basis) << 11)) {
+                if (raw_span < ((span_blks * g_umd_ctx.block_basis) << 11)) {
                     u8 *out_p = (u8 *)cache_ptr;
                     for (u32 b = blk; b <= span_last; b++) {
                         r = np9660GetBlockTableEntry(entry, (int)b);
                         if (r < 0) {
                             goto cleanup;
                         }
-                        u32 b_bytes_cur = g_umd_ctx_8b48.block_basis << 11;
+                        u32 b_bytes_cur = g_umd_ctx.block_basis << 11;
                         u32 b_comp = ((const SceNp9660BlockRef *)entry)->comp_size;
                         u8 *b_src = read_ptr + (((const SceNp9660BlockRef *)entry)->file_off - first_off);
                         if (b_comp < b_bytes_cur) {
                             void *tmp = np9660GetFplBlock();
                             sceKernelMemcpy(tmp, b_src, b_comp);
-                            r = np9660AsyncDecompress(out_p, tmp, (int)(g_umd_ctx_8b48.block_basis << 11));
+                            r = np9660AsyncDecompress(out_p, tmp, (int)(g_umd_ctx.block_basis << 11));
                             if (r < 0) {
                                 goto cleanup;
                             }
                         } else if (out_p != b_src) {
                             sceKernelMemmove(out_p, b_src, b_bytes_cur);
                         }
-                        out_p += (g_umd_ctx_8b48.block_basis << 11);
+                        out_p += (g_umd_ctx.block_basis << 11);
                     }
                 }
                 blk = span_last;
-                u32 step_bytes = (span_blks * g_umd_ctx_8b48.block_basis) << 11;
+                u32 step_bytes = (span_blks * g_umd_ctx.block_basis) << 11;
                 goto advance_blk;
             } else if (fp_mode == 1) {
                 sceKernelDelayThread(100);
@@ -2923,7 +2922,7 @@ static int umd_io_ioctl(void *iot, unsigned int cmd, void *indata, int inlen, vo
                 return (int)0x80010016;
             }
             u32 cur_lba = *(u32 *)((u8 *)iot + 0x18);
-            u32 max_sec = (g_umd_ctx_8b48.last_lba - cur_lba) + 1U;
+            u32 max_sec = (g_umd_ctx.last_lba - cur_lba) + 1U;
             if ((int)max_sec < nsec) {
                 nsec = (int)max_sec;
             }
@@ -2963,7 +2962,7 @@ static int umd_io_ioctl(void *iot, unsigned int cmd, void *indata, int inlen, vo
 /* 0x4ccc */
 static NOINLINE void *np9660GetFplBlock(void)
 {
-    return g_fpl_block_8b44;
+    return g_fpl_block;
 }
 
 /* 0x4cd8 */
@@ -2976,13 +2975,13 @@ static NOINLINE int np9660SubmitRead(const u32 *ctx_in)
     }
     u8 flg = *((const u8 *)ctx_in + 0x42);
     if ((flg & 1U) != 0) {
-        if (g_cur_mutex_8b34 == g_main_mutex_8b3c) {
-            sceKernelLockMutex(g_nc_mutex_8b38, 1, NULL);
+        if (g_cur_mutex == g_main_mutex) {
+            sceKernelLockMutex(g_nc_mutex, 1, NULL);
             int intr = sceKernelCpuSuspendIntr();
-            sceKernelCancelMutex(g_cur_mutex_8b34, 1, (int *)&count_out);
-            g_cur_mutex_8b34 = g_nc_mutex_8b38;
+            sceKernelCancelMutex(g_cur_mutex, 1, (int *)&count_out);
+            g_cur_mutex = g_nc_mutex;
             sceKernelCpuResumeIntr(intr);
-            sceKernelUnlockMutex(g_main_mutex_8b3c, 1);
+            sceKernelUnlockMutex(g_main_mutex, 1);
             flg = *((const u8 *)ctx_in + 0x42);
         }
     }
@@ -2993,7 +2992,7 @@ static NOINLINE int np9660SubmitRead(const u32 *ctx_in)
         }
     }
     int intr = sceKernelCpuSuspendIntr();
-    u32 *dst = (u32 *)&g_umd_ctx_8b48;
+    u32 *dst = (u32 *)&g_umd_ctx;
     const u32 *src = ctx_in;
     for (int i = 0; i < 20; i += 4) {
         dst[i + 0] = src[i + 0];
@@ -3003,22 +3002,22 @@ static NOINLINE int np9660SubmitRead(const u32 *ctx_in)
     }
     dst[20] = src[20];
     dst[21] = src[21];
-    np9660SetDecThreadPrio((int)g_umd_ctx_8b48.thread_prio);
+    np9660SetDecThreadPrio((int)g_umd_ctx.thread_prio);
     void *gi = sceKernelGetGameInfo();
     if (gi != NULL) {
         const char *id = (const char *)gi + 0x44;
         if (strcmp(id, "ULUS10021") == 0 || strcmp(id, "ULES00108") == 0) {
-            g_umd_ctx_8b48.emu_rate2 = 0x44c;
+            g_umd_ctx.emu_rate2 = 0x44c;
         }
         if (strcmp(id, "ULUS10059") == 0) {
-            g_umd_ctx_8b48.emu_flags = 8;
-            g_umd_ctx_8b48.emu_rate1 = 0x64;
-            g_umd_ctx_8b48.emu_rate2 = 0x1f4;
+            g_umd_ctx.emu_flags = 8;
+            g_umd_ctx.emu_rate1 = 0x64;
+            g_umd_ctx.emu_rate2 = 0x1f4;
         }
     }
-    np9660SetEmuRate1(g_umd_ctx_8b48.emu_rate1);
-    np9660SetEmuRate2(g_umd_ctx_8b48.emu_rate2);
-    np9660SetEmuFlags(g_umd_ctx_8b48.emu_flags);
+    np9660SetEmuRate1(g_umd_ctx.emu_rate1);
+    np9660SetEmuRate2(g_umd_ctx.emu_rate2);
+    np9660SetEmuFlags(g_umd_ctx.emu_flags);
     sceKernelCpuResumeIntr(intr);
     return 0;
 }
@@ -3027,17 +3026,17 @@ static NOINLINE int np9660SubmitRead(const u32 *ctx_in)
 static NOINLINE int np9660GetDiscInfo(void *out)
 {
     int intr = sceKernelCpuSuspendIntr();
-    if (g_umd_ctx_8b48.fd > 0) {
+    if (g_umd_ctx.fd > 0) {
         u32 *dst = (u32 *)out;
-        const u32 *src = (const u32 *)g_umd_ctx_8b48.disc_id;
+        const u32 *src = (const u32 *)g_umd_ctx.disc_id;
         for (int i = 0; i < 8; i += 4) {
             dst[i + 0] = src[i + 0];
             dst[i + 1] = src[i + 1];
             dst[i + 2] = src[i + 2];
             dst[i + 3] = src[i + 3];
         }
-        dst[8] = g_umd_ctx_8b48.disc_param_30;
-        dst[9] = g_umd_ctx_8b48.last_lba;
+        dst[8] = g_umd_ctx.disc_param_30;
+        dst[9] = g_umd_ctx.last_lba;
         sceKernelCpuResumeIntr(intr);
         return 0;
     }
@@ -3053,15 +3052,15 @@ static NOINLINE int np9660GetDiscInfo(void *out)
 static NOINLINE int np9660GetDiscParams(int *out0, int *out1, int *out2)
 {
     int intr = sceKernelCpuSuspendIntr();
-    if (g_umd_ctx_8b48.fd > 0) {
+    if (g_umd_ctx.fd > 0) {
         if (out0 != NULL) {
-            *out0 = (int)g_umd_ctx_8b48.lba_param;
+            *out0 = (int)g_umd_ctx.lba_param;
         }
         if (out1 != NULL) {
-            *out1 = (int)g_umd_ctx_8b48.disc_param_2c;
+            *out1 = (int)g_umd_ctx.disc_param_2c;
         }
         if (out2 != NULL) {
-            *out2 = (int)g_umd_ctx_8b48.last_lba;
+            *out2 = (int)g_umd_ctx.last_lba;
         }
         sceKernelCpuResumeIntr(intr);
         return 0;
@@ -3077,13 +3076,13 @@ static NOINLINE int np9660GetDiscParams(int *out0, int *out1, int *out2)
 /* 0x5054 */
 static NOINLINE int np9660LockMutex(void)
 {
-    if (g_cur_mutex_8b34 == 0) {
+    if (g_cur_mutex == 0) {
         return (int)0x80000041;
     }
-    g_mutex_owner_pri_8be0 = sceKernelGetThreadCurrentPriority();
+    g_mutex_owner_pri = sceKernelGetThreadCurrentPriority();
     int r;
     do {
-        r = sceKernelLockMutex(g_cur_mutex_8b34, 1, NULL);
+        r = sceKernelLockMutex(g_cur_mutex, 1, NULL);
     } while (r == (int)0x800201a9);
     return r;
 }
@@ -3091,21 +3090,21 @@ static NOINLINE int np9660LockMutex(void)
 /* 0x50c4 */
 static NOINLINE int np9660UnlockMutex(void)
 {
-    if (g_cur_mutex_8b34 == 0) {
+    if (g_cur_mutex == 0) {
         return (int)0x80000041;
     }
-    return sceKernelUnlockMutex(g_cur_mutex_8b34, 1);
+    return sceKernelUnlockMutex(g_cur_mutex, 1);
 }
 
 /* 0x50fc */
 static NOINLINE int np9660ReadImageFile(void *buf, u32 pos_lo, u32 pos_hi, int size)
 {
     SceOff off = ((SceOff)pos_hi << 32) | pos_lo;
-    SceOff r = sceIoLseek(g_umd_ctx_8b48.fd, off, 0);
+    SceOff r = sceIoLseek(g_umd_ctx.fd, off, 0);
     if (r != off) {
         return (r < 0) ? (int)r : (int)0x80210001;
     }
-    int rd = sceIoRead(g_umd_ctx_8b48.fd, buf, (SceSize)size);
+    int rd = sceIoRead(g_umd_ctx.fd, buf, (SceSize)size);
     if (rd == size) {
         return 0;
     }
@@ -3125,7 +3124,7 @@ static NOINLINE int np9660SeekDiscRaw(int addr)
     if (sceKernelGetCompiledSdkVersion() <= 0x03000000) {
         return 0;
     }
-    return ((uaddr - g_part_info_8be4[1]) < g_part_info_8be4[2]) ? 1 : 0;
+    return ((uaddr - g_part_info[1]) < g_part_info[2]) ? 1 : 0;
 }
 
 /* 0x5218 */
@@ -3133,10 +3132,10 @@ static NOINLINE int np9660CloseMountedImage(void)
 {
     np9660SetMountStatus((int)0x80210003);
     int r = 0;
-    if (g_umd_ctx_8b48.fd > 0) {
-        r = sceIoClose(g_umd_ctx_8b48.fd);
+    if (g_umd_ctx.fd > 0) {
+        r = sceIoClose(g_umd_ctx.fd);
     }
-    g_umd_ctx_8b48.fd = 0;
+    g_umd_ctx.fd = 0;
     return r;
 }
 
@@ -3145,13 +3144,13 @@ static NOINLINE int np9660ReadPvd(void)
 {
     u8 *pvd = NULL;
     np9660GetPvdBuf((void **)&pvd);
-    return memcmp(pvd + 0x373, g_dummy_disc_id_8940, 0x20) == 0;
+    return memcmp(pvd + 0x373, g_dummy_disc_id, 0x20) == 0;
 }
 
 /* 0x52a0 */
 static NOINLINE int np9660GetImageFlags(void)
 {
-    return g_umd_ctx_8b48.flags_42;
+    return g_umd_ctx.flags_42;
 }
 
 /* 0x52ac */
@@ -3167,7 +3166,7 @@ static NOINLINE int np9660GetSectorInfo(int *info_out)
 /* 0x52cc */
 static NOINLINE int np9660GetMutexOwnerPri(void)
 {
-    return g_mutex_owner_pri_8be0;
+    return g_mutex_owner_pri;
 }
 
 /* 0x52d8 */
@@ -3176,41 +3175,41 @@ static NOINLINE int np9660SetBlockCacheBuf(void *buf, int size)
     if (size != 0x8000) {
         return (int)0x80010016;
     }
-    g_cache_buf_8bf4 = buf;
-    g_cached_blk_8bf8 = -1;
+    g_cache_buf = buf;
+    g_cached_blk = -1;
     return 0;
 }
 
 /* 0x5308 */
 static NOINLINE int np9660ResetBlockCache(void)
 {
-    g_cached_blk_8bf8 = -1;
+    g_cached_blk = -1;
     return 0;
 }
 
 /* 0x531c */
 static NOINLINE int np9660ClearBlockCache(void)
 {
-    g_cached_blk_8bf8 = -1;
+    g_cached_blk = -1;
     return 0;
 }
 
 /* 0x5330 */
 static NOINLINE int np9660AcquireBlockCache(void **out, int blk)
 {
-    *out = g_cache_buf_8bf4;
-    if (g_cached_blk_8bf8 == blk) {
+    *out = g_cache_buf;
+    if (g_cached_blk == blk) {
         return 1;
     }
-    g_cached_blk_8bf8 = blk;
+    g_cached_blk = blk;
     return 0;
 }
 
 /* 0x535c */
 static NOINLINE int np9660LookupBlockCache(void **out, int blk)
 {
-    if (g_cached_blk_8bf8 == blk) {
-        *out = g_cache_buf_8bf4;
+    if (g_cached_blk == blk) {
+        *out = g_cache_buf;
         return 1;
     }
     *out = NULL;
@@ -3220,14 +3219,14 @@ static NOINLINE int np9660LookupBlockCache(void **out, int blk)
 /* 0x538c */
 static NOINLINE int np9660IsBlockCached(int blk)
 {
-    return (g_cached_blk_8bf8 == blk) ? 0 : (int)0x80010006;
+    return (g_cached_blk == blk) ? 0 : (int)0x80010006;
 }
 
 /* 0x53a8 */
 static NOINLINE int np9660EvictBlockCache(int blk)
 {
-    if (g_cached_blk_8bf8 == blk) {
-        g_cached_blk_8bf8 = -1;
+    if (g_cached_blk == blk) {
+        g_cached_blk = -1;
         return 0;
     }
     return (int)0x80010006;
@@ -3362,9 +3361,9 @@ static int umd_io_devctl(void *iot, const char *dev, unsigned int cmd, void *ind
             if (outdata == NULL || (u32)outlen < 4U) {
                 return (int)0x80010016;
             }
-            int r = np9660ReadSectors(0x10, g_pvd_buf_8c38, 1);
+            int r = np9660ReadSectors(0x10, g_pvd_buf, 1);
             if (r == 1) {
-                *(void **)outdata = g_pvd_buf_8c38;
+                *(void **)outdata = g_pvd_buf;
                 return 0;
             }
             if (r < 0) {
@@ -3446,12 +3445,12 @@ static NOINLINE int np9660DevctlReadSectors(void *outdata, u32 outlen, const u32
     if (np9660CheckDelayEnabled() == 0) {
         return (int)in[3];
     }
-    u8 flags = g_emu_flags_8c34;
+    u8 flags = g_emu_flags;
     if ((flags & 4U) != 0) {
         if (sceKernelSearchModuleByName("sceNetAdhoc_Library") < 0) {
             return (int)in[3];
         }
-        flags = g_emu_flags_8c34;
+        flags = g_emu_flags;
     }
     int seek_only = (int)((in[0] << 3) & 8U);
     if ((flags & 2U) == 0) {
@@ -3480,7 +3479,7 @@ static NOINLINE int np9660DevctlReadSectors(void *outdata, u32 outlen, const u32
 /* 0x5af8 */
 static NOINLINE void np9660SetEmuLba(u32 lba)
 {
-    g_emu_8c04 = lba;
+    g_emuReadStateC = lba;
 }
 
 /* 0x5b04 */
@@ -3491,18 +3490,18 @@ static NOINLINE int np9660SimulateDelay(u32 lba, u32 cnt, int seek_only, int tab
     int cross_layer = 0;
     int hit = 0;
 
-    if (((g_emu_flags_8c34 ^ 1U) == 0) && seek_only == 0) {
+    if (((g_emu_flags ^ 1U) == 0) && seek_only == 0) {
         hit = (np9660LookupRingCache(lba, cnt, 0, table_sel, &rem_lba, &rem_blks) != 0);
     }
     u32 seek_dist = 0;
     if (seek_only != 0 || hit == 0) {
-        seek_dist = np9660CalcSeekDistance(lba, g_emu_8c04, &cross_layer);
+        seek_dist = np9660CalcSeekDistance(lba, g_emuReadStateC, &cross_layer);
     }
-    g_emu_time_8c08 = sceKernelGetSystemTimeWide();
-    if (g_emu_time_8c10 == 0 || (u64)(g_emu_time_8c08 - g_emu_time_8c10) > 0x4c4b40ULL) {
-        g_emu_8c20 = 0;
+    g_emuTimeStart = sceKernelGetSystemTimeWide();
+    if (g_emuTimeLast == 0 || (u64)(g_emuTimeStart - g_emuTimeLast) > 0x4c4b40ULL) {
+        g_emuSeekParamA = 0;
     }
-    if (lba == g_emu_8c04) {
+    if (lba == g_emuReadStateC) {
         if (hit != 0) {
             np9660SleepForTransfer(lba, cnt, seek_dist, 1, cross_layer);
         } else {
@@ -3515,9 +3514,9 @@ static NOINLINE int np9660SimulateDelay(u32 lba, u32 cnt, int seek_only, int tab
             np9660ApplySeekDelay(lba, cnt, seek_dist, 2, cross_layer);
         }
     }
-    g_emu_time_8c10 = sceKernelGetSystemTimeWide();
-    g_emu_8c04 = lba + cnt;
-    g_emu_8bfc = lba + cnt;
+    g_emuTimeLast = sceKernelGetSystemTimeWide();
+    g_emuReadStateC = lba + cnt;
+    g_emuReadStateA = lba + cnt;
     return np9660InsertRingCache(lba, cnt, seek_only, table_sel);
 }
 
@@ -3537,54 +3536,54 @@ static NOINLINE int np9660CalcSectorRange(const u32 *in, int *step_out)
     u16 cnt = (u16)in[3];
     int substep = 0;
 
-    if (lba == g_emu_8c30 && (*step_out == 1 || *step_out == 4) && cnt == 1) {
-        if (g_emu_8c24 == 2) {
+    if (lba == g_emuSeekParamE && (*step_out == 1 || *step_out == 4) && cnt == 1) {
+        if (g_emuSeekParamB == 2) {
             substep = 1;
-            if (lba == g_emu_8c30 + 1U) {
+            if (lba == g_emuSeekParamE + 1U) {
                 goto check_5ef4;
             }
             goto check_5dac;
         }
-        g_emu_8c28 = lba;
+        g_emuSeekParamC = lba;
         goto check_5e40;
     }
-    if (lba == g_emu_8c30 + 1U) {
+    if (lba == g_emuSeekParamE + 1U) {
 check_5ef4:
-        if ((*step_out == 1 || *step_out == 4) && cnt == 1 && g_emu_8c24 == 5) {
+        if ((*step_out == 1 || *step_out == 4) && cnt == 1 && g_emuSeekParamB == 5) {
             substep = 2;
-            g_emu_8c28 = lba;
+            g_emuSeekParamC = lba;
             goto check_5e40;
         }
     }
 check_5dac:
-    if (lba == g_emu_8c30 && *step_out == 5 && cnt == 2 && g_emu_8c24 == 2) {
-        g_emu_8c28 = lba + 1U;
+    if (lba == g_emuSeekParamE && *step_out == 5 && cnt == 2 && g_emuSeekParamB == 2) {
+        g_emuSeekParamC = lba + 1U;
         substep = 3;
         goto check_5e40;
     }
-    g_emu_8c28 = lba + cnt - 1U;
-    g_emu_8c30 = lba;
-    g_emu_8c2c = 0x20;
+    g_emuSeekParamC = lba + cnt - 1U;
+    g_emuSeekParamE = lba;
+    g_emuSeekParamD = 0x20;
     return 0;
 
 check_5e40:
-    if (g_emu_8c2c != 0x10) {
-        g_emu_8c2c = 0x20;
+    if (g_emuSeekParamD != 0x10) {
+        g_emuSeekParamD = 0x20;
         return 0;
     }
     int mode = *step_out;
     if (mode == 1) {
-        if (g_emu_8c24 == 1 || g_emu_8c24 == 4) {
+        if (g_emuSeekParamB == 1 || g_emuSeekParamB == 4) {
             return 1;
         }
-        if (g_emu_8c24 == 5 && (substep == 1 || substep == 2)) {
+        if (g_emuSeekParamB == 5 && (substep == 1 || substep == 2)) {
             return 1;
         }
     } else if (mode == 4) {
-        if (g_emu_8c24 == 1 || g_emu_8c24 == 4) {
+        if (g_emuSeekParamB == 1 || g_emuSeekParamB == 4) {
             return 1;
         }
-        if (g_emu_8c24 == 5) {
+        if (g_emuSeekParamB == 5) {
             if (substep == 1) {
                 return 1;
             }
@@ -3599,7 +3598,7 @@ check_5e40:
             return 1;
         }
     }
-    g_emu_8c2c = 0x20;
+    g_emuSeekParamD = 0x20;
     return 0;
 }
 
@@ -3607,7 +3606,7 @@ static int np9660EmuReset1(void);
 static int np9660EmuReset2(void);
 static int np9660EmuNoop(void);
 
-static int (* const g_emu_fn_tab_8960[8])(void) = {
+static int (* const g_emu_fn_tab[8])(void) = {
     np9660EmuNoop,
     np9660EmuReset1,
     np9660EmuNoop,
@@ -3624,21 +3623,21 @@ static NOINLINE int np9660GetEmuParam(int idx)
     if ((u32)idx >= 8U) {
         return 0;
     }
-    g_emu_8c24 = idx;
-    return g_emu_fn_tab_8960[idx]();
+    g_emuSeekParamB = idx;
+    return g_emu_fn_tab[idx]();
 }
 
 /* 0x5fd8 (in .rodata table 0x8960) */
 static int np9660EmuReset1(void)
 {
-    g_emu_8c2c = 0x10;
+    g_emuSeekParamD = 0x10;
     return 0;
 }
 
 /* 0x5fe8 (in .rodata table 0x8960) */
 static int np9660EmuReset2(void)
 {
-    g_emu_8c2c = 0x10;
+    g_emuSeekParamD = 0x10;
     return 0;
 }
 
@@ -3651,18 +3650,18 @@ static int np9660EmuNoop(void)
 /* 0x5ffc */
 static NOINLINE void np9660RecordStartTime(void)
 {
-    g_emu_time_9c18 = sceKernelGetSystemTimeWide();
+    g_emuStatTimeB = sceKernelGetSystemTimeWide();
 }
 
 /* 0x6028 */
 static NOINLINE int np9660CheckDelayEnabled(void)
 {
-    if (g_emu_rate1_9c20 != 0 || g_emu_rate2_9c22 != 0) {
+    if (g_emu_rate1 != 0 || g_emu_rate2 != 0) {
         if (sceWlanDrv_driver_7DD3787C() != 1) {
             return 1;
         }
     }
-    if ((g_emu_flags_8c34 & 0xcU) != 0) {
+    if ((g_emu_flags & 0xcU) != 0) {
         return 1;
     }
     return 0;
@@ -3671,40 +3670,40 @@ static NOINLINE int np9660CheckDelayEnabled(void)
 /* 0x6098 */
 static NOINLINE void np9660SetEmuRate1(u16 val)
 {
-    g_emu_rate1_9c20 = val;
+    g_emu_rate1 = val;
 }
 
 /* 0x60a4 */
 static NOINLINE void np9660SetEmuRate2(u16 val)
 {
-    g_emu_rate2_9c22 = val;
+    g_emu_rate2 = val;
 }
 
 /* 0x60b0 */
 static NOINLINE void np9660SetEmuFlags(u8 val)
 {
-    g_emu_flags_8c34 = val;
+    g_emu_flags = val;
 }
 
 /* 0x60bc */
 static NOINLINE void np9660GetPvdBuf(void **out)
 {
-    *out = g_pvd_buf_8c38;
+    *out = g_pvd_buf;
 }
 
 /* 0x60cc */
 static NOINLINE void np9660ApplySeekDelay(u32 lba, u32 cnt, u32 seek_dist, int mode, int cross_layer)
 {
     u64 elapsed;
-    if ((u64)g_emu_time_8c08 > (u64)g_emu_time_9c18) {
-        elapsed = (u64)g_emu_time_8c08 - (u64)g_emu_time_9c18;
+    if ((u64)g_emuTimeStart > (u64)g_emuStatTimeB) {
+        elapsed = (u64)g_emuTimeStart - (u64)g_emuStatTimeB;
     } else {
-        elapsed = ((u64)0 - (u64)g_emu_time_8c08) | (~(u64)g_emu_time_9c18);
+        elapsed = ((u64)0 - (u64)g_emuTimeStart) | (~(u64)g_emuStatTimeB);
     }
     sceUmd9660_driver_887C3193();
     u32 low = sceKernelGetSystemTimeLow();
     u32 s0 = low + 0x23dU;
-    u32 half = (u32)g_data_8a08;
+    u32 half = (u32)g_np9660EmuParam0;
     u32 mult;
     if (lba <= half) {
         if (lba < s0) {
@@ -3743,7 +3742,7 @@ static NOINLINE void np9660ApplySeekDelay(u32 lba, u32 cnt, u32 seek_dist, int m
         u32 prod = (factor * cnt + 0x35b60U) * mult;
         a1 = (u32)(((u64)prod * 0x10624dd3ULL) >> 38);
     }
-    u32 xfer = (u32)(((u64)(a1 * (u32)g_emu_rate1_9c20) * 0x10624dd3ULL) >> 38);
+    u32 xfer = (u32)(((u64)(a1 * (u32)g_emu_rate1) * 0x10624dd3ULL) >> 38);
     u32 total = xfer;
     if (mode != 1) {
         u32 s_us = seek_dist * 6U;
@@ -3753,12 +3752,12 @@ static NOINLINE void np9660ApplySeekDelay(u32 lba, u32 cnt, u32 seek_dist, int m
         if (cross_layer != 0) {
             s_us += 0xc350U;
         }
-        u32 seek_scaled = (u32)(((u64)(s_us * (u32)g_emu_rate2_9c22) * 0x10624dd3ULL) >> 38);
+        u32 seek_scaled = (u32)(((u64)(s_us * (u32)g_emu_rate2) * 0x10624dd3ULL) >> 38);
         total = xfer + seek_scaled;
     }
 
     if (elapsed >= (u64)total) {
-        g_emu_8c20 += (u32)elapsed - total;
+        g_emuSeekParamA += (u32)elapsed - total;
     } else {
         u32 wait_us = total - (u32)elapsed;
         if (wait_us != 0) {
@@ -3770,11 +3769,11 @@ static NOINLINE void np9660ApplySeekDelay(u32 lba, u32 cnt, u32 seek_dist, int m
 /* 0x63b4 */
 static NOINLINE void np9660SleepForTransfer(u32 lba, u32 cnt, u32 seek_dist, int mode, int cross_layer)
 {
-    u64 elapsed = (u64)g_emu_time_8c08 - (u64)g_emu_time_9c18;
+    u64 elapsed = (u64)g_emuTimeStart - (u64)g_emuStatTimeB;
     sceUmd9660_driver_887C3193();
     u32 low = sceKernelGetSystemTimeLow();
     u32 s0 = low + 0x23dU;
-    u32 half = (u32)g_data_8a08;
+    u32 half = (u32)g_np9660EmuParam0;
     u32 mult;
     if (lba <= half) {
         if (lba < s0) {
@@ -3846,7 +3845,7 @@ static NOINLINE void np9660SleepForTransfer(u32 lba, u32 cnt, u32 seek_dist, int
     }
 
     u32 t4 = (u32)(((u64)((factor * cnt + 0x157cU) * mult) * 0x10624dd3ULL) >> 38);
-    u32 xfer = (u32)(((u64)(t4 * (u32)g_emu_rate1_9c20) * 0x10624dd3ULL) >> 38);
+    u32 xfer = (u32)(((u64)(t4 * (u32)g_emu_rate1) * 0x10624dd3ULL) >> 38);
     u32 total = xfer;
     if (mode != 1) {
         u32 s_us = seek_dist * 6U;
@@ -3857,12 +3856,12 @@ static NOINLINE void np9660SleepForTransfer(u32 lba, u32 cnt, u32 seek_dist, int
             s_us += 0xc350U;
         }
         u32 xfer2 = (u32)(((u64)(xfer * mult) * 0x10624dd3ULL) >> 38);
-        u32 seek_scaled = (u32)(((u64)(s_us * (u32)g_emu_rate2_9c22) * 0x10624dd3ULL) >> 38);
+        u32 seek_scaled = (u32)(((u64)(s_us * (u32)g_emu_rate2) * 0x10624dd3ULL) >> 38);
         total = xfer2 + seek_scaled;
     }
 
     if (elapsed >= (u64)total) {
-        g_emu_8c20 += (u32)elapsed - total;
+        g_emuSeekParamA += (u32)elapsed - total;
     } else {
         u32 wait_us = total - (u32)elapsed;
         if (wait_us != 0) {
@@ -3874,14 +3873,14 @@ static NOINLINE void np9660SleepForTransfer(u32 lba, u32 cnt, u32 seek_dist, int
 /* 0x66f8 */
 static NOINLINE u32 np9660CalcSeekDistance(u32 lba, u32 prev_lba, int *cross_layer)
 {
-    u32 cur = g_emu_8c04;
-    u32 half = (u32)g_data_8a08;
+    u32 cur = g_emuReadStateC;
+    u32 half = (u32)g_np9660EmuParam0;
     if (cur < lba) {
         u32 diff = lba - prev_lba;
         if (lba > half && prev_lba < half) {
             *cross_layer = 1;
             u32 d1 = lba - half;
-            u32 d2 = half - g_emu_8c04;
+            u32 d2 = half - g_emuReadStateC;
             diff = (d2 < d1) ? (d1 - d2) : (d2 - d1);
         }
         return diff;
@@ -3902,13 +3901,13 @@ static NOINLINE int np9660InitDecThread(void)
 {
     int r = sceKernelCreateMbx("SceNp9660Dec", 1, NULL);
     if (r >= 0) {
-        g_dec_mbx_943c = r;
+        g_dec_mbx = r;
         r = sceKernelCreateEventFlag("SceNp9660Dec", 1, 0, NULL);
         if (r >= 0) {
-            g_dec_evf_9440 = r;
+            g_dec_evf = r;
             r = sceKernelCreateThread("SceNp9660Dec", np9660DecThreadEntry, 0x70, 0x1000, 0x00100001, NULL);
             if (r >= 0) {
-                g_dec_thid_9438 = r;
+                g_dec_thid = r;
                 r = sceKernelStartThread(r, 0, NULL);
                 if (r >= 0) {
                     return 0;
@@ -3916,17 +3915,17 @@ static NOINLINE int np9660InitDecThread(void)
             }
         }
     }
-    if (g_dec_thid_9438 > 0) {
-        sceKernelDeleteThread(g_dec_thid_9438);
-        g_dec_thid_9438 = 0;
+    if (g_dec_thid > 0) {
+        sceKernelDeleteThread(g_dec_thid);
+        g_dec_thid = 0;
     }
-    if (g_dec_evf_9440 > 0) {
-        sceKernelDeleteEventFlag(g_dec_evf_9440);
-        g_dec_evf_9440 = 0;
+    if (g_dec_evf > 0) {
+        sceKernelDeleteEventFlag(g_dec_evf);
+        g_dec_evf = 0;
     }
-    if (g_dec_mbx_943c > 0) {
-        sceKernelDeleteMbx(g_dec_mbx_943c);
-        g_dec_mbx_943c = 0;
+    if (g_dec_mbx > 0) {
+        sceKernelDeleteMbx(g_dec_mbx);
+        g_dec_mbx = 0;
     }
     return r;
 }
@@ -3935,27 +3934,27 @@ static NOINLINE int np9660InitDecThread(void)
 static NOINLINE int np9660TermDecThread(void)
 {
     u32 msg[6];
-    if (g_dec_thid_9438 > 0 && g_dec_mbx_943c > 0) {
+    if (g_dec_thid > 0 && g_dec_mbx > 0) {
         msg[0] = 0;
         msg[1] = 0;
         msg[2] = 0;
         msg[3] = 0;
         msg[4] = 0;
         msg[5] = 0;
-        sceKernelSendMbx(g_dec_mbx_943c, msg);
-        sceKernelWaitThreadEnd(g_dec_thid_9438, NULL);
+        sceKernelSendMbx(g_dec_mbx, msg);
+        sceKernelWaitThreadEnd(g_dec_thid, NULL);
     }
-    if (g_dec_thid_9438 > 0) {
-        sceKernelDeleteThread(g_dec_thid_9438);
-        g_dec_thid_9438 = 0;
+    if (g_dec_thid > 0) {
+        sceKernelDeleteThread(g_dec_thid);
+        g_dec_thid = 0;
     }
-    if (g_dec_evf_9440 > 0) {
-        sceKernelDeleteEventFlag(g_dec_evf_9440);
-        g_dec_evf_9440 = 0;
+    if (g_dec_evf > 0) {
+        sceKernelDeleteEventFlag(g_dec_evf);
+        g_dec_evf = 0;
     }
-    if (g_dec_mbx_943c > 0) {
-        sceKernelDeleteMbx(g_dec_mbx_943c);
-        g_dec_mbx_943c = 0;
+    if (g_dec_mbx > 0) {
+        sceKernelDeleteMbx(g_dec_mbx);
+        g_dec_mbx = 0;
     }
     return 0;
 }
@@ -3968,12 +3967,12 @@ static NOINLINE int np9660SetDecThreadPrio(int prio)
         if (prio == 0) {
             prio = 0x70;
         }
-        r = sceKernelChangeThreadPriority(g_dec_thid_9438, prio);
+        r = sceKernelChangeThreadPriority(g_dec_thid, prio);
         if (r < 0) {
             return r;
         }
     }
-    g_data_8a10 = prio;
+    g_np9660EmuParam2 = prio;
     return r;
 }
 
@@ -3981,8 +3980,8 @@ static NOINLINE int np9660SetDecThreadPrio(int prio)
 static NOINLINE int np9660AsyncDecompress(void *dst, u32 dst_len, const void *src)
 {
     u32 msg[6];
-    if (g_data_8a10 < 0) {
-        int r = sceKernelChangeThreadPriority(g_dec_thid_9438, np9660GetMutexOwnerPri());
+    if (g_np9660EmuParam2 < 0) {
+        int r = sceKernelChangeThreadPriority(g_dec_thid, np9660GetMutexOwnerPri());
         if (r < 0) {
             return r;
         }
@@ -3990,11 +3989,11 @@ static NOINLINE int np9660AsyncDecompress(void *dst, u32 dst_len, const void *sr
     msg[2] = (u32)dst;
     msg[3] = dst_len;
     msg[4] = (u32)src;
-    int r = sceKernelSendMbx(g_dec_mbx_943c, msg);
+    int r = sceKernelSendMbx(g_dec_mbx, msg);
     if (r < 0) {
         return r;
     }
-    r = sceKernelWaitEventFlag(g_dec_evf_9440, 1, 0x21, NULL, NULL);
+    r = sceKernelWaitEventFlag(g_dec_evf, 1, 0x21, NULL, NULL);
     return (r < 0) ? r : (int)msg[5];
 }
 
@@ -4005,7 +4004,7 @@ static NOINLINE int np9660DecThreadEntry(SceSize args, void *argp)
     (void)argp;
     u32 *msg = NULL;
     int r;
-    while ((r = sceKernelReceiveMbx(g_dec_mbx_943c, (void **)&msg, NULL)) >= 0) {
+    while ((r = sceKernelReceiveMbx(g_dec_mbx, (void **)&msg, NULL)) >= 0) {
         u32 dst = msg[2];
         if (dst == 0) {
             break;
@@ -4019,7 +4018,7 @@ static NOINLINE int np9660DecThreadEntry(SceSize args, void *argp)
             sceKernelDcacheWritebackRange((const void *)cached_addr, msg[4]);
             msg[5] = (u32)r;
         }
-        sceKernelSetEventFlag(g_dec_evf_9440, 1);
+        sceKernelSetEventFlag(g_dec_evf, 1);
     }
     return sceKernelExitThread(r);
 }
@@ -4028,15 +4027,15 @@ static NOINLINE int np9660DecThreadEntry(SceSize args, void *argp)
 static NOINLINE void np9660ResetRingCache(void)
 {
     for (int i = 0; i < 0xe8; i++) {
-        g_ring0_9480[i].lba = 0;
-        g_ring0_9480[i].valid = 0;
+        g_ring0[i].lba = 0;
+        g_ring0[i].valid = 0;
     }
     for (int i = 0; i < 8; i++) {
-        g_ring1_9bc0[i].lba = 0;
-        g_ring1_9bc0[i].valid = 0;
+        g_ring1[i].lba = 0;
+        g_ring1[i].valid = 0;
     }
-    g_ring0_idx_9444 = 0;
-    g_ring1_idx_9448 = 0;
+    g_ring0_idx = 0;
+    g_ring1_idx = 0;
 }
 
 /* 0x6bd4 */
@@ -4064,11 +4063,11 @@ static NOINLINE int np9660InsertRingCache(u32 lba, u32 count, int seek_only, int
     (void)seek_only;
     u32 aligned_start = 0;
     u32 aligned_end = 0;
-    g_emu_9c24 = 0;
+    g_emuStatE = 0;
     u32 blks = np9660AlignLbaRange(lba, count, &aligned_start, &aligned_end);
     np9660UpdateRingCache(aligned_start, (int)blks, table_sel);
     if (table_sel != 0) {
-        g_emu_9c24 = 0;
+        g_emuStatE = 0;
         return 0;
     }
     np9660EvictRingWindow(aligned_end, 0);
@@ -4078,8 +4077,8 @@ static NOINLINE int np9660InsertRingCache(u32 lba, u32 count, int seek_only, int
 /* 0x6d10 */
 static NOINLINE void np9660SetRingElapsed(u32 lo, u32 hi)
 {
-    g_ring_elapsed_lo_9450 = lo;
-    g_ring_elapsed_hi_9454 = (int)hi;
+    g_ring_elapsed_lo = lo;
+    g_ring_elapsed_hi = (int)hi;
 }
 
 /* 0x6d24 */
@@ -4088,14 +4087,14 @@ static NOINLINE int np9660ScanRingCache(u32 start_lba, u32 blks, int table_sel, 
     u32 off = 0;
     u32 matched = 0;
     if (table_sel != 0) {
-        int idx = g_ring1_idx_9448;
+        int idx = g_ring1_idx;
         for (int step = 0; step < 9; step++, idx++) {
             if (idx >= 8) {
                 idx = 0;
             }
-            if (g_ring1_9bc0[idx].valid == 1) {
+            if (g_ring1[idx].valid == 1) {
                 u32 target = start_lba + off;
-                if (g_ring1_9bc0[idx].lba == target) {
+                if (g_ring1[idx].lba == target) {
                     matched++;
                     off += 0x10U;
                     if (matched == blks) {
@@ -4111,14 +4110,14 @@ static NOINLINE int np9660ScanRingCache(u32 start_lba, u32 blks, int table_sel, 
             }
         }
     } else {
-        int idx = g_ring0_idx_9444;
+        int idx = g_ring0_idx;
         for (int step = 0; step < 0xe9; step++, idx++) {
             if (idx >= 0xe8) {
                 idx = 0;
             }
-            if (g_ring0_9480[idx].valid == 1) {
+            if (g_ring0[idx].valid == 1) {
                 u32 target = start_lba + off;
-                if (g_ring0_9480[idx].lba == target) {
+                if (g_ring0[idx].lba == target) {
                     matched++;
                     off += 0x10U;
                     if (matched == blks) {
@@ -4146,65 +4145,65 @@ static NOINLINE int np9660UpdateRingCache(u32 start_lba, int blks, int table_sel
         int idx = 0;
         for (; idx < 8; idx++) {
             full++;
-            if (g_ring1_9bc0[idx].valid != 1) {
+            if (g_ring1[idx].valid != 1) {
                 full = 0;
                 break;
             }
         }
         if (full != 0) {
-            idx = g_ring1_idx_9448;
+            idx = g_ring1_idx;
         }
         if (blks > 0) {
             for (int rem = blks; rem != 0; rem--, idx++) {
                 if (idx >= 8) {
                     idx = 0;
                 }
-                g_ring1_idx_9448 = idx;
+                g_ring1_idx = idx;
                 if (full != 0) {
-                    g_ring1_9bc0[idx].lba = start_lba + (u32)off;
-                    g_ring1_9bc0[idx].valid = 1;
+                    g_ring1[idx].lba = start_lba + (u32)off;
+                    g_ring1[idx].valid = 1;
                     off += 0x10;
-                } else if (g_ring1_9bc0[idx].valid != 1) {
-                    g_ring1_9bc0[idx].valid = 1;
-                    g_ring1_9bc0[idx].lba = start_lba + (u32)off;
+                } else if (g_ring1[idx].valid != 1) {
+                    g_ring1[idx].valid = 1;
+                    g_ring1[idx].lba = start_lba + (u32)off;
                     off += 0x10;
                     full = 1;
                 }
             }
         }
-        g_ring1_idx_9448++;
+        g_ring1_idx++;
         return 0;
     } else {
         int idx = 0;
         for (; idx < 0xe8; idx++) {
             full++;
-            if (g_ring0_9480[idx].valid != 1) {
+            if (g_ring0[idx].valid != 1) {
                 full = 0;
                 break;
             }
         }
         if (full != 0) {
-            idx = g_ring0_idx_9444;
+            idx = g_ring0_idx;
         }
         if (blks > 0) {
             for (int rem = blks; rem != 0; rem--, idx++) {
                 if (idx >= 0xe8) {
                     idx = 0;
                 }
-                g_ring0_idx_9444 = idx;
+                g_ring0_idx = idx;
                 if (full != 0) {
-                    g_ring0_9480[idx].lba = start_lba + (u32)off;
-                    g_ring0_9480[idx].valid = 1;
+                    g_ring0[idx].lba = start_lba + (u32)off;
+                    g_ring0[idx].valid = 1;
                     off += 0x10;
-                } else if (g_ring0_9480[idx].valid != 1) {
-                    g_ring0_9480[idx].valid = 1;
-                    g_ring0_9480[idx].lba = start_lba + (u32)off;
+                } else if (g_ring0[idx].valid != 1) {
+                    g_ring0[idx].valid = 1;
+                    g_ring0[idx].lba = start_lba + (u32)off;
                     off += 0x10;
                     full = 1;
                 }
             }
         }
-        g_ring0_idx_9444++;
+        g_ring0_idx++;
         return 0;
     }
 }
@@ -4224,13 +4223,13 @@ static NOINLINE u32 np9660AlignLbaRange(u32 lba, u32 count, u32 *aligned_start, 
 static NOINLINE int np9660EvictRingWindow(u32 end_lba, int table_sel)
 {
     int span = 0x40;
-    if (g_ring_elapsed_hi_9454 > 0 || (g_ring_elapsed_hi_9454 == 0 && g_ring_elapsed_lo_9450 > 0x9c3fU)) {
-        u64 elapsed = ((u64)(u32)g_ring_elapsed_hi_9454 << 32) | (u64)g_ring_elapsed_lo_9450;
+    if (g_ring_elapsed_hi > 0 || (g_ring_elapsed_hi == 0 && g_ring_elapsed_lo > 0x9c3fU)) {
+        u64 elapsed = ((u64)(u32)g_ring_elapsed_hi << 32) | (u64)g_ring_elapsed_lo;
         s64 q = np9660Div64((s64)(elapsed - 40000ULL), 8000);
         int v = (int)q + 0x40;
         span = (v < 0x3f0) ? v : 0x3f0;
     }
-    g_emu_9c24 = span;
+    g_emuStatE = span;
     return np9660UpdateRingCache(end_lba, span / 16, table_sel);
 }
 
@@ -4242,7 +4241,7 @@ static NOINLINE int np9660SimulateDelayV2(u32 lba, u32 cnt, int seek_only, int m
     if (seek_only == 0) {
         hit = (np9660LookupRingCache(lba, cnt, 0, mode, rem_lba, rem_blks) != 0);
     }
-    u32 prev_cur = g_emu_8c00;
+    u32 prev_cur = g_emuReadStateB;
     int small_adj = 0;
     if ((mode & 2) == 0 && hit == 0 && cnt < 0x41U) {
         u32 d = (lba < prev_cur) ? (prev_cur - lba) : (lba - prev_cur);
@@ -4252,20 +4251,20 @@ static NOINLINE int np9660SimulateDelayV2(u32 lba, u32 cnt, int seek_only, int m
     }
     u32 seek_dist = 0;
     if (seek_only != 0 || hit == 0) {
-        seek_dist = np9660CalcSeekDistanceV2(lba, g_emu_9c0c, &cross_flags);
+        seek_dist = np9660CalcSeekDistanceV2(lba, g_emuStatD, &cross_flags);
     }
     s64 now = sceKernelGetSystemTimeWide();
-    g_emu_time_9c10 = now;
-    if (g_emu_time_8c18 != 0) {
-        u64 diff = (u64)now - (u64)g_emu_time_8c18;
+    g_emuStatTimeA = now;
+    if (g_emuTimeAccum != 0) {
+        u64 diff = (u64)now - (u64)g_emuTimeAccum;
         np9660SetRingElapsed((u32)diff, (u32)(diff >> 32));
     }
-    u32 cur = g_emu_8c00;
+    u32 cur = g_emuReadStateB;
     if (lba == cur) {
         if ((hit | small_adj) != 0) {
             np9660SleepForTransferV2(lba, cnt, seek_dist, 1, cross_flags);
             if (hit == 0 && small_adj != 0) {
-                g_emu_9c0c = lba + cnt + 0x80U;
+                g_emuStatD = lba + cnt + 0x80U;
             }
         } else {
             np9660ApplySeekDelayV2(lba, cnt, seek_dist, 1, cross_flags, mode);
@@ -4274,7 +4273,7 @@ static NOINLINE int np9660SimulateDelayV2(u32 lba, u32 cnt, int seek_only, int m
         if ((hit | small_adj) != 0) {
             np9660SleepForTransferV2(lba, cnt, seek_dist, 1, cross_flags);
             if (hit == 0 && small_adj != 0) {
-                g_emu_9c0c = lba + cnt + 0x80U;
+                g_emuStatD = lba + cnt + 0x80U;
             }
         } else {
             np9660ApplySeekDelayV2(lba, cnt, seek_dist, 3, cross_flags, mode);
@@ -4286,21 +4285,21 @@ static NOINLINE int np9660SimulateDelayV2(u32 lba, u32 cnt, int seek_only, int m
                (lba > cur && (lba & 0x0ffffff0U) == (cur >> 4))) {
         np9660SleepForTransferV2(lba, cnt, seek_dist, 2, cross_flags);
         if (hit == 0 && small_adj != 0) {
-            g_emu_9c0c = lba + cnt + 0x80U;
+            g_emuStatD = lba + cnt + 0x80U;
         }
     } else {
         np9660ApplySeekDelayV2(lba, cnt, seek_dist, 3, cross_flags, mode);
     }
 
     u32 next_cur = lba + cnt;
-    g_emu_time_8c18 = sceKernelGetSystemTimeWide();
-    g_emu_9c00 = cnt;
-    g_emu_8c00 = next_cur;
+    g_emuTimeAccum = sceKernelGetSystemTimeWide();
+    g_emuStatA = cnt;
+    g_emuReadStateB = next_cur;
     if (hit == 0) {
-        g_emu_9c08 = (u32)mode;
-        g_emu_9c0c = next_cur + (u32)g_emu_9c24;
+        g_emuStatC = (u32)mode;
+        g_emuStatD = next_cur + (u32)g_emuStatE;
     } else {
-        g_emu_9c08 = (u32)mode | 0xf0000000U;
+        g_emuStatC = (u32)mode | 0xf0000000U;
     }
     return hit;
 }
@@ -4308,39 +4307,39 @@ static NOINLINE int np9660SimulateDelayV2(u32 lba, u32 cnt, int seek_only, int m
 /* 0x73b4 */
 static NOINLINE void np9660SetEmuLbaV2(u32 lba)
 {
-    g_emu_9c0c = lba;
+    g_emuStatD = lba;
 }
 
 /* 0x73c0 */
 static NOINLINE void np9660ApplySeekDelayV2(u32 lba, u32 cnt, u32 seek_dist, int mode, int cross_flags, int req_mode)
 {
     u64 elapsed;
-    if ((u64)g_emu_time_9c10 > (u64)g_emu_time_9c18) {
-        elapsed = (u64)g_emu_time_9c10 - (u64)g_emu_time_9c18;
+    if ((u64)g_emuStatTimeA > (u64)g_emuStatTimeB) {
+        elapsed = (u64)g_emuStatTimeA - (u64)g_emuStatTimeB;
     } else {
-        elapsed = ((u64)0 - (u64)g_emu_time_9c10) | (~(u64)g_emu_time_9c18);
+        elapsed = ((u64)0 - (u64)g_emuStatTimeA) | (~(u64)g_emuStatTimeB);
     }
     if (cnt - 0x81U < 0x80U) {
-        g_data_8a14 = 0x756;
-        g_data_8a18 = 0x1f8;
+        g_np9660EmuParam3 = 0x756;
+        g_np9660EmuParam4 = 0x1f8;
     } else if (cnt - 0x41U < 0x40U) {
-        g_data_8a14 = 0x8b8;
-        g_data_8a18 = 0x167;
+        g_np9660EmuParam3 = 0x8b8;
+        g_np9660EmuParam4 = 0x167;
     } else {
-        g_data_8a14 = 0x6ed;
-        g_data_8a18 = 0x304;
+        g_np9660EmuParam3 = 0x6ed;
+        g_np9660EmuParam4 = 0x304;
     }
     sceUmd9660_driver_887C3193();
     u32 low = sceKernelGetSystemTimeLow();
-    u32 s1 = (u32)g_data_8a18 + low;
-    u32 half = (u32)g_data_8a0c;
+    u32 s1 = (u32)g_np9660EmuParam4 + low;
+    u32 half = (u32)g_np9660EmuParam1;
     u32 mult;
     if (lba <= half) {
         if (lba < s1) {
-            mult = (u32)g_data_8a14;
+            mult = (u32)g_np9660EmuParam3;
         } else {
-            u32 q = lba / (u32)g_data_8a18;
-            mult = (u32)g_data_8a14 - q;
+            u32 q = lba / (u32)g_np9660EmuParam4;
+            mult = (u32)g_np9660EmuParam3 - q;
             if (mult < 0x3e8U) {
                 mult = 0x3e8U;
             }
@@ -4350,13 +4349,13 @@ static NOINLINE void np9660ApplySeekDelayV2(u32 lba, u32 cnt, u32 seek_dist, int
         if (v1 < s1) {
             mult = 0x3e8U;
         } else {
-            u32 q = v1 / (u32)g_data_8a18;
+            u32 q = v1 / (u32)g_np9660EmuParam4;
             mult = q + 0x3e8U;
             if (mult < 0x3e8U) {
                 mult = 0x3e8U;
             }
-            if (mult > (u32)g_data_8a14) {
-                mult = (u32)g_data_8a14;
+            if (mult > (u32)g_np9660EmuParam3) {
+                mult = (u32)g_np9660EmuParam3;
             }
         }
     }
@@ -4394,10 +4393,10 @@ static NOINLINE void np9660ApplySeekDelayV2(u32 lba, u32 cnt, u32 seek_dist, int
     u32 total;
     int cf2 = cross_flags & 2;
     if (mode == 1) {
-        total = (xfer * (u32)g_emu_rate1_9c20) >> 10;
+        total = (xfer * (u32)g_emu_rate1) >> 10;
     } else {
         xfer += (cnt < 0x80U) ? 0x3bd08U : 0x249f0U;
-        u32 prev_mode = g_emu_9c08;
+        u32 prev_mode = g_emuStatC;
         if ((prev_mode & 1U) != 0 && (prev_mode & 0xf0000000U) != 0 && req_mode == 0) {
             xfer += 0x5000U;
         }
@@ -4405,7 +4404,7 @@ static NOINLINE void np9660ApplySeekDelayV2(u32 lba, u32 cnt, u32 seek_dist, int
         if ((cross_flags & 1) != 0) {
             s_us += 0xc350U;
         }
-        if (g_emu_9c04 == 0 && cf2 != 0) {
+        if (g_emuStatB == 0 && cf2 != 0) {
             if (seek_dist - 0x2a01U <= 0xd5feU) {
                 s_us += 0x60000U;
             } else if (seek_dist <= 0x10000U) {
@@ -4414,7 +4413,7 @@ static NOINLINE void np9660ApplySeekDelayV2(u32 lba, u32 cnt, u32 seek_dist, int
                 s_us += 0xa0000U;
             }
         } else {
-            if ((g_emu_9c04 & 2) != 0 && cf2 == 0) {
+            if ((g_emuStatB & 2) != 0 && cf2 == 0) {
                 if (seek_dist < 0x3001U) {
                     s_us += 0x30000U;
                 } else if (seek_dist <= 0xffffU) {
@@ -4437,7 +4436,7 @@ static NOINLINE void np9660ApplySeekDelayV2(u32 lba, u32 cnt, u32 seek_dist, int
         if (s_us > 0x28847aU) {
             s_us = 0x28847aU;
         }
-        total = ((xfer * (u32)g_emu_rate1_9c20) >> 10) + ((s_us * (u32)g_emu_rate2_9c22) >> 10);
+        total = ((xfer * (u32)g_emu_rate1) >> 10) + ((s_us * (u32)g_emu_rate2) >> 10);
     }
 
     if (elapsed < (u64)total) {
@@ -4446,41 +4445,41 @@ static NOINLINE void np9660ApplySeekDelayV2(u32 lba, u32 cnt, u32 seek_dist, int
             sceKernelDelayThread(wait_us);
         }
     }
-    g_emu_9c04 = (cf2 == 0) ? 0 : 2;
+    g_emuStatB = (cf2 == 0) ? 0 : 2;
 }
 
 /* 0x78d0 */
 static NOINLINE void np9660SleepForTransferV2(u32 lba, u32 cnt, u32 seek_dist, int mode, int cross_flags)
 {
-    u64 elapsed = (u64)g_emu_time_9c10 - (u64)g_emu_time_9c18;
+    u64 elapsed = (u64)g_emuStatTimeA - (u64)g_emuStatTimeB;
     sceUmd9660_driver_887C3193();
-    u32 old_8a18 = (u32)g_data_8a18;
+    u32 old_8a18 = (u32)g_np9660EmuParam4;
     u32 low = sceKernelGetSystemTimeLow();
     u32 s3 = old_8a18 + low;
     if (cnt - 0x81U < 0x80U) {
-        g_data_8a14 = 0x728;
-        g_data_8a18 = 0x213;
+        g_np9660EmuParam3 = 0x728;
+        g_np9660EmuParam4 = 0x213;
     } else if (cnt - 0x41U < 0x40U) {
-        g_data_8a14 = 0x8d6;
-        g_data_8a18 = 0x15e;
+        g_np9660EmuParam3 = 0x8d6;
+        g_np9660EmuParam4 = 0x15e;
     } else if (cnt - 0x21U < 0x20U) {
-        g_data_8a14 = 0x6b5;
-        g_data_8a18 = 0x269;
+        g_np9660EmuParam3 = 0x6b5;
+        g_np9660EmuParam4 = 0x269;
     } else {
-        g_data_8a18 = 0x23d;
+        g_np9660EmuParam4 = 0x23d;
     }
 
-    u32 half = (u32)g_data_8a0c;
+    u32 half = (u32)g_np9660EmuParam1;
     u32 mult;
     if (lba <= half) {
         if (lba < s3) {
-            mult = (u32)g_data_8a14;
+            mult = (u32)g_np9660EmuParam3;
         } else {
-            u32 q = lba / (u32)g_data_8a18;
-            if ((u32)g_data_8a14 < q) {
+            u32 q = lba / (u32)g_np9660EmuParam4;
+            if ((u32)g_np9660EmuParam3 < q) {
                 mult = 0x3e8U;
             } else {
-                mult = (u32)g_data_8a14 - q;
+                mult = (u32)g_np9660EmuParam3 - q;
                 if (mult < 0x3e8U) {
                     mult = 0x3e8U;
                 }
@@ -4491,13 +4490,13 @@ static NOINLINE void np9660SleepForTransferV2(u32 lba, u32 cnt, u32 seek_dist, i
         if (v1 < s3) {
             mult = 0x3e8U;
         } else {
-            u32 q = v1 / (u32)g_data_8a18;
+            u32 q = v1 / (u32)g_np9660EmuParam4;
             mult = q + 0x3e8U;
             if (mult < 0x3e8U) {
                 mult = 0x3e8U;
             }
-            if (mult > (u32)g_data_8a14) {
-                mult = (u32)g_data_8a14;
+            if (mult > (u32)g_np9660EmuParam3) {
+                mult = (u32)g_np9660EmuParam3;
             }
         }
     }
@@ -4533,7 +4532,7 @@ static NOINLINE void np9660SleepForTransferV2(u32 lba, u32 cnt, u32 seek_dist, i
     if (mode == 2) {
         xfer = (cnt < 0x41U) ? (xfer << 3) : (xfer + s6);
     }
-    if (g_emu_9c04 != cross_flags) {
+    if (g_emuStatB != cross_flags) {
         xfer += (low & 0x4fffU) + 0x1000U;
     }
     if (cnt < 0x11U) {
@@ -4542,7 +4541,7 @@ static NOINLINE void np9660SleepForTransferV2(u32 lba, u32 cnt, u32 seek_dist, i
 
     u32 total;
     if (mode == 1) {
-        total = (xfer * (u32)g_emu_rate1_9c20) >> 10;
+        total = (xfer * (u32)g_emu_rate1) >> 10;
     } else {
         u32 s_us = seek_dist * 5U;
         if (s_us > 0x28847aU) {
@@ -4551,7 +4550,7 @@ static NOINLINE void np9660SleepForTransferV2(u32 lba, u32 cnt, u32 seek_dist, i
         if ((cross_flags & 1) != 0) {
             s_us += 0xc350U;
         }
-        total = ((xfer * (u32)g_emu_rate1_9c20) >> 10) + ((s_us * (u32)g_emu_rate2_9c22) >> 10);
+        total = ((xfer * (u32)g_emu_rate1) >> 10) + ((s_us * (u32)g_emu_rate2) >> 10);
     }
 
     if (elapsed < (u64)total) {
@@ -4566,15 +4565,15 @@ static NOINLINE void np9660SleepForTransferV2(u32 lba, u32 cnt, u32 seek_dist, i
 static NOINLINE u32 np9660CalcSeekDistanceV2(u32 lba, u32 prev_lba, int *cross_flags)
 {
     *cross_flags = 0;
-    u32 ref = g_emu_9c0c;
-    u32 half = (u32)g_data_8a0c;
+    u32 ref = g_emuStatD;
+    u32 half = (u32)g_np9660EmuParam1;
     if (ref < lba) {
         u32 diff = lba - prev_lba;
         if (lba > half) {
             if (prev_lba < half) {
-                *cross_flags = (g_emu_8c00 > half) ? 2 : 3;
+                *cross_flags = (g_emuReadStateB > half) ? 2 : 3;
                 u32 d1 = lba - half;
-                u32 d2 = half - g_emu_9c0c;
+                u32 d2 = half - g_emuStatD;
                 diff = (d2 < d1) ? (d1 - d2) : (d2 - d1);
             } else {
                 *cross_flags = 2;
@@ -4585,7 +4584,7 @@ static NOINLINE u32 np9660CalcSeekDistanceV2(u32 lba, u32 prev_lba, int *cross_f
         u32 diff = prev_lba - lba;
         if (prev_lba > half) {
             if (lba < half) {
-                *cross_flags = (g_emu_8c00 > half) ? 1 : 0;
+                *cross_flags = (g_emuReadStateB > half) ? 1 : 0;
                 u32 d1 = prev_lba - half;
                 u32 d2 = half - lba;
                 diff = (d1 < d2) ? (d2 - d1) : (d1 - d2);
