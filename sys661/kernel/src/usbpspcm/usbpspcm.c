@@ -50,10 +50,10 @@ typedef struct {
 } ScePspcmFdSlot;
 
 typedef struct {
-    int unk0;
+    int flags;
     int fs_num;
-    int unk8;
-    int unkc;
+    int dev_entry;
+    int dev_type;
     ScePspcmFdSlot *slot;
 } ScePspcmIob;
 
@@ -68,45 +68,45 @@ static int g_connected;           /* 0x1c9c */
 static int g_wait_thid;           /* 0x1ca0 */
 static int g_conn_semaid;         /* 0x1ca4 */
 
-static int sub_0000(void);
-static int sub_00cc(void);
-static int sub_022c(void);
-static int sub_0288(void);
-static int sub_02b0(void);
-static int sub_03ac(void);
-static int sub_03d0(void);
-static int sub_03d8(void);
-static int sub_03e0(ScePspcmIob *iob, const char *dev, unsigned int cmd, void *indata, int inlen, void *outdata, int outlen);
-static int sub_06a4(ScePspcmIob *iob, const char *file, int flags, int mode);
-static int sub_06f0(ScePspcmIob *iob);
-static int sub_070c(ScePspcmIob *iob, char *data, int len);
-static int sub_073c(ScePspcmIob *iob, const char *data, int len);
-static int sub_07a0(ScePspcmIob *iob, unsigned int cmd, void *indata, int inlen, void *outdata, int outlen);
-static int sub_08b4(void);
-static void sub_0a38(void);
-static int sub_0b14(const char *dev, u32 cmd, const void *indata, u32 inlen, void *outdata, u32 outlen);
-static int sub_0cd4(ScePspcmIob *iob, const char *file, int flags, int mode);
-static int sub_0eb4(ScePspcmIob *iob);
-static int sub_0fd4(ScePspcmIob *iob, char *data, int len);
-static int sub_1260(ScePspcmIob *iob, const char *data, int len);
-static int sub_139c(ScePspcmIob *iob, u32 cmd, const void *indata, u32 inlen);
-static int sub_150c(void);
-static int sub_1530(u32 args, void *argp);
-static int sub_1570(u32 **out_buf);
-static int sub_163c(int slot);
-static void sub_16b8(void);
+static int usbPspcmAttach(void);
+static int usbPspcmDetach(void);
+static int pspcmCreateConnectSema(void);
+static int pspcmDeleteConnectSema(void);
+static int pspcmRegisterIoDriver(void);
+static int pspcmUnregisterIoDriver(void);
+static int pspcmDrvInit(void);
+static int pspcmDrvExit(void);
+static int pspcmDrvDevctl(ScePspcmIob *iob, const char *dev, unsigned int cmd, void *indata, int inlen, void *outdata, int outlen);
+static int pspcmDrvOpen(ScePspcmIob *iob, const char *file, int flags, int mode);
+static int pspcmDrvClose(ScePspcmIob *iob);
+static int pspcmDrvRead(ScePspcmIob *iob, char *data, int len);
+static int pspcmDrvWrite(ScePspcmIob *iob, const char *data, int len);
+static int pspcmDrvIoctl(ScePspcmIob *iob, unsigned int cmd, void *indata, int inlen, void *outdata, int outlen);
+static int kermitPspcmInit(void);
+static void kermitPspcmTerm(void);
+static int kermitPspcmDevctl(const char *dev, u32 cmd, const void *indata, u32 inlen, void *outdata, u32 outlen);
+static int kermitPspcmOpen(ScePspcmIob *iob, const char *file, int flags, int mode);
+static int kermitPspcmClose(ScePspcmIob *iob);
+static int kermitPspcmRead(ScePspcmIob *iob, char *data, int len);
+static int kermitPspcmWrite(ScePspcmIob *iob, const char *data, int len);
+static int kermitPspcmIoctl(ScePspcmIob *iob, u32 cmd, const void *indata, u32 inlen);
+static int pspcmConnIntrHandler(void);
+static int pspcmConnThread(u32 args, void *argp);
+static int pspcmAllocBufSlot(u32 **out_buf);
+static int pspcmFreeBufSlot(int slot);
+static void pspcmHandleConnEvent(void);
 
 static const void * const g_usb_cb[2] = {
-    sub_0000,
-    sub_00cc
+    usbPspcmAttach,
+    usbPspcmDetach
 };
 
-static int sub_0000(void)
+static int usbPspcmAttach(void)
 {
-    if (sub_022c() < 0)
+    if (pspcmCreateConnectSema() < 0)
         return -1;
-    if (sub_02b0() < 0) {
-        sub_0288();
+    if (pspcmRegisterIoDriver() < 0) {
+        pspcmDeleteConnectSema();
         return -1;
     }
     g_connected = 1;
@@ -119,7 +119,7 @@ int module_start(SceSize args, void *argp)
     (void)argp;
     if (sceUsb_driver_C99E1766(5, (void *)g_usb_cb) < 0)
         return 1;
-    return (sub_08b4() < 0) ? 1 : 0;
+    return (kermitPspcmInit() < 0) ? 1 : 0;
 }
 
 int module_stop(SceSize args, void *argp)
@@ -128,19 +128,19 @@ int module_stop(SceSize args, void *argp)
     (void)argp;
     if (sceUsb_driver_6C68EE25(5, (void *)g_usb_cb) < 0)
         return 1;
-    sub_0a38();
+    kermitPspcmTerm();
     return 0;
 }
 
-static int sub_00cc(void)
+static int usbPspcmDetach(void)
 {
     g_connected = -1;
-    sub_03ac();
-    sub_0288();
+    pspcmUnregisterIoDriver();
+    pspcmDeleteConnectSema();
     return 0;
 }
 
-static int sub_00fc(u32 cmd, int thid)
+static int pspcmSetWaitThread(u32 cmd, int thid)
 {
     int ret = sceKernelPollSema(g_conn_semaid, 1);
     if (ret < 0)
@@ -165,7 +165,7 @@ static int sub_00fc(u32 cmd, int thid)
     return ret;
 }
 
-static int sub_01e4(void *arg)
+static int pspcmNotifyWaitThread(void *arg)
 {
     int ret = sceKernelStartThread(g_wait_thid, 8, arg);
     if (ret >= 0) {
@@ -176,7 +176,7 @@ static int sub_01e4(void *arg)
     return ret;
 }
 
-static int sub_022c(void)
+static int pspcmCreateConnectSema(void)
 {
     int semaid = sceKernelCreateSema("SceUsbPspcmConnect", 0x101, 1, 1, NULL);
     g_conn_semaid = semaid;
@@ -186,13 +186,13 @@ static int sub_022c(void)
     return 0;
 }
 
-static int sub_0288(void)
+static int pspcmDeleteConnectSema(void)
 {
     sceKernelDeleteSema(g_conn_semaid);
     return 0;
 }
 
-static int sub_02b0(void)
+static int pspcmRegisterIoDriver(void)
 {
     g_io_drv[0] = 0;
     g_io_drv[1] = 0;
@@ -205,34 +205,34 @@ static int sub_02b0(void)
     g_io_drv[2] = 0x200;
     g_io_drv[3] = (u32)"USBPSPCommunicationDriver";
     g_io_drv[4] = (u32)&g_io_drv[5];
-    g_io_drv[5] = (u32)sub_03d0;
-    g_io_drv[6] = (u32)sub_03d8;
-    g_io_drv[7] = (u32)sub_06a4;
-    g_io_drv[8] = (u32)sub_06f0;
-    g_io_drv[9] = (u32)sub_070c;
-    g_io_drv[10] = (u32)sub_073c;
-    g_io_drv[12] = (u32)sub_07a0;
-    g_io_drv[25] = (u32)sub_03e0;
+    g_io_drv[5] = (u32)pspcmDrvInit;
+    g_io_drv[6] = (u32)pspcmDrvExit;
+    g_io_drv[7] = (u32)pspcmDrvOpen;
+    g_io_drv[8] = (u32)pspcmDrvClose;
+    g_io_drv[9] = (u32)pspcmDrvRead;
+    g_io_drv[10] = (u32)pspcmDrvWrite;
+    g_io_drv[12] = (u32)pspcmDrvIoctl;
+    g_io_drv[25] = (u32)pspcmDrvDevctl;
     return (sceIoAddDrv(g_io_drv) < 0) ? -1 : 0;
 }
 
-static int sub_03ac(void)
+static int pspcmUnregisterIoDriver(void)
 {
     sceIoDelDrv("usbpspcm");
     return 0;
 }
 
-static int sub_03d0(void)
+static int pspcmDrvInit(void)
 {
     return 0;
 }
 
-static int sub_03d8(void)
+static int pspcmDrvExit(void)
 {
     return 0;
 }
 
-static int sub_03e0(ScePspcmIob *iob, const char *dev, unsigned int cmd, void *indata, int inlen, void *outdata, int outlen)
+static int pspcmDrvDevctl(ScePspcmIob *iob, const char *dev, unsigned int cmd, void *indata, int inlen, void *outdata, int outlen)
 {
     u32 k1 = pspGetK1();
     (void)iob;
@@ -250,13 +250,13 @@ static int sub_03e0(ScePspcmIob *iob, const char *dev, unsigned int cmd, void *i
                 return 0x80243402;
             if ((k1 >> 31) != 0 && (*(u16 *)((u8 *)cb + 0x16) & 2) == 0)
                 return 0x80243402;
-            int ret = sub_00fc(cmd, *(int *)indata);
+            int ret = pspcmSetWaitThread(cmd, *(int *)indata);
             if (ret != 0)
                 return ret;
-            return sub_0b14(dev, cmd, indata, 4, NULL, 0);
+            return kermitPspcmDevctl(dev, cmd, indata, 4, NULL, 0);
         }
         if (cmd == 0x03407003)
-            return sub_0b14(dev, 0x03407003, NULL, 0, NULL, 0);
+            return kermitPspcmDevctl(dev, 0x03407003, NULL, 0, NULL, 0);
         return 0x80243402;
     }
 
@@ -265,7 +265,7 @@ static int sub_03e0(ScePspcmIob *iob, const char *dev, unsigned int cmd, void *i
             return 0x80243402;
         if ((s32)(k1 & (((u32)outdata + (u32)outlen) | (u32)outdata | (u32)outlen)) < 0)
             return 0x80243402;
-        return sub_0b14(dev, 0x03427004, NULL, 0, outdata, 4);
+        return kermitPspcmDevctl(dev, 0x03427004, NULL, 0, outdata, 4);
     }
 
     if (cmd < 0x03427004) {
@@ -275,7 +275,7 @@ static int sub_03e0(ScePspcmIob *iob, const char *dev, unsigned int cmd, void *i
             return 0x80243402;
         if ((s32)(k1 & (((u32)indata + (u32)inlen) | (u32)indata | (u32)inlen)) < 0)
             return 0x80243402;
-        return sub_0b14(dev, 0x03415006, indata, 4, NULL, 0);
+        return kermitPspcmDevctl(dev, 0x03415006, indata, 4, NULL, 0);
     }
 
     if (cmd == 0x03435005) {
@@ -303,34 +303,34 @@ static int sub_03e0(ScePspcmIob *iob, const char *dev, unsigned int cmd, void *i
             tmp[2] = 0;
             tmp[3] = 1;
         }
-        return sub_0b14(dev, cmd, tmp, 0x10, outdata, 0x10);
+        return kermitPspcmDevctl(dev, cmd, tmp, 0x10, outdata, 0x10);
     }
 
     return 0x80243402;
 }
 
-static int sub_06a4(ScePspcmIob *iob, const char *file, int flags, int mode)
+static int pspcmDrvOpen(ScePspcmIob *iob, const char *file, int flags, int mode)
 {
     if (g_connected < 0)
         return 0x80243407;
     if (iob->fs_num >= 8)
         return 0x80243402;
-    return sub_0cd4(iob, file, flags, mode);
+    return kermitPspcmOpen(iob, file, flags, mode);
 }
 
-static int sub_06f0(ScePspcmIob *iob)
+static int pspcmDrvClose(ScePspcmIob *iob)
 {
-    return sub_0eb4(iob);
+    return kermitPspcmClose(iob);
 }
 
-static int sub_070c(ScePspcmIob *iob, char *data, int len)
+static int pspcmDrvRead(ScePspcmIob *iob, char *data, int len)
 {
     if (!data)
         return 0x80243402;
-    return sub_0fd4(iob, data, len);
+    return kermitPspcmRead(iob, data, len);
 }
 
-static int sub_073c(ScePspcmIob *iob, const char *data, int len)
+static int pspcmDrvWrite(ScePspcmIob *iob, const char *data, int len)
 {
     if (!data && (u32)len > 0)
         return 0x80243402;
@@ -338,17 +338,17 @@ static int sub_073c(ScePspcmIob *iob, const char *data, int len)
         return 0x80243402;
     if (((0x00220202 >> (((u32)data >> 27) & 0x1f)) & 1) == 0)
         return 0x80243402;
-    return sub_1260(iob, data, len);
+    return kermitPspcmWrite(iob, data, len);
 }
 
-static int sub_07a0(ScePspcmIob *iob, unsigned int cmd, void *indata, int inlen, void *outdata, int outlen)
+static int pspcmDrvIoctl(ScePspcmIob *iob, unsigned int cmd, void *indata, int inlen, void *outdata, int outlen)
 {
     u32 k1 = pspGetK1();
     (void)outdata;
     (void)outlen;
 
     if (cmd == 0x03406105 || cmd == 0x03405101 || cmd == 0x03406103)
-        return sub_139c(iob, cmd, NULL, 0);
+        return kermitPspcmIoctl(iob, cmd, NULL, 0);
 
     if (cmd == 0x03415104) {
         if (indata) {
@@ -357,7 +357,7 @@ static int sub_07a0(ScePspcmIob *iob, unsigned int cmd, void *indata, int inlen,
             if ((s32)(k1 & (((u32)indata + (u32)inlen) | (u32)indata | (u32)inlen)) < 0)
                 return 0x80243402;
         }
-        return sub_139c(iob, cmd, indata, 4);
+        return kermitPspcmIoctl(iob, cmd, indata, 4);
     }
 
     if (cmd == 0x03416102) {
@@ -367,19 +367,19 @@ static int sub_07a0(ScePspcmIob *iob, unsigned int cmd, void *indata, int inlen,
             return 0x80243402;
         if ((*(u32 *)indata & ~3u) != 0)
             return 0x80243402;
-        return sub_139c(iob, cmd, indata, 4);
+        return kermitPspcmIoctl(iob, cmd, indata, 4);
     }
 
     return 0x80243402;
 }
 
-static int sub_08b4(void)
+static int kermitPspcmInit(void)
 {
     u32 *pkt;
     u64 resp;
 
     sceKernelMemset(g_buf_used, 0, 0x60);
-    if (sceKermit_driver_5280B410(0x0d, sub_150c) != 0)
+    if (sceKermit_driver_5280B410(0x0d, pspcmConnIntrHandler) != 0)
         return 1;
     int mtx = sceKernelCreateMutex("SceKermitPspCmFd", 0x100, 0, NULL);
     if (mtx <= 0)
@@ -396,7 +396,7 @@ static int sub_08b4(void)
         return 1;
     g_conn_evid = evid;
 
-    int thid = sceKernelCreateThread("pspcmkconn", sub_1530, 0x10, 0x800, 0x00100001, NULL);
+    int thid = sceKernelCreateThread("pspcmkconn", pspcmConnThread, 0x10, 0x800, 0x00100001, NULL);
     if (thid < 0)
         return 1;
     g_conn_thid = thid;
@@ -404,26 +404,26 @@ static int sub_08b4(void)
     if (sceKernelStartThread(thid, 0, NULL) < 0)
         return 1;
 
-    int slot = sub_1570(&pkt);
+    int slot = pspcmAllocBufSlot(&pkt);
     int res = slot;
     if (slot >= 0) {
         int kret = sceKermit_driver_36666181(pkt, 8, 0xc63, 0, 0, &resp);
         res = (kret == 0) ? (int)resp : kret;
-        sub_163c(slot);
+        pspcmFreeBufSlot(slot);
     }
     return (res != 0) ? 1 : 0;
 }
 
-static void sub_0a38(void)
+static void kermitPspcmTerm(void)
 {
     u32 *pkt;
     u64 resp;
 
     sceKermit_driver_5280B410(0x0d, NULL);
-    int slot = sub_1570(&pkt);
+    int slot = pspcmAllocBufSlot(&pkt);
     if (slot >= 0) {
         sceKermit_driver_36666181(pkt, 8, 0xc6e, 0, 0, &resp);
-        sub_163c(slot);
+        pspcmFreeBufSlot(slot);
     }
     if (g_conn_thid != 0)
         sceKernelTerminateDeleteThread(g_conn_thid);
@@ -435,12 +435,12 @@ static void sub_0a38(void)
         sceKernelDeleteMutex(g_buf_mutex);
 }
 
-static int sub_0b14(const char *dev, u32 cmd, const void *indata, u32 inlen, void *outdata, u32 outlen)
+static int kermitPspcmDevctl(const char *dev, u32 cmd, const void *indata, u32 inlen, void *outdata, u32 outlen)
 {
     u32 *pkt;
     u64 resp;
 
-    int slot = sub_1570(&pkt);
+    int slot = pspcmAllocBufSlot(&pkt);
     if (slot < 0)
         return slot;
 
@@ -469,11 +469,11 @@ static int sub_0b14(const char *dev, u32 cmd, const void *indata, u32 inlen, voi
         if (outdata && outlen > 0)
             sceKernelMemcpy(outdata, out_buf, outlen);
     }
-    sub_163c(slot);
+    pspcmFreeBufSlot(slot);
     return ret;
 }
 
-static int sub_0cd4(ScePspcmIob *iob, const char *file, int flags, int mode)
+static int kermitPspcmOpen(ScePspcmIob *iob, const char *file, int flags, int mode)
 {
     u32 *pkt;
     u64 resp;
@@ -500,7 +500,7 @@ static int sub_0cd4(ScePspcmIob *iob, const char *file, int flags, int mode)
         return 0;
 
     iob->slot = fd_slot;
-    int bslot = sub_1570(&pkt);
+    int bslot = pspcmAllocBufSlot(&pkt);
     if (bslot < 0)
         return bslot;
 
@@ -516,7 +516,7 @@ static int sub_0cd4(ScePspcmIob *iob, const char *file, int flags, int mode)
     int kfd = (int)resp;
     if (ret == 0) {
         fd_slot->kermit_fd = kfd;
-        sub_163c(bslot);
+        pspcmFreeBufSlot(bslot);
         return kfd;
     }
 
@@ -528,16 +528,16 @@ static int sub_0cd4(ScePspcmIob *iob, const char *file, int flags, int mode)
     ret = sceKernelUnlockMutex(g_fd_mutex, 1);
     if (ret != 0)
         return ret;
-    sub_163c(bslot);
+    pspcmFreeBufSlot(bslot);
     return 0;
 }
 
-static int sub_0eb4(ScePspcmIob *iob)
+static int kermitPspcmClose(ScePspcmIob *iob)
 {
     u32 *pkt;
     u64 resp;
 
-    int bslot = sub_1570(&pkt);
+    int bslot = pspcmAllocBufSlot(&pkt);
     if (bslot < 0)
         return bslot;
     if (iob->fs_num >= 8)
@@ -560,11 +560,11 @@ static int sub_0eb4(ScePspcmIob *iob)
         if (mret != 0)
             return mret;
     }
-    sub_163c(bslot);
+    pspcmFreeBufSlot(bslot);
     return ret;
 }
 
-static int sub_0fd4(ScePspcmIob *iob, char *data, int len)
+static int kermitPspcmRead(ScePspcmIob *iob, char *data, int len)
 {
     u32 *pkt;
     u64 resp;
@@ -575,7 +575,7 @@ static int sub_0fd4(ScePspcmIob *iob, char *data, int len)
     if (fd_slot < &g_fds[0] || fd_slot >= &g_fds[8] || fd_slot->iob != iob)
         return 0x80010009;
 
-    int bslot = sub_1570(&pkt);
+    int bslot = pspcmAllocBufSlot(&pkt);
     if (bslot < 0)
         return bslot;
 
@@ -649,11 +649,11 @@ static int sub_0fd4(ScePspcmIob *iob, char *data, int len)
     }
 
 done:
-    sub_163c(bslot);
+    pspcmFreeBufSlot(bslot);
     return total;
 }
 
-static int sub_1260(ScePspcmIob *iob, const char *data, int len)
+static int kermitPspcmWrite(ScePspcmIob *iob, const char *data, int len)
 {
     u32 *pkt;
     u64 resp;
@@ -668,7 +668,7 @@ static int sub_1260(ScePspcmIob *iob, const char *data, int len)
     u32 wb_size = (off + (u32)len + 0x3f) & ~0x3fu;
     sceKernelDcacheWritebackRange(data - off, wb_size);
 
-    int bslot = sub_1570(&pkt);
+    int bslot = pspcmAllocBufSlot(&pkt);
     if (bslot < 0)
         return bslot;
 
@@ -678,11 +678,11 @@ static int sub_1260(ScePspcmIob *iob, const char *data, int len)
     int ret = sceKermit_driver_36666181(pkt, 8, 0xc6a, 3, 0, &resp);
     if (ret == 0)
         ret = (int)resp;
-    sub_163c(bslot);
+    pspcmFreeBufSlot(bslot);
     return ret;
 }
 
-static int sub_139c(ScePspcmIob *iob, u32 cmd, const void *indata, u32 inlen)
+static int kermitPspcmIoctl(ScePspcmIob *iob, u32 cmd, const void *indata, u32 inlen)
 {
     u32 *pkt;
     u64 resp;
@@ -691,7 +691,7 @@ static int sub_139c(ScePspcmIob *iob, u32 cmd, const void *indata, u32 inlen)
     if (fd_slot < &g_fds[0] || fd_slot >= &g_fds[8] || fd_slot->iob != iob)
         return 0x80010009;
 
-    int bslot = sub_1570(&pkt);
+    int bslot = pspcmAllocBufSlot(&pkt);
     if (bslot < 0)
         return bslot;
 
@@ -711,27 +711,27 @@ static int sub_139c(ScePspcmIob *iob, u32 cmd, const void *indata, u32 inlen)
     int ret = sceKermit_driver_36666181(pkt, 8, 0xc6f, 6, 0, &resp);
     if (ret == 0)
         ret = (int)resp;
-    sub_163c(bslot);
+    pspcmFreeBufSlot(bslot);
     return ret;
 }
 
-static int sub_150c(void)
+static int pspcmConnIntrHandler(void)
 {
     return sceKernelSetEventFlag(g_conn_evid, 1);
 }
 
-static int sub_1530(u32 args, void *argp)
+static int pspcmConnThread(u32 args, void *argp)
 {
     (void)args;
     (void)argp;
     for (;;) {
         if (sceKernelWaitEventFlag(g_conn_evid, 1, 0x21, NULL, NULL) == 0)
-            sub_16b8();
+            pspcmHandleConnEvent();
     }
     return 0;
 }
 
-static int sub_1570(u32 **out_buf)
+static int pspcmAllocBufSlot(u32 **out_buf)
 {
     int ret = sceKernelLockMutex(g_buf_mutex, 1, NULL);
     if (ret != 0)
@@ -754,7 +754,7 @@ static int sub_1570(u32 **out_buf)
     return (slot < 0x60) ? slot : (int)0x80000022;
 }
 
-static int sub_163c(int slot)
+static int pspcmFreeBufSlot(int slot)
 {
     if ((u32)slot >= 0x60)
         return 0;
@@ -765,7 +765,7 @@ static int sub_163c(int slot)
     return sceKernelUnlockMutex(g_buf_mutex, 1);
 }
 
-static void sub_16b8(void)
+static void pspcmHandleConnEvent(void)
 {
     u32 info[2];
     if (sceUsb_driver_9F89B84C(info) < 0)
@@ -774,6 +774,6 @@ static void sub_16b8(void)
         if ((info[1] & 2) || (info[1] & 1))
             g_connected = -1;
     }
-    if (sub_01e4(info) < 0)
+    if (pspcmNotifyWaitThread(info) < 0)
         sceKernelExitThread(g_wait_thid);
 }

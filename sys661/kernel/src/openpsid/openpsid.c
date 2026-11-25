@@ -65,7 +65,7 @@ static u8 g_ticketBuf[0x100] __attribute__((aligned(64))); /* 0x3BC0 */
 static u32 g_customTitleId[9];                   /* 0x3CC0 */
 
 /* 0x0000 */
-static s32 sub_0000(u8 *buf, u32 size, u32 keyId)
+static s32 kirkDecryptAesCbc(u8 *buf, u32 size, u32 keyId)
 {
     KirkAESHeader *hdr = (KirkAESHeader *)buf;
     u32 totalSize = size + sizeof(KirkAESHeader);
@@ -80,7 +80,7 @@ static s32 sub_0000(u8 *buf, u32 size, u32 keyId)
 }
 
 /* 0x004C */
-static s32 sub_004C(u8 *buf, u32 size, u32 keyId)
+static s32 kirkEncryptAesCbc(u8 *buf, u32 size, u32 keyId)
 {
     KirkAESHeader *hdr = (KirkAESHeader *)buf;
     u32 totalSize = size + sizeof(KirkAESHeader);
@@ -95,7 +95,7 @@ static s32 sub_004C(u8 *buf, u32 size, u32 keyId)
 }
 
 /* 0x0098 */
-static s32 sub_0098(u8 *buf, u32 size)
+static s32 kirkEncryptAesCbcFuse(u8 *buf, u32 size)
 {
     KirkAESHeader *hdr = (KirkAESHeader *)buf;
     u32 totalSize = size + sizeof(KirkAESHeader);
@@ -110,7 +110,7 @@ static s32 sub_0098(u8 *buf, u32 size)
 }
 
 /* 0x00E8 */
-static s32 sub_00E8(u8 *cert)
+static s32 loadAndVerifyOpenPsidCert(u8 *cert)
 {
     if (sceIdStorageLookup(0x101, 0x1D0, cert, 0x30) < 0) {
         if (sceIdStorageLookup(0x121, 0x1D0, cert, 0x30) < 0)
@@ -126,7 +126,7 @@ static s32 sub_00E8(u8 *cert)
 }
 
 /* 0x01C4 */
-static s32 sub_01C4(u8 *cert)
+static s32 loadAndVerifyConsoleIdCert(u8 *cert)
 {
     if (sceIdStorageLookup(0x100, 0x38, cert, KIRK_CERT_LEN) < 0) {
         if (sceIdStorageLookup(0x120, 0x38, cert, KIRK_CERT_LEN) < 0)
@@ -165,7 +165,7 @@ s32 sceOpenPSIDGetOpenPSID(SceOpenPSID *pOpenPSID)
         return SCE_ERROR_SEMAPHORE;
     }
 
-    status = sub_00E8(g_certBuf);
+    status = loadAndVerifyOpenPsidCert(g_certBuf);
     if (status == 0) {
         for (i = 0; i < sizeof(SceOpenPSID); i++)
             pOpenPSID->data[i] = g_certBuf[i];
@@ -181,17 +181,17 @@ s32 sceOpenPSIDGetOpenPSID(SceOpenPSID *pOpenPSID)
 }
 
 /* 0x03B4 */
-s32 sceOpenPSIDGetPSID(SceOpenPSID *pPSID, s32 unk)
+s32 sceOpenPSIDGetPSID(SceOpenPSID *pPSID, s32 type)
 {
     s32 status;
     u32 i;
 
-    if (unk != 1)
+    if (type != 1)
         return SCE_ERROR_INVALID_POINTER;
     if (sceKernelWaitSema(g_semaId, 1, NULL) != 0)
         return SCE_ERROR_SEMAPHORE;
 
-    status = sub_01C4(g_certBuf);
+    status = loadAndVerifyConsoleIdCert(g_certBuf);
     if (status == 0) {
         for (i = 0; i < sizeof(SceOpenPSID); i++)
             pPSID->data[i] = g_certBuf[i];
@@ -206,17 +206,17 @@ s32 sceOpenPSIDGetPSID(SceOpenPSID *pPSID, s32 unk)
 }
 
 /* 0x0498 */
-s32 sceOpenPSID_driver_E8316C16(u8 *pOut, s32 unk)
+s32 sceOpenPSID_driver_E8316C16(u8 *pOut, s32 index)
 {
     s32 status;
     u32 i;
 
-    if (unk != 0)
+    if (index != 0)
         return SCE_ERROR_INVALID_SIZE;
     if (sceKernelWaitSema(g_semaId, 1, NULL) != 0)
         return SCE_ERROR_SEMAPHORE;
 
-    status = sub_01C4(g_certBuf);
+    status = loadAndVerifyConsoleIdCert(g_certBuf);
     if (status == 0) {
         if ((g_certBuf[8] >> 2) == 0x23) {
             *pOut = (u8)((g_certBuf[8] << 6) | (g_certBuf[9] >> 2));
@@ -249,7 +249,7 @@ s32 sceOpenPSIDGetProductCode(SceProductCode *pProductCode)
         return SCE_ERROR_SEMAPHORE;
     }
 
-    status = sub_01C4(g_certBuf);
+    status = loadAndVerifyConsoleIdCert(g_certBuf);
     if (status == 0) {
         ((u8 *)pProductCode)[0] = g_certBuf[5];
         ((u8 *)pProductCode)[1] = g_certBuf[4];
@@ -303,7 +303,7 @@ s32 scePcactAuth1BB(u8 flag, u8 *arg1, u8 *arg2, u8 *arg3, u8 *out128, u8 *out64
     for (i = 0; i < 0x10; i++)
         g_certBuf[0x14 + i] = out64[i];
 
-    if (sub_0000(g_certBuf, 0x10, 0x68) != 0) {
+    if (kirkDecryptAesCbc(g_certBuf, 0x10, 0x68) != 0) {
         status = 0x80520333;
         goto cleanup;
     }
@@ -318,7 +318,7 @@ s32 scePcactAuth1BB(u8 flag, u8 *arg1, u8 *arg2, u8 *arg3, u8 *out128, u8 *out64
     for (i = 0; i < 0x10; i++)
         g_certBuf[0x14 + i] = arg1[i];
 
-    if (sub_0000(g_certBuf, 0x10, 0x68) != 0) {
+    if (kirkDecryptAesCbc(g_certBuf, 0x10, 0x68) != 0) {
         status = 0x80520333;
         goto cleanup;
     }
@@ -343,7 +343,7 @@ s32 scePcactAuth1BB(u8 flag, u8 *arg1, u8 *arg2, u8 *arg3, u8 *out128, u8 *out64
     for (i = 0; i < 0x60; i++)
         g_certBuf[0x14 + i] = g_ticketBuf[i] ^ g_pcactKey1[i & 0xF];
 
-    if (sub_004C(g_certBuf, 0x60, 0x13) != 0) {
+    if (kirkEncryptAesCbc(g_certBuf, 0x60, 0x13) != 0) {
         status = 0x80520334;
         goto cleanup;
     }
@@ -375,7 +375,7 @@ s32 scePcactAuth1BB(u8 flag, u8 *arg1, u8 *arg2, u8 *arg3, u8 *out128, u8 *out64
     }
     for (i = 0; i < 0x10; i++)
         g_certBuf[0x14 + i] = g_certBuf[i];
-    if (sub_004C(g_certBuf, 0x10, 0x13) != 0) {
+    if (kirkEncryptAesCbc(g_certBuf, 0x10, 0x13) != 0) {
         status = 0x80520334;
         goto cleanup;
     }
@@ -434,7 +434,7 @@ s32 scePcactAuth2BB(u8 *arg0, u8 *arg1, u8 *out16)
     }
     for (i = 0; i < 0x10; i++)
         g_certBuf[0x14 + i] = g_certBuf[i];
-    if (sub_004C(g_certBuf, 0x10, 0x13) != 0) {
+    if (kirkEncryptAesCbc(g_certBuf, 0x10, 0x13) != 0) {
         status = 0x80520334;
         goto cleanup;
     }
@@ -447,7 +447,7 @@ s32 scePcactAuth2BB(u8 *arg0, u8 *arg1, u8 *out16)
 
     for (i = 0; i < 0x30; i++)
         g_certBuf[0x14 + i] = arg0[0x10 + i] ^ g_pcactKey2[i & 0xF];
-    if (sub_0000(g_certBuf, 0x30, 0x13) != 0) {
+    if (kirkDecryptAesCbc(g_certBuf, 0x30, 0x13) != 0) {
         status = 0x80520333;
         goto cleanup;
     }
@@ -495,7 +495,7 @@ s32 sceMlnpsnlAuth1BB(u8 *arg0, u8 *arg1, u8 *out128, u8 *out64)
     for (i = 0; i < 0x40; i++)
         out64[i] = 0;
 
-    if (sub_01C4(g_certBuf) != 0) {
+    if (loadAndVerifyConsoleIdCert(g_certBuf) != 0) {
         status = 0x80520340;
         goto cleanup;
     }
@@ -511,7 +511,7 @@ s32 sceMlnpsnlAuth1BB(u8 *arg0, u8 *arg1, u8 *out128, u8 *out64)
     for (i = 0; i < 0x10; i++)
         g_certBuf[0x14 + i] = out64[i];
 
-    if (sub_0000(g_certBuf, 0x10, 0x68) != 0) {
+    if (kirkDecryptAesCbc(g_certBuf, 0x10, 0x68) != 0) {
         status = 0x80520333;
         goto cleanup;
     }
@@ -526,7 +526,7 @@ s32 sceMlnpsnlAuth1BB(u8 *arg0, u8 *arg1, u8 *out128, u8 *out64)
     for (i = 0; i < 0x10; i++)
         g_certBuf[0x14 + i] = psid[i];
 
-    if (sub_0000(g_certBuf, 0x10, 0x68) != 0) {
+    if (kirkDecryptAesCbc(g_certBuf, 0x10, 0x68) != 0) {
         status = 0x80520333;
         goto cleanup;
     }
@@ -541,7 +541,7 @@ s32 sceMlnpsnlAuth1BB(u8 *arg0, u8 *arg1, u8 *out128, u8 *out64)
 
     for (i = 0; i < 0x60; i++)
         g_certBuf[0x14 + i] = g_ticketBuf[i] ^ g_mlnpsnlKey1[i & 0xF];
-    if (sub_004C(g_certBuf, 0x60, 0x13) != 0) {
+    if (kirkEncryptAesCbc(g_certBuf, 0x60, 0x13) != 0) {
         status = 0x80520334;
         goto cleanup;
     }
@@ -573,7 +573,7 @@ s32 sceMlnpsnlAuth1BB(u8 *arg0, u8 *arg1, u8 *out128, u8 *out64)
     }
     for (i = 0; i < 0x10; i++)
         g_certBuf[0x14 + i] = g_certBuf[i];
-    if (sub_004C(g_certBuf, 0x10, 0x13) != 0) {
+    if (kirkEncryptAesCbc(g_certBuf, 0x10, 0x13) != 0) {
         status = 0x80520334;
         goto cleanup;
     }
@@ -632,7 +632,7 @@ s32 sceMlnpsnlAuth2BB(u8 *arg0, u8 *arg1, u8 *out16)
     }
     for (i = 0; i < 0x10; i++)
         g_certBuf[0x14 + i] = g_certBuf[i];
-    if (sub_004C(g_certBuf, 0x10, 0x13) != 0) {
+    if (kirkEncryptAesCbc(g_certBuf, 0x10, 0x13) != 0) {
         status = 0x80520334;
         goto cleanup;
     }
@@ -645,7 +645,7 @@ s32 sceMlnpsnlAuth2BB(u8 *arg0, u8 *arg1, u8 *out16)
 
     for (i = 0; i < 0x30; i++)
         g_certBuf[0x14 + i] = arg0[0x10 + i] ^ g_mlnpsnlKey2[i & 0xF];
-    if (sub_0000(g_certBuf, 0x30, 0x13) != 0) {
+    if (kirkDecryptAesCbc(g_certBuf, 0x30, 0x13) != 0) {
         status = 0x80520333;
         goto cleanup;
     }
@@ -690,7 +690,7 @@ static void udiv64_1000(u32 lo, u32 hi, u32 *outLo, u32 *outHi)
 }
 
 /* 0x1A7C */
-static s32 sub_1A7C(u8 *outBuf, s32 mode)
+static s32 generatePsidTicket(u8 *outBuf, s32 mode)
 {
     u8 privKey[0x20];
     u8 qtgp2[0x10];
@@ -714,7 +714,7 @@ static s32 sub_1A7C(u8 *outBuf, s32 mode)
     for (i = 0; i < 0x100; i++)
         outBuf[i] = 0;
 
-    status = sub_01C4(g_certBuf);
+    status = loadAndVerifyConsoleIdCert(g_certBuf);
     if (status != 0)
         goto cleanup;
 
@@ -831,7 +831,7 @@ static s32 sub_1A7C(u8 *outBuf, s32 mode)
             g_ticketBuf[0x8C + i] = gameInfo10[5 + i];
     }
 
-    if (sub_0000(g_ticketBuf, 0x90, 0x68) != 0) {
+    if (kirkDecryptAesCbc(g_ticketBuf, 0x90, 0x68) != 0) {
         status = 0x80520402;
         goto cleanup;
     }
@@ -843,7 +843,7 @@ static s32 sub_1A7C(u8 *outBuf, s32 mode)
         g_certBuf[0x24 + i] = g_ticketBuf[i];
     for (i = 0; i < 0xA0; i++)
         g_certBuf[0x14 + i] ^= g_psidTicketKey[i & 0xF];
-    if (sub_004C(g_certBuf, 0xA0, 0x13) != 0) {
+    if (kirkEncryptAesCbc(g_certBuf, 0xA0, 0x13) != 0) {
         status = 0x80520403;
         goto cleanup;
     }
@@ -870,7 +870,7 @@ static s32 sub_1A7C(u8 *outBuf, s32 mode)
 
     for (i = 0; i < 0x10; i++)
         g_certBuf[0x14 + i] = g_ticketBuf[i];
-    if (sub_004C(g_certBuf, 0x10, 0x13) != 0) {
+    if (kirkEncryptAesCbc(g_certBuf, 0x10, 0x13) != 0) {
         status = 0x80520403;
         goto cleanup;
     }
@@ -879,7 +879,7 @@ static s32 sub_1A7C(u8 *outBuf, s32 mode)
 
     for (i = 0; i < 0x10; i++)
         g_certBuf[0x14 + i] = g_ticketBuf[i];
-    if (sub_004C(g_certBuf, 0x10, 0x14) != 0) {
+    if (kirkEncryptAesCbc(g_certBuf, 0x10, 0x14) != 0) {
         status = 0x80520403;
         goto cleanup;
     }
@@ -888,7 +888,7 @@ static s32 sub_1A7C(u8 *outBuf, s32 mode)
 
     for (i = 0; i < 0x10; i++)
         g_certBuf[0x14 + i] = g_ticketBuf[i];
-    if (sub_0098(g_certBuf, 0x10) != 0) {
+    if (kirkEncryptAesCbcFuse(g_certBuf, 0x10) != 0) {
         status = 0x80520404;
         goto cleanup;
     }
@@ -942,7 +942,7 @@ s32 sceOpenPSID_AE6DD68C(const u8 *titleId9, u8 *out256)
         g_hasCustomTitleId = 0;
     }
 
-    status = sub_1A7C(out256, 1);
+    status = generatePsidTicket(out256, 1);
 
     for (i = 0; i < 9; i++)
         g_customTitleId[i] = 0;
@@ -963,7 +963,7 @@ s32 sceOpenPSID_driver_8546569E(u8 *out256)
     if (sceKernelWaitSema(g_semaId, 1, NULL) != 0)
         return 0x80520406;
 
-    status = sub_1A7C(out256, 0);
+    status = generatePsidTicket(out256, 0);
     if (sceKernelSignalSema(g_semaId, 1) != 0)
         status = 0x80520406;
 

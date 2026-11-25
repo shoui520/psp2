@@ -17,7 +17,7 @@ SCE_MODULE_INFO("sceChnnlsv", SCE_MODULE_KERNEL | SCE_MODULE_KIRK_SEMAPHORE_LIB 
 SCE_SDK_VERSION(SDK_VERSION);
 
 //Subroutine _SdCrypt - Address 0x00000000
-s32 _SdCrypt(void *buf, u8 *data, u32 size, u8 *data2, u8 *unk4, u32 mode)
+s32 _SdCrypt(void *buf, u8 *data, u32 size, u8 *data2, u8 *ivSeed, u32 mode)
 {
 	s32 ret;
 
@@ -84,16 +84,16 @@ s32 _SdCrypt(void *buf, u8 *data, u32 size, u8 *data2, u8 *unk4, u32 mode)
 		for (i = 0; i < 16; i++) //0x000000F8
 			block2[i] = ((u8 *)buf)[i];
 
-		u32 unk4_int = ((u32 *)unk4)[0];
+		u32 ivSeedVal = ((u32 *)ivSeed)[0];
 
-		if (unk4_int != 1) { //0x0000011C
+		if (ivSeedVal != 1) { //0x0000011C
 			for (i = 0; i < 12; i++) //0x00000124
 				block1[i] = block2[i];
 
-			block1[12] = unk4[0] - 1;
-			block1[13] = (unk4_int - 1) >> 8;
-			block1[14] = (unk4_int - 1) >> 16;
-			block1[15] = (unk4_int - 1) >> 24;
+			block1[12] = ivSeed[0] - 1;
+			block1[13] = (ivSeedVal - 1) >> 8;
+			block1[14] = (ivSeedVal - 1) >> 16;
+			block1[15] = (ivSeedVal - 1) >> 24;
 		} else {
 			for (i = 0; i < 16; i++) //0x00000254
 				block1[i] = 0;
@@ -104,11 +104,11 @@ s32 _SdCrypt(void *buf, u8 *data, u32 size, u8 *data2, u8 *unk4, u32 mode)
 				for (j = 0; j < 12; j++) //0x00000184
 					((u8 *)buf)[i + j] = block2[j];
 
-				((u8 *)buf)[i + 12] = unk4[0];
-				((u8 *)buf)[i + 13] = unk4[1];
-				((u8 *)buf)[i + 14] = unk4[2];
-				((u8 *)buf)[i + 15] = unk4[3];
-				((u32 *)unk4)[0]++;
+				((u8 *)buf)[i + 12] = ivSeed[0];
+				((u8 *)buf)[i + 13] = ivSeed[1];
+				((u8 *)buf)[i + 14] = ivSeed[2];
+				((u8 *)buf)[i + 15] = ivSeed[3];
+				((u32 *)ivSeed)[0]++;
 			}
 		}
 
@@ -515,7 +515,7 @@ s32 sceSdCreateList(SceSdCtx1 *ctx, int mode, int genMode, u8 *data, u8 *key)
 	if (pspK1StaBufOk(data, 16) && pspK1StaBufOk(key, 16) && pspK1StaBufOk(ctx, sizeof(SceSdCtx1))) {
 		if (sceKernelWaitSema(g_chnnlsv.sema2, 1, NULL) == 0) { //0x00000E18
 			ctx->mode = mode;
-			ctx->unk4 = 1;
+			ctx->ivSeed = 1;
 
 			if (genMode == 2) { //0x00000E3C
 				for (i = 0; i < 16; i++) //0x000011B8
@@ -632,7 +632,7 @@ s32 sceSdSetMember(SceSdCtx1 *ctx, u8 *data, u32 size)
 					u32 length = 0;
 
 					while (size >= 2048) { //0x000012E0
-						ret = _SdCrypt(g_chnnlsv.kirk_buf3, data + length, 2048, ctx->data, (u8 *)&ctx->unk4, ctx->mode);
+						ret = _SdCrypt(g_chnnlsv.kirk_buf3, data + length, 2048, ctx->data, (u8 *)&ctx->ivSeed, ctx->mode);
 
 						size -= 2048;
 						length += 2048;
@@ -642,7 +642,7 @@ s32 sceSdSetMember(SceSdCtx1 *ctx, u8 *data, u32 size)
 					}
 
 					if (size != 0) //0x0000132C
-						ret = _SdCrypt(g_chnnlsv.kirk_buf3, data + length, size, ctx->data, (u8 *)&ctx->unk4, ctx->mode);
+						ret = _SdCrypt(g_chnnlsv.kirk_buf3, data + length, size, ctx->data, (u8 *)&ctx->ivSeed, ctx->mode);
 				} else
 					ret = SCE_CHNNLSV_ERROR_ILLEGAL_ALIGNMENT_SIZE;
 			} else
@@ -687,7 +687,7 @@ s32 sceSdCleanList(SceSdCtx1 *ctx)
 		for (i = 0; i < 16; i++) //0x000013A0
 			ctx->data[i] = 0;
 
-		ctx->unk4 = 0;
+		ctx->ivSeed = 0;
 		ctx->mode = 0;
 		ret = SCE_ERROR_OK;
 	}

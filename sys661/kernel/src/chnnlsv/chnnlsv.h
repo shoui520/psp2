@@ -7,7 +7,7 @@
 
 typedef struct {
 	u32 mode;
-	u32 unk4;
+	u32 ivSeed;
 	u8 data[16];
 } SceSdCtx1;
 
@@ -67,7 +67,7 @@ const u8 SceSdKey6[16] = {
 };
 
 s32 sceUtilsBufferCopyWithRange(void* outBuf, s32 outsize, void* inBuf, s32 insize, s32 cmd);
-s32 _SdCrypt(void *buf, u8 *data, u32 size, u8 *data2, u8 *unk4, u32 mode);
+s32 _SdCrypt(void *buf, u8 *data, u32 size, u8 *data2, u8 *seed, u32 mode);
 s32 _kirk4(void *buf, u32 size, u32 scramble_code);
 s32 _kirk7(void *buf, u32 size, u32 scramble_code);
 s32 _kirk5(void *buf, u32 size);

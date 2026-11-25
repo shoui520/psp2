@@ -1,4 +1,5 @@
 #include <common_imp.h>
+#include <crypto/kirk.h>
 
 extern SceUID sceKernelCreateSema(const char *name, SceUInt attr, int initVal, int maxVal, void *option);
 extern int sceKernelDeleteSema(SceUID semaid);
@@ -67,8 +68,8 @@ static u64 unpack_u64_le(const u8 *src)
 	       ((u64)src[7] << 56);
 }
 
-/* 0x0000: sub_0000 */
-static void sub_0000(u8 *dst, const u8 *s1, u32 l1, const u8 *s2, u32 l2,
+/* 0x0000: packAuthBuffer */
+static void packAuthBuffer(u8 *dst, const u8 *s1, u32 l1, const u8 *s2, u32 l2,
                      const u8 *s3, u32 l3, const u8 *s4, u32 l4)
 {
 	if (l1 != 0) copy_bytes(dst, s1, l1);
@@ -83,8 +84,8 @@ static void sub_0000(u8 *dst, const u8 *s1, u32 l1, const u8 *s2, u32 l2,
 	if (rem != 0) zero_bytes(dst, rem);
 }
 
-/* 0x00E4: sub_00e4 (SHA-1 via Kirk cmd 11) */
-static int sub_00e4(u8 *buf, const u8 *s1, u32 l1, const u8 *s2, u32 l2,
+/* 0x00E4: kirkSha1Multi (SHA-1 via Kirk cmd 11) */
+static int kirkSha1Multi(u8 *buf, const u8 *s1, u32 l1, const u8 *s2, u32 l2,
                     const u8 *s3, u32 l3)
 {
 	u32 total = l1 + l2 + l3;
@@ -101,8 +102,8 @@ static int sub_00e4(u8 *buf, const u8 *s1, u32 l1, const u8 *s2, u32 l2,
 	return (r == 0) ? 0 : -0x102;
 }
 
-/* 0x01B8: sub_01b8 (ECDSA verify via Kirk cmd 17) */
-static int sub_01b8(u8 *work, const u8 *pub, const u8 *hash, const u8 *sig)
+/* 0x01B8: kirkEcdsaVerify (ECDSA verify via Kirk cmd 17) */
+static int kirkEcdsaVerify(u8 *work, const u8 *pub, const u8 *hash, const u8 *sig)
 {
 	copy_bytes(work, pub, 0x28);
 	copy_bytes(work + 0x28, hash, 0x14);
@@ -111,8 +112,8 @@ static int sub_01b8(u8 *work, const u8 *pub, const u8 *hash, const u8 *sig)
 	return (r == 0) ? 0 : -0x10C;
 }
 
-/* 0x025C: sub_025c (Read & verify IDStorage certificate via Kirk cmd 18) */
-static int sub_025c(u8 *cert_buf)
+/* 0x025C: loadAndVerifyIdStorageCert (Read & verify IDStorage certificate via Kirk cmd 18) */
+static int loadAndVerifyIdStorageCert(u8 *cert_buf)
 {
 	int r = sceIdStorageLookup(0x100, 0xF0, cert_buf, 0xB8);
 	if (r < 0) {
@@ -125,8 +126,8 @@ static int sub_025c(u8 *cert_buf)
 	return (kr == 0) ? 0 : -0x106;
 }
 
-/* 0x02E0: sub_02e0 (Kirk cmd 4 encrypt with IV from PRNG cmd 14) */
-static int sub_02e0(u8 *work, u32 keyslot, const u8 *s1, u32 l1, const u8 *s2, u32 l2,
+/* 0x02E0: kirkEncryptWithPrngIv (Kirk cmd 4 encrypt with IV from PRNG cmd 14) */
+static int kirkEncryptWithPrngIv(u8 *work, u32 keyslot, const u8 *s1, u32 l1, const u8 *s2, u32 l2,
                     const u8 *s3, u32 l3, const u8 *s4, u32 l4, const u8 *s5, u32 l5,
                     const u8 *s6, u32 l6)
 {
@@ -142,11 +143,12 @@ static int sub_02e0(u8 *work, u32 keyslot, const u8 *s1, u32 l1, const u8 *s2, u
 	p += 8;
 	zero_bytes(p, 8);
 	p += 8;
-	*(u32 *)(work + 0x00) = 4;
-	*(u32 *)(work + 0x04) = 0;
-	*(u32 *)(work + 0x08) = 0;
-	*(u32 *)(work + 0x0C) = keyslot;
-	*(u32 *)(work + 0x10) = aligned;
+	KirkAESHeader *hdr = (KirkAESHeader *)work;
+	hdr->mode = 4;
+	hdr->reserved0 = 0;
+	hdr->reserved1 = 0;
+	hdr->keyIndex = keyslot;
+	hdr->dataSize = aligned;
 	if (l1 != 0) copy_bytes(p, s1, l1);
 	p += l1;
 	if (l2 != 0) copy_bytes(p, s2, l2);
@@ -163,43 +165,43 @@ static int sub_02e0(u8 *work, u32 keyslot, const u8 *s1, u32 l1, const u8 *s2, u
 	return (r == 0) ? 0 : -0x10A;
 }
 
-/* 0x0534: sub_0534 (Kirk cmd 4 encrypt in-place) */
-static int sub_0534(u8 *work, u32 len, u32 keyslot)
+static int kirkEncryptInPlace(u8 *work, u32 len, u32 keyslot)
 {
-	*(u32 *)(work + 0x00) = 4;
-	*(u32 *)(work + 0x04) = 0;
-	*(u32 *)(work + 0x08) = 0;
-	*(u32 *)(work + 0x0C) = keyslot;
-	*(u32 *)(work + 0x10) = len;
+	KirkAESHeader *hdr = (KirkAESHeader *)work;
+	hdr->mode = 4;
+	hdr->reserved0 = 0;
+	hdr->reserved1 = 0;
+	hdr->keyIndex = keyslot;
+	hdr->dataSize = len;
 	u32 sz = len + 0x14;
 	int r = sceUtilsBufferCopyWithRange(work, sz, work, sz, 4);
 	return (r == 0) ? 0 : -0x10A;
 }
 
-/* 0x0580: sub_0580 (Kirk cmd 7 decrypt in-place) */
-static int sub_0580(u8 *work, u32 len, u32 keyslot)
+static int kirkDecryptInPlace(u8 *work, u32 len, u32 keyslot)
 {
-	*(u32 *)(work + 0x00) = 5;
-	*(u32 *)(work + 0x04) = 0;
-	*(u32 *)(work + 0x08) = 0;
-	*(u32 *)(work + 0x0C) = keyslot;
-	*(u32 *)(work + 0x10) = len;
+	KirkAESHeader *hdr = (KirkAESHeader *)work;
+	hdr->mode = 5;
+	hdr->reserved0 = 0;
+	hdr->reserved1 = 0;
+	hdr->keyIndex = keyslot;
+	hdr->dataSize = len;
 	u32 sz = len + 0x14;
 	int r = sceUtilsBufferCopyWithRange(work, sz, work, sz, 7);
 	return (r == 0) ? 0 : -0x10A;
 }
 
-/* 0x05D0: sub_05d0 (Copy & Kirk cmd 7 decrypt) */
-static int sub_05d0(u8 *work, u32 keyslot, const u8 *src, u32 len)
+/* 0x05D0: kirkCopyAndDecrypt (Copy & Kirk cmd 7 decrypt) */
+static int kirkCopyAndDecrypt(u8 *work, u32 keyslot, const u8 *src, u32 len)
 {
 	if (len != 0) {
 		copy_bytes(work + 0x14, src, len);
 	}
-	return sub_0580(work, len, keyslot);
+	return kirkDecryptInPlace(work, len, keyslot);
 }
 
-/* 0x0620: sub_0620 (Generate keystream blocks via Kirk cmd 7 keyslot 0x44) */
-static int sub_0620(u8 *work, u32 len, u64 *counter, const u32 *key)
+/* 0x0620: kirkGenKeystream (Generate keystream blocks via Kirk cmd 7 keyslot 0x44) */
+static int kirkGenKeystream(u8 *work, u32 len, u64 *counter, const u32 *key)
 {
 	for (u32 off = 0x14; off < len + 0x14; off += 0x10) {
 		u32 *blk = (u32 *)(work + off);
@@ -215,11 +217,11 @@ static int sub_0620(u8 *work, u32 len, u64 *counter, const u32 *key)
 		}
 		*counter = c + 1;
 	}
-	return sub_0580(work, len, 0x44);
+	return kirkDecryptInPlace(work, len, 0x44);
 }
 
-/* 0x06E0: sub_06e0 (CTR encrypt + HMAC-SHA1 tag) */
-static int sub_06e0(u8 *work, u8 *data, u32 len, u64 *counter, const u8 *key, u8 *hdr, int do_enc)
+/* 0x06E0: ctrEncryptAndMac (CTR encrypt + HMAC-SHA1 tag) */
+static int ctrEncryptAndMac(u8 *work, u8 *data, u32 len, u64 *counter, const u8 *key, u8 *hdr, int do_enc)
 {
 	pack_u64_le(hdr, *counter);
 	zero_bytes(hdr + 8, 8);
@@ -227,7 +229,7 @@ static int sub_06e0(u8 *work, u8 *data, u32 len, u64 *counter, const u8 *key, u8
 		if (len == 0) {
 			return -0x400;
 		}
-		int r = sub_0620(work, len, counter, (const u32 *)key);
+		int r = kirkGenKeystream(work, len, counter, (const u32 *)key);
 		if (r != 0) {
 			return r;
 		}
@@ -238,7 +240,7 @@ static int sub_06e0(u8 *work, u8 *data, u32 len, u64 *counter, const u8 *key, u8
 			d_ptr[i] ^= w_ptr[i];
 		}
 	}
-	int r = sub_00e4(work, key, 0x14, hdr, 0x10, data, len);
+	int r = kirkSha1Multi(work, key, 0x14, hdr, 0x10, data, len);
 	if (r != 0) {
 		return r;
 	}
@@ -246,11 +248,11 @@ static int sub_06e0(u8 *work, u8 *data, u32 len, u64 *counter, const u8 *key, u8
 	return 0;
 }
 
-/* 0x089C: sub_089c (Verify HMAC-SHA1 tag + CTR decrypt) */
-static int sub_089c(u8 *work, u8 *data, u32 len, u64 *counter, u64 *min_counter,
+/* 0x089C: verifyMacAndCtrDecrypt (Verify HMAC-SHA1 tag + CTR decrypt) */
+static int verifyMacAndCtrDecrypt(u8 *work, u8 *data, u32 len, u64 *counter, u64 *min_counter,
                     const u8 *key, const u8 *hdr, int do_dec, int check_seq)
 {
-	int r = sub_00e4(work, key, 0x14, hdr, 0x10, data, len);
+	int r = kirkSha1Multi(work, key, 0x14, hdr, 0x10, data, len);
 	if (r != 0) {
 		return r;
 	}
@@ -268,7 +270,7 @@ static int sub_089c(u8 *work, u8 *data, u32 len, u64 *counter, u64 *min_counter,
 		if (len == 0) {
 			return -0x400;
 		}
-		r = sub_0620(work, len, counter, (const u32 *)key);
+		r = kirkGenKeystream(work, len, counter, (const u32 *)key);
 		if (r != 0) {
 			return r;
 		}
@@ -365,13 +367,13 @@ int sceMemab_driver_4B54EAAD(u8 *out_plain, u8 *out_enc)
 	}
 	int ret = -0x200;
 	if (g_inited != 0) {
-		ret = sub_025c(g_idstorage_cert);
+		ret = loadAndVerifyIdStorageCert(g_idstorage_cert);
 		if (ret == 0) {
 			if (sceUtilsBufferCopyWithRange(g_rand_buf, 0x3C, NULL, 0, 12) != 0) {
 				ret = -0x100;
 			} else {
-				sub_0000(out_plain, g_rand_buf, 0x3C, g_idstorage_cert, 0x10, NULL, 0, NULL, 0);
-				ret = sub_02e0(g_buf_3140, 2, g_rand_buf + 0x14, 0x28, g_idstorage_cert, 0x60,
+				packAuthBuffer(out_plain, g_rand_buf, 0x3C, g_idstorage_cert, 0x10, NULL, 0, NULL, 0);
+				ret = kirkEncryptWithPrngIv(g_buf_3140, 2, g_rand_buf + 0x14, 0x28, g_idstorage_cert, 0x60,
 				               NULL, 0, NULL, 0, NULL, 0, NULL, 0);
 				if (ret == 0) {
 					copy_bytes(out_enc, g_ptr_3140 + 0x14, 0xA0);
@@ -394,15 +396,15 @@ int sceMemab_driver_9BF0C95D(u8 *out_plain, const u8 *in_enc, u8 *out_enc)
 	}
 	int ret = -0x200;
 	if (g_inited != 0) {
-		ret = sub_05d0(g_buf_3140, 2, in_enc, 0xA0);
+		ret = kirkCopyAndDecrypt(g_buf_3140, 2, in_enc, 0xA0);
 		if (ret == 0) {
-			ret = sub_00e4(g_buf_2fc0, g_ptr_3140 + 0x38, 0x38, NULL, 0, NULL, 0);
+			ret = kirkSha1Multi(g_buf_2fc0, g_ptr_3140 + 0x38, 0x38, NULL, 0, NULL, 0);
 		}
 		if (ret == 0) {
-			ret = sub_025c(g_idstorage_cert);
+			ret = loadAndVerifyIdStorageCert(g_idstorage_cert);
 		}
 		if (ret == 0) {
-			if (sub_01b8(g_ecdsa_buf, g_idstorage_cert + 0x60, g_ptr_2fc0, g_ptr_3140 + 0x70) != 0) {
+			if (kirkEcdsaVerify(g_ecdsa_buf, g_idstorage_cert + 0x60, g_ptr_2fc0, g_ptr_3140 + 0x70) != 0) {
 				ret = -0x301;
 			}
 		}
@@ -422,10 +424,10 @@ int sceMemab_driver_9BF0C95D(u8 *out_plain, const u8 *in_enc, u8 *out_enc)
 			copy_bytes(sp_buf, g_rand_buf + 0x14, 0x28);
 			copy_bytes(sp_buf + 0x28, g_ptr_3140 + 0x10, 0x28);
 			copy_bytes(sp_buf + 0x50, g_ptr_3140 + 0x38, 0x10);
-			ret = sub_00e4(g_buf_2fc0, sp_buf, 0x60, NULL, 0, NULL, 0);
+			ret = kirkSha1Multi(g_buf_2fc0, sp_buf, 0x60, NULL, 0, NULL, 0);
 		}
 		if (ret == 0) {
-			ret = sub_025c(g_idstorage_cert);
+			ret = loadAndVerifyIdStorageCert(g_idstorage_cert);
 		}
 		if (ret == 0) {
 			copy_bytes(g_aes_buf, g_idstorage_cert + 0x88, 0x20);
@@ -435,12 +437,12 @@ int sceMemab_driver_9BF0C95D(u8 *out_plain, const u8 *in_enc, u8 *out_enc)
 			}
 		}
 		if (ret == 0) {
-			ret = sub_00e4(g_buf_2fc0, g_ecdh_buf, 0x14, sp_buf, 0x60, NULL, 0);
+			ret = kirkSha1Multi(g_buf_2fc0, g_ecdh_buf, 0x14, sp_buf, 0x60, NULL, 0);
 		}
 		if (ret == 0) {
-			sub_0000(out_plain, g_ptr_3140 + 0x48, 0x28, sp_buf, 0x50,
+			packAuthBuffer(out_plain, g_ptr_3140 + 0x48, 0x28, sp_buf, 0x50,
 			         g_idstorage_cert, 0x10, g_ecdh_buf, 0x14);
-			ret = sub_02e0(g_buf_3140, 2, sp_buf, 0x60, g_aes_buf, 0x28,
+			ret = kirkEncryptWithPrngIv(g_buf_3140, 2, sp_buf, 0x60, g_aes_buf, 0x28,
 			               g_ptr_2fc0, 0x14, g_idstorage_cert, 0x60, NULL, 0, NULL, 0);
 		}
 		if (ret == 0) {
@@ -468,23 +470,23 @@ int sceMemab_driver_C3981EE1(u8 *in_out_plain, const u8 *in_enc, u8 *out_enc)
 	}
 	int ret = -0x200;
 	if (g_inited != 0) {
-		ret = sub_05d0(g_buf_3140, 2, in_enc, 0x110);
+		ret = kirkCopyAndDecrypt(g_buf_3140, 2, in_enc, 0x110);
 		if (ret == 0) {
-			ret = sub_00e4(g_buf_2fc0, g_ptr_3140 + 0xAC, 0x38, NULL, 0, NULL, 0);
+			ret = kirkSha1Multi(g_buf_2fc0, g_ptr_3140 + 0xAC, 0x38, NULL, 0, NULL, 0);
 		}
 		if (ret == 0) {
-			ret = sub_025c(g_idstorage_cert);
+			ret = loadAndVerifyIdStorageCert(g_idstorage_cert);
 		}
 		if (ret == 0) {
-			if (sub_01b8(g_ecdsa_buf, g_idstorage_cert + 0x60, g_ptr_2fc0, g_ptr_3140 + 0xE4) != 0) {
+			if (kirkEcdsaVerify(g_ecdsa_buf, g_idstorage_cert + 0x60, g_ptr_2fc0, g_ptr_3140 + 0xE4) != 0) {
 				ret = -0x301;
 			}
 		}
 		if (ret == 0) {
-			ret = sub_00e4(g_buf_2fc0, g_ptr_3140 + 0x10, 0x60, NULL, 0, NULL, 0);
+			ret = kirkSha1Multi(g_buf_2fc0, g_ptr_3140 + 0x10, 0x60, NULL, 0, NULL, 0);
 		}
 		if (ret == 0) {
-			if (sub_01b8(g_ecdsa_buf, g_ptr_3140 + 0xBC, g_ptr_2fc0, g_ptr_3140 + 0x70) != 0) {
+			if (kirkEcdsaVerify(g_ecdsa_buf, g_ptr_3140 + 0xBC, g_ptr_2fc0, g_ptr_3140 + 0x70) != 0) {
 				ret = -0x303;
 			}
 		}
@@ -512,7 +514,7 @@ int sceMemab_driver_C3981EE1(u8 *in_out_plain, const u8 *in_enc, u8 *out_enc)
 			}
 		}
 		if (ret == 0) {
-			ret = sub_00e4(g_buf_2fc0, g_ecdh_buf, 0x14, g_ptr_3140 + 0x10, 0x60, NULL, 0);
+			ret = kirkSha1Multi(g_buf_2fc0, g_ecdh_buf, 0x14, g_ptr_3140 + 0x10, 0x60, NULL, 0);
 		}
 		if (ret == 0) {
 			for (u32 i = 0; i < 0x14; i++) {
@@ -526,10 +528,10 @@ int sceMemab_driver_C3981EE1(u8 *in_out_plain, const u8 *in_enc, u8 *out_enc)
 			copy_bytes(sp20, g_ptr_3140 + 0x38, 0x28);
 			copy_bytes(sp20 + 0x28, g_ptr_3140 + 0x10, 0x28);
 			copy_bytes(sp20 + 0x50, g_ptr_3140 + 0xAC, 0x10);
-			ret = sub_00e4(g_buf_2fc0, sp20, 0x60, NULL, 0, NULL, 0);
+			ret = kirkSha1Multi(g_buf_2fc0, sp20, 0x60, NULL, 0, NULL, 0);
 		}
 		if (ret == 0) {
-			ret = sub_025c(g_idstorage_cert);
+			ret = loadAndVerifyIdStorageCert(g_idstorage_cert);
 		}
 		if (ret == 0) {
 			copy_bytes(g_aes_buf, g_idstorage_cert + 0x88, 0x20);
@@ -539,16 +541,16 @@ int sceMemab_driver_C3981EE1(u8 *in_out_plain, const u8 *in_enc, u8 *out_enc)
 			}
 		}
 		if (ret == 0) {
-			ret = sub_00e4(g_buf_2fc0, g_ecdh_buf, 0x14, sp20, 0x60, NULL, 0);
+			ret = kirkSha1Multi(g_buf_2fc0, g_ecdh_buf, 0x14, sp20, 0x60, NULL, 0);
 		}
 		if (ret == 0) {
-			sub_0000(in_out_plain, g_ecdh_buf, 0x14, NULL, 0, NULL, 0, NULL, 0);
+			packAuthBuffer(in_out_plain, g_ecdh_buf, 0x14, NULL, 0, NULL, 0, NULL, 0);
 			copy_bytes(spb0, g_session_key, 0x20);
-			ret = sub_06e0(g_ptr_3140, spb0, 0x20, &ctr, in_out_plain, sp90, 1);
+			ret = ctrEncryptAndMac(g_ptr_3140, spb0, 0x20, &ctr, in_out_plain, sp90, 1);
 		}
 		if (ret == 0) {
 			pack_u64_le(sp80, g_seq_counter);
-			ret = sub_02e0(g_buf_3140, 2, sp20, 0x60, g_aes_buf, 0x28,
+			ret = kirkEncryptWithPrngIv(g_buf_3140, 2, sp20, 0x60, g_aes_buf, 0x28,
 			               g_ptr_2fc0, 0x14, spb0, 0x20, sp80, 0x08, sp90, 0x20);
 		}
 		if (ret == 0) {
@@ -579,12 +581,12 @@ int sceMemab_driver_23E4659B(u8 *in_out_plain, const u8 *in_enc, u8 *out_enc)
 	}
 	int ret = -0x200;
 	if (g_inited != 0) {
-		ret = sub_05d0(g_buf_3140, 2, in_enc, 0x100);
+		ret = kirkCopyAndDecrypt(g_buf_3140, 2, in_enc, 0x100);
 		if (ret == 0) {
-			ret = sub_00e4(g_buf_2fc0, g_ptr_3140 + 0x10, 0x60, NULL, 0, NULL, 0);
+			ret = kirkSha1Multi(g_buf_2fc0, g_ptr_3140 + 0x10, 0x60, NULL, 0, NULL, 0);
 		}
 		if (ret == 0) {
-			if (sub_01b8(g_ecdsa_buf, in_out_plain, g_ptr_2fc0, g_ptr_3140 + 0x70) != 0) {
+			if (kirkEcdsaVerify(g_ecdsa_buf, in_out_plain, g_ptr_2fc0, g_ptr_3140 + 0x70) != 0) {
 				ret = -0x307;
 			}
 		}
@@ -613,7 +615,7 @@ int sceMemab_driver_23E4659B(u8 *in_out_plain, const u8 *in_enc, u8 *out_enc)
 			}
 		}
 		if (ret == 0) {
-			ret = sub_00e4(g_buf_2fc0, in_out_plain + 0x88, 0x14, g_ptr_3140 + 0x10, 0x60, NULL, 0);
+			ret = kirkSha1Multi(g_buf_2fc0, in_out_plain + 0x88, 0x14, g_ptr_3140 + 0x10, 0x60, NULL, 0);
 		}
 		if (ret == 0) {
 			for (u32 i = 0; i < 0x14; i++) {
@@ -624,19 +626,19 @@ int sceMemab_driver_23E4659B(u8 *in_out_plain, const u8 *in_enc, u8 *out_enc)
 			}
 		}
 		if (ret == 0) {
-			sub_0000(in_out_plain, in_out_plain + 0x88, 0x14, g_ptr_3140 + 0xAC, 0x20,
+			packAuthBuffer(in_out_plain, in_out_plain + 0x88, 0x14, g_ptr_3140 + 0xAC, 0x20,
 			         g_ptr_3140 + 0xCC, 0x08, NULL, 0);
-			ret = sub_089c(g_ptr_3140, in_out_plain + 0x14, 0x20, &ctr, &min_ctr,
+			ret = verifyMacAndCtrDecrypt(g_ptr_3140, in_out_plain + 0x14, 0x20, &ctr, &min_ctr,
 			               in_out_plain, g_ptr_3140 + 0xD4, 1, 0);
 		}
 		if (ret == 0) {
 			ctr = 0;
 			copy_bytes(sp50, g_session_key, 0x20);
-			ret = sub_06e0(g_ptr_3140, sp50, 0x20, &ctr, in_out_plain, sp30, 1);
+			ret = ctrEncryptAndMac(g_ptr_3140, sp50, 0x20, &ctr, in_out_plain, sp30, 1);
 		}
 		if (ret == 0) {
 			pack_u64_le(sp20, g_seq_counter);
-			ret = sub_02e0(g_buf_3140, 2, sp50, 0x20, sp20, 0x08, sp30, 0x20,
+			ret = kirkEncryptWithPrngIv(g_buf_3140, 2, sp50, 0x20, sp20, 0x08, sp30, 0x20,
 			               NULL, 0, NULL, 0, NULL, 0);
 		}
 		if (ret == 0) {
@@ -665,11 +667,11 @@ int sceMemab_driver_8ABE3445(u8 *in_out_plain, const u8 *in_enc)
 	int ret = -0x200;
 	if (g_inited != 0) {
 		copy_bytes(sp10, in_enc, 0x60);
-		ret = sub_05d0(g_buf_3140, 2, sp10, 0x60);
+		ret = kirkCopyAndDecrypt(g_buf_3140, 2, sp10, 0x60);
 		if (ret == 0) {
 			copy_bytes(sp10, g_ptr_3140 + 0x10, 0x60);
-			sub_0000(in_out_plain, in_out_plain, 0x14, sp10, 0x20, sp10 + 0x20, 0x08, NULL, 0);
-			ret = sub_089c(g_ptr_3140, in_out_plain + 0x14, 0x20, &ctr, &min_ctr,
+			packAuthBuffer(in_out_plain, in_out_plain, 0x14, sp10, 0x20, sp10 + 0x20, 0x08, NULL, 0);
+			ret = verifyMacAndCtrDecrypt(g_ptr_3140, in_out_plain + 0x14, 0x20, &ctr, &min_ctr,
 			               in_out_plain, sp10 + 0x28, 1, 0);
 		}
 	}
@@ -694,7 +696,7 @@ int sceMemab_driver_3C15BC8C(u8 *ctx, u8 *data, u32 len, u8 *hdr, int do_enc)
 			ret = -0x401;
 		} else {
 			u64 ctr = unpack_u64_le(ctx + 0x3C);
-			ret = sub_06e0(g_ptr_3140, data, len, &ctr, ctx, hdr, do_enc);
+			ret = ctrEncryptAndMac(g_ptr_3140, data, len, &ctr, ctx, hdr, do_enc);
 			if (ret == 0) {
 				pack_u64_le(ctx + 0x3C, ctr);
 			}
@@ -721,7 +723,7 @@ int sceMemab_driver_D47A50B1(u8 *ctx, u8 *data, u32 len, const u8 *hdr, int do_d
 		} else {
 			u64 ctr = unpack_u64_le(hdr);
 			u64 min_ctr = unpack_u64_le(ctx + 0x44);
-			ret = sub_089c(g_ptr_3140, data, len, &ctr, &min_ctr, ctx, hdr, do_dec, check_seq);
+			ret = verifyMacAndCtrDecrypt(g_ptr_3140, data, len, &ctr, &min_ctr, ctx, hdr, do_dec, check_seq);
 			if (ret == 0 && check_seq != 0) {
 				pack_u64_le(ctx + 0x44, ctr);
 			}
@@ -747,7 +749,7 @@ int sceMemab_driver_F742F283(u8 *data, u32 len, u8 *hdr, int do_enc)
 			ret = -0x401;
 		} else {
 			u64 ctr = g_seq_counter;
-			ret = sub_06e0(g_ptr_3140, data, len, &ctr, g_session_key, hdr, do_enc);
+			ret = ctrEncryptAndMac(g_ptr_3140, data, len, &ctr, g_session_key, hdr, do_enc);
 			if (ret == 0) {
 				g_seq_counter = ctr;
 			}
@@ -774,7 +776,7 @@ int sceMemab_driver_CB5D3916(u8 *ctx, u8 *data, u32 len, const u8 *hdr, int do_d
 		} else {
 			u64 ctr = unpack_u64_le(hdr);
 			u64 min_ctr = unpack_u64_le(ctx + 0x34);
-			ret = sub_089c(g_ptr_3140, data, len, &ctr, &min_ctr, ctx + 0x14, hdr, do_dec, check_seq);
+			ret = verifyMacAndCtrDecrypt(g_ptr_3140, data, len, &ctr, &min_ctr, ctx + 0x14, hdr, do_dec, check_seq);
 			if (ret == 0 && check_seq != 0) {
 				pack_u64_le(ctx + 0x34, ctr);
 			}
@@ -808,7 +810,7 @@ int sceMemab_driver_9DE8C8CD(const u32 *mask, u32 *data, u32 len)
 			dst[2] = src[2] ^ mask[2];
 			dst[3] = src[3] ^ mask[3];
 		}
-		ret = sub_0534(g_buf_3a80, len, 7);
+		ret = kirkEncryptInPlace(g_buf_3a80, len, 7);
 		if (ret == 0) {
 			work = (u32 *)g_ptr_3a94;
 			for (u32 i = 0; i < blocks; i++) {
@@ -849,7 +851,7 @@ int sceMemab_driver_9BF1A0A4(const u32 *mask, u32 *data, u32 len)
 			dst[2] = src[2] ^ mask[2];
 			dst[3] = (src[3] ^ mask[3]) ^ i;
 		}
-		ret = sub_0580(g_buf_3a80, len, 7);
+		ret = kirkDecryptInPlace(g_buf_3a80, len, 7);
 		if (ret == 0) {
 			u32 *out_work = (u32 *)g_buf_3a80;
 			for (u32 i = 0; i < blocks; i++) {
