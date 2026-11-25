@@ -27,7 +27,7 @@ extern int sceKernelDeleteEventFlag(int evid);
 extern int sceKernelStartThread(int thid, u32 arglen, void *argp);
 extern int sceKernelDeleteMutex(int mutexid);
 
-extern void sceKernelDcacheWritebackRange(const void *p, unsigned int size);
+extern int sceKernelDcacheWritebackRange(const void *p, unsigned int size);
 extern int sceKernelDcacheInvalidateRangeForUser(void *p, unsigned int size);
 
 extern void *memset(void *s, int c, u32 n);
@@ -666,7 +666,9 @@ static int kermitPspcmWrite(ScePspcmIob *iob, const char *data, int len)
 
     u32 off = (u32)data & 0x3f;
     u32 wb_size = (off + (u32)len + 0x3f) & ~0x3fu;
-    sceKernelDcacheWritebackRange(data - off, wb_size);
+    int wb_ret = sceKernelDcacheWritebackRange(data - off, wb_size);
+    if (wb_ret != 0)
+        return wb_ret;
 
     int bslot = pspcmAllocBufSlot(&pkt);
     if (bslot < 0)
@@ -771,8 +773,10 @@ static void pspcmHandleConnEvent(void)
     if (sceUsb_driver_9F89B84C(info) < 0)
         return;
     if (info[1] & 0x80) {
-        if ((info[1] & 2) || (info[1] & 1))
+        if (info[1] & 2)
             g_connected = -1;
+        else if (info[1] & 1)
+            g_connected = (int)info[1];
     }
     if (pspcmNotifyWaitThread(info) < 0)
         sceKernelExitThread(g_wait_thid);

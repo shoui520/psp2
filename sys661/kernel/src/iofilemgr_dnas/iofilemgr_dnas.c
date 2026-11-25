@@ -297,9 +297,9 @@ static s64 dnasHookLseek(SceIoHookArg *harg, s64 ofs, int whence)
         return (s64)(s32)0x80510201;
     }
 
-    if (new_pos < 0)
-        new_pos = 0;
-    if ((u64)new_pos > (u64)slot->pgd_info[5])
+    if ((s32)(new_pos >> 32) > 0)
+        new_pos = 0xFFFFFFFFLL;
+    if ((u32)new_pos > slot->pgd_info[5])
         new_pos = (u64)slot->pgd_info[5];
     slot->cur_pos = (u32)new_pos;
 
@@ -343,7 +343,7 @@ static int dnasHookRead(SceIoHookArg *harg, char *data, int len)
     u32 end_pos = cur_pos + (u32)len;
     if (end_pos > file_size)
         end_pos = file_size;
-    int skip_mac = (slot->check_table == 0) ? 1 : 0;
+    int check_mac = (slot->check_table == 0) ? 1 : 0;
     u32 block_size = slot->pgd_info[6];
 
     ret = dnasUnlock();
@@ -391,7 +391,7 @@ static int dnasHookRead(SceIoHookArg *harg, char *data, int len)
             goto err_out;
         }
 
-        if (!skip_mac) {
+        if (check_mac) {
             u32 blk_idx = aligned_pos / block_size;
             if (harg->funcs->lseek(harg->arg, (s64)(slot->table_offset + (blk_idx << 4)), 0) < 0) {
                 ret = -1;
@@ -420,7 +420,7 @@ static int dnasHookRead(SceIoHookArg *harg, char *data, int len)
                 if (slot->type < 3)
                     ret = dnasVerifyMac(work_ptr + verified, vchunk, slot->vkey, mac_ptr, mac_type);
                 else
-                    ret = dnasVerifyMacXor(work_ptr + verified, vchunk, slot->vkey, mac_ptr, mac_type, aligned_pos + verified);
+                    ret = dnasVerifyMacXor(work_ptr + verified, vchunk, slot->vkey, mac_ptr, mac_type, aligned_pos);
                 if (ret < 0)
                     goto err_out;
                 verified += block_size;
@@ -537,7 +537,7 @@ static int dnasSetKey(SceIoHookArg *harg, void *key)
         ret = sceDrmBBMacInit(mkey, 1);
         if (ret < 0)
             goto fail;
-        ret = sceAmctrl_driver_9227EA79(mkey, (const u8 *)g_pgd_mac_key + (version << 4) - 0x10, 0x10);
+        ret = sceAmctrl_driver_9227EA79(mkey, g_pgd_mac_key, (version << 4) - 0x10);
         if (ret < 0)
             goto fail;
         ret = sceDrmBBMacFinal(mkey, slot->vkey, key);

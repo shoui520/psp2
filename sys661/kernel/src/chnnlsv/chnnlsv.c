@@ -554,9 +554,9 @@ s32 sceSdCreateList(SceSdCtx1 *ctx, int mode, int genMode, u8 *data, u8 *key)
 						for (i = 0; i < 16; i++) //0x000010FC
 							g_chnnlsv.kirk_buf4[i] ^= SceSdKey3[i];
 					} else if (ctx->mode == 2) { //0x00000EC8
-						ret = _kirk5(g_chnnlsv.kirk_buf4, 16);
+						ret = _kirk5(g_chnnlsv.kirk_buf3, 16);
 					} else if (ctx->mode == 1) { //0x00000ED0
-						ret = _kirk4(g_chnnlsv.kirk_buf4, 16, 4);
+						ret = _kirk4(g_chnnlsv.kirk_buf3, 16, 4);
 					} else if (ctx->mode == 3) { //0x00000ED8
 						for (i = 0; i < 16; i++) //0x00000FF4
 							g_chnnlsv.kirk_buf4[i] ^= SceSdKey2[i];
@@ -833,7 +833,7 @@ s32 _kirk5Xor(void *buf, u32 size, u8 *data)
 
 	if (ret == 0) { //0x000016B4
 		for (i = 0; i < 16; i++) //0x000016C4
-			data[i] = ((u8 *)buf)[size + i];
+			data[i] = ((u8 *)buf)[size + 4 + i];
 	}
 
 	return ret;

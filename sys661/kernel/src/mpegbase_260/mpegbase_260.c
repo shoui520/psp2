@@ -551,7 +551,7 @@ int sceMpegBasePESpacketCopy(u32 *pkt)
         SceMpegLLI *next_lli = lli + 1;
         lli->next = (u32)next_lli & 0x1FFFFFFF;
         lli->ctrl = len | 0x0A909000U;
-        pkt = (u32 *)next_pkt;
+        pkt += 4;
         lli = next_lli;
         if (lli == lli_end)
             break;
@@ -708,12 +708,13 @@ int executeYuvCopyLli(SceMpegLLI *end_lli)
     sceKernelDcacheWritebackInvalidateRange(&g_mpegbase, (u32)((u8 *)end_lli - (u8 *)&g_mpegbase));
 
     int ret;
+    int res;
     do {
         ret = sceDmacplus_driver_6945F1D3(&g_mpegbase);
         if (ret != 0 && ret != (int)0x80000021)
             return ret;
-        sceDmacplus_driver_5FCF43BD(0, 0);
+        res = sceDmacplus_driver_5FCF43BD(0, 0);
     } while (ret != 0);
 
-    return 0;
+    return res;
 }
