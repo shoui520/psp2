@@ -432,7 +432,7 @@ static s32 checkPeerConnected(void)
         g_state = 19;
         return 0;
     }
-    if ((u32)g_subState >= 2) {
+    if ((u32)g_subState < 2) {
         g_state = 5;
     }
     s32 ret = sceNetAdhocctlGetPeerList(&buflen, NULL);

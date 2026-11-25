@@ -286,7 +286,7 @@ int sceVaudio_504E4745(int effect_vol)
 {
     if (g_vaudio.effect_vol < 0)
         return 0x80000001;
-    if ((u32)(effect_vol + 0x400) > 0xC00)
+    if ((u32)(effect_vol - 0x400) > 0xC00)
         return 0x800001FE;
     g_vaudio.effect_vol = effect_vol;
     return 0;
