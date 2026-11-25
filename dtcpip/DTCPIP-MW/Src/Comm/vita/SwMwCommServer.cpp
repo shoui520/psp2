@@ -8,6 +8,7 @@
 
 #include <stddef.h>
 #include <scetypes.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <kernel/threadmgr.h>
@@ -139,8 +140,10 @@ extern "C" int SwMwCommServerCheckAppEvent(void)
 #define SWMW_IPC_EVENT_CONNECT		0x010
 #define SWMW_IPC_EVENT_ERROR		0x200
 
-/* the bits a stream request's wait takes */
-#define SWMW_IPC_WAIT_MASK		792
+/* the event bits a receive waits for: data, closed, connect, error */
+#define SWMW_IPC_EVENT_MASK		538
+/* the bits a stream request's wait takes: the same, plus the stream's signal bit */
+#define SWMW_IPC_STREAM_WAIT_MASK	792
 
 /* the message pipe the server creates: its stack, its buffer and its options */
 #define SWMW_IPC_PIPE_STACK		64
@@ -229,7 +232,7 @@ extern "C" int SwMwIpcWaitEvent(SceUID event, int timeout)
 	SceUInt64 eventValue = 0;
 	int result;
 
-	result = sceKernelWaitEvent(event, SWMW_IPC_WAIT_MASK, &flags, &eventValue,
+	result = sceKernelWaitEvent(event, SWMW_IPC_STREAM_WAIT_MASK, &flags, &eventValue,
 				    timeout != 0 ? &timeoutValue : NULL);
 	if (result != 0) {
 		if (result == SCE_KERNEL_ERROR_WAIT_TIMEOUT)
@@ -250,5 +253,38 @@ extern "C" int SwMwIpcSend(SceUID pipe, const void *message)
 		return SWMW_IPC_ERROR;
 	if (sent == SWMW_IPC_MESSAGE_SIZE)
 		return 0;
+	return SWMW_IPC_ERROR;
+}
+
+/*
+ * receive one 0x20-byte message block: the pipe's event says what arrived — data (the
+ * event's user data carries the moved size in its high word), the peer's close, its
+ * connect or an error — and anything else is the protocol's fatal error.
+ */
+extern "C" int SwMwIpcReceive(SceUID pipe, void *message, int timeout)
+{
+	SceUInt32 timeoutValue = timeout;
+	SceUInt32 received = 0;
+	SceUInt32 flags = 0;
+	SceUInt64 eventValue = 0;
+	unsigned int size;
+
+	if (sceKernelReceiveMsgPipe(pipe, message, SWMW_IPC_MESSAGE_SIZE, 17, &received,
+				    timeout != 0 ? &timeoutValue : NULL) != 0)
+		return SWMW_IPC_ERROR;
+	if (sceKernelWaitEvent(pipe, SWMW_IPC_EVENT_MASK, &flags, &eventValue, NULL) != 0)
+		return SWMW_IPC_ERROR;
+	if ((flags & SWMW_IPC_EVENT_CLOSED) != 0)
+		return SWMW_IPC_ERROR;
+	if ((flags & SWMW_IPC_EVENT_CONNECT) != 0)
+		return (int)eventValue == SCE_KERNEL_ERROR_WAIT_TIMEOUT ? SWMW_IPC_ERROR_TIMEOUT
+								       : SWMW_IPC_ERROR;
+	if ((flags & SWMW_IPC_EVENT_ERROR) != 0)
+		return SWMW_IPC_ERROR;
+	if ((flags & SWMW_IPC_EVENT_DATA) != 0) {
+		size = (unsigned int)(eventValue >> 32);
+		return size == SWMW_IPC_MESSAGE_SIZE ? 0 : SWMW_IPC_ERROR;
+	}
+	printf("SwMwIPCReceiveEventMsgPipe : fatal error\n");
 	return SWMW_IPC_ERROR;
 }
