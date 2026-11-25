@@ -1147,13 +1147,14 @@ public:
 	TelephonyResult ReadNetworkReportLine(paf::string *outLine);
 
 	static int PowerCallback(int notifyId, int notifyCount, int powerInfo, void *common);
-	static void LivespaceCallback(int eventType, void *userData);
-	static void TelRegAppCallback(int eventType, void *userData);
-	static void SuspendResumeCallback(int eventType, void *userData);
-	static void ShutdownCallback(int eventType, void *userData);
+	static void LivespaceCallback(int code, const void *eventData, SceSize size, void *userData);
+	static void AppActivatedCallback(int code, const void *eventData, SceSize size, void *userData);
+	static void AppDeactivatedCallback(int code, const void *eventData, SceSize size, void *userData);
+	static void AppEndedCallback(int code, const void *eventData, SceSize size, void *userData);
 
 private:
 	int ExecuteTurnOnInternal();
+	void HandleAppDeactivated(int code, int appId);
 
 	paf::thread::Mutex m_smcMutex;
 	paf::thread::Mutex m_listenerMutex;
@@ -1165,12 +1166,12 @@ private:
 	int m_cachedSimCondition;
 	int m_cachedFlightMode;
 	int m_debugDiagFlag;
-	bool m_suspended;
+	bool m_operatorAppLaunched;
 	int m_debugForceFlag;
 	TelGeneralLogicAction m_action;
 	TelGeneralLogicStateMachineContext m_stateMachine;
-	SceUID m_turnOnTimerId;
-	SceUID m_retryTimerId;
+	int m_telRegAppId;
+	int m_operatorAppId;
 	bool m_scanActive;
 	int m_debugLogStage;
 	bool m_debugLogEnabled;

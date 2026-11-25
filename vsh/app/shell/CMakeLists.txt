@@ -491,6 +491,9 @@ psp2_module(vs0_vsh_shell_shell KIND user COMPILER snc PARTIAL SOURCES
 	src/telephony_plugin/src/general/tel_general_logic_action_api_param.cpp
 	src/telephony_plugin/src/general/tel_general_logic_action_event_param.cpp
 	src/telephony_plugin/src/general/tel_general_logic_sm.cpp
+	src/telephony_plugin/src/general/tel_general_logic_action.cpp
+	src/telephony_plugin/src/general/tel_general_logic_mediator.cpp
+	src/telephony_plugin/src/general/tel_general_logic_mediator2.cpp
 	src/telephony_plugin/src/general/tel_general_logic_mediator_mini.cpp
 	src/telephony_plugin/src/general/tel_general_logic_mediator_mini2.cpp
 	shell.c
