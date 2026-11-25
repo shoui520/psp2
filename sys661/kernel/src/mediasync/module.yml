@@ -67,9 +67,9 @@ imports:
       - sceIoDread: 0xe3eb004c
       - sceIoDclose: 0xeb092469
     variables:
-      - g_deleted_error: 0xe4d75bc0
-      - IoFileMgrForKernel_var_E6F7A8DF: 0xe6f7a8df
-      - IoFileMgrForKernel_var_F659661B: 0xf659661b
+      - g_ioDeletedError: 0xe4d75bc0
+      - g_ioAsyncDelayEnable: 0xe6f7a8df
+      - g_ioAsyncDelayCount: 0xf659661b
   - name: ThreadManForKernel
     version: [0, 17]
     attributes: 0x0001
@@ -120,9 +120,9 @@ imports:
     functions:
       - sceKernelSearchModuleByName: 0xd86dd11b
     variables:
-      - ModuleMgrForKernel_var_57F4B35E: 0x57f4b35e
-      - ModuleMgrForKernel_var_99BFFDB8: 0x99bffdb8
-      - ModuleMgrForKernel_var_DB08B7FF: 0xdb08b7ff
+      - g_modmgrCompatMode: 0x57f4b35e
+      - g_modmgrCompatFixB: 0x99bffdb8
+      - g_modmgrCompatFixA: 0xdb08b7ff
   - name: sceUmd
     version: [0, 17]
     attributes: 0x0009
@@ -167,36 +167,36 @@ imports:
     len: 6
     pad: 4
     variables:
-      - scePower_driver_var_07FC869E: 0x07fc869e
-      - scePower_driver_var_18DFA43A: 0x18dfa43a
-      - scePower_driver_var_2A28BB48: 0x2a28bb48
-      - scePower_driver_var_2EDA246C: 0x2eda246c
-      - scePower_driver_var_3080D4C0: 0x3080d4c0
-      - scePower_driver_var_33399B15: 0x33399b15
-      - scePower_driver_var_4A03DA50: 0x4a03da50
-      - scePower_driver_var_8B317890: 0x8b317890
-      - scePower_driver_var_93E16800: 0x93e16800
-      - scePower_driver_var_94FA3195: 0x94fa3195
-      - scePower_driver_var_C7998FA4: 0xc7998fa4
-      - scePower_driver_var_E59CA666: 0xe59ca666
+      - g_powerKermitMode: 0x07fc869e
+      - g_powerCompatFlagC: 0x18dfa43a
+      - g_powerCompatSingleD: 0x2a28bb48
+      - g_powerCompatDelayA: 0x2eda246c
+      - g_powerCompatFlagB: 0x3080d4c0
+      - g_powerCompatTableF: 0x33399b15
+      - g_powerCompatTableE: 0x4a03da50
+      - g_powerCompatDelayG: 0x8b317890
+      - g_powerCompatDelayH: 0x93e16800
+      - g_powerCompatFlagI: 0x94fa3195
+      - g_powerCompatFlagJ: 0xc7998fa4
+      - g_powerCompatTableK: 0xe59ca666
   - name: sceUsb_driver
     version: [0, 17]
     attributes: 0x0001
     len: 6
     pad: 6
     variables:
-      - sceUsb_driver_var_3EA085BF: 0x3ea085bf
-      - sceUsb_driver_var_A942D291: 0xa942d291
+      - g_usbCompatModeB: 0x3ea085bf
+      - g_usbCompatModeA: 0xa942d291
   - name: sceKermitMsfs_driver
     version: [0, 17]
     attributes: 0x0001
     len: 6
     pad: 7
     variables:
-      - sceKermitMsfs_driver_var_7668D90C: 0x7668d90c
-      - sceKermitMsfs_driver_var_93B61A29: 0x93b61a29
-      - sceKermitMsfs_driver_var_BE954163: 0xbe954163
-      - sceKermitMsfs_driver_var_C1B4213A: 0xc1b4213a
+      - g_msfsCompatAlwaysOne: 0x7668d90c
+      - g_msfsCompatDelayFlag: 0x93b61a29
+      - g_msfsCompatCacheDelay: 0xbe954163
+      - g_msfsCompatFlagEnable: 0xc1b4213a
   - name: sceCtrl_driver
     version: [0, 17]
     attributes: 0x0001
@@ -222,8 +222,8 @@ imports:
       - sceRegGetKeyValue: 0xf4a3e396
       - sceRegCloseCategory: 0xfc742751
     variables:
-      - sceReg_driver_var_5105E3FF: 0x5105e3ff
-      - sceReg_driver_var_867D5F60: 0x867d5f60
+      - g_regCompatDelayB: 0x5105e3ff
+      - g_regCompatDelayA: 0x867d5f60
   - name: sceMeCore_driver
     version: [0, 17]
     attributes: 0x0001
@@ -232,23 +232,23 @@ imports:
     functions:
       - sceMeCore_driver_4CD5B5BF: 0x4cd5b5bf
     variables:
-      - sceMeCore_driver_var_385A4CC6: 0x385a4cc6
-      - sceMeCore_driver_var_61FF4837: 0x61ff4837
-      - sceMeCore_driver_var_AB354CA1: 0xab354ca1
+      - g_meCoreCompatListFlag: 0x385a4cc6
+      - g_meCoreCompatSingleA: 0x61ff4837
+      - g_meCoreCompatSingleB: 0xab354ca1
   - name: sceDmacplus_driver
     version: [0, 17]
     attributes: 0x0001
     len: 6
     pad: 5
     variables:
-      - sceDmacplus_driver_var_374689B0: 0x374689b0
-      - sceDmacplus_driver_var_9D3DDDF0: 0x9d3dddf0
-      - sceDmacplus_driver_var_AA2E7E54: 0xaa2e7e54
-      - sceDmacplus_driver_var_C10B947A: 0xc10b947a
+      - g_dmacCompatFlagA: 0x374689b0
+      - g_dmacCompatModeB: 0x9d3dddf0
+      - g_dmacCompatFlagC: 0xaa2e7e54
+      - g_dmacCompatFlagD: 0xc10b947a
   - name: sceRtc_driver
     version: [0, 17]
     attributes: 0x0001
     len: 6
     pad: 2
     variables:
-      - sceRtc_driver_var_5A64FA55: 0x5a64fa55
+      - g_rtcCompatFlag: 0x5a64fa55

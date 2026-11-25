@@ -1,5 +1,4 @@
 TARGET := mediasync
-SRCS := mediasync.c
-EXTRA_CFLAGS := -O2 -fno-reorder-blocks
+SRCS := mediasync.c sysfile.c
 
 include ../../build.mak
