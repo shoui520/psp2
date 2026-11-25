@@ -9,32 +9,37 @@ typedef struct {
 	u32 mode;
 	u32 ivSeed;
 	u8 data[16];
-} SceSdCtx1;
+} SceSdCryptCtx;
 
 typedef struct {
 	u32 mode;
 	u8 data[16];
 	u8 key[16];
 	u32 size;
-} SceSdCtx2;
+} SceSdHashCtx;
+
+typedef union {
+	struct {
+		u32 mode;
+		u32 reservedA;
+		u32 reservedB;
+		u32 keyslot;
+		u32 dataSize;
+		u8 payload[0x800];
+	} hdr;
+	u8 raw[0x814];
+} SceKirkAesBuf;
 
 typedef struct {
-	u8 kirk_buf1[0x14];	//0x00001A80
-	u8 kirk_buf2[0x82C];	//0x00001A94
-	u8 kirk_buf3[0x14];	//0x000022C0
-	u8 kirk_buf4[0x800];	//0x000022D4
-	SceUID sema1;		//0x00002AD4
-	SceUID sema2;		//0x00002AD8
+	u8 hash_hdr[0x14];	//0x00001A80
+	u8 hash_body[0x82C];	//0x00001A94
+	u8 crypt_hdr[0x14];	//0x000022C0
+	u8 crypt_body[0x800];	//0x000022D4
 } g_chnnlsv_struct;
 
-g_chnnlsv_struct g_chnnlsv = {
-	{0},
-	{0},
-	{0},
-	{0},
-	0,
-	0
-};
+g_chnnlsv_struct g_chnnlsv;
+SceUID g_chnnlsv_sema1;
+SceUID g_chnnlsv_sema2;
 
 //0x0000198C
 const u8 SceSdKey1[16] = {
@@ -66,8 +71,8 @@ const u8 SceSdKey6[16] = {
 	0xEC, 0x6D, 0x29, 0x59, 0x26, 0x35, 0xA5, 0x7F, 0x97, 0x2A, 0x0D, 0xBC, 0xA3, 0x26, 0x33, 0x00
 };
 
-s32 sceUtilsBufferCopyWithRange(void* outBuf, s32 outsize, void* inBuf, s32 insize, s32 cmd);
-s32 _SdCrypt(void *buf, u8 *data, u32 size, u8 *data2, u8 *seed, u32 mode);
+s32 sceUtilsBufferCopyWithRange(void *outBuf, s32 outsize, void *inBuf, s32 insize, s32 cmd);
+s32 _SdCrypt(void *buf, u8 *data, u32 size, u8 *keySeed, u32 *ivSeed, u32 mode);
 s32 _kirk4(void *buf, u32 size, u32 scramble_code);
 s32 _kirk7(void *buf, u32 size, u32 scramble_code);
 s32 _kirk5(void *buf, u32 size);

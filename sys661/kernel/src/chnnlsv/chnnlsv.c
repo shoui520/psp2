@@ -17,107 +17,106 @@ SCE_MODULE_INFO("sceChnnlsv", SCE_MODULE_KERNEL | SCE_MODULE_KIRK_SEMAPHORE_LIB 
 SCE_SDK_VERSION(SDK_VERSION);
 
 //Subroutine _SdCrypt - Address 0x00000000
-s32 _SdCrypt(void *buf, u8 *data, u32 size, u8 *data2, u8 *ivSeed, u32 mode)
+s32 _SdCrypt(void *buf, u8 *data, u32 size, u8 *keySeed, u32 *ivSeed, u32 mode)
 {
+	SceKirkAesBuf *kirk = (SceKirkAesBuf *)buf;
 	s32 ret;
-
 	u32 scramble_code;
-
 	u8 block1[16], block2[16];
-
 	u32 i, j;
 
-	for (i = 0; i < 16; i++) //0x00000030
-		((u8 *)buf)[20 + i] = data2[i];
+	for (i = 0; i < 16; i++)
+		kirk->hdr.payload[i] = keySeed[i];
 
-	if (mode == 6) { //0x00000050
+	if (mode == 6) {
 		scramble_code = 100;
 
-		for (i = 0; i < 16; i++) //0x000003AC
-			((u8 *)buf)[20 + i] ^= SceSdKey6[i];
+		for (i = 0; i < 16; i++)
+			kirk->hdr.payload[i] ^= SceSdKey6[i];
 
 		ret = _kirk8(buf, 16);
 
-		for (i = 0; i < 16; i++) //0x000003EC
-			((u8 *)buf)[i] ^= SceSdKey5[i];
-	} else if (mode == 4) { //0x00000058
+		for (i = 0; i < 16; i++)
+			kirk->raw[i] ^= SceSdKey5[i];
+	} else if (mode == 4) {
 		scramble_code = 87;
 
-		for (i = 0; i < 16; i++) //0x00000330
-			((u8 *)buf)[20 + i] ^= SceSdKey3[i];
+		for (i = 0; i < 16; i++)
+			kirk->hdr.payload[i] ^= SceSdKey3[i];
 
 		ret = _kirk8(buf, 16);
 
-		for (i = 0; i < 16; i++) //0x00000370
-			((u8 *)buf)[i] ^= SceSdKey2[i];
-	} else if (mode == 2) { //0x00000060
+		for (i = 0; i < 16; i++)
+			kirk->raw[i] ^= SceSdKey2[i];
+	} else if (mode == 2) {
 		ret = _kirk8(buf, 16);
 
 		scramble_code = 83;
-	} else if (mode == 1) { //0x00000068
+	} else if (mode == 1) {
 		ret = _kirk7(buf, 16, 4);
 
 		scramble_code = 83;
-	} else if (mode == 3) { //0x00000070
+	} else if (mode == 3) {
 		scramble_code = 87;
 
-		for (i = 0; i < 16; i++) //0x00000280
-			((u8 *)buf)[20 + i] ^= SceSdKey3[i];
+		for (i = 0; i < 16; i++)
+			kirk->hdr.payload[i] ^= SceSdKey3[i];
 
 		ret = _kirk7(buf, 16, 14);
 
-		for (i = 0; i < 16; i++) //0x000002C4
-			((u8 *)buf)[i] ^= SceSdKey2[i];
+		for (i = 0; i < 16; i++)
+			kirk->raw[i] ^= SceSdKey2[i];
 	} else {
 		scramble_code = 100;
 
-		for (i = 0; i < 16; i++) //0x00000084
-			((u8 *)buf)[20 + i] ^= SceSdKey6[i];
+		for (i = 0; i < 16; i++)
+			kirk->hdr.payload[i] ^= SceSdKey6[i];
 
 		ret = _kirk7(buf, 16, 18);
 
-		for (i = 0; i < 16; i++) //0x000000C8
-			((u8 *)buf)[i] ^= SceSdKey5[i];
+		for (i = 0; i < 16; i++)
+			kirk->raw[i] ^= SceSdKey5[i];
 	}
 
-	if (ret == 0) { //0x000000EC
-		for (i = 0; i < 16; i++) //0x000000F8
-			block2[i] = ((u8 *)buf)[i];
+	if (ret == 0) {
+		for (i = 0; i < 16; i++)
+			block2[i] = kirk->raw[i];
 
-		u32 ivSeedVal = ((u32 *)ivSeed)[0];
+		u32 ivSeedVal = *ivSeed;
+		u8 *ivBytes = (u8 *)ivSeed;
 
-		if (ivSeedVal != 1) { //0x0000011C
-			for (i = 0; i < 12; i++) //0x00000124
+		if (ivSeedVal != 1) {
+			for (i = 0; i < 12; i++)
 				block1[i] = block2[i];
 
-			block1[12] = ivSeed[0] - 1;
+			block1[12] = ivBytes[0] - 1;
 			block1[13] = (ivSeedVal - 1) >> 8;
 			block1[14] = (ivSeedVal - 1) >> 16;
 			block1[15] = (ivSeedVal - 1) >> 24;
 		} else {
-			for (i = 0; i < 16; i++) //0x00000254
+			for (i = 0; i < 16; i++)
 				block1[i] = 0;
 		}
 
-		if (size > 0) { //0x0000016C
-			for (i = 20; i < (size + 20); i += 16) { //0x0000017C
-				for (j = 0; j < 12; j++) //0x00000184
-					((u8 *)buf)[i + j] = block2[j];
+		if (size > 0) {
+			for (i = 20; i < (size + 20); i += 16) {
+				for (j = 0; j < 12; j++)
+					kirk->raw[i + j] = block2[j];
 
-				((u8 *)buf)[i + 12] = ivSeed[0];
-				((u8 *)buf)[i + 13] = ivSeed[1];
-				((u8 *)buf)[i + 14] = ivSeed[2];
-				((u8 *)buf)[i + 15] = ivSeed[3];
-				((u32 *)ivSeed)[0]++;
+				kirk->raw[i + 12] = ivBytes[0];
+				kirk->raw[i + 13] = ivBytes[1];
+				kirk->raw[i + 14] = ivBytes[2];
+				kirk->raw[i + 15] = ivBytes[3];
+				(*ivSeed)++;
 			}
 		}
 
 		ret = _kirk7Xor(buf, size, block1, scramble_code);
 
-		if (ret == 0) { //0x000001F0
-			if (ret < (s32)size) { //0x000001FC
-				for (i = 0; i < size; i++) //0x00000204
-					data[i] ^= ((u8 *)buf)[i];
+		if (ret == 0) {
+			if (ret < (s32)size) {
+				for (i = 0; i < size; i++)
+					data[i] ^= kirk->raw[i];
 			}
 		}
 	}
@@ -130,13 +129,13 @@ s32 module_start(SceSize args __attribute__((unused)), void *argp __attribute__(
 {
 	s32 ret = 1;
 
-	g_chnnlsv.sema1 = sceKernelCreateSema("SceChnnlsv1", 0, 1, 1, NULL);
+	g_chnnlsv_sema1 = sceKernelCreateSema("SceChnnlsv1", 0, 1, 1, NULL);
 
-	if (g_chnnlsv.sema1 > 0) { //0x00000460
-		g_chnnlsv.sema2 = sceKernelCreateSema("SceChnnlsv2", 0, 1, 1, NULL);
+	if (g_chnnlsv_sema1 > 0) {
+		g_chnnlsv_sema2 = sceKernelCreateSema("SceChnnlsv2", 0, 1, 1, NULL);
 
-		if (g_chnnlsv.sema2 < 1) //0x00000478
-			sceKernelDeleteSema(g_chnnlsv.sema1);
+		if (g_chnnlsv_sema2 < 1)
+			sceKernelDeleteSema(g_chnnlsv_sema1);
 		else
 			ret = SCE_ERROR_OK;
 	}
@@ -151,11 +150,11 @@ s32 module_stop(SceSize args __attribute__((unused)), void *argp __attribute__((
 
 	SceUInt timeout = 1000000;
 
-	if (sceKernelWaitSema(g_chnnlsv.sema1, 1, &timeout) == 0) { //0x000004D8
-		sceKernelDeleteSema(g_chnnlsv.sema1);
+	if (sceKernelWaitSema(g_chnnlsv_sema1, 1, &timeout) == 0) {
+		sceKernelDeleteSema(g_chnnlsv_sema1);
 
-		if (sceKernelWaitSema(g_chnnlsv.sema2, 1, &timeout) == 0) { //0x00000510
-			sceKernelDeleteSema(g_chnnlsv.sema2);
+		if (sceKernelWaitSema(g_chnnlsv_sema2, 1, &timeout) == 0) {
+			sceKernelDeleteSema(g_chnnlsv_sema2);
 
 			ret = SCE_ERROR_OK;
 		}
@@ -165,31 +164,22 @@ s32 module_stop(SceSize args __attribute__((unused)), void *argp __attribute__((
 }
 
 /**
- * Initialize the SceSdCtx2 struct and set the mode.
- *
- * @param ctx Pointer to the SceSdCtx2 struct
- * @param mode One of the modes whichs sets the scramble key for kirk.
- *
- * @return SCE_ERROR_OK on initialization success.
- * @return SCE_CHNNLSV_ERROR_ILLEGAL_ADDR if ctx cannot be accessed from the current context.
- *
+ * Initialize the SceSdHashCtx struct and set the mode.
  */
 //Subroutine sceSdSetIndex - Address 0x00000528
-s32 sceSdSetIndex(SceSdCtx2 *ctx, s32 mode)
+s32 sceSdSetIndex(SceSdHashCtx *ctx, s32 mode)
 {
 	s32 oldK1 = pspShiftK1();
-
 	s32 ret = SCE_CHNNLSV_ERROR_ILLEGAL_ADDR;
-
 	u32 i;
 
-	if (pspK1StaBufOk(ctx, sizeof(SceSdCtx2))) { //0x0000053C
+	if (pspK1StaBufOk(ctx, sizeof(SceSdHashCtx))) {
 		ctx->mode = mode;
 
-		for (i = 0; i < 16; i++) //0x0000054C
+		for (i = 0; i < 16; i++)
 			ctx->data[i] = 0;
 
-		for (i = 0; i < 16; i++) //0x00000568
+		for (i = 0; i < 16; i++)
 			ctx->key[i] = 0;
 
 		ctx->size = 0;
@@ -204,48 +194,34 @@ s32 sceSdSetIndex(SceSdCtx2 *ctx, s32 mode)
 
 /**
  * Generates a hash storing the result into ctx->data and updates ctx->key
- *
- * @param ctx Pointer to the SceSdCtx2 struct
- * @param data Pointer to the data used in hash generation
- * @param size The size of the data used for hash generation
- *
- * @return SCE_ERROR_OK on success
- * @return SCE_CHNNLSV_ERROR_ILLEGAL_ADDR if ctx/data cannot be accessed from the current context.
- * @return SCE_CHNNLSV_ERROR_SEMA_ERROR wait/signal sema error
- * @return SCE_CHNNLSV_ERROR_ILLEGAL_SIZE if ctx->size > 16
- *
  */
 //Subroutine sceSdRemoveValue - Address 0x0000058C
-s32 sceSdRemoveValue(SceSdCtx2 *ctx, u8 *data, u32 size)
+s32 sceSdRemoveValue(SceSdHashCtx *ctx, u8 *data, u32 size)
 {
 	s32 oldK1 = pspShiftK1();
-
 	s32 ret = SCE_CHNNLSV_ERROR_ILLEGAL_ADDR;
-
 	u32 scramble_code;
-
 	u32 i;
 
-	//0x000005DC & 0x000005F0
-	if (pspK1DynBufOk(data, size) && pspK1StaBufOk(ctx, sizeof(SceSdCtx2))) {
-		if (sceKernelWaitSema(g_chnnlsv.sema1, 1, NULL) == 0) { //0x00000644
-			if (ctx->size < 17) { //0x00000658
-				if ((ctx->size + size) < 17) { //0x00000668
-					if (size != 0) { //0x000007E0
-						for (i = 0; i < size; i++) //0x000007E8
+	if (pspK1DynBufOk(data, size) && pspK1StaBufOk(ctx, sizeof(SceSdHashCtx))) {
+		if (sceKernelWaitSema(g_chnnlsv_sema1, 1, NULL) == 0) {
+			if (ctx->size < 17) {
+				if ((ctx->size + size) < 17) {
+					if (size != 0) {
+						for (i = 0; i < size; i++)
 							ctx->key[ctx->size + i] = data[i];
 					}
 
 					ctx->size += size;
 					ret = SCE_ERROR_OK;
 				} else {
-					if (ctx->mode == 6) //0x00000674
+					if (ctx->mode == 6)
 						scramble_code = 17;
-					else if (ctx->mode == 4) //0x00000680
+					else if (ctx->mode == 4)
 						scramble_code = 13;
-					else if (ctx->mode == 2) //0x0000068C
+					else if (ctx->mode == 2)
 						scramble_code = 5;
-					else if (ctx->mode == 1) //0x00000698
+					else if (ctx->mode == 1)
 						scramble_code = 3;
 					else {
 						scramble_code = 12;
@@ -254,9 +230,9 @@ s32 sceSdRemoveValue(SceSdCtx2 *ctx, u8 *data, u32 size)
 							scramble_code = 16;
 					}
 
-					if (ctx->size != 0) { //0x000006B0
-						for (i = 0; i < ctx->size; i++) //0x000006C0
-							g_chnnlsv.kirk_buf2[i] = ctx->key[i];
+					if (ctx->size != 0) {
+						for (i = 0; i < ctx->size; i++)
+							g_chnnlsv.hash_body[i] = ctx->key[i];
 					}
 
 					u32 oldsize = ctx->size;
@@ -265,42 +241,41 @@ s32 sceSdRemoveValue(SceSdCtx2 *ctx, u8 *data, u32 size)
 					ctx->size = tempsize;
 					u32 newsize = size - tempsize;
 
-					if (tempsize != 0) { //0x00000700
-						for (i = 0; i < tempsize; i++) //0x00000714
+					if (tempsize != 0) {
+						for (i = 0; i < tempsize; i++)
 							ctx->key[i] = data[newsize + i];
 					}
 
 					ret = SCE_ERROR_OK;
 
-					if (newsize != 0) { //0x00000730
+					if (newsize != 0) {
 						for (i = 0; i < newsize; i++) {
-							if (oldsize == 2048) { //0x00000750
-								ret = _kirk4Xor(g_chnnlsv.kirk_buf1, 2048, ctx->data, scramble_code);
+							if (oldsize == 2048) {
+								ret = _kirk4Xor(g_chnnlsv.hash_hdr, 2048, ctx->data, scramble_code);
 
-								if (ret != 0) //0x000007D0
-									goto signalsema;
+								if (ret != 0)
+									break;
 
 								oldsize = 0;
 							}
 
-							g_chnnlsv.kirk_buf2[oldsize] = data[i];
+							g_chnnlsv.hash_body[oldsize] = data[i];
 							oldsize++;
 						}
 					}
 
-					if (oldsize != 0) //0x0000077C
-						ret = _kirk4Xor(g_chnnlsv.kirk_buf1, oldsize, ctx->data, scramble_code);
+					if (ret == 0 && oldsize != 0)
+						ret = _kirk4Xor(g_chnnlsv.hash_hdr, oldsize, ctx->data, scramble_code);
 				}
 			} else
 				ret = SCE_CHNNLSV_ERROR_ILLEGAL_SIZE;
 
-signalsema:
 			{
 				u32 clear_size = (size < 0x7F1) ? (size + 0x24) : 0x814;
-				memset(g_chnnlsv.kirk_buf1, 0, clear_size);
-				sceKernelDcacheWritebackRange(g_chnnlsv.kirk_buf1, clear_size);
+				memset(g_chnnlsv.hash_hdr, 0, clear_size);
+				sceKernelDcacheWritebackRange(g_chnnlsv.hash_hdr, clear_size);
 			}
-			if (sceKernelSignalSema(g_chnnlsv.sema1, 1) != 0) //0x0000078C
+			if (sceKernelSignalSema(g_chnnlsv_sema1, 1) != 0)
 				ret = SCE_CHNNLSV_ERROR_SEMA_ERROR;
 		} else
 			ret = SCE_CHNNLSV_ERROR_SEMA_ERROR;
@@ -312,45 +287,28 @@ signalsema:
 }
 
 /**
- * Generates a hash based on the context collected by sceSdRemoveValue,
- * the results of which are stored into the SAVEDATA_PARAMS field of PARAM.SFO
- *
- * @param ctx Pointer to the SceSdCtx2 struct
- * @param hash The end result of the hash generated by this function is stored here
- * @param key If provided, this key will also be used in the encryption process
- *
- * @return SCE_ERROR_OK on success
- * @return SCE_CHNNLSV_ERROR_ILLEGAL_ADDR if ctx/hash/key cannot be accessed from the current context.
- * @return SCE_CHNNLSV_ERROR_SEMA_ERROR wait/signal sema error
- * @return SCE_CHNNLSV_ERROR_ILLEGAL_SIZE if ctx->size > 16
- *
+ * Generates a hash based on the context collected by sceSdRemoveValue
  */
-//Subroutine sceSdGetLastIndex - Address 0x00000824
-s32 sceSdGetLastIndex(SceSdCtx2 *ctx, u8 *hash, u8 *key)
+//Subroutine sceSdGetLastIndex - Address 0x00000840
+s32 sceSdGetLastIndex(SceSdHashCtx *ctx, u8 *hash, u8 *key)
 {
 	s32 oldK1 = pspShiftK1();
-
 	s32 ret = SCE_CHNNLSV_ERROR_ILLEGAL_ADDR;
-
 	u8 block1[16], block2[16];
-
 	u8 xorbyte, shiftbyte1, shiftbyte2;
-
 	u32 scramble_code;
-
 	u32 i;
 
-	//0x00000870, 0x00000884 & 0x00000898
-	if (pspK1StaBufOk(hash, 16) && pspK1StaBufOk(key, 16) && pspK1StaBufOk(ctx, sizeof(SceSdCtx2))) {
-		if (sceKernelWaitSema(g_chnnlsv.sema1, 1, NULL) == 0) { //0x000008EC
-			if (ctx->size < 17) { //0x000008FC
-				if (ctx->mode == 6) //0x0000090C
+	if (pspK1StaBufOk(hash, 16) && pspK1StaBufOk(key, 16) && pspK1StaBufOk(ctx, sizeof(SceSdHashCtx))) {
+		if (sceKernelWaitSema(g_chnnlsv_sema1, 1, NULL) == 0) {
+			if (ctx->size < 17) {
+				if (ctx->mode == 6)
 					scramble_code = 17;
-				else if (ctx->mode == 4) //0x00000918
+				else if (ctx->mode == 4)
 					scramble_code = 13;
-				else if (ctx->mode == 2) //0x00000924
+				else if (ctx->mode == 2)
 					scramble_code = 5;
-				else if (ctx->mode == 1) //0x00000930
+				else if (ctx->mode == 1)
 					scramble_code = 3;
 				else {
 					scramble_code = 12;
@@ -359,18 +317,18 @@ s32 sceSdGetLastIndex(SceSdCtx2 *ctx, u8 *hash, u8 *key)
 						scramble_code = 16;
 				}
 
-				for (i = 0; i < 16; i++) //0x00000950
-					g_chnnlsv.kirk_buf2[i] = 0;
+				for (i = 0; i < 16; i++)
+					g_chnnlsv.hash_body[i] = 0;
 
-				ret = _kirk4(g_chnnlsv.kirk_buf1, 16, scramble_code);
+				ret = _kirk4(g_chnnlsv.hash_hdr, 16, scramble_code);
 
-				if (ret == 0) { //0x0000097C
-					for (i = 0; i < 16; i++) //0x0000098C
-						block1[i] = g_chnnlsv.kirk_buf2[i];
+				if (ret == 0) {
+					for (i = 0; i < 16; i++)
+						block1[i] = g_chnnlsv.hash_body[i];
 
 					xorbyte = (block1[0] & 0x80) ? 135 : 0;
 
-					for (i = 0; i < 15; i++) { //0x000009C0
+					for (i = 0; i < 15; i++) {
 						shiftbyte1 = block1[i] << 1;
 						shiftbyte2 = block1[i + 1] >> 7;
 						block1[i] = shiftbyte1 | shiftbyte2;
@@ -379,10 +337,10 @@ s32 sceSdGetLastIndex(SceSdCtx2 *ctx, u8 *hash, u8 *key)
 					shiftbyte1 = block1[15] << 1;
 					block1[15] = shiftbyte1 ^ xorbyte;
 
-					if (ctx->size != 16) { //0x000009FC
+					if (ctx->size != 16) {
 						xorbyte = (block1[0] & 0x80) ? 135 : 0;
 
-						for (i = 0; i < 15; i++) { //0x00000A1C
+						for (i = 0; i < 15; i++) {
 							shiftbyte1 = block1[i] << 1;
 							shiftbyte2 = block1[i + 1] >> 7;
 							block1[i] = shiftbyte1 | shiftbyte2;
@@ -393,91 +351,87 @@ s32 sceSdGetLastIndex(SceSdCtx2 *ctx, u8 *hash, u8 *key)
 
 						ctx->key[ctx->size] = -128;
 
-						if ((ctx->size + 1) < 16) { //0x00000A64
-							for (i = (ctx->size + 1); i < 16; i++) //0x00000A74
+						if ((ctx->size + 1) < 16) {
+							for (i = (ctx->size + 1); i < 16; i++)
 								ctx->key[i] = 0;
 						}
 					}
 
-					for (i = 0; i < 16; i++) //0x00000A90
+					for (i = 0; i < 16; i++)
 						ctx->key[i] ^= block1[i];
 
-					for (i = 0; i < 16; i++) //0x00000ABC
-						g_chnnlsv.kirk_buf2[i] = ctx->key[i];
+					for (i = 0; i < 16; i++)
+						g_chnnlsv.hash_body[i] = ctx->key[i];
 
-					for (i = 0; i < 16; i++) //0x00000AE4
+					for (i = 0; i < 16; i++)
 						block2[i] = ctx->data[i];
 
-					ret = _kirk4Xor(g_chnnlsv.kirk_buf1, 16, block2, scramble_code);
+					ret = _kirk4Xor(g_chnnlsv.hash_hdr, 16, block2, scramble_code);
 
-					if (ret == 0) { //0x00000B18
-						if ((ctx->mode - 3) < 2) { //0x00000B2C
-							for (i = 0; i < 16; i++) //0x00000B40
+					if (ret == 0) {
+						if ((ctx->mode - 3) < 2) {
+							for (i = 0; i < 16; i++)
 								block2[i] ^= SceSdKey1[i];
-						} else if ((ctx->mode - 5) < 2) { //0x00000D20
-							for (i = 0; i < 16; i++) //0x00000D34
+						} else if ((ctx->mode - 5) < 2) {
+							for (i = 0; i < 16; i++)
 								block2[i] ^= SceSdKey4[i];
 						}
 
 						u32 xor1 = (ctx->mode ^ 2) < 1;
 						u32 xor2 = ((ctx->mode ^ 4) < 1) | xor1;
 
-						//0x00000B78 & 0x00000B84
 						if ((xor2 != 0) || (ctx->mode == 6)) {
-							for (i = 0; i < 16; i++) //0x00000CA0
-								g_chnnlsv.kirk_buf2[i] = block2[i];
+							for (i = 0; i < 16; i++)
+								g_chnnlsv.hash_body[i] = block2[i];
 
-							ret = _kirk5(g_chnnlsv.kirk_buf1, 16);
+							ret = _kirk5(g_chnnlsv.hash_hdr, 16);
 
-							if (ret != 0) //0x00000CD0
-								goto signalsema;
+							if (ret == 0)
+								ret = _kirk4(g_chnnlsv.hash_hdr, 16, scramble_code);
 
-							ret = _kirk4(g_chnnlsv.kirk_buf1, 16, scramble_code);
-
-							if (ret != 0) //0x00000CE8
-								goto signalsema;
-
-							for (i = 0; i < 16; i++) //0x00000CF8
-								block2[i] = g_chnnlsv.kirk_buf2[i];
+							if (ret == 0) {
+								for (i = 0; i < 16; i++)
+									block2[i] = g_chnnlsv.hash_body[i];
+							}
 						}
 
-						if (key != 0) { //0x00000B8C
-							for (i = 0; i < 16; i++) //0x00000B98
+						if (ret == 0 && key != 0) {
+							for (i = 0; i < 16; i++)
 								block2[i] ^= key[i];
 
-							for (i = 0; i < 16; i++) //0x00000BC0
-								g_chnnlsv.kirk_buf2[i] = block2[i];
+							for (i = 0; i < 16; i++)
+								g_chnnlsv.hash_body[i] = block2[i];
 
-							ret = _kirk4(g_chnnlsv.kirk_buf1, 16, scramble_code);
+							ret = _kirk4(g_chnnlsv.hash_hdr, 16, scramble_code);
 
-							if (ret != 0) //0x00000BF4
-								goto signalsema;
-
-							for (i = 0; i < 16; i++) //0x00000C04
-								block2[i] = g_chnnlsv.kirk_buf2[i];
+							if (ret == 0) {
+								for (i = 0; i < 16; i++)
+									block2[i] = g_chnnlsv.hash_body[i];
+							}
 						}
 
-						for (i = 0; i < 16; i++) //0x00000C24
-							hash[i] = block2[i];
+						if (ret == 0) {
+							for (i = 0; i < 16; i++)
+								hash[i] = block2[i];
 
-						for (i = 0; i < 16; i++) //0x00000C44
-							ctx->data[i] = 0;
+							for (i = 0; i < 16; i++)
+								ctx->data[i] = 0;
 
-						for (i = 0; i < 16; i++) //0x00000C60
-							ctx->key[i] = 0;
+							for (i = 0; i < 16; i++)
+								ctx->key[i] = 0;
 
-						ctx->size = 0;
-						ctx->mode = 0;
-						ret = SCE_ERROR_OK;
+							ctx->size = 0;
+							ctx->mode = 0;
+							ret = SCE_ERROR_OK;
+						}
 					}
 				}
 			} else
 				ret = SCE_CHNNLSV_ERROR_ILLEGAL_SIZE;
 
-signalsema:
-			memset(g_chnnlsv.kirk_buf1, 0, 0x24);
-			sceKernelDcacheWritebackRange(g_chnnlsv.kirk_buf1, 0x24);
-			if (sceKernelSignalSema(g_chnnlsv.sema1, 1) != 0) //0x00000C80
+			memset(g_chnnlsv.hash_hdr, 0, 0x24);
+			sceKernelDcacheWritebackRange(g_chnnlsv.hash_hdr, 0x24);
+			if (sceKernelSignalSema(g_chnnlsv_sema1, 1) != 0)
 				ret = SCE_CHNNLSV_ERROR_SEMA_ERROR;
 		} else
 			ret = SCE_CHNNLSV_ERROR_SEMA_ERROR;
@@ -490,100 +444,86 @@ signalsema:
 
 /**
  * The main key generating function, 1 for encryption, 2 for decryption
- *
- * @param ctx Pointer to the SceSdCtx1 struct
- * @param mode Different public keys/kirk commands will be used depending on the mode specified
- * @param genMode Specify whether encryption (1) or decryption (1) should be used
- * @param data Pointer to some data used for encryption/decryption
- * @param key If specified, this key will be used as the private key for encryption/decryption
- *
- * @return SCE_ERROR_OK on success
- * @return SCE_CHNNLSV_ERROR_ILLEGAL_ADDR if ctx/data/key cannot be accessed from the current context.
- * @return SCE_CHNNLSV_ERROR_SEMA_ERROR wait/signal sema error
- *
  */
-//Subroutine sceSdCreateList - Address 0x00000D60
-s32 sceSdCreateList(SceSdCtx1 *ctx, int mode, int genMode, u8 *data, u8 *key)
+//Subroutine sceSdCreateList - Address 0x00000D9C
+s32 sceSdCreateList(SceSdCryptCtx *ctx, int mode, int genMode, u8 *data, u8 *key)
 {
 	s32 oldK1 = pspShiftK1();
-
 	s32 ret = SCE_CHNNLSV_ERROR_ILLEGAL_ADDR;
-
 	u32 i;
 
-	//0x00000DB0, 0x00000DC4 & 0x00000DD8
-	if (pspK1StaBufOk(data, 16) && pspK1StaBufOk(key, 16) && pspK1StaBufOk(ctx, sizeof(SceSdCtx1))) {
-		if (sceKernelWaitSema(g_chnnlsv.sema2, 1, NULL) == 0) { //0x00000E18
+	if (pspK1StaBufOk(data, 16) && pspK1StaBufOk(key, 16) && pspK1StaBufOk(ctx, sizeof(SceSdCryptCtx))) {
+		if (sceKernelWaitSema(g_chnnlsv_sema2, 1, NULL) == 0) {
 			ctx->mode = mode;
 			ctx->ivSeed = 1;
 
-			if (genMode == 2) { //0x00000E3C
-				for (i = 0; i < 16; i++) //0x000011B8
+			if (genMode == 2) {
+				for (i = 0; i < 16; i++)
 					ctx->data[i] = data[i];
 
-				if (key != 0) { //0x000011D4
-					for (i = 0; i < 16; i++) //0x000011DC
+				if (key != 0) {
+					for (i = 0; i < 16; i++)
 						ctx->data[i] ^= key[i];
 				}
 
 				ret = SCE_ERROR_OK;
-			} else if (genMode == 1) { //0x00000E44
-				ret = _kirk14(g_chnnlsv.kirk_buf3);
+			} else if (genMode == 1) {
+				ret = _kirk14(g_chnnlsv.crypt_hdr);
 
-				if (ret == 0) { //0x00000E70
-					for (i = 15; (int)i >= 0; i--) //0x00000E7C
-						g_chnnlsv.kirk_buf4[i] = g_chnnlsv.kirk_buf3[i];
+				if (ret == 0) {
+					for (i = 15; (int)i >= 0; i--)
+						g_chnnlsv.crypt_body[i] = g_chnnlsv.crypt_hdr[i];
 
-					for (i = 12; i < 16; i++) //0x00000E98
-						g_chnnlsv.kirk_buf4[i] = 0;
+					for (i = 12; i < 16; i++)
+						g_chnnlsv.crypt_body[i] = 0;
 
-					if (ctx->mode == 6) { //0x00000EB8
-						for (i = 0; i < 16; i++) //0x0000113C
-							g_chnnlsv.kirk_buf4[i] ^= SceSdKey5[i];
+					if (ctx->mode == 6) {
+						for (i = 0; i < 16; i++)
+							g_chnnlsv.crypt_body[i] ^= SceSdKey5[i];
 
-						ret = _kirk5(g_chnnlsv.kirk_buf3, 16);
+						ret = _kirk5(g_chnnlsv.crypt_hdr, 16);
 
-						for (i = 0; i < 16; i++) //0x00001184
-							g_chnnlsv.kirk_buf4[i] ^= SceSdKey6[i];
-					} else if (ctx->mode == 4) { //0x00000EC0
-						for (i = 0; i < 16; i++) //0x000010B4
-							g_chnnlsv.kirk_buf4[i] ^= SceSdKey2[i];
+						for (i = 0; i < 16; i++)
+							g_chnnlsv.crypt_body[i] ^= SceSdKey6[i];
+					} else if (ctx->mode == 4) {
+						for (i = 0; i < 16; i++)
+							g_chnnlsv.crypt_body[i] ^= SceSdKey2[i];
 
-						ret = _kirk5(g_chnnlsv.kirk_buf3, 16);
+						ret = _kirk5(g_chnnlsv.crypt_hdr, 16);
 
-						for (i = 0; i < 16; i++) //0x000010FC
-							g_chnnlsv.kirk_buf4[i] ^= SceSdKey3[i];
-					} else if (ctx->mode == 2) { //0x00000EC8
-						ret = _kirk5(g_chnnlsv.kirk_buf3, 16);
-					} else if (ctx->mode == 1) { //0x00000ED0
-						ret = _kirk4(g_chnnlsv.kirk_buf3, 16, 4);
-					} else if (ctx->mode == 3) { //0x00000ED8
-						for (i = 0; i < 16; i++) //0x00000FF4
-							g_chnnlsv.kirk_buf4[i] ^= SceSdKey2[i];
+						for (i = 0; i < 16; i++)
+							g_chnnlsv.crypt_body[i] ^= SceSdKey3[i];
+					} else if (ctx->mode == 2) {
+						ret = _kirk5(g_chnnlsv.crypt_hdr, 16);
+					} else if (ctx->mode == 1) {
+						ret = _kirk4(g_chnnlsv.crypt_hdr, 16, 4);
+					} else if (ctx->mode == 3) {
+						for (i = 0; i < 16; i++)
+							g_chnnlsv.crypt_body[i] ^= SceSdKey2[i];
 
-						ret = _kirk4(g_chnnlsv.kirk_buf3, 16, 14);
+						ret = _kirk4(g_chnnlsv.crypt_hdr, 16, 14);
 
-						for (i = 0; i < 16; i++) //0x00001040
-							g_chnnlsv.kirk_buf4[i] ^= SceSdKey3[i];
+						for (i = 0; i < 16; i++)
+							g_chnnlsv.crypt_body[i] ^= SceSdKey3[i];
 					} else {
-						for (i = 0; i < 16; i++) //0x00000EEC
-							g_chnnlsv.kirk_buf4[i] ^= SceSdKey5[i];
+						for (i = 0; i < 16; i++)
+							g_chnnlsv.crypt_body[i] ^= SceSdKey5[i];
 
-						ret = _kirk4(g_chnnlsv.kirk_buf3, 16, 18);
+						ret = _kirk4(g_chnnlsv.crypt_hdr, 16, 18);
 
-						for (i = 0; i < 16; i++) //0x00000F38
-							g_chnnlsv.kirk_buf4[i] ^= SceSdKey6[i];
+						for (i = 0; i < 16; i++)
+							g_chnnlsv.crypt_body[i] ^= SceSdKey6[i];
 					}
 
-					if (ret == 0) { //0x00000F60
-						for (i = 0; i < 16; i++) //0x00000F6C
-							ctx->data[i] = g_chnnlsv.kirk_buf4[i];
+					if (ret == 0) {
+						for (i = 0; i < 16; i++)
+							ctx->data[i] = g_chnnlsv.crypt_body[i];
 
-						for (i = 0; i < 16; i++) //0x00000F90
-							data[i] = g_chnnlsv.kirk_buf4[i];
+						for (i = 0; i < 16; i++)
+							data[i] = g_chnnlsv.crypt_body[i];
 
-						if (key != 0) { //0x00000FB0
-							for (i = 0; i < 16; i++) //0x00000FB8
+						if (key != 0) {
+							for (i = 0; i < 16; i++)
 								ctx->data[i] ^= key[i];
 						}
 					}
@@ -591,9 +531,9 @@ s32 sceSdCreateList(SceSdCtx1 *ctx, int mode, int genMode, u8 *data, u8 *key)
 			} else
 				ret = SCE_ERROR_OK;
 
-			memset(g_chnnlsv.kirk_buf3, 0, 0x24);
-			sceKernelDcacheWritebackRange(g_chnnlsv.kirk_buf3, 0x24);
-			if (sceKernelSignalSema(g_chnnlsv.sema2, 1) != 0)
+			memset(g_chnnlsv.crypt_hdr, 0, 0x24);
+			sceKernelDcacheWritebackRange(g_chnnlsv.crypt_hdr, 0x24);
+			if (sceKernelSignalSema(g_chnnlsv_sema2, 1) != 0)
 				ret = SCE_CHNNLSV_ERROR_SEMA_ERROR;
 		} else
 			ret = SCE_CHNNLSV_ERROR_SEMA_ERROR;
@@ -606,55 +546,43 @@ s32 sceSdCreateList(SceSdCtx1 *ctx, int mode, int genMode, u8 *data, u8 *key)
 
 /**
  * The main encryption/decryption function, the size of "data" must be 16 byte aligned
- *
- * @param ctx Pointer to the SceSdCtx1 struct
- * @param data Pointer to the data used in the encryption/decryption process
- * @param size The size of "data"
- *
- * @return SCE_ERROR_OK on success
- * @return SCE_CHNNLSV_ERROR_ILLEGAL_ADDR if ctx/data cannot be accessed from the current context.
- * @return SCE_CHNNLSV_ERROR_SEMA_ERROR wait/signal sema error
- * @return SCE_CHNNLSV_ERROR_ILLEGAL_ALIGNMENT_SIZE if the size of "data" is not 16 byte aligned
- *
  */
-//Subroutine sceSdSetMember - Address 0x00001208
-s32 sceSdSetMember(SceSdCtx1 *ctx, u8 *data, u32 size)
+//Subroutine sceSdSetMember - Address 0x00001268
+s32 sceSdSetMember(SceSdCryptCtx *ctx, u8 *data, u32 size)
 {
 	s32 oldK1 = pspShiftK1();
-
 	s32 ret = SCE_CHNNLSV_ERROR_ILLEGAL_ADDR;
 
-	//0x00001258 & 0x0000126C
-	if (pspK1DynBufOk(data, size) && pspK1StaBufOk(ctx, sizeof(SceSdCtx1))) {
-		if (sceKernelWaitSema(g_chnnlsv.sema2, 1, NULL) == 0) { //0x000012C0
-			if (size != 0) { //0x00001338
-				if ((size & 0xF) == 0) { //0x000012D4
+	if (pspK1DynBufOk(data, size) && pspK1StaBufOk(ctx, sizeof(SceSdCryptCtx))) {
+		if (sceKernelWaitSema(g_chnnlsv_sema2, 1, NULL) == 0) {
+			if (size != 0) {
+				if ((size & 0xF) == 0) {
 					u32 length = 0;
+					ret = SCE_ERROR_OK;
 
-					while (size >= 2048) { //0x000012E0
-						ret = _SdCrypt(g_chnnlsv.kirk_buf3, data + length, 2048, ctx->data, (u8 *)&ctx->ivSeed, ctx->mode);
+					while (size >= 2048) {
+						ret = _SdCrypt(g_chnnlsv.crypt_hdr, data + length, 2048, ctx->data, &ctx->ivSeed, ctx->mode);
 
 						size -= 2048;
 						length += 2048;
 
-						if (ret != 0) //0x0000131C
-							goto signalsema;
+						if (ret != 0)
+							break;
 					}
 
-					if (size != 0) //0x0000132C
-						ret = _SdCrypt(g_chnnlsv.kirk_buf3, data + length, size, ctx->data, (u8 *)&ctx->ivSeed, ctx->mode);
+					if (ret == 0 && size != 0)
+						ret = _SdCrypt(g_chnnlsv.crypt_hdr, data + length, size, ctx->data, &ctx->ivSeed, ctx->mode);
 				} else
 					ret = SCE_CHNNLSV_ERROR_ILLEGAL_ALIGNMENT_SIZE;
 			} else
 				ret = SCE_ERROR_OK;
 
-signalsema:
 			{
 				u32 clear_size = (size < 0x801) ? (size + 0x14) : 0x814;
-				memset(g_chnnlsv.kirk_buf3, 0, clear_size);
-				sceKernelDcacheWritebackRange(g_chnnlsv.kirk_buf3, clear_size);
+				memset(g_chnnlsv.crypt_hdr, 0, clear_size);
+				sceKernelDcacheWritebackRange(g_chnnlsv.crypt_hdr, clear_size);
 			}
-			if (sceKernelSignalSema(g_chnnlsv.sema2, 1) != 0) //0x00001338
+			if (sceKernelSignalSema(g_chnnlsv_sema2, 1) != 0)
 				ret = SCE_CHNNLSV_ERROR_SEMA_ERROR;
 		} else
 			ret = SCE_CHNNLSV_ERROR_SEMA_ERROR;
@@ -666,25 +594,17 @@ signalsema:
 }
 
 /**
- * Initialize the SceSdCtx1 struct.
- *
- * @param ctx Pointer to the SceSdCtx1 struct
- *
- * @return SCE_ERROR_OK on initialization success.
- * @return SCE_CHNNLSV_ERROR_ILLEGAL_ADDR if ctx cannot be accessed from the current context.
- *
+ * Initialize the SceSdCryptCtx struct.
  */
-//Subroutine sceSdCleanList - Address 0x00001380
-s32 sceSdCleanList(SceSdCtx1 *ctx)
+//Subroutine sceSdCleanList - Address 0x00001414
+s32 sceSdCleanList(SceSdCryptCtx *ctx)
 {
 	s32 oldK1 = pspShiftK1();
-
 	s32 ret = SCE_CHNNLSV_ERROR_ILLEGAL_ADDR;
-
 	u32 i;
 
-	if (pspK1StaBufOk(ctx, sizeof(SceSdCtx1))) { //0x00001394
-		for (i = 0; i < 16; i++) //0x000013A0
+	if (pspK1StaBufOk(ctx, sizeof(SceSdCryptCtx))) {
+		for (i = 0; i < 16; i++)
 			ctx->data[i] = 0;
 
 		ctx->ivSeed = 0;
@@ -697,14 +617,16 @@ s32 sceSdCleanList(SceSdCtx1 *ctx)
 	return ret;
 }
 
-//Subroutine _kirk4 - Address 0x000013C8
+//Subroutine _kirk4 - Address 0x0000145C
 s32 _kirk4(void *buf, u32 size, u32 scramble_code)
 {
-	((u32 *)buf)[3] = scramble_code;
-	((u32 *)buf)[0] = 4;
-	((u32 *)buf)[1] = 0;
-	((u32 *)buf)[2] = 0;
-	((u32 *)buf)[4] = size;
+	SceKirkAesBuf *kirk = (SceKirkAesBuf *)buf;
+
+	kirk->hdr.keyslot = scramble_code;
+	kirk->hdr.mode = 4;
+	kirk->hdr.reservedA = 0;
+	kirk->hdr.reservedB = 0;
+	kirk->hdr.dataSize = size;
 
 	size += 20;
 
@@ -716,14 +638,16 @@ s32 _kirk4(void *buf, u32 size, u32 scramble_code)
 	return ret;
 }
 
-//Subroutine _kirk7 - Address 0x00001418
+//Subroutine _kirk7 - Address 0x000014AC
 s32 _kirk7(void *buf, u32 size, u32 scramble_code)
 {
-	((u32 *)buf)[3] = scramble_code;
-	((u32 *)buf)[0] = 5;
-	((u32 *)buf)[1] = 0;
-	((u32 *)buf)[2] = 0;
-	((u32 *)buf)[4] = size;
+	SceKirkAesBuf *kirk = (SceKirkAesBuf *)buf;
+
+	kirk->hdr.keyslot = scramble_code;
+	kirk->hdr.mode = 5;
+	kirk->hdr.reservedA = 0;
+	kirk->hdr.reservedB = 0;
+	kirk->hdr.dataSize = size;
 
 	size += 20;
 
@@ -735,14 +659,16 @@ s32 _kirk7(void *buf, u32 size, u32 scramble_code)
 	return ret;
 }
 
-//Subroutine _kirk5 - Address 0x00001468
+//Subroutine _kirk5 - Address 0x000014FC
 s32 _kirk5(void *buf, u32 size)
 {
-	((u32 *)buf)[0] = 4;
-	((u32 *)buf)[3] = 256;
-	((u32 *)buf)[1] = 0;
-	((u32 *)buf)[2] = 0;
-	((u32 *)buf)[4] = size;
+	SceKirkAesBuf *kirk = (SceKirkAesBuf *)buf;
+
+	kirk->hdr.mode = 4;
+	kirk->hdr.keyslot = 256;
+	kirk->hdr.reservedA = 0;
+	kirk->hdr.reservedB = 0;
+	kirk->hdr.dataSize = size;
 
 	size += 20;
 
@@ -754,14 +680,16 @@ s32 _kirk5(void *buf, u32 size)
 	return ret;
 }
 
-//Subroutine _kirk8 - Address 0x000014BC
+//Subroutine _kirk8 - Address 0x00001550
 s32 _kirk8(void *buf, u32 size)
 {
-	((u32 *)buf)[0] = 5;
-	((u32 *)buf)[3] = 256;
-	((u32 *)buf)[1] = 0;
-	((u32 *)buf)[2] = 0;
-	((u32 *)buf)[4] = size;
+	SceKirkAesBuf *kirk = (SceKirkAesBuf *)buf;
+
+	kirk->hdr.mode = 5;
+	kirk->hdr.keyslot = 256;
+	kirk->hdr.reservedA = 0;
+	kirk->hdr.reservedB = 0;
+	kirk->hdr.dataSize = size;
 
 	size += 20;
 
@@ -773,99 +701,99 @@ s32 _kirk8(void *buf, u32 size)
 	return ret;
 }
 
-//Subroutine _kirk4Xor - Address 0x00001510
+//Subroutine _kirk4Xor - Address 0x000015A4
 s32 _kirk4Xor(void *buf, u32 size, u8 *data, u32 scramble_code)
 {
+	SceKirkAesBuf *kirk = (SceKirkAesBuf *)buf;
 	s32 ret;
-
 	u32 i;
 
-	for (i = 0; i < 16; i++) //0x00001538
-		((u8 *)buf)[20 + i] ^= data[i];
+	for (i = 0; i < 16; i++)
+		kirk->hdr.payload[i] ^= data[i];
 
 	ret = _kirk4(buf, size, scramble_code);
 
-	if (ret == 0) { //0x00001568
-		for (i = 0; i < 16; i++) //0x00001578
-			data[i] = ((u8 *)buf)[size + 4 + i];
-	}
+	if (ret != 0)
+		return ret;
 
-	return ret;
+	for (i = 0; i < 16; i++)
+		data[i] = kirk->raw[size + 4 + i];
+
+	return 0;
 }
 
-//Subroutine _kirk7Xor - Address 0x000015B0
+//Subroutine _kirk7Xor - Address 0x00001644
 s32 _kirk7Xor(void *buf, u32 size, u8 *data, u32 scramble_code)
 {
+	SceKirkAesBuf *kirk = (SceKirkAesBuf *)buf;
 	s32 ret;
-
 	u32 i;
-
 	u8 block[16];
 
-	for (i = 0; i < 16; i++) //0x000015D4
-		block[i] = ((u8 *)buf)[size + 4 + i];
+	for (i = 0; i < 16; i++)
+		block[i] = kirk->raw[size + 4 + i];
 
 	ret = _kirk7(buf, size, scramble_code);
 
-	if (ret == 0) { //0x000015F8
-		for (i = 0; i < 16; i++) //0x00001604
-			((u8 *)buf)[i] ^= data[i];
+	if (ret != 0)
+		return ret;
 
-		for (i = 0; i < 16; i++) //0x0000162C
-			data[i] = block[i];
-	}
+	for (i = 0; i < 16; i++)
+		kirk->raw[i] ^= data[i];
 
-	return ret;
+	for (i = 0; i < 16; i++)
+		data[i] = block[i];
+
+	return 0;
 }
 
-//NOTE: seems to be unused.
-//Subroutine _kirk5Xor - Address 0x00001660
+//Subroutine _kirk5Xor - Address 0x000016F4
 s32 _kirk5Xor(void *buf, u32 size, u8 *data)
 {
+	SceKirkAesBuf *kirk = (SceKirkAesBuf *)buf;
 	s32 ret;
-
 	u32 i;
 
-	for (i = 0; i < 16; i++) //0x00001684
-		((u8 *)buf)[20 + i] ^= data[i];
+	for (i = 0; i < 16; i++)
+		kirk->hdr.payload[i] ^= data[i];
 
 	ret = _kirk5(buf, size);
 
-	if (ret == 0) { //0x000016B4
-		for (i = 0; i < 16; i++) //0x000016C4
-			data[i] = ((u8 *)buf)[size + 4 + i];
-	}
+	if (ret != 0)
+		return ret;
 
-	return ret;
+	for (i = 0; i < 16; i++)
+		data[i] = kirk->raw[size + 4 + i];
+
+	return 0;
 }
 
-//NOTE: seems to be unused.
-//Subroutine _kirk8Xor - Address 0x000016FC
+//Subroutine _kirk8Xor - Address 0x00001790
 s32 _kirk8Xor(void *buf, u32 size, u8 *data)
 {
+	SceKirkAesBuf *kirk = (SceKirkAesBuf *)buf;
 	s32 ret;
-
 	u32 i;
-
 	u8 block[16];
 
-	for (i = 0; i < 16; i++) //0x0000171C
-		block[i] = ((u8 *)buf)[size + 4 + i];
+	for (i = 0; i < 16; i++)
+		block[i] = kirk->raw[size + 4 + i];
 
 	ret = _kirk8(buf, size);
 
-	if (ret == 0) { //0x00001740
-		for (i = 0; i < 16; i++) //0x0000174C
-			((u8 *)buf)[i] ^= data[i];
+	if (ret != 0)
+		return ret;
 
-		for (i = 0; i < 16; i++) //0x00001774
-			data[i] = block[i];
-	}
+	for (i = 0; i < 16; i++)
+		kirk->raw[i] ^= data[i];
 
-	return ret;
+	for (i = 0; i < 16; i++)
+		data[i] = block[i];
+
+	return 0;
 }
 
-//Subroutine _kirk14 - Address 0x000017A8
+//Subroutine _kirk14 - Address 0x0000183C
 s32 _kirk14(void *buf)
 {
 	s32 ret = SCE_CHNNLSV_ERROR_KIRK_14_ERROR;
