@@ -19,6 +19,7 @@
 #include <net.h>
 #include <sysmodule/sysmodule.h>
 #include <libkernel/libkernel.h>
+#include "SwMwCommServer.h"
 
 #define SWMW_COMM_SOURCE	"C:\\work\\svn\\psp2\\dtcpip\\trunk.365\\DTCPIP-MW\\Src\\Comm\\vita\\SwMwCommServer.cpp"
 
@@ -52,37 +53,6 @@ struct SwMwIpcWireMessage {
 	int value1;		/* 0x14 */
 	int value2;		/* 0x18 */
 	int value3;		/* 0x1C */
-};
-
-/* one request as the server sees it (0x38 bytes, the library's message layout) */
-struct SwMwIpcMessage {
-	int command;		/* 0x00 */
-	unsigned char channel;	/* 0x04 */
-	unsigned char padAfterChannel;
-	unsigned short size;	/* 0x06 */
-	void *payload;		/* 0x08 */
-	int value0;		/* 0x0C */
-	int value1;		/* 0x10 */
-	int value2;		/* 0x14 */
-	int value3;		/* 0x18 */
-	int result;		/* 0x1C */
-	unsigned short outSize;	/* 0x20 */
-	unsigned short padAfterOutSize;
-	void *outPayload;	/* 0x24 */
-	int out0;		/* 0x28 */
-	int out1;		/* 0x2C */
-	int out2;		/* 0x30 */
-	int out3;		/* 0x34 */
-};
-
-/* the middleware's identity, from the launch parameter (main.cpp) */
-extern char g_swagnerIdentity[16];
-
-/* a request's payload: the SW core's 256-byte block after the request's header */
-struct SwMwCommRequest {
-	int reserved;			/* 0x00 */
-	int value[3];			/* 0x04: the request's header words */
-	unsigned char payload[256];	/* 0x10 */
 };
 
 /* the network setup the server makes before its pipes: SceNet's 64 KiB work memory */
@@ -527,7 +497,8 @@ struct SwMwCommChannel {
 	int index;			/* 0x04 */
 	void *sharedBase;		/* 0x08: the shared memory's base */
 	int bufferSize;			/* 0x0C: its size */
-	unsigned int reserved[16];	/* 0x10: the original never reads or writes them */
+	unsigned int context[16];	/* 0x10: the SW core's per-channel words (the sink,
+					 * source and move-sink device words at 0x10/0x18/0x20) */
 	struct SwMwSharedMemory *shared;	/* 0x50: the shared memory control object */
 	SceUID singlePipe;		/* 0x54: the single-stream CtoS pipe */
 	struct SwMwCommThread singleThread;	/* 0x58 */
@@ -1278,4 +1249,72 @@ extern "C" int SwMwCommServerRun(struct SwMwCommServer *server,
 	}
 	swMwTrace("sw mw:[SWP] Server Error %d\n", result);
 	return 0;
+}
+
+/* signal a stream with its index (0x81002564): the index travels in the event's high word */
+extern "C" int SwMwIpcSignalStream(SceUID event, int streamIndex)
+{
+	if (sceKernelSetEvent(event, 0x1000000,
+			      (SceUInt64)(unsigned int)streamIndex << 32) != 0)
+		return SWMW_IPC_ERROR;
+	return 0;
+}
+
+/*
+ * Answer a request (0x81001206): its result and out values as the reply block's three
+ * pairs, its out payload into the stream's shared slice, then the block on the stream's
+ * StoC pipe (shared streams signal the event with the stream index instead).
+ */
+extern "C" int SwMwCommServerReply(struct SwMwCommChannel *channel,
+				   struct SwMwIpcMessage *request)
+{
+	struct SwMwIpcBlock block;
+	struct SwMwIpcBlock *reply;
+	int result;
+
+	if (request->channel >= 4) {
+		result = 12003;
+		swMwTrace("[SWMW] Error %d in %s:%d\n", result, SWMW_COMM_SOURCE, 428);
+		return result;
+	}
+	if (channel->streamCount != 0)
+		reply = (struct SwMwIpcBlock *)((char *)channel->server->base +
+			SWMW_COMM_CHANNEL_STRIDE * channel->index +
+			SWMW_COMM_STREAM_STRIDE * request->channel + SWMW_COMM_BLOCK_OFFSET);
+	else
+		reply = &block;
+	reply->channelCommand = ((unsigned long long)(unsigned int)request->result << 32) +
+				((unsigned long long)(unsigned short)request->outSize << 16);
+	reply->value1Value0 = ((unsigned long long)(unsigned int)request->out0 << 32) +
+			      (unsigned int)request->out1;
+	reply->value3Value2 = ((unsigned long long)(unsigned int)request->out2 << 32) +
+			      (unsigned int)request->out3;
+	if (request->outSize != 0 && request->outPayload != NULL &&
+	    request->outSize <= 0x800 && request->channel != 255)
+		memcpy((char *)channel->server->base +
+		       SWMW_COMM_CHANNEL_STRIDE * channel->index +
+		       SWMW_COMM_STREAM_STRIDE * request->channel + SWMW_COMM_REPLY_OFFSET,
+		       request->outPayload, request->outSize);
+	if (channel->streamCount != 0)
+		result = SwMwIpcSignalStream(channel->slots[request->channel].pipeStoC,
+					     request->channel);
+	else
+		result = SwMwIpcSend(channel->slots[request->channel].pipeStoC, reply);
+	if (result != 0)
+		swMwTrace("[SWMW] Error %d in %s:%d\n", result, SWMW_COMM_SOURCE, 452);
+	return result;
+}
+
+/* answer a request whose channel byte 255 means "no reply" (0x8100142a) */
+extern "C" int SwMwCommServerReplyError(struct SwMwCommChannel *channel,
+					struct SwMwIpcMessage *request)
+{
+	int result;
+
+	if (request->channel == 255)
+		return 0;
+	result = SwMwCommServerReply(channel, request);
+	if (result != 0)
+		swMwTrace("[SWMW] Error %d in %s:%d\n", result, SWMW_COMM_SOURCE, 825);
+	return result;
 }
