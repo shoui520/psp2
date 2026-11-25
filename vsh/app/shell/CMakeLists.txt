@@ -415,6 +415,8 @@ psp2_module(vs0_vsh_shell_shell KIND user COMPILER snc PARTIAL SOURCES
 	src/np/ipc/nptrophy/nptrophy_ipc_server.cpp
 	src/np/ipc/nptrophy/nptrophy_job.cpp
 	src/np/ipc/nptrophy/nptrophy_notify.cpp
+	parental_control_mgr.cpp
+	playlog.cpp
 	shell.c
 )
 target_include_directories(vs0_vsh_shell_shell PRIVATE "${PSP2_SRC}/vsh/paf/include"
