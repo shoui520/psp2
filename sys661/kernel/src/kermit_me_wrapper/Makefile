@@ -1,4 +1,4 @@
 TARGET := kermit_me_wrapper
-SRCS   := kermit_me_wrapper.c
+SRCS   := me_boot.S kermit_me_wrapper.c
 
 include ../../build.mak
