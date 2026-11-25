@@ -51,7 +51,7 @@ public:
     int getState() const { return m_state; }
 
 public:
-    unsigned int m_pad4;
+    unsigned int m_alignPad;
     uint32_t m_param;
     uint16_t m_flagsAndTarget;
     uint16_t m_cmdCode;
@@ -69,7 +69,7 @@ public:
 
 CmdNode::CmdNode(unsigned int inCap, unsigned int outCap, int *outErr,
                  unsigned int totalBytes, unsigned int headerBytes)
-    : m_pad4(0),
+    : m_alignPad(0),
       m_param(0),
       m_flagsAndTarget(0),
       m_cmdCode(0),
@@ -97,12 +97,13 @@ CmdNode::CmdNode(unsigned int inCap, unsigned int outCap, int *outErr,
         return;
     }
 
-    m_inBuf = (char *)this + offset;
+    char *selfBytes = reinterpret_cast<char *>(this);
+    m_inBuf = selfBytes + offset;
     if (totalBytes < afterIn + m_outCap) {
         *outErr = MUSICCORE_ERR_NO_MEMORY;
         return;
     }
-    m_outBuf = (char *)this + afterIn;
+    m_outBuf = selfBytes + afterIn;
 }
 
 CmdNode::~CmdNode()
@@ -238,7 +239,8 @@ CmdQueue::CmdQueue(const char *name, unsigned int inSize, unsigned int outSize,
         return;
     }
 
-    char *cursor = (char *)this + 48;
+    char *selfBytes = reinterpret_cast<char *>(this);
+    char *cursor = selfBytes + 48u;
     m_poolBase = cursor;
 
     for (unsigned int i = 0; i < m_capacity; ++i) {
@@ -476,16 +478,16 @@ bool CmdQueue::mergeSeekDelta(unsigned int prevStep, unsigned int *curStep)
 struct SeekTrackPayload {
     unsigned char header[160];
     unsigned char pauseFlag;
-    unsigned char pad161[3];
+    unsigned char padPause[3];
     unsigned int stepDelta;
     unsigned int seekPos;
 };
 
 struct PlaylistSeekPayload {
     unsigned int stepDelta;
-    unsigned int reserved[6];
+    unsigned int headerWords[6];
     unsigned int seekPos;
-    unsigned int reserved8;
+    unsigned int padAlign;
     unsigned int playlistId;
 };
 

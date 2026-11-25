@@ -183,16 +183,16 @@ public:
     OutputFlushFn onFlush;
     SceUID outputThreadId;
     uint8_t quitRequested;
-    uint8_t pad21[3];
+    uint8_t padQuit[3];
     SceUID mainStatusFlagId;
     SceUID totalMutexId;
     int stopRequested;
     uint8_t openPortRequested;
     uint8_t closePortRequested;
-    uint8_t pad38[2];
+    uint8_t padPortReq[2];
     SceUID stoppedFlagId;
     uint8_t initialized;
-    uint8_t pad45[3];
+    uint8_t padInit[3];
     int channelCount;
     int grainSize;
     int sampleRate;
@@ -229,7 +229,7 @@ public:
     unsigned int dbFadeMode;
     float currentFadeDbOffset;
     uint8_t isMuted;
-    uint8_t pad197[3];
+    uint8_t padMuted[3];
     SoundOutExclusiveParam exclusiveParam;
 
     /* 0x811E6D64 */

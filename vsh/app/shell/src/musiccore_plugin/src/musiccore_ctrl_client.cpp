@@ -86,13 +86,13 @@ struct ContentInfoBuffers {
 
 struct PlaybackStatusOut {
     unsigned char bytes[3];
-    unsigned char pad3[13];
+    unsigned char padHeader[13];
     int16_t flags;
-    int reserved20;
-    int reserved24;
+    int statusWordLow;
+    int statusWordHigh;
     int playState;
     int contentType;
-    int pad36;
+    int padAlign;
     int64_t trackId;
     int64_t trackItemId;
     int64_t playlistId;
@@ -482,10 +482,10 @@ int ctrlGetContentInfo(unsigned char channelId, ContentInfoBuffers *info)
 
 struct RawPlaybackStatus {
     unsigned char bytes[3];
-    unsigned char pad3[25];
+    unsigned char padHeader[25];
     int playState;
     int contentType;
-    int pad36;
+    int padAlign;
     int64_t trackId;
     int64_t trackItemId;
     int64_t playlistId;
@@ -514,8 +514,8 @@ int ctrlGetPlaybackStatus(unsigned char channelId, PlaybackStatusOut *outStatus,
     outStatus->bytes[1] = rawStatus.bytes[1];
     outStatus->bytes[2] = rawStatus.bytes[2];
     outStatus->flags = -1;
-    outStatus->reserved20 = 0;
-    outStatus->reserved24 = 0;
+    outStatus->statusWordLow = 0;
+    outStatus->statusWordHigh = 0;
     outStatus->playState = rawStatus.playState;
     outStatus->contentType = rawStatus.contentType;
     outStatus->trackId = rawStatus.trackId;

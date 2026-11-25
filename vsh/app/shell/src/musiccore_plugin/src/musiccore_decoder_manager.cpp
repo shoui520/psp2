@@ -120,7 +120,7 @@ extern void releaseFactoryMediaInfo(CodecFactory *factory, MediaInfoBase **media
 
 extern void decoderSetListener(DecoderInstance *decoder, void *listener);
 extern unsigned int decoderRequestStart(DecoderInstance *decoder, MediaInfoBase *mediaInfo,
-                                        int startMs, int flagPrimary, int flagSecondary);
+                                        int startMs, int endMs, int playSpeed);
 extern unsigned int decoderRequestStop(DecoderInstance *decoder);
 extern unsigned int decoderRequestPause(DecoderInstance *decoder);
 extern unsigned int decoderRequestSeek(DecoderInstance *decoder, int posMs);
@@ -129,14 +129,14 @@ extern void *decoderGetParserAdapter(DecoderInstance *decoder);
 
 struct ParserAdapterBase {
     virtual ~ParserAdapterBase() {}
-    virtual int reservedA() { return 0; }
-    virtual int reservedB() { return 0; }
-    virtual int reservedC() { return 0; }
-    virtual int reservedD() { return 0; }
-    virtual int reservedE() { return 0; }
-    virtual int reservedF() { return 0; }
-    virtual int reservedG() { return 0; }
-    virtual int reservedH() { return 0; }
+    virtual int onPipeConsumed(int frameFlags) { (void)frameFlags; return 0; }
+    virtual int onPipeUnderflow() { return 0; }
+    virtual int onFrameConsumed(int frameFlags) { (void)frameFlags; return 0; }
+    virtual int runLoop() { return 0; }
+    virtual int openStream() { return 0; }
+    virtual int closeStream() { return 0; }
+    virtual int produceFrame(void *outPkt) { (void)outPkt; return 0; }
+    virtual int queryTagMetadata(void *tagOut) { (void)tagOut; return 0; }
     virtual int findCachedMediaInfo(const char *path, MediaInfoBase **outInfo) = 0;
 };
 
@@ -189,7 +189,7 @@ public:
     virtual ~ActiveFilterListener() {}
     virtual void onEndOfStream() = 0;
     virtual void onDecodeError(int stage, unsigned int decErr) = 0;
-    virtual void onReservedEvent() {}
+    virtual void onBufferNotice() {}
     virtual void onOpenComplete(int status, int param) = 0;
     virtual void onStopComplete(int status) = 0;
     virtual void onPauseComplete(int status) = 0;
@@ -220,7 +220,7 @@ public:
     int lastAsyncStatus;
     int lastAsyncParam;
     uint8_t lastEventType;
-    uint8_t pad77[3];
+    uint8_t padActive[3];
 
     /* 0x811E9ED0 */
     CodecAdapter(const char *mutexName, const char *condName);
@@ -254,7 +254,7 @@ public:
     virtual int closeDecoder() = 0;
 
     /* 0x811EA016 */
-    virtual int startPlay(MediaInfoBase *mediaInfo, int startMs, int flagPrimary, int flagSecondary, void *userCtx);
+    virtual int startPlay(MediaInfoBase *mediaInfo, int startMs, int endMs, int playSpeed, void *userCtx);
 
     /* 0x811EA0A8 */
     virtual int pausePlay();
@@ -341,8 +341,8 @@ int CodecAdapter::setEventCallbacks(MediaReadyCallback readyCb, ErrorCallback er
 }
 
 /* 0x811EA016 */
-int CodecAdapter::startPlay(MediaInfoBase *mediaInfo, int startMs, int flagPrimary,
-                            int flagSecondary, void *userCtx)
+int CodecAdapter::startPlay(MediaInfoBase *mediaInfo, int startMs, int endMs,
+                            int playSpeed, void *userCtx)
 {
     if (decoder == NULL) {
         return MUSICCORE_ERR_FAILED;
@@ -353,7 +353,7 @@ int CodecAdapter::startPlay(MediaInfoBase *mediaInfo, int startMs, int flagPrima
 
     syncMutexLock(&waitMutex);
     pendingUserCtx = userCtx;
-    unsigned int decErr = decoderRequestStart(decoder, mediaInfo, startMs, flagPrimary, flagSecondary);
+    unsigned int decErr = decoderRequestStart(decoder, mediaInfo, startMs, endMs, playSpeed);
     if (decErr != 0) {
         syncMutexUnlock(&waitMutex);
         return mapDecoderError(decErr);
@@ -1273,8 +1273,8 @@ public:
     }
 
     /* 0x811E9A20 */
-    int startMedia(MediaInfoBase *mediaInfo, int startMs, int flagPrimary,
-                   int flagSecondary, void *userCtx)
+    int startMedia(MediaInfoBase *mediaInfo, int startMs, int endMs,
+                   int playSpeed, void *userCtx)
     {
         MediaInfoBase *localMedia = mediaInfo;
         if (localMedia == NULL) {
@@ -1284,7 +1284,7 @@ public:
             releaseMediaInfo(&localMedia, 1);
             return MUSICCORE_ERR_FAILED;
         }
-        int ret = activeCodec->startPlay(localMedia, startMs, flagPrimary, flagSecondary, userCtx);
+        int ret = activeCodec->startPlay(localMedia, startMs, endMs, playSpeed, userCtx);
         if (localMedia->isRetained == 0) {
             releaseMediaInfo(&localMedia, 1);
         }

@@ -29,38 +29,38 @@ static const int MP4_ERR_BOX_EOF = -2144862168;     /* 0x80280028 */
 struct TrackMetadataResult {
     int channels;
     uint8_t hasChannels;
-    uint8_t pad5[3];
+    uint8_t padChannels[3];
     int bitRate;
     uint8_t hasBitRate;
-    uint8_t pad13[3];
+    uint8_t padBitRate[3];
     unsigned int durationMs;
     uint8_t hasDuration;
-    uint8_t pad21[3];
+    uint8_t padDuration[3];
     int sampleRate;
     uint8_t hasSampleRate;
-    uint8_t pad29[3];
+    uint8_t padSampleRate[3];
     int codecProfile;
     uint8_t hasCodecProfile;
-    uint8_t pad37[3];
+    uint8_t padCodecProfile[3];
     int codecSubType;
     uint8_t hasCodecSubType;
-    uint8_t pad45[3];
+    uint8_t padCodecSubType[3];
 };
 
 struct StreamIoInterface {
     virtual ~StreamIoInterface() {}
-    virtual int reserved08() = 0;
+    virtual int isInitialized() = 0;
     virtual int open() = 0;
     virtual int close() = 0;
     virtual int isOpen() = 0;
     virtual int getSize() = 0;
     virtual int getPosition() = 0;
-    virtual int reserved20() = 0;
-    virtual int reserved24() = 0;
-    virtual int reserved28() = 0;
-    virtual int reserved2C() = 0;
+    virtual int setPath(const char *path) = 0;
+    virtual int setPriorityMode(uint32_t priorityMode) = 0;
+    virtual int applyOpenFilePriority(int priorityMode) = 0;
+    virtual int flushCache() = 0;
     virtual int setIoHint(int hintMode, int hintParam) = 0;
-    virtual int reserved34() = 0;
+    virtual void *mapRangeSimple(int offset, int size, int unusedFlag, int *outErr, int *outMapped) = 0;
     virtual int mapRange(int offset, unsigned int size, int flags, int *outMapped,
                          int *outErr, int extra) = 0;
     virtual int checkRangeReadable(int sizeBytes, int *outErr) = 0;
@@ -76,7 +76,7 @@ struct Mp4FramePacket {
     int samplesPerFrame;
     uint8_t flags;
     uint8_t channelCount;
-    uint8_t pad18[6];
+    uint8_t padChannel[6];
     uint16_t leadingSkip;
     uint16_t trailingSkip;
 };
