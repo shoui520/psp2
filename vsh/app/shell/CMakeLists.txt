@@ -524,6 +524,13 @@ psp2_module(vs0_vsh_shell_shell KIND user COMPILER snc PARTIAL SOURCES
 	src/topmenu_plugin/src/topmenu_interface.cpp
 	src/topmenu_plugin/src/topmenu_plane.cpp
 	src/topmenu_plugin/src/top_window_base.cpp
+	src/topmenu_plugin/src/app_info_search_job.cpp
+	src/topmenu_plugin/src/debugger_check_job.cpp
+	src/topmenu_plugin/src/app_check_job.cpp
+	src/topmenu_plugin/src/install_job.cpp
+	src/topmenu_plugin/src/uri_search_job.cpp
+	src/topmenu_plugin/src/boot_screen.cpp
+	src/topmenu_plugin/src/cleanup_job.cpp
 	src/topmenu_plugin/src/top_tab_cache_manager.cpp
 	src/topmenu_plugin/src/topmenu_dialog_mgr.cpp
 	src/topmenu_plugin/src/topmenu_app_error.cpp
