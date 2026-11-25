@@ -12,18 +12,13 @@
 #include "../Comm/vita/SwMwCommServer.h"
 #include "SwMwSync.h"
 #include "SwMwSinkStream.h"
+#include "SwMwSink.h"
 
 #define SWMW_SINK_SOURCE	"C:\\work\\svn\\psp2\\dtcpip\\trunk.365\\DTCPIP-MW\\Src\\Mw\\SwMwSinkDispatch.cpp"
 
 extern "C" {
 int swMwTrace(const char *format, ...);
 int SwsSetToolMode(int value);
-
-/* the sink object (SwMwSink.cpp) */
-int SwMwSinkCreate(int *sink, int device);
-int SwMwSinkDestroy(void *sink);
-int SwMwSinkSetUri(void *sink, void *uri, int size);
-int SwMwSinkGetUriResult(void *sink, int timeout);
 
 }
 
@@ -152,7 +147,7 @@ extern "C" int SwMwSinkCloseCommand(struct SwMwCommChannel *channel,
 			swMwTrace("[SWMW] Error %d in %s:%d\n", 12003,
 				  SWMW_SINK_SOURCE, 240);
 		} else {
-			status = SwMwSinkDestroy((void *)sink);
+			status = SwMwSinkDestroy(sink);
 			if (status != 0) {
 				swMwTrace("[SWMW] Error %d in %s:%d\n", status,
 					  SWMW_SINK_SOURCE, 245);
@@ -200,7 +195,7 @@ extern "C" int SwMwSinkSetUriCommand(struct SwMwCommChannel *channel,
 			unsigned short port = request->value1;
 
 			payload = (int *)request->payload;
-			status = SwMwSinkSetUri((void *)sink, payload, port);
+			status = SwMwSinkSetUri(sink, payload, port);
 				if (status != 12007 && status != 0) {
 					swMwTrace("[SWMW] Error %d in %s:%d\n", status,
 						  SWMW_SINK_SOURCE, 287);
@@ -248,7 +243,7 @@ extern "C" int SwMwSinkGetUriResultCommand(struct SwMwCommChannel *channel,
 			swMwTrace("[SWMW] Error %d in %s:%d\n", 12003,
 				  SWMW_SINK_SOURCE, 314);
 		} else {
-			status = SwMwSinkGetUriResult((void *)sink, request->value1);
+			status = SwMwSinkGetUriResult(sink, request->value1);
 				if (status != 12007 && status != 0) {
 					swMwTrace("[SWMW] Error %d in %s:%d\n", status,
 						  SWMW_SINK_SOURCE, 319);
