@@ -1,47 +1,47 @@
 # 3.65-CEX: vs0:sys/external/libperf.suprx (generated)
 set(MODULE_NID 0x8792D1AF)
+set(MODULE_AUTH_ID 0x280000000002803C)
 set(MODULE_ATTR 0)
 set(MODULE_EXPORTS exports.yml)
 set(MODULE_SDK_VERSION 0x03650011)
+set(MODULE_EXPORT_ORDER 0x447F047D 0xDAB47909 0x00000000)
 set(MODULE_IMPORT_LIBS
 	0xAB606F3F:1:0x0
 	0x69699F30:1:0x0
 	0xCAE9ACE6:5:0x0
 	0x859A24B1:2:0x0
 )
-set(MODULE_IMPORT_FUNCS
-	_sceKernelPaAddBusTraceByKey
-	_sceKernelPaAddGpuTraceByKey
-	_sceKernelPaAddArmTraceByKey
-	_sceKernelPaGetGpuSampledData
-	_sceKernelPaAddCounterTraceByKey
-	sceKernelPerfArmPmonReset
-	_sceKernelPaSetupTraceBufferByKey
-	sceKernelPerfArmPmonSelectEvent
-	sceKernelPerfArmPmonStop
-	sceKernelPaGetIoBaseAddress
-	sceKernelPerfArmPmonStart
-	sceKernelPaGetTimebaseFrequency
-	sceKernelPerfArmPmonSetCounterValue
-	sceDTraceClientIoctl
-	sceDTraceClientOpen
-	sceDTraceClientClose
-	sceKernelGetThreadId
-	sceClibMemcpy_safe
-	__stack_chk_fail
-	sceKernelLockLwMutex
-	sceKernelUnlockLwMutex
-	sceKernelPMonThreadGetCounter
-	sceKernelTryLockLwMutex
-	sceKernelCreateThread
-	sceKernelCreateLwMutex
-	sceKernelWaitThreadEnd
-	sceKernelStartThread
-	sceKernelGetPMUSERENR
-	sceClibPrintf
-	sceKernelDeleteThread
-	sceKernelDelayThread
-)
-set(MODULE_IMPORT_VARS
-	__stack_chk_guard
+set(MODULE_IMPORT_NIDS
+	0xAB606F3F:F:0x0F05045B
+	0xAB606F3F:F:0x174F2500
+	0xAB606F3F:F:0x2CB10FD0
+	0xAB606F3F:F:0x39096D8F
+	0xAB606F3F:F:0x5F050AAF
+	0xAB606F3F:F:0x7B9CF258
+	0xAB606F3F:F:0x7BD1B4A3
+	0xAB606F3F:F:0x9E55649C
+	0xAB606F3F:F:0xA42BDD17
+	0xAB606F3F:F:0xA4EE9025
+	0xAB606F3F:F:0xAAE516BC
+	0xAB606F3F:F:0xCAEE6AF2
+	0xAB606F3F:F:0xFC954C07
+	0x69699F30:F:0x63F0C4F5
+	0x69699F30:F:0x761062E9
+	0x69699F30:F:0xB8232491
+	0xCAE9ACE6:F:0x0FB972F9
+	0xCAE9ACE6:F:0x2E3B02A1
+	0xCAE9ACE6:F:0x37691BF8
+	0xCAE9ACE6:F:0x46E7BE7B
+	0xCAE9ACE6:F:0x91FA6614
+	0xCAE9ACE6:F:0x99B2BF15
+	0xCAE9ACE6:F:0xA6A2C915
+	0xCAE9ACE6:F:0xC5C11EE7
+	0xCAE9ACE6:F:0xDA6EC8EF
+	0xCAE9ACE6:F:0xDDB395A9
+	0xCAE9ACE6:F:0xF08DE149
+	0xCAE9ACE6:F:0xF8A99FDF
+	0xCAE9ACE6:F:0xFA26BC62
+	0xCAE9ACE6:V:0x93B8AA67
+	0x859A24B1:F:0x1BBDE3D9
+	0x859A24B1:F:0x4B675D05
 )

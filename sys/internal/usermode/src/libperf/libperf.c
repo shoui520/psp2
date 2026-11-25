@@ -1,45 +1,48 @@
 /*
- * ScePerf skeleton: export stubs.
- *
- * Generated (T2). Every body is a placeholder.
+ * ScePerf: module entry points and timebase API.
  */
 
-#include <skeleton.h>
+#include "libperf_internal.h"
 
-STUB_MAIN(module_start)
-STUB_MAIN(module_stop)
+int module_start(SceSize args, const void *argp)
+{
+	SceUInt32 ioBase;
 
-STUB(sceRazorCpuGetUserMarkerTraceBuffer)
-STUB(scePerfArmPmonSetCounterValue)
-STUB(scePerfArmPmonReset)
-STUB(sceRazorCpuStartActivityMonitor)
-STUB(_sceRazorCpuWriteFiberUltPkt)
-STUB(scePerfArmPmonSoftwareIncrement)
-STUB(_sceCpuRazorPopFiberUserMarker)
-STUB(sceRazorCpuStopUserMarkerTrace)
-STUB(sceRazorCpuSync)
-STUB(sceRazorCpuPushMarkerWithHud)
-STUB(scePerfArmPmonGetCounterValue)
-STUB(scePerfArmPmonSelectEvent)
-STUB(scePerfGetTimebaseFrequency)
-STUB(_sceRazorCpuInit)
-STUB(sceRazorCpuIsCapturing)
-STUB(_sceCpuRazorPushFiberUserMarker)
-STUB(sceRazorCpuStopCapture)
-STUB(sceRazorCpuStopActivityMonitor)
-STUB(sceRazorCpuStartUserMarkerTrace)
-STUB(scePerfGetTimebaseValue)
-STUB(sceRazorCpuPushMarker)
-STUB(scePerfArmPmonStart)
-STUB(scePerfArmPmonStop)
-STUB(sceRazorCpuStartCapture)
-STUB(sceRazorCpuPopMarker)
-STUB(sceRazorCpuGetActivityMonitorTraceBuffer)
-STUB(ScePerfInternal_26A6DF2C)
-STUB(ScePerfInternal_275F2475)
-STUB(ScePerfInternal_35405E9B)
-STUB(ScePerfInternal_37D9191E)
-STUB(ScePerfInternal_8AE83E02)
-STUB(ScePerfInternal_9D1E1CEE)
+	(void)args;
+	(void)argp;
 
-STUB_VAR(_pLibPerfCaptureFlagPtr)
+	razorCpuInit(SCE_PERF_ARM_PMON_PMCNT_NUM);
+	ioBase = sceKernelPaGetIoBaseAddress();
+	g_paIoBase = (volatile SceUInt32 *)ioBase;
+	if (ioBase == 0)
+		return SCE_KERNEL_START_FAILED;
+	return SCE_KERNEL_START_SUCCESS;
+}
+
+int module_stop(SceSize args, const void *argp)
+{
+	(void)args;
+	(void)argp;
+	return SCE_KERNEL_STOP_SUCCESS;
+}
+
+SceUInt64 scePerfGetTimebaseValue(void)
+{
+	volatile SceUInt32 *base = g_paIoBase;
+	SceUInt32 hi;
+	SceUInt32 lo;
+	SceUInt32 hi2;
+
+	do {
+		hi = base[0x8C / 4];
+		lo = base[0x88 / 4];
+		hi2 = base[0x8C / 4];
+	} while (hi != hi2);
+
+	return ((SceUInt64)hi << 32) | (SceUInt64)lo;
+}
+
+SceUInt32 scePerfGetTimebaseFrequency(void)
+{
+	return sceKernelPaGetTimebaseFrequency();
+}
