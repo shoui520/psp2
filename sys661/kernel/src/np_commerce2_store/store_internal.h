@@ -12,7 +12,198 @@ typedef signed int s32;
 typedef unsigned long long u64;
 typedef signed long long s64;
 
-static inline u32 byteswap32(u32 v)
+/* Commerce2 / Store error codes */
+#define STORE_ERR_STACK_OVERFLOW        ((int)0x80550004)
+#define STORE_ERR_NOT_INITIALIZED       ((int)0x80550F01)
+#define STORE_ERR_ALREADY_INITIALIZED   ((int)0x80550F02)
+#define STORE_ERR_INVALID_ARG           ((int)0x80550F03)
+#define STORE_ERR_INVALID_ID            ((int)0x80550F07)
+#define STORE_ERR_OUT_OF_MEMORY         ((int)0x80550F0B)
+#define STORE_ERR_ABORTED               ((int)0x80550F10)
+#define STORE_ERR_BUF_OVERFLOW          ((int)0x80550F11)
+#define STORE_ERR_RESP_TOO_SMALL        ((int)0x80550F12)
+#define STORE_ERR_RESP_BUF_LIMIT        ((int)0x80550F18)
+#define STORE_ERR_INVALID_CMD           ((int)0x80550F81)
+#define STORE_ERR_INVALID_PAYMENT       ((int)0x80550F82)
+#define STORE_ERR_BUF_TOO_SMALL         ((int)0x80550F84)
+#define STORE_ERR_TAG_NOT_FOUND         ((int)0x80550F87)
+#define STORE_ERR_COUNTRY_NOT_FOUND     ((int)0x80550F92)
+#define STORE_ERR_MAINTENANCE           ((int)0x80550F93)
+#define STORE_ERR_INVALID_SERVICE       ((int)0x80550F96)
+#define STORE_ERR_SERVER_BASE           ((int)0x80551000)
+#define STORE_ERR_SERVER_GENERIC        ((int)0x80551001)
+#define STORE_ERR_SERVER_CARD_INVALID   ((int)0x8055102B)
+#define STORE_ERR_SERVER_ADDR_INVALID   ((int)0x80551041)
+
+/* SDK version thresholds */
+#define STORE_SDK_VER_550               0x0505000F
+#define STORE_MIN_STACK_STD             4080
+#define STORE_MIN_STACK_LARGE           14320
+#define STORE_KEEPALIVE_TIMEOUT_US      10000000ULL
+#define STORE_UNIX_EPOCH_US             0x00DCBFFEFF2BC000ULL
+
+/* Store request command IDs (1-based index into g_endpoint_names) */
+enum StoreCmdId {
+    STORE_CMD_CR_SESS            = 1,
+    STORE_CMD_DEL_SESS           = 2,
+    STORE_CMD_GET_CAT            = 3,
+    STORE_CMD_GET_PROD           = 4,
+    STORE_CMD_SRCH_PROD          = 5,
+    STORE_CMD_GET_WAL            = 6,
+    STORE_CMD_GET_DRM            = 7,
+    STORE_CMD_PUR_PREV           = 8,
+    STORE_CMD_PURCH              = 9,
+    STORE_CMD_GET_CC             = 10,
+    STORE_CMD_TOPUP_CC           = 11,
+    STORE_CMD_VCHR_RED_PREV      = 12,
+    STORE_CMD_VCHR_RED           = 13,
+    STORE_CMD_TOP_EDY            = 14,
+    STORE_CMD_TOP_EDY_RES        = 15,
+    STORE_CMD_ADD_CART           = 16,
+    STORE_CMD_REM_CART           = 17,
+    STORE_CMD_CLEAR_CART         = 18,
+    STORE_CMD_GET_CART           = 19,
+    STORE_CMD_GET_PROV           = 20,
+    STORE_CMD_GET_PAY            = 21,
+    STORE_CMD_GET_BILL           = 22,
+    STORE_CMD_REG_CC             = 23,
+    STORE_CMD_GET_ADDR           = 24,
+    STORE_CMD_GET_RES_ADDR       = 25,
+    STORE_CMD_EVENT_LOG          = 26,
+    STORE_CMD_START_REG          = 29,
+    STORE_CMD_SET_RES_ADDR       = 38,
+    STORE_CMD_GET_BILL_INFO      = 43,
+    STORE_CMD_AUTHENTICATE       = 49,
+    STORE_CMD_GET_CNSL_ACT       = 59,
+    STORE_CMD_VERIFY_DOB         = 61,
+    STORE_CMD_GET_EPW            = 65,
+    STORE_CMD_CR_GUEST_SESS      = 66,
+    STORE_CMD_GET_PROD_LIST      = 71,
+    STORE_CMD_RECOM_PRODS        = 76,
+    STORE_CMD_GET_PROD_IDS       = 80,
+};
+
+/* Form key indices into g_form_keys */
+enum StoreFormKeyId {
+    SFKEY_AMP                   = 0,
+    SFKEY_COMMA                 = 1,
+    SFKEY_VERSION               = 2,
+    SFKEY_USERNAME              = 3,
+    SFKEY_PASSWORD              = 4,
+    SFKEY_CONSOLE_ID            = 5,
+    SFKEY_CATEGORY_ID           = 6,
+    SFKEY_START_POSITION        = 7,
+    SFKEY_MAX_COUNT             = 8,
+    SFKEY_PRODUCT_ID            = 9,
+    SFKEY_STORE_TYPE            = 10,
+    SFKEY_QUERY_KEY             = 11,
+    SFKEY_QUERY_VALUE           = 12,
+    SFKEY_SORT_METHOD           = 13,
+    SFKEY_SKU_ID                = 14,
+    SFKEY_SKU_IDS               = 15,
+    SFKEY_TITLE_ID              = 16,
+    SFKEY_DRM_CONTENT_TYPE      = 17,
+    SFKEY_QUICK_PURCHASE        = 18,
+    SFKEY_TOPUP_AMOUNT          = 19,
+    SFKEY_1                     = 20,
+    SFKEY_2                     = 21,
+    SFKEY_3                     = 22,
+    SFKEY_EDY_RECEIPT_ID        = 23,
+    SFKEY_RESULT_EDY_TOPUP      = 24,
+    SFKEY_PAYMENT_TYPE          = 25,
+    SFKEY_PAYMENT_METHOD_ID     = 26,
+    SFKEY_HOLDER_NAME           = 27,
+    SFKEY_CARD_NUMBER           = 28,
+    SFKEY_START_YEAR            = 29,
+    SFKEY_START_MONTH           = 30,
+    SFKEY_EXPIRE_YEAR           = 31,
+    SFKEY_EXPIRE_MONTH          = 32,
+    SFKEY_SECURITY_CODE         = 33,
+    SFKEY_ISSUE_NUMBER          = 34,
+    SFKEY_CITY                  = 35,
+    SFKEY_PROVINCE              = 36,
+    SFKEY_POSTAL_CODE           = 37,
+    SFKEY_EVENT_TYPE            = 38,
+    SFKEY_ID                    = 39,
+    SFKEY_URL                   = 40,
+    SFKEY_COUNTRY               = 41,
+    SFKEY_LANGUAGE              = 42,
+    SFKEY_YOB                   = 43,
+    SFKEY_MOB                   = 44,
+    SFKEY_DOB                   = 45,
+    SFKEY_AUTO_DEPOSIT_FLAG     = 63,
+    SFKEY_SERVICE_ID            = 73,
+    SFKEY_SAVE                  = 74,
+    SFKEY_REWARD_ID             = 75,
+    SFKEY_REWARD_IDS            = 76,
+    SFKEY_PRODUCT_IDS           = 77,
+    SFKEY_RECOM_TYPE            = 78,
+    SFKEY_CONTENT_ID            = 79,
+    SFKEY_FILE_ID               = 80,
+};
+
+typedef struct {
+    u32 len;
+    const char *str;
+} StoreFormKey;
+
+typedef struct {
+    u32 key_index;
+    const char *value;
+    u32 value_len;
+} StoreSearchQuery;
+
+/* Commerce2 context layout (shared with sceNpCommerce2) */
+typedef struct {
+    u8  reserved0[24];
+    int http_tmpl_id;         /* +0x018 */
+    char url_buf[8];          /* +0x01C */
+    u8  session_buf[1024];    /* +0x024 */
+    u32 session_len;          /* +0x424 (1060) */
+    u32 svc_type;             /* +0x428 (1064) */
+    u32 pad_42c;              /* +0x42C */
+    u64 last_activity_us;     /* +0x430 (1072) */
+    u32 no_size_check;        /* +0x438 (1080) */
+    u32 http_status;          /* +0x43C (1084) */
+    char country_code[4];     /* +0x440 (1088) */
+    char lang_code[4];        /* +0x444 (1092) */
+} StoreContext;
+
+typedef struct {
+    u32 reserved[3];
+    u32 flags;                /* +0x0C (bit 1 = aborted) */
+    int http_req_id;          /* +0x10 */
+    u16 cmd_id;               /* +0x14 */
+    u16 pad;
+} StoreRequest;
+
+typedef struct {
+    const char *payment_method_id;
+    u32 payment_method_id_len;
+    const char *holder_name;
+    u32 holder_name_len;
+    const char *card_number;
+    u32 start_year;
+    u32 start_month;
+    u32 expire_year;
+    u32 expire_month;
+    const char *security_code;
+    const char *issue_number;
+    const char *street1;
+    u32 street1_len;
+    const char *street2;
+    u32 street2_len;
+    const char *street3;
+    u32 street3_len;
+    const char *city;
+    u32 city_len;
+    const char *province;
+    u32 province_len;
+    const char *postal_code;
+    u32 postal_code_len;
+} StoreBillingInfo;
+
+static inline u32 store_bswap32(u32 v)
 {
     return ((v & 0x000000FFU) << 24) |
            ((v & 0x0000FF00U) << 8)  |
@@ -20,32 +211,32 @@ static inline u32 byteswap32(u32 v)
            ((v & 0xFF000000U) >> 24);
 }
 
-static inline u16 byteswap16(u16 v) { return (u16)((v << 8) | (v >> 8)); }
-static inline u16 _wsbh(u16 v) { return byteswap16(v); }
-static inline u32 _bswapw(u32 v) { return byteswap32(v); }
+static inline u16 store_bswap16(u16 v)
+{
+    return (u16)((v << 8) | (v >> 8));
+}
+
 static inline s32 store_min_s32(s32 a, s32 b) { return a < b ? a : b; }
 static inline s32 store_max_s32(s32 a, s32 b) { return a > b ? a : b; }
 
-#define LODWORD(x) ((u32)((u64)(x)))
-#define HIDWORD(x) ((u32)((u64)(x) >> 32))
-#define SHIDWORD(x) ((s32)((u64)(x) >> 32))
-#define LOWORD(x)  ((u16)((u32)(x)))
-#define HIWORD(x)  ((u16)((u32)(x) >> 16))
-#define LOBYTE(x)  ((u8)((u32)(x)))
-#define HIBYTE(x)  ((u8)((u32)(x) >> 8))
-#define BYTE1(x)   ((u8)((u32)(x) >> 8))
-#define BYTE2(x)   ((u8)((u32)(x) >> 16))
-#define BYTE3(x)   ((u8)((u32)(x) >> 24))
-#define __PAIR64__(hi, lo) (((u64)(u32)(hi) << 32) | (u32)(lo))
-#define __CFADD__(x, y)    ((u32)((u32)(x) + (u32)(y)) < (u32)(x))
-#define true 1
-#define false 0
+static inline u32 store_read_be32(const void *ptr)
+{
+    const u8 *p = (const u8 *)ptr;
+    return ((u32)p[0] << 24) | ((u32)p[1] << 16) | ((u32)p[2] << 8) | (u32)p[3];
+}
 
-typedef struct {
-    u32 len;
-    const char *str;
-} StoreFormKey;
+static inline u64 store_read_be64(const void *ptr)
+{
+    const u8 *p = (const u8 *)ptr;
+    return ((u64)store_read_be32(p) << 32) | (u64)store_read_be32(p + 4);
+}
 
+static inline u64 store_unix_ms_to_rtc(u64 ms)
+{
+    return ms ? (ms * 1000ULL + STORE_UNIX_EPOCH_US) : 0ULL;
+}
+
+/* Global tables & state */
 extern const char * const g_endpoint_names[86];
 extern const char * const g_service_prefixes[9];
 extern const StoreFormKey g_form_keys[81];
@@ -58,545 +249,240 @@ extern u32 g_store_init;
 extern u32 g_store_mgr;
 
 /* Imported library functions */
-extern int KprintfForUser();
-extern int _sceKernelCheckThreadStack();
-extern int name();
-extern int sceKernelGetCompiledSdkVersion();
-extern int sceKernelMemcpy();
-extern int sceKernelMemset();
-extern int sceNetIfhandle_lib_15CFE3C0();
-extern int sceNetIfhandle_lib_76BAD213();
-extern int sceNet_lib_750F705D();
-extern int sceNet_lib_94DCA9F0();
-extern int sceNet_lib_96EF9DA1();
-extern int sceNet_lib_A0F16ABD();
-extern int sceNet_lib_B5CE388A();
-extern int sceNet_lib_BCBE14CF();
-extern int sceNet_lib_C13C9307();
-extern int sceNet_lib_CF705E46();
-extern int sceNet_lib_D8722983();
-extern int sceNpCommerce2_02C307C0();
-extern int sceNpCommerce2_02CADA41();
-extern int sceNpCommerce2_06618C81();
-extern int sceNpCommerce2_0A6AB496();
-extern int sceNpCommerce2_157FA8AA();
-extern int sceNpCommerce2_22CEC5E2();
-extern int sceNpCommerce2_2AFD0CC7();
-extern int sceNpCommerce2_3546C737();
-extern int sceNpCommerce2_382803C8();
-extern int sceNpCommerce2_3F6D413C();
-extern int sceNpCommerce2_460A1D92();
-extern int sceNpCommerce2_4D43B84D();
-extern int sceNpCommerce2_63B96D73();
-extern int sceNpCommerce2_66EC0829();
-extern int sceNpCommerce2_69FEA1C8();
-extern int sceNpCommerce2_75DF99A9();
-extern int sceNpCommerce2_77BE411B();
-extern int sceNpCommerce2_8139E653();
-extern int sceNpCommerce2_851E7844();
-extern int sceNpCommerce2_8642C532();
-extern int sceNpCommerce2_8E80E661();
-extern int sceNpCommerce2_ADAA054C();
-extern int sceNpCommerce2_AE614CC6();
-extern int sceNpCommerce2_C27FEAB1();
-extern int sceNpCommerce2_CBA487E9();
-extern int sceNpCommerce2_CCEEA788();
-extern int sceNpCommerce2_D4C319C6();
-extern int sceNpCommerce2_D5932A6C();
-extern int sceNpCommerce2_E3455E27();
-extern int sceNpCommerce2_EE7255FE();
-extern int sceNpCommerce2_F0900551();
-extern int sceNpCommerce2_F8D175FA();
-extern int sceNpCommerce2_FC47B63C();
-extern int sceNp_2E4769C3();
+extern int   KprintfForUser(const char *fmt, ...);
+extern int   _sceKernelCheckThreadStack(void);
+extern int   sceKernelGetCompiledSdkVersion(void);
+extern void *sceKernelMemcpy(void *dst, const void *src, size_t n);
+extern void *sceKernelMemset(void *dst, int ch, size_t n);
+extern void *sceNetIfhandle_lib_15CFE3C0(u32 size);
+extern void  sceNetIfhandle_lib_76BAD213(void *ptr, u32 unused);
+extern int   sceNet_lib_750F705D(int ch);
+extern int   sceNet_lib_94DCA9F0(const char *a, const char *b, size_t n);
+extern int   sceNet_lib_96EF9DA1(int ch);
+extern int   sceNet_lib_A0F16ABD(const char *a, const char *b);
+extern char *sceNet_lib_B5CE388A(char *dst, const char *src, size_t n);
+extern char *sceNet_lib_BCBE14CF(const char *s, int ch);
+extern int   sceNet_lib_C13C9307(int ch);
+extern int   sceNet_lib_CF705E46(char *buf, const char *fmt, ...);
+extern u32   sceNet_lib_D8722983(const char *s);
+extern int   sceNp_2E4769C3(void);
 
-/* Module functions */
-int sceNpCommerce2Store_8E76A121();
-int sceNpCommerce2Store_81044B28(int a1, int a2, int a3, int a4, unsigned int a5, int a6);
-int sceNpCommerce2Store_E3D1EA90(int a1);
-int sceNpCommerce2Store_B20C910B(int a1, int a2, unsigned int a3);
-int sceNpCommerce2Store_DA7B5568(int a1, u32 *a2);
-int sceNpCommerce2Store_7B6C5AEB(int a1, u32 *a2);
-int sceNpCommerce2Store_59D8A74D();
-int sceNpCommerce2Store_8455D3ED();
-int sceNpCommerce2Store_48FE9646(int a1, int a2, int a3);
-int sceNpCommerce2Store_CD27E505(int a1, int a2, int a3);
-int sceNpCommerce2Store_873887CF(int a1, int a2, int a3, int a4);
-int sceNpCommerce2Store_2A06624D(int a1, int a2, int a3);
-int sceNpCommerce2Store_45E24DCA(int a1, int a2, int a3);
-int sceNpCommerce2Store_D601DE6A(int a1, int a2);
-int sceNpCommerce2Store_7D7FB404(int a1, int a2);
-int sceNpCommerce2Store_ABF975F8(int a1, int a2);
-int sceNpCommerce2Store_28EF259E(int a1, int a2, int a3, int a4, int a5, int a6);
-int sceNpCommerce2Store_98F66F2C(int a1, int a2, int a3, int a4);
-int sceNpCommerce2Store_607146F0(int a1, int a2);
-int sceNpCommerce2Store_B2DDD9D5(int a1, int a2, int a3);
-int sceNpCommerce2Store_C228C7BF(int a1, int a2);
-int sceNpCommerce2Store_B93B30CD(int a1, int a2, int a3);
-int sceNpCommerce2Store_869624DB(int a1, int a2, int a3);
-int sceNpCommerce2Store_4E84A105(int a1, int a2, int a3);
-int sceNpCommerce2Store_E7BBC497(int a1, int a2, int a3);
-int sceNpCommerce2Store_B477732B(int a1, int a2, int a3);
-int sceNpCommerce2Store_F7D8224B(int a1, int a2, int a3);
-int sceNpCommerce2Store_219B9CD4(int a1, int a2, int a3);
-int sceNpCommerce2Store_A7C4A4E0(int a1, int a2, int a3);
-int sceNpCommerce2Store_F5E850B6(int a1, int a2);
-int sceNpCommerce2Store_EEAC383D(int a1, int a2, int a3, int a4, int a5);
-int sceNpCommerce2Store_619AFBAE(int a1, int a2, int a3, int a4);
-int sceNpCommerce2Store_9B001542(int a1, int a2);
-int sceNpCommerce2Store_5CAF925C(int a1, int a2, int a3);
-int sceNpCommerce2Store_99A17682(int a1, int a2, int a3);
-int sceNpCommerce2Store_4B3A29D4(int a1, int a2, int a3);
-int sceNpCommerce2Store_39D8AB1E(int a1, int a2, int a3);
-int sceNpCommerce2Store_92393647(int a1, int a2, int a3);
-int sceNpCommerce2Store_9DBCFF3D(int a1, int a2, int a3);
-int sceNpCommerce2Store_E5ECA4DF(int a1, int a2, int a3);
-int sceNpCommerce2Store_783CC832(int a1, int a2, int a3);
-int sceNpCommerce2Store_236FC217(int a1, int a2, int a3);
-int sceNpCommerce2Store_7A08C301(int a1, int a2);
-int sceNpCommerce2Store_ECF70261(int a1, int a2);
-int sceNpCommerce2Store_EF8F317D(int a1, int a2, int a3, int a4, int a5);
-int sceNpCommerce2Store_FB5F3C12(int a1, int a2, int a3, int a4);
-int sceNpCommerce2Store_CCA8601C(int a1, int a2, int a3);
-int sceNpCommerce2Store_5115E0CB(int a1, int a2);
-int sceNpCommerce2Store_5CE497F6(int a1, int a2);
-int sceNpCommerce2Store_61FD9968(int a1, int a2, int a3);
-int sceNpCommerce2Store_EFFCA1ED(int a1, int a2);
-int sceNpCommerce2Store_B8E4EED6(int a1, int a2);
-int sceNpCommerce2Store_74B79FF2(int a1, int a2);
-int sceNpCommerce2Store_782ED6EB(int a1, int a2, int a3);
-int sceNpCommerce2Store_D2E48887(int a1, int a2, int a3);
-int sceNpCommerce2Store_CADDC96B(int a1, int a2);
-int sceNpCommerce2Store_E1776B29(int a1, int a2, int a3);
-int sceNpCommerce2Store_264E9CAA(int a1, int a2, int a3);
-int sceNpCommerce2Store_F4261841(int a1, int a2);
-int sceNpCommerce2Store_DD8F307B(int a1, int a2, int a3);
-int sceNpCommerce2Store_B9133D27(int a1, int a2);
-int sceNpCommerce2Store_CA9FB11B(int a1, int a2);
-int sceNpCommerce2Store_4534FD80(int a1, int a2, int a3, int a4);
-int sceNpCommerce2Store_21134841(int a1, int a2, int a3);
-int sceNpCommerce2Store_BE626428(int a1, int a2);
-int sceNpCommerce2Store_C8133F70(int a1, int a2);
-int sceNpCommerce2Store_AE6DAF88(int a1, int a2);
-int sceNpCommerce2Store_AD64726E(int a1);
-int sceNpCommerce2Store_59E39F46(int a1, int a2, int a3, int a4);
-int sceNpCommerce2Store_6301672F(int a1, int a2);
-int sceNpCommerce2Store_701385D5(int a1);
-int sceNpCommerce2Store_850F5E58(int a1, int a2, int a3, int a4);
-int sceNpCommerce2Store_99300AC2(int a1, int a2, int a3);
-int sceNpCommerce2Store_211DFA3C(int a1, int a2);
-int sceNpCommerce2Store_48F4C175(int a1, int a2);
-int sceNpCommerce2Store_41C60662(int a1, int a2);
-int sceNpCommerce2Store_ECE95BB2(int a1, int a2, int a3, int a4);
-int sceNpCommerce2Store_1F4FFF9A(int a1, int a2, int a3, int a4);
-int sceNpCommerce2Store_4E280B0A(int a1, int a2, int a3);
-int sceNpCommerce2Store_E1DC1A08(int a1, int a2);
-int sceNpCommerce2Store_A8B9FFDB(int a1, int a2);
-int sceNpCommerce2Store_694667CF(int a1, int a2);
-int sceNpCommerce2Store_CAB4A8F6(int a1, int a2);
-int sceNpCommerce2Store_F5381482(int a1, int a2, int a3, int a4);
-int sceNpCommerce2Store_B1957179(int a1, int a2, int a3, int a4);
-int sceNpCommerce2Store_0A7B6B92(int a1, int a2, int a3);
-int sceNpCommerce2Store_849E6B93(int a1, int a2);
-int sceNpCommerce2Store_FB5D86D3(int a1, int a2);
-int sceNpCommerce2Store_19FAC163(int a1, int a2);
-int sceNpCommerce2Store_A89F0478(int a1, int a2);
-int sceNpCommerce2Store_8C0C2F7C(int a1);
-int sceNpCommerce2Store_EBBA8ECE(int a1, int a2, int a3, int a4);
-int sceNpCommerce2Store_7136C275(int a1, int a2, int a3);
-int sceNpCommerce2Store_259AE74B(int a1, int a2);
-int sceNpCommerce2Store_320C18DB(int a1, int a2);
-int sceNpCommerce2Store_39757926(int a1);
-int sceNpCommerce2Store_6ACDFAC8(int a1, int a2, int a3, int a4);
-int sceNpCommerce2Store_FFEBE5FF(int a1, int a2, int a3);
-int sceNpCommerce2Store_998EB0CC(int a1, int a2, int a3);
-int sceNpCommerce2Store_6C5AE9E5(int a1, int a2, int a3);
-int sceNpCommerce2Store_73AE0FA0(int a1, int a2);
-int sceNpCommerce2Store_995ECF93(int a1, int a2);
-int sceNpCommerce2Store_CBBFF272(int a1, int a2, int a3, int a4);
-int sceNpCommerce2Store_4D5DA905(int a1, int a2, int a3);
-int sceNpCommerce2Store_91749B96(int a1, int a2, int a3);
-int sceNpCommerce2Store_B961BF22(int a1, int a2);
-int sceNpCommerce2Store_1A7F75D7();
-int sceNpCommerce2Store_A52FFFF8(int a1, int a2, int a3, int a4);
-int sceNpCommerce2Store_18457EB9(int a1, int a2, int a3);
-int sceNpCommerce2Store_57DD55E5(int a1, int a2, int a3);
-int sceNpCommerce2Store_063A16A4(int a1, int a2);
-int sceNpCommerce2Store_CE84A5DC(int a1, int a2, int a3);
-int sceNpCommerce2Store_6961822C(int a1, int a2, int a3);
-int sceNpCommerce2Store_B1BEAFED(int a1, int a2);
-int sceNpCommerce2Store_7A1291A6(int a1);
-int sceNpCommerce2Store_E55BC0DF(int a1, int a2, int a3, int a4);
-int sceNpCommerce2Store_EAF03127(int a1, int a2, int a3);
-int sceNpCommerce2Store_D58BC86C(int a1, int a2);
-int sceNpCommerce2Store_12378B6A(int a1, int a2);
-int sceNpCommerce2Store_53716B04(int a1, int a2, int a3, int a4);
-int sceNpCommerce2Store_8EABFF3E(int a1, int a2);
-int sceNpCommerce2Store_472E4D84(int a1, int a2);
-int sceNpCommerce2Store_B0E5DFD8(int a1, int a2, int a3, int a4);
-int sceNpCommerce2Store_6EB54FA3(int a1, int a2, int a3);
-int sceNpCommerce2Store_DA757050(int a1, int a2);
-int sceNpCommerce2Store_B8889A67(int a1);
-int sceNpCommerce2Store_0E2B656E(int a1, int a2, int a3, int a4);
-int sceNpCommerce2Store_C7B9E02B(int a1, int a2, int a3);
-int sceNpCommerce2Store_8B81197E(int a1, int a2);
-int sceNpCommerce2Store_7B3A8218(int a1, int a2);
-int sceNpCommerce2Store_D2517B02(int a1, int a2);
-int sceNpCommerce2Store_ECE10E5B(int a1, int a2, int a3, int a4);
-int sceNpCommerce2Store_49E768E9(int a1, int a2, int a3);
-int sceNpCommerce2Store_9AA823E4(int a1, int a2);
-int sceNpCommerce2Store_0A5949EF(int a1, int a2);
-int sceNpCommerce2Store_C57CF651(int a1, int a2);
-int sceNpCommerce2Store_6FE1F29E(int a1, int a2, int a3, int a4);
-int sceNpCommerce2Store_346E1F56(int a1, int a2, int a3);
-int sceNpCommerce2Store_3572E4D7(int a1, int a2);
-int sceNpCommerce2Store_75C205F7(int a1, int a2);
-int sceNpCommerce2Store_68B07CDC(int a1, int a2, int a3);
-int sceNpCommerce2Store_334F89A3(int a1, int a2, int a3, int a4);
-int sceNpCommerce2Store_2E290D53(int a1, int a2);
-int sceNpCommerce2Store_47A8A5B4(int a1, int a2, int a3, int a4);
-int sceNpCommerce2Store_FEDE1E87(int a1, int a2, int a3, int a4);
-int sceNpCommerce2Store_2180FE6C(int a1, int a2, int a3);
-int sceNpCommerce2Store_5EC8E7B8(int a1, int a2);
-int sceNpCommerce2Store_00292401(int a1, int a2);
-int sceNpCommerce2Store_FC6408EC(int a1, int a2, int a3);
-int sceNpCommerce2Store_25579A90(int a1, int a2);
-int sceNpCommerce2Store_66BC1072(int a1, int a2);
-int sceNpCommerce2Store_D22ADDA7(int a1, int a2, int a3);
-int sceNpCommerce2Store_65D72F22(int a1, int a2);
-int sceNpCommerce2Store_2581BC37(int a1, int a2, int a3);
-int sceNpCommerce2Store_59443417(int a1, int a2, int a3);
-int sceNpCommerce2Store_1C4CE9CB(int a1, int a2, int a3);
-int sceNpCommerce2Store_7063CC9D(int a1, int a2, int a3);
-int sceNpCommerce2Store_548C6487(int a1, int a2);
-int sceNpCommerce2Store_F036856B(int a1, int a2, int a3);
-int sceNpCommerce2Store_7F642484(int a1, int a2, int a3);
-int sceNpCommerce2Store_9D3888D8(int a1, int a2, int a3);
-int sceNpCommerce2Store_92E53CD4(int a1, int a2);
-int sceNpCommerce2Store_D232FB91(int a1, int a2, int a3, int a4);
-int sceNpCommerce2Store_6AECBA79(int a1, int a2, int a3, int a4);
-int sceNpCommerce2Store_D63D12BF(int a1, int a2, int a3);
-int sceNpCommerce2Store_ED2C778E(int a1, int a2);
-int sceNpCommerce2Store_CBC27838(int a1, int a2);
-int sceNpCommerce2Store_7C45D60E(int a1, int a2);
-int sceNpCommerce2Store_09B3E27D(int a1);
-int sceNpCommerce2Store_8644CCFB(int a1, int a2, int a3, int a4);
-int sceNpCommerce2Store_770C5947(int a1, int a2, int a3);
-int sceNpCommerce2Store_78BA836A(int a1, int a2);
-int sceNpCommerce2Store_7D654C92(int a1, int a2, int a3, int a4);
-int sceNpCommerce2Store_C0BB62AD(int a1, int a2, int a3, int a4);
-int sceNpCommerce2Store_DDD2C398(int a1, int a2);
-int sceNpCommerce2Store_D70F1117(int a1, int a2, int a3, int a4);
-int sceNpCommerce2Store_54D94925(int a1, int a2, int a3);
-int sceNpCommerce2Store_94E8DAB3(int a1, int a2, int a3);
-int sceNpCommerce2Store_465A6BBA(int a1, int a2, int a3);
-int sceNpCommerce2Store_E6009051(int a1, int a2, int a3);
-int sceNpCommerce2Store_B1F9111F(int a1, int a2);
-int sceNpCommerce2Store_6DDED3F7(int a1, int a2);
-int sceNpCommerce2Store_E1A8D7FF(int a1, int a2, int a3, int a4);
-int sceNpCommerce2Store_5857AF83(int a1, int a2, int a3, int a4);
-int sceNpCommerce2Store_4E3E0594(int a1, int a2, int a3);
-int sceNpCommerce2Store_FBF61E40(int a1, int a2, int a3);
-int sceNpCommerce2Store_BC7F8DA6(int a1, int a2, int a3);
-int sceNpCommerce2Store_A93E02A6(int a1, int a2);
-int sceNpCommerce2Store_166EA2D5(int a1, int a2);
-int sceNpCommerce2Store_F22C4985(int a1);
-int sceNpCommerce2Store_47540138(int a1, int a2, int a3, int a4);
-int sceNpCommerce2Store_0E083AEA(int a1, int a2, int a3);
-int sceNpCommerce2Store_84C4226F(int a1, int a2, int a3);
-int sceNpCommerce2Store_A165F819(int a1, int a2);
-int sceNpCommerce2Store_42769097(int a1);
-int sceNpCommerce2Store_C42B0607(int a1, int a2, int a3, int a4);
-int sceNpCommerce2Store_BCD5575A(int a1, int a2, int a3);
-int sceNpCommerce2Store_C7AFBA23(int a1, int a2);
-int sceNpCommerce2Store_D31C1673(int a1, int a2, int a3, int a4, int a5, int a6);
-int sceNpCommerce2Store_5C15E8DA(int a1, int a2, int a3, int a4);
-int sceNpCommerce2Store_C2A7C748(int a1, int a2);
-int sceNpCommerce2Store_E3A5AC0C(int a1, int a2, int a3);
-int sceNpCommerce2Store_85F7B364(int a1, int a2, int a3);
-int sceNpCommerce2Store_C9652539(int a1, int a2, unsigned int a3, int a4);
-int sceNpCommerce2Store_B9108E1C(int a1, int a2, int a3, int a4);
-int sceNpCommerce2Store_20A1FDAD(int a1, int a2, int a3);
-int sceNpCommerce2Store_7BBE5E6F(int a1, int a2, int a3);
-int sceNpCommerce2Store_0F42E599(int a1, int a2, int a3);
-int sceNpCommerce2Store_F132A92F(int a1, int a2, int a3);
-int sceNpCommerce2Store_8C9B3738(int a1, int a2, int a3);
-int sceNpCommerce2Store_C6FDB930(int a1, int a2, int a3);
-int sceNpCommerce2Store_96E5B56F(int a1, int a2);
-int sceNpCommerce2Store_EF296653(int a1, int a2, int a3);
-int sceNpCommerce2Store_7EB1A34C(int a1, int a2);
-int sceNpCommerce2Store_43CF3A7A(int a1, int a2);
-int sceNpCommerce2Store_BAFBB9D2(int a1, int a2, int a3);
-int sceNpCommerce2Store_31FFC518(int a1, int a2, int a3);
-int sceNpCommerce2Store_E9E20646(int a1, int a2, int a3);
-int sceNpCommerce2Store_CC69487B(int a1, int a2);
-int sceNpCommerce2Store_26781C1F(int a1, int a2, int a3);
-int sceNpCommerce2Store_E2367A5C(int a1, int a2, int a3);
-int sceNpCommerce2Store_8E216CEB(int a1, int a2, int a3);
-int sceNpCommerce2Store_4F460A0D(int a1, int a2);
-int sceNpCommerce2Store_4F945E73(int a1, int a2, int a3);
-int sceNpCommerce2Store_3370450A(int a1, int a2);
-int sceNpCommerce2Store_7411D8E7(int a1, int a2, int a3);
-int sceNpCommerce2Store_9E63F7D5(int a1, int a2, int a3);
-int sceNpCommerce2Store_D830992C(int a1, int a2, int a3);
-int sceNpCommerce2Store_94E55872(int a1, int a2, int a3);
-int sceNpCommerce2Store_E4E600A5(int a1, int a2);
-int sceNpCommerce2Store_93A4DBE4(int a1, int a2, int a3);
-int sceNpCommerce2Store_E1B3A08D(int a1, int a2, int a3);
-int sceNpCommerce2Store_A47A19C1(int a1, int a2, int a3);
-int sceNpCommerce2Store_1FBC9F13(int a1, int a2);
-int sceNpCommerce2Store_4C78B957(int a1, int a2);
-int sceNpCommerce2Store_0DD765EC(int a1, int a2);
-int sceNpCommerce2Store_47DC8C9F(int a1, int a2);
-int sceNpCommerce2Store_DA223D9D(int a1, int a2, int a3, int a4);
-int sceNpCommerce2Store_7B0C0787(int a1, int a2, int a3);
-int sceNpCommerce2Store_B7CD88D7(int a1, int a2, int a3);
-int sceNpCommerce2Store_264EAA5B(int a1, int a2);
-int sceNpCommerce2Store_31B3119F(int a1, int a2, int a3);
-int sceNpCommerce2Store_861ACADC(int a1, int a2, int a3, int a4);
-int sceNpCommerce2Store_00E9235B(int a1, int a2, int a3);
-int sceNpCommerce2Store_FBE5903B(int a1, int a2, int a3);
-int sceNpCommerce2Store_6CD2ED8C(int a1);
-int sceNpCommerce2Store_6E216646(int a1, int a2);
-int sceNpCommerce2Store_DA570F5D(int a1, int a2);
-int sceNpCommerce2Store_B953E742(int a1, int a2, int a3);
-int sceNpCommerce2Store_39D8C7D9(int a1, int a2);
-int sceNpCommerce2Store_3F18219A(int a1, int a2, int a3, int a4, unsigned int a5);
-int store_req_fn_1();
-int store_req_fn_2();
-int store_req_fn_3();
-int store_req_fn_4();
-int store_req_fn_5();
-int store_req_fn_6();
-int store_req_fn_7();
-int store_req_fn_8();
-int store_req_fn_9();
-int store_req_fn_10();
-int store_req_fn_11();
-s32 store_req_fn_12();
-s32 store_req_fn_13();
-int store_req_fn_14();
-s32 store_req_fn_15();
-s32 store_req_fn_16();
-int store_req_fn_17();
-int store_req_fn_18();
-s32 store_req_fn_19();
-int store_req_fn_20();
-int store_req_fn_21();
-s32 store_req_fn_22();
-int store_req_fn_23();
-int store_req_fn_24();
-int store_req_fn_25();
-int store_req_fn_26();
-int store_req_fn_27();
-s32 store_req_fn_28();
-int store_req_fn_29();
-int store_req_fn_30();
-int store_req_fn_31();
-int store_req_fn_32();
-int store_req_fn_33();
-int store_req_fn_34();
-int store_req_fn_35();
-int store_req_fn_36();
-int store_req_fn_37();
-int store_req_fn_38();
-int store_req_fn_39();
-int store_req_fn_40();
-int store_req_fn_41();
-int store_req_fn_42();
-int store_req_fn_43();
-int store_req_fn_44();
-int store_req_fn_45();
-int store_tlv_fn_1();
-int store_tlv_fn_2();
-int store_tlv_fn_3();
-int store_tlv_fn_4();
-int store_tlv_fn_5();
-int store_tlv_fn_6();
-int store_tlv_fn_7();
-int store_tlv_fn_8();
-int store_tlv_fn_9();
-int store_tlv_fn_10();
-unsigned int store_tlv_fn_11();
-int store_tlv_fn_12();
-int store_tlv_fn_13();
-int store_tlv_fn_14();
-int store_tlv_fn_15();
-unsigned int store_tlv_fn_16();
-int store_tlv_fn_17();
-s32 store_tlv_fn_18();
-int store_tlv_fn_19();
-unsigned int store_tlv_fn_20();
-int store_tlv_fn_21();
-int store_tlv_fn_22();
-int store_tlv_fn_23();
-unsigned int store_tlv_fn_24();
-int store_tlv_fn_25();
-int store_tlv_fn_26();
-int store_tlv_fn_27();
-int store_tlv_fn_28();
-unsigned int store_tlv_fn_29();
-int store_tlv_fn_30();
-int store_tlv_fn_31();
-int store_tlv_fn_32();
-int store_tlv_fn_33();
-int store_tlv_fn_34();
-int store_tlv_fn_35();
-int store_tlv_fn_36();
-int store_tlv_fn_37();
-int store_tlv_fn_38();
-s32 store_tlv_fn_39();
-int store_tlv_fn_40();
-s32 store_tlv_fn_41();
-int store_tlv_fn_42();
-int store_tlv_fn_43();
-int store_tlv_fn_44();
-int store_tlv_fn_45();
-int store_tlv_fn_46();
-int store_tlv_fn_47();
-int store_tlv_fn_48();
-int store_tlv_fn_49();
-int store_tlv_fn_50();
-int store_tlv_fn_51();
-int store_tlv_fn_52();
-int store_tlv_fn_53();
-int store_tlv_fn_54();
-int store_disp_fn_1();
-int store_disp_fn_2();
-int store_disp_fn_3();
-int store_disp_fn_4();
-int store_disp_fn_5();
-int store_disp_fn_6();
-int store_disp_fn_7();
-int store_disp_fn_8();
-int store_disp_fn_9();
-int store_disp_fn_10();
-int store_disp_fn_11();
-int store_disp_fn_12();
-int store_disp_fn_13();
-int store_disp_fn_14();
-int store_disp_fn_15();
-int store_disp_fn_16();
-int store_disp_fn_17();
-int store_disp_fn_18();
-int store_disp_fn_19();
-int store_disp_fn_20();
-s32 store_disp_fn_21();
-int store_disp_fn_22();
-int store_disp_fn_23();
-s32 store_disp_fn_24();
-int store_disp_fn_25();
-s32 store_disp_fn_26();
-int store_disp_fn_27();
-int store_disp_fn_28();
-int store_disp_fn_29();
-int store_disp_fn_30();
-int store_disp_fn_31();
-int store_disp_fn_32();
-int store_disp_fn_33();
-int store_disp_fn_34();
-int store_disp_fn_35();
-int store_disp_fn_36();
-int store_disp_fn_37();
-int store_disp_fn_38();
-s32 store_disp_fn_39();
-int store_disp_fn_40();
-int store_disp_fn_41();
-int store_disp_fn_42();
-int store_disp_fn_43();
-int store_disp_fn_44();
-int store_disp_fn_45();
-int store_disp_fn_46();
-s32 store_disp_fn_47();
-int store_disp_fn_48();
-s32 store_disp_fn_49();
-int store_disp_fn_50();
-s32 store_disp_fn_51();
-s32 store_disp_fn_52();
-int store_disp_fn_53();
-int store_disp_fn_54();
-int store_disp_fn_55();
-int store_disp_fn_56();
-int store_disp_fn_57();
-int store_disp_fn_58();
-int store_disp_fn_59();
-int store_disp_fn_60();
-int store_disp_fn_61();
-int store_disp_fn_62();
-int store_disp_fn_63();
-int store_disp_fn_64();
-s32 store_disp_fn_65();
-s32 store_disp_fn_66();
-int store_disp_fn_67();
-int store_disp_fn_68();
-int store_disp_fn_69();
-int store_disp_fn_70();
-int store_disp_fn_71();
-int store_disp_fn_72();
-int store_disp_fn_73();
-signed int store_disp_fn_74();
-int store_disp_fn_75();
-int store_disp_fn_76();
-int store_disp_fn_77();
-int store_disp_fn_78();
-void store_term_noop();
-int store_disp_fn_79();
-int store_disp_fn_80();
-int store_disp_fn_81();
-int store_disp_fn_82();
-int store_disp_fn_83();
-int store_disp_fn_84();
-s32 store_disp_fn_85();
-int store_disp_fn_86();
-s32 store_disp_fn_87();
-int store_disp_fn_88();
-int store_disp_fn_89();
-int store_disp_fn_90();
-int store_disp_fn_91();
-s32 store_disp_fn_92();
-int store_disp_fn_93();
-s32 store_disp_fn_94();
-int store_disp_fn_95();
-int store_disp_fn_96();
-int store_disp_fn_97();
-int store_disp_fn_98();
-int store_disp_fn_99();
-int store_disp_fn_100();
-int store_disp_fn_101();
-s32 store_disp_fn_102();
-int store_disp_fn_103();
-int store_disp_fn_104();
-int store_disp_fn_105();
-int store_disp_fn_106();
-int store_disp_fn_107();
-s32 store_disp_fn_108();
-int store_util_fn_1();
-int store_util_fn_2();
-int store_util_fn_3();
-int store_util_fn_4();
-int store_util_fn_5();
-int store_util_fn_6();
-int store_util_fn_7();
-int store_util_fn_8();
-int store_util_fn_9();
-int store_util_fn_10();
-int store_util_fn_11();
-int store_util_fn_12();
-int store_util_fn_13();
-s32 store_util_fn_14();
-int store_util_fn_15();
-s32 store_util_fn_16();
-int store_util_fn_17();
-int store_util_fn_18();
-int store_util_fn_19();
-int store_util_fn_20();
-int store_util_fn_21();
-int store_util_fn_22();
-int store_util_fn_23();
-int store_util_fn_24();
-int store_util_fn_25();
-int store_util_fn_26();
-int store_util_fn_27();
-int store_util_fn_28();
+extern int sceNpCommerce2_02C307C0(u32 *mgr, u32 req_id);
+extern int sceNpCommerce2_02CADA41(StoreContext *ctx, char *email_out, char *pwd_out, int flag);
+extern int sceNpCommerce2_06618C81(u32 *mgr, StoreRequest *req, u32 ctx_id, u32 *req_id_out);
+extern int sceNpCommerce2_0A6AB496(u32 *mgr, u32 ctx_id, StoreContext **ctx_out, int lock_flag);
+extern int sceNpCommerce2_157FA8AA(char *console_id_out, u32 buf_size);
+extern int sceNpCommerce2_22CEC5E2(int a, int b);
+extern int sceNpCommerce2_2AFD0CC7(int a, int b);
+extern int sceNpCommerce2_3546C737(const u8 *buf, u32 size, u32 tag, u32 min_len, u32 *count_out);
+extern int sceNpCommerce2_382803C8(int http_tmpl, u32 svc_type, u32 cmd_id, const char *prefix,
+                                   const char *endpoint, int flag, char *url_buf,
+                                   int *http_req_out, u32 len_lo, u32 len_hi);
+extern int sceNpCommerce2_3F6D413C(const u8 *buf, u32 size, u32 tag, u32 min_len, u32 *count_out);
+extern int sceNpCommerce2_460A1D92(int *out_ver, int kind);
+extern int sceNpCommerce2_4D43B84D(int http_req, u32 *status_out);
+extern int sceNpCommerce2_63B96D73(int http_req);
+extern int sceNpCommerce2_66EC0829(char *dst, u32 dst_size, const char *src, u32 src_len, int flag);
+extern int sceNpCommerce2_69FEA1C8(const u8 *buf, u32 size, u32 tag, u32 min_len, u32 *out_arr, u32 extra);
+extern int sceNpCommerce2_75DF99A9(int http_tmpl, char *url_buf);
+extern int sceNpCommerce2_77BE411B(u32 *mgr);
+extern int sceNpCommerce2_8139E653(void);
+extern int sceNpCommerce2_851E7844(u32 *mgr, u32 req_id, StoreRequest **req_out);
+extern int sceNpCommerce2_8642C532(u32 *mgr);
+extern int sceNpCommerce2_8E80E661(void);
+extern int sceNpCommerce2_ADAA054C(const void *buf, u32 buf_size, u32 body_len);
+extern int sceNpCommerce2_AE614CC6(int http_req, const void *data, u32 len);
+extern int sceNpCommerce2_C27FEAB1(StoreContext *ctx, int http_req, u32 cmd_id,
+                                   u8 *status_out, void *buf, u32 buf_size);
+extern int sceNpCommerce2_CBA487E9(void);
+extern int sceNpCommerce2_CCEEA788(void);
+extern int sceNpCommerce2_D4C319C6(int http_req, void *buf, void *body_ptr,
+                                   u32 buf_size, int *trunc_out);
+extern int sceNpCommerce2_D5932A6C(StoreContext *ctx, char *country_out, u32 size, int flag);
+extern int sceNpCommerce2_E3455E27(const u8 *buf, u32 size, u32 tag, u32 min_len, u16 *len_out);
+extern int sceNpCommerce2_EE7255FE(StoreContext *ctx, u32 val);
+extern int sceNpCommerce2_F0900551(StoreContext *ctx, u32 *ver_out);
+extern int sceNpCommerce2_F8D175FA(const void *buf, u32 buf_size, const char *country, const char *lang);
+extern int sceNpCommerce2_FC47B63C(u64 *time_out);
+
+/* Core manager & lifecycle */
+int  store_init_mgr(void);
+int  store_create_req(u32 ctx_id, u16 cmd_id, u32 *req_id_out);
+int  store_set_ctx_option(u32 ctx_id, u32 val);
+int  store_set_svc_type(u32 ctx_id, u32 svc_type);
+int  store_get_http_status(u32 ctx_id, u32 *status_out);
+int  store_get_country_caps(u32 ctx_id, const char *country, u32 *out_info);
+int  store_recv_response(u32 req_id, u8 *buf, u32 buf_size, u32 *recv_size_out);
+int  store_post_process_response(StoreContext *ctx, StoreRequest *req,
+                                 const u8 *buf, u32 buf_size, u32 resp_size);
+
+/* Lock / keepalive helpers (shared by dispatch & util) */
+int  store_lock_ctx_req(u32 req_id, StoreContext **ctx_out, StoreRequest **req_out);
+void store_refresh_keepalive(StoreContext *ctx);
+int  store_unlock_ctx_req(StoreContext *ctx, StoreRequest *req, int ret);
+
+/* Request senders (store_req.c) */
+int store_resolve_endpoint(u32 svc_type, u16 cmd_id, const char **prefix_out, const char **endpoint_out);
+int store_send_empty(u32 svc_type, int http_tmpl, char *url_buf, u16 cmd_id, int *http_req_out);
+int store_send_get_cat(u32 svc_type, int http_tmpl, char *url_buf, u16 cmd_id, int *http_req_out,
+                       const char *cat_id, const char * const *reward_id, u32 has_reward,
+                       u32 start_pos, u32 max_cnt);
+int store_send_get_prod(u32 svc_type, int http_tmpl, char *url_buf, u16 cmd_id, int *http_req_out,
+                        const char *cat_id, const char *prod_id,
+                        const char * const *reward_id, u32 has_reward);
+int store_send_add_cart(u32 svc_type, int http_tmpl, char *url_buf, u16 cmd_id, int *http_req_out,
+                        const char * const *sku_ids, u32 sku_cnt,
+                        const char * const *reward_ids, u32 reward_cnt);
+int store_send_sku_id(u32 svc_type, int http_tmpl, char *url_buf, u16 cmd_id, int *http_req_out,
+                      const char *sku_id);
+int store_send_purchase(u32 svc_type, int http_tmpl, char *url_buf, u16 cmd_id, int *http_req_out,
+                        const char *password, int quick_purchase, int auto_deposit);
+int store_send_payment_type(u32 svc_type, int http_tmpl, char *url_buf, u16 cmd_id, int *http_req_out,
+                            u32 pay_type);
+int store_send_get_drm(u32 svc_type, int http_tmpl, char *url_buf, u16 cmd_id, int *http_req_out,
+                       const char * const *sku_ids, u32 sku_cnt, const char *svc_id,
+                       const char *reward_ids, u32 start_pos, u32 max_cnt, u32 drm_type);
+int store_send_billing(u32 svc_type, int http_tmpl, char *url_buf, u16 cmd_id, int *http_req_out,
+                       const StoreBillingInfo *info);
+int store_send_postal_code(u32 svc_type, int http_tmpl, char *url_buf, u16 cmd_id, int *http_req_out,
+                           const char *postal_code);
+int store_send_topup_amount(u32 svc_type, int http_tmpl, char *url_buf, u16 cmd_id, int *http_req_out,
+                            u32 amount);
+int store_send_edy_result(u32 svc_type, int http_tmpl, char *url_buf, u16 cmd_id, int *http_req_out,
+                          const char *receipt_id, int is_ok);
+int store_send_voucher(u32 svc_type, int http_tmpl, char *url_buf, u16 cmd_id, int *http_req_out,
+                       const char *code1, const char *code2, const char *code3, int auto_deposit);
+int store_send_event_log(u32 svc_type, int http_tmpl, char *url_buf, u16 cmd_id, int *http_req_out,
+                         u32 event_type, const char *id_str, const char *url_str);
+int store_send_search_prod(u32 svc_type, int http_tmpl, char *url_buf, u16 cmd_id, int *http_req_out,
+                           u32 start_pos, u32 max_cnt, const StoreSearchQuery *queries, u32 query_cnt);
+int store_send_guest_sess(u32 svc_type, int http_tmpl, char *url_buf, u16 cmd_id, int *http_req_out,
+                          u32 ver, const char *country, const char *lang,
+                          u32 yob, u32 mob, u32 dob, const char *console_id);
+int store_send_prod_list(u32 svc_type, int http_tmpl, char *url_buf, u16 cmd_id, int *http_req_out,
+                         const char * const *prod_ids, u32 prod_cnt);
+int store_send_recom_prods(u32 svc_type, int http_tmpl, char *url_buf, u16 cmd_id, int *http_req_out,
+                           const char * const *prod_ids, u32 prod_cnt,
+                           u32 start_pos, u32 max_cnt, u32 recom_type);
+int store_send_get_prod_ids(u32 svc_type, int http_tmpl, char *url_buf, u16 cmd_id, int *http_req_out,
+                            const char *content_id, const char *file_id);
+
+/* Request start dispatchers (store_util.c & store_dispatch.c) */
+int store_start_empty(u32 req_id);
+int store_start_get_cat(u32 req_id, const char *cat_id, const char * const *reward_id,
+                        u32 has_reward, u32 start_pos, u32 max_cnt);
+int store_start_guest_sess(u32 req_id, const char *country, const char *lang,
+                           u32 yob, u32 mob, u32 dob);
+int store_start_get_prod(u32 req_id, const char *cat_id, const char *prod_id,
+                         const char * const *reward_id, u32 has_reward);
+int store_start_add_cart(u32 req_id, const char * const *sku_ids, u32 sku_cnt,
+                         const char * const *reward_ids, u32 reward_cnt);
+int store_start_sku_id(u32 req_id, const char *sku_id);
+int store_start_purchase(u32 req_id, const char *password, int quick_purchase, int auto_deposit);
+int store_start_payment_type(u32 req_id, u32 pay_type);
+int store_start_get_drm(u32 req_id, const char * const *sku_ids, u32 sku_cnt, const char *svc_id,
+                        const char *reward_ids, u32 start_pos, u32 max_cnt, u32 drm_type);
+int store_start_billing(u32 req_id, const StoreBillingInfo *info);
+int store_start_postal_code(u32 req_id, const char *postal_code);
+int store_start_topup_amount(u32 req_id, u32 amount);
+int store_start_edy_result(u32 req_id, const char *receipt_id, int is_ok);
+int store_start_voucher(u32 req_id, const char *code1, const char *code2,
+                        const char *code3, int auto_deposit);
+int store_start_event_log(u32 req_id, u32 event_type, const char *id_str, const char *url_str);
+int store_start_search_prod(u32 req_id, u32 start_pos, u32 max_cnt,
+                            const StoreSearchQuery *queries, u32 query_cnt);
+int store_start_prod_list(u32 req_id, const char * const *prod_ids, u32 prod_cnt);
+int store_start_recom_prods(u32 req_id, const char * const *prod_ids, u32 prod_cnt,
+                            u32 start_pos, u32 max_cnt, u32 recom_type);
+int store_start_get_prod_ids(u32 req_id, const char *content_id, const char *file_id);
+
+/* High-level SDK-checked wrappers */
+int store_checked_recv(u32 req_id, u8 *buf, u32 buf_size, u32 *recv_size_out, int strict_size);
+int store_checked_get_cat(u32 req_id, const char *cat_id, const char * const *reward_id,
+                          u32 has_reward, u32 start_pos, u32 max_cnt, int strict_check);
+int store_checked_get_prod(u32 req_id, const char *cat_id, const char *prod_id,
+                           const char * const *reward_id, u32 has_reward, int strict_check);
+int store_checked_get_prod_list(u32 req_id, const char * const *prod_ids, u32 prod_cnt, int strict_check);
+
+/* TLV helpers & parsers (store_tlv.c & store_dispatch.c) */
+int store_tlv_parse_root(const u8 *buf, u32 buf_size, u32 *ver_out, u32 *body_size_out, u32 *extra_out);
+int store_tlv_find_nth(const u8 *buf, u32 buf_size, u16 tag, u16 min_len, u32 index, u16 *len_out);
+int store_tlv_find_nth_ex(const u8 *buf, u32 buf_size, u16 tag, u16 min_len,
+                          u32 index, u16 *len_out, int extra_mode);
+int store_tlv_find_nth_paged(const u8 *buf, u32 buf_size, u16 tag, u16 min_len,
+                             u32 index, u16 *len_out, u32 extra);
+int store_tlv_clamp_paged(const u32 *cursor, u16 tag, u16 min_len, u32 *range_out);
+int store_tlv_parse_err_flag(const u8 *buf, u32 buf_size, u32 *flag_out);
+int store_tlv_parse_simple_root(u32 *out, const u8 *buf, u32 buf_size);
+int store_tlv_parse_counted_root(u32 *out, const u8 *buf, u32 buf_size, u32 tag);
+int store_tlv_parse_paged_root(u32 *out, const u8 *buf, u32 buf_size, u16 tag, u16 min_len);
+int store_tlv_parse_cart_root(u32 *out, const u8 *buf, u32 buf_size, int optional_tags);
+int store_tlv_parse_purchase_root(u32 *out, const u8 *buf, u32 buf_size);
+int store_tlv_parse_topup_root(u32 *out, const u8 *buf, u32 buf_size);
+int store_tlv_parse_voucher_root(u32 *out, const u8 *buf, u32 buf_size, int with_tx_id);
+int store_tlv_parse_addr_lookup_root(u32 *out, const u8 *buf, u32 buf_size);
+int store_tlv_parse_epw_root(u32 *out, const u8 *buf, u32 buf_size);
+int store_tlv_parse_prod_list_root(u32 *out, const u8 *buf, u32 buf_size);
+int store_tlv_parse_recom_root(u32 *out, const u8 *buf, u32 buf_size);
+int store_tlv_parse_tag_ptr_item(const u32 *parent, u32 index, u16 tag, int from_body, u32 *out_ptr);
+int store_tlv_parse_search_item(const u32 *parent, u32 index, int use_paged, u32 *out);
+int store_tlv_parse_cart_item(const u32 *parent, int indexed, u32 index, u32 *out);
+int store_tlv_parse_wallet_info(const u32 *parent, u32 *out);
+int store_tlv_parse_cart_summary(const u32 *parent, u32 *out);
+int store_tlv_parse_tax_info(const u32 *parent, const u8 *scan, u32 scan_len, u32 *out);
+int store_tlv_parse_voucher_summary(const u32 *parent, u32 *out);
+int store_tlv_parse_voucher_items(const u32 *parent, u32 *out);
+int store_tlv_parse_province_info(const u32 *parent, u32 index, u32 *out);
+int store_tlv_parse_city_info(const u32 *parent, u32 index, u32 *out);
+int store_tlv_parse_pay_method(const u32 *parent, u32 index, u32 *out);
+int store_tlv_parse_currency(const u32 *parent, u32 index, u32 *out);
+int store_tlv_parse_rating_item(const u32 *parent, int indexed, u32 index, u32 *out);
+int store_tlv_parse_discount_info(const u32 *cursor, u32 *has_disc, u32 *disc_type,
+                                  u32 *disc_val, u32 *disc_price);
+int store_tlv_parse_reward_info(u32 ver, const u8 *base, const u8 *data, u32 data_size,
+                                const u8 *body, u32 *out, int is_alt);
+int store_tlv_parse_content_hdr(const u8 *item, u32 *id_out, u32 *type_out, u32 *date_out,
+                                u32 *count1_out, u32 *count2_out, u32 *has_flag_out,
+                                u32 *raw_flags_out, u32 *sp_flags_out);
+int store_tlv_parse_content_item(const u8 *item, u32 item_len, const u8 *base, u32 ver,
+                                 u32 kind, u32 *out);
+int store_tlv_parse_rating_system(const u8 *item, u32 item_len, const u8 *base, u32 ver, u32 *out);
+int store_tlv_parse_sku_fields(const u8 *item, u32 **desc, int skip_extra);
+int store_tlv_parse_sku_full(const u8 *item, u32 **desc);
+int store_tlv_parse_category_info(const u32 *parent, u32 *out, int is_alt);
+int store_tlv_parse_cat_sku(const u32 *parent, u32 *out, int is_alt);
+int store_tlv_parse_product_info(const u32 *parent, u32 *out, int is_alt);
+int store_tlv_parse_product_sku(const u32 *parent, u32 index, u32 *out, int is_alt);
+int store_tlv_parse_link_info(const u32 *parent, u32 index, u32 *out);
+int store_tlv_parse_entitlement(const u32 *parent, u32 index, u32 *out);
+int store_tlv_parse_subscr_sku(const u32 *parent, u32 index, u32 *out);
+int store_tlv_parse_download_file(const u32 *parent, u32 index, u32 *out);
+int store_tlv_parse_video_sku(const u32 *parent, u32 index, u32 *out, int is_alt);
+int store_tlv_parse_cart_entry(const u32 *parent, u32 index, u32 *out);
+int store_tlv_parse_cart_sku_brief(const u32 *parent, u32 *out);
+int store_tlv_parse_cart_sku_full(const u32 *parent, u32 *out, int is_alt);
+int store_tlv_parse_audio_lang(const u32 *parent, u32 index, u32 *code_out, u32 *flags_out);
+int store_tlv_parse_card_info(const u32 *parent, u32 *out);
+int store_tlv_parse_drm_item(const u32 *parent, u32 index, u32 *out);
+int store_tlv_parse_drm_reward(const u32 *parent, u32 *out, int is_alt);
+int store_tlv_parse_drm_subitem(const u32 *parent, u32 index, u32 *out);
+int store_tlv_parse_address_root(u32 *out, const u8 *buf, u32 buf_size);
+int store_tlv_parse_edy_info(const u32 *parent, u32 *out);
+int store_tlv_parse_voucher_item(const u32 *parent, u32 index, u32 *out);
+int store_tlv_parse_download_list(const u32 *parent, u32 *out);
+int store_tlv_parse_video_info(const u32 *parent, u32 *out, int is_alt);
+int store_tlv_parse_account_info(const u32 *parent, u32 *out);
+int store_tlv_parse_reg_rules(const u32 *parent, u32 *out);
+int store_tlv_parse_billing_root(u32 *out, const u8 *buf, u32 buf_size);
+int store_tlv_parse_auth_root(u32 *out, const u8 *buf, u32 buf_size);
+int store_tlv_parse_console_act(const u32 *parent, u32 index, u32 *out);
+int store_tlv_parse_err_item(const u32 *parent, u32 index, u32 *out);
+int store_tlv_parse_sess_root(u32 *out, const u8 *buf, u32 buf_size);
+int store_tlv_parse_eula_flag(const u32 *parent, u32 *out);
+int store_tlv_parse_category_item(const u32 *parent, u32 *out);
+int store_tlv_parse_rating_first(const u32 *parent, u32 *out);
+int store_tlv_parse_rating_nth(const u32 *parent, u32 index, u32 *out);
+int store_tlv_parse_credit_info(const u32 *parent, u32 index, u32 *out);
+int store_tlv_parse_subscr_ent(const u32 *parent, u32 index, u32 *out);
 
 #endif /* STORE_INTERNAL_H */

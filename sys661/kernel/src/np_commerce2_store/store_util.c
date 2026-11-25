@@ -1,998 +1,449 @@
 #include "store_internal.h"
 
-int store_util_fn_1(int a1, int a2)
+/* =========================================================================
+ * Shared context/request lock & keep-alive helpers
+ * ========================================================================= */
+
+int store_lock_ctx_req(u32 req_id, StoreContext **ctx_out, StoreRequest **req_out)
 {
-  return store_util_fn_27(a1, 11, a2, 0);
+    int ret;
+
+    *ctx_out = NULL;
+    *req_out = NULL;
+    ret = sceNpCommerce2_0A6AB496(&g_store_mgr, req_id >> 16, ctx_out, 1);
+    if (ret < 0)
+        return ret;
+    ret = sceNpCommerce2_851E7844(&g_store_mgr, req_id, req_out);
+    return ret;
 }
 
-
-int store_util_fn_2(int a1, int a2)
+void store_refresh_keepalive(StoreContext *ctx)
 {
-  return store_util_fn_27(a1, 14, a2, 0);
-}
+    u64 now_us = 0;
 
-
-int store_util_fn_3(unsigned int a1, int a2)
-{
-  int v4;
-  int v5;
-  int v6;
-  int v7;
-  s64 v8;
-  int v9;
-  int v10;
-  int v11;
-  int v12;
-  int v14;
-  int v15;
-  s64 v16;
-
-  v14 = 0;
-  v15 = 0;
-  v4 = sceNpCommerce2_0A6AB496(&g_store_mgr, HIWORD(a1), &v14, 1);
-  if ( v4 < 0 )
-    goto LABEL_14;
-  v4 = sceNpCommerce2_851E7844(&g_store_mgr, a1, &v15);
-  if ( v4 < 0 )
-    goto LABEL_14;
-  v6 = v14;
-  v5 = sceNpCommerce2_FC47B63C(&v16);
-  v7 = v14;
-  if ( v5 < 0 )
-    goto LABEL_10;
-  v8 = *(u64 *)(v6 + 1072);
-  if ( HIDWORD(v16) - HIDWORD(v8) != (unsigned int)v16 < (unsigned int)v8 )
-  {
-    v9 = *(u32 *)(v6 + 24);
-LABEL_9:
-    sceNpCommerce2_75DF99A9(v9, v6 + 28);
-    v7 = v14;
-LABEL_10:
-    v10 = v15;
-    goto LABEL_11;
-  }
-  v10 = v15;
-  if ( (u64)(v16 - v8) >> 32 == 0 )
-  {
-    v11 = a2;
-    if ( (unsigned int)(v16 - v8) <= 0x98967F )
-      goto LABEL_12;
-    v9 = *(u32 *)(v6 + 24);
-    goto LABEL_9;
-  }
-LABEL_11:
-  v11 = a2;
-LABEL_12:
-  v4 = store_req_fn_23(*(u32 *)(v7 + 1064), *(u32 *)(v7 + 24), v7 + 28, *(u16 *)(v10 + 20), (int *)(v10 + 16), v11);
-  if ( v4 >= 0 )
-    sceNpCommerce2_FC47B63C(v14 + 1072);
-LABEL_14:
-  if ( v15 != 0 )
-  {
-    if ( (*(u32 *)(v15 + 12) & 2) != 0 )
-      v4 = -2141909232;
-    sceNpCommerce2_8642C532(&g_store_mgr);
-    v12 = v14;
-  }
-  else
-  {
-    v12 = v14;
-  }
-  if ( v12 != 0 )
-    sceNpCommerce2_77BE411B(&g_store_mgr);
-  return v4;
-}
-
-
-int store_util_fn_4(int a1, int a2)
-{
-  return store_util_fn_27(a1, 15, a2, 0);
-}
-
-
-int store_util_fn_5(unsigned int a1, int a2, int a3)
-{
-  int v6;
-  int v7;
-  int v8;
-  int v9;
-  s64 v10;
-  int v11;
-  int v12;
-  int v13;
-  int v14;
-  int v16;
-  int v17;
-  s64 v18;
-
-  v16 = 0;
-  v17 = 0;
-  v6 = sceNpCommerce2_0A6AB496(&g_store_mgr, HIWORD(a1), &v16, 1);
-  if ( v6 < 0 )
-    goto LABEL_14;
-  v6 = sceNpCommerce2_851E7844(&g_store_mgr, a1, &v17);
-  if ( v6 < 0 )
-    goto LABEL_14;
-  v8 = v16;
-  v7 = sceNpCommerce2_FC47B63C(&v18);
-  v9 = v16;
-  if ( v7 < 0 )
-    goto LABEL_10;
-  v10 = *(u64 *)(v8 + 1072);
-  if ( HIDWORD(v18) - HIDWORD(v10) != (unsigned int)v18 < (unsigned int)v10 )
-  {
-    v11 = *(u32 *)(v8 + 24);
-LABEL_9:
-    sceNpCommerce2_75DF99A9(v11, v8 + 28);
-    v9 = v16;
-LABEL_10:
-    v12 = v17;
-    goto LABEL_11;
-  }
-  v12 = v17;
-  if ( (u64)(v18 - v10) >> 32 == 0 )
-  {
-    v13 = a2;
-    if ( (unsigned int)(v18 - v10) <= 0x98967F )
-      goto LABEL_12;
-    v11 = *(u32 *)(v8 + 24);
-    goto LABEL_9;
-  }
-LABEL_11:
-  v13 = a2;
-LABEL_12:
-  v6 = store_req_fn_24(*(u32 *)(v9 + 1064), *(u32 *)(v9 + 24), v9 + 28, *(u16 *)(v12 + 20), (int *)(v12 + 16), v13, a3);
-  if ( v6 >= 0 )
-    sceNpCommerce2_FC47B63C(v16 + 1072);
-LABEL_14:
-  if ( v17 != 0 )
-  {
-    if ( (*(u32 *)(v17 + 12) & 2) != 0 )
-      v6 = -2141909232;
-    sceNpCommerce2_8642C532(&g_store_mgr);
-    v14 = v16;
-  }
-  else
-  {
-    v14 = v16;
-  }
-  if ( v14 != 0 )
-    sceNpCommerce2_77BE411B(&g_store_mgr);
-  return v6;
-}
-
-
-int store_util_fn_6(int a1, int a2)
-{
-  return store_util_fn_27(a1, 12, a2, 0);
-}
-
-
-int store_util_fn_7(int a1, int a2)
-{
-  return store_util_fn_27(a1, 13, a2, 0);
-}
-
-
-int store_util_fn_8(unsigned int a1, int a2, int a3, int a4, int a5)
-{
-  int v10;
-  int v11;
-  int v12;
-  int v13;
-  s64 v14;
-  int v15;
-  int v16;
-  int v18;
-  int v19;
-  s64 v20;
-
-  v18 = 0;
-  v19 = 0;
-  v10 = sceNpCommerce2_0A6AB496(&g_store_mgr, HIWORD(a1), &v18, 1);
-  if ( v10 < 0 )
-    goto LABEL_13;
-  v10 = sceNpCommerce2_851E7844(&g_store_mgr, a1, &v19);
-  if ( v10 < 0 )
-    goto LABEL_13;
-  v12 = v18;
-  v11 = sceNpCommerce2_FC47B63C(&v20);
-  v13 = v19;
-  if ( v11 >= 0 )
-  {
-    v14 = *(u64 *)(v12 + 1072);
-    if ( HIDWORD(v20) - HIDWORD(v14) != (unsigned int)v20 < (unsigned int)v14 )
-    {
-      v15 = *(u32 *)(v12 + 24);
-LABEL_10:
-      sceNpCommerce2_75DF99A9(v15, v12 + 28);
-      v13 = v19;
-      goto LABEL_11;
+    if (sceNpCommerce2_FC47B63C(&now_us) >= 0) {
+        if (now_us < ctx->last_activity_us ||
+            (now_us - ctx->last_activity_us) >= STORE_KEEPALIVE_TIMEOUT_US) {
+            sceNpCommerce2_75DF99A9(ctx->http_tmpl_id, ctx->url_buf);
+        }
     }
-    if ( (u64)(v20 - v14) >> 32 != 0 )
-    {
-      v13 = v19;
-      goto LABEL_11;
+}
+
+int store_unlock_ctx_req(StoreContext *ctx, StoreRequest *req, int ret)
+{
+    if (req) {
+        if (req->flags & 2)
+            ret = STORE_ERR_ABORTED;
+        sceNpCommerce2_8642C532(&g_store_mgr);
     }
-    v13 = v19;
-    if ( (unsigned int)(v20 - v14) > 0x98967F )
-    {
-      v15 = *(u32 *)(v12 + 24);
-      goto LABEL_10;
+    if (ctx)
+        sceNpCommerce2_77BE411B(&g_store_mgr);
+    return ret;
+}
+
+/* =========================================================================
+ * Context options, request creation, and response post-processing
+ * ========================================================================= */
+
+int store_set_ctx_option(u32 ctx_id, u32 val)
+{
+    StoreContext *ctx = NULL;
+    int ret = sceNpCommerce2_0A6AB496(&g_store_mgr, ctx_id, &ctx, 1);
+    if (ret >= 0)
+        ret = sceNpCommerce2_EE7255FE(ctx, val);
+    if (ctx)
+        sceNpCommerce2_77BE411B(&g_store_mgr);
+    return ret;
+}
+
+int store_set_svc_type(u32 ctx_id, u32 svc_type)
+{
+    StoreContext *ctx = NULL;
+    int ret = sceNpCommerce2_0A6AB496(&g_store_mgr, ctx_id, &ctx, 1);
+    if (ret >= 0)
+        ctx->svc_type = svc_type;
+    if (ctx)
+        sceNpCommerce2_77BE411B(&g_store_mgr);
+    return ret;
+}
+
+int store_get_http_status(u32 ctx_id, u32 *status_out)
+{
+    StoreContext *ctx = NULL;
+    int ret = sceNpCommerce2_0A6AB496(&g_store_mgr, ctx_id, &ctx, 1);
+    if (ret >= 0)
+        *status_out = ctx->http_status;
+    if (ctx)
+        sceNpCommerce2_77BE411B(&g_store_mgr);
+    return ret;
+}
+
+int store_create_req(u32 ctx_id, u16 cmd_id, u32 *req_id_out)
+{
+    StoreContext *ctx = NULL;
+    StoreRequest *req = NULL;
+    int ret = sceNpCommerce2_0A6AB496(&g_store_mgr, ctx_id, &ctx, 1);
+    if (ret >= 0) {
+        req = (StoreRequest *)sceNetIfhandle_lib_15CFE3C0(sizeof(StoreRequest));
+        if (!req) {
+            ret = STORE_ERR_OUT_OF_MEMORY;
+        } else {
+            sceKernelMemset(req, 0, sizeof(StoreRequest));
+            req->cmd_id = cmd_id;
+            ret = sceNpCommerce2_06618C81(&g_store_mgr, req, ctx_id, req_id_out);
+            if (ret < 0)
+                sceNetIfhandle_lib_76BAD213(req, 0);
+        }
     }
-  }
-LABEL_11:
-  v10 = store_req_fn_25(
-          *(u32 *)(v18 + 1064),
-          *(u32 *)(v18 + 24),
-          v18 + 28,
-          *(u16 *)(v13 + 20),
-          (int *)(v13 + 16),
-          a2,
-          a3,
-          a4,
-          a5);
-  if ( v10 >= 0 )
-    sceNpCommerce2_FC47B63C(v18 + 1072);
-LABEL_13:
-  if ( v19 != 0 )
-  {
-    if ( (*(u32 *)(v19 + 12) & 2) != 0 )
-      v10 = -2141909232;
-    sceNpCommerce2_8642C532(&g_store_mgr);
-    v16 = v18;
-  }
-  else
-  {
-    v16 = v18;
-  }
-  if ( v16 != 0 )
-    sceNpCommerce2_77BE411B(&g_store_mgr);
-  return v10;
+    if (ctx)
+        sceNpCommerce2_77BE411B(&g_store_mgr);
+    return ret;
 }
 
-
-int store_util_fn_9(int a1, int a2)
+int store_post_process_response(StoreContext *ctx, StoreRequest *req,
+                                const u8 *buf, u32 buf_size, u32 resp_size)
 {
-  return store_util_fn_27(a1, 26, a2, 0);
-}
+    u32 acct_info[24];
+    u32 sess_cursor[16];
+    u16 cmd = req->cmd_id;
 
-
-int store_util_fn_10(unsigned int a1, int a2, int a3, int a4)
-{
-  int v8;
-  int v9;
-  int v10;
-  int v11;
-  s64 v12;
-  int v13;
-  int v14;
-  int v15;
-  int v16;
-  int v18;
-  int v19;
-  s64 v20;
-
-  v18 = 0;
-  v19 = 0;
-  v8 = sceNpCommerce2_0A6AB496(&g_store_mgr, HIWORD(a1), &v18, 1);
-  if ( v8 < 0 )
-    goto LABEL_14;
-  v8 = sceNpCommerce2_851E7844(&g_store_mgr, a1, &v19);
-  if ( v8 < 0 )
-    goto LABEL_14;
-  v10 = v18;
-  v9 = sceNpCommerce2_FC47B63C(&v20);
-  v11 = v18;
-  if ( v9 < 0 )
-    goto LABEL_10;
-  v12 = *(u64 *)(v10 + 1072);
-  if ( HIDWORD(v20) - HIDWORD(v12) != (unsigned int)v20 < (unsigned int)v12 )
-  {
-    v13 = *(u32 *)(v10 + 24);
-LABEL_9:
-    sceNpCommerce2_75DF99A9(v13, v10 + 28);
-    v11 = v18;
-LABEL_10:
-    v14 = v19;
-    goto LABEL_11;
-  }
-  v14 = v19;
-  if ( (u64)(v20 - v12) >> 32 == 0 )
-  {
-    v15 = a2;
-    if ( (unsigned int)(v20 - v12) <= 0x98967F )
-      goto LABEL_12;
-    v13 = *(u32 *)(v10 + 24);
-    goto LABEL_9;
-  }
-LABEL_11:
-  v15 = a2;
-LABEL_12:
-  v8 = store_req_fn_26(
-         *(u32 *)(v11 + 1064),
-         *(u32 *)(v11 + 24),
-         v11 + 28,
-         *(u16 *)(v14 + 20),
-         (int *)(v14 + 16),
-         v15,
-         a3,
-         a4);
-  if ( v8 >= 0 )
-    sceNpCommerce2_FC47B63C(v18 + 1072);
-LABEL_14:
-  if ( v19 != 0 )
-  {
-    if ( (*(u32 *)(v19 + 12) & 2) != 0 )
-      v8 = -2141909232;
-    sceNpCommerce2_8642C532(&g_store_mgr);
-    v16 = v18;
-  }
-  else
-  {
-    v16 = v18;
-  }
-  if ( v16 != 0 )
-    sceNpCommerce2_77BE411B(&g_store_mgr);
-  return v8;
-}
-
-
-int store_util_fn_11(int a1, int a2)
-{
-  return store_util_fn_27(a1, 5, a2, 0);
-}
-
-
-int store_util_fn_12(unsigned int a1, int a2, int a3, int a4, int a5, int a6, int a7)
-{
-  int v14;
-  int v15;
-  int v16;
-  int v17;
-  s64 v18;
-  int v19;
-  int v20;
-  int v21;
-  int v22;
-  int v24;
-  int v25;
-  s64 v26;
-
-  v24 = 0;
-  v25 = 0;
-  v14 = sceNpCommerce2_0A6AB496(&g_store_mgr, HIWORD(a1), &v24, 1);
-  if ( v14 < 0 )
-    goto LABEL_14;
-  v14 = sceNpCommerce2_851E7844(&g_store_mgr, a1, &v25);
-  if ( v14 < 0 )
-    goto LABEL_14;
-  v16 = v24;
-  v15 = sceNpCommerce2_FC47B63C(&v26);
-  v17 = v25;
-  if ( v15 < 0 )
-    goto LABEL_10;
-  v18 = *(u64 *)(v16 + 1072);
-  if ( HIDWORD(v26) - HIDWORD(v18) != (unsigned int)v26 < (unsigned int)v18 )
-  {
-    v19 = *(u32 *)(v16 + 24);
-LABEL_9:
-    sceNpCommerce2_75DF99A9(v19, v16 + 28);
-    v17 = v25;
-LABEL_10:
-    v20 = v24;
-    goto LABEL_11;
-  }
-  v20 = v24;
-  if ( (u64)(v26 - v18) >> 32 == 0 )
-  {
-    v21 = a2;
-    if ( (unsigned int)(v26 - v18) <= 0x98967F )
-      goto LABEL_12;
-    v19 = *(u32 *)(v16 + 24);
-    goto LABEL_9;
-  }
-LABEL_11:
-  v21 = a2;
-LABEL_12:
-  v14 = store_req_fn_27(v21, *(u32 *)(v20 + 24), v20 + 28, *(u16 *)(v17 + 20), (int *)(v17 + 16), a3, a4, a5, a6, a7);
-  if ( v14 >= 0 )
-    sceNpCommerce2_FC47B63C(v24 + 1072);
-LABEL_14:
-  if ( v25 != 0 )
-  {
-    if ( (*(u32 *)(v25 + 12) & 2) != 0 )
-      v14 = -2141909232;
-    sceNpCommerce2_8642C532(&g_store_mgr);
-    v22 = v24;
-  }
-  else
-  {
-    v22 = v24;
-  }
-  if ( v22 != 0 )
-    sceNpCommerce2_77BE411B(&g_store_mgr);
-  return v14;
-}
-
-
-int store_util_fn_13(int a1, int a2)
-{
-  return store_util_fn_27(a1, 59, a2, 0);
-}
-
-
-s32 store_util_fn_14(unsigned int a1)
-{
-  s32 v2;
-  int v3;
-  int v4;
-  int v5;
-  s64 v6;
-  int v7;
-  int v8;
-  int v9;
-  int v10;
-  int v12;
-  int v13;
-  s64 v14;
-
-  v12 = 0;
-  v13 = 0;
-  v2 = sceNpCommerce2_0A6AB496(&g_store_mgr, HIWORD(a1), &v12, 1);
-  if ( v2 < 0 )
-    goto LABEL_15;
-  v2 = sceNpCommerce2_851E7844(&g_store_mgr, a1, &v13);
-  if ( v2 < 0 )
-    goto LABEL_15;
-  v4 = v12;
-  v3 = sceNpCommerce2_FC47B63C(&v14);
-  v5 = v12;
-  if ( v3 < 0 )
-    goto LABEL_11;
-  v6 = *(u64 *)(v4 + 1072);
-  if ( HIDWORD(v14) - HIDWORD(v6) != (unsigned int)v14 < (unsigned int)v6 )
-  {
-    v7 = *(u32 *)(v4 + 24);
-LABEL_10:
-    sceNpCommerce2_75DF99A9(v7, v4 + 28);
-    v5 = v12;
-LABEL_11:
-    v8 = v13;
-    goto LABEL_12;
-  }
-  v8 = v13;
-  if ( (u64)(v14 - v6) >> 32 == 0 )
-  {
-    if ( (unsigned int)(v14 - v6) <= 0x98967F )
-    {
-      v9 = *(u32 *)(v12 + 24);
-      goto LABEL_13;
+    if (cmd == STORE_CMD_AUTHENTICATE || cmd == STORE_CMD_CR_SESS ||
+        cmd == STORE_CMD_CR_GUEST_SESS) {
+        int parse_ret = (cmd == STORE_CMD_AUTHENTICATE)
+            ? store_tlv_parse_auth_root(sess_cursor, buf, resp_size)
+            : store_tlv_parse_sess_root(sess_cursor, buf, resp_size);
+        if (parse_ret >= 0 && store_tlv_parse_account_info(sess_cursor, acct_info) >= 0) {
+            sceNet_lib_B5CE388A(ctx->country_code, (const char *)acct_info[16], 4);
+            ctx->country_code[3] = '\0';
+            sceNet_lib_B5CE388A(ctx->lang_code, (const char *)acct_info[17], 4);
+            ctx->lang_code[3] = '\0';
+            sceNpCommerce2_F8D175FA(buf, buf_size, ctx->country_code, ctx->lang_code);
+        }
+        cmd = req->cmd_id;
     }
-    v7 = *(u32 *)(v4 + 24);
-    goto LABEL_10;
-  }
-LABEL_12:
-  v9 = *(u32 *)(v5 + 24);
-LABEL_13:
-  v2 = store_req_fn_16(*(u32 *)(v5 + 1064), v9, v5 + 28, *(u16 *)(v8 + 20), (u32 *)(v8 + 16));
-  if ( v2 >= 0 )
-    sceNpCommerce2_FC47B63C(v12 + 1072);
-LABEL_15:
-  if ( v13 != 0 )
-  {
-    if ( (*(u32 *)(v13 + 12) & 2) != 0 )
-      v2 = -2141909232;
-    sceNpCommerce2_8642C532(&g_store_mgr);
-    v10 = v12;
-  }
-  else
-  {
-    v10 = v12;
-  }
-  if ( v10 != 0 )
-    sceNpCommerce2_77BE411B(&g_store_mgr);
-  return v2;
-}
 
-
-int store_util_fn_15(int a1, int a2)
-{
-  return store_util_fn_27(a1, 65, a2, 0);
-}
-
-
-s32 store_util_fn_16(unsigned int a1)
-{
-  s32 v2;
-  int v3;
-  int v4;
-  int v5;
-  s64 v6;
-  int v7;
-  int v8;
-  int v9;
-  int v10;
-  int v12;
-  int v13;
-  s64 v14;
-
-  v12 = 0;
-  v13 = 0;
-  v2 = sceNpCommerce2_0A6AB496(&g_store_mgr, HIWORD(a1), &v12, 1);
-  if ( v2 < 0 )
-    goto LABEL_15;
-  v2 = sceNpCommerce2_851E7844(&g_store_mgr, a1, &v13);
-  if ( v2 < 0 )
-    goto LABEL_15;
-  v4 = v12;
-  v3 = sceNpCommerce2_FC47B63C(&v14);
-  v5 = v12;
-  if ( v3 < 0 )
-    goto LABEL_11;
-  v6 = *(u64 *)(v4 + 1072);
-  if ( HIDWORD(v14) - HIDWORD(v6) != (unsigned int)v14 < (unsigned int)v6 )
-  {
-    v7 = *(u32 *)(v4 + 24);
-LABEL_10:
-    sceNpCommerce2_75DF99A9(v7, v4 + 28);
-    v5 = v12;
-LABEL_11:
-    v8 = v13;
-    goto LABEL_12;
-  }
-  v8 = v13;
-  if ( (u64)(v14 - v6) >> 32 == 0 )
-  {
-    if ( (unsigned int)(v14 - v6) <= 0x98967F )
-    {
-      v9 = *(u32 *)(v12 + 24);
-      goto LABEL_13;
+    if (cmd == STORE_CMD_AUTHENTICATE || cmd == STORE_CMD_CR_SESS ||
+        cmd == STORE_CMD_START_REG || cmd == STORE_CMD_VERIFY_DOB ||
+        cmd == STORE_CMD_CR_GUEST_SESS) {
+        if (resp_size <= sizeof(ctx->session_buf)) {
+            ctx->session_len = resp_size;
+            sceKernelMemcpy(ctx->session_buf, buf, resp_size);
+        } else {
+            ctx->session_len = 0;
+        }
     }
-    v7 = *(u32 *)(v4 + 24);
-    goto LABEL_10;
-  }
-LABEL_12:
-  v9 = *(u32 *)(v5 + 24);
-LABEL_13:
-  v2 = store_req_fn_28(*(u32 *)(v5 + 1064), v9, v5 + 28, *(u16 *)(v8 + 20), (u32 *)(v8 + 16));
-  if ( v2 >= 0 )
-    sceNpCommerce2_FC47B63C(v12 + 1072);
-LABEL_15:
-  if ( v13 != 0 )
-  {
-    if ( (*(u32 *)(v13 + 12) & 2) != 0 )
-      v2 = -2141909232;
-    sceNpCommerce2_8642C532(&g_store_mgr);
-    v10 = v12;
-  }
-  else
-  {
-    v10 = v12;
-  }
-  if ( v10 != 0 )
-    sceNpCommerce2_77BE411B(&g_store_mgr);
-  return v2;
+    return 0;
 }
 
+/* =========================================================================
+ * Request start dispatchers
+ * ========================================================================= */
 
-int store_util_fn_17(int a1, int a2)
+int store_start_empty(u32 req_id)
 {
-  return store_util_fn_27(a1, 66, a2, 0);
-}
-
-
-int store_util_fn_18(int a1, int a2)
-{
-  return store_util_fn_27(a1, 71, a2, 0);
-}
-
-
-int store_util_fn_19(unsigned int a1, int a2, int a3)
-{
-  int v6;
-  int v7;
-  int v8;
-  int v9;
-  s64 v10;
-  int v11;
-  int v12;
-  int v13;
-  int v14;
-  int v16;
-  int v17;
-  s64 v18;
-
-  v16 = 0;
-  v17 = 0;
-  v6 = sceNpCommerce2_0A6AB496(&g_store_mgr, HIWORD(a1), &v16, 1);
-  if ( v6 < 0 )
-    goto LABEL_14;
-  v6 = sceNpCommerce2_851E7844(&g_store_mgr, a1, &v17);
-  if ( v6 < 0 )
-    goto LABEL_14;
-  v8 = v16;
-  v7 = sceNpCommerce2_FC47B63C(&v18);
-  v9 = v16;
-  if ( v7 < 0 )
-    goto LABEL_10;
-  v10 = *(u64 *)(v8 + 1072);
-  if ( HIDWORD(v18) - HIDWORD(v10) != (unsigned int)v18 < (unsigned int)v10 )
-  {
-    v11 = *(u32 *)(v8 + 24);
-LABEL_9:
-    sceNpCommerce2_75DF99A9(v11, v8 + 28);
-    v9 = v16;
-LABEL_10:
-    v12 = v17;
-    goto LABEL_11;
-  }
-  v12 = v17;
-  if ( (u64)(v18 - v10) >> 32 == 0 )
-  {
-    v13 = a2;
-    if ( (unsigned int)(v18 - v10) <= 0x98967F )
-      goto LABEL_12;
-    v11 = *(u32 *)(v8 + 24);
-    goto LABEL_9;
-  }
-LABEL_11:
-  v13 = a2;
-LABEL_12:
-  v6 = store_req_fn_30(*(u32 *)(v9 + 1064), *(u32 *)(v9 + 24), v9 + 28, *(u16 *)(v12 + 20), (int *)(v12 + 16), v13, a3);
-  if ( v6 >= 0 )
-    sceNpCommerce2_FC47B63C(v16 + 1072);
-LABEL_14:
-  if ( v17 != 0 )
-  {
-    if ( (*(u32 *)(v17 + 12) & 2) != 0 )
-      v6 = -2141909232;
-    sceNpCommerce2_8642C532(&g_store_mgr);
-    v14 = v16;
-  }
-  else
-  {
-    v14 = v16;
-  }
-  if ( v14 != 0 )
-    sceNpCommerce2_77BE411B(&g_store_mgr);
-  return v6;
-}
-
-
-int store_util_fn_20(int a1, int a2)
-{
-  return store_util_fn_27(a1, 76, a2, 0);
-}
-
-
-int store_util_fn_21(unsigned int a1, int a2, int a3, int a4, int a5, int a6)
-{
-  int v12;
-  int v13;
-  int v14;
-  int v15;
-  s64 v16;
-  int v17;
-  int v18;
-  int v20;
-  int v21;
-  s64 v22;
-
-  v20 = 0;
-  v21 = 0;
-  v12 = sceNpCommerce2_0A6AB496(&g_store_mgr, HIWORD(a1), &v20, 1);
-  if ( v12 < 0 )
-    goto LABEL_13;
-  v12 = sceNpCommerce2_851E7844(&g_store_mgr, a1, &v21);
-  if ( v12 < 0 )
-    goto LABEL_13;
-  v14 = v20;
-  v13 = sceNpCommerce2_FC47B63C(&v22);
-  v15 = v21;
-  if ( v13 >= 0 )
-  {
-    v16 = *(u64 *)(v14 + 1072);
-    if ( HIDWORD(v22) - HIDWORD(v16) != (unsigned int)v22 < (unsigned int)v16 )
-    {
-      v17 = *(u32 *)(v14 + 24);
-LABEL_10:
-      sceNpCommerce2_75DF99A9(v17, v14 + 28);
-      v15 = v21;
-      goto LABEL_11;
+    StoreContext *ctx = NULL;
+    StoreRequest *req = NULL;
+    int ret = store_lock_ctx_req(req_id, &ctx, &req);
+    if (ret >= 0) {
+        store_refresh_keepalive(ctx);
+        ret = store_send_empty(ctx->svc_type, ctx->http_tmpl_id, ctx->url_buf,
+                               req->cmd_id, &req->http_req_id);
+        if (ret >= 0)
+            sceNpCommerce2_FC47B63C(&ctx->last_activity_us);
     }
-    if ( (u64)(v22 - v16) >> 32 != 0 )
-    {
-      v15 = v21;
-      goto LABEL_11;
-    }
-    v15 = v21;
-    if ( (unsigned int)(v22 - v16) > 0x98967F )
-    {
-      v17 = *(u32 *)(v14 + 24);
-      goto LABEL_10;
-    }
-  }
-LABEL_11:
-  v12 = store_req_fn_31(
-          *(u32 *)(v20 + 1064),
-          *(u32 *)(v20 + 24),
-          v20 + 28,
-          *(u16 *)(v15 + 20),
-          (int *)(v15 + 16),
-          a2,
-          a3,
-          a4,
-          a5,
-          a6);
-  if ( v12 >= 0 )
-    sceNpCommerce2_FC47B63C(v20 + 1072);
-LABEL_13:
-  if ( v21 != 0 )
-  {
-    if ( (*(u32 *)(v21 + 12) & 2) != 0 )
-      v12 = -2141909232;
-    sceNpCommerce2_8642C532(&g_store_mgr);
-    v18 = v20;
-  }
-  else
-  {
-    v18 = v20;
-  }
-  if ( v18 != 0 )
-    sceNpCommerce2_77BE411B(&g_store_mgr);
-  return v12;
+    return store_unlock_ctx_req(ctx, req, ret);
 }
 
-
-int store_util_fn_22(int a1, int a2)
+int store_start_get_cat(u32 req_id, const char *cat_id, const char * const *reward_id,
+                        u32 has_reward, u32 start_pos, u32 max_cnt)
 {
-  return store_util_fn_27(a1, 80, a2, 0);
-}
-
-
-int store_util_fn_23(unsigned int a1, int a2, int a3)
-{
-  int v6;
-  int v7;
-  int v8;
-  int v9;
-  s64 v10;
-  int v11;
-  int v12;
-  int v13;
-  int v14;
-  int v16;
-  int v17;
-  s64 v18;
-
-  v16 = 0;
-  v17 = 0;
-  v6 = sceNpCommerce2_0A6AB496(&g_store_mgr, HIWORD(a1), &v16, 1);
-  if ( v6 < 0 )
-    goto LABEL_14;
-  v6 = sceNpCommerce2_851E7844(&g_store_mgr, a1, &v17);
-  if ( v6 < 0 )
-    goto LABEL_14;
-  v8 = v16;
-  v7 = sceNpCommerce2_FC47B63C(&v18);
-  v9 = v16;
-  if ( v7 < 0 )
-    goto LABEL_10;
-  v10 = *(u64 *)(v8 + 1072);
-  if ( HIDWORD(v18) - HIDWORD(v10) != (unsigned int)v18 < (unsigned int)v10 )
-  {
-    v11 = *(u32 *)(v8 + 24);
-LABEL_9:
-    sceNpCommerce2_75DF99A9(v11, v8 + 28);
-    v9 = v16;
-LABEL_10:
-    v12 = v17;
-    goto LABEL_11;
-  }
-  v12 = v17;
-  if ( (u64)(v18 - v10) >> 32 == 0 )
-  {
-    v13 = a2;
-    if ( (unsigned int)(v18 - v10) <= 0x98967F )
-      goto LABEL_12;
-    v11 = *(u32 *)(v8 + 24);
-    goto LABEL_9;
-  }
-LABEL_11:
-  v13 = a2;
-LABEL_12:
-  v6 = store_req_fn_32(*(u32 *)(v9 + 1064), *(u32 *)(v9 + 24), v9 + 28, *(u16 *)(v12 + 20), (int *)(v12 + 16), v13, a3);
-  if ( v6 >= 0 )
-    sceNpCommerce2_FC47B63C(v16 + 1072);
-LABEL_14:
-  if ( v17 != 0 )
-  {
-    if ( (*(u32 *)(v17 + 12) & 2) != 0 )
-      v6 = -2141909232;
-    sceNpCommerce2_8642C532(&g_store_mgr);
-    v14 = v16;
-  }
-  else
-  {
-    v14 = v16;
-  }
-  if ( v14 != 0 )
-    sceNpCommerce2_77BE411B(&g_store_mgr);
-  return v6;
-}
-
-
-int store_util_fn_24(int a1, int a2)
-{
-  int v3;
-  u32 v5[4];
-
-  v5[0] = 0;
-  v3 = sceNpCommerce2_0A6AB496(&g_store_mgr, a1, v5, 1);
-  if ( v3 >= 0 )
-    v3 = sceNpCommerce2_EE7255FE(v5[0], a2);
-  if ( v5[0] != 0 )
-    sceNpCommerce2_77BE411B(&g_store_mgr);
-  return v3;
-}
-
-
-int store_util_fn_25(int a1, int a2)
-{
-  int v3;
-  int v4;
-  u32 v6[4];
-
-  v6[0] = 0;
-  v3 = sceNpCommerce2_0A6AB496(&g_store_mgr, a1, v6, 1);
-  v4 = v6[0];
-  if ( v3 >= 0 )
-    *(u32 *)(v6[0] + 1064) = a2;
-  if ( v4 != 0 )
-    sceNpCommerce2_77BE411B(&g_store_mgr);
-  return v3;
-}
-
-
-int store_util_fn_26(int a1, u32 *a2)
-{
-  int result;
-  int v4;
-  int v5;
-  u32 v6[4];
-
-  v6[0] = 0;
-  result = sceNpCommerce2_0A6AB496(&g_store_mgr, a1, v6, 1);
-  v4 = result;
-  v5 = v6[0];
-  if ( result >= 0 )
-    *a2 = *(u32 *)(v6[0] + 1084);
-  if ( v5 != 0 )
-  {
-    sceNpCommerce2_77BE411B(&g_store_mgr);
-    return v4;
-  }
-  return result;
-}
-
-
-int store_util_fn_27(int a1, int a2, int a3)
-{
-  int v6;
-  int v7;
-  int v8;
-  int v9;
-  u32 v11[4];
-
-  v11[0] = 0;
-  v6 = sceNpCommerce2_0A6AB496(&g_store_mgr, a1, v11, 1);
-  if ( v6 < 0
-    || (v7 = sceNetIfhandle_lib_15CFE3C0(24), v6 = -2141909237, v8 = 0, v7 != 0)
-    && (sceKernelMemset(v7, 0, 24), *(u16 *)(v7 + 20) = a2,
-                                    (v6 = sceNpCommerce2_06618C81(&g_store_mgr, v7, a1, a3)) >= 0)
-    || v7 == 0 )
-  {
-    v9 = v11[0];
-  }
-  else
-  {
-    sceNetIfhandle_lib_76BAD213(v7, v8);
-    v9 = v11[0];
-  }
-  if ( v9 != 0 )
-    sceNpCommerce2_77BE411B(&g_store_mgr);
-  return v6;
-}
-
-
-int store_util_fn_28(int a1, int a2, int a3, int a4, unsigned int a5)
-{
-  u16 v9;
-  int v10;
-  int v12;
-  int *v13;
-  int v14;
-  int v15; // dc
-  int v16;
-  int v18;
-  u32 v19[24];
-  u32 v20[12];
-  u32 v21[16];
-
-  v9 = *(u16 *)(a2 + 20);
-  v10 = v9;
-  if ( v9 == 49 )
-  {
-    v13 = v21;
-    v18 = store_tlv_fn_36(v21, a3, a5);
-    goto LABEL_18;
-  }
-  v12 = 1;
-  if ( v9 < 0x32u || (v12 = 66, v9 != 61) )
-  {
-    v13 = v20;
-    if ( v9 != v12 )
-    {
-LABEL_5:
-      v10 = v9;
-      goto LABEL_6;
+    StoreContext *ctx = NULL;
+    StoreRequest *req = NULL;
+    int ret = store_lock_ctx_req(req_id, &ctx, &req);
+    if (ret >= 0) {
+        if (ctx->no_size_check == 0 && max_cnt >= 61)
+            return store_unlock_ctx_req(ctx, req, STORE_ERR_INVALID_ARG);
+        store_refresh_keepalive(ctx);
+        ret = store_send_get_cat(ctx->svc_type, ctx->http_tmpl_id, ctx->url_buf,
+                                 req->cmd_id, &req->http_req_id,
+                                 cat_id, reward_id, has_reward, start_pos, max_cnt);
+        if (ret >= 0)
+            sceNpCommerce2_FC47B63C(&ctx->last_activity_us);
     }
-    v18 = store_tlv_fn_41(v20, a3, a5);
-LABEL_18:
-    if ( v18 >= 0 )
-    {
-      if ( store_tlv_fn_33(v13, v19) >= 0 )
-      {
-        sceNet_lib_B5CE388A(a1 + 1088, v19[16], 4);
-        *(u8 *)(a1 + 1091) = 0;
-        sceNet_lib_B5CE388A(a1 + 1092, v19[17], 4);
-        *(u8 *)(a1 + 1091) = 0;
-        sceNpCommerce2_F8D175FA(a3, a4, a1 + 1088, a1 + 1092);
-      }
-      v9 = *(u16 *)(a2 + 20);
-    }
-    else
-    {
-      v9 = *(u16 *)(a2 + 20);
-    }
-    goto LABEL_5;
-  }
-LABEL_6:
-  if ( v10 != 49 )
-  {
-    if ( v10 >= 50 )
-    {
-      v14 = 66;
-      if ( v10 != 61 )
-      {
-LABEL_9:
-        v15 = v10 == v14;
-        v16 = a5 < 0x401;
-        if ( !v15 )
-          return 0;
-        goto LABEL_12;
-      }
-    }
-    else
-    {
-      v14 = 29;
-      if ( v10 != 1 )
-        goto LABEL_9;
-    }
-  }
-  v16 = a5 < 0x401;
-LABEL_12:
-  if ( v16 )
-  {
-    *(u32 *)(a1 + 1060) = a5;
-    sceKernelMemcpy(a1 + 36, a3, a5);
-  }
-  else
-  {
-    *(u32 *)(a1 + 1060) = 0;
-  }
-  return 0;
+    return store_unlock_ctx_req(ctx, req, ret);
 }
 
+int store_start_guest_sess(u32 req_id, const char *country, const char *lang,
+                           u32 yob, u32 mob, u32 dob)
+{
+    StoreContext *ctx = NULL;
+    StoreRequest *req = NULL;
+    char console_id[64];
+    u32 proto_ver = 0;
+    int ret = store_lock_ctx_req(req_id, &ctx, &req);
+    if (ret >= 0) {
+        store_refresh_keepalive(ctx);
+        ret = sceNpCommerce2_F0900551(ctx, &proto_ver);
+        if (ret >= 0)
+            ret = sceNpCommerce2_157FA8AA(console_id, sizeof(console_id));
+        if (ret >= 0)
+            ret = store_send_guest_sess(ctx->svc_type, ctx->http_tmpl_id, ctx->url_buf,
+                                        req->cmd_id, &req->http_req_id,
+                                        proto_ver, country, lang, yob, mob, dob, console_id);
+        if (ret >= 0)
+            sceNpCommerce2_FC47B63C(&ctx->last_activity_us);
+    }
+    return store_unlock_ctx_req(ctx, req, ret);
+}
 
+int store_start_get_prod(u32 req_id, const char *cat_id, const char *prod_id,
+                         const char * const *reward_id, u32 has_reward)
+{
+    StoreContext *ctx = NULL;
+    StoreRequest *req = NULL;
+    int ret = store_lock_ctx_req(req_id, &ctx, &req);
+    if (ret >= 0) {
+        store_refresh_keepalive(ctx);
+        ret = store_send_get_prod(ctx->svc_type, ctx->http_tmpl_id, ctx->url_buf,
+                                  req->cmd_id, &req->http_req_id,
+                                  cat_id, prod_id, reward_id, has_reward);
+        if (ret >= 0)
+            sceNpCommerce2_FC47B63C(&ctx->last_activity_us);
+    }
+    return store_unlock_ctx_req(ctx, req, ret);
+}
+
+int store_start_add_cart(u32 req_id, const char * const *sku_ids, u32 sku_cnt,
+                         const char * const *reward_ids, u32 reward_cnt)
+{
+    StoreContext *ctx = NULL;
+    StoreRequest *req = NULL;
+    int ret = store_lock_ctx_req(req_id, &ctx, &req);
+    if (ret >= 0) {
+        store_refresh_keepalive(ctx);
+        ret = store_send_add_cart(ctx->svc_type, ctx->http_tmpl_id, ctx->url_buf,
+                                  req->cmd_id, &req->http_req_id,
+                                  sku_ids, sku_cnt, reward_ids, reward_cnt);
+        if (ret >= 0)
+            sceNpCommerce2_FC47B63C(&ctx->last_activity_us);
+    }
+    return store_unlock_ctx_req(ctx, req, ret);
+}
+
+int store_start_sku_id(u32 req_id, const char *sku_id)
+{
+    StoreContext *ctx = NULL;
+    StoreRequest *req = NULL;
+    int ret = store_lock_ctx_req(req_id, &ctx, &req);
+    if (ret >= 0) {
+        store_refresh_keepalive(ctx);
+        ret = store_send_sku_id(ctx->svc_type, ctx->http_tmpl_id, ctx->url_buf,
+                                req->cmd_id, &req->http_req_id, sku_id);
+        if (ret >= 0)
+            sceNpCommerce2_FC47B63C(&ctx->last_activity_us);
+    }
+    return store_unlock_ctx_req(ctx, req, ret);
+}
+
+int store_start_purchase(u32 req_id, const char *password, int quick_purchase, int auto_deposit)
+{
+    StoreContext *ctx = NULL;
+    StoreRequest *req = NULL;
+    int ret = store_lock_ctx_req(req_id, &ctx, &req);
+    if (ret >= 0) {
+        store_refresh_keepalive(ctx);
+        ret = store_send_purchase(ctx->svc_type, ctx->http_tmpl_id, ctx->url_buf,
+                                  req->cmd_id, &req->http_req_id,
+                                  password, quick_purchase, auto_deposit);
+        if (ret >= 0)
+            sceNpCommerce2_FC47B63C(&ctx->last_activity_us);
+    }
+    return store_unlock_ctx_req(ctx, req, ret);
+}
+
+int store_start_payment_type(u32 req_id, u32 pay_type)
+{
+    StoreContext *ctx = NULL;
+    StoreRequest *req = NULL;
+    int ret = store_lock_ctx_req(req_id, &ctx, &req);
+    if (ret >= 0) {
+        store_refresh_keepalive(ctx);
+        ret = store_send_payment_type(ctx->svc_type, ctx->http_tmpl_id, ctx->url_buf,
+                                      req->cmd_id, &req->http_req_id, pay_type);
+        if (ret >= 0)
+            sceNpCommerce2_FC47B63C(&ctx->last_activity_us);
+    }
+    return store_unlock_ctx_req(ctx, req, ret);
+}
+
+int store_start_get_drm(u32 req_id, const char * const *sku_ids, u32 sku_cnt, const char *svc_id,
+                        const char *reward_ids, u32 start_pos, u32 max_cnt, u32 drm_type)
+{
+    StoreContext *ctx = NULL;
+    StoreRequest *req = NULL;
+    int ret = store_lock_ctx_req(req_id, &ctx, &req);
+    if (ret >= 0) {
+        store_refresh_keepalive(ctx);
+        ret = store_send_get_drm(ctx->svc_type, ctx->http_tmpl_id, ctx->url_buf,
+                                 req->cmd_id, &req->http_req_id,
+                                 sku_ids, sku_cnt, svc_id, reward_ids, start_pos, max_cnt, drm_type);
+        if (ret >= 0)
+            sceNpCommerce2_FC47B63C(&ctx->last_activity_us);
+    }
+    return store_unlock_ctx_req(ctx, req, ret);
+}
+
+int store_start_billing(u32 req_id, const StoreBillingInfo *info)
+{
+    StoreContext *ctx = NULL;
+    StoreRequest *req = NULL;
+    int ret = store_lock_ctx_req(req_id, &ctx, &req);
+    if (ret >= 0) {
+        store_refresh_keepalive(ctx);
+        ret = store_send_billing(ctx->svc_type, ctx->http_tmpl_id, ctx->url_buf,
+                                 req->cmd_id, &req->http_req_id, info);
+        if (ret >= 0)
+            sceNpCommerce2_FC47B63C(&ctx->last_activity_us);
+    }
+    return store_unlock_ctx_req(ctx, req, ret);
+}
+
+int store_start_postal_code(u32 req_id, const char *postal_code)
+{
+    StoreContext *ctx = NULL;
+    StoreRequest *req = NULL;
+    int ret = store_lock_ctx_req(req_id, &ctx, &req);
+    if (ret >= 0) {
+        store_refresh_keepalive(ctx);
+        ret = store_send_postal_code(ctx->svc_type, ctx->http_tmpl_id, ctx->url_buf,
+                                     req->cmd_id, &req->http_req_id, postal_code);
+        if (ret >= 0)
+            sceNpCommerce2_FC47B63C(&ctx->last_activity_us);
+    }
+    return store_unlock_ctx_req(ctx, req, ret);
+}
+
+int store_start_topup_amount(u32 req_id, u32 amount)
+{
+    StoreContext *ctx = NULL;
+    StoreRequest *req = NULL;
+    int ret = store_lock_ctx_req(req_id, &ctx, &req);
+    if (ret >= 0) {
+        store_refresh_keepalive(ctx);
+        ret = store_send_topup_amount(ctx->svc_type, ctx->http_tmpl_id, ctx->url_buf,
+                                      req->cmd_id, &req->http_req_id, amount);
+        if (ret >= 0)
+            sceNpCommerce2_FC47B63C(&ctx->last_activity_us);
+    }
+    return store_unlock_ctx_req(ctx, req, ret);
+}
+
+int store_start_edy_result(u32 req_id, const char *receipt_id, int is_ok)
+{
+    StoreContext *ctx = NULL;
+    StoreRequest *req = NULL;
+    int ret = store_lock_ctx_req(req_id, &ctx, &req);
+    if (ret >= 0) {
+        store_refresh_keepalive(ctx);
+        ret = store_send_edy_result(ctx->svc_type, ctx->http_tmpl_id, ctx->url_buf,
+                                    req->cmd_id, &req->http_req_id, receipt_id, is_ok);
+        if (ret >= 0)
+            sceNpCommerce2_FC47B63C(&ctx->last_activity_us);
+    }
+    return store_unlock_ctx_req(ctx, req, ret);
+}
+
+int store_start_voucher(u32 req_id, const char *code1, const char *code2,
+                        const char *code3, int auto_deposit)
+{
+    StoreContext *ctx = NULL;
+    StoreRequest *req = NULL;
+    int ret = store_lock_ctx_req(req_id, &ctx, &req);
+    if (ret >= 0) {
+        store_refresh_keepalive(ctx);
+        ret = store_send_voucher(ctx->svc_type, ctx->http_tmpl_id, ctx->url_buf,
+                                 req->cmd_id, &req->http_req_id, code1, code2, code3, auto_deposit);
+        if (ret >= 0)
+            sceNpCommerce2_FC47B63C(&ctx->last_activity_us);
+    }
+    return store_unlock_ctx_req(ctx, req, ret);
+}
+
+int store_start_event_log(u32 req_id, u32 event_type, const char *id_str, const char *url_str)
+{
+    StoreContext *ctx = NULL;
+    StoreRequest *req = NULL;
+    int ret = store_lock_ctx_req(req_id, &ctx, &req);
+    if (ret >= 0) {
+        store_refresh_keepalive(ctx);
+        ret = store_send_event_log(ctx->svc_type, ctx->http_tmpl_id, ctx->url_buf,
+                                   req->cmd_id, &req->http_req_id, event_type, id_str, url_str);
+        if (ret >= 0)
+            sceNpCommerce2_FC47B63C(&ctx->last_activity_us);
+    }
+    return store_unlock_ctx_req(ctx, req, ret);
+}
+
+int store_start_search_prod(u32 req_id, u32 start_pos, u32 max_cnt,
+                            const StoreSearchQuery *queries, u32 query_cnt)
+{
+    StoreContext *ctx = NULL;
+    StoreRequest *req = NULL;
+    int ret = store_lock_ctx_req(req_id, &ctx, &req);
+    if (ret >= 0) {
+        store_refresh_keepalive(ctx);
+        ret = store_send_search_prod(ctx->svc_type, ctx->http_tmpl_id, ctx->url_buf,
+                                     req->cmd_id, &req->http_req_id,
+                                     start_pos, max_cnt, queries, query_cnt);
+        if (ret >= 0)
+            sceNpCommerce2_FC47B63C(&ctx->last_activity_us);
+    }
+    return store_unlock_ctx_req(ctx, req, ret);
+}
+
+int store_start_prod_list(u32 req_id, const char * const *prod_ids, u32 prod_cnt)
+{
+    StoreContext *ctx = NULL;
+    StoreRequest *req = NULL;
+    int ret = store_lock_ctx_req(req_id, &ctx, &req);
+    if (ret >= 0) {
+        store_refresh_keepalive(ctx);
+        ret = store_send_prod_list(ctx->svc_type, ctx->http_tmpl_id, ctx->url_buf,
+                                   req->cmd_id, &req->http_req_id, prod_ids, prod_cnt);
+        if (ret >= 0)
+            sceNpCommerce2_FC47B63C(&ctx->last_activity_us);
+    }
+    return store_unlock_ctx_req(ctx, req, ret);
+}
+
+int store_start_recom_prods(u32 req_id, const char * const *prod_ids, u32 prod_cnt,
+                            u32 start_pos, u32 max_cnt, u32 recom_type)
+{
+    StoreContext *ctx = NULL;
+    StoreRequest *req = NULL;
+    int ret = store_lock_ctx_req(req_id, &ctx, &req);
+    if (ret >= 0) {
+        store_refresh_keepalive(ctx);
+        ret = store_send_recom_prods(ctx->svc_type, ctx->http_tmpl_id, ctx->url_buf,
+                                     req->cmd_id, &req->http_req_id,
+                                     prod_ids, prod_cnt, start_pos, max_cnt, recom_type);
+        if (ret >= 0)
+            sceNpCommerce2_FC47B63C(&ctx->last_activity_us);
+    }
+    return store_unlock_ctx_req(ctx, req, ret);
+}
+
+int store_start_get_prod_ids(u32 req_id, const char *content_id, const char *file_id)
+{
+    StoreContext *ctx = NULL;
+    StoreRequest *req = NULL;
+    int ret = store_lock_ctx_req(req_id, &ctx, &req);
+    if (ret >= 0) {
+        store_refresh_keepalive(ctx);
+        ret = store_send_get_prod_ids(ctx->svc_type, ctx->http_tmpl_id, ctx->url_buf,
+                                      req->cmd_id, &req->http_req_id, content_id, file_id);
+        if (ret >= 0)
+            sceNpCommerce2_FC47B63C(&ctx->last_activity_us);
+    }
+    return store_unlock_ctx_req(ctx, req, ret);
+}
