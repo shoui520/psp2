@@ -5,12 +5,24 @@
 KERNEL_DIR := $(abspath $(dir $(lastword $(MAKEFILE_LIST))))
 TOOLS_DIR  := $(abspath $(KERNEL_DIR)/../../tools)
 PSPDEV     ?= $(if $(PSP2_TOOLCHAINS),$(PSP2_TOOLCHAINS)/pspdev-v20261001,$(KERNEL_DIR)/../../toolchains/install/pspdev-v20261001)
-CROSS      := $(PSPDEV)/bin/psp-
-CC         := $(CROSS)gcc
-PRXGEN     := $(CROSS)prxgen
+PSP_GCC336 ?= $(if $(PSP2_TOOLCHAINS),$(PSP2_TOOLCHAINS)/psp-gcc-3.3.6-allegrex,$(KERNEL_DIR)/../../toolchains/install/psp-gcc-3.3.6-allegrex)
+PSP_TOOLCHAIN ?= $(if $(wildcard $(PSP_GCC336)/bin/psp-gcc),gcc336,pspdev)
+PRXGEN     := $(PSPDEV)/bin/psp-prxgen
 PYTHON     ?= python3
 O          ?= $(if $(MEP_OUT),$(MEP_OUT)/sys661/$(TARGET),build)
 
+ifeq ($(PSP_TOOLCHAIN),gcc336)
+CROSS      := $(PSP_GCC336)/bin/psp-
+CC         := $(CROSS)gcc
+CFLAGS     := -std=gnu99 -O2 -G0 -march=allegrex -mabi=eabi -mgp32 -mfp32 -msingle-float -mbranch-likely \
+              -ffreestanding -fno-builtin -fno-common -fno-pic -mno-abicalls \
+              -Wall -W -Wno-unused-parameter -Wno-unused-function -Wno-unused-variable -Wno-sign-compare \
+              -I. -I$(KERNEL_DIR)/include -I$(PSPDEV)/psp/sdk/include \
+              $(filter-out -fno-reorder-blocks -fno-inline -fno-inline-small-functions -fno-ipa-cp -fno-optimize-sibling-calls -fno-toplevel-reorder -fno-ipa-icf -fno-ipa-ra,$(EXTRA_CFLAGS))
+ASFLAGS    := -G0 -march=allegrex -I. -I$(KERNEL_DIR)/include -I$(PSPDEV)/psp/sdk/include
+else
+CROSS      := $(PSPDEV)/bin/psp-
+CC         := $(CROSS)gcc
 CFLAGS     := -std=gnu17 -O2 -G0 -march=allegrex -ffreestanding -fno-builtin -fno-common \
               -fno-pic -mno-abicalls -fno-toplevel-reorder -fno-inline-small-functions \
               -fno-ipa-icf -fno-optimize-sibling-calls -fno-ipa-ra \
@@ -23,6 +35,7 @@ CFLAGS     := -std=gnu17 -O2 -G0 -march=allegrex -ffreestanding -fno-builtin -fn
               -I. -I$(KERNEL_DIR)/include -I$(PSPDEV)/psp/sdk/include \
               $(EXTRA_CFLAGS)
 ASFLAGS    := -G0 -march=allegrex -I. -I$(KERNEL_DIR)/include -I$(PSPDEV)/psp/sdk/include
+endif
 LDFLAGS    := -nostdlib -Wl,-q,-T,$(KERNEL_DIR)/prx.ld -Wl,-Map,$(O)/$(TARGET).map
 
 OBJS       := $(addprefix $(O)/,$(addsuffix .o,$(basename $(SRCS))))

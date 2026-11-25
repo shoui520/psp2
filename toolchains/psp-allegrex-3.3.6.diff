@@ -1,0 +1,450 @@
+diff -ruN gcc-3.3.6.orig/config.sub gcc-3.3.6/config.sub
+--- gcc-3.3.6.orig/config.sub	2003-01-30 23:25:36.000000000 +0000
++++ gcc-3.3.6/config.sub	2026-11-25 04:49:56.433549096 +0000
+@@ -226,7 +226,7 @@
+ 	# Some are omitted here because they have special meanings below.
+ 	1750a | 580 \
+ 	| a29k \
+-	| alpha | alphaev[4-8] | alphaev56 | alphaev6[78] | alphapca5[67] \
++	| aarch64 | alpha | alphaev[4-8] | alphaev56 | alphaev6[78] | alphapca5[67] \
+ 	| alpha64 | alpha64ev[4-8] | alpha64ev56 | alpha64ev6[78] | alpha64pca5[67] \
+ 	| arc | arm | arm[bl]e | arme[lb] | armv[2345] | armv[345][lb] | avr \
+ 	| clipper \
+@@ -236,7 +236,7 @@
+ 	| i370 | i860 | i960 | ia64 \
+ 	| ip2k \
+ 	| m32r | m68000 | m68k | m88k | mcore \
+-	| mips | mipsbe | mipseb | mipsel | mipsle \
++	| mips | mipsallegrex | mipsallegrexel | mipsbe | mipseb | mipsel | mipsle \
+ 	| mips16 \
+ 	| mips64 | mips64el \
+ 	| mips64vr | mips64vrel \
+@@ -290,7 +290,7 @@
+ 	# Recognize the basic CPU types with company name.
+ 	580-* \
+ 	| a29k-* \
+-	| alpha-* | alphaev[4-8]-* | alphaev56-* | alphaev6[78]-* \
++	| aarch64-* | alpha-* | alphaev[4-8]-* | alphaev56-* | alphaev6[78]-* \
+ 	| alpha64-* | alpha64ev[4-8]-* | alpha64ev56-* | alpha64ev6[78]-* \
+ 	| alphapca5[67]-* | alpha64pca5[67]-* | arc-* \
+ 	| arm-*  | armbe-* | armle-* | armeb-* | armv*-* \
+@@ -308,7 +308,7 @@
+ 	| m32r-* \
+ 	| m68000-* | m680[012346]0-* | m68360-* | m683?2-* | m68k-* \
+ 	| m88110-* | m88k-* | mcore-* \
+-	| mips-* | mipsbe-* | mipseb-* | mipsel-* | mipsle-* \
++	| mips-* | mipsallegrex-* | mipsallegrexel-* | mipsbe-* | mipseb-* | mipsel-* | mipsle-* \
+ 	| mips16-* \
+ 	| mips64-* | mips64el-* \
+ 	| mips64vr-* | mips64vrel-* \
+diff -ruN gcc-3.3.6.orig/gcc/config/mips/mips-protos.h gcc-3.3.6/gcc/config/mips/mips-protos.h
+--- gcc-3.3.6.orig/gcc/config/mips/mips-protos.h	2005-01-08 14:33:32.000000000 +0000
++++ gcc-3.3.6/gcc/config/mips/mips-protos.h	2026-11-25 04:49:56.436549069 +0000
+@@ -50,6 +50,7 @@
+ extern void		mips_output_ascii PARAMS ((FILE *, const char *,
+ 						   size_t));
+ extern void		mips_order_regs_for_local_alloc PARAMS ((void));
++extern int		mips_use_ins_ext_p PARAMS ((rtx, rtx, rtx));
+ extern struct rtx_def * embedded_pic_fnaddr_reg PARAMS ((void));
+ extern struct rtx_def *	mips16_gp_pseudo_reg PARAMS ((void));
+ #ifdef ASM_OUTPUT_UNDEF_FUNCTION
+diff -ruN gcc-3.3.6.orig/gcc/config/mips/mips.c gcc-3.3.6/gcc/config/mips/mips.c
+--- gcc-3.3.6.orig/gcc/config/mips/mips.c	2005-01-08 14:33:33.000000000 +0000
++++ gcc-3.3.6/gcc/config/mips/mips.c	2026-11-25 04:49:56.440549033 +0000
+@@ -591,6 +591,7 @@
+ 
+   /* MIPS II */
+   { "r6000", PROCESSOR_R6000, 2 },
++  { "allegrex", PROCESSOR_ALLEGREX, 2 },
+ 
+   /* MIPS III */
+   { "r4000", PROCESSOR_R4000, 3 },
+@@ -1823,7 +1824,7 @@
+     num_nops = 1;
+ 
+   else if (type == DELAY_HILO)
+-    num_nops = 2;
++    num_nops = TARGET_ALLEGREX ? 0 : 2;
+ 
+   else
+     num_nops = 0;
+@@ -2107,7 +2108,7 @@
+ 	  else if (GP_REG_P (regno0))
+ 	    {
+ 	      if (GP_REG_P (regno1))
+-		ret = "move\t%0,%1";
++		ret = TARGET_ALLEGREX ? "addu\t%0,%1,$0" : "move\t%0,%1";
+ 
+ 	      else if (MD_REG_P (regno1))
+ 		{
+@@ -2123,7 +2124,8 @@
+ 
+ 	      else
+ 		{
+-		  delay = DELAY_LOAD;
++		  if (!TARGET_ALLEGREX)
++		    delay = DELAY_LOAD;
+ 		  if (FP_REG_P (regno1))
+ 		    ret = "mfc1\t%0,%1";
+ 		  else if (ALL_COP_REG_P (regno1))
+@@ -2142,7 +2144,8 @@
+ 	    {
+ 	      if (GP_REG_P (regno1))
+ 		{
+-		  delay = DELAY_LOAD;
++		  if (!TARGET_ALLEGREX)
++		    delay = DELAY_LOAD;
+ 		  ret = "mtc1\t%1,%0";
+ 		}
+ 
+@@ -2260,11 +2263,12 @@
+ 	  if (INTVAL (op1) == 0 && ! TARGET_MIPS16)
+ 	    {
+ 	      if (GP_REG_P (regno0))
+-		ret = "move\t%0,%z1";
++		ret = TARGET_ALLEGREX ? "addu\t%0,%z1,$0" : "move\t%0,%z1";
+ 
+ 	      else if (FP_REG_P (regno0))
+ 		{
+-		  delay = DELAY_LOAD;
++		  if (!TARGET_ALLEGREX)
++		    delay = DELAY_LOAD;
+ 		  ret = "mtc1\t%z1,%0";
+ 		}
+ 
+@@ -2296,7 +2300,7 @@
+ 	  if (op1 == CONST0_RTX (SFmode))
+ 	    {
+ 	      if (GP_REG_P (regno0))
+-		ret = "move\t%0,%.";
++		ret = TARGET_ALLEGREX ? "addu\t%0,%.,$0" : "move\t%0,%.";
+ 
+ 	      else if (FP_REG_P (regno0))
+ 		{
+@@ -10913,3 +10917,22 @@
+ #endif /* TARGET_IRIX6 */
+ 
+ #include "gt-mips.h"
++
++int
++mips_use_ins_ext_p (op, size, pos)
++     rtx op;
++     rtx size;
++     rtx pos;
++{
++  if (!ISA_HAS_EXT_INS)
++    return 0;
++  if (GET_CODE (op) != REG && GET_CODE (op) != SUBREG)
++    return 0;
++  if (GET_MODE (op) != SImode)
++    return 0;
++  if (GET_CODE (size) != CONST_INT || GET_CODE (pos) != CONST_INT)
++    return 0;
++  if (INTVAL (size) <= 0 || INTVAL (pos) < 0 || INTVAL (pos) + INTVAL (size) > 32)
++    return 0;
++  return 1;
++}
+diff -ruN gcc-3.3.6.orig/gcc/config/mips/mips.h gcc-3.3.6/gcc/config/mips/mips.h
+--- gcc-3.3.6.orig/gcc/config/mips/mips.h	2005-01-08 14:33:34.000000000 +0000
++++ gcc-3.3.6/gcc/config/mips/mips.h	2026-11-25 04:52:44.598012593 +0000
+@@ -76,7 +76,8 @@
+   PROCESSOR_R5KC,
+   PROCESSOR_R20KC,
+   PROCESSOR_SR71000,
+-  PROCESSOR_SB1
++  PROCESSOR_SB1,
++  PROCESSOR_ALLEGREX
+ };
+ 
+ /* Recast the cpu class to be the cpu attribute.  */
+@@ -365,6 +366,7 @@
+ #define TARGET_MIPS5500             (mips_arch == PROCESSOR_R5500)
+ #define TARGET_SB1                  (mips_arch == PROCESSOR_SB1)
+ #define TARGET_SR71K                (mips_arch == PROCESSOR_SR71000)
++#define TARGET_ALLEGREX             (mips_arch == PROCESSOR_ALLEGREX)
+ 
+ /* Scheduling target defines.  */
+ #define TUNE_MIPS3000               (mips_tune == PROCESSOR_R3000)
+@@ -376,6 +378,7 @@
+ #define TUNE_MIPS6000               (mips_tune == PROCESSOR_R6000)
+ #define TUNE_SB1                    (mips_tune == PROCESSOR_SB1)
+ #define TUNE_SR71K                  (mips_tune == PROCESSOR_SR71000)
++#define TUNE_ALLEGREX               (mips_tune == PROCESSOR_ALLEGREX)
+ 
+ /* Define preprocessor macros for the -march and -mtune options.
+    PREFIX is either _MIPS_ARCH or _MIPS_TUNE, INFO is the selected
+@@ -811,7 +814,7 @@
+ 				 && !TARGET_MIPS16)
+ 
+ /* ISA has just the integer condition move instructions (movn,movz) */
+-#define ISA_HAS_INT_CONDMOVE     0
++#define ISA_HAS_INT_CONDMOVE     (TARGET_ALLEGREX && !TARGET_MIPS16)
+ 
+ /* ISA has the mips4 FP condition code instructions: FP-compare to CC,
+    branch on CC, and move (both FP and non-FP) on CC.  */
+@@ -833,6 +836,7 @@
+ /* ISA has integer multiply-accumulate instructions, madd and msub.  */
+ #define ISA_HAS_MADD_MSUB       ((ISA_MIPS32				\
+ 				  || ISA_MIPS64				\
++				  || TARGET_ALLEGREX			\
+ 				  ) && !TARGET_MIPS16)
+ 
+ /* ISA has floating-point nmadd and nmsub instructions.  */
+@@ -844,6 +848,7 @@
+ /* ISA has count leading zeroes/ones instruction (not implemented).  */
+ #define ISA_HAS_CLZ_CLO         ((ISA_MIPS32				\
+                                   || ISA_MIPS64				\
++                                  || TARGET_ALLEGREX			\
+                                  ) && !TARGET_MIPS16)
+ 
+ /* ISA has double-word count leading zeroes/ones instruction (not
+@@ -882,8 +887,12 @@
+ #define ISA_HAS_ROTR_SI         (TARGET_MIPS5400                        \
+                                  || TARGET_MIPS5500                     \
+                                  || TARGET_SR71K                        \
++                                 || TARGET_ALLEGREX                     \
+                                  )
+ 
++#define ISA_HAS_SEB_SEH         (TARGET_ALLEGREX && !TARGET_MIPS16)
++#define ISA_HAS_EXT_INS         (TARGET_ALLEGREX && !TARGET_MIPS16)
++
+ /* ISA has 32-bit rotate right instruction.  */
+ #define ISA_HAS_ROTR_DI         (TARGET_64BIT                           \
+                                  && (TARGET_MIPS5400                    \
+@@ -2571,8 +2580,9 @@
+ #define OUTGOING_REG_PARM_STACK_SPACE
+ 
+ #define STACK_BOUNDARY \
+-  ((mips_abi == ABI_32 || mips_abi == ABI_O64 || mips_abi == ABI_EABI) \
+-   ? 64 : 128)
++  (TARGET_ALLEGREX ? 128 : \
++   ((mips_abi == ABI_32 || mips_abi == ABI_O64 || mips_abi == ABI_EABI) \
++    ? 64 : 128))
+ 
+ /* Make sure 4 words are always allocated on the stack.  */
+ 
+@@ -2874,9 +2884,10 @@
+ /* Treat LOC as a byte offset from the stack pointer and round it up
+    to the next fully-aligned offset.  */
+ #define MIPS_STACK_ALIGN(LOC)						\
+-  ((mips_abi == ABI_32 || mips_abi == ABI_O64 || mips_abi == ABI_EABI)	\
+-   ? ((LOC) + 7) & ~7							\
+-   : ((LOC) + 15) & ~15)
++  (TARGET_ALLEGREX ? (((LOC) + 15) & ~15) :				\
++   ((mips_abi == ABI_32 || mips_abi == ABI_O64 || mips_abi == ABI_EABI)	\
++    ? ((LOC) + 7) & ~7							\
++    : ((LOC) + 15) & ~15))
+ 
+ 
+ /* Define the `__builtin_va_list' type for the ABI.  */
+diff -ruN gcc-3.3.6.orig/gcc/config/mips/mips.md gcc-3.3.6/gcc/config/mips/mips.md
+--- gcc-3.3.6.orig/gcc/config/mips/mips.md	2005-01-08 14:11:12.000000000 +0000
++++ gcc-3.3.6/gcc/config/mips/mips.md	2026-11-25 04:49:56.446548980 +0000
+@@ -125,7 +125,7 @@
+ 
+ ;; ??? Fix everything that tests this attribute.
+ (define_attr "cpu"
+-  "default,r3000,r3900,r6000,r4000,r4100,r4111,r4120,r4300,r4600,r4650,r5000,r5400,r5500,r8000,sr71000,r4kc,r5kc,r20kc"
++  "default,r3000,r3900,r6000,r4000,r4100,r4111,r4120,r4300,r4600,r4650,r5000,r5400,r5500,r8000,sr71000,r4kc,r5kc,r20kc,allegrex"
+   (const (symbol_ref "mips_cpu_attr")))
+ 
+ ;; Does the instruction have a mandatory delay slot?
+@@ -2852,9 +2852,9 @@
+       if (GENERATE_BRANCHLIKELY)
+ 	{
+           if (which_alternative == 1)
+-	    return \"%(beql\\t%0,$0,1f\\n\\tbreak\\t%2\\n%~1:%)\";
++	    return TARGET_ALLEGREX ? \"%(beql\\t%0,$0,1f\\n\\tbreak\\t0,%2\\n%~1:%)\" : \"%(beql\\t%0,$0,1f\\n\\tbreak\\t%2\\n%~1:%)\";
+ 	  else
+-	    return \"%(beql\\t%0,%1,1f\\n\\tbreak\\t%2\\n%~1:%)\";
++	    return TARGET_ALLEGREX ? \"%(beql\\t%0,%1,1f\\n\\tbreak\\t0,%2\\n%~1:%)\" : \"%(beql\\t%0,%1,1f\\n\\tbreak\\t%2\\n%~1:%)\";
+ 	}
+       else
+ 	{
+@@ -4384,6 +4384,11 @@
+   if (optimize && GET_CODE (operands[1]) == MEM)
+     operands[1] = force_not_mem (operands[1]);
+ 
++  if (ISA_HAS_SEB_SEH && GET_CODE (operands[1]) != MEM)
++    {
++      emit_insn (gen_extendhisi2_seh (operands[0], operands[1]));
++      DONE;
++    }
+   if (GET_CODE (operands[1]) != MEM)
+     {
+       rtx op1   = gen_lowpart (SImode, operands[1]);
+@@ -4446,6 +4451,11 @@
+   if (optimize && GET_CODE (operands[1]) == MEM)
+     operands[1] = force_not_mem (operands[1]);
+ 
++  if (ISA_HAS_SEB_SEH && GET_CODE (operands[1]) != MEM)
++    {
++      emit_insn (gen_extendqisi2_seb (operands[0], operands[1]));
++      DONE;
++    }
+   if (GET_CODE (operands[1]) != MEM)
+     {
+       rtx op1   = gen_lowpart (SImode, operands[1]);
+@@ -4897,12 +4907,19 @@
+ ;; Only specify the mode operand 1, the rest are assumed to be word_mode.
+ (define_expand "extzv"
+   [(set (match_operand 0 "register_operand" "")
+-	(zero_extract (match_operand:QI 1 "memory_operand" "")
++	(zero_extract (match_operand 1 "nonimmediate_operand" "")
+ 		      (match_operand 2 "immediate_operand" "")
+ 		      (match_operand 3 "immediate_operand" "")))]
+   "!TARGET_MIPS16"
+   "
+ {
++  if (mips_use_ins_ext_p (operands[1], operands[2], operands[3]))
++    {
++      emit_insn (gen_extzvsi (operands[0], operands[1], operands[2], operands[3]));
++      DONE;
++    }
++  if (GET_CODE (operands[1]) != MEM)
++    FAIL;
+   /* If the field does not start on a byte boundary, then fail.  */
+   if (INTVAL (operands[3]) % 8 != 0)
+     FAIL;
+@@ -4945,13 +4962,21 @@
+ 
+ ;; Only specify the mode operands 0, the rest are assumed to be word_mode.
+ (define_expand "insv"
+-  [(set (zero_extract (match_operand:QI 0 "memory_operand" "")
++  [(set (zero_extract (match_operand 0 "nonimmediate_operand" "")
+ 		      (match_operand 1 "immediate_operand" "")
+ 		      (match_operand 2 "immediate_operand" ""))
+-	(match_operand 3 "register_operand" ""))]
++	(match_operand 3 "reg_or_0_operand" ""))]
+   "!TARGET_MIPS16"
+   "
+ {
++  if (mips_use_ins_ext_p (operands[0], operands[1], operands[2]))
++    {
++      emit_insn (gen_insvsi (operands[0], operands[1], operands[2], operands[3]));
++      DONE;
++    }
++  if (GET_CODE (operands[0]) != MEM)
++    FAIL;
++  operands[3] = force_reg (word_mode, operands[3]);
+   /* If the field does not start on a byte boundary, then fail.  */
+   if (INTVAL (operands[2]) % 8 != 0)
+     FAIL;
+@@ -7739,14 +7764,14 @@
+   "ISA_HAS_ROTR_SI"
+   "*
+ {
+-  if (TARGET_SR71K && GET_CODE (operands[2]) != CONST_INT)
+-    return \"rorv\\t%0,%1,%2\";
++  if ((TARGET_SR71K || TARGET_ALLEGREX) && GET_CODE (operands[2]) != CONST_INT)
++    return TARGET_ALLEGREX ? \"rotrv\\t%0,%1,%2\" : \"rorv\\t%0,%1,%2\";
+ 
+   if ((GET_CODE (operands[2]) == CONST_INT)
+       && (INTVAL (operands[2]) < 0 || INTVAL (operands[2]) >= 32))
+     abort ();
+ 
+-  return \"ror\\t%0,%1,%2\";
++  return TARGET_ALLEGREX ? \"rotr\\t%0,%1,%2\" : \"ror\\t%0,%1,%2\";
+ }"
+   [(set_attr "type"     "arith")
+    (set_attr "mode"     "SI")])
+@@ -11198,3 +11223,59 @@
+   [(set_attr "type"	"arith")
+    (set_attr "mode"	"DI")
+    (set_attr "length"	"40")])
++
++;; Sony ALLEGREX instructions.
++
++(define_insn "extendqisi2_seb"
++  [(set (match_operand:SI 0 "register_operand" "=d")
++	(sign_extend:SI (match_operand:QI 1 "register_operand" "d")))]
++  "ISA_HAS_SEB_SEH"
++  "seb\t%0,%1"
++  [(set_attr "type"	"arith")
++   (set_attr "mode"	"SI")])
++
++(define_insn "extendhisi2_seh"
++  [(set (match_operand:SI 0 "register_operand" "=d")
++	(sign_extend:SI (match_operand:HI 1 "register_operand" "d")))]
++  "ISA_HAS_SEB_SEH"
++  "seh\t%0,%1"
++  [(set_attr "type"	"arith")
++   (set_attr "mode"	"SI")])
++
++(define_insn "extzvsi"
++  [(set (match_operand:SI 0 "register_operand" "=d")
++	(zero_extract:SI (match_operand:SI 1 "register_operand" "d")
++			 (match_operand:SI 2 "immediate_operand" "I")
++			 (match_operand:SI 3 "immediate_operand" "I")))]
++  "mips_use_ins_ext_p (operands[1], operands[2], operands[3])"
++  "ext\t%0,%1,%3,%2"
++  [(set_attr "type"	"arith")
++   (set_attr "mode"	"SI")])
++
++(define_insn "insvsi"
++  [(set (zero_extract:SI (match_operand:SI 0 "register_operand" "+d")
++			 (match_operand:SI 1 "immediate_operand" "I")
++			 (match_operand:SI 2 "immediate_operand" "I"))
++	(match_operand:SI 3 "reg_or_0_operand" "dJ"))]
++  "mips_use_ins_ext_p (operands[0], operands[1], operands[2])"
++  "ins\t%0,%z3,%2,%1"
++  [(set_attr "type"	"arith")
++   (set_attr "mode"	"SI")])
++
++(define_insn "sminsi3"
++  [(set (match_operand:SI 0 "register_operand" "=d")
++	(smin:SI (match_operand:SI 1 "register_operand" "d")
++		 (match_operand:SI 2 "register_operand" "d")))]
++  "TARGET_ALLEGREX"
++  "min\t%0,%1,%2"
++  [(set_attr "type"	"arith")
++   (set_attr "mode"	"SI")])
++
++(define_insn "smaxsi3"
++  [(set (match_operand:SI 0 "register_operand" "=d")
++	(smax:SI (match_operand:SI 1 "register_operand" "d")
++		 (match_operand:SI 2 "register_operand" "d")))]
++  "TARGET_ALLEGREX"
++  "max\t%0,%1,%2"
++  [(set_attr "type"	"arith")
++   (set_attr "mode"	"SI")])
+diff -ruN gcc-3.3.6.orig/gcc/config.gcc gcc-3.3.6/gcc/config.gcc
+--- gcc-3.3.6.orig/gcc/config.gcc	2004-04-29 05:42:47.000000000 +0100
++++ gcc-3.3.6/gcc/config.gcc	2026-11-25 04:52:44.599012584 +0000
+@@ -287,10 +287,10 @@
+ alpha*-*-*)
+ 	cpu_type=alpha
+ 	;;
+-strongarm*-*-*)
++strongarm*-*-* | aarch64*-*-*)
+ 	cpu_type=arm
+ 	;;
+-arm*-*-*)
++arm*-*-* | aarch64*-*-*)
+ 	cpu_type=arm
+ 	;;
+ xscale-*-*)
+@@ -697,7 +697,7 @@
+ 	extra_parts=""
+ 	use_collect2=yes
+ 	;;
+-arm*-*-linux*)			# ARM GNU/Linux with ELF
++arm*-*-linux* | aarch64*-*-linux*)	# ARM/AArch64 GNU/Linux with ELF
+ 	tm_file="dbxelf.h elfos.h arm/elf.h arm/linux-gas.h arm/linux-elf.h arm/aout.h arm/arm.h"
+ 	tmake_file="t-slibgcc-elf-ver t-linux arm/t-linux"
+ 	extra_parts="crtbegin.o crtbeginS.o crtend.o crtendS.o"
+@@ -1929,7 +1929,13 @@
+ 	target_cpu_default="MASK_64BIT|MASK_FLOAT64|MASK_GAS"
+ 	tm_defines="MIPS_ISA_DEFAULT=64 MIPS_CPU_STRING_DEFAULT=\\\"sb1\\\" MIPS_ABI_DEFAULT=ABI_O64"
+ 	;;
+-mips-*-elf* | mipsel-*-elf*)
++mips-*-elf* | mipsallegrexel-*-elf* | mipsallegrexel-*-psp*)
++	tm_file="${tm_file} mips/elf.h"
++	tmake_file=mips/t-elf
++	target_cpu_default="MASK_SINGLE_FLOAT|MASK_GAS"
++	tm_defines="MIPS_CPU_STRING_DEFAULT=\\\"allegrex\\\" MIPS_ABI_DEFAULT=ABI_EABI MIPS_ISA_DEFAULT=2"
++	;;
++mipsel-*-elf*)
+ 	tm_file="${tm_file} mips/elf.h"
+ 	tmake_file=mips/t-elf
+ 	;;

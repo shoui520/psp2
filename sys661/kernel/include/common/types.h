@@ -5,7 +5,23 @@
 #ifndef TYPES_H
 #define TYPES_H
 
+#if defined(__GNUC__) && __GNUC__ < 4
+#ifndef _PSP_STDINT_TYPES_DEFINED
+#define _PSP_STDINT_TYPES_DEFINED
+typedef signed char             int8_t;
+typedef unsigned char           uint8_t;
+typedef signed short            int16_t;
+typedef unsigned short          uint16_t;
+typedef signed int              int32_t;
+typedef unsigned int            uint32_t;
+typedef signed long long        int64_t;
+typedef unsigned long long      uint64_t;
+typedef int32_t                 intptr_t;
+typedef uint32_t                uintptr_t;
+#endif
+#else
 #include <stdint.h>
+#endif
 
 /*
  * Define NULL if not already defined
@@ -88,6 +104,14 @@ typedef void *          ScePVoid;
 typedef s32             SceMode;
 /* An offset inside a file */
 typedef SceInt64        SceOff;
+
+#if !defined(__STDC_VERSION__) || __STDC_VERSION__ < 201112L
+#ifndef _Static_assert
+#define _PSP_SA_CAT(a, b)       a##b
+#define _PSP_SA_LINE(a, b)      _PSP_SA_CAT(a, b)
+#define _Static_assert(cond, m) typedef char _PSP_SA_LINE(_static_assert_, __LINE__)[(cond) ? 1 : -1]
+#endif
+#endif
 
 #endif
 

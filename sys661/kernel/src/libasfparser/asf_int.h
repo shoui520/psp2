@@ -5,6 +5,7 @@
 #ifndef ASF_INT_H
 #define ASF_INT_H
 
+#include <stddef.h>
 #include <common/types.h>
 
 /* Kernel_Library imports */
@@ -336,9 +337,9 @@ _Static_assert(sizeof(SceWmaParserCtx) == 736, "SceWmaParserCtx size");
 _Static_assert(sizeof(SceAsfHeaderInfo) == 72, "SceAsfHeaderInfo size");
 _Static_assert(sizeof(SceAsfPacketState) == 80, "SceAsfPacketState size");
 _Static_assert(sizeof(SceAsfStream) == 104, "SceAsfStream size");
-_Static_assert(__builtin_offsetof(SceAsfParser, streamById) == 13432, "streamById offset");
-_Static_assert(__builtin_offsetof(SceAsfParser, io) == 13940, "io offset");
-_Static_assert(__builtin_offsetof(SceAsfParser, drm) == 13960, "drm offset");
+_Static_assert(offsetof(SceAsfParser, streamById) == 13432, "streamById offset");
+_Static_assert(offsetof(SceAsfParser, io) == 13940, "io offset");
+_Static_assert(offsetof(SceAsfParser, drm) == 13960, "drm offset");
 
 /* Constant tables (asf_tables.c) */
 extern const u16 g_wmaBarkFreqs[25];
