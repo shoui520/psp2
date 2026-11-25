@@ -989,7 +989,7 @@ extern "C" int SwMwMoveSinkFinalizeCommand(struct SwMwCommChannel *channel,
 		} else if (request->size != 0) {
 			value2 = request->value2;
 			status = SwMwMoveSinkFinalize(sink, request->payload, value2,
-						      request->value1, value2);
+						      request->value1);
 				if (status != 12007 && status != 0) {
 					swMwTrace("[SWMW] Error %d in %s:%d\n", status,
 						  SWMW_MOVESINK_SOURCE, 925);

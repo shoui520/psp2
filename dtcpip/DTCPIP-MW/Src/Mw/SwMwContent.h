@@ -34,6 +34,22 @@ int SwMwNetFormatAddress(int kind, const void *address, char *text,
 int SwMwStatus(int status);						/* 0x81012408 */
 }
 
+/* the DTCP move message (0x24 bytes): its type word, the kxm label byte and the three
+ * payload blocks the content object sends with MV_FINALIZE */
+struct SwMwMoveMessage {
+	unsigned int type;		/* 0x00 */
+	unsigned char label;		/* 0x04 */
+	unsigned char key[8];		/* 0x05 */
+	unsigned char first[10];	/* 0x0D */
+	unsigned char second[10];	/* 0x17 */
+	unsigned char padding[3];	/* 0x21 */
+};
+
+extern "C" {
+int SwMwMoveMessageInit(struct SwMwMoveMessage *message);	/* 0x8105236c */
+int SwMwMoveMessageDone(struct SwMwMoveMessage *message);	/* 0x810523d6 */
+}
+
 /* the content object (14 dispatch slots, in table order) */
 struct SwMwContent {
 	virtual ~SwMwContent();					/* 0x00/0x04 */
@@ -42,11 +58,11 @@ struct SwMwContent {
 	virtual int close(struct SwMwUri *uri);			/* 0x10 */
 	virtual int list(void *out);				/* 0x14 */
 	virtual int setUri(int *uriSet, struct SwMwUri *uri, int mode);	/* 0x18 */
-	virtual int operation(int value, int mode);		/* 0x1c */
+	virtual int operation(struct SwMwUri *uri, int *result);	/* 0x1c */
 	virtual int request(int value, struct SwMwUri *uri, char mode);	/* 0x20 */
-	virtual int response(int value, struct SwMwUri *uri);		/* 0x24 */
-	virtual int commit(struct SwMwUri *uri, char mode);		/* 0x28 */
-	virtual int abort(struct SwMwUri *uri, char mode);		/* 0x2c */
+	virtual int finalize(struct SwMwUri *uri, struct SwMwMoveMessage *message);	/* 0x24 */
+	virtual int complete(struct SwMwUri *uri, unsigned char state);		/* 0x28 */
+	virtual int abort(struct SwMwUri *uri, unsigned char state);		/* 0x2c */
 	virtual int getState();					/* 0x30 */
 	virtual int getStateResult(struct SwMwUri *uri, int mode);	/* 0x34 */
 };
