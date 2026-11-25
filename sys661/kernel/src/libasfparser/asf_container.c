@@ -81,15 +81,19 @@ static const AsfSimpleObjRule g_asfSimpleObjTable[12] = {
 	{ g_asfGuids[GUID_DIGITAL_SIGNATURE],  ASF_OBJ_MASK_DIGITAL_SIG },
 };
 
-/* Helpers for codec & object mask decoding */
-static u32 asfMaxStreamsFromFlags(u64 objectFlags)
-{
-	return (u32)((objectFlags & 0xFEULL) >> 1);
-}
+/* Forward declarations matching Sony's definition order */
+static u32 asfMaxStreamsFromFlags(u64 objectFlags);
+static u64 asfSingleObjBits(u64 objectFlags);
+static u32 asfCodecInfoSize(u64 codecFlags);
+static u32 asfCodecCtxSize(u64 codecFlags);
+static u32 asfCountSingleObjs(u64 objectFlags);
+static u32 asfCalcSingleObjTableSize(u64 objectFlags);
+static u32 asfCalcObjTableSize(u64 objectFlags);
+static s32 asfValidateObjMask(const SceAsfParser *parser, u64 objMask);
 
-static u64 asfSingleObjBits(u64 objectFlags)
+u32 __attribute__((noinline)) asfExtractStreamId(u32 flags)
 {
-	return objectFlags & ASF_OBJ_MASK_SINGLE_VALID;
+	return flags & 0x7F;
 }
 
 s32 asfIsDrmEnabled(const SceAsfParser *parser)
@@ -99,45 +103,35 @@ s32 asfIsDrmEnabled(const SceAsfParser *parser)
 	return (parser->objectFlags & ASF_OBJ_MASK_DRM_ANY) != 0;
 }
 
-static u32 asfCodecInfoSize(u64 codecFlags)
-{
-	return (codecFlags & ASF_CODEC_FLAG_WMA) ? sizeof(SceAsfWmaWaveFormat) : 0;
-}
-
-static u32 asfCodecCtxSize(u64 codecFlags)
-{
-	return (codecFlags & ASF_CODEC_FLAG_WMA) ? sizeof(SceWmaParserCtx) : 0;
-}
-
-static u32 asfCountSingleObjs(u64 objectFlags)
-{
-	u64 bits = asfSingleObjBits(objectFlags);
-	u32 count = 0;
-	u64 bit;
-	for (bit = 1; bit != 0; bit <<= 1) {
-		if ((bits & bit) != 0)
-			count++;
-	}
-	return count;
-}
-
-static u32 asfCalcCodecWorkSize(const SceAsfParser *parser)
+static u32 __attribute__((noinline)) asfCalcCodecWorkSize(const SceAsfParser *parser)
 {
 	u32 count = asfMaxStreamsFromFlags(parser->objectFlags) + 1;
-	return (asfCodecInfoSize(parser->codecFlags) + asfCodecCtxSize(parser->codecFlags)) * count;
+	u32 infoSz = asfCodecInfoSize(parser->codecFlags);
+	u32 ctxSz = asfCodecCtxSize(parser->codecFlags);
+	return (infoSz + ctxSz) * count;
 }
 
-static u32 asfCalcObjTableSize(u64 objectFlags)
+static u32 __attribute__((noinline)) asfCalcStreamObjTableSize(u64 objectFlags)
 {
-	return (asfMaxStreamsFromFlags(objectFlags) + asfCountSingleObjs(objectFlags)) * sizeof(SceAsfObjEntry);
+	return asfMaxStreamsFromFlags(objectFlags) * sizeof(SceAsfObjEntry);
 }
 
-static u32 asfCalcDrmHeaderBufSize(const SceAsfParser *parser)
+static u32 __attribute__((noinline)) asfCalcSingleObjTableSize(u64 objectFlags)
+{
+	return asfCountSingleObjs(objectFlags) * sizeof(SceAsfObjEntry);
+}
+
+static u32 __attribute__((noinline)) asfCalcObjTableSize(u64 objectFlags)
+{
+	return asfCalcStreamObjTableSize(objectFlags) + asfCalcSingleObjTableSize(objectFlags);
+}
+
+static u32 __attribute__((noinline)) asfCalcDrmHeaderBufSize(const SceAsfParser *parser)
 {
 	return asfIsDrmEnabled(parser) ? ASF_DRM_HEADER_BUF_SIZE : 0;
 }
 
-static u32 asfCalcDrmDecryptBufSize(const SceAsfParser *parser)
+static u32 __attribute__((noinline)) asfCalcDrmDecryptBufSize(const SceAsfParser *parser)
 {
 	return asfIsDrmEnabled(parser) ? ASF_DRM_DECRYPT_BUF_SIZE : 0;
 }
@@ -172,24 +166,13 @@ void *asfMemmove(void *dst, const void *src, s32 len)
 	return dst;
 }
 
-static s32 asfValidateObjMask(const SceAsfParser *parser, u64 objMask)
-{
-	if (objMask != asfSingleObjBits(objMask))
-		return SCE_ASF_ERROR_INVALID_OBJECT_MASK;
-	u32 bits = asfCountSingleObjs(objMask);
-	if (bits != 1)
-		return SCE_ASF_ERROR_INVALID_OBJECT_MASK;
-	if ((parser->objectFlags & objMask) == 0)
-		return SCE_ASF_ERROR_OBJECT_NOT_ENABLED;
-	return 0;
-}
-
 s32 asfGetStreamObjEntry(const SceAsfParser *parser, u32 streamIdx, SceAsfObjEntry **outEntry)
 {
 	if (streamIdx >= asfMaxStreamsFromFlags(parser->objectFlags))
 		return SCE_ASF_ERROR_STREAM_IDX_OUT_OF_RANGE;
-	u32 baseSingleCount = asfCountSingleObjs(parser->objectFlags & ASF_OBJ_MASK_FILE_PROP);
-	*outEntry = &parser->objTable[baseSingleCount + streamIdx];
+	u32 baseBytes = asfCalcSingleObjTableSize(parser->objectFlags & ASF_OBJ_MASK_FILE_PROP);
+	u8 *tableBytes = (u8 *)parser->objTable;
+	*outEntry = (SceAsfObjEntry *)(tableBytes + baseBytes) + streamIdx;
 	return 0;
 }
 
@@ -199,9 +182,56 @@ s32 asfGetHeaderObjEntry(const SceAsfParser *parser, u64 objMask, SceAsfObjEntry
 	if (ret < 0)
 		return ret;
 	u64 lowerMask = (objMask - 1ULL) & parser->objectFlags;
-	u32 idx = asfMaxStreamsFromFlags(lowerMask) + asfCountSingleObjs(lowerMask);
-	*outEntry = &parser->objTable[idx];
-	return 0;
+	u32 byteOff = asfCalcObjTableSize(lowerMask);
+	u8 *tableBytes = (u8 *)parser->objTable;
+	*outEntry = (SceAsfObjEntry *)(tableBytes + byteOff);
+	return ret;
+}
+
+static u32 __attribute__((noinline)) asfCodecInfoSize(u64 codecFlags)
+{
+	return (codecFlags & ASF_CODEC_FLAG_WMA) ? sizeof(SceAsfWmaWaveFormat) : 0;
+}
+
+static u32 __attribute__((noinline)) asfCodecCtxSize(u64 codecFlags)
+{
+	return (codecFlags & ASF_CODEC_FLAG_WMA) ? sizeof(SceWmaParserCtx) : 0;
+}
+
+static u32 __attribute__((noinline)) asfCountSingleObjs(u64 objectFlags)
+{
+	u64 bits = asfSingleObjBits(objectFlags);
+	u32 count = 0;
+	u64 bit;
+	for (bit = 1; bit != 0; bit <<= 1) {
+		u32 lo = (u32)(bits & bit);
+		u32 hi = (u32)((bits & bit) >> 32);
+		count += ((lo | hi) != 0);
+	}
+	return count;
+}
+
+static s32 __attribute__((noinline)) asfValidateObjMask(const SceAsfParser *parser, u64 objMask)
+{
+	if (objMask != asfSingleObjBits(objMask))
+		return SCE_ASF_ERROR_INVALID_OBJECT_MASK;
+	u32 bits = asfCountSingleObjs(objMask);
+	if (bits == 0)
+		return SCE_ASF_ERROR_INVALID_OBJECT_MASK;
+	s32 ret = (bits < 2) ? 0 : SCE_ASF_ERROR_INVALID_OBJECT_MASK;
+	if ((parser->objectFlags & objMask) == 0)
+		ret = SCE_ASF_ERROR_OBJECT_NOT_ENABLED;
+	return ret;
+}
+
+static u32 __attribute__((noinline)) asfMaxStreamsFromFlags(u64 objectFlags)
+{
+	return (u32)((objectFlags & 0xFEULL) >> 1);
+}
+
+static u64 __attribute__((noinline)) asfSingleObjBits(u64 objectFlags)
+{
+	return objectFlags & ASF_OBJ_MASK_SINGLE_VALID;
 }
 
 s32 asfReadObjEntryInfo(const SceAsfObjEntry *entry, u64 *outOffset, u64 *outSize)
@@ -213,14 +243,46 @@ s32 asfReadObjEntryInfo(const SceAsfObjEntry *entry, u64 *outOffset, u64 *outSiz
 	return 0;
 }
 
-static void asfClearObjEntry(SceAsfObjEntry *entry)
+static void __attribute__((noinline)) asfClearObjEntry(SceAsfObjEntry *entry)
 {
 	entry->count = 0;
 	entry->offset = 0;
 	entry->size = 0;
 }
 
-static void asfInitDrmState(SceAsfParser *parser)
+static void __attribute__((noinline)) asfClearHeaderObjEntry(const SceAsfParser *parser, u64 objMask)
+{
+	SceAsfObjEntry *entry;
+	if (asfGetHeaderObjEntry(parser, objMask, &entry) >= 0)
+		asfClearObjEntry(entry);
+}
+
+static void __attribute__((noinline)) asfClearStreamObjEntry(const SceAsfParser *parser, u32 streamIdx)
+{
+	SceAsfObjEntry *entry;
+	if (asfGetStreamObjEntry(parser, streamIdx, &entry) >= 0)
+		asfClearObjEntry(entry);
+}
+
+static void __attribute__((noinline)) asfClearAllHeaderObjEntries(const SceAsfParser *parser)
+{
+	u64 bits = asfSingleObjBits(parser->objectFlags);
+	u64 bit;
+	for (bit = 1; bit != 0; bit <<= 1) {
+		if ((bits & bit) != 0)
+			asfClearHeaderObjEntry(parser, bit);
+	}
+}
+
+static void __attribute__((noinline)) asfClearAllStreamObjEntries(const SceAsfParser *parser)
+{
+	u32 maxStreams = asfMaxStreamsFromFlags(parser->objectFlags);
+	u32 i;
+	for (i = 0; i < maxStreams; i++)
+		asfClearStreamObjEntry(parser, i);
+}
+
+static s32 __attribute__((noinline)) asfInitDrmState(SceAsfParser *parser)
 {
 	parser->drm.drmStreamId = 0;
 	sceKernelMemset(&parser->drm.session, 0, sizeof(SceAsfDrmSession));
@@ -231,29 +293,23 @@ static void asfInitDrmState(SceAsfParser *parser)
 		sceKernelMemset(parser->drm.headerBuf, 0, asfCalcDrmHeaderBufSize(parser));
 		sceKernelMemset(parser->drm.decryptBuf, 0, asfCalcDrmDecryptBufSize(parser));
 	}
+	return 0;
 }
 
-s32 asfInitWorkMem(SceAsfParser *parser)
+static void __attribute__((noinline)) asfResetParsedState(SceAsfParser *parser)
 {
-	u32 i;
-	s32 ret = 0;
-	u8 *base = (u8 *)parser->workBuf;
+	asfClearAllHeaderObjEntries(parser);
+	asfClearAllStreamObjEntries(parser);
+	asfInitDrmState(parser);
+}
 
-	parser->streamCount = 0;
-	for (i = 0; i < ASF_MAX_STREAMS; i++) {
-		sceKernelMemset(&parser->streams[i], 0, sizeof(SceAsfStream));
-		parser->streamById[i] = NULL;
-	}
-
-	parser->codecWorkBase = base;
-	if (((u32)base & 7) != 0)
-		ret = SCE_ASF_ERROR_UNALIGNED_WORKBUF;
-
-	/* Assign per-stream codecInfo and codecCtx pointers */
+static void __attribute__((noinline)) asfAssignStreamWorkMem(SceAsfParser *parser)
+{
 	u32 maxStreams = asfMaxStreamsFromFlags(parser->objectFlags);
 	u32 infoSz = asfCodecInfoSize(parser->codecFlags);
 	u32 ctxSz = asfCodecCtxSize(parser->codecFlags);
-	u8 *ptr = base;
+	u8 *ptr = (u8 *)parser->codecWorkBase;
+	u32 i;
 	for (i = 0; i < maxStreams; i++) {
 		parser->streams[i].codecInfo = ptr;
 		parser->streams[i].codecCtx = ptr + infoSz;
@@ -261,6 +317,15 @@ s32 asfInitWorkMem(SceAsfParser *parser)
 	}
 	parser->tempStream.codecInfo = ptr;
 	parser->tempStream.codecCtx = ptr + infoSz;
+}
+
+static s32 __attribute__((noinline)) asfAssignWorkMem(SceAsfParser *parser)
+{
+	u8 *base = (u8 *)parser->workBuf;
+	s32 ret = (((u32)base & 7) != 0) ? SCE_ASF_ERROR_UNALIGNED_WORKBUF : 0;
+
+	parser->codecWorkBase = base;
+	asfAssignStreamWorkMem(parser);
 
 	u32 codecBytes = asfCalcCodecWorkSize(parser);
 	parser->objTable = (SceAsfObjEntry *)(base + codecBytes);
@@ -270,64 +335,58 @@ s32 asfInitWorkMem(SceAsfParser *parser)
 		parser->drm.decryptBuf = base + off + asfCalcDrmHeaderBufSize(parser);
 		parser->drm.decryptBufSize = asfCalcDrmDecryptBufSize(parser);
 	}
+	return ret;
+}
 
+static void __attribute__((noinline)) asfCopyCodecInfo(const SceAsfParser *parser, void *dst, const void *src)
+{
+	sceKernelMemcpy(dst, src, asfCodecInfoSize(parser->codecFlags));
+}
+
+static void __attribute__((noinline)) asfCopyCodecCtx(const SceAsfParser *parser, void *dst, const void *src)
+{
+	sceKernelMemcpy(dst, src, asfCodecCtxSize(parser->codecFlags));
+}
+
+s32 asfInitWorkMem(SceAsfParser *parser)
+{
+	u32 i;
+
+	parser->streamCount = 0;
+	for (i = 0; i < ASF_MAX_STREAMS; i++) {
+		sceKernelMemset(&parser->streams[i], 0, sizeof(SceAsfStream));
+		parser->streamById[i] = NULL;
+	}
+
+	s32 ret = asfAssignWorkMem(parser);
 	if (ret < 0)
 		return ret;
 
-	/* Clear all indexed object entries */
-	u64 bits = asfSingleObjBits(parser->objectFlags);
-	u64 bit;
-	for (bit = 1; bit != 0; bit <<= 1) {
-		if ((bits & bit) != 0) {
-			SceAsfObjEntry *entry;
-			if (asfGetHeaderObjEntry(parser, bit, &entry) >= 0)
-				asfClearObjEntry(entry);
-		}
-	}
-	for (i = 0; i < maxStreams; i++) {
-		SceAsfObjEntry *entry;
-		if (asfGetStreamObjEntry(parser, i, &entry) >= 0)
-			asfClearObjEntry(entry);
-	}
-
-	asfInitDrmState(parser);
+	asfResetParsedState(parser);
 	return 0;
 }
 
 /* GUID I/O and comparison */
-static s32 asfReadGuid(SceAsfIoContext *io, u8 guid[16])
+static s32 __attribute__((noinline)) asfReadGuid(SceAsfIoContext *io, SceAsfGuid *guid)
 {
-	u32 d1;
-	u16 d2, d3;
 	s32 ret;
 	s32 i;
 
-	ret = asfIoReadU32(io, &d1);
+	ret = asfIoReadU32(io, &guid->timeLow);
 	if (ret < 0)
 		return ret;
-	guid[0] = (u8)(d1 & 0xFF);
-	guid[1] = (u8)((d1 >> 8) & 0xFF);
-	guid[2] = (u8)((d1 >> 16) & 0xFF);
-	guid[3] = (u8)((d1 >> 24) & 0xFF);
-
-	ret = asfIoReadU16(io, &d2);
+	ret = asfIoReadU16(io, &guid->timeMid);
 	if (ret < 0)
 		return ret;
-	guid[4] = (u8)(d2 & 0xFF);
-	guid[5] = (u8)((d2 >> 8) & 0xFF);
-
-	ret = asfIoReadU16(io, &d3);
+	ret = asfIoReadU16(io, &guid->timeHiAndVer);
 	if (ret < 0)
 		return ret;
-	guid[6] = (u8)(d3 & 0xFF);
-	guid[7] = (u8)((d3 >> 8) & 0xFF);
-
 	for (i = 0; i < 8; i++) {
-		ret = asfIoReadU8(io, &guid[8 + i]);
+		ret = asfIoReadU8(io, &guid->clockSeqAndNode[i]);
 		if (ret < 0)
 			return ret;
 	}
-	return 0;
+	return ret;
 }
 
 static s32 asfCompareGuid(const u8 *a, const u8 *b)
@@ -361,19 +420,27 @@ static u16 asfStreamTypeFromGuid(const u8 *guid)
 	return ASF_STREAM_TYPE_UNKNOWN;
 }
 
-static s32 asfCheckObjMinSize(u64 objMask, u64 objSize)
+static void __attribute__((noinline)) asfLookupObjMinSize(u64 objMask, u32 *outMinSize, s32 *outErrCode)
 {
-	u32 minSize = 24;
-	s32 errCode = SCE_ASF_ERROR_UNKNOWN_OBJ_SIZE;
 	u32 i;
+	*outMinSize = 24;
+	*outErrCode = SCE_ASF_ERROR_UNKNOWN_OBJ_SIZE;
 
 	for (i = 0; i < 15; i++) {
 		if ((g_asfMinSizeTable[i].mask & objMask) != 0) {
-			minSize = g_asfMinSizeTable[i].minSize;
-			errCode = g_asfMinSizeTable[i].errCode;
-			break;
+			*outMinSize = g_asfMinSizeTable[i].minSize;
+			*outErrCode = g_asfMinSizeTable[i].errCode;
+			return;
 		}
 	}
+}
+
+static s32 __attribute__((noinline)) asfCheckObjMinSize(u64 objMask, u64 objSize)
+{
+	u32 minSize;
+	s32 errCode;
+
+	asfLookupObjMinSize(objMask, &minSize, &errCode);
 	if (objSize < (u64)minSize)
 		return errCode;
 	return 0;
@@ -404,9 +471,11 @@ static s32 asfReadAndRecordStreamObj(SceAsfParser *parser, u32 streamIdx, u64 *o
 		return ret;
 
 	SceAsfObjEntry *entry;
-	if (asfGetStreamObjEntry(parser, streamIdx, &entry) >= 0)
-		asfRecordObjEntry(entry, (u64)(pos - 24), *outSize);
-	return 0;
+	ret = asfGetStreamObjEntry(parser, streamIdx, &entry);
+	if (ret < 0)
+		return 0;
+	asfRecordObjEntry(entry, (u64)(pos - 24), *outSize);
+	return ret;
 }
 
 static s32 asfReadAndRecordHeaderObj(SceAsfParser *parser, u64 objMask, u64 *outSize)
@@ -425,12 +494,14 @@ static s32 asfReadAndRecordHeaderObj(SceAsfParser *parser, u64 objMask, u64 *out
 		return ret;
 
 	SceAsfObjEntry *entry;
-	if (asfGetHeaderObjEntry(parser, objMask, &entry) >= 0)
-		asfRecordObjEntry(entry, (u64)(pos - 24), *outSize);
-	return 0;
+	ret = asfGetHeaderObjEntry(parser, objMask, &entry);
+	if (ret < 0)
+		return 0;
+	asfRecordObjEntry(entry, (u64)(pos - 24), *outSize);
+	return ret;
 }
 
-static s32 asfSkipUnknownObj(SceAsfIoContext *io, u64 *outSize)
+static s32 __attribute__((noinline)) asfSkipGenericObj(SceAsfIoContext *io, u64 *outSize)
 {
 	s32 ret = asfIoReadU64(io, outSize);
 	if (ret < 0)
@@ -438,6 +509,12 @@ static s32 asfSkipUnknownObj(SceAsfIoContext *io, u64 *outSize)
 	if (*outSize < 24)
 		return SCE_ASF_ERROR_UNKNOWN_OBJ_SIZE;
 	return asfIoSkip(io, (s64)(*outSize - 24));
+}
+
+static s32 __attribute__((noinline)) asfSkipPaddingObj(SceAsfIoContext *io, const SceAsfGuid *guid, u64 *outSize)
+{
+	(void)guid;
+	return asfSkipGenericObj(io, outSize);
 }
 
 /* Parse Content Encryption Object (0x40000) */
@@ -498,7 +575,7 @@ static s32 asfParseContentEncryption(SceAsfParser *parser, u64 *remSize)
 	*remSize -= sess->licenseUrlSize;
 
 	sess->encType = 1;
-	return 0;
+	return ret;
 }
 
 /* Parse Extended Content Encryption Object (0x80000) */
@@ -521,29 +598,34 @@ static s32 asfParseExtContentEncryption(SceAsfParser *parser, u64 *remSize)
 		return ret;
 	*remSize -= sess->contentEncSize;
 	sess->encType = 2;
+	return ret;
+}
+
+static s32 __attribute__((noinline)) asfParseEncryptionBody(SceAsfParser *parser, u64 objMask, u64 *remSize)
+{
+	if (objMask == ASF_OBJ_MASK_CONTENT_ENC)
+		return asfParseContentEncryption(parser, remSize);
+	if (objMask == ASF_OBJ_MASK_EXT_ENC)
+		return asfParseExtContentEncryption(parser, remSize);
 	return 0;
 }
 
-static s32 asfParseSimpleHeaderObj(SceAsfParser *parser, u64 objMask, u64 *outSize)
+static s32 __attribute__((noinline)) asfParseSimpleHeaderObj(SceAsfParser *parser, u64 objMask, u64 *outSize)
 {
 	s32 ret = asfReadAndRecordHeaderObj(parser, objMask, outSize);
 	if (ret < 0)
 		return ret;
 
 	u64 rem = *outSize - 24;
-	if (objMask == ASF_OBJ_MASK_CONTENT_ENC)
-		ret = asfParseContentEncryption(parser, &rem);
-	else if (objMask == ASF_OBJ_MASK_EXT_ENC)
-		ret = asfParseExtContentEncryption(parser, &rem);
-
+	ret = asfParseEncryptionBody(parser, objMask, &rem);
 	if (ret < 0)
 		return ret;
 	return asfIoSkip(&parser->io, (s64)rem);
 }
 
-/* Parse WMA v2 WAVEFORMATEX codec-specific data */
-static s32 asfParseWmaWaveFormat(SceAsfWmaWaveFormat *fmt, SceAsfIoContext *io,
-                                 u64 *bytesRead, u32 typeSpecLen, u32 errCorrLen)
+/* Parse WMA version 2 WAVEFORMATEX codec-specific data */
+static s32 __attribute__((noinline)) asfParseWmaWaveFormat(SceAsfWmaWaveFormat *fmt, SceAsfIoContext *io,
+                                                           u64 *bytesRead, u32 typeSpecLen, u32 errCorrLen)
 {
 	s32 ret;
 
@@ -562,6 +644,7 @@ static s32 asfParseWmaWaveFormat(SceAsfWmaWaveFormat *fmt, SceAsfIoContext *io,
 	ret = asfIoReadU16(io, &fmt->blockAlign);
 	if (ret < 0)
 		return ret;
+	(void)asfGetMaxBlockAlign();
 	/* Skip wBitsPerSample (2) + cbSize (2) + dwSamplesPerBlock (4) */
 	ret = asfIoSkip(io, 8);
 	if (ret < 0)
@@ -574,7 +657,7 @@ static s32 asfParseWmaWaveFormat(SceAsfWmaWaveFormat *fmt, SceAsfIoContext *io,
 		return ret;
 
 	*bytesRead += (u64)(typeSpecLen + errCorrLen - 2);
-	return 0;
+	return ret;
 }
 
 static s32 asfParseAudioStreamFormat(SceAsfStream *stream, u64 codecFlags, SceAsfIoContext *io,
@@ -621,8 +704,8 @@ static s32 asfParseStreamSpecificData(SceAsfStream *stream, u64 codecFlags, SceA
 
 static s32 asfParseStreamBody(SceAsfStream *stream, u64 codecFlags, SceAsfIoContext *io, u64 *bytesRead)
 {
-	u8 streamTypeGuid[16];
-	u8 errCorrGuid[16];
+	SceAsfGuid streamTypeGuid;
+	SceAsfGuid errCorrGuid;
 	u64 timeOffset;
 	u32 typeSpecLen;
 	u32 errCorrLen;
@@ -630,12 +713,12 @@ static s32 asfParseStreamBody(SceAsfStream *stream, u64 codecFlags, SceAsfIoCont
 	u32 reserved;
 	s32 ret;
 
-	ret = asfReadGuid(io, streamTypeGuid);
+	ret = asfReadGuid(io, &streamTypeGuid);
 	if (ret < 0)
 		return ret;
-	stream->streamType = asfStreamTypeFromGuid(streamTypeGuid);
+	stream->streamType = asfStreamTypeFromGuid((const u8 *)&streamTypeGuid);
 
-	ret = asfReadGuid(io, errCorrGuid);
+	ret = asfReadGuid(io, &errCorrGuid);
 	if (ret < 0)
 		return ret;
 	ret = asfIoReadU64(io, &timeOffset);
@@ -651,7 +734,7 @@ static s32 asfParseStreamBody(SceAsfStream *stream, u64 codecFlags, SceAsfIoCont
 	if (ret < 0)
 		return ret;
 
-	u32 streamNum = flags & 0x7F;
+	u32 streamNum = asfExtractStreamId(flags);
 	stream->streamNumber = streamNum;
 	if (streamNum == 0)
 		return SCE_ASF_ERROR_INVALID_STREAM_ID;
@@ -741,20 +824,22 @@ static s32 asfParseStreamProperties(SceAsfParser *parser, u64 *outSize)
 		dst->streamType = parser->tempStream.streamType;
 		dst->codecId = parser->tempStream.codecId;
 		dst->stateFlags = parser->tempStream.stateFlags;
-		sceKernelMemcpy(dst->codecInfo, parser->tempStream.codecInfo, asfCodecInfoSize(parser->codecFlags));
-		sceKernelMemcpy(dst->codecCtx, parser->tempStream.codecCtx, asfCodecCtxSize(parser->codecFlags));
-		dst->reserved14 = parser->tempStream.reserved14;
+		asfCopyCodecInfo(parser, dst->codecInfo, parser->tempStream.codecInfo);
+		asfCopyCodecCtx(parser, dst->codecCtx, parser->tempStream.codecCtx);
+		dst->reserved = parser->tempStream.reserved;
 		sceKernelMemcpy(&dst->pkt, &parser->tempStream.pkt, sizeof(SceAsfPacketState));
-		parser->streamCount++;
 
-		ret = asfRegisterStream(parser, dst);
+		u32 curIdx = parser->streamCount;
+		parser->streamCount = curIdx + 1;
+
+		ret = asfRegisterStream(parser, &parser->streams[curIdx]);
 		if (ret < 0)
 			return ret;
 	}
 
 	if (bytesRead < *outSize)
 		return asfIoSkip(io, (s64)(*outSize - bytesRead));
-	return 0;
+	return ret;
 }
 
 /* Extended Stream Properties Object helpers */
@@ -854,24 +939,58 @@ static s32 asfParseExtStreamProperties(SceAsfParser *parser, u64 *outSize)
 	return 0;
 }
 
-static s32 asfParseHeaderExtSubObject(SceAsfParser *parser, u64 *outSize)
+typedef s32 (*AsfObjHandlerFn)(SceAsfParser *parser, u64 *outSize);
+
+typedef struct AsfObjHandlerRule {
+	const u8 *guid;
+	AsfObjHandlerFn handler;
+} AsfObjHandlerRule;
+
+static const u8 *g_asfPaddingGuidPtr = g_asfGuids[GUID_PADDING];
+
+static const u8 *g_asfHeaderExtSkipGuids[12] = {
+	g_asfGuids[20], g_asfGuids[21], g_asfGuids[22], g_asfGuids[23],
+	g_asfGuids[24], g_asfGuids[25], g_asfGuids[26], g_asfGuids[27],
+	g_asfGuids[28], g_asfGuids[29], g_asfGuids[30], g_asfGuids[31],
+};
+
+static s32 __attribute__((noinline)) asfParseHeaderExtSubObject(SceAsfParser *parser, u64 *outSize)
 {
+	static AsfObjHandlerRule extHandler = {
+		g_asfGuids[GUID_EXT_STREAM_PROP], asfParseExtStreamProperties
+	};
 	SceAsfIoContext *io = &parser->io;
-	u8 guid[16];
+	SceAsfGuid guid;
 	u32 i;
 
-	s32 ret = asfReadGuid(io, guid);
+	s32 ret = asfReadGuid(io, &guid);
 	if (ret < 0)
 		return ret;
 
-	if (asfCompareGuid(guid, g_asfGuids[GUID_EXT_STREAM_PROP]) == 0)
-		return asfParseExtStreamProperties(parser, outSize);
+	if (asfCompareGuid((const u8 *)&guid, extHandler.guid) == 0)
+		return extHandler.handler(parser, outSize);
 
-	for (i = 20; i < 32; i++) {
-		if (asfCompareGuid(guid, g_asfGuids[i]) == 0)
-			return asfSkipUnknownObj(io, outSize);
+	for (i = 0; i < 12; i++) {
+		if (asfCompareGuid((const u8 *)&guid, g_asfHeaderExtSkipGuids[i]) == 0)
+			return asfSkipGenericObj(io, outSize);
 	}
-	return asfSkipUnknownObj(io, outSize);
+	return asfSkipPaddingObj(io, &guid, outSize);
+}
+
+static s32 __attribute__((noinline)) asfParseHeaderExtLoop(SceAsfParser *parser, u64 dataSize)
+{
+	u64 consumed = 0;
+	s32 ret = 0;
+	while (consumed < dataSize) {
+		u64 subSize = 0;
+		ret = asfParseHeaderExtSubObject(parser, &subSize);
+		if (ret < 0)
+			return ret;
+		consumed += subSize;
+	}
+	if (consumed != dataSize)
+		return SCE_ASF_ERROR_HEADER_SIZE;
+	return ret;
 }
 
 static s32 asfParseHeaderExtension(SceAsfParser *parser, u64 *outSize)
@@ -891,63 +1010,60 @@ static s32 asfParseHeaderExtension(SceAsfParser *parser, u64 *outSize)
 	if (ret < 0)
 		return ret;
 
-	u64 consumed = 0;
-	while (consumed < (u64)dataSize) {
-		u64 subSize = 0;
-		ret = asfParseHeaderExtSubObject(parser, &subSize);
-		if (ret < 0)
-			return ret;
-		consumed += subSize;
-	}
-	if (consumed != (u64)dataSize)
-		return SCE_ASF_ERROR_HEADER_SIZE;
-	return 0;
+	return asfParseHeaderExtLoop(parser, (u64)dataSize);
 }
 
 static s32 asfParseHeaderChildObject(SceAsfParser *parser, u64 *outSize, u32 *filePropCount)
 {
+	static AsfObjHandlerRule headerHandlers[4] = {
+		{ g_asfGuids[GUID_FILE_PROPERTIES],   asfParseFileProperties },
+		{ g_asfGuids[GUID_STREAM_PROPERTIES], asfParseStreamProperties },
+		{ g_asfGuids[GUID_EXT_STREAM_ALT],    asfParseStreamProperties },
+		{ g_asfGuids[GUID_HEADER_EXTENSION],  asfParseHeaderExtension },
+	};
 	SceAsfIoContext *io = &parser->io;
-	u8 guid[16];
+	SceAsfGuid guid;
 	u32 i;
 
 	*outSize = 0;
-	s32 ret = asfReadGuid(io, guid);
+	s32 ret = asfReadGuid(io, &guid);
 	if (ret < 0)
 		return ret;
 
-	if (asfCompareGuid(guid, g_asfGuids[GUID_FILE_PROPERTIES]) == 0) {
-		ret = asfParseFileProperties(parser, outSize);
-		(*filePropCount)++;
-		return ret;
+	for (i = 0; i < 4; i++) {
+		if (asfCompareGuid((const u8 *)&guid, headerHandlers[i].guid) == 0) {
+			AsfObjHandlerFn fn = headerHandlers[i].handler;
+			ret = fn(parser, outSize);
+			if (fn == asfParseFileProperties)
+				(*filePropCount)++;
+			return ret;
+		}
 	}
-	if (asfCompareGuid(guid, g_asfGuids[GUID_STREAM_PROPERTIES]) == 0 ||
-	    asfCompareGuid(guid, g_asfGuids[GUID_EXT_STREAM_ALT]) == 0) {
-		return asfParseStreamProperties(parser, outSize);
-	}
-	if (asfCompareGuid(guid, g_asfGuids[GUID_HEADER_EXTENSION]) == 0)
-		return asfParseHeaderExtension(parser, outSize);
 
 	for (i = 0; i < 12; i++) {
-		if (asfCompareGuid(guid, g_asfSimpleObjTable[i].guid) == 0)
+		if (asfCompareGuid((const u8 *)&guid, g_asfSimpleObjTable[i].guid) == 0)
 			return asfParseSimpleHeaderObj(parser, g_asfSimpleObjTable[i].mask, outSize);
 	}
 
-	return asfSkipUnknownObj(io, outSize);
+	if (asfCompareGuid((const u8 *)&guid, g_asfPaddingGuidPtr) == 0)
+		return asfSkipGenericObj(io, outSize);
+
+	return asfSkipPaddingObj(io, &guid, outSize);
 }
 
 s32 asfParseHeaderObject(SceAsfParser *parser)
 {
 	SceAsfIoContext *io = &parser->io;
-	u8 guid[16];
+	SceAsfGuid guid;
 	u64 headerSize;
 	u32 numSubObjs;
 	u32 filePropCount = 0;
 	s32 ret;
 
-	ret = asfReadGuid(io, guid);
+	ret = asfReadGuid(io, &guid);
 	if (ret < 0)
 		return ret;
-	if (asfCompareGuid(guid, g_asfGuids[GUID_HEADER]) != 0)
+	if (asfCompareGuid((const u8 *)&guid, g_asfGuids[GUID_HEADER]) != 0)
 		return SCE_ASF_ERROR_INVALID_HEADER_GUID;
 
 	ret = asfIoReadU64(io, &headerSize);
@@ -959,7 +1075,7 @@ s32 asfParseHeaderObject(SceAsfParser *parser)
 	ret = asfIoReadU32(io, &numSubObjs);
 	if (ret < 0)
 		return ret;
-	/* Skip Reserved1 (1) + Reserved2 (1) */
+	/* Skip header reserved bytes (2 bytes) */
 	ret = asfIoSkip(io, 2);
 	if (ret < 0)
 		return ret;
@@ -995,17 +1111,17 @@ s32 asfParseHeaderObject(SceAsfParser *parser)
 s32 asfParseDataObject(SceAsfParser *parser)
 {
 	SceAsfIoContext *io = &parser->io;
-	u8 guid[16];
-	u8 fileId[16];
+	SceAsfGuid guid;
+	SceAsfGuid fileId;
 	u64 dataObjSize;
 	u64 totalPackets;
 	u16 reserved;
 	s32 ret;
 
-	ret = asfReadGuid(io, guid);
+	ret = asfReadGuid(io, &guid);
 	if (ret < 0)
 		return ret;
-	if (asfCompareGuid(guid, g_asfGuids[GUID_DATA]) != 0)
+	if (asfCompareGuid((const u8 *)&guid, g_asfGuids[GUID_DATA]) != 0)
 		return SCE_ASF_ERROR_DATA_OBJ_GUID;
 
 	ret = asfIoReadU64(io, &dataObjSize);
@@ -1014,7 +1130,7 @@ s32 asfParseDataObject(SceAsfParser *parser)
 	if (dataObjSize < 50)
 		return SCE_ASF_ERROR_DATA_OBJ_INVALID;
 
-	ret = asfReadGuid(io, fileId);
+	ret = asfReadGuid(io, &fileId);
 	if (ret < 0)
 		return ret;
 	ret = asfIoReadU64(io, &totalPackets);
@@ -1039,7 +1155,7 @@ s32 asfParseDataObject(SceAsfParser *parser)
 }
 
 /* Stream codec lifecycle and frame dispatch */
-static s32 asfRestoreStreamFilePos(SceAsfStream *stream)
+static s32 __attribute__((noinline)) asfRestoreStreamFilePos(SceAsfStream *stream)
 {
 	s64 res = asfIoSeek(stream->pkt.io, stream->pkt.savedFilePos, ASF_SEEK_SET);
 	if (res < 0)
@@ -1047,7 +1163,7 @@ static s32 asfRestoreStreamFilePos(SceAsfStream *stream)
 	return 0;
 }
 
-static s32 asfSaveStreamFilePos(SceAsfStream *stream)
+static s32 __attribute__((noinline)) asfSaveStreamFilePos(SceAsfStream *stream)
 {
 	s64 pos = asfIoTell(stream->pkt.io);
 	stream->pkt.savedFilePos = pos;
@@ -1056,21 +1172,44 @@ static s32 asfSaveStreamFilePos(SceAsfStream *stream)
 	return 0;
 }
 
+static void __attribute__((noinline)) asfClearTimeMs(u32 *timeMs)
+{
+	*timeMs = 0;
+}
+
+static s32 __attribute__((noinline)) asfInitAudioCodec(SceAsfStream *stream, u64 codecFlags)
+{
+	if (stream->codecId == ASF_CODEC_ID_WMA_V2 && (codecFlags & ASF_CODEC_FLAG_WMA) != 0)
+		return wmaInitParser((SceWmaParserCtx *)stream->codecCtx,
+		                     (const SceAsfWmaWaveFormat *)stream->codecInfo);
+	return 0;
+}
+
+static s32 __attribute__((noinline)) asfInitStreamCodec(SceAsfStream *stream, u64 codecFlags)
+{
+	if (stream->streamType == ASF_STREAM_TYPE_AUDIO)
+		return asfInitAudioCodec(stream, codecFlags);
+	return 0;
+}
+
 s32 asfInitAllCodecs(SceAsfParser *parser)
 {
 	u32 i;
 	for (i = 0; i < parser->streamCount; i++) {
-		SceAsfStream *stream = &parser->streams[i];
-		if (stream->streamType == ASF_STREAM_TYPE_AUDIO &&
-		    stream->codecId == ASF_CODEC_ID_WMA_V2 &&
-		    (parser->codecFlags & ASF_CODEC_FLAG_WMA) != 0) {
-			s32 ret = wmaInitParser((SceWmaParserCtx *)stream->codecCtx,
-			                        (const SceAsfWmaWaveFormat *)stream->codecInfo);
-			if (ret < 0)
-				return ret;
-		}
+		s32 ret = asfInitStreamCodec(&parser->streams[i], parser->codecFlags);
+		if (ret < 0)
+			return ret;
 	}
 	return 0;
+}
+
+static s32 __attribute__((noinline)) asfReadAudioFrame(SceAsfStream *stream, u64 codecFlags, SceAsfWmaFrame *frame)
+{
+	if (stream->codecId != ASF_CODEC_ID_WMA_V2 || (codecFlags & ASF_CODEC_FLAG_WMA) == 0)
+		return SCE_ASF_ERROR_UNSUPPORTED_STREAM;
+	SceAsfWmaWaveFormat *fmt = (SceAsfWmaWaveFormat *)stream->codecInfo;
+	stream->pkt.drm->blockAlign = fmt->blockAlign;
+	return wmaReadNextFrame((SceWmaParserCtx *)stream->codecCtx, stream, frame);
 }
 
 s32 asfReadNextFrame(SceAsfStream *stream, u64 codecFlags, SceAsfWmaFrame *frame)
@@ -1079,18 +1218,22 @@ s32 asfReadNextFrame(SceAsfStream *stream, u64 codecFlags, SceAsfWmaFrame *frame
 	if (ret < 0)
 		return ret;
 
-	if (stream->streamType != ASF_STREAM_TYPE_AUDIO ||
-	    stream->codecId != ASF_CODEC_ID_WMA_V2 ||
-	    (codecFlags & ASF_CODEC_FLAG_WMA) == 0) {
+	if (stream->streamType != ASF_STREAM_TYPE_AUDIO)
 		return SCE_ASF_ERROR_UNSUPPORTED_STREAM;
-	}
 
-	SceAsfWmaWaveFormat *fmt = (SceAsfWmaWaveFormat *)stream->codecInfo;
-	stream->pkt.drm->blockAlign = fmt->blockAlign;
-	ret = wmaReadNextFrame((SceWmaParserCtx *)stream->codecCtx, stream, frame);
+	ret = asfReadAudioFrame(stream, codecFlags, frame);
 	if (ret >= 0)
 		return asfSaveStreamFilePos(stream);
 	return ret;
+}
+
+static s32 __attribute__((noinline)) asfSeekAudioFrame(SceAsfStream *stream, u64 codecFlags, u32 *timeMs)
+{
+	if (stream->codecId != ASF_CODEC_ID_WMA_V2 || (codecFlags & ASF_CODEC_FLAG_WMA) == 0)
+		return SCE_ASF_ERROR_UNSUPPORTED_STREAM;
+	SceAsfWmaWaveFormat *fmt = (SceAsfWmaWaveFormat *)stream->codecInfo;
+	stream->pkt.drm->blockAlign = fmt->blockAlign;
+	return wmaSeekFrame((SceWmaParserCtx *)stream->codecCtx, stream, timeMs);
 }
 
 s32 asfSeekStreamFrame(SceAsfStream *stream, u64 codecFlags, u32 *timeMs)
@@ -1099,29 +1242,29 @@ s32 asfSeekStreamFrame(SceAsfStream *stream, u64 codecFlags, u32 *timeMs)
 	if (ret < 0)
 		return ret;
 
-	if (stream->streamType != ASF_STREAM_TYPE_AUDIO ||
-	    stream->codecId != ASF_CODEC_ID_WMA_V2 ||
-	    (codecFlags & ASF_CODEC_FLAG_WMA) == 0) {
+	if (stream->streamType != ASF_STREAM_TYPE_AUDIO)
 		return SCE_ASF_ERROR_UNSUPPORTED_STREAM;
-	}
 
-	SceAsfWmaWaveFormat *fmt = (SceAsfWmaWaveFormat *)stream->codecInfo;
-	stream->pkt.drm->blockAlign = fmt->blockAlign;
-	ret = wmaSeekFrame((SceWmaParserCtx *)stream->codecCtx, stream, timeMs);
+	ret = asfSeekAudioFrame(stream, codecFlags, timeMs);
 	if (ret >= 0)
 		return asfSaveStreamFilePos(stream);
 	return ret;
 }
 
+static void __attribute__((noinline)) asfGetAudioStreamTime(SceAsfStream *stream, u64 codecFlags, u32 *timeMs)
+{
+	if (stream->codecId == ASF_CODEC_ID_WMA_V2 && (codecFlags & ASF_CODEC_FLAG_WMA) != 0)
+		wmaGetCurTime((const SceWmaParserCtx *)stream->codecCtx, stream, timeMs);
+	else
+		asfClearTimeMs(timeMs);
+}
+
 void asfGetStreamTime(SceAsfStream *stream, u64 codecFlags, u32 *timeMs)
 {
-	if (stream->streamType == ASF_STREAM_TYPE_AUDIO &&
-	    stream->codecId == ASF_CODEC_ID_WMA_V2 &&
-	    (codecFlags & ASF_CODEC_FLAG_WMA) != 0) {
-		wmaGetCurTime((const SceWmaParserCtx *)stream->codecCtx, timeMs);
-	} else {
-		*timeMs = 0;
-	}
+	if (stream->streamType == ASF_STREAM_TYPE_AUDIO)
+		asfGetAudioStreamTime(stream, codecFlags, timeMs);
+	else
+		asfClearTimeMs(timeMs);
 }
 
 s32 asfSetDrmCallbacks(SceAsfParser *parser, const SceAsfDrmCallbacks *cbs)

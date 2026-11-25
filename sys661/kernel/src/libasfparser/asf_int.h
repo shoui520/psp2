@@ -130,10 +130,10 @@ typedef struct SceAsfDrmCallbacks {
 } SceAsfDrmCallbacks;
 
 typedef struct SceAsfGuid {
-	u32 data1;
-	u16 data2;
-	u16 data3;
-	u8 data4[8];
+	u32 timeLow;
+	u16 timeMid;
+	u16 timeHiAndVer;
+	u8 clockSeqAndNode[8];
 } SceAsfGuid;
 
 typedef struct SceAsfObjEntry {
@@ -149,7 +149,7 @@ typedef struct SceAsfIoContext {
 } SceAsfIoContext;
 
 typedef struct SceAsfDrmSession {
-	u32 reserved0;
+	u32 reserved;
 	void *userArg;
 	u8 *contentEncData;
 	u32 contentEncSize;
@@ -185,7 +185,7 @@ typedef struct SceAsfDrmContext {
 typedef struct SceAsfHeaderInfo {
 	u64 headerSize;
 	u64 dataSize;
-	u64 reserved10;
+	u64 reserved;
 	u64 dataPacketsCount;
 	u64 playDuration;
 	u64 sendDuration;
@@ -202,14 +202,14 @@ typedef struct SceAsfPacketState {
 	u8 errCorrFlags;
 	u8 lengthTypeFlags;
 	u8 propertyFlags;
-	u8 pad0[3];
+	u8 padBytes[3];
 	u32 packetLength;
 	u32 paddingLength;
 	u32 sendTime;
 	u16 duration;
 	u8 subPayloadDelta;
 	u8 payloadCountFlags;
-	u32 reserved18;
+	u32 reserved;
 	u32 payloadIndex;
 	u32 subPayloadIndex;
 	u32 packetOffset;
@@ -219,7 +219,7 @@ typedef struct SceAsfPacketState {
 	SceAsfHeaderInfo *headerInfo;
 	SceAsfIoContext *io;
 	SceAsfDrmContext *drm;
-	u32 pad44;
+	u32 alignPad;
 	s64 savedFilePos;
 } SceAsfPacketState;
 
@@ -230,13 +230,13 @@ typedef struct SceAsfStream {
 	u32 stateFlags;
 	void *codecInfo;
 	void *codecCtx;
-	u32 reserved14;
+	u32 reserved;
 	SceAsfPacketState pkt;
 } SceAsfStream;
 
 typedef struct SceAsfWmaWaveFormat {
 	u16 channels;
-	u16 pad02;
+	u16 pad;
 	u32 sampleRate;
 	u32 avgBytesPerSec;
 	u16 blockAlign;
@@ -263,7 +263,7 @@ typedef struct SceWmaBitReader {
 
 typedef struct SceWmaChannel {
 	const u16 *coefVlc;
-	u32 reserved04;
+	u32 reserved;
 	u32 coefsCount;
 	u32 coded;
 } SceWmaChannel;
@@ -303,7 +303,7 @@ typedef struct SceWmaParserCtx {
 	u32 packetReady;
 	u32 bitReservoirSkipBits;
 	SceWmaBitReader br;
-	u32 pad2C8;
+	u32 alignPad;
 	u32 curTimeMs;
 	u32 frameDurationMs;
 	u32 flagDiscontinuity;
@@ -315,14 +315,12 @@ typedef struct SceAsfParser {
 	u64 codecFlags;
 	u64 objectFlags;
 	u32 drmEnableFlags;
-	u32 reserved14;
-	u32 reserved18;
-	u32 reserved1C;
+	u32 reservedHeader[3];
 	u32 needMem;
 	void *workBuf;
 	SceAsfHeaderInfo header;
 	u32 streamCount;
-	u32 reserved74;
+	u32 reservedCountPad;
 	SceAsfStream streams[ASF_MAX_STREAMS];
 	SceAsfStream tempStream;
 	SceAsfStream *streamById[ASF_MAX_STREAMS];
@@ -371,10 +369,11 @@ s32 asfPacketPeekPayload(void *dst, SceAsfPacketState *pkt, u32 size);
 s32 asfPacketAdvancePayload(SceAsfPacketState *pkt);
 s32 asfPacketIsPayloadDone(SceAsfPacketState *pkt);
 s32 asfPacketSeekToTime(SceAsfPacketState *pkt, u32 targetTimeMs);
-s32 asfPacketTimeDelta(SceAsfPacketState *pkt, u32 targetTimeMs);
+s64 asfPacketTimeDelta(SceAsfPacketState *pkt, u32 targetTimeMs);
 s32 asfPacketSeekToPacket(SceAsfPacketState *pkt, u64 packetNum);
 s32 asfPacketSkipBytes(SceAsfPacketState *pkt, u32 count);
 u32 asfPacketGetSendTime(SceAsfPacketState *pkt);
+u32 asfGetMaxBlockAlign(void);
 
 /* Container & memory layout (asf_container.c) */
 s32 asfIsDrmEnabled(const SceAsfParser *parser);
@@ -391,11 +390,12 @@ s32 asfSeekStreamFrame(SceAsfStream *stream, u64 codecFlags, u32 *timeMs);
 void asfGetStreamTime(SceAsfStream *stream, u64 codecFlags, u32 *timeMs);
 s32 asfSetDrmCallbacks(SceAsfParser *parser, const SceAsfDrmCallbacks *cbs);
 void *asfMemmove(void *dst, const void *src, s32 len);
+u32 asfExtractStreamId(u32 flags);
 
 /* WMA bitstream/frame parser (asf_wma.c) */
 s32 wmaInitParser(SceWmaParserCtx *ctx, const SceAsfWmaWaveFormat *fmt);
 s32 wmaReadNextFrame(SceWmaParserCtx *ctx, SceAsfStream *stream, SceAsfWmaFrame *frame);
 s32 wmaSeekFrame(SceWmaParserCtx *ctx, SceAsfStream *stream, u32 *timeMs);
-void wmaGetCurTime(const SceWmaParserCtx *ctx, u32 *timeMs);
+void wmaGetCurTime(const SceWmaParserCtx *ctx, const SceAsfStream *stream, u32 *timeMs);
 
 #endif /* ASF_INT_H */

@@ -171,7 +171,12 @@ static s32 pktHasMoreSubPayloads(const SceAsfPacketState *pkt)
 	return !pktIsAtPacketEnd(pkt);
 }
 
-static s32 pktIsEof(const SceAsfPacketState *pkt)
+static s32 __attribute__((noinline)) pktMatchesStream(const SceAsfPacketState *pkt, u32 streamNum)
+{
+	return pkt->streamId == streamNum;
+}
+
+static s32 __attribute__((noinline)) pktIsEof(const SceAsfPacketState *pkt)
 {
 	return pkt->packetNumber >= pkt->headerInfo->dataPacketsCount;
 }
@@ -250,17 +255,16 @@ static s32 pktReadDrmIvSubPayload(SceAsfPacketState *pkt, u32 size)
 	if (ret < 0)
 		return ret;
 
-	SceAsfDrmContext *drm = pkt->drm;
-	if (drm->ivSize != 0)
+	if (pkt->drm->ivSize != 0)
 		return ret;
 
-	sceKernelMemset(drm->ivBuf, 0, 15);
+	sceKernelMemset(pkt->drm->ivBuf, 0, 15);
 	if (toRead == 9) {
-		drm->ivSize = 8;
-		sceKernelMemcpy(&drm->ivBuf[7], &tmp[1], 8);
+		pkt->drm->ivSize = 8;
+		sceKernelMemcpy(&pkt->drm->ivBuf[7], &tmp[1], 8);
 	} else if (toRead == 8) {
-		drm->ivSize = 8;
-		sceKernelMemcpy(&drm->ivBuf[7], &tmp[0], 8);
+		pkt->drm->ivSize = 8;
+		sceKernelMemcpy(&pkt->drm->ivBuf[7], &tmp[0], 8);
 	}
 	return ret;
 }
@@ -427,11 +431,11 @@ static s32 pktParseOnePayload(SceAsfPacketState *pkt, s32 *foundTarget)
 	if (ret < 0)
 		return ret;
 
-	u32 streamNum = streamByte & 0x7F;
+	u32 streamNum = asfExtractStreamId(streamByte);
 	if (streamNum == 0)
 		return SCE_ASF_ERROR_INVALID_STREAM_ID;
 
-	if (streamNum == pkt->streamId)
+	if (pktMatchesStream(pkt, streamNum))
 		*foundTarget = 1;
 
 	ret = pktReadVarField(pkt, pktMediaObjNumLenType(pkt), &fieldVal, 0);
@@ -498,14 +502,16 @@ static s32 pktParseOnePayload(SceAsfPacketState *pkt, s32 *foundTarget)
 	return ret;
 }
 
-static s32 pktParsePayloads(SceAsfPacketState *pkt, s32 *foundTarget)
+static s32 __attribute__((noinline)) pktParseSinglePayload(SceAsfPacketState *pkt, s32 *foundTarget)
 {
 	*foundTarget = 0;
-	if (!pktIsMultiPayload(pkt)) {
-		pkt->payloadFlags = 0;
-		return pktParseOnePayload(pkt, foundTarget);
-	}
+	pkt->payloadFlags = 0;
+	return pktParseOnePayload(pkt, foundTarget);
+}
 
+static s32 __attribute__((noinline)) pktParseMultiPayload(SceAsfPacketState *pkt, s32 *foundTarget)
+{
+	*foundTarget = 0;
 	pkt->payloadFlags = 1;
 	s32 ret = pktReadU8(pkt, &pkt->payloadCountFlags);
 	if (ret < 0)
@@ -520,6 +526,13 @@ static s32 pktParsePayloads(SceAsfPacketState *pkt, s32 *foundTarget)
 		pkt->payloadIndex++;
 	}
 	return ret;
+}
+
+static s32 __attribute__((noinline)) pktParsePayloads(SceAsfPacketState *pkt, s32 *foundTarget)
+{
+	if (!pktIsMultiPayload(pkt))
+		return pktParseSinglePayload(pkt, foundTarget);
+	return pktParseMultiPayload(pkt, foundTarget);
 }
 
 static s32 pktAdvanceToNextPacket(SceAsfPacketState *pkt)
@@ -646,32 +659,36 @@ s32 asfPacketAdvancePayload(SceAsfPacketState *pkt)
 s32 asfPacketIsPayloadDone(SceAsfPacketState *pkt)
 {
 	if ((pkt->payloadFlags & 2) != 0) {
-		if (pktIsAtSubPayloadEnd(pkt))
-			return 1;
+		s32 done = pktIsAtSubPayloadEnd(pkt);
+		if (done != 0)
+			return done;
 	}
 	if ((pkt->payloadFlags & 1) != 0) {
-		if (pktIsAtPayloadEnd(pkt))
-			return 1;
+		s32 done = pktIsAtPayloadEnd(pkt);
+		if (done != 0)
+			return done;
 	}
 	return pktIsAtPacketEnd(pkt);
 }
 
-s32 asfPacketTimeDelta(SceAsfPacketState *pkt, u32 targetTimeMs)
+s64 asfPacketTimeDelta(SceAsfPacketState *pkt, u32 targetTimeMs)
 {
 	u32 start = pkt->sendTime;
 	u32 end = start + pkt->duration;
 	if (targetTimeMs >= start && targetTimeMs < end)
 		return 0;
 	if (targetTimeMs >= start)
-		return (s32)(targetTimeMs - end);
-	return (s32)(targetTimeMs - start);
+		return (s64)targetTimeMs - (s64)end;
+	return (s64)targetTimeMs - (s64)start;
 }
 
 s32 asfPacketSeekToPacket(SceAsfPacketState *pkt, u64 packetNum)
 {
 	u64 idx = packetNum - 1;
 	pkt->packetNumber = idx;
-	s64 filePos = (s64)(pkt->headerInfo->headerSize + 50 + idx * (u64)pkt->headerInfo->maxPacketSize);
+	u64 headerEnd = pkt->headerInfo->headerSize + 50;
+	u64 pktBytes = idx * (u64)pkt->headerInfo->maxPacketSize;
+	s64 filePos = (s64)(headerEnd + pktBytes);
 	s64 seekRes = asfIoSeek(pkt->io, filePos, ASF_SEEK_SET);
 	if (seekRes < 0)
 		return (s32)seekRes;
@@ -736,4 +753,9 @@ s32 asfPacketSkipBytes(SceAsfPacketState *pkt, u32 count)
 u32 asfPacketGetSendTime(SceAsfPacketState *pkt)
 {
 	return pkt->sendTime;
+}
+
+u32 asfGetMaxBlockAlign(void)
+{
+	return ASF_DRM_DECRYPT_BUF_SIZE;
 }

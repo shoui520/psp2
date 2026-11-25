@@ -1,8 +1,20 @@
 /*
  * PS Vita ePSP 6.61 libasfparser.prx (sceASFParser)
- * WMA v2 superframe, bitstream, and Huffman VLC frame boundary parser.
+ * WMA version 2 superframe, bitstream, and Huffman VLC frame boundary parser.
  */
 #include "asf_int.h"
+
+static void * __attribute__((noinline)) wmaMemset(void *dst, s32 val, s32 len)
+{
+	u8 *p = (u8 *)dst;
+	if (p == NULL)
+		return NULL;
+	while (len > 0) {
+		*p++ = (u8)val;
+		len--;
+	}
+	return dst;
+}
 
 /* Bit reader helpers */
 static void wmaBrInit(SceWmaBitReader *br, u32 packetBits)
@@ -84,25 +96,35 @@ static s32 wmaBrSkipBits(SceWmaBitReader *br, u32 nBits)
 	return 0;
 }
 
-static s32 wmaBrReadBits(SceWmaBitReader *br, u32 nBits, u32 *out)
+static s32 __attribute__((noinline)) wmaBrReadBits(SceWmaBitReader *br, u32 nBits, u32 *out)
 {
-	u32 word = wmaBrPeek32(br);
-	*out = (word >> (32 - nBits)) & (0xFFFFFFFFU >> (32 - nBits));
-	return wmaBrSkipBits(br, nBits);
+	const u8 *p = br->buf + (br->curBit >> 3);
+	u32 word = ((u32)p[0] << 24) | ((u32)p[1] << 16) | ((u32)p[2] << 8) | (u32)p[3];
+	u32 shift = 32 - nBits - (br->curBit & 7);
+	u32 mask = 0xFFFFFFFFU >> (32 - nBits);
+	*out = (word >> shift) & mask;
+
+	u32 nextBit = br->curBit + nBits;
+	if (nextBit > br->endBit) {
+		br->curBit = br->endBit;
+		return SCE_ASF_ERROR_WMA_BITSTREAM_END;
+	}
+	br->curBit = nextBit;
+	return 0;
 }
 
-static s32 wmaBrCopyBits(SceWmaBitReader *br, u8 *dst, u32 nBits)
+static s32 __attribute__((noinline)) wmaBrCopyBits(SceWmaParserCtx *ctx, u8 *dst, u32 nBits)
 {
 	s32 ret = 0;
 	u32 val;
 
 	while (nBits >= 8) {
-		ret = wmaBrReadBits(br, 8, &val);
+		ret = wmaBrReadBits(&ctx->br, 8, &val);
 		*dst++ = (u8)val;
 		nBits -= 8;
 	}
 	if (nBits != 0) {
-		ret = wmaBrReadBits(br, nBits, &val);
+		ret = wmaBrReadBits(&ctx->br, nBits, &val);
 		*dst = (u8)(val << (8 - nBits));
 	}
 	return ret;
@@ -281,62 +303,78 @@ static void wmaInitExponentBands(SceWmaParserCtx *ctx, u32 numSizes)
 		if (sr < 44100) {
 			if (sr < 32000) {
 				if (sr >= 22050 && blockDouble == 512) {
-					static const s32 b22_512[14] = {
+					static const s32 bandTable[] = {
 						5, 12, 18, 25, 34, 46, 63, 86, 102, 123, 149, 179, 221, 256
 					};
+					s32 idx;
 					ctx->bandCounts[i] = 14;
-					sceKernelMemcpy(&bounds[1], b22_512, sizeof(b22_512));
+					for (idx = 0; idx < 14; idx++)
+						bounds[idx + 1] = bandTable[idx];
 				} else if (sr >= 22050 && blockDouble == 256) {
-					static const s32 b22_256[10] = {
+					static const s32 bandTable[] = {
 						5, 11, 17, 23, 31, 43, 62, 89, 110, 128
 					};
+					s32 idx;
 					ctx->bandCounts[i] = 10;
-					sceKernelMemcpy(&bounds[1], b22_256, sizeof(b22_256));
+					for (idx = 0; idx < 10; idx++)
+						bounds[idx + 1] = bandTable[idx];
 				} else {
 					useHardcoded = 0;
 				}
 			} else {
 				if (blockDouble == 256) {
-					static const s32 b32_256[11] = {
+					static const s32 bandTable[] = {
 						4, 9, 14, 19, 25, 35, 51, 76, 96, 124, 128
 					};
+					s32 idx;
 					ctx->bandCounts[i] = 11;
-					sceKernelMemcpy(&bounds[1], b32_256, sizeof(b32_256));
+					for (idx = 0; idx < 11; idx++)
+						bounds[idx + 1] = bandTable[idx];
 				} else if (blockDouble == 512) {
-					static const s32 b32_512[15] = {
+					static const s32 bandTable[] = {
 						5, 10, 15, 20, 28, 37, 50, 70, 85, 102, 123, 152, 192, 248, 256
 					};
+					s32 idx;
 					ctx->bandCounts[i] = 15;
-					sceKernelMemcpy(&bounds[1], b32_512, sizeof(b32_512));
+					for (idx = 0; idx < 15; idx++)
+						bounds[idx + 1] = bandTable[idx];
 				} else if (blockDouble == 1024) {
-					static const s32 b32_1024[16] = {
+					static const s32 bandTable[] = {
 						6, 13, 20, 29, 41, 55, 74, 101, 141, 170, 205, 246, 304, 384, 496, 512
 					};
+					s32 idx;
 					ctx->bandCounts[i] = 16;
-					sceKernelMemcpy(&bounds[1], b32_1024, sizeof(b32_1024));
+					for (idx = 0; idx < 16; idx++)
+						bounds[idx + 1] = bandTable[idx];
 				} else {
 					useHardcoded = 0;
 				}
 			}
 		} else {
 			if (blockDouble == 256) {
-				static const s32 b44_256[12] = {
+				static const s32 bandTable[] = {
 					4, 9, 12, 16, 21, 26, 37, 45, 55, 70, 90, 128
 				};
+				s32 idx;
 				ctx->bandCounts[i] = 12;
-				sceKernelMemcpy(&bounds[1], b44_256, sizeof(b44_256));
+				for (idx = 0; idx < 12; idx++)
+					bounds[idx + 1] = bandTable[idx];
 			} else if (blockDouble == 512) {
-				static const s32 b44_512[15] = {
+				static const s32 bandTable[] = {
 					5, 11, 17, 23, 31, 37, 43, 51, 62, 74, 89, 110, 139, 180, 256
 				};
+				s32 idx;
 				ctx->bandCounts[i] = 15;
-				sceKernelMemcpy(&bounds[1], b44_512, sizeof(b44_512));
+				for (idx = 0; idx < 15; idx++)
+					bounds[idx + 1] = bandTable[idx];
 			} else if (blockDouble == 1024) {
-				static const s32 b44_1024[17] = {
+				static const s32 bandTable[] = {
 					5, 12, 18, 25, 34, 46, 54, 63, 86, 102, 123, 149, 179, 221, 279, 360, 512
 				};
+				s32 idx;
 				ctx->bandCounts[i] = 17;
-				sceKernelMemcpy(&bounds[1], b44_1024, sizeof(b44_1024));
+				for (idx = 0; idx < 17; idx++)
+					bounds[idx + 1] = bandTable[idx];
 			} else {
 				useHardcoded = 0;
 			}
@@ -457,18 +495,19 @@ static void wmaSelectStereoCoefVlc(const u16 **outVlc, u32 vlcSet, u32 msStereo)
 static s32 wmaDecodeBlockLen(SceWmaParserCtx *ctx)
 {
 	u32 nextLen = ctx->frameLen;
+	s32 ret = 0;
 	if (ctx->useVariableBlockLen != 0) {
 		u32 code;
-		s32 ret = wmaBrReadBits(&ctx->br, ctx->blockLenBits, &code);
+		ret = wmaBrReadBits(&ctx->br, ctx->blockLenBits, &code);
 		if (ret < 0)
 			return ret;
-		nextLen = ctx->frameLen / (1U << (code & 0xFF));
+		nextLen = ctx->frameLen / (1U << code);
 	}
 	ctx->nextBlockLen = (u16)nextLen;
 	ctx->blockPos = (u16)(ctx->blockPos + ctx->curBlockLen);
 	if (ctx->blockPos < ctx->frameLen && (s32)ctx->frameLen < (s32)(ctx->blockPos + nextLen))
-		return SCE_ASF_ERROR_WMA_FRAME_CORRUPT;
-	return 0;
+		ret = SCE_ASF_ERROR_WMA_FRAME_CORRUPT;
+	return ret;
 }
 
 static void wmaUpdateBlockParams(SceWmaParserCtx *ctx)
@@ -707,15 +746,9 @@ static s32 wmaDecodeSubframeHeader(SceWmaParserCtx *ctx)
 	return wmaDecodeExpLpc(ctx, hasExp);
 }
 
-static s32 wmaDecodeSubframe(SceWmaParserCtx *ctx)
+static s32 __attribute__((noinline)) wmaDecodeAllChannels(SceWmaParserCtx *ctx)
 {
-	if (ctx->curBlockLen < ctx->minBlockLen)
-		return SCE_ASF_ERROR_WMA_BAD_BLOCK_LEN;
-
-	s32 ret = wmaDecodeSubframeHeader(ctx);
-	if (ret < 0)
-		return ret;
-
+	s32 ret = 0;
 	u32 c;
 	for (c = 0; c < ctx->channels; c++) {
 		if (ctx->ch[c].coded != 0) {
@@ -724,8 +757,23 @@ static s32 wmaDecodeSubframe(SceWmaParserCtx *ctx)
 				return ret;
 		}
 	}
+	return ret;
+}
+
+static s32 __attribute__((noinline)) wmaDecodeSubframe(SceWmaParserCtx *ctx)
+{
+	if (ctx->curBlockLen < ctx->minBlockLen)
+		return SCE_ASF_ERROR_WMA_BAD_BLOCK_LEN;
+
+	s32 ret = wmaDecodeSubframeHeader(ctx);
+	if (ret < 0)
+		return ret;
+
+	ret = wmaDecodeAllChannels(ctx);
+	if (ret < 0)
+		return ret;
 	ctx->subframeIndex++;
-	return 0;
+	return ret;
 }
 
 static void wmaFinishFrameState(SceWmaParserCtx *ctx)
@@ -773,8 +821,10 @@ static s32 wmaParseSuperframeHeader(SceWmaParserCtx *ctx, s32 checkSeq)
 	if (ret < 0)
 		return ret;
 
-	if (checkSeq != 0 && seq != ((ctx->packetSeq + 1) & 0xF))
+	if (checkSeq != 0 && seq != ((ctx->packetSeq + 1) & 0xF)) {
 		seqErr = SCE_ASF_ERROR_WMA_SEQ_MISMATCH;
+		ctx->packetSeq = seq;
+	}
 	ctx->packetSeq = seq;
 
 	ret = wmaBrReadBits(&ctx->br, 4, &numFrames);
@@ -799,8 +849,8 @@ static s32 wmaReadInitialBlockLens(SceWmaParserCtx *ctx)
 		ret = wmaBrReadBits(&ctx->br, ctx->blockLenBits, &curCode);
 		if (ret < 0)
 			return ret;
-		ctx->prevBlockLen = (u16)(ctx->frameLen / (1U << (prevCode & 0xFF)));
-		ctx->curBlockLen = (u16)(ctx->frameLen / (1U << (curCode & 0xFF)));
+		ctx->prevBlockLen = (u16)(ctx->frameLen / (1U << prevCode));
+		ctx->curBlockLen = (u16)(ctx->frameLen / (1U << curCode));
 		ctx->blockPos = 0;
 	}
 	ctx->packetReady = 1;
@@ -817,19 +867,35 @@ static s32 wmaSkipRemainingPacketBits(SceWmaParserCtx *ctx, SceAsfStream *stream
 	return ret;
 }
 
-static s32 wmaAdvancePayloadIfNeeded(SceAsfStream *stream)
+static void __attribute__((noinline)) wmaMarkNotReady(SceWmaParserCtx *ctx)
 {
-	SceWmaParserCtx *ctx = (SceWmaParserCtx *)stream->codecCtx;
+	ctx->packetReady = 0;
+}
+
+static void __attribute__((noinline)) wmaSetCurTime(SceWmaParserCtx *ctx, u32 timeMs)
+{
+	wmaMarkNotReady(ctx);
+	ctx->curTimeMs = timeMs;
+}
+
+static void __attribute__((noinline)) wmaResetBlockLens(SceWmaParserCtx *ctx)
+{
+	ctx->packetReady = 0;
+	ctx->curBlockLen = (u16)ctx->frameLen;
+	ctx->prevBlockLen = (u16)ctx->frameLen;
+}
+
+static s32 __attribute__((noinline)) wmaAdvancePayloadIfNeeded(SceAsfStream *stream)
+{
+	s32 ret = 0;
 	if (asfPacketIsPayloadDone(&stream->pkt)) {
-		s32 ret = asfPacketAdvancePayload(&stream->pkt);
-		if (ret >= 0) {
-			ctx->packetReady = 0;
-			ctx->curTimeMs = asfPacketGetSendTime(&stream->pkt);
-		}
+		ret = asfPacketAdvancePayload(&stream->pkt);
+		if (ret >= 0)
+			wmaSetCurTime((SceWmaParserCtx *)stream->codecCtx, asfPacketGetSendTime(&stream->pkt));
 		return ret;
 	}
-	ctx->packetReady = 0;
-	return 0;
+	wmaMarkNotReady((SceWmaParserCtx *)stream->codecCtx);
+	return ret;
 }
 
 static s32 wmaLoadSuperframeHeader(SceWmaParserCtx *ctx, SceAsfStream *stream,
@@ -861,7 +927,7 @@ static s32 wmaLoadSuperframeHeader(SceWmaParserCtx *ctx, SceAsfStream *stream,
 
 	if (ctx->bitReservoirSkipBits != 0) {
 		if (appendTail != 0) {
-			ret = wmaBrCopyBits(&ctx->br, frame->data + ((frame->bitLength + 7) >> 3),
+			ret = wmaBrCopyBits(ctx, frame->data + ((frame->bitLength + 7) >> 3),
 			                    ctx->bitReservoirSkipBits);
 			frame->bitLength += ctx->bitReservoirSkipBits;
 		} else {
@@ -915,7 +981,7 @@ static s32 wmaContinueSplitFrame(SceWmaParserCtx *ctx, SceAsfStream *stream, Sce
 	return ret;
 }
 
-static u32 wmaCollectFrameFlags(const SceWmaParserCtx *ctx)
+static u32 __attribute__((noinline)) wmaCollectFrameFlags(const SceWmaParserCtx *ctx)
 {
 	u32 flags = (ctx->flagDiscontinuity != 0) ? 1U : 0U;
 	if (ctx->flagNextDiscontinuity != 0)
@@ -925,35 +991,46 @@ static u32 wmaCollectFrameFlags(const SceWmaParserCtx *ctx)
 	return flags;
 }
 
-static void wmaClearBitReservoirFlags(SceWmaParserCtx *ctx)
+static void __attribute__((noinline)) wmaClearBitReservoirFlags(SceWmaParserCtx *ctx)
 {
-	ctx->flagDiscontinuity = (ctx->flagNextDiscontinuity != 0) ? 1U : 0U;
+	if (ctx->flagNextDiscontinuity != 0)
+		ctx->flagDiscontinuity = 1;
+	else
+		ctx->flagDiscontinuity = 0;
 	ctx->flagPacketLoss = 0;
 	ctx->flagNextDiscontinuity = 0;
 }
 
-/* Public WMA parser entry points */
-s32 wmaInitParser(SceWmaParserCtx *ctx, const SceAsfWmaWaveFormat *fmt)
+static void __attribute__((noinline)) wmaClearFixedFrameFlags(SceWmaParserCtx *ctx)
 {
-	if (ctx == NULL || fmt == NULL)
-		return SCE_ASF_ERROR_WMA_INVALID_PARAM;
+	ctx->flagPacketLoss = 0;
+	ctx->flagDiscontinuity = 0;
+	ctx->flagNextDiscontinuity = 0;
+}
 
-	s32 ret = wmaValidateWaveFormat(fmt);
-	if (ret < 0)
-		return ret;
-
-	sceKernelMemset(ctx, 0, 716);
+static void __attribute__((noinline)) wmaClearCtx(SceWmaParserCtx *ctx)
+{
+	wmaMemset(ctx, 0, 716);
 	ctx->packetReady = 0;
-	ctx->coefBitDepth = 9;
-	ctx->curHighBandCoefStart = 0;
+}
+
+static s32 __attribute__((noinline)) wmaInitCodecParams(SceWmaParserCtx *ctx, const SceAsfWmaWaveFormat *fmt)
+{
 	ctx->frameLen = wmaSelectFrameLen(fmt->sampleRate);
 	ctx->channels = fmt->channels;
 	ctx->sampleRate = fmt->sampleRate;
+	return wmaSetupCodecParams(ctx, fmt->avgBytesPerSec, fmt->encodeOptions);
+}
 
-	ret = wmaSetupCodecParams(ctx, fmt->avgBytesPerSec, fmt->encodeOptions);
-	if (ret < 0)
-		return ret;
+static s32 __attribute__((noinline)) wmaConfigureCodec(SceWmaParserCtx *ctx, const SceAsfWmaWaveFormat *fmt)
+{
+	ctx->coefBitDepth = 9;
+	ctx->curHighBandCoefStart = 0;
+	return wmaInitCodecParams(ctx, fmt);
+}
 
+static s32 __attribute__((noinline)) wmaInitDecodeState(SceWmaParserCtx *ctx)
+{
 	ctx->subframeIndex = 0;
 	ctx->prevBlockLen = (u16)ctx->frameLen;
 	ctx->curBlockLen = (u16)ctx->frameLen;
@@ -972,18 +1049,52 @@ s32 wmaInitParser(SceWmaParserCtx *ctx, const SceAsfWmaWaveFormat *fmt)
 		ctx->ch[0].coefVlc = g_wmaVlcCoef4;
 	else
 		ctx->ch[0].coefVlc = g_wmaVlcCoef2;
+	return 0;
+}
 
-	wmaBrInit(&ctx->br, (u32)fmt->blockAlign * 8U);
+static s32 __attribute__((noinline)) wmaInitCodec(SceWmaParserCtx *ctx, const SceAsfWmaWaveFormat *fmt, u32 packetBits)
+{
+	s32 ret = wmaValidateWaveFormat(fmt);
+	if (ret < 0)
+		return ret;
+	wmaClearCtx(ctx);
+	ret = wmaConfigureCodec(ctx, fmt);
+	if (ret < 0)
+		return ret;
+	ret = wmaInitDecodeState(ctx);
+	if (ret < 0)
+		return ret;
+	wmaBrInit(&ctx->br, packetBits);
 	ctx->packetReady = 0;
+	return ret;
+}
 
+static s32 __attribute__((noinline)) wmaCalcFrameDurationMs(const SceWmaParserCtx *ctx)
+{
 	if (ctx->sampleRate == 0)
 		return SCE_ASF_ERROR_WMA_BAD_SAMPLERATE;
+	return (s32)((1000U * ctx->frameLen) / ctx->sampleRate);
+}
 
-	ctx->frameDurationMs = (1000U * ctx->frameLen) / ctx->sampleRate;
+/* Public WMA parser entry points */
+s32 wmaInitParser(SceWmaParserCtx *ctx, const SceAsfWmaWaveFormat *fmt)
+{
+	if (ctx == NULL || fmt == NULL)
+		return SCE_ASF_ERROR_WMA_INVALID_PARAM;
+
+	s32 ret = wmaInitCodec(ctx, fmt, (u32)fmt->blockAlign * 8U);
+	if (ret < 0)
+		return ret;
+
+	s32 dur = wmaCalcFrameDurationMs(ctx);
+	if (dur < 0)
+		return dur;
+
+	ctx->frameDurationMs = (u32)dur;
 	ctx->flagDiscontinuity = 1;
 	ctx->flagNextDiscontinuity = 0;
 	ctx->flagPacketLoss = 0;
-	return 0;
+	return ret;
 }
 
 static s32 wmaReadFrameReservoir(SceWmaParserCtx *ctx, SceAsfStream *stream, SceAsfWmaFrame *frame)
@@ -1038,7 +1149,7 @@ static s32 wmaReadFrameReservoir(SceWmaParserCtx *ctx, SceAsfStream *stream, Sce
 
 	frame->flags = wmaCollectFrameFlags(ctx);
 	wmaClearBitReservoirFlags(ctx);
-	return 0;
+	return ret;
 }
 
 static s32 wmaReadFrameFixed(SceWmaParserCtx *ctx, SceAsfStream *stream, SceAsfWmaFrame *frame)
@@ -1062,11 +1173,8 @@ static s32 wmaReadFrameFixed(SceWmaParserCtx *ctx, SceAsfStream *stream, SceAsfW
 	wmaBrMarkPacketDone(&ctx->br);
 
 	ret = asfPacketSkipBytes(&stream->pkt, pktBits >> 3);
-	if (ret >= 0) {
-		ctx->flagPacketLoss = 0;
-		ctx->flagDiscontinuity = 0;
-		ctx->flagNextDiscontinuity = 0;
-	}
+	if (ret >= 0)
+		wmaClearFixedFrameFlags(ctx);
 	return ret;
 }
 
@@ -1114,10 +1222,8 @@ s32 wmaSeekFrame(SceWmaParserCtx *ctx, SceAsfStream *stream, u32 *timeMs)
 		return ret;
 
 	if (didSeek != 0) {
-		ctx->packetReady = 0;
-		ctx->curTimeMs = asfPacketGetSendTime(&stream->pkt);
-		ctx->prevBlockLen = (u16)ctx->frameLen;
-		ctx->curBlockLen = (u16)ctx->frameLen;
+		wmaSetCurTime(ctx, asfPacketGetSendTime(&stream->pkt));
+		wmaResetBlockLens(ctx);
 	}
 
 	if (ctx->packetReady == 0 && ctx->useBitReservoir != 0) {
@@ -1164,7 +1270,7 @@ s32 wmaSeekFrame(SceWmaParserCtx *ctx, SceAsfStream *stream, u32 *timeMs)
 	return ret;
 }
 
-void wmaGetCurTime(const SceWmaParserCtx *ctx, u32 *timeMs)
+void wmaGetCurTime(const SceWmaParserCtx *ctx, __attribute__((unused)) const SceAsfStream *stream, u32 *timeMs)
 {
 	*timeMs = ctx->curTimeMs;
 }
