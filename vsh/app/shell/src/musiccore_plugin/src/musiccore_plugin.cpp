@@ -43,8 +43,8 @@ extern int musicCoreMainGetPlayTime(void *mainObj, const void *ctx, void *outTim
 extern int musicCoreMainSetBgmMute(void *mainObj, int mode, int enable); /* 0x811D07D6 */
 extern int musicCoreMainGetBgmMute(void *mainObj, int mode, void *outState); /* 0x811D07EE */
 extern int musicCoreMainSetAvrcpActive(void *mainObj, const void *ctx, int active); /* 0x811D0804 */
-extern int musicCoreMainSetMuteFlag1(void *mainObj, const void *ctx, int mute); /* 0x811D082E */
-extern int musicCoreMainSetMuteFlag2(void *mainObj, const void *ctx, int mute); /* 0x811D087C */
+extern int musicCoreMainSetNoticeSuppress(void *mainObj, const void *ctx, int suppressMode); /* 0x811D082E */
+extern int musicCoreMainClearNoticeSuppress(void *mainObj, const void *ctx, int suppressMode); /* 0x811D087C */
 extern int musicCoreConvertRepeat(int raw, int *outVal);	/* 0x811D1214 */
 extern int musicCoreConvertShuffle(int raw, int *outVal);	/* 0x811D1248 */
 extern int musicCoreConvertEq(int raw, int *outVal);		/* 0x811D126C */
@@ -54,7 +54,7 @@ extern int musicCoreConvertTrackInfo(const void *rawTrack, const void *rawStatus
 extern int musicCoreConvertUri(const char *rawUri, char *outUri); /* 0x811D16B2 */
 extern int musicCoreConvertCapFlag(SceUInt8 capByte, void *outVal); /* 0x811D16C6 */
 
-typedef void (*MusicCoreEventCb)(int eventId, int param1, int param2, int param3);
+typedef void (*MusicCoreEventCb)(int eventId, int eventData, int eventDetail, int eventFlags);
 
 struct MusicCoreClientCtx {
 	int seqId;						/* +0 */
@@ -69,11 +69,11 @@ struct MusicCoreRawStatus {
 	int channelType;					/* +0 */
 	int state;						/* +4 */
 	int eventType;						/* +8 */
-	int reserved12;						/* +12 */
-	int reserved16;						/* +16 */
+	int statusExtraLow;					/* +12 */
+	int statusExtraHigh;					/* +16 */
 	int errorCode;						/* +20 */
-	int reserved24;						/* +24 */
-	int reserved28;						/* +28 */
+	int errorDetailLow;					/* +24 */
+	int errorDetailHigh;					/* +28 */
 	SceUInt32 playMode;					/* +32 */
 	int bgmReason;						/* +36 */
 	int bgmPriority;					/* +40 */
@@ -106,7 +106,7 @@ struct MusicCorePublicStatus {
 	int eventType;						/* +4 */
 	int errorCode;						/* +8 */
 	SceUInt8 playMode;					/* +12 */
-	SceUInt8 pad13[3];					/* +13 */
+	SceUInt8 padPlayMode[3];				/* +13 */
 	SceInt64 duration;					/* +16 */
 	int posLo;						/* +24 */
 	int posHi;						/* +28 */
@@ -129,13 +129,13 @@ struct MusicCoreImposeInfo {
 	int volume;						/* +0 */
 	SceUInt8 playMode;					/* +4 */
 	SceUInt8 bgmReason;					/* +5 */
-	SceUInt8 pad6[2];					/* +6 */
+	SceUInt8 padBgmReason[2];				/* +6 */
 	int bgmPriority;					/* +8 */
 	char title[2048];					/* +12 */
 	char artist[2048];					/* +2060 */
 	char album[2048];					/* +4108 */
 	SceUInt8 canPlay;					/* +6156 */
-	SceUInt8 pad6157[3];					/* +6157 */
+	SceUInt8 padCanPlay[3];					/* +6157 */
 	int durationLo;						/* +6160 */
 	int durationHi;						/* +6164 */
 	int posLo;						/* +6168 */
@@ -163,7 +163,7 @@ static SceUInt8 s_exLoaded = 0;					/* 0x8156B8DB */
 static paf::list<MusicCoreEventCb> s_eventCallbacks;		/* 0x8156B8E0 */
 
 /* Forward declarations */
-static int musicCoreDispatchEventCb(int eventId, int param1, int param2, int param3); /* 0x811CD8EA */
+static int musicCoreDispatchEventCb(int eventId, int eventData, int eventDetail, int eventFlags); /* 0x811CD8EA */
 static void musicCoreOnShellEvent(int eventId, const void *info); /* 0x811CE316 */
 static void musicCoreOnAppEvent(int eventType, const void *titleId); /* 0x811CE3AE */
 static void musicCoreOnPowerEvent2(int eventId);		/* 0x811CE45A */
@@ -931,7 +931,7 @@ int musicCoreSetMute1(SceUInt8 mute)
 	sce_paf_memset(payload, 0, sizeof(payload));
 	if (s_musicCoreMain == NULL)
 		return 0;
-	int ret = musicCoreMainSetMuteFlag1(s_musicCoreMain, &ctx, mute);
+	int ret = musicCoreMainSetNoticeSuppress(s_musicCoreMain, &ctx, mute);
 	if (ret == 0)
 		return musicCoreMainSendCmd(s_musicCoreMain, ctx.seqId, ctx.seqId, 0x190000,
 			payload, sizeof(payload));
@@ -951,7 +951,7 @@ int musicCoreSetMute2(SceUInt8 mute)
 	sce_paf_memset(payload, 0, sizeof(payload));
 	if (s_musicCoreMain == NULL)
 		return 0;
-	int ret = musicCoreMainSetMuteFlag2(s_musicCoreMain, &ctx, mute);
+	int ret = musicCoreMainClearNoticeSuppress(s_musicCoreMain, &ctx, mute);
 	if (ret == 0)
 		return musicCoreMainSendCmd(s_musicCoreMain, ctx.seqId, ctx.seqId, 0x190000,
 			payload, sizeof(payload));
@@ -1113,7 +1113,7 @@ int musicCoreCmdSetAvrcp(const MusicCoreClientCtx *ctx, SceUInt8 enable)
 }
 
 /* 0x811CD556 */
-int musicCoreCmdSetMute1(const MusicCoreClientCtx *ctx, SceUInt8 mute)
+int musicCoreCmdSetNoticeSuppress(const MusicCoreClientCtx *ctx, SceUInt8 mute)
 {
 	if (mute > 1)
 		return (int)0x80100D01;
@@ -1121,7 +1121,7 @@ int musicCoreCmdSetMute1(const MusicCoreClientCtx *ctx, SceUInt8 mute)
 	sce_paf_memset(payload, 0, sizeof(payload));
 	if (s_musicCoreMain == NULL)
 		return 0;
-	int ret = musicCoreMainSetMuteFlag1(s_musicCoreMain, ctx, mute);
+	int ret = musicCoreMainSetNoticeSuppress(s_musicCoreMain, ctx, mute);
 	if (ret == 0)
 		return musicCoreMainSendCmd(s_musicCoreMain, ctx->seqId, ctx->seqId, 0x190000,
 			payload, sizeof(payload));
@@ -1129,7 +1129,7 @@ int musicCoreCmdSetMute1(const MusicCoreClientCtx *ctx, SceUInt8 mute)
 }
 
 /* 0x811CD610 */
-int musicCoreCmdSetMute2(const MusicCoreClientCtx *ctx, SceUInt8 mute)
+int musicCoreCmdClearNoticeSuppress(const MusicCoreClientCtx *ctx, SceUInt8 mute)
 {
 	if (mute > 1)
 		return (int)0x80100D01;
@@ -1137,7 +1137,7 @@ int musicCoreCmdSetMute2(const MusicCoreClientCtx *ctx, SceUInt8 mute)
 	sce_paf_memset(payload, 0, sizeof(payload));
 	if (s_musicCoreMain == NULL)
 		return 0;
-	int ret = musicCoreMainSetMuteFlag2(s_musicCoreMain, ctx, mute);
+	int ret = musicCoreMainClearNoticeSuppress(s_musicCoreMain, ctx, mute);
 	if (ret == 0)
 		return musicCoreMainSendCmd(s_musicCoreMain, ctx->seqId, ctx->seqId, 0x190000,
 			payload, sizeof(payload));
@@ -1185,12 +1185,12 @@ int musicCoreCmdSetSystemPause(const MusicCoreClientCtx *ctx, SceUInt8 pause)
 }
 
 /* 0x811CD8EA */
-static int musicCoreDispatchEventCb(int eventId, int param1, int param2, int param3)
+static int musicCoreDispatchEventCb(int eventId, int eventData, int eventDetail, int eventFlags)
 {
 	for (paf::list<MusicCoreEventCb>::iterator it = s_eventCallbacks.begin();
 	     it != s_eventCallbacks.end(); ++it) {
 		if (*it != NULL)
-			(*it)(eventId, param1, param2, param3);
+			(*it)(eventId, eventData, eventDetail, eventFlags);
 	}
 	return 0;
 }
@@ -1310,12 +1310,12 @@ int musicCoreGetParam(const MusicCoreClientCtx *ctx, int paramId, int *outVal)
 }
 
 /* 0x811CDC54 */
-int musicCoreCmd20(const MusicCoreClientCtx *ctx) { return musicCoreSendSimpleCmd(ctx, 20); }
+int musicCoreDbSync(const MusicCoreClientCtx *ctx) { return musicCoreSendSimpleCmd(ctx, 20); }
 /* 0x811CDD02 */
-int musicCoreCmd15(const MusicCoreClientCtx *ctx) { return musicCoreSendSimpleCmd(ctx, 15); }
+int musicCoreDbOpen(const MusicCoreClientCtx *ctx) { return musicCoreSendSimpleCmd(ctx, 15); }
 
 /* 0x811CDDB0 */
-int musicCoreCmd16(const MusicCoreClientCtx *ctx, SceUInt8 flag)
+int musicCoreDbSuspend(const MusicCoreClientCtx *ctx, SceUInt8 flag)
 {
 	if (ctx->channel > 2)
 		return (int)0x80100D01;
@@ -1332,12 +1332,12 @@ int musicCoreCmd16(const MusicCoreClientCtx *ctx, SceUInt8 flag)
 }
 
 /* 0x811CDE6C */
-int musicCoreCmd17(const MusicCoreClientCtx *ctx) { return musicCoreSendSimpleCmd(ctx, 17); }
+int musicCoreDbClose(const MusicCoreClientCtx *ctx) { return musicCoreSendSimpleCmd(ctx, 17); }
 /* 0x811CDF1A */
-int musicCoreCmd18(const MusicCoreClientCtx *ctx) { return musicCoreSendSimpleCmd(ctx, 18); }
+int musicCoreDbDetach(const MusicCoreClientCtx *ctx) { return musicCoreSendSimpleCmd(ctx, 18); }
 
 /* 0x811CDFC8 */
-int musicCoreCmd19(const MusicCoreClientCtx *ctx, const void *data)
+int musicCoreDbQuery(const MusicCoreClientCtx *ctx, const void *data)
 {
 	if (ctx->channel > 2)
 		return (int)0x80100D01;
@@ -1396,6 +1396,16 @@ int musicCoreCmdResetChannel(const MusicCoreClientCtx *ctx)
 	return musicCoreSendSimpleCmd(ctx, 21);
 }
 
+struct ShellAppEventInfo {
+	SceUInt32 eventWords[2];
+	const void *titleIdPtr;
+};
+
+struct RemoteKeyEventInfo {
+	SceUInt32 eventWords[2];
+	SceUInt32 keyCode;
+};
+
 /* 0x811CE316 */
 static void musicCoreOnShellEvent(int eventId, const void *info)
 {
@@ -1409,8 +1419,8 @@ static void musicCoreOnShellEvent(int eventId, const void *info)
 		payload.type = 3;
 	else
 		return;
-	const void *titlePtr = *(const void *const *)((const char *)info + 8);
-	sce_paf_memcpy(payload.titleId, titlePtr, 32);
+	const ShellAppEventInfo *appInfo = static_cast<const ShellAppEventInfo *>(info);
+	sce_paf_memcpy(payload.titleId, appInfo->titleIdPtr, 32);
 	if (s_musicCoreMain != NULL)
 		musicCoreMainSendCmd(s_musicCoreMain, 36, 0, 24u << 16, &payload, sizeof(payload));
 }
@@ -1462,7 +1472,8 @@ static void musicCoreOnRemoteKey(int eventId, int handler, const void *ev)
 	MusicCoreClientCtx ctx;
 	sce_paf_memset(&ctx, 0, sizeof(ctx));
 	ctx.seqId = 156;
-	SceUInt8 keyCode = (SceUInt8)(*(const SceUInt32 *)((const char *)ev + 8));
+	const RemoteKeyEventInfo *keyEv = static_cast<const RemoteKeyEventInfo *>(ev);
+	SceUInt8 keyCode = static_cast<SceUInt8>(keyEv->keyCode);
 	SceUInt32 ctrlCode;
 	switch (keyCode) {
 	case 0: ctrlCode = 0; break;

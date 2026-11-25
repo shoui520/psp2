@@ -51,7 +51,7 @@ extern int trackInfoPopulateMetadata(const void *trackInfo, void *metaBufs);
 extern int isTrackIdRemoved(int64_t trackId, void *listHandle);
 extern void computePlaybackRange(int seekMode, int speedMode, int step, int durationMs,
                                  int volumeMode, int *outPrev, int *outNext, int *outCur);
-extern int decoderMgrIsSameFormat(void *decMgr, int codecFormat);
+extern int decoderMgrIsSameFormat(void *decMgr, void *mediaInfo);
 extern int audioOutputSetVolume(void *audioOut, int volume, int ramp, unsigned char *outFlag);
 extern int audioOutputSetAlcMode(void *audioOut, int alcMode);
 
@@ -67,11 +67,16 @@ struct TrackMetadataBuffers {
     paf::thread::Mutex *mutex;
 };
 
+struct DecoderManagerHandle {
+    void *vtablePtr;
+    int ioPriority;
+};
+
 struct TrackInfoData {
     void *vtable;
     int flags;
     int contentKind;
-    int pad12;
+    int padAlign;
     int64_t playlistId;
     int64_t trackId;
     int64_t trackItemId;
@@ -82,18 +87,23 @@ struct TrackInfoData {
     int bitRate;
     int channels;
     int durationMs;
-    int trackMetaExtra[4];
-    int sourceType;
-    int trackPadExtra[2];
+    int playAttemptCount;
+    int fileSizeHigh;
+    int resumePositionMs;
+    int playCount;
+    int loopCount;
+    int slotSerial;
+    void *ownerList;
+    void *mediaInfo;
     unsigned char isValid;
-    unsigned char pad2145[3];
+    unsigned char padTail[3];
 };
 
 struct MediaListStatus {
     void *vtable;
     int playState;
     int trackOrderIndex;
-    int pad12;
+    int padAlign;
     int64_t currentTrackId;
     int prevTrackIdx;
     int nextTrackIdx;
@@ -137,15 +147,15 @@ struct StateSnapshotOut {
 
 struct StateDispatchReq {
     unsigned char mediaPrefix[148];
-    int pad148;
+    int padMedia;
     int fadeMs;
     void *newMediaHandle;
     unsigned char resetPos;
-    unsigned char pad161[3];
+    unsigned char padReset[3];
     unsigned int seekParams[5];
     int repeatValue;
     int shuffleValue;
-    int pad192;
+    int padShuffle;
     int errorCode;
     int volumeLevel;
     int volumeRamp;
@@ -158,16 +168,16 @@ struct StateDispatchReq {
     unsigned char suspendFlag;
     unsigned char syncFlag;
     unsigned char portFlag;
-    unsigned char pad247;
+    unsigned char padTail;
 };
 
 struct MediaListInterface {
     virtual ~MediaListInterface() {}
-    virtual void onReserved04() {}
-    virtual void onReserved08() {}
-    virtual void onReserved0C() {}
-    virtual void onReserved10() {}
-    virtual void onReserved14() {}
+    virtual void initialize() {}
+    virtual void finalize() {}
+    virtual int openList() { return 0; }
+    virtual int closeList() { return 0; }
+    virtual int refreshList() { return 0; }
     virtual int seekToIndex(unsigned int target, unsigned char *outChanged) = 0;
     virtual unsigned int stepNextCandidate(unsigned int curIdx, int wrapMode, int dir,
                                            unsigned int *ioTried, int *ioErr,
@@ -175,18 +185,18 @@ struct MediaListInterface {
                                            unsigned char *outWrapped) = 0;
     virtual int resolveCurrentTrackId(int64_t *outTrackId) = 0;
     virtual void setTrackPosition(int orderIdx, int64_t *ioTrackId) = 0;
-    virtual void onReserved28() {}
-    virtual void onReserved2C() {}
-    virtual void onReserved30() {}
+    virtual int queryTrackMeta(void *metaOut) { (void)metaOut; return 0; }
+    virtual int getListKind() { return 0; }
+    virtual int isListReady() { return 0; }
     virtual int getStatus(MediaListStatus *outStatus) = 0;
     virtual void *getListHandle() = 0;
     virtual int hasTracks() = 0;
     virtual int getCurrentIndex() = 0;
-    virtual void onReserved44() {}
+    virtual int64_t getCurrentTrackKey() { return -1; }
     virtual void lockList(int shuffleSeed, int paramA, int paramB, unsigned char *outLocked, int flag) = 0;
     virtual void unlockList(int flag) = 0;
     virtual void applyShuffleSeed() = 0;
-    virtual void onReserved54() {}
+    virtual int getTrackCount() { return 0; }
     virtual int getTrackOrderIndex() = 0;
 };
 
@@ -256,7 +266,7 @@ static void resetTrackInfo(TrackInfoData *info)
     info->trackId = -1;
     info->trackItemId = -1;
     info->codecFlags = -1;
-    info->sourceType = -1;
+    info->slotSerial = -1;
 }
 
 static void resetMediaListStatus(MediaListStatus *st)
@@ -401,7 +411,7 @@ int dbSeekNormalTarget(unsigned int seekCmd, MediaListInterface *media,
             if (err == 0) {
                 err = mediaListFillTrackInfo(&candidate, status.trackOrderIndex, media);
                 if (err == 0) {
-                    int decArg = (decMgr != NULL) ? ((const int *)decMgr)[1] : 0;
+                    int decArg = (decMgr != NULL) ? static_cast<const DecoderManagerHandle *>(decMgr)->ioPriority : 0;
                     err = trackInfoOpenDecoder(&candidate, decArg, 1);
                     if (err != 0)
                         trackInfoReleaseResources(&candidate, 1);
@@ -447,7 +457,7 @@ int dbSeekNormalTarget(unsigned int seekCmd, MediaListInterface *media,
                     *outExtraErr = err;
                     err = restoreErr;
                 } else {
-                    int decArg = (decMgr != NULL) ? ((const int *)decMgr)[1] : 0;
+                    int decArg = (decMgr != NULL) ? static_cast<const DecoderManagerHandle *>(decMgr)->ioPriority : 0;
                     trackInfoOpenDecoder(&candidate, decArg, 0);
                     int seekErr = media->seekToIndex((unsigned int)lastGoodIdx, outChanged);
                     *outExtraErr = err;
@@ -627,31 +637,31 @@ public:
     void *m_audioOut;
     PlaybackStateBase *m_currentState;
     unsigned char m_flagPendingActive;
-    unsigned char m_flag121;
+    unsigned char m_stopRequested;
     unsigned char m_hasPendingTrack;
-    unsigned char m_flag123;
+    unsigned char m_dbRemovedError;
     unsigned char m_speedDirChanged;
-    unsigned char m_flag125;
-    unsigned char m_pad126[2];
+    unsigned char m_seekFailed;
+    unsigned char m_padFlags[2];
     void *m_pendingMedia;
     int m_pendingSeekStep;
     int m_pendingVolumeMode;
-    int m_pad140;
+    int m_padPendingAlign;
     TrackInfoData m_pendingTrackInfo;
-    int m_pad2292;
+    int m_padPendingTail;
     int m_lastDbErr;
     int m_extraSeekErr;
     int m_targetState;
     int m_pendingFadeMs;
     int m_playParam;
     unsigned char m_needDecoderRestart;
-    unsigned char m_pad2317[3];
+    unsigned char m_padRestart[3];
     MediaListInterface *m_activeMedia;
     int m_currentPosMs;
     int m_prevTrackPos;
     int m_nextTrackPos;
     TrackInfoData m_activeTrackInfo;
-    int m_pad4484;
+    int m_padActiveTail;
     MediaListStatus m_mediaListStatus;
     int m_repeatMode;
     int m_shuffleSeed;
@@ -679,16 +689,16 @@ StateMachine::StateMachine(void *owner)
       m_audioOut(NULL),
       m_currentState(NULL),
       m_flagPendingActive(0),
-      m_flag121(0),
+      m_stopRequested(0),
       m_hasPendingTrack(0),
-      m_flag123(0),
+      m_dbRemovedError(0),
       m_speedDirChanged(0),
-      m_flag125(0),
+      m_seekFailed(0),
       m_pendingMedia(NULL),
       m_pendingSeekStep(-2),
       m_pendingVolumeMode((int)0x80000000u),
-      m_pad140(0),
-      m_pad2292(0),
+      m_padPendingAlign(0),
+      m_padPendingTail(0),
       m_lastDbErr(0),
       m_extraSeekErr(0),
       m_targetState(7),
@@ -699,7 +709,7 @@ StateMachine::StateMachine(void *owner)
       m_currentPosMs(-1),
       m_prevTrackPos(-1),
       m_nextTrackPos(-1),
-      m_pad4484(0),
+      m_padActiveTail(0),
       m_repeatMode(0),
       m_shuffleSeed(0),
       m_seekMode(-1),
@@ -770,7 +780,7 @@ int StateMachine::buildSnapshot(StateSnapshotOut *outSnap)
     outSnap->bitRate = m_activeTrackInfo.bitRate;
     outSnap->channels = m_activeTrackInfo.channels;
     outSnap->codecType = m_activeTrackInfo.codecType;
-    outSnap->sourceType = m_activeTrackInfo.sourceType;
+    outSnap->sourceType = m_activeTrackInfo.loopCount;
 
     outSnap->positionMs = (m_currentState != NULL) ? m_currentState->getCurrentPosMs() : m_currentPosMs;
     outSnap->currentTrackNum = m_prevTrackPos;
@@ -1018,7 +1028,7 @@ int StateMachine::seekActiveMedia(const unsigned int *seekParams, MediaListInter
             if (ret != 0) {
                 if (prevOrderIdx != -2 &&
                     mediaListFillTrackInfo(&m_activeTrackInfo, prevOrderIdx, media) == 0) {
-                    int decArg = (m_decoderMgr != NULL) ? ((const int *)m_decoderMgr)[1] : 0;
+                    int decArg = (m_decoderMgr != NULL) ? static_cast<const DecoderManagerHandle *>(m_decoderMgr)->ioPriority : 0;
                     trackInfoOpenDecoder(&m_activeTrackInfo, decArg, 0);
                 } else {
                     if (hadTrack)
@@ -1043,7 +1053,7 @@ int StateMachine::seekActiveMedia(const unsigned int *seekParams, MediaListInter
             if (ret != 0) {
                 if (prevOrderIdx != -2 &&
                     mediaListFillTrackInfo(&m_activeTrackInfo, prevOrderIdx, m_activeMedia) == 0) {
-                    int decArg = (m_decoderMgr != NULL) ? ((const int *)m_decoderMgr)[1] : 0;
+                    int decArg = (m_decoderMgr != NULL) ? static_cast<const DecoderManagerHandle *>(m_decoderMgr)->ioPriority : 0;
                     trackInfoOpenDecoder(&m_activeTrackInfo, decArg, 0);
                 } else if (hadTrack) {
                     m_lastErrorType = 0;
@@ -1145,7 +1155,7 @@ int StateMachine::seekPendingMedia(const unsigned int *seekParams, MediaListInte
                         m_hasPendingTrack = 0;
                         *outHasPending = 0;
                     } else {
-                        int decArg = (m_decoderMgr != NULL) ? ((const int *)m_decoderMgr)[1] : 0;
+                        int decArg = (m_decoderMgr != NULL) ? static_cast<const DecoderManagerHandle *>(m_decoderMgr)->ioPriority : 0;
                         trackInfoOpenDecoder(&m_pendingTrackInfo, decArg, 0);
                         m_hasPendingTrack = 1;
                         *outHasPending = 1;
@@ -1395,7 +1405,7 @@ int StateStopped::onPlay(int playParam)
     m_owner->m_playParam = playParam;
     if (m_owner->m_decoderMgr != NULL) {
         int sameFmt = decoderMgrIsSameFormat(m_owner->m_decoderMgr,
-                                             m_owner->m_activeTrackInfo.trackPadExtra[0]);
+                                             m_owner->m_activeTrackInfo.mediaInfo);
         m_owner->m_needDecoderRestart = (sameFmt != 1) ? 1 : 0;
     } else {
         m_owner->m_needDecoderRestart = 1;
@@ -1505,7 +1515,7 @@ int StateStopped::onSeekAndPlay(const unsigned int *seekParams, int playParam)
     m_owner->m_targetState = 4;
     if (m_owner->m_decoderMgr != NULL) {
         int sameFmt = decoderMgrIsSameFormat(m_owner->m_decoderMgr,
-                                             m_owner->m_activeTrackInfo.trackPadExtra[0]);
+                                             m_owner->m_activeTrackInfo.mediaInfo);
         m_owner->m_needDecoderRestart = (sameFmt != 1) ? 1 : 0;
     } else {
         m_owner->m_needDecoderRestart = 1;
@@ -1530,7 +1540,7 @@ int StateStopped::onSetMediaPlaying(MediaListInterface *media, int shuffleSeed)
     m_owner->m_playParam = 0;
     if (m_owner->m_decoderMgr != NULL) {
         int sameFmt = decoderMgrIsSameFormat(m_owner->m_decoderMgr,
-                                             m_owner->m_activeTrackInfo.trackPadExtra[0]);
+                                             m_owner->m_activeTrackInfo.mediaInfo);
         m_owner->m_needDecoderRestart = (sameFmt != 1) ? 1 : 0;
     } else {
         m_owner->m_needDecoderRestart = 1;

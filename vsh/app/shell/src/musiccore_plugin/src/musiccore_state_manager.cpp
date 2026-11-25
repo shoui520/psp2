@@ -94,10 +94,10 @@ struct StateMediaSnapshot {
 
 struct StateCmdPayload {
     StateMediaSnapshot media;
-    int pad148;
+    int padMedia;
     int fadeMs;
     void *newMediaHandle;
-    int pad160;
+    int resetPos;
     int seekTarget;
     int seekVolumeMode;
     int seekMode;
@@ -105,7 +105,7 @@ struct StateCmdPayload {
     int seekStep;
     int repeatValue;
     int shuffleValue;
-    int pad192;
+    int padShuffle;
     int errorCode;
     int volumeLevel;
     int volumeRamp;
@@ -121,13 +121,13 @@ struct StateCmdPayload {
     unsigned char suspendFlag;
     unsigned char syncFlag;
     unsigned char portFlag;
-    unsigned char pad247;
+    unsigned char padTail;
 };
 
 struct StateResultEvent {
     uint64_t cmdHdr;
     int errCode;
-    int pad12;
+    int padErr;
     StateMediaSnapshot media;
     uint32_t origParam;
     uint32_t origCmdHi;
@@ -136,7 +136,7 @@ struct StateResultEvent {
 
 struct StateQueueNode {
     void *vtable;
-    int pad4;
+    int padAlign;
     uint64_t cmdHdr;
     void *inBuf;
     unsigned int inSize;
@@ -149,8 +149,8 @@ struct StateManagerCallbacks {
 };
 
 struct DecoderTrackInfoMsg {
-    int pad0;
-    int pad4;
+    int headerLow;
+    int headerHigh;
     int64_t playlistId;
     int64_t trackId;
     int trackIndex;
@@ -170,28 +170,28 @@ struct StateNotifyMsg {
     uint32_t param;
     uint32_t cmdHi;
     int errorCode;
-    int pad12;
-    int pad16;
-    int pad20;
+    int notifyKind;
+    int notifySubCode;
+    int padAlign;
     StateMediaSnapshot media;
-    int pad160;
+    int padMedia;
     int extraVal;
-    int pad168;
+    int padTail;
 };
 
 struct StateMediaChangedMsg {
     uint32_t param;
     uint32_t cmdHi;
-    int pad8;
+    int padHeader;
     unsigned char hasNewMedia;
-    unsigned char pad13[3];
+    unsigned char padHasNew[3];
     void *newMedia;
     unsigned char hasUriFlag;
-    unsigned char pad21[3];
+    unsigned char padHasUri[3];
     StateMediaSnapshot media;
     void *oldMedia;
     unsigned char decrementUri;
-    unsigned char pad165[3];
+    unsigned char padDecrement[3];
 };
 
 static void initDefaultMediaSnapshot(StateMediaSnapshot *st)
@@ -297,7 +297,7 @@ private:
     SceUID m_threadId;
     void *m_cmdQueue;
     StateManagerCallbacks m_cbs;
-    int m_pad28;
+    int m_padAlign;
     struct StateMachineStorage {
         unsigned char head[116];
         void *activeMedia;
@@ -311,7 +311,7 @@ StateManager::StateManager()
     : m_initSema(-1),
       m_threadId(-1),
       m_cmdQueue(NULL),
-      m_pad28(0)
+      m_padAlign(0)
 {
     m_cbs.onResult = NULL;
     m_cbs.onMessage = NULL;
@@ -495,7 +495,7 @@ int StateManager::pause(unsigned char resetPos, int fadeParam, uint32_t origPara
 {
     StateCmdPayload req;
     initDefaultCmdPayload(&req);
-    req.pad160 = resetPos;
+    req.resetPos = resetPos;
     req.playParamVal = fadeParam;
     req.origParam = origParam;
     req.origCmdHi = origCmdHi;

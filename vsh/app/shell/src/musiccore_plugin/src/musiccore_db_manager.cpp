@@ -91,24 +91,17 @@ extern int setPowerSaveMode(int mode, int val, int flags);
  * MusicPlayer (0x811DFD10 - 0x811DFDF0)
  * ========================================================================= */
 
-class MusicPlayerBaseStub {
-public:
-    virtual ~MusicPlayerBaseStub() {}
-    virtual void onReserved() {}
-    virtual int isPlayable() { return 0; }
-};
-
 class MusicPlayer {
 public:
     static unsigned int calcTotalSize(int capacity);
     MusicPlayer(void *factory, int capacity, int *outErr, unsigned int totalBytes,
                 unsigned int headerBytes);
     virtual ~MusicPlayer();
-    virtual void onConstructReserved() {}
+    virtual void onSessionConstructed() {}
     virtual bool canHandleCommand(int channel, uint32_t cmdPacked, int param, int extra, int flags);
 
 private:
-    unsigned char m_baseStorage[472];
+    unsigned char m_playerBaseMembers[472];
 };
 
 unsigned int MusicPlayer::calcTotalSize(int capacity)
@@ -164,15 +157,15 @@ public:
     void endTransaction(int mode);
 
 private:
-    int m_pad4;
+    int m_padAlign;
     dbutil::Connection m_conn;
     paf::thread::Mutex m_mutex;
     unsigned char m_isOpen;
-    unsigned char m_pad225[7];
+    unsigned char m_padTail[7];
 };
 
 DbConnection::DbConnection()
-    : m_pad4(0),
+    : m_padAlign(0),
       m_conn(),
       m_mutex("SceShellMusicCoreDbExclsv", 0),
       m_isOpen(0)
@@ -313,20 +306,20 @@ struct RegKeyEntry {
 struct RegCacheSlot {
     int keyIndex;
     unsigned char dirty;
-    unsigned char pad5[3];
+    unsigned char padDirty[3];
     uint64_t timestampUs;
     int value;
-    int pad20;
+    int padValue;
 };
 
 struct MusicRegSnapshot {
-    int pad0[19];
+    int headerFields[19];
     int repeatMode;
     int shuffleMode;
-    int pad84[3];
+    int audioModeFields[3];
     int audioBalance;
     int eqType;
-    int pad104[3];
+    int eqBandFields[3];
     int audioNormalizer;
 };
 
@@ -342,7 +335,7 @@ class MusicRegCache {
 public:
     MusicRegCache();
     virtual ~MusicRegCache();
-    virtual void onReserved() {}
+    virtual void initialize() {}
 
     int loadAllSettings(MusicRegSnapshot *outSnap);
     int scheduleWrite(int keyIndex, int value);
@@ -351,12 +344,12 @@ public:
     int setImposeAudioBalance(int index, int value);
 
 public:
-    int m_pad4;
+    int m_padAlign;
     RegCacheSlot m_slots[5];
 };
 
 MusicRegCache::MusicRegCache()
-    : m_pad4(0)
+    : m_padAlign(0)
 {
     for (int i = 0; i < 5; ++i) {
         m_slots[i].keyIndex = 255;
@@ -480,10 +473,10 @@ struct MediaListSlot {
     virtual unsigned int getSlotStride() { return 9008u; }
 
     unsigned char inUse;
-    unsigned char pad5[3];
+    unsigned char padInUse[3];
     unsigned int payloadCap;
     void *payloadPtr;
-    unsigned char storage[8992];
+    unsigned char payloadArena[8992];
 };
 
 struct DbCallbacks {
@@ -494,7 +487,7 @@ struct DbCallbacks {
 
 struct DbCmdQueueNode {
     void *vtable;
-    int pad4;
+    int padAlign;
     uint64_t cmdHdr;
     void *inBuf;
     unsigned int inSize;
@@ -502,9 +495,9 @@ struct DbCmdQueueNode {
 
 struct DbMediaTrackInfo {
     void *vtable;
-    int pad4;
+    int codecSubType;
     int contentKind;
-    int pad12;
+    int padAlign;
     int64_t playlistId;
     int64_t trackId;
     int64_t trackItemId;
@@ -515,22 +508,27 @@ struct DbMediaTrackInfo {
     int bitRate;
     int channels;
     int durationMs;
-    int trackMetaExtra[4];
+    int playAttemptCount;
+    int fileSizeHigh;
+    int resumePositionMs;
+    int playCount;
     int sourceType;
-    int trackPadExtra[2];
+    int slotSerial;
+    void *ownerList;
+    void *mediaInfo;
     unsigned char isValid;
 };
 
 struct DbResultEvent {
     uint64_t cmdHdr;
     int errCode;
-    int pad12;
+    int padErr;
     uint32_t origParam;
     uint32_t origCmdHi;
     void *mediaHandle;
     void *workBuf;
     unsigned char dbChanged;
-    unsigned char pad33[7];
+    unsigned char padChanged[7];
     DbMediaTrackInfo trackInfo;
     int seekStep;
     int trackIndex;
@@ -539,13 +537,13 @@ struct DbResultEvent {
     int seekCmd;
     int repeatMode;
     unsigned char isNewMedia;
-    unsigned char pad2225[3];
+    unsigned char padNewMedia[3];
     int seekStepParam;
     int shuffleMode;
     int playMode;
     int audioNormalizer;
     int eqType;
-    int pad2248[3];
+    int eqBands[3];
     int audioBalance;
     int dbStatus;
 };
@@ -556,31 +554,31 @@ struct DbOpenMediaReq {
     int shuffleSeed;
     void *mediaQueue;
     int playMode;
-    int pad20[37];
+    int padBody[37];
     uint32_t origParam;
     uint32_t origCmdHi;
 };
 
 struct DbCloseMediaReq {
     void *mediaHandle;
-    int pad4[41];
+    int padBody[41];
     uint32_t origParam;
     uint32_t origCmdHi;
 };
 
 struct DbSeekMediaReq {
     int seekCmd;
-    int pad4;
+    int padCmd;
     int64_t playlistId;
     int64_t trackItemId;
     int targetIndex;
     int seekStep;
     unsigned char isNewMedia;
-    unsigned char pad33[3];
+    unsigned char padNewMedia[3];
     void *mediaHandle;
     int seekStepOut;
     int shuffleSeed;
-    int pad48[30];
+    int padBody[30];
     uint32_t origParam;
     uint32_t origCmdHi;
 };
@@ -596,7 +594,7 @@ struct DbQueryTracksReq {
 struct DbQueryIdReq {
     char *outBuf;
     size_t outSize;
-    int pad8[40];
+    int padBody[40];
     uint32_t origParam;
     uint32_t origCmdHi;
 };
@@ -604,7 +602,7 @@ struct DbQueryIdReq {
 struct DbSimpleValueReq {
     int value;
     unsigned char alsoSaveBalance;
-    unsigned char pad5[163];
+    unsigned char padBody[163];
     uint32_t origParam;
     uint32_t origCmdHi;
 };
@@ -614,29 +612,29 @@ struct DbSetEqReq {
     int bandLow;
     int bandMid;
     int bandHigh;
-    int pad16[38];
+    int padBody[38];
     uint32_t origParam;
     uint32_t origCmdHi;
 };
 
 struct LsdbAppEntry {
-    int pad0;
-    int pad4;
-    int pad8;
+    int appCategory;
+    int appType;
+    int appStatus;
     paf::string titleId;
     paf::string appPath;
-    int pad36;
+    int appAttr;
     paf::string iconPath;
-    int pad52;
+    int iconAttr;
     paf::string liveAreaPath;
-    int pad68[4];
+    int extraAttrs[4];
 
-    LsdbAppEntry() : pad0(0), pad4(0), pad8(0), pad36(0), pad52(0)
+    LsdbAppEntry() : appCategory(0), appType(0), appStatus(0), appAttr(0), iconAttr(0)
     {
-        pad68[0] = 0;
-        pad68[1] = 0;
-        pad68[2] = 0;
-        pad68[3] = 0;
+        extraAttrs[0] = 0;
+        extraAttrs[1] = 0;
+        extraAttrs[2] = 0;
+        extraAttrs[3] = 0;
     }
 };
 
@@ -755,10 +753,10 @@ int DbManager::stop()
 {
     int ret = 0;
     if (m_threadId != -1) {
-        unsigned char dummy[176];
-        sce_paf_memset(dummy, 0, sizeof(dummy));
+        unsigned char stopPayload[176];
+        sce_paf_memset(stopPayload, 0, sizeof(stopPayload));
         uint64_t stopHdr = (uint64_t)0x81008000u << 32;
-        ret = enqueueCmd(stopHdr, dummy, sizeof(dummy));
+        ret = enqueueCmd(stopHdr, stopPayload, sizeof(stopPayload));
 
         int waitErr = sceKernelWaitThreadEnd(m_threadId, NULL, NULL);
         if (waitErr < 0)
@@ -803,7 +801,7 @@ int DbManager::start(const DbCallbacks *cbs)
             MediaListSlot *slot = new (cursor) MediaListSlot();
             slot->inUse = 0;
             slot->payloadCap = 8992u;
-            slot->payloadPtr = slot->storage;
+            slot->payloadPtr = slot->payloadArena;
             cursor += slot->getSlotStride();
         }
     }
@@ -1110,11 +1108,11 @@ void DbManager::refreshMediaTrackIds(void *mediaHandle)
         return;
 
     struct MediaListItem {
-        int pad0;
+        int headerWord;
         int mode;
-        int pad8[4];
+        int itemMeta[4];
         const char *path;
-        int pad28;
+        int padAlign;
         uint64_t trackId;
     };
 
@@ -1242,7 +1240,7 @@ int DbManager::handleSeekMedia(const DbSeekMediaReq *req, DbResultEvent *outEv)
         int curIdx = idxVtbl[16](media);
         outEv->trackIndex = ordVtbl[22](media, curIdx);
         trackInfoReleaseResources(&trackInfo, 0);
-        outEv->trackInfo.trackPadExtra[0] = 0;
+        outEv->trackInfo.mediaInfo = NULL;
     }
 
     if (locked == 1) {
