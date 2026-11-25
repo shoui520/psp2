@@ -43,6 +43,17 @@ struct SwMwIpcBlock {
 	unsigned long long value3Value2;	/* 0x18: value3, value2 << 32 */
 };
 
+/* a control message as it travels over the server's pipes (0x20 bytes) */
+struct SwMwIpcWireMessage {
+	int header[2];		/* 0x00: the message pipe's own */
+	int kind;		/* 0x08: 1 connect, 2 connected, 3 disconnect, 4 open, 5 opened, ... */
+	int result;		/* 0x0C */
+	int value0;		/* 0x10 */
+	int value1;		/* 0x14 */
+	int value2;		/* 0x18 */
+	int value3;		/* 0x1C */
+};
+
 /* one request as the server sees it (0x38 bytes, the library's message layout) */
 struct SwMwIpcMessage {
 	int command;		/* 0x00 */
@@ -439,6 +450,10 @@ extern "C" int SwMwCommServerCreateShared(struct SwMwSharedMemory **out, const c
 {
 	struct SwMwSharedMemory *shared;
 	MemBlockUserOpt option;
+	union {
+		MemBlockUserOpt option;
+		SceKernelAllocMemBlockOpt sdkOption;
+	} blockOption;
 
 	shared = new struct SwMwSharedMemory;
 	if (shared == NULL)
@@ -465,9 +480,9 @@ extern "C" int SwMwCommServerCreateShared(struct SwMwSharedMemory **out, const c
 		strncpy(shared->name, name, 32);
 		/* the SDK 3.65 option is the 0x40-byte MemBlockUserOpt above; the tree's SDK
 		 * header still declares the older 0x14-byte form of the same argument */
+		memcpy(&blockOption.option, &option, sizeof(option));
 		shared->memBlock = sceKernelAllocMemBlock(
-			name, 0xC20D060, shared->size,
-			(const SceKernelAllocMemBlockOpt *)&option);
+			name, 0xC20D060, shared->size, &blockOption.sdkOption);
 		if (shared->memBlock < 0) {
 			delete shared;
 			return SWMW_SHARED_ERROR;
@@ -491,7 +506,7 @@ extern "C" int SwMwCommServerCreateShared(struct SwMwSharedMemory **out, const c
  * The channel keeps one per stream slot (and one of its own for the single-stream case).
  */
 struct SwMwCommThread {
-	void (*entry)(void *argument);	/* 0x00: the thread's entry */
+	int (*entry)(void *argument);	/* 0x00: the thread's entry */
 	SceUID id;			/* 0x04: its id, once started */
 	void *argument;			/* 0x08: what the entry receives */
 };
@@ -513,7 +528,7 @@ struct SwMwCommChannel {
 	void *sharedBase;		/* 0x08: the shared memory's base */
 	int bufferSize;			/* 0x0C: its size */
 	unsigned int reserved[16];	/* 0x10: the original never reads or writes them */
-	void *shared;			/* 0x50: the shared memory control object */
+	struct SwMwSharedMemory *shared;	/* 0x50: the shared memory control object */
 	SceUID singlePipe;		/* 0x54: the single-stream CtoS pipe */
 	struct SwMwCommThread singleThread;	/* 0x58 */
 	int streamCount;		/* 0x64: 0: one stream, else four stream slots */
@@ -694,7 +709,7 @@ extern "C" void SwsSetAffinity(int value)
  * the tool mode the priority (111, or the system's 0x10000040), the SW_DEP type the
  * affinity the channel open asked for (192 when it is set and not the system's).
  */
-extern "C" int SwMwThreadCreate(struct SwMwCommThread *thread, void (*entry)(void *),
+extern "C" int SwMwThreadCreate(struct SwMwCommThread *thread, int (*entry)(void *),
 				void *argument, int type)
 {
 	char name[32];
@@ -786,4 +801,235 @@ extern "C" int SwMwThreadCreate(struct SwMwCommThread *thread, void (*entry)(voi
 		return sceKernelStartThread(id, 0xC, thread);
 	}
 	return id;
+}
+
+/*
+ * Set a channel up (0x81001832): open the single stream's CtoS pipe, create the four
+ * streams' request pipes (StoC) and, when the channel carries streams, open their CtoS
+ * pipes, then create or open the shared memory block. A failure tears the pipes down and
+ * answers 12009.
+ */
+extern "C" int SwMwCommChannelSetup(struct SwMwCommChannel *channel, int bufferSize)
+{
+	char name[32];
+	int result = 0;
+	unsigned int i;
+
+	channel->singlePipe = -1;
+	if (channel->streamCount == 0) {
+		sprintf(name, "%s_%02d", "SW_IPC_Strm_Pipe_CtoS", channel->index);
+		result = SwMwIpcOpenPipe(name, &channel->singlePipe);
+		if (result != 0) {
+			swMwTrace("[SWMW] Error %d in %s:%d\n", result, SWMW_COMM_SOURCE, 275);
+			goto fail;
+		}
+	}
+	for (i = 0; i < 4; ++i) {
+		channel->slots[i].pipeStoC = -1;
+		channel->slots[i].pipeCtoS = -1;
+	}
+	for (i = 0; i < 4; ++i) {
+		sprintf(name, "%s_%02d_%02d", "SW_IPC_Strm_Pipe_StoC", channel->index, i);
+		result = SwMwIpcCreatePipe(name, &channel->slots[i].pipeStoC);
+		if (result != 0) {
+			swMwTrace("[SWMW] Error %d in %s:%d\n", result, SWMW_COMM_SOURCE, 286);
+			goto fail;
+		}
+		if (channel->streamCount != 0) {
+			sprintf(name, "%s_%02d_%02d", "SW_IPC_Strm_Pipe_CtoS", channel->index, i);
+			result = SwMwIpcOpenPipe(name, &channel->slots[i].pipeCtoS);
+			if (result != 0) {
+				swMwTrace("[SWMW] Error %d in %s:%d\n", result, SWMW_COMM_SOURCE, 291);
+				goto fail;
+			}
+		}
+	}
+	if (bufferSize == 0) {
+		channel->sharedBase = NULL;
+		channel->bufferSize = 0;
+		return 0;
+	}
+	sprintf(name, "%s_%02d", "SW_IPC_Strm_ShMem", channel->index);
+	result = SwMwCommServerCreateShared(&channel->shared, name, bufferSize,
+					    &channel->sharedBase, 0);
+	if (result != 0) {
+		swMwTrace("[SWMW] Error %d in %s:%d\n", result, SWMW_COMM_SOURCE, 299);
+		goto fail;
+	}
+	channel->bufferSize = bufferSize;
+	return 0;
+fail:
+	for (i = 0; i < 4; ++i) {
+		if (channel->slots[i].pipeStoC != -1) {
+			result = SwMwIpcDeletePipe(channel->slots[i].pipeStoC);
+			if (result != 0)
+				swMwTrace("[SWMW] Error %d in %s:%d\n", result,
+					  SWMW_COMM_SOURCE, 312);
+			channel->slots[i].pipeStoC = -1;
+		}
+		if (channel->slots[i].pipeCtoS != -1) {
+			result = SwMwIpcClosePipe(channel->slots[i].pipeCtoS);
+			if (result != 0)
+				swMwTrace("[SWMW] Error %d in %s:%d\n", result,
+					  SWMW_COMM_SOURCE, 317);
+			channel->slots[i].pipeCtoS = -1;
+		}
+	}
+	if (result != 0)
+		swMwTrace("[SWMW] Error %d in %s:%d\n", result, SWMW_COMM_SOURCE, 321);
+	return 12009;
+}
+
+/* tear a channel down (0x81001b9c): free its shared block, then its stream pipes */
+extern "C" int SwMwCommChannelTerm(struct SwMwCommChannel *channel)
+{
+	int result;
+	int status;
+	unsigned int i;
+
+	if (channel->shared != NULL) {
+		result = SwMwSharedMemoryFree((struct SwMwSharedMemory *)channel->shared, 0);
+		if (result != 0)
+			swMwTrace("[SWMW] Error %d in %s:%d\n", result, SWMW_COMM_SOURCE, 336);
+		channel->shared = NULL;
+		channel->sharedBase = NULL;
+		channel->bufferSize = 0;
+	}
+	for (i = 0; i < 4; ++i) {
+		if (channel->slots[i].pipeStoC != -1) {
+			status = SwMwIpcDeletePipe(channel->slots[i].pipeStoC);
+			if (status != 0)
+				swMwTrace("[SWMW] Error %d in %s:%d\n", status,
+					  SWMW_COMM_SOURCE, 345);
+			channel->slots[i].pipeStoC = -1;
+		}
+		if (channel->slots[i].pipeCtoS != -1) {
+			status = SwMwIpcClosePipe(channel->slots[i].pipeCtoS);
+			if (status != 0)
+				swMwTrace("[SWMW] Error %d in %s:%d\n", status,
+					  SWMW_COMM_SOURCE, 350);
+			channel->slots[i].pipeCtoS = -1;
+		}
+	}
+	if (channel->singlePipe != -1) {
+		SwMwIpcClosePipe(channel->singlePipe);
+		channel->singlePipe = -1;
+	}
+	return 0;
+}
+
+/* free a channel (0x81001cfc): its four stream pipe pairs and its single pipe */
+extern "C" int SwMwCommChannelFree(struct SwMwCommChannel *channel)
+{
+	int result;
+	unsigned int i;
+
+	for (i = 0; i < 4; ++i) {
+		if (channel->slots[i].pipeStoC != -1) {
+			result = SwMwIpcDeletePipe(channel->slots[i].pipeStoC);
+			if (result != 0)
+				swMwTrace("[SWMW] Error %d in %s:%d\n", result,
+					  SWMW_COMM_SOURCE, 543);
+			channel->slots[i].pipeStoC = -1;
+		}
+		if (channel->slots[i].pipeCtoS != -1) {
+			result = SwMwIpcClosePipe(channel->slots[i].pipeCtoS);
+			if (result != 0)
+				swMwTrace("[SWMW] Error %d in %s:%d\n", result,
+					  SWMW_COMM_SOURCE, 548);
+			channel->slots[i].pipeCtoS = -1;
+		}
+	}
+	if (channel->singlePipe != -1) {
+		SwMwIpcClosePipe(channel->singlePipe);
+		channel->singlePipe = -1;
+	}
+	return 0;
+}
+
+/*
+ * Open a channel (0x81001e0e): the request names the channel, its stream count and buffer
+ * size; set the channel up, start one thread per stream (or the single one), and tell the
+ * library the channel is open with a kind-5 control message. A failure tears it down.
+ */
+extern "C" int SwMwCommChannelOpen(struct SwMwCommServer *server,
+				   struct SwMwIpcWireMessage *message)
+{
+	struct SwMwCommChannel *channel;
+	struct SwMwThreadArgument *argument;
+	struct SwMwIpcWireMessage control;
+	int streams = message->value0;
+	int index = message->value1;
+	int bufferSize = message->value2;
+	int affinity = message->value3;
+	int result;
+	int failed;
+	unsigned int i;
+
+	channel = &server->channels[index];
+	channel->streamCount = streams;
+	SwsSetAffinity(affinity);
+	result = SwMwCommChannelSetup(channel, bufferSize);
+	failed = 0;
+	if (result != 0) {
+		swMwTrace("[SWMW] Error %d in %s:%d\n", result, SWMW_COMM_SOURCE, 687);
+		failed = 1;
+	}
+	if (failed == 0) {
+		if (streams != 0) {
+			i = 0;
+			while (1) {
+				argument = (struct SwMwThreadArgument *)malloc(8);
+				if (argument == NULL)
+					break;
+				argument->channel = channel;
+				argument->pipe = channel->slots[i].pipeCtoS;
+				if (SwMwThreadCreate(&channel->slots[i].thread,
+						     SwMwCommServerThread, argument, 19) != 0)
+					break;
+				if (++i >= 4) {
+					control.kind = 5;
+					control.result = 0;
+					control.value0 = 0;
+					control.value1 = 0;
+					control.value2 = 0;
+					control.value3 = 0;
+					result = SwMwIpcSend(server->pipeStoC, &control);
+					if (result != 0) {
+						swMwTrace("[SWMW] Error %d in %s:%d\n", result,
+							  SWMW_COMM_SOURCE, 724);
+						goto fail;
+					}
+					return 0;
+				}
+			}
+		} else {
+			argument = (struct SwMwThreadArgument *)malloc(8);
+			if (argument != NULL) {
+				argument->channel = channel;
+				argument->pipe = channel->singlePipe;
+				if (SwMwThreadCreate(&channel->singleThread,
+						     SwMwCommServerThread, argument, 0) == 0) {
+					control.kind = 5;
+					control.result = 0;
+					control.value0 = 0;
+					control.value1 = 0;
+					control.value2 = 0;
+					control.value3 = 0;
+					result = SwMwIpcSend(server->pipeStoC, &control);
+					if (result != 0) {
+						swMwTrace("[SWMW] Error %d in %s:%d\n", result,
+							  SWMW_COMM_SOURCE, 724);
+						goto fail;
+					}
+					return 0;
+				}
+			}
+		}
+	}
+fail:
+	result = SwMwCommChannelTerm(channel);
+	if (result != 0)
+		swMwTrace("[SWMW] Error %d in %s:%d\n", result, SWMW_COMM_SOURCE, 732);
+	return result;
 }
