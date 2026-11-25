@@ -144,7 +144,7 @@ ImeDialog::ImeDialog(SceImeDialogParam *param, ImeDialogFunction callback, bool 
 				math::v4 area = m_scrollView->m_view_box;
 
 				area.set_y(m_scrollView->GetSize(0)->extract_y() - (float)IME_DIALOG_VIEW_HEIGHT);
-				ScePafWidget_46F36554(m_scrollView, area);
+				m_scrollView->SetVerticalBarMargin(area);
 			}
 			infobar = 0;
 			if (infobarShown)
