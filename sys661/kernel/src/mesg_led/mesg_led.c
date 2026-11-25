@@ -597,25 +597,25 @@ static u8 g_data[0x184] = {
     /* 0xb740 */ 0x98, 0xa8, 0x2d, 0x7e,
 };
 
-u8 *g_8DC0;
-s32 g_8DFC;
+u8 *g_mesgWorkBufPtr;
+s32 g_mesgInitFlag;
 u8 *g_bss_ptrs[134];
 u8 g_zero8[8];
-u8 g_8EE8[336];
-u8 g_9038[200];
-u8 g_9100[384];
-u8 g_9280[256];
-u8 g_9380[32];
-u8 g_93A0[40];
+u8 g_mesgHeaderBuf[336];
+u8 g_mesgMetaBuf[200];
+u8 g_mesgAesBuf[384];
+u8 g_mesgKeyBuf[256];
+u8 g_mesgHashBuf[32];
+u8 g_mesgSigBuf[40];
 u8 g_saved_keys[40];
-SceUID g_93F0;
-SceUID g_93F4;
+SceUID g_mesgSemaId;
+SceUID g_mesgPartitionId;
 
 int mesgLedMemcmp(const u8 *a, const u8 *b, u32 len);
 
 int mesgLedDecryptAesCbc(void *buf, int size, int keyId, int poll) // at 0x00000000
 {
-    g_8DC0 = buf;
+    g_mesgWorkBufPtr = buf;
     *(s32*)(buf + 0) = 5; // used for AES CBC
     *(s32*)(buf + 4) = 0;
     *(s32*)(buf + 8) = 0;
@@ -640,7 +640,7 @@ int mesgLedCheckKeyBlacklist(u8 *a0, u8 *a1, u32 a2) // at 0x0000006C
     return 0;
 }
 
-// mesgLedDecryptExecutable(&g_8A78, &g_8A7C, 81, pOut, cbIn, cbOut, 0, g_8EA8, 0, 2, 0, 0);
+// mesgLedDecryptExecutable(&g_mesgKeyIndexA, &g_mesgKeyIndexB, 81, pOut, cbIn, cbOut, 0, g_mesgDefaultKey, 0, 2, 0, 0);
 int mesgLedDecryptExecutable(u8 *tag, u8 *arg1, int keyId, u8 *pOut, u32 cbIn, u32 *cbOut, int poll, u8 *arg7, u32 arg8, s32 arg9, u8 *arg10, u8 *arg11) // at 0x000000E0
 {
     u8 sp0[40];
@@ -666,10 +666,10 @@ int mesgLedDecryptExecutable(u8 *tag, u8 *arg1, int keyId, u8 *pOut, u32 cbIn, u
     }
     // 0190
     for (u32 i = 0; i < 336; i++) {
-        g_8EE8[i] = pOut[i];
+        g_mesgHeaderBuf[i] = pOut[i];
     }
     // 01E4
-    if (mesgLedMemcmp(tag, (g_8EE8 + 0xD0), 4)) {
+    if (mesgLedMemcmp(tag, (g_mesgHeaderBuf + 0xD0), 4)) {
         // 19C8
         retVal = -301;
         goto end;
@@ -683,7 +683,7 @@ int mesgLedDecryptExecutable(u8 *tag, u8 *arg1, int keyId, u8 *pOut, u32 cbIn, u
         // 1994
         // 19A4
         for (s32 i = 0; i < 24; i++) {
-            if (g_8EE8[i + 212] != 0) {
+            if (g_mesgHeaderBuf[i + 212] != 0) {
                 retVal = -302;
                 goto end;
             }
@@ -692,7 +692,7 @@ int mesgLedDecryptExecutable(u8 *tag, u8 *arg1, int keyId, u8 *pOut, u32 cbIn, u
         // 1960
         // 1970
         for (s32 i = 0; i < 88; i++) {
-            if (g_8EE8[i + 212] != 0) {
+            if (g_mesgHeaderBuf[i + 212] != 0) {
                 retVal = -302;
                 goto end;
             }
@@ -701,18 +701,18 @@ int mesgLedDecryptExecutable(u8 *tag, u8 *arg1, int keyId, u8 *pOut, u32 cbIn, u
         // 192C
         // 193C
         for (s32 i = 1; i < 88; i++) {
-            if (g_8EE8[i + 212] != 0) {
+            if (g_mesgHeaderBuf[i + 212] != 0) {
                 retVal = -302;
                 goto end;
             }
         }
         // 1884
-        sp80 = g_8EE8[212];
+        sp80 = g_mesgHeaderBuf[212];
     } else if (arg9 == 6) {
         // 18F8
         // 1908
         for (s32 i = 0; i < 56; i++) {
-            if (g_8EE8[i + 212] != 0) {
+            if (g_mesgHeaderBuf[i + 212] != 0) {
                 retVal = -302;
                 goto end;
             }
@@ -721,18 +721,18 @@ int mesgLedDecryptExecutable(u8 *tag, u8 *arg1, int keyId, u8 *pOut, u32 cbIn, u
         // 18C4
         // 18D4
         for (s32 i = 1; i < 56; i++) {
-            if (g_8EE8[i + 212] != 0) {
+            if (g_mesgHeaderBuf[i + 212] != 0) {
                 retVal = -302;
                 goto end;
             }
         }
         // 1884
-        sp80 = g_8EE8[212];
+        sp80 = g_mesgHeaderBuf[212];
     } else if (arg9 == 9) {
         // 1890
         // 18A0
         for (s32 i = 0; i < 48; i++) {
-            if (g_8EE8[i + 212] != 0) {
+            if (g_mesgHeaderBuf[i + 212] != 0) {
                 retVal = -302;
                 goto end;
             }
@@ -741,25 +741,25 @@ int mesgLedDecryptExecutable(u8 *tag, u8 *arg1, int keyId, u8 *pOut, u32 cbIn, u
         // 1858
         // 1864
         for (s32 i = 1; i < 48; i++) {
-            if (g_8EE8[i + 212] != 0) {
+            if (g_mesgHeaderBuf[i + 212] != 0) {
                 retVal = -302;
                 goto end;
             }
         }
         // 1884
-        sp80 = g_8EE8[212];
+        sp80 = g_mesgHeaderBuf[212];
     }
     // 0240
     // 0244
     if (arg7 != NULL && arg8 != 0) {
         // 1838
-        if (mesgLedCheckKeyBlacklist(g_8EE8, arg7, arg8) == 1) {
+        if (mesgLedCheckKeyBlacklist(g_mesgHeaderBuf, arg7, arg8) == 1) {
             retVal = -305;
             goto end;
         }
     }
     // 0254
-    u32 cb = g_8EE8[176] | (g_8EE8[177] << 8) | (g_8EE8[178] << 16) | (g_8EE8[179] << 24);
+    u32 cb = g_mesgHeaderBuf[176] | (g_mesgHeaderBuf[177] << 8) | (g_mesgHeaderBuf[178] << 16) | (g_mesgHeaderBuf[179] << 24);
     *cbOut = cb;
     if (cbIn - 336 < cb) {
         retVal = -206;
@@ -771,18 +771,18 @@ int mesgLedDecryptExecutable(u8 *tag, u8 *arg1, int keyId, u8 *pOut, u32 cbIn, u
         for (s32 i = 0; i < 9; i++) {
             // 17FC
             for (u32 j = 0; j < 16; j++) {
-                  (g_9100 + 0x14)[i * 16 + j] = arg1[i * 16 + j];
+                  (g_mesgAesBuf + 0x14)[i * 16 + j] = arg1[i * 16 + j];
             }
-            (g_9100 + 0x14)[i * 16] = i;
+            (g_mesgAesBuf + 0x14)[i * 16] = i;
         }
     } else {
         // 02C8
         for (u32 i = 0; i < 144; i++) {
-            (g_9100 + 0x14)[i] = arg1[i];
+            (g_mesgAesBuf + 0x14)[i] = arg1[i];
         }
     }
     // 02E8
-    retVal = mesgLedDecryptAesCbc(g_9100, 144, keyId, poll);
+    retVal = mesgLedDecryptAesCbc(g_mesgAesBuf, 144, keyId, poll);
     if (retVal != 0) {
         // 1238
         if (retVal >= 0) {
@@ -798,19 +798,19 @@ int mesgLedDecryptExecutable(u8 *tag, u8 *arg1, int keyId, u8 *pOut, u32 cbIn, u
         if (arg11 != NULL) {
             // 0358
             for (s32 i = 0; i < 144; i++) {
-                g_9100[i] ^= arg11[i & 0xF];
+                g_mesgAesBuf[i] ^= arg11[i & 0xF];
             }
         }
     }
     // 0388
     // 0398
     for (u32 i = 0; i < 144; i++) {
-        g_9038[i] = g_9100[i];
+        g_mesgMetaBuf[i] = g_mesgAesBuf[i];
     }
     if (arg9 == 9 || arg9 == 10) {
         // 03D0
         for (u32 i = 0; i < 40; i++) {
-            g_93A0[i] = pOut[i + 260];
+            g_mesgSigBuf[i] = pOut[i + 260];
         }
         // 03F0
         for (u32 i = 0; i < 40; i++) {
@@ -818,9 +818,9 @@ int mesgLedDecryptExecutable(u8 *tag, u8 *arg1, int keyId, u8 *pOut, u32 cbIn, u
         }
         // 0410
         for (u32 i = 0; i < 40; i++) {
-            sp0[i] = g_93A0[i];
+            sp0[i] = g_mesgSigBuf[i];
         }
-        g_8DC0 = pOut;
+        g_mesgWorkBufPtr = pOut;
         *(s32*)(pOut) = cbIn - 4;
         if (!poll) {
             // 17C0
@@ -846,9 +846,9 @@ int mesgLedDecryptExecutable(u8 *tag, u8 *arg1, int keyId, u8 *pOut, u32 cbIn, u
         }
         // 0190
         for (u32 i = 0; i < 32; i++) {
-            pOut[i] = g_8EE8[i];
+            pOut[i] = g_mesgHeaderBuf[i];
         }
-        u8 *a2 = g_9280;
+        u8 *a2 = g_mesgKeyBuf;
         if (tag[2] == 0x16) {
             // 1790
             // 179C
@@ -880,9 +880,9 @@ int mesgLedDecryptExecutable(u8 *tag, u8 *arg1, int keyId, u8 *pOut, u32 cbIn, u
         }
         if (!poll) {
             // 1744
-            retVal = sceUtilsBufferCopyWithRange(NULL, 0, g_9280, 100, 17);
+            retVal = sceUtilsBufferCopyWithRange(NULL, 0, g_mesgKeyBuf, 100, 17);
         } else {
-            retVal = sceUtilsBufferCopyByPollingWithRange(NULL, 0, g_9280, 100, 17);
+            retVal = sceUtilsBufferCopyByPollingWithRange(NULL, 0, g_mesgKeyBuf, 100, 17);
         }
         // 055C
         if (retVal != 0) {
@@ -894,10 +894,10 @@ int mesgLedDecryptExecutable(u8 *tag, u8 *arg1, int keyId, u8 *pOut, u32 cbIn, u
     // 0568
     if (arg9 == 3) {
         // 145C
-        u8 *a2 = g_9100;
+        u8 *a2 = g_mesgAesBuf;
         // 1470
         for (u32 i = 0; i < 64; i++) {
-            *(s8*)(a2 + i) = (g_8EE8 + 0xec)[i];
+            *(s8*)(a2 + i) = (g_mesgHeaderBuf + 0xec)[i];
         }
         a2 = a2 + 64;
         // 1494
@@ -911,27 +911,27 @@ int mesgLedDecryptExecutable(u8 *tag, u8 *arg1, int keyId, u8 *pOut, u32 cbIn, u
         a2 = a2 + 32;
         // 14D0
         for (u32 i = 0; i < 48; i++) {
-            *(s8*)(a2 + i) = (g_8EE8 + 0x80)[i];
+            *(s8*)(a2 + i) = (g_mesgHeaderBuf + 0x80)[i];
         }
         a2 = a2 + 48;
         // 14FC
         for (u32 i = 0; i < 16; i++) {
-            *(s8*)(a2 + i) = (g_8EE8 + 0xD0)[i];
+            *(s8*)(a2 + i) = (g_mesgHeaderBuf + 0xD0)[i];
         }
         a2 = a2 + 16;
         // 1528
         for (u32 i = 0; i < 16; i++) {
-            *(s8*)(a2 + i) = (g_8EE8 + 0x12C)[i];
+            *(s8*)(a2 + i) = (g_mesgHeaderBuf + 0x12C)[i];
         }
         // 1550
         for (s32 i = 0; i < 80; i++) {
             if (arg11 != NULL) {
-                g_9100[144 + i] ^= arg11[i & 0xF];
+                g_mesgAesBuf[144 + i] ^= arg11[i & 0xF];
             }
             // 1580
-            g_9100[144 + i] ^= arg10[i];
+            g_mesgAesBuf[144 + i] ^= arg10[i];
         }
-        retVal = sceUtilsBufferCopyWithRange(g_9280, 180, g_9100, 336, 3);
+        retVal = sceUtilsBufferCopyWithRange(g_mesgKeyBuf, 180, g_mesgAesBuf, 336, 3);
         if (retVal != 0) {
             // 0A78
             if (retVal >= 0) {
@@ -942,10 +942,10 @@ int mesgLedDecryptExecutable(u8 *tag, u8 *arg1, int keyId, u8 *pOut, u32 cbIn, u
             retVal = -303;
             goto reset;
         }
-        a2 = g_9100;
+        a2 = g_mesgAesBuf;
         // 15D4
         for (u32 i = 0; i < 4; i++) {
-            a2[i] = (g_8EE8 + 0xD0)[i];
+            a2[i] = (g_mesgHeaderBuf + 0xD0)[i];
         }
         a2 = a2 + 4;
         // 15F8
@@ -955,62 +955,62 @@ int mesgLedDecryptExecutable(u8 *tag, u8 *arg1, int keyId, u8 *pOut, u32 cbIn, u
         a2 = a2 + 88;
         // 161C
         for (u32 i = 0; i < 16; i++) {
-            a2[i] = (g_8EE8 + 0x140)[i];
+            a2[i] = (g_mesgHeaderBuf + 0x140)[i];
         }
         a2 = a2 + 16;
         // 1648
         for (u32 i = 0; i < 20; i++) {
-            a2[i] = (g_8EE8 + 0x12C)[i];
+            a2[i] = (g_mesgHeaderBuf + 0x12C)[i];
         }
         // 1670
         for (u32 i = 0; i < 16; i++) {
-            a2[i] = g_9280[0x40 + i];
+            a2[i] = g_mesgKeyBuf[0x40 + i];
         }
         a2 = a2 + 20;
         // 169C
         for (u32 i = 0; i < 48; i++) {
-            a2[i] = g_9280[i];
+            a2[i] = g_mesgKeyBuf[i];
         }
         a2 = a2 + 48;
         // 16C8
         for (u32 i = 0; i < 16; i++) {
-            a2[i] = g_9280[0x30 + i];
+            a2[i] = g_mesgKeyBuf[0x30 + i];
         }
         a2 = a2 + 16;
         // 16F4
         for (u32 i = 0; i < 16; i++) {
-            a2[i] = (g_8EE8 + 0xB0)[i];
+            a2[i] = (g_mesgHeaderBuf + 0xB0)[i];
         }
         a2 = a2 + 16;
         // 1720
         for (u32 i = 0; i < 128; i++) {
-            a2[i] = g_8EE8[i];
+            a2[i] = g_mesgHeaderBuf[i];
         }
     } else if (arg9 == 5 || arg9 == 7 || arg9 == 10) {
         // 113C
-        u8 *a2 = (g_9100 + 0x14);
+        u8 *a2 = (g_mesgAesBuf + 0x14);
         // 114C
         for (u32 i = 0; i < 48; i++) {
-            a2[i] = (g_8EE8 + 0x80)[i];
+            a2[i] = (g_mesgHeaderBuf + 0x80)[i];
         }
         a2 = a2 + 48;
         for (u32 i = 0; i < 16; i++) {
-            a2[i] = (g_8EE8 + 0xD0)[i];
+            a2[i] = (g_mesgHeaderBuf + 0xD0)[i];
         }
         a2 = a2 + 16;
         // 11A4
         for (u32 i = 0; i < 16; i++) {
-            a2[i] = (g_8EE8 + 0x12C)[i];
+            a2[i] = (g_mesgHeaderBuf + 0x12C)[i];
         }
         // 11CC
         for (s32 i = 0; i < 80; i++) {
             if (arg11 != NULL) {
-                g_9100[20 + i] ^= arg11[i & 0xF];
+                g_mesgAesBuf[20 + i] ^= arg11[i & 0xF];
             }
             // 11FC
-            g_9100[20 + i] ^= arg10[i & 0xF];
+            g_mesgAesBuf[20 + i] ^= arg10[i & 0xF];
         }
-        retVal = mesgLedDecryptAesCbc(g_9100, 80, keyId, poll);
+        retVal = mesgLedDecryptAesCbc(g_mesgAesBuf, 80, keyId, poll);
         if (retVal != 0) {
             // 1238
             if (retVal >= 0) {
@@ -1022,14 +1022,14 @@ int mesgLedDecryptExecutable(u8 *tag, u8 *arg1, int keyId, u8 *pOut, u32 cbIn, u
             goto reset;
         }
         // 124C
-        a2 = g_9100;
+        a2 = g_mesgAesBuf;
         // 125C
         for (u32 i = 0; i < 80; i++) {
-            g_9280[i] = a2[i];
+            g_mesgKeyBuf[i] = a2[i];
         }
         // 1284
         for (u32 i = 0; i < 4; i++) {
-            a2[i] = (g_8EE8 + 0xD0)[i];
+            a2[i] = (g_mesgHeaderBuf + 0xD0)[i];
         }
         a2 = a2 + 4;
         // 12A8
@@ -1042,106 +1042,106 @@ int mesgLedDecryptExecutable(u8 *tag, u8 *arg1, int keyId, u8 *pOut, u32 cbIn, u
             a2 = a2 - 32;
             // 1438
             for (u32 i = 0; i < 32; i++) {
-                a2[i] = (g_8EE8 + 0x10C)[i];
+                a2[i] = (g_mesgHeaderBuf + 0x10C)[i];
             }
             a2 = a2 + 32;
         }
         // 12C8
         // 12D4
         for (u32 i = 0; i < 16; i++) {
-            a2[i] = (g_8EE8 + 0x140)[i];
+            a2[i] = (g_mesgHeaderBuf + 0x140)[i];
         }
         a2 = a2 + 16;
         // 1300
         for (u32 i = 0; i < 20; i++) {
-            a2[i] = (g_8EE8 + 0x12C)[i];
+            a2[i] = (g_mesgHeaderBuf + 0x12C)[i];
         }
         // 1328
         for (u32 i = 0; i < 16; i++) {
-            a2[i] = g_9280[0x40 + i];
+            a2[i] = g_mesgKeyBuf[0x40 + i];
         }
         a2 = a2 + 20;
         // 1354
         for (u32 i = 0; i < 48; i++) {
-            a2[i] = g_9280[i];
+            a2[i] = g_mesgKeyBuf[i];
         }
         a2 = a2 + 48;
         // 1380
         for (u32 i = 0; i < 16; i++) {
-            a2[i] = g_9280[0x30 + i];
+            a2[i] = g_mesgKeyBuf[0x30 + i];
         }
         a2 = a2 + 16;
         // 13AC
         for (u32 i = 0; i < 16; i++) {
-            a2[i] = (g_8EE8 + 0xB0)[i];
+            a2[i] = (g_mesgHeaderBuf + 0xB0)[i];
         }
         a2 = a2 + 16;
         // 13D8
         for (u32 i = 0; i < 128; i++) {
-            a2[i] = g_8EE8[i];
+            a2[i] = g_mesgHeaderBuf[i];
         }
         if (arg9 == 10) {
             // 140C
             for (u32 i = 0; i < 40; i++) {
-                (g_9100 + 0x34)[i] = 0;
+                (g_mesgAesBuf + 0x34)[i] = 0;
             }
         }
     } else if (arg9 != 2 && arg9 != 4 && arg9 != 6 && arg9 != 9) {
         // 10A4
         // 10B4
         for (u32 i = 0; i < 128; i++) {
-            g_9100[i] = (g_8EE8 + 0xD0)[i];
+            g_mesgAesBuf[i] = (g_mesgHeaderBuf + 0xD0)[i];
         }
         // 10E4
         for (u32 i = 0; i < 128; i++) {
-            (g_9100 + 0x80)[i] = (g_8EE8 + 0x80)[i];
+            (g_mesgAesBuf + 0x80)[i] = (g_mesgHeaderBuf + 0x80)[i];
         }
         // 1114
         for (u32 i = 0; i < 128; i++) {
-            (g_9100 + 0xD0)[i] = g_8EE8[i];
+            (g_mesgAesBuf + 0xD0)[i] = g_mesgHeaderBuf[i];
         }
     } else {
         // 05CC
-        u8 *a2 = g_9100;
+        u8 *a2 = g_mesgAesBuf;
         // 05DC
         for (u32 i = 0; i < 92; i++) {
-            *(s8*)(a2 + i) = (g_8EE8 + 0xD0)[i];
+            *(s8*)(a2 + i) = (g_mesgHeaderBuf + 0xD0)[i];
         }
         a2 = a2 + 92;
         // 0608
         for (u32 i = 0; i < 16; i++) {
-            *(s8*)(a2 + i) = (g_8EE8 + 0x140)[i];
+            *(s8*)(a2 + i) = (g_mesgHeaderBuf + 0x140)[i];
         }
         a2 = a2 + 16;
         // 0634
         for (u32 i = 0; i < 20; i++) {
-            *(s8*)(a2 + i) = (g_8EE8 + 0x12C)[i];
+            *(s8*)(a2 + i) = (g_mesgHeaderBuf + 0x12C)[i];
         }
         a2 = a2 + 20;
         // 0660
         for (u32 i = 0; i < 48; i++) {
-            *(s8*)(a2 + i) = (g_8EE8 + 0x80)[i];
+            *(s8*)(a2 + i) = (g_mesgHeaderBuf + 0x80)[i];
         }
         a2 = a2 + 48;
         // 068C
         for (u32 i = 0; i < 16; i++) {
-            *(s8*)(a2 + i) = (g_8EE8 + 0xD0)[i];
+            *(s8*)(a2 + i) = (g_mesgHeaderBuf + 0xD0)[i];
         }
         a2 = a2 + 16;
         // 06B8
         for (u32 i = 0; i < 16; i++) {
-            *(s8*)(a2 + i) = (g_8EE8 + 0xB0)[i];
+            *(s8*)(a2 + i) = (g_mesgHeaderBuf + 0xB0)[i];
         }
         a2 = a2 + 16;
         // 06E4
         for (u32 i = 0; i < 128; i++) {
-            *(s8*)(a2 + i) = g_8EE8[i];
+            *(s8*)(a2 + i) = g_mesgHeaderBuf[i];
         }
         if (arg9 == 9) {
             // 1080
             // 1088
             for (u32 i = 0; i < 40; i++) {
-                (g_9100 + 0x34)[i] = 0;
+                (g_mesgAesBuf + 0x34)[i] = 0;
             }
         }
     }
@@ -1151,9 +1151,9 @@ int mesgLedDecryptExecutable(u8 *tag, u8 *arg1, int keyId, u8 *pOut, u32 cbIn, u
         // 0FF8
         // 100C
         for (u32 i = 0; i < 160; i++) {
-            g_9280[0x14 + i] = (g_9100 + 0x10)[i];
+            g_mesgKeyBuf[0x14 + i] = (g_mesgAesBuf + 0x10)[i];
         }
-        retVal = mesgLedDecryptAesCbc(g_9280, 160, keyId, poll);
+        retVal = mesgLedDecryptAesCbc(g_mesgKeyBuf, 160, keyId, poll);
         if (retVal != 0) {
             // 09B8
             if (retVal >= 0) {
@@ -1166,23 +1166,23 @@ int mesgLedDecryptExecutable(u8 *tag, u8 *arg1, int keyId, u8 *pOut, u32 cbIn, u
         }
         // 105C
         for (u32 i = 0; i < 160; i++) {
-            (g_9100 + 0x10)[i] = g_9280[i];
+            (g_mesgAesBuf + 0x10)[i] = g_mesgKeyBuf[i];
         }
     } else if (arg9 == 2 || arg9 == 3 || arg9 == 4 || arg9 == 5 || arg9 == 6 || arg9 == 7 || arg9 == 9 || arg9 == 10) {
         // 0F0C
         // 0F1C
         for (u32 i = 0; i < 96; i++) {
-            g_9280[0x14 + i] = (g_9100 + 0x5C)[i];
+            g_mesgKeyBuf[0x14 + i] = (g_mesgAesBuf + 0x5C)[i];
         }
         if (arg9 == 3 || arg9 == 5 || arg9 == 7 || arg9 == 10) {
             // 0F70
             // 0F78
             for (s32 i = 0; i < 96; i++) {
-                g_9280[20 + i] ^= arg10[i & 0xF];
+                g_mesgKeyBuf[20 + i] ^= arg10[i & 0xF];
             }
         }
         // 0FA4
-        retVal = mesgLedDecryptAesCbc(g_9280, 96, keyId, poll);
+        retVal = mesgLedDecryptAesCbc(g_mesgKeyBuf, 96, keyId, poll);
         if (retVal != 0) {
             // 09B8
             if (retVal >= 0) {
@@ -1195,7 +1195,7 @@ int mesgLedDecryptExecutable(u8 *tag, u8 *arg1, int keyId, u8 *pOut, u32 cbIn, u
         }
         // 0FD4
         for (u32 i = 0; i < 96; i++) {
-            (g_9100 + 0x5C)[i] = g_9280[i];
+            (g_mesgAesBuf + 0x5C)[i] = g_mesgKeyBuf[i];
         }
     }
     // XXXXXXXXXXXXXXXXX2
@@ -1204,75 +1204,75 @@ int mesgLedDecryptExecutable(u8 *tag, u8 *arg1, int keyId, u8 *pOut, u32 cbIn, u
         // 0D44
         // 0D54
         for (u32 i = 0; i < 20; i++) {
-            g_9280[i] = (g_9100 + 0x6C)[i];
+            g_mesgKeyBuf[i] = (g_mesgAesBuf + 0x6C)[i];
         }
         if (arg9 == 4) {
             // 0EE0
             // 0EEC
             for (s32 i = 103; i >= 0; i--) {
-                g_9100[24 + i] = g_9100[4 + i];
+                g_mesgAesBuf[24 + i] = g_mesgAesBuf[4 + i];
             }
         } else {
             // 0D84
             for (u32 i = 0; i < 16; i++) {
-                (g_9100 + 0x70)[i] = (g_9100 + 0x70)[i - 20];
+                (g_mesgAesBuf + 0x70)[i] = (g_mesgAesBuf + 0x70)[i - 20];
             }
             if (arg9 != 6 && arg9 != 7) {
                 // 0EC4
                 for (u32 i = 0; i < 88; i++) {
-                    (g_9100 + 0x18)[i] = 0;
+                    (g_mesgAesBuf + 0x18)[i] = 0;
                 }
             } else {
                 // 0DC8
                 for (u32 i = 0; i < 32; i++) {
-                    g_9380[i] = (g_9100 + 0x3C)[i];
+                    g_mesgHashBuf[i] = (g_mesgAesBuf + 0x3C)[i];
                 }
                 // 0DF8
                 for (u32 i = 0; i < 32; i++) {
-                    (g_9100 + 0x50)[i] = g_9380[i];
+                    (g_mesgAesBuf + 0x50)[i] = g_mesgHashBuf[i];
                 }
                 // 0E20
                 for (u32 i = 0; i < 56; i++) {
-                    (g_9100 + 0x18)[i] = 0;
+                    (g_mesgAesBuf + 0x18)[i] = 0;
                 }
             }
             // 0E38
             if (sp80 == 128)
             {
                 // 0EB8
-                g_9100[24] = 128;
+                g_mesgAesBuf[24] = 128;
             }
         }
         // 0E48
-        g_8DC0 = g_9100;
+        g_mesgWorkBufPtr = g_mesgAesBuf;
         // 0E5C
         for (u32 i = 0; i < 4; i++) {
-            g_9100[4 + i] = g_9100[i];
+            g_mesgAesBuf[4 + i] = g_mesgAesBuf[i];
         }
-        *(s32*)g_8DC0 = 332;
+        *(s32*)g_mesgWorkBufPtr = 332;
         // 0E94
         for (u32 i = 0; i < 16; i++) {
-            g_9100[8 + i] = g_9038[i];
+            g_mesgAesBuf[8 + i] = g_mesgMetaBuf[i];
         }
     } else {
         // 0770
         for (u32 i = 0; i < 20; i++) {
-            g_9280[i] = g_9100[4 + i];
+            g_mesgKeyBuf[i] = g_mesgAesBuf[4 + i];
         }
-        g_8DC0 = g_9100;
-        *(s32*)g_9100 = 332;
+        g_mesgWorkBufPtr = g_mesgAesBuf;
+        *(s32*)g_mesgAesBuf = 332;
         // 07B4
         for (u32 i = 0; i < 20; i++) {
-            g_9100[4 + i] = g_9038[i];
+            g_mesgAesBuf[4 + i] = g_mesgMetaBuf[i];
         }
     }
     // XXXXXXXXXXXXXXXXX1
     // 07D0
     if (!poll) {
         // 0D24
-        retVal = sceUtilsBufferCopyWithRange(g_9100, 336, g_9100, 336, 11);
+        retVal = sceUtilsBufferCopyWithRange(g_mesgAesBuf, 336, g_mesgAesBuf, 336, 11);
     } else {
-        retVal = sceUtilsBufferCopyByPollingWithRange(g_9100, 336, g_9100, 336, 11);
+        retVal = sceUtilsBufferCopyByPollingWithRange(g_mesgAesBuf, 336, g_mesgAesBuf, 336, 11);
     }
     // 07F8
     if (retVal != 0) {
@@ -1287,7 +1287,7 @@ int mesgLedDecryptExecutable(u8 *tag, u8 *arg1, int keyId, u8 *pOut, u32 cbIn, u
         goto reset;
     }
     // 0910, 0D1C, 0934
-    if (mesgLedMemcmp(g_9100, g_9280, 20)) {
+    if (mesgLedMemcmp(g_mesgAesBuf, g_mesgKeyBuf, 20)) {
         // 0B14
         retVal = -302;
         goto reset;
@@ -1297,9 +1297,9 @@ int mesgLedDecryptExecutable(u8 *tag, u8 *arg1, int keyId, u8 *pOut, u32 cbIn, u
         // 0B34
         // 0B44
         for (s32 i = 0; i < 64; i++) {
-            g_9100[128 + i] ^= g_9038[16 + i];
+            g_mesgAesBuf[128 + i] ^= g_mesgMetaBuf[16 + i];
         }
-        retVal = mesgLedDecryptAesCbc((g_9100 + 0x6C), 64, keyId, poll);
+        retVal = mesgLedDecryptAesCbc((g_mesgAesBuf + 0x6C), 64, keyId, poll);
         if (retVal != 0) {
             // 09B8
             if (retVal >= 0) {
@@ -1312,7 +1312,7 @@ int mesgLedDecryptExecutable(u8 *tag, u8 *arg1, int keyId, u8 *pOut, u32 cbIn, u
         }
         // 0B9C
         for (s32 i = 0; i < 64; i++) {
-            pOut[64 + i] = (g_9100 + 0x6C)[i] ^ g_9038[80 + i];
+            pOut[64 + i] = (g_mesgAesBuf + 0x6C)[i] ^ g_mesgMetaBuf[80 + i];
         }
         if (arg9 == 6 || arg9 == 7) {
             // 0C90
@@ -1322,7 +1322,7 @@ int mesgLedDecryptExecutable(u8 *tag, u8 *arg1, int keyId, u8 *pOut, u32 cbIn, u
             pOut[160] = 1;
             // 0CB8
             for (u32 i = 0; i < 16; i++) {
-                pOut[176 + i] = (g_9100 + 0xC0)[i];
+                pOut[176 + i] = (g_mesgAesBuf + 0xC0)[i];
             }
             // 0CD8
             for (u32 i = 0; i < 16; i++) {
@@ -1330,12 +1330,12 @@ int mesgLedDecryptExecutable(u8 *tag, u8 *arg1, int keyId, u8 *pOut, u32 cbIn, u
             }
             // 0CF8
             for (u32 i = 0; i < 128; i++) {
-                pOut[208 + i] = (g_9100 + 0xD0)[i];
+                pOut[208 + i] = (g_mesgAesBuf + 0xD0)[i];
             }
         } else {
             // 0BE0
             for (u32 i = 0; i < 32; i++) {
-                pOut[128 + i] = g_9380[i];
+                pOut[128 + i] = g_mesgHashBuf[i];
             }
             // 0C00
             for (u32 i = 0; i < 16; i++) {
@@ -1345,7 +1345,7 @@ int mesgLedDecryptExecutable(u8 *tag, u8 *arg1, int keyId, u8 *pOut, u32 cbIn, u
             pOut[160] = 1;
             // 0C2C
             for (u32 i = 0; i < 16; i++) {
-                pOut[176 + i] = (g_9100 + 0xC0)[i];
+                pOut[176 + i] = (g_mesgAesBuf + 0xC0)[i];
             }
             // 0C4C
             for (u32 i = 0; i < 16; i++) {
@@ -1353,15 +1353,15 @@ int mesgLedDecryptExecutable(u8 *tag, u8 *arg1, int keyId, u8 *pOut, u32 cbIn, u
             }
             // 0C6C
             for (u32 i = 0; i < 128; i++) {
-                pOut[208 + i] = (g_9100 + 0xD0)[i];
+                pOut[208 + i] = (g_mesgAesBuf + 0xD0)[i];
             }
         }
     } else {
         // 0970
         for (s32 i = 0; i < 112; i++) {
-            g_9100[64 + i] ^= g_9038[20 + i];
+            g_mesgAesBuf[64 + i] ^= g_mesgMetaBuf[20 + i];
         }
-        retVal = mesgLedDecryptAesCbc((g_9100 + 0x2C), 112, keyId, poll);
+        retVal = mesgLedDecryptAesCbc((g_mesgAesBuf + 0x2C), 112, keyId, poll);
         if (retVal != 0) {
             // 09B8
             if (retVal >= 0) {
@@ -1375,11 +1375,11 @@ int mesgLedDecryptExecutable(u8 *tag, u8 *arg1, int keyId, u8 *pOut, u32 cbIn, u
         // 09CC
         // 09DC
         for (s32 i = 0; i < 112; i++) {
-            pOut[64 + i] = (g_9100 + 0x2C)[i] ^ g_9038[32 + i];
+            pOut[64 + i] = (g_mesgAesBuf + 0x2C)[i] ^ g_mesgMetaBuf[32 + i];
         }
         // 0A10
         for (u32 i = 0; i < 160; i++) {
-            pOut[176 + i] = (g_9100 + 0xB0)[i];
+            pOut[176 + i] = (g_mesgAesBuf + 0xB0)[i];
         }
         if (arg9 == 8) {
             // 0B1C
@@ -1437,26 +1437,26 @@ reset:
     // 0828
     // 0834
     for (u32 i = 0; i < 336; i++) {
-        pOut[i] = g_8EE8[i];
+        pOut[i] = g_mesgHeaderBuf[i];
     }
     *(s32*)(cbOut + 0) = 0;
 
 end:
     // 0860
     for (u32 i = 0; i < 144; i++) {
-        g_9038[i] = 0;
+        g_mesgMetaBuf[i] = 0;
     }
     // 0880
     for (u32 i = 0; i < 336; i++) {
-        g_9100[i] = 0;
+        g_mesgAesBuf[i] = 0;
     }
     // 08A0
     for (u32 i = 0; i < 180; i++) {
-        g_9280[i] = 0;
+        g_mesgKeyBuf[i] = 0;
     }
     // 08C0
     for (u32 i = 0; i < 336; i++) {
-        g_8EE8[i] = 0;
+        g_mesgHeaderBuf[i] = 0;
     }
     return retVal;
 }
@@ -1481,48 +1481,48 @@ int mesgLedVerifyExecHeader(u8 *tag, u8 *key16, u8 *buf, u32 size, u32 arg4, u8 
         goto cleanup;
     }
     for (u32 i = 0; i < 336; i++) {
-        g_8EE8[i] = buf[i];
+        g_mesgHeaderBuf[i] = buf[i];
     }
     for (u32 i = 0; i < 64; i++) {
-        g_9100[i] = buf[236 + i];
+        g_mesgAesBuf[i] = buf[236 + i];
     }
     for (u32 i = 0; i < 80; i++) {
-        g_9100[64 + i] = 0;
+        g_mesgAesBuf[64 + i] = 0;
     }
-    g_9100[96] = 2;
-    g_9100[112] = 80;
+    g_mesgAesBuf[96] = 2;
+    g_mesgAesBuf[112] = 80;
     for (u32 i = 0; i < 48; i++) {
-        g_9100[144 + i] = buf[128 + i];
+        g_mesgAesBuf[144 + i] = buf[128 + i];
     }
     for (u32 i = 0; i < 16; i++) {
-        g_9100[192 + i] = buf[192 + i];
+        g_mesgAesBuf[192 + i] = buf[192 + i];
     }
     for (u32 i = 0; i < 16; i++) {
-        g_9100[208 + i] = buf[300 + i];
+        g_mesgAesBuf[208 + i] = buf[300 + i];
     }
-    if (mesgLedMemcmp(tag, &g_8EE8[0xD0], 4) != 0) {
+    if (mesgLedMemcmp(tag, &g_mesgHeaderBuf[0xD0], 4) != 0) {
         retVal = -301;
         goto cleanup;
     }
     for (s32 i = 0; i < 24; i++) {
-        if (g_8EE8[212 + i] != 0) {
+        if (g_mesgHeaderBuf[212 + i] != 0) {
             retVal = -302;
             goto cleanup;
         }
     }
     if (arg5 != NULL && arg6 != 0) {
-        if (mesgLedCheckKeyBlacklist(g_8EE8, arg5, arg6) == 1) {
+        if (mesgLedCheckKeyBlacklist(g_mesgHeaderBuf, arg5, arg6) == 1) {
             retVal = -305;
             goto cleanup;
         }
     }
     for (s32 i = 0; i < 80; i++) {
         if (arg7 != NULL) {
-            g_9100[144 + i] ^= arg7[i & 0xF];
+            g_mesgAesBuf[144 + i] ^= arg7[i & 0xF];
         }
-        g_9100[144 + i] ^= key16[i & 0xF];
+        g_mesgAesBuf[144 + i] ^= key16[i & 0xF];
     }
-    retVal = sceUtilsBufferCopyWithRange(g_9100, 336, g_9100, 336, 2);
+    retVal = sceUtilsBufferCopyWithRange(g_mesgAesBuf, 336, g_mesgAesBuf, 336, 2);
     if (retVal != 0) {
         if (retVal < 0) {
             retVal = -303;
@@ -1533,46 +1533,46 @@ int mesgLedVerifyExecHeader(u8 *tag, u8 *key16, u8 *buf, u32 size, u32 arg4, u8 
     }
     for (s32 i = 0; i < 80; i++) {
         if (arg7 != NULL) {
-            g_9100[144 + i] ^= arg7[i & 0xF];
+            g_mesgAesBuf[144 + i] ^= arg7[i & 0xF];
         }
-        g_9100[144 + i] ^= key16[i & 0xF];
+        g_mesgAesBuf[144 + i] ^= key16[i & 0xF];
     }
     for (u32 i = 0; i < 64; i++) {
-        buf[236 + i] = g_9100[i];
+        buf[236 + i] = g_mesgAesBuf[i];
     }
     for (u32 i = 0; i < 48; i++) {
-        buf[128 + i] = g_9100[144 + i];
+        buf[128 + i] = g_mesgAesBuf[144 + i];
     }
     for (u32 i = 0; i < 16; i++) {
-        buf[192 + i] = g_9100[192 + i];
+        buf[192 + i] = g_mesgAesBuf[192 + i];
     }
     for (u32 i = 0; i < 16; i++) {
-        buf[300 + i] = g_9100[208 + i];
+        buf[300 + i] = g_mesgAesBuf[208 + i];
     }
     retVal = 0;
 
 cleanup:
     for (u32 i = 0; i < 336; i++) {
-        g_9100[i] = 0;
+        g_mesgAesBuf[i] = 0;
     }
     for (u32 i = 0; i < 336; i++) {
-        g_8EE8[i] = 0;
+        g_mesgHeaderBuf[i] = 0;
     }
     return retVal;
 }
 
 int module_start(void)
 {
-    g_8DFC = 0;
+    g_mesgInitFlag = 0;
     SceUID id1 = sceKernelCreateSema("SceUtils4096", 0, 1, 1, NULL);
-    g_93F0 = id1;
+    g_mesgSemaId = id1;
     if (id1 <= 0) {
         return 1;
     }
     SceUID id2 = sceKernelCreateSema("SceUtils5120", 0, 1, 1, NULL);
-    g_93F4 = id2;
+    g_mesgPartitionId = id2;
     if (id2 <= 0) {
-        sceKernelDeleteSema(g_93F0);
+        sceKernelDeleteSema(g_mesgSemaId);
         return 1;
     }
     return 0;
@@ -1580,30 +1580,30 @@ int module_start(void)
 
 static inline void __attribute__((always_inline)) restore_resmgr_keys(void)
 {
-    if (g_8DFC == 1) {
+    if (g_mesgInitFlag == 1) {
         for (u32 i = 0; i < 20; i++) {
             g_data[0x00 + i] = g_saved_keys[i];
             g_data[0xC8 + i] = g_saved_keys[20 + i];
         }
-        g_8DFC = 2;
-    } else if (g_8DFC == 3) {
+        g_mesgInitFlag = 2;
+    } else if (g_mesgInitFlag == 3) {
         for (u32 i = 0; i < 20; i++) {
             g_data[0x8C + i] = g_saved_keys[i];
             g_data[0xDC + i] = g_saved_keys[20 + i];
         }
-        g_8DFC = 2;
-    } else if (g_8DFC == 4) {
+        g_mesgInitFlag = 2;
+    } else if (g_mesgInitFlag == 4) {
         for (u32 i = 0; i < 20; i++) {
             g_data[0xB4 + i] = g_saved_keys[i];
             g_data[0xF0 + i] = g_saved_keys[20 + i];
         }
-        g_8DFC = 2;
+        g_mesgInitFlag = 2;
     }
 }
 
 int sceUtilsGetLoadModuleCLength(u8 *arg0, u32 arg1, u32 *arg2) /* @ 0x1e50 */
 {
-    if (sceKernelWaitSema(g_93F0, 1, NULL) != 0) {
+    if (sceKernelWaitSema(g_mesgSemaId, 1, NULL) != 0) {
         return -108;
     }
     s32 ret;
@@ -1623,7 +1623,7 @@ int sceUtilsGetLoadModuleCLength(u8 *arg0, u32 arg1, u32 *arg2) /* @ 0x1e50 */
     if (ret == -301) {
         ret = mesgLedDecryptExecutable((u8 *)&g_rodata[0x09b4], (u8 *)&g_rodata[0x09b8], 69, arg0, arg1, arg2, 0, (u8 *)&g_rodata[0x0a48], 2832, 8, NULL, NULL);
     }
-    if (sceKernelSignalSema(g_93F0, 1) != 0) {
+    if (sceKernelSignalSema(g_mesgSemaId, 1) != 0) {
         ret = -109;
     }
     return ret;
@@ -1631,7 +1631,7 @@ int sceUtilsGetLoadModuleCLength(u8 *arg0, u32 arg1, u32 *arg2) /* @ 0x1e50 */
 
 int sceUtilsGetLoadModuleCLengthByPolling(u8 *arg0, u32 arg1, u32 *arg2) /* @ 0x20a0 */
 {
-    if (sceKernelPollSema(g_93F0, 1) != 0) {
+    if (sceKernelPollSema(g_mesgSemaId, 1) != 0) {
         return -108;
     }
     s32 ret;
@@ -1651,7 +1651,7 @@ int sceUtilsGetLoadModuleCLengthByPolling(u8 *arg0, u32 arg1, u32 *arg2) /* @ 0x
     if (ret == -301) {
         ret = mesgLedDecryptExecutable((u8 *)&g_rodata[0x09b4], (u8 *)&g_rodata[0x09b8], 69, arg0, arg1, arg2, 1, (u8 *)&g_rodata[0x0a48], 2832, 8, NULL, NULL);
     }
-    if (sceKernelSignalSema(g_93F0, 1) != 0) {
+    if (sceKernelSignalSema(g_mesgSemaId, 1) != 0) {
         ret = -109;
     }
     return ret;
@@ -1659,7 +1659,7 @@ int sceUtilsGetLoadModuleCLengthByPolling(u8 *arg0, u32 arg1, u32 *arg2) /* @ 0x
 
 int sceUtilsGetLoadModuleDLength(u8 *arg0, u32 arg1, u32 *arg2) /* @ 0x22ec */
 {
-    if (sceKernelWaitSema(g_93F0, 1, NULL) != 0) {
+    if (sceKernelWaitSema(g_mesgSemaId, 1, NULL) != 0) {
         return -108;
     }
     s32 ret;
@@ -1718,7 +1718,7 @@ int sceUtilsGetLoadModuleDLength(u8 *arg0, u32 arg1, u32 *arg2) /* @ 0x22ec */
     if (ret == -301) {
         ret = mesgLedDecryptExecutable((u8 *)&g_rodata[0x1574], (u8 *)&g_rodata[0x1578], 70, arg0, arg1, arg2, 0, g_bss_ptrs[83], 0, 0, NULL, NULL);
     }
-    if (sceKernelSignalSema(g_93F0, 1) != 0) {
+    if (sceKernelSignalSema(g_mesgSemaId, 1) != 0) {
         ret = -109;
     }
     return ret;
@@ -1726,7 +1726,7 @@ int sceUtilsGetLoadModuleDLength(u8 *arg0, u32 arg1, u32 *arg2) /* @ 0x22ec */
 
 int sceUtilsGetLoadModuleDLengthByPolling(u8 *arg0, u32 arg1, u32 *arg2) /* @ 0x28e8 */
 {
-    if (sceKernelPollSema(g_93F0, 1) != 0) {
+    if (sceKernelPollSema(g_mesgSemaId, 1) != 0) {
         return -108;
     }
     s32 ret;
@@ -1785,7 +1785,7 @@ int sceUtilsGetLoadModuleDLengthByPolling(u8 *arg0, u32 arg1, u32 *arg2) /* @ 0x
     if (ret == -301) {
         ret = mesgLedDecryptExecutable((u8 *)&g_rodata[0x1574], (u8 *)&g_rodata[0x1578], 70, arg0, arg1, arg2, 1, g_bss_ptrs[83], 0, 0, NULL, NULL);
     }
-    if (sceKernelSignalSema(g_93F0, 1) != 0) {
+    if (sceKernelSignalSema(g_mesgSemaId, 1) != 0) {
         ret = -109;
     }
     return ret;
@@ -1793,7 +1793,7 @@ int sceUtilsGetLoadModuleDLengthByPolling(u8 *arg0, u32 arg1, u32 *arg2) /* @ 0x
 
 int sceResmapPrepare(u8 *arg0, u32 arg1, u32 *arg2) /* @ 0x2ee0 */
 {
-    if (sceKernelWaitSema(g_93F0, 1, NULL) != 0) {
+    if (sceKernelWaitSema(g_mesgSemaId, 1, NULL) != 0) {
         return -108;
     }
     s32 ret;
@@ -1807,7 +1807,7 @@ int sceResmapPrepare(u8 *arg0, u32 arg1, u32 *arg2) /* @ 0x2ee0 */
     if (ret == -301) {
         ret = mesgLedDecryptExecutable((u8 *)&g_rodata[0x1794], (u8 *)&g_rodata[0x1798], 71, arg0, arg1, arg2, 0, g_bss_ptrs[95], 0, 0, NULL, NULL);
     }
-    if (sceKernelSignalSema(g_93F0, 1) != 0) {
+    if (sceKernelSignalSema(g_mesgSemaId, 1) != 0) {
         ret = -109;
     }
     return ret;
@@ -1815,7 +1815,7 @@ int sceResmapPrepare(u8 *arg0, u32 arg1, u32 *arg2) /* @ 0x2ee0 */
 
 int sceResmapPrepareByPolling(u8 *arg0, u32 arg1, u32 *arg2) /* @ 0x3094 */
 {
-    if (sceKernelPollSema(g_93F0, 1) != 0) {
+    if (sceKernelPollSema(g_mesgSemaId, 1) != 0) {
         return -108;
     }
     s32 ret;
@@ -1829,7 +1829,7 @@ int sceResmapPrepareByPolling(u8 *arg0, u32 arg1, u32 *arg2) /* @ 0x3094 */
     if (ret == -301) {
         ret = mesgLedDecryptExecutable((u8 *)&g_rodata[0x1794], (u8 *)&g_rodata[0x1798], 71, arg0, arg1, arg2, 1, g_bss_ptrs[95], 0, 0, NULL, NULL);
     }
-    if (sceKernelSignalSema(g_93F0, 1) != 0) {
+    if (sceKernelSignalSema(g_mesgSemaId, 1) != 0) {
         ret = -109;
     }
     return ret;
@@ -1837,7 +1837,7 @@ int sceResmapPrepareByPolling(u8 *arg0, u32 arg1, u32 *arg2) /* @ 0x3094 */
 
 int sceDbmanSelect(u8 *arg0, u32 arg1, u32 *arg2) /* @ 0x3244 */
 {
-    if (sceKernelWaitSema(g_93F0, 1, NULL) != 0) {
+    if (sceKernelWaitSema(g_mesgSemaId, 1, NULL) != 0) {
         return -108;
     }
     s32 ret;
@@ -1851,7 +1851,7 @@ int sceDbmanSelect(u8 *arg0, u32 arg1, u32 *arg2) /* @ 0x3244 */
     if (ret == -301) {
         ret = mesgLedDecryptExecutable((u8 *)&g_rodata[0x182c], (u8 *)&g_rodata[0x1830], 72, arg0, arg1, arg2, 0, g_bss_ptrs[96], 0, 0, NULL, NULL);
     }
-    if (sceKernelSignalSema(g_93F0, 1) != 0) {
+    if (sceKernelSignalSema(g_mesgSemaId, 1) != 0) {
         ret = -109;
     }
     return ret;
@@ -1859,7 +1859,7 @@ int sceDbmanSelect(u8 *arg0, u32 arg1, u32 *arg2) /* @ 0x3244 */
 
 int sceDbmanSelectByPolling(u8 *arg0, u32 arg1, u32 *arg2) /* @ 0x33f8 */
 {
-    if (sceKernelPollSema(g_93F0, 1) != 0) {
+    if (sceKernelPollSema(g_mesgSemaId, 1) != 0) {
         return -108;
     }
     s32 ret;
@@ -1873,7 +1873,7 @@ int sceDbmanSelectByPolling(u8 *arg0, u32 arg1, u32 *arg2) /* @ 0x33f8 */
     if (ret == -301) {
         ret = mesgLedDecryptExecutable((u8 *)&g_rodata[0x182c], (u8 *)&g_rodata[0x1830], 72, arg0, arg1, arg2, 1, g_bss_ptrs[96], 0, 0, NULL, NULL);
     }
-    if (sceKernelSignalSema(g_93F0, 1) != 0) {
+    if (sceKernelSignalSema(g_mesgSemaId, 1) != 0) {
         ret = -109;
     }
     return ret;
@@ -1881,7 +1881,7 @@ int sceDbmanSelectByPolling(u8 *arg0, u32 arg1, u32 *arg2) /* @ 0x33f8 */
 
 int sceNwman_driver_9555D68D(u8 *arg0, u32 arg1, u32 *arg2) /* @ 0x35a8 */
 {
-    if (sceKernelWaitSema(g_93F0, 1, NULL) != 0) {
+    if (sceKernelWaitSema(g_mesgSemaId, 1, NULL) != 0) {
         return -108;
     }
     s32 ret;
@@ -1898,7 +1898,7 @@ int sceNwman_driver_9555D68D(u8 *arg0, u32 arg1, u32 *arg2) /* @ 0x35a8 */
     if (ret == -301) {
         ret = mesgLedDecryptExecutable((u8 *)&g_rodata[0x18c4], (u8 *)&g_rodata[0x18c8], 73, arg0, arg1, arg2, 0, g_bss_ptrs[97], 0, 0, NULL, NULL);
     }
-    if (sceKernelSignalSema(g_93F0, 1) != 0) {
+    if (sceKernelSignalSema(g_mesgSemaId, 1) != 0) {
         ret = -109;
     }
     return ret;
@@ -1911,13 +1911,13 @@ int sceResmgr_9DC14891(u8 *arg0, u32 arg1, u32 *arg2) /* @ 0x37a8 */
         pspSetK1(old_k1);
         return -110;
     }
-    if (sceKernelWaitSema(g_93F0, 1, NULL) != 0) {
+    if (sceKernelWaitSema(g_mesgSemaId, 1, NULL) != 0) {
         pspSetK1(old_k1);
         return -108;
     }
     s32 ret;
     ret = mesgLedDecryptExecutable((u8 *)&g_rodata[0x1974], (u8 *)&g_rodata[0x1978], 92, arg0, arg1, arg2, 0, g_bss_ptrs[99], 0, 9, NULL, NULL);
-    if (sceKernelSignalSema(g_93F0, 1) != 0) {
+    if (sceKernelSignalSema(g_mesgSemaId, 1) != 0) {
         ret = -109;
     }
     pspSetK1(old_k1);
@@ -1926,7 +1926,7 @@ int sceResmgr_9DC14891(u8 *arg0, u32 arg1, u32 *arg2) /* @ 0x37a8 */
 
 int sceUtilsGetLoadModuleILength(u8 *arg0, u32 arg1, u32 *arg2) /* @ 0x38b0 */
 {
-    if (sceKernelWaitSema(g_93F0, 1, NULL) != 0) {
+    if (sceKernelWaitSema(g_mesgSemaId, 1, NULL) != 0) {
         return -108;
     }
     s32 ret;
@@ -1989,7 +1989,7 @@ int sceUtilsGetLoadModuleILength(u8 *arg0, u32 arg1, u32 *arg2) /* @ 0x38b0 */
         ret = mesgLedDecryptExecutable((u8 *)&g_rodata[0x0078], (u8 *)&g_rodata[0x007c], 75, arg0, arg1, arg2, 0, g_bss_ptrs[0], 0, 0, NULL, NULL);
     }
     restore_resmgr_keys();
-    if (sceKernelSignalSema(g_93F0, 1) != 0) {
+    if (sceKernelSignalSema(g_mesgSemaId, 1) != 0) {
         ret = -109;
     }
     return ret;
@@ -1997,7 +1997,7 @@ int sceUtilsGetLoadModuleILength(u8 *arg0, u32 arg1, u32 *arg2) /* @ 0x38b0 */
 
 int sceUtilsGetLoadModuleILengthByPolling(u8 *arg0, u32 arg1, u32 *arg2) /* @ 0x4170 */
 {
-    if (sceKernelPollSema(g_93F0, 1) != 0) {
+    if (sceKernelPollSema(g_mesgSemaId, 1) != 0) {
         return -108;
     }
     s32 ret;
@@ -2060,7 +2060,7 @@ int sceUtilsGetLoadModuleILengthByPolling(u8 *arg0, u32 arg1, u32 *arg2) /* @ 0x
         ret = mesgLedDecryptExecutable((u8 *)&g_rodata[0x0078], (u8 *)&g_rodata[0x007c], 75, arg0, arg1, arg2, 1, g_bss_ptrs[0], 0, 0, NULL, NULL);
     }
     restore_resmgr_keys();
-    if (sceKernelSignalSema(g_93F0, 1) != 0) {
+    if (sceKernelSignalSema(g_mesgSemaId, 1) != 0) {
         ret = -109;
     }
     return ret;
@@ -2068,7 +2068,7 @@ int sceUtilsGetLoadModuleILengthByPolling(u8 *arg0, u32 arg1, u32 *arg2) /* @ 0x
 
 int sceUtilsGetLoadModuleJLength(u8 *arg0, u32 arg1, u32 *arg2) /* @ 0x4a2c */
 {
-    if (sceKernelWaitSema(g_93F0, 1, NULL) != 0) {
+    if (sceKernelWaitSema(g_mesgSemaId, 1, NULL) != 0) {
         return -108;
     }
     s32 ret;
@@ -2097,7 +2097,7 @@ int sceUtilsGetLoadModuleJLength(u8 *arg0, u32 arg1, u32 *arg2) /* @ 0x4a2c */
     if (ret == -301) {
         ret = mesgLedDecryptExecutable((u8 *)&g_rodata[0x198c], (u8 *)&g_rodata[0x1990], 76, arg0, arg1, arg2, 0, g_bss_ptrs[100], 0, 0, NULL, NULL);
     }
-    if (sceKernelSignalSema(g_93F0, 1) != 0) {
+    if (sceKernelSignalSema(g_mesgSemaId, 1) != 0) {
         ret = -109;
     }
     return ret;
@@ -2105,7 +2105,7 @@ int sceUtilsGetLoadModuleJLength(u8 *arg0, u32 arg1, u32 *arg2) /* @ 0x4a2c */
 
 int sceUtilsGetLoadModuleJLengthByPolling(u8 *arg0, u32 arg1, u32 *arg2) /* @ 0x4d50 */
 {
-    if (sceKernelPollSema(g_93F0, 1) != 0) {
+    if (sceKernelPollSema(g_mesgSemaId, 1) != 0) {
         return -108;
     }
     s32 ret;
@@ -2134,7 +2134,7 @@ int sceUtilsGetLoadModuleJLengthByPolling(u8 *arg0, u32 arg1, u32 *arg2) /* @ 0x
     if (ret == -301) {
         ret = mesgLedDecryptExecutable((u8 *)&g_rodata[0x198c], (u8 *)&g_rodata[0x1990], 76, arg0, arg1, arg2, 1, g_bss_ptrs[100], 0, 0, NULL, NULL);
     }
-    if (sceKernelSignalSema(g_93F0, 1) != 0) {
+    if (sceKernelSignalSema(g_mesgSemaId, 1) != 0) {
         ret = -109;
     }
     return ret;
@@ -2142,7 +2142,7 @@ int sceUtilsGetLoadModuleJLengthByPolling(u8 *arg0, u32 arg1, u32 *arg2) /* @ 0x
 
 int sceUtilsGetLoadModuleKLength(u8 *arg0, u32 arg1, u32 *arg2) /* @ 0x5070 */
 {
-    if (sceKernelWaitSema(g_93F0, 1, NULL) != 0) {
+    if (sceKernelWaitSema(g_mesgSemaId, 1, NULL) != 0) {
         return -108;
     }
     s32 ret;
@@ -2156,7 +2156,7 @@ int sceUtilsGetLoadModuleKLength(u8 *arg0, u32 arg1, u32 *arg2) /* @ 0x5070 */
     if (ret == -301) {
         ret = mesgLedDecryptExecutable((u8 *)&g_rodata[0x1b1c], (u8 *)&g_rodata[0x1b20], 77, arg0, arg1, arg2, 0, g_bss_ptrs[106], 0, 0, NULL, NULL);
     }
-    if (sceKernelSignalSema(g_93F0, 1) != 0) {
+    if (sceKernelSignalSema(g_mesgSemaId, 1) != 0) {
         ret = -109;
     }
     return ret;
@@ -2164,7 +2164,7 @@ int sceUtilsGetLoadModuleKLength(u8 *arg0, u32 arg1, u32 *arg2) /* @ 0x5070 */
 
 int sceUtilsGetLoadModuleKLengthByPolling(u8 *arg0, u32 arg1, u32 *arg2) /* @ 0x5224 */
 {
-    if (sceKernelPollSema(g_93F0, 1) != 0) {
+    if (sceKernelPollSema(g_mesgSemaId, 1) != 0) {
         return -108;
     }
     s32 ret;
@@ -2178,7 +2178,7 @@ int sceUtilsGetLoadModuleKLengthByPolling(u8 *arg0, u32 arg1, u32 *arg2) /* @ 0x
     if (ret == -301) {
         ret = mesgLedDecryptExecutable((u8 *)&g_rodata[0x1b1c], (u8 *)&g_rodata[0x1b20], 77, arg0, arg1, arg2, 1, g_bss_ptrs[106], 0, 0, NULL, NULL);
     }
-    if (sceKernelSignalSema(g_93F0, 1) != 0) {
+    if (sceKernelSignalSema(g_mesgSemaId, 1) != 0) {
         ret = -109;
     }
     return ret;
@@ -2186,12 +2186,12 @@ int sceUtilsGetLoadModuleKLengthByPolling(u8 *arg0, u32 arg1, u32 *arg2) /* @ 0x
 
 int sceUtilsGetLoadModuleLLength(u8 *arg0, u32 arg1, u32 *arg2) /* @ 0x53d4 */
 {
-    if (sceKernelWaitSema(g_93F0, 1, NULL) != 0) {
+    if (sceKernelWaitSema(g_mesgSemaId, 1, NULL) != 0) {
         return -108;
     }
     s32 ret;
     ret = mesgLedDecryptExecutable((u8 *)&g_rodata[0x1bb4], (u8 *)&g_rodata[0x1bb8], 78, arg0, arg1, arg2, 0, (u8 *)&g_rodata[0x1c48], 144, 8, NULL, NULL);
-    if (sceKernelSignalSema(g_93F0, 1) != 0) {
+    if (sceKernelSignalSema(g_mesgSemaId, 1) != 0) {
         ret = -109;
     }
     return ret;
@@ -2199,12 +2199,12 @@ int sceUtilsGetLoadModuleLLength(u8 *arg0, u32 arg1, u32 *arg2) /* @ 0x53d4 */
 
 int sceUtilsGetLoadModuleLLengthByPolling(u8 *arg0, u32 arg1, u32 *arg2) /* @ 0x5494 */
 {
-    if (sceKernelPollSema(g_93F0, 1) != 0) {
+    if (sceKernelPollSema(g_mesgSemaId, 1) != 0) {
         return -108;
     }
     s32 ret;
     ret = mesgLedDecryptExecutable((u8 *)&g_rodata[0x1bb4], (u8 *)&g_rodata[0x1bb8], 78, arg0, arg1, arg2, 1, (u8 *)&g_rodata[0x1c48], 144, 8, NULL, NULL);
-    if (sceKernelSignalSema(g_93F0, 1) != 0) {
+    if (sceKernelSignalSema(g_mesgSemaId, 1) != 0) {
         ret = -109;
     }
     return ret;
@@ -2212,7 +2212,7 @@ int sceUtilsGetLoadModuleLLengthByPolling(u8 *arg0, u32 arg1, u32 *arg2) /* @ 0x
 
 int sceUtilsGetLoadModuleMLength(u8 *arg0, u32 arg1, u32 *arg2) /* @ 0x5550 */
 {
-    if (sceKernelWaitSema(g_93F0, 1, NULL) != 0) {
+    if (sceKernelWaitSema(g_mesgSemaId, 1, NULL) != 0) {
         return -108;
     }
     s32 ret;
@@ -2241,7 +2241,7 @@ int sceUtilsGetLoadModuleMLength(u8 *arg0, u32 arg1, u32 *arg2) /* @ 0x5550 */
     if (ret == -301) {
         ret = mesgLedDecryptExecutable((u8 *)&g_rodata[0x1cdc], (u8 *)&g_rodata[0x1ce0], 79, arg0, arg1, arg2, 0, g_bss_ptrs[107], 0, 0, NULL, NULL);
     }
-    if (sceKernelSignalSema(g_93F0, 1) != 0) {
+    if (sceKernelSignalSema(g_mesgSemaId, 1) != 0) {
         ret = -109;
     }
     return ret;
@@ -2249,7 +2249,7 @@ int sceUtilsGetLoadModuleMLength(u8 *arg0, u32 arg1, u32 *arg2) /* @ 0x5550 */
 
 int sceUtilsGetLoadModuleMLengthByPolling(u8 *arg0, u32 arg1, u32 *arg2) /* @ 0x5878 */
 {
-    if (sceKernelPollSema(g_93F0, 1) != 0) {
+    if (sceKernelPollSema(g_mesgSemaId, 1) != 0) {
         return -108;
     }
     s32 ret;
@@ -2278,7 +2278,7 @@ int sceUtilsGetLoadModuleMLengthByPolling(u8 *arg0, u32 arg1, u32 *arg2) /* @ 0x
     if (ret == -301) {
         ret = mesgLedDecryptExecutable((u8 *)&g_rodata[0x1cdc], (u8 *)&g_rodata[0x1ce0], 79, arg0, arg1, arg2, 1, g_bss_ptrs[107], 0, 0, NULL, NULL);
     }
-    if (sceKernelSignalSema(g_93F0, 1) != 0) {
+    if (sceKernelSignalSema(g_mesgSemaId, 1) != 0) {
         ret = -109;
     }
     return ret;
@@ -2286,7 +2286,7 @@ int sceUtilsGetLoadModuleMLengthByPolling(u8 *arg0, u32 arg1, u32 *arg2) /* @ 0x
 
 int sceUtilsGetLoadModuleNLength(u8 *arg0, u32 arg1, u32 *arg2) /* @ 0x5b9c */
 {
-    if (sceKernelWaitSema(g_93F0, 1, NULL) != 0) {
+    if (sceKernelWaitSema(g_mesgSemaId, 1, NULL) != 0) {
         return -108;
     }
     s32 ret;
@@ -2315,7 +2315,7 @@ int sceUtilsGetLoadModuleNLength(u8 *arg0, u32 arg1, u32 *arg2) /* @ 0x5b9c */
     if (ret == -301) {
         ret = mesgLedDecryptExecutable((u8 *)&g_rodata[0x1e6c], (u8 *)&g_rodata[0x1e70], 80, arg0, arg1, arg2, 0, g_bss_ptrs[113], 0, 0, NULL, NULL);
     }
-    if (sceKernelSignalSema(g_93F0, 1) != 0) {
+    if (sceKernelSignalSema(g_mesgSemaId, 1) != 0) {
         ret = -109;
     }
     return ret;
@@ -2323,7 +2323,7 @@ int sceUtilsGetLoadModuleNLength(u8 *arg0, u32 arg1, u32 *arg2) /* @ 0x5b9c */
 
 int sceUtilsGetLoadModuleNLengthByPolling(u8 *arg0, u32 arg1, u32 *arg2) /* @ 0x5ec4 */
 {
-    if (sceKernelPollSema(g_93F0, 1) != 0) {
+    if (sceKernelPollSema(g_mesgSemaId, 1) != 0) {
         return -108;
     }
     s32 ret;
@@ -2352,7 +2352,7 @@ int sceUtilsGetLoadModuleNLengthByPolling(u8 *arg0, u32 arg1, u32 *arg2) /* @ 0x
     if (ret == -301) {
         ret = mesgLedDecryptExecutable((u8 *)&g_rodata[0x1e6c], (u8 *)&g_rodata[0x1e70], 80, arg0, arg1, arg2, 1, g_bss_ptrs[113], 0, 0, NULL, NULL);
     }
-    if (sceKernelSignalSema(g_93F0, 1) != 0) {
+    if (sceKernelSignalSema(g_mesgSemaId, 1) != 0) {
         ret = -109;
     }
     return ret;
@@ -2360,7 +2360,7 @@ int sceUtilsGetLoadModuleNLengthByPolling(u8 *arg0, u32 arg1, u32 *arg2) /* @ 0x
 
 int sceMesgd_driver_102DC8AF(u8 *arg0, u32 arg1, u32 *arg2) /* @ 0x61e8 */
 {
-    if (sceKernelWaitSema(g_93F0, 1, NULL) != 0) {
+    if (sceKernelWaitSema(g_mesgSemaId, 1, NULL) != 0) {
         return -108;
     }
     s32 ret;
@@ -2377,7 +2377,7 @@ int sceMesgd_driver_102DC8AF(u8 *arg0, u32 arg1, u32 *arg2) /* @ 0x61e8 */
     if (ret == -301) {
         ret = mesgLedDecryptExecutable((u8 *)&g_rodata[0x1ffc], (u8 *)&g_rodata[0x2000], 81, arg0, arg1, arg2, 0, g_bss_ptrs[119], 0, 0, NULL, NULL);
     }
-    if (sceKernelSignalSema(g_93F0, 1) != 0) {
+    if (sceKernelSignalSema(g_mesgSemaId, 1) != 0) {
         ret = -109;
     }
     return ret;
@@ -2385,7 +2385,7 @@ int sceMesgd_driver_102DC8AF(u8 *arg0, u32 arg1, u32 *arg2) /* @ 0x61e8 */
 
 int sceMesgd_driver_ADD0CB66(u8 *arg0, u32 arg1, u32 *arg2) /* @ 0x63e8 */
 {
-    if (sceKernelPollSema(g_93F0, 1) != 0) {
+    if (sceKernelPollSema(g_mesgSemaId, 1) != 0) {
         return -108;
     }
     s32 ret;
@@ -2402,7 +2402,7 @@ int sceMesgd_driver_ADD0CB66(u8 *arg0, u32 arg1, u32 *arg2) /* @ 0x63e8 */
     if (ret == -301) {
         ret = mesgLedDecryptExecutable((u8 *)&g_rodata[0x1ffc], (u8 *)&g_rodata[0x2000], 81, arg0, arg1, arg2, 1, g_bss_ptrs[119], 0, 0, NULL, NULL);
     }
-    if (sceKernelSignalSema(g_93F0, 1) != 0) {
+    if (sceKernelSignalSema(g_mesgSemaId, 1) != 0) {
         ret = -109;
     }
     return ret;
@@ -2410,7 +2410,7 @@ int sceMesgd_driver_ADD0CB66(u8 *arg0, u32 arg1, u32 *arg2) /* @ 0x63e8 */
 
 int sceWmd_driver_7A0E484C(u8 *arg0, u32 arg1, u32 *arg2) /* @ 0x65e4 */
 {
-    if (sceKernelWaitSema(g_93F0, 1, NULL) != 0) {
+    if (sceKernelWaitSema(g_mesgSemaId, 1, NULL) != 0) {
         return -108;
     }
     s32 ret;
@@ -2439,7 +2439,7 @@ int sceWmd_driver_7A0E484C(u8 *arg0, u32 arg1, u32 *arg2) /* @ 0x65e4 */
     if (ret == -301) {
         ret = mesgLedDecryptExecutable((u8 *)&g_rodata[0x20ac], (u8 *)&g_rodata[0x20b0], 82, arg0, arg1, arg2, 0, g_bss_ptrs[121], 0, 0, NULL, NULL);
     }
-    if (sceKernelSignalSema(g_93F0, 1) != 0) {
+    if (sceKernelSignalSema(g_mesgSemaId, 1) != 0) {
         ret = -109;
     }
     return ret;
@@ -2447,7 +2447,7 @@ int sceWmd_driver_7A0E484C(u8 *arg0, u32 arg1, u32 *arg2) /* @ 0x65e4 */
 
 int sceWmd_driver_B7CE9041(u8 *arg0, u32 arg1, u32 *arg2) /* @ 0x6908 */
 {
-    if (sceKernelPollSema(g_93F0, 1) != 0) {
+    if (sceKernelPollSema(g_mesgSemaId, 1) != 0) {
         return -108;
     }
     s32 ret;
@@ -2476,7 +2476,7 @@ int sceWmd_driver_B7CE9041(u8 *arg0, u32 arg1, u32 *arg2) /* @ 0x6908 */
     if (ret == -301) {
         ret = mesgLedDecryptExecutable((u8 *)&g_rodata[0x20ac], (u8 *)&g_rodata[0x20b0], 82, arg0, arg1, arg2, 1, g_bss_ptrs[121], 0, 0, NULL, NULL);
     }
-    if (sceKernelSignalSema(g_93F0, 1) != 0) {
+    if (sceKernelSignalSema(g_mesgSemaId, 1) != 0) {
         ret = -109;
     }
     return ret;
@@ -2484,7 +2484,7 @@ int sceWmd_driver_B7CE9041(u8 *arg0, u32 arg1, u32 *arg2) /* @ 0x6908 */
 
 int sceUtilsGetLoadModuleRLength(u8 *arg0, u32 arg1, u32 *arg2, u8 *arg3) /* @ 0x6c28 */
 {
-    if (sceKernelWaitSema(g_93F0, 1, NULL) != 0) {
+    if (sceKernelWaitSema(g_mesgSemaId, 1, NULL) != 0) {
         return -108;
     }
     s32 ret;
@@ -2501,7 +2501,7 @@ int sceUtilsGetLoadModuleRLength(u8 *arg0, u32 arg1, u32 *arg2, u8 *arg3) /* @ 0
     if (ret == -301) {
         ret = mesgLedDecryptExecutable((u8 *)&g_rodata[0x223c], (u8 *)&g_rodata[0x2240], 101, arg0, arg1, arg2, 0, g_bss_ptrs[127], 0, 3, (u8 *)&g_rodata[0x2250], arg3);
     }
-    if (sceKernelSignalSema(g_93F0, 1) != 0) {
+    if (sceKernelSignalSema(g_mesgSemaId, 1) != 0) {
         ret = -109;
     }
     return ret;
@@ -2509,7 +2509,7 @@ int sceUtilsGetLoadModuleRLength(u8 *arg0, u32 arg1, u32 *arg2, u8 *arg3) /* @ 0
 
 int sceUtilsPrepareGetLoadModuleRLength(u8 *arg0, u32 arg1, u8 *arg2) /* @ 0x6e5c */
 {
-    if (sceKernelWaitSema(g_93F0, 1, NULL) != 0) {
+    if (sceKernelWaitSema(g_mesgSemaId, 1, NULL) != 0) {
         return -108;
     }
     s32 ret;
@@ -2526,7 +2526,7 @@ int sceUtilsPrepareGetLoadModuleRLength(u8 *arg0, u32 arg1, u8 *arg2) /* @ 0x6e5
     if (ret == -301) {
         ret = mesgLedVerifyExecHeader((u8 *)&g_rodata[0x223c], (u8 *)&g_rodata[0x2250], arg0, arg1, 0, g_bss_ptrs[127], 0, arg2);
     }
-    if (sceKernelSignalSema(g_93F0, 1) != 0) {
+    if (sceKernelSignalSema(g_mesgSemaId, 1) != 0) {
         ret = -109;
     }
     return ret;
@@ -2534,7 +2534,7 @@ int sceUtilsPrepareGetLoadModuleRLength(u8 *arg0, u32 arg1, u8 *arg2) /* @ 0x6e5
 
 int sceUtilsGetLoadModuleSLength(u8 *arg0, u32 arg1, u32 *arg2, u8 *arg3) /* @ 0x6ffc */
 {
-    if (sceKernelWaitSema(g_93F0, 1, NULL) != 0) {
+    if (sceKernelWaitSema(g_mesgSemaId, 1, NULL) != 0) {
         return -108;
     }
     s32 ret;
@@ -2551,7 +2551,7 @@ int sceUtilsGetLoadModuleSLength(u8 *arg0, u32 arg1, u32 *arg2, u8 *arg3) /* @ 0
     if (ret == -301) {
         ret = mesgLedDecryptExecutable((u8 *)&g_rodata[0x228c], (u8 *)&g_rodata[0x2290], 102, arg0, arg1, arg2, 0, g_bss_ptrs[129], 0, 3, (u8 *)&g_rodata[0x22a0], arg3);
     }
-    if (sceKernelSignalSema(g_93F0, 1) != 0) {
+    if (sceKernelSignalSema(g_mesgSemaId, 1) != 0) {
         ret = -109;
     }
     return ret;
@@ -2559,7 +2559,7 @@ int sceUtilsGetLoadModuleSLength(u8 *arg0, u32 arg1, u32 *arg2, u8 *arg3) /* @ 0
 
 int sceUtilsPrepareGetLoadModuleSLength(u8 *arg0, u32 arg1, u8 *arg2) /* @ 0x7230 */
 {
-    if (sceKernelWaitSema(g_93F0, 1, NULL) != 0) {
+    if (sceKernelWaitSema(g_mesgSemaId, 1, NULL) != 0) {
         return -108;
     }
     s32 ret;
@@ -2576,7 +2576,7 @@ int sceUtilsPrepareGetLoadModuleSLength(u8 *arg0, u32 arg1, u8 *arg2) /* @ 0x723
     if (ret == -301) {
         ret = mesgLedVerifyExecHeader((u8 *)&g_rodata[0x228c], (u8 *)&g_rodata[0x22a0], arg0, arg1, 0, g_bss_ptrs[129], 0, arg2);
     }
-    if (sceKernelSignalSema(g_93F0, 1) != 0) {
+    if (sceKernelSignalSema(g_mesgSemaId, 1) != 0) {
         ret = -109;
     }
     return ret;
@@ -2584,7 +2584,7 @@ int sceUtilsPrepareGetLoadModuleSLength(u8 *arg0, u32 arg1, u8 *arg2) /* @ 0x723
 
 int sceUtilsGetLoadModuleTLength(u8 *arg0, u32 arg1, u32 *arg2, u8 *arg3) /* @ 0x73d0 */
 {
-    if (sceKernelWaitSema(g_93F0, 1, NULL) != 0) {
+    if (sceKernelWaitSema(g_mesgSemaId, 1, NULL) != 0) {
         return -108;
     }
     s32 ret;
@@ -2598,7 +2598,7 @@ int sceUtilsGetLoadModuleTLength(u8 *arg0, u32 arg1, u32 *arg2, u8 *arg3) /* @ 0
     if (ret == -301) {
         ret = mesgLedDecryptExecutable((u8 *)&g_rodata[0x22dc], (u8 *)&g_rodata[0x22e0], 101, arg0, arg1, arg2, 0, g_bss_ptrs[131], 0, 5, (u8 *)&g_rodata[0x22f0], arg3);
     }
-    if (sceKernelSignalSema(g_93F0, 1) != 0) {
+    if (sceKernelSignalSema(g_mesgSemaId, 1) != 0) {
         ret = -109;
     }
     return ret;
@@ -2606,7 +2606,7 @@ int sceUtilsGetLoadModuleTLength(u8 *arg0, u32 arg1, u32 *arg2, u8 *arg3) /* @ 0
 
 int sceUtilsGetLoadModuleULength(u8 *arg0, u32 arg1, u32 *arg2, u8 *arg3) /* @ 0x75b4 */
 {
-    if (sceKernelWaitSema(g_93F0, 1, NULL) != 0) {
+    if (sceKernelWaitSema(g_mesgSemaId, 1, NULL) != 0) {
         return -108;
     }
     s32 ret;
@@ -2620,7 +2620,7 @@ int sceUtilsGetLoadModuleULength(u8 *arg0, u32 arg1, u32 *arg2, u8 *arg3) /* @ 0
     if (ret == -301) {
         ret = mesgLedDecryptExecutable((u8 *)&g_rodata[0x2304], (u8 *)&g_rodata[0x2308], 102, arg0, arg1, arg2, 0, g_bss_ptrs[132], 0, 5, (u8 *)&g_rodata[0x2318], arg3);
     }
-    if (sceKernelSignalSema(g_93F0, 1) != 0) {
+    if (sceKernelSignalSema(g_mesgSemaId, 1) != 0) {
         ret = -109;
     }
     return ret;
@@ -2628,7 +2628,7 @@ int sceUtilsGetLoadModuleULength(u8 *arg0, u32 arg1, u32 *arg2, u8 *arg3) /* @ 0
 
 int sceUtilsGetLoadModuleVLength(u8 *arg0, u32 arg1, u32 *arg2) /* @ 0x7798 */
 {
-    if (sceKernelWaitSema(g_93F0, 1, NULL) != 0) {
+    if (sceKernelWaitSema(g_mesgSemaId, 1, NULL) != 0) {
         return -108;
     }
     s32 ret;
@@ -2642,7 +2642,7 @@ int sceUtilsGetLoadModuleVLength(u8 *arg0, u32 arg1, u32 *arg2) /* @ 0x7798 */
     if (ret == -301) {
         ret = mesgLedDecryptExecutable((u8 *)&g_rodata[0x232c], (u8 *)&g_rodata[0x2330], 103, arg0, arg1, arg2, 0, g_bss_ptrs[133], 0, 2, NULL, NULL);
     }
-    if (sceKernelSignalSema(g_93F0, 1) != 0) {
+    if (sceKernelSignalSema(g_mesgSemaId, 1) != 0) {
         ret = -109;
     }
     return ret;
@@ -2650,7 +2650,7 @@ int sceUtilsGetLoadModuleVLength(u8 *arg0, u32 arg1, u32 *arg2) /* @ 0x7798 */
 
 int sceUtilsGetLoadModuleVLengthByPolling(u8 *arg0, u32 arg1, u32 *arg2) /* @ 0x794c */
 {
-    if (sceKernelPollSema(g_93F0, 1) != 0) {
+    if (sceKernelPollSema(g_mesgSemaId, 1) != 0) {
         return -108;
     }
     s32 ret;
@@ -2664,7 +2664,7 @@ int sceUtilsGetLoadModuleVLengthByPolling(u8 *arg0, u32 arg1, u32 *arg2) /* @ 0x
     if (ret == -301) {
         ret = mesgLedDecryptExecutable((u8 *)&g_rodata[0x232c], (u8 *)&g_rodata[0x2330], 103, arg0, arg1, arg2, 1, g_bss_ptrs[133], 0, 2, NULL, NULL);
     }
-    if (sceKernelSignalSema(g_93F0, 1) != 0) {
+    if (sceKernelSignalSema(g_mesgSemaId, 1) != 0) {
         ret = -109;
     }
     return ret;
@@ -2672,12 +2672,12 @@ int sceUtilsGetLoadModuleVLengthByPolling(u8 *arg0, u32 arg1, u32 *arg2) /* @ 0x
 
 int sceUtilsGetLoadModuleWLength(u8 *arg0, u32 arg1, u32 *arg2, u8 *arg3) /* @ 0x7afc */
 {
-    if (sceKernelWaitSema(g_93F0, 1, NULL) != 0) {
+    if (sceKernelWaitSema(g_mesgSemaId, 1, NULL) != 0) {
         return -108;
     }
     s32 ret;
     ret = mesgLedDecryptExecutable((u8 *)&g_rodata[0x0314], (u8 *)&g_rodata[0x0318], 106, arg0, arg1, arg2, 0, g_bss_ptrs[22], 0, 5, (u8 *)&g_rodata[0x0328], arg3);
-    if (sceKernelSignalSema(g_93F0, 1) != 0) {
+    if (sceKernelSignalSema(g_mesgSemaId, 1) != 0) {
         ret = -109;
     }
     return ret;
@@ -2689,14 +2689,14 @@ int scePauth_F7AA47F6(u8 *arg0, u32 arg1, u32 *arg2, u8 *arg3) /* @ 0x7bcc */
     s32 ret;
     if (!pspK1DynBufOk(arg0, arg1) || !pspK1StaBufOk(arg2, 4) || !pspK1StaBufOk(arg3, 16)) {
         ret = -110;
-    } else if (sceKernelWaitSema(g_93F0, 1, NULL) != 0) {
+    } else if (sceKernelWaitSema(g_mesgSemaId, 1, NULL) != 0) {
         ret = -108;
     } else {
         ret = mesgLedDecryptExecutable((u8 *)&g_rodata[0x0364], (u8 *)&g_rodata[0x0368], 71, arg0, arg1, arg2, 0, g_bss_ptrs[24], 0, 5, (u8 *)&g_rodata[0x0378], arg3);
         if (ret == -301) {
             ret = mesgLedDecryptExecutable((u8 *)&g_rodata[0x033c], (u8 *)&g_rodata[0x0340], 71, arg0, arg1, arg2, 0, g_bss_ptrs[23], 0, 5, (u8 *)&g_rodata[0x0350], arg3);
         }
-        if (sceKernelSignalSema(g_93F0, 1) != 0) {
+        if (sceKernelSignalSema(g_mesgSemaId, 1) != 0) {
             ret = -109;
         }
     }
@@ -2717,11 +2717,11 @@ int scePauth_98B83B5D(u8 *arg0, u32 arg1, u32 *arg2, u8 *arg3) /* @ 0x7d90 */
     s32 ret;
     if (!pspK1DynBufOk(arg0, arg1) || !pspK1StaBufOk(arg2, 4) || !pspK1StaBufOk(arg3, 16)) {
         ret = -110;
-    } else if (sceKernelWaitSema(g_93F0, 1, NULL) != 0) {
+    } else if (sceKernelWaitSema(g_mesgSemaId, 1, NULL) != 0) {
         ret = -108;
     } else {
         ret = mesgLedDecryptExecutable((u8 *)&g_rodata[0x038c], (u8 *)&g_rodata[0x0390], 71, arg0, arg1, arg2, 0, g_bss_ptrs[25], 0, 5, (u8 *)&g_rodata[0x03a0], arg3);
-        if (sceKernelSignalSema(g_93F0, 1) != 0) {
+        if (sceKernelSignalSema(g_mesgSemaId, 1) != 0) {
             ret = -109;
         }
     }
@@ -2738,7 +2738,7 @@ int scePauth_98B83B5D(u8 *arg0, u32 arg1, u32 *arg2, u8 *arg3) /* @ 0x7d90 */
 
 int sceUtilsGetLoadModuleYLength(u8 *arg0, u32 arg1, u32 *arg2, u8 *arg3) /* @ 0x7eec */
 {
-    if (sceKernelWaitSema(g_93F0, 1, NULL) != 0) {
+    if (sceKernelWaitSema(g_mesgSemaId, 1, NULL) != 0) {
         return -108;
     }
     s32 ret;
@@ -2753,7 +2753,7 @@ int sceUtilsGetLoadModuleYLength(u8 *arg0, u32 arg1, u32 *arg2, u8 *arg3) /* @ 0
         ret = mesgLedDecryptExecutable((u8 *)&g_rodata[0x0248], (u8 *)&g_rodata[0x024c], 72, arg0, arg1, arg2, 0, g_bss_ptrs[17], 0, 5, (u8 *)&g_rodata[0x025c], arg3);
     }
     restore_resmgr_keys();
-    if (sceKernelSignalSema(g_93F0, 1) != 0) {
+    if (sceKernelSignalSema(g_mesgSemaId, 1) != 0) {
         ret = -109;
     }
     return ret;
@@ -2761,20 +2761,20 @@ int sceUtilsGetLoadModuleYLength(u8 *arg0, u32 arg1, u32 *arg2, u8 *arg3) /* @ 0
 
 int sceDbsvrGetData(u8 *out20) /* @ 0x8354 */
 {
-    if (sceKernelWaitSema(g_93F4, 1, NULL) != 0) {
+    if (sceKernelWaitSema(g_mesgPartitionId, 1, NULL) != 0) {
         return -108;
     }
-    s32 ret = sceUtilsBufferCopyWithRange(g_9280, 20, NULL, 0, 14);
+    s32 ret = sceUtilsBufferCopyWithRange(g_mesgKeyBuf, 20, NULL, 0, 14);
     if (ret == 0) {
         for (u32 i = 0; i < 20; i++) {
-            out20[i] = g_9280[i];
+            out20[i] = g_mesgKeyBuf[i];
         }
     } else if (ret < 0) {
         ret = -101;
     } else {
         ret = (ret == KIRK_NOT_INITIALIZED) ? -107 : -104;
     }
-    if (sceKernelSignalSema(g_93F4, 1) != 0) {
+    if (sceKernelSignalSema(g_mesgPartitionId, 1) != 0) {
         ret = -109;
     }
     return ret;
@@ -2828,27 +2828,27 @@ int sceResmgr_8E6C62C8(const u8 *in120) /* @ 0x8590 */
         pspSetK1(old_k1);
         return -204;
     }
-    if (sceKernelWaitSema(g_93F0, 1, NULL) != 0) {
+    if (sceKernelWaitSema(g_mesgSemaId, 1, NULL) != 0) {
         pspSetK1(old_k1);
         return -108;
     }
     for (u32 i = 0; i < 120; i++) {
-        g_8EE8[i] = in120[i];
+        g_mesgHeaderBuf[i] = in120[i];
     }
     s32 ret;
-    if (g_8DFC != 0) {
+    if (g_mesgInitFlag != 0) {
         ret = -102;
         goto cleanup;
     }
     for (u32 i = 0; i < 80; i++) {
-        g_9100[4 + i] = g_8EE8[i];
+        g_mesgAesBuf[4 + i] = g_mesgHeaderBuf[i];
     }
-    g_8DC0 = g_9100;
-    *(s32 *)g_9100 = 80;
+    g_mesgWorkBufPtr = g_mesgAesBuf;
+    *(s32 *)g_mesgAesBuf = 80;
     for (u32 i = 0; i < 16; i++) {
-        g_9100[68 + i] = g_rodata[0x957c - 0x92d0 + i];
+        g_mesgAesBuf[68 + i] = g_rodata[0x957c - 0x92d0 + i];
     }
-    ret = sceUtilsBufferCopyWithRange(g_9100, 84, g_9100, 84, 11);
+    ret = sceUtilsBufferCopyWithRange(g_mesgAesBuf, 84, g_mesgAesBuf, 84, 11);
     if (ret != 0) {
         if (ret < 0) {
             ret = -102;
@@ -2858,12 +2858,12 @@ int sceResmgr_8E6C62C8(const u8 *in120) /* @ 0x8590 */
         goto cleanup;
     }
     for (u32 i = 0; i < 20; i++) {
-        g_9280[i] = g_9100[i];
+        g_mesgKeyBuf[i] = g_mesgAesBuf[i];
     }
     for (u32 i = 0; i < 16; i++) {
-        g_9100[20 + i] = g_8EE8[64 + i];
+        g_mesgAesBuf[20 + i] = g_mesgHeaderBuf[64 + i];
     }
-    ret = mesgLedDecryptAesCbc(g_9100, 16, 86, 0);
+    ret = mesgLedDecryptAesCbc(g_mesgAesBuf, 16, 86, 0);
     if (ret != 0) {
         if (ret < 0) {
             ret = -103;
@@ -2872,28 +2872,28 @@ int sceResmgr_8E6C62C8(const u8 *in120) /* @ 0x8590 */
         }
         goto cleanup;
     }
-    if (mesgLedMemcmp(g_9280, g_9100, 16) != 0) {
+    if (mesgLedMemcmp(g_mesgKeyBuf, g_mesgAesBuf, 16) != 0) {
         ret = -302;
         goto cleanup;
     }
     for (u32 i = 0; i < 40; i++) {
-        g_9100[i] = g_rodata[0x959c - 0x92d0 + i];
+        g_mesgAesBuf[i] = g_rodata[0x959c - 0x92d0 + i];
     }
     for (u32 i = 0; i < 20; i++) {
-        g_9100[40 + i] = g_9280[i];
+        g_mesgAesBuf[40 + i] = g_mesgKeyBuf[i];
     }
     for (u32 i = 0; i < 40; i++) {
-        g_9100[60 + i] = g_8EE8[80 + i];
+        g_mesgAesBuf[60 + i] = g_mesgHeaderBuf[80 + i];
     }
-    ret = sceUtilsBufferCopyWithRange(NULL, 0, g_9100, 100, 17);
+    ret = sceUtilsBufferCopyWithRange(NULL, 0, g_mesgAesBuf, 100, 17);
     if (ret != 0) {
         ret = -303;
         goto cleanup;
     }
     for (u32 i = 0; i < 48; i++) {
-        g_9100[20 + i] = g_8EE8[16 + i] ^ g_rodata[0x958c - 0x92d0 + (i & 0xF)];
+        g_mesgAesBuf[20 + i] = g_mesgHeaderBuf[16 + i] ^ g_rodata[0x958c - 0x92d0 + (i & 0xF)];
     }
-    ret = mesgLedDecryptAesCbc(g_9100, 48, 86, 0);
+    ret = mesgLedDecryptAesCbc(g_mesgAesBuf, 48, 86, 0);
     if (ret != 0) {
         if (ret < 0) {
             ret = -103;
@@ -2903,44 +2903,44 @@ int sceResmgr_8E6C62C8(const u8 *in120) /* @ 0x8590 */
         goto cleanup;
     }
     for (u32 i = 0; i < 48; i++) {
-        g_9100[i] ^= g_rodata[0x958c - 0x92d0 + (i & 0xF)];
+        g_mesgAesBuf[i] ^= g_rodata[0x958c - 0x92d0 + (i & 0xF)];
     }
-    if (g_9100[0] == 0xF0 && g_9100[1] >= 0x90) {
-        g_8DFC = 4;
+    if (g_mesgAesBuf[0] == 0xF0 && g_mesgAesBuf[1] >= 0x90) {
+        g_mesgInitFlag = 4;
         for (u32 i = 0; i < 20; i++) {
             g_saved_keys[i] = g_data[0xB4 + i];
             g_saved_keys[20 + i] = g_data[0xF0 + i];
-            g_data[0xB4 + i] = g_9100[i];
-            g_data[0xF0 + i] = g_9100[20 + i];
+            g_data[0xB4 + i] = g_mesgAesBuf[i];
+            g_data[0xF0 + i] = g_mesgAesBuf[20 + i];
         }
-    } else if (g_9100[0] == 0xF0 && (s8)g_9100[1] < 0) {
-        g_8DFC = 3;
+    } else if (g_mesgAesBuf[0] == 0xF0 && (s8)g_mesgAesBuf[1] < 0) {
+        g_mesgInitFlag = 3;
         for (u32 i = 0; i < 20; i++) {
             g_saved_keys[i] = g_data[0x8C + i];
             g_saved_keys[20 + i] = g_data[0xDC + i];
-            g_data[0x8C + i] = g_9100[i];
-            g_data[0xDC + i] = g_9100[20 + i];
+            g_data[0x8C + i] = g_mesgAesBuf[i];
+            g_data[0xDC + i] = g_mesgAesBuf[20 + i];
         }
     } else {
-        g_8DFC = 1;
+        g_mesgInitFlag = 1;
         for (u32 i = 0; i < 20; i++) {
             g_saved_keys[i] = g_data[0x00 + i];
             g_saved_keys[20 + i] = g_data[0xC8 + i];
-            g_data[0x00 + i] = g_9100[i];
-            g_data[0xC8 + i] = g_9100[20 + i];
+            g_data[0x00 + i] = g_mesgAesBuf[i];
+            g_data[0xC8 + i] = g_mesgAesBuf[20 + i];
         }
     }
     ret = 0;
 
 cleanup:
     for (u32 i = 0; i < 16; i++) {
-        g_9280[i] = 0;
+        g_mesgKeyBuf[i] = 0;
     }
     for (u32 i = 0; i < 336; i++) {
-        g_9100[i] = 0;
-        g_8EE8[i] = 0;
+        g_mesgAesBuf[i] = 0;
+        g_mesgHeaderBuf[i] = 0;
     }
-    if (sceKernelSignalSema(g_93F0, 1) != 0) {
+    if (sceKernelSignalSema(g_mesgSemaId, 1) != 0) {
         ret = -109;
     }
     pspSetK1(old_k1);

@@ -69,19 +69,19 @@ static const u32 g_tags[4] = {
 };
 
 /* 0x000022DC */
-static const u8 g_key_22DC[16] = {
+static const u8 g_prxDecryptKeyA[16] = {
     0x71, 0xF6, 0xA8, 0x31, 0x1E, 0xE0, 0xFF, 0x1E,
     0x50, 0xBA, 0x6C, 0xD2, 0x98, 0x2D, 0xD6, 0x2D
 };
 
 /* 0x000022EC */
-static const u8 g_key_22EC[16] = {
+static const u8 g_prxDecryptKeyB[16] = {
     0xAA, 0x85, 0x4D, 0xB0, 0xFF, 0xCA, 0x47, 0xEB,
     0x38, 0x7F, 0xD7, 0xE4, 0x3D, 0x62, 0xB0, 0x10
 };
 
 /* 0x000022FC */
-static const u8 g_key_22FC[0x90] = {
+static const u8 g_prxKeyTableA[0x90] = {
     0x6A, 0x19, 0x71, 0xF3, 0x18, 0xDE, 0xD3, 0xA2, 0x6D, 0x3B, 0xDE, 0xC7, 0xBE, 0x98, 0xE2, 0x4C,
     0xE3, 0xDC, 0xDF, 0x42, 0x7B, 0x5B, 0x12, 0x28, 0x7D, 0xC0, 0x7A, 0x59, 0x86, 0xF0, 0xF5, 0xB5,
     0x58, 0xD8, 0x64, 0x18, 0x84, 0x24, 0x7F, 0xE9, 0x57, 0xAB, 0x4F, 0xC6, 0x92, 0x6D, 0x70, 0x29,
@@ -94,7 +94,7 @@ static const u8 g_key_22FC[0x90] = {
 };
 
 /* 0x0000238C */
-static const u8 g_key_238C[0x90] = {
+static const u8 g_prxKeyTableB[0x90] = {
     0x50, 0xCC, 0x03, 0xAC, 0x3F, 0x53, 0x1A, 0xFA, 0x0A, 0xA4, 0x34, 0x23, 0x86, 0x61, 0x7F, 0x97,
     0x84, 0x1C, 0x1A, 0x1D, 0x08, 0xD4, 0x50, 0xB6, 0xD9, 0x73, 0x27, 0x80, 0xD1, 0xDE, 0xEE, 0xCA,
     0x49, 0x8B, 0x84, 0x37, 0xDB, 0xF0, 0x70, 0xA2, 0xA6, 0x2B, 0x09, 0x4D, 0x3B, 0x29, 0xDE, 0x0B,
@@ -107,7 +107,7 @@ static const u8 g_key_238C[0x90] = {
 };
 
 /* 0x0000241C */
-static const u8 g_seed_241C[16] = {
+static const u8 g_prxXorSeed[16] = {
     0x09, 0xEE, 0x7E, 0x6D, 0x7A, 0xE9, 0xA6, 0xDE,
     0x79, 0xC0, 0xBA, 0x24, 0xA3, 0x88, 0x1D, 0x14
 };
@@ -150,8 +150,8 @@ static const u8 g_key_zero_16[16] = { 0 };
 
 /* .bss */
 static u8 *g_prx_buff;              /* 0x25C0 */
-static u8 g_swbuff_25C4[0x150];     /* 0x25C4 */
-static u8 g_swbuff_2740[0x28];      /* 0x2740 */
+static u8 g_prxHdrBackup[0x150];     /* 0x25C4 */
+static u8 g_prxSigBackup[0x28];      /* 0x2740 */
 static u8 g_selftest_buffer[0x1C];  /* 0x2780 */
 static GlobalSysParam g_sys;        /* 0x279C */
 
@@ -248,22 +248,22 @@ static int decryptPrxModule(u8 *prx, u32 size, u32 *newsize, u32 sync)
     }
 
     for (i = 0; i < 0x150; i++)
-        g_swbuff_25C4[i] = prx[i];
+        g_prxHdrBackup[i] = prx[i];
 
-    if (memlmd_memcmp((const u8 *)&g_tags[3], g_swbuff_25C4 + 0xD0, 4) == 0) {
+    if (memlmd_memcmp((const u8 *)&g_tags[3], g_prxHdrBackup + 0xD0, 4) == 0) {
         key_ptr = g_key_dest;
         scramble_code = 0x43;
         mode_type = 4;
-    } else if (memlmd_memcmp((const u8 *)&g_tags[2], g_swbuff_25C4 + 0xD0, 4) == 0) {
+    } else if (memlmd_memcmp((const u8 *)&g_tags[2], g_prxHdrBackup + 0xD0, 4) == 0) {
         key_ptr = g_key_zero_16;
         scramble_code = 0x43;
         mode_type = 4;
-    } else if (memlmd_memcmp((const u8 *)&g_tags[0], g_swbuff_25C4 + 0xD0, 4) == 0) {
-        key_ptr = g_key_22FC;
+    } else if (memlmd_memcmp((const u8 *)&g_tags[0], g_prxHdrBackup + 0xD0, 4) == 0) {
+        key_ptr = g_prxKeyTableA;
         scramble_code = 0x42;
         mode_type = 0;
-    } else if (memlmd_memcmp((const u8 *)&g_tags[1], g_swbuff_25C4 + 0xD0, 4) == 0) {
-        key_ptr = g_key_238C;
+    } else if (memlmd_memcmp((const u8 *)&g_tags[1], g_prxHdrBackup + 0xD0, 4) == 0) {
+        key_ptr = g_prxKeyTableB;
         scramble_code = 0x43;
         mode_type = 0;
     } else {
@@ -273,7 +273,7 @@ static int decryptPrxModule(u8 *prx, u32 size, u32 *newsize, u32 sync)
 
     if (mode_type != 0) {
         for (i = 0; i < 0x30; i++) {
-            if (g_swbuff_25C4[0xD4 + i] != 0) {
+            if (g_prxHdrBackup[0xD4 + i] != 0) {
                 ret = -302;
                 goto cleanup;
             }
@@ -285,10 +285,10 @@ static int decryptPrxModule(u8 *prx, u32 size, u32 *newsize, u32 sync)
         }
     }
 
-    u32 out_sz = ((u32)g_swbuff_25C4[0xB3] << 24) |
-                 ((u32)g_swbuff_25C4[0xB2] << 16) |
-                 ((u32)g_swbuff_25C4[0xB1] << 8)  |
-                 (u32)g_swbuff_25C4[0xB0];
+    u32 out_sz = ((u32)g_prxHdrBackup[0xB3] << 24) |
+                 ((u32)g_prxHdrBackup[0xB2] << 16) |
+                 ((u32)g_prxHdrBackup[0xB1] << 8)  |
+                 (u32)g_prxHdrBackup[0xB0];
     *newsize = out_sz;
     if (size - 0x150 < out_sz) {
         ret = -206;
@@ -306,11 +306,11 @@ static int decryptPrxModule(u8 *prx, u32 size, u32 *newsize, u32 sync)
             g_hwbuff_A00[0x14 + (blk << 4)] = (u8)blk;
         }
         for (i = 0; i < 0x28; i++)
-            g_swbuff_2740[i] = prx[0x104 + i];
+            g_prxSigBackup[i] = prx[0x104 + i];
         for (i = 0; i < 0x28; i++)
             prx[0x104 + i] = 0;
         for (i = 0; i < 0x28; i++)
-            stack_save[i] = g_swbuff_2740[i];
+            stack_save[i] = g_prxSigBackup[i];
 
         g_prx_buff = prx;
         *(u32 *)prx = size - 4;
@@ -332,7 +332,7 @@ static int decryptPrxModule(u8 *prx, u32 size, u32 *newsize, u32 sync)
         for (i = 0; i < 0x14; i++)
             stack_hash[i] = prx[i];
         for (i = 0; i < 0x20; i++)
-            prx[i] = g_swbuff_25C4[i];
+            prx[i] = g_prxHdrBackup[i];
         for (i = 0; i < 0x28; i++)
             g_hwbuff_340[i] = g_kirk11_header[i];
         for (i = 0; i < 0x14; i++)
@@ -370,26 +370,26 @@ static int decryptPrxModule(u8 *prx, u32 size, u32 *newsize, u32 sync)
 
     if (mode_type == 0) {
         for (i = 0; i < 0x80; i++)
-            g_hwbuff_A00[i] = g_swbuff_25C4[0xD0 + i];
+            g_hwbuff_A00[i] = g_prxHdrBackup[0xD0 + i];
         for (i = 0; i < 0x50; i++)
-            g_hwbuff_A00[0x80 + i] = g_swbuff_25C4[0x80 + i];
+            g_hwbuff_A00[0x80 + i] = g_prxHdrBackup[0x80 + i];
         for (i = 0; i < 0x80; i++)
-            g_hwbuff_A00[0xD0 + i] = g_swbuff_25C4[i];
+            g_hwbuff_A00[0xD0 + i] = g_prxHdrBackup[i];
     } else {
         for (i = 0; i < 0x5C; i++)
-            g_hwbuff_A00[i] = g_swbuff_25C4[0xD0 + i];
+            g_hwbuff_A00[i] = g_prxHdrBackup[0xD0 + i];
         for (i = 0; i < 0x10; i++)
-            g_hwbuff_A00[0x5C + i] = g_swbuff_25C4[0x140 + i];
+            g_hwbuff_A00[0x5C + i] = g_prxHdrBackup[0x140 + i];
         for (i = 0; i < 0x14; i++)
-            g_hwbuff_A00[0x6C + i] = g_swbuff_25C4[0x12C + i];
+            g_hwbuff_A00[0x6C + i] = g_prxHdrBackup[0x12C + i];
         for (i = 0; i < 0x30; i++)
-            g_hwbuff_A00[0x80 + i] = g_swbuff_25C4[0x80 + i];
+            g_hwbuff_A00[0x80 + i] = g_prxHdrBackup[0x80 + i];
         for (i = 0; i < 0x10; i++)
-            g_hwbuff_A00[0xB0 + i] = g_swbuff_25C4[0xC0 + i];
+            g_hwbuff_A00[0xB0 + i] = g_prxHdrBackup[0xC0 + i];
         for (i = 0; i < 0x10; i++)
-            g_hwbuff_A00[0xC0 + i] = g_swbuff_25C4[0xB0 + i];
+            g_hwbuff_A00[0xC0 + i] = g_prxHdrBackup[0xB0 + i];
         for (i = 0; i < 0x80; i++)
-            g_hwbuff_A00[0xD0 + i] = g_swbuff_25C4[i];
+            g_hwbuff_A00[0xD0 + i] = g_prxHdrBackup[i];
         for (i = 0; i < 0x28; i++)
             g_hwbuff_A00[0x34 + i] = 0;
     }
@@ -532,7 +532,7 @@ static int decryptPrxModule(u8 *prx, u32 size, u32 *newsize, u32 sync)
 
 restore_and_cleanup:
     for (i = 0; i < 0x150; i++)
-        prx[i] = g_swbuff_25C4[i];
+        prx[i] = g_prxHdrBackup[i];
     *newsize = 0;
 
 cleanup:
@@ -545,7 +545,7 @@ cleanup:
     for (i = 0; i < 0xB4; i++)
         g_hwbuff_340[i] = 0;
     for (i = 0; i < 0x150; i++)
-        g_swbuff_25C4[i] = 0;
+        g_prxHdrBackup[i] = 0;
     return ret;
 }
 
@@ -608,12 +608,12 @@ static int unsign(u8 *prx, u32 size, u32 sync)
         g_hwbuff_A00[0x14 + i] = prx[0x80 + i];
 
     for (i = 0; i < 0xD0; i++)
-        g_hwbuff_A00[0x14 + i] ^= g_key_22EC[i & 0xF];
+        g_hwbuff_A00[0x14 + i] ^= g_prxDecryptKeyB[i & 0xF];
 
     int ret2 = kirk8((u8 *)g_hwbuff_A00, 0xD0, sync);
     if (ret2 == 0) {
         for (i = 0; i < 0xD0; i++)
-            g_hwbuff_A00[i] ^= g_key_22DC[i & 0xF];
+            g_hwbuff_A00[i] ^= g_prxDecryptKeyA[i & 0xF];
         for (i = 0; i < 0x90; i++)
             prx[0x80 + i] = g_hwbuff_A00[0x40 + i];
         for (i = 0; i < 0x40; i++)
@@ -670,7 +670,7 @@ s32 memlmd_F26A33C3(u32 mode, vs32 *hashAddr)
 
     sceKernelPowerLockForUser(0);
     for (i = 0; i < 16; i++)
-        g_key_dest[i] = g_seed_241C[i] ^ hash_addr[i];
+        g_key_dest[i] = g_prxXorSeed[i] ^ hash_addr[i];
     sceKernelPowerUnlockForUser(0);
     return 0;
 }
