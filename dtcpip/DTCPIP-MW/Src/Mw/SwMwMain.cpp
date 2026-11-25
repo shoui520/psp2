@@ -22,12 +22,14 @@ int _sceDtcpIpDownloadInit(void);
 int _sceDtcpIpDownloadTerm(void);
 
 /* the communication server (DTCPIP-MW/Src/Comm/vita/SwMwCommServer.cpp) */
-int SwMwCommServerCreate(int *server);
-int SwMwCommServerRun(int server, int (*dispatch)(int, void *), int argument, int flags);
-int SwMwCommServerTerm(int server);
+struct SwMwCommServer;
+int SwMwCommServerCreate(struct SwMwCommServer **server);
+int SwMwCommServerRun(struct SwMwCommServer *server, void (*dispatch)(void *, void *, void *),
+		      void *argument, int flags);
+int SwMwCommServerTerm(struct SwMwCommServer *server);
 
 /* the manager's dispatcher (DTCPIP-MW/Src/Mw/SwMwManagerDispatch.cpp) */
-int SwMwManagerDispatch(int, void *);
+void SwMwManagerDispatch(void *, void *, void *);
 }
 
 #define SWMW_SOURCE	"C:\\work\\svn\\psp2\\dtcpip\\trunk.365\\DTCPIP-MW\\Src\\Mw\\SwMwMain.cpp"
@@ -39,7 +41,7 @@ int SwMwManagerDispatch(int, void *);
 extern "C" int swagnerMain(void)
 {
 	int result;
-	int server;
+	struct SwMwCommServer *server;
 
 	int activationFailed = 0;
 	result = _sceDtcpIpActivateInit();
@@ -67,7 +69,7 @@ extern "C" int swagnerMain(void)
 				int runFailed = 0;
 
 				result = SwMwCommServerRun(server, SwMwManagerDispatch,
-							   0, 0);
+							   NULL, 0);
 				if (result != 0) {
 					SWMW_TRACE_ERROR(result, 35);
 					runFailed = 1;

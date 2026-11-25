@@ -541,11 +541,10 @@ struct SwMwCommServer {
 	SceUID mutex;			/* 0x000 */
 	SceUID pipeCtoS;		/* 0x004 */
 	SceUID pipeStoC;		/* 0x008 */
-	void *shared;			/* 0x00C: the shared memory control object */
+	struct SwMwSharedMemory *shared;	/* 0x00C: the shared memory control object */
 	void *base;			/* 0x010: its base */
 	struct SwMwCommChannel channels[2];	/* 0x014 */
-	void (*dispatch)(struct SwMwCommChannel *channel, struct SwMwIpcMessage *request,
-			 void *context);	/* 0x184 */
+	void (*dispatch)(void *channel, void *request, void *context);	/* 0x184 */
 	void *dispatchContext;		/* 0x188 */
 	int timeout;			/* 0x18C: a request receive's timeout, in milliseconds */
 };
@@ -1029,4 +1028,254 @@ extern "C" int SwMwCommChannelOpen(struct SwMwCommServer *server,
 		swMwTrace("[SWMW] Error %d in %s:%d\n", result, SWMW_COMM_SOURCE, 732);
 	return result;
 
+}
+
+/* a channel's area of the shared memory: its in-use byte and the four stream slices */
+struct SwMwChannelShared {
+	unsigned char inUse;				/* 0x0000 */
+	unsigned char header[7];			/* 0x0001 */
+	unsigned char stream[4][SWMW_COMM_STREAM_STRIDE];	/* 0x0008 */
+};
+
+/*
+ * Create the server (0x810006c8): its network, the StoC pipe it answers on, the shared
+ * block, the hello message, the CtoS pipe and the connect ack, the control mutex and the
+ * two channels. Every step traces its line on failure and the cleanup releases whatever
+ * was taken.
+ */
+extern "C" int SwMwCommServerCreate(struct SwMwCommServer **out)
+{
+	struct SwMwCommServer *server;
+	struct SwMwIpcWireMessage message;
+	struct SwMwCommChannel *channel;
+	void *base;
+	int result;
+	int status;
+	unsigned int i;
+
+	*out = NULL;
+	server = (struct SwMwCommServer *)malloc(sizeof(*server));
+	if (server == NULL) {
+		swMwTrace("[SWMW] Error %d in %s:%d\n", 12008, SWMW_COMM_SOURCE, 82);
+		return 12008;
+	}
+	server->mutex = -1;
+	server->pipeCtoS = -1;
+	server->pipeStoC = -1;
+	server->shared = NULL;
+	server->base = NULL;
+	result = SwMwNetInit();
+	if (result == 0) {
+		result = SwMwIpcCreatePipe("SW_IPC_Sys_Pipe_StoC", &server->pipeStoC);
+		if (result != 0)
+			swMwTrace("[SWMW] Error %d in %s:%d\n", result, SWMW_COMM_SOURCE, 94);
+	}
+	if (result == 0) {
+		result = SwMwCommServerCreateShared(&server->shared, "SW_IPC_Sys_ShMem",
+						    SWMW_COMM_SHARED_SIZE, &base, 0);
+		if (result != 0) {
+			swMwTrace("[SWMW] Error %d in %s:%d\n", result, SWMW_COMM_SOURCE, 98);
+		} else {
+			server->base = base;
+			memset(base, 0, SWMW_COMM_SHARED_SIZE);
+		}
+	}
+	if (result == 0) {
+		message.kind = 0;
+		message.result = 0;
+		message.value0 = 0;
+		message.value1 = 0;
+		message.value2 = 0;
+		message.value3 = 0;
+		result = SwMwIpcSend(server->pipeStoC, &message);
+		if (result != 0)
+			swMwTrace("[SWMW] Error %d in %s:%d\n", result, SWMW_COMM_SOURCE, 111);
+	}
+	if (result == 0) {
+		result = SwMwIpcWaitEvent(server->pipeStoC, 0);
+		if (result != 0)
+			swMwTrace("[SWMW] Error %d in %s:%d\n", result, SWMW_COMM_SOURCE, 114);
+	}
+	if (result == 0) {
+		result = SwMwIpcOpenPipe("SW_IPC_Sys_Pipe_CtoS", &server->pipeCtoS);
+		if (result != 0)
+			swMwTrace("[SWMW] Error %d in %s:%d\n", result, SWMW_COMM_SOURCE, 117);
+	}
+	if (result == 0) {
+		result = SwMwIpcReceive(server->pipeCtoS, &message, 1000000);
+		if (result != 0)
+			swMwTrace("[SWMW] Error %d in %s:%d\n", result, SWMW_COMM_SOURCE, 121);
+	}
+	if (result == 0) {
+		if (message.kind != 1) {
+			swMwTrace("[SWMW] ERROR in %s:%d\n", SWMW_COMM_SOURCE, 123);
+			result = 12004;
+		} else if (message.value0 != 2 || message.value1 != 0) {
+			swMwTrace("[SWMW] ERROR in %s:%d\n", SWMW_COMM_SOURCE, 128);
+			result = 12004;
+		}
+	}
+	if (result == 0) {
+		result = SwMwIpcOpenMutex(&server->mutex, "SW_IPC_Sys_Mutex", 0);
+		if (result != 0)
+			swMwTrace("[SWMW] Error %d in %s:%d\n", result, SWMW_COMM_SOURCE, 135);
+	}
+	if (result == 0) {
+		for (i = 0; i < 2; ++i) {
+			channel = &server->channels[i];
+			channel->server = server;
+			channel->index = i;
+			channel->sharedBase = NULL;
+			channel->bufferSize = 0;
+			channel->shared = NULL;
+			channel->singlePipe = -1;
+		}
+		message.kind = 2;
+		message.result = 0;
+		message.value0 = 0;
+		message.value1 = 0;
+		message.value2 = 0;
+		message.value3 = 0;
+		result = SwMwIpcSend(server->pipeStoC, &message);
+		if (result != 0)
+			swMwTrace("[SWMW] Error %d in %s:%d\n", result, SWMW_COMM_SOURCE, 156);
+	}
+	if (result == 0) {
+		*out = server;
+		return 0;
+	}
+	if (server->mutex != -1) {
+		SwMwIpcCloseMutex(server->mutex, 0);
+		server->mutex = -1;
+	}
+	if (server->shared != NULL) {
+		status = SwMwSharedMemoryFree(server->shared, 0);
+		if (status != 0)
+			swMwTrace("[SWMW] Error %d in %s:%d\n", status, SWMW_COMM_SOURCE, 170);
+	}
+	if (server->pipeStoC != -1) {
+		SwMwIpcDeletePipe(server->pipeStoC);
+		server->pipeStoC = -1;
+	}
+	if (server->pipeCtoS != -1) {
+		SwMwIpcClosePipe(server->pipeCtoS);
+		server->pipeCtoS = -1;
+	}
+	SwMwNetTerm();
+	free(server);
+	return result;
+}
+
+/* tear the server down (0x81000b48): the network, the open channels, the shared block,
+ * the pipes, the mutex and the server itself */
+extern "C" int SwMwCommServerTerm(struct SwMwCommServer *server)
+{
+	struct SwMwChannelShared *area = (struct SwMwChannelShared *)server->base;
+	int result;
+	int status;
+	unsigned int i;
+
+	SwMwNetTerm();
+	for (i = 0; i < 2; ++i) {
+		if (area[i].inUse == 1)
+			SwMwCommChannelFree(&server->channels[i]);
+	}
+	if (server->shared != NULL) {
+		result = SwMwSharedMemoryFree(server->shared, 0);
+		if (result != 0)
+			swMwTrace("[SWMW] Error %d in %s:%d\n", result, SWMW_COMM_SOURCE, 211);
+	}
+	if (server->pipeCtoS != -1)
+		SwMwIpcClosePipe(server->pipeCtoS);
+	if (server->mutex != -1) {
+		status = SwMwIpcCloseMutex(server->mutex, 0);
+		if (status != 0)
+			swMwTrace("[SWMW] Error %d in %s:%d\n", status,
+				  SWMW_COMM_SOURCE, 220);
+	}
+	if (server->pipeStoC != -1)
+		SwMwIpcDeletePipe(server->pipeStoC);
+	free(server);
+	return 0;
+}
+
+/* close one channel of the server (0x8100206a): stop its threads, tear it down, answer
+ * the library with a kind-7 control message */
+extern "C" int SwMwCommStreamClose(struct SwMwCommServer *server,
+				   struct SwMwIpcWireMessage *message)
+{
+	struct SwMwCommChannel *channel = &server->channels[message->value0];
+	struct SwMwIpcWireMessage control;
+	int result;
+	unsigned int i;
+
+	if (channel->streamCount != 0) {
+		for (i = 0; i < 4; ++i)
+			SwMwCommStreamStop(&channel->slots[i].thread);
+	} else {
+		SwMwCommStreamStop(&channel->singleThread);
+	}
+	result = SwMwCommChannelTerm(channel);
+	if (result != 0)
+		swMwTrace("[SWMW] Error %d in %s:%d\n", result, SWMW_COMM_SOURCE, 763);
+	control.kind = 7;
+	control.result = 0;
+	control.value0 = 0;
+	control.value1 = 0;
+	control.value2 = 0;
+	control.value3 = 0;
+	result = SwMwIpcSend(server->pipeStoC, &control);
+	if (result != 0)
+		swMwTrace("[SWMW] Error %d in %s:%d\n", result, SWMW_COMM_SOURCE, 770);
+	return 0;
+}
+
+/*
+ * The server's run loop (0x81000d86): remember the manager's dispatch triple, receive
+ * requests from the CtoS pipe, poll the application's events on a timeout, and handle
+ * disconnect (end), channel open (kind 4) and channel close (kind 6).
+ */
+extern "C" int SwMwCommServerRun(struct SwMwCommServer *server,
+				 void (*dispatch)(void *, void *, void *),
+				 void *context, int timeout)
+{
+	struct SwMwIpcWireMessage message;
+	int result;
+
+	server->dispatch = dispatch;
+	server->dispatchContext = context;
+	server->timeout = timeout;
+	for (;;) {
+		result = SwMwIpcReceive(server->pipeCtoS, &message, 1000000);
+		if (result == SWMW_IPC_ERROR_TIMEOUT) {
+			if (SwMwCommServerCheckAppEvent() == 1) {
+				swMwTrace("sw mw:[SWP] SCE_APP_EVENT_REQUEST_QUIT\n");
+				return 0;
+			}
+			continue;
+		}
+		if (result != 0) {
+			swMwTrace("[SWMW] Error %d in %s:%d\n", result, SWMW_COMM_SOURCE, 627);
+			break;
+		}
+		if (message.kind == 3)
+			return 0;
+		if (message.kind == 4) {
+			result = SwMwCommChannelOpen(server, &message);
+			if (result != 0) {
+				swMwTrace("[SWMW] Error %d in %s:%d\n", result,
+					  SWMW_COMM_SOURCE, 643);
+				break;
+			}
+		} else if (message.kind == 6) {
+			result = SwMwCommStreamClose(server, &message);
+			if (result != 0) {
+				swMwTrace("[SWMW] Error %d in %s:%d\n", result,
+					  SWMW_COMM_SOURCE, 647);
+				break;
+			}
+		}
+	}
+	swMwTrace("sw mw:[SWP] Server Error %d\n", result);
+	return 0;
 }
