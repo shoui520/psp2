@@ -12,7 +12,231 @@ typedef signed int s32;
 typedef unsigned long long u64;
 typedef signed long long s64;
 
-static inline u32 byteswap32(u32 v)
+/* Commerce2 / RegCam error codes */
+#define REGCAM_ERR_NOT_INITIALIZED      ((int)0x80550F01)
+#define REGCAM_ERR_ALREADY_INITIALIZED  ((int)0x80550F02)
+#define REGCAM_ERR_INVALID_ARG          ((int)0x80550F03)
+#define REGCAM_ERR_OUT_OF_MEMORY        ((int)0x80550F0B)
+#define REGCAM_ERR_ABORTED              ((int)0x80550F10)
+#define REGCAM_ERR_BUF_OVERFLOW         ((int)0x80550F11)
+#define REGCAM_ERR_RESP_TOO_SMALL       ((int)0x80550F12)
+#define REGCAM_ERR_RESP_BUF_LIMIT       ((int)0x80550F18)
+#define REGCAM_ERR_INVALID_CMD          ((int)0x80550F81)
+#define REGCAM_ERR_INVALID_PAYMENT      ((int)0x80550F82)
+#define REGCAM_ERR_TAG_NOT_FOUND        ((int)0x80550F87)
+#define REGCAM_ERR_MAINTENANCE          ((int)0x80550F93)
+#define REGCAM_ERR_INVALID_SERVICE      ((int)0x80550F96)
+#define REGCAM_ERR_QUICK_OVERFLOW       ((int)0x80550FD1)
+#define REGCAM_ERR_QUICK_ABORTED        ((int)0x80550FD2)
+#define REGCAM_ERR_STACK_OVERFLOW       ((int)0x80550004)
+#define REGCAM_ERR_SERVER_BASE          ((int)0x80551000)
+#define REGCAM_ERR_SERVER_GENERIC       ((int)0x80551001)
+#define REGCAM_ERR_SERVER_NO_PROV       ((int)0x80551004)
+#define REGCAM_ERR_SERVER_CARD_INVALID  ((int)0x8055102B)
+#define REGCAM_ERR_SERVER_ADDR_INVALID  ((int)0x80551041)
+
+/* Keep-alive timeout: 10 seconds in microseconds */
+#define REGCAM_KEEPALIVE_TIMEOUT_US     10000000ULL
+
+/* Unix epoch (1970-01-01) offset from PSP RTC epoch (0001-01-01) in microseconds */
+#define REGCAM_UNIX_EPOCH_US            0x00DCBFFEFF2BC000ULL
+
+/* Service types */
+#define REGCAM_SVC_STORE                1
+#define REGCAM_SVC_REG                  5
+#define REGCAM_SVC_CAM                  6
+#define REGCAM_SVC_UPGRADE              7
+#define REGCAM_SVC_PWD                  8
+
+/* Request command IDs (1-based index into g_endpoint_names) */
+enum RegCamCmdId {
+    REGCAM_CMD_CR_SESS               = 1,
+    REGCAM_CMD_DEL_SESS              = 2,
+    REGCAM_CMD_GET_CAT               = 3,
+    REGCAM_CMD_GET_PROD              = 4,
+    REGCAM_CMD_SRCH_PROD             = 5,
+    REGCAM_CMD_GET_DRM               = 7,
+    REGCAM_CMD_GET_PROV              = 20,
+    REGCAM_CMD_REG_CC                = 23,
+    REGCAM_CMD_GET_COUNTRIES         = 27,
+    REGCAM_CMD_BIND_ACCOUNT          = 28,
+    REGCAM_CMD_START_REG             = 29,
+    REGCAM_CMD_GET_SEC_Q             = 30,
+    REGCAM_CMD_SET_CRED              = 31,
+    REGCAM_CMD_SET_LID               = 32,
+    REGCAM_CMD_UPD_PASS              = 33,
+    REGCAM_CMD_VERIFY_OID            = 34,
+    REGCAM_CMD_SET_OID               = 35,
+    REGCAM_CMD_GET_NAME              = 36,
+    REGCAM_CMD_SET_NAME              = 37,
+    REGCAM_CMD_SET_RES_ADDR          = 38,
+    REGCAM_CMD_SET_RRN               = 39,
+    REGCAM_CMD_GET_OPT_IN            = 40,
+    REGCAM_CMD_SET_OPT_IN            = 41,
+    REGCAM_CMD_AUTH_MASTER           = 42,
+    REGCAM_CMD_SET_SUB_CTRL          = 44,
+    REGCAM_CMD_RESET_SUB_PASS        = 45,
+    REGCAM_CMD_GET_WAL_OPT           = 46,
+    REGCAM_CMD_SET_WAL_OPT           = 47,
+    REGCAM_CMD_SUBMIT_REG            = 48,
+    REGCAM_CMD_AUTHENTICATE          = 49,
+    REGCAM_CMD_REM_PAY               = 50,
+    REGCAM_CMD_GET_TRAN_HIST         = 51,
+    REGCAM_CMD_GET_TRAN_DETAIL       = 52,
+    REGCAM_CMD_GET_SRVS              = 53,
+    REGCAM_CMD_GET_SRV_DETAIL        = 54,
+    REGCAM_CMD_GET_SUBSCR            = 55,
+    REGCAM_CMD_CHANGE_SUBSCR         = 57,
+    REGCAM_CMD_CANCEL_SUBSCR         = 58,
+    REGCAM_CMD_ACPT_EULA             = 60,
+    REGCAM_CMD_VERIFY_DOB            = 61,
+    REGCAM_CMD_VERIFY_SEC_ANS        = 62,
+    REGCAM_CMD_SEND_PASS_RESET_MAIL  = 63,
+    REGCAM_CMD_VERIFY_MASTER_BILL    = 64,
+    REGCAM_CMD_CR_GUEST_SESS         = 66,
+    REGCAM_CMD_RESET_PASS            = 67,
+    REGCAM_CMD_GET_MASTER_BILL       = 68,
+    REGCAM_CMD_SEND_CONSENT_MAIL     = 69,
+    REGCAM_CMD_GET_MASTER_RES_ADDR   = 70,
+    REGCAM_CMD_SET_SEC_Q             = 74,
+    REGCAM_CMD_SUBMIT_UPGRADE        = 75,
+    REGCAM_CMD_RECOM_PRODS           = 76,
+    REGCAM_CMD_VERIFY_BILL           = 77,
+    REGCAM_CMD_SET_ACCOUNT_LANG      = 84,
+};
+
+/* Form key indices into g_form_keys */
+enum RegCamFormKeyId {
+    FKEY_AMP                    = 0,
+    FKEY_COMMA                  = 1,
+    FKEY_VERSION                = 2,
+    FKEY_USERNAME               = 3,
+    FKEY_PASSWORD               = 4,
+    FKEY_CONSOLE_ID             = 5,
+    FKEY_START_POSITION         = 7,
+    FKEY_MAX_COUNT              = 8,
+    FKEY_SKU_ID                 = 14,
+    FKEY_1                      = 20,
+    FKEY_2                      = 21,
+    FKEY_3                      = 22,
+    FKEY_PAYMENT_TYPE           = 25,
+    FKEY_PAYMENT_METHOD_ID      = 26,
+    FKEY_HOLDER_NAME            = 27,
+    FKEY_CARD_NUMBER            = 28,
+    FKEY_START_YEAR             = 29,
+    FKEY_START_MONTH            = 30,
+    FKEY_EXPIRE_YEAR            = 31,
+    FKEY_EXPIRE_MONTH           = 32,
+    FKEY_SECURITY_CODE          = 33,
+    FKEY_ISSUE_NUMBER           = 34,
+    FKEY_CITY                   = 35,
+    FKEY_PROVINCE               = 36,
+    FKEY_POSTAL_CODE            = 37,
+    FKEY_COUNTRY                = 41,
+    FKEY_LANGUAGE               = 42,
+    FKEY_YOB                    = 43,
+    FKEY_MOB                    = 44,
+    FKEY_DOB                    = 45,
+    FKEY_LOGIN_NAME             = 46,
+    FKEY_SECURITY_QUESTION      = 47,
+    FKEY_SECURITY_ANSWER        = 48,
+    FKEY_PS_HANDLE              = 49,
+    FKEY_FIRST_NAME             = 50,
+    FKEY_LAST_NAME              = 51,
+    FKEY_FIRST_NAME_ASCII       = 52,
+    FKEY_LAST_NAME_ASCII        = 53,
+    FKEY_GENDER                 = 54,
+    FKEY_SCEX_OPTIN_FLAG        = 55,
+    FKEY_AFFILIATES_OPTIN_FLAG  = 56,
+    FKEY_SUB_LOGIN_NAME         = 57,
+    FKEY_CONTENT_RATING         = 58,
+    FKEY_CHAT_CONTROL           = 59,
+    FKEY_SEARCH_CONTROL         = 60,
+    FKEY_SPENDING_LIMIT_FLAG    = 61,
+    FKEY_SPENDING_LIMIT         = 62,
+    FKEY_AUTO_DEPOSIT_FLAG      = 63,
+    FKEY_COMMERCE_PASSWORD_FLAG = 64,
+    FKEY_FROM_YEAR              = 65,
+    FKEY_FROM_MONTH             = 66,
+    FKEY_FROM_DAY               = 67,
+    FKEY_TO_YEAR                = 68,
+    FKEY_TO_MONTH               = 69,
+    FKEY_TO_DAY                 = 70,
+    FKEY_TIMEZONE               = 71,
+    FKEY_TRANSACTION_ID         = 72,
+    FKEY_SERVICE_ID             = 73,
+    FKEY_SAVE                   = 74,
+};
+
+typedef struct {
+    u32 len;
+    const char *str;
+} RegCamFormKey;
+
+/* Commerce2 context layout (shared with sceNpCommerce2) */
+typedef struct {
+    u8  reserved0[24];
+    int http_tmpl_id;         /* +0x018 */
+    char url_buf[8];          /* +0x01C (session/url header storage) */
+    u8  session_buf[1024];    /* +0x024 */
+    u32 session_len;          /* +0x424 (1060) */
+    u32 svc_type;             /* +0x428 (1064) */
+    u32 pad_42c;              /* +0x42C */
+    u64 last_activity_us;     /* +0x430 (1072) */
+    u32 no_size_check;        /* +0x438 (1080) */
+    u32 http_status;          /* +0x43C (1084) */
+    char country_code[4];     /* +0x440 (1088) */
+    char lang_code[4];        /* +0x444 (1092) */
+} RegCamContext;
+
+/* Commerce2 request handle object */
+typedef struct {
+    u32 reserved[3];
+    u32 flags;                /* +0x0C (bit 1 = aborted) */
+    int http_req_id;          /* +0x10 */
+    u16 cmd_id;               /* +0x14 */
+    u16 pad;
+} RegCamRequest;
+
+/* Generic TLV response cursor (40-byte header common to all parsed results) */
+typedef struct {
+    u32 version;              /* +0x00 */
+    const u8 *base;           /* +0x04 (buffer start; base+4 is empty string sentinel) */
+    u32 total_size;           /* +0x08 */
+    const u8 *data;           /* +0x0C (current TLV payload start) */
+    u32 data_size;            /* +0x10 (current TLV payload size) */
+    const u8 *body;           /* +0x14 (sub-TLV scan start) */
+    u32 reserved[4];          /* +0x18..0x24 */
+} RegCamTlvHeader;
+
+/* Credit card / billing / residential address input struct */
+typedef struct {
+    const char *payment_method_id;
+    u32 payment_method_id_len;
+    const char *holder_name;
+    u32 holder_name_len;
+    const char *card_number;
+    u32 start_year;
+    u32 start_month;
+    u32 expire_year;
+    u32 expire_month;
+    const char *security_code;
+    const char *issue_number;
+    const char *street1;
+    u32 street1_len;
+    const char *street2;
+    u32 street2_len;
+    const char *street3;
+    u32 street3_len;
+    const char *city;
+    u32 city_len;
+    const char *province;
+    u32 province_len;
+    const char *postal_code;
+    u32 postal_code_len;
+} RegCamBillingInfo;
+
+static inline u32 regcam_bswap32(u32 v)
 {
     return ((v & 0x000000FFU) << 24) |
            ((v & 0x0000FF00U) << 8)  |
@@ -20,14 +244,9 @@ static inline u32 byteswap32(u32 v)
            ((v & 0xFF000000U) >> 24);
 }
 
-static inline u16 byteswap16(u16 v)
+static inline u16 regcam_bswap16(u16 v)
 {
     return (u16)((v << 8) | (v >> 8));
-}
-
-static inline u16 _wsbh(u16 v)
-{
-    return byteswap16(v);
 }
 
 static inline s32 regcam_min_s32(s32 a, s32 b)
@@ -35,23 +254,26 @@ static inline s32 regcam_min_s32(s32 a, s32 b)
     return a < b ? a : b;
 }
 
-#define LODWORD(x) ((u32)((u64)(x)))
-#define HIDWORD(x) ((u32)((u64)(x) >> 32))
-#define LOWORD(x)  ((u16)((u32)(x)))
-#define HIWORD(x)  ((u16)((u32)(x) >> 16))
-#define LOBYTE(x)  ((u8)((u32)(x)))
-#define HIBYTE(x)  ((u8)((u32)(x) >> 8))
-#define BYTE1(x)   ((u8)((u32)(x) >> 8))
-#define BYTE2(x)   ((u8)((u32)(x) >> 16))
-#define BYTE3(x)   ((u8)((u32)(x) >> 24))
-#define __PAIR64__(hi, lo) (((u64)(u32)(hi) << 32) | (u32)(lo))
-#define __CFADD__(x, y)    ((u32)((u32)(x) + (u32)(y)) < (u32)(x))
+static inline u32 regcam_read_be32(const void *ptr)
+{
+    const u8 *p = (const u8 *)ptr;
+    return ((u32)p[0] << 24) | ((u32)p[1] << 16) | ((u32)p[2] << 8) | (u32)p[3];
+}
 
-typedef struct {
-    u32 len;
-    const char *str;
-} RegCamFormKey;
+static inline u64 regcam_read_be64(const void *ptr)
+{
+    const u8 *p = (const u8 *)ptr;
+    u64 hi = (u64)regcam_read_be32(p);
+    u64 lo = (u64)regcam_read_be32(p + 4);
+    return (hi << 32) | lo;
+}
 
+static inline u64 regcam_unix_ms_to_rtc(u64 ms)
+{
+    return ms ? (ms * 1000ULL + REGCAM_UNIX_EPOCH_US) : 0ULL;
+}
+
+/* Global tables & state */
 extern const char * const g_endpoint_names[86];
 extern const char * const g_service_prefixes[9];
 extern const RegCamFormKey g_form_keys[81];
@@ -63,470 +285,264 @@ extern u32 g_quick_req_id;
 extern u32 g_quick_abort_flag;
 
 /* Imported library functions */
-extern int _sceKernelCheckThreadStack();
-extern int sceKernelGetCompiledSdkVersion();
-extern int sceKernelMemcpy();
-extern int sceKernelMemset();
-extern int sceNetIfhandle_lib_15CFE3C0();
-extern int sceNetIfhandle_lib_76BAD213();
-extern int sceNet_lib_750F705D();
-extern int sceNet_lib_80C9F02A();
-extern int sceNet_lib_96EF9DA1();
-extern int sceNet_lib_B5CE388A();
-extern int sceNet_lib_B9085A96();
-extern int sceNet_lib_BCBE14CF();
-extern int sceNet_lib_C13C9307();
-extern int sceNet_lib_CF705E46();
-extern int sceNet_lib_D8722983();
-extern int sceNpCommerce2_02C307C0();
-extern int sceNpCommerce2_02CADA41();
-extern int sceNpCommerce2_06618C81();
-extern int sceNpCommerce2_0A6AB496();
-extern int sceNpCommerce2_157FA8AA();
-extern int sceNpCommerce2_22CEC5E2();
-extern int sceNpCommerce2_382803C8();
-extern int sceNpCommerce2_3F6D413C();
-extern int sceNpCommerce2_460A1D92();
-extern int sceNpCommerce2_4D43B84D();
-extern int sceNpCommerce2_63B96D73();
-extern int sceNpCommerce2_66EC0829();
-extern int sceNpCommerce2_69FEA1C8();
-extern int sceNpCommerce2_75DF99A9();
-extern int sceNpCommerce2_77BE411B();
-extern int sceNpCommerce2_851E7844();
-extern int sceNpCommerce2_8642C532();
-extern int sceNpCommerce2_ADAA054C();
-extern int sceNpCommerce2_AE614CC6();
-extern int sceNpCommerce2_C27FEAB1();
-extern int sceNpCommerce2_D4C319C6();
-extern int sceNpCommerce2_E3455E27();
-extern int sceNpCommerce2_F0900551();
-extern int sceNpCommerce2_F8D175FA();
-extern int sceNpCommerce2_FC47B63C();
+extern int sceKernelGetCompiledSdkVersion(void);
+extern int _sceKernelCheckThreadStack(void);
+extern void *sceKernelMemset(void *dst, int ch, size_t n);
+extern void *sceKernelMemcpy(void *dst, const void *src, size_t n);
 
-/* Internal & exported module functions */
-int regcam_form_build_bind_account(int pass, int http_req, int *out_len, int ver, int user, int pwd, int cid);
-int sceNpCommerce2RegCam_1EA0D72D(int a1, u16 *a2, u32 *a3);
-int sceNpCommerce2RegCam_78E3D827();
-int sceNpCommerce2RegCam_0400E86A();
-int regcam_api_helper_1(int a1);
-int regcam_api_helper_2(int a1);
-int regcam_api_helper_3(int a1, int a2);
-int regcam_api_helper_4(int a1);
-int regcam_api_helper_5(int a1, int a2, int a3, int a4);
-int regcam_api_helper_6(int a1, int a2);
-int regcam_api_helper_7(int a1);
-int regcam_api_helper_8(int a1, int a2, int a3, int a4);
-int regcam_api_helper_9(int a1, int a2, int a3);
-int regcam_api_helper_10(int a1, int a2, int a3);
-int regcam_api_helper_11(int a1, int a2, int a3);
-int regcam_api_helper_12(int a1, int a2);
-int regcam_api_helper_13(int a1, int a2);
-int regcam_api_helper_14(int a1, int a2, int a3, int a4);
-int sceNpCommerce2RegCam_1E1C2D9D(int a1, int a2);
-int sceNpCommerce2RegCam_CA669133(int a1);
-int sceNpCommerce2RegCam_D1C2D16F(int a1, int a2, int a3, int a4);
-int sceNpCommerce2RegCam_49967C41(int a1, int a2, int a3);
-int sceNpCommerce2RegCam_38BE19B7(int a1, int a2, int a3);
-int sceNpCommerce2RegCam_ECB37716(int a1, int a2);
-int sceNpCommerce2RegCam_F692E73E(int a1, int a2, int a3);
-int sceNpCommerce2RegCam_CB9EC34C(int a1, int a2, int a3, int a4);
-int sceNpCommerce2RegCam_DEA9E110(int a1, int a2, int a3);
-int sceNpCommerce2RegCam_3E015183(int a1, int a2);
-int sceNpCommerce2RegCam_43A10942(int a1, int a2, int a3);
-int sceNpCommerce2RegCam_06B1824F(int a1, int a2);
-int sceNpCommerce2RegCam_7A315723(int a1, int a2, int a3, int a4, int a5, int a6);
-int sceNpCommerce2RegCam_4B1A9E4E(int a1, int a2, int a3, int a4);
-int sceNpCommerce2RegCam_856C52E9(int a1, int a2, int a3);
-int sceNpCommerce2RegCam_BD48E118(int a1, int a2);
-int sceNpCommerce2RegCam_DB478D24(int a1, int a2);
-int sceNpCommerce2RegCam_5F45DF28(int a1);
-int sceNpCommerce2RegCam_6EA71511(int a1, int a2, int a3, int a4);
-int sceNpCommerce2RegCam_EC918C7E(int a1, int a2, int a3);
-int sceNpCommerce2RegCam_FAC30D4E(int a1, int a2, int a3);
-int sceNpCommerce2RegCam_B56A1200(int a1, int a2);
-int sceNpCommerce2RegCam_13E0AD53(int a1, int a2, int a3, int a4, int a5, int a6);
-int sceNpCommerce2RegCam_F5E2A7B0(int a1, int a2, int a3, int a4);
-int sceNpCommerce2RegCam_2054F881(int a1, int a2);
-int sceNpCommerce2RegCam_9018A33F(int a1, int a2);
-int sceNpCommerce2RegCam_F3D3D32F(int a1, int a2, int a3, int a4);
-int sceNpCommerce2RegCam_35685D12(int a1, int a2);
-int sceNpCommerce2RegCam_90E218A2(int a1, int a2);
-int sceNpCommerce2RegCam_FA305116(int a1, int a2, int a3, int a4);
-int sceNpCommerce2RegCam_5EE50062(int a1, int a2);
-int sceNpCommerce2RegCam_1A0507A7(int a1, int a2);
-int sceNpCommerce2RegCam_D059973F(int a1, int a2, int a3, int a4);
-int sceNpCommerce2RegCam_6F0783DA(int a1, int a2);
-int sceNpCommerce2RegCam_CD9F9F24(int a1, int a2);
-int sceNpCommerce2RegCam_10E44562(int a1, int a2, int a3, int a4);
-int sceNpCommerce2RegCam_E68AD08A(int a1, int a2);
-int sceNpCommerce2RegCam_DC403471(int a1);
-int sceNpCommerce2RegCam_54E7925E(int a1, int a2, int a3, int a4);
-int sceNpCommerce2RegCam_9AFBDA97(int a1, int a2, int a3);
-int sceNpCommerce2RegCam_29CB32DA(int a1, int a2);
-int sceNpCommerce2RegCam_B4CC8AE6(int a1, int a2);
-int sceNpCommerce2RegCam_EE818631(int a1, int a2, int a3, int a4, int a5, int a6, int a7, int a8);
-int sceNpCommerce2RegCam_F6415A7A(int a1, int a2, int a3, int a4);
-int sceNpCommerce2RegCam_3328C751(int a1, int a2);
-int sceNpCommerce2RegCam_461DD73D(int a1, int a2);
-int sceNpCommerce2RegCam_28541A7A(int a1, int a2, int a3, int a4);
-int sceNpCommerce2RegCam_DF407CA3(int a1, int a2);
-int sceNpCommerce2RegCam_0EE4DB04(int a1, int a2, int a3);
-int sceNpCommerce2RegCam_993C822E(int a1, int a2, int a3, int a4);
-int sceNpCommerce2RegCam_7D3AD059(int a1, int a2);
-int sceNpCommerce2RegCam_505C1C2B(int a1);
-int sceNpCommerce2RegCam_544545B6(int a1, int a2, int a3, int a4);
-int sceNpCommerce2RegCam_F8BA328E(int a1, int a2, int a3);
-int sceNpCommerce2RegCam_6BFAB2ED(int a1, int a2);
-int sceNpCommerce2RegCam_D99AEC05(int a1, int a2);
-int sceNpCommerce2RegCam_726FF626(int a1, int a2, int a3);
-int sceNpCommerce2RegCam_FA13A517(int a1, int a2, int a3, int a4);
-int sceNpCommerce2RegCam_289E304C(int a1, int a2);
-int sceNpCommerce2RegCam_BD9DD225(int a1, int a2, int a3);
-int sceNpCommerce2RegCam_B816C674(int a1, int a2, int a3, int a4);
-int sceNpCommerce2RegCam_AA077B50(int a1, int a2);
-int sceNpCommerce2RegCam_C1D499F5(int a1, int a2, int a3, int a4, int a5, int a6);
-int sceNpCommerce2RegCam_CE4F0A96(int a1, int a2, int a3, int a4);
-int sceNpCommerce2RegCam_32016B1A(int a1, int a2);
-int sceNpCommerce2RegCam_68315782(int a1, int a2, int a3);
-int sceNpCommerce2RegCam_E8B01984(int a1, int a2, int a3, int a4);
-int sceNpCommerce2RegCam_1C3B41DA(int a1, int a2);
-int sceNpCommerce2RegCam_4D7EEABD(int a1);
-int sceNpCommerce2RegCam_3EFA6523(int a1, int a2, int a3, int a4);
-int sceNpCommerce2RegCam_14626EC6(int a1, int a2, int a3);
-int sceNpCommerce2RegCam_37F3D00E(int a1, int a2);
-int sceNpCommerce2RegCam_3B9334BA(int a1, int a2);
-int sceNpCommerce2RegCam_EF397E50(int a1, int a2, int a3);
-int sceNpCommerce2RegCam_7AB45618(int a1, int a2, int a3, int a4);
-int sceNpCommerce2RegCam_64D92E9C(int a1, int a2);
-int sceNpCommerce2RegCam_130756C8(int a1);
-int sceNpCommerce2RegCam_A2A91596(int a1, int a2, int a3, int a4);
-int sceNpCommerce2RegCam_C0CAEE74(int a1, int a2, int a3);
-int sceNpCommerce2RegCam_F5BCBE33(int a1, int a2);
-int sceNpCommerce2RegCam_B140C5D7(int a1, int a2);
-int sceNpCommerce2RegCam_19679B00(int a1, int a2, int a3, int a4);
-int sceNpCommerce2RegCam_9C9E0B84(int a1, int a2, int a3, int a4);
-int sceNpCommerce2RegCam_BBAE6864(int a1, int a2, int a3);
-int sceNpCommerce2RegCam_43ABA1B2(int a1, int a2);
-int sceNpCommerce2RegCam_6CDE3C3A(int a1, int a2);
-int sceNpCommerce2RegCam_DA4D6AC6(int a1, int a2, int a3);
-int sceNpCommerce2RegCam_C8124194(int a1, int a2, int a3);
-int sceNpCommerce2RegCam_17843035(int a1, int a2, int a3);
-int sceNpCommerce2RegCam_B0EEB010(int a1, int a2);
-int sceNpCommerce2RegCam_4328E348(int a1);
-int sceNpCommerce2RegCam_8061F181(int a1, int a2, int a3, int a4);
-int sceNpCommerce2RegCam_B4EE6FD8(int a1, int a2);
-int sceNpCommerce2RegCam_53BB97C3(int a1, int a2, int a3, int a4, int a5, int a6, int a7, int a8, int a9, int a10);
-int sceNpCommerce2RegCam_8BBBCF11(int a1, int a2, int a3, int a4);
-int sceNpCommerce2RegCam_F8462A1F(int a1, int a2, int a3);
-int sceNpCommerce2RegCam_ECFD766F(int a1, int a2, int a3);
-int sceNpCommerce2RegCam_D0320D95(int a1, int a2);
-int sceNpCommerce2RegCam_F66BE4F0(int a1, int a2, int a3, int a4);
-int sceNpCommerce2RegCam_CA1F31C0(int a1, int a2, int a3, int a4);
-int sceNpCommerce2RegCam_3C07C95A(int a1, int a2, int a3);
-int sceNpCommerce2RegCam_9A5600B9(int a1, int a2);
-int sceNpCommerce2RegCam_3D77FBF8(int a1, int a2, int a3);
-int sceNpCommerce2RegCam_C48D59AE(int a1, int a2, int a3);
-int sceNpCommerce2RegCam_99D0CFA1(int a1, int a2, int a3);
-int sceNpCommerce2RegCam_10FAC26F(int a1, int a2, int a3);
-int sceNpCommerce2RegCam_0AA280E7(int a1, int a2);
-int sceNpCommerce2RegCam_BA099CBE(int a1, int a2);
-int sceNpCommerce2RegCam_90F2F814(int a1, int a2);
-int sceNpCommerce2RegCam_290B7E82(int a1, int a2, int a3);
-int sceNpCommerce2RegCam_0F0D10D7(int a1, int a2, int a3, int a4);
-int sceNpCommerce2RegCam_0933A995(int a1, int a2, int a3);
-int sceNpCommerce2RegCam_D8F02D94(int a1, int a2, int a3);
-int sceNpCommerce2RegCam_F59AC300(int a1, int a2);
-int sceNpCommerce2RegCam_4EAA3049(int a1, int a2, int a3, int a4);
-int sceNpCommerce2RegCam_7C50D970(int a1, int a2, int a3, int a4);
-int sceNpCommerce2RegCam_A9925EBC(int a1, int a2, int a3);
-int sceNpCommerce2RegCam_6E001343(int a1, int a2, int a3);
-int sceNpCommerce2RegCam_63FAD5E2(int a1, int a2, int a3);
-int sceNpCommerce2RegCam_6EFF8564(int a1, int a2);
-int sceNpCommerce2RegCam_56AB8C1F(int a1, int a2, int a3, int a4);
-int sceNpCommerce2RegCam_46A43687(int a1, int a2, int a3, int a4);
-int sceNpCommerce2RegCam_69F468DB(int a1, int a2, int a3);
-int sceNpCommerce2RegCam_E2AD8DB9(int a1, int a2, int a3);
-int sceNpCommerce2RegCam_04AF3D66(int a1, int a2, int a3);
-int sceNpCommerce2RegCam_552B0DF7(int a1, int a2, int a3);
-int sceNpCommerce2RegCam_F373282E(int a1, int a2);
-int sceNpCommerce2RegCam_86966193(int a1, int a2);
-int sceNpCommerce2RegCam_427495CA(int a1, int a2, int a3, int a4);
-int sceNpCommerce2RegCam_4C191E40(int a1, int a2);
-int sceNpCommerce2RegCam_524A8607(int a1, int a2);
-int sceNpCommerce2RegCam_A2337870(int a1, int a2, int a3, int a4);
-int sceNpCommerce2RegCam_69817297(int a1, int a2);
-int sceNpCommerce2RegCam_BCFD9CC5(int a1);
-int sceNpCommerce2RegCam_E256E232(int a1, int a2, int a3, int a4);
-int sceNpCommerce2RegCam_4FDB9B84(int a1, int a2);
-int sceNpCommerce2RegCam_FA10DDCA(int a1, int a2, int a3, int a4, int a5);
-int sceNpCommerce2RegCam_48D75015(int a1, int a2, int a3, int a4);
-int sceNpCommerce2RegCam_00E61B9F(int a1, int a2, int a3);
-int sceNpCommerce2RegCam_BE4E06A6(int a1, int a2);
-int sceNpCommerce2RegCam_F6BBF9FC(int a1, int a2);
-int sceNpCommerce2RegCam_1CB4F2B3(int a1, int a2, int a3, int a4);
-int sceNpCommerce2RegCam_4D6A55F2(int a1, int a2, int a3, int a4);
-int sceNpCommerce2RegCam_F1711F2E(int a1, int a2, int a3);
-int sceNpCommerce2RegCam_EB7C8574(int a1, int a2);
-int sceNpCommerce2RegCam_51D546D5(int a1, int a2);
-int sceNpCommerce2RegCam_BA6DA16C(int a1, int a2);
-int sceNpCommerce2RegCam_1BC6B384(int a1);
-int sceNpCommerce2RegCam_748B85C7(int a1, int a2, int a3, int a4);
-int sceNpCommerce2RegCam_01B124E9(int a1, int a2);
-int sceNpCommerce2RegCam_A4BD8ECD(int a1, int a2, int a3);
-int sceNpCommerce2RegCam_EDBDE24A(int a1, int a2, int a3, int a4);
-int sceNpCommerce2RegCam_B9AA1D92(int a1, int a2);
-int sceNpCommerce2RegCam_FB32EF43(int a1, int a2);
-int sceNpCommerce2RegCam_46BA74F3(int a1, int a2, int a3, int a4);
-int sceNpCommerce2RegCam_1D971360(int a1, int a2);
-int sceNpCommerce2RegCam_DA23FE50(int a1);
-int sceNpCommerce2RegCam_AF8404F6(int a1, int a2, int a3, int a4);
-int sceNpCommerce2RegCam_9D44ED38(int a1, int a2, int a3);
-int sceNpCommerce2RegCam_999908AF(int a1, int a2, int a3);
-int sceNpCommerce2RegCam_3E8C6A5C(int a1, int a2, int a3);
-int sceNpCommerce2RegCam_4F2E8993(int a1, int a2);
-int sceNpCommerce2RegCam_1E8D3613(int a1, int a2);
-int sceNpCommerce2RegCam_9FCC267C(int a1);
-int sceNpCommerce2RegCam_DE2BB689(int a1, int a2, int a3, int a4);
-int sceNpCommerce2RegCam_BD83257C(int a1, int a2);
-int sceNpCommerce2RegCam_4937BAA2(int a1);
-int sceNpCommerce2RegCam_0F42FC76(int a1, int a2, int a3, int a4);
-int sceNpCommerce2RegCam_CD307E5C(int a1, int a2, int a3);
-int sceNpCommerce2RegCam_6925F26A(int a1, int a2);
-int sceNpCommerce2RegCam_249407CF(int a1, int a2);
-int sceNpCommerce2RegCam_BF007C60(int a1, int a2, int a3, int a4);
-int sceNpCommerce2RegCam_2FC38094(int a1, int a2, int a3);
-int sceNpCommerce2RegCam_28907860(int a1, int a2);
-int sceNpCommerce2RegCam_D6C671FA(int a1, int a2);
-int sceNpCommerce2RegCam_F8FBAE67(int a1, int a2);
-int sceNpCommerce2RegCam_E68CE3E1(int a1, int a2, int a3, int a4);
-int regcam_api_helper_15(int a1, int a2);
-int sceNpCommerce2RegCam_5F271C1B(int a1, int a2, u32 *a3);
-int regcam_get_endpoint(int a1, u16 a2, u32 *a3, u32 *a4);
-s32 regcam_send_req_1(int a1, int a2, int a3, u16 a4, u32 *a5);
-int regcam_send_req_2(int a1, int a2, int a3, u16 a4, int *a5, int a6);
-s32 regcam_send_req_3(int a1, int a2, int a3, u16 a4, u32 *a5);
-s32 regcam_send_req_4(int a1, int a2, int a3, u16 a4, u32 *a5);
-int regcam_send_req_5(int a1, int a2, int a3, u16 a4, u32 *a5, int a6);
-s32 regcam_send_req_6(int a1, int a2, int a3, u16 a4, u32 *a5);
-int regcam_send_req_7(int a1, int a2, int a3, u16 a4, int *a5, int a6);
-int regcam_send_req_8(int a1, int a2, int a3, u16 a4, int *a5, int a6);
-int regcam_send_req_9(int a1, int a2, int a3, u16 a4, int *a5, int a6, int a7, int a8, int a9);
-int regcam_send_req_10( int a1, int a2, int a3, u16 a4, int *a5, int a6, int a7, int a8, int a9, int a10, int a11, int a12);
-s32 regcam_send_req_11(int a1, int a2, int a3, u16 a4, u32 *a5);
-int regcam_send_req_12(int a1, int a2, int a3, u16 a4, int *a5, int a6, int a7, int a8, int a9, int a10);
-int regcam_send_req_13(int a1, int a2, int a3, u16 a4, int *a5, int a6);
-int regcam_send_req_14(int a1, int a2, int a3, u16 a4, int *a5, int a6);
-int regcam_send_req_15(int a1, int a2, int a3, u16 a4, int *a5, int a6);
-s32 regcam_send_req_16(int a1, int a2, int a3, u16 a4, u32 *a5);
-int regcam_send_req_17( int a1, int a2, int a3, u16 a4, int *a5, int a6, int a7, int a8, int a9, int a10, int a11, int a12);
-int regcam_send_req_18(int a1, int a2, int a3, u16 a4, int *a5, int a6);
-int regcam_send_req_19(int a1, int a2, int a3, u16 a4, int *a5, int a6, int a7);
-s32 regcam_send_req_20(int a1, int a2, int a3, u16 a4, u32 *a5);
-int regcam_send_req_21(int a1, int a2, int a3, u16 a4, int *a5, int a6, int a7);
-int regcam_send_req_22(int a1, int a2, int a3, u16 a4, int *a5, int a6, int a7);
-int regcam_send_req_23(int a1, int a2, int a3, u16 a4, int *a5, int a6, int a7, int a8, int a9, int a10);
-int regcam_send_req_24(int a1, int a2, int a3, u16 a4, int *a5, int a6, int a7);
-s32 regcam_send_req_25(int a1, int a2, int a3, u16 a4, u32 *a5);
-int regcam_send_req_26(int a1, int a2, int a3, u16 a4, int *a5, int a6, int a7);
-s32 regcam_send_req_27(int a1, int a2, int a3, u16 a4, u32 *a5);
-int regcam_send_req_28(int a1, int a2, int a3, u16 a4, int *a5, int a6, int a7, int a8, int a9);
-int regcam_send_req_29( int a1, int a2, int a3, u16 a4, int *a5, int a6, int a7, int a8, int a9, int a10, int a11, int a12, int a13);
-int regcam_send_req_30(int a1, int a2, int a3, u16 a4, int *a5, int a6, int a7, int a8);
-int regcam_send_req_31(int a1, int a2, int a3, u16 a4, int *a5, int a6, int a7);
-int regcam_send_req_32(int a1, int a2, int a3, u16 a4, int *a5, int a6, int a7, int a8);
-int regcam_send_req_33(int a1, int a2, int a3, u16 a4, int *a5, int a6, int a7, int a8);
-int regcam_send_req_34( int a1, int a2, int a3, u16 a4, int *a5, int a6, int a7, int a8, int a9, int a10, int a11);
-int regcam_send_req_35(int a1, int a2, int a3, u16 a4, int *a5, int a6, int a7, int a8);
-int regcam_send_req_36(int a1, int a2, int a3, u16 a4, int *a5, int a6, int a7);
-s32 regcam_send_req_37(int a1, int a2, int a3, u16 a4, u32 *a5);
-int regcam_send_req_38(int a1, int a2, int a3, u16 a4, int *a5, int a6);
-int regcam_send_req_39(int a1, int a2, int a3, u16 a4, int *a5, int a6);
-int regcam_emit_str_field(int a1, int a2, int a3, int a4, int a5);
-int regcam_emit_uint_field(int a1, int a2, int a3, int a4, int a5);
-int regcam_emit_prefixed_field(int a1, int a2, int *a3, unsigned int a4, int a5, int a6, int a7);
-int regcam_form_build_1(int a1, int a2, u32 *a3, int a4, int a5, int a6, int a7);
-int regcam_form_build_2(int a1, int a2, u32 *a3, int a4, int a5, int a6, int a7, int a8, int a9, int a10);
-int regcam_form_build_3(int a1, int a2, u32 *a3, int a4, int a5, int a6, int a7, int a8);
-int regcam_form_build_4(int a1, int a2, u64 *a3, int a4);
-int regcam_form_build_5(int a1, int a2, u64 *a3, int a4);
-int regcam_form_build_6(int a1, int a2, u64 *a3, int a4);
-int regcam_form_build_7(int a1, int a2, u32 *a3, int a4, int a5, int a6, int a7, u8 *a8, u8 *a9, int a10);
-int regcam_form_build_8(int a1, int a2, u64 *a3, int a4, int a5);
-int regcam_form_build_9(int a1, int a2, u64 *a3, int a4, int a5);
-int regcam_form_build_10(int a1, int a2, u32 *a3, int a4, int a5, int a6, int a7, int a8);
-int regcam_form_build_11(int a1, int a2, u64 *a3, int a4, int a5);
-int regcam_form_build_12(int a1, int a2, u64 *a3, int a4, int a5);
-int regcam_form_build_13(int a1, int a2, u32 *a3, int a4, int a5, int a6, int a7);
-int regcam_form_build_14(int a1, int a2, u32 *a3, int a4, int a5, int a6, int a7, int a8, int a9, int a10, int a11);
-int regcam_form_build_15(int a1, int a2, u32 *a3, int a4, int a5, int a6);
-int regcam_form_build_16(int a1, int a2, u32 *a3, int a4, int a5, int a6);
-int regcam_form_build_17(int a1, int a2, u32 *a3, int a4, int a5, int a6, int a7, int a8, int a9);
-int regcam_form_build_18(int a1, int a2, u32 *a3, int a4, int a5, int a6);
-int regcam_form_build_19(int a1, int a2, u64 *a3, int a4);
-int regcam_write_prefixed_field(int a1, u32 *a2, unsigned int a3, int a4, int a5, int a6, int a7);
-int regcam_write_uint_field(int a1, int a2, int a3, int a4);
-int regcam_tlv_parse_1(int *a1, int a2, u32 *a3);
-int regcam_tlv_parse_2(int *a1, u32 *a2);
-int regcam_tlv_parse_3(u32 *a1, int a2, int a3);
-int regcam_tlv_parse_4(int *a1, int a2, u32 *a3);
-int regcam_tlv_parse_5(int *a1, u32 *a2);
-int regcam_tlv_parse_6(int *a1, u32 *a2);
-int regcam_tlv_parse_7(int *a1, u32 *a2);
-int regcam_tlv_parse_8(int *a1, u32 *a2);
-int regcam_tlv_parse_9(u32 *a1, int a2, int a3);
-int regcam_tlv_parse_10(int *a1, int a2, int *a3);
-int regcam_tlv_parse_11(int *a1, int a2, u32 *a3);
-int regcam_tlv_parse_12(int *a1, u32 *a2);
-unsigned int regcam_tlv_parse_13(int *a1, int a2, u32 *a3);
-int regcam_tlv_parse_14(int *a1, int a2, u32 *a3);
-int regcam_tlv_parse_15(int *a1, u32 *a2, int a3);
-int regcam_tlv_parse_16(int *a1, int a2, u32 *a3);
-unsigned int regcam_tlv_parse_17(int *a1, int a2, u32 *a3);
-int regcam_tlv_parse_18(int *a1, int a2, u32 *a3);
-int regcam_tlv_parse_19(int *a1, int a2, u32 *a3);
-int regcam_tlv_parse_20(u32 *a1, int a2, int a3);
-int regcam_tlv_parse_21(int a1, int a2, u32 *a3);
-s32 regcam_tlv_parse_22(u32 *a1, int a2, int a3);
-int regcam_tlv_parse_23(u32 *a1, int a2);
-int regcam_tlv_parse_24(u32 *a1, int a2);
-s32 regcam_tlv_parse_25(u32 *a1, int a2, int a3);
-int regcam_tlv_parse_26(int a1, int a2, int a3);
-int regcam_tlv_parse_27(int *a1, int a2, u32 *a3);
-s32 regcam_tlv_parse_28(u32 *a1, int a2, int a3);
-int regcam_tlv_parse_29(u32 *a1, int a2, int a3);
-int regcam_tlv_parse_30(int *a1, int a2, u32 *a3);
-int regcam_tlv_parse_31(u32 *a1, int a2, int a3);
-s32 regcam_tlv_parse_32(u32 *a1, int a2, int a3);
-int regcam_tlv_parse_33(int a1, int a2, int a3);
-int regcam_tlv_parse_34(u32 *a1, int a2, int a3);
-int regcam_tlv_parse_35(u32 *a1, int a2, int a3);
-int regcam_tlv_parse_36(int *a1, u32 *a2);
-int regcam_tlv_parse_37(u32 *a1, int a2, int a3);
-int regcam_tlv_parse_38(u32 *a1, int a2, int a3);
-int regcam_tlv_parse_39(int a1, int a2, int a3);
-int regcam_tlv_parse_40(int a1, int a2, u32 *a3);
-s32 regcam_tlv_parse_41(u32 *a1, int a2, int a3);
-int regcam_tlv_parse_42(u32 *a1, int a2, int a3);
-s32 regcam_tlv_parse_43(u32 *a1, int a2, int a3);
-s32 regcam_tlv_parse_44(u32 *a1, int a2, int a3);
-s32 regcam_tlv_parse_45(u32 *a1, int a2, int a3);
-int regcam_tlv_parse_46(u32 *a1, int a2, int a3);
-int regcam_tlv_parse_47(int a1, int a2);
-int regcam_tlv_parse_48(u32 *a1, int a2, int a3);
-int regcam_tlv_parse_49(int a1, int a2, int a3);
-int regcam_tlv_parse_50(int a1, int a2, int a3);
-int regcam_tlv_parse_51(int *a1, u32 *a2);
-int regcam_tlv_parse_52(u32 *a1, int a2, int a3);
-int regcam_tlv_parse_53(int a1, unsigned int a2, u32 *a3, u32 *a4, u32 *a5);
-int regcam_tlv_parse_54( int a1, int a2, u16 a3, u16 a4, unsigned int a5, u16 *a6);
-int regcam_tlv_parse_55(int a1, int a2, u16 a3, u16 a4, unsigned int a5, u16 *a6, int a7);
-int regcam_tlv_parse_56(u32 *a1, u16 a2, u16 a3, int a4);
-int regcam_tlv_parse_57(int *a1, unsigned int a2, int a3);
-s32 regcam_tlv_parse_58(int a1, int a2, int a3, int a4, int a5, u32 *a6);
-s32 regcam_tlv_parse_59(int a1, int a2, int a3, int a4, int a5, u32 *a6);
-int regcam_tlv_parse_60(int *a1, unsigned int a2, u32 *a3);
-int regcam_tlv_parse_61(int *a1, unsigned int a2, u32 *a3);
-int regcam_tlv_parse_62(int *a1, int a2, int a3, u16 a4, u32 *a5);
-int regcam_tlv_parse_63(u32 *a1, u32 *a2, u32 *a3, u32 *a4, u32 *a5);
-signed int regcam_recv_response(unsigned int a1, int a2, unsigned int a3, int *a4);
-int regcam_dispatch_1(unsigned int a1);
-int regcam_dispatch_2(unsigned int a1, int a2, int a3);
-int regcam_dispatch_3(unsigned int a1, int a2, int a3, int a4, int a5, int a6);
-int regcam_dispatch_4(unsigned int a1, int a2, u8 *a3, u8 *a4);
-int regcam_dispatch_5(unsigned int a1, int a2, u8 *a3, int a4, int a5, int a6, int a7, int a8, int a9, int a10);
-int regcam_dispatch_6(unsigned int a1, int a2, int a3, int a4, int a5);
-int regcam_validate_field(unsigned int a1, u8 *a2, int *a3);
-int regcam_init_internal();
-void regcam_term_internal();
-int regcam_destroy_req_internal(unsigned int a1);
-int regcam_abort_req_internal(unsigned int a1);
-int regcam_dispatch_7(int a1, int a2);
-s32 regcam_dispatch_8(unsigned int a1);
-s32 regcam_dispatch_9(unsigned int a1);
-int regcam_dispatch_10(int a1, int a2);
-s32 regcam_dispatch_11(unsigned int a1);
-int regcam_dispatch_12(int a1, int a2);
-int regcam_dispatch_13(unsigned int a1, int a2);
-int regcam_dispatch_14(int a1, int a2);
-s32 regcam_dispatch_15(unsigned int a1);
-int regcam_dispatch_16(int a1, int a2);
-int regcam_dispatch_17(unsigned int a1, int a2);
-int regcam_dispatch_18(int a1, int a2);
-int regcam_dispatch_19(int a1, int a2);
-int regcam_dispatch_20(int a1, int a2);
-int regcam_dispatch_21(int a1, int a2);
-s32 regcam_dispatch_22(unsigned int a1);
-int regcam_dispatch_23(int a1, int a2);
-int regcam_dispatch_24(unsigned int a1, int a2, int a3, int a4, int a5, int a6);
-int regcam_dispatch_25(int a1, int a2);
-int regcam_dispatch_26(unsigned int a1, int a2);
-int regcam_dispatch_27(int a1, int a2);
-int regcam_dispatch_28(unsigned int a1, int a2);
-int regcam_dispatch_29(int a1, int a2);
-int regcam_dispatch_30(int a1, int a2);
-int regcam_dispatch_31(unsigned int a1, int a2);
-int regcam_dispatch_32(int a1, int a2);
-s32 regcam_dispatch_33(unsigned int a1);
-int regcam_dispatch_34(int a1, int a2);
-int regcam_dispatch_35(unsigned int a1, int a2, int a3, int a4, int a5, int a6, int a7, int a8);
-int regcam_dispatch_36(int a1, int a2);
-int regcam_dispatch_37(unsigned int a1, int a2);
-int regcam_dispatch_38(int a1, int a2);
-int regcam_dispatch_39(unsigned int a1, int a2, int a3);
-int regcam_dispatch_40(int a1, int a2);
-s32 regcam_dispatch_41(unsigned int a1);
-int regcam_dispatch_42(int a1, int a2);
-int regcam_dispatch_43(unsigned int a1, int a2, int a3);
-int regcam_dispatch_44(int a1, int a2);
-int regcam_dispatch_45(unsigned int a1, int a2, int a3);
-int regcam_dispatch_46(int a1, int a2);
-int regcam_dispatch_47(unsigned int a1, int a2, int a3, int a4, int a5, int a6);
-int regcam_dispatch_48(int a1, int a2);
-int regcam_dispatch_49(unsigned int a1, int a2, int a3);
-int regcam_dispatch_50(int a1, int a2);
-s32 regcam_dispatch_51(unsigned int a1);
-int regcam_dispatch_52(int a1, int a2);
-int regcam_dispatch_53(unsigned int a1, int a2, int a3);
-int regcam_dispatch_54(int a1, int a2);
-s32 regcam_dispatch_55(unsigned int a1);
-int regcam_dispatch_56(int a1, int a2);
-int regcam_dispatch_57(int a1, int a2);
-int regcam_dispatch_58(int a1, int a2);
-int regcam_dispatch_59(int a1, int a2);
-int regcam_dispatch_60(unsigned int a1, int a2, int a3, int a4);
-int regcam_dispatch_61(int a1, int a2);
-int regcam_dispatch_62(unsigned int a1, int a2, int a3);
-int regcam_dispatch_63(int a1, int a2);
-int regcam_dispatch_64(unsigned int a1, int a2, int a3, int a4);
-int regcam_dispatch_65(int a1, int a2);
-int regcam_dispatch_66(unsigned int a1, int a2, int a3, int a4);
-int regcam_dispatch_67(int a1, int a2);
-int regcam_dispatch_68(unsigned int a1, int a2);
-int regcam_dispatch_69(int a1, int a2);
-int regcam_dispatch_70(unsigned int a1, int a2);
-int regcam_dispatch_71(int a1, int a2);
-int regcam_dispatch_72(int a1, int a2);
-int regcam_dispatch_73(int a1, int a2);
-int regcam_dispatch_74(unsigned int a1, int a2, int a3, int a4);
-int regcam_dispatch_75(int a1, int a2);
-int regcam_dispatch_76(int a1, int a2);
-int regcam_dispatch_77(unsigned int a1, int a2, int a3);
-int regcam_dispatch_78(int a1, int a2);
-int regcam_dispatch_79(int a1, int a2);
-s32 regcam_dispatch_80(unsigned int a1);
-int regcam_dispatch_81(int a1, int a2);
-int regcam_dispatch_82(unsigned int a1, int a2);
-int regcam_dispatch_83(int a1, int a2);
-int regcam_dispatch_84(unsigned int a1, int a2);
-int regcam_set_service_type(int a1, int a2);
-int regcam_create_req(int a1, s16 a2, int a3);
-int regcam_post_process_response(int a1, int a2, int a3, int a4, unsigned int a5);
-int sceNpCommerce2RegCam_D73CC389( int a1, int (*a2)(), int a3, int a4, int a5, unsigned int a6, int a7, int a8, u32 *a9);
-int sceNpCommerce2RegCam_107C4508();
-int regcam_quick_helper_1(int (*a1)(), char *a2, char *a3, int a4, unsigned int a5);
-int regcam_quick_helper_2(int (*a1)(), int a2, unsigned int a3);
-int regcam_quick_helper_3(int a1, int a2, int a3, int a4, int a5, int a6, int a7, int a8, int a9);
-int regcam_quick_helper_4(int a1, int a2, int a3, int a4, u32 *a5);
+extern void *sceNetIfhandle_lib_15CFE3C0(u32 size);
+extern void  sceNetIfhandle_lib_76BAD213(void *ptr, u32 unused);
+
+extern int   sceNet_lib_750F705D(int ch);
+extern int   sceNet_lib_80C9F02A(const char *a, const char *b);
+extern int   sceNet_lib_96EF9DA1(int ch);
+extern char *sceNet_lib_B5CE388A(char *dst, const char *src, size_t n);
+extern int   sceNet_lib_B9085A96(const char *a, const char *b, size_t n);
+extern char *sceNet_lib_BCBE14CF(const char *s, int ch);
+extern int   sceNet_lib_C13C9307(int ch);
+extern int   sceNet_lib_CF705E46(char *buf, const char *fmt, ...);
+extern u32   sceNet_lib_D8722983(const char *s);
+
+extern int sceNpCommerce2_02C307C0(u32 *mgr, u32 req_id);
+extern int sceNpCommerce2_02CADA41(RegCamContext *ctx, char *email_out, char *pwd_out, int flag);
+extern int sceNpCommerce2_06618C81(u32 *mgr, RegCamRequest *req, u32 ctx_id, u32 *req_id_out);
+extern int sceNpCommerce2_0A6AB496(u32 *mgr, u32 ctx_id, RegCamContext **ctx_out, int lock_flag);
+extern int sceNpCommerce2_157FA8AA(char *console_id_out, u32 buf_size);
+extern int sceNpCommerce2_22CEC5E2(int a, int b);
+extern int sceNpCommerce2_382803C8(int http_tmpl, u32 svc_type, u32 cmd_id, const char *prefix,
+                                   const char *endpoint, int flag, char *url_buf,
+                                   int *http_req_out, u32 len_lo, u32 len_hi);
+extern int sceNpCommerce2_3F6D413C(const u8 *buf, u32 size, u32 tag, u32 min_len, u32 *count_out);
+extern int sceNpCommerce2_460A1D92(int *out_ver, int kind);
+extern int sceNpCommerce2_4D43B84D(int http_req, u32 *status_out);
+extern int sceNpCommerce2_63B96D73(int http_req);
+extern int sceNpCommerce2_66EC0829(char *dst, u32 dst_size, const char *src, u32 src_len, int flag);
+extern int sceNpCommerce2_69FEA1C8(u32 *out_val);
+extern int sceNpCommerce2_75DF99A9(int http_tmpl, char *url_buf);
+extern int sceNpCommerce2_77BE411B(u32 *mgr);
+extern int sceNpCommerce2_851E7844(u32 *mgr, u32 req_id, RegCamRequest **req_out);
+extern int sceNpCommerce2_8642C532(u32 *mgr);
+extern int sceNpCommerce2_ADAA054C(const void *buf, u32 buf_size, u32 body_len);
+extern int sceNpCommerce2_AE614CC6(int http_req, const void *data, u32 len);
+extern int sceNpCommerce2_C27FEAB1(RegCamContext *ctx, int http_req, u32 cmd_id,
+                                   u8 *status_out, void *buf, u32 buf_size);
+extern int sceNpCommerce2_D4C319C6(int http_req, void *buf, void *body_ptr,
+                                   u32 buf_size, int *trunc_out);
+extern int sceNpCommerce2_E3455E27(const u8 *buf, u32 size, u32 tag, u32 min_len, u16 *len_out);
+extern int sceNpCommerce2_F0900551(RegCamContext *ctx, u32 *ver_out);
+extern int sceNpCommerce2_F8D175FA(const void *buf, u32 buf_size, const char *country, const char *lang);
+extern int sceNpCommerce2_FC47B63C(u64 *time_out);
+
+/* Core lifecycle & request helpers */
+int  regcam_init_mgr(void);
+void regcam_term_mgr(void);
+int  regcam_validate_str(u32 field_type, const char *str, u32 *flags_out);
+int  regcam_destroy_req(u32 req_id);
+int  regcam_abort_req(u32 req_id);
+int  regcam_create_req(u32 ctx_id, u16 cmd_id, u32 *req_id_out);
+int  regcam_set_svc_type(u32 ctx_id, u32 svc_type);
+int  regcam_recv_response(u32 req_id, u8 *buf, u32 buf_size, u32 *recv_size_out);
+int  regcam_post_process_response(RegCamContext *ctx, RegCamRequest *req,
+                                  const u8 *buf, u32 buf_size, u32 resp_size);
+
+/* Internal request start dispatchers */
+int regcam_start_empty(u32 req_id, int clear_session);
+int regcam_start_get_countries(u32 req_id);
+int regcam_start_bind_account(u32 req_id, const char *user, const char *pass);
+int regcam_start_start_reg(u32 req_id, const char *country, const char *lang, u32 yob, u32 mob, u32 dob);
+int regcam_start_authenticate(u32 req_id, int use_explicit, const char *user, const char *pass);
+int regcam_start_get_tran_hist(u32 req_id, int use_explicit, const char *login,
+                               u32 from_y, u32 from_m, u32 from_d,
+                               u32 to_y, u32 to_m, u32 to_d, s32 tz_min);
+int regcam_start_verify_dob(u32 req_id, const char *login, u32 yob, u32 mob, u32 dob);
+int regcam_start_payment_type(u32 req_id, u32 pay_type);
+int regcam_start_billing(u32 req_id, int prefix_mode, const RegCamBillingInfo *info,
+                         int include_save, u32 save_flag);
+int regcam_start_set_cred(u32 req_id, const char *login, const char *pass,
+                          u32 sec_q, const char *sec_ans, u32 sec_ans_len);
+int regcam_start_set_lid(u32 req_id, const char *login);
+int regcam_start_upd_pass(u32 req_id, const char *pass);
+int regcam_start_oid(u32 req_id, const char *oid);
+int regcam_start_set_name(u32 req_id, const char *first, u32 first_len, const char *last, u32 last_len,
+                          const char *first_ascii, const char *last_ascii, u32 gender);
+int regcam_start_set_rrn(u32 req_id, const char *rrn, u32 rrn_len);
+int regcam_start_set_opt_in(u32 req_id, u32 scex_flag, u32 aff_flag);
+int regcam_start_auth_master(u32 req_id, const char *login, const char *pass);
+int regcam_start_set_sub_ctrl(u32 req_id, const char *sub_login, u32 content_rating,
+                              u32 chat_ctrl, u32 search_ctrl, u32 limit_flag, u32 limit_val);
+int regcam_start_reset_sub_pass(u32 req_id, const char *sub_login, const char *new_pass);
+int regcam_start_set_wal_opt(u32 req_id, u32 auto_deposit, u32 pwd_flag);
+int regcam_start_get_tran_detail(u32 req_id, const char *login, const char *tx_id, s32 tz_min);
+int regcam_start_get_srvs(u32 req_id, u32 start_pos, u32 max_cnt);
+int regcam_start_get_srv_detail(u32 req_id, const char *srv_id, u32 start_pos, u32 max_cnt);
+int regcam_start_get_subscr(u32 req_id, const char *srv_id, u32 start_pos, u32 max_cnt);
+int regcam_start_sku_id(u32 req_id, const char *sku_id);
+int regcam_start_verify_sec_ans(u32 req_id, u32 sec_q, const char *sec_ans, u32 sec_ans_len);
+int regcam_start_set_account_lang(u32 req_id, const char *lang);
+
+/* Shared endpoint & form-building helpers */
+int regcam_resolve_endpoint(u32 svc_type, u16 cmd_id, const char **prefix_out, const char **endpoint_out);
+int regcam_write_prefixed_field(int http_req, const char * const *prefixes, u32 prefix_cnt,
+                                u32 key_id, const void *val, u32 val_len, int prepend_amp);
+int regcam_write_uint_field(int http_req, u32 key_id, u32 val, int prepend_amp);
+int regcam_emit_str_field(int write_pass, int http_req, u32 key_id, const char *val, int prepend_amp);
+int regcam_emit_uint_field(int write_pass, int http_req, u32 key_id, u32 val, int prepend_amp);
+int regcam_emit_prefixed_str(int write_pass, int http_req, const char * const *prefixes,
+                             u32 prefix_cnt, u32 key_id, const char *val, int prepend_amp);
+
+/* Request senders */
+int regcam_send_empty(u32 svc_type, int http_tmpl, char *url_buf, u16 cmd_id, int *http_req_out);
+int regcam_send_sku_id(u32 svc_type, int http_tmpl, char *url_buf, u16 cmd_id, int *http_req_out, const char *sku_id);
+int regcam_send_payment_type(u32 svc_type, int http_tmpl, char *url_buf, u16 cmd_id, int *http_req_out, u32 pay_type);
+int regcam_send_billing(u32 svc_type, int http_tmpl, char *url_buf, u16 cmd_id, int *http_req_out,
+                        int prefix_mode, const RegCamBillingInfo *info, int include_save, u32 save_flag);
+int regcam_send_version_only(u32 svc_type, int http_tmpl, char *url_buf, u16 cmd_id, int *http_req_out, u32 ver);
+int regcam_send_bind_account(u32 svc_type, int http_tmpl, char *url_buf, u16 cmd_id, int *http_req_out,
+                             u32 ver, const char *user, const char *pass, const char *cid);
+int regcam_send_start_reg(u32 svc_type, int http_tmpl, char *url_buf, u16 cmd_id, int *http_req_out,
+                          u32 ver, const char *country, const char *lang, u32 yob, u32 mob, u32 dob, const char *cid);
+int regcam_send_set_cred(u32 svc_type, int http_tmpl, char *url_buf, u16 cmd_id, int *http_req_out,
+                         const char *login, const char *pass, u32 sec_q, const char *sec_ans, u32 sec_ans_len);
+int regcam_send_set_lid(u32 svc_type, int http_tmpl, char *url_buf, u16 cmd_id, int *http_req_out, const char *login);
+int regcam_send_upd_pass(u32 svc_type, int http_tmpl, char *url_buf, u16 cmd_id, int *http_req_out, const char *pass);
+int regcam_send_oid(u32 svc_type, int http_tmpl, char *url_buf, u16 cmd_id, int *http_req_out, const char *oid);
+int regcam_send_set_name(u32 svc_type, int http_tmpl, char *url_buf, u16 cmd_id, int *http_req_out,
+                         const char *first, u32 first_len, const char *last, u32 last_len,
+                         const char *first_ascii, const char *last_ascii, u32 gender);
+int regcam_send_set_rrn(u32 svc_type, int http_tmpl, char *url_buf, u16 cmd_id, int *http_req_out,
+                        const char *rrn, u32 rrn_len);
+int regcam_send_set_opt_in(u32 svc_type, int http_tmpl, char *url_buf, u16 cmd_id, int *http_req_out,
+                           u32 scex_flag, u32 aff_flag);
+int regcam_send_auth_master(u32 svc_type, int http_tmpl, char *url_buf, u16 cmd_id, int *http_req_out,
+                            const char *login, const char *pass);
+int regcam_send_set_sub_ctrl(u32 svc_type, int http_tmpl, char *url_buf, u16 cmd_id, int *http_req_out,
+                             const char *sub_login, u32 content_rating, u32 chat_ctrl, u32 search_ctrl, u32 limit_flag, u32 limit_val);
+int regcam_send_reset_sub_pass(u32 svc_type, int http_tmpl, char *url_buf, u16 cmd_id, int *http_req_out,
+                               const char *sub_login, const char *new_pass);
+int regcam_send_set_wal_opt(u32 svc_type, int http_tmpl, char *url_buf, u16 cmd_id, int *http_req_out,
+                            u32 auto_deposit, u32 pwd_flag);
+int regcam_send_authenticate(u32 svc_type, int http_tmpl, char *url_buf, u16 cmd_id, int *http_req_out,
+                             u32 ver, const char *user, const char *pass, const char *cid);
+int regcam_send_get_tran_hist(u32 svc_type, int http_tmpl, char *url_buf, u16 cmd_id, int *http_req_out,
+                              const char *login, u32 from_y, u32 from_m, u32 from_d,
+                              u32 to_y, u32 to_m, u32 to_d, s32 tz_min);
+int regcam_send_get_tran_detail(u32 svc_type, int http_tmpl, char *url_buf, u16 cmd_id, int *http_req_out,
+                                const char *login, const char *tx_id, s32 tz_min);
+int regcam_send_get_srvs(u32 svc_type, int http_tmpl, char *url_buf, u16 cmd_id, int *http_req_out,
+                         u32 start_pos, u32 max_cnt);
+int regcam_send_get_srv_detail(u32 svc_type, int http_tmpl, char *url_buf, u16 cmd_id, int *http_req_out,
+                               const char *srv_id, u32 start_pos, u32 max_cnt);
+int regcam_send_get_subscr(u32 svc_type, int http_tmpl, char *url_buf, u16 cmd_id, int *http_req_out,
+                           const char *srv_id, u32 start_pos, u32 max_cnt);
+int regcam_send_verify_dob(u32 svc_type, int http_tmpl, char *url_buf, u16 cmd_id, int *http_req_out,
+                           u32 ver, const char *login, u32 yob, u32 mob, u32 dob, const char *cid);
+int regcam_send_verify_sec_ans(u32 svc_type, int http_tmpl, char *url_buf, u16 cmd_id, int *http_req_out,
+                               u32 sec_q, const char *sec_ans, u32 sec_ans_len);
+int regcam_send_set_account_lang(u32 svc_type, int http_tmpl, char *url_buf, u16 cmd_id, int *http_req_out,
+                                 const char *lang);
+
+/* TLV response parser helpers */
+int regcam_tlv_parse_root(const u8 *buf, u32 buf_size, u32 *ver_out, u32 *body_size_out, u32 *extra_out);
+int regcam_tlv_find_nth(const u8 *buf, u32 buf_size, u16 tag, u16 min_len, u32 index, u16 *len_out);
+int regcam_tlv_find_nth_ex(const u8 *buf, u32 buf_size, u16 tag, u16 min_len,
+                           u32 index, u16 *len_out, int extra_mode);
+int regcam_tlv_parse_err_flag(const u8 *buf, u32 buf_size, u32 *flag_out);
+int regcam_tlv_parse_simple_root(u32 *out, const u8 *buf, u32 buf_size);
+int regcam_tlv_parse_counted_root(u32 *out, const u8 *buf, u32 buf_size, u32 tag);
+int regcam_tlv_parse_paged_root(u32 *out, const u8 *buf, u32 buf_size, u16 tag, u16 min_len);
+int regcam_tlv_parse_sess_root(u32 *out, const u8 *buf, u32 buf_size);
+int regcam_tlv_parse_auth_root(u32 *out, const u8 *buf, u32 buf_size);
+int regcam_tlv_parse_bind_root(u32 *out, const u8 *buf, u32 buf_size);
+int regcam_tlv_parse_address_root(u32 *out, const u8 *buf, u32 buf_size);
+int regcam_tlv_parse_billing_root(u32 *out, const u8 *buf, u32 buf_size);
+int regcam_tlv_parse_account_info(const u32 *parent, u32 *out);
+int regcam_tlv_parse_country_info(const u32 *parent, u32 index, u32 *out);
+int regcam_tlv_parse_reg_rules(const u32 *parent, u32 *out);
+int regcam_tlv_parse_name_info(const u32 *parent, u32 *out);
+int regcam_tlv_parse_opt_in(const u32 *parent, u32 *out);
+int regcam_tlv_parse_wal_opt(const u32 *parent, u32 *out);
+int regcam_tlv_parse_card_info(const u32 *parent, u32 *out);
+int regcam_tlv_parse_sec_q_item(const u32 *parent, const u8 *payload, u16 plen, u32 *out);
+int regcam_tlv_parse_sec_q_nth(const u32 *parent, u32 index, u32 *out);
+int regcam_tlv_parse_sec_q_first(const u32 *parent, u32 *out);
+int regcam_tlv_parse_province_info(const u32 *parent, u32 index, u32 *out);
+int regcam_tlv_parse_city_info(const u32 *parent, u32 index, u32 *out);
+int regcam_tlv_parse_pay_method(const u32 *parent, u32 index, u32 *out);
+int regcam_tlv_parse_bind_result(const u32 *parent, u32 index, u32 *out);
+int regcam_tlv_parse_currency(const u32 *parent, u32 index, u32 *out);
+int regcam_tlv_parse_sub_account(const u32 *parent, u32 index, u32 *out);
+int regcam_tlv_parse_spend_limit(const u32 *parent, u32 index, u32 *limit_out);
+int regcam_tlv_parse_tran_hist_item(const u32 *parent, u32 index, u32 *out);
+int regcam_tlv_parse_tran_detail(const u32 *parent, u32 *out);
+int regcam_tlv_parse_tran_order(const u32 *parent, u32 index, u32 *out);
+int regcam_tlv_parse_tran_item(const u32 *parent, u32 index, u32 *out);
+int regcam_tlv_parse_price_info(const u32 *parent, u32 *out, int is_alt);
+int regcam_tlv_parse_service_info(const u32 *parent, u32 index, u32 *out);
+int regcam_tlv_parse_entitlement(const u32 *parent, u32 index, u32 *out);
+int regcam_tlv_parse_subscription(const u32 *parent, u32 index, u32 *out);
+int regcam_tlv_parse_subscr_plan(const u32 *parent, u32 index, u32 *out);
+int regcam_tlv_parse_reward(const u32 *parent, u32 index, u32 *out);
+int regcam_tlv_parse_eula_info(const u32 *parent, u32 *out);
+int regcam_tlv_parse_eula_ext(const u32 *parent, u32 *out);
+
+/* Internal guarded API wrappers used by quick-registration */
+int regcam_api_destroy_req(u32 req_id);
+int regcam_api_abort_req(u32 req_id);
+int regcam_api_create_del_sess_req(u32 ctx_id, u32 *req_id_out);
+int regcam_api_start_del_sess(u32 req_id);
+int regcam_api_recv_del_sess(u32 req_id, u8 *buf, u32 buf_size, u32 *recv_size_out);
+int regcam_api_create_get_prov_req(u32 ctx_id, u32 *req_id_out);
+int regcam_api_start_get_prov(u32 req_id);
+int regcam_api_recv_get_prov(u32 req_id, u8 *buf, u32 buf_size, u32 *recv_size_out);
+int regcam_api_init_prov_result(u32 *out, const u8 *buf, u32 buf_size);
+int regcam_api_get_prov_info(const u32 *parent, u32 index, u32 *out);
+int regcam_api_get_city_info(const u32 *parent, u32 index, u32 *out);
+int regcam_api_create_reg_cc_req(u32 ctx_id, u32 *req_id_out);
+int regcam_api_start_reg_cc(u32 req_id, const RegCamBillingInfo *info);
+int regcam_api_recv_reg_cc(u32 req_id, u8 *buf, u32 buf_size, u32 *recv_size_out);
+int regcam_api_set_svc_type(u32 ctx_id, u32 svc_type);
+
+/* Exported API prototypes used by quick-registration */
+int sceNpCommerce2RegCam_5F271C1B(u32 field_type, const char *str, u32 *flags_out);
+int sceNpCommerce2RegCam_06B1824F(u32 ctx_id, u32 *req_id_out);
+int sceNpCommerce2RegCam_7A315723(u32 req_id, const char *country, const char *lang, u32 yob, u32 mob, u32 dob);
+int sceNpCommerce2RegCam_4B1A9E4E(u32 req_id, u8 *buf, u32 buf_size, u32 *recv_size_out);
+int sceNpCommerce2RegCam_856C52E9(u32 *out, const u8 *buf, u32 buf_size);
+int sceNpCommerce2RegCam_BD48E118(const u32 *parent, u32 *out);
+int sceNpCommerce2RegCam_DB478D24(u32 ctx_id, u32 *req_id_out);
+int sceNpCommerce2RegCam_5F45DF28(u32 req_id);
+int sceNpCommerce2RegCam_6EA71511(u32 req_id, u8 *buf, u32 buf_size, u32 *recv_size_out);
+int sceNpCommerce2RegCam_EC918C7E(u32 *out, const u8 *buf, u32 buf_size);
+int sceNpCommerce2RegCam_FAC30D4E(const u32 *parent, u32 index, u32 *out);
+int sceNpCommerce2RegCam_B56A1200(u32 ctx_id, u32 *req_id_out);
+int sceNpCommerce2RegCam_13E0AD53(u32 req_id, const char *login, const char *pass,
+                                  u32 sec_q, const char *sec_ans, u32 sec_ans_len);
+int sceNpCommerce2RegCam_F5E2A7B0(u32 req_id, u8 *buf, u32 buf_size, u32 *recv_size_out);
+int sceNpCommerce2RegCam_69817297(u32 ctx_id, u32 *req_id_out);
+int sceNpCommerce2RegCam_BCFD9CC5(u32 req_id);
+int sceNpCommerce2RegCam_E256E232(u32 req_id, u8 *buf, u32 buf_size, u32 *recv_size_out);
+int sceNpCommerce2RegCam_6F0783DA(u32 ctx_id, u32 *req_id_out);
+int sceNpCommerce2RegCam_CD9F9F24(u32 req_id, const char *oid);
+int sceNpCommerce2RegCam_10E44562(u32 req_id, u8 *buf, u32 buf_size, u32 *recv_size_out);
+int sceNpCommerce2RegCam_B4CC8AE6(u32 ctx_id, u32 *req_id_out);
+int sceNpCommerce2RegCam_EE818631(u32 req_id, const char *first, u32 first_len,
+                                  const char *last, u32 last_len,
+                                  const char *first_ascii, const char *last_ascii, u32 gender);
+int sceNpCommerce2RegCam_F6415A7A(u32 req_id, u8 *buf, u32 buf_size, u32 *recv_size_out);
+int sceNpCommerce2RegCam_3328C751(u32 ctx_id, u32 *req_id_out);
+int sceNpCommerce2RegCam_461DD73D(u32 req_id, const RegCamBillingInfo *info);
+int sceNpCommerce2RegCam_28541A7A(u32 req_id, u8 *buf, u32 buf_size, u32 *recv_size_out);
+int sceNpCommerce2RegCam_DF407CA3(u32 ctx_id, u32 *req_id_out);
+int sceNpCommerce2RegCam_0EE4DB04(u32 req_id, const char *rrn, u32 rrn_len);
+int sceNpCommerce2RegCam_993C822E(u32 req_id, u8 *buf, u32 buf_size, u32 *recv_size_out);
+int sceNpCommerce2RegCam_D99AEC05(u32 ctx_id, u32 *req_id_out);
+int sceNpCommerce2RegCam_726FF626(u32 req_id, u32 scex_flag, u32 aff_flag);
+int sceNpCommerce2RegCam_FA13A517(u32 req_id, u8 *buf, u32 buf_size, u32 *recv_size_out);
+int sceNpCommerce2RegCam_64D92E9C(u32 ctx_id, u32 *req_id_out);
+int sceNpCommerce2RegCam_130756C8(u32 req_id);
+int sceNpCommerce2RegCam_A2A91596(u32 req_id, u8 *buf, u32 buf_size, u32 *recv_size_out);
+int sceNpCommerce2RegCam_B140C5D7(u32 ctx_id, u32 *req_id_out);
+int sceNpCommerce2RegCam_19679B00(u32 req_id, int use_explicit, const char *user, const char *pass);
+int sceNpCommerce2RegCam_9C9E0B84(u32 req_id, u8 *buf, u32 buf_size, u32 *recv_size_out);
 
 #endif /* REGCAM_INTERNAL_H */

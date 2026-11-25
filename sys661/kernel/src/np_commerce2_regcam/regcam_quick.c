@@ -1,636 +1,511 @@
 #include "regcam_internal.h"
 
-int sceNpCommerce2RegCam_D73CC389(
-        int a1,
-        int (*a2)(),
-        int a3,
-        int a4,
-        int a5,
-        unsigned int a6,
-        int a7,
-        int a8,
-        u32 *a9)
-{
-  int v11;
-  s64 v16;
-  int v17;
-  int v18;
-  int result;
-  int v20;
-  int v21;
-  int (*i)();
-  int v23;
-  int v24;
-  int v25;
-  int v26;
-  int v27;
-  int v28;
-  int v29;
-  int v30;
-  int v31;
-  const char *v32;
-  int v33;
-  int v34;
-  int v35;
-  int v36;
-  int v37;
-  unsigned int v38;
-  int v39;
-  char v40[32];
-  u8 v41[44];
-  const char *v42;
-  int v43;
-  u8 *v44;
-  int v45;
-  const char *v46;
-  int v47;
-  const char *v48;
-  int v49;
-  u8 v50[64];
-  u8 v51[64];
-  u8 v52[32];
-  u8 v53[64];
-  u8 v54[16];
-  u8 v55[112];
-  u8 v56[16];
-  u8 v57[16];
-  u8 v58[48];
-  u8 v59[40];
-  int v60;
-  u8 v61[40];
-  int v62;
-  u8 v63[2048];
-  int v64;
-  u8 v65[4];
-  int v66;
-  int v67;
-  int v68;
+#define REGCAM_ERR_QUICK_NO_SEC_Q   ((int)0x80550FD0)
+#define REGCAM_ERR_QUICK_ENV        ((int)0x80550FD3)
+#define REGCAM_ERR_LOGIN_EXISTS     ((int)0x80551044)
+#define REGCAM_ERR_OID_EXISTS       ((int)0x80551048)
 
-  v11 = 0;
-  v66 = a5;
-  g_quick_abort_flag = 0;
-  v67 = 0;
-  if ( a2 == NULL || a3 == 0 || a4 == 0 || a5 == 0 )
-    goto LABEL_8;
-  v16 = ((u64)(v16) & 0xFFFFFFFF00000000ULL) | (u32)(a7 == 0);
-  v16 = ((u64)(v16) & 0x00000000FFFFFFFFULL) | ((u64)(u32)(a8 == 0) << 32);
-  if ( v16 == 0 )
-  {
-    if ( a9 != NULL )
-    {
-      v17 = -2141909245;
-      if ( a6 < 0x1F )
-        goto LABEL_9;
-      if ( sceNet_lib_D8722983(a3) == 2 && sceNet_lib_D8722983(a4) == 2 )
-      {
-        v17 = sceNpCommerce2_460A1D92(v54, 9);
-        if ( v17 < 0 )
-          goto LABEL_9;
-        v17 = -2141909037;
-        if ( sceNet_lib_B9085A96((int)"np", v54, 3) == 0 )
-          goto LABEL_9;
-        v17 = regcam_api_helper_15(a1, 5);
-        if ( v17 < 0 )
-          goto LABEL_9;
-        v17 = sceNpCommerce2RegCam_06B1824F(a1, (int)&g_quick_req_id);
-        if ( v17 >= 0 )
-        {
-          v17 = sceNpCommerce2RegCam_7A315723(g_quick_req_id, a3, a4, 1970, 1, 1);
-          if ( v17 >= 0 )
-            v17 = sceNpCommerce2RegCam_4B1A9E4E(g_quick_req_id, a7, a8, (int)&v64);
-          regcam_api_helper_1(g_quick_req_id);
-          g_quick_req_id = 0;
-        }
-        if ( v17 < 0 )
-          goto LABEL_9;
-        v20 = sceNpCommerce2RegCam_856C52E9((int)v58, a7, v64);
-        v67 = 1;
-        if ( v20 >= 0 )
-          v20 = sceNpCommerce2RegCam_BD48E118((int)v58, (int)v55);
-        v17 = v20;
-        if ( v20 < 0 )
-          goto LABEL_9;
-        v17 = -2141909038;
-        if ( g_quick_abort_flag == v67 )
-          goto LABEL_9;
-        v17 = sceNpCommerce2RegCam_DB478D24(a1, (int)&g_quick_req_id);
-        if ( v17 >= 0 )
-        {
-          v17 = sceNpCommerce2RegCam_5F45DF28(g_quick_req_id);
-          if ( v17 >= 0 )
-            v17 = sceNpCommerce2RegCam_6EA71511(g_quick_req_id, a7, a8, (int)&v64);
-          regcam_api_helper_1(g_quick_req_id);
-          g_quick_req_id = 0;
-        }
-        if ( v17 < 0 )
-          goto LABEL_9;
-        v21 = sceNpCommerce2RegCam_EC918C7E((int)v59, a7, v64);
-        if ( v21 >= 0 )
-        {
-          v17 = -2141909040;
-          if ( v60 == 0 )
-            goto LABEL_9;
-          v21 = sceNpCommerce2RegCam_FAC30D4E((int)v59, 0, (int)v61);
-          if ( v21 >= 0 )
-            v11 = v62;
-        }
-        v17 = v21;
-        if ( v21 < 0 )
-          goto LABEL_9;
-        v17 = -2141909038;
-        if ( g_quick_abort_flag == 1 )
-          goto LABEL_9;
-        while ( 2 )
-        {
-          for ( i = a2; ; i = a2 )
-          {
-            v17 = regcam_quick_helper_1(i, a3, a4, v40, 17);
-            if ( v17 < 0 )
-              goto LABEL_9;
-            v17 = -2141909039;
-            if ( (unsigned int)(sceNet_lib_D8722983(v40) + 25) > 0x40 )
-              goto LABEL_9;
-            sceNet_lib_CF705E46(v53, "%s%s", v40, "@d0.mail.playstation.net");
-            v17 = regcam_quick_helper_2(a2, v52, 31);
-            if ( v17 < 0 )
-              goto LABEL_9;
-            v68 = sceNet_lib_D8722983(v52);
-            v17 = sceNpCommerce2RegCam_B56A1200(a1, (int)&g_quick_req_id);
-            if ( v17 >= 0 )
-            {
-              v17 = sceNpCommerce2RegCam_13E0AD53(g_quick_req_id, (int)v53, (int)v52, v11, (int)v52, v68);
-              if ( v17 >= 0 )
-                v17 = sceNpCommerce2RegCam_F5E2A7B0(g_quick_req_id, a7, a8, (int)&v64);
-              regcam_api_helper_1(g_quick_req_id);
-              g_quick_req_id = 0;
-            }
-            if ( v17 != -2141908924 )
-              break;
-          }
-          if ( v17 < 0 )
-            goto LABEL_9;
-          v17 = -2141909038;
-          if ( g_quick_abort_flag == 1 )
-            goto LABEL_9;
-          v23 = sceNpCommerce2RegCam_69817297(a1, (int)&g_quick_req_id);
-          if ( v23 >= 0 )
-          {
-            v23 = sceNpCommerce2RegCam_BCFD9CC5(g_quick_req_id);
-            if ( v23 >= 0 )
-              v23 = sceNpCommerce2RegCam_E256E232(g_quick_req_id, a7, a8, (int)&v64);
-          }
-          v17 = v23;
-          regcam_api_helper_1(g_quick_req_id);
-          g_quick_req_id = 0;
-          if ( v17 < 0 )
-            goto LABEL_9;
-          v17 = -2141909038;
-          if ( g_quick_abort_flag == 1 )
-            goto LABEL_9;
-          v24 = sceNpCommerce2RegCam_6F0783DA(a1, (int)&g_quick_req_id);
-          if ( v24 >= 0 )
-          {
-            v24 = sceNpCommerce2RegCam_CD9F9F24(g_quick_req_id, (int)v40);
-            if ( v24 >= 0 )
-              v24 = sceNpCommerce2RegCam_10E44562(g_quick_req_id, a7, a8, (int)&v64);
-          }
-          v17 = v24;
-          regcam_api_helper_1(g_quick_req_id);
-          g_quick_req_id = 0;
-          if ( v17 == -2141908920 )
+static char regcam_alnum_char(u32 idx)
+{
+    if (idx < 10)
+        return (char)('0' + idx);
+    if (idx < 36)
+        return (char)('A' + (idx - 10));
+    return (char)('a' + (idx - 36));
+}
+
+static int regcam_quick_gen_oid(u32 (*rand_cb)(void), const char *country, const char *lang,
+                                char *oid_out, u32 oid_buf_size)
+{
+    u32 flags;
+    int ret;
+
+    if (oid_buf_size < 17)
+        return REGCAM_ERR_QUICK_OVERFLOW;
+
+    do {
+        char *cursor;
+        u32 idx;
+
+        if (g_quick_abort_flag == 1)
+            return REGCAM_ERR_QUICK_ABORTED;
+
+        sceNet_lib_80C9F02A(oid_out, "Q-");
+        cursor = oid_out + sceNet_lib_D8722983("Q-");
+        for (idx = 0; idx < 8; idx++)
+            *cursor++ = regcam_alnum_char(rand_cb() % 62U);
+
+        *cursor++ = '-';
+        *cursor++ = (char)sceNet_lib_C13C9307((u8)country[0]);
+        *cursor++ = (char)sceNet_lib_C13C9307((u8)country[1]);
+        *cursor++ = '-';
+        *cursor++ = (char)sceNet_lib_C13C9307((u8)lang[0]);
+        *cursor++ = (char)sceNet_lib_C13C9307((u8)lang[1]);
+        *cursor = '\0';
+
+        flags = 0;
+        ret = sceNpCommerce2RegCam_5F271C1B(16, oid_out, &flags);
+        if (ret < 0)
             continue;
-          break;
-        }
-        if ( v17 < 0 )
-          goto LABEL_9;
-        v17 = -2141909038;
-        if ( g_quick_abort_flag == 1 )
-          goto LABEL_9;
-        v25 = sceNpCommerce2RegCam_B4CC8AE6(a1, (int)&g_quick_req_id);
-        if ( v25 >= 0 )
-        {
-          v27 = sceNet_lib_D8722983("firstName");
-          v26 = sceNet_lib_D8722983("lastName");
-          v25 = sceNpCommerce2RegCam_EE818631(g_quick_req_id, (int)"firstName", v27, (int)"lastName", v26, 0, 0, 0);
-          if ( v25 >= 0 )
-            v25 = sceNpCommerce2RegCam_F6415A7A(g_quick_req_id, a7, a8, (int)&v64);
-        }
-        v17 = v25;
-        regcam_api_helper_1(g_quick_req_id);
-        g_quick_req_id = 0;
-        if ( v17 < 0 )
-          goto LABEL_9;
-        v17 = -2141909038;
-        if ( g_quick_abort_flag == 1 )
-          goto LABEL_9;
-        v28 = regcam_api_helper_6(a1, (int)&g_quick_req_id);
-        if ( v28 >= 0 )
-        {
-          v28 = regcam_api_helper_7(g_quick_req_id);
-          if ( v28 >= 0 )
-            v28 = regcam_api_helper_8(g_quick_req_id, a7, a8, (int)&v64);
-        }
-        v17 = v28;
-        regcam_api_helper_1(g_quick_req_id);
-        g_quick_req_id = 0;
-        if ( (((unsigned int)v17 >> 31) & (v17 != 0x80551004)) != 0 )
-          goto LABEL_9;
-        v17 = regcam_quick_helper_3(a7, v64, v17 != (int)0x80551004, (int)v50, 64, (int)v51, 64, (int)v56, 16);
-        if ( v17 < 0 )
-          goto LABEL_9;
-        v17 = -2141909038;
-        if ( g_quick_abort_flag == 1 )
-          goto LABEL_9;
-        sceKernelMemset(v41, 0, 92);
-        v42 = "StreetAddress1";
-        v29 = sceNet_lib_D8722983("StreetAddress1");
-        v46 = v50;
-        v43 = v29;
-        v47 = sceNet_lib_D8722983(v50);
-        v44 = v51;
-        v30 = sceNet_lib_D8722983(v51);
-        v48 = v56;
-        v45 = v30;
-        v49 = sceNet_lib_D8722983(v56);
-        if ( sceNet_lib_B9085A96("US", a3, 3) != 0 )
-        {
-          if ( sceNet_lib_B9085A96("CA", a3, 3) != 0 )
-            goto LABEL_79;
-          v46 = "ON";
-          v31 = sceNet_lib_D8722983("ON");
-          v32 = "M2H 3R6";
-        }
-        else
-        {
-          v46 = "CA";
-          v31 = sceNet_lib_D8722983("CA");
-          v32 = "94404";
-        }
-        v47 = v31;
-        v48 = v32;
-        v49 = sceNet_lib_D8722983(v32);
-LABEL_79:
-        v33 = sceNpCommerce2RegCam_3328C751(a1, (int)&g_quick_req_id);
-        if ( v33 >= 0 )
-        {
-          v33 = sceNpCommerce2RegCam_461DD73D(g_quick_req_id, (int)v41);
-          if ( v33 >= 0 )
-            v33 = sceNpCommerce2RegCam_28541A7A(g_quick_req_id, a7, a8, (int)&v64);
-        }
-        v17 = v33;
-        regcam_api_helper_1(g_quick_req_id);
-        g_quick_req_id = 0;
-        if ( v17 >= 0 )
-        {
-          v17 = -2141909038;
-          if ( g_quick_abort_flag != 1 )
-          {
-            if ( sceNet_lib_B9085A96("KR", a3, 3) == 0 )
-            {
-              v38 = a2();
-              sceNet_lib_CF705E46(v57, "%07u", v38 % 0x989680);
-              v39 = sceNpCommerce2RegCam_DF407CA3(a1, (int)&g_quick_req_id);
-              if ( v39 >= 0 )
-              {
-                v39 = sceNpCommerce2RegCam_0EE4DB04(g_quick_req_id, (int)"700101", (int)v57);
-                if ( v39 >= 0 )
-                  v39 = sceNpCommerce2RegCam_993C822E(g_quick_req_id, a7, a8, (int)&v64);
-              }
-              v17 = v39;
-              regcam_api_helper_1(g_quick_req_id);
-              g_quick_req_id = 0;
-              if ( v17 < 0 )
-              {
-                v18 = v67;
-                goto LABEL_10;
-              }
-            }
-            v17 = -2141909038;
-            if ( g_quick_abort_flag != 1 )
-            {
-              v34 = sceNpCommerce2RegCam_D99AEC05(a1, (int)&g_quick_req_id);
-              if ( v34 >= 0 )
-              {
-                v34 = sceNpCommerce2RegCam_726FF626(g_quick_req_id, 1, 1);
-                if ( v34 >= 0 )
-                  v34 = sceNpCommerce2RegCam_FA13A517(g_quick_req_id, a7, a8, (int)&v64);
-              }
-              v17 = v34;
-              regcam_api_helper_1(g_quick_req_id);
-              g_quick_req_id = 0;
-              if ( v17 >= 0 )
-              {
-                v17 = -2141909038;
-                if ( g_quick_abort_flag != 1 )
-                {
-                  v35 = sceNpCommerce2RegCam_64D92E9C(a1, (int)&g_quick_req_id);
-                  if ( v35 >= 0 )
-                  {
-                    v35 = sceNpCommerce2RegCam_130756C8(g_quick_req_id);
-                    if ( v35 >= 0 )
-                      v35 = sceNpCommerce2RegCam_A2A91596(g_quick_req_id, a7, a8, (int)&v64);
-                  }
-                  v17 = v35;
-                  regcam_api_helper_1(g_quick_req_id);
-                  g_quick_req_id = 0;
-                  if ( v17 >= 0 )
-                  {
-                    if ( g_quick_abort_flag == 1 )
-                    {
-                      v17 = -2141909038;
-                    }
-                    else
-                    {
-                      v36 = v66;
-                      *a9 = v64;
-                      sceNet_lib_80C9F02A(v36, v52);
-                      if ( (v55[76] & 1) != 0 )
-                      {
-                        v37 = regcam_quick_helper_4(a1, a3, v53, v52, v41);
-                        v17 = v37;
-                        if ( v37 < 0 )
-                        {
-                          v18 = v67;
-                          goto LABEL_10;
-                        }
-                      }
-                      if ( g_quick_abort_flag == 1 )
-                        v17 = -2141909038;
-                    }
-                  }
+    } while (ret < 0 || flags != 0);
+
+    return ret;
+}
+
+static int regcam_quick_gen_password(u32 (*rand_cb)(void), char *pass_out, u32 pass_buf_size)
+{
+    u32 flags;
+    int ret;
+
+    if (pass_buf_size < 31)
+        return REGCAM_ERR_QUICK_OVERFLOW;
+
+    do {
+        u32 idx;
+
+        if (g_quick_abort_flag == 1)
+            return REGCAM_ERR_QUICK_ABORTED;
+
+        sceKernelMemset(pass_out, 0, pass_buf_size);
+        for (idx = 0; idx < 30; idx++)
+            pass_out[idx] = regcam_alnum_char(rand_cb() % 62U);
+
+        flags = 0;
+        ret = sceNpCommerce2RegCam_5F271C1B(40, pass_out, &flags);
+        if (ret < 0)
+            continue;
+    } while (ret < 0 || flags != 0);
+
+    return ret;
+}
+
+static int regcam_quick_extract_location(const u8 *resp_buf, u32 resp_size, int has_provinces,
+                                         char *prov_out, u32 prov_size,
+                                         char *city_out, u32 city_size,
+                                         char *postal_out, u32 postal_size)
+{
+    u32 root_cursor[12];
+    u32 prov_info[16];
+    u32 city_info[12];
+    int ret;
+
+    sceKernelMemset(prov_out, 0, prov_size);
+    sceNet_lib_B5CE388A(prov_out, "Province", prov_size);
+    sceKernelMemset(city_out, 0, city_size);
+    sceNet_lib_B5CE388A(city_out, "City", city_size);
+    sceKernelMemset(postal_out, 0, postal_size);
+    sceNet_lib_B5CE388A(postal_out, "11111", postal_size);
+
+    if (!has_provinces)
+        return 0;
+
+    ret = regcam_api_init_prov_result(root_cursor, resp_buf, resp_size);
+    if (ret >= 0 && root_cursor[10] != 0) {
+        ret = regcam_api_get_prov_info(root_cursor, 0, prov_info);
+        if (ret >= 0) {
+            const char *prov_name = (const char *)prov_info[11];
+            sceNet_lib_B5CE388A(prov_out, prov_name, prov_size);
+            if (prov_info[12] != 0) {
+                ret = regcam_api_get_city_info(prov_info, 0, city_info);
+                if (ret >= 0) {
+                    const char *city_name = (const char *)city_info[11];
+                    sceNet_lib_B5CE388A(city_out, city_name, city_size);
                 }
-              }
             }
-          }
         }
-        goto LABEL_9;
-      }
     }
-LABEL_8:
-    v17 = -2141909245;
-    goto LABEL_9;
-  }
-  v17 = -2141909245;
-LABEL_9:
-  v18 = v67;
-LABEL_10:
-  if ( v18 != 1 )
-    return v17;
-  result = v17;
-  if ( g_quick_abort_flag == 0 )
-  {
-    if ( regcam_api_helper_3(a1, (int)&g_quick_req_id) >= 0 && regcam_api_helper_4(g_quick_req_id) >= 0 )
-      regcam_api_helper_5(g_quick_req_id, (int)v63, 2048, (int)v65);
-    regcam_api_helper_1(g_quick_req_id);
+    return ret;
+}
+
+static int regcam_quick_register_card(u32 ctx_id, const char *country, const char *email,
+                                      const char *password, const RegCamBillingInfo *addr)
+{
+    RegCamBillingInfo card;
+    u8 auth_buf[2048];
+    u8 card_buf[2048];
+    u32 auth_size;
+    u32 card_size;
+    int ret;
+
+    ret = regcam_api_set_svc_type(ctx_id, REGCAM_SVC_CAM);
+    if (ret < 0)
+        return ret;
+    if (g_quick_abort_flag == 1)
+        return REGCAM_ERR_QUICK_ABORTED;
+
+    ret = sceNpCommerce2RegCam_B140C5D7(ctx_id, &g_quick_req_id);
+    if (ret >= 0) {
+        ret = sceNpCommerce2RegCam_19679B00(g_quick_req_id, 1, email, password);
+        if (ret >= 0)
+            ret = sceNpCommerce2RegCam_9C9E0B84(g_quick_req_id, auth_buf, sizeof(auth_buf), &auth_size);
+    }
+    regcam_api_destroy_req(g_quick_req_id);
     g_quick_req_id = 0;
-    return v17;
-  }
-  return result;
-}
+    if (ret < 0)
+        return ret;
+    if (g_quick_abort_flag == 1)
+        return REGCAM_ERR_QUICK_ABORTED;
 
+    sceKernelMemset(&card, 0, sizeof(card));
+    card.payment_method_id     = "VISA";
+    card.payment_method_id_len = sceNet_lib_D8722983("VISA");
+    card.holder_name           = "firstName lastName";
+    card.holder_name_len       = sceNet_lib_D8722983("firstName lastName");
+    card.start_year            = 2008;
+    card.start_month           = 12;
+    card.expire_year           = 2022;
+    card.expire_month          = 12;
+    card.security_code         = "150";
+    if (sceNet_lib_B9085A96("US", country, 3) != 0 &&
+        sceNet_lib_B9085A96("CA", country, 3) != 0)
+        card.card_number = "4111111111111111";
+    else
+        card.card_number = "4444444444444448";
 
-int sceNpCommerce2RegCam_107C4508()
-{
-  if ( g_quick_req_id != 0 )
-    regcam_api_helper_2(g_quick_req_id);
-  g_quick_abort_flag = 1;
-  return 0;
-}
+    card.street1         = addr->street1;
+    card.street1_len     = addr->street1_len;
+    card.city            = addr->city;
+    card.city_len        = addr->city_len;
+    card.province        = addr->province;
+    card.province_len    = addr->province_len;
+    card.postal_code     = addr->postal_code;
+    card.postal_code_len = addr->postal_code_len;
 
-
-int regcam_quick_helper_1(int (*a1)(), char *a2, char *a3, int a4, unsigned int a5)
-{
-  int v5;
-  int v10;
-  u8 *v11;
-  unsigned int v12;
-  unsigned int v13;
-  char v14;
-  u8 *v15;
-  u32 v17[4];
-
-  v5 = -2141909039;
-  if ( a5 >= 0x11 )
-  {
-LABEL_2:
-    v10 = g_quick_abort_flag;
-    do
-    {
-      v5 = -2141909038;
-      if ( v10 == 1 )
-        break;
-      sceNet_lib_80C9F02A(a4, "Q-");
-      v11 = (u8 *)(a4 + sceNet_lib_D8722983("Q-"));
-      v12 = 0;
-      do
-      {
-        ++v12;
-        v13 = a1() % 0x3Eu;
-        v14 = v13 + 48;
-        if ( v13 >= 0xA )
-        {
-          v14 = v13 + 55;
-          if ( v13 - 10 >= 0x1A )
-            v14 = v13 + 61;
-        }
-        *v11++ = v14;
-      }
-      while ( v12 < 8 );
-      *v11 = 45;
-      v15 = v11 + 1;
-      *v15 = sceNet_lib_C13C9307(*a2);
-      v15[1] = sceNet_lib_C13C9307(a2[1]);
-      v15[2] = 45;
-      v15[3] = sceNet_lib_C13C9307(*a3);
-      v15[4] = sceNet_lib_C13C9307(a3[1]);
-      v15[5] = 0;
-      v17[0] = 0;
-      v5 = sceNpCommerce2RegCam_5F271C1B(16, a4, v17);
-      if ( v5 < 0 )
-        goto LABEL_2;
-      v10 = g_quick_abort_flag;
+    ret = regcam_api_create_reg_cc_req(ctx_id, &g_quick_req_id);
+    if (ret >= 0) {
+        ret = regcam_api_start_reg_cc(g_quick_req_id, &card);
+        if (ret >= 0)
+            ret = regcam_api_recv_reg_cc(g_quick_req_id, card_buf, sizeof(card_buf), &card_size);
     }
-    while ( v17[0] != 0 );
-  }
-  return v5;
+    regcam_api_destroy_req(g_quick_req_id);
+    g_quick_req_id = 0;
+    return ret;
 }
 
-
-int regcam_quick_helper_2(int (*a1)(), int a2, unsigned int a3)
+int sceNpCommerce2RegCam_D73CC389(u32 ctx_id, u32 (*rand_cb)(void), const char *country,
+                                  const char *lang, char *password_out, u32 password_buf_size,
+                                  u8 *resp_buf, u32 resp_buf_size, u32 *resp_size_out)
 {
-  int v3;
-  int v5;
-  int v8;
-  u8 *v9;
-  unsigned int v10;
-  unsigned int v11;
-  char v12;
-  u32 v14[4];
+    char oid_buf[32];
+    char prov_buf[64];
+    char city_buf[64];
+    char pass_buf[32];
+    char email_buf[64];
+    char env_buf[16];
+    char postal_buf[16];
+    char rrn_suffix[16];
+    u8 reg_rules[112];
+    u32 sess_cursor[12];
+    u32 secq_root[12];
+    u32 secq_item[12];
+    u8 del_buf[2048];
+    RegCamBillingInfo addr;
+    u32 recv_size = 0;
+    u32 del_size = 0;
+    u32 sec_q_id = 0;
+    int session_open = 0;
+    int ret;
 
-  v3 = a3 < 0x1F;
-  v5 = -2141909039;
-  if ( !v3 )
-  {
-LABEL_2:
-    v8 = g_quick_abort_flag;
-    do
-    {
-      v9 = (u8 *)a2;
-      v5 = -2141909038;
-      if ( v8 == 1 )
-        break;
-      sceKernelMemset(a2, 0, a3);
-      v10 = 0;
-      do
-      {
-        ++v10;
-        v11 = a1() % 0x3Eu;
-        v12 = v11 + 48;
-        if ( v11 >= 0xA )
-        {
-          v12 = v11 + 55;
-          if ( v11 - 10 >= 0x1A )
-            v12 = v11 + 61;
-        }
-        *v9++ = v12;
-      }
-      while ( v10 < 0x1E );
-      v14[0] = 0;
-      v5 = sceNpCommerce2RegCam_5F271C1B(40, a2, v14);
-      if ( v5 < 0 )
-        goto LABEL_2;
-      v8 = g_quick_abort_flag;
+    g_quick_abort_flag = 0;
+
+    if (!rand_cb || !country || !lang || !password_out ||
+        !resp_buf || resp_buf_size == 0 || !resp_size_out)
+        return REGCAM_ERR_INVALID_ARG;
+    if (password_buf_size < 31)
+        return REGCAM_ERR_INVALID_ARG;
+    if (sceNet_lib_D8722983(country) != 2 || sceNet_lib_D8722983(lang) != 2)
+        return REGCAM_ERR_INVALID_ARG;
+
+    ret = sceNpCommerce2_460A1D92((int *)env_buf, 9);
+    if (ret < 0)
+        return ret;
+    if (sceNet_lib_B9085A96("np", env_buf, 3) == 0)
+        return REGCAM_ERR_QUICK_ENV;
+
+    ret = regcam_api_set_svc_type(ctx_id, REGCAM_SVC_REG);
+    if (ret < 0)
+        return ret;
+
+    /* Start registration session */
+    ret = sceNpCommerce2RegCam_06B1824F(ctx_id, &g_quick_req_id);
+    if (ret >= 0) {
+        ret = sceNpCommerce2RegCam_7A315723(g_quick_req_id, country, lang, 1970, 1, 1);
+        if (ret >= 0)
+            ret = sceNpCommerce2RegCam_4B1A9E4E(g_quick_req_id, resp_buf, resp_buf_size, &recv_size);
+        regcam_api_destroy_req(g_quick_req_id);
+        g_quick_req_id = 0;
     }
-    while ( v14[0] != 0 );
-  }
-  return v5;
+    if (ret < 0)
+        return ret;
+
+    session_open = 1;
+    ret = sceNpCommerce2RegCam_856C52E9(sess_cursor, resp_buf, recv_size);
+    if (ret >= 0)
+        ret = sceNpCommerce2RegCam_BD48E118(sess_cursor, (u32 *)reg_rules);
+    if (ret < 0)
+        goto cleanup;
+    if (g_quick_abort_flag == 1) {
+        ret = REGCAM_ERR_QUICK_ABORTED;
+        goto cleanup;
+    }
+
+    /* Fetch security questions */
+    ret = sceNpCommerce2RegCam_DB478D24(ctx_id, &g_quick_req_id);
+    if (ret >= 0) {
+        ret = sceNpCommerce2RegCam_5F45DF28(g_quick_req_id);
+        if (ret >= 0)
+            ret = sceNpCommerce2RegCam_6EA71511(g_quick_req_id, resp_buf, resp_buf_size, &recv_size);
+        regcam_api_destroy_req(g_quick_req_id);
+        g_quick_req_id = 0;
+    }
+    if (ret < 0)
+        goto cleanup;
+
+    ret = sceNpCommerce2RegCam_EC918C7E(secq_root, resp_buf, recv_size);
+    if (ret >= 0) {
+        if (secq_root[10] == 0) {
+            ret = REGCAM_ERR_QUICK_NO_SEC_Q;
+            goto cleanup;
+        }
+        ret = sceNpCommerce2RegCam_FAC30D4E(secq_root, 0, secq_item);
+        if (ret >= 0)
+            sec_q_id = secq_item[10];
+    }
+    if (ret < 0)
+        goto cleanup;
+    if (g_quick_abort_flag == 1) {
+        ret = REGCAM_ERR_QUICK_ABORTED;
+        goto cleanup;
+    }
+
+    /* Generate unique login / password / online ID, accept EULA */
+    for (;;) {
+        for (;;) {
+            u32 pass_len;
+
+            ret = regcam_quick_gen_oid(rand_cb, country, lang, oid_buf, 17);
+            if (ret < 0)
+                goto cleanup;
+            if (sceNet_lib_D8722983(oid_buf) + 25U > sizeof(email_buf)) {
+                ret = REGCAM_ERR_QUICK_OVERFLOW;
+                goto cleanup;
+            }
+            sceNet_lib_CF705E46(email_buf, "%s%s", oid_buf, "@d0.mail.playstation.net");
+
+            ret = regcam_quick_gen_password(rand_cb, pass_buf, 31);
+            if (ret < 0)
+                goto cleanup;
+            pass_len = sceNet_lib_D8722983(pass_buf);
+
+            ret = sceNpCommerce2RegCam_B56A1200(ctx_id, &g_quick_req_id);
+            if (ret >= 0) {
+                ret = sceNpCommerce2RegCam_13E0AD53(g_quick_req_id, email_buf, pass_buf,
+                                                    sec_q_id, pass_buf, pass_len);
+                if (ret >= 0)
+                    ret = sceNpCommerce2RegCam_F5E2A7B0(g_quick_req_id, resp_buf, resp_buf_size, &recv_size);
+                regcam_api_destroy_req(g_quick_req_id);
+                g_quick_req_id = 0;
+            }
+            if (ret != REGCAM_ERR_LOGIN_EXISTS)
+                break;
+        }
+        if (ret < 0)
+            goto cleanup;
+        if (g_quick_abort_flag == 1) {
+            ret = REGCAM_ERR_QUICK_ABORTED;
+            goto cleanup;
+        }
+
+        ret = sceNpCommerce2RegCam_69817297(ctx_id, &g_quick_req_id);
+        if (ret >= 0) {
+            ret = sceNpCommerce2RegCam_BCFD9CC5(g_quick_req_id);
+            if (ret >= 0)
+                ret = sceNpCommerce2RegCam_E256E232(g_quick_req_id, resp_buf, resp_buf_size, &recv_size);
+        }
+        regcam_api_destroy_req(g_quick_req_id);
+        g_quick_req_id = 0;
+        if (ret < 0)
+            goto cleanup;
+        if (g_quick_abort_flag == 1) {
+            ret = REGCAM_ERR_QUICK_ABORTED;
+            goto cleanup;
+        }
+
+        ret = sceNpCommerce2RegCam_6F0783DA(ctx_id, &g_quick_req_id);
+        if (ret >= 0) {
+            ret = sceNpCommerce2RegCam_CD9F9F24(g_quick_req_id, oid_buf);
+            if (ret >= 0)
+                ret = sceNpCommerce2RegCam_10E44562(g_quick_req_id, resp_buf, resp_buf_size, &recv_size);
+        }
+        regcam_api_destroy_req(g_quick_req_id);
+        g_quick_req_id = 0;
+        if (ret != REGCAM_ERR_OID_EXISTS)
+            break;
+    }
+    if (ret < 0)
+        goto cleanup;
+    if (g_quick_abort_flag == 1) {
+        ret = REGCAM_ERR_QUICK_ABORTED;
+        goto cleanup;
+    }
+
+    /* Set default name */
+    ret = sceNpCommerce2RegCam_B4CC8AE6(ctx_id, &g_quick_req_id);
+    if (ret >= 0) {
+        u32 first_len = sceNet_lib_D8722983("firstName");
+        u32 last_len = sceNet_lib_D8722983("lastName");
+        ret = sceNpCommerce2RegCam_EE818631(g_quick_req_id, "firstName", first_len,
+                                            "lastName", last_len, NULL, NULL, 0);
+        if (ret >= 0)
+            ret = sceNpCommerce2RegCam_F6415A7A(g_quick_req_id, resp_buf, resp_buf_size, &recv_size);
+    }
+    regcam_api_destroy_req(g_quick_req_id);
+    g_quick_req_id = 0;
+    if (ret < 0)
+        goto cleanup;
+    if (g_quick_abort_flag == 1) {
+        ret = REGCAM_ERR_QUICK_ABORTED;
+        goto cleanup;
+    }
+
+    /* Query provinces and build default residential address */
+    ret = regcam_api_create_get_prov_req(ctx_id, &g_quick_req_id);
+    if (ret >= 0) {
+        ret = regcam_api_start_get_prov(g_quick_req_id);
+        if (ret >= 0)
+            ret = regcam_api_recv_get_prov(g_quick_req_id, resp_buf, resp_buf_size, &recv_size);
+    }
+    regcam_api_destroy_req(g_quick_req_id);
+    g_quick_req_id = 0;
+    if (ret < 0 && ret != REGCAM_ERR_SERVER_NO_PROV)
+        goto cleanup;
+
+    ret = regcam_quick_extract_location(resp_buf, recv_size, (ret == 0),
+                                        prov_buf, sizeof(prov_buf),
+                                        city_buf, sizeof(city_buf),
+                                        postal_buf, sizeof(postal_buf));
+    if (ret < 0)
+        goto cleanup;
+    if (g_quick_abort_flag == 1) {
+        ret = REGCAM_ERR_QUICK_ABORTED;
+        goto cleanup;
+    }
+
+    sceKernelMemset(&addr, 0, sizeof(addr));
+    addr.street1         = "StreetAddress1";
+    addr.street1_len     = sceNet_lib_D8722983("StreetAddress1");
+    addr.province        = prov_buf;
+    addr.province_len    = sceNet_lib_D8722983(prov_buf);
+    addr.city            = city_buf;
+    addr.city_len        = sceNet_lib_D8722983(city_buf);
+    addr.postal_code     = postal_buf;
+    addr.postal_code_len = sceNet_lib_D8722983(postal_buf);
+
+    if (sceNet_lib_B9085A96("US", country, 3) == 0) {
+        addr.province        = "CA";
+        addr.province_len    = sceNet_lib_D8722983("CA");
+        addr.postal_code     = "94404";
+        addr.postal_code_len = sceNet_lib_D8722983("94404");
+    } else if (sceNet_lib_B9085A96("CA", country, 3) == 0) {
+        addr.province        = "ON";
+        addr.province_len    = sceNet_lib_D8722983("ON");
+        addr.postal_code     = "M2H 3R6";
+        addr.postal_code_len = sceNet_lib_D8722983("M2H 3R6");
+    }
+
+    ret = sceNpCommerce2RegCam_3328C751(ctx_id, &g_quick_req_id);
+    if (ret >= 0) {
+        ret = sceNpCommerce2RegCam_461DD73D(g_quick_req_id, &addr);
+        if (ret >= 0)
+            ret = sceNpCommerce2RegCam_28541A7A(g_quick_req_id, resp_buf, resp_buf_size, &recv_size);
+    }
+    regcam_api_destroy_req(g_quick_req_id);
+    g_quick_req_id = 0;
+    if (ret < 0)
+        goto cleanup;
+    if (g_quick_abort_flag == 1) {
+        ret = REGCAM_ERR_QUICK_ABORTED;
+        goto cleanup;
+    }
+
+    /* Korea requires resident registration number */
+    if (sceNet_lib_B9085A96("KR", country, 3) == 0) {
+        sceNet_lib_CF705E46(rrn_suffix, "%07u", rand_cb() % 10000000U);
+        ret = sceNpCommerce2RegCam_DF407CA3(ctx_id, &g_quick_req_id);
+        if (ret >= 0) {
+            ret = sceNpCommerce2RegCam_0EE4DB04(g_quick_req_id, "700101", (u32)(size_t)rrn_suffix);
+            if (ret >= 0)
+                ret = sceNpCommerce2RegCam_993C822E(g_quick_req_id, resp_buf, resp_buf_size, &recv_size);
+        }
+        regcam_api_destroy_req(g_quick_req_id);
+        g_quick_req_id = 0;
+        if (ret < 0)
+            goto cleanup;
+    }
+    if (g_quick_abort_flag == 1) {
+        ret = REGCAM_ERR_QUICK_ABORTED;
+        goto cleanup;
+    }
+
+    /* Set opt-in flags and submit registration */
+    ret = sceNpCommerce2RegCam_D99AEC05(ctx_id, &g_quick_req_id);
+    if (ret >= 0) {
+        ret = sceNpCommerce2RegCam_726FF626(g_quick_req_id, 1, 1);
+        if (ret >= 0)
+            ret = sceNpCommerce2RegCam_FA13A517(g_quick_req_id, resp_buf, resp_buf_size, &recv_size);
+    }
+    regcam_api_destroy_req(g_quick_req_id);
+    g_quick_req_id = 0;
+    if (ret < 0)
+        goto cleanup;
+    if (g_quick_abort_flag == 1) {
+        ret = REGCAM_ERR_QUICK_ABORTED;
+        goto cleanup;
+    }
+
+    ret = sceNpCommerce2RegCam_64D92E9C(ctx_id, &g_quick_req_id);
+    if (ret >= 0) {
+        ret = sceNpCommerce2RegCam_130756C8(g_quick_req_id);
+        if (ret >= 0)
+            ret = sceNpCommerce2RegCam_A2A91596(g_quick_req_id, resp_buf, resp_buf_size, &recv_size);
+    }
+    regcam_api_destroy_req(g_quick_req_id);
+    g_quick_req_id = 0;
+    if (ret < 0)
+        goto cleanup;
+    if (g_quick_abort_flag == 1) {
+        ret = REGCAM_ERR_QUICK_ABORTED;
+        goto cleanup;
+    }
+
+    *resp_size_out = recv_size;
+    sceNet_lib_80C9F02A(password_out, pass_buf);
+
+    /* Register test card if registration rules require payment verification */
+    if (reg_rules[76] & 1) {
+        ret = regcam_quick_register_card(ctx_id, country, email_buf, pass_buf, &addr);
+        if (ret < 0)
+            goto cleanup;
+    }
+    if (g_quick_abort_flag == 1)
+        ret = REGCAM_ERR_QUICK_ABORTED;
+
+cleanup:
+    if (session_open && g_quick_abort_flag == 0) {
+        if (regcam_api_create_del_sess_req(ctx_id, &g_quick_req_id) >= 0 &&
+            regcam_api_start_del_sess(g_quick_req_id) >= 0) {
+            regcam_api_recv_del_sess(g_quick_req_id, del_buf, sizeof(del_buf), &del_size);
+        }
+        regcam_api_destroy_req(g_quick_req_id);
+        g_quick_req_id = 0;
+    }
+    return ret;
 }
 
-
-int regcam_quick_helper_3(int a1, int a2, int a3, int a4, int a5, int a6, int a7, int a8, int a9)
+int sceNpCommerce2RegCam_107C4508(void)
 {
-  int v17;
-  u32 v19[12];
-  u8 v20[44];
-  int v21;
-  int v22;
-  u8 v23[44];
-  int v24;
-
-  sceKernelMemset(a4, a5, 0);
-  sceNet_lib_B5CE388A(a4, "Province", a5);
-  sceKernelMemset(a6, a7, 0);
-  sceNet_lib_B5CE388A(a6, "City", a7);
-  sceKernelMemset(a8, a9, 0);
-  sceNet_lib_B5CE388A(a8, "11111", a9);
-  v17 = 0;
-  if ( a3 != 0 )
-  {
-    v17 = regcam_api_helper_9((int)v19, a1, a2);
-    if ( v17 >= 0 && v19[10] != 0 )
-    {
-      v17 = regcam_api_helper_10((int)v19, 0, (int)v20);
-      if ( v17 >= 0 )
-      {
-        sceNet_lib_B5CE388A(a4, v21, a5);
-        if ( v22 != 0 )
-        {
-          v17 = regcam_api_helper_11((int)v20, 0, (int)v23);
-          if ( v17 >= 0 )
-            sceNet_lib_B5CE388A(a6, v24, a7);
-        }
-      }
-    }
-  }
-  return v17;
+    if (g_quick_req_id != 0)
+        regcam_api_abort_req(g_quick_req_id);
+    g_quick_abort_flag = 1;
+    return 0;
 }
-
-
-int regcam_quick_helper_4(int a1, int a2, int a3, int a4, u32 *a5)
-{
-  int v10;
-  int v11;
-  int v12;
-  int v13;
-  int v14;
-  int v15;
-  int v16;
-  int v17;
-  int v18;
-  const char *v19;
-  int v20;
-  u32 v22[24];
-  u8 v23[2048];
-  u8 v24[2048];
-  u8 v25[4];
-  u8 v26[12];
-
-  v10 = regcam_api_helper_15(a1, 6);
-  if ( v10 >= 0 )
-  {
-    v10 = -2141909038;
-    if ( g_quick_abort_flag != 1 )
-    {
-      v11 = sceNpCommerce2RegCam_B140C5D7(a1, (int)&g_quick_req_id);
-      if ( v11 >= 0 )
-      {
-        v11 = sceNpCommerce2RegCam_19679B00(g_quick_req_id, 1, a3, a4);
-        if ( v11 >= 0 )
-          v11 = sceNpCommerce2RegCam_9C9E0B84(g_quick_req_id, (int)v23, 2048, (int)v25);
-      }
-      regcam_api_helper_1(g_quick_req_id);
-      v10 = v11;
-      g_quick_req_id = 0;
-      if ( v11 >= 0 )
-      {
-        v10 = -2141909038;
-        if ( g_quick_abort_flag != 1 )
-        {
-          sceKernelMemset(v22, 0, 92);
-          v12 = a5[12];
-          v13 = a5[19];
-          v14 = a5[20];
-          v15 = a5[22];
-          v16 = a5[17];
-          v17 = a5[18];
-          v18 = a5[21];
-          v22[11] = a5[11];
-          v22[12] = v12;
-          v22[19] = v13;
-          v22[20] = v14;
-          v22[0] = "VISA";
-          v22[17] = v16;
-          v22[18] = v17;
-          v22[21] = v18;
-          v22[22] = v15;
-          v22[1] = sceNet_lib_D8722983("VISA");
-          v22[2] = "firstName lastName";
-          v22[3] = sceNet_lib_D8722983("firstName lastName");
-          v22[5] = 2008;
-          v22[7] = 2022;
-          v22[8] = 12;
-          v22[9] = "150";
-          v22[6] = 12;
-          if ( sceNet_lib_B9085A96("US", a2, 3) != 0 && sceNet_lib_B9085A96("CA", a2, 3) != 0 )
-            v19 = "4111111111111111";
-          else
-            v19 = "4444444444444448";
-          v22[4] = v19;
-          v20 = regcam_api_helper_12(a1, (int)&g_quick_req_id);
-          if ( v20 >= 0 )
-          {
-            v20 = regcam_api_helper_13(g_quick_req_id, (int)v22);
-            if ( v20 >= 0 )
-              v20 = regcam_api_helper_14(g_quick_req_id, (int)v24, 2048, (int)v26);
-          }
-          regcam_api_helper_1(g_quick_req_id);
-          g_quick_req_id = 0;
-          return v20;
-        }
-      }
-    }
-  }
-  return v10;
-}
-
-

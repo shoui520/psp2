@@ -1,4251 +1,1000 @@
 #include "regcam_internal.h"
 
 const char * const g_endpoint_names[86] = {
-    "crSess",
-    "delSess",
-    "getCat",
-    "getProd",
-    "srchProd",
-    "getWal",
-    "getDrm",
-    "purPrev",
-    "purch",
-    "getCC",
-    "topupCC",
-    "vchrRedPrev",
-    "vchrRed",
-    "topEdy",
-    "topEdyRes",
-    "addCart",
-    "remCart",
-    "clearCart",
-    "getCart",
-    "getProv",
-    "getPay",
-    "getBill",
-    "regCC",
-    "getAddr",
-    "getResAddr",
-    "eventLog",
-    "getCountries",
-    "bindAccount",
-    "startReg",
-    "getSecQ",
-    "setCred",
-    "setLid",
-    "updPass",
-    "verifyOid",
-    "setOid",
-    "getName",
-    "setName",
-    "setResAddr",
-    "setRrn",
-    "getOptIn",
-    "setOptIn",
-    "authMaster",
-    "getBillInfo",
-    "setSubCtrl",
-    "resetSubPass",
-    "getWalOpt",
-    "setWalOpt",
-    "submitReg",
-    "authenticate",
-    "remPay",
-    "getTranHist",
-    "getTranDetail",
-    "getSrvs",
-    "getSrvDetail",
-    "getSubscr",
-    "getSubscrPlan",
-    "changeSubscr",
-    "cancelSubscr",
-    "getCnslAct",
-    "acptEula",
-    "verifyDob",
-    "verifySecAns",
-    "sendPassResetMail",
-    "verifyMasterBill",
-    "getEpw",
-    "crGuestSess",
-    "resetPass",
-    "getMasterBill",
-    "sendConsentMail",
-    "getMasterResAddr",
-    "getProdList",
-    "getSkuList",
-    "getReward",
-    "setSecQ",
-    "submitUpgrade",
-    "recomProds",
-    "verifyBill",
-    "regDevice",
-    "deregDevice",
-    "getProdIds",
-    "crSessTicket",
-    "getUsersFromCID",
-    "getActCode",
-    "setAccountLang",
-    "getPivotForProd",
-    "getProdForPivot",
+    "crSess", "delSess", "getCat", "getProd", "srchProd", "getWal", "getDrm",
+    "purPrev", "purch", "getCC", "topupCC", "vchrRedPrev", "vchrRed",
+    "topEdy", "topEdyRes", "addCart", "remCart", "clearCart", "getCart",
+    "getProv", "getPay", "getBill", "regCC", "getAddr", "getResAddr",
+    "eventLog", "getCountries", "bindAccount", "startReg", "getSecQ",
+    "setCred", "setLid", "updPass", "verifyOid", "setOid", "getName",
+    "setName", "setResAddr", "setRrn", "getOptIn", "setOptIn", "authMaster",
+    "getBillInfo", "setSubCtrl", "resetSubPass", "getWalOpt", "setWalOpt",
+    "submitReg", "authenticate", "remPay", "getTranHist", "getTranDetail",
+    "getSrvs", "getSrvDetail", "getSubscr", "getSubscrPlan", "changeSubscr",
+    "cancelSubscr", "getCnslAct", "acptEula", "verifyDob", "verifySecAns",
+    "sendPassResetMail", "verifyMasterBill", "getEpw", "crGuestSess",
+    "resetPass", "getMasterBill", "sendConsentMail", "getMasterResAddr",
+    "getProdList", "getSkuList", "getReward", "setSecQ", "submitUpgrade",
+    "recomProds", "verifyBill", "regDevice", "deregDevice", "getProdIds",
+    "crSessTicket", "getUsersFromCID", "getActCode", "setAccountLang",
+    "getPivotForProd", "getProdForPivot",
 };
 
 const char * const g_service_prefixes[9] = {
-    "",
-    "store/",
-    "store/",
-    "store/",
-    "store/",
-    "reg/",
-    "cam/",
-    "upgrade/",
-    "pwd/",
+    "", "store/", "store/", "store/", "store/",
+    "reg/", "cam/", "upgrade/", "pwd/",
 };
 
 const RegCamFormKey g_form_keys[81] = {
-    { 1, "&" },
-    { 1, "," },
-    { 8, "version=" },
-    { 9, "username=" },
-    { 9, "password=" },
-    { 10, "consoleId=" },
-    { 11, "categoryId=" },
-    { 14, "startPosition=" },
-    { 18, "maxCountOfResults=" },
-    { 10, "productId=" },
-    { 10, "storeType=" },
-    { 9, "queryKey=" },
-    { 11, "queryValue=" },
-    { 18, "contentSortMethod=" },
-    { 6, "skuId=" },
-    { 7, "skuIds=" },
-    { 8, "titleId=" },
-    { 15, "drmContentType=" },
-    { 14, "quickPurchase=" },
-    { 12, "topupAmount=" },
-    { 2, "1=" },
-    { 2, "2=" },
-    { 2, "3=" },
-    { 13, "edyReceiptId=" },
-    { 21, "resultOfTopupFromEdy=" },
-    { 12, "paymentType=" },
-    { 16, "paymentMethodId=" },
-    { 11, "holderName=" },
-    { 11, "cardNumber=" },
-    { 10, "startYear=" },
-    { 11, "startMonth=" },
-    { 11, "expireYear=" },
-    { 12, "expireMonth=" },
-    { 13, "securityCode=" },
-    { 12, "issueNumber=" },
-    { 5, "city=" },
-    { 9, "province=" },
-    { 11, "postalCode=" },
-    { 10, "eventType=" },
-    { 3, "id=" },
-    { 4, "url=" },
-    { 8, "country=" },
-    { 9, "language=" },
-    { 4, "yob=" },
-    { 4, "mob=" },
-    { 4, "dob=" },
-    { 10, "loginName=" },
-    { 17, "securityQuestion=" },
-    { 15, "securityAnswer=" },
-    { 9, "psHandle=" },
-    { 10, "firstName=" },
-    { 9, "lastName=" },
-    { 15, "firstNameASCII=" },
-    { 14, "lastNameASCII=" },
-    { 7, "gender=" },
-    { 14, "scexOptinFlag=" },
-    { 20, "affiliatesOptinFlag=" },
-    { 13, "subLoginName=" },
-    { 14, "contentRating=" },
-    { 12, "chatControl=" },
-    { 14, "searchControl=" },
-    { 18, "spendingLimitFlag=" },
-    { 14, "spendingLimit=" },
-    { 16, "autoDepositFlag=" },
-    { 21, "commercePasswordFlag=" },
-    { 9, "fromYear=" },
-    { 10, "fromMonth=" },
-    { 8, "fromDay=" },
-    { 7, "toYear=" },
-    { 8, "toMonth=" },
-    { 6, "toDay=" },
-    { 9, "timezone=" },
-    { 14, "transactionId=" },
-    { 10, "serviceId=" },
-    { 5, "save=" },
-    { 9, "rewardId=" },
-    { 10, "rewardIds=" },
-    { 11, "productIds=" },
-    { 19, "recommendationType=" },
-    { 10, "contentId=" },
-    { 7, "fileId=" },
+    { 1,  "&" },                     { 1,  "," },
+    { 8,  "version=" },              { 9,  "username=" },
+    { 9,  "password=" },             { 10, "consoleId=" },
+    { 11, "categoryId=" },           { 14, "startPosition=" },
+    { 18, "maxCountOfResults=" },    { 10, "productId=" },
+    { 10, "storeType=" },            { 9,  "queryKey=" },
+    { 11, "queryValue=" },           { 18, "contentSortMethod=" },
+    { 6,  "skuId=" },                { 7,  "skuIds=" },
+    { 8,  "titleId=" },              { 15, "drmContentType=" },
+    { 14, "quickPurchase=" },        { 12, "topupAmount=" },
+    { 2,  "1=" },                    { 2,  "2=" },
+    { 2,  "3=" },                    { 13, "edyReceiptId=" },
+    { 21, "resultOfTopupFromEdy=" }, { 12, "paymentType=" },
+    { 16, "paymentMethodId=" },      { 11, "holderName=" },
+    { 11, "cardNumber=" },           { 10, "startYear=" },
+    { 11, "startMonth=" },           { 11, "expireYear=" },
+    { 12, "expireMonth=" },          { 13, "securityCode=" },
+    { 12, "issueNumber=" },          { 5,  "city=" },
+    { 9,  "province=" },             { 11, "postalCode=" },
+    { 10, "eventType=" },            { 3,  "id=" },
+    { 4,  "url=" },                  { 8,  "country=" },
+    { 9,  "language=" },             { 4,  "yob=" },
+    { 4,  "mob=" },                  { 4,  "dob=" },
+    { 10, "loginName=" },            { 17, "securityQuestion=" },
+    { 15, "securityAnswer=" },       { 9,  "psHandle=" },
+    { 10, "firstName=" },            { 9,  "lastName=" },
+    { 15, "firstNameASCII=" },       { 14, "lastNameASCII=" },
+    { 7,  "gender=" },               { 14, "scexOptinFlag=" },
+    { 20, "affiliatesOptinFlag=" },  { 13, "subLoginName=" },
+    { 14, "contentRating=" },        { 12, "chatControl=" },
+    { 14, "searchControl=" },        { 18, "spendingLimitFlag=" },
+    { 14, "spendingLimit=" },        { 16, "autoDepositFlag=" },
+    { 21, "commercePasswordFlag=" }, { 9,  "fromYear=" },
+    { 10, "fromMonth=" },            { 8,  "fromDay=" },
+    { 7,  "toYear=" },               { 8,  "toMonth=" },
+    { 6,  "toDay=" },                { 9,  "timezone=" },
+    { 14, "transactionId=" },        { 10, "serviceId=" },
+    { 5,  "save=" },                 { 9,  "rewardId=" },
+    { 10, "rewardIds=" },            { 11, "productIds=" },
+    { 19, "recommendationType=" },   { 10, "contentId=" },
+    { 7,  "fileId=" },
 };
 
 const char * const g_gender_strs[3] = { "XXX", "m", "f" };
 
-
-int regcam_get_endpoint(int a1, u16 a2, u32 *a3, u32 *a4)
+int regcam_resolve_endpoint(u32 svc_type, u16 cmd_id, const char **prefix_out, const char **endpoint_out)
 {
-  int v4;
-  int v5;
-  int v6;
-  int v11;
+    int ver_dummy = 0;
+    int ret;
 
-  v4 = a2;
-  v5 = a2 < 0x57u;
-  v6 = -2141909119;
-  if ( v5 )
-  {
-    v6 = -2141909098;
-    if ( (unsigned int)(a1 - 1) < 8 )
-    {
-      v6 = sceNpCommerce2_460A1D92(&v11, 9);
-      if ( v6 >= 0 )
-      {
-        *a3 = g_service_prefixes[a1];
-        if ( a1 == 7 )
-        {
-          if ( v4 == 31 )
-          {
-            v4 = 74;
-          }
-          else if ( v4 == 48 )
-          {
-            v4 = 75;
-          }
+    if (cmd_id >= 87U)
+        return REGCAM_ERR_INVALID_CMD;
+    if (svc_type < 1U || svc_type >= 9U)
+        return REGCAM_ERR_INVALID_SERVICE;
+
+    ret = sceNpCommerce2_460A1D92(&ver_dummy, 9);
+    if (ret < 0)
+        return ret;
+
+    *prefix_out = g_service_prefixes[svc_type];
+    if (svc_type == REGCAM_SVC_UPGRADE) {
+        if (cmd_id == REGCAM_CMD_SET_CRED)
+            cmd_id = REGCAM_CMD_SET_SEC_Q;
+        else if (cmd_id == REGCAM_CMD_SUBMIT_REG)
+            cmd_id = REGCAM_CMD_SUBMIT_UPGRADE;
+    }
+    *endpoint_out = g_endpoint_names[cmd_id - 1];
+    return ret;
+}
+
+int regcam_write_prefixed_field(int http_req, const char * const *prefixes, u32 prefix_cnt,
+                                u32 key_id, const void *val, u32 val_len, int prepend_amp)
+{
+    u32 idx;
+    int ret;
+
+    if (prepend_amp == 1) {
+        ret = sceNpCommerce2_AE614CC6(http_req, "&", 1);
+        if (ret < 0)
+            return ret;
+    }
+    for (idx = 0; idx < prefix_cnt; idx++) {
+        if (prefixes[idx] != NULL) {
+            ret = sceNpCommerce2_AE614CC6(http_req, prefixes[idx], sceNet_lib_D8722983(prefixes[idx]));
+            if (ret < 0)
+                return ret;
         }
-        *a4 = g_endpoint_names[v4 - 1];
-      }
     }
-  }
-  return v6;
+    ret = sceNpCommerce2_AE614CC6(http_req, g_form_keys[key_id].str, g_form_keys[key_id].len);
+    if (ret < 0)
+        return ret;
+    return sceNpCommerce2_AE614CC6(http_req, val, val_len);
 }
 
-
-s32 regcam_send_req_1(int a1, int a2, int a3, u16 a4, u32 *a5)
+int regcam_write_uint_field(int http_req, u32 key_id, u32 val, int prepend_amp)
 {
-  int v5;
-  int v10;
-  int v11;
-  int v13;
-  u32 v14[3];
+    char num_buf[16];
+    int len;
+    int ret;
 
-  v5 = a4;
-  v14[0] = 0;
-  v13 = 0;
-  v10 = regcam_get_endpoint(a1, a4, &v13, v14);
-  if ( v10 >= 0 )
-    v10 = sceNpCommerce2_382803C8(a2, a1, v5, v13, v14[0], 0, a3, a5, 0, 0);
-  v11 = v10;
-  if ( v10 >= 0 )
-    return regcam_min_s32(sceNpCommerce2_AE614CC6(*a5, 0, 0), 0);
-  return v11;
+    if (prepend_amp == 1) {
+        ret = sceNpCommerce2_AE614CC6(http_req, "&", 1);
+        if (ret < 0)
+            return ret;
+    }
+    ret = sceNpCommerce2_AE614CC6(http_req, g_form_keys[key_id].str, g_form_keys[key_id].len);
+    if (ret < 0)
+        return ret;
+    len = sceNet_lib_CF705E46(num_buf, "%u", val);
+    if (len >= 16)
+        return REGCAM_ERR_BUF_OVERFLOW;
+    return sceNpCommerce2_AE614CC6(http_req, num_buf, sceNet_lib_D8722983(num_buf));
 }
 
-
-int regcam_send_req_2(int a1, int a2, int a3, u16 a4, int *a5, int a6)
+int regcam_emit_str_field(int write_pass, int http_req, u32 key_id, const char *val, int prepend_amp)
 {
-  s64 v7;
-  int v8;
-  unsigned int v11;
-  int v12;
-  int v13;
-  int v14;
-  int result;
-  u8 v16[784];
-  int v17;
-  int v18;
-  int v19;
-  int v20;
-
-  v19 = a2;
-  v20 = a3;
-  v7 = 0;
-  v8 = a4;
-  v11 = 0;
-  v12 = a6;
-  while ( 1 )
-  {
-    v14 = *a5;
-    v13 = sceNet_lib_D8722983(v12);
-    result = sceNpCommerce2_66EC0829(v16, 769, a6, v13, 0);
-    if ( result >= 0 )
-    {
-      result = regcam_emit_str_field(v11 != 0, v14, 14, v16, 0);
-      if ( result >= 0 )
-      {
-        if ( v11 == 0 )
-          v7 = result;
-        result = 0;
-      }
-    }
-    if ( result < 0 )
-      break;
-    if ( v11 != 0 )
-    {
-      ++v11;
-    }
-    else
-    {
-      v18 = 0;
-      v17 = 0;
-      result = regcam_get_endpoint(a1, v8, &v17, &v18);
-      if ( result >= 0 )
-        result = sceNpCommerce2_382803C8(v19, a1, v8, v17, v18, 0, v20, a5, v7, HIDWORD(v7));
-      v11 = 1;
-      if ( result < 0 )
-        return result;
-    }
-    v12 = a6;
-    if ( v11 >= 2 )
-      return 0;
-  }
-  return result;
+    u32 val_len = sceNet_lib_D8722983(val);
+    if (!write_pass)
+        return (int)((prepend_amp == 1 ? 1U : 0U) + g_form_keys[key_id].len + val_len);
+    return regcam_write_prefixed_field(http_req, NULL, 0, key_id, val, val_len, prepend_amp);
 }
 
-
-s32 regcam_send_req_3(int a1, int a2, int a3, u16 a4, u32 *a5)
+int regcam_emit_uint_field(int write_pass, int http_req, u32 key_id, u32 val, int prepend_amp)
 {
-  int v5;
-  int v10;
-  int v11;
-  int v13;
-  u32 v14[3];
+    char num_buf[16];
+    int num_len;
 
-  v5 = a4;
-  v14[0] = 0;
-  v13 = 0;
-  v10 = regcam_get_endpoint(a1, a4, &v13, v14);
-  if ( v10 >= 0 )
-    v10 = sceNpCommerce2_382803C8(a2, a1, v5, v13, v14[0], 0, a3, a5, 0, 0);
-  v11 = v10;
-  if ( v10 >= 0 )
-    return regcam_min_s32(sceNpCommerce2_AE614CC6(*a5, 0, 0), 0);
-  return v11;
+    if (write_pass)
+        return regcam_write_uint_field(http_req, key_id, val, prepend_amp);
+    num_len = sceNet_lib_CF705E46(num_buf, "%u", val);
+    if (num_len >= 16)
+        return REGCAM_ERR_BUF_OVERFLOW;
+    return num_len + (int)((prepend_amp == 1 ? 1U : 0U) + g_form_keys[key_id].len);
 }
 
-
-s32 regcam_send_req_4(int a1, int a2, int a3, u16 a4, u32 *a5)
+int regcam_emit_prefixed_str(int write_pass, int http_req, const char * const *prefixes,
+                             u32 prefix_cnt, u32 key_id, const char *val, int prepend_amp)
 {
-  int v5;
-  int v10;
-  int v11;
-  int v13;
-  u32 v14[3];
+    u32 val_len = sceNet_lib_D8722983(val);
+    u32 total, idx;
 
-  v5 = a4;
-  v14[0] = 0;
-  v13 = 0;
-  v10 = regcam_get_endpoint(a1, a4, &v13, v14);
-  if ( v10 >= 0 )
-    v10 = sceNpCommerce2_382803C8(a2, a1, v5, v13, v14[0], 0, a3, a5, 0, 0);
-  v11 = v10;
-  if ( v10 >= 0 )
-    return regcam_min_s32(sceNpCommerce2_AE614CC6(*a5, 0, 0), 0);
-  return v11;
+    if (write_pass)
+        return regcam_write_prefixed_field(http_req, prefixes, prefix_cnt, key_id, val, val_len, prepend_amp);
+    total = (prepend_amp == 1 ? 1U : 0U) + g_form_keys[key_id].len + val_len;
+    for (idx = 0; idx < prefix_cnt; idx++) {
+        if (prefixes[idx] != NULL)
+            total += sceNet_lib_D8722983(prefixes[idx]);
+    }
+    return (int)total;
 }
 
-
-int regcam_send_req_5(int a1, int a2, int a3, u16 a4, u32 *a5, int a6)
+static int regcam_emit_prefixed_raw(int write_pass, int http_req, const char * const *prefixes,
+                                    u32 prefix_cnt, u32 key_id, const void *val, u32 val_len,
+                                    int prepend_amp, u64 *total_out)
 {
-  int v7;
-  s64 v8;
-  unsigned int v11;
-  int result;
-  int v13;
-  int v14;
-  int v15;
-  int v16;
-  int v17;
-  int v18;
-
-  v17 = a2;
-  v18 = a3;
-  v7 = a4;
-  v8 = 0;
-  v11 = 0;
-  while ( 1 )
-  {
-    result = -2141909118;
-    if ( a6 != 0 )
-      break;
-    v13 = regcam_emit_str_field(v11 != 0, *a5, 25, "CC", 0);
-    v14 = v13;
-    if ( v13 >= 0 )
-    {
-      if ( v11 == 0 )
-        v8 = v13;
-      v14 = 0;
-    }
-    result = v14;
-    if ( v14 < 0 )
-      break;
-    if ( v11 != 0 )
-    {
-      ++v11;
-    }
-    else
-    {
-      v16 = 0;
-      v15 = 0;
-      result = regcam_get_endpoint(a1, v7, &v15, &v16);
-      if ( result >= 0 )
-        result = sceNpCommerce2_382803C8(v17, a1, v7, v15, v16, 0, v18, a5, v8, HIDWORD(v8));
-      v11 = 1;
-      if ( result < 0 )
-        return result;
-    }
-    if ( v11 >= 2 )
-      return 0;
-  }
-  return result;
-}
-
-
-s32 regcam_send_req_6(int a1, int a2, int a3, u16 a4, u32 *a5)
-{
-  int v5;
-  int v10;
-  int v11;
-  int v13;
-  u32 v14[3];
-
-  v5 = a4;
-  v14[0] = 0;
-  v13 = 0;
-  v10 = regcam_get_endpoint(a1, a4, &v13, v14);
-  if ( v10 >= 0 )
-    v10 = sceNpCommerce2_382803C8(a2, a1, v5, v13, v14[0], 0, a3, a5, 0, 0);
-  v11 = v10;
-  if ( v10 >= 0 )
-    return regcam_min_s32(sceNpCommerce2_AE614CC6(*a5, 0, 0), 0);
-  return v11;
-}
-
-
-int regcam_send_req_7(int a1, int a2, int a3, u16 a4, int *a5, int a6)
-{
-  int v9;
-  unsigned int v12;
-  int i;
-  int result;
-  int v15;
-  int v16;
-  int v17;
-  int v18;
-  int v19;
-  int v20;
-
-  v17 = 0;
-  v18 = 0;
-  v9 = a4;
-  v12 = 0;
-  for ( i = *a5; ; i = *a5 )
-  {
-    result = regcam_form_build_1(v12 != 0, i, &v17, 0, a6, 0, 0);
-    if ( result < 0 )
-      break;
-    if ( v12 != 0 )
-    {
-      ++v12;
-    }
-    else
-    {
-      v20 = 0;
-      v19 = 0;
-      v15 = v17;
-      v16 = v18;
-      result = regcam_get_endpoint(a1, v9, &v19, &v20);
-      if ( result >= 0 )
-        result = sceNpCommerce2_382803C8(a2, a1, v9, v19, v20, 0, a3, a5, v15, v16);
-      v12 = 1;
-      if ( result < 0 )
-        return result;
-    }
-    if ( v12 >= 2 )
-      return 0;
-  }
-  return result;
-}
-
-
-int regcam_send_req_8(int a1, int a2, int a3, u16 a4, int *a5, int a6)
-{
-  s64 v6;
-  int v8;
-  unsigned int v11;
-  int i;
-  int result;
-  int v14;
-  int v15;
-  int v16;
-  int v17;
-
-  v16 = a2;
-  v17 = a3;
-  v6 = 0;
-  v8 = a4;
-  v11 = 0;
-  for ( i = *a5; ; i = *a5 )
-  {
-    result = regcam_emit_uint_field(v11 != 0, i, 2, a6, 0);
-    if ( result >= 0 )
-    {
-      if ( v11 == 0 )
-        v6 = result;
-      result = 0;
-    }
-    if ( result < 0 )
-      break;
-    if ( v11 != 0 )
-    {
-      ++v11;
-    }
-    else
-    {
-      v15 = 0;
-      v14 = 0;
-      result = regcam_get_endpoint(a1, v8, &v14, &v15);
-      if ( result >= 0 )
-        result = sceNpCommerce2_382803C8(v16, a1, v8, v14, v15, 0, v17, a5, v6, HIDWORD(v6));
-      v11 = 1;
-      if ( result < 0 )
-        return result;
-    }
-    if ( v11 >= 2 )
-      return 0;
-  }
-  return result;
-}
-
-
-int regcam_send_req_9(int a1, int a2, int a3, u16 a4, int *a5, int a6, int a7, int a8, int a9)
-{
-  int v11;
-  unsigned int v15;
-  int i;
-  int result;
-  int v18;
-  int v19;
-  int v20;
-  int v21;
-  int v22;
-  int v23;
-  int v24;
-  int v25;
-
-  v24 = a2;
-  v25 = a3;
-  v20 = 0;
-  v21 = 0;
-  v11 = a4;
-  v15 = 0;
-  for ( i = *a5; ; i = *a5 )
-  {
-    result = regcam_form_build_bind_account(v15 != 0, i, &v20, a6, a7, a8, a9);
-    if ( result < 0 )
-      break;
-    if ( v15 != 0 )
-    {
-      ++v15;
-    }
-    else
-    {
-      v23 = 0;
-      v22 = 0;
-      v18 = v20;
-      v19 = v21;
-      result = regcam_get_endpoint(a1, v11, &v22, &v23);
-      if ( result >= 0 )
-        result = sceNpCommerce2_382803C8(v24, a1, v11, v22, v23, 0, v25, a5, v18, v19);
-      v15 = 1;
-      if ( result < 0 )
-        return result;
-    }
-    if ( v15 >= 2 )
-      return 0;
-  }
-  return result;
-}
-
-
-int regcam_send_req_10(
-        int a1,
-        int a2,
-        int a3,
-        u16 a4,
-        int *a5,
-        int a6,
-        int a7,
-        int a8,
-        int a9,
-        int a10,
-        int a11,
-        int a12)
-{
-  int v13;
-  unsigned int v18;
-  int i;
-  int result;
-  int v21;
-  int v22;
-  int v23;
-  int v24;
-  int v25;
-  int v26;
-  int v27;
-  int v28;
-
-  v27 = a2;
-  v28 = a3;
-  v23 = 0;
-  v24 = 0;
-  v13 = a4;
-  v18 = 0;
-  for ( i = *a5; ; i = *a5 )
-  {
-    result = regcam_form_build_2(v18 != 0, i, &v23, a6, a7, a8, a9, a10, a11, a12);
-    if ( result < 0 )
-      break;
-    if ( v18 != 0 )
-    {
-      ++v18;
-    }
-    else
-    {
-      v26 = 0;
-      v25 = 0;
-      v21 = v23;
-      v22 = v24;
-      result = regcam_get_endpoint(a1, v13, &v25, &v26);
-      if ( result >= 0 )
-        result = sceNpCommerce2_382803C8(v27, a1, v13, v25, v26, 0, v28, a5, v21, v22);
-      v18 = 1;
-      if ( result < 0 )
-        return result;
-    }
-    if ( v18 >= 2 )
-      return 0;
-  }
-  return result;
-}
-
-
-s32 regcam_send_req_11(int a1, int a2, int a3, u16 a4, u32 *a5)
-{
-  int v5;
-  int v10;
-  int v11;
-  int v13;
-  u32 v14[3];
-
-  v5 = a4;
-  v14[0] = 0;
-  v13 = 0;
-  v10 = regcam_get_endpoint(a1, a4, &v13, v14);
-  if ( v10 >= 0 )
-    v10 = sceNpCommerce2_382803C8(a2, a1, v5, v13, v14[0], 0, a3, a5, 0, 0);
-  v11 = v10;
-  if ( v10 >= 0 )
-    return regcam_min_s32(sceNpCommerce2_AE614CC6(*a5, 0, 0), 0);
-  return v11;
-}
-
-
-int regcam_send_req_12(int a1, int a2, int a3, u16 a4, int *a5, int a6, int a7, int a8, int a9, int a10)
-{
-  int v12;
-  unsigned int v16;
-  int i;
-  int result;
-  int v19;
-  int v20;
-  int v21;
-  int v22;
-  int v23;
-  int v24;
-  int v25;
-  int v26;
-
-  v25 = a2;
-  v26 = a3;
-  v21 = 0;
-  v22 = 0;
-  v12 = a4;
-  v16 = 0;
-  for ( i = *a5; ; i = *a5 )
-  {
-    result = regcam_form_build_3(v16 != 0, i, &v21, a6, a7, a8, a9, a10);
-    if ( result < 0 )
-      break;
-    if ( v16 != 0 )
-    {
-      ++v16;
-    }
-    else
-    {
-      v24 = 0;
-      v23 = 0;
-      v19 = v21;
-      v20 = v22;
-      result = regcam_get_endpoint(a1, v12, &v23, &v24);
-      if ( result >= 0 )
-        result = sceNpCommerce2_382803C8(v25, a1, v12, v23, v24, 0, v26, a5, v19, v20);
-      v16 = 1;
-      if ( result < 0 )
-        return result;
-    }
-    if ( v16 >= 2 )
-      return 0;
-  }
-  return result;
-}
-
-
-int regcam_send_req_13(int a1, int a2, int a3, u16 a4, int *a5, int a6)
-{
-  int v9;
-  unsigned int v12;
-  int i;
-  int result;
-  int v15;
-  int v16;
-  int v17;
-  int v18;
-  int v19;
-  int v20;
-
-  v17 = 0;
-  v18 = 0;
-  v9 = a4;
-  v12 = 0;
-  for ( i = *a5; ; i = *a5 )
-  {
-    result = regcam_form_build_4(v12 != 0, i, &v17, a6);
-    if ( result < 0 )
-      break;
-    if ( v12 != 0 )
-    {
-      ++v12;
-    }
-    else
-    {
-      v20 = 0;
-      v19 = 0;
-      v15 = v17;
-      v16 = v18;
-      result = regcam_get_endpoint(a1, v9, &v19, &v20);
-      if ( result >= 0 )
-        result = sceNpCommerce2_382803C8(a2, a1, v9, v19, v20, 0, a3, a5, v15, v16);
-      v12 = 1;
-      if ( result < 0 )
-        return result;
-    }
-    if ( v12 >= 2 )
-      return 0;
-  }
-  return result;
-}
-
-
-int regcam_send_req_14(int a1, int a2, int a3, u16 a4, int *a5, int a6)
-{
-  int v9;
-  unsigned int v12;
-  int i;
-  int result;
-  int v15;
-  int v16;
-  int v17;
-  int v18;
-  int v19;
-  int v20;
-
-  v17 = 0;
-  v18 = 0;
-  v9 = a4;
-  v12 = 0;
-  for ( i = *a5; ; i = *a5 )
-  {
-    result = regcam_form_build_5(v12 != 0, i, &v17, a6);
-    if ( result < 0 )
-      break;
-    if ( v12 != 0 )
-    {
-      ++v12;
-    }
-    else
-    {
-      v20 = 0;
-      v19 = 0;
-      v15 = v17;
-      v16 = v18;
-      result = regcam_get_endpoint(a1, v9, &v19, &v20);
-      if ( result >= 0 )
-        result = sceNpCommerce2_382803C8(a2, a1, v9, v19, v20, 0, a3, a5, v15, v16);
-      v12 = 1;
-      if ( result < 0 )
-        return result;
-    }
-    if ( v12 >= 2 )
-      return 0;
-  }
-  return result;
-}
-
-
-int regcam_send_req_15(int a1, int a2, int a3, u16 a4, int *a5, int a6)
-{
-  int v9;
-  unsigned int v12;
-  int i;
-  int result;
-  int v15;
-  int v16;
-  int v17;
-  int v18;
-  int v19;
-  int v20;
-
-  v17 = 0;
-  v18 = 0;
-  v9 = a4;
-  v12 = 0;
-  for ( i = *a5; ; i = *a5 )
-  {
-    result = regcam_form_build_6(v12 != 0, i, &v17, a6);
-    if ( result < 0 )
-      break;
-    if ( v12 != 0 )
-    {
-      ++v12;
-    }
-    else
-    {
-      v20 = 0;
-      v19 = 0;
-      v15 = v17;
-      v16 = v18;
-      result = regcam_get_endpoint(a1, v9, &v19, &v20);
-      if ( result >= 0 )
-        result = sceNpCommerce2_382803C8(a2, a1, v9, v19, v20, 0, a3, a5, v15, v16);
-      v12 = 1;
-      if ( result < 0 )
-        return result;
-    }
-    if ( v12 >= 2 )
-      return 0;
-  }
-  return result;
-}
-
-
-s32 regcam_send_req_16(int a1, int a2, int a3, u16 a4, u32 *a5)
-{
-  int v5;
-  int v10;
-  int v11;
-  int v13;
-  u32 v14[3];
-
-  v5 = a4;
-  v14[0] = 0;
-  v13 = 0;
-  v10 = regcam_get_endpoint(a1, a4, &v13, v14);
-  if ( v10 >= 0 )
-    v10 = sceNpCommerce2_382803C8(a2, a1, v5, v13, v14[0], 0, a3, a5, 0, 0);
-  v11 = v10;
-  if ( v10 >= 0 )
-    return regcam_min_s32(sceNpCommerce2_AE614CC6(*a5, 0, 0), 0);
-  return v11;
-}
-
-
-int regcam_send_req_17(
-        int a1,
-        int a2,
-        int a3,
-        u16 a4,
-        int *a5,
-        int a6,
-        int a7,
-        int a8,
-        int a9,
-        int a10,
-        int a11,
-        int a12)
-{
-  int v13;
-  unsigned int v18;
-  int i;
-  int result;
-  int v21;
-  int v22;
-  int v23;
-  int v24;
-  int v25;
-  int v26;
-  int v27;
-  int v28;
-
-  v27 = a2;
-  v28 = a3;
-  v23 = 0;
-  v24 = 0;
-  v13 = a4;
-  v18 = 0;
-  for ( i = *a5; ; i = *a5 )
-  {
-    result = regcam_form_build_7(v18 != 0, i, &v23, a6, a7, a8, a9, a10, a11, a12);
-    if ( result < 0 )
-      break;
-    if ( v18 != 0 )
-    {
-      ++v18;
-    }
-    else
-    {
-      v26 = 0;
-      v25 = 0;
-      v21 = v23;
-      v22 = v24;
-      result = regcam_get_endpoint(a1, v13, &v25, &v26);
-      if ( result >= 0 )
-        result = sceNpCommerce2_382803C8(v27, a1, v13, v25, v26, 0, v28, a5, v21, v22);
-      v18 = 1;
-      if ( result < 0 )
-        return result;
-    }
-    if ( v18 >= 2 )
-      return 0;
-  }
-  return result;
-}
-
-
-int regcam_send_req_18(int a1, int a2, int a3, u16 a4, int *a5, int a6)
-{
-  int v9;
-  unsigned int v12;
-  int i;
-  int result;
-  int v15;
-  int v16;
-  int v17;
-  int v18;
-  int v19;
-  int v20;
-
-  v17 = 0;
-  v18 = 0;
-  v9 = a4;
-  v12 = 0;
-  for ( i = *a5; ; i = *a5 )
-  {
-    result = regcam_form_build_1(v12 != 0, i, &v17, 1, a6, 0, 0);
-    if ( result < 0 )
-      break;
-    if ( v12 != 0 )
-    {
-      ++v12;
-    }
-    else
-    {
-      v20 = 0;
-      v19 = 0;
-      v15 = v17;
-      v16 = v18;
-      result = regcam_get_endpoint(a1, v9, &v19, &v20);
-      if ( result >= 0 )
-        result = sceNpCommerce2_382803C8(a2, a1, v9, v19, v20, 0, a3, a5, v15, v16);
-      v12 = 1;
-      if ( result < 0 )
-        return result;
-    }
-    if ( v12 >= 2 )
-      return 0;
-  }
-  return result;
-}
-
-
-int regcam_send_req_19(int a1, int a2, int a3, u16 a4, int *a5, int a6, int a7)
-{
-  int v8;
-  unsigned int v12;
-  int i;
-  int v14;
-  int v15;
-  int v16;
-  s64 v17;
-  int v18;
-  int v19;
-  int v20;
-  int v21;
-  int result;
-  u32 v23[8];
-  int v24;
-  int v25;
-  int v26;
-  int v27;
-  int v28;
-  int v29;
-
-  v26 = a2;
-  v27 = a3;
-  v28 = 0;
-  v29 = 0;
-  v8 = a4;
-  v12 = 0;
-  for ( i = *a5; ; i = *a5 )
-  {
-    sceKernelMemset(v23, 0, 32);
-    v23[0] = "koreanId";
-    v14 = regcam_emit_prefixed_field(v12 != 0, i, v23, 1, 20, a6, 0);
-    v15 = v14;
-    if ( v14 >= 0 )
-    {
-      v16 = i;
-      v17 = v14;
-      v18 = regcam_emit_prefixed_field(v12 != 0, v16, v23, 1, 21, a7, 1);
-      v15 = v18;
-      if ( v18 >= 0 )
-      {
-        v19 = __CFADD__((u32)v17, v18);
-        v20 = HIDWORD(v17) + (v18 >> 31);
-        v21 = v17 + v18;
-        if ( v12 == 0 )
-        {
-          v28 = v21;
-          v29 = v20 + v19;
-        }
-        v15 = 0;
-      }
-    }
-    result = v15;
-    if ( v15 < 0 )
-      break;
-    if ( v12 != 0 )
-    {
-      ++v12;
-    }
-    else
-    {
-      v25 = 0;
-      v24 = 0;
-      result = regcam_get_endpoint(a1, v8, &v24, &v25);
-      if ( result >= 0 )
-        result = sceNpCommerce2_382803C8(v26, a1, v8, v24, v25, 0, v27, a5, v28, v29);
-      v12 = 1;
-      if ( result < 0 )
-        return result;
-    }
-    if ( v12 >= 2 )
-      return 0;
-  }
-  return result;
-}
-
-
-s32 regcam_send_req_20(int a1, int a2, int a3, u16 a4, u32 *a5)
-{
-  int v5;
-  int v10;
-  int v11;
-  int v13;
-  u32 v14[3];
-
-  v5 = a4;
-  v14[0] = 0;
-  v13 = 0;
-  v10 = regcam_get_endpoint(a1, a4, &v13, v14);
-  if ( v10 >= 0 )
-    v10 = sceNpCommerce2_382803C8(a2, a1, v5, v13, v14[0], 0, a3, a5, 0, 0);
-  v11 = v10;
-  if ( v10 >= 0 )
-    return regcam_min_s32(sceNpCommerce2_AE614CC6(*a5, 0, 0), 0);
-  return v11;
-}
-
-
-int regcam_send_req_21(int a1, int a2, int a3, u16 a4, int *a5, int a6, int a7)
-{
-  int v9;
-  unsigned int v13;
-  int i;
-  int result;
-  int v16;
-  int v17;
-  int v18;
-  int v19;
-  int v20;
-  int v21;
-  int v22;
-
-  v22 = a2;
-  v18 = 0;
-  v19 = 0;
-  v9 = a4;
-  v13 = 0;
-  for ( i = *a5; ; i = *a5 )
-  {
-    result = regcam_form_build_8(v13 != 0, i, &v18, a6, a7);
-    if ( result < 0 )
-      break;
-    if ( v13 != 0 )
-    {
-      ++v13;
-    }
-    else
-    {
-      v21 = 0;
-      v20 = 0;
-      v16 = v18;
-      v17 = v19;
-      result = regcam_get_endpoint(a1, v9, &v20, &v21);
-      if ( result >= 0 )
-        result = sceNpCommerce2_382803C8(v22, a1, v9, v20, v21, 0, a3, a5, v16, v17);
-      v13 = 1;
-      if ( result < 0 )
-        return result;
-    }
-    if ( v13 >= 2 )
-      return 0;
-  }
-  return result;
-}
-
-
-int regcam_send_req_22(int a1, int a2, int a3, u16 a4, int *a5, int a6, int a7)
-{
-  int v9;
-  unsigned int v13;
-  int i;
-  int result;
-  int v16;
-  int v17;
-  int v18;
-  int v19;
-  int v20;
-  int v21;
-  int v22;
-
-  v22 = a2;
-  v18 = 0;
-  v19 = 0;
-  v9 = a4;
-  v13 = 0;
-  for ( i = *a5; ; i = *a5 )
-  {
-    result = regcam_form_build_9(v13 != 0, i, &v18, a6, a7);
-    if ( result < 0 )
-      break;
-    if ( v13 != 0 )
-    {
-      ++v13;
-    }
-    else
-    {
-      v21 = 0;
-      v20 = 0;
-      v16 = v18;
-      v17 = v19;
-      result = regcam_get_endpoint(a1, v9, &v20, &v21);
-      if ( result >= 0 )
-        result = sceNpCommerce2_382803C8(v22, a1, v9, v20, v21, 0, a3, a5, v16, v17);
-      v13 = 1;
-      if ( result < 0 )
-        return result;
-    }
-    if ( v13 >= 2 )
-      return 0;
-  }
-  return result;
-}
-
-
-int regcam_send_req_23(int a1, int a2, int a3, u16 a4, int *a5, int a6, int a7, int a8, int a9, int a10)
-{
-  int v12;
-  unsigned int v16;
-  int i;
-  int result;
-  int v19;
-  int v20;
-  int v21;
-  int v22;
-  int v23;
-  int v24;
-  int v25;
-  int v26;
-
-  v25 = a2;
-  v26 = a3;
-  v21 = 0;
-  v22 = 0;
-  v12 = a4;
-  v16 = 0;
-  for ( i = *a5; ; i = *a5 )
-  {
-    result = regcam_form_build_10(v16 != 0, i, &v21, a6, a7, a8, a9, a10);
-    if ( result < 0 )
-      break;
-    if ( v16 != 0 )
-    {
-      ++v16;
-    }
-    else
-    {
-      v24 = 0;
-      v23 = 0;
-      v19 = v21;
-      v20 = v22;
-      result = regcam_get_endpoint(a1, v12, &v23, &v24);
-      if ( result >= 0 )
-        result = sceNpCommerce2_382803C8(v25, a1, v12, v23, v24, 0, v26, a5, v19, v20);
-      v16 = 1;
-      if ( result < 0 )
-        return result;
-    }
-    if ( v16 >= 2 )
-      return 0;
-  }
-  return result;
-}
-
-
-int regcam_send_req_24(int a1, int a2, int a3, u16 a4, int *a5, int a6, int a7)
-{
-  int v9;
-  unsigned int v13;
-  int i;
-  int result;
-  int v16;
-  int v17;
-  int v18;
-  int v19;
-  int v20;
-  int v21;
-  int v22;
-
-  v22 = a2;
-  v18 = 0;
-  v19 = 0;
-  v9 = a4;
-  v13 = 0;
-  for ( i = *a5; ; i = *a5 )
-  {
-    result = regcam_form_build_11(v13 != 0, i, &v18, a6, a7);
-    if ( result < 0 )
-      break;
-    if ( v13 != 0 )
-    {
-      ++v13;
-    }
-    else
-    {
-      v21 = 0;
-      v20 = 0;
-      v16 = v18;
-      v17 = v19;
-      result = regcam_get_endpoint(a1, v9, &v20, &v21);
-      if ( result >= 0 )
-        result = sceNpCommerce2_382803C8(v22, a1, v9, v20, v21, 0, a3, a5, v16, v17);
-      v13 = 1;
-      if ( result < 0 )
-        return result;
-    }
-    if ( v13 >= 2 )
-      return 0;
-  }
-  return result;
-}
-
-
-s32 regcam_send_req_25(int a1, int a2, int a3, u16 a4, u32 *a5)
-{
-  int v5;
-  int v10;
-  int v11;
-  int v13;
-  u32 v14[3];
-
-  v5 = a4;
-  v14[0] = 0;
-  v13 = 0;
-  v10 = regcam_get_endpoint(a1, a4, &v13, v14);
-  if ( v10 >= 0 )
-    v10 = sceNpCommerce2_382803C8(a2, a1, v5, v13, v14[0], 0, a3, a5, 0, 0);
-  v11 = v10;
-  if ( v10 >= 0 )
-    return regcam_min_s32(sceNpCommerce2_AE614CC6(*a5, 0, 0), 0);
-  return v11;
-}
-
-
-int regcam_send_req_26(int a1, int a2, int a3, u16 a4, int *a5, int a6, int a7)
-{
-  int v9;
-  unsigned int v13;
-  int i;
-  int result;
-  int v16;
-  int v17;
-  int v18;
-  int v19;
-  int v20;
-  int v21;
-  int v22;
-
-  v22 = a2;
-  v18 = 0;
-  v19 = 0;
-  v9 = a4;
-  v13 = 0;
-  for ( i = *a5; ; i = *a5 )
-  {
-    result = regcam_form_build_12(v13 != 0, i, &v18, a6, a7);
-    if ( result < 0 )
-      break;
-    if ( v13 != 0 )
-    {
-      ++v13;
-    }
-    else
-    {
-      v21 = 0;
-      v20 = 0;
-      v16 = v18;
-      v17 = v19;
-      result = regcam_get_endpoint(a1, v9, &v20, &v21);
-      if ( result >= 0 )
-        result = sceNpCommerce2_382803C8(v22, a1, v9, v20, v21, 0, a3, a5, v16, v17);
-      v13 = 1;
-      if ( result < 0 )
-        return result;
-    }
-    if ( v13 >= 2 )
-      return 0;
-  }
-  return result;
-}
-
-
-s32 regcam_send_req_27(int a1, int a2, int a3, u16 a4, u32 *a5)
-{
-  int v5;
-  int v10;
-  int v11;
-  int v13;
-  u32 v14[3];
-
-  v5 = a4;
-  v14[0] = 0;
-  v13 = 0;
-  v10 = regcam_get_endpoint(a1, a4, &v13, v14);
-  if ( v10 >= 0 )
-    v10 = sceNpCommerce2_382803C8(a2, a1, v5, v13, v14[0], 0, a3, a5, 0, 0);
-  v11 = v10;
-  if ( v10 >= 0 )
-    return regcam_min_s32(sceNpCommerce2_AE614CC6(*a5, 0, 0), 0);
-  return v11;
-}
-
-
-int regcam_send_req_28(int a1, int a2, int a3, u16 a4, int *a5, int a6, int a7, int a8, int a9)
-{
-  int v11;
-  unsigned int v15;
-  int i;
-  int result;
-  int v18;
-  int v19;
-  int v20;
-  int v21;
-  int v22;
-  int v23;
-  int v24;
-  int v25;
-
-  v24 = a2;
-  v25 = a3;
-  v20 = 0;
-  v21 = 0;
-  v11 = a4;
-  v15 = 0;
-  for ( i = *a5; ; i = *a5 )
-  {
-    result = regcam_form_build_13(v15 != 0, i, &v20, a6, a7, a8, a9);
-    if ( result < 0 )
-      break;
-    if ( v15 != 0 )
-    {
-      ++v15;
-    }
-    else
-    {
-      v23 = 0;
-      v22 = 0;
-      v18 = v20;
-      v19 = v21;
-      result = regcam_get_endpoint(a1, v11, &v22, &v23);
-      if ( result >= 0 )
-        result = sceNpCommerce2_382803C8(v24, a1, v11, v22, v23, 0, v25, a5, v18, v19);
-      v15 = 1;
-      if ( result < 0 )
-        return result;
-    }
-    if ( v15 >= 2 )
-      return 0;
-  }
-  return result;
-}
-
-
-int regcam_send_req_29(
-        int a1,
-        int a2,
-        int a3,
-        u16 a4,
-        int *a5,
-        int a6,
-        int a7,
-        int a8,
-        int a9,
-        int a10,
-        int a11,
-        int a12,
-        int a13)
-{
-  int v14;
-  unsigned int v19;
-  int i;
-  int result;
-  int v22;
-  int v23;
-  int v24;
-  int v25;
-  int v26;
-  int v27;
-  int v28;
-  int v29;
-
-  v28 = a2;
-  v29 = a3;
-  v24 = 0;
-  v25 = 0;
-  v14 = a4;
-  v19 = 0;
-  for ( i = *a5; ; i = *a5 )
-  {
-    result = regcam_form_build_14(v19 != 0, i, &v24, a6, a7, a8, a9, a10, a11, a12, a13);
-    if ( result < 0 )
-      break;
-    if ( v19 != 0 )
-    {
-      ++v19;
-    }
-    else
-    {
-      v27 = 0;
-      v26 = 0;
-      v22 = v24;
-      v23 = v25;
-      result = regcam_get_endpoint(a1, v14, &v26, &v27);
-      if ( result >= 0 )
-        result = sceNpCommerce2_382803C8(v28, a1, v14, v26, v27, 0, v29, a5, v22, v23);
-      v19 = 1;
-      if ( result < 0 )
-        return result;
-    }
-    if ( v19 >= 2 )
-      return 0;
-  }
-  return result;
-}
-
-
-int regcam_send_req_30(int a1, int a2, int a3, u16 a4, int *a5, int a6, int a7, int a8)
-{
-  int v9;
-  unsigned int v13;
-  int i;
-  int result;
-  u8 v16[32];
-  int v17;
-  int v18;
-  int v19;
-  int v20;
-  s64 v21;
-
-  v19 = a2;
-  v20 = a3;
-  v21 = 0;
-  v9 = a4;
-  v13 = 0;
-  for ( i = *a5; ; i = *a5 )
-  {
-    sceNpCommerce2_22CEC5E2(v16, 32, a7, a8, 1);
-    result = regcam_emit_str_field(v13 != 0, i, 72, v16, 0);
-    if ( result >= 0 )
-    {
-      if ( v13 == 0 )
-        v21 = result;
-      result = 0;
-    }
-    if ( result < 0 )
-      break;
-    if ( v13 != 0 )
-    {
-      ++v13;
-    }
-    else
-    {
-      v18 = 0;
-      v17 = 0;
-      result = regcam_get_endpoint(a1, v9, &v17, &v18);
-      if ( result >= 0 )
-        result = sceNpCommerce2_382803C8(v19, a1, v9, v17, v18, 0, v20, a5, v21, HIDWORD(v21));
-      v13 = 1;
-      if ( result < 0 )
-        return result;
-    }
-    if ( v13 >= 2 )
-      return 0;
-  }
-  return result;
-}
-
-
-int regcam_send_req_31(int a1, int a2, int a3, u16 a4, int *a5, int a6, int a7)
-{
-  int v8;
-  unsigned int v12;
-  int i;
-  int v14;
-  int v15;
-  int v16;
-  s64 v17;
-  int v18;
-  s64 v19;
-  int result;
-  int v21;
-  int v22;
-  int v23;
-  int v24;
-  s64 v25;
-
-  v23 = a2;
-  v24 = a3;
-  v25 = 0;
-  v8 = a4;
-  v12 = 0;
-  for ( i = *a5; ; i = *a5 )
-  {
-    v14 = regcam_emit_uint_field(v12 != 0, i, 7, a6, 0);
-    v15 = v14;
-    if ( v14 >= 0 )
-    {
-      v16 = i;
-      v17 = v14;
-      v18 = regcam_emit_uint_field(v12 != 0, v16, 8, a7, 1);
-      v15 = v18;
-      if ( v18 >= 0 )
-      {
-        v19 = v17 + v18;
-        if ( v12 == 0 )
-          v25 = v19;
-        v15 = 0;
-      }
-    }
-    result = v15;
-    if ( v15 < 0 )
-      break;
-    if ( v12 != 0 )
-    {
-      ++v12;
-    }
-    else
-    {
-      v22 = 0;
-      v21 = 0;
-      result = regcam_get_endpoint(a1, v8, &v21, &v22);
-      if ( result >= 0 )
-        result = sceNpCommerce2_382803C8(v23, a1, v8, v21, v22, 0, v24, a5, v25, HIDWORD(v25));
-      v12 = 1;
-      if ( result < 0 )
-        return result;
-    }
-    if ( v12 >= 2 )
-      return 0;
-  }
-  return result;
-}
-
-
-int regcam_send_req_32(int a1, int a2, int a3, u16 a4, int *a5, int a6, int a7, int a8)
-{
-  int v10;
-  unsigned int v14;
-  int i;
-  int result;
-  int v17;
-  int v18;
-  int v19;
-  int v20;
-  int v21;
-  int v22;
-  int v23;
-  int v24;
-
-  v23 = a2;
-  v24 = a3;
-  v19 = 0;
-  v20 = 0;
-  v10 = a4;
-  v14 = 0;
-  for ( i = *a5; ; i = *a5 )
-  {
-    result = regcam_form_build_15(v14 != 0, i, &v19, a6, a7, a8);
-    if ( result < 0 )
-      break;
-    if ( v14 != 0 )
-    {
-      ++v14;
-    }
-    else
-    {
-      v22 = 0;
-      v21 = 0;
-      v17 = v19;
-      v18 = v20;
-      result = regcam_get_endpoint(a1, v10, &v21, &v22);
-      if ( result >= 0 )
-        result = sceNpCommerce2_382803C8(v23, a1, v10, v21, v22, 0, v24, a5, v17, v18);
-      v14 = 1;
-      if ( result < 0 )
-        return result;
-    }
-    if ( v14 >= 2 )
-      return 0;
-  }
-  return result;
-}
-
-
-int regcam_send_req_33(int a1, int a2, int a3, u16 a4, int *a5, int a6, int a7, int a8)
-{
-  int v10;
-  unsigned int v14;
-  int i;
-  int result;
-  int v17;
-  int v18;
-  int v19;
-  int v20;
-  int v21;
-  int v22;
-  int v23;
-  int v24;
-
-  v23 = a2;
-  v24 = a3;
-  v19 = 0;
-  v20 = 0;
-  v10 = a4;
-  v14 = 0;
-  for ( i = *a5; ; i = *a5 )
-  {
-    result = regcam_form_build_16(v14 != 0, i, &v19, a6, a7, a8);
-    if ( result < 0 )
-      break;
-    if ( v14 != 0 )
-    {
-      ++v14;
-    }
-    else
-    {
-      v22 = 0;
-      v21 = 0;
-      v17 = v19;
-      v18 = v20;
-      result = regcam_get_endpoint(a1, v10, &v21, &v22);
-      if ( result >= 0 )
-        result = sceNpCommerce2_382803C8(v23, a1, v10, v21, v22, 0, v24, a5, v17, v18);
-      v14 = 1;
-      if ( result < 0 )
-        return result;
-    }
-    if ( v14 >= 2 )
-      return 0;
-  }
-  return result;
-}
-
-
-int regcam_send_req_34(
-        int a1,
-        int a2,
-        int a3,
-        u16 a4,
-        int *a5,
-        int a6,
-        int a7,
-        int a8,
-        int a9,
-        int a10,
-        int a11)
-{
-  int v13;
-  unsigned int v17;
-  int i;
-  int result;
-  int v20;
-  int v21;
-  int v22;
-  int v23;
-  int v24;
-  int v25;
-  int v26;
-  int v27;
-
-  v26 = a2;
-  v27 = a3;
-  v22 = 0;
-  v23 = 0;
-  v13 = a4;
-  v17 = 0;
-  for ( i = *a5; ; i = *a5 )
-  {
-    result = regcam_form_build_17(v17 != 0, i, &v22, a6, a7, a8, a9, a10, a11);
-    if ( result < 0 )
-      break;
-    if ( v17 != 0 )
-    {
-      ++v17;
-    }
-    else
-    {
-      v25 = 0;
-      v24 = 0;
-      v20 = v22;
-      v21 = v23;
-      result = regcam_get_endpoint(a1, v13, &v24, &v25);
-      if ( result >= 0 )
-        result = sceNpCommerce2_382803C8(v26, a1, v13, v24, v25, 0, v27, a5, v20, v21);
-      v17 = 1;
-      if ( result < 0 )
-        return result;
-    }
-    if ( v17 >= 2 )
-      return 0;
-  }
-  return result;
-}
-
-
-int regcam_send_req_35(int a1, int a2, int a3, u16 a4, int *a5, int a6, int a7, int a8)
-{
-  int v10;
-  unsigned int v14;
-  int i;
-  int result;
-  int v17;
-  int v18;
-  int v19;
-  int v20;
-  int v21;
-  int v22;
-  int v23;
-  int v24;
-
-  v23 = a2;
-  v24 = a3;
-  v19 = 0;
-  v20 = 0;
-  v10 = a4;
-  v14 = 0;
-  for ( i = *a5; ; i = *a5 )
-  {
-    result = regcam_form_build_18(v14 != 0, i, &v19, a6, a7, a8);
-    if ( result < 0 )
-      break;
-    if ( v14 != 0 )
-    {
-      ++v14;
-    }
-    else
-    {
-      v22 = 0;
-      v21 = 0;
-      v17 = v19;
-      v18 = v20;
-      result = regcam_get_endpoint(a1, v10, &v21, &v22);
-      if ( result >= 0 )
-        result = sceNpCommerce2_382803C8(v23, a1, v10, v21, v22, 0, v24, a5, v17, v18);
-      v14 = 1;
-      if ( result < 0 )
-        return result;
-    }
-    if ( v14 >= 2 )
-      return 0;
-  }
-  return result;
-}
-
-
-int regcam_send_req_36(int a1, int a2, int a3, u16 a4, int *a5, int a6, int a7)
-{
-  int v9;
-  unsigned int v13;
-  int i;
-  int result;
-  int v16;
-  int v17;
-  int v18;
-  int v19;
-  int v20;
-  int v21;
-  int v22;
-
-  v22 = a2;
-  v18 = 0;
-  v19 = 0;
-  v9 = a4;
-  v13 = 0;
-  for ( i = *a5; ; i = *a5 )
-  {
-    result = regcam_form_build_1(v13 != 0, i, &v18, 0, a6, 1, a7);
-    if ( result < 0 )
-      break;
-    if ( v13 != 0 )
-    {
-      ++v13;
-    }
-    else
-    {
-      v21 = 0;
-      v20 = 0;
-      v16 = v18;
-      v17 = v19;
-      result = regcam_get_endpoint(a1, v9, &v20, &v21);
-      if ( result >= 0 )
-        result = sceNpCommerce2_382803C8(v22, a1, v9, v20, v21, 0, a3, a5, v16, v17);
-      v13 = 1;
-      if ( result < 0 )
-        return result;
-    }
-    if ( v13 >= 2 )
-      return 0;
-  }
-  return result;
-}
-
-
-s32 regcam_send_req_37(int a1, int a2, int a3, u16 a4, u32 *a5)
-{
-  int v5;
-  int v10;
-  int v11;
-  int v13;
-  u32 v14[3];
-
-  v5 = a4;
-  v14[0] = 0;
-  v13 = 0;
-  v10 = regcam_get_endpoint(a1, a4, &v13, v14);
-  if ( v10 >= 0 )
-    v10 = sceNpCommerce2_382803C8(a2, a1, v5, v13, v14[0], 0, a3, a5, 0, 0);
-  v11 = v10;
-  if ( v10 >= 0 )
-    return regcam_min_s32(sceNpCommerce2_AE614CC6(*a5, 0, 0), 0);
-  return v11;
-}
-
-
-int regcam_send_req_38(int a1, int a2, int a3, u16 a4, int *a5, int a6)
-{
-  int v9;
-  unsigned int v12;
-  int i;
-  int result;
-  int v15;
-  int v16;
-  int v17;
-  int v18;
-  int v19;
-  int v20;
-
-  v17 = 0;
-  v18 = 0;
-  v9 = a4;
-  v12 = 0;
-  for ( i = *a5; ; i = *a5 )
-  {
-    result = regcam_form_build_1(v12 != 0, i, &v17, 0, a6, 0, 0);
-    if ( result < 0 )
-      break;
-    if ( v12 != 0 )
-    {
-      ++v12;
-    }
-    else
-    {
-      v20 = 0;
-      v19 = 0;
-      v15 = v17;
-      v16 = v18;
-      result = regcam_get_endpoint(a1, v9, &v19, &v20);
-      if ( result >= 0 )
-        result = sceNpCommerce2_382803C8(a2, a1, v9, v19, v20, 0, a3, a5, v15, v16);
-      v12 = 1;
-      if ( result < 0 )
-        return result;
-    }
-    if ( v12 >= 2 )
-      return 0;
-  }
-  return result;
-}
-
-
-int regcam_send_req_39(int a1, int a2, int a3, u16 a4, int *a5, int a6)
-{
-  int v9;
-  unsigned int v12;
-  int i;
-  int result;
-  int v15;
-  int v16;
-  int v17;
-  int v18;
-  int v19;
-  int v20;
-
-  v17 = 0;
-  v18 = 0;
-  v9 = a4;
-  v12 = 0;
-  for ( i = *a5; ; i = *a5 )
-  {
-    result = regcam_form_build_19(v12 != 0, i, &v17, a6);
-    if ( result < 0 )
-      break;
-    if ( v12 != 0 )
-    {
-      ++v12;
-    }
-    else
-    {
-      v20 = 0;
-      v19 = 0;
-      v15 = v17;
-      v16 = v18;
-      result = regcam_get_endpoint(a1, v9, &v19, &v20);
-      if ( result >= 0 )
-        result = sceNpCommerce2_382803C8(a2, a1, v9, v19, v20, 0, a3, a5, v15, v16);
-      v12 = 1;
-      if ( result < 0 )
-        return result;
-    }
-    if ( v12 >= 2 )
-      return 0;
-  }
-  return result;
-}
-
-
-int regcam_emit_str_field(int a1, int a2, int a3, int a4, int a5)
-{
-  int result;
-  int v9;
-
-  if ( a1 != 1 )
-    return (a5 == 1) + g_form_keys[a3].len + sceNet_lib_D8722983(a4);
-  if ( a5 != 1 || (result = sceNpCommerce2_AE614CC6(a2, "&", 1)) >= 0 )
-  {
-    result = sceNpCommerce2_AE614CC6(a2, g_form_keys[a3].str, g_form_keys[a3].len);
-    if ( result >= 0 )
-    {
-      v9 = sceNet_lib_D8722983(a4);
-      return sceNpCommerce2_AE614CC6(a2, a4, v9);
-    }
-  }
-  return result;
-}
-
-
-int regcam_emit_uint_field(int a1, int a2, int a3, int a4, int a5)
-{
-  int v5;
-  int v6;
-  int v7;
-  int v9;
-
-  if ( a1 == 1 )
-    return regcam_write_uint_field(a2, a3, a4, a5);
-  v6 = (a5 == 1) + g_form_keys[a3].len;
-  v5 = sceNet_lib_CF705E46(&v9, "%u", a4);
-  v7 = -2141909231;
-  if ( v5 < 16 )
-    return v5 + v6;
-  return v7;
-}
-
-
-int regcam_emit_prefixed_field(int a1, int a2, int *a3, unsigned int a4, int a5, int a6, int a7)
-{
-  int v13;
-  int v15;
-  int v16;
-  unsigned int v17;
-  int *v18;
-  int v19;
-
-  v13 = sceNet_lib_D8722983(a6);
-  v15 = v13;
-  if ( a1 == 1 )
-    return regcam_write_prefixed_field(a2, a3, a4, a5, a6, v13, a7);
-  v16 = a7 == 1;
-  v17 = 0;
-  if ( a4 != 0 )
-  {
-    v18 = a3;
-    do
-    {
-      v19 = *v18;
-      ++v17;
-      ++v18;
-      v16 += sceNet_lib_D8722983(v19);
-    }
-    while ( v17 < a4 );
-  }
-  return v16 + g_form_keys[a5].len + v15;
-}
-
-
-int regcam_form_build_1(int a1, int a2, u32 *a3, int a4, int a5, int a6, int a7)
-{
-  s64 v8;
-  int v9;
-  const char *v12;
-  u8 *v13;
-  u8 *v14;
-  int v15;
-  int v16;
-  int v17;
-  int v18;
-  u8 *v19;
-  int v20;
-  int v21;
-  int v22;
-  int v23;
-  int v24;
-  u8 *v25;
-  u8 *v26;
-  u8 *v27;
-  u8 *v28;
-  int v29;
-  u8 *v30;
-  int v31;
-  u8 *v32;
-  int v33;
-  u8 *v34;
-  int v35;
-  u8 *v36;
-  int v37;
-  int v38;
-  int v39;
-  int v40; // dc
-  u32 *v41;
-  const char *v43;
-  int v44;
-  int v45;
-  int v46;
-  int v47;
-  int v48;
-  int v49;
-  int v50;
-  u32 *v51;
-  int v52;
-  int v53;
-  int v54;
-  unsigned int v55;
-  u32 *v56;
-  int v57;
-  int v58;
-  int v59;
-  unsigned int v60;
-  int *v61;
-  int v62;
-  int v63;
-  int v64;
-  unsigned int v65;
-  u32 *v66;
-  int v67;
-  int v68;
-  int v69;
-  unsigned int v70;
-  int *v71;
-  int v72;
-  int v73;
-  int v74;
-  unsigned int v75;
-  u32 *v76;
-  int v77;
-  int v78;
-  int v79;
-  int v80;
-  int v81;
-  int v82;
-  int v83;
-  int v84;
-  int v85;
-  int v86;
-  int v87;
-  int v88;
-  int v89;
-  int v90;
-  int v91;
-  int v92;
-  int v93;
-  int v94;
-  int v95;
-  int v96;
-  int v97;
-  int v98;
-  int v99;
-  u8 v100[784];
-  u32 v101[8];
-  u8 v102[16];
-  u8 v103[16];
-  u8 v104[16];
-  u8 v105[16];
-  int v106;
-  u32 *v107;
-  int v108;
-  int v109;
-  int v110;
-  int v111;
-  int v112;
-  int v113;
-  int v114;
-
-  v106 = a2;
-  v107 = a3;
-  v8 = 0;
-  v9 = 0;
-  v108 = a6;
-  v109 = a7;
-  sceKernelMemset(v101, 0, 32);
-  v12 = "creditCard.";
-  if ( a4 != 0 )
-  {
-    if ( a4 != 1 )
-      goto LABEL_3;
-    v12 = "account.";
-  }
-  v101[0] = v12;
-LABEL_3:
-  v13 = *(u8 **)a5;
-  v101[1] = "address.";
-  v101[2] = "address";
-  if ( v13 == NULL )
-    goto LABEL_14;
-  if ( *v13 != 0 )
-  {
-    v15 = *(u32 *)(a5 + 4);
-    if ( v15 == 0 )
-    {
-      v14 = *(u8 **)(a5 + 8);
-      goto LABEL_15;
-    }
-    v16 = *(u32 *)(a5 + 4);
-    if ( v13[v15 - 1] == 0 )
-      v16 = v15 - 1;
-    if ( a1 == 1 )
-      v17 = regcam_write_prefixed_field(v106, v101, 1, 26, v13, v16, 0);
-    else
-      v17 = sceNet_lib_D8722983(v101[0]) + v16 + 16;
-    v18 = v17;
-    if ( v17 < 0 )
-      return v18;
-    v9 = 1;
-    v8 = v17;
-LABEL_14:
-    v14 = *(u8 **)(a5 + 8);
-    goto LABEL_15;
-  }
-  v14 = *(u8 **)(a5 + 8);
-LABEL_15:
-  if ( v14 != NULL )
-  {
-    if ( *v14 != 0 )
-    {
-      v20 = *(u32 *)(a5 + 12);
-      if ( v20 != 0 )
-      {
-        v97 = sceNpCommerce2_66EC0829(v100, 769, v14, v20, 0);
-        v18 = v97;
-        if ( v97 < 0 )
-          return v18;
-        v98 = sceNet_lib_D8722983(v100);
-        v99 = a1 == 1 ? regcam_write_prefixed_field(v106, v101, 1, 27, v100, v98, v9) : v9 + sceNet_lib_D8722983(v101[0]) + v98 + 11;
-        v18 = v99;
-        if ( v99 < 0 )
-          return v18;
-        v8 += v99;
-        v9 = 1;
-      }
-      v19 = *(u8 **)(a5 + 16);
-    }
-    else
-    {
-      v19 = *(u8 **)(a5 + 16);
-    }
-  }
-  else
-  {
-    v19 = *(u8 **)(a5 + 16);
-  }
-  if ( v19 != NULL )
-  {
-    if ( *v19 != 0 )
-    {
-      v95 = sceNet_lib_D8722983(v19);
-      if ( a1 == 1 )
-        v96 = regcam_write_prefixed_field(v106, v101, 1, 28, v19, v95, v9);
-      else
-        v96 = v9 + sceNet_lib_D8722983(v101[0]) + v95 + 11;
-      v18 = v96;
-      if ( v96 < 0 )
-        return v18;
-      v8 += v96;
-      v9 = 1;
-    }
-    v21 = *(u32 *)(a5 + 20);
-  }
-  else
-  {
-    v21 = *(u32 *)(a5 + 20);
-  }
-  if ( v21 != 0 )
-  {
-    v92 = sceNet_lib_CF705E46(v102, "%u", v21);
-    v18 = -2141909231;
-    if ( v92 >= 16 )
-      return v18;
-    v93 = sceNet_lib_D8722983(v102);
-    v94 = a1 == 1 ? regcam_write_prefixed_field(v106, v101, 1, 29, v102, v93, v9) : v9 + sceNet_lib_D8722983(v101[0]) + v93 + 10;
-    v18 = v94;
-    if ( v94 < 0 )
-      return v18;
-    v8 += v94;
-    v9 = 1;
-  }
-  v22 = *(u32 *)(a5 + 24);
-  if ( v22 != 0 )
-  {
-    v89 = sceNet_lib_CF705E46(v103, "%u", v22);
-    v18 = -2141909231;
-    if ( v89 >= 16 )
-      return v18;
-    v90 = sceNet_lib_D8722983(v103);
-    v91 = a1 == 1 ? regcam_write_prefixed_field(v106, v101, 1, 30, v103, v90, v9) : v9 + sceNet_lib_D8722983(v101[0]) + v90 + 11;
-    v18 = v91;
-    if ( v91 < 0 )
-      return v18;
-    v8 += v91;
-    v9 = 1;
-  }
-  v23 = *(u32 *)(a5 + 28);
-  if ( v23 != 0 )
-  {
-    v86 = sceNet_lib_CF705E46(v104, "%u", v23);
-    v18 = -2141909231;
-    if ( v86 >= 16 )
-      return v18;
-    v87 = sceNet_lib_D8722983(v104);
-    v88 = a1 == 1 ? regcam_write_prefixed_field(v106, v101, 1, 31, v104, v87, v9) : v9 + sceNet_lib_D8722983(v101[0]) + v87 + 11;
-    v18 = v88;
-    if ( v88 < 0 )
-      return v18;
-    v8 += v88;
-    v9 = 1;
-  }
-  v24 = *(u32 *)(a5 + 32);
-  if ( v24 != 0 )
-  {
-    v83 = sceNet_lib_CF705E46(v105, "%u", v24);
-    v18 = -2141909231;
-    if ( v83 >= 16 )
-      return v18;
-    v84 = sceNet_lib_D8722983(v105);
-    v85 = a1 == 1 ? regcam_write_prefixed_field(v106, v101, 1, 32, v105, v84, v9) : v9 + sceNet_lib_D8722983(v101[0]) + 12 + v84;
-    v18 = v85;
-    if ( v85 < 0 )
-      return v18;
-    v8 += v85;
-    v9 = 1;
-  }
-  v25 = *(u8 **)(a5 + 36);
-  if ( v25 != NULL )
-  {
-    if ( *v25 != 0 )
-    {
-      v81 = sceNet_lib_D8722983(*(u32 *)(a5 + 36));
-      if ( a1 == 1 )
-        v82 = regcam_write_prefixed_field(v106, v101, 1, 33, v25, v81, v9);
-      else
-        v82 = v9 + sceNet_lib_D8722983(v101[0]) + 13 + v81;
-      v18 = v82;
-      if ( v82 < 0 )
-        return v18;
-      v8 += v82;
-      v9 = 1;
-    }
-    v26 = *(u8 **)(a5 + 40);
-  }
-  else
-  {
-    v26 = *(u8 **)(a5 + 40);
-  }
-  if ( v26 != NULL )
-  {
-    if ( *v26 != 0 )
-    {
-      v79 = sceNet_lib_D8722983(v26);
-      if ( a1 == 1 )
-        v80 = regcam_write_prefixed_field(v106, v101, 1, 34, v26, v79, v9);
-      else
-        v80 = v9 + sceNet_lib_D8722983(v101[0]) + v79 + 12;
-      v18 = v80;
-      if ( v80 < 0 )
-        return v18;
-      v8 += v80;
-      v9 = 1;
-    }
-    v27 = *(u8 **)(a5 + 44);
-  }
-  else
-  {
-    v27 = *(u8 **)(a5 + 44);
-  }
-  if ( v27 != NULL )
-  {
-    if ( *v27 != 0 )
-    {
-      v29 = *(u32 *)(a5 + 48);
-      if ( v29 != 0 )
-      {
-        v18 = sceNpCommerce2_66EC0829(v100, 769, v27, v29, 0);
-        if ( v18 < 0 )
-          return v18;
-        v110 = sceNet_lib_D8722983(v100);
-        v74 = v9;
-        v75 = 0;
-        v76 = v101;
-        if ( a1 == 1 )
-        {
-          v78 = regcam_write_prefixed_field(v106, v101, 3, 20, v100, v110, v9);
-        }
-        else
-        {
-          do
-          {
-            ++v75;
-            v77 = sceNet_lib_D8722983(*v76++);
-            v74 += v77;
-          }
-          while ( v75 < 3 );
-          v78 = v74 + v110 + 2;
-        }
-        v18 = v78;
-        if ( v78 < 0 )
-          return v18;
-        v8 += v78;
-        v9 = 1;
-      }
-      v28 = *(u8 **)(a5 + 52);
-    }
-    else
-    {
-      v28 = *(u8 **)(a5 + 52);
-    }
-  }
-  else
-  {
-    v28 = *(u8 **)(a5 + 52);
-  }
-  if ( v28 != NULL )
-  {
-    if ( *v28 != 0 )
-    {
-      v31 = *(u32 *)(a5 + 56);
-      if ( v31 != 0 )
-      {
-        v18 = sceNpCommerce2_66EC0829(v100, 769, v28, v31, 0);
-        if ( v18 < 0 )
-          return v18;
-        v111 = sceNet_lib_D8722983(v100);
-        v69 = v9;
-        v70 = 0;
-        v71 = v101;
-        if ( a1 == 1 )
-        {
-          v73 = regcam_write_prefixed_field(v106, v101, 3, 21, v100, v111, v9);
-        }
-        else
-        {
-          do
-          {
-            v72 = *v71;
-            ++v70;
-            ++v71;
-            v69 += sceNet_lib_D8722983(v72);
-          }
-          while ( v70 < 3 );
-          v73 = v69 + v111 + 2;
-        }
-        v18 = v73;
-        if ( v73 < 0 )
-          return v18;
-        v8 += v73;
-        v9 = 1;
-      }
-      v30 = *(u8 **)(a5 + 60);
-    }
-    else
-    {
-      v30 = *(u8 **)(a5 + 60);
-    }
-  }
-  else
-  {
-    v30 = *(u8 **)(a5 + 60);
-  }
-  if ( v30 != NULL )
-  {
-    if ( *v30 != 0 )
-    {
-      v33 = *(u32 *)(a5 + 64);
-      if ( v33 != 0 )
-      {
-        v18 = sceNpCommerce2_66EC0829(v100, 769, v30, v33, 0);
-        if ( v18 < 0 )
-          return v18;
-        v112 = sceNet_lib_D8722983(v100);
-        v64 = v9;
-        v65 = 0;
-        v66 = v101;
-        if ( a1 == 1 )
-        {
-          v68 = regcam_write_prefixed_field(v106, v101, 3, 22, v100, v112, v9);
-        }
-        else
-        {
-          do
-          {
-            ++v65;
-            v67 = sceNet_lib_D8722983(*v66++);
-            v64 += v67;
-          }
-          while ( v65 < 3 );
-          v68 = v64 + v112 + 2;
-        }
-        v18 = v68;
-        if ( v68 < 0 )
-          return v18;
-        v8 += v68;
-        v9 = 1;
-      }
-      v32 = *(u8 **)(a5 + 68);
-    }
-    else
-    {
-      v32 = *(u8 **)(a5 + 68);
-    }
-  }
-  else
-  {
-    v32 = *(u8 **)(a5 + 68);
-  }
-  if ( v32 != NULL )
-  {
-    if ( *v32 != 0 )
-    {
-      v35 = *(u32 *)(a5 + 72);
-      if ( v35 != 0 )
-      {
-        v18 = sceNpCommerce2_66EC0829(v100, 769, v32, v35, 0);
-        if ( v18 < 0 )
-          return v18;
-        v113 = sceNet_lib_D8722983(v100);
-        v59 = v9;
-        v60 = 0;
-        v61 = v101;
-        if ( a1 == 1 )
-        {
-          v63 = regcam_write_prefixed_field(v106, v101, 2, 35, v100, v113, v9);
-        }
-        else
-        {
-          do
-          {
-            v62 = *v61;
-            ++v60;
-            ++v61;
-            v59 += sceNet_lib_D8722983(v62);
-          }
-          while ( v60 < 2 );
-          v63 = v59 + v113 + 5;
-        }
-        v18 = v63;
-        if ( v63 < 0 )
-          return v18;
-        v8 += v63;
-        v9 = 1;
-      }
-      v34 = *(u8 **)(a5 + 76);
-    }
-    else
-    {
-      v34 = *(u8 **)(a5 + 76);
-    }
-  }
-  else
-  {
-    v34 = *(u8 **)(a5 + 76);
-  }
-  if ( v34 != NULL )
-  {
-    if ( *v34 != 0 )
-    {
-      v37 = *(u32 *)(a5 + 80);
-      if ( v37 != 0 )
-      {
-        v18 = sceNpCommerce2_66EC0829(v100, 769, v34, v37, 0);
-        if ( v18 < 0 )
-          return v18;
-        v114 = sceNet_lib_D8722983(v100);
-        v54 = v9;
-        v55 = 0;
-        v56 = v101;
-        if ( a1 == 1 )
-        {
-          v58 = regcam_write_prefixed_field(v106, v101, 2, 36, v100, v114, v9);
-        }
-        else
-        {
-          do
-          {
-            ++v55;
-            v57 = sceNet_lib_D8722983(*v56++);
-            v54 += v57;
-          }
-          while ( v55 < 2 );
-          v58 = v54 + v114 + 9;
-        }
-        v18 = v58;
-        if ( v58 < 0 )
-          return v18;
-        v8 += v58;
-        v9 = 1;
-      }
-      v36 = *(u8 **)(a5 + 84);
-    }
-    else
-    {
-      v36 = *(u8 **)(a5 + 84);
-    }
-  }
-  else
-  {
-    v36 = *(u8 **)(a5 + 84);
-  }
-  v38 = v108;
-  if ( v36 != NULL )
-  {
-    v38 = v108;
-    if ( *v36 != 0 )
-    {
-      v39 = *(u32 *)(a5 + 88);
-      if ( v39 != 0 )
-      {
-        v18 = sceNpCommerce2_66EC0829(v100, 769, v36, v39, 0);
-        if ( v18 < 0 )
-          return v18;
-        v47 = sceNet_lib_D8722983(v100);
-        v48 = v47;
-        v49 = v9;
-        v50 = 0;
-        v51 = v101;
-        if ( a1 == 1 )
-        {
-          v53 = regcam_write_prefixed_field(v106, v101, 2, 37, v100, v47, v9);
-        }
-        else
-        {
-          do
-          {
-            ++v50;
-            v52 = sceNet_lib_D8722983(*v51++);
-            v49 += v52;
-          }
-          while ( v101 != NULL );
-          v53 = v49 + v48 + 11;
-        }
-        v18 = v53;
-        if ( v53 < 0 )
-          return v18;
-        v8 += v53;
-        v9 = 1;
-      }
-      v38 = v108;
-    }
-  }
-  if ( v38 != 1 )
-  {
-LABEL_73:
-    v40 = a1 == 1;
-    v41 = v107;
-    if ( !v40 )
-    {
-      *v107 = v8;
-      v41[1] = HIDWORD(v8);
-    }
-    return 0;
-  }
-  v43 = "true";
-  if ( v109 != 1 )
-    v43 = "false";
-  if ( a1 == 1 )
-  {
-    if ( v9 != 1 || (v44 = sceNpCommerce2_AE614CC6(v106, "&", 1)) >= 0 )
-    {
-      v45 = sceNpCommerce2_AE614CC6(v106, "save=", 5);
-      if ( v45 < 0 )
-        return v45;
-      v46 = sceNet_lib_D8722983(v43);
-      v44 = sceNpCommerce2_AE614CC6(v106, v43, v46);
-    }
-  }
-  else
-  {
-    v44 = v9 + sceNet_lib_D8722983(v43) + 5;
-  }
-  v18 = v44;
-  if ( v44 >= 0 )
-  {
-    v8 += v44;
-    goto LABEL_73;
-  }
-  return v18;
-}
-
-
-int regcam_form_build_bind_account(int pass, int http_req, int *out_len, int ver, int user, int pwd, int cid)
-{
-    u8 enc[784];
-    char num[16];
-    s64 total = 0;
-    int r, n;
-
-    if (pass == 1) {
-        r = regcam_write_uint_field(http_req, 2, ver, 0);
+    u32 idx;
+    int ret;
+
+    if (write_pass) {
+        ret = regcam_write_prefixed_field(http_req, prefixes, prefix_cnt, key_id, val, val_len, prepend_amp);
+        if (ret < 0)
+            return ret;
     } else {
-        n = sceNet_lib_CF705E46(num, "%u", ver);
-        r = (n < 16) ? (n + (int)g_form_keys[2].len) : -2141909231;
-    }
-    if (r < 0) return r;
-    total = r;
-
-    r = sceNpCommerce2_66EC0829(enc, 769, user, sceNet_lib_D8722983(user), 0);
-    if (r < 0) return r;
-    if (pass == 1) {
-        r = sceNpCommerce2_AE614CC6(http_req, g_form_keys[0].str, g_form_keys[0].len);
-        if (r < 0) return r;
-        r = sceNpCommerce2_AE614CC6(http_req, g_form_keys[3].str, g_form_keys[3].len);
-        if (r < 0) return r;
-        r = sceNpCommerce2_AE614CC6(http_req, enc, sceNet_lib_D8722983(enc));
-    } else {
-        r = (int)g_form_keys[3].len + sceNet_lib_D8722983(enc) + 1;
-    }
-    if (r < 0) return r;
-    total += r;
-
-    r = sceNpCommerce2_66EC0829(enc, 769, pwd, sceNet_lib_D8722983(pwd), 0);
-    if (r < 0) return r;
-    if (pass == 1) {
-        r = sceNpCommerce2_AE614CC6(http_req, g_form_keys[0].str, g_form_keys[0].len);
-        if (r < 0) return r;
-        r = sceNpCommerce2_AE614CC6(http_req, g_form_keys[4].str, g_form_keys[4].len);
-        if (r < 0) return r;
-        r = sceNpCommerce2_AE614CC6(http_req, enc, sceNet_lib_D8722983(enc));
-    } else {
-        r = (int)g_form_keys[4].len + sceNet_lib_D8722983(enc) + 1;
-    }
-    if (r < 0) return r;
-    total += r;
-
-    if (pass == 1) {
-        r = sceNpCommerce2_AE614CC6(http_req, g_form_keys[0].str, g_form_keys[0].len);
-        if (r < 0) return r;
-        r = sceNpCommerce2_AE614CC6(http_req, g_form_keys[5].str, g_form_keys[5].len);
-        if (r < 0) return r;
-        r = sceNpCommerce2_AE614CC6(http_req, cid, sceNet_lib_D8722983(cid));
-    } else {
-        r = (int)g_form_keys[5].len + sceNet_lib_D8722983(cid) + 1;
-    }
-    if (r < 0) return r;
-    total += r;
-
-    if (pass != 1) {
-        out_len[0] = (int)(u32)total;
-        out_len[1] = (int)(u32)((u64)total >> 32);
+        u32 bytes = (prepend_amp == 1 ? 1U : 0U) + g_form_keys[key_id].len + val_len;
+        for (idx = 0; idx < prefix_cnt; idx++) {
+            if (prefixes[idx] != NULL)
+                bytes += sceNet_lib_D8722983(prefixes[idx]);
+        }
+        *total_out += bytes;
     }
     return 0;
 }
 
-int regcam_form_build_2(int a1, int a2, u32 *a3, int a4, int a5, int a6, int a7, int a8, int a9, int a10)
+static int regcam_emit_urlenc_prefixed(int write_pass, int http_req, const char * const *prefixes,
+                                       u32 prefix_cnt, u32 key_id, const char *src, u32 src_len,
+                                       int prepend_amp, u64 *total_out)
 {
-  int v16;
-  int v17;
-  int v18;
-  s64 v19;
-  unsigned int i;
-  int v21;
-  int v22;
-  s64 v23;
-  unsigned int j;
-  int v25;
-  int v26;
-  s64 v27;
-  int v28;
-  int v29;
-  int v30;
-  int v31;
-  int v32;
-  int v33;
-  s64 v34;
-  int v35;
-  int v36;
-  s64 v37;
-  int v38;
-  u32 *v39;
-  int v41;
-  int v42;
-  u32 v43[4];
-  u8 v44[16];
-  u8 v45[16];
-  u32 *v46;
-  int v47;
+    char enc_buf[784];
+    int ret;
 
-  v46 = a3;
-  v47 = a8;
-  sceKernelMemset(v43, 0, 8);
-  v43[0] = "account.";
-  if ( a1 == 1 )
-  {
-    v17 = regcam_write_uint_field(a2, 2, a4, 0);
-  }
-  else
-  {
-    v16 = sceNet_lib_CF705E46(v45, "%u", a4);
-    v17 = -2141909231;
-    if ( v16 < 16 )
-      v17 = v16 + 8;
-  }
-  v18 = v17;
-  if ( v17 >= 0 )
-  {
-    v19 = v17;
-    for ( i = 0; i < sceNet_lib_D8722983(a5) && i < 0x10; ++i )
-      v44[i] = sceNet_lib_C13C9307(*(char *)(a5 + i));
-    if ( i == 16 )
-      v44[15] = 0;
-    else
-      v44[i] = 0;
-    v21 = sceNet_lib_D8722983(v44);
-    v22 = a1 == 1 ? regcam_write_prefixed_field(a2, v43, 1, 41, v44, v21, 1) : sceNet_lib_D8722983(v43[0]) + 1 + v21 + 8;
-    v18 = v22;
-    if ( v22 >= 0 )
-    {
-      v23 = v19 + v22;
-      for ( j = 0; j < sceNet_lib_D8722983(a6) && j < 0x10; ++j )
-        v44[j] = sceNet_lib_96EF9DA1(*(char *)(a6 + j));
-      if ( j == 16 )
-        v44[15] = 0;
-      else
-        v44[j] = 0;
-      v25 = sceNet_lib_D8722983(v44);
-      v26 = a1 == 1 ? regcam_write_prefixed_field(a2, v43, 1, 42, v44, v25, 1) : sceNet_lib_D8722983(v43[0]) + 1 + v25 + 9;
-      v18 = v26;
-      if ( v26 >= 0 )
-      {
-        v27 = v23 + v26;
-        sceNet_lib_CF705E46(v44, "%u", a7);
-        v28 = sceNet_lib_D8722983(v44);
-        v29 = a1 == 1 ? regcam_write_prefixed_field(a2, v43, 1, 43, v44, v28, 1) : sceNet_lib_D8722983(v43[0]) + 1 + v28 + 4;
-        v18 = v29;
-        if ( v29 >= 0 )
-        {
-          v27 = ((u64)(v27) & 0xFFFFFFFF00000000ULL) | (u32)(v27 + v29);
-          v30 = HIDWORD(v27) + (v29 >> 31);
-          v31 = (unsigned int)v27 < v29;
-          sceNet_lib_CF705E46(v44, "%u", v47);
-          v32 = sceNet_lib_D8722983(v44);
-          v33 = a1 == 1 ? regcam_write_prefixed_field(a2, v43, 1, 44, v44, v32, 1) : sceNet_lib_D8722983(v43[0]) + 1 + v32 + 4;
-          v18 = v33;
-          if ( v33 >= 0 )
-          {
-            v27 = ((u64)(v27) & 0x00000000FFFFFFFFULL) | ((u64)(u32)(v30 + v31) << 32);
-            v34 = v27 + v33;
-            sceNet_lib_CF705E46(v44, "%u", a9);
-            v35 = sceNet_lib_D8722983(v44);
-            v36 = a1 == 1 ? regcam_write_prefixed_field(a2, v43, 1, 45, v44, v35, 1) : sceNet_lib_D8722983(v43[0]) + 1 + v35 + 4;
-            v18 = v36;
-            if ( v36 >= 0 )
-            {
-              v37 = v34 + v36;
-              if ( a1 == 1 )
-              {
-                v18 = sceNpCommerce2_AE614CC6(a2, "&", 1);
-                if ( v18 < 0 )
-                  return v18;
-                v41 = sceNpCommerce2_AE614CC6(a2, "consoleId=", 10);
-                if ( v41 < 0 )
-                  return v41;
-                v42 = sceNet_lib_D8722983(a10);
-                v38 = sceNpCommerce2_AE614CC6(a2, a10, v42);
-              }
-              else
-              {
-                v38 = sceNet_lib_D8722983(a10) + 11;
-              }
-              v18 = v38;
-              if ( v38 >= 0 )
-              {
-                v37 = ((u64)(v37) & 0xFFFFFFFF00000000ULL) | (u32)(v37 + v38);
-                if ( a1 != 1 )
-                {
-                  v39 = v46;
-                  *v46 = v37;
-                  v39[1] = HIDWORD(v37) + (v38 >> 31) + ((unsigned int)v37 < v38);
-                }
-                return 0;
-              }
-            }
-          }
-        }
-      }
-    }
-  }
-  return v18;
+    ret = sceNpCommerce2_66EC0829(enc_buf, 769, src, src_len, 0);
+    if (ret < 0)
+        return ret;
+    return regcam_emit_prefixed_raw(write_pass, http_req, prefixes, prefix_cnt,
+                                    key_id, enc_buf, sceNet_lib_D8722983(enc_buf),
+                                    prepend_amp, total_out);
 }
 
-
-int regcam_form_build_3(int a1, int a2, u32 *a3, int a4, int a5, int a6, int a7, int a8)
+static int regcam_emit_uint_prefixed(int write_pass, int http_req, const char * const *prefixes,
+                                     u32 prefix_cnt, u32 key_id, u32 val, int prepend_amp, u64 *total_out)
 {
-  s64 v11;
-  int v13;
-  int v15;
-  int v16;
-  int v17;
-  int v18;
-  int v19;
-  int v20;
-  int v21;
-  int v22;
-  int v23;
-  s64 v24;
-  int v25;
-  int v26;
-  u32 *v27;
-  u8 v29[784];
-  u32 v30[4];
-  u32 *v31;
-  int v32;
-  int v33;
-
-  v31 = a3;
-  v11 = 0;
-  v13 = 0;
-  v32 = a7;
-  v33 = a8;
-  sceKernelMemset(v30, 0, 8);
-  v30[0] = "account.";
-  if ( a4 != 0 )
-  {
-    v15 = sceNet_lib_D8722983(a4);
-    v16 = sceNpCommerce2_66EC0829(v29, 769, a4, v15, 0);
-    if ( v16 < 0 )
-      return v16;
-    v17 = sceNet_lib_D8722983(v29);
-    v18 = a1 == 1 ? regcam_write_prefixed_field(a2, v30, 1, 46, v29, v17, 0) : sceNet_lib_D8722983(v30[0]) + v17 + 10;
-    v16 = v18;
-    if ( v18 < 0 )
-      return v16;
-    v13 = 1;
-    v11 = v18;
-  }
-  if ( a5 != 0 )
-  {
-    v19 = sceNet_lib_D8722983(a5);
-    v16 = sceNpCommerce2_66EC0829(v29, 769, a5, v19, 0);
-    if ( v16 < 0 )
-      return v16;
-    v20 = sceNet_lib_D8722983(v29);
-    v21 = a1 == 1 ? regcam_write_prefixed_field(a2, v30, 1, 4, v29, v20, v13) : v13 + sceNet_lib_D8722983(v30[0]) + v20 + 9;
-    v16 = v21;
-    if ( v21 < 0 )
-      return v16;
-    v11 += v21;
-    v13 = 1;
-  }
-  sceNet_lib_CF705E46(v29, "%u", a6);
-  v22 = sceNet_lib_D8722983(v29);
-  if ( a1 == 1 )
-    v23 = regcam_write_prefixed_field(a2, v30, 1, 47, v29, v22, v13);
-  else
-    v23 = v13 + sceNet_lib_D8722983(v30[0]) + v22 + 17;
-  v16 = v23;
-  if ( v23 >= 0 )
-  {
-    v24 = v11 + v23;
-    v16 = sceNpCommerce2_66EC0829(v29, 769, v32, v33, 0);
-    if ( v16 >= 0 )
-    {
-      v25 = sceNet_lib_D8722983(v29);
-      v26 = a1 == 1 ? regcam_write_prefixed_field(a2, v30, 1, 48, v29, v25, 1) : sceNet_lib_D8722983(v30[0]) + 1 + v25 + 15;
-      v16 = v26;
-      if ( v26 >= 0 )
-      {
-        v24 = ((u64)(v24) & 0xFFFFFFFF00000000ULL) | (u32)(v24 + v26);
-        if ( a1 != 1 )
-        {
-          v27 = v31;
-          *v31 = v24;
-          v27[1] = HIDWORD(v24) + (v26 >> 31) + ((unsigned int)v24 < v26);
-        }
-        return 0;
-      }
-    }
-  }
-  return v16;
+    char num_buf[16];
+    int len = sceNet_lib_CF705E46(num_buf, "%u", val);
+    if (len >= 16)
+        return REGCAM_ERR_BUF_OVERFLOW;
+    return regcam_emit_prefixed_raw(write_pass, http_req, prefixes, prefix_cnt,
+                                    key_id, num_buf, sceNet_lib_D8722983(num_buf),
+                                    prepend_amp, total_out);
 }
 
-
-int regcam_form_build_4(int a1, int a2, u64 *a3, int a4)
+static int regcam_open_post(u32 svc_type, int http_tmpl, char *url_buf, u16 cmd_id,
+                            int *http_req_out, u64 content_len)
 {
-  int v8;
-  int v9;
-  int v10;
-  int v11;
-  u8 v13[784];
-  u32 v14[4];
+    const char *prefix = NULL;
+    const char *endpoint = NULL;
+    int ret;
 
-  sceKernelMemset(v14, 0, 8);
-  v14[0] = "account.";
-  v8 = sceNet_lib_D8722983(a4);
-  v9 = sceNpCommerce2_66EC0829(v13, 769, a4, v8, 0);
-  if ( v9 >= 0 )
-  {
-    v10 = sceNet_lib_D8722983(v13);
-    if ( a1 == 1 )
-      v11 = regcam_write_prefixed_field(a2, v14, 1, 46, v13, v10, 0);
-    else
-      v11 = sceNet_lib_D8722983(v14[0]) + v10 + 10;
-    v9 = v11;
-    if ( v11 >= 0 )
-    {
-      v9 = 0;
-      if ( a1 != 1 )
-        *a3 = v11;
-    }
-  }
-  return v9;
+    ret = regcam_resolve_endpoint(svc_type, cmd_id, &prefix, &endpoint);
+    if (ret < 0)
+        return ret;
+    return sceNpCommerce2_382803C8(http_tmpl, svc_type, cmd_id, prefix, endpoint, 0,
+                                   url_buf, http_req_out, (u32)content_len, (u32)(content_len >> 32));
 }
 
-
-int regcam_form_build_5(int a1, int a2, u64 *a3, int a4)
+int regcam_send_empty(u32 svc_type, int http_tmpl, char *url_buf, u16 cmd_id, int *http_req_out)
 {
-  int v8;
-  int v9;
-  int v10;
-  int v11;
-  u8 v13[784];
-  u32 v14[4];
-
-  sceKernelMemset(v14, 0, 8);
-  v14[0] = "account.";
-  v8 = sceNet_lib_D8722983(a4);
-  v9 = sceNpCommerce2_66EC0829(v13, 769, a4, v8, 0);
-  if ( v9 >= 0 )
-  {
-    v10 = sceNet_lib_D8722983(v13);
-    if ( a1 == 1 )
-      v11 = regcam_write_prefixed_field(a2, v14, 1, 4, v13, v10, 0);
-    else
-      v11 = sceNet_lib_D8722983(v14[0]) + v10 + 9;
-    v9 = v11;
-    if ( v11 >= 0 )
-    {
-      v9 = 0;
-      if ( a1 != 1 )
-        *a3 = v11;
-    }
-  }
-  return v9;
+    int ret = regcam_open_post(svc_type, http_tmpl, url_buf, cmd_id, http_req_out, 0);
+    if (ret < 0)
+        return ret;
+    return regcam_min_s32(sceNpCommerce2_AE614CC6(*http_req_out, NULL, 0), 0);
 }
 
-
-int regcam_form_build_6(int a1, int a2, u64 *a3, int a4)
+int regcam_send_sku_id(u32 svc_type, int http_tmpl, char *url_buf, u16 cmd_id,
+                       int *http_req_out, const char *sku_id)
 {
-  int v8;
-  int v9;
-  int v10;
-  int v11;
-  u8 v13[784];
-  u32 v14[4];
+    char enc_buf[784];
+    u64 total = 0;
+    int pass, ret;
 
-  sceKernelMemset(v14, 0, 8);
-  v14[0] = "account.";
-  v8 = sceNet_lib_D8722983(a4);
-  v9 = sceNpCommerce2_66EC0829(v13, 769, a4, v8, 0);
-  if ( v9 >= 0 )
-  {
-    v10 = sceNet_lib_D8722983(v13);
-    if ( a1 == 1 )
-      v11 = regcam_write_prefixed_field(a2, v14, 1, 49, v13, v10, 0);
-    else
-      v11 = sceNet_lib_D8722983(v14[0]) + v10 + 9;
-    v9 = v11;
-    if ( v11 >= 0 )
-    {
-      v9 = 0;
-      if ( a1 != 1 )
-        *a3 = v11;
-    }
-  }
-  return v9;
-}
-
-
-int regcam_form_build_7(int a1, int a2, u32 *a3, int a4, int a5, int a6, int a7, u8 *a8, u8 *a9, int a10)
-{
-  int v17;
-  int v18;
-  int v19;
-  s64 v20;
-  int v21;
-  int v22;
-  s64 v23;
-  int v24;
-  int v25; // dc
-  u32 *v26;
-  char *v28;
-  int v29;
-  int v30;
-  int v31;
-  int v32;
-  int v33;
-  int v34;
-  int v35;
-  int v36;
-  u8 v37[784];
-  u32 v38[4];
-  u32 *v39;
-
-  v39 = a3;
-  sceKernelMemset(v38, 0, 8);
-  v38[0] = "account.";
-  v17 = sceNpCommerce2_66EC0829(v37, 769, a4, a5, 0);
-  if ( v17 >= 0 )
-  {
-    v18 = sceNet_lib_D8722983(v37);
-    v19 = a1 == 1 ? regcam_write_prefixed_field(a2, v38, 1, 50, v37, v18, 0) : sceNet_lib_D8722983(v38[0]) + v18 + 10;
-    v17 = v19;
-    if ( v19 >= 0 )
-    {
-      v20 = v19;
-      v17 = sceNpCommerce2_66EC0829(v37, 769, a6, a7, 0);
-      if ( v17 >= 0 )
-      {
-        v21 = sceNet_lib_D8722983(v37);
-        v22 = a1 == 1 ? regcam_write_prefixed_field(a2, v38, 1, 51, v37, v21, 1) : sceNet_lib_D8722983(v38[0]) + 1 + v21 + 9;
-        v17 = v22;
-        if ( v22 >= 0 )
-        {
-          v23 = v20 + v22;
-          if ( a8 != NULL && *a8 != 0 )
-          {
-            v34 = sceNet_lib_D8722983(a8);
-            v17 = sceNpCommerce2_66EC0829(v37, 769, a8, v34, 0);
-            if ( v17 < 0 )
-              return v17;
-            v35 = sceNet_lib_D8722983(v37);
-            v36 = a1 == 1 ? regcam_write_prefixed_field(a2, v38, 1, 52, v37, v35, 1) : sceNet_lib_D8722983(v38[0]) + 1 + v35 + 15;
-            v17 = v36;
-            if ( v36 < 0 )
-              return v17;
-            v23 += v36;
-          }
-          v24 = a10;
-          if ( a9 != NULL )
-          {
-            if ( *a9 != 0 )
-            {
-              v31 = sceNet_lib_D8722983(a9);
-              v17 = sceNpCommerce2_66EC0829(v37, 769, a9, v31, 0);
-              if ( v17 < 0 )
-                return v17;
-              v32 = sceNet_lib_D8722983(v37);
-              v33 = a1 == 1 ? regcam_write_prefixed_field(a2, v38, 1, 53, v37, v32, 1) : sceNet_lib_D8722983(v38[0]) + 1 + v32 + 14;
-              v17 = v33;
-              if ( v33 < 0 )
-                return v17;
-              v23 += v33;
-            }
-            v24 = a10;
-          }
-          if ( (unsigned int)(v24 - 1) < 2 )
-          {
-            v28 = g_gender_strs[v24];
-            v29 = sceNet_lib_D8722983(v28);
-            if ( a1 == 1 )
-              v30 = regcam_write_prefixed_field(a2, v38, 1, 54, v28, v29, 1);
-            else
-              v30 = sceNet_lib_D8722983(v38[0]) + 1 + v29 + 7;
-            v17 = v30;
-            if ( v30 < 0 )
-              return v17;
-            v23 += v30;
-          }
-          v25 = a1 == 1;
-          v26 = v39;
-          if ( !v25 )
-          {
-            *v39 = v23;
-            v26[1] = HIDWORD(v23);
-          }
-          return 0;
+    for (pass = 0; pass < 2; pass++) {
+        ret = sceNpCommerce2_66EC0829(enc_buf, 769, sku_id, sceNet_lib_D8722983(sku_id), 0);
+        if (ret < 0)
+            return ret;
+        ret = regcam_emit_str_field(pass, *http_req_out, FKEY_SKU_ID, enc_buf, 0);
+        if (ret < 0)
+            return ret;
+        if (pass == 0) {
+            total = (u64)(u32)ret;
+            ret = regcam_open_post(svc_type, http_tmpl, url_buf, cmd_id, http_req_out, total);
+            if (ret < 0)
+                return ret;
         }
-      }
     }
-  }
-  return v17;
-}
-
-
-int regcam_form_build_8(int a1, int a2, u64 *a3, int a4, int a5)
-{
-  int v7;
-  s64 v9;
-  const char *v11;
-  int v12;
-  int v13;
-  const char *v14;
-  int v15;
-  int v17;
-  int v18;
-  int v19;
-
-  v7 = 0;
-  v9 = 0;
-  if ( a4 != 0 )
-  {
-    v11 = "true";
-    if ( a4 != 2 )
-      v11 = "false";
-    if ( a1 == 1 )
-    {
-      v13 = sceNpCommerce2_AE614CC6(a2, "scexOptinFlag=", 14);
-      if ( v13 < 0 )
-        return v13;
-      v19 = sceNet_lib_D8722983(v11);
-      v12 = sceNpCommerce2_AE614CC6(a2, v11, v19);
-    }
-    else
-    {
-      v12 = sceNet_lib_D8722983(v11) + 14;
-    }
-    v13 = v12;
-    if ( v12 < 0 )
-      return v13;
-    v7 = 1;
-    v9 = v12;
-  }
-  if ( a5 == 0 )
-    goto LABEL_15;
-  v14 = "true";
-  if ( a5 != 2 )
-    v14 = "false";
-  if ( a1 == 1 )
-  {
-    if ( v7 != 1 || (v15 = sceNpCommerce2_AE614CC6(a2, "&", 1)) >= 0 )
-    {
-      v17 = sceNpCommerce2_AE614CC6(a2, "affiliatesOptinFlag=", 20);
-      if ( v17 < 0 )
-        return v17;
-      v18 = sceNet_lib_D8722983(v14);
-      v15 = sceNpCommerce2_AE614CC6(a2, v14, v18);
-    }
-  }
-  else
-  {
-    v15 = v7 + sceNet_lib_D8722983(v14) + 20;
-  }
-  v13 = v15;
-  if ( v15 >= 0 )
-  {
-    v9 += v15;
-LABEL_15:
-    v13 = 0;
-    if ( a1 != 1 )
-      *a3 = v9;
-  }
-  return v13;
-}
-
-
-int regcam_form_build_9(int a1, int a2, u64 *a3, int a4, int a5)
-{
-  int v10;
-  int v11;
-  int v12;
-  s64 v13;
-  int v14;
-  int v15;
-  s64 v16;
-  int v18;
-  int v19;
-  int v20;
-  int v21;
-  u8 v22[784];
-
-  v10 = sceNet_lib_D8722983(a4);
-  v11 = sceNpCommerce2_66EC0829(v22, 769, a4, v10, 0);
-  if ( v11 >= 0 )
-  {
-    if ( a1 == 1 )
-    {
-      v20 = sceNpCommerce2_AE614CC6(a2, "username=", 9);
-      if ( v20 < 0 )
-        return v20;
-      v21 = sceNet_lib_D8722983(v22);
-      v12 = sceNpCommerce2_AE614CC6(a2, v22, v21);
-    }
-    else
-    {
-      v12 = sceNet_lib_D8722983(v22) + 9;
-    }
-    v11 = v12;
-    if ( v12 >= 0 )
-    {
-      v13 = v12;
-      v14 = sceNet_lib_D8722983(a5);
-      v11 = sceNpCommerce2_66EC0829(v22, 769, a5, v14, 0);
-      if ( v11 >= 0 )
-      {
-        if ( a1 == 1 )
-        {
-          v18 = sceNpCommerce2_AE614CC6(a2, "&", 1);
-          if ( v18 < 0 )
-            return v18;
-          v11 = sceNpCommerce2_AE614CC6(a2, "password=", 9);
-          if ( v11 < 0 )
-            return v11;
-          v19 = sceNet_lib_D8722983(v22);
-          v15 = sceNpCommerce2_AE614CC6(a2, v22, v19);
-        }
-        else
-        {
-          v15 = sceNet_lib_D8722983(v22) + 10;
-        }
-        v11 = v15;
-        if ( v15 >= 0 )
-        {
-          v16 = v13 + v15;
-          if ( a1 != 1 )
-            *a3 = v16;
-          return 0;
-        }
-      }
-    }
-  }
-  return v11;
-}
-
-
-int regcam_form_build_10(int a1, int a2, u32 *a3, int a4, int a5, int a6, int a7, int a8)
-{
-  int v13;
-  int v14;
-  int v15;
-  const char *v16;
-  s64 v17;
-  int v18;
-  s64 v19;
-  const char *v20;
-  int v21;
-  s64 v22;
-  int v23;
-  s64 v24;
-  const char *v25;
-  int v26;
-  s64 v27;
-  int v28; // dc
-  u32 *v29;
-  int v31;
-  int v32;
-  int v33;
-  int v34;
-  int v35;
-  int v36;
-  int v37;
-  int v38;
-  int v39;
-  int v40;
-  int v41;
-  int v42;
-  u8 v43[784];
-  u8 v44[16];
-  u32 *v45;
-  int v46;
-  int v47;
-
-  v45 = a3;
-  v46 = a6;
-  v47 = a8;
-  v13 = sceNet_lib_D8722983(a4);
-  v14 = sceNpCommerce2_66EC0829(v43, 769, a4, v13, 0);
-  if ( v14 >= 0 )
-  {
-    if ( a1 == 1 )
-    {
-      v41 = sceNpCommerce2_AE614CC6(a2, "subLoginName=", 13);
-      if ( v41 < 0 )
-        return v41;
-      v42 = sceNet_lib_D8722983(v43);
-      v15 = sceNpCommerce2_AE614CC6(a2, v43, v42);
-    }
-    else
-    {
-      v15 = sceNet_lib_D8722983(v43) + 13;
-    }
-    v14 = v15;
-    if ( v15 >= 0 )
-    {
-      v16 = "true";
-      v17 = v15;
-      if ( a5 != 1 )
-        v16 = "false";
-      if ( a1 == 1 )
-      {
-        v14 = sceNpCommerce2_AE614CC6(a2, "&", 1);
-        if ( v14 < 0 )
-          return v14;
-        v39 = sceNpCommerce2_AE614CC6(a2, "contentRating=", 14);
-        if ( v39 < 0 )
-          return v39;
-        v40 = sceNet_lib_D8722983(v16);
-        v18 = sceNpCommerce2_AE614CC6(a2, v16, v40);
-      }
-      else
-      {
-        v18 = sceNet_lib_D8722983(v16) + 15;
-      }
-      v14 = v18;
-      if ( v18 >= 0 )
-      {
-        v19 = v17 + v18;
-        v20 = "true";
-        if ( v46 != 1 )
-          v20 = "false";
-        if ( a1 == 1 )
-        {
-          v14 = sceNpCommerce2_AE614CC6(a2, "&", 1);
-          if ( v14 < 0 )
-            return v14;
-          v37 = sceNpCommerce2_AE614CC6(a2, "chatControl=", 12);
-          if ( v37 < 0 )
-            return v37;
-          v38 = sceNet_lib_D8722983(v20);
-          v21 = sceNpCommerce2_AE614CC6(a2, v20, v38);
-        }
-        else
-        {
-          v21 = sceNet_lib_D8722983(v20) + 13;
-        }
-        v14 = v21;
-        if ( v21 >= 0 )
-        {
-          v22 = v19 + v21;
-          if ( a1 == 1 )
-          {
-            v14 = sceNpCommerce2_AE614CC6(a2, "&", 1);
-            if ( v14 < 0 )
-              return v14;
-            v35 = sceNpCommerce2_AE614CC6(a2, "searchControl=", 14);
-            if ( v35 < 0 )
-              return v35;
-            v36 = sceNet_lib_D8722983("true");
-            v23 = sceNpCommerce2_AE614CC6(a2, "true", v36);
-          }
-          else
-          {
-            v23 = sceNet_lib_D8722983("true") + 15;
-          }
-          v14 = v23;
-          if ( v23 >= 0 )
-          {
-            v24 = v22 + v23;
-            v25 = "true";
-            if ( a7 != 1 )
-              v25 = "false";
-            if ( a1 == 1 )
-            {
-              v14 = sceNpCommerce2_AE614CC6(a2, "&", 1);
-              if ( v14 < 0 )
-                return v14;
-              v33 = sceNpCommerce2_AE614CC6(a2, "spendingLimitFlag=", 18);
-              if ( v33 < 0 )
-                return v33;
-              v34 = sceNet_lib_D8722983(v25);
-              v26 = sceNpCommerce2_AE614CC6(a2, v25, v34);
-            }
-            else
-            {
-              v26 = sceNet_lib_D8722983(v25) + 19;
-            }
-            v14 = v26;
-            if ( v26 >= 0 )
-            {
-              v27 = v24 + v26;
-              if ( a7 != 1 )
-              {
-LABEL_24:
-                v28 = a1 == 1;
-                v29 = v45;
-                if ( !v28 )
-                {
-                  *v45 = v27;
-                  v29[1] = HIDWORD(v27);
-                }
-                return 0;
-              }
-              if ( a1 == 1 )
-              {
-                v32 = regcam_write_uint_field(a2, 62, v47, 1);
-              }
-              else
-              {
-                v31 = sceNet_lib_CF705E46(v44, "%u", v47);
-                v32 = -2141909231;
-                if ( v31 < 16 )
-                  v32 = 12 + v31 + 3;
-              }
-              v14 = v32;
-              if ( v32 >= 0 )
-              {
-                v27 += v32;
-                goto LABEL_24;
-              }
-            }
-          }
-        }
-      }
-    }
-  }
-  return v14;
-}
-
-
-int regcam_form_build_11(int a1, int a2, u64 *a3, int a4, int a5)
-{
-  int v10;
-  int v11;
-  int v12;
-  s64 v13;
-  int v14;
-  int v15;
-  int v16;
-  int v18;
-  int v19;
-  u8 v20[784];
-  u32 v21[4];
-
-  sceKernelMemset(v21, 0, 8);
-  v21[0] = "account.";
-  v10 = sceNet_lib_D8722983(a4);
-  v11 = sceNpCommerce2_66EC0829(v20, 769, a4, v10, 0);
-  if ( v11 >= 0 )
-  {
-    if ( a1 == 1 )
-    {
-      v18 = sceNpCommerce2_AE614CC6(a2, "subLoginName=", 13);
-      if ( v18 < 0 )
-        return v18;
-      v19 = sceNet_lib_D8722983(v20);
-      v12 = sceNpCommerce2_AE614CC6(a2, v20, v19);
-    }
-    else
-    {
-      v12 = sceNet_lib_D8722983(v20) + 13;
-    }
-    v11 = v12;
-    if ( v12 >= 0 )
-    {
-      v13 = v12;
-      v14 = sceNet_lib_D8722983(a5);
-      v11 = sceNpCommerce2_66EC0829(v20, 769, a5, v14, 0);
-      if ( v11 >= 0 )
-      {
-        v15 = sceNet_lib_D8722983(v20);
-        v16 = a1 == 1 ? regcam_write_prefixed_field(a2, v21, 1, 4, v20, v15, 1) : sceNet_lib_D8722983(v21[0]) + 1 + v15 + 9;
-        v11 = v16;
-        if ( v16 >= 0 )
-        {
-          if ( a1 != 1 )
-            *a3 = v13 + v16;
-          return 0;
-        }
-      }
-    }
-  }
-  return v11;
-}
-
-
-int regcam_form_build_12(int a1, int a2, u64 *a3, int a4, int a5)
-{
-  int v7;
-  s64 v9;
-  const char *v11;
-  int v12;
-  int v13;
-  const char *v14;
-  int v15;
-  int v17;
-  int v18;
-  int v19;
-
-  v7 = 0;
-  v9 = 0;
-  if ( a4 != 0 )
-  {
-    v11 = "true";
-    if ( a4 != 2 )
-      v11 = "false";
-    if ( a1 == 1 )
-    {
-      v13 = sceNpCommerce2_AE614CC6(a2, "autoDepositFlag=", 16);
-      if ( v13 < 0 )
-        return v13;
-      v19 = sceNet_lib_D8722983(v11);
-      v12 = sceNpCommerce2_AE614CC6(a2, v11, v19);
-    }
-    else
-    {
-      v12 = sceNet_lib_D8722983(v11) + 16;
-    }
-    v13 = v12;
-    if ( v12 < 0 )
-      return v13;
-    v7 = 1;
-    v9 = v12;
-  }
-  if ( a5 == 0 )
-    goto LABEL_15;
-  v14 = "true";
-  if ( a5 != 2 )
-    v14 = "false";
-  if ( a1 == 1 )
-  {
-    if ( v7 != 1 || (v15 = sceNpCommerce2_AE614CC6(a2, "&", 1)) >= 0 )
-    {
-      v17 = sceNpCommerce2_AE614CC6(a2, "commercePasswordFlag=", 21);
-      if ( v17 < 0 )
-        return v17;
-      v18 = sceNet_lib_D8722983(v14);
-      v15 = sceNpCommerce2_AE614CC6(a2, v14, v18);
-    }
-  }
-  else
-  {
-    v15 = v7 + sceNet_lib_D8722983(v14) + 21;
-  }
-  v13 = v15;
-  if ( v15 >= 0 )
-  {
-    v9 += v15;
-LABEL_15:
-    v13 = 0;
-    if ( a1 != 1 )
-      *a3 = v9;
-  }
-  return v13;
-}
-
-
-int regcam_form_build_13(int a1, int a2, u32 *a3, int a4, int a5, int a6, int a7)
-{
-  int v13;
-  int v14;
-  int v15;
-  s64 v16;
-  int v17;
-  int v18;
-  int v19;
-  s64 v20;
-  int v21;
-  s64 v22;
-  int v23;
-  int v25;
-  int v26;
-  int v27;
-  int v28;
-  int v29;
-  int v30;
-  int v31;
-  u8 v32[784];
-  u8 v33[16];
-
-  if ( a1 == 1 )
-  {
-    v14 = regcam_write_uint_field(a2, 2, a4, 0);
-  }
-  else
-  {
-    v13 = sceNet_lib_CF705E46(v33, "%u", a4);
-    v14 = -2141909231;
-    if ( v13 < 16 )
-      v14 = v13 + 8;
-  }
-  v15 = v14;
-  if ( v14 >= 0 )
-  {
-    v16 = v14;
-    v17 = sceNet_lib_D8722983(a5);
-    v15 = sceNpCommerce2_66EC0829(v32, 769, a5, v17, 0);
-    if ( v15 >= 0 )
-    {
-      if ( a1 == 1 )
-      {
-        v29 = sceNpCommerce2_AE614CC6(a2, "&", 1);
-        if ( v29 < 0 )
-          return v29;
-        v30 = sceNpCommerce2_AE614CC6(a2, "username=", 9);
-        if ( v30 < 0 )
-          return v30;
-        v31 = sceNet_lib_D8722983(v32);
-        v18 = sceNpCommerce2_AE614CC6(a2, v32, v31);
-      }
-      else
-      {
-        v18 = sceNet_lib_D8722983(v32) + 10;
-      }
-      v15 = v18;
-      if ( v18 >= 0 )
-      {
-        v20 = v16 + v18;
-        v19 = sceNet_lib_D8722983(a6);
-        v15 = sceNpCommerce2_66EC0829(v32, 769, a6, v19, 0);
-        if ( v15 >= 0 )
-        {
-          if ( a1 == 1 )
-          {
-            v27 = sceNpCommerce2_AE614CC6(a2, "&", 1);
-            if ( v27 < 0 )
-              return v27;
-            v15 = sceNpCommerce2_AE614CC6(a2, "password=", 9);
-            if ( v15 < 0 )
-              return v15;
-            v28 = sceNet_lib_D8722983(v32);
-            v21 = sceNpCommerce2_AE614CC6(a2, v32, v28);
-          }
-          else
-          {
-            v21 = sceNet_lib_D8722983(v32) + 10;
-          }
-          v15 = v21;
-          if ( v21 >= 0 )
-          {
-            v22 = v20 + v21;
-            if ( a1 == 1 )
-            {
-              v25 = sceNpCommerce2_AE614CC6(a2, "&", 1);
-              if ( v25 < 0 )
-                return v25;
-              v15 = sceNpCommerce2_AE614CC6(a2, "consoleId=", 10);
-              if ( v15 < 0 )
-                return v15;
-              v26 = sceNet_lib_D8722983(a7);
-              v23 = sceNpCommerce2_AE614CC6(a2, a7, v26);
-            }
-            else
-            {
-              v23 = sceNet_lib_D8722983(a7) + 11;
-            }
-            v15 = v23;
-            if ( v23 >= 0 )
-            {
-              v22 = ((u64)(v22) & 0xFFFFFFFF00000000ULL) | (u32)(v22 + v23);
-              if ( a1 != 1 )
-              {
-                *a3 = v22;
-                a3[1] = HIDWORD(v22) + (v23 >> 31) + ((unsigned int)v22 < v23);
-              }
-              return 0;
-            }
-          }
-        }
-      }
-    }
-  }
-  return v15;
-}
-
-
-int regcam_form_build_14(int a1, int a2, u32 *a3, int a4, int a5, int a6, int a7, int a8, int a9, int a10, int a11)
-{
-  int v17;
-  int v18;
-  int v19;
-  int v20;
-  int v21;
-  s64 v22;
-  int v23;
-  int v24;
-  s64 v25;
-  int v26;
-  int v27;
-  s64 v28;
-  int v29;
-  int v30;
-  s64 v31;
-  int v32;
-  int v33;
-  s64 v34;
-  int v35;
-  int v36;
-  s64 v37;
-  int v38;
-  int v39;
-  s64 v40;
-  int v41;
-  int v42;
-  u32 *v43;
-  u8 v45[784];
-  u32 v46[4];
-  u32 *v47;
-  int v48;
-
-  v47 = a3;
-  v48 = a8;
-  sceKernelMemset(v46, 0, 8);
-  v46[0] = "transactionSearchCriteria.";
-  v17 = sceNet_lib_D8722983(a4);
-  v18 = sceNpCommerce2_66EC0829(v45, 769, a4, v17, 0);
-  if ( v18 >= 0 )
-  {
-    v19 = sceNet_lib_D8722983(v45);
-    v20 = a1 == 1 ? regcam_write_prefixed_field(a2, v46, 1, 46, v45, v19, 0) : sceNet_lib_D8722983(v46[0]) + v19 + 10;
-    v18 = v20;
-    if ( v20 >= 0 )
-    {
-      v21 = a5;
-      v22 = v20;
-      sceNet_lib_CF705E46(v45, "%u", v21);
-      v23 = sceNet_lib_D8722983(v45);
-      v24 = a1 == 1 ? regcam_write_prefixed_field(a2, v46, 1, 65, v45, v23, 1) : sceNet_lib_D8722983(v46[0]) + 1 + v23 + 9;
-      v18 = v24;
-      if ( v24 >= 0 )
-      {
-        v25 = v22 + v24;
-        sceNet_lib_CF705E46(v45, "%u", a6);
-        v26 = sceNet_lib_D8722983(v45);
-        v27 = a1 == 1 ? regcam_write_prefixed_field(a2, v46, 1, 66, v45, v26, 1) : sceNet_lib_D8722983(v46[0]) + 1 + v26 + 10;
-        v18 = v27;
-        if ( v27 >= 0 )
-        {
-          v28 = v25 + v27;
-          sceNet_lib_CF705E46(v45, "%u", a7);
-          v29 = sceNet_lib_D8722983(v45);
-          v30 = a1 == 1 ? regcam_write_prefixed_field(a2, v46, 1, 67, v45, v29, 1) : sceNet_lib_D8722983(v46[0]) + 1 + v29 + 8;
-          v18 = v30;
-          if ( v30 >= 0 )
-          {
-            v31 = v28 + v30;
-            sceNet_lib_CF705E46(v45, "%u", v48);
-            v32 = sceNet_lib_D8722983(v45);
-            v33 = a1 == 1 ? regcam_write_prefixed_field(a2, v46, 1, 68, v45, v32, 1) : sceNet_lib_D8722983(v46[0]) + 1 + v32 + 7;
-            v18 = v33;
-            if ( v33 >= 0 )
-            {
-              v34 = v31 + v33;
-              sceNet_lib_CF705E46(v45, "%u", a9);
-              v35 = sceNet_lib_D8722983(v45);
-              v36 = a1 == 1 ? regcam_write_prefixed_field(a2, v46, 1, 69, v45, v35, 1) : sceNet_lib_D8722983(v46[0]) + 1 + v35 + 8;
-              v18 = v36;
-              if ( v36 >= 0 )
-              {
-                v37 = v34 + v36;
-                sceNet_lib_CF705E46(v45, "%u", a10);
-                v38 = sceNet_lib_D8722983(v45);
-                v39 = a1 == 1 ? regcam_write_prefixed_field(a2, v46, 1, 70, v45, v38, 1) : sceNet_lib_D8722983(v46[0]) + 1 + v38 + 6;
-                v18 = v39;
-                if ( v39 >= 0 )
-                {
-                  v40 = v37 + v39;
-                  sceNet_lib_CF705E46(v45, "%d", a11);
-                  v41 = sceNet_lib_D8722983(v45);
-                  v42 = a1 == 1 ? regcam_write_prefixed_field(a2, v46, 1, 71, v45, v41, 1) : sceNet_lib_D8722983(v46[0]) + 1 + v41 + 9;
-                  v18 = v42;
-                  if ( v42 >= 0 )
-                  {
-                    v40 = ((u64)(v40) & 0xFFFFFFFF00000000ULL) | (u32)(v40 + v42);
-                    if ( a1 != 1 )
-                    {
-                      v43 = v47;
-                      *v47 = v40;
-                      v43[1] = HIDWORD(v40) + (v42 >> 31) + ((unsigned int)v40 < v42);
-                    }
-                    return 0;
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    }
-  }
-  return v18;
-}
-
-
-int regcam_form_build_15(int a1, int a2, u32 *a3, int a4, int a5, int a6)
-{
-  int v12;
-  int v13;
-  int v14;
-  s64 v15;
-  int v16;
-  int v17;
-  s64 v18;
-  int v19;
-  int v20;
-  int v22;
-  int v23;
-  u8 v24[784];
-  u8 v25[16];
-
-  v12 = sceNet_lib_D8722983(a4);
-  v13 = sceNpCommerce2_66EC0829(v24, 769, a4, v12, 0);
-  if ( v13 >= 0 )
-  {
-    if ( a1 == 1 )
-    {
-      v22 = sceNpCommerce2_AE614CC6(a2, "serviceId=", 10);
-      if ( v22 < 0 )
-        return v22;
-      v23 = sceNet_lib_D8722983(v24);
-      v14 = sceNpCommerce2_AE614CC6(a2, v24, v23);
-    }
-    else
-    {
-      v14 = sceNet_lib_D8722983(v24) + 10;
-    }
-    v13 = v14;
-    if ( v14 >= 0 )
-    {
-      v15 = v14;
-      if ( a1 == 1 )
-      {
-        v17 = regcam_write_uint_field(a2, 7, a5, 1);
-      }
-      else
-      {
-        v16 = sceNet_lib_CF705E46(v25, "%u", a5);
-        v17 = -2141909231;
-        if ( v16 < 16 )
-          v17 = 12 + v16 + 3;
-      }
-      v13 = v17;
-      if ( v17 >= 0 )
-      {
-        v18 = v15 + v17;
-        if ( a1 == 1 )
-        {
-          v20 = regcam_write_uint_field(a2, 8, a6, 1);
-        }
-        else
-        {
-          v19 = sceNet_lib_CF705E46(v25, "%u", a6);
-          v20 = -2141909231;
-          if ( v19 < 16 )
-            v20 = 16 + v19 + 3;
-        }
-        v13 = v20;
-        if ( v20 >= 0 )
-        {
-          v18 = ((u64)(v18) & 0xFFFFFFFF00000000ULL) | (u32)(v18 + v20);
-          if ( a1 != 1 )
-          {
-            *a3 = v18;
-            a3[1] = HIDWORD(v18) + (v20 >> 31) + ((unsigned int)v18 < v20);
-          }
-          return 0;
-        }
-      }
-    }
-  }
-  return v13;
-}
-
-
-int regcam_form_build_16(int a1, int a2, u32 *a3, int a4, int a5, int a6)
-{
-  int v12;
-  int v13;
-  int v14;
-  s64 v15;
-  int v16;
-  int v17;
-  s64 v18;
-  int v19;
-  int v20;
-  int v22;
-  int v23;
-  u8 v24[784];
-  u8 v25[16];
-
-  v12 = sceNet_lib_D8722983(a4);
-  v13 = sceNpCommerce2_66EC0829(v24, 769, a4, v12, 0);
-  if ( v13 >= 0 )
-  {
-    if ( a1 == 1 )
-    {
-      v22 = sceNpCommerce2_AE614CC6(a2, "serviceId=", 10);
-      if ( v22 < 0 )
-        return v22;
-      v23 = sceNet_lib_D8722983(v24);
-      v14 = sceNpCommerce2_AE614CC6(a2, v24, v23);
-    }
-    else
-    {
-      v14 = sceNet_lib_D8722983(v24) + 10;
-    }
-    v13 = v14;
-    if ( v14 >= 0 )
-    {
-      v15 = v14;
-      if ( a1 == 1 )
-      {
-        v17 = regcam_write_uint_field(a2, 7, a5, 1);
-      }
-      else
-      {
-        v16 = sceNet_lib_CF705E46(v25, "%u", a5);
-        v17 = -2141909231;
-        if ( v16 < 16 )
-          v17 = 12 + v16 + 3;
-      }
-      v13 = v17;
-      if ( v17 >= 0 )
-      {
-        v18 = v15 + v17;
-        if ( a1 == 1 )
-        {
-          v20 = regcam_write_uint_field(a2, 8, a6, 1);
-        }
-        else
-        {
-          v19 = sceNet_lib_CF705E46(v25, "%u", a6);
-          v20 = -2141909231;
-          if ( v19 < 16 )
-            v20 = 16 + v19 + 3;
-        }
-        v13 = v20;
-        if ( v20 >= 0 )
-        {
-          v18 = ((u64)(v18) & 0xFFFFFFFF00000000ULL) | (u32)(v18 + v20);
-          if ( a1 != 1 )
-          {
-            *a3 = v18;
-            a3[1] = HIDWORD(v18) + (v20 >> 31) + ((unsigned int)v18 < v20);
-          }
-          return 0;
-        }
-      }
-    }
-  }
-  return v13;
-}
-
-
-int regcam_form_build_17(int a1, int a2, u32 *a3, int a4, int a5, int a6, int a7, int a8, int a9)
-{
-  int v15;
-  int v16;
-  int v17;
-  s64 v18;
-  int v19;
-  int v20;
-  int v21;
-  s64 v22;
-  int v23;
-  int v24;
-  s64 v25;
-  int v26;
-  int v27;
-  s64 v28;
-  int v29;
-  int v30;
-  s64 v31;
-  int v32;
-  u32 *v33;
-  int v35;
-  u8 v36[784];
-  u32 v37[4];
-  u8 v38[16];
-  u32 *v39;
-  int v40;
-
-  v39 = a3;
-  v40 = a8;
-  sceKernelMemset(v37, 0, 8);
-  v37[0] = "account.";
-  if ( a1 == 1 )
-  {
-    v16 = regcam_write_uint_field(a2, 2, a4, 0);
-  }
-  else
-  {
-    v15 = sceNet_lib_CF705E46(v38, "%u", a4);
-    v16 = -2141909231;
-    if ( v15 < 16 )
-      v16 = v15 + 8;
-  }
-  v17 = v16;
-  if ( v16 >= 0 )
-  {
-    v18 = v16;
-    v19 = sceNet_lib_D8722983(a5);
-    v17 = sceNpCommerce2_66EC0829(v36, 769, a5, v19, 0);
-    if ( v17 >= 0 )
-    {
-      v20 = sceNet_lib_D8722983(v36);
-      v21 = a1 == 1 ? regcam_write_prefixed_field(a2, v37, 1, 46, v36, v20, 1) : sceNet_lib_D8722983(v37[0]) + 1 + v20 + 10;
-      v17 = v21;
-      if ( v21 >= 0 )
-      {
-        v22 = v18 + v21;
-        sceNet_lib_CF705E46(v36, "%u", a6);
-        v23 = sceNet_lib_D8722983(v36);
-        v24 = a1 == 1 ? regcam_write_prefixed_field(a2, v37, 1, 43, v36, v23, 1) : sceNet_lib_D8722983(v37[0]) + 1 + v23 + 4;
-        v17 = v24;
-        if ( v24 >= 0 )
-        {
-          v25 = v22 + v24;
-          sceNet_lib_CF705E46(v36, "%u", a7);
-          v26 = sceNet_lib_D8722983(v36);
-          v27 = a1 == 1 ? regcam_write_prefixed_field(a2, v37, 1, 44, v36, v26, 1) : sceNet_lib_D8722983(v37[0]) + 1 + v26 + 4;
-          v17 = v27;
-          if ( v27 >= 0 )
-          {
-            v28 = v25 + v27;
-            sceNet_lib_CF705E46(v36, "%u", v40);
-            v29 = sceNet_lib_D8722983(v36);
-            v30 = a1 == 1 ? regcam_write_prefixed_field(a2, v37, 1, 45, v36, v29, 1) : sceNet_lib_D8722983(v37[0]) + 1 + v29 + 4;
-            v17 = v30;
-            if ( v30 >= 0 )
-            {
-              v31 = v28 + v30;
-              if ( a1 == 1 )
-              {
-                v17 = sceNpCommerce2_AE614CC6(a2, "&", 1);
-                if ( v17 < 0 )
-                  return v17;
-                v17 = sceNpCommerce2_AE614CC6(a2, "consoleId=", 10);
-                if ( v17 < 0 )
-                  return v17;
-                v35 = sceNet_lib_D8722983(a9);
-                v32 = sceNpCommerce2_AE614CC6(a2, a9, v35);
-              }
-              else
-              {
-                v32 = sceNet_lib_D8722983(a9) + 11;
-              }
-              v17 = v32;
-              if ( v32 >= 0 )
-              {
-                v31 = ((u64)(v31) & 0xFFFFFFFF00000000ULL) | (u32)(v31 + v32);
-                if ( a1 != 1 )
-                {
-                  v33 = v39;
-                  *v39 = v31;
-                  v33[1] = HIDWORD(v31) + (v32 >> 31) + ((unsigned int)v31 < v32);
-                }
-                return 0;
-              }
-            }
-          }
-        }
-      }
-    }
-  }
-  return v17;
-}
-
-
-int regcam_form_build_18(int a1, int a2, u32 *a3, int a4, int a5, int a6)
-{
-  int v12;
-  int v13;
-  int v14;
-  int v15;
-  s64 v16;
-  int v17;
-  int v18;
-  int v19;
-  s64 v20;
-  u8 v22[784];
-  u32 v23[4];
-
-  sceKernelMemset(v23, 0, 8);
-  v23[0] = "account.";
-  sceNet_lib_CF705E46(v22, "%u", a4);
-  v12 = sceNet_lib_D8722983(v22);
-  if ( a1 == 1 )
-    v13 = regcam_write_prefixed_field(a2, v23, 1, 47, v22, v12, 0);
-  else
-    v13 = sceNet_lib_D8722983(v23[0]) + v12 + 17;
-  v14 = v13;
-  if ( v13 >= 0 )
-  {
-    v15 = a5;
-    v16 = v13;
-    v14 = sceNpCommerce2_66EC0829(v22, 769, v15, a6, 0);
-    if ( v14 >= 0 )
-    {
-      v17 = sceNet_lib_D8722983(v22);
-      v18 = a1 == 1 ? regcam_write_prefixed_field(a2, v23, 1, 48, v22, v17, 1) : sceNet_lib_D8722983(v23[0]) + 1 + v17 + 15;
-      v14 = v18;
-      if ( v18 >= 0 )
-      {
-        v19 = v16 + v18;
-        v20 = v16 + v18;
-        if ( a1 != 1 )
-        {
-          *a3 = v19;
-          a3[1] = HIDWORD(v20);
-        }
-        return 0;
-      }
-    }
-  }
-  return v14;
-}
-
-
-int regcam_form_build_19(int a1, int a2, u64 *a3, int a4)
-{
-  unsigned int v8;
-  int result;
-  int v10[4];
-  u8 v11[16];
-
-  v8 = 0;
-  sceKernelMemset(v10, 0, 8);
-  v10[0] = (int)"account.";
-  while ( v8 < sceNet_lib_D8722983(a4) && v8 < 0x10 )
-  {
-    v11[v8] = sceNet_lib_96EF9DA1(*(char *)(a4 + v8));
-    ++v8;
-  }
-  if ( v8 == 16 )
-    v11[15] = 0;
-  else
-    v11[v8] = 0;
-  result = regcam_emit_prefixed_field(a1, a2, v10, 1u, 42, (int)v11, 0);
-  if ( result >= 0 )
-  {
-    if ( a1 != 1 )
-      *a3 = result;
     return 0;
-  }
-  return result;
 }
 
-
-int regcam_write_prefixed_field(int a1, u32 *a2, unsigned int a3, int a4, int a5, int a6, int a7)
+int regcam_send_payment_type(u32 svc_type, int http_tmpl, char *url_buf, u16 cmd_id,
+                             int *http_req_out, u32 pay_type)
 {
-  unsigned int v13;
-  int v14;
-  int result;
-  int v16;
+    u64 total = 0;
+    int pass, ret;
 
-  if ( a7 != 1 || (result = sceNpCommerce2_AE614CC6(a1, "&", 1)) >= 0 )
-  {
-    v13 = 0;
-    if ( a3 != 0 )
-    {
-      do
-      {
-        ++v13;
-        if ( *a2 != 0 )
-        {
-          v16 = sceNet_lib_D8722983(*a2);
-          result = sceNpCommerce2_AE614CC6(a1, *a2, v16);
-          v14 = v13 < a3;
-          if ( result < 0 )
-            return result;
+    for (pass = 0; pass < 2; pass++) {
+        if (pay_type != 0)
+            return REGCAM_ERR_INVALID_PAYMENT;
+        ret = regcam_emit_str_field(pass, *http_req_out, FKEY_PAYMENT_TYPE, "CC", 0);
+        if (ret < 0)
+            return ret;
+        if (pass == 0) {
+            total = (u64)(u32)ret;
+            ret = regcam_open_post(svc_type, http_tmpl, url_buf, cmd_id, http_req_out, total);
+            if (ret < 0)
+                return ret;
         }
-        else
-        {
-          v14 = v13 < a3;
-        }
-        ++a2;
-      }
-      while ( v14 );
     }
-    result = sceNpCommerce2_AE614CC6(a1, g_form_keys[a4].str, g_form_keys[a4].len);
-    if ( result >= 0 )
-      return sceNpCommerce2_AE614CC6(a1, a5, a6);
-  }
-  return result;
+    return 0;
 }
 
-
-int regcam_write_uint_field(int a1, int a2, int a3, int a4)
+static int regcam_build_billing_form(int write_pass, int http_req, u64 *len_out,
+                                     int prefix_mode, const RegCamBillingInfo *info,
+                                     int include_save, u32 save_flag)
 {
-  int v7;
-  int v8;
-  int v9;
-  u8 v11[16];
+    const char *prefixes[3] = { NULL, "address.", "address" };
+    u64 total = 0;
+    int has_field = 0;
+    int ret;
 
-  if ( a4 != 1 || (v7 = sceNpCommerce2_AE614CC6(a1, "&", 1)) >= 0 )
-  {
-    v7 = sceNpCommerce2_AE614CC6(a1, g_form_keys[a2].str, g_form_keys[a2].len);
-    if ( v7 >= 0 )
-    {
-      v8 = sceNet_lib_CF705E46(v11, "%u", a3);
-      v7 = -2141909231;
-      if ( v8 < 16 )
-      {
-        v9 = sceNet_lib_D8722983(v11);
-        return sceNpCommerce2_AE614CC6(a1, v11, v9);
-      }
+    if (prefix_mode == 0)
+        prefixes[0] = "creditCard.";
+    else if (prefix_mode == 1)
+        prefixes[0] = "account.";
+
+    if (info->payment_method_id != NULL && info->payment_method_id[0] != '\0' && info->payment_method_id_len != 0) {
+        u32 len = info->payment_method_id_len;
+        if (info->payment_method_id[len - 1] == '\0')
+            len--;
+        ret = regcam_emit_prefixed_raw(write_pass, http_req, prefixes, 1,
+                                       FKEY_PAYMENT_METHOD_ID, info->payment_method_id, len, has_field, &total);
+        if (ret < 0) return ret;
+        has_field = 1;
     }
-  }
-  return v7;
+    if (info->holder_name != NULL && info->holder_name[0] != '\0' && info->holder_name_len != 0) {
+        ret = regcam_emit_urlenc_prefixed(write_pass, http_req, prefixes, 1,
+                                          FKEY_HOLDER_NAME, info->holder_name, info->holder_name_len, has_field, &total);
+        if (ret < 0) return ret;
+        has_field = 1;
+    }
+    if (info->card_number != NULL && info->card_number[0] != '\0') {
+        ret = regcam_emit_prefixed_raw(write_pass, http_req, prefixes, 1,
+                                       FKEY_CARD_NUMBER, info->card_number, sceNet_lib_D8722983(info->card_number),
+                                       has_field, &total);
+        if (ret < 0) return ret;
+        has_field = 1;
+    }
+    if (info->start_year != 0) {
+        ret = regcam_emit_uint_prefixed(write_pass, http_req, prefixes, 1, FKEY_START_YEAR, info->start_year, has_field, &total);
+        if (ret < 0) return ret;
+        has_field = 1;
+    }
+    if (info->start_month != 0) {
+        ret = regcam_emit_uint_prefixed(write_pass, http_req, prefixes, 1, FKEY_START_MONTH, info->start_month, has_field, &total);
+        if (ret < 0) return ret;
+        has_field = 1;
+    }
+    if (info->expire_year != 0) {
+        ret = regcam_emit_uint_prefixed(write_pass, http_req, prefixes, 1, FKEY_EXPIRE_YEAR, info->expire_year, has_field, &total);
+        if (ret < 0) return ret;
+        has_field = 1;
+    }
+    if (info->expire_month != 0) {
+        ret = regcam_emit_uint_prefixed(write_pass, http_req, prefixes, 1, FKEY_EXPIRE_MONTH, info->expire_month, has_field, &total);
+        if (ret < 0) return ret;
+        has_field = 1;
+    }
+    if (info->security_code != NULL && info->security_code[0] != '\0') {
+        ret = regcam_emit_prefixed_raw(write_pass, http_req, prefixes, 1,
+                                       FKEY_SECURITY_CODE, info->security_code, sceNet_lib_D8722983(info->security_code),
+                                       has_field, &total);
+        if (ret < 0) return ret;
+        has_field = 1;
+    }
+    if (info->issue_number != NULL && info->issue_number[0] != '\0') {
+        ret = regcam_emit_prefixed_raw(write_pass, http_req, prefixes, 1,
+                                       FKEY_ISSUE_NUMBER, info->issue_number, sceNet_lib_D8722983(info->issue_number),
+                                       has_field, &total);
+        if (ret < 0) return ret;
+        has_field = 1;
+    }
+    if (info->street1 != NULL && info->street1[0] != '\0' && info->street1_len != 0) {
+        ret = regcam_emit_urlenc_prefixed(write_pass, http_req, prefixes, 3,
+                                          FKEY_1, info->street1, info->street1_len, has_field, &total);
+        if (ret < 0) return ret;
+        has_field = 1;
+    }
+    if (info->street2 != NULL && info->street2[0] != '\0' && info->street2_len != 0) {
+        ret = regcam_emit_urlenc_prefixed(write_pass, http_req, prefixes, 3,
+                                          FKEY_2, info->street2, info->street2_len, has_field, &total);
+        if (ret < 0) return ret;
+        has_field = 1;
+    }
+    if (info->street3 != NULL && info->street3[0] != '\0' && info->street3_len != 0) {
+        ret = regcam_emit_urlenc_prefixed(write_pass, http_req, prefixes, 3,
+                                          FKEY_3, info->street3, info->street3_len, has_field, &total);
+        if (ret < 0) return ret;
+        has_field = 1;
+    }
+    if (info->city != NULL && info->city[0] != '\0' && info->city_len != 0) {
+        ret = regcam_emit_urlenc_prefixed(write_pass, http_req, prefixes, 2,
+                                          FKEY_CITY, info->city, info->city_len, has_field, &total);
+        if (ret < 0) return ret;
+        has_field = 1;
+    }
+    if (info->province != NULL && info->province[0] != '\0' && info->province_len != 0) {
+        ret = regcam_emit_urlenc_prefixed(write_pass, http_req, prefixes, 2,
+                                          FKEY_PROVINCE, info->province, info->province_len, has_field, &total);
+        if (ret < 0) return ret;
+        has_field = 1;
+    }
+    if (info->postal_code != NULL && info->postal_code[0] != '\0' && info->postal_code_len != 0) {
+        ret = regcam_emit_urlenc_prefixed(write_pass, http_req, prefixes, 2,
+                                          FKEY_POSTAL_CODE, info->postal_code, info->postal_code_len, has_field, &total);
+        if (ret < 0) return ret;
+        has_field = 1;
+    }
+    if (include_save == 1) {
+        const char *flag_str = (save_flag == 1) ? "true" : "false";
+        ret = regcam_emit_prefixed_raw(write_pass, http_req, NULL, 0,
+                                       FKEY_SAVE, flag_str, sceNet_lib_D8722983(flag_str), has_field, &total);
+        if (ret < 0) return ret;
+    }
+    if (!write_pass)
+        *len_out = total;
+    return 0;
 }
 
+int regcam_send_billing(u32 svc_type, int http_tmpl, char *url_buf, u16 cmd_id, int *http_req_out,
+                        int prefix_mode, const RegCamBillingInfo *info, int include_save, u32 save_flag)
+{
+    u64 total = 0;
+    int pass, ret;
 
+    for (pass = 0; pass < 2; pass++) {
+        ret = regcam_build_billing_form(pass, *http_req_out, &total, prefix_mode, info, include_save, save_flag);
+        if (ret < 0)
+            return ret;
+        if (pass == 0) {
+            ret = regcam_open_post(svc_type, http_tmpl, url_buf, cmd_id, http_req_out, total);
+            if (ret < 0)
+                return ret;
+        }
+    }
+    return 0;
+}
+
+int regcam_send_version_only(u32 svc_type, int http_tmpl, char *url_buf, u16 cmd_id,
+                             int *http_req_out, u32 ver)
+{
+    int pass, ret;
+
+    for (pass = 0; pass < 2; pass++) {
+        ret = regcam_emit_uint_field(pass, *http_req_out, FKEY_VERSION, ver, 0);
+        if (ret < 0)
+            return ret;
+        if (pass == 0) {
+            ret = regcam_open_post(svc_type, http_tmpl, url_buf, cmd_id, http_req_out, (u64)(u32)ret);
+            if (ret < 0)
+                return ret;
+        }
+    }
+    return 0;
+}
+
+static int regcam_build_auth_form(int write_pass, int http_req, u64 *len_out,
+                                  u32 ver, const char *user, const char *pass_str, const char *cid)
+{
+    u64 total = 0;
+    int ret;
+
+    ret = regcam_emit_uint_field(write_pass, http_req, FKEY_VERSION, ver, 0);
+    if (ret < 0) return ret;
+    total += (u32)ret;
+
+    ret = regcam_emit_urlenc_prefixed(write_pass, http_req, NULL, 0, FKEY_USERNAME,
+                                      user, sceNet_lib_D8722983(user), 1, &total);
+    if (ret < 0) return ret;
+
+    ret = regcam_emit_urlenc_prefixed(write_pass, http_req, NULL, 0, FKEY_PASSWORD,
+                                      pass_str, sceNet_lib_D8722983(pass_str), 1, &total);
+    if (ret < 0) return ret;
+
+    ret = regcam_emit_prefixed_raw(write_pass, http_req, NULL, 0, FKEY_CONSOLE_ID,
+                                   cid, sceNet_lib_D8722983(cid), 1, &total);
+    if (ret < 0) return ret;
+
+    if (!write_pass)
+        *len_out = total;
+    return 0;
+}
+
+int regcam_send_bind_account(u32 svc_type, int http_tmpl, char *url_buf, u16 cmd_id, int *http_req_out,
+                             u32 ver, const char *user, const char *pass_str, const char *cid)
+{
+    u64 total = 0;
+    int pass, ret;
+
+    for (pass = 0; pass < 2; pass++) {
+        ret = regcam_build_auth_form(pass, *http_req_out, &total, ver, user, pass_str, cid);
+        if (ret < 0) return ret;
+        if (pass == 0) {
+            ret = regcam_open_post(svc_type, http_tmpl, url_buf, cmd_id, http_req_out, total);
+            if (ret < 0) return ret;
+        }
+    }
+    return 0;
+}
+
+int regcam_send_authenticate(u32 svc_type, int http_tmpl, char *url_buf, u16 cmd_id, int *http_req_out,
+                             u32 ver, const char *user, const char *pass_str, const char *cid)
+{
+    return regcam_send_bind_account(svc_type, http_tmpl, url_buf, cmd_id, http_req_out, ver, user, pass_str, cid);
+}
+
+int regcam_send_start_reg(u32 svc_type, int http_tmpl, char *url_buf, u16 cmd_id, int *http_req_out,
+                          u32 ver, const char *country, const char *lang, u32 yob, u32 mob, u32 dob, const char *cid)
+{
+    const char *acct_prefix[1] = { "account." };
+    char tmp_buf[16];
+    u64 total = 0;
+    u32 idx, len;
+    int pass, ret;
+
+    for (pass = 0; pass < 2; pass++) {
+        total = 0;
+        ret = regcam_emit_uint_field(pass, *http_req_out, FKEY_VERSION, ver, 0);
+        if (ret < 0) return ret;
+        total += (u32)ret;
+
+        len = sceNet_lib_D8722983(country);
+        for (idx = 0; idx < len && idx < 15; idx++)
+            tmp_buf[idx] = (char)sceNet_lib_C13C9307((u8)country[idx]);
+        tmp_buf[idx] = '\0';
+        ret = regcam_emit_prefixed_raw(pass, *http_req_out, acct_prefix, 1, FKEY_COUNTRY,
+                                       tmp_buf, sceNet_lib_D8722983(tmp_buf), 1, &total);
+        if (ret < 0) return ret;
+
+        len = sceNet_lib_D8722983(lang);
+        for (idx = 0; idx < len && idx < 15; idx++)
+            tmp_buf[idx] = (char)sceNet_lib_96EF9DA1((u8)lang[idx]);
+        tmp_buf[idx] = '\0';
+        ret = regcam_emit_prefixed_raw(pass, *http_req_out, acct_prefix, 1, FKEY_LANGUAGE,
+                                       tmp_buf, sceNet_lib_D8722983(tmp_buf), 1, &total);
+        if (ret < 0) return ret;
+
+        ret = regcam_emit_uint_prefixed(pass, *http_req_out, acct_prefix, 1, FKEY_YOB, yob, 1, &total);
+        if (ret < 0) return ret;
+        ret = regcam_emit_uint_prefixed(pass, *http_req_out, acct_prefix, 1, FKEY_MOB, mob, 1, &total);
+        if (ret < 0) return ret;
+        ret = regcam_emit_uint_prefixed(pass, *http_req_out, acct_prefix, 1, FKEY_DOB, dob, 1, &total);
+        if (ret < 0) return ret;
+        ret = regcam_emit_prefixed_raw(pass, *http_req_out, NULL, 0, FKEY_CONSOLE_ID,
+                                       cid, sceNet_lib_D8722983(cid), 1, &total);
+        if (ret < 0) return ret;
+
+        if (pass == 0) {
+            ret = regcam_open_post(svc_type, http_tmpl, url_buf, cmd_id, http_req_out, total);
+            if (ret < 0) return ret;
+        }
+    }
+    return 0;
+}
+
+int regcam_send_set_cred(u32 svc_type, int http_tmpl, char *url_buf, u16 cmd_id, int *http_req_out,
+                         const char *login, const char *pass_str, u32 sec_q, const char *sec_ans, u32 sec_ans_len)
+{
+    const char *acct_prefix[1] = { "account." };
+    u64 total = 0;
+    int pass, has_field, ret;
+
+    for (pass = 0; pass < 2; pass++) {
+        total = 0;
+        has_field = 0;
+        if (login != NULL) {
+            ret = regcam_emit_urlenc_prefixed(pass, *http_req_out, acct_prefix, 1, FKEY_LOGIN_NAME,
+                                              login, sceNet_lib_D8722983(login), has_field, &total);
+            if (ret < 0) return ret;
+            has_field = 1;
+        }
+        if (pass_str != NULL) {
+            ret = regcam_emit_urlenc_prefixed(pass, *http_req_out, acct_prefix, 1, FKEY_PASSWORD,
+                                              pass_str, sceNet_lib_D8722983(pass_str), has_field, &total);
+            if (ret < 0) return ret;
+            has_field = 1;
+        }
+        ret = regcam_emit_uint_prefixed(pass, *http_req_out, acct_prefix, 1, FKEY_SECURITY_QUESTION, sec_q, has_field, &total);
+        if (ret < 0) return ret;
+        ret = regcam_emit_urlenc_prefixed(pass, *http_req_out, acct_prefix, 1, FKEY_SECURITY_ANSWER,
+                                          sec_ans, sec_ans_len, 1, &total);
+        if (ret < 0) return ret;
+
+        if (pass == 0) {
+            ret = regcam_open_post(svc_type, http_tmpl, url_buf, cmd_id, http_req_out, total);
+            if (ret < 0) return ret;
+        }
+    }
+    return 0;
+}
+
+static int regcam_send_acct_single_str(u32 svc_type, int http_tmpl, char *url_buf, u16 cmd_id,
+                                       int *http_req_out, u32 key_id, const char *val)
+{
+    const char *acct_prefix[1] = { "account." };
+    u64 total = 0;
+    int pass, ret;
+
+    for (pass = 0; pass < 2; pass++) {
+        total = 0;
+        ret = regcam_emit_urlenc_prefixed(pass, *http_req_out, acct_prefix, 1, key_id,
+                                          val, sceNet_lib_D8722983(val), 0, &total);
+        if (ret < 0) return ret;
+        if (pass == 0) {
+            ret = regcam_open_post(svc_type, http_tmpl, url_buf, cmd_id, http_req_out, total);
+            if (ret < 0) return ret;
+        }
+    }
+    return 0;
+}
+
+int regcam_send_set_lid(u32 svc_type, int http_tmpl, char *url_buf, u16 cmd_id, int *http_req_out, const char *login)
+{
+    return regcam_send_acct_single_str(svc_type, http_tmpl, url_buf, cmd_id, http_req_out, FKEY_LOGIN_NAME, login);
+}
+
+int regcam_send_upd_pass(u32 svc_type, int http_tmpl, char *url_buf, u16 cmd_id, int *http_req_out, const char *pass_str)
+{
+    return regcam_send_acct_single_str(svc_type, http_tmpl, url_buf, cmd_id, http_req_out, FKEY_PASSWORD, pass_str);
+}
+
+int regcam_send_oid(u32 svc_type, int http_tmpl, char *url_buf, u16 cmd_id, int *http_req_out, const char *oid)
+{
+    return regcam_send_acct_single_str(svc_type, http_tmpl, url_buf, cmd_id, http_req_out, FKEY_PS_HANDLE, oid);
+}
+
+int regcam_send_set_name(u32 svc_type, int http_tmpl, char *url_buf, u16 cmd_id, int *http_req_out,
+                         const char *first, u32 first_len, const char *last, u32 last_len,
+                         const char *first_ascii, const char *last_ascii, u32 gender)
+{
+    const char *acct_prefix[1] = { "account." };
+    u64 total = 0;
+    int pass, ret;
+
+    for (pass = 0; pass < 2; pass++) {
+        total = 0;
+        ret = regcam_emit_urlenc_prefixed(pass, *http_req_out, acct_prefix, 1, FKEY_FIRST_NAME, first, first_len, 0, &total);
+        if (ret < 0) return ret;
+        ret = regcam_emit_urlenc_prefixed(pass, *http_req_out, acct_prefix, 1, FKEY_LAST_NAME, last, last_len, 1, &total);
+        if (ret < 0) return ret;
+        if (first_ascii != NULL && first_ascii[0] != '\0') {
+            ret = regcam_emit_urlenc_prefixed(pass, *http_req_out, acct_prefix, 1, FKEY_FIRST_NAME_ASCII,
+                                              first_ascii, sceNet_lib_D8722983(first_ascii), 1, &total);
+            if (ret < 0) return ret;
+        }
+        if (last_ascii != NULL && last_ascii[0] != '\0') {
+            ret = regcam_emit_urlenc_prefixed(pass, *http_req_out, acct_prefix, 1, FKEY_LAST_NAME_ASCII,
+                                              last_ascii, sceNet_lib_D8722983(last_ascii), 1, &total);
+            if (ret < 0) return ret;
+        }
+        if (gender == 1U || gender == 2U) {
+            const char *gstr = g_gender_strs[gender];
+            ret = regcam_emit_prefixed_raw(pass, *http_req_out, acct_prefix, 1, FKEY_GENDER,
+                                           gstr, sceNet_lib_D8722983(gstr), 1, &total);
+            if (ret < 0) return ret;
+        }
+        if (pass == 0) {
+            ret = regcam_open_post(svc_type, http_tmpl, url_buf, cmd_id, http_req_out, total);
+            if (ret < 0) return ret;
+        }
+    }
+    return 0;
+}
+
+int regcam_send_set_rrn(u32 svc_type, int http_tmpl, char *url_buf, u16 cmd_id, int *http_req_out,
+                        const char *rrn_part1, u32 rrn_part2_ptr)
+{
+    const char *kor_prefix[1] = { "koreanId" };
+    const char *rrn_part2 = (const char *)rrn_part2_ptr;
+    u64 total = 0;
+    int pass, ret;
+
+    for (pass = 0; pass < 2; pass++) {
+        total = 0;
+        ret = regcam_emit_prefixed_str(pass, *http_req_out, kor_prefix, 1, 20, rrn_part1, 0);
+        if (ret < 0) return ret;
+        total += (u32)ret;
+        ret = regcam_emit_prefixed_str(pass, *http_req_out, kor_prefix, 1, 21, rrn_part2, 1);
+        if (ret < 0) return ret;
+        total += (u32)ret;
+        if (pass == 0) {
+            ret = regcam_open_post(svc_type, http_tmpl, url_buf, cmd_id, http_req_out, total);
+            if (ret < 0) return ret;
+        }
+    }
+    return 0;
+}
+
+static int regcam_send_two_bool_flags(u32 svc_type, int http_tmpl, char *url_buf, u16 cmd_id, int *http_req_out,
+                                      u32 key1, u32 flag1, u32 key2, u32 flag2)
+{
+    u64 total = 0;
+    int pass, has_field, ret;
+
+    for (pass = 0; pass < 2; pass++) {
+        total = 0;
+        has_field = 0;
+        if (flag1 != 0) {
+            const char *s1 = (flag1 == 2) ? "true" : "false";
+            ret = regcam_emit_prefixed_raw(pass, *http_req_out, NULL, 0, key1, s1, sceNet_lib_D8722983(s1), 0, &total);
+            if (ret < 0) return ret;
+            has_field = 1;
+        }
+        if (flag2 != 0) {
+            const char *s2 = (flag2 == 2) ? "true" : "false";
+            ret = regcam_emit_prefixed_raw(pass, *http_req_out, NULL, 0, key2, s2, sceNet_lib_D8722983(s2), has_field, &total);
+            if (ret < 0) return ret;
+        }
+        if (pass == 0) {
+            ret = regcam_open_post(svc_type, http_tmpl, url_buf, cmd_id, http_req_out, total);
+            if (ret < 0) return ret;
+        }
+    }
+    return 0;
+}
+
+int regcam_send_set_opt_in(u32 svc_type, int http_tmpl, char *url_buf, u16 cmd_id, int *http_req_out,
+                           u32 scex_flag, u32 aff_flag)
+{
+    return regcam_send_two_bool_flags(svc_type, http_tmpl, url_buf, cmd_id, http_req_out,
+                                      FKEY_SCEX_OPTIN_FLAG, scex_flag, FKEY_AFFILIATES_OPTIN_FLAG, aff_flag);
+}
+
+int regcam_send_set_wal_opt(u32 svc_type, int http_tmpl, char *url_buf, u16 cmd_id, int *http_req_out,
+                            u32 auto_deposit, u32 pwd_flag)
+{
+    return regcam_send_two_bool_flags(svc_type, http_tmpl, url_buf, cmd_id, http_req_out,
+                                      FKEY_AUTO_DEPOSIT_FLAG, auto_deposit, FKEY_COMMERCE_PASSWORD_FLAG, pwd_flag);
+}
+
+int regcam_send_auth_master(u32 svc_type, int http_tmpl, char *url_buf, u16 cmd_id, int *http_req_out,
+                            const char *login, const char *pass_str)
+{
+    u64 total = 0;
+    int pass, ret;
+
+    for (pass = 0; pass < 2; pass++) {
+        total = 0;
+        ret = regcam_emit_urlenc_prefixed(pass, *http_req_out, NULL, 0, FKEY_USERNAME,
+                                          login, sceNet_lib_D8722983(login), 0, &total);
+        if (ret < 0) return ret;
+        ret = regcam_emit_urlenc_prefixed(pass, *http_req_out, NULL, 0, FKEY_PASSWORD,
+                                          pass_str, sceNet_lib_D8722983(pass_str), 1, &total);
+        if (ret < 0) return ret;
+        if (pass == 0) {
+            ret = regcam_open_post(svc_type, http_tmpl, url_buf, cmd_id, http_req_out, total);
+            if (ret < 0) return ret;
+        }
+    }
+    return 0;
+}
+
+int regcam_send_set_sub_ctrl(u32 svc_type, int http_tmpl, char *url_buf, u16 cmd_id, int *http_req_out,
+                             const char *sub_login, u32 content_rating, u32 chat_ctrl,
+                             u32 search_ctrl, u32 limit_flag, u32 limit_val)
+{
+    u64 total = 0;
+    int pass, ret;
+
+    (void)search_ctrl;
+    for (pass = 0; pass < 2; pass++) {
+        const char *rating_s = (content_rating == 1) ? "true" : "false";
+        const char *chat_s   = (chat_ctrl == 1) ? "true" : "false";
+        const char *limit_s  = (limit_flag == 1) ? "true" : "false";
+        total = 0;
+
+        ret = regcam_emit_urlenc_prefixed(pass, *http_req_out, NULL, 0, FKEY_SUB_LOGIN_NAME,
+                                          sub_login, sceNet_lib_D8722983(sub_login), 0, &total);
+        if (ret < 0) return ret;
+        ret = regcam_emit_prefixed_raw(pass, *http_req_out, NULL, 0, FKEY_CONTENT_RATING,
+                                       rating_s, sceNet_lib_D8722983(rating_s), 1, &total);
+        if (ret < 0) return ret;
+        ret = regcam_emit_prefixed_raw(pass, *http_req_out, NULL, 0, FKEY_CHAT_CONTROL,
+                                       chat_s, sceNet_lib_D8722983(chat_s), 1, &total);
+        if (ret < 0) return ret;
+        ret = regcam_emit_prefixed_raw(pass, *http_req_out, NULL, 0, FKEY_SEARCH_CONTROL,
+                                       "true", 4, 1, &total);
+        if (ret < 0) return ret;
+        ret = regcam_emit_prefixed_raw(pass, *http_req_out, NULL, 0, FKEY_SPENDING_LIMIT_FLAG,
+                                       limit_s, sceNet_lib_D8722983(limit_s), 1, &total);
+        if (ret < 0) return ret;
+        if (limit_flag == 1) {
+            ret = regcam_emit_uint_field(pass, *http_req_out, FKEY_SPENDING_LIMIT, limit_val, 1);
+            if (ret < 0) return ret;
+            total += (u32)ret;
+        }
+        if (pass == 0) {
+            ret = regcam_open_post(svc_type, http_tmpl, url_buf, cmd_id, http_req_out, total);
+            if (ret < 0) return ret;
+        }
+    }
+    return 0;
+}
+
+int regcam_send_reset_sub_pass(u32 svc_type, int http_tmpl, char *url_buf, u16 cmd_id, int *http_req_out,
+                               const char *sub_login, const char *new_pass)
+{
+    const char *acct_prefix[1] = { "account." };
+    u64 total = 0;
+    int pass, ret;
+
+    for (pass = 0; pass < 2; pass++) {
+        total = 0;
+        ret = regcam_emit_urlenc_prefixed(pass, *http_req_out, NULL, 0, FKEY_SUB_LOGIN_NAME,
+                                          sub_login, sceNet_lib_D8722983(sub_login), 0, &total);
+        if (ret < 0) return ret;
+        ret = regcam_emit_urlenc_prefixed(pass, *http_req_out, acct_prefix, 1, FKEY_PASSWORD,
+                                          new_pass, sceNet_lib_D8722983(new_pass), 1, &total);
+        if (ret < 0) return ret;
+        if (pass == 0) {
+            ret = regcam_open_post(svc_type, http_tmpl, url_buf, cmd_id, http_req_out, total);
+            if (ret < 0) return ret;
+        }
+    }
+    return 0;
+}
+
+int regcam_send_get_tran_hist(u32 svc_type, int http_tmpl, char *url_buf, u16 cmd_id, int *http_req_out,
+                              const char *login, u32 from_y, u32 from_m, u32 from_d,
+                              u32 to_y, u32 to_m, u32 to_d, s32 tz_min)
+{
+    const char *tx_prefix[1] = { "transactionSearchCriteria." };
+    char tz_buf[16];
+    u64 total = 0;
+    int pass, ret;
+
+    for (pass = 0; pass < 2; pass++) {
+        total = 0;
+        ret = regcam_emit_urlenc_prefixed(pass, *http_req_out, tx_prefix, 1, FKEY_LOGIN_NAME,
+                                          login, sceNet_lib_D8722983(login), 0, &total);
+        if (ret < 0) return ret;
+        ret = regcam_emit_uint_prefixed(pass, *http_req_out, tx_prefix, 1, FKEY_FROM_YEAR, from_y, 1, &total);
+        if (ret < 0) return ret;
+        ret = regcam_emit_uint_prefixed(pass, *http_req_out, tx_prefix, 1, FKEY_FROM_MONTH, from_m, 1, &total);
+        if (ret < 0) return ret;
+        ret = regcam_emit_uint_prefixed(pass, *http_req_out, tx_prefix, 1, FKEY_FROM_DAY, from_d, 1, &total);
+        if (ret < 0) return ret;
+        ret = regcam_emit_uint_prefixed(pass, *http_req_out, tx_prefix, 1, FKEY_TO_YEAR, to_y, 1, &total);
+        if (ret < 0) return ret;
+        ret = regcam_emit_uint_prefixed(pass, *http_req_out, tx_prefix, 1, FKEY_TO_MONTH, to_m, 1, &total);
+        if (ret < 0) return ret;
+        ret = regcam_emit_uint_prefixed(pass, *http_req_out, tx_prefix, 1, FKEY_TO_DAY, to_d, 1, &total);
+        if (ret < 0) return ret;
+
+        sceNet_lib_CF705E46(tz_buf, "%d", tz_min);
+        ret = regcam_emit_prefixed_raw(pass, *http_req_out, tx_prefix, 1, FKEY_TIMEZONE,
+                                       tz_buf, sceNet_lib_D8722983(tz_buf), 1, &total);
+        if (ret < 0) return ret;
+
+        if (pass == 0) {
+            ret = regcam_open_post(svc_type, http_tmpl, url_buf, cmd_id, http_req_out, total);
+            if (ret < 0) return ret;
+        }
+    }
+    return 0;
+}
+
+int regcam_send_get_tran_detail(u32 svc_type, int http_tmpl, char *url_buf, u16 cmd_id, int *http_req_out,
+                                const char *unused_arg, const char *tx_lo_ptr, s32 tx_hi)
+{
+    char tx_str[32];
+    int pass, ret;
+
+    (void)unused_arg;
+    for (pass = 0; pass < 2; pass++) {
+        ((int (*)(char *, u32, u32, u32, int))sceNpCommerce2_22CEC5E2)(tx_str, sizeof(tx_str), (u32)tx_lo_ptr, (u32)tx_hi, 1);
+        ret = regcam_emit_str_field(pass, *http_req_out, FKEY_TRANSACTION_ID, tx_str, 0);
+        if (ret < 0) return ret;
+        if (pass == 0) {
+            ret = regcam_open_post(svc_type, http_tmpl, url_buf, cmd_id, http_req_out, (u64)(u32)ret);
+            if (ret < 0) return ret;
+        }
+    }
+    return 0;
+}
+
+int regcam_send_get_srvs(u32 svc_type, int http_tmpl, char *url_buf, u16 cmd_id, int *http_req_out,
+                         u32 start_pos, u32 max_cnt)
+{
+    u64 total = 0;
+    int pass, ret;
+
+    for (pass = 0; pass < 2; pass++) {
+        total = 0;
+        ret = regcam_emit_uint_field(pass, *http_req_out, FKEY_START_POSITION, start_pos, 0);
+        if (ret < 0) return ret;
+        total += (u32)ret;
+        ret = regcam_emit_uint_field(pass, *http_req_out, FKEY_MAX_COUNT, max_cnt, 1);
+        if (ret < 0) return ret;
+        total += (u32)ret;
+        if (pass == 0) {
+            ret = regcam_open_post(svc_type, http_tmpl, url_buf, cmd_id, http_req_out, total);
+            if (ret < 0) return ret;
+        }
+    }
+    return 0;
+}
+
+int regcam_send_get_srv_detail(u32 svc_type, int http_tmpl, char *url_buf, u16 cmd_id, int *http_req_out,
+                               const char *srv_id, u32 start_pos, u32 max_cnt)
+{
+    u64 total = 0;
+    int pass, ret;
+
+    for (pass = 0; pass < 2; pass++) {
+        total = 0;
+        ret = regcam_emit_urlenc_prefixed(pass, *http_req_out, NULL, 0, FKEY_SERVICE_ID,
+                                          srv_id, sceNet_lib_D8722983(srv_id), 0, &total);
+        if (ret < 0) return ret;
+        ret = regcam_emit_uint_field(pass, *http_req_out, FKEY_START_POSITION, start_pos, 1);
+        if (ret < 0) return ret;
+        total += (u32)ret;
+        ret = regcam_emit_uint_field(pass, *http_req_out, FKEY_MAX_COUNT, max_cnt, 1);
+        if (ret < 0) return ret;
+        total += (u32)ret;
+        if (pass == 0) {
+            ret = regcam_open_post(svc_type, http_tmpl, url_buf, cmd_id, http_req_out, total);
+            if (ret < 0) return ret;
+        }
+    }
+    return 0;
+}
+
+int regcam_send_get_subscr(u32 svc_type, int http_tmpl, char *url_buf, u16 cmd_id, int *http_req_out,
+                           const char *srv_id, u32 start_pos, u32 max_cnt)
+{
+    return regcam_send_get_srv_detail(svc_type, http_tmpl, url_buf, cmd_id, http_req_out, srv_id, start_pos, max_cnt);
+}
+
+int regcam_send_verify_dob(u32 svc_type, int http_tmpl, char *url_buf, u16 cmd_id, int *http_req_out,
+                           u32 ver, const char *login, u32 yob, u32 mob, u32 dob, const char *cid)
+{
+    const char *acct_prefix[1] = { "account." };
+    u64 total = 0;
+    int pass, ret;
+
+    for (pass = 0; pass < 2; pass++) {
+        total = 0;
+        ret = regcam_emit_uint_field(pass, *http_req_out, FKEY_VERSION, ver, 0);
+        if (ret < 0) return ret;
+        total += (u32)ret;
+        ret = regcam_emit_urlenc_prefixed(pass, *http_req_out, acct_prefix, 1, FKEY_LOGIN_NAME,
+                                          login, sceNet_lib_D8722983(login), 1, &total);
+        if (ret < 0) return ret;
+        ret = regcam_emit_uint_prefixed(pass, *http_req_out, acct_prefix, 1, FKEY_YOB, yob, 1, &total);
+        if (ret < 0) return ret;
+        ret = regcam_emit_uint_prefixed(pass, *http_req_out, acct_prefix, 1, FKEY_MOB, mob, 1, &total);
+        if (ret < 0) return ret;
+        ret = regcam_emit_uint_prefixed(pass, *http_req_out, acct_prefix, 1, FKEY_DOB, dob, 1, &total);
+        if (ret < 0) return ret;
+        ret = regcam_emit_prefixed_raw(pass, *http_req_out, NULL, 0, FKEY_CONSOLE_ID,
+                                       cid, sceNet_lib_D8722983(cid), 1, &total);
+        if (ret < 0) return ret;
+
+        if (pass == 0) {
+            ret = regcam_open_post(svc_type, http_tmpl, url_buf, cmd_id, http_req_out, total);
+            if (ret < 0) return ret;
+        }
+    }
+    return 0;
+}
+
+int regcam_send_verify_sec_ans(u32 svc_type, int http_tmpl, char *url_buf, u16 cmd_id, int *http_req_out,
+                               u32 sec_q, const char *sec_ans, u32 sec_ans_len)
+{
+    const char *acct_prefix[1] = { "account." };
+    u64 total = 0;
+    int pass, ret;
+
+    for (pass = 0; pass < 2; pass++) {
+        total = 0;
+        ret = regcam_emit_uint_prefixed(pass, *http_req_out, acct_prefix, 1, FKEY_SECURITY_QUESTION, sec_q, 0, &total);
+        if (ret < 0) return ret;
+        ret = regcam_emit_urlenc_prefixed(pass, *http_req_out, acct_prefix, 1, FKEY_SECURITY_ANSWER,
+                                          sec_ans, sec_ans_len, 1, &total);
+        if (ret < 0) return ret;
+        if (pass == 0) {
+            ret = regcam_open_post(svc_type, http_tmpl, url_buf, cmd_id, http_req_out, total);
+            if (ret < 0) return ret;
+        }
+    }
+    return 0;
+}
+
+int regcam_send_set_account_lang(u32 svc_type, int http_tmpl, char *url_buf, u16 cmd_id, int *http_req_out,
+                                 const char *lang)
+{
+    const char *acct_prefix[1] = { "account." };
+    char lang_buf[16];
+    u32 idx, len = sceNet_lib_D8722983(lang);
+    int pass, ret;
+
+    for (idx = 0; idx < len && idx < 15; idx++)
+        lang_buf[idx] = (char)sceNet_lib_96EF9DA1((u8)lang[idx]);
+    lang_buf[idx] = '\0';
+
+    for (pass = 0; pass < 2; pass++) {
+        ret = regcam_emit_prefixed_str(pass, *http_req_out, acct_prefix, 1, FKEY_LANGUAGE, lang_buf, 0);
+        if (ret < 0) return ret;
+        if (pass == 0) {
+            ret = regcam_open_post(svc_type, http_tmpl, url_buf, cmd_id, http_req_out, (u64)(u32)ret);
+            if (ret < 0) return ret;
+        }
+    }
+    return 0;
+}
