@@ -326,18 +326,18 @@ static u8 g_ether_addr[8] = {
 /* .bss globals (0x79c0 .. 0x856c) */
 static SceWlanCtx *g_wlan_ctx;
 static s32 g_tx_delay_us;
-static s32 g_unknown_79c8;
+static s32 g_quirkTxDelayMode;
 static s32 g_stop_delay_us;
-static s32 g_unknown_79d0;
+static s32 g_quirkRxDelayMs;
 static s32 g_suspend_arg;
 static u8 g_wakeup_cfg[0x28];
 static u8 g_host_discover_cfg[0x28];
-static SceWlanMbxMsg g_mbx_msg_7a28;
-static SceWlanMbxMsg g_mbx_msg_7a4c;
-static SceWlanMbxMsg g_mbx_msg_7a70;
-static SceWlanMbxMsg g_mbx_msg_7a94;
-static SceWlanMbxMsg g_mbx_msg_7ab8;
-static SceWlanMbxMsg g_mbx_msg_7adc;
+static SceWlanMbxMsg g_mbxMsgLinkEvent;
+static SceWlanMbxMsg g_mbxMsgPowerEvent;
+static SceWlanMbxMsg g_mbxMsgScanEvent;
+static SceWlanMbxMsg g_mbxMsgGameModeEvent;
+static SceWlanMbxMsg g_mbxMsgRxEvent;
+static SceWlanMbxMsg g_mbxMsgTxEvent;
 static u8 g_resume_buf[0x170];
 static u32 g_drop_rate;
 static u32 g_drop_duration;
@@ -347,8 +347,8 @@ static u32 g_drop_next_time;
 static s32 g_drop_active;
 static u32 g_mt_state[521];
 static s32 g_mt_index;
-static u32 g_unknown_84b0;
-static u32 g_unknown_84b4;
+static u32 g_quirkParamA;
+static u32 g_quirkMaxSendSize;
 static u32 g_switch_and_power_state;
 static s32 g_mac_cached;
 static s32 g_scan_ready;
@@ -664,7 +664,7 @@ static void wlanIfDown(void *ifp)
 static void wlanIfIoctl(void *ifp, u32 cmd, void *arg2, u32 *arg3)
 {
 	SceWlanCtx *ctx = (SceWlanCtx *)sceNetIfhandle_driver_D5AD6DEA(ifp);
-	if (ctx->version_or_mode > 0x1ffff && (g_mbx_msg_7a28.flags & 1) != 0) {
+	if (ctx->version_or_mode > 0x1ffff && (g_mbxMsgLinkEvent.flags & 1) != 0) {
 		int intr = sceKernelCpuSuspendIntr();
 		if (ctx->netif.if_internal != NULL) {
 			sceNetIfhandle_driver_F94BAF52(ifp, 4, 0x80410d0c);
@@ -796,7 +796,7 @@ static void wlanIfIoctl(void *ifp, u32 cmd, void *arg2, u32 *arg3)
 			err = 0x80410d02;
 			goto free_and_err;
 		}
-		if (g_unknown_79c8 != 0) {
+		if (g_quirkTxDelayMode != 0) {
 			sceKernelDelayThread(100000);
 			goto send_msg_keep_type;
 		}
@@ -1033,7 +1033,7 @@ static void wlanHandlePowerSwitchEvent(int switch_on, SceWlanCtx *ctx)
 			sceNetIfhandle_driver_263767F6(&ctx->netif, 3, 0);
 		}
 		int intr = sceKernelCpuSuspendIntr();
-		SceWlanMbxMsg *m = &g_mbx_msg_7a28;
+		SceWlanMbxMsg *m = &g_mbxMsgLinkEvent;
 		m->type = 0x80000006;
 		if (!(m->flags & 1)) {
 			m->flags = 3;
@@ -1085,8 +1085,8 @@ static int wlanMacThread(SceSize args, void *argp)
 						ctx->alarm_id = 0;
 					}
 					ctx->flags &= ~0x4000u;
-					if (g_unknown_79d0 != 0) {
-						sceKernelDelayThread(g_unknown_79d0 * 1000);
+					if (g_quirkRxDelayMs != 0) {
+						sceKernelDelayThread(g_quirkRxDelayMs * 1000);
 					}
 					ctx->flags &= ~0x1000u;
 				} else if (type != 0xc0000000u) {
@@ -1123,7 +1123,7 @@ static int wlanMacThread(SceSize args, void *argp)
 			if (type <= 0x80000009u) {
 				if (type < 0x80000008u) {
 					if (type == 0x80000001u) {
-						g_mbx_msg_7a94.flags &= ~1u;
+						g_mbxMsgGameModeEvent.flags &= ~1u;
 						if ((ctx->flags & 0x80) && !(ctx->flags & 0x800)) {
 							for (int i = 0; i < 10; i++) {
 								int rx_len = wlanKermitRxData(ctx->rx_buf, 0x92a);
@@ -1253,7 +1253,7 @@ static int wlanMacThread(SceSize args, void *argp)
 							ctx->flags = (ctx->flags | 0x200) & ~0x20000u;
 						}
 					} else if (type == 0x601) {
-						g_mbx_msg_7ab8.flags &= ~1u;
+						g_mbxMsgRxEvent.flags &= ~1u;
 						if (ctx->flags & 0x20000) {
 							wlanKermitSetHostDiscover(NULL);
 							ctx->flags &= ~8u;
@@ -1307,14 +1307,14 @@ static int wlanMacThread(SceSize args, void *argp)
 				msg->flags &= ~1u;
 				sceKernelCpuResumeIntr(intr);
 			} else if (type == 0x80000013u) {
-				g_mbx_msg_7adc.flags &= ~1u;
+				g_mbxMsgTxEvent.flags &= ~1u;
 				int ev = wlanKermitPollEvent();
 				if (ev & 2) {
 					int sw = wlanKermitGetSwitchAndPower();
 					wlanHandlePowerSwitchEvent(sw, ctx);
 				}
 				if (ev & 1) {
-					g_mbx_msg_7ab8.flags &= ~1u;
+					g_mbxMsgRxEvent.flags &= ~1u;
 					if (ctx->flags & 0x20000) {
 						wlanKermitSetHostDiscover(NULL);
 						ctx->flags &= ~8u;
@@ -1447,7 +1447,7 @@ static int wlanSysEventHandler(int ev_id, char *ev_name, void *param, int *resul
 				sceKernelChangeThreadPriority(ctx->mac_thid, 0x10);
 			}
 			intr = sceKernelCpuSuspendIntr();
-			SceWlanMbxMsg *m = &g_mbx_msg_7a70;
+			SceWlanMbxMsg *m = &g_mbxMsgScanEvent;
 			m->type = 0x8000000e;
 			if (!(m->flags & 1)) {
 				m->flags = 3;
@@ -1477,7 +1477,7 @@ static int wlanSysEventHandler(int ev_id, char *ev_name, void *param, int *resul
 				sceNetIfhandle_driver_263767F6(&ctx->netif, 9, 0);
 			}
 			int intr = sceKernelCpuSuspendIntr();
-			SceWlanMbxMsg *m = &g_mbx_msg_7a70;
+			SceWlanMbxMsg *m = &g_mbxMsgScanEvent;
 			m->type = 0x8000000f;
 			if (!(m->flags & 1)) {
 				m->flags = 3;
@@ -1490,7 +1490,7 @@ static int wlanSysEventHandler(int ev_id, char *ev_name, void *param, int *resul
 				sceNetIfhandle_driver_263767F6(&ctx->netif, 8, 0);
 			}
 			int intr = sceKernelCpuSuspendIntr();
-			SceWlanMbxMsg *m = &g_mbx_msg_7a70;
+			SceWlanMbxMsg *m = &g_mbxMsgScanEvent;
 			if (!(m->flags & 1)) {
 				m->type = 0x8000000f;
 				m->flags = 3;
@@ -1518,10 +1518,10 @@ int sceWlanDrv_driver_EDD207B1(int cmd, void *arg)
 {
 	u32 val = (u32)arg;
 	if (cmd == 4) {
-		g_unknown_84b0 = val;
+		g_quirkParamA = val;
 	}
 	if (cmd == 5) {
-		g_unknown_79c8 = (s32)val;
+		g_quirkTxDelayMode = (s32)val;
 	}
 	if (cmd == 6) {
 		g_stop_delay_us = (s32)(val * 1000);
@@ -1530,10 +1530,10 @@ int sceWlanDrv_driver_EDD207B1(int cmd, void *arg)
 		g_tx_delay_us = (s32)(val * 1000);
 	}
 	if (cmd == 8) {
-		g_unknown_84b4 = val;
+		g_quirkMaxSendSize = val;
 	}
 	if (cmd == 9) {
-		g_unknown_79d0 = (s32)val;
+		g_quirkRxDelayMs = (s32)val;
 	}
 	if (cmd != 0) {
 		return -1;
@@ -1880,7 +1880,7 @@ static void wlanIfTx(void *ifp)
 {
 	SceWlanCtx *ctx = (SceWlanCtx *)sceNetIfhandle_driver_D5AD6DEA(ifp);
 	int intr = sceKernelCpuSuspendIntr();
-	SceWlanMbxMsg *m = &g_mbx_msg_7a4c;
+	SceWlanMbxMsg *m = &g_mbxMsgPowerEvent;
 	m->type = 0x8000000d;
 	if (!(m->flags & 1)) {
 		m->flags = 3;
@@ -1895,7 +1895,7 @@ static int wlanKermitIntr7(void)
 	SceWlanCtx *ctx = g_wlan_ctx;
 	if (ctx != NULL) {
 		int intr = sceKernelCpuSuspendIntr();
-		SceWlanMbxMsg *m = &g_mbx_msg_7a94;
+		SceWlanMbxMsg *m = &g_mbxMsgGameModeEvent;
 		m->type = 0x80000001;
 		if (!(m->flags & 1)) {
 			m->flags = 3;
@@ -1912,7 +1912,7 @@ static int wlanKermitIntr8(void)
 	SceWlanCtx *ctx = g_wlan_ctx;
 	if (ctx != NULL) {
 		int intr = sceKernelCpuSuspendIntr();
-		SceWlanMbxMsg *m = &g_mbx_msg_7adc;
+		SceWlanMbxMsg *m = &g_mbxMsgTxEvent;
 		m->type = 0x80000013;
 		if (!(m->flags & 1)) {
 			m->flags = 3;
@@ -2162,7 +2162,7 @@ static SceUInt wlanAlarmHandler(void *common)
 	SceWlanCtx *ctx = (SceWlanCtx *)common;
 	ctx->alarm_id = 0;
 	int intr = sceKernelCpuSuspendIntr();
-	SceWlanMbxMsg *m = &g_mbx_msg_7a28;
+	SceWlanMbxMsg *m = &g_mbxMsgLinkEvent;
 	m->type = 0x80000007;
 	if (!(m->flags & 1)) {
 		m->flags = 3;
@@ -2189,7 +2189,7 @@ static SceUInt wlanSuspendAlarmHandler(void *common)
 	}
 
 	intr = sceKernelCpuSuspendIntr();
-	SceWlanMbxMsg *m = &g_mbx_msg_7a70;
+	SceWlanMbxMsg *m = &g_mbxMsgScanEvent;
 	m->type = 0x8000000e;
 	if (!(m->flags & 1)) {
 		m->flags = 3;
@@ -3390,7 +3390,7 @@ int sceWlanDrv_lib_B7865DB5(void)
 /* 0x5a90: sceWlanDrv_lib_E47015D7 */
 u32 sceWlanDrv_lib_E47015D7(void)
 {
-	return g_unknown_84b0;
+	return g_quirkParamA;
 }
 
 /* 0x5a9c: sceWlanDrv_lib_768E275B */
@@ -3473,7 +3473,7 @@ int sceWlanDrv_lib_5CFFAAB1(u32 id, const void *buf, u32 len)
 	u32 k1 = pspGetK1();
 	pspSetK1(k1 << 11);
 	int ret = wlanKermitSetKey(0x47, id, buf, len);
-	g_max_send_size = g_unknown_84b4;
+	g_max_send_size = g_quirkMaxSendSize;
 	pspSetK1(k1);
 	return ret;
 }

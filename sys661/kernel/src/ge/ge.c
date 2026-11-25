@@ -2500,21 +2500,59 @@ SceGeListState sceGeDrawSync(int syncType)
         _sceGeListLazyFlush();
         sceKernelCpuResumeIntr(oldIntr);
         // Wait for the drawing event flag to be triggered
-        ret = sceKernelWaitEventFlag(g_AwQueue.drawingEvFlagId, 2, 0, NULL, NULL);
-        if (ret >= 0) {
-            // 3FF4
-            int i;
-            // Reset the state of all the completed display lists
-            for (i = 0; i < MAX_COUNT_DL; i++) {
-                SceGeDisplayList *curDl = &g_displayLists[i];
-                if (curDl->state == SCE_GE_DL_STATE_COMPLETED) {
-                    // 4010
-                    curDl->state = SCE_GE_DL_STATE_NONE;
-                    curDl->isBusy = 0;
+        if (g_suspendTimeoutPatch != 0) {
+            SceUInt timeout = 4000000;
+            ret = sceKernelWaitEventFlag(g_AwQueue.drawingEvFlagId, 2, 0, NULL, &timeout);
+            if (ret < 0) {
+                if (ret == (int)0x800201A8) {
+                    Kprintf("sceGeDrawSync(): timeout\n");
+                    HW_GE_EXEC = 0;
+                    pspSync();
+                    int i;
+                    for (i = 0; i < MAX_COUNT_DL; i++) {
+                        g_displayLists[i].next = &g_displayLists[i + 1];
+                        g_displayLists[i].prev = &g_displayLists[i - 1];
+                        g_displayLists[i].signal = 0;
+                        g_displayLists[i].state = SCE_GE_DL_STATE_NONE;
+                        g_displayLists[i].isBusy = 0;
+                    }
+                    g_AwQueue.free_last = &g_displayLists[MAX_COUNT_DL - 1];
+                    g_AwQueue.isBreak = 0;
+                    g_AwQueue.active_last = NULL;
+                    g_displayLists[0].prev = NULL;
+                    g_displayLists[MAX_COUNT_DL - 1].next = NULL;
+                    g_AwQueue.free_first = &g_displayLists[0];
+                    g_AwQueue.active_first = NULL;
+                    ret = 0;
                 }
-                // 4000
+            } else {
+                int i;
+                for (i = 0; i < MAX_COUNT_DL; i++) {
+                    SceGeDisplayList *curDl = &g_displayLists[i];
+                    if (curDl->state == SCE_GE_DL_STATE_COMPLETED) {
+                        curDl->state = SCE_GE_DL_STATE_NONE;
+                        curDl->isBusy = 0;
+                    }
+                }
+                ret = SCE_GE_LIST_COMPLETED;
             }
-            ret = SCE_GE_LIST_COMPLETED;
+        } else {
+            ret = sceKernelWaitEventFlag(g_AwQueue.drawingEvFlagId, 2, 0, NULL, NULL);
+            if (ret >= 0) {
+                // 3FF4
+                int i;
+                // Reset the state of all the completed display lists
+                for (i = 0; i < MAX_COUNT_DL; i++) {
+                    SceGeDisplayList *curDl = &g_displayLists[i];
+                    if (curDl->state == SCE_GE_DL_STATE_COMPLETED) {
+                        // 4010
+                        curDl->state = SCE_GE_DL_STATE_NONE;
+                        curDl->isBusy = 0;
+                    }
+                    // 4000
+                }
+                ret = SCE_GE_LIST_COMPLETED;
+            }
         }
     } else if (syncType == 1) {
         // Here, just poll the drawing status
