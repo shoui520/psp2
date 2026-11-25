@@ -1,8 +1,10 @@
 # 3.650.011-TOOL: vs0:sys/external/librazorcapture_es4.suprx (generated)
 set(MODULE_NID 0xA0B6A3B5)
+set(MODULE_AUTH_ID 0x2800000000028040)
 set(MODULE_ATTR 6)
 set(MODULE_EXPORTS exports.yml)
 set(MODULE_SDK_VERSION 0x03650011)
+set(MODULE_EXPORT_ORDER 0x7B2A3F18 0x00000000)
 set(MODULE_IMPORT_LIBS
 	0xCAE9ACE6:5:0x0
 	0xF2FF276E:1:0x0
@@ -14,45 +16,43 @@ set(MODULE_IMPORT_LIBS
 	0x6EC1443D:1:0x0
 	0x1082DA7F:1:0x0
 )
-set(MODULE_IMPORT_FUNCS
-	sceKernelPollEventFlag
-	sceKernelDeleteLwMutex
-	sceClibMemcpy_safe
-	__stack_chk_fail
-	sceKernelLockLwMutex
-	sceClibMemset
-	sceIoOpen
-	sceKernelCreateEventFlag
-	sceKernelUnlockLwMutex
-	sceClibStrnlen
-	sceClibStrncpy
-	sceKernelCreateThread
-	sceKernelCreateLwMutex
-	sceKernelWaitThreadEnd
-	sceKernelStartThread
-	sceClibPrintf
-	sceIoWrite
-	sceIoClose
-	sceKernelGetMemBlockInfoByAddr
-	sceKernelDeleteThread
-	sceKernelDeleteEventFlag
-	sceKernelGetProcessId
-	sceKernelSetEventFlag
-	sceGxmProgramGetParameter
-	sceGxmProgramParameterGetResourceIndex
-	sceGxmProgramParameterGetName
-	sceGxmProgramGetSize
-	sceGxmProgramParameterGetArraySize
-	sceGxmProgramCheck
-	sceGxmSetInitializeParamInternal
-	sceGxmGetTopContextInternal
-	SceGpuEs4User_CCEE0336
-	sceGpuUnregisterSalvage
-	sceGpuRegisterSalvage
-	sceGpuSignalWaitLockup
-	scePowerGetGpuClockFrequency
-	scePowerGetUsingWireless
-)
-set(MODULE_IMPORT_VARS
-	__stack_chk_guard
+set(MODULE_IMPORT_NIDS
+	0xCAE9ACE6:F:0x1FBB0FE1
+	0xCAE9ACE6:F:0x244E76D2
+	0xCAE9ACE6:F:0x2E3B02A1
+	0xCAE9ACE6:F:0x37691BF8
+	0xCAE9ACE6:F:0x46E7BE7B
+	0xCAE9ACE6:F:0x632980D7
+	0xCAE9ACE6:F:0x6C60AC61
+	0xCAE9ACE6:F:0x8516D040
+	0xCAE9ACE6:F:0x91FA6614
+	0xCAE9ACE6:F:0xAC595E68
+	0xCAE9ACE6:F:0xC458D60A
+	0xCAE9ACE6:F:0xC5C11EE7
+	0xCAE9ACE6:F:0xDA6EC8EF
+	0xCAE9ACE6:F:0xDDB395A9
+	0xCAE9ACE6:F:0xF08DE149
+	0xCAE9ACE6:F:0xFA26BC62
+	0xCAE9ACE6:V:0x93B8AA67
+	0xF2FF276E:F:0x34EFD876
+	0xF2FF276E:F:0xC70B8886
+	0x37FE725A:F:0x4010AD65
+	0x859A24B1:F:0x1BBDE3D9
+	0x859A24B1:F:0x5840162C
+	0x859A24B1:F:0x9DCB4B7A
+	0x859A24B1:F:0xEC94DFF7
+	0xF76B66BD:F:0x06FF9151
+	0xF76B66BD:F:0x5C79D59A
+	0xF76B66BD:F:0x6AF88A5D
+	0xF76B66BD:F:0xBF5E2090
+	0xF76B66BD:F:0xDBA8D061
+	0xF76B66BD:F:0xED8B6C69
+	0x3FE654E6:F:0x3FC5E110
+	0x3FE654E6:F:0x90EE6A28
+	0xFAFCA413:F:0xCCEE0336
+	0x6EC1443D:F:0x807202B7
+	0x6EC1443D:F:0x8E0D9D40
+	0x6EC1443D:F:0xE0DECA6E
+	0x1082DA7F:F:0x1B04A1D6
+	0x1082DA7F:F:0xD541FF03
 )
