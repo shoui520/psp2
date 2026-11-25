@@ -8,65 +8,108 @@
 
 typedef int32_t SceUID;
 typedef uint32_t SceSize;
+typedef uint64_t SceNpTime;
+
+/* NP Auth & Ticket error codes (Sony SDK np_error.h) */
+#define SCE_NP_ERROR_STACK_TOO_SHORT                ((int)0x80550004)
+#define SCE_NP_ERROR_INVALID_ARGUMENT               ((int)0x80550003)
+
+#define SCE_NP_AUTH_ERROR_ALREADY_INITIALIZED       ((int)0x80550301)
+#define SCE_NP_AUTH_ERROR_NOT_INITIALIZED           ((int)0x80550302)
+#define SCE_NP_AUTH_ERROR_EINVAL                    ((int)0x80550303)
+#define SCE_NP_AUTH_ERROR_ENOMEM                    ((int)0x80550304)
+#define SCE_NP_AUTH_ERROR_ESRCH                     ((int)0x80550305)
+#define SCE_NP_AUTH_ERROR_EBUSY                     ((int)0x80550306)
+#define SCE_NP_AUTH_ERROR_ABORTED                   ((int)0x80550307)
+#define SCE_NP_AUTH_ERROR_INVALID_SERVICE_ID        ((int)0x80550308)
+#define SCE_NP_AUTH_ERROR_INVALID_CREDENTIAL        ((int)0x80550309)
+#define SCE_NP_AUTH_ERROR_INVALID_ENTITLEMENT_ID    ((int)0x8055030a)
+#define SCE_NP_AUTH_ERROR_INVALID_DATA_LENGTH       ((int)0x8055030b)
+#define SCE_NP_AUTH_ERROR_UNSUPPORTED_TICKET_VER    ((int)0x8055030c)
+#define SCE_NP_AUTH_ERROR_STACKSIZE_TOO_SHORT       ((int)0x8055030d)
+#define SCE_NP_AUTH_ERROR_TICKET_PARAM_NOT_FOUND    ((int)0x8055030f)
+#define SCE_NP_AUTH_ERROR_SIGNED_OUT                ((int)0x80550310)
+#define SCE_NP_AUTH_ERROR_REQUEST_LIMIT             ((int)0x80550381)
+#define SCE_NP_AUTH_ERROR_ALREADY_SET               ((int)0x80550382)
+#define SCE_NP_AUTH_ERROR_SHORT_READ                ((int)0x80550384)
+#define SCE_NP_AUTH_ERROR_SSL_CERT_EXPIRED          ((int)0x80550385)
+#define SCE_NP_AUTH_ERROR_SSL_CERT_REVOKED          ((int)0x80550386)
+#define SCE_NP_AUTH_ERROR_SSL_CERT_COMMON_NAME      ((int)0x80550387)
+#define SCE_NP_AUTH_ERROR_SSL_CERT_UNTRUSTED        ((int)0x80550388)
+#define SCE_NP_AUTH_ERROR_SSL_CERT_OTHER            ((int)0x80550389)
+
+#define SCE_NP_MANAGER_ERROR_INVALID_ARGUMENT       ((int)0x80550503)
+#define SCE_NP_MANAGER_ERROR_INVALID_TICKET_SIZE    ((int)0x80550505)
+#define SCE_NP_UTIL_ERROR_PARSER_FAILED             ((int)0x80550603)
+
+#define SCE_HTTP_ERROR_SSL                          ((int)0x80431075)
+#define SCE_HTTPS_ERROR_CERT                        ((int)0x80435060)
+
+#define SCE_NP_TICKET_MAX_SIZE                      65536u
+#define SCE_NP_SERVICE_ID_SIZE                      24u
+#define SCE_NP_ENTITLEMENT_ID_SIZE                  32u
+#define SCE_NP_COOKIE_MAX_SIZE                      1024u
+#define SCE_NP_TICKET_PARAM_DATA_LEN                256u
+#define SCE_NP_TICKET_PARAM_MAX                     12
 
 /* Imports */
 extern int sceNpCore_0366DAB6(char *buf, uint32_t size);
 extern int sceNpCore_04096629(int idx, char *buf, uint32_t size);
 extern int sceNpCore_243690EE(char *buf, uint32_t size);
-extern int sceNpCore_5145344F(int idx, char *name, uint32_t name_sz, char *val, uint32_t val_sz);
+extern int sceNpCore_5145344F(int idx, char *name, uint32_t nameSize, char *val, uint32_t valSize);
 extern int sceNpCore_515B65E8(int idx, const char *val, uint32_t len);
-extern int sceNpCore_8AFAB4A0(void *param, char *buf, uint32_t size);
-extern int sceNpCore_9218ACF6(char *name, uint32_t name_sz, char *val, uint32_t val_sz);
+extern int sceNpCore_8AFAB4A0(void *node, char *buf, uint32_t size);
+extern int sceNpCore_9218ACF6(char *name, uint32_t nameSize, char *val, uint32_t valSize);
 extern int sceNpCore_B13D27CA(char *url, uint32_t size);
 extern int sceNpCore_E7AED5A3(char *buf, uint32_t size);
 
-extern int sceKernelQueryMemoryInfo(uint32_t addr, uint32_t *mem_id, uint32_t *block_id);
+extern int sceKernelQueryMemoryInfo(uint32_t addr, uint32_t *partitionId, uint32_t *blockId);
 extern int sceNetFreeThreadinfo(SceUID thid);
 
 extern int sceNet_lib_B5CE388A(char *dst, const char *src, uint32_t size);
 extern int sceNet_lib_CF705E46(char *dst, const char *fmt, ...);
 extern uint32_t sceNet_lib_D8722983(const char *str);
-extern int sceNet_lib_E0A81C7C(const char *s1, const char *s2, uint32_t n);
+extern int sceNet_lib_E0A81C7C(const char *lhs, const char *rhs, uint32_t n);
 
-extern int sceParseUri_49E950EC(char *dst, uint32_t *out_len, uint32_t max_len, const char *src);
-extern int sceParseHttp_AD7BFDEF(const char *headers, uint32_t headers_len, const char *name, const char **out_val, uint32_t *out_len);
+extern int sceParseUri_49E950EC(char *dst, uint32_t *outLen, uint32_t maxLen, const char *src);
+extern int sceParseHttp_AD7BFDEF(const char *headers, uint32_t headersLen, const char *name, const char **outVal, uint32_t *outLen);
 
-extern int sceHttpGetContentLength(int req_id, uint64_t *len);
-extern int sceHttpSetRecvTimeOut(int tmpl_id, uint32_t timeout);
+extern int sceHttpGetContentLength(int reqId, uint64_t *len);
+extern int sceHttpSetRecvTimeOut(int tmplId, uint32_t timeout);
 extern int sceHttpAddExtraHeader(int id, const char *name, const char *value, uint32_t mode);
-extern int sceHttpGetStatusCode(int req_id, int *status_code);
-extern int sceHttpDeleteConnection(int conn_id);
-extern int sceHttpSetConnectTimeOut(int tmpl_id, uint32_t timeout);
-extern int sceHttpSetSendTimeOut(int tmpl_id, uint32_t timeout);
-extern int sceHttpCreateTemplate(const char *agent, int http_ver, int auto_proxy);
-extern int sceHttpDeleteRequest(int req_id);
-extern int sceHttp_AB1540D5(int req_id, int *err1, int *err2);
-extern int sceHttpCreateRequestWithURL(int conn_id, int method, const char *url, uint64_t content_len);
-extern int sceHttpSendRequest(int req_id, const void *data, uint32_t data_size);
-extern int sceHttpAbortRequest(int req_id);
-extern int sceHttpCreateConnectionWithURL(int tmpl_id, const char *url, int enable_keepalive);
-extern int sceHttpGetAllHeader(int req_id, char **header, uint32_t *header_size);
-extern int sceHttpReadData(int req_id, void *data, uint32_t size);
-extern int sceHttpDeleteTemplate(int tmpl_id);
-extern int sceHttp_3C478044(int tmpl_id, int val);
-extern int sceHttp_87F1E666(int tmpl_id, int val);
+extern int sceHttpGetStatusCode(int reqId, int *statusCode);
+extern int sceHttpDeleteConnection(int connId);
+extern int sceHttpSetConnectTimeOut(int tmplId, uint32_t timeout);
+extern int sceHttpSetSendTimeOut(int tmplId, uint32_t timeout);
+extern int sceHttpCreateTemplate(const char *agent, int httpVer, int autoProxy);
+extern int sceHttpDeleteRequest(int reqId);
+extern int sceHttp_AB1540D5(int reqId, int *sslErr, int *certErr);
+extern int sceHttpCreateRequestWithURL(int connId, int method, const char *url, uint64_t contentLen);
+extern int sceHttpSendRequest(int reqId, const void *data, uint32_t dataSize);
+extern int sceHttpAbortRequest(int reqId);
+extern int sceHttpCreateConnectionWithURL(int tmplId, const char *url, int enableKeepalive);
+extern int sceHttpGetAllHeader(int reqId, char **header, uint32_t *headerSize);
+extern int sceHttpReadData(int reqId, void *data, uint32_t size);
+extern int sceHttpDeleteTemplate(int tmplId);
+extern int sceHttp_3C478044(int tmplId, int val);
+extern int sceHttp_87F1E666(int tmplId, int val);
 
 extern int sceNp_B4063F7A(char *buf);
 extern int sceNp_B819A0C8(char *user, char *pass, void *opt);
 extern int sceNp_E24DA399(void);
 
 extern int sceKernelCpuSuspendIntr(void);
-extern void *sceKernelMemset(void *s, int c, SceSize n);
+extern void *sceKernelMemset(void *dst, int c, SceSize n);
 extern int _sceKernelCheckThreadStack(void);
 extern void *sceKernelMemcpy(void *dst, const void *src, SceSize n);
 extern void sceKernelCpuResumeIntr(int intr);
 
-extern int sceKernelGetModuleGPByAddress(uint32_t addr, uint32_t *out_gp);
+extern int sceKernelGetModuleGPByAddress(uint32_t addr, uint32_t *outGp);
 
 extern int sceKernelSendMbx(SceUID mbxid, void *msg);
 extern int sceKernelStartThread(SceUID thid, SceSize arglen, void *argp);
 extern int sceKernelWaitThreadEnd(SceUID thid, uint32_t *timeout);
-extern int sceKernelReferVplStatus(SceUID uid, void *info);
+extern int sceKernelReferVplStatus(SceUID uid, void *status);
 extern SceUID sceKernelCreateThread(const char *name, int (*entry)(SceSize, void *), int initPriority, int stackSize, uint32_t attr, void *option);
 extern SceUID sceKernelCreateVpl(const char *name, int part, int attr, uint32_t size, void *opt);
 extern SceUID sceKernelCreateMbx(const char *name, uint32_t attr, void *opt);
@@ -77,7 +120,72 @@ extern int sceKernelDeleteThread(SceUID thid);
 extern int sceKernelTryAllocateVpl(SceUID uid, uint32_t size, void **data);
 extern int sceKernelFreeVpl(SceUID uid, void *data);
 
-/* Data structures */
+/* Kernel VPL status layout (52 bytes) */
+typedef struct SceKernelVplStatus {
+	SceSize size;
+	char name[32];
+	uint32_t attr;
+	int poolSize;
+	int freeSize;
+	int numWaitThreads;
+} SceKernelVplStatus;
+
+/* Kernel thread creation option (8 bytes) */
+typedef struct SceKernelThreadOptParam {
+	SceSize size;
+	SceUID stackMpid;
+} SceKernelThreadOptParam;
+
+/* Kernel mailbox message header (8 bytes) */
+typedef struct SceKernelMsgPacket {
+	struct SceKernelMsgPacket *next;
+	uint8_t msgPriority;
+	uint8_t pad[3];
+} SceKernelMsgPacket;
+
+/* Sony SDK NP Auth public types (np_auth.h) */
+typedef struct SceNpDate {
+	uint16_t year;
+	uint8_t month;
+	uint8_t day;
+} SceNpDate;
+
+typedef struct SceNpTicketVersion {
+	uint16_t major;
+	uint16_t minor;
+} SceNpTicketVersion;
+
+typedef int (*SceNpAuthCallback)(int id, int result, void *arg);
+
+typedef struct SceNpAuthRequestParameter {
+	SceSize size;
+	SceNpTicketVersion version;
+	const char *serviceId;
+	const void *cookie;
+	SceSize cookieSize;
+	const char *entitlementId;
+	uint32_t consumedCount;
+	SceNpAuthCallback ticketCb;
+	void *cbArg;
+} SceNpAuthRequestParameter;
+
+typedef struct SceNpEntitlement {
+	char id[SCE_NP_ENTITLEMENT_ID_SIZE];
+	SceNpTime createdDate;
+	SceNpTime expireDate;
+	uint32_t type;
+	int32_t remainingCount;
+	uint32_t consumedCount;
+	uint8_t padding[4];
+} SceNpEntitlement;
+
+typedef struct SceNpAuthMemStat {
+	int poolSize;
+	int maxUsedSize;
+	int freeSize;
+} SceNpAuthMemStat;
+
+/* Internal NP Auth structures */
 typedef struct SceNpAuthParamNode {
 	struct SceNpAuthParamNode *next; /* 0x00 */
 	uint32_t id;                     /* 0x04 */
@@ -87,96 +195,105 @@ typedef struct SceNpAuthParamNode {
 
 typedef struct SceNpAuthRequest {
 	struct SceNpAuthRequest *next;   /* 0x00 */
-	int req_id;                      /* 0x04 */
+	int reqId;                       /* 0x04 */
 	uint8_t state;                   /* 0x08 */
-	uint8_t has_entitlement;         /* 0x09 */
-	uint8_t use_console_id;          /* 0x0a */
-	uint8_t reserved0b;                  /* 0x0b */
-	uint16_t ver_major;              /* 0x0c */
-	uint16_t ver_minor;              /* 0x0e */
-	SceNpAuthParamNode *params_head; /* 0x10 */
-	SceNpAuthParamNode *params_tail; /* 0x14 */
-	uint32_t param_mask;             /* 0x18 */
-	int (*pre_cb)(int, int, void *); /* 0x1c */
-	int (*done_cb)(int, int, void *);/* 0x20 */
-	void *cb_arg;                    /* 0x24 */
-	int http_req_id;                 /* 0x28 */
-	uint32_t reserved2c;                 /* 0x2c */
-	void *mbx_next;                  /* 0x30 */
-	uint8_t mbx_prio;                /* 0x34 */
-	uint8_t mbx_dummy[3];            /* 0x35 */
-	int64_t msg_req_id;              /* 0x38 */
+	uint8_t hasEntitlement;          /* 0x09 */
+	uint8_t useConsoleId;            /* 0x0a */
+	uint8_t statePad;                /* 0x0b */
+	SceNpTicketVersion version;      /* 0x0c */
+	SceNpAuthParamNode *paramsHead;  /* 0x10 */
+	SceNpAuthParamNode *paramsTail;  /* 0x14 */
+	uint32_t activeParamMask;        /* 0x18 */
+	SceNpAuthCallback preCb;         /* 0x1c */
+	SceNpAuthCallback doneCb;        /* 0x20 */
+	void *cbArg;                     /* 0x24 */
+	int httpReqId;                   /* 0x28 */
+	uint32_t httpPad;                /* 0x2c */
+	SceKernelMsgPacket mbxHeader;    /* 0x30 */
+	int64_t msgReqId;                /* 0x38 */
 	struct SceNpAuthRequest *self;   /* 0x40 */
-	uint32_t reserved44;                 /* 0x44 */
-	uint32_t pre_gp;                 /* 0x48 */
-	uint32_t done_gp;                /* 0x4c */
+	uint32_t selfPad;                /* 0x44 */
+	uint32_t preGp;                  /* 0x48 */
+	uint32_t doneGp;                 /* 0x4c */
 } SceNpAuthRequest;
 
-typedef struct SceNpAuthEntitlement {
-	char id[0x20];
-	uint64_t created_date;
-	uint64_t expire_date;
-	uint32_t type;
-	uint32_t remaining_count;
-	uint32_t consumed_count;
-} SceNpAuthEntitlement;
+typedef struct SceNpAuthMbxMessage {
+	SceKernelMsgPacket header;       /* 0x00 */
+	int64_t reqId;                   /* 0x08 */
+	SceNpAuthRequest *req;           /* 0x10 */
+} SceNpAuthMbxMessage;
 
 typedef struct SceNpAuthTicketBuf {
 	const uint8_t *buf;              /* 0x00 */
-	uint16_t ver_major;              /* 0x04 */
-	uint16_t ver_minor;              /* 0x06 */
+	uint8_t verBytes[4];             /* 0x04 */
 	uint32_t size;                   /* 0x08 */
 	uint32_t offset;                 /* 0x0c */
 } SceNpAuthTicketBuf;
 
+typedef struct SceNpAuthV3EntStream {
+	uint16_t tag;                    /* 0x00 */
+	uint16_t len;                    /* 0x02 */
+	const uint8_t *ptr;              /* 0x04 */
+	uint32_t pos;                    /* 0x08 */
+} SceNpAuthV3EntStream;
+
+typedef struct SceNpAuthV3EntHeader {
+	uint8_t flags;                   /* 0x00 */
+	uint8_t idLen;                   /* 0x01 */
+} SceNpAuthV3EntHeader;
+
 typedef struct SceNpAuthVersionHandler {
 	uint16_t major;
 	uint16_t minor;
-	int (*handler)(SceNpAuthTicketBuf *, ...);
+	void *handler;
 } SceNpAuthVersionHandler;
 
+typedef int (*SceNpAuthTicketParamFn)(SceNpAuthTicketBuf *, int, void *);
+typedef int (*SceNpAuthEntListFn)(SceNpAuthTicketBuf *, uint8_t *, uint32_t);
+typedef int (*SceNpAuthEntFindFn)(SceNpAuthTicketBuf *, const char *, SceNpEntitlement *);
+
 /* Forward declarations */
-static int npAuthGetTicketParamV2(SceNpAuthTicketBuf *tbuf, int param_id, void *out);
-static int npAuthGetTicketParamV3(SceNpAuthTicketBuf *tbuf, int param_id, void *out);
-static int npAuthListEntitlementsV2(SceNpAuthTicketBuf *tbuf, uint8_t *out_buf, uint32_t max_count);
-static int npAuthListEntitlementsV3(SceNpAuthTicketBuf *tbuf, uint8_t *out_buf, uint32_t max_count);
-static int npAuthFindEntitlementV2(SceNpAuthTicketBuf *tbuf, const char *ent_id, uint8_t *out_ent);
-static int npAuthFindEntitlementV3(SceNpAuthTicketBuf *tbuf, const char *ent_id, uint8_t *out_ent);
-static int npAuthGetEntitlementById(const void *buf, uint32_t len, const char *ent_id, void *out_ent);
-static int npAuthSeekTicketTag(SceNpAuthTicketBuf *tbuf, uint16_t target_tag, int skip_root);
-static int npAuthReadTicketField(SceNpAuthTicketBuf *tbuf, void *out_buf);
-static int npAuthReadEntitlementIdV3(void *ctx, const char *prefix, uint32_t prefix_len, uint8_t *hdr, char *out_id);
-static int npAuthReadEntitlementBodyV3(void *ctx, const uint8_t *hdr, void *out_ent);
+static int npAuthGetTicketParamV2(SceNpAuthTicketBuf *tbuf, int ticketParamId, void *outBuf);
+static int npAuthGetTicketParamV3(SceNpAuthTicketBuf *tbuf, int ticketParamId, void *outBuf);
+static int npAuthListEntitlementsV2(SceNpAuthTicketBuf *tbuf, uint8_t *outBuf, uint32_t maxCount);
+static int npAuthListEntitlementsV3(SceNpAuthTicketBuf *tbuf, uint8_t *outBuf, uint32_t maxCount);
+static int npAuthFindEntitlementV2(SceNpAuthTicketBuf *tbuf, const char *entId, SceNpEntitlement *outEnt);
+static int npAuthFindEntitlementV3(SceNpAuthTicketBuf *tbuf, const char *entId, SceNpEntitlement *outEnt);
+static int npAuthGetEntitlementById(const void *buf, uint32_t len, const char *entId, SceNpEntitlement *outEnt);
+static int npAuthSeekTicketTag(SceNpAuthTicketBuf *tbuf, uint16_t targetTag, int skipRoot);
+static int npAuthReadTicketField(SceNpAuthTicketBuf *tbuf, void *outBuf);
+static int npAuthReadEntitlementIdV3(SceNpAuthV3EntStream *stream, const char *prefix, uint32_t prefixLen, const SceNpAuthV3EntHeader *hdr, char *outId);
+static int npAuthReadEntitlementBodyV3(SceNpAuthV3EntStream *stream, const SceNpAuthV3EntHeader *hdr, SceNpEntitlement *outEnt);
 
 int npAuthWorkerThread(SceSize args, void *argp);
-static int npAuthCreateRequestInternal(int *out_id, const void *ver, const char *service_id, int use_cid);
-static int npAuthDestroyRequestInternal(int req_id);
-static SceNpAuthRequest *npAuthFindRequest(int req_id, SceNpAuthRequest **out_prev);
-static int npAuthBuildPostBody(SceNpAuthRequest *req, char *buf, uint32_t buf_size);
+static int npAuthCreateRequestInternal(int *outId, const SceNpTicketVersion *ver, const char *serviceId, int useCid);
+static int npAuthDestroyRequestInternal(int reqId);
+static SceNpAuthRequest *npAuthFindRequest(int reqId, SceNpAuthRequest **outPrev);
+static int npAuthBuildPostBody(SceNpAuthRequest *req, char *buf, uint32_t bufSize);
 static int npAuthSetCredentials(SceNpAuthRequest *req, const char *user, const char *pass);
-static int npAuthSetEntitlementConsume(SceNpAuthRequest *req, const char *ent_id, uint32_t consumed);
-static int npAuthSetCookie(SceNpAuthRequest *req, const char *cookie, uint32_t cookie_len);
-static int npAuthSetParam(SceNpAuthRequest *req, uint32_t param_id, const void *data, uint32_t len);
-static int npAuthClearParam(SceNpAuthRequest *req, uint32_t param_id);
+static int npAuthSetEntitlementConsume(SceNpAuthRequest *req, const char *entId, uint32_t consumed);
+static int npAuthSetCookie(SceNpAuthRequest *req, const char *cookie, uint32_t cookieLen);
+static int npAuthSetParam(SceNpAuthRequest *req, uint32_t keyId, const void *data, uint32_t len);
+static int npAuthClearParam(SceNpAuthRequest *req, uint32_t keyId);
 static int npAuthExecuteRequest(SceNpAuthRequest *req);
-static int npAuthSendHttpPost(SceNpAuthRequest *req, const void *post_data, uint32_t post_len);
-static int npAuthParseHttpResponse(SceNpAuthRequest *req, char *buf, uint32_t buf_size);
+static int npAuthSendHttpPost(SceNpAuthRequest *req, const void *postData, uint32_t postLen);
+static int npAuthParseHttpResponse(SceNpAuthRequest *req);
 static int npAuthReadHttpBody(SceNpAuthRequest *req, void *buf, uint32_t size);
-static int npAuthOpenHttpConnection(int *out_tmpl, int *out_conn, char *agent_buf, uint32_t agent_sz, char *url_buf, uint32_t url_sz);
-static int npAuthTranslateHttpError(int http_req_id, int err);
+static int npAuthOpenHttpConnection(int *outTmpl, int *outConn, char *agentBuf, uint32_t agentSize, char *urlBuf, uint32_t urlSize);
+static int npAuthTranslateHttpError(int httpReqId, int err);
 
-int sceNpAuth_61BB18B3(int req_id);
-int sceNpAuth_72BB0467(int req_id);
-int sceNpAuth_B714FBDD(int req_id, const char *user, const char *pass);
-int sceNpAuth_CE85B3B8(int *out_id, const void *ver, const char *service_id, int use_cid);
-int sceNpAuth_D99455DD(int req_id);
-int sceNpAuth_DAD65284(int req_id, int (*pre_cb)(int, int, void *), int (*done_cb)(int, int, void *), void *arg);
+int sceNpAuth_61BB18B3(int reqId);
+int sceNpAuth_72BB0467(int reqId);
+int sceNpAuth_B714FBDD(int reqId, const char *user, const char *pass);
+int sceNpAuth_CE85B3B8(int *outId, const SceNpTicketVersion *ver, const char *serviceId, int useCid);
+int sceNpAuth_D99455DD(int reqId);
+int sceNpAuth_DAD65284(int reqId, SceNpAuthCallback preCb, SceNpAuthCallback doneCb, void *arg);
 
 /* .rodata tables */
 static const struct {
 	uint16_t type;
 	uint16_t size;
-} g_ticket_v2_schema[11] = {
+} g_ticketV2Schema[11] = {
 	{ 0x0008, 0x0014 },
 	{ 0x0001, 0x0004 },
 	{ 0x0007, 0x0008 },
@@ -194,7 +311,7 @@ static const struct {
 	uint32_t id;
 	uint16_t type;
 	uint16_t size;
-} g_ticket_v3_schema[12] = {
+} g_ticketV3Schema[12] = {
 	{ 0,  0x0008, 0x0014 },
 	{ 1,  0x0001, 0x0004 },
 	{ 2,  0x0007, 0x0008 },
@@ -210,52 +327,52 @@ static const struct {
 };
 
 /* .data */
-static SceUID g_vpl_id = -1;               /* 0x3890 */
-static uint32_t g_vpl_max_used = 0xffffffff; /* 0x3894 */
-static char g_np_header_val[12] = "        "; /* 0x3898 */
+static SceUID g_vplId = -1;               /* 0x3890 */
+static int32_t g_vplMaxUsed = -1;         /* 0x3894 */
+static char g_npHeaderVal[12] = "        "; /* 0x3898 */
 
-static const uint16_t g_supported_vers[] = {
-	2, 1,
-	3, 0,
-	0, 0
+static const SceNpTicketVersion g_supportedVers[] = {
+	{ 2, 1 },
+	{ 3, 0 },
+	{ 0, 0 }
 };
 
-static SceNpAuthVersionHandler g_param_handlers[] = {
+static SceNpAuthVersionHandler g_paramHandlers[] = {
 	{ 2, 1, (void *)npAuthGetTicketParamV2 },
 	{ 3, 0, (void *)npAuthGetTicketParamV3 },
 	{ 0, 0, NULL }
 };
 
-static SceNpAuthVersionHandler g_ent_by_id_handlers[] = {
+static SceNpAuthVersionHandler g_entByIdHandlers[] = {
 	{ 2, 1, (void *)npAuthFindEntitlementV2 },
 	{ 3, 0, (void *)npAuthFindEntitlementV3 },
 	{ 0, 0, NULL }
 };
 
-static SceNpAuthVersionHandler g_ent_list_handlers[] = {
+static SceNpAuthVersionHandler g_entListHandlers[] = {
 	{ 2, 1, (void *)npAuthListEntitlementsV2 },
 	{ 3, 0, (void *)npAuthListEntitlementsV3 },
 	{ 0, 0, NULL }
 };
 
 /* .bss */
-static SceUID g_mbx_id;                    /* 0x3900 */
-static uint32_t g_stack_size;              /* 0x3904 */
-static SceUID g_thread_id;                 /* 0x3908 */
-static int g_initialized;                  /* 0x390c */
-static SceNpAuthRequest *g_req_list;       /* 0x3910 */
-static int g_last_req_id;                  /* 0x3914 */
-static SceNpAuthVersionHandler *g_cur_param_h;     /* 0x3918 */
-static SceNpAuthVersionHandler *g_cur_ent_id_h;    /* 0x391c */
-static SceNpAuthVersionHandler *g_cur_ent_list_h;  /* 0x3920 */
+static SceUID g_mbxId;                    /* 0x3900 */
+static uint32_t g_stackSize;              /* 0x3904 */
+static SceUID g_threadId;                 /* 0x3908 */
+static int g_initialized;                 /* 0x390c */
+static SceNpAuthRequest *g_reqList;       /* 0x3910 */
+static int g_lastReqId;                   /* 0x3914 */
+static SceNpAuthVersionHandler *g_curParamHandler;    /* 0x3918 */
+static SceNpAuthVersionHandler *g_curEntIdHandler;    /* 0x391c */
+static SceNpAuthVersionHandler *g_curEntListHandler;  /* 0x3920 */
 
 /* === npAuthCreateVpl @ 0x0000 === */
 static __attribute__((noinline)) int npAuthCreateVpl(int part, uint32_t size, const char *name)
 {
 	SceUID vpl = sceKernelCreateVpl(name, part, 0, size, NULL);
 	if (vpl >= 0) {
-		g_vpl_id = vpl;
-		g_vpl_max_used = 0;
+		g_vplId = vpl;
+		g_vplMaxUsed = 0;
 	}
 	return vpl;
 }
@@ -263,26 +380,26 @@ static __attribute__((noinline)) int npAuthCreateVpl(int part, uint32_t size, co
 /* === npAuthDeleteVpl @ 0x0044 === */
 static __attribute__((noinline)) void npAuthDeleteVpl(void)
 {
-	if (g_vpl_id > 0) {
-		sceKernelDeleteVpl(g_vpl_id);
-		g_vpl_id = -1;
+	if (g_vplId > 0) {
+		sceKernelDeleteVpl(g_vplId);
+		g_vplId = -1;
 	}
 }
 
 /* === npAuthGetVplStat @ 0x0080 === */
-static __attribute__((noinline)) int npAuthGetVplStat(uint32_t *out_stat)
+static __attribute__((noinline)) int npAuthGetVplStat(SceNpAuthMemStat *outStat)
 {
-	uint32_t info[16];
-	if (out_stat == NULL) {
+	SceKernelVplStatus status;
+	if (outStat == NULL) {
 		return (int)0x80550101;
 	}
-	info[0] = 0x34;
-	int res = sceKernelReferVplStatus(g_vpl_id, info);
+	status.size = sizeof(SceKernelVplStatus);
+	int res = sceKernelReferVplStatus(g_vplId, &status);
 	if (res >= 0) {
-		sceKernelMemset(out_stat, 0, 12);
-		out_stat[1] = g_vpl_max_used;
-		out_stat[2] = info[11];
-		out_stat[0] = info[10];
+		sceKernelMemset(outStat, 0, sizeof(SceNpAuthMemStat));
+		outStat->maxUsedSize = g_vplMaxUsed;
+		outStat->freeSize = status.freeSize;
+		outStat->poolSize = status.poolSize;
 		res = 0;
 	}
 	return res;
@@ -291,16 +408,16 @@ static __attribute__((noinline)) int npAuthGetVplStat(uint32_t *out_stat)
 /* === npAuthAlloc @ 0x0104 === */
 static __attribute__((noinline)) void *npAuthAlloc(uint32_t size)
 {
-	uint32_t info[16];
-	void *ptr = NULL;
-	if (sceKernelTryAllocateVpl(g_vpl_id, size, &ptr) < 0) {
+	SceKernelVplStatus status;
+	void *ptr;
+	if (sceKernelTryAllocateVpl(g_vplId, size, &ptr) < 0) {
 		return NULL;
 	}
-	info[0] = 0x34;
-	if (sceKernelReferVplStatus(g_vpl_id, info) == 0) {
-		uint32_t used = info[10] - info[11];
-		if (used > g_vpl_max_used) {
-			g_vpl_max_used = used;
+	status.size = sizeof(SceKernelVplStatus);
+	if (sceKernelReferVplStatus(g_vplId, &status) == 0) {
+		int32_t used = status.poolSize - status.freeSize;
+		if (used > g_vplMaxUsed) {
+			g_vplMaxUsed = used;
 		}
 	}
 	return ptr;
@@ -310,198 +427,172 @@ static __attribute__((noinline)) void *npAuthAlloc(uint32_t size)
 static __attribute__((noinline)) void npAuthFree(void *ptr)
 {
 	if (ptr != NULL) {
-		sceKernelFreeVpl(g_vpl_id, ptr);
+		sceKernelFreeVpl(g_vplId, ptr);
+	}
+}
+
+static __inline__ __attribute__((always_inline)) void npAuthShutdownWorker(void)
+{
+	SceNpAuthRequest quitReq;
+	g_stackSize = 0;
+	npAuthDeleteVpl();
+	sceKernelMemset(&quitReq, 0, sizeof(quitReq));
+	quitReq.msgReqId = 0;
+	if (g_mbxId > 0) {
+		sceKernelSendMbx(g_mbxId, &quitReq.mbxHeader);
+	}
+	if (g_threadId > 0) {
+		if (sceKernelWaitThreadEnd(g_threadId, NULL) >= 0) {
+			sceKernelDeleteThread(g_threadId);
+		}
+		sceNetFreeThreadinfo(g_threadId);
+		g_threadId = 0;
+	}
+	if (g_mbxId > 0) {
+		sceKernelDeleteMbx(g_mbxId);
+		g_mbxId = 0;
 	}
 }
 
 /* === sceNpAuth_A1DE86F8 (sceNpAuthInit) @ 0x01a0 === */
-int sceNpAuth_A1DE86F8(uint32_t pool_size, uint32_t stack_size, int prio)
+int sceNpAuth_A1DE86F8(uint32_t poolSize, uint32_t stackSize, int prio)
 {
-	uint32_t opt[4];
-	SceNpAuthRequest dummy_req;
-	uint32_t mem_info[4];
+	SceKernelThreadOptParam threadOpt;
+	uint32_t partitionId;
+	int res;
 
 	if (_sceKernelCheckThreadStack() < 0xfd0) {
-		return (int)0x80550004;
+		return SCE_NP_ERROR_STACK_TOO_SHORT;
 	}
-	if (stack_size < 0x3800) {
-		return (int)0x8055030d;
+	if (stackSize < 0x3800) {
+		return SCE_NP_AUTH_ERROR_STACKSIZE_TOO_SHORT;
 	}
+
 	if (g_initialized > 0) {
-		int err = (int)0x80550301;
-		goto cleanup;
-	}
-
-	int res = sceKernelCreateMbx("SceNpAuthWorker", 0, NULL);
-	if (res < 0) {
-		goto cleanup_vpl;
-	}
-	g_mbx_id = res;
-
-	res = sceKernelQueryMemoryInfo((uint32_t)(uintptr_t)&g_initialized, &mem_info[0], NULL);
-	if (res < 0) {
-		goto cleanup_vpl;
-	}
-
-	res = npAuthCreateVpl((int)mem_info[0], pool_size, "SceAuthMain");
-	if (res < 0) {
-		goto cleanup_vpl;
-	}
-
-	sceKernelMemset(opt, 0, 8);
-	g_stack_size = stack_size;
-	opt[0] = 8;
-	opt[1] = mem_info[0];
-	res = sceKernelCreateThread("SceNpAuthWorker", npAuthWorkerThread, prio, (int)stack_size, 0, opt);
-	if (res < 0) {
-		goto cleanup_vpl;
-	}
-	g_thread_id = res;
-
-	res = sceKernelStartThread(res, 0, NULL);
-	if (res < 0) {
-		goto cleanup_vpl;
-	}
-
-	g_initialized = 1;
-	return 0;
-
-cleanup_vpl:
-	{
-		int err = res;
-cleanup:
-		g_stack_size = 0;
-		npAuthDeleteVpl();
-		sceKernelMemset(&dummy_req, 0, sizeof(dummy_req));
-		dummy_req.msg_req_id = 0;
-		if (g_mbx_id > 0) {
-			sceKernelSendMbx(g_mbx_id, &dummy_req.mbx_next);
+		res = SCE_NP_AUTH_ERROR_ALREADY_INITIALIZED;
+	} else {
+		res = sceKernelCreateMbx("SceNpAuthWorker", 0, NULL);
+		if (res >= 0) {
+			g_mbxId = res;
+			res = sceKernelQueryMemoryInfo((uint32_t)(uintptr_t)&g_initialized, &partitionId, NULL);
 		}
-		if (g_thread_id > 0) {
-			if (sceKernelWaitThreadEnd(g_thread_id, NULL) >= 0) {
-				sceKernelDeleteThread(g_thread_id);
+		if (res >= 0) {
+			res = npAuthCreateVpl((int)partitionId, poolSize, "SceAuthMain");
+		}
+		if (res >= 0) {
+			g_stackSize = stackSize;
+			sceKernelMemset(&threadOpt, 0, sizeof(threadOpt));
+			threadOpt.size = sizeof(threadOpt);
+			threadOpt.stackMpid = (SceUID)partitionId;
+			res = sceKernelCreateThread("SceNpAuthWorker", npAuthWorkerThread, prio, (int)stackSize, 0, &threadOpt);
+			if (res >= 0) {
+				g_threadId = res;
+				res = sceKernelStartThread(res, 0, NULL);
 			}
-			sceNetFreeThreadinfo(g_thread_id);
-			g_thread_id = 0;
 		}
-		if (g_mbx_id > 0) {
-			sceKernelDeleteMbx(g_mbx_id);
-			g_mbx_id = 0;
-		}
-		return err;
-	}
-}
-
-/* === sceNpAuth_CD86A656 (sceNpAuthCreateStartRequest) @ 0x03a8 === */
-int sceNpAuth_CD86A656(const uint32_t *param)
-{
-	char user[80];
-	char pass[48];
-	int req_id = 0;
-
-	if (_sceKernelCheckThreadStack() < 0xf70) {
-		return (int)0x80550004;
-	}
-	if (param == NULL || param[0] != 0x24) {
-		return (int)0x80550303;
-	}
-	if (g_initialized == 0) {
-		return (int)0x80550302;
-	}
-
-	int res = sceNpAuth_CE85B3B8(&req_id, &param[1], (const char *)(uintptr_t)param[2], 0);
-	if (res < 0) {
-		goto error;
-	}
-
-	res = sceNp_B819A0C8(user, pass, NULL);
-	if (res < 0) {
-		goto error;
-	}
-
-	res = sceNpAuth_B714FBDD(req_id, user, pass);
-	if (res < 0) {
-		goto error;
-	}
-
-	if (param[3] != 0) {
-		if (g_initialized == 0) {
-			res = (int)0x80550302;
-			goto error;
-		}
-		SceNpAuthRequest *req = npAuthFindRequest(req_id, NULL);
-		if (req == NULL) {
-			res = (int)0x80550305;
-			goto error;
-		}
-		res = npAuthSetCookie(req, (const char *)(uintptr_t)param[3], param[4]);
-		if (res < 0) {
-			goto error;
+		if (res >= 0) {
+			g_initialized = 1;
+			return 0;
 		}
 	}
 
-	if (param[5] != 0) {
-		if (g_initialized == 0) {
-			res = (int)0x80550302;
-			goto error;
-		}
-		SceNpAuthRequest *req = npAuthFindRequest(req_id, NULL);
-		if (req == NULL) {
-			res = (int)0x80550305;
-			goto error;
-		}
-		res = npAuthSetEntitlementConsume(req, (const char *)(uintptr_t)param[5], param[6]);
-		if (res < 0) {
-			goto error;
-		}
-	}
-
-	res = sceNpAuth_DAD65284(req_id, NULL, (void *)(uintptr_t)param[7], (void *)(uintptr_t)param[8]);
-	if (res < 0) {
-		goto error;
-	}
-	return req_id;
-
-error:
-	if (req_id != 0) {
-		sceNpAuth_72BB0467(req_id);
-	}
+	npAuthShutdownWorker();
 	return res;
 }
 
-/* === sceNpAuth_72BB0467 (sceNpAuthDestroyRequest) @ 0x0568 === */
-int sceNpAuth_72BB0467(int req_id)
+/* === sceNpAuth_CD86A656 (sceNpAuthCreateStartRequest) @ 0x03a8 === */
+int sceNpAuth_CD86A656(const SceNpAuthRequestParameter *reqParam)
 {
-	if (_sceKernelCheckThreadStack() < 0xfe0) {
-		return (int)0x80550004;
+	char user[80];
+	char pass[48];
+	int reqId = 0;
+
+	if (_sceKernelCheckThreadStack() < 0xf70) {
+		return SCE_NP_ERROR_STACK_TOO_SHORT;
+	}
+	if (reqParam == NULL || reqParam->size != sizeof(SceNpAuthRequestParameter)) {
+		return SCE_NP_AUTH_ERROR_EINVAL;
 	}
 	if (g_initialized == 0) {
-		return (int)0x80550302;
+		return SCE_NP_AUTH_ERROR_NOT_INITIALIZED;
 	}
-	return npAuthDestroyRequestInternal(req_id);
+
+	int res = sceNpAuth_CE85B3B8(&reqId, &reqParam->version, reqParam->serviceId, 0);
+	if (res >= 0) {
+		res = sceNp_B819A0C8(user, pass, NULL);
+	}
+	if (res >= 0) {
+		res = sceNpAuth_B714FBDD(reqId, user, pass);
+	}
+	if (res >= 0 && reqParam->cookie != NULL) {
+		if (g_initialized != 0) {
+			SceNpAuthRequest *req = npAuthFindRequest(reqId, NULL);
+			if (req == NULL) {
+				res = SCE_NP_AUTH_ERROR_ESRCH;
+			} else {
+				res = npAuthSetCookie(req, (const char *)reqParam->cookie, reqParam->cookieSize);
+			}
+		} else {
+			res = SCE_NP_AUTH_ERROR_NOT_INITIALIZED;
+		}
+	}
+	if (res >= 0 && reqParam->entitlementId != NULL) {
+		if (g_initialized == 0) {
+			res = SCE_NP_AUTH_ERROR_NOT_INITIALIZED;
+		} else {
+			SceNpAuthRequest *req = npAuthFindRequest(reqId, NULL);
+			if (req == NULL) {
+				res = SCE_NP_AUTH_ERROR_ESRCH;
+			} else {
+				res = npAuthSetEntitlementConsume(req, reqParam->entitlementId, reqParam->consumedCount);
+			}
+		}
+	}
+	if (res >= 0) {
+		res = sceNpAuth_DAD65284(reqId, NULL, reqParam->ticketCb, reqParam->cbArg);
+	}
+	if (res < 0) {
+		if (reqId != 0) {
+			sceNpAuth_72BB0467(reqId);
+		}
+		return res;
+	}
+	return reqId;
+}
+
+/* === sceNpAuth_72BB0467 (sceNpAuthDestroyRequest) @ 0x0568 === */
+int sceNpAuth_72BB0467(int reqId)
+{
+	if (_sceKernelCheckThreadStack() < 0xfe0) {
+		return SCE_NP_ERROR_STACK_TOO_SHORT;
+	}
+	if (g_initialized == 0) {
+		return SCE_NP_AUTH_ERROR_NOT_INITIALIZED;
+	}
+	return npAuthDestroyRequestInternal(reqId);
 }
 
 /* === sceNpAuth_D99455DD (sceNpAuthAbortRequest) @ 0x05c4 === */
-int sceNpAuth_D99455DD(int req_id)
+int sceNpAuth_D99455DD(int reqId)
 {
 	if (_sceKernelCheckThreadStack() < 0xff0) {
-		return (int)0x80550004;
+		return SCE_NP_ERROR_STACK_TOO_SHORT;
 	}
 	if (g_initialized == 0) {
-		return (int)0x80550302;
+		return SCE_NP_AUTH_ERROR_NOT_INITIALIZED;
 	}
-	if (req_id == 0) {
-		return (int)0x80550303;
+	if (reqId == 0) {
+		return SCE_NP_AUTH_ERROR_EINVAL;
 	}
-	SceNpAuthRequest *req = npAuthFindRequest(req_id, NULL);
+	SceNpAuthRequest *req = npAuthFindRequest(reqId, NULL);
 	if (req == NULL) {
-		return (int)0x80550305;
+		return SCE_NP_AUTH_ERROR_ESRCH;
 	}
-	int state = sceNpAuth_61BB18B3(req_id);
+	int state = sceNpAuth_61BB18B3(reqId);
 	if (state >= 0) {
 		if (state < 2) {
 			int intr = sceKernelCpuSuspendIntr();
-			if (req->state <= 3) {
+			if (req->state <= 3u) {
 				req->state = 3;
 			}
 			sceKernelCpuResumeIntr(intr);
@@ -509,77 +600,77 @@ int sceNpAuth_D99455DD(int req_id)
 		}
 		if (state == 2) {
 			int intr = sceKernelCpuSuspendIntr();
-			if (req->state <= 3) {
+			if (req->state <= 3u) {
 				req->state = 3;
 			}
 			sceKernelCpuResumeIntr(intr);
-			if (req->http_req_id != 0) {
-				return sceHttpAbortRequest(req->http_req_id);
+			if (req->httpReqId != 0) {
+				return sceHttpAbortRequest(req->httpReqId);
 			}
 			return 0;
 		}
 	}
-	return (int)0x80550307;
+	return SCE_NP_AUTH_ERROR_ABORTED;
 }
 
 /* === sceNpAuth_CE85B3B8 @ 0x06f0 === */
-int sceNpAuth_CE85B3B8(int *out_id, const void *ver, const char *service_id, int use_cid)
+int sceNpAuth_CE85B3B8(int *outId, const SceNpTicketVersion *ver, const char *serviceId, int useCid)
 {
 	if (g_initialized == 0) {
-		return (int)0x80550302;
+		return SCE_NP_AUTH_ERROR_NOT_INITIALIZED;
 	}
-	if (out_id == NULL) {
-		return (int)0x80550303;
+	if (outId == NULL) {
+		return SCE_NP_AUTH_ERROR_EINVAL;
 	}
-	return npAuthCreateRequestInternal(out_id, ver, service_id, use_cid);
+	return npAuthCreateRequestInternal(outId, ver, serviceId, useCid);
 }
 
 /* === sceNpAuth_B714FBDD @ 0x072c === */
-int sceNpAuth_B714FBDD(int req_id, const char *user, const char *pass)
+int sceNpAuth_B714FBDD(int reqId, const char *user, const char *pass)
 {
 	if (g_initialized == 0) {
-		return (int)0x80550302;
+		return SCE_NP_AUTH_ERROR_NOT_INITIALIZED;
 	}
-	SceNpAuthRequest *req = npAuthFindRequest(req_id, NULL);
+	SceNpAuthRequest *req = npAuthFindRequest(reqId, NULL);
 	if (req == NULL) {
-		return (int)0x80550305;
+		return SCE_NP_AUTH_ERROR_ESRCH;
 	}
 	return npAuthSetCredentials(req, user, pass);
 }
 
 /* === sceNpAuth_DAD65284 @ 0x07a0 === */
-int sceNpAuth_DAD65284(int req_id, int (*pre_cb)(int, int, void *), int (*done_cb)(int, int, void *), void *arg)
+int sceNpAuth_DAD65284(int reqId, SceNpAuthCallback preCb, SceNpAuthCallback doneCb, void *arg)
 {
 	if (g_initialized == 0) {
-		return (int)0x80550302;
+		return SCE_NP_AUTH_ERROR_NOT_INITIALIZED;
 	}
-	if (req_id == 0 || done_cb == NULL) {
-		return (int)0x80550303;
+	if (reqId == 0 || doneCb == NULL) {
+		return SCE_NP_AUTH_ERROR_EINVAL;
 	}
-	SceNpAuthRequest *req = npAuthFindRequest(req_id, NULL);
+	SceNpAuthRequest *req = npAuthFindRequest(reqId, NULL);
 	if (req == NULL) {
-		return (int)0x80550305;
+		return SCE_NP_AUTH_ERROR_ESRCH;
 	}
 	int intr = sceKernelCpuSuspendIntr();
-	req->pre_cb = pre_cb;
-	if (sceKernelGetModuleGPByAddress((uint32_t)(uintptr_t)pre_cb, &req->pre_gp) < 0) {
-		register uint32_t gp_reg asm("gp");
-		req->pre_gp = gp_reg;
+	req->preCb = preCb;
+	if (sceKernelGetModuleGPByAddress((uint32_t)(uintptr_t)preCb, &req->preGp) < 0) {
+		register uint32_t gpReg asm("gp");
+		req->preGp = gpReg;
 	}
-	req->done_cb = done_cb;
-	if (sceKernelGetModuleGPByAddress((uint32_t)(uintptr_t)done_cb, &req->done_gp) < 0) {
-		register uint32_t gp_reg asm("gp");
-		req->done_gp = gp_reg;
+	req->doneCb = doneCb;
+	if (sceKernelGetModuleGPByAddress((uint32_t)(uintptr_t)doneCb, &req->doneGp) < 0) {
+		register uint32_t gpReg asm("gp");
+		req->doneGp = gpReg;
 	}
-	req->msg_req_id = (int64_t)req_id;
-	req->cb_arg = arg;
+	req->msgReqId = (int64_t)reqId;
+	req->cbArg = arg;
 	req->self = req;
 	sceKernelCpuResumeIntr(intr);
 
-	int res = sceKernelSendMbx(g_mbx_id, &req->mbx_next);
+	int res = sceKernelSendMbx(g_mbxId, &req->mbxHeader);
 	if (res >= 0) {
 		intr = sceKernelCpuSuspendIntr();
-		if (req->state <= 1) {
+		if (req->state <= 1u) {
 			req->state = 1;
 		}
 		sceKernelCpuResumeIntr(intr);
@@ -588,17 +679,17 @@ int sceNpAuth_DAD65284(int req_id, int (*pre_cb)(int, int, void *), int (*done_c
 }
 
 /* === sceNpAuth_61BB18B3 @ 0x08f0 === */
-int sceNpAuth_61BB18B3(int req_id)
+int sceNpAuth_61BB18B3(int reqId)
 {
 	if (g_initialized == 0) {
-		return (int)0x80550302;
+		return SCE_NP_AUTH_ERROR_NOT_INITIALIZED;
 	}
-	if (req_id == 0) {
-		return (int)0x80550303;
+	if (reqId == 0) {
+		return SCE_NP_AUTH_ERROR_EINVAL;
 	}
-	SceNpAuthRequest *req = npAuthFindRequest(req_id, NULL);
+	SceNpAuthRequest *req = npAuthFindRequest(reqId, NULL);
 	if (req == NULL) {
-		return (int)0x80550305;
+		return SCE_NP_AUTH_ERROR_ESRCH;
 	}
 	int intr = sceKernelCpuSuspendIntr();
 	int state = req->state;
@@ -609,302 +700,274 @@ int sceNpAuth_61BB18B3(int req_id)
 /* === npAuthGetStackSize @ 0x0960 === */
 static __attribute__((noinline)) uint32_t npAuthGetStackSize(void)
 {
-	return g_stack_size;
+	return g_stackSize;
 }
 
 /* === sceNpAuth_4EC1F667 (sceNpAuthTerm) @ 0x096c === */
-int sceNpAuth_4EC1F667(void)
+void sceNpAuth_4EC1F667(void)
 {
-	SceNpAuthRequest dummy_req;
-
 	if (_sceKernelCheckThreadStack() < 0xff0) {
-		return (int)0x80550004;
+		return;
 	}
 	if (g_initialized == 0) {
-		return 0;
+		return;
 	}
-	while (g_req_list != NULL) {
-		sceNpAuth_D99455DD(g_req_list->req_id);
-		npAuthDestroyRequestInternal(g_req_list->req_id);
+	while (g_reqList != NULL) {
+		sceNpAuth_D99455DD(g_reqList->reqId);
+		npAuthDestroyRequestInternal(g_reqList->reqId);
 	}
-	g_stack_size = 0;
-	npAuthDeleteVpl();
-	sceKernelMemset(&dummy_req, 0, sizeof(dummy_req));
-	dummy_req.msg_req_id = 0;
-	if (g_mbx_id > 0) {
-		sceKernelSendMbx(g_mbx_id, &dummy_req.mbx_next);
-	}
-	if (g_thread_id > 0) {
-		if (sceKernelWaitThreadEnd(g_thread_id, NULL) >= 0) {
-			sceKernelDeleteThread(g_thread_id);
-		}
-		sceNetFreeThreadinfo(g_thread_id);
-		g_thread_id = 0;
-	}
-	if (g_mbx_id > 0) {
-		sceKernelDeleteMbx(g_mbx_id);
-		g_mbx_id = 0;
-	}
+	npAuthShutdownWorker();
 	g_initialized = 0;
-	return 0;
 }
 
-/* === sceNpAuth_3F1C1F70 @ 0x0a84 === */
-int sceNpAuth_3F1C1F70(int req_id, void *buf, uint32_t size)
+/* === sceNpAuth_3F1C1F70 (sceNpAuthGetTicket) @ 0x0a84 === */
+int sceNpAuth_3F1C1F70(int reqId, void *buf, uint32_t size)
 {
 	if (_sceKernelCheckThreadStack() < 0xff0) {
-		return (int)0x80550004;
+		return SCE_NP_ERROR_STACK_TOO_SHORT;
 	}
 	if (g_initialized == 0) {
-		return (int)0x80550302;
+		return SCE_NP_AUTH_ERROR_NOT_INITIALIZED;
 	}
-	if (req_id == 0 || buf == NULL || size == 0) {
-		return (int)0x80550303;
+	if ((reqId == 0) | (buf == NULL) || size == 0) {
+		return SCE_NP_AUTH_ERROR_EINVAL;
 	}
-	SceNpAuthRequest *req = npAuthFindRequest(req_id, NULL);
+	SceNpAuthRequest *req = npAuthFindRequest(reqId, NULL);
 	if (req == NULL) {
-		return (int)0x80550305;
+		return SCE_NP_AUTH_ERROR_ESRCH;
 	}
 	return npAuthReadHttpBody(req, buf, size);
 }
 
 /* === sceNpAuth_F4531ADC @ 0x0b3c === */
-int sceNpAuth_F4531ADC(uint32_t *out_stat)
+int sceNpAuth_F4531ADC(SceNpAuthMemStat *outStat)
 {
 	if (_sceKernelCheckThreadStack() < 0xff0) {
-		return (int)0x80550004;
+		return SCE_NP_ERROR_STACK_TOO_SHORT;
 	}
 	if (g_initialized == 0) {
-		return (int)0x80550302;
+		return SCE_NP_AUTH_ERROR_NOT_INITIALIZED;
 	}
-	return npAuthGetVplStat(out_stat);
+	return npAuthGetVplStat(outStat);
 }
 
 /* === npAuthWorkerThread @ 0x0b98 === */
 __attribute__((noinline)) int npAuthWorkerThread(SceSize args, void *argp)
 {
-	void *msg = NULL;
-	while (sceKernelReceiveMbx(g_mbx_id, &msg, NULL) >= 0) {
-		uint32_t *m = (uint32_t *)msg;
-		if ((m[2] | m[3]) == 0) {
+	void *rawMsg = NULL;
+	(void)args;
+	(void)argp;
+
+	while (sceKernelReceiveMbx(g_mbxId, &rawMsg, NULL) >= 0) {
+		SceNpAuthMbxMessage *msg = (SceNpAuthMbxMessage *)rawMsg;
+		if (msg->reqId == 0) {
 			break;
 		}
-		SceNpAuthRequest *req = (SceNpAuthRequest *)(uintptr_t)m[4];
+		SceNpAuthRequest *req = msg->req;
 		if (req != NULL) {
 			int intr = sceKernelCpuSuspendIntr();
-			if (req->state <= 2) {
+			if (req->state <= 2u) {
 				req->state = 2;
 			}
 			sceKernelCpuResumeIntr(intr);
 		}
-		int res = npAuthExecuteRequest((SceNpAuthRequest *)(uintptr_t)m[4]);
-		req = (SceNpAuthRequest *)(uintptr_t)m[4];
+		int res = npAuthExecuteRequest(msg->req);
+		req = msg->req;
 		if (req != NULL) {
 			int intr = sceKernelCpuSuspendIntr();
-			if (req->state <= 4) {
+			if (req->state <= 4u) {
 				req->state = 4;
 			}
 			sceKernelCpuResumeIntr(intr);
 		}
 		if (res == 1) {
-			req = (SceNpAuthRequest *)(uintptr_t)m[4];
-			npAuthDestroyRequestInternal(req->req_id);
+			npAuthDestroyRequestInternal(msg->req->reqId);
 		}
 	}
 	return 0;
 }
 
-/* === npAuthCreateRequestInternal @ 0x0ca0 === */
-static __attribute__((noinline)) int npAuthCreateRequestInternal(int *out_id, const void *ver, const char *service_id, int use_cid)
+static __inline__ __attribute__((always_inline)) void npAuthFreeRequestNodes(SceNpAuthRequest *req)
 {
-	uint32_t svc_len = 0;
-	if (service_id != NULL) {
-		svc_len = sceNet_lib_D8722983(service_id);
+	while (req->paramsHead != NULL) {
+		SceNpAuthParamNode *nextNode = req->paramsHead->next;
+		npAuthFree(req->paramsHead);
+		req->paramsHead = nextNode;
 	}
-	if (svc_len - 1 >= 0x18) {
-		return (int)0x80550308;
+	npAuthFree(req);
+}
+
+/* === npAuthCreateRequestInternal @ 0x0ca0 === */
+static __attribute__((noinline)) int npAuthCreateRequestInternal(int *outId, const SceNpTicketVersion *ver, const char *serviceId, int useCid)
+{
+	uint32_t svcLen = 0;
+	if (serviceId != NULL) {
+		svcLen = sceNet_lib_D8722983(serviceId);
+	}
+	if (svcLen - 1u >= SCE_NP_SERVICE_ID_SIZE) {
+		return SCE_NP_AUTH_ERROR_INVALID_SERVICE_ID;
 	}
 	SceNpAuthRequest *req = (SceNpAuthRequest *)npAuthAlloc(sizeof(SceNpAuthRequest));
 	if (req == NULL) {
-		return (int)0x80550304;
+		return SCE_NP_AUTH_ERROR_ENOMEM;
 	}
 	sceKernelMemset(req, 0, sizeof(SceNpAuthRequest));
-	sceKernelMemcpy(&req->ver_major, ver, 4);
-	req->use_console_id = (uint8_t)use_cid;
+	sceKernelMemcpy(&req->version, ver, sizeof(SceNpTicketVersion));
+	req->useConsoleId = (uint8_t)useCid;
 	req->state = 0;
-	req->has_entitlement = 0;
+	req->hasEntitlement = 0;
 
-	int res = npAuthSetParam(req, 2, service_id, svc_len);
-	if (res < 0) {
-		goto error;
-	}
-
-	int intr = sceKernelCpuSuspendIntr();
-	int next_id = (g_last_req_id == 16) ? 1 : (g_last_req_id + 1);
-	int found_id = (int)0x80550381;
-	while (next_id != g_last_req_id) {
-		if (npAuthFindRequest(next_id, NULL) == NULL) {
-			found_id = next_id;
-			g_last_req_id = next_id;
-			break;
+	int res = npAuthSetParam(req, 2, serviceId, svcLen);
+	if (res >= 0) {
+		int intr = sceKernelCpuSuspendIntr();
+		int nextId = (g_lastReqId == 16) ? 1 : (g_lastReqId + 1);
+		int foundId = SCE_NP_AUTH_ERROR_REQUEST_LIMIT;
+		while (nextId != g_lastReqId) {
+			if (npAuthFindRequest(nextId, NULL) == NULL) {
+				foundId = nextId;
+				g_lastReqId = nextId;
+				break;
+			}
+			nextId = (nextId == 16) ? 1 : (nextId + 1);
 		}
-		next_id = (next_id == 16) ? 1 : (next_id + 1);
-	}
-	if (found_id < 0) {
+		if (foundId >= 0) {
+			*outId = foundId;
+			req->next = g_reqList;
+			req->reqId = foundId;
+			g_reqList = req;
+			sceKernelCpuResumeIntr(intr);
+			return res;
+		}
 		sceKernelCpuResumeIntr(intr);
-		res = found_id;
-		goto error;
+		res = foundId;
 	}
 
-	*out_id = found_id;
-	req->next = g_req_list;
-	req->req_id = found_id;
-	g_req_list = req;
-	sceKernelCpuResumeIntr(intr);
-	return res;
-
-error:
-	if (req != NULL) {
-		while (req->params_head != NULL) {
-			SceNpAuthParamNode *n = req->params_head->next;
-			npAuthFree(req->params_head);
-			req->params_head = n;
-		}
-		npAuthFree(req);
-	}
+	npAuthFreeRequestNodes(req);
 	return res;
 }
 
 /* === npAuthDestroyRequestInternal @ 0x0e74 === */
-static __attribute__((noinline)) int npAuthDestroyRequestInternal(int req_id)
+static __attribute__((noinline)) int npAuthDestroyRequestInternal(int reqId)
 {
 	SceNpAuthRequest *prev = NULL;
 	int intr = sceKernelCpuSuspendIntr();
-	SceNpAuthRequest *req = npAuthFindRequest(req_id, &prev);
+	SceNpAuthRequest *req = npAuthFindRequest(reqId, &prev);
 	if (req == NULL) {
 		sceKernelCpuResumeIntr(intr);
-		return (int)0x80550305;
+		return SCE_NP_AUTH_ERROR_ESRCH;
 	}
-	int state = sceNpAuth_61BB18B3(req_id);
-	if ((uint32_t)(state - 1) < 3) {
+	int state = sceNpAuth_61BB18B3(reqId);
+	if ((uint32_t)(state - 1) < 3u) {
 		sceKernelCpuResumeIntr(intr);
-		return (int)0x80550306;
+		return SCE_NP_AUTH_ERROR_EBUSY;
 	}
 	if (prev != NULL) {
 		prev->next = req->next;
 	} else {
-		g_req_list = req->next;
+		g_reqList = g_reqList->next;
 	}
 	sceKernelCpuResumeIntr(intr);
 
-	while (req->params_head != NULL) {
-		SceNpAuthParamNode *n = req->params_head->next;
-		npAuthFree(req->params_head);
-		req->params_head = n;
-	}
-	npAuthFree(req);
+	npAuthFreeRequestNodes(req);
 	return 0;
 }
 
 /* === npAuthFindRequest @ 0x0f64 === */
-static __attribute__((noinline)) SceNpAuthRequest *npAuthFindRequest(int req_id, SceNpAuthRequest **out_prev)
+static __attribute__((noinline)) SceNpAuthRequest *npAuthFindRequest(int reqId, SceNpAuthRequest **outPrev)
 {
 	SceNpAuthRequest *prev = NULL;
-	SceNpAuthRequest *cur = g_req_list;
+	SceNpAuthRequest *cur = g_reqList;
 	while (cur != NULL) {
-		if (cur->req_id == req_id) {
+		if (cur->reqId == reqId) {
 			break;
 		}
 		prev = cur;
 		cur = cur->next;
 	}
-	if (out_prev != NULL) {
-		*out_prev = prev;
+	if (outPrev != NULL) {
+		*outPrev = prev;
 	}
 	return cur;
 }
 
 /* === npAuthBuildPostBody @ 0x0fa0 === */
-static __attribute__((noinline)) int npAuthBuildPostBody(SceNpAuthRequest *req, char *buf, uint32_t buf_size)
+static __attribute__((noinline)) int npAuthBuildPostBody(SceNpAuthRequest *req, char *buf, uint32_t bufSize)
 {
 	char prefix[32];
-	char num_str[16];
-	uint32_t enc_len = 0;
+	char numStr[16];
+	uint32_t encLen;
+	int res = 0;
 
 	if (req == NULL) {
-		sceKernelMemset(prefix, 0, 32);
-		return (int)0x80550303;
+		sceKernelMemset(prefix, 0, sizeof(prefix));
+		return SCE_NP_AUTH_ERROR_EINVAL;
 	}
 
-	int res;
-	if ((req->param_mask & 1) == 0) {
-		sceNet_lib_CF705E46(num_str, "%u", req->has_entitlement);
-		uint32_t len = sceNet_lib_D8722983(num_str);
-		res = npAuthSetParam(req, 0, num_str, len);
-		if (res != 0) {
-			goto out_err;
-		}
+	if ((req->activeParamMask & 1u) == 0) {
+		sceNet_lib_CF705E46(numStr, "%u", req->hasEntitlement);
+		uint32_t len = sceNet_lib_D8722983(numStr);
+		res = npAuthSetParam(req, 0, numStr, len);
 	}
 
-	if (req->use_console_id != 0) {
-		res = sceNpCore_243690EE(buf, buf_size);
-		if (res < 0) {
-			goto out_err;
-		}
-		res = npAuthSetParam(req, 1, buf, (uint32_t)res);
-		if (res < 0 && res != (int)0x80550382) {
-			goto out_err;
-		}
-		req->use_console_id = 0;
-	} else {
-		res = npAuthClearParam(req, 1);
-		if (res < 0 && res != (int)0x80550305) {
-			goto out_err;
+	if (res == 0) {
+		if (req->useConsoleId != 0) {
+			res = sceNpCore_243690EE(buf, bufSize);
+			if (res >= 0) {
+				res = npAuthSetParam(req, 1, buf, (uint32_t)res);
+				if (res >= 0 || res == SCE_NP_AUTH_ERROR_ALREADY_SET) {
+					req->useConsoleId = 0;
+					res = 0;
+				}
+			}
+		} else {
+			res = npAuthClearParam(req, 1);
+			if (res >= 0 || res == SCE_NP_AUTH_ERROR_ESRCH) {
+				res = 0;
+			}
 		}
 	}
 
-	if ((req->param_mask & 0x100) == 0) {
-		res = sceNpCore_E7AED5A3(buf, buf_size);
-		if (res < 0) {
-			goto out_err;
-		}
-		res = npAuthSetParam(req, 8, buf, 0x40);
-		if (res < 0) {
-			goto out_err;
+	if (res == 0 && (req->activeParamMask & 0x100u) == 0) {
+		res = sceNpCore_E7AED5A3(buf, bufSize);
+		if (res >= 0) {
+			res = npAuthSetParam(req, 8, buf, 0x40);
 		}
 	}
 
-	uint32_t total = 0;
-	for (SceNpAuthParamNode *node = req->params_head; node != NULL; node = node->next) {
-		res = sceNpCore_8AFAB4A0(node, prefix, 32);
-		if (res < 0) {
-			goto out_err;
-		}
-		if ((uint32_t)res >= buf_size) {
-			res = (int)0x80550304;
-			goto out_err;
-		}
-		enc_len = (uint32_t)res;
-		sceNet_lib_B5CE388A(buf, prefix, (uint32_t)res);
-		buf += enc_len;
-		buf_size -= enc_len;
-		total += enc_len;
+	if (res >= 0) {
+		uint32_t total = 0;
+		SceNpAuthParamNode *node;
+		for (node = req->paramsHead; node != NULL; node = node->next) {
+			res = sceNpCore_8AFAB4A0(node, prefix, sizeof(prefix));
+			if (res < 0) {
+				break;
+			}
+			encLen = (uint32_t)res;
+			if (encLen >= bufSize) {
+				res = SCE_NP_AUTH_ERROR_ENOMEM;
+				break;
+			}
+			sceNet_lib_B5CE388A(buf, prefix, encLen);
+			buf += encLen;
+			bufSize -= encLen;
+			total += encLen;
 
-		res = sceParseUri_49E950EC(buf, &enc_len, buf_size, node->data);
-		uint32_t added = enc_len - 1;
-		total += added;
-		buf += added;
-		buf_size -= added;
-		if (res < 0) {
-			goto out_err;
+			res = sceParseUri_49E950EC(buf, &encLen, bufSize, node->data);
+			uint32_t added = encLen - 1u;
+			total += added;
+			buf += added;
+			bufSize -= added;
+			if (res < 0) {
+				break;
+			}
+		}
+		if (node == NULL) {
+			sceKernelMemset(prefix, 0, sizeof(prefix));
+			return (int)total;
 		}
 	}
 
-	sceKernelMemset(prefix, 0, 32);
-	return (int)total;
-
-out_err:
-	sceKernelMemset(prefix, 0, 32);
+	sceKernelMemset(prefix, 0, sizeof(prefix));
 	return res;
 }
 
@@ -914,10 +977,10 @@ static __attribute__((noinline)) int npAuthSetCredentials(SceNpAuthRequest *req,
 	uint32_t ulen = (user != NULL) ? sceNet_lib_D8722983(user) : 0;
 	uint32_t plen = (pass != NULL) ? sceNet_lib_D8722983(pass) : 0;
 	if (req == NULL) {
-		return (int)0x80550303;
+		return SCE_NP_AUTH_ERROR_EINVAL;
 	}
-	if (ulen == 0 || plen == 0) {
-		return (int)0x80550309;
+	if ((ulen == 0) | (plen == 0)) {
+		return SCE_NP_AUTH_ERROR_INVALID_CREDENTIAL;
 	}
 	int res = npAuthSetParam(req, 3, user, ulen);
 	if (res >= 0) {
@@ -927,301 +990,285 @@ static __attribute__((noinline)) int npAuthSetCredentials(SceNpAuthRequest *req,
 }
 
 /* === npAuthSetEntitlementConsume @ 0x12ac === */
-static __attribute__((noinline)) int npAuthSetEntitlementConsume(SceNpAuthRequest *req, const char *ent_id, uint32_t consumed)
+static __attribute__((noinline)) int npAuthSetEntitlementConsume(SceNpAuthRequest *req, const char *entId, uint32_t consumed)
 {
-	char num_str[16];
-	uint32_t len = (ent_id != NULL) ? sceNet_lib_D8722983(ent_id) : 0;
+	char numStr[16];
+	uint32_t len = (entId != NULL) ? sceNet_lib_D8722983(entId) : 0;
 	if (req == NULL) {
-		return (int)0x80550303;
+		return SCE_NP_AUTH_ERROR_EINVAL;
 	}
-	if (len - 1 >= 0x20) {
-		return (int)0x8055030a;
+	if (len - 1u >= SCE_NP_ENTITLEMENT_ID_SIZE) {
+		return SCE_NP_AUTH_ERROR_INVALID_ENTITLEMENT_ID;
 	}
-	req->has_entitlement = 1;
-	int res = npAuthSetParam(req, 5, ent_id, len);
+	req->hasEntitlement = 1;
+	int res = npAuthSetParam(req, 5, entId, len);
 	if (res >= 0) {
-		sceNet_lib_CF705E46(num_str, "%u", consumed);
-		uint32_t nlen = sceNet_lib_D8722983(num_str);
-		res = npAuthSetParam(req, 6, num_str, nlen);
+		sceNet_lib_CF705E46(numStr, "%u", consumed);
+		uint32_t nlen = sceNet_lib_D8722983(numStr);
+		res = npAuthSetParam(req, 6, numStr, nlen);
 	}
 	return res;
 }
 
 /* === npAuthSetCookie @ 0x136c === */
-static __attribute__((noinline)) int npAuthSetCookie(SceNpAuthRequest *req, const char *cookie, uint32_t cookie_len)
+static __attribute__((noinline)) int npAuthSetCookie(SceNpAuthRequest *req, const char *cookie, uint32_t cookieLen)
 {
 	if (req == NULL) {
-		return (int)0x80550303;
+		return SCE_NP_AUTH_ERROR_EINVAL;
 	}
-	if (cookie == NULL || cookie_len == 0 || cookie_len > 0x400) {
-		return (int)0x8055030b;
+	if (((cookie == NULL) | (cookieLen == 0)) || cookieLen > SCE_NP_COOKIE_MAX_SIZE) {
+		return SCE_NP_AUTH_ERROR_INVALID_DATA_LENGTH;
 	}
-	return npAuthSetParam(req, 7, cookie, cookie_len);
+	return npAuthSetParam(req, 7, cookie, cookieLen);
 }
 
 /* === npAuthSetParam @ 0x13d0 === */
-static __attribute__((noinline)) int npAuthSetParam(SceNpAuthRequest *req, uint32_t param_id, const void *data, uint32_t len)
+static __attribute__((noinline)) int npAuthSetParam(SceNpAuthRequest *req, uint32_t keyId, const void *data, uint32_t len)
 {
 	char prefix[32];
 	int res;
 
-	if (req == NULL || data == NULL || param_id >= 9) {
-		res = (int)0x80550303;
-		goto out;
-	}
-	if ((req->param_mask & (1u << param_id)) != 0) {
-		res = (int)0x80550382;
-		goto out;
-	}
-
-	SceNpAuthParamNode *node = (SceNpAuthParamNode *)npAuthAlloc(len + 13);
-	if (node == NULL) {
-		res = (int)0x80550304;
-		goto out;
-	}
-	node->next = NULL;
-	node->id = param_id;
-	node->len = len;
-	sceKernelMemcpy(node->data, data, len);
-	node->data[len] = '\0';
-
-	res = sceNpCore_8AFAB4A0(node, prefix, 32);
-	if (res < 0) {
-		goto out;
-	}
-	if (prefix[0] == '&') {
-		if (req->params_head != NULL) {
-			req->params_tail->next = node;
-		} else {
-			req->params_head = node;
-		}
-		req->params_tail = node;
+	if (((req == NULL) | (data == NULL)) || keyId >= 9u) {
+		res = SCE_NP_AUTH_ERROR_EINVAL;
+	} else if ((req->activeParamMask & (1u << keyId)) != 0) {
+		res = SCE_NP_AUTH_ERROR_ALREADY_SET;
 	} else {
-		if (req->params_tail == NULL) {
-			req->params_tail = node;
-		}
-		node->next = req->params_head;
-		req->params_head = node;
-	}
-	req->param_mask |= (1u << param_id);
-	res = 0;
+		SceNpAuthParamNode *node = (SceNpAuthParamNode *)npAuthAlloc(len + 13u);
+		if (node == NULL) {
+			res = SCE_NP_AUTH_ERROR_ENOMEM;
+		} else {
+			node->next = NULL;
+			node->id = keyId;
+			node->len = len;
+			sceKernelMemcpy(node->data, data, len);
+			node->data[len] = '\0';
 
-out:
-	sceKernelMemset(prefix, 0, 32);
+			res = sceNpCore_8AFAB4A0(node, prefix, sizeof(prefix));
+			if (res >= 0) {
+				if (prefix[0] == '&') {
+					if (req->paramsHead != NULL) {
+						req->paramsTail->next = node;
+					} else {
+						req->paramsHead = node;
+					}
+					req->paramsTail = node;
+				} else {
+					if (req->paramsTail == NULL) {
+						req->paramsTail = node;
+					}
+					node->next = req->paramsHead;
+					req->paramsHead = node;
+				}
+				req->activeParamMask |= (1u << keyId);
+				res = 0;
+			}
+		}
+	}
+
+	sceKernelMemset(prefix, 0, sizeof(prefix));
 	return res;
 }
 
 /* === npAuthClearParam @ 0x1528 === */
-static __attribute__((noinline)) int npAuthClearParam(SceNpAuthRequest *req, uint32_t param_id)
+static __attribute__((noinline)) int npAuthClearParam(SceNpAuthRequest *req, uint32_t keyId)
 {
-	if (req == NULL || param_id >= 9) {
-		return (int)0x80550303;
+	if (req == NULL || keyId >= 9u) {
+		return SCE_NP_AUTH_ERROR_EINVAL;
 	}
 	SceNpAuthParamNode *prev = NULL;
-	SceNpAuthParamNode *cur = req->params_head;
-	uint32_t mask = ~(1u << param_id);
+	SceNpAuthParamNode *cur = req->paramsHead;
+	uint32_t mask = ~(1u << keyId);
 	while (cur != NULL) {
-		if (cur->id == param_id) {
+		if (cur->id == keyId) {
 			if (prev == NULL) {
-				req->params_head = cur->next;
+				req->paramsHead = cur->next;
 			} else {
 				prev->next = cur->next;
 			}
 			if (cur->next == NULL) {
-				req->params_tail = prev;
+				req->paramsTail = prev;
 			}
 			npAuthFree(cur);
-			req->param_mask &= mask;
+			req->activeParamMask &= mask;
 			return 0;
 		}
 		prev = cur;
 		cur = cur->next;
 	}
-	return (int)0x80550305;
+	return SCE_NP_AUTH_ERROR_ESRCH;
 }
 
 /* === npAuthExecuteRequest @ 0x15ec === */
 static __attribute__((noinline)) int npAuthExecuteRequest(SceNpAuthRequest *req)
 {
-	int tmpl_id = 0;
-	int conn_id = 0;
-	int cb_res = 0;
+	int tmplId = 0;
+	int connId = 0;
+	int cbRes = 0;
+	char *workBuf = NULL;
 
 	if (req == NULL) {
-		return (int)0x80550303;
+		return SCE_NP_AUTH_ERROR_EINVAL;
 	}
 
-	int ver_ok = 0;
-	for (int i = 0; g_supported_vers[i] != 0; i += 2) {
-		if (g_supported_vers[i] == req->ver_major && g_supported_vers[i + 1] == req->ver_minor) {
-			ver_ok = 1;
+	int verOk = 0;
+	for (int i = 0; g_supportedVers[i].major != 0; i++) {
+		if (g_supportedVers[i].major == req->version.major && g_supportedVers[i].minor == req->version.minor) {
+			verOk = 1;
 			break;
 		}
 	}
 
-	int res;
-	char *work_buf = NULL;
-	if (!ver_ok) {
-		res = (int)0x8055030c;
-		goto done;
-	}
-
-	work_buf = (char *)npAuthAlloc(0x832);
-	if (work_buf == NULL) {
-		res = (int)0x80550304;
-		goto done;
-	}
-	sceKernelMemset(work_buf, 0, 0x832);
-	char *body_buf = work_buf + 0x32;
-
-	res = npAuthOpenHttpConnection(&tmpl_id, &conn_id, body_buf, 0x800, work_buf, 0x32);
-	if (res < 0) {
-		goto done;
-	}
-
-	if (req->pre_cb != NULL) {
-		register uint32_t gp_reg asm("gp");
-		uint32_t saved_gp = gp_reg;
-		gp_reg = req->pre_gp;
-		int stk = _sceKernelCheckThreadStack();
-		int max_stk = (int)npAuthGetStackSize();
-		if (stk - max_stk > 0) {
-			uint32_t pad = ((uint32_t)(stk - (int)npAuthGetStackSize()) + 15) & ~15u;
-			void * volatile dummy = __builtin_alloca(pad);
-			(void)dummy;
-			req->pre_cb(req->req_id, conn_id, req->cb_arg);
+	int res = SCE_NP_AUTH_ERROR_UNSUPPORTED_TICKET_VER;
+	if (verOk) {
+		workBuf = (char *)npAuthAlloc(0x832);
+		if (workBuf == NULL) {
+			res = SCE_NP_AUTH_ERROR_ENOMEM;
 		} else {
-			req->pre_cb(req->req_id, conn_id, req->cb_arg);
+			char *bodyBuf = workBuf + 0x32;
+			sceKernelMemset(workBuf, 0, 0x832);
+			res = npAuthOpenHttpConnection(&tmplId, &connId, bodyBuf, 0x800, workBuf, 0x32);
+			if (res >= 0) {
+				if (req->preCb != NULL) {
+					register uint32_t gpReg asm("gp");
+					uint32_t savedGp = gpReg;
+					gpReg = req->preGp;
+					int stk = _sceKernelCheckThreadStack();
+					int maxStk = (int)npAuthGetStackSize();
+					if (stk - maxStk > 0) {
+						uint32_t padSize = ((uint32_t)(stk - (int)npAuthGetStackSize()) + 15u) & ~15u;
+						void * volatile stackGuard = __builtin_alloca(padSize);
+						(void)stackGuard;
+						req->preCb(req->reqId, connId, req->cbArg);
+					} else {
+						req->preCb(req->reqId, connId, req->cbArg);
+					}
+					gpReg = savedGp;
+				}
+
+				res = npAuthBuildPostBody(req, bodyBuf, 0x800);
+				if (res >= 0) {
+					int postLen = res;
+					if (sceNpAuth_61BB18B3(req->reqId) == 3) {
+						res = SCE_NP_AUTH_ERROR_ABORTED;
+					} else {
+						res = sceHttpCreateRequestWithURL(connId, 1, workBuf, (uint64_t)(uint32_t)postLen);
+						if (res >= 0) {
+							req->httpReqId = res;
+							res = npAuthSendHttpPost(req, bodyBuf, (uint32_t)postLen);
+							if (res == 0) {
+								res = npAuthParseHttpResponse(req);
+							}
+							if (sceNpAuth_61BB18B3(req->reqId) == 3) {
+								res = SCE_NP_AUTH_ERROR_ABORTED;
+							}
+						}
+					}
+				}
+			}
 		}
-		gp_reg = saved_gp;
 	}
 
-	res = npAuthBuildPostBody(req, body_buf, 0x800);
-	if (res < 0) {
-		goto done;
-	}
-	int post_len = res;
-
-	if (sceNpAuth_61BB18B3(req->req_id) == 3) {
-		res = (int)0x80550307;
-		goto done;
-	}
-
-	res = sceHttpCreateRequestWithURL(conn_id, 1, work_buf, (uint64_t)(uint32_t)post_len);
-	if (res < 0) {
-		goto done;
-	}
-	req->http_req_id = res;
-
-	res = npAuthSendHttpPost(req, body_buf, (uint32_t)post_len);
-	if (res == 0) {
-		res = npAuthParseHttpResponse(req, body_buf, 0x800);
-	}
-	if (sceNpAuth_61BB18B3(req->req_id) == 3) {
-		res = (int)0x80550307;
-	}
-
-done:
-	if (req->done_cb != NULL) {
+	if (req->doneCb != NULL) {
 		int stk = _sceKernelCheckThreadStack();
-		register uint32_t gp_reg asm("gp");
-		uint32_t saved_gp = gp_reg;
-		gp_reg = req->done_gp;
-		int max_stk = (int)npAuthGetStackSize();
-		if (stk - max_stk > 0) {
-			uint32_t pad = ((uint32_t)(stk - (int)npAuthGetStackSize()) + 15) & ~15u;
-			void * volatile dummy = __builtin_alloca(pad);
-			(void)dummy;
-			cb_res = req->done_cb(req->req_id, res, req->cb_arg);
+		register uint32_t gpReg asm("gp");
+		uint32_t savedGp = gpReg;
+		gpReg = req->doneGp;
+		int maxStk = (int)npAuthGetStackSize();
+		if (stk - maxStk > 0) {
+			uint32_t padSize = ((uint32_t)(stk - (int)npAuthGetStackSize()) + 15u) & ~15u;
+			void * volatile stackGuard = __builtin_alloca(padSize);
+			(void)stackGuard;
+			cbRes = req->doneCb(req->reqId, res, req->cbArg);
 		} else {
-			cb_res = req->done_cb(req->req_id, res, req->cb_arg);
+			cbRes = req->doneCb(req->reqId, res, req->cbArg);
 		}
-		gp_reg = saved_gp;
+		gpReg = savedGp;
 	}
 
-	if (req->http_req_id > 0) {
-		sceHttpDeleteRequest(req->http_req_id);
-		req->http_req_id = 0;
+	if (req->httpReqId > 0) {
+		sceHttpDeleteRequest(req->httpReqId);
+		req->httpReqId = 0;
 	}
-	if (tmpl_id > 0) {
-		sceHttpDeleteTemplate(tmpl_id);
+	if (tmplId > 0) {
+		sceHttpDeleteTemplate(tmplId);
 	}
-	if (conn_id > 0) {
-		sceHttpDeleteConnection(conn_id);
+	if (connId > 0) {
+		sceHttpDeleteConnection(connId);
 	}
-	if (work_buf != NULL) {
-		npAuthFree(work_buf);
+	if (workBuf != NULL) {
+		npAuthFree(workBuf);
 	}
-	return cb_res;
+	return cbRes;
 }
 
 /* === npAuthSendHttpPost @ 0x191c === */
-static __attribute__((noinline)) int npAuthSendHttpPost(SceNpAuthRequest *req, const void *post_data, uint32_t post_len)
+static __attribute__((noinline)) int npAuthSendHttpPost(SceNpAuthRequest *req, const void *postData, uint32_t postLen)
 {
-	char hdr_name[32];
-	char hdr_val[48];
-	char ver_str[32];
+	char hdrName[32];
+	char hdrVal[48];
+	char verStr[16];
 
-	sceNet_lib_CF705E46(ver_str, "%d.%d", req->ver_major, req->ver_minor);
+	sceNet_lib_CF705E46(verStr, "%d.%d", req->version.major, req->version.minor);
 	int idx = 0;
 	int done = 0;
 	do {
-		int res = sceNpCore_5145344F(idx, hdr_name, 32, hdr_val, 48);
-		if (res < 0) {
-			return res;
-		}
+		int res = sceNpCore_5145344F(idx, hdrName, sizeof(hdrName), hdrVal, sizeof(hdrVal));
 		if (res > 0) {
 			done = 1;
 		}
-		if (idx == 0) {
-			sceNet_lib_B5CE388A(hdr_val, ver_str, 48);
+		if (res < 0) {
+			return res;
 		}
-		res = sceHttpAddExtraHeader(req->http_req_id, hdr_name, hdr_val, 0);
+		if (idx == 0) {
+			sceNet_lib_B5CE388A(hdrVal, verStr, sizeof(hdrVal));
+		}
+		res = sceHttpAddExtraHeader(req->httpReqId, hdrName, hdrVal, 0);
 		idx++;
 		if (res < 0) {
 			return res;
 		}
 	} while (!done);
 
-	int res = sceNpCore_9218ACF6(hdr_name, 32, g_np_header_val, 4);
+	int res = sceNpCore_9218ACF6(hdrName, sizeof(hdrName), g_npHeaderVal, 4);
 	if (res < 0) {
 		return res;
 	}
-	res = sceNp_B4063F7A(g_np_header_val + 4);
+	res = sceNp_B4063F7A(g_npHeaderVal + 4);
 	if (res < 0) {
 		return res;
 	}
-	res = sceHttpAddExtraHeader(req->http_req_id, hdr_name, g_np_header_val, 0);
+	res = sceHttpAddExtraHeader(req->httpReqId, hdrName, g_npHeaderVal, 0);
 	if (res < 0) {
 		return res;
 	}
-	res = sceHttpSendRequest(req->http_req_id, post_data, post_len);
+	res = sceHttpSendRequest(req->httpReqId, postData, postLen);
 	if (res < 0) {
-		return npAuthTranslateHttpError(req->http_req_id, res);
+		return npAuthTranslateHttpError(req->httpReqId, res);
 	}
-	sceKernelMemset(hdr_name, 0, 32);
-	sceKernelMemset(hdr_val, 0, 48);
-	sceKernelMemset(g_np_header_val, 0x20, 4);
-	sceKernelMemset(g_np_header_val + 4, 0x20, 4);
+	sceKernelMemset(hdrName, 0, sizeof(hdrName));
+	sceKernelMemset(hdrVal, 0, sizeof(hdrVal));
+	sceKernelMemset(g_npHeaderVal, 0x20, 4);
+	sceKernelMemset(g_npHeaderVal + 4, 0x20, 4);
 	return 0;
 }
 
 /* === npAuthParseHttpResponse @ 0x1ad4 === */
-static __attribute__((noinline)) int npAuthParseHttpResponse(SceNpAuthRequest *req, char *buf, uint32_t buf_size)
+static __attribute__((noinline)) int npAuthParseHttpResponse(SceNpAuthRequest *req)
 {
-	char hdr_name[32];
-	int status_code = 0;
-	char *all_hdr = NULL;
-	uint32_t all_hdr_len = 0;
-	const char *val_ptr = NULL;
-	uint32_t val_len = 0;
-	uint64_t content_len = 0;
+	char hdrName[32];
+	int statusCode;
+	char *allHdr;
+	uint32_t allHdrLen;
+	const char *valPtr;
+	uint32_t valLen;
+	uint64_t contentLen;
 
-	int res = sceHttpGetStatusCode(req->http_req_id, &status_code);
+	int res = sceHttpGetStatusCode(req->httpReqId, &statusCode);
 	if (res < 0) {
 		return res;
 	}
-	res = sceHttpGetAllHeader(req->http_req_id, &all_hdr, &all_hdr_len);
+	allHdrLen = 0;
+	res = sceHttpGetAllHeader(req->httpReqId, &allHdr, &allHdrLen);
 	if (res < 0) {
 		return res;
 	}
@@ -1229,256 +1276,251 @@ static __attribute__((noinline)) int npAuthParseHttpResponse(SceNpAuthRequest *r
 	int idx = 0;
 	int done = 0;
 	do {
-		res = sceNpCore_04096629(idx, hdr_name, 32);
-		if (res < 0) {
-			return res;
-		}
+		res = sceNpCore_04096629(idx, hdrName, sizeof(hdrName));
 		if (res > 0) {
 			done = 1;
 		}
-		res = sceParseHttp_AD7BFDEF(all_hdr, all_hdr_len, hdr_name, &val_ptr, &val_len);
 		if (res < 0) {
 			return res;
 		}
-		res = sceNpCore_515B65E8(idx, val_ptr, val_len);
+		res = sceParseHttp_AD7BFDEF(allHdr, allHdrLen, hdrName, &valPtr, &valLen);
+		if (res < 0) {
+			return res;
+		}
+		res = sceNpCore_515B65E8(idx, valPtr, valLen);
 		idx++;
 		if (res < 0) {
 			return res;
 		}
 	} while (!done);
 
-	res = sceHttpGetContentLength(req->http_req_id, &content_len);
+	res = sceHttpGetContentLength(req->httpReqId, &contentLen);
 	if (res < 0) {
 		return res;
 	}
-	if (content_len == 0 || content_len > 0x10000) {
-		return (int)0x8055030b;
+	if (contentLen == 0 || contentLen > SCE_NP_TICKET_MAX_SIZE) {
+		return SCE_NP_AUTH_ERROR_INVALID_DATA_LENGTH;
 	}
-	return (int)content_len;
+	return (int)contentLen;
 }
 
 /* === npAuthReadHttpBody @ 0x1bf8 === */
 static __attribute__((noinline)) int npAuthReadHttpBody(SceNpAuthRequest *req, void *buf, uint32_t size)
 {
-	if (req == NULL || req->http_req_id == 0 || buf == NULL || size == 0) {
-		return (int)0x80550303;
+	if (req == NULL || req->httpReqId == 0 || buf == NULL || size == 0) {
+		return SCE_NP_AUTH_ERROR_EINVAL;
 	}
 	uint32_t total = 0;
 	uint8_t *dst = (uint8_t *)buf;
-	while (1) {
-		int n = sceHttpReadData(req->http_req_id, dst, size);
+	int n;
+	do {
+		n = sceHttpReadData(req->httpReqId, dst, size);
 		if (n < 0) {
-			return npAuthTranslateHttpError(req->http_req_id, n);
+			return npAuthTranslateHttpError(req->httpReqId, n);
 		}
 		size -= (uint32_t)n;
 		dst += n;
 		total += (uint32_t)n;
-		if (n <= 0 || size == 0) {
-			break;
-		}
-	}
+	} while (n >= 0 && size != 0);
 	if (size != 0) {
-		return (int)0x80550384;
+		return SCE_NP_AUTH_ERROR_SHORT_READ;
 	}
 	return (int)total;
 }
 
 /* === npAuthOpenHttpConnection @ 0x1cc8 === */
-static __attribute__((noinline)) int npAuthOpenHttpConnection(int *out_tmpl, int *out_conn, char *agent_buf, uint32_t agent_sz, char *url_buf, uint32_t url_sz)
+static __attribute__((noinline)) int npAuthOpenHttpConnection(int *outTmpl, int *outConn, char *agentBuf, uint32_t agentSize, char *urlBuf, uint32_t urlSize)
 {
-	int res = sceNpCore_0366DAB6(agent_buf, agent_sz);
+	int res = sceNpCore_0366DAB6(agentBuf, agentSize);
 	if (res < 0) {
 		return res;
 	}
-	res = sceHttpCreateTemplate(agent_buf, 0, 0);
+	res = sceHttpCreateTemplate(agentBuf, 0, 0);
 	if (res < 0) {
 		return res;
 	}
-	*out_tmpl = res;
+	*outTmpl = res;
 
-	res = sceHttpSetConnectTimeOut(*out_tmpl, 20000000);
+	res = sceHttpSetConnectTimeOut(*outTmpl, 20000000);
 	if (res < 0) {
 		return res;
 	}
-	res = sceHttpSetSendTimeOut(*out_tmpl, 20000000);
+	res = sceHttpSetSendTimeOut(*outTmpl, 20000000);
 	if (res < 0) {
 		return res;
 	}
-	res = sceHttpSetRecvTimeOut(*out_tmpl, 20000000);
+	res = sceHttpSetRecvTimeOut(*outTmpl, 20000000);
 	if (res < 0) {
 		return res;
 	}
 
 	if (sceNp_E24DA399() > 0) {
-		res = sceHttp_87F1E666(*out_tmpl, 0x40);
+		res = sceHttp_87F1E666(*outTmpl, 0x40);
 		if (res < 0) {
 			return res;
 		}
-		res = sceHttp_3C478044(*out_tmpl, 1);
+		res = sceHttp_3C478044(*outTmpl, 1);
 	} else {
-		res = sceHttp_87F1E666(*out_tmpl, 0xe5);
+		res = sceHttp_87F1E666(*outTmpl, 0xe5);
 		if (res < 0) {
 			return res;
 		}
-		res = sceHttp_3C478044(*out_tmpl, 0x1a);
+		res = sceHttp_3C478044(*outTmpl, 0x1a);
 	}
 	if (res < 0) {
 		return res;
 	}
 
-	res = sceNpCore_B13D27CA(url_buf, url_sz);
+	res = sceNpCore_B13D27CA(urlBuf, urlSize);
 	if (res < 0) {
 		return res;
 	}
-	res = sceHttpCreateConnectionWithURL(*out_tmpl, url_buf, 1);
+	res = sceHttpCreateConnectionWithURL(*outTmpl, urlBuf, 1);
 	if (res < 0) {
 		return res;
 	}
-	*out_conn = res;
+	*outConn = res;
 	return 0;
 }
 
 /* === npAuthTranslateHttpError @ 0x1e0c === */
-static __attribute__((noinline)) int npAuthTranslateHttpError(int http_req_id, int err)
+static __attribute__((noinline)) int npAuthTranslateHttpError(int httpReqId, int err)
 {
-	int err1 = 0, err2 = 0;
-	if (err != (int)0x80431075) {
+	int sslErr;
+	int certErr;
+	if (err != SCE_HTTP_ERROR_SSL) {
 		return err;
 	}
-	int res = sceHttp_AB1540D5(http_req_id, &err1, &err2);
+	int res = sceHttp_AB1540D5(httpReqId, &sslErr, &certErr);
 	if (res < 0) {
 		return res;
 	}
-	if (err1 != (int)0x80435060) {
-		return err1;
+	if (sslErr != SCE_HTTPS_ERROR_CERT) {
+		return sslErr;
 	}
-	if (err2 & 4) {
-		return (int)0x80550385;
+	if (certErr & 4) {
+		return SCE_NP_AUTH_ERROR_SSL_CERT_EXPIRED;
 	}
-	if (err2 & 0x20) {
-		return (int)0x80550386;
+	if (certErr & 0x20) {
+		return SCE_NP_AUTH_ERROR_SSL_CERT_REVOKED;
 	}
-	if (err2 & 2) {
-		return (int)0x80550387;
+	if (certErr & 2) {
+		return SCE_NP_AUTH_ERROR_SSL_CERT_COMMON_NAME;
 	}
-	if (err2 & 1) {
-		return (int)0x80550388;
+	if (certErr & 1) {
+		return SCE_NP_AUTH_ERROR_SSL_CERT_UNTRUSTED;
 	}
-	return (int)0x80550389;
+	return SCE_NP_AUTH_ERROR_SSL_CERT_OTHER;
 }
 
 /* === sceNpAuth_5A3CB57A (sceNpAuthGetTicketParam) @ 0x1eb4 === */
-int sceNpAuth_5A3CB57A(const void *buf, uint32_t len, int param_id, void *out_param)
+int sceNpAuth_5A3CB57A(const void *buf, uint32_t len, int ticketParamId, void *outTicketParam)
 {
 	SceNpAuthTicketBuf tbuf;
-	sceKernelMemset(out_param, 0, 0x100);
-	if (buf == NULL || out_param == NULL) {
-		return (int)0x80550503;
+	sceKernelMemset(outTicketParam, 0, SCE_NP_TICKET_PARAM_DATA_LEN);
+	if (buf == NULL || outTicketParam == NULL) {
+		return SCE_NP_MANAGER_ERROR_INVALID_ARGUMENT;
 	}
-	if (len - 4 > 0xfffc) {
-		return (int)0x80550505;
+	if (len - 4u > 0xfffcu) {
+		return SCE_NP_MANAGER_ERROR_INVALID_TICKET_SIZE;
 	}
-	if ((uint32_t)param_id >= 12) {
-		return (int)0x80550503;
+	if ((uint32_t)ticketParamId >= (uint32_t)SCE_NP_TICKET_PARAM_MAX) {
+		return SCE_NP_MANAGER_ERROR_INVALID_ARGUMENT;
 	}
 	tbuf.buf = (const uint8_t *)buf;
 	tbuf.size = len;
 	tbuf.offset = 4;
-	sceKernelMemcpy(&tbuf.ver_major, buf, 4);
-	uint8_t maj = (uint8_t)(tbuf.ver_major & 0xff) >> 4;
-	uint8_t min = (uint8_t)((tbuf.ver_major >> 8) & 0xff);
-	tbuf.ver_major = (uint16_t)(maj | ((uint16_t)min << 8));
+	sceKernelMemcpy(tbuf.verBytes, buf, 4);
+	tbuf.verBytes[0] >>= 4;
 
-	g_cur_param_h = g_param_handlers;
-	while (g_cur_param_h->major != 0) {
-		if (g_cur_param_h->major == maj && g_cur_param_h->minor == min) {
+	g_curParamHandler = g_paramHandlers;
+	while (g_curParamHandler->major != 0) {
+		if (g_curParamHandler->major == tbuf.verBytes[0] && g_curParamHandler->minor == tbuf.verBytes[1]) {
 			break;
 		}
-		g_cur_param_h++;
+		g_curParamHandler++;
 	}
-	if (g_cur_param_h->major == 0) {
-		return (int)0x80550310;
+	if (g_curParamHandler->major == 0) {
+		return SCE_NP_AUTH_ERROR_SIGNED_OUT;
 	}
-	return ((int (*)(SceNpAuthTicketBuf *, int, void *))g_cur_param_h->handler)(&tbuf, param_id, out_param);
+	return ((SceNpAuthTicketParamFn)g_curParamHandler->handler)(&tbuf, ticketParamId, outTicketParam);
 }
 
 /* === sceNpAuth_75FB0AE3 (sceNpAuthGetEntitlementIdList) @ 0x2000 === */
-int sceNpAuth_75FB0AE3(const void *buf, uint32_t len, uint8_t *out_buf, uint32_t max_count)
+int sceNpAuth_75FB0AE3(const void *buf, uint32_t len, uint8_t *outBuf, uint32_t maxCount)
 {
 	SceNpAuthTicketBuf tbuf;
 	if (buf == NULL) {
-		return (int)0x80550503;
+		return SCE_NP_MANAGER_ERROR_INVALID_ARGUMENT;
 	}
-	if (len - 4 > 0xfffc) {
-		return (int)0x80550505;
+	if (len - 4u > 0xfffcu) {
+		return SCE_NP_MANAGER_ERROR_INVALID_TICKET_SIZE;
 	}
 	tbuf.buf = (const uint8_t *)buf;
 	tbuf.size = len;
 	tbuf.offset = 4;
-	sceKernelMemcpy(&tbuf.ver_major, buf, 4);
-	uint8_t maj = (uint8_t)(tbuf.ver_major & 0xff) >> 4;
-	uint8_t min = (uint8_t)((tbuf.ver_major >> 8) & 0xff);
-	tbuf.ver_major = (uint16_t)(maj | ((uint16_t)min << 8));
+	sceKernelMemcpy(tbuf.verBytes, buf, 4);
+	tbuf.verBytes[0] >>= 4;
 
-	g_cur_ent_list_h = g_ent_list_handlers;
-	while (g_cur_ent_list_h->major != 0) {
-		if (g_cur_ent_list_h->major == maj && g_cur_ent_list_h->minor == min) {
+	g_curEntListHandler = g_entListHandlers;
+	while (g_curEntListHandler->major != 0) {
+		if (g_curEntListHandler->major == tbuf.verBytes[0] && g_curEntListHandler->minor == tbuf.verBytes[1]) {
 			break;
 		}
-		g_cur_ent_list_h++;
+		g_curEntListHandler++;
 	}
-	if (g_cur_ent_list_h->major == 0) {
-		return (int)0x80550310;
+	if (g_curEntListHandler->major == 0) {
+		return SCE_NP_AUTH_ERROR_SIGNED_OUT;
 	}
-	return ((int (*)(SceNpAuthTicketBuf *, uint8_t *, uint32_t))g_cur_ent_list_h->handler)(&tbuf, out_buf, max_count);
+	return ((SceNpAuthEntListFn)g_curEntListHandler->handler)(&tbuf, outBuf, maxCount);
 }
 
 /* === sceNpAuth_6900F084 (sceNpAuthGetEntitlementById) @ 0x2114 === */
-int sceNpAuth_6900F084(const void *buf, uint32_t len, const char *ent_id, void *out_ent)
+int sceNpAuth_6900F084(const void *buf, uint32_t len, const char *entId, SceNpEntitlement *outEnt)
 {
-	uint8_t tmp[64];
-	int res = npAuthGetEntitlementById(buf, len, ent_id, tmp);
-	if (out_ent != NULL) {
-		sceKernelMemcpy(out_ent, tmp, 64);
+	SceNpEntitlement entBuf;
+	int res = npAuthGetEntitlementById(buf, len, entId, &entBuf);
+	if (outEnt != NULL) {
+		sceKernelMemcpy(outEnt, &entBuf, sizeof(SceNpEntitlement));
 	}
 	return res;
 }
 
 /* === npAuthGetTicketParamV2 @ 0x2164 === */
-static __attribute__((noinline)) int npAuthGetTicketParamV2(SceNpAuthTicketBuf *tbuf, int param_id, void *out)
+static __attribute__((noinline)) int npAuthGetTicketParamV2(SceNpAuthTicketBuf *tbuf, int ticketParamId, void *outBuf)
 {
-	if (param_id >= 11) {
-		return (int)0x8055030f;
+	if (ticketParamId >= 11) {
+		return SCE_NP_AUTH_ERROR_TICKET_PARAM_NOT_FOUND;
 	}
 	int res = npAuthSeekTicketTag(tbuf, 0x3000, 1);
 	if (res != 0) {
 		return res;
 	}
-	for (int i = 0; i <= param_id; i++) {
-		int t = npAuthReadTicketField(tbuf, out);
-		if (t != g_ticket_v2_schema[i].type) {
-			return (int)0x80550603;
+	for (int i = 0; i <= ticketParamId; i++) {
+		int tag = npAuthReadTicketField(tbuf, outBuf);
+		if (tag != g_ticketV2Schema[i].type) {
+			return SCE_NP_UTIL_ERROR_PARSER_FAILED;
 		}
 	}
 	return 0;
 }
 
 /* === npAuthGetTicketParamV3 @ 0x2220 === */
-static __attribute__((noinline)) int npAuthGetTicketParamV3(SceNpAuthTicketBuf *tbuf, int param_id, void *out)
+static __attribute__((noinline)) int npAuthGetTicketParamV3(SceNpAuthTicketBuf *tbuf, int ticketParamId, void *outBuf)
 {
-	if (param_id >= 12) {
-		return (int)0x8055030f;
+	if (ticketParamId >= SCE_NP_TICKET_PARAM_MAX) {
+		return SCE_NP_AUTH_ERROR_TICKET_PARAM_NOT_FOUND;
 	}
 	int res = npAuthSeekTicketTag(tbuf, 0x3000, 1);
 	if (res != 0) {
 		return res;
 	}
-	for (int i = 0; i < 12; i++) {
-		int t = npAuthReadTicketField(tbuf, out);
-		if (t != g_ticket_v3_schema[i].type) {
-			return (int)0x80550603;
+	for (int i = 0; i < SCE_NP_TICKET_PARAM_MAX; i++) {
+		int tag = npAuthReadTicketField(tbuf, outBuf);
+		if (tag != g_ticketV3Schema[i].type) {
+			return SCE_NP_UTIL_ERROR_PARSER_FAILED;
 		}
-		if ((int)g_ticket_v3_schema[i].id == param_id) {
+		if ((int)g_ticketV3Schema[i].id == ticketParamId) {
 			break;
 		}
 	}
@@ -1486,245 +1528,232 @@ static __attribute__((noinline)) int npAuthGetTicketParamV3(SceNpAuthTicketBuf *
 }
 
 /* === npAuthListEntitlementsV2 @ 0x22dc === */
-static __attribute__((noinline)) int npAuthListEntitlementsV2(SceNpAuthTicketBuf *tbuf, uint8_t *out_buf, uint32_t max_count)
+static __attribute__((noinline)) int npAuthListEntitlementsV2(SceNpAuthTicketBuf *tbuf, uint8_t *outBuf, uint32_t maxCount)
 {
-	uint8_t tmp[256];
+	uint8_t fieldBuf[SCE_NP_TICKET_PARAM_DATA_LEN];
 	uint32_t count = 0;
 	while (npAuthSeekTicketTag(tbuf, 0x3001, 1) == 0) {
-		if (npAuthReadTicketField(tbuf, tmp) != 8) {
-			return (int)0x80550603;
+		if (npAuthReadTicketField(tbuf, fieldBuf) != 8) {
+			return SCE_NP_UTIL_ERROR_PARSER_FAILED;
 		}
-		if (out_buf != NULL && count < max_count) {
-			sceKernelMemcpy(out_buf, tmp, 0x20);
+		if (outBuf != NULL && count < maxCount) {
+			sceKernelMemcpy(outBuf, fieldBuf, SCE_NP_ENTITLEMENT_ID_SIZE);
 		}
 		count++;
-		out_buf += 0x20;
+		outBuf += SCE_NP_ENTITLEMENT_ID_SIZE;
 	}
 	return (int)count;
 }
 
 /* === npAuthListEntitlementsV3 @ 0x23a4 === */
-static __attribute__((noinline)) int npAuthListEntitlementsV3(SceNpAuthTicketBuf *tbuf, uint8_t *out_buf, uint32_t max_count)
+static __attribute__((noinline)) int npAuthListEntitlementsV3(SceNpAuthTicketBuf *tbuf, uint8_t *outBuf, uint32_t maxCount)
 {
-	struct {
-		uint16_t tag;
-		uint16_t len;
-		const uint8_t *ptr;
-		uint32_t pos;
-	} sub_ctx;
-	uint8_t hdr[16];
-	char prefix[256];
-	uint8_t byte_tmp;
+	SceNpAuthV3EntStream entStream;
+	SceNpAuthV3EntHeader entHdr;
+	char prefix[SCE_NP_TICKET_PARAM_DATA_LEN];
+	uint8_t flagsByte;
 
 	tbuf->offset = 4;
 	int res = npAuthGetTicketParamV3(tbuf, 8, prefix);
 	if (res < 0) {
 		return res;
 	}
-	uint32_t prefix_len = sceNet_lib_D8722983(prefix);
+	uint32_t prefixLen = sceNet_lib_D8722983(prefix);
 	tbuf->offset = 4;
 	if (npAuthSeekTicketTag(tbuf, 0x3010, 0) != 0) {
-		return (int)0x80550603;
+		return SCE_NP_UTIL_ERROR_PARSER_FAILED;
 	}
-	if (tbuf->offset + 4 >= tbuf->size) {
-		return (int)0x80550603;
+	if (tbuf->offset + 4u >= tbuf->size) {
+		return SCE_NP_UTIL_ERROR_PARSER_FAILED;
 	}
-	sceKernelMemcpy(&sub_ctx, tbuf->buf + tbuf->offset, 4);
-	sub_ctx.tag = (uint16_t)((sub_ctx.tag >> 8) | (sub_ctx.tag << 8));
-	sub_ctx.len = (uint16_t)((sub_ctx.len >> 8) | (sub_ctx.len << 8));
-	if (tbuf->offset + sub_ctx.len + 4 > tbuf->size) {
-		return (int)0x80550603;
+	sceKernelMemcpy(&entStream, tbuf->buf + tbuf->offset, 4);
+	entStream.tag = (uint16_t)((entStream.tag >> 8) | (entStream.tag << 8));
+	entStream.len = (uint16_t)((entStream.len >> 8) | (entStream.len << 8));
+	if (tbuf->offset + entStream.len + 4u > tbuf->size) {
+		return SCE_NP_UTIL_ERROR_PARSER_FAILED;
 	}
-	sub_ctx.ptr = tbuf->buf + tbuf->offset + 4;
-	sub_ctx.pos = 0;
+	entStream.ptr = tbuf->buf + tbuf->offset + 4;
+	entStream.pos = 0;
 
 	uint32_t count = 0;
-	while (sub_ctx.pos < sub_ctx.len) {
-		if (sub_ctx.pos + 1 > sub_ctx.len) {
-			return (int)0x80550603;
+	while (entStream.pos < entStream.len) {
+		if (entStream.pos + 1u > entStream.len) {
+			return SCE_NP_UTIL_ERROR_PARSER_FAILED;
 		}
-		sceKernelMemcpy(&byte_tmp, sub_ctx.ptr + sub_ctx.pos, 1);
-		sub_ctx.pos++;
-		hdr[0] = (uint8_t)(((byte_tmp >> 6) & 3) | (((byte_tmp >> 5) & 1) << 2));
-		uint8_t id_len = byte_tmp & 0x1f;
-		hdr[1] = (id_len != 0) ? id_len : 0x20;
+		sceKernelMemcpy(&flagsByte, entStream.ptr + entStream.pos, 1);
+		entStream.pos++;
+		entHdr.flags = (uint8_t)(((flagsByte >> 6) & 3u) | (((flagsByte >> 5) & 1u) << 2));
+		uint8_t idLen = flagsByte & 0x1fu;
+		entHdr.idLen = (idLen != 0) ? idLen : SCE_NP_ENTITLEMENT_ID_SIZE;
 
-		char *dst_id = (out_buf != NULL && count < max_count) ? (char *)(out_buf + (count << 5)) : NULL;
-		res = npAuthReadEntitlementIdV3(&sub_ctx, prefix, prefix_len, hdr, dst_id);
+		char *dstId = (outBuf != NULL && count < maxCount) ? (char *)(outBuf + (count << 5)) : NULL;
+		res = npAuthReadEntitlementIdV3(&entStream, prefix, prefixLen, &entHdr, dstId);
 		if (res < 0) {
 			return res;
 		}
-		uint32_t skip = (hdr[0] & 4) ? 16 : 8;
-		if ((hdr[0] & 3) == 1) {
-			skip += 8;
+		uint32_t skip = (entHdr.flags & 4u) ? 16u : 8u;
+		if ((entHdr.flags & 3u) == 1u) {
+			skip += 8u;
 		}
-		if (sub_ctx.pos + skip > sub_ctx.len) {
-			return (int)0x80550603;
+		if (entStream.pos + skip > entStream.len) {
+			return SCE_NP_UTIL_ERROR_PARSER_FAILED;
 		}
-		sub_ctx.pos += skip;
+		entStream.pos += skip;
 		count++;
 	}
 	return (int)count;
 }
 
 /* === npAuthFindEntitlementV2 @ 0x25fc === */
-static __attribute__((noinline)) int npAuthFindEntitlementV2(SceNpAuthTicketBuf *tbuf, const char *ent_id, uint8_t *out_ent)
+static __attribute__((noinline)) int npAuthFindEntitlementV2(SceNpAuthTicketBuf *tbuf, const char *entId, SceNpEntitlement *outEnt)
 {
-	uint8_t tmp[256];
+	uint8_t fieldBuf[SCE_NP_TICKET_PARAM_DATA_LEN];
 	while (npAuthSeekTicketTag(tbuf, 0x3001, 1) == 0) {
-		if (npAuthReadTicketField(tbuf, tmp) != 8) {
-			return (int)0x80550603;
+		if (npAuthReadTicketField(tbuf, fieldBuf) != 8) {
+			return SCE_NP_UTIL_ERROR_PARSER_FAILED;
 		}
-		uint32_t len = sceNet_lib_D8722983(ent_id) + 1;
-		if (sceNet_lib_E0A81C7C(ent_id, (const char *)tmp, len) == 0) {
-			sceKernelMemset(out_ent, 0, 0x40);
-			sceKernelMemcpy(out_ent, tmp, 0x20);
-			if (npAuthReadTicketField(tbuf, tmp) != 7) {
-				return (int)0x80550603;
+		uint32_t len = sceNet_lib_D8722983(entId) + 1u;
+		if (sceNet_lib_E0A81C7C(entId, (const char *)fieldBuf, len) == 0) {
+			sceKernelMemset(outEnt, 0, sizeof(SceNpEntitlement));
+			sceKernelMemcpy(outEnt->id, fieldBuf, SCE_NP_ENTITLEMENT_ID_SIZE);
+			if (npAuthReadTicketField(tbuf, fieldBuf) != 7) {
+				return SCE_NP_UTIL_ERROR_PARSER_FAILED;
 			}
-			sceKernelMemcpy(out_ent + 0x20, tmp, 8);
-			if (npAuthReadTicketField(tbuf, tmp) != 7) {
-				return (int)0x80550603;
+			sceKernelMemcpy(&outEnt->createdDate, fieldBuf, sizeof(SceNpTime));
+			if (npAuthReadTicketField(tbuf, fieldBuf) != 7) {
+				return SCE_NP_UTIL_ERROR_PARSER_FAILED;
 			}
-			sceKernelMemcpy(out_ent + 0x28, tmp, 8);
-			if (npAuthReadTicketField(tbuf, tmp) != 1) {
-				return (int)0x80550603;
+			sceKernelMemcpy(&outEnt->expireDate, fieldBuf, sizeof(SceNpTime));
+			if (npAuthReadTicketField(tbuf, fieldBuf) != 1) {
+				return SCE_NP_UTIL_ERROR_PARSER_FAILED;
 			}
-			sceKernelMemcpy(out_ent + 0x30, tmp, 4);
-			uint32_t etype = ((SceNpAuthEntitlement *)out_ent)->type;
-			if (etype != 1) {
+			sceKernelMemcpy(&outEnt->type, fieldBuf, sizeof(uint32_t));
+			if (outEnt->type != 1u) {
 				return 0;
 			}
-			if (npAuthReadTicketField(tbuf, tmp) != 1) {
-				return (int)0x80550603;
+			if (npAuthReadTicketField(tbuf, fieldBuf) != 1) {
+				return SCE_NP_UTIL_ERROR_PARSER_FAILED;
 			}
-			sceKernelMemcpy(out_ent + 0x34, tmp, 4);
-			if (npAuthReadTicketField(tbuf, tmp) != 1) {
-				return (int)0x80550603;
+			sceKernelMemcpy(&outEnt->remainingCount, fieldBuf, sizeof(int32_t));
+			if (npAuthReadTicketField(tbuf, fieldBuf) != 1) {
+				return SCE_NP_UTIL_ERROR_PARSER_FAILED;
 			}
-			sceKernelMemcpy(out_ent + 0x38, tmp, 4);
+			sceKernelMemcpy(&outEnt->consumedCount, fieldBuf, sizeof(uint32_t));
 			return 0;
 		}
 	}
-	return (int)0x80550305;
+	return SCE_NP_AUTH_ERROR_ESRCH;
 }
 
 /* === npAuthFindEntitlementV3 @ 0x2790 === */
-static __attribute__((noinline)) int npAuthFindEntitlementV3(SceNpAuthTicketBuf *tbuf, const char *ent_id, uint8_t *out_ent)
+static __attribute__((noinline)) int npAuthFindEntitlementV3(SceNpAuthTicketBuf *tbuf, const char *entId, SceNpEntitlement *outEnt)
 {
-	struct {
-		uint16_t tag;
-		uint16_t len;
-		const uint8_t *ptr;
-		uint32_t pos;
-	} sub_ctx;
-	uint8_t hdr[16];
-	char prefix[256];
-	char cur_id[32];
-	uint8_t byte_tmp;
+	SceNpAuthV3EntStream entStream;
+	SceNpAuthV3EntHeader entHdr;
+	char prefix[SCE_NP_TICKET_PARAM_DATA_LEN];
+	char curId[SCE_NP_ENTITLEMENT_ID_SIZE];
+	uint8_t flagsByte;
 
-	uint32_t eid_len = sceNet_lib_D8722983(ent_id) + 1;
-	if (eid_len > 0x20) {
-		return (int)0x80550003;
+	uint32_t eidLen = sceNet_lib_D8722983(entId) + 1u;
+	if (eidLen > SCE_NP_ENTITLEMENT_ID_SIZE) {
+		return SCE_NP_ERROR_INVALID_ARGUMENT;
 	}
 	tbuf->offset = 4;
 	int res = npAuthGetTicketParamV3(tbuf, 8, prefix);
 	if (res < 0) {
 		return res;
 	}
-	uint32_t prefix_len = sceNet_lib_D8722983(prefix);
+	uint32_t prefixLen = sceNet_lib_D8722983(prefix);
 	tbuf->offset = 4;
 	if (npAuthSeekTicketTag(tbuf, 0x3010, 0) != 0) {
-		return (int)0x80550603;
+		return SCE_NP_UTIL_ERROR_PARSER_FAILED;
 	}
 	if (npAuthSeekTicketTag(tbuf, 0x3010, 0) != 0) {
-		return (int)0x80550603;
+		return SCE_NP_UTIL_ERROR_PARSER_FAILED;
 	}
-	if (tbuf->offset + 4 >= tbuf->size) {
-		return (int)0x80550603;
+	if (tbuf->offset + 4u >= tbuf->size) {
+		return SCE_NP_UTIL_ERROR_PARSER_FAILED;
 	}
-	sceKernelMemcpy(&sub_ctx, tbuf->buf + tbuf->offset, 4);
-	sub_ctx.tag = (uint16_t)((sub_ctx.tag >> 8) | (sub_ctx.tag << 8));
-	sub_ctx.len = (uint16_t)((sub_ctx.len >> 8) | (sub_ctx.len << 8));
-	if (tbuf->offset + sub_ctx.len + 4 > tbuf->size) {
-		return (int)0x80550603;
+	sceKernelMemcpy(&entStream, tbuf->buf + tbuf->offset, 4);
+	entStream.tag = (uint16_t)((entStream.tag >> 8) | (entStream.tag << 8));
+	entStream.len = (uint16_t)((entStream.len >> 8) | (entStream.len << 8));
+	if (tbuf->offset + entStream.len + 4u > tbuf->size) {
+		return SCE_NP_UTIL_ERROR_PARSER_FAILED;
 	}
-	sub_ctx.ptr = tbuf->buf + tbuf->offset + 4;
-	sub_ctx.pos = 0;
+	entStream.ptr = tbuf->buf + tbuf->offset + 4;
+	entStream.pos = 0;
 
-	while (sub_ctx.pos < sub_ctx.len) {
-		if (sub_ctx.pos + 1 > sub_ctx.len) {
-			return (int)0x80550603;
+	while (entStream.pos < entStream.len) {
+		if (entStream.pos + 1u > entStream.len) {
+			return SCE_NP_UTIL_ERROR_PARSER_FAILED;
 		}
-		sceKernelMemcpy(&byte_tmp, sub_ctx.ptr + sub_ctx.pos, 1);
-		sub_ctx.pos++;
-		hdr[0] = (uint8_t)(((byte_tmp >> 6) & 3) | (((byte_tmp >> 5) & 1) << 2));
-		uint8_t id_len = byte_tmp & 0x1f;
-		hdr[1] = (id_len != 0) ? id_len : 0x20;
+		sceKernelMemcpy(&flagsByte, entStream.ptr + entStream.pos, 1);
+		entStream.pos++;
+		entHdr.flags = (uint8_t)(((flagsByte >> 6) & 3u) | (((flagsByte >> 5) & 1u) << 2));
+		uint8_t idLen = flagsByte & 0x1fu;
+		entHdr.idLen = (idLen != 0) ? idLen : SCE_NP_ENTITLEMENT_ID_SIZE;
 
-		res = npAuthReadEntitlementIdV3(&sub_ctx, prefix, prefix_len, hdr, cur_id);
+		res = npAuthReadEntitlementIdV3(&entStream, prefix, prefixLen, &entHdr, curId);
 		if (res < 0) {
 			return res;
 		}
-		if (sceNet_lib_E0A81C7C(ent_id, cur_id, eid_len) == 0) {
-			sceKernelMemset(out_ent, 0, 0x40);
-			res = npAuthReadEntitlementBodyV3(&sub_ctx, hdr, out_ent);
+		if (sceNet_lib_E0A81C7C(entId, curId, eidLen) == 0) {
+			sceKernelMemset(outEnt, 0, sizeof(SceNpEntitlement));
+			res = npAuthReadEntitlementBodyV3(&entStream, &entHdr, outEnt);
 			if (res < 0) {
 				return res;
 			}
-			sceKernelMemcpy(out_ent, ent_id, eid_len);
+			sceKernelMemcpy(outEnt->id, entId, eidLen);
 			return 0;
 		}
-		uint32_t skip = (hdr[0] & 4) ? 16 : 8;
-		if ((hdr[0] & 3) == 1) {
-			skip += 8;
+		uint32_t skip = (entHdr.flags & 4u) ? 16u : 8u;
+		if ((entHdr.flags & 3u) == 1u) {
+			skip += 8u;
 		}
-		if (sub_ctx.pos + skip > sub_ctx.len) {
-			return (int)0x80550603;
+		if (entStream.pos + skip > entStream.len) {
+			return SCE_NP_UTIL_ERROR_PARSER_FAILED;
 		}
-		sub_ctx.pos += skip;
+		entStream.pos += skip;
 	}
-	return (int)0x80550305;
+	return SCE_NP_AUTH_ERROR_ESRCH;
 }
 
 /* === npAuthGetEntitlementById @ 0x2a68 === */
-static __attribute__((noinline)) int npAuthGetEntitlementById(const void *buf, uint32_t len, const char *ent_id, void *out_ent)
+static __attribute__((noinline)) int npAuthGetEntitlementById(const void *buf, uint32_t len, const char *entId, SceNpEntitlement *outEnt)
 {
 	SceNpAuthTicketBuf tbuf;
-	if (buf == NULL || ent_id == NULL || out_ent == NULL) {
-		return (int)0x80550003;
+	if (buf == NULL || entId == NULL || outEnt == NULL) {
+		return SCE_NP_ERROR_INVALID_ARGUMENT;
 	}
-	if (len - 4 > 0xfffc) {
-		return (int)0x80550505;
+	if (len - 4u > 0xfffcu) {
+		return SCE_NP_MANAGER_ERROR_INVALID_TICKET_SIZE;
 	}
 	tbuf.buf = (const uint8_t *)buf;
 	tbuf.size = len;
 	tbuf.offset = 4;
-	sceKernelMemcpy(&tbuf.ver_major, buf, 4);
-	uint8_t maj = (uint8_t)(tbuf.ver_major & 0xff) >> 4;
-	uint8_t min = (uint8_t)((tbuf.ver_major >> 8) & 0xff);
-	tbuf.ver_major = (uint16_t)(maj | ((uint16_t)min << 8));
+	sceKernelMemcpy(tbuf.verBytes, buf, 4);
+	tbuf.verBytes[0] >>= 4;
 
-	g_cur_ent_id_h = g_ent_by_id_handlers;
-	while (g_cur_ent_id_h->major != 0) {
-		if (g_cur_ent_id_h->major == maj && g_cur_ent_id_h->minor == min) {
+	g_curEntIdHandler = g_entByIdHandlers;
+	while (g_curEntIdHandler->major != 0) {
+		if (g_curEntIdHandler->major == tbuf.verBytes[0] && g_curEntIdHandler->minor == tbuf.verBytes[1]) {
 			break;
 		}
-		g_cur_ent_id_h++;
+		g_curEntIdHandler++;
 	}
-	if (g_cur_ent_id_h->major == 0) {
-		return (int)0x80550310;
+	if (g_curEntIdHandler->major == 0) {
+		return SCE_NP_AUTH_ERROR_SIGNED_OUT;
 	}
-	return ((int (*)(SceNpAuthTicketBuf *, const char *, void *))g_cur_ent_id_h->handler)(&tbuf, ent_id, out_ent);
+	return ((SceNpAuthEntFindFn)g_curEntIdHandler->handler)(&tbuf, entId, outEnt);
 }
 
 /* === npAuthSeekTicketTag @ 0x2b94 === */
-static __attribute__((noinline)) int npAuthSeekTicketTag(SceNpAuthTicketBuf *tbuf, uint16_t target_tag, int skip_root)
+static __attribute__((noinline)) int npAuthSeekTicketTag(SceNpAuthTicketBuf *tbuf, uint16_t targetTag, int skipRoot)
 {
 	uint16_t hdr[2];
 	uint32_t off = tbuf->offset;
-	if (off + 4 >= tbuf->size) {
-		return (int)0x80550603;
+	if (off + 4u >= tbuf->size) {
+		return SCE_NP_UTIL_ERROR_PARSER_FAILED;
 	}
 	while (1) {
 		sceKernelMemcpy(hdr, tbuf->buf + off, 4);
@@ -1732,178 +1761,167 @@ static __attribute__((noinline)) int npAuthSeekTicketTag(SceNpAuthTicketBuf *tbu
 		uint16_t len = (uint16_t)((hdr[1] >> 8) | (hdr[1] << 8));
 		hdr[0] = tag;
 		hdr[1] = len;
-		if (tag == target_tag && (skip_root & 1) == 0) {
+		if (tag == targetTag && (skipRoot & 1) == 0) {
 			tbuf->offset = off;
 			return 0;
 		}
-		off += 4;
-		if ((tag & 0xf000) == 0) {
+		off += 4u;
+		if ((tag & 0xf000u) == 0) {
 			if (tag != 0) {
 				if (off + len > tbuf->size) {
-					return (int)0x80550603;
+					return SCE_NP_UTIL_ERROR_PARSER_FAILED;
 				}
 				off += len;
 			}
-		} else if ((tag & 0xf010) == 0x3010) {
+		} else if ((tag & 0xf010u) == 0x3010u) {
 			if (off + len > tbuf->size) {
-				return (int)0x80550603;
+				return SCE_NP_UTIL_ERROR_PARSER_FAILED;
 			}
 			off += len;
 		}
-		if (hdr[0] == target_tag) {
+		if (hdr[0] == targetTag) {
 			tbuf->offset = off;
 			return 0;
 		}
-		if (off + 4 >= tbuf->size) {
+		if (off + 4u >= tbuf->size) {
 			break;
 		}
 	}
-	return (int)0x80550603;
+	return SCE_NP_UTIL_ERROR_PARSER_FAILED;
 }
 
 /* === npAuthReadTicketField @ 0x2cb4 === */
-static __attribute__((noinline)) int npAuthReadTicketField(SceNpAuthTicketBuf *tbuf, void *out_buf)
+static __attribute__((noinline)) int npAuthReadTicketField(SceNpAuthTicketBuf *tbuf, void *outBuf)
 {
 	uint16_t hdr[2];
 	uint32_t off = tbuf->offset;
-	if (off + 4 >= tbuf->size) {
-		return (int)0x80550603;
+	if (off + 4u >= tbuf->size) {
+		return SCE_NP_UTIL_ERROR_PARSER_FAILED;
 	}
 	sceKernelMemcpy(hdr, tbuf->buf + off, 4);
 	uint16_t tag = (uint16_t)((hdr[0] >> 8) | (hdr[0] << 8));
 	uint16_t len = (uint16_t)((hdr[1] >> 8) | (hdr[1] << 8));
 	hdr[0] = tag;
 	hdr[1] = len;
-	if (off + len + 4 > tbuf->size || tag == 0 || (tag & 0xf010) == 0x3000) {
-		return (int)0x80550603;
+	if (off + len + 4u > tbuf->size || tag == 0 || (tag & 0xf010u) == 0x3000u) {
+		return SCE_NP_UTIL_ERROR_PARSER_FAILED;
 	}
-	sceKernelMemset(out_buf, 0, 0x100);
-	uint32_t data_off = off + 4;
+	sceKernelMemset(outBuf, 0, SCE_NP_TICKET_PARAM_DATA_LEN);
+	uint32_t dataOff = off + 4u;
+	uint8_t *outBytes = (uint8_t *)outBuf;
 
-	if (tag == 1) {
-		uint32_t v = 0;
-		sceKernelMemcpy(&v, tbuf->buf + data_off, 4);
-		*(uint32_t *)out_buf = __builtin_bswap32(v);
-	} else if (tag == 2 || tag == 7) {
-		uint8_t raw[8];
-		sceKernelMemcpy(raw, tbuf->buf + data_off, 8);
+	if (tag == 1u) {
+		uint32_t rawWord;
+		sceKernelMemcpy(&rawWord, tbuf->buf + dataOff, 4);
+		*(uint32_t *)outBuf = __builtin_bswap32(rawWord);
+	} else if (tag == 2u || tag == 7u) {
+		uint8_t rawBytes[8];
+		sceKernelMemcpy(rawBytes, tbuf->buf + dataOff, 8);
 		uint64_t val = 0;
 		for (int i = 0; i < 8; i++) {
-			val = (val << 8) | raw[i];
+			val = (val << 8) | rawBytes[i];
 		}
-		*(uint64_t *)out_buf = val;
-	} else if (tag == 4 || tag == 8) {
-		if (len < 0x100) {
-			sceKernelMemcpy(out_buf, tbuf->buf + data_off, len);
-			((uint8_t *)out_buf)[len] = 0;
+		*(uint64_t *)outBuf = val;
+	} else if (tag == 4u || tag == 8u) {
+		if (len < SCE_NP_TICKET_PARAM_DATA_LEN) {
+			sceKernelMemcpy(outBuf, tbuf->buf + dataOff, len);
+			outBytes[len] = 0;
 		} else {
-			sceKernelMemcpy(out_buf, tbuf->buf + data_off, 0xff);
-			((uint8_t *)out_buf)[0xff] = 0;
+			sceKernelMemcpy(outBuf, tbuf->buf + dataOff, SCE_NP_TICKET_PARAM_DATA_LEN - 1u);
+			outBytes[SCE_NP_TICKET_PARAM_DATA_LEN - 1u] = 0;
 		}
-	} else if (tag == 0x3011) {
-		uint32_t v = 0;
-		sceKernelMemcpy(&v, tbuf->buf + data_off, 4);
-		uint32_t bs = __builtin_bswap32(v);
-		*(uint16_t *)out_buf = (uint16_t)(bs >> 16);
-		((uint8_t *)out_buf)[2] = (uint8_t)(bs >> 8);
-		((uint8_t *)out_buf)[3] = (uint8_t)bs;
+	} else if (tag == 0x3011u) {
+		uint32_t rawDate;
+		SceNpDate *outDate = (SceNpDate *)outBuf;
+		sceKernelMemcpy(&rawDate, tbuf->buf + dataOff, 4);
+		uint32_t swapped = __builtin_bswap32(rawDate);
+		outDate->year = (uint16_t)(swapped >> 16);
+		outDate->month = (uint8_t)(swapped >> 8);
+		outDate->day = (uint8_t)swapped;
 	}
-	tbuf->offset = data_off + hdr[1];
+	tbuf->offset = dataOff + hdr[1];
 	return hdr[0];
 }
 
 /* === npAuthReadEntitlementIdV3 @ 0x2f1c === */
-static __attribute__((noinline)) int npAuthReadEntitlementIdV3(void *ctx, const char *prefix, uint32_t prefix_len, uint8_t *hdr, char *out_id)
+static __attribute__((noinline)) int npAuthReadEntitlementIdV3(SceNpAuthV3EntStream *stream, const char *prefix, uint32_t prefixLen, const SceNpAuthV3EntHeader *hdr, char *outId)
 {
-	struct {
-		uint16_t tag;
-		uint16_t len;
-		const uint8_t *ptr;
-		uint32_t pos;
-	} *c = ctx;
-	uint8_t tmp[32];
-	uint8_t id_len = hdr[1];
+	uint8_t idBuf[SCE_NP_ENTITLEMENT_ID_SIZE];
+	uint8_t idLen = hdr->idLen;
 
-	if (c->pos + id_len > c->len) {
-		return (int)0x80550603;
+	if (stream->pos + idLen > stream->len) {
+		return SCE_NP_UTIL_ERROR_PARSER_FAILED;
 	}
-	sceKernelMemcpy(tmp, c->ptr + c->pos, id_len);
-	c->pos += id_len;
+	sceKernelMemcpy(idBuf, stream->ptr + stream->pos, idLen);
+	stream->pos += idLen;
 
-	if (out_id != NULL) {
-		if (hdr[1] < 9) {
-			if (prefix_len + hdr[1] + 2 > 0x20) {
-				return (int)0x80550603;
+	if (outId != NULL) {
+		if (hdr->idLen < 9u) {
+			if (prefixLen + hdr->idLen + 2u > SCE_NP_ENTITLEMENT_ID_SIZE) {
+				return SCE_NP_UTIL_ERROR_PARSER_FAILED;
 			}
-			sceKernelMemcpy(out_id, prefix, prefix_len);
-			out_id[prefix_len] = '-';
-			sceKernelMemcpy(out_id + prefix_len + 1, tmp, hdr[1]);
-			out_id[prefix_len + 1 + hdr[1]] = '\0';
+			sceKernelMemcpy(outId, prefix, prefixLen);
+			outId[prefixLen] = '-';
+			sceKernelMemcpy(outId + prefixLen + 1u, idBuf, hdr->idLen);
+			outId[prefixLen + 1u + hdr->idLen] = '\0';
 		} else {
-			sceKernelMemset(out_id, 0, 0x20);
-			sceKernelMemcpy(out_id, tmp, hdr[1]);
+			sceKernelMemset(outId, 0, SCE_NP_ENTITLEMENT_ID_SIZE);
+			sceKernelMemcpy(outId, idBuf, hdr->idLen);
 		}
 	}
 	return 0;
 }
 
 /* === npAuthReadEntitlementBodyV3 @ 0x3050 === */
-static __attribute__((noinline)) int npAuthReadEntitlementBodyV3(void *ctx, const uint8_t *hdr, void *out_ent)
+static __attribute__((noinline)) int npAuthReadEntitlementBodyV3(SceNpAuthV3EntStream *stream, const SceNpAuthV3EntHeader *hdr, SceNpEntitlement *outEnt)
 {
-	struct {
-		uint16_t tag;
-		uint16_t len;
-		const uint8_t *ptr;
-		uint32_t pos;
-	} *c = ctx;
-	SceNpAuthEntitlement *ent = (SceNpAuthEntitlement *)out_ent;
-	uint8_t raw[8];
+	uint8_t rawBytes[8];
 
-	ent->type = hdr[0] & 3;
-	if (c->pos + 8 > c->len) {
-		return (int)0x80550603;
+	outEnt->type = hdr->flags & 3u;
+	if (stream->pos + 8u > stream->len) {
+		return SCE_NP_UTIL_ERROR_PARSER_FAILED;
 	}
-	sceKernelMemcpy(raw, c->ptr + c->pos, 8);
-	c->pos += 8;
-	uint64_t v1 = 0;
+	sceKernelMemcpy(rawBytes, stream->ptr + stream->pos, 8);
+	stream->pos += 8u;
+	uint64_t createdTime = 0;
 	for (int i = 0; i < 8; i++) {
-		v1 = (v1 << 8) | raw[i];
+		createdTime = (createdTime << 8) | rawBytes[i];
 	}
-	ent->created_date = v1;
+	outEnt->createdDate = createdTime;
 
-	if (hdr[0] & 4) {
-		if (c->pos + 8 > c->len) {
-			return (int)0x80550603;
+	if (hdr->flags & 4u) {
+		if (stream->pos + 8u > stream->len) {
+			return SCE_NP_UTIL_ERROR_PARSER_FAILED;
 		}
-		sceKernelMemcpy(raw, c->ptr + c->pos, 8);
-		c->pos += 8;
-		uint64_t v2 = 0;
+		sceKernelMemcpy(rawBytes, stream->ptr + stream->pos, 8);
+		stream->pos += 8u;
+		uint64_t expireTime = 0;
 		for (int i = 0; i < 8; i++) {
-			v2 = (v2 << 8) | raw[i];
+			expireTime = (expireTime << 8) | rawBytes[i];
 		}
-		ent->expire_date = v2;
+		outEnt->expireDate = expireTime;
 	} else {
-		ent->expire_date = 0;
+		outEnt->expireDate = 0;
 	}
 
-	if ((hdr[0] & 3) == 1) {
-		if (c->pos + 4 > c->len) {
-			return (int)0x80550603;
+	if ((hdr->flags & 3u) == 1u) {
+		uint32_t rawCount;
+		if (stream->pos + 4u > stream->len) {
+			return SCE_NP_UTIL_ERROR_PARSER_FAILED;
 		}
-		uint32_t val = 0;
-		sceKernelMemcpy(&val, c->ptr + c->pos, 4);
-		c->pos += 4;
-		ent->remaining_count = __builtin_bswap32(val);
+		sceKernelMemcpy(&rawCount, stream->ptr + stream->pos, 4);
+		stream->pos += 4u;
+		outEnt->remainingCount = (int32_t)__builtin_bswap32(rawCount);
 
-		if (c->pos + 4 > c->len) {
-			return (int)0x80550603;
+		if (stream->pos + 4u > stream->len) {
+			return SCE_NP_UTIL_ERROR_PARSER_FAILED;
 		}
-		sceKernelMemcpy(&val, c->ptr + c->pos, 4);
-		c->pos += 4;
-		ent->consumed_count = __builtin_bswap32(val);
+		sceKernelMemcpy(&rawCount, stream->ptr + stream->pos, 4);
+		stream->pos += 4u;
+		outEnt->consumedCount = __builtin_bswap32(rawCount);
 	} else {
-		ent->consumed_count = 0;
-		ent->remaining_count = 0;
+		outEnt->consumedCount = 0;
+		outEnt->remainingCount = 0;
 	}
 	return 0;
 }
