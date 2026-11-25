@@ -500,6 +500,16 @@ psp2_module(vs0_vsh_shell_shell KIND user COMPILER snc PARTIAL SOURCES
 	src/trigger_mgr/trigger_mgr.cpp
 	src/trigger_mgr/periodic_timer.cpp
 	src/trigger_mgr/time_of_day_timer.cpp
+	src/patch_chk_plugin/game_update.cpp
+	src/patch_chk_plugin/patch_chk_plugin.cpp
+	src/patch_chk_plugin/patch_chk_util.cpp
+	src/patch_chk_plugin/patch_chk_controller.cpp
+	src/patch_chk_plugin/patch_chk_runner.cpp
+	src/patch_chk_plugin/patch_chk_job_queue.cpp
+	src/patch_chk_plugin/patch_chk_ui.cpp
+	src/patch_chk_plugin/patch_chk_sysupchk.cpp
+	src/patch_chk_plugin/patch_chk_changeinfo.cpp
+	src/patch_chk_plugin/patch_chk_jobs.cpp
 	shell.c
 )
 target_include_directories(vs0_vsh_shell_shell PRIVATE "${PSP2_SRC}/vsh/paf/include"
