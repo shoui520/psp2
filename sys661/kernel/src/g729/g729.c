@@ -182,11 +182,7 @@ s32 sceG729_driver_5A409D1B(s32 idx)
         pspSetK1(oldK1);
         return 0x80680001;
     }
-    if (g_encRes.rawBase == NULL) {
-        pspSetK1(oldK1);
-        return 0x80680001;
-    }
-    if (g_encRes.count == 0 || g_encRes.fplId <= 0) {
+    if (g_encRes.rawBase == NULL || g_encRes.count == 0 || g_encRes.fplId <= 0) {
         pspSetK1(oldK1);
         return 0x80680002;
     }
@@ -345,7 +341,7 @@ s32 sceG729_driver_74804D93(s32 idx)
     }
     s32 ret = sceMeCore_driver_635397BB(0x162, slot->meCtx);
     pspSetK1(oldK1);
-    return (ret < 0) ? idx : ret;
+    return (ret >= 0) ? idx : ret;
 }
 
 s32 sceG729_driver_13F1028A(s32 idx)
@@ -405,16 +401,7 @@ s32 sceG729_driver_3489D1F3(s32 idx, u32 bitLen, u32 opt, void *inBuf, void *out
     s32 ret = sceKernelDcacheInvalidateRangeForUser(slot->outBuf, sizeof(slot->outBuf));
     if (ret >= 0) {
         ret = sceMeCore_driver_FA398D71(0x163, slot->meCtx, bitLen, opt, inBuf, ((u32)slot->outBuf & 0x1FFFFFFF) | 0x40000000);
-        u32 *src = (u32 *)slot->outBuf;
-        u32 *dst = (u32 *)outBuf;
-        for (s32 i = 0; i < 10; i++) {
-            dst[0] = src[0];
-            dst[1] = src[1];
-            dst[2] = src[2];
-            dst[3] = src[3];
-            src += 4;
-            dst += 4;
-        }
+        memcpy(outBuf, slot->outBuf, 0xA0);
     }
     pspSetK1(oldK1);
     return ret;
