@@ -75,7 +75,7 @@ int dtcpIpStrmInit(struct SwStrmClient **outClient, struct SceDtcpIpIpcObject *c
 	if (connection == NULL)
 		return 2;
 
-	client = dtcpIpMalloc(sizeof(*client));
+	client = dtcpIpAlloc(sizeof(*client));
 	if (client == NULL)
 		return 5;
 	client->ipc = NULL;
@@ -84,7 +84,7 @@ int dtcpIpStrmInit(struct SwStrmClient **outClient, struct SceDtcpIpIpcObject *c
 	client->state = 0;
 	client->session = 0;
 	if (sceKernelCreateLwMutex(&client->mutex, "sce_sws_mutex", 0x2000, 0, NULL) < 0) {
-		dtcpIpMspaceFree(client);
+		dtcpIpFree(client);
 		*outClient = NULL;
 		return 5;
 	}
@@ -99,7 +99,7 @@ int dtcpIpStrmInit(struct SwStrmClient **outClient, struct SceDtcpIpIpcObject *c
 	}
 	ret = dtcpIpMapIpcStatus3(message.result);
 	sceKernelDeleteLwMutex(&client->mutex);
-	dtcpIpMspaceFree(client);
+	dtcpIpFree(client);
 	*outClient = NULL;
 	return ret;
 }
@@ -162,7 +162,7 @@ int dtcpIpStrmCloseSession(struct SwStrmClient *client)
 	if (dtcpIpIpcRequest(client->ipc->stream, &message) != 0 || message.result != 0)
 		result = dtcpIpMapIpcStatus3(message.result);
 	sceKernelDeleteLwMutex(&client->mutex);
-	dtcpIpMspaceFree(client);
+	dtcpIpFree(client);
 	return result;
 }
 
@@ -189,7 +189,7 @@ int dtcpIpStrmOpenStream(struct SwStrmStream **outStream, struct SwStrmClient *c
 	if (client == NULL)
 		return 2;
 
-	stream = dtcpIpMalloc(sizeof(*stream));
+	stream = dtcpIpAlloc(sizeof(*stream));
 	if (stream == NULL)
 		return 5;
 	stream->client = NULL;
@@ -199,7 +199,7 @@ int dtcpIpStrmOpenStream(struct SwStrmStream **outStream, struct SwStrmClient *c
 	stream->state = 0;
 	stream->id = 0;
 	if (sceKernelCreateLwMutex(&stream->mutex, "sce_sws_mutex", 0x2000, 0, NULL) < 0) {
-		dtcpIpMspaceFree(stream);
+		dtcpIpFree(stream);
 		*outStream = NULL;
 		return 5;
 	}
@@ -211,8 +211,8 @@ int dtcpIpStrmOpenStream(struct SwStrmStream **outStream, struct SwStrmClient *c
 	} else if (dtcpIpIpcInitShared(stream->channel, shared) != 0) {
 		ret = dtcpIpMapIpcStatus3(0);
 	} else {
-		stream->buffer = shared[0];
-		stream->buffer2 = (char *)shared[0] + config[1];
+		stream->buffer = shared[1];
+		stream->buffer2 = (char *)shared[1] + config[1];
 		message.command = SW_STRM_OPEN_STREAM;
 		message.channel = 0;
 		message.size = 24;
@@ -227,7 +227,7 @@ int dtcpIpStrmOpenStream(struct SwStrmStream **outStream, struct SwStrmClient *c
 		ret = dtcpIpMapIpcStatus3(message.result);
 	}
 	sceKernelDeleteLwMutex(&stream->mutex);
-	dtcpIpMspaceFree(stream);
+	dtcpIpFree(stream);
 	*outStream = NULL;
 	return ret;
 }
@@ -247,7 +247,7 @@ int dtcpIpStrmCloseStream(void *object)
 		dtcpIpMapIpcStatus3(message.result);
 	ret = dtcpIpIpcFiniStream(stream->channel, 0);
 	sceKernelDeleteLwMutex(&stream->mutex);
-	dtcpIpMspaceFree(stream);
+	dtcpIpFree(stream);
 	return ret;
 }
 

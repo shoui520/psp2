@@ -215,7 +215,7 @@ int dtcpIpIpcCreate(int *outConnection, const int *sessionInfo, const unsigned i
 	if (sessionInfo == NULL)
 		return 2;
 
-	object = dtcpIpMalloc(sizeof(*object));
+	object = dtcpIpAlloc(sizeof(*object));
 	if (object == NULL)
 		return 5;
 	object->session = NULL;
@@ -243,7 +243,7 @@ int dtcpIpIpcCreate(int *outConnection, const int *sessionInfo, const unsigned i
 		dtcpIpIpcFiniStream(object->stream, 0);
 	if (object->session != NULL)
 		dtcpIpIpcFiniSession(object->session);
-	dtcpIpMspaceFree(object);
+	dtcpIpFree(object);
 	*outConnection = 0;
 	return ret;
 }
@@ -268,7 +268,7 @@ int dtcpIpIpcClose(int connection)
 				if (ret == 0 || ret == SCE_DTCP_IP_IPC_STATUS_BUSY
 				    || ret == SCE_DTCP_IP_IPC_STATUS_LATER) {
 					dtcpIpIpcFiniSession(object->session);
-					dtcpIpMspaceFree(object);
+					dtcpIpFree(object);
 					if (ret == 0)
 						return 0;
 				}
@@ -330,7 +330,7 @@ int dtcpIpIpcConnect(void **outConnection)
 
 	config[34] = 0;
 	config[0] = (unsigned int)&g_dtcpIpIpcConfig[35];
-	object = dtcpIpMalloc(sizeof(*object));
+	object = dtcpIpAlloc(sizeof(*object));
 	if (object == NULL)
 		return 5;
 	object->session = NULL;
@@ -343,7 +343,7 @@ int dtcpIpIpcConnect(void **outConnection)
 			dtcpIpIpcFiniStream(object->stream, 0);
 		if (object->session != NULL)
 			dtcpIpIpcFiniSession(object->session);
-		dtcpIpMspaceFree(object);
+		dtcpIpFree(object);
 		*outConnection = NULL;
 		return ret;
 	}
@@ -363,7 +363,7 @@ int dtcpIpIpcDisconnect(void *connection)
 	if (ret != 0)
 		return dtcpIpMapIpcStatus(ret);
 	dtcpIpIpcFiniSession(object->session);
-	dtcpIpMspaceFree(object);
+	dtcpIpFree(object);
 	return 0;
 }
 

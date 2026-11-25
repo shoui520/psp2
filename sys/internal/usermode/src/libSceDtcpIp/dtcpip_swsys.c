@@ -124,7 +124,7 @@ int dtcpIpSysInit(struct SwSysClient **outClient, struct SceDtcpIpIpcObject *con
 		return 2;
 	if (connection == NULL)
 		return 2;
-	client = dtcpIpMalloc(sizeof(*client));
+	client = dtcpIpAlloc(sizeof(*client));
 	if (client == NULL)
 		return 5;
 	client->ipc = NULL;
@@ -134,7 +134,7 @@ int dtcpIpSysInit(struct SwSysClient **outClient, struct SceDtcpIpIpcObject *con
 	client->session = 0;
 	if (sceKernelCreateLwMutex(&client->mutex, "sce_sws_mutex", 0x2000, 0, NULL) < 0) {
 		ret = 5;
-		dtcpIpMspaceFree(client);
+		dtcpIpFree(client);
 		*outClient = NULL;
 		return ret;
 	}
@@ -156,7 +156,7 @@ int dtcpIpSysInit(struct SwSysClient **outClient, struct SceDtcpIpIpcObject *con
 		}
 	}
 	if (ret != 0) {
-		dtcpIpMspaceFree(client);
+		dtcpIpFree(client);
 		*outClient = NULL;
 	}
 	if (hold[0] != 0) {
@@ -268,7 +268,7 @@ int dtcpIpSysCloseSession(struct SwSysClient *client)
 		sceKernelUnlockLwMutex(&held->mutex, 1);
 	}
 	sceKernelDeleteLwMutex(&client->mutex);
-	dtcpIpMspaceFree(client);
+	dtcpIpFree(client);
 	return result;
 }
 
@@ -295,7 +295,7 @@ int dtcpIpSysOpenStream(struct SwSysStream **outStream, struct SwSysClient *clie
 		return 2;
 	if (client == NULL)
 		return 2;
-	stream = dtcpIpMalloc(sizeof(*stream));
+	stream = dtcpIpAlloc(sizeof(*stream));
 	if (stream == NULL)
 		return 5;
 	stream->client = NULL;
@@ -305,7 +305,7 @@ int dtcpIpSysOpenStream(struct SwSysStream **outStream, struct SwSysClient *clie
 	stream->state = 0;
 	stream->id = 0;
 	if (sceKernelCreateLwMutex(&stream->mutex, "sce_sws_mutex", 0x2000, 0, NULL) < 0) {
-		dtcpIpMspaceFree(stream);
+		dtcpIpFree(stream);
 		*outStream = NULL;
 		return 5;
 	}
@@ -317,8 +317,8 @@ int dtcpIpSysOpenStream(struct SwSysStream **outStream, struct SwSysClient *clie
 	} else if ((ret = dtcpIpIpcInitShared(stream->channel, shared)) != 0) {
 		result = dtcpIpMapIpcStatus2(ret);
 	} else {
-		stream->buffer = shared[0];
-		stream->buffer2 = (char *)shared[0] + config[1];
+		stream->buffer = shared[1];
+		stream->buffer2 = (char *)shared[1] + config[1];
 		if (dtcpIpSwAcquireStream(hold, stream, 1) != 0) {
 			result = 3;
 		} else {
@@ -342,7 +342,7 @@ int dtcpIpSysOpenStream(struct SwSysStream **outStream, struct SwSysClient *clie
 			result = dtcpIpMapIpcStatus2(ret);
 		}
 	}
-	dtcpIpMspaceFree(stream);
+	dtcpIpFree(stream);
 	*outStream = NULL;
 	if (hold[0] != 0) {
 		struct SwSysStream *held = (struct SwSysStream *)hold[0];
@@ -387,7 +387,7 @@ int dtcpIpSysCloseStream(void *object)
 		}
 		closeResult = dtcpIpIpcFiniStream(stream->channel, hold[0]);
 		sceKernelDeleteLwMutex(&stream->mutex);
-		dtcpIpMspaceFree(stream);
+		dtcpIpFree(stream);
 		return closeResult;
 	}
 	if (hold[0] != 0) {
