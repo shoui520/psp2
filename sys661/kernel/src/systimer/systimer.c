@@ -199,8 +199,8 @@ SceSTimerReg STimerRegSave[TIMER_NUM_HW_TIMERS];
 static s32 systimerhandler(s32 arg0 __attribute__((unused)), SceSTimerInfo *timer, s32 arg2);
 static void _sceSTimerStopCount(SceSTimerInfo *timer);
 static s32 _sceSTimerGetCount(SceSTimerInfo *timer);
-static s32 suspendSTimer(s32 unk __attribute__((unused)), void *param __attribute__((unused)));
-static s32 resumeSTimer(s32 unk __attribute__((unused)), void *param __attribute__((unused)));
+static s32 suspendSTimer(s32 event __attribute__((unused)), void *param __attribute__((unused)));
+static s32 resumeSTimer(s32 event __attribute__((unused)), void *param __attribute__((unused)));
 
 // 0x02e8
 s32 SysTimerInit(SceSize argSize __attribute__((unused)), const void *argBlock __attribute__((unused)))
@@ -212,7 +212,7 @@ s32 SysTimerInit(SceSize argSize __attribute__((unused)), const void *argBlock _
         g_timerCB.SYSTMR[i].regadr->timerData = TIMER_SET_MODE(TIMER_MODE_UNKNOWN) | TIMER_SET_COUNT(0);
         g_timerCB.SYSTMR[i].regadr->prsclNumerator = -1;
         g_timerCB.SYSTMR[i].regadr->prsclDenominator = -1;
-        //(void)g_timerCB.SYSTMR[i].regadr->unk0;
+        //(void)g_timerCB.SYSTMR[i].regadr->timerData;
         g_timerCB.SYSTMR[i].cb = NULL;
         g_timerCB.SYSTMR[i].prev_tmcy = 0;
         g_timerCB.SYSTMR[i].prev_icnt = 0;
@@ -287,7 +287,7 @@ static s32 _sceSTimerGetCount(SceSTimerInfo *timer)
  * Suspend all timers, save their states and counter value, and prohibit 
  * the timer interrupts.
  */
-static s32 suspendSTimer(s32 unk __attribute__((unused)), void *param __attribute__((unused)))
+static s32 suspendSTimer(s32 event __attribute__((unused)), void *param __attribute__((unused)))
 {
     s32 i;
     for (i = 0; i < TIMER_NUM_HW_TIMERS; i++) {
@@ -304,13 +304,13 @@ static s32 suspendSTimer(s32 unk __attribute__((unused)), void *param __attribut
  * Resume all timers, set their previous states and counter value and enable 
  * the timer interrupts.
  */
-static s32 resumeSTimer(s32 unk __attribute__((unused)), void *param __attribute__((unused)))
+static s32 resumeSTimer(s32 event __attribute__((unused)), void *param __attribute__((unused)))
 {
     s32 i;
     for (i = 0; i < TIMER_NUM_HW_TIMERS; i++) {
         g_timerCB.SYSTMR[i].regadr->prsclDenominator = STimerRegSave[i].M;
         g_timerCB.SYSTMR[i].regadr->prsclNumerator = STimerRegSave[i].N;
-        //(void)g_timerCB.SYSTMR[i].regadr->unk0;
+        //(void)g_timerCB.SYSTMR[i].regadr->timerData;
         g_timerCB.SYSTMR[i].regadr->timerData = STimerRegSave[i].Control & ~0x80000000;
         sceKernelEnableIntr(g_timerCB.SYSTMR[i].intrcode);
     }
@@ -333,7 +333,7 @@ s32 sceSTimerAlloc(void)
             g_timerCB.SYSTMR[i].regadr->timerData = TIMER_SET_MODE(TIMER_MODE_UNKNOWN) | TIMER_SET_COUNT(0);
             g_timerCB.SYSTMR[i].regadr->prsclNumerator = -1;
             g_timerCB.SYSTMR[i].regadr->prsclDenominator = -1;
-            //(void)g_timerCB.SYSTMR[i].regadr->unk0;
+            //(void)g_timerCB.SYSTMR[i].regadr->timerData;
             g_timerCB.SYSTMR[i].prev_tmcy = 0;
             g_timerCB.SYSTMR[i].prev_icnt = 0;
             g_timerCB.SYSTMR[i].totalcount = 0;
@@ -368,7 +368,7 @@ s32 sceSTimerFree(s32 timerId)
     timer->regadr->prsclNumerator = -1;
     timer->regadr->prsclDenominator = -1;
     timer->cb = NULL;
-    //(void)timer->regadr->unk0;
+    //(void)timer->regadr->timerData;
     timer->common = NULL;
     timer->timid = -1;
     timer->prev_tmcy = 0;

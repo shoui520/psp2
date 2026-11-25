@@ -31,7 +31,7 @@ typedef struct SceIoDeviceFunction {
 	int (*df_chstat)(SceIoIob *iob, const char *file, void *stat, int bits);
 	int (*df_rename)(SceIoIob *iob, const char *oldname, const char *newname);
 	int (*df_chdir)(SceIoIob *iob, const char *dir);
-	int (*df_mount)(SceIoIob *iob, const char *fs, const char *dev, int mode, void *unk, int len);
+	int (*df_mount)(SceIoIob *iob, const char *fs, const char *dev, int mode, void *mountArg, int len);
 	int (*df_umount)(SceIoIob *iob, const char *dev);
 	int (*df_devctl)(SceIoIob *iob, const char *dev, int cmd, void *indata, SceSize inlen, void *outdata, SceSize outlen);
 	int (*df_cancel)(SceIoIob *iob);
@@ -62,7 +62,7 @@ static int mscmhcInit(void *de);
 static int mscmhcExit(void *de);
 static int mscmhcOpen(SceIoIob *iob, char *file, int flags, int mode);
 static int mscmhcClose(SceIoIob *iob);
-static int mscmhcMount(SceIoIob *iob, const char *fs, const char *dev, int mode, void *unk, int len);
+static int mscmhcMount(SceIoIob *iob, const char *fs, const char *dev, int mode, void *mountArg, int len);
 static int mscmhcUmount(SceIoIob *iob, const char *dev);
 
 static const SceIoDeviceFunction g_msstorFuncs = {
@@ -118,7 +118,7 @@ static const u32 g_msDescriptor[24] = {
 
 static int g_msState = 4;
 static int g_ejectCount = 1;
-static int g_unk_1308[2];
+static int g_msemuReserved[2];
 static int g_lockMode;
 static int g_isSuspended;
 static int g_statCount0;
@@ -328,7 +328,7 @@ static int mscmhcUnregisterCb(SceUID *in, SceSize inlen, void *outdata)
 
 static int mscmhcDevctl(SceIoIob *iob, const char *dev, int cmd, void *indata, SceSize inlen, void *outdata, SceSize outlen)
 {
-	(void)g_unk_1308;
+	(void)g_msemuReserved;
 	if (iob->i_unit != 0) {
 		return 0x80010013;
 	}
@@ -518,7 +518,7 @@ static int mscmhcClose(SceIoIob *iob)
 	return 0;
 }
 
-static int mscmhcMount(SceIoIob *iob, const char *fs, const char *dev, int mode, void *unk, int len)
+static int mscmhcMount(SceIoIob *iob, const char *fs, const char *dev, int mode, void *mountArg, int len)
 {
 	return 0;
 }

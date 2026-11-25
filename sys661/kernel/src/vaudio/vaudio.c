@@ -35,9 +35,18 @@ typedef struct {
     u8 freq_idx;
     s8 alc_mode;
     s8 half_mode;
-    s8 pad_15;
+    s8 reserved;
     s16 effect_vol;
 } SceVaudioCtx;
+
+typedef struct SceVaudioMeWork {
+    u32 samples;
+    u32 in_stride;
+    u32 out_stride;
+    u32 reserved;
+    u8 effect_ctx[0x270];
+    u8 alc_ctx[0x200];
+} SceVaudioMeWork;
 
 static SceVaudioCtx g_vaudio;
 
@@ -58,12 +67,12 @@ static const u32 g_vaudio_err_table[8] = {
     0x80000002, 0x800002FF, 0x800002FF, 0x00000000,
 };
 
-int sub_06e8(int vol, void *buf);
-int sub_0ac8(int samplecount, int freq, int channels, int half_mode, int effect_vol);
-int sub_0d84(int freq);
-int sub_0e0c(u8 *work, int ch_bits, int out_bits, int freq, int samples);
-int sub_0ef0(u8 *work, int samples, int a2, int a3, int a4, u32 effect_param);
-int sub_0f70(u32 *work, void *in_buf, void *out_buf, int effect_type);
+int vaudioOutputInternal(int vol, void *buf);
+int vaudioChReserveInternal(int samplecount, int freq, int channels, int half_mode, int effect_vol);
+int getFreqIndex(int freq);
+int meVaudioInit(SceVaudioMeWork *work, int ch_bits, int out_bits, int freq, int samples);
+int meVaudioSetEffect(SceVaudioMeWork *work, int samples, int a2, int a3, int a4, u32 effect_param);
+int meVaudioProcess(SceVaudioMeWork *work, void *in_buf, void *out_buf, int effect_type);
 
 int sceVaudioOutputBlocking(int vol, void *buf)
 {
@@ -78,7 +87,7 @@ int sceVaudioOutputBlocking(int vol, void *buf)
     }
 
     if (g_vaudio.effect_vol < 0) {
-        int ret = sub_06e8(vol, buf);
+        int ret = vaudioOutputInternal(vol, buf);
         pspSetK1(k1);
         return ret;
     }
@@ -97,7 +106,7 @@ int sceVaudioOutputBlocking(int vol, void *buf)
         int res = sceMeCore_driver_FA398D71(0x125, dst, buf, (int)g_vaudio.effect_vol);
         if (res < 0) {
             if (buf == NULL)
-                res = sub_06e8(vol, NULL);
+                res = vaudioOutputInternal(vol, NULL);
             else
                 res = 0;
             pspSetK1(k1);
@@ -105,10 +114,10 @@ int sceVaudioOutputBlocking(int vol, void *buf)
         }
 
         if (res & 2) {
-            sub_06e8(vol, dst);
+            vaudioOutputInternal(vol, dst);
         } else if (buf == NULL || prev_state > 0) {
             if (buf == NULL)
-                res = sub_06e8(vol, NULL);
+                res = vaudioOutputInternal(vol, NULL);
             else
                 res = 0;
             pspSetK1(k1);
@@ -119,7 +128,7 @@ int sceVaudioOutputBlocking(int vol, void *buf)
             continue;
         if (res == (res & 1)) {
             if (buf == NULL)
-                res = sub_06e8(vol, NULL);
+                res = vaudioOutputInternal(vol, NULL);
             else
                 res = 0;
             pspSetK1(k1);
@@ -145,7 +154,7 @@ int sceVaudio_E8E78DC8(int samplecount, int freq, int channels)
     if (ret < 0)
         return ret;
 
-    return sub_0ac8(samplecount, freq, channels, 1, 0x800);
+    return vaudioChReserveInternal(samplecount, freq, channels, 1, 0x800);
 }
 
 int sceVaudioChRelease(void)
@@ -235,7 +244,7 @@ int sceVaudioSetAlcMode(int mode)
     return 0;
 }
 
-int sub_04d0(void)
+int vaudioInitWork(void)
 {
     SceUID sema = sceKernelCreateSema("SceVaudio", 0x101, 1, 1, NULL);
     g_vaudio.sema_id = sema;
@@ -265,12 +274,12 @@ int sub_04d0(void)
 
 int sceVaudioChReserve(int samplecount, int freq, int channels)
 {
-    return sub_0ac8(samplecount, freq, channels, 0, -1);
+    return vaudioChReserveInternal(samplecount, freq, channels, 0, -1);
 }
 
 int sceVaudio_driver_27ACC20B(int samplecount, int freq, int channels)
 {
-    return sub_0ac8(samplecount, freq, channels, 1, -1);
+    return vaudioChReserveInternal(samplecount, freq, channels, 1, -1);
 }
 
 int sceVaudio_504E4745(int effect_vol)
@@ -298,7 +307,7 @@ int sceVaudio_driver_DCC18F25(void)
 
 int module_start(SceSize args, void *argp)
 {
-    return (sub_04d0() < 0) ? 1 : 0;
+    return (vaudioInitWork() < 0) ? 1 : 0;
 }
 
 int module_stop(SceSize args, void *argp)
@@ -310,7 +319,7 @@ int module_stop(SceSize args, void *argp)
     return 0;
 }
 
-int sub_06e8(int vol, void *buf)
+int vaudioOutputInternal(int vol, void *buf)
 {
     int ret = sceKernelWaitSema(g_vaudio.sema_id, 1, NULL);
     if (ret < 0)
@@ -356,7 +365,7 @@ int sub_06e8(int vol, void *buf)
     if ((g_vaudio.sample_count & 7) == 0)
         use_me = g_vaudio.alc_mode & 1;
     if (((u8)g_vaudio.effect_type > 0) | use_me) {
-        ret = sub_0f70((u32 *)(g_vaudio.work_buf + 0x4000), buf, target_out, g_vaudio.effect_type);
+        ret = meVaudioProcess((SceVaudioMeWork *)(g_vaudio.work_buf + 0x4000), buf, target_out, g_vaudio.effect_type);
     } else {
         u32 uncached_dst = (u32)target_out & 0x9FFFFFFFU;
         cur_out = (u8 *)((u32)cur_out & 0x9FFFFFFFU);
@@ -402,7 +411,7 @@ int sub_06e8(int vol, void *buf)
         u32 param_t1 = 0x03333333;
         if (eff != 0)
             param_t1 = g_vaudio_effect_table[g_vaudio.freq_idx][eff - 1];
-        int me_res = sub_0ef0(g_vaudio.work_buf + 0x4000, samples, param_a2, 0x7FFFFF, 0, param_t1);
+        int me_res = meVaudioSetEffect((SceVaudioMeWork *)(g_vaudio.work_buf + 0x4000), samples, param_a2, 0x7FFFFF, 0, param_t1);
         if (me_res < 0)
             ret = me_res;
     } else if (g_vaudio.effect_dirty == 2) {
@@ -416,7 +425,7 @@ int sub_06e8(int vol, void *buf)
     return ret;
 }
 
-int sub_0ac8(int samplecount, int freq, int channels, int half_mode, int effect_vol)
+int vaudioChReserveInternal(int samplecount, int freq, int channels, int half_mode, int effect_vol)
 {
     if ((u32)(samplecount - 0x100) > 0x700)
         return 0x80000104;
@@ -478,10 +487,10 @@ int sub_0ac8(int samplecount, int freq, int channels, int half_mode, int effect_
 
     g_vaudio.ch_count = channels;
     g_vaudio.sample_count = actual_samples;
-    g_vaudio.freq_idx = sub_0d84(freq);
+    g_vaudio.freq_idx = getFreqIndex(freq);
     g_vaudio.buf_idx = 0;
 
-    sub_0e0c(g_vaudio.work_buf + 0x4000, channels << 3, 16, freq, samplecount);
+    meVaudioInit((SceVaudioMeWork *)(g_vaudio.work_buf + 0x4000), channels << 3, 16, freq, samplecount);
 
     int eff = g_vaudio.effect_type;
     int param_a2 = (eff != 0) ? 0x392CCF : 0x7FFFFF;
@@ -489,7 +498,7 @@ int sub_0ac8(int samplecount, int freq, int channels, int half_mode, int effect_
     if (eff != 0)
         param_t1 = g_vaudio_effect_table[g_vaudio.freq_idx][eff - 1];
 
-    ret = sub_0ef0(g_vaudio.work_buf + 0x4000, samplecount, param_a2, 0x7FFFFF, 0, param_t1);
+    ret = meVaudioSetEffect((SceVaudioMeWork *)(g_vaudio.work_buf + 0x4000), samplecount, param_a2, 0x7FFFFF, 0, param_t1);
     if (ret >= 0) {
         ret = sceAudioSRCChReserve(actual_samples, src_freq, 2);
         if (ret >= 0)
@@ -501,7 +510,7 @@ int sub_0ac8(int samplecount, int freq, int channels, int half_mode, int effect_
     return ret;
 }
 
-int sub_0d84(int freq)
+int getFreqIndex(int freq)
 {
     switch (freq) {
     case 44100: return 0;
@@ -517,37 +526,37 @@ int sub_0d84(int freq)
     }
 }
 
-int sub_0e0c(u8 *work, int ch_bits, int out_bits, int freq, int samples)
+int meVaudioInit(SceVaudioMeWork *work, int ch_bits, int out_bits, int freq, int samples)
 {
-    int res = sceMeCore_driver_635397BB(0x120, work + 0x10, ch_bits, out_bits);
+    int res = sceMeCore_driver_635397BB(0x120, work->effect_ctx, ch_bits, out_bits);
     int in_bytes = (ch_bits >> 3) << 1;
     int out_bytes = (out_bits >> 3) << 1;
     if (res >= 0) {
-        *(u32 *)(work + 4) = in_bytes;
-        *(u32 *)(work + 8) = out_bytes;
+        work->in_stride = in_bytes;
+        work->out_stride = out_bytes;
         if (ch_bits == 16 && (samples & 7) == 0)
-            res = sceMeCore_driver_635397BB(0x123, work + 0x280, samples, freq);
+            res = sceMeCore_driver_635397BB(0x123, work->alc_ctx, samples, freq);
     }
     if ((u32)(res + 8) < 8)
         return g_vaudio_err_table[-1 - res];
     return res;
 }
 
-int sub_0ef0(u8 *work, int samples, int a2, int a3, int a4, u32 effect_param)
+int meVaudioSetEffect(SceVaudioMeWork *work, int samples, int a2, int a3, int a4, u32 effect_param)
 {
-    int res = sceMeCore_driver_635397BB(0x121, work + 0x10, samples, a2, a3, a4, effect_param);
-    *(u32 *)work = samples;
+    int res = sceMeCore_driver_635397BB(0x121, work->effect_ctx, samples, a2, a3, a4, effect_param);
+    work->samples = samples;
     if ((u32)(res + 8) < 8)
         return g_vaudio_err_table[-1 - res];
     return res;
 }
 
-int sub_0f70(u32 *work, void *in_buf, void *out_buf, int effect_type)
+int meVaudioProcess(SceVaudioMeWork *work, void *in_buf, void *out_buf, int effect_type)
 {
     if ((0xD3 >> ((u32)in_buf >> 29)) & 1)
-        sceKernelDcacheWritebackRange(in_buf, work[0] * work[1]);
+        sceKernelDcacheWritebackRange(in_buf, work->samples * work->in_stride);
     if ((0xD3 >> ((u32)out_buf >> 29)) & 1)
-        sceKernelDcacheInvalidateRangeForUser(out_buf, work[0] * work[2]);
+        sceKernelDcacheInvalidateRangeForUser(out_buf, work->samples * work->out_stride);
 
     int res = sceMeCore_driver_FA398D71(0x122, work, in_buf, out_buf, effect_type);
     if ((u32)(res + 8) < 8)

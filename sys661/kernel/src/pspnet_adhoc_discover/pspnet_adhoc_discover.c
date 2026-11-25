@@ -51,11 +51,11 @@ static s32 g_canSkip;                        /* 0x10d4 */
 static SceNetAdhocDiscoverParam *g_param;    /* 0x10d8 */
 static SceNetAdhocctlScanInfo g_targetScan;  /* 0x10dc */
 
-static void sub_07f8(s32 event, s32 error, void *arg);
-static s32 sub_0938(void);
-static s32 sub_0a30(void);
-static s32 sub_0af4(void);
-static s32 sub_0cbc(void);
+static void adhocctlEventHandler(s32 event, s32 error, void *arg);
+static s32 processDiscoverState(void);
+static s32 checkPeerConnected(void);
+static s32 selectBestScanTarget(void);
+static s32 handleCreateWaitState(void);
 
 s32 sceNetAdhocDiscover_941B3877(SceNetAdhocDiscoverParam *param)
 {
@@ -65,7 +65,7 @@ s32 sceNetAdhocDiscover_941B3877(SceNetAdhocDiscoverParam *param)
         return 0x80411301;
     g_eventFlags = 0;
     g_eventError = 0;
-    s32 id = sceNetAdhocctl_lib_F8BABD85(sub_07f8, NULL);
+    s32 id = sceNetAdhocctl_lib_F8BABD85(adhocctlEventHandler, NULL);
     if (id < 0)
         return id;
     s32 mode = param->mode;
@@ -145,7 +145,7 @@ s32 sceNetAdhocDiscover_52DE1B97(void)
         }
         break;
     case 4:
-        sub_0a30();
+        checkPeerConnected();
         break;
     case 5: {
         s32 ret = sceNetAdhocctlDisconnect();
@@ -164,7 +164,7 @@ s32 sceNetAdhocDiscover_52DE1B97(void)
         }
         break;
     case 7:
-        sub_0938();
+        processDiscoverState();
         break;
     case 8: {
         s32 ret = sceNetAdhocctlScan();
@@ -188,7 +188,7 @@ s32 sceNetAdhocDiscover_52DE1B97(void)
         }
         break;
     case 10:
-        sub_0af4();
+        selectBestScanTarget();
         break;
     case 11: {
         s32 ret = sceNetAdhocctl_lib_F6057CC4(g_param->groupName);
@@ -212,7 +212,7 @@ s32 sceNetAdhocDiscover_52DE1B97(void)
         }
         break;
     case 13:
-        sub_0cbc();
+        handleCreateWaitState();
         break;
     case 14:
         if (g_subState == 3) {
@@ -350,7 +350,7 @@ s32 sceNetAdhocDiscover_A423A21B(void)
     return ret;
 }
 
-static void sub_07f8(s32 event, s32 error, void *arg)
+static void adhocctlEventHandler(s32 event, s32 error, void *arg)
 {
     switch (event) {
     case 0:
@@ -395,7 +395,7 @@ static void sub_07f8(s32 event, s32 error, void *arg)
     }
 }
 
-static s32 sub_0938(void)
+static s32 processDiscoverState(void)
 {
     if ((g_eventFlags & 0x20) != 0) {
         g_eventFlags &= ~0x20U;
@@ -419,7 +419,7 @@ static s32 sub_0938(void)
     return 0;
 }
 
-static s32 sub_0a30(void)
+static s32 checkPeerConnected(void)
 {
     s32 buflen = 0;
     if ((g_eventFlags & 0x20) != 0) {
@@ -443,7 +443,7 @@ static s32 sub_0a30(void)
     return ret;
 }
 
-static s32 sub_0af4(void)
+static s32 selectBestScanTarget(void)
 {
     s32 buflen = 0;
     SceNetAdhocctlScanInfo *best = NULL;
@@ -490,7 +490,7 @@ static s32 sub_0af4(void)
     return ret;
 }
 
-static s32 sub_0cbc(void)
+static s32 handleCreateWaitState(void)
 {
     if ((g_eventFlags & 0x20) != 0) {
         s32 ret = sceNetAdhocctlDisconnect();

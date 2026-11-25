@@ -18,14 +18,14 @@ typedef struct
 
 typedef struct
 {
-    int (*handler)(int unk, void* param);
+    int (*handler)(int event, void* param);
     int gp;
     void *param;
 } SceSuspendHandler;
 
 typedef struct
 {
-    int (*handler)(int unk, void* param);
+    int (*handler)(int event, void* param);
     int gp;
     void *param;
 } SceResumeHandler;
@@ -57,84 +57,81 @@ int sceKernelRegisterPowerHandlers(ScePowerHandlers *handlers)
     return g_iTempPowerLock;
 }
 
-int sceKernelPowerLock(int unk)
+int sceKernelPowerLock(int lockType)
 {
     if (g_pPowerHandlers == NULL)
     {
-        // CB90
         int oldIntr = suspendIntr();
         g_iTempPowerLock++;
         resumeIntr(oldIntr);
         return 0;
     }
-    return g_pPowerHandlers->lock(unk);
+    return g_pPowerHandlers->lock(lockType);
 }
 
-int sceKernelPowerLockForUser(int unk)
+int sceKernelPowerLockForUser(int lockType)
 {
     if (g_pPowerHandlers != NULL)
-        return g_pPowerHandlers->lockForUser(unk);
+        return g_pPowerHandlers->lockForUser(lockType);
     return 0;
 }
 
-int sceKernelPowerUnlock(int unk)
+int sceKernelPowerUnlock(int lockType)
 {
     if (g_pPowerHandlers == NULL)
     {
-        // CB90
         int oldIntr = suspendIntr();
         g_iTempPowerLock--;
         resumeIntr(oldIntr);
         return 0;
     }
-    return g_pPowerHandlers->unlock(unk);
+    return g_pPowerHandlers->unlock(lockType);
 }
 
-int sceKernelPowerUnlockForUser(int unk)
+int sceKernelPowerUnlockForUser(int lockType)
 {
     if (g_pPowerHandlers != NULL)
-        return g_pPowerHandlers->unlockForUser(unk);
+        return g_pPowerHandlers->unlockForUser(lockType);
     return 0;
 }
 
-int sceKernelPowerTick(int unk)
+int sceKernelPowerTick(int tickType)
 {
     if (g_pPowerHandlers != NULL) {
-        // CCA0
-        return g_pPowerHandlers->tick(unk);
+        return g_pPowerHandlers->tick(tickType);
     }
     return 0;
 }
 
-int sceKernelVolatileMemLock(int unk, void **ptr, int *size)
+int sceKernelVolatileMemLock(int id, void **ptr, int *size)
 {
     if (g_pPowerHandlers != NULL)
-        return g_pPowerHandlers->memLock(unk, ptr, size);
+        return g_pPowerHandlers->memLock(id, ptr, size);
     return -1;
 }
 
-int sceKernelVolatileMemTryLock(int unk, void **ptr, int *size)
+int sceKernelVolatileMemTryLock(int id, void **ptr, int *size)
 {
     if (g_pPowerHandlers != NULL)
-        return g_pPowerHandlers->memTryLock(unk, ptr, size);
+        return g_pPowerHandlers->memTryLock(id, ptr, size);
     return -1;
 }
 
-int sceKernelVolatileMemUnlock(int unk)
+int sceKernelVolatileMemUnlock(int id)
 {
     if (g_pPowerHandlers != NULL)
-        return g_pPowerHandlers->memUnlock(unk);
+        return g_pPowerHandlers->memUnlock(id);
     return -1;
 }
 
-int sceKernelPowerRebootStart(int unk)
+int sceKernelPowerRebootStart(int mode)
 {
     if (g_pPowerHandlers != NULL)
-        return g_pPowerHandlers->rebootStart(unk);
+        return g_pPowerHandlers->rebootStart(mode);
     return 0;
 }
 
-int sceKernelRegisterSuspendHandler(int reg, int (*handler)(int unk, void *param), void *param)
+int sceKernelRegisterSuspendHandler(int reg, int (*handler)(int event, void *param), void *param)
 {
     if (reg < 0 || reg >= 32)
         return -1;
@@ -160,40 +157,35 @@ int sceKernelRegisterResumeHandler(int reg, int (*handler)(int, void*), void *pa
     return 0;
 }
 
-int sceKernelDispatchSuspendHandlers(int unk)
+int sceKernelDispatchSuspendHandlers(int event)
 {
     int oldGp = pspGetGp();
     SceSuspendHandler *cur = &g_SuspendHandlers[0];
     int i;
-    // CEB0
     for (i = 0; i < 32; i++)
     {
         if (cur->handler != NULL)
         {
-            // CEF0
             pspSetGp(cur->gp);
-            cur->handler(unk, cur->param);
+            cur->handler(event, cur->param);
         }
-        // CEC0
         cur++;
     }
     pspSetGp(oldGp);
     return 0;
 }
 
-int sceKernelDispatchResumeHandlers(int unk)
+int sceKernelDispatchResumeHandlers(int event)
 {
     int oldGp = pspGetGp();
     SceResumeHandler *cur = &g_ResumeHandlers[31];
-    // CF40
     int i;
     for (i = 0; i < 32; i++)
     {
         if (cur->handler != NULL)
         {
-            // CF80
             pspSetGp(cur->gp);
-            cur->handler(unk, cur->param);
+            cur->handler(event, cur->param);
         }
         cur--;
     }

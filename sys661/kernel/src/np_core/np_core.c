@@ -18,25 +18,25 @@ typedef struct PspOpenPSID {
 extern int SysMemForKernel_7FF2F35A(int);
 extern int sceOpenPSIDGetPSID(PspOpenPSID, int);
 
-u32 sub_0000045C(int, int, u32);
-void sub_0000055C();
-u32 sub_00000590(int, int);
-u32 sub_000005D8(int *, char *, int);
-u32 sub_00000658(char *, char *, int, int *, int);
-u32 sub_00000728(char *, int, char *, char *);
-u32 sub_000007B4(void *, int);
-u32 sub_000007F8(void *, int);
-u32 sub_00000840(void *, int);
-u32 sub_000008F8(int, char *, int);
-u32 sub_0000098C(char *, int);
+u32 validateResponseHeader(int, int, u32);
+void clearNpEnv(void);
+u32 getNpUserAgent(int, int);
+u32 getNpServiceEntry(int *, char *, int);
+u32 getNpHeaderPair(char *, char *, int, int *, int);
+u32 getNpVersionInfo(char *, int, char *, char *);
+u32 formatNpAuthUrl(void *, int);
+u32 getNpTitleInfo(void *, int);
+u32 formatConsolePsidHex(void *, int);
+u32 getNpHeaderName(int, char *, int);
+u32 parseNpStatusHeader(char *, int);
 
 
 /*
  * .data section
  */
-int g_0xE30;
-int g_0xE34;
-int g_0xE38;
+int g_npEnvName;
+int g_npEnvFlag1;
+int g_npEnvFlag2;
 
 /*
  * Subroutine sceNpCore_57E15796 - Address 0x00000000 
@@ -44,7 +44,7 @@ int g_0xE38;
  */
 void sceNpCore_57E15796(void) {
 	s32 oldk1 = pspShiftK1();
-	sub_0000055C();
+	clearNpEnv();
 	pspSetK1(oldk1);
 }
 
@@ -79,7 +79,7 @@ u32 sceNpCore_243690EE(int address, int size) {
 	if (address != 0) {
 		//0xB8
 		if (((oldk1 << 11) & (((address + size) | address) | size)) >= 0) {
-			u32 res = sub_00000590(address, size);
+			u32 res = getNpUserAgent(address, size);
 			pspSetK1(oldk1);
 			return res;
 		}
@@ -102,7 +102,7 @@ u32 sceNpCore_8AFAB4A0(int arg0, int address, int size) {
 		if ((((arg0 + 12) | arg0) & (arg0 < 1)) >= 0) {
 			//0x138
 			if (((oldk1 << 11) & (((address + size) | address) | size)) >= 0) {
-				u32 res = sub_000005D8((int *) arg0, (char *) address, size);
+				u32 res = getNpServiceEntry((int *) arg0, (char *) address, size);
 				pspSetK1(oldk1);
 				return res;
 			}
@@ -129,7 +129,7 @@ u32 sceNpCore_5145344F(char *arg0, int address, int size, int arg3, int t0) {
 			if (arg3 != 0) {
 				//0x1B8
 				if (((oldk1 << 11) & (((arg3 | t0) | arg3) | t0)) >= 0) {
-					u32 res = sub_00000658(arg0, (char *) address, size, (int *) arg3,
+					u32 res = getNpHeaderPair(arg0, (char *) address, size, (int *) arg3,
 							t0);
 					pspSetK1(oldk1);
 					return res;
@@ -159,7 +159,7 @@ u32 sceNpCore_9218ACF6(int address, int size, int arg2, int arg3) {
 			if (arg2 != 0) {
 				//0x238
 				if (((oldk1 << 11) & (((arg2 + arg3) | arg2) | arg3)) >= 0) {
-					u32 res = sub_00000728((char *) address, size, (char *) arg2,
+					u32 res = getNpVersionInfo((char *) address, size, (char *) arg2,
 							(char *) arg3);
 					pspSetK1(oldk1);
 					return res;
@@ -185,7 +185,7 @@ u32 sceNpCore_B13D27CA(int address, int size) {
 	if (address != 0) {
 		//0x29C
 		if (((oldk1 << 11) & (((address + size) | address) | size)) >= 0) {
-			u32 res = sub_000007B4((int *) address, size);
+			u32 res = formatNpAuthUrl((int *) address, size);
 			pspSetK1(oldk1);
 			return res;
 		}
@@ -206,7 +206,7 @@ u32 sceNpCore_0366DAB6(int address, int size) {
 	if (address != 0) {
 		//0x300
 		if (((oldk1 << 11) & (((address + size) | address) | size)) >= 0) {
-			u32 res = sub_000007F8((int *) address, size);
+			u32 res = getNpTitleInfo((int *) address, size);
 			pspSetK1(oldk1);
 			return res;
 		}
@@ -227,7 +227,7 @@ u32 sceNpCore_E7AED5A3(int address, int size) {
 	if (address != 0) {
 		//0x364
 		if (((oldk1 << 11) & (((address + size) | address) | size)) >= 0) {
-			u32 res = sub_00000840((int *) address, size);
+			u32 res = formatConsolePsidHex((int *) address, size);
 			pspSetK1(oldk1);
 			return res;
 		}
@@ -248,7 +248,7 @@ u32 sceNpCore_04096629(int arg0, int address, int size) {
 	if (address != 0) {
 		//0x3C8
 		if (((oldk1 << 11) & (((address + size) | address) | size)) >= 0) {
-			u32 res = sub_000008F8(arg0, (char *)address, size);
+			u32 res = getNpHeaderName(arg0, (char *)address, size);
 			pspSetK1(oldk1);
 			return res;
 		}
@@ -269,7 +269,7 @@ u32 sceNpCore_515B65E8(int arg0, int address, int size) {
 	if (address != 0) {
 		//0x42C
 		if (((oldk1 << 11) & (((address + size) | address) | size)) >= 0) {
-			u32 res = sub_0000045C(arg0, address, size);
+			u32 res = validateResponseHeader(arg0, address, size);
 			pspSetK1(oldk1);
 			return res;
 		}
@@ -282,11 +282,11 @@ u32 sceNpCore_515B65E8(int arg0, int address, int size) {
 
 /* 
  * TODO: Resolve address
- * Subroutine sub_0000045C - Address 0x0000045C 
+ * Subroutine validateResponseHeader - Address 0x0000045C 
  * StringAddress
  * StringSize
  */
-u32 sub_0000045C(int arg0, int address, u32 size) {
+u32 validateResponseHeader(int arg0, int address, u32 size) {
 	char *strPtr = (char *) ((arg0 << 3) + 0x0E00);
 	u32 retStatus = 0x80550203;
 	u32 tempSize = size;
@@ -309,7 +309,7 @@ u32 sub_0000045C(int arg0, int address, u32 size) {
 			retStatus = strlen(strPtr);
 			//0x520
 			if (strncmp("X-I-5-Status", strPtr, retStatus + 1) == 0) {
-				retStatus = sub_0000098C((char *)tempAddress, tempSize);
+				retStatus = parseNpStatusHeader((char *)tempAddress, tempSize);
 				return (retStatus == 0) ? 0x8055030E : retStatus;
 			}
 			//0x4A0
@@ -322,10 +322,10 @@ u32 sub_0000045C(int arg0, int address, u32 size) {
 }
 
 /*
- * Subroutine sub_0000055C - Address 0x0000055C 
+ * Subroutine clearNpEnv - Address 0x0000055C 
  */
-void sub_0000055C(void) {
-	int *s0 = (int *) g_0xE30;
+void clearNpEnv(void) {
+	int *s0 = (int *) g_npEnvName;
 	int res = SysMemForKernel_7FF2F35A(*s0);
 	//0x578
 	if (res >= 0) {
@@ -337,9 +337,9 @@ void sub_0000055C(void) {
 
 /*
  * TODO: Resolve address
- * Subroutine sub_00000590 - Address 0x00000590
+ * Subroutine getNpUserAgent - Address 0x00000590
  */
-u32 sub_00000590(int arg0, int arg1) {
+u32 getNpUserAgent(int arg0, int arg1) {
 	int *s0 = (int *) 0x0DE0;
 	u32 res = 0x80550202;
 	//0x5B0
@@ -353,9 +353,9 @@ u32 sub_00000590(int arg0, int arg1) {
 
 /*
  * TODO: Resolve address and redo
- * Subroutine sub_000005D8 - Address 0x000005D8
+ * Subroutine getNpServiceEntry - Address 0x000005D8
  */
-u32 sub_000005D8(int *arg0, char *str, int arg2) {
+u32 getNpServiceEntry(int *arg0, char *str, int arg2) {
 	int *s0 = arg0;
 	int *s1 = (int *) ((s0[0] << 3) + 0x0D98);
 	//0x60C
@@ -374,9 +374,9 @@ u32 sub_000005D8(int *arg0, char *str, int arg2) {
 
 /*
  * TODO: Resolve address & "t0" as unused 
- * Subroutine sub_00000658 - Address 0x00000658 
+ * Subroutine getNpHeaderPair - Address 0x00000658 
  */
-u32 sub_00000658(char *arg0, char *str, int len, int *arg3, int t0) {
+u32 getNpHeaderPair(char *arg0, char *str, int len, int *arg3, int t0) {
 	t0 = 0; //This is temporary to avoid compilation error
 	char *tempStr = str;
 	char *s1 = arg0;
@@ -406,9 +406,9 @@ u32 sub_00000658(char *arg0, char *str, int len, int *arg3, int t0) {
 }
 
 /*
- * Subroutine sub_00000728 - Address 0x00000728
+ * Subroutine getNpVersionInfo - Address 0x00000728
  */
-u32 sub_00000728(char *arg0, int arg1, char *arg2, char *arg3) {
+u32 getNpVersionInfo(char *arg0, int arg1, char *arg2, char *arg3) {
 	char *s1 = arg3;
 	char *s2 = arg2;
 	//0x754
@@ -428,9 +428,9 @@ u32 sub_00000728(char *arg0, int arg1, char *arg2, char *arg3) {
 }
 
 /*
- * Subroutine sub_000007B4 - Address 0x000007B4 
+ * Subroutine formatNpAuthUrl - Address 0x000007B4 
  */
-u32 sub_000007B4(void *data, int len) {
+u32 formatNpAuthUrl(void *data, int len) {
 	u32 res = 0x80550202;
 	//0x7D4
 	if ((len < 50) == 0) {
@@ -442,9 +442,9 @@ u32 sub_000007B4(void *data, int len) {
 }
 
 /*
- * Subroutine sub_000007F8 - Address 0x000007F8 
+ * Subroutine getNpTitleInfo - Address 0x000007F8 
  */
-u32 sub_000007F8(void *arg0, int len) {
+u32 getNpTitleInfo(void *arg0, int len) {
 	char *s0 = ((char *) 0x0D90);
 	//0x818
 	if ((s0[0] < len) != 0) {
@@ -455,9 +455,9 @@ u32 sub_000007F8(void *arg0, int len) {
 }
 
 /*
- * Subroutine sub_00000840 - Address 0x00000840
+ * Subroutine formatConsolePsidHex - Address 0x00000840
  */
-u32 sub_00000840(void *buf, int len) {
+u32 formatConsolePsidHex(void *buf, int len) {
 	PspOpenPSID psid;
 	char *s0 = buf; //u8 * s0 = *s3 =  *buf
 	int i = 0;
@@ -483,9 +483,9 @@ u32 sub_00000840(void *buf, int len) {
 }
 
 /*
- * Subroutine sub_000008F8 - Address 0x000008F8 
+ * Subroutine getNpHeaderName - Address 0x000008F8 
  */
-u32 sub_000008F8(int arg0, char * arg1, int len) { //char arg1 - > char * arg1
+u32 getNpHeaderName(int arg0, char * arg1, int len) { //char arg1 - > char * arg1
 	char *s3 = (char *) ((arg0 << 3) + arg0);
 	//0x934
 	if ((arg0 < 3) != 0) {
@@ -503,9 +503,9 @@ u32 sub_000008F8(int arg0, char * arg1, int len) { //char arg1 - > char * arg1
 }
 
 /*
- * Subroutine sub_0000098C - Address 0x0000098C
+ * Subroutine parseNpStatusHeader - Address 0x0000098C
  */
-u32 sub_0000098C(char * arg0, int arg1) { //char arg0 -> char * arg0
+u32 parseNpStatusHeader(char * arg0, int arg1) { //char arg0 -> char * arg0
 	int data[4];
 	u32 s0 = 0;
 	int s1 = (int)arg0 + 0x0E18; //int s1 = arg0 + *((int *) 0x0E18);
