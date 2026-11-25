@@ -9,7 +9,7 @@
 #include "intr.h"
 
 // 1848
-void *g_nmiHandlers[16] = { NULL };
+void *g_nmiHandlers[17] = { NULL };
 
 int NmiManInit(void)
 {
@@ -18,7 +18,7 @@ int NmiManInit(void)
     int i;
     pspCop0CtrlSet(COP0_CTRL_NMI_TABLE, 0);
     // 0AEC
-    for (i = 0; i < 16; i++)
+    for (i = 0; i < 17; i++)
         g_nmiHandlers[i] = NULL;
     nmiInit();
     pspCop0CtrlSet(COP0_CTRL_NMI_TABLE, (int)g_nmiHandlers);

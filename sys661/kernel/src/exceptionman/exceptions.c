@@ -145,23 +145,24 @@ int sceKernelReleaseExceptionHandler(int exno, void (*func)())
         dbg_printf("(ERROR)\n");
         return 0x80020032;
     }
-    SceExceptionHandler *lastEx = ExcepManCB.hdlr2[exno];
-    SceExceptionHandler *ex = lastEx->next;
+    SceExceptionHandler **lastEx = &ExcepManCB.hdlr2[exno];
+    SceExceptionHandler *ex = *lastEx;
     // 07A0
     while (ex != NULL)
     {
-        if ((void*)((int)ex->cb & 0xFFFFFFFC) == func)
+        void *cb = (void*)((int)ex->cb & 0xFFFFFFFC);
+        if (cb == func)
         {  
             // 07E8
-            *(int*)(ex->cb) = 0;
-            lastEx->next = ex->next;
+            *(int*)cb = 0;
+            *lastEx = ex->next;
             FreeExcepCB(ex);
             build_exectbl();
             resumeIntr(oldIntr);
             dbg_printf("(end)\n");
             return 0;
         }
-        lastEx = ex;
+        lastEx = &ex->next;
         ex = ex->next;
     }
     // 07C0
@@ -174,28 +175,23 @@ int sceKernelReleaseDefaultExceptionHandler(void (*func)())
 {
     dbg_printf("exec %s\n", __FUNCTION__);
     int oldIntr = suspendIntr();
-    void (*actualFunc)() = func + 8;
+    void *actualFunc = (char *)func + 8;
     SceExceptionHandler *releaseEx = (SceExceptionHandler*)func;
-    SceExceptionHandler *ex = (SceExceptionHandler*)func;
-    if (func != defaultExceptionSpinLoop)
+    if (func != defaultExceptionSpinLoop && ExcepManCB.defaultHdlr != NULL)
     {
-        SceExceptionHandler *next = ExcepManCB.defaultHdlr->next;
-        // 085C
-        while (next != NULL)
+        void **cur = (void **)&ExcepManCB.defaultHdlr;
+        while (*cur != NULL)
         {
-            void (*nextFunc) = ex->next;
-            if (nextFunc == actualFunc)
+            if (*cur == actualFunc)
             {
-                // 0898
-                ex->next = releaseEx->next;
-                releaseEx->next = 0;
+                *cur = releaseEx->next;
+                releaseEx->next = NULL;
                 build_exectbl();
                 resumeIntr(oldIntr);
                 dbg_printf("(end)\n");
                 return 0;
             }
-            ex = nextFunc - 8;
-            next = ex->next;
+            cur = (void **)((char *)(*cur) - 8);
         }
     }
     // 0874
@@ -277,7 +273,7 @@ void Allocexceppool(void)
     int i;
     for (i = 0; i < 31; i++)
         ExcepManCB.pool[i].next = &ExcepManCB.pool[i + 1];
-    ExcepManCB.hdlr2[30] = NULL;
+    ExcepManCB.pool[31].next = NULL;
 }
 
 int sceKernelRegisterExceptionHandler(int exno, void (*func)())
