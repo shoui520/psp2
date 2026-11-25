@@ -89,68 +89,68 @@ extern int sceSysregGetTachyonVersion(void);
 static IrdaContext g_irda;
 static SircsContext g_sircs;
 
-static int sub_0140(int intr, void *arg);
-static void sub_0a08(void);
-static void sub_0a4c(void);
-static int sub_0a8c(void);
-static u32 sub_0c34(SircsData *sd, u32 *out);
-static int sub_0d28(SircsData *sd, u32 *in, u32 count);
+static int sircsIntrHandler(int intr, void *arg);
+static void sircsPowerLock(void);
+static void sircsPowerUnlock(void);
+static int sircsIsBusy(void);
+static u32 sircsEncodePulses(SircsData *sd, u32 *out);
+static int sircsDecodePulses(SircsData *sd, u32 *in, u32 count);
 
-static int sub_0f58(void *arg, const char *devname, unsigned int cmd, void *indata, int inlen, void *outdata, int outlen);
-static int sub_10e0(void *arg, unsigned int cmd, void *indata, int inlen, void *outdata, int outlen);
-static int sub_127c(u32 baud);
-static int sub_142c(u32 *out);
-static int sub_1488(void);
-static int sub_14c0(void);
-static int sub_1574(void);
-static int sub_15c0(u32 *out);
-static int sub_1624(void);
-static int sub_16b8(void);
-static int sub_17d4(void);
-static int sub_1828(void);
-static void sub_1910(void);
-static int sub_198c(IrdaContext *ctx);
-static void sub_19e4(void);
-static void sub_1a28(void);
-static void sub_1a68(void);
-static void sub_1abc(void);
-static int sub_1b1c(void);
-static void sub_1b28(int (*cb)(void));
-static int sub_1b34(void);
-static int sub_1b54(void);
-static int sub_1b7c(void *arg);
-static int sub_1bf4(void *arg);
-static int sub_1c20(void *arg, char *file, int flags, int mode);
-static int sub_1c3c(void *arg);
-static int sub_1c58(void *arg, char *data, int len);
-static int sub_1c78(void *arg, const char *data, int len);
-static int sub_1c98(int ev_id, char *ev_name, void *param, int *result);
-static int sub_1d04(void);
-static int sub_1e30(void);
-static int sub_1eac(u8 *buf, u32 len);
-static int sub_1fbc(const u8 *buf, u32 len);
-static int sub_20e8(int intr, IrdaContext *ctx);
-static SceUInt sub_2114(IrdaContext *ctx);
-static int sub_2210(IrdaContext *ctx);
+static int irdaIoIoctl(void *arg, const char *devname, unsigned int cmd, void *indata, int inlen, void *outdata, int outlen);
+static int irdaIoDevctl(void *arg, unsigned int cmd, void *indata, int inlen, void *outdata, int outlen);
+static int irdaSetBaudrate(u32 baud);
+static int irdaGetRxCount(u32 *out);
+static int irdaWaitRxReady(void);
+static int irdaFlushRx(void);
+static int irdaWaitTxDone(void);
+static int irdaGetTxFree(u32 *out);
+static int irdaFlushTx(void);
+static int irdaHwEnable(void);
+static int irdaHwDisable(void);
+static int irdaAllocResources(void);
+static void irdaFreeResources(void);
+static int irdaStartTxAlarm(IrdaContext *ctx);
+static void irdaPowerLock(void);
+static void irdaPowerUnlock(void);
+static void irdaEnableTxHardware(void);
+static void irdaDisableTxHardware(void);
+static int irdaIsLocked(void);
+static void irdaSetSircsBusyCallback(int (*cb)(void));
+static int irdaAddDriver(void);
+static int irdaDelDriver(void);
+static int irdaIoInit(void *arg);
+static int irdaIoExit(void *arg);
+static int irdaIoOpen(void *arg, char *file, int flags, int mode);
+static int irdaIoClose(void *arg);
+static int irdaIoRead(void *arg, char *data, int len);
+static int irdaIoWrite(void *arg, const char *data, int len);
+static int irdaSysEventHandler(int ev_id, char *ev_name, void *param, int *result);
+static int irdaOpen(void);
+static int irdaClose(void);
+static int irdaRead(u8 *buf, u32 len);
+static int irdaWrite(const u8 *buf, u32 len);
+static int irdaIntrHandler(int intr, IrdaContext *ctx);
+static SceUInt irdaTxAlarmHandler(IrdaContext *ctx);
+static int irdaDrainRxFifo(IrdaContext *ctx);
 
 static const void * const g_irda_funcs[22] = {
-    sub_1b7c,
-    sub_1bf4,
-    sub_1c20,
-    sub_1c3c,
-    sub_1c58,
-    sub_1c78,
+    irdaIoInit,
+    irdaIoExit,
+    irdaIoOpen,
+    irdaIoClose,
+    irdaIoRead,
+    irdaIoWrite,
     0,
-    sub_0f58,
+    irdaIoIoctl,
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    sub_10e0,
+    irdaIoDevctl,
     0
 };
 
 static const struct {
     const char *name;
     u32 dev_type;
-    u32 unk2;
+    u32 version;
     const char *desc;
     const void *funcs;
 } g_irda_drv = {
@@ -174,7 +174,7 @@ static struct {
     0x40,
     "SceIrda",
     0x00ffff00,
-    sub_1c98,
+    irdaSysEventHandler,
     0, 0, 0, { 0 }
 };
 
@@ -199,7 +199,7 @@ int sceSircs_driver_62411801(void)
         sceGpioSetPortMode(2, 0);
     }
 
-    ret = sceKernelRegisterIntrHandler(14, 2, sub_0140, 0, 0);
+    ret = sceKernelRegisterIntrHandler(14, 2, sircsIntrHandler, 0, 0);
     if (ret < 0)
         return ret;
 
@@ -221,7 +221,7 @@ int sceSircs_driver_62411801(void)
     g_sircs.busy = 0;
     g_sircs.power_locked = 0;
 
-    ret = sub_1b34();
+    ret = irdaAddDriver();
     if (ret < 0) {
         sceKernelDeleteEventFlag(g_sircs.evf_id);
         sceKernelDeleteSema(g_sircs.sema_id);
@@ -229,11 +229,11 @@ int sceSircs_driver_62411801(void)
         return ret;
     }
 
-    sub_1b28(sub_0a8c);
+    irdaSetSircsBusyCallback(sircsIsBusy);
     return 0;
 }
 
-static int sub_0140(int intr, void *arg)
+static int sircsIntrHandler(int intr, void *arg)
 {
     volatile u32 *sircs_regs = (volatile u32 *)0xbe340000;
 
@@ -326,7 +326,7 @@ int sceSircsSend(SircsData *sd, int count)
     }
 
     intr = sceKernelCpuSuspendIntr();
-    if (sub_1b1c() != 0) {
+    if (irdaIsLocked() != 0) {
         sceKernelCpuResumeIntr(intr);
         __asm__ volatile ("move $k1, %0" : : "r"(k1));
         return 0x80290100;
@@ -341,14 +341,14 @@ int sceSircsSend(SircsData *sd, int count)
         return ret;
     }
 
-    sub_0a08();
+    sircsPowerLock();
     sceSysregSircsClkEnable();
     sceSysregSircsIoEnable();
 
     if (g_sircs.use_gpio != 0)
         sceGpioPortClear(4);
 
-    sub_0c34(sd, pulse_buf);
+    sircsEncodePulses(sd, pulse_buf);
 
     *(volatile u32 *)0xbe340000 = 0xa0;
     sircs_regs[1] = 0x14;
@@ -391,7 +391,7 @@ int sceSircsSend(SircsData *sd, int count)
     sceSysregSircsClkDisable();
     sceSysregSircsIoDisable();
     g_sircs.busy = 0;
-    sub_0a4c();
+    sircsPowerUnlock();
     sceKernelSignalSema(g_sircs.sema_id, 1);
 
     __asm__ volatile ("move $k1, %0" : : "r"(k1));
@@ -421,7 +421,7 @@ int sceSircs_83381633(SircsData *sd, SceUInt timeout)
     }
 
     intr = sceKernelCpuSuspendIntr();
-    if (sub_1b1c() != 0) {
+    if (irdaIsLocked() != 0) {
         sceKernelCpuResumeIntr(intr);
         __asm__ volatile ("move $k1, %0" : : "r"(k1));
         return 0x80290100;
@@ -436,7 +436,7 @@ int sceSircs_83381633(SircsData *sd, SceUInt timeout)
         return ret;
     }
 
-    sub_0a08();
+    sircsPowerLock();
     sceSysregSircsClkEnable();
     sceSysregSircsIoEnable();
 
@@ -478,19 +478,19 @@ int sceSircs_83381633(SircsData *sd, SceUInt timeout)
         } else if (outbits & 0x400) {
             ret = 0x80290301;
         } else {
-            ret = sub_0d28(sd, pulse_buf, g_sircs.rx_rcvd);
+            ret = sircsDecodePulses(sd, pulse_buf, g_sircs.rx_rcvd);
         }
     }
 
     g_sircs.busy = 0;
-    sub_0a4c();
+    sircsPowerUnlock();
     sceKernelSignalSema(g_sircs.sema_id, 1);
 
     __asm__ volatile ("move $k1, %0" : : "r"(k1));
     return ret;
 }
 
-static void sub_0a08(void)
+static void sircsPowerLock(void)
 {
     if (g_sircs.power_locked == 0) {
         sceKernelPowerLock(0);
@@ -498,7 +498,7 @@ static void sub_0a08(void)
     }
 }
 
-static void sub_0a4c(void)
+static void sircsPowerUnlock(void)
 {
     if (g_sircs.power_locked != 0) {
         sceKernelPowerUnlock(0);
@@ -506,7 +506,7 @@ static void sub_0a4c(void)
     }
 }
 
-static int sub_0a8c(void)
+static int sircsIsBusy(void)
 {
     return g_sircs.busy;
 }
@@ -522,7 +522,7 @@ int module_stop(SceSize args, void *argp)
 {
     (void)args;
     (void)argp;
-    sub_1b54();
+    irdaDelDriver();
     if (g_sircs.use_gpio != 0)
         sceGpioPortSet(4);
     sceSysregSircsClkDisable();
@@ -530,8 +530,8 @@ int module_stop(SceSize args, void *argp)
     sceKernelReleaseIntrHandler(14);
     sceKernelDeleteSema(g_sircs.sema_id);
     sceKernelDeleteEventFlag(g_sircs.evf_id);
-    sub_1b54();
-    sub_0a4c();
+    irdaDelDriver();
+    sircsPowerUnlock();
     return 0;
 }
 
@@ -546,8 +546,8 @@ int module_reboot_before(SceSize args, void *argp)
     sceKernelReleaseIntrHandler(14);
     sceKernelDeleteSema(g_sircs.sema_id);
     sceKernelDeleteEventFlag(g_sircs.evf_id);
-    sub_1b54();
-    sub_0a4c();
+    irdaDelDriver();
+    sircsPowerUnlock();
     return 0;
 }
 
@@ -560,12 +560,12 @@ int sceSircs_driver_19155A2F(void)
     sceKernelReleaseIntrHandler(14);
     sceKernelDeleteSema(g_sircs.sema_id);
     sceKernelDeleteEventFlag(g_sircs.evf_id);
-    sub_1b54();
-    sub_0a4c();
+    irdaDelDriver();
+    sircsPowerUnlock();
     return 0;
 }
 
-static u32 sub_0c34(SircsData *sd, u32 *out)
+static u32 sircsEncodePulses(SircsData *sd, u32 *out)
 {
     u32 total_time = 0xbb8;
     u8 cmd = sd->cmd;
@@ -602,7 +602,7 @@ static u32 sub_0c34(SircsData *sd, u32 *out)
     return total_time;
 }
 
-static int sub_0d28(SircsData *sd, u32 *in, u32 count)
+static int sircsDecodePulses(SircsData *sd, u32 *in, u32 count)
 {
     u8 cmd = 0;
     u16 dev = 0;
@@ -691,7 +691,7 @@ static int sub_0d28(SircsData *sd, u32 *in, u32 count)
     return 0;
 }
 
-static int sub_0f58(void *arg, const char *devname, unsigned int cmd, void *indata, int inlen, void *outdata, int outlen)
+static int irdaIoIoctl(void *arg, const char *devname, unsigned int cmd, void *indata, int inlen, void *outdata, int outlen)
 {
     (void)arg;
     (void)devname;
@@ -699,33 +699,33 @@ static int sub_0f58(void *arg, const char *devname, unsigned int cmd, void *inda
     switch (cmd) {
     case 0x05000004:
     case 0x05000008:
-        return sub_14c0();
+        return irdaFlushRx();
     case 0x05000007:
-        return sub_1624();
+        return irdaFlushTx();
     case 0x05000009:
         return 0;
     case 0x05001003:
-        return sub_1488();
+        return irdaWaitRxReady();
     case 0x05001006:
-        return sub_1574();
+        return irdaWaitTxDone();
     case 0x05010001:
         if (indata == 0 || inlen != 4)
             return 0x80020324;
-        return sub_127c(*(u32 *)indata);
+        return irdaSetBaudrate(*(u32 *)indata);
     case 0x05020002:
         if (outdata == 0 || outlen != 4)
             return 0x80020324;
-        return sub_142c((u32 *)outdata);
+        return irdaGetRxCount((u32 *)outdata);
     case 0x05020005:
         if (outdata == 0 || outlen != 4)
             return 0x80020324;
-        return sub_15c0((u32 *)outdata);
+        return irdaGetTxFree((u32 *)outdata);
     default:
         return 0x80020325;
     }
 }
 
-static int sub_10e0(void *arg, unsigned int cmd, void *indata, int inlen, void *outdata, int outlen)
+static int irdaIoDevctl(void *arg, unsigned int cmd, void *indata, int inlen, void *outdata, int outlen)
 {
     (void)arg;
 
@@ -771,7 +771,7 @@ static int sub_10e0(void *arg, unsigned int cmd, void *indata, int inlen, void *
     }
 }
 
-static int sub_127c(u32 baud)
+static int irdaSetBaudrate(u32 baud)
 {
     volatile u32 *uart_regs = (volatile u32 *)0xbe540000;
     int intr;
@@ -809,7 +809,7 @@ static int sub_127c(u32 baud)
     return 0;
 }
 
-static int sub_142c(u32 *out)
+static int irdaGetRxCount(u32 *out)
 {
     int intr;
 
@@ -822,14 +822,14 @@ static int sub_142c(u32 *out)
     return 0;
 }
 
-static int sub_1488(void)
+static int irdaWaitRxReady(void)
 {
     u32 outbits;
     int ret = sceKernelWaitEventFlag(g_irda.evf_id, 0x10, 1, &outbits, 0);
     return ret < 0 ? ret : 0;
 }
 
-static int sub_14c0(void)
+static int irdaFlushRx(void)
 {
     int intr;
 
@@ -849,15 +849,15 @@ static int sub_14c0(void)
     return 0;
 }
 
-static int sub_1574(void)
+static int irdaWaitTxDone(void)
 {
     u32 outbits;
     int ret = sceKernelWaitEventFlag(g_irda.evf_id, 0x20, 0x20, &outbits, 0);
-    sub_1a28();
+    irdaPowerUnlock();
     return ret < 0 ? ret : 0;
 }
 
-static int sub_15c0(u32 *out)
+static int irdaGetTxFree(u32 *out)
 {
     int intr;
 
@@ -870,7 +870,7 @@ static int sub_15c0(u32 *out)
     return 0;
 }
 
-static int sub_1624(void)
+static int irdaFlushTx(void)
 {
     int intr;
 
@@ -885,11 +885,11 @@ static int sub_1624(void)
     }
     sceKernelClearEventFlag(g_irda.evf_id, ~0x20U);
     sceKernelCpuResumeIntr(intr);
-    sub_1a28();
+    irdaPowerUnlock();
     return 0;
 }
 
-static int sub_16b8(void)
+static int irdaHwEnable(void)
 {
     volatile u32 *uart_regs = (volatile u32 *)0xbe540000;
 
@@ -919,7 +919,7 @@ static int sub_16b8(void)
     return 0;
 }
 
-static int sub_17d4(void)
+static int irdaHwDisable(void)
 {
     sceSysregUartIoDisable(5);
     sceSysregUartClkEnable(5);
@@ -928,7 +928,7 @@ static int sub_17d4(void)
     return 0;
 }
 
-static int sub_1828(void)
+static int irdaAllocResources(void)
 {
     int ret;
 
@@ -945,14 +945,14 @@ static int sub_1828(void)
     if (ret < 0)
         return 0x802a0006;
 
-    sceKernelRegisterIntrHandler(37, 2, sub_20e8, &g_irda, 0);
+    sceKernelRegisterIntrHandler(37, 2, irdaIntrHandler, &g_irda, 0);
     sceKernelEnableIntr(37);
     ret = sceKernelCreateEventFlag("SceIrdaDriver", 0x201, 0, 0);
     g_irda.evf_id = ret;
     return ret < 0 ? 0x802a0006 : 0;
 }
 
-static void sub_1910(void)
+static void irdaFreeResources(void)
 {
     sceKernelDisableIntr(37);
     sceKernelReleaseIntrHandler(37);
@@ -970,17 +970,17 @@ static void sub_1910(void)
     }
 }
 
-static int sub_198c(IrdaContext *ctx)
+static int irdaStartTxAlarm(IrdaContext *ctx)
 {
     if (ctx->alarm_id == 0) {
-        sub_1a68();
-        SceUID id = sceKernelSetAlarm(100, sub_2114, ctx);
+        irdaEnableTxHardware();
+        SceUID id = sceKernelSetAlarm(100, irdaTxAlarmHandler, ctx);
         ctx->alarm_id = id >= 0 ? id : 0;
     }
     return 0;
 }
 
-static void sub_19e4(void)
+static void irdaPowerLock(void)
 {
     if (g_irda.power_locked == 0) {
         sceKernelPowerLock(0);
@@ -988,7 +988,7 @@ static void sub_19e4(void)
     }
 }
 
-static void sub_1a28(void)
+static void irdaPowerUnlock(void)
 {
     if (g_irda.power_locked != 0) {
         sceKernelPowerUnlock(0);
@@ -996,7 +996,7 @@ static void sub_1a28(void)
     }
 }
 
-static void sub_1a68(void)
+static void irdaEnableTxHardware(void)
 {
     volatile u32 cr = *(volatile u32 *)0xbe540030;
     if ((cr & 0x20) == 0) {
@@ -1007,7 +1007,7 @@ static void sub_1a68(void)
     }
 }
 
-static void sub_1abc(void)
+static void irdaDisableTxHardware(void)
 {
     volatile u32 cr = *(volatile u32 *)0xbe540030;
     if (cr & 0x20) {
@@ -1019,28 +1019,28 @@ static void sub_1abc(void)
     }
 }
 
-static int sub_1b1c(void)
+static int irdaIsLocked(void)
 {
     return g_irda.sircs_lock;
 }
 
-static void sub_1b28(int (*cb)(void))
+static void irdaSetSircsBusyCallback(int (*cb)(void))
 {
     g_irda.sircs_cb = cb;
 }
 
-static int sub_1b34(void)
+static int irdaAddDriver(void)
 {
     return sceIoAddDrv((void *)&g_irda_drv);
 }
 
-static int sub_1b54(void)
+static int irdaDelDriver(void)
 {
     sceIoDelDrv(g_irda_drv.name);
     return 0;
 }
 
-static int sub_1b7c(void *arg)
+static int irdaIoInit(void *arg)
 {
     (void)arg;
     if (sceSysregGetTachyonVersion() <= 0x4fffff) {
@@ -1054,64 +1054,64 @@ static int sub_1b7c(void *arg)
     return 0;
 }
 
-static int sub_1bf4(void *arg)
+static int irdaIoExit(void *arg)
 {
     (void)arg;
-    sub_1e30();
+    irdaClose();
     sceKernelUnregisterSysEventHandler(&g_sysevent);
     return 0;
 }
 
-static int sub_1c20(void *arg, char *file, int flags, int mode)
+static int irdaIoOpen(void *arg, char *file, int flags, int mode)
 {
     (void)arg;
     (void)file;
     (void)flags;
     (void)mode;
-    return sub_1d04();
+    return irdaOpen();
 }
 
-static int sub_1c3c(void *arg)
+static int irdaIoClose(void *arg)
 {
     (void)arg;
-    return sub_1e30();
+    return irdaClose();
 }
 
-static int sub_1c58(void *arg, char *data, int len)
+static int irdaIoRead(void *arg, char *data, int len)
 {
     (void)arg;
-    return sub_1eac((u8 *)data, len);
+    return irdaRead((u8 *)data, len);
 }
 
-static int sub_1c78(void *arg, const char *data, int len)
+static int irdaIoWrite(void *arg, const char *data, int len)
 {
     (void)arg;
-    return sub_1fbc((const u8 *)data, len);
+    return irdaWrite((const u8 *)data, len);
 }
 
-static int sub_1c98(int ev_id, char *ev_name, void *param, int *result)
+static int irdaSysEventHandler(int ev_id, char *ev_name, void *param, int *result)
 {
     (void)ev_name;
     (void)param;
     (void)result;
     if (ev_id == 0x400c) {
         if (g_irda.open_count != 0)
-            sub_17d4();
+            irdaHwDisable();
     } else if (ev_id == 0x1000c) {
         if (g_irda.open_count != 0)
-            sub_16b8();
+            irdaHwEnable();
     }
     return 0;
 }
 
-static int sub_1d04(void)
+static int irdaOpen(void)
 {
     int ret = 0;
 
     if (g_irda.open_count > 0)
         return 0x802a0004;
 
-    sub_19e4();
+    irdaPowerLock();
     if (g_irda.open_count == 0) {
         g_irda.baudrate = 9600;
         g_irda.alarm_usec = 0x3400;
@@ -1123,45 +1123,45 @@ static int sub_1d04(void)
         }
         g_irda.sircs_lock = 1;
         sceKernelCpuResumeIntr(intr);
-        sub_16b8();
-        if (sub_1828() < 0) {
+        irdaHwEnable();
+        if (irdaAllocResources() < 0) {
             ret = 0x802a0006;
             goto err;
         }
     }
     g_irda.open_count++;
-    sub_1a28();
+    irdaPowerUnlock();
     return 0;
 
 err:
     if (ret != (int)0x802a0007) {
-        sub_17d4();
-        sub_1910();
+        irdaHwDisable();
+        irdaFreeResources();
         g_irda.sircs_lock = 0;
     }
-    sub_1a28();
+    irdaPowerUnlock();
     return ret;
 }
 
-static int sub_1e30(void)
+static int irdaClose(void)
 {
-    sub_19e4();
+    irdaPowerLock();
     if (g_irda.open_count == 0) {
-        sub_1a28();
+        irdaPowerUnlock();
         return 0x802a0003;
     }
     g_irda.open_count--;
     if (g_irda.open_count <= 0) {
-        sub_17d4();
-        sub_1910();
+        irdaHwDisable();
+        irdaFreeResources();
         g_irda.sircs_lock = 0;
         g_irda.open_count = 0;
     }
-    sub_1a28();
+    irdaPowerUnlock();
     return 0;
 }
 
-static int sub_1eac(u8 *buf, u32 len)
+static int irdaRead(u8 *buf, u32 len)
 {
     u32 read_bytes = 0;
     int intr;
@@ -1186,7 +1186,7 @@ static int sub_1eac(u8 *buf, u32 len)
     return read_bytes;
 }
 
-static int sub_1fbc(const u8 *buf, u32 len)
+static int irdaWrite(const u8 *buf, u32 len)
 {
     u32 written = 0;
     int intr;
@@ -1196,7 +1196,7 @@ static int sub_1fbc(const u8 *buf, u32 len)
     if (buf == 0)
         return 0x80020324;
 
-    sub_19e4();
+    irdaPowerLock();
     intr = sceKernelCpuSuspendIntr();
     sceKernelClearEventFlag(g_irda.evf_id, ~0x20U);
     if (g_irda.tx_count < g_irda.tx_buf_size && len != 0) {
@@ -1207,22 +1207,22 @@ static int sub_1fbc(const u8 *buf, u32 len)
             g_irda.tx_count++;
         } while (g_irda.tx_count < g_irda.tx_buf_size && written < len);
     }
-    sub_198c(&g_irda);
+    irdaStartTxAlarm(&g_irda);
     sceKernelCpuResumeIntr(intr);
     return written;
 }
 
-static int sub_20e8(int intr, IrdaContext *ctx)
+static int irdaIntrHandler(int intr, IrdaContext *ctx)
 {
     volatile u32 *uart_regs = (volatile u32 *)0xbe540000;
     (void)intr;
     u32 mis = uart_regs[16];
     uart_regs[17] = mis;
-    sub_2210(ctx);
+    irdaDrainRxFifo(ctx);
     return -1;
 }
 
-static SceUInt sub_2114(IrdaContext *ctx)
+static SceUInt irdaTxAlarmHandler(IrdaContext *ctx)
 {
     SceUInt next = ctx->alarm_usec;
 
@@ -1236,7 +1236,7 @@ static SceUInt sub_2114(IrdaContext *ctx)
     }
 
     if (ctx->tx_count == 0 && (*(volatile u32 *)0xbe540018 & 8) == 0) {
-        sub_1abc();
+        irdaDisableTxHardware();
         sceKernelSetEventFlag(ctx->evf_id, 0x20);
         ctx->alarm_id = 0;
         next = 0;
@@ -1244,7 +1244,7 @@ static SceUInt sub_2114(IrdaContext *ctx)
     return next;
 }
 
-static int sub_2210(IrdaContext *ctx)
+static int irdaDrainRxFifo(IrdaContext *ctx)
 {
     int rcvd = 0;
 
