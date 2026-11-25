@@ -11,9 +11,9 @@ static SceSysEventHandler g_sysEventHandler = {
 	.handler = peripheralSysEventHandler,
 };
 
-static int g_unk_dd0;
-static int g_unk_dd4;
-static int g_unk_dd8;
+static int g_periphParam1;
+static int g_periphParam0;
+static int g_periphParam2;
 static u32 g_watchdogCounter;
 static SceUID g_mutexId;
 static void *g_bufBase;
@@ -72,19 +72,19 @@ int sceKermitPeripheral_driver_76BE2E28(int a0, int a1, int a2)
 	}
 
 	if (a0 >= 0) {
-		g_unk_dd4 = a0;
+		g_periphParam0 = a0;
 	} else {
-		a0 = g_unk_dd4;
+		a0 = g_periphParam0;
 	}
 	if (a1 >= 0) {
-		g_unk_dd0 = a1;
+		g_periphParam1 = a1;
 	} else {
-		a1 = g_unk_dd0;
+		a1 = g_periphParam1;
 	}
 	if (a2 >= 0) {
-		g_unk_dd8 = a2;
+		g_periphParam2 = a2;
 	} else {
-		a2 = g_unk_dd8;
+		a2 = g_periphParam2;
 	}
 
 	req->cmd = 0x416;
@@ -145,12 +145,9 @@ int sceKermitPeripheral_driver_8C7903E7(u32 a0, u32 a1)
 	req->args[0] = a0;
 	req->args[1] = a1;
 
-	u64 resp = 0;
+	u64 resp;
 	int kres = sceKermit_driver_36666181(req, KERMIT_MODE_PERIPHERAL, 0x415, 2, 0, &resp);
-	res = sceKernelUnlockMutex(g_mutexId, 1);
-	if (res != 0) {
-		return res;
-	}
+	sceKernelUnlockMutex(g_mutexId, 1);
 	return (kres != 0) ? kres : (int)resp;
 }
 
@@ -235,10 +232,9 @@ int sceKermitPeripheral_driver_55D690DD(void *out)
 
 int sceKermitPeripheral_driver_9EF7501D(void)
 {
-	u32 val = g_watchdogCounter + 1;
-	g_watchdogCounter = val;
-	HW(0xBFC00188u) = val;
-	return 0;
+	u32 prev = g_watchdogCounter++;
+	HW(0xBFC00188u) = g_watchdogCounter;
+	return (int)prev;
 }
 
 int sceKermitPeripheral_driver_0648E1A3(void)
@@ -273,7 +269,7 @@ s64 sceKermitPeripheral_driver_20638B97(void)
 
 	sceKernelDcacheInvalidateRange(aligned, 0x40);
 	SceKermitRequest *req = KERMIT_UNCACHED(aligned);
-	u64 resp = 0;
+	u64 resp;
 	int res = sceKermit_driver_36666181(req, KERMIT_MODE_PERIPHERAL, 0x41C, 0, 0, &resp);
 	if (res != 0) {
 		return (s64)res;
@@ -317,7 +313,7 @@ static int peripheralSendSimpleCmd(u32 cmd)
 
 	sceKernelDcacheInvalidateRange(aligned, 0x40);
 	SceKermitRequest *req = KERMIT_UNCACHED(aligned);
-	u64 resp = 0;
+	u64 resp;
 	int res = sceKermit_driver_36666181(req, KERMIT_MODE_PERIPHERAL, cmd, 0, 0, &resp);
 	return (res != 0) ? res : (int)resp;
 }
