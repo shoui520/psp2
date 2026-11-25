@@ -25,10 +25,44 @@
 /* the middleware's trace (SwMwTrace.c's [SWMW] print, flushes every message) */
 extern "C" int swMwTrace(const char *format, ...);
 
-/* the server's shared memory: two channel slices of 16520 bytes */
+/* the server's shared memory: two channel slices of 16520 bytes, four 4128-byte stream
+ * slices in each, the request block at 4104 and the reply payload at 2056 */
 #define SWMW_COMM_SHARED_SIZE		33040
 #define SWMW_COMM_CHANNEL_STRIDE		16520
 #define SWMW_COMM_CHANNEL_COUNT		2
+#define SWMW_COMM_STREAM_STRIDE		4128
+#define SWMW_COMM_PAYLOAD_OFFSET		8
+#define SWMW_COMM_REPLY_OFFSET		2056
+#define SWMW_COMM_BLOCK_OFFSET		4104
+
+/* the 8-dword request block: the library writes it as three 64-bit pairs */
+struct SwMwIpcBlock {
+	unsigned int header[2];			/* 0x00: the protocol leaves them unused */
+	unsigned long long channelCommand;	/* 0x08: channel << 24 | size, command << 32 */
+	unsigned long long value1Value0;	/* 0x10: value1, value0 << 32 */
+	unsigned long long value3Value2;	/* 0x18: value3, value2 << 32 */
+};
+
+/* one request as the server sees it (0x38 bytes, the library's message layout) */
+struct SwMwIpcMessage {
+	int command;		/* 0x00 */
+	unsigned char channel;	/* 0x04 */
+	unsigned char padAfterChannel;
+	unsigned short size;	/* 0x06 */
+	void *payload;		/* 0x08 */
+	int value0;		/* 0x0C */
+	int value1;		/* 0x10 */
+	int value2;		/* 0x14 */
+	int value3;		/* 0x18 */
+	int result;		/* 0x1C */
+	unsigned short outSize;	/* 0x20 */
+	unsigned short padAfterOutSize;
+	void *outPayload;	/* 0x24 */
+	int out0;		/* 0x28 */
+	int out1;		/* 0x2C */
+	int out2;		/* 0x30 */
+	int out3;		/* 0x34 */
+};
 
 /* the middleware's identity, from the launch parameter (main.cpp) */
 extern char g_swagnerIdentity[16];
@@ -88,11 +122,18 @@ extern "C" int SwMwCommServerGetRequest(const struct SwMwCommRequest *request, i
 	return 0;
 }
 
-/* store the 64-byte value a SW core reply carries (after its 12-byte header) in a
- * request's payload (0x81000c78) */
+/* the SW core's reply: its 12-byte header, then the 64-byte value a request carries */
+struct SwMwCoreReply {
+	int header[3];			/* 0x00 */
+	unsigned char value[64];	/* 0x0C */
+};
+
+/* store the 64-byte value a SW core reply carries in a request's payload (0x81000c78) */
 extern "C" int SwMwCommServerSetRequestValue(struct SwMwCommRequest *request, const void *value)
 {
-	memcpy(request->payload, (const char *)value + 12, 64);
+	const struct SwMwCoreReply *reply = (const struct SwMwCoreReply *)value;
+
+	memcpy(request->payload, reply->value, sizeof(reply->value));
 	return 0;
 }
 
@@ -144,6 +185,8 @@ extern "C" int SwMwCommServerCheckAppEvent(void)
 #define SWMW_IPC_EVENT_MASK		538
 /* the bits a stream request's wait takes: the same, plus the stream's signal bit */
 #define SWMW_IPC_STREAM_WAIT_MASK	792
+/* the bits the shared-memory stream wait takes: the library's signal, error, connect, close */
+#define SWMW_IPC_SHARED_WAIT_MASK	0x1000218
 
 /* the message pipe the server creates: its stack, its buffer and its options */
 #define SWMW_IPC_PIPE_STACK		64
@@ -241,6 +284,40 @@ extern "C" int SwMwIpcWaitEvent(SceUID event, int timeout)
 	}
 	if ((flags & 0x100) != 0)
 		return 0;
+	return SWMW_IPC_ERROR;
+}
+
+/*
+ * wait for a stream's shared-memory event: the signal bit carries the number of bytes the
+ * library moved in the user data's high word; a timed-out wait is the protocol's status.
+ */
+extern "C" int SwMwIpcWaitSharedEvent(SceUID event, int *outSize, int timeout)
+{
+	SceUInt32 timeoutValue = timeout;
+	SceUInt32 flags = 0;
+	SceUInt64 eventValue = 0;
+	int result;
+
+	result = sceKernelWaitEvent(event, SWMW_IPC_SHARED_WAIT_MASK, &flags, &eventValue,
+				    timeout != 0 ? &timeoutValue : NULL);
+	if (result != 0) {
+		if (result == SCE_KERNEL_ERROR_WAIT_TIMEOUT)
+			return SWMW_IPC_ERROR_TIMEOUT;
+		return SWMW_IPC_ERROR;
+	}
+	if ((flags & SWMW_IPC_EVENT_CLOSED) != 0)
+		return SWMW_IPC_ERROR;
+	if ((flags & SWMW_IPC_EVENT_CONNECT) != 0) {
+		if ((int)eventValue == SCE_KERNEL_ERROR_WAIT_TIMEOUT)
+			return SWMW_IPC_ERROR_TIMEOUT;
+		return SWMW_IPC_ERROR;
+	}
+	if ((flags & SWMW_IPC_EVENT_ERROR) != 0)
+		return SWMW_IPC_ERROR;
+	if ((flags & 0x1000000) != 0) {
+		*outSize = (int)(eventValue >> 32);
+		return 0;
+	}
 	return SWMW_IPC_ERROR;
 }
 
@@ -421,9 +498,47 @@ struct SwMwCommThread {
 
 /* one stream of a channel: the pipes and the thread that carries it */
 struct SwMwCommStreamSlot {
-	SceUID createdPipe;		/* 0x00: the request pipe the server created */
-	SceUID openedPipe;		/* 0x04: the reply pipe the library opened */
+	SceUID pipeStoC;		/* 0x00: the request pipe the server created */
+	SceUID pipeCtoS;		/* 0x04: the reply pipe the server opened */
 	struct SwMwCommThread thread;	/* 0x08 */
+};
+
+struct SwMwCommServer;
+
+/* one of the server's two channels: 184 bytes, its pipes, its shared block and the
+ * stream groups the library opens on it */
+struct SwMwCommChannel {
+	struct SwMwCommServer *server;	/* 0x00 */
+	int index;			/* 0x04 */
+	void *sharedBase;		/* 0x08: the shared memory's base */
+	int bufferSize;			/* 0x0C: its size */
+	unsigned int reserved[16];	/* 0x10: the original never reads or writes them */
+	void *shared;			/* 0x50: the shared memory control object */
+	SceUID singlePipe;		/* 0x54: the single-stream CtoS pipe */
+	struct SwMwCommThread singleThread;	/* 0x58 */
+	int streamCount;		/* 0x64: 0: one stream, else four stream slots */
+	struct SwMwCommStreamSlot slots[4];	/* 0x68 */
+};
+
+/* the server: its control objects, its shared memory, its two channels and the manager
+ * dispatch its stream threads call */
+struct SwMwCommServer {
+	SceUID mutex;			/* 0x000 */
+	SceUID pipeCtoS;		/* 0x004 */
+	SceUID pipeStoC;		/* 0x008 */
+	void *shared;			/* 0x00C: the shared memory control object */
+	void *base;			/* 0x010: its base */
+	struct SwMwCommChannel channels[2];	/* 0x014 */
+	void (*dispatch)(struct SwMwCommChannel *channel, struct SwMwIpcMessage *request,
+			 void *context);	/* 0x184 */
+	void *dispatchContext;		/* 0x188 */
+	int timeout;			/* 0x18C: a request receive's timeout, in milliseconds */
+};
+
+/* what a stream thread's argument points to: its channel and its request pipe */
+struct SwMwThreadArgument {
+	struct SwMwCommChannel *channel;	/* 0x00 */
+	SceUID pipe;			/* 0x04 */
 };
 
 /* stop a stream's thread: wait for it to end, then delete it */
@@ -434,4 +549,241 @@ extern "C" int SwMwCommStreamStop(struct SwMwCommThread *thread)
 	result = sceKernelWaitThreadEnd(thread->id, NULL, NULL);
 	sceKernelDeleteThread(thread->id);
 	return result;
+}
+
+/*
+ * The receive path the stream threads share: wait on the channel's shared event (its
+ * stream slices) or on the message pipe (the single-stream case), then decode the
+ * 8-dword block into the request the dispatch reads.
+ */
+extern "C" int SwMwCommServerReceive(struct SwMwCommChannel *channel, SceUID pipe,
+				     struct SwMwIpcMessage *request, int timeout)
+{
+	struct SwMwIpcBlock block;
+	struct SwMwIpcBlock *received;
+	int streamIndex = 0;
+	int result;
+
+	if (channel->streamCount != 0)
+		result = SwMwIpcWaitSharedEvent(pipe, &streamIndex, 1000 * timeout);
+	else
+		result = SwMwIpcReceive(pipe, &block, 1000 * timeout);
+	if (result != 0) {
+		swMwTrace("[SWMW] Error %d in %s:%d\n", result, SWMW_COMM_SOURCE, 384);
+		return result;
+	}
+	if (channel->streamCount != 0)
+		received = (struct SwMwIpcBlock *)((char *)channel->server->base +
+			 SWMW_COMM_CHANNEL_STRIDE * channel->index +
+			 SWMW_COMM_STREAM_STRIDE * streamIndex + SWMW_COMM_BLOCK_OFFSET);
+	else
+		received = &block;
+	request->command = (int)(received->channelCommand >> 32);
+	request->channel = (unsigned char)(received->channelCommand >> 24);
+	request->size = (unsigned short)received->channelCommand;
+	request->value0 = (int)(received->value1Value0 >> 32);
+	request->value1 = (int)received->value1Value0;
+	request->value2 = (int)(received->value3Value2 >> 32);
+	request->value3 = (int)received->value3Value2;
+	if (request->size != 0)
+		request->payload = (char *)channel->server->base +
+				   SWMW_COMM_CHANNEL_STRIDE * channel->index +
+				   SWMW_COMM_STREAM_STRIDE * request->channel +
+				   SWMW_COMM_PAYLOAD_OFFSET;
+	else
+		request->payload = NULL;
+	if (request->channel == 255)
+		request->outPayload = NULL;
+	else
+		request->outPayload = (char *)channel->server->base +
+				      SWMW_COMM_CHANNEL_STRIDE * channel->index +
+				      SWMW_COMM_STREAM_STRIDE * request->channel +
+				      SWMW_COMM_REPLY_OFFSET;
+	return 0;
+}
+
+/*
+ * Receive a request for a stream thread: a timeout is the protocol's stop word (the
+ * request's command becomes 1), anything else an error; the reply fields are cleared and
+ * the caller learns whether the loop goes on.
+ */
+extern "C" int SwMwCommServerReceiveRequest(struct SwMwCommChannel *channel, SceUID pipe,
+					    struct SwMwIpcMessage *request, int *outDone)
+{
+	int result;
+
+	result = SwMwCommServerReceive(channel, pipe, request, channel->server->timeout);
+	if (result != 0) {
+		if (result != SWMW_IPC_ERROR_TIMEOUT) {
+			swMwTrace("[SWMW] Error %d in %s:%d\n", result, SWMW_COMM_SOURCE, 789);
+			return result;
+		}
+		request->command = 1;
+	}
+	request->result = 0;
+	request->outSize = 0;
+	request->outPayload = NULL;
+	request->out0 = 0;
+	request->out1 = 0;
+	request->out2 = 0;
+	request->out3 = 0;
+	*outDone = request->command == 0;
+	return 0;
+}
+
+/* a stream thread's trampoline: hand the thread's argument to its entry */
+extern "C" int SwMwThreadTrampoline(SceSize args, void *argument)
+{
+	struct SwMwCommThread *thread = (struct SwMwCommThread *)argument;
+
+	thread->entry(thread->argument);
+	return 0;
+}
+
+/* a stream thread: receive this stream's requests until one times out or fails, and let
+ * the manager's dispatch handle each one */
+extern "C" int SwMwCommServerThread(void *argument)
+{
+	struct SwMwThreadArgument *thread = (struct SwMwThreadArgument *)argument;
+	struct SwMwCommChannel *channel = thread->channel;
+	struct SwMwCommServer *server = channel->server;
+	struct SwMwIpcMessage request;
+	int done = 0;
+	int result;
+
+	for (;;) {
+		result = SwMwCommServerReceiveRequest(channel, thread->pipe, &request, &done);
+		if (result != 0) {
+			swMwTrace("[SWMW] Error %d in %s:%d\n", result, SWMW_COMM_SOURCE, 851);
+			done = 1;
+		}
+		if (done != 0)
+			break;
+		server->dispatch(channel, &request, server->dispatchContext);
+	}
+	free(thread);
+	return 0;
+}
+
+/* the process-wide SW settings the thread helper reads */
+static int g_swsToolMode;
+static int g_swsAffinity;
+
+extern "C" int SwsGetToolMode(void)
+{
+	return g_swsToolMode;
+}
+
+extern "C" void SwsSetToolMode(int value)
+{
+	g_swsToolMode = value;
+}
+
+extern "C" int SwsGetAffinity(void)
+{
+	return g_swsAffinity;
+}
+
+extern "C" void SwsSetAffinity(int value)
+{
+	g_swsAffinity = value;
+}
+
+/*
+ * Start one of the middleware's threads: the type picks the name and the stack size,
+ * the tool mode the priority (111, or the system's 0x10000040), the SW_DEP type the
+ * affinity the channel open asked for (192 when it is set and not the system's).
+ */
+extern "C" int SwMwThreadCreate(struct SwMwCommThread *thread, void (*entry)(void *),
+				void *argument, int type)
+{
+	char name[32];
+	SceSize stackSize = 0x4000;
+	int priority = 111;
+	int affinity = 0;
+	int id;
+
+	thread->entry = entry;
+	thread->argument = argument;
+	memcpy(name, "SWS_THREAD_NO_NAME", 0x13);
+	name[19] = 0;
+	if (SwsGetToolMode() == 0)
+		priority = 0x10000040;
+	switch (type) {
+	case 0:
+		strncpy(name, "SWS_THREAD_TYPE_ANONYMOUS", 0x1F);
+		break;
+	case 1:
+		strncpy(name, "SWS_THREAD_TYPE_AKE_CMD_TIMER", 0x1F);
+		break;
+	case 2:
+		strncpy(name, "SWS_THREAD_TYPE_KX_EXP", 0x1F);
+		break;
+	case 3:
+		strncpy(name, "SWS_THREAD_TYPE_SINK_AUTH", 0x1F);
+		stackSize = 0x8000;
+		break;
+	case 4:
+		strncpy(name, "SWS_THREAD_TYPE_SINK_AKE_TIMER", 0x1F);
+		break;
+	case 5:
+		strncpy(name, "SWS_THREAD_TYPE_SINK_CKC", 0x1F);
+		break;
+	case 6:
+		strncpy(name, "SWS_THREAD_TYPE_SRC_AUTH", 0x1F);
+		stackSize = 0x8000;
+		break;
+	case 7:
+		strncpy(name, "SWS_THREAD_TYPE_SRC_AUTH_SERVER", 0x1F);
+		stackSize = 0x8000;
+		break;
+	case 8:
+		strncpy(name, "SWS_THREAD_TYPE_SRC_AKE_TIMER", 0x1F);
+		stackSize = 0x8000;
+		break;
+	case 9:
+		strncpy(name, "SWS_THREAD_TYPE_RTT_REG", 0x1F);
+		stackSize = 0x8000;
+		break;
+	case 10:
+		strncpy(name, "SWS_THREAD_TYPE_TTL_CHECK", 0x1F);
+		break;
+	case 11:
+		strncpy(name, "SWS_THREAD_TYPE_MEDIA_DISCONNECT", 0x1F);
+		break;
+	case 16:
+		strncpy(name, "SWS_THREAD_TYPE_SW_TIMER", 0x1F);
+		break;
+	case 17:
+		strncpy(name, "SWS_THREAD_TYPE_SW_DEP", 0x1F);
+		affinity = SwsGetAffinity();
+		if (affinity != 0) {
+			affinity |= 0x80000;
+			if (affinity != 0x80000)
+				priority = 192;
+		}
+		break;
+	case 18:
+		stackSize = 0x20000;
+		strncpy(name, "SWS_THREAD_TYPE_TOOL", 0x1F);
+		break;
+	case 19:
+		strncpy(name, "SWS_THREAD_TYPE_ANONYMOUS", 0x1F);
+		affinity = SwsGetAffinity();
+		if (affinity != 0) {
+			affinity |= 0x80000;
+			if (affinity != 0x80000)
+				priority = 192;
+		}
+		break;
+	default:
+		break;
+	}
+	id = sceKernelCreateThread(name, SwMwThreadTrampoline, priority, stackSize, 0,
+				   affinity, NULL);
+	if (id >= 0) {
+		thread->id = id;
+		return sceKernelStartThread(id, 0xC, thread);
+	}
+	return id;
 }
