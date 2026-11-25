@@ -1,6 +1,7 @@
 #include "common_asm.h"
 
     .globl initExceptionVectors
+    .type initExceptionVectors, @function
 initExceptionVectors:
     lui        $a0, %hi(execNmiHandler)
     addiu      $a0, $a0, %lo(execNmiHandler)
@@ -9,21 +10,24 @@ initExceptionVectors:
     addiu      $a0, $a0, %lo(exceptionVectorEntry)
     jr         $ra
     mtc0       $a0, $25
+    .size initExceptionVectors, . - initExceptionVectors
 
-# At 0x0000001C
-    # get threadman exception vector?
     .globl ExceptionManagerForKernel_96D47F7E
+    .type ExceptionManagerForKernel_96D47F7E, @function
 ExceptionManagerForKernel_96D47F7E:
     lui        $v0, %hi(threadManExceptionVector)
     jr         $ra
     addiu      $v0, $v0, %lo(threadManExceptionVector)
-    nop        
-    nop        
-    nop        
-    nop        
-    nop        
-    nop        
+    .size ExceptionManagerForKernel_96D47F7E, . - ExceptionManagerForKernel_96D47F7E
+    nop
+    nop
+    nop
+    nop
+    nop
+    nop
 
+    .globl exceptionVectorEntry
+    .type exceptionVectorEntry, @function
 exceptionVectorEntry:
     ctc0       $v0, $4
     ctc0       $v1, $5
@@ -33,10 +37,9 @@ exceptionVectorEntry:
     ctc0       $v1, $2
     andi       $v0, $v0, 0x7C
     li         $v1, 32
-    bne        $v0, $v1, loc_00000098
+    bne        $v0, $v1, storeEpcAndDispatch
     mfc0       $v1, $14
 
-    # 0068
     .globl syscallHandler
 syscallHandler:
     j          syscallHandler
@@ -54,37 +57,37 @@ threadManExceptionVector:
     mtc0       $v1, $25
     mfc0       $v1, $14
 
-loc_00000098:
+storeEpcAndDispatch:
     ctc0       $v1, $zr
 
-loc_0000009C:
+dispatchException:
     lui        $v1, %hi(ExcepManCB)
     ins        $v1, $v0, 0, 7
     lw         $v0, %lo(ExcepManCB)($v1)
     cfc0       $v1, $25
-    bnezl      $v1, loc_000000BC # profiler
+    bnezl      $v1, profilerHook
     sw         $v0, 12($v1)
     jr         $v0
-    nop        
+    nop
 
-loc_000000BC:
+profilerHook:
     lw         $v1, 0($v1)
     lw         $v0, 0($v1)
     sw         $zr, 0($v1)
-    sync       
+    sync
     cfc0       $v1, $25
     lw         $v1, 8($v1)
-    bnez       $v1, loc_000000E0
+    bnez       $v1, profilerIncrement
     cfc0       $v1, $25
     sw         $v0, 4($v1)
 
-loc_000000E0:
+profilerIncrement:
     lw         $v0, 8($v1)
     addiu      $v0, $v0, 1
     sw         $v0, 8($v1)
     lw         $v0, 12($v1)
     jr         $v0
-    nop        
+    nop
 
 execNmiHandler:
     ctc0       $v1, $7
@@ -95,76 +98,83 @@ execNmiHandler:
     mfc0       $v1, $12
     ctc0       $v1, $19
     li         $v0, 124
-    b          loc_0000009C
-    nop        
+    b          dispatchException
+    nop
 
     .globl resetExceptionStub
 resetExceptionStub:
     ctc0       $v0, $6
     mfc0       $v0, $22
     bne        $zr, $v0, ExceptionManagerForKernel_79454858
-    nop        
+    nop
 
     .globl nmiExceptionJumpStub
 nmiExceptionJumpStub:
     cfc0       $v0, $9
     jr         $v0
-    nop        
-    nop        
+    nop
+    .size exceptionVectorEntry, . - exceptionVectorEntry
+    nop
 
     .globl nmiExceptionJumpStubEnd
 nmiExceptionJumpStubEnd:
-    nop        
-    nop        
-    nop        
-    nop        
-    nop        
-    nop        
-    nop        
-    nop        
+    nop
+    nop
+    nop
+    nop
+    nop
+    nop
+    nop
+    nop
 
     .globl ExceptionManagerForKernel_79454858
+    .type ExceptionManagerForKernel_79454858, @function
 ExceptionManagerForKernel_79454858:
     li         $v0, 92
-    b          loc_0000009C
-    nop        
+    b          dispatchException
+    nop
 
     .globl defaultExceptionSpinLoop
 defaultExceptionSpinLoop:
-    nop        
-    nop        
+    nop
+    nop
 
-loc_00000174:
-    b          loc_00000174
-    nop        
-    nop        
+defaultExceptionLoop:
+    b          defaultExceptionLoop
+    nop
+    .size ExceptionManagerForKernel_79454858, . - ExceptionManagerForKernel_79454858
+    nop
 
-    # 0180
     .globl nmiInit
+    .type nmiInit, @function
 nmiInit:
     lui        $v0, 0xBC10
     lui        $v1, 0xFFFF
     ori        $v1, $v1, 0xFFFF
     sw         $v1, 4($v0)
-    lui        $v1, %hi(g_0D40)
-    sw         $zr, %lo(g_0D40)($v1)
-    lui        $v1, %hi(g_0D44)
+    lui        $v1, %hi(g_nmiActive)
+    sw         $zr, %lo(g_nmiActive)($v1)
+    lui        $v1, %hi(g_activeNmiHandler)
     jr         $ra
-    sw         $zr, %lo(g_0D44)($v1)
+    sw         $zr, %lo(g_activeNmiHandler)($v1)
+    .size nmiInit, . - nmiInit
 
-    # 01A4
     .globl nmiHandler
 nmiHandler:
-    nop        
-    nop        
-    lui        $v1, %hi(g_0D40)
-    lw         $v0, %lo(g_0D40)($v1)
-    bnez       $v0, loc_000004E0 # handler was already called!
+    nop
+    nop
+
+    .globl nmiHandlerEntry
+    .type nmiHandlerEntry, @function
+nmiHandlerEntry:
+    lui        $v1, %hi(g_nmiActive)
+    lw         $v0, %lo(g_nmiActive)($v1)
+    bnez       $v0, nmiReentrantBreak
     addi       $v0, $v0, 1
-    sw         $v0, %lo(g_0D40)($v1)
-    lui        $v0, %hi(g_0D44)
-    sw         $zr, %lo(g_0D44)($v0)
-    move       $v0, $sp
+    sw         $v0, %lo(g_nmiActive)($v1)
+    lui        $v0, %hi(g_activeNmiHandler)
+    sw         $zr, %lo(g_activeNmiHandler)($v0)
+    addu       $v0, $sp, $zr
     lui        $sp, %hi(g_stackCtx)
     addiu      $sp, $sp, %lo(g_stackCtx)
     sw         $at, 4($sp)
@@ -202,72 +212,72 @@ nmiHandler:
     sw         $v1, 132($sp)
     lui        $v0, 0xBC10
     lw         $s0, 0($v0)
-    move       $s1, $zr
+    addu       $s1, $zr, $zr
     lui        $v0, 0xFFFF
     ori        $v0, $v0, 0xFFFF
     and        $v0, $v0, $s0
-    beqz       $v0, loc_000002A0
+    beqz       $v0, nmiCheckDebugBus
     bitrev     $v1, $s0
     clz        $s2, $v1
     li         $v0, 0xFFFF
     and        $v0, $v0, $s0
-    bnez       $v0, loc_000002F0
+    bnez       $v0, nmiDecodeSourceAddr
     li         $a0, 0
     addiu      $s2, $s2, -16
     lui        $v0, 0xFFFF
     and        $v0, $v0, $s0
-    bnez       $v0, loc_000002F0
+    bnez       $v0, nmiDecodeSourceAddr
     li         $a0, 1
 
-loc_000002A0:
+nmiCheckDebugBus:
     mfc0       $v0, $24
     andi       $v0, $v0, 0x1
-    beqz       $v0, loc_000002E8
-    nop        
+    beqz       $v0, nmiUnhandledBreak
+    nop
     li         $s2, 16
     lui        $s1, 0xA7F0
     lw         $s1, 4($s1)
     lui        $v0, 0x2222
     ori        $v0, $v0, 0x2222
-    move       $a1, $s1
+    addu       $a1, $s1, $zr
     li         $a2, -1
     and        $a0, $s1, $v0
-    bnez       $a0, loc_00000374
+    bnez       $a0, nmiDispatchHandler
     li         $a0, 0
     sll        $v0, $v0, 1
     and        $a0, $s1, $v0
-    bnez       $a0, loc_00000374
+    bnez       $a0, nmiDispatchHandler
     li         $a0, 2
 
-loc_000002E8:
-    j          loc_000004DC
-    nop        
+nmiUnhandledBreak:
+    j          nmiFatalBreak
+    nop
 
-loc_000002F0:
+nmiDecodeSourceAddr:
     lui        $v0, 0xBC10
     li         $at, 8
-    beql       $s2, $at, loc_00000368
+    beql       $s2, $at, nmiReadSourceAddr
     ori        $v0, $v0, 0x10
     li         $at, 9
-    beql       $s2, $at, loc_00000368
+    beql       $s2, $at, nmiReadSourceAddr
     ori        $v0, $v0, 0x14
     li         $at, 10
-    beql       $s2, $at, loc_00000368
+    beql       $s2, $at, nmiReadSourceAddr
     ori        $v0, $v0, 0xA0
     li         $at, 11
-    beql       $s2, $at, loc_00000368
+    beql       $s2, $at, nmiReadSourceAddr
     ori        $v0, $v0, 0xA4
     li         $at, 12
-    beql       $s2, $at, loc_00000368
+    beql       $s2, $at, nmiReadSourceAddr
     ori        $v0, $v0, 0xC
     li         $at, 13
-    beql       $s2, $at, loc_00000368
+    beql       $s2, $at, nmiReadSourceAddr
     ori        $v0, $v0, 0x88
     li         $at, 14
-    beql       $s2, $at, loc_00000368
+    beql       $s2, $at, nmiReadSourceAddr
     ori        $v0, $v0, 0xE0
     li         $at, 15
-    beql       $s2, $at, loc_00000368
+    beql       $s2, $at, nmiReadSourceAddr
     ori        $v0, $v0, 0xE4
     sll        $k0, $s2, 2
     li         $k1, 52
@@ -275,42 +285,42 @@ loc_000002F0:
     lui        $v0, 0xBC10
     addu       $v0, $v0, $k1
 
-loc_00000368:
+nmiReadSourceAddr:
     lw         $a2, 0($v0)
     ext        $a1, $a2, 31, 1
     ins        $a2, $zr, 0, 31
 
-loc_00000374:
+nmiDispatchHandler:
     cfc0       $a3, $zr
     cfc0       $t0, $1
     cfc0       $v0, $18
     sll        $v1, $s2, 2
     addu       $k0, $v0, $v1
     lw         $s3, 0($k0)
-    lui        $at, %hi(g_0D44)
-    sw         $s3, %lo(g_0D44)($at)
-    beqz       $s3, loc_000003D4
-    nop        
-    beqz       $s0, loc_000003AC
+    lui        $at, %hi(g_activeNmiHandler)
+    sw         $s3, %lo(g_activeNmiHandler)($at)
+    beqz       $s3, nmiRestoreContext
+    nop
+    beqz       $s0, nmiClearDebugBus
     lui        $k0, 0xBC10
     sw         $s0, 4($k0)
-    sync       
+    sync
 
-loc_000003AC:
-    beqz       $s1, loc_000003C4
+nmiClearDebugBus:
+    beqz       $s1, nmiInvokeHandler
     lui        $k0, 0xA7F8
     lw         $zr, 0($k0)
     lui        $k0, 0xA7F0
     sw         $s1, 32($k0)
-    sync       
+    sync
 
-loc_000003C4:
+nmiInvokeHandler:
     lui        $sp, %hi(g_stackCtx)
     addiu      $sp, $sp, %lo(g_stackCtx)
     jalr       $s3
-    nop        
+    nop
 
-loc_000003D4:
+nmiRestoreContext:
     lui        $sp, %hi(g_stackCtx)
     addiu      $sp, $sp, %lo(g_stackCtx)
     lw         $k0, 128($sp)
@@ -346,17 +356,17 @@ loc_000003D4:
     lw         $ra, 124($sp)
     lw         $at, 4($sp)
     lw         $sp, 116($sp)
-    lui        $v0, %hi(g_0D40)
-    sw         $zr, %lo(g_0D40)($v0)
+    lui        $v0, %hi(g_nmiActive)
+    sw         $zr, %lo(g_nmiActive)($v0)
     cfc0       $v1, $19
     lui        $v0, 0xFFBF
     ori        $v0, $v0, 0xFFFF
     and        $v1, $v1, $v0
     mtc0       $v1, $12
-    lui        $v0, %hi(g_0D44)
-    lw         $v1, %lo(g_0D44)($v0)
-    beqz       $v1, loc_000004CC
-    nop        
+    lui        $v0, %hi(g_activeNmiHandler)
+    lw         $v1, %lo(g_activeNmiHandler)($v0)
+    beqz       $v1, nmiChainNext
+    nop
     mfc0       $v1, $12
     lui        $v0, 0xFFEF
     ori        $v0, $v0, 0xFFFF
@@ -368,21 +378,21 @@ loc_000003D4:
     mtc0       $v1, $30
     cfc0       $v0, $6
     cfc0       $v1, $7
-    nop        
-    nop        
-    eret       
-    nop        
-    nop        
+    nop
+    nop
+    eret
+    nop
+    nop
 
-loc_000004CC:
+nmiChainNext:
     lui        $v0, %hi(nmiHandler)
     lw         $v0, %lo(nmiHandler)($v0)
     jr         $v0
-    nop        
+    nop
 
-loc_000004DC:
-    break      0x080, 0x000  # 0x20000
+nmiFatalBreak:
+    break      0x080, 0x000
 
-loc_000004E0:
-    break      0x080, 0x000  # 0x20000
-
+nmiReentrantBreak:
+    break      0x080, 0x000
+    .size nmiHandlerEntry, . - nmiHandlerEntry
