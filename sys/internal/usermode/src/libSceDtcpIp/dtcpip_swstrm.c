@@ -115,6 +115,7 @@ int dtcpIpStrmSetUri(struct SwStrmClient *client, const char *uri, unsigned shor
 		return 2;
 	client->flushing = 0;
 	message.command = SW_STRM_SET_URI;
+	message.channel = 0;
 	message.size = dtcpIpStrnlen(uri) + 1;
 	message.payload = (void *)uri;
 	message.value0 = client->session;
@@ -155,6 +156,8 @@ int dtcpIpStrmCloseSession(struct SwStrmClient *client)
 	if (client == NULL)
 		return 2;
 	message.command = SW_STRM_CLOSE;
+	message.channel = 0;
+	message.size = 0;
 	message.value0 = client->session;
 	if (dtcpIpIpcRequest(client->ipc->stream, &message) != 0 || message.result != 0)
 		result = dtcpIpMapIpcStatus3(message.result);
@@ -213,6 +216,7 @@ int dtcpIpStrmOpenStream(struct SwStrmStream **outStream, struct SwStrmClient *c
 	stream->buffer = shared[0];
 	stream->buffer2 = (char *)shared[0] + config[1];
 	message.command = SW_STRM_OPEN_STREAM;
+	message.channel = 0;
 	message.size = 24;
 	message.payload = config;
 	message.value0 = client->session;
@@ -260,6 +264,7 @@ int dtcpIpStrmGetInfo(void *object, void *info)
 	if (stream == NULL)
 		return 2;
 	message.command = SW_STRM_GET_INFO;
+	message.channel = 0;
 	message.size = 56;
 	message.payload = info;
 	message.value0 = stream->id;

@@ -161,6 +161,8 @@ int dtcpIpSysInit(struct SwSysClient **outClient, struct SceDtcpIpIpcObject *con
 	}
 	client->session = 0;
 	message.command = SW_SYS_CONNECT;
+	message.channel = 0;
+	message.size = 0;
 	if (dtcpIpIpcRequest(connection->stream, &message) != 0 || message.result != 0) {
 		ret = dtcpIpMapIpcStatus2(message.result);
 		goto fail;
@@ -194,8 +196,8 @@ fail:
 int dtcpIpSysSetUri(struct SwSysClient *client, const char *uri, unsigned short port,
 		    unsigned char *outId)
 {
-	struct SceDtcpIpIpcMessage message;
 	int acquired[2] = { 0, 0 };
+	struct SceDtcpIpIpcMessage message;
 	int ret;
 	int tries;
 	int id;
@@ -212,6 +214,7 @@ int dtcpIpSysSetUri(struct SwSysClient *client, const char *uri, unsigned short 
 	}
 	client->flushing = 0;
 	message.command = SW_SYS_SET_URI;
+	message.channel = 0;
 	message.size = dtcpIpStrnlen(uri) + 1;
 	message.payload = (void *)uri;
 	message.value0 = client->session;
@@ -257,8 +260,8 @@ int dtcpIpSysSetUri(struct SwSysClient *client, const char *uri, unsigned short 
 /* close the session client's session */
 int dtcpIpSysCloseSession(struct SwSysClient *client)
 {
-	struct SceDtcpIpIpcMessage message;
 	int acquired[2] = { 0, 0 };
+	struct SceDtcpIpIpcMessage message;
 	int ret;
 
 	if (client == NULL)
@@ -272,6 +275,8 @@ int dtcpIpSysCloseSession(struct SwSysClient *client)
 		return 3;
 	}
 	message.command = SW_SYS_CLOSE;
+	message.channel = 0;
+	message.size = 0;
 	message.value0 = client->session;
 	if (dtcpIpIpcRequest(client->ipc->stream, &message) != 0) {
 		ret = dtcpIpMapIpcStatus2(message.result);
@@ -362,6 +367,7 @@ int dtcpIpSysOpenStream(struct SwSysStream **outStream, struct SwSysClient *clie
 		goto fail;
 	}
 	message.command = SW_SYS_OPEN_STREAM;
+	message.channel = 0;
 	message.size = 20;
 	message.payload = config;
 	message.value0 = client->session;
@@ -394,8 +400,8 @@ fail:
 int dtcpIpSysCloseStream(void *object)
 {
 	struct SwSysStream *stream = object;
-	struct SceDtcpIpIpcMessage message;
 	int acquired[2] = { 0, 0 };
+	struct SceDtcpIpIpcMessage message;
 	int ret;
 	int result = 0;
 	int channelResult;
@@ -444,8 +450,8 @@ freed:
 int dtcpIpSysGetInfo(void *object, void *info)
 {
 	struct SwSysStream *stream = object;
-	struct SceDtcpIpIpcMessage message;
 	int acquired[2] = { 0, 0 };
+	struct SceDtcpIpIpcMessage message;
 	int ret;
 
 	if (stream == NULL)
@@ -459,6 +465,7 @@ int dtcpIpSysGetInfo(void *object, void *info)
 		return 3;
 	}
 	message.command = SW_SYS_GET_INFO;
+	message.channel = 0;
 	message.size = 576;
 	message.payload = info;
 	message.value0 = stream->id;
@@ -485,8 +492,8 @@ int dtcpIpSysGetInfo(void *object, void *info)
 int dtcpIpSysSetParameter(void *object, int parameter)
 {
 	struct SwSysStream *stream = object;
-	struct SceDtcpIpIpcMessage message;
 	int acquired[2] = { 0, 0 };
+	struct SceDtcpIpIpcMessage message;
 	int ret;
 
 	if (stream == NULL)
@@ -589,8 +596,8 @@ int dtcpIpSysReceive(void *object, void **buffer, SceSize *size, void *type, int
 int dtcpIpSysRelease(void *object, SceSize size)
 {
 	struct SwSysStream *stream = object;
-	struct SceDtcpIpIpcMessage message;
 	int acquired[2] = { 0, 0 };
+	struct SceDtcpIpIpcMessage message;
 	int ret;
 
 	if (stream == NULL)
@@ -630,8 +637,8 @@ int dtcpIpSysRelease(void *object, SceSize size)
 int dtcpIpSysSend(void *object, int a1, int a2, int a3)
 {
 	struct SwSysStream *stream = object;
-	struct SceDtcpIpIpcMessage message;
 	int acquired[2] = { 0, 0 };
+	struct SceDtcpIpIpcMessage message;
 	int ret;
 
 	if (stream == NULL)
@@ -683,8 +690,8 @@ int dtcpIpSysSend(void *object, int a1, int a2, int a3)
 int dtcpIpSysSendMessage(void *object, int messageValue)
 {
 	struct SwSysStream *stream = object;
-	struct SceDtcpIpIpcMessage message;
 	int acquired[2] = { 0, 0 };
+	struct SceDtcpIpIpcMessage message;
 	int ret;
 
 	if (stream == NULL)
@@ -732,8 +739,8 @@ int dtcpIpSysSendMessage(void *object, int messageValue)
 int dtcpIpSysAbort(void *object)
 {
 	struct SwSysStream *stream = object;
-	struct SceDtcpIpIpcMessage message;
 	int acquired[2] = { 0, 0 };
+	struct SceDtcpIpIpcMessage message;
 	int ret;
 
 	if (stream == NULL)
@@ -801,8 +808,8 @@ int dtcpIpSysIsStreamOpen(void *object)
 int dtcpIpSysClose(void *object)
 {
 	struct SwSysStream *stream = object;
-	struct SceDtcpIpIpcMessage message;
 	int acquired[2] = { 0, 0 };
+	struct SceDtcpIpIpcMessage message;
 	int ret;
 
 	if (stream == NULL)
@@ -816,6 +823,8 @@ int dtcpIpSysClose(void *object)
 		return 3;
 	}
 	message.command = SW_SYS_CLOSE_STREAM;
+	message.channel = 0;
+	message.size = 0;
 	message.value0 = stream->id;
 	ret = dtcpIpIpcRequest(stream->channel, &message);
 	if (ret == 0) {
