@@ -104,7 +104,10 @@ typedef struct NpFriendProfile {
 
 /* an entry of the online play session log */
 struct NpFriendSessionLog {
-	int reserved;
+	virtual ~NpFriendSessionLog()
+	{
+	}
+
 	SceNpId npId;
 	paf::rtc::Tick date;
 	paf::string titleId;

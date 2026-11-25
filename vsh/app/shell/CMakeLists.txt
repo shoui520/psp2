@@ -191,6 +191,7 @@ psp2_module(vs0_vsh_shell_shell KIND user COMPILER snc PARTIAL SOURCES
 	np_friend.cpp
 	np_friend_storage.cpp
 	np_friend_storage_heap.cpp
+	np_friend_list.cpp
 	shell_error_dialog.cpp
 	shell_cron.cpp
 	shell_cron_impl.cpp
@@ -419,6 +420,8 @@ psp2_module(vs0_vsh_shell_shell KIND user COMPILER snc PARTIAL SOURCES
 	src/np/ipc/npmanager/ipc_server/npmanager_ipc_server.cpp
 	src/np/ipc/npmanager/ipc_server/npmanager_job.cpp
 	src/np/ipc/npcommerce2_session_mgr.cpp
+	src/np/commerce2/np_commerce2_core.cpp
+	src/np/commerce2/np_commerce2_http.cpp
 	src/np/ipc/rt_netinfo_udpp2p.cpp
 	src/np/ipc/nptrophy/nptrophy_ipc_server.cpp
 	src/np/ipc/nptrophy/nptrophy_job.cpp

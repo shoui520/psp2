@@ -6,6 +6,7 @@
 #include <scetypes.h>
 #include <plugin.h>
 #include <std/string.h>
+#include <datetime/datetime.h>
 #include <libkernel/libkernel.h>
 #include <np_common/np_common.h>
 #include "../../../plugins.h"
@@ -147,7 +148,7 @@ struct NpCommerce2QueueNode {
 struct NpCommerce2CacheSlot {
 	IPMI::Session *ownerSession;	/* +0x00 (used by per-session slots) */
 	SceUInt32 ctxType;		/* +0x04 */
-	int coreCtxId;			/* +0x08 */
+	SceUInt32 coreCtxId;		/* +0x08 */
 	SceUInt8 *respBuf;		/* +0x0C */
 	SceSize respCapacity;		/* +0x10 */
 	SceSize respSize;		/* +0x14 */
@@ -159,7 +160,7 @@ struct NpCommerce2CacheSlot {
 struct NpCommerce2ActiveReq {
 	int inUse;
 	int requestId;
-	int coreReqId;
+	SceUInt32 coreReqId;
 	int aborted;
 };
 
@@ -190,7 +191,7 @@ static int s_comm2Initialized = 0;				/* 0x815451B0 */
 static NpCommerce2QueueNode *s_comm2QueueHead = NULL;		/* 0x815451B4 */
 static SceUID s_comm2QueueSema = -1;				/* 0x815451B8 */
 static SceUInt32 s_comm2QueueLimit = 0;				/* 0x815451BC */
-static int s_comm2CurrentCoreReq = 0;				/* 0x815451C0 */
+static SceUInt32 s_comm2CurrentCoreReq = 0;			/* 0x815451C0 */
 static int s_comm2Epoch = 0;					/* 0x815451C4 */
 
 /* 13 static cache slots indexed by NpCommerce2ReqKind (0x815451C8) */
@@ -489,7 +490,7 @@ static int npComm2GetResultCommon(NpCommerce2SessionManager *mgr, IPMI::Session 
 		if (urlBufSize == 0) {
 			*outUrlSize = 0;
 		} else {
-			ret = npCommerce2CoreGetContextUrl(slot->coreCtxId, &urlStr);
+			ret = npCommerce2GetContextCookie(slot->coreCtxId, &urlStr);
 			if (ret >= 0) {
 				if (kind == NP_COMM2_KIND_PRODUCT_INFO_EX &&
 				    *urlStr == '\0' &&
@@ -507,7 +508,7 @@ static int npComm2GetResultCommon(NpCommerce2SessionManager *mgr, IPMI::Session 
 	}
 
 	if (ret >= 0 && outGeneration != NULL) {
-		ret = npCommerce2CoreGetContextStamp(slot->coreCtxId, outStamp);
+		ret = npCommerce2GetContextBuildVersion(slot->coreCtxId, outStamp);
 		if (ret >= 0)
 			*outGeneration = slot->generation;
 	}
@@ -986,7 +987,7 @@ static int npComm2AbortReq(NpCommerce2SessionManager *mgr, int requestId)
 			return NP_COMM2_ERR_NOT_FOUND;
 		}
 		if (s_activeReqs[idx].coreReqId != 0)
-			npCommerce2CoreAbortRequest(s_activeReqs[idx].coreReqId);
+			sceNpCommerce2AbortReq(s_activeReqs[idx].coreReqId);
 		s_activeReqs[idx].aborted = 1;
 	} else {
 		npComm2FreeReqId(mgr, requestId);
@@ -1097,26 +1098,26 @@ static int npComm2CheckSignInRequirement(SceUID clientPid)
 
 /* 0x81223C70 */
 static int npComm2ExecSessionRequest(NpCommerce2SessionManager *mgr, int requestId,
-				     const NpCommerce2QueueItem *item, int coreCtxId,
+				     const NpCommerce2QueueItem *item, SceUInt32 coreCtxId,
 				     void *respBuf, SceSize respCap, SceSize *outRespSize)
 {
 	int ret = npComm2CheckSignInRequirement(item->clientPid);
 	if (ret >= 0) {
-		ret = npCommerce2CoreCreateSessionReq(coreCtxId, &s_comm2CurrentCoreReq);
+		ret = sceNpCommerce2CreateSessionCreateReq(coreCtxId, &s_comm2CurrentCoreReq);
 		if (ret < 0)
 			return ret;
 
-		ret = npComm2BindCoreReq(mgr, requestId, s_comm2CurrentCoreReq);
+		ret = npComm2BindCoreReq(mgr, requestId, static_cast<int>(s_comm2CurrentCoreReq));
 		if (ret >= 0) {
-			ret = npCommerce2CoreStartSessionReq(s_comm2CurrentCoreReq);
+			ret = sceNpCommerce2CreateSessionStart(s_comm2CurrentCoreReq);
 			if (ret >= 0)
-				ret = npCommerce2CoreGetResponse(s_comm2CurrentCoreReq, respBuf,
-								 respCap, outRespSize);
+				ret = SceNpCommerce2_B7387C96(s_comm2CurrentCoreReq, respBuf,
+							      respCap, outRespSize);
 		}
 	}
 
 	npComm2UnbindCoreReq(mgr, requestId);
-	npCommerce2CoreDestroyRequest(s_comm2CurrentCoreReq);
+	sceNpCommerce2DestroyReq(s_comm2CurrentCoreReq);
 	s_comm2CurrentCoreReq = 0;
 	return ret;
 }
@@ -1165,10 +1166,10 @@ static int npComm2WorkerThread(SceSize args, void *argp)
 	for (i = 1; i < NP_COMM2_STATIC_TYPE_COUNT; i++) {
 		if (i == NP_COMM2_KIND_SESSION)
 			continue;
-		int ret = npCommerce2CoreCreateContext(2u, &s_staticSlots[i].coreCtxId);
+		int ret = SceNpCommerce2_AA090F5E(2u, &s_staticSlots[i].coreCtxId);
 		if (ret >= 0 && s_staticSlots[i].ctxType != 9u)
-			ret = npCommerce2CoreSetContextType(s_staticSlots[i].coreCtxId,
-							    s_staticSlots[i].ctxType);
+			ret = npCommerce2SetContextServiceType(s_staticSlots[i].coreCtxId,
+							       s_staticSlots[i].ctxType);
 		if (ret < 0) {
 			initOk = false;
 			break;
@@ -1177,10 +1178,10 @@ static int npComm2WorkerThread(SceSize args, void *argp)
 
 	if (initOk) {
 		for (i = 0; i < NP_COMM2_MAX_SESSION_SLOTS; i++) {
-			int ret = npCommerce2CoreCreateContext(2u, &s_sessionSlots[i].coreCtxId);
+			int ret = SceNpCommerce2_AA090F5E(2u, &s_sessionSlots[i].coreCtxId);
 			if (ret >= 0 && s_sessionSlots[i].ctxType != 9u)
-				ret = npCommerce2CoreSetContextType(s_sessionSlots[i].coreCtxId,
-								    s_sessionSlots[i].ctxType);
+				ret = npCommerce2SetContextServiceType(s_sessionSlots[i].coreCtxId,
+								       s_sessionSlots[i].ctxType);
 			if (ret < 0) {
 				initOk = false;
 				break;
@@ -1266,13 +1267,13 @@ static int npComm2WorkerThread(SceSize args, void *argp)
 			npComm2InvalidateSlot(mgr, NP_COMM2_KIND_VOUCHER);
 			int res = npComm2CheckSignInRequirement(item.clientPid);
 			if (res >= 0) {
-				res = npCommerce2CoreCreateVoucherReq(slot->coreCtxId,
-								      &s_comm2CurrentCoreReq);
+				res = npCommerce2CreateGuestSessionReq(slot->coreCtxId,
+								       &s_comm2CurrentCoreReq);
 				if (res >= 0) {
 					res = npComm2BindCoreReq(mgr, requestId,
-								 s_comm2CurrentCoreReq);
+								 static_cast<int>(s_comm2CurrentCoreReq));
 					if (res >= 0) {
-						res = npCommerce2CoreStartVoucherReq(
+						res = npCommerce2StartGuestSessionReq(
 							s_comm2CurrentCoreReq,
 							item.payload.codes.countryCode,
 							item.payload.codes.langCode,
@@ -1280,19 +1281,19 @@ static int npComm2WorkerThread(SceSize args, void *argp)
 							item.payload.codes.maxCount,
 							item.payload.codes.sortMode);
 						if (res >= 0) {
-							res = npCommerce2CoreGetResponse(
+							res = SceNpCommerce2_B7387C96(
 								s_comm2CurrentCoreReq,
 								slot->respBuf, slot->respCapacity,
 								&slot->respSize);
 						}
 					}
 					npComm2UnbindCoreReq(mgr, requestId);
-					npCommerce2CoreDestroyRequest(s_comm2CurrentCoreReq);
+					sceNpCommerce2DestroyReq(s_comm2CurrentCoreReq);
 					s_comm2CurrentCoreReq = 0;
 				}
 			} else {
 				npComm2UnbindCoreReq(mgr, requestId);
-				npCommerce2CoreDestroyRequest(s_comm2CurrentCoreReq);
+				sceNpCommerce2DestroyReq(s_comm2CurrentCoreReq);
 				s_comm2CurrentCoreReq = 0;
 			}
 			npComm2StoreSlotResult(mgr, NP_COMM2_KIND_VOUCHER, 0, res);
@@ -1306,36 +1307,37 @@ static int npComm2WorkerThread(SceSize args, void *argp)
 			int kind = item.kind;
 			NpCommerce2CacheSlot *slot = &s_staticSlots[kind];
 			npComm2InvalidateSlot(mgr, kind);
-			int res = npCommerce2CoreCreateProductInfoReq(slot->coreCtxId,
-								      &s_comm2CurrentCoreReq);
+			int res = npCommerce2CreateAuthenticateReq(slot->coreCtxId,
+								   &s_comm2CurrentCoreReq);
 			if (res >= 0) {
-				res = npComm2BindCoreReq(mgr, requestId, s_comm2CurrentCoreReq);
+				res = npComm2BindCoreReq(mgr, requestId,
+							 static_cast<int>(s_comm2CurrentCoreReq));
 				if (res >= 0) {
 					bool boundUrl = false;
 					if (kind == NP_COMM2_KIND_PRODUCT_INFO_EX &&
 					    s_lastCategoryErrSession == item.session) {
 						boundUrl = true;
-						npCommerce2CoreBindThreadUrl(sceKernelGetThreadId(),
-									     s_lastCategoryErrUrl);
+						npCommerce2BindThreadCookie(sceKernelGetThreadId(),
+									    s_lastCategoryErrUrl);
 					}
-					res = npCommerce2CoreStartProductInfoReq(
+					res = npCommerce2StartAuthenticateReq(
 						s_comm2CurrentCoreReq,
 						item.payload.pair.mode,
 						item.payload.pair.productId,
 						item.payload.pair.categoryId,
 						item.payload.pair.flags);
 					if (res >= 0) {
-						res = npCommerce2CoreGetResponse(
+						res = SceNpCommerce2_B7387C96(
 							s_comm2CurrentCoreReq,
 							slot->respBuf, slot->respCapacity,
 							&slot->respSize);
 					}
 					if (boundUrl)
-						npCommerce2CoreUnbindThreadUrl();
+						npCommerce2UnbindThreadCookie();
 				}
 			}
 			npComm2UnbindCoreReq(mgr, requestId);
-			npCommerce2CoreDestroyRequest(s_comm2CurrentCoreReq);
+			sceNpCommerce2DestroyReq(s_comm2CurrentCoreReq);
 			s_comm2CurrentCoreReq = 0;
 			npComm2StoreSlotResult(mgr, kind, 0, res);
 			npComm2FreeReqId(mgr, requestId);
@@ -1345,12 +1347,13 @@ static int npComm2WorkerThread(SceSize args, void *argp)
 		case NP_COMM2_KIND_PRODUCT_LIST: {
 			NpCommerce2CacheSlot *slot = &s_staticSlots[NP_COMM2_KIND_PRODUCT_LIST];
 			npComm2InvalidateSlot(mgr, NP_COMM2_KIND_PRODUCT_LIST);
-			int res = npCommerce2CoreCreateProductListReq(slot->coreCtxId,
-								      &s_comm2CurrentCoreReq);
+			int res = npCommerce2CreateStartRegReq(slot->coreCtxId,
+							       &s_comm2CurrentCoreReq);
 			if (res >= 0) {
-				res = npComm2BindCoreReq(mgr, requestId, s_comm2CurrentCoreReq);
+				res = npComm2BindCoreReq(mgr, requestId,
+							 static_cast<int>(s_comm2CurrentCoreReq));
 				if (res >= 0) {
-					res = npCommerce2CoreStartProductListReq(
+					res = npCommerce2StartStartRegReq(
 						s_comm2CurrentCoreReq,
 						item.payload.codes.countryCode,
 						item.payload.codes.langCode,
@@ -1359,14 +1362,14 @@ static int npComm2WorkerThread(SceSize args, void *argp)
 						item.payload.codes.sortMode,
 						item.payload.codes.filter);
 					if (res >= 0) {
-						res = npCommerce2CoreGetResponse(
+						res = SceNpCommerce2_B7387C96(
 							s_comm2CurrentCoreReq,
 							slot->respBuf, slot->respCapacity,
 							&slot->respSize);
 					}
 				}
 				npComm2UnbindCoreReq(mgr, requestId);
-				npCommerce2CoreDestroyRequest(s_comm2CurrentCoreReq);
+				sceNpCommerce2DestroyReq(s_comm2CurrentCoreReq);
 				s_comm2CurrentCoreReq = 0;
 			}
 			npComm2StoreSlotResult(mgr, NP_COMM2_KIND_PRODUCT_LIST, 0, res);
@@ -1377,17 +1380,18 @@ static int npComm2WorkerThread(SceSize args, void *argp)
 		case NP_COMM2_KIND_CATEGORY: {
 			NpCommerce2CacheSlot *slot = &s_staticSlots[NP_COMM2_KIND_CATEGORY];
 			npComm2InvalidateSlot(mgr, NP_COMM2_KIND_CATEGORY);
-			int res = npCommerce2CoreCreateCategoryReq(slot->coreCtxId,
-								   &s_comm2CurrentCoreReq);
+			int res = npCommerce2CreateBindAccountReq(slot->coreCtxId,
+								  &s_comm2CurrentCoreReq);
 			if (res >= 0) {
-				res = npComm2BindCoreReq(mgr, requestId, s_comm2CurrentCoreReq);
+				res = npComm2BindCoreReq(mgr, requestId,
+							 static_cast<int>(s_comm2CurrentCoreReq));
 				if (res >= 0) {
-					res = npCommerce2CoreStartCategoryReq(
+					res = npCommerce2StartBindAccountReq(
 						s_comm2CurrentCoreReq,
 						item.payload.names.categoryId,
 						item.payload.names.subCategory);
 					if (res >= 0) {
-						res = npCommerce2CoreGetResponse(
+						res = SceNpCommerce2_B7387C96(
 							s_comm2CurrentCoreReq,
 							slot->respBuf, slot->respCapacity,
 							&slot->respSize);
@@ -1396,8 +1400,8 @@ static int npComm2WorkerThread(SceSize args, void *argp)
 							s_lastCategoryErrSession = NULL;
 						} else {
 							const char *errUrl = NULL;
-							if (npCommerce2CoreGetContextUrl(slot->coreCtxId,
-											 &errUrl) >= 0) {
+							if (npCommerce2GetContextCookie(slot->coreCtxId,
+											&errUrl) >= 0) {
 								s_lastCategoryErrSession = item.session;
 								sceClibStrlcpy(s_lastCategoryErrUrl,
 									       errUrl,
@@ -1407,7 +1411,7 @@ static int npComm2WorkerThread(SceSize args, void *argp)
 					}
 				}
 				npComm2UnbindCoreReq(mgr, requestId);
-				npCommerce2CoreDestroyRequest(s_comm2CurrentCoreReq);
+				sceNpCommerce2DestroyReq(s_comm2CurrentCoreReq);
 				s_comm2CurrentCoreReq = 0;
 			}
 			npComm2StoreSlotResult(mgr, NP_COMM2_KIND_CATEGORY, 0, res);
@@ -1418,26 +1422,27 @@ static int npComm2WorkerThread(SceSize args, void *argp)
 		case NP_COMM2_KIND_BROWSE: {
 			NpCommerce2CacheSlot *slot = &s_staticSlots[NP_COMM2_KIND_BROWSE];
 			npComm2InvalidateSlot(mgr, NP_COMM2_KIND_BROWSE);
-			int res = npCommerce2CoreCreateBrowseReq(slot->coreCtxId,
-								 &s_comm2CurrentCoreReq);
+			int res = npCommerce2CreateVerifyDobReq(slot->coreCtxId,
+								&s_comm2CurrentCoreReq);
 			if (res >= 0) {
-				res = npComm2BindCoreReq(mgr, requestId, s_comm2CurrentCoreReq);
+				res = npComm2BindCoreReq(mgr, requestId,
+							 static_cast<int>(s_comm2CurrentCoreReq));
 				if (res >= 0) {
-					res = npCommerce2CoreStartBrowseReq(
+					res = npCommerce2StartVerifyDobReq(
 						s_comm2CurrentCoreReq,
 						item.payload.browse.targetId,
 						item.payload.browse.startPos,
 						item.payload.browse.maxCount,
 						item.payload.browse.flags);
 					if (res >= 0) {
-						res = npCommerce2CoreGetResponse(
+						res = SceNpCommerce2_B7387C96(
 							s_comm2CurrentCoreReq,
 							slot->respBuf, slot->respCapacity,
 							&slot->respSize);
 					}
 				}
 				npComm2UnbindCoreReq(mgr, requestId);
-				npCommerce2CoreDestroyRequest(s_comm2CurrentCoreReq);
+				sceNpCommerce2DestroyReq(s_comm2CurrentCoreReq);
 				s_comm2CurrentCoreReq = 0;
 			}
 			npComm2StoreSlotResult(mgr, NP_COMM2_KIND_BROWSE, 0, res);
@@ -1451,14 +1456,15 @@ static int npComm2WorkerThread(SceSize args, void *argp)
 			if (targetKind == 0)
 				targetKind = NP_COMM2_KIND_EMPTY_STORE;
 			NpCommerce2CacheSlot *dstSlot = &s_staticSlots[NP_COMM2_KIND_EMPTY_STORE];
-			int res = npCommerce2CoreCreateEmptyStoreReq(s_staticSlots[targetKind].coreCtxId,
-								     &s_comm2CurrentCoreReq);
+			int res = SceNpCommerce2_C737A929(s_staticSlots[targetKind].coreCtxId,
+							  &s_comm2CurrentCoreReq);
 			if (res >= 0) {
-				res = npComm2BindCoreReq(mgr, requestId, s_comm2CurrentCoreReq);
+				res = npComm2BindCoreReq(mgr, requestId,
+							 static_cast<int>(s_comm2CurrentCoreReq));
 				if (res >= 0) {
-					res = npCommerce2CoreStartEmptyStoreReq(s_comm2CurrentCoreReq);
+					res = SceNpCommerce2_2DC2A0F9(s_comm2CurrentCoreReq);
 					if (res >= 0) {
-						res = npCommerce2CoreGetResponse(
+						res = SceNpCommerce2_B7387C96(
 							s_comm2CurrentCoreReq,
 							dstSlot->respBuf, dstSlot->respCapacity,
 							&dstSlot->respSize);
@@ -1466,7 +1472,7 @@ static int npComm2WorkerThread(SceSize args, void *argp)
 				}
 			}
 			npComm2UnbindCoreReq(mgr, requestId);
-			npCommerce2CoreDestroyRequest(s_comm2CurrentCoreReq);
+			sceNpCommerce2DestroyReq(s_comm2CurrentCoreReq);
 			s_comm2CurrentCoreReq = 0;
 			dstSlot->lastResult = res;
 			npComm2FreeReqId(mgr, requestId);
@@ -1476,23 +1482,24 @@ static int npComm2WorkerThread(SceSize args, void *argp)
 		case NP_COMM2_KIND_ENTITLEMENT: {
 			NpCommerce2CacheSlot *slot = &s_staticSlots[NP_COMM2_KIND_ENTITLEMENT];
 			npComm2InvalidateSlot(mgr, NP_COMM2_KIND_ENTITLEMENT);
-			int res = npCommerce2CoreCreateEntitlementReq(slot->coreCtxId,
-								      &s_comm2CurrentCoreReq);
+			int res = npCommerce2CreateSendEmailVerReq(slot->coreCtxId,
+								   &s_comm2CurrentCoreReq);
 			if (res >= 0) {
-				res = npComm2BindCoreReq(mgr, requestId, s_comm2CurrentCoreReq);
+				res = npComm2BindCoreReq(mgr, requestId,
+							 static_cast<int>(s_comm2CurrentCoreReq));
 				if (res >= 0) {
-					res = npCommerce2CoreStartEntitlementReq(
+					res = npCommerce2StartSendEmailVerReq(
 						s_comm2CurrentCoreReq,
 						item.payload.one.entitlementId);
 					if (res >= 0) {
-						res = npCommerce2CoreGetResponse(
+						res = SceNpCommerce2_B7387C96(
 							s_comm2CurrentCoreReq,
 							slot->respBuf, slot->respCapacity,
 							&slot->respSize);
 					}
 				}
 				npComm2UnbindCoreReq(mgr, requestId);
-				npCommerce2CoreDestroyRequest(s_comm2CurrentCoreReq);
+				sceNpCommerce2DestroyReq(s_comm2CurrentCoreReq);
 				s_comm2CurrentCoreReq = 0;
 			}
 			npComm2StoreSlotResult(mgr, NP_COMM2_KIND_ENTITLEMENT, 0, res);
@@ -1513,10 +1520,10 @@ static int npComm2WorkerThread(SceSize args, void *argp)
 	}
 
 	for (i = 0; i < NP_COMM2_MAX_SESSION_SLOTS; i++)
-		npCommerce2CoreDestroyContext(s_sessionSlots[i].coreCtxId);
+		sceNpCommerce2DestroyCtx(s_sessionSlots[i].coreCtxId);
 	for (i = 1; i < NP_COMM2_STATIC_TYPE_COUNT; i++) {
 		if (i != NP_COMM2_KIND_SESSION)
-			npCommerce2CoreDestroyContext(s_staticSlots[i].coreCtxId);
+			sceNpCommerce2DestroyCtx(s_staticSlots[i].coreCtxId);
 	}
 
 	sceKernelExitThread(0);

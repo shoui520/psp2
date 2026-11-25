@@ -528,37 +528,6 @@ extern SceUInt64 shellDesDecryptBlock(const SceUInt32 *subkeys, SceUInt32 reserv
 				      SceUInt32 blockLo, SceUInt32 blockHi);				/* 0x8144A30A */
 
 /* Commerce2 lower-layer session/HTTP helpers (0x812BD5D4..0x812BDAA4, 0x8132DA00..0x8132DA08) */
-extern void *npCommerce2Alloc(SceSize size);								/* 0x8132DA00 */
-extern void npCommerce2Free(void *ptr);									/* 0x8132DA08 */
-extern int npCommerce2CoreCreateContext(SceUInt32 version, int *outCtxId);				/* 0x812BD5D4 */
-extern int npCommerce2CoreDestroyContext(int ctxId);							/* 0x812BD5F8 */
-extern int npCommerce2CoreDestroyRequest(int reqId);							/* 0x812BD61A */
-extern int npCommerce2CoreAbortRequest(int reqId);							/* 0x812BD63C */
-extern int npCommerce2CoreCreateSessionReq(int ctxId, int *outReqId);					/* 0x812BD65E */
-extern int npCommerce2CoreStartSessionReq(int reqId);							/* 0x812BD68A */
-extern int npCommerce2CoreGetResponse(int reqId, void *buf, SceSize bufSize, SceSize *outSize);		/* 0x812BD6AC */
-extern int npCommerce2CoreCreateEmptyStoreReq(int ctxId, int *outReqId);				/* 0x812BD6CC */
-extern int npCommerce2CoreStartEmptyStoreReq(int reqId);						/* 0x812BD6F8 */
-extern int npCommerce2CoreCreateCategoryReq(int ctxId, int *outReqId);					/* 0x812BD71A */
-extern int npCommerce2CoreStartCategoryReq(int reqId, const char *categoryId, const char *subCategory);	/* 0x812BD746 */
-extern int npCommerce2CoreCreateProductListReq(int ctxId, int *outReqId);				/* 0x812BD772 */
-extern int npCommerce2CoreStartProductListReq(int reqId, const char *countryCode, const char *langCode,
-					      int startPos, int maxCount, int sortMode, int filter);	/* 0x812BD79E */
-extern int npCommerce2CoreCreateProductInfoReq(int ctxId, int *outReqId);				/* 0x812BD7E4 */
-extern int npCommerce2CoreStartProductInfoReq(int reqId, int mode, const char *productId,
-					      const char *categoryId, int flags);			/* 0x812BD810 */
-extern int npCommerce2CoreCreateBrowseReq(int ctxId, int *outReqId);					/* 0x812BD84C */
-extern int npCommerce2CoreStartBrowseReq(int reqId, const char *targetId, int startPos,
-					 int maxCount, int flags);					/* 0x812BD878 */
-extern int npCommerce2CoreCreateEntitlementReq(int ctxId, int *outReqId);				/* 0x812BD934 */
-extern int npCommerce2CoreStartEntitlementReq(int reqId, const char *entitlementId);			/* 0x812BD960 */
-extern int npCommerce2CoreCreateVoucherReq(int ctxId, int *outReqId);					/* 0x812BD98C */
-extern int npCommerce2CoreStartVoucherReq(int reqId, const char *countryCode, const char *langCode,
-					  int startPos, int maxCount, int sortMode);			/* 0x812BD9B8 */
-extern int npCommerce2CoreBindThreadUrl(SceUID threadId, const char *url);				/* 0x812BDA02 */
-extern int npCommerce2CoreUnbindThreadUrl(void);							/* 0x812BDA2E */
-extern int npCommerce2CoreGetContextUrl(int ctxId, const char **outUrl);				/* 0x812BDA4A */
-extern int npCommerce2CoreSetContextType(int ctxId, SceUInt32 ctxType);					/* 0x812BDA76 */
-extern int npCommerce2CoreGetContextStamp(int ctxId, int *outStamp);					/* 0x812BDAA4 */
+#include "../commerce2/np_commerce2_core.h"
 
 #endif /* SHELL_NP_IPC_INTERNAL_H */
