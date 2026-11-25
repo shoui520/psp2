@@ -45,6 +45,31 @@ extern int sceKermitMemory_driver_90B662D0(void *addr, u32 size);
 extern int sceKermitMemory_driver_AAF047AC(void *pkt, u32 arg_idx, void *addr, u32 size, u32 dir);
 
 typedef struct {
+    u8 pad[0x16];
+    u16 attr;
+} ScePspcmUidCb;
+
+typedef struct {
+    u32 pkt[0x1000];
+    union {
+        struct {
+            char dev[0x800];
+            u8 inData[0x800];
+            u8 outData[0x3000];
+        } devctl;
+        struct {
+            char path[0x2000];
+            u8 rest[0x2000];
+        } open;
+        struct {
+            u8 inData[0x1000];
+            u8 outData[0x3000];
+        } ioctl;
+        u8 bounce[0x4000];
+    } payload;
+} ScePspcmKermitBuf;
+
+typedef struct {
     void *iob;
     int kermit_fd;
 } ScePspcmFdSlot;
@@ -92,7 +117,7 @@ static int kermitPspcmWrite(ScePspcmIob *iob, const char *data, int len);
 static int kermitPspcmIoctl(ScePspcmIob *iob, u32 cmd, const void *indata, u32 inlen);
 static int pspcmConnIntrHandler(void);
 static int pspcmConnThread(u32 args, void *argp);
-static int pspcmAllocBufSlot(u32 **out_buf);
+static int pspcmAllocBufSlot(ScePspcmKermitBuf **out_buf);
 static int pspcmFreeBufSlot(int slot);
 static void pspcmHandleConnEvent(void);
 
@@ -239,16 +264,16 @@ static int pspcmDrvDevctl(ScePspcmIob *iob, const char *dev, unsigned int cmd, v
 
     if (cmd <= 0x03415002) {
         if (cmd >= 0x03415001) {
-            void *cb = NULL;
+            ScePspcmUidCb *cb = NULL;
             if (!indata || (u32)inlen < 4)
                 return 0x80243402;
             if ((s32)(k1 & (((u32)indata + (u32)inlen) | (u32)indata | (u32)inlen)) < 0)
                 return 0x80243402;
             if (sceKernelGetThreadmanIdType(*(int *)indata) != 1)
                 return 0x80243402;
-            if (sceKernelGetUIDcontrolBlock(*(int *)indata, &cb) != 0)
+            if (sceKernelGetUIDcontrolBlock(*(int *)indata, (void **)&cb) != 0)
                 return 0x80243402;
-            if ((k1 >> 31) != 0 && (*(u16 *)((u8 *)cb + 0x16) & 2) == 0)
+            if ((k1 >> 31) != 0 && (cb->attr & 2) == 0)
                 return 0x80243402;
             int ret = pspcmSetWaitThread(cmd, *(int *)indata);
             if (ret != 0)
@@ -375,7 +400,7 @@ static int pspcmDrvIoctl(ScePspcmIob *iob, unsigned int cmd, void *indata, int i
 
 static int kermitPspcmInit(void)
 {
-    u32 *pkt;
+    ScePspcmKermitBuf *kbuf;
     u64 resp;
 
     sceKernelMemset(g_buf_used, 0, 0x60);
@@ -404,10 +429,10 @@ static int kermitPspcmInit(void)
     if (sceKernelStartThread(thid, 0, NULL) < 0)
         return 1;
 
-    int slot = pspcmAllocBufSlot(&pkt);
+    int slot = pspcmAllocBufSlot(&kbuf);
     int res = slot;
     if (slot >= 0) {
-        int kret = sceKermit_driver_36666181(pkt, 8, 0xc63, 0, 0, &resp);
+        int kret = sceKermit_driver_36666181(kbuf->pkt, 8, 0xc63, 0, 0, &resp);
         res = (kret == 0) ? (int)resp : kret;
         pspcmFreeBufSlot(slot);
     }
@@ -416,13 +441,13 @@ static int kermitPspcmInit(void)
 
 static void kermitPspcmTerm(void)
 {
-    u32 *pkt;
+    ScePspcmKermitBuf *kbuf;
     u64 resp;
 
     sceKermit_driver_5280B410(0x0d, NULL);
-    int slot = pspcmAllocBufSlot(&pkt);
+    int slot = pspcmAllocBufSlot(&kbuf);
     if (slot >= 0) {
-        sceKermit_driver_36666181(pkt, 8, 0xc6e, 0, 0, &resp);
+        sceKermit_driver_36666181(kbuf->pkt, 8, 0xc6e, 0, 0, &resp);
         pspcmFreeBufSlot(slot);
     }
     if (g_conn_thid != 0)
@@ -437,16 +462,16 @@ static void kermitPspcmTerm(void)
 
 static int kermitPspcmDevctl(const char *dev, u32 cmd, const void *indata, u32 inlen, void *outdata, u32 outlen)
 {
-    u32 *pkt;
+    ScePspcmKermitBuf *kbuf;
     u64 resp;
 
-    int slot = pspcmAllocBufSlot(&pkt);
+    int slot = pspcmAllocBufSlot(&kbuf);
     if (slot < 0)
         return slot;
 
-    char *dev_buf = (char *)pkt + 0x4000;
-    void *in_buf = (u8 *)pkt + 0x4800;
-    void *out_buf = (u8 *)pkt + 0x5000;
+    char *dev_buf = kbuf->payload.devctl.dev;
+    void *in_buf = kbuf->payload.devctl.inData;
+    void *out_buf = kbuf->payload.devctl.outData;
 
     strncpy(dev_buf, dev, 0x800);
     dev_buf[0x7ff] = '\0';
@@ -454,16 +479,16 @@ static int kermitPspcmDevctl(const char *dev, u32 cmd, const void *indata, u32 i
         sceKernelMemcpy(in_buf, indata, inlen);
     sceKernelMemset(out_buf, 0, outlen);
 
-    pkt[0] = 0xc60;
+    kbuf->pkt[0] = 0xc60;
     u32 dev_len = strlen(dev_buf) + 1;
-    sceKermitMemory_driver_AAF047AC(pkt, 0, dev_buf, dev_len, 1);
-    pkt[6] = cmd;
-    sceKermitMemory_driver_AAF047AC(pkt, 2, in_buf, inlen, 1);
-    pkt[10] = inlen;
-    sceKermitMemory_driver_AAF047AC(pkt, 4, out_buf, outlen, 2);
-    pkt[14] = outlen;
+    sceKermitMemory_driver_AAF047AC(kbuf->pkt, 0, dev_buf, dev_len, 1);
+    kbuf->pkt[6] = cmd;
+    sceKermitMemory_driver_AAF047AC(kbuf->pkt, 2, in_buf, inlen, 1);
+    kbuf->pkt[10] = inlen;
+    sceKermitMemory_driver_AAF047AC(kbuf->pkt, 4, out_buf, outlen, 2);
+    kbuf->pkt[14] = outlen;
 
-    int ret = sceKermit_driver_36666181(pkt, 8, 0xc60, 6, 0, &resp);
+    int ret = sceKermit_driver_36666181(kbuf->pkt, 8, 0xc60, 6, 0, &resp);
     if (ret == 0) {
         ret = (int)resp;
         if (outdata && outlen > 0)
@@ -475,7 +500,7 @@ static int kermitPspcmDevctl(const char *dev, u32 cmd, const void *indata, u32 i
 
 static int kermitPspcmOpen(ScePspcmIob *iob, const char *file, int flags, int mode)
 {
-    u32 *pkt;
+    ScePspcmKermitBuf *kbuf;
     u64 resp;
 
     if (iob->fs_num >= 8)
@@ -500,19 +525,19 @@ static int kermitPspcmOpen(ScePspcmIob *iob, const char *file, int flags, int mo
         return 0;
 
     iob->slot = fd_slot;
-    int bslot = pspcmAllocBufSlot(&pkt);
+    int bslot = pspcmAllocBufSlot(&kbuf);
     if (bslot < 0)
         return bslot;
 
-    char *path_buf = (char *)pkt + 0x4000;
+    char *path_buf = kbuf->payload.open.path;
     snprintf(path_buf, 0x2000, "%s%d", file, iob->fs_num);
     path_buf[0x1fff] = '\0';
     u32 path_len = strlen(path_buf) + 1;
-    sceKermitMemory_driver_AAF047AC(pkt, 0, path_buf, path_len, 1);
-    pkt[6] = flags;
-    pkt[8] = mode;
+    sceKermitMemory_driver_AAF047AC(kbuf->pkt, 0, path_buf, path_len, 1);
+    kbuf->pkt[6] = flags;
+    kbuf->pkt[8] = mode;
 
-    ret = sceKermit_driver_36666181(pkt, 8, 0xc67, 3, 0, &resp);
+    ret = sceKermit_driver_36666181(kbuf->pkt, 8, 0xc67, 3, 0, &resp);
     int kfd = (int)resp;
     if (ret == 0) {
         fd_slot->kermit_fd = kfd;
@@ -534,10 +559,10 @@ static int kermitPspcmOpen(ScePspcmIob *iob, const char *file, int flags, int mo
 
 static int kermitPspcmClose(ScePspcmIob *iob)
 {
-    u32 *pkt;
+    ScePspcmKermitBuf *kbuf;
     u64 resp;
 
-    int bslot = pspcmAllocBufSlot(&pkt);
+    int bslot = pspcmAllocBufSlot(&kbuf);
     if (bslot < 0)
         return bslot;
     if (iob->fs_num >= 8)
@@ -547,8 +572,8 @@ static int kermitPspcmClose(ScePspcmIob *iob)
     if (fd_slot < &g_fds[0] || fd_slot >= &g_fds[8] || fd_slot->iob != iob)
         return 0x80010009;
 
-    pkt[4] = fd_slot->kermit_fd;
-    int ret = sceKermit_driver_36666181(pkt, 8, 0xc6b, 1, 0, &resp);
+    kbuf->pkt[4] = fd_slot->kermit_fd;
+    int ret = sceKermit_driver_36666181(kbuf->pkt, 8, 0xc6b, 1, 0, &resp);
     if (ret == 0) {
         iob->slot = NULL;
         ret = (int)resp;
@@ -566,7 +591,7 @@ static int kermitPspcmClose(ScePspcmIob *iob)
 
 static int kermitPspcmRead(ScePspcmIob *iob, char *data, int len)
 {
-    u32 *pkt;
+    ScePspcmKermitBuf *kbuf;
     u64 resp;
 
     if (iob->fs_num >= 8)
@@ -575,87 +600,88 @@ static int kermitPspcmRead(ScePspcmIob *iob, char *data, int len)
     if (fd_slot < &g_fds[0] || fd_slot >= &g_fds[8] || fd_slot->iob != iob)
         return 0x80010009;
 
-    int bslot = pspcmAllocBufSlot(&pkt);
+    int bslot = pspcmAllocBufSlot(&kbuf);
     if (bslot < 0)
         return bslot;
 
-    u8 *bounce = (u8 *)pkt + 0x4000;
+    u8 *bounce = kbuf->payload.bounce;
     int total = 0;
     u32 unaligned = (u32)data & 0x3f;
     u32 rem = (u32)len;
 
-    if (unaligned != 0) {
-        u32 head = 0x40 - unaligned;
-        if (rem < head)
-            head = rem;
-        pkt[4] = fd_slot->kermit_fd;
-        sceKermitMemory_driver_AAF047AC(pkt, 1, bounce, head, 2);
-        pkt[8] = head;
-        int ret = sceKermit_driver_36666181(pkt, 8, 0xc5e, 3, 0, &resp);
-        total = ret;
-        if (ret != 0)
-            goto done;
-        int rlen = (int)resp;
-        if (rlen <= 0)
-            goto done;
-        total = rlen;
-        sceKernelMemcpy(data, bounce, rlen);
-        if ((u32)rlen != head)
-            goto done;
-        rem -= rlen;
-    }
-
-    for (;;) {
-        u32 tail = rem & 0x3f;
-        u32 body = rem - tail;
-        char *cur_dst = data + total;
-        if (body >= 0x40) {
-            sceKernelDcacheInvalidateRangeForUser(cur_dst, body);
-            pkt[4] = fd_slot->kermit_fd;
-            sceKermitMemory_driver_AAF047AC(pkt, 1, cur_dst, body, 2);
-            pkt[8] = body;
-            int ret = sceKermit_driver_36666181(pkt, 8, 0xc5e, 3, 0, &resp);
+    do {
+        if (unaligned != 0) {
+            u32 head = 0x40 - unaligned;
+            if (rem < head)
+                head = rem;
+            kbuf->pkt[4] = fd_slot->kermit_fd;
+            sceKermitMemory_driver_AAF047AC(kbuf->pkt, 1, bounce, head, 2);
+            kbuf->pkt[8] = head;
+            int ret = sceKermit_driver_36666181(kbuf->pkt, 8, 0xc5e, 3, 0, &resp);
+            total = ret;
             if (ret != 0)
-                goto done;
+                break;
             int rlen = (int)resp;
-            if (rlen <= 0) {
-                if (rlen < 0)
-                    total = rlen;
-                goto done;
-            }
-            sceKermitMemory_driver_90B662D0(cur_dst, rlen);
-            total += rlen;
-            if ((u32)rlen != body)
-                goto done;
+            if (rlen <= 0)
+                break;
+            total = rlen;
+            sceKernelMemcpy(data, bounce, rlen);
+            if ((u32)rlen != head)
+                break;
             rem -= rlen;
-            continue;
         }
-        if (rem != 0) {
-            pkt[4] = fd_slot->kermit_fd;
-            sceKermitMemory_driver_AAF047AC(pkt, 1, bounce, rem, 2);
-            pkt[8] = rem;
-            int ret = sceKermit_driver_36666181(pkt, 8, 0xc5e, 3, 0, &resp);
-            if (ret != 0)
-                goto done;
-            int rlen = (int)resp;
-            if (rlen > 0) {
-                sceKernelMemcpy(data + total, bounce, rlen);
-                total += rlen;
-            } else if (rlen < 0) {
-                total = rlen;
-            }
-        }
-        break;
-    }
 
-done:
+        for (;;) {
+            u32 tail = rem & 0x3f;
+            u32 body = rem - tail;
+            char *cur_dst = data + total;
+            if (body >= 0x40) {
+                sceKernelDcacheInvalidateRangeForUser(cur_dst, body);
+                kbuf->pkt[4] = fd_slot->kermit_fd;
+                sceKermitMemory_driver_AAF047AC(kbuf->pkt, 1, cur_dst, body, 2);
+                kbuf->pkt[8] = body;
+                int ret = sceKermit_driver_36666181(kbuf->pkt, 8, 0xc5e, 3, 0, &resp);
+                if (ret != 0)
+                    break;
+                int rlen = (int)resp;
+                if (rlen <= 0) {
+                    if (rlen < 0)
+                        total = rlen;
+                    break;
+                }
+                sceKermitMemory_driver_90B662D0(cur_dst, rlen);
+                total += rlen;
+                if ((u32)rlen != body)
+                    break;
+                rem -= rlen;
+                continue;
+            }
+            if (rem != 0) {
+                kbuf->pkt[4] = fd_slot->kermit_fd;
+                sceKermitMemory_driver_AAF047AC(kbuf->pkt, 1, bounce, rem, 2);
+                kbuf->pkt[8] = rem;
+                int ret = sceKermit_driver_36666181(kbuf->pkt, 8, 0xc5e, 3, 0, &resp);
+                if (ret != 0)
+                    break;
+                int rlen = (int)resp;
+                if (rlen > 0) {
+                    sceKernelMemcpy(data + total, bounce, rlen);
+                    total += rlen;
+                } else if (rlen < 0) {
+                    total = rlen;
+                }
+            }
+            break;
+        }
+    } while (0);
+
     pspcmFreeBufSlot(bslot);
     return total;
 }
 
 static int kermitPspcmWrite(ScePspcmIob *iob, const char *data, int len)
 {
-    u32 *pkt;
+    ScePspcmKermitBuf *kbuf;
     u64 resp;
 
     if (iob->fs_num >= 8)
@@ -670,14 +696,14 @@ static int kermitPspcmWrite(ScePspcmIob *iob, const char *data, int len)
     if (wb_ret != 0)
         return wb_ret;
 
-    int bslot = pspcmAllocBufSlot(&pkt);
+    int bslot = pspcmAllocBufSlot(&kbuf);
     if (bslot < 0)
         return bslot;
 
-    pkt[4] = fd_slot->kermit_fd;
-    sceKermitMemory_driver_AAF047AC(pkt, 1, (void *)data, len, 1);
-    pkt[8] = len;
-    int ret = sceKermit_driver_36666181(pkt, 8, 0xc6a, 3, 0, &resp);
+    kbuf->pkt[4] = fd_slot->kermit_fd;
+    sceKermitMemory_driver_AAF047AC(kbuf->pkt, 1, (void *)data, len, 1);
+    kbuf->pkt[8] = len;
+    int ret = sceKermit_driver_36666181(kbuf->pkt, 8, 0xc6a, 3, 0, &resp);
     if (ret == 0)
         ret = (int)resp;
     pspcmFreeBufSlot(bslot);
@@ -686,31 +712,31 @@ static int kermitPspcmWrite(ScePspcmIob *iob, const char *data, int len)
 
 static int kermitPspcmIoctl(ScePspcmIob *iob, u32 cmd, const void *indata, u32 inlen)
 {
-    u32 *pkt;
+    ScePspcmKermitBuf *kbuf;
     u64 resp;
 
     ScePspcmFdSlot *fd_slot = iob->slot;
     if (fd_slot < &g_fds[0] || fd_slot >= &g_fds[8] || fd_slot->iob != iob)
         return 0x80010009;
 
-    int bslot = pspcmAllocBufSlot(&pkt);
+    int bslot = pspcmAllocBufSlot(&kbuf);
     if (bslot < 0)
         return bslot;
 
-    void *in_buf = (u8 *)pkt + 0x4000;
-    void *out_buf = (u8 *)pkt + 0x5000;
+    void *in_buf = kbuf->payload.ioctl.inData;
+    void *out_buf = kbuf->payload.ioctl.outData;
     if (indata && inlen > 0)
         sceKernelMemcpy(in_buf, indata, inlen);
 
-    pkt[0] = 0xc6f;
-    pkt[4] = fd_slot->kermit_fd;
-    pkt[6] = cmd;
-    sceKermitMemory_driver_AAF047AC(pkt, 2, in_buf, inlen, 1);
-    pkt[10] = inlen;
-    sceKermitMemory_driver_AAF047AC(pkt, 4, out_buf, 0, 2);
-    pkt[14] = 0;
+    kbuf->pkt[0] = 0xc6f;
+    kbuf->pkt[4] = fd_slot->kermit_fd;
+    kbuf->pkt[6] = cmd;
+    sceKermitMemory_driver_AAF047AC(kbuf->pkt, 2, in_buf, inlen, 1);
+    kbuf->pkt[10] = inlen;
+    sceKermitMemory_driver_AAF047AC(kbuf->pkt, 4, out_buf, 0, 2);
+    kbuf->pkt[14] = 0;
 
-    int ret = sceKermit_driver_36666181(pkt, 8, 0xc6f, 6, 0, &resp);
+    int ret = sceKermit_driver_36666181(kbuf->pkt, 8, 0xc6f, 6, 0, &resp);
     if (ret == 0)
         ret = (int)resp;
     pspcmFreeBufSlot(bslot);
@@ -733,7 +759,7 @@ static int pspcmConnThread(u32 args, void *argp)
     return 0;
 }
 
-static int pspcmAllocBufSlot(u32 **out_buf)
+static int pspcmAllocBufSlot(ScePspcmKermitBuf **out_buf)
 {
     int ret = sceKernelLockMutex(g_buf_mutex, 1, NULL);
     if (ret != 0)
@@ -744,7 +770,7 @@ static int pspcmAllocBufSlot(u32 **out_buf)
         if (g_buf_used[slot] == 0) {
             void *buf = (void *)(0xABA00000 + (slot << 15));
             g_buf_used[slot] = 1;
-            *out_buf = (u32 *)buf;
+            *out_buf = (ScePspcmKermitBuf *)buf;
             sceKernelMemset(buf, 0, 0x8000);
             break;
         }
