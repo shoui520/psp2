@@ -299,6 +299,7 @@ psp2_module(vs0_vsh_shell_shell KIND user COMPILER snc PARTIAL SOURCES
 	src/liblocation/src/location_service/location_xtra.cpp
 	src/liblocation/src/location_service/location_timer.cpp
 	src/liblocation/src/location_service/location_log_writer.cpp
+	src/liblocation/src/location_service/position_manager.cpp
 	shell.c
 )
 target_include_directories(vs0_vsh_shell_shell PRIVATE "${PSP2_SRC}/vsh/paf/include"
