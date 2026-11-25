@@ -1647,7 +1647,7 @@ static int desCbcDecryptSingleBlock(const SceUInt32 keyWords[2], const SceUInt8 
 }
 
 /* 0x812214B4: build 32-byte Triple-DES-EDE-CBC encrypted device token */
-static int npGenerateDeviceToken(void *outTokenBuf)
+int npGenerateDeviceToken(void *outTokenBuf)
 {
 	SceUInt8 plaintext[32];
 	SceRtcTick tick;
