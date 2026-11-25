@@ -405,6 +405,21 @@ extern "C" int SwMwSinkStreamReauthenticate(struct SwMwSinkStream *stream)
 	return status;
 }
 
+/* the periodic connect: re-authenticate when the reader's key is expiring (0x8100fdf0) */
+extern "C" int SwMwSinkStreamConnect(struct SwMwSinkStream *stream)
+{
+	int status;
+
+	if (stream->connected == 0 || stream->downloader == NULL)
+		return 0;
+	if ((stream->downloader->isKeyExpiring() & 1) == 0)
+		return 0;
+	status = SwMwSinkStreamReauthenticate(stream);
+	if (status != 0)
+		swMwTrace("[SWMW] Error %d in %s:%d\n", status, SWMW_STREAM_SOURCE, 1023);
+	return 0;
+}
+
 /* the transfer forwarders the dispatcher calls: the file's bodies do the work */
 extern "C" int SwMwSinkStreamSetParameter(struct SwMwSinkStream *stream, int parameter)
 {

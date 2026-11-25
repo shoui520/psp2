@@ -50,6 +50,32 @@ int SwMwMoveMessageInit(struct SwMwMoveMessage *message);	/* 0x8105236c */
 int SwMwMoveMessageDone(struct SwMwMoveMessage *message);	/* 0x810523d6 */
 }
 
+struct SwMwStreamEvent;
+
+/* the content library's transfer object (the downloader/reader pair's wrapper): its
+ * interface in dispatch-table order. Only the calls the middleware makes are named; the
+ * rest carry the behaviour their bodies showed. Ours (no Sony record names the library
+ * class; recorded in agent/namecheck). */
+struct SwMwTransfer {
+	virtual void destroy();				/* 0x00 */
+	virtual void dispose();				/* 0x04 */
+	virtual int setEvent(struct SwMwStreamEvent *event);	/* 0x08 */
+	virtual int start(int *out);			/* 0x0C */
+	virtual int reset();				/* 0x10 */
+	virtual int isReady();				/* 0x14 */
+	virtual int getState();				/* 0x18 */
+	virtual int setParameter(int parameter);	/* 0x1C */
+	virtual int attach(int value);			/* 0x20 */
+	virtual int transfer(int value);		/* 0x24 */
+	virtual int write(int offset, int size);	/* 0x28 */
+	virtual int getChunkList(int *out);		/* 0x2C */
+	virtual int release(int size);			/* 0x30 */
+	virtual int setSessionData(const void *data);	/* 0x34 */
+	virtual int getSessionData(int *out);		/* 0x38 */
+	virtual int isKeyExpiring();			/* 0x3C */
+	virtual int startMove(int value);		/* 0x40 */
+};
+
 /* the content object (14 dispatch slots, in table order) */
 struct SwMwContent {
 	virtual ~SwMwContent();					/* 0x00/0x04 */

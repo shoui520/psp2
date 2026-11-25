@@ -242,6 +242,21 @@ extern "C" int SwMwMoveSinkStreamOnEvent(struct SwMwSinkStream *stream, int *mes
 	return result;
 }
 
+/* the periodic connect: check the transfer's key when it is expiring (0x8100b786) */
+extern "C" int SwMwMoveSinkStreamConnect(struct SwMwSinkStream *stream)
+{
+	int status;
+
+	if (stream->connected == 0 || stream->downloader == NULL)
+		return 0;
+	if ((stream->downloader->isKeyExpiring() & 1) == 0)
+		return 0;
+	status = SwMwMoveSinkStreamKxExpiring();
+	if (status != 0)
+		swMwTrace("[SWMW] Error %d in %s:%d\n", status, SWMW_MOVESTREAM_SOURCE, 1034);
+	return 0;
+}
+
 /* the move's key is about to expire (0x8100b76c) */
 extern "C" int SwMwMoveSinkStreamKxExpiring(void)
 {

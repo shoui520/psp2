@@ -10,6 +10,7 @@
 #include <scetypes.h>
 #include <kernel/threadmgr.h>
 #include "SwMwSync.h"
+#include "SwMwContent.h"
 
 /* the windows the stream shares with the library: the receive and send areas of the
  * shared memory, their sizes and the block size */
@@ -50,8 +51,8 @@ struct SwMwSinkStream {
 	int state;			/* 0x000: 1 once init succeeded */
 	int sink;			/* 0x004: the sink that created the stream */
 	int contentId;			/* 0x008: the content the stream plays */
-	void *downloader;		/* 0x00C: the download object */
-	void *reader;			/* 0x010: the read object */
+	struct SwMwTransfer *downloader;	/* 0x00C: the download object */
+	struct SwMwTransfer *reader;	/* 0x010: the read object */
 	struct SwMwStreamWindow window;	/* 0x014: the shared-memory windows */
 	struct SwMwStreamEvent event;	/* 0x02C: the reader's event object */
 	unsigned char work[0x498];	/* 0x040: the reader's work area */
