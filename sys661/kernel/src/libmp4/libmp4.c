@@ -54,16 +54,16 @@ extern s32 sceMpegBasePESpacketCopy(void *pkt);
 
 /* mp4msv Imports */
 extern s32 mp4msv_089364A9(u32 track, u32 sample, s32 dir, s32 *out_sample, void *out_info);
-extern s32 mp4msv_08F96BE2(u32 a0, s32 *out_val);
+extern s32 mp4msv_08F96BE2(u32 desc_id, s32 *out_val);
 extern s32 mp4msv_0C06DACB(u32 ctx, u32 track_idx, u32 *out_track);
-extern s32 mp4msv_0C0843B0(u32 track, u32 ts, s32 *out_sample, s32 mode, void *out1, void *out2);
+extern s32 mp4msv_0C0843B0(u32 track, u32 ts, s32 *out_sample, s32 mode, void *out_dts, void *out_flag);
 extern s32 mp4msv_0D32271B(u32 ctx, void *out_brand);
 extern s32 mp4msv_0DF0B9AD(u32 ctx, u32 idx, void *out_info);
 extern s32 mp4msv_182FF541(u32 ctx, u32 *out_duration);
 extern s32 mp4msv_21BD7274(u32 track, u32 sample, u32 *out_dts, s32 *out_flag);
 extern s32 mp4msv_2B1B8D23(u32 desc, u32 idx, u16 *out_len);
 extern s32 mp4msv_2BAF7C25(u32 desc, void *out_info);
-extern s32 mp4msv_35144B9C(u32 desc, void *out_avcc, char *out_a, char *out_b);
+extern s32 mp4msv_35144B9C(u32 desc, void *out_avcc, char *out_profile, char *out_compat);
 extern s32 mp4msv_3C2183C7(u32 flag, const void *cfg);
 extern s32 mp4msv_3D57BA52(u32 ctx, u32 *out_tracks);
 extern s32 mp4msv_3D8D41A0(u32 ctx, void *io_ctx);
@@ -85,34 +85,61 @@ extern s32 mp4msv_A824645B(u32 val, u32 src_scale, u32 dst_scale, u32 *out_val);
 extern s32 mp4msv_A9FD62E2(u32 track, u32 *out_count);
 extern s32 mp4msv_AD3AF34E(u32 ctx, u32 idx, void *out_info);
 extern s32 mp4msv_BD23D34A(u32 ctx, u32 tag, void *out_val);
-extern s32 mp4msv_BE558D75(u32 desc, u32 idx, u32 a2, u32 a3, void *out_buf);
+extern s32 mp4msv_BE558D75(u32 desc, u32 idx, u32 start_off, u32 flags, void *out_buf);
 extern s32 mp4msv_CFF25FAC(u32 ctx, void *out_hdr);
 extern s32 mp4msv_E042AB3C(u32 ctx, u32 *out_timescale);
 extern s32 mp4msv_E5C33D61(u32 track, u32 sample, u32 flags, void *out_entry);
-extern s32 mp4msv_E641D779(u32 desc, u32 idx, u32 a2, u32 a3, void *out_buf);
+extern s32 mp4msv_E641D779(u32 desc, u32 idx, u32 start_off, u32 flags, void *out_buf);
 extern s32 mp4msv_EE62F96D(u32 track, u32 idx, s32 *out_dur, s32 *out_time, s32 *out_rate);
 extern s32 mp4msv_EF6D76BC(u32 ctx, u32 track, s32 *out_count);
 extern s32 mp4msv_F595F917(u32 *out_ctx);
-extern s32 mp4msv_FF9E6F58(u32 track, u32 *out_dur, s32 flags);
+extern s32 mp4msv_FF9E6F58(u32 track, u32 *out_dur);
+
+typedef struct SceMp4GlobalState {
+    u32 libMagic;
+    u32 libVersion;
+    u32 *heapHandle;
+    u32 heapSize;
+    u32 mutexFlags;
+    u32 mainMutex[8];
+    u32 aacMutex[8];
+} SceMp4GlobalState;
+
+typedef struct SceMp4MetaInfo {
+    u32 index;
+    u32 type;
+    u8 isIso639;
+    u8 padding[3];
+    u16 language;
+    u16 encoding;
+    s32 dataLength;
+} SceMp4MetaInfo;
+
+typedef struct SceMp4AacSlot {
+    u32 codecWork[10];
+    u32 sampleRate;
+    u8 outputMode;
+    u8 downmixMode;
+    u8 headerPad[2];
+    u32 extraWork[20];
+    s32 state;
+    u32 edramAlign;
+    u8 codecBuffer[102176];
+    u8 tailPad[24];
+} SceMp4AacSlot;
 
 /* Globals */
 static const u32 g_mp4HeapSizes[2] = { 0x10000U, 0x40000U };
 static const u32 g_annexBStartCode = 0x01000000U;
 
 static s32 g_aacFplId = -1;
-static u32 g_mp4LibMagic;
-static u32 g_mp4LibVersion;
-static u32 *g_mp4HeapHandle;
-static u32 g_mp4HeapSize;
-static u32 g_mp4MutexFlags;
-static u32 g_mp4MainMutex[8];
-static u32 g_mp4AacMutex[8];
+static SceMp4GlobalState g_mp4State;
 
 static void *(*g_mp4CopyFn)(void *, const void *, u32);
 static u32 g_pesLliCount;
 static u32 g_pesLliBuf[400];
 
-static void *g_aacPoolBase;
+static SceMp4AacSlot *g_aacPoolBase;
 static s32 g_aacSlotCount;
 static s32 g_heapInstanceCount;
 
@@ -129,7 +156,7 @@ static NOINLINE s32 mp4GetEditListInternal(u32 **mp4, u32 *track, u32 *out_list,
 static NOINLINE s32 mp4GetAvcTrackInfoInternal(u32 **mp4, u32 *track, u32 *out_info);
 static NOINLINE s32 mp4GetAacTrackInfoInternal(u32 **mp4, u32 *track, u32 *out_info);
 static NOINLINE s32 mp4RegistTrackInternal(u32 **mp4, u32 type, s32 idx, const u32 *cbs, u32 *track);
-static NOINLINE s32 mp4SampleBufPutInternal(u32 **mp4, u32 *track);
+static NOINLINE s32 mp4SampleBufPutInternal(u32 **mp4, u32 *track, s32 max_samples);
 static NOINLINE s32 mp4GetAvcAuInternal(u32 **mp4, u32 *track, u32 *au, u32 *out_info);
 static NOINLINE s32 mp4GetAacAuInternal(u32 **mp4, u32 *track, u32 *au, u32 *out_info);
 static NOINLINE s32 mp4ConvertSampleInfo(const u32 *raw, u32 *out);
@@ -164,7 +191,7 @@ static NOINLINE void *mp4Alloc(u32 size);
 static NOINLINE s32 mp4Free(void *ptr);
 static NOINLINE void *mp4GetGlobalCopyCtx(void);
 static NOINLINE s64 mp4CbGetCurrentPos(u32 *cb);
-static NOINLINE s64 mp4CbSeek(u32 *cb, s32 unused, s32 off_lo, s32 off_hi, s32 whence);
+static NOINLINE s64 mp4CbSeek(u32 *cb, s64 offset, s32 whence);
 static NOINLINE s32 mp4CbRead(u32 *cb, void *dst, s32 size);
 static NOINLINE void *mp4MemcpyWrap(void *dst, const void *src, u32 size);
 static NOINLINE s32 mp4IoOpen(void);
@@ -177,7 +204,7 @@ static NOINLINE void *mp4MemCallocCb(u32 size);
 static NOINLINE s32 mp4MemFreeCb(void *ptr);
 static NOINLINE void *mp4MemCopyCb(void *dst, u32 dst_size, const void *src, u32 src_size);
 static NOINLINE void *mp4MemSetCb(void *dst, s32 val, u32 size);
-static NOINLINE s32 mp4StrCmpWrap(const char *s1, const char *s2);
+static NOINLINE s32 mp4StrCmpWrap(const char *lhs, const char *rhs);
 static NOINLINE s32 mp4StrLenCb(const u8 *s);
 static NOINLINE s32 mp4SgListTotalSize(const u32 *sg);
 static NOINLINE s32 mp4PacketizeAvcNal(const u32 *avc_pkt, u32 *au);
@@ -196,7 +223,7 @@ static NOINLINE s32 mp4PesFlushDcacheChain(const u32 *lli);
 static NOINLINE s32 mp4PesQueueLliEntries(u32 *pes_ctx);
 static NOINLINE s32 mp4CacheInit(u32 *cache, const u32 *cbs, u32 buf, u32 buf_size, u8 enable);
 static NOINLINE s32 mp4CacheTerm(u32 *cache);
-static NOINLINE s32 mp4CacheReadDispatch(void *dst, s32 dst_size, u32 off_lo, u32 off_hi, s32 len, u32 *cache);
+static NOINLINE s32 mp4CacheReadDispatch(void *dst, s64 offset, s32 len, u32 *cache);
 static NOINLINE s32 mp4IoCtxInit(u32 *io, const u32 *cbs, u32 buf, u32 buf_size, u8 enable);
 static NOINLINE s32 mp4IoCtxTerm(u32 *io);
 static NOINLINE s32 mp4CacheReadBuffered(u8 *dst, s64 off, s32 len, u32 *cache);
@@ -234,11 +261,11 @@ static NOINLINE s32 mp4TermHeap(void);
 static NOINLINE void *mp4HeapAllocWrap(u32 *heap, u32 size);
 static NOINLINE s32 mp4HeapFreeWrap(u32 *heap, void *ptr);
 static NOINLINE s32 mp4GetMetaCountInternal(u32 **mp4, const u32 *track);
-static NOINLINE s32 mp4GetMetaInfoInternal(u32 **mp4, const u32 *track, s32 idx, u32 *out_handle, u8 *out_info);
-static NOINLINE s32 mp4GetMetaDataInternal(u32 **mp4, const u32 *track, s32 idx, void *out_buf, u32 buf_size);
-static NOINLINE s32 mp4StrCmp(const char *s1, const char *s2);
+static NOINLINE s32 mp4GetMetaInfoInternal(u32 **mp4, const u32 *track, s32 idx, u32 *out_handle, SceMp4MetaInfo *out_info);
+static NOINLINE s32 mp4GetMetaDataInternal(u32 **mp4, const u32 *track, s32 idx, void *out_buf, s32 buf_size);
+static NOINLINE s32 mp4StrCmp(const char *lhs, const char *rhs);
 static NOINLINE u32 mp4ReadBeUint(const u8 *p, s32 len);
-static NOINLINE u32 *mp4UserHeapCreate(const char *name, u32 size, u16 attr);
+static NOINLINE u32 *mp4UserHeapCreate(const char *name, u32 size, u32 attr, void *opt);
 static NOINLINE s32 mp4UserHeapDelete(u32 *heap);
 static NOINLINE void *mp4UserHeapAllocOpt(u32 *heap, u32 size, const u32 *opt);
 static NOINLINE s32 mp4UserHeapFree(u32 *heap, void *ptr);
@@ -255,7 +282,7 @@ static NOINLINE s32 mp4ValidateHandle(u32 **mp4)
     u32 *p = *mp4;
     if (p == NULL)
         return SCE_MP4_ERROR_NOT_INITIALIZED;
-    if ((u32)p < (u32)g_mp4HeapHandle || (u32)p >= (u32)g_mp4HeapHandle + g_mp4HeapSize)
+    if ((u32)p < (u32)g_mp4State.heapHandle || (u32)p >= (u32)g_mp4State.heapHandle + g_mp4State.heapSize)
         return SCE_MP4_ERROR_NOT_INITIALIZED;
     if (*p != MP4_MAGIC_HANDLE)
         return SCE_MP4_ERROR_NOT_INITIALIZED;
@@ -268,6 +295,8 @@ static NOINLINE s32 mp4CreateInternal(u32 **mp4, const u32 *cbs, u32 buf, s32 bu
     u8 hdr_buf[4];
     u8 brand_buf[12];
     s32 ret;
+    s32 io_inited = 0;
+    s32 msv_created = 0;
 
     mp4GetGlobalCopyCtx();
     if (buf_size < 1024)
@@ -280,111 +309,112 @@ static NOINLINE s32 mp4CreateInternal(u32 **mp4, const u32 *cbs, u32 buf, s32 bu
 
     ctx[47] = 0;
     ctx[48] = 0;
-    ret = mp4CreateLwMutex(&ctx[49], "SceMp4Data", 0);
-    if (ret < 0)
-        goto fail_mutex;
-    ctx[47] = (u32)&ctx[49];
+    do {
+        ret = mp4CreateLwMutex(&ctx[49], "SceMp4Data", 0);
+        if (ret < 0)
+            break;
+        ctx[47] = (u32)&ctx[49];
 
-    ret = mp4CreateLwMutex(&ctx[57], "SceMp4SampleBuf", 0);
-    if (ret < 0)
-        goto fail_mutex;
-    ctx[48] = (u32)&ctx[57];
+        ret = mp4CreateLwMutex(&ctx[57], "SceMp4SampleBuf", 0);
+        if (ret < 0)
+            break;
+        ctx[48] = (u32)&ctx[57];
 
-    ctx[22] = buf;
-    if (buf == 0) {
-        ret = SCE_MP4_ERROR_INVALID_VALUE;
-        goto fail_mutex;
-    }
-
-    mp4LockLwMutex((void *)(*mp4)[47]);
-    cb_bundle[0] = cbs[0];
-    cb_bundle[1] = cbs[1];
-    cb_bundle[2] = cbs[2];
-    cb_bundle[3] = cbs[3];
-    cb_bundle[4] = (u32)mp4;
-    mp4IoCtxInit(&ctx[2], cb_bundle, ctx[22], (u32)buf_size, 1);
-
-    if (mp4msv_F595F917(&ctx[1]) != 0) {
-        ret = SCE_MP4_ERROR_NO_MEMORY;
-        goto fail_io;
-    }
-
-    ret = SCE_MP4_ERROR_INVALID_VALUE;
-    if (mp4msv_3D8D41A0(ctx[1], &ctx[2]) == 0) {
-        s32 r;
-        mp4msv_CFF25FAC(ctx[1], hdr_buf);
-        mp4msv_BD23D34A(ctx[1], 0x4D534E56U, &ctx[23]);
-
-        r = mp4msv_0D32271B(ctx[1], brand_buf);
-        if (r != 0 && (r < 0 || (u32)(r - 0x2002) >= 2U))
-            goto fail_ctx;
-
-        r = mp4msv_AD3AF34E(ctx[1], 1, &ctx[34]);
-        if (r != 0) {
-            if (r < 0 || (u32)(r - 0x2002) >= 2U)
-                goto fail_ctx;
-            ctx[25] = 0;
-        } else {
-            ctx[25] = (ctx[35] == 0x61766331U) ? 1 : 0;
-        }
-
-        r = mp4msv_0DF0B9AD(ctx[1], 1, &ctx[26]);
-        if (r != 0) {
-            if (r < 0 || (u32)(r - 0x2002) >= 2U)
-                goto fail_ctx;
-            ctx[24] = 0;
-        } else {
-            ctx[24] = (ctx[27] == 0x6D703461U) ? 1 : 0;
-        }
-
-        r = mp4msv_67AF9E0F(ctx[1], hdr_buf, 3);
-        if (r != 0) {
-            ret = (r == 0x2003) ? SCE_MP4_ERROR_BAD_DATA : SCE_MP4_ERROR_INVALID_VALUE;
-            goto fail_ctx;
-        }
-
-        r = mp4msv_46186C26(ctx[1]);
-        if (r == 1) {
-            ret = SCE_MP4_ERROR_NO_MEMORY;
-            goto fail_ctx;
-        }
-        if (r != 0) {
-            ret = (r == 0x2003) ? SCE_MP4_ERROR_BAD_DATA : SCE_MP4_ERROR_INVALID_VALUE;
-            goto fail_ctx;
-        }
-
-        r = mp4msv_3D57BA52(ctx[1], &ctx[44]);
-        if (r == 0)
-            r = mp4msv_E042AB3C(ctx[1], &ctx[45]);
-        if (r != 0) {
-            ret = (r == 0x2003) ? SCE_MP4_ERROR_BAD_DATA : SCE_MP4_ERROR_INVALID_VALUE;
-            goto fail_ctx;
-        }
-
-        r = mp4msv_182FF541(ctx[1], &ctx[46]);
-        if (r == 0) {
-            ctx[0] = MP4_MAGIC_HANDLE;
-            mp4UnlockLwMutex((void *)(*mp4)[47]);
-            return 0;
-        } else if (r == 1) {
-            ret = SCE_MP4_ERROR_NO_MEMORY;
-        } else if (r == 2) {
-            ret = SCE_MP4_ERROR_IO_FAILED;
-        } else if (r == 8) {
-            ret = SCE_MP4_ERROR_END_OF_TRACK;
-        } else if (r == 0x2003) {
-            ret = SCE_MP4_ERROR_BAD_DATA;
-        } else {
+        ctx[22] = buf;
+        if (buf == 0) {
             ret = SCE_MP4_ERROR_INVALID_VALUE;
+            break;
         }
-    }
 
-fail_ctx:
-    mp4msv_9D56A7CC(ctx[1]);
-fail_io:
-    mp4UnlockLwMutex((void *)(*mp4)[47]);
-    mp4IoCtxTerm(&ctx[2]);
-fail_mutex:
+        mp4LockLwMutex((void *)(*mp4)[47]);
+        cb_bundle[0] = cbs[0];
+        cb_bundle[1] = cbs[1];
+        cb_bundle[2] = cbs[2];
+        cb_bundle[3] = cbs[3];
+        cb_bundle[4] = (u32)mp4;
+        mp4IoCtxInit(&ctx[2], cb_bundle, ctx[22], (u32)buf_size, 1);
+        io_inited = 1;
+
+        if (mp4msv_F595F917(&ctx[1]) != 0) {
+            ret = SCE_MP4_ERROR_NO_MEMORY;
+            break;
+        }
+        msv_created = 1;
+
+        ret = SCE_MP4_ERROR_INVALID_VALUE;
+        if (mp4msv_3D8D41A0(ctx[1], &ctx[2]) == 0) {
+            s32 r;
+            mp4msv_CFF25FAC(ctx[1], hdr_buf);
+            mp4msv_BD23D34A(ctx[1], 0x4D534E56U, &ctx[23]);
+
+            r = mp4msv_0D32271B(ctx[1], brand_buf);
+            if (r != 0 && (r < 0 || (u32)(r - 0x2002) >= 2U))
+                break;
+
+            r = mp4msv_AD3AF34E(ctx[1], 1, &ctx[34]);
+            if (r != 0) {
+                if (r < 0 || (u32)(r - 0x2002) >= 2U)
+                    break;
+                ctx[25] = 0;
+            } else {
+                ctx[25] = (ctx[35] == 0x61766331U) ? 1 : 0;
+            }
+
+            r = mp4msv_0DF0B9AD(ctx[1], 1, &ctx[26]);
+            if (r != 0) {
+                if (r < 0 || (u32)(r - 0x2002) >= 2U)
+                    break;
+                ctx[24] = 0;
+            } else {
+                ctx[24] = (ctx[27] == 0x6D703461U) ? 1 : 0;
+            }
+
+            r = mp4msv_67AF9E0F(ctx[1], hdr_buf, 3);
+            if (r != 0) {
+                ret = (r == 0x2003) ? SCE_MP4_ERROR_BAD_DATA : SCE_MP4_ERROR_INVALID_VALUE;
+                break;
+            }
+
+            r = mp4msv_46186C26(ctx[1]);
+            if (r == 1) {
+                ret = SCE_MP4_ERROR_NO_MEMORY;
+                break;
+            }
+            if (r != 0) {
+                ret = (r == 0x2003) ? SCE_MP4_ERROR_BAD_DATA : SCE_MP4_ERROR_INVALID_VALUE;
+                break;
+            }
+
+            r = mp4msv_3D57BA52(ctx[1], &ctx[44]);
+            if (r == 0)
+                r = mp4msv_E042AB3C(ctx[1], &ctx[45]);
+            if (r != 0) {
+                ret = (r == 0x2003) ? SCE_MP4_ERROR_BAD_DATA : SCE_MP4_ERROR_INVALID_VALUE;
+                break;
+            }
+
+            r = mp4msv_182FF541(ctx[1], &ctx[46]);
+            if (r == 0) {
+                ctx[0] = MP4_MAGIC_HANDLE;
+                mp4UnlockLwMutex((void *)(*mp4)[47]);
+                return 0;
+            }
+            switch (r) {
+            case 1:      ret = SCE_MP4_ERROR_NO_MEMORY; break;
+            case 2:      ret = SCE_MP4_ERROR_IO_FAILED; break;
+            case 8:      ret = SCE_MP4_ERROR_END_OF_TRACK; break;
+            case 0x2003: ret = SCE_MP4_ERROR_BAD_DATA; break;
+            default:     ret = SCE_MP4_ERROR_INVALID_VALUE; break;
+            }
+        }
+    } while (0);
+
+    if (msv_created)
+        mp4msv_9D56A7CC(ctx[1]);
+    if (io_inited) {
+        mp4UnlockLwMutex((void *)(*mp4)[47]);
+        mp4IoCtxTerm(&ctx[2]);
+    }
     if (ctx[48] != 0) {
         mp4DeleteLwMutex((void *)ctx[48]);
         ctx[48] = 0;
@@ -424,7 +454,7 @@ static NOINLINE s32 mp4DeleteInternal(u32 **mp4)
 static NOINLINE s32 mp4GetMovieInfoInternal(u32 **mp4, u32 *out_info)
 {
     u32 *ctx = *mp4;
-    u32 scaled = 0;
+    u32 scaled;
     if (out_info == NULL)
         return SCE_MP4_ERROR_INVALID_VALUE;
     s32 r = mp4msv_A824645B(ctx[46], ctx[45], 90000, &scaled);
@@ -483,7 +513,9 @@ static NOINLINE s32 mp4SampleBufAvailableInternal(u32 **mp4, u32 *track, s32 *ou
     u32 *sb = (u32 *)track[14];
     s32 sfree = mp4RingGetFree(&sb[17]);
     s32 bfree = mp4RingGetFree(&sb[7]);
-    s32 ret = (bfree >= 0 && sfree >= 0) ? 0 : SCE_MP4_ERROR_INTERNAL;
+    s32 ret = (bfree < 0) ? SCE_MP4_ERROR_INTERNAL : 0;
+    if (sfree < 0)
+        ret = SCE_MP4_ERROR_INTERNAL;
     if (out_samples != NULL)
         *out_samples = sfree;
     if (out_bytes != NULL)
@@ -493,55 +525,54 @@ static NOINLINE s32 mp4SampleBufAvailableInternal(u32 **mp4, u32 *track, s32 *ou
 
 static NOINLINE s32 mp4GetSampleNumWithTsInternal(u32 **mp4, u32 *track, const u32 *ts)
 {
-    u32 scaled_ts = 0;
-    s32 sample = 0;
-    u32 tmp1 = 0, tmp2 = 0;
-    if (mp4 == NULL || track == NULL || ts == NULL)
+    u32 scaled_ts;
+    s32 sample;
+    u32 outDts, outFlag;
+    if (((mp4 == NULL) | (track == NULL)) || ts == NULL)
         return SCE_MP4_ERROR_INVALID_VALUE;
     if (mp4msv_A824645B(ts[1], 90000, track[10], &scaled_ts) != 0)
         return SCE_MP4_ERROR_END_OF_TRACK;
-    s32 r = mp4msv_0C0843B0(track[8], scaled_ts, &sample, 1, &tmp1, &tmp2);
+    s32 r = mp4msv_0C0843B0(track[8], scaled_ts, &sample, 1, &outDts, &outFlag);
     if (sample == 0)
         r = 8;
-    if (r == 0)
-        return sample - 1;
-    if (r == 1)
-        return SCE_MP4_ERROR_NO_MEMORY;
-    if (r == 2)
-        return SCE_MP4_ERROR_IO_FAILED;
-    if (r == 8 || r == 8197)
-        return SCE_MP4_ERROR_END_OF_TRACK;
-    if (r == 8195)
-        return SCE_MP4_ERROR_BAD_DATA;
-    if (r == 8201)
-        return SCE_MP4_ERROR_INTERNAL;
-    return SCE_MP4_ERROR_INVALID_VALUE;
+    switch (r) {
+    case 0:    return sample - 1;
+    case 1:    return SCE_MP4_ERROR_NO_MEMORY;
+    case 2:    return SCE_MP4_ERROR_IO_FAILED;
+    case 8:
+    case 8197: return SCE_MP4_ERROR_END_OF_TRACK;
+    case 8195: return SCE_MP4_ERROR_BAD_DATA;
+    case 8201: return SCE_MP4_ERROR_INTERNAL;
+    default:   return SCE_MP4_ERROR_INVALID_VALUE;
+    }
 }
 
 static NOINLINE s32 mp4SearchSyncSampleInternal(u32 **mp4, u32 *track, s32 dir, s32 sample)
 {
-    s32 out_sample = 0;
+    s32 out_sample;
     u8 info[12];
-    if (mp4 == NULL || track == NULL)
+    s32 msv_dir;
+    if ((mp4 == NULL) | (track == NULL))
         return SCE_MP4_ERROR_INVALID_VALUE;
-    if (dir != 0 && dir != 1)
+    if (dir == 0)
+        msv_dir = 0;
+    else if (dir == 1)
+        msv_dir = 1;
+    else
         return SCE_MP4_ERROR_INVALID_VALUE;
-    s32 r = mp4msv_089364A9(track[8], (u32)(sample + 1), dir, &out_sample, info);
+    s32 r = mp4msv_089364A9(track[8], (u32)(sample + 1), msv_dir, &out_sample, info);
     if (out_sample == 0)
         r = 8;
-    if (r == 0)
-        return out_sample - 1;
-    if (r == 1)
-        return SCE_MP4_ERROR_NO_MEMORY;
-    if (r == 2)
-        return SCE_MP4_ERROR_IO_FAILED;
-    if (r == 8 || r == 8201)
-        return SCE_MP4_ERROR_END_OF_TRACK;
-    if (r == 8195)
-        return SCE_MP4_ERROR_BAD_DATA;
-    if (r == 8200)
-        return SCE_MP4_ERROR_BUFFER_EMPTY;
-    return SCE_MP4_ERROR_INVALID_VALUE;
+    switch (r) {
+    case 0:    return out_sample - 1;
+    case 1:    return SCE_MP4_ERROR_NO_MEMORY;
+    case 2:    return SCE_MP4_ERROR_IO_FAILED;
+    case 8:
+    case 8201: return SCE_MP4_ERROR_END_OF_TRACK;
+    case 8195: return SCE_MP4_ERROR_BAD_DATA;
+    case 8200: return SCE_MP4_ERROR_BUFFER_EMPTY;
+    default:   return SCE_MP4_ERROR_INVALID_VALUE;
+    }
 }
 
 static NOINLINE s32 mp4GetEditListInternal(u32 **mp4, u32 *track, u32 *out_list, s32 max_entries)
@@ -585,7 +616,7 @@ static NOINLINE s32 mp4GetEditListInternal(u32 **mp4, u32 *track, u32 *out_list,
 static NOINLINE s32 mp4GetAvcTrackInfoInternal(u32 **mp4, u32 *track, u32 *out_info)
 {
     (void)mp4;
-    u32 scaled = 0;
+    u32 scaled;
     if ((track[15] & 0x10) == 0 || out_info == NULL)
         return SCE_MP4_ERROR_INVALID_VALUE;
     out_info[2] = track[12];
@@ -599,7 +630,7 @@ static NOINLINE s32 mp4GetAvcTrackInfoInternal(u32 **mp4, u32 *track, u32 *out_i
 static NOINLINE s32 mp4GetAacTrackInfoInternal(u32 **mp4, u32 *track, u32 *out_info)
 {
     (void)mp4;
-    u32 scaled = 0;
+    u32 scaled;
     if ((track[15] & 0x20) == 0)
         return SCE_MP4_ERROR_INVALID_VALUE;
     u32 *desc = *(u32 **)track[13];
@@ -617,7 +648,7 @@ static NOINLINE s32 mp4GetAacTrackInfoInternal(u32 **mp4, u32 *track, u32 *out_i
 
 static NOINLINE s32 mp4RegistTrackInternal(u32 **mp4, u32 type, s32 idx, const u32 *cbs, u32 *track)
 {
-    u32 count = 0;
+    u32 count;
     s32 ret = mp4FindTrackByType(mp4, type, idx, &count, track);
     if (ret != 0 || (s32)count - 1 < idx)
         return SCE_MP4_ERROR_END_OF_TRACK;
@@ -626,16 +657,24 @@ static NOINLINE s32 mp4RegistTrackInternal(u32 **mp4, u32 type, s32 idx, const u
     if (r != 0)
         return (r == 0x2003) ? SCE_MP4_ERROR_BAD_DATA : SCE_MP4_ERROR_INVALID_VALUE;
 
-    r = mp4msv_FF9E6F58(track[8], &track[11], (s32)0x80610000);
-    if (r == 0)
-        r = mp4msv_5EE48079(track[8], &track[12]);
+    r = mp4msv_FF9E6F58(track[8], &track[11]);
+    switch (r) {
+    case 0:      break;
+    case 1:      return SCE_MP4_ERROR_NO_MEMORY;
+    case 2:      return SCE_MP4_ERROR_IO_FAILED;
+    case 8:      return SCE_MP4_ERROR_END_OF_TRACK;
+    case 0x2003: return SCE_MP4_ERROR_BAD_DATA;
+    default:     return SCE_MP4_ERROR_INVALID_VALUE;
+    }
 
-    if (r != 0) {
-        if (r == 1) return SCE_MP4_ERROR_NO_MEMORY;
-        if (r == 2) return SCE_MP4_ERROR_IO_FAILED;
-        if (r == 8) return SCE_MP4_ERROR_END_OF_TRACK;
-        if (r == 0x2003) return SCE_MP4_ERROR_BAD_DATA;
-        return SCE_MP4_ERROR_INVALID_VALUE;
+    r = mp4msv_5EE48079(track[8], &track[12]);
+    switch (r) {
+    case 0:      break;
+    case 1:      return SCE_MP4_ERROR_NO_MEMORY;
+    case 2:      return SCE_MP4_ERROR_IO_FAILED;
+    case 8:      return SCE_MP4_ERROR_END_OF_TRACK;
+    case 0x2003: return SCE_MP4_ERROR_BAD_DATA;
+    default:     return SCE_MP4_ERROR_INVALID_VALUE;
     }
 
     if ((type & 0x10) != 0)
@@ -654,7 +693,7 @@ static NOINLINE s32 mp4RegistTrackInternal(u32 **mp4, u32 type, s32 idx, const u
     return ret;
 }
 
-static NOINLINE s32 mp4SampleBufPutInternal(u32 **mp4, u32 *track)
+static NOINLINE s32 mp4SampleBufPutInternal(u32 **mp4, u32 *track, s32 max_samples)
 {
     u32 raw[16];
     u32 info[12];
@@ -663,12 +702,14 @@ static NOINLINE s32 mp4SampleBufPutInternal(u32 **mp4, u32 *track)
         return SCE_MP4_ERROR_INVALID_VALUE;
 
     s32 free_slots = mp4RingGetFree(&sb[17]);
+    s32 to_put = (max_samples < free_slots) ? max_samples : free_slots;
     s32 ret = mp4CheckSampleIndex(track, track[9]);
     if (ret < 0)
         return ret;
 
     s32 rem = (s32)track[12] - (s32)track[9];
-    s32 to_put = (free_slots < rem) ? free_slots : rem;
+    if (rem < to_put)
+        to_put = rem;
     s32 put_count = 0;
 
     while (put_count < to_put) {
@@ -788,18 +829,30 @@ static NOINLINE s32 mp4GetSampleInfoInternal(u32 **mp4, u32 *track, s32 sample, 
 
 static NOINLINE s32 mp4FetchSampleMeta(const u32 *track, s32 sample, u32 *out_raw)
 {
-    s32 flag = 0;
+    s32 flag;
     out_raw[0] = (u32)sample;
     u32 idx = (u32)(sample + 1);
     s32 r = mp4msv_E5C33D61(track[8], idx, 0, &out_raw[6]);
-    if (r == 0)
-        r = mp4msv_21BD7274(track[8], idx, &out_raw[4], &flag);
-    if (r != 0) {
-        if (r == 1) return SCE_MP4_ERROR_NO_MEMORY;
-        if (r == 2) return SCE_MP4_ERROR_IO_FAILED;
-        if (r == 8 || r == 8201) return SCE_MP4_ERROR_END_OF_TRACK;
-        if (r == 8195) return SCE_MP4_ERROR_BAD_DATA;
-        return SCE_MP4_ERROR_INVALID_VALUE;
+    switch (r) {
+    case 0:    break;
+    case 1:    return SCE_MP4_ERROR_NO_MEMORY;
+    case 2:    return SCE_MP4_ERROR_IO_FAILED;
+    case 4:    return SCE_MP4_ERROR_INVALID_VALUE;
+    case 8:
+    case 8201: return SCE_MP4_ERROR_END_OF_TRACK;
+    case 8195: return SCE_MP4_ERROR_BAD_DATA;
+    default:   return SCE_MP4_ERROR_INVALID_VALUE;
+    }
+    r = mp4msv_21BD7274(track[8], idx, &out_raw[4], &flag);
+    switch (r) {
+    case 0:    break;
+    case 1:    return SCE_MP4_ERROR_NO_MEMORY;
+    case 2:    return SCE_MP4_ERROR_IO_FAILED;
+    case 4:    return SCE_MP4_ERROR_INVALID_VALUE;
+    case 8:
+    case 8201: return SCE_MP4_ERROR_END_OF_TRACK;
+    case 8195: return SCE_MP4_ERROR_BAD_DATA;
+    default:   return SCE_MP4_ERROR_INVALID_VALUE;
     }
     out_raw[5] = out_raw[4] + out_raw[11];
     if (mp4msv_A824645B(out_raw[4], track[10], 90000, &out_raw[2]) != 0)
@@ -862,7 +915,7 @@ static NOINLINE s32 mp4GetAvcParamSetInternal(u32 **mp4, u32 *track, s32 sample,
 {
     u32 raw[16];
     u32 pkt[8];
-    if ((track[15] & 0x10) == 0 || out_param == NULL)
+    if (((track[15] & 0x10) == 0) | (out_param == NULL))
         return SCE_MP4_ERROR_INVALID_VALUE;
     s32 ret = mp4FetchSampleMeta(track, sample, raw);
     if (ret != 0)
@@ -916,7 +969,7 @@ static NOINLINE s32 mp4InitAuInternal(u32 **mp4, u32 buf, u32 *au)
 
 static NOINLINE s32 mp4CountTracksInternal(u32 **mp4, u32 type)
 {
-    u32 count = 0;
+    u32 count;
     s32 ret = mp4FindTrackByType(mp4, type, 655535, &count, NULL);
     return (ret == 0) ? (s32)count : ret;
 }
@@ -960,7 +1013,7 @@ static NOINLINE s32 mp4SampleBufFlushInternal(u32 **mp4, u32 *track)
 static NOINLINE s32 mp4GetEditListCountInternal(u32 **mp4, u32 *track)
 {
     (void)mp4;
-    s32 count = 0;
+    s32 count;
     s32 r = mp4msv_54410730(track[8], &count);
     if (r == 0)
         return count;
@@ -1015,7 +1068,7 @@ static NOINLINE s32 mp4FindTrackByType(u32 **mp4, u32 type, s32 idx, u32 *out_co
     u32 vid_info[8];
     u32 aud_info[4];
     u8 avcc[16];
-    char c1 = 0, c2[3];
+    char profileFlag = 0, profileExt[3];
     u32 trk = 0, handler = 0, desc = 0;
     s32 enc = 0;
 
@@ -1056,7 +1109,7 @@ static NOINLINE s32 mp4FindTrackByType(u32 **mp4, u32 type, s32 idx, u32 *out_co
                 return SCE_MP4_ERROR_INVALID_VALUE;
             if (vid_info[0] != 0x61766331U)
                 continue;
-            if (mp4msv_35144B9C(desc, avcc, &c1, c2) != 0)
+            if (mp4msv_35144B9C(desc, avcc, &profileFlag, profileExt) != 0)
                 continue;
             if (mp4msv_08F96BE2(vid_info[1], &enc) != 0)
                 return SCE_MP4_ERROR_INVALID_VALUE;
@@ -1088,26 +1141,28 @@ static NOINLINE s32 mp4ParseAacDescriptors(u32 **mp4, u32 *track)
 {
     (void)mp4;
     u32 *dst = &track[60];
-    u32 count = 0;
-    u32 desc = 0;
+    u32 msv_track = track[8];
+    u32 count;
+    u32 desc;
     u32 info[4];
 
     track[13] = (u32)dst;
     dst[0] = 0;
     mp4MemSetCb(&dst[2], 0, 8);
 
-    s32 r = mp4msv_A9FD62E2(track[8], &count);
+    s32 r = mp4msv_A9FD62E2(msv_track, &count);
     if (r != 0)
         return (r == 0x2003) ? SCE_MP4_ERROR_BAD_DATA : SCE_MP4_ERROR_INVALID_VALUE;
     if (count == 0)
         return SCE_MP4_ERROR_NO_RESOURCE;
 
     dst[1] = count;
-    r = mp4msv_6D619263(track[8], 1, &desc);
-    if (r != 0) {
-        if (r == 8194) return SCE_MP4_ERROR_END_OF_TRACK;
-        if (r == 8195) return SCE_MP4_ERROR_BAD_DATA;
-        return SCE_MP4_ERROR_INVALID_VALUE;
+    r = mp4msv_6D619263(msv_track, 1, &desc);
+    switch (r) {
+    case 0:    break;
+    case 8194: return SCE_MP4_ERROR_END_OF_TRACK;
+    case 8195: return SCE_MP4_ERROR_BAD_DATA;
+    default:   return SCE_MP4_ERROR_INVALID_VALUE;
     }
     if (mp4msv_A418509D(desc, info) != 0)
         return SCE_MP4_ERROR_INVALID_VALUE;
@@ -1124,19 +1179,19 @@ static NOINLINE s32 mp4ParseAvcDescriptors(u32 **mp4, u32 *track)
 {
     (void)mp4;
     u32 *dst = &track[60];
-    u8 *param_buf = (u8 *)&track[662];
+    u8 *nalParamBuf = (u8 *)&track[662];
     u32 rem_buf = 4096;
     u32 count = 0;
     u32 desc = 0;
     u32 info[8];
     u8 avcc[16];
-    char c1 = 0, c2[15];
+    char profileFlag = 0, profileExt[15];
     u16 len = 0;
 
     track[13] = (u32)dst;
     dst[0] = 0;
     mp4MemSetCb(&dst[2], 0, 2400);
-    mp4MemSetCb(param_buf, 0, 4096);
+    mp4MemSetCb(nalParamBuf, 0, 4096);
 
     s32 r = mp4msv_A9FD62E2(track[8], &count);
     if (r != 0)
@@ -1146,8 +1201,8 @@ static NOINLINE s32 mp4ParseAvcDescriptors(u32 **mp4, u32 *track)
 
     dst[1] = count;
     for (u32 i = 0; i < count; i++) {
-        c1 = 0;
-        c2[0] = 0;
+        profileFlag = 0;
+        profileExt[0] = 0;
         r = mp4msv_6D619263(track[8], i + 1, &desc);
         if (r != 0) {
             if (r == 8194) return SCE_MP4_ERROR_END_OF_TRACK;
@@ -1157,7 +1212,7 @@ static NOINLINE s32 mp4ParseAvcDescriptors(u32 **mp4, u32 *track)
         if (mp4msv_2BAF7C25(desc, info) != 0)
             return SCE_MP4_ERROR_INVALID_VALUE;
         if (info[0] == 0x61766331U) {
-            if (mp4msv_35144B9C(desc, avcc, &c1, c2) != 0)
+            if (mp4msv_35144B9C(desc, avcc, &profileFlag, profileExt) != 0)
                 return SCE_MP4_ERROR_INVALID_VALUE;
             u32 *ent = &dst[6 * i + 2];
             ent[5] = avcc[3];
@@ -1166,10 +1221,10 @@ static NOINLINE s32 mp4ParseAvcDescriptors(u32 **mp4, u32 *track)
             ent[3] = len;
             if (rem_buf < len)
                 return SCE_MP4_ERROR_NO_RESOURCE;
-            if (mp4msv_E641D779(desc, 1, 0, 0, param_buf) != 0)
+            if (mp4msv_E641D779(desc, 1, 0, 0, nalParamBuf) != 0)
                 return SCE_MP4_ERROR_INVALID_VALUE;
-            ent[1] = (u32)param_buf;
-            param_buf += ent[3];
+            ent[1] = (u32)nalParamBuf;
+            nalParamBuf += ent[3];
             rem_buf -= ent[3];
 
             if (mp4msv_A09878FC(desc, 1, &len) != 0)
@@ -1177,10 +1232,10 @@ static NOINLINE s32 mp4ParseAvcDescriptors(u32 **mp4, u32 *track)
             ent[4] = len;
             if (rem_buf < len)
                 return SCE_MP4_ERROR_NO_RESOURCE;
-            if (mp4msv_BE558D75(desc, 1, 0, 0, param_buf) != 0)
+            if (mp4msv_BE558D75(desc, 1, 0, 0, nalParamBuf) != 0)
                 return SCE_MP4_ERROR_INVALID_VALUE;
-            ent[2] = (u32)param_buf;
-            param_buf += ent[4];
+            ent[2] = (u32)nalParamBuf;
+            nalParamBuf += ent[4];
             rem_buf -= ent[4];
             ent[0] = desc;
         }
@@ -1290,22 +1345,26 @@ s32 sceMp4_68651CBC(s32 mode, s32 version)
 
 static NOINLINE s32 mp4IoSeek(u32 *io, s64 off, s16 whence)
 {
+    s64 cur = *(const s64 *)io;
     s64 pos;
-    if (whence == 0) {
+    switch (whence) {
+    case 0:
         pos = off;
-    } else if (whence == 1) {
-        pos = *(const s64 *)io + off;
-    } else if (whence == 2) {
+        break;
+    case 1:
+        pos = cur + off;
+        break;
+    case 2:
         pos = (s64)io[3] - off;
-    } else {
+        break;
+    default:
         return -1;
     }
     if (pos < 0)
         pos = 0;
     else if (pos > (s64)io[3])
         pos = (s64)io[3];
-    io[0] = (u32)pos;
-    io[1] = 0;
+    *(s64 *)io = pos;
     return 0;
 }
 
@@ -1313,7 +1372,7 @@ static NOINLINE s32 mp4IoReadBE(u8 *dst, u32 size, u32 *io)
 {
     u8 tmp[16];
     u32 req = (size >= 9U) ? 8U : size;
-    s32 r = mp4CacheReadDispatch(tmp, 8, io[0], io[1], (s32)req, (u32 *)io[4]);
+    s32 r = mp4CacheReadDispatch(tmp, *(const s64 *)io, (s32)req, (u32 *)io[4]);
     if (r > 0) {
         *(s64 *)io += r;
     }
@@ -1326,12 +1385,12 @@ static NOINLINE s32 mp4IoReadBE(u8 *dst, u32 size, u32 *io)
 
 static NOINLINE void *mp4Alloc(u32 size)
 {
-    return mp4HeapAllocWrap(g_mp4HeapHandle, size);
+    return mp4HeapAllocWrap(g_mp4State.heapHandle, size);
 }
 
 static NOINLINE s32 mp4Free(void *ptr)
 {
-    return mp4HeapFreeWrap(g_mp4HeapHandle, ptr);
+    return mp4HeapFreeWrap(g_mp4State.heapHandle, ptr);
 }
 
 /* 0x2c78: sceMp4Finish */
@@ -1364,16 +1423,14 @@ static NOINLINE s64 mp4CbGetCurrentPos(u32 *cb)
     return ret;
 }
 
-static NOINLINE s64 mp4CbSeek(u32 *cb, s32 unused, s32 off_lo, s32 off_hi, s32 whence)
+static NOINLINE s64 mp4CbSeek(u32 *cb, s64 offset, s32 whence)
 {
-    (void)unused;
     u32 **mp4 = (u32 **)cb[4];
-    s64 off = ((s64)off_hi << 32) | (u64)(u32)off_lo;
     u32 old_gp;
     __asm__ volatile ("move %0, $gp" : "=r"(old_gp));
     mp4UnlockLwMutex(mp4GetDataMutex(mp4));
     __asm__ volatile ("move $gp, %0" : : "r"(cb[6]));
-    s64 ret = ((s64 (*)(u32, s64, s32))cb[2])(cb[0], off, whence);
+    s64 ret = ((s64 (*)(u32, s64, s32))cb[2])(cb[0], offset, whence);
     __asm__ volatile ("move $gp, %0" : : "r"(old_gp));
     mp4LockLwMutex(mp4GetDataMutex(mp4));
     return ret;
@@ -1404,23 +1461,23 @@ static NOINLINE s64 mp4IoGetSize(const u32 *io) { return (s64)io[3]; }
 
 static NOINLINE s32 mp4IoRead(void *dst, s32 size, u32 *io)
 {
-    s32 r = mp4CacheReadDispatch(dst, size, io[0], io[1], size, (u32 *)io[4]);
+    s32 r = mp4CacheReadDispatch(dst, *(const s64 *)io, size, (u32 *)io[4]);
     if (r > 0)
         *(s64 *)io += r;
     return r;
 }
 
-static NOINLINE void *mp4MemAllocCb(u32 size) { return mp4HeapAllocWrap(g_mp4HeapHandle, size); }
+static NOINLINE void *mp4MemAllocCb(u32 size) { return mp4HeapAllocWrap(g_mp4State.heapHandle, size); }
 
 static NOINLINE void *mp4MemCallocCb(u32 size)
 {
-    void *p = mp4HeapAllocWrap(g_mp4HeapHandle, size);
+    void *p = mp4HeapAllocWrap(g_mp4State.heapHandle, size);
     if (p != NULL)
         sceKernelMemset(p, 0, size);
     return p;
 }
 
-static NOINLINE s32 mp4MemFreeCb(void *ptr) { return mp4HeapFreeWrap(g_mp4HeapHandle, ptr); }
+static NOINLINE s32 mp4MemFreeCb(void *ptr) { return mp4HeapFreeWrap(g_mp4State.heapHandle, ptr); }
 
 static NOINLINE void *mp4MemCopyCb(void *dst, u32 dst_size, const void *src, u32 src_size)
 {
@@ -1430,7 +1487,7 @@ static NOINLINE void *mp4MemCopyCb(void *dst, u32 dst_size, const void *src, u32
 }
 
 static NOINLINE void *mp4MemSetCb(void *dst, s32 val, u32 size) { return sceKernelMemset(dst, val, size); }
-static NOINLINE s32 mp4StrCmpWrap(const char *s1, const char *s2) { return mp4StrCmp(s1, s2); }
+static NOINLINE s32 mp4StrCmpWrap(const char *lhs, const char *rhs) { return mp4StrCmp(lhs, rhs); }
 
 static NOINLINE s32 mp4StrLenCb(const u8 *s)
 {
@@ -1733,14 +1790,11 @@ static NOINLINE s32 mp4CacheTerm(u32 *cache)
     return 0;
 }
 
-static NOINLINE s32 mp4CacheReadDispatch(void *dst, s32 dst_size, u32 off_lo, u32 off_hi, s32 len, u32 *cache)
+static NOINLINE s32 mp4CacheReadDispatch(void *dst, s64 offset, s32 len, u32 *cache)
 {
-    (void)dst_size;
-    if ((cache[13] & 1) != 0) {
-        s64 off = ((s64)off_hi << 32) | (u64)off_lo;
-        return mp4CacheReadBuffered((u8 *)dst, off, len, cache);
-    }
-    s64 pos = mp4CbSeek(&cache[2], 0, (s32)off_lo, (s32)off_hi, 0);
+    if ((cache[13] & 1) != 0)
+        return mp4CacheReadBuffered((u8 *)dst, offset, len, cache);
+    s64 pos = mp4CbSeek(&cache[2], offset, 0);
     if (pos < 0)
         return SCE_MP4_ERROR_IO_FAILED;
     return mp4CbRead(&cache[2], dst, len);
@@ -1766,7 +1820,7 @@ static NOINLINE s32 mp4IoCtxInit(u32 *io, const u32 *cbs, u32 buf, u32 buf_size,
     io[0] = 0;
     io[1] = 0;
     io[2] = 0;
-    io[3] = (u32)mp4CbGetFileSize(&cache[2]);
+    io[3] = (u32)mp4CbGetFileSize((u32 *)io[4] + 2);
     return 0;
 }
 
@@ -1797,7 +1851,7 @@ static NOINLINE s32 mp4CacheReadBuffered(u8 *dst, s64 off, s32 len, u32 *cache)
             s64 bsz = (s32)cache[11];
             s64 aligned = (cur_pos / bsz) * bsz;
             *(s64 *)cache = aligned;
-            if (mp4CbSeek(&cache[2], 0, (s32)aligned, (s32)(aligned >> 32), 0) < 0)
+            if (mp4CbSeek(&cache[2], aligned, 0) < 0)
                 return SCE_MP4_ERROR_IO_FAILED;
             s32 r = mp4CbRead(&cache[2], (void *)cache[10], (s32)cache[11]);
             cache[12] = (u32)r;
@@ -1811,11 +1865,11 @@ static NOINLINE s32 mp4CacheReadBuffered(u8 *dst, s64 off, s32 len, u32 *cache)
 static NOINLINE s32 mp4CbGetFileSize(u32 *cb)
 {
     s64 orig = mp4CbGetCurrentPos(cb);
-    if (mp4CbSeek(cb, 0, 0, 0, 2) < 0)
+    if ((s32)mp4CbSeek(cb, 0, 2) < 0)
         return 0;
     s64 end = mp4CbGetCurrentPos(cb);
     s32 size = (end == -1LL) ? 0 : (s32)end;
-    mp4CbSeek(cb, 0, (s32)orig, (s32)(orig >> 32), 0);
+    mp4CbSeek(cb, orig, 0);
     return size;
 }
 
@@ -1880,7 +1934,7 @@ static NOINLINE s32 mp4RingFillFromCb(u32 *ring, s64 off, s32 count)
 {
     s32 free_sp = (s32)(ring[0] - ring[3]);
     s32 rem = (count < free_sp) ? count : free_sp;
-    s32 (*read_cb)(void *, s32, u32, u32, s32, u32) = (s32 (*)(void *, s32, u32, u32, s32, u32))ring[6];
+    s32 (*read_cb)(void *, s64, s32, u32) = (s32 (*)(void *, s64, s32, u32))ring[6];
     s32 done = 0;
 
     while (rem > 0) {
@@ -1891,7 +1945,7 @@ static NOINLINE s32 mp4RingFillFromCb(u32 *ring, s64 off, s32 count)
             return SCE_MP4_ERROR_INVALID_VALUE;
         u32 esz = ring[4];
         s64 cur_off = off + (s64)done * (s64)esz;
-        s32 r = read_cb((void *)(ring[5] + wpos * esz), (s32)(wpos * esz), (u32)cur_off, (u32)(cur_off >> 32), (s32)((u32)chunk * esz), ring[7]);
+        s32 r = read_cb((void *)(ring[5] + wpos * esz), cur_off, (s32)((u32)chunk * esz), ring[7]);
         if (r < 0)
             return r;
         s32 elems = r / (s32)esz;
@@ -1949,13 +2003,19 @@ static NOINLINE s32 mp4RingReset(u32 *ring) { ring[1] = 0; ring[2] = 0; ring[3] 
 static NOINLINE s32 mp4RingGetFree(const u32 *ring) { return (s32)(ring[0] - ring[3]); }
 static NOINLINE s32 mp4RingConsume(u32 *ring, s32 count, u8 *dst, s32 advance) { return mp4RingRead(ring, count, dst, advance); }
 
+static inline SceMp4AacSlot *mp4AacGetSlot(s32 slot_idx)
+{
+    if (g_aacPoolBase == NULL || g_aacSlotCount == 0 || ((slot_idx < 0) | (slot_idx >= g_aacSlotCount)))
+        return NULL;
+    return &g_aacPoolBase[slot_idx];
+}
+
 static NOINLINE s32 mp4AacTermPool(void)
 {
     if (g_aacPoolBase == NULL || g_aacSlotCount == 0 || g_aacFplId == -1)
         return 0;
     for (s32 i = 0; i < g_aacSlotCount; i++) {
-        u32 *slot = (u32 *)((u8 *)g_aacPoolBase + i * MP4_AAC_SLOT_SIZE);
-        if (slot[32] == 1)
+        if (g_aacPoolBase[i].state == 1)
             return SCE_MP4_ERROR_AAC_FREE_FAIL;
     }
     if (sceKernelFreeFpl(g_aacFplId, g_aacPoolBase) < 0)
@@ -1969,12 +2029,14 @@ static NOINLINE s32 mp4AacTermPool(void)
 
 static NOINLINE s32 mp4AacReleaseSlot(s32 slot_idx)
 {
-    if (g_aacPoolBase == NULL || g_aacSlotCount == 0 || slot_idx < 0 || slot_idx >= g_aacSlotCount)
+    SceMp4AacSlot *slot = mp4AacGetSlot(slot_idx);
+    if (slot == NULL)
         return SCE_MP4_ERROR_AAC_NOT_INIT;
-    u32 *slot = (u32 *)((u8 *)g_aacPoolBase + slot_idx * MP4_AAC_SLOT_SIZE);
+    if (slot_idx < 0 || slot_idx >= g_aacSlotCount)
+        return SCE_MP4_ERROR_AAC_INVALID_ID;
     s32 intr = sceKernelCpuSuspendIntr();
-    if ((s32)slot[32] > 0)
-        slot[32] = 0;
+    if (slot->state > 0)
+        slot->state = 0;
     sceKernelCpuResumeIntr(intr);
     return 0;
 }
@@ -2014,13 +2076,15 @@ static NOINLINE s32 mp4AacInitPool(s32 count)
     g_aacFplId = fpl;
     if (fpl < 0)
         return SCE_MP4_ERROR_AAC_ALLOC_FAIL;
-    if (sceKernelAllocateFpl(fpl, &g_aacPoolBase, NULL) < 0) {
+    void *pool = NULL;
+    if (sceKernelAllocateFpl(fpl, &pool, NULL) < 0) {
         sceKernelDeleteFpl(g_aacFplId);
         g_aacFplId = -1;
         g_aacPoolBase = NULL;
         return SCE_MP4_ERROR_AAC_ALLOC_FAIL;
     }
-    u8 *p = (u8 *)g_aacPoolBase;
+    g_aacPoolBase = (SceMp4AacSlot *)pool;
+    u8 *p = (u8 *)pool;
     for (s32 i = 0; i < total; i++)
         p[i] = 0;
     g_aacSlotCount = count;
@@ -2033,26 +2097,26 @@ static NOINLINE s32 mp4AacAcquireSlot(s32 sample_rate)
         return SCE_MP4_ERROR_INVALID_VALUE;
     s32 intr = sceKernelCpuSuspendIntr();
     s32 found = -1;
-    u32 *slot = NULL;
+    SceMp4AacSlot *slot = NULL;
     for (s32 i = 0; i < g_aacSlotCount; i++) {
-        u32 *cur = (u32 *)((u8 *)g_aacPoolBase + i * MP4_AAC_SLOT_SIZE);
-        if (cur[32] == 0) {
+        SceMp4AacSlot *cur = &g_aacPoolBase[i];
+        if (cur->state == 0) {
             found = i;
             slot = cur;
-            cur[32] = 1;
+            cur->state = 1;
             break;
         }
     }
     sceKernelCpuResumeIntr(intr);
     if (found < 0)
         return SCE_MP4_ERROR_AAC_NO_SLOT;
-    slot[32] = 2;
+    slot->state = 2;
     s32 r = mp4AacInitCodecSlot(found, sample_rate);
     if (r < 0) {
         mp4AacReleaseSlot(found);
         return r;
     }
-    slot[32] = 3;
+    slot->state = 3;
     return found;
 }
 
@@ -2060,47 +2124,47 @@ static NOINLINE s32 mp4AacDecodeFrame(s32 slot_idx, const u32 *au, u32 pcm_out)
 {
     if (slot_idx < 0 || slot_idx >= g_aacSlotCount)
         return SCE_MP4_ERROR_AAC_INVALID_ID;
-    if (g_aacPoolBase == NULL || g_aacSlotCount == 0)
+    SceMp4AacSlot *slot = mp4AacGetSlot(slot_idx);
+    if (slot == NULL)
         return SCE_MP4_ERROR_AAC_NOT_INIT;
-    u32 *slot = (u32 *)((u8 *)g_aacPoolBase + slot_idx * MP4_AAC_SLOT_SIZE);
-    if ((s32)slot[32] < 3)
+    if (slot->state < 3)
         return SCE_MP4_ERROR_AAC_NOT_READY;
-    slot[6] = au[4];
-    slot[8] = pcm_out;
-    if (sceAudiocodecDecode(slot, 0x1003) < 0)
+    slot->codecWork[6] = au[4];
+    slot->codecWork[8] = pcm_out;
+    if (sceAudiocodecDecode(slot->codecWork, 0x1003) < 0)
         return SCE_MP4_ERROR_AAC_DECODE_FAIL;
-    if (slot[9] == 0)
-        sceKernelMemset((void *)slot[8], 0, 4096);
+    if (slot->codecWork[9] == 0)
+        sceKernelMemset((void *)slot->codecWork[8], 0, 4096);
     return 0;
 }
 
 static NOINLINE s32 mp4AacInitCodecSlot(s32 slot_idx, s32 sample_rate)
 {
-    if (g_aacPoolBase == NULL || g_aacSlotCount == 0 || slot_idx < 0 || slot_idx >= g_aacSlotCount)
+    SceMp4AacSlot *slot = mp4AacGetSlot(slot_idx);
+    if (slot == NULL)
         return SCE_MP4_ERROR_AAC_NOT_INIT;
-    u32 *slot = (u32 *)((u8 *)g_aacPoolBase + slot_idx * MP4_AAC_SLOT_SIZE);
-    slot[3] = (u32)((u8 *)slot + 136);
-    slot[4] = 102176;
-    slot[5] = 1;
-    slot[10] = (u32)sample_rate;
-    ((u8 *)slot)[44] = 0;
-    ((u8 *)slot)[45] = 0;
-    s32 r = sceAudiocodecInit(slot, 0x1003);
+    slot->codecWork[3] = (u32)slot->codecBuffer;
+    slot->codecWork[4] = 102176;
+    slot->codecWork[5] = 1;
+    slot->sampleRate = (u32)sample_rate;
+    slot->outputMode = 0;
+    slot->downmixMode = 0;
+    s32 r = sceAudiocodecInit(slot->codecWork, 0x1003);
     return (r < 0) ? r : 0;
 }
 
 static NOINLINE s32 mp4DeleteGlobalMutexes(void)
 {
     s32 ret = 0;
-    if ((g_mp4MutexFlags & 2) != 0) {
-        s32 r = mp4DeleteLwMutex(g_mp4AacMutex);
-        g_mp4MutexFlags &= ~2U;
+    if ((g_mp4State.mutexFlags & 2) != 0) {
+        s32 r = mp4DeleteLwMutex(g_mp4State.aacMutex);
+        g_mp4State.mutexFlags &= ~2U;
         if (r < 0)
             ret = r;
     }
-    if ((g_mp4MutexFlags & 1) != 0) {
-        s32 r = mp4DeleteLwMutex(g_mp4MainMutex);
-        g_mp4MutexFlags &= ~1U;
+    if ((g_mp4State.mutexFlags & 1) != 0) {
+        s32 r = mp4DeleteLwMutex(g_mp4State.mainMutex);
+        g_mp4State.mutexFlags &= ~1U;
         if (r < 0)
             ret = r;
     }
@@ -2111,12 +2175,12 @@ static NOINLINE s32 mp4DeleteLwMutex(void *work) { return sceKernelDeleteLwMutex
 
 static NOINLINE s32 mp4CreateGlobalMutexes(void)
 {
-    s32 r = sceKernelCreateLwMutex(g_mp4MainMutex, "SceMp4", 0x300, 0, NULL);
+    s32 r = sceKernelCreateLwMutex(g_mp4State.mainMutex, "SceMp4", 0x300, 0, NULL);
     if (r >= 0) {
-        g_mp4MutexFlags |= 1U;
-        r = sceKernelCreateLwMutex(g_mp4AacMutex, "SceMp4AacDec", 0x300, 0, NULL);
+        g_mp4State.mutexFlags |= 1U;
+        r = sceKernelCreateLwMutex(g_mp4State.aacMutex, "SceMp4AacDec", 0x300, 0, NULL);
         if (r >= 0)
-            g_mp4MutexFlags |= 2U;
+            g_mp4State.mutexFlags |= 2U;
     }
     return r;
 }
@@ -2131,31 +2195,31 @@ static NOINLINE s32 mp4UnlockLwMutex(void *work) { return sceKernelUnlockLwMutex
 
 static NOINLINE s32 mp4IsInitialized(void)
 {
-    return (g_mp4LibMagic == MP4_MAGIC_LIB) ? 0 : SCE_MP4_ERROR_NOT_INITIALIZED;
+    return (g_mp4State.libMagic == MP4_MAGIC_LIB) ? 0 : SCE_MP4_ERROR_NOT_INITIALIZED;
 }
 
 static NOINLINE s32 mp4InitHeap(u32 size)
 {
-    if (g_mp4LibMagic == MP4_MAGIC_LIB)
+    if (g_mp4State.libMagic == MP4_MAGIC_LIB)
         return SCE_MP4_ERROR_ALREADY_INITED;
-    g_mp4HeapHandle = mp4UserHeapCreate("SceMp4DemuxRes", size, 0);
-    if (g_mp4HeapHandle == NULL)
+    g_mp4State.heapHandle = mp4UserHeapCreate("SceMp4DemuxResource", size, 0, NULL);
+    if (g_mp4State.heapHandle == NULL)
         return SCE_MP4_ERROR_NOT_INITIALIZED;
-    g_mp4LibMagic = MP4_MAGIC_LIB;
-    g_mp4LibVersion = 0x31303030U;
-    g_mp4HeapSize = size;
+    g_mp4State.libMagic = MP4_MAGIC_LIB;
+    g_mp4State.libVersion = 0x31303030U;
+    g_mp4State.heapSize = size;
     return 0;
 }
 
 static NOINLINE s32 mp4TermHeap(void)
 {
-    if (g_mp4LibMagic != MP4_MAGIC_LIB)
+    if (g_mp4State.libMagic != MP4_MAGIC_LIB)
         return SCE_MP4_ERROR_NOT_INITIALIZED;
-    s32 r = mp4UserHeapDelete(g_mp4HeapHandle);
-    g_mp4LibMagic = 0;
-    g_mp4LibVersion = 0;
-    g_mp4HeapHandle = NULL;
-    g_mp4HeapSize = 0;
+    s32 r = mp4UserHeapDelete(g_mp4State.heapHandle);
+    g_mp4State.libMagic = 0;
+    g_mp4State.libVersion = 0;
+    g_mp4State.heapHandle = NULL;
+    g_mp4State.heapSize = 0;
     return r;
 }
 
@@ -2170,9 +2234,9 @@ s32 sceMp4_B1221EE7(u32 **mp4, const u32 *cbs, u32 buf, s32 buf_size)
     if (ret < 0) return ret;
     if (mp4 == NULL) return SCE_MP4_ERROR_INVALID_VALUE;
     if (mp4ValidateHandle(mp4) == 0) return SCE_MP4_ERROR_ALREADY_INITED;
-    mp4LockLwMutex(g_mp4MainMutex);
+    mp4LockLwMutex(g_mp4State.mainMutex);
     ret = mp4CreateInternal(mp4, cbs, buf, buf_size);
-    mp4UnlockLwMutex(g_mp4MainMutex);
+    mp4UnlockLwMutex(g_mp4State.mainMutex);
     return ret;
 }
 
@@ -2183,11 +2247,11 @@ s32 sceMp4_538C2057(u32 **mp4)
     if (ret < 0) return ret;
     ret = mp4ValidateHandle(mp4);
     if (ret < 0) return ret;
-    mp4LockLwMutex(g_mp4MainMutex);
+    mp4LockLwMutex(g_mp4State.mainMutex);
     mp4LockLwMutex(mp4GetSampleBufMutex(mp4));
     mp4LockLwMutex(mp4GetDataMutex(mp4));
     ret = mp4DeleteInternal(mp4);
-    mp4UnlockLwMutex(g_mp4MainMutex);
+    mp4UnlockLwMutex(g_mp4State.mainMutex);
     return ret;
 }
 
@@ -2321,7 +2385,7 @@ s32 sceMp4_113E9E7B(u32 **mp4, const u32 *track)
     return ret;
 }
 
-s32 sceMp4_4FB5B756(u32 **mp4, const u32 *track, s32 idx, u8 *out_info)
+s32 sceMp4_4FB5B756(u32 **mp4, const u32 *track, s32 idx, SceMp4MetaInfo *out_info)
 {
     u32 handle = 0;
     if (_sceKernelCheckThreadStack() < 4064) return SCE_MP4_ERROR_STACK_OVERFLOW;
@@ -2335,7 +2399,7 @@ s32 sceMp4_4FB5B756(u32 **mp4, const u32 *track, s32 idx, u8 *out_info)
     return ret;
 }
 
-s32 sceMp4_D2AC9A7E(u32 **mp4, const u32 *track, s32 idx, void *out_buf, u32 buf_size)
+s32 sceMp4_D2AC9A7E(u32 **mp4, const u32 *track, s32 idx, void *out_buf, s32 buf_size)
 {
     if (_sceKernelCheckThreadStack() < 4064) return SCE_MP4_ERROR_STACK_OVERFLOW;
     s32 ret = mp4IsInitialized();
@@ -2426,7 +2490,7 @@ s32 sceMp4_8754ECB8(u32 **mp4, u32 *track, s32 *out_samples, s32 *out_bytes)
     return ret;
 }
 
-s32 sceMp4_31BCD7E0(u32 **mp4, u32 *track)
+s32 sceMp4_31BCD7E0(u32 **mp4, u32 *track, s32 max_samples)
 {
     if (_sceKernelCheckThreadStack() < 4080) return SCE_MP4_ERROR_STACK_OVERFLOW;
     s32 ret = mp4IsInitialized();
@@ -2435,7 +2499,7 @@ s32 sceMp4_31BCD7E0(u32 **mp4, u32 *track)
     if (ret < 0) return ret;
     mp4LockLwMutex(mp4GetSampleBufMutex(mp4));
     mp4LockLwMutex(mp4GetDataMutex(mp4));
-    ret = mp4SampleBufPutInternal(mp4, track);
+    ret = mp4SampleBufPutInternal(mp4, track, max_samples);
     mp4UnlockLwMutex(mp4GetDataMutex(mp4));
     mp4UnlockLwMutex(mp4GetSampleBufMutex(mp4));
     return ret;
@@ -2550,9 +2614,9 @@ s32 sceMp4_4ED4AB1E(s32 count)
     if (_sceKernelCheckThreadStack() < 4080) return SCE_MP4_ERROR_STACK_OVERFLOW;
     s32 ret = mp4IsInitialized();
     if (ret < 0) return ret;
-    mp4LockLwMutex(g_mp4AacMutex);
+    mp4LockLwMutex(g_mp4State.aacMutex);
     ret = mp4AacInitResourceWrap(count);
-    mp4UnlockLwMutex(g_mp4AacMutex);
+    mp4UnlockLwMutex(g_mp4State.aacMutex);
     return ret;
 }
 
@@ -2561,9 +2625,9 @@ s32 sceMp4_7D332394(void)
     if (_sceKernelCheckThreadStack() < 4080) return SCE_MP4_ERROR_STACK_OVERFLOW;
     s32 ret = mp4IsInitialized();
     if (ret < 0) return ret;
-    mp4LockLwMutex(g_mp4AacMutex);
+    mp4LockLwMutex(g_mp4State.aacMutex);
     ret = mp4AacTermResourceWrap();
-    mp4UnlockLwMutex(g_mp4AacMutex);
+    mp4UnlockLwMutex(g_mp4State.aacMutex);
     return ret;
 }
 
@@ -2572,9 +2636,9 @@ s32 sceMp4_10EE0D2C(s32 *out_slot)
     if (_sceKernelCheckThreadStack() < 4080) return SCE_MP4_ERROR_STACK_OVERFLOW;
     s32 ret = mp4IsInitialized();
     if (ret < 0) return ret;
-    mp4LockLwMutex(g_mp4AacMutex);
+    mp4LockLwMutex(g_mp4State.aacMutex);
     ret = mp4AacOpenSlot(out_slot, 48000);
-    mp4UnlockLwMutex(g_mp4AacMutex);
+    mp4UnlockLwMutex(g_mp4State.aacMutex);
     return ret;
 }
 
@@ -2583,9 +2647,9 @@ s32 sceMp4_5D72B333(const s32 *slot)
     if (_sceKernelCheckThreadStack() < 4080) return SCE_MP4_ERROR_STACK_OVERFLOW;
     s32 ret = mp4IsInitialized();
     if (ret < 0) return ret;
-    mp4LockLwMutex(g_mp4AacMutex);
+    mp4LockLwMutex(g_mp4State.aacMutex);
     ret = mp4AacCloseSlot(slot);
-    mp4UnlockLwMutex(g_mp4AacMutex);
+    mp4UnlockLwMutex(g_mp4State.aacMutex);
     return ret;
 }
 
@@ -2594,9 +2658,9 @@ s32 sceMp4_7663CB5C(s32 *slot, const u32 *au, u32 pcm_out, s32 reinit, s32 sampl
     if (_sceKernelCheckThreadStack() < 4064) return SCE_MP4_ERROR_STACK_OVERFLOW;
     s32 ret = mp4IsInitialized();
     if (ret < 0) return ret;
-    mp4LockLwMutex(g_mp4AacMutex);
+    mp4LockLwMutex(g_mp4State.aacMutex);
     ret = mp4AacDecodeSlotWrap(slot, au, pcm_out, reinit, sample_rate);
-    mp4UnlockLwMutex(g_mp4AacMutex);
+    mp4UnlockLwMutex(g_mp4State.aacMutex);
     return ret;
 }
 
@@ -2611,46 +2675,47 @@ s32 sceMp4_BCA9389C(u32 **mp4, s32 max_samples, s32 avg_size, s32 max_size, s32 
 static NOINLINE s32 mp4GetMetaCountInternal(u32 **mp4, const u32 *track)
 {
     u32 trk = (track != NULL) ? track[8] : 0;
-    s32 count = 0;
+    s32 count;
     s32 r = mp4msv_EF6D76BC((*mp4)[1], trk, &count);
     if (r == 0)
         return count;
     return (r == 8195) ? SCE_MP4_ERROR_BAD_DATA : SCE_MP4_ERROR_INVALID_VALUE;
 }
 
-static NOINLINE s32 mp4GetMetaInfoInternal(u32 **mp4, const u32 *track, s32 idx, u32 *out_handle, u8 *out_info)
+static NOINLINE s32 mp4GetMetaInfoInternal(u32 **mp4, const u32 *track, s32 idx, u32 *out_handle, SceMp4MetaInfo *out_info)
 {
+    u32 *ctx = *mp4;
     u32 trk = (track != NULL) ? track[8] : 0;
-    u16 len = 0;
+    u16 len;
     s32 count = mp4GetMetaCountInternal(mp4, track);
     if (count < 0)
         return count;
-    if (idx >= count || out_info == NULL)
+    if ((idx >= count) | (out_info == NULL))
         return SCE_MP4_ERROR_INVALID_VALUE;
-    s32 r = mp4msv_4C677A7E((*mp4)[1], trk, (u32)(idx + 1), out_handle, out_info + 4, out_info + 12, out_info + 14, &len);
-    *(u32 *)(out_info + 16) = len;
+    s32 r = mp4msv_4C677A7E(ctx[1], trk, (u32)(idx + 1), out_handle, &out_info->type, &out_info->language, &out_info->encoding, &len);
+    out_info->dataLength = len;
     if (r != 0)
         return (r == 8195) ? SCE_MP4_ERROR_BAD_DATA : SCE_MP4_ERROR_INVALID_VALUE;
-    u16 lang = *(const u16 *)(out_info + 12);
-    *(u32 *)out_info = (u32)idx;
-    out_info[8] = (u8)(lang >> 15);
-    *(u16 *)(out_info + 12) = (u16)(lang & 0x7FFFU);
-    out_info[9] = 0;
-    out_info[10] = 0;
-    out_info[11] = 0;
+    u16 lang = out_info->language;
+    out_info->index = (u32)idx;
+    out_info->isIso639 = (u8)(lang >> 15);
+    out_info->language = (u16)(lang & 0x7FFFU);
+    out_info->padding[0] = 0;
+    out_info->padding[1] = 0;
+    out_info->padding[2] = 0;
     return 0;
 }
 
-static NOINLINE s32 mp4GetMetaDataInternal(u32 **mp4, const u32 *track, s32 idx, void *out_buf, u32 buf_size)
+static NOINLINE s32 mp4GetMetaDataInternal(u32 **mp4, const u32 *track, s32 idx, void *out_buf, s32 buf_size)
 {
-    u8 info[32];
-    u32 handle = 0;
-    if (out_buf == NULL || (s32)buf_size < 0)
+    SceMp4MetaInfo info;
+    u32 handle;
+    if ((out_buf == NULL) | (buf_size < 0))
         return SCE_MP4_ERROR_INVALID_VALUE;
-    s32 ret = mp4GetMetaInfoInternal(mp4, track, idx, &handle, info);
+    s32 ret = mp4GetMetaInfoInternal(mp4, track, idx, &handle, &info);
     if (ret < 0)
         return ret;
-    if (*(const u32 *)(info + 16) < buf_size)
+    if (info.dataLength < buf_size)
         return SCE_MP4_ERROR_INVALID_VALUE;
     s32 r = mp4msv_9632797F(handle, 0, 0, out_buf);
     if (r != 0)
@@ -2658,37 +2723,38 @@ static NOINLINE s32 mp4GetMetaDataInternal(u32 **mp4, const u32 *track, s32 idx,
     return 0;
 }
 
-static NOINLINE s32 mp4StrCmp(const char *s1, const char *s2)
+static NOINLINE s32 mp4StrCmp(const char *lhs, const char *rhs)
 {
-    if (s1 == NULL || s2 == NULL) {
-        if (s1 == s2) return 0;
-        return (s1 != NULL) ? 1 : -1;
+    if (lhs == NULL || rhs == NULL) {
+        if (lhs == rhs) return 0;
+        return (lhs != NULL) ? 1 : -1;
     }
-    while (*s1 == *s2) {
-        if (*s1 == '\0')
+    while (*lhs == *rhs) {
+        if (*lhs == '\0')
             return 0;
-        s1++;
-        s2++;
+        lhs++;
+        rhs++;
     }
-    return (s32)*s1 - (s32)*s2;
+    return (s32)*lhs - (s32)*rhs;
 }
 
 static NOINLINE u32 mp4ReadBeUint(const u8 *p, s32 len)
 {
     switch (len) {
     case 1: return p[0];
-    case 2: return ((u32)p[0] << 8) | p[1];
-    case 3: return ((u32)p[0] << 16) | ((u32)p[1] << 8) | p[2];
-    case 4: return ((u32)p[0] << 24) | ((u32)p[1] << 16) | ((u32)p[2] << 8) | p[3];
+    case 2: return (u16)(((u32)p[0] << 8) + p[1]);
+    case 3: return ((u32)p[0] << 16) + ((u32)p[1] << 8) + p[2];
+    case 4: return ((u32)p[0] << 24) + ((u32)p[1] << 16) + ((u32)p[2] << 8) + p[3];
     default: return 0;
     }
 }
 
 /* Userland FPL-backed heap allocator */
-static NOINLINE u32 *mp4UserHeapCreate(const char *name, u32 size, u16 attr)
+static NOINLINE u32 *mp4UserHeapCreate(const char *name, u32 size, u32 attr, void *opt)
 {
+    (void)opt;
     u32 aligned = (size + 255U) & ~255U;
-    s32 fpl_attr = (attr & 0x4000) ? 0x4000 : 0;
+    s32 fpl_attr = (attr & 0x4000U) ? 0x4000 : 0;
     s32 fpl = sceKernelCreateFpl(name, 2, fpl_attr, aligned, 1, NULL);
     if (fpl < 0)
         return NULL;
@@ -2888,37 +2954,41 @@ static NOINLINE void *mp4BlockAlloc(u32 *arena, u32 size, u32 align)
                 u32 tail_u = 0;
                 s32 need_u = units;
                 u32 *link_prev = NULL;
+                s32 fits = 1;
                 if (align != 0) {
                     u32 mis = (u32)&cur[2 * (cur_u - units) + 2] % align;
                     if (mis != 0) {
                         tail_u = mis >> 3;
                         need_u = units + (s32)tail_u;
-                        if (cur_u < need_u)
-                            goto next_blk;
-                        link_prev = cur;
-                        if (cur_u == need_u) {
-                            link_prev = prev;
-                            prev[0] = cur[0];
+                        if (cur_u < need_u) {
+                            fits = 0;
+                        } else {
+                            link_prev = cur;
+                            if (cur_u == need_u) {
+                                link_prev = prev;
+                                prev[0] = cur[0];
+                            }
                         }
                     }
                 }
-                cur[1] = (u32)(cur_u - need_u);
-                cur += 2 * (cur_u - need_u);
-                u32 ret_addr = (u32)&cur[2];
-                cur[1] = (u32)units;
-                if (tail_u != 0) {
-                    u32 *tail = &cur[2 * units];
-                    tail[0] = link_prev[0];
-                    tail[1] = tail_u;
-                    link_prev[0] = (u32)tail;
+                if (fits) {
+                    cur[1] = (u32)(cur_u - need_u);
+                    cur += 2 * (cur_u - need_u);
+                    u32 ret_addr = (u32)&cur[2];
+                    cur[1] = (u32)units;
+                    if (tail_u != 0) {
+                        u32 *tail = &cur[2 * units];
+                        tail[0] = link_prev[0];
+                        tail[1] = tail_u;
+                        link_prev[0] = (u32)tail;
+                    }
+                    arena[5] = (u32)prev;
+                    cur[0] = (u32)arena;
+                    arena[3] += cur[1];
+                    return (void *)ret_addr;
                 }
-                arena[5] = (u32)prev;
-                cur[0] = (u32)arena;
-                arena[3] += cur[1];
-                return (void *)ret_addr;
             }
         }
-next_blk:
         if (cur == start)
             return NULL;
         prev = cur;
@@ -2984,7 +3054,7 @@ static NOINLINE s32 mp4BlockFree(u32 *arena, void *ptr)
 
 static NOINLINE s32 mp4BlockInit(u32 *arena, u32 size)
 {
-    if (arena == NULL || size < 0x31U)
+    if ((arena == NULL) | (size < 0x31U))
         return 1;
     u32 units = (size - 24U) >> 3;
     u32 *first = &arena[6];
