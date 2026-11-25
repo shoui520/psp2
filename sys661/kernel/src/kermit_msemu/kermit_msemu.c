@@ -459,7 +459,7 @@ static int msemuSysEventHandler(int ev_id, char *ev_name, void *param, int *resu
 			g_isSuspended = 1;
 		} else if (ev_id == 0x1000D) {
 			g_statCount1++;
-			g_msState = 0x400000;
+			g_msState = 1;
 			g_statCount3++;
 			g_ejectCount++;
 			notifyCbLists(2);

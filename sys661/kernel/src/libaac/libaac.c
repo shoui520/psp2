@@ -76,7 +76,7 @@ void updateStreamBuffer(s32 id)
         return;
     }
 
-    p = g_pool + id * SCE_AAC_MEM_SIZE;
+    p = &g_pool[id];
 
     if (p == NULL) {
         return;
@@ -116,7 +116,7 @@ void compactInputBuffer(s32 id) {
         return;
     }
 
-    p = g_pool + id * SCE_AAC_MEM_SIZE;
+    p = &g_pool[id];
 
     if (p == NULL) {
         return;
@@ -156,7 +156,7 @@ s32 sceAacEndEntry(void) {
             break;
         }
 
-        if (g_pool + p == NULL) {
+        if (&g_pool[i] == NULL) {
             continue;
         }
 
@@ -209,16 +209,14 @@ s32 sceAacInitResource(s32 nbr)
         return 0x80691501; // SCE_ERROR_AAC_NOT_INITIALIZED
     }
 
-    if (size <= 0) {
-        g_nbr = nbr;
-
-        return SCE_ERROR_OK;
+    if (size > 0) {
+        // memset
+        for (i=0; i<size; i++) {
+            ((u8*)g_pool)[i] = 0;
+        }
     }
 
-    // memset
-    for (i=0; i<size; i++) {
-        ((u8*)g_pool)[i] = 0;
-    }
+    g_nbr = nbr;
 
     return SCE_ERROR_OK;
 }
@@ -249,7 +247,7 @@ s32 sceAacTermResource(void)
 
         if (g_pool != NULL && g_nbr != 0) {
             if (i>=0 && i<g_nbr) {
-                p = g_pool + offset;
+                p = &g_pool[i];
             }
         }
 
@@ -330,7 +328,7 @@ s32 sceAacInit(SceAacInitArg *arg)
 
         if (g_pool != NULL && g_nbr != 0) {
             if (i>=0 && i<g_nbr) {
-                p = g_pool + offset;
+                p = &g_pool[i];
             }
         }
 
@@ -405,7 +403,7 @@ s32 sceAac_E955E83A(s32 *sampleRate)
 
         if (g_pool != NULL && g_nbr != 0) {
             if (i>=0 && i<g_nbr) {
-                p = g_pool + offset;
+                p = &g_pool[i];
             }
         }
 
@@ -463,7 +461,7 @@ s32 sceAacExit(s32 id)
         return 0x80691503;
     }
 
-    p = g_pool + id * SCE_AAC_MEM_SIZE;
+    p = &g_pool[id];
 
     if (p == NULL) {
         return 0x80691503;
@@ -503,7 +501,7 @@ s32 sceAacDecode(s32 id, void** src)
         return 0x80691503;
     }
 
-    p = g_pool + id * SCE_AAC_MEM_SIZE;
+    p = &g_pool[id];
 
     if (p == NULL) {
         return 0x80691503;
@@ -528,7 +526,7 @@ s32 sceAacDecode(s32 id, void** src)
     }
 
     if ((p->info.streamCur == p->info.streamEnd && p->info.streamRemaining > 0) ||
-        (p->info.availBytes >= 1536)) {
+        (p->info.streamCur != p->info.streamEnd && p->info.availBytes >= 1536)) {
         // sceAudiocodec_70A703F8
         if (sceAudiocodecDecode(&p->codec, 0x1003) < 0) {
             handleAacLoop(id);
@@ -573,7 +571,7 @@ s32 sceAac_FA01FCB6(s32 id, void *arg1, s32 *arg2, void *arg3, s32 *arg4)
         return 0x80691503;
     }
 
-    p = g_pool + id * SCE_AAC_MEM_SIZE;
+    p = &g_pool[id];
 
     if (p == NULL) {
         return 0x80691503;
@@ -616,7 +614,7 @@ s32 sceAacCheckStreamDataNeeded(s32 id)
         return 0x80691503;
     }
 
-    p = g_pool + id * SCE_AAC_MEM_SIZE;
+    p = &g_pool[id];
 
     if (p == NULL) {
         return 0x80691503;
@@ -648,7 +646,7 @@ s32 sceAacGetInfoToAddStreamData(s32 id, s32 **arg1, s32 *arg2, s32 *arg3)
         return 0x80691503;
     }
 
-    p = g_pool + id * SCE_AAC_MEM_SIZE;
+    p = &g_pool[id];
 
     if (p == NULL) {
         return 0x80691503;
@@ -705,7 +703,7 @@ s32 sceAacNotifyAddStreamData(s32 id, s32 size)
         return 0x80691503;
     }
 
-    p = g_pool + id * SCE_AAC_MEM_SIZE;
+    p = &g_pool[id];
 
     if (p == NULL) {
         return 0x80691503;
@@ -753,7 +751,7 @@ s32 sceAacResetPlayPosition(s32 id)
         return 0x80691503;
     }
 
-    p = g_pool + id * SCE_AAC_MEM_SIZE;
+    p = &g_pool[id];
 
     if (g_pool == NULL) {
         return 0x80691503;
@@ -795,7 +793,7 @@ s32 sceAacSetLoopNum(s32 id, s32 loopNum)
         return 0x80691503;
     }
 
-    p = g_pool + id * SCE_AAC_MEM_SIZE;
+    p = &g_pool[id];
 
     if (p == NULL) {
         return 0x80691503;
@@ -832,7 +830,7 @@ s32 sceAacGetMaxOutputSample(s32 id)
         return 0x80691503;
     }
 
-    p = g_pool + id * SCE_AAC_MEM_SIZE;
+    p = &g_pool[id];
 
     if (p == NULL) {
         return 0x80691503;
@@ -866,7 +864,7 @@ s32 sceAacGetSumDecodedSample(s32 id)
         return 0x80691503;
     }
 
-    p = g_pool + id * SCE_AAC_MEM_SIZE;
+    p = &g_pool[id];
 
     if (p == NULL) {
         return 0x80691503;
@@ -898,7 +896,7 @@ s32 sceAacGetLoopNum(s32 id)
         return 0x80691503;
     }
 
-    p = g_pool + id * SCE_AAC_MEM_SIZE;
+    p = &g_pool[id];
 
     if (p == NULL) {
         return 0x80691503;
@@ -936,7 +934,7 @@ s32 initAacCodec(s32 id)
         return 0x80691503;
     }
 
-    p = g_pool + id * SCE_AAC_MEM_SIZE;
+    p = &g_pool[id];
 
     if (p == NULL) {
         return 0x80691503;
@@ -980,22 +978,25 @@ void handleAacLoop(s32 id)
         return;
     }
 
-    p = g_pool + id * SCE_AAC_MEM_SIZE;
+    p = &g_pool[id];
 
     if (p == NULL) {
         return;
     }
 
     if (p->info.streamCur == p->info.streamEnd && p->info.streamRemaining <= 0) {
-        if (p->info.loopNum > 0) {
-            p->info.reset = 1;
-        }
-        else {
-            p->info.loopNum--;
+        if (p->info.loopNum != 0) {
+            if (p->info.loopNum > 0) {
+                p->info.loopNum--;
+            }
 
             sceAacResetPlayPosition(id);
         }
+        else {
+            p->info.reset = 1;
+        }
     }
-
-    updateStreamBuffer(id);
+    else {
+        updateStreamBuffer(id);
+    }
 }
