@@ -1,3791 +1,1539 @@
 #include "libhttp_internal.h"
 
-int http_opts_fn_1(int a1, u8 *a2)
-{
-  int result;
-  int v5;
-  int v6;
-  int v7;
-  int v8;
-  int v9;
-  u8 *v10;
-  int v11;
-  int v12;
-  int v13;
-  int v14;
-  int v15;
-  int v16;
-  int v17;
-  int v18;
-  int v19;
-  int v20;
+/* -------------------------------------------------------------------------
+ * Memory allocator & library init state
+ * ------------------------------------------------------------------------- */
+static void *(*g_http_alloc_fn)(u32);
+static void  (*g_http_free_fn)(void *);
+static void *(*g_http_realloc_fn)(void *, u32);
+static s32     g_http_vpl_id;
+static s32     g_http_vpl_size;
+static s32     g_http_alloc_count;
+static s32     g_http_inited;
 
-  sceKernelMemset(&v20, 0, 44);
-  result = 0;
-  if ( a1 != 0 && a2 != NULL )
-  {
-    if ( sceNet_lib_D8722983(a2) != 0 && *a2 == 47 )
+/* -------------------------------------------------------------------------
+ * 301 Redirect cache state (16 static slots)
+ * ------------------------------------------------------------------------- */
+static s32             g_redir_inited;
+static HttpRedirEntry  g_redir_pool[16];
+static HttpRedirEntry *g_redir_free_list;
+static HttpRedirEntry *g_redir_head;
+static HttpRedirEntry *g_redir_tail;
+
+/* -------------------------------------------------------------------------
+ * Shared handle-option helpers
+ * ------------------------------------------------------------------------- */
+static inline void http_unlock_template(HttpTemplate *tmpl)
+{
+    s32 intr = http_intr_suspend();
+    tmpl->ref_count--;
+    http_intr_resume(intr);
+}
+
+static inline void http_unlock_connection(HttpConnection *conn)
+{
+    s32 intr = http_intr_suspend();
+    conn->ref_count--;
+    http_intr_resume(intr);
+}
+
+static inline void http_unlock_request(HttpRequest *req)
+{
+    s32 intr = http_intr_suspend();
+    req->ref_count--;
+    http_intr_resume(intr);
+}
+
+/* -------------------------------------------------------------------------
+ * Path resolution & memory pool
+ * ------------------------------------------------------------------------- */
+char *http_resolve_relative_path(const char *base_path, const char *rel_path)
+{
+    char *combined;
+    char *swept;
+
+    if (base_path == NULL || rel_path == NULL)
+        return NULL;
+
+    if (sceNet_lib_D8722983(rel_path) != 0 && rel_path[0] == '/') {
+        u32 len = sceNet_lib_D8722983(rel_path) + 1;
+        combined = (char *)http_malloc(len);
+        if (combined == NULL)
+            return NULL;
+        sceKernelMemcpy(combined, rel_path, len);
+    } else {
+        const char *slash = sceNet_lib_F48963C6(base_path, '/');
+        if (slash != NULL) {
+            u32 dir_len = (u32)(slash - base_path) + 1;
+            u32 rel_len = sceNet_lib_D8722983(rel_path);
+            combined = (char *)http_malloc(dir_len + rel_len + 1);
+            if (combined == NULL)
+                return NULL;
+            sceKernelMemcpy(combined, base_path, dir_len);
+            combined[dir_len] = '\0';
+        } else {
+            u32 base_len = sceNet_lib_D8722983(base_path);
+            u32 rel_len = sceNet_lib_D8722983(rel_path);
+            combined = (char *)http_malloc(base_len + rel_len + 1);
+            if (combined == NULL)
+                return NULL;
+            sceNet_lib_80C9F02A(combined, base_path);
+        }
+        sceNet_lib_5705F6F9(combined, rel_path);
+    }
+
     {
-      v18 = sceNet_lib_D8722983(a2) + 1;
-      v19 = http_opts_fn_2(v18);
-      v9 = v19;
-      if ( v19 == 0 )
+        u32 comb_len = sceNet_lib_D8722983(combined);
+        swept = (char *)http_malloc(comb_len + 1);
+        if (swept != NULL && sceUriSweepPath(swept, combined, comb_len + 1) >= 0) {
+            http_free(combined);
+            return swept;
+        }
+    }
+
+    http_free(combined);
+    if (swept != NULL)
+        http_free(swept);
+    return NULL;
+}
+
+void *http_malloc(u32 size)
+{
+    void *ptr = NULL;
+
+    if (g_http_alloc_fn != NULL) {
+        ptr = g_http_alloc_fn(size);
+    } else if (sceKernelTryAllocateVpl(g_http_vpl_id, size, &ptr) < 0) {
+        ptr = NULL;
+    }
+
+    if (ptr != NULL)
+        g_http_alloc_count++;
+    return ptr;
+}
+
+void http_free(void *ptr)
+{
+    if (ptr != NULL)
+        g_http_alloc_count--;
+    if (g_http_free_fn != NULL)
+        g_http_free_fn(ptr);
+    else
+        sceKernelFreeVpl(g_http_vpl_id, ptr);
+}
+
+s32 sceHttpSetMallocFunction(void *(*alloc_fn)(u32), void (*free_fn)(void *), void *(*realloc_fn)(void *, u32))
+{
+    s32 ret;
+
+    if (_sceKernelCheckThreadStack() < 2016)
+        return SCE_HTTP_ERROR_OUT_OF_STACK;
+    if (alloc_fn == NULL || free_fn == NULL || realloc_fn == NULL)
+        return SCE_HTTP_ERROR_INVALID_VALUE;
+    if (g_http_alloc_count > 0)
+        return SCE_HTTP_ERROR_BUSY;
+
+    if (g_http_vpl_id != 0) {
+        ret = sceKernelDeleteVpl(g_http_vpl_id);
+        if (ret < 0)
+            return ret;
+        g_http_vpl_id = 0;
+    }
+
+    g_http_alloc_fn = alloc_fn;
+    g_http_free_fn = free_fn;
+    g_http_realloc_fn = realloc_fn;
+    return 0;
+}
+
+s32 http_pool_init(u32 size)
+{
+    u32 part_id;
+    s32 ret;
+
+    if (size == 0)
         return 0;
-      sceKernelMemcpy(v19, a2, v18);
-    }
-    else
-    {
-      v5 = sceNet_lib_F48963C6(a1, 47);
-      if ( v5 != 0 )
-      {
-        v7 = v5 - a1 + 1;
-        v6 = sceNet_lib_D8722983(a2);
-        v8 = http_opts_fn_2(v7 + v6 + 1);
-        v9 = v8;
-        if ( v8 == 0 )
-          return 0;
-        sceKernelMemcpy(v8, a1, v7);
-        *(u8 *)(v9 + v7) = 0;
-        v10 = a2;
-        v11 = v9;
-      }
-      else
-      {
-        v16 = sceNet_lib_D8722983(a1);
-        v15 = sceNet_lib_D8722983(a2);
-        v17 = http_opts_fn_2(v16 + v15 + 1);
-        v9 = v17;
-        if ( v17 == 0 )
-          return 0;
-        sceNet_lib_80C9F02A(v17, a1);
-        v11 = v9;
-        v10 = a2;
-      }
-      sceNet_lib_5705F6F9(v11, v10);
-    }
-    v12 = sceNet_lib_D8722983(v9);
-    v13 = http_opts_fn_2(v12 + 1);
-    if ( v13 != 0 )
-    {
-      v14 = sceNet_lib_D8722983(v9);
-      if ( sceUriSweepPath(v13, v9, v14 + 1) >= 0 )
-      {
-        result = v13;
-        if ( v9 != 0 )
-        {
-          http_opts_fn_3(v9);
-          return v13;
+
+    ret = sceKernelQueryMemoryInfo(&g_http_vpl_id, &part_id, NULL);
+    if (ret >= 0) {
+        ret = sceKernelCreateVpl("SceHttp", (s32)part_id, 0, size, NULL);
+        if (ret >= 0) {
+            g_http_vpl_id = ret;
+            g_http_vpl_size = (s32)size;
+            return 0;
         }
-        return result;
-      }
     }
-    if ( v9 != 0 )
-      http_opts_fn_3(v9);
-    if ( v13 == 0 )
-      return 0;
-    http_opts_fn_3(v13);
+
+    if (g_http_vpl_id != 0) {
+        sceKernelDeleteVpl(g_http_vpl_id);
+        g_http_vpl_id = 0;
+    }
+    return ret;
+}
+
+void http_pool_term(void)
+{
+    if (g_http_vpl_id != 0) {
+        sceKernelDeleteVpl(g_http_vpl_id);
+        g_http_vpl_id = 0;
+        g_http_vpl_size = 0;
+    }
+}
+
+s32 http_pool_get_size(void)
+{
+    if (g_http_alloc_fn != NULL)
+        return -1;
+    return g_http_vpl_size;
+}
+
+/* -------------------------------------------------------------------------
+ * Template / Connection / Request option setters
+ * ------------------------------------------------------------------------- */
+s32 sceHttpSetResolveRetry(s32 id, s32 retry)
+{
+    HttpTemplate *tmpl = NULL;
+    s32 ret;
+
+    if (_sceKernelCheckThreadStack() < 2016)
+        return SCE_HTTP_ERROR_OUT_OF_STACK;
+    if (http_is_inited() != 1)
+        return SCE_HTTP_ERROR_BEFORE_INIT;
+
+    ret = http_lock_template(id, &tmpl);
+    if (ret >= 0) {
+        tmpl->resolve_retry = retry;
+        http_unlock_template(tmpl);
+    }
+    return ret;
+}
+
+s32 sceHttpSetResolveTimeOut(s32 id, u32 usec)
+{
+    HttpTemplate *tmpl = NULL;
+    s32 ret;
+
+    if (_sceKernelCheckThreadStack() < 2016)
+        return SCE_HTTP_ERROR_OUT_OF_STACK;
+    if (http_is_inited() != 1)
+        return SCE_HTTP_ERROR_BEFORE_INIT;
+
+    ret = http_lock_template(id, &tmpl);
+    if (ret >= 0) {
+        tmpl->resolve_timeout = usec;
+        http_unlock_template(tmpl);
+    }
+    return ret;
+}
+
+static s32 http_set_tmpl_or_conn_u32(s32 id, u32 val, u32 tmpl_off)
+{
+    s32 type;
+    s32 ret;
+
+    if (_sceKernelCheckThreadStack() < 2016)
+        return SCE_HTTP_ERROR_OUT_OF_STACK;
+    if (http_is_inited() != 1)
+        return SCE_HTTP_ERROR_BEFORE_INIT;
+
+    type = http_handle_type(id);
+    if (type < 0)
+        return type;
+
+    if (type == HTTP_HANDLE_TEMPLATE) {
+        HttpTemplate *tmpl = NULL;
+        ret = http_lock_template(id, &tmpl);
+        if (ret >= 0) {
+            *(u32 *)((u8 *)tmpl + tmpl_off) = val;
+            http_unlock_template(tmpl);
+        }
+        return ret;
+    }
+    if (type == HTTP_HANDLE_CONNECTION) {
+        HttpConnection *conn = NULL;
+        ret = http_lock_connection(id, &conn);
+        if (ret >= 0) {
+            *(u32 *)((u8 *)&conn->cfg + tmpl_off) = val;
+            http_unlock_connection(conn);
+        }
+        return ret;
+    }
+    return SCE_HTTP_ERROR_INVALID_ID;
+}
+
+s32 sceHttpSetConnectTimeOut(s32 id, u32 usec)
+{
+    return http_set_tmpl_or_conn_u32(id, usec, offsetof(HttpTemplate, connect_timeout));
+}
+
+s32 sceHttpSetSendTimeOut(s32 id, u32 usec)
+{
+    return http_set_tmpl_or_conn_u32(id, usec, offsetof(HttpTemplate, send_timeout));
+}
+
+s32 sceHttpSetRecvTimeOut(s32 id, u32 usec)
+{
+    return http_set_tmpl_or_conn_u32(id, usec, offsetof(HttpTemplate, recv_timeout));
+}
+
+s32 sceHttp_CC920C12(s32 id)
+{
+    return http_set_tmpl_or_conn_u32(id, 1, offsetof(HttpTemplate, tcp_nodelay));
+}
+
+s32 sceHttp_D29163DA(s32 id)
+{
+    return http_set_tmpl_or_conn_u32(id, 0, offsetof(HttpTemplate, tcp_nodelay));
+}
+
+s32 sceHttpSetResHeaderMaxSize(s32 id, u32 size)
+{
+    return http_set_tmpl_or_conn_u32(id, size, offsetof(HttpTemplate, res_header_max_size));
+}
+
+s32 sceHttpSetRecvBlockSize(s32 id, u32 size)
+{
+    s32 type;
+    s32 ret;
+    HttpTemplate *tmpl = NULL;
+
+    if (_sceKernelCheckThreadStack() < 2016)
+        return SCE_HTTP_ERROR_OUT_OF_STACK;
+    if (http_is_inited() != 1)
+        return SCE_HTTP_ERROR_BEFORE_INIT;
+
+    type = http_handle_type(id);
+    if (type < 0)
+        return type;
+    if (type != HTTP_HANDLE_TEMPLATE)
+        return SCE_HTTP_ERROR_INVALID_ID;
+
+    ret = http_lock_template(id, &tmpl);
+    if (ret >= 0) {
+        tmpl->recv_block_size = size;
+        http_unlock_template(tmpl);
+    }
+    return ret;
+}
+
+s32 sceHttpSetCacheContentLengthMaxSize(s32 id, u32 size)
+{
+    s32 type;
+    s32 ret;
+
+    if (_sceKernelCheckThreadStack() < 2016)
+        return SCE_HTTP_ERROR_OUT_OF_STACK;
+    if (http_is_inited() != 1)
+        return SCE_HTTP_ERROR_BEFORE_INIT;
+
+    type = http_handle_type(id);
+    if (type < 0)
+        return type;
+
+    if (type == HTTP_HANDLE_TEMPLATE) {
+        HttpTemplate *tmpl = NULL;
+        ret = http_lock_template(id, &tmpl);
+        if (ret >= 0) {
+            tmpl->cache_content_max_size = size;
+            http_unlock_template(tmpl);
+        }
+        return ret;
+    }
+    if (type == HTTP_HANDLE_CONNECTION) {
+        HttpConnection *conn = NULL;
+        ret = http_lock_connection(id, &conn);
+        if (ret >= 0) {
+            conn->cfg.cache_content_max_size = size;
+            http_unlock_connection(conn);
+        }
+        return ret;
+    }
+    if (type == HTTP_HANDLE_REQUEST) {
+        HttpRequest *req = NULL;
+        ret = http_lock_request(id, &req);
+        if (ret >= 0) {
+            req->cfg.cache_content_max_size = size;
+            http_unlock_request(req);
+        }
+        return ret;
+    }
+    return SCE_HTTP_ERROR_INVALID_ID;
+}
+
+s32 sceHttpEnableKeepAlive(s32 id)
+{
+    return http_set_tmpl_or_conn_u32(id, 1, offsetof(HttpTemplate, keep_alive));
+}
+
+s32 sceHttpDisableKeepAlive(s32 id)
+{
+    return http_set_tmpl_or_conn_u32(id, 0, offsetof(HttpTemplate, keep_alive));
+}
+
+static s32 http_set_any_u32_locked(s32 id, u32 val, u32 tmpl_off)
+{
+    s32 type;
+    s32 intr;
+    s32 ret;
+
+    if (_sceKernelCheckThreadStack() < 2016)
+        return SCE_HTTP_ERROR_OUT_OF_STACK;
+    if (http_is_inited() != 1)
+        return SCE_HTTP_ERROR_BEFORE_INIT;
+
+    type = http_handle_type(id);
+    if (type < 0)
+        return type;
+
+    intr = http_intr_suspend();
+    if (type == HTTP_HANDLE_TEMPLATE) {
+        HttpTemplate *tmpl = NULL;
+        ret = http_lock_template(id, &tmpl);
+        if (tmpl != NULL) {
+            *(u32 *)((u8 *)tmpl + tmpl_off) = val;
+            tmpl->ref_count--;
+            ret = 0;
+        }
+    } else if (type == HTTP_HANDLE_CONNECTION) {
+        HttpConnection *conn = NULL;
+        ret = http_lock_connection(id, &conn);
+        if (conn != NULL) {
+            *(u32 *)((u8 *)&conn->cfg + tmpl_off) = val;
+            conn->ref_count--;
+            ret = 0;
+        }
+    } else if (type == HTTP_HANDLE_REQUEST) {
+        HttpRequest *req = NULL;
+        ret = http_lock_request(id, &req);
+        if (req != NULL) {
+            *(u32 *)((u8 *)&req->cfg + tmpl_off) = val;
+            req->ref_count--;
+        }
+    } else {
+        ret = SCE_HTTP_ERROR_INVALID_ID;
+    }
+    http_intr_resume(intr);
+    return ret;
+}
+
+static s32 http_set_any_u16_locked(s32 id, u16 val, u32 tmpl_off)
+{
+    s32 type;
+    s32 intr;
+    s32 ret;
+
+    if (_sceKernelCheckThreadStack() < 2016)
+        return SCE_HTTP_ERROR_OUT_OF_STACK;
+    if (http_is_inited() != 1)
+        return SCE_HTTP_ERROR_BEFORE_INIT;
+
+    type = http_handle_type(id);
+    if (type < 0)
+        return type;
+
+    intr = http_intr_suspend();
+    if (type == HTTP_HANDLE_TEMPLATE) {
+        HttpTemplate *tmpl = NULL;
+        ret = http_lock_template(id, &tmpl);
+        if (tmpl != NULL) {
+            *(u16 *)((u8 *)tmpl + tmpl_off) = val;
+            tmpl->ref_count--;
+            ret = 0;
+        }
+    } else if (type == HTTP_HANDLE_CONNECTION) {
+        HttpConnection *conn = NULL;
+        ret = http_lock_connection(id, &conn);
+        if (conn != NULL) {
+            *(u16 *)((u8 *)&conn->cfg + tmpl_off) = val;
+            conn->ref_count--;
+            ret = 0;
+        }
+    } else if (type == HTTP_HANDLE_REQUEST) {
+        HttpRequest *req = NULL;
+        ret = http_lock_request(id, &req);
+        if (req != NULL) {
+            *(u16 *)((u8 *)&req->cfg + tmpl_off) = val;
+            req->ref_count--;
+        }
+    } else {
+        ret = SCE_HTTP_ERROR_INVALID_ID;
+    }
+    http_intr_resume(intr);
+    return ret;
+}
+
+s32 sceHttpEnableCookie(s32 id)
+{
+    return http_set_any_u32_locked(id, 1, offsetof(HttpTemplate, cookie_enabled));
+}
+
+s32 sceHttpDisableCookie(s32 id)
+{
+    return http_set_any_u32_locked(id, 0, offsetof(HttpTemplate, cookie_enabled));
+}
+
+s32 sceHttpEnableAuth(s32 id)
+{
+    return http_set_any_u32_locked(id, 1, offsetof(HttpTemplate, auth_enabled));
+}
+
+s32 sceHttpDisableAuth(s32 id)
+{
+    return http_set_any_u32_locked(id, 0, offsetof(HttpTemplate, auth_enabled));
+}
+
+s32 sceHttp_CDB0DC58(s32 id)
+{
+    return http_set_any_u16_locked(id, 1, offsetof(HttpTemplate, proxy_auth_enabled));
+}
+
+s32 sceHttp_951D310E(s32 id)
+{
+    return http_set_any_u16_locked(id, 0, offsetof(HttpTemplate, proxy_auth_enabled));
+}
+
+s32 sceHttp_D80BE761(s32 id)
+{
+    return http_set_any_u16_locked(id, 1, offsetof(HttpTemplate, allow_http09));
+}
+
+s32 sceHttp_C0E69162(s32 id)
+{
+    return http_set_any_u16_locked(id, 0, offsetof(HttpTemplate, allow_http09));
+}
+
+s32 sceHttpEnableRedirect(s32 id)
+{
+    return http_set_tmpl_or_conn_u32(id, 1, offsetof(HttpTemplate, auto_redirect));
+}
+
+s32 sceHttpDisableRedirect(s32 id)
+{
+    return http_set_tmpl_or_conn_u32(id, 0, offsetof(HttpTemplate, auto_redirect));
+}
+
+s32 sceHttpChangeHttpVersion(s32 id, s32 version)
+{
+    s32 type;
+    s32 ret;
+
+    if (_sceKernelCheckThreadStack() < 2016)
+        return SCE_HTTP_ERROR_OUT_OF_STACK;
+    if (http_is_inited() != 1)
+        return SCE_HTTP_ERROR_BEFORE_INIT;
+
+    type = http_handle_type(id);
+    if (type < 0)
+        return type;
+
+    if (type == HTTP_HANDLE_TEMPLATE) {
+        HttpTemplate *tmpl = NULL;
+        ret = http_lock_template(id, &tmpl);
+        if (ret >= 0) {
+            tmpl->http_version = version;
+            http_unlock_template(tmpl);
+        }
+        return ret;
+    }
+    if (type == HTTP_HANDLE_CONNECTION) {
+        HttpConnection *conn = NULL;
+        ret = http_lock_connection(id, &conn);
+        if (ret >= 0) {
+            conn->cfg.auto_redirect = 0;
+            http_unlock_connection(conn);
+        }
+        return ret;
+    }
+    if (type == HTTP_HANDLE_REQUEST) {
+        HttpRequest *req = NULL;
+        ret = http_lock_request(id, &req);
+        if (ret >= 0) {
+            req->cfg.http_version = version;
+            http_unlock_request(req);
+        }
+        return ret;
+    }
+    return SCE_HTTP_ERROR_INVALID_ID;
+}
+
+s32 sceHttpDisableCache(s32 id)
+{
+    if (_sceKernelCheckThreadStack() < 2016)
+        return SCE_HTTP_ERROR_OUT_OF_STACK;
+    if (http_is_inited() != 1 || http_cache_mem_is_inited() != 1)
+        return SCE_HTTP_ERROR_BEFORE_INIT;
+    return http_set_any_u32_locked(id, HTTP_CACHE_NONE, offsetof(HttpTemplate, cache_mode));
+}
+
+static s32 http_set_callback_pair(s32 id, void *cb, void *arg, u32 cb_off, u32 arg_off, s32 has_arg)
+{
+    s32 type;
+    s32 intr;
+    s32 ret;
+
+    if (_sceKernelCheckThreadStack() < 2000)
+        return SCE_HTTP_ERROR_OUT_OF_STACK;
+    if (http_is_inited() != 1)
+        return SCE_HTTP_ERROR_BEFORE_INIT;
+
+    type = http_handle_type(id);
+    if (type < 0)
+        return type;
+
+    intr = http_intr_suspend();
+    ret = SCE_HTTP_ERROR_INVALID_ID;
+    if (type == HTTP_HANDLE_TEMPLATE) {
+        HttpTemplate *tmpl = NULL;
+        http_lock_template(id, &tmpl);
+        if (tmpl != NULL) {
+            *(void **)((u8 *)tmpl + cb_off) = cb;
+            if (has_arg)
+                *(void **)((u8 *)tmpl + arg_off) = arg;
+            tmpl->ref_count--;
+            ret = 0;
+        }
+    } else if (type == HTTP_HANDLE_CONNECTION) {
+        HttpConnection *conn = NULL;
+        http_lock_connection(id, &conn);
+        if (conn != NULL) {
+            *(void **)((u8 *)&conn->cfg + cb_off) = cb;
+            if (has_arg)
+                *(void **)((u8 *)&conn->cfg + arg_off) = arg;
+            conn->ref_count--;
+            ret = 0;
+        }
+    } else if (type == HTTP_HANDLE_REQUEST) {
+        HttpRequest *req = NULL;
+        ret = http_lock_request(id, &req);
+        if (req != NULL) {
+            *(void **)((u8 *)&req->cfg + cb_off) = cb;
+            if (has_arg)
+                *(void **)((u8 *)&req->cfg + arg_off) = arg;
+            req->ref_count--;
+        }
+    }
+    http_intr_resume(intr);
+    return ret;
+}
+
+s32 sceHttpSetAuthInfoCB(s32 id, void *cb)
+{
+    return http_set_callback_pair(id, cb, NULL, offsetof(HttpTemplate, auth_cb_legacy), 0, 0);
+}
+
+s32 sceHttpSetAuthInfoCallback(s32 id, void *cb, void *arg)
+{
+    return http_set_callback_pair(id, cb, arg,
+                                  offsetof(HttpTemplate, auth_cb),
+                                  offsetof(HttpTemplate, auth_cb_arg), 1);
+}
+
+s32 sceHttpSetRedirectCallback(s32 id, void *cb, void *arg)
+{
+    return http_set_callback_pair(id, cb, arg,
+                                  offsetof(HttpTemplate, redirect_cb),
+                                  offsetof(HttpTemplate, redirect_cb_arg), 1);
+}
+
+s32 sceHttpSetCookieSendCallback(s32 id, void *cb, void *arg)
+{
+    return http_set_callback_pair(id, cb, arg,
+                                  offsetof(HttpTemplate, cookie_send_cb),
+                                  offsetof(HttpTemplate, cookie_send_cb_arg), 1);
+}
+
+s32 sceHttpSetCookieRecvCallback(s32 id, void *cb, void *arg)
+{
+    return http_set_callback_pair(id, cb, arg,
+                                  offsetof(HttpTemplate, cookie_recv_cb),
+                                  offsetof(HttpTemplate, cookie_recv_cb_arg), 1);
+}
+
+/* -------------------------------------------------------------------------
+ * Extra headers & proxy configuration
+ * ------------------------------------------------------------------------- */
+s32 http_add_header_internal(s32 id, const char *name, const char *value, s32 mode)
+{
+    HttpHeaderNode *node = NULL;
+    HttpTemplate *cfg = NULL;
+    HttpConnection *conn = NULL;
+    HttpRequest *req = NULL;
+    s32 type;
+    s32 ret;
+    s32 intr;
+
+    if (http_is_inited() != 1)
+        return SCE_HTTP_ERROR_BEFORE_INIT;
+
+    if (mode == 0)
+        http_delete_header_internal(id, name);
+
+    ret = http_header_node_alloc(&node, name, value);
+    if (ret < 0)
+        goto fail;
+
+    type = http_handle_type(id);
+    if (type < 0) {
+        ret = type;
+        goto fail;
+    }
+
+    if (type == HTTP_HANDLE_TEMPLATE) {
+        ret = http_lock_template(id, &cfg);
+        if (ret < 0)
+            goto fail;
+    } else if (type == HTTP_HANDLE_CONNECTION) {
+        ret = http_lock_connection(id, &conn);
+        if (ret < 0)
+            goto fail;
+        cfg = &conn->cfg;
+    } else if (type == HTTP_HANDLE_REQUEST) {
+        ret = http_lock_request(id, &req);
+        if (ret < 0)
+            goto fail;
+        cfg = &req->cfg;
+    } else {
+        ret = SCE_HTTP_ERROR_INVALID_ID;
+        goto fail;
+    }
+
+    intr = http_intr_suspend();
+    if (cfg->headers == NULL) {
+        cfg->headers = node;
+    } else {
+        HttpHeaderNode *tail = cfg->headers;
+        while (tail->next != NULL)
+            tail = tail->next;
+        tail->next = node;
+    }
+
+    if (req != NULL)
+        req->ref_count--;
+    else if (conn != NULL)
+        conn->ref_count--;
+    else if (cfg != NULL)
+        cfg->ref_count--;
+
+    http_intr_resume(intr);
     return 0;
-  }
-  return result;
+
+fail:
+    http_header_list_free(node);
+    return ret;
 }
 
-
-int http_opts_fn_2(int a1)
+s32 http_header_list_remove(HttpHeaderNode **head, const char *name)
 {
-  int result;
-  u32 v2[4];
-
-  if ( HTTP_BSS_U32(0x2668) != NULL )
-  {
-    v2[0] = ((int (*)())HTTP_BSS_U32(0x2668))(a1, a1, v2);
-  }
-  else if ( sceKernelTryAllocateVpl(HTTP_BSS_U32(0x2674), a1, v2) < 0 )
-  {
-    v2[0] = 0;
-  }
-  result = v2[0];
-  if ( v2[0] != 0 )
-    ++HTTP_BSS_U32(0x267C);
-  return result;
-}
-
-
-int http_opts_fn_3(int a1)
-{
-  if ( a1 != 0 )
-    --HTTP_BSS_U32(0x267C);
-  if ( HTTP_BSS_U32(0x266C) != NULL )
-    return ((int (*)())HTTP_BSS_U32(0x266C))();
-  else
-    return sceKernelFreeVpl(HTTP_BSS_U32(0x2674), a1, 0x20000u, 0x20000u);
-}
-
-
-int sceHttpSetMallocFunction(int (*a1)(u32, u32, u32), int (*a2)(void), int a3)
-{
-  int v6; // dc
-  int result;
-
-  v6 = _sceKernelCheckThreadStack() < 2016;
-  result = -2143088522;
-  if ( !v6 )
-  {
-    result = 0;
-    if ( a1 == NULL || a2 == NULL || a3 == 0 )
-      return -2143088130;
-    if ( HTTP_BSS_U32(0x267C) > 0 )
-      return -2143088607;
-    if ( HTTP_BSS_U32(0x2674) == 0 )
-    {
-LABEL_8:
-      HTTP_BSS_U32(0x2668) = a1;
-      HTTP_BSS_U32(0x2670) = a3;
-      HTTP_BSS_U32(0x266C) = a2;
-      return result;
-    }
-    result = sceKernelDeleteVpl();
-    if ( result >= 0 )
-    {
-      HTTP_BSS_U32(0x2674) = 0;
-      goto LABEL_8;
-    }
-  }
-  return result;
-}
-
-
-int http_opts_fn_4(int a1)
-{
-  int MemoryInfo;
-  u32 v4[4];
-
-  if ( a1 == 0 )
-    return 0;
-  MemoryInfo = sceKernelQueryMemoryInfo(&HTTP_BSS_U32(0x2674), v4, 0);
-  if ( MemoryInfo >= 0 )
-  {
-    MemoryInfo = sceKernelCreateVpl("SceHttp", v4[0], 0, a1, 0);
-    if ( MemoryInfo >= 0 )
-    {
-      HTTP_BSS_U32(0x2674) = MemoryInfo;
-      HTTP_BSS_U32(0x2678) = a1;
-      return 0;
-    }
-  }
-  if ( HTTP_BSS_U32(0x2674) != 0 )
-  {
-    sceKernelDeleteVpl();
-    HTTP_BSS_U32(0x2674) = 0;
-  }
-  return MemoryInfo;
-}
-
-
-int http_opts_fn_5()
-{
-  int result;
-
-  if ( HTTP_BSS_U32(0x2674) != 0 )
-  {
-    result = sceKernelDeleteVpl();
-    HTTP_BSS_U32(0x2674) = 0;
-    HTTP_BSS_U32(0x2678) = 0;
-  }
-  return result;
-}
-
-
-int http_opts_fn_6()
-{
-  int result;
-
-  result = -1;
-  if ( HTTP_BSS_U32(0x2668) == NULL )
-    return HTTP_BSS_U32(0x2678);
-  return result;
-}
-
-
-int sceHttpSetResolveRetry(int a1, int a2)
-{
-  int v4; // dc
-  int result;
-  int v6;
-  int v7;
-  int v8;
-  int v9;
-  u32 v10[4];
-
-  v4 = _sceKernelCheckThreadStack() < 2016;
-  result = -2143088522;
-  if ( !v4 )
-  {
-    v10[0] = 0;
-    v6 = -2143088639;
-    if ( http_opts_fn_23() == 1 && (v6 = http_io_fn_31(a1, v10, 1)) >= 0 )
-    {
-      *(u32 *)(v10[0] + 12) = a2;
-      v7 = http_io_fn_89();
-      v8 = v10[0];
-      --*(u32 *)(v10[0] + 8);
-      http_io_fn_90(v7, v8, v9);
-      return v6;
-    }
-    else
-    {
-      return v6;
-    }
-  }
-  return result;
-}
-
-
-int sceHttpSetResolveTimeOut(int a1, int a2)
-{
-  int v4; // dc
-  int result;
-  int v6;
-  int v7;
-  int v8;
-  int v9;
-  u32 v10[4];
-
-  v4 = _sceKernelCheckThreadStack() < 2016;
-  result = -2143088522;
-  if ( !v4 )
-  {
-    v10[0] = 0;
-    v6 = -2143088639;
-    if ( http_opts_fn_23() == 1 && (v6 = http_io_fn_31(a1, v10, 1)) >= 0 )
-    {
-      *(u32 *)(v10[0] + 24) = a2;
-      v7 = http_io_fn_89();
-      v8 = v10[0];
-      --*(u32 *)(v10[0] + 8);
-      http_io_fn_90(v7, v8, v9);
-      return v6;
-    }
-    else
-    {
-      return v6;
-    }
-  }
-  return result;
-}
-
-
-int sceHttpSetConnectTimeOut(int a1, int a2)
-{
-  int v4; // dc
-  int result;
-  int v6;
-  int v7;
-  int v8;
-  int v9;
-  int v10;
-  int v11;
-  int v12;
-  int v13;
-  u32 v14[3];
-
-  v4 = _sceKernelCheckThreadStack() < 2016;
-  result = -2143088522;
-  if ( !v4 )
-  {
-    v13 = 0;
-    v6 = -2143088639;
-    v14[0] = 0;
-    if ( http_opts_fn_23() == 1 )
-    {
-      v7 = http_io_fn_43(a1);
-      v6 = v7;
-      if ( v7 >= 0 )
-      {
-        if ( v7 != 0 )
-        {
-          v6 = -2143088384;
-          if ( v7 == 0x1000000 )
-          {
-            v6 = http_io_fn_23(a1, v14, 0x1000000);
-            if ( v6 >= 0 )
-            {
-              *(u32 *)(v14[0] + 204) = a2;
-              v9 = http_io_fn_89();
-              v12 = v14[0];
-LABEL_10:
-              --*(u32 *)(v12 + 8);
-              http_io_fn_90(v9, v10, v11);
-              return v6;
-            }
-          }
-        }
-        else
-        {
-          v6 = http_io_fn_31(a1, &v13, v8);
-          if ( v6 >= 0 )
-          {
-            *(u32 *)(v13 + 28) = a2;
-            v9 = http_io_fn_89();
-            v12 = v13;
-            goto LABEL_10;
-          }
-        }
-      }
-    }
-    return v6;
-  }
-  return result;
-}
-
-
-int sceHttpSetSendTimeOut(int a1, int a2)
-{
-  int v4; // dc
-  int result;
-  int v6;
-  int v7;
-  int v8;
-  int v9;
-  int v10;
-  int v11;
-  int v12;
-  int v13;
-  u32 v14[3];
-
-  v4 = _sceKernelCheckThreadStack() < 2016;
-  result = -2143088522;
-  if ( !v4 )
-  {
-    v13 = 0;
-    v6 = -2143088639;
-    v14[0] = 0;
-    if ( http_opts_fn_23() == 1 )
-    {
-      v7 = http_io_fn_43(a1);
-      v6 = v7;
-      if ( v7 >= 0 )
-      {
-        if ( v7 != 0 )
-        {
-          v6 = -2143088384;
-          if ( v7 == 0x1000000 )
-          {
-            v6 = http_io_fn_23(a1, v14, 0x1000000);
-            if ( v6 >= 0 )
-            {
-              *(u32 *)(v14[0] + 212) = a2;
-              v9 = http_io_fn_89();
-              v12 = v14[0];
-LABEL_10:
-              --*(u32 *)(v12 + 8);
-              http_io_fn_90(v9, v10, v11);
-              return v6;
-            }
-          }
-        }
-        else
-        {
-          v6 = http_io_fn_31(a1, &v13, v8);
-          if ( v6 >= 0 )
-          {
-            *(u32 *)(v13 + 36) = a2;
-            v9 = http_io_fn_89();
-            v12 = v13;
-            goto LABEL_10;
-          }
-        }
-      }
-    }
-    return v6;
-  }
-  return result;
-}
-
-
-int sceHttpSetRecvTimeOut(int a1, int a2)
-{
-  int v4; // dc
-  int result;
-  int v6;
-  int v7;
-  int v8;
-  int v9;
-  int v10;
-  int v11;
-  int v12;
-  int v13;
-  u32 v14[3];
-
-  v4 = _sceKernelCheckThreadStack() < 2016;
-  result = -2143088522;
-  if ( !v4 )
-  {
-    v13 = 0;
-    v6 = -2143088639;
-    v14[0] = 0;
-    if ( http_opts_fn_23() == 1 )
-    {
-      v7 = http_io_fn_43(a1);
-      v6 = v7;
-      if ( v7 >= 0 )
-      {
-        if ( v7 != 0 )
-        {
-          v6 = -2143088384;
-          if ( v7 == 0x1000000 )
-          {
-            v6 = http_io_fn_23(a1, v14, 0x1000000);
-            if ( v6 >= 0 )
-            {
-              *(u32 *)(v14[0] + 208) = a2;
-              v9 = http_io_fn_89();
-              v12 = v14[0];
-LABEL_10:
-              --*(u32 *)(v12 + 8);
-              http_io_fn_90(v9, v10, v11);
-              return v6;
-            }
-          }
-        }
-        else
-        {
-          v6 = http_io_fn_31(a1, &v13, v8);
-          if ( v6 >= 0 )
-          {
-            *(u32 *)(v13 + 32) = a2;
-            v9 = http_io_fn_89();
-            v12 = v13;
-            goto LABEL_10;
-          }
-        }
-      }
-    }
-    return v6;
-  }
-  return result;
-}
-
-
-int sceHttp_CC920C12(int a1)
-{
-  int v2; // dc
-  int result;
-  int v4;
-  int v5;
-  int v6;
-  int v7;
-  int v8;
-  int v9;
-  int v10;
-  int v11;
-  u32 v12[3];
-
-  v2 = _sceKernelCheckThreadStack() < 2016;
-  result = -2143088522;
-  if ( !v2 )
-  {
-    v11 = 0;
-    v4 = -2143088639;
-    v12[0] = 0;
-    if ( http_opts_fn_23() == 1 )
-    {
-      v5 = http_io_fn_43(a1);
-      v4 = v5;
-      if ( v5 >= 0 )
-      {
-        if ( v5 != 0 )
-        {
-          v4 = -2143088384;
-          if ( v5 == 0x1000000 )
-          {
-            v4 = http_io_fn_23(a1, v12, 0x1000000);
-            if ( v4 >= 0 )
-            {
-              *(u32 *)(v12[0] + 268) = 1;
-              v7 = http_io_fn_89();
-              v10 = v12[0];
-LABEL_10:
-              --*(u32 *)(v10 + 8);
-              http_io_fn_90(v7, v8, v9);
-              return v4;
-            }
-          }
-        }
-        else
-        {
-          v4 = http_io_fn_31(a1, &v11, v6);
-          if ( v4 >= 0 )
-          {
-            *(u32 *)(v11 + 92) = 1;
-            v7 = http_io_fn_89();
-            v10 = v11;
-            goto LABEL_10;
-          }
-        }
-      }
-    }
-    return v4;
-  }
-  return result;
-}
-
-
-int sceHttp_D29163DA(int a1)
-{
-  int v2; // dc
-  int result;
-  int v4;
-  int v5;
-  int v6;
-  int v7;
-  int v8;
-  int v9;
-  int v10;
-  int v11;
-  u32 v12[3];
-
-  v2 = _sceKernelCheckThreadStack() < 2016;
-  result = -2143088522;
-  if ( !v2 )
-  {
-    v11 = 0;
-    v4 = -2143088639;
-    v12[0] = 0;
-    if ( http_opts_fn_23() == 1 )
-    {
-      v5 = http_io_fn_43(a1);
-      v4 = v5;
-      if ( v5 >= 0 )
-      {
-        if ( v5 != 0 )
-        {
-          v4 = -2143088384;
-          if ( v5 == 0x1000000 )
-          {
-            v4 = http_io_fn_23(a1, v12, 0x1000000);
-            if ( v4 >= 0 )
-            {
-              *(u32 *)(v12[0] + 268) = 0;
-              v7 = http_io_fn_89();
-              v10 = v12[0];
-LABEL_10:
-              --*(u32 *)(v10 + 8);
-              http_io_fn_90(v7, v8, v9);
-              return v4;
-            }
-          }
-        }
-        else
-        {
-          v4 = http_io_fn_31(a1, &v11, v6);
-          if ( v4 >= 0 )
-          {
-            *(u32 *)(v11 + 92) = 0;
-            v7 = http_io_fn_89();
-            v10 = v11;
-            goto LABEL_10;
-          }
-        }
-      }
-    }
-    return v4;
-  }
-  return result;
-}
-
-
-int sceHttpSetResHeaderMaxSize(int a1, int a2)
-{
-  int v4; // dc
-  int result;
-  int v6;
-  int v7;
-  int v8;
-  int v9;
-  int v10;
-  int v11;
-  int v12;
-  int v13;
-  u32 v14[3];
-
-  v4 = _sceKernelCheckThreadStack() < 2016;
-  result = -2143088522;
-  if ( !v4 )
-  {
-    v13 = 0;
-    v6 = -2143088639;
-    v14[0] = 0;
-    if ( http_opts_fn_23() == 1 )
-    {
-      v7 = http_io_fn_43(a1);
-      v6 = v7;
-      if ( v7 >= 0 )
-      {
-        if ( v7 != 0 )
-        {
-          v6 = -2143088384;
-          if ( v7 == 0x1000000 )
-          {
-            v6 = http_io_fn_23(a1, v14, 0x1000000);
-            if ( v6 >= 0 )
-            {
-              *(u32 *)(v14[0] + 216) = a2;
-              v9 = http_io_fn_89();
-              v12 = v14[0];
-LABEL_10:
-              --*(u32 *)(v12 + 8);
-              http_io_fn_90(v9, v10, v11);
-              return v6;
-            }
-          }
-        }
-        else
-        {
-          v6 = http_io_fn_31(a1, &v13, v8);
-          if ( v6 >= 0 )
-          {
-            *(u32 *)(v13 + 40) = a2;
-            v9 = http_io_fn_89();
-            v12 = v13;
-            goto LABEL_10;
-          }
-        }
-      }
-    }
-    return v6;
-  }
-  return result;
-}
-
-
-int sceHttpSetRecvBlockSize(int a1, int a2)
-{
-  int v4; // dc
-  int result;
-  int v6;
-  int v7;
-  int v8;
-  int v9;
-  int v10;
-  int v11;
-  u32 v12[4];
-
-  v4 = _sceKernelCheckThreadStack() < 2016;
-  result = -2143088522;
-  if ( !v4 )
-  {
-    v12[0] = 0;
-    v6 = -2143088639;
-    if ( http_opts_fn_23() == 1 )
-    {
-      v7 = http_io_fn_43(a1);
-      v6 = v7;
-      if ( v7 >= 0 )
-      {
-        if ( v7 != 0 )
-        {
-          return -2143088384;
-        }
-        else
-        {
-          v6 = http_io_fn_31(a1, v12, v8);
-          if ( v6 >= 0 )
-          {
-            *(u32 *)(v12[0] + 44) = a2;
-            v9 = http_io_fn_89();
-            v10 = v12[0];
-            --*(u32 *)(v12[0] + 8);
-            http_io_fn_90(v9, v11, v10);
-            return v6;
-          }
-        }
-      }
-    }
-    return v6;
-  }
-  return result;
-}
-
-
-int sceHttpSetCacheContentLengthMaxSize(int a1, int a2)
-{
-  int v4; // dc
-  int result;
-  int v6;
-  int v7;
-  int v8;
-  int v9;
-  int v10;
-  int v11;
-  int v12;
-  int v13;
-  int v14;
-  int v15;
-
-  v4 = _sceKernelCheckThreadStack() < 2016;
-  result = -2143088522;
-  if ( !v4 )
-  {
-    v13 = 0;
-    v6 = -2143088639;
-    v14 = 0;
-    v15 = 0;
-    if ( http_opts_fn_23() == 1 )
-    {
-      v7 = http_io_fn_43(a1);
-      v6 = v7;
-      if ( v7 >= 0 )
-      {
-        if ( v7 != 0 )
-        {
-          if ( v7 != 0x1000000 )
-          {
-            v6 = -2143088384;
-            if ( v7 == 0x2000000 )
-            {
-              v6 = http_io_fn_12(a1, &v15);
-              if ( v6 >= 0 )
-              {
-                *(u32 *)(v15 + 184) = a2;
-                v8 = http_io_fn_89();
-                --*(u32 *)(v15 + 32);
-LABEL_11:
-                http_io_fn_90(v8, v9, v10);
-                return v6;
-              }
-            }
-            return v6;
-          }
-          v6 = http_io_fn_23(a1, &v14, 0x1000000);
-          if ( v6 >= 0 )
-          {
-            *(u32 *)(v14 + 224) = a2;
-            v11 = http_io_fn_89();
-            v12 = v14;
-LABEL_14:
-            v8 = v11;
-            --*(u32 *)(v12 + 8);
-            goto LABEL_11;
-          }
-        }
-        else
-        {
-          v6 = http_io_fn_31(a1, &v13, 0x1000000);
-          if ( v6 >= 0 )
-          {
-            *(u32 *)(v13 + 48) = a2;
-            v11 = http_io_fn_89();
-            v12 = v13;
-            goto LABEL_14;
-          }
-        }
-      }
-    }
-    return v6;
-  }
-  return result;
-}
-
-
-int sceHttpEnableKeepAlive(int a1)
-{
-  int v2; // dc
-  int result;
-  int v4;
-  int v5;
-  int v6;
-  int v7;
-  int v8;
-  int v9;
-  int v10;
-  int v11;
-  u32 v12[3];
-
-  v2 = _sceKernelCheckThreadStack() < 2016;
-  result = -2143088522;
-  if ( !v2 )
-  {
-    v11 = 0;
-    v4 = -2143088639;
-    v12[0] = 0;
-    if ( http_opts_fn_23() == 1 )
-    {
-      v5 = http_io_fn_43(a1);
-      v4 = v5;
-      if ( v5 >= 0 )
-      {
-        if ( v5 != 0 )
-        {
-          v4 = -2143088384;
-          if ( v5 == 0x1000000 )
-          {
-            v4 = http_io_fn_23(a1, v12, 0x1000000);
-            if ( v4 >= 0 )
-            {
-              *(u32 *)(v12[0] + 252) = 1;
-              v7 = http_io_fn_89();
-              v10 = v12[0];
-LABEL_10:
-              --*(u32 *)(v10 + 8);
-              http_io_fn_90(v7, v8, v9);
-              return v4;
-            }
-          }
-        }
-        else
-        {
-          v4 = http_io_fn_31(a1, &v11, v6);
-          if ( v4 >= 0 )
-          {
-            *(u32 *)(v11 + 76) = 1;
-            v7 = http_io_fn_89();
-            v10 = v11;
-            goto LABEL_10;
-          }
-        }
-      }
-    }
-    return v4;
-  }
-  return result;
-}
-
-
-int sceHttpDisableKeepAlive(int a1)
-{
-  int v2; // dc
-  int result;
-  int v4;
-  int v5;
-  int v6;
-  int v7;
-  int v8;
-  int v9;
-  int v10;
-  int v11;
-  u32 v12[3];
-
-  v2 = _sceKernelCheckThreadStack() < 2016;
-  result = -2143088522;
-  if ( !v2 )
-  {
-    v11 = 0;
-    v4 = -2143088639;
-    v12[0] = 0;
-    if ( http_opts_fn_23() == 1 )
-    {
-      v5 = http_io_fn_43(a1);
-      v4 = v5;
-      if ( v5 >= 0 )
-      {
-        if ( v5 != 0 )
-        {
-          v4 = -2143088384;
-          if ( v5 == 0x1000000 )
-          {
-            v4 = http_io_fn_23(a1, v12, 0x1000000);
-            if ( v4 >= 0 )
-            {
-              *(u32 *)(v12[0] + 252) = 0;
-              v7 = http_io_fn_89();
-              v10 = v12[0];
-LABEL_10:
-              --*(u32 *)(v10 + 8);
-              http_io_fn_90(v7, v8, v9);
-              return v4;
-            }
-          }
-        }
-        else
-        {
-          v4 = http_io_fn_31(a1, &v11, v6);
-          if ( v4 >= 0 )
-          {
-            *(u32 *)(v11 + 76) = 0;
-            v7 = http_io_fn_89();
-            v10 = v11;
-            goto LABEL_10;
-          }
-        }
-      }
-    }
-    return v4;
-  }
-  return result;
-}
-
-
-int sceHttpEnableCookie(int a1)
-{
-  int v2; // dc
-  int result;
-  int v4;
-  int v5;
-  int v6;
-  int v7;
-  int v8;
-  int v9;
-  int v10;
-  int v11;
-  int v12;
-  int v13;
-  int v14;
-  int v15;
-  int v16;
-  int v17;
-  int v18;
-  int v19;
-
-  v2 = _sceKernelCheckThreadStack() < 2000;
-  result = -2143088522;
-  if ( !v2 )
-  {
-    v4 = -2143088639;
-    if ( http_opts_fn_23() == 1 )
-    {
-      v4 = http_io_fn_43(a1);
-      if ( v4 >= 0 )
-      {
-        v6 = http_io_fn_89();
-        v7 = v4 > 0x1000000;
-        if ( v4 == 0x1000000 )
-        {
-          v16 = http_io_fn_23(a1, &v18, v5);
-          v11 = v18;
-          v9 = v16;
-          if ( v18 == 0 )
-            goto LABEL_10;
-          v12 = *(u32 *)(v18 + 8);
-          *(u32 *)(v18 + 260) = 1;
-          v9 = 0;
-        }
-        else
-        {
-          v8 = 0x2000000;
-          if ( v4 > 0x1000000 )
-          {
-            if ( v4 == 0x2000000 )
-            {
-              v13 = http_io_fn_12(a1, &v19);
-              v14 = v19;
-              v9 = v13;
-              if ( v19 != 0 )
-              {
-                v15 = *(u32 *)(v19 + 32);
-                *(u32 *)(v19 + 220) = 1;
-                *(u32 *)(v14 + 32) = v15 - 1;
-              }
-              goto LABEL_10;
-            }
-            goto LABEL_9;
-          }
-          if ( v4 != 0 )
-          {
-LABEL_9:
-            v9 = -2143088384;
-LABEL_10:
-            http_io_fn_90(v6, v7, v8);
-            return v9;
-          }
-          v10 = http_io_fn_31(a1, &v17, 0x2000000);
-          v11 = v17;
-          v9 = v10;
-          if ( v17 == 0 )
-            goto LABEL_10;
-          v12 = *(u32 *)(v17 + 8);
-          v9 = 0;
-          *(u32 *)(v17 + 84) = 1;
-        }
-        *(u32 *)(v11 + 8) = v12 - 1;
-        goto LABEL_10;
-      }
-    }
-    return v4;
-  }
-  return result;
-}
-
-
-int sceHttpDisableCookie(int a1)
-{
-  int v2; // dc
-  int result;
-  int v4;
-  int v5;
-  int v6;
-  int v7;
-  int v8;
-  int v9;
-  int v10;
-  int v11;
-  int v12;
-  int v13;
-  int v14;
-  int v15;
-  int v16;
-  int v17;
-  int v18;
-
-  v2 = _sceKernelCheckThreadStack() < 2016;
-  result = -2143088522;
-  if ( !v2 )
-  {
-    v4 = -2143088639;
-    if ( http_opts_fn_23() == 1 )
-    {
-      v4 = http_io_fn_43(a1);
-      if ( v4 >= 0 )
-      {
-        v6 = http_io_fn_89();
-        v7 = v4 > 0x1000000;
-        switch ( v4 )
-        {
-          case 0:
-            v9 = http_io_fn_31(a1, &v16, 0);
-            v10 = v16;
-            v8 = v9;
-            if ( v16 == 0 )
-              goto LABEL_10;
-            v11 = *(u32 *)(v16 + 8);
-            v8 = 0;
-            *(u32 *)(v16 + 84) = 0;
-            break;
-          case 0x1000000:
-            v15 = http_io_fn_23(a1, &v17, v7);
-            v10 = v17;
-            v8 = v15;
-            if ( v17 == 0 )
-              goto LABEL_10;
-            v11 = *(u32 *)(v17 + 8);
-            *(u32 *)(v17 + 260) = 0;
-            v8 = 0;
-            break;
-          case 0x2000000:
-            v12 = http_io_fn_12(a1, &v18);
-            v13 = v18;
-            v8 = v12;
-            if ( v18 != 0 )
-            {
-              v14 = *(u32 *)(v18 + 32);
-              *(u32 *)(v18 + 220) = 0;
-              *(u32 *)(v13 + 32) = v14 - 1;
-            }
-            goto LABEL_10;
-          default:
-            v8 = -2143088384;
-LABEL_10:
-            http_io_fn_90(v6, v5, v7);
-            return v8;
-        }
-        *(u32 *)(v10 + 8) = v11 - 1;
-        goto LABEL_10;
-      }
-    }
-    return v4;
-  }
-  return result;
-}
-
-
-int sceHttpEnableAuth(int a1)
-{
-  int v2; // dc
-  int result;
-  int v4;
-  int v5;
-  int v6;
-  int v7;
-  int v8;
-  int v9;
-  int v10;
-  int v11;
-  int v12;
-  int v13;
-  int v14;
-  int v15;
-  int v16;
-  int v17;
-  int v18;
-  int v19;
-
-  v2 = _sceKernelCheckThreadStack() < 2000;
-  result = -2143088522;
-  if ( !v2 )
-  {
-    v4 = -2143088639;
-    if ( http_opts_fn_23() == 1 )
-    {
-      v4 = http_io_fn_43(a1);
-      if ( v4 >= 0 )
-      {
-        v6 = http_io_fn_89();
-        v7 = v4 > 0x1000000;
-        if ( v4 == 0x1000000 )
-        {
-          v16 = http_io_fn_23(a1, &v18, v5);
-          v11 = v18;
-          v9 = v16;
-          if ( v18 == 0 )
-            goto LABEL_10;
-          v12 = *(u32 *)(v18 + 8);
-          *(u32 *)(v18 + 264) = 1;
-          v9 = 0;
-        }
-        else
-        {
-          v8 = 0x2000000;
-          if ( v4 > 0x1000000 )
-          {
-            if ( v4 == 0x2000000 )
-            {
-              v13 = http_io_fn_12(a1, &v19);
-              v14 = v19;
-              v9 = v13;
-              if ( v19 != 0 )
-              {
-                v15 = *(u32 *)(v19 + 32);
-                *(u32 *)(v19 + 224) = 1;
-                *(u32 *)(v14 + 32) = v15 - 1;
-              }
-              goto LABEL_10;
-            }
-            goto LABEL_9;
-          }
-          if ( v4 != 0 )
-          {
-LABEL_9:
-            v9 = -2143088384;
-LABEL_10:
-            http_io_fn_90(v6, v7, v8);
-            return v9;
-          }
-          v10 = http_io_fn_31(a1, &v17, 0x2000000);
-          v11 = v17;
-          v9 = v10;
-          if ( v17 == 0 )
-            goto LABEL_10;
-          v12 = *(u32 *)(v17 + 8);
-          v9 = 0;
-          *(u32 *)(v17 + 88) = 1;
-        }
-        *(u32 *)(v11 + 8) = v12 - 1;
-        goto LABEL_10;
-      }
-    }
-    return v4;
-  }
-  return result;
-}
-
-
-int sceHttpDisableAuth(int a1)
-{
-  int v2; // dc
-  int result;
-  int v4;
-  int v5;
-  int v6;
-  int v7;
-  int v8;
-  int v9;
-  int v10;
-  int v11;
-  int v12;
-  int v13;
-  int v14;
-  int v15;
-  int v16;
-  int v17;
-  int v18;
-
-  v2 = _sceKernelCheckThreadStack() < 2016;
-  result = -2143088522;
-  if ( !v2 )
-  {
-    v4 = -2143088639;
-    if ( http_opts_fn_23() == 1 )
-    {
-      v4 = http_io_fn_43(a1);
-      if ( v4 >= 0 )
-      {
-        v6 = http_io_fn_89();
-        v7 = v4 > 0x1000000;
-        switch ( v4 )
-        {
-          case 0:
-            v9 = http_io_fn_31(a1, &v16, 0);
-            v10 = v16;
-            v8 = v9;
-            if ( v16 == 0 )
-              goto LABEL_10;
-            v11 = *(u32 *)(v16 + 8);
-            v8 = 0;
-            *(u32 *)(v16 + 88) = 0;
-            break;
-          case 0x1000000:
-            v15 = http_io_fn_23(a1, &v17, v7);
-            v10 = v17;
-            v8 = v15;
-            if ( v17 == 0 )
-              goto LABEL_10;
-            v11 = *(u32 *)(v17 + 8);
-            *(u32 *)(v17 + 264) = 0;
-            v8 = 0;
-            break;
-          case 0x2000000:
-            v12 = http_io_fn_12(a1, &v18);
-            v13 = v18;
-            v8 = v12;
-            if ( v18 != 0 )
-            {
-              v14 = *(u32 *)(v18 + 32);
-              *(u32 *)(v18 + 224) = 0;
-              *(u32 *)(v13 + 32) = v14 - 1;
-            }
-            goto LABEL_10;
-          default:
-            v8 = -2143088384;
-LABEL_10:
-            http_io_fn_90(v6, v5, v7);
-            return v8;
-        }
-        *(u32 *)(v10 + 8) = v11 - 1;
-        goto LABEL_10;
-      }
-    }
-    return v4;
-  }
-  return result;
-}
-
-
-int sceHttp_CDB0DC58(int a1)
-{
-  int v2; // dc
-  int result;
-  int v4;
-  int v5;
-  int v6;
-  int v7;
-  int v8;
-  int v9;
-  int v10;
-  int v11;
-  int v12;
-  int v13;
-  int v14;
-  int v15;
-  int v16;
-  int v17;
-  int v18;
-  int v19;
-
-  v2 = _sceKernelCheckThreadStack() < 2000;
-  result = -2143088522;
-  if ( !v2 )
-  {
-    v4 = -2143088639;
-    if ( http_opts_fn_23() == 1 )
-    {
-      v4 = http_io_fn_43(a1);
-      if ( v4 >= 0 )
-      {
-        v6 = http_io_fn_89();
-        v7 = v4 > 0x1000000;
-        if ( v4 == 0x1000000 )
-        {
-          v16 = http_io_fn_23(a1, &v18, v5);
-          v11 = v18;
-          v9 = v16;
-          if ( v18 == 0 )
-            goto LABEL_10;
-          v12 = *(u32 *)(v18 + 8);
-          *(u16 *)(v18 + 350) = 1;
-          v9 = 0;
-        }
-        else
-        {
-          v8 = 0x2000000;
-          if ( v4 > 0x1000000 )
-          {
-            if ( v4 == 0x2000000 )
-            {
-              v13 = http_io_fn_12(a1, &v19);
-              v14 = v19;
-              v9 = v13;
-              if ( v19 != 0 )
-              {
-                v15 = *(u32 *)(v19 + 32);
-                *(u16 *)(v19 + 310) = 1;
-                *(u32 *)(v14 + 32) = v15 - 1;
-              }
-              goto LABEL_10;
-            }
-            goto LABEL_9;
-          }
-          if ( v4 != 0 )
-          {
-LABEL_9:
-            v9 = -2143088384;
-LABEL_10:
-            http_io_fn_90(v6, v7, v8);
-            return v9;
-          }
-          v10 = http_io_fn_31(a1, &v17, 0x2000000);
-          v11 = v17;
-          v9 = v10;
-          if ( v17 == 0 )
-            goto LABEL_10;
-          v12 = *(u32 *)(v17 + 8);
-          v9 = 0;
-          *(u16 *)(v17 + 174) = 1;
-        }
-        *(u32 *)(v11 + 8) = v12 - 1;
-        goto LABEL_10;
-      }
-    }
-    return v4;
-  }
-  return result;
-}
-
-
-int sceHttp_951D310E(int a1)
-{
-  int v2; // dc
-  int result;
-  int v4;
-  int v5;
-  int v6;
-  int v7;
-  int v8;
-  int v9;
-  int v10;
-  int v11;
-  int v12;
-  int v13;
-  int v14;
-  int v15;
-  int v16;
-  int v17;
-  int v18;
-
-  v2 = _sceKernelCheckThreadStack() < 2016;
-  result = -2143088522;
-  if ( !v2 )
-  {
-    v4 = -2143088639;
-    if ( http_opts_fn_23() == 1 )
-    {
-      v4 = http_io_fn_43(a1);
-      if ( v4 >= 0 )
-      {
-        v6 = http_io_fn_89();
-        v7 = v4 > 0x1000000;
-        switch ( v4 )
-        {
-          case 0:
-            v9 = http_io_fn_31(a1, &v16, 0);
-            v10 = v16;
-            v8 = v9;
-            if ( v16 == 0 )
-              goto LABEL_10;
-            v11 = *(u32 *)(v16 + 8);
-            v8 = 0;
-            *(u16 *)(v16 + 174) = 0;
-            break;
-          case 0x1000000:
-            v15 = http_io_fn_23(a1, &v17, v7);
-            v10 = v17;
-            v8 = v15;
-            if ( v17 == 0 )
-              goto LABEL_10;
-            v11 = *(u32 *)(v17 + 8);
-            *(u16 *)(v17 + 350) = 0;
-            v8 = 0;
-            break;
-          case 0x2000000:
-            v12 = http_io_fn_12(a1, &v18);
-            v13 = v18;
-            v8 = v12;
-            if ( v18 != 0 )
-            {
-              v14 = *(u32 *)(v18 + 32);
-              *(u16 *)(v18 + 310) = 0;
-              *(u32 *)(v13 + 32) = v14 - 1;
-            }
-            goto LABEL_10;
-          default:
-            v8 = -2143088384;
-LABEL_10:
-            http_io_fn_90(v6, v5, v7);
-            return v8;
-        }
-        *(u32 *)(v10 + 8) = v11 - 1;
-        goto LABEL_10;
-      }
-    }
-    return v4;
-  }
-  return result;
-}
-
-
-int sceHttp_D80BE761(int a1)
-{
-  int v2; // dc
-  int result;
-  int v4;
-  int v5;
-  int v6;
-  int v7;
-  int v8;
-  int v9;
-  int v10;
-  int v11;
-  int v12;
-  int v13;
-  int v14;
-  int v15;
-  int v16;
-  int v17;
-  int v18;
-  int v19;
-
-  v2 = _sceKernelCheckThreadStack() < 2000;
-  result = -2143088522;
-  if ( !v2 )
-  {
-    v4 = -2143088639;
-    if ( http_opts_fn_23() == 1 )
-    {
-      v4 = http_io_fn_43(a1);
-      if ( v4 >= 0 )
-      {
-        v6 = http_io_fn_89();
-        v7 = v4 > 0x1000000;
-        if ( v4 == 0x1000000 )
-        {
-          v16 = http_io_fn_23(a1, &v18, v5);
-          v11 = v18;
-          v9 = v16;
-          if ( v18 == 0 )
-            goto LABEL_10;
-          v12 = *(u32 *)(v18 + 8);
-          *(u16 *)(v18 + 274) = 1;
-          v9 = 0;
-        }
-        else
-        {
-          v8 = 0x2000000;
-          if ( v4 > 0x1000000 )
-          {
-            if ( v4 == 0x2000000 )
-            {
-              v13 = http_io_fn_12(a1, &v19);
-              v14 = v19;
-              v9 = v13;
-              if ( v19 != 0 )
-              {
-                v15 = *(u32 *)(v19 + 32);
-                *(u16 *)(v19 + 234) = 1;
-                *(u32 *)(v14 + 32) = v15 - 1;
-              }
-              goto LABEL_10;
-            }
-            goto LABEL_9;
-          }
-          if ( v4 != 0 )
-          {
-LABEL_9:
-            v9 = -2143088384;
-LABEL_10:
-            http_io_fn_90(v6, v7, v8);
-            return v9;
-          }
-          v10 = http_io_fn_31(a1, &v17, 0x2000000);
-          v11 = v17;
-          v9 = v10;
-          if ( v17 == 0 )
-            goto LABEL_10;
-          v12 = *(u32 *)(v17 + 8);
-          v9 = 0;
-          *(u16 *)(v17 + 98) = 1;
-        }
-        *(u32 *)(v11 + 8) = v12 - 1;
-        goto LABEL_10;
-      }
-    }
-    return v4;
-  }
-  return result;
-}
-
-
-int sceHttp_C0E69162(int a1)
-{
-  int v2; // dc
-  int result;
-  int v4;
-  int v5;
-  int v6;
-  int v7;
-  int v8;
-  int v9;
-  int v10;
-  int v11;
-  int v12;
-  int v13;
-  int v14;
-  int v15;
-  int v16;
-  int v17;
-  int v18;
-
-  v2 = _sceKernelCheckThreadStack() < 2016;
-  result = -2143088522;
-  if ( !v2 )
-  {
-    v4 = -2143088639;
-    if ( http_opts_fn_23() == 1 )
-    {
-      v4 = http_io_fn_43(a1);
-      if ( v4 >= 0 )
-      {
-        v6 = http_io_fn_89();
-        v7 = v4 > 0x1000000;
-        switch ( v4 )
-        {
-          case 0:
-            v9 = http_io_fn_31(a1, &v16, 0);
-            v10 = v16;
-            v8 = v9;
-            if ( v16 == 0 )
-              goto LABEL_10;
-            v11 = *(u32 *)(v16 + 8);
-            v8 = 0;
-            *(u16 *)(v16 + 98) = 0;
-            break;
-          case 0x1000000:
-            v15 = http_io_fn_23(a1, &v17, v7);
-            v10 = v17;
-            v8 = v15;
-            if ( v17 == 0 )
-              goto LABEL_10;
-            v11 = *(u32 *)(v17 + 8);
-            *(u16 *)(v17 + 274) = 0;
-            v8 = 0;
-            break;
-          case 0x2000000:
-            v12 = http_io_fn_12(a1, &v18);
-            v13 = v18;
-            v8 = v12;
-            if ( v18 != 0 )
-            {
-              v14 = *(u32 *)(v18 + 32);
-              *(u16 *)(v18 + 234) = 0;
-              *(u32 *)(v13 + 32) = v14 - 1;
-            }
-            goto LABEL_10;
-          default:
-            v8 = -2143088384;
-LABEL_10:
-            http_io_fn_90(v6, v5, v7);
-            return v8;
-        }
-        *(u32 *)(v10 + 8) = v11 - 1;
-        goto LABEL_10;
-      }
-    }
-    return v4;
-  }
-  return result;
-}
-
-
-int sceHttpEnableRedirect(int a1)
-{
-  int v2; // dc
-  int result;
-  int v4;
-  int v5;
-  int v6;
-  int v7;
-  int v8;
-  int v9;
-  int v10;
-  int v11;
-  u32 v12[3];
-
-  v2 = _sceKernelCheckThreadStack() < 2016;
-  result = -2143088522;
-  if ( !v2 )
-  {
-    v11 = 0;
-    v4 = -2143088639;
-    v12[0] = 0;
-    if ( http_opts_fn_23() == 1 )
-    {
-      v5 = http_io_fn_43(a1);
-      v4 = v5;
-      if ( v5 >= 0 )
-      {
-        if ( v5 != 0 )
-        {
-          v4 = -2143088384;
-          if ( v5 == 0x1000000 )
-          {
-            v4 = http_io_fn_23(a1, v12, 0x1000000);
-            if ( v4 >= 0 )
-            {
-              *(u32 *)(v12[0] + 256) = 1;
-              v7 = http_io_fn_89();
-              v10 = v12[0];
-LABEL_10:
-              --*(u32 *)(v10 + 8);
-              http_io_fn_90(v7, v8, v9);
-              return v4;
-            }
-          }
-        }
-        else
-        {
-          v4 = http_io_fn_31(a1, &v11, v6);
-          if ( v4 >= 0 )
-          {
-            *(u32 *)(v11 + 80) = 1;
-            v7 = http_io_fn_89();
-            v10 = v11;
-            goto LABEL_10;
-          }
-        }
-      }
-    }
-    return v4;
-  }
-  return result;
-}
-
-
-int sceHttpDisableRedirect(int a1)
-{
-  int v2; // dc
-  int result;
-  int v4;
-  int v5;
-  int v6;
-  int v7;
-  int v8;
-  int v9;
-  int v10;
-  int v11;
-  u32 v12[3];
-
-  v2 = _sceKernelCheckThreadStack() < 2016;
-  result = -2143088522;
-  if ( !v2 )
-  {
-    v11 = 0;
-    v4 = -2143088639;
-    v12[0] = 0;
-    if ( http_opts_fn_23() == 1 )
-    {
-      v5 = http_io_fn_43(a1);
-      v4 = v5;
-      if ( v5 >= 0 )
-      {
-        if ( v5 != 0 )
-        {
-          v4 = -2143088384;
-          if ( v5 == 0x1000000 )
-          {
-            v4 = http_io_fn_23(a1, v12, 0x1000000);
-            if ( v4 >= 0 )
-            {
-              *(u32 *)(v12[0] + 256) = 0;
-              v7 = http_io_fn_89();
-              v10 = v12[0];
-LABEL_10:
-              --*(u32 *)(v10 + 8);
-              http_io_fn_90(v7, v8, v9);
-              return v4;
-            }
-          }
-        }
-        else
-        {
-          v4 = http_io_fn_31(a1, &v11, v6);
-          if ( v4 >= 0 )
-          {
-            *(u32 *)(v11 + 80) = 0;
-            v7 = http_io_fn_89();
-            v10 = v11;
-            goto LABEL_10;
-          }
-        }
-      }
-    }
-    return v4;
-  }
-  return result;
-}
-
-
-int sceHttpChangeHttpVersion(int a1, int a2)
-{
-  int v4; // dc
-  int result;
-  int v6;
-  int v7;
-  int v8;
-  int v9;
-  int v10;
-  int v11;
-  int v12;
-  int v13;
-  int v14;
-  int v15;
-
-  v4 = _sceKernelCheckThreadStack() < 2016;
-  result = -2143088522;
-  if ( !v4 )
-  {
-    v13 = 0;
-    v6 = -2143088639;
-    v14 = 0;
-    v15 = 0;
-    if ( http_opts_fn_23() == 1 )
-    {
-      v7 = http_io_fn_43(a1);
-      v6 = v7;
-      if ( v7 >= 0 )
-      {
-        if ( v7 != 0 )
-        {
-          if ( v7 != 0x1000000 )
-          {
-            v6 = -2143088384;
-            if ( v7 == 0x2000000 )
-            {
-              v6 = http_io_fn_12(a1, &v15);
-              if ( v6 >= 0 )
-              {
-                *(u32 *)(v15 + 140) = a2;
-                v8 = http_io_fn_89();
-                --*(u32 *)(v15 + 32);
-LABEL_11:
-                http_io_fn_90(v8, v9, v10);
-                return v6;
-              }
-            }
-            return v6;
-          }
-          v6 = http_io_fn_23(a1, &v14, 0x1000000);
-          if ( v6 >= 0 )
-          {
-            *(u32 *)(v14 + 256) = 0;
-            v11 = http_io_fn_89();
-            v12 = v14;
-LABEL_14:
-            v8 = v11;
-            --*(u32 *)(v12 + 8);
-            goto LABEL_11;
-          }
-        }
-        else
-        {
-          v6 = http_io_fn_31(a1, &v13, 0x1000000);
-          if ( v6 >= 0 )
-          {
-            *(u32 *)(v13 + 4) = a2;
-            v11 = http_io_fn_89();
-            v12 = v13;
-            goto LABEL_14;
-          }
-        }
-      }
-    }
-    return v6;
-  }
-  return result;
-}
-
-
-int sceHttpDisableCache(int a1)
-{
-  int v2; // dc
-  int result;
-  int v4;
-  int v5;
-  int v6;
-  int v7;
-  int v8;
-  int v9;
-  int v10;
-  int v11;
-  int v12;
-  int v13;
-  int v14;
-  int v15;
-  int v16;
-  int v17;
-  int v18;
-  int v19;
-
-  v2 = _sceKernelCheckThreadStack() < 2016;
-  result = -2143088522;
-  if ( !v2 )
-  {
-    v17 = 0;
-    v18 = 0;
-    if ( http_opts_fn_23() != 1 || http_io_fn_66() != 1 )
-      return -2143088639;
-    v4 = http_io_fn_43(a1);
-    if ( v4 >= 0 )
-    {
-      v6 = http_io_fn_89();
-      v7 = v4 > 0x1000000;
-      if ( v4 == 0x1000000 )
-      {
-        v16 = http_io_fn_23(a1, &v18, v5);
-        v11 = v18;
-        v9 = v16;
-        if ( v18 == 0 )
-          goto LABEL_12;
-        v12 = *(u32 *)(v18 + 8);
-        *(u32 *)(v18 + 196) = 0;
-        v9 = 0;
-      }
-      else
-      {
-        v8 = 0x2000000;
-        if ( v4 > 0x1000000 )
-        {
-          if ( v4 == 0x2000000 )
-          {
-            v13 = http_io_fn_12(a1, &v19);
-            v14 = v19;
-            v9 = v13;
-            if ( v19 != 0 )
-            {
-              v15 = *(u32 *)(v19 + 32);
-              *(u32 *)(v19 + 156) = 0;
-              *(u32 *)(v14 + 32) = v15 - 1;
-            }
-            goto LABEL_12;
-          }
-          goto LABEL_11;
-        }
-        if ( v4 != 0 )
-        {
-LABEL_11:
-          v9 = -2143088384;
-LABEL_12:
-          http_io_fn_90(v6, v7, v8);
-          return v9;
-        }
-        v10 = http_io_fn_31(a1, &v17, 0x2000000);
-        v11 = v17;
-        v9 = v10;
-        if ( v17 == 0 )
-          goto LABEL_12;
-        v12 = *(u32 *)(v17 + 8);
-        v9 = 0;
-        *(u32 *)(v17 + 20) = 0;
-      }
-      *(u32 *)(v11 + 8) = v12 - 1;
-      goto LABEL_12;
-    }
-    return v4;
-  }
-  return result;
-}
-
-
-int sceHttpSetAuthInfoCB(int a1, int a2)
-{
-  int v4; // dc
-  int result;
-  int v6;
-  int v7;
-  int v8;
-  int v9;
-  int v10;
-  int v11;
-  int v12;
-  int v13;
-  int v14;
-  int v15;
-  int v16;
-  int v17;
-  int v18;
-
-  v4 = _sceKernelCheckThreadStack() < 2000;
-  result = -2143088522;
-  if ( !v4 )
-  {
-    v6 = -2143088639;
-    if ( http_opts_fn_23() == 1 )
-    {
-      v6 = http_io_fn_43(a1);
-      if ( v6 >= 0 )
-      {
-        v8 = http_io_fn_89();
-        v9 = v6 > 0x1000000;
-        if ( v6 == 0x1000000 )
-        {
-          http_io_fn_23(a1, &v17, v9);
-          v11 = v17;
-          v10 = -2143088384;
-          if ( v17 == 0 )
-            goto LABEL_10;
-          v12 = *(u32 *)(v17 + 8);
-          *(u32 *)(v17 + 284) = a2;
-          v10 = 0;
-        }
-        else
-        {
-          if ( v6 > 0x1000000 )
-          {
-            if ( v6 == 0x2000000 )
-            {
-              v13 = http_io_fn_12(a1, &v18);
-              v14 = v18;
-              v10 = v13;
-              if ( v18 != 0 )
-              {
-                v15 = *(u32 *)(v18 + 32);
-                *(u32 *)(v18 + 244) = a2;
-                *(u32 *)(v14 + 32) = v15 - 1;
-                goto LABEL_10;
-              }
-            }
-            goto LABEL_9;
-          }
-          if ( v6 != 0 )
-          {
-LABEL_9:
-            v10 = -2143088384;
-LABEL_10:
-            http_io_fn_90(v8, v7, v9);
-            return v10;
-          }
-          http_io_fn_31(a1, &v16, 0);
-          v11 = v16;
-          v10 = -2143088384;
-          if ( v16 == 0 )
-            goto LABEL_10;
-          v12 = *(u32 *)(v16 + 8);
-          v10 = 0;
-          *(u32 *)(v16 + 108) = a2;
-        }
-        *(u32 *)(v11 + 8) = v12 - 1;
-        goto LABEL_10;
-      }
-    }
-    return v6;
-  }
-  return result;
-}
-
-
-int sceHttpSetAuthInfoCallback(int a1, int a2, int a3)
-{
-  int v6; // dc
-  int result;
-  int v8;
-  int v9;
-  int v10;
-  int v11;
-  int v12;
-  int v13;
-  int v14;
-  int v15;
-  int v16;
-  int v17;
-  int v18;
-  int v19;
-  int v20;
-  int v21;
-  int v22;
-
-  v6 = _sceKernelCheckThreadStack() < 2000;
-  result = -2143088522;
-  if ( !v6 )
-  {
-    v8 = -2143088639;
-    if ( http_opts_fn_23() == 1 )
-    {
-      v8 = http_io_fn_43(a1);
-      if ( v8 >= 0 )
-      {
-        v10 = http_io_fn_89();
-        v11 = v8 > 0x1000000;
-        if ( v8 == 0x1000000 )
-        {
-          http_io_fn_23(a1, &v21, v11);
-          v18 = v21;
-          v12 = -2143088384;
-          if ( v21 != 0 )
-          {
-            v19 = *(u32 *)(v21 + 8);
-            v12 = 0;
-            *(u32 *)(v21 + 288) = a2;
-            *(u32 *)(v18 + 8) = v19 - 1;
-            *(u32 *)(v18 + 292) = a3;
-          }
-          goto LABEL_10;
-        }
-        if ( v8 > 0x1000000 )
-        {
-          if ( v8 == 0x2000000 )
-          {
-            v15 = http_io_fn_12(a1, &v22);
-            v16 = v22;
-            v12 = v15;
-            if ( v22 != 0 )
-            {
-              v17 = *(u32 *)(v22 + 32);
-              *(u32 *)(v22 + 248) = a2;
-              *(u32 *)(v16 + 32) = v17 - 1;
-              *(u32 *)(v16 + 252) = a3;
-              goto LABEL_10;
-            }
-          }
-        }
-        else if ( v8 == 0 )
-        {
-          http_io_fn_31(a1, &v20, 0);
-          v13 = v20;
-          v12 = -2143088384;
-          if ( v20 != 0 )
-          {
-            v14 = *(u32 *)(v20 + 8);
-            v12 = 0;
-            *(u32 *)(v20 + 112) = a2;
-            *(u32 *)(v13 + 8) = v14 - 1;
-            *(u32 *)(v13 + 116) = a3;
-          }
-          goto LABEL_10;
-        }
-        v12 = -2143088384;
-LABEL_10:
-        http_io_fn_90(v10, v9, v11);
-        return v12;
-      }
-    }
-    return v8;
-  }
-  return result;
-}
-
-
-int sceHttpSetRedirectCallback(int a1, int a2, int a3)
-{
-  int v6; // dc
-  int result;
-  int v8;
-  int v9;
-  int v10;
-  int v11;
-  int v12;
-  int v13;
-  int v14;
-  int v15;
-  int v16;
-  int v17;
-  int v18;
-  int v19;
-  int v20;
-  int v21;
-  int v22;
-
-  v6 = _sceKernelCheckThreadStack() < 2000;
-  result = -2143088522;
-  if ( !v6 )
-  {
-    v8 = -2143088639;
-    if ( http_opts_fn_23() == 1 )
-    {
-      v8 = http_io_fn_43(a1);
-      if ( v8 >= 0 )
-      {
-        v10 = http_io_fn_89();
-        v11 = v8 > 0x1000000;
-        if ( v8 == 0x1000000 )
-        {
-          http_io_fn_23(a1, &v21, v11);
-          v18 = v21;
-          v12 = -2143088384;
-          if ( v21 != 0 )
-          {
-            v19 = *(u32 *)(v21 + 8);
-            v12 = 0;
-            *(u32 *)(v21 + 296) = a2;
-            *(u32 *)(v18 + 8) = v19 - 1;
-            *(u32 *)(v18 + 300) = a3;
-          }
-          goto LABEL_10;
-        }
-        if ( v8 > 0x1000000 )
-        {
-          if ( v8 == 0x2000000 )
-          {
-            v15 = http_io_fn_12(a1, &v22);
-            v16 = v22;
-            v12 = v15;
-            if ( v22 != 0 )
-            {
-              v17 = *(u32 *)(v22 + 32);
-              *(u32 *)(v22 + 256) = a2;
-              *(u32 *)(v16 + 32) = v17 - 1;
-              *(u32 *)(v16 + 260) = a3;
-              goto LABEL_10;
-            }
-          }
-        }
-        else if ( v8 == 0 )
-        {
-          http_io_fn_31(a1, &v20, 0);
-          v13 = v20;
-          v12 = -2143088384;
-          if ( v20 != 0 )
-          {
-            v14 = *(u32 *)(v20 + 8);
-            v12 = 0;
-            *(u32 *)(v20 + 120) = a2;
-            *(u32 *)(v13 + 8) = v14 - 1;
-            *(u32 *)(v13 + 124) = a3;
-          }
-          goto LABEL_10;
-        }
-        v12 = -2143088384;
-LABEL_10:
-        http_io_fn_90(v10, v9, v11);
-        return v12;
-      }
-    }
-    return v8;
-  }
-  return result;
-}
-
-
-int sceHttpSetCookieSendCallback(int a1, int a2, int a3)
-{
-  int v6; // dc
-  int result;
-  int v8;
-  int v9;
-  int v10;
-  int v11;
-  int v12;
-  int v13;
-  int v14;
-  int v15;
-  int v16;
-  int v17;
-  int v18;
-  int v19;
-  int v20;
-  int v21;
-  int v22;
-
-  v6 = _sceKernelCheckThreadStack() < 2000;
-  result = -2143088522;
-  if ( !v6 )
-  {
-    v8 = -2143088639;
-    if ( http_opts_fn_23() == 1 )
-    {
-      v8 = http_io_fn_43(a1);
-      if ( v8 >= 0 )
-      {
-        v10 = http_io_fn_89();
-        v11 = v8 > 0x1000000;
-        if ( v8 == 0x1000000 )
-        {
-          http_io_fn_23(a1, &v21, v11);
-          v18 = v21;
-          v12 = -2143088384;
-          if ( v21 != 0 )
-          {
-            v19 = *(u32 *)(v21 + 8);
-            v12 = 0;
-            *(u32 *)(v21 + 304) = a2;
-            *(u32 *)(v18 + 8) = v19 - 1;
-            *(u32 *)(v18 + 308) = a3;
-          }
-          goto LABEL_10;
-        }
-        if ( v8 > 0x1000000 )
-        {
-          if ( v8 == 0x2000000 )
-          {
-            v15 = http_io_fn_12(a1, &v22);
-            v16 = v22;
-            v12 = v15;
-            if ( v22 != 0 )
-            {
-              v17 = *(u32 *)(v22 + 32);
-              *(u32 *)(v22 + 264) = a2;
-              *(u32 *)(v16 + 32) = v17 - 1;
-              *(u32 *)(v16 + 268) = a3;
-              goto LABEL_10;
-            }
-          }
-        }
-        else if ( v8 == 0 )
-        {
-          http_io_fn_31(a1, &v20, 0);
-          v13 = v20;
-          v12 = -2143088384;
-          if ( v20 != 0 )
-          {
-            v14 = *(u32 *)(v20 + 8);
-            v12 = 0;
-            *(u32 *)(v20 + 128) = a2;
-            *(u32 *)(v13 + 8) = v14 - 1;
-            *(u32 *)(v13 + 132) = a3;
-          }
-          goto LABEL_10;
-        }
-        v12 = -2143088384;
-LABEL_10:
-        http_io_fn_90(v10, v9, v11);
-        return v12;
-      }
-    }
-    return v8;
-  }
-  return result;
-}
-
-
-int sceHttpSetCookieRecvCallback(int a1, int a2, int a3)
-{
-  int v6; // dc
-  int result;
-  int v8;
-  int v9;
-  int v10;
-  int v11;
-  int v12;
-  int v13;
-  int v14;
-  int v15;
-  int v16;
-  int v17;
-  int v18;
-  int v19;
-  int v20;
-  int v21;
-  int v22;
-
-  v6 = _sceKernelCheckThreadStack() < 2000;
-  result = -2143088522;
-  if ( !v6 )
-  {
-    v8 = -2143088639;
-    if ( http_opts_fn_23() == 1 )
-    {
-      v8 = http_io_fn_43(a1);
-      if ( v8 >= 0 )
-      {
-        v10 = http_io_fn_89();
-        v11 = v8 > 0x1000000;
-        if ( v8 == 0x1000000 )
-        {
-          http_io_fn_23(a1, &v21, v11);
-          v18 = v21;
-          v12 = -2143088384;
-          if ( v21 != 0 )
-          {
-            v19 = *(u32 *)(v21 + 8);
-            v12 = 0;
-            *(u32 *)(v21 + 312) = a2;
-            *(u32 *)(v18 + 8) = v19 - 1;
-            *(u32 *)(v18 + 316) = a3;
-          }
-          goto LABEL_10;
-        }
-        if ( v8 > 0x1000000 )
-        {
-          if ( v8 == 0x2000000 )
-          {
-            v15 = http_io_fn_12(a1, &v22);
-            v16 = v22;
-            v12 = v15;
-            if ( v22 != 0 )
-            {
-              v17 = *(u32 *)(v22 + 32);
-              *(u32 *)(v22 + 272) = a2;
-              *(u32 *)(v16 + 32) = v17 - 1;
-              *(u32 *)(v16 + 276) = a3;
-              goto LABEL_10;
-            }
-          }
-        }
-        else if ( v8 == 0 )
-        {
-          http_io_fn_31(a1, &v20, 0);
-          v13 = v20;
-          v12 = -2143088384;
-          if ( v20 != 0 )
-          {
-            v14 = *(u32 *)(v20 + 8);
-            v12 = 0;
-            *(u32 *)(v20 + 136) = a2;
-            *(u32 *)(v13 + 8) = v14 - 1;
-            *(u32 *)(v13 + 140) = a3;
-          }
-          goto LABEL_10;
-        }
-        v12 = -2143088384;
-LABEL_10:
-        http_io_fn_90(v10, v9, v11);
-        return v12;
-      }
-    }
-    return v8;
-  }
-  return result;
-}
-
-
-int http_opts_fn_7(int a1, int a2, int a3, int a4)
-{
-  int v4;
-  int v10;
-  int v11;
-  int v12;
-  int v13;
-  int v14;
-  int v15;
-  int v16;
-  int v17;
-  int v18;
-  int i;
-  int v20;
-  int v21;
-  int v22;
-  int v23;
-
-  v4 = -2143088639;
-  v21 = 0;
-  v22 = 0;
-  v23 = 0;
-  v20 = 0;
-  if ( http_opts_fn_23() != 1 )
-    goto LABEL_2;
-  if ( a4 == 0 )
-    http_opts_fn_9(a1, a2);
-  v4 = http_io_fn_78(&v20, a2, a3);
-  if ( v4 < 0 )
-    goto LABEL_2;
-  v10 = http_io_fn_43(a1);
-  v4 = v10;
-  if ( v10 < 0 )
-    goto LABEL_2;
-  if ( v10 != 0 )
-  {
-    if ( v10 == 0x1000000 )
-    {
-      v4 = http_io_fn_23(a1, &v22, v11);
-      if ( v4 >= 0 )
-      {
-        v12 = v22 + 176;
-        goto LABEL_12;
-      }
-    }
-    else
-    {
-      v4 = -2143088384;
-      if ( v10 == 0x2000000 )
-      {
-        v4 = http_io_fn_12(a1, &v23);
-        if ( v4 >= 0 )
-        {
-          v12 = v23 + 136;
-LABEL_12:
-          v21 = v12;
-          goto LABEL_13;
-        }
-      }
-    }
-LABEL_2:
-    http_io_fn_79(v20);
-    return v4;
-  }
-  v4 = http_io_fn_31(a1, &v21, v11);
-  if ( v4 < 0 )
-    goto LABEL_2;
-LABEL_13:
-  v13 = http_io_fn_89();
-  v15 = v21;
-  v16 = v13;
-  v17 = *(u32 *)(v21 + 152);
-  v18 = v20;
-  if ( v17 == 0 )
-  {
-LABEL_27:
-    *(u32 *)(v21 + 152) = v18;
-    goto LABEL_19;
-  }
-  for ( i = *(u32 *)(v21 + 152); ; i = v17 )
-  {
-    v17 = *(u32 *)(v17 + 8);
-    if ( v17 == 0 )
-      break;
-  }
-  if ( i == 0 )
-  {
-    v18 = v20;
-    goto LABEL_27;
-  }
-  *(u32 *)(i + 8) = v20;
-LABEL_19:
-  if ( v23 != 0 )
-  {
-    --*(u32 *)(v23 + 32);
-  }
-  else if ( v22 != 0 )
-  {
-    --*(u32 *)(v22 + 8);
-  }
-  else if ( v15 != 0 )
-  {
-    --*(u32 *)(v15 + 8);
-  }
-  http_io_fn_90(v16, v15, v14);
-  return 0;
-}
-
-
-int http_opts_fn_8(int **a1, int a2)
-{
-  int *v4;
-  int *v5;
-  int i;
-
-  v4 = NULL;
-  if ( a1 == NULL || a2 == 0 )
-    return -2143088130;
-  v5 = *a1;
-  if ( *a1 == NULL )
-    return -2143088603;
-  for ( i = *v5; sceNet_lib_9CFBC7E3(i, a2) != 0; i = *v5 )
-  {
-    v4 = v5;
-    v5 = (int *)v5[2];
-    if ( v5 == NULL )
-      return -2143088603;
-  }
-  if ( v4 != NULL )
-    v4[2] = v5[2];
-  else
-    *a1 = (int *)v5[2];
-  http_opts_fn_3(*v5);
-  http_opts_fn_3(v5[1]);
-  http_opts_fn_3((int)v5);
-  return 0;
-}
-
-
-int http_opts_fn_9(int a1, int a2)
-{
-  int v4;
-  int v5;
-  int result;
-  int v7;
-  int v8;
-  int v9;
-  int v10;
-  int v11;
-  int v12;
-  int v13;
-  int v14;
-  int v15;
-  int v16;
-  int v17;
-
-  v4 = -2143088639;
-  v5 = 0;
-  v15 = 0;
-  v16 = 0;
-  v17 = 0;
-  if ( http_opts_fn_23() != 1 )
-    return v4;
-  v4 = -2143088603;
-  if ( a2 == 0 )
-    return v4;
-  v7 = http_io_fn_43(a1);
-  v4 = v7;
-  if ( v7 < 0 )
-    return v4;
-  if ( v7 != 0 )
-  {
-    if ( v7 == 0x1000000 )
-    {
-      v4 = http_io_fn_23(a1, &v16, v8);
-      if ( v4 < 0 )
-        return v4;
-      v9 = v16 + 176;
-    }
-    else
-    {
-      v4 = -2143088384;
-      if ( v7 != 0x2000000 )
-        return v4;
-      v4 = http_io_fn_12(a1, &v17);
-      if ( v4 < 0 )
-        return v4;
-      v9 = v17 + 136;
-    }
-    v15 = v9;
-LABEL_11:
-    v12 = http_io_fn_89();
-    if ( v4 >= 0 )
-    {
-      while ( 1 )
-      {
-        v4 = http_opts_fn_8((int **)(v15 + 152), a2);
-        if ( v4 < 0 )
-          break;
-        v5 = 1;
-      }
-    }
-    if ( v17 != 0 )
-    {
-      --*(u32 *)(v17 + 32);
-      goto LABEL_17;
-    }
-    v13 = v16;
-    if ( v16 != 0 )
-    {
-      v14 = *(u32 *)(v16 + 8);
-    }
-    else
-    {
-      v13 = v15;
-      if ( v15 == 0 )
-        goto LABEL_17;
-      v14 = *(u32 *)(v15 + 8);
-    }
-    *(u32 *)(v13 + 8) = v14 - 1;
-LABEL_17:
-    http_io_fn_90(v12, v10, v11);
-    if ( v5 != 0 )
-      return 0;
-    return v4;
-  }
-  result = http_io_fn_31(a1, &v15, v8);
-  v4 = result;
-  if ( result >= 0 )
-    goto LABEL_11;
-  return result;
-}
-
-
-int sceHttpSetProxy(int a1, int a2, int a3, int a4, int a5)
-{
-  int v10; // dc
-  int result;
-  int v12;
-  int v13;
-  int v14;
-  int v15;
-  int v16;
-  int v17;
-  int v18;
-  int v19;
-  int v20;
-  int v21;
-  int v22;
-  int v23;
-  int v24;
-  int v25;
-  int v26;
-  int v27;
-  int v28;
-  int v29;
-  int v30;
-  u32 v31[3];
-
-  v10 = _sceKernelCheckThreadStack() < 10192;
-  result = -2143088522;
-  if ( !v10 )
-  {
-    v30 = 0;
-    v12 = 0;
-    v31[0] = 0;
-    v13 = -2143088639;
-    if ( http_opts_fn_23() == 1 )
-    {
-      if ( a3 == 1 )
-      {
-        v13 = -2143088130;
-        if ( a4 == 0 )
-          goto LABEL_3;
-        v13 = -2143088380;
-        if ( (unsigned int)(sceNet_lib_D8722983(a4) + 1) >= 0x81 )
-          goto LABEL_3;
-        v28 = sceNet_lib_D8722983(a4);
-        v29 = http_opts_fn_2(v28 + 1);
-        v12 = v29;
-        v13 = -2143088606;
-        if ( v29 == 0 )
-          goto LABEL_3;
-        sceNet_lib_80C9F02A(v29, a4);
-        http_io_fn_35(v12);
-      }
-      v19 = http_io_fn_43(a1);
-      v13 = v19;
-      if ( v19 >= 0 )
-      {
-        if ( v19 != 0 )
-        {
-          v13 = -2143088384;
-          if ( v19 != 0x1000000 )
-            goto LABEL_3;
-          v13 = http_io_fn_23(a1, v31, v20);
-          if ( v13 < 0 )
-            goto LABEL_3;
-          v30 = v31[0] + 176;
-          *(u32 *)(v31[0] + 64) = 0;
-        }
-        else
-        {
-          v13 = http_io_fn_31(a1, &v30, v20);
-          if ( v13 < 0 )
-          {
-            v14 = v31[0];
-LABEL_4:
-            if ( v14 != 0 )
-            {
-              v15 = http_io_fn_89();
-              v18 = v31[0];
-            }
+    HttpHeaderNode *prev = NULL;
+    HttpHeaderNode *cur;
+
+    if (head == NULL || name == NULL)
+        return SCE_HTTP_ERROR_INVALID_VALUE;
+
+    cur = *head;
+    while (cur != NULL) {
+        if (sceNet_lib_9CFBC7E3(cur->name, name) == 0) {
+            if (prev != NULL)
+                prev->next = cur->next;
             else
-            {
-              if ( v30 == 0 )
-                goto LABEL_6;
-              v15 = http_io_fn_89();
-              v18 = v30;
-            }
-            --*(u32 *)(v18 + 8);
-            http_io_fn_90(v15, v16, v17);
-LABEL_6:
-            result = v13;
-            if ( v12 != 0 )
-            {
-              http_opts_fn_3(v12);
-              return v13;
-            }
-            return result;
-          }
+                *head = cur->next;
+            http_free(cur->name);
+            http_free(cur->value);
+            http_free(cur);
+            return 0;
         }
-        v13 = http_io_fn_4(v30);
-        if ( v13 >= 0 )
-        {
-          v23 = http_io_fn_89();
-          if ( a2 != 0 )
-          {
-            if ( a3 == 0 )
-            {
-              *(u16 *)(v30 + 96) = 1;
-              goto LABEL_22;
+        prev = cur;
+        cur = cur->next;
+    }
+    return SCE_HTTP_ERROR_NOT_FOUND;
+}
+
+s32 http_delete_header_internal(s32 id, const char *name)
+{
+    HttpTemplate *cfg = NULL;
+    HttpConnection *conn = NULL;
+    HttpRequest *req = NULL;
+    s32 type;
+    s32 ret;
+    s32 removed = 0;
+    s32 intr;
+
+    if (http_is_inited() != 1)
+        return SCE_HTTP_ERROR_BEFORE_INIT;
+    if (name == NULL)
+        return SCE_HTTP_ERROR_NOT_FOUND;
+
+    type = http_handle_type(id);
+    if (type < 0)
+        return type;
+
+    if (type == HTTP_HANDLE_TEMPLATE) {
+        ret = http_lock_template(id, &cfg);
+        if (ret < 0)
+            return ret;
+    } else if (type == HTTP_HANDLE_CONNECTION) {
+        ret = http_lock_connection(id, &conn);
+        if (ret < 0)
+            return ret;
+        cfg = &conn->cfg;
+    } else if (type == HTTP_HANDLE_REQUEST) {
+        ret = http_lock_request(id, &req);
+        if (ret < 0)
+            return ret;
+        cfg = &req->cfg;
+    } else {
+        return SCE_HTTP_ERROR_INVALID_ID;
+    }
+
+    intr = http_intr_suspend();
+    while (http_header_list_remove(&cfg->headers, name) >= 0)
+        removed = 1;
+
+    if (req != NULL)
+        req->ref_count--;
+    else if (conn != NULL)
+        conn->ref_count--;
+    else if (cfg != NULL)
+        cfg->ref_count--;
+
+    http_intr_resume(intr);
+    return removed ? 0 : SCE_HTTP_ERROR_NOT_FOUND;
+}
+
+s32 sceHttpSetProxy(s32 id, s32 use_proxy, s32 proxy_mode, const char *server, u16 port)
+{
+    char *server_copy = NULL;
+    HttpTemplate *cfg = NULL;
+    HttpConnection *conn = NULL;
+    s32 type;
+    s32 ret;
+    s32 intr;
+
+    if (_sceKernelCheckThreadStack() < 10192)
+        return SCE_HTTP_ERROR_OUT_OF_STACK;
+    if (http_is_inited() != 1)
+        return SCE_HTTP_ERROR_BEFORE_INIT;
+
+    if (proxy_mode == 1) {
+        u32 len;
+        if (server == NULL)
+            return SCE_HTTP_ERROR_INVALID_VALUE;
+        len = sceNet_lib_D8722983(server);
+        if (len + 1 >= 129)
+            return SCE_HTTP_ERROR_OUT_OF_SIZE;
+        server_copy = (char *)http_malloc(len + 1);
+        if (server_copy == NULL)
+            return SCE_HTTP_ERROR_OUT_OF_MEMORY;
+        sceNet_lib_80C9F02A(server_copy, server);
+        http_strip_proxy_host(server_copy);
+    }
+
+    type = http_handle_type(id);
+    if (type < 0) {
+        ret = type;
+        goto fail;
+    }
+
+    if (type == HTTP_HANDLE_TEMPLATE) {
+        ret = http_lock_template(id, &cfg);
+        if (ret < 0)
+            goto fail;
+    } else if (type == HTTP_HANDLE_CONNECTION) {
+        ret = http_lock_connection(id, &conn);
+        if (ret < 0)
+            goto fail;
+        cfg = &conn->cfg;
+        conn->resolved = 0;
+    } else {
+        ret = SCE_HTTP_ERROR_INVALID_ID;
+        goto fail;
+    }
+
+    ret = http_refresh_apctl_proxy(cfg);
+    if (ret < 0)
+        goto fail;
+
+    intr = http_intr_suspend();
+    if (use_proxy != 0) {
+        if (proxy_mode == 0) {
+            cfg->use_default_proxy = 1;
+        } else if (proxy_mode == 1) {
+            if (cfg->proxy_server != NULL)
+                http_free(cfg->proxy_server);
+            cfg->proxy_server = server_copy;
+            server_copy = NULL;
+            cfg->proxy_port = port;
+            cfg->use_proxy = 1;
+            cfg->use_default_proxy = 0;
+        }
+    } else {
+        cfg->use_proxy = 0;
+        cfg->use_default_proxy = 0;
+    }
+
+    if (conn != NULL)
+        conn->ref_count--;
+    else if (cfg != NULL)
+        cfg->ref_count--;
+    http_intr_resume(intr);
+    return 0;
+
+fail:
+    if (conn != NULL)
+        http_unlock_connection(conn);
+    else if (cfg != NULL)
+        http_unlock_template(cfg);
+    if (server_copy != NULL)
+        http_free(server_copy);
+    return ret;
+}
+
+s32 sceHttpGetProxy(s32 id, s32 *use_proxy, s32 *proxy_mode, char *server, u32 server_len, u16 *port)
+{
+    HttpTemplate *cfg = NULL;
+    HttpConnection *conn = NULL;
+    HttpRequest *req = NULL;
+    s32 type;
+    s32 ret;
+    s32 intr;
+
+    if (_sceKernelCheckThreadStack() < 2000)
+        return SCE_HTTP_ERROR_OUT_OF_STACK;
+    if (http_is_inited() != 1)
+        return SCE_HTTP_ERROR_BEFORE_INIT;
+    if (use_proxy == NULL || proxy_mode == NULL || server == NULL || port == NULL)
+        return SCE_HTTP_ERROR_INVALID_VALUE;
+    if (server_len < 128)
+        return SCE_HTTP_ERROR_OUT_OF_SIZE;
+
+    type = http_handle_type(id);
+    if (type < 0)
+        return type;
+
+    if (type == HTTP_HANDLE_TEMPLATE) {
+        ret = http_lock_template(id, &cfg);
+        if (ret < 0)
+            return ret;
+    } else if (type == HTTP_HANDLE_CONNECTION) {
+        ret = http_lock_connection(id, &conn);
+        if (ret < 0)
+            return ret;
+        cfg = &conn->cfg;
+    } else if (type == HTTP_HANDLE_REQUEST) {
+        ret = http_lock_request(id, &req);
+        if (ret < 0)
+            return ret;
+        cfg = &req->conn->cfg;
+    } else {
+        return SCE_HTTP_ERROR_INVALID_ID;
+    }
+
+    intr = http_intr_suspend();
+    if (cfg->use_proxy == 1) {
+        *use_proxy = 1;
+        if (cfg->proxy_server != NULL) {
+            sceNet_lib_B5CE388A(server, cfg->proxy_server, 128);
+            *port = cfg->proxy_port;
+        }
+    } else {
+        *use_proxy = 0;
+    }
+    *proxy_mode = (cfg->use_default_proxy != 1);
+
+    if (req != NULL)
+        req->ref_count--;
+    else if (conn != NULL)
+        conn->ref_count--;
+    else if (cfg != NULL)
+        cfg->ref_count--;
+    http_intr_resume(intr);
+    return 0;
+}
+
+s32 sceHttpEnableCache(s32 id)
+{
+    if (_sceKernelCheckThreadStack() < 2032)
+        return SCE_HTTP_ERROR_OUT_OF_STACK;
+    if (http_is_inited() != 1 || http_cache_mem_is_inited() != 1)
+        return SCE_HTTP_ERROR_BEFORE_INIT;
+    return http_set_cache_mode(id, HTTP_CACHE_MEM);
+}
+
+s32 sceHttp_8046E250(s32 id)
+{
+    if (_sceKernelCheckThreadStack() < 2032)
+        return SCE_HTTP_ERROR_OUT_OF_STACK;
+    if (http_is_inited() != 1 || http_cache_pool_is_inited() != 1)
+        return SCE_HTTP_ERROR_BEFORE_INIT;
+    return http_set_cache_mode(id, HTTP_CACHE_POOL);
+}
+
+s32 sceHttpAddExtraHeader(s32 id, const char *name, const char *value, s32 mode)
+{
+    if (_sceKernelCheckThreadStack() < 2016)
+        return SCE_HTTP_ERROR_OUT_OF_STACK;
+    return http_add_header_internal(id, name, value, mode);
+}
+
+s32 sceHttpDeleteHeader(s32 id, const char *name)
+{
+    if (_sceKernelCheckThreadStack() < 2032)
+        return SCE_HTTP_ERROR_OUT_OF_STACK;
+    return http_delete_header_internal(id, name);
+}
+
+s32 http_set_cache_mode(s32 id, s32 mode)
+{
+    s32 type;
+    s32 intr;
+    s32 ret;
+    HttpTemplate *cfg = NULL;
+    HttpConnection *conn = NULL;
+    HttpRequest *req = NULL;
+
+    type = http_handle_type(id);
+    if (type < 0)
+        return type;
+
+    intr = http_intr_suspend();
+    if (type == HTTP_HANDLE_TEMPLATE) {
+        ret = http_lock_template(id, &cfg);
+        if (cfg != NULL) {
+            cfg->cache_mode = mode;
+            if (cfg->cache_content_max_size == 0) {
+                if (mode == HTTP_CACHE_MEM)
+                    cfg->cache_content_max_size = http_cache_mem_get_max_size();
+                else if (mode == HTTP_CACHE_POOL)
+                    cfg->cache_content_max_size = http_cache_pool_get_max_size();
             }
-            v25 = v31[0];
-            if ( a3 != 1 )
-            {
-LABEL_23:
-              if ( v25 != 0 )
-              {
-                v26 = *(u32 *)(v25 + 8);
-              }
-              else
-              {
-                v25 = v30;
-                if ( v30 == 0 )
-                {
-LABEL_28:
-                  http_io_fn_90(v23, v21, v22);
-                  return 0;
+            cfg->ref_count--;
+            ret = 0;
+        }
+    } else if (type == HTTP_HANDLE_CONNECTION) {
+        ret = http_lock_connection(id, &conn);
+        if (conn != NULL) {
+            conn->cfg.cache_mode = mode;
+            if (conn->cfg.cache_content_max_size == 0) {
+                if (mode == HTTP_CACHE_MEM)
+                    conn->cfg.cache_content_max_size = http_cache_mem_get_max_size();
+                else if (mode == HTTP_CACHE_POOL)
+                    conn->cfg.cache_content_max_size = http_cache_pool_get_max_size();
+            }
+            conn->ref_count--;
+            ret = 0;
+        }
+    } else if (type == HTTP_HANDLE_REQUEST) {
+        ret = http_lock_request(id, &req);
+        if (req != NULL) {
+            req->cfg.cache_mode = mode;
+            if (req->cfg.cache_content_max_size == 0) {
+                if (mode == HTTP_CACHE_MEM)
+                    req->cfg.cache_content_max_size = http_cache_mem_get_max_size();
+                else if (mode == HTTP_CACHE_POOL)
+                    req->cfg.cache_content_max_size = http_cache_pool_get_max_size();
+            }
+            req->ref_count--;
+        }
+    } else {
+        ret = SCE_HTTP_ERROR_INVALID_ID;
+    }
+    http_intr_resume(intr);
+    return ret;
+}
+
+/* -------------------------------------------------------------------------
+ * 301 Redirect cache
+ * ------------------------------------------------------------------------- */
+static void http_redir_unlink_and_free(HttpRedirEntry *entry)
+{
+    if (entry->prev != NULL) {
+        entry->prev->next = entry->next;
+        if (entry->next != NULL)
+            entry->next->prev = entry->prev;
+        else
+            g_redir_tail = entry->prev;
+    } else {
+        g_redir_head = entry->next;
+        if (entry->next != NULL)
+            entry->next->prev = NULL;
+        else
+            g_redir_tail = NULL;
+    }
+
+    http_free(entry->src_url);
+    http_free(entry->dst_url);
+    sceKernelMemset(entry, 0, sizeof(*entry));
+    entry->free_next = g_redir_free_list;
+    g_redir_free_list = entry;
+}
+
+static void http_cache_mem_unlink_and_free(HttpCacheEntry *entry)
+{
+    http_cache_hash_remove(g_cache_mem_buckets, entry);
+    if (entry->lru_prev != NULL) {
+        entry->lru_prev->lru_next = entry->lru_next;
+        if (entry->lru_next != NULL)
+            entry->lru_next->lru_prev = entry->lru_prev;
+        else
+            g_cache_mem_tail = entry->lru_prev;
+    } else {
+        g_cache_mem_head = entry->lru_next;
+        if (entry->lru_next != NULL)
+            entry->lru_next->lru_prev = NULL;
+        else
+            g_cache_mem_tail = NULL;
+    }
+
+    http_cache_mem_account_free(entry->data);
+    http_cache_data_free(entry->data);
+    http_free(entry->url);
+    http_free(entry);
+}
+
+s32 http_redir_cache_init(void)
+{
+    u32 idx;
+
+    if (g_redir_inited == 1)
+        return SCE_HTTP_ERROR_ALREADY_INITED;
+
+    g_redir_inited = 1;
+    sceKernelMemset(g_redir_pool, 0, sizeof(g_redir_pool));
+    g_redir_free_list = &g_redir_pool[0];
+    for (idx = 0; idx < 15; idx++)
+        g_redir_pool[idx].free_next = &g_redir_pool[idx + 1];
+    g_redir_pool[15].free_next = NULL;
+    g_redir_head = NULL;
+    g_redir_tail = NULL;
+    return 0;
+}
+
+s32 http_redir_cache_term(void)
+{
+    HttpRedirEntry *entry;
+
+    if (g_redir_inited != 1)
+        return SCE_HTTP_ERROR_BEFORE_INIT;
+
+    for (entry = g_redir_head; entry != NULL; entry = entry->next) {
+        http_free(entry->dst_url);
+        http_free(entry->src_url);
+    }
+
+    g_redir_inited = 0;
+    sceKernelMemset(g_redir_pool, 0, sizeof(g_redir_pool));
+    g_redir_free_list = NULL;
+    g_redir_head = NULL;
+    g_redir_tail = NULL;
+    return 0;
+}
+
+HttpRedirEntry *http_redir_cache_lookup_req(HttpRequest *req)
+{
+    HttpRedirEntry *entry = NULL;
+    char *url = http_build_request_url(req);
+
+    if (url != NULL) {
+        s32 intr = http_intr_suspend();
+        entry = http_redir_cache_find_unlocked(url, req->method, NULL);
+        http_intr_resume(intr);
+        http_free(url);
+    }
+    return entry;
+}
+
+void http_redir_cache_add(const char *src_url, s32 method, const u8 *extra_md5, const char *dst_url)
+{
+    s32 intr = http_intr_suspend();
+    HttpRedirEntry *existing = http_redir_cache_find_unlocked(src_url, method, extra_md5);
+    HttpRedirEntry *slot;
+
+    if (existing != NULL) {
+        if (sceNet_lib_A0F16ABD(existing->dst_url, dst_url) == 0) {
+            http_redir_entry_release(existing);
+            http_intr_resume(intr);
+            return;
+        }
+        http_redir_entry_mark_deleted(existing);
+        http_redir_entry_release(existing);
+    }
+
+    while ((slot = g_redir_free_list) == NULL) {
+        HttpRedirEntry *victim = g_redir_tail;
+        while (victim != NULL && victim->ref_count != 0)
+            victim = victim->prev;
+        if (victim == NULL) {
+            http_intr_resume(intr);
+            return;
+        }
+        http_redir_entry_mark_deleted(victim);
+    }
+
+    g_redir_free_list = slot->free_next;
+    slot->src_url = (char *)http_malloc(sceNet_lib_D8722983(src_url) + 1);
+    if (slot->src_url != NULL) {
+        sceNet_lib_80C9F02A(slot->src_url, src_url);
+        slot->dst_url = (char *)http_malloc(sceNet_lib_D8722983(dst_url) + 1);
+        if (slot->dst_url != NULL) {
+            sceNet_lib_80C9F02A(slot->dst_url, dst_url);
+            http_md5_digest(src_url, sceNet_lib_D8722983(src_url), slot->url_md5);
+            slot->method = method;
+            if (extra_md5 != NULL)
+                sceKernelMemcpy(slot->extra_md5, extra_md5, 16);
+            slot->prev = NULL;
+            slot->next = g_redir_head;
+            if (g_redir_head != NULL)
+                g_redir_head->prev = slot;
+            else
+                g_redir_tail = slot;
+            g_redir_head = slot;
+            http_intr_resume(intr);
+            return;
+        }
+        http_free(slot->src_url);
+    }
+
+    sceKernelMemset(slot, 0, sizeof(*slot));
+    slot->free_next = g_redir_free_list;
+    g_redir_free_list = slot;
+    http_intr_resume(intr);
+}
+
+HttpRedirEntry *http_redir_cache_find(const char *url, s32 method, const u8 *extra_md5)
+{
+    s32 intr = http_intr_suspend();
+    HttpRedirEntry *entry = http_redir_cache_find_unlocked(url, method, extra_md5);
+    http_intr_resume(intr);
+    return entry;
+}
+
+void http_redir_entry_release_locked(HttpRedirEntry *entry)
+{
+    s32 intr = http_intr_suspend();
+    http_redir_entry_release(entry);
+    http_intr_resume(intr);
+}
+
+void http_redir_entry_invalidate_locked(HttpRedirEntry *entry)
+{
+    s32 intr = http_intr_suspend();
+    http_redir_entry_mark_deleted(entry);
+    http_redir_entry_release(entry);
+    http_intr_resume(intr);
+}
+
+void http_redir_entry_release(HttpRedirEntry *entry)
+{
+    entry->ref_count--;
+    if (entry->ref_count == 0 && entry->deleted == 1)
+        http_redir_unlink_and_free(entry);
+}
+
+void http_cache_mem_entry_release(HttpCacheEntry *entry)
+{
+    entry->ref_count--;
+    if (entry->ref_count == 0 && entry->deleted == 1)
+        http_cache_mem_unlink_and_free(entry);
+}
+
+void http_redir_entry_mark_deleted(HttpRedirEntry *entry)
+{
+    entry->deleted = 1;
+    if (entry->ref_count == 0)
+        http_redir_unlink_and_free(entry);
+}
+
+void http_cache_mem_entry_mark_deleted(HttpCacheEntry *entry)
+{
+    entry->deleted = 1;
+    if (entry->ref_count == 0)
+        http_cache_mem_unlink_and_free(entry);
+}
+
+HttpRedirEntry *http_redir_cache_find_unlocked(const char *url, s32 method, const u8 *extra_md5)
+{
+    u8 digest[16];
+    HttpRedirEntry *entry;
+
+    http_md5_digest(url, sceNet_lib_D8722983(url), digest);
+    for (entry = g_redir_head; entry != NULL; entry = entry->next) {
+        if (sceNet_lib_E0A81C7C(entry->url_md5, digest, 16) != 0)
+            continue;
+        if (sceNet_lib_A0F16ABD(entry->src_url, url) != 0)
+            continue;
+        if (entry->method != method)
+            continue;
+        if (extra_md5 != NULL && sceNet_lib_E0A81C7C(entry->extra_md5, extra_md5, 16) != 0)
+            continue;
+        if (entry->deleted == 1)
+            continue;
+
+        entry->hit_count++;
+        entry->ref_count++;
+
+        if (entry->prev != NULL) {
+            entry->prev->next = entry->next;
+            if (entry->next != NULL)
+                entry->next->prev = entry->prev;
+            else
+                g_redir_tail = entry->prev;
+        } else {
+            g_redir_head = entry->next;
+            if (entry->next != NULL)
+                entry->next->prev = NULL;
+            else
+                g_redir_tail = NULL;
+        }
+        entry->prev = NULL;
+        entry->next = g_redir_head;
+        if (g_redir_head != NULL)
+            g_redir_head->prev = entry;
+        else
+            g_redir_tail = entry;
+        g_redir_head = entry;
+        return entry;
+    }
+    return NULL;
+}
+
+/* -------------------------------------------------------------------------
+ * Library lifecycle
+ * ------------------------------------------------------------------------- */
+s32 sceHttpInit(u32 pool_size)
+{
+    s32 ret;
+
+    if (_sceKernelCheckThreadStack() < 2032)
+        return SCE_HTTP_ERROR_OUT_OF_STACK;
+    if (g_http_inited == 1)
+        return SCE_HTTP_ERROR_ALREADY_INITED;
+
+    http_template_list_init();
+    http_connection_list_init();
+    http_request_list_init();
+    http_redir_cache_init();
+    http_auth_cache_init();
+    http_cookie_jar_init();
+
+    ret = http_pool_init(pool_size);
+    if (ret < 0)
+        return ret;
+
+    g_http_inited = 1;
+    return 0;
+}
+
+s32 sceHttpEnd(void)
+{
+    if (_sceKernelCheckThreadStack() < 2032)
+        return SCE_HTTP_ERROR_OUT_OF_STACK;
+    if (g_http_inited != 1)
+        return SCE_HTTP_ERROR_BEFORE_INIT;
+
+    http_cookie_jar_term();
+    http_redir_cache_term();
+    http_auth_cache_term();
+    http_pool_term();
+    g_http_inited = 0;
+    return 0;
+}
+
+s32 http_is_inited(void)
+{
+    return g_http_inited;
+}
+
+s32 module_reboot_before(void)
+{
+    while (http_storage_lock() < 0)
+        sceKernelDelayThread(100000);
+    return 0;
+}
+
+/* -------------------------------------------------------------------------
+ * Chunked transfer-encoding & DNS resolution
+ * ------------------------------------------------------------------------- */
+s32 http_recv_chunked(HttpRequest *req, u8 *dst, u32 len, s32 flags)
+{
+    u32 remaining = len;
+    u32 total = 0;
+    HttpConnection *conn;
+    s32 ret;
+
+    if (req->state != HTTP_REQ_RECEIVING)
+        return 0;
+
+    conn = req->redir_conn != NULL ? req->redir_conn : req->conn;
+    if (len == 0)
+        return 0;
+
+    while (remaining != 0 && req->state == HTTP_REQ_RECEIVING) {
+        u32 chunk_avail = req->chunk_remaining;
+
+        if (chunk_avail == 0) {
+            ret = http_read_chunk_size(req, &req->chunk_remaining, flags);
+            if (ret < 0) {
+                req->chunk_remaining = 0;
+                req->res_info.is_chunked = 0;
+                return ret;
+            }
+            chunk_avail = req->chunk_remaining;
+            if (chunk_avail == 0) {
+                ret = http_skip_chunk_trailers(req, flags);
+                if (ret < 0) {
+                    req->chunk_remaining = 0;
+                    req->res_info.is_chunked = 0;
+                    return ret;
                 }
-                v26 = *(u32 *)(v30 + 8);
-              }
-              *(u32 *)(v25 + 8) = v26 - 1;
-              goto LABEL_28;
+                if (req->res_info.conn_close == 1)
+                    http_close_connection(conn);
+                req->res_info.is_chunked = 0;
+                req->state = HTTP_REQ_DONE;
+                break;
             }
-            v24 = v30;
-            v27 = *(u32 *)(v30 + 64);
-            if ( v27 != 0 )
-            {
-              http_opts_fn_3(v27);
-              v24 = v30;
+        }
+
+        {
+            u32 to_read = remaining < chunk_avail ? remaining : chunk_avail;
+            ret = http_recv_raw(req, dst + total, to_read, flags);
+            if (ret < 0) {
+                req->chunk_remaining = 0;
+                req->res_info.is_chunked = 0;
+                return ret;
             }
-            *(u32 *)(v24 + 64) = v12;
-            *(u16 *)(v24 + 172) = a5;
-            *(u32 *)(v24 + 16) = 1;
-          }
-          else
-          {
-            v24 = v30;
-            *(u32 *)(v30 + 16) = 0;
-          }
-          *(u16 *)(v24 + 96) = 0;
-LABEL_22:
-          v25 = v31[0];
-          goto LABEL_23;
-        }
-      }
-    }
-LABEL_3:
-    v14 = v31[0];
-    goto LABEL_4;
-  }
-  return result;
-}
-
-
-int sceHttpGetProxy(int a1, u32 *a2, u32 *a3, int a4, unsigned int a5, u16 *a6)
-{
-  int v12; // dc
-  int result;
-  int v14;
-  s64 v15;
-  int v16;
-  int v17;
-  int v18;
-  int v19;
-  int v20;
-  int v21;
-  int v22;
-  int v23;
-  int v24;
-  int v25;
-  int v26;
-  int v27;
-  int v28;
-  int v29;
-
-  v12 = _sceKernelCheckThreadStack() < 2000;
-  result = -2143088522;
-  if ( !v12 )
-  {
-    v27 = 0;
-    v14 = -2143088639;
-    v28 = 0;
-    v29 = 0;
-    if ( http_opts_fn_23() != 1 )
-      return v14;
-    v15 = ((u64)(v15) & 0xFFFFFFFF00000000ULL) | (u32)(a3 == NULL);
-    v15 = ((u64)(v15) & 0x00000000FFFFFFFFULL) | ((u64)(u32)(a2 == NULL) << 32);
-    if ( v15 != 0 || a4 == 0 || a6 == NULL )
-      return -2143088130;
-    v14 = -2143088380;
-    if ( a5 < 0x80 )
-      return v14;
-    v16 = http_io_fn_43(a1);
-    v14 = v16;
-    if ( v16 < 0 )
-      return v14;
-    if ( v16 != 0 )
-    {
-      if ( v16 == 0x1000000 )
-      {
-        v14 = http_io_fn_23(a1, &v28, v17);
-        if ( v14 < 0 )
-          return v14;
-        v19 = v28;
-      }
-      else
-      {
-        if ( v16 != 0x2000000 )
-          return -2143088384;
-        v18 = http_io_fn_12(a1, &v29);
-        v14 = v18;
-        if ( v18 < 0 )
-          return v14;
-        v19 = *(u32 *)(v29 + 928);
-      }
-      v27 = v19 + 176;
-    }
-    else
-    {
-      result = http_io_fn_31(a1, &v27, v17);
-      v14 = result;
-      if ( result < 0 )
-        return result;
-    }
-    v20 = http_io_fn_89();
-    v22 = v27;
-    v23 = v20;
-    if ( *(u32 *)(v27 + 16) == 1 )
-    {
-      v24 = *(u32 *)(v27 + 64);
-      *a2 = 1;
-      if ( v24 != 0 )
-      {
-        sceNet_lib_B5CE388A(a4, v24, 128);
-        v22 = v27;
-        *a6 = *(u16 *)(v27 + 172);
-      }
-    }
-    else
-    {
-      *a2 = 0;
-    }
-    v25 = *(s16 *)(v22 + 96);
-    v26 = v29;
-    v12 = v29 == 0;
-    *a3 = v25 != 1;
-    if ( v12 )
-    {
-      if ( v28 != 0 )
-      {
-        v21 = *(u32 *)(v28 + 8) - 1;
-        *(u32 *)(v28 + 8) = v21;
-      }
-      else if ( v22 != 0 )
-      {
-        --*(u32 *)(v22 + 8);
-      }
-    }
-    else
-    {
-      --*(u32 *)(v26 + 32);
-    }
-    http_io_fn_90(v23, v25, v21);
-    return v14;
-  }
-  return result;
-}
-
-
-int sceHttpEnableCache(int a1)
-{
-  int v2; // dc
-  int result;
-
-  v2 = _sceKernelCheckThreadStack() < 2032;
-  result = -2143088522;
-  if ( !v2 )
-  {
-    if ( http_opts_fn_23() == 1 && http_io_fn_66() == 1 )
-      return http_opts_fn_10(a1, 1);
-    else
-      return -2143088639;
-  }
-  return result;
-}
-
-
-int sceHttp_8046E250(int a1)
-{
-  int v2; // dc
-  int result;
-
-  v2 = _sceKernelCheckThreadStack() < 2032;
-  result = -2143088522;
-  if ( !v2 )
-  {
-    if ( http_opts_fn_23() == 1 && http_io_fn_68() == 1 )
-      return http_opts_fn_10(a1, 2);
-    else
-      return -2143088639;
-  }
-  return result;
-}
-
-
-int sceHttpAddExtraHeader(int a1, int a2, int a3, int a4)
-{
-  int v8; // dc
-  int result;
-
-  v8 = _sceKernelCheckThreadStack() < 2016;
-  result = -2143088522;
-  if ( !v8 )
-    return http_opts_fn_7(a1, a2, a3, a4);
-  return result;
-}
-
-
-int sceHttpDeleteHeader(int a1, int a2)
-{
-  int v4; // dc
-  int result;
-
-  v4 = _sceKernelCheckThreadStack() < 2032;
-  result = -2143088522;
-  if ( !v4 )
-    return http_opts_fn_9(a1, a2);
-  return result;
-}
-
-
-int http_opts_fn_10(int a1, int a2)
-{
-  int v4;
-  int v5;
-  int v6;
-  int v7;
-  int v9;
-  u32 *v10;
-  int v11;
-  int v12;
-  int v13;
-  int v14;
-  int v15;
-  int v16;
-  int v17;
-  u32 *v18;
-  u32 *v19;
-  int v20;
-
-  v18 = NULL;
-  v19 = NULL;
-  v4 = http_io_fn_43(a1);
-  if ( v4 >= 0 )
-  {
-    v7 = http_io_fn_89();
-    switch ( v4 )
-    {
-      case 0:
-        v9 = http_io_fn_31(a1, &v18, v6);
-        v10 = v18;
-        v4 = v9;
-        if ( v18 == NULL )
-          goto LABEL_6;
-        v11 = v18[12];
-        v18[5] = a2;
-        if ( v11 != 0 )
-          goto LABEL_12;
-        v5 = 1;
-        v6 = 2;
-        if ( a2 == 1 )
-        {
-          v10[12] = http_io_fn_67();
-        }
-        else
-        {
-          if ( a2 != 2 )
-            goto LABEL_12;
-          v10[12] = http_io_fn_69();
-        }
-        v10 = v18;
-        goto LABEL_12;
-      case 0x1000000:
-        v16 = http_io_fn_23(a1, &v19, v6);
-        v10 = v19;
-        v4 = v16;
-        if ( v19 == NULL )
-          goto LABEL_6;
-        v17 = v19[56];
-        v19[49] = a2;
-        if ( v17 == 0 )
-        {
-          if ( a2 == 1 )
-          {
-            v10[56] = http_io_fn_67();
-          }
-          else
-          {
-            if ( a2 != 2 )
-            {
-              v12 = v10[2];
-              goto LABEL_13;
+            total += (u32)ret;
+            remaining -= (u32)ret;
+            req->chunk_remaining -= (u32)ret;
+            if (req->chunk_remaining == 0) {
+                ret = http_skip_crlf_line(req, flags);
+                if (ret < 0) {
+                    req->chunk_remaining = 0;
+                    req->res_info.is_chunked = 0;
+                    return ret;
+                }
             }
-            v10[56] = http_io_fn_69();
-          }
-          v10 = v19;
         }
-LABEL_12:
-        v12 = v10[2];
-LABEL_13:
-        v4 = 0;
-        v10[2] = v12 - 1;
-        goto LABEL_6;
-      case 0x2000000:
-        v13 = http_io_fn_12(a1, &v20);
-        v14 = v20;
-        v4 = v13;
-        if ( v20 == 0 )
-          goto LABEL_6;
-        v15 = *(u32 *)(v20 + 184);
-        *(u32 *)(v20 + 156) = a2;
-        if ( v15 == 0 )
-        {
-          if ( a2 == 1 )
-          {
-            *(u32 *)(v14 + 184) = http_io_fn_67();
-          }
-          else
-          {
-            if ( a2 != 2 )
-              goto LABEL_22;
-            *(u32 *)(v14 + 184) = http_io_fn_69();
-          }
-          v14 = v20;
+    }
+
+    return (s32)total;
+}
+
+s32 http_recv_raw(HttpRequest *req, void *dst, u32 len, s32 flags)
+{
+    return http_buffered_recv(req, (u8 *)dst, len, flags, 0);
+}
+
+s32 http_read_chunk_size(HttpRequest *req, u32 *size_out, s32 flags)
+{
+    HttpConnection *conn = req->redir_conn != NULL ? req->redir_conn : req->conn;
+    char buf[16];
+    char lf;
+    s32 idx = 0;
+    s32 found_delim = 0;
+    s32 ret;
+
+    while (idx < 11) {
+        ret = http_recv_raw(req, &buf[idx], 1, flags);
+        if (ret < 0)
+            return ret;
+        if (ret == 0) {
+            http_close_connection(conn);
+            return SCE_HTTP_ERROR_BAD_RESPONSE;
         }
-LABEL_22:
-        --*(u32 *)(v14 + 32);
-        goto LABEL_6;
-      default:
-        v4 = -2143088384;
-LABEL_6:
-        http_io_fn_90(v7, v5, v6);
-        return v4;
+        if (buf[idx] == ' ' || buf[idx] == '\r') {
+            found_delim = 1;
+            break;
+        }
+        idx++;
     }
-  }
-  return v4;
-}
 
+    if (!found_delim)
+        return 0;
 
-int http_opts_fn_11()
-{
-  int v0;
-  unsigned int v1;
-  int v2;
-
-  v0 = 0;
-  if ( (&HTTP_BSS_U32(0x2680))[0] == 1 )
-    return -2143088608;
-  (&HTTP_BSS_U32(0x2680))[0] = 1;
-  sceKernelMemset(&HTTP_BSS_U8(0x2684), 0, 1088);
-  v1 = 0;
-  HTTP_BSS_U32(0x2AC4) = (int)&HTTP_BSS_U8(0x2684);
-  v2 = 0;
-  do
-  {
-    ++v1;
-    (&HTTP_BSS_U32(0x2680))[v2 + 17] = (int)&HTTP_BSS_U8(0x26C8) + v2 * 4;
-    v2 += 17;
-  }
-  while ( v1 < 0xF );
-  HTTP_BSS_U32(0x2ACC) = 0;
-  HTTP_BSS_U32(0x2AC0) = 0;
-  HTTP_BSS_U32(0x2AC8) = 0;
-  return v0;
-}
-
-
-int http_opts_fn_12()
-{
-  int v0;
-  int *i;
-
-  v0 = 0;
-  if ( (&HTTP_BSS_U32(0x2680))[0] != 1 )
-    return -2143088639;
-  for ( i = (int *)HTTP_BSS_U32(0x2AC8); i != NULL; i = (int *)i[15] )
-  {
-    http_opts_fn_3(i[12]);
-    http_opts_fn_3(i[6]);
-  }
-  (&HTTP_BSS_U32(0x2680))[0] = 0;
-  sceKernelMemset(&HTTP_BSS_U8(0x2684), 0, 1088);
-  HTTP_BSS_U32(0x2ACC) = 0;
-  HTTP_BSS_U32(0x2AC4) = 0;
-  HTTP_BSS_U32(0x2AC8) = 0;
-  return v0;
-}
-
-
-int http_opts_fn_13(int a1)
-{
-  int v2;
-  int v3;
-  int v4;
-  int v5;
-  int v6;
-
-  v2 = 0;
-  v3 = http_io_fn_14(a1);
-  if ( v3 != 0 )
-  {
-    v4 = http_io_fn_89();
-    v2 = http_opts_fn_22(v3, *(u32 *)(a1 + 28), 0);
-    http_io_fn_90(v4, v5, v6);
-    http_opts_fn_3(v3);
-  }
-  return v2;
-}
-
-
-int http_opts_fn_14(int a1, int a2, int a3, int a4)
-{
-  int v8;
-  int v9;
-  int v10;
-  int v11;
-  int v12;
-  int *v13;
-  int v14;
-  int i;
-  int v17;
-  int v18;
-  int v19;
-  int v20;
-  int v21;
-  int v22;
-
-  v11 = http_io_fn_89();
-  v8 = http_opts_fn_22(a1, a2, a3);
-  v12 = v8;
-  if ( v8 == 0 )
-  {
-LABEL_4:
-    while ( 1 )
-    {
-      v13 = (int *)HTTP_BSS_U32(0x2AC4);
-      if ( HTTP_BSS_U32(0x2AC4) != 0 )
-        break;
-      v14 = HTTP_BSS_U32(0x2ACC);
-      if ( HTTP_BSS_U32(0x2ACC) == 0 )
-        return http_io_fn_90(v11, v9, v10);
-      for ( i = *(u32 *)(HTTP_BSS_U32(0x2ACC) + 4); i != 0; i = *(u32 *)(v14 + 4) )
-      {
-        v14 = *(u32 *)(v14 + 56);
-        if ( v14 == 0 )
-          return http_io_fn_90(v11, v9, v10);
-      }
-      http_opts_fn_20(v14);
+    if (buf[idx] == ' ') {
+        ret = http_skip_crlf_line(req, flags);
+        if (ret < 0)
+            return ret;
+    } else if (buf[idx] == '\r') {
+        ret = http_recv_raw(req, &lf, 1, flags);
+        if (ret < 0)
+            return ret;
+        if (ret == 0 || lf != '\n') {
+            http_close_connection(conn);
+            return SCE_HTTP_ERROR_BAD_RESPONSE;
+        }
     }
-    HTTP_BSS_U32(0x2AC4) = *(u32 *)(HTTP_BSS_U32(0x2AC4) + 64);
-    v17 = sceNet_lib_D8722983(a1);
-    v18 = http_opts_fn_2(v17 + 1);
-    v13[6] = v18;
-    if ( v18 != 0 )
-    {
-      sceNet_lib_80C9F02A(v18, a1);
-      v19 = sceNet_lib_D8722983(a4);
-      v20 = http_opts_fn_2(v19 + 1);
-      v13[12] = v20;
-      if ( v20 != 0 )
-      {
-        sceNet_lib_80C9F02A(v20, a4);
-        v21 = sceNet_lib_D8722983(a1);
-        http_io_fn_91(a1, v21, v13 + 2);
-        v13[7] = a2;
-        if ( a3 != 0 )
-          sceKernelMemcpy(v13 + 8, a3, 16);
-        v13[14] = 0;
-        v22 = HTTP_BSS_U32(0x2AC8);
-        v13[15] = HTTP_BSS_U32(0x2AC8);
-        if ( v22 != 0 )
-          *(u32 *)(v22 + 56) = v13;
-        else
-          HTTP_BSS_U32(0x2ACC) = (int)v13;
-        HTTP_BSS_U32(0x2AC8) = (int)v13;
-        return http_io_fn_90(v11, v9, v10);
-      }
-      http_opts_fn_3(v13[6]);
-    }
-    sceKernelMemset(v13, 0, 68);
-    v9 = HTTP_BSS_U32(0x2AC4);
-    v13[16] = HTTP_BSS_U32(0x2AC4);
-    HTTP_BSS_U32(0x2AC4) = (int)v13;
-    return http_io_fn_90(v11, v9, v10);
-  }
-  if ( sceNet_lib_A0F16ABD(*(u32 *)(v8 + 48), a4) != 0 )
-  {
-    http_opts_fn_20(v12);
-    http_opts_fn_18(v12);
-    goto LABEL_4;
-  }
-  http_opts_fn_18(v12);
-  return http_io_fn_90(v11, v9, v10);
-}
 
-
-int http_opts_fn_15(int a1, int a2, int a3)
-{
-  int v6;
-  int v7;
-  int v8;
-  int v9;
-
-  v6 = http_io_fn_89();
-  v7 = http_opts_fn_22(a1, a2, a3);
-  http_io_fn_90(v6, v8, v9);
-  return v7;
-}
-
-
-int http_opts_fn_16(int a1)
-{
-  int v2;
-  int v3;
-  int v4;
-
-  v2 = http_io_fn_89();
-  http_opts_fn_18(a1);
-  return http_io_fn_90(v2, v3, v4);
-}
-
-
-int http_opts_fn_17(int a1)
-{
-  int v2;
-  int v3;
-  int v4;
-
-  v2 = http_io_fn_89();
-  http_opts_fn_20(a1);
-  http_opts_fn_18(a1);
-  return http_io_fn_90(v2, v3, v4);
-}
-
-
-void http_opts_fn_18(u32 *a1)
-{
-  int v2;
-  int v3;
-  int v4;
-  int v5;
-
-  v2 = a1[1];
-  a1[1] = v2 - 1;
-  if ( v2 == 1 && a1[13] == 1 )
-  {
-    v3 = a1[14];
-    if ( v3 != 0 )
-    {
-      *(u32 *)(v3 + 60) = a1[15];
-      v5 = a1[15];
-      if ( v5 != 0 )
-        *(u32 *)(v5 + 56) = v3;
-      else
-        HTTP_BSS_U32(0x2ACC) = v3;
-    }
-    else
-    {
-      HTTP_BSS_U32(0x2AC8) = a1[15];
-      v4 = a1[15];
-      if ( v4 != 0 )
-        *(u32 *)(v4 + 56) = 0;
-      else
-        HTTP_BSS_U32(0x2ACC) = 0;
-    }
-    http_opts_fn_3(a1[6]);
-    http_opts_fn_3(a1[12]);
-    sceKernelMemset(a1, 0, 68);
-    a1[16] = HTTP_BSS_U32(0x2AC4);
-    HTTP_BSS_U32(0x2AC4) = (int)a1;
-  }
-}
-
-
-void http_opts_fn_19(u32 *a1)
-{
-  int v2;
-  int v3;
-  int v4;
-  int v5;
-
-  v2 = a1[1];
-  a1[1] = v2 - 1;
-  if ( v2 == 1 && a1[13] == 1 )
-  {
-    http_io_fn_71(&HTTP_BSS_U8(0x30DC), a1);
-    v3 = a1[14];
-    if ( v3 != 0 )
-    {
-      *(u32 *)(v3 + 60) = a1[15];
-      v5 = a1[15];
-      if ( v5 != 0 )
-        *(u32 *)(v5 + 56) = v3;
-      else
-        HTTP_BSS_U32(0x316C) = v3;
-    }
-    else
-    {
-      HTTP_BSS_U32(0x3168) = a1[15];
-      v4 = a1[15];
-      if ( v4 != 0 )
-        *(u32 *)(v4 + 56) = 0;
-      else
-        HTTP_BSS_U32(0x316C) = 0;
-    }
-    http_io_fn_56(a1[12]);
-    http_io_fn_55(a1[12]);
-    http_opts_fn_3(a1[6]);
-    http_opts_fn_3((int)a1);
-  }
-}
-
-
-void http_opts_fn_20(u32 *a1)
-{
-  int v2;
-  int v3;
-  int v4;
-  int v5;
-
-  v2 = a1[1];
-  a1[13] = 1;
-  if ( v2 == 0 )
-  {
-    v3 = a1[14];
-    if ( v3 != 0 )
-    {
-      *(u32 *)(v3 + 60) = a1[15];
-      v5 = a1[15];
-      if ( v5 != 0 )
-        *(u32 *)(v5 + 56) = v3;
-      else
-        HTTP_BSS_U32(0x2ACC) = v3;
-    }
-    else
-    {
-      HTTP_BSS_U32(0x2AC8) = a1[15];
-      v4 = a1[15];
-      if ( v4 != 0 )
-        *(u32 *)(v4 + 56) = 0;
-      else
-        HTTP_BSS_U32(0x2ACC) = 0;
-    }
-    http_opts_fn_3(a1[6]);
-    http_opts_fn_3(a1[12]);
-    sceKernelMemset(a1, 0, 68);
-    a1[16] = HTTP_BSS_U32(0x2AC4);
-    HTTP_BSS_U32(0x2AC4) = (int)a1;
-  }
-}
-
-
-void http_opts_fn_21(u32 *a1)
-{
-  int v2;
-  int v3;
-  int v4;
-  int v5;
-
-  v2 = a1[1];
-  a1[13] = 1;
-  if ( v2 == 0 )
-  {
-    http_io_fn_71(&HTTP_BSS_U8(0x30DC), a1);
-    v3 = a1[14];
-    if ( v3 != 0 )
-    {
-      *(u32 *)(v3 + 60) = a1[15];
-      v5 = a1[15];
-      if ( v5 != 0 )
-        *(u32 *)(v5 + 56) = v3;
-      else
-        HTTP_BSS_U32(0x316C) = v3;
-    }
-    else
-    {
-      HTTP_BSS_U32(0x3168) = a1[15];
-      v4 = a1[15];
-      if ( v4 != 0 )
-        *(u32 *)(v4 + 56) = 0;
-      else
-        HTTP_BSS_U32(0x316C) = 0;
-    }
-    http_io_fn_56(a1[12]);
-    http_io_fn_55(a1[12]);
-    http_opts_fn_3(a1[6]);
-    http_opts_fn_3((int)a1);
-  }
-}
-
-
-int *http_opts_fn_22(int a1, int a2, int a3)
-{
-  int v6;
-  int *v7;
-  int v9;
-  int v10;
-  int v11;
-  int v12;
-  int v13;
-  u8 v14[16];
-
-  v6 = sceNet_lib_D8722983(a1);
-  http_io_fn_91(a1, v6, v14);
-  v7 = (int *)HTTP_BSS_U32(0x2AC8);
-  if ( HTTP_BSS_U32(0x2AC8) == 0 )
-    return v7;
-  while ( sceNet_lib_E0A81C7C(v7 + 2, v14, 16) != 0 )
-  {
-    v7 = (int *)v7[15];
-LABEL_4:
-    if ( v7 == NULL )
-      return v7;
-  }
-  if ( sceNet_lib_A0F16ABD(v7[6], a1) != 0 )
-  {
-    v7 = (int *)v7[15];
-    goto LABEL_4;
-  }
-  if ( v7[7] != a2 )
-  {
-    v7 = (int *)v7[15];
-    goto LABEL_4;
-  }
-  if ( a3 != 0 && sceNet_lib_E0A81C7C(v7 + 8, a3, 16) != 0 )
-  {
-    v7 = (int *)v7[15];
-    goto LABEL_4;
-  }
-  if ( v7[13] == 1 )
-  {
-    v7 = (int *)v7[15];
-    goto LABEL_4;
-  }
-  v9 = *v7 + 1;
-  ++v7[1];
-  *v7 = v9;
-  if ( v7 != NULL )
-  {
-    v10 = v7[14];
-    if ( v10 != 0 )
-    {
-      *(u32 *)(v10 + 60) = v7[15];
-      v13 = v7[15];
-      if ( v13 != 0 )
-        *(u32 *)(v13 + 56) = v10;
-      else
-        HTTP_BSS_U32(0x2ACC) = v10;
-    }
-    else
-    {
-      HTTP_BSS_U32(0x2AC8) = v7[15];
-      v11 = v7[15];
-      if ( v11 != 0 )
-        *(u32 *)(v11 + 56) = 0;
-      else
-        HTTP_BSS_U32(0x2ACC) = 0;
-    }
-    v7[14] = 0;
-    v12 = HTTP_BSS_U32(0x2AC8);
-    v7[15] = HTTP_BSS_U32(0x2AC8);
-    if ( v12 != 0 )
-      *(u32 *)(v12 + 56) = v7;
-    else
-      HTTP_BSS_U32(0x2ACC) = (int)v7;
-    HTTP_BSS_U32(0x2AC8) = (int)v7;
-  }
-  return v7;
-}
-
-
-int sceHttpInit(int a1)
-{
-  int v2; // dc
-  int result;
-  int v4;
-
-  v2 = _sceKernelCheckThreadStack() < 2032;
-  result = -2143088522;
-  if ( !v2 )
-  {
-    v4 = -2143088608;
-    if ( HTTP_BSS_U32(0x2AD0) == 1 )
-      return v4;
-    http_io_fn_34();
-    http_io_fn_25();
-    http_io_fn_15();
-    http_opts_fn_11();
-    http_core_fn_18();
-    http_cookie_fn_14();
-    v4 = http_opts_fn_4(a1);
-    result = 0;
-    if ( v4 < 0 )
-      return v4;
-    else
-      HTTP_BSS_U32(0x2AD0) = 1;
-  }
-  return result;
-}
-
-
-int sceHttpEnd()
-{
-  int v0; // dc
-  int result;
-  int v2;
-
-  v0 = _sceKernelCheckThreadStack() < 2032;
-  result = -2143088522;
-  if ( !v0 )
-  {
-    v2 = -2143088639;
-    if ( HTTP_BSS_U32(0x2AD0) == 1 )
-    {
-      http_cookie_fn_15();
-      http_opts_fn_12();
-      http_core_fn_19();
-      http_opts_fn_5();
-      HTTP_BSS_U32(0x2AD0) = 0;
-      return 0;
-    }
-    return v2;
-  }
-  return result;
-}
-
-
-int http_opts_fn_23()
-{
-  return HTTP_BSS_U32(0x2AD0);
-}
-
-
-int module_reboot_before()
-{
-  while ( http_io_fn_104() < 0 )
-    sceKernelDelayThread(100000);
-  return 0;
-}
-
-
-int http_opts_fn_24(u32 *a1, int a2, unsigned int a3, int a4)
-{
-  int result;
-  unsigned int v8;
-  int v9;
-  int v10;
-  unsigned int i;
-  int v12;
-  unsigned int v13;
-  int v14;
-
-  result = 0;
-  v8 = a3;
-  v9 = 0;
-  if ( a1[15] != 4 )
-    return result;
-  v10 = a1[233];
-  if ( v10 == 0 )
-    v10 = a1[232];
-  if ( a3 == 0 )
+    buf[idx] = '\0';
+    *size_out = sceNet_lib_2A73ADDC(buf, NULL, 16);
     return 0;
-  for ( i = a1[22]; i != 0; i = a1[22] )
-  {
-    v12 = v8 < i;
-LABEL_10:
-    v13 = v8;
-    if ( !v12 )
-      v13 = i;
-    result = http_opts_fn_25(a1, a2 + v9, v13, a4);
-    v9 += result;
-    if ( result < 0
-      || (v14 = a1[22], v8 -= result, a1[22] = v14 - result, v14 == result) && (result = http_io_fn_36(a1, a4)) < 0 )
-    {
-      a1[22] = 0;
-      goto LABEL_20;
+}
+
+s32 http_transport_recv(HttpConnection *conn, void *buf, u32 len)
+{
+    if (conn->scheme != HTTP_SCHEME_HTTPS || conn->state == HTTP_CONN_PROXY_TUNNEL)
+        return sceNetInetRecv(conn->sock_fd, buf, len, 0);
+    return http_ssl_recv(conn, buf, (s32)len);
+}
+
+s32 http_resolve_connection_host(HttpConnection *conn)
+{
+    char proxy_buf[128];
+    const char *target_host;
+    void *res_buf = NULL;
+    s32 rid = 0;
+    s32 ret;
+    s32 intr;
+
+    if (conn->cfg.use_default_proxy == 1) {
+        ret = http_refresh_apctl_proxy(&conn->cfg);
+        if (ret < 0)
+            return ret;
     }
-LABEL_14:
-    result = v9;
-    if ( v8 == 0 || a1[15] != 4 )
-      return result;
-  }
-  result = http_opts_fn_26(a1, a1 + 22, a4);
-  if ( result < 0 )
-  {
-    a1[22] = 0;
-    goto LABEL_20;
-  }
-  i = a1[22];
-  v12 = v8 < i;
-  if ( i != 0 )
-    goto LABEL_10;
-  result = http_io_fn_3(a1, a4);
-  if ( result >= 0 )
-  {
-    if ( a1[212] == 1 )
-      http_io_fn_24(v10);
-    a1[211] = 0;
-    a1[15] = 5;
-    goto LABEL_14;
-  }
-  a1[22] = 0;
-LABEL_20:
-  a1[211] = 0;
-  return result;
-}
 
+    intr = http_intr_suspend();
+    if (conn->cfg.use_proxy == 1) {
+        sceNet_lib_B5CE388A(proxy_buf, conn->cfg.proxy_server, sizeof(proxy_buf));
+        target_host = proxy_buf;
+    } else {
+        target_host = conn->host;
+    }
+    http_intr_resume(intr);
 
-int http_opts_fn_25(int a1, int a2, int a3, int a4)
-{
-  return http_io_fn_7(a1, a2, a3, a4, 0);
-}
+    ret = http_inet_pton(2, target_host, &conn->addr.addr);
+    if (ret != 1) {
+        res_buf = http_malloc(768);
+        if (res_buf == NULL)
+            return SCE_HTTP_ERROR_OUT_OF_MEMORY;
 
+        ret = sceNetResolverCreate(&rid, res_buf, 768);
+        if (ret >= 0) {
+            conn->state = HTTP_CONN_RESOLVING;
+            conn->resolver_id = rid;
+            ret = sceNetResolverStartNtoA(rid, target_host, &conn->addr.addr,
+                                          conn->cfg.resolve_timeout, conn->cfg.resolve_retry);
+            conn->state = HTTP_CONN_CONNECTING;
+            if (ret < 0) {
+                sceNetResolverDelete(rid);
+                http_free(res_buf);
+                return ret;
+            }
+            ret = sceNetResolverDelete(rid);
+            if (ret < 0) {
+                http_free(res_buf);
+                return ret;
+            }
+        } else {
+            http_free(res_buf);
+            return ret;
+        }
+    }
 
-int http_opts_fn_26(int a1, u32 *a2, int a3)
-{
-  int v3;
-  int v6;
-  int v8;
-  char *v9;
-  int v10;
-  int v11;
-  int v12;
-  s64 v13;
-  u8 *v14;
-  int result;
-  int v16;
-  int v17;
-  u8 v18[16];
-  u8 v19[16];
+    conn->addr.family = 2;
+    conn->resolved = 1;
+    conn->addr.port = http_bswap16(conn->cfg.use_proxy == 1 ? conn->cfg.proxy_port : conn->port);
 
-  v3 = 0;
-  v6 = *(u32 *)(a1 + 932);
-  if ( v6 == 0 )
-    v6 = *(u32 *)(a1 + 928);
-  v8 = 0;
-  v9 = v18;
-  while ( 1 )
-  {
-    v10 = http_opts_fn_25(a1, (int)v9, 1, a3);
-    v11 = v10;
-    if ( v10 < 0 )
-      return v11;
-    if ( v10 == 0 )
-      goto LABEL_19;
-    v12 = *v9;
-    v13 = ((u64)(v13) & 0xFFFFFFFF00000000ULL) | (u32)(v12 == 0x20);
-    v13 = ((u64)(v13) & 0x00000000FFFFFFFFULL) | ((u64)(u32)(v12 == 0xD) << 32);
-    if ( v13 != 0 )
-      break;
-    v9 = &v18[++v8];
-    if ( v8 >= 11 )
-      goto LABEL_9;
-  }
-  v3 = 1;
-LABEL_9:
-  v14 = &v18[v8];
-  if ( v3 != 1 )
+    if (res_buf != NULL)
+        http_free(res_buf);
     return 0;
-  v16 = (char)*v14;
-  if ( v16 == 32 )
-  {
-    result = http_io_fn_36(a1, a3);
-    if ( result >= 0 )
-      goto LABEL_13;
-  }
-  else
-  {
-    if ( v16 != 13 )
-    {
-LABEL_13:
-      *v14 = 0;
-LABEL_14:
-      *a2 = sceNet_lib_2A73ADDC(v18, 0, 16);
-      return 0;
-    }
-    v17 = http_opts_fn_25(a1, (int)v19, 1, a3);
-    v11 = v17;
-    if ( v17 >= 0 )
-    {
-      if ( v17 != 0 && v19[0] == 10 )
-      {
-        *v14 = 0;
-        goto LABEL_14;
-      }
-LABEL_19:
-      v11 = -2143088540;
-      http_io_fn_24(v6);
-    }
-    return v11;
-  }
-  return result;
 }
-
-
-int http_opts_fn_27(u32 *a1, int a2, int a3)
-{
-  if ( a1[1] != 1 || a1[13] == 3 )
-    return sceNetInetRecv(a1[12]);
-  else
-    return http_ssl_fn_14(a1, a2, a3);
-}
-
-
-int http_opts_fn_28(int a1)
-{
-  int v2;
-  int v3;
-  int v4;
-  int v5;
-  int v6;
-  u8 *v7;
-  int started;
-  int v9;
-  int v10;
-  u32 v11;
-  int result;
-  u8 v13[128];
-  u32 v14[4];
-
-  v2 = 0;
-  v3 = *(s16 *)(a1 + 272);
-  v14[0] = 0;
-  if ( v3 != 1 || (result = http_io_fn_4(a1 + 176)) >= 0 )
-  {
-    v6 = http_io_fn_89();
-    if ( *(u32 *)(a1 + 192) == 1 )
-    {
-      sceNet_lib_B5CE388A(v13, *(u32 *)(a1 + 240), 128);
-      v7 = v13;
-    }
-    else
-    {
-      v7 = *(u8 **)(a1 + 56);
-    }
-    http_io_fn_90(v6, v4, v5);
-    started = http_io_fn_95(2, v7, a1 + 356);
-    if ( started == 1 )
-      goto LABEL_9;
-    v2 = http_opts_fn_2(768);
-    started = -2143088606;
-    if ( v2 != 0 )
-    {
-      started = sceNetResolverCreate(v14, v2, 768);
-      if ( started >= 0 )
-      {
-        v9 = v14[0];
-        *(u32 *)(a1 + 52) = 1;
-        *(u32 *)(a1 + 28) = v9;
-        started = sceNetResolverStartNtoA(v9, v7, a1 + 356, *(u32 *)(a1 + 200), *(u32 *)(a1 + 188));
-        *(u32 *)(a1 + 52) = 2;
-        if ( started < 0 )
-        {
-          sceNetResolverDelete(v14[0]);
-        }
-        else
-        {
-          started = sceNetResolverDelete(v14[0]);
-          if ( started >= 0 )
-          {
-LABEL_9:
-            v10 = *(u32 *)(a1 + 192);
-            *(u8 *)(a1 + 353) = 2;
-            *(u32 *)(a1 + 64) = 1;
-            if ( v10 == 1 )
-              v11 = *(u16 *)(a1 + 348);
-            else
-              v11 = *(u16 *)(a1 + 400);
-            *(u16 *)(a1 + 354) = _wsbh(v11);
-          }
-        }
-      }
-    }
-    result = started;
-    if ( v2 != 0 )
-    {
-      http_opts_fn_3(v2);
-      return started;
-    }
-  }
-  return result;
-}
-
-
