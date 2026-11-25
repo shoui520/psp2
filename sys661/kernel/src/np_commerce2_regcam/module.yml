@@ -1,0 +1,286 @@
+name: sceNpCommerce2RegCam
+attributes: 0x0006
+version: [1, 3]
+sdk_version: 0x06060110
+stub_order: [Kernel_Library, SysMemUserForUser, sceNetIfhandle_lib, sceNet_lib, sceNp, sceNpCommerce2]
+exports:
+  - name: syslib
+    version: [0, 0]
+    attributes: 0x8000
+    variables:
+      - module_info: 0xf01d73a7
+      - module_sdk_version: 0x11b97506
+  - name: sceNpCommerce2RegCam
+    version: [0, 17]
+    attributes: 0x0001
+    len: 5
+    pad: 3
+    extra_words: [0x00040000]
+    bucket_words: [0x00020000, 0x00070005, 0x000f000a, 0x00140011, 0x001b001a, 0x0021001c, 0x00240022, 0x00280026, 0x0031002d, 0x00380034, 0x0042003e, 0x00460046, 0x004a0049, 0x0050004b, 0x00560055, 0x005a0057, 0x005d005c, 0x0060005f, 0x00630060, 0x00680063, 0x006d006b, 0x0070006e, 0x00730071, 0x007b0076, 0x00830081, 0x00880084, 0x008e008b, 0x00950090, 0x009b0099, 0x009f009d, 0x00a800a5, 0x00b700af]
+    functions:
+      - sceNpCommerce2RegCam_00E61B9F: 0x00e61b9f
+      - sceNpCommerce2RegCam_01B124E9: 0x01b124e9
+      - sceNpCommerce2RegCam_0400E86A: 0x0400e86a
+      - sceNpCommerce2RegCam_04AF3D66: 0x04af3d66
+      - sceNpCommerce2RegCam_06B1824F: 0x06b1824f
+      - sceNpCommerce2RegCam_0933A995: 0x0933a995
+      - sceNpCommerce2RegCam_0AA280E7: 0x0aa280e7
+      - sceNpCommerce2RegCam_0EE4DB04: 0x0ee4db04
+      - sceNpCommerce2RegCam_0F0D10D7: 0x0f0d10d7
+      - sceNpCommerce2RegCam_0F42FC76: 0x0f42fc76
+      - sceNpCommerce2RegCam_107C4508: 0x107c4508
+      - sceNpCommerce2RegCam_10E44562: 0x10e44562
+      - sceNpCommerce2RegCam_10FAC26F: 0x10fac26f
+      - sceNpCommerce2RegCam_130756C8: 0x130756c8
+      - sceNpCommerce2RegCam_13E0AD53: 0x13e0ad53
+      - sceNpCommerce2RegCam_14626EC6: 0x14626ec6
+      - sceNpCommerce2RegCam_17843035: 0x17843035
+      - sceNpCommerce2RegCam_19679B00: 0x19679b00
+      - sceNpCommerce2RegCam_1A0507A7: 0x1a0507a7
+      - sceNpCommerce2RegCam_1BC6B384: 0x1bc6b384
+      - sceNpCommerce2RegCam_1C3B41DA: 0x1c3b41da
+      - sceNpCommerce2RegCam_1CB4F2B3: 0x1cb4f2b3
+      - sceNpCommerce2RegCam_1D971360: 0x1d971360
+      - sceNpCommerce2RegCam_1E1C2D9D: 0x1e1c2d9d
+      - sceNpCommerce2RegCam_1E8D3613: 0x1e8d3613
+      - sceNpCommerce2RegCam_1EA0D72D: 0x1ea0d72d
+      - sceNpCommerce2RegCam_2054F881: 0x2054f881
+      - sceNpCommerce2RegCam_249407CF: 0x249407cf
+      - sceNpCommerce2RegCam_28541A7A: 0x28541a7a
+      - sceNpCommerce2RegCam_28907860: 0x28907860
+      - sceNpCommerce2RegCam_289E304C: 0x289e304c
+      - sceNpCommerce2RegCam_290B7E82: 0x290b7e82
+      - sceNpCommerce2RegCam_29CB32DA: 0x29cb32da
+      - sceNpCommerce2RegCam_2FC38094: 0x2fc38094
+      - sceNpCommerce2RegCam_32016B1A: 0x32016b1a
+      - sceNpCommerce2RegCam_3328C751: 0x3328c751
+      - sceNpCommerce2RegCam_35685D12: 0x35685d12
+      - sceNpCommerce2RegCam_37F3D00E: 0x37f3d00e
+      - sceNpCommerce2RegCam_38BE19B7: 0x38be19b7
+      - sceNpCommerce2RegCam_3B9334BA: 0x3b9334ba
+      - sceNpCommerce2RegCam_3C07C95A: 0x3c07c95a
+      - sceNpCommerce2RegCam_3D77FBF8: 0x3d77fbf8
+      - sceNpCommerce2RegCam_3E015183: 0x3e015183
+      - sceNpCommerce2RegCam_3E8C6A5C: 0x3e8c6a5c
+      - sceNpCommerce2RegCam_3EFA6523: 0x3efa6523
+      - sceNpCommerce2RegCam_427495CA: 0x427495ca
+      - sceNpCommerce2RegCam_4328E348: 0x4328e348
+      - sceNpCommerce2RegCam_43A10942: 0x43a10942
+      - sceNpCommerce2RegCam_43ABA1B2: 0x43aba1b2
+      - sceNpCommerce2RegCam_461DD73D: 0x461dd73d
+      - sceNpCommerce2RegCam_46A43687: 0x46a43687
+      - sceNpCommerce2RegCam_46BA74F3: 0x46ba74f3
+      - sceNpCommerce2RegCam_48D75015: 0x48d75015
+      - sceNpCommerce2RegCam_4937BAA2: 0x4937baa2
+      - sceNpCommerce2RegCam_49967C41: 0x49967c41
+      - sceNpCommerce2RegCam_4B1A9E4E: 0x4b1a9e4e
+      - sceNpCommerce2RegCam_4C191E40: 0x4c191e40
+      - sceNpCommerce2RegCam_4D6A55F2: 0x4d6a55f2
+      - sceNpCommerce2RegCam_4D7EEABD: 0x4d7eeabd
+      - sceNpCommerce2RegCam_4EAA3049: 0x4eaa3049
+      - sceNpCommerce2RegCam_4F2E8993: 0x4f2e8993
+      - sceNpCommerce2RegCam_4FDB9B84: 0x4fdb9b84
+      - sceNpCommerce2RegCam_505C1C2B: 0x505c1c2b
+      - sceNpCommerce2RegCam_51D546D5: 0x51d546d5
+      - sceNpCommerce2RegCam_524A8607: 0x524a8607
+      - sceNpCommerce2RegCam_53BB97C3: 0x53bb97c3
+      - sceNpCommerce2RegCam_544545B6: 0x544545b6
+      - sceNpCommerce2RegCam_54E7925E: 0x54e7925e
+      - sceNpCommerce2RegCam_552B0DF7: 0x552b0df7
+      - sceNpCommerce2RegCam_56AB8C1F: 0x56ab8c1f
+      - sceNpCommerce2RegCam_5EE50062: 0x5ee50062
+      - sceNpCommerce2RegCam_5F271C1B: 0x5f271c1b
+      - sceNpCommerce2RegCam_5F45DF28: 0x5f45df28
+      - sceNpCommerce2RegCam_63FAD5E2: 0x63fad5e2
+      - sceNpCommerce2RegCam_64D92E9C: 0x64d92e9c
+      - sceNpCommerce2RegCam_68315782: 0x68315782
+      - sceNpCommerce2RegCam_6925F26A: 0x6925f26a
+      - sceNpCommerce2RegCam_69817297: 0x69817297
+      - sceNpCommerce2RegCam_69F468DB: 0x69f468db
+      - sceNpCommerce2RegCam_6BFAB2ED: 0x6bfab2ed
+      - sceNpCommerce2RegCam_6CDE3C3A: 0x6cde3c3a
+      - sceNpCommerce2RegCam_6E001343: 0x6e001343
+      - sceNpCommerce2RegCam_6EA71511: 0x6ea71511
+      - sceNpCommerce2RegCam_6EFF8564: 0x6eff8564
+      - sceNpCommerce2RegCam_6F0783DA: 0x6f0783da
+      - sceNpCommerce2RegCam_726FF626: 0x726ff626
+      - sceNpCommerce2RegCam_748B85C7: 0x748b85c7
+      - sceNpCommerce2RegCam_78E3D827: 0x78e3d827
+      - sceNpCommerce2RegCam_7A315723: 0x7a315723
+      - sceNpCommerce2RegCam_7AB45618: 0x7ab45618
+      - sceNpCommerce2RegCam_7C50D970: 0x7c50d970
+      - sceNpCommerce2RegCam_7D3AD059: 0x7d3ad059
+      - sceNpCommerce2RegCam_8061F181: 0x8061f181
+      - sceNpCommerce2RegCam_856C52E9: 0x856c52e9
+      - sceNpCommerce2RegCam_86966193: 0x86966193
+      - sceNpCommerce2RegCam_8BBBCF11: 0x8bbbcf11
+      - sceNpCommerce2RegCam_9018A33F: 0x9018a33f
+      - sceNpCommerce2RegCam_90E218A2: 0x90e218a2
+      - sceNpCommerce2RegCam_90F2F814: 0x90f2f814
+      - sceNpCommerce2RegCam_993C822E: 0x993c822e
+      - sceNpCommerce2RegCam_999908AF: 0x999908af
+      - sceNpCommerce2RegCam_99D0CFA1: 0x99d0cfa1
+      - sceNpCommerce2RegCam_9A5600B9: 0x9a5600b9
+      - sceNpCommerce2RegCam_9AFBDA97: 0x9afbda97
+      - sceNpCommerce2RegCam_9C9E0B84: 0x9c9e0b84
+      - sceNpCommerce2RegCam_9D44ED38: 0x9d44ed38
+      - sceNpCommerce2RegCam_9FCC267C: 0x9fcc267c
+      - sceNpCommerce2RegCam_A2337870: 0xa2337870
+      - sceNpCommerce2RegCam_A2A91596: 0xa2a91596
+      - sceNpCommerce2RegCam_A4BD8ECD: 0xa4bd8ecd
+      - sceNpCommerce2RegCam_A9925EBC: 0xa9925ebc
+      - sceNpCommerce2RegCam_AA077B50: 0xaa077b50
+      - sceNpCommerce2RegCam_AF8404F6: 0xaf8404f6
+      - sceNpCommerce2RegCam_B0EEB010: 0xb0eeb010
+      - sceNpCommerce2RegCam_B140C5D7: 0xb140c5d7
+      - sceNpCommerce2RegCam_B4CC8AE6: 0xb4cc8ae6
+      - sceNpCommerce2RegCam_B4EE6FD8: 0xb4ee6fd8
+      - sceNpCommerce2RegCam_B56A1200: 0xb56a1200
+      - sceNpCommerce2RegCam_B816C674: 0xb816c674
+      - sceNpCommerce2RegCam_B9AA1D92: 0xb9aa1d92
+      - sceNpCommerce2RegCam_BA099CBE: 0xba099cbe
+      - sceNpCommerce2RegCam_BA6DA16C: 0xba6da16c
+      - sceNpCommerce2RegCam_BBAE6864: 0xbbae6864
+      - sceNpCommerce2RegCam_BCFD9CC5: 0xbcfd9cc5
+      - sceNpCommerce2RegCam_BD48E118: 0xbd48e118
+      - sceNpCommerce2RegCam_BD83257C: 0xbd83257c
+      - sceNpCommerce2RegCam_BD9DD225: 0xbd9dd225
+      - sceNpCommerce2RegCam_BE4E06A6: 0xbe4e06a6
+      - sceNpCommerce2RegCam_BF007C60: 0xbf007c60
+      - sceNpCommerce2RegCam_C0CAEE74: 0xc0caee74
+      - sceNpCommerce2RegCam_C1D499F5: 0xc1d499f5
+      - sceNpCommerce2RegCam_C48D59AE: 0xc48d59ae
+      - sceNpCommerce2RegCam_C8124194: 0xc8124194
+      - sceNpCommerce2RegCam_CA1F31C0: 0xca1f31c0
+      - sceNpCommerce2RegCam_CA669133: 0xca669133
+      - sceNpCommerce2RegCam_CB9EC34C: 0xcb9ec34c
+      - sceNpCommerce2RegCam_CD307E5C: 0xcd307e5c
+      - sceNpCommerce2RegCam_CD9F9F24: 0xcd9f9f24
+      - sceNpCommerce2RegCam_CE4F0A96: 0xce4f0a96
+      - sceNpCommerce2RegCam_D0320D95: 0xd0320d95
+      - sceNpCommerce2RegCam_D059973F: 0xd059973f
+      - sceNpCommerce2RegCam_D1C2D16F: 0xd1c2d16f
+      - sceNpCommerce2RegCam_D6C671FA: 0xd6c671fa
+      - sceNpCommerce2RegCam_D73CC389: 0xd73cc389
+      - sceNpCommerce2RegCam_D8F02D94: 0xd8f02d94
+      - sceNpCommerce2RegCam_D99AEC05: 0xd99aec05
+      - sceNpCommerce2RegCam_DA23FE50: 0xda23fe50
+      - sceNpCommerce2RegCam_DA4D6AC6: 0xda4d6ac6
+      - sceNpCommerce2RegCam_DB478D24: 0xdb478d24
+      - sceNpCommerce2RegCam_DC403471: 0xdc403471
+      - sceNpCommerce2RegCam_DE2BB689: 0xde2bb689
+      - sceNpCommerce2RegCam_DEA9E110: 0xdea9e110
+      - sceNpCommerce2RegCam_DF407CA3: 0xdf407ca3
+      - sceNpCommerce2RegCam_E256E232: 0xe256e232
+      - sceNpCommerce2RegCam_E2AD8DB9: 0xe2ad8db9
+      - sceNpCommerce2RegCam_E68AD08A: 0xe68ad08a
+      - sceNpCommerce2RegCam_E68CE3E1: 0xe68ce3e1
+      - sceNpCommerce2RegCam_E8B01984: 0xe8b01984
+      - sceNpCommerce2RegCam_EB7C8574: 0xeb7c8574
+      - sceNpCommerce2RegCam_EC918C7E: 0xec918c7e
+      - sceNpCommerce2RegCam_ECB37716: 0xecb37716
+      - sceNpCommerce2RegCam_ECFD766F: 0xecfd766f
+      - sceNpCommerce2RegCam_EDBDE24A: 0xedbde24a
+      - sceNpCommerce2RegCam_EE818631: 0xee818631
+      - sceNpCommerce2RegCam_EF397E50: 0xef397e50
+      - sceNpCommerce2RegCam_F1711F2E: 0xf1711f2e
+      - sceNpCommerce2RegCam_F373282E: 0xf373282e
+      - sceNpCommerce2RegCam_F3D3D32F: 0xf3d3d32f
+      - sceNpCommerce2RegCam_F59AC300: 0xf59ac300
+      - sceNpCommerce2RegCam_F5BCBE33: 0xf5bcbe33
+      - sceNpCommerce2RegCam_F5E2A7B0: 0xf5e2a7b0
+      - sceNpCommerce2RegCam_F6415A7A: 0xf6415a7a
+      - sceNpCommerce2RegCam_F66BE4F0: 0xf66be4f0
+      - sceNpCommerce2RegCam_F692E73E: 0xf692e73e
+      - sceNpCommerce2RegCam_F6BBF9FC: 0xf6bbf9fc
+      - sceNpCommerce2RegCam_F8462A1F: 0xf8462a1f
+      - sceNpCommerce2RegCam_F8BA328E: 0xf8ba328e
+      - sceNpCommerce2RegCam_F8FBAE67: 0xf8fbae67
+      - sceNpCommerce2RegCam_FA10DDCA: 0xfa10ddca
+      - sceNpCommerce2RegCam_FA13A517: 0xfa13a517
+      - sceNpCommerce2RegCam_FA305116: 0xfa305116
+      - sceNpCommerce2RegCam_FAC30D4E: 0xfac30d4e
+      - sceNpCommerce2RegCam_FB32EF43: 0xfb32ef43
+imports:
+  - name: sceNpCommerce2
+    version: [0, 17]
+    attributes: 0x0009
+    pad: 5
+    functions:
+      - sceNpCommerce2_02C307C0: 0x02c307c0
+      - sceNpCommerce2_02CADA41: 0x02cada41
+      - sceNpCommerce2_06618C81: 0x06618c81
+      - sceNpCommerce2_0A6AB496: 0x0a6ab496
+      - sceNpCommerce2_157FA8AA: 0x157fa8aa
+      - sceNpCommerce2_22CEC5E2: 0x22cec5e2
+      - sceNpCommerce2_2AFD0CC7: 0x2afd0cc7
+      - sceNpCommerce2_3546C737: 0x3546c737
+      - sceNpCommerce2_382803C8: 0x382803c8
+      - sceNpCommerce2_3F6D413C: 0x3f6d413c
+      - sceNpCommerce2_460A1D92: 0x460a1d92
+      - sceNpCommerce2_4D43B84D: 0x4d43b84d
+      - sceNpCommerce2_63B96D73: 0x63b96d73
+      - sceNpCommerce2_66EC0829: 0x66ec0829
+      - sceNpCommerce2_69FEA1C8: 0x69fea1c8
+      - sceNpCommerce2_75DF99A9: 0x75df99a9
+      - sceNpCommerce2_77BE411B: 0x77be411b
+      - sceNpCommerce2_8139E653: 0x8139e653
+      - sceNpCommerce2_851E7844: 0x851e7844
+      - sceNpCommerce2_8642C532: 0x8642c532
+      - sceNpCommerce2_8E80E661: 0x8e80e661
+      - sceNpCommerce2_ADAA054C: 0xadaa054c
+      - sceNpCommerce2_AE614CC6: 0xae614cc6
+      - sceNpCommerce2_C27FEAB1: 0xc27feab1
+      - sceNpCommerce2_CBA487E9: 0xcba487e9
+      - sceNpCommerce2_CCEEA788: 0xcceea788
+      - sceNpCommerce2_D4C319C6: 0xd4c319c6
+      - sceNpCommerce2_D5932A6C: 0xd5932a6c
+      - sceNpCommerce2_E3455E27: 0xe3455e27
+      - sceNpCommerce2_EE7255FE: 0xee7255fe
+      - sceNpCommerce2_F0900551: 0xf0900551
+      - sceNpCommerce2_F8D175FA: 0xf8d175fa
+      - sceNpCommerce2_FC47B63C: 0xfc47b63c
+  - name: SysMemUserForUser
+    version: [0, 17]
+    attributes: 0x4000
+    pad: 6
+    functions:
+      - KprintfForUser: 0x13a5abef
+      - sceKernelGetCompiledSdkVersion: 0xfc114573
+  - name: sceNetIfhandle_lib
+    version: [0, 17]
+    attributes: 0x4009
+    pad: 5
+    functions:
+      - sceNetIfhandle_lib_15CFE3C0: 0x15cfe3c0
+      - sceNetIfhandle_lib_76BAD213: 0x76bad213
+  - name: sceNet_lib
+    version: [0, 17]
+    attributes: 0x0009
+    pad: 5
+    functions:
+      - sceNet_lib_750F705D: 0x750f705d
+      - sceNet_lib_80C9F02A: 0x80c9f02a
+      - sceNet_lib_94DCA9F0: 0x94dca9f0
+      - sceNet_lib_96EF9DA1: 0x96ef9da1
+      - sceNet_lib_A0F16ABD: 0xa0f16abd
+      - sceNet_lib_B5CE388A: 0xb5ce388a
+      - sceNet_lib_B9085A96: 0xb9085a96
+      - sceNet_lib_BCBE14CF: 0xbcbe14cf
+      - sceNet_lib_C13C9307: 0xc13c9307
+      - sceNet_lib_CF705E46: 0xcf705e46
+      - sceNet_lib_D8722983: 0xd8722983
+  - name: sceNp
+    version: [0, 17]
+    attributes: 0x0009
+    pad: 6
+    functions:
+      - sceNp_2E4769C3: 0x2e4769c3
+  - name: Kernel_Library
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 1
+    functions:
+      - sceKernelMemset: 0xa089eca4
+      - _sceKernelCheckThreadStack: 0xd13bde95
+      - sceKernelMemcpy: 0x1839852a
