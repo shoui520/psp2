@@ -91,6 +91,13 @@ int DialogPage::Inactivate()
 	return 0;
 }
 
+ui::Scene *DialogPage::GetRoot()
+{
+	if (m_plugin != NULL)
+		return m_plugin->PageRoot(m_id);
+	return NULL;
+}
+
 void DialogPage::FadeIn(float timeMs, float delayMs)
 {
 	ui::Scene *scene;

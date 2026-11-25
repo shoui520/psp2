@@ -13,9 +13,15 @@
 #include <photoreview_dialog.h>
 #include <plugin.h>
 #include <std/string>
+#include <common/job_slots.h>
+#include <math/ngp/v2.h>
 #include <math/ngp/v4.h>
+#include <math/rect.h>
 #include <memory/heap_allocator.h>
+#include "dialog_page.h"
 #include "event_dispatcher.h"
+#include "gesture_handler.h"
+#include "gui_dialog.h"
 #include "input_listener.h"
 
 /* the work memory is missing for a call, another call holds it (names ours) */
@@ -51,23 +57,83 @@ public:
 };
 
 /* the dialog's page, its photo and its buttons (photoreview_dialog_view.cpp) */
-class PhotoReviewView : public EventDispatcher {
+class PhotoReviewView : public EventDispatcher, public DialogPage, public GestureHandler,
+			public EventListener, public InputHandler {
 public:
 	PhotoReviewView(paf::Plugin *plugin);
 	virtual ~PhotoReviewView();
 
-	void SetBgColor(bool infobarShown, const paf::math::v4 &color);
+	void SetBgColor(SceInt32 infobarShown, const paf::math::v4 &color);
 	int SetPhoto(const paf::string &path, SceInt32 mode, paf::memory::HeapAllocator *decodeHeap,
 		     void *workMemory);
 	int SetExportParam(const paf::string &photoTitle, const paf::string &gameTitle,
 			   const paf::string &gameComment);
-	int StartDecode(void);
-	int Start(void);
-	int Stop(void);
-	int Close(int32_t transition, float fadeTimeMs);
+	void StartDecode(void);
 
-	/* the view's members: written with photoreview_dialog_view.cpp */
-	SceUInt64 m_layout[(776 - 32) / 8];
+	virtual int Open();
+	virtual int Close();
+	virtual void OnInit(int32_t type, paf::ui::Handler *self, paf::ui::Event *e);
+	virtual void OnDecide(int32_t type, paf::ui::Handler *self, paf::ui::Event *e);
+	virtual void OnButton(int32_t type, paf::ui::Handler *self, paf::ui::Event *e);
+	virtual void OnHidden();
+
+	virtual void OnGesture01(int32_t type, paf::ui::Handler *self, paf::ui::Event *e);
+	virtual void OnGesture13(int32_t type, paf::ui::Handler *self, paf::ui::Event *e);
+	virtual void OnGesture14(int32_t type, paf::ui::Handler *self, paf::ui::Event *e);
+	virtual void OnGesture15(int32_t type, paf::ui::Handler *self, paf::ui::Event *e);
+	virtual void OnGesture16(int32_t type, paf::ui::Handler *self, paf::ui::Event *e);
+
+	virtual void OnEvent(EventDispatcher *sender, int32_t event, void *arg);
+	virtual void OnPadInput(const paf::inputdevice::pad::Data *data,
+				const paf::inputdevice::pad::Data *pre);
+
+private:
+	void ShowUi(void);
+	void HideUi(void);
+	void OpenSaveConfirmDialog(void);
+	void OpenSaveWaitDialog(void);
+	void OpenErrorDialog(SceInt32 error);
+	void DisablePhotoGestures(void);
+	void EnablePhotoGestures(void);
+	void UpdatePhotoLimits(const paf::math::v4 &fitSize, float aspect);
+	void UpdatePhotoDragLimit(paf::ui::Widget *widget);
+	static int ClampFocus(paf::math::v2 *focus, const paf::math::rect &viewRect,
+			      const paf::math::rect &photoRect);
+	void OnJobRemoved(uint32_t index, paf::common::SharedPtr<paf::job::JobItem> item);
+	void OnZoomAnimEnd(paf::Timer *t, paf::ui::AnimListener *listener);
+	void OnStoreButtonDecide(int32_t type, paf::ui::Handler *self);
+	void HandleZoomInput(const paf::inputdevice::pad::Data *data);
+
+	static void JobRemovedCB(uint32_t index, paf::common::SharedPtr<paf::job::JobItem> item,
+				 void *userdata);
+	static void ZoomAnimEndCB(paf::Timer *t, paf::ui::AnimListener *listener, void *data1,
+				  void *data2, void *data3);
+	static void StoreButtonCB(int32_t type, paf::ui::Handler *self, paf::ui::Event *e,
+				  void *userdata);
+
+	paf::common::JobSlots m_jobSlots;
+	paf::string m_path;
+	SceInt32 m_mode;
+	bool m_uiShown;
+	bool m_hasFatalError;
+	SceInt32 m_fatalError;
+	GuiConfirmDialog m_saveConfirmDialog;
+	GuiWaitDialog m_saveWaitDialog;
+	GuiMessageDialog m_errorDialog;
+	paf::math::v4 m_photoSize;
+	paf::math::v4 m_fitSize;
+	paf::math::v4 m_reserved624;
+	paf::math::v2 m_reserved640;
+	SceUInt8 m_reserved648[32];
+	paf::memory::HeapAllocator *m_decodeHeap;
+	void *m_workMemory;
+	SceInt32 m_infobarShown;
+	paf::math::v4 m_bgColor;
+	paf::math::v4 m_viewSize;
+	paf::string m_photoTitle;
+	paf::string m_gameTitle;
+	paf::string m_gameComment;
+	paf::string m_storeContentId;
 };
 
 class PhotoReviewDialog : public EventListener, public PluginApp {

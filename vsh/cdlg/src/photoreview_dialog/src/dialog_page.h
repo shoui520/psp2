@@ -67,6 +67,7 @@ public:
 	/* Hide or SlideOut has ended */
 	virtual void OnHidden();
 
+	paf::ui::Scene *GetRoot();
 	paf::ui::Widget *FindChild(const paf::IDParam &id, int32_t opt);
 	void ShowChild(const paf::IDParam &id, float timeMs);
 	void HideChild(const paf::IDParam &id, float timeMs);

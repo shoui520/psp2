@@ -324,13 +324,13 @@ int PhotoReviewDialog::Init(Plugin *plugin)
 int PhotoReviewDialog::Start(Plugin *plugin)
 {
 	StartInputListener();
-	m_view.Start();
+	m_view.Open();
 	return 0;
 }
 
 int PhotoReviewDialog::Stop(Plugin *plugin)
 {
-	m_view.Stop();
+	m_view.Close();
 	StopInputListener();
 	return 0;
 }
@@ -352,12 +352,12 @@ void PhotoReviewDialog::OnEvent(EventDispatcher *sender, int32_t event, void *ar
 	case PHOTOREVIEW_EVENT_RESULT:
 		m_result.result = *(SceInt32 *)arg;
 		memset(m_result.reserved, 0, sizeof(m_result.reserved));
-		m_view.Close(2, 500.0f);
+		m_view.SlideOut(DIALOG_PAGE_SLIDE_UP, 500.0f);
 		break;
 	case PHOTOREVIEW_EVENT_OK:
 		m_result.result = SCE_COMMON_DIALOG_RESULT_OK;
 		memset(m_result.reserved, 0, sizeof(m_result.reserved));
-		m_view.Close(2, 500.0f);
+		m_view.SlideOut(DIALOG_PAGE_SLIDE_UP, 500.0f);
 		break;
 	case PHOTOREVIEW_EVENT_CLOSED:
 		if (m_callback != NULL)

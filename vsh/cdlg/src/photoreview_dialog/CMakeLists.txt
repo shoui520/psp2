@@ -2,17 +2,22 @@ enable_language(CXX)
 # ScePhotoReviewDialogPlugin (vs0:sys/external/libcdlg_photoreview.suprx), built by Sony with SNC
 # 3.57 in C++: the photo review dialog's plugin. Its paf imports take libpaf's link names.
 set(MODULE_IMPORT_NAMES vsh/paf/fw/3.65-CEX.exports.yml)
-psp2_module(vs0_sys_external_libcdlg_photoreview KIND user COMPILER snc PARTIAL SOURCES
+psp2_module(vs0_sys_external_libcdlg_photoreview KIND user COMPILER snc SOURCES
 	src/photoreview_dialog_plugin.cpp
 	src/event_dispatcher.cpp
 	src/input_listener.cpp
 	src/dialog_page.cpp
 	src/plugin_app.cpp
+	src/photoreview_dialog_view.cpp
 	src/exif_reader.cpp
 	src/gui_dialog.cpp
 	src/gesture_handler.cpp
 	src/photo_app_launch_job.cpp
 	../../../app/common/src/photo_makernote/photo_makernote.cpp
+	../msg_dialog/msg_dialog_util.cpp
+	../../../app/common/src/mpo/mpo.c
+	../../../../sys/sdk/target/src/libsnc/unwind_pr0.c
+	../../../../sys/sdk/target/src/libsnc/unwind_pr1.c
 )
 target_include_directories(vs0_sys_external_libcdlg_photoreview PRIVATE "${PSP2_SRC}/vsh/paf/include"
 	"${PSP2_SRC}/vsh/paf")
