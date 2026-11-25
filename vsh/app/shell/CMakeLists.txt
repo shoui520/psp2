@@ -405,6 +405,13 @@ psp2_module(vs0_vsh_shell_shell KIND user COMPILER snc PARTIAL SOURCES
 	src/netctl/net_stun.cpp
 	src/netctl/net_upnp.cpp
 	src/netctl/net_wispr.cpp
+	src/netctl/net_indicator.cpp
+	src/np/ipc/jga_msg_server.cpp
+	src/np/ipc/npauth_ipc_server.cpp
+	src/np/ipc/npmanager/ipc_server/npmanager_ipc_server.cpp
+	src/np/ipc/npmanager/ipc_server/npmanager_job.cpp
+	src/np/ipc/npcommerce2_session_mgr.cpp
+	src/np/ipc/rt_netinfo_udpp2p.cpp
 	shell.c
 )
 target_include_directories(vs0_vsh_shell_shell PRIVATE "${PSP2_SRC}/vsh/paf/include"
