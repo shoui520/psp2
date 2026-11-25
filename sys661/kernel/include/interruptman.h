@@ -34,33 +34,37 @@ enum SceInterrupts {
     SCE_INTERRUPT_INT = 66
 };
 
-typedef struct {   
+typedef struct {
     // Handler address
     s32 handler; // 0
     // GP of the module
     s32 gp; // 4
     // Argument given by sceKernelRegisterSubIntrHandler
     s32 arg; // 8
-    s32 u12, u16, u20;
-    // See disableCb
-    s32 enableCb; // 24
-    // Pointer to the callback called by sceKernelDisableSubIntr(), that takes the same arguments as it
-    s32 disableCb; // 28
-    // See disableCb
-    s32 suspendCb; // 32
-    // See disableCb
-    s32 resumeCb; // 36
-    // See disableCb
-    s32 isOccuredCb; // 40
-    s32 u44;
-    // Some options
-    s32 v48; // 48
-    s32 u52, u56, u60;
+    u32 callCount; // 12
+    u32 minClockLo; // 16
+    u32 minClockHi; // 20
+    u32 maxClockLo; // 24
+    u32 maxClockHi; // 28
+    u32 totalClockLo; // 32
+    u32 totalClockHi; // 36
+    s32 reservedSub; // 40
+    s32 reservedCb; // 44
+    union {
+        u32 flags;
+        struct {
+            u8 subCount;
+            u8 attr;
+            u8 intrNum;
+            u8 isSub;
+        } bits;
+    }; // 48
+    s32 reserved[3]; // 52
 } SubInterrupt; // Size: 64
 
-typedef struct {   
+typedef struct {
     s32 size; // 0
-    s32 u4;
+    s32 attr; // 4
     // Callback called before setting sub interrupt, when registering
     s32 (*cbRegBefore)(s32, s32, void*, void*); // 8
     // Callback called after
@@ -76,22 +80,35 @@ typedef struct {
     s32 (*cbIsOccured)(s32, s32); // 40
 } SceIntrCb; // Size: 44
 
-// Arg4 in sceKernelRegisterIntrHandler()
-typedef struct {   
-    // Handler address, sometimes OR'ed with 2 ?!?
+typedef struct {
+    // Handler address, bit 1 indicates full context save
     s32 handler; // 0
     // GP of the module
     s32 gp; // 4
     // Argument given by sceKernelRegisterIntrHandler
     void *arg; // 8
-    s32 u12, u16, u20, u24, u28, u32, u36;
+    u32 callCount; // 12
+    u32 minClockLo; // 16
+    u32 minClockHi; // 20
+    u32 maxClockLo; // 24
+    u32 maxClockHi; // 28
+    u32 totalClockLo; // 32
+    u32 totalClockHi; // 36
     // Pointer to sub interrupts
     SubInterrupt *subIntrs; // 40
-    // Some value set by sceKernelRegisterIntrHandler, using arg4 SubIntrInfo.callbacks, contains some handlers ran by sceKernelRegisterSubIntrHandler
+    // Sub-interrupt callback table registered via sceKernelRegisterIntrHandler
     SceIntrCb *cb; // 44
-    // InterruptManagerForKernel_D01EAA3F changes a bit depending on arg1, sceKernelRegisterIntrHandler changes some also; lower byte is the max number of sub interrupts
-    s32 v48; // 48
-    s32 u52, u56, u60;
+    // Lower byte is the max number of sub interrupts; bits 8..9 level; bit 10/11 user-mode; bit 15 logging disable; bits 16..23 intrNum
+    union {
+        u32 flags;
+        struct {
+            u8 subCount;
+            u8 attr;
+            u8 intrNum;
+            u8 isSub;
+        } bits;
+    }; // 48
+    s32 reserved[3]; // 52
 } Interrupt; // Size: 64
 
 typedef struct {
@@ -106,50 +123,68 @@ typedef struct {
     void *cb;
 } SceIntrHandler;
 
-typedef s32 (*MonitorCb)(s32 intrNum, s32 subIntrNum, s32, s32, s32, s32, s8);
+typedef struct {
+    s32 size; // 0 (must be 56)
+    s32 entry; // 4
+    void *common; // 8
+    s32 gp; // 12
+    s16 intrCode; // 16
+    s16 subCount; // 18
+    s16 intrLevel; // 20
+    s16 enabled; // 22
+    u32 calls; // 24
+    u32 reserved; // 28
+    u32 totalClockLo; // 32
+    u32 totalClockHi; // 36
+    u32 minClockLo; // 40
+    u32 minClockHi; // 44
+    u32 maxClockLo; // 48
+    u32 maxClockHi; // 52
+} PspIntrHandlerOptionParam; // Size: 56
 
-s32 sceKernelRegisterIntrHandler(s32 intrNum, s32 arg1, void *func, void *arg3, SceIntrHandler *handler);
+typedef s32 (*MonitorCb)(s32 intrNum, s32 subIntrNum, s32, s32, s32, s32, u8);
+
+s32 sceKernelRegisterIntrHandler(s32 intrNum, s32 saveContext, void *func, void *common, SceIntrHandler *handler);
 s32 sceKernelSetUserModeIntrHanlerAcceptable(s32 intrNum, s32 subIntrNum, s32 setBit);
 s32 sceKernelReleaseIntrHandler(s32 intrNum);
-s32 sceKernelSetIntrLevel(s32 intrNum, s32 num);
-s32 sceKernelSetIntrLogging(s32 intrNum, s32 arg1);
+s32 sceKernelSetIntrLevel(s32 intrNum, s32 level);
+s32 sceKernelSetIntrLogging(s32 intrNum, s32 enable);
 s32 sceKernelEnableIntr(s32 intNum);
-s32 sceKernelSuspendIntr(s32 arg0, s32 *arg1);
-s32 sceKernelResumeIntr(s32 intrNum, s32 arg1);
-void ReleaseContextHooks();
-void InterruptManagerForKernel_E790EAED(s32 (*arg0)(), s32 (*arg1)());
-s32 sceKernelCallSubIntrHandler(s32 intrNum, s32 subIntrNum, s32 arg2, s32 arg3);
-s32 sceKernelGetUserIntrStack();
+s32 sceKernelSuspendIntr(s32 intrNum, s32 *prevState);
+s32 sceKernelResumeIntr(s32 intrNum, s32 prevState);
+void ReleaseContextHooks(void);
+void InterruptManagerForKernel_E790EAED(s32 (*beforeHook)(), s32 (*afterHook)());
+s32 sceKernelCallSubIntrHandler(s32 intrNum, s32 subIntrNum, s32 userArg, s32 extraArg);
+s32 sceKernelGetUserIntrStack(void);
 s32 sceKernelRegisterSubIntrHandler(s32 intrNum, s32 subIntrNum, void *handler, void *arg);
 s32 sceKernelReleaseSubIntrHandler(s32 intrNum, s32 subIntrNum);
 s32 sceKernelEnableSubIntr(s32 intrNum, s32 subIntrNum);
 s32 sceKernelDisableSubIntr(s32 intrNum, s32 subIntrNum);
-s32 sceKernelSuspendSubIntr(s32 intrNum, s32 subIntrNum, s32 *arg2);
-s32 sceKernelResumeSubIntr(s32 intrNum, s32 subIntrNum, s32 arg2);
+s32 sceKernelSuspendSubIntr(s32 intrNum, s32 subIntrNum, s32 *prevState);
+s32 sceKernelResumeSubIntr(s32 intrNum, s32 subIntrNum, s32 prevState);
 s32 sceKernelIsSubInterruptOccured(s32 intrNum, s32 subIntrNum);
-s32 sceKernelQueryIntrHandlerInfo(s32 intrNum, s32 subIntrNum, s32 out);
+s32 sceKernelQueryIntrHandlerInfo(s32 intrNum, s32 subIntrNum, PspIntrHandlerOptionParam *out);
 s32 sceKernelSetPrimarySyscallHandler(s32 syscallId, void (*syscall)());
-void sceKernelCpuEnableIntr();
+void sceKernelCpuEnableIntr(void);
 s32 InterruptManagerForKernel_6FCBA912(s32 set);
 s32 sceKernelClearIntrLogging(s32 intrNum);
 s32 sceKernelIsInterruptOccurred(s32 intrNum);
 s32 sceKernelDisableIntr(s32 intrNum);
 void RegisterSubIntrruptMonitor(MonitorCb before, MonitorCb after);
-void ReleaseSubIntrruptMonitor();
+void ReleaseSubIntrruptMonitor(void);
 s32 UnSupportIntr(s32 intrNum);
-s32 InterruptManagerForKernel_8DFBD787();
-s32 QueryIntrHandlerInfoForUser();
-s32 sceKernelRegisterUserSpaceIntrStack(s32 addr, s32 size, s32 arg2);
-s32 sceKernelGetCpuClockCounter();
-u64 sceKernelGetCpuClockCounterWide();
-u32 _sceKernelGetCpuClockCounterLow();
+s32 InterruptManagerForKernel_8DFBD787(void);
+s32 QueryIntrHandlerInfoForUser(void);
+s32 sceKernelRegisterUserSpaceIntrStack(s32 addr, s32 size, s32 stackFlagAddr);
+s32 sceKernelGetCpuClockCounter(void);
+u64 sceKernelGetCpuClockCounterWide(void);
+u32 _sceKernelGetCpuClockCounterLow(void);
 s32 sceKernelRegisterSystemCallTable(SceSyscallTable *newMap);
 s32 sceKernelQuerySystemCall(void (*sysc)());
-void InterruptManagerForKernel_E526B767(s32 arg);
+void InterruptManagerForKernel_E526B767(s32 mode);
 s32 sceKernelGetSyscallRA(void);
 s32 sceKernelCpuSuspendIntr(void);
 void sceKernelCpuResumeIntr(s32 intr);
 void sceKernelCpuResumeIntrWithSync(s32 intr);
 s32 sceKernelIsIntrContext(void);
 int sceKernelCallUserIntrHandler(int, int, int, int, int, int);
-

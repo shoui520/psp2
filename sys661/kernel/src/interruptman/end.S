@@ -4,10 +4,13 @@
 #include "common_asm.h"
 
     .globl sceKernelCpuSuspendIntr
+    .type sceKernelCpuSuspendIntr, @function
 sceKernelCpuSuspendIntr:
     mfic $v0, $0
     mtic $zr, $0
     beqz $v0, loc_3164
+    nop
+    nop
 
 loc_3154:
     nop
@@ -17,18 +20,24 @@ loc_3154:
 loc_3164:
     jr $ra
     nop
+    .size sceKernelCpuSuspendIntr, .-sceKernelCpuSuspendIntr
 
     .globl sceKernelCpuResumeIntrWithSync
+    .type sceKernelCpuResumeIntrWithSync, @function
 sceKernelCpuResumeIntrWithSync:
     sync
     nop
+    .size sceKernelCpuResumeIntrWithSync, .-sceKernelCpuResumeIntrWithSync
 
     .globl sceKernelCpuResumeIntr
+    .type sceKernelCpuResumeIntr, @function
 sceKernelCpuResumeIntr:
     mtic $a0, $0
     j loc_3154
     nop
+    .size sceKernelCpuResumeIntr, .-sceKernelCpuResumeIntr
 
+    .type syscallMonitorTrampoline, @function
 syscallMonitorTrampoline:
     addiu      $sp, $sp, -64
     sw         $t7, 8($sp)
@@ -50,7 +59,7 @@ syscallMonitorTrampoline:
     sw         $t3, 44($sp)
     sw         $t7, 48($sp)
 
-mod_327C:
+syscallMonitorBeforeInsn:
     nop
 
     sw         $t4, 52($sp)
@@ -69,22 +78,24 @@ mod_327C:
     jalr       $t7
     lui        $k1, 0x10
     mtic       $0, $0
-    move       $a2, $v0
-    move       $a3, $v1
+    addu       $a2, $v0, $0
+    addu       $a3, $v1, $0
     lw         $a0, 0($sp)
     lw         $a1, 4($sp)
     sw         $v0, 8($sp)
 
-mod_32D4:
+syscallMonitorAfterInsn:
     nop
 
     sw         $v1, 12($sp)
     lw         $v0, 8($sp)
     lw         $v1, 12($sp)
-    j          loc_00000DDC
+    j          syscallMonitorReturn
     addiu      $sp, $sp, 16
+    .size syscallMonitorTrampoline, .-syscallMonitorTrampoline
 
     .globl InterruptManagerForKernel_2F3C4DCD
+    .type InterruptManagerForKernel_2F3C4DCD, @function
 InterruptManagerForKernel_2F3C4DCD:
     lui        $t0, %hi(syscallMonitorTrampoline)
     addiu      $t0, $t0, %lo(syscallMonitorTrampoline)
@@ -96,27 +107,29 @@ InterruptManagerForKernel_2F3C4DCD:
     or         $a1, $a1, $t1
     lui        $t1, 0xA00
     or         $t0, $t0, $t1
-    lui        $at, %hi(mod_327C)
-    sw         $a0, %lo(mod_327C)($at)
-    cache      0x1B, %lo(mod_327C)($at)
-    cache      0x8, %lo(mod_327C)($at)
-    lui        $at, %hi(mod_32D4)
-    sw         $a1, %lo(mod_32D4)($at)
-    cache      0x1B, %lo(mod_32D4)($at)
-    cache      0x8, %lo(mod_32D4)($at)
-    lui        $at, %hi(mod_0DC4)
-    sw         $t0, %lo(mod_0DC4)($at)
-    cache      0x1B, %lo(mod_0DC4)($at)
-    cache      0x8, %lo(mod_0DC4)($at)
+    lui        $at, %hi(syscallMonitorBeforeInsn)
+    sw         $a0, %lo(syscallMonitorBeforeInsn)($at)
+    cache      0x1B, %lo(syscallMonitorBeforeInsn)($at)
+    cache      0x8, %lo(syscallMonitorBeforeInsn)($at)
+    lui        $at, %hi(syscallMonitorAfterInsn)
+    sw         $a1, %lo(syscallMonitorAfterInsn)($at)
+    cache      0x1B, %lo(syscallMonitorAfterInsn)($at)
+    cache      0x8, %lo(syscallMonitorAfterInsn)($at)
+    lui        $at, %hi(syscallMonitorHookInsn)
+    sw         $t0, %lo(syscallMonitorHookInsn)($at)
+    cache      0x1B, %lo(syscallMonitorHookInsn)($at)
+    cache      0x8, %lo(syscallMonitorHookInsn)($at)
     jr         $ra
     sync
+    .size InterruptManagerForKernel_2F3C4DCD, .-InterruptManagerForKernel_2F3C4DCD
 
     .globl InterruptManagerForKernel_02AC50D5
+    .type InterruptManagerForKernel_02AC50D5, @function
 InterruptManagerForKernel_02AC50D5:
-    lui        $at, %hi(mod_0DC4)
-    sw         $0, %lo(mod_0DC4)($at)
-    cache      0x1B, %lo(mod_0DC4)($at)                                                                         
-    cache      0x8, %lo(mod_0DC4)($at)
+    lui        $at, %hi(syscallMonitorHookInsn)
+    sw         $0, %lo(syscallMonitorHookInsn)($at)
+    cache      0x1B, %lo(syscallMonitorHookInsn)($at)
+    cache      0x8, %lo(syscallMonitorHookInsn)($at)
     jr         $ra
     sync
-
+    .size InterruptManagerForKernel_02AC50D5, .-InterruptManagerForKernel_02AC50D5

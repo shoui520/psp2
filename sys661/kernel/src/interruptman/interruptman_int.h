@@ -2,10 +2,9 @@
    See the file COPYING for copying permission.
 */
 
-void *mymemset(void *dstVoid, s8 c, s32 n);
+void *mymemset(void *dstVoid, u8 fillByte, s32 count);
 s32 SuspendIntc(s32 flag, void *param);
 s32 ResumeIntc(s32 flag, void *param);
-void InterruptDisableInTable(s32 intrNum);
-void InterruptEnableInTable(s32 intrNum);
-void AllLevelInterruptDisable(s32 intrNum);
-
+void InterruptDisableInTable(u32 intrNum);
+void InterruptEnableInTable(u32 intrNum);
+void AllLevelInterruptDisable(u32 intrNum);

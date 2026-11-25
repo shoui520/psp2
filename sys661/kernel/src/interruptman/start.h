@@ -2,37 +2,36 @@
    See the file COPYING for copying permission.
 */
 
-void cp0TimerIntrHandler();
+void cp0TimerIntrHandler(void);
 void intrExcepHandler(void);
-void SaveThreadContext();
-void returnFromUserIntrHandler();
-s32 defaultContextHook();
+void SaveThreadContext(void);
+void returnFromUserIntrHandler(void);
+s32 defaultContextHook(void);
 void intrExcepHandler2(void);
-void invalidSyscallHandler();
+void invalidSyscallHandler(void);
 void syscallExcepHandler(void);
-void loc_00000DDC();
-void syscallIsCop2Enabled();
-void syscallCpuSuspendIntr();
-void syscallCpuResumeIntr();
-void syscallCpuResumeIntrWithSync();
-void syscallInvertIntrBit();
-void syscallSuspendIntrAndDisableCache();
-void syscallResumeIntrAndEnableCache();
-void syscallIsIntrContext();
-void syscallGetIntrState();
-void syscallGetCpuClockCounter();
-void syscallGetCpuPrid();
-void syscallGetCpuId();
-void syscallIsKernelMode();
-void syscallUnsupportedError();
-void intcMaskAll();
-void intcGetPending(s32*);
-void intcGetMask(s32*);
-void intcSetMask(s32*);
+void syscallMonitorReturn(void);
+void syscallIsCop2Enabled(void);
+void syscallCpuSuspendIntr(void);
+void syscallCpuResumeIntr(void);
+void syscallCpuResumeIntrWithSync(void);
+void syscallInvertIntrBit(void);
+void syscallSuspendIntrAndDisableCache(void);
+void syscallResumeIntrAndEnableCache(void);
+void syscallIsIntrContext(void);
+void syscallGetIntrState(void);
+void syscallGetCpuClockCounter(void);
+void syscallGetCpuPrid(void);
+void syscallGetCpuId(void);
+void syscallIsKernelMode(void);
+void syscallUnsupportedError(void);
+void intcMaskAll(void);
+void intcGetPending(s32 *);
+void intcGetMask(s32 *);
+void intcSetMask(s32 *);
 
-extern s32 mod_0400;
-extern s32 mod_0468;
-extern s32 mod_0DC4;
-extern s32 mod_0E48;
-extern s32 mod_0E50;
-
+extern s32 contextHookBeforeInsn;
+extern s32 contextHookAfterInsn;
+extern s32 syscallMonitorHookInsn;
+extern s32 syscallReturnScrubStartInsn;
+extern s32 syscallReturnScrubT3Insn;

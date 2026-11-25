@@ -47,25 +47,24 @@ SceResidentLibraryEntryTable intrEntry = {
     .nidTableCount = 0
 };
 
-// 0x3458
 SCE_MODULE_INFO("sceInterruptManager", SCE_MODULE_KERNEL | SCE_MODULE_ATTR_CANT_STOP | SCE_MODULE_ATTR_EXCLUSIVE_LOAD |
                                        SCE_MODULE_ATTR_EXCLUSIVE_START, 1, 9);
 SCE_MODULE_BOOTSTART("IntrManInit");
 SCE_MODULE_REBOOT_BEFORE("IntrManTerminate");
 SCE_SDK_VERSION(SDK_VERSION);
 
-SceSyscallTable g_emptyTable = { // 0x3810
+SceSyscallTable g_emptyTable = {
     .next = NULL,
     .seed = 0,
-    .tableSize = 0,
     .funcTableSize = 0,
+    .tableSize = 0,
 };
 
-SceSyscallTable g_syscallTable = { // 0x3700
+SceSyscallTable g_syscallTable = {
     .next = &g_emptyTable,
     .seed = 0,
-    .tableSize = 0x00000100,
-    .funcTableSize = 0x00000110,
+    .funcTableSize = 0x00000100,
+    .tableSize = 0x00000110,
     .syscalls = {
         invalidSyscallHandler, invalidSyscallHandler, returnFromUserIntrHandler, invalidSyscallHandler,
         invalidSyscallHandler, invalidSyscallHandler, invalidSyscallHandler, invalidSyscallHandler,
@@ -86,38 +85,82 @@ SceSyscallTable g_syscallTable = { // 0x3700
     }
 };
 
-s8 g_stackBottom[672]; // 0x3820?
+s8 g_stackBottom[672];
 
-s8 g_stackMiddle[7232]; // 0x3AC0
+s8 g_stackMiddle[7232];
 
-s8 g_stackTop[304]; // 0x5700
+s8 g_stackTop[304];
 
-s8 g_syscCtx[16]; // 0x5830
+s8 g_syscCtx[16];
 
-typedef struct
+typedef struct {
+    u32 reservedHeader[9];
+    u16 saveKind;
+    u16 fpuSaved;
+    u32 fcsr;
+    u32 hi;
+    u32 lo;
+    u32 status;
+    u32 epc;
+    u32 cop0Ctrl23;
+    u32 cause;
+    u32 gprAt;
+    u32 gprV0;
+    u32 gprV1;
+    u32 gprA0;
+    u32 gprA1;
+    u32 gprA2;
+    u32 gprA3;
+    u32 gprT0;
+    u32 gprT1;
+    u32 gprT2;
+    u32 gprT3;
+    u32 gprT4;
+    u32 gprT5;
+    u32 gprT6;
+    u32 gprT7;
+    u32 gprS0;
+    u32 gprS1;
+    u32 gprS2;
+    u32 gprS3;
+    u32 gprS4;
+    u32 gprS5;
+    u32 gprS6;
+    u32 gprS7;
+    u32 gprT8;
+    u32 gprT9;
+    u32 gprK0;
+    u32 gprK1;
+    u32 gprGp;
+    s32 gprSp;
+    u32 gprFp;
+    u32 gprRa;
+} SceIntrKernelFrame;
+
+typedef struct __attribute__((aligned(64)))
 {
     s32 grpsOpt[24]; // 0
-    s8 unused2; // 96
-    s8 opt2; // 97
-    s8 opt; // 98
-    s8 unused3; // 99
+    u8 reservedFlag; // 96
+    u8 userIntrDepth; // 97
+    u8 defaultLoggingDisabled; // 98
+    u8 reservedPad; // 99
     MonitorCb monitorCbBefore; // 100
     MonitorCb monitorCbAfter; // 104
-    s32 unused; // 108
+    s32 savedIntrExcepEntry; // 108
     s32 intrStack; // 112
     s32 intrStackArg; // 116
     u32 clockCounterLo; // 120
     u32 clockCounterHi; // 124
     Interrupt intr[68]; // 128
-    s32 subIntrMemoryPoolId; // 4088
-    s32 intcState[2]; // 4092
-    s32 count;
-    s32 compare;
+    s32 subIntrMemoryPoolId; // 4480
+    s32 intcState[2]; // 4484
+    s32 count; // 4492
+    s32 compare; // 4496
 } InterruptInfo;
 
-InterruptInfo intInfo; // 0x5840
+InterruptInfo intInfo;
 
-s32 IntrManInit()
+s32 IntrManInit(void)
 {
     dbg_init(1, FB_NONE, FAT_HARDWARE);
     dbg_printf("Called %s\n", __FUNCTION__);
@@ -126,14 +169,13 @@ s32 IntrManInit()
     pspCop0CtrlSet(COP0_CTRL_SP_KERNEL, (s32)g_stackTop);
     pspCop0CtrlSet(COP0_CTRL_SP_USER, 0);
     mymemset(&intInfo, 0, sizeof(InterruptInfo));
-    intInfo.opt = 1;
+    intInfo.defaultLoggingDisabled = 1;
     intcMaskAll();
     ReleaseContextHooks();
-    // 1150
     s32 i;
-    for (i = 67; i >= 0; i--) {
-        intInfo.intr[i].u16 = -1;
-        intInfo.intr[i].u20 = -1;
+    for (i = 0; i < 68; i++) {
+        intInfo.intr[i].minClockLo = (u32)-1;
+        intInfo.intr[i].minClockHi = (u32)-1;
     }
     sceKernelRegisterExceptionHandler(EXCEP_INT, (void*)intrExcepHandler);
     sceKernelRegisterPriorityExceptionHandler(EXCEP_INT, 3, (void*)intrExcepHandler2);
@@ -154,20 +196,17 @@ s32 IntrManInit()
     return 0;
 }
 
-// 58DD8978
-s32 sceKernelRegisterIntrHandler(s32 intrNum, s32 arg1, void *func, void *arg3, SceIntrHandler *handler)
+s32 sceKernelRegisterIntrHandler(s32 intrNum, s32 saveContext, void *func, void *common, SceIntrHandler *handler)
 {
-    dbg_printf("sceKernelRegisterIntrHandler(%d, %d, %08x, %08x, %08x)\n", intrNum, arg1, func, arg3, handler);
+    dbg_printf("sceKernelRegisterIntrHandler(%d, %d, %08x, %08x, %08x)\n", intrNum, saveContext, func, common, handler);
     if (sceKernelIsIntrContext() != 0)
         return SCE_ERROR_KERNEL_CANNOT_BE_CALLED_FROM_INTERRUPT;
-    if (intrNum >= 68)
+    if ((u32)intrNum >= 68)
         return SCE_ERROR_KERNEL_INVALID_INTERRUPT;
     if (handler != NULL && handler->size != 12)
         return SCE_ERROR_KERNEL_INVALID_INTERRUPT_ARGUMENT;
-    // 12B8
     s32 oldIc = sceKernelCpuSuspendIntr();
     if (handler != NULL && handler->attr > 0 && intInfo.subIntrMemoryPoolId == 0) {
-        // 1468
         s32 ret = sceKernelCreateHeap(1, 0x800, 1, "SceInterruptManager");
         if (ret > 0)
             intInfo.subIntrMemoryPoolId = ret;
@@ -176,114 +215,97 @@ s32 sceKernelRegisterIntrHandler(s32 intrNum, s32 arg1, void *func, void *arg3, 
             return ret;
         }
     }
-    // 12E4
     Interrupt *intr = &intInfo.intr[intrNum];
     if (intr->handler != 0 && (intr->handler & 3) != 1) {
         sceKernelCpuResumeIntr(oldIc);
         return SCE_ERROR_KERNEL_HANDLER_ALREADY_EXISTS;
     }
-    // 1354
     if ((s32)func >= 0) {
         sceKernelCpuResumeIntr(oldIc);
         return SCE_ERROR_KERNEL_INVALID_INTERRUPT;
     }
     intr->subIntrs = NULL;
-    // 1368
     intr->cb = NULL;
     s32 size;
     if (handler == NULL || (size = handler->attr) <= 0) {
-        // 144C
         if (intr->subIntrs != NULL) {
-            sceKernelFreeHeapMemory(intInfo.subIntrMemoryPoolId, intr->subIntrs); // Free memory space
+            sceKernelFreeHeapMemory(intInfo.subIntrMemoryPoolId, intr->subIntrs);
             intr->subIntrs = NULL;
         }
     } else {
         s32 allocSize = size << 6;
-        SubInterrupt *subIntrs = sceKernelAllocHeapMemory(intInfo.subIntrMemoryPoolId, allocSize); // Allocate space to store the subIntrs
+        SubInterrupt *subIntrs = sceKernelAllocHeapMemory(intInfo.subIntrMemoryPoolId, allocSize);
         if (subIntrs != NULL)
             mymemset(subIntrs, 0, allocSize);
-        // 13A4
         intr->subIntrs = subIntrs;
         if (subIntrs == NULL) {
-            // 1440
             sceKernelCpuResumeIntr(oldIc);
             return SCE_ERROR_KERNEL_NO_MEMORY;
         }
         intr->cb = handler->cb;
     }
-    // 13B4
     sceKernelSuspendIntr(intrNum, 0);
     s32 intrLevel;
     if (intr->handler != 1 && intrNum < 64)
         intrLevel = 3;
     else
         intrLevel = 0;
-    // 13E0
-    if (arg1 != 0)
-        arg1 = 2;
-    intr->v48 = (intr->v48 & 0xFFFFFCFF) | ((intrLevel << 8) & 0x300);
-    intr->handler = arg1 | (s32)func;
+    if (saveContext != 0)
+        saveContext = 2;
+    intr->flags = (intr->flags & 0xFFFFFCFFu) | ((u32)(intrLevel << 8) & 0x300u);
+    intr->handler = saveContext | (s32)func;
     intr->gp = sceKernelGetModuleGPByAddressForKernel((u32)func);
-    intr->arg = arg3;
-    *(s8*)&intr->v48 = 0;
+    intr->arg = common;
+    intr->bits.subCount = 0;
     if (handler != NULL)
-        *(s8*)&intr->v48 = *(s8*)&handler->attr;
-    // 1420
-    intr->v48 = ((intr->v48 & 0x7FFF7FFF) | ((intInfo.opt << 15) & 0x8000)) & 0x7FFFFFFF;
-    *((s8*)&intr->v48 + 2) = intrNum;
+        intr->bits.subCount = (u8)handler->attr;
+    intr->flags = ((intr->flags & 0x7FFF7FFFu) | ((u32)(intInfo.defaultLoggingDisabled << 15) & 0x8000u)) & 0x7FFFFFFFu;
+    intr->bits.intrNum = (u8)intrNum;
     sceKernelCpuResumeIntr(oldIc);
     return 0;
 }
 
-// A1B88367
 s32 sceKernelSetUserModeIntrHanlerAcceptable(s32 intrNum, s32 subIntrNum, s32 setBit)
 {
     dbg_printf("Called %s\n", __FUNCTION__);
     if (sceKernelIsIntrContext() != 0)
         return SCE_ERROR_KERNEL_CANNOT_BE_CALLED_FROM_INTERRUPT;
-    if (intrNum >= 68)
+    if ((u32)intrNum >= 68)
         return SCE_ERROR_KERNEL_INVALID_INTERRUPT;
     s32 oldIntr = sceKernelCpuSuspendIntr();
     Interrupt *intr = &intInfo.intr[intrNum];
     if (intr->handler == 0 || (intr->handler & 3) == 1) {
-        // 15F4
         sceKernelCpuResumeIntr(oldIntr);
         return SCE_ERROR_KERNEL_HANDLER_NOTFOUND;
     }
-    if (subIntrNum < 0 || subIntrNum >= (intr->v48 & 0xFF)) {
-        // 1538
+    if (subIntrNum < 0 || subIntrNum >= (s32)intr->bits.subCount) {
         sceKernelCpuResumeIntr(oldIntr);
         return SCE_ERROR_KERNEL_INVALID_INTERRUPT;
     }
-    // 156C
     SubInterrupt *subIntr = &intr->subIntrs[subIntrNum];
-    subIntr->v48 = (subIntr->v48 & 0xFFFFFBFF) | (((setBit != 0) << 10) & 0x00000400);
-    intr->v48 &= 0xFFFFF7FF;
-    s8 num = intr->v48 & 0xFF;
-    s8 v = (subIntr->v48 >> 10) & 1;
-    // 15B4
+    subIntr->flags = (subIntr->flags & 0xFFFFFBFFu) | ((u32)((setBit != 0) << 10) & 0x00000400u);
+    intr->flags &= 0xFFFFF7FFu;
+    u8 num = intr->bits.subCount;
+    u8 acceptable = (u8)((subIntr->flags >> 10) & 1u);
     s32 i;
-    for (i = 0; i < num; i++) {
-        if (v != 0) {
-            // 15E4
-            intr->v48 |= 0x800;
+    for (i = 0; i < (s32)num; i++) {
+        if (acceptable != 0) {
+            intr->flags |= 0x800u;
             break;
         }
     }
-    // 15C4
-    if (((intr->v48 >> 11) & 1) != 0)
+    if (((intr->flags >> 11) & 1u) != 0)
         sceKernelSetIntrLevel(intrNum, 2);
     sceKernelCpuResumeIntr(oldIntr);
     return 0;
 }
 
-// F987B1F0
 s32 sceKernelReleaseIntrHandler(s32 intrNum)
 {
     dbg_printf("Called %s\n", __FUNCTION__);
     if (sceKernelIsIntrContext() != 0)
         return SCE_ERROR_KERNEL_CANNOT_BE_CALLED_FROM_INTERRUPT;
-    if (intrNum >= 68)
+    if ((u32)intrNum >= 68)
         return SCE_ERROR_KERNEL_INVALID_INTERRUPT;
     s32 oldIntr = sceKernelCpuSuspendIntr();
     Interrupt *intr = &intInfo.intr[intrNum];
@@ -291,163 +313,137 @@ s32 sceKernelReleaseIntrHandler(s32 intrNum)
         sceKernelCpuResumeIntr(oldIntr);
         return SCE_ERROR_KERNEL_HANDLER_NOTFOUND;
     }
-    // 1698
-    if (((intr->v48 >> 8) & 3) != 0) {
-        // 16CC
+    if (((intr->flags >> 8) & 3u) != 0) {
         intr->handler = 0;
         sceKernelSuspendIntr(intrNum, 0);
     } else
         intr->handler = 1;
-    // 16B0
     intr->cb = NULL;
     if (intr->subIntrs != NULL)
         sceKernelFreeHeapMemory(intInfo.subIntrMemoryPoolId, intr->subIntrs);
-    // 16C4
     intr->subIntrs = NULL;
     sceKernelCpuResumeIntr(oldIntr);
     return 0;
 }
 
-// B941600E
-s32 sceKernelSetIntrLevel(s32 intrNum, s32 num)
+s32 sceKernelSetIntrLevel(s32 intrNum, s32 level)
 {
     dbg_printf("Called %s\n", __FUNCTION__);
-    if (intrNum >= 64)
+    if ((u32)intrNum >= 64)
         return SCE_ERROR_KERNEL_INVALID_INTERRUPT;
-    if (num < 1 || num >= 4)
+    if (level < 1 || level >= 4)
         return SCE_ERROR_KERNEL_INVALID_INTERRUPT_LEVEL;
     Interrupt *intr = &intInfo.intr[intrNum];
     s32 oldIntr = sceKernelCpuSuspendIntr();
     if (intr->handler == 0 || (intr->handler & 3) == 1) {
-        // 1814
         sceKernelCpuResumeIntr(oldIntr);
         return SCE_ERROR_KERNEL_HANDLER_NOTFOUND;
     }
-    if (((intr->v48 >> 11) & 1) != 0 && ((num ^ 2) != 0)) {
-        // 1800
+    if (((intr->flags >> 11) & 1u) != 0 && ((level ^ 2) != 0)) {
         sceKernelCpuResumeIntr(oldIntr);
         return SCE_ERROR_KERNEL_INVALID_INTERRUPT_LEVEL;
     }
-    if (((intInfo.grpsOpt[(intrNum >> 5) + 6] >> (intrNum & 0x1F)) & 1) == 0) {
-        // 17F4
-        intr->v48 = (intr->v48 & 0xFFFFFCFF) | ((num << 8) & 0x00000300);
+    if ((((u32)intInfo.grpsOpt[((u32)intrNum >> 5) + 6] >> (intrNum & 0x1F)) & 1u) == 0) {
+        intr->flags = (intr->flags & 0xFFFFFCFFu) | ((u32)(level << 8) & 0x00000300u);
     } else {
-        if (((intr->v48 >> 8) & 3) < num) {
-            // 17E4
-            InterruptDisableInTable(intrNum);
+        if ((s32)((intr->flags >> 8) & 3u) < level) {
+            InterruptDisableInTable((u32)intrNum);
         }
-        // 17A8
-        intr->v48 = (intr->v48 & 0xFFFFFCFF) | ((num << 8) & 0x00000300);
-        InterruptEnableInTable(intrNum);
+        intr->flags = (intr->flags & 0xFFFFFCFFu) | ((u32)(level << 8) & 0x00000300u);
+        InterruptEnableInTable((u32)intrNum);
     }
-    // 17B8
     sceKernelCpuResumeIntr(oldIntr);
     return 0;
 }
 
-// AB1FC793
-s32 sceKernelSetIntrLogging(s32 intrNum, s32 arg1)
+s32 sceKernelSetIntrLogging(s32 intrNum, s32 enable)
 {
     dbg_printf("Called %s\n", __FUNCTION__);
-    if (intrNum >= 68)
+    if ((u32)intrNum >= 68)
         return SCE_ERROR_KERNEL_INVALID_INTERRUPT;
     s32 oldIc = sceKernelCpuSuspendIntr();
     Interrupt *intr = &intInfo.intr[intrNum];
-    if (arg1 == 0) {
-        // 189C
-        intr->v48 |= 0x00008000;
+    if (enable == 0) {
+        intr->flags |= 0x00008000u;
     } else
-        intr->v48 &= 0xFFFF7FFF;
-    // 1878
+        intr->flags &= 0xFFFF7FFFu;
     sceKernelCpuResumeIntr(oldIc);
     return 0;
 }
 
-// 4D6E7305
 s32 sceKernelEnableIntr(s32 intNum)
 {
     dbg_printf("sceKernelEnableIntr(%d)\n", intNum);
-    s32 v;
-    if (intNum >= 68)
+    s32 mask;
+    if ((u32)intNum >= 68)
         return SCE_ERROR_KERNEL_INVALID_INTERRUPT;
     s32 oldIc = sceKernelCpuSuspendIntr();
     if (intInfo.intr[intNum].handler == 0) {
         sceKernelCpuResumeIntr(oldIc);
         return SCE_ERROR_KERNEL_HANDLER_NOTFOUND;
     }
-    // 1928
     if (intNum < 64) {
-        // 1978
-        InterruptEnableInTable(intNum);
+        InterruptEnableInTable((u32)intNum);
         sceKernelCpuResumeIntr(oldIc);
         return 0;
     }
     if (intNum == 64)
-        v = 0x100;
+        mask = 0x100;
     else if (intNum == 65)
-        v = 0x200;
+        mask = 0x200;
     else if (intNum == 66)
-        v = 0x1000;
+        mask = 0x1000;
     else if (intNum == 67)
-        v = 0x8000;
+        mask = 0x8000;
     else
-        v = 0;
-    // 1960
-    pspCop0StateSet(COP0_STATE_STATUS, pspCop0StateGet(COP0_STATE_STATUS) | (v & 0xFF00));
+        mask = 0;
+    pspCop0StateSet(COP0_STATE_STATUS, pspCop0StateGet(COP0_STATE_STATUS) | (mask & 0xFF00));
     sceKernelCpuResumeIntr(oldIc);
     return 0;
 }
 
-// 2412F096
-s32 sceKernelSuspendIntr(s32 arg0, s32 *arg1)
+s32 sceKernelSuspendIntr(s32 intrNum, s32 *prevState)
 {
-    dbg_printf("sceKernelSuspendIntr(%d, %08x)\n", arg0, arg1);
+    dbg_printf("sceKernelSuspendIntr(%d, %08x)\n", intrNum, prevState);
     s32 ret = 0;
     s32 mask;
-    if (arg0 >= 68)
+    if ((u32)intrNum >= 68)
         return SCE_ERROR_KERNEL_INVALID_INTERRUPT;
     s32 oldIc = sceKernelCpuSuspendIntr();
-    if (arg0 == 64)
+    if (intrNum == 64)
         mask = 0x100;
-    else if (arg0 == 65)
+    else if (intrNum == 65)
         mask = 0x200;
-    else if (arg0 == 66)
+    else if (intrNum == 66)
         mask = 0x1000;
-    else if (arg0 == 67)
+    else if (intrNum == 67)
         mask = 0x8000;
     else
         mask = 0;
-    // 19F8
-    if (intInfo.intr[arg0].handler != 0) {
-        // 1A78
-        if (arg1 != NULL) {
-            if (arg0 >= 64) {
-                // 1AA8
-                *arg1 = (pspCop0StateGet(COP0_STATE_STATUS) & 0xFF00) & mask;
+    if (intInfo.intr[intrNum].handler != 0) {
+        if (prevState != NULL) {
+            if (intrNum >= 64) {
+                *prevState = (pspCop0StateGet(COP0_STATE_STATUS) & 0xFF00) & mask;
             } else
-                *arg1 = (intInfo.grpsOpt[(arg0 >> 5) + 6] >> (arg0 & 0x1F)) & 1;
+                *prevState = ((u32)intInfo.grpsOpt[((u32)intrNum >> 5) + 6] >> (intrNum & 0x1F)) & 1u;
         }
     } else {
         ret = SCE_ERROR_KERNEL_HANDLER_NOTFOUND;
-        if (arg1 != NULL)
-            *arg1 = 0;
+        if (prevState != NULL)
+            *prevState = 0;
     }
-    // 1A24
-    if (arg0 < 64) {
-        // 1A68
-        AllLevelInterruptDisable(arg0);
+    if (intrNum < 64) {
+        AllLevelInterruptDisable((u32)intrNum);
     } else
         pspCop0StateSet(COP0_STATE_STATUS, pspCop0StateGet(COP0_STATE_STATUS) & ~(mask & 0xFF00));
-    // 1A3C
     sceKernelCpuResumeIntr(oldIc);
     return ret;
 }
 
-// DB14CBE0
-s32 sceKernelResumeIntr(s32 intrNum, s32 arg1)
+s32 sceKernelResumeIntr(s32 intrNum, s32 prevState)
 {
     dbg_printf("Called %s\n", __FUNCTION__);
-    if (intrNum >= 68)
+    if ((u32)intrNum >= 68)
         return SCE_ERROR_KERNEL_INVALID_INTERRUPT;
     s32 oldIntr = sceKernelCpuSuspendIntr();
     s32 mask;
@@ -461,28 +457,23 @@ s32 sceKernelResumeIntr(s32 intrNum, s32 arg1)
         mask = 0x8000;
     else
         mask = 0;
-    // 1B2C
     if (intInfo.intr[intrNum].handler != 0) {
-        // 1BA8
         if (intrNum >= 64) {
-            // 1BC8
-            if (arg1 != 0) {
+            if (prevState != 0) {
                 pspCop0StateSet(COP0_STATE_STATUS, pspCop0StateGet(COP0_STATE_STATUS) | (mask & 0xFF00));
                 sceKernelCpuResumeIntr(oldIntr);
                 return 0;
             }
         } else {
-            if (arg1 == 0) {
-                // 1B98
-                AllLevelInterruptDisable(intrNum);
+            if (prevState == 0) {
+                AllLevelInterruptDisable((u32)intrNum);
             } else
-                InterruptEnableInTable(intrNum);
+                InterruptEnableInTable((u32)intrNum);
             sceKernelCpuResumeIntr(oldIntr);
             return 0;
         }
     } else if (intrNum < 64) {
-        // 1B98
-        AllLevelInterruptDisable(intrNum);
+        AllLevelInterruptDisable((u32)intrNum);
         sceKernelCpuResumeIntr(oldIntr);
         return SCE_ERROR_KERNEL_HANDLER_NOTFOUND;
     } else {
@@ -490,79 +481,70 @@ s32 sceKernelResumeIntr(s32 intrNum, s32 arg1)
         sceKernelCpuResumeIntr(oldIntr);
         return SCE_ERROR_KERNEL_HANDLER_NOTFOUND;
     }
-    // 1B5C
     pspCop0StateSet(COP0_STATE_STATUS, pspCop0StateGet(COP0_STATE_STATUS) & ~(mask & 0xFF00));
     sceKernelCpuResumeIntr(oldIntr);
     return 0;
 }
 
-// DB9A5496
-void ReleaseContextHooks()
+void ReleaseContextHooks(void)
 {
     dbg_printf("Called %s\n", __FUNCTION__);
     InterruptManagerForKernel_E790EAED(defaultContextHook, defaultContextHook);
 }
 
-void InterruptManagerForKernel_E790EAED(s32 (*arg0)(), s32 (*arg1)())
+void InterruptManagerForKernel_E790EAED(s32 (*beforeHook)(), s32 (*afterHook)())
 {
     dbg_printf("Called %s\n", __FUNCTION__);
     s32 oldIc = sceKernelCpuSuspendIntr();
-    mod_0468 = 0x0C000000 + (((s32)arg1 >> 2) & 0x3FFFFFF);
-    pspCache(0x1A, &mod_0468);
-    pspCache(0x08, &mod_0468);
-    mod_0400 = 0x0C000000 + (((s32)arg0 >> 2) & 0x3FFFFFF);
-    pspCache(0x1A, &mod_0400);
-    pspCache(0x08, &mod_0400);
+    contextHookAfterInsn = 0x0C000000 + (((s32)afterHook >> 2) & 0x3FFFFFF);
+    pspCache(0x1A, &contextHookAfterInsn);
+    pspCache(0x08, &contextHookAfterInsn);
+    contextHookBeforeInsn = 0x0C000000 + (((s32)beforeHook >> 2) & 0x3FFFFFF);
+    pspCache(0x1A, &contextHookBeforeInsn);
+    pspCache(0x08, &contextHookBeforeInsn);
     sceKernelCpuResumeIntr(oldIc);
 }
 
-// 0C5F7AE3
-s32 sceKernelCallSubIntrHandler(s32 intrNum, s32 subIntrNum, s32 arg2, s32 arg3)
+s32 sceKernelCallSubIntrHandler(s32 intrNum, s32 subIntrNum, s32 userArg, s32 extraArg)
 {
     dbg_printf("Called %s\n", __FUNCTION__);
     SubInterrupt *subIntr = &intInfo.intr[intrNum].subIntrs[subIntrNum];
-    if (subIntr->handler < 2)
+    if ((u32)subIntr->handler < 2u)
         return SCE_ERROR_KERNEL_HANDLER_NOTFOUND;
     if (intInfo.monitorCbBefore != NULL) {
-        if (((subIntr->v48 >> 15) & 1) == 0)
-            subIntr->u12++;
-        // 1D18
-        intInfo.monitorCbBefore(intrNum, subIntrNum, arg2, subIntr->arg, arg3, subIntr->handler, intInfo.opt2);
+        if (((subIntr->flags >> 15) & 1u) == 0)
+            subIntr->callCount++;
+        intInfo.monitorCbBefore(intrNum, subIntrNum, userArg, subIntr->arg, extraArg, subIntr->handler, intInfo.userIntrDepth);
     }
-    // 1D28
     s32 oldGp = pspGetGp();
     pspSetGp(subIntr->gp);
     s32 ret;
     if (subIntr->handler >= 0) {
-        // 1DB8
-        ret = sceKernelCallUserIntrHandler(arg2, subIntr->arg, arg3, 0, subIntr->handler, sceKernelGetUserIntrStack());
+        ret = sceKernelCallUserIntrHandler(userArg, subIntr->arg, extraArg, 0, subIntr->handler, sceKernelGetUserIntrStack());
     } else {
         s32 (*func)(s32, s32, s32) = (void*)subIntr->handler;
-        ret = func(arg2, subIntr->arg, arg3);
+        ret = func(userArg, subIntr->arg, extraArg);
     }
-    // 1D4C
     pspSetGp(oldGp);
     if (intInfo.monitorCbAfter != 0) {
-        // 1D94
-        intInfo.monitorCbAfter(intrNum, subIntrNum, arg2, subIntr->arg, arg3, ret, intInfo.opt2);
+        intInfo.monitorCbAfter(intrNum, subIntrNum, userArg, subIntr->arg, extraArg, ret, intInfo.userIntrDepth);
     }
     return ret;
 }
 
-// CD36EB65
-s32 sceKernelGetUserIntrStack()
+s32 sceKernelGetUserIntrStack(void)
 {
     dbg_printf("Called %s\n", __FUNCTION__);
-    if (intInfo.opt2 == 0)
+    if (intInfo.userIntrDepth == 0)
         return intInfo.intrStack;
-    return *(s32*)(pspCop0CtrlGet(COP0_CTRL_SP_KERNEL) + 180);
+    const SceIntrKernelFrame *frame = (const SceIntrKernelFrame *)pspCop0CtrlGet(COP0_CTRL_SP_KERNEL);
+    return frame->gprSp;
 }
 
-// FFA8B183 (kernel) / CA04A2B9
 s32 sceKernelRegisterSubIntrHandler(s32 intrNum, s32 subIntrNum, void *handler, void *arg)
 {
     dbg_printf("Called %s\n", __FUNCTION__);
-    if (intrNum >= 68)
+    if ((u32)intrNum >= 68)
         return SCE_ERROR_KERNEL_INVALID_INTERRUPT;
     s32 oldK1 = pspShiftK1();
     s32 oldIntr = sceKernelCpuSuspendIntr();
@@ -572,24 +554,21 @@ s32 sceKernelRegisterSubIntrHandler(s32 intrNum, s32 subIntrNum, void *handler, 
         pspSetK1(oldK1);
         return SCE_ERROR_KERNEL_HANDLER_NOTFOUND;
     }
-    // 1ED4
     if (((s32)handler >> 31) == 0) {
         if (intInfo.intrStack == 0) {
-            pspSetK1(oldK1);
             return SCE_ERROR_KERNEL_INVALID_INTERRUPT;
         }
-        if (((intr->v48 >> 11) & 1) == 0) {
+        if (((intr->flags >> 11) & 1u) == 0) {
             sceKernelCpuResumeIntr(oldIntr);
             pspSetK1(oldK1);
             return SCE_ERROR_KERNEL_INVALID_INTERRUPT;
         }
-    } else if (pspK1IsUserMode()) { // 200C
+    } else if (pspK1IsUserMode()) {
         sceKernelCpuResumeIntr(oldIntr);
         pspSetK1(oldK1);
         return SCE_ERROR_KERNEL_INVALID_INTERRUPT;
     }
-    // 1F00
-    if (subIntrNum < 0 || subIntrNum >= (intr->v48 & 0xFF)) {
+    if (subIntrNum < 0 || subIntrNum >= (s32)intr->bits.subCount) {
         sceKernelCpuResumeIntr(oldIntr);
         pspSetK1(oldK1);
         return SCE_ERROR_KERNEL_INVALID_INTERRUPT;
@@ -600,15 +579,12 @@ s32 sceKernelRegisterSubIntrHandler(s32 intrNum, s32 subIntrNum, void *handler, 
         pspSetK1(oldK1);
         return SCE_ERROR_KERNEL_HANDLER_ALREADY_EXISTS;
     }
-    // 1F3C
-    if (((s32)handler >> 31) == 0 && ((subIntr->v48 >> 10) & 1) == 0) {
+    if (((s32)handler >> 31) == 0 && ((subIntr->flags >> 10) & 1u) == 0) {
         sceKernelCpuResumeIntr(oldIntr);
         pspSetK1(oldK1);
         return SCE_ERROR_KERNEL_INVALID_INTERRUPT;
     }
-    // 1F60
     if (intr->cb != NULL && intr->cb->cbRegBefore != NULL) {
-        // 1FEC
         s32 ret = intr->cb->cbRegBefore(intrNum, subIntrNum, handler, arg);
         if (ret != 0) {
             sceKernelCpuResumeIntr(oldIntr);
@@ -617,16 +593,13 @@ s32 sceKernelRegisterSubIntrHandler(s32 intrNum, s32 subIntrNum, void *handler, 
         }
     }
     subIntr->handler = (s32)handler;
-    // 1F78
     subIntr->gp = sceKernelGetModuleGPByAddressForKernel((u32)handler);
-    *(s8*)&subIntr->v48 = 0;
+    subIntr->bits.subCount = 0;
     subIntr->arg = (s32)arg;
-    subIntr->v48 = (subIntr->v48 & 0xFFFF7FFF) | (intr->v48 & 0x00008000) | 0x80000300;
+    subIntr->flags = (subIntr->flags & 0xFFFF7FFFu) | (intr->flags & 0x00008000u) | 0x80000300u;
     if (intr->cb != NULL && intr->cb->cbRegAfter != NULL) {
-        // 1FD4
         s32 ret = intr->cb->cbRegAfter(intrNum, subIntrNum, handler, arg);
         if (ret != 0) {
-            // (moved 1FC4)
             subIntr->handler = 0;
             sceKernelCpuResumeIntr(oldIntr);
             pspSetK1(oldK1);
@@ -638,38 +611,31 @@ s32 sceKernelRegisterSubIntrHandler(s32 intrNum, s32 subIntrNum, void *handler, 
     return 0;
 }
 
-// D61E6961 (both kernel and user)
 s32 sceKernelReleaseSubIntrHandler(s32 intrNum, s32 subIntrNum)
 {
     dbg_printf("Called %s\n", __FUNCTION__);
-    if (intrNum >= 68)
+    if ((u32)intrNum >= 68)
         return SCE_ERROR_KERNEL_INVALID_INTERRUPT;
     s32 oldK1 = pspShiftK1();
     s32 oldIntr = sceKernelCpuSuspendIntr();
     Interrupt *intr = &intInfo.intr[intrNum];
     if (intr->handler == 0) {
-        // 2108
         sceKernelCpuResumeIntr(oldIntr);
         pspSetK1(oldK1);
         return SCE_ERROR_KERNEL_HANDLER_NOTFOUND;
     }
-    if (subIntrNum < 0 || subIntrNum >= (intr->v48 & 0xFF)) {
-        // 20A0
+    if (subIntrNum < 0 || subIntrNum >= (s32)intr->bits.subCount) {
         sceKernelCpuResumeIntr(oldIntr);
         pspSetK1(oldK1);
         return SCE_ERROR_KERNEL_INVALID_INTERRUPT;
     }
-    // 20E0
     SubInterrupt *subIntr = &intr->subIntrs[subIntrNum];
     if (subIntr->handler == 0 || (subIntr->handler < 0 && pspK1IsUserMode())) {
-        // 2108
         sceKernelCpuResumeIntr(oldIntr);
         pspSetK1(oldK1);
         return SCE_ERROR_KERNEL_HANDLER_NOTFOUND;
     }
-    // 2110
     if (intr->cb != NULL && intr->cb->cbRelBefore != NULL) {
-        // 2160
         s32 ret = intr->cb->cbRelBefore(intrNum, subIntrNum);
         if (ret != 0) {
             sceKernelCpuResumeIntr(oldIntr);
@@ -677,13 +643,10 @@ s32 sceKernelReleaseSubIntrHandler(s32 intrNum, s32 subIntrNum)
             return ret;
         }
     }
-    // 2128
     s32 oldHandler = subIntr->handler;
     subIntr->handler = 0;
     if (intr->cb != NULL && intr->cb->cbRelAfter != NULL) {
-        // 2150
         s32 ret = intr->cb->cbRelAfter(intrNum, subIntrNum);
-        // (moved 2140)
         if (ret != 0) {
             subIntr->handler = oldHandler;
             sceKernelCpuResumeIntr(oldIntr);
@@ -696,57 +659,48 @@ s32 sceKernelReleaseSubIntrHandler(s32 intrNum, s32 subIntrNum)
     return 0;
 }
 
-// FB8E22EC (both user and kernel)
 s32 sceKernelEnableSubIntr(s32 intrNum, s32 subIntrNum)
 {
     dbg_printf("Called %s\n", __FUNCTION__);
-    if (intrNum >= 68)
+    if ((u32)intrNum >= 68)
         return SCE_ERROR_KERNEL_INVALID_INTERRUPT;
     s32 oldK1 = pspShiftK1();
     s32 oldIntr = sceKernelCpuSuspendIntr();
     Interrupt *intr = &intInfo.intr[intrNum];
-    if (subIntrNum < 0 || subIntrNum >= (intr->v48 & 0xFF)
-     || (pspK1IsUserMode() && (((intr->v48 >> 11) & 1) == 0
-                              || ((intr->subIntrs[subIntrNum].v48 >> 10) & 1) == 0))) {
-        // 2210
+    if (subIntrNum < 0 || subIntrNum >= (s32)intr->bits.subCount
+     || (pspK1IsUserMode() && (((intr->flags >> 11) & 1u) == 0
+                              || ((intr->subIntrs[subIntrNum].flags >> 10) & 1u) == 0))) {
         sceKernelCpuResumeIntr(oldIntr);
         pspSetK1(oldK1);
         return SCE_ERROR_KERNEL_INVALID_INTERRUPT;
     }
-    // 2248
     if (intr->handler == 0 || intr->cb == NULL || intr->cb->cbEnable == NULL) {
-        // 226C
         sceKernelCpuResumeIntr(oldIntr);
         pspSetK1(oldK1);
         return SCE_ERROR_KERNEL_HANDLER_NOTFOUND;
     }
-    // 2274
     s32 ret = intr->cb->cbEnable(intrNum, subIntrNum);
     sceKernelCpuResumeIntr(oldIntr);
     pspSetK1(oldK1);
     return ret;
 }
 
-// 4023E1A7 (kernel) / 8A389411 (user)
 s32 sceKernelDisableSubIntr(s32 intrNum, s32 subIntrNum)
 {
     dbg_printf("Called %s\n", __FUNCTION__);
-    if (intrNum >= 68)
+    if ((u32)intrNum >= 68)
         return SCE_ERROR_KERNEL_INVALID_INTERRUPT;
     s32 oldK1 = pspShiftK1();
     s32 oldIntr = sceKernelCpuSuspendIntr();
     Interrupt *intr = &intInfo.intr[intrNum];
-    if (subIntrNum < 0 || subIntrNum >= (intr->v48 & 0xFF)
-     || (pspK1IsUserMode() && (((intr->v48 >> 11) & 1) == 0
-                              || ((intr->subIntrs[subIntrNum].v48 >> 10) & 1) == 0))) {
-        // 231C
+    if (subIntrNum < 0 || subIntrNum >= (s32)intr->bits.subCount
+     || (pspK1IsUserMode() && (((intr->flags >> 11) & 1u) == 0
+                              || ((intr->subIntrs[subIntrNum].flags >> 10) & 1u) == 0))) {
         sceKernelCpuResumeIntr(oldIntr);
         pspSetK1(oldK1);
         return SCE_ERROR_KERNEL_INVALID_INTERRUPT;
     }
-    // 2354
     if (intr->handler == 0 || intr->cb == NULL || intr->cb->cbDisable == NULL) {
-        // 2378
         sceKernelCpuResumeIntr(oldIntr);
         pspSetK1(oldK1);
         return SCE_ERROR_KERNEL_HANDLER_NOTFOUND;
@@ -757,120 +711,103 @@ s32 sceKernelDisableSubIntr(s32 intrNum, s32 subIntrNum)
     return ret;
 }
 
-// C495F536 (kernel) / 5CB5A78B (user)
-s32 sceKernelSuspendSubIntr(s32 intrNum, s32 subIntrNum, s32 *arg2)
+s32 sceKernelSuspendSubIntr(s32 intrNum, s32 subIntrNum, s32 *prevState)
 {
     dbg_printf("Called %s\n", __FUNCTION__);
-    if (intrNum >= 68)
+    if ((u32)intrNum >= 68)
         return SCE_ERROR_KERNEL_INVALID_INTERRUPT;
     s32 oldK1 = pspShiftK1();
-    if (!pspK1PtrOk(arg2)) {
-        // 24C4
+    if (!pspK1PtrOk(prevState)) {
         pspSetK1(oldK1);
         return SCE_ERROR_KERNEL_ILLEGAL_ADDR;
     }
     s32 oldIntr = sceKernelCpuSuspendIntr();
     Interrupt *intr = &intInfo.intr[intrNum];
-    if (subIntrNum < 0 || subIntrNum >= (intr->v48 & 0xFF)
-     || (pspK1IsUserMode() && (((intr->v48 >> 11) & 1) == 0
-                              || ((intr->subIntrs[subIntrNum].v48 >> 10) & 1) == 0))) {
-        // 2440
+    if (subIntrNum < 0 || subIntrNum >= (s32)intr->bits.subCount
+     || (pspK1IsUserMode() && (((intr->flags >> 11) & 1u) == 0
+                              || ((intr->subIntrs[subIntrNum].flags >> 10) & 1u) == 0))) {
         sceKernelCpuResumeIntr(oldIntr);
         pspSetK1(oldK1);
         return SCE_ERROR_KERNEL_INVALID_INTERRUPT;
     }
-    // 247C
     if (intr->handler == 0 || intr->cb == NULL || intr->cb->cbSuspend == NULL) {
-        // 24A0
-        if (arg2 != NULL)
-            *arg2 = 0;
+        if (prevState != NULL)
+            *prevState = 0;
         sceKernelCpuResumeIntr(oldIntr);
         pspSetK1(oldK1);
         return SCE_ERROR_KERNEL_HANDLER_NOTFOUND;
     }
-    
-    s32 ret = intr->cb->cbSuspend(intrNum, subIntrNum, arg2);
+
+    s32 ret = intr->cb->cbSuspend(intrNum, subIntrNum, prevState);
     sceKernelCpuResumeIntr(oldIntr);
     pspSetK1(oldK1);
     return ret;
 }
 
-// 2980AE03 (kernel) / 7860E0DC (user)
-s32 sceKernelResumeSubIntr(s32 intrNum, s32 subIntrNum, s32 arg2)
+s32 sceKernelResumeSubIntr(s32 intrNum, s32 subIntrNum, s32 prevState)
 {
     dbg_printf("Called %s\n", __FUNCTION__);
-    if (intrNum >= 68)
+    if ((u32)intrNum >= 68)
         return SCE_ERROR_KERNEL_INVALID_INTERRUPT;
     s32 oldK1 = pspShiftK1();
     s32 oldIntr = sceKernelCpuSuspendIntr();
     Interrupt *intr = &intInfo.intr[intrNum];
-    if (subIntrNum < 0 || subIntrNum >= (intr->v48 & 0xFF)
-     || (pspK1IsUserMode() && (((intr->v48 >> 11) & 1) == 0
-                              || ((intr->subIntrs[subIntrNum].v48 >> 10) & 1) == 0))) {
-        // 2574
+    if (subIntrNum < 0 || subIntrNum >= (s32)intr->bits.subCount
+     || (pspK1IsUserMode() && (((intr->flags >> 11) & 1u) == 0
+                              || ((intr->subIntrs[subIntrNum].flags >> 10) & 1u) == 0))) {
         sceKernelCpuResumeIntr(oldIntr);
         pspSetK1(oldK1);
         return SCE_ERROR_KERNEL_INVALID_INTERRUPT;
     }
-    // 25B0
     if (intr->handler == 0 || intr->cb == NULL || intr->cb->cbResume == NULL) {
-        // 25D4
         sceKernelCpuResumeIntr(oldIntr);
         pspSetK1(oldK1);
         return SCE_ERROR_KERNEL_HANDLER_NOTFOUND;
     }
-    s32 ret = intr->cb->cbResume(intrNum, subIntrNum, arg2);
+    s32 ret = intr->cb->cbResume(intrNum, subIntrNum, prevState);
     sceKernelCpuResumeIntr(oldIntr);
     pspSetK1(oldK1);
     return ret;
 }
 
-// 4351DD4E (kernel) / FC4374B8 (user)
 s32 sceKernelIsSubInterruptOccured(s32 intrNum, s32 subIntrNum)
 {
     dbg_printf("Called %s\n", __FUNCTION__);
-    if (intrNum >= 68)
+    if ((u32)intrNum >= 68)
         return SCE_ERROR_KERNEL_INVALID_INTERRUPT;
     s32 oldK1 = pspShiftK1();
     s32 oldIntr = sceKernelCpuSuspendIntr();
     Interrupt *intr = &intInfo.intr[intrNum];
-    if (subIntrNum < 0 || subIntrNum >= (intr->v48 & 0xFF)
-     || (pspK1IsUserMode() && (((intr->v48 >> 11) & 1) == 0
-                              || ((intr->subIntrs[subIntrNum].v48 >> 10) & 1) == 0))) {
-        // 2688
+    if (subIntrNum < 0 || subIntrNum >= (s32)intr->bits.subCount
+     || (pspK1IsUserMode() && (((intr->flags >> 11) & 1u) == 0
+                              || ((intr->subIntrs[subIntrNum].flags >> 10) & 1u) == 0))) {
         sceKernelCpuResumeIntr(oldIntr);
         pspSetK1(oldK1);
         return SCE_ERROR_KERNEL_INVALID_INTERRUPT;
     }
-    // 26C0
     if (intr->handler == 0 || intr->cb == NULL || intr->cb->cbIsOccured == NULL) {
-        // 26E4
         sceKernelCpuResumeIntr(oldIntr);
         pspSetK1(oldK1);
         return SCE_ERROR_KERNEL_HANDLER_NOTFOUND;
     }
-    // 26EC
     s32 ret = intr->cb->cbIsOccured(intrNum, subIntrNum);
     sceKernelCpuResumeIntr(oldIntr);
     pspSetK1(oldK1);
     return ret;
 }
 
-// 68B5CA51
-s32 sceKernelQueryIntrHandlerInfo(s32 intrNum, s32 subIntrNum, s32 out)
+s32 sceKernelQueryIntrHandlerInfo(s32 intrNum, s32 subIntrNum, PspIntrHandlerOptionParam *out)
 {
     dbg_printf("Called %s\n", __FUNCTION__);
-    if (intrNum >= 68)
+    if ((u32)intrNum >= 68)
         return SCE_ERROR_KERNEL_INVALID_INTERRUPT;
-    if (*(s32*)(out + 0) != 56)
+    if (out->size != 56)
         return SCE_ERROR_KERNEL_INVALID_INTERRUPT_ARGUMENT;
     s32 oldIntr = sceKernelCpuSuspendIntr();
     Interrupt *intr = &intInfo.intr[intrNum];
-    s8 numSubIntr = intr->v48 & 0xFF;
+    u8 numSubIntr = intr->bits.subCount;
     if (numSubIntr != 0) {
-        if (subIntrNum < 0 || subIntrNum >= numSubIntr) {
-            // (2918)
-            // 291C
+        if (subIntrNum < 0 || subIntrNum >= (s32)numSubIntr) {
             if (subIntrNum != -1) {
                 sceKernelCpuResumeIntr(oldIntr);
                 return SCE_ERROR_KERNEL_INVALID_INTERRUPT;
@@ -882,16 +819,13 @@ s32 sceKernelQueryIntrHandlerInfo(s32 intrNum, s32 subIntrNum, s32 out)
                 intr = (Interrupt*)&intr->subIntrs[subIntrNum];
         }
     }
-    // (2794)
-    // 2798
-    *(void**)(out + 8) = intr->arg;
-    *(s32*)(out + 4) = intr->handler;
-    *(s32*)(out + 12) = intr->gp;
-    *(s16*)(out + 16) = intrNum;
-    *(s16*)(out + 20) = (intr->v48 >> 8) & 3;
+    out->common = intr->arg;
+    out->entry = intr->handler;
+    out->gp = intr->gp;
+    out->intrCode = (s16)intrNum;
+    out->intrLevel = (s16)((intr->flags >> 8) & 3u);
     if (intrNum >= 64) {
-        // 28D0
-        s32 st = pspCop0StateGet(COP0_STATE_STATUS) & 0xFF00;;
+        s32 st = pspCop0StateGet(COP0_STATE_STATUS) & 0xFF00;
         s32 mask;
         if (intrNum == 64)
             mask = 0x0100;
@@ -903,109 +837,96 @@ s32 sceKernelQueryIntrHandlerInfo(s32 intrNum, s32 subIntrNum, s32 out)
             mask = 0x8000;
         else
             mask = 0;
-        // 2908
-        *(s16*)(out + 22) = (st & mask) != 0;
+        out->enabled = (s16)((st & mask) != 0);
     } else {
-        s8 bit = (intInfo.grpsOpt[(intrNum >> 5) + 6] >> (intrNum & 0x1F)) & 1;
-        *(s16*)(out + 22) = bit;
-        if ((bit & (~subIntrNum >> 31)) != 0) {
+        u8 bit = (u8)(((u32)intInfo.grpsOpt[((u32)intrNum >> 5) + 6] >> (intrNum & 0x1F)) & 1u);
+        out->enabled = (s16)bit;
+        if (bit != 0 && subIntrNum >= 0) {
             if (intr->handler != 0) {
-                // 287C
                 if (intr->cb != NULL && intr->cb->cbSuspend != NULL && intr->cb->cbResume != NULL) {
-                    s32 sp;
-                    intr->cb->cbSuspend(intrNum, subIntrNum, &sp);
-                    intr->cb->cbResume(intrNum, subIntrNum, sp);
-                    *(s16*)(out + 22) = (sp != 0);
+                    s32 savedState;
+                    intr->cb->cbSuspend(intrNum, subIntrNum, &savedState);
+                    intr->cb->cbResume(intrNum, subIntrNum, savedState);
+                    out->enabled = (s16)(savedState != 0);
                 }
+            } else {
+                out->enabled = 0;
             }
-            else
-                *(s16*)(out + 22) = 0;
         }
     }
-    // 280C
-    *(s32*)(out + 32) = intr->u32;
-    *(s32*)(out + 36) = intr->u36;
-    *(s16*)(out + 18) = intr->v48 & 0xFF;
-    *(s32*)(out + 40) = intr->u16;
-    *(s32*)(out + 44) = intr->u20;
-    *(s32*)(out + 24) = intr->u12;
-    *(s32*)(out + 48) = intr->u24;
-    *(s32*)(out + 52) = intr->u28;
+    out->totalClockLo = intr->totalClockLo;
+    out->totalClockHi = intr->totalClockHi;
+    out->subCount = (s16)intr->bits.subCount;
+    out->minClockLo = intr->minClockLo;
+    out->minClockHi = intr->minClockHi;
+    out->calls = intr->callCount;
+    out->maxClockLo = intr->maxClockLo;
+    out->maxClockHi = intr->maxClockHi;
     sceKernelCpuResumeIntr(oldIntr);
     return 0;
 }
 
-// 2938
-void *mymemset(void *dstVoid, s8 c, s32 n)
+void *mymemset(void *dstVoid, u8 fillByte, s32 count)
 {
     dbg_printf("Called %s\n", __FUNCTION__);
-    s8 *dst = (s8*)dstVoid;
+    u8 *dst = (u8*)dstVoid;
     if (dst != NULL) {
-        // 2950
-        s8 *actDst = dst;
-        while ((n--) > 0)
-            *(actDst++) = c;
+        u8 *actDst = dst;
+        while ((count--) > 0)
+            *(actDst++) = fillByte;
     }
     return dst;
 }
 
-// 2968
-void InterruptDisableInTable(s32 intrNum)
+void InterruptDisableInTable(u32 intrNum)
 {
     dbg_printf("Called %s\n", __FUNCTION__);
     s32 mask = ~(1 << (intrNum & 0x1F));
     s32 *ptr = &intInfo.grpsOpt[intrNum >> 5];
     s32 i = 3;
-    // 2990
     while ((i--) >= 0) {
         *ptr &= mask;
         ptr += 2;
     }
 }
 
-void InterruptEnableInTable(s32 intrNum)
+void InterruptEnableInTable(u32 intrNum)
 {
     dbg_printf("Called %s\n", __FUNCTION__);
-    s32 val = (intInfo.intr[intrNum].v48 >> 8) & 3;
+    s32 val = (intInfo.intr[intrNum].flags >> 8) & 3u;
     s32 mask = 1 << (intrNum & 0x1F);
     s32 *ptr = &intInfo.grpsOpt[(intrNum >> 5) + (val << 1)];
-    // 29F8
     while ((val++) < 4) {
         *ptr |= mask;
         ptr += 2;
     }
-    // 2A14
     if (sceKernelIsIntrContext() == 0) {
-        // 2A30
         intcSetMask(&intInfo.grpsOpt[6]);
     }
     dbg_printf(" InterruptEnableInTable ok\n");
 }
 
-// 2A40
-void AllLevelInterruptDisable(s32 intrNum)
+void AllLevelInterruptDisable(u32 intrNum)
 {
     dbg_printf("Called %s\n", __FUNCTION__);
     s32 *ptr = &intInfo.grpsOpt[intrNum >> 5];
     s32 mask = ~(1 << (intrNum & 0x1F));
     s32 i = 11;
-    // 2A78
     while ((i--) >= 0) {
         *ptr &= mask;
         ptr += 2;
     }
-    s32 sp[2];
-    intcGetMask(sp);
-    sp[intrNum >> 5] &= mask;
-    intcSetMask(sp);
+    s32 maskBuf[2];
+    intcGetMask(maskBuf);
+    maskBuf[intrNum >> 5] &= mask;
+    intcSetMask(maskBuf);
 }
 
-// 55D18836
 s32 sceKernelSetPrimarySyscallHandler(s32 syscallId, void (*syscall)())
 {
     dbg_printf("Called %s\n", __FUNCTION__);
     s32 oldIntr = sceKernelCpuSuspendIntr();
-    if (syscallId <= 0 || g_syscallTable.tableSize + g_syscallTable.funcTableSize < syscallId * 4) {
+    if (syscallId <= 0 || g_syscallTable.seed + g_syscallTable.funcTableSize < syscallId * 4) {
         sceKernelCpuResumeIntr(oldIntr);
         return SCE_ERROR_KERNEL_INVALID_SYSCALL_ID;
     }
@@ -1013,9 +934,7 @@ s32 sceKernelSetPrimarySyscallHandler(s32 syscallId, void (*syscall)())
         sceKernelCpuResumeIntr(oldIntr);
         return SCE_ERROR_KERNEL_SYSCALL_HANDLER_ALREADY_EXISTS;
     }
-    // 2B68
     if ((s32)syscall >= 0) {
-        // 2B8C
         sceKernelCpuResumeIntr(oldIntr);
         return SCE_ERROR_KERNEL_ILLEGAL_ADDR;
     }
@@ -1025,7 +944,7 @@ s32 sceKernelSetPrimarySyscallHandler(s32 syscallId, void (*syscall)())
     return 0;
 }
 
-s32 IntrManTerminate(void *arg0 __attribute__((unused)), s32 arg1 __attribute__((unused)), s32 arg2 __attribute__((unused)), s32 arg3 __attribute__((unused)))
+s32 IntrManTerminate(void *param __attribute__((unused)), s32 unusedSize __attribute__((unused)), s32 unusedFlag __attribute__((unused)), s32 unusedExtra __attribute__((unused)))
 {
     dbg_printf("Called %s\n", __FUNCTION__);
     pspCop0StateSet(COP0_STATE_STATUS, pspCop0StateGet(COP0_STATE_STATUS) & 0xFFFF7BFF);
@@ -1036,8 +955,7 @@ s32 IntrManTerminate(void *arg0 __attribute__((unused)), s32 arg1 __attribute__(
     return 0;
 }
 
-// 02314986
-void sceKernelCpuEnableIntr()
+void sceKernelCpuEnableIntr(void)
 {
     dbg_printf("Called %s\n", __FUNCTION__);
     asm("mtic %0, $0" : : "r" (1));
@@ -1046,48 +964,44 @@ void sceKernelCpuEnableIntr()
 s32 InterruptManagerForKernel_6FCBA912(s32 set)
 {
     dbg_printf("Called %s\n", __FUNCTION__);
-    intInfo.opt = (set == 0);
+    intInfo.defaultLoggingDisabled = (u8)(set == 0);
     return 0;
 }
 
-// A4C1C627
 s32 sceKernelClearIntrLogging(s32 intrNum)
 {
     dbg_printf("Called %s\n", __FUNCTION__);
-    if (intrNum >= 68)
+    if ((u32)intrNum >= 68)
         return SCE_ERROR_KERNEL_INVALID_INTERRUPT;
     s32 oldIntr = sceKernelCpuSuspendIntr();
     Interrupt *intr = &intInfo.intr[intrNum];
-    intr->u16 = -1;
-    intr->u20 = -1;
-    intr->u24 = 0;
-    intr->u28 = 0;
-    intr->u32 = 0;
-    intr->u36 = 0;
-    intr->u12 = 0;
+    intr->minClockLo = (u32)-1;
+    intr->minClockHi = (u32)-1;
+    intr->maxClockLo = 0;
+    intr->maxClockHi = 0;
+    intr->totalClockLo = 0;
+    intr->totalClockHi = 0;
+    intr->callCount = 0;
     sceKernelCpuResumeIntr(oldIntr);
     return 0;
 }
 
-// F2F1E983
 s32 sceKernelIsInterruptOccurred(s32 intrNum)
 {
     dbg_printf("Called %s\n", __FUNCTION__);
-    s32 sp[2];
-    if (intrNum >= 64)
+    s32 pendingBuf[2];
+    if ((u32)intrNum >= 64)
         return SCE_ERROR_KERNEL_INVALID_INTERRUPT;
-    intcGetPending(sp);
-    return (sp[intrNum >> 5] >> (intrNum & 0x1F)) & 1;
+    intcGetPending(pendingBuf);
+    return ((u32)pendingBuf[(u32)intrNum >> 5] >> (intrNum & 0x1F)) & 1u;
 }
 
-// D774BA45
 s32 sceKernelDisableIntr(s32 intrNum)
 {
     dbg_printf("Called %s\n", __FUNCTION__);
     return sceKernelSuspendIntr(intrNum, 0);
 }
 
-// DBD52A5D
 void RegisterSubIntrruptMonitor(MonitorCb before, MonitorCb after)
 {
     dbg_printf("Called %s\n", __FUNCTION__);
@@ -1095,49 +1009,45 @@ void RegisterSubIntrruptMonitor(MonitorCb before, MonitorCb after)
     intInfo.monitorCbBefore = before;
 }
 
-// 19596CD3
-void ReleaseSubIntrruptMonitor()
+void ReleaseSubIntrruptMonitor(void)
 {
     dbg_printf("Called %s\n", __FUNCTION__);
     intInfo.monitorCbAfter = 0;
     intInfo.monitorCbBefore = 0;
 }
 
-// 8357E7FA
 s32 UnSupportIntr(s32 intrNum)
 {
     dbg_printf("Called %s\n", __FUNCTION__);
-    if (intrNum >= 64)
+    if ((u32)intrNum >= 64)
         return SCE_ERROR_KERNEL_INVALID_INTERRUPT;
     s32 oldIntr = sceKernelCpuSuspendIntr();
     sceKernelSuspendIntr(intrNum, 0);
     Interrupt *intr = &intInfo.intr[intrNum];
     intr->handler = 1;
-    intr->v48 &= 0xFFFFFCFF;
+    intr->flags &= 0xFFFFFCFFu;
     sceKernelCpuResumeIntr(oldIntr);
     return 0;
 }
 
-s32 InterruptManagerForKernel_8DFBD787()
+s32 InterruptManagerForKernel_8DFBD787(void)
 {
     dbg_printf("Called %s\n", __FUNCTION__);
-    if (intInfo.opt2 != 0) {
-        s32 addr = pspCop0CtrlGet(COP0_CTRL_TCB);
-        if (addr != 0)
-            return *(s32*)addr;
+    if (intInfo.userIntrDepth != 0) {
+        s32 *tcbPtr = (s32 *)pspCop0CtrlGet(COP0_CTRL_TCB);
+        if (tcbPtr != NULL)
+            return *tcbPtr;
     }
     return 0;
 }
 
-// D2E8363F
-s32 QueryIntrHandlerInfoForUser()
+s32 QueryIntrHandlerInfoForUser(void)
 {
     dbg_printf("Called %s\n", __FUNCTION__);
     return SCE_ERROR_KERNEL_ERROR;
 }
 
-// EEE43F47
-s32 sceKernelRegisterUserSpaceIntrStack(s32 addr, s32 size, s32 arg2)
+s32 sceKernelRegisterUserSpaceIntrStack(s32 addr, s32 size, s32 stackFlagAddr)
 {
     dbg_printf("Called %s\n", __FUNCTION__);
     if (size != 0x2000)
@@ -1147,26 +1057,23 @@ s32 sceKernelRegisterUserSpaceIntrStack(s32 addr, s32 size, s32 arg2)
         sceKernelCpuResumeIntr(oldIntr);
         return SCE_ERROR_KERNEL_STACK_ALREADY_SET;
     }
-    if (addr < 0 || arg2 < 0) {
+    if (addr < 0 || stackFlagAddr < 0) {
         sceKernelCpuResumeIntr(oldIntr);
         return SCE_ERROR_KERNEL_INVALID_STACK_ADDRESS;
     }
-    intInfo.intrStackArg = arg2;
+    intInfo.intrStackArg = stackFlagAddr;
     intInfo.intrStack = addr + 0x2000;
-    // 2EF8
     sceKernelCpuResumeIntr(oldIntr);
     return 0;
 }
 
-// 30C08374
-s32 sceKernelGetCpuClockCounter()
+s32 sceKernelGetCpuClockCounter(void)
 {
     dbg_printf("Called %s\n", __FUNCTION__);
     return pspCop0StateGet(COP0_STATE_COUNT);
 }
 
-// F9E06DF1
-u64 sceKernelGetCpuClockCounterWide()
+u64 sceKernelGetCpuClockCounterWide(void)
 {
     dbg_printf("Called %s\n", __FUNCTION__);
     s32 oldIntr = sceKernelCpuSuspendIntr();
@@ -1176,43 +1083,36 @@ u64 sceKernelGetCpuClockCounterWide()
         intInfo.clockCounterLo = count;
     else
         hi++;
-    // 2EDC
     sceKernelCpuResumeIntr(oldIntr);
     return ((u64)hi << 32) | (u64)count;
 }
 
-// 6DDA4D7B
-u32 QueryInterruptManCB()
+u32 QueryInterruptManCB(void)
 {
     dbg_printf("Called %s\n", __FUNCTION__);
     return intInfo.clockCounterLo;
 }
 
-// E6FB16E3
-u32 _sceKernelGetCpuClockCounterLow()
+u32 _sceKernelGetCpuClockCounterLow(void)
 {
     dbg_printf("Called %s\n", __FUNCTION__);
     return intInfo.clockCounterHi;
 }
 
-// 14D4C61A
 s32 sceKernelRegisterSystemCallTable(SceSyscallTable *newMap)
 {
     dbg_printf("Called %s\n", __FUNCTION__);
     if (newMap->next != NULL)
         return SCE_ERROR_KERNEL_SYSCALLTABLE_ALREADY_REGISTERED;
-    if (newMap->tableSize < 0 || newMap->funcTableSize - 16 < newMap->tableSize)
+    if (newMap->funcTableSize < 0 || newMap->tableSize - 16 < newMap->funcTableSize)
         return SCE_ERROR_KERNEL_INVALID_SYSCALLTABLE;
-    // 2F7C
     s32 oldIntr = sceKernelCpuSuspendIntr();
     SceSyscallTable *cur = g_syscallTable.next;
     SceSyscallTable *prev = &g_syscallTable;
-    // 2FA0
     while (cur->seed != 0) {
         prev = cur;
         cur = cur->next;
     }
-    // 2FB0
     newMap->next = cur;
     prev->next = newMap;
     pspCop0CtrlSet(COP0_CTRL_SC_TABLE, (s32)g_syscallTable.next);
@@ -1220,55 +1120,45 @@ s32 sceKernelRegisterSystemCallTable(SceSyscallTable *newMap)
     return 0;
 }
 
-// F153B371
 s32 sceKernelQuerySystemCall(void (*sysc)())
-{   
+{
     SceSyscallTable *cur = &g_syscallTable;
-    // 2FE4
     do {
-        s32 count = (cur->funcTableSize < 16 ? cur->funcTableSize - 13 : cur->funcTableSize - 16) / 4;
-        // 3008
+        s32 count = (cur->tableSize - 16) / 4;
         s32 i;
         for (i = 0; i < count; i++) {
             void (*curSys)(void) = (void*)((s32)cur->syscalls[i] | 0x80000000);
             if (curSys == sysc) {
                 cur->syscalls[i] = curSys;
-                // 303C
-                return (cur->seed < 0 ? cur->seed + 3 : cur->seed) / 4 + i;
+                return cur->seed / 4 + i;
             }
         }
-        // 3028
         cur = cur->next;
     } while (cur != NULL);
     return -1;
 }
 
-void InterruptManagerForKernel_E526B767(s32 arg)
+void InterruptManagerForKernel_E526B767(s32 mode)
 {
     dbg_printf("Called %s\n", __FUNCTION__);
-    if (arg == 0)
-        mod_0E48 = 0x42000018; // eret
-    // 30F0
-    if (arg == 1) {
-        // 3104
-        mod_0E50 = 0x00005821; // t3 = 0
-    }
+    if (mode == 0)
+        syscallReturnScrubStartInsn = 0x42000018;
+    if (mode == 1)
+        syscallReturnScrubT3Insn = 0x00005821;
 }
 
-// 3110
 s32 SuspendIntc(s32 flag __attribute__((unused)), void *param __attribute__((unused)))
 {
     dbg_printf("Called %s\n", __FUNCTION__);
-    s32 sp[2];
-    intInfo.compare = pspCop0StateGet(COP0_STATE_COMPARE);
+    s32 maskBuf[2];
     intInfo.count = pspCop0StateGet(COP0_STATE_COUNT);
+    intInfo.compare = pspCop0StateGet(COP0_STATE_COMPARE);
     intcGetMask(intInfo.intcState);
-    mymemset(sp, 0, 8);
-    intcSetMask(sp);
+    mymemset(maskBuf, 0, 8);
+    intcSetMask(maskBuf);
     return 0;
 }
 
-// 3160
 s32 ResumeIntc(s32 flag __attribute__((unused)), void *param __attribute__((unused)))
 {
     dbg_printf("Called %s\n", __FUNCTION__);
@@ -1277,4 +1167,3 @@ s32 ResumeIntc(s32 flag __attribute__((unused)), void *param __attribute__((unus
     pspCop0StateSet(COP0_STATE_COUNT, intInfo.count);
     return 0;
 }
-

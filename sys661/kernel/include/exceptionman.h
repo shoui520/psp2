@@ -5,7 +5,7 @@
 #include "common_header.h"
 
 // interruption
-#define EXCEP_INT 1
+#define EXCEP_INT 0
 // load or instruction fetch exception
 #define EXCEP_ADEL 4
 // address store exception

@@ -8,6 +8,7 @@
 ##
 
     .globl cp0TimerIntrHandler
+    .type cp0TimerIntrHandler, @function
 cp0TimerIntrHandler:
     mfc0  $v0, $11
     lui   $v1, 0x8000
@@ -24,6 +25,7 @@ loc_0024:
     mfc0  $v1, $9
     jr    $ra
     sw    $v1, %lo(intInfo+120)($a3)
+    .size cp0TimerIntrHandler, .-cp0TimerIntrHandler
 
     nop # ?
 
@@ -34,9 +36,11 @@ loc_0024:
 intrExcepHandler:
     nop
     nop
+    .type intrExcepHandlerBody, @function
+intrExcepHandlerBody:
     cfc0 $v0, $13
     bnez $v0, loc_0218
-    move $v1, $sp
+    addu $v1, $sp, $0
     cfc0 $sp, $14
 
 loc_0050:
@@ -86,7 +90,7 @@ loc_0050:
 loc_00F8:
     sw    $gp, 176($sp)
     cfc0  $gp, $13
-    move  $k1, $sp
+    addu  $k1, $sp, $0
     bnez  $gp, loc_0138
     sw    $a3, 92($sp)
     lui   $sp, %hi(g_syscCtx)
@@ -127,8 +131,8 @@ loc_0138:
     srl   $at, $at, 2
     ins   $v1, $at, 14, 2
     addiu $k0, $a0, 24
-    move  $at, $0
-    move  $a1, $0
+    addu  $at, $0, $0
+    addu  $a1, $0, $0
 
 loc_019C:
     lw    $a2, %lo(intInfo+40)($a0)
@@ -145,7 +149,7 @@ loc_019C:
     sh    $0, 36($k1)
     or    $ra, $ra, $v1
     beqz  $ra, _InterruptManagerForKernel_551097F2
-    move  $a0, $k1
+    addu  $a0, $k1, $0
     j     loc_00000978
     sw    $k1, 12($sp)
 
@@ -234,10 +238,10 @@ loc_02F0:
     lw    $a1, 8($k0)
     lw    $a2, 56($k1)
 
-mod_02F8:
+intrMonitorHookInsn:
     nop
 
-    move  $k1, $0
+    addu  $k1, $0, $0
     slti  $ra, $a0, 64
     mtic  $ra, $0                                                                                      
     jalr  $v0
@@ -313,8 +317,8 @@ loc_03A4:
     bnez  $v1, loc_0478
     lw    $a0, 12($sp)
 
-    .globl mod_0400
-mod_0400:
+    .globl contextHookBeforeInsn
+contextHookBeforeInsn:
     jal   defaultContextHook
     li    $k1, 3
     beqz  $v0, _InterruptManagerForKernel_551097F2
@@ -344,13 +348,13 @@ loc_0444:
     sw    $s7, 156($a0)
     sw    $fp, 184($a0)
 
-    .globl mod_0468
-mod_0468:
+    .globl contextHookAfterInsn
+contextHookAfterInsn:
     jal   defaultContextHook
 
-    move  $a1, $0
+    addu  $a1, $0, $0
     j     _InterruptManagerForKernel_551097F2
-    move  $a0, $v0
+    addu  $a0, $v0, $0
 
 loc_0478:
     lb    $a2, 37($a0)
@@ -392,8 +396,11 @@ loc_0478:
     lwc1  $30, 312($a0)
     lwc1  $31, 316($a0)
 
+    .size intrExcepHandlerBody, .-intrExcepHandlerBody
+
 _InterruptManagerForKernel_551097F2:
     .globl InterruptManagerForKernel_551097F2
+    .type InterruptManagerForKernel_551097F2, @function
 InterruptManagerForKernel_551097F2:
     lw    $sp, 180($a0)
     lb    $a2, 36($a0)
@@ -490,13 +497,17 @@ loc_0650:
     lw    $k1, 172($a0)
     jr    $ra
     li    $v0, 1
+    .size InterruptManagerForKernel_551097F2, .-InterruptManagerForKernel_551097F2
 
     .globl sceKernelIsIntrContext
+    .type sceKernelIsIntrContext, @function
 sceKernelIsIntrContext:
     jr   $ra
     cfc0 $v0, $13
+    .size sceKernelIsIntrContext, .-sceKernelIsIntrContext
 
     .globl SaveThreadContext
+    .type SaveThreadContext, @function
 SaveThreadContext:
     cache 0x18, 52($a0)
     cache 0x18, 128($a0)
@@ -528,23 +539,25 @@ SaveThreadContext:
     mtc0  $v1, $12
     jr    $ra
     sw    $t4, 40($a0)
+    .size SaveThreadContext, .-SaveThreadContext
 
     .globl sceKernelCallUserIntrHandler
+    .type sceKernelCallUserIntrHandler, @function
 sceKernelCallUserIntrHandler:
     mfc0       $t2, $12
     mtic       $0, $0
     lui        $t3, %hi(intInfo+112)
-    lw         $t3, %lo(intInfo+112)
+    lw         $t3, %lo(intInfo+112)($t3)
     addiu      $t1, $t1, -32
     addiu      $t3, $t3, -7552
     sltu       $v0, $t1, $t3
     bnez       $v0, loc_00000914
     lui        $v1, %hi(intInfo+97)
-    lbu        $v0, %lo(intInfo+97)
+    lbu        $v0, %lo(intInfo+97)($v1)
     cache      0x18, -64($sp)
-    move       $t3, $sp
+    addu       $t3, $sp, $0
     addiu      $v0, $v0, 1
-    sb         $v0, %lo(intInfo+97)
+    sb         $v0, %lo(intInfo+97)($v1)
     addiu      $sp, $sp, -400
     ins        $sp, $0, 0, 6
     cfc0       $v0, $15
@@ -560,24 +573,24 @@ sceKernelCallUserIntrHandler:
     lui        $at, 0xDEAD
     ori        $at, $at, 0xBEEF
     lui        $t4, %hi(intInfo+116)
-    lw         $t4, %lo(intInfo+116)
+    lw         $t4, %lo(intInfo+116)($t4)
     beqz       $t4, loc_076C
-    move       $t5, $0
+    addu       $t5, $0, $0
     lw         $t5, 0($t4)
     sw         $0, 0($t4)
 
 loc_076C:
     sw         $t5, 392($sp)
     sw         $s0, 320($sp)
-    move       $s0, $at
+    addu       $s0, $at, $0
     sw         $s1, 324($sp)
-    move       $s1, $at
+    addu       $s1, $at, $0
     ext        $t3, $t2, 29, 1
     sw         $s2, 328($sp)
-    move       $s2, $at
+    addu       $s2, $at, $0
     cfc0       $t9, $23
     sw         $s3, 332($sp)
-    move       $s3, $at                                                                                     
+    addu       $s3, $at, $0                                                                                     
     beqz       $t3, loc_07AC
     sw         $s4, 336($sp)
     ctc1       $0, $31
@@ -586,26 +599,26 @@ loc_076C:
 
 loc_07AC:
     sw         $s5, 340($sp)
-    move       $s5, $at
-    move       $s4, $at
+    addu       $s5, $at, $0
+    addu       $s4, $at, $0
     sw         $s6, 344($sp)
-    move       $s6, $at
-    move       $v0, $at
+    addu       $s6, $at, $0
+    addu       $v0, $at, $0
     sw         $s7, 348($sp)
-    move       $s7, $at
-    move       $v1, $at
+    addu       $s7, $at, $0
+    addu       $v1, $at, $0
     sw         $k0, 352($sp)
-    move       $k0, $0
-    move       $t4, $at
+    addu       $k0, $0, $0
+    addu       $t4, $at, $0
     sw         $t9, 368($sp)
-    move       $k1, $0
-    move       $t5, $at
+    addu       $k1, $0, $0
+    addu       $t5, $at, $0
     sw         $fp, 356($sp)
-    move       $fp, $at
-    move       $t6, $at
+    addu       $fp, $at, $0
+    addu       $t6, $at, $0
     sw         $ra, 360($sp)
-    move       $t8, $at
-    move       $t7, $at
+    addu       $t8, $at, $0
+    addu       $t7, $at, $0
     sw         $t2, 364($sp)
     li         $t3, 140
     addiu      $ra, $t1, 16
@@ -616,7 +629,7 @@ loc_07AC:
     ctc0       $sp, $15
     ctc0       $sp, $14
     sw         $0, 24($t1)
-    move       $t9, $at
+    addu       $t9, $at, $0
     sw         $0, 28($t1)
     cache      0x8, 16($t1)
     cache      0x1A, 16($t1)
@@ -625,11 +638,11 @@ loc_07AC:
     and        $t2, $t2, $t3
     ori        $t2, $t2, 0x13
     mtc0       $t2, $12
-    move       $t2, $at
-    move       $t3, $at
+    addu       $t2, $at, $0
+    addu       $t3, $at, $0
     mtc0       $t0, $14
     sync
-    move       $sp, $t1
+    addu       $sp, $t1, $0
     eret
 
     .globl returnFromUserIntrHandler
@@ -639,7 +652,7 @@ returnFromUserIntrHandler:
     cfc0       $v0, $4
     cfc0       $sp, $15
     lui        $a1, %hi(intInfo+97)
-    lbu        $a0, %lo(intInfo+97)
+    lbu        $a0, %lo(intInfo+97)($a1)
     lw         $t4, 364($sp)
     mfc0       $t5, $12
     lw         $t8, 368($sp)
@@ -655,11 +668,11 @@ returnFromUserIntrHandler:
     lw         $k0, 352($sp)                                                                                
     lw         $fp, 356($sp)
     addiu      $a0, $a0, -1
-    sb         $a0, %lo(intInfo+97)
+    sb         $a0, %lo(intInfo+97)($a1)
     ctc0       $t8, $23
-    move       $k1, $0
+    addu       $k1, $0, $0
     lui        $t0, %hi(intInfo+116)
-    lw         $t0, %lo(intInfo+116)
+    lw         $t0, %lo(intInfo+116)($t0)
     beqz       $t0, loc_08D8
     lw         $t1, 392($sp)
     sw         $t1, 0($t0)
@@ -684,11 +697,13 @@ loc_08D8:
 loc_00000914:
     j          loc_00000914
     break      0x003, 0x3FF  # (0x00FFF)
+    .size sceKernelCallUserIntrHandler, .-sceKernelCallUserIntrHandler
 
     .globl defaultContextHook
+    .type defaultContextHook, @function
 defaultContextHook:
     jr    $ra
-    move  $v0, $0
+    addu  $v0, $0, $0
 
     .globl intrExcepHandler2
 intrExcepHandler2:
@@ -717,7 +732,7 @@ loc_0000095C:
     eret
 
 loc_00000978:
-    move       $sp, $k1
+    addu       $sp, $k1, $0
     lui        $v1, %hi(intrExcepHandler)
     lw         $v1, %lo(intrExcepHandler)($v1)
     lui        $at, %hi(intInfo+108)
@@ -777,7 +792,7 @@ loc_00000978:
     ctc0       $v0, $4
     ctc0       $v1, $5
     lui        $v0, %hi(intInfo+108)
-    lw         $v0, %lo(intInfo+108)
+    lw         $v0, %lo(intInfo+108)($v0)
     jr         $v0
     lw         $sp, 180($sp)
 
@@ -796,7 +811,7 @@ loc_00000A88:
     sw         $a0, 0($sp)
     sw         $a1, 4($sp)
     sw         $a2, 8($sp)
-    move       $a3, $v0
+    addu       $a3, $v0, $0
     sw         $v0, 12($sp)
     sw         $t0, 16($sp)
     sw         $t1, 20($sp)
@@ -809,7 +824,7 @@ loc_00000A88:
     sw         $t8, 48($sp)
     sw         $t9, 52($sp)
 
-mod_0AC4:
+intrMonitorBeforeInsn:
     nop
 
     cfc0       $t0, $13
@@ -825,10 +840,10 @@ mod_0AC4:
     lw         $a0, 0($sp)
     lw         $a1, 4($sp)
     lw         $a2, 8($sp)
-    move       $a3, $v0
+    addu       $a3, $v0, $0
     cfc0       $t0, $13
 
-mod_0B04:
+intrMonitorAfterInsn:
     nop
 
     sw         $v0, 0($sp)
@@ -920,8 +935,10 @@ loc_00000C00:
     addiu      $a2, $a2, 1
     j          loc_00000B18
     sw         $a2, 12($k0)
+    .size defaultContextHook, .-defaultContextHook
 
     .globl InterruptManagerForKernel_A6978B70
+    .type InterruptManagerForKernel_A6978B70, @function
 InterruptManagerForKernel_A6978B70:
     lui        $t0, %hi(intrMonitorTrampoline)
     addiu      $t0, $t0, %lo(intrMonitorTrampoline)
@@ -933,27 +950,29 @@ InterruptManagerForKernel_A6978B70:
     or         $a1, $a1, $t1
     lui        $t1, 0xA00
     or         $t0, $t0, $t1
-    lui        $at, %hi(mod_0AC4)
-    sw         $a0, %lo(mod_0AC4)($at)
-    cache      0x1B, %lo(mod_0AC4)($at)
-    cache      0x8, %lo(mod_0AC4)($at)
-    lui        $at, %hi(mod_0B04)
-    sw         $a1, %lo(mod_0B04)($at)
-    cache      0x1B, %lo(mod_0B04)($at)
-    cache      0x8, %lo(mod_0B04)($at)
-    lui        $at, %hi(mod_02F8)
-    sw         $t0, %lo(mod_02F8)($at)
-    cache      0x1B, %lo(mod_02F8)($at)
-    cache      0x8, %lo(mod_02F8)($at)
+    lui        $at, %hi(intrMonitorBeforeInsn)
+    sw         $a0, %lo(intrMonitorBeforeInsn)($at)
+    cache      0x1B, %lo(intrMonitorBeforeInsn)($at)
+    cache      0x8, %lo(intrMonitorBeforeInsn)($at)
+    lui        $at, %hi(intrMonitorAfterInsn)
+    sw         $a1, %lo(intrMonitorAfterInsn)($at)
+    cache      0x1B, %lo(intrMonitorAfterInsn)($at)
+    cache      0x8, %lo(intrMonitorAfterInsn)($at)
+    lui        $at, %hi(intrMonitorHookInsn)
+    sw         $t0, %lo(intrMonitorHookInsn)($at)
+    cache      0x1B, %lo(intrMonitorHookInsn)($at)
+    cache      0x8, %lo(intrMonitorHookInsn)($at)
     jr         $ra
     sync
+    .size InterruptManagerForKernel_A6978B70, .-InterruptManagerForKernel_A6978B70
 
     .globl InterruptManagerForKernel_1373F20E
+    .type InterruptManagerForKernel_1373F20E, @function
 InterruptManagerForKernel_1373F20E:
-    lui        $at, %hi(mod_02F8)
-    sw         $0, %lo(mod_02F8)
-    cache      0x1B, %lo(mod_02F8)
-    cache      0x8, %lo(mod_02F8)
+    lui        $at, %hi(intrMonitorHookInsn)
+    sw         $0, %lo(intrMonitorHookInsn)($at)
+    cache      0x1B, %lo(intrMonitorHookInsn)($at)
+    cache      0x8, %lo(intrMonitorHookInsn)($at)
     jr         $ra
     sync
 
@@ -969,11 +988,13 @@ invalidSyscallHandler:
     cfc0       $v0, $0
     mtc0       $v0, $14
     lui        $v0, %hi(syscallExcepHandler)
-    lw         $v0, %lo(syscallExcepHandler)
+    lw         $v0, %lo(syscallExcepHandler)($v0)
     jr         $v0
     nop
+    .size InterruptManagerForKernel_1373F20E, .-InterruptManagerForKernel_1373F20E
 
     .globl sceKernelGetSyscallRA
+    .type sceKernelGetSyscallRA, @function
 sceKernelGetSyscallRA:
     cfc0       $v0, $16
     beqz       $v0, loc_00000CF0
@@ -985,11 +1006,14 @@ sceKernelGetSyscallRA:
 loc_00000CF0:
     jr         $ra
     nop
+    .size sceKernelGetSyscallRA, .-sceKernelGetSyscallRA
 
     .globl syscallExcepHandler
 syscallExcepHandler:
     nop
     nop
+    .type syscallExcepHandlerBody, @function
+syscallExcepHandlerBody:
     cfc0       $v0, $0
     cfc0       $v1, $3
     mfc0       $t7, $21
@@ -1045,8 +1069,8 @@ loc_00000D40:
     ctc1       $t4, $31
     sw         $sp, 0($k1)
 
-    .globl mod_0DC4
-mod_0DC4:
+    .globl syscallMonitorHookInsn
+syscallMonitorHookInsn:
     nop
 
     sw         $ra, 12($sp)
@@ -1055,8 +1079,8 @@ mod_0DC4:
     lui        $k1, 0x10
     mtic       $0, $0
 
-    .globl loc_00000DDC
-loc_00000DDC:
+    .globl syscallMonitorReturn
+syscallMonitorReturn:
     lui        $t7, 0xCCCC
     ori        $t7, $t7, 0xCCCC
     lui        $t6, 0xBC00
@@ -1085,39 +1109,38 @@ loc_00000DDC:
     mtc0       $t0, $12
     lw         $sp, 8($sp)
 
-    .globl mod_0E48
-mod_0E48:
+    .globl syscallReturnScrubStartInsn
+syscallReturnScrubStartInsn:
     lui        $at, 0xDEAD
 
     ori        $at, $at, 0xBEEF
 
-    .globl mod_0E50
-mod_0E50:
-    move       $t3, $at
+    .globl syscallReturnScrubT3Insn
+syscallReturnScrubT3Insn:
+    addu       $t3, $at, $0
 
-    move       $t4, $at
-    move       $t9, $at
-    move       $t2, $at
+    addu       $t4, $at, $0
+    addu       $t9, $at, $0
+    addu       $t2, $at, $0
     mtlo       $at
     mthi       $at
-    move       $t0, $at
-    move       $t1, $at
-    move       $a0, $at
-    move       $a1, $at
-    move       $a2, $at
-    move       $a3, $at
-    move       $t5, $at
-    move       $t6, $at
-    move       $t7, $at
-    move       $t8, $at
+    addu       $t0, $at, $0
+    addu       $t1, $at, $0
+    addu       $a0, $at, $0
+    addu       $a1, $at, $0
+    addu       $a2, $at, $0
+    addu       $a3, $at, $0
+    addu       $t5, $at, $0
+    addu       $t6, $at, $0
+    addu       $t7, $at, $0
+    addu       $t8, $at, $0
     eret
 
 loc_00000E98:
     j          loc_00000E98
     break      0x003, 0x3FE  # (0x00FFE)
+    .size syscallExcepHandlerBody, .-syscallExcepHandlerBody
 
-    # OHNOES alignment :O :O
-    nop
     nop
     nop
     nop
@@ -1132,6 +1155,7 @@ loc_00000E98:
 ##
 
     .globl syscallIsCop2Enabled
+    .type syscallIsCop2Enabled, @function
 syscallIsCop2Enabled:
     mfc0       $v0, $12
     ext        $v0, $v0, 30, 1
@@ -1264,8 +1288,10 @@ syscallUnsupportedError:
     lui        $v0, 0x8002
     addiu      $v0, $v0, 314
     eret
+    .size syscallIsCop2Enabled, .-syscallIsCop2Enabled
 
     .globl intcMaskAll
+    .type intcMaskAll, @function
 intcMaskAll:
     lui        $at, 0xBC30
     lui        $v0, 0x2000
@@ -1275,8 +1301,10 @@ intcMaskAll:
     sw         $0, 40($at)
     jr         $ra
     sync
+    .size intcMaskAll, .-intcMaskAll
 
     .globl intcGetPending
+    .type intcGetPending, @function
 intcGetPending:
     lui        $at, 0xBC30
     lw         $v0, 4($at)
@@ -1290,8 +1318,10 @@ intcGetPending:
     ins        $v1, $at, 14, 2
     jr         $ra
     sw         $v1, 4($a0)
+    .size intcGetPending, .-intcGetPending
 
     .globl intcGetMask
+    .type intcGetMask, @function
 intcGetMask:
     lui        $at, 0xBC30
     lw         $v0, 8($at)
@@ -1303,8 +1333,10 @@ intcGetMask:
     ins        $v1, $at, 14, 2
     jr         $ra
     sw         $v1, 4($a0)
+    .size intcGetMask, .-intcGetMask
 
     .globl intcSetMask
+    .type intcSetMask, @function
 intcSetMask:
     lw         $v0, 0($a0)
     lw         $v1, 4($a0)
@@ -1322,4 +1354,5 @@ intcSetMask:
     sw         $v0, 40($at)
     jr         $ra
     sync
+    .size intcSetMask, .-intcSetMask
 
