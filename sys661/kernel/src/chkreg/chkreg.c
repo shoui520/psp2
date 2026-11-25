@@ -264,10 +264,16 @@ s32 sceChkregGetPsCode(ScePsCode *pPsCode)
 	if ((g_isConsoleIdCertificateObtained || (status = _sceChkregLookupConsoleIdCertificate()) == SCE_ERROR_OK)
 		&& (status = _sceChkregVerifyConsoleIdCertificate()) == SCE_ERROR_OK)
 	{
-		pPsCode->companyCode = g_ConsoleIdCertificate.consoleId.companyCode;
-		pPsCode->productCode = g_ConsoleIdCertificate.consoleId.productCode;
-		pPsCode->productSubCode = g_ConsoleIdCertificate.consoleId.productSubCode;
-		pPsCode->factoryCode = g_ConsoleIdCertificate.consoleId.factoryCode;
+		const u8 *raw = (const u8 *)&g_ConsoleIdCertificate;
+		u8 *dst = (u8 *)pPsCode;
+		dst[0] = raw[3];
+		dst[1] = raw[2];
+		dst[2] = raw[5];
+		dst[3] = raw[4];
+		dst[4] = raw[7];
+		dst[5] = raw[6];
+		dst[6] = raw[8] >> 2;
+		dst[7] = 0;
 	}
 
 	/* Release acquired semaphore resource. */

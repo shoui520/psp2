@@ -117,14 +117,14 @@ found_field:
                 if (*p == '\n') {
                     if (i != 1 && p[-1] == '\r')
                         has_cr = 1;
-                    if (next_i < len && (p[1] == ' ' || p[1] == '\t')) {
-                        i = next_i;
-                        continue;
+                    if (next_i < len) {
+                        if (p[1] != ' ' && p[1] != '\t') {
+                            u32 end_pos = i - ((has_cr == 1) ? 1 : 0);
+                            *value_out = buf + val_start;
+                            *value_len_out = end_pos - val_start;
+                            return end_pos;
+                        }
                     }
-                    u32 end_pos = i - ((has_cr == 1) ? 1 : 0);
-                    *value_out = buf + val_start;
-                    *value_len_out = end_pos - val_start;
-                    return end_pos;
                 }
                 i = next_i;
             }
