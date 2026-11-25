@@ -27,6 +27,9 @@
 #include <memory/heap_allocator.h>
 #include <graphics/surface/surface.h>
 #include <graphics/surface/surface_pool.h>
+#include <graphics/surface/surface_screen.h>
+#include <graphics/effects/screen_copy.h>
+#include <graphics/drawobj/plane_obj.h>
 #include <graphics/graphmem/graphmem.h>
 #include <cache/cache_manager.h>
 #include <cache/cache_image.h>
@@ -34,15 +37,26 @@
 #include <widget/core/widget.h>
 #include <widget/core/handler.h>
 #include <widget/w_scene.h>
+#include <widget/w_camera.h>
+#include <widget/w_plane.h>
+#include <widget/w_button.h>
+#include <widget/w_supplier.h>
+#include <widget/w_busyindicator.h>
 #include <widget/w_scroll_view_base.h>
 #include <widget/w_pageturn.h>
 #include <widget/w_text.h>
 #include <inputdevice/inputlistener.h>
+#include <appmgr.h>
+#include <appmgr/appmgr.h>
 #include <common_gui_dialog/common_gui_dialog.h>
 #include "../../livespace_db/lsdb_keys.h"
 #include "../../livespace_db/livespace_db_internal.h"
 #include "../../../shell.h"
 #include "../../../plugins.h"
+#include "../../../bgdl_api.h"
+#include "../../../console_info/console_info.h"
+#include "../../nsx/nsx_internal.h"
+#include "../../esecron/include/eseutil.hpp"
 #include "../../indicator_plugin/src/indicator_interface.h"
 #include "../../power_manage_plugin/src/power_manage_internal.h"
 #include "../../applauncher_plugin/src/applauncher.h"
@@ -56,13 +70,37 @@ int sceRegMgrGetKeyIntForUser(const char *category, const char *name, int *outVa
 int sceRegMgrSetKeyIntForUser(const char *category, const char *name, int value);
 int sceCompatGetPspSystemSoftwareVersion(void);
 int sceAppMgrSetRecommendedScreenOrientationForShell(int orientation);
+int sceAppMgrDestroyAppByName(const char *name);
+int sceSharedFbGetRenderingInfo(SceUID pid);
+int sceKernelCheckDipswForUser(SceUInt32 bit);
+SceUInt32 sceKernelGetSystemTimeLow(void);
+SceUInt64 sceKernelGetSystemTimeWideForUser(void);
 int SceLsdb_DD7D68C0(AppInfoSClient *client, LsdbQueryCondition *conditions,
 		     paf::vector<paf::string> *outTitleIds, int option);
 int SceLsdb_87EE0526(AppInfoSClient *client, const paf::string *titleId, LsdbAppInfoPtr *outInfo);
 const char *SceLsdb_8FDA59EA(const LsdbAppInfoPtr *app);
 const char *sceLsdbGetAppVer(const LsdbAppInfoPtr *app);
 const char *sceLsdbGetGameDataId(const LsdbAppInfoPtr *app);
+const char *sceLsdbGetStitle(const LsdbAppInfoPtr *app);
+const char *sceLsdbGetTitle(const LsdbAppInfoPtr *app);
+const char *sceLsdbGetCategory(const LsdbAppInfoPtr *app);
+const char *sceLsdbGetOriginalPath(const LsdbAppInfoPtr *app);
+int sceLsdbGetMetaContentsPath(const LsdbAppInfoPtr *app);
+SceInt64 SceLsdb_849E8DC6(const LsdbAppInfoPtr *app);
+SceInt64 SceLsdb_9D27A87D(const LsdbAppInfoPtr *app);
+SceInt64 SceLsdb_0B16523B(const LsdbAppInfoPtr *app);
+int SceLsdb_DA0D7B0A(const LsdbAppInfoPtr *app);
+int SceLsdb_44CD0D07(const LsdbAppInfoPtr *app);
+bool SceLsdb_F4325AD0(const LsdbAppInfoPtr *app);
+const char *SceLsdb_B7F9E89F(const LsdbAppInfoPtr *app);
+int SceLsdb_C80B07C3(const LsdbAppInfoPtr *app);
+int SceLsdb_D8DF91EE(paf::rtc::Tick *tick);
+const char *SceActivityDb_E6C23731(void);
 }
+
+/* External shell helpers (console_info / format) */
+int consoleInfoFileAddTime(int index, SceUInt64 elapsedUs);		/* 0x81376D44 */
+void shellSizeTextKB(paf::wstring *text, SceUInt32 sizeKB);		/* 0x8134367C */
 
 /* Forward declarations */
 class TopTabBase;
@@ -82,11 +120,25 @@ struct TopmenuBootScreen;
 /* TopWindowBase, 0x812845A8 / 0x81284EB4)                            */
 /* ------------------------------------------------------------------ */
 
+typedef void (*TopmenuEventCallback)(SceInt32 eventType, void *sender, SceInt32 eventArg,
+				     void *userData);
+
 class TopmenuEventListener {
 public:
+	TopmenuEventListener() : m_callback(NULL), m_userData(NULL), m_pendingDelete(false) {}
+	TopmenuEventListener(TopmenuEventCallback cb, void *userData)
+		: m_callback(cb), m_userData(userData), m_pendingDelete(false)
+	{
+	}
 	virtual ~TopmenuEventListener() {}
-	virtual void Invoke(SceInt32 eventType, void *sender, SceInt32 arg) = 0;
+	virtual void Invoke(SceInt32 eventType, void *sender, SceInt32 eventArg)
+	{
+		if (m_callback != NULL)
+			m_callback(eventType, sender, eventArg, m_userData);
+	}
 
+	TopmenuEventCallback m_callback;
+	void *m_userData;
 	bool m_pendingDelete;
 };
 
@@ -100,6 +152,60 @@ public:
 			delete *it;
 		}
 		m_listeners.clear();
+	}
+
+	void AddListener(TopmenuEventListener *listener)
+	{
+		for (paf::list<TopmenuEventListener *>::iterator it = m_listeners.begin();
+		     it != m_listeners.end(); ++it) {
+			if (*it == listener)
+				return;
+		}
+		m_listeners.push_back(listener);
+	}
+
+	void RemoveListener(TopmenuEventCallback cb, void *userData)
+	{
+		for (paf::list<TopmenuEventListener *>::iterator it = m_listeners.begin();
+		     it != m_listeners.end(); ++it) {
+			TopmenuEventListener *listener = *it;
+			if (listener != NULL && listener->m_callback == cb &&
+			    listener->m_userData == userData) {
+				if (m_dispatching) {
+					listener->m_pendingDelete = true;
+				} else {
+					m_listeners.erase(it);
+					delete listener;
+				}
+				return;
+			}
+		}
+	}
+
+	void Dispatch(SceInt32 eventType, void *sender, SceInt32 eventArg)
+	{
+		m_dispatching = true;
+		for (paf::list<TopmenuEventListener *>::iterator it = m_listeners.begin();
+		     it != m_listeners.end(); ++it) {
+			TopmenuEventListener *listener = *it;
+			if (listener != NULL)
+				listener->Invoke(eventType, sender, eventArg);
+		}
+		m_dispatching = false;
+
+		paf::list<TopmenuEventListener *>::iterator it = m_listeners.begin();
+		while (it != m_listeners.end()) {
+			TopmenuEventListener *listener = *it;
+			if (listener == NULL || listener->m_pendingDelete) {
+				paf::list<TopmenuEventListener *>::iterator nextIt = it;
+				++nextIt;
+				m_listeners.erase(it);
+				delete listener;
+				it = nextIt;
+			} else {
+				++it;
+			}
+		}
 	}
 
 	paf::list<TopmenuEventListener *> m_listeners;
@@ -116,6 +222,37 @@ public:
 			delete it->second;
 		}
 		m_eventMap.clear();
+	}
+
+	void AddEventListener(SceInt32 eventType, TopmenuEventCallback cb, void *userData)
+	{
+		TopmenuEventListener *listener = new TopmenuEventListener(cb, userData);
+		paf::map<SceInt32, TopmenuEventListenerList *>::iterator it =
+			m_eventMap.find(eventType);
+		if (it == m_eventMap.end()) {
+			TopmenuEventListenerList *list = new TopmenuEventListenerList();
+			list->AddListener(listener);
+			m_eventMap.insert(paf::pair<SceInt32, TopmenuEventListenerList *>(
+				eventType, list));
+		} else if (it->second != NULL) {
+			it->second->AddListener(listener);
+		}
+	}
+
+	void RemoveEventListener(SceInt32 eventType, TopmenuEventCallback cb, void *userData)
+	{
+		paf::map<SceInt32, TopmenuEventListenerList *>::iterator it =
+			m_eventMap.find(eventType);
+		if (it != m_eventMap.end() && it->second != NULL)
+			it->second->RemoveListener(cb, userData);
+	}
+
+	void DispatchEvent(SceInt32 eventType, void *sender, SceInt32 eventArg)
+	{
+		paf::map<SceInt32, TopmenuEventListenerList *>::iterator it =
+			m_eventMap.find(eventType);
+		if (it != m_eventMap.end() && it->second != NULL)
+			it->second->Dispatch(eventType, sender, eventArg);
 	}
 
 	paf::map<SceInt32, TopmenuEventListenerList *> m_eventMap;
@@ -171,8 +308,16 @@ public:
 	void MoveTabAfter(TopTabBase *tab, TopTabBase *afterTab);
 	void AttachScrollView(paf::ui::ScrollView *scrollView);
 	TopTabBase *FindFocusedTab();
+	TopTabBase *FindNearestTab();
 	TopTabBase *FindTabByPageKey(SceInt32 pageKey);
-	TopTabBase *GetTabAt(SceInt32 index);
+	TopTabBase *FindTabBySnapId(SceInt32 snapId);
+	TopTabBase *GetNextTab(TopTabBase *tab);
+	TopTabBase *GetPrevTab(TopTabBase *tab);
+	SceInt32 GetTabSnapId(TopTabBase *tab);
+	void ScrollToTab(TopTabBase *tab, float durationSec);
+	void ScrollToTabAnimated(TopTabBase *tab);
+	void RefreshLayoutImmediate();
+	void RefreshLayoutDefault();
 
 	paf::ui::Widget *m_rootWidget;		/* +0x10 */
 	paf::ui::ScrollView *m_scrollView;	/* +0x14 */
@@ -303,6 +448,94 @@ public:
 typedef char TopmenuProcessBaseSizeCheck[sizeof(TopmenuProcessBase) == 40 ? 1 : -1];
 typedef char TopmenuAppProcessSizeCheck[sizeof(TopmenuAppProcess) == 104 ? 1 : -1];
 
+/* ------------------------------------------------------------------ */
+/* TopTabScreenCopy (16B) & TopTabAppData (184B, 0x8129666C..8D23)    */
+/* ------------------------------------------------------------------ */
+
+class TopTabScreenCopy {
+public:
+	TopTabScreenCopy(TopTabAppData *owner, paf::graph::SurfacePool *pool, bool fullSize);
+	~TopTabScreenCopy();
+
+	void ClearState();
+	void CaptureAndPublish();
+	bool IsReady() const;
+
+	TopTabAppData *m_owner;					/* +0x00 */
+	paf::intrusive_ptr<paf::graph::Surface> m_surface;	/* +0x04 */
+	paf::graph::ScreenCopyObj *m_copyObj;			/* +0x08 */
+	bool m_captured;					/* +0x0C */
+};
+
+class TopTabAppData {
+public:
+	TopTabAppData(TopTab *ownerTab, const paf::string &titleId, const LsdbAppInfoPtr &appInfo,
+		      SceInt32 launchMode, bool autoStart, SceInt32 startArg);
+	~TopTabAppData();
+
+	void HideAnimated(float durationSec);
+	void ShowAnimated(float durationSec);
+	void SetAppViewState(SceInt32 state);
+	void SetSnapshotSurface(const paf::intrusive_ptr<paf::graph::Surface> &surface);
+	void Update();
+	void SetPageTurnDisabled(bool disabled);
+	int ReloadLiveArea(const LiveAreaReloadRequest *req);
+	void OnActivateTab();
+	void OnDeactivateTab();
+	void OnBgLoadStepDone();
+	paf::intrusive_ptr<paf::graph::Surface> GetScreenCopySurface() const;
+	void UpdateUpStatus(SceInt32 newStatus);
+	void FillLiveAreaInitInfo(LiveAreaPageInitInfo *outInfo);
+	void RefreshLiveAreaInfo();
+	void OnEnterViewport();
+	void OnLeaveViewport();
+	void ReportLiveAreaOpen();
+	void ReportLiveAreaClose();
+	void LoadBackgroundImage();
+	void SetupContent();
+	void RequestCancelLaunch();
+
+	paf::string m_titleId;					/* +0x00 */
+	TopTab *m_ownerTab;					/* +0x0C */
+	bool m_noScreenCopy;					/* +0x10 */
+	bool m_hasSnapshot;					/* +0x11 */
+	bool m_shownOnce;					/* +0x12 */
+	SceInt32 m_upStatus;					/* +0x14 */
+	paf::ui::Widget *m_rootWidget;				/* +0x18 */
+	paf::ui::PageTurn *m_pageTurn;				/* +0x1C */
+	paf::ui::Widget *m_contentWidget;			/* +0x20 */
+	paf::ui::Widget *m_snapshotPlane;			/* +0x24 */
+	paf::ui::BusyIndicator *m_busyIndicator;		/* +0x28 */
+	paf::ui::Supplier *m_cornerSupplier;			/* +0x2C */
+	TopTabScreenCopy *m_screenCopy;				/* +0x30 */
+	SceInt32 m_viewKind;					/* +0x34 */
+	SceInt32 m_appViewState;				/* +0x38 */
+	SceInt32 m_captureCountdown;				/* +0x3C */
+	SceInt32 m_bgLoadPendingCount;				/* +0x40 */
+	SceInt32 m_dialogId;					/* +0x44 */
+	SceInt32 m_mediaAppType;				/* +0x48 */
+	SceInt32 m_mediaStorageKind;				/* +0x4C */
+	TopmenuAppProcess m_process;				/* +0x50 */
+};
+
+typedef char TopTabScreenCopySizeCheck[sizeof(TopTabScreenCopy) == 16 ? 1 : -1];
+typedef char TopTabAppDataSizeCheck[sizeof(TopTabAppData) == 184 ? 1 : -1];
+
+/* Promotion error context (68 bytes, 0x81289E86 / 0x8128A1F8 / 0x8128ACC8) */
+struct TopmenuInstallError {
+	TopmenuInstallError();
+
+	SceInt32 errorCode;					/* +0x00 */
+	bool isAddcont;						/* +0x04 */
+	paf::string url;					/* +0x08 */
+	paf::string path;					/* +0x14 */
+	paf::string title;					/* +0x20 */
+	paf::string titleId;					/* +0x2C */
+	paf::string iconPath;					/* +0x38 */
+};
+
+typedef char TopmenuInstallErrorSizeCheck[sizeof(TopmenuInstallError) == 68 ? 1 : -1];
+
 /* Helper structs embedded in TopWindow */
 struct TopmenuLaunchSeq {
 	SceInt32 state;						/* +0x00 */
@@ -423,6 +656,12 @@ extern TopmenuHelpMgr *g_topmenuHelpMgr;			/* 0x815AC7C8 */
 extern TopmenuWhatsNewMgr *g_topmenuWhatsNewMgr;		/* 0x815AC520 */
 extern TopmenuBootScreen *g_topmenuBootScreen;			/* 0x815AC6F0 */
 extern bool g_topmenuTestCrashEnabled;				/* 0x815AC4C0 */
+extern SceGxmRenderTarget *g_topmenuSmallRenderTarget;		/* 0x815AC4C4 */
+extern SceGxmRenderTarget *g_topmenuLargeRenderTarget;		/* 0x815AC4C8 */
+extern bool g_topmenuHeaderFocusByPad;				/* 0x815AC4F8 */
+extern SceInt32 g_topmenuNextTabOrderStamp;			/* 0x8154573C */
+extern SceInt32 g_topmenuDisabledPageTurnCount;			/* 0x81545A30 */
+extern paf::graph::Surface g_topmenuDefaultSnapshotSurface;	/* 0x814D15B8 */
 
 /* ------------------------------------------------------------------ */
 /* Cross-TU internal APIs                                             */
@@ -498,9 +737,64 @@ void topmenuTopWindowStop(void);
 void topmenuTopWindowExit(void);
 void topmenuWhatsNewInit(void);
 void topmenuWhatsNewTerm(void);
+void topmenuWhatsNewShow(void);
+void topmenuWhatsNewHide(void);
+void topmenuWhatsNewCheckRefresh(void);
+void topmenuWhatsNewForceRefresh(void);
+void topmenuWhatsNewOnAgeChanged(void);
 void topmenuBootScreenStart(void);
 void topmenuBootScreenStop(void);
 int topmenuCheckCrashReportFile(void);
+
+/* Batch 2 cross-TU APIs */
+typedef void (*TopmenuPromoteDoneCallback)(SceInt32 result, void *userData);
+bool topmenuStartAppDataPromote(const LsdbAppInfoPtr *appInfo,
+				TopmenuPromoteDoneCallback callback,
+				void *userData, bool isLaunchPromote);
+void topmenuPushPowerKeyHandler(power_manage::PowerKeyCallback callback, void *userData);
+void topmenuPopPowerKeyHandler(power_manage::PowerKeyCallback callback, void *userData);
+void topmenuAddTabLeaveListener(SceInt32 pageKey, TopmenuEventCallback callback, void *userData);
+void topmenuRemoveTabLeaveListener(SceInt32 pageKey, TopmenuEventCallback callback, void *userData);
+int topmenuShowAppErrorMessageDialog(SceInt32 errorCode, const LsdbAppInfoPtr *appInfo,
+				     CommonGuiDialogHandler *handler,
+				     const wchar_t *msgArgA, const wchar_t *msgArgB,
+				     const wchar_t *msgArgC, const wchar_t *msgArgD,
+				     const wchar_t *msgArgE);
+int topmenuShowAppError(SceInt32 errorCode, const LsdbAppInfoPtr *appInfo,
+			CommonGuiDialogHandler *handler,
+			const wchar_t *msgArgA, const wchar_t *msgArgB,
+			const wchar_t *msgArgC, const wchar_t *msgArgD,
+			const wchar_t *msgArgE);
+void topmenuShowPowerHoldErrorDialog(SceInt32 errorCode);
+
+/* Batch 3-5 cross-TU hooks (real signatures verified in IDA) */
+TopmenuSurfacePoolSlot *topmenuAcquireSurfacePool(bool highPriority);		/* 0x81275CF4 */
+void topmenuReleaseSurfacePool(TopmenuSurfacePoolSlot *slot);			/* 0x81275D32 */
+void topmenuOnTabDestroyed(TopWindow *window, TopTab *tab);			/* 0x81279F06 */
+bool topmenuHasRunningAppWithTitleId(TopWindow *window, const char *titleId);	/* 0x8127A9AC */
+SceUInt64 topmenuGetAppFlags(TopWindow *window, const char *titleId);		/* 0x81270BD6 */
+void topmenuSetHoveredTab(TopTab *tab);						/* 0x8127B864 */
+void topmenuFocusHoveredTab(TopTab *tab);					/* 0x8127B89C */
+void topmenuSelectHeaderTab(TopTab *tab);					/* 0x812730B8 */
+bool topmenuCanPromoteApp(TopWindow *window, int checkMode, bool ignoreActive, bool force); /* 0x8127A688 */
+ApplauncherInterface *topmenuGetApplauncherInterface(void);			/* 0x8126F976 */
+LiveAreaPluginInterface *topmenuGetLiveAreaInterface(void);			/* 0x81270644 */
+void topmenuSetGateEffectSurface(bool reverseEffect,
+				 const paf::intrusive_ptr<paf::graph::Surface> *surface); /* 0x8127B8DC */
+bool topmenuIsLaunchSeqIdle(const TopmenuLaunchSeq *seq);			/* 0x81271E3C */
+void topmenuSetPageTurnDragging(TopWindow *window, bool dragging);		/* 0x8127A396 */
+void topmenuCloseTab(TopTab *tab, bool animate);				/* 0x812701BA */
+const char *topmenuAppProcessGetTitleId(const TopmenuAppProcess *proc);		/* 0x81287190 */
+bool topmenuAppProcessIsRunning(const TopmenuAppProcess *proc);			/* 0x8128720C */
+void topmenuAppProcessOnEnterViewport(TopmenuAppProcess *proc);			/* 0x812872DC */
+void topmenuAppProcessOnLeaveViewport(TopmenuAppProcess *proc);			/* 0x812872E4 */
+void topmenuAppProcessCancel(TopmenuAppProcess *proc);				/* 0x812874F2 */
+SceUID topmenuProcessGetPid(const TopmenuProcessBase *proc);			/* 0x8129A20C */
+void topmenuInstallErrorFill(SceInt32 errorCode, const BgdlTaskInfo *taskInfo,
+			     TopmenuInstallError *outError);			/* 0x8128A1F8 */
+void topmenuInstallErrorShowDialog(const TopmenuInstallError *errorInfo);	/* 0x8128ACC8 */
+bool topmenuResolvePromoteTitleId(const LsdbAppInfoPtr *appInfo, paf::string *outTitleId); /* 0x8128B506 */
+void topmenuEnqueueInstallJob(paf::common::SharedPtr<paf::job::JobItem> *job);	/* 0x8128D510 */
 
 /* TopWindow hold/busy and app-launch helpers called by Batch 1 TUs */
 void topmenuBeginGameHold(void);

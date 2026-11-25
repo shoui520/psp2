@@ -147,6 +147,21 @@ int nsxPushInfoEnqueueJob(void);
 int nsxClockUpdaterRegisterCron(void);
 int nsxPushInfoRunCheck(void);
 
+/* WhatsNew accessor wrapper (nsx_whats_new.cpp, 0x8122CD08..0x8122CD90) */
+class NsxWhatsNewAccessorImpl;
+
+struct NsxWhatsNewAccessor {
+	NsxWhatsNewAccessor() : impl(NULL) {}
+	~NsxWhatsNewAccessor();
+	int Init(void (*callback)(void *), void *callbackArg);
+	int Terminate();
+	int LoadMaterials(paf::vector<NsxMaterialItem *> *outMaterials,
+			  paf::rtc::Tick *outNextRefreshTick);
+	int RequestUpdate(bool forceRefresh);
+
+	NsxWhatsNewAccessorImpl *impl;
+};
+
 /* WhatsNew material annotation queries (nsx_whats_new.cpp) */
 int nsxMaterialGetOperatorId(const NsxMaterialItem *material);
 bool nsxMaterialIsEmergency(const NsxMaterialItem *material);

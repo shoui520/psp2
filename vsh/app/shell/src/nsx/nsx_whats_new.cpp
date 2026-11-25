@@ -464,8 +464,6 @@ static bool writeWhatsNewXmlFooter(paf::common::SharedPtr<paf::File> outFile)
 	return true;
 }
 
-class NsxWhatsNewAccessorImpl;
-
 /* 0x81230B04..0x81230B8C */
 class NsxUpdateWhatsNewJob : public paf::job::JobItem {
 public:
@@ -481,6 +479,8 @@ private:
 	void *m_callbackArg;
 	bool m_forceRefresh;
 };
+
+} /* namespace */
 
 /* 0x8122CEBE..0x81230A88 */
 class NsxWhatsNewAccessorImpl {
@@ -936,19 +936,7 @@ int NsxWhatsNewAccessorImpl::RunUpdate(bool forceRefresh)
 	return updateOutcome;
 }
 
-} /* namespace */
-
-/* Handle wrapper matching 0x8122CD08..0x8122CD90 */
-struct NsxWhatsNewAccessor {
-	NsxWhatsNewAccessorImpl *impl;
-
-	~NsxWhatsNewAccessor();
-	int Init(void (*callback)(void *), void *callbackArg);
-	int Terminate();
-	int LoadMaterials(paf::vector<NsxMaterialItem *> *outMaterials,
-			  paf::rtc::Tick *outNextRefreshTick);
-	int RequestUpdate(bool forceRefresh);
-};
+/* Handle wrapper methods matching 0x8122CD08..0x8122CD90 (struct declared in nsx_internal.h) */
 
 /* 0x8122CD08 */
 int NsxWhatsNewAccessor::Terminate()
