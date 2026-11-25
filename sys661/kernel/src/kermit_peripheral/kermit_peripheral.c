@@ -33,7 +33,7 @@ int sceKermitPeripheral_driver_C6F8B4E1(u32 key, u32 offset, void *buf, u32 len)
 	if (leaf > 0xFFEFu) {
 		return 0x80000100;
 	}
-	if (offset >= 0x200u || len >= 0x200u || (offset + len) > 0x200u) {
+	if (((offset >= 0x200u) | (len >= 0x200u)) || (offset + len) > 0x200u) {
 		return 0x800001FE;
 	}
 
@@ -43,12 +43,12 @@ int sceKermitPeripheral_driver_C6F8B4E1(u32 key, u32 offset, void *buf, u32 len)
 	}
 
 	req->cmd = 0x41D;
-	req->args[0] = leaf;
-	req->args[1] = offset;
+	*(u32 *)&req->args[0] = leaf;
+	*(u32 *)&req->args[1] = offset;
 	sceKermitMemory_driver_AAF047AC(req, 2, work, len, 2);
-	req->args[3] = len;
+	*(u32 *)&req->args[3] = len;
 
-	u64 resp = 0;
+	u64 resp;
 	int kres = sceKermit_driver_36666181(req, KERMIT_MODE_PERIPHERAL, 0x41D, 4, 0, &resp);
 	if (kres == 0) {
 		kres = (int)*(volatile u64 *)0xBFC00848u;
@@ -58,7 +58,7 @@ int sceKermitPeripheral_driver_C6F8B4E1(u32 key, u32 offset, void *buf, u32 len)
 	return (res == 0) ? kres : res;
 }
 
-int sceKermitPeripheral_driver_76BE2E28(int a0, int a1, int a2)
+int sceKermitPeripheral_driver_76BE2E28(int param0, int param1, int param2)
 {
 	u8 stack_buf[0x80];
 	SceKermitRequest *aligned = (SceKermitRequest *)(((u32)stack_buf + 0x3Fu) & ~0x3Fu);
@@ -71,28 +71,28 @@ int sceKermitPeripheral_driver_76BE2E28(int a0, int a1, int a2)
 		return res;
 	}
 
-	if (a0 >= 0) {
-		g_periphParam0 = a0;
+	if (param0 >= 0) {
+		g_periphParam0 = param0;
 	} else {
-		a0 = g_periphParam0;
+		param0 = g_periphParam0;
 	}
-	if (a1 >= 0) {
-		g_periphParam1 = a1;
+	if (param1 >= 0) {
+		g_periphParam1 = param1;
 	} else {
-		a1 = g_periphParam1;
+		param1 = g_periphParam1;
 	}
-	if (a2 >= 0) {
-		g_periphParam2 = a2;
+	if (param2 >= 0) {
+		g_periphParam2 = param2;
 	} else {
-		a2 = g_periphParam2;
+		param2 = g_periphParam2;
 	}
 
 	req->cmd = 0x416;
-	req->args[0] = (u32)a0;
-	req->args[1] = (u32)a1;
-	req->args[2] = (u32)a2;
+	*(u32 *)&req->args[0] = (u32)param0;
+	*(u32 *)&req->args[1] = (u32)param1;
+	*(u32 *)&req->args[2] = (u32)param2;
 
-	u64 resp = 0;
+	u64 resp;
 	int kres = sceKermit_driver_36666181(req, KERMIT_MODE_PERIPHERAL, 0x416, 3, 0, &resp);
 	if (kres == 0) {
 		kres = (int)resp;
@@ -101,7 +101,7 @@ int sceKermitPeripheral_driver_76BE2E28(int a0, int a1, int a2)
 	return (res == 0) ? kres : res;
 }
 
-int sceKermitPeripheral_D27C5E03(u32 a0)
+int sceKermitPeripheral_D27C5E03(u32 modeParam)
 {
 	u8 stack_buf[0x80];
 	SceKermitRequest *aligned = (SceKermitRequest *)(((u32)stack_buf + 0x3Fu) & ~0x3Fu);
@@ -117,8 +117,8 @@ int sceKermitPeripheral_D27C5E03(u32 a0)
 		return res;
 	}
 
-	req->args[0] = a0;
-	u64 resp = 0;
+	*(u32 *)&req->args[0] = modeParam;
+	u64 resp;
 	int kres = sceKermit_driver_36666181(req, KERMIT_MODE_PERIPHERAL, 0x418, 1, 0, &resp);
 	res = sceKernelUnlockMutex(g_mutexId, 1);
 	pspSetK1(old_k1);
@@ -128,7 +128,7 @@ int sceKermitPeripheral_D27C5E03(u32 a0)
 	return (kres != 0) ? kres : (int)resp;
 }
 
-int sceKermitPeripheral_driver_8C7903E7(u32 a0, u32 a1)
+int sceKermitPeripheral_driver_8C7903E7(u32 cmdParam, u32 valParam)
 {
 	u8 stack_buf[0x80];
 	SceKermitRequest *aligned = (SceKermitRequest *)(((u32)stack_buf + 0x3Fu) & ~0x3Fu);
@@ -142,8 +142,8 @@ int sceKermitPeripheral_driver_8C7903E7(u32 a0, u32 a1)
 	}
 
 	req->cmd = 0x415;
-	req->args[0] = a0;
-	req->args[1] = a1;
+	*(u32 *)&req->args[0] = cmdParam;
+	*(u32 *)&req->args[1] = valParam;
 
 	u64 resp;
 	int kres = sceKermit_driver_36666181(req, KERMIT_MODE_PERIPHERAL, 0x415, 2, 0, &resp);
@@ -151,7 +151,7 @@ int sceKermitPeripheral_driver_8C7903E7(u32 a0, u32 a1)
 	return (kres != 0) ? kres : (int)resp;
 }
 
-int sceKermitPeripheral_driver_61BEA1D2(u32 a0)
+int sceKermitPeripheral_driver_61BEA1D2(u32 devParam)
 {
 	u8 stack_buf[0x80];
 	SceKermitRequest *aligned = (SceKermitRequest *)(((u32)stack_buf + 0x3Fu) & ~0x3Fu);
@@ -164,8 +164,8 @@ int sceKermitPeripheral_driver_61BEA1D2(u32 a0)
 		return res;
 	}
 
-	req->args[0] = a0;
-	u64 resp = 0;
+	*(u32 *)&req->args[0] = devParam;
+	u64 resp;
 	int kres = sceKermit_driver_36666181(req, KERMIT_MODE_PERIPHERAL, 0x419, 1, 0, &resp);
 	res = sceKernelUnlockMutex(g_mutexId, 1);
 	if (res != 0) {
@@ -333,7 +333,7 @@ static int peripheralGet8Bytes(void *out, u32 cmd)
 	}
 
 	sceKermitMemory_driver_AAF047AC(req, 0, work, 8, 2);
-	u64 resp = 0;
+	u64 resp;
 	int kres = sceKermit_driver_36666181(req, KERMIT_MODE_PERIPHERAL, cmd, 1, 0, &resp);
 	if (kres == 0) {
 		kres = (int)resp;

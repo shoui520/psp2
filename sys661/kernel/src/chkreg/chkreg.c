@@ -117,7 +117,7 @@ s32 _sceChkregLookupUMDRegionCodeInfo(void)
 }
 
 /* Checks whether the specified UMD-media type and region ID is valid. */
-s32 _sceChkregCheckRegion(u32 arg0, u32 umdMediaTypeRegionId)
+s32 _sceChkregCheckRegion(u32 regionFlags, u32 umdMediaTypeRegionId)
 {
     SceIdStorageUMDRegionCodeInfo *pUMDRegionCodeInfo = (SceIdStorageUMDRegionCodeInfo *)&g_pIdStorageUMDConfig[SCE_ID_STORAGE_LEAF_CONSOLE_ID_OPEN_PSID_3_UMD_1_OFFSET_REGION_CODES];
 
@@ -126,7 +126,7 @@ s32 _sceChkregCheckRegion(u32 arg0, u32 umdMediaTypeRegionId)
     for (i = 0; i < g_numUMDRegionCodeInfoEntries; i++)
     {
         if (pUMDRegionCodeInfo[i].umdMediaTypeRegionCode == umdMediaTypeRegionId
-            && pUMDRegionCodeInfo[i].regionFlags == arg0) // 0x00000160
+            && pUMDRegionCodeInfo[i].regionFlags == regionFlags) // 0x00000160
         {
             return SCE_TRUE;
         }
@@ -286,7 +286,7 @@ s32 sceChkregGetPsCode(ScePsCode *pPsCode)
 }
 
 // Subroutine sceChkreg_driver_9C6E1D34 - Address 0x0000051C
-s32 sceChkreg_driver_9C6E1D34(const u8 *arg0, u8 *pHash)
+s32 sceChkreg_driver_9C6E1D34(const u8 *srcBuf, u8 *pHash)
 {
 	s32 status;
 
@@ -309,10 +309,10 @@ s32 sceChkreg_driver_9C6E1D34(const u8 *arg0, u8 *pHash)
 
 	/* Copy 0x20 bytes of input data to work buffer. */
 
-	memcpyInline(pWorkBufferHashData += sizeof g_hashPrefix, &arg0[0xD4], 0x10);
+	memcpyInline(pWorkBufferHashData += sizeof g_hashPrefix, &srcBuf[0xD4], 0x10);
 
 	// 0x000005C4 - 0x000005E4
-	memcpyInline(pWorkBufferHashData += 0x10, &arg0[0x140], 0x10);
+	memcpyInline(pWorkBufferHashData += 0x10, &srcBuf[0x140], 0x10);
 
 	/* Compute SHA1 hash. */
 	status = sceUtilsBufferCopyWithRange((u8 *)g_pWorkBuffer, sizeof(SceChkregHashData), (u8 *)g_pWorkBuffer, sizeof(SceChkregHashData), KIRK_CMD_HASH_GEN_SHA1); // 0x000005F8

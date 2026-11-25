@@ -75,20 +75,20 @@ extern int sceNpDrmVerifyAct(void *data);
 extern int scePcactAuth1BB(int mode, void *psid, void *req, u64 *utcMs, void *out1, void *out2);
 extern int scePcactAuth2BB(void *in, void *out, void *key);
 
-s32 sceNpInstall_driver_5847D8C7(int a0, int a1, int a2, int a3)
+s32 sceNpInstall_driver_5847D8C7(int mode, int challengeBuf, int outBufPrimary, int outBufSecondary)
 		__attribute__((alias("sceNpInstall_user_5847D8C7")));
 
-s32 sceNpInstall_driver_0B039B36(int a0, int a1, int a2)
+s32 sceNpInstall_driver_0B039B36(int actAddr, int actSize, int outBuf)
 		__attribute__((alias("sceNpInstall_user_0B039B36")));
 
-s32 sceNpInstall_driver_91F9D50D(int a0)
+s32 sceNpInstall_driver_91F9D50D(int accountAddr)
 		__attribute__((alias("sceNpInstall_user_91F9D50D")));
 
 void sceNpInstall_driver_7AE4C8BC(void)
 		__attribute__((alias("sceNpInstall_user_7AE4C8BC")));
 
-s32 getNpChallenge(int a0, int size, int a2, int a3);
-s32 installActivationDat(int addr, int crypt, int addr2);
+s32 getNpChallenge(int mode, int challengeBuf, int outBufPrimary, int outBufSecondary);
+s32 installActivationDat(int addr, int size, int outBuf);
 s32 storeAccountID(int addr);
 u32 removeAct(void);
 s32 registerNpDeactivationThread(void);
@@ -112,25 +112,17 @@ u32 module_stop(SceSize args __attribute__((unused)),
 /*
  * sceNpInstallGetChallenge
  * Address 0x00000010
- * 
- * Verfies the data being passed
  */
-s32 sceNpInstall_user_5847D8C7(int a0, int a1, int a2, int a3) {
+s32 sceNpInstall_user_5847D8C7(int mode, int challengeBuf, int outBufPrimary, int outBufSecondary) {
 	s32 res = SCE_ERROR_PRIV_REQUIRED;
 	s32 oldk1 = pspShiftK1();
-	//0x44
-	if ((((a1 + 32) | a1) & (oldk1 << 11)) >= 0) {
-		//0x4C
-		if ((((a2 + 128) | a2) & (oldk1 << 11)) >= 0) {
-			//0x5C
-			if ((((a3 + 64) | a3) & (oldk1 << 11)) >= 0) {
-				res = getNpChallenge(a0, a1, a2, a3);
+	if ((((challengeBuf + 32) | challengeBuf) & (oldk1 << 11)) >= 0) {
+		if ((((outBufPrimary + 128) | outBufPrimary) & (oldk1 << 11)) >= 0) {
+			if ((((outBufSecondary + 64) | outBufSecondary) & (oldk1 << 11)) >= 0) {
+				res = getNpChallenge(mode, challengeBuf, outBufPrimary, outBufSecondary);
 			}
-			//0x70
 		}
-		//0x70
 	}
-	//0x70
 	pspSetK1(oldk1);
 	return res;
 }
@@ -138,25 +130,15 @@ s32 sceNpInstall_user_5847D8C7(int a0, int a1, int a2, int a3) {
 /*
  * sceNpInstallActivation
  * Address 0x00000088
- * 
- * Begins installation of the act.dat file.
- * 
- * @param addr		- the address to write act.dat information to
- * @param crypt 	- value to crypt it with?
- * @param addr2 	- Used for encryption process?
  */
-s32 sceNpInstall_user_0B039B36(int addr, int crypt, int addr2) {
+s32 sceNpInstall_user_0B039B36(int actAddr, int actSize, int outBuf) {
 	s32 res = SCE_ERROR_PRIV_REQUIRED;
 	s32 oldk1 = pspShiftK1();
-	//0xC0
-	if (((oldk1 << 11) & (((addr + crypt) | addr) | crypt)) >= 0) {
-		//0xC8
-		if ((((addr2 + 64) | addr2) & (oldk1 << 11)) >= 0) {
-			res = installActivationDat(addr, crypt, addr2);
+	if (((oldk1 << 11) & (((actAddr + actSize) | actAddr) | actSize)) >= 0) {
+		if ((((outBuf + 64) | outBuf) & (oldk1 << 11)) >= 0) {
+			res = installActivationDat(actAddr, actSize, outBuf);
 		}
-		//0xDC
 	}
-	//0xDC
 	pspSetK1(oldk1);
 	return res;
 }
@@ -164,19 +146,13 @@ s32 sceNpInstall_user_0B039B36(int addr, int crypt, int addr2) {
 /*
  * sceNpInstallCheckActivation
  * Address 0x000000F4
- * 
- * Stores the Account ID at the specified address
- * 
- * @param addr - the address to pass to store the Account ID to 
  */
-s32 sceNpInstall_user_91F9D50D(int addr) {
+s32 sceNpInstall_user_91F9D50D(int accountAddr) {
 	s32 res = SCE_ERROR_PRIV_REQUIRED;
 	s32 oldk1 = pspShiftK1();
-	//0x11C
-	if ((((addr + 8) | addr) & (oldk1 << 11)) >= 0) {
-		res = storeAccountID(addr);
+	if ((((accountAddr + 8) | accountAddr) & (oldk1 << 11)) >= 0) {
+		res = storeAccountID(accountAddr);
 	}
-	//0x12C
 	pspSetK1(oldk1);
 	return res;
 }
@@ -184,8 +160,6 @@ s32 sceNpInstall_user_91F9D50D(int addr) {
 /*
  * sceNpInstallDeactivation
  * Address 0x00000140
- * 
- * Creates and runs the thread for act.dat deletion
  */
 void sceNpInstall_user_7AE4C8BC(void) {
 	s32 oldk1 = pspShiftK1();
@@ -194,16 +168,16 @@ void sceNpInstall_user_7AE4C8BC(void) {
 	return;
 }
 
-s32 getNpChallenge(int mode, int challengeBuf, int outBuf1, int outBuf2) {
+s32 getNpChallenge(int mode, int challengeBuf, int outBufPrimary, int outBufSecondary) {
 	u8 psid[16];
 	u8 req[48];
 	u64 curTick;
 	u64 utcMs;
-	int fd = -1;
+	int fileDesc = -1;
 	int authMode;
 	s32 res;
 
-	if (challengeBuf == 0 || outBuf2 == 0 || outBuf1 == 0)
+	if (challengeBuf == 0 || outBufSecondary == 0 || outBufPrimary == 0)
 		return SCE_NULL_POINTER;
 
 	res = sceRtc_driver_CEEF238F(&curTick);
@@ -211,11 +185,12 @@ s32 getNpChallenge(int mode, int challengeBuf, int outBuf1, int outBuf2) {
 		return res;
 
 	if (mode == 1) {
-		fd = sceIoOpen("flash2:/act.dat", 0x04000001, 0);
+		fileDesc = sceIoOpen("flash2:/act.dat", 0x04000001, 0);
 		authMode = 1;
-		res = SCE_ERROR_UNKNOWN_0;
-		if (fd >= 0)
-			goto done;
+		if (fileDesc >= 0) {
+			sceIoClose(fileDesc);
+			return SCE_ERROR_UNKNOWN_0;
+		}
 	} else if (mode == 0) {
 		authMode = 0;
 		if (curTick < g_challengeExpireTick)
@@ -236,18 +211,15 @@ s32 getNpChallenge(int mode, int challengeBuf, int outBuf1, int outBuf2) {
 	if (res < 0)
 		return res;
 
-	res = scePcactAuth1BB(authMode, psid, req, &utcMs, (void *)outBuf1, (void *)outBuf2);
+	res = scePcactAuth1BB(authMode, psid, req, &utcMs, (void *)outBufPrimary, (void *)outBufSecondary);
 	if (mode == 1)
 		res = sceRtc_driver_89FA4262(&g_challengeExpireTick, &curTick, 30, 0);
 
-done:
-	if (fd >= 0)
-		sceIoClose(fd);
 	return res;
 }
 
 s32 installActivationDat(int addr, int size, int outBuf) {
-	SceUID fd;
+	SceUID fileDesc;
 	s32 res;
 	void *actData = (void *)(addr + 80);
 
@@ -255,29 +227,22 @@ s32 installActivationDat(int addr, int size, int outBuf) {
 		return SCE_NULL_POINTER;
 
 	res = scePcactAuth2BB((void *)addr, (void *)outBuf, &g_act);
-	if (res < 0)
-		goto fail;
-
-	res = sceNpDrmDecActivation(actData, &g_act);
-	if (res < 0)
-		goto fail;
-
-	res = sceNpDrmVerifyAct(actData);
-	if (res < 0)
-		goto fail;
-
-	fd = sceIoOpen("flash2:/act.dat", 0x04000602, 0x1B6);
-	res = fd;
-	if (fd >= 0) {
-		res = sceIoWrite(fd, actData, 0x1038);
-		if (res != 0x1038 && res >= 0)
-			res = SCE_ERROR_READ_WRITE;
-		sceIoClose(fd);
+	if (res >= 0)
+		res = sceNpDrmDecActivation(actData, &g_act);
+	if (res >= 0)
+		res = sceNpDrmVerifyAct(actData);
+	if (res >= 0) {
+		fileDesc = sceIoOpen("flash2:/act.dat", 0x04000602, 0x1B6);
+		res = fileDesc;
+		if (fileDesc >= 0) {
+			res = sceIoWrite(fileDesc, actData, 0x1038);
+			if (res != 0x1038 && res >= 0)
+				res = SCE_ERROR_READ_WRITE;
+			sceIoClose(fileDesc);
+		}
 	}
-	if (res < 0) {
-fail:
+	if (res < 0)
 		sceIoRemove("flash2:/act.dat");
-	}
 
 	memset(actData, 0, 0x1040);
 	memset((void *)outBuf, 0, 64);
@@ -288,23 +253,23 @@ fail:
 s32 storeAccountID(int addr) {
 	ActDat act;
 	s32 res = SCE_NULL_POINTER;
-	SceUID fd;
+	SceUID fileDesc;
 	int *out = (int *)addr;
 
 	if (addr == 0)
 		return res;
 
-	fd = sceIoOpen("flash2:/act.dat", 0x04000001, 0);
+	fileDesc = sceIoOpen("flash2:/act.dat", 0x04000001, 0);
 	res = SCE_ERROR_IO;
-	if (fd >= 0) {
-		res = sceIoRead(fd, &act, 16);
+	if (fileDesc >= 0) {
+		res = sceIoRead(fileDesc, &act, 16);
 		if (res == 16) {
 			out[0] = act.accountID[0];
 			out[1] = act.accountID[1];
 		} else if (res >= 0) {
 			res = SCE_ERROR_READ_WRITE;
 		}
-		sceIoClose(fd);
+		sceIoClose(fileDesc);
 	}
 	return res;
 }
