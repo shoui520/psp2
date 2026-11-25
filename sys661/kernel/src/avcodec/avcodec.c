@@ -130,7 +130,7 @@ typedef struct {
 
 typedef struct {
     SceMpegLli lli[100];      /* 0x000..0x640 */
-    u32 pad_640[4];           /* 0x640..0x650 */
+    u32 reserved640[4];           /* 0x640..0x650 */
     u8 coeffs[22];            /* 0x650..0x666 */
     s16 cscMode;              /* 0x666 */
     u32 cscWidth;             /* 0x668 */
@@ -142,7 +142,7 @@ typedef struct {
 static SceMpegBaseCtx g_mpegCtx;
 
 /* 0x0000 */
-static int sub_0000(void)
+static int mpegBaseInitSync(void)
 {
     g_mpegCtx.lliSema = sceKernelCreateSema("SceMpegBaseLLI", 1, 1, 1, NULL);
     g_mpegCtx.cscMutex = sceKernelCreateMutex("SceMpegBaseCSC", 0x201, 0, NULL);
@@ -153,7 +153,7 @@ static int sub_0000(void)
 }
 
 /* 0x0094 */
-static int sub_0094(void)
+static int mpegBaseTermSync(void)
 {
     sceKernelDeleteEventFlag(g_mpegCtx.cscEvf);
     sceKernelDeleteMutex(g_mpegCtx.cscMutex);
@@ -174,9 +174,9 @@ int sceMpegbase_31007FF8(void)
 }
 
 /* === sceAudiocodec === */
-static int sub_09AC(u32 *workArea, int codecType);
-static int sub_0A9C(u32 *workArea, int codecType);
-static int sub_0B74(u32 ver, u32 layer, int bitrateIdx, int sfIdx, u32 *outSize);
+static int audiocodecGetNeedMem(u32 *workArea, int codecType);
+static int audiocodecGetWorkSize(u32 *workArea, int codecType);
+static int mp3CalcFrameSize(u32 ver, u32 layer, int bitrateIdx, int sfIdx, u32 *outSize);
 
 /* 0x0100 */
 int sceAudiocodecCheckNeedMem(u32 *workArea, int codecType)
@@ -295,13 +295,13 @@ int sceAudiocodecDecode(u32 *workArea, int codecType)
         if (codecType == 0x1002 || codecType == 0x1004)
             inSize = (int)workArea[10];
         else
-            inSize = sub_09AC(workArea, codecType);
+            inSize = audiocodecGetNeedMem(workArea, codecType);
 
         if (inSize < 0) {
             res = inSize;
         } else {
             sceKernelDcacheWritebackRange((void *)workArea[6], inSize);
-            int outSize = sub_0A9C(workArea, codecType);
+            int outSize = audiocodecGetWorkSize(workArea, codecType);
             if (outSize < 0) {
                 res = outSize;
             } else {
@@ -384,7 +384,7 @@ int sceAudiocodecAlcExtendParameter(u32 *workArea, int codecType, int *sizeAddr)
         set_k1(k1);
         return 0x80000023;
     }
-    int res = sub_0A9C(workArea, codecType);
+    int res = audiocodecGetWorkSize(workArea, codecType);
     if (res >= 0) {
         *sizeAddr = res;
         res = 0;
@@ -446,7 +446,7 @@ int sceAudiocodecReleaseEDRAM(u32 *workArea)
 }
 
 /* 0x09AC */
-static int sub_09AC(u32 *workArea, int codecType)
+static int audiocodecGetNeedMem(u32 *workArea, int codecType)
 {
     switch (codecType - 0x1000) {
     case 0:
@@ -461,11 +461,11 @@ static int sub_09AC(u32 *workArea, int codecType)
             if (res < 0)
                 return res;
         }
-        return sub_0B74(workArea[14], workArea[15], workArea[17], workArea[18], &workArea[10]);
+        return mp3CalcFrameSize(workArea[14], workArea[15], workArea[17], workArea[18], &workArea[10]);
     case 3:
         return (((u8 *)workArea)[0x2C] != 0) ? 0x609 : 0x600;
     case 4:
-        return sub_0B74(workArea[12], workArea[13], workArea[15], workArea[16], &workArea[10]);
+        return mp3CalcFrameSize(workArea[12], workArea[13], workArea[15], workArea[16], &workArea[10]);
     case 5:
         return 0x420D;
     default:
@@ -474,7 +474,7 @@ static int sub_09AC(u32 *workArea, int codecType)
 }
 
 /* 0x0A9C */
-static int sub_0A9C(u32 *workArea, int codecType)
+static int audiocodecGetWorkSize(u32 *workArea, int codecType)
 {
     switch (codecType - 0x1000) {
     case 0: {
@@ -508,7 +508,7 @@ static int sub_0A9C(u32 *workArea, int codecType)
 }
 
 /* 0x0B74 */
-static int sub_0B74(u32 ver, u32 layer, int bitrateIdx, int sfIdx, u32 *outSize)
+static int mp3CalcFrameSize(u32 ver, u32 layer, int bitrateIdx, int sfIdx, u32 *outSize)
 {
     u32 br = 0;
     if (ver < 3 && bitrateIdx >= 0 && bitrateIdx < 15)
@@ -531,15 +531,15 @@ static int sub_0B74(u32 ver, u32 layer, int bitrateIdx, int sfIdx, u32 *outSize)
 }
 
 /* === sceVideocodec === */
-static int sub_1738(u32 *workArea, u32 type);
-static int sub_179C(u32 *workArea, u32 type);
-static int sub_1840(u32 *workArea, u32 type);
-static void sub_19FC(u32 *workArea, u32 type);
-static void sub_1AA8(u32 *workArea, u32 type);
-static int sub_1B80(u32 *workArea, u32 type);
-static void sub_1C74(u32 *workArea, u32 type);
-static int sub_1CDC(u32 *workArea, u32 type);
-static int sub_1D2C(u32 *workArea, u32 *sizes);
+static int videocodecCheckWorkArea(u32 *workArea, u32 type);
+static int videocodecCheckWorkAreaBuffers(u32 *workArea, u32 type);
+static int videocodecCheckDecodeBuffers(u32 *workArea, u32 type);
+static void videocodecFlushDecodeCache(u32 *workArea, u32 type);
+static void videocodecInvalidateOutputCache(u32 *workArea, u32 type);
+static int videocodecCheckInitBuffers(u32 *workArea, u32 type);
+static void videocodecFlushInitCache(u32 *workArea, u32 type);
+static int videocodecCheckWorkAreaWithCtrl(u32 *workArea, u32 type);
+static int videocodecCalcFrameBufSizes(u32 *workArea, u32 *sizes);
 
 /* 0x0C54 */
 int sceVideocodecGetEDRAM(u32 *workArea, int type)
@@ -586,7 +586,7 @@ int sceVideocodecOpen(u32 *workArea, int type)
 {
     int k1 = get_k1();
     set_k1(k1 << 11);
-    int res = sub_1738(workArea, type);
+    int res = videocodecCheckWorkArea(workArea, type);
     if (res == 0) {
         workArea[0] = 0x05100601;
         sceKernelDcacheWritebackInvalidateRange((void *)workArea[4], (type == 0) ? 0x28 : 0x100);
@@ -607,7 +607,7 @@ int sceVideocodecInit(u32 *workArea, int type)
 {
     int k1 = get_k1();
     set_k1(k1 << 11);
-    int res = sub_179C(workArea, type);
+    int res = videocodecCheckWorkAreaBuffers(workArea, type);
     if (res == 0) {
         sceKernelDcacheWritebackInvalidateRange((void *)workArea[4], (type == 0) ? 0x28 : 0x100);
         if ((workArea[5] & 0x1FFFFFFF) > 0x3FFFFF)
@@ -629,7 +629,7 @@ int sceVideocodecSetMemory(u32 *workArea, int type)
 {
     int k1 = get_k1();
     set_k1(k1 << 11);
-    int res = sub_1738(workArea, type);
+    int res = videocodecCheckWorkArea(workArea, type);
     if (res >= 0 && (int)(workArea[3] & (k1 << 11)) < 0) {
         set_k1(k1);
         return 0x80000023;
@@ -699,7 +699,7 @@ int sceVideocodecGetSEI(u32 *workArea, int type)
     set_k1(k1 << 11);
     int res = 0x806201FE;
     if (type == 0) {
-        res = sub_1738(workArea, 0);
+        res = videocodecCheckWorkArea(workArea, 0);
         if (res == 0) {
             u32 p50 = workArea[20];
             if ((int)(((p50 | (p50 + 0xA4)) | workArea[3]) & (k1 << 11)) < 0)
@@ -725,7 +725,7 @@ int sceVideocodecGetFrameCrop(u32 *workArea, int type)
     set_k1(k1 << 11);
     int res = 0x806201FE;
     if (type == 0) {
-        res = sub_1738(workArea, 0);
+        res = videocodecCheckWorkArea(workArea, 0);
         if (res == 0) {
             u32 p54 = workArea[21];
             if ((int)(((p54 | (p54 + 0x10)) | workArea[3]) & (k1 << 11)) < 0)
@@ -751,7 +751,7 @@ int sceVideocodec_893B32B1(u32 *workArea, int type)
     set_k1(k1 << 11);
     int res = 0x806201FE;
     if (type == 0) {
-        res = sub_1738(workArea, 0);
+        res = videocodecCheckWorkArea(workArea, 0);
         if (res >= 0 && (int)(workArea[3] & (k1 << 11)) < 0) {
             set_k1(k1);
             return 0x80000023;
@@ -769,7 +769,7 @@ int sceVideocodec_893B32B1(u32 *workArea, int type)
 }
 
 /* 0x1428 */
-static int sub_1428(void)
+static int videocodecPowerOff(void)
 {
     sceMePower_driver_984E2608(0);
     sceMePowerControlAvcPower(0);
@@ -781,10 +781,10 @@ int sceVideocodecDecode(u32 *workArea, int type)
 {
     int k1 = get_k1();
     set_k1(k1 << 11);
-    int res = sub_1840(workArea, type);
+    int res = videocodecCheckDecodeBuffers(workArea, type);
     if (res == 0) {
-        sub_19FC(workArea, type);
-        sub_1AA8(workArea, type);
+        videocodecFlushDecodeCache(workArea, type);
+        videocodecInvalidateOutputCache(workArea, type);
         int ret = sceMeVideo_driver_8768915D(type, workArea);
         if ((u32)(ret - 1) < (u32)-5)
             ret = -4;
@@ -799,10 +799,10 @@ int sceVideocodecStop(u32 *workArea, int type)
 {
     int k1 = get_k1();
     set_k1(k1 << 11);
-    int res = sub_1B80(workArea, type);
+    int res = videocodecCheckInitBuffers(workArea, type);
     if (res == 0) {
-        sub_1C74(workArea, type);
-        sub_1AA8(workArea, type);
+        videocodecFlushInitCache(workArea, type);
+        videocodecInvalidateOutputCache(workArea, type);
         int ret = sceMeVideo_driver_4D78330C(type, workArea);
         if ((u32)(ret - 1) < (u32)-5)
             ret = -4;
@@ -817,7 +817,7 @@ int sceVideocodecDelete(u32 *workArea, int type)
 {
     int k1 = get_k1();
     set_k1(k1 << 11);
-    int res = sub_1CDC(workArea, type);
+    int res = videocodecCheckWorkAreaWithCtrl(workArea, type);
     if (res == 0) {
         sceKernelDcacheWritebackInvalidateRange((void *)workArea[4], (type == 0) ? 0x28 : 0x100);
         sceKernelPollEventFlag(g_mpegCtx.cscEvf, 1, 0x21, NULL);
@@ -836,7 +836,7 @@ int sceVideocodec_D95C24D5(u32 *workArea)
     u32 sizes[6];
     int k1 = get_k1();
     set_k1(k1 << 11);
-    int res = sub_1D2C(workArea, sizes);
+    int res = videocodecCalcFrameBufSizes(workArea, sizes);
     if (res == 0) {
         sceKernelDcacheWritebackInvalidateRange((void *)workArea[3], sizes[0]);
         sceKernelDcacheWritebackInvalidateRange((void *)workArea[4], sizes[0]);
@@ -860,7 +860,7 @@ int sceVideocodec_D95C24D5(u32 *workArea)
 }
 
 /* 0x1738 */
-static int sub_1738(u32 *workArea, u32 type)
+static int videocodecCheckWorkArea(u32 *workArea, u32 type)
 {
     int k1 = get_k1();
     if ((int)(((u32)workArea | ((u32)workArea + 0x60)) & k1) < 0)
@@ -878,7 +878,7 @@ static int sub_1738(u32 *workArea, u32 type)
 }
 
 /* 0x179C */
-static int sub_179C(u32 *workArea, u32 type)
+static int videocodecCheckWorkAreaBuffers(u32 *workArea, u32 type)
 {
     int k1 = get_k1();
     if ((int)(((u32)workArea | ((u32)workArea + 0x60)) & k1) < 0)
@@ -902,7 +902,7 @@ static int sub_179C(u32 *workArea, u32 type)
 }
 
 /* 0x1840 */
-static int sub_1840(u32 *workArea, u32 type)
+static int videocodecCheckDecodeBuffers(u32 *workArea, u32 type)
 {
     int k1 = get_k1();
     if ((int)(((u32)workArea | ((u32)workArea + 0x60)) & k1) < 0)
@@ -961,7 +961,7 @@ static int sub_1840(u32 *workArea, u32 type)
 }
 
 /* 0x19FC */
-static void sub_19FC(u32 *workArea, u32 type)
+static void videocodecFlushDecodeCache(u32 *workArea, u32 type)
 {
     if ((workArea[9] & 0x1FFFFFFF) > 0x3FFFFF)
         sceKernelDcacheWritebackInvalidateRange((void *)workArea[9], workArea[10]);
@@ -976,7 +976,7 @@ static void sub_19FC(u32 *workArea, u32 type)
 }
 
 /* 0x1AA8 */
-static void sub_1AA8(u32 *workArea, u32 type)
+static void videocodecInvalidateOutputCache(u32 *workArea, u32 type)
 {
     if (type != 0)
         return;
@@ -992,7 +992,7 @@ static void sub_1AA8(u32 *workArea, u32 type)
 }
 
 /* 0x1B80 */
-static int sub_1B80(u32 *workArea, u32 type)
+static int videocodecCheckInitBuffers(u32 *workArea, u32 type)
 {
     int k1 = get_k1();
     if ((int)(((u32)workArea | ((u32)workArea + 0x60)) & k1) < 0)
@@ -1029,7 +1029,7 @@ static int sub_1B80(u32 *workArea, u32 type)
 }
 
 /* 0x1C74 */
-static void sub_1C74(u32 *workArea, u32 type)
+static void videocodecFlushInitCache(u32 *workArea, u32 type)
 {
     u32 sz = 0x28;
     if (type != 0) {
@@ -1041,16 +1041,16 @@ static void sub_1C74(u32 *workArea, u32 type)
 }
 
 /* 0x1CDC */
-static int sub_1CDC(u32 *workArea, u32 type)
+static int videocodecCheckWorkAreaWithCtrl(u32 *workArea, u32 type)
 {
-    int res = sub_1738(workArea, type);
+    int res = videocodecCheckWorkArea(workArea, type);
     if (res >= 0 && (int)(workArea[3] & get_k1()) < 0)
         res = 0x80000023;
     return res;
 }
 
 /* 0x1D2C */
-static int sub_1D2C(u32 *workArea, u32 *sizes)
+static int videocodecCalcFrameBufSizes(u32 *workArea, u32 *sizes)
 {
     int k1 = get_k1();
     if ((int)(((u32)workArea | ((u32)workArea + 0x38)) & k1) < 0)
@@ -1100,8 +1100,8 @@ static int sub_1D2C(u32 *workArea, u32 *sizes)
 }
 
 /* === sceMpegbase (LLI / Copy) === */
-static SceMpegLli *sub_23CC(SceMpegLli *lli, u32 dst, u32 src, int blocks);
-static int sub_2454(SceMpegLli *endLli);
+static SceMpegLli *mpegBaseBuildLliChain(SceMpegLli *lli, u32 dst, u32 src, int blocks);
+static int mpegBaseRunLliTransfer(SceMpegLli *endLli);
 
 /* 0x1FB4 */
 int sceMpegBaseYCrCbCopy(u32 *dst, u32 *src, int flags)
@@ -1140,19 +1140,19 @@ int sceMpegBaseYCrCbCopy(u32 *dst, u32 *src, int flags)
         SceMpegLli *lli = g_mpegCtx.lli;
         __builtin_allegrex_cache(0x18, (unsigned int)lli);
         if (flags & 1) {
-            lli = sub_23CC(lli, dst[4], src[4], blocksY);
-            lli = sub_23CC(lli, dst[5], src[5], blocksY);
-            lli = sub_23CC(lli, dst[8], src[8], blocksC);
-            lli = sub_23CC(lli, dst[9], src[9], blocksC);
+            lli = mpegBaseBuildLliChain(lli, dst[4], src[4], blocksY);
+            lli = mpegBaseBuildLliChain(lli, dst[5], src[5], blocksY);
+            lli = mpegBaseBuildLliChain(lli, dst[8], src[8], blocksC);
+            lli = mpegBaseBuildLliChain(lli, dst[9], src[9], blocksC);
         }
         if (flags & 2) {
-            lli = sub_23CC(lli, dst[6], src[6], blocksY);
-            lli = sub_23CC(lli, dst[7], src[7], blocksY);
-            lli = sub_23CC(lli, dst[10], src[10], blocksC);
-            lli = sub_23CC(lli, dst[11], src[11], blocksC);
+            lli = mpegBaseBuildLliChain(lli, dst[6], src[6], blocksY);
+            lli = mpegBaseBuildLliChain(lli, dst[7], src[7], blocksY);
+            lli = mpegBaseBuildLliChain(lli, dst[10], src[10], blocksC);
+            lli = mpegBaseBuildLliChain(lli, dst[11], src[11], blocksC);
         }
         if (lli != g_mpegCtx.lli)
-            res = sub_2454(lli);
+            res = mpegBaseRunLliTransfer(lli);
         sceKernelSignalSema(g_mpegCtx.lliSema, 1);
     }
     set_k1(k1);
@@ -1185,17 +1185,17 @@ int sceMpegBaseYCrCbCopyVme(u32 *dst, u32 *src, int flags)
         SceMpegLli *lli = g_mpegCtx.lli;
         __builtin_allegrex_cache(0x18, (unsigned int)lli);
         if (flags & 1) {
-            lli = sub_23CC(lli, dst[4], src[4], blocksY);
-            lli = sub_23CC(lli, dst[6], src[6], blocksC);
-            lli = sub_23CC(lli, dst[7], src[7], blocksC);
+            lli = mpegBaseBuildLliChain(lli, dst[4], src[4], blocksY);
+            lli = mpegBaseBuildLliChain(lli, dst[6], src[6], blocksC);
+            lli = mpegBaseBuildLliChain(lli, dst[7], src[7], blocksC);
         }
         if (flags & 2) {
-            lli = sub_23CC(lli, dst[5], src[5], blocksY);
-            lli = sub_23CC(lli, dst[8], src[8], blocksC);
-            lli = sub_23CC(lli, dst[9], src[9], blocksC);
+            lli = mpegBaseBuildLliChain(lli, dst[5], src[5], blocksY);
+            lli = mpegBaseBuildLliChain(lli, dst[8], src[8], blocksC);
+            lli = mpegBaseBuildLliChain(lli, dst[9], src[9], blocksC);
         }
         if (lli != g_mpegCtx.lli)
-            res = sub_2454(lli);
+            res = mpegBaseRunLliTransfer(lli);
         sceKernelSignalSema(g_mpegCtx.lliSema, 1);
     }
     set_k1(k1);
@@ -1203,7 +1203,7 @@ int sceMpegBaseYCrCbCopyVme(u32 *dst, u32 *src, int flags)
 }
 
 /* 0x23CC */
-static SceMpegLli *sub_23CC(SceMpegLli *lli, u32 dst, u32 src, int blocks)
+static SceMpegLli *mpegBaseBuildLliChain(SceMpegLli *lli, u32 dst, u32 src, int blocks)
 {
     if (blocks == 0)
         return lli;
@@ -1225,7 +1225,7 @@ static SceMpegLli *sub_23CC(SceMpegLli *lli, u32 dst, u32 src, int blocks)
 }
 
 /* 0x2454 */
-static int sub_2454(SceMpegLli *endLli)
+static int mpegBaseRunLliTransfer(SceMpegLli *endLli)
 {
     endLli[-1].next = 0;
     endLli[-1].ctrl |= 0x80000000;
@@ -1309,8 +1309,8 @@ err_104:
 }
 
 /* === sceJpeg === */
-static int sub_3790(void *a0, void *a1, void *a2);
-static int sub_3B98(int mode, int width, const void *coeffs);
+static int mpegBaseRunCsc(void *a0, void *a1, void *a2);
+static int mpegBaseConfigCsc(int mode, int width, const void *coeffs);
 
 /* 0x267C */
 int sceJpegInitMJpeg(void)
@@ -1460,8 +1460,8 @@ int sceJpegMJpegCscWithColorOption(void *rgba, const void *ycbcr, int widthHeigh
     desc[9] = (u32)ycbcr + halfArea * 2 + quarterArea * 3;
 
     sceKernelDcacheInvalidateRangeForUser(rgba, strideBytes << 1);
-    sub_3B98(mode, lineWidth, (optHi == 0) ? g_cscCoeffs0 : g_cscCoeffs1);
-    int res = sub_3790(rgba, (u8 *)rgba + strideBytes, desc);
+    mpegBaseConfigCsc(mode, lineWidth, (optHi == 0) ? g_cscCoeffs0 : g_cscCoeffs1);
+    int res = mpegBaseRunCsc(rgba, (u8 *)rgba + strideBytes, desc);
     sceKernelUnlockMutex(g_mpegCtx.cscMutex, 1);
     set_k1(k1);
     return res;
@@ -1649,7 +1649,7 @@ int sceJpegMJpegCsc(void *rgba, const void *ycbcr, int widthHeight, int lineWidt
 }
 
 /* 0x32B4 */
-static int sub_32B4(void)
+static int jpegInitSync(void)
 {
     g_jpegCtx.state = 0;
     int sema = sceKernelCreateSema("SceJpeg", 1, 1, 1, NULL);
@@ -1658,17 +1658,17 @@ static int sub_32B4(void)
 }
 
 /* 0x3304 */
-static int sub_3304(void)
+static int jpegTermSync(void)
 {
     sceKernelDeleteSema(g_jpegCtx.sema);
     return 0;
 }
 
 /* === sceMpegbase (CSC) === */
-static int sub_3D8C(u32 *dst, const u32 *src, const u32 *offsets, int mode);
-static int sub_3E4C(void *a0, void *a1, void *a2);
-static int sub_3EFC(u32 *pRgb0, u32 *pRgb1, const u32 *range, const u32 *src, u32 *offsets, u32 *outStep);
-static int sub_4074(u32 rgb0, u32 rgb1, const u32 *range, const u32 *src);
+static int mpegBaseFillYuvRowArgs(u32 *dst, const u32 *src, const u32 *offsets, int mode);
+static int mpegBaseRunCscEx(void *a0, void *a1, void *a2);
+static int mpegBaseComputeRowOffsets(u32 *pRgb0, u32 *pRgb1, const u32 *range, const u32 *src, u32 *offsets, u32 *outStep);
+static int mpegBaseTransferYuvSlice(u32 rgb0, u32 rgb1, const u32 *range, const u32 *src);
 
 /* 0x332C */
 int sceMpegBaseCscAvc(void *rgb0, void *rgb1, int width, const u32 *src)
@@ -1709,7 +1709,7 @@ int sceMpegBaseCscAvc(void *rgb0, void *rgb1, int width, const u32 *src)
         return res;
     }
 
-    res = sub_3B98(g_mpegCtx.cscMode, width, NULL);
+    res = mpegBaseConfigCsc(g_mpegCtx.cscMode, width, NULL);
     if (res == 0) {
         if (sceKernelPollEventFlag(g_mpegCtx.cscEvf, 3, 1, NULL) < 0) {
             res = 0x80000001;
@@ -1765,16 +1765,16 @@ int sceMpegBaseCscVme(void *rgb0, void *rgb1, int width, const u32 *src)
         return 0x80000023;
     }
 
-    int res = sub_3B98(g_mpegCtx.cscMode, width, NULL);
+    int res = mpegBaseConfigCsc(g_mpegCtx.cscMode, width, NULL);
     if (res == 0)
-        res = sub_3790(rgb0, rgb1, (void *)src);
+        res = mpegBaseRunCsc(rgb0, rgb1, (void *)src);
     sceKernelUnlockMutex(g_mpegCtx.cscMutex, 1);
     set_k1(k1);
     return res;
 }
 
 /* 0x3790 */
-static int sub_3790(void *a0, void *a1, void *a2)
+static int mpegBaseRunCsc(void *a0, void *a1, void *a2)
 {
     if (sceKernelPollEventFlag(g_mpegCtx.cscEvf, 3, 1, NULL) < 0)
         return 0x80000001;
@@ -1836,26 +1836,26 @@ int sceMpegBaseCscAvcRange(void *rgb0, void *rgb1, const u32 *range, int width, 
         set_k1(k1);
         return res;
     }
-    res = sub_3B98(g_mpegCtx.cscMode, width, NULL);
+    res = mpegBaseConfigCsc(g_mpegCtx.cscMode, width, NULL);
     if (res == 0) {
         if (w != range[3]) {
-            res = sub_4074((u32)rgb0, (u32)rgb1, range, src);
+            res = mpegBaseTransferYuvSlice((u32)rgb0, (u32)rgb1, range, src);
         } else if (h != range[2]) {
             u32 tmp[12];
             u32 offsets[4];
             u32 step = 0;
             u32 r0 = (u32)rgb0, r1 = (u32)rgb1;
-            res = sub_3EFC(&r0, &r1, range, src, offsets, &step);
+            res = mpegBaseComputeRowOffsets(&r0, &r1, range, src, offsets, &step);
             if (res == 0) {
                 tmp[0] = range[3];
                 tmp[1] = range[2] - step;
                 tmp[2] = src[2];
                 tmp[3] = src[3];
-                sub_3D8C(tmp, src, offsets, 0);
-                res = sub_3E4C((void *)r0, (void *)r1, tmp);
+                mpegBaseFillYuvRowArgs(tmp, src, offsets, 0);
+                res = mpegBaseRunCscEx((void *)r0, (void *)r1, tmp);
             }
         } else {
-            res = sub_3E4C(rgb0, rgb1, (void *)src);
+            res = mpegBaseRunCscEx(rgb0, rgb1, (void *)src);
         }
     }
     sceKernelUnlockMutex(g_mpegCtx.cscMutex, 1);
@@ -1864,7 +1864,7 @@ int sceMpegBaseCscAvcRange(void *rgb0, void *rgb1, const u32 *range, int width, 
 }
 
 /* 0x3B98 */
-static int sub_3B98(int mode, int width, const void *coeffs)
+static int mpegBaseConfigCsc(int mode, int width, const void *coeffs)
 {
     if (width == 0)
         width = g_mpegCtx.cscWidth;
@@ -1964,7 +1964,7 @@ int sceMpegBaseCscInit(int width)
 }
 
 /* 0x3D8C */
-static int sub_3D8C(u32 *dst, const u32 *src, const u32 *offsets, int mode)
+static int mpegBaseFillYuvRowArgs(u32 *dst, const u32 *src, const u32 *offsets, int mode)
 {
     if (mode & 2) {
         dst[4] = src[5] + offsets[1];
@@ -1992,7 +1992,7 @@ static int sub_3D8C(u32 *dst, const u32 *src, const u32 *offsets, int mode)
 }
 
 /* 0x3E4C */
-static int sub_3E4C(void *a0, void *a1, void *a2)
+static int mpegBaseRunCscEx(void *a0, void *a1, void *a2)
 {
     if (sceKernelPollEventFlag(g_mpegCtx.cscEvf, 3, 1, NULL) < 0)
         return 0x80000001;
@@ -2011,7 +2011,7 @@ static int sub_3E4C(void *a0, void *a1, void *a2)
 }
 
 /* 0x3EFC */
-static int sub_3EFC(u32 *pRgb0, u32 *pRgb1, const u32 *range, const u32 *src, u32 *offsets, u32 *outStep)
+static int mpegBaseComputeRowOffsets(u32 *pRgb0, u32 *pRgb1, const u32 *range, const u32 *src, u32 *offsets, u32 *outStep)
 {
     u32 tmp[12];
     tmp[1] = 0;
@@ -2040,8 +2040,8 @@ static int sub_3EFC(u32 *pRgb0, u32 *pRgb1, const u32 *range, const u32 *src, u3
     tmp[0] = range[3];
     tmp[2] = src[2];
     tmp[3] = src[3];
-    sub_3D8C(tmp, src, offsets, 2);
-    int res = sub_3E4C((void *)*pRgb0, (void *)*pRgb1, tmp);
+    mpegBaseFillYuvRowArgs(tmp, src, offsets, 2);
+    int res = mpegBaseRunCscEx((void *)*pRgb0, (void *)*pRgb1, tmp);
     if (res == 0) {
         *pRgb0 += 0x40;
         if (*pRgb1 != 0)
@@ -2055,13 +2055,13 @@ static int sub_3EFC(u32 *pRgb0, u32 *pRgb1, const u32 *range, const u32 *src, u3
 }
 
 /* 0x4074 */
-static int sub_4074(u32 rgb0, u32 rgb1, const u32 *range, const u32 *src)
+static int mpegBaseTransferYuvSlice(u32 rgb0, u32 rgb1, const u32 *range, const u32 *src)
 {
     u32 tmp[12];
     u32 offsets[4];
     u32 step = 0;
     u32 r0 = rgb0, r1 = rgb1;
-    int res = sub_3EFC(&r0, &r1, range, src, offsets, &step);
+    int res = mpegBaseComputeRowOffsets(&r0, &r1, range, src, offsets, &step);
     if (res != 0)
         return res;
 
@@ -2076,8 +2076,8 @@ static int sub_4074(u32 rgb0, u32 rgb1, const u32 *range, const u32 *src)
     u32 stepY = src[0] << 7;
     u32 stepC = stepY >> 1;
     for (i = 0; i < pairs; i++) {
-        sub_3D8C(tmp, src, offsets, 0);
-        res = sub_3E4C((void *)r0, (void *)r1, tmp);
+        mpegBaseFillYuvRowArgs(tmp, src, offsets, 0);
+        res = mpegBaseRunCscEx((void *)r0, (void *)r1, tmp);
         if (res != 0)
             return res;
         r0 += 0x80;
@@ -2090,8 +2090,8 @@ static int sub_4074(u32 rgb0, u32 rgb1, const u32 *range, const u32 *src)
     }
     if (rem & 1) {
         tmp[1] = 1;
-        sub_3D8C(tmp, src, offsets, 0);
-        res = sub_3E4C((void *)r0, (void *)r1, tmp);
+        mpegBaseFillYuvRowArgs(tmp, src, offsets, 0);
+        res = mpegBaseRunCscEx((void *)r0, (void *)r1, tmp);
     }
     return res;
 }
@@ -2141,16 +2141,16 @@ int sceJpegCsc(void *rgba, const void *ycbcr, int widthHeight, int lineWidth, in
 /* 0x43E4 */
 int sceAvcodecStartEntry(SceSize args, void *argp)
 {
-    sub_0000();
-    sub_1428();
-    sub_32B4();
+    mpegBaseInitSync();
+    videocodecPowerOff();
+    jpegInitSync();
     return 0;
 }
 
 /* 0x4414 */
 int sceAvcodecEndEntry(SceSize args, void *argp)
 {
-    sub_0094();
-    sub_3304();
+    mpegBaseTermSync();
+    jpegTermSync();
     return 0;
 }

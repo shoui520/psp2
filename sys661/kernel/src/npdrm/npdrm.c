@@ -70,7 +70,7 @@ static inline void psp_set_k1(uint32_t k1)
 
 /* Forward declarations */
 int sceNpDrmGetModuleKey(int fd, void *key_out, void *type_out);
-static int __attribute__((noinline)) sub_01c0(void *arg);
+static int __attribute__((noinline)) npdrmGetModuleKeyOnKernelStack(void *arg);
 int sceNpDrmGetIDps(void *idps);
 int sceNpDrmVerifyAct(const uint8_t *act);
 int sceNpDrmVerifyRif(const uint8_t *rif);
@@ -81,30 +81,30 @@ int sceNpDrmGetContentKey(uint8_t *key_out, const uint8_t *act, const uint8_t *r
 int sceNpDrmGetVersionKey(uint8_t *key_out, const uint8_t *act, const uint8_t *rif, int type);
 int sceNpDrmGetFixedKey(uint8_t *key_out, const char *content_id, int type);
 int sceNpDrmSetRifDevice(int dev);
-static int __attribute__((noinline)) sub_0650(const char *content_id);
-static int __attribute__((noinline)) sub_06fc(uint8_t *key, int type);
-static int __attribute__((noinline)) sub_0760(uint8_t *key_out, const uint8_t *edata_hdr, uint32_t hdr_size);
+static int __attribute__((noinline)) npdrmOpenRifFile(const char *content_id);
+static int __attribute__((noinline)) npdrmTransformKeyByType(uint8_t *key, int type);
+static int __attribute__((noinline)) npdrmDecryptEdataKey(uint8_t *key_out, const uint8_t *edata_hdr, uint32_t hdr_size);
 int sceNpDrmDecActivation(uint8_t *act_buf, const uint8_t *key);
-static int __attribute__((noinline)) sub_0ae4(uint8_t *key_out, const uint8_t *rif, int type);
-static int __attribute__((noinline)) sub_0c14(const uint8_t *src, uint8_t *dst, int count);
-static int __attribute__((noinline)) sub_0ce8(uint8_t *key_out, const uint8_t *act, const uint8_t *rif);
-static int __attribute__((noinline)) sub_0e4c(uint8_t *key_out, const uint8_t *rif);
-static int __attribute__((noinline)) sub_0f18(const uint8_t *rif, uint8_t *ms_id_in);
-static int __attribute__((noinline)) sub_1008(uint8_t *out);
-static int __attribute__((noinline)) sub_1038(uint8_t *out);
-static int __attribute__((noinline)) sub_1068(uint8_t *rif_out, const char *content_id);
-static int __attribute__((noinline)) sub_1184(const uint8_t *rif);
-static int __attribute__((noinline)) sub_12bc(const uint8_t *rif);
-static int sub_1434(int ev_id, char *ev_name, void *param, int *result);
-int sub_17d8(void *arg);
-static int __attribute__((noinline)) sub_191c(int err);
-static int __attribute__((noinline)) sub_1978(const void *sig, const void *pubkey, const void *data, uint32_t size);
-static int __attribute__((noinline)) sub_19f8(const uint8_t *in, uint8_t *out, const uint8_t *key);
-static int __attribute__((noinline)) sub_1a70(const uint8_t *in, uint8_t *out, const uint8_t *key);
-static int __attribute__((noinline)) sub_1cc0(const uint8_t *data, uint32_t size, uint8_t *digest);
-static int __attribute__((noinline)) sub_208c(const uint32_t *ctx, const uint8_t *in, uint8_t *out);
-static int __attribute__((noinline)) sub_262c(const uint32_t *ctx, const uint8_t *in, uint8_t *out);
-static int __attribute__((noinline)) sub_2d1c(uint32_t *ctx, int block_bits, int key_bits, const uint8_t *key);
+static int __attribute__((noinline)) npdrmDecryptRifKeyLocked(uint8_t *key_out, const uint8_t *rif, int type);
+static int __attribute__((noinline)) npdrmDecryptActBlocks(const uint8_t *src, uint8_t *dst, int count);
+static int __attribute__((noinline)) npdrmDecryptRifWithAct(uint8_t *key_out, const uint8_t *act, const uint8_t *rif);
+static int __attribute__((noinline)) npdrmDecryptFreeRif(uint8_t *key_out, const uint8_t *rif);
+static int __attribute__((noinline)) npdrmVerifyMsRif(const uint8_t *rif, uint8_t *ms_id_in);
+static int __attribute__((noinline)) npdrmGetMsId(uint8_t *out);
+static int __attribute__((noinline)) npdrmReadFuseId(uint8_t *out);
+static int __attribute__((noinline)) npdrmLoadRifByContentId(uint8_t *rif_out, const char *content_id);
+static int __attribute__((noinline)) npdrmVerifyRifHeader(const uint8_t *rif);
+static int __attribute__((noinline)) npdrmCheckRifValidityPeriod(const uint8_t *rif);
+static int npdrmSysEventHandler(int ev_id, char *ev_name, void *param, int *result);
+int npdrmSetupEdataKeyOnKernelStack(void *arg);
+static int __attribute__((noinline)) npdrmMapIoError(int err);
+static int __attribute__((noinline)) npdrmVerifyEcdsaSig(const void *sig, const void *pubkey, const void *data, uint32_t size);
+static int __attribute__((noinline)) npdrmAes128EncryptBlock(const uint8_t *in, uint8_t *out, const uint8_t *key);
+static int __attribute__((noinline)) npdrmAes128DecryptBlock(const uint8_t *in, uint8_t *out, const uint8_t *key);
+static int __attribute__((noinline)) npdrmSha1Digest(const uint8_t *data, uint32_t size, uint8_t *digest);
+static int __attribute__((noinline)) npdrmAesEncryptBlock(const uint32_t *ctx, const uint8_t *in, uint8_t *out);
+static int __attribute__((noinline)) npdrmAesDecryptBlock(const uint32_t *ctx, const uint8_t *in, uint8_t *out);
+static int __attribute__((noinline)) npdrmAesSetKey(uint32_t *ctx, int block_bits, int key_bits, const uint8_t *key);
 
 /* .rodata constants */
 static const uint8_t g_keys_3690[3][16] = {
@@ -310,7 +310,7 @@ int module_start(int args, void *argp)
     g_sysevent_handler.size = 0x40;
     g_sysevent_handler.name = "SceNpDrm";
     g_sysevent_handler.type_mask = 0x00ffff00;
-    g_sysevent_handler.handler = sub_1434;
+    g_sysevent_handler.handler = npdrmSysEventHandler;
 
     int res = sceKernelRegisterSysEventHandler(&g_sysevent_handler);
     if (res != 0) {
@@ -368,11 +368,11 @@ int sceNpDrmGetModuleKey(int fd, void *key_out, void *type_out)
     args.fd = fd;
     args.key_out = key_out;
     args.type_out = (uint32_t *)type_out;
-    return sceKernelExtendKernelStack(0x1000, sub_01c0, &args);
+    return sceKernelExtendKernelStack(0x1000, npdrmGetModuleKeyOnKernelStack, &args);
 }
 
 /* 0x01c0 */
-static int __attribute__((noinline)) sub_01c0(void *arg)
+static int __attribute__((noinline)) npdrmGetModuleKeyOnKernelStack(void *arg)
 {
     ModuleKeyArgs *args = (ModuleKeyArgs *)arg;
     uint8_t hdr[0x90];
@@ -400,12 +400,12 @@ static int __attribute__((noinline)) sub_01c0(void *arg)
         return 0x80550913;
     }
 
-    res = sub_0760((uint8_t *)key_out, hdr, 0x90);
+    res = npdrmDecryptEdataKey((uint8_t *)key_out, hdr, 0x90);
     if (res < 0) {
         return res;
     }
 
-    uint16_t flags = *(uint16_t *)(hdr + 0x0c);
+    uint16_t flags = (uint16_t)hdr[0x0c] | ((uint16_t)hdr[0x0d] << 8);
     type_out[0] = flags;
     type_out[1] = 0;
     return res;
@@ -439,17 +439,17 @@ int sceNpDrmVerifyAct(const uint8_t *act)
         return 0x80550906;
     }
 
-    int res = sub_1978(act + 0x1010, g_pubkey_36c0, act, 0x1010);
+    int res = npdrmVerifyEcdsaSig(act + 0x1010, g_pubkey_36c0, act, 0x1010);
     return (res < 0) ? (int)0x80550903 : 0;
 }
 
 /* 0x0380 */
 int sceNpDrmVerifyRif(const uint8_t *rif)
 {
-    int res = sub_1184(rif);
+    int res = npdrmVerifyRifHeader(rif);
     if (res >= 0) {
         if (*(const uint32_t *)(rif + 4) == 0x03000000) {
-            res = sub_0f18(rif, NULL);
+            res = npdrmVerifyMsRif(rif, NULL);
         }
     }
     return res;
@@ -459,7 +459,7 @@ int sceNpDrmVerifyRif(const uint8_t *rif)
 int sceNpDrmVerifyRifById(const char *content_id)
 {
     uint8_t rif[0x98];
-    int res = sub_1068(rif, content_id);
+    int res = npdrmLoadRifByContentId(rif, content_id);
     if (res == 0) {
         res = sceNpDrmVerifyRif(rif);
     }
@@ -471,7 +471,7 @@ int sceNpDrmCheckRifTimeLimit(const uint8_t *rif)
 {
     int res = sceNpDrmVerifyRif(rif);
     if (res >= 0) {
-        res = sub_12bc(rif);
+        res = npdrmCheckRifValidityPeriod(rif);
     }
     return res;
 }
@@ -480,7 +480,7 @@ int sceNpDrmCheckRifTimeLimit(const uint8_t *rif)
 int sceNpDrmCheckRifTimeLimitById(const char *content_id)
 {
     uint8_t rif[0x98];
-    int res = sub_1068(rif, content_id);
+    int res = npdrmLoadRifByContentId(rif, content_id);
     if (res == 0) {
         res = sceNpDrmCheckRifTimeLimit(rif);
     }
@@ -503,18 +503,18 @@ int sceNpDrmGetVersionKey(uint8_t *key_out, const uint8_t *act, const uint8_t *r
     uint32_t ver = *(const uint32_t *)(rif + 4);
     int res;
     if (ver == 0x03000000) {
-        res = sub_0e4c(key_out, rif);
+        res = npdrmDecryptFreeRif(key_out, rif);
     } else {
         if (act == NULL) {
             return 0x80550901;
         }
-        res = sub_0ce8(key_out, act, rif);
+        res = npdrmDecryptRifWithAct(key_out, act, rif);
     }
 
     if (res >= 0) {
-        res = sub_12bc(rif);
+        res = npdrmCheckRifValidityPeriod(rif);
         if (res >= 0) {
-            res = sub_06fc(key_out, type);
+            res = npdrmTransformKeyByType(key_out, type);
         }
     }
     return res;
@@ -549,7 +549,7 @@ int sceNpDrmGetFixedKey(uint8_t *key_out, const char *content_id, int type)
         return 0x80550902;
     }
 
-    return sub_06fc(key_out, type);
+    return npdrmTransformKeyByType(key_out, type);
 }
 
 /* 0x062c */
@@ -563,7 +563,7 @@ int sceNpDrmSetRifDevice(int dev)
 }
 
 /* 0x0650 */
-static int __attribute__((noinline)) sub_0650(const char *content_id)
+static int __attribute__((noinline)) npdrmOpenRifFile(const char *content_id)
 {
     char path[0x40];
 
@@ -586,7 +586,7 @@ static int __attribute__((noinline)) sub_0650(const char *content_id)
 }
 
 /* 0x06fc */
-static int __attribute__((noinline)) sub_06fc(uint8_t *key, int type)
+static int __attribute__((noinline)) npdrmTransformKeyByType(uint8_t *key, int type)
 {
     uint32_t idx = (uint32_t)type & 0x00ffffffU;
     if (idx == 0) {
@@ -596,12 +596,12 @@ static int __attribute__((noinline)) sub_06fc(uint8_t *key, int type)
         return 0x80550901;
     }
 
-    int res = sub_19f8(key, key, g_keys_3690[idx - 1]);
+    int res = npdrmAes128EncryptBlock(key, key, g_keys_3690[idx - 1]);
     return (res < 0) ? (int)0x80550902 : 0;
 }
 
 /* 0x0760 */
-static int __attribute__((noinline)) sub_0760(uint8_t *key_out, const uint8_t *edata_hdr, uint32_t hdr_size)
+static int __attribute__((noinline)) npdrmDecryptEdataKey(uint8_t *key_out, const uint8_t *edata_hdr, uint32_t hdr_size)
 {
     uint8_t rif_buf[0x98];
     uint8_t bbmac_ctx[0x20];
@@ -610,7 +610,7 @@ static int __attribute__((noinline)) sub_0760(uint8_t *key_out, const uint8_t *e
         return 0x80550901;
     }
 
-    int res = sub_1978(edata_hdr + 0x58, g_pubkey_36e8, edata_hdr, 0x58);
+    int res = npdrmVerifyEcdsaSig(edata_hdr + 0x58, g_pubkey_36e8, edata_hdr, 0x58);
     if (res < 0) {
         return 0x80550913;
     }
@@ -655,7 +655,7 @@ static int __attribute__((noinline)) sub_0760(uint8_t *key_out, const uint8_t *e
             return res;
         }
     } else {
-        int fd = sub_0650(content_id);
+        int fd = npdrmOpenRifFile(content_id);
         if (fd < 0) {
             return (fd == (int)0x80010002) ? (int)0x80550910 : fd;
         }
@@ -664,7 +664,7 @@ static int __attribute__((noinline)) sub_0760(uint8_t *key_out, const uint8_t *e
         if (nread != 0x98) {
             return (nread < 0) ? nread : (int)0x80550904;
         }
-        res = sub_0ae4(key_out, rif_buf, *(const int32_t *)(edata_hdr + 8));
+        res = npdrmDecryptRifKeyLocked(key_out, rif_buf, *(const int32_t *)(edata_hdr + 8));
         if (res < 0) {
             return res;
         }
@@ -682,7 +682,7 @@ static int __attribute__((noinline)) sub_0760(uint8_t *key_out, const uint8_t *e
         }
     }
 
-    res = sub_1a70(key_out, key_out, g_key_3740);
+    res = npdrmAes128DecryptBlock(key_out, key_out, g_key_3740);
     return (res < 0) ? res : 0;
 }
 
@@ -695,11 +695,11 @@ int sceNpDrmDecActivation(uint8_t *act_buf, const uint8_t *key)
         return 0x80550901;
     }
 
-    int res = sub_2d1c(ctx, 0x80, 0x80, key);
+    int res = npdrmAesSetKey(ctx, 0x80, 0x80, key);
     if (res >= 0) {
         for (int off = 0x1030; off > 0; off -= 0x10) {
             uint8_t *blk = act_buf + off;
-            res = sub_262c(ctx, blk, blk);
+            res = npdrmAesDecryptBlock(ctx, blk, blk);
             if (res < 0) {
                 goto out;
             }
@@ -707,7 +707,7 @@ int sceNpDrmDecActivation(uint8_t *act_buf, const uint8_t *key)
                 blk[i] ^= blk[i - 0x10];
             }
         }
-        res = sub_262c(ctx, act_buf, act_buf);
+        res = npdrmAesDecryptBlock(ctx, act_buf, act_buf);
     }
 
 out:
@@ -716,7 +716,7 @@ out:
 }
 
 /* 0x0ae4 */
-static int __attribute__((noinline)) sub_0ae4(uint8_t *key_out, const uint8_t *rif, int type)
+static int __attribute__((noinline)) npdrmDecryptRifKeyLocked(uint8_t *key_out, const uint8_t *rif, int type)
 {
     if (g_npdrm_mutex == 0) {
         return 0x80000041;
@@ -752,18 +752,18 @@ unlock:
 }
 
 /* 0x0c14 */
-static int __attribute__((noinline)) sub_0c14(const uint8_t *src, uint8_t *dst, int count)
+static int __attribute__((noinline)) npdrmDecryptActBlocks(const uint8_t *src, uint8_t *dst, int count)
 {
     uint8_t idps[16];
     uint8_t master_key[16];
 
     int res = sceNpDrmGetIDps(idps);
     if (res >= 0) {
-        res = sub_19f8(g_key_3720, master_key, idps);
+        res = npdrmAes128EncryptBlock(g_key_3720, master_key, idps);
         if (res >= 0) {
             int total = count << 4;
             for (int off = 0; off < total; off += 0x10) {
-                res = sub_1a70(src + off, dst + off, master_key);
+                res = npdrmAes128DecryptBlock(src + off, dst + off, master_key);
                 if (res < 0) {
                     break;
                 }
@@ -776,7 +776,7 @@ static int __attribute__((noinline)) sub_0c14(const uint8_t *src, uint8_t *dst, 
 }
 
 /* 0x0ce8 */
-static int __attribute__((noinline)) sub_0ce8(uint8_t *key_out, const uint8_t *act, const uint8_t *rif)
+static int __attribute__((noinline)) npdrmDecryptRifWithAct(uint8_t *key_out, const uint8_t *act, const uint8_t *rif)
 {
     uint8_t act_key[16];
     uint8_t dec_idx_buf[16];
@@ -804,7 +804,7 @@ static int __attribute__((noinline)) sub_0ce8(uint8_t *key_out, const uint8_t *a
         return 0x80550911;
     }
 
-    res = sub_1a70(rif + 0x40, dec_idx_buf, g_key_3710);
+    res = npdrmAes128DecryptBlock(rif + 0x40, dec_idx_buf, g_key_3710);
     if (res < 0) {
         goto cleanup;
     }
@@ -819,12 +819,12 @@ static int __attribute__((noinline)) sub_0ce8(uint8_t *key_out, const uint8_t *a
     }
     *(uint32_t *)(dec_idx_buf + 12) = idx;
 
-    res = sub_0c14(act + idx * 16 + 0x10, act_key, 1);
+    res = npdrmDecryptActBlocks(act + idx * 16 + 0x10, act_key, 1);
     if (res < 0) {
         goto cleanup;
     }
 
-    res = sub_1a70(rif + 0x50, key_out, act_key);
+    res = npdrmAes128DecryptBlock(rif + 0x50, key_out, act_key);
     if (res < 0) {
         res = 0x80550902;
     }
@@ -835,32 +835,32 @@ cleanup:
 }
 
 /* 0x0e4c */
-static int __attribute__((noinline)) sub_0e4c(uint8_t *key_out, const uint8_t *rif)
+static int __attribute__((noinline)) npdrmDecryptFreeRif(uint8_t *key_out, const uint8_t *rif)
 {
     uint8_t ms_key[16];
 
-    int res = sub_1184(rif);
+    int res = npdrmVerifyRifHeader(rif);
     if (res < 0) {
         return res;
     }
 
-    res = sub_1008(ms_key);
+    res = npdrmGetMsId(ms_key);
     if (res < 0) {
         goto cleanup;
     }
 
-    res = sub_0f18(rif, ms_key);
+    res = npdrmVerifyMsRif(rif, ms_key);
     if (res < 0) {
         goto cleanup;
     }
 
-    res = sub_19f8(ms_key, ms_key, g_key_3730);
+    res = npdrmAes128EncryptBlock(ms_key, ms_key, g_key_3730);
     if (res < 0) {
         res = 0x80550902;
         goto cleanup;
     }
 
-    res = sub_1a70(rif + 0x50, key_out, ms_key);
+    res = npdrmAes128DecryptBlock(rif + 0x50, key_out, ms_key);
     if (res < 0) {
         res = 0x80550902;
     }
@@ -871,7 +871,7 @@ cleanup:
 }
 
 /* 0x0f18 */
-static int __attribute__((noinline)) sub_0f18(const uint8_t *rif, uint8_t *ms_id_in)
+static int __attribute__((noinline)) npdrmVerifyMsRif(const uint8_t *rif, uint8_t *ms_id_in)
 {
     uint8_t local_ms_id[16];
     uint8_t dec_buf[16];
@@ -880,7 +880,7 @@ static int __attribute__((noinline)) sub_0f18(const uint8_t *rif, uint8_t *ms_id
     int res;
     uint8_t *ms_id = ms_id_in;
     if (ms_id == NULL) {
-        res = sub_1008(local_ms_id);
+        res = npdrmGetMsId(local_ms_id);
         if (res < 0) {
             goto cleanup;
         }
@@ -897,7 +897,7 @@ static int __attribute__((noinline)) sub_0f18(const uint8_t *rif, uint8_t *ms_id
         goto cleanup;
     }
 
-    res = sub_1a70(rif + 0x40, dec_buf, g_key_3710);
+    res = npdrmAes128DecryptBlock(rif + 0x40, dec_buf, g_key_3710);
     if (res < 0) {
         goto cleanup;
     }
@@ -917,7 +917,7 @@ cleanup:
 }
 
 /* 0x1008 */
-static int __attribute__((noinline)) sub_1008(uint8_t *out)
+static int __attribute__((noinline)) npdrmGetMsId(uint8_t *out)
 {
     if (out == NULL) {
         return 0x80550901;
@@ -926,7 +926,7 @@ static int __attribute__((noinline)) sub_1008(uint8_t *out)
 }
 
 /* 0x1038 */
-static int __attribute__((noinline)) sub_1038(uint8_t *out)
+static int __attribute__((noinline)) npdrmReadFuseId(uint8_t *out)
 {
     uint32_t v0 = *(volatile uint32_t *)0xbc100094;
     uint32_t v1 = *(volatile uint32_t *)0xbc100090;
@@ -936,7 +936,7 @@ static int __attribute__((noinline)) sub_1038(uint8_t *out)
 }
 
 /* 0x1068 */
-static int __attribute__((noinline)) sub_1068(uint8_t *rif_out, const char *content_id)
+static int __attribute__((noinline)) npdrmLoadRifByContentId(uint8_t *rif_out, const char *content_id)
 {
     if (rif_out == NULL || content_id == NULL || content_id[0] == '\0') {
         return 0x80550901;
@@ -945,7 +945,7 @@ static int __attribute__((noinline)) sub_1068(uint8_t *rif_out, const char *cont
         return 0x80550901;
     }
 
-    int fd = sub_0650(content_id);
+    int fd = npdrmOpenRifFile(content_id);
     if (fd < 0) {
         if (fd == (int)0x80020328) {
             return fd;
@@ -966,7 +966,7 @@ static int __attribute__((noinline)) sub_1068(uint8_t *rif_out, const char *cont
 }
 
 /* 0x1184 */
-static int __attribute__((noinline)) sub_1184(const uint8_t *rif)
+static int __attribute__((noinline)) npdrmVerifyRifHeader(const uint8_t *rif)
 {
     uint8_t buf[0x90];
 
@@ -995,15 +995,15 @@ static int __attribute__((noinline)) sub_1184(const uint8_t *rif)
         if (res < 0) {
             return res;
         }
-        res = sub_1038(buf + 0x80);
+        res = npdrmReadFuseId(buf + 0x80);
         if (res < 0) {
             return res;
         }
-        res = sub_1978(rif + 0x70, g_pubkey_36c0, buf, 0x90);
+        res = npdrmVerifyEcdsaSig(rif + 0x70, g_pubkey_36c0, buf, 0x90);
         sceKernelMemset(buf, 0, 0x90);
         err_code = 0x80550918;
     } else {
-        res = sub_1978(rif + 0x70, g_pubkey_36c0, rif, 0x70);
+        res = npdrmVerifyEcdsaSig(rif + 0x70, g_pubkey_36c0, rif, 0x70);
         err_code = 0x80550904;
     }
 
@@ -1011,7 +1011,7 @@ static int __attribute__((noinline)) sub_1184(const uint8_t *rif)
 }
 
 /* 0x12bc */
-static int __attribute__((noinline)) sub_12bc(const uint8_t *rif)
+static int __attribute__((noinline)) npdrmCheckRifValidityPeriod(const uint8_t *rif)
 {
     uint64_t cur_tick;
 
@@ -1019,8 +1019,16 @@ static int __attribute__((noinline)) sub_12bc(const uint8_t *rif)
         sceKernelDelayThread(100000);
     }
 
-    uint32_t end_hi = *(const uint32_t *)(rif + 0x68);
-    uint32_t end_lo = *(const uint32_t *)(rif + 0x6c);
+    typedef struct {
+        uint8_t header[0x60];
+        uint32_t start_hi;
+        uint32_t start_lo;
+        uint32_t end_hi;
+        uint32_t end_lo;
+    } SceNpDrmRifTime;
+    const SceNpDrmRifTime *rif_time = (const SceNpDrmRifTime *)rif;
+    uint32_t end_hi = rif_time->end_hi;
+    uint32_t end_lo = rif_time->end_lo;
     if ((end_hi | end_lo) == 0) {
         return 0;
     }
@@ -1032,8 +1040,8 @@ static int __attribute__((noinline)) sub_12bc(const uint8_t *rif)
     uint64_t end_ms = ((uint64_t)__builtin_bswap32(end_hi) << 32) | __builtin_bswap32(end_lo);
     uint64_t end_tick = end_ms * 1000ULL + 0x00dcbffeff2bc000ULL;
 
-    uint32_t start_hi = *(const uint32_t *)(rif + 0x60);
-    uint32_t start_lo = *(const uint32_t *)(rif + 0x64);
+    uint32_t start_hi = rif_time->start_hi;
+    uint32_t start_lo = rif_time->start_lo;
     uint64_t start_ms = ((uint64_t)__builtin_bswap32(start_hi) << 32) | __builtin_bswap32(start_lo);
     uint64_t start_tick = start_ms * 1000ULL + 0x00dcbffeff2bc000ULL;
 
@@ -1047,7 +1055,7 @@ static int __attribute__((noinline)) sub_12bc(const uint8_t *rif)
 }
 
 /* 0x1434 */
-static int sub_1434(int ev_id, char *ev_name, void *param, int *result)
+static int npdrmSysEventHandler(int ev_id, char *ev_name, void *param, int *result)
 {
     (void)ev_name;
     (void)param;
@@ -1184,7 +1192,7 @@ int __attribute__((optimize("no-crossjumping", "no-reorder-blocks"))) sceNpDrmEd
             psp_set_k1(k1 << 11);
             res = sceKernelLockMutex(g_npdrm_mutex, 1, NULL);
             if (res == 0) {
-                res = sceKernelExtendKernelStack(0x1000, sub_17d8, &fd_arg);
+                res = sceKernelExtendKernelStack(0x1000, npdrmSetupEdataKeyOnKernelStack, &fd_arg);
                 sceKernelUnlockMutex(g_npdrm_mutex, 1);
             }
             psp_set_k1(k1);
@@ -1194,7 +1202,7 @@ int __attribute__((optimize("no-crossjumping", "no-reorder-blocks"))) sceNpDrmEd
 }
 
 /* 0x17d8 */
-int sub_17d8(void *arg)
+int npdrmSetupEdataKeyOnKernelStack(void *arg)
 {
     uint8_t hdr[0x90];
     uint32_t range[2];
@@ -1218,26 +1226,26 @@ int sub_17d8(void *arg)
         return 0x80550913;
     }
 
-    res = sub_0760(key, hdr, 0x90);
+    res = npdrmDecryptEdataKey(key, hdr, 0x90);
     if (res < 0) {
-        return sub_191c(res);
+        return npdrmMapIoError(res);
     }
 
-    flags_word = *(uint16_t *)(hdr + 0x0c);
+    flags_word = (uint16_t)hdr[0x0c] | ((uint16_t)hdr[0x0d] << 8);
     res = sceIoIoctl(fd, 0x04100002, &flags_word, 4, NULL, 0);
     if (res < 0) {
-        return sub_191c(res);
+        return npdrmMapIoError(res);
     }
 
     res = sceIoIoctl(fd, 0x04100001, key, 16, NULL, 0);
     if (res < 0) {
-        return sub_191c(res);
+        return npdrmMapIoError(res);
     }
     return 0;
 }
 
 /* 0x191c */
-static int __attribute__((noinline)) sub_191c(int err)
+static int __attribute__((noinline)) npdrmMapIoError(int err)
 {
     switch ((uint32_t)err) {
     case 0x80510201:
@@ -1256,7 +1264,7 @@ static int __attribute__((noinline)) sub_191c(int err)
 }
 
 /* 0x1978 */
-static int __attribute__((noinline)) sub_1978(const void *sig, const void *pubkey, const void *data, uint32_t size)
+static int __attribute__((noinline)) npdrmVerifyEcdsaSig(const void *sig, const void *pubkey, const void *data, uint32_t size)
 {
     uint8_t digest[20];
     int res;
@@ -1264,7 +1272,7 @@ static int __attribute__((noinline)) sub_1978(const void *sig, const void *pubke
     if (size < 0x801) {
         res = sceDdrdbHash(data, (int)size, digest);
     } else {
-        res = sub_1cc0((const uint8_t *)data, size, digest);
+        res = npdrmSha1Digest((const uint8_t *)data, size, digest);
     }
     if (res >= 0) {
         res = sceDdrdbSigvry(pubkey, digest, sig);
@@ -1273,12 +1281,12 @@ static int __attribute__((noinline)) sub_1978(const void *sig, const void *pubke
 }
 
 /* 0x19f8 */
-static int __attribute__((noinline)) sub_19f8(const uint8_t *in, uint8_t *out, const uint8_t *key)
+static int __attribute__((noinline)) npdrmAes128EncryptBlock(const uint8_t *in, uint8_t *out, const uint8_t *key)
 {
     uint32_t ctx[0x3cc / 4];
-    int res = sub_2d1c(ctx, 0x80, 0x80, key);
+    int res = npdrmAesSetKey(ctx, 0x80, 0x80, key);
     if (res >= 0) {
-        res = sub_208c(ctx, in, out);
+        res = npdrmAesEncryptBlock(ctx, in, out);
     }
     volatile uint8_t *p = (volatile uint8_t *)ctx;
     for (int i = 0; i < 0x3cc; i++) {
@@ -1288,12 +1296,12 @@ static int __attribute__((noinline)) sub_19f8(const uint8_t *in, uint8_t *out, c
 }
 
 /* 0x1a70 */
-static int __attribute__((noinline)) sub_1a70(const uint8_t *in, uint8_t *out, const uint8_t *key)
+static int __attribute__((noinline)) npdrmAes128DecryptBlock(const uint8_t *in, uint8_t *out, const uint8_t *key)
 {
     uint32_t ctx[0x3cc / 4];
-    int res = sub_2d1c(ctx, 0x80, 0x80, key);
+    int res = npdrmAesSetKey(ctx, 0x80, 0x80, key);
     if (res >= 0) {
-        res = sub_262c(ctx, in, out);
+        res = npdrmAesDecryptBlock(ctx, in, out);
     }
     volatile uint8_t *p = (volatile uint8_t *)ctx;
     for (int i = 0; i < 0x3cc; i++) {
@@ -1313,7 +1321,7 @@ static inline uint32_t rotr32(uint32_t x, unsigned int n)
 }
 
 /* 0x1b68 */
-static void __attribute__((noinline)) sub_1b68(uint32_t *w, uint32_t *state)
+static void __attribute__((noinline)) npdrmSha1Transform(uint32_t *w, uint32_t *state)
 {
     uint32_t a = state[0];
     uint32_t b = state[1];
@@ -1358,7 +1366,7 @@ static void __attribute__((noinline)) sub_1b68(uint32_t *w, uint32_t *state)
 }
 
 /* 0x1cc0 */
-static int __attribute__((noinline)) sub_1cc0(const uint8_t *data, uint32_t size, uint8_t *digest)
+static int __attribute__((noinline)) npdrmSha1Digest(const uint8_t *data, uint32_t size, uint8_t *digest)
 {
     uint32_t w[16];
     uint32_t state[5];
@@ -1380,7 +1388,7 @@ static int __attribute__((noinline)) sub_1cc0(const uint8_t *data, uint32_t size
             w[i] = v;
             p += 4;
         }
-        sub_1b68(w, state);
+        npdrmSha1Transform(w, state);
         rem -= 64;
     }
 
@@ -1399,14 +1407,14 @@ static int __attribute__((noinline)) sub_1cc0(const uint8_t *data, uint32_t size
     }
 
     if (rem >= 56) {
-        sub_1b68(w, state);
+        npdrmSha1Transform(w, state);
         for (int i = 0; i < 16; i++) {
             w[i] = 0;
         }
     }
 
     w[15] = bit_len;
-    sub_1b68(w, state);
+    npdrmSha1Transform(w, state);
 
     for (int i = 0; i < 5; i++) {
         uint32_t v = state[i];
@@ -1419,7 +1427,7 @@ static int __attribute__((noinline)) sub_1cc0(const uint8_t *data, uint32_t size
 }
 
 /* 0x1f70 */
-static uint32_t __attribute__((noinline)) sub_1f70(uint32_t w)
+static uint32_t __attribute__((noinline)) npdrmAesSubWord(uint32_t w)
 {
     uint32_t b3 = (g_aes_te0[(w >> 24) & 0xff] >> 16) & 0xff;
     uint32_t b2 = (g_aes_te0[(w >> 16) & 0xff] >> 16) & 0xff;
@@ -1429,7 +1437,7 @@ static uint32_t __attribute__((noinline)) sub_1f70(uint32_t w)
 }
 
 /* 0x1fb0 */
-static uint8_t __attribute__((noinline)) sub_1fb0(uint8_t a, uint8_t b)
+static uint8_t __attribute__((noinline)) npdrmAesGfMul(uint8_t a, uint8_t b)
 {
     if (a == 0 || b == 0) {
         return 0;
@@ -1440,23 +1448,23 @@ static uint8_t __attribute__((noinline)) sub_1fb0(uint8_t a, uint8_t b)
 }
 
 /* 0x1fe8 */
-static uint8_t __attribute__((noinline)) sub_1fe8(uint32_t w, uint32_t coeff)
+static uint8_t __attribute__((noinline)) npdrmAesInvMixColByte(uint32_t w, uint32_t coeff)
 {
-    uint8_t r0 = sub_1fb0((uint8_t)(w & 0xff), (uint8_t)(coeff & 0xff));
-    uint8_t r1 = sub_1fb0((uint8_t)((w >> 8) & 0xff), (uint8_t)((coeff >> 8) & 0xff));
-    uint8_t r2 = sub_1fb0((uint8_t)((w >> 16) & 0xff), (uint8_t)((coeff >> 16) & 0xff));
-    uint8_t r3 = sub_1fb0((uint8_t)((w >> 24) & 0xff), (uint8_t)((coeff >> 24) & 0xff));
+    uint8_t r0 = npdrmAesGfMul((uint8_t)(w & 0xff), (uint8_t)(coeff & 0xff));
+    uint8_t r1 = npdrmAesGfMul((uint8_t)((w >> 8) & 0xff), (uint8_t)((coeff >> 8) & 0xff));
+    uint8_t r2 = npdrmAesGfMul((uint8_t)((w >> 16) & 0xff), (uint8_t)((coeff >> 16) & 0xff));
+    uint8_t r3 = npdrmAesGfMul((uint8_t)((w >> 24) & 0xff), (uint8_t)((coeff >> 24) & 0xff));
     return r0 ^ r1 ^ r2 ^ r3;
 }
 
 /* 0x2038 */
-static uint32_t __attribute__((noinline)) sub_2038(uint32_t w)
+static uint32_t __attribute__((noinline)) npdrmAesInvMixColWord(uint32_t w)
 {
     const uint32_t c = 0x0e090d0b;
-    uint32_t b3 = sub_1fe8(w, c);
-    uint32_t b2 = sub_1fe8(w, rotr32(c, 8));
-    uint32_t b1 = sub_1fe8(w, rotr32(c, 16));
-    uint32_t b0 = sub_1fe8(w, rotr32(c, 24));
+    uint32_t b3 = npdrmAesInvMixColByte(w, c);
+    uint32_t b2 = npdrmAesInvMixColByte(w, rotr32(c, 8));
+    uint32_t b1 = npdrmAesInvMixColByte(w, rotr32(c, 16));
+    uint32_t b0 = npdrmAesInvMixColByte(w, rotr32(c, 24));
     return (b3 << 24) | (b2 << 16) | (b1 << 8) | b0;
 }
 
@@ -1495,7 +1503,7 @@ static inline uint32_t aes_dec_last(uint32_t s0, uint32_t s1, uint32_t s2, uint3
 }
 
 /* 0x208c */
-static int __attribute__((noinline)) sub_208c(const uint32_t *ctx, const uint8_t *in, uint8_t *out)
+static int __attribute__((noinline)) npdrmAesEncryptBlock(const uint32_t *ctx, const uint8_t *in, uint8_t *out)
 {
     uint32_t nb = ctx[0x3c4 / 4];
     uint32_t nr = ctx[0x3c8 / 4];
@@ -1533,7 +1541,7 @@ static int __attribute__((noinline)) sub_208c(const uint32_t *ctx, const uint8_t
 }
 
 /* 0x262c */
-static int __attribute__((noinline)) sub_262c(const uint32_t *ctx, const uint8_t *in, uint8_t *out)
+static int __attribute__((noinline)) npdrmAesDecryptBlock(const uint32_t *ctx, const uint8_t *in, uint8_t *out)
 {
     uint32_t nb = ctx[0x3c4 / 4];
     uint32_t nr = ctx[0x3c8 / 4];
@@ -1571,7 +1579,7 @@ static int __attribute__((noinline)) sub_262c(const uint32_t *ctx, const uint8_t
 }
 
 /* 0x2d1c */
-static int __attribute__((noinline)) sub_2d1c(uint32_t *ctx, int block_bits, int key_bits, const uint8_t *key)
+static int __attribute__((noinline)) npdrmAesSetKey(uint32_t *ctx, int block_bits, int key_bits, const uint8_t *key)
 {
     if (ctx == NULL || key == NULL) {
         return 0x80000103;
@@ -1602,7 +1610,7 @@ static int __attribute__((noinline)) sub_2d1c(uint32_t *ctx, int block_bits, int
     if (nk < 7) {
         int rcon_idx = 0;
         for (int i = nk; i < total; i += nk) {
-            uint32_t temp = sub_1f70(rotr32(ctx[i - 1], 8)) ^ g_aes_rcon[rcon_idx++];
+            uint32_t temp = npdrmAesSubWord(rotr32(ctx[i - 1], 8)) ^ g_aes_rcon[rcon_idx++];
             ctx[i] = ctx[i - nk] ^ temp;
             for (int j = 1; j < nk && (i + j) < total; j++) {
                 ctx[i + j] = ctx[i + j - nk] ^ ctx[i + j - 1];
@@ -1611,13 +1619,13 @@ static int __attribute__((noinline)) sub_2d1c(uint32_t *ctx, int block_bits, int
     } else {
         int rcon_idx = 0;
         for (int i = nk; i < total; i += nk) {
-            uint32_t temp = sub_1f70(rotr32(ctx[i - 1], 8)) ^ g_aes_rcon[rcon_idx++];
+            uint32_t temp = npdrmAesSubWord(rotr32(ctx[i - 1], 8)) ^ g_aes_rcon[rcon_idx++];
             ctx[i] = ctx[i - nk] ^ temp;
             for (int j = 1; j < 4 && (i + j) < total; j++) {
                 ctx[i + j] = ctx[i + j - nk] ^ ctx[i + j - 1];
             }
             if (i + 4 < total) {
-                ctx[i + 4] = ctx[i + 4 - nk] ^ sub_1f70(ctx[i + 3]);
+                ctx[i + 4] = ctx[i + 4 - nk] ^ npdrmAesSubWord(ctx[i + 3]);
             }
             for (int j = 5; j < nk && (i + j) < total; j++) {
                 ctx[i + j] = ctx[i + j - nk] ^ ctx[i + j - 1];
@@ -1632,7 +1640,7 @@ static int __attribute__((noinline)) sub_2d1c(uint32_t *ctx, int block_bits, int
     for (int i = nb; i < total - nb; i += nb) {
         int dst = (total - nb) - i;
         for (int j = 0; j < nb; j++) {
-            drk[dst + j] = sub_2038(ctx[i + j]);
+            drk[dst + j] = npdrmAesInvMixColWord(ctx[i + j]);
         }
     }
     for (int j = 0; j < nb; j++) {
