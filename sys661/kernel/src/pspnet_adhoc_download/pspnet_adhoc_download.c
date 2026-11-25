@@ -123,7 +123,7 @@ typedef struct SceNetAdhocDownloadServerCtx {
     int ptp_id;                                               /* 0x1c */
     uint8_t peer_mac[6];                                      /* 0x20 */
     char peer_nickname[0x80];                                 /* 0x26 */
-    uint16_t reserved_a6;                                          /* 0xa6 */
+    uint16_t reserved;                                        /* 0xa6 */
     SceNetAdhocDownloadQueue queue;                           /* 0xa8 */
 } SceNetAdhocDownloadServerCtx; /* 0xb0 */
 
@@ -133,7 +133,7 @@ typedef struct SceNetAdhocDownloadClientPeer {
     uint8_t *raw_buf;                           /* 0x08 */
     uint8_t mac[6];                             /* 0x0c */
     char nickname[0x80];                        /* 0x12 */
-    uint16_t reserved_92;                            /* 0x92 */
+    uint16_t reserved;                          /* 0x92 */
     uint32_t data_len;                          /* 0x94 */
     void *data_ptr;                             /* 0x98 */
     void *extra_ptr;                            /* 0x9c */
@@ -150,7 +150,7 @@ typedef struct SceNetAdhocDownloadClientCtx {
     int evf_id;                                                     /* 0x18 */
     int ptp_id;                                                     /* 0x1c */
     uint8_t target_mac[6];                                          /* 0x20 */
-    uint16_t reserved_26;                                                /* 0x26 */
+    uint16_t reserved;                                              /* 0x26 */
 } SceNetAdhocDownloadClientCtx; /* 0x28 */
 
 typedef struct SceNetAdhocDistributeWorker {
@@ -160,7 +160,7 @@ typedef struct SceNetAdhocDistributeWorker {
     int state;           /* 0x0c */
     int error_code;      /* 0x10 */
     uint8_t mac[6];      /* 0x14 */
-    uint16_t reserved_1a;     /* 0x1a */
+    uint16_t reserved;   /* 0x1a */
     char nickname[0x80]; /* 0x1c */
     uint32_t total_len;  /* 0x9c */
     uint32_t sent_len;   /* 0xa0 */
@@ -197,7 +197,7 @@ static SceNetAdhocDownloadClientPeer *g_client_peer_list;   /* 0x4574 */
 static SceNetAdhocDownloadClientCtx g_client_ctx_buf;       /* 0x4578 (0x28 bytes) */
 static uint32_t g_client_lwmutex[8];                        /* 0x45a0 (0x20 bytes) */
 static int g_vpl_id;                                        /* 0x45c0 */
-static uint32_t g_max_vpl_used;                             /* 0x45c4 */
+static int g_max_vpl_used;                                  /* 0x45c4 */
 
 /* Forward declarations of internal helpers */
 static void __attribute__((noinline)) adhocDownloadServerMatchingCb(int matching_id, int event, uint8_t *mac, int optlen, void *optdata);
@@ -245,7 +245,7 @@ int sceNetAdhocDownload_13DAB550(uint32_t data_len, void *data_ptr, void *extra_
     if (!g_server_inited) {
         return 0x80410c01;
     }
-    if (data_len == 0 || data_ptr == NULL) {
+    if ((data_len == 0) | (data_ptr == NULL)) {
         return 0x80410c03;
     }
     if (g_server_ctx != NULL) {
@@ -388,7 +388,7 @@ int sceNetAdhocDownload_F8FC359E(uint8_t *mac, int reply_mode)
 int sceNetAdhocDownload_D0189004(int total_len, void *cb_arg,
                                  int (*send_cb)(void *, void **, int *))
 {
-    uint8_t local_mac[16];
+    uint8_t self_mac[16];
     uint32_t out_bits;
     uint32_t timeout;
     uint32_t net_len;
@@ -409,7 +409,7 @@ int sceNetAdhocDownload_D0189004(int total_len, void *cb_arg,
         return 0x80410c07;
     }
 
-    int res = sceNetGetLocalEtherAddr(local_mac);
+    int res = sceNetGetLocalEtherAddr(self_mac);
     int ptp_id = -1;
     if (res < 0) {
         return res;
@@ -425,73 +425,88 @@ int sceNetAdhocDownload_D0189004(int total_len, void *cb_arg,
         g_server_ctx->info->total = total_len;
     }
 
-    int retries = 20;
-    for (;;) {
-        res = sceKernelPollEventFlag(g_server_ctx->evf_id, 2, 0x11, &out_bits);
-        if (res != (int)0x800201af) {
-            res = 0x80410c0a;
-            goto cleanup;
-        }
+    do {
+        int retries = 20;
+        int connected = 0;
+        for (;;) {
+            res = sceKernelPollEventFlag(g_server_ctx->evf_id, 2, 0x11, &out_bits);
+            if (res != (int)0x800201af) {
+                res = 0x80410c0a;
+                break;
+            }
 
-        ptp_id = sceNetAdhocPtpOpen(local_mac, 0x8001, g_server_ctx->peer_mac,
-                                    0x8001, 0x2d20, 200000, 50, 0);
-        if (ptp_id < 0) {
-            res = ptp_id;
-            goto cleanup;
-        }
-        g_server_ctx->ptp_id = ptp_id;
+            ptp_id = sceNetAdhocPtpOpen(self_mac, 0x8001, g_server_ctx->peer_mac,
+                                        0x8001, 0x2d20, 200000, 50, 0);
+            if (ptp_id < 0) {
+                res = ptp_id;
+                break;
+            }
+            g_server_ctx->ptp_id = ptp_id;
 
-        res = sceNetAdhocPtpConnect(ptp_id, 10000000, 0);
-        if (res >= 0) {
+            res = sceNetAdhocPtpConnect(ptp_id, 10000000, 0);
+            if (res >= 0) {
+                connected = 1;
+                break;
+            }
+            if (res != (int)0x80410718 || retries <= 0) {
+                break;
+            }
+            retries--;
+            g_server_ctx->ptp_id = 0;
+            sceNetAdhocPtpClose(ptp_id, 0);
+            ptp_id = -1;
+            timeout = 500000;
+            sceKernelWaitEventFlag(g_server_ctx->evf_id, 2, 1, &out_bits, &timeout);
+        }
+        if (!connected) {
             break;
         }
-        if (res != (int)0x80410718 || retries <= 0) {
-            goto cleanup;
-        }
-        retries--;
-        g_server_ctx->ptp_id = 0;
-        sceNetAdhocPtpClose(ptp_id, 0);
-        ptp_id = -1;
-        timeout = 500000;
-        sceKernelWaitEventFlag(g_server_ctx->evf_id, 2, 1, &out_bits, &timeout);
-    }
 
-    net_len = __builtin_bswap32((uint32_t)total_len);
-    chunk_len = 4;
-    res = sceNetAdhocPtpSend(ptp_id, &net_len, &chunk_len, 0, 0);
-    if (res < 0) {
-        goto cleanup;
-    }
-    res = sceNetAdhocPtpFlush(ptp_id, 0, 0);
-    if (res < 0) {
-        goto cleanup;
-    }
-
-    int rem = total_len;
-    while (rem > 0) {
-        if (send_cb(cb_arg, &chunk_ptr, &chunk_total) < 0) {
-            res = 0x80410c0b;
-            goto cleanup;
+        net_len = __builtin_bswap32((uint32_t)total_len);
+        chunk_len = 4;
+        res = sceNetAdhocPtpSend(ptp_id, &net_len, &chunk_len, 0, 0);
+        if (res < 0) {
+            break;
         }
-        int offset = 0;
-        while (offset < chunk_total) {
-            int rem_chunk = chunk_total - offset;
-            chunk_len = (rem_chunk < 0x5a5) ? rem_chunk : 0x5a4;
-            res = sceNetAdhocPtpSend(ptp_id, (uint8_t *)chunk_ptr + offset, &chunk_len, 0, 0);
-            offset += 0x5a4;
-            if (res < 0) {
-                goto cleanup;
+        res = sceNetAdhocPtpFlush(ptp_id, 0, 0);
+        if (res < 0) {
+            break;
+        }
+
+        int rem = total_len;
+        int failed = 0;
+        while (rem > 0) {
+            if (send_cb(cb_arg, &chunk_ptr, &chunk_total) < 0) {
+                res = 0x80410c0b;
+                failed = 1;
+                break;
             }
-            if (g_server_ctx->info != NULL && g_server_ctx->info->size >= 0x10) {
-                g_server_ctx->info->sent += chunk_len;
+            int offset = 0;
+            while (offset < chunk_total) {
+                int rem_chunk = chunk_total - offset;
+                chunk_len = (rem_chunk < 0x5a5) ? rem_chunk : 0x5a4;
+                res = sceNetAdhocPtpSend(ptp_id, (uint8_t *)chunk_ptr + offset, &chunk_len, 0, 0);
+                offset += 0x5a4;
+                if (res < 0) {
+                    failed = 1;
+                    break;
+                }
+                if (g_server_ctx->info != NULL && g_server_ctx->info->size >= 0x10) {
+                    g_server_ctx->info->sent += chunk_len;
+                }
             }
+            if (failed) {
+                break;
+            }
+            rem -= chunk_total;
         }
-        rem -= chunk_total;
-    }
+        if (failed) {
+            break;
+        }
 
-    res = sceNetAdhocPtpFlush(ptp_id, 0, 0);
+        res = sceNetAdhocPtpFlush(ptp_id, 0, 0);
+    } while (0);
 
-cleanup:
     g_server_ctx->state = 5;
     if (res == (int)0x80410708) {
         res = 0x80410c0a;
@@ -623,7 +638,7 @@ int sceNetAdhocDownload_04077014(uint32_t pool_size, int part)
     if (g_server_inited) {
         return 0x80410c02;
     }
-    if (part != 2 && part != 5) {
+    if ((part != 2) & (part != 5)) {
         return 0x80410c03;
     }
     int res = adhocDownloadCreatePool(pool_size, part);
@@ -950,56 +965,62 @@ int sceNetAdhocDownload_8846D2B0(void *buf, int bufsize, void *cb_arg,
     int listen_id = sceNetAdhocPtpListen(peer_mac, 0x8001, 0xb480, 200000, 50, 1, 0);
     int ptp_id = listen_id;
     res = listen_id;
-    if (listen_id < 0) {
-        goto cleanup;
-    }
-    g_client_ctx->ptp_id = listen_id;
-
-    for (;;) {
-        int acc_id = sceNetAdhocPtpAccept(listen_id, peer_mac, &peer_port, 10000000, 0);
-        res = acc_id;
-        if (acc_id < 0) {
-            goto cleanup;
-        }
-        if (sceNet_lib_E0A81C7C(peer_mac, g_client_ctx->target_mac, 6) == 0 && peer_port == 0x8001) {
-            g_client_ctx->ptp_id = acc_id;
-            sceNetAdhocPtpClose(listen_id, 0);
-            ptp_id = acc_id;
+    do {
+        if (listen_id < 0) {
             break;
         }
-        sceNetAdhocPtpClose(acc_id, 0);
-    }
+        g_client_ctx->ptp_id = listen_id;
 
-    if (g_client_abort_flag > 0) {
-        res = 0x80410c0a;
-        goto cleanup;
-    }
+        int accepted = 0;
+        for (;;) {
+            int acc_id = sceNetAdhocPtpAccept(listen_id, peer_mac, &peer_port, 10000000, 0);
+            res = acc_id;
+            if (acc_id < 0) {
+                break;
+            }
+            if (sceNet_lib_E0A81C7C(peer_mac, g_client_ctx->target_mac, 6) == 0 && peer_port == 0x8001) {
+                g_client_ctx->ptp_id = acc_id;
+                sceNetAdhocPtpClose(listen_id, 0);
+                ptp_id = acc_id;
+                accepted = 1;
+                break;
+            }
+            sceNetAdhocPtpClose(acc_id, 0);
+        }
+        if (!accepted) {
+            break;
+        }
 
-    hdr_len = 4;
-    res = sceNetAdhocPtpRecv(ptp_id, &total_len, &hdr_len, 10000000, 0);
-    if (res < 0) {
-        goto cleanup;
-    }
-    total_len = __builtin_bswap32(total_len);
-    if (total_len == 0) {
-        goto cleanup;
-    }
+        if (g_client_abort_flag > 0) {
+            res = 0x80410c0a;
+            break;
+        }
 
-    uint32_t recvd = 0;
-    do {
-        chunk_len = bufsize;
-        res = sceNetAdhocPtpRecv(ptp_id, buf, &chunk_len, 10000000, 0);
+        hdr_len = 4;
+        res = sceNetAdhocPtpRecv(ptp_id, &total_len, &hdr_len, 10000000, 0);
         if (res < 0) {
-            goto cleanup;
+            break;
         }
-        if (recv_cb(cb_arg, total_len, buf, chunk_len) < 0) {
-            res = 0x80410c0c;
-            goto cleanup;
+        total_len = __builtin_bswap32(total_len);
+        if (total_len == 0) {
+            break;
         }
-        recvd += (uint32_t)chunk_len;
-    } while (recvd < total_len);
 
-cleanup:
+        uint32_t recvd = 0;
+        do {
+            chunk_len = bufsize;
+            res = sceNetAdhocPtpRecv(ptp_id, buf, &chunk_len, 10000000, 0);
+            if (res < 0) {
+                break;
+            }
+            if (recv_cb(cb_arg, total_len, buf, chunk_len) < 0) {
+                res = 0x80410c0c;
+                break;
+            }
+            recvd += (uint32_t)chunk_len;
+        } while (recvd < total_len);
+    } while (0);
+
     if (res == (int)0x80410708) {
         res = 0x80410c0a;
     }
@@ -1241,7 +1262,7 @@ int sceNetAdhocDownload_C8402ACD(uint32_t pool_size, int part)
     if (g_client_inited) {
         return 0x80410c02;
     }
-    if (part != 2 && part != 5) {
+    if ((part != 2) & (part != 5)) {
         return 0x80410c03;
     }
     int res = adhocDownloadCreatePool(pool_size, part);
@@ -1347,10 +1368,11 @@ int sceNetAdhocDownload_1AD5CC88(void)
     if (g_client_ctx->state != 3) {
         return 0x80410c07;
     }
-    if (g_client_ctx->ptp_id > 0) {
-        g_client_abort_flag = 1;
-        sceNetAdhoc_73BFD52D(g_client_ctx->ptp_id, 0x3f0);
+    if (g_client_ctx->ptp_id <= 0) {
+        return 0x80410c07;
     }
+    g_client_abort_flag = 1;
+    sceNetAdhoc_73BFD52D(g_client_ctx->ptp_id, 0x3f0);
     return 0;
 }
 
@@ -1453,7 +1475,7 @@ static void *__attribute__((noinline)) adhocDownloadAlloc(uint32_t size)
     }
     status[0] = 0x34;
     if (sceKernelReferVplStatus(g_vpl_id, status) == 0) {
-        uint32_t used = status[10] - status[11];
+        int used = (int)(status[10] - status[11]);
         if (used > g_max_vpl_used) {
             g_max_vpl_used = used;
         }
@@ -1657,7 +1679,7 @@ sceNetAdhocDownload_0A531FBE(int worker_idx, uint8_t *info_out)
         res = 0x80410c01;
     } else if (g_distribute_ctx == NULL) {
         res = 0x80410c05;
-    } else if (worker_idx > g_distribute_ctx->max_workers || info_out == NULL) {
+    } else if ((worker_idx > g_distribute_ctx->max_workers) | (info_out == NULL)) {
         res = 0x80410c03;
     } else if (g_distribute_ctx->state != 1) {
         res = 0x80410c07;
@@ -1858,79 +1880,94 @@ static void __attribute__((noinline)) adhocDistributeResetWorker(SceNetAdhocDist
 /* 0x30d4 */
 static int __attribute__((noinline)) adhocDistributeSendToClient(int worker_idx)
 {
-    uint8_t local_mac[16];
+    uint8_t self_mac[16];
     uint32_t net_len;
     int chunk_len;
     void *chunk_ptr;
     int chunk_total;
 
     SceNetAdhocDistributeWorker *w = &g_distribute_ctx->workers[worker_idx];
-    int res = sceNetGetLocalEtherAddr(local_mac);
+    int res = sceNetGetLocalEtherAddr(self_mac);
     if (res < 0) {
         return res;
     }
 
     int retries = 20;
     int ptp_id = -1;
-    for (;;) {
-        if (g_distribute_ctx->state != 1) {
-            return 0x80410c07;
+    do {
+        int connected = 0;
+        for (;;) {
+            if (g_distribute_ctx->state != 1) {
+                return 0x80410c07;
+            }
+            ptp_id = sceNetAdhocPtpOpen(self_mac, 0x8001, w->mac, 0x8001, 0x2d20, 200000, 50, 0);
+            res = ptp_id;
+            if (ptp_id < 0) {
+                break;
+            }
+            w->ptp_id = ptp_id;
+            res = sceNetAdhocPtpConnect(ptp_id, 10000000, 0);
+            if (res >= 0) {
+                connected = 1;
+                break;
+            }
+            if (res != (int)0x80410718 || retries <= 0) {
+                break;
+            }
+            retries--;
+            w->ptp_id = -1;
+            sceNetAdhocPtpClose(ptp_id, 0);
+            sceKernelDelayThread(500000);
         }
-        ptp_id = sceNetAdhocPtpOpen(local_mac, 0x8001, w->mac, 0x8001, 0x2d20, 200000, 50, 0);
-        res = ptp_id;
-        if (ptp_id < 0) {
-            goto cleanup;
-        }
-        w->ptp_id = ptp_id;
-        res = sceNetAdhocPtpConnect(ptp_id, 10000000, 0);
-        if (res >= 0) {
+        if (!connected) {
             break;
         }
-        if (res != (int)0x80410718 || retries <= 0) {
-            goto cleanup;
-        }
-        retries--;
-        w->ptp_id = -1;
-        sceNetAdhocPtpClose(ptp_id, 0);
-        sceKernelDelayThread(500000);
-    }
 
-    net_len = __builtin_bswap32((uint32_t)g_distribute_ctx->total_data_len);
-    chunk_len = 4;
-    res = sceNetAdhocPtpSend(ptp_id, &net_len, &chunk_len, 0, 0);
-    if (res < 0) {
-        goto cleanup;
-    }
-    res = sceNetAdhocPtpFlush(ptp_id, 0, 0);
-    if (res < 0) {
-        goto cleanup;
-    }
-
-    int rem = g_distribute_ctx->total_data_len;
-    while (rem > 0) {
-        if (g_distribute_ctx->send_cb(worker_idx, g_distribute_ctx->cb_arg,
-                                      g_distribute_ctx->total_data_len - rem,
-                                      &chunk_ptr, &chunk_total) < 0) {
-            res = 0x80410c0b;
-            goto cleanup;
+        net_len = __builtin_bswap32((uint32_t)g_distribute_ctx->total_data_len);
+        chunk_len = 4;
+        res = sceNetAdhocPtpSend(ptp_id, &net_len, &chunk_len, 0, 0);
+        if (res < 0) {
+            break;
         }
-        int offset = 0;
-        while (offset < chunk_total) {
-            int rem_chunk = chunk_total - offset;
-            chunk_len = (rem_chunk < 0x5a5) ? rem_chunk : 0x5a4;
-            res = sceNetAdhocPtpSend(ptp_id, (uint8_t *)chunk_ptr + offset, &chunk_len, 0, 0);
-            offset += 0x5a4;
-            if (res < 0) {
-                goto cleanup;
+        res = sceNetAdhocPtpFlush(ptp_id, 0, 0);
+        if (res < 0) {
+            break;
+        }
+
+        int rem = g_distribute_ctx->total_data_len;
+        int failed = 0;
+        while (rem > 0) {
+            if (g_distribute_ctx->send_cb(worker_idx, g_distribute_ctx->cb_arg,
+                                          g_distribute_ctx->total_data_len - rem,
+                                          &chunk_ptr, &chunk_total) < 0) {
+                res = 0x80410c0b;
+                failed = 1;
+                break;
             }
-            w->sent_len += (uint32_t)chunk_len;
+            int offset = 0;
+            while (offset < chunk_total) {
+                int rem_chunk = chunk_total - offset;
+                chunk_len = (rem_chunk < 0x5a5) ? rem_chunk : 0x5a4;
+                res = sceNetAdhocPtpSend(ptp_id, (uint8_t *)chunk_ptr + offset, &chunk_len, 0, 0);
+                offset += 0x5a4;
+                if (res < 0) {
+                    failed = 1;
+                    break;
+                }
+                w->sent_len += (uint32_t)chunk_len;
+            }
+            if (failed) {
+                break;
+            }
+            rem -= chunk_total;
         }
-        rem -= chunk_total;
-    }
+        if (failed) {
+            break;
+        }
 
-    res = sceNetAdhocPtpFlush(ptp_id, 0, 0);
+        res = sceNetAdhocPtpFlush(ptp_id, 0, 0);
+    } while (0);
 
-cleanup:
     w->ptp_id = -1;
     if (ptp_id >= 0) {
         sceNetAdhocPtpClose(ptp_id, 0);
@@ -1964,7 +2001,7 @@ int sceNetAdhocDownload_E01A6429(uint32_t pool_size, int part)
     if (g_distribute_inited) {
         return 0x80410c02;
     }
-    if (part != 2 && part != 5) {
+    if ((part != 2) & (part != 5)) {
         return 0x80410c03;
     }
     int res = adhocDownloadCreatePool(pool_size, part);
@@ -2060,7 +2097,7 @@ static int __attribute__((noinline)) adhocDistributeCreateContext(int max_worker
     if (worker_part != 2 && worker_part != 5) {
         return 0x80410c03;
     }
-    if (data_len == 0 || data_ptr == NULL) {
+    if ((data_len == 0) | (data_ptr == NULL)) {
         return 0x80410c03;
     }
     if (g_distribute_ctx != NULL) {
@@ -2099,66 +2136,73 @@ static int __attribute__((noinline)) adhocDistributeCreateContext(int max_worker
         g_distribute_ctx_buf.opt_len = data_len + 0x91;
     }
 
-    res = 0x80410c06;
-    g_distribute_ctx->opt_buf = adhocDownloadAlloc(g_distribute_ctx->opt_len);
-    if (g_distribute_ctx->opt_buf == NULL) {
-        goto fail;
-    }
-
-    uint8_t *p = adhocDownloadWriteTlvTag(1, nickname, 0x80, (uint8_t *)g_distribute_ctx->opt_buf);
-    p = adhocDownloadWriteTlvTag(2, data_ptr, data_len, p);
-    if (extra_ptr != NULL) {
-        adhocDownloadWriteTlvTag(3, extra_ptr, 8, p);
-    }
-
-    g_distribute_ctx->max_concurrent = max_concurrent;
-    g_distribute_ctx->total_data_len = total_send_len;
-    g_distribute_ctx->cb_arg = cb_arg;
-    g_distribute_ctx->send_cb = send_cb;
-
-    res = sceNetAdhocMatchingCreate(1, max_workers + 1, 0x8001, 0x800, 1000000, 30000000, 3, 1000000, adhocDistributeMatchingCb);
-    if (res < 0) {
-        goto fail;
-    }
-    g_distribute_ctx->matching_id = res;
-
-    res = sceKernelCreateSema("SceNetAdhocDistribute", 0, 0, 0x80, NULL);
-    if (res < 0) {
-        goto fail;
-    }
-    g_distribute_ctx->queue_sema = res;
-
-    if (g_distribute_ctx->max_concurrent > 0) {
-        res = sceKernelCreateSema("SceNetAdhocDistributeCounter", 0,
-                                  g_distribute_ctx->max_concurrent,
-                                  g_distribute_ctx->max_concurrent, NULL);
-        if (res < 0) {
-            goto fail;
+    do {
+        res = 0x80410c06;
+        g_distribute_ctx->opt_buf = adhocDownloadAlloc(g_distribute_ctx->opt_len);
+        if (g_distribute_ctx->opt_buf == NULL) {
+            break;
         }
-        g_distribute_ctx->concurrent_sema = res;
-    }
 
-    sceKernelMemset(th_opt, 0, 8);
-    th_opt[0] = 8;
-    th_opt[1] = (uint32_t)worker_part;
-
-    for (int i = 0; i < max_workers; i++) {
-        res = sceKernelCreateThread("SceNetAdhocDistributeWorker", adhocDistributeWorkerThread,
-                                    worker_pri, worker_stack, 0, th_opt);
-        if (res < 0) {
-            goto fail;
+        uint8_t *p = adhocDownloadWriteTlvTag(1, nickname, 0x80, (uint8_t *)g_distribute_ctx->opt_buf);
+        p = adhocDownloadWriteTlvTag(2, data_ptr, data_len, p);
+        if (extra_ptr != NULL) {
+            adhocDownloadWriteTlvTag(3, extra_ptr, 8, p);
         }
-        g_distribute_ctx->workers[i].thid = res;
-        res = sceKernelCreateEventFlag("SceNetAdhocDistributeWorker", 0, 0, NULL);
+
+        g_distribute_ctx->max_concurrent = max_concurrent;
+        g_distribute_ctx->total_data_len = total_send_len;
+        g_distribute_ctx->cb_arg = cb_arg;
+        g_distribute_ctx->send_cb = send_cb;
+
+        res = sceNetAdhocMatchingCreate(1, max_workers + 1, 0x8001, 0x800, 1000000, 30000000, 3, 1000000, adhocDistributeMatchingCb);
         if (res < 0) {
-            goto fail;
+            break;
         }
-        g_distribute_ctx->workers[i].evf_id = res;
-    }
+        g_distribute_ctx->matching_id = res;
 
-    return 0;
+        res = sceKernelCreateSema("SceNetAdhocDistribute", 0, 0, 0x80, NULL);
+        if (res < 0) {
+            break;
+        }
+        g_distribute_ctx->queue_sema = res;
 
-fail:
+        if (g_distribute_ctx->max_concurrent > 0) {
+            res = sceKernelCreateSema("SceNetAdhocDistributeCounter", 0,
+                                      g_distribute_ctx->max_concurrent,
+                                      g_distribute_ctx->max_concurrent, NULL);
+            if (res < 0) {
+                break;
+            }
+            g_distribute_ctx->concurrent_sema = res;
+        }
+
+        sceKernelMemset(th_opt, 0, 8);
+        th_opt[0] = 8;
+        th_opt[1] = (uint32_t)worker_part;
+
+        int worker_failed = 0;
+        for (int i = 0; i < max_workers; i++) {
+            res = sceKernelCreateThread("SceNetAdhocDistributeWorker", adhocDistributeWorkerThread,
+                                        worker_pri, worker_stack, 0, th_opt);
+            if (res < 0) {
+                worker_failed = 1;
+                break;
+            }
+            g_distribute_ctx->workers[i].thid = res;
+            res = sceKernelCreateEventFlag("SceNetAdhocDistributeWorker", 0, 0, NULL);
+            if (res < 0) {
+                worker_failed = 1;
+                break;
+            }
+            g_distribute_ctx->workers[i].evf_id = res;
+        }
+        if (worker_failed) {
+            break;
+        }
+
+        return 0;
+    } while (0);
+
     if (g_distribute_ctx != NULL) {
         for (int i = 0; i < max_workers; i++) {
             SceNetAdhocDistributeWorker *w = &g_distribute_ctx->workers[i];
@@ -2207,26 +2251,29 @@ static int __attribute__((noinline)) adhocDistributeStartMatching(int evth_pri, 
 
     g_distribute_ctx->state = 1;
     int res = 0;
+    int started_ok = 1;
     for (idx = 0; idx < g_distribute_ctx->max_workers; idx++) {
         SceNetAdhocDistributeWorker *w = &g_distribute_ctx->workers[idx];
         adhocDistributeResetWorker(w);
         if (w->thid >= 0) {
             res = sceKernelStartThread(w->thid, 4, &idx);
             if (res < 0) {
-                goto fail;
+                started_ok = 0;
+                break;
             }
         }
     }
 
-    res = sceNetAdhocMatching_E8454C65(g_distribute_ctx->matching_id,
-                                       evth_pri, evth_stack, evth_part,
-                                       inth_pri, inth_stack, inth_part,
-                                       g_distribute_ctx->opt_len, g_distribute_ctx->opt_buf);
-    if (res >= 0) {
-        return 0;
+    if (started_ok) {
+        res = sceNetAdhocMatching_E8454C65(g_distribute_ctx->matching_id,
+                                           evth_pri, evth_stack, evth_part,
+                                           inth_pri, inth_stack, inth_part,
+                                           g_distribute_ctx->opt_len, g_distribute_ctx->opt_buf);
+        if (res >= 0) {
+            return 0;
+        }
     }
 
-fail:
     for (;;) {
         sceKernelCancelSema(g_distribute_ctx->queue_sema, 0, &num_wait);
         int retry = 0;
