@@ -124,7 +124,7 @@ int SysMemInit(SceSize argSize __attribute__((unused)), const void *argBlock)
     }
     // 10B88
     SysMemThreadConfig *threadConf = config->threadConf;
-    g_1453C = 0xFFFFFFFF;
+    gSysmemRestrictionFlags = 0xFFFFFFFF;
     gSysmemRandomValue = config->randomValue;
     threadConf->kernelLibs[2] = &__library_exports_5; // 0x11EE0 sceSuspendForKernel
     threadConf->kernelLibs[3] = &__library_exports_4; // 0x11ED0 sceSysEventForKernel

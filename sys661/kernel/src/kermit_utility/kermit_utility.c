@@ -387,7 +387,8 @@ int module_start(SceSize args, void *argp)
 {
     (void)args;
     (void)argp;
-    return sceUtility_driver_F062AEA6();
+    sceUtility_driver_F062AEA6();
+    return 0;
 }
 
 int sceUtility_driver_F062AEA6(void)
@@ -1754,15 +1755,14 @@ int sceUtilityLoadUsbModule(u32 id)
     SET_K1(0);
     if (id < 1 || id > 5) {
         SET_K1(k1);
-        return 0x80110201;
+        return 0x80110e01;
     }
     int ret = utilityLoadUsbModule(id);
-    if (ret < 0 && ret != (int)0x80111102) {
-        SET_K1(k1);
-        return ret;
+    if (ret < 0) {
+        ret = (ret & (int)0xFFFF00FF) | 0xE00;
     }
     SET_K1(k1);
-    return 0;
+    return ret;
 }
 
 int sceUtilityUnloadUsbModule(u32 id)
@@ -1771,15 +1771,14 @@ int sceUtilityUnloadUsbModule(u32 id)
     SET_K1(0);
     if (id < 1 || id > 5) {
         SET_K1(k1);
-        return 0x80110201;
+        return 0x80110e01;
     }
     int ret = utilityUnloadUsbModule(id);
-    if (ret < 0 && ret != (int)0x80111103) {
-        SET_K1(k1);
-        return ret;
+    if (ret < 0) {
+        ret = (ret & (int)0xFFFF00FF) | 0xE00;
     }
     SET_K1(k1);
-    return 0;
+    return ret;
 }
 
 static int utilityLoadAvModRaw(u32 id)
@@ -2203,8 +2202,6 @@ static int utilityOskMutexInit(void)
 
 int sceUtility_private_B08B2B48(void)
 {
-    if (g_dialog.status == 0)
-        return 2;
     return (int)g_dialog.status;
 }
 

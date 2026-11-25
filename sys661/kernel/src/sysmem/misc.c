@@ -13,21 +13,21 @@ s32(*gGetIdFunc)(const char *path, char *id);
 SceGameInfo SystemGameInfo;
 
 // 140C8
-char g_140C8[9];
+char gSystemIdString[9];
 
 // 14538
 s32 gSysmemRandomValue;
 
 // 1453C
-u32 g_1453C;
+u32 gSysmemRestrictionFlags;
 
 // 14540
 u32 gSysmemModel;
 
 void InitSystemIdString(void)
 {
-    strncpy(g_140C8, "invalid", 8);
-    g_140C8[8] = '\0';
+    strncpy(gSystemIdString, "invalid", 8);
+    gSystemIdString[8] = '\0';
 }
 
 s32 SysMemUserForUser_945E45DA(char *arg)
@@ -38,7 +38,7 @@ s32 SysMemUserForUser_945E45DA(char *arg)
         return SCE_ERROR_KERNEL_ILLEGAL_ADDR;
     }
     // A280
-    strncpy(arg, g_140C8, 8);
+    strncpy(arg, gSystemIdString, 8);
     arg[8] = '\0';
     pspSetK1(oldK1);
     return 0;
@@ -46,7 +46,7 @@ s32 SysMemUserForUser_945E45DA(char *arg)
 
 s32 SysMemForKernel_A03CB480(char *arg)
 {
-    strncpy(g_140C8, arg, 8);
+    strncpy(gSystemIdString, arg, 8);
     return 0;
 }
 
@@ -621,14 +621,14 @@ s32 sceKernelGetInitialRandomValue(void)
 
 s32 SysMemUserForUser_D8DE5C1E(void)
 {
-    if (g_1453C != 0)
+    if (gSysmemRestrictionFlags != 0)
         return SCE_ERROR_KERNEL_ERROR;
     return 0;
 }
 
 u32 SysMemForKernel_13EE28DA(u32 flag)
 {
-    return (g_1453C &= flag);
+    return (gSysmemRestrictionFlags &= flag);
 }
 
 u32 sceKernelGetModel(void)
