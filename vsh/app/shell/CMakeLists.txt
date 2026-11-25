@@ -306,6 +306,17 @@ psp2_module(vs0_vsh_shell_shell KIND user COMPILER snc PARTIAL SOURCES
 	src/liblocation/src/location_service/location_util.cpp
 	src/liblocation/src/location_service/location_setting.cpp
 	src/liblocation/src/location_service/location_poll.cpp
+	src/liblocation/src/location_service/client_manager.cpp
+	src/liblocation/src/location_service/driver_controller.cpp
+	src/liblocation/src/location_service/driver_manager.cpp
+	src/liblocation/src/location_service/gps_ctrl_sm.cpp
+	src/liblocation/src/location_service/flying_start_sm.cpp
+	src/liblocation/src/location_service/heading_manager.cpp
+	src/liblocation/src/location_service/provider_gps_sm.cpp
+	src/liblocation/src/location_service/qualcomm_adapter.cpp
+	src/liblocation/src/location_service/wmm_geomag.cpp
+	src/liblocation/src/location_service/location_perm_svc.cpp
+	src/liblocation/src/location_service/location_perm_server.cpp
 	shell.c
 )
 target_include_directories(vs0_vsh_shell_shell PRIVATE "${PSP2_SRC}/vsh/paf/include"
