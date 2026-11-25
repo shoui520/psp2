@@ -542,7 +542,16 @@ psp2_module(vs0_vsh_shell_shell KIND user COMPILER snc PARTIAL SOURCES
 	src/topmenu_plugin/src/online_storage_launcher.cpp
 	src/topmenu_plugin/src/topmenu_input_listener.cpp
 	src/topmenu_plugin/src/patch_chk_launcher.cpp
+	src/topmenu_plugin/src/topmenu_bg_app_ctrl.cpp
+	src/topmenu_plugin/src/psm_update_job.cpp
 	src/topmenu_plugin/src/topmenu_gesture_listener.cpp
+	src/topmenu_plugin/src/spawn_process_job.cpp
+	src/topmenu_plugin/src/update_addcont_license_job.cpp
+	src/topmenu_plugin/src/psn_signin_dialog_job.cpp
+	src/topmenu_plugin/src/update_ftt_license_job.cpp
+	src/topmenu_plugin/src/update_license_job.cpp
+	src/topmenu_plugin/src/remove_savedata_job.cpp
+	src/topmenu_plugin/src/online_storage_delete_launcher.cpp
 	src/topmenu_plugin/src/topmenu_lsdb_sync.cpp
 	shell.c
 )

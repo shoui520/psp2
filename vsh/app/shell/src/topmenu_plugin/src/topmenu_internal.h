@@ -50,9 +50,11 @@
 #include <widget/w_scroll_view_base.h>
 #include <widget/w_pageturn.h>
 #include <widget/w_text.h>
+#include <widget/w_rich_text.h>
 #include <inputdevice/inputlistener.h>
 #include <appmgr.h>
 #include <appmgr/appmgr.h>
+#include <vshbridge/vshbridge.h>
 #include <libhttp/libhttp_url.h>
 #include <common_gui_dialog/common_gui_dialog.h>
 #include "../../livespace_db/lsdb_keys.h"
@@ -143,22 +145,35 @@ int sceKernelDeleteSemaForUser(SceUID semaId);
 int sceCompatGetPspSystemSoftwareVersion(void);
 int sceAppMgrSetRecommendedScreenOrientationForShell(int orientation);
 int sceAppMgrDestroyAppByName(const char *name);
+int sceAppMgrDeactivateApp(int appId);
 int sceAppMgrOverwriteLaunchParamForShell(int appId, const char *param);
+int sceAppMgrPeekLaunchParamForShell(int appId, char *param, SceSize size);
 int sceAppMgrLaunchAppByNameForShell(SceUInt32 flags, const char *name, const char *param);
+int sceAppMgrLaunchAppByName2ndStage(int appId, const char *path, SceUInt32 budgetSize,
+				     SceUInt32 processAttr, const AppmgrLaunchAppOption *option);
+int sceAppMgrResumeBgAppByShell(int appId);
 int sceAppMgrGetCoredumpStateForShell(TopmenuCoredumpState *state);
 int appmgrFinishCoredumpForShellSyscall(void);
+SceUID appmgrGetProcessIdByAppIdForShellSyscall(int appId);
+int appmgrDestroyAppByAppIdSyscall(int appId);
+int appmgrNotifyLiveBoardModeForShellSyscall(int appId, int mode);
 int sceSharedFbGetRenderingInfo(SceUID pid);
 int sceKernelCheckDipswForUser(SceUInt32 bit);
 SceUInt32 sceKernelGetSystemTimeLow(void);
 SceUInt64 sceKernelGetSystemTimeWideForUser(void);
 SceUInt32 vshDisplayRegisterFrameBufCallback(SceUID cbId);
 SceUInt32 vshCoredumpDeleteCrashReportCaf(void);
+int SceNpManagerSP_7C78A608(int *outState);
 int sceErrorGetExternalString(char *outBuf, int errorCode);
 int SceLsdb_DD7D68C0(AppInfoSClient *client, LsdbQueryCondition *conditions,
 		     paf::vector<paf::string> *outTitleIds, int option);
 int SceLsdb_87EE0526(AppInfoSClient *client, const paf::string *titleId, LsdbAppInfoPtr *outInfo);
 int SceLsdb_E2838878(AppInfoSClient *client, const char *uri, paf::string *outTitleId, int option);
 const char *SceLsdb_8FDA59EA(const LsdbAppInfoPtr *app);
+const char *sceLsdbGetSelfPath(const LsdbAppInfoPtr *app);
+const char *sceLsdbGetDiscId(const LsdbAppInfoPtr *app);
+SceInt64 sceLsdbGetParentalLevel(const LsdbAppInfoPtr *app);
+SceInt64 sceLsdbGetBootable(const LsdbAppInfoPtr *app);
 const char *sceLsdbGetAppVer(const LsdbAppInfoPtr *app);
 const char *sceLsdbGetGameDataId(const LsdbAppInfoPtr *app);
 const char *sceLsdbGetStitle(const LsdbAppInfoPtr *app);
@@ -166,8 +181,13 @@ const char *sceLsdbGetTitle(const LsdbAppInfoPtr *app);
 const char *sceLsdbGetCategory(const LsdbAppInfoPtr *app);
 const char *sceLsdbGetOriginalPath(const LsdbAppInfoPtr *app);
 const char *SceLsdb_E26FC9E8(const LsdbAppInfoPtr *app);
+const char *SceLsdb_2D538EB9(const LsdbAppInfoPtr *app);
 int sceLsdbGetMetaContentsPath(const LsdbAppInfoPtr *app);
 SceInt64 SceLsdb_849E8DC6(const LsdbAppInfoPtr *app);
+SceInt32 SceLsdb_132FA3C6(const LsdbAppInfoPtr *app);
+SceUInt32 SceLsdb_45B38A03(const LsdbAppInfoPtr *app);
+SceInt64 SceLsdb_1518F869(const LsdbAppInfoPtr *app);
+SceInt64 SceLsdb_43153457(const LsdbAppInfoPtr *app);
 SceInt64 SceLsdb_9D27A87D(const LsdbAppInfoPtr *app);
 SceInt64 SceLsdb_0B16523B(const LsdbAppInfoPtr *app);
 int SceLsdb_DA0D7B0A(const LsdbAppInfoPtr *app);
@@ -910,25 +930,91 @@ void topmenuScrollToTabPageKey(SceInt32 pageKey);				/* 0x812737FE */
 SceInt32 topmenuGetFocusedTabPageKey(TopWindow *window);			/* 0x81285A3C */
 
 /* Process base and Batch 4 job helpers */
+class TopmenuSpawnConfirmHandler : public CommonGuiDialogHandler {
+public:
+	TopmenuSpawnConfirmHandler(const LsdbAppInfoPtr *appInfo, SceInt32 launchAppId,
+				   SceInt32 existingFlags, SceInt32 extraFlags);
+	virtual ~TopmenuSpawnConfirmHandler();
+	virtual void operator()(SceInt32 dialogId, SceInt32 button);
+
+	void CancelLaunchAndReturnHome();
+	void ResumePendingLaunch();
+
+	LsdbAppInfoPtr m_appInfo;	/* +0x04 */
+	SceInt32 m_launchAppId;		/* +0x0C */
+	SceInt32 m_existingFlags;	/* +0x10 */
+	SceInt32 m_extraFlags;		/* +0x14 */
+};
+
+typedef char TopmenuSpawnConfirmHandlerSizeCheck[sizeof(TopmenuSpawnConfirmHandler) == 24 ? 1 : -1];
+
+void topmenuProcessListAdd(TopmenuProcessBase *proc);				/* 0x81281758 */
+void topmenuProcessListRemove(TopmenuProcessBase *proc);			/* 0x8128178E */
+TopmenuAppProcess *topmenuFindProcessByTitleId(TopWindow *window, const char *titleId); /* 0x8127AB9A */
+TopmenuAppProcess *topmenuFindProcessByRunningAppId(TopWindow *window, SceInt32 appId); /* 0x8127A7FC */
+void topmenuRecordLaunchedAppFlags(TopWindow *window, SceInt32 appId,
+				   const char *appName, SceInt64 attribute);	/* 0x8127A874 */
+bool topmenuIsBlockedLaunchTitle(const char *titleId);				/* 0x8127289E */
+void topmenuSwitchToProcess(TopWindow *window, TopmenuAppProcess *proc, bool animate); /* 0x81272BAE */
+void topmenuReturnToHomeIfActive(TopmenuAppProcess *proc);			/* 0x8127B8B6 */
+void topmenuUpdateIduAfterAppFailure(TopWindow *window, TopTab *tab);		/* 0x8127A5EA */
+int shellSvcActivityPostSystemSoftwareImpl(const char *titleId);		/* 0x811BD168 */
+
+LsdbAppInfoPtr *topmenuProcessGetAppInfo(TopmenuProcessBase *proc);		/* 0x8129A16C */
 void topmenuProcessSetState(TopmenuProcessBase *proc, SceInt32 state);		/* 0x8129A172 */
+const char *topmenuProcessGetTitleId(const TopmenuProcessBase *proc);		/* 0x8129A1FA */
+void topmenuProcessSetLiveAreaFocus(TopmenuProcessBase *proc, bool focused);	/* 0x8129A222 */
 void topmenuProcessActivateLiveArea(TopmenuProcessBase *proc);			/* 0x8129A294 */
+TopTabAppData *topmenuProcessGetTabAppData(const TopmenuProcessBase *proc);	/* 0x8129A3D8 */
+void topmenuProcessResetAndCancel(TopmenuProcessBase *proc);			/* 0x8129A3E4 */
 void topmenuProcessOnEnterViewport(TopmenuProcessBase *proc);			/* 0x8129A476 */
 void topmenuProcessOnLeaveViewport(TopmenuProcessBase *proc);			/* 0x8129A510 */
 int topmenuProcessCommand(TopmenuProcessBase *proc, SceInt32 command);		/* 0x8129A6FA */
+int topmenuProcessFlushPendingAction(TopmenuProcessBase *proc);			/* 0x8129A7A4 */
+void topmenuProcessClearSpawnJob(TopmenuProcessBase *proc);			/* 0x8129A7BE */
 int topmenuProcessSpawn(TopmenuProcessBase *proc, SceInt32 startArg, SceInt32 resumeFlag); /* 0x8129A828 */
 int topmenuProcessLaunchAsync(TopmenuProcessBase *proc, SceInt32 startArg);	/* 0x8129A966 */
+int topmenuProcessAttachAppId(TopmenuProcessBase *proc, SceInt32 appId);	/* 0x8129AA7E */
+int topmenuProcessPollSharedFb(TopmenuProcessBase *proc);			/* 0x8129AA9A */
+bool topmenuProcessIsSpawnedOrRunning(const TopmenuProcessBase *proc);		/* 0x8129AAC8 */
+SceInt32 topmenuProcessGetPendingLaunchId(const TopmenuProcessBase *proc);	/* 0x8129AB02 */
 SceUID topmenuProcessGetPid(const TopmenuProcessBase *proc);			/* 0x8129A20C */
+void topmenuCreateSpawnJob(paf::common::SharedPtr<paf::job::JobItem> *outJob,
+			   TopmenuProcessBase *proc, SceInt32 launchAppId,
+			   SceInt32 checkFlags);				/* 0x8129BD9C */
+int topmenuStartSpawnJob(paf::common::SharedPtr<paf::job::JobItem> *outJob,
+			 TopmenuProcessBase *proc, SceInt32 launchAppId,
+			 SceInt32 checkFlags);					/* 0x8129BDFA */
+int topmenuEnqueueExistingSpawnJob(paf::common::SharedPtr<paf::job::JobItem> *job); /* 0x8129BE88 */
+SceInt32 topmenuSpawnJobGetLaunchAppId(const paf::job::JobItem *job);		/* 0x8129AB02 helper */
+int topmenuStartSpawnBgJob(paf::common::SharedPtr<paf::job::JobItem> *outJob,
+			   const LsdbAppInfoPtr *appInfo, SceInt32 launchAppId); /* 0x8129E818 */
 int topmenuSpawnWaitPromoteReady(const paf::string *titleId);			/* 0x8129EC6A */
-void topmenuSpawnHandlePromoteFailure(const paf::string *titleId, SceInt32 retryCount); /* 0x8129EAF8 */
+int topmenuSpawnHandlePromoteFailure(const paf::string *titleId, SceInt32 retryCount); /* 0x8129EAF8 */
+void topmenuSetPromoteWaitLock(bool locked, const char *titleId);		/* 0x8129EEF8 */
 void topmenuSpawnOnInstallNoticeEvent(int code, const void *data, SceSize size, void *arg); /* 0x8129EF5C */
 void topmenuStartPsmUpdateJob(paf::common::SharedPtr<paf::job::JobItem> *outJob,
 			      const paf::string *titleId, SceInt32 pageKey);	/* 0x8129B436 */
+void topmenuStartUpdateAddcontLicenseJob(paf::common::SharedPtr<paf::job::JobItem> *outJob,
+					 const char *titleId, SceInt32 launchAppId,
+					 SceInt32 existingFlags, SceInt32 extraFlags); /* 0x8129F682 */
 void topmenuStartPsnSignInDialogJob(paf::common::SharedPtr<paf::job::JobItem> *outJob,
 				    TopmenuAppProcess *proc);			/* 0x8129FC14 */
 bool topmenuHasPendingFttUpdateTask(const paf::string *titleId);		/* 0x8129FF40 */
 void topmenuStartUpdateFttLicenseJob(paf::common::SharedPtr<paf::job::JobItem> *outJob,
 				     TopmenuAppProcess *proc,
 				     const LsdbAppInfoPtr *appInfo);		/* 0x812A03AE */
+void topmenuOnLicenseDialogTabLeave(SceInt32 eventType, void *sender, SceInt32 eventArg,
+				    void *userData);				/* 0x812A053E */
+void topmenuStartUpdateLicenseJob(paf::common::SharedPtr<paf::job::JobItem> *outJob,
+				  const LsdbAppInfoPtr *appInfo);		/* 0x812A0AEA */
+void topmenuStartRemoveSavedataJob(paf::common::SharedPtr<paf::job::JobItem> *outJob,
+				   const LsdbAppInfoPtr *appInfo, SceInt32 launchAppId,
+				   SceInt32 existingFlags, SceInt32 extraFlags); /* 0x812A122C */
+int topmenuShowOnlineStorageDeletePrompt(const LsdbAppInfoPtr *appInfo, SceInt32 launchAppId,
+					 SceInt32 existingFlags, SceInt32 extraFlags,
+					 const paf::LocalFileStat *saveStat,
+					 SceInt32 errorCode);			/* 0x812A1D82 */
 bool bgdlResolvePspInstallTitleId(const LsdbAppInfoPtr *appInfo, paf::string *outTitleId); /* 0x81113900 */
 
 /* Batch 3 cross-TU APIs */
