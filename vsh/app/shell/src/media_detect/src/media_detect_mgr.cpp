@@ -12,7 +12,7 @@
 #include <thread/thread.h>
 
 extern "C" {
-extern int vshIoUmount(int id, int force, int opt1, int opt2);
+extern int vshIoUmount(int id, int force, SceUInt32 reservedLow, SceUInt32 reservedHigh);
 extern int vshIoCreateMountEvent(int id, int flags);
 extern int vshIoDeleteMountEvent(int eventId);
 extern int vshIoCreateErrorEvent(int id, int flags, void *outInfo);

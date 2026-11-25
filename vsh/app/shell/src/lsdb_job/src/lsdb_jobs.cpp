@@ -36,11 +36,11 @@ struct LsdbPageThemeItem {
 	int texHeight;
 	int imageWidth;
 	int imageHeight;
-	int reserved01;
+	int fontColorWithShadow;
 
 	LsdbPageThemeItem()
 		: bgColor(0), texWidth(0), texHeight(0), imageWidth(0), imageHeight(0),
-		  reserved01(0x01FFFFFF) {}
+		  fontColorWithShadow(0x01FFFFFF) {}
 };
 
 struct LsdbIconInfo {
@@ -81,7 +81,7 @@ struct LsdbAttrMapVal {
 	int type;
 	int pad;
 	union {
-		SceInt64 i64;
+		SceInt64 intVal;
 		paf::string *str;
 	};
 };

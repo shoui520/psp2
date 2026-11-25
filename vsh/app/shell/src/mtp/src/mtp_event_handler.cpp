@@ -10,6 +10,8 @@
 #include <plugin.h>
 #include <job/job.h>
 
+#include "../../../plugins.h"
+#include "../../applauncher_plugin/src/applauncher.h"
 #include "../../livespace_db/lsdb_keys.h"
 
 extern "C" {
@@ -117,17 +119,17 @@ int MtpEventHandler::SetCmaIconLock(SceUInt8 unlock)
 	paf::Plugin *plugin = paf::Plugin::Find("applauncher_plugin");
 	if (plugin == NULL)
 		return -1;
-	void *iface = plugin->GetInterface(1);
+	ApplauncherInterface *iface = static_cast<ApplauncherInterface *>(plugin->GetInterface(1));
 	if (iface == NULL)
 		return -1;
 
 	paf::string titleId("NPXS10026");
 	if (unlock != 0) {
 		typedef void (*UnlockFn)(const paf::string *, int);
-		(*(UnlockFn *)((char *)iface + 16))(&titleId, 1);
+		reinterpret_cast<UnlockFn>(iface->func[4])(&titleId, 1);
 	} else {
 		typedef void (*LockFn)(const paf::string *);
-		(*(LockFn *)((char *)iface + 20))(&titleId);
+		reinterpret_cast<LockFn>(iface->func[5])(&titleId);
 	}
 	return 0;
 }
@@ -151,10 +153,10 @@ void MtpEventHandler::OnDisconnected()
 
 	paf::Plugin *topmenu = paf::Plugin::Find("topmenu_plugin");
 	if (topmenu != NULL) {
-		void *iface = topmenu->GetInterface(1);
+		ShellPluginInterface *iface = static_cast<ShellPluginInterface *>(topmenu->GetInterface(1));
 		if (iface != NULL) {
 			typedef const char *(*GetActiveTitleFn)(void);
-			const char *active = (*(GetActiveTitleFn *)((char *)iface + 184))();
+			const char *active = reinterpret_cast<GetActiveTitleFn>(iface->func[46])();
 			if (active != NULL && sce_paf_strcmp(active, "NPXS10026") == 0)
 				return;
 		}
@@ -229,17 +231,17 @@ void MtpEventHandler::OnConnected()
 
 	paf::Plugin *topmenu = paf::Plugin::Find("topmenu_plugin");
 	if (topmenu != NULL) {
-		void *iface = topmenu->GetInterface(1);
+		ShellPluginInterface *iface = static_cast<ShellPluginInterface *>(topmenu->GetInterface(1));
 		if (iface != NULL) {
 			typedef const char *(*GetActiveTitleFn)(void);
-			const char *active = (*(GetActiveTitleFn *)((char *)iface + 184))();
+			const char *active = reinterpret_cast<GetActiveTitleFn>(iface->func[46])();
 			if (active != NULL && sce_paf_strcmp(active, "NPXS10026") == 0) {
 				m_isConnected = 1;
 				mtpOpenBusyDialog();
 				return;
 			}
 			typedef int (*IsHomeFn)(void);
-			if ((*(IsHomeFn *)((char *)iface + 108))() != 0) {
+			if (reinterpret_cast<IsHomeFn>(iface->func[27])() != 0) {
 				m_isConnected = 1;
 				mtpOpenBusyDialog();
 				return;

@@ -7,13 +7,14 @@
 #include <scetypes.h>
 #include <std/string.h>
 #include <framework.h>
+#include <common_gui_dialog/common_gui_dialog.h>
 
 extern "C" {
 extern int sceClibPrintf(const char *fmt, ...);
-extern void SceCommonGuiDialog_696DB9C9(void *param);
 }
 
-extern int strongDialogOpenMessageDialog(const void *param, SceUInt32 mode, int flags); /* 0x8124D61C */
+extern int strongDialogOpenMessageDialog(const CommonGuiLayoutDialogParam *param,
+	SceUInt32 mode, int flags);				/* 0x8124D61C */
 extern void strongDialogClose(int dlgId);			/* 0x8124D69A */
 
 static int s_usbError1DlgId = -1;				/* 0x81544E20 */
@@ -21,49 +22,15 @@ static int s_usbError2DlgId = -1;				/* 0x81544E24 */
 static int s_usbError3DlgId = -1;				/* 0x81544E28 */
 static int s_mtpBusyDlgId = -1;					/* 0x81544E2C */
 
-struct MtpUsbErrorDialogListener {
+class MtpUsbErrorDialogListener : public CommonGuiDialogHandler {
+public:
 	virtual ~MtpUsbErrorDialogListener() {}
-};
-
-struct MtpMessageDialogParam {
-	SceUInt8 commonHeader[72];				/* +0 */
-	const void *style1;					/* +72 */
-	const void *style2;					/* +76 */
-	const void *style3;					/* +80 */
-	paf::wstring title;					/* +84 */
-	paf::wstring message;					/* +96 */
-	const void *extra1;					/* +108 */
-	const void *extra2;					/* +112 */
-	const void *extra3;					/* +116 */
-	const void *extra4;					/* +120 */
-	float scale;						/* +128 */
-	paf::graph::Surface *iconSurface;			/* +132 */
-	void *widgetRef;					/* +136 */
-	paf::graph::Surface *bgSurface;				/* +140 */
-	MtpUsbErrorDialogListener *listener;			/* +144 */
-	void *secondaryListener;				/* +148 */
-	void *tertiaryListener;					/* +152 */
-
-	MtpMessageDialogParam()
-		: style1(NULL), style2(NULL), style3(NULL),
-		  extra1(NULL), extra2(NULL), extra3(NULL), extra4(NULL),
-		  scale(1.0f), iconSurface(NULL), widgetRef(NULL), bgSurface(NULL),
-		  listener(NULL), secondaryListener(NULL), tertiaryListener(NULL)
+	virtual void operator()(SceInt32 dialogId, SceInt32 button)
 	{
-		SceCommonGuiDialog_696DB9C9(commonHeader);
-		commonHeader[68] = 0;
-	}
-
-	~MtpMessageDialogParam()
-	{
-		if (bgSurface != NULL)
-			bgSurface->Release();
-		if (widgetRef != NULL) {
-			typedef void (*ReleaseFn)(void *);
-			(*(ReleaseFn **)(*(void **)widgetRef))[7](widgetRef);
-		}
-		if (iconSurface != NULL)
-			iconSurface->Release();
+		(void)button;
+		strongDialogClose(dialogId);
+		if (s_usbError1DlgId == dialogId)
+			s_usbError1DlgId = -1;
 	}
 };
 
@@ -94,13 +61,13 @@ int openUsbError1Dialog(void)
 		return -1;
 	}
 
-	MtpMessageDialogParam param;
+	CommonGuiLayoutDialogParam param;
 	paf::IDParam msgId(0x76C70719u);
 	const wchar_t *msg = fw->GetCommonString(msgId);
 	if (msg != NULL)
-		param.message = msg;
-	param.commonHeader[53] = 1;
-	param.listener = new MtpUsbErrorDialogListener();
+		param.text = msg;
+	param.notifyClose = true;
+	param.handler = new MtpUsbErrorDialogListener();
 
 	int dlgId = strongDialogOpenMessageDialog(&param, 1, 1);
 	s_usbError1DlgId = dlgId;
@@ -140,11 +107,11 @@ void mtpOpenBusyDialog(void)
 		return;
 	}
 
-	MtpMessageDialogParam param;
+	CommonGuiLayoutDialogParam param;
 	paf::IDParam msgId(0xB9650C36u);
 	const wchar_t *msg = fw->GetCommonString(msgId);
 	if (msg != NULL)
-		param.message = msg;
+		param.text = msg;
 
 	int dlgId = strongDialogOpenMessageDialog(&param, 1, 1);
 	s_mtpBusyDlgId = dlgId;
