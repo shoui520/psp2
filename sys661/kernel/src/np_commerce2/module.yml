@@ -1,0 +1,212 @@
+name: sceNpCommerce2
+attributes: 0x0006
+version: [1, 3]
+sdk_version: 0x06060110
+stub_order: [Kernel_Library, SysMemUserForUser, ThreadManForUser, sceHttp, sceNetIfhandle_lib, sceNet_lib, sceNp, sceNpCore, sceParseHttp, sceParseUri, sceRtc]
+exports:
+  - name: syslib
+    version: [0, 0]
+    attributes: 0x8000
+    variables:
+      - module_info: 0xf01d73a7
+      - module_sdk_version: 0x11b97506
+  - name: sceNpCommerce2
+    version: [0, 17]
+    attributes: 0x0001
+    len: 5
+    pad: 1
+    extra_words: [0x00040000]
+    bucket_words: [0x00030000, 0x00060005, 0x00070007, 0x00090008, 0x000d000c, 0x0010000d, 0x00110010, 0x00140013, 0x00160016, 0x001b0019, 0x001f001e, 0x00230021, 0x00260025, 0x002b0029, 0x002d002c, 0x0030002f, 0x00350031, 0x00370037, 0x00380038, 0x00390038, 0x00390039, 0x003b003a, 0x003f003e, 0x00400040, 0x00430041, 0x00460045, 0x00480048, 0x004b004a, 0x004e004c, 0x004e004e, 0x00530050, 0x00540053]
+    functions:
+      - sceNpCommerce2GetProductInfoStart: 0x005b5f20
+      - sceNpCommerce2_02C307C0: 0x02c307c0
+      - sceNpCommerce2_02CADA41: 0x02cada41
+      - sceNpCommerce2GetGameProductInfoFromContentInfo: 0x05e7afbc
+      - sceNpCommerce2_06618C81: 0x06618c81
+      - sceNpCommerce2_0A6AB496: 0x0a6ab496
+      - sceNpCommerce2Init: 0x0e9956e3
+      - sceNpCommerce2_157FA8AA: 0x157fa8aa
+      - sceNpCommerce2DestroyReq: 0x1888a9fe
+      - sceNpCommerce2GetPrice: 0x1c85ed88
+      - sceNpCommerce2GetGameProductInfo: 0x1c952dcb
+      - sceNpCommerce2_1D9C32C0: 0x1d9c32c0
+      - sceNpCommerce2_22CEC5E2: 0x22cec5e2
+      - sceNpCommerce2_287B6FB3: 0x287b6fb3
+      - sceNpCommerce2_2AFD0CC7: 0x2afd0cc7
+      - sceNpCommerce2CreateSessionStart: 0x2b25f6e9
+      - sceNpCommerce2GetProductInfoCreateReq: 0x3371d5f1
+      - sceNpCommerce2_3546C737: 0x3546c737
+      - sceNpCommerce2_3755FC84: 0x3755fc84
+      - sceNpCommerce2_382803C8: 0x382803c8
+      - sceNpCommerce2_3D88DCCA: 0x3d88dcca
+      - sceNpCommerce2_3F6D413C: 0x3f6d413c
+      - sceNpCommerce2_4484DB5A: 0x4484db5a
+      - sceNpCommerce2_44B8A9A9: 0x44b8a9a9
+      - sceNpCommerce2_460A1D92: 0x460a1d92
+      - sceNpCommerce2_48D77A66: 0x48d77a66
+      - sceNpCommerce2DestroyGetProductInfoResult: 0x490210e0
+      - sceNpCommerce2_4D43B84D: 0x4d43b84d
+      - sceNpCommerce2_4DB0E04F: 0x4db0e04f
+      - sceNpCommerce2CreateSessionCreateReq: 0x4ecd4503
+      - sceNpCommerce2_51A88E18: 0x51a88e18
+      - sceNpCommerce2GetCategoryInfo: 0x54fe8871
+      - sceNpCommerce2GetCategoryInfoFromContentInfo: 0x57c8bd4e
+      - sceNpCommerce2GetSessionInfo: 0x590a3229
+      - sceNpCommerce2_5BDD4913: 0x5bdd4913
+      - sceNpCommerce2_5C691546: 0x5c691546
+      - sceNpCommerce2GetCategoryContentsCreateReq: 0x5d8c2d99
+      - sceNpCommerce2_63B96D73: 0x63b96d73
+      - sceNpCommerce2GetContentRatingDescriptor: 0x6592fe83
+      - sceNpCommerce2_66EC0829: 0x66ec0829
+      - sceNpCommerce2_6795EE19: 0x6795ee19
+      - sceNpCommerce2_69FEA1C8: 0x69fea1c8
+      - sceNpCommerce2GetContentRatingInfoFromGameProductInfo: 0x6a2ae572
+      - sceNpCommerce2CreateCtx: 0x6f1fe37f
+      - sceNpCommerce2_73F9CD9E: 0x73f9cd9e
+      - sceNpCommerce2_75DF99A9: 0x75df99a9
+      - sceNpCommerce2_77BE411B: 0x77be411b
+      - sceNpCommerce2_7B00DE40: 0x7b00de40
+      - sceNpCommerce2_7EB30CAA: 0x7eb30caa
+      - sceNpCommerce2_8026FA46: 0x8026fa46
+      - sceNpCommerce2_80A1A7A0: 0x80a1a7a0
+      - sceNpCommerce2GetCategoryContentsGetResult: 0x80a7afdb
+      - sceNpCommerce2_8139E653: 0x8139e653
+      - sceNpCommerce2_851E7844: 0x851e7844
+      - sceNpCommerce2_8642C532: 0x8642c532
+      - sceNpCommerce2_8E80E661: 0x8e80e661
+      - sceNpCommerce2_993C29DB: 0x993c29db
+      - sceNpCommerce2Term: 0xa5a34ea4
+      - sceNpCommerce2GetProductInfoGetResult: 0xaa4a1e3d
+      - sceNpCommerce2_ADAA054C: 0xadaa054c
+      - sceNpCommerce2_AE614CC6: 0xae614cc6
+      - sceNpCommerce2_AED78BDE: 0xaed78bde
+      - sceNpCommerce2GetContentInfo: 0xb0d7aa90
+      - sceNpCommerce2_B7911D82: 0xb7911d82
+      - sceNpCommerce2CreateSessionGetResult: 0xbc61ffc8
+      - sceNpCommerce2_C27FEAB1: 0xc27feab1
+      - sceNpCommerce2_C3A3EAED: 0xc3a3eaed
+      - sceNpCommerce2GetContentRatingInfoFromCategoryInfo: 0xc5505a19
+      - sceNpCommerce2AbortReq: 0xc7f32242
+      - sceNpCommerce2_CBA487E9: 0xcba487e9
+      - sceNpCommerce2_CCEEA788: 0xcceea788
+      - sceNpCommerce2InitGetCategoryContentsResult: 0xceab1829
+      - sceNpCommerce2_D4C319C6: 0xd4c319c6
+      - sceNpCommerce2_D5932A6C: 0xd5932a6c
+      - sceNpCommerce2_DA206690: 0xda206690
+      - sceNpCommerce2GetCategoryContentsStart: 0xdd6758fa
+      - sceNpCommerce2_E3455E27: 0xe3455e27
+      - sceNpCommerce2_E3EC9E14: 0xe3ec9e14
+      - sceNpCommerce2DestroyGetCategoryContentsResult: 0xed85acce
+      - sceNpCommerce2_EE7255FE: 0xee7255fe
+      - sceNpCommerce2_F0900551: 0xf0900551
+      - sceNpCommerce2GetGameSkuInfoFromGameProductInfo: 0xf2278b90
+      - sceNpCommerce2DestroyCtx: 0xf297ab9c
+      - sceNpCommerce2_F8D175FA: 0xf8d175fa
+      - sceNpCommerce2InitGetProductInfoResult: 0xfc30c19e
+      - sceNpCommerce2_FC47B63C: 0xfc47b63c
+      - sceNpCommerce2_FC687AC7: 0xfc687ac7
+imports:
+  - name: SysMemUserForUser
+    version: [0, 17]
+    attributes: 0x4000
+    pad: 6
+    functions:
+      - KprintfForUser: 0x13a5abef
+      - sceKernelGetCompiledSdkVersion: 0xfc114573
+  - name: sceNetIfhandle_lib
+    version: [0, 17]
+    attributes: 0x4009
+    pad: 5
+    functions:
+      - sceNetIfhandle_lib_15CFE3C0: 0x15cfe3c0
+      - sceNetIfhandle_lib_76BAD213: 0x76bad213
+  - name: sceNpCore
+    version: [0, 17]
+    attributes: 0x4009
+    pad: 6
+    functions:
+      - sceNpCore_52440ABF: 0x52440abf
+      - sceNpCore_E7AED5A3: 0xe7aed5a3
+  - name: sceRtc
+    version: [0, 17]
+    attributes: 0x4001
+    pad: 5
+    functions:
+      - sceRtcGetCurrentTick: 0x3f7ad767
+  - name: sceNet_lib
+    version: [0, 17]
+    attributes: 0x0009
+    pad: 5
+    functions:
+      - sceNet_lib_750F705D: 0x750f705d
+      - sceNet_lib_80C9F02A: 0x80c9f02a
+      - sceNet_lib_94DCA9F0: 0x94dca9f0
+      - sceNet_lib_96EF9DA1: 0x96ef9da1
+      - sceNet_lib_A0F16ABD: 0xa0f16abd
+      - sceNet_lib_B5CE388A: 0xb5ce388a
+      - sceNet_lib_B9085A96: 0xb9085a96
+      - sceNet_lib_BCBE14CF: 0xbcbe14cf
+      - sceNet_lib_C13C9307: 0xc13c9307
+      - sceNet_lib_CF705E46: 0xcf705e46
+      - sceNet_lib_D8722983: 0xd8722983
+  - name: sceParseUri
+    version: [0, 17]
+    attributes: 0x0009
+    pad: 4
+    functions:
+      - sceUriEscape: 0x49e950ec
+  - name: sceParseHttp
+    version: [0, 17]
+    attributes: 0x0009
+    pad: 7
+    functions:
+      - sceParseHttpResponseHeader: 0xad7bfdef
+  - name: sceHttp
+    version: [0, 17]
+    attributes: 0x0009
+    pad: 4
+    functions:
+      - sceHttpGetContentLength: 0x0282a3bd
+      - sceHttpEnableCookie: 0x0dafa58f
+      - sceHttpSetRecvTimeOut: 0x1f0fc3e3
+      - sceHttp_3C478044: 0x3c478044
+      - sceHttpAddExtraHeader: 0x3eaba285
+      - sceHttpCreateRequest: 0x47347b50
+      - sceHttpGetStatusCode: 0x4cc7d78f
+      - sceHttpDeleteConnection: 0x5152773b
+      - sceHttp_87F1E666: 0x87f1e666
+      - sceHttpSetConnectTimeOut: 0x8acd1f73
+      - sceHttpCreateConnection: 0x8eefd953
+      - sceHttpSetSendTimeOut: 0x9988172d
+      - sceHttpCreateTemplate: 0x9b1f1f36
+      - sceHttpDeleteRequest: 0xa5512e01
+      - sceHttpSendRequest: 0xbb70706f
+      - sceHttpAbortRequest: 0xc10b6bd9
+      - sceHttpGetAllHeader: 0xdb266ccf
+      - sceHttpReadData: 0xedeeb999
+      - sceHttpDeleteTemplate: 0xfcf8c055
+  - name: sceNp
+    version: [0, 17]
+    attributes: 0x0009
+    pad: 6
+    functions:
+      - sceNp_2E4769C3: 0x2e4769c3
+      - sceNpGetAccountRegion: 0xa0be3c4b
+      - sceNp_B819A0C8: 0xb819a0c8
+      - sceNp_E24DA399: 0xe24da399
+  - name: Kernel_Library
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 5
+    functions:
+      - sceKernelCpuSuspendIntr: 0x092968f4
+      - sceKernelMemset: 0xa089eca4
+      - _sceKernelCheckThreadStack: 0xd13bde95
+      - sceKernelMemcpy: 0x1839852a
+      - sceKernelCpuResumeIntr: 0x5f10d406
+  - name: ThreadManForUser
+    version: [0, 17]
+    attributes: 0x4001
+    pad: 3
+    functions:
+      - sceKernelGetSystemTimeWide: 0x82bc5777
