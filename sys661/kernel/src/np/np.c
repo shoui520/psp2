@@ -2326,13 +2326,12 @@ int sceNp_857B47D3(void)
 /* sceNp_37E1E274 @ 0x4580 */
 int sceNp_37E1E274(void)
 {
-    if (_sceKernelCheckThreadStack() < 0x7f0)
-        return 0x80550004;
-    if (g_np_inited != 0) {
-        npResidentTerm();
+    int ret = _sceKernelCheckThreadStack();
+    if (ret >= 0x7f0 && g_np_inited != 0) {
+        ret = npResidentTerm();
         g_np_inited = 0;
     }
-    return 0;
+    return ret;
 }
 
 /* sceNp_B4063F7A @ 0x45cc */

@@ -208,7 +208,7 @@ typedef struct SendMsg {
 } SendMsg;
 
 /* Forward declarations of internal helpers */
-static int matchingStartInternal(int matchingId, int evPri, int evStack, int inPri, int inStack, int optLen, const void *optData);
+static int matchingStartInternal(int matchingId, int evPri, int evStack, int evPart, int inPri, int inStack, int inPart, int optLen, const void *optData);
 static int matchingSelectTargetInternal(int matchingId, const u8 *mac, int optLen, const void *optData);
 static void *matchingAlloc(u32 size);
 static int matchingEventThread(u32 args, void *argp);
@@ -246,7 +246,7 @@ static int matchingIsLocalMacLower(const PeerNode *peer);
 int sceNetAdhocMatchingInit(u32 memsize)
 {
 	if (_sceKernelCheckThreadStack() < 0xbe0)
-		return 0x80410719;
+		return 0x80410005;
 	if (g_is_init != 0)
 		return 0x80410812;
 	if (memsize == 0)
@@ -278,7 +278,7 @@ int sceNetAdhocMatchingCreate(int mode, int maxPeers, u16 port, int bufSize, u32
 	u32 gp_val[4];
 
 	if (_sceKernelCheckThreadStack() < 0xb80)
-		return 0x80410719;
+		return 0x80410005;
 	if (g_is_init == 0)
 		return 0x80410813;
 	if ((u32)(mode - 1) >= 3u)
@@ -525,7 +525,7 @@ int sceNetAdhocMatchingStop(int matchingId)
 int sceNetAdhocMatchingDelete(int matchingId)
 {
 	if (_sceKernelCheckThreadStack() < 0xfa0)
-		return 0x80410719;
+		return 0x80410005;
 	if (g_is_init == 0)
 		return 0x80410813;
 	if (matchingId <= 0)
@@ -552,7 +552,7 @@ int sceNetAdhocMatchingDelete(int matchingId)
 int sceNetAdhocMatchingSelectTarget(int matchingId, const u8 *mac, int optLen, const void *optData)
 {
 	if (_sceKernelCheckThreadStack() < 0xb80)
-		return 0x80410719;
+		return 0x80410005;
 	if (g_is_init == 0)
 		return 0x80410813;
 	if (matchingId <= 0)
@@ -712,7 +712,7 @@ int sceNetAdhocMatchingSetHelloOpt(int matchingId, int optLen, const void *optDa
 int sceNetAdhocMatchingGetHelloOpt(int matchingId, int *pOptLen, void *optData)
 {
 	if (_sceKernelCheckThreadStack() < 0xbd0)
-		return 0x80410719;
+		return 0x80410005;
 	if (g_is_init == 0)
 		return 0x80410813;
 	if (matchingId <= 0)
@@ -782,7 +782,7 @@ int sceNetAdhocMatchingGetMembers(int matchingId, int *pSize, void *buf)
 int sceNetAdhocMatchingSendData(int matchingId, const u8 *mac, int dataLen, const void *data)
 {
 	if (_sceKernelCheckThreadStack() < 0xfa0)
-		return 0x80410719;
+		return 0x80410005;
 	if (g_is_init == 0)
 		return 0x80410813;
 	if (matchingId <= 0)
@@ -868,7 +868,7 @@ int sceNetAdhocMatchingSendData(int matchingId, const u8 *mac, int dataLen, cons
 int sceNetAdhocMatchingAbortSendData(int matchingId, const u8 *mac)
 {
 	if (_sceKernelCheckThreadStack() < 0xbb0)
-		return 0x80410719;
+		return 0x80410005;
 	if (g_is_init == 0)
 		return 0x80410813;
 	if (matchingId <= 0)
@@ -913,7 +913,7 @@ int sceNetAdhocMatchingAbortSendData(int matchingId, const u8 *mac)
 int sceNetAdhocMatchingTerm(void)
 {
 	if (_sceKernelCheckThreadStack() < 0xbe0)
-		return 0x80410719;
+		return 0x80410005;
 	if (g_is_init == 0)
 		return 0;
 	if (g_ctx_list != NULL)
@@ -933,46 +933,24 @@ int sceNetAdhocMatchingTerm(void)
 /* 0x0e88: sceNetAdhocMatchingStart */
 int sceNetAdhocMatchingStart(int matchingId, int evPri, int evStack, int inPri, int inStack, int optLen, const void *optData)
 {
-	if (_sceKernelCheckThreadStack() < 0xb80)
-		return 0x80410719;
-	if (g_is_init == 0)
-		return 0x80410813;
-	if (matchingId <= 0)
-		return 0x80410804;
-	if ((u32)(evPri - 8) >= 0x69u || (u32)(inPri - 8) >= 0x69u)
-		return 0x8041080a;
-	if (evStack < 0x1c00 || inStack < 0x1000)
-		return 0x80410818;
-	if (optLen < 0 || (optLen != 0 && optData == NULL))
-		return 0x80410805;
-
-	return matchingStartInternal(matchingId, evPri, evStack, inPri, inStack, optLen, optData);
+	if (_sceKernelCheckThreadStack() < 0xbd0)
+		return 0x80410005;
+	return matchingStartInternal(matchingId, evPri, evStack, 2, inPri, inStack, 2, optLen, optData);
 }
 
 /* 0x0f34: sceNetAdhocMatching_E8454C65 */
-int sceNetAdhocMatching_E8454C65(int matchingId, int evPri, int evStack, int inPri, int inStack, int optLen, const void *optData)
+int sceNetAdhocMatching_E8454C65(int matchingId, int evPri, int evStack, int evPart, int inPri, int inStack, int inPart, int optLen, const void *optData)
 {
-	if (_sceKernelCheckThreadStack() < 0xb80)
-		return 0x80410719;
-	if (g_is_init == 0)
-		return 0x80410813;
-	if (matchingId <= 0)
-		return 0x80410804;
-	if ((u32)(evPri - 8) >= 0x69u || (u32)(inPri - 8) >= 0x69u)
-		return 0x8041080a;
-	if (evStack < 0x400 || inStack < 0x400)
-		return 0x80410818;
-	if (optLen < 0 || (optLen != 0 && optData == NULL))
-		return 0x80410805;
-
-	return matchingStartInternal(matchingId, evPri, evStack, inPri, inStack, optLen, optData);
+	if (_sceKernelCheckThreadStack() < 0xbd0)
+		return 0x80410005;
+	return matchingStartInternal(matchingId, evPri, evStack, evPart, inPri, inStack, inPart, optLen, optData);
 }
 
 /* 0x0ff0: sceNetAdhocMatchingCancelTarget */
 int sceNetAdhocMatchingCancelTarget(int matchingId, const u8 *mac)
 {
 	if (_sceKernelCheckThreadStack() < 0xb80)
-		return 0x80410719;
+		return 0x80410005;
 	if (g_is_init == 0)
 		return 0x80410813;
 	if (matchingId <= 0)
@@ -987,7 +965,7 @@ int sceNetAdhocMatchingCancelTarget(int matchingId, const u8 *mac)
 int sceNetAdhocMatchingCancelTargetWithOpt(int matchingId, const u8 *mac, int optLen, const void *optData)
 {
 	if (_sceKernelCheckThreadStack() < 0xb80)
-		return 0x80410719;
+		return 0x80410005;
 	if (g_is_init == 0)
 		return 0x80410813;
 	if (matchingId <= 0)
@@ -1004,7 +982,7 @@ int sceNetAdhocMatchingCancelTargetWithOpt(int matchingId, const u8 *mac, int op
 int sceNetAdhocMatchingGetPoolMaxAlloc(void)
 {
 	if (_sceKernelCheckThreadStack() < 0xbe0)
-		return 0x80410719;
+		return 0x80410005;
 	if (g_is_init == 0)
 		return 0x80410813;
 	return g_max_alloc;
@@ -1023,9 +1001,17 @@ int sceNetAdhocMatchingGetPoolStat(SceNetAdhocMatchingPoolStat *poolstat)
 	return matchingGetPoolStatInternal(poolstat);
 }
 
-/* 0x11ac: matchingStartInternal */
-static int matchingStartInternal(int matchingId, int evPri, int evStack, int inPri, int inStack, int optLen, const void *optData)
+/* 0x116c: matchingStartInternal */
+static int matchingStartInternal(int matchingId, int evPri, int evStack, int evPart, int inPri, int inStack, int inPart, int optLen, const void *optData)
 {
+	if (g_is_init == 0)
+		return 0x80410813;
+	if (evStack < 0xc00)
+		return 0x80410815;
+	if ((evPart != 2 && evPart != 5) || (inPart != 2 && inPart != 5))
+		return 0x80410807;
+	(void)inStack;
+
 	sceKernelLockLwMutex(&g_lock, 1, NULL);
 	MatchingCtx *ctx = matchingFindCtxById(matchingId);
 	if (ctx == NULL) {
