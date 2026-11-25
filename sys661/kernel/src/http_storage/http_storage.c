@@ -237,10 +237,10 @@ s32 sceHttpStorage_bridge_EFE06A20(s32 type, char *buf, u32 size)
             pspSetK1(oldk1);
             return 0x80000104;
         }
-        if ((u8)info->param_gamedata_id[0] == 0) {
-            strncpy(buf, (const char *)info->param_product_string, 13);
+        if ((u8)info->sfoGameDataId[0] == 0) {
+            strncpy(buf, (const char *)info->sfoProductString, 13);
         } else {
-            strncpy(buf, info->param_gamedata_id, 10);
+            strncpy(buf, info->sfoGameDataId, 10);
         }
         pspSetK1(oldk1);
         return 0;
@@ -249,7 +249,7 @@ s32 sceHttpStorage_bridge_EFE06A20(s32 type, char *buf, u32 size)
             pspSetK1(oldk1);
             return 0x80000104;
         }
-        strncpy(buf, info->param_app_ver, 7);
+        strncpy(buf, info->sfoAppVer, 7);
         pspSetK1(oldk1);
         return 0;
     case 3:

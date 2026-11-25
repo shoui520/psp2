@@ -50,45 +50,45 @@ s32 SysMemForKernel_A03CB480(char *arg)
     return 0;
 }
 
-s32 SysMemForKernel_807179E7(char *gameId, int arg1, char *arg2, char *arg3, int arg4, int arg5, char *arg6)
+s32 SysMemForKernel_807179E7(char *gameId, int parentalLevel, char *gameDataId, char *appVer, int bootable, int opnssmpVer, char *vshVersion)
 {
     if (gameId == NULL) {
         // 90A4
-        SystemGameInfo.param_product_string[0] = '\0';
+        SystemGameInfo.sfoProductString[0] = '\0';
     } else {
-        strncpy((char*)SystemGameInfo.param_product_string, gameId, 13);
-        SystemGameInfo.param_product_string[13] = '\0';
+        strncpy((char*)SystemGameInfo.sfoProductString, gameId, 13);
+        SystemGameInfo.sfoProductString[13] = '\0';
     }
     // 8FB0
-    SystemGameInfo.param_parental = arg1;
-    if (arg2 == NULL) {
+    SystemGameInfo.sfoParentalLevel = parentalLevel;
+    if (gameDataId == NULL) {
         // 909C
-        SystemGameInfo.param_gamedata_id[0] = '\0';
+        SystemGameInfo.sfoGameDataId[0] = '\0';
     } else {
-        strncpy(SystemGameInfo.param_gamedata_id, arg2, 10);
-        SystemGameInfo.param_gamedata_id[10] = '\0';
+        strncpy(SystemGameInfo.sfoGameDataId, gameDataId, 10);
+        SystemGameInfo.sfoGameDataId[10] = '\0';
     }
     // 8FD0
-    if (arg3 == NULL) {
+    if (appVer == NULL) {
         // 9090
-        SystemGameInfo.param_app_ver[0] = '\0';
+        SystemGameInfo.sfoAppVer[0] = '\0';
     }
     else {
-        strncpy(SystemGameInfo.param_app_ver, arg3, 7);
-        SystemGameInfo.param_app_ver[7] = '\0';
+        strncpy(SystemGameInfo.sfoAppVer, appVer, 7);
+        SystemGameInfo.sfoAppVer[7] = '\0';
     }
     // 8FF0
-    SystemGameInfo.param_bootable = arg4;
-    SystemGameInfo.param_opnssmp_ver = arg5;
-    if (arg6 == NULL) {
+    SystemGameInfo.sfoBootable = bootable;
+    SystemGameInfo.sfoOpnssmpVer = opnssmpVer;
+    if (vshVersion == NULL) {
         // 9088
         SystemGameInfo.vsh_version[0] = '\0';
     } else {
-        strncpy(SystemGameInfo.vsh_version, arg6, 7);
+        strncpy(SystemGameInfo.vsh_version, vshVersion, 7);
         SystemGameInfo.vsh_version[7] = '\0';
     }
     // 9014
-    if (gameId != NULL || arg1 != 0 || arg2 != NULL || arg3 != NULL || arg6 != NULL) {
+    if (gameId != NULL || parentalLevel != 0 || gameDataId != NULL || appVer != NULL || vshVersion != NULL) {
         // 907C
         SystemGameInfo.flags |= 0x100;
     } else
@@ -122,17 +122,17 @@ s32 sceKernelCopyGameInfo(SceGameInfo *info)
     // 9124
     if ((SystemGameInfo.flags & 0x100) != 0) {
         // 9238
-        strncpy((char*)info->param_product_string, (char*)SystemGameInfo.param_product_string, 13);
-        info->param_product_string[13] = '\0';
-        info->param_parental = SystemGameInfo.param_parental;
-        strncpy(info->param_gamedata_id, SystemGameInfo.param_gamedata_id, 10);
-        info->param_gamedata_id[10] = '\0';
+        strncpy((char*)info->sfoProductString, (char*)SystemGameInfo.sfoProductString, 13);
+        info->sfoProductString[13] = '\0';
+        info->sfoParentalLevel = SystemGameInfo.sfoParentalLevel;
+        strncpy(info->sfoGameDataId, SystemGameInfo.sfoGameDataId, 10);
+        info->sfoGameDataId[10] = '\0';
         strncpy(info->vsh_version, SystemGameInfo.vsh_version, 7);
         info->vsh_version[7] = '\0';
     } else {
-        info->param_product_string[0] = '\0';
-        info->param_parental = 0;
-        info->param_gamedata_id[0] = '\0';
+        info->sfoProductString[0] = '\0';
+        info->sfoParentalLevel = 0;
+        info->sfoGameDataId[0] = '\0';
         info->vsh_version[0] = '\0';
     }
     // 9140
@@ -211,7 +211,7 @@ void CopyGameInfo(SceGameInfo *info)
     // 9364
     if ((info->flags & 0x100) != 0) {
         // 9478
-        SysMemForKernel_807179E7((char*)info->param_product_string, info->param_parental, info->param_gamedata_id, info->param_app_ver, info->param_bootable, info->param_opnssmp_ver, info->vsh_version);
+        SysMemForKernel_807179E7((char*)info->sfoProductString, info->sfoParentalLevel, info->sfoGameDataId, info->sfoAppVer, info->sfoBootable, info->sfoOpnssmpVer, info->vsh_version);
     }
     // 936C
     if ((info->flags & 0x200) != 0) {
@@ -253,8 +253,8 @@ void InitGameInfo(void)
     SystemGameInfo.umd_data_string[0] = '\0';
     SystemGameInfo.expect_umd_data[0] = '\0';
     SystemGameInfo.allow_replace_umd = 0;
-    SystemGameInfo.param_product_string[0] = '\0';
-    SystemGameInfo.param_parental = 0;
+    SystemGameInfo.sfoProductString[0] = '\0';
+    SystemGameInfo.sfoParentalLevel = 0;
     SystemGameInfo.vsh_version[0] = '\0';
     SystemGameInfo.umd_cache_on = 0;
     SystemGameInfo.compiled_sdk_version = 0;
@@ -263,14 +263,14 @@ void InitGameInfo(void)
     SystemGameInfo.utility_location = 0;
 }
 
-s32 SysMemForKernel_F3BDB718(char *arg0)
+s32 SysMemForKernel_F3BDB718(char *umdData)
 {
-    if (arg0 == NULL) {
+    if (umdData == NULL) {
         // 95B4
         memset(SystemGameInfo.umd_data_string, 0, 16);
         SystemGameInfo.flags &= ~0x1;
     } else {
-        strncpy((char*)SystemGameInfo.umd_data_string, arg0, 10);
+        strncpy((char*)SystemGameInfo.umd_data_string, umdData, 10);
         SystemGameInfo.umd_data_string[10] = '\0';
         SystemGameInfo.flags |= 0x1;
     }

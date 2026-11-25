@@ -1,4 +1,4 @@
 TARGET := ge
-SRCS   := ge.c stall.S
+SRCS   := stall.S ge.c
 
 include ../../build.mak

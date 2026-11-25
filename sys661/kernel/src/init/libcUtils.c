@@ -8,26 +8,28 @@
 
 void strcpy256(char *dest, char *src)
 {
-    s32 i;
-    for (i = 255; i >= 0; i--) {
-        char c = (i == 0) ? '\0' : *dest;
-        dest++;
-        *src = c;
-        if (c == '\0')
+    s32 remaining = 255;
+    do {
+        char ch = *src++;
+        remaining--;
+        if (remaining == 0)
+            ch = '\0';
+        *dest++ = ch;
+        if (ch == '\0')
             break;
-        src++;
-    }
+    } while (remaining != 0);
 }
 
-void wcscpy256(short *dest, short *src) 
+void wcscpy256(short *dest, short *src)
 {
-    s32 i;
-    for (i = 255; i >= 0; i--) {
-        short c = (i == 0) ? '\0' : *dest;
-        dest++;
-        *src = c;
-        if (c == '\0')
+    s32 remaining = 255;
+    do {
+        short ch = *src++;
+        remaining--;
+        if (remaining == 0)
+            ch = 0;
+        *dest++ = ch;
+        if (ch == 0)
             break;
-        src++;
-    }
+    } while (remaining != 0);
 }

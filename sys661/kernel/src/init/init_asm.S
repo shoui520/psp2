@@ -8,23 +8,21 @@
     .globl initClearMem
 
 # initClearMem(u32 *baseAddr, u32 size)
-# zeros out memory range starting at "baseAddr"
-# for "size" words.
-    
+# Copied to the reset vector (0xBFC00000) to zero all RAM (including stack) twice and halt.
+    .type initClearMem, @function
     .ent initClearMem
 initClearMem:
-    move       $v0, $a0 # origAddr = baseAddr
-	addu       $t0, $a0, $a1 # maxWordAddr = baseAddr + size
-	addiu      $t0, $t0, -4 # maxWordAddr -= 0x4
-loop1: 
-	sw         $zr, 0($a0) # do { *baseAddr = 0; } 
-	bne        $t0, $a0, loop1 # while (baseAddr++ != maxWordAddr);
-	addiu      $a0, $a0, 4
-loop2: 
-	sw         $zr, 0($v0) # do { *origAddr = 0; }
-	bne        $t0, $v0, loop2 # while (origAddr++ != maxWordAddr);
-	addiu      $v0, $v0, 4
-	break
+    addu       $v0, $a0, $zr
+    addu       $t0, $a0, $a1
+    addiu      $t0, $t0, -4
+clearPassFirst:
+    sw         $zr, 0($a0)
+    bne        $t0, $a0, clearPassFirst
+    addiu      $a0, $a0, 4
+clearPassSecond:
+    sw         $zr, 0($v0)
+    bne        $t0, $v0, clearPassSecond
+    addiu      $v0, $v0, 4
+    break
     .end initClearMem
-
-
+    .size initClearMem, . - initClearMem

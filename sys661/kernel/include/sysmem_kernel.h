@@ -13,7 +13,7 @@
 #include "loadcore.h"
 
 typedef struct {
-    s32 reserved0; //0
+    s32 reserved; //0
     u32 numExportLibs; //4 -- number of sysmem's export libraries - set in SysMemInit (from utopia)
     SceResidentLibraryEntryTable *kernelLibs[8]; //8 --array of sysmem's export tables set in SysMemInit (from utopia)
     u32 loadCoreAddr; // 40 -- allocated in SysMemInit (from utopia)
@@ -70,8 +70,8 @@ struct SceGameInfo {
     char QTGP2[8]; // 40
     char QTGP3[16]; // 48
     u32  allow_replace_umd; // 64
-    u8   param_product_string[16]; // 68
-    u32  param_parental; // 84
+    u8   sfoProductString[16]; // 68
+    u32  sfoParentalLevel; // 84
     char vsh_version[8]; // 88
     u32  umd_cache_on; // 96
     u32  compiled_sdk_version; // 100
@@ -79,16 +79,16 @@ struct SceGameInfo {
     u32  DNAS; // 108
     u32  utility_location; // 112
     char vsh_bootfilename[64]; // 116
-    char param_gamedata_id[16]; // 180
-    char param_app_ver[8]; // 196
+    char sfoGameDataId[16]; // 180
+    char sfoAppVer[8]; // 196
     u8   subscription_validity[8]; // 204
-    u32  param_bootable; // 212
-    u32  param_opnssmp_ver; // 216
+    u32  sfoBootable; // 212
+    u32  sfoOpnssmpVer; // 216
 };
 
-s32 SysMemForKernel_807179E7(char *gameId, int arg1, char *arg2, char *arg3, int arg4, int arg5, char *arg6);
+s32 SysMemForKernel_807179E7(char *gameId, int parentalLevel, char *gameDataId, char *appVer, int bootable, int opnssmpVer, char *vshVersion);
 s32 sceKernelCopyGameInfo(SceGameInfo *info);
-s32 SysMemForKernel_F3BDB718(char *arg0);
+s32 SysMemForKernel_F3BDB718(char *umdData);
 s32 sceKernelGetQTGP2(char *qtgp2);
 s32 sceKernelSetQTGP2(char *qtgp2);
 s32 sceKernelGetQTGP3(char *qtgp3);
@@ -135,7 +135,7 @@ s32 sceKernelSetGcovFunction();
 s32 sceKernelCallGcovFunction();
 s32 sceKernelSetGprofFunction();
 s32 sceKernelCallGprofFunction();
-int sceKernelCheckDebugHandler(void *arg0, u32 arg1);
+int sceKernelCheckDebugHandler(void *argSize, u32 argBlock);
 s32 SysMemForKernel_7FF2F35A(char *arg);
 s32 SysMemForKernel_A03CB480(char *arg);
 

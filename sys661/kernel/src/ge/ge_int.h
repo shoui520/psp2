@@ -24,30 +24,30 @@
 /******************************/
 
 int _sceGeReset();
-s32 _sceGeInitCallback3(void *arg0, s32 arg1, void *arg2);
+s32 _sceGeInitCallback3(void *cbArg, s32 stage, void *opt);
 s32 _sceGeInitCallback4();
-int _sceGeSetRegRadr1(int arg0);
-int _sceGeSetRegRadr2(int arg0);
-int _sceGeSetInternalReg(int type, int arg1, int arg2, int arg3);
-int _sceGeInterrupt(int arg0, int arg1, int arg2);
+int _sceGeSetRegRadr1(int radr);
+int _sceGeSetRegRadr2(int radr);
+int _sceGeSetInternalReg(int type, int base, int radr1, int radr2);
+int _sceGeInterrupt(int intrCode, int subIntr, int intrArg);
 s32 _sceGeSysEventHandler(s32 ev_id, char *ev_name, void *param, s32 *result);
 int _sceGeModuleStart();
-int _sceGeModuleRebootPhase(s32 arg0 __attribute__((unused)), void *arg1 __attribute__((unused)), s32 arg2 __attribute__((unused)), s32 arg3 __attribute__((unused)));
-int _sceGeModuleRebootBefore(void *arg0 __attribute__((unused)), s32 arg1 __attribute__((unused)), s32 arg2 __attribute__((unused)), s32 arg3 __attribute__((unused)));
-int _sceGeSetBaseRadr(int arg0, int arg1, int arg2);
+int _sceGeModuleRebootPhase(s32 phase __attribute__((unused)), void *rebootParam __attribute__((unused)), s32 flags __attribute__((unused)), s32 opt __attribute__((unused)));
+int _sceGeModuleRebootBefore(void *rebootParam __attribute__((unused)), s32 phase __attribute__((unused)), s32 flags __attribute__((unused)), s32 opt __attribute__((unused)));
+int _sceGeSetBaseRadr(int base, int radr1, int radr2);
 int __attribute__((noinline)) _sceGeEdramResume();
 int __attribute__((noinline)) _sceGeEdramSuspend();
 int __attribute__((noinline)) _sceGeQueueInit();
 int __attribute__((noinline)) _sceGeQueueSuspend();
 int __attribute__((noinline)) _sceGeQueueResume();
-void __attribute__((noinline)) _sceGeFinishInterrupt(int arg0, int arg1, int arg2);
-void __attribute__((noinline)) _sceGeListInterrupt(int arg0, int arg1, int arg2);
+void __attribute__((noinline)) _sceGeFinishInterrupt(int attr, int ctrlReg, int intrArg);
+void __attribute__((noinline)) _sceGeListInterrupt(int attr, int ctrlReg, int intrArg);
 int __attribute__((noinline)) sceGeDebugBreak();
-int __attribute__((noinline)) sceGeDebugContinue(int arg0);
+int __attribute__((noinline)) sceGeDebugContinue(int byStep);
 int __attribute__((noinline)) _sceGeQueueInitCallback();
 int __attribute__((noinline)) _sceGeQueueEnd();
 int __attribute__((noinline)) _sceGeQueueStatus(void);
-void __attribute__((noinline)) _sceGeErrorInterrupt(int arg0, int arg1, int arg2);
+void __attribute__((noinline)) _sceGeErrorInterrupt(int attr, int ctrlReg, int intrArg);
 void __attribute__((noinline)) _sceGeListError(u32 cmd, int err);
 void __attribute__((noinline)) _sceGeWriteBp(int *list);
 void __attribute__((noinline)) _sceGeClearBp();
@@ -96,8 +96,8 @@ typedef struct {
     // Number of times we want to break (-1 = infinite)
     int count; // 4
     // The two commands which the SIGNAL/END pair replaced
-    int oldCmd1; // 8
-    int oldCmd2; // 12
+    int savedSignalCmd; // 8
+    int savedEndCmd; // 12
 } SceGeBpCmd;
 
 typedef struct {

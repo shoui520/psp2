@@ -6,6 +6,7 @@
     .set noreorder
 
     .globl sceGeListUpdateStallAddr
+    .ent   sceGeListUpdateStallAddr
 sceGeListUpdateStallAddr:
     lui   $v0, %hi(g_dlMask)
     lw    $v0, %lo(g_dlMask)($v0)
@@ -13,8 +14,9 @@ sceGeListUpdateStallAddr:
     addiu $v1, $v1, %lo(g_displayLists)
     xor   $v0, $v0, $a0 # pointer to the SceGeDisplayList
     subu  $v1, $v0, $v1
-    sltiu $v1, $v1, 4096
-    beqz  $v1, err_invalid_id # the display list isn't in g_displayLists
+    rotr  $v1, $v1, 6
+    srl   $v1, $v1, 6
+    bnez  $v1, err_invalid_id # display list pointer unaligned or out of range
     ext   $t0, $a1, 0, 29 # uncached stall address
     mfic  $v1, $0 # disable interrupts
     mtic  $0,  $0
@@ -34,7 +36,7 @@ sceGeListUpdateStallAddr:
     # reenable interrupts
     mtic  $v1, $0
     jr    $ra
-    move  $v0, $0
+    addu  $v0, $0, $0
 
 not_running:
     xori  $t2, $t1, 0x1
@@ -51,14 +53,14 @@ not_running:
     # restore interrupts
     mtic  $v1, $0
     jr    $ra
-    move  $v0, $0
+    addu  $v0, $0, $0
 
 logging:
     # basically run g_GeLogHandler(2, dlId, addr)
     addiu $sp, $sp, -16
     sw    $ra, 0($sp)
-    move  $a2, $a1
-    move  $a1, $a0
+    addu  $a2, $a1, $0
+    addu  $a1, $a0, $0
     sw    $v1, 4($sp)
     li    $a0, 2
     sw    $k1, 8($sp)
@@ -67,7 +69,7 @@ logging:
     lw    $ra, 0($sp)
     lw    $v1, 4($sp)
     lw    $k1, 8($sp)
-    move  $v0, $0
+    addu  $v0, $0, $0
     # restore interrupts
     mtic  $v1, $0
     jr    $ra
@@ -90,4 +92,5 @@ err_invalid_id:
     ori    $v0, $v0, 0x100
     jr     $ra
     nop
+    .end   sceGeListUpdateStallAddr
 

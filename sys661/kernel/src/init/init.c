@@ -103,7 +103,7 @@ static void InitCBInit(const SceLoadCoreBootInfo *bootInfo)
     g_init->curBootCallback2 = NULL;
     
     g_npDrmData.size = sizeof(SceNpDrm);
-    g_npDrmData.fileOffset = SCE_KERNEL_VALUE_UNITIALIZED;
+    g_npDrmData.fileOffset = 0xFFFFFFFFULL;
     
     u32 i;
     for (i = 0; i < sizeof g_npDrmData.keyData; i++)
@@ -113,27 +113,27 @@ static void InitCBInit(const SceLoadCoreBootInfo *bootInfo)
 /* Exit Init and restart the kernel. */
 static s32 ExitInit(s32 error)
 {
-    void *blk;
+    SceInitVshMainArg *blk;
     SceUID blkId;
     
     g_init->vshParam.size = sizeof(SceKernelLoadExecVSHParam);
     blkId = sceKernelGetChunk(0);
     if (blkId <= 0) {
-        blk = g_init->vshMainArg;
-        g_init->vshMainArg[0] = 32;
-        g_init->vshMainArg[1] = 32;
-        g_init->vshMainArg[2] = 0;
-        g_init->vshMainArg[4] = 0;
+        blk = (SceInitVshMainArg *)g_init->vshMainArg;
+        blk->memSize = 32;
+        blk->headerSize = 32;
+        blk->bootType = 0;
+        blk->exitMode = 0;
     } else
-        blk = sceKernelGetBlockHeadAddr(blkId);
+        blk = (SceInitVshMainArg *)sceKernelGetBlockHeadAddr(blkId);
 
-    *(s32 *)(blk + 24) = error;
-    g_init->vshParam.args = *(s32 *)blk;
+    blk->exitError = error;
+    g_init->vshParam.args = blk->memSize;
     g_init->vshParam.configFile = PSP_BOOT_CONFIG_FILE_PATH;
     g_init->vshParam.vshmainArgp = blk;
     g_init->vshParam.string = NULL;
     g_init->vshParam.argp = blk;
-    g_init->vshParam.vshmainArgs = *(s32 *)blk;
+    g_init->vshParam.vshmainArgs = blk->memSize;
     g_init->vshParam.key = NULL;
     
     blkId = sceKernelGetChunk(4);
@@ -153,16 +153,16 @@ static s32 ExitInit(s32 error)
 static u32 ExitCheck(void)
 {
     SceUID blkId;
-    void *blk;
+    SceInitVshMainArg *blk;
     
     blkId = sceKernelGetChunk(0);
     if (blkId <= 0)
         return SCE_ERROR_OK;
     
-    blk = sceKernelGetBlockHeadAddr(blkId);
-    s32 arg = *(s32 *)(blk + 20);
-    if (arg != 0)
-        ExitInit(arg);
+    blk = (SceInitVshMainArg *)sceKernelGetBlockHeadAddr(blkId);
+    s32 rebootErr = blk->rebootError;
+    if (rebootErr != 0)
+        ExitInit(rebootErr);
         
     return SCE_ERROR_OK;
 }
@@ -176,14 +176,14 @@ static void PowerUnlock(void)
 }
 
 /* Call the registered boot callbacks of the loaded modules. */
-static void invoke_init_callback(s32 arg)
+static void invoke_init_callback(u32 stage)
 {
-    s32 i; 
-    s32 maxStage;
+    u32 i; 
+    u32 maxStage;
     SceBootCallback *bootCallBacks;
     SceKernelBootCallbackFunction bootCbFunc;
     
-    if (arg >= 4) {
+    if (stage >= 4) {
         bootCallBacks = g_init->bootCallbacks2;
         i = 4;
         maxStage = 5;
@@ -192,29 +192,29 @@ static void invoke_init_callback(s32 arg)
         i = 0;
         maxStage = 4;
     }
-    s32 starti = i;
+    u32 startStage = i;
     
-    for (; i <= arg; i++) {
-        if ((arg == (maxStage - 1)) && (arg == i)) {
-            if (arg >= 4) //0x00000514
+    for (; i <= stage; i++) {
+        if ((stage == (maxStage - 1)) && (stage == i)) {
+            if (stage >= 4)
                 g_init->bootCallbacks2 = NULL;
             else
                 g_init->bootCallbacks1 = NULL;
         }
         s32 j;
         for (j = 0; bootCallBacks[j].bootCBFunc != NULL; j++) { 
-            if ((starti + ((s32)bootCallBacks[j].bootCBFunc & 3)) == i) {
-                bootCbFunc = (SceKernelBootCallbackFunction)((s32)bootCallBacks[j].bootCBFunc & ~0x3);
+            if ((startStage + ((u32)bootCallBacks[j].bootCBFunc & 3)) == i) {
+                bootCbFunc = (SceKernelBootCallbackFunction)((u32)bootCallBacks[j].bootCBFunc & ~0x3u);
                 if (i != (maxStage - 1))
                     bootCbFunc((void *)bootCallBacks, 1, NULL);
                 else
-                    bootCbFunc(((void *)&bootCallBacks[j]) + 2, 0, NULL);
+                    bootCbFunc(((u16 *)&bootCallBacks[j]) + 1, 0, NULL);
             }
         }
-        if (i == (arg - 1)) {
+        if (i == (stage - 1)) {
             while (j > 0) {
-                j--; //0x00000590
-                if ((((s32)bootCallBacks[j].bootCBFunc & 3) + starti) >= arg)
+                j--;
+                if ((((u32)bootCallBacks[j].bootCBFunc & 3) + startStage) >= stage)
                     break;
                 bootCallBacks[j].bootCBFunc = NULL;
             }
@@ -224,8 +224,8 @@ static void invoke_init_callback(s32 arg)
 
 static u32 finishModuleBoot(void)
 {   
-    s32 pspModel;
-    s32 apiType;
+    u32 pspModel;
+    u32 apiType;
     s32 intrState;
     
     invoke_init_callback(3);
@@ -243,6 +243,8 @@ static u32 finishModuleBoot(void)
         case SCE_INIT_APPLICATION_POPS:
             UtilsForKernel_39FFB756(81);
             break;
+        case 0:
+        case SCE_INIT_APPLICATION_GAME:
         default:
             UtilsForKernel_39FFB756(0);
             break;
@@ -268,8 +270,8 @@ static s32 CleanupPhase1(SceLoadCoreBootInfo *bootInfo)
     
     g_cleanupPhase1Done += 1;
     
-    s32 i;
-    for (i = 0; i < bootInfo->numProtects; i++) {
+    u32 i;
+    for (i = 0; i < (u32)bootInfo->numProtects; i++) {
         SceLoadCoreProtectInfo *prot = &bootInfo->protects[i];
         if (GET_PROTECT_INFO_TYPE(prot->attr) == 0x200 
                 && (GET_PROTECT_INFO_STATE(prot->attr) & SCE_PROTECT_INFO_STATE_IS_ALLOCATED)) {
@@ -298,8 +300,8 @@ static s32 CleanupPhase2(SceLoadCoreBootInfo *bootInfo)
     SceUID blkId;
     s32 status;
     
-    s32 i;
-    for (i = 0; i < bootInfo->numProtects; i++) {
+    u32 i;
+    for (i = 0; i < (u32)bootInfo->numProtects; i++) {
         SceLoadCoreProtectInfo *prot = &bootInfo->protects[i];
         switch (GET_PROTECT_INFO_TYPE(prot->attr)) { 
         case SCE_PROTECT_INFO_TYPE_USER_PARAM: case 0x200:
@@ -335,12 +337,12 @@ static void ProtectHandling(const SceLoadCoreBootInfo *bootInfo)
     SceUID partId;
     SceSysmemMemoryBlockInfo blkInfo;
     
-    s32 i;
-    for (i = 0; i < bootInfo->numProtects; i++) {
+    u32 i;
+    for (i = 0; i < (u32)bootInfo->numProtects; i++) {
         SceLoadCoreProtectInfo *protectInfo = &bootInfo->protects[i];
         switch (GET_PROTECT_INFO_TYPE(protectInfo->attr)) { 
         case SCE_PROTECT_INFO_TYPE_FILE_NAME:
-            if (protectInfo->size != 0) { //0x000009AC
+            if (protectInfo->size != 0) {
                 partId = sceKernelAllocPartitionMemory(SCE_KERNEL_PRIMARY_KERNEL_PARTITION, "SceInitFileName", 
                         SCE_KERNEL_SMEM_High, protectInfo->size, 0);
                 if (partId > 0) {
@@ -352,7 +354,7 @@ static void ProtectHandling(const SceLoadCoreBootInfo *bootInfo)
                     protectInfo->attr = SET_PROTECT_INFO_STATE(SCE_PROTECT_INFO_STATE_IS_ALLOCATED, protectInfo->attr);
                 }
             }
-            if (i == bootInfo->modProtId)
+            if ((s32)i == bootInfo->modProtId)
                 g_init->fileModAddr = (void *)protectInfo->addr;
             break;
         case SCE_PROTECT_INFO_TYPE_VSH_PARAM: 
@@ -362,17 +364,17 @@ static void ProtectHandling(const SceLoadCoreBootInfo *bootInfo)
                 if (partId > 0) {
                     blkInfo.size = sizeof blkInfo;
                     sceKernelQueryMemoryBlockInfo(partId, &blkInfo);
-                    void *addr = (void *)blkInfo.addr;
-                    memmove(addr, (void *)protectInfo->addr, protectInfo->size);
+                    SceInitVshMainArg *vshArg = (SceInitVshMainArg *)blkInfo.addr;
+                    memmove(vshArg, (void *)protectInfo->addr, protectInfo->size);
                     
-                    protectInfo->addr = (u32)addr;
+                    protectInfo->addr = (u32)vshArg;
                     protectInfo->attr = SET_PROTECT_INFO_STATE(SCE_PROTECT_INFO_STATE_IS_ALLOCATED, protectInfo->attr);
                     protectInfo->partId = partId;
                     
-                    *(u32 *)(addr + 4) = 32;
-                    *(u32 *)(addr + 0) = blkInfo.memSize;
-                    *(s32 *)(addr + 24) = 0;
-                    *(s32 *)(addr + 20) = 0;
+                    vshArg->headerSize = 32;
+                    vshArg->memSize = blkInfo.memSize;
+                    vshArg->exitError = 0;
+                    vshArg->rebootError = 0;
                     sceKernelRegisterChunk(0, partId);
                 }
             }
@@ -413,10 +415,10 @@ static void ProtectHandling(const SceLoadCoreBootInfo *bootInfo)
             }
             break;
         case SCE_PROTECT_INFO_TYPE_PARAM_SFO:
-            if (protectInfo->size != 0) { //0x00000B24
+            if (protectInfo->size != 0) {
                 partId = sceKernelAllocPartitionMemory(SCE_KERNEL_PRIMARY_KERNEL_PARTITION, "SceInitParamsfo", 
                         SCE_KERNEL_SMEM_High, protectInfo->size, 0);
-                if (partId > 0) { //0x00000B40
+                if (partId > 0) {
                     void *addr = sceKernelGetBlockHeadAddr(partId);
                     memmove(addr, (void *)protectInfo->addr, protectInfo->size);
                     
@@ -439,14 +441,14 @@ static void ProtectHandling(const SceLoadCoreBootInfo *bootInfo)
             blkInfo.size = sizeof blkInfo;
             sceKernelQueryMemoryBlockInfo(partId, &blkInfo);
             
-            void *addr = (void *)blkInfo.addr;
-            *(s32 *)(addr + 4) = 32;
-            *(s32 *)(addr + 0) = blkInfo.memSize;
-            *(s32 *)(addr + 24) = 0;
-            *(s32 *)(addr + 8) = 0;
-            *(s32 *)(addr + 12) = 0;
-            *(s32 *)(addr + 16) = 0;
-            *(s32 *)(addr + 20) = 0;
+            SceInitVshMainArg *vshArg = (SceInitVshMainArg *)blkInfo.addr;
+            vshArg->headerSize = 32;
+            vshArg->memSize = blkInfo.memSize;
+            vshArg->exitError = 0;
+            vshArg->bootType = 0;
+            vshArg->flags = 0;
+            vshArg->exitMode = 0;
+            vshArg->rebootError = 0;
             sceKernelRegisterChunk(0, partId);
         }
     }
@@ -579,7 +581,7 @@ static SceUID LoadModuleBufferAnchorInBtcnf(void *modBuf, s32 opt)
 {
     SceUID status;
     
-    switch (g_init->apiType) {
+    switch ((u32)g_init->apiType) {
     case SCE_EXEC_FILE_APITYPE_USBWLAN: 
     case SCE_EXEC_FILE_APITYPE_UNK132:
         status = sceKernelLoadModuleBufferForLoadExecBufferVSHUsbWlan(g_init->apiType, modBuf, 0, NULL);
@@ -616,11 +618,12 @@ static void StopInit(const char *str __attribute__((unused)), s32 line __attribu
 {
     s32 intrState = sceKernelCpuSuspendIntr();
     
-    HW(HW_RAM_SIZE) &= ~(RAM_TYPE_32_MB | RAM_TYPE_64_MB);
+    u32 ramCfg = HW(HW_RAM_SIZE) & ~(RAM_TYPE_32_MB | RAM_TYPE_64_MB);
     if (g_MemSize > RAM_SIZE_32_MB)
-        HW(HW_RAM_SIZE) |= RAM_TYPE_64_MB;
+        ramCfg |= RAM_TYPE_64_MB;
     else
-        HW(HW_RAM_SIZE) |= RAM_TYPE_32_MB;
+        ramCfg |= RAM_TYPE_32_MB;
+    HW(HW_RAM_SIZE) = ramCfg;
     
     sceKernelMemset32((void *)HWPTR(HW_RESET_VECTOR), 0, HW_RESET_VECTOR_SIZE);
     memcpy((void *)HWPTR(HW_RESET_VECTOR), initClearMem, INIT_CLEAR_MEM_SIZE);
@@ -644,11 +647,12 @@ static void InitThreadEntry(SceSize args, void *argp)
     SceLoadCoreBootInfo *bootInfo;
     s32 modStatus1, modStatus2;
     
-    if (args < 8)
+    if (args < sizeof(SceInitThreadArgs))
         return;
     
-    threadId = ((u32 *)argp)[0];
-    bootInfo = (SceLoadCoreBootInfo *)((u32 *)argp)[1];
+    SceInitThreadArgs *threadArgs = (SceInitThreadArgs *)argp;
+    threadId = threadArgs->initThreadId;
+    bootInfo = threadArgs->bootInfo;
     
     foundMod = SCE_FALSE;
     
@@ -808,7 +812,7 @@ static void InitThreadEntry(SceSize args, void *argp)
                     ((char *)opnssmpFile)[j] = ~((char *)opnssmpFile)[j];
                     
                 SceGameInfo *gameInfo = sceKernelGetGameInfo();
-                void *argp = (void *)gameInfo->param_opnssmp_ver; // TODO: suspicious
+                void *argp = (void *)gameInfo->sfoOpnssmpVer;
                 SceIoStat stat;
                 if (argp != NULL && sceIoGetstat((char *)opnssmpFile, &stat) >= SCE_ERROR_OK) {
                     SceUID modId = sceKernelLoadModuleForKernel((char *)opnssmpFile, 0, NULL);
@@ -902,10 +906,9 @@ static void InitThreadEntry(SceSize args, void *argp)
     if (foundMod == SCE_TRUE)
         invoke_init_callback(4);
 
-    void *ptr = sceKernelDeci2pReferOperations();
-    if (ptr != NULL) {
-        void (*func)(s32) = (void (*)(s32))*(s32 *)(ptr + 8);
-        func(2);
+    SceKernelDeci2Ops *deci2Ops = sceKernelDeci2pReferOperations();
+    if (deci2Ops != NULL) {
+        deci2Ops->ops[1](2);
     }
 
     LoadExecForKernel_AA2029EC();
@@ -913,11 +916,6 @@ static void InitThreadEntry(SceSize args, void *argp)
     /* Step3: Init stops and unloads itself now. */
     sceKernelStopUnloadSelfModuleWithStatus(SCE_KERNEL_NO_RESIDENT, 0, NULL, NULL, NULL);
 }
-
-#ifdef INSTALLER
-/* Reference to patch.S (needed because when patching init, SystemControl only has access to its bootstart's address)*/
-asm(".word init_patch\n");
-#endif
 
 /* Setup the boot process of the rest of the PSP kernel modules. */
 s32 InitInit(SceSize argSize, const void *argBlock)
@@ -940,7 +938,7 @@ s32 InitInit(SceSize argSize, const void *argBlock)
     ProtectHandling(bootInfo);
     
     SceLoadCoreBootModuleInfo *modules = bootInfo->modules;
-    if (bootInfo->bootMode == 0 && (u32)modules->modBuf <= (SCE_USERSPACE_GAME_ADDR_K0 - 1)) {
+    if (bootInfo->bootMode == 0 && (u32)modules->modBuf <= 0x88FFFFFFu) {
         void *minStart = (void *)SCE_KERNEL_VALUE_UNITIALIZED;
         void *maxEnd = NULL;
         
@@ -958,16 +956,14 @@ s32 InitInit(SceSize argSize, const void *argBlock)
         sceKernelMemset32(maxEnd, 0, SCE_USERSPACE_ADDR_K0 - (u32)maxEnd);
     } else
         sceKernelMemset32((void *)REBOOT_BASE_ADDR_K0, 0, SCE_USERSPACE_ADDR_K0 - REBOOT_BASE_ADDR_K0);
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wcast-function-type"
+
     SceUID id = sceKernelCreateThread("SceKernelInitThread", (SceKernelThreadEntry)InitThreadEntry, 
             SCE_KERNEL_MODULE_INIT_PRIORITY, 0x4000, 0, NULL);
-#pragma GCC diagnostic pop
     
-    u32 threadArgs[2] = { 
+    SceInitThreadArgs threadArgs = { 
         threadId, 
-        (u32)bootInfo, 
+        (SceLoadCoreBootInfo *)bootInfo, 
     };
-    return sceKernelStartThread(id, sizeof threadArgs, threadArgs);
+    return sceKernelStartThread(id, sizeof threadArgs, &threadArgs);
 }
 

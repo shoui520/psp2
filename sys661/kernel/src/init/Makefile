@@ -1,4 +1,4 @@
 TARGET := init
-SRCS   := gamePatching.c init.c init_asm.S libcUtils.c patch.S
+SRCS   := init_asm.S libcUtils.c gamePatching.c init.c
 
 include ../../build.mak

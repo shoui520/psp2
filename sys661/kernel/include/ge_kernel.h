@@ -110,7 +110,7 @@ typedef struct
     u32 edramRefresh1; // 48
     u32 edramRefresh2; // 52
     u32 edramRefresh3; // 56
-    u32 edramUnk40; // 60
+    u32 edramPowerCtrl; // 60
     u32 geometryClock; // 64
     u32 dl[495]; // 68
 } _SceGeContext;
@@ -275,14 +275,14 @@ int sceGeEdramInit();
 /**
  * Sets the EDRAM refresh parameters.
  *
- * @param arg0 Unknown (0 or 1).
- * @param arg1 Unknown (0 to 0x7FFFFF).
- * @param arg2 Unknown (0 to 0x3FF).
- * @param arg3 Unknown (0 to 0xF).
+ * @param mode Refresh mode (0 or 1).
+ * @param refreshCycle Refresh cycle parameter (0 to 0x7FFFFF).
+ * @param refreshCount Refresh count parameter (0 to 0x3FF).
+ * @param refreshRate Refresh rate field (0 to 0xF).
  *
  * @return Zero on success, otherwise less than zero.
  */
-int sceGeEdramSetRefreshParam(int arg0, int arg1, int arg2, int arg3);
+int sceGeEdramSetRefreshParam(int mode, int refreshCycle, int refreshCount, int refreshRate);
 
 /**
  * Sets the EDRAM size to be enabled.
@@ -323,13 +323,13 @@ int sceGePutBreakpoint(SceGeBreakpoint *bp, int size);
 /**
  * Gets a breakpoint.
  *
- * @param outPtr The list of breakpoints (check sceGePutBreakpoint()).
+ * @param bp The list of breakpoints (check sceGePutBreakpoint()).
  * @param size The number of breakpoints to read.
- * @param arg2 A pointer where will be stored the total number of breakpoints.
+ * @param totalCountPtr A pointer where will be stored the total number of breakpoints.
  *
  * @return The number of stored breakpoints on success, otherwise less than zero.
  */
-int sceGeGetBreakpoint(SceGeBreakpoint *bp, int size, int *arg2);
+int sceGeGetBreakpoint(SceGeBreakpoint *bp, int size, int *totalCountPtr);
 
 /**
  * Gets a list of the IDs of the display lists currently being in the queue.
