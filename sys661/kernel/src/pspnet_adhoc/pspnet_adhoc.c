@@ -90,14 +90,14 @@ typedef struct AdhocMbuf {
 
 /* Interface structure returned by sceNet_lib_D60225A3() */
 typedef struct AdhocIfnet {
-	u8 pad_00[0x30];
+	u8 reserved_00[0x30];
 	u16 if_flags;                 /* 0x30 */
-	u8 pad_32[0x56];
+	u8 reserved_32[0x56];
 	u32 if_obytes_lo;             /* 0x88 */
 	u32 if_obytes_hi;             /* 0x8c */
-	u8 pad_90[0x28];
+	u8 reserved_90[0x28];
 	void (*if_start)(void *ifp);  /* 0xb8 */
-	u8 pad_bc[0x10];
+	u8 reserved_bc[0x10];
 	AdhocMbuf *snd_head;          /* 0xcc */
 	AdhocMbuf *snd_tail;          /* 0xd0 */
 	s32 snd_len;                  /* 0xd4 */
@@ -108,15 +108,15 @@ typedef struct AdhocIfnet {
 
 /* Waiter node on sock->wait_list (linked via +0x58) */
 typedef struct AdhocWaiter {
-	u8 pad_00[0x20];
+	u8 reserved_00[0x20];
 	u32 wait_chan;                /* 0x20 */
-	u8 pad_24[0x28];
+	u8 reserved_24[0x28];
 	s32 sema_id;                  /* 0x4c */
-	u8 pad_50[0x08];
+	u8 reserved_50[0x08];
 	struct AdhocWaiter *next;     /* 0x58 */
 } AdhocWaiter;
 
-/* Socket descriptor (0x28 bytes) allocated by sub_0f60 */
+/* Socket descriptor (0x28 bytes) allocated by adhocSockCreate */
 typedef struct AdhocSocket {
 	struct AdhocSocket *next;     /* 0x00 */
 	struct AdhocSocket **prev;    /* 0x04 */
@@ -142,7 +142,26 @@ typedef struct PdpFragEntry {
 	AdhocMbuf *m_head;            /* 0x30 */
 } PdpFragEntry;
 
-/* PDP PCB (0x3c bytes) allocated by sub_2a9c */
+/* PDP PCB (0x3c bytes) allocated by pdpAllocPcb */
+typedef struct ScePdpStatOut {
+    struct ScePdpStatOut *next; /* 0x00 */
+    s32 pdp_id;                 /* 0x04 */
+    u8 mac[6];                  /* 0x08 */
+    u16 port;                   /* 0x0e */
+    u32 rcvd_data;              /* 0x10 */
+} ScePdpStatOut;
+
+typedef struct ScePtpStatOut {
+    struct ScePtpStatOut *next; /* 0x00 */
+    s32 ptp_id;                 /* 0x04 */
+    u8 local_mac[6];            /* 0x08 */
+    u8 peer_mac[6];             /* 0x0e */
+    u16 local_port;             /* 0x14 */
+    u16 peer_port;              /* 0x16 */
+    u32 sent_data;              /* 0x18 */
+    u32 rcvd_data;              /* 0x1c */
+} ScePtpStatOut;
+
 typedef struct PdpPcb {
 	struct PdpPcb *next;          /* 0x00 */
 	struct PdpPcb **prev;         /* 0x04 */
@@ -155,13 +174,13 @@ typedef struct PdpPcb {
 	u32 rx_cc;                    /* 0x20 */
 	u32 rx_hiwat;                 /* 0x24 */
 	u32 rx_drops;                 /* 0x28 */
-	u32 pad_2c;                   /* 0x2c */
+	u32 reserved_2c;                   /* 0x2c */
 	PdpFragEntry *frag_head;      /* 0x30 */
 	PdpFragEntry **frag_tail;     /* 0x34 */
 	u32 frag_count;               /* 0x38 */
 } PdpPcb;
 
-/* PTP PCB (0xf0 bytes) allocated by sub_4a30 */
+/* PTP PCB (0xf0 bytes) allocated by ptpAllocPcb */
 typedef struct PtpPcb {
 	struct PtpPcb *next;          /* 0x00 */
 	struct PtpPcb **prev;         /* 0x04 */
@@ -198,10 +217,10 @@ typedef struct PtpPcb {
 	u32 irs;                      /* 0x80 */
 	u8 timer_rexmt[0x1c];         /* 0x84..0x9f */
 	u32 timer_rexmt_active;       /* 0xa0 */
-	u32 pad_a4;                   /* 0xa4 */
+	u32 reserved_a4;                   /* 0xa4 */
 	u8 timer_probe[0x1c];         /* 0xa8..0xc3 */
 	u32 timer_probe_active;       /* 0xc4 */
-	u32 pad_c8;                   /* 0xc8 */
+	u32 reserved_c8;                   /* 0xc8 */
 	u32 rexmt_intvl;              /* 0xcc */
 	s32 rexmt_max;                /* 0xd0 */
 	s32 rexmt_rem;                /* 0xd4 */
@@ -219,7 +238,7 @@ typedef struct GameModeNode {
 	struct GameModeNode **prev;   /* 0x04 */
 	s32 id;                       /* 0x08 */
 	u8 mac[6];                    /* 0x0c */
-	u16 pad_12;                   /* 0x12 */
+	u16 reserved_12;                   /* 0x12 */
 	void *user_buf;               /* 0x14 */
 	u32 user_size;                /* 0x18 */
 	void *work_buf;               /* 0x1c */
@@ -234,68 +253,68 @@ typedef struct SceNetAdhocPollSd {
 } SceNetAdhocPollSd;
 
 /* Forward declarations */
-static void sub_0270(void);
-static s32 sub_036c(void *ifp, void *m);
-static s32 sub_047c(s32 a0, s32 a1, void **out);
-static void sub_0490(void *ifp);
-static s32 sub_0974(void *arr, s32 count);
-static void sub_0dd0(void);
-static void sub_0e18(void);
-static AdhocSocket *sub_0e90(s32 type, s32 id);
-static s32 sub_0ed8(void);
-static s32 sub_0f60(s32 type, AdhocSocket **out_sock);
-static void sub_0ffc(AdhocSocket *sock);
-static s32 sub_1044(void);
-static void sub_1078(AdhocSocket *sock, s32 flags);
-static s32 sub_1620(PdpPcb *pdp, const u8 *dst_mac, u16 dport, const void *data, s32 len, u32 timeout, s32 flags);
-static s32 sub_1c48(PdpPcb *pdp, u8 *src_mac, u16 *sport, void *data, s32 *data_len, u32 timeout, s32 flags);
-static s32 sub_20c4(s32 id, u8 *src_mac, u16 *sport, void *buf, s32 *len, u32 timeout, s32 flags);
-static void sub_225c(PdpPcb *pdp);
-static void sub_231c(AdhocMbuf *m);
-static void sub_29ac(void);
-static void sub_2a18(void);
-static s32 sub_2a9c(PdpPcb **out_pdp);
-static s32 sub_2b2c(PdpPcb *pdp, const u8 *mac, u16 port, u32 bufsize);
-static void sub_2d04(PdpPcb *pdp);
-static s32 sub_2d50(void);
-static void sub_2d5c(void *ifp);
-static s32 sub_2dc4(AdhocSocket *sock, s32 events);
-static u16 sub_2e78(void);
-static s32 sub_3afc(const u8 *src_mac, u16 src_port, const u8 *dst_mac, u16 dst_port, u32 bufsize, u32 rexmt_int, s32 rexmt_cnt, s32 queue_max, s32 mode);
-static s32 sub_3c44(s32 id, u32 timeout, s32 nonblock);
-static s32 sub_3c7c(PtpPcb *ptp, u32 timeout, s32 flags);
-static s32 sub_3e30(PtpPcb *ptp, u8 *peer_mac, u16 *peer_port, u32 timeout, s32 flags, s32 *out_id);
-static s32 sub_40ec(PtpPcb *ptp, const void *data, s32 *len, u32 timeout, s32 flags);
-static s32 sub_44d4(PtpPcb *ptp, void *data, s32 *len, u32 timeout, s32 flags);
-static s32 sub_4808(PtpPcb *ptp, u32 timeout, s32 flags);
-static s32 sub_4a30(PtpPcb **out_ptp);
-static void sub_4ad4(PtpPcb *ptp);
-static s32 sub_4b7c(PtpPcb *ptp, const u8 *src_mac, u16 src_port, const u8 *dst_mac, u16 dst_port, u32 bufsize, u32 rexmt_int, s32 rexmt_cnt, s32 queue_max, s32 mode);
-static void sub_4d48(PtpPcb *ptp);
-static void sub_4e3c(PtpPcb *ptp);
-static s32 sub_4fc8(AdhocSocket *sock, s32 events);
-static void sub_5288(void);
-static void sub_52e0(void);
-static PtpPcb *sub_536c(const u8 *local_mac, u16 local_port, const u8 *peer_mac, u16 peer_port);
-static void sub_542c(PtpPcb *ptp);
-static void sub_5590(PtpPcb *ptp);
-static void sub_55dc(PtpPcb *ptp);
-static s32 sub_55f8(void);
-static void sub_5604(void *ifp);
-static void sub_572c(void *ifp);
-static void sub_5750(PtpPcb *ptp);
-static u16 sub_584c(void);
-static void sub_5938(AdhocMbuf *m);
-static void sub_637c(const u8 *src_mac, u16 sport, const u8 *dst_mac, u16 dport, u8 type, u32 seq_or_ack, AdhocMbuf *payload_m);
-static void sub_668c(PtpPcb *ptp, u8 type);
-static void sub_6878(PtpPcb *ptp, s32 rexmt_only);
-static void sub_6a54(PtpPcb *ptp);
-static void sub_6b20(PtpPcb *ptp);
-static s32 sub_7008(void);
-static void sub_7020(void);
-static s32 sub_7188(const u8 *mac, void *buf, u32 size);
-static s32 sub_72a4(s32 id);
-static s32 sub_7338(s32 id, void *buf, s32 mode);
+static void adhocRxSoftIntr(void);
+static s32 adhocIfOutput(void *ifp, void *m);
+static s32 adhocGetRxQueue(s32 a0, s32 a1, void **out);
+static void adhocIfDetachNotify(void *ifp);
+static s32 adhocPollSockets(void *arr, s32 count);
+static void adhocSockInit(void);
+static void adhocSockTerm(void);
+static AdhocSocket *adhocSockFind(s32 type, s32 id);
+static s32 adhocSockAllocId(void);
+static s32 adhocSockCreate(s32 type, AdhocSocket **out_sock);
+static void adhocSockTryFree(AdhocSocket *sock);
+static s32 adhocSockHasActive(void);
+static void adhocSockWakeWaiters(AdhocSocket *sock, s32 flags);
+static s32 pdpSendInternal(PdpPcb *pdp, const u8 *dst_mac, u16 dport, const void *data, s32 len, u32 timeout, s32 flags);
+static s32 pdpRecvInternal(PdpPcb *pdp, u8 *src_mac, u16 *sport, void *data, s32 *data_len, u32 timeout, s32 flags);
+static s32 pdpRecvById(s32 id, u8 *src_mac, u16 *sport, void *buf, s32 *len, u32 timeout, s32 flags);
+static void pdpFlushQueues(PdpPcb *pdp);
+static void pdpInputPacket(AdhocMbuf *m);
+static void pdpInit(void);
+static void pdpTerm(void);
+static s32 pdpAllocPcb(PdpPcb **out_pdp);
+static s32 pdpBindPcb(PdpPcb *pdp, const u8 *mac, u16 port, u32 bufsize);
+static void pdpFreePcb(PdpPcb *pdp);
+static s32 pdpHasActive(void);
+static void pdpIfDetach(void *ifp);
+static s32 pdpPollEvents(AdhocSocket *sock, s32 events);
+static u16 pdpAllocAnonPort(void);
+static s32 ptpCreateSocket(const u8 *src_mac, u16 src_port, const u8 *dst_mac, u16 dst_port, u32 bufsize, u32 rexmt_int, s32 rexmt_cnt, s32 queue_max, s32 mode);
+static s32 ptpFlushWrapper(s32 id, u32 timeout, s32 nonblock);
+static s32 ptpWaitConnect(PtpPcb *ptp, u32 timeout, s32 flags);
+static s32 ptpAcceptInternal(PtpPcb *ptp, u8 *peer_mac, u16 *peer_port, u32 timeout, s32 flags, s32 *out_id);
+static s32 ptpSendInternal(PtpPcb *ptp, const void *data, s32 *len, u32 timeout, s32 flags);
+static s32 ptpRecvInternal(PtpPcb *ptp, void *data, s32 *len, u32 timeout, s32 flags);
+static s32 ptpFlushInternal(PtpPcb *ptp, u32 timeout, s32 flags);
+static s32 ptpAllocPcb(PtpPcb **out_ptp);
+static void ptpDropTxQueue(PtpPcb *ptp);
+static s32 ptpBindPcb(PtpPcb *ptp, const u8 *src_mac, u16 src_port, const u8 *dst_mac, u16 dst_port, u32 bufsize, u32 rexmt_int, s32 rexmt_cnt, s32 queue_max, s32 mode);
+static void ptpMarkConnected(PtpPcb *ptp);
+static void ptpClosePcb(PtpPcb *ptp);
+static s32 ptpPollEvents(AdhocSocket *sock, s32 events);
+static void ptpInit(void);
+static void ptpTerm(void);
+static PtpPcb *ptpFindPcb(const u8 *local_mac, u16 local_port, const u8 *peer_mac, u16 peer_port);
+static void ptpFreePcb(PtpPcb *ptp);
+static void ptpClearTxQueue(PtpPcb *ptp);
+static void ptpClearRxQueue(PtpPcb *ptp);
+static s32 ptpHasActive(void);
+static void ptpIfDetach(void *ifp);
+static void ptpIfDetachNoop(void *ifp);
+static void ptpFreeListenQueue(PtpPcb *ptp);
+static u16 ptpAllocAnonPort(void);
+static void ptpInputPacket(AdhocMbuf *m);
+static void ptpBuildAndSendPacket(const u8 *src_mac, u16 sport, const u8 *dst_mac, u16 dport, u8 type, u32 seq_or_ack, AdhocMbuf *payload_m);
+static void ptpSendControlPacket(PtpPcb *ptp, u8 type);
+static void ptpTransmitData(PtpPcb *ptp, s32 rexmt_only);
+static void ptpRexmtTimeout(PtpPcb *ptp);
+static void ptpProbeTimeout(PtpPcb *ptp);
+static s32 gameModeInit(void);
+static void gameModeTerm(void);
+static s32 gameModeCreateBuffer(const u8 *mac, void *buf, u32 size);
+static s32 gameModeDeleteBuffer(s32 id);
+static s32 gameModeUpdateBuffer(s32 id, void *buf, s32 mode);
 
 /* Read-only constants at 0x7984..0x7998 */
 static const u16 g_adhoc_ethertype = 0xC888; /* 0x7984 */
@@ -372,15 +391,15 @@ s32 sceNetAdhocInit(void)
 	g_rx_queue.max_count = 0x32;
 	g_rx_queue.drops = 0;
 
-	sub_0dd0();
-	sub_29ac();
-	sub_5288();
+	adhocSockInit();
+	pdpInit();
+	ptpInit();
 
-	ret = sceNet_lib_B3A48B7F(sub_0270, sub_0490);
+	ret = sceNet_lib_B3A48B7F(adhocRxSoftIntr, adhocIfDetachNotify);
 	if (ret >= 0) {
-		ret = sceNet_lib_1F94AFD9(sub_047c);
+		ret = sceNet_lib_1F94AFD9(adhocGetRxQueue);
 		if (ret >= 0) {
-			ret = sub_7008();
+			ret = gameModeInit();
 			if (ret >= 0) {
 				g_adhoc_inited = 1;
 				ret = 0;
@@ -390,9 +409,9 @@ s32 sceNetAdhocInit(void)
 		}
 		sceNet_lib_949F1FBB();
 	}
-	sub_52e0();
-	sub_2a18();
-	sub_0e18();
+	ptpTerm();
+	pdpTerm();
+	adhocSockTerm();
 
 out:
 	sceNet_lib_515B2F33(intr);
@@ -415,15 +434,15 @@ s32 sceNetAdhocTerm(void)
 
 	ret = 0;
 	if (g_adhoc_inited != 0) {
-		if (sub_1044() != 0 || sub_2d50() != 0 || sub_55f8() != 0) {
+		if (adhocSockHasActive() != 0 || pdpHasActive() != 0 || ptpHasActive() != 0) {
 			ret = 0x80410714;
 		} else {
-			sub_7020();
+			gameModeTerm();
 			sceNet_lib_0A5A8751();
 			sceNet_lib_949F1FBB();
-			sub_52e0();
-			sub_2a18();
-			sub_0e18();
+			ptpTerm();
+			pdpTerm();
+			adhocSockTerm();
 			for (;;) {
 				m = g_rx_queue.head;
 				if (m == NULL)
@@ -443,8 +462,8 @@ s32 sceNetAdhocTerm(void)
 	return ret;
 }
 
-/* === sub_0270 @ 0x0270 === */
-static void sub_0270(void)
+/* === adhocRxSoftIntr @ 0x0270 === */
+static void adhocRxSoftIntr(void)
 {
 	AdhocMbuf *m;
 	u8 proto;
@@ -469,17 +488,17 @@ static void sub_0270(void)
 			proto = m->m_data[0x30];
 		}
 		if (proto == 1) {
-			sub_231c(m);
+			pdpInputPacket(m);
 		} else if (proto == 2) {
-			sub_5938(m);
+			ptpInputPacket(m);
 		} else {
 			sceNetIfhandle_lib_F56FAC82(m);
 		}
 	}
 }
 
-/* === sub_036c @ 0x036c === */
-static s32 sub_036c(void *ifp_arg, void *m_arg)
+/* === adhocIfOutput @ 0x036c === */
+static s32 adhocIfOutput(void *ifp_arg, void *m_arg)
 {
 	AdhocIfnet *ifp = (AdhocIfnet *)ifp_arg;
 	AdhocMbuf *m = (AdhocMbuf *)m_arg;
@@ -517,8 +536,8 @@ static s32 sub_036c(void *ifp_arg, void *m_arg)
 	return 0;
 }
 
-/* === sub_047c @ 0x047c === */
-static s32 sub_047c(s32 a0, s32 a1, void **out)
+/* === adhocGetRxQueue @ 0x047c === */
+static s32 adhocGetRxQueue(s32 a0, s32 a1, void **out)
 {
 	(void)a0;
 	(void)a1;
@@ -526,12 +545,12 @@ static s32 sub_047c(s32 a0, s32 a1, void **out)
 	return 0;
 }
 
-/* === sub_0490 @ 0x0490 === */
-static void sub_0490(void *ifp)
+/* === adhocIfDetachNotify @ 0x0490 === */
+static void adhocIfDetachNotify(void *ifp)
 {
-	sub_2d5c(ifp);
-	sub_5604(ifp);
-	sub_572c(ifp);
+	pdpIfDetach(ifp);
+	ptpIfDetach(ifp);
+	ptpIfDetachNoop(ifp);
 }
 
 /* === sceNetAdhoc_7A662D6B @ 0x04ac === */
@@ -582,7 +601,7 @@ s32 sceNetAdhoc_7A662D6B(SceNetAdhocPollSd *sds, s32 count, u32 timeout, s32 non
 	}
 
 	for (i = 0; i < count; i++) {
-		s = sub_0e90(0, sds[i].id);
+		s = adhocSockFind(0, sds[i].id);
 		if (s == NULL) {
 			ret = 0x80410707;
 			goto free_arr;
@@ -598,7 +617,7 @@ s32 sceNetAdhoc_7A662D6B(SceNetAdhocPollSd *sds, s32 count, u32 timeout, s32 non
 	}
 
 	for (;;) {
-		ret = sub_0974(arr, count);
+		ret = adhocPollSockets(arr, count);
 		if (ret > 0 || nonblock != 0)
 			break;
 
@@ -675,7 +694,7 @@ s32 sceNetAdhoc_7A662D6B(SceNetAdhocPollSd *sds, s32 count, u32 timeout, s32 non
 cleanup_socks:
 	for (i = 0; i < count; i++) {
 		s = (AdhocSocket *)arr[i * 2];
-		sub_0ffc(s);
+		adhocSockTryFree(s);
 	}
 
 free_arr:
@@ -688,8 +707,8 @@ out:
 	return ret;
 }
 
-/* === sub_0974 @ 0x0974 === */
-static s32 sub_0974(void *arr_arg, s32 count)
+/* === adhocPollSockets @ 0x0974 === */
+static s32 adhocPollSockets(void *arr_arg, s32 count)
 {
 	void **arr = (void **)arr_arg;
 	s32 ready = 0;
@@ -701,9 +720,9 @@ static s32 sub_0974(void *arr_arg, s32 count)
 		s32 rev = 0;
 
 		if (s->type == 1) {
-			rev = sub_2dc4(s, sd->events);
+			rev = pdpPollEvents(s, sd->events);
 		} else if (s->type == 2) {
-			rev = sub_4fc8(s, sd->events);
+			rev = ptpPollEvents(s, sd->events);
 		}
 		sd->revents = rev;
 		if (rev != 0)
@@ -749,7 +768,7 @@ s32 sceNetAdhoc_73BFD52D(s32 id, s32 flag)
 		}
 		ret = 0;
 	} else {
-		s = sub_0e90(0, id);
+		s = adhocSockFind(0, id);
 		if (s == NULL) {
 			ret = 0x80410707;
 		} else {
@@ -788,7 +807,7 @@ s32 sceNetAdhoc_4D2CE199(s32 id, s32 *flag)
 	} else if (sceWlanDevIsGameMode() != 0) {
 		ret = 0x8041071b;
 	} else {
-		s = sub_0e90(0, id);
+		s = adhocSockFind(0, id);
 		if (s == NULL) {
 			ret = 0x80410707;
 		} else {
@@ -801,17 +820,17 @@ s32 sceNetAdhoc_4D2CE199(s32 id, s32 *flag)
 	return ret;
 }
 
-/* === sub_0dd0 @ 0x0dd0 === */
-static void sub_0dd0(void)
+/* === adhocSockInit @ 0x0dd0 === */
+static void adhocSockInit(void)
 {
 	g_sock_list.head = NULL;
 	g_sock_list.tail = &g_sock_list.head;
-	sceNet_lib_2E005032(sub_1078);
+	sceNet_lib_2E005032(adhocSockWakeWaiters);
 	g_last_sock_id = 0;
 }
 
-/* === sub_0e18 @ 0x0e18 === */
-static void sub_0e18(void)
+/* === adhocSockTerm @ 0x0e18 === */
+static void adhocSockTerm(void)
 {
 	AdhocSocket *s;
 	AdhocSocket *next;
@@ -830,8 +849,8 @@ static void sub_0e18(void)
 	}
 }
 
-/* === sub_0e90 @ 0x0e90 === */
-static AdhocSocket *sub_0e90(s32 type, s32 id)
+/* === adhocSockFind @ 0x0e90 === */
+static AdhocSocket *adhocSockFind(s32 type, s32 id)
 {
 	AdhocSocket *s;
 
@@ -844,8 +863,8 @@ static AdhocSocket *sub_0e90(s32 type, s32 id)
 	return NULL;
 }
 
-/* === sub_0ed8 @ 0x0ed8 === */
-static s32 sub_0ed8(void)
+/* === adhocSockAllocId @ 0x0ed8 === */
+static s32 adhocSockAllocId(void)
 {
 	s32 cand = g_last_sock_id + 1;
 	s32 count = 0;
@@ -854,7 +873,7 @@ static s32 sub_0ed8(void)
 		cand = 1;
 
 	while (count < 0xfe) {
-		if (sub_0e90(0, cand) == NULL) {
+		if (adhocSockFind(0, cand) == NULL) {
 			g_last_sock_id = cand;
 			return cand;
 		}
@@ -866,8 +885,8 @@ static s32 sub_0ed8(void)
 	return -1;
 }
 
-/* === sub_0f60 @ 0x0f60 === */
-static s32 sub_0f60(s32 type, AdhocSocket **out_sock)
+/* === adhocSockCreate @ 0x0f60 === */
+static s32 adhocSockCreate(s32 type, AdhocSocket **out_sock)
 {
 	AdhocSocket *s;
 
@@ -885,8 +904,8 @@ static s32 sub_0f60(s32 type, AdhocSocket **out_sock)
 	return 0;
 }
 
-/* === sub_0ffc @ 0x0ffc === */
-static void sub_0ffc(AdhocSocket *sock)
+/* === adhocSockTryFree @ 0x0ffc === */
+static void adhocSockTryFree(AdhocSocket *sock)
 {
 	if (sock->pcb == NULL && sock->wait_list == NULL) {
 		if (sock->next != NULL)
@@ -898,8 +917,8 @@ static void sub_0ffc(AdhocSocket *sock)
 	}
 }
 
-/* === sub_1044 @ 0x1044 === */
-static s32 sub_1044(void)
+/* === adhocSockHasActive @ 0x1044 === */
+static s32 adhocSockHasActive(void)
 {
 	AdhocSocket *s;
 
@@ -910,8 +929,8 @@ static s32 sub_1044(void)
 	return 0;
 }
 
-/* === sub_1078 @ 0x1078 === */
-static void sub_1078(AdhocSocket *sock, s32 flags)
+/* === adhocSockWakeWaiters @ 0x1078 === */
+static void adhocSockWakeWaiters(AdhocSocket *sock, s32 flags)
 {
 	AdhocWaiter *w;
 	u32 chan;
@@ -968,27 +987,27 @@ s32 sceNetAdhocPdpCreate(const u8 *mac, u16 port, u32 bufsize, s32 flags)
 		goto out;
 	}
 
-	ret = sub_0f60(1, &sock);
+	ret = adhocSockCreate(1, &sock);
 	if (ret < 0)
 		goto out;
 
-	ret = sub_2a9c(&pdp);
+	ret = pdpAllocPcb(&pdp);
 	if (ret < 0) {
-		sub_0ffc(sock);
+		adhocSockTryFree(sock);
 		goto out;
 	}
 
-	ret = sub_2b2c(pdp, mac, port, bufsize);
+	ret = pdpBindPcb(pdp, mac, port, bufsize);
 	if (ret < 0) {
-		sub_2d04(pdp);
-		sub_0ffc(sock);
+		pdpFreePcb(pdp);
+		adhocSockTryFree(sock);
 		goto out;
 	}
 
-	id = sub_0ed8();
+	id = adhocSockAllocId();
 	if (id < 0) {
-		sub_2d04(pdp);
-		sub_0ffc(sock);
+		pdpFreePcb(pdp);
+		adhocSockTryFree(sock);
 		ret = 0x8041070b;
 		goto out;
 	}
@@ -1051,14 +1070,14 @@ s32 sceNetAdhocPdpSend(s32 id, const u8 *dst_mac, u16 dport, const void *data, s
 		goto out;
 	}
 
-	sock = sub_0e90(1, id);
+	sock = adhocSockFind(1, id);
 	if (sock == NULL || sock->pcb == NULL) {
 		ret = 0x80410707;
 		goto out;
 	}
 
-	ret = sub_1620((PdpPcb *)sock->pcb, dst_mac, dport, data, len, timeout, nonblock);
-	sub_0ffc(sock);
+	ret = pdpSendInternal((PdpPcb *)sock->pcb, dst_mac, dport, data, len, timeout, nonblock);
+	adhocSockTryFree(sock);
 
 out:
 	sceNet_lib_515B2F33(intr);
@@ -1095,7 +1114,7 @@ s32 sceNetAdhocPdpDelete(s32 id, s32 flags)
 		goto out;
 	}
 
-	sock = sub_0e90(1, id);
+	sock = adhocSockFind(1, id);
 	if (sock == NULL || sock->pcb == NULL) {
 		ret = 0x80410707;
 		goto out;
@@ -1104,7 +1123,7 @@ s32 sceNetAdhocPdpDelete(s32 id, s32 flags)
 	pdp = (PdpPcb *)sock->pcb;
 	sock->pcb = NULL;
 	pdp->sock = NULL;
-	sub_2d04(pdp);
+	pdpFreePcb(pdp);
 
 	if (sock->wait_list != NULL) {
 		if (sock->flags & 1)
@@ -1113,7 +1132,7 @@ s32 sceNetAdhocPdpDelete(s32 id, s32 flags)
 			sceNet_lib_7574FDA1((void *)sock->chan_wr);
 		sceNet_lib_7574FDA1(&g_global_wait_head);
 	}
-	sub_0ffc(sock);
+	adhocSockTryFree(sock);
 	ret = 0;
 
 out:
@@ -1121,8 +1140,8 @@ out:
 	return ret;
 }
 
-/* === sub_1620 @ 0x1620 === */
-static s32 sub_1620(PdpPcb *pdp, const u8 *dst_mac, u16 dport, const void *data, s32 len, u32 timeout, s32 flags)
+/* === pdpSendInternal @ 0x1620 === */
+static s32 pdpSendInternal(PdpPcb *pdp, const u8 *dst_mac, u16 dport, const void *data, s32 len, u32 timeout, s32 flags)
 {
 	u32 rem_timeout = timeout;
 	AdhocIfnet *ifp;
@@ -1266,7 +1285,7 @@ static s32 sub_1620(PdpPcb *pdp, const u8 *dst_mac, u16 dport, const void *data,
 			ifp->if_obytes_lo = new_lo;
 			ifp->if_obytes_hi += carry;
 		}
-		sub_036c(ifp, m);
+		adhocIfOutput(ifp, m);
 		g_pdp_stats[4]++;
 
 		cur_off += chunk;
@@ -1276,8 +1295,8 @@ static s32 sub_1620(PdpPcb *pdp, const u8 *dst_mac, u16 dport, const void *data,
 	return 0;
 }
 
-/* === sub_1c48 @ 0x1c48 === */
-static s32 sub_1c48(PdpPcb *pdp, u8 *src_mac, u16 *sport, void *data, s32 *data_len, u32 timeout, s32 flags)
+/* === pdpRecvInternal @ 0x1c48 === */
+static s32 pdpRecvInternal(PdpPcb *pdp, u8 *src_mac, u16 *sport, void *data, s32 *data_len, u32 timeout, s32 flags)
 {
 	u32 rem_timeout = timeout;
 	AdhocMbuf *m;
@@ -1360,7 +1379,7 @@ s32 sceNetAdhocPdpRecv(s32 id, u8 *src_mac, u16 *sport, void *buf, s32 *len, u32
 	if ((nonblock & ~1) != 0)
 		return 0x80410708;
 
-	return sub_20c4(id, src_mac, sport, buf, len, timeout, nonblock);
+	return pdpRecvById(id, src_mac, sport, buf, len, timeout, nonblock);
 }
 
 /* === sceNetAdhoc_67346A2A @ 0x2004 === */
@@ -1368,7 +1387,7 @@ s32 sceNetAdhoc_67346A2A(s32 id, u8 *src_mac, u16 *sport, void *buf, s32 *len, u
 {
 	if ((nonblock & ~1) != 0)
 		return 0x80410708;
-	return sub_20c4(id, src_mac, sport, buf, len, timeout, nonblock | 2);
+	return pdpRecvById(id, src_mac, sport, buf, len, timeout, nonblock | 2);
 }
 
 /* === sceNetAdhoc_lib_F9240FBA @ 0x2060 === */
@@ -1386,8 +1405,8 @@ s32 sceNetAdhoc_lib_1059683E(void *dst)
 	return 0;
 }
 
-/* === sub_20c4 @ 0x20c4 === */
-static s32 sub_20c4(s32 id, u8 *src_mac, u16 *sport, void *buf, s32 *len, u32 timeout, s32 flags)
+/* === pdpRecvById @ 0x20c4 === */
+static s32 pdpRecvById(s32 id, u8 *src_mac, u16 *sport, void *buf, s32 *len, u32 timeout, s32 flags)
 {
 	s32 intr;
 	s32 ret;
@@ -1423,14 +1442,14 @@ static s32 sub_20c4(s32 id, u8 *src_mac, u16 *sport, void *buf, s32 *len, u32 ti
 		goto out;
 	}
 
-	sock = sub_0e90(1, id);
+	sock = adhocSockFind(1, id);
 	if (sock == NULL || sock->pcb == NULL) {
 		ret = 0x80410707;
 		goto out;
 	}
 
-	ret = sub_1c48((PdpPcb *)sock->pcb, src_mac, sport, buf, len, timeout, flags);
-	sub_0ffc(sock);
+	ret = pdpRecvInternal((PdpPcb *)sock->pcb, src_mac, sport, buf, len, timeout, flags);
+	adhocSockTryFree(sock);
 
 out:
 	sceNet_lib_515B2F33(intr);
@@ -1439,8 +1458,8 @@ out:
 	return ret;
 }
 
-/* === sub_225c @ 0x225c === */
-static void sub_225c(PdpPcb *pdp)
+/* === pdpFlushQueues @ 0x225c === */
+static void pdpFlushQueues(PdpPcb *pdp)
 {
 	AdhocMbuf *m;
 	PdpFragEntry *fe;
@@ -1467,8 +1486,8 @@ static void sub_225c(PdpPcb *pdp)
 	}
 }
 
-/* === sub_231c @ 0x231c === */
-static void sub_231c(AdhocMbuf *m)
+/* === pdpInputPacket @ 0x231c === */
+static void pdpInputPacket(AdhocMbuf *m)
 {
 	u8 dst_mac[6];
 	u8 src_mac[6];
@@ -1755,11 +1774,11 @@ s32 sceNetAdhocGetPdpStat(s32 *buflen, void *buf)
 		for (pdp = g_pdp_list.head; pdp != NULL; pdp = pdp->next) {
 			if (total_bytes + 0x14 > max_len)
 				break;
-			*(u32 *)(out + 0x00) = 0;
-			*(s32 *)(out + 0x04) = (pdp->sock != NULL) ? pdp->sock->id : -1;
+			((ScePdpStatOut *)out)->next = NULL;
+			((ScePdpStatOut *)out)->pdp_id = (pdp->sock != NULL) ? pdp->sock->id : -1;
 			sceKernelMemcpy(out + 0x08, pdp->mac, 6);
-			*(u16 *)(out + 0x0e) = pdp->port;
-			*(u32 *)(out + 0x10) = pdp->rx_cc;
+			((ScePdpStatOut *)out)->port = pdp->port;
+			((ScePdpStatOut *)out)->rcvd_data = pdp->rx_cc;
 			if (total_bytes >= 0x14)
 				*(void **)(out - 0x14) = out;
 			out += 0x14;
@@ -1774,8 +1793,8 @@ out:
 	return ret;
 }
 
-/* === sub_29ac @ 0x29ac === */
-static void sub_29ac(void)
+/* === pdpInit @ 0x29ac === */
+static void pdpInit(void)
 {
 	g_pdp_list.head = NULL;
 	g_pdp_list.tail = &g_pdp_list.head;
@@ -1784,23 +1803,23 @@ static void sub_29ac(void)
 	g_pdp_seq = (u16)(sceNet_lib_1858883D() / 0x8001);
 }
 
-/* === sub_2a18 @ 0x2a18 === */
-static void sub_2a18(void)
+/* === pdpTerm @ 0x2a18 === */
+static void pdpTerm(void)
 {
 	PdpPcb *pdp;
 
 	while ((pdp = g_pdp_list.head) != NULL) {
 		if (pdp->sock != NULL) {
 			pdp->sock->pcb = NULL;
-			sub_0ffc(pdp->sock);
+			adhocSockTryFree(pdp->sock);
 			pdp->sock = NULL;
 		}
-		sub_2d04(pdp);
+		pdpFreePcb(pdp);
 	}
 }
 
-/* === sub_2a9c @ 0x2a9c === */
-static s32 sub_2a9c(PdpPcb **out_pdp)
+/* === pdpAllocPcb @ 0x2a9c === */
+static s32 pdpAllocPcb(PdpPcb **out_pdp)
 {
 	PdpPcb *pdp;
 
@@ -1818,8 +1837,8 @@ static s32 sub_2a9c(PdpPcb **out_pdp)
 	return 0;
 }
 
-/* === sub_2b2c @ 0x2b2c === */
-static s32 sub_2b2c(PdpPcb *pdp, const u8 *mac, u16 port, u32 bufsize)
+/* === pdpBindPcb @ 0x2b2c === */
+static s32 pdpBindPcb(PdpPcb *pdp, const u8 *mac, u16 port, u32 bufsize)
 {
 	u8 local_mac[8];
 	PdpPcb *cur;
@@ -1832,7 +1851,7 @@ static s32 sub_2b2c(PdpPcb *pdp, const u8 *mac, u16 port, u32 bufsize)
 		return 0x80410701;
 
 	if (port == 0) {
-		port = sub_2e78();
+		port = pdpAllocAnonPort();
 		if (port == 0)
 			return 0x8041070b;
 	} else {
@@ -1849,10 +1868,10 @@ static s32 sub_2b2c(PdpPcb *pdp, const u8 *mac, u16 port, u32 bufsize)
 	return 0;
 }
 
-/* === sub_2d04 @ 0x2d04 === */
-static void sub_2d04(PdpPcb *pdp)
+/* === pdpFreePcb @ 0x2d04 === */
+static void pdpFreePcb(PdpPcb *pdp)
 {
-	sub_225c(pdp);
+	pdpFlushQueues(pdp);
 	if (pdp->next != NULL)
 		pdp->next->prev = pdp->prev;
 	else
@@ -1861,14 +1880,14 @@ static void sub_2d04(PdpPcb *pdp)
 	sceNetIfhandle_lib_76BAD213(pdp);
 }
 
-/* === sub_2d50 @ 0x2d50 === */
-static s32 sub_2d50(void)
+/* === pdpHasActive @ 0x2d50 === */
+static s32 pdpHasActive(void)
 {
 	return (g_pdp_list.head != NULL) ? 1 : 0;
 }
 
-/* === sub_2d5c @ 0x2d5c === */
-static void sub_2d5c(void *ifp_arg)
+/* === pdpIfDetach @ 0x2d5c === */
+static void pdpIfDetach(void *ifp_arg)
 {
 	AdhocIfnet *ifp = (AdhocIfnet *)ifp_arg;
 	PdpPcb *pdp;
@@ -1887,8 +1906,8 @@ static void sub_2d5c(void *ifp_arg)
 	}
 }
 
-/* === sub_2dc4 @ 0x2dc4 === */
-static s32 sub_2dc4(AdhocSocket *sock, s32 events)
+/* === pdpPollEvents @ 0x2dc4 === */
+static s32 pdpPollEvents(AdhocSocket *sock, s32 events)
 {
 	PdpPcb *pdp = (PdpPcb *)sock->pcb;
 	s32 rev = 0;
@@ -1910,8 +1929,8 @@ static s32 sub_2dc4(AdhocSocket *sock, s32 events)
 	return rev;
 }
 
-/* === sub_2e78 @ 0x2e78 === */
-static u16 sub_2e78(void)
+/* === pdpAllocAnonPort @ 0x2e78 === */
+static u16 pdpAllocAnonPort(void)
 {
 	u16 cand = g_pdp_anon_port;
 	s32 count = 0;
@@ -1957,7 +1976,7 @@ s32 sceNetAdhocPtpOpen(const u8 *src_mac, u16 src_port, const u8 *dst_mac, u16 d
 	if (delay != 0)
 		sceKernelDelayThread(delay);
 
-	return sub_3afc(src_mac, src_port, dst_mac, dst_port, bufsize, rexmt_int, rexmt_cnt, 0, 1);
+	return ptpCreateSocket(src_mac, src_port, dst_mac, dst_port, bufsize, rexmt_int, rexmt_cnt, 0, 1);
 }
 
 /* === sceNetAdhocPtpConnect @ 0x3060 === */
@@ -2002,14 +2021,14 @@ s32 sceNetAdhocPtpConnect(s32 id, u32 timeout, s32 nonblock)
 		goto out;
 	}
 
-	sock = sub_0e90(2, id);
+	sock = adhocSockFind(2, id);
 	if (sock == NULL || sock->pcb == NULL) {
 		ret = 0x80410707;
 		goto out;
 	}
 
-	ret = sub_3c7c((PtpPcb *)sock->pcb, timeout, nonblock);
-	sub_0ffc(sock);
+	ret = ptpWaitConnect((PtpPcb *)sock->pcb, timeout, nonblock);
+	adhocSockTryFree(sock);
 
 out:
 	sceNet_lib_515B2F33(intr);
@@ -2032,7 +2051,7 @@ s32 sceNetAdhocPtpListen(const u8 *src_mac, u16 src_port, u32 bufsize, u32 rexmt
 	if (flags != 0)
 		return 0x80410708;
 
-	return sub_3afc(src_mac, src_port, g_zero_mac, 0, bufsize, rexmt_int, rexmt_cnt, backlog, 2);
+	return ptpCreateSocket(src_mac, src_port, g_zero_mac, 0, bufsize, rexmt_int, rexmt_cnt, backlog, 2);
 }
 
 /* === sceNetAdhocPtpAccept @ 0x3334 === */
@@ -2080,14 +2099,14 @@ s32 sceNetAdhocPtpAccept(s32 id, u8 *peer_mac, u16 *peer_port, u32 timeout, s32 
 		goto out;
 	}
 
-	sock = sub_0e90(2, id);
+	sock = adhocSockFind(2, id);
 	if (sock == NULL || sock->pcb == NULL) {
 		ret = 0x80410707;
 		goto out;
 	}
 
-	ret = sub_3e30((PtpPcb *)sock->pcb, peer_mac, peer_port, timeout, nonblock, &new_id);
-	sub_0ffc(sock);
+	ret = ptpAcceptInternal((PtpPcb *)sock->pcb, peer_mac, peer_port, timeout, nonblock, &new_id);
+	adhocSockTryFree(sock);
 	if (ret == 0)
 		ret = new_id;
 
@@ -2139,14 +2158,14 @@ s32 sceNetAdhocPtpSend(s32 id, const void *data, s32 *len, u32 timeout, s32 nonb
 		goto out;
 	}
 
-	sock = sub_0e90(2, id);
+	sock = adhocSockFind(2, id);
 	if (sock == NULL || sock->pcb == NULL) {
 		ret = 0x80410707;
 		goto out;
 	}
 
-	ret = sub_40ec((PtpPcb *)sock->pcb, data, len, timeout, nonblock);
-	sub_0ffc(sock);
+	ret = ptpSendInternal((PtpPcb *)sock->pcb, data, len, timeout, nonblock);
+	adhocSockTryFree(sock);
 
 out:
 	sceNet_lib_515B2F33(intr);
@@ -2192,12 +2211,12 @@ s32 sceNetAdhocPtpRecv(s32 id, void *data, s32 *len, u32 timeout, s32 nonblock)
 	} else if (sceWlanDevIsGameMode() != 0) {
 		ret = 0x8041071b;
 	} else {
-		sock = sub_0e90(2, id);
+		sock = adhocSockFind(2, id);
 		if (sock == NULL || sock->pcb == NULL) {
 			ret = 0x80410707;
 		} else {
-			ret = sub_44d4((PtpPcb *)sock->pcb, data, len, timeout, nonblock);
-			sub_0ffc(sock);
+			ret = ptpRecvInternal((PtpPcb *)sock->pcb, data, len, timeout, nonblock);
+			adhocSockTryFree(sock);
 		}
 	}
 	sceNet_lib_515B2F33(intr);
@@ -2239,12 +2258,12 @@ s32 sceNetAdhocPtpFlush(s32 id, u32 timeout, s32 nonblock)
 	} else if (sceWlanDevIsGameMode() != 0) {
 		ret = 0x8041071b;
 	} else {
-		sock = sub_0e90(2, id);
+		sock = adhocSockFind(2, id);
 		if (sock == NULL || sock->pcb == NULL) {
 			ret = 0x80410707;
 		} else {
-			ret = sub_4808((PtpPcb *)sock->pcb, timeout, nonblock);
-			sub_0ffc(sock);
+			ret = ptpFlushInternal((PtpPcb *)sock->pcb, timeout, nonblock);
+			adhocSockTryFree(sock);
 		}
 	}
 
@@ -2273,18 +2292,18 @@ s32 sceNetAdhocPtpClose(s32 id, s32 flags)
 	if (g_adhoc_inited == 0) {
 		ret = 0x80410712;
 	} else {
-		sock = sub_0e90(2, id);
+		sock = adhocSockFind(2, id);
 		if (sock == NULL) {
 			ret = 0x80410701;
 		} else {
-			sub_4e3c((PtpPcb *)sock->pcb);
-			sub_5750((PtpPcb *)sock->pcb);
+			ptpClosePcb((PtpPcb *)sock->pcb);
+			ptpFreeListenQueue((PtpPcb *)sock->pcb);
 			sock->flags |= 1;
 			sock->id = -1;
 			if (sock->wait_list == NULL) {
-				sub_542c((PtpPcb *)sock->pcb);
+				ptpFreePcb((PtpPcb *)sock->pcb);
 				sock->pcb = NULL;
-				sub_0ffc(sock);
+				adhocSockTryFree(sock);
 			}
 			ret = 0;
 		}
@@ -2294,8 +2313,8 @@ s32 sceNetAdhocPtpClose(s32 id, s32 flags)
 	return ret;
 }
 
-/* === sub_3afc @ 0x3afc === */
-static s32 sub_3afc(const u8 *src_mac, u16 src_port, const u8 *dst_mac, u16 dst_port, u32 bufsize, u32 rexmt_int, s32 rexmt_cnt, s32 queue_max, s32 mode)
+/* === ptpCreateSocket @ 0x3afc === */
+static s32 ptpCreateSocket(const u8 *src_mac, u16 src_port, const u8 *dst_mac, u16 dst_port, u32 bufsize, u32 rexmt_int, s32 rexmt_cnt, s32 queue_max, s32 mode)
 {
 	s32 intr;
 	s32 ret;
@@ -2316,27 +2335,27 @@ static s32 sub_3afc(const u8 *src_mac, u16 src_port, const u8 *dst_mac, u16 dst_
 		goto out;
 	}
 
-	ret = sub_0f60(2, &sock);
+	ret = adhocSockCreate(2, &sock);
 	if (ret < 0)
 		goto out;
 
-	ret = sub_4a30(&ptp);
+	ret = ptpAllocPcb(&ptp);
 	if (ret < 0) {
-		sub_0ffc(sock);
+		adhocSockTryFree(sock);
 		goto out;
 	}
 
-	ret = sub_4b7c(ptp, src_mac, src_port, dst_mac, dst_port, bufsize, rexmt_int, rexmt_cnt, queue_max, mode);
+	ret = ptpBindPcb(ptp, src_mac, src_port, dst_mac, dst_port, bufsize, rexmt_int, rexmt_cnt, queue_max, mode);
 	if (ret < 0) {
-		sub_542c(ptp);
-		sub_0ffc(sock);
+		ptpFreePcb(ptp);
+		adhocSockTryFree(sock);
 		goto out;
 	}
 
-	id = sub_0ed8();
+	id = adhocSockAllocId();
 	if (id < 0) {
-		sub_542c(ptp);
-		sub_0ffc(sock);
+		ptpFreePcb(ptp);
+		adhocSockTryFree(sock);
 		ret = 0x8041070b;
 		goto out;
 	}
@@ -2360,14 +2379,14 @@ out:
 	return ret;
 }
 
-/* === sub_3c44 @ 0x3c44 === */
-static s32 sub_3c44(s32 id, u32 timeout, s32 nonblock)
+/* === ptpFlushWrapper @ 0x3c44 === */
+static s32 ptpFlushWrapper(s32 id, u32 timeout, s32 nonblock)
 {
 	return sceNetAdhocPtpFlush(id, timeout, nonblock);
 }
 
-/* === sub_3c7c @ 0x3c7c === */
-static s32 sub_3c7c(PtpPcb *ptp, u32 timeout, s32 flags)
+/* === ptpWaitConnect @ 0x3c7c === */
+static s32 ptpWaitConnect(PtpPcb *ptp, u32 timeout, s32 flags)
 {
 	u32 rem_timeout = timeout;
 	s32 ret;
@@ -2380,9 +2399,9 @@ static s32 sub_3c7c(PtpPcb *ptp, u32 timeout, s32 flags)
 		if (ifp == NULL)
 			return 0x80410715;
 		ptp->state = 2;
-		sub_668c(ptp, 1);
+		ptpSendControlPacket(ptp, 1);
 		ptp->rexmt_rem = ptp->rexmt_max;
-		sceNet_lib_A8B6205A(ptp->timer_rexmt, ptp->rexmt_intvl, sub_6a54, ptp);
+		sceNet_lib_A8B6205A(ptp->timer_rexmt, ptp->rexmt_intvl, ptpRexmtTimeout, ptp);
 	} else if (ptp->state == 4) {
 		return 0;
 	} else if (ptp->state != 2 && ptp->state != 3) {
@@ -2409,8 +2428,8 @@ static s32 sub_3c7c(PtpPcb *ptp, u32 timeout, s32 flags)
 	return 0;
 }
 
-/* === sub_3e30 @ 0x3e30 === */
-static s32 sub_3e30(PtpPcb *ptp, u8 *peer_mac, u16 *peer_port, u32 timeout, s32 flags, s32 *out_id)
+/* === ptpAcceptInternal @ 0x3e30 === */
+static s32 ptpAcceptInternal(PtpPcb *ptp, u8 *peer_mac, u16 *peer_port, u32 timeout, s32 flags, s32 *out_id)
 {
 	u32 rem_timeout = timeout;
 	PtpPcb *child;
@@ -2443,13 +2462,13 @@ static s32 sub_3e30(PtpPcb *ptp, u8 *peer_mac, u16 *peer_port, u32 timeout, s32 
 		}
 	}
 
-	ret = sub_0f60(2, &new_sock);
+	ret = adhocSockCreate(2, &new_sock);
 	if (ret < 0)
 		return ret;
 
-	id = sub_0ed8();
+	id = adhocSockAllocId();
 	if (id < 0) {
-		sub_0ffc(new_sock);
+		adhocSockTryFree(new_sock);
 		return 0x8041070b;
 	}
 
@@ -2478,8 +2497,8 @@ static s32 sub_3e30(PtpPcb *ptp, u8 *peer_mac, u16 *peer_port, u32 timeout, s32 
 	return 0;
 }
 
-/* === sub_40ec @ 0x40ec === */
-static s32 sub_40ec(PtpPcb *ptp, const void *data, s32 *len, u32 timeout, s32 flags)
+/* === ptpSendInternal @ 0x40ec === */
+static s32 ptpSendInternal(PtpPcb *ptp, const void *data, s32 *len, u32 timeout, s32 flags)
 {
 	u32 rem_timeout = timeout;
 	s32 req_len = *len;
@@ -2573,7 +2592,7 @@ static s32 sub_40ec(PtpPcb *ptp, const void *data, s32 *len, u32 timeout, s32 fl
 			*len = sent;
 		}
 
-		sub_6878(ptp, 0);
+		ptpTransmitData(ptp, 0);
 		if (flags & 1)
 			break;
 	}
@@ -2581,8 +2600,8 @@ static s32 sub_40ec(PtpPcb *ptp, const void *data, s32 *len, u32 timeout, s32 fl
 	return 0;
 }
 
-/* === sub_44d4 @ 0x44d4 === */
-static s32 sub_44d4(PtpPcb *ptp, void *data, s32 *len, u32 timeout, s32 flags)
+/* === ptpRecvInternal @ 0x44d4 === */
+static s32 ptpRecvInternal(PtpPcb *ptp, void *data, s32 *len, u32 timeout, s32 flags)
 {
 	u32 rem_timeout = timeout;
 	s32 req_len = *len;
@@ -2646,13 +2665,13 @@ static s32 sub_44d4(PtpPcb *ptp, void *data, s32 *len, u32 timeout, s32 flags)
 	*len = rcvd;
 	if ((ptp->flags & 1) && ptp->rx_hiwat - ptp->rx_cc >= 0x54c) {
 		ptp->flags &= ~1;
-		sub_668c(ptp, 5);
+		ptpSendControlPacket(ptp, 5);
 	}
 	return 0;
 }
 
-/* === sub_4808 @ 0x4808 === */
-static s32 sub_4808(PtpPcb *ptp, u32 timeout, s32 flags)
+/* === ptpFlushInternal @ 0x4808 === */
+static s32 ptpFlushInternal(PtpPcb *ptp, u32 timeout, s32 flags)
 {
 	u32 rem_timeout = timeout;
 	s32 ret;
@@ -2695,8 +2714,8 @@ s32 sceNetAdhoc_lib_2CA12790(void *dst)
 	return 0;
 }
 
-/* === sub_4a30 @ 0x4a30 === */
-static s32 sub_4a30(PtpPcb **out_ptp)
+/* === ptpAllocPcb @ 0x4a30 === */
+static s32 ptpAllocPcb(PtpPcb **out_ptp)
 {
 	PtpPcb *ptp;
 
@@ -2716,8 +2735,8 @@ static s32 sub_4a30(PtpPcb **out_ptp)
 	return 0;
 }
 
-/* === sub_4ad4 @ 0x4ad4 === */
-static void sub_4ad4(PtpPcb *ptp)
+/* === ptpDropTxQueue @ 0x4ad4 === */
+static void ptpDropTxQueue(PtpPcb *ptp)
 {
 	AdhocMbuf *m;
 
@@ -2742,8 +2761,8 @@ static void sub_4ad4(PtpPcb *ptp)
 	ptp->rx_hiwat = 0;
 }
 
-/* === sub_4b7c @ 0x4b7c === */
-static s32 sub_4b7c(PtpPcb *ptp, const u8 *src_mac, u16 src_port, const u8 *dst_mac, u16 dst_port, u32 bufsize, u32 rexmt_int, s32 rexmt_cnt, s32 queue_max, s32 mode)
+/* === ptpBindPcb @ 0x4b7c === */
+static s32 ptpBindPcb(PtpPcb *ptp, const u8 *src_mac, u16 src_port, const u8 *dst_mac, u16 dst_port, u32 bufsize, u32 rexmt_int, s32 rexmt_cnt, s32 queue_max, s32 mode)
 {
 	u8 local_mac[8];
 	PtpPcb *cur;
@@ -2761,7 +2780,7 @@ static s32 sub_4b7c(PtpPcb *ptp, const u8 *src_mac, u16 src_port, const u8 *dst_
 	}
 
 	if (src_port == 0) {
-		src_port = sub_584c();
+		src_port = ptpAllocAnonPort();
 		if (src_port == 0)
 			return 0x8041070b;
 	} else {
@@ -2794,12 +2813,12 @@ static s32 sub_4b7c(PtpPcb *ptp, const u8 *src_mac, u16 src_port, const u8 *dst_
 		ptp->state = 1;
 	else
 		ptp->state = 0;
-	sub_4ad4(ptp);
+	ptpDropTxQueue(ptp);
 	return 0;
 }
 
-/* === sub_4d48 @ 0x4d48 === */
-static void sub_4d48(PtpPcb *ptp)
+/* === ptpMarkConnected @ 0x4d48 === */
+static void ptpMarkConnected(PtpPcb *ptp)
 {
 	sceNet_lib_A93A93E9(ptp->timer_rexmt);
 	ptp->state = 4;
@@ -2808,7 +2827,7 @@ static void sub_4d48(PtpPcb *ptp)
 	ptp->snd_max = ptp->iss + 1;
 	ptp->rcv_nxt = ptp->irs + 1;
 
-	sceNet_lib_A8B6205A(ptp->timer_probe, ptp->rexmt_intvl, sub_6b20, ptp);
+	sceNet_lib_A8B6205A(ptp->timer_probe, ptp->rexmt_intvl, ptpProbeTimeout, ptp);
 
 	if (ptp->parent != NULL) {
 		PtpPcb *parent = ptp->parent;
@@ -2832,20 +2851,20 @@ static void sub_4d48(PtpPcb *ptp)
 	}
 }
 
-/* === sub_4e3c @ 0x4e3c === */
-static void sub_4e3c(PtpPcb *ptp)
+/* === ptpClosePcb @ 0x4e3c === */
+static void ptpClosePcb(PtpPcb *ptp)
 {
 	sceNet_lib_A93A93E9(ptp->timer_rexmt);
 	sceNet_lib_A93A93E9(ptp->timer_probe);
 
 	if (ptp->parent != NULL) {
-		sub_542c(ptp);
+		ptpFreePcb(ptp);
 		return;
 	}
 
 	ptp->state = 0;
-	sub_5590(ptp);
-	sub_55dc(ptp);
+	ptpClearTxQueue(ptp);
+	ptpClearRxQueue(ptp);
 
 	if (ptp->flags & 2) {
 		ptp->flags &= ~2;
@@ -2867,8 +2886,8 @@ static void sub_4e3c(PtpPcb *ptp)
 	}
 }
 
-/* === sub_4fc8 @ 0x4fc8 === */
-static s32 sub_4fc8(AdhocSocket *sock, s32 events)
+/* === ptpPollEvents @ 0x4fc8 === */
+static s32 ptpPollEvents(AdhocSocket *sock, s32 events)
 {
 	PtpPcb *ptp = (PtpPcb *)sock->pcb;
 	s32 rev = 0;
@@ -2953,14 +2972,14 @@ s32 sceNetAdhocGetPtpStat(s32 *buflen, void *buf)
 				continue;
 			if (total_bytes + 0x20 > max_len)
 				break;
-			*(u32 *)(out + 0x00) = 0;
-			*(s32 *)(out + 0x04) = (ptp->sock != NULL) ? ptp->sock->id : -1;
+			((ScePdpStatOut *)out)->next = NULL;
+			((ScePtpStatOut *)out)->ptp_id = (ptp->sock != NULL) ? ptp->sock->id : -1;
 			sceKernelMemcpy(out + 0x08, ptp->local_mac, 6);
 			sceKernelMemcpy(out + 0x0e, ptp->peer_mac, 6);
-			*(u16 *)(out + 0x14) = ptp->local_port;
-			*(u16 *)(out + 0x16) = ptp->peer_port;
-			*(u32 *)(out + 0x18) = ptp->tx_cc;
-			*(u32 *)(out + 0x1c) = ptp->rx_cc;
+			((ScePtpStatOut *)out)->local_port = ptp->local_port;
+			((ScePtpStatOut *)out)->peer_port = ptp->peer_port;
+			((ScePtpStatOut *)out)->sent_data = ptp->tx_cc;
+			((ScePtpStatOut *)out)->rcvd_data = ptp->rx_cc;
 			if (total_bytes >= 0x20)
 				*(void **)(out - 0x20) = out;
 			out += 0x20;
@@ -2975,8 +2994,8 @@ out:
 	return ret;
 }
 
-/* === sub_5288 @ 0x5288 === */
-static void sub_5288(void)
+/* === ptpInit @ 0x5288 === */
+static void ptpInit(void)
 {
 	g_ptp_list.head = NULL;
 	g_ptp_list.tail = &g_ptp_list.head;
@@ -2985,23 +3004,23 @@ static void sub_5288(void)
 	sceKernelMemset(g_ptp_stats, 0, 0x7c);
 }
 
-/* === sub_52e0 @ 0x52e0 === */
-static void sub_52e0(void)
+/* === ptpTerm @ 0x52e0 === */
+static void ptpTerm(void)
 {
 	PtpPcb *ptp;
 
 	while ((ptp = g_ptp_list.head) != NULL) {
 		if (ptp->sock != NULL) {
 			ptp->sock->pcb = NULL;
-			sub_0ffc(ptp->sock);
+			adhocSockTryFree(ptp->sock);
 			ptp->sock = NULL;
 		}
-		sub_542c(ptp);
+		ptpFreePcb(ptp);
 	}
 }
 
-/* === sub_536c @ 0x536c === */
-static PtpPcb *sub_536c(const u8 *local_mac, u16 local_port, const u8 *peer_mac, u16 peer_port)
+/* === ptpFindPcb @ 0x536c === */
+static PtpPcb *ptpFindPcb(const u8 *local_mac, u16 local_port, const u8 *peer_mac, u16 peer_port)
 {
 	PtpPcb *ptp;
 
@@ -3014,8 +3033,8 @@ static PtpPcb *sub_536c(const u8 *local_mac, u16 local_port, const u8 *peer_mac,
 	return NULL;
 }
 
-/* === sub_542c @ 0x542c === */
-static void sub_542c(PtpPcb *ptp)
+/* === ptpFreePcb @ 0x542c === */
+static void ptpFreePcb(PtpPcb *ptp)
 {
 	PtpPcb *child;
 
@@ -3023,7 +3042,7 @@ static void sub_542c(PtpPcb *ptp)
 	sceNet_lib_A93A93E9(ptp->timer_probe);
 
 	while ((child = ptp->q_head) != NULL) {
-		sub_542c(child);
+		ptpFreePcb(child);
 	}
 
 	if (ptp->parent != NULL) {
@@ -3042,13 +3061,13 @@ static void sub_542c(PtpPcb *ptp)
 		g_ptp_list.tail = ptp->prev;
 	*ptp->prev = ptp->next;
 
-	sub_5590(ptp);
-	sub_55dc(ptp);
+	ptpClearTxQueue(ptp);
+	ptpClearRxQueue(ptp);
 	sceNetIfhandle_lib_76BAD213(ptp);
 }
 
-/* === sub_5590 @ 0x5590 === */
-static void sub_5590(PtpPcb *ptp)
+/* === ptpClearTxQueue @ 0x5590 === */
+static void ptpClearTxQueue(PtpPcb *ptp)
 {
 	AdhocMbuf *m;
 
@@ -3062,8 +3081,8 @@ static void sub_5590(PtpPcb *ptp)
 	ptp->tx_cc = 0;
 }
 
-/* === sub_55dc @ 0x55dc === */
-static void sub_55dc(PtpPcb *ptp)
+/* === ptpClearRxQueue @ 0x55dc === */
+static void ptpClearRxQueue(PtpPcb *ptp)
 {
 	AdhocMbuf *m;
 
@@ -3077,14 +3096,14 @@ static void sub_55dc(PtpPcb *ptp)
 	ptp->rx_cc = 0;
 }
 
-/* === sub_55f8 @ 0x55f8 === */
-static s32 sub_55f8(void)
+/* === ptpHasActive @ 0x55f8 === */
+static s32 ptpHasActive(void)
 {
 	return (g_ptp_list.head != NULL) ? 1 : 0;
 }
 
-/* === sub_5604 @ 0x5604 === */
-static void sub_5604(void *ifp_arg)
+/* === ptpIfDetach @ 0x5604 === */
+static void ptpIfDetach(void *ifp_arg)
 {
 	AdhocIfnet *ifp = (AdhocIfnet *)ifp_arg;
 	PtpPcb *ptp;
@@ -3094,21 +3113,21 @@ static void sub_5604(void *ifp_arg)
 
 	for (ptp = g_ptp_list.head; ptp != NULL; ptp = ptp->next) {
 		if (ptp->state == 4 && ptp->tx_head != NULL && ptp->snd_nxt < ptp->snd_max) {
-			sub_6878(ptp, 0);
+			ptpTransmitData(ptp, 0);
 			if (ifp->snd_len >= ifp->snd_maxlen)
 				break;
 		}
 	}
 }
 
-/* === sub_572c @ 0x572c === */
-static void sub_572c(void *ifp_arg)
+/* === ptpIfDetachNoop @ 0x572c === */
+static void ptpIfDetachNoop(void *ifp_arg)
 {
 	(void)ifp_arg;
 }
 
-/* === sub_5750 @ 0x5750 === */
-static void sub_5750(PtpPcb *ptp)
+/* === ptpFreeListenQueue @ 0x5750 === */
+static void ptpFreeListenQueue(PtpPcb *ptp)
 {
 	PtpPcb *child;
 
@@ -3120,8 +3139,8 @@ static void sub_5750(PtpPcb *ptp)
 			ptp->q_tail = child->acc_prev;
 		*child->acc_prev = child->acc_next;
 		ptp->q_len--;
-		sub_4e3c(child);
-		sub_5750(child);
+		ptpClosePcb(child);
+		ptpFreeListenQueue(child);
 		if (csock != NULL) {
 			PtpPcb *cpcb = (PtpPcb *)csock->pcb;
 			csock->pcb = NULL;
@@ -3133,17 +3152,17 @@ static void sub_5750(PtpPcb *ptp)
 				*cpcb->prev = cpcb->next;
 				sceNetIfhandle_lib_76BAD213(cpcb);
 			}
-			sub_0ffc(csock);
+			adhocSockTryFree(csock);
 		}
 	}
 	sceKernelMemset(ptp->local_mac, 0, 6);
 	sceKernelMemset(ptp->peer_mac, 0, 6);
 	ptp->local_port = 0;
-	sub_4ad4(ptp);
+	ptpDropTxQueue(ptp);
 }
 
-/* === sub_584c @ 0x584c === */
-static u16 sub_584c(void)
+/* === ptpAllocAnonPort @ 0x584c === */
+static u16 ptpAllocAnonPort(void)
 {
 	u16 cand = g_ptp_anon_port;
 	s32 count = 0;
@@ -3169,8 +3188,8 @@ static u16 sub_584c(void)
 	return 0;
 }
 
-/* === sub_5938 @ 0x5938 === */
-static void sub_5938(AdhocMbuf *m)
+/* === ptpInputPacket @ 0x5938 === */
+static void ptpInputPacket(AdhocMbuf *m)
 {
 	u8 dst_mac[6];
 	u8 src_mac[6];
@@ -3255,15 +3274,15 @@ static void sub_5938(AdhocMbuf *m)
 			sceNetIfhandle_lib_BFF3CEA5(m, pad_trim);
 	}
 
-	ptp = sub_536c(dst_mac, dport, src_mac, sport);
+	ptp = ptpFindPcb(dst_mac, dport, src_mac, sport);
 	if (ptp == NULL) {
 		if (type == 1) {
-			ptp = sub_536c(dst_mac, dport, g_zero_mac, 0);
+			ptp = ptpFindPcb(dst_mac, dport, g_zero_mac, 0);
 			type = m->m_data[0x31];
 		}
 		if (ptp == NULL) {
 			if (type != 7)
-				sub_637c(dst_mac, dport, src_mac, sport, 7, 0, NULL);
+				ptpBuildAndSendPacket(dst_mac, dport, src_mac, sport, 7, 0, NULL);
 			g_ptp_stats[27]++;
 			sceNetIfhandle_lib_F56FAC82(m);
 			return;
@@ -3276,21 +3295,21 @@ static void sub_5938(AdhocMbuf *m)
 		case 0:
 		case 2:
 		case 4:
-			sub_637c(dst_mac, dport, src_mac, sport, 7, 0, NULL);
+			ptpBuildAndSendPacket(dst_mac, dport, src_mac, sport, 7, 0, NULL);
 			g_ptp_stats[3]++;
 			break;
 		case 1: {
 			PtpPcb *child;
 			if (ptp->q_len >= ptp->q_maxlen) {
-				sub_5750(ptp);
+				ptpFreeListenQueue(ptp);
 				if (ptp->q_len >= ptp->q_maxlen) {
-					sub_637c(dst_mac, dport, src_mac, sport, 7, 0, NULL);
+					ptpBuildAndSendPacket(dst_mac, dport, src_mac, sport, 7, 0, NULL);
 					g_ptp_stats[2]++;
 					break;
 				}
 			}
-			if (sub_4a30(&child) < 0) {
-				sub_637c(dst_mac, dport, src_mac, sport, 7, 0, NULL);
+			if (ptpAllocPcb(&child) < 0) {
+				ptpBuildAndSendPacket(dst_mac, dport, src_mac, sport, 7, 0, NULL);
 				g_ptp_stats[2]++;
 				break;
 			}
@@ -3308,24 +3327,24 @@ static void sub_5938(AdhocMbuf *m)
 			child->mode = 1;
 			child->state = 3;
 			child->parent = ptp;
-			sub_4ad4(child);
+			ptpDropTxQueue(child);
 			child->acc_next = NULL;
 			child->acc_prev = ptp->q_tail;
 			*ptp->q_tail = child;
 			ptp->q_tail = &child->acc_next;
 			ptp->q_len++;
-			sub_668c(child, 2);
+			ptpSendControlPacket(child, 2);
 			child->rexmt_rem = child->rexmt_max;
-			sceNet_lib_A8B6205A(child->timer_rexmt, child->rexmt_intvl, sub_6a54, child);
+			sceNet_lib_A8B6205A(child->timer_rexmt, child->rexmt_intvl, ptpRexmtTimeout, child);
 			g_ptp_stats[1]++;
 			break;
 		}
 		case 3:
 			if (ptp->irs != seq) {
-				sub_637c(dst_mac, dport, src_mac, sport, 7, 0, NULL);
+				ptpBuildAndSendPacket(dst_mac, dport, src_mac, sport, 7, 0, NULL);
 				g_ptp_stats[3]++;
 			} else {
-				sub_668c(ptp, 2);
+				ptpSendControlPacket(ptp, 2);
 				g_ptp_stats[1]++;
 			}
 			break;
@@ -3339,28 +3358,28 @@ static void sub_5938(AdhocMbuf *m)
 		case 0:
 		case 1:
 		case 3:
-			sub_637c(dst_mac, dport, src_mac, sport, 7, 0, NULL);
+			ptpBuildAndSendPacket(dst_mac, dport, src_mac, sport, 7, 0, NULL);
 			g_ptp_stats[7]++;
 			break;
 		case 2:
 			if (ptp->iss != seq) {
-				sub_637c(dst_mac, dport, src_mac, sport, 7, 0, NULL);
+				ptpBuildAndSendPacket(dst_mac, dport, src_mac, sport, 7, 0, NULL);
 				g_ptp_stats[7]++;
 			} else {
 				ptp->snd_wnd = wnd;
 				if (wnd < ptp->rcv_wnd)
 					ptp->rcv_wnd = wnd;
-				sub_4d48(ptp);
-				sub_668c(ptp, 3);
+				ptpMarkConnected(ptp);
+				ptpSendControlPacket(ptp, 3);
 				g_ptp_stats[5]++;
 			}
 			break;
 		case 4:
 			if (ptp->iss != seq) {
-				sub_637c(dst_mac, dport, src_mac, sport, 7, 0, NULL);
+				ptpBuildAndSendPacket(dst_mac, dport, src_mac, sport, 7, 0, NULL);
 				g_ptp_stats[7]++;
 			} else {
-				sub_668c(ptp, 3);
+				ptpSendControlPacket(ptp, 3);
 				g_ptp_stats[6]++;
 			}
 			break;
@@ -3376,21 +3395,21 @@ static void sub_5938(AdhocMbuf *m)
 			break;
 		case 1:
 		case 2:
-			sub_637c(dst_mac, dport, src_mac, sport, 7, 0, NULL);
+			ptpBuildAndSendPacket(dst_mac, dport, src_mac, sport, 7, 0, NULL);
 			g_ptp_stats[11]++;
 			break;
 		case 3:
 			if (ptp->iss == seq) {
-				sub_4d48(ptp);
+				ptpMarkConnected(ptp);
 				g_ptp_stats[9]++;
 			} else {
-				sub_637c(dst_mac, dport, src_mac, sport, 7, 0, NULL);
+				ptpBuildAndSendPacket(dst_mac, dport, src_mac, sport, 7, 0, NULL);
 				g_ptp_stats[11]++;
 			}
 			break;
 		case 4:
 			if (ptp->iss != seq) {
-				sub_637c(dst_mac, dport, src_mac, sport, 7, 0, NULL);
+				ptpBuildAndSendPacket(dst_mac, dport, src_mac, sport, 7, 0, NULL);
 				g_ptp_stats[11]++;
 			} else {
 				g_ptp_stats[10]++;
@@ -3408,25 +3427,25 @@ static void sub_5938(AdhocMbuf *m)
 			break;
 		case 1:
 		case 2:
-			sub_637c(dst_mac, dport, src_mac, sport, 7, 0, NULL);
+			ptpBuildAndSendPacket(dst_mac, dport, src_mac, sport, 7, 0, NULL);
 			g_ptp_stats[16]++;
 			break;
 		case 3:
 			if (ptp->rcv_nxt == seq) {
-				sub_668c(ptp, 2);
-				sceNet_lib_A8B6205A(ptp->timer_rexmt, ptp->rexmt_intvl, sub_6a54, ptp);
+				ptpSendControlPacket(ptp, 2);
+				sceNet_lib_A8B6205A(ptp->timer_rexmt, ptp->rexmt_intvl, ptpRexmtTimeout, ptp);
 				ptp->rexmt_rem = ptp->rexmt_max;
 			}
 			break;
 		case 4:
 			if (ptp->rcv_nxt != seq) {
 				if ((s32)(ptp->rcv_nxt - seq) > 0) {
-					sub_668c(ptp, 5);
+					ptpSendControlPacket(ptp, 5);
 					g_ptp_stats[15]++;
 				} else {
 					if (!(ptp->flags & 1)) {
 						ptp->flags |= 1;
-						sub_668c(ptp, 6);
+						ptpSendControlPacket(ptp, 6);
 					}
 					g_ptp_stats[16]++;
 				}
@@ -3446,7 +3465,7 @@ static void sub_5938(AdhocMbuf *m)
 			ptp->rx_tail = m;
 			ptp->rx_cc += (u32)m->m_pkthdr_len;
 			ptp->rcv_nxt++;
-			sub_668c(ptp, 5);
+			ptpSendControlPacket(ptp, 5);
 			if (ptp->rx_flags & 1) {
 				ptp->rx_flags &= ~1;
 				sceNet_lib_7574FDA1(&ptp->rx_head);
@@ -3465,7 +3484,7 @@ static void sub_5938(AdhocMbuf *m)
 	case 5: /* ACK */
 		if (ptp->state < 4) {
 			if (ptp->state > 0) {
-				sub_637c(dst_mac, dport, src_mac, sport, 7, 0, NULL);
+				ptpBuildAndSendPacket(dst_mac, dport, src_mac, sport, 7, 0, NULL);
 				g_ptp_stats[20]++;
 			} else if (ptp->state == 0) {
 				g_ptp_stats[20]++;
@@ -3485,7 +3504,7 @@ static void sub_5938(AdhocMbuf *m)
 				ptp->tx_flags &= ~2;
 				sceNet_lib_7574FDA1(&g_global_wait_head);
 			}
-			sub_6878(ptp, 0);
+			ptpTransmitData(ptp, 0);
 			g_ptp_stats[19]++;
 			break;
 		}
@@ -3493,7 +3512,7 @@ static void sub_5938(AdhocMbuf *m)
 		for (;;) {
 			AdhocMbuf *txm = ptp->tx_head;
 			if (txm == NULL) {
-				sub_4e3c(ptp);
+				ptpClosePcb(ptp);
 				g_ptp_stats[20]++;
 				goto drop;
 			}
@@ -3522,14 +3541,14 @@ static void sub_5938(AdhocMbuf *m)
 			ptp->tx_flags &= ~2;
 			sceNet_lib_7574FDA1(&g_global_wait_head);
 		}
-		sub_6878(ptp, 0);
+		ptpTransmitData(ptp, 0);
 		g_ptp_stats[18]++;
 		break;
 
 	case 6: /* NACK / FAST REXMT */
 		if (ptp->state < 4) {
 			if (ptp->state > 0) {
-				sub_637c(dst_mac, dport, src_mac, sport, 7, 0, NULL);
+				ptpBuildAndSendPacket(dst_mac, dport, src_mac, sport, 7, 0, NULL);
 				g_ptp_stats[23]++;
 			} else if (ptp->state == 0) {
 				g_ptp_stats[23]++;
@@ -3543,7 +3562,7 @@ static void sub_5938(AdhocMbuf *m)
 			}
 			sceNet_lib_A93A93E9(ptp->timer_rexmt);
 			ptp->snd_nxt = ptp->snd_una;
-			sub_6878(ptp, 0);
+			ptpTransmitData(ptp, 0);
 			g_ptp_stats[22]++;
 		}
 		break;
@@ -3553,7 +3572,7 @@ static void sub_5938(AdhocMbuf *m)
 			g_ptp_stats[26]++;
 		} else if (ptp->state >= 2 && ptp->state < 5) {
 			g_ptp_stats[25]++;
-			sub_4e3c(ptp);
+			ptpClosePcb(ptp);
 		}
 		break;
 
@@ -3565,8 +3584,8 @@ drop:
 	sceNetIfhandle_lib_F56FAC82(m);
 }
 
-/* === sub_637c @ 0x637c === */
-static void sub_637c(const u8 *src_mac, u16 sport, const u8 *dst_mac, u16 dport, u8 type, u32 seq_or_ack, AdhocMbuf *payload_m)
+/* === ptpBuildAndSendPacket @ 0x637c === */
+static void ptpBuildAndSendPacket(const u8 *src_mac, u16 sport, const u8 *dst_mac, u16 dport, u8 type, u32 seq_or_ack, AdhocMbuf *payload_m)
 {
 	AdhocIfnet *ifp;
 	s32 payload_len;
@@ -3659,11 +3678,11 @@ static void sub_637c(const u8 *src_mac, u16 sport, const u8 *dst_mac, u16 dport,
 		ifp->if_obytes_lo = new_lo;
 		ifp->if_obytes_hi += carry;
 	}
-	sub_036c(ifp, m);
+	adhocIfOutput(ifp, m);
 }
 
-/* === sub_668c @ 0x668c === */
-static void sub_668c(PtpPcb *ptp, u8 type)
+/* === ptpSendControlPacket @ 0x668c === */
+static void ptpSendControlPacket(PtpPcb *ptp, u8 type)
 {
 	u32 seq_val;
 	AdhocMbuf *m = NULL;
@@ -3727,13 +3746,13 @@ static void sub_668c(PtpPcb *ptp, u8 type)
 		break;
 	}
 
-	sub_637c(ptp->local_mac, ptp->local_port, ptp->peer_mac, ptp->peer_port, type, seq_val, m);
+	ptpBuildAndSendPacket(ptp->local_mac, ptp->local_port, ptp->peer_mac, ptp->peer_port, type, seq_val, m);
 	if (m != NULL)
 		sceNetIfhandle_lib_F56FAC82(m);
 }
 
-/* === sub_6878 @ 0x6878 === */
-static void sub_6878(PtpPcb *ptp, s32 rexmt_only)
+/* === ptpTransmitData @ 0x6878 === */
+static void ptpTransmitData(PtpPcb *ptp, s32 rexmt_only)
 {
 	AdhocMbuf *m = ptp->tx_head;
 	u32 off_bytes = 0;
@@ -3756,19 +3775,19 @@ static void sub_6878(PtpPcb *ptp, s32 rexmt_only)
 			if (sent_cnt != 0)
 				break;
 			if (rexmt_only != 0) {
-				sub_637c(ptp->local_mac, ptp->local_port, ptp->peer_mac, ptp->peer_port, 4, ptp->snd_una - 1, NULL);
+				ptpBuildAndSendPacket(ptp->local_mac, ptp->local_port, ptp->peer_mac, ptp->peer_port, 4, ptp->snd_una - 1, NULL);
 				g_ptp_stats[29]++;
 				return;
 			}
 			if (!(ptp->timer_rexmt_active & 1)) {
 				g_ptp_stats[30]++;
 				ptp->rexmt_rem = ptp->rexmt_max;
-				sceNet_lib_A8B6205A(ptp->timer_rexmt, ptp->rexmt_intvl, sub_6a54, ptp);
+				sceNet_lib_A8B6205A(ptp->timer_rexmt, ptp->rexmt_intvl, ptpRexmtTimeout, ptp);
 			}
 			break;
 		}
 
-		sub_637c(ptp->local_mac, ptp->local_port, ptp->peer_mac, ptp->peer_port, 4, ptp->snd_nxt, m);
+		ptpBuildAndSendPacket(ptp->local_mac, ptp->local_port, ptp->peer_mac, ptp->peer_port, 4, ptp->snd_nxt, m);
 		sent_cnt++;
 		if ((ts[2] | ts[3]) == 0) {
 			s64 now = sceKernelGetSystemTimeWide();
@@ -3783,37 +3802,37 @@ static void sub_6878(PtpPcb *ptp, s32 rexmt_only)
 
 	if (rexmt_only == 0 && sent_cnt > 0) {
 		ptp->rexmt_rem = ptp->rexmt_max;
-		sceNet_lib_A8B6205A(ptp->timer_rexmt, ptp->rexmt_intvl, sub_6a54, ptp);
+		sceNet_lib_A8B6205A(ptp->timer_rexmt, ptp->rexmt_intvl, ptpRexmtTimeout, ptp);
 	}
 }
 
-/* === sub_6a54 @ 0x6a54 === */
-static void sub_6a54(PtpPcb *ptp)
+/* === ptpRexmtTimeout @ 0x6a54 === */
+static void ptpRexmtTimeout(PtpPcb *ptp)
 {
 	if (ptp->state < 2)
 		return;
 
 	if (ptp->rexmt_rem <= 0) {
 		ptp->rexmt_rem--;
-		sub_4e3c(ptp);
+		ptpClosePcb(ptp);
 		return;
 	}
 	ptp->rexmt_rem--;
 
 	if (ptp->state == 2) {
-		sub_668c(ptp, 1);
+		ptpSendControlPacket(ptp, 1);
 	} else if (ptp->state == 3) {
-		sub_668c(ptp, 2);
+		ptpSendControlPacket(ptp, 2);
 	} else if (ptp->state == 4) {
 		ptp->snd_nxt = ptp->snd_una;
-		sub_6878(ptp, 1);
+		ptpTransmitData(ptp, 1);
 		g_ptp_stats[28]++;
 	}
-	sceNet_lib_A8B6205A(ptp->timer_rexmt, ptp->rexmt_intvl, sub_6a54, ptp);
+	sceNet_lib_A8B6205A(ptp->timer_rexmt, ptp->rexmt_intvl, ptpRexmtTimeout, ptp);
 }
 
-/* === sub_6b20 @ 0x6b20 === */
-static void sub_6b20(PtpPcb *ptp)
+/* === ptpProbeTimeout @ 0x6b20 === */
+static void ptpProbeTimeout(PtpPcb *ptp)
 {
 	AdhocMbuf *m;
 
@@ -3828,12 +3847,12 @@ static void sub_6b20(PtpPcb *ptp)
 			s64 start = (s64)(((u64)ts[3] << 32) | ts[2]);
 			s64 max_wait = (s64)ptp->rexmt_intvl * (s64)(ptp->rexmt_max + 1);
 			if (now - start > max_wait) {
-				sub_4e3c(ptp);
+				ptpClosePcb(ptp);
 				return;
 			}
 		}
 	}
-	sceNet_lib_A8B6205A(ptp->timer_probe, ptp->rexmt_intvl, sub_6b20, ptp);
+	sceNet_lib_A8B6205A(ptp->timer_probe, ptp->rexmt_intvl, ptpProbeTimeout, ptp);
 }
 
 /* === sceNetAdhocGameModeCreateMaster @ 0x6c1c === */
@@ -3861,7 +3880,7 @@ s32 sceNetAdhocGameModeCreateMaster(void *buf, u32 size)
 	} else {
 		ret = sceNetGetLocalEtherAddr(local_mac);
 		if (ret >= 0) {
-			ret = sub_7188(local_mac, buf, size);
+			ret = gameModeCreateBuffer(local_mac, buf, size);
 			if (ret >= 0) {
 				g_gm_master_id = ret;
 				ret = 0;
@@ -3895,7 +3914,7 @@ s32 sceNetAdhocGameModeCreateReplica(const u8 *mac, void *buf, u32 size)
 	} else if (sceWlanDevIsGameMode() == 0) {
 		ret = 0x8041071b;
 	} else {
-		ret = sub_7188(mac, buf, size);
+		ret = gameModeCreateBuffer(mac, buf, size);
 	}
 
 	sceNet_lib_515B2F33(intr);
@@ -3982,16 +4001,16 @@ s32 sceNetAdhocGameModeDeleteMaster(void)
 	return ret;
 }
 
-/* === sub_7008 @ 0x7008 === */
-static s32 sub_7008(void)
+/* === gameModeInit @ 0x7008 === */
+static s32 gameModeInit(void)
 {
 	g_gm_list.head = NULL;
 	g_gm_list.tail = &g_gm_list.head;
 	return 0;
 }
 
-/* === sub_7020 @ 0x7020 === */
-static void sub_7020(void)
+/* === gameModeTerm @ 0x7020 === */
+static void gameModeTerm(void)
 {
 	GameModeNode *gm;
 
@@ -4010,13 +4029,13 @@ s32 sceNetAdhocGameModeUpdateReplica(s32 id, void *opt_data)
 {
 	if (_sceKernelCheckThreadStack() < 0x7f0)
 		return 0x80410005;
-	return sub_7338(id, opt_data, 0);
+	return gameModeUpdateBuffer(id, opt_data, 0);
 }
 
 /* === sceNetAdhoc_lib_AF6DFB15 @ 0x70e0 === */
 s32 sceNetAdhoc_lib_AF6DFB15(s32 id, void *opt_data)
 {
-	return sub_7338(id, opt_data, 1);
+	return gameModeUpdateBuffer(id, opt_data, 1);
 }
 
 /* === sceNetAdhocGameModeDeleteReplica @ 0x70fc === */
@@ -4035,15 +4054,15 @@ s32 sceNetAdhocGameModeDeleteReplica(s32 id)
 	if (g_adhoc_inited == 0) {
 		ret = 0x80410712;
 	} else {
-		ret = sub_72a4(id);
+		ret = gameModeDeleteBuffer(id);
 	}
 
 	sceNet_lib_515B2F33(intr);
 	return ret;
 }
 
-/* === sub_7188 @ 0x7188 === */
-static s32 sub_7188(const u8 *mac, void *buf, u32 size)
+/* === gameModeCreateBuffer @ 0x7188 === */
+static s32 gameModeCreateBuffer(const u8 *mac, void *buf, u32 size)
 {
 	s32 id;
 	GameModeNode *gm;
@@ -4081,8 +4100,8 @@ static s32 sub_7188(const u8 *mac, void *buf, u32 size)
 	return id;
 }
 
-/* === sub_72a4 @ 0x72a4 === */
-static s32 sub_72a4(s32 id)
+/* === gameModeDeleteBuffer @ 0x72a4 === */
+static s32 gameModeDeleteBuffer(s32 id)
 {
 	GameModeNode *gm;
 
@@ -4103,8 +4122,8 @@ static s32 sub_72a4(s32 id)
 	return 0;
 }
 
-/* === sub_7338 @ 0x7338 === */
-static s32 sub_7338(s32 id, void *opt_data, s32 mode)
+/* === gameModeUpdateBuffer @ 0x7338 === */
+static s32 gameModeUpdateBuffer(s32 id, void *opt_data, s32 mode)
 {
 	u32 recv_info[6];
 	s32 intr;

@@ -79,106 +79,106 @@ int sceUtilityUnloadModule(u32 id);
 int sceUtility_private_59EB3A17(int flag);
 
 /* Forward declarations */
-static int sub_011c(u32 type, void *params);
-static int sub_088c(u32 type);
-static int sub_0984(u32 type, void *params);
-static int sub_1124(int ev_id, char *ev_name, void *param, int *result);
-static int sub_1224(u32 type, int speed);
-static int sub_12ac(u32 type);
-static int sub_12f4(u32 type);
-int sub_1694(SceSize args, void *argp);
-int sub_1c04(SceSize args, void *argp);
-int sub_1c74(SceSize args, void *argp);
-int sub_1edc(SceSize args, void *argp);
-int sub_1f84(SceUID modid, int reason);
-int sub_1ffc(SceUID modid, int reason);
-int sub_2074(void);
-int sub_20ec(u32 type, void *params);
-static int sub_2350(u32 type);
-static int sub_25ec(void);
-static int sub_2650(void);
-static int sub_2680(u32 type, int speed);
-static int sub_26f8(u32 type);
-static int sub_296c(u32 type, u32 size, void *params);
-static SceUID sub_29a4(const char *path, SceUID *block_p, int flags, void *opt);
-static int sub_2a50(SceUID modid);
-static SceUID sub_2ad4(const char *path, int mpid, SceSize argsize, void *argp, SceUID *block_p);
-static int sub_3208(void);
-static void sub_3264(SceUID block_id);
-static void sub_32a0(int step, SceUID block_id);
-static int sub_333c(void);
-static int sub_3458(void);
-static int sub_3588(void);
-static int sub_3614(const char *path, int arg1);
-static int sub_3654(SceUID modid);
-static int sub_3700(int idx);
-static int sub_37d0(void);
-static int sub_384c(u32 id);
-static int sub_3920(u32 id);
-static int sub_3aac(u32 id);
-static int sub_3b58(u32 id);
-static int sub_3bc4(u32 id);
-static int sub_3cd0(u32 id);
-static int sub_3db8(u32 id);
-static int sub_3e50(void);
-static int sub_3f2c(void);
-static int sub_3f78(u32 id, int a1);
-static int sub_3fe8(u32 id, int a1);
-static int sub_4058(u32 id);
-static int sub_412c(u32 id);
-static int sub_41ec(u32 id);
-static int sub_42f8(void);
-static int sub_4344(u32 id);
-static int sub_43f8(void);
-static int sub_4444(u32 id, int a1);
-static int sub_44b4(void);
-static int sub_4540(u32 id);
-static int sub_4720(u32 id);
-static int sub_489c(u32 id);
-static int sub_4aa8(int count, const u32 *ids);
-static int sub_4b8c(int count, const u32 *ids);
-static int sub_4c24(u32 id);
-static int sub_4cf0(u32 id);
-static int sub_4da0(u32 id);
-static int sub_4e14(void);
-static int sub_559c(void);
-static int sub_621c(u32 id, u32 val);
-static int sub_651c(u32 id, u32 *val);
-static int sub_68f8(const char *dir, const char *name, u32 val);
-static int sub_6a88(const char *dir, const char *name, u32 *val, u32 defval);
-static int sub_6bec(const char *dir, const char *name, const char *str, int size);
-static int sub_6ce8(const char *dir, const char *name, char *buf, int size, const char *defstr);
-static int sub_6e68(u32 id, const char *str);
-int sub_7034(u32 id, char *str, int len);
-static int sub_7a7c(int idx);
-static int sub_7ae4(int idx);
-static int sub_7b3c(int idx);
-static int sub_7b94(void *buf);
-static int sub_7cd0(int idx);
-static int sub_7d50(int idx, int param, const void *data);
-static int sub_7e60(int idx, int param, void *data);
-static int sub_7f8c(const char *dir, int idx);
-static int sub_8048(int dst_idx, int src_idx);
-static int sub_80ec(int a0, int a1);
-static int sub_817c(int idx);
-static int sub_81d0(void);
-static int sub_8200(int idx);
-static int sub_825c(int idx);
-static int sub_830c(int idx, int param, void *data, int set_mode);
-static int sub_8c20(void);
-static int sub_8d2c(int *idx_p);
-static int sub_8df0(char *out_dir, int idx);
-static int sub_8e60(const char *dir, int a1);
-static int sub_8ee8(int idx);
-static int sub_8f3c(u32 *reg_p);
-static int sub_8f6c(u32 reg);
-static int sub_9044(u32 type, u32 sub_mode);
-static int sub_90e4(int mode);
-static int sub_91b0(void);
-static void sub_9204(void);
-static u32 sub_9210(void);
-static int sub_922c(int a0, int a1, void *a2);
-static int sub_9270(int a0, int a1, void *a2);
+static int utilityDialogInitStart(u32 type, void *params);
+static int utilityDialogShutdownStart(u32 type);
+static int utilityDialogInitWrapper(u32 type, void *params);
+static int utilitySysEventHandler(int ev_id, char *ev_name, void *param, int *result);
+static int utilityDialogUpdate(u32 type, int speed);
+static int utilityDialogGetStatus(u32 type);
+static int utilityDialogAbort(u32 type);
+int utilityDialogThread(SceSize args, void *argp);
+int utilityAppletLoadThread(SceSize args, void *argp);
+int utilityAppletUnloadThread(SceSize args, void *argp);
+int utilityDialogUnloadThread(SceSize args, void *argp);
+int utilityStopUnloadModuleA(SceUID modid, int reason);
+int utilityStopUnloadModuleB(SceUID modid, int reason);
+int utilityClearDialogVmem(void);
+int utilityAppletInitStart(u32 type, void *params);
+static int utilityAppletShutdownStart(u32 type);
+static int utilityAppletInitSync(void);
+static int utilityAppletTermSync(void);
+static int utilityAppletUpdate(u32 type, int speed);
+static int utilityAppletGetStatus(u32 type);
+static int utilityCheckAppletParamSize(u32 type, u32 size, void *params);
+static SceUID utilityLoadModuleWithRetry(const char *path, SceUID *block_p, int flags, void *opt);
+static int utilityUnloadModuleWithRetry(SceUID modid);
+static SceUID utilityLoadStartModule(const char *path, int mpid, SceSize argsize, void *argp, SceUID *block_p);
+static int utilityIsDevToolMode(void);
+static void utilityFlushMemBlock(SceUID block_id);
+static void utilityLogMemBlockStep(int step, SceUID block_id);
+static int utilityCheckDiscBootMode(void);
+static int utilityNetModuleInit(void);
+static int utilityNpModuleInit(void);
+static int utilityLoadModuleToPartition(const char *path, int arg1);
+static int utilityStopAndUnloadModule(SceUID modid);
+static int utilityLoadUsbModByIdx(int idx);
+static int utilityUsbModuleInit(void);
+static int utilityLoadUsbModule(u32 id);
+static int utilityUnloadUsbModule(u32 id);
+static int utilityLoadAvModRaw(u32 id);
+static int utilityUnloadAvModRaw(u32 id);
+static int utilityLoadAvModWithMe(u32 id);
+static int utilityLoadAvModule(u32 id);
+static int utilityUnloadAvModule(u32 id);
+static int utilityAvModuleInit(void);
+static int utilityUpdownModuleInit(void);
+static int utilityLoadUpdownModule(u32 id, int a1);
+static int utilityUnloadUpdownModule(u32 id, int a1);
+static int utilityLoadNpModRaw(u32 id);
+static int utilityUnloadNpModRaw(u32 id);
+static int utilityLoadNpModChecked(u32 id);
+static int utilityNpNoop1(void);
+static int utilityLoadNpModule(u32 id);
+static int utilityNpNoop2(void);
+static int utilityUnloadNpModule(u32 id, int a1);
+static int utilityModMutexInit(void);
+static int utilityLoadModuleById(u32 id);
+static int utilityUnloadModuleById(u32 id);
+static int utilityIsValidModuleId(u32 id);
+static int utilityLoadModuleBatch(int count, const u32 *ids);
+static int utilityUnloadModuleBatch(int count, const u32 *ids);
+static int utilityLoadSingleModule(u32 id);
+static int utilityUnloadSingleModule(u32 id);
+static int utilityModuleNoopArg(u32 id);
+static int utilityModuleNoop(void);
+static int utilityOskMutexInit(void);
+static int utilitySetSystemParamIntInternal(u32 id, u32 val);
+static int utilityGetSystemParamIntInternal(u32 id, u32 *val);
+static int utilityRegWriteInt(const char *dir, const char *name, u32 val);
+static int utilityRegReadInt(const char *dir, const char *name, u32 *val, u32 defval);
+static int utilityRegWriteStr(const char *dir, const char *name, const char *str, int size);
+static int utilityRegReadStr(const char *dir, const char *name, char *buf, int size, const char *defstr);
+static int utilitySetSystemParamStrInternal(u32 id, const char *str);
+int utilityGetSystemParamStrInternal(u32 id, char *str, int len);
+static int utilityNetParamDeleteEntry(int idx);
+static int utilityNetParamLock(int idx);
+static int utilityNetParamUnlock(int idx);
+static int utilityNetParamGetFirstValid(void *buf);
+static int utilityNetParamCheckEntry(int idx);
+static int utilityNetParamSetData(int idx, int param, const void *data);
+static int utilityNetParamGetData(int idx, int param, void *data);
+static int utilityNetParamRemoveRegCat(const char *dir, int idx);
+static int utilityNetParamCopyEntry(int dst_idx, int src_idx);
+static int utilityNetParamSwapEntries(int a0, int a1);
+static int utilityNetParamCheckByIdx(int idx);
+static int utilityNetParamSyncFromKermit(void);
+static int utilityNetParamCheckSlot(int idx);
+static int utilityNetParamCheckSlot1(int idx);
+static int utilityNetParamAccessData(int idx, int param, void *data, int set_mode);
+static int utilityKermitFetchNetParam(void);
+static int utilityNetParamDefaultSlot(int *idx_p);
+static int utilityNetParamFormatPath(char *out_dir, int idx);
+static int utilityNetParamEnsureRegCat(const char *dir, int a1);
+static int utilityNetParamValidateIdx(int idx);
+static int utilityRegOpenSystem(u32 *reg_p);
+static int utilityRegFlushClose(u32 reg);
+static int utilityKermitStartDialog(u32 type, u32 sub_mode);
+static int utilityKermitSetPowerMode(int mode);
+static int utilityKermitEndDialog(void);
+static void utilityClearStatusFlags(void);
+static u32 utilityGetStatusFlags(void);
+static int utilityKermitSendRequest(int a0, int a1, void *a2);
+static int utilityKermitSendRequestWrap(int a0, int a1, void *a2);
 
 /* Data structures */
 typedef struct {
@@ -290,7 +290,7 @@ static SceSysEventHandler g_sys_ev_handler = {
     0x40,
     "SceUtility",
     0x00FFFF00,
-    sub_1124,
+    utilitySysEventHandler,
     0, 0, NULL,
     { 0, 0, 0, 0, 0, 0, 0, 0, 0 }
 };
@@ -394,8 +394,8 @@ int sceUtility_driver_F062AEA6(void)
 {
     int ret;
 
-    sub_559c();
-    sub_91b0();
+    utilityOskMutexInit();
+    utilityKermitEndDialog();
 
     g_dialog.worktime_evf = sceKernelCreateEventFlag("SceUtilityWorktime", 0x200, 0, NULL);
     if (g_dialog.worktime_evf < 0)
@@ -408,25 +408,25 @@ int sceUtility_driver_F062AEA6(void)
     g_dialog.emulated_ms = -1;
     sceKernelRegisterSysEventHandler(&g_sys_ev_handler);
 
-    ret = sub_25ec();
+    ret = utilityAppletInitSync();
     if (ret < 0) return ret;
-    ret = sub_333c();
+    ret = utilityCheckDiscBootMode();
     if (ret < 0) return ret;
-    ret = sub_3458();
+    ret = utilityNetModuleInit();
     if (ret < 0) return ret;
-    ret = sub_37d0();
+    ret = utilityUsbModuleInit();
     if (ret < 0) return ret;
-    ret = sub_3e50();
+    ret = utilityAvModuleInit();
     if (ret < 0) return ret;
-    ret = sub_3f2c();
+    ret = utilityUpdownModuleInit();
     if (ret < 0) return ret;
-    ret = sub_42f8();
+    ret = utilityNpNoop1();
     if (ret < 0) return ret;
-    ret = sub_43f8();
+    ret = utilityNpNoop2();
     if (ret < 0) return ret;
-    ret = sub_3588();
+    ret = utilityNpModuleInit();
     if (ret < 0) return ret;
-    ret = sub_44b4();
+    ret = utilityModMutexInit();
     if (ret < 0) return ret;
 
     return 0;
@@ -434,13 +434,13 @@ int sceUtility_driver_F062AEA6(void)
 
 int sceUtility_driver_20C68C34(void)
 {
-    sub_2650();
-    sub_4e14();
+    utilityAppletTermSync();
+    utilityModuleNoop();
     sceKernelUnregisterSysEventHandler(&g_sys_ev_handler);
     return 0;
 }
 
-static int sub_1124(int ev_id, char *ev_name, void *param, int *result)
+static int utilitySysEventHandler(int ev_id, char *ev_name, void *param, int *result)
 {
     int status;
     (void)ev_name;
@@ -448,7 +448,7 @@ static int sub_1124(int ev_id, char *ev_name, void *param, int *result)
     (void)result;
 
     if (ev_id == 0x20f || ev_id == 0x400) {
-        if ((sub_9210() & 1) == 0) {
+        if ((utilityGetStatusFlags() & 1) == 0) {
             status = g_dialog.status;
             if (status != 0 && (u32)(status - 4) >= 2) {
                 if (sceKernelWaitEventFlag(g_dialog.suspend_evf, 1, 0, NULL, NULL) == 0)
@@ -468,7 +468,7 @@ static int sub_1124(int ev_id, char *ev_name, void *param, int *result)
 }
 
 /* Dialog core */
-static int sub_011c(u32 type, void *params)
+static int utilityDialogInitStart(u32 type, void *params)
 {
     int intr, ret;
     u32 size, ver = 0, sub_mode = 0;
@@ -625,7 +625,7 @@ static int sub_011c(u32 type, void *params)
         goto err;
     }
 
-    sub_9044(type, sub_mode);
+    utilityKermitStartDialog(type, sub_mode);
     if (type == 1) {
         const char *dev = sceUtility_private_59EB3A17(2) ? "mscmhcemu0:" : "mscmhc0:";
         g_dialog.devctl_res = sceIoDevctl(dev, 0x0202580A, NULL, 0, g_dialog.devctl_out, 16);
@@ -638,13 +638,13 @@ static int sub_011c(u32 type, void *params)
     if (ret < 0)
         goto err;
 
-    sub_90e4(1);
+    utilityKermitSetPowerMode(1);
     sceKernelClearEventFlag(g_dialog.worktime_evf, 0);
-    g_dialog.thid = sceKernelCreateThread("SceUtilityInit", sub_1694, p[4], 0x1000, 0x00100000, NULL);
+    g_dialog.thid = sceKernelCreateThread("SceUtilityInit", utilityDialogThread, p[4], 0x1000, 0x00100000, NULL);
     if (g_dialog.thid <= 0) {
         ret = g_dialog.thid;
         sceKernelVolatileMemUnlock(0);
-        sub_90e4(0);
+        utilityKermitSetPowerMode(0);
         goto err;
     }
 
@@ -652,7 +652,7 @@ static int sub_011c(u32 type, void *params)
     if (ret != 0) {
         sceKernelDeleteThread(g_dialog.thid);
         sceKernelVolatileMemUnlock(0);
-        sub_90e4(0);
+        utilityKermitSetPowerMode(0);
         goto err;
     }
 
@@ -668,7 +668,7 @@ err:
     return ret;
 }
 
-static int sub_088c(u32 type)
+static int utilityDialogShutdownStart(u32 type)
 {
     int ret;
     u32 *p;
@@ -683,7 +683,7 @@ static int sub_088c(u32 type)
 
     g_dialog.status = 4;
     p = (u32 *)g_dialog.params;
-    g_dialog.thid = sceKernelCreateThread("SceUtilityShutdown", sub_1c74, p[4], 0x1000, 0x00100000, NULL);
+    g_dialog.thid = sceKernelCreateThread("SceUtilityShutdown", utilityAppletUnloadThread, p[4], 0x1000, 0x00100000, NULL);
     if (g_dialog.thid <= 0) {
         g_dialog.thid = 0;
         return g_dialog.thid;
@@ -699,17 +699,17 @@ static int sub_088c(u32 type)
     return 0;
 }
 
-static int sub_0984(u32 type, void *params)
+static int utilityDialogInitWrapper(u32 type, void *params)
 {
     int ret;
 
-    ret = sub_011c(type, params);
+    ret = utilityDialogInitStart(type, params);
     if (ret == 0)
         g_dialog.sdk_ver_override = 0x06060110;
     return ret;
 }
 
-static int sub_1224(u32 type, int speed)
+static int utilityDialogUpdate(u32 type, int speed)
 {
     if (g_dialog.active_type != type)
         return 0x80110005;
@@ -722,7 +722,7 @@ static int sub_1224(u32 type, int speed)
     return 0;
 }
 
-static int sub_12ac(u32 type)
+static int utilityDialogGetStatus(u32 type)
 {
     if (g_dialog.active_type != type) {
         if (g_dialog.status == 0)
@@ -732,7 +732,7 @@ static int sub_12ac(u32 type)
     return g_dialog.status;
 }
 
-static int sub_12f4(u32 type)
+static int utilityDialogAbort(u32 type)
 {
     if (g_dialog.active_type != type)
         return 0x80110005;
@@ -986,13 +986,13 @@ int sceUtility_private_31516141(int mode)
 
 int sceUtility_private_186A2C84(void);
 
-int sub_1694(SceSize args, void *argp)
+int utilityDialogThread(SceSize args, void *argp)
 {
     int status = 0;
 
     if (args == 0 && argp == NULL) {
         if (sceKernelSearchModuleByName("scePaf_Module") < 0) {
-            g_dialog.paf_modid = sub_3614("flash0:/vsh/module/pafmini.prx", 2);
+            g_dialog.paf_modid = utilityLoadModuleToPartition("flash0:/vsh/module/pafmini.prx", 2);
             if (g_dialog.paf_modid >= 0)
                 sceKernelStartModule(g_dialog.paf_modid, 0, NULL, &status, NULL);
         }
@@ -1020,15 +1020,15 @@ int sceUtility_private_186A2C84(void)
     return 0;
 }
 
-int sub_1c04(SceSize args, void *argp)
+int utilityAppletLoadThread(SceSize args, void *argp)
 {
-    g_applet.modid = sub_2ad4(g_applet.mod_path, 2, args, argp, &g_applet.block_id);
+    g_applet.modid = utilityLoadStartModule(g_applet.mod_path, 2, args, argp, &g_applet.block_id);
     sceKernelSetEventFlag(g_applet.worktime_evf, 1);
     sceKernelWaitEventFlag(g_applet.worktime_evf, 2, 0x20, NULL, NULL);
     return sceKernelExitDeleteThread(0);
 }
 
-int sub_1c74(SceSize args, void *argp)
+int utilityAppletUnloadThread(SceSize args, void *argp)
 {
     int intr;
     (void)args;
@@ -1038,19 +1038,19 @@ int sub_1c74(SceSize args, void *argp)
     sceKernelWaitEventFlag(g_dialog.worktime_evf, 8, 0x20, NULL, NULL);
     sceKernelWaitThreadEnd(g_dialog.thid, NULL);
 
-    sub_1f84(g_dialog.main_modid, 5);
+    utilityStopUnloadModuleA(g_dialog.main_modid, 5);
     g_dialog.main_modid = 0;
-    sub_1f84(g_dialog.net_modid, 5);
+    utilityStopUnloadModuleA(g_dialog.net_modid, 5);
     g_dialog.net_modid = 0;
-    sub_1f84(g_dialog.common_modid, 5);
+    utilityStopUnloadModuleA(g_dialog.common_modid, 5);
     g_dialog.common_modid = 0;
     if (g_dialog.paf_modid != 0) {
-        sub_1f84(g_dialog.paf_modid, 5);
+        utilityStopUnloadModuleA(g_dialog.paf_modid, 5);
         g_dialog.paf_modid = 0;
     }
 
-    sub_2074();
-    sub_9204();
+    utilityClearDialogVmem();
+    utilityClearStatusFlags();
     intr = sceKernelCpuSuspendIntr();
     g_dialog.status = 0;
     g_dialog.params = NULL;
@@ -1060,24 +1060,24 @@ int sub_1c74(SceSize args, void *argp)
     g_dialog.speed = 0;
     sceKernelCpuResumeIntr(intr);
 
-    sub_90e4(0);
+    utilityKermitSetPowerMode(0);
     sceKernelVolatileMemUnlock(0);
     sceKernelSetEventFlag(g_dialog.suspend_evf, 2);
     return sceKernelExitDeleteThread(0);
 }
 
-int sub_2074(void)
+int utilityClearDialogVmem(void)
 {
     if (g_dialog.vmem_addr == NULL || g_dialog.vmem_size == 0)
         return 0;
-    if (sub_3208() != 0) {
+    if (utilityIsDevToolMode() != 0) {
         u32 seed = sceKernelGetSystemTimeLow() + (u32)sceKernelGetThreadId();
         return sceKernelMemset32(g_dialog.vmem_addr, (int)seed, g_dialog.vmem_size);
     }
     return sceKernelMemset(g_dialog.vmem_addr, 0, g_dialog.vmem_size);
 }
 
-int sub_1edc(SceSize args, void *argp)
+int utilityDialogUnloadThread(SceSize args, void *argp)
 {
     int intr;
     (void)args;
@@ -1086,7 +1086,7 @@ int sub_1edc(SceSize args, void *argp)
     sceKernelSetEventFlag(g_applet.worktime_evf, 4);
     sceKernelWaitEventFlag(g_applet.worktime_evf, 8, 0x20, NULL, NULL);
     sceKernelWaitThreadEnd(g_applet.shutdown_thid, NULL);
-    sub_1ffc(g_applet.modid, 0);
+    utilityStopUnloadModuleB(g_applet.modid, 0);
     if (g_applet.block_id > 0) {
         sceKernelFreePartitionMemory(g_applet.block_id);
         g_applet.block_id = 0;
@@ -1099,7 +1099,7 @@ int sub_1edc(SceSize args, void *argp)
     return sceKernelExitDeleteThread(0);
 }
 
-int sub_1f84(SceUID modid, int reason)
+int utilityStopUnloadModuleA(SceUID modid, int reason)
 {
     int status, ret;
     u32 opt[5];
@@ -1119,7 +1119,7 @@ int sub_1f84(SceUID modid, int reason)
     return ret;
 }
 
-int sub_1ffc(SceUID modid, int reason)
+int utilityStopUnloadModuleB(SceUID modid, int reason)
 {
     int status, ret;
     u32 opt[5];
@@ -1132,7 +1132,7 @@ int sub_1ffc(SceUID modid, int reason)
 
     ret = sceKernelStopModule(modid, 0, NULL, &status, opt);
     if (ret >= 0) {
-        ret = sub_2a50(modid);
+        ret = utilityUnloadModuleWithRetry(modid);
         if (ret > 0)
             ret = 0;
     }
@@ -1140,7 +1140,7 @@ int sub_1ffc(SceUID modid, int reason)
 }
 
 /* Applet core (HtmlViewer) */
-int sub_20ec(u32 type, void *params)
+int utilityAppletInitStart(u32 type, void *params)
 {
     u32 *p = (u32 *)params;
     u32 size, ver, part_size;
@@ -1164,7 +1164,7 @@ int sub_20ec(u32 type, void *params)
     else if (size == 0xa8) ver = 0x12c;
     else return 0x80110004;
 
-    part_size = sub_296c(type, ver, params);
+    part_size = utilityCheckAppletParamSize(type, ver, params);
     block = sceKernelAllocPartitionMemory(2, "SceUtilityAppletPartition", 0, part_size, NULL);
     if (block <= 0)
         return block;
@@ -1185,7 +1185,7 @@ int sub_20ec(u32 type, void *params)
     strncpy((char *)&arg[5], (const char *)game_info + 0x44, 13);
     ((char *)arg)[0x21] = '\0';
 
-    g_applet.init_thid = sceKernelCreateThread("SceUtilityAppletInit", sub_1c04, p[4], 0x800, 0x00100000, NULL);
+    g_applet.init_thid = sceKernelCreateThread("SceUtilityAppletInit", utilityAppletLoadThread, p[4], 0x800, 0x00100000, NULL);
     if (g_applet.init_thid <= 0) {
         ret = g_applet.init_thid;
         g_applet.init_thid = 0;
@@ -1202,7 +1202,7 @@ int sub_20ec(u32 type, void *params)
     return 0;
 }
 
-static int sub_2350(u32 type)
+static int utilityAppletShutdownStart(u32 type)
 {
     int ret;
     u32 *p;
@@ -1214,7 +1214,7 @@ static int sub_2350(u32 type)
 
     g_applet.status = 4;
     p = (u32 *)g_applet.params;
-    g_applet.init_thid = sceKernelCreateThread("SceUtilityAppletShutdown", sub_1edc, p[4], 0x800, 0x00100000, NULL);
+    g_applet.init_thid = sceKernelCreateThread("SceUtilityAppletShutdown", utilityDialogUnloadThread, p[4], 0x800, 0x00100000, NULL);
     if (g_applet.init_thid <= 0) {
         ret = g_applet.init_thid;
         g_applet.init_thid = 0;
@@ -1255,10 +1255,10 @@ int sceUtility_private_048BFC46(const char *name, int flags, void *opt)
     else
         return 0x80010002;
 
-    return sub_29a4(path, &g_applet.block_id, flags, opt);
+    return utilityLoadModuleWithRetry(path, &g_applet.block_id, flags, opt);
 }
 
-static int sub_25ec(void)
+static int utilityAppletInitSync(void)
 {
     g_applet.worktime_evf = sceKernelCreateEventFlag("SceUtilityAppletWorktime", 0x200, 0, NULL);
     if (g_applet.worktime_evf < 0)
@@ -1270,14 +1270,14 @@ static int sub_25ec(void)
     return 0;
 }
 
-static int sub_2650(void)
+static int utilityAppletTermSync(void)
 {
     if (g_applet.worktime_evf > 0)
         sceKernelDeleteEventFlag(g_applet.worktime_evf);
     return 0;
 }
 
-static int sub_2680(u32 type, int speed)
+static int utilityAppletUpdate(u32 type, int speed)
 {
     if (g_applet.active_type != type)
         return 0x80110005;
@@ -1289,7 +1289,7 @@ static int sub_2680(u32 type, int speed)
     return 0;
 }
 
-static int sub_26f8(u32 type)
+static int utilityAppletGetStatus(u32 type)
 {
     if (g_applet.active_type != type)
         return 0x80110005;
@@ -1360,7 +1360,7 @@ int sceUtility_private_69AB28E8(SceUID thid)
 
 int sceUtility_private_78A2FE0C(SceUID modid)
 {
-    return sub_2a50(modid);
+    return utilityUnloadModuleWithRetry(modid);
 }
 
 int sceUtility_private_4F6FFC7C(int a0)
@@ -1373,7 +1373,7 @@ int sceUtility_private_34340686(int a0)
     return scePower_driver_315B8CB6(a0);
 }
 
-static int sub_296c(u32 type, u32 size, void *params)
+static int utilityCheckAppletParamSize(u32 type, u32 size, void *params)
 {
     if (type != 1)
         return 0;
@@ -1384,7 +1384,7 @@ static int sub_296c(u32 type, u32 size, void *params)
     return 0x380000;
 }
 
-static SceUID sub_29a4(const char *path, SceUID *block_p, int flags, void *opt)
+static SceUID utilityLoadModuleWithRetry(const char *path, SceUID *block_p, int flags, void *opt)
 {
     SceUID modid, new_block = 0;
     int i;
@@ -1408,7 +1408,7 @@ static SceUID sub_29a4(const char *path, SceUID *block_p, int flags, void *opt)
     return modid;
 }
 
-static int sub_2a50(SceUID modid)
+static int utilityUnloadModuleWithRetry(SceUID modid)
 {
     int ret, i;
 
@@ -1424,7 +1424,7 @@ static int sub_2a50(SceUID modid)
     return ret;
 }
 
-static SceUID sub_2ad4(const char *path, int mpid, SceSize argsize, void *argp, SceUID *block_p)
+static SceUID utilityLoadStartModule(const char *path, int mpid, SceSize argsize, void *argp, SceUID *block_p)
 {
     SceUID modid;
     int status, ret;
@@ -1438,7 +1438,7 @@ static SceUID sub_2ad4(const char *path, int mpid, SceSize argsize, void *argp, 
     ((u8 *)load_opt)[16] = 0;
     ((u8 *)load_opt)[17] = 1;
 
-    modid = sub_29a4(path, block_p, 0, load_opt);
+    modid = utilityLoadModuleWithRetry(path, block_p, 0, load_opt);
     if (modid < 0)
         return modid;
 
@@ -1483,9 +1483,9 @@ int sceUtility_private_0C0AE566(SceSize size)
     g_dialog_mem_head.next->prev = &g_dialog_mem_nodes[0];
     g_dialog_mem_head.next = &g_dialog_mem_nodes[0];
 
-    if (sub_3208() != 0) {
+    if (utilityIsDevToolMode() != 0) {
         g_dialog_mem_time = sceKernelGetSystemTimeLow() + (u32)sceKernelGetThreadId();
-        sub_3264(g_dialog_mem_nodes[0].block_id);
+        utilityFlushMemBlock(g_dialog_mem_nodes[0].block_id);
     }
 
     g_dialog_mem_inited = 1;
@@ -1505,8 +1505,8 @@ int sceUtility_private_B34EC4AD(void)
     }
 
     for (node = g_dialog_mem_head.next; node != &g_dialog_mem_head; node = node->next) {
-        if (sub_3208() != 0)
-            sub_32a0(1, node->block_id);
+        if (utilityIsDevToolMode() != 0)
+            utilityLogMemBlockStep(1, node->block_id);
         if (node != &g_dialog_mem_nodes[0] && node->block_id >= 0) {
             sceKernelJointMemoryBlock(g_dialog_mem_nodes[0].block_id, node->block_id);
             node->block_id = -1;
@@ -1540,8 +1540,8 @@ SceUID sceUtility_private_ACB67A01(const char *path, int flags, void *opt)
 
     for (node = g_dialog_mem_head.next; node != &g_dialog_mem_head; node = node->next) {
         if (node->modid < 0 && node->block_id >= 0) {
-            if (sub_3208() != 0)
-                sub_32a0(2, node->block_id);
+            if (utilityIsDevToolMode() != 0)
+                utilityLogMemBlockStep(2, node->block_id);
             modid = sceKernelLoadModuleToBlock(path, node->block_id, &rem_block, flags, opt);
             if (modid >= 0) {
                 node->modid = modid;
@@ -1552,8 +1552,8 @@ SceUID sceUtility_private_ACB67A01(const char *path, int flags, void *opt)
                     free_node->prev = node;
                     node->next->prev = free_node;
                     node->next = free_node;
-                    if (sub_3208() != 0)
-                        sub_3264(rem_block);
+                    if (utilityIsDevToolMode() != 0)
+                        utilityFlushMemBlock(rem_block);
                 }
                 return modid;
             }
@@ -1576,8 +1576,8 @@ int sceUtility_private_BBCD1885(SceUID modid)
             if (ret < 0)
                 return ret;
             node->modid = -1;
-            if (sub_3208() != 0)
-                sub_3264(node->block_id);
+            if (utilityIsDevToolMode() != 0)
+                utilityFlushMemBlock(node->block_id);
 
             /* Merge with next free block if adjacent */
             if (node->next != &g_dialog_mem_head && node->next->modid < 0) {
@@ -1607,7 +1607,7 @@ int sceUtility_private_BBCD1885(SceUID modid)
     return 0x8002013e;
 }
 
-static int sub_3208(void)
+static int utilityIsDevToolMode(void)
 {
     if (!sceKernelIsToolMode())
         return 0;
@@ -1616,7 +1616,7 @@ static int sub_3208(void)
     return (sceKernelDipsw(0x18) != 0) ? 1 : 0;
 }
 
-static void sub_3264(SceUID block_id)
+static void utilityFlushMemBlock(SceUID block_id)
 {
     u32 info[14];
     info[0] = 0x38;
@@ -1624,7 +1624,7 @@ static void sub_3264(SceUID block_id)
         sceKernelMemset32((void *)info[10], g_dialog_mem_time, info[11]);
 }
 
-static void sub_32a0(int step, SceUID block_id)
+static void utilityLogMemBlockStep(int step, SceUID block_id)
 {
     u32 info[14];
     info[0] = 0x38;
@@ -1642,7 +1642,7 @@ static void sub_32a0(int step, SceUID block_id)
 }
 
 /* NetModule / UsbModule / AvModule / LoadModule */
-static int sub_333c(void)
+static int utilityCheckDiscBootMode(void)
 {
     if (sceKernelApplicationType() == 0x200) {
         if (sceKernelBootFrom() == 0x20)
@@ -1651,7 +1651,7 @@ static int sub_333c(void)
     return 0;
 }
 
-static int sub_3458(void)
+static int utilityNetModuleInit(void)
 {
     g_net_mod_flags = 0;
     g_net_block_id = -1;
@@ -1674,7 +1674,7 @@ int sceUtilityUnloadNetModule(u32 id)
     return 0;
 }
 
-static int sub_3588(void)
+static int utilityNpModuleInit(void)
 {
     g_np_mutex = sceKernelCreateMutex("SceUtilityNpModule", 0, 0, NULL);
     return (g_np_mutex < 0) ? g_np_mutex : 0;
@@ -1684,7 +1684,7 @@ int sceUtility_private_C7D5983F(u32 id)
 {
     u32 k1 = GET_K1();
     SET_K1(0);
-    int ret = sub_4344(id);
+    int ret = utilityLoadNpModule(id);
     SET_K1(k1);
     return ret;
 }
@@ -1693,12 +1693,12 @@ int sceUtility_private_5C494AC6(u32 id)
 {
     u32 k1 = GET_K1();
     SET_K1(0);
-    int ret = sub_4444(id, 0);
+    int ret = utilityUnloadNpModule(id, 0);
     SET_K1(k1);
     return ret;
 }
 
-static int sub_3614(const char *path, int mpid)
+static int utilityLoadModuleToPartition(const char *path, int mpid)
 {
     u32 opt[5];
     opt[0] = 0x14;
@@ -1710,7 +1710,7 @@ static int sub_3614(const char *path, int mpid)
     return sceKernelLoadModuleForKernel(path, 0, opt);
 }
 
-static int sub_3654(SceUID modid)
+static int utilityStopAndUnloadModule(SceUID modid)
 {
     int status, ret;
     ret = sceKernelStopModule(modid, 0, NULL, &status, NULL);
@@ -1719,31 +1719,31 @@ static int sub_3654(SceUID modid)
     return ret;
 }
 
-static int sub_3700(int idx)
+static int utilityLoadUsbModByIdx(int idx)
 {
     if (idx < 0 || idx >= 5)
         return 0x80110201;
-    return sub_4540(0x200 + idx);
+    return utilityLoadModuleById(0x200 + idx);
 }
 
-static int sub_37d0(void)
+static int utilityUsbModuleInit(void)
 {
     g_usb_mutex = sceKernelCreateMutex("SceUtilityUsbModule", 0, 0, NULL);
     return (g_usb_mutex < 0) ? g_usb_mutex : 0;
 }
 
-static int sub_384c(u32 id)
+static int utilityLoadUsbModule(u32 id)
 {
     sceKernelLockMutex(g_usb_mutex, 1, NULL);
-    int ret = sub_3700((int)id - 1);
+    int ret = utilityLoadUsbModByIdx((int)id - 1);
     sceKernelUnlockMutex(g_usb_mutex, 1);
     return ret;
 }
 
-static int sub_3920(u32 id)
+static int utilityUnloadUsbModule(u32 id)
 {
     sceKernelLockMutex(g_usb_mutex, 1, NULL);
-    int ret = sub_4720(id - 1 + 0x200);
+    int ret = utilityUnloadModuleById(id - 1 + 0x200);
     sceKernelUnlockMutex(g_usb_mutex, 1);
     return ret;
 }
@@ -1756,7 +1756,7 @@ int sceUtilityLoadUsbModule(u32 id)
         SET_K1(k1);
         return 0x80110201;
     }
-    int ret = sub_384c(id);
+    int ret = utilityLoadUsbModule(id);
     if (ret < 0 && ret != (int)0x80111102) {
         SET_K1(k1);
         return ret;
@@ -1773,7 +1773,7 @@ int sceUtilityUnloadUsbModule(u32 id)
         SET_K1(k1);
         return 0x80110201;
     }
-    int ret = sub_3920(id);
+    int ret = utilityUnloadUsbModule(id);
     if (ret < 0 && ret != (int)0x80111103) {
         SET_K1(k1);
         return ret;
@@ -1782,40 +1782,40 @@ int sceUtilityUnloadUsbModule(u32 id)
     return 0;
 }
 
-static int sub_3aac(u32 id)
+static int utilityLoadAvModRaw(u32 id)
 {
-    return sub_4540(id + 0x300);
+    return utilityLoadModuleById(id + 0x300);
 }
 
-static int sub_3b58(u32 id)
+static int utilityUnloadAvModRaw(u32 id)
 {
-    return sub_4720(id + 0x300);
+    return utilityUnloadModuleById(id + 0x300);
 }
 
-static int sub_3bc4(u32 id)
+static int utilityLoadAvModWithMe(u32 id)
 {
     if (id == 1 || id == 4)
         sceMeBootStart(1);
-    return sub_3aac(id);
+    return utilityLoadAvModRaw(id);
 }
 
-static int sub_3cd0(u32 id)
+static int utilityLoadAvModule(u32 id)
 {
     sceKernelLockMutex(g_av_mutex, 1, NULL);
-    int ret = sub_3bc4(id);
+    int ret = utilityLoadAvModWithMe(id);
     sceKernelUnlockMutex(g_av_mutex, 1);
     return ret;
 }
 
-static int sub_3db8(u32 id)
+static int utilityUnloadAvModule(u32 id)
 {
     sceKernelLockMutex(g_av_mutex, 1, NULL);
-    int ret = sub_3b58(id);
+    int ret = utilityUnloadAvModRaw(id);
     sceKernelUnlockMutex(g_av_mutex, 1);
     return ret;
 }
 
-static int sub_3e50(void)
+static int utilityAvModuleInit(void)
 {
     g_av_mutex = sceKernelCreateMutex("SceUtilityAvModule", 0, 0, NULL);
     return (g_av_mutex < 0) ? g_av_mutex : 0;
@@ -1825,85 +1825,85 @@ int sceUtilityLoadAvModule(u32 id)
 {
     if (id > 7)
         return 0x80110301;
-    return sub_3cd0(id);
+    return utilityLoadAvModule(id);
 }
 
 int sceUtilityUnloadAvModule(u32 id)
 {
     if (id > 7)
         return 0x80110301;
-    return sub_3db8(id);
+    return utilityUnloadAvModule(id);
 }
 
-static int sub_3f2c(void)
+static int utilityUpdownModuleInit(void)
 {
     g_updown_mutex = sceKernelCreateMutex("SceUtilityUpdownModule", 0, 0, NULL);
     return (g_updown_mutex < 0) ? g_updown_mutex : 0;
 }
 
-static int sub_3f78(u32 id, int a1)
+static int utilityLoadUpdownModule(u32 id, int a1)
 {
     (void)a1;
     sceKernelLockMutex(g_updown_mutex, 1, NULL);
-    int ret = sub_4540(id);
+    int ret = utilityLoadModuleById(id);
     sceKernelUnlockMutex(g_updown_mutex, 1);
     return ret;
 }
 
-static int sub_3fe8(u32 id, int a1)
+static int utilityUnloadUpdownModule(u32 id, int a1)
 {
     (void)a1;
     sceKernelLockMutex(g_updown_mutex, 1, NULL);
-    int ret = sub_4720(id);
+    int ret = utilityUnloadModuleById(id);
     sceKernelUnlockMutex(g_updown_mutex, 1);
     return ret;
 }
 
-static int sub_4058(u32 id)
+static int utilityLoadNpModRaw(u32 id)
 {
-    return sub_4540(id);
+    return utilityLoadModuleById(id);
 }
 
-static int sub_412c(u32 id)
+static int utilityUnloadNpModRaw(u32 id)
 {
-    return sub_4720(id);
+    return utilityUnloadModuleById(id);
 }
 
-static int sub_41ec(u32 id)
+static int utilityLoadNpModChecked(u32 id)
 {
     if (id == 0x502)
         sceNpDrmSetDebugMode(1);
-    return sub_4058(id);
+    return utilityLoadNpModRaw(id);
 }
 
-static int sub_42f8(void)
+static int utilityNpNoop1(void)
 {
     return 0;
 }
 
-static int sub_4344(u32 id)
+static int utilityLoadNpModule(u32 id)
 {
     sceKernelLockMutex(g_np_mutex, 1, NULL);
-    int ret = sub_41ec(id);
+    int ret = utilityLoadNpModChecked(id);
     sceKernelUnlockMutex(g_np_mutex, 1);
     return ret;
 }
 
-static int sub_43f8(void)
+static int utilityNpNoop2(void)
 {
     return 0;
 }
 
-static int sub_4444(u32 id, int a1)
+static int utilityUnloadNpModule(u32 id, int a1)
 {
     (void)a1;
     sceKernelLockMutex(g_np_mutex, 1, NULL);
-    int ret = sub_412c(id);
+    int ret = utilityUnloadNpModRaw(id);
     sceKernelUnlockMutex(g_np_mutex, 1);
     return ret;
 }
 
-static int sub_44b4(void)
+static int utilityModMutexInit(void)
 {
     g_mod_mutex = sceKernelCreateMutex("SceUtilityModule", 0, 0, NULL);
     return (g_mod_mutex < 0) ? g_mod_mutex : 0;
@@ -1913,7 +1913,7 @@ int sceUtility_private_7EBD6208(u32 id)
 {
     u32 k1 = GET_K1();
     SET_K1(0);
-    int ret = sub_3f78(id, 0);
+    int ret = utilityLoadUpdownModule(id, 0);
     SET_K1(k1);
     return ret;
 }
@@ -1922,7 +1922,7 @@ int sceUtility_private_40FBA532(u32 id)
 {
     u32 k1 = GET_K1();
     SET_K1(0);
-    int ret = sub_3fe8(id, 0);
+    int ret = utilityUnloadUpdownModule(id, 0);
     SET_K1(k1);
     return ret;
 }
@@ -1968,7 +1968,7 @@ static SceUtilityModEntry *get_mod_table(u32 id, u32 *out_idx, u32 *out_count)
     }
 }
 
-static int sub_4540(u32 id)
+static int utilityLoadModuleById(u32 id)
 {
     u32 idx, count;
     SceUtilityModEntry *tab = get_mod_table(id, &idx, &count);
@@ -1979,14 +1979,14 @@ static int sub_4540(u32 id)
     if (tab[idx].state_and_modid > 0)
         return 0x80111102;
 
-    modid = sub_3614(tab[idx].path, tab[idx].mpid);
+    modid = utilityLoadModuleToPartition(tab[idx].path, tab[idx].mpid);
     if (modid < 0)
         return modid;
     tab[idx].state_and_modid = modid;
     return 0;
 }
 
-static int sub_4720(u32 id)
+static int utilityUnloadModuleById(u32 id)
 {
     u32 idx, count;
     SceUtilityModEntry *tab = get_mod_table(id, &idx, &count);
@@ -1997,13 +1997,13 @@ static int sub_4720(u32 id)
     if (tab[idx].state_and_modid <= 0)
         return 0x80111103;
 
-    ret = sub_3654(tab[idx].state_and_modid);
+    ret = utilityStopAndUnloadModule(tab[idx].state_and_modid);
     if (ret >= 0)
         tab[idx].state_and_modid = 0;
     return ret;
 }
 
-static int sub_489c(u32 id)
+static int utilityIsValidModuleId(u32 id)
 {
     u32 idx = 0, count = 0;
     return (get_mod_table(id, &idx, &count) != NULL) ? 0 : (int)0x80111101;
@@ -2014,7 +2014,7 @@ int sceUtilityLoadModule(u32 id)
     u32 k1 = GET_K1();
     SET_K1(0);
 
-    int ret = sub_489c(id);
+    int ret = utilityIsValidModuleId(id);
     if (ret < 0) {
         SET_K1(k1);
         return ret;
@@ -2023,13 +2023,13 @@ int sceUtilityLoadModule(u32 id)
     sceKernelLockMutex(g_mod_mutex, 1, NULL);
     u32 cat = id >> 8;
     if (cat == 2)
-        ret = sub_384c(id & 0xFF);
+        ret = utilityLoadUsbModule(id & 0xFF);
     else if (cat == 3)
-        ret = sub_3cd0(id & 0xFF);
+        ret = utilityLoadAvModule(id & 0xFF);
     else if (cat == 5)
-        ret = sub_4344(id);
+        ret = utilityLoadNpModule(id);
     else
-        ret = sub_4540(id);
+        ret = utilityLoadModuleById(id);
     sceKernelUnlockMutex(g_mod_mutex, 1);
 
     SET_K1(k1);
@@ -2041,7 +2041,7 @@ int sceUtilityUnloadModule(u32 id)
     u32 k1 = GET_K1();
     SET_K1(0);
 
-    int ret = sub_489c(id);
+    int ret = utilityIsValidModuleId(id);
     if (ret < 0) {
         SET_K1(k1);
         return ret;
@@ -2050,24 +2050,24 @@ int sceUtilityUnloadModule(u32 id)
     sceKernelLockMutex(g_mod_mutex, 1, NULL);
     u32 cat = id >> 8;
     if (cat == 2)
-        ret = sub_3920(id & 0xFF);
+        ret = utilityUnloadUsbModule(id & 0xFF);
     else if (cat == 3)
-        ret = sub_3db8(id & 0xFF);
+        ret = utilityUnloadAvModule(id & 0xFF);
     else if (cat == 5)
-        ret = sub_4444(id, 0);
+        ret = utilityUnloadNpModule(id, 0);
     else
-        ret = sub_4720(id);
+        ret = utilityUnloadModuleById(id);
     sceKernelUnlockMutex(g_mod_mutex, 1);
 
     SET_K1(k1);
     return ret;
 }
 
-static int sub_4aa8(int count, const u32 *ids)
+static int utilityLoadModuleBatch(int count, const u32 *ids)
 {
     int i, ret = 0;
     for (i = 0; i < count; i++) {
-        ret = sub_4540(ids[i]);
+        ret = utilityLoadModuleById(ids[i]);
         if (ret < 0 && ret != (int)0x80111102)
             break;
         ret = 0;
@@ -2075,11 +2075,11 @@ static int sub_4aa8(int count, const u32 *ids)
     return ret;
 }
 
-static int sub_4b8c(int count, const u32 *ids)
+static int utilityUnloadModuleBatch(int count, const u32 *ids)
 {
     int i, ret = 0;
     for (i = count - 1; i >= 0; i--) {
-        ret = sub_4720(ids[i]);
+        ret = utilityUnloadModuleById(ids[i]);
         if (ret < 0 && ret != (int)0x80111103)
             break;
         ret = 0;
@@ -2087,23 +2087,23 @@ static int sub_4b8c(int count, const u32 *ids)
     return ret;
 }
 
-static int sub_4c24(u32 id)
+static int utilityLoadSingleModule(u32 id)
 {
-    return sub_4540(id);
+    return utilityLoadModuleById(id);
 }
 
-static int sub_4cf0(u32 id)
+static int utilityUnloadSingleModule(u32 id)
 {
-    return sub_4720(id);
+    return utilityUnloadModuleById(id);
 }
 
-static int sub_4da0(u32 id)
+static int utilityModuleNoopArg(u32 id)
 {
     (void)id;
     return 0;
 }
 
-static int sub_4e14(void)
+static int utilityModuleNoop(void)
 {
     return 0;
 }
@@ -2112,7 +2112,7 @@ int sceUtility_private_3B6D7CED(int count, const u32 *ids)
 {
     int ret;
     sceKernelLockMutex(g_mod_mutex, 1, NULL);
-    ret = sub_4aa8(count, ids);
+    ret = utilityLoadModuleBatch(count, ids);
     sceKernelUnlockMutex(g_mod_mutex, 1);
     return ret;
 }
@@ -2121,14 +2121,14 @@ int sceUtility_private_CF6799A3(int count, const u32 *ids)
 {
     int ret;
     sceKernelLockMutex(g_mod_mutex, 1, NULL);
-    ret = sub_4b8c(count, ids);
+    ret = utilityUnloadModuleBatch(count, ids);
     sceKernelUnlockMutex(g_mod_mutex, 1);
     return ret;
 }
 
 int sceUtility_private_390A738F(u32 id)
 {
-    return sub_4c24(id);
+    return utilityLoadSingleModule(id);
 }
 
 int sceUtility_private_48B0FBCD(int cmd, void *inbuf, u32 insize, void *outbuf, u32 outsize)
@@ -2169,33 +2169,33 @@ int sceUtility_private_48B0FBCD(int cmd, void *inbuf, u32 insize, void *outbuf, 
 }
 
 /* Public Dialog Wrappers */
-int sceUtilityGameSharingInitStart(void *params) { return sub_011c(3, params); }
-int sceUtilityGameSharingShutdownStart(void) { return sub_088c(3); }
-int sceUtilityGameSharingUpdate(int speed) { return sub_1224(3, speed); }
-int sceUtilityGameSharingGetStatus(void) { return sub_12ac(3); }
+int sceUtilityGameSharingInitStart(void *params) { return utilityDialogInitStart(3, params); }
+int sceUtilityGameSharingShutdownStart(void) { return utilityDialogShutdownStart(3); }
+int sceUtilityGameSharingUpdate(int speed) { return utilityDialogUpdate(3, speed); }
+int sceUtilityGameSharingGetStatus(void) { return utilityDialogGetStatus(3); }
 
-int sceUtilityNetconfInitStart(void *params) { return sub_011c(4, params); }
-int sceUtilityNetconfShutdownStart(void) { return sub_088c(4); }
-int sceUtilityNetconfUpdate(int speed) { return sub_1224(4, speed); }
-int sceUtilityNetconfGetStatus(void) { return sub_12ac(4); }
+int sceUtilityNetconfInitStart(void *params) { return utilityDialogInitStart(4, params); }
+int sceUtilityNetconfShutdownStart(void) { return utilityDialogShutdownStart(4); }
+int sceUtilityNetconfUpdate(int speed) { return utilityDialogUpdate(4, speed); }
+int sceUtilityNetconfGetStatus(void) { return utilityDialogGetStatus(4); }
 
-int sceUtilitySavedataInitStart(void *params) { return sub_011c(1, params); }
-int sceUtilitySavedataShutdownStart(void) { return sub_088c(1); }
-int sceUtilitySavedataUpdate(int speed) { return sub_1224(1, speed); }
-int sceUtilitySavedataGetStatus(void) { return sub_12ac(1); }
+int sceUtilitySavedataInitStart(void *params) { return utilityDialogInitStart(1, params); }
+int sceUtilitySavedataShutdownStart(void) { return utilityDialogShutdownStart(1); }
+int sceUtilitySavedataUpdate(int speed) { return utilityDialogUpdate(1, speed); }
+int sceUtilitySavedataGetStatus(void) { return utilityDialogGetStatus(1); }
 
-int sceUtilityMsgDialogInitStart(void *params) { return sub_011c(5, params); }
-int sceUtilityMsgDialogShutdownStart(void) { return sub_088c(5); }
-int sceUtilityMsgDialogUpdate(int speed) { return sub_1224(5, speed); }
-int sceUtilityMsgDialogGetStatus(void) { return sub_12ac(5); }
-int sceUtilityMsgDialogAbort(void) { return sub_12f4(5); }
+int sceUtilityMsgDialogInitStart(void *params) { return utilityDialogInitStart(5, params); }
+int sceUtilityMsgDialogShutdownStart(void) { return utilityDialogShutdownStart(5); }
+int sceUtilityMsgDialogUpdate(int speed) { return utilityDialogUpdate(5, speed); }
+int sceUtilityMsgDialogGetStatus(void) { return utilityDialogGetStatus(5); }
+int sceUtilityMsgDialogAbort(void) { return utilityDialogAbort(5); }
 
-int sceUtilityOskInitStart(void *params) { return sub_011c(6, params); }
-int sceUtilityOskShutdownStart(void) { return sub_088c(6); }
-int sceUtilityOskUpdate(int speed) { return sub_1224(6, speed); }
-int sceUtilityOskGetStatus(void) { return sub_12ac(6); }
+int sceUtilityOskInitStart(void *params) { return utilityDialogInitStart(6, params); }
+int sceUtilityOskShutdownStart(void) { return utilityDialogShutdownStart(6); }
+int sceUtilityOskUpdate(int speed) { return utilityDialogUpdate(6, speed); }
+int sceUtilityOskGetStatus(void) { return utilityDialogGetStatus(6); }
 
-static int sub_559c(void)
+static int utilityOskMutexInit(void)
 {
     g_osk_mutex = sceKernelCreateMutex("SceKermitOsk", 0, 0, NULL);
     return (g_osk_mutex < 0) ? g_osk_mutex : 0;
@@ -2208,80 +2208,80 @@ int sceUtility_private_B08B2B48(void)
     return (int)g_dialog.status;
 }
 
-int sceUtility_DDE5389D(void *params) { return sub_011c(7, params); }
-int sceUtility_149A7895(void) { return sub_088c(7); }
-int sceUtility_4A833BA4(int speed) { return sub_1224(7, speed); }
-int sceUtility_A50E5B30(void) { return sub_12ac(7); }
+int sceUtility_DDE5389D(void *params) { return utilityDialogInitStart(7, params); }
+int sceUtility_149A7895(void) { return utilityDialogShutdownStart(7); }
+int sceUtility_4A833BA4(int speed) { return utilityDialogUpdate(7, speed); }
+int sceUtility_A50E5B30(void) { return utilityDialogGetStatus(7); }
 
-int sceUtility_943CBA46(void *params) { return sub_011c(8, params); }
-int sceUtility_0F3EEAAC(void) { return sub_088c(8); }
-int sceUtility_147F7C85(int speed) { return sub_1224(8, speed); }
-int sceUtility_16A1A8D8(void) { return sub_12ac(8); }
+int sceUtility_943CBA46(void *params) { return utilityDialogInitStart(8, params); }
+int sceUtility_0F3EEAAC(void) { return utilityDialogShutdownStart(8); }
+int sceUtility_147F7C85(int speed) { return utilityDialogUpdate(8, speed); }
+int sceUtility_16A1A8D8(void) { return utilityDialogGetStatus(8); }
 
-int sceUtility_1281DA8E(void *params) { return sub_011c(9, params); }
-int sceUtility_5EF1C24A(void) { return sub_088c(9); }
-int sceUtility_A03D29BA(int speed) { return sub_1224(9, speed); }
-int sceUtility_C4700FA3(void) { return sub_12ac(9); }
+int sceUtility_1281DA8E(void *params) { return utilityDialogInitStart(9, params); }
+int sceUtility_5EF1C24A(void) { return utilityDialogShutdownStart(9); }
+int sceUtility_A03D29BA(int speed) { return utilityDialogUpdate(9, speed); }
+int sceUtility_C4700FA3(void) { return utilityDialogGetStatus(9); }
 
-int sceUtility_24AC31EB(void *params) { return sub_011c(17, params); }
-int sceUtility_32E32DCB(void) { return sub_088c(17); }
-int sceUtility_4AECD179(int speed) { return sub_1224(17, speed); }
-int sceUtility_B57E95D9(void) { return sub_12ac(17); }
-int sceUtility_180F7B62(void) { return sub_12f4(17); }
+int sceUtility_24AC31EB(void *params) { return utilityDialogInitStart(17, params); }
+int sceUtility_32E32DCB(void) { return utilityDialogShutdownStart(17); }
+int sceUtility_4AECD179(int speed) { return utilityDialogUpdate(17, speed); }
+int sceUtility_B57E95D9(void) { return utilityDialogGetStatus(17); }
+int sceUtility_180F7B62(void) { return utilityDialogAbort(17); }
 
-int sceUtility_private_756A93B3(void *params) { return sub_011c(10, params); }
-int sceUtility_private_26D0B065(void) { return sub_088c(10); }
-int sceUtility_private_CE484145(int speed) { return sub_1224(10, speed); }
-int sceUtility_private_981FFD72(void) { return sub_12ac(10); }
+int sceUtility_private_756A93B3(void *params) { return utilityDialogInitStart(10, params); }
+int sceUtility_private_26D0B065(void) { return utilityDialogShutdownStart(10); }
+int sceUtility_private_CE484145(int speed) { return utilityDialogUpdate(10, speed); }
+int sceUtility_private_981FFD72(void) { return utilityDialogGetStatus(10); }
 
-int sceUtility_0251B134(void *params) { return sub_011c(11, params); }
-int sceUtility_F9E0008C(void) { return sub_088c(11); }
-int sceUtility_AB083EA9(int speed) { return sub_1224(11, speed); }
-int sceUtility_D81957B7(void) { return sub_12ac(11); }
+int sceUtility_0251B134(void *params) { return utilityDialogInitStart(11, params); }
+int sceUtility_F9E0008C(void) { return utilityDialogShutdownStart(11); }
+int sceUtility_AB083EA9(int speed) { return utilityDialogUpdate(11, speed); }
+int sceUtility_D81957B7(void) { return utilityDialogGetStatus(11); }
 
-int sceUtility_16D02AF0(void *params) { return sub_011c(12, params); }
-int sceUtility_E19C97D6(void) { return sub_088c(12); }
-int sceUtility_F3FBC572(int speed) { return sub_1224(12, speed); }
-int sceUtility_86ABDB1B(void) { return sub_12ac(12); }
+int sceUtility_16D02AF0(void *params) { return utilityDialogInitStart(12, params); }
+int sceUtility_E19C97D6(void) { return utilityDialogShutdownStart(12); }
+int sceUtility_F3FBC572(int speed) { return utilityDialogUpdate(12, speed); }
+int sceUtility_86ABDB1B(void) { return utilityDialogGetStatus(12); }
 
-int sceUtility_42071A83(void *params) { return sub_011c(13, params); }
-int sceUtility_D17A0573(void) { return sub_088c(13); }
-int sceUtility_D852CDCE(int speed) { return sub_1224(13, speed); }
-int sceUtility_89317C8F(void) { return sub_12ac(13); }
+int sceUtility_42071A83(void *params) { return utilityDialogInitStart(13, params); }
+int sceUtility_D17A0573(void) { return utilityDialogShutdownStart(13); }
+int sceUtility_D852CDCE(int speed) { return utilityDialogUpdate(13, speed); }
+int sceUtility_89317C8F(void) { return utilityDialogGetStatus(13); }
 
-int sceUtility_4B0A8FE5(void *params) { return sub_011c(14, params); }
-int sceUtility_06A48659(void) { return sub_088c(14); }
-int sceUtility_A084E056(int speed) { return sub_1224(14, speed); }
-int sceUtility_2B96173B(void) { return sub_12ac(14); }
+int sceUtility_4B0A8FE5(void *params) { return utilityDialogInitStart(14, params); }
+int sceUtility_06A48659(void) { return utilityDialogShutdownStart(14); }
+int sceUtility_A084E056(int speed) { return utilityDialogUpdate(14, speed); }
+int sceUtility_2B96173B(void) { return utilityDialogGetStatus(14); }
 
-int sceUtility_81C44706(void *params) { return sub_011c(15, params); }
-int sceUtility_E7B778D8(void) { return sub_088c(15); }
-int sceUtility_6F56F9CF(int speed) { return sub_1224(15, speed); }
-int sceUtility_8326AB05(void) { return sub_12ac(15); }
+int sceUtility_81C44706(void *params) { return utilityDialogInitStart(15, params); }
+int sceUtility_E7B778D8(void) { return utilityDialogShutdownStart(15); }
+int sceUtility_6F56F9CF(int speed) { return utilityDialogUpdate(15, speed); }
+int sceUtility_8326AB05(void) { return utilityDialogGetStatus(15); }
 
-int sceUtility_DA97F1AA(void *params) { return sub_011c(16, params); }
-int sceUtility_54A5C62F(void) { return sub_088c(16); }
-int sceUtility_B8592D5F(int speed) { return sub_1224(16, speed); }
-int sceUtility_3AAD51DC(void) { return sub_12ac(16); }
+int sceUtility_DA97F1AA(void *params) { return utilityDialogInitStart(16, params); }
+int sceUtility_54A5C62F(void) { return utilityDialogShutdownStart(16); }
+int sceUtility_B8592D5F(int speed) { return utilityDialogUpdate(16, speed); }
+int sceUtility_3AAD51DC(void) { return utilityDialogGetStatus(16); }
 
-int sceUtility_A7BB7C67(void *params) { return sub_011c(18, params); }
-int sceUtility_C130D441(void) { return sub_088c(18); }
-int sceUtility_0940A1B9(int speed) { return sub_1224(18, speed); }
-int sceUtility_094198B8(void) { return sub_12ac(18); }
+int sceUtility_A7BB7C67(void *params) { return utilityDialogInitStart(18, params); }
+int sceUtility_C130D441(void) { return utilityDialogShutdownStart(18); }
+int sceUtility_0940A1B9(int speed) { return utilityDialogUpdate(18, speed); }
+int sceUtility_094198B8(void) { return utilityDialogGetStatus(18); }
 
-int sceUtility_3A15CD0A(void *params) { return sub_011c(19, params); }
-int sceUtility_9F313D14(void) { return sub_088c(19); }
-int sceUtility_D23665F4(int speed) { return sub_1224(19, speed); }
-int sceUtility_D4C2BD73(void) { return sub_12ac(19); }
-int sceUtility_0E0C27AF(void) { return sub_12f4(19); }
+int sceUtility_3A15CD0A(void *params) { return utilityDialogInitStart(19, params); }
+int sceUtility_9F313D14(void) { return utilityDialogShutdownStart(19); }
+int sceUtility_D23665F4(int speed) { return utilityDialogUpdate(19, speed); }
+int sceUtility_D4C2BD73(void) { return utilityDialogGetStatus(19); }
+int sceUtility_0E0C27AF(void) { return utilityDialogAbort(19); }
 
-int sceUtility_B0FB7FF5(void *params) { return sub_0984(15, params); }
-int sceUtility_86A03A27(void *params) { return sub_0984(11, params); }
+int sceUtility_B0FB7FF5(void *params) { return utilityDialogInitWrapper(15, params); }
+int sceUtility_86A03A27(void *params) { return utilityDialogInitWrapper(11, params); }
 
-int sceUtilityHtmlViewerInitStart(void *params) { return sub_20ec(1, params); }
-int sceUtilityHtmlViewerShutdownStart(void) { return sub_2350(1); }
-int sceUtilityHtmlViewerUpdate(int speed) { return sub_2680(1, speed); }
-int sceUtilityHtmlViewerGetStatus(void) { return sub_26f8(1); }
+int sceUtilityHtmlViewerInitStart(void *params) { return utilityAppletInitStart(1, params); }
+int sceUtilityHtmlViewerShutdownStart(void) { return utilityAppletShutdownStart(1); }
+int sceUtilityHtmlViewerUpdate(int speed) { return utilityAppletUpdate(1, speed); }
+int sceUtilityHtmlViewerGetStatus(void) { return utilityAppletGetStatus(1); }
 
 void sceUtility_3AD50AE7(void) {}
 void sceUtility_BC6B6296(void) {}
@@ -2306,34 +2306,34 @@ typedef struct {
 static void sysparam_set_int_cb(void *arg)
 {
     SceUtilitySysParamStackArg *a = (SceUtilitySysParamStackArg *)arg;
-    a->res = sub_621c(a->id, a->val);
+    a->res = utilitySetSystemParamIntInternal(a->id, a->val);
 }
 
 static void sysparam_get_int_cb(void *arg)
 {
     SceUtilitySysParamStackArg *a = (SceUtilitySysParamStackArg *)arg;
-    a->res = sub_651c(a->id, a->val_p);
+    a->res = utilityGetSystemParamIntInternal(a->id, a->val_p);
 }
 
 static void sysparam_set_str_cb(void *arg)
 {
     SceUtilitySysParamStackArg *a = (SceUtilitySysParamStackArg *)arg;
-    a->res = sub_6e68(a->id, a->str);
+    a->res = utilitySetSystemParamStrInternal(a->id, a->str);
 }
 
 static void sysparam_get_str_cb(void *arg)
 {
     SceUtilitySysParamStackArg *a = (SceUtilitySysParamStackArg *)arg;
-    a->res = sub_7034(a->id, a->buf, a->len);
+    a->res = utilityGetSystemParamStrInternal(a->id, a->buf, a->len);
 }
 
-static int sub_68f8(const char *dir, const char *name, u32 val)
+static int utilityRegWriteInt(const char *dir, const char *name, u32 val)
 {
     u32 reg = 0, cat = 0, type = 0;
     SceSize size = 0;
     int ret;
 
-    ret = sub_8f3c(&reg);
+    ret = utilityRegOpenSystem(&reg);
     if (ret == 0) {
         ret = sceRegOpenCategory(reg, dir, 2, &cat);
         if (ret == 0) {
@@ -2344,18 +2344,18 @@ static int sub_68f8(const char *dir, const char *name, u32 val)
                 ret = sceRegFlushCategory(cat);
             sceRegCloseCategory(cat);
         }
-        sub_8f6c(reg);
+        utilityRegFlushClose(reg);
     }
     return ret;
 }
 
-static int sub_6a88(const char *dir, const char *name, u32 *val, u32 defval)
+static int utilityRegReadInt(const char *dir, const char *name, u32 *val, u32 defval)
 {
     u32 reg = 0, cat = 0, kh = 0, type = 0;
     SceSize size = 0;
     int ret;
 
-    ret = sub_8f3c(&reg);
+    ret = utilityRegOpenSystem(&reg);
     if (ret == 0) {
         ret = sceRegOpenCategory(reg, dir, 1, &cat);
         if (ret == 0) {
@@ -2366,14 +2366,14 @@ static int sub_6a88(const char *dir, const char *name, u32 *val, u32 defval)
                 ret = sceRegGetKeyValueByName(cat, name, val, 4);
             sceRegCloseCategory(cat);
         }
-        sub_8f6c(reg);
+        utilityRegFlushClose(reg);
     }
     if (ret < 0)
         *val = defval;
     return ret;
 }
 
-static int sub_6bec(const char *dir, const char *name, const char *str, int size)
+static int utilityRegWriteStr(const char *dir, const char *name, const char *str, int size)
 {
     u32 reg = 0, cat = 0;
     int ret;
@@ -2381,7 +2381,7 @@ static int sub_6bec(const char *dir, const char *name, const char *str, int size
 
     memset(buf, 0, sizeof(buf));
     strncpy(buf, str, size);
-    ret = sub_8f3c(&reg);
+    ret = utilityRegOpenSystem(&reg);
     if (ret == 0) {
         ret = sceRegOpenCategory(reg, dir, 2, &cat);
         if (ret == 0) {
@@ -2390,18 +2390,18 @@ static int sub_6bec(const char *dir, const char *name, const char *str, int size
                 ret = sceRegFlushCategory(cat);
             sceRegCloseCategory(cat);
         }
-        sub_8f6c(reg);
+        utilityRegFlushClose(reg);
     }
     return ret;
 }
 
-static int sub_6ce8(const char *dir, const char *name, char *buf, int size, const char *defstr)
+static int utilityRegReadStr(const char *dir, const char *name, char *buf, int size, const char *defstr)
 {
     u32 reg = 0, cat = 0, kh = 0, type = 0;
     SceSize ksize = 0;
     int ret;
 
-    ret = sub_8f3c(&reg);
+    ret = utilityRegOpenSystem(&reg);
     if (ret == 0) {
         ret = sceRegOpenCategory(reg, dir, 1, &cat);
         if (ret == 0) {
@@ -2410,7 +2410,7 @@ static int sub_6ce8(const char *dir, const char *name, char *buf, int size, cons
                 ret = sceRegGetKeyValue(cat, kh, buf, size);
             sceRegCloseCategory(cat);
         }
-        sub_8f6c(reg);
+        utilityRegFlushClose(reg);
     }
     if (ret < 0 && defstr != NULL) {
         strncpy(buf, defstr, size);
@@ -2419,61 +2419,61 @@ static int sub_6ce8(const char *dir, const char *name, char *buf, int size, cons
     return ret;
 }
 
-static int sub_621c(u32 id, u32 val)
+static int utilitySetSystemParamIntInternal(u32 id, u32 val)
 {
     switch (id) {
     case 2:
         if (val > 1) return 0x80110102;
-        return sub_68f8("/CONFIG/SYSTEM/NET", "adhoc_channel", val);
+        return utilityRegWriteInt("/CONFIG/SYSTEM/NET", "adhoc_channel", val);
     case 3:
         if (val > 11) return 0x80110102;
-        return sub_68f8("/CONFIG/DATE", "date_format", val);
+        return utilityRegWriteInt("/CONFIG/DATE", "date_format", val);
     case 4:
         if (val > 2) return 0x80110102;
-        return sub_68f8("/CONFIG/DATE", "time_format", val);
+        return utilityRegWriteInt("/CONFIG/DATE", "time_format", val);
     case 5:
-        return sub_68f8("/CONFIG/DATE", "time_zone", val);
+        return utilityRegWriteInt("/CONFIG/DATE", "time_zone", val);
     case 6:
         if (val > 1) return 0x80110102;
-        return sub_68f8("/CONFIG/DATE", "summer_time", val);
+        return utilityRegWriteInt("/CONFIG/DATE", "summer_time", val);
     case 7:
         if (val > 11) return 0x80110102;
-        return sub_68f8("/CONFIG/SYSTEM/XMB", "language", val);
+        return utilityRegWriteInt("/CONFIG/SYSTEM/XMB", "language", val);
     case 8:
         if (val > 1) return 0x80110102;
-        return sub_68f8("/CONFIG/SYSTEM/XMB", "button_assign", val);
+        return utilityRegWriteInt("/CONFIG/SYSTEM/XMB", "button_assign", val);
     case 9:
         if (val > 1) return 0x80110102;
-        return sub_68f8("/CONFIG/MUSIC", "wma_play", val);
+        return utilityRegWriteInt("/CONFIG/MUSIC", "wma_play", val);
     case 10:
         if (val > 1) return 0x80110102;
-        return sub_68f8("/CONFIG/BROWSER", "flash_activated", val);
+        return utilityRegWriteInt("/CONFIG/BROWSER", "flash_activated", val);
     default:
         return 0x80110101;
     }
 }
 
-static int sub_651c(u32 id, u32 *val)
+static int utilityGetSystemParamIntInternal(u32 id, u32 *val)
 {
     switch (id) {
     case 2:
-        return sub_6a88("/CONFIG/SYSTEM/NET", "adhoc_channel", val, 0);
+        return utilityRegReadInt("/CONFIG/SYSTEM/NET", "adhoc_channel", val, 0);
     case 3:
-        return sub_6a88("/CONFIG/DATE", "date_format", val, 0);
+        return utilityRegReadInt("/CONFIG/DATE", "date_format", val, 0);
     case 4:
-        return sub_6a88("/CONFIG/DATE", "time_format", val, 0);
+        return utilityRegReadInt("/CONFIG/DATE", "time_format", val, 0);
     case 5:
-        return sub_6a88("/CONFIG/DATE", "time_zone", val, 0);
+        return utilityRegReadInt("/CONFIG/DATE", "time_zone", val, 0);
     case 6:
-        return sub_6a88("/CONFIG/DATE", "summer_time", val, 0);
+        return utilityRegReadInt("/CONFIG/DATE", "summer_time", val, 0);
     case 7:
-        return sub_6a88("/CONFIG/SYSTEM/XMB", "language", val, 1);
+        return utilityRegReadInt("/CONFIG/SYSTEM/XMB", "language", val, 1);
     case 8:
-        return sub_6a88("/CONFIG/SYSTEM/XMB", "button_assign", val, 0);
+        return utilityRegReadInt("/CONFIG/SYSTEM/XMB", "button_assign", val, 0);
     case 9:
-        return sub_6a88("/CONFIG/MUSIC", "wma_play", val, 0);
+        return utilityRegReadInt("/CONFIG/MUSIC", "wma_play", val, 0);
     case 10:
-        return sub_6a88("/CONFIG/BROWSER", "flash_activated", val, 0);
+        return utilityRegReadInt("/CONFIG/BROWSER", "flash_activated", val, 0);
     default:
         return 0x80110101;
     }
@@ -2514,7 +2514,7 @@ int sceUtilityGetSystemParamInt(u32 id, u32 *val)
 }
 
 __attribute__((noinline))
-static int sub_6e68(u32 id, const char *str)
+static int utilitySetSystemParamStrInternal(u32 id, const char *str)
 {
     if (id != 1)
         return 0x80110101;
@@ -2523,13 +2523,13 @@ static int sub_6e68(u32 id, const char *str)
     SceUtilitySysParamStackArg arg;
     arg.id = id;
     arg.str = str;
-    arg.res = sub_6bec("/CONFIG/SYSTEM", "owner_name", str, 0x80);
+    arg.res = utilityRegWriteStr("/CONFIG/SYSTEM", "owner_name", str, 0x80);
     return arg.res;
 }
 
 int sceUtilitySetSystemParamString(u32 id, const char *str)
 {
-    return sub_6e68(id, str);
+    return utilitySetSystemParamStrInternal(id, str);
 }
 
 int sceUtilityGetSystemParamString(u32 id, char *str, int len)
@@ -2550,7 +2550,7 @@ int sceUtilityGetSystemParamString(u32 id, char *str, int len)
     return arg.res;
 }
 
-int sub_7034(u32 id, char *str, int len)
+int utilityGetSystemParamStrInternal(u32 id, char *str, int len)
 {
     if (id != 1)
         return 0x80110101;
@@ -2558,7 +2558,7 @@ int sub_7034(u32 id, char *str, int len)
         return 0x80110104;
     if (len < 0x80)
         return 0x80110103;
-    return sub_6ce8("/CONFIG/SYSTEM", "owner_name", str, 0x80, "");
+    return utilityRegReadStr("/CONFIG/SYSTEM", "owner_name", str, 0x80, "");
 }
 
 /* NetParam & Kermit WLAN sync */
@@ -2575,18 +2575,18 @@ static void netparam_stack_cb(void *arg)
 {
     SceUtilityNetParamStackArg *a = (SceUtilityNetParamStackArg *)arg;
     switch (a->op) {
-    case 0: a->res = sub_7a7c(a->id); break;
-    case 1: a->res = sub_7b94(a->data); break;
-    case 2: a->res = sub_7cd0(a->id); break;
-    case 3: a->res = sub_8048(a->dst, a->id); break;
-    case 4: a->res = sub_7e60(a->id, a->param, a->data); break;
-    case 5: a->res = sub_7d50(a->id, a->param, a->data); break;
-    case 6: a->res = sub_7ae4(a->id); break;
-    case 7: a->res = sub_7b3c(a->id); break;
-    case 8: a->res = sub_80ec(a->id, a->dst); break;
-    case 9: a->res = sub_817c(a->id); break;
-    case 10: a->res = sub_81d0(); break;
-    case 11: a->res = sub_8200(a->id); break;
+    case 0: a->res = utilityNetParamDeleteEntry(a->id); break;
+    case 1: a->res = utilityNetParamGetFirstValid(a->data); break;
+    case 2: a->res = utilityNetParamCheckEntry(a->id); break;
+    case 3: a->res = utilityNetParamCopyEntry(a->dst, a->id); break;
+    case 4: a->res = utilityNetParamGetData(a->id, a->param, a->data); break;
+    case 5: a->res = utilityNetParamSetData(a->id, a->param, a->data); break;
+    case 6: a->res = utilityNetParamLock(a->id); break;
+    case 7: a->res = utilityNetParamUnlock(a->id); break;
+    case 8: a->res = utilityNetParamSwapEntries(a->id, a->dst); break;
+    case 9: a->res = utilityNetParamCheckByIdx(a->id); break;
+    case 10: a->res = utilityNetParamSyncFromKermit(); break;
+    case 11: a->res = utilityNetParamCheckSlot(a->id); break;
     default: a->res = 0; break;
     }
 }
@@ -2747,9 +2747,9 @@ int sceUtility_netparam_internal_02598DB8(int a0, int a1)
 {
     u32 k1 = GET_K1();
     SET_K1(0);
-    int ret = sub_80ec(a0, a1);
+    int ret = utilityNetParamSwapEntries(a0, a1);
     if (ret == 0) {
-        int r2 = sub_817c(a0);
+        int r2 = utilityNetParamCheckByIdx(a0);
         if (r2 < 0)
             ret = r2;
     }
@@ -2761,33 +2761,33 @@ int sceUtility_netparam_internal_09905636(int id)
 {
     u32 k1 = GET_K1();
     SET_K1(0);
-    int ret = sub_817c(id);
+    int ret = utilityNetParamCheckByIdx(id);
     if (ret == 0)
-        ret = sub_8200(id);
+        ret = utilityNetParamCheckSlot(id);
     SET_K1(k1);
     return run_netparam_op(9, id, 0, 0, NULL, 0);
 }
 
 int sceUtility_netparam_internal_6D77B975(void)
 {
-    return sub_81d0();
+    return utilityNetParamSyncFromKermit();
 }
 
 int sceUtility_4FED24D8(int id)
 {
-    return sub_8200(id);
+    return utilityNetParamCheckSlot(id);
 }
 
-static int sub_7a7c(int idx)
+static int utilityNetParamDeleteEntry(int idx)
 {
     char dir[48];
-    int ret = sub_8df0(dir, idx);
+    int ret = utilityNetParamFormatPath(dir, idx);
     if (ret < 0)
         return ret;
-    return sub_8e60(dir, 1);
+    return utilityNetParamEnsureRegCat(dir, 1);
 }
 
-static int sub_7ae4(int idx)
+static int utilityNetParamLock(int idx)
 {
     if (g_netparam_locked != 0)
         return 0x80110602;
@@ -2795,7 +2795,7 @@ static int sub_7ae4(int idx)
     return 0;
 }
 
-static int sub_7b3c(int idx)
+static int utilityNetParamUnlock(int idx)
 {
     if (g_netparam_locked != idx)
         return 0x80110602;
@@ -2803,10 +2803,10 @@ static int sub_7b3c(int idx)
     return 0;
 }
 
-static int sub_7b94(void *buf)
+static int utilityNetParamGetFirstValid(void *buf)
 {
     int idx = 0;
-    int ret = sub_8d2c(&idx);
+    int ret = utilityNetParamDefaultSlot(&idx);
     if (ret < 0)
         return ret;
     if (buf != NULL)
@@ -2814,78 +2814,78 @@ static int sub_7b94(void *buf)
     return 0;
 }
 
-static int sub_7cd0(int idx)
+static int utilityNetParamCheckEntry(int idx)
 {
     char dir[48];
-    int ret = sub_8df0(dir, idx);
+    int ret = utilityNetParamFormatPath(dir, idx);
     if (ret < 0)
         return ret;
-    return sub_7f8c(dir, idx);
+    return utilityNetParamRemoveRegCat(dir, idx);
 }
 
-static int sub_7d50(int idx, int param, const void *data)
+static int utilityNetParamSetData(int idx, int param, const void *data)
 {
-    return sub_830c(idx, param, (void *)data, 1);
+    return utilityNetParamAccessData(idx, param, (void *)data, 1);
 }
 
-static int sub_7e60(int idx, int param, void *data)
+static int utilityNetParamGetData(int idx, int param, void *data)
 {
-    return sub_830c(idx, param, data, 0);
+    return utilityNetParamAccessData(idx, param, data, 0);
 }
 
-static int sub_7f8c(const char *dir, int idx)
+static int utilityNetParamRemoveRegCat(const char *dir, int idx)
 {
     u32 reg = 0;
     (void)idx;
-    if (sub_8f3c(&reg) == 0) {
+    if (utilityRegOpenSystem(&reg) == 0) {
         sceRegRemoveCategory(reg, dir);
-        sub_8f6c(reg);
+        utilityRegFlushClose(reg);
     }
     return 0;
 }
 
-static int sub_8048(int dst_idx, int src_idx)
+static int utilityNetParamCopyEntry(int dst_idx, int src_idx)
 {
     char src_dir[48], dst_dir[48];
-    if (sub_8df0(src_dir, src_idx) < 0 || sub_8df0(dst_dir, dst_idx) < 0)
+    if (utilityNetParamFormatPath(src_dir, src_idx) < 0 || utilityNetParamFormatPath(dst_dir, dst_idx) < 0)
         return 0x80110601;
     sceKernelMemcpy(dst_dir, src_dir, sizeof(dst_dir));
     return 0;
 }
 
-static int sub_80ec(int a0, int a1)
+static int utilityNetParamSwapEntries(int a0, int a1)
 {
     char dir0[48], dir1[48];
-    if (sub_8df0(dir0, a0) < 0 || sub_8df0(dir1, a1) < 0)
+    if (utilityNetParamFormatPath(dir0, a0) < 0 || utilityNetParamFormatPath(dir1, a1) < 0)
         return 0x80110601;
-    int r0 = sub_8e60(dir0, 1);
-    int r1 = sub_8e60(dir1, 1);
+    int r0 = utilityNetParamEnsureRegCat(dir0, 1);
+    int r1 = utilityNetParamEnsureRegCat(dir1, 1);
     return (r0 == 0 && r1 == 0) ? 0 : (int)0x80110601;
 }
 
-static int sub_817c(int idx)
+static int utilityNetParamCheckByIdx(int idx)
 {
-    return sub_8ee8(idx);
+    return utilityNetParamValidateIdx(idx);
 }
 
-static int sub_81d0(void)
+static int utilityNetParamSyncFromKermit(void)
 {
-    return sub_8c20();
+    return utilityKermitFetchNetParam();
 }
 
-static int sub_8200(int idx)
+static int utilityNetParamCheckSlot(int idx)
 {
-    return sub_825c(idx);
+    return utilityNetParamCheckSlot1(idx);
 }
 
-static int sub_825c(int idx)
+static int utilityNetParamCheckSlot1(int idx)
 {
     if (idx != 1)
         return 0x80110601;
-    return sub_8c20();
+    return utilityKermitFetchNetParam();
 }
 
-static int sub_830c(int idx, int param, void *data, int set_mode)
+static int utilityNetParamAccessData(int idx, int param, void *data, int set_mode)
 {
     char dir[48];
     int ret;
@@ -2893,32 +2893,32 @@ static int sub_830c(int idx, int param, void *data, int set_mode)
 
     if (data == NULL)
         return 0x80110604;
-    ret = sub_8df0(dir, idx);
+    ret = utilityNetParamFormatPath(dir, idx);
     if (ret < 0)
         return ret;
     if (set_mode)
-        return sub_68f8(dir, "conf_serial_no", *(u32 *)data);
-    return sub_6a88(dir, "conf_serial_no", (u32 *)data, 0);
+        return utilityRegWriteInt(dir, "conf_serial_no", *(u32 *)data);
+    return utilityRegReadInt(dir, "conf_serial_no", (u32 *)data, 0);
 }
 
-static int sub_8c20(void)
+static int utilityKermitFetchNetParam(void)
 {
     sceKernelDcacheInvalidateRange(g_kermit_net_buf, sizeof(g_kermit_net_buf));
-    int ret = sub_9270(3, 13, g_kermit_net_buf);
+    int ret = utilityKermitSendRequestWrap(3, 13, g_kermit_net_buf);
     if (ret == 0) {
-        sub_6bec("/CONFIG/NETWORK/INFRASTRUCTURE/1", "conf_name", (const char *)g_kermit_net_buf, 0x80);
+        utilityRegWriteStr("/CONFIG/NETWORK/INFRASTRUCTURE/1", "conf_name", (const char *)g_kermit_net_buf, 0x80);
     }
     return ret;
 }
 
-static int sub_8d2c(int *idx_p)
+static int utilityNetParamDefaultSlot(int *idx_p)
 {
     if (idx_p != NULL)
         *idx_p = 1;
     return 0;
 }
 
-static int sub_8df0(char *out_dir, int idx)
+static int utilityNetParamFormatPath(char *out_dir, int idx)
 {
     if (idx < 0 || idx > 24)
         return 0x80110601;
@@ -2926,31 +2926,31 @@ static int sub_8df0(char *out_dir, int idx)
     return 0;
 }
 
-static int sub_8e60(const char *dir, int a1)
+static int utilityNetParamEnsureRegCat(const char *dir, int a1)
 {
     u32 reg = 0, cat = 0;
     int ret;
     (void)a1;
 
-    ret = sub_8f3c(&reg);
+    ret = utilityRegOpenSystem(&reg);
     if (ret == 0) {
         ret = sceRegOpenCategory(reg, dir, 1, &cat);
         if (ret == 0)
             sceRegCloseCategory(cat);
-        sub_8f6c(reg);
+        utilityRegFlushClose(reg);
     }
     return (ret < 0) ? 0x80110601 : 0;
 }
 
-static int sub_8ee8(int idx)
+static int utilityNetParamValidateIdx(int idx)
 {
     char dir[48];
-    if (sub_8df0(dir, idx) < 0)
+    if (utilityNetParamFormatPath(dir, idx) < 0)
         return 0x80110601;
-    return sub_7f8c(dir, idx);
+    return utilityNetParamRemoveRegCat(dir, idx);
 }
 
-static int sub_8f3c(u32 *reg_p)
+static int utilityRegOpenSystem(u32 *reg_p)
 {
     u32 param[8];
     memset(param, 0, sizeof(param));
@@ -2960,7 +2960,7 @@ static int sub_8f3c(u32 *reg_p)
     return sceRegOpenRegistry(param, 2, reg_p);
 }
 
-static int sub_8f6c(u32 reg)
+static int utilityRegFlushClose(u32 reg)
 {
     int ret = sceRegFlushRegistry(reg);
     if (ret == 0)
@@ -2968,7 +2968,7 @@ static int sub_8f6c(u32 reg)
     return ret;
 }
 
-static int sub_9044(u32 type, u32 sub_mode)
+static int utilityKermitStartDialog(u32 type, u32 sub_mode)
 {
     (void)sub_mode;
     g_status_flags = 0;
@@ -2980,34 +2980,34 @@ static int sub_9044(u32 type, u32 sub_mode)
     return 0;
 }
 
-static int sub_90e4(int mode)
+static int utilityKermitSetPowerMode(int mode)
 {
-    return sub_922c(9, (mode != 0) ? 3 : 4, NULL);
+    return utilityKermitSendRequest(9, (mode != 0) ? 3 : 4, NULL);
 }
 
 int sceUtility_private_74E69D03(void *buf)
 {
-    return sub_922c(9, 1, buf);
+    return utilityKermitSendRequest(9, 1, buf);
 }
 
-static int sub_91b0(void)
+static int utilityKermitEndDialog(void)
 {
-    sub_90e4(0);
-    sub_9270(3, 0, NULL);
+    utilityKermitSetPowerMode(0);
+    utilityKermitSendRequestWrap(3, 0, NULL);
     return 0;
 }
 
-static void sub_9204(void)
+static void utilityClearStatusFlags(void)
 {
     g_status_flags = 0;
 }
 
-static u32 sub_9210(void)
+static u32 utilityGetStatusFlags(void)
 {
     return g_status_flags;
 }
 
-static int sub_922c(int fac, int cmd, void *arg)
+static int utilityKermitSendRequest(int fac, int cmd, void *arg)
 {
     SceKermitRequest *req;
     u64 resp = 0;
@@ -3022,7 +3022,7 @@ static int sub_922c(int fac, int cmd, void *arg)
     return (int)resp;
 }
 
-static int sub_9270(int fac, int cmd, void *arg)
+static int utilityKermitSendRequestWrap(int fac, int cmd, void *arg)
 {
-    return sub_922c(fac, cmd, arg);
+    return utilityKermitSendRequest(fac, cmd, arg);
 }
