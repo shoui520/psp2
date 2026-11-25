@@ -15,55 +15,42 @@ SCE_MODULE_STOP_THREAD_PARAMETER(3, 0x20, 0x0400, 0);
 typedef struct
 {
     u16 frameSize;
-    char channels;
-    char modeId;
+    u8 channels;
+    u8 modeId;
 } SceAtracModeEntry;
 
-// 3E74
+typedef struct
+{
+    u16 frameSize;
+    u16 channels;
+    u8 configLo;
+    u8 configHi;
+    u16 pad;
+} SceAtracPlusModeEntry;
+
 SceAtracModeEntry g_at3ModeTable[] = {
-    { 0x00C0, 0x1, 0xE },
-    { 0x0098, 0x1, 0xF },
-    { 0x0180, 0x2, 0x4 },
-    { 0x0130, 0x2, 0x6 },
-    { 0x00C0, 0x2, 0xB }
+    { 0x00C0, 1, 0xE },
+    { 0x0098, 1, 0xF },
+    { 0x0180, 2, 0x4 },
+    { 0x0130, 2, 0x6 },
+    { 0x00C0, 2, 0xB }
 };
 
-// 3E88
-SceAtracModeEntry g_at3PlusModeTable[] = {
-    { 0x00C0, 0x1, 0x0 },
-    { 0x1724, 0x0, 0x0 },
-    { 0x0118, 0x1, 0x0 },
-    { 0x2224, 0x0, 0x0 },
-    { 0x0178, 0x1, 0x0 },
-    { 0x2E24, 0x0, 0x0 },
-
-    { 0x0230, 0x1, 0x0 },
-    { 0x4524, 0x0, 0x0 },
-    { 0x02E8, 0x1, 0x0 },
-    { 0x5C24, 0x0, 0x0 },
-
-    { 0x0118, 0x2, 0x0 },
-    { 0x2228, 0x0, 0x0 },
-    { 0x0178, 0x2, 0x0 },
-    { 0x2E28, 0x0, 0x0 },
-
-    { 0x0230, 0x2, 0x0 },
-    { 0x4528, 0x0, 0x0 },
-    { 0x02E8, 0x2, 0x0 },
-    { 0x5C28, 0x0, 0x0 },
-
-    { 0x03A8, 0x2, 0x0 },
-    { 0x7428, 0x0, 0x0 },
-    { 0x0460, 0x2, 0x0 },
-    { 0x8B28, 0x0, 0x0 },
-    
-    { 0x05D0, 0x2, 0x0 },
-    { 0xB928, 0x0, 0x0 },
-    { 0x0748, 0x2, 0x0 },
-    { 0xE828, 0x0, 0x0 },
-
-    { 0x0800, 0x2, 0x0 },
-    { 0xFF28, 0x0, 0x0 }
+SceAtracPlusModeEntry g_at3PlusModeTable[] = {
+    { 0x00C0, 1, 0x24, 0x17, 0 },
+    { 0x0118, 1, 0x24, 0x22, 0 },
+    { 0x0178, 1, 0x24, 0x2E, 0 },
+    { 0x0230, 1, 0x24, 0x45, 0 },
+    { 0x02E8, 1, 0x24, 0x5C, 0 },
+    { 0x0118, 2, 0x28, 0x22, 0 },
+    { 0x0178, 2, 0x28, 0x2E, 0 },
+    { 0x0230, 2, 0x28, 0x45, 0 },
+    { 0x02E8, 2, 0x28, 0x5C, 0 },
+    { 0x03A8, 2, 0x28, 0x74, 0 },
+    { 0x0460, 2, 0x28, 0x8B, 0 },
+    { 0x05D0, 2, 0x28, 0xB9, 0 },
+    { 0x0748, 2, 0x28, 0xE8, 0 },
+    { 0x0800, 2, 0x28, 0xFF, 0 }
 };
 
 // 3EF8
@@ -132,7 +119,7 @@ int sceAtracReinit(int numAT3Id, int numAT3plusId)
         for (i = 0; i < numAT3Id + numAT3plusId; i++)
         {
             curId->codec.edramAddr = (void *)count;
-            curId->codec.reserved1 = 1;
+            curId->codec.edramFlag = 1;
             if (i >= numAT3plusId)
             {
                 // 0164
@@ -141,8 +128,8 @@ int sceAtracReinit(int numAT3Id, int numAT3plusId)
             }
             else
             {
-                curId->codec.param0.bytes.b0 = 40;
-                curId->codec.param0.bytes.b1 = 92;
+                curId->codec.codecConfig.byte[0] = 40;
+                curId->codec.codecConfig.byte[1] = 92;
                 curId->info.codec = 0x1000;
                 count += g_needMemAT3plus;
             }
@@ -214,20 +201,17 @@ int sceAtracSetHalfwayBufferAndGetID(u8 *buffer, u32 readByte, u32 bufferByte)
     // 0388
     if (id < 0)
         return id;
-    int ret2 = setHalfwayBuffer(&g_atracIds[id], buffer, readByte, bufferByte, &info);
-    if (ret2 < 0)
+    int setRet = setHalfwayBuffer(&g_atracIds[id], buffer, readByte, bufferByte, &info);
+    if (setRet < 0)
     {
-        // 03E0
         if (id >= 0 && id < 6)
         {
-            // 03F4
             int oldIntr = sceKernelCpuSuspendIntr();
             if (g_atracIds[id].info.state > 0 && g_atracIds[id].info.state != 16)
                 g_atracIds[id].info.state = -1;
-            // 0420
             sceKernelCpuResumeIntr(oldIntr);
         }
-        return ret2;
+        return setRet;
     }
     return id;
 }
@@ -280,12 +264,12 @@ int sceAtracSetMOutHalfwayBufferAndGetID(u8 *buffer, u32 readByte, u32 bufferByt
     return id;
 }
 
-int sceAtracSetAA3HalfwayBufferAndGetID(u8 *buffer, u32 readByte, u32 bufferByte, int arg3, int arg4 __attribute__((unused)))
+int sceAtracSetAA3HalfwayBufferAndGetID(u8 *buffer, u32 readByte, u32 bufferByte, u32 fileSize, int unusedFlag __attribute__((unused)))
 {
     SceAtracFile info;
     if (bufferByte < readByte)
         return 0x80630013;
-    int id = openAA3AndGetID(buffer, readByte, arg3, &info);
+    int id = openAA3AndGetID(buffer, readByte, fileSize, &info);
     if (id < 0)
         return id;
     int ret = setHalfwayBuffer(&g_atracIds[id], buffer, readByte, bufferByte, &info);
@@ -363,9 +347,8 @@ int sceAtracGetStreamDataInfo(int atracID, u8 **writePtr, u32 *writableByte, u32
     }
     else if (info->state == 3)
     {
-        // 0974
         u32 readPos = info->dataOff + info->streamDataByte;
-        *writableByte = info->bufferByte - readPos;
+        *writableByte = info->dataEnd - readPos;
         *writePtr = info->buffer + readPos;
         *readPosition = readPos;
     }
@@ -422,10 +405,9 @@ int sceAtracGetSecondBufferInfo(int atracID, u32 *position, u32 *dataByte)
         *dataByte = 0;
         return 0x80630022;
     }
-    // 0B14
     u32 pos = getSecondBufPos(info, info->loopEnd) + 1;
     *position = pos;
-    *dataByte = info->bufferByte - pos;
+    *dataByte = info->dataEnd - pos;
     return 0;
 }
 
@@ -492,7 +474,7 @@ int sceAtracGetNextDecodePosition(int atracID, u32 *samplePosition)
     int ret = isValidState(info->state);
     if (ret < 0)
         return ret;
-    if (info->bufferByte - info->curOff < info->sampleSize || info->endSample < info->decodePos)
+    if (info->dataEnd - info->curOff < info->sampleSize || info->endSample < info->decodePos)
         return 0x80630024;
     *samplePosition = info->decodePos - info->samplesPerChan;
     return 0;
@@ -569,21 +551,20 @@ int sceAtracResetPlayPosition(int atracID, u32 sample, u32 writeByteFirstBuf, u3
     return resetId(&g_atracIds[atracID]);
 }
 
-int sceAtracLowLevelInitDecoder(int atracID, void *arg1)
+int sceAtracLowLevelInitDecoder(int atracID, SceAtracLowLevelInitParam *initParam)
 {
     if (atracID < 0 || atracID >= 6 || g_atracIds[atracID].info.state <= 0)
         return 0x80630005;
     SceAtracIdInfo *info = &g_atracIds[atracID].info;
-    int ret = initDecoder(&g_atracIds[atracID], arg1);
+    int ret = initDecoder(&g_atracIds[atracID], initParam);
     if (ret != 0)
         return ret;
-    if (*(int*)(arg1 + 0) == 1 && *(int*)(arg1 + 0) == *(int*)(arg1 + 4)) // 1194
+    if (initParam->numChan == 1 && initParam->numChan == initParam->outputChan)
         return sceAudiocodec_3DD7EE1A(&g_atracIds[atracID].codec, info->codec);
-    // 1174
     return sceAudiocodecInit(&g_atracIds[atracID].codec, info->codec);
 }
 
-int sceAtracLowLevelDecode(int atracID, void *inBuf, int *arg2, void *outBuf, int *arg4)
+int sceAtracLowLevelDecode(int atracID, void *inBuf, int *readBytes, void *outBuf, int *decodedBytes)
 {
     if (atracID < 0 || atracID >= 6 || g_atracIds[atracID].info.state <= 0)
         return 0x80630005;
@@ -595,14 +576,12 @@ int sceAtracLowLevelDecode(int atracID, void *inBuf, int *arg2, void *outBuf, in
     g_atracIds[atracID].codec.inBuf = inBuf;
     g_atracIds[atracID].codec.outBuf = outBuf;
     if (info->codec == 0x1000) {
-        // 1278
         g_atracIds[atracID].codec.param[0] = 0;
     }
-    // 1234
     if (sceAudiocodecDecode(&g_atracIds[atracID].codec, info->codec) != 0)
         return 0x80630002;
-    *arg2 = g_atracIds[atracID].codec.readSample;
-    *arg4 = g_atracIds[atracID].codec.decodedSample;
+    *readBytes = g_atracIds[atracID].codec.readSample;
+    *decodedBytes = g_atracIds[atracID].codec.decodedSample;
     return 0;
 }
 
@@ -697,9 +676,9 @@ int sceAtracSetDataAndGetID(u8 *buffer, u32 bufferByte)
     return sceAtracSetHalfwayBufferAndGetID(buffer, bufferByte, bufferByte);
 }
 
-int sceAtracSetAA3DataAndGetID(u8 *buffer, u32 bufferByte, int arg2, int arg3)
+int sceAtracSetAA3DataAndGetID(u8 *buffer, u32 bufferByte, u32 fileSize, int unusedFlag)
 {
-    return sceAtracSetAA3HalfwayBufferAndGetID(buffer, bufferByte, bufferByte, arg2, arg3); // unused last argument?
+    return sceAtracSetAA3HalfwayBufferAndGetID(buffer, bufferByte, bufferByte, fileSize, unusedFlag);
 }
 
 int sceAtracIsSecondBufferNeeded(int atracID)
@@ -738,7 +717,7 @@ int sceAtracGetMaxSample(int atracID, u32 *maxSample)
         return 0x80630005;
     if (g_atracIds[atracID].info.state == 1)
         return 0x80630010;
-    *maxSample = 0x800 >> (g_atracIds[atracID].info.codec & 1);
+    *maxSample = 0x800u >> (g_atracIds[atracID].info.codec & 1);
     return 0;
 }
 
@@ -784,8 +763,8 @@ SceAtracId *_sceAtracGetContextAddress(int atracID)
 // 182C
 int allocEdram(void)
 {
-    g_atracIds[0].codec.param0.bytes.b0 = 40;
-    g_atracIds[0].codec.param0.bytes.b1 = 92;
+    g_atracIds[0].codec.codecConfig.byte[0] = 40;
+    g_atracIds[0].codec.codecConfig.byte[1] = 92;
     int ret = sceAudiocodecCheckNeedMem(&g_atracIds[0].codec, 0x1000);
     if (ret < 0)
         return ret;
@@ -802,11 +781,10 @@ int allocEdram(void)
     return 0;
 }
 
-// 18D4
-int openAA3AndGetID(u8 *buffer, u32 readByte, int arg2, SceAtracFile *info)
+int openAA3AndGetID(u8 *buffer, u32 readByte, u32 fileSize, SceAtracFile *info)
 {
     SceAA3File file;
-    int codec = parseAA3(readByte, &file, arg2, buffer);
+    int codec = parseAA3(readByte, &file, fileSize, buffer);
     if (codec < 0)
         return codec;
     int ret = setAtracFileInfo(&file, info);
@@ -816,7 +794,7 @@ int openAA3AndGetID(u8 *buffer, u32 readByte, int arg2, SceAtracFile *info)
 }
 
 // 1938
-int isValidState(char state)
+int isValidState(int state)
 {
     if (state == 8)
         return 0x80630031;
@@ -834,71 +812,56 @@ int getOutputChan(SceAtracIdInfo *info, SceAudiocodecCodec *codec)
         // 199C
         return codec->param[6];
     }
-    if (codec->param0.word - 0xeU < 2)
+    if (codec->codecConfig.word - 0xeU < 2)
         return codec->param[1];
     return 2;
 }
 
-// 19A4
 int decodeFrame(SceAtracId *id, short *outAddr, u32 *samples, u32 *finishFlag)
 {
     char buf[0x2000] __attribute__((aligned(64)));
-    int tmpVal = 0x800 >> (id->info.codec & 1);
+    int maxFrameSamples = 0x800 >> (id->info.codec & 1);
     int nextSample = getNextSample(&id->info);
-    u32 tmp2 = id->info.curOff;
-    if (id->info.dataEnd >= id->info.sampleSize + tmp2 && id->info.endSample >= id->info.decodePos)
+    u32 readOff = id->info.curOff;
+    if (id->info.dataEnd >= id->info.sampleSize + readOff && id->info.endSample >= id->info.decodePos)
     {
-        // 1A74
-        // 1A94
         if (((id->info.state & 4) != 0 && id->info.streamDataByte < id->info.sampleSize)
-         || (id->info.state == 3 && id->info.dataOff + id->info.streamDataByte < id->info.sampleSize + id->info.curOff)) // 1C34
+         || (id->info.state == 3 && id->info.dataOff + id->info.streamDataByte < id->info.sampleSize + id->info.curOff))
         {
-            // 1C4C
             *finishFlag = 0;
             return 0x80630023;
         }
-        // 1AA4
         if ((id->info.state & 4) == 0) {
-            // 1AB4
-            id->codec.inBuf = id->info.buffer + tmp2;
+            id->codec.inBuf = id->info.buffer + readOff;
         } else {
-            // 1C1C
-            char unkFlag = id->info.secondBufState & 1;
-            tmp2 = (unkFlag) ? id->info.secondBufReadOff : id->info.firstBufReadOff;
-            u8* infoBuf = (unkFlag) ? id->info.secondBuffer : id->info.buffer;
-            // 1AB4
-            id->codec.inBuf = infoBuf + tmp2;
+            char useSecondBuf = id->info.secondBufState & 1;
+            readOff = useSecondBuf ? id->info.secondBufReadOff : id->info.firstBufReadOff;
+            u8 *infoBuf = useSecondBuf ? id->info.secondBuffer : id->info.buffer;
+            id->codec.inBuf = infoBuf + readOff;
         }
-        // 1AB8
         id->codec.outBuf = outAddr;
-        if (nextSample != tmpVal)
+        if (nextSample != maxFrameSamples)
             id->codec.outBuf = buf;
-        // 1AC4
         int ret = sceAudiocodecDecode(&id->codec, id->info.codec);
         if (ret != 0)
         {
-            // 1C0C
             *finishFlag = 0;
             return 0x80630002;
         }
         id->info.curOff += id->info.sampleSize;
         if (id->info.numFrame == 0)
         {
-            // 1B20
             *samples = nextSample;
             if (id->info.endSample < id->info.decodePos + nextSample)
                 *finishFlag = (id->info.loopNum == 0);
             else
                 *finishFlag = 0;
-            // 1B44
-            if (nextSample != tmpVal && nextSample != 0 && outAddr != NULL) {
+            if (nextSample != maxFrameSamples && nextSample != 0 && outAddr != NULL) {
                 int numChan = getOutputChan(&id->info, &id->codec);
-                sceKernelMemcpy(outAddr, buf + ((id->info.decodePos & (0x7FF >> (id->info.codec & 1))) << numChan), nextSample << numChan);
+                sceKernelMemcpy(outAddr, buf + ((id->info.decodePos & (0x7FFu >> (id->info.codec & 1))) << numChan), nextSample << numChan);
             }
-            // 1B98
             id->info.decodePos += nextSample;
-            // 1BC8
-            if (id->info.loopEnd != 0 && (id->info.loopNum != 0 || id->info.loopEnd >= id->info.decodePos) && id->info.loopEnd < id->info.decodePos) // go back to start of loop
+            if (id->info.loopEnd != 0 && (id->info.loopNum != 0 || id->info.loopEnd >= id->info.decodePos) && id->info.loopEnd < id->info.decodePos)
             {
                 id->info.curOff = getOffFromSample(&id->info, id->info.loopStart);
                 id->info.numFrame = getFrameFromSample(&id->info, id->info.loopStart);
@@ -909,15 +872,11 @@ int decodeFrame(SceAtracId *id, short *outAddr, u32 *samples, u32 *finishFlag)
         }
         else
             id->info.numFrame--;
-        // (1AF8)
-        // 1AFC
         if ((id->info.state & 4) != 0) {
-            // 1B10
             atracConsumeFrame(&id->info);
         }
         return ret;
     }
-    // 1A34
     *finishFlag = 1;
     return 0x80630024;
 }
@@ -927,7 +886,6 @@ void atracConsumeFrame(SceAtracIdInfo *info)
     info->streamDataByte -= info->sampleSize;
     if (info->secondBufState == 1)
     {
-        // 1D48
         u32 nextOff = info->secondBufReadOff + info->sampleSize;
         if (info->secondBufferByte >= nextOff + info->sampleSize)
             info->secondBufReadOff = nextOff;
@@ -939,10 +897,10 @@ void atracConsumeFrame(SceAtracIdInfo *info)
         }
         return;
     }
-    u32 tmp2 = info->firstBufReadOff + info->sampleSize;
-    if (info->bufferByte < tmp2 + info->sampleSize)
-        tmp2 = 0;
-    info->firstBufReadOff = tmp2;
+    u32 nextReadOff = info->firstBufReadOff + info->sampleSize;
+    if (info->bufferByte < nextReadOff + info->sampleSize)
+        nextReadOff = 0;
+    info->firstBufReadOff = nextReadOff;
     if (info->loopEnd != 0)
     {
         if (info->loopNum != 0)
@@ -1104,9 +1062,9 @@ int loadWaveFile(u32 size, SceAtracFile *info, u8 *in)
                     if (validBitsPerSample != 1)
                         return 0x80630006;
                     curOff += 4; // skip channel mask
-                    short tmpVal = readWaveData(in, &curOff, 2); // err.. it should be GUID
-                    info->codecParam.v16 = tmpVal;
-                    if ((tmpVal & 0xFFFF) != readWaveData(in, &curOff, 2))
+                    short jointStereo = readWaveData(in, &curOff, 2);
+                    info->codecParam.half = jointStereo;
+                    if ((jointStereo & 0xFFFF) != readWaveData(in, &curOff, 2))
                         return 0x80630006;
                     if (readWaveData(in, &curOff, 4) != validBitsPerSample)
                         return 0x80630006;
@@ -1116,30 +1074,25 @@ int loadWaveFile(u32 size, SceAtracFile *info, u8 *in)
                 else
                 {
                     if (fmtCode != (s16)0xFFFE) {
-                        // 20B8
                         return 0x80630006;
                     }
                     if (cksize < 52)
                         return 0x80630006;
                     u8 *curIn = in + curOff + 10;
                     u8 *curGUID = g_at3PlusGUID;
-                    // 2048
                     int i;
-                    // check AT3+ GUID
                     for (i = 16; i != 0; i--)
                     {
                         if (*(curGUID++) != *(curIn++))
                         {
-                            // 20A4
                             if (i == 0)
                                 break;
                             return 0x80630006;
                         }
                     }
-                    // 2064
-                    info->codecParam.v8[0] = in[curOff + 28];
-                    info->codecParam.v8[1] = in[curOff + 29];
-                    if (((info->codecParam.v8[0] >> 2) & 7) != info->channels)
+                    info->codecParam.bytes[0] = in[curOff + 28];
+                    info->codecParam.bytes[1] = in[curOff + 29];
+                    if (((info->codecParam.bytes[0] >> 2) & 7) != info->channels)
                         return 0x80630006;
                     fmt = 0x1000;
                     cksize -= 52;
@@ -1150,73 +1103,63 @@ int loadWaveFile(u32 size, SceAtracFile *info, u8 *in)
             default:
                 break;
         }
-        // 1F38
-        // 1F3C
         curOff += cksize;
     } while (size >= curOff && curOff + 8 < size);
-    // 1F58 dup
     return 0x80630011;
 }
 
-// 2310
 int readWaveData(u8 *in, u32 *curOff, int size)
 {
     u8 *curStr = in + *curOff + size;
     *curOff = *curOff + size;
     int result = 0;
-    // 2324
     do
         result |= *(--curStr) << ((--size) * 8);
     while (size != 0);
     return result;
 }
 
-// 2348
 int getOffFromSample(SceAtracIdInfo *info, u32 sample)
 {
     u32 max = 368;
     if (info->codec == 0x1001)
         max = 69;
-    u32 tmpVal = ((sample >> (0x100B - info->codec)) - 1) * info->sampleSize;
-    if ((sample & (0x7FF >> (info->codec & 1))) < max && tmpVal != 0)
-        tmpVal -= info->sampleSize;
-    // 239C
-    return tmpVal + info->dataOff;
+    u32 frameOff = ((sample >> (0x100B - info->codec)) - 1) * info->sampleSize;
+    if ((sample & (0x7FFu >> (info->codec & 1))) < max && frameOff != 0)
+        frameOff -= info->sampleSize;
+    return frameOff + info->dataOff;
 }
 
-// 23A4
-u32 getSecondBufPos(SceAtracIdInfo *info, u32 arg1)
+u32 getSecondBufPos(SceAtracIdInfo *info, u32 sample)
 {
-    return ((arg1 >> (0x100B - info->codec)) + 1) * info->sampleSize + info->dataOff - 1;
+    u32 frames = (sample >> (0x100B - info->codec)) + 1;
+    return frames * info->sampleSize + info->dataOff - 1;
 }
 
-// 23D4
 int getFrameFromSample(SceAtracIdInfo *info, u32 sample)
 {
     u32 max = 368;
     if (info->codec == 0x1001)
         max = 69;
-    if ((sample & (0x7FF >> (info->codec & 1))) < max)
+    if ((sample & (0x7FFu >> (info->codec & 1))) < max)
         return 2;
     return 1;
 }
 
-// 240C
 int getNextSample(SceAtracIdInfo *info)
 {
-    int mask = 0x7FF >> (info->codec & 1);
+    u32 mask = 0x7FFu >> (info->codec & 1);
     u32 nextOff = (info->decodePos & ~mask) + mask;
-    u32 tmp2 = nextOff - info->endSample;
+    u32 excessSamples = nextOff - info->endSample;
     if (info->endSample >= nextOff)
-        tmp2 = 0;
-    u32 tmp3 = (info->decodePos & mask) + tmp2;
-    u32 tmp4 = 0x800 >> (info->codec & 1);
-    if (tmp3 >= tmp4)
+        excessSamples = 0;
+    u32 usedSamples = (info->decodePos & mask) + excessSamples;
+    u32 frameSamples = 0x800u >> (info->codec & 1);
+    if (usedSamples >= frameSamples)
         return 0;
-    return tmp4 - tmp3;
+    return frameSamples - usedSamples;
 }
 
-// 245C
 int setBuffer(SceAtracId *id, u8 *buffer, u32 readByte, u32 bufferByte, SceAtracFile *info)
 {
     id->info.numChan = info->channels;
@@ -1227,267 +1170,142 @@ int setBuffer(SceAtracId *id, u8 *buffer, u32 readByte, u32 bufferByte, SceAtrac
     id->info.buffer = buffer;
     id->info.curOff = info->dataOff;
     id->info.dataOff = info->dataOff;
-    id->info.dataEnd = info->dataSize + info->dataOff; // end
+    id->info.dataEnd = info->dataSize + info->dataOff;
     id->info.secondBufState = 0;
     id->info.bufferByte = bufferByte;
     id->info.firstBufReadOff = info->dataOff;
     if (id->info.endSample >= id->info.loopEnd && (id->info.endSample >> (0x100B - id->info.codec)) * id->info.sampleSize < info->dataSize)
     {
-        // 2584
         int ret = setBufferSize(&id->info, readByte, bufferByte);
         if (ret != 0)
             return ret;
-        if (id->info.codec == 0x1001) // AT3
+        if (id->info.codec == 0x1001)
         {
-            // 25BC
             SceAtracModeEntry *cur = &g_at3WaveModeTable[4];
-            // 25D4
             int i;
             for (i = 0; i < 5; i++)
             {
                 if (cur->frameSize == id->info.sampleSize)
                 {
-                    // 25F0
-                    if (cur->modeId == info->codecParam.v16) {
-                        id->codec.param0.word = cur->channels;
+                    if (cur->modeId == info->codecParam.half) {
+                        id->codec.codecConfig.word = cur->channels;
                         return 0;
                     }
                 }
-                // 25E0
                 cur--;
             }
             return 0x80630008;
         }
-        id->codec.param0.bytes.b0 = info->codecParam.v8[0];
+        id->codec.codecConfig.byte[0] = info->codecParam.bytes[0];
         id->codec.param[0] = 0;
-        id->codec.param0.bytes.b1 = info->codecParam.v8[1];
+        id->codec.codecConfig.byte[1] = info->codecParam.bytes[1];
         return ret;
     }
     return 0x80630008;
 }
 
-// 2608
-int initDecoder(SceAtracId *info, void *arg1)
+int initDecoder(SceAtracId *id, SceAtracLowLevelInitParam *initParam)
 {
+    SceAtracIdInfo *info = &id->info;
     int ret;
-    if (info->info.codec == 0x1001)
-    {
-        // 26AC
-        ret = initAT3Decoder(&info->codec, arg1); // AT3
-    }
+    if (info->codec == 0x1001)
+        ret = initAT3Decoder(&id->codec, initParam);
     else
-        ret = initAT3plusDecoder(&info->codec, arg1); // AT3+
-    // 2634
+        ret = initAT3plusDecoder(&id->codec, initParam);
     if (ret < 0)
         return ret;
-    info->info.state = 8;
-    info->info.buffer = NULL;
-    info->info.numChan = *(u8*)(arg1 + 0);
-    info->info.secondBuffer = NULL;
-    info->info.secondBufferByte = 0;
-    info->info.sampleSize = *(u16*)(arg1 + 8);
-    info->info.decodePos = 0;
-    info->info.endSample = 0;
-    info->info.loopStart = 0;
-    info->info.loopEnd = 0;
-    info->info.samplesPerChan = 0;
-    info->info.numFrame = 0;
-    info->info.secondBufState = 0;
-    info->info.dataOff = 0;
-    info->info.curOff = 0;
-    info->info.dataEnd = 0;
-    info->info.loopNum = 0;
-    info->info.streamDataByte = 0;
-    info->info.firstBufReadOff = 0;
-    info->info.secondBufReadOff = 0;
-    info->info.bufferByte = 0;
+    info->state = 8;
+    info->buffer = NULL;
+    info->numChan = (u8)initParam->numChan;
+    info->secondBuffer = NULL;
+    info->secondBufferByte = 0;
+    info->sampleSize = (u16)initParam->frameSize;
+    info->decodePos = 0;
+    info->endSample = 0;
+    info->loopStart = 0;
+    info->loopEnd = 0;
+    info->samplesPerChan = 0;
+    info->numFrame = 0;
+    info->secondBufState = 0;
+    info->dataOff = 0;
+    info->curOff = 0;
+    info->dataEnd = 0;
+    info->loopNum = 0;
+    info->streamDataByte = 0;
+    info->firstBufReadOff = 0;
+    info->secondBufReadOff = 0;
+    info->bufferByte = 0;
     return ret;
 }
 
-// 26BC
-int initAT3Decoder(SceAudiocodecCodec *codec, void *arg1)
+int initAT3Decoder(SceAudiocodecCodec *codec, SceAtracLowLevelInitParam *initParam)
 {
-    int sp[8];
-    int *cur = (int*)&g_at3ModeTable[0];
-    int *curEnd = (int*)&g_at3ModeTable[4];
-    int *curSp = sp;
-    int *end = curEnd;
-    if (((int)g_at3ModeTable & 3) == 0)
-    {
-        // 27C0
-        for (;;)
-        {
-            curSp[0] = cur[0];
-            curSp[1] = cur[1];
-            curSp[2] = cur[2];
-            curSp[3] = cur[3];
-            curSp += 4;
-            cur = curEnd;
-            if (curEnd == end)
-            {
-                // 27F4
-                *curSp = *curEnd;
-                break;
-            }
-            curEnd += 4;
-        }
-    }
-    else
-    {
-        // 26F4
-        do
-        {
-            asm("lwl $a0, 3(%0)\n \
-                 lwr $a0, 0(%0)\n \
-                 lwr $a1, 7(%0)\n \
-                 lwr $a1, 4(%0)\n \
-                 lwr $a2, 11(%0)\n \
-                 lwr $a2, 8(%0)\n \
-                 lwr $a3, 15(%0)\n \
-                 lwr $a3, 12(%0)\n \
-                 swl $a0, 3(%1)\n \
-                 swr $a0, 0(%1)\n \
-                 swr $a1, 7(%1)\n \
-                 swr $a1, 4(%1)\n \
-                 swr $a2, 11(%1)\n \
-                 swr $a2, 8(%1)\n \
-                 swr $a3, 15(%1)\n \
-                 swr $a3, 12(%1)" : : "r" (cur), "r" (curSp) : "a0", "a1", "a2", "a3");
-            cur += 4;
-            curSp += 4;
-        } while (cur != end);
-        asm("lwl $v1, 3(%0)\n \
-             lwr $v1, 0(%0)\n \
-             swl $v1, 3(%1)\n \
-             swr $v1, 0(%1)" : : "r" (cur), "r" (curSp) : "v1");
-    }
-    // 2754
-    int ret = isValidOpt(*(int*)(arg1 + 0), *(int*)(arg1 + 4));
+    int ret = isValidOpt(initParam->numChan, initParam->outputChan);
     if (ret < 0)
         return ret;
-    // 2778
     int i;
-    SceAtracModeEntry *tmpVal = &g_at3ModeTable[4];
-    for (i = 0; i < 5; i++)
+    for (i = 4; i >= 0; i--)
     {
-        if (tmpVal->frameSize == *(int*)(arg1 + 8) && tmpVal->channels == *(int*)(arg1 + 0)) { // 27A0
-            codec->param0.word = 0;
-            codec->param0.bytes.b0 = tmpVal->modeId;
+        if (g_at3ModeTable[i].frameSize == initParam->frameSize && g_at3ModeTable[i].channels == initParam->numChan)
+        {
+            codec->codecConfig.word = g_at3ModeTable[i].modeId;
             return 0;
         }
-        // 2784
-        tmpVal--;
     }
     return 0x80630001;
 }
 
-// 2804
-int initAT3plusDecoder(SceAudiocodecCodec *codec, void *arg1)
+int initAT3plusDecoder(SceAudiocodecCodec *codec, SceAtracLowLevelInitParam *initParam)
 {
-    int sp[28];
-    int *cur = (int*)&g_at3PlusModeTable[0];
-    int *curSp = sp;
-    int *end = (int*)&g_at3PlusModeTable[28];
-    if (((int)g_at3PlusModeTable & 3) == 0)
-    {
-        // 2918
-        do
-        {
-            curSp[0] = cur[0];
-            curSp[1] = cur[1];
-            curSp[2] = cur[2];
-            curSp[3] = cur[3];
-            cur += 4;
-            curSp += 4;
-        } while (cur != end);
-    }
-    else
-    {
-        do
-        {
-            asm("lwl $a0, 3(%0)\n \
-                 lwr $a0, 0(%0)\n \
-                 lwr $a1, 7(%0)\n \
-                 lwr $a1, 4(%0)\n \
-                 lwr $a2, 11(%0)\n \
-                 lwr $a2, 8(%0)\n \
-                 lwr $a3, 15(%0)\n \
-                 lwr $a3, 12(%0)\n \
-                 swl $a0, 3(%1)\n \
-                 swr $a0, 0(%1)\n \
-                 swr $a1, 7(%1)\n \
-                 swr $a1, 4(%1)\n \
-                 swr $a2, 11(%1)\n \
-                 swr $a2, 8(%1)\n \
-                 swr $a3, 15(%1)\n \
-                 swr $a3, 12(%1)" : : "r" (cur), "r" (curSp) : "a0", "a1", "a2", "a3");
-            cur += 4;
-            curSp += 4;
-        } while (cur != end);
-    }
-    // 2888
-    int ret = isValidOpt(*(int*)(arg1 + 0), *(int*)(arg1 + 4));
+    int ret = isValidOpt(initParam->numChan, initParam->outputChan);
     if (ret < 0)
         return ret;
-    curSp = &sp[26];
-    // 28A8
     int i;
-    for (i = 0; i < 14; i++)
+    for (i = 13; i >= 0; i--)
     {
-        if (*(u16*)(curSp + 0) == *(int*)(arg1 + 8))
+        if (g_at3PlusModeTable[i].frameSize == initParam->frameSize && g_at3PlusModeTable[i].channels == initParam->numChan)
         {
-            // 28D0
-            if (*(u16*)((int)curSp + 2) == *(int*)(arg1 + 0))
-            {
-                codec->param0.bytes.b1 = *(u8*)((int)curSp + 5);
-                codec->param0.bytes.b0 = *(u8*)((int)curSp + 4);
-                codec->param[2] = 0;
-                codec->param0.bytes.b2 = 0;
-                codec->param0.bytes.b3 = 0;
-                codec->param1.bytes.b0 = 0;
-                codec->param1.bytes.b1 = 0;
-                codec->param1.bytes.b2 = 0;
-                codec->param1.bytes.b3 = 0;
-                codec->param[0] = 0;
-                return 0;
-            }
+            codec->codecConfig.byte[1] = g_at3PlusModeTable[i].configHi;
+            codec->codecConfig.byte[0] = g_at3PlusModeTable[i].configLo;
+            codec->param[2] = 0;
+            codec->codecConfig.byte[2] = 0;
+            codec->codecConfig.byte[3] = 0;
+            codec->codecMode.ubyte[0] = 0;
+            codec->codecMode.sbyte[1] = 0;
+            codec->codecMode.sbyte[2] = 0;
+            codec->codecMode.sbyte[3] = 0;
+            codec->param[0] = 0;
+            return 0;
         }
-        // 28B4
-        curSp -= 2;
     }
     return 0x80630001;
 }
 
-// 294C
-int isValidOpt(int arg0, int arg1)
+int isValidOpt(int numChan, int outputChan)
 {
-    if ((arg0 != 2 || arg1 != 2) && (arg0 != 1 || arg1 < 1 || arg1 >= 3))
+    if ((numChan != 2 || outputChan != 2) && (numChan != 1 || outputChan < 1 || outputChan >= 3))
         return 0x80630001;
     return 0;
 }
 
-// 298C
 void setBufferInfo(SceAtracIdInfo *info, u32 factSize, u32 dataSize, u32 samplesPerChan, int loopStart, int loopEnd)
 {
     int add = 368;
     if (info->codec == 0x1001)
         add = 69;
     u32 shift = 0x100B - info->codec;
-    u32 samples = samplesPerChan + add;
+    int samples = (int)(samplesPerChan + add);
     if (factSize != 0) {
-        // 29FC
         factSize += samples;
     }
     else
         factSize = (dataSize / info->sampleSize) << shift;
-    // 29C0
     info->decodePos = samples;
     info->loopNum = 0;
     info->endSample = factSize - 1;
     info->numFrame = samples >> shift;
     if (loopStart < 0)
     {
-        // 29F0
         info->loopEnd = 0;
         info->loopStart = 0;
     }
@@ -1497,14 +1315,12 @@ void setBufferInfo(SceAtracIdInfo *info, u32 factSize, u32 dataSize, u32 samples
     }
 }
 
-// 2A04
 int setBufferSize(SceAtracIdInfo *info, u32 readByte, u32 bufferByte)
 {
     if (bufferByte < info->dataEnd)
     {
-        // 2A48
-        u32 tmpVal = info->sampleSize * 3;
-        if (info->streamDataByte < tmpVal)
+        u32 minBufBytes = info->sampleSize * 3;
+        if (info->streamDataByte < minBufBytes)
             return 0x80630011;
         if (info->loopEnd == 0) {
             info->state = 4;
@@ -1514,11 +1330,10 @@ int setBufferSize(SceAtracIdInfo *info, u32 readByte, u32 bufferByte)
             info->state = 5;
             return 0;
         }
-        u32 tmp2 = getSecondBufPos(info, info->loopEnd) - info->dataOff + 1;
+        u32 loopStreamLimit = getSecondBufPos(info, info->loopEnd) - info->dataOff + 1;
         info->state = 6;
-        if (tmp2 < info->streamDataByte)
-            info->streamDataByte = tmp2;
-        // 2AAC
+        if (loopStreamLimit < info->streamDataByte)
+            info->streamDataByte = loopStreamLimit;
         info->secondBufReadOff = 0;
         info->secondBuffer = NULL;
         info->secondBufferByte = 0;
@@ -1633,15 +1448,13 @@ u32 getReadPosition(SceAtracIdInfo *info)
     return 0;
 }
 
-// 2D54
 u32 getWritableByte(SceAtracIdInfo *info)
 {
-    // 2D84
-    u32 num1 = atracGetContiguousWritable(info->secondBufState != 1 ? info->firstBufReadOff : 0, info->bufferByte, atracGetFirstBufStreamBytes(info), info->sampleSize);
-    u32 num2 = atracGetNextWriteBytes(info);
-    if (num2 >= num1)
-        return num1;
-    return num2;
+    u32 contiguous = atracGetContiguousWritable(info->secondBufState != 1 ? info->firstBufReadOff : 0, info->bufferByte, atracGetFirstBufStreamBytes(info), info->sampleSize);
+    u32 nextWrite = atracGetNextWriteBytes(info);
+    if (nextWrite >= contiguous)
+        return contiguous;
+    return nextWrite;
 }
 
 int atracGetRemainFramesLinear(SceAtracIdInfo *info)
@@ -1656,64 +1469,60 @@ int atracGetRemainFramesLoop(SceAtracIdInfo *info)
     int ret = atracCountLoopFrames(info);
     if (info->loopNum < 0)
         return ret;
-    u32 ret2 = getSecondBufPos(info, info->loopEnd);
+    u32 loopEndPos = getSecondBufPos(info, info->loopEnd);
     u32 sum = info->curOff + info->streamDataByte;
-    if (sum >= ret2 + 1 && (s32)(sum - (ret2 + 1)) / (s32)(ret2 - getOffFromSample(info, info->loopStart) + 1) >= info->loopNum) // 2E78
+    if (sum >= loopEndPos + 1 && (s32)(sum - (loopEndPos + 1)) / (s32)(loopEndPos - getOffFromSample(info, info->loopStart) + 1) >= info->loopNum)
         ret = -3;
-    // 2E58
     return ret;
 }
 
 int atracCountLoopFrames(SceAtracIdInfo *info)
 {
-    u32 ret = getSecondBufPos(info, info->loopEnd);
+    u32 loopEndPos = getSecondBufPos(info, info->loopEnd);
     u32 sum = info->curOff + info->streamDataByte;
-    u32 sum2 = sum - ret - 1;
+    u32 pastLoop = sum - loopEndPos - 1;
     int count;
-    if (ret + 1 < sum)
+    if (loopEndPos + 1 < sum)
     {
-        // 2F28
-        u32 ret2 = getFrameFromSample(info, info->loopStart);
-        u32 tmpVal = ret - getOffFromSample(info, info->loopStart) + 1;
-        count = (ret - info->curOff + 1) / info->sampleSize + (sum2 / tmpVal) * (tmpVal / info->sampleSize - ret2);
-        if (ret2 * info->sampleSize < sum2 % tmpVal)
-            count += (sum2 % tmpVal) / info->sampleSize - ret2;
+        u32 skipFrames = getFrameFromSample(info, info->loopStart);
+        u32 loopBytes = loopEndPos - getOffFromSample(info, info->loopStart) + 1;
+        count = (loopEndPos - info->curOff + 1) / info->sampleSize + (pastLoop / loopBytes) * (loopBytes / info->sampleSize - skipFrames);
+        if (skipFrames * info->sampleSize < pastLoop % loopBytes)
+            count += (pastLoop % loopBytes) / info->sampleSize - skipFrames;
     }
     else
         count = info->streamDataByte / info->sampleSize;
-    // 2EFC
     return pspMax(count - info->numFrame, 0);
 }
 
-int atracAdvanceRingOffset(u32 arg0, u32 arg1, u32 arg2, u32 arg3)
+int atracAdvanceRingOffset(u32 readOff, u32 bufferByte, u32 streamBytes, u32 frameSize)
 {
-    u32 num = arg0 + arg2;
-    if (arg0 < arg1)
-        arg1 = (((arg1 - arg0) / arg3) * arg3) + arg0;
-    // 2FCC
-    if (num < arg1)
-        return num;
-    if (arg1 >= arg2)
-        return num - arg1;
+    u32 endPos = readOff + streamBytes;
+    if (readOff < bufferByte)
+        bufferByte = (((bufferByte - readOff) / frameSize) * frameSize) + readOff;
+    if (endPos < bufferByte)
+        return endPos;
+    if (bufferByte >= streamBytes)
+        return endPos - bufferByte;
     return 0;
 }
 
-u32 atracAddOffsetBounded(u32 arg0, u32 arg1, u32 arg2, u32 arg3)
+u32 atracAddOffsetBounded(u32 dataEnd, u32 curOff, u32 streamBytes, u32 bufferByte)
 {
-    u32 num = arg1 + arg2;
-    if (num < arg0 && arg2 < arg3)
-        return num;
+    u32 nextOff = curOff + streamBytes;
+    if (nextOff < dataEnd && streamBytes < bufferByte)
+        return nextOff;
     return 0;
 }
 
-u32 atracAdvanceLoopOffset(u32 arg0, u32 arg1, u32 arg2, u32 arg3, u32 arg4)
+u32 atracAdvanceLoopOffset(u32 curOff, u32 streamBytes, u32 loopStartOff, u32 loopEndOff, u32 bufferByte)
 {
-    if (arg1 >= arg4)
+    if (streamBytes >= bufferByte)
         return 0;
-    u32 tmpVal = arg0 + arg1;
-    if (tmpVal < arg3 + 1)
-        return tmpVal;
-    return arg2 + (tmpVal - arg3 - 1) % (arg3 - arg2 + 1);
+    u32 nextOff = curOff + streamBytes;
+    if (nextOff < loopEndOff + 1)
+        return nextOff;
+    return loopStartOff + (nextOff - loopEndOff - 1) % (loopEndOff - loopStartOff + 1);
 }
 
 u32 atracGetNextWriteBytes(SceAtracIdInfo *info)
@@ -1721,18 +1530,14 @@ u32 atracGetNextWriteBytes(SceAtracIdInfo *info)
     char state = info->state;
     if (state == 6)
     {
-        // 30A8
         state = 5;
         if (info->loopEnd < info->decodePos)
             state = 4;
     }
-    // 306C
     if (state == 4) {
-        // 3098
         return atracGetRemainDataBytes(info);
     }
     if (state == 5) {
-        // 3088
         return atracGetLoopRemainBytes(info);
     }
     return 0;
@@ -1747,26 +1552,24 @@ u32 atracGetRemainDataBytes(SceAtracIdInfo *info)
 
 u32 atracGetLoopRemainBytes(SceAtracIdInfo *info)
 {
-    u32 ret = getSecondBufPos(info, info->loopEnd);
+    u32 loopEndPos = getSecondBufPos(info, info->loopEnd);
     u32 sum = info->curOff + info->streamDataByte;
-    if (sum >= ret + 1)
+    if (sum >= loopEndPos + 1)
     {
-        // 3138
-        u32 sum2 = ret - getOffFromSample(info, info->loopStart) + 1;
-        return sum2 - (info->curOff + info->streamDataByte - ret - 1) % sum2;
+        u32 loopSpan = loopEndPos - getOffFromSample(info, info->loopStart) + 1;
+        return loopSpan - (info->curOff + info->streamDataByte - loopEndPos - 1) % loopSpan;
     }
-    return ret - sum + 1;
+    return loopEndPos - sum + 1;
 }
 
-u32 atracGetContiguousWritable(u32 arg0, u32 arg1, u32 arg2, u32 arg3)
+u32 atracGetContiguousWritable(u32 readOff, u32 bufferByte, u32 streamBytes, u32 frameSize)
 {
-    if (arg0 < arg1)
-        arg1 = ((arg1 - arg0) / arg3) * arg3 + arg0;
-    // 3190
-    if (arg0 + arg2 < arg1)
-        return arg1 - (arg0 + arg2);
-    if (arg1 >= arg2)
-        return arg1 - arg2;
+    if (readOff < bufferByte)
+        bufferByte = ((bufferByte - readOff) / frameSize) * frameSize + readOff;
+    if (readOff + streamBytes < bufferByte)
+        return bufferByte - (readOff + streamBytes);
+    if (bufferByte >= streamBytes)
+        return bufferByte - streamBytes;
     return 0;
 }
 
@@ -1774,58 +1577,50 @@ u32 atracGetFirstBufStreamBytes(SceAtracIdInfo *info)
 {
     if (info->loopEnd < info->decodePos && info->secondBufState == 1)
     {
-        u32 num1 = info->secondBufReadOff;
-        // 31E4
-        u32 num2 = info->secondBufferByte;
-        if (num1 < num2)
-            num2 = ((num2 - num1) / info->sampleSize) * info->sampleSize + num1;
-        // 320C
-        if (num2 < num1)
+        u32 secondReadOff = info->secondBufReadOff;
+        u32 secondEnd = info->secondBufferByte;
+        if (secondReadOff < secondEnd)
+            secondEnd = ((secondEnd - secondReadOff) / info->sampleSize) * info->sampleSize + secondReadOff;
+        if (secondEnd < secondReadOff)
             return 0;
-        if (num2 - num1 >= info->streamDataByte)
+        if (secondEnd - secondReadOff >= info->streamDataByte)
             return 0;
-        return info->streamDataByte - (num2 - num1);
+        return info->streamDataByte - (secondEnd - secondReadOff);
     }
-    // 31D8
     return info->streamDataByte;
 }
 
-u32 atracAlignBufferEnd(u32 arg0, u32 arg1, u32 arg2)
+u32 atracAlignBufferEnd(u32 startOff, u32 frameSize, u32 bufferByte)
 {
-    if (arg0 >= arg2)
-        return arg2;
-    return ((arg2 - arg0) / arg1) * arg1 + arg0;
+    if (startOff >= bufferByte)
+        return bufferByte;
+    return ((bufferByte - startOff) / frameSize) * frameSize + startOff;
 }
 
-// 325C
 void copyBuffer(SceAtracIdInfo *info, u32 bufferByte)
 {
-    u32 num1 = info->bufferByte;
-    u32 num2 = info->dataOff;
-    if (num2 < num1)
-        num1 = ((num1 - num2) / info->sampleSize) * info->sampleSize + num2;
-    // 3290
-    u32 count = bufferByte - num1;
+    u32 bufEnd = info->bufferByte;
+    u32 dataStart = info->dataOff;
+    if (dataStart < bufEnd)
+        bufEnd = ((bufEnd - dataStart) / info->sampleSize) * info->sampleSize + dataStart;
+    u32 count = bufferByte - bufEnd;
     if (count <= 0)
         return;
-    sceKernelMemcpy(info->buffer, info->buffer + num1, count);
+    sceKernelMemcpy(info->buffer, info->buffer + bufEnd, count);
 }
 
-// 32B4
 void getBufferInfo(SceAtracIdInfo *info, u32 sample, SceBufferInfo *bufferInfo)
 {
-    switch (info->state) // jump table at 0x3F38
+    switch (info->state)
     {
     case 3: {
-        // 3308
-        u32 num1 = info->dataOff + info->streamDataByte;
-        u32 num2 = info->dataOff + ((sample >> (0x100B - info->codec)) + 1) * info->sampleSize;
-        bufferInfo->writePositionFirstBuf = info->buffer + num1;
-        bufferInfo->writableByteFirstBuf = info->dataEnd - num1;
-        bufferInfo->readPositionFirstBuf = num1;
-        if (num2 >= num1) {
-            // 339C dup
-            bufferInfo->minWriteByteFirstBuf = num2 - num1;
+        u32 streamPos = info->dataOff + info->streamDataByte;
+        u32 samplePos = info->dataOff + ((sample >> (0x100B - info->codec)) + 1) * info->sampleSize;
+        bufferInfo->writePositionFirstBuf = info->buffer + streamPos;
+        bufferInfo->writableByteFirstBuf = info->dataEnd - streamPos;
+        bufferInfo->readPositionFirstBuf = streamPos;
+        if (samplePos >= streamPos) {
+            bufferInfo->minWriteByteFirstBuf = samplePos - streamPos;
         }
         else
             bufferInfo->minWriteByteFirstBuf = 0;
@@ -1833,139 +1628,120 @@ void getBufferInfo(SceAtracIdInfo *info, u32 sample, SceBufferInfo *bufferInfo)
         break;
 
     case 4: case 5: {
-        // 33BC
-        u32 num1 = atracAlignBufferEnd(0, info->sampleSize, info->bufferByte);
+        u32 maxFirstBuf = atracAlignBufferEnd(0, info->sampleSize, info->bufferByte);
         bufferInfo->writePositionFirstBuf = info->buffer;
-        u32 ret = getOffFromSample(info, sample);
-        bufferInfo->readPositionFirstBuf = ret;
-        u32 num2 = info->dataEnd - ret;
-        if (num2 >= num1)
-            num2 = num1;
-        bufferInfo->writableByteFirstBuf = num2;
+        u32 sampleOff = getOffFromSample(info, sample);
+        bufferInfo->readPositionFirstBuf = sampleOff;
+        u32 remainBytes = info->dataEnd - sampleOff;
+        if (remainBytes >= maxFirstBuf)
+            remainBytes = maxFirstBuf;
+        bufferInfo->writableByteFirstBuf = remainBytes;
         bufferInfo->minWriteByteFirstBuf = (getFrameFromSample(info, sample) + 1) * info->sampleSize;
     }
         break;
 
     case 6: {
-        // 3420
-        u32 ret1 = getOffFromSample(info, sample);
-        u32 ret2 = getSecondBufPos(info, info->loopEnd);
-        u32 ret3 = atracAlignBufferEnd(0, info->sampleSize, info->bufferByte);
-        u32 mult = (getFrameFromSample(info, sample) + 1) * info->sampleSize;
-        if (ret1 < ret2)
+        u32 sampleOff = getOffFromSample(info, sample);
+        u32 loopEndOff = getSecondBufPos(info, info->loopEnd);
+        u32 maxFirstBuf = atracAlignBufferEnd(0, info->sampleSize, info->bufferByte);
+        u32 minFrameBytes = (getFrameFromSample(info, sample) + 1) * info->sampleSize;
+        if (sampleOff < loopEndOff)
         {
-            u32 diff = ret2 - ret1 + 1;
-            if (diff < ret3)
-                ret3 = diff;
-            if (diff >= mult)
-                diff = mult;
+            u32 diff = loopEndOff - sampleOff + 1;
+            if (diff < maxFirstBuf)
+                maxFirstBuf = diff;
+            if (diff >= minFrameBytes)
+                diff = minFrameBytes;
             bufferInfo->writePositionFirstBuf = info->buffer;
-            bufferInfo->writableByteFirstBuf = ret3;
+            bufferInfo->writableByteFirstBuf = maxFirstBuf;
             bufferInfo->minWriteByteFirstBuf = diff;
-            bufferInfo->readPositionFirstBuf = ret1;
+            bufferInfo->readPositionFirstBuf = sampleOff;
             break;
         }
-        // 34A8
-        u32 num = ret2 + atracAlignBufferEnd(0, info->sampleSize, info->secondBufferByte);
-        if (ret1 >= num)
+        u32 secondEndOff = loopEndOff + atracAlignBufferEnd(0, info->sampleSize, info->secondBufferByte);
+        if (sampleOff >= secondEndOff)
         {
-            bufferInfo->readPositionFirstBuf = ret1;
-            // 351C
-            bufferInfo->minWriteByteFirstBuf = mult;
-            num = info->dataEnd - ret1;
-            if (num >= ret3)
-                num = ret3;
+            bufferInfo->readPositionFirstBuf = sampleOff;
+            bufferInfo->minWriteByteFirstBuf = minFrameBytes;
+            secondEndOff = info->dataEnd - sampleOff;
+            if (secondEndOff >= maxFirstBuf)
+                secondEndOff = maxFirstBuf;
             bufferInfo->writePositionFirstBuf = info->buffer;
-            bufferInfo->writableByteFirstBuf = num;
+            bufferInfo->writableByteFirstBuf = secondEndOff;
             break;
         }
-        else if (ret2 + info->secondBufferByte + 1 < info->dataEnd)
+        else if (loopEndOff + info->secondBufferByte + 1 < info->dataEnd)
         {
-            num++;
-            bufferInfo->readPositionFirstBuf = num;
-            ret1 += mult;
-            u32 num2 = info->dataEnd - num;
-            if (num2 >= ret3)
-                num2 = ret3;
+            secondEndOff++;
+            bufferInfo->readPositionFirstBuf = secondEndOff;
+            sampleOff += minFrameBytes;
+            u32 remainBytes = info->dataEnd - secondEndOff;
+            if (remainBytes >= maxFirstBuf)
+                remainBytes = maxFirstBuf;
             bufferInfo->writePositionFirstBuf = info->buffer;
-            bufferInfo->writableByteFirstBuf = num2;
-            if (ret1 >= num) {
-                // 339C dup
-                bufferInfo->minWriteByteFirstBuf = ret1 - num;
+            bufferInfo->writableByteFirstBuf = remainBytes;
+            if (sampleOff >= secondEndOff) {
+                bufferInfo->minWriteByteFirstBuf = sampleOff - secondEndOff;
             }
             else
                 bufferInfo->minWriteByteFirstBuf = 0;
             break;
         }
     }
-        // fall thru
+        /* fallthrough */
 
     default:
-        // 33A4
-        // 33A8
         bufferInfo->writableByteFirstBuf = 0;
         bufferInfo->writePositionFirstBuf = info->buffer;
         bufferInfo->minWriteByteFirstBuf = 0;
         bufferInfo->readPositionFirstBuf = 0;
         break;
     }
-    // 3364
     bufferInfo->readPositionSecondBuf = 0;
     bufferInfo->writePositionSecondBuf = info->buffer;
     bufferInfo->writableByteSecondBuf = 0;
     bufferInfo->minWriteByteSecondBuf = 0;
 }
 
-// 3540
 int resetPlayPos(SceAtracIdInfo *info, u32 sample, u32 writeByteFirstBuf, u32 writeByteSecondBuf)
 {
     SceBufferInfo bufferInfo;
     getBufferInfo(info, sample, &bufferInfo);
     if (writeByteFirstBuf < bufferInfo.minWriteByteFirstBuf || bufferInfo.writableByteFirstBuf < writeByteFirstBuf) {
-        // 358C
         return 0x80630016;
     }
-    // 35B0
     if (writeByteSecondBuf < bufferInfo.minWriteByteSecondBuf || bufferInfo.writableByteSecondBuf < writeByteSecondBuf) {
-        // 35C8
         return 0x80630017;
     }
     info->decodePos = sample;
-    // 35D4
     info->numFrame = getFrameFromSample(info, sample);
     info->loopNum = 0;
     info->curOff = getOffFromSample(info, sample);
     switch (info->state)
     {
     case 6: {
-        // 3660
-        u32 ret1 = getOffFromSample(info, sample);
-        u32 ret2 = getSecondBufPos(info, info->loopEnd);
-        if (ret1 < ret2)
+        u32 sampleOff = getOffFromSample(info, sample);
+        u32 loopEndOff = getSecondBufPos(info, info->loopEnd);
+        if (sampleOff < loopEndOff)
         {
-                // 3650
             info->streamDataByte = writeByteFirstBuf;
-            // 3654 dup
             info->secondBufState = 0;
-            // 3658 dup
             info->firstBufReadOff = 0;
         }
         else
         {
-            u32 num = ret2 + atracAlignBufferEnd(0, info->sampleSize, info->secondBufferByte);
-            if (ret1 >= num)
+            u32 secondEndOff = loopEndOff + atracAlignBufferEnd(0, info->sampleSize, info->secondBufferByte);
+            if (sampleOff >= secondEndOff)
             {
-                // 36DC
                 info->streamDataByte = writeByteFirstBuf;
                 info->secondBufState = 2;
-                // 3658 dup
                 info->firstBufReadOff = 0;
             }
             else
             {
-                info->streamDataByte = num - ret1 + writeByteFirstBuf + 1;
+                info->streamDataByte = secondEndOff - sampleOff + writeByteFirstBuf + 1;
                 info->secondBufState = 1;
-                info->secondBufReadOff = ret1 - ret2 - 1;
+                info->secondBufReadOff = sampleOff - loopEndOff - 1;
             }
         }
     }
@@ -1973,33 +1749,28 @@ int resetPlayPos(SceAtracIdInfo *info, u32 sample, u32 writeByteFirstBuf, u32 wr
 
     case 4: case 5:
         info->streamDataByte = writeByteFirstBuf;
-        // 3654/3658 dup
         info->secondBufState = 0;
         info->firstBufReadOff = 0;
         break;
 
     case 3:
-        // 3624
         info->secondBufState = 0;
         info->streamDataByte += writeByteFirstBuf;
         if (info->dataOff + info->streamDataByte >= info->dataEnd)
             info->state = 2;
         break;
     }
-    // 361C
     return 0;
 }
 
-// 36E8
-int parseAA3(u32 readByte, SceAA3File *aa3, int arg2, u8 *buffer)
+int parseAA3(u32 readByte, SceAA3File *aa3, u32 fileSize, u8 *buffer)
 {
     u32 curOff = 0;
     if (readByte < 3)
         return 0x80631004;
     int magic = aa3ReadU24BE(buffer, &curOff, readByte);
-    if (magic != 0x656133 && magic != 0x494433) // 3ae / 3AE
+    if (magic != 0x656133 && magic != 0x494433)
     {
-        // 3910
         aa3->loopStartSample = 0;
         aa3->dataOff = 0;
     }
@@ -2009,7 +1780,6 @@ int parseAA3(u32 readByte, SceAA3File *aa3, int arg2, u8 *buffer)
             return 0x80631004;
         if (buffer[curOff] != 3 || buffer[curOff + 1] != 0)
             return 0x80631002;
-        // 37B0
         curOff = curOff + 3;
         aa3->loopStartSample = aa3ReadSyncSafeU32(buffer, &curOff, readByte);
         if (aa3->loopStartSample == -1)
@@ -2021,30 +1791,28 @@ int parseAA3(u32 readByte, SceAA3File *aa3, int arg2, u8 *buffer)
             curOff += 16;
         aa3->dataOff = curOff;
     }
-    // 3810
     if (readByte - 34 < curOff)
         return 0x80631004;
-    if (aa3ReadU24BE(buffer, &curOff, readByte) != 0x454133) // "3AE"
+    if (aa3ReadU24BE(buffer, &curOff, readByte) != 0x454133)
         return 0x80631003;
     curOff++;
-    aa3->loopEndSample = aa3ReadU16LE(buffer, &curOff, readByte);
+    aa3->loopEndSample = aa3ReadU16BE(buffer, &curOff, readByte);
     if (aa3->loopEndSample == -1)
         return 0x80631003;
-    if (aa3ReadU16LE(buffer, &curOff, readByte) != 0xFFFF)
+    if (aa3ReadU16BE(buffer, &curOff, readByte) != 0xFFFF)
         return 0x80631003;
     curOff += 24;
-    aa3->codingMode = *(u8*)(buffer + curOff);
+    aa3->codingMode = buffer[curOff];
     int codec;
-    if (*(u8*)(buffer + curOff) == 0)
+    if (buffer[curOff] == 0)
         codec = 0x1001;
-    else if (*(u8*)(buffer + curOff) == 1)
+    else if (buffer[curOff] == 1)
         codec = 0x1000;
     else
         return 0x80631004;
-    // 38D8
-    aa3->sampleRate = aa3ReadU32LE(buffer, &curOff, readByte);
+    aa3->sampleRate = aa3ReadU32BE(buffer, &curOff, readByte);
     int sum = aa3->dataOff + aa3->loopEndSample;
-    aa3->dataSize = arg2 - sum;
+    aa3->dataSize = fileSize - sum;
     aa3->dataOff = sum;
     return codec;
 }
@@ -2057,7 +1825,6 @@ int setAtracFileInfo(SceAA3File *aa3, SceAtracFile *info)
     info->dataOff = aa3->dataOff;
     if (aa3->codingMode != 0)
     {
-        // 39A8
         if (aa3->codingMode != 1)
             return 0;
         info->samplesPerChan = 2048;
@@ -2068,8 +1835,8 @@ int setAtracFileInfo(SceAA3File *aa3, SceAtracFile *info)
             return 0x80631005;
         info->factSz = 0;
         info->dataBlkSz = ((aa3->sampleRate & 0x3FF) << 3) + 8;
-        info->codecParam.v8[0] = ((aa3->sampleRate >> 8) & 3) | 0x28;
-        info->codecParam.v8[1] = aa3->sampleRate & 0xFF;
+        info->codecParam.bytes[0] = ((aa3->sampleRate >> 8) & 3) | 0x28;
+        info->codecParam.bytes[1] = aa3->sampleRate & 0xFF;
     }
     else
     {
@@ -2079,34 +1846,29 @@ int setAtracFileInfo(SceAA3File *aa3, SceAtracFile *info)
             return 0x80631005;
         info->dataBlkSz = (aa3->sampleRate & 0x3FF) << 3;
         if ((aa3->sampleRate & 0x20000) == 0) {
-            // 39A0
-            info->codecParam.v16 = 0;
+            info->codecParam.half = 0;
         }
         else
-            info->codecParam.v16 = 1;
-        // 3990
+            info->codecParam.half = 1;
         info->factSz = 0;
     }
-    // 3994
     return 0;
 }
 
-int aa3ReadU32LE(u8 *buffer, u32 *curOff, u32 arg2)
+int aa3ReadU32BE(u8 *buffer, u32 *curOff, u32 readByte)
 {
     int result = 0;
-    if (arg2 < *curOff + 4)
+    if (readByte < *curOff + 4)
     {
-        // 3A64
         int i;
         for (i = 0; i < 4; i++)
         {
-            u8 num = 0;
-            if (arg2 >= *curOff + i + 1)
-                num = buffer[*curOff + i];
-            // 3A8C
-            result |= num << (i * 8);
+            u8 byteVal = 0;
+            if (readByte >= *curOff + i + 1)
+                byteVal = buffer[*curOff + i];
+            result |= byteVal << (i * 8);
         }
-        *curOff = arg2;
+        *curOff = readByte;
     }
     else
     {
@@ -2119,20 +1881,18 @@ int aa3ReadU32LE(u8 *buffer, u32 *curOff, u32 arg2)
     return result;
 }
 
-u16 aa3ReadU16LE(u8 *buffer, u32 *curOff, u32 readByte)
+u16 aa3ReadU16BE(u8 *buffer, u32 *curOff, u32 readByte)
 {
     u16 result = 0;
     if (readByte < *curOff + 2)
     {
-        // 3AD8
         int i;
         for (i = 0; i < 2; i++)
         {
-            u8 num = 0;
+            u8 byteVal = 0;
             if (readByte >= *curOff + i + 1)
-                num = buffer[*curOff + i];
-            // 3B00
-            result |= num << (i * 8);
+                byteVal = buffer[*curOff + i];
+            result |= byteVal << (i * 8);
         }
         *curOff = readByte;
     }

@@ -7,11 +7,11 @@
 typedef struct
 {
     s32 version; // 0
-    s32 reserved0; // 4
+    s32 reserved; // 4
     s32 err; // 8
     void *edramAddr; // 12
     s32 neededMem; // 16
-    s32 reserved1; // 20
+    s32 edramFlag; // 20
     void *inBuf; // 24
     s32 readSample; // 28
     void *outBuf; // 32
@@ -19,27 +19,15 @@ typedef struct
 
     /* Codec-specific parameter block (offsets 40..103). */
     union {
-        struct {
-            s8 b0;
-            s8 b1;
-            s8 b2;
-            s8 b3;
-        } bytes;
+        s8 byte[4];
         s32 word;
-    } param0; // 40 (e.g. input buffer size / sample rate)
+    } codecConfig; // 40 (e.g. input buffer size / sample rate / channel config)
     union {
-        struct {
-            u8 b0;
-            s8 b1;
-            s8 b2;
-            s8 b3;
-        } bytes;
-        struct {
-            s16 h0;
-            s16 h1;
-        } halves;
+        u8 ubyte[4];
+        s8 sbyte[4];
+        s16 half[2];
         s32 word;
-    } param1; // 44
+    } codecMode; // 44 (e.g. AAC ADTS/SBR flags / ATRAC3 mode)
     s32 param[14]; // 48..103
     void *allocMem; // 104
 } SceAudiocodecCodec;

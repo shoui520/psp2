@@ -1,54 +1,50 @@
 typedef struct
 {
-    u16 channels; // 0
-    u16 dataBlkSz; // 2
+    u16 channels;
+    u16 dataBlkSz;
     union {
-        u8 v8[2];
-        u16 v16;
-    } codecParam; // 4
-    // padding
-    u32 dataOff; // 8
-    u32 factSz; // 12
-    u32 dataSize; // 16
-    u32 samplesPerChan; // 20
-    int loopStart; // 24
-    int loopEnd; // 28
-} SceAtracFile; // size: 32
+        u8 bytes[2];
+        u16 half;
+    } codecParam;
+    u32 dataOff;
+    u32 factSz;
+    u32 dataSize;
+    u32 samplesPerChan;
+    int loopStart;
+    int loopEnd;
+} SceAtracFile;
 
 typedef struct
 {
-    u32 decodePos; // 0
-    u32 endSample; // 4
-    u32 loopStart; // 8
-    u32 loopEnd; // 12
-    int samplesPerChan; // 16
-    char numFrame; // 20
-    // 2: all the stream data on the buffer
-    // 6: looping -> second buffer needed
-    char state; // 21
+    u32 decodePos;
+    u32 endSample;
+    u32 loopStart;
+    u32 loopEnd;
+    int samplesPerChan;
+    char numFrame;
+    char state;
     char secondBufState;
-    char numChan; // 23
-    u16 sampleSize; // 24
-    u16 codec; // 26
-    u32 dataOff; // 28
-    u32 curOff; // 32
-    u32 dataEnd; // 36
-    int loopNum; // 40
-    u32 streamDataByte; // 44
+    u8 numChan;
+    u16 sampleSize;
+    u16 codec;
+    u32 dataOff;
+    u32 curOff;
+    u32 dataEnd;
+    int loopNum;
+    u32 streamDataByte;
     u32 firstBufReadOff;
     u32 secondBufReadOff;
-    u8 *buffer; // 56
-    u8 *secondBuffer; // 60
-    u32 bufferByte; // 64
-    u32 secondBufferByte; // 68
-    // ...
+    u8 *buffer;
+    u8 *secondBuffer;
+    u32 bufferByte;
+    u32 secondBufferByte;
 } SceAtracIdInfo;
 
 typedef struct
 {
-    SceAudiocodecCodec codec __attribute__((aligned(256))); // size: 128
-    SceAtracIdInfo info __attribute__((aligned(128))); // size: 128
-} SceAtracId; // size: 256
+    SceAudiocodecCodec codec __attribute__((aligned(256)));
+    SceAtracIdInfo info __attribute__((aligned(128)));
+} SceAtracId;
 
 typedef struct
 {
@@ -64,39 +60,47 @@ typedef struct
 
 typedef struct
 {
+    int numChan;
+    int outputChan;
+    int frameSize;
+} SceAtracLowLevelInitParam;
+
+typedef struct
+{
     u32 magic;
     u16 frameSize;
-    u8 codingMode, reserved07;
-    u32 dataOff; // 8
-    u32 reserved12;
-    u32 dataSize; // 16
-    u32 reserved20, reserved24, reserved28;
+    u8 codingMode;
+    u8 pad;
+    u32 dataOff;
+    u32 reservedAfterOff;
+    u32 dataSize;
+    u32 reservedHeader[3];
     u32 sampleRate;
-    u32 reserved36;
+    u32 reservedBeforeLoop;
     s32 loopStartSample;
     s32 loopEndSample;
 } SceAA3File;
 
 int setHalfwayBuffer(SceAtracId *id, u8 *buffer, u32 readByte, u32 bufferByte, SceAtracFile *info);
 int setMOutHalfwayBuffer(SceAtracId *id, u8 *buffer, u32 readByte, u32 bufferByte, SceAtracFile *info);
-int resetId(SceAtracId *info);
+int resetId(SceAtracId *id);
 int allocEdram(void);
-int openAA3AndGetID(u8 *buffer, u32 readByte, int arg2, SceAtracFile *info);
-int isValidState(char state);
+int openAA3AndGetID(u8 *buffer, u32 readByte, u32 fileSize, SceAtracFile *info);
+int isValidState(int state);
 int getOutputChan(SceAtracIdInfo *info, SceAudiocodecCodec *codec);
 int decodeFrame(SceAtracId *id, short *outAddr, u32 *samples, u32 *finishFlag);
 void atracConsumeFrame(SceAtracIdInfo *info);
 int loadWaveFile(u32 size, SceAtracFile *info, u8 *in);
 int readWaveData(u8 *in, u32 *curOff, int size);
 int getOffFromSample(SceAtracIdInfo *info, u32 sample);
-u32 getSecondBufPos(SceAtracIdInfo *info, u32 arg1);
+u32 getSecondBufPos(SceAtracIdInfo *info, u32 sample);
 int getFrameFromSample(SceAtracIdInfo *info, u32 sample);
 int getNextSample(SceAtracIdInfo *info);
 int setBuffer(SceAtracId *id, u8 *buffer, u32 readByte, u32 bufferByte, SceAtracFile *info);
-int initDecoder(SceAtracId *info, void *arg1);
-int initAT3Decoder(SceAudiocodecCodec *codec, void *arg1);
-int initAT3plusDecoder(SceAudiocodecCodec *codec, void *arg1);
-int isValidOpt(int arg0, int arg1);
+int initDecoder(SceAtracId *id, SceAtracLowLevelInitParam *initParam);
+int initAT3Decoder(SceAudiocodecCodec *codec, SceAtracLowLevelInitParam *initParam);
+int initAT3plusDecoder(SceAudiocodecCodec *codec, SceAtracLowLevelInitParam *initParam);
+int isValidOpt(int numChan, int outputChan);
 void setBufferInfo(SceAtracIdInfo *info, u32 factSize, u32 dataSize, u32 samplesPerChan, int loopStart, int loopEnd);
 int setBufferSize(SceAtracIdInfo *info, u32 readByte, u32 bufferByte);
 int getRemainFrame(SceAtracIdInfo *info);
@@ -106,22 +110,21 @@ u32 getWritableByte(SceAtracIdInfo *info);
 int atracGetRemainFramesLinear(SceAtracIdInfo *info);
 int atracGetRemainFramesLoop(SceAtracIdInfo *info);
 int atracCountLoopFrames(SceAtracIdInfo *info);
-int atracAdvanceRingOffset(u32 arg0, u32 arg1, u32 arg2, u32 arg3);
-u32 atracAddOffsetBounded(u32 arg0, u32 arg1, u32 arg2, u32 arg3);
-u32 atracAdvanceLoopOffset(u32 arg0, u32 arg1, u32 arg2, u32 arg3, u32 arg4);
+int atracAdvanceRingOffset(u32 readOff, u32 bufferByte, u32 streamBytes, u32 frameSize);
+u32 atracAddOffsetBounded(u32 dataEnd, u32 curOff, u32 streamBytes, u32 bufferByte);
+u32 atracAdvanceLoopOffset(u32 curOff, u32 streamBytes, u32 loopStartOff, u32 loopEndOff, u32 bufferByte);
 u32 atracGetNextWriteBytes(SceAtracIdInfo *info);
 u32 atracGetRemainDataBytes(SceAtracIdInfo *info);
 u32 atracGetLoopRemainBytes(SceAtracIdInfo *info);
-u32 atracGetContiguousWritable(u32 arg0, u32 arg1, u32 arg2, u32 arg3);
+u32 atracGetContiguousWritable(u32 readOff, u32 bufferByte, u32 streamBytes, u32 frameSize);
 u32 atracGetFirstBufStreamBytes(SceAtracIdInfo *info);
-u32 atracAlignBufferEnd(u32 arg0, u32 arg1, u32 arg2);
+u32 atracAlignBufferEnd(u32 startOff, u32 frameSize, u32 bufferByte);
 void copyBuffer(SceAtracIdInfo *info, u32 bufferByte);
 void getBufferInfo(SceAtracIdInfo *info, u32 sample, SceBufferInfo *bufferInfo);
 int resetPlayPos(SceAtracIdInfo *info, u32 sample, u32 writeByteFirstBuf, u32 writeByteSecondBuf);
-int parseAA3(u32 readByte, SceAA3File *aa3, int arg2, u8 *buffer);
+int parseAA3(u32 readByte, SceAA3File *aa3, u32 fileSize, u8 *buffer);
 int setAtracFileInfo(SceAA3File *aa3, SceAtracFile *info);
-int aa3ReadU32LE(u8 *buffer, u32 *curOff, u32 arg2);
-u16 aa3ReadU16LE(u8 *buffer, u32 *curOff, u32 readByte);
+int aa3ReadU32BE(u8 *buffer, u32 *curOff, u32 readByte);
+u16 aa3ReadU16BE(u8 *buffer, u32 *curOff, u32 readByte);
 int aa3ReadU24BE(u8 *buffer, u32 *curOff, u32 readByte);
 int aa3ReadSyncSafeU32(u8 *buffer, u32 *curOff, u32 readByte);
-

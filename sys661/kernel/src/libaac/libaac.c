@@ -424,10 +424,10 @@ s32 sceAac_E955E83A(s32 *sampleRate)
     p->info.state = 2;
     p->codec.edramAddr = &p->data;
     p->codec.neededMem = SCE_AAC_DATA_SIZE;
-    p->codec.reserved1 = 1;
-    p->codec.param0.word = *sampleRate;
-    p->codec.param1.bytes.b1 = 0;
-    p->codec.param1.bytes.b0 = 0;
+    p->codec.edramFlag = 1;
+    p->codec.codecConfig.word = *sampleRate;
+    p->codec.codecMode.sbyte[1] = 0;
+    p->codec.codecMode.ubyte[0] = 0;
 
     // sceAudiocodec_5B37EB1D
     ret = sceAudiocodecInit(&p->codec, 0x1003);
@@ -941,11 +941,11 @@ s32 initAacCodec(s32 id)
     }
 
     p->codec.neededMem = SCE_AAC_DATA_SIZE;
-    p->codec.reserved1 = 1;
+    p->codec.edramFlag = 1;
     p->codec.edramAddr = p->data;
-    p->codec.param0.word = p->info.sampleRate;
-    p->codec.param1.bytes.b1 = 0;
-    p->codec.param1.bytes.b0 = 0;
+    p->codec.codecConfig.word = p->info.sampleRate;
+    p->codec.codecMode.sbyte[1] = 0;
+    p->codec.codecMode.ubyte[0] = 0;
 
     ret = sceAudiocodecInit(&p->codec, 0x1003);
     if (ret < 0) {

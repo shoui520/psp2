@@ -126,7 +126,7 @@ s32 sceAudiocodecDecode(SceAudiocodecCodec *info, s32 codec)
     }
     s32 size;
     if (codec == 0x1002 || codec == 0x1004) {
-        size = info->param0.word;
+        size = info->codecConfig.word;
     } else {
         size = getBufSize(info, codec);
         if (size < 0) {
@@ -163,7 +163,7 @@ s32 sceAudiocodecGetInfo(SceAudiocodecCodec *info, s32 codec)
         pspSetK1(oldK1);
         return SCE_ERROR_PRIV_REQUIRED;
     }
-    if ((codec == 0x1002 || codec == 0x1004) && !pspK1DynBufOk(info->inBuf, info->param0.word)) {
+    if ((codec == 0x1002 || codec == 0x1004) && !pspK1DynBufOk(info->inBuf, info->codecConfig.word)) {
         pspSetK1(oldK1);
         return SCE_ERROR_PRIV_REQUIRED;
     }
@@ -274,13 +274,13 @@ static s32 getBufSize(SceAudiocodecCodec *info, s32 codec)
             if (ret < 0)
                 return ret;
         }
-        return calcMp3FrameSize(info->param[2], info->param[3], info->param[5], info->param[6], &info->param0.word);
+        return calcMp3FrameSize(info->param[2], info->param[3], info->param[5], info->param[6], &info->codecConfig.word);
     case 0x1003:
-        if (info->param1.bytes.b0 == 0)
+        if (info->codecMode.ubyte[0] == 0)
             return 0x600;
         return 0x609;
     case 0x1004:
-        return calcMp3FrameSize(info->param[0], info->param[1], info->param[3], info->param[4], &info->param0.word);
+        return calcMp3FrameSize(info->param[0], info->param[1], info->param[3], info->param[4], &info->codecConfig.word);
     case 0x1005:
         return 0x420D;
     }
@@ -308,7 +308,7 @@ static s32 getOutBufSize(SceAudiocodecCodec *info, s32 codec)
             return 0x1200;
         return 0x900;
     case 0x1003:
-        if ((u8)info->param1.bytes.b1 == 0)
+        if (info->codecMode.ubyte[1] == 0)
             return 0x1000;
         return 0x2000;
     case 0x1004:
