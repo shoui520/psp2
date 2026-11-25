@@ -60,6 +60,8 @@ typedef void (*ShellEventCallback)(int code, const void *data, SceSize size, voi
 #include <std/memory>
 namespace paf { class Framework; namespace graph { class SurfacePool; class Surface; }
 	namespace memory { class HeapAllocator; } }
+namespace IPMI { class Session; }
+class CommonGuiMessageDialogParam;
 
 /* the framework: made at start (0x81002C1C), then run until the shell ends (0x81002CBA) */
 extern paf::Framework *g_shellFramework;
@@ -206,11 +208,12 @@ int shellMainThreadPollerCreate(void);			/* (0x8121CFE2) */
 /* the registry manager's errors (0x800Dxxxx), the ones the error dialog is shown for (value
    only: no name known) */
 #define SHELL_ERROR_FACILITY_REGMGR	0x00D
+void shellErrorDialogOpen(int type, CommonGuiMessageDialogParam *param, bool loadModule);	/* (0x810FB388) */
 void shellErrorDialogShow(int type, int error, const paf::wstring *message, bool loadModule);	/* (0x810FB45E) */
 
-/* a notice request: an ux0 theme whose activation has expired sends (0, -1, NULL)
+/* a notice request: an ux0 theme whose activation has expired sends (NULL, -1, NULL)
    (0x8124B4DA) */
-int shellSystemNoticeRequest(int type, int arg, const char *text);
+int shellSystemNoticeRequest(IPMI::Session *session, int requestId, const char *themePath);
 
 /* the home screen told to update: 3 after a theme change (0x811CCE2C) */
 int shellHomeUpdateRequest(SceUInt8 kind);

@@ -76,7 +76,7 @@ static bool s_opened = false;
 static wstring s_message;
 
 /* (0x810FB388) */
-static __attribute__((noinline)) void shellErrorDialogOpen(int type, CommonGuiMessageDialogParam *param, bool loadModule)
+__attribute__((noinline)) void shellErrorDialogOpen(int type, CommonGuiMessageDialogParam *param, bool loadModule)
 {
 	if (loadModule)
 		sceKernelLoadStartModule("vs0:sys/external/common_gui_dialog.suprx", 0, NULL, 0,

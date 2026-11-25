@@ -403,7 +403,8 @@ void powerManageRequestDisplayOff();
 /* Cross-module shell helpers */
 extern int shellParentalControlUpdate(bool isActive, bool forceSave);
 extern void shellRegMgrLogError(int errorCode, int showErrorDialog);
-extern int shellShutdownRequest(int mode, int flags);
+namespace IPMI { class Session; }
+extern int shellShutdownRequest(IPMI::Session *session, int flags);
 extern int shellStateWatcherOpenDialog(CommonGuiLayoutDialogParam *param, bool highPriority,
 				       int category);
 extern int shellStateWatcherCloseDialog(int dialogId);
