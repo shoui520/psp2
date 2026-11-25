@@ -340,3 +340,71 @@ extern "C" int SwMwSharedMemoryFree(struct SwMwSharedMemory *shared, int close)
 	delete shared;
 	return 0;
 }
+
+/* the allocation's attribute word as this SDK writes it (0x4020) and its open flags (48) */
+#define SWMW_MEMBLOCK_ATTR_CONTIGUOUS	0x4000
+#define SWMW_MEMBLOCK_ATTR_KEEP		0x20
+#define SWMW_MEMBLOCK_OPEN_FLAGS	48
+
+/* the capability this middleware's block asks for */
+#define SWMW_MEMBLOCK_CAPABILITY	133
+
+/* the status a shared memory block that cannot be had answers with */
+#define SWMW_SHARED_ERROR		12012
+
+/*
+ * Get the shared memory block: the library creates it and the server opens it by name
+ * (open != 0), or the server creates it (open == 0). The block's size is rounded to a page
+ * and its base handed back. A failure releases whatever was taken and answers 12012.
+ */
+extern "C" int SwMwCommServerCreateShared(struct SwMwSharedMemory **out, const char *name,
+					  int size, void **outBase, int open)
+{
+	struct SwMwSharedMemory *shared;
+	MemBlockUserOpt option;
+
+	shared = new struct SwMwSharedMemory;
+	if (shared == NULL)
+		return SWMW_SHARED_ERROR;
+	memset(shared, 0, 32);
+	shared->size = (size + 4095) & 0xFFFFF000;
+	shared->memBlock = 0;
+	shared->base = NULL;
+	if (open != 0) {
+		strncpy(shared->name, name, 32);
+		shared->memBlock = sceKernelOpenMemBlock(name, SWMW_MEMBLOCK_OPEN_FLAGS);
+		if (shared->memBlock < 0) {
+			delete shared;
+			return SWMW_SHARED_ERROR;
+		}
+	} else {
+		memset(&option, 0, sizeof(option));
+		option.size = sizeof(option);
+		option.attr = SWMW_MEMBLOCK_ATTR_CONTIGUOUS;
+		option.attr |= SWMW_MEMBLOCK_ATTR_KEEP;
+		option.openFlags = SWMW_MEMBLOCK_OPEN_FLAGS;
+		SwMwMemoryTypeClear(option.capabilities);
+		SwMwMemoryTypeAdd(option.capabilities, SWMW_MEMBLOCK_CAPABILITY);
+		strncpy(shared->name, name, 32);
+		/* the SDK 3.65 option is the 0x40-byte MemBlockUserOpt above; the tree's SDK
+		 * header still declares the older 0x14-byte form of the same argument */
+		shared->memBlock = sceKernelAllocMemBlock(
+			name, 0xC20D060, shared->size,
+			(const SceKernelAllocMemBlockOpt *)&option);
+		if (shared->memBlock < 0) {
+			delete shared;
+			return SWMW_SHARED_ERROR;
+		}
+	}
+	if (sceKernelGetMemBlockBase(shared->memBlock, &shared->base) >= 0) {
+		*outBase = shared->base;
+		*out = shared;
+		return 0;
+	}
+	if (open != 0)
+		sceKernelCloseMemBlock(shared->memBlock);
+	else
+		sceKernelFreeMemBlock(shared->memBlock);
+	delete shared;
+	return SWMW_SHARED_ERROR;
+}
