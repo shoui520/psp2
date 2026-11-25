@@ -45,14 +45,14 @@ s32 g_suppArgSet; // 0xD3CC
 void *g_suppArgp; // 0xD3D0
 s32 g_suppArgs; // 0xD3D4
 SceKernelRebootArgType g_suppArgType; // 0xD3D8
-void (*g_regExitCbCb)(); // 0xD3DC, some unknown callback
-s32 (*g_rebootCb)(s32); // 0x66A0
+void (*g_regExitCbCb)(); /* exit callback registration hook */
+s32 (*g_rebootCb)(s32);
 
 s32 sceKermit_driver_9DDD7DCA(void);
 
-char **g_encryptedBootPathPtr = (char**)&g_encryptedBootPath; // 0xD390 [hardcoded??]
+char **g_encryptedBootPathPtr = (char**)&g_encryptedBootPath;
 
-s32 *g_unkCbInfo[4]; // 0xD400
+s32 *g_exitCbSlot[4];
 
 s32 LoadExecForUser_362A956B()
 {
@@ -67,25 +67,27 @@ s32 LoadExecForUser_362A956B()
         pspSetK1(oldK1);
         return ret;
     }
-    s32 *argm8 = (s32*)cbInfo.common - 2;
-    if (!pspK1PtrOk(argm8)) {
+    s32 *cbHeader = (s32*)cbInfo.common - 2;
+    if (!pspK1PtrOk(cbHeader)) {
         pspSetK1(oldK1);
         return SCE_ERROR_KERNEL_ILLEGAL_ADDR;
     }
-    s32 pos  = *(s32*)(argm8 + 0);
-    s32 *cbData = (s32*)*(s32*)(argm8 + 4);
+    s32 pos = cbHeader[0];
+    s32 *cbData = (s32*)cbHeader[1];
     if ((u32)pos >= 4) {
         pspSetK1(oldK1);
         return SCE_ERROR_KERNEL_ILLEGAL_ARGUMENT;
     }
-    if (!pspK1PtrOk(cbData))
+    if (!pspK1PtrOk(cbData)) {
+        pspSetK1(oldK1);
         return SCE_ERROR_KERNEL_ILLEGAL_ADDR;
+    }
     pspSetK1(oldK1);
-    if (cbData[0] < 12)
+    if ((u32)cbData[0] < 12)
         return SCE_ERROR_KERNEL_ILLEGAL_SIZE;
     cbData[1] = 0;
     cbData[2] = -1;
-    g_unkCbInfo[pos] = cbData;
+    g_exitCbSlot[pos] = cbData;
     return 0;
 }
 
@@ -120,7 +122,6 @@ void copyArgsToRebootParam(SceKernelRebootParam *hwOpt, SceKernelLoadExecVSHPara
     }
 
     if (opt->extArgs == 0) {
-        // b28
         if (sceKernelGetChunk(4) > 0) {
             hwOpt->args[hwOpt->curArgs].argp = sceKernelInitParamSfo(&hwOpt->args[hwOpt->curArgs].args);
             hwOpt->args[hwOpt->curArgs].type = SCE_KERNEL_REBOOT_ARGTYPE_EXT;
@@ -177,23 +178,17 @@ void fixupArgsAddr(SceKernelRebootParam *hwOpt, SceKernelLoadExecVSHParam *opt _
         case SCE_KERNEL_REBOOT_ARGTYPE_EMU:
         case SCE_KERNEL_REBOOT_ARGTYPE_VSHMAIN:
         // E4C
-        case SCE_KERNEL_REBOOT_ARGTYPE_UNKNOWN8:
+        case SCE_KERNEL_REBOOT_ARGTYPE_EXEC_ARG:
         case SCE_KERNEL_REBOOT_ARGTYPE_KERNEL:
         case SCE_KERNEL_REBOOT_ARGTYPE_FILENAME:
-            // C7C
-            // C80
-            // C84
-            // C88
             for (j = 0; j < 32; j++) {
                 s32 mustmove = (s32)UCACHED(hwOpt->args[(u8)fixId[j]].argp) >= (s32)UCACHED(args->argp);
                 if (mustmove) {
-                    // E20 / E28
                     s32 k;
                     for (k = fixCount; k >= j; k--)
                         fixId[k + 1] = fixId[k];
                 }
                 if (mustmove || fixId[j] == -1) {
-                    // E40
                     fixCount++;
                     fixId[j] = i;
                     break;
@@ -201,52 +196,37 @@ void fixupArgsAddr(SceKernelRebootParam *hwOpt, SceKernelLoadExecVSHParam *opt _
             }
             break;
         }
-
-        // CCC
-        // CD0
     }
 
-    // CDC / CF8
     for (i = 0; i < fixCount; i++) {
         SceKernelArgsStor *args = &hwOpt->args[(u8)fixId[i]];
         switch (args->type & 0xFFFF) {
         case SCE_KERNEL_REBOOT_ARGTYPE_GAMEINFO:
-        // DF4
         case SCE_KERNEL_REBOOT_ARGTYPE_NPDRM:
         case SCE_KERNEL_REBOOT_ARGTYPE_DEFAULT:
         case SCE_KERNEL_REBOOT_ARGTYPE_VSHMAIN:
         case SCE_KERNEL_REBOOT_ARGTYPE_KERNEL:
         case SCE_KERNEL_REBOOT_ARGTYPE_FILENAME:
-        // E10
         case SCE_KERNEL_REBOOT_ARGTYPE_EXT:
-        // E10
         case SCE_KERNEL_REBOOT_ARGTYPE_EMU:
-        // DE4
-        case SCE_KERNEL_REBOOT_ARGTYPE_UNKNOWN8:
-            // D48 / D4C
+        case SCE_KERNEL_REBOOT_ARGTYPE_EXEC_ARG:
             addr -= UPALIGN256(args->args);
             sceKernelMemmove(addr, args->argp, args->args);
             if ((args->type & 0xFFFF) == SCE_KERNEL_REBOOT_ARGTYPE_NPDRM) {
-                // DD0
                 sceKernelMemset(args->argp, 0, args->args);
             }
 
-            // D74
             args->argp = addr;
             break;
         }
 
-        // D7C
-        if ((args->type & 0xFFFF) == SCE_KERNEL_REBOOT_ARGTYPE_UNKNOWN8) {
-            // DC8
+        if ((args->type & 0xFFFF) == SCE_KERNEL_REBOOT_ARGTYPE_EXEC_ARG) {
             hwOpt->execArgp = args->argp;
         }
-        // D84
     }
     hwOpt->npDrmArgAddr = addr;
 }
 
-// BD2F1094
 s32 sceKernelLoadExec(char *file, SceKernelLoadExecParam *opt)
 {
     s32 ret;
@@ -256,7 +236,7 @@ s32 sceKernelLoadExec(char *file, SceKernelLoadExecParam *opt)
         pspSetK1(oldK1);
         return ret;
     }
-    s32 oldD384 = g_loadExecCb;
+    s32 oldCb = g_loadExecCb;
     g_loadExecCb = 0;
     g_suppArgSet = 0;
     g_suppArgp = NULL;
@@ -264,7 +244,7 @@ s32 sceKernelLoadExec(char *file, SceKernelLoadExecParam *opt)
     g_suppArgType = SCE_KERNEL_REBOOT_ARGTYPE_NONE;
     ret = sceKernelBootFrom();
     if (ret >= 48) {
-        g_loadExecCb = oldD384;
+        g_loadExecCb = oldCb;
         sceKernelUnlockMutex(g_loadExecMutex, 1);
         pspSetK1(oldK1);
         return SCE_ERROR_KERNEL_ILLEGAL_PERMISSION_CALL;
@@ -272,99 +252,89 @@ s32 sceKernelLoadExec(char *file, SceKernelLoadExecParam *opt)
 
     if ((ret == 0 && sceKernelIsToolMode() != 0) || ret == 32) {
         u32 allowReplaceUmd;
-        // FB4
         if (sceKernelGetCompiledSdkVersion() != 0 && sceKernelGetAllowReplaceUmd(&allowReplaceUmd) == 0 && allowReplaceUmd != 0) {
-            g_loadExecCb = oldD384;
+            g_loadExecCb = oldCb;
             sceKernelUnlockMutex(g_loadExecMutex, 1);
             pspSetK1(oldK1);
             return SCE_ERROR_KERNEL_ILLEGAL_PERMISSION_CALL;
         }
-        // FE0
         if (sceKernelIsIntrContext() != 0) {
-            g_loadExecCb = oldD384;
+            g_loadExecCb = oldCb;
             sceKernelUnlockMutex(g_loadExecMutex, 1);
             pspSetK1(oldK1);
             return SCE_ERROR_KERNEL_CANNOT_BE_CALLED_FROM_INTERRUPT;
         }
-        if (pspK1IsUserMode()) {
-            g_loadExecCb = oldD384;
+        if (!pspK1IsUserMode()) {
+            g_loadExecCb = oldCb;
             sceKernelUnlockMutex(g_loadExecMutex, 1);
             pspSetK1(oldK1);
             return SCE_ERROR_KERNEL_ILLEGAL_PERMISSION_CALL;
         }
         if (file == NULL || !pspK1PtrOk(file)) {
-            g_loadExecCb = oldD384;
+            g_loadExecCb = oldCb;
             sceKernelUnlockMutex(g_loadExecMutex, 1);
             pspSetK1(oldK1);
             return SCE_ERROR_KERNEL_ILLEGAL_ADDR;
         }
         if (opt != NULL) {
             if (!pspK1StaBufOk(opt, sizeof *opt)) {
-                g_loadExecCb = oldD384;
+                g_loadExecCb = oldCb;
                 sceKernelUnlockMutex(g_loadExecMutex, 1);
                 pspSetK1(oldK1);
                 return SCE_ERROR_KERNEL_ILLEGAL_ADDR;
             }
             if (opt->key != NULL && !pspK1PtrOk(opt->key)) {
-                g_loadExecCb = oldD384;
+                g_loadExecCb = oldCb;
                 sceKernelUnlockMutex(g_loadExecMutex, 1);
                 pspSetK1(oldK1);
                 return SCE_ERROR_KERNEL_ILLEGAL_ADDR;
             }
-            // 1058
             if (opt->argp != NULL && !pspK1DynBufOk(opt->argp, opt->args)) {
-                g_loadExecCb = oldD384;
+                g_loadExecCb = oldCb;
                 sceKernelUnlockMutex(g_loadExecMutex, 1);
                 pspSetK1(oldK1);
                 return SCE_ERROR_KERNEL_ILLEGAL_ADDR;
             }
         }
         s32 apiType;
-        // 107C
         if (sceKernelGetChunk(3) < 0) {
-            // 1220
             if (sceKernelIsDVDMode() == 0 && strcmp(file, g_unencryptedBootPath) == 0) {
                 file = *g_encryptedBootPathPtr;
                 apiType = SCE_EXEC_FILE_APITYPE_GAME_BOOT;
             } else
                 apiType = SCE_EXEC_FILE_APITYPE_GAME_EBOOT;
         } else {
-            s32 apiType2;
+            s32 msApiType;
             if (strcmp(file, g_unencryptedBootPath) != 0) {
-                // 120C
                 apiType = SCE_EXEC_FILE_APITYPE_EMU_EBOOT_EF;
-                apiType2 = SCE_EXEC_FILE_APITYPE_EMU_EBOOT_MS;
+                msApiType = SCE_EXEC_FILE_APITYPE_EMU_EBOOT_MS;
             } else {
                 file = *g_encryptedBootPathPtr;
                 apiType = SCE_EXEC_FILE_APITYPE_EMU_BOOT_EF;
-                apiType2 = SCE_EXEC_FILE_APITYPE_EMU_BOOT_MS;
+                msApiType = SCE_EXEC_FILE_APITYPE_EMU_BOOT_MS;
             }
-            // 10BC
-            if (InitForKernel_9D33A110() != 80) // not EF
-                apiType = apiType2;
+            if (InitForKernel_9D33A110() != 80)
+                apiType = msApiType;
         }
-        // 10C0
         ret = ioctlAndDevctl(file, 0x208810, 0x208010);
         if (ret < 0) {
-            g_loadExecCb = oldD384;
+            g_loadExecCb = oldCb;
             sceKernelUnlockMutex(g_loadExecMutex, 1);
             pspSetK1(oldK1);
             return ret;
         }
         if (sceKernelIsToolMode() != 0) {
-            // 11BC
             SceIoStat stat;
-            if (sceIoGetstat(file, &stat) >= 0 && stat.st_size > 0x1780000) { // 11EC
-                g_loadExecCb = oldD384;
+            if (sceIoGetstat(file, &stat) >= 0 && stat.st_size > 0x1780000) {
+                g_loadExecCb = oldCb;
                 sceKernelUnlockMutex(g_loadExecMutex, 1);
                 pspSetK1(oldK1);
                 return SCE_ERROR_KERNEL_ERROR;
             }
         }
-        SceKernelLoadExecVSHParam vshParam;
         RunExecParams args;
+        SceKernelLoadExecVSHParam vshParam __attribute__((aligned(16)));
 
-        // 10F0
         vshParam.size = 48;
         vshParam.vshmainArgs = 0;
         vshParam.vshmainArgp = NULL;
@@ -374,7 +344,6 @@ s32 sceKernelLoadExec(char *file, SceKernelLoadExecParam *opt)
         vshParam.extArgs = 0;
         vshParam.extArgp = NULL;
         if (opt == NULL) {
-            // 11B0
             vshParam.args = 0;
             vshParam.argp = NULL;
         } else {
@@ -382,28 +351,26 @@ s32 sceKernelLoadExec(char *file, SceKernelLoadExecParam *opt)
             vshParam.argp = opt->argp;
         }
         char *name;
-        // 112C
         if (apiType == SCE_EXEC_FILE_APITYPE_EMU_EBOOT_MS || apiType == SCE_EXEC_FILE_APITYPE_EMU_BOOT_MS || apiType == SCE_EXEC_FILE_APITYPE_EMU_EBOOT_EF || apiType == SCE_EXEC_FILE_APITYPE_EMU_BOOT_EF)
             name = g_umdEmuStr;
         else
             name = g_gameStr;
-        // 116C
         vshParam.key = name;
-        vshParam.opt11 = 0;
+        vshParam.reserved = 0;
 
         args.apiType = apiType;
         args.args = 0;
         args.argp = file;
         args.vshParam = &vshParam;
-        args.opt4 = 0;
-        args.npDrm1 = NULL;
-        args.npDrm2_1 = 0;
-        args.npDrm2_2 = 0;
+        args.vshArg = 0;
+        args.npDrmKey = NULL;
+        args.npDrmKeyLo = 0;
+        args.npDrmKeyHi = 0;
         ret = runExec(&args);
     } else
         ret = SCE_ERROR_KERNEL_ILLEGAL_PERMISSION_CALL;
 
-    g_loadExecCb = oldD384;
+    g_loadExecCb = oldCb;
     sceKernelUnlockMutex(g_loadExecMutex, 1);
     pspSetK1(oldK1);
     return ret;
@@ -413,11 +380,11 @@ s32 sceKernelLoadExecNpDrm(char *file, SceKernelLoadExecParam *opt) __attribute_
 s32 LoadExecForUser_8ADA38D3(char *file, SceKernelLoadExecParam *opt)
 {
     RunExecParams args;
-    SceKernelLoadExecVSHParam vshParam;
-    char unkPtr[16];
-    s32 unkPtr2[2];
+    SceKernelLoadExecVSHParam vshParam __attribute__((aligned(16)));
+    char npDrmKey[16];
+    s32 npDrmKeyWords[2];
     SceUID fileId;
-    s32 oldD384;
+    s32 oldCb;
 
     s32 oldK1 = pspShiftK1();
     s32 ret = sceKernelLockMutex(g_loadExecMutex, 1, NULL);
@@ -425,7 +392,7 @@ s32 LoadExecForUser_8ADA38D3(char *file, SceKernelLoadExecParam *opt)
         pspSetK1(oldK1);
         return ret;
     }
-    oldD384 = g_loadExecCb;
+    oldCb = g_loadExecCb;
     g_loadExecCb = 0;
     g_suppArgSet = 0;
     g_suppArgp = NULL;
@@ -433,19 +400,19 @@ s32 LoadExecForUser_8ADA38D3(char *file, SceKernelLoadExecParam *opt)
     g_suppArgType = SCE_KERNEL_REBOOT_ARGTYPE_NONE;
 
     if (sceKernelIsIntrContext() != 0) {
-        g_loadExecCb = oldD384;
+        g_loadExecCb = oldCb;
         sceKernelUnlockMutex(g_loadExecMutex, 1);
         pspSetK1(oldK1);
         return SCE_ERROR_KERNEL_CANNOT_BE_CALLED_FROM_INTERRUPT;
     }
-    if (pspK1IsUserMode()) {
-        g_loadExecCb = oldD384;
+    if (!pspK1IsUserMode()) {
+        g_loadExecCb = oldCb;
         sceKernelUnlockMutex(g_loadExecMutex, 1);
         pspSetK1(oldK1);
         return SCE_ERROR_KERNEL_ILLEGAL_PERMISSION_CALL;
     }
     if (file == NULL || !pspK1PtrOk(file)) {
-        g_loadExecCb = oldD384;
+        g_loadExecCb = oldCb;
         sceKernelUnlockMutex(g_loadExecMutex, 1);
         pspSetK1(oldK1);
         return SCE_ERROR_KERNEL_ILLEGAL_ADDR;
@@ -453,31 +420,29 @@ s32 LoadExecForUser_8ADA38D3(char *file, SceKernelLoadExecParam *opt)
 
     if (opt != NULL) {
         if (!pspK1StaBufOk(opt, 16)) {
-            g_loadExecCb = oldD384;
+            g_loadExecCb = oldCb;
             sceKernelUnlockMutex(g_loadExecMutex, 1);
             pspSetK1(oldK1);
             return SCE_ERROR_KERNEL_ILLEGAL_ADDR;
         }
-        if (opt->key != 0 && pspK1PtrOk(opt->key)) {
-            g_loadExecCb = oldD384;
+        if (opt->key != NULL && !pspK1PtrOk(opt->key)) {
+            g_loadExecCb = oldCb;
             sceKernelUnlockMutex(g_loadExecMutex, 1);
             pspSetK1(oldK1);
             return SCE_ERROR_KERNEL_ILLEGAL_ADDR;
         }
 
-        // 135C
         if (opt->argp != NULL && !pspK1DynBufOk(opt->argp, opt->args)) {
-            g_loadExecCb = oldD384;
+            g_loadExecCb = oldCb;
             sceKernelUnlockMutex(g_loadExecMutex, 1);
             pspSetK1(oldK1);
             return SCE_ERROR_KERNEL_ILLEGAL_ADDR;
         }
     }
 
-    // 1388
     ret = ioctlAndDevctl(file, 0x208813, 0x208013);
     if (ret < 0) {
-        g_loadExecCb = oldD384;
+        g_loadExecCb = oldCb;
         sceKernelUnlockMutex(g_loadExecMutex, 1);
         pspSetK1(oldK1);
         return ret;
@@ -485,15 +450,15 @@ s32 LoadExecForUser_8ADA38D3(char *file, SceKernelLoadExecParam *opt)
 
     fileId = sceIoOpen(file, 0x4000001, 511);
     if (fileId < 0) {
-        g_loadExecCb = oldD384;
+        g_loadExecCb = oldCb;
         sceKernelUnlockMutex(g_loadExecMutex, 1);
         pspSetK1(oldK1);
         return fileId;
     }
-    ret = sceKernelNpDrmGetModuleKey(fileId, unkPtr, unkPtr2);
+    ret = sceKernelNpDrmGetModuleKey(fileId, npDrmKey, npDrmKeyWords);
     if (ret < 0) {
         sceIoClose(fileId);
-        g_loadExecCb = oldD384;
+        g_loadExecCb = oldCb;
         sceKernelUnlockMutex(g_loadExecMutex, 1);
         pspSetK1(oldK1);
         return ret;
@@ -506,9 +471,7 @@ s32 LoadExecForUser_8ADA38D3(char *file, SceKernelLoadExecParam *opt)
     vshParam.flags = 0x10000;
     vshParam.extArgs = 0;
     vshParam.extArgp = NULL;
-    //
     if (opt == NULL) {
-        // 1528
         vshParam.args = 0;
         vshParam.argp = 0;
     } else {
@@ -516,7 +479,6 @@ s32 LoadExecForUser_8ADA38D3(char *file, SceKernelLoadExecParam *opt)
         vshParam.argp = opt->argp;
     }
 
-    // 1414
     switch (sceKernelInitApitype()) {
     case SCE_EXEC_FILE_APITYPE_GAME_EBOOT:
     case SCE_EXEC_FILE_APITYPE_GAME_BOOT:
@@ -561,24 +523,23 @@ s32 LoadExecForUser_8ADA38D3(char *file, SceKernelLoadExecParam *opt)
     }
 
     s32 apiType;
-    vshParam.opt11 = 0;
+    vshParam.reserved = 0;
     if (InitForKernel_9D33A110() == 80)
         apiType = SCE_EXEC_FILE_APITYPE_NPDRM_EF;
     else
         apiType = SCE_EXEC_FILE_APITYPE_NPDRM_MS;
 
-    // 1464
     args.apiType = apiType;
     args.args = 0;
     args.argp = file;
     args.vshParam = &vshParam;
-    args.opt4 = 0;
-    args.npDrm1 = unkPtr;
-    args.npDrm2_1 = unkPtr2[0];
-    args.npDrm2_2 = unkPtr2[1];
+    args.vshArg = 0;
+    args.npDrmKey = npDrmKey;
+    args.npDrmKeyLo = npDrmKeyWords[0];
+    args.npDrmKeyHi = npDrmKeyWords[1];
     ret = runExec(&args);
     sceIoClose(fileId);
-    g_loadExecCb = oldD384;
+    g_loadExecCb = oldCb;
     sceKernelUnlockMutex(g_loadExecMutex, 1);
     pspSetK1(oldK1);
     return ret;
@@ -586,9 +547,9 @@ s32 LoadExecForUser_8ADA38D3(char *file, SceKernelLoadExecParam *opt)
 
 s32 LoadExecForUser_D1FB50DC(void *arg)
 {
-    SceKernelLoadExecVSHParam vshParam;
     RunExecParams args;
-    s32 ret, oldVar;
+    SceKernelLoadExecVSHParam vshParam __attribute__((aligned(16)));
+    s32 ret, oldCb;
 
     s32 oldK1 = pspShiftK1();
     ret = sceKernelLockMutex(g_loadExecMutex, 1, NULL);
@@ -597,7 +558,7 @@ s32 LoadExecForUser_D1FB50DC(void *arg)
         return ret;
     }
 
-    oldVar = g_loadExecCb;
+    oldCb = g_loadExecCb;
     g_loadExecCb = 0;
     if (sceKernelIsIntrContext() == 0) {
         if (pspK1IsUserMode()) {
@@ -605,10 +566,10 @@ s32 LoadExecForUser_D1FB50DC(void *arg)
             args.args = 0;
             args.argp = NULL;
             args.vshParam = &vshParam;
-            args.opt4 = arg;
-            args.npDrm1 = NULL;
-            args.npDrm2_1 = 0;
-            args.npDrm2_2 = 0;
+            args.vshArg = arg;
+            args.npDrmKey = NULL;
+            args.npDrmKeyLo = 0;
+            args.npDrmKeyHi = 0;
 
             vshParam.size = sizeof vshParam;
             vshParam.args = 0;
@@ -618,10 +579,10 @@ s32 LoadExecForUser_D1FB50DC(void *arg)
             vshParam.vshmainArgp = NULL;
             vshParam.configFile = NULL;
             vshParam.string = NULL;
-            vshParam.flags = 1;
+            vshParam.flags = 0x10000;
             vshParam.extArgs = 0;
             vshParam.extArgp = NULL;
-            vshParam.opt11 = 0;
+            vshParam.reserved = 0;
 
             ret = runExec(&args);
         } else
@@ -629,17 +590,16 @@ s32 LoadExecForUser_D1FB50DC(void *arg)
     } else
         ret = SCE_ERROR_KERNEL_CANNOT_BE_CALLED_FROM_INTERRUPT;
 
-    g_loadExecCb = oldVar;
+    g_loadExecCb = oldCb;
     sceKernelUnlockMutex(g_loadExecMutex, 1);
     pspSetK1(oldK1);
     return ret;
 }
 
-// 08F7166C
 s32 sceKernelExitVSHVSH(SceKernelLoadExecVSHParam *opt)
 {
-    SceKernelLoadExecVSHParam vshParam;
     RunExecParams args;
+    SceKernelLoadExecVSHParam vshParam __attribute__((aligned(16)));
     s32 oldK1 = pspShiftK1();
 
     if (sceKernelIsIntrContext() != 0) {
@@ -647,13 +607,12 @@ s32 sceKernelExitVSHVSH(SceKernelLoadExecVSHParam *opt)
         return SCE_ERROR_KERNEL_CANNOT_BE_CALLED_FROM_INTERRUPT;
     }
 #ifndef INSTALLER
-    if (pspK1IsUserMode()) {
+    if (!pspK1IsUserMode()) {
         pspSetK1(oldK1);
         return SCE_ERROR_KERNEL_ILLEGAL_PERMISSION_CALL;
     }
 #endif
 
-    // 16B0
 #ifndef INSTALLER
     if (sceKernelGetUserLevel() != 4) {
         pspSetK1(oldK1);
@@ -667,7 +626,6 @@ s32 sceKernelExitVSHVSH(SceKernelLoadExecVSHParam *opt)
     }
     vshParam.size = sizeof vshParam;
     if (opt == NULL) {
-        // 17B8
         vshParam.args = 0;
         vshParam.argp = NULL;
         vshParam.key = NULL;
@@ -688,7 +646,6 @@ s32 sceKernelExitVSHVSH(SceKernelLoadExecVSHParam *opt)
         vshParam.string      = opt->string;
         vshParam.flags       = opt->flags;
         if (opt->size >= sizeof vshParam) {
-            // 17A4
             vshParam.extArgs = opt->extArgs;
             vshParam.extArgp = opt->extArgp;
         } else {
@@ -697,29 +654,26 @@ s32 sceKernelExitVSHVSH(SceKernelLoadExecVSHParam *opt)
         }
     }
 
-    // 1738
     if (vshParam.key == NULL)
         vshParam.key = g_vshStr;
 
-    // 1754
     vshParam.flags |= 0x10000;
-    vshParam.opt11 = 0;
+    vshParam.reserved = 0;
 
     args.apiType = SCE_EXEC_FILE_APITYPE_VSH_2;
     args.args = 0;
     args.argp = NULL;
     args.vshParam = &vshParam;
-    args.opt4 = 0;
-    args.npDrm1 = NULL;
-    args.npDrm2_1 = 0;
-    args.npDrm2_2 = 0;
+    args.vshArg = 0;
+    args.npDrmKey = NULL;
+    args.npDrmKeyLo = 0;
+    args.npDrmKeyHi = 0;
     ret = runExec(&args);
     pspSetK1(oldK1);
     return ret;
 }
 
-// 1F88A490
-s32 sceKernelRegisterExitCallback(SceUID cbId) // alias: 4AC57943 in ForUser
+s32 sceKernelRegisterExitCallback(SceUID cbId)
 {
     s32 oldK1 = pspShiftK1();
     s32 mtx = sceKernelLockMutex(g_loadExecMutex, 1, NULL);
@@ -728,22 +682,19 @@ s32 sceKernelRegisterExitCallback(SceUID cbId) // alias: 4AC57943 in ForUser
         return mtx;
     }
     if (sceKernelGetThreadmanIdType(cbId) == 8) {
-        // 188C
         g_loadExecCb = cbId;
         sceKernelUnlockMutex(g_loadExecMutex, 1);
         if (g_regExitCbCb != NULL && sceKernelGetCompiledSdkVersion() == 0) {
-            // 18E0
             g_regExitCbCb();
         }
 
-        // 18B4
         if (cbId != 0 && g_loadExecIsInited == 1)
             sceKernelInvokeExitCallback();
         pspSetK1(oldK1);
         return mtx;
     }
     sceKernelUnlockMutex(g_loadExecMutex, 1);
-    if (sceKernelGetCompiledSdkVersion() <= 0x30904FF) {
+    if ((s32)sceKernelGetCompiledSdkVersion() <= 0x30904FF) {
         pspSetK1(oldK1);
         return mtx;
     }
@@ -751,7 +702,6 @@ s32 sceKernelRegisterExitCallback(SceUID cbId) // alias: 4AC57943 in ForUser
     return SCE_ERROR_KERNEL_ILLEGAL_ARGUMENT;
 }
 
-// 1F08547A
 s32 sceKernelInvokeExitCallback()
 {
     s32 ret;
@@ -762,9 +712,7 @@ s32 sceKernelInvokeExitCallback()
     if (g_loadExecCb != 0 && sceKernelGetThreadmanIdType(g_loadExecCb) != 8)
         g_loadExecCb = 0;
 
-    // 1944
     if (g_loadExecCb != 0) {
-        // 1984
         sceKernelPowerRebootStart(0);
         ret = sceKernelNotifyCallback(g_loadExecCb, 0);
     } else {
@@ -772,26 +720,24 @@ s32 sceKernelInvokeExitCallback()
         ret = SCE_ERROR_KERNEL_NO_EXIT_CALLBACK;
     }
 
-    // 1960
     sceKernelUnlockMutex(g_loadExecMutex, 1);
     return ret;
 }
 
-s32 LoadExecForKernel_BC26BEEF(SceKernelLoadExecVSHParam *opt, s32 arg1)
+s32 LoadExecForKernel_BC26BEEF(SceKernelLoadExecVSHParam *opt, s32 notUpdater)
 {
     if (opt == NULL)
         return SCE_ERROR_KERNEL_INVALID_ARGUMENT;
     if (opt->key == NULL)
         return SCE_ERROR_KERNEL_INVALID_ARGUMENT;
-    if (arg1 == 0) {
-        // 1A34
+    if (notUpdater == 0) {
         if ((strcmp(opt->key, "game") == 0)
          || (strcmp(opt->key, "vsh") == 0)
          || (strcmp(opt->key, "updater") == 0))
             return 1;
         return 0;
     }
-    if (arg1 != 1)
+    if (notUpdater != 1)
         return SCE_ERROR_KERNEL_INVALID_ARGUMENT;
     return strcmp(opt->key, "updater") != 0;
 }
@@ -1105,7 +1051,7 @@ s32 loadExecVSH(s32 apiType, char *file, SceKernelLoadExecVSHParam *opt, u32 fla
     s32 oldK1 = pspShiftK1();
     if (sceKernelIsIntrContext() == 0) {
 #ifndef INSTALLER
-        if (!pspK1IsUserMode()) {
+        if (pspK1IsUserMode()) {
 #else
         if (1) {
 #endif
@@ -1185,19 +1131,18 @@ s32 loadExecVSH(s32 apiType, char *file, SceKernelLoadExecVSHParam *opt, u32 fla
                     }
                 }
             }
-            SceKernelLoadExecVSHParam vshParam;
             RunExecParams args;
+            SceKernelLoadExecVSHParam vshParam __attribute__((aligned(16)));
 
-            // 2488
             copyVSHParam(&vshParam, flags, opt);
             args.apiType = apiType;
             args.args = 0;
             args.argp = file;
             args.vshParam = &vshParam;
-            args.opt4 = 0;
-            args.npDrm1 = NULL;
-            args.npDrm2_1 = 0;
-            args.npDrm2_2 = 0;
+            args.vshArg = 0;
+            args.npDrmKey = NULL;
+            args.npDrmKeyLo = 0;
+            args.npDrmKeyHi = 0;
             ret = runExec(&args);
             pspSetK1(oldK1);
             return ret;
@@ -1211,7 +1156,6 @@ s32 loadExecVSH(s32 apiType, char *file, SceKernelLoadExecVSHParam *opt, u32 fla
     }
 }
 
-// 0x2580
 s32 loadExecVSHWithArgs(s32 apiType, s32 args, void *argp, SceKernelLoadExecVSHParam *opt, u32 flags)
 {
     s32 oldK1 = pspShiftK1();
@@ -1223,8 +1167,7 @@ s32 loadExecVSHWithArgs(s32 apiType, s32 args, void *argp, SceKernelLoadExecVSHP
     if (pspK1IsUserMode()) {
         s32 ret;
         RunExecParams rebootArgs;
-        SceKernelLoadExecVSHParam vshArgs;
-        // 25F4
+        SceKernelLoadExecVSHParam vshArgs __attribute__((aligned(16)));
         if (sceKernelGetUserLevel() != 4) {
             pspSetK1(oldK1);
             return SCE_ERROR_KERNEL_ILLEGAL_PERMISSION_CALL;
@@ -1238,7 +1181,6 @@ s32 loadExecVSHWithArgs(s32 apiType, s32 args, void *argp, SceKernelLoadExecVSHP
             return SCE_ERROR_KERNEL_ILLEGAL_ADDR;
         }
 
-        // 263C
         ret = checkVSHParam(opt);
         if (ret < 0) {
             pspSetK1(oldK1);
@@ -1249,10 +1191,10 @@ s32 loadExecVSHWithArgs(s32 apiType, s32 args, void *argp, SceKernelLoadExecVSHP
         rebootArgs.args = args;
         rebootArgs.argp = argp;
         rebootArgs.vshParam = &vshArgs;
-        rebootArgs.opt4 = 0;
-        rebootArgs.npDrm1 = NULL;
-        rebootArgs.npDrm2_1 = 0;
-        rebootArgs.npDrm2_2 = 0;
+        rebootArgs.vshArg = 0;
+        rebootArgs.npDrmKey = NULL;
+        rebootArgs.npDrmKeyLo = 0;
+        rebootArgs.npDrmKeyHi = 0;
         ret = runExec(&rebootArgs);
         pspSetK1(oldK1);
         return ret;
@@ -1262,20 +1204,18 @@ s32 loadExecVSHWithArgs(s32 apiType, s32 args, void *argp, SceKernelLoadExecVSHP
     }
 }
 
-// 0x26B0
 s32 loadExecKernel(s32 apiType, SceKernelLoadExecVSHParam *opt)
 {
-    SceKernelLoadExecVSHParam vshParam;
     RunExecParams args;
+    SceKernelLoadExecVSHParam vshParam __attribute__((aligned(16)));
     s32 ret;
     s32 oldK1 = pspShiftK1();
 
-    if (apiType != SCE_EXEC_FILE_APITYPE_KERNEL_REBOOT && sceKernelIsIntrContext() != 0) { // 2810
+    if (apiType != SCE_EXEC_FILE_APITYPE_KERNEL_REBOOT && sceKernelIsIntrContext() != 0) {
         pspSetK1(oldK1);
         return SCE_ERROR_KERNEL_CANNOT_BE_CALLED_FROM_INTERRUPT;
     }
 
-    // 26C4
     if (pspK1IsUserMode()) {
         pspSetK1(oldK1);
         return SCE_ERROR_KERNEL_ILLEGAL_PERMISSION_CALL;
@@ -1287,7 +1227,6 @@ s32 loadExecKernel(s32 apiType, SceKernelLoadExecVSHParam *opt)
     }
     vshParam.size = sizeof vshParam;
     if (opt == NULL) {
-        // 27E0
         vshParam.args = 0;
         vshParam.argp = NULL;
         vshParam.key = NULL;
@@ -1308,7 +1247,6 @@ s32 loadExecKernel(s32 apiType, SceKernelLoadExecVSHParam *opt)
         vshParam.string = opt->string;
         vshParam.flags = opt->flags;
         if (opt->size >= sizeof vshParam) {
-            // 27D4
             vshParam.extArgs = opt->extArgs;
             vshParam.extArgp = opt->extArgp;
         } else {
@@ -1317,68 +1255,64 @@ s32 loadExecKernel(s32 apiType, SceKernelLoadExecVSHParam *opt)
         }
     }
 
-    // 2750
     if (vshParam.key == NULL)
         vshParam.key = g_vshStr;
 
-    // 276C
     args.apiType = apiType;
     args.args = 0;
     args.argp = NULL;
     args.vshParam = &vshParam;
-    args.opt4 = 0;
-    args.npDrm1 = NULL;
-    args.npDrm2_1 = 0;
-    args.npDrm2_2 = 0;
+    args.vshArg = 0;
+    args.npDrmKey = NULL;
+    args.npDrmKeyLo = 0;
+    args.npDrmKeyHi = 0;
 
     vshParam.flags |= 0x10000;
-    vshParam.opt11 = 0;
+    vshParam.reserved = 0;
     ret = runExec(&args);
     pspSetK1(oldK1);
     return ret;
 }
 
-// 0x2844
 s32 rebootKernel(SceKernelLoadExecVSHParam *arg)
 {
     return loadExecKernel(SCE_EXEC_FILE_APITYPE_KERNEL_REBOOT, arg);
 }
 
-// 0x2864
-s32 runExecFromThread(u32 args __attribute__((unused)), RunExecParams *opt) // 2864
+s32 runExecFromThread(u32 args __attribute__((unused)), RunExecParams *opt)
 {
     NpDrmArg npDrmArg;
-    char str1[256], str2[256], str3[256];
+    char keyBuf[256], configBuf[256], stringBuf[256];
     if (opt == NULL)
         return SCE_ERROR_KERNEL_ERROR;
     npDrmArg.size = sizeof npDrmArg;
-    npDrmArg.npDrm2_1 = opt->npDrm2_1;
-    npDrmArg.npDrm2_2 = opt->npDrm2_2;
+    npDrmArg.npDrmKeyLo = opt->npDrmKeyLo;
+    npDrmArg.npDrmKeyHi = opt->npDrmKeyHi;
 
-    if (opt->npDrm1) {
-        memcpy(&npDrmArg.npDrm1, opt->npDrm1, 16);
-        memset(opt->npDrm1, 0, 16);
+    if (opt->npDrmKey) {
+        memcpy(&npDrmArg.npDrmKey, opt->npDrmKey, 16);
+        memset(opt->npDrmKey, 0, 16);
     }
 
     opt->npDrmArg = &npDrmArg;
 
     memcpy(&npDrmArg.vshParam, opt->vshParam, sizeof *opt->vshParam);
-    opt->opt4 = &npDrmArg.vshParam;
+    opt->vshArg = &npDrmArg.vshParam;
 
     if (npDrmArg.vshParam.key != NULL) {
-        strncpy(str1, npDrmArg.vshParam.key, 256);
-        npDrmArg.vshParam.key = str1;
+        strncpy(keyBuf, npDrmArg.vshParam.key, 256);
+        npDrmArg.vshParam.key = keyBuf;
     } else if (npDrmArg.vshParam.configFile == NULL)
         return SCE_ERROR_KERNEL_ERROR;
 
     if (npDrmArg.vshParam.configFile != NULL) {
-        strncpy(str2, npDrmArg.vshParam.configFile, 256);
-        npDrmArg.vshParam.configFile = str2;
+        strncpy(configBuf, npDrmArg.vshParam.configFile, 256);
+        npDrmArg.vshParam.configFile = configBuf;
     }
 
     if (npDrmArg.vshParam.string != NULL) {
-        strncpy(str3, npDrmArg.vshParam.string, 256);
-        npDrmArg.vshParam.string = str3;
+        strncpy(stringBuf, npDrmArg.vshParam.string, 256);
+        npDrmArg.vshParam.string = stringBuf;
     }
 
     sceKernelSetSystemStatus(0x40000);
@@ -1399,13 +1333,11 @@ s32 runExecFromThread(u32 args __attribute__((unused)), RunExecParams *opt) // 2
     return runReboot(opt);
 }
 
-// 0x29A4
 void copyVSHParam(SceKernelLoadExecVSHParam *dstOpt, u32 flags, SceKernelLoadExecVSHParam *srcOpt)
 {
     dstOpt->size = sizeof *dstOpt;
     dstOpt->flags = flags;
     if (srcOpt == NULL) {
-        // 2A24
         dstOpt->args = 0;
         dstOpt->argp = NULL;
         dstOpt->key = NULL;
@@ -1424,7 +1356,6 @@ void copyVSHParam(SceKernelLoadExecVSHParam *dstOpt, u32 flags, SceKernelLoadExe
         dstOpt->configFile = srcOpt->configFile;
         dstOpt->string = srcOpt->string;
         if (srcOpt->size >= sizeof *dstOpt) {
-            // 2A10
             dstOpt->extArgs = srcOpt->extArgs;
             dstOpt->extArgp = srcOpt->extArgp;
         } else {
@@ -1433,12 +1364,10 @@ void copyVSHParam(SceKernelLoadExecVSHParam *dstOpt, u32 flags, SceKernelLoadExe
         }
     }
 
-    // 29F0
     if (dstOpt->key == NULL)
         dstOpt->key = g_gameStr;
 
-    // 2A08
-    dstOpt->opt11 = 0;
+    dstOpt->reserved = 0;
     return;
 }
 
@@ -1576,9 +1505,8 @@ s32 runReboot(RunExecParams *opt)
             ;
     }
 
-    // 2BC4
     pspCop0StateSet(COP0_STATE_STATUS, pspCop0StateGet(COP0_STATE_STATUS) & 0xFFF7FFE0);
-    // Skipped useless part
+    sceKernelSetSystemStatus(0x40040);
 
     // 2C58
     SceKernelRebootParam *hwOpt = makeRebootParam();
@@ -1679,26 +1607,21 @@ s32 runReboot(RunExecParams *opt)
             ptr[1] = 32;
         }
 
-        // 2E94
-        ptr[2] = (s32)opt->opt4;
-        if (opt->opt4 == 0) {
-            // 2EB4
+        ptr[2] = (s32)opt->vshArg;
+        if (opt->vshArg == 0) {
             s32 v;
             if ((v = ptr[6]) == 0)
                 if ((v = ptr[5]) == 0)
                     v = ptr[4];
-            // 2ECC
             ptr[3] = v;
         } else
             ptr[3] = 0;
 
-        // 2EA4
         ptr[6] = 0;
         ptr[4] = 0;
         ptr[5] = 0;
     }
 
-    // 2C84
     if (g_suppArgSet) {
         hwOpt->args[hwOpt->curArgs].argp = g_suppArgp;
         hwOpt->args[hwOpt->curArgs].args = g_suppArgs;
@@ -1706,23 +1629,22 @@ s32 runReboot(RunExecParams *opt)
         hwOpt->curArgs++;
     }
 
-    // 2CE0
-    if ((opt->vshParam->flags & 0x10000) == 0)
-        *(s32*)(hwOpt->startAddr + hwOpt->numLoadModules * 32 - 12) = opt->apiType;
+    if ((opt->vshParam->flags & 0x10000) == 0) {
+        s32 *modTable = (s32 *)hwOpt->startAddr;
+        modTable[hwOpt->numLoadModules * 8 - 3] = opt->apiType;
+    }
 
-    // 2D04
     fixupArgsAddr(hwOpt, opt->vshParam);
     sceKernelSetDdrMemoryProtection(0x88400000, 0x400000, 12);
     if (opt->apiType == SCE_EXEC_FILE_APITYPE_DEBUG)
         return ret;
     sceKernelMemset((void*)0x88600000, 0, 0x200000);
 #ifndef INSTALLER
-    ret = decodeKL4E((void*)0x88600000, 0x200000, (void*)g_reboot + 4, NULL);
+    ret = decodeKL4E((void*)0x88600000, 0x200000, &g_reboot[4], NULL);
 #else
-	ret = (*decodeKL4EPtr)((void*)0x88600000, 0x200000, (void*)g_reboot + 4, NULL);
+    ret = (*decodeKL4EPtr)((void*)0x88600000, 0x200000, &g_reboot[4], NULL);
 #endif
     if (ret < 0) {
-        // 2DD0
         sceKernelCpuSuspendIntr();
         *(s32*)(0xBC100040) = (*(s32*)(0xBC100040) & 0xFFFFFFFC) | 1;
         sceKernelMemset((void*)0x88600000, 0, 0x200000);
@@ -1745,8 +1667,7 @@ s32 runReboot(RunExecParams *opt)
     return ret;
 }
 
-// 0x32FC
-SceKernelRebootParam *makeRebootParam()
+SceKernelRebootParam *makeRebootParam(void)
 {
     s32 base, startAddr, args, endAddr;
     SceKernelRebootParam *opt;
@@ -1755,9 +1676,9 @@ SceKernelRebootParam *makeRebootParam()
     else
         base = 0x88400000;
 
-    opt       = (SceKernelRebootParam*)UPALIGN64(base + 0x10); // Size 0x1000
-    startAddr = UPALIGN64((s32)opt  + 0x01000); // Size 0x1c000
-    args      = UPALIGN64(startAddr + 0x1c000); // Size 0x380 (32 arguments max)
+    opt       = (SceKernelRebootParam*)UPALIGN64(base + 0x10);
+    startAddr = UPALIGN64((s32)opt  + 0x01000);
+    args      = UPALIGN64(startAddr + 0x1c000);
     endAddr   = UPALIGN64(args      + 0x00380);
 
     sceKernelMemset((void*)base, 0, endAddr - base);
@@ -1768,10 +1689,10 @@ SceKernelRebootParam *makeRebootParam()
     opt->curArgs   = 0;
     opt->argTypeFlags     = 0;
     opt->model     = sceKernelGetModel();
-    opt->reserved60     = 0;
+    opt->reservedConfig[3] = 0;
     opt->dipswLo   = sceKernelDipswLow32();
     opt->dipswHi   = sceKernelDipswHigh32();
-    opt->reserved48     = 0;
+    opt->reservedConfig[0] = 0;
 
     if (sceKernelDipsw(30) != 1)
         opt->dipswHi &= 0xFAFFFFFF;

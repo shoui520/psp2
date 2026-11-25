@@ -29,16 +29,16 @@ typedef struct
     void *vshmainArgp;
     /** "/kd/pspbtcnf_game.txt" or "/kd/pspbtcnf.txt" if not supplied (max. 256 chars). */
     char *configFile;
-    /** An unknown string (max. 256 chars). */
+    /** Auxiliary parameter string (max. 256 chars). */
     char *string;
-    /** Unknown flag default value = 0x10000. */
+    /** Execution flags (default value = 0x10000). */
     u32 flags;
     /** The size of the external arguments. */
     u32 extArgs;
     /** "External" arguments only used when calling a function accepting a SceKernelLoadExecVSHParam as an argument. */
     void *extArgp;
     /** Unused. */
-    u32 opt11;
+    u32 reserved;
 } SceKernelLoadExecVSHParam;
 
 /** Types of arguments passed to reboot.bin. */
@@ -52,8 +52,8 @@ typedef enum
     SCE_KERNEL_REBOOT_ARGTYPE_FILENAME =   0x2,
     /** Vshmain arguments, passed to vshmain after the program has exited. */
     SCE_KERNEL_REBOOT_ARGTYPE_VSHMAIN  =   0x4,
-    /** Unknown (not argument made in loadexec has this type). */
-    SCE_KERNEL_REBOOT_ARGTYPE_UNKNOWN8 =   0x8,
+    /** Exec argument pointer passed to reboot.bin. */
+    SCE_KERNEL_REBOOT_ARGTYPE_EXEC_ARG =   0x8,
     /** Game info (as returned by sceKernelGetGameInfo()). */
     SCE_KERNEL_REBOOT_ARGTYPE_GAMEINFO =  0x20,
     /** Used only by emulation api types. */

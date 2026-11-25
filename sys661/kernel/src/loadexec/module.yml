@@ -60,7 +60,7 @@ exports:
       - LoadExecForKernel_E704ECC3: 0xe704ecc3
       - LoadExecForKernel_F9CFCF2F: 0xf9cfcf2f
     variables:
-      - g_unkCbInfo: 0xae9efc0d
+      - g_exitCbSlot: 0xae9efc0d
   - name: LoadExecForUser
     version: [0, 17]
     attributes: 0x4001
