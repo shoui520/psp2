@@ -325,7 +325,7 @@ __attribute__((noinline)) int dtcpIpSwWait(SceUID event, int *outValue, int time
  * parameter (the 32 bytes of the caller's status at +12), and the launch handle keeps
  * the application alive while the library works.
  */
-int dtcpIpIpcLaunchMiddleware(void **outLaunch)
+__attribute__((noinline)) int dtcpIpIpcLaunchMiddleware(void **outLaunch)
 {
 	struct {
 		SceAppMgrAppStatus status;	/* 0x00: the caller's own status */
@@ -367,7 +367,7 @@ __attribute__((noinline)) int dtcpIpSwFreeLaunch(void *launch, int *slot)
  * the shared memory block: the middleware creates it and the library opens it by
  * name; the caller's base receives its address.
  */
-int dtcpIpSwCreateShared(struct SwIpcShared **outShared, const char *name, SceSize size,
+__attribute__((noinline)) int dtcpIpSwCreateShared(struct SwIpcShared **outShared, const char *name, SceSize size,
 			 void **outBase, int open)
 {
 	struct SwIpcShared *shared;
@@ -426,14 +426,14 @@ int dtcpIpSwCreateShared(struct SwIpcShared **outShared, const char *name, SceSi
 }
 
 /* open the middleware's shared memory block by name */
-int dtcpIpSwOpenShared(struct SwIpcShared **outShared, const char *name, SceSize size,
+__attribute__((noinline)) int dtcpIpSwOpenShared(struct SwIpcShared **outShared, const char *name, SceSize size,
 		       void **outBase)
 {
 	return dtcpIpSwCreateShared(outShared, name, size, outBase, 1);
 }
 
 /* close a shared memory block */
-__attribute__((noinline)) int dtcpIpSwCloseShared(struct SwIpcShared *shared)
+__attribute__((noinline)) __attribute__((noinline)) int dtcpIpSwCloseShared(struct SwIpcShared *shared)
 {
 	sceKernelCloseMemBlock(shared->memBlock);
 	dtcpIpFree(shared);
@@ -500,16 +500,8 @@ int dtcpIpIpcInitSession(struct SceDtcpIpIpcObject *object, const unsigned int *
 		if (channel == 3) {
 			ret = 12009;
 		} else {
-			message.kind = 1;
-			message.result = 0;
-			message.value0 = 2;
-			message.value1 = 0;
-			message.value2 = 0;
-			message.value3 = 0;
-			ret = dtcpIpSwSend(client->pipeCtoS, &message);
-			if (ret == 0)
-				ret = dtcpIpSwReceive(client->pipeStoC, &message, 1000000);
-			if (ret == 0 && (message.kind != 2 || message.result != 0))
+			ret = dtcpIpSwReceive(client->pipeStoC, &message, 1000000);
+			if (ret == 0 && (message.kind != 0 || message.result != 0))
 				ret = 12004;
 			if (ret == 0) {
 				ret = dtcpIpSwCreateMutex(&client->mutex, "SW_IPC_Sys_Mutex", 1);
@@ -524,14 +516,28 @@ int dtcpIpIpcInitSession(struct SceDtcpIpIpcObject *object, const unsigned int *
 						do {
 							ch->client = client;
 							ch->index = index++;
+							ch->sharedBase = NULL;
 							ch->bufferSize = 0;
 							ch->shared = NULL;
-							ch->sharedBase = NULL;
 							ch++;
 							((struct SwIpcChannelShared *)base)[index - 1].inUse = 0;
 						} while (index < 2);
-						object->session = client;
-						return 0;
+						message.kind = 1;
+						message.result = 0;
+						message.value0 = 2;
+						message.value1 = 0;
+						message.value2 = 0;
+						message.value3 = 0;
+						ret = dtcpIpSwSend(client->pipeCtoS, &message);
+						if (ret == 0)
+							ret = dtcpIpSwReceive(client->pipeStoC, &message, 1000000);
+						if (ret == 0 && message.kind != 2)
+							ret = 12004;
+						if (ret == 0) {
+							object->session = client;
+							return 0;
+						}
+						dtcpIpSwCloseShared(client->shared);
 					}
 				}
 			}
@@ -556,40 +562,19 @@ int dtcpIpIpcInitSession(struct SceDtcpIpIpcObject *object, const unsigned int *
 	}
 	dtcpIpFree(client);
 	return ret;
-
-fail:
-	{
-		int launch = (int)client->launch;
-
-		dtcpIpSwFreeLaunch(client->launch, &launch);
-	}
-	if (client->pipeCtoS != -1) {
-		dtcpIpSwDeletePipe(client->pipeCtoS);
-		client->pipeCtoS = -1;
-	}
-	if (client->pipeStoC != -1) {
-		dtcpIpSwClosePipe(client->pipeStoC);
-		client->pipeStoC = -1;
-	}
-	if (client->mutex != -1) {
-		dtcpIpSwDeleteMutex(client->mutex, 1);
-		client->mutex = -1;
-	}
-	dtcpIpFree(client);
-	return ret;
 }
 
 /* free a channel: its shared memory and its pipes */
-int dtcpIpSwFiniChannel(struct SwIpcChannel *channel)
+__attribute__((noinline)) int dtcpIpSwFiniChannel(struct SwIpcChannel *channel)
 {
 	struct SwIpcChannel *ch = channel;
 	unsigned int i;
 
 	if (ch->shared != NULL) {
 		dtcpIpSwCloseShared(ch->shared);
-		ch->sharedBase = NULL;
+		ch->bufferSize = 0;
 		ch->shared = NULL;
-		ch->size = 0;
+		ch->sharedBase = NULL;
 	}
 	for (i = 0; i < 4; ++i) {
 		if (ch->pipe[i].stoC != -1) {
@@ -753,7 +738,7 @@ int dtcpIpIpcRequest(void *stream, struct SceDtcpIpIpcMessage *message)
  * pipe), tell the middleware the channel closes (kind 6, the reply's kind 7), mark the
  * channel free and free it.
  */
-int dtcpIpIpcFiniStream(void *stream, int status)
+__attribute__((noinline)) int dtcpIpIpcFiniStream(void *stream, int status)
 {
 	struct SwIpcChannel *channel = stream;
 	struct SwIpcClient *client = channel->client;
@@ -766,8 +751,8 @@ int dtcpIpIpcFiniStream(void *stream, int status)
 	if (channel->shared != NULL) {
 		dtcpIpSwCloseShared(channel->shared);
 		channel->bufferSize = 0;
-		channel->sharedBase = NULL;
 		channel->shared = NULL;
+		channel->sharedBase = NULL;
 	}
 	message.command = 0;
 	message.channel = 255;
@@ -792,7 +777,7 @@ int dtcpIpIpcFiniStream(void *stream, int status)
 	control.value3 = 0;
 	ret = dtcpIpSwSend(client->pipeCtoS, &control);
 	if (ret == 0 || ret == 12011 || ret == 12017) {
-		ret = dtcpIpSwReceive(client->pipeStoC, &reply, 0);
+		ret = dtcpIpSwReceive(client->pipeStoC, &reply, 1000000);
 		if (ret == 0 || ret == 12011 || ret == 12017) {
 			if (ret != 0 || reply.kind == 7) {
 				dtcpIpSwFiniChannel(channel);

@@ -358,8 +358,8 @@ int dtcpIpSysOpenStream(struct SwSysStream **outStream, struct SwSysClient *clie
 int dtcpIpSysCloseStream(void *object)
 {
 	struct SwSysStream *stream = object;
-	struct SceDtcpIpIpcMessage message;
 	int hold[2] = { 0, 0 };
+	struct SceDtcpIpIpcMessage message;
 	int ret;
 	int result;
 	int closeResult;
@@ -404,8 +404,8 @@ int dtcpIpSysCloseStream(void *object)
 int dtcpIpSysGetInfo(void *object, void *info)
 {
 	struct SwSysStream *stream = object;
-	struct SceDtcpIpIpcMessage message;
 	int hold[2] = { 0, 0 };
+	struct SceDtcpIpIpcMessage message;
 	int ret;
 	int result;
 
@@ -443,8 +443,8 @@ int dtcpIpSysGetInfo(void *object, void *info)
 int dtcpIpSysSetParameter(void *object, int parameter)
 {
 	struct SwSysStream *stream = object;
-	struct SceDtcpIpIpcMessage message;
 	int hold[2] = { 0, 0 };
+	struct SceDtcpIpIpcMessage message;
 	int ret;
 	int result;
 
@@ -496,8 +496,8 @@ int dtcpIpSysSetParameter(void *object, int parameter)
 int dtcpIpSysReceive(void *object, void **buffer, SceSize *size, void *type, int timeout)
 {
 	struct SwSysStream *stream = object;
-	struct SceDtcpIpIpcMessage message;
 	int hold[2] = { 0, 0 };
+	struct SceDtcpIpIpcMessage message;
 	int ret;
 	int result;
 
@@ -557,8 +557,8 @@ int dtcpIpSysReceive(void *object, void **buffer, SceSize *size, void *type, int
 int dtcpIpSysRelease(void *object, SceSize size)
 {
 	struct SwSysStream *stream = object;
-	struct SceDtcpIpIpcMessage message;
 	int hold[2] = { 0, 0 };
+	struct SceDtcpIpIpcMessage message;
 	int ret;
 	int result;
 
@@ -596,8 +596,8 @@ int dtcpIpSysRelease(void *object, SceSize size)
 int dtcpIpSysSend(void *object, void **buffer, SceSize *size, int timeout)
 {
 	struct SwSysStream *stream = object;
-	struct SceDtcpIpIpcMessage message;
 	int hold[2] = { 0, 0 };
+	struct SceDtcpIpIpcMessage message;
 	int ret;
 	int result;
 	SceSize chunkSize;
@@ -657,8 +657,8 @@ int dtcpIpSysSend(void *object, void **buffer, SceSize *size, int timeout)
 int dtcpIpSysSendMessage(void *object, int messageValue)
 {
 	struct SwSysStream *stream = object;
-	struct SceDtcpIpIpcMessage message;
 	int hold[2] = { 0, 0 };
+	struct SceDtcpIpIpcMessage message;
 	int ret;
 	int result;
 
@@ -696,8 +696,8 @@ int dtcpIpSysSendMessage(void *object, int messageValue)
 int dtcpIpSysAbort(void *object)
 {
 	struct SwSysStream *stream = object;
-	struct SceDtcpIpIpcMessage message;
 	int hold[2] = { 0, 0 };
+	struct SceDtcpIpIpcMessage message;
 	int ret;
 	int result;
 
@@ -768,8 +768,8 @@ int dtcpIpSysIsStreamOpen(void *object)
 int dtcpIpSysClose(void *object)
 {
 	struct SwSysStream *stream = object;
-	struct SceDtcpIpIpcMessage message;
 	int hold[2] = { 0, 0 };
+	struct SceDtcpIpIpcMessage message;
 	int ret;
 	int result;
 

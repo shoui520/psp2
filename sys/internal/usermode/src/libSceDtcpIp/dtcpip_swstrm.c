@@ -90,6 +90,8 @@ int dtcpIpStrmInit(struct SwStrmClient **outClient, struct SceDtcpIpIpcObject *c
 	}
 	client->flushing = 0;
 	message.command = SW_STRM_CONNECT;
+	message.channel = 0;
+	message.size = 0;
 	if (dtcpIpIpcRequest(connection->stream, &message) == 0 && message.result == 0) {
 		client->session = message.out0;
 		client->pending = 0;
@@ -126,6 +128,8 @@ int dtcpIpStrmSetUri(struct SwStrmClient *client, const char *uri, unsigned shor
 		if (message.result == 0 || message.result == SW_STRM_STATUS_LATER) {
 			for (;;) {
 				message.command = SW_STRM_GET_URI_RESULT;
+				message.channel = 0;
+				message.size = 0;
 				message.value0 = client->session;
 				message.value1 = client->flushing;
 				ret = dtcpIpIpcRequest(client->ipc->stream, &message);
@@ -242,6 +246,8 @@ int dtcpIpStrmCloseStream(void *object)
 	if (stream == NULL)
 		return 2;
 	message.command = SW_STRM_CLOSE_STREAM;
+	message.channel = 0;
+	message.size = 0;
 	message.value0 = stream->id;
 	if (dtcpIpIpcRequest(stream->channel, &message) != 0 || message.result != 0)
 		dtcpIpMapIpcStatus3(message.result);
@@ -284,6 +290,8 @@ int dtcpIpStrmSetParameter(void *object, int parameter)
 		return 2;
 	for (;;) {
 		message.command = SW_STRM_SET_PARAMETER;
+		message.channel = 0;
+		message.size = 0;
 		message.value0 = stream->id;
 		message.value1 = parameter;
 		ret = dtcpIpIpcRequest(stream->channel, &message);
@@ -321,6 +329,7 @@ int dtcpIpStrmReceive(void *object, void **buffer, SceSize *size, void *type, in
 	for (;;) {
 		message.command = SW_STRM_RECEIVE;
 		message.channel = 1;
+		message.size = 0;
 		message.value0 = stream->id;
 		ret = dtcpIpIpcRequest(stream->channel, &message);
 		if (ret != 0)
@@ -370,6 +379,7 @@ int dtcpIpStrmRelease(void *object, SceSize size)
 		return 2;
 	message.command = SW_STRM_RELEASE;
 	message.channel = 1;
+	message.size = 0;
 	message.value0 = stream->id;
 	message.value1 = size;
 	ret = dtcpIpIpcRequest(stream->channel, &message);
@@ -394,6 +404,7 @@ int dtcpIpStrmSend(void *object, void **buffer, SceSize *size, int timeout)
 	for (;;) {
 		message.command = SW_STRM_SEND;
 		message.channel = 2;
+		message.size = 0;
 		message.value0 = stream->id;
 		ret = dtcpIpIpcRequest(stream->channel, &message);
 		if (ret != 0)
@@ -438,6 +449,7 @@ int dtcpIpStrmSendMessage(void *object, int messageValue)
 		return 2;
 	message.command = SW_STRM_SEND_MESSAGE;
 	message.channel = 2;
+	message.size = 0;
 	message.value0 = stream->id;
 	message.value1 = messageValue;
 	ret = dtcpIpIpcRequest(stream->channel, &message);
@@ -460,6 +472,7 @@ int dtcpIpStrmAbort(void *object)
 	for (;;) {
 		message.command = SW_STRM_ABORT;
 		message.channel = 2;
+		message.size = 0;
 		message.value0 = stream->id;
 		ret = dtcpIpIpcRequest(stream->channel, &message);
 		if (ret != 0)
@@ -488,6 +501,7 @@ int dtcpIpStrmIsStreamOpen(void *object)
 		return 2;
 	message.command = SW_STRM_IS_OPEN;
 	message.channel = 3;
+	message.size = 0;
 	message.value0 = stream->id;
 	ret = dtcpIpIpcRequest(stream->channel, &message);
 	if (ret != 0 || (ret = message.result) != 0) {

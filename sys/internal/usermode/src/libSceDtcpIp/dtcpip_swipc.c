@@ -259,6 +259,7 @@ int dtcpIpIpcClose(int connection)
 		return 2;
 	message.command = SCE_DTCP_IP_IPC_DISCONNECT;
 	message.channel = 0;
+	message.size = 0;
 	ret = dtcpIpIpcRequest(object->stream, &message);
 	if (ret == 0 || ret == SCE_DTCP_IP_IPC_STATUS_LATER || ret == SCE_DTCP_IP_IPC_STATUS_BUSY) {
 		if (ret == 0) {
@@ -288,6 +289,7 @@ int dtcpIpIpcDestroy(int connection)
 		return 2;
 	message.command = SCE_DTCP_IP_IPC_DESTROY;
 	message.channel = 0;
+	message.size = 0;
 	if (dtcpIpIpcRequest(object->stream, &message) != 0 || message.result != 0)
 		return dtcpIpMapIpcStatus(0);
 	return 0;
@@ -307,6 +309,7 @@ int dtcpIpIpcWaitReady(int connection, int *outStatus)
 		return 2;
 	message.command = SCE_DTCP_IP_IPC_WAIT_READY;
 	message.channel = 0;
+	message.size = 0;
 	ret = dtcpIpIpcRequest(object->stream, &message);
 	if (ret != 0)
 		return dtcpIpMapIpcStatus(ret);
@@ -378,10 +381,12 @@ int dtcpIpIpcGetSessionStatus(void *connection, int *outStatus)
 		return 2;
 	message.command = SCE_DTCP_IP_IPC_GET_SESSION;
 	message.channel = 0;
+	message.size = 0;
 	if (dtcpIpIpcRequest(object->stream, &message) == 0 && message.result == 0) {
 		for (;;) {
 			message.command = SCE_DTCP_IP_IPC_GET_SESSION_RESULT;
 			message.channel = 0;
+			message.size = 0;
 			if (dtcpIpIpcRequest(object->stream, &message) != 0)
 				break;
 			if (message.result == 0) {
@@ -410,6 +415,7 @@ int dtcpIpIpcCloseSession(void *connection)
 		return 2;
 	message.command = SCE_DTCP_IP_IPC_CLOSE_SESSION;
 	message.channel = 0;
+	message.size = 0;
 	ret = dtcpIpIpcRequest(object->stream, &message);
 	if (ret != 0)
 		return dtcpIpMapIpcStatus(ret);
@@ -428,6 +434,7 @@ int dtcpIpIpcOpenSession(void *connection)
 		return 2;
 	message.command = SCE_DTCP_IP_IPC_OPEN_SESSION;
 	message.channel = 0;
+	message.size = 0;
 	if (dtcpIpIpcRequest(object->stream, &message) != 0 || message.result != 0)
 		return dtcpIpMapIpcStatus(0);
 	return 0;
