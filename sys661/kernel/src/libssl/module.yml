@@ -1,0 +1,277 @@
+name: sceSsl_Module
+attributes: 0x0006
+version: [2, 1]
+sdk_version: 0x06060110
+stub_order: [Kernel_Library, SysMemUserForUser, ThreadManForUser, UtilsForUser, sceNetInet, sceNet_lib, sceRtc]
+exports:
+  - name: syslib
+    version: [0, 0]
+    attributes: 0x8000
+    variables:
+      - module_info: 0xf01d73a7
+      - module_sdk_version: 0x11b97506
+  - name: sceSsl
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 1
+    functions:
+      - sceSslGetNameEntryCount: 0x058d21c0
+      - sceSslGetUsedMemoryCurrent: 0x0eb43b06
+      - sceSslGetNotBefore: 0x17a10dcc
+      - sceSslEnd: 0x191cdeff
+      - sceSslGetIssuerName: 0x1b7c8191
+      - sceSslGetSubjectName: 0x3dd5e023
+      - sceSslGetNotAfter: 0x5bfb6b61
+      - sceSslInit: 0x957ecbe2
+      - sceSslGetUsedMemoryMax: 0xb99ede6a
+      - sceSslGetSerialNumber: 0xcc0919b0
+      - sceSslGetNameEntryInfo: 0xd6d097b4
+      - sceSslGetKeyUsage: 0xf57765d3
+  - name: sceSsl_lib
+    version: [0, 17]
+    attributes: 0x0001
+    len: 5
+    pad: 1
+    extra_words: [0x00040000]
+    bucket_words: [0x00010000, 0x000a0006, 0x000f000c, 0x0012000f, 0x00160015, 0x00190017, 0x001c001b, 0x00200020, 0x00250022, 0x002b0027, 0x002f002d, 0x00370034, 0x003c0039, 0x00440040, 0x004a0046, 0x004e004c, 0x0051004f, 0x00590055, 0x0062005a, 0x00670065, 0x006e006b, 0x00760070, 0x007c0079, 0x0083007f, 0x008b0088, 0x008f008c, 0x00930092, 0x00990097, 0x009d009a, 0x00a300a1, 0x00a900a9, 0x00ab00a9]
+    functions:
+      - sceSsl_lib_0217E73C: 0x0217e73c
+      - sceSsl_lib_047AB6BB: 0x047ab6bb
+      - sceSsl_lib_04E677AF: 0x04e677af
+      - sceSsl_lib_05E019A4: 0x05e019a4
+      - sceSsl_lib_064F5DF3: 0x064f5df3
+      - sceSsl_lib_067173A8: 0x067173a8
+      - sceSsl_lib_0861D934: 0x0861d934
+      - sceSsl_lib_089FF1F1: 0x089ff1f1
+      - sceSsl_lib_09C45275: 0x09c45275
+      - sceSsl_lib_0A241EDE: 0x0a241ede
+      - sceSsl_lib_0FD2F220: 0x0fd2f220
+      - sceSsl_lib_0FF7BA68: 0x0ff7ba68
+      - sceSsl_lib_101D418A: 0x101d418a
+      - sceSsl_lib_104F749D: 0x104f749d
+      - sceSsl_lib_12C7718F: 0x12c7718f
+      - sceSsl_lib_19A0DB42: 0x19a0db42
+      - sceSsl_lib_1B93AD27: 0x1b93ad27
+      - sceSsl_lib_1BCA32E3: 0x1bca32e3
+      - sceSsl_lib_1C2728A5: 0x1c2728a5
+      - sceSsl_lib_1E257243: 0x1e257243
+      - sceSsl_lib_1EC64594: 0x1ec64594
+      - sceSsl_lib_21F2A35C: 0x21f2a35c
+      - sceSsl_lib_26A7CF72: 0x26a7cf72
+      - sceSsl_lib_28B4DE33: 0x28b4de33
+      - sceSsl_lib_2B7BD166: 0x2b7bd166
+      - sceSsl_lib_2E2E2B09: 0x2e2e2b09
+      - sceSsl_lib_2FE7BB42: 0x2fe7bb42
+      - sceSsl_lib_338C8FDD: 0x338c8fdd
+      - sceSsl_lib_340F8829: 0x340f8829
+      - sceSsl_lib_341843AB: 0x341843ab
+      - sceSsl_lib_3454E622: 0x3454e622
+      - sceSsl_lib_37C7B76C: 0x37c7b76c
+      - sceSsl_lib_3E040FD4: 0x3e040fd4
+      - sceSsl_lib_3E3133D6: 0x3e3133d6
+      - sceSsl_lib_4214B7AF: 0x4214b7af
+      - sceSsl_lib_42DF4592: 0x42df4592
+      - sceSsl_lib_42FFA860: 0x42ffa860
+      - sceSsl_lib_45514AE3: 0x45514ae3
+      - sceSsl_lib_47F7B97F: 0x47f7b97f
+      - sceSsl_lib_4A6078CF: 0x4a6078cf
+      - sceSsl_lib_4AE72675: 0x4ae72675
+      - sceSsl_lib_4AF959E3: 0x4af959e3
+      - sceSsl_lib_4BE9030A: 0x4be9030a
+      - sceSsl_lib_4C75B8E9: 0x4c75b8e9
+      - sceSsl_lib_4E0F2CCC: 0x4e0f2ccc
+      - sceSsl_lib_5040E836: 0x5040e836
+      - sceSsl_lib_529A9477: 0x529a9477
+      - sceSsl_lib_54A7D8F3: 0x54a7d8f3
+      - sceSsl_lib_558CAA41: 0x558caa41
+      - sceSsl_lib_5605C9FE: 0x5605c9fe
+      - sceSsl_lib_56E19CEB: 0x56e19ceb
+      - sceSsl_lib_57F2E960: 0x57f2e960
+      - sceSsl_lib_58352068: 0x58352068
+      - sceSsl_lib_588F2FE8: 0x588f2fe8
+      - sceSsl_lib_5AD14F0B: 0x5ad14f0b
+      - sceSsl_lib_5DED429A: 0x5ded429a
+      - sceSsl_lib_5E5C873A: 0x5e5c873a
+      - sceSsl_lib_6038DEDE: 0x6038dede
+      - sceSsl_lib_6053B79C: 0x6053b79c
+      - sceSsl_lib_624CB314: 0x624cb314
+      - sceSsl_lib_6443D0EE: 0x6443d0ee
+      - sceSsl_lib_64AA4ED6: 0x64aa4ed6
+      - sceSsl_lib_665D02F6: 0x665d02f6
+      - sceSsl_lib_675AC5AA: 0x675ac5aa
+      - sceSsl_lib_69105335: 0x69105335
+      - sceSsl_lib_69F1B678: 0x69f1b678
+      - sceSsl_lib_6A19E0AA: 0x6a19e0aa
+      - sceSsl_lib_6BA650E4: 0x6ba650e4
+      - sceSsl_lib_6CDEB823: 0x6cdeb823
+      - sceSsl_lib_6E1E9E0D: 0x6e1e9e0d
+      - sceSsl_lib_72D77445: 0x72d77445
+      - sceSsl_lib_7317C1BC: 0x7317c1bc
+      - sceSsl_lib_732F4E44: 0x732f4e44
+      - sceSsl_lib_737BED1C: 0x737bed1c
+      - sceSsl_lib_76A46EDA: 0x76a46eda
+      - sceSsl_lib_7781A781: 0x7781a781
+      - sceSsl_lib_795B9EDF: 0x795b9edf
+      - sceSsl_lib_7BDAF864: 0x7bdaf864
+      - sceSsl_lib_7D0E41F4: 0x7d0e41f4
+      - sceSsl_lib_80608663: 0x80608663
+      - sceSsl_lib_8390B321: 0x8390b321
+      - sceSsl_lib_84833472: 0x84833472
+      - sceSsl_lib_868C15DF: 0x868c15df
+      - sceSsl_lib_86D0771E: 0x86d0771e
+      - sceSsl_lib_86D4034D: 0x86d4034d
+      - sceSsl_lib_88897D26: 0x88897d26
+      - sceSsl_lib_88A96ED0: 0x88a96ed0
+      - sceSsl_lib_8A2F6963: 0x8a2f6963
+      - sceSsl_lib_8B78A6C0: 0x8b78a6c0
+      - sceSsl_lib_8D484361: 0x8d484361
+      - sceSsl_lib_9052D21A: 0x9052d21a
+      - sceSsl_lib_909E9D31: 0x909e9d31
+      - sceSsl_lib_90BCFCE2: 0x90bcfce2
+      - sceSsl_lib_9266C0D5: 0x9266c0d5
+      - sceSsl_lib_9274BFE3: 0x9274bfe3
+      - sceSsl_lib_9299C6CE: 0x9299c6ce
+      - sceSsl_lib_92FA8B34: 0x92fa8b34
+      - sceSsl_lib_9307DE23: 0x9307de23
+      - sceSsl_lib_9566709F: 0x9566709f
+      - sceSsl_lib_959557F5: 0x959557f5
+      - sceSsl_lib_95E346AB: 0x95e346ab
+      - sceSsl_lib_999D7614: 0x999d7614
+      - sceSsl_lib_9A789D37: 0x9a789d37
+      - sceSsl_lib_9CB1A62F: 0x9cb1a62f
+      - sceSsl_lib_9CDCA0D7: 0x9cdca0d7
+      - sceSsl_lib_9D8A385E: 0x9d8a385e
+      - sceSsl_lib_9EF66756: 0x9ef66756
+      - sceSsl_lib_A1C3AB31: 0xa1c3ab31
+      - sceSsl_lib_A2619268: 0xa2619268
+      - sceSsl_lib_A2CE8DCD: 0xa2ce8dcd
+      - sceSsl_lib_A739BFD9: 0xa739bfd9
+      - sceSsl_lib_A7BED83B: 0xa7bed83b
+      - sceSsl_lib_A87C65C7: 0xa87c65c7
+      - sceSsl_lib_A8F0AD39: 0xa8f0ad39
+      - sceSsl_lib_A9191C17: 0xa9191c17
+      - sceSsl_lib_A920B39E: 0xa920b39e
+      - sceSsl_lib_AA3B27CF: 0xaa3b27cf
+      - sceSsl_lib_ABCD28B8: 0xabcd28b8
+      - sceSsl_lib_AE3986D3: 0xae3986d3
+      - sceSsl_lib_AEBF278B: 0xaebf278b
+      - sceSsl_lib_AFD1D124: 0xafd1d124
+      - sceSsl_lib_B0B90785: 0xb0b90785
+      - sceSsl_lib_B1E75EA9: 0xb1e75ea9
+      - sceSsl_lib_B3B04C58: 0xb3b04c58
+      - sceSsl_lib_B40D11EA: 0xb40d11ea
+      - sceSsl_lib_B4D78E98: 0xb4d78e98
+      - sceSsl_lib_B7CA8717: 0xb7ca8717
+      - sceSsl_lib_B81AD643: 0xb81ad643
+      - sceSsl_lib_B87FFE37: 0xb87ffe37
+      - sceSsl_lib_B9C8CCE6: 0xb9c8cce6
+      - sceSsl_lib_BB1564A3: 0xbb1564a3
+      - sceSsl_lib_BDAD0841: 0xbdad0841
+      - sceSsl_lib_BE423CD1: 0xbe423cd1
+      - sceSsl_lib_BE4A711C: 0xbe4a711c
+      - sceSsl_lib_BE5FF9F1: 0xbe5ff9f1
+      - sceSsl_lib_BF55C31C: 0xbf55c31c
+      - sceSsl_lib_C0ABBB57: 0xc0abbb57
+      - sceSsl_lib_C1A2E14B: 0xc1a2e14b
+      - sceSsl_lib_C270B3A8: 0xc270b3a8
+      - sceSsl_lib_C6ED5C87: 0xc6ed5c87
+      - sceSsl_lib_C85F6FCE: 0xc85f6fce
+      - sceSsl_lib_C97D0510: 0xc97d0510
+      - sceSsl_lib_CA6A3C74: 0xca6a3c74
+      - sceSsl_lib_CED07EAE: 0xced07eae
+      - sceSsl_lib_CF78BEFB: 0xcf78befb
+      - sceSsl_lib_CFA2F8EB: 0xcfa2f8eb
+      - sceSsl_lib_D1205C58: 0xd1205c58
+      - sceSsl_lib_D49A570C: 0xd49a570c
+      - sceSsl_lib_D53ACF30: 0xd53acf30
+      - sceSsl_lib_D579CE04: 0xd579ce04
+      - sceSsl_lib_D5ABC603: 0xd5abc603
+      - sceSsl_lib_D84E2411: 0xd84e2411
+      - sceSsl_lib_D8C05497: 0xd8c05497
+      - sceSsl_lib_DEA6EDB2: 0xdea6edb2
+      - sceSsl_lib_E11361C2: 0xe11361c2
+      - sceSsl_lib_E14101E4: 0xe14101e4
+      - sceSsl_lib_E3C30923: 0xe3c30923
+      - sceSsl_lib_E5FC4992: 0xe5fc4992
+      - sceSsl_lib_E78AD94D: 0xe78ad94d
+      - sceSsl_lib_E7BFC0EF: 0xe7bfc0ef
+      - sceSsl_lib_E7C29542: 0xe7c29542
+      - sceSsl_lib_E92302C5: 0xe92302c5
+      - sceSsl_lib_EBFB0E3C: 0xebfb0e3c
+      - sceSsl_lib_EC4A18D7: 0xec4a18d7
+      - sceSsl_lib_ECE07B61: 0xece07b61
+      - sceSsl_lib_ED95A457: 0xed95a457
+      - sceSsl_lib_EDBE00D6: 0xedbe00d6
+      - sceSsl_lib_EE624680: 0xee624680
+      - sceSsl_lib_EF5A4BD4: 0xef5a4bd4
+      - sceSsl_lib_FAF333D1: 0xfaf333d1
+      - sceSsl_lib_FB8273FE: 0xfb8273fe
+imports:
+  - name: sceNet_lib
+    version: [0, 17]
+    attributes: 0x0009
+    pad: 5
+    functions:
+      - sceNet_lib_4753D878: 0x4753d878
+      - sceNet_lib_5705F6F9: 0x5705f6f9
+      - sceNet_lib_80C9F02A: 0x80c9f02a
+      - sceNet_lib_8687B5AB: 0x8687b5ab
+      - sceNet_lib_94DCA9F0: 0x94dca9f0
+      - sceNet_lib_A0F16ABD: 0xa0f16abd
+      - sceNet_lib_B5CE388A: 0xb5ce388a
+      - sceNet_lib_D8722983: 0xd8722983
+      - sceNet_lib_E0A81C7C: 0xe0a81c7c
+  - name: Kernel_Library
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 5
+    functions:
+      - sceKernelMemset: 0xa089eca4
+      - sceKernelLockLwMutex: 0xbea46419
+      - _sceKernelCheckThreadStack: 0xd13bde95
+      - sceKernelUnlockLwMutex: 0x15b6446b
+      - sceKernelMemcpy: 0x1839852a
+  - name: ThreadManForUser
+    version: [0, 17]
+    attributes: 0x4001
+    pad: 7
+    functions:
+      - sceKernelCreateFpl: 0xc07bb470
+      - sceKernelDeleteFpl: 0xed1410e0
+      - sceKernelFreeFpl: 0xf6414a71
+      - sceKernelDeleteLwMutex: 0x60107536
+      - sceKernelTryAllocateFpl: 0x623ae665
+      - sceKernelCreateLwMutex: 0x19cff145
+  - name: UtilsForUser
+    version: [0, 17]
+    attributes: 0x4001
+    pad: 7
+    functions:
+      - sceKernelUtilsSha1BlockResult: 0x585f1c09
+      - sceKernelUtilsMd5BlockUpdate: 0x61e1e525
+      - sceKernelUtilsMd5BlockInit: 0x9e5c5086
+      - sceKernelUtilsMd5BlockResult: 0xb8d24e78
+      - sceKernelUtilsMd5Digest: 0xc8186a58
+      - sceKernelUtilsSha1BlockInit: 0xf8fcd5ba
+      - sceKernelUtilsSha1BlockUpdate: 0x346f6da8
+  - name: sceRtc
+    version: [0, 17]
+    attributes: 0x4001
+    pad: 5
+    functions:
+      - sceRtcGetCurrentClock: 0x4cfa57b0
+      - sceRtcGetTime64_t: 0xe1c93e47
+  - name: sceNetInet
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 5
+    functions:
+      - sceNetInetShutdown: 0x4cfe4e56
+      - sceNetInetSend: 0x7aa671bc
+      - sceNetInetRecv: 0xcda85c99
+  - name: SysMemUserForUser
+    version: [0, 17]
+    attributes: 0x4000
+    pad: 2
+    functions:
+      - sceKernelQueryMemoryInfo: 0x2a3e5280
