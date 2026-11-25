@@ -317,6 +317,21 @@ psp2_module(vs0_vsh_shell_shell KIND user COMPILER snc PARTIAL SOURCES
 	src/liblocation/src/location_service/wmm_geomag.cpp
 	src/liblocation/src/location_service/location_perm_svc.cpp
 	src/liblocation/src/location_service/location_perm_server.cpp
+	src/livearea_plugin/src/livearea_plugin.cpp
+	src/livearea_plugin/src/livearea_interface.cpp
+	src/livearea_plugin/src/livearea_cron.cpp
+	src/livearea_plugin/src/livearea_cache.cpp
+	src/livearea_plugin/src/livearea_mgr.cpp
+	src/livearea_plugin/src/livearea_page.cpp
+	src/livearea_plugin/src/livearea_feed.cpp
+	src/livearea_plugin/src/livearea_status_job.cpp
+	src/livearea_plugin/src/livearea_status_dlg.cpp
+	src/livearea_plugin/src/livearea_more_ctrl.cpp
+	src/livearea_plugin/src/livearea_visualizer.cpp
+	src/livearea_plugin/src/livearea_updater_wrap.cpp
+	src/livearea_plugin/src/livearea_updater.cpp
+	src/livearea_plugin/src/livearea_daily_task.cpp
+	src/livearea_plugin/src/livearea_reset_job.cpp
 	shell.c
 )
 target_include_directories(vs0_vsh_shell_shell PRIVATE "${PSP2_SRC}/vsh/paf/include"
