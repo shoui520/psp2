@@ -1,5 +1,6 @@
 # 3.630.011-DEBUGGER: vs0:sys/external/libcdlg_calendar_review.suprx (generated)
 set(MODULE_NID 0x46F3B88E)
+set(MODULE_AUTH_ID 0x28000000000280AA)
 set(MODULE_ATTR 0)
 set(MODULE_EXPORTS exports.yml)
 set(MODULE_SDK_VERSION 0x03630011)
