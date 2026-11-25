@@ -11,6 +11,66 @@
 /* what a failed signal wait reports (22: the object's own error status) */
 #define SWMW_SIGNAL_ERROR	22
 
+/* create the lwmutex the gate and the events lock (0x8100c200) */
+extern "C" int SwMwMutexCreate(SceKernelLwMutexWork *mutex)
+{
+	int result;
+
+	result = sceKernelCreateLwMutex(mutex, "sce_sws_mutex", 0x2000, 0, NULL);
+	if (result >= 0)
+		return 0;
+	return result;
+}
+
+/* delete a signal's lwmutex (0x8100c4b6) */
+extern "C" int SwMwMutexDelete(SceKernelLwMutexWork *mutex)
+{
+	return sceKernelDeleteLwMutex(mutex);
+}
+
+/* create a signal: its flag, the condition variable and its mutex (0x8100c2f0) */
+extern "C" int SwMwEventCreate(struct SwMwSignal *signal)
+{
+	signal->signalled = 0;
+	if (sceKernelCreateLwMutex(&signal->mutex, "sce_sws_event_mutex", 0x2000, 0, NULL) < 0)
+		return 11;
+	if (sceKernelCreateLwCond(&signal->cond, "sce_sws_event_cond", 0x2000, &signal->mutex,
+				  NULL) >= 0)
+		return 0;
+	sceKernelDeleteLwMutex(&signal->mutex);
+	return 11;
+}
+
+/* delete a signal's condition variable and mutex (0x8100c4d0) */
+extern "C" int SwMwEventDelete(struct SwMwSignal *signal)
+{
+	sceKernelDeleteLwCond(&signal->cond);
+	sceKernelDeleteLwMutex(&signal->mutex);
+	return 0;
+}
+
+/* set up the gate: its counters and the two sides' signals (0x8107b79c) */
+extern "C" int SwMwGateInit(struct SwMwGate *gate)
+{
+	gate->sharedCount = 0;
+	gate->sharedWaiters = 0;
+	gate->exclusiveCount = 0;
+	gate->exclusiveWaiters = 0;
+	SwMwMutexCreate(&gate->mutex);
+	SwMwEventCreate(&gate->sharedSignal);
+	SwMwEventCreate(&gate->exclusiveSignal);
+	return 0;
+}
+
+/* tear the gate down (0x8107b7ec) */
+extern "C" int SwMwGateDone(struct SwMwGate *gate)
+{
+	SwMwEventDelete(&gate->exclusiveSignal);
+	SwMwEventDelete(&gate->sharedSignal);
+	SwMwMutexDelete(&gate->mutex);
+	return 0;
+}
+
 extern "C" int SwMwMutexLock(SceKernelLwMutexWork *mutex)
 {
 	return sceKernelLockLwMutex(mutex, 1, NULL);

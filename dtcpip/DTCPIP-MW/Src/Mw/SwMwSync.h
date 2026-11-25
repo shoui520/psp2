@@ -29,6 +29,12 @@ struct SwMwGate {
 };
 
 extern "C" {
+int SwMwMutexCreate(SceKernelLwMutexWork *mutex);
+int SwMwMutexDelete(SceKernelLwMutexWork *mutex);
+int SwMwEventCreate(struct SwMwSignal *signal);
+int SwMwEventDelete(struct SwMwSignal *signal);
+int SwMwGateInit(struct SwMwGate *gate);
+int SwMwGateDone(struct SwMwGate *gate);
 int SwMwMutexLock(SceKernelLwMutexWork *mutex);
 int SwMwMutexUnlock(SceKernelLwMutexWork *mutex);
 int SwMwSignalWait(struct SwMwSignal *signal);

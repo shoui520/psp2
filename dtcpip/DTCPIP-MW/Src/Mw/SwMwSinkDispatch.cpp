@@ -11,6 +11,7 @@
 #include <scetypes.h>
 #include "../Comm/vita/SwMwCommServer.h"
 #include "SwMwSync.h"
+#include "SwMwSinkStream.h"
 
 #define SWMW_SINK_SOURCE	"C:\\work\\svn\\psp2\\dtcpip\\trunk.365\\DTCPIP-MW\\Src\\Mw\\SwMwSinkDispatch.cpp"
 
@@ -24,21 +25,6 @@ int SwMwSinkDestroy(void *sink);
 int SwMwSinkSetUri(void *sink, void *uri, int size);
 int SwMwSinkGetUriResult(void *sink, int timeout);
 
-/* the sink's stream object (SwMwSinkStream.cpp) */
-struct SwMwGate *SwMwSinkStreamGate(void *stream);
-int SwMwSinkStreamCreate(int *stream, void *sink, const int *window);
-int SwMwSinkStreamDestroy(void *stream);
-int SwMwSinkStreamConnect(void *stream);
-int SwMwSinkStreamGetInfo(void *stream, void *info);
-int SwMwSinkStreamSetParameter(void *stream, int parameter);
-int SwMwSinkStreamPoll(void *stream);
-int SwMwSinkStreamReceive(void *stream, int *offset, int *size, unsigned char *type);
-int SwMwSinkStreamRelease(void *stream, int size);
-int SwMwSinkStreamSend(void *stream, int *offset, int *size);
-int SwMwSinkStreamSendMessage(void *stream, int message);
-int SwMwSinkStreamAbort(void *stream);
-int SwMwSinkStreamIsOpen(void *stream);
-void SwMwSinkStreamGetWindow(void *stream, int *window);
 }
 
 /* the information block's first 16 bytes, copied whole */
@@ -53,16 +39,6 @@ struct SwMwSinkStreamInfo {
 	unsigned char third[16];	/* 0x20 */
 	int value0;			/* 0x30 */
 	int value1;			/* 0x34 */
-};
-
-/* the stream's shared-memory windows, as the middleware holds them */
-struct SwMwSinkStreamWindow {
-	unsigned char *receiveBase;	/* 0x00: the receive window's base */
-	int sendSize;			/* 0x04 */
-	unsigned char *sendBase;	/* 0x08: the shared memory's base */
-	int receiveSize;		/* 0x0C */
-	int reserved;			/* 0x10: the library's config[3] */
-	int blockSize;			/* 0x14 */
 };
 
 /* answer a sink request with a status and no payload (0x8100cf4c) */
@@ -92,7 +68,7 @@ extern "C" int SwMwSinkStreamDecodeHandle(int handle, int *stream)
 /* the stream gate's shared side, taken for a stream command (0x8107b964/0x8107b984) */
 extern "C" struct SwMwGate **SwMwSinkStreamLock(struct SwMwGate **held, void *stream)
 {
-	held[0] = SwMwSinkStreamGate(stream);
+	held[0] = SwMwSinkStreamGate((struct SwMwSinkStream *)stream);
 	SwMwGateSharedLock(held[0]);
 	return held;
 }
@@ -106,7 +82,7 @@ extern "C" struct SwMwGate **SwMwSinkStreamUnlock(struct SwMwGate **held)
 /* the stream gate's exclusive side, taken for the periodic connect (0x8107b998/0x8107b9b8) */
 extern "C" struct SwMwGate **SwMwSinkConnectLock(struct SwMwGate **held, void *stream)
 {
-	held[0] = SwMwSinkStreamGate(stream);
+	held[0] = SwMwSinkStreamGate((struct SwMwSinkStream *)stream);
 	SwMwGateExclusiveLock(held[0]);
 	return held;
 }
@@ -339,7 +315,7 @@ extern "C" int SwMwSinkOpenStreamCommand(struct SwMwCommChannel *channel,
 	int *values;
 	int sink;
 	int stream;
-	int window[6];
+	struct SwMwStreamWindow window;
 	struct SwMwCommRequestView view;
 	struct SwMwManagerContextBlock context;
 	int failed;
@@ -364,13 +340,13 @@ extern "C" int SwMwSinkOpenStreamCommand(struct SwMwCommChannel *channel,
 				  SWMW_SINK_SOURCE, 386);
 		} else if (request->size != 0) {
 			payload = (int *)request->payload;
-			window[2] = view.value[1];
-			window[3] = payload[1];
-			window[0] = view.value[1] + payload[1];
-			window[1] = payload[2];
-			window[4] = payload[3];
-			window[5] = payload[4];
-			status = SwMwSinkStreamCreate(&stream, (void *)sink, window);
+			window.sendBase = (unsigned char *)view.value[1];
+			window.receiveSize = payload[1];
+			window.receiveBase = (unsigned char *)(view.value[1] + payload[1]);
+			window.sendSize = payload[2];
+			window.reserved = payload[3];
+			window.blockSize = payload[4];
+			status = SwMwSinkStreamCreate((struct SwMwSinkStream **)&stream, (void *)sink, &window);
 			if (status != 0) {
 				swMwTrace("[SWMW] Error %d in %s:%d\n", status,
 					  SWMW_SINK_SOURCE, 406);
@@ -428,7 +404,7 @@ extern "C" int SwMwSinkCloseStreamCommand(struct SwMwCommChannel *channel,
 			swMwTrace("[SWMW] Error %d in %s:%d\n", 12003,
 				  SWMW_SINK_SOURCE, 441);
 		} else {
-			status = SwMwSinkStreamDestroy((void *)stream);
+			status = SwMwSinkStreamDestroy((struct SwMwSinkStream *)stream);
 				if (status != 0) {
 					swMwTrace("[SWMW] Error %d in %s:%d\n", status,
 						  SWMW_SINK_SOURCE, 446);
@@ -485,7 +461,7 @@ extern "C" int SwMwSinkGetInfoCommand(struct SwMwCommChannel *channel,
 			memcpy(info.third, payload + 8, 16);
 			memcpy(info.second, payload + 4, 16);
 			info.value1 = payload[13];
-			status = SwMwSinkStreamGetInfo((void *)stream, &info);
+			status = SwMwSinkStreamGetInfo((struct SwMwSinkStream *)stream, &info);
 				if (status != 0) {
 					swMwTrace("[SWMW] Error %d in %s:%d\n", status,
 						  SWMW_SINK_SOURCE, 500);
@@ -533,7 +509,7 @@ extern "C" int SwMwSinkSetParameterCommand(struct SwMwCommChannel *channel,
 			swMwTrace("[SWMW] Error %d in %s:%d\n", 12003,
 				  SWMW_SINK_SOURCE, 526);
 		} else {
-			status = SwMwSinkStreamSetParameter((void *)stream, request->value1);
+			status = SwMwSinkStreamSetParameter((struct SwMwSinkStream *)stream, request->value1);
 				if (status != 12007 && status != 0) {
 					swMwTrace("[SWMW] Error %d in %s:%d\n", status,
 						  SWMW_SINK_SOURCE, 531);
@@ -577,7 +553,7 @@ extern "C" int SwMwSinkPollCommand(struct SwMwCommChannel *channel,
 			swMwTrace("[SWMW] Error %d in %s:%d\n", 12003,
 				  SWMW_SINK_SOURCE, 557);
 		} else {
-			status = SwMwSinkStreamPoll((void *)stream);
+			status = SwMwSinkStreamPoll((struct SwMwSinkStream *)stream);
 				if (status != 12007 && status != 0) {
 					swMwTrace("[SWMW] Error %d in %s:%d\n", status,
 						  SWMW_SINK_SOURCE, 562);
@@ -625,13 +601,13 @@ extern "C" int SwMwSinkReceiveCommand(struct SwMwCommChannel *channel,
 			swMwTrace("[SWMW] Error %d in %s:%d\n", 12003,
 				  SWMW_SINK_SOURCE, 592);
 		} else {
-			status = SwMwSinkStreamReceive((void *)stream, &offset, &size, &type);
+			status = SwMwSinkStreamReceive((struct SwMwSinkStream *)stream, &offset, &size, &type);
 				if (status != 12007 && status != 12401 && status != 0) {
 					swMwTrace("[SWMW] Error %d in %s:%d\n", status,
 						  SWMW_SINK_SOURCE, 597);
 					failed = 1;
 				}
-			SwMwSinkStreamGetWindow((void *)stream, window);
+			SwMwSinkStreamGetWindow((struct SwMwSinkStream *)stream, window);
 			request->result = status;
 			request->outSize = 0;
 			request->outPayload = NULL;
@@ -673,7 +649,7 @@ extern "C" int SwMwSinkReleaseCommand(struct SwMwCommChannel *channel,
 			swMwTrace("[SWMW] Error %d in %s:%d\n", 12003,
 				  SWMW_SINK_SOURCE, 629);
 		} else {
-			status = SwMwSinkStreamRelease((void *)stream, request->value1);
+			status = SwMwSinkStreamRelease((struct SwMwSinkStream *)stream, request->value1);
 				if (status != 0) {
 					swMwTrace("[SWMW] Error %d in %s:%d\n", status,
 						  SWMW_SINK_SOURCE, 634);
@@ -720,13 +696,13 @@ extern "C" int SwMwSinkSendCommand(struct SwMwCommChannel *channel,
 			swMwTrace("[SWMW] Error %d in %s:%d\n", 12003,
 				  SWMW_SINK_SOURCE, 664);
 		} else {
-			status = SwMwSinkStreamSend((void *)stream, &offset, &size);
+			status = SwMwSinkStreamSend((struct SwMwSinkStream *)stream, &offset, &size);
 				if (status != 12007 && status != 0) {
 					swMwTrace("[SWMW] Error %d in %s:%d\n", status,
 						  SWMW_SINK_SOURCE, 669);
 					failed = 1;
 				}
-			SwMwSinkStreamGetWindow((void *)stream, window);
+			SwMwSinkStreamGetWindow((struct SwMwSinkStream *)stream, window);
 			request->result = status;
 			request->outSize = 0;
 			request->outPayload = NULL;
@@ -767,7 +743,7 @@ extern "C" int SwMwSinkSendMessageCommand(struct SwMwCommChannel *channel,
 			swMwTrace("[SWMW] Error %d in %s:%d\n", 12003,
 				  SWMW_SINK_SOURCE, 700);
 		} else {
-			status = SwMwSinkStreamSendMessage((void *)stream, request->value1);
+			status = SwMwSinkStreamSendMessage((struct SwMwSinkStream *)stream, request->value1);
 				if (status != 12015 && status != 0) {
 					swMwTrace("[SWMW] Error %d in %s:%d\n", status,
 						  SWMW_SINK_SOURCE, 705);
@@ -811,7 +787,7 @@ extern "C" int SwMwSinkAbortCommand(struct SwMwCommChannel *channel,
 			swMwTrace("[SWMW] Error %d in %s:%d\n", 12003,
 				  SWMW_SINK_SOURCE, 731);
 		} else {
-			status = SwMwSinkStreamAbort((void *)stream);
+			status = SwMwSinkStreamAbort((struct SwMwSinkStream *)stream);
 				if (status != 12007 && status != 0) {
 					swMwTrace("[SWMW] Error %d in %s:%d\n", status,
 						  SWMW_SINK_SOURCE, 736);
@@ -855,7 +831,7 @@ extern "C" int SwMwSinkIsOpenCommand(struct SwMwCommChannel *channel,
 			swMwTrace("[SWMW] Error %d in %s:%d\n", 12003,
 				  SWMW_SINK_SOURCE, 762);
 		} else {
-			status = SwMwSinkStreamIsOpen((void *)stream);
+			status = SwMwSinkStreamIsOpen((struct SwMwSinkStream *)stream);
 				if (status != 0) {
 					swMwTrace("[SWMW] Error %d in %s:%d\n", status,
 						  SWMW_SINK_SOURCE, 767);
@@ -884,7 +860,7 @@ extern "C" int SwMwSinkStreamConnectCommand(struct SwMwCommChannel *channel,
 
 	stream = request->value0;
 	if (stream != 0) {
-		status = SwMwSinkStreamConnect((void *)stream);
+		status = SwMwSinkStreamConnect((struct SwMwSinkStream *)stream);
 		if (status != 0) {
 			swMwTrace("[SWMW] Error %d in %s:%d\n", status, SWMW_SINK_SOURCE, 790);
 			return 1;
