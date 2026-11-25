@@ -53,7 +53,7 @@ static int g_brightness;       /* 0x207c */
 static int g_contrast;         /* 0x2080 */
 static int g_sharpness;        /* 0x2084 */
 static int g_zoom;             /* 0x2088 */
-static int g_val_208c;         /* 0x208c */
+static int g_anti_flicker;     /* 0x208c */
 static int g_reverse_mode;     /* 0x2090 */
 static int g_ev_level;         /* 0x2094 */
 static int g_effect_mode;      /* 0x2098 */
@@ -96,7 +96,7 @@ int module_start(SceSize args, void *argp)
     g_zoom = 0x0a;
     g_ev_level = 8;
     g_sharpness = 0;
-    g_val_208c = 0;
+    g_anti_flicker = 0;
     g_reverse_mode = 0;
     g_effect_mode = 0;
     g_cam_type = sceUsb_driver_B3E9ABCE();
@@ -602,7 +602,7 @@ int sceUsbCamGetZoom(int *out)
 int sceUsbCam_6784E6A8(int val)
 {
     u32 k1 = pspShiftK1();
-    int ret = usbCamSetParam(0x15e, val, &g_val_208c);
+    int ret = usbCamSetParam(0x15e, val, &g_anti_flicker);
     pspSetK1(k1);
     return ret;
 }
@@ -612,7 +612,7 @@ int sceUsbCam_driver_6784E6A8(int val) __attribute__((alias("sceUsbCam_6784E6A8"
 int sceUsbCam_AA7D94BA(int *out)
 {
     u32 k1 = pspShiftK1();
-    int ret = usbCamGetParam(out, g_val_208c);
+    int ret = usbCamGetParam(out, g_anti_flicker);
     pspSetK1(k1);
     return ret;
 }

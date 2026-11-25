@@ -169,15 +169,16 @@ s32 sceKernelDmaSoftRequest(u32 arg0, u32 arg1, u32 arg2, u32 arg3)
 
     if (arg3) {
         if (arg2) {
-            HW(baseaddr + 44) = (1 << arg1);
-        } else {
             HW(baseaddr + 40) = (1 << arg1);
+        } else {
+            HW(baseaddr + 44) = (1 << arg1);
         }
     } else if (arg2) {
-        HW(baseaddr + 32) = (arg2 << arg1);
+        HW(baseaddr + 32) = (1 << arg1);
     } else {
-        HW(baseaddr + 34) = (1 << arg1);
+        HW(baseaddr + 36) = (1 << arg1);
     }
+    pspSync();
 
     return SCE_ERROR_OK;
 }
@@ -306,6 +307,7 @@ int sceKernelDmaOpDeQueue(sceKernelDmaOperation *op)
             g_dmacman.queueHead = op->pNext;
         }
 
+        op->pPrev = NULL;
         op->pNext = NULL;
         op->uiFlag &= ~0x1;
         ret = SCE_ERROR_OK;
@@ -353,7 +355,7 @@ int sceKernelDmaOpSetCallback(sceKernelDmaOperation *op, int (*func)(int, int), 
         return 0x800202CF;
     if (op->uiFlag & 0x1000)
         return 0x800202C3;
-    if (!(op->uiFlag & 0x800))
+    if (!(op->uiFlag & 0x100))
         return 0x800202C1;
     if (op->uiFlag & 0x2)
         return 0x800202C0;
@@ -366,7 +368,7 @@ int sceKernelDmaOpSetCallback(sceKernelDmaOperation *op, int (*func)(int, int), 
 }
 
 //0x808
-s32 sceKernelDmaOpSetupMemcpy(sceKernelDmaOperation *op, s32 arg1, s32 arg2, s32 arg3)
+s32 sceKernelDmaOpSetupMemcpy(sceKernelDmaOperation *op, s32 arg1, s32 arg2, u32 arg3)
 {
     if (!op)
         return 0x800202CF;
@@ -378,13 +380,14 @@ s32 sceKernelDmaOpSetupMemcpy(sceKernelDmaOperation *op, s32 arg1, s32 arg2, s32
         return 0x800202C0;
     if (op->uiFlag & 0x70)
         return 0x800202C4;
-    if (arg3 < 0x1000) {
-        op->uiSrcAddr = arg2;
-        op->uiDestAddr = arg1;
-        op->uiLLI = 0;
-        op->uiControl = arg3 & 0x8C4BF000;
-        op->uiConfiguration |= 0xC001;
-    }
+    if (arg3 >= 0x1000)
+        return 0x800202CE;
+
+    op->uiSrcAddr = arg2;
+    op->uiDestAddr = arg1;
+    op->uiLLI = 0;
+    op->uiControl = arg3 | 0x8C4BF000;
+    op->uiConfiguration |= 0xC001;
 
     return SCE_ERROR_OK;
 }
@@ -423,7 +426,7 @@ int sceKernelDmaOpSetupLink(sceKernelDmaOperation *op, int arg1, u32 *arg2)
     if ((op->uiFlag & 0x1172) != 0x100) {
         if (op->uiFlag & 0x1000)
             return 0x800202C3;
-        if ((op->uiFlag & 0x1172) != 0)
+        if ((op->uiFlag & 0x1172) == 0)
             return 0x800202C1;
         if (op->uiFlag & 0x2)
             return 0x800202C0;
@@ -437,7 +440,7 @@ int sceKernelDmaOpSetupLink(sceKernelDmaOperation *op, int arg1, u32 *arg2)
         tail->Control |= 0x80000000;
         head = KUNCACHED(arg2);
     } else {
-        head = KCACHED((u32)arg2 & 0xFFFFFFF8);
+        head = KCACHED((u32)arg2 & 0xFFFFFFFC);
     }
 
     op->HeadLLI = head;
@@ -453,9 +456,10 @@ int sceKernelDmaOpSetupLink(sceKernelDmaOperation *op, int arg1, u32 *arg2)
 }
 
 //0xA64
-s32 sceKernelDmaOpSync(sceKernelDmaOperation *op, s32 command, u32 *timeout)
+s32 sceKernelDmaOpSync(sceKernelDmaOperation *op, s32 command, u32 timeout)
 {
     s32 err;
+    u32 to;
 
     if (!op)
         return 0x800202CF;
@@ -482,7 +486,8 @@ s32 sceKernelDmaOpSync(sceKernelDmaOperation *op, s32 command, u32 *timeout)
         return sceKernelWaitEventFlag(g_dmacman.evFlagId, op->evpat, 33, NULL, NULL) ?
             SCE_ERROR_KERNEL_ERROR : SCE_ERROR_OK;
     case 2:
-        err = sceKernelWaitEventFlag(g_dmacman.evFlagId, op->evpat, 33, NULL, timeout);
+        to = timeout;
+        err = sceKernelWaitEventFlag(g_dmacman.evFlagId, op->evpat, 33, NULL, &to);
         if (err == SCE_ERROR_OK)
             return SCE_ERROR_OK;
         if (err == SCE_ERROR_KERNEL_WAIT_TIMEOUT) {
@@ -500,12 +505,12 @@ static void abortDmaChannel(sceKernelDmaOperation *op)
 {
     s32 ch = op->dmaCh;
     s32 chOff = (ch & 7) << 5;
-    u32 base = (ch >> 3 == 0) ? 0xBCA00000 : 0xBC900000;
+    u32 base = (ch >> 3) ? 0xBCA00000 : 0xBC900000;
     u32 address = chOff + base + 0x100;
 
-    HW(address) &= ~0x1;
+    HW(address + 16) &= ~0x1;
 
-    while (HW(address) & 0x1);
+    while (HW(address + 16) & 0x1);
 
     op->uiFlag = 0x20;
     op->dmaCh = -1;
@@ -542,7 +547,7 @@ int sceKernelDmaOpQuit(sceKernelDmaOperation *op)
     else
         abortDmaChannel(op);
 
-    sceKernelCpuResumeIntr(intr);
+    sceKernelCpuResumeIntrWithSync(intr);
     return ret;
 }
 
@@ -632,7 +637,7 @@ s32 sceKernelDmaOpAssignMultiple(sceKernelDmaOperation **ops, s32 size)
     u32 intr;
     s32 remaining = size;
 
-    if (size > 16)
+    if ((u32)(size - 2) >= 15)
         return 0x800202BD;
 
     for (int i = 0; i < 16; i++) {
@@ -643,7 +648,7 @@ s32 sceKernelDmaOpAssignMultiple(sceKernelDmaOperation **ops, s32 size)
     if (remaining < 0)
         return 0x800202BD;
 
-    for (int i = size - 1; i; i--) {
+    for (int i = 0; i < size - 1; i++) {
         sceKernelDmaOperation *op = ops[i];
         if (!op)
             return 0x800202CF;
@@ -665,7 +670,7 @@ s32 sceKernelDmaOpAssignMultiple(sceKernelDmaOperation **ops, s32 size)
         ops[i+1]->pParent = ops[i];
         ops[i]->pNext = NULL;
         ops[i]->pPrev = NULL;
-        ops[i+1]->uiChMask[0] = ops[i]->uiChMask[0];
+        ops[i+1]->uiChMask[0] = ops[0]->uiChMask[0];
     }
     ops[0]->uiChMask[1] = size;
     sceKernelCpuResumeIntr(intr);
@@ -683,37 +688,38 @@ static s32 interruptHandler(s32 arg0 __attribute__((unused)), s32 arg1)
     tcStatus = HW(addr + 4);
     errStatus = HW(addr + 12);
     intStatus = (tcStatus | errStatus) & 0xFF;
-    HW(addr + 8) = 0;
 
     for (int i = 0; intStatus >= (1U << i); i++) {
         if (intStatus & (1U << i)) {
-            if (!g_dmacman.activeOps[i + 8*arg1]) {
-                if ((u32)g_dmacman.queueTail & (1 << i))
+            int ch = i + 8 * arg1;
+            if (!g_dmacman.activeOps[ch]) {
+                if ((g_dmacman.excludedChMask & (1 << ch)) == 0)
                     Kprintf("Fatal error: Stray interrupt occurred\n");
             } else {
-                sceKernelDmaOperation *op = g_dmacman.activeOps[i + 8*arg1];
-                op->uiSrcAddr = HW(addr + 0x100);
-                op->uiDestAddr = HW(addr + 0x100 + 4);
-                op->uiLLI = HW(addr + 0x100 + 8);
-                op->uiControl = HW(addr + 0x100 + 12);
-                op->uiConfiguration = HW(addr + 0x100 + 16);
+                sceKernelDmaOperation *op = g_dmacman.activeOps[ch];
+                u32 chAddr = addr + 0x100 + i * 32;
+                op->uiSrcAddr = HW(chAddr);
+                op->uiDestAddr = HW(chAddr + 4);
+                op->uiLLI = HW(chAddr + 8);
+                op->uiControl = HW(chAddr + 12);
+                op->uiConfiguration = HW(chAddr + 16);
                 if (tcStatus & (1 << i)) {
-                    if (!HW(addr + 0x100 + 8) && !(HW(addr + 0x100 + 16) & 0x1)) {
-                        g_dmacman.inUseChMask &= ~(1 << i);
+                    if (!HW(chAddr + 8) && !(HW(chAddr + 16) & 0x1)) {
+                        g_dmacman.inUseChMask &= ~(1 << ch);
                         evMask |= op->evpat;
                         op->uiFlag |= 0x40;
                         op->uiFlag &= ~0x2;
                         op->dmaCh = -1;
-                        g_dmacman.activeOps[i + 8*arg1] = NULL;
+                        g_dmacman.activeOps[ch] = NULL;
                     }
-                    HW(addr + 16) = (1 << i);
+                    HW(addr + 8) = (1 << i);
                     cbStatus = 0;
                 } else {
-                    if (HW(addr + 0x100 + 8) && (HW(addr + 0x100 + 16) & 0x1)) {
+                    if (HW(chAddr + 8) && (HW(chAddr + 16) & 0x1)) {
                         abortDmaChannel(op);
                     }
-                    g_dmacman.inUseChMask &= ~(1 << i);
-                    g_dmacman.activeOps[i + 8*arg1] = NULL;
+                    g_dmacman.inUseChMask &= ~(1 << ch);
+                    g_dmacman.activeOps[ch] = NULL;
                     evMask |= op->evpat;
                     op->uiFlag |= 0x40;
                     op->uiFlag &= ~0x2;
@@ -721,7 +727,7 @@ static s32 interruptHandler(s32 arg0 __attribute__((unused)), s32 arg1)
                     HW(addr + 16) = (1 << i);
                     cbStatus = -1;
                 }
-                if (op->cbfunc && op->cbfunc(op, cbStatus, i + 8*arg1, op->pCookie) == 1) {
+                if (op->cbfunc && op->cbfunc(op, cbStatus, ch, op->pCookie) == 1) {
                     if (op->HeadLLI) {
                         op->uiSrcAddr = op->HeadLLI->SrcAddr;
                         op->uiDestAddr = op->HeadLLI->DestAddr;
@@ -762,7 +768,7 @@ static s32 interruptHandler(s32 arg0 __attribute__((unused)), s32 arg1)
 static void _sceKernelDmaSchedule(void)
 {
     sceKernelDmaOperation *t1 = g_dmacman.queueHead;
-    u32 t2 = g_dmacman.inUseChMask & g_dmacman.excludedChMask;
+    u32 t2 = g_dmacman.inUseChMask | g_dmacman.excludedChMask;
     u32 a3 = t2 ^ 0xFFFF;
 
     for (; t1 && a3; t1 = t1->pNext) {
@@ -780,6 +786,8 @@ static void _sceKernelDmaSchedule(void)
                     t1->pNext = a0->pNext;
                     if (a0->pPrev)
                         a0->pPrev->pNext = a0;
+                    else
+                        g_dmacman.queueHead = a0;
                     if (!a0->pNext)
                         g_dmacman.queueTail = t1;
                     else
@@ -792,8 +800,8 @@ static void _sceKernelDmaSchedule(void)
             sceKernelDmaOperation *op = t1;
             for (int j = 0; op && j < 16; j++) {
                 if (t0 & (1 << j)) {
-                    if (g_dmacman.activeOps[j])
-                        g_dmacman.activeOps[j]->dmaCh = j;
+                    g_dmacman.activeOps[j] = op;
+                    op->dmaCh = j;
                     op = op->pChild;
                     t2 |= (1 << j);
                 }
@@ -806,18 +814,18 @@ static void _sceKernelDmaSchedule(void)
                 if (pos >= 16) {
                     break;
                 }
-                g_dmacman.activeOps[pos] = t1;
-                t1->dmaCh = pos;
+                g_dmacman.activeOps[pos] = a2;
+                a2->dmaCh = pos;
                 t2 |= (1 << pos);
             }
 
-            u32 base = (t1->dmaCh / 8) ? 0xBCA00000 : 0xBC900000;
-            if (!(HW(0xBC100050) & (0x20 << (t1->dmaCh / 8)))) {
-                HW(0xBC100050) |= 0x20 << (t1->dmaCh / 8);
+            u32 base = (a2->dmaCh / 8) ? 0xBCA00000 : 0xBC900000;
+            if (!(HW(0xBC100050) & (0x20 << (a2->dmaCh / 8)))) {
+                HW(0xBC100050) |= 0x20 << (a2->dmaCh / 8);
                 HW(base + 48) |= 1;
                 HW(base + 52) = 0;
 
-                for (int i = 8; i > 0; i--) {
+                for (int i = 0; i < 8; i++) {
                     HW(base + 0x100 + 32*i) = 0;
                     HW(base + 0x104 + 32*i) = 0;
                     HW(base + 0x108 + 32*i) = 0;
@@ -828,15 +836,13 @@ static void _sceKernelDmaSchedule(void)
                 HW(base + 8) = 0xFF;
                 HW(base + 16) = 0xFF;
             }
-            HW(base + 0x100 + (a2->dmaCh & 7) * 32) = t1->uiSrcAddr;
-            HW(base + 0x104 + (a2->dmaCh & 7) * 32) = t1->uiDestAddr;
-            HW(base + 0x108 + (a2->dmaCh & 7) * 32) = t1->uiLLI;
-            HW(base + 0x10C + (a2->dmaCh & 7) * 32) = t1->uiControl;
-            HW(base + 0x110 + (a2->dmaCh & 7) * 32) = t1->uiConfiguration;
+            HW(base + 0x100 + (a2->dmaCh & 7) * 32) = a2->uiSrcAddr;
+            HW(base + 0x104 + (a2->dmaCh & 7) * 32) = a2->uiDestAddr;
+            HW(base + 0x108 + (a2->dmaCh & 7) * 32) = a2->uiLLI;
+            HW(base + 0x10C + (a2->dmaCh & 7) * 32) = a2->uiControl;
+            HW(base + 0x110 + (a2->dmaCh & 7) * 32) = a2->uiConfiguration;
             a2->uiFlag |= 2;
-            if (a2->pParent && !a2->pChild) {
-                break;
-            } else {
+            if (!a2->pParent) {
                 a2->uiFlag &= ~0x1;
                 if (a2 == g_dmacman.queueTail)
                     g_dmacman.queueTail = a2->pPrev;
@@ -852,6 +858,7 @@ static void _sceKernelDmaSchedule(void)
                 }
             }
         }
+        a3 = t2 ^ 0xFFFF;
     }
 
     g_dmacman.inUseChMask = ~g_dmacman.excludedChMask & t2;
@@ -863,7 +870,7 @@ s32 sceKernelDmaChExclude(u32 ch, u32 arg1)
     u32 intr;
     u32 ret;
 
-    if (ch > 16)
+    if (ch >= 16)
         return 0x800202CF;
 
     intr = sceKernelCpuSuspendIntr();
@@ -910,6 +917,7 @@ sceKernelDmaOperation *sceKernelDmaOpAlloc(void)
     sceKernelDmaOperation *op = g_dmacman.freeList;
     if (op) {
         if (op->uiFlag & 0x1000) {
+            op->uiFlag = 0;
             g_dmacman.freeList = op->pNext;
             op->uiChMask[0] = 0xFFFF;
             op->cbfunc = NULL;

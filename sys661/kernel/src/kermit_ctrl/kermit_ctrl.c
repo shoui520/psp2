@@ -156,7 +156,7 @@ static int _sceCtrlVblankIntr(int sub_intr, void *arg);
 static int _sceCtrlTimerIntr(int timer_id, u32 count, void *common, u32 arg4);
 static int _sceCtrlUpdateButtons(u32 rawButtons, const u8 *axes);
 static SceUInt _sceCtrlDummyAlarm(void *common);
-static int _sceCtrlReadBuf(SceCtrlData2 *pData, u8 nBufs, u32 port, u8 mode);
+static int _sceCtrlReadBuf(SceCtrlData2 *pData, int nBufs, u32 port, u8 mode);
 static void _sceCtrlPollHardware(void);
 static SceUInt _sceCtrlPollAlarm(void *common);
 
@@ -517,7 +517,7 @@ static int _sceCtrlUpdateButtons(u32 rawButtons, const u8 *axes)
 	return 0;
 }
 
-s32 sceCtrlSetSamplingMode(u8 mode)
+s32 sceCtrlSetSamplingMode(u32 mode)
 {
 	if (mode >= 2) {
 		return 0x80000107;
@@ -574,7 +574,7 @@ s32 sceCtrlSetSamplingCycle(u32 cycle)
 	return prevCycle;
 }
 
-s32 sceCtrlReadBufferPositive(SceCtrlData *pData, u8 nBufs)
+s32 sceCtrlReadBufferPositive(SceCtrlData *pData, int nBufs)
 {
 	u32 oldK1 = pspGetK1();
 	u32 shiftedK1 = oldK1 << 11;
@@ -743,7 +743,7 @@ u32 sceCtrlGetButtonIntercept(u32 buttons)
 	return mode;
 }
 
-s32 sceCtrlSetRapidFire(u8 slot, u32 uiMask, u32 uiTrigger, u32 uiTarget, u8 uiDelay, u8 uiMake, u8 uiBreak)
+s32 sceCtrlSetRapidFire(u32 slot, u32 uiMask, u32 uiTrigger, u32 uiTarget, u32 uiDelay, u32 uiMake, u32 uiBreak)
 {
 	if (slot >= 16) {
 		return 0x80000102;
@@ -836,37 +836,37 @@ u32 sceCtrlGetSamplingCycle(u32 *pCycle)
 	return 0;
 }
 
-s32 sceCtrlPeekBufferPositive(SceCtrlData *pData, u8 nBufs)
+s32 sceCtrlPeekBufferPositive(SceCtrlData *pData, int nBufs)
 {
 	return _sceCtrlReadBuf((SceCtrlData2 *)pData, nBufs, 0, 0);
 }
 
-s32 sceCtrlPeekBufferNegative(SceCtrlData *pData, u8 nBufs)
+s32 sceCtrlPeekBufferNegative(SceCtrlData *pData, int nBufs)
 {
 	return _sceCtrlReadBuf((SceCtrlData2 *)pData, nBufs, 0, 1);
 }
 
-s32 sceCtrlReadBufferNegative(SceCtrlData *pData, u8 nBufs)
+s32 sceCtrlReadBufferNegative(SceCtrlData *pData, int nBufs)
 {
 	return _sceCtrlReadBuf((SceCtrlData2 *)pData, nBufs, 0, 3);
 }
 
-s32 sceCtrlPeekBufferPositive2(u32 port, SceCtrlData2 *pData, u8 nBufs)
+s32 sceCtrlPeekBufferPositive2(u32 port, SceCtrlData2 *pData, int nBufs)
 {
 	return _sceCtrlReadBuf(pData, nBufs, port, 4);
 }
 
-s32 sceCtrlPeekBufferNegative2(u32 port, SceCtrlData2 *pData, u8 nBufs)
+s32 sceCtrlPeekBufferNegative2(u32 port, SceCtrlData2 *pData, int nBufs)
 {
 	return _sceCtrlReadBuf(pData, nBufs, port, 5);
 }
 
-s32 sceCtrlReadBufferPositive2(u32 port, SceCtrlData2 *pData, u8 nBufs)
+s32 sceCtrlReadBufferPositive2(u32 port, SceCtrlData2 *pData, int nBufs)
 {
 	return _sceCtrlReadBuf(pData, nBufs, port, 6);
 }
 
-s32 sceCtrlReadBufferNegative2(u32 port, SceCtrlData2 *pData, u8 nBufs)
+s32 sceCtrlReadBufferNegative2(u32 port, SceCtrlData2 *pData, int nBufs)
 {
 	return _sceCtrlReadBuf(pData, nBufs, port, 7);
 }
@@ -886,15 +886,15 @@ u32 sceCtrlSetPollingMode(u8 pollMode)
 	return 0;
 }
 
-s32 sceCtrlSetSuspendingExtraSamples(s16 suspendSamples)
+s32 sceCtrlSetSuspendingExtraSamples(u32 suspendSamples)
 {
-	if ((u16)suspendSamples >= 0x12Du) {
+	if (suspendSamples >= 0x12Du) {
 		return 0x800001FE;
 	}
 	if (suspendSamples == 1) {
 		suspendSamples = 0;
 	}
-	g_ctrl.suspendSamples = suspendSamples;
+	g_ctrl.suspendSamples = (s16)suspendSamples;
 	return 0;
 }
 
@@ -903,7 +903,7 @@ s16 sceCtrlGetSuspendingExtraSamples(void)
 	return g_ctrl.suspendSamples;
 }
 
-s32 sceCtrlSetButtonEmulation(u8 slot, u32 userButtons, u32 kernelButtons, u32 uiMake)
+s32 sceCtrlSetButtonEmulation(u32 slot, u32 userButtons, u32 kernelButtons, u32 uiMake)
 {
 	if (slot >= 4) {
 		return 0x800001FE;
@@ -914,7 +914,7 @@ s32 sceCtrlSetButtonEmulation(u8 slot, u32 userButtons, u32 kernelButtons, u32 u
 	return 0;
 }
 
-s32 sceCtrlSetAnalogEmulation(u8 slot, u8 aX, u8 aY, u32 uiMake)
+s32 sceCtrlSetAnalogEmulation(u32 slot, u8 aX, u8 aY, u32 uiMake)
 {
 	if (slot >= 4) {
 		return 0x800001FE;
@@ -945,7 +945,7 @@ u32 sceCtrlUpdateCableTypeReq(void)
 	return 0;
 }
 
-s32 sceCtrlClearRapidFire(u8 slot)
+s32 sceCtrlClearRapidFire(u32 slot)
 {
 	if (slot >= 16) {
 		return 0x80000102;
@@ -967,7 +967,7 @@ static SceUInt _sceCtrlDummyAlarm(void *common)
 	return 0;
 }
 
-static int _sceCtrlReadBuf(SceCtrlData2 *pData, u8 nBufs, u32 port, u8 mode)
+static int _sceCtrlReadBuf(SceCtrlData2 *pData, int nBufs, u32 port, u8 mode)
 {
 	if ((u32)(nBufs - 1u) >= 64u) {
 		return 0x80000104;
