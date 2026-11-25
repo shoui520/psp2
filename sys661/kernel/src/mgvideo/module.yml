@@ -1,0 +1,165 @@
+name: sceMGVideo_Service
+attributes: 0x1006
+version: [1, 12]
+sdk_version: 0x06060002
+stub_order: [InterruptManagerForKernel, SysclibForKernel, ThreadManForKernel, sceMgr_driver, sceRtc_driver, sceSuspendForKernel, sceSysEventForKernel]
+exports:
+  - name: syslib
+    version: [0, 0]
+    attributes: 0x8000
+    functions:
+      - module_stop: 0xcee8593c
+    variables:
+      - module_info: 0xf01d73a7
+      - module_sdk_version: 0x11b97506
+  - name: sceMgVideo_driver
+    version: [0, 17]
+    attributes: 0x0001
+    len: 5
+    pad: 2
+    extra_words: [0x00020000]
+    bucket_words: [0x00000000, 0x00020000, 0x00070006, 0x000c0008, 0x0013000e, 0x00170014, 0x001d001b, 0x0022001e]
+    functions:
+      - sceMgVideo_driver_26A29916: 0x26a29916
+      - sceMgVideo_driver_2C046DAE: 0x2c046dae
+      - sceMgVideo_driver_362459AD: 0x362459ad
+      - sceMgVideo_driver_37E95490: 0x37e95490
+      - sceMgVideo_driver_39712740: 0x39712740
+      - sceMgVideo_driver_3F5EC8C7: 0x3f5ec8c7
+      - sceMgVideo_driver_44B6C121: 0x44b6c121
+      - sceMgVideo_driver_5BDB10E1: 0x5bdb10e1
+      - sceMgVideo_driver_62FF3C70: 0x62ff3c70
+      - sceMgVideo_driver_68908973: 0x68908973
+      - sceMgVideo_driver_68E28BCE: 0x68e28bce
+      - sceMgVideo_driver_6F1D18F4: 0x6f1d18f4
+      - sceMgVideo_driver_70960650: 0x70960650
+      - sceMgVideo_driver_7894CCE9: 0x7894cce9
+      - sceMgVideo_driver_85471E34: 0x85471e34
+      - sceMgVideo_driver_8678713F: 0x8678713f
+      - sceMgVideo_driver_8B2D15A2: 0x8b2d15a2
+      - sceMgVideo_driver_8CFD3E08: 0x8cfd3e08
+      - sceMgVideo_driver_8678713F: 0x8d02590a
+      - sceMgVideo_driver_913FBC5A: 0x913fbc5a
+      - sceMgVideo_driver_AC0757DF: 0xac0757df
+      - sceMgVideo_driver_AD6C48A0: 0xad6c48a0
+      - sceMgVideo_driver_AFA4D611: 0xafa4d611
+      - sceMgVideo_driver_B593C4A9: 0xb593c4a9
+      - sceMgVideo_driver_B8304DF9: 0xb8304df9
+      - sceMgVideo_driver_B8F2B2B5: 0xb8f2b2b5
+      - sceMgVideo_driver_BD83E45F: 0xbd83e45f
+      - sceMgVideo_driver_C189C37B: 0xc189c37b
+      - sceMgVideo_driver_8678713F: 0xc92b2ca3
+      - sceMgVideo_driver_DAA1AAA7: 0xdaa1aaa7
+      - sceMgVideo_driver_8678713F: 0xe7907c84
+      - module_stop: 0xe9d0829c
+      - sceMgVideo_driver_8678713F: 0xec67a12d
+      - sceMgVideo_driver_EC989B72: 0xec989b72
+imports:
+  - name: sceMgr_driver
+    version: [0, 17]
+    attributes: 0x0009
+    pad: 6
+    functions:
+      - sceMgr_driver_02117F1E: 0x02117f1e
+      - sceMgr_driver_09C11491: 0x09c11491
+      - sceMgr_driver_0C813CF1: 0x0c813cf1
+      - sceMgr_driver_0EBA1587: 0x0eba1587
+      - sceMgr_driver_156A83C3: 0x156a83c3
+      - sceMgr_driver_1B4DB19C: 0x1b4db19c
+      - sceMgr_driver_1B63AFF9: 0x1b63aff9
+      - sceMgr_driver_20610CDF: 0x20610cdf
+      - sceMgr_driver_275C6686: 0x275c6686
+      - sceMgr_driver_2D1CB2B8: 0x2d1cb2b8
+      - sceMgr_driver_39E49050: 0x39e49050
+      - sceMgr_driver_3B548024: 0x3b548024
+      - sceMgr_driver_401F71DC: 0x401f71dc
+      - sceMgr_driver_45EA1DB5: 0x45ea1db5
+      - sceMgr_driver_4FD151B7: 0x4fd151b7
+      - sceMgr_driver_5A63B6A4: 0x5a63b6a4
+      - sceMgr_driver_5BABFFAE: 0x5babffae
+      - sceMgr_driver_5C5AB33B: 0x5c5ab33b
+      - sceMgr_driver_6B4C5BC5: 0x6b4c5bc5
+      - sceMgr_driver_735972DB: 0x735972db
+      - sceMgr_driver_7B11D7AD: 0x7b11d7ad
+      - sceMgr_driver_7DB1B0E5: 0x7db1b0e5
+      - sceMgr_driver_7EC9DF8B: 0x7ec9df8b
+      - sceMgr_driver_7F37BECF: 0x7f37becf
+      - sceMgr_driver_84B044C7: 0x84b044c7
+      - sceMgr_driver_85F518AB: 0x85f518ab
+      - sceMgr_driver_864EA078: 0x864ea078
+      - sceMgr_driver_9315D849: 0x9315d849
+      - sceMgr_driver_97B245D5: 0x97b245d5
+      - sceMgr_driver_9973CD5B: 0x9973cd5b
+      - sceMgr_driver_9AE6ED58: 0x9ae6ed58
+      - sceMgr_driver_A329A73B: 0xa329a73b
+      - sceMgr_driver_A3A302CC: 0xa3a302cc
+      - sceMgr_driver_B40FEAD1: 0xb40fead1
+      - sceMgr_driver_B53B2B5B: 0xb53b2b5b
+      - sceMgr_driver_B8626BA2: 0xb8626ba2
+      - sceMgr_driver_BBF6C182: 0xbbf6c182
+      - sceMgr_driver_C0B28CED: 0xc0b28ced
+      - sceMgr_driver_C3C8C1FC: 0xc3c8c1fc
+      - sceMgr_driver_CEE87932: 0xcee87932
+      - sceMgr_driver_CF1EC2ED: 0xcf1ec2ed
+      - sceMgr_driver_DA7D8C82: 0xda7d8c82
+      - sceMgr_driver_E6A203F8: 0xe6a203f8
+      - sceMgr_driver_EA241D32: 0xea241d32
+      - sceMgr_driver_EBED61A7: 0xebed61a7
+      - sceMgr_driver_EDEAAA00: 0xedeaaa00
+      - sceMgr_driver_FDF97B95: 0xfdf97b95
+  - name: SysclibForKernel
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 7
+    functions:
+      - memset: 0x10f3bb61
+      - memcmp: 0x81d0d1f7
+      - memmove: 0xa48d2592
+      - memcpy: 0xab7592ff
+      - strncpy: 0xb49a7697
+  - name: InterruptManagerForKernel
+    version: [0, 17]
+    attributes: 0x0009
+    len: 6
+    pad: 6
+    functions:
+      - sceKernelCpuSuspendIntr: 0x092968f4
+      - sceKernelCpuResumeIntr: 0x5f10d406
+  - name: ThreadManForKernel
+    version: [0, 17]
+    attributes: 0x0001
+    len: 6
+    pad: 5
+    functions:
+      - sceKernelTryAllocateFpl: 0x623ae665
+      - sceKernelExtendKernelStack: 0xbc31c1b9
+      - sceKernelCreateFpl: 0xc07bb470
+      - sceKernelDelayThread: 0xceadeb47
+      - sceKernelDeleteFpl: 0xed1410e0
+  - name: sceSuspendForKernel
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 4
+    functions:
+      - sceKernelPowerUnlock: 0x3aee7261
+      - sceKernelPowerLock: 0xeadb1bd7
+  - name: sceSysEventForKernel
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 7
+    functions:
+      - sceKernelRegisterSysEventHandler: 0xcd9e4bb5
+      - sceKernelUnregisterSysEventHandler: 0xd7d3fdcd
+  - name: sceRtc_driver
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 2
+    functions:
+      - sceRtcGetCurrentTick: 0x3f7ad767
+      - sceRtc_driver_66054C2A: 0x66054c2a
+      - sceRtcGetTick: 0x6ff40acc
+      - sceRtc_driver_8413CADC: 0x8413cadc
+      - sceRtc_driver_C0F36B91: 0xc0f36b91
+      - sceRtc_driver_C66D9686: 0xc66d9686
+      - sceRtc_driver_CEEF238F: 0xceef238f
+      - sceRtcSetTick: 0xe7b3abf4
