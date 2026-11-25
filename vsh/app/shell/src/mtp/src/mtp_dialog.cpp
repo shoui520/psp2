@@ -36,19 +36,19 @@ struct MtpMessageDialogParam {
 	const void *extra2;					/* +112 */
 	const void *extra3;					/* +116 */
 	const void *extra4;					/* +120 */
-	float scale;						/* +124 */
-	paf::graph::Surface *surface1;				/* +128 */
-	void *widgetRef;					/* +132 */
-	paf::graph::Surface *surface2;				/* +136 */
-	MtpUsbErrorDialogListener *listener;			/* +140 */
-	int field144;						/* +144 */
-	int field148;						/* +148 */
+	float scale;						/* +128 */
+	paf::graph::Surface *iconSurface;			/* +132 */
+	void *widgetRef;					/* +136 */
+	paf::graph::Surface *bgSurface;				/* +140 */
+	MtpUsbErrorDialogListener *listener;			/* +144 */
+	void *secondaryListener;				/* +148 */
+	void *tertiaryListener;					/* +152 */
 
 	MtpMessageDialogParam()
 		: style1(NULL), style2(NULL), style3(NULL),
 		  extra1(NULL), extra2(NULL), extra3(NULL), extra4(NULL),
-		  scale(1.0f), surface1(NULL), widgetRef(NULL), surface2(NULL),
-		  listener(NULL), field144(0), field148(0)
+		  scale(1.0f), iconSurface(NULL), widgetRef(NULL), bgSurface(NULL),
+		  listener(NULL), secondaryListener(NULL), tertiaryListener(NULL)
 	{
 		SceCommonGuiDialog_696DB9C9(commonHeader);
 		commonHeader[68] = 0;
@@ -56,14 +56,14 @@ struct MtpMessageDialogParam {
 
 	~MtpMessageDialogParam()
 	{
-		if (surface2 != NULL)
-			surface2->Release();
+		if (bgSurface != NULL)
+			bgSurface->Release();
 		if (widgetRef != NULL) {
 			typedef void (*ReleaseFn)(void *);
 			(*(ReleaseFn **)(*(void **)widgetRef))[7](widgetRef);
 		}
-		if (surface1 != NULL)
-			surface1->Release();
+		if (iconSurface != NULL)
+			iconSurface->Release();
 	}
 };
 

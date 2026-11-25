@@ -23,49 +23,49 @@ struct LsdbJobClientHolder {
 extern LsdbJobClientHolder *g_lsdbJobClientHolder;		/* 0x8156B860 */
 
 struct LsdbPageLayoutItem {
-	void *f0;
-	int f4;
-	int f8;
-	int fC;
+	void *begin;
+	void *end;
+	void *capacity;
+	int allocator;
 };
 
 struct LsdbPageThemeItem {
-	paf::string f0;
-	int f0C;
-	int f10;
-	int f14;
-	int f18;
-	int f1C;
-	int f20;
+	paf::string themeFile;
+	int bgColor;
+	int texWidth;
+	int texHeight;
+	int imageWidth;
+	int imageHeight;
+	int reserved01;
 
 	LsdbPageThemeItem()
-		: f0C(0), f10(0), f14(0), f18(0), f1C(0), f20(0x01FFFFFF) {}
+		: bgColor(0), texWidth(0), texHeight(0), imageWidth(0), imageHeight(0),
+		  reserved01(0x01FFFFFF) {}
 };
 
 struct LsdbIconInfo {
-	int f0;
-	int f4;
-	int f8;
-	paf::string fC;
-	paf::string f18;
-	int f24;
-	paf::string f28;
-	int f34;
-	paf::string f38;
-	int f44;
-	int f48;
-	paf::common::SharedPtr<int> f4C;
+	SceInt64 rowid;
+	int pos;
+	paf::string title;
+	paf::string iconPath;
+	int type;
+	paf::string titleId;
+	int icon0Type;
+	paf::string command;
+	int parentalLockLv;
+	int status;
+	paf::common::SharedPtr<int> folder;
 
 	LsdbIconInfo()
-		: f0(0), f4(0), f8(0), f24(0), f34(0), f44(0), f48(0) {}
+		: rowid(0), pos(0), type(0), icon0Type(0), parentalLockLv(0), status(0) {}
 };
 
 struct LsdbFolderSurfacePair {
-	int f0;
+	int pos;
 	paf::graph::Surface *surface;
 
-	LsdbFolderSurfacePair(const LsdbFolderSurfacePair &o)
-		: f0(o.f0), surface(o.surface)
+	LsdbFolderSurfacePair(const LsdbFolderSurfacePair &other)
+		: pos(other.pos), surface(other.surface)
 	{
 		if (surface)
 			surface->AddRef();
@@ -157,9 +157,9 @@ GetPageLayoutJob::GetPageLayoutJob(int pageId, SceUInt32 count, LsdbJobCallback 
 		for (SceUInt32 i = 0; i < m_count; ++i) {
 			LsdbPageLayoutItem *item = new LsdbPageLayoutItem();
 			if (item != NULL) {
-				item->f0 = NULL;
-				item->f4 = 0;
-				item->f8 = 0;
+				item->begin = NULL;
+				item->end = NULL;
+				item->capacity = NULL;
 			}
 			m_pages.push_back(paf::common::SharedPtr<LsdbPageLayoutItem>(item));
 		}
@@ -335,9 +335,9 @@ int SetPageLayoutJob::Run()
 			paf::vector<paf::common::SharedPtr<LsdbPageLayoutItem> > tmp;
 			LsdbPageLayoutItem *item = new LsdbPageLayoutItem();
 			if (item != NULL) {
-				item->f0 = NULL;
-				item->f4 = 0;
-				item->f8 = 0;
+				item->begin = NULL;
+				item->end = NULL;
+				item->capacity = NULL;
 			}
 			tmp.push_back(paf::common::SharedPtr<LsdbPageLayoutItem>(item));
 			int r = SceLsdb_D74AC354(g_lsdbJobClientHolder->client, pageId, 1, &tmp);
@@ -350,7 +350,7 @@ int SetPageLayoutJob::Run()
 			paf::vector<paf::common::SharedPtr<LsdbIconInfo> > *icons =
 				(paf::vector<paf::common::SharedPtr<LsdbIconInfo> > *)tmp[0].get();
 			for (SceUInt32 j = 0; j < icons->size(); ++j) {
-				SceUInt32 pos = (SceUInt32)(*icons)[j]->f8;
+				SceUInt32 pos = (SceUInt32)(*icons)[j]->pos;
 				if (pos <= 9u)
 					used[pos] = 1;
 			}

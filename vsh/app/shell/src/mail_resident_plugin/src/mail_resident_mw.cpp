@@ -92,12 +92,12 @@ void MailResidentMwManager::Disconnect(SceUInt8 graceful)
 /* 0x811C89EA */
 int MailResidentMwManager::IsRunning(int *outStatus)
 {
-	SceUInt8 status[0x80];
+	SceUInt32 status[0x20];
 	do {
 		sce_paf_memset(status, 0, sizeof(status));
 		*outStatus = sceAppMgrGetStatusByName("NPXS10063", status);
 		sceKernelDelayThread(64000);
-	} while ((*outStatus | *(int *)(status + 0x3C)) == 0);
+	} while ((*outStatus | (int)status[15]) == 0);
 	return (*outStatus == 0);
 }
 
@@ -140,13 +140,13 @@ void MailResidentMwManager::LaunchAndConnect()
 				break;
 		}
 
-		SceUInt8 status[0x80];
+		SceUInt32 status[0x20];
 		int st;
 		do {
 			sce_paf_memset(status, 0, sizeof(status));
 			st = sceAppMgrGetStatusByName("NPXS10063", status);
 			sceKernelDelayThread(64000);
-		} while ((st | *(int *)(status + 0x3C)) == 0);
+		} while ((st | (int)status[15]) == 0);
 
 		if (st == 0) {
 			if (outBits == 1) {

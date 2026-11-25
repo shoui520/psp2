@@ -88,17 +88,17 @@ static void pushQueueEvent(MailResidentApp *app, MailResidentEvent *ev)
 }
 
 /* 0x811C7188 */
-void MailResidentApp::EnqueueEvent(int kind, SceUInt32 arg1, int arg2)
+void MailResidentApp::EnqueueEvent(int kind, SceUInt32 eventParam, int appState)
 {
 	switch (kind) {
 	case 0:
-		m_netState = arg1;
+		m_netState = eventParam;
 		/* fallthrough */
 	case 1:
 	case 7: {
 		void *mem = mailResidentMalloc(sizeof(MailResidentEvent));
 		if (mem != NULL) {
-			MailResidentEvent *ev = new (mem) MailResidentEvent(arg1 ? 7 : 6);
+			MailResidentEvent *ev = new (mem) MailResidentEvent(eventParam ? 7 : 6);
 			pushQueueEvent(this, ev);
 		}
 		return;
@@ -115,7 +115,7 @@ void MailResidentApp::EnqueueEvent(int kind, SceUInt32 arg1, int arg2)
 		     it != m_queue.end(); ++it) {
 			MailResidentEvent *e = *it;
 			if (e->m_type == 4) {
-				if (((MailResidentSyncEvent *)e)->m_arg == arg1) {
+				if (((MailResidentSyncEvent *)e)->m_arg == eventParam) {
 					m_queueMutex.Unlock();
 					return;
 				}
@@ -139,7 +139,7 @@ void MailResidentApp::EnqueueEvent(int kind, SceUInt32 arg1, int arg2)
 
 		void *mem = mailResidentMalloc(sizeof(MailResidentSyncEvent));
 		if (mem != NULL) {
-			MailResidentSyncEvent *ev = new (mem) MailResidentSyncEvent(evType, arg1);
+			MailResidentSyncEvent *ev = new (mem) MailResidentSyncEvent(evType, eventParam);
 			pushQueueEvent(this, ev);
 		}
 		return;
@@ -147,7 +147,7 @@ void MailResidentApp::EnqueueEvent(int kind, SceUInt32 arg1, int arg2)
 	case 4: {
 		void *mem = mailResidentMalloc(sizeof(MailResidentAppEvent));
 		if (mem != NULL) {
-			MailResidentAppEvent *ev = new (mem) MailResidentAppEvent(arg1, arg2);
+			MailResidentAppEvent *ev = new (mem) MailResidentAppEvent(eventParam, appState);
 			pushQueueEvent(this, ev);
 		}
 		return;
@@ -514,8 +514,8 @@ void MailResidentApp::ProcessQueue()
 		MailResidentAppEvent *ae = (MailResidentAppEvent *)ev;
 		for (paf::list<MailResidentSession *>::iterator it = m_sessions.begin();
 		     it != m_sessions.end(); ++it) {
-			if ((SceUInt32)(*it)->m_pid == ae->m_arg1) {
-				(*it)->m_state = ae->m_arg2;
+			if ((SceUInt32)(*it)->m_pid == ae->m_pid) {
+				(*it)->m_state = ae->m_appState;
 				void *mem = mailResidentMalloc(sizeof(MailResidentEvent));
 				if (mem != NULL) {
 					MailResidentEvent *e2 = new (mem) MailResidentEvent(1);

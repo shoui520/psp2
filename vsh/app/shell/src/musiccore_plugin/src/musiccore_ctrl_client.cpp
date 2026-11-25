@@ -46,28 +46,28 @@ extern int controllerSendCommand(void *ctrl, uint64_t cmdHeader, const void *inB
                                  unsigned int inSize, SceUInt *timeout, void *outResult);
 extern int controllerGetContentInfo(void *ctrl, unsigned char channelId, void *infoBuf);
 extern int controllerGetStatus(void *ctrl, unsigned char channelId, void *statusBuf,
-                               void *arg3, void *arg4, int *outMode,
+                               void *outPos, void *outPosValid, int *outMode,
                                void *workBuf, unsigned char *outFlag, int queryFlags);
 extern int controllerGetState(void *ctrl, unsigned char channelId, void *outState);
 
 struct OpenParams {
-    int field0;
-    int field4;
-    int field8;
-    int fieldC;
-    int field10;
+    int sampleRate;
+    int channels;
+    int grainSize;
+    int audioMode;
+    int priorityHint;
 };
 
 struct OpenTrackPayload {
     void *vtable;
     char slot;
     int trackParam;
-    int openField0;
-    int openField4;
-    int openField8;
+    int sampleRate;
+    int channels;
+    int grainSize;
     int reserved;
-    int openFieldC;
-    int openField10;
+    int audioMode;
+    int priorityHint;
 };
 
 struct CmdResult {
@@ -90,12 +90,12 @@ struct PlaybackStatusOut {
     int16_t flags;
     int reserved20;
     int reserved24;
-    int field28;
-    int field32;
+    int playState;
+    int contentType;
     int pad36;
-    int64_t time40;
-    int64_t time48;
-    int64_t time56;
+    int64_t trackId;
+    int64_t trackItemId;
+    int64_t playlistId;
     int words[19];
 };
 
@@ -183,12 +183,12 @@ int ctrlOpenWithParams(uint32_t param, unsigned char channelId, int trackParam,
     payload.vtable = NULL;
     payload.slot = -1;
     payload.trackParam = trackParam;
-    payload.openField0 = openParams->field0;
-    payload.openField4 = openParams->field4;
-    payload.openField8 = openParams->field8;
+    payload.sampleRate = openParams->sampleRate;
+    payload.channels = openParams->channels;
+    payload.grainSize = openParams->grainSize;
     payload.reserved = 0;
-    payload.openFieldC = openParams->fieldC;
-    payload.openField10 = openParams->field10;
+    payload.audioMode = openParams->audioMode;
+    payload.priorityHint = openParams->priorityHint;
 
     CmdResult res;
     res.errCode = 0;
@@ -316,24 +316,24 @@ int ctrlSkipNext(uint32_t param, unsigned char channelId)
     return controllerSendCommand(g_ctrlInstance, hdr, NULL, 0, NULL, NULL);
 }
 
-int ctrlSetRepeatShuffle(uint32_t param, unsigned char channelId,
-                         int arg2, int arg3, int arg4, int arg5)
+int ctrlSetEqualizer(uint32_t param, unsigned char channelId,
+                     int eqType, int bandLow, int bandMid, int bandHigh)
 {
     if (g_ctrlInstance == NULL)
         return MUSICCORE_ERR_FAILED;
 
     int payload[4];
     sce_paf_memset(payload, 0, sizeof(payload));
-    payload[0] = arg2;
-    payload[1] = arg3;
-    payload[2] = arg4;
-    payload[3] = arg5;
+    payload[0] = eqType;
+    payload[1] = bandLow;
+    payload[2] = bandMid;
+    payload[3] = bandHigh;
 
     uint64_t hdr = makeCmdHeader(param, 0x31150000u | channelId);
     return controllerSendCommand(g_ctrlInstance, hdr, payload, 20, NULL, NULL);
 }
 
-int ctrlSkipPrev(uint32_t param, unsigned char channelId)
+int ctrlSetAudioNormalizer(uint32_t param, unsigned char channelId)
 {
     if (g_ctrlInstance == NULL)
         return MUSICCORE_ERR_FAILED;
@@ -341,47 +341,47 @@ int ctrlSkipPrev(uint32_t param, unsigned char channelId)
     return controllerSendCommand(g_ctrlInstance, hdr, NULL, 0, NULL, NULL);
 }
 
-int ctrlGlobalCmd810D(uint32_t param, int unused1, int unused2, uint16_t flags)
+int ctrlSetIdleCallback(uint32_t param, int unusedFirst, int unusedSecond, uint16_t flags)
 {
     if (g_ctrlInstance == NULL)
         return MUSICCORE_ERR_FAILED;
-    (void)unused1;
-    (void)unused2;
+    (void)unusedFirst;
+    (void)unusedSecond;
     uint32_t hi = (flags & 0x7F00u) | 0x810D000Fu;
     return controllerSendCommand(g_ctrlInstance, makeCmdHeader(param, hi), NULL, 0, NULL, NULL);
 }
 
-int ctrlGlobalCmd8101(uint32_t param, int unused1, int unused2, uint16_t flags)
+int ctrlNotifySystemState(uint32_t param, int unusedFirst, int unusedSecond, uint16_t flags)
 {
     if (g_ctrlInstance == NULL)
         return MUSICCORE_ERR_FAILED;
-    (void)unused1;
-    (void)unused2;
+    (void)unusedFirst;
+    (void)unusedSecond;
     uint32_t hi = (flags & 0x7F00u) | 0x8101000Fu;
     return controllerSendCommand(g_ctrlInstance, makeCmdHeader(param, hi), NULL, 0, NULL, NULL);
 }
 
-int ctrlGlobalCmd8103(uint32_t param, int unused1, int unused2, uint16_t flags)
+int ctrlSetStatusCallback(uint32_t param, int unusedFirst, int unusedSecond, uint16_t flags)
 {
     if (g_ctrlInstance == NULL)
         return MUSICCORE_ERR_FAILED;
-    (void)unused1;
-    (void)unused2;
+    (void)unusedFirst;
+    (void)unusedSecond;
     uint32_t hi = (flags & 0x7F00u) | 0x810300FFu;
     return controllerSendCommand(g_ctrlInstance, makeCmdHeader(param, hi), NULL, 0, NULL, NULL);
 }
 
-int ctrlGlobalCmd8104(uint32_t param, int unused1, int unused2, uint16_t flags)
+int ctrlSetCapCallback(uint32_t param, int unusedFirst, int unusedSecond, uint16_t flags)
 {
     if (g_ctrlInstance == NULL)
         return MUSICCORE_ERR_FAILED;
-    (void)unused1;
-    (void)unused2;
+    (void)unusedFirst;
+    (void)unusedSecond;
     uint32_t hi = (flags & 0x7F00u) | 0x810400FFu;
     return controllerSendCommand(g_ctrlInstance, makeCmdHeader(param, hi), NULL, 0, NULL, NULL);
 }
 
-int ctrlGlobalCmd8105(uint32_t param)
+int ctrlSetExtraCallback(uint32_t param)
 {
     if (g_ctrlInstance == NULL)
         return MUSICCORE_ERR_FAILED;
@@ -389,47 +389,47 @@ int ctrlGlobalCmd8105(uint32_t param)
     return controllerSendCommand(g_ctrlInstance, hdr, NULL, 0, NULL, NULL);
 }
 
-int ctrlGlobalCmd8106(uint32_t param, int unused1, int unused2, uint16_t flags)
+int ctrlSetMetadataCallback(uint32_t param, int unusedFirst, int unusedSecond, uint16_t flags)
 {
     if (g_ctrlInstance == NULL)
         return MUSICCORE_ERR_FAILED;
-    (void)unused1;
-    (void)unused2;
+    (void)unusedFirst;
+    (void)unusedSecond;
     uint32_t hi = (flags & 0x7F00u) | 0x810600FFu;
     return controllerSendCommand(g_ctrlInstance, makeCmdHeader(param, hi), NULL, 0, NULL, NULL);
 }
 
-int ctrlGlobalCmd8107A(uint32_t param, int unused1, int unused2, uint16_t flags)
+int ctrlDbOpen(uint32_t param, int unusedFirst, int unusedSecond, uint16_t flags)
 {
     if (g_ctrlInstance == NULL)
         return MUSICCORE_ERR_FAILED;
-    (void)unused1;
-    (void)unused2;
+    (void)unusedFirst;
+    (void)unusedSecond;
     uint32_t hi = (flags & 0x7F00u) | 0x810700FFu;
     return controllerSendCommand(g_ctrlInstance, makeCmdHeader(param, hi), NULL, 0, NULL, NULL);
 }
 
-int ctrlGlobalCmd8107B(uint32_t param, int unused1, int unused2, uint16_t flags)
+int ctrlDbSuspend(uint32_t param, int unusedFirst, int unusedSecond, uint16_t flags)
 {
     if (g_ctrlInstance == NULL)
         return MUSICCORE_ERR_FAILED;
-    (void)unused1;
-    (void)unused2;
+    (void)unusedFirst;
+    (void)unusedSecond;
     uint32_t hi = (flags & 0x7F00u) | 0x810700FFu;
     return controllerSendCommand(g_ctrlInstance, makeCmdHeader(param, hi), NULL, 0, NULL, NULL);
 }
 
-int ctrlGlobalCmd8108(uint32_t param, int unused1, int unused2, uint16_t flags)
+int ctrlDbClose(uint32_t param, int unusedFirst, int unusedSecond, uint16_t flags)
 {
     if (g_ctrlInstance == NULL)
         return MUSICCORE_ERR_FAILED;
-    (void)unused1;
-    (void)unused2;
+    (void)unusedFirst;
+    (void)unusedSecond;
     uint32_t hi = (flags & 0x7F00u) | 0x810800FFu;
     return controllerSendCommand(g_ctrlInstance, makeCmdHeader(param, hi), NULL, 0, NULL, NULL);
 }
 
-int ctrlGlobalCmd8109(uint32_t param)
+int ctrlDbQuery(uint32_t param)
 {
     if (g_ctrlInstance == NULL)
         return MUSICCORE_ERR_FAILED;
@@ -483,18 +483,18 @@ int ctrlGetContentInfo(unsigned char channelId, ContentInfoBuffers *info)
 struct RawPlaybackStatus {
     unsigned char bytes[3];
     unsigned char pad3[25];
-    int field28;
-    int field32;
+    int playState;
+    int contentType;
     int pad36;
-    int64_t time40;
-    int64_t time48;
-    int64_t time56;
+    int64_t trackId;
+    int64_t trackItemId;
+    int64_t playlistId;
     int words[19];
     unsigned char tail[4];
 };
 
 int ctrlGetPlaybackStatus(unsigned char channelId, PlaybackStatusOut *outStatus,
-                          void *arg3, void *arg4)
+                          void *outPos, void *outPosValid)
 {
     void *heap = getLocalHeap();
     void *workBuf = ScePafStdc_D00387E7(2088, heap);
@@ -504,7 +504,7 @@ int ctrlGetPlaybackStatus(unsigned char channelId, PlaybackStatusOut *outStatus,
     RawPlaybackStatus rawStatus;
     int mode = 4;
     unsigned char flag = 0;
-    int ret = controllerGetStatus(g_ctrlInstance, channelId, &rawStatus, arg3, arg4,
+    int ret = controllerGetStatus(g_ctrlInstance, channelId, &rawStatus, outPos, outPosValid,
                                   &mode, workBuf, &flag, 2);
     ::operator delete(workBuf);
     if (ret != 0)
@@ -516,11 +516,11 @@ int ctrlGetPlaybackStatus(unsigned char channelId, PlaybackStatusOut *outStatus,
     outStatus->flags = -1;
     outStatus->reserved20 = 0;
     outStatus->reserved24 = 0;
-    outStatus->field28 = rawStatus.field28;
-    outStatus->field32 = rawStatus.field32;
-    outStatus->time40 = rawStatus.time40;
-    outStatus->time48 = rawStatus.time48;
-    outStatus->time56 = rawStatus.time56;
+    outStatus->playState = rawStatus.playState;
+    outStatus->contentType = rawStatus.contentType;
+    outStatus->trackId = rawStatus.trackId;
+    outStatus->trackItemId = rawStatus.trackItemId;
+    outStatus->playlistId = rawStatus.playlistId;
     for (int i = 0; i < 19; ++i)
         outStatus->words[i] = rawStatus.words[i];
     return 0;
@@ -564,7 +564,7 @@ int ctrlGetState(unsigned char channelId, void *outState)
     return ret;
 }
 
-int ctrlCmd3118(uint32_t param, unsigned char channelId, int unusedArg, uint16_t flags)
+int ctrlNotifyStatus(uint32_t param, unsigned char channelId, int unusedArg, uint16_t flags)
 {
     if (g_ctrlInstance == NULL)
         return MUSICCORE_ERR_FAILED;
@@ -573,7 +573,7 @@ int ctrlCmd3118(uint32_t param, unsigned char channelId, int unusedArg, uint16_t
     return controllerSendCommand(g_ctrlInstance, makeCmdHeader(param, hi), NULL, 0, NULL, NULL);
 }
 
-int ctrlCmd3117(uint32_t param, unsigned char channelId)
+int ctrlSeekAndPlay(uint32_t param, unsigned char channelId)
 {
     if (g_ctrlInstance == NULL)
         return MUSICCORE_ERR_FAILED;
@@ -581,7 +581,7 @@ int ctrlCmd3117(uint32_t param, unsigned char channelId)
     return controllerSendCommand(g_ctrlInstance, hdr, NULL, 28, NULL, NULL);
 }
 
-int ctrlCmd3119(uint32_t param, unsigned char channelId, int unusedArg, uint16_t flags)
+int ctrlResetSpeed(uint32_t param, unsigned char channelId, int unusedArg, uint16_t flags)
 {
     if (g_ctrlInstance == NULL)
         return MUSICCORE_ERR_FAILED;
@@ -590,7 +590,7 @@ int ctrlCmd3119(uint32_t param, unsigned char channelId, int unusedArg, uint16_t
     return controllerSendCommand(g_ctrlInstance, makeCmdHeader(param, hi), NULL, 0, NULL, NULL);
 }
 
-int ctrlCmd311B(uint32_t param, unsigned char channelId, int unusedArg, uint16_t flags)
+int ctrlRefreshDbId(uint32_t param, unsigned char channelId, int unusedArg, uint16_t flags)
 {
     if (g_ctrlInstance == NULL)
         return MUSICCORE_ERR_FAILED;

@@ -121,17 +121,114 @@ struct MusicCoreMetaDesc {
 	SceSize albumSize;
 };
 
+struct MusicCoreRawSnap {
+	SceUInt8 channelId;					/* +0 */
+	SceInt8 playerKind;					/* +1 */
+	SceInt8 bgmStatus;					/* +2 */
+	SceInt8 bgmReason;					/* +3 */
+	int bgmPriority;					/* +4 */
+	SceUInt8 playableFlag;					/* +8 */
+	SceUInt8 pad9[3];					/* +9 */
+	int seqNum;						/* +12 */
+	SceInt16 notifyFlags;					/* +16 */
+	SceInt16 pad18;						/* +18 */
+	int cmdParam;						/* +20 */
+	int errCode;						/* +24 */
+	int playState;						/* +28 */
+	int contentType;					/* +32 */
+	int pad36;						/* +36 */
+	SceInt64 trackId;					/* +40 */
+	SceInt64 trackItemId;					/* +48 */
+	SceInt64 playlistId;					/* +56 */
+	int trackIndex;						/* +64 */
+	int totalTracks;					/* +68 */
+	int currentTrackNum;					/* +72 */
+	int durationMs;						/* +76 */
+	int sampleRate;						/* +80 */
+	int bitRate;						/* +84 */
+	int channels;						/* +88 */
+	int codecType;						/* +92 */
+	int sourceType;						/* +96 */
+	int repeatMode;						/* +100 */
+	int shuffleMode;					/* +104 */
+	int volumeMode;						/* +108 */
+	int audioBalance;					/* +112 */
+	int eqType;						/* +116 */
+	int eqBandLow;						/* +120 */
+	int eqBandMid;						/* +124 */
+	int eqBandHigh;						/* +128 */
+	int audioNormalizer;					/* +132 */
+	int extraErr;						/* +136 */
+	int pad140;						/* +140 */
+};
+
+struct MusicCoreTrackInfoRaw {
+	char uri[0x804];					/* +0 */
+	int listIndex;						/* +0x804 */
+	int trackIndex;						/* +0x808 */
+	int pad80C;						/* +0x80C */
+	SceInt64 trackId;					/* +0x810 */
+	int shuffleFlag;					/* +0x818 */
+	int contentKind;					/* +0x81C */
+	int extraMeta;						/* +0x820 */
+	int pad824;						/* +0x824 */
+};
+
+struct MusicCoreConvertedStatus {
+	int channelType;					/* +0 */
+	int cmdParam;						/* +4 */
+	int errCode;						/* +8 */
+	int reserved12;						/* +12 */
+	int reserved16;						/* +16 */
+	int hasRingError;					/* +20 */
+	int reserved24;						/* +24 */
+	int reserved28;						/* +28 */
+	int playMode;						/* +32 */
+	int bgmReason;						/* +36 */
+	int bgmPriority;					/* +40 */
+	int playableFlag;					/* +44 */
+	SceInt64 trackId;					/* +48 */
+	int trackIndex;						/* +56 */
+	int playTime;						/* +60 */
+	int durationMs;						/* +64 */
+	int sampleRate;						/* +68 */
+	int bitRate;						/* +72 */
+	int channels;						/* +76 */
+	int codecType;						/* +80 */
+	int sourceType;						/* +84 */
+	int currentTrackNum;					/* +88 */
+	int totalTracks;					/* +92 */
+	int audioBalance;					/* +96 */
+	int shuffleMode;					/* +100 */
+	int repeatMode;						/* +104 */
+	int audioNormalizer;					/* +108 */
+	int eqType;						/* +112 */
+	int volumeMode;						/* +116 */
+	SceInt64 trackItemId;					/* +120 */
+	SceInt64 playlistId;					/* +128 */
+	int capActive;						/* +136 */
+	int seqNum;						/* +140 */
+};
+
+struct MusicCoreTimeCbData {
+	SceUInt8 slotId;					/* +0 */
+	SceInt8 channelType;					/* +1 */
+	SceUInt8 pad2[2];					/* +2 */
+	int timeMs;						/* +4 */
+	SceInt64 trackId;					/* +8 */
+};
+
 static MusicCoreNotifyCb s_notifyCb = NULL;			/* 0x8156B938 */
 static SceUInt8 s_capData[72];					/* 0x8156B93C */
-static SceUInt8 s_rawStatusCh0[144];				/* 0x8156B988 */
-static SceUInt8 s_rawStatusCh1[144];				/* 0x8156BA18 */
-static SceUInt8 s_rawStatusCh2[144];				/* 0x8156BAA8 */
+static MusicCoreRawSnap s_rawStatusCh0;				/* 0x8156B988 */
+static MusicCoreRawSnap s_rawStatusCh1;				/* 0x8156BA18 */
+static MusicCoreRawSnap s_rawStatusCh2;				/* 0x8156BAA8 */
 static int s_playTimeCh1 = 0;					/* 0x8156BB38 */
 static int s_playTimeCh2 = 0;					/* 0x8156BB3C */
 static SceUInt8 s_extraState[3][8];				/* 0x8156BB40..BB57 */
 static SceUInt8 s_playTimeCh0Slot = 0;				/* 0x8156BB58 */
 static int s_playTimeCh0Val = 0;				/* 0x8156BB5C */
-static SceUInt8 s_trackInfoBuf[0x828];				/* 0x8156BB68 */
+static MusicCoreTrackInfoRaw s_trackInfoBuf;			/* 0x8156BB68 */
 static SceUInt8 s_exOpenParam[20];				/* 0x8156C390 */
 static char s_uriCh1[0x401];					/* 0x8156C3A4 */
 static char s_uriCh0[0x401];					/* 0x8156C7A5 */
@@ -248,7 +345,7 @@ MusicCoreMain::MusicCoreMain(int *outErr)
 {
 	s_notifyCb = NULL;
 	*outErr = (int)0x8FFF0002;
-	*(SceInt64 *)(s_rawStatusCh1 + 40) = -1;
+	s_rawStatusCh1.trackId = -1;
 
 	SceUID sema = sceKernelCreateSema("SceShellMusicCorePluginMainWait", 0, 0, 1, NULL);
 	if (sema < 0) {
@@ -351,9 +448,9 @@ int MusicCoreMain::InitController()
 	s_powerPauseFlag = 0;
 	s_btrmOwned = 0;
 	s_titleDirty = 0;
-	sce_paf_memset(s_trackInfoBuf, 0, sizeof(s_trackInfoBuf));
-	*(int *)(s_trackInfoBuf + 0x818) = -1;
-	*(int *)(s_trackInfoBuf + 0x81C) = -1;
+	sce_paf_memset(&s_trackInfoBuf, 0, sizeof(s_trackInfoBuf));
+	s_trackInfoBuf.shuffleFlag = -1;
+	s_trackInfoBuf.contentKind = -1;
 	sce_paf_memset(s_curAppTitle, 0, sizeof(s_curAppTitle));
 	sce_paf_memset(s_prevAppTitle, 0, sizeof(s_prevAppTitle));
 	sce_paf_strncpy(s_curAppTitle, "NPXS19999", sce_paf_strlen("NPXS19999"));
@@ -564,7 +661,7 @@ int MusicCoreMain::HandleControl(const MusicCoreQueueMsg *msg)
 			}
 			return 0;
 		}
-		if ((SceUInt64)(*(SceInt64 *)(s_rawStatusCh1 + 40)) >= 0xFFFFFFFFFFFFFFFEULL)
+		if ((SceUInt64)s_rawStatusCh1.trackId >= 0xFFFFFFFFFFFFFFFEULL)
 			return 0;
 	}
 
@@ -788,15 +885,18 @@ int MusicCoreMain::HandleCmd19(const MusicCoreQueueMsg *msg)
 	int ret = ParseMsgHeader(msg, &seqId, &ch);
 	if (ret != 0)
 		return ret;
-	SceUInt8 buf[184];
-	sce_paf_memset(buf, 0, sizeof(buf));
-	sce_paf_memcpy(buf, msg->payload, msg->payloadSize);
-	SceUInt8 data[160];
-	sce_paf_memcpy(data, buf + 8, sizeof(data));
-	SceUInt32 opt = *(SceUInt32 *)(buf + 168);
-	if (opt > 2)
+	struct DbQueryMsg {
+		int queryType;
+		int pad4;
+		SceUInt8 data[160];
+		SceUInt32 opt;
+		SceUInt8 tail[12];
+	} buf;
+	sce_paf_memset(&buf, 0, sizeof(buf));
+	sce_paf_memcpy(&buf, msg->payload, msg->payloadSize);
+	if (buf.opt > 2)
 		return (int)0x80100D01;
-	return musicCoreCtrlCmd19(seqId, data, *(int *)buf, (int)opt);
+	return musicCoreCtrlCmd19(seqId, buf.data, buf.queryType, (int)buf.opt);
 }
 
 static void applyPauseToTitleSlots(MusicCoreMain *self, bool forceStop)
@@ -872,7 +972,7 @@ int MusicCoreMain::HandleAppFocusChange(const MusicCoreQueueMsg *msg)
 
 	if (sce_paf_strncmp(s_prevAppTitle, "NPXS10009", sce_paf_strlen(s_prevAppTitle)) == 0 &&
 	    sce_paf_strncmp(s_curAppTitle, "NPXS19999", sce_paf_strlen(s_curAppTitle)) == 0 &&
-	    (SceUInt64)(*(SceInt64 *)(s_rawStatusCh1 + 40)) >= 0xFFFFFFFFFFFFFFFEULL) {
+	    (SceUInt64)s_rawStatusCh1.trackId >= 0xFFFFFFFFFFFFFFFEULL) {
 		musicCoreCtrlPause(0, 1, 0, 0);
 	}
 
@@ -949,7 +1049,7 @@ int MusicCoreMain::HandlePowerResume(const MusicCoreQueueMsg *msg)
 int MusicCoreMain::GetStatus(const MusicCoreClientReq *req, void *outRaw)
 {
 	if (req->channel == 0) {
-		sce_paf_memcpy(outRaw, s_rawStatusCh1, 144);
+		sce_paf_memcpy(outRaw, &s_rawStatusCh1, sizeof(s_rawStatusCh1));
 		return 0;
 	}
 	if (req->channel == 1) {
@@ -957,8 +1057,8 @@ int MusicCoreMain::GetStatus(const MusicCoreClientReq *req, void *outRaw)
 		int ret = ResolveSlot(0, req->appId, &slot);
 		if (ret != 0)
 			return ret;
-		if (slot == s_rawStatusCh0[0]) {
-			sce_paf_memcpy(outRaw, s_rawStatusCh0, 144);
+		if (slot == s_rawStatusCh0.channelId) {
+			sce_paf_memcpy(outRaw, &s_rawStatusCh0, sizeof(s_rawStatusCh0));
 			return 0;
 		}
 		SceUInt8 tmp[144];
@@ -970,7 +1070,7 @@ int MusicCoreMain::GetStatus(const MusicCoreClientReq *req, void *outRaw)
 		return ret;
 	}
 	if (req->channel == 2) {
-		sce_paf_memcpy(outRaw, s_rawStatusCh2, 144);
+		sce_paf_memcpy(outRaw, &s_rawStatusCh2, sizeof(s_rawStatusCh2));
 		return 0;
 	}
 	return (int)0x80100D01;
@@ -1017,7 +1117,7 @@ int MusicCoreMain::GetError(const MusicCoreClientReq *req, int *outErr)
 int MusicCoreMain::GetTrackInfo(const MusicCoreClientReq *req, void *outTrack, void *outRaw)
 {
 	if (req->channel == 0) {
-		sce_paf_memcpy(outTrack, s_trackInfoBuf, sizeof(s_trackInfoBuf));
+		sce_paf_memcpy(outTrack, &s_trackInfoBuf, sizeof(s_trackInfoBuf));
 		return GetStatus(req, outRaw);
 	}
 	if (req->channel > 2)
@@ -1037,7 +1137,7 @@ int MusicCoreMain::GetUri(const MusicCoreClientReq *req, void *outUri)
 		int ret = ResolveSlot(0, req->appId, &slot);
 		if (ret != 0)
 			return ret;
-		if (slot == s_rawStatusCh0[0]) {
+		if (slot == s_rawStatusCh0.channelId) {
 			sce_paf_memcpy(outUri, s_uriCh0, 0x401);
 			return 0;
 		}
@@ -1230,12 +1330,19 @@ int MusicCoreMain::DispatchMsg(const MusicCoreQueueMsg *msg)
 	case 12: {
 		int ret = ParseMsgHeader(msg, &seqId, &ch);
 		if (ret != 0) return ret;
-		SceUInt8 uriPayload[1052];
-		sce_paf_memset(uriPayload, 0, sizeof(uriPayload));
-		sce_paf_memcpy(uriPayload, msg->payload, msg->payloadSize);
-		int appId = *(int *)(uriPayload + 1048);
+		struct OpenUriMsg {
+			char uri[1028];
+			SceUInt8 opt0[4];
+			SceUInt8 bgmAllowed;
+			SceUInt8 optRest[11];
+			int pid;
+			int appId;
+		} uriPayload;
+		sce_paf_memset(&uriPayload, 0, sizeof(uriPayload));
+		sce_paf_memcpy(&uriPayload, msg->payload, msg->payloadSize);
+		int appId = uriPayload.appId;
 		s_ptCh1.extra = 119;
-		ret = SetSlotBgmAllowed(ch, appId, uriPayload[1032]);
+		ret = SetSlotBgmAllowed(ch, appId, uriPayload.bgmAllowed);
 		if (ret != 0) return ret;
 		ret = ResolveSlot(ch, appId, &slot);
 		if (ret != 0) return ret;
@@ -1310,7 +1417,7 @@ int MusicCoreMain::DispatchMsg(const MusicCoreQueueMsg *msg)
 	case 29: return musicCoreCtrlResumeAudio(512, 1);
 	case 30:
 		if (paf::system::Model::GetType() == 1 ||
-		    (SceUInt64)(*(SceInt64 *)(s_rawStatusCh1 + 40)) >= 0xFFFFFFFFFFFFFFFEULL)
+		    (SceUInt64)s_rawStatusCh1.trackId >= 0xFFFFFFFFFFFFFFFEULL)
 			return HandleControl(msg);
 		return 0;
 	case 31: return musicCoreCtrlClearAudio(512, 1);
@@ -1327,7 +1434,7 @@ int MusicCoreMain::MainLoop()
 	if (sceKernelSignalSema(m_semaId, 1) >= 0) {
 		m_stopping = 0;
 		do {
-			SceInt64 curTrackId = *(SceInt64 *)(s_rawStatusCh1 + 40);
+			SceInt64 curTrackId = s_rawStatusCh1.trackId;
 			if (curTrackId == -1 || curTrackId == -2) {
 				if (s_btrmOwned != 0)
 					paf::inputdevice::ReleaseBtrmOwnership();
@@ -1460,34 +1567,35 @@ void musicCoreConvertNoop(void)
 }
 
 /* 0x811D1320 */
-int musicCoreConvertStatus(const SceUInt8 *raw, int *outStatus, int playTime, const SceUInt8 *cap)
+int musicCoreConvertStatus(const void *rawPtr, void *outStatusPtr, int playTime, const SceUInt8 *cap)
 {
-	SceInt8 chType = (SceInt8)raw[1];
+	const MusicCoreRawSnap *raw = (const MusicCoreRawSnap *)rawPtr;
+	MusicCoreConvertedStatus *outStatus = (MusicCoreConvertedStatus *)outStatusPtr;
+	SceInt8 chType = raw->playerKind;
 	if (chType == 0)
-		outStatus[0] = 1;
+		outStatus->channelType = 1;
 	else if (chType == 1)
-		outStatus[0] = 0;
+		outStatus->channelType = 0;
 	else if (chType == 2)
-		outStatus[0] = 2;
+		outStatus->channelType = 2;
 	else
 		return (int)0x80100D01;
 
-	const int *rawWords = (const int *)raw;
-	outStatus[1] = rawWords[5];
-	outStatus[2] = rawWords[6];
-	outStatus[5] = 0;
+	outStatus->cmdParam = raw->cmdParam;
+	outStatus->errCode = raw->errCode;
+	outStatus->hasRingError = 0;
 
-	if (outStatus[0] == 0) {
+	if (outStatus->channelType == 0) {
 		for (int i = 0; i < 10; ++i) {
 			if (s_errRingCh1.errors[i] != 0) {
-				outStatus[5] = 1;
+				outStatus->hasRingError = 1;
 				break;
 			}
 		}
-	} else if (outStatus[0] == 1) {
+	} else if (outStatus->channelType == 1) {
 		int idx = -1;
 		for (int i = 0; i < 8; ++i) {
-			if (s_appSlots[i].slotId == raw[0]) {
+			if (s_appSlots[i].slotId == raw->channelId) {
 				idx = i;
 				break;
 			}
@@ -1496,89 +1604,89 @@ int musicCoreConvertStatus(const SceUInt8 *raw, int *outStatus, int playTime, co
 			return (int)0x80100D01;
 		for (int i = 0; i < 10; ++i) {
 			if (s_errRingCh0[idx].errors[i] != 0) {
-				outStatus[5] = 1;
+				outStatus->hasRingError = 1;
 				break;
 			}
 		}
 	} else {
 		for (int i = 0; i < 10; ++i) {
 			if (s_errRingCh2.errors[i] != 0) {
-				outStatus[5] = 1;
+				outStatus->hasRingError = 1;
 				break;
 			}
 		}
 	}
 
-	int ret = musicCoreConvertPlayMode((SceInt8)raw[2], &outStatus[8]);
+	int ret = musicCoreConvertPlayMode(raw->bgmStatus, &outStatus->playMode);
 	if (ret != 0) return ret;
-	outStatus[9] = (SceInt8)raw[3];
-	outStatus[10] = rawWords[1];
-	outStatus[11] = raw[8];
-	*(SceInt64 *)(outStatus + 12) = *(const SceInt64 *)(raw + 40);
-	outStatus[14] = rawWords[16];
-	outStatus[15] = playTime;
-	outStatus[16] = rawWords[19];
-	outStatus[17] = rawWords[20];
-	outStatus[18] = rawWords[21];
-	outStatus[19] = rawWords[22];
-	outStatus[20] = rawWords[23];
-	outStatus[21] = rawWords[24];
-	outStatus[22] = rawWords[18];
-	outStatus[23] = rawWords[17];
-	outStatus[24] = rawWords[28];
+	outStatus->bgmReason = raw->bgmReason;
+	outStatus->bgmPriority = raw->bgmPriority;
+	outStatus->playableFlag = raw->playableFlag;
+	outStatus->trackId = raw->trackId;
+	outStatus->trackIndex = raw->trackIndex;
+	outStatus->playTime = playTime;
+	outStatus->durationMs = raw->durationMs;
+	outStatus->sampleRate = raw->sampleRate;
+	outStatus->bitRate = raw->bitRate;
+	outStatus->channels = raw->channels;
+	outStatus->codecType = raw->codecType;
+	outStatus->sourceType = raw->sourceType;
+	outStatus->currentTrackNum = raw->currentTrackNum;
+	outStatus->totalTracks = raw->totalTracks;
+	outStatus->audioBalance = raw->audioBalance;
 
-	ret = musicCoreConvertSampleRate(rawWords[20], &outStatus[17]);
+	ret = musicCoreConvertSampleRate(raw->sampleRate, &outStatus->sampleRate);
 	if (ret != 0) return ret;
-	ret = musicCoreConvertRepeat(rawWords[25], &outStatus[26]);
+	ret = musicCoreConvertRepeat(raw->repeatMode, &outStatus->repeatMode);
 	if (ret != 0) return ret;
-	ret = musicCoreConvertShuffle((SceUInt32)rawWords[26], &outStatus[25]);
+	ret = musicCoreConvertShuffle((SceUInt32)raw->shuffleMode, &outStatus->shuffleMode);
 	if (ret != 0) return ret;
-	ret = musicCoreConvertEq(rawWords[33], &outStatus[27]);
+	ret = musicCoreConvertEq(raw->audioNormalizer, &outStatus->audioNormalizer);
 	if (ret != 0) return ret;
-	if (rawWords[29] < 0 || rawWords[29] > 4)
+	if (raw->eqType < 0 || raw->eqType > 4)
 		return (int)0x80100D01;
-	outStatus[28] = rawWords[29];
-	ret = musicCoreConvertVolumeMode((SceUInt32)rawWords[8], &outStatus[29]);
+	outStatus->eqType = raw->eqType;
+	ret = musicCoreConvertVolumeMode((SceUInt32)raw->contentType, &outStatus->volumeMode);
 	if (ret != 0) return ret;
 
-	*(SceInt64 *)(outStatus + 30) = *(const SceInt64 *)(raw + 48);
-	*(SceInt64 *)(outStatus + 32) = *(const SceInt64 *)(raw + 56);
-	outStatus[35] = rawWords[3];
-	if (outStatus[0] == 0)
-		outStatus[34] = (cap[50] != 0);
-	else if (outStatus[0] == 1)
-		outStatus[34] = (cap[30] != 0);
+	outStatus->trackItemId = raw->trackItemId;
+	outStatus->playlistId = raw->playlistId;
+	outStatus->seqNum = raw->seqNum;
+	if (outStatus->channelType == 0)
+		outStatus->capActive = (cap[50] != 0);
+	else if (outStatus->channelType == 1)
+		outStatus->capActive = (cap[30] != 0);
 	else
-		outStatus[34] = (cap[70] != 0);
+		outStatus->capActive = (cap[70] != 0);
 	return 0;
 }
 
 /* 0x811D1608 */
-int musicCoreConvertTrackInfo(const char *rawTrack, const void *rawStatus, char *outInfo)
+int musicCoreConvertTrackInfo(const char *rawTrackPtr, const void *rawStatusPtr, char *outInfoPtr)
 {
-	sce_paf_strncpy(outInfo, rawTrack, 0x801);
-	const int *srcW = (const int *)rawTrack;
-	const int *stW = (const int *)rawStatus;
-	int *dstW = (int *)outInfo;
-	dstW[513] = srcW[513];
-	dstW[514] = stW[16];
-	*(SceInt64 *)(outInfo + 2064) = *(const SceInt64 *)((const char *)rawStatus + 40);
+	const MusicCoreTrackInfoRaw *src = (const MusicCoreTrackInfoRaw *)rawTrackPtr;
+	const MusicCoreRawSnap *st = (const MusicCoreRawSnap *)rawStatusPtr;
+	MusicCoreTrackInfoRaw *dst = (MusicCoreTrackInfoRaw *)outInfoPtr;
+	sce_paf_strncpy(dst->uri, src->uri, 0x801);
+	dst->listIndex = src->listIndex;
+	dst->trackIndex = st->trackIndex;
+	dst->trackId = st->trackId;
 
-	SceUInt32 flag1 = (SceUInt32)srcW[518];
-	if (flag1 <= 1)
-		dstW[518] = (int)flag1;
-	else if (flag1 == (SceUInt32)-1)
-		dstW[518] = 2;
+	SceUInt32 shuffleFlag = (SceUInt32)src->shuffleFlag;
+	if (shuffleFlag <= 1)
+		dst->shuffleFlag = (int)shuffleFlag;
+	else if (shuffleFlag == (SceUInt32)-1)
+		dst->shuffleFlag = 2;
 	else
 		return (int)0x80100D01;
 
-	SceUInt32 flag2 = (SceUInt32)srcW[519];
-	if (flag2 == 1)
-		dstW[519] = 0;
-	else if (flag2 == 2)
-		dstW[519] = 2;
-	else if (flag2 == (SceUInt32)-1)
-		dstW[519] = 18;
+	SceUInt32 contentKind = (SceUInt32)src->contentKind;
+	if (contentKind == 1)
+		dst->contentKind = 0;
+	else if (contentKind == 2)
+		dst->contentKind = 2;
+	else if (contentKind == (SceUInt32)-1)
+		dst->contentKind = 18;
 	else
 		return (int)0x80100D01;
 	return 0;
@@ -1657,20 +1765,20 @@ static void pushRingError(MusicCoreErrorRing *ring, int err)
 }
 
 /* 0x811D18B0 */
-static int musicCoreOnStatusCb(const void *raw, SceUInt16 eventId, SceUInt32 cmd, int err)
+static int musicCoreOnStatusCb(const void *rawPtr, SceUInt16 eventId, SceUInt32 cmd, int err)
 {
-	const SceUInt8 *rawBytes = (const SceUInt8 *)raw;
-	SceInt8 chType = (SceInt8)rawBytes[1];
-	int converted[36];
-	sce_paf_memset(converted, 0, sizeof(converted));
+	const MusicCoreRawSnap *raw = (const MusicCoreRawSnap *)rawPtr;
+	SceInt8 chType = raw->playerKind;
+	MusicCoreConvertedStatus converted;
+	sce_paf_memset(&converted, 0, sizeof(converted));
 	MusicCoreClientReq ctx;
 	sce_paf_memset(&ctx, 0, sizeof(ctx));
 	ctx.seqId = (int)cmd;
 	ctx.channel = (SceUInt8)chType;
 
 	if (chType == 1) {
-		SceInt64 prevTrack = *(SceInt64 *)(s_rawStatusCh1 + 40);
-		SceInt64 newTrack = *(const SceInt64 *)(rawBytes + 40);
+		SceInt64 prevTrack = s_rawStatusCh1.trackId;
+		SceInt64 newTrack = raw->trackId;
 		if (cmd == 0 && s_muteFlag2 == 0) {
 			if (s_muteFlag1 == 0 || err == (int)0x80100D06 || err == (int)0x80100D07)
 				pushRingError(&s_errRingCh1, err);
@@ -1700,10 +1808,10 @@ static int musicCoreOnStatusCb(const void *raw, SceUInt16 eventId, SceUInt32 cmd
 			sceBtAvrcpSetTitle(blank, 1);
 			s_titleDirty = 0;
 		}
-		sce_paf_memcpy(s_rawStatusCh1, rawBytes, 144);
-		int ret = musicCoreConvertStatus(s_rawStatusCh1, converted, s_playTimeCh1, s_capData);
+		s_rawStatusCh1 = *raw;
+		int ret = musicCoreConvertStatus(&s_rawStatusCh1, &converted, s_playTimeCh1, s_capData);
 		if (ret == 0 && s_notifyCb != NULL)
-			s_notifyCb(&ctx, eventId, &err, converted);
+			s_notifyCb(&ctx, eventId, &err, &converted);
 		return ret;
 	}
 	if (chType == 2) {
@@ -1713,16 +1821,16 @@ static int musicCoreOnStatusCb(const void *raw, SceUInt16 eventId, SceUInt32 cmd
 			s_ptCh2.cmdId = (int)cmd;
 			s_ptCh2.errCode = err;
 		}
-		sce_paf_memcpy(s_rawStatusCh2, rawBytes, 144);
-		int ret = musicCoreConvertStatus(s_rawStatusCh2, converted, s_playTimeCh2, s_capData);
+		s_rawStatusCh2 = *raw;
+		int ret = musicCoreConvertStatus(&s_rawStatusCh2, &converted, s_playTimeCh2, s_capData);
 		if (ret == 0 && s_notifyCb != NULL)
-			s_notifyCb(&ctx, eventId, &err, converted);
+			s_notifyCb(&ctx, eventId, &err, &converted);
 		return ret;
 	}
 	if (chType == 0) {
 		int idx = -1;
 		for (int i = 0; i < 8; ++i) {
-			if (s_appSlots[i].slotId == rawBytes[0]) {
+			if (s_appSlots[i].slotId == raw->channelId) {
 				idx = i;
 				break;
 			}
@@ -1735,10 +1843,10 @@ static int musicCoreOnStatusCb(const void *raw, SceUInt16 eventId, SceUInt32 cmd
 			s_ptCh0[idx].cmdId = (int)cmd;
 			s_ptCh0[idx].errCode = err;
 		}
-		sce_paf_memcpy(s_rawStatusCh0, rawBytes, 144);
-		int ret = musicCoreConvertStatus(s_rawStatusCh0, converted, s_playTimeCh0Val, s_capData);
+		s_rawStatusCh0 = *raw;
+		int ret = musicCoreConvertStatus(&s_rawStatusCh0, &converted, s_playTimeCh0Val, s_capData);
 		if (ret == 0 && s_notifyCb != NULL)
-			s_notifyCb(&ctx, eventId, &err, converted);
+			s_notifyCb(&ctx, eventId, &err, &converted);
 		return ret;
 	}
 	return (int)0x80100D01;
@@ -1757,17 +1865,17 @@ static int musicCoreOnExtraCb(const void *data)
 /* 0x811D1E82 */
 static int musicCoreOnTimeCb(const void *data)
 {
-	const SceUInt8 *bytes = (const SceUInt8 *)data;
-	SceInt8 chType = (SceInt8)bytes[1];
-	int timeVal = *(const int *)(bytes + 4);
-	SceInt64 trackId = *(const SceInt64 *)(bytes + 8);
+	const MusicCoreTimeCbData *cb = (const MusicCoreTimeCbData *)data;
+	SceInt8 chType = cb->channelType;
+	int timeVal = cb->timeMs;
+	SceInt64 trackId = cb->trackId;
 	if (chType == 0) {
-		s_playTimeCh0Slot = bytes[0];
+		s_playTimeCh0Slot = cb->slotId;
 		s_playTimeCh0Val = timeVal;
 		return 0;
 	}
 	if (chType == 1) {
-		if (trackId == *(SceInt64 *)(s_rawStatusCh1 + 40))
+		if (trackId == s_rawStatusCh1.trackId)
 			s_playTimeCh1 = timeVal;
 		return 0;
 	}
@@ -1779,9 +1887,10 @@ static int musicCoreOnTimeCb(const void *data)
 }
 
 /* 0x811D1F18 */
-static int musicCoreOnMediaCb(int kind, const void *rawStatus, const void *data)
+static int musicCoreOnMediaCb(int kind, const void *rawStatusPtr, const void *data)
 {
-	SceInt8 chType = ((const SceInt8 *)rawStatus)[1];
+	const MusicCoreRawSnap *rawStatus = (const MusicCoreRawSnap *)rawStatusPtr;
+	SceInt8 chType = rawStatus->playerKind;
 	if (chType == 0) {
 		if (kind == 1)
 			sce_paf_memcpy(s_uriCh0, data, 0x401);
@@ -1789,10 +1898,9 @@ static int musicCoreOnMediaCb(int kind, const void *rawStatus, const void *data)
 	}
 	if (chType == 1) {
 		if (kind == 2) {
-			sce_paf_memcpy(s_trackInfoBuf, data, sizeof(s_trackInfoBuf));
-			*(int *)(s_trackInfoBuf + 0x810) = *(const int *)((const char *)rawStatus + 40);
-			*(int *)(s_trackInfoBuf + 0x814) = *(const int *)((const char *)rawStatus + 44);
-			*(int *)(s_trackInfoBuf + 0x808) = *(const int *)((const char *)rawStatus + 64);
+			sce_paf_memcpy(&s_trackInfoBuf, data, sizeof(s_trackInfoBuf));
+			s_trackInfoBuf.trackId = rawStatus->trackId;
+			s_trackInfoBuf.trackIndex = rawStatus->trackIndex;
 		} else if (kind == 1) {
 			sce_paf_memcpy(s_uriCh1, data, 0x401);
 		}

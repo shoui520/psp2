@@ -66,17 +66,17 @@ struct MusicCoreClientCtx {
 };
 
 struct MusicCoreRawStatus {
-	int field0;						/* +0 */
+	int channelType;					/* +0 */
 	int state;						/* +4 */
 	int eventType;						/* +8 */
-	int field12;						/* +12 */
-	int field16;						/* +16 */
+	int reserved12;						/* +12 */
+	int reserved16;						/* +16 */
 	int errorCode;						/* +20 */
-	int field24;						/* +24 */
-	int field28;						/* +28 */
+	int reserved24;						/* +24 */
+	int reserved28;						/* +28 */
 	SceUInt32 playMode;					/* +32 */
-	int flag36;						/* +36 */
-	int flag40;						/* +40 */
+	int bgmReason;						/* +36 */
+	int bgmPriority;					/* +40 */
 	int mediaType;						/* +44 */
 	SceInt64 duration;					/* +48 */
 	int posLo;						/* +56 */
@@ -89,18 +89,16 @@ struct MusicCoreRawStatus {
 	int trackTotal;						/* +84 */
 	int artistId;						/* +88 */
 	int albumId;						/* +92 */
-	int field96;						/* +96 */
+	int audioBalance;					/* +96 */
 	SceUInt32 shuffleMode;					/* +100 */
 	SceUInt32 repeatMode;					/* +104 */
 	SceUInt32 avlsMode;					/* +108 */
 	int eqMode;						/* +112 */
 	int volume;						/* +116 */
-	int field120;						/* +120 */
-	int field124;						/* +124 */
-	int field128;						/* +128 */
-	int field132;						/* +132 */
-	int field136;						/* +136 */
-	int field140;						/* +140 */
+	SceInt64 trackItemId;					/* +120 */
+	SceInt64 playlistId;					/* +128 */
+	int isPlayable;						/* +136 */
+	int seqNum;						/* +140 */
 };
 
 struct MusicCorePublicStatus {
@@ -130,9 +128,9 @@ struct MusicCorePublicStatus {
 struct MusicCoreImposeInfo {
 	int volume;						/* +0 */
 	SceUInt8 playMode;					/* +4 */
-	SceUInt8 flag5;						/* +5 */
+	SceUInt8 bgmReason;					/* +5 */
 	SceUInt8 pad6[2];					/* +6 */
-	int flag8;						/* +8 */
+	int bgmPriority;					/* +8 */
 	char title[2048];					/* +12 */
 	char artist[2048];					/* +2060 */
 	char album[2048];					/* +4108 */
@@ -298,17 +296,22 @@ int musicCoreSendOpenUri(const MusicCoreClientCtx *ctx, const void *uriBuf, cons
 {
 	if (ctx->channel > 2)
 		return (int)0x80100D01;
-	SceUInt8 payload[1052];
-	sce_paf_memset(payload, 0, sizeof(payload));
-	sce_paf_memcpy(payload, uriBuf, 0x401);
-	sce_paf_memcpy(payload + 1028, optBuf, 16);
-	*(int *)(payload + 1044) = ctx->pid;
-	*(int *)(payload + 1048) = ctx->appId;
+	struct OpenUriPayload {
+		char uri[1028];
+		SceUInt8 opt[16];
+		int pid;
+		int appId;
+	} payload;
+	sce_paf_memset(&payload, 0, sizeof(payload));
+	sce_paf_memcpy(payload.uri, uriBuf, 0x401);
+	sce_paf_memcpy(payload.opt, optBuf, 16);
+	payload.pid = ctx->pid;
+	payload.appId = ctx->appId;
 	if (s_musicCoreMain == NULL)
 		return 0;
 	SceUInt32 packed = ((SceUInt32)12 << 16) | ctx->channel;
 	return musicCoreMainSendCmd(s_musicCoreMain, packed, ctx->seqId, packed,
-		payload, sizeof(payload));
+		&payload, sizeof(payload));
 }
 
 /* 0x811CAE46 */
@@ -624,8 +627,8 @@ int musicCoreGetImposeInfo(MusicCoreImposeInfo *outInfo)
 
 	outInfo->volume = raw.volume;
 	outInfo->playMode = (SceUInt8)raw.playMode;
-	outInfo->flag5 = (SceUInt8)raw.flag36;
-	outInfo->flag8 = raw.flag40;
+	outInfo->bgmReason = (SceUInt8)raw.bgmReason;
+	outInfo->bgmPriority = raw.bgmPriority;
 	sce_paf_memcpy(outInfo->title, metaBuf + 2048, 2048);
 	sce_paf_memcpy(outInfo->artist, metaBuf, 2048);
 	sce_paf_memcpy(outInfo->album, metaBuf + 4096, 2048);
@@ -1220,16 +1223,20 @@ int musicCoreCmdSetContent(const MusicCoreClientCtx *ctx, const void *content)
 {
 	if (ctx->channel > 2)
 		return (int)0x80100D01;
-	SceUInt8 payload[2096];
-	sce_paf_memset(payload, 0, sizeof(payload));
-	sce_paf_memcpy(payload, content, 0x828);
-	*(int *)(payload + 2088) = ctx->pid;
-	*(int *)(payload + 2092) = ctx->appId;
+	struct SetContentPayload {
+		SceUInt8 content[0x828];
+		int pid;
+		int appId;
+	} payload;
+	sce_paf_memset(&payload, 0, sizeof(payload));
+	sce_paf_memcpy(payload.content, content, 0x828);
+	payload.pid = ctx->pid;
+	payload.appId = ctx->appId;
 	if (s_musicCoreMain == NULL)
 		return 0;
 	SceUInt32 packed = ((SceUInt32)1 << 16) | ctx->channel;
 	return musicCoreMainSendCmd(s_musicCoreMain, packed, ctx->seqId, packed,
-		payload, sizeof(payload));
+		&payload, sizeof(payload));
 }
 
 /* 0x811CDAAE */
@@ -1283,7 +1290,7 @@ int musicCoreGetParam(const MusicCoreClientCtx *ctx, int paramId, int *outVal)
 		ret = musicCoreMainGetStatus(s_musicCoreMain, ctx, &raw);
 		if (ret == 0) {
 			int mapped = 0;
-			ret = musicCoreConvertEq(raw.field132, &mapped);
+			ret = musicCoreConvertEq((int)(raw.playlistId >> 32), &mapped);
 			if (ret == 0)
 				*outVal = mapped;
 		}
@@ -1334,16 +1341,20 @@ int musicCoreCmd19(const MusicCoreClientCtx *ctx, const void *data)
 {
 	if (ctx->channel > 2)
 		return (int)0x80100D01;
-	SceUInt8 payload[184];
-	sce_paf_memset(payload, 0, sizeof(payload));
-	sce_paf_memcpy(payload, data, 0xB0);
-	*(int *)(payload + 176) = ctx->pid;
-	*(int *)(payload + 180) = ctx->appId;
+	struct DbQueryPayload {
+		SceUInt8 data[0xB0];
+		int pid;
+		int appId;
+	} payload;
+	sce_paf_memset(&payload, 0, sizeof(payload));
+	sce_paf_memcpy(payload.data, data, 0xB0);
+	payload.pid = ctx->pid;
+	payload.appId = ctx->appId;
 	if (s_musicCoreMain == NULL)
 		return 0;
 	SceUInt32 packed = ((SceUInt32)19 << 16) | ctx->channel;
 	return musicCoreMainSendCmd(s_musicCoreMain, packed, ctx->seqId, packed,
-		payload, sizeof(payload));
+		&payload, sizeof(payload));
 }
 
 /* 0x811CE090 */

@@ -65,10 +65,10 @@ struct MailResidentEvent : public paf::common::RefObj {
 };
 
 struct MailResidentAppEvent : public MailResidentEvent {
-	SceUInt32 m_arg1;					/* +12 */
-	int m_arg2;						/* +16 */
-	MailResidentAppEvent(SceUInt32 arg1, int arg2)
-		: MailResidentEvent(0), m_arg1(arg1), m_arg2(arg2) {}
+	SceUInt32 m_pid;					/* +12 */
+	int m_appState;						/* +16 */
+	MailResidentAppEvent(SceUInt32 pid, int appState)
+		: MailResidentEvent(0), m_pid(pid), m_appState(appState) {}
 };
 
 struct MailResidentSyncEvent : public MailResidentEvent {
@@ -116,7 +116,7 @@ public:
 
 	int Start();						/* 0x811C7476 */
 	void Stop();						/* 0x811C76B6 */
-	void EnqueueEvent(int kind, SceUInt32 arg1, int arg2);	/* 0x811C7188 */
+	void EnqueueEvent(int kind, SceUInt32 eventParam, int appState); /* 0x811C7188 */
 	void CancelPendingSyncs();				/* 0x811C77F8 */
 	int EnsureMwRunning(SceInt64 key);			/* 0x811C7878 */
 	int OnNewSession(IPMI::Server *srv, const IPMI::Session::Config *cfg); /* 0x811C7918 */
