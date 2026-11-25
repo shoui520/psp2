@@ -55,7 +55,7 @@ ActDat g_act = {
 	}
 };
 
-int g_0x9D0[2];
+int g_challengeExpireTick[2];
 int g_fd;
 
 /*
@@ -87,7 +87,7 @@ s32 sceNpInstall_driver_91F9D50D(int a0)
 void sceNpInstall_driver_7AE4C8BC(void)
 		__attribute__((alias("sceNpInstall_user_7AE4C8BC")));
 
-s32 sub_0016C(int a0, int size, int a2, int a3);
+s32 getNpChallenge(int a0, int size, int a2, int a3);
 s32 installActivationDat(int addr, int crypt, int addr2);
 s32 storeAccountID(int addr);
 u32 removeAct(void);
@@ -124,7 +124,7 @@ s32 sceNpInstall_user_5847D8C7(int a0, int a1, int a2, int a3) {
 		if ((((a2 + 128) | a2) & (oldk1 << 11)) >= 0) {
 			//0x5C
 			if ((((a3 + 64) | a3) & (oldk1 << 11)) >= 0) {
-				res = sub_0016C(a0, a1, a2, a3);
+				res = getNpChallenge(a0, a1, a2, a3);
 			}
 			//0x70
 		}
@@ -194,11 +194,7 @@ void sceNpInstall_user_7AE4C8BC(void) {
 	return;
 }
 
-/*
- * sub_0016C
- * Address 0x0000016C
- */
-s32 sub_0016C(int a0, int size, int a2, int a3) {
+s32 getNpChallenge(int a0, int size, int a2, int a3) {
 	PspOpenPSID psid; 	// 0  - 16
 	u8 data[64];		// 16 - 80
 	s32 retStatus = SCE_NULL_POINTER;
@@ -235,12 +231,10 @@ s32 sub_0016C(int a0, int size, int a2, int a3) {
 		//0x1F8
 		s2 = 0;
 		//0x208
-		if ((*((int *) data + 0xD) < g_0x9D0[1]) != 0)
+		if ((*((int *) data + 0xD) < g_challengeExpireTick[1]) != 0)
 			return SCE_ERROR_UNKNOWN_1;
-		//0x210
-		if (g_0x9D0[1] == *((int *) data + 0xD)) {
-			//0x224
-			if ((*((int *) data + 0xC) < g_0x9D0[0]) != 0)
+		if (g_challengeExpireTick[1] == *((int *) data + 0xD)) {
+			if ((*((int *) data + 0xC) < g_challengeExpireTick[0]) != 0)
 				return SCE_ERROR_UNKNOWN_1;
 			//0x27C
 			goto mem;
@@ -273,7 +267,7 @@ s32 sub_0016C(int a0, int size, int a2, int a3) {
 		retStatus = scePcactAuth1BB(s2, psid, &data[0], &data[56], a2, a3);
 		//0x314
 		if (a0 == 1)
-			retStatus = sceRtc_driver_89FA4262(&g_0x9D0[0], &data[48], 30, 0);
+			retStatus = sceRtc_driver_89FA4262(&g_challengeExpireTick[0], &data[48], 30, 0);
 	}
 	//0x334
 	if (fd >= 0)
@@ -283,9 +277,6 @@ s32 sub_0016C(int a0, int size, int a2, int a3) {
 
 /*
  * Attempts to generate and install act.dat into flash2
- * 
- * sub_00374
- * Address 0x00000374
  * 
  * @param addr		- the address to write act.dat information to
  * @param crypt 	- type of encryption to use?
@@ -353,9 +344,6 @@ s32 installActivationDat(int addr, int crypt, int addr2) {
 }
 
 /* 
- * sub_004C4
- * Address 0x000004C4
- *
  * Gets the Account ID from act.dat in flash2 and stores it
  * into the desired address.
  *
@@ -396,9 +384,6 @@ s32 storeAccountID(int addr) {
 }
 
 /*
- * sub_00580
- * Address 0x00000580
- * 
  * Removes act.dat from flash2 and sets appropriate global flag
  */
 u32 removeAct(void) {
@@ -408,9 +393,6 @@ u32 removeAct(void) {
 }
 
 /*
- * sub_005AC
- * Address 0x000005AC
- * 
  * Creates and starts a seperate thread for deleting act.dat from flash2
  */
 s32 registerNpDeactivationThread(void) {

@@ -67,7 +67,6 @@ static SceSysCallEntryTable *g_pSysEntControl; // 0x000080EC
  */
 static SceSysCallEntryTable initialSysEntTable[SYSCALL_ENTRY_TABLES]; //0x000080F0
 
-//sub_00000344
 /*
  * Initialize the System Call table.  It is initialized the very
  * first time a SCE_LIB_SYSCALL_EXPORT resident library is 
@@ -139,7 +138,6 @@ s32 SyscallTableInit(u32 seed, SceSyscallTable **syscallTable)
    return SCE_ERROR_OK; 
 }
 
-//sub_000004B4
 /*
  * Allocate a system-call-entry-table for a resident library exporting 
  * its functions via the SYSCALL_EXPORT technique.  In order to allocate 
@@ -223,7 +221,6 @@ s32 AllocSysTable(u16 numEntries)
     return SCE_ERROR_KERNEL_ERROR;
 }
 
-//sub_000005BC
 /*
  * FreeSysTable
  * 
@@ -307,7 +304,6 @@ SceSysCallEntryTable *FreeSysTable(u32 sysTableEntryAddr)
     return curSysTableEntry;
 }
 
-//sub_0x00000740
 /*
  * The system call table's exported function slots are initialized 
  * with a pointer to this function.  Calling a function slot 

@@ -2,13 +2,13 @@
    See the file COPYING for copying permission.
 */
 
-void sub_0000();
+void initExceptionVectors(void);
 extern u32 syscallHandler;
-void sub_0120();
-void sub_0130();
-void sub_0140();
-void ExceptionManagerForKernel_79454858();
-void sub_016C();
-void nmiInit();
-void nmiHandler();
+void resetExceptionStub(void);
+void nmiExceptionJumpStub(void);
+void nmiExceptionJumpStubEnd(void);
+void ExceptionManagerForKernel_79454858(void);
+void defaultExceptionSpinLoop(void);
+void nmiInit(void);
+void nmiHandler(void);
 

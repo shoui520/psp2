@@ -48,28 +48,24 @@ int ExcepManInit(SceSize argSize __attribute__((unused)), const void *argBlock _
     ExcepManCB.defaultHdlr = NULL;
     Allocexceppool();
     pspCop0CtrlSet(25, 0);
-    sub_0000();
+    initExceptionVectors();
     int cpuid = pspCop0StateGet(COP0_STATE_CPUID);
     int *src, *srcEnd, *dst;
     if (cpuid == 1)
     {
-        // 05A4
-        src = (int*)&sub_0130;
-        dst = (int*)(0xBFC00000 + (int)ExceptionManagerForKernel_79454858 - (int)sub_0120);
-        srcEnd = (int*)&sub_0140;
+        src = (int*)&nmiExceptionJumpStub;
+        dst = (int*)(0xBFC00000 + (int)ExceptionManagerForKernel_79454858 - (int)resetExceptionStub);
+        srcEnd = (int*)&nmiExceptionJumpStubEnd;
     }
     else
     {
         dst = (int*)(0xBFC00000);
-        src = (int*)&sub_0120;
+        src = (int*)&resetExceptionStub;
         srcEnd = (int*)&ExceptionManagerForKernel_79454858;
     }
-    // 0550
-    // 055C
     while (src != srcEnd)
         *(dst++) = *(src++);
-    // 0578
-    sceKernelRegisterDefaultExceptionHandler(sub_016C);
+    sceKernelRegisterDefaultExceptionHandler(defaultExceptionSpinLoop);
     NmiManInit();
     dbg_printf("-- init ended\n");
     resumeIntr(oldIntr);
@@ -122,7 +118,7 @@ int sceKernelRegisterDefaultExceptionHandler(void *func)
     dbg_printf("sceKernelRegisterDefaultExceptionHandler(%08x)\n", func);
     int oldIntr = suspendIntr();
     SceExceptionHandler *handler = func;
-    if (handler->next != NULL || (func == sub_016C && ExcepManCB.defaultHdlr != NULL)) // 0734
+    if (handler->next != NULL || (func == defaultExceptionSpinLoop && ExcepManCB.defaultHdlr != NULL)) // 0734
     {
         // 0744
         resumeIntr(oldIntr);
@@ -181,7 +177,7 @@ int sceKernelReleaseDefaultExceptionHandler(void (*func)())
     void (*actualFunc)() = func + 8;
     SceExceptionHandler *releaseEx = (SceExceptionHandler*)func;
     SceExceptionHandler *ex = (SceExceptionHandler*)func;
-    if (func != sub_016C)
+    if (func != defaultExceptionSpinLoop)
     {
         SceExceptionHandler *next = ExcepManCB.defaultHdlr->next;
         // 085C
@@ -293,7 +289,7 @@ int sceKernelRegisterExceptionHandler(int exno, void (*func)())
 SceExceptionHandler *sceKernelGetActiveDefaultExceptionHandler(void)
 {
     dbg_printf("exec %s\n", __FUNCTION__);
-    if ((void*)ExcepManCB.defaultHdlr == sub_016C)
+    if ((void*)ExcepManCB.defaultHdlr == defaultExceptionSpinLoop)
         return NULL;
     return ExcepManCB.defaultHdlr;
 }

@@ -6,7 +6,6 @@
 
 static void *wmemcpy(u32 *dest, const u32 *src, u32 n);
 
-//sub_000074CC
 s32 strcmp(const char *s1, const char *s2)
 {   
     if (s1 != NULL && s2 != NULL) {   
@@ -25,7 +24,6 @@ s32 strcmp(const char *s1, const char *s2)
     return -1;
 }
 
-//sub_0000754C
 char *strncpy(char *dest, const char *src, s32 n) 
 {
     char *tmpDest;
@@ -45,7 +43,6 @@ char *strncpy(char *dest, const char *src, s32 n)
     return dest;
 }
 
-//sub_000075C8
 u32 strlen(const char *s) 
 {
     u32 len;
@@ -60,7 +57,6 @@ u32 strlen(const char *s)
     return len;
 }
 
-//sub_000075FC
 void *memcpy(void *dest, const void *src, u32 n)
 {
     u8 *tmpDest;

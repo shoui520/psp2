@@ -1,12 +1,12 @@
 #include "common_asm.h"
 
-    .globl sub_0000
-sub_0000:
+    .globl initExceptionVectors
+initExceptionVectors:
     lui        $a0, %hi(execNmiHandler)
     addiu      $a0, $a0, %lo(execNmiHandler)
     ctc0       $a0, $9
-    lui        $a0, %hi(sub_0040)
-    addiu      $a0, $a0, %lo(sub_0040)
+    lui        $a0, %hi(exceptionVectorEntry)
+    addiu      $a0, $a0, %lo(exceptionVectorEntry)
     jr         $ra
     mtc0       $a0, $25
 
@@ -14,9 +14,9 @@ sub_0000:
     # get threadman exception vector?
     .globl ExceptionManagerForKernel_96D47F7E
 ExceptionManagerForKernel_96D47F7E:
-    lui        $v0, %hi(sub_0070)
+    lui        $v0, %hi(threadManExceptionVector)
     jr         $ra
-    addiu      $v0, $v0, %lo(sub_0070)
+    addiu      $v0, $v0, %lo(threadManExceptionVector)
     nop        
     nop        
     nop        
@@ -24,7 +24,7 @@ ExceptionManagerForKernel_96D47F7E:
     nop        
     nop        
 
-sub_0040:
+exceptionVectorEntry:
     ctc0       $v0, $4
     ctc0       $v1, $5
     mfc0       $v0, $13
@@ -42,15 +42,15 @@ syscallHandler:
     j          syscallHandler
     ctc0       $v1, $zr
 
-sub_0070:
+threadManExceptionVector:
     ctc0       $v0, $4
     ctc0       $v1, $5
     mfc0       $v0, $13
     mfc0       $v1, $12
     ctc0       $v0, $3
     ctc0       $v1, $2
-    lui        $v1, %hi(sub_0040)
-    addiu      $v1, $v1, %lo(sub_0040)
+    lui        $v1, %hi(exceptionVectorEntry)
+    addiu      $v1, $v1, %lo(exceptionVectorEntry)
     mtc0       $v1, $25
     mfc0       $v1, $14
 
@@ -98,22 +98,22 @@ execNmiHandler:
     b          loc_0000009C
     nop        
 
-    .globl sub_0120
-sub_0120:
+    .globl resetExceptionStub
+resetExceptionStub:
     ctc0       $v0, $6
     mfc0       $v0, $22
     bne        $zr, $v0, ExceptionManagerForKernel_79454858
     nop        
 
-    .globl sub_0130
-sub_0130:
+    .globl nmiExceptionJumpStub
+nmiExceptionJumpStub:
     cfc0       $v0, $9
     jr         $v0
     nop        
     nop        
 
-    .globl sub_0140
-sub_0140:
+    .globl nmiExceptionJumpStubEnd
+nmiExceptionJumpStubEnd:
     nop        
     nop        
     nop        
@@ -129,8 +129,8 @@ ExceptionManagerForKernel_79454858:
     b          loc_0000009C
     nop        
 
-    .globl sub_016C
-sub_016C:
+    .globl defaultExceptionSpinLoop
+defaultExceptionSpinLoop:
     nop        
     nop        
 

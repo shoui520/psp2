@@ -12,7 +12,6 @@
 /* The group of chunks to be used by the system. */
 SceUID chunks[SCE_KERNEL_NUM_CHUNKS]; //0x00009A48
 
-// sub_000086C0
 void ChunkInit(void)
 {
     u32 i;

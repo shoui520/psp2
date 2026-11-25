@@ -5,29 +5,26 @@ SCE_MODULE_INFO("sceVideocodec_Driver", SCE_MODULE_KERNEL | SCE_MODULE_ATTR_CANT
 SCE_SDK_VERSION(0x06060110);
 
 typedef struct SceVideocodecCodec {
-    s32 unk0;
-    s32 unk4;
-    s32 unk8;
-    void *unk12;      /* 0x0c */
-    void *unk16;      /* 0x10 */
+    s32 version;      /* 0x00 */
+    s32 reserved0;    /* 0x04 */
+    s32 err;          /* 0x08 */
+    void *meHandle;   /* 0x0c */
+    void *codecInfo;  /* 0x10 */
     void *edramAddr;  /* 0x14 */
     u32 neededMem;    /* 0x18 */
     void *inBuf;      /* 0x1c */
     u32 inBufSize;    /* 0x20 */
-    void *unk36;      /* 0x24 */
-    u32 unk40;        /* 0x28 */
-    void *unk44;      /* 0x2c */
-    void *unk48;      /* 0x30 */
-    void *unk52;      /* 0x34 */
-    s32 unk56;        /* 0x38 */
-    u32 unk60;        /* 0x3c */
-    s32 unk64;        /* 0x40 */
-    s32 unk68;        /* 0x44 */
-    s32 unk72;        /* 0x48 */
-    s32 unk76;        /* 0x4c */
+    void *esBuf;      /* 0x24 */
+    u32 esBufSize;    /* 0x28 */
+    void *frameBufInfo; /* 0x2c */
+    void *frameInfo;  /* 0x30 */
+    void *decodeFlags;/* 0x34 */
+    s32 picBufInfo;   /* 0x38 */
+    u32 frameCount;   /* 0x3c */
+    s32 reserved1[4]; /* 0x40..0x4f */
     void *seiBuf;     /* 0x50 */
-    void *unk84;      /* 0x54 */
-    s32 unk88;        /* 0x58 */
+    void *extraInfoBuf;/* 0x54 */
+    s32 reserved2;    /* 0x58 */
     void *allocMem;   /* 0x5c */
 } SceVideocodecCodec;
 
@@ -44,15 +41,15 @@ s32 sceMeVideo_driver_E8CD3C75(s32 type, SceVideocodecCodec *info);
 
 s32 g_retValues[] = { 0x80628002, 0x80628001, 0x80620002, 0x806201FE, 0x00000000 };
 
-static s32 sub_07a8(SceVideocodecCodec *info, u32 type);
-static s32 sub_080c(SceVideocodecCodec *info, u32 type);
-static void sub_08b0(SceVideocodecCodec *info, s32 type);
-static s32 sub_0924(SceVideocodecCodec *info, u32 type);
-static void sub_0ae0(SceVideocodecCodec *info, s32 type);
-static void sub_0b8c(SceVideocodecCodec *info, s32 type);
-static s32 sub_0c38(SceVideocodecCodec *info, u32 type);
-static void sub_0d2c(SceVideocodecCodec *info, s32 type);
-static s32 sub_0d94(SceVideocodecCodec *info, u32 type);
+static s32 validateOpenParams(SceVideocodecCodec *info, u32 type);
+static s32 validateInitParams(SceVideocodecCodec *info, u32 type);
+static void flushInitBuffers(SceVideocodecCodec *info, s32 type);
+static s32 validateDecodeParams(SceVideocodecCodec *info, u32 type);
+static void flushDecodeInputBuffers(SceVideocodecCodec *info, s32 type);
+static void invalidateDecodeOutputBuffers(SceVideocodecCodec *info, s32 type);
+static s32 validateStopParams(SceVideocodecCodec *info, u32 type);
+static void flushStopBuffers(SceVideocodecCodec *info, s32 type);
+static s32 validateDeleteParams(SceVideocodecCodec *info, u32 type);
 
 s32 sceVideocodecGetEDRAM(SceVideocodecCodec *info, s32 type)
 {
@@ -93,10 +90,10 @@ s32 sceVideocodecReleaseEDRAM(SceVideocodecCodec *info)
 s32 sceVideocodecOpen(SceVideocodecCodec *info, u32 type)
 {
     s32 oldK1 = pspShiftK1();
-    s32 ret = sub_07a8(info, type);
+    s32 ret = validateOpenParams(info, type);
     if (ret == 0) {
-        info->unk0 = 0x05100601;
-        sceKernelDcacheWritebackInvalidateRange(info->unk16, type == 0 ? 0x28 : 0x100);
+        info->version = 0x05100601;
+        sceKernelDcacheWritebackInvalidateRange(info->codecInfo, type == 0 ? 0x28 : 0x100);
         s32 id = sceMeVideo_driver_C441994C(type, info);
         ret = id;
         if (id != 0) {
@@ -113,14 +110,14 @@ s32 sceVideocodecOpen(SceVideocodecCodec *info, u32 type)
 s32 sceVideocodecSetMemory(SceVideocodecCodec *info, u32 type)
 {
     s32 oldK1 = pspShiftK1();
-    s32 ret = sub_07a8(info, type);
+    s32 ret = validateOpenParams(info, type);
     if (ret >= 0) {
-        if (!pspK1PtrOk(info->unk12)) {
+        if (!pspK1PtrOk(info->meHandle)) {
             ret = SCE_ERROR_PRIV_REQUIRED;
         }
     }
     if (ret == 0 && type == 0) {
-        sceKernelDcacheWritebackInvalidateRange(info->unk16, 0x28);
+        sceKernelDcacheWritebackInvalidateRange(info->codecInfo, 0x28);
         s32 id = sceMeVideo_driver_6D68B223(0, 1, info);
         s32 idx = ((u32)(id - 1) < (u32)-5) ? -4 : id;
         ret = g_retValues[idx + 4];
@@ -134,14 +131,14 @@ s32 sceVideocodecScanHeader(SceVideocodecCodec *info, u32 type)
     s32 oldK1 = pspShiftK1();
     s32 ret = SCE_ERROR_PRIV_REQUIRED;
     if (pspK1StaBufOk(info, 0x60)
-     && pspK1StaBufOk(info->unk16, 0x100)
-     && pspK1DynBufOk(info->unk36, info->unk40)
-     && pspK1PtrOk(info->unk12)) {
+     && pspK1StaBufOk(info->codecInfo, 0x100)
+     && pspK1DynBufOk(info->esBuf, info->esBufSize)
+     && pspK1PtrOk(info->meHandle)) {
         ret = 0x806201FE;
         if (type - 1 < 2) {
-            sceKernelDcacheWritebackInvalidateRange(info->unk16, 0x100);
-            if (((u32)info->unk36 & 0x1FFFFFFF) > 0x003FFFFF) {
-                sceKernelDcacheWritebackInvalidateRange(info->unk36, info->unk40);
+            sceKernelDcacheWritebackInvalidateRange(info->codecInfo, 0x100);
+            if (((u32)info->esBuf & 0x1FFFFFFF) > 0x003FFFFF) {
+                sceKernelDcacheWritebackInvalidateRange(info->esBuf, info->esBufSize);
             }
             s32 id = sceMeVideo_driver_6D68B223(type, 2, info);
             s32 idx = ((u32)(id - 1) < (u32)-5) ? -4 : id;
@@ -173,14 +170,14 @@ s32 sceVideocodecGetSEI(SceVideocodecCodec *info, u32 type)
     s32 oldK1 = pspShiftK1();
     s32 ret = 0x806201FE;
     if (type == 0) {
-        ret = sub_07a8(info, 0);
+        ret = validateOpenParams(info, 0);
         if (ret == 0) {
-            if (!pspK1StaBufOk(info->seiBuf, 0xA4) || !pspK1PtrOk(info->unk12)) {
+            if (!pspK1StaBufOk(info->seiBuf, 0xA4) || !pspK1PtrOk(info->meHandle)) {
                 ret = SCE_ERROR_PRIV_REQUIRED;
             }
         }
         if (ret == 0) {
-            sceKernelDcacheWritebackInvalidateRange(info->unk16, type == 0 ? 0x28 : 0x100);
+            sceKernelDcacheWritebackInvalidateRange(info->codecInfo, type == 0 ? 0x28 : 0x100);
             sceKernelDcacheInvalidateRangeForUser(info->seiBuf, 0xC0);
             s32 id = sceMeVideo_driver_6D68B223(type, 5, info);
             s32 idx = ((u32)(id - 1) < (u32)-5) ? -4 : id;
@@ -201,9 +198,9 @@ s32 sceVideocodec_driver_CB3312D1(void)
 s32 sceVideocodecInit(SceVideocodecCodec *info, u32 type)
 {
     s32 oldK1 = pspShiftK1();
-    s32 ret = sub_080c(info, type);
+    s32 ret = validateInitParams(info, type);
     if (ret == 0) {
-        sub_08b0(info, type);
+        flushInitBuffers(info, type);
         s32 id = sceMeVideo_driver_E8CD3C75(type, info);
         s32 idx = ((u32)(id - 1) < (u32)-5) ? -4 : id;
         ret = g_retValues[idx + 4];
@@ -215,10 +212,10 @@ s32 sceVideocodecInit(SceVideocodecCodec *info, u32 type)
 s32 sceVideocodecDecode(SceVideocodecCodec *info, u32 type)
 {
     s32 oldK1 = pspShiftK1();
-    s32 ret = sub_0924(info, type);
+    s32 ret = validateDecodeParams(info, type);
     if (ret == 0) {
-        sub_0ae0(info, type);
-        sub_0b8c(info, type);
+        flushDecodeInputBuffers(info, type);
+        invalidateDecodeOutputBuffers(info, type);
         s32 id = sceMeVideo_driver_8768915D(type, info);
         s32 idx = ((u32)(id - 1) < (u32)-5) ? -4 : id;
         ret = g_retValues[idx + 4];
@@ -230,10 +227,10 @@ s32 sceVideocodecDecode(SceVideocodecCodec *info, u32 type)
 s32 sceVideocodecStop(SceVideocodecCodec *info, u32 type)
 {
     s32 oldK1 = pspShiftK1();
-    s32 ret = sub_0c38(info, type);
+    s32 ret = validateStopParams(info, type);
     if (ret == 0) {
-        sub_0d2c(info, type);
-        sub_0b8c(info, type);
+        flushStopBuffers(info, type);
+        invalidateDecodeOutputBuffers(info, type);
         s32 id = sceMeVideo_driver_4D78330C(type, info);
         s32 idx = ((u32)(id - 1) < (u32)-5) ? -4 : id;
         ret = g_retValues[idx + 4];
@@ -245,9 +242,9 @@ s32 sceVideocodecStop(SceVideocodecCodec *info, u32 type)
 s32 sceVideocodecDelete(SceVideocodecCodec *info, u32 type)
 {
     s32 oldK1 = pspShiftK1();
-    s32 ret = sub_0d94(info, type);
+    s32 ret = validateDeleteParams(info, type);
     if (ret <= 0) {
-        sceKernelDcacheWritebackInvalidateRange(info->unk16, type == 0 ? 0x28 : 0x100);
+        sceKernelDcacheWritebackInvalidateRange(info->codecInfo, type == 0 ? 0x28 : 0x100);
         s32 id = sceMeVideo_driver_8DD56014(type, info);
         s32 idx = ((u32)(id - 1) < (u32)-5) ? -4 : id;
         ret = g_retValues[idx + 4];
@@ -256,7 +253,7 @@ s32 sceVideocodecDelete(SceVideocodecCodec *info, u32 type)
     return ret;
 }
 
-static s32 sub_07a8(SceVideocodecCodec *info, u32 type)
+static s32 validateOpenParams(SceVideocodecCodec *info, u32 type)
 {
     if (!pspK1StaBufOk(info, 0x60))
         return SCE_ERROR_PRIV_REQUIRED;
@@ -266,12 +263,12 @@ static s32 sub_07a8(SceVideocodecCodec *info, u32 type)
             return 0x806201FE;
         sz = 0x100;
     }
-    if (!pspK1DynBufOk(info->unk16, sz))
+    if (!pspK1DynBufOk(info->codecInfo, sz))
         return SCE_ERROR_PRIV_REQUIRED;
     return 0;
 }
 
-static s32 sub_080c(SceVideocodecCodec *info, u32 type)
+static s32 validateInitParams(SceVideocodecCodec *info, u32 type)
 {
     if (!pspK1StaBufOk(info, 0x60)
      || !pspK1DynBufOk(info->edramAddr, info->neededMem)
@@ -283,27 +280,27 @@ static s32 sub_080c(SceVideocodecCodec *info, u32 type)
             return 0x806201FE;
         sz = 0x100;
     }
-    if (!pspK1DynBufOk(info->unk16, sz))
+    if (!pspK1DynBufOk(info->codecInfo, sz))
         return SCE_ERROR_PRIV_REQUIRED;
     return 0;
 }
 
-static void sub_08b0(SceVideocodecCodec *info, s32 type)
+static void flushInitBuffers(SceVideocodecCodec *info, s32 type)
 {
-    sceKernelDcacheWritebackInvalidateRange(info->unk16, type != 0 ? 0x100 : 0x28);
+    sceKernelDcacheWritebackInvalidateRange(info->codecInfo, type != 0 ? 0x100 : 0x28);
     if (((u32)info->edramAddr & 0x1FFFFFFF) > 0x003FFFFF) {
         sceKernelDcacheWritebackInvalidateRange(info->edramAddr, info->neededMem);
     }
     sceKernelDcacheWritebackInvalidateRange(info->inBuf, info->inBufSize);
 }
 
-static s32 sub_0924(SceVideocodecCodec *info, u32 type)
+static s32 validateDecodeParams(SceVideocodecCodec *info, u32 type)
 {
     if (!pspK1StaBufOk(info, 0x60)
-     || !pspK1PtrOk(info->unk12)
+     || !pspK1PtrOk(info->meHandle)
      || !pspK1DynBufOk(info->edramAddr, info->neededMem)
      || !pspK1DynBufOk(info->inBuf, info->inBufSize)
-     || !pspK1DynBufOk(info->unk36, info->unk40))
+     || !pspK1DynBufOk(info->esBuf, info->esBufSize))
         return SCE_ERROR_PRIV_REQUIRED;
     u32 sz = 0x28;
     if (type != 0) {
@@ -311,62 +308,62 @@ static s32 sub_0924(SceVideocodecCodec *info, u32 type)
             return 0x806201FE;
         sz = 0x100;
     }
-    if (!pspK1StaBufOk(info->unk16, sz))
+    if (!pspK1StaBufOk(info->codecInfo, sz))
         return SCE_ERROR_PRIV_REQUIRED;
     if (type != 0)
         return 0;
-    u32 cnt = info->unk60;
-    if (!pspK1DynBufOk(info->unk44, cnt * 0x2C) || !pspK1StaBufOk(info->unk48, 0x64))
+    u32 cnt = info->frameCount;
+    if (!pspK1DynBufOk(info->frameBufInfo, cnt * 0x2C) || !pspK1StaBufOk(info->frameInfo, 0x64))
         return SCE_ERROR_PRIV_REQUIRED;
-    if (info->unk56 != 0) {
-        if (!pspK1DynBufOk(info->unk52, cnt * 0x148))
+    if (info->picBufInfo != 0) {
+        if (!pspK1DynBufOk(info->decodeFlags, cnt * 0x148))
             return SCE_ERROR_PRIV_REQUIRED;
     }
-    u32 flags = (u32)info->unk52;
+    u32 flags = (u32)info->decodeFlags;
     if ((s32)flags < 0) {
         if (info->seiBuf != NULL && !pspK1StaBufOk(info->seiBuf, 0xA4))
             return SCE_ERROR_PRIV_REQUIRED;
     }
     if ((flags & 0x40000000) != 0) {
-        if (info->unk84 != NULL && !pspK1StaBufOk(info->unk84, 0x10))
+        if (info->extraInfoBuf != NULL && !pspK1StaBufOk(info->extraInfoBuf, 0x10))
             return SCE_ERROR_PRIV_REQUIRED;
     }
     return 0;
 }
 
-static void sub_0ae0(SceVideocodecCodec *info, s32 type)
+static void flushDecodeInputBuffers(SceVideocodecCodec *info, s32 type)
 {
-    if (((u32)info->unk36 & 0x1FFFFFFF) > 0x003FFFFF) {
-        sceKernelDcacheWritebackInvalidateRange(info->unk36, info->unk40);
+    if (((u32)info->esBuf & 0x1FFFFFFF) > 0x003FFFFF) {
+        sceKernelDcacheWritebackInvalidateRange(info->esBuf, info->esBufSize);
     }
     if (type != 0) {
         if (((u32)info->edramAddr & 0x1FFFFFFF) > 0x003FFFFF) {
             sceKernelDcacheWritebackInvalidateRange(info->edramAddr, info->neededMem);
         }
         sceKernelDcacheWritebackInvalidateRange(info->inBuf, info->inBufSize);
-        sceKernelDcacheWritebackInvalidateRange(info->unk16, 0x100);
+        sceKernelDcacheWritebackInvalidateRange(info->codecInfo, 0x100);
     } else {
-        sceKernelDcacheWritebackInvalidateRange(info->unk16, 0x28);
+        sceKernelDcacheWritebackInvalidateRange(info->codecInfo, 0x28);
     }
 }
 
-static void sub_0b8c(SceVideocodecCodec *info, s32 type)
+static void invalidateDecodeOutputBuffers(SceVideocodecCodec *info, s32 type)
 {
     if (type != 0)
         return;
-    sceKernelDcacheInvalidateRangeForUser(info->unk44, (info->unk60 * 0x2C + 0x3F) & ~0x3FU);
-    sceKernelDcacheInvalidateRangeForUser(info->unk48, 0x40);
-    if (info->unk56 != 0) {
-        sceKernelDcacheInvalidateRangeForUser((void *)info->unk56, (info->unk60 * 0x148 + 0x3F) & ~0x3FU);
+    sceKernelDcacheInvalidateRangeForUser(info->frameBufInfo, (info->frameCount * 0x2C + 0x3F) & ~0x3FU);
+    sceKernelDcacheInvalidateRangeForUser(info->frameInfo, 0x40);
+    if (info->picBufInfo != 0) {
+        sceKernelDcacheInvalidateRangeForUser((void *)info->picBufInfo, (info->frameCount * 0x148 + 0x3F) & ~0x3FU);
     }
-    if ((s32)info->unk52 < 0 && info->seiBuf != NULL) {
+    if ((s32)info->decodeFlags < 0 && info->seiBuf != NULL) {
         sceKernelDcacheInvalidateRangeForUser(info->seiBuf, 0xC0);
     }
 }
 
-static s32 sub_0c38(SceVideocodecCodec *info, u32 type)
+static s32 validateStopParams(SceVideocodecCodec *info, u32 type)
 {
-    if (!pspK1StaBufOk(info, 0x60) || !pspK1PtrOk(info->unk12))
+    if (!pspK1StaBufOk(info, 0x60) || !pspK1PtrOk(info->meHandle))
         return SCE_ERROR_PRIV_REQUIRED;
     u32 sz = 0x28;
     if (type != 0) {
@@ -374,21 +371,21 @@ static s32 sub_0c38(SceVideocodecCodec *info, u32 type)
             return 0x806201FE;
         sz = 0x100;
     }
-    if (!pspK1StaBufOk(info->unk16, sz))
+    if (!pspK1StaBufOk(info->codecInfo, sz))
         return SCE_ERROR_PRIV_REQUIRED;
     if (type != 0)
         return 0;
-    u32 cnt = info->unk60;
-    if (!pspK1DynBufOk(info->unk44, cnt * 0x2C) || !pspK1StaBufOk(info->unk48, 0x64))
+    u32 cnt = info->frameCount;
+    if (!pspK1DynBufOk(info->frameBufInfo, cnt * 0x2C) || !pspK1StaBufOk(info->frameInfo, 0x64))
         return SCE_ERROR_PRIV_REQUIRED;
-    if (info->unk56 != 0) {
-        if (!pspK1DynBufOk((void *)info->unk56, cnt * 0x148))
+    if (info->picBufInfo != 0) {
+        if (!pspK1DynBufOk((void *)info->picBufInfo, cnt * 0x148))
             return SCE_ERROR_PRIV_REQUIRED;
     }
     return 0;
 }
 
-static void sub_0d2c(SceVideocodecCodec *info, s32 type)
+static void flushStopBuffers(SceVideocodecCodec *info, s32 type)
 {
     u32 sz = 0x28;
     if (type != 0) {
@@ -397,14 +394,14 @@ static void sub_0d2c(SceVideocodecCodec *info, s32 type)
         }
         sz = 0x100;
     }
-    sceKernelDcacheWritebackInvalidateRange(info->unk16, sz);
+    sceKernelDcacheWritebackInvalidateRange(info->codecInfo, sz);
 }
 
-static s32 sub_0d94(SceVideocodecCodec *info, u32 type)
+static s32 validateDeleteParams(SceVideocodecCodec *info, u32 type)
 {
-    s32 ret = sub_07a8(info, type);
+    s32 ret = validateOpenParams(info, type);
     if (ret >= 0) {
-        if (!pspK1PtrOk(info->unk12))
+        if (!pspK1PtrOk(info->meHandle))
             ret = SCE_ERROR_PRIV_REQUIRED;
     }
     return ret;

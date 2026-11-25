@@ -226,7 +226,6 @@ s32 sceKernelStopUnloadSelfModule(SceSize args, void *argp, s32 *pModResult, con
     return _StopUnloadSelfModuleWithStatus(SCE_ERROR_OK, (void *)pspGetRa(), args, argp, pModResult, pOption);
 }
 
-// Subroutine sub_000076CC - Address 0x000076CC 
 static s32 _SelfStopUnloadModule(s32 returnStatus, const void *codeAddr, SceSize args, void *argp, s32 *pStatus,
     const SceKernelSMOption *pOption)
 {
@@ -274,7 +273,6 @@ static s32 _SelfStopUnloadModule(s32 returnStatus, const void *codeAddr, SceSize
     return status;
 }
 
-// Subroutine sub_000077F0 - Address 0x000077F0 
 static s32 _StopUnloadSelfModuleWithStatus(s32 returnStatus, void *addr, SceSize args, void *argp, s32 *pStatus,
     const SceKernelSMOption *pOption)
 {
