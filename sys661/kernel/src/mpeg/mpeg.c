@@ -356,8 +356,9 @@ static s32 mpegFlushAllStreamInternal(u32 *mp_ptr)
 /* 2: 0x01bc (200B) */
 static s32 mpegUnRegistStreamInternal(u32 *mp_ptr, u32 *stream)
 {
-	if (mpegValidateHandle(mp_ptr) != 0)
-		return 0x806101fe;
+	s32 ret = mpegValidateHandle(mp_ptr);
+	if (ret != 0)
+		return ret;
 	if (stream == 0)
 		return 0x806101fe;
 	u32 mp = *mp_ptr;

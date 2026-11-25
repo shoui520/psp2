@@ -2291,7 +2291,7 @@ s32 sceKernelLoadRebootBin(u8 *file, u32 size)
     
     status = memlmd_F26A33C3(0, HWPTR(0xBFC00200)); //0x00003F70
     if (status != SCE_ERROR_OK) //0x00003F84
-        return SCE_KERNEL_VALUE_UNITIALIZED;
+        return status;
     
     status = memlmd_CF03556B(file, size, &newSize); //0x00003F8C
     if (status != SCE_ERROR_OK) //0x00003F94
