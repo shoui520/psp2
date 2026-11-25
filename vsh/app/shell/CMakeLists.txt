@@ -367,6 +367,13 @@ psp2_module(vs0_vsh_shell_shell KIND user COMPILER snc PARTIAL SOURCES
 	src/media_detect/src/media_detect_mgr.cpp
 	src/mtp/src/mtp_event_handler.cpp
 	src/mtp/src/mtp_dialog.cpp
+	src/mtp/src/mtp_service_worker.cpp
+	src/mtp/src/mtp_service_session_mgr.cpp
+	src/mtp/src/mtp_storage_usb_handler.cpp
+	src/mtp/src/mtp_service_dispatch.cpp
+	src/mtp/src/mtp_server.cpp
+	src/mtp/src/mtp_marlin_service.cpp
+	src/mtp/src/mtp_wrapper.cpp
 	src/musiccore_plugin/src/musiccore_plugin.cpp
 	src/musiccore_plugin/src/musiccore_main_thread.cpp
 	src/musiccore_plugin/src/musiccore_ctrl_client.cpp
