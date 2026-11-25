@@ -179,44 +179,44 @@ struct RegKeyEntry g_keys[104] = {
 };
 
 static struct RegCatEntry g_cats[38] = {
-	/*  0 */ { "/REGISTRY", 0x00, &g_keys[-1999], 1, 0 },
-	/*  1 */ { "/CONFIG/BROWSER", 0x01, &g_keys[-1998], 19, 0 },
-	/*  2 */ { "/CONFIG/BROWSER2", 0x02, &g_keys[-1979], 4, 0 },
-	/*  3 */ { "/CONFIG/DISPLAY", 0x03, &g_keys[-1975], 1, 0 },
-	/*  4 */ { "/CONFIG/NP", 0x04, &g_keys[-1974], 15, 0 },
-	/*  5 */ { "/CONFIG/SYSTEM", 0x05, &g_keys[-1959], 4, 0 },
-	/*  6 */ { "/CONFIG/SYSTEM/XMB", 0x06, &g_keys[-1955], 2, 0 },
-	/*  7 */ { "/CONFIG/SYSTEM/LOCK", 0x07, &g_keys[-1953], 3, 0 },
-	/*  8 */ { "/CONFIG/SYSTEM/CHARACTER_SET", 0x08, &g_keys[-1950], 2, 0 },
-	/*  9 */ { "/CONFIG/SYSTEM/SOUND", 0x09, &g_keys[-1902], 4, 0 },
-	/* 10 */ { "/CONFIG/SYSTEM/POWER_SAVING", 0x0a, &g_keys[-1898], 3, 0 },
-	/* 11 */ { "/CONFIG/DATE", 0x0b, &g_keys[-1948], 5, 0 },
-	/* 12 */ { "/CONFIG/NETWORK/ADHOC", 0x0c, &g_keys[-1943], 2, 0 },
-	/* 13 */ { "/CONFIG/NETWORK/INFRASTRUCTURE", 0x0d, &g_keys[-1941], 5, 0 },
-	/* 14 */ { "/CONFIG/NETWORK/GO_MESSENGER", 0x0e, &g_keys[-1936], 2, 0 },
-	/* 15 */ { "/CONFIG/OSK", 0x0f, &g_keys[-1934], 5, 0 },
-	/* 16 */ { "/DATA/COUNT", 0x10, &g_keys[-1927], 6, 0 },
-	/* 17 */ { "/DATA/FONT", 0x11, &g_keys[-1929], 2, 0 },
-	/* 18 */ { "/DATA/FONT/PROPERTY/INFO0", 0x12, &g_keys[-1921], 16, 0 },
-	/* 19 */ { "/DATA/FONT/PROPERTY/INFO1", 0x13, &g_keys[-1921], 16, 0 },
-	/* 20 */ { "/DATA/FONT/PROPERTY/INFO2", 0x14, &g_keys[-1921], 16, 0 },
-	/* 21 */ { "/DATA/FONT/PROPERTY/INFO3", 0x15, &g_keys[-1921], 16, 0 },
-	/* 22 */ { "/DATA/FONT/PROPERTY/INFO4", 0x16, &g_keys[-1921], 16, 0 },
-	/* 23 */ { "/DATA/FONT/PROPERTY/INFO5", 0x17, &g_keys[-1921], 16, 0 },
-	/* 24 */ { "/DATA/FONT/PROPERTY/INFO6", 0x18, &g_keys[-1921], 16, 0 },
-	/* 25 */ { "/DATA/FONT/PROPERTY/INFO7", 0x19, &g_keys[-1921], 16, 0 },
-	/* 26 */ { "/DATA/FONT/PROPERTY/INFO8", 0x1a, &g_keys[-1921], 16, 0 },
-	/* 27 */ { "/DATA/FONT/PROPERTY/INFO9", 0x1b, &g_keys[-1921], 16, 0 },
-	/* 28 */ { "/DATA/FONT/PROPERTY/INFO10", 0x1c, &g_keys[-1921], 16, 0 },
-	/* 29 */ { "/DATA/FONT/PROPERTY/INFO11", 0x1d, &g_keys[-1921], 16, 0 },
-	/* 30 */ { "/DATA/FONT/PROPERTY/INFO12", 0x1e, &g_keys[-1921], 16, 0 },
-	/* 31 */ { "/DATA/FONT/PROPERTY/INFO13", 0x1f, &g_keys[-1921], 16, 0 },
-	/* 32 */ { "/DATA/FONT/PROPERTY/INFO14", 0x20, &g_keys[-1921], 16, 0 },
-	/* 33 */ { "/DATA/FONT/PROPERTY/INFO15", 0x21, &g_keys[-1921], 16, 0 },
-	/* 34 */ { "/DATA/FONT/PROPERTY/INFO16", 0x22, &g_keys[-1921], 16, 0 },
-	/* 35 */ { "/DATA/FONT/PROPERTY/INFO17", 0x23, &g_keys[-1921], 16, 0 },
-	/* 36 */ { "/SYSPROFILE", 0x24, &g_keys[-1905], 1, 0 },
-	/* 37 */ { "/SYSPROFILE/RESOLUTION", 0x25, &g_keys[-1904], 2, 0 },
+	/*  0 */ { "/REGISTRY", 0x00, &g_keys[0], 1, 0 },
+	/*  1 */ { "/CONFIG/BROWSER", 0x01, &g_keys[1], 19, 0 },
+	/*  2 */ { "/CONFIG/BROWSER2", 0x02, &g_keys[20], 4, 0 },
+	/*  3 */ { "/CONFIG/DISPLAY", 0x03, &g_keys[24], 1, 0 },
+	/*  4 */ { "/CONFIG/NP", 0x04, &g_keys[25], 15, 0 },
+	/*  5 */ { "/CONFIG/SYSTEM", 0x05, &g_keys[40], 4, 0 },
+	/*  6 */ { "/CONFIG/SYSTEM/XMB", 0x06, &g_keys[44], 2, 0 },
+	/*  7 */ { "/CONFIG/SYSTEM/LOCK", 0x07, &g_keys[46], 3, 0 },
+	/*  8 */ { "/CONFIG/SYSTEM/CHARACTER_SET", 0x08, &g_keys[49], 2, 0 },
+	/*  9 */ { "/CONFIG/SYSTEM/SOUND", 0x09, &g_keys[97], 4, 0 },
+	/* 10 */ { "/CONFIG/SYSTEM/POWER_SAVING", 0x0a, &g_keys[101], 3, 0 },
+	/* 11 */ { "/CONFIG/DATE", 0x0b, &g_keys[51], 5, 0 },
+	/* 12 */ { "/CONFIG/NETWORK/ADHOC", 0x0c, &g_keys[56], 2, 0 },
+	/* 13 */ { "/CONFIG/NETWORK/INFRASTRUCTURE", 0x0d, &g_keys[58], 5, 0 },
+	/* 14 */ { "/CONFIG/NETWORK/GO_MESSENGER", 0x0e, &g_keys[63], 2, 0 },
+	/* 15 */ { "/CONFIG/OSK", 0x0f, &g_keys[65], 5, 0 },
+	/* 16 */ { "/DATA/COUNT", 0x10, &g_keys[72], 6, 0 },
+	/* 17 */ { "/DATA/FONT", 0x11, &g_keys[70], 2, 0 },
+	/* 18 */ { "/DATA/FONT/PROPERTY/INFO0", 0x12, &g_keys[78], 16, 0 },
+	/* 19 */ { "/DATA/FONT/PROPERTY/INFO1", 0x13, &g_keys[78], 16, 0 },
+	/* 20 */ { "/DATA/FONT/PROPERTY/INFO2", 0x14, &g_keys[78], 16, 0 },
+	/* 21 */ { "/DATA/FONT/PROPERTY/INFO3", 0x15, &g_keys[78], 16, 0 },
+	/* 22 */ { "/DATA/FONT/PROPERTY/INFO4", 0x16, &g_keys[78], 16, 0 },
+	/* 23 */ { "/DATA/FONT/PROPERTY/INFO5", 0x17, &g_keys[78], 16, 0 },
+	/* 24 */ { "/DATA/FONT/PROPERTY/INFO6", 0x18, &g_keys[78], 16, 0 },
+	/* 25 */ { "/DATA/FONT/PROPERTY/INFO7", 0x19, &g_keys[78], 16, 0 },
+	/* 26 */ { "/DATA/FONT/PROPERTY/INFO8", 0x1a, &g_keys[78], 16, 0 },
+	/* 27 */ { "/DATA/FONT/PROPERTY/INFO9", 0x1b, &g_keys[78], 16, 0 },
+	/* 28 */ { "/DATA/FONT/PROPERTY/INFO10", 0x1c, &g_keys[78], 16, 0 },
+	/* 29 */ { "/DATA/FONT/PROPERTY/INFO11", 0x1d, &g_keys[78], 16, 0 },
+	/* 30 */ { "/DATA/FONT/PROPERTY/INFO12", 0x1e, &g_keys[78], 16, 0 },
+	/* 31 */ { "/DATA/FONT/PROPERTY/INFO13", 0x1f, &g_keys[78], 16, 0 },
+	/* 32 */ { "/DATA/FONT/PROPERTY/INFO14", 0x20, &g_keys[78], 16, 0 },
+	/* 33 */ { "/DATA/FONT/PROPERTY/INFO15", 0x21, &g_keys[78], 16, 0 },
+	/* 34 */ { "/DATA/FONT/PROPERTY/INFO16", 0x22, &g_keys[78], 16, 0 },
+	/* 35 */ { "/DATA/FONT/PROPERTY/INFO17", 0x23, &g_keys[78], 16, 0 },
+	/* 36 */ { "/SYSPROFILE", 0x24, &g_keys[94], 1, 0 },
+	/* 37 */ { "/SYSPROFILE/RESOLUTION", 0x25, &g_keys[95], 2, 0 },
 };
 
 static void regLoadDefaults(void);
@@ -228,48 +228,65 @@ static int regGetCategoryKeyCount(u32 cat_id, u32 *out_num);
 static int regGetKeyValueByName(int cat_id, const char *name, void *buf, u32 size);
 static int regGetKeyNames(u32 cat_id, char *buf, int count);
 
-static inline u32 get_k1(void)
+static inline int check_ptr_k1(u32 k1_s, const void *p)
 {
-	u32 k1;
-	__asm__ volatile ("move %0, $k1" : "=r"(k1));
-	return k1;
+	return (s32)(k1_s & (u32)p) < 0;
 }
 
-static inline int check_uptr(const void *p, u32 size)
+static inline int check_range_k1(u32 k1_s, const void *p, u32 size)
 {
 	u32 addr = (u32)p;
-	u32 end = addr + size;
-	return (s32)((addr | size | end) & (get_k1() << 11)) < 0;
+	return (s32)((((addr + size) | addr) | size) & k1_s) < 0;
 }
 
 int sceRegOpenRegistry(struct RegParam *reg, int mode, REGHANDLE *h)
 {
+	u32 old_k1 = pspGetK1();
+	u32 k1_s = old_k1 << 11;
+	pspSetK1(k1_s);
 	if (sceReg_driver_var_867D5F60 != 0)
 		sceKernelDelayThread(sceReg_driver_var_867D5F60);
-	if (reg == NULL || h == NULL)
+	if (check_ptr_k1(k1_s, reg) || check_ptr_k1(k1_s, h)) {
+		pspSetK1(old_k1);
 		return 0x8008273b;
-	if (check_uptr(reg, sizeof(*reg)) || check_uptr(h, sizeof(*h)))
-		return 0x8008273b;
-	if (mode != 2)
+	}
+	if (mode != 2) {
+		pspSetK1(old_k1);
 		return 0x80082719;
-	if (reg->regtype != 1)
+	}
+	if (reg->regtype != 1) {
+		pspSetK1(old_k1);
 		return 0x800001ff;
+	}
 	g_reg_open = 1;
 	*h = 0;
+	pspSetK1(old_k1);
 	return 0;
 }
 
 int sceRegOpenCategory(REGHANDLE h, const char *name, int mode, REGHANDLE *cat_h)
 {
-	if (name == NULL)
+	u32 old_k1 = pspGetK1();
+	u32 k1_s = old_k1 << 11;
+	pspSetK1(k1_s);
+	if (name == NULL) {
+		pspSetK1(old_k1);
 		return 0x80082738;
-	if (check_uptr(name, 0x10) || cat_h == NULL || check_uptr(cat_h, 4))
+	}
+	if (check_ptr_k1(k1_s, name) || check_ptr_k1(k1_s, cat_h)) {
+		pspSetK1(old_k1);
 		return 0x8008273b;
-	if (mode != 2)
+	}
+	if (mode != 2) {
+		pspSetK1(old_k1);
 		return 0x80082719;
-	if (h != 0 || g_reg_open == 0)
+	}
+	if (h != 0 || g_reg_open == 0) {
+		pspSetK1(old_k1);
 		return 0x80082715;
+	}
 	*cat_h = regOpenCategoryByName(name);
+	pspSetK1(old_k1);
 	return 0;
 }
 
@@ -277,105 +294,181 @@ int sceRegGetKeyInfo(REGHANDLE cat_h, const char *name, REGHANDLE *key_h, u32 *t
 {
 	u32 raw_id;
 	int res;
+	u32 old_k1 = pspGetK1();
+	u32 k1_s = old_k1 << 11;
+	pspSetK1(k1_s);
 
-	if (name == NULL || check_uptr(name, 0x1b))
+	if (check_ptr_k1(k1_s, name) || check_ptr_k1(k1_s, key_h) ||
+	    check_ptr_k1(k1_s, type) || check_ptr_k1(k1_s, size)) {
+		pspSetK1(old_k1);
 		return 0x8008273b;
-	if (key_h == NULL || check_uptr(key_h, 4))
-		return 0x8008273b;
-	if (type != NULL && check_uptr(type, 4))
-		return 0x8008273b;
-	if (size != NULL && check_uptr(size, 4))
-		return 0x8008273b;
-	if (regIsCategoryOpen(cat_h) == 0)
+	}
+	if (regIsCategoryOpen(cat_h) == 0) {
+		pspSetK1(old_k1);
 		return 0x8008272e;
+	}
 	res = regFindKey(cat_h, name, &raw_id, type, size);
 	*key_h = raw_id ^ 0xa0f3d97b;
+	pspSetK1(old_k1);
 	return res;
 }
 
 int sceRegSetKeyValue(REGHANDLE cat_h, const char *name, const void *buf, u32 size)
 {
-	if (name == NULL || check_uptr(name, 0x1b))
+	int res;
+	u32 old_k1 = pspGetK1();
+	u32 k1_s = old_k1 << 11;
+	pspSetK1(k1_s);
+
+	if (check_ptr_k1(k1_s, name) || check_range_k1(k1_s, buf, size)) {
+		pspSetK1(old_k1);
 		return 0x8008273b;
-	if (buf == NULL || check_uptr(buf, size))
-		return 0x8008273b;
-	if (regIsCategoryOpen(cat_h) == 0)
+	}
+	if (regIsCategoryOpen(cat_h) == 0) {
+		pspSetK1(old_k1);
 		return 0x8008272e;
-	return regSetKeyValue(cat_h, name, buf, size);
+	}
+	res = regSetKeyValue(cat_h, name, buf, size);
+	pspSetK1(old_k1);
+	return res;
 }
 
 int sceRegGetKeyValue(REGHANDLE cat_h, REGHANDLE key_h, void *buf, u32 size)
 {
-	if (buf == NULL || check_uptr(buf, size))
+	int res;
+	u32 old_k1 = pspGetK1();
+	u32 k1_s = old_k1 << 11;
+	pspSetK1(k1_s);
+
+	if (check_range_k1(k1_s, buf, size)) {
+		pspSetK1(old_k1);
 		return 0x8008273b;
-	if (regIsCategoryOpen(cat_h) == 0)
+	}
+	if (regIsCategoryOpen(cat_h) == 0) {
+		pspSetK1(old_k1);
 		return 0x8008272e;
-	return regGetKeyValueById(cat_h, key_h ^ 0xa0f3d97b, buf, size);
+	}
+	res = regGetKeyValueById(cat_h, key_h ^ 0xa0f3d97b, buf, size);
+	pspSetK1(old_k1);
+	return res;
 }
 
 int sceReg_driver_D323FC94(REGHANDLE cat_h, u32 *num)
 {
-	if (num == NULL || check_uptr(num, 4))
+	int res;
+	u32 old_k1 = pspGetK1();
+	u32 k1_s = old_k1 << 11;
+	pspSetK1(k1_s);
+
+	if (check_ptr_k1(k1_s, num)) {
+		pspSetK1(old_k1);
 		return 0x8008273b;
-	if (regIsCategoryOpen(cat_h) == 0)
+	}
+	if (regIsCategoryOpen(cat_h) == 0) {
+		pspSetK1(old_k1);
 		return 0x8008272e;
-	return regGetCategoryKeyCount(cat_h, num);
+	}
+	res = regGetCategoryKeyCount(cat_h, num);
+	pspSetK1(old_k1);
+	return res;
 }
 
 int sceReg_driver_BAE3371A(REGHANDLE cat_h, char *buf, int num)
 {
-	if ((u32)num >= 0x20 || buf == NULL || check_uptr(buf, (u32)(num * 27)))
+	int res;
+	u32 old_k1 = pspGetK1();
+	u32 k1_s = old_k1 << 11;
+	pspSetK1(k1_s);
+
+	if ((u32)num >= 0x20 || check_range_k1(k1_s, buf, (u32)(num * 27))) {
+		pspSetK1(old_k1);
 		return 0x8008273b;
-	if (regIsCategoryOpen(cat_h) == 0)
+	}
+	if (regIsCategoryOpen(cat_h) == 0) {
+		pspSetK1(old_k1);
 		return 0x8008272e;
-	return regGetKeyNames(cat_h, buf, num);
+	}
+	res = regGetKeyNames(cat_h, buf, num);
+	pspSetK1(old_k1);
+	return res;
 }
 
 int sceRegGetKeyInfoByName(REGHANDLE cat_h, const char *name, u32 *type, u32 *size)
 {
-	u32 dummy_id;
+	u32 ignored_id;
+	int res;
+	u32 old_k1 = pspGetK1();
+	u32 k1_s = old_k1 << 11;
+	pspSetK1(k1_s);
 
-	if (name == NULL || check_uptr(name, 0x1b))
+	if (check_ptr_k1(k1_s, name) || check_ptr_k1(k1_s, type) || check_ptr_k1(k1_s, size)) {
+		pspSetK1(old_k1);
 		return 0x8008273b;
-	if (type != NULL && check_uptr(type, 4))
-		return 0x8008273b;
-	if (size != NULL && check_uptr(size, 4))
-		return 0x8008273b;
-	if (regIsCategoryOpen(cat_h) == 0)
+	}
+	if (regIsCategoryOpen(cat_h) == 0) {
+		pspSetK1(old_k1);
 		return 0x8008272e;
-	return regFindKey(cat_h, name, &dummy_id, type, size);
+	}
+	res = regFindKey(cat_h, name, &ignored_id, type, size);
+	pspSetK1(old_k1);
+	return res;
 }
 
 int sceRegGetKeyValueByName(REGHANDLE cat_h, const char *name, void *buf, u32 size)
 {
-	if (name == NULL || check_uptr(name, 0x1b))
+	int res;
+	u32 old_k1 = pspGetK1();
+	u32 k1_s = old_k1 << 11;
+	pspSetK1(k1_s);
+
+	if (check_ptr_k1(k1_s, name) || check_range_k1(k1_s, buf, size)) {
+		pspSetK1(old_k1);
 		return 0x8008273b;
-	if (buf == NULL || check_uptr(buf, size))
-		return 0x8008273b;
-	if (regIsCategoryOpen(cat_h) == 0)
+	}
+	if (regIsCategoryOpen(cat_h) == 0) {
+		pspSetK1(old_k1);
 		return 0x8008272e;
-	return regGetKeyValueByName(cat_h, name, buf, size);
+	}
+	res = regGetKeyValueByName(cat_h, name, buf, size);
+	pspSetK1(old_k1);
+	return res;
 }
 
 int sceRegCreateKey(REGHANDLE cat_h, const char *name, int type, u32 size)
 {
+	u32 old_k1 = pspGetK1();
+	u32 k1_s = old_k1 << 11;
 	(void)cat_h;
 	(void)type;
 	(void)size;
-	if (name == NULL)
+	pspSetK1(k1_s);
+	if (name == NULL) {
+		pspSetK1(old_k1);
 		return 0x80082737;
-	if (check_uptr(name, 0x1b))
+	}
+	if (check_ptr_k1(k1_s, name)) {
+		pspSetK1(old_k1);
 		return 0x8008273b;
+	}
+	pspSetK1(old_k1);
 	return 0;
 }
 
 int sceRegRemoveCategory(REGHANDLE h, const char *name)
 {
+	u32 old_k1 = pspGetK1();
+	u32 k1_s = old_k1 << 11;
 	(void)h;
-	if (name == NULL)
+	pspSetK1(k1_s);
+	if (name == NULL) {
+		pspSetK1(old_k1);
 		return 0x80082738;
-	if (check_uptr(name, 0x10))
+	}
+	if (check_ptr_k1(k1_s, name)) {
+		pspSetK1(old_k1);
 		return 0x8008273b;
+	}
+	pspSetK1(old_k1);
 	return 0;
 }
 
@@ -426,7 +519,7 @@ int sceRegCloseCategory(REGHANDLE cat_h)
 
 int sceReg_driver_C3DEEBC6(struct RegParam *reg)
 {
-	if (reg == NULL || check_uptr(reg, sizeof(*reg)))
+	if (check_ptr_k1(pspGetK1() << 11, reg))
 		return 0x8008273b;
 	return 0;
 }
@@ -434,7 +527,7 @@ int sceReg_driver_C3DEEBC6(struct RegParam *reg)
 int sceReg_driver_405D36C3(REGHANDLE cat_h, const char *name)
 {
 	(void)cat_h;
-	if (name == NULL || check_uptr(name, 0x1b))
+	if (check_ptr_k1(pspGetK1() << 11, name))
 		return 0x8008273b;
 	return 0;
 }
@@ -454,16 +547,20 @@ int sceRegFlushCategory(REGHANDLE cat_h)
 int sceReg_driver_90AA3904(REGHANDLE h, u32 *num)
 {
 	(void)h;
-	if (num == NULL || check_uptr(num, 4))
+	if (check_ptr_k1(pspGetK1() << 11, num))
 		return 0x8008273b;
 	return 0;
 }
 
 int sceReg_driver_6328E4C6(REGHANDLE h, char *buf, int num)
 {
+	u32 old_k1 = pspGetK1();
+	u32 k1_s = old_k1 << 11;
 	(void)h;
-	if ((u32)num >= 0x40 || buf == NULL || check_uptr(buf, (u32)(num * 27)))
+	if ((u32)num >= 0x40 || check_range_k1(k1_s, buf, (u32)(num * 27))) {
+		pspSetK1(old_k1);
 		return 0x8008273b;
+	}
 	return 0;
 }
 
@@ -552,7 +649,14 @@ static __attribute__((noinline)) void regLoadDefaults(void)
 	g_keys[18].size = 1;
 	g_webpage_quality = 0;
 	g_tm_ec_ttl = 0;
-	memset(g_tm_ec_ttl_update_time, 0, 8);
+	g_tm_ec_ttl_update_time[0] = 0;
+	g_tm_ec_ttl_update_time[1] = 0;
+	g_tm_ec_ttl_update_time[2] = 0;
+	g_tm_ec_ttl_update_time[3] = 0;
+	g_tm_ec_ttl_update_time[4] = 0;
+	g_tm_ec_ttl_update_time[5] = 0;
+	g_tm_ec_ttl_update_time[6] = 0;
+	g_tm_ec_ttl_update_time[7] = 0;
 	g_tm_service_sub_status = 0;
 
 	memcpy(g_np_env, (const void *)0xa83ff110, 9);

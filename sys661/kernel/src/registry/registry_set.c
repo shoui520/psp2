@@ -400,1153 +400,343 @@ __attribute__((noinline)) int regSetKeyValue(int cat_id, const char *name, const
 			return 0x8008271d;
 		return 0;
 	case 0x07b:
-		if (cat_id != 0x12 || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x07c:
-		if (cat_id != 0x12 || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x07d:
-		if (cat_id != 0x12 || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x07e:
-		if (cat_id != 0x12 || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x07f:
-		if (cat_id != 0x12 || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x080:
-		if (cat_id != 0x12 || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x081:
-		if (cat_id != 0x12 || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x082:
-		if (cat_id != 0x12 || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x083:
-		if (cat_id != 0x12 || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x084:
-		if (cat_id != 0x12 || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x085:
-		if (cat_id != 0x12 || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x086:
-		if (cat_id != 0x12 || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x087:
-		if (cat_id != 0x12 || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x088:
-		if (cat_id != 0x12 || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x089:
-		if (cat_id != 0x12 || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x08a:
 		if (cat_id != 0x12 || size != ksize)
 			return 0x8008271d;
 		return 0;
 	case 0x08b:
-		if (cat_id != 0x13 || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x08c:
-		if (cat_id != 0x13 || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x08d:
-		if (cat_id != 0x13 || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x08e:
-		if (cat_id != 0x13 || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x08f:
-		if (cat_id != 0x13 || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x090:
-		if (cat_id != 0x13 || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x091:
-		if (cat_id != 0x13 || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x092:
-		if (cat_id != 0x13 || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x093:
-		if (cat_id != 0x13 || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x094:
-		if (cat_id != 0x13 || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x095:
-		if (cat_id != 0x13 || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x096:
-		if (cat_id != 0x13 || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x097:
-		if (cat_id != 0x13 || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x098:
-		if (cat_id != 0x13 || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x099:
-		if (cat_id != 0x13 || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x09a:
 		if (cat_id != 0x13 || size != ksize)
 			return 0x8008271d;
 		return 0;
 	case 0x09b:
-		if (cat_id != 0x14 || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x09c:
-		if (cat_id != 0x14 || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x09d:
-		if (cat_id != 0x14 || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x09e:
-		if (cat_id != 0x14 || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x09f:
-		if (cat_id != 0x14 || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x0a0:
-		if (cat_id != 0x14 || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x0a1:
-		if (cat_id != 0x14 || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x0a2:
-		if (cat_id != 0x14 || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x0a3:
-		if (cat_id != 0x14 || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x0a4:
-		if (cat_id != 0x14 || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x0a5:
-		if (cat_id != 0x14 || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x0a6:
-		if (cat_id != 0x14 || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x0a7:
-		if (cat_id != 0x14 || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x0a8:
-		if (cat_id != 0x14 || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x0a9:
-		if (cat_id != 0x14 || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x0aa:
 		if (cat_id != 0x14 || size != ksize)
 			return 0x8008271d;
 		return 0;
 	case 0x0ab:
-		if (cat_id != 0x15 || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x0ac:
-		if (cat_id != 0x15 || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x0ad:
-		if (cat_id != 0x15 || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x0ae:
-		if (cat_id != 0x15 || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x0af:
-		if (cat_id != 0x15 || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x0b0:
-		if (cat_id != 0x15 || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x0b1:
-		if (cat_id != 0x15 || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x0b2:
-		if (cat_id != 0x15 || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x0b3:
-		if (cat_id != 0x15 || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x0b4:
-		if (cat_id != 0x15 || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x0b5:
-		if (cat_id != 0x15 || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x0b6:
-		if (cat_id != 0x15 || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x0b7:
-		if (cat_id != 0x15 || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x0b8:
-		if (cat_id != 0x15 || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x0b9:
-		if (cat_id != 0x15 || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x0ba:
 		if (cat_id != 0x15 || size != ksize)
 			return 0x8008271d;
 		return 0;
 	case 0x0bb:
-		if (cat_id != 0x16 || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x0bc:
-		if (cat_id != 0x16 || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x0bd:
-		if (cat_id != 0x16 || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x0be:
-		if (cat_id != 0x16 || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x0bf:
-		if (cat_id != 0x16 || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x0c0:
-		if (cat_id != 0x16 || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x0c1:
-		if (cat_id != 0x16 || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x0c2:
-		if (cat_id != 0x16 || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x0c3:
-		if (cat_id != 0x16 || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x0c4:
-		if (cat_id != 0x16 || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x0c5:
-		if (cat_id != 0x16 || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x0c6:
-		if (cat_id != 0x16 || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x0c7:
-		if (cat_id != 0x16 || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x0c8:
-		if (cat_id != 0x16 || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x0c9:
-		if (cat_id != 0x16 || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x0ca:
 		if (cat_id != 0x16 || size != ksize)
 			return 0x8008271d;
 		return 0;
 	case 0x0cb:
-		if (cat_id != 0x17 || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x0cc:
-		if (cat_id != 0x17 || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x0cd:
-		if (cat_id != 0x17 || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x0ce:
-		if (cat_id != 0x17 || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x0cf:
-		if (cat_id != 0x17 || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x0d0:
-		if (cat_id != 0x17 || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x0d1:
-		if (cat_id != 0x17 || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x0d2:
-		if (cat_id != 0x17 || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x0d3:
-		if (cat_id != 0x17 || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x0d4:
-		if (cat_id != 0x17 || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x0d5:
-		if (cat_id != 0x17 || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x0d6:
-		if (cat_id != 0x17 || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x0d7:
-		if (cat_id != 0x17 || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x0d8:
-		if (cat_id != 0x17 || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x0d9:
-		if (cat_id != 0x17 || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x0da:
 		if (cat_id != 0x17 || size != ksize)
 			return 0x8008271d;
 		return 0;
 	case 0x0db:
-		if (cat_id != 0x18 || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x0dc:
-		if (cat_id != 0x18 || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x0dd:
-		if (cat_id != 0x18 || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x0de:
-		if (cat_id != 0x18 || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x0df:
-		if (cat_id != 0x18 || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x0e0:
-		if (cat_id != 0x18 || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x0e1:
-		if (cat_id != 0x18 || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x0e2:
-		if (cat_id != 0x18 || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x0e3:
-		if (cat_id != 0x18 || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x0e4:
-		if (cat_id != 0x18 || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x0e5:
-		if (cat_id != 0x18 || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x0e6:
-		if (cat_id != 0x18 || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x0e7:
-		if (cat_id != 0x18 || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x0e8:
-		if (cat_id != 0x18 || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x0e9:
-		if (cat_id != 0x18 || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x0ea:
 		if (cat_id != 0x18 || size != ksize)
 			return 0x8008271d;
 		return 0;
 	case 0x0eb:
-		if (cat_id != 0x19 || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x0ec:
-		if (cat_id != 0x19 || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x0ed:
-		if (cat_id != 0x19 || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x0ee:
-		if (cat_id != 0x19 || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x0ef:
-		if (cat_id != 0x19 || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x0f0:
-		if (cat_id != 0x19 || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x0f1:
-		if (cat_id != 0x19 || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x0f2:
-		if (cat_id != 0x19 || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x0f3:
-		if (cat_id != 0x19 || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x0f4:
-		if (cat_id != 0x19 || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x0f5:
-		if (cat_id != 0x19 || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x0f6:
-		if (cat_id != 0x19 || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x0f7:
-		if (cat_id != 0x19 || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x0f8:
-		if (cat_id != 0x19 || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x0f9:
-		if (cat_id != 0x19 || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x0fa:
 		if (cat_id != 0x19 || size != ksize)
 			return 0x8008271d;
 		return 0;
 	case 0x0fb:
-		if (cat_id != 0x1a || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x0fc:
-		if (cat_id != 0x1a || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x0fd:
-		if (cat_id != 0x1a || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x0fe:
-		if (cat_id != 0x1a || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x0ff:
-		if (cat_id != 0x1a || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x100:
-		if (cat_id != 0x1a || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x101:
-		if (cat_id != 0x1a || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x102:
-		if (cat_id != 0x1a || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x103:
-		if (cat_id != 0x1a || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x104:
-		if (cat_id != 0x1a || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x105:
-		if (cat_id != 0x1a || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x106:
-		if (cat_id != 0x1a || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x107:
-		if (cat_id != 0x1a || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x108:
-		if (cat_id != 0x1a || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x109:
-		if (cat_id != 0x1a || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x10a:
 		if (cat_id != 0x1a || size != ksize)
 			return 0x8008271d;
 		return 0;
 	case 0x10b:
-		if (cat_id != 0x1b || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x10c:
-		if (cat_id != 0x1b || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x10d:
-		if (cat_id != 0x1b || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x10e:
-		if (cat_id != 0x1b || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x10f:
-		if (cat_id != 0x1b || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x110:
-		if (cat_id != 0x1b || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x111:
-		if (cat_id != 0x1b || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x112:
-		if (cat_id != 0x1b || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x113:
-		if (cat_id != 0x1b || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x114:
-		if (cat_id != 0x1b || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x115:
-		if (cat_id != 0x1b || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x116:
-		if (cat_id != 0x1b || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x117:
-		if (cat_id != 0x1b || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x118:
-		if (cat_id != 0x1b || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x119:
-		if (cat_id != 0x1b || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x11a:
 		if (cat_id != 0x1b || size != ksize)
 			return 0x8008271d;
 		return 0;
 	case 0x11b:
-		if (cat_id != 0x1c || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x11c:
-		if (cat_id != 0x1c || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x11d:
-		if (cat_id != 0x1c || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x11e:
-		if (cat_id != 0x1c || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x11f:
-		if (cat_id != 0x1c || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x120:
-		if (cat_id != 0x1c || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x121:
-		if (cat_id != 0x1c || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x122:
-		if (cat_id != 0x1c || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x123:
-		if (cat_id != 0x1c || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x124:
-		if (cat_id != 0x1c || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x125:
-		if (cat_id != 0x1c || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x126:
-		if (cat_id != 0x1c || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x127:
-		if (cat_id != 0x1c || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x128:
-		if (cat_id != 0x1c || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x129:
-		if (cat_id != 0x1c || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x12a:
 		if (cat_id != 0x1c || size != ksize)
 			return 0x8008271d;
 		return 0;
 	case 0x12b:
-		if (cat_id != 0x1d || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x12c:
-		if (cat_id != 0x1d || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x12d:
-		if (cat_id != 0x1d || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x12e:
-		if (cat_id != 0x1d || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x12f:
-		if (cat_id != 0x1d || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x130:
-		if (cat_id != 0x1d || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x131:
-		if (cat_id != 0x1d || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x132:
-		if (cat_id != 0x1d || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x133:
-		if (cat_id != 0x1d || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x134:
-		if (cat_id != 0x1d || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x135:
-		if (cat_id != 0x1d || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x136:
-		if (cat_id != 0x1d || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x137:
-		if (cat_id != 0x1d || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x138:
-		if (cat_id != 0x1d || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x139:
-		if (cat_id != 0x1d || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x13a:
 		if (cat_id != 0x1d || size != ksize)
 			return 0x8008271d;
 		return 0;
 	case 0x13b:
-		if (cat_id != 0x1e || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x13c:
-		if (cat_id != 0x1e || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x13d:
-		if (cat_id != 0x1e || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x13e:
-		if (cat_id != 0x1e || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x13f:
-		if (cat_id != 0x1e || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x140:
-		if (cat_id != 0x1e || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x141:
-		if (cat_id != 0x1e || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x142:
-		if (cat_id != 0x1e || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x143:
-		if (cat_id != 0x1e || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x144:
-		if (cat_id != 0x1e || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x145:
-		if (cat_id != 0x1e || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x146:
-		if (cat_id != 0x1e || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x147:
-		if (cat_id != 0x1e || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x148:
-		if (cat_id != 0x1e || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x149:
-		if (cat_id != 0x1e || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x14a:
 		if (cat_id != 0x1e || size != ksize)
 			return 0x8008271d;
 		return 0;
 	case 0x14b:
-		if (cat_id != 0x1f || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x14c:
-		if (cat_id != 0x1f || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x14d:
-		if (cat_id != 0x1f || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x14e:
-		if (cat_id != 0x1f || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x14f:
-		if (cat_id != 0x1f || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x150:
-		if (cat_id != 0x1f || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x151:
-		if (cat_id != 0x1f || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x152:
-		if (cat_id != 0x1f || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x153:
-		if (cat_id != 0x1f || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x154:
-		if (cat_id != 0x1f || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x155:
-		if (cat_id != 0x1f || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x156:
-		if (cat_id != 0x1f || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x157:
-		if (cat_id != 0x1f || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x158:
-		if (cat_id != 0x1f || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x159:
-		if (cat_id != 0x1f || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x15a:
 		if (cat_id != 0x1f || size != ksize)
 			return 0x8008271d;
 		return 0;
 	case 0x15b:
-		if (cat_id != 0x20 || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x15c:
-		if (cat_id != 0x20 || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x15d:
-		if (cat_id != 0x20 || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x15e:
-		if (cat_id != 0x20 || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x15f:
-		if (cat_id != 0x20 || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x160:
-		if (cat_id != 0x20 || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x161:
-		if (cat_id != 0x20 || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x162:
-		if (cat_id != 0x20 || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x163:
-		if (cat_id != 0x20 || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x164:
-		if (cat_id != 0x20 || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x165:
-		if (cat_id != 0x20 || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x166:
-		if (cat_id != 0x20 || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x167:
-		if (cat_id != 0x20 || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x168:
-		if (cat_id != 0x20 || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x169:
-		if (cat_id != 0x20 || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x16a:
 		if (cat_id != 0x20 || size != ksize)
 			return 0x8008271d;
 		return 0;
 	case 0x16b:
-		if (cat_id != 0x21 || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x16c:
-		if (cat_id != 0x21 || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x16d:
-		if (cat_id != 0x21 || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x16e:
-		if (cat_id != 0x21 || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x16f:
-		if (cat_id != 0x21 || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x170:
-		if (cat_id != 0x21 || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x171:
-		if (cat_id != 0x21 || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x172:
-		if (cat_id != 0x21 || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x173:
-		if (cat_id != 0x21 || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x174:
-		if (cat_id != 0x21 || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x175:
-		if (cat_id != 0x21 || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x176:
-		if (cat_id != 0x21 || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x177:
-		if (cat_id != 0x21 || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x178:
-		if (cat_id != 0x21 || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x179:
-		if (cat_id != 0x21 || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x17a:
 		if (cat_id != 0x21 || size != ksize)
 			return 0x8008271d;
 		return 0;
 	case 0x17b:
-		if (cat_id != 0x22 || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x17c:
-		if (cat_id != 0x22 || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x17d:
-		if (cat_id != 0x22 || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x17e:
-		if (cat_id != 0x22 || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x17f:
-		if (cat_id != 0x22 || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x180:
-		if (cat_id != 0x22 || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x181:
-		if (cat_id != 0x22 || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x182:
-		if (cat_id != 0x22 || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x183:
-		if (cat_id != 0x22 || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x184:
-		if (cat_id != 0x22 || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x185:
-		if (cat_id != 0x22 || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x186:
-		if (cat_id != 0x22 || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x187:
-		if (cat_id != 0x22 || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x188:
-		if (cat_id != 0x22 || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x189:
-		if (cat_id != 0x22 || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x18a:
 		if (cat_id != 0x22 || size != ksize)
 			return 0x8008271d;
 		return 0;
 	case 0x18b:
-		if (cat_id != 0x23 || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x18c:
-		if (cat_id != 0x23 || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x18d:
-		if (cat_id != 0x23 || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x18e:
-		if (cat_id != 0x23 || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x18f:
-		if (cat_id != 0x23 || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x190:
-		if (cat_id != 0x23 || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x191:
-		if (cat_id != 0x23 || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x192:
-		if (cat_id != 0x23 || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x193:
-		if (cat_id != 0x23 || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x194:
-		if (cat_id != 0x23 || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x195:
-		if (cat_id != 0x23 || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x196:
-		if (cat_id != 0x23 || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x197:
-		if (cat_id != 0x23 || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x198:
-		if (cat_id != 0x23 || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x199:
-		if (cat_id != 0x23 || size != ksize)
-			return 0x8008271d;
-		return 0;
 	case 0x19a:
 		if (cat_id != 0x23 || size != ksize)
 			return 0x8008271d;

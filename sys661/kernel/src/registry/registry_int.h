@@ -5,7 +5,7 @@
  * ePSP 6.61 sceRegistry_Service (registry.prx)
  */
 
-#include <common/types.h>
+#include <common_imp.h>
 
 typedef u32 REGHANDLE;
 
@@ -13,8 +13,7 @@ struct RegParam {
 	u32 regtype;
 	char name[256];
 	u32 namelen;
-	u32 reserved2;
-	u32 reserved3;
+	u32 reserved[2];
 };
 
 struct RegKeyEntry {
@@ -34,7 +33,7 @@ struct RegCatEntry {
 
 extern int sceKernelDelayThread(u32 delay);
 extern void *memset(void *s, int c, u32 n);
-extern int strncmp(const char *s1, const char *s2, u32 n);
+extern int strncmp(const char *lhs, const char *rhs, u32 n);
 extern u32 strnlen(const char *s, u32 maxlen);
 extern void *memcpy(void *dst, const void *src, u32 n);
 extern char *strncpy(char *dst, const char *src, u32 n);
