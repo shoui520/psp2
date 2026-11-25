@@ -12,7 +12,7 @@ typedef struct SceCtrlData {
 	u8 rsrv[4];
 } SceCtrlData;
 
-typedef struct SceCtrlData2 {
+typedef struct SceCtrlDataEx {
 	u32 timeStamp;
 	u32 buttons;
 	u8 aX;
@@ -28,7 +28,7 @@ typedef struct SceCtrlData2 {
 	s32 AxisSenseB;
 	s32 TiltA;
 	s32 TiltB;
-} SceCtrlData2;
+} SceCtrlDataEx;
 
 typedef struct SceCtrlLatch {
 	u32 buttonMake;
@@ -113,7 +113,7 @@ typedef struct SceCtrl {
 		u8 analog[4];
 		u32 analogWord;
 	};
-	u8 pad248[2];
+	u8 idleSkipPad[2];
 	u8 idleSkipCount;
 	u8 idleSkipReload;
 	SceCtrlEmulationData emulationData[4];
@@ -144,7 +144,7 @@ int sceSTimerFree(int timer_id);
 int sceSTimerStartCount(int timer_id);
 int sceSTimerStopCount(int timer_id);
 int sceSTimerSetPrscl(int timer_id, int num, int den);
-int sceSTimerSetHandler(int timer_id, int cycle, int (*handler)(int timer_id, u32 count, void *common, u32 arg4), void *common);
+int sceSTimerSetHandler(int timer_id, int cycle, int (*handler)(int timer_id, u32 count, void *common, u32 timerArg), void *common);
 
 s32 sceCtrlInit(void);
 s32 sceCtrlEnd(void);
@@ -152,11 +152,11 @@ s32 sceCtrlSuspend(void);
 s32 sceCtrlResume(void);
 
 static int _sceCtrlSysEventHandler(int ev_id, char *ev_name, void *param, int *result);
-static int _sceCtrlVblankIntr(int sub_intr, void *arg);
-static int _sceCtrlTimerIntr(int timer_id, u32 count, void *common, u32 arg4);
+static int _sceCtrlVblankIntr(int subIntr, void *arg);
+static int _sceCtrlTimerIntr(int timer_id, u32 count, void *common, u32 timerArg);
 static int _sceCtrlUpdateButtons(u32 rawButtons, const u8 *axes);
-static SceUInt _sceCtrlDummyAlarm(void *common);
-static int _sceCtrlReadBuf(SceCtrlData2 *pData, int nBufs, u32 port, u8 mode);
+static SceUInt _sceCtrlIdleAlarm(void *common);
+static int _sceCtrlReadBuf(SceCtrlDataEx *pData, int nBufs, u32 port, u8 mode);
 static void _sceCtrlPollHardware(void);
 static SceUInt _sceCtrlPollAlarm(void *common);
 
@@ -304,7 +304,7 @@ static int _sceCtrlSysEventHandler(int ev_id, char *ev_name, void *param, int *r
 	return 0;
 }
 
-static int _sceCtrlVblankIntr(int sub_intr, void *arg)
+static int _sceCtrlVblankIntr(int subIntr, void *arg)
 {
 	int intr = sceKernelCpuSuspendIntr();
 	if (g_ctrl.updateCycle == 0) {
@@ -312,7 +312,7 @@ static int _sceCtrlVblankIntr(int sub_intr, void *arg)
 			g_ctrl.sysconStatus.busy.intr1 = 1;
 			sceKernelSetAlarm(700, _sceCtrlPollAlarm, NULL);
 		} else {
-			sceKernelSetAlarm(700, _sceCtrlDummyAlarm, NULL);
+			sceKernelSetAlarm(700, _sceCtrlIdleAlarm, NULL);
 		}
 	}
 	if (g_ctrl.cancelIdleTimer != 0) {
@@ -324,7 +324,7 @@ static int _sceCtrlVblankIntr(int sub_intr, void *arg)
 	return -1;
 }
 
-static int _sceCtrlTimerIntr(int timer_id, u32 count, void *common, u32 arg4)
+static int _sceCtrlTimerIntr(int timer_id, u32 count, void *common, u32 timerArg)
 {
 	int intr = sceKernelCpuSuspendIntr();
 	if (g_ctrl.updateCycle != 0) {
@@ -332,7 +332,7 @@ static int _sceCtrlTimerIntr(int timer_id, u32 count, void *common, u32 arg4)
 			g_ctrl.sysconStatus.busy.intr1 = 1;
 			_sceCtrlPollHardware();
 		} else {
-			sceKernelSetAlarm(700, _sceCtrlDummyAlarm, NULL);
+			sceKernelSetAlarm(700, _sceCtrlIdleAlarm, NULL);
 		}
 	}
 	if (g_ctrl.cancelIdleTimer != 0) {
@@ -579,7 +579,7 @@ s32 sceCtrlReadBufferPositive(SceCtrlData *pData, int nBufs)
 	u32 oldK1 = pspGetK1();
 	u32 shiftedK1 = oldK1 << 11;
 	if (g_hasFastSample == 0) {
-		return _sceCtrlReadBuf((SceCtrlData2 *)pData, nBufs, 0, 2);
+		return _sceCtrlReadBuf((SceCtrlDataEx *)pData, nBufs, 0, 2);
 	}
 	pspSetK1(shiftedK1);
 	g_hasFastSample = 0;
@@ -809,13 +809,13 @@ s32 sceCtrlResume(void)
 	return 0;
 }
 
-u32 sceCtrl_driver_5886194C(u8 arg1)
+u32 sceCtrl_driver_5886194C(u8 skipReload)
 {
-	g_ctrl.idleSkipReload = arg1;
+	g_ctrl.idleSkipReload = skipReload;
 	return 0;
 }
 
-u32 sceCtrl_driver_6C86AF22(s32 arg1)
+u32 sceCtrl_driver_6C86AF22(s32 mode)
 {
 	return 0;
 }
@@ -838,35 +838,35 @@ u32 sceCtrlGetSamplingCycle(u32 *pCycle)
 
 s32 sceCtrlPeekBufferPositive(SceCtrlData *pData, int nBufs)
 {
-	return _sceCtrlReadBuf((SceCtrlData2 *)pData, nBufs, 0, 0);
+	return _sceCtrlReadBuf((SceCtrlDataEx *)pData, nBufs, 0, 0);
 }
 
 s32 sceCtrlPeekBufferNegative(SceCtrlData *pData, int nBufs)
 {
-	return _sceCtrlReadBuf((SceCtrlData2 *)pData, nBufs, 0, 1);
+	return _sceCtrlReadBuf((SceCtrlDataEx *)pData, nBufs, 0, 1);
 }
 
 s32 sceCtrlReadBufferNegative(SceCtrlData *pData, int nBufs)
 {
-	return _sceCtrlReadBuf((SceCtrlData2 *)pData, nBufs, 0, 3);
+	return _sceCtrlReadBuf((SceCtrlDataEx *)pData, nBufs, 0, 3);
 }
 
-s32 sceCtrlPeekBufferPositive2(u32 port, SceCtrlData2 *pData, int nBufs)
+s32 sceCtrlPeekBufferPositive2(u32 port, SceCtrlDataEx *pData, int nBufs)
 {
 	return _sceCtrlReadBuf(pData, nBufs, port, 4);
 }
 
-s32 sceCtrlPeekBufferNegative2(u32 port, SceCtrlData2 *pData, int nBufs)
+s32 sceCtrlPeekBufferNegative2(u32 port, SceCtrlDataEx *pData, int nBufs)
 {
 	return _sceCtrlReadBuf(pData, nBufs, port, 5);
 }
 
-s32 sceCtrlReadBufferPositive2(u32 port, SceCtrlData2 *pData, int nBufs)
+s32 sceCtrlReadBufferPositive2(u32 port, SceCtrlDataEx *pData, int nBufs)
 {
 	return _sceCtrlReadBuf(pData, nBufs, port, 6);
 }
 
-s32 sceCtrlReadBufferNegative2(u32 port, SceCtrlData2 *pData, int nBufs)
+s32 sceCtrlReadBufferNegative2(u32 port, SceCtrlDataEx *pData, int nBufs)
 {
 	return _sceCtrlReadBuf(pData, nBufs, port, 7);
 }
@@ -954,7 +954,7 @@ s32 sceCtrlClearRapidFire(u32 slot)
 	return 0;
 }
 
-static SceUInt _sceCtrlDummyAlarm(void *common)
+static SceUInt _sceCtrlIdleAlarm(void *common)
 {
 	int intr = sceKernelCpuSuspendIntr();
 	u32 rawButtons = g_ctrl.rawButtons;
@@ -967,7 +967,7 @@ static SceUInt _sceCtrlDummyAlarm(void *common)
 	return 0;
 }
 
-static int _sceCtrlReadBuf(SceCtrlData2 *pData, int nBufs, u32 port, u8 mode)
+static int _sceCtrlReadBuf(SceCtrlDataEx *pData, int nBufs, u32 port, u8 mode)
 {
 	if ((u32)(nBufs - 1u) >= 64u) {
 		return 0x80000104;
