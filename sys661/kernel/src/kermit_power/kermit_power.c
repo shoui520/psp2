@@ -398,7 +398,7 @@ u32 scePower_driver_var_2EDA246C;
 u32 scePower_driver_var_3080D4C0;
 u32 scePower_driver_var_18DFA43A;
 u32 scePower_driver_var_33399B15;
-static u32 g_kermit_periph_0648;
+static u32 g_kermitPeriphStatus;
 u32 scePower_driver_var_C7998FA4;
 u32 scePower_driver_var_2A28BB48;
 u32 scePower_driver_var_94FA3195;
@@ -871,7 +871,7 @@ static s32 initSuspendSubsys(void)
 	scePower_driver_6CF50928(0);
 	g_susp_ctx.kernelLockCount += sceKernelRegisterPowerHandlers(&g_power_handlers);
 	sceKernelCpuResumeIntr(intr);
-	g_kermit_periph_0648 = (u32)sceKermitPeripheral_driver_0648E1A3();
+	g_kermitPeriphStatus = (u32)sceKermitPeripheral_driver_0648E1A3();
 	return 0;
 }
 
@@ -1183,7 +1183,7 @@ static s32 __attribute__((noipa)) executePowerTransition(int transMode)
 	spBuf[0x14 / 4] = (u32)&spBuf[0x80 / 4];
 
 	scePower_driver_C463E7F2();
-	if (g_kermit_periph_0648 != 0) {
+	if (g_kermitPeriphStatus != 0) {
 		scePower_34F9C463();
 		savedCpu = scePowerGetCpuClockFrequencyInt();
 		savedPll = savedCpu;
@@ -1325,7 +1325,7 @@ static s32 __attribute__((noipa)) executePowerTransition(int transMode)
 	sceKernelSysEventDispatch(0xff0000, 0x100002, "phase1", &spBuf[0x40 / 4], NULL, 0, NULL);
 	sceKernelSysEventDispatch(0xff0000, 0x400000, "completed", &spBuf[0x40 / 4], NULL, 0, NULL);
 
-	if (g_kermit_periph_0648 != 0) {
+	if (g_kermitPeriphStatus != 0) {
 		if (savedCpu == 333)
 			changeClockFrequency(222, 222, 111);
 		else

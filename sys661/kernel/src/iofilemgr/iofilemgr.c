@@ -2342,7 +2342,7 @@ int sceIoGetDevType(SceUID fd)
     pspSetK1(oldK1);
     if (ret < 0)
         return ret;
-    return iob->d_type;
+    return (u8)iob->d_type;
 }
 
 int sceIoGetThreadCwd(SceUID uid, char *dir, int len)
