@@ -91,7 +91,7 @@ static void InitWaitDialogStyles()
 void TwInitPluginContext(Plugin *plugin)
 {
 	if (plugin != NULL)
-		s_pluginContext = *(void **)((uint8_t *)plugin + 212);
+		s_pluginContext = plugin->m_surface_pool;
 }
 
 /* TwPageManager */
@@ -234,7 +234,7 @@ void TwPageManager::OnPluginPageInit(int32_t type, ui::Handler *self, ui::Event 
 
 	if (s_activePageManager == NULL || widget == NULL)
 		return;
-	uint32_t hash = *(const uint32_t *)((const uint8_t *)widget + 332);
+	uint32_t hash = widget->m_name.GetIDHash();
 
 	for (int i = 0; s_activePageManager->m_entries[i].pageIdHash != 0 ||
 			s_activePageManager->m_entries[i].handler != NULL;

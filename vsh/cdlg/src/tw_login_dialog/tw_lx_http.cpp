@@ -182,9 +182,9 @@ bool LxHttpRequest::CanReuseConnection()
 
 	if ((sceHttpGetLastErrno(m_reqId, &err) | err) < 0)
 		return false;
-	uint8_t dummy = 0;
+	uint8_t probeByte = 0;
 
-	return sceHttpReadData(m_reqId, &dummy, 1) == 0;
+	return sceHttpReadData(m_reqId, &probeByte, 1) == 0;
 }
 
 int LxHttpRequest::Close()

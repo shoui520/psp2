@@ -167,13 +167,13 @@ LxString LxOAuthSigner::ComputeSignature(const char *method, const char *url,
 	signingKey.Append(m_tokenSecret);
 
 	uint8_t digest[20];
-	char b64[32];
+	char base64Digest[32];
 
 	sceHmacSha1Digest((const unsigned char *)signingKey.CStr(), signingKey.Length(),
 			  (const unsigned char *)baseStr.CStr(), baseStr.Length(), digest);
-	size_t b64Len = LxBase64Encode(b64, digest, sizeof(digest));
+	size_t encodedLen = LxBase64Encode(base64Digest, digest, sizeof(digest));
 
-	return LxString(b64, b64Len);
+	return LxString(base64Digest, encodedLen);
 }
 
 LxString LxOAuthSigner::BuildAuthHeader(const char *method, const char *url,

@@ -474,7 +474,7 @@ void TwLoginPage::OnCancelClick(int event, ui::Handler *handler, ui::Event *ev, 
 	TwLoginPage *self = (TwLoginPage *)userData;
 
 	TwInfobar::Hide();
-	self->m_app->ClosePage(*(const uint32_t *)((const uint8_t *)self->m_pageWidget + 332));
+	self->m_app->ClosePage(self->m_pageWidget->m_name.GetIDHash());
 	self->m_app->FinishDialog(SCE_COMMON_DIALOG_RESULT_USER_CANCELED);
 }
 
