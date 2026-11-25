@@ -616,7 +616,8 @@ int dtcpIpMapIpcStatus3(int status)
 							result = 8;
 							break;
 						case 12202:
-							return 5;
+							result = 9;
+							break;
 						case 12203:
 							result = 10;
 							break;
@@ -625,9 +626,6 @@ int dtcpIpMapIpcStatus3(int status)
 							break;
 						case 12205:
 							result = 12;
-							break;
-						case 12206:
-							result = 33;
 							break;
 						}
 						return result;
