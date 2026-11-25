@@ -1,0 +1,295 @@
+name: SceHttp_Library
+attributes: 0x0006
+version: [2, 1]
+sdk_version: 0x06060110
+stub_order: [Kernel_Library, SysMemUserForUser, ThreadManForUser, UtilsForUser, sceCertLoader, sceHttpStorage, sceNetApctl, sceNetInet, sceNetResolver, sceNet_lib, sceParseHttp, sceParseUri, sceRtc, sceSsl_lib]
+exports:
+  - name: syslib
+    version: [0, 0]
+    attributes: 0x8000
+    functions:
+      - module_reboot_before: 0x2f064fa6
+    variables:
+      - module_info: 0xf01d73a7
+      - module_sdk_version: 0x11b97506
+  - name: sceHttp
+    version: [0, 17]
+    attributes: 0x0001
+    len: 5
+    extra_words: [0x00040000]
+    bucket_words: [0x00020000, 0x00050003, 0x00060006, 0x00080007, 0x000b000a, 0x000d000c, 0x000e000e, 0x000f000e, 0x00110011, 0x00140014, 0x00170016, 0x001a0019, 0x001a001a, 0x001b001a, 0x001c001b, 0x0021001f, 0x00220021, 0x00250024, 0x00260026, 0x002c0029, 0x002d002d, 0x00340031, 0x00380035, 0x003b0039, 0x003d003b, 0x0040003f, 0x00480044, 0x004b0049, 0x004c004c, 0x004d004d, 0x0050004e, 0x00520051]
+    functions:
+      - sceHttpGetContentLength: 0x0282a3bd
+      - sceHttpSetResolveRetry: 0x03d9526f
+      - sceHttpSetCookieSendCallback: 0x06488a1c
+      - sceHttpEnableRedirect: 0x0809c831
+      - sceHttpDisableCookie: 0x0b12abfb
+      - sceHttpEnableCookie: 0x0dafa58f
+      - sceHttpDeleteHeader: 0x15540184
+      - sceHttpDisableRedirect: 0x1a0ebb69
+      - sceHttpFlushCache: 0x1cedb9d4
+      - sceHttpSetRecvTimeOut: 0x1f0fc3e3
+      - sceHttpGetNetworkPspError: 0x2255551e
+      - sceHttpSetAuthInfoCallback: 0x267618f4
+      - sceHttpSetAuthInfoCB: 0x2a6c3296
+      - sceHttpFlushAuthList: 0x2c3c82cf
+      - sceHttpSetCookieRecvCallback: 0x3a67f306
+      - sceHttp_3C478044: 0x3c478044
+      - sceHttpAddExtraHeader: 0x3eaba285
+      - sceHttp_457D221D: 0x457d221d
+      - sceHttpCreateRequest: 0x47347b50
+      - sceHttpSetResolveTimeOut: 0x47940436
+      - sceHttpGetStatusCode: 0x4cc7d78f
+      - sceHttp_4E4A284A: 0x4e4a284a
+      - sceHttpDeleteConnection: 0x5152773b
+      - sceHttpIsRequestInCache: 0x54e7df75
+      - sceHttpsSetSslCallback: 0x569a1481
+      - sceHttpEnableCache: 0x59e6d16f
+      - sceHttp_68AB0F86: 0x68ab0f86
+      - sceHttp_739C2D79: 0x739c2d79
+      - sceHttpSaveSystemCookie: 0x76d1363b
+      - sceHttpAddCookie: 0x7774bf4c
+      - sceHttp_77EE5319: 0x77ee5319
+      - sceHttpEnableKeepAlive: 0x78a0d3ec
+      - sceHttpEndCache: 0x78b54c09
+      - sceHttp_8046E250: 0x8046e250
+      - sceHttpsLoadDefaultCert: 0x87797bdd
+      - sceHttp_87F1E666: 0x87f1e666
+      - sceHttpSetConnectTimeOut: 0x8acd1f73
+      - sceHttpCreateConnection: 0x8eefd953
+      - sceHttp_951D310E: 0x951d310e
+      - sceHttpSetRecvBlockSize: 0x9668864c
+      - sceHttpGetCookie: 0x96f16d3e
+      - sceHttpSetSendTimeOut: 0x9988172d
+      - sceHttpSendRequestInCacheFirstMode: 0x9afc98b2
+      - sceHttpCreateTemplate: 0x9b1f1f36
+      - sceHttpEnableAuth: 0x9fc5f10d
+      - sceHttpSetRedirectCallback: 0xa4496de5
+      - sceHttp_A461A167: 0xa461a167
+      - sceHttpDeleteRequest: 0xa5512e01
+      - sceHttpInitCache: 0xa6800c34
+      - sceHttp_A909F2AE: 0xa909f2ae
+      - sceHttpsGetSslError: 0xab1540d5
+      - sceHttpInit: 0xab1abe07
+      - sceHttpDisableAuth: 0xae948fee
+      - sceHttp_B0257723: 0xb0257723
+      - sceHttpSetCacheContentLengthMaxSize: 0xb0c34b1d
+      - sceHttpsDisableOption: 0xb3faf831
+      - sceHttpCreateRequestWithURL: 0xb509b09e
+      - sceHttpsEnableOption: 0xbac31bf1
+      - sceHttpSendRequest: 0xbb70706f
+      - sceHttp_C0E69162: 0xc0e69162
+      - sceHttpAbortRequest: 0xc10b6bd9
+      - sceHttpChangeHttpVersion: 0xc6330b0d
+      - sceHttpDisableKeepAlive: 0xc7ef2559
+      - sceHttpSetResHeaderMaxSize: 0xc98cbba7
+      - sceHttp_CC920C12: 0xcc920c12
+      - sceHttpDisableCache: 0xccbd167a
+      - sceHttp_CDB0DC58: 0xcdb0dc58
+      - sceHttpCreateConnectionWithURL: 0xcdf8ecb9
+      - sceHttpGetNetworkErrno: 0xd081ec8f
+      - sceHttpsGetCaList: 0xd11dab01
+      - sceHttpEnd: 0xd1c8945e
+      - sceHttp_D29163DA: 0xd29163da
+      - sceHttpGetProxy: 0xd70d4847
+      - sceHttp_D80BE761: 0xd80be761
+      - sceHttpGetAllHeader: 0xdb266ccf
+      - sceHttp_DD6E7857: 0xdd6e7857
+      - sceHttpsInit: 0xe4d21302
+      - sceHttpReadData: 0xedeeb999
+      - sceHttpSetProxy: 0xf0f46c62
+      - sceHttpLoadSystemCookie: 0xf1657b22
+      - sceHttpSetMallocFunction: 0xf49934f6
+      - sceHttpsEnd: 0xf9d8eb63
+      - sceHttpDeleteTemplate: 0xfcf8c055
+imports:
+  - name: sceParseUri
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 4
+    functions:
+      - sceUriParse: 0x568518c9
+      - sceUriBuild: 0x7ee318af
+      - sceUriSweepPath: 0x8885a782
+  - name: sceParseHttp
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 7
+    functions:
+      - sceParseHttpStatusLine: 0x8077a433
+      - sceParseHttpResponseHeader: 0xad7bfdef
+  - name: sceNetApctl
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 4
+    functions:
+      - sceNetApctlGetInfo: 0x2befdf23
+  - name: sceNetResolver
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 5
+    functions:
+      - sceNetResolverStartNtoA: 0x224c5f44
+      - sceNetResolverCreate: 0x244172af
+      - sceNetResolverStop: 0x808f6063
+      - sceNetResolverDelete: 0x94523e09
+  - name: sceNetInet
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 5
+    functions:
+      - sceNetInetGetsockname: 0x162e6fd5
+      - sceNetInetSetsockopt: 0x2fe71fe7
+      - sceNetInetConnect: 0x410b34aa
+      - sceNetInetGetsockopt: 0x4a114c7c
+      - sceNetInetSelect: 0x5be8d595
+      - sceNetInetSend: 0x7aa671bc
+      - sceNetInetSocketAbort: 0x80a21abd
+      - sceNetInetSocket: 0x8b7b220f
+      - sceNetInetGetPspError: 0x8ca3a97e
+      - sceNetInetClose: 0x8d7284ea
+      - sceNetInetGetTcpcbstat: 0xb3888ad4
+      - sceNetInetRecv: 0xcda85c99
+      - sceNetInetInetPton: 0xe30b8c19
+      - sceNetInetGetErrno: 0xfbabe411
+  - name: sceSsl_lib
+    version: [0, 17]
+    attributes: 0x0009
+    pad: 5
+    functions:
+      - sceSsl_lib_0217E73C: 0x0217e73c
+      - sceSsl_lib_047AB6BB: 0x047ab6bb
+      - sceSsl_lib_05E019A4: 0x05e019a4
+      - sceSsl_lib_0861D934: 0x0861d934
+      - sceSsl_lib_0FF7BA68: 0x0ff7ba68
+      - sceSsl_lib_12C7718F: 0x12c7718f
+      - sceSsl_lib_28B4DE33: 0x28b4de33
+      - sceSsl_lib_2B7BD166: 0x2b7bd166
+      - sceSsl_lib_341843AB: 0x341843ab
+      - sceSsl_lib_3454E622: 0x3454e622
+      - sceSsl_lib_37C7B76C: 0x37c7b76c
+      - sceSsl_lib_3E040FD4: 0x3e040fd4
+      - sceSsl_lib_3E3133D6: 0x3e3133d6
+      - sceSsl_lib_42FFA860: 0x42ffa860
+      - sceSsl_lib_4BE9030A: 0x4be9030a
+      - sceSsl_lib_4C75B8E9: 0x4c75b8e9
+      - sceSsl_lib_5040E836: 0x5040e836
+      - sceSsl_lib_529A9477: 0x529a9477
+      - sceSsl_lib_54A7D8F3: 0x54a7d8f3
+      - sceSsl_lib_58352068: 0x58352068
+      - sceSsl_lib_588F2FE8: 0x588f2fe8
+      - sceSsl_lib_5E5C873A: 0x5e5c873a
+      - sceSsl_lib_6038DEDE: 0x6038dede
+      - sceSsl_lib_69F1B678: 0x69f1b678
+      - sceSsl_lib_7317C1BC: 0x7317c1bc
+      - sceSsl_lib_76A46EDA: 0x76a46eda
+      - sceSsl_lib_7BDAF864: 0x7bdaf864
+      - sceSsl_lib_7D0E41F4: 0x7d0e41f4
+      - sceSsl_lib_80608663: 0x80608663
+      - sceSsl_lib_84833472: 0x84833472
+      - sceSsl_lib_8D484361: 0x8d484361
+      - sceSsl_lib_9266C0D5: 0x9266c0d5
+      - sceSsl_lib_9299C6CE: 0x9299c6ce
+      - sceSsl_lib_92FA8B34: 0x92fa8b34
+      - sceSsl_lib_A7BED83B: 0xa7bed83b
+      - sceSsl_lib_A8F0AD39: 0xa8f0ad39
+      - sceSsl_lib_A920B39E: 0xa920b39e
+      - sceSsl_lib_AEBF278B: 0xaebf278b
+      - sceSsl_lib_B3B04C58: 0xb3b04c58
+      - sceSsl_lib_B40D11EA: 0xb40d11ea
+      - sceSsl_lib_B4D78E98: 0xb4d78e98
+      - sceSsl_lib_B7CA8717: 0xb7ca8717
+      - sceSsl_lib_B87FFE37: 0xb87ffe37
+      - sceSsl_lib_B9C8CCE6: 0xb9c8cce6
+      - sceSsl_lib_BF55C31C: 0xbf55c31c
+      - sceSsl_lib_C1A2E14B: 0xc1a2e14b
+      - sceSsl_lib_C85F6FCE: 0xc85f6fce
+      - sceSsl_lib_CFA2F8EB: 0xcfa2f8eb
+      - sceSsl_lib_D53ACF30: 0xd53acf30
+      - sceSsl_lib_D5ABC603: 0xd5abc603
+      - sceSsl_lib_E7BFC0EF: 0xe7bfc0ef
+      - sceSsl_lib_E7C29542: 0xe7c29542
+      - sceSsl_lib_EBFB0E3C: 0xebfb0e3c
+      - sceSsl_lib_FB8273FE: 0xfb8273fe
+  - name: sceCertLoader
+    version: [0, 17]
+    attributes: 0x4009
+    pad: 6
+    functions:
+      - sceCertLoader_DD629A24: 0xdd629a24
+  - name: sceRtc
+    version: [0, 17]
+    attributes: 0x4001
+    pad: 5
+    functions:
+      - sceRtcGetCurrentTick: 0x3f7ad767
+      - sceRtcFormatRFC2822: 0xc663b3b9
+      - sceRtcParseDateTime: 0xdfbc5f16
+      - sceRtcTickAddSeconds: 0xf2a4afe5
+  - name: Kernel_Library
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 5
+    functions:
+      - sceKernelCpuSuspendIntr: 0x092968f4
+      - sceKernelMemset: 0xa089eca4
+      - _sceKernelCheckThreadStack: 0xd13bde95
+      - sceKernelMemcpy: 0x1839852a
+      - sceKernelCpuResumeIntr: 0x5f10d406
+  - name: ThreadManForUser
+    version: [0, 17]
+    attributes: 0x4001
+    pad: 7
+    functions:
+      - sceKernelDelayThread: 0xceadeb47
+      - sceKernelGetSystemTimeLow: 0x369ed59d
+      - sceKernelCreateVpl: 0x56c039b5
+      - sceKernelDeleteVpl: 0x89b3d48c
+      - sceKernelTryAllocateVpl: 0xaf36d708
+      - sceKernelFreeVpl: 0xb736e9ff
+  - name: UtilsForUser
+    version: [0, 17]
+    attributes: 0x4001
+    pad: 7
+    functions:
+      - sceKernelUtilsMd5BlockUpdate: 0x61e1e525
+      - sceKernelUtilsMd5BlockInit: 0x9e5c5086
+      - sceKernelUtilsMd5BlockResult: 0xb8d24e78
+      - sceKernelUtilsMd5Digest: 0xc8186a58
+  - name: sceNet_lib
+    version: [0, 17]
+    attributes: 0x0009
+    pad: 5
+    functions:
+      - sceNet_lib_1FB2FDDD: 0x1fb2fddd
+      - sceNet_lib_2A73ADDC: 0x2a73addc
+      - sceNet_lib_5705F6F9: 0x5705f6f9
+      - sceNet_lib_750F705D: 0x750f705d
+      - sceNet_lib_80C9F02A: 0x80c9f02a
+      - sceNet_lib_9CFBC7E3: 0x9cfbc7e3
+      - sceNet_lib_A0F16ABD: 0xa0f16abd
+      - sceNet_lib_B5CE388A: 0xb5ce388a
+      - sceNet_lib_B9085A96: 0xb9085a96
+      - sceNet_lib_BCBE14CF: 0xbcbe14cf
+      - sceNet_lib_CF705E46: 0xcf705e46
+      - sceNet_lib_D8722983: 0xd8722983
+      - sceNet_lib_E0A81C7C: 0xe0a81c7c
+      - sceNet_lib_F48963C6: 0xf48963c6
+  - name: SysMemUserForUser
+    version: [0, 17]
+    attributes: 0x4000
+    pad: 6
+    functions:
+      - sceKernelQueryMemoryInfo: 0x2a3e5280
+      - sceKernelGetCompiledSdkVersion: 0xfc114573
+  - name: sceHttpStorage
+    version: [0, 17]
+    attributes: 0x4009
+    pad: 1
+    functions:
+      - sceHttpStorage_driver_24AA94F4: 0x24aa94f4
+      - sceHttpStorage_driver_2D8DAE58: 0x2d8dae58
+      - sceHttpStorage_driver_700AAD44: 0x700aad44
+      - sceHttpStorage_driver_B33389CE: 0xb33389ce
+      - sceHttpStorage_driver_CDA3D8F6: 0xcda3d8f6
+      - sceHttpStorage_driver_CDDF1103: 0xcddf1103
