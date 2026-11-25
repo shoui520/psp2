@@ -1,0 +1,202 @@
+name: pops
+attributes: 0x0000
+version: [1, 39]
+sdk_version: 0x06060110
+stub_order: [IoFileMgrForUser, Kernel_Library, SysMemUserForUser, ThreadManForUser, UtilsForUser, pspvmc, sceCtrl, sceDisplay, sceDmac, sceGe_user, sceImpose, sceKermitPeripheral, sceMeAudio, scePaf, scePopsMan, scePower, sceSuspendForUser, sceUtility]
+exports:
+  - name: syslib
+    version: [0, 0]
+    attributes: 0x8000
+    functions:
+      - module_start: 0xd632acdb
+    variables:
+      - module_info: 0xf01d73a7
+      - module_sdk_version: 0x11b97506
+      - module_start_thread_parameter: 0x0f7c276c
+imports:
+  - name: pspvmc
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 5
+    functions:
+      - pspvmc_0820B291: 0x0820b291
+      - pspvmc_38A87A12: 0x38a87a12
+  - name: scePaf
+    version: [0, 17]
+    attributes: 0x0001
+    len: 6
+    pad: 5
+    functions:
+      - scePaf_0C2CD696: 0x0c2cd696
+      - scePaf_0FCDFA1E: 0x0fcdfa1e
+      - scePaf_1F02DD65: 0x1f02dd65
+      - scePaf_20BEF384: 0x20bef384
+      - scePaf_3C4BC2CD: 0x3c4bc2cd
+      - scePaf_3E564415: 0x3e564415
+      - scePaf_43759F51: 0x43759f51
+      - scePaf_4E43A742: 0x4e43a742
+      - scePaf_5A12583F: 0x5a12583f
+      - scePaf_66CCA794: 0x66cca794
+      - scePaf_6D55F3F5: 0x6d55f3f5
+      - scePaf_71B92320: 0x71b92320
+      - scePaf_7B7133D5: 0x7b7133d5
+      - scePaf_8C5CC663: 0x8c5cc663
+      - scePaf_9CD6C5F4: 0x9cd6c5f4
+      - scePaf_9D854500: 0x9d854500
+      - scePaf_A138A376: 0xa138a376
+      - scePaf_A631AC8B: 0xa631ac8b
+      - scePaf_B4652CFE: 0xb4652cfe
+      - scePaf_D9E2D6E1: 0xd9e2d6e1
+      - scePaf_E0B32AE8: 0xe0b32ae8
+      - scePaf_E49835DC: 0xe49835dc
+      - scePaf_FF9C876B: 0xff9c876b
+  - name: sceDmac
+    version: [0, 17]
+    attributes: 0x4001
+    pad: 4
+    functions:
+      - sceDmacMemcpy: 0x617f3fe6
+  - name: sceDisplay
+    version: [0, 17]
+    attributes: 0x4001
+    pad: 5
+    functions:
+      - sceDisplayWaitVblankStartCB: 0x46f186c3
+      - sceDisplaySetHoldMode: 0x7ed59bc4
+      - sceDisplayWaitVblankStart: 0x984c27e7
+      - sceDisplayGetVcount: 0x9c6eaad7
+  - name: sceGe_user
+    version: [0, 17]
+    attributes: 0x4001
+    pad: 5
+    functions:
+      - sceGeListSync: 0x03444eb4
+      - sceGeListEnQueue: 0xab49e76a
+      - sceGeDrawSync: 0xb287bd61
+      - sceGeEdramSetAddrTranslation: 0xb77905ea
+      - sceGeListUpdateStallAddr: 0xe0d68148
+  - name: sceUtility
+    version: [0, 17]
+    attributes: 0x4001
+    pad: 5
+    functions:
+      - sceUtilitySavedataInitStart: 0x50c4cd57
+      - sceUtilitySavedataGetStatus: 0x8874dbe0
+      - sceUtilitySavedataShutdownStart: 0x9790b33c
+      - sceUtilitySavedataUpdate: 0xd4b95ffb
+  - name: scePower
+    version: [0, 17]
+    attributes: 0x4001
+    pad: 7
+    functions:
+      - scePowerRegisterCallback: 0x04b7766e
+      - scePowerSetClockFrequency: 0x469989ad
+  - name: sceCtrl
+    version: [0, 17]
+    attributes: 0x4001
+    pad: 4
+    functions:
+      - sceCtrlSetSamplingMode: 0x1f4011e6
+      - sceCtrlSetSamplingCycle: 0x6a2774f3
+      - sceCtrlSetIdleCancelThreshold: 0xa7144800
+      - sceCtrlPeekBufferNegative: 0xc152080a
+  - name: sceImpose
+    version: [0, 17]
+    attributes: 0x4001
+    pad: 6
+    functions:
+      - sceImposeGetLanguageMode: 0x24fd7bcf
+  - name: sceMeAudio
+    version: [0, 17]
+    attributes: 0x4001
+    pad: 5
+    functions:
+      - sceMeAudio_10DABACD: 0x10dabacd
+      - sceMeAudio_34F2548F: 0x34f2548f
+      - sceMeAudio_59759606: 0x59759606
+      - sceMeAudio_6FCDD82D: 0x6fcdd82d
+      - sceMeAudio_83609AC9: 0x83609ac9
+      - sceMeAudio_899A3BC0: 0x899a3bc0
+      - sceMeAudio_9FBE4AD3: 0x9fbe4ad3
+      - sceMeAudio_A651EA7B: 0xa651ea7b
+      - sceMeAudio_A8176E49: 0xa8176e49
+      - sceMeAudio_C4169D0F: 0xc4169d0f
+      - sceMeAudio_C47D3670: 0xc47d3670
+      - sceMeAudio_D96DC042: 0xd96dc042
+      - sceMeAudio_EB52DFE0: 0xeb52dfe0
+      - sceMeAudio_F1502A62: 0xf1502a62
+      - sceMeAudio_F7CD1362: 0xf7cd1362
+  - name: scePopsMan
+    version: [0, 17]
+    attributes: 0x4001
+    pad: 5
+    functions:
+      - scePopsMan_0090B2C8: 0x0090b2c8
+  - name: sceKermitPeripheral
+    version: [0, 17]
+    attributes: 0x4001
+    pad: 4
+    functions:
+      - sceKermitPeripheral_C0EBC631: 0xc0ebc631
+      - sceKermitPeripheral_D27C5E03: 0xd27c5e03
+  - name: IoFileMgrForUser
+    version: [0, 17]
+    attributes: 0x4001
+    pad: 7
+    functions:
+      - sceIoDevctl: 0x54f5fb11
+      - sceIoClose: 0x810c4bc3
+      - sceIoDopen: 0xb29ddf9c
+      - sceIoDread: 0xe3eb004c
+      - sceIoDclose: 0xeb092469
+      - sceIoOpen: 0x109f50bc
+  - name: Kernel_Library
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 5
+    functions:
+      - sceKernelMemset: 0xa089eca4
+      - sceKernelMemcpy: 0x1839852a
+  - name: SysMemUserForUser
+    version: [0, 17]
+    attributes: 0x4000
+    pad: 6
+    functions:
+      - sceKernelSetCompilerVersion: 0xf77d77cb
+      - sceKernelSetCompiledSdkVersion660: 0x358ca1bb
+  - name: ThreadManForUser
+    version: [0, 17]
+    attributes: 0x4001
+    pad: 7
+    functions:
+      - sceKernelDelayThread: 0xceadeb47
+      - sceKernelCreateSema: 0xd6da4ba1
+      - sceKernelSetEventFlag: 0x1fb15a32
+      - sceKernelCreateCallback: 0xe81caf8f
+      - sceKernelStartThread: 0xf475845d
+      - sceKernelWaitEventFlagCB: 0x328c546a
+      - sceKernelGetSystemTimeLow: 0x369ed59d
+      - sceKernelSignalSema: 0x3f53e640
+      - sceKernelCreateThread: 0x446d8de6
+      - sceKernelWaitSema: 0x4e3a1105
+      - sceKernelCreateEventFlag: 0x55c20a00
+      - sceKernelSetAlarm: 0x6652b8ca
+      - sceKernelDelayThreadCB: 0x68da9e36
+      - sceKernelChangeThreadPriority: 0x71bc9871
+      - sceKernelCancelAlarm: 0x7e65b999
+  - name: UtilsForUser
+    version: [0, 17]
+    attributes: 0x4001
+    pad: 7
+    functions:
+      - sceKernelDcacheWritebackAll: 0x79d1c3fa
+      - sceKernelDcacheInvalidateRangeForUser: 0xbfa98062
+      - sceKernelDcacheWritebackInvalidateRange: 0x34b9fa9e
+      - sceKernelDcacheWritebackRange: 0x3ee30821
+  - name: sceSuspendForUser
+    version: [0, 17]
+    attributes: 0x4000
+    pad: 2
+    functions:
+      - sceKernelPowerUnlock: 0x3aee7261
+      - sceKernelPowerLock: 0xeadb1bd7
