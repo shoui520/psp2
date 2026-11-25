@@ -1,5 +1,6 @@
 # 3.65-CEX: vs0:sys/external/libcdlg_netcheck.suprx (generated)
 set(MODULE_NID 0xFBBDF1D5)
+set(MODULE_AUTH_ID 0x2800000000028017)
 set(MODULE_ATTR 0)
 set(MODULE_EXPORTS exports.yml)
 set(MODULE_SDK_VERSION 0x03650011)
@@ -743,9 +744,9 @@ set(MODULE_IMPORT_FUNCS
 	SceIpmi_1D7F6CE9
 	SceIpmi_22625598
 	SceIpmi_3A564438
-	SceIpmi_4E255C31
+	_ZN4IPMI6Client13getBufferSizeEPKNS0_6ConfigE
 	SceIpmi_9EE9496B
-	SceIpmi_B282B430
+	_ZN4IPMI6Client6createEPPS0_PKNS0_6ConfigEPvS6_
 	SceIpmi_B56BAC7F
 	SceIpmi_B943F5D9
 	SceIpmi_D15C6742
@@ -1173,13 +1174,13 @@ set(MODULE_IMPORT_FUNCS
 	ScePafWidget_66D4EAE7
 	ScePafWidget_6811A0CF
 	ScePafWidget_68CE5A20
-	_ZN3paf2ui5Plane11SwapDrawObjENS_6common9SharedPtrINS_5graph7DrawObjEEEi
+	ScePafWidget_6A222804
 	ScePafWidget_6A9532CE
 	ScePafWidget_6E3EEF4E
 	ScePafWidget_6F5FB5EC
 	ScePafWidget_701AADB6
 	ScePafWidget_71349B04
-	_ZN3paf2ui6Widget11SetPos_coreERKNS_4math2v4Ejb
+	ScePafWidget_7239B876
 	ScePafWidget_723F6A4C
 	ScePafWidget_7284DAB8
 	ScePafWidget_733EF398
