@@ -5,6 +5,8 @@
 #ifndef LOADEXEC_H
 #define LOADEXEC_H
 
+#include <loadexec_kernel.h>
+
 typedef struct
 {
     s32 size; // 0
@@ -66,7 +68,7 @@ typedef struct
     // ... ? size is max 0x1000
 } SceKernelRebootParam;
 
-s32 decodeKL4E(void *inPtr, s32 inSize, void *outPtr, s32 outSize);
+s32 decodeKL4E(void *dest, s32 size, const void *src, const void **srcEnd);
 
 void copyArgsToRebootParam(SceKernelRebootParam *hwOpt, SceKernelLoadExecVSHParam *opt);
 void fixupArgsAddr(SceKernelRebootParam *hwOpt, SceKernelLoadExecVSHParam *opt __attribute__((unused)));

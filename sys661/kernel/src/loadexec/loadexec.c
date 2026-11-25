@@ -1717,9 +1717,9 @@ s32 runReboot(RunExecParams *opt)
         return ret;
     sceKernelMemset((void*)0x88600000, 0, 0x200000);
 #ifndef INSTALLER
-    ret = decodeKL4E((void*)0x88600000, 0x200000, (void*)g_reboot + 4, 0);
+    ret = decodeKL4E((void*)0x88600000, 0x200000, (void*)g_reboot + 4, NULL);
 #else
-	ret = (*decodeKL4EPtr)((void*)0x88600000, 0x200000, (void*)g_reboot + 4, 0);
+	ret = (*decodeKL4EPtr)((void*)0x88600000, 0x200000, (void*)g_reboot + 4, NULL);
 #endif
     if (ret < 0) {
         // 2DD0

@@ -11,10 +11,6 @@
     .global g_ToolBreakMode
     .global g_SyscallIntrRegSave
 
-##
-# sub_00000000
-##
-
 # loadCoreClearMem(u32 *baseAddr, u32 size)
 # zeros out memory range starting at "baseAddr"
 # for "size" words.
@@ -34,10 +30,6 @@ loop2:		# Refs: 0x0000001C
 	addiu      $v0, $v0, 4
 	break
     .end loadCoreClearMem
-
-##
-# sub_00000028
-##
 
     .ent sceLoadCorePrimarySyscallHandler
 sceLoadCorePrimarySyscallHandler:
