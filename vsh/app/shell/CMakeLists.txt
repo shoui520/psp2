@@ -332,6 +332,13 @@ psp2_module(vs0_vsh_shell_shell KIND user COMPILER snc PARTIAL SOURCES
 	src/livearea_plugin/src/livearea_updater.cpp
 	src/livearea_plugin/src/livearea_daily_task.cpp
 	src/livearea_plugin/src/livearea_reset_job.cpp
+	src/livearea_plugin/src/livearea_page_inner.cpp
+	src/livearea_plugin/src/livearea_rco_loader.cpp
+	src/livearea_plugin/src/livearea_cma_banner.cpp
+	src/livearea_plugin/src/livearea_parental_banner.cpp
+	src/livearea_plugin/src/livearea_music_banner.cpp
+	src/livearea_plugin/src/livearea_task_mgr.cpp
+	src/livearea_plugin/src/livearea_updator_mutex.cpp
 	shell.c
 )
 target_include_directories(vs0_vsh_shell_shell PRIVATE "${PSP2_SRC}/vsh/paf/include"
