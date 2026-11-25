@@ -14,9 +14,9 @@
 extern void *g_pafFramework;					/* 0x81488474 */
 
 struct PatchCheckCacheData {
-	SceInt64 f0;
-	int f8;
-	int fC;
+	SceUInt64 updDate;
+	int resStatus;
+	int signOff;
 };
 
 extern int shellSvcPatchCheckDispatchSync(IPMI::Session *session, SceUInt32 methodId,
@@ -35,7 +35,7 @@ extern paf::job::JobItem *patchCheckSetJobCtor(void *mem, IPMI::Session *session
 
 static paf::job::JobQueue *shellSvcPatchCheckJobQueue()
 {
-	return (paf::job::JobQueue *)((char *)&g_pafFramework + 146 * 4);
+	return paf::job::JobQueue::default_queue;
 }
 
 /* 0x811C4554 */

@@ -19,7 +19,7 @@ struct AppInfoDbValue {
 	int type;						/* +0: 0=int64, 1=string* */
 	int pad;						/* +4 */
 	union {
-		SceInt64 i64;					/* +8 */
+		SceInt64 intVal;				/* +8 */
 		paf::string *str;				/* +8 */
 	};
 };
@@ -39,20 +39,20 @@ extern paf::job::JobItem *appInfoDbSetKeyJobCtor(void *mem, IPMI::Session *sessi
 	const char *titleId, SceUInt32 key, const AppInfoDbValue *val, SceInt64 ts); /* 0x811C0A9A */
 extern paf::job::JobItem *appInfoDbSetMultiJobCtor(void *mem, IPMI::Session *session, SceUInt32 reqId,
 	SceUInt32 count, const SceUInt32 *keys, const SceUInt32 *types,
-	const SceInt64 *i64Vals, const char **strVals);		/* 0x811C0C24 */
+	const SceInt64 *intVals, const char **strVals);		/* 0x811C0C24 */
 extern paf::job::JobItem *appInfoDbGetKeyJobCtor(void *mem, IPMI::Session *session, SceUInt32 reqId,
 	const char *titleId, SceUInt32 key);			/* 0x811C0F32 */
 extern paf::job::JobItem *appInfoDbDeleteJobCtor(void *mem, IPMI::Session *session, SceUInt32 reqId,
-	int arg1, int mode, SceInt64 arg2, const char *str, SceInt64 arg3); /* 0x811C10D0 */
+	int key, int mode, SceInt64 bits, const char *str, SceInt64 mask); /* 0x811C10D0 */
 
 static paf::job::JobQueue *shellSvcAppInfoDbJobQueue()
 {
-	return (paf::job::JobQueue *)((char *)&g_pafFramework + 146 * 4);
+	return paf::job::JobQueue::default_queue;
 }
 
 /* 0x811C0164 */
 int shellSvcAppInfoDbEnqueueSetKey(IPMI::Session *session, SceUInt32 reqId,
-	const char *titleId, SceUInt32 key, int type, SceInt64 i64Val,
+	const char *titleId, SceUInt32 key, int type, SceInt64 intVal,
 	const char *strVal, SceInt64 ts)
 {
 	paf::job::JobItem *job = NULL;
@@ -60,13 +60,13 @@ int shellSvcAppInfoDbEnqueueSetKey(IPMI::Session *session, SceUInt32 reqId,
 	if (mem != NULL) {
 		AppInfoDbValue val;
 		val.type = 0;
-		val.i64 = 0;
+		val.intVal = 0;
 		if (type != 0) {
 			val.type = 1;
 			val.str = new paf::string(strVal ? strVal : "");
 		} else {
 			val.type = 0;
-			val.i64 = i64Val;
+			val.intVal = intVal;
 		}
 		job = appInfoDbSetKeyJobCtor(mem, session, reqId, titleId, key, &val, ts);
 		if (val.type == 1) {
@@ -88,12 +88,12 @@ int shellSvcAppInfoDbEnqueueSetKey(IPMI::Session *session, SceUInt32 reqId,
 /* 0x811C0318 */
 int shellSvcAppInfoDbEnqueueSetMulti(IPMI::Session *session, SceUInt32 reqId,
 	SceUInt32 count, const SceUInt32 *keys, const SceUInt32 *types,
-	const SceInt64 *i64Vals, const char **strVals)
+	const SceInt64 *intVals, const char **strVals)
 {
 	paf::job::JobItem *job = NULL;
 	void *mem = operator new(44);
 	if (mem != NULL)
-		job = appInfoDbSetMultiJobCtor(mem, session, reqId, count, keys, types, i64Vals, strVals);
+		job = appInfoDbSetMultiJobCtor(mem, session, reqId, count, keys, types, intVals, strVals);
 	paf::common::SharedPtr<paf::job::JobItem> sp(job);
 	if (!sp.get()) {
 		shellSvcAppInfoDbSendSetMultiResp(session, reqId, (int)0x80101002);
@@ -131,12 +131,12 @@ int shellSvcAppInfoDbEnqueueGetKey(IPMI::Session *session, SceUInt32 reqId,
 
 /* 0x811C0556 */
 int shellSvcAppInfoDbEnqueueDelete(IPMI::Session *session, SceUInt32 reqId,
-	int arg1, int mode, SceInt64 arg2, const char *str, SceInt64 arg3)
+	int key, int mode, SceInt64 bits, const char *str, SceInt64 mask)
 {
 	paf::job::JobItem *job = NULL;
 	void *mem = operator new(80);
 	if (mem != NULL)
-		job = appInfoDbDeleteJobCtor(mem, session, reqId, arg1, mode, arg2, str, arg3);
+		job = appInfoDbDeleteJobCtor(mem, session, reqId, key, mode, bits, str, mask);
 	paf::common::SharedPtr<paf::job::JobItem> sp(job);
 	if (!sp.get()) {
 		shellSvcAppInfoDbSendDeleteResp(session, reqId, (int)0x80101002);

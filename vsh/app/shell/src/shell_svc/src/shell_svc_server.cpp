@@ -517,8 +517,7 @@ int shellSvcLiveAreaEnqueueUpdate(IPMI::Session *session, SceUInt32 reqId,
 		job->m_allowAny = allowAny;
 	}
 	paf::common::SharedPtr<paf::job::JobItem> sp(job);
-	paf::job::JobQueue *q = (paf::job::JobQueue *)((char *)g_pafFramework + 584);
-	if (q->Enqueue(sp) != 0)
+	if (paf::job::JobQueue::default_queue->Enqueue(sp) != 0)
 		shellSvcLiveAreaSendUpdateResp(session, reqId, (int)0x801040FF);
 	return 0;
 }
@@ -540,8 +539,7 @@ int shellSvcLiveAreaEnqueueSetContent(IPMI::Session *session, SceUInt32 reqId,
 			job->m_xmls[i].assign((const char *)bufs[i]->GetAddr(), bufs[i]->GetSize());
 	}
 	paf::common::SharedPtr<paf::job::JobItem> sp(job);
-	paf::job::JobQueue *q = (paf::job::JobQueue *)((char *)g_pafFramework + 584);
-	int r = q->Enqueue(sp);
+	int r = paf::job::JobQueue::default_queue->Enqueue(sp);
 	if (r != 0)
 		r = (int)0x801040FF;
 	return r;
@@ -600,8 +598,7 @@ int shellSvcLiveAreaEnqueueGetTs(IPMI::Session *session, SceUInt32 reqId,
 		job->m_frameId = frameId ? frameId : "";
 	}
 	paf::common::SharedPtr<paf::job::JobItem> sp(job);
-	paf::job::JobQueue *q = (paf::job::JobQueue *)((char *)g_pafFramework + 584);
-	if (q->Enqueue(sp) != 0) {
+	if (paf::job::JobQueue::default_queue->Enqueue(sp) != 0) {
 		SceUInt64 zeroTs = 0;
 		shellSvcLiveAreaSendGetTsResp(session, reqId, (int)0x801040FF, &zeroTs);
 	}
@@ -619,8 +616,7 @@ int shellSvcLiveAreaEnqueueGetContent(IPMI::Session *session, SceUInt32 reqId,
 		job->m_maxSize = maxSize;
 	}
 	paf::common::SharedPtr<paf::job::JobItem> sp(job);
-	paf::job::JobQueue *q = (paf::job::JobQueue *)((char *)g_pafFramework + 584);
-	if (q->Enqueue(sp) != 0) {
+	if (paf::job::JobQueue::default_queue->Enqueue(sp) != 0) {
 		SceUInt32 zeroSz = 0;
 		shellSvcLiveAreaSendGetContentResp(session, reqId, (int)0x801040FF, NULL, &zeroSz);
 	}

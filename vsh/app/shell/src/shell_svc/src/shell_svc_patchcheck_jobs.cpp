@@ -13,12 +13,13 @@
 #include <plugin.h>
 #include <thread/thread.h>
 
+#include "../../../plugins.h"
 #include "../../livespace_db/lsdb_keys.h"
 
 struct PatchCheckCacheData {
-	SceInt64 f0;
-	int f8;
-	int fC;
+	SceUInt64 updDate;
+	int resStatus;
+	int signOff;
 };
 
 extern "C" {
@@ -121,7 +122,7 @@ public:
 int PatchCheckSetJob::Run()
 {
 	char ctx[4];
-	bool flag = (m_data.f8 != 1 && m_data.f8 != 3);
+	bool flag = (m_data.resStatus != 1 && m_data.resStatus != 3);
 	return SceLsdb_79A6D877(ctx, &m_titleId, flag, &m_data, m_flags);
 }
 
@@ -131,18 +132,19 @@ void PatchCheckSetJob::Finish(int result)
 	if (result == 0) {
 		paf::Plugin *plugin = paf::Plugin::Find("topmenu_plugin");
 		if (plugin != NULL) {
-			void *iface = plugin->GetInterface(1);
+			ShellPluginInterface *iface =
+				static_cast<ShellPluginInterface *>(plugin->GetInterface(1));
 			if (iface != NULL) {
-				struct {
+				struct LiveAreaUpdateNotify {
 					const char *titleId;
-					int f4;
-					int f8;
-				} arg;
-				arg.titleId = m_titleId.c_str();
-				arg.f4 = 0;
-				arg.f8 = 0x20000;
-				void (*fn)(void *) = *(void (**)(void *))((char *)iface + 180);
-				fn(&arg);
+					const char *dirPath;
+					int updateMask;
+				} notify;
+				notify.titleId = m_titleId.c_str();
+				notify.dirPath = NULL;
+				notify.updateMask = 0x20000;
+				typedef void (*NotifyFn)(const LiveAreaUpdateNotify *);
+				reinterpret_cast<NotifyFn>(iface->func[45])(&notify);
 			}
 		}
 	}

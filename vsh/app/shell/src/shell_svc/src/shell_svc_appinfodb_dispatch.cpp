@@ -10,15 +10,15 @@
 #include "../../livespace_db/lsdb_keys.h"
 
 extern int shellSvcAppInfoDbEnqueueSetKey(IPMI::Session *session, SceUInt32 reqId,
-	const char *titleId, SceUInt32 key, int type, SceInt64 i64Val,
+	const char *titleId, SceUInt32 key, int type, SceInt64 intVal,
 	const char *strVal, SceInt64 ts);			/* 0x811C0164 */
 extern int shellSvcAppInfoDbEnqueueSetMulti(IPMI::Session *session, SceUInt32 reqId,
 	SceUInt32 count, const SceUInt32 *keys, const SceUInt32 *types,
-	const SceInt64 *i64Vals, const char **strVals);		/* 0x811C0318 */
+	const SceInt64 *intVals, const char **strVals);		/* 0x811C0318 */
 extern int shellSvcAppInfoDbEnqueueGetKey(IPMI::Session *session, SceUInt32 reqId,
 	const char *titleId, SceUInt32 key);			/* 0x811C0434 */
 extern int shellSvcAppInfoDbEnqueueDelete(IPMI::Session *session, SceUInt32 reqId,
-	int arg1, int mode, SceInt64 arg2, const char *str, SceInt64 arg3); /* 0x811C0556 */
+	int key, int mode, SceInt64 bits, const char *str, SceInt64 mask); /* 0x811C0556 */
 
 /* 0x811C0726 */
 int shellSvcAppInfoDbSendGetKeyResp(IPMI::Session *session, SceUInt32 reqId, int err,
@@ -76,15 +76,15 @@ void shellSvcAppInfoDbNoop(void)
 struct AppInfoDbSetKeyReq {
 	SceUInt32 key;
 	int type;
-	SceInt64 i64Val;
+	SceInt64 intVal;
 	SceInt64 ts;
 };
 
 struct AppInfoDbDeleteReq {
-	int arg1;
+	int key;
 	int mode;
-	SceInt64 arg2;
-	SceInt64 arg3;
+	SceInt64 bits;
+	SceInt64 mask;
 };
 
 /* 0x811C0880 */
@@ -102,13 +102,13 @@ int shellSvcAppInfoDbDispatchAsync(IPMI::Session *session, SceUInt32 reqId, SceU
 		const AppInfoDbSetKeyReq *p = (const AppInfoDbSetKeyReq *)inBufs[0].pData;
 		return shellSvcAppInfoDbEnqueueSetKey(session, reqId,
 			(const char *)inBufs[1].pData, p->key, p->type,
-			p->i64Val, (const char *)inBufs[2].pData, p->ts);
+			p->intVal, (const char *)inBufs[2].pData, p->ts);
 	}
 	case 0x90006: {
 		const AppInfoDbDeleteReq *p = (const AppInfoDbDeleteReq *)inBufs[0].pData;
 		return shellSvcAppInfoDbEnqueueDelete(session, reqId,
-			p->arg1, p->mode, p->arg2,
-			(const char *)inBufs[1].pData, p->arg3);
+			p->key, p->mode, p->bits,
+			(const char *)inBufs[1].pData, p->mask);
 	}
 	default:
 		return (int)0x800205C1;

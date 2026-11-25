@@ -13,83 +13,88 @@
 
 #include "shell_svc_newevent.h"
 
-extern void *g_pafFramework;					/* 0x81488474 */
-
 static paf::job::JobQueue *shellSvcNewEventJobQueue()
 {
-	return (paf::job::JobQueue *)((char *)&g_pafFramework + 146 * 4);
+	return paf::job::JobQueue::default_queue;
 }
 
 /* 0x811C300C */
-void shellSvcNewEventFillEntry(NewEventDbEntry *e, const char *titleId, const char *groupId,
-	SceInt64 eventId, int type, int f28, SceUInt8 f2c, SceUInt8 f2d,
-	const char *f30, int f3c, int f40, const char **args, SceUInt32 argCount,
-	const char *text1, const char *text2, int fC8,
-	const char *fCC, const char *fD8, const char *fE4,
-	int fF0, float fF4, int fFC)
+void shellSvcNewEventFillEntry(NewEventDbEntry *entry, const char *titleId, const char *itemId,
+	SceInt64 rowid, int msgType, int actType, SceUInt8 newFlag, SceUInt8 popupNo,
+	const char *iconPath, const void *iconData, int iconDataSize,
+	const char **msgArgs, SceUInt32 argCount,
+	const char *title, const char *desc, int execMode,
+	const char *execTitleId, const char *execArg, const char *timeUpdated,
+	int seId, float seVolume, int notifyFlags)
 {
-	e->m_titleId = titleId ? titleId : "";
-	e->m_groupId = groupId ? groupId : "";
-	e->m_eventId = eventId;
-	e->m_type = type;
-	e->m_f24 = 0;
-	e->m_f28 = f28;
-	e->m_f2c = f2c;
-	e->m_f2d = f2d;
-	e->m_f30 = f30 ? f30 : "";
-	e->m_f3c = f3c;
-	e->m_f40 = f40;
-	SceUInt32 n = (argCount < 9u) ? argCount : 9u;
-	for (SceUInt32 i = 0; i < n; ++i)
-		e->m_args[i] = args[i] ? args[i] : "";
-	e->m_text1 = text1 ? text1 : "";
-	e->m_text2 = text2 ? text2 : "";
-	e->m_fC8 = fC8;
-	e->m_fCC = fCC ? fCC : "";
-	e->m_fD8 = fD8 ? fD8 : "";
-	e->m_fE4 = fE4 ? fE4 : "";
-	e->m_fF0 = fF0;
-	e->m_fF4 = fF4;
-	e->m_fFC = fFC;
+	entry->m_titleId = titleId ? titleId : "";
+	entry->m_itemId = itemId ? itemId : "";
+	entry->m_rowid = rowid;
+	entry->m_msgType = msgType;
+	entry->m_actType = actType;
+	entry->m_newFlag = newFlag;
+	entry->m_popupNo = popupNo;
+	entry->m_iconPath = iconPath ? iconPath : "";
+	entry->m_iconData = iconData;
+	entry->m_iconDataSize = iconDataSize;
+	SceUInt32 count = (argCount < 9u) ? argCount : 9u;
+	for (SceUInt32 idx = 0; idx < count; ++idx)
+		entry->m_msgArgs[idx] = msgArgs[idx] ? msgArgs[idx] : "";
+	entry->m_title = title ? title : "";
+	entry->m_desc = desc ? desc : "";
+	entry->m_execMode = execMode;
+	entry->m_execTitleId = execTitleId ? execTitleId : "";
+	entry->m_execArg = execArg ? execArg : "";
+	entry->m_timeUpdated = timeUpdated ? timeUpdated : "";
+	entry->m_seId = seId;
+	entry->m_seVolume = seVolume;
+	entry->m_notifyFlags = notifyFlags;
 }
 
 /* 0x811C31D4 */
 int shellSvcNewEventEnqueueAdd(IPMI::Session *session, SceUInt32 reqId,
-	const char *titleId, const char *groupId, SceInt64 eventId,
-	int type, int f28, SceUInt8 f2c, SceUInt8 f2d,
-	const char *f30, int f3c, int f40, const char **args, SceUInt32 argCount,
-	const char *text1, const char *text2, int fC8,
-	const char *fCC, const char *fD8, const char *fE4,
-	int fF0, float fF4, int fFC, SceUInt8 flag)
+	const char *titleId, const char *itemId, SceInt64 rowid,
+	int msgType, int actType, SceUInt8 newFlag, SceUInt8 popupNo,
+	const char *iconPath, const void *iconData, int iconDataSize,
+	const char **msgArgs, SceUInt32 argCount,
+	const char *title, const char *desc, int execMode,
+	const char *execTitleId, const char *execArg, const char *timeUpdated,
+	int seId, float seVolume, int notifyFlags, SceUInt8 popupFlag)
 {
-	NewEventAddJob *job = new NewEventAddJob(session, reqId, flag);
+	NewEventAddJob *job = new NewEventAddJob(session, reqId, popupFlag);
 	paf::common::SharedPtr<paf::job::JobItem> sp(job);
 	if (job == NULL) {
-		SceInt64 zeroId = 0;
-		int z1 = 0, z2 = 0;
-		shellSvcNewEventSendAddResp(session, reqId, (int)0x80101002, &zeroId, &z1, &z2);
+		SceInt64 zeroRowId = 0;
+		int zeroHash = 0;
+		int zeroNotify = 0;
+		shellSvcNewEventSendAddResp(session, reqId, (int)0x80101002,
+			&zeroRowId, &zeroHash, &zeroNotify);
 		return 0;
 	}
-	shellSvcNewEventFillEntry(&job->m_entry, titleId, groupId, eventId,
-		type, f28, f2c, f2d, f30, f3c, f40, args, argCount,
-		text1, text2, fC8, fCC, fD8, fE4, fF0, fF4, fFC);
+	shellSvcNewEventFillEntry(&job->m_entry, titleId, itemId, rowid,
+		msgType, actType, newFlag, popupNo, iconPath, iconData, iconDataSize,
+		msgArgs, argCount, title, desc, execMode, execTitleId, execArg, timeUpdated,
+		seId, seVolume, notifyFlags);
 	int r = shellSvcNewEventJobQueue()->Enqueue(sp);
 	if (r != 0) {
-		SceInt64 zeroId = 0;
-		int z1 = 0, z2 = 0;
-		shellSvcNewEventSendAddResp(session, reqId, r, &zeroId, &z1, &z2);
+		SceInt64 zeroRowId = 0;
+		int zeroHash = 0;
+		int zeroNotify = 0;
+		shellSvcNewEventSendAddResp(session, reqId, r,
+			&zeroRowId, &zeroHash, &zeroNotify);
 	}
 	return 0;
 }
 
 /* 0x811C34A2 */
 int shellSvcNewEventBatchPush(IPMI::Session *session,
-	const char *titleId, const char *groupId, SceInt64 eventId,
-	int type, int f28, SceUInt8 f2c, SceUInt8 f2d,
-	const char *f30, int f3c, int f40, const char **args, SceUInt32 argCount,
-	const char *text1, const char *text2, int fC8,
-	const char *fCC, const char *fD8, const char *fE4,
-	int fF0, float fF4, int fFC)
+	const char *titleId, const char *itemId, SceInt64 rowid,
+	int msgType, int actType, SceUInt8 newFlag, SceUInt8 popupNo,
+	const char *iconPath, const void *iconData, int iconDataSize,
+	const char **msgArgs, SceUInt32 argCount,
+	const char *title, const char *desc, int execMode,
+	const char *execTitleId, const char *execArg, const char *timeUpdated,
+	int seId, float seVolume, int notifyFlags)
 {
 	NewEventBatchAddJob *job = NULL;
 	int r = shellSvcNewEventGetOrCreateBatch(session, &job, 0);
@@ -98,9 +103,9 @@ int shellSvcNewEventBatchPush(IPMI::Session *session,
 	paf::common::SharedPtr<NewEventDbEntry> entry(new NewEventDbEntry());
 	job->m_entries.push_back(entry);
 	shellSvcNewEventFillEntry(job->m_entries[job->m_entries.size() - 1].get(),
-		titleId, groupId, eventId, type, f28, f2c, f2d,
-		f30, f3c, f40, args, argCount, text1, text2,
-		fC8, fCC, fD8, fE4, fF0, fF4, fFC);
+		titleId, itemId, rowid, msgType, actType, newFlag, popupNo,
+		iconPath, iconData, iconDataSize, msgArgs, argCount, title, desc,
+		execMode, execTitleId, execArg, timeUpdated, seId, seVolume, notifyFlags);
 	return 0;
 }
 
@@ -124,7 +129,7 @@ int shellSvcNewEventEnqueueBatchCommit(IPMI::Session *session, SceUInt32 reqId, 
 
 /* 0x811C3868 */
 int shellSvcNewEventEnqueueDelete(IPMI::Session *session, SceUInt32 reqId,
-	const char **titleIds, const char **groupIds, const SceInt64 *eventIds, int count)
+	const char **titleIds, const char **itemIds, const SceInt64 *rowIds, int count)
 {
 	NewEventDeleteJob *job = new NewEventDeleteJob(session, reqId);
 	paf::common::SharedPtr<paf::job::JobItem> sp(job);
@@ -132,13 +137,13 @@ int shellSvcNewEventEnqueueDelete(IPMI::Session *session, SceUInt32 reqId,
 		shellSvcNewEventSendDeleteResp(session, reqId, (int)0x80101002);
 		return 0;
 	}
-	for (int i = 0; i < count; ++i) {
-		NewEventDeleteKey k;
-		job->m_keys.push_back(k);
+	for (int idx = 0; idx < count; ++idx) {
+		NewEventDeleteKey key;
+		job->m_keys.push_back(key);
 		NewEventDeleteKey &dst = job->m_keys[job->m_keys.size() - 1];
-		dst.m_titleId = titleIds[i] ? titleIds[i] : "";
-		dst.m_groupId = groupIds[i] ? groupIds[i] : "";
-		dst.m_eventId = eventIds[i];
+		dst.m_titleId = titleIds[idx] ? titleIds[idx] : "";
+		dst.m_itemId = itemIds[idx] ? itemIds[idx] : "";
+		dst.m_rowid = rowIds[idx];
 	}
 	int r = shellSvcNewEventJobQueue()->Enqueue(sp);
 	if (r != 0)
@@ -148,9 +153,9 @@ int shellSvcNewEventEnqueueDelete(IPMI::Session *session, SceUInt32 reqId,
 
 /* 0x811C3A78 */
 int shellSvcNewEventEnqueueSendSimple(IPMI::Session *session, SceUInt32 reqId,
-	const void *payload, SceUInt8 flag)
+	const NewEventSimplePayload *payload, SceUInt8 resolveFlag)
 {
-	NewEventSendSimpleJob *job = new NewEventSendSimpleJob(session, reqId, payload, flag);
+	NewEventSendSimpleJob *job = new NewEventSendSimpleJob(session, reqId, payload, resolveFlag);
 	paf::common::SharedPtr<paf::job::JobItem> sp(job);
 	if (job == NULL) {
 		shellSvcNewEventSendSimpleResp(session, reqId, (int)0x801063FF);
@@ -163,9 +168,9 @@ int shellSvcNewEventEnqueueSendSimple(IPMI::Session *session, SceUInt32 reqId,
 }
 
 /* 0x811C3BBC */
-int shellSvcNewEventEnqueueClear(IPMI::Session *session, SceUInt32 reqId, SceUInt8 flag)
+int shellSvcNewEventEnqueueClear(IPMI::Session *session, SceUInt32 reqId, SceUInt8 resolveFlag)
 {
-	NewEventClearJob *job = new NewEventClearJob(session, reqId, flag);
+	NewEventClearJob *job = new NewEventClearJob(session, reqId, resolveFlag);
 	paf::common::SharedPtr<paf::job::JobItem> sp(job);
 	if (job == NULL) {
 		shellSvcNewEventSendClearResp(session, reqId, (int)0x801063FF);
@@ -179,9 +184,9 @@ int shellSvcNewEventEnqueueClear(IPMI::Session *session, SceUInt32 reqId, SceUIn
 
 /* 0x811C3CC2 */
 int shellSvcNewEventEnqueueProgStart(IPMI::Session *session, SceUInt32 reqId,
-	const void *payload, SceUInt8 flag)
+	const NewEventProgressStartPayload *payload, SceUInt8 resolveFlag)
 {
-	NewEventProgressStartJob *job = new NewEventProgressStartJob(session, reqId, payload, flag);
+	NewEventProgressStartJob *job = new NewEventProgressStartJob(session, reqId, payload, resolveFlag);
 	paf::common::SharedPtr<paf::job::JobItem> sp(job);
 	if (job == NULL) {
 		shellSvcNewEventSendProgStartResp(session, reqId, (int)0x801063FF);
@@ -194,14 +199,16 @@ int shellSvcNewEventEnqueueProgStart(IPMI::Session *session, SceUInt32 reqId,
 }
 
 /* 0x811C3E06 */
-int shellSvcNewEventSyncUpdateProg(IPMI::Session *session, const void *payload)
+int shellSvcNewEventSyncUpdateProg(IPMI::Session *session,
+	const NewEventProgressUpdatePayload *payload)
 {
 	shellSvcNewEventUpdateProgress(session, payload);
 	return 0;
 }
 
 /* 0x811C3E10 */
-int shellSvcNewEventEnqueueProgFinish(IPMI::Session *session, SceUInt32 reqId, const void *payload)
+int shellSvcNewEventEnqueueProgFinish(IPMI::Session *session, SceUInt32 reqId,
+	const NewEventProgressFinishPayload *payload)
 {
 	NewEventProgressFinishJob *job = new NewEventProgressFinishJob(session, reqId, payload);
 	paf::common::SharedPtr<paf::job::JobItem> sp(job);
@@ -216,41 +223,36 @@ int shellSvcNewEventEnqueueProgFinish(IPMI::Session *session, SceUInt32 reqId, c
 }
 
 /* 0x811C3F42 */
-int shellSvcDisp_07_Sync(IPMI::Session *s, SceUInt32 m, const IPMI::DataInfo *in,
-	SceUInt32 inCount, IPMI::BufferInfo *out, SceUInt32 outCount)
+int shellSvcDisp_07_Sync(IPMI::Session *session, SceUInt32 methodId, const IPMI::DataInfo *inBufs,
+	SceUInt32 inCount, IPMI::BufferInfo *outBufs, SceUInt32 outCount)
 {
-	return shellSvcNewEventDispatchSync(s, m, in, inCount, out, outCount);
+	return shellSvcNewEventDispatchSync(session, methodId, inBufs, inCount, outBufs, outCount);
 }
 
 /* 0x811C3F56 */
-int shellSvcDisp_07_Async(IPMI::Session *s, SceUInt32 reqId, SceUInt32 m,
-	const IPMI::DataInfo *in, SceUInt32 inCount)
+int shellSvcDisp_07_Async(IPMI::Session *session, SceUInt32 reqId, SceUInt32 methodId,
+	const IPMI::DataInfo *inBufs, SceUInt32 inCount)
 {
-	return shellSvcNewEventDispatchAsync(s, reqId, m, in, inCount);
+	return shellSvcNewEventDispatchAsync(session, reqId, methodId, inBufs, inCount);
 }
 
 /* 0x811C3F66 */
-void shellSvcDisp_07_Disconn(IPMI::Session *s)
+void shellSvcDisp_07_Disconn(IPMI::Session *session)
 {
-	shellSvcNewEventAbortBatch(s);
-	shellSvcNewEventCancelSession(s);
-	shellSvcNewEventCleanupProgressSession(s);
+	shellSvcNewEventAbortBatch(session);
+	shellSvcNewEventCancelSession(session);
+	shellSvcNewEventCleanupProgressSession(session);
 }
 
 /* 0x811C3F7C */
-int shellSvcNewEventGetProgressWrap(SceInt64 eventId, float *outProg, paf::string *outT1, paf::string *outT2)
+int shellSvcNewEventGetProgressWrap(SceInt64 eventId, float *outProg,
+	paf::string *outTitle, paf::string *outDesc)
 {
-	return shellSvcNewEventGetProgress(eventId, outProg, outT1, outT2);
+	return shellSvcNewEventGetProgress(eventId, outProg, outTitle, outDesc);
 }
 
 /* 0x811C3F8C */
 int shellSvcNewEventCancelProgressWrap(SceInt64 eventId)
 {
 	return shellSvcNewEventCancelProgress(eventId);
-}
-
-/* 0x811C3F94 */
-paf::string shellSvcNewEventGetCancelTextWrap(SceInt64 eventId)
-{
-	return shellSvcNewEventGetCancelText(eventId);
 }

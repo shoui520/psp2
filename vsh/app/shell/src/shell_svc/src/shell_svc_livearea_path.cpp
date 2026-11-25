@@ -6,19 +6,31 @@
 #include <stddef.h>
 #include <scetypes.h>
 #include <std/string.h>
+#include <std/map>
 #include <std/string>
 #include <buffer/buffer.h>
 #include <common/shared_ptr.h>
 #include <plugin.h>
 
+#include "../../../plugins.h"
 #include "../../livespace_db/lsdb_keys.h"
+
+struct LsdbRowAttrVal {
+	int type;
+	int pad;
+	union {
+		SceInt64 intVal;
+		paf::string *str;
+	};
+};
 
 extern "C" {
 extern int vshSblSsIsDevelopmentMode(void);
 extern void SceLsdb_A6D8772C(void *ctx);
 extern int SceLsdb_E90B81CD(void *ctx);
 extern void SceLsdb_E2101B03(void *ctx);
-extern int SceLsdb_D239031A(void *ctx, const paf::string *titleId, paf::common::SharedPtr<int> *row);
+extern int SceLsdb_D239031A(void *ctx, const paf::string *titleId,
+	paf::common::SharedPtr<paf::map<SceUInt32, LsdbRowAttrVal> > *row);
 extern int SceLsdb_6C74B301(void *ctx, paf::string *titleId, const char *path,
 	int *outFlag, SceUInt64 *ts, paf::string *outDir, SceUID pid);
 extern int SceLsdb_EFD528B1(void *ctx, paf::string *titleId, paf::common::SharedPtr<int> *parsed,
@@ -86,33 +98,23 @@ int shellSvcGetAppMountPath(const paf::string *titleId, paf::string *outPath)
 		return r;
 	}
 
-	paf::common::SharedPtr<int> row(new int[3]);
+	paf::common::SharedPtr<paf::map<SceUInt32, LsdbRowAttrVal> > row(
+		new paf::map<SceUInt32, LsdbRowAttrVal>());
 	r = SceLsdb_D239031A(lsdbCtx, titleId, &row);
 	if (r != 0) {
 		SceLsdb_E2101B03(lsdbCtx);
 		return r;
 	}
 
-	/* Look up key 0x9A9B3542 in row map */
-	int *root = *(int **)row.get();
-	int node = root ? *root : 0;
-	while (node && *((SceUInt8 *)node + 41) == 0) {
-		SceUInt32 k = *(SceUInt32 *)(node + 16);
-		if (k == 0x9A9B3542u)
-			break;
-		node = (k < 0x9A9B3542u) ? *(int *)(node + 8) : *(int *)(node + 4);
-	}
-	if ((int *)node == root) {
+	paf::map<SceUInt32, LsdbRowAttrVal>::iterator it = row->find(0x9A9B3542u);
+	if (it == row->end()) {
 		SceLsdb_E2101B03(lsdbCtx);
 		return (int)0x801040FF;
 	}
 
 	const char *val = "";
-	if (*(int *)(node + 24) == 1) {
-		char **sp = *(char ***)(node + 32);
-		if (sp)
-			val = *sp;
-	}
+	if (it->second.type == 1 && it->second.str != NULL)
+		val = it->second.str->c_str();
 	*outPath = val ? val : "";
 	SceLsdb_E2101B03(lsdbCtx);
 	return 0;
@@ -124,7 +126,7 @@ int shellSvcMountAppForLiveArea(const paf::string *titleId, paf::string *path, p
 	paf::Plugin *gp = paf::Plugin::Find("game_plugin");
 	if (!gp)
 		return (int)0x801040FF;
-	void *iface = gp->GetInterface(1);
+	ShellPluginInterface *iface = static_cast<ShellPluginInterface *>(gp->GetInterface(1));
 	if (!iface)
 		return (int)0x801040FF;
 
@@ -135,7 +137,7 @@ int shellSvcMountAppForLiveArea(const paf::string *titleId, paf::string *path, p
 
 	char mountBuf[20];
 	typedef int (*MountFn)(const char *, char *, int);
-	r = (*(MountFn *)((char *)iface + 16))(appPath.c_str(), mountBuf, 17);
+	r = reinterpret_cast<MountFn>(iface->func[4])(appPath.c_str(), mountBuf, 17);
 	if (r != 0)
 		return r;
 
@@ -174,10 +176,10 @@ int shellSvcLiveAreaUpdateFromPath(SceUID pid, const char *inPath, paf::string *
 	if (mountPoint.size() != 0) {
 		paf::Plugin *gp = paf::Plugin::Find("game_plugin");
 		if (gp) {
-			void *iface = gp->GetInterface(1);
+			ShellPluginInterface *iface = static_cast<ShellPluginInterface *>(gp->GetInterface(1));
 			if (iface) {
 				typedef void (*UnmountFn)(const char *);
-				(*(UnmountFn *)((char *)iface + 20))(mountPoint.c_str());
+				reinterpret_cast<UnmountFn>(iface->func[5])(mountPoint.c_str());
 			}
 		}
 	}
@@ -207,10 +209,10 @@ int shellSvcLiveAreaSetFromPath(SceUID pid, const char *inPath, paf::common::Sha
 	if (mountPoint.size() != 0) {
 		paf::Plugin *gp = paf::Plugin::Find("game_plugin");
 		if (gp) {
-			void *iface = gp->GetInterface(1);
+			ShellPluginInterface *iface = static_cast<ShellPluginInterface *>(gp->GetInterface(1));
 			if (iface) {
 				typedef void (*UnmountFn)(const char *);
-				(*(UnmountFn *)((char *)iface + 20))(mountPoint.c_str());
+				reinterpret_cast<UnmountFn>(iface->func[5])(mountPoint.c_str());
 			}
 		}
 	}

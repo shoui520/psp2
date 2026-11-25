@@ -26,7 +26,7 @@ extern int shellSvcLiveAreaSyncDefault(IPMI::Session *, SceUInt32, const IPMI::D
 
 static paf::job::JobQueue *shellSvcActivityJobQueue()
 {
-	return (paf::job::JobQueue *)((char *)&g_pafFramework + 146 * 4);
+	return paf::job::JobQueue::default_queue;
 }
 
 /* 0x811B99E0 */

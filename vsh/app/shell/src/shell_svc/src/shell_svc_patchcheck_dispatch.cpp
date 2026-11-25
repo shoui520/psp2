@@ -8,9 +8,9 @@
 #include <ipmi/session.h>
 
 struct PatchCheckCacheData {
-	SceInt64 f0;
-	int f8;
-	int fC;
+	SceUInt64 updDate;
+	int resStatus;
+	int signOff;
 };
 
 extern int shellSvcPatchCheckEnqueueGet(IPMI::Session *session, SceUInt32 reqId, const char *titleId); /* 0x811C4554 */

@@ -13,12 +13,31 @@
 #include "../../livespace_db/lsdb_keys.h"
 #include "shell_svc_activity.h"
 
-extern void *g_pafFramework;					/* 0x81488474 */
+struct ActivityPostTrophyReq {
+	int grade;
+};
 
-static paf::job::JobQueue *shellSvcActivityDispatchJobQueue()
-{
-	return (paf::job::JobQueue *)((char *)&g_pafFramework + 146 * 4);
-}
+struct ActivityPostStorePurchaseReq {
+	int itemType;
+	int price;
+	int quantity;
+	int flags;
+};
+
+struct ActivityPostStoreRatingReq {
+	int itemType;
+	int rating;
+};
+
+struct ActivityPostGameStatusReq {
+	int statusType;
+	int statusFlags;
+};
+
+struct ActivityPostGameStatusUriReq {
+	int statusType;
+	SceUInt32 reqVersion;
+};
 
 /* 0x811BCFBA */
 int shellSvcActivityDispatchSync(IPMI::Session *session, SceUInt32 methodId,
@@ -33,12 +52,13 @@ int shellSvcActivityDispatchSync(IPMI::Session *session, SceUInt32 methodId,
 			(const char *)inBufs[0].pData);
 		return session->respondToSyncMethodRequest(r, outBufs, outCount);
 	case 0x80001: {
-		const int *p0 = (const int *)inBufs[0].pData;
+		const ActivityPostTrophyReq *req =
+			static_cast<const ActivityPostTrophyReq *>(inBufs[0].pData);
 		r = shellSvcActivityPostTrophy(session,
 			(const char *)inBufs[1].pData,
 			(const char *)inBufs[2].pData,
 			(const char *)inBufs[3].pData,
-			p0[0],
+			req->grade,
 			(const char *)inBufs[4].pData);
 		return session->respondToSyncMethodRequest(r, outBufs, outCount);
 	}
@@ -56,28 +76,31 @@ int shellSvcActivityDispatchSync(IPMI::Session *session, SceUInt32 methodId,
 			(const char *)inBufs[3].pData);
 		return session->respondToSyncMethodRequest(r, outBufs, outCount);
 	case 0x80004: {
-		const int *p0 = (const int *)inBufs[0].pData;
+		const ActivityPostStorePurchaseReq *req =
+			static_cast<const ActivityPostStorePurchaseReq *>(inBufs[0].pData);
 		r = shellSvcActivityPostStorePurchase(session,
-			(const char *)inBufs[1].pData, p0[0],
+			(const char *)inBufs[1].pData, req->itemType,
 			(const char *)inBufs[2].pData,
 			(const char *)inBufs[3].pData,
 			(const char *)inBufs[4].pData,
 			(const char *)inBufs[5].pData,
-			p0[1], p0[2], p0[3]);
+			req->price, req->quantity, req->flags);
 		return session->respondToSyncMethodRequest(r, outBufs, outCount);
 	}
 	case 0x80005: {
-		const int *p0 = (const int *)inBufs[0].pData;
+		const ActivityPostStoreRatingReq *req =
+			static_cast<const ActivityPostStoreRatingReq *>(inBufs[0].pData);
 		r = shellSvcActivityPostStoreRating(session,
-			(const char *)inBufs[1].pData, p0[0],
-			(const char *)inBufs[2].pData, p0[1],
+			(const char *)inBufs[1].pData, req->itemType,
+			(const char *)inBufs[2].pData, req->rating,
 			(const char *)inBufs[3].pData,
 			(const char *)inBufs[4].pData);
 		return session->respondToSyncMethodRequest(r, outBufs, outCount);
 	}
 	case 0x80006: {
-		const int *p0 = (const int *)inBufs[0].pData;
-		r = shellSvcActivityPostGameStatus(session, p0[0], p0[1],
+		const ActivityPostGameStatusReq *req =
+			static_cast<const ActivityPostGameStatusReq *>(inBufs[0].pData);
+		r = shellSvcActivityPostGameStatus(session, req->statusType, req->statusFlags,
 			(const char *)inBufs[1].pData,
 			(const char *)inBufs[2].pData,
 			(const char *)inBufs[3].pData,
@@ -86,10 +109,11 @@ int shellSvcActivityDispatchSync(IPMI::Session *session, SceUInt32 methodId,
 		return session->respondToSyncMethodRequest(r, outBufs, outCount);
 	}
 	case 0x80007: {
-		const int *p0 = (const int *)inBufs[0].pData;
-		r = shellSvcActivityPostGameStatusWithUri(session, p0[0],
+		const ActivityPostGameStatusUriReq *req =
+			static_cast<const ActivityPostGameStatusUriReq *>(inBufs[0].pData);
+		r = shellSvcActivityPostGameStatusWithUri(session, req->statusType,
 			(const char *)inBufs[1].pData,
-			(SceUInt32)p0[1],
+			req->reqVersion,
 			(const char *)inBufs[2].pData);
 		return session->respondToSyncMethodRequest(r, outBufs, outCount);
 	}
@@ -110,6 +134,6 @@ int shellSvcActivityPostSystemSoftwareImpl(const char *titleId)
 		return 0;
 
 	paf::common::SharedPtr<paf::job::JobItem> job(new PostSystemSoftwareStatusJob(rec));
-	shellSvcActivityDispatchJobQueue()->Enqueue(job);
+	paf::job::JobQueue::default_queue->Enqueue(job);
 	return r;
 }

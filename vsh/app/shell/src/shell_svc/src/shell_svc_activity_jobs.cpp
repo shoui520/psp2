@@ -13,21 +13,15 @@
 #include <common/string_util.h>
 #include <plugin.h>
 
+#include "../../../plugins.h"
 #include "../../livespace_db/lsdb_keys.h"
 #include "shell_svc_activity.h"
-
-extern paf::wstring shellFormatText(const wchar_t *format, const wchar_t *text1 = L"",
-	const wchar_t *text2 = L"", const wchar_t *text3 = L"",
-	const wchar_t *text4 = L"", const wchar_t *text5 = L"",
-	const wchar_t *text6 = L"", const wchar_t *text7 = L"",
-	const wchar_t *text8 = L"", const wchar_t *text9 = L"",
-	const wchar_t *text10 = L"", const wchar_t *text11 = L"");
 
 struct LsdbAttrVal {
 	int type;
 	int pad;
 	union {
-		SceInt64 i64;
+		SceInt64 intVal;
 		paf::string *str;
 	};
 };
@@ -212,14 +206,14 @@ int PostSystemSoftwareStatusJob::Prepare()
 	if (r < 0)
 		return r;
 
-	const char *t1 = sceLsdbGetTitle(&row);
-	paf::string titleClean(t1 ? t1 : "");
+	const char *cleanTitleStr = sceLsdbGetTitle(&row);
+	paf::string titleClean(cleanTitleStr ? cleanTitleStr : "");
 	if (titleClean.size() == 0)
 		return (int)0x80101041;
 	shellSvcActivityStripNewlines(titleClean);
 
-	const char *t2 = sceLsdbGetTitle(&row);
-	paf::string titleRaw(t2 ? t2 : "");
+	const char *rawTitleStr = sceLsdbGetTitle(&row);
+	paf::string titleRaw(rawTitleStr ? rawTitleStr : "");
 	if (titleRaw.size() == 0)
 		return (int)0x80101041;
 

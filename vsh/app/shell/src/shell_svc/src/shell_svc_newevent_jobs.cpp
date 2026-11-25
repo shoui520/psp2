@@ -22,7 +22,7 @@ struct LsdbAttrVal {
 	int type;
 	int pad;
 	union {
-		SceInt64 i64;
+		SceInt64 intVal;
 		paf::string *str;
 	};
 };
@@ -30,8 +30,8 @@ struct LsdbAttrVal {
 struct NewEventProgressEntry {
 	paf::string m_titleId;					/* +0 */
 	SceInt64 m_eventId;					/* +16 */
-	paf::string m_text1;					/* +24 */
-	paf::string m_text2;					/* +36 */
+	paf::string m_title;					/* +24 */
+	paf::string m_desc;					/* +36 */
 	float m_progress;					/* +48 */
 	IPMI::Session *m_session;				/* +52 */
 	paf::string m_cancelText;				/* +56 */
@@ -46,7 +46,7 @@ extern int SceLsdb_E90B81CD(void *ctx);
 extern void SceLsdb_E2101B03(void *ctx);
 extern int SceLsdb_D239031A(void *ctx, const paf::string *titleId,
 	paf::common::SharedPtr<paf::map<SceUInt32, LsdbAttrVal> > *row);
-extern int SceLsdb_315B9FD6(NewEventDbEntry *entry, SceUInt8 flag);
+extern int SceLsdb_315B9FD6(NewEventDbEntry *entry, SceUInt8 popupFlag);
 extern int SceLsdb_B3252544(const paf::common::SharedPtr<NewEventDbEntry> *entries,
 	SceSize count, int flags);
 extern int SceLsdb_AE04DDEB(const NewEventDeleteKey *keys, SceSize count);
@@ -58,6 +58,8 @@ static paf::list<NewEventDbJobBase *> s_newEventJobs;		/* 0x8156B7B8 */
 static paf::thread::RMutex s_newEventMutex("SceNewEventDbJob", 0); /* 0x8156B7C8 */
 static paf::map<SceInt64, NewEventProgressEntry> s_progressMap;	/* 0x8156B7E8 */
 static NewEventBatchAddJob *s_pendingBatchJob = NULL;		/* 0x81544E04 */
+
+static const char kDefaultUserGroupId[] = "g00";
 
 /* 0x811C1300 */
 void shellSvcResolveClientTitleId(paf::string *out, SceUID appId, SceUInt8 flag, SceUInt8 rawMode)
@@ -89,9 +91,9 @@ void shellSvcResolveClientTitleId(paf::string *out, SceUID appId, SceUInt8 flag,
 				if (SceLsdb_D239031A(ctx, &key, &row) == 0) {
 					paf::map<SceUInt32, LsdbAttrVal>::iterator it = row->find(0x308A7798u);
 					if (it != row->end()) {
-						const char *v = (it->second.type == 1 && it->second.str != NULL)
+						const char *valStr = (it->second.type == 1 && it->second.str != NULL)
 							? it->second.str->c_str() : "";
-						res = v ? v : "";
+						res = valStr ? valStr : "";
 					}
 				}
 			}
@@ -138,11 +140,11 @@ void shellSvcNewEventCancelSession(IPMI::Session *session)
 /* 0x811C1758 */
 int NewEventAddJob::Run()
 {
-	int r = SceLsdb_315B9FD6(&m_entry, m_flag);
+	int r = SceLsdb_315B9FD6(&m_entry, m_popupFlag);
 	s_newEventMutex.Lock();
 	if (!IsCanceled())
 		r = shellSvcNewEventSendAddResp(m_session, m_reqId, r,
-			&m_entry.m_eventId, &m_entry.m_fF8, &m_entry.m_fFC);
+			&m_entry.m_rowid, &m_entry.m_hash, &m_entry.m_notifyFlags);
 	s_newEventMutex.Unlock();
 	return r;
 }
@@ -204,22 +206,20 @@ int NewEventDeleteJob::Run()
 int NewEventSendSimpleJob::Run()
 {
 	NewEventDbEntry entry;
-	shellSvcResolveClientTitleId(&entry.m_titleId, m_session->getAppId(), m_flag, 0);
+	shellSvcResolveClientTitleId(&entry.m_titleId, m_session->getAppId(), m_resolveFlag, 0);
 	int r;
 	if (entry.m_titleId.size() != 0) {
-		entry.m_groupId = "g00";
-		paf::wstring wtext((const wchar_t *)m_payload);
-		paf::common::Utf16ToUtf8(wtext, &entry.m_text2);
-		entry.m_type = 258;
-		entry.m_f24 = 0;
-		entry.m_f28 = 2;
-		entry.m_f2c = 1;
-		entry.m_f2d = 1;
-		entry.m_fC8 = 0x20000;
-		entry.m_fCC = entry.m_titleId;
-		const char *arg = (const char *)m_payload + 128;
-		if (arg[0] != '\0')
-			entry.m_fD8 = paf::string("type=USER_DEFINED&arg=") + arg;
+		entry.m_itemId = kDefaultUserGroupId;
+		paf::wstring wtext(m_payload.descText);
+		paf::common::Utf16ToUtf8(wtext, &entry.m_desc);
+		entry.m_msgType = 258;
+		entry.m_actType = 2;
+		entry.m_newFlag = 1;
+		entry.m_popupNo = 1;
+		entry.m_execMode = 0x20000;
+		entry.m_execTitleId = entry.m_titleId;
+		if (m_payload.userArg[0] != '\0')
+			entry.m_execArg = paf::string("type=USER_DEFINED&arg=") + m_payload.userArg;
 		r = SceLsdb_315B9FD6(&entry, 1);
 		if (r != 0)
 			r = (int)0x801063FF;
@@ -238,8 +238,8 @@ int NewEventSendSimpleJob::Run()
 int NewEventClearJob::Run()
 {
 	NewEventDeleteKey key;
-	shellSvcResolveClientTitleId(&key.m_titleId, m_session->getAppId(), m_flag, 0);
-	key.m_groupId = "g00";
+	shellSvcResolveClientTitleId(&key.m_titleId, m_session->getAppId(), m_resolveFlag, 0);
+	key.m_itemId = kDefaultUserGroupId;
 	int r = SceLsdb_AE04DDEB(&key, 1);
 	if (r != 0)
 		r = (int)0x801063FF;
@@ -254,43 +254,41 @@ int NewEventClearJob::Run()
 int NewEventProgressStartJob::Run()
 {
 	NewEventDbEntry entry;
-	shellSvcResolveClientTitleId(&entry.m_titleId, m_session->getAppId(), m_flag, 0);
+	shellSvcResolveClientTitleId(&entry.m_titleId, m_session->getAppId(), m_resolveFlag, 0);
 	int r;
 	if (entry.m_titleId.size() != 0) {
-		entry.m_groupId = "g00";
-		paf::wstring w1((const wchar_t *)m_payload);
-		paf::common::Utf16ToUtf8(w1, &entry.m_text1);
-		paf::wstring w2((const wchar_t *)((const char *)m_payload + 128));
-		paf::common::Utf16ToUtf8(w2, &entry.m_text2);
-		entry.m_type = 64;
-		entry.m_f24 = 0;
-		entry.m_f28 = 2;
-		entry.m_f2c = 0;
-		entry.m_f2d = 1;
-		entry.m_fC8 = 0x20000;
-		entry.m_fCC = entry.m_titleId;
-		const char *arg = (const char *)m_payload + 256;
-		if (arg[0] != '\0')
-			entry.m_fD8 = paf::string("type=USER_DEFINED&arg=") + arg;
+		entry.m_itemId = kDefaultUserGroupId;
+		paf::wstring titleW(m_payload.titleText);
+		paf::common::Utf16ToUtf8(titleW, &entry.m_title);
+		paf::wstring descW(m_payload.descText);
+		paf::common::Utf16ToUtf8(descW, &entry.m_desc);
+		entry.m_msgType = 64;
+		entry.m_actType = 2;
+		entry.m_newFlag = 0;
+		entry.m_popupNo = 1;
+		entry.m_execMode = 0x20000;
+		entry.m_execTitleId = entry.m_titleId;
+		if (m_payload.userArg[0] != '\0')
+			entry.m_execArg = paf::string("type=USER_DEFINED&arg=") + m_payload.userArg;
 		r = SceLsdb_315B9FD6(&entry, 1);
 		if (r != 0)
 			r = (int)0x801063FF;
 
-		NewEventProgressEntry pe;
-		pe.m_titleId = entry.m_titleId;
-		pe.m_eventId = entry.m_eventId;
-		pe.m_text1 = "";
-		pe.m_text2 = "";
-		pe.m_progress = 0.0f;
-		pe.m_session = m_session;
-		paf::wstring wCancel((const wchar_t *)((const char *)m_payload + 1264));
-		paf::common::Utf16ToUtf8(wCancel, &pe.m_cancelText);
+		NewEventProgressEntry progressEntry;
+		progressEntry.m_titleId = entry.m_titleId;
+		progressEntry.m_eventId = entry.m_rowid;
+		progressEntry.m_title = "";
+		progressEntry.m_desc = "";
+		progressEntry.m_progress = 0.0f;
+		progressEntry.m_session = m_session;
+		paf::wstring cancelW(m_payload.cancelText);
+		paf::common::Utf16ToUtf8(cancelW, &progressEntry.m_cancelText);
 
-		paf::map<SceInt64, NewEventProgressEntry>::iterator it = s_progressMap.find(entry.m_eventId);
+		paf::map<SceInt64, NewEventProgressEntry>::iterator it = s_progressMap.find(entry.m_rowid);
 		if (it == s_progressMap.end())
-			s_progressMap.insert(paf::pair<SceInt64, NewEventProgressEntry>(entry.m_eventId, pe));
+			s_progressMap.insert(paf::pair<SceInt64, NewEventProgressEntry>(entry.m_rowid, progressEntry));
 		else
-			it->second = pe;
+			it->second = progressEntry;
 	} else {
 		r = (int)0x801063FF;
 	}
@@ -318,21 +316,19 @@ int NewEventProgressFinishJob::Run()
 	if (it == s_progressMap.end()) {
 		r = (int)0x801063FF;
 	} else {
-		entry.m_groupId = "g00";
-		paf::wstring w1((const wchar_t *)m_payload);
-		paf::common::Utf16ToUtf8(w1, &entry.m_text1);
-		paf::wstring w2((const wchar_t *)((const char *)m_payload + 128));
-		paf::common::Utf16ToUtf8(w2, &entry.m_text2);
-		entry.m_type = 128;
-		entry.m_f24 = 0;
-		entry.m_f28 = 2;
-		entry.m_f2c = 1;
-		entry.m_f2d = 1;
-		entry.m_fC8 = 0x20000;
-		entry.m_fCC = entry.m_titleId;
-		const char *arg = (const char *)m_payload + 256;
-		if (arg[0] != '\0')
-			entry.m_fD8 = paf::string("type=USER_DEFINED&arg=") + arg;
+		entry.m_itemId = kDefaultUserGroupId;
+		paf::wstring titleW(m_payload.titleText);
+		paf::common::Utf16ToUtf8(titleW, &entry.m_title);
+		paf::wstring descW(m_payload.descText);
+		paf::common::Utf16ToUtf8(descW, &entry.m_desc);
+		entry.m_msgType = 128;
+		entry.m_actType = 2;
+		entry.m_newFlag = 1;
+		entry.m_popupNo = 1;
+		entry.m_execMode = 0x20000;
+		entry.m_execTitleId = entry.m_titleId;
+		if (m_payload.userArg[0] != '\0')
+			entry.m_execArg = paf::string("type=USER_DEFINED&arg=") + m_payload.userArg;
 		r = SceLsdb_315B9FD6(&entry, 1);
 		if (r != 0)
 			r = (int)0x801063FF;
@@ -347,30 +343,32 @@ int NewEventProgressFinishJob::Run()
 }
 
 /* 0x811C2A32 */
-int shellSvcNewEventUpdateProgress(IPMI::Session *session, const void *payload)
+int shellSvcNewEventUpdateProgress(IPMI::Session *session,
+	const NewEventProgressUpdatePayload *payload)
 {
 	for (paf::map<SceInt64, NewEventProgressEntry>::iterator it = s_progressMap.begin();
 	     it != s_progressMap.end(); ++it) {
 		if (it->second.m_session->getAppId() == session->getAppId()) {
-			paf::wstring w1((const wchar_t *)payload);
-			paf::common::Utf16ToUtf8(w1, &it->second.m_text1);
-			paf::wstring w2((const wchar_t *)((const char *)payload + 128));
-			paf::common::Utf16ToUtf8(w2, &it->second.m_text2);
-			it->second.m_progress = *(const float *)((const char *)payload + 256);
+			paf::wstring titleW(payload->titleText);
+			paf::common::Utf16ToUtf8(titleW, &it->second.m_title);
+			paf::wstring descW(payload->descText);
+			paf::common::Utf16ToUtf8(descW, &it->second.m_desc);
+			it->second.m_progress = payload->progress;
 		}
 	}
 	return 0;
 }
 
 /* 0x811C2BF2 */
-int shellSvcNewEventGetProgress(SceInt64 eventId, float *outProg, paf::string *outT1, paf::string *outT2)
+int shellSvcNewEventGetProgress(SceInt64 eventId, float *outProg,
+	paf::string *outTitle, paf::string *outDesc)
 {
 	paf::map<SceInt64, NewEventProgressEntry>::iterator it = s_progressMap.find(eventId);
 	if (it == s_progressMap.end())
 		return (int)0x801063FF;
 	*outProg = it->second.m_progress;
-	*outT1 = it->second.m_text1;
-	*outT2 = it->second.m_text2;
+	*outTitle = it->second.m_title;
+	*outDesc = it->second.m_desc;
 	return 0;
 }
 
@@ -383,7 +381,7 @@ int shellSvcNewEventCancelProgress(SceInt64 eventId)
 		s_progressMap.erase(it);
 	}
 	NewEventDeleteKey key;
-	key.m_eventId = eventId;
+	key.m_rowid = eventId;
 	return SceLsdb_AE04DDEB(&key, 1);
 }
 
@@ -403,7 +401,7 @@ int shellSvcNewEventCleanupProgressSession(IPMI::Session *session)
 	     it != s_progressMap.end(); ++it) {
 		if (it->second.m_session->getAppId() == session->getAppId()) {
 			NewEventDeleteKey key;
-			key.m_eventId = it->second.m_eventId;
+			key.m_rowid = it->second.m_eventId;
 			int r = SceLsdb_AE04DDEB(&key, 1);
 			s_progressMap.erase(it);
 			return r;
@@ -413,22 +411,22 @@ int shellSvcNewEventCleanupProgressSession(IPMI::Session *session)
 }
 
 NewEventSendSimpleJob::NewEventSendSimpleJob(IPMI::Session *session, SceUInt32 reqId,
-	const void *payload, SceUInt8 flag)
-	: NewEventDbJobBase(session, reqId), m_flag(flag)
+	const NewEventSimplePayload *payload, SceUInt8 resolveFlag)
+	: NewEventDbJobBase(session, reqId), m_resolveFlag(resolveFlag)
 {
-	sce_paf_memcpy(m_payload, payload, sizeof(m_payload));
+	sce_paf_memcpy(&m_payload, payload, sizeof(m_payload));
 }
 
 NewEventProgressStartJob::NewEventProgressStartJob(IPMI::Session *session, SceUInt32 reqId,
-	const void *payload, SceUInt8 flag)
-	: NewEventDbJobBase(session, reqId), m_flag(flag)
+	const NewEventProgressStartPayload *payload, SceUInt8 resolveFlag)
+	: NewEventDbJobBase(session, reqId), m_resolveFlag(resolveFlag)
 {
-	sce_paf_memcpy(m_payload, payload, sizeof(m_payload));
+	sce_paf_memcpy(&m_payload, payload, sizeof(m_payload));
 }
 
 NewEventProgressFinishJob::NewEventProgressFinishJob(IPMI::Session *session, SceUInt32 reqId,
-	const void *payload)
+	const NewEventProgressFinishPayload *payload)
 	: NewEventDbJobBase(session, reqId)
 {
-	sce_paf_memcpy(m_payload, payload, sizeof(m_payload));
+	sce_paf_memcpy(&m_payload, payload, sizeof(m_payload));
 }

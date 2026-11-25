@@ -15,7 +15,17 @@
 #include <plugin.h>
 #include <thread/thread.h>
 
+#include "../../../plugins.h"
 #include "../../livespace_db/lsdb_keys.h"
+
+struct LiTemplateLayout {
+	paf::string m_style;					/* +0 */
+	paf::string m_formatVer;				/* +12 */
+	SceInt64 m_contentRev;					/* +24 */
+	int m_formatVersion;					/* +32 */
+	paf::list<void *> m_parts;				/* +36 */
+	SceUInt64 m_modifiedDate;				/* +48 */
+};
 
 extern "C" {
 extern void SceLsdb_A6D8772C(void *ctx);
@@ -25,7 +35,7 @@ extern int SceLsdb_D239031A(void *ctx, const paf::string *titleId, paf::common::
 extern int sceLsdbGetSystemVersion(paf::common::SharedPtr<int> *row);
 extern int sceLsdbGetType(paf::common::SharedPtr<int> *row);
 extern int SceLsdb_BE72A404(const char *titleId);
-extern int *SceLsdb_D3EF2C98(void *mem);
+extern LiTemplateLayout *SceLsdb_D3EF2C98(void *mem);
 extern int SceLsdb_60B535FD(int sysVer, int mode);
 extern void SceLsdb_88FDC55C(paf::string *out, int sysVer);
 extern int SceLsdb_1673AD48(void);
@@ -232,11 +242,12 @@ int shellSvcLiveAreaUpdateJobRun(void *rawJob)
 	if (res == 0) {
 		paf::Plugin *topmenu = paf::Plugin::Find("topmenu_plugin");
 		if (topmenu) {
-			void *iface = topmenu->GetInterface(1);
+			ShellPluginInterface *iface =
+				static_cast<ShellPluginInterface *>(topmenu->GetInterface(1));
 			if (iface) {
 				const void *args[3] = { job->m_titleId.c_str(), outDir.c_str(), (const void *)outFlag };
 				typedef void (*NotifyFn)(const void **);
-				(*(NotifyFn *)((char *)iface + 180))(args);
+				reinterpret_cast<NotifyFn>(iface->func[45])(args);
 			}
 		}
 	}
@@ -277,9 +288,9 @@ int shellSvcLiveAreaSetContentJobRun(void *rawJob)
 		paf::vector<paf::string> m_xmls;
 	} *job = (SetJob *)rawJob;
 
-	void *mem = operator new(56);
-	int *parsed = mem ? SceLsdb_D3EF2C98(mem) : NULL;
-	paf::common::SharedPtr<int> spParsed(parsed);
+	void *mem = operator new(sizeof(LiTemplateLayout));
+	LiTemplateLayout *parsed = mem ? SceLsdb_D3EF2C98(mem) : NULL;
+	paf::common::SharedPtr<int> spParsed(reinterpret_cast<int *>(parsed));
 
 	paf::string outDir;
 	int outFlag = 0;
@@ -310,7 +321,7 @@ int shellSvcLiveAreaSetContentJobRun(void *rawJob)
 				res = (int)0x80104004;
 				break;
 			}
-			((paf::vector<void *> *)((char *)parsed + 36))->push_back(node);
+			parsed->m_parts.push_back(node);
 			job->m_xmls.pop_back();
 		}
 
@@ -333,11 +344,12 @@ int shellSvcLiveAreaSetContentJobRun(void *rawJob)
 	if (res == 0) {
 		paf::Plugin *topmenu = paf::Plugin::Find("topmenu_plugin");
 		if (topmenu) {
-			void *iface = topmenu->GetInterface(1);
+			ShellPluginInterface *iface =
+				static_cast<ShellPluginInterface *>(topmenu->GetInterface(1));
 			if (iface) {
 				const void *args[3] = { job->m_titleId.c_str(), outDir.c_str(), (const void *)outFlag };
 				typedef void (*NotifyFn)(const void **);
-				(*(NotifyFn *)((char *)iface + 180))(args);
+				reinterpret_cast<NotifyFn>(iface->func[45])(args);
 			}
 		}
 	}
@@ -364,12 +376,13 @@ int shellSvcLiveAreaGetTsJobRun(void *rawJob)
 
 	if (res == 0) {
 		paf::Plugin *la = paf::Plugin::Find("livearea_plugin");
-		void *iface = la ? la->GetInterface(1) : NULL;
+		ShellPluginInterface *iface = la
+			? static_cast<ShellPluginInterface *>(la->GetInterface(1)) : NULL;
 		if (!iface) {
 			res = (int)0x801040FF;
 		} else {
 			typedef int (*GetTsFn)(const char *, const char *, SceUInt64 *);
-			GetTsFn fn = *(GetTsFn *)((char *)iface + 20);
+			GetTsFn fn = reinterpret_cast<GetTsFn>(iface->func[5]);
 			int tries = 625;
 			do {
 				const char *fid = job->m_frameId.size() ? job->m_frameId.c_str() : NULL;
