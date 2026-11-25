@@ -13,7 +13,7 @@ typedef struct SceUsbPspcmCallbacks {
 } SceUsbPspcmCallbacks;
 
 u32 strlen(const char *s);
-int strncmp(const char *s1, const char *s2, u32 n);
+int strncmp(const char *lhs, const char *rhs, u32 n);
 char *strncpy(char *dst, const char *src, u32 n);
 int sceKernelCancelEventFlag(SceUID evid, u32 new_pattern, int *num_wait_threads);
 
@@ -26,8 +26,8 @@ static int _sceUsbWaitStateInternal(u32 state, s32 waitmode, SceUInt *timeout, i
 static int _sceUsbInitKermit(void);
 static int _sceUsbKermitActivate(u32 pid);
 static int _sceUsbKermitDeactivate(u32 pid);
-static int _sceUsbKermitCmd0(u32 cmd);
-static int _sceUsbKermitCmd1(u32 cmd, u32 arg0);
+static int _sceUsbKermitSendCmd(u32 cmd);
+static int _sceUsbKermitSendCmdArg(u32 cmd, u32 cmdArg);
 static int _sceUsbKermitCmdBuf(u32 cmd, const void *buf, u32 size);
 static int _sceUsbKermitPspcmStart(u32 size, const void *args);
 static int _sceUsbInitStates(void);
@@ -336,9 +336,9 @@ int sceUsb_driver_32627D8F(void *buf, u32 size)
 	}
 
 	sceKermitMemory_driver_AAF047AC(req, 0, work, size, 2);
-	req->args[1] = size;
+	req->argWords[1].lo = size;
 
-	u64 resp = 0;
+	u64 resp;
 	int kres = sceKermit_driver_36666181(req, KERMIT_MODE_USB, 0x15F, 2, 0, &resp);
 	res = sceKernelUnlockMutex(g_mutexId, 1);
 	if (res != 0) {
@@ -353,16 +353,17 @@ int sceUsb_driver_32627D8F(void *buf, u32 size)
 	return cmdRes;
 }
 
-int sceUsb_driver_AB8ADCC8(void *buf1, void *buf2)
+int sceUsb_driver_AB8ADCC8(void *gpsData, void *satData)
 {
 	u8 stack_buf[0x80];
 	SceKermitRequest *aligned = (SceKermitRequest *)(((u32)stack_buf + 0x3Fu) & ~0x3Fu);
-	u32 half = (g_workSize >> 1) & ~0x3Fu;
+	u32 half = g_workSize >> 1;
+	half -= half & 0x3Fu;
 
 	sceKernelDcacheInvalidateRange(aligned, 0x40);
 	SceKermitRequest *req = KERMIT_UNCACHED(aligned);
-	u8 *work1 = (u8 *)g_workBuf;
-	u8 *work2 = work1 + half;
+	u8 *gpsWork = (u8 *)g_workBuf;
+	u8 *satWork = gpsWork + half;
 
 	int res = sceKernelLockMutex(g_mutexId, 1, NULL);
 	if (res != 0) {
@@ -370,10 +371,10 @@ int sceUsb_driver_AB8ADCC8(void *buf1, void *buf2)
 	}
 
 	req->cmd = 0xC6F;
-	sceKermitMemory_driver_AAF047AC(req, 0, work1, 0x30, 2);
-	sceKermitMemory_driver_AAF047AC(req, 1, work2, 0x104, 2);
+	sceKermitMemory_driver_AAF047AC(req, 0, gpsWork, 0x30, 2);
+	sceKermitMemory_driver_AAF047AC(req, 1, satWork, 0x104, 2);
 
-	u64 resp = 0;
+	u64 resp;
 	int kres = sceKermit_driver_36666181(req, KERMIT_MODE_USB, 0x159, 2, 0, &resp);
 	if (kres != 0) {
 		return kres;
@@ -381,11 +382,11 @@ int sceUsb_driver_AB8ADCC8(void *buf1, void *buf2)
 
 	int cmdRes = (int)resp;
 	if (cmdRes == 0) {
-		if (buf1 != NULL) {
-			sceKernelMemcpy(buf1, work1, 0x30);
+		if (gpsData != NULL) {
+			sceKernelMemcpy(gpsData, gpsWork, 0x30);
 		}
-		if (buf2 != NULL) {
-			sceKernelMemcpy(buf2, work2, 0x104);
+		if (satData != NULL) {
+			sceKernelMemcpy(satData, satWork, 0x104);
 		}
 	}
 
@@ -412,10 +413,10 @@ static int _sceUsbKermitPspcmStart(u32 size, const void *args)
 	}
 
 	sceKernelMemcpy(work, args, size);
-	req->args[0] = size;
+	req->argWords[0].lo = size;
 	sceKermitMemory_driver_AAF047AC(req, 1, work, size, 1);
 
-	u64 resp = 0;
+	u64 resp;
 	int kres = sceKermit_driver_36666181(req, KERMIT_MODE_USB, 0x164, 2, 0, &resp);
 	res = sceKernelUnlockMutex(g_mutexId, 1);
 	if (res != 0) {
@@ -437,14 +438,18 @@ int sceUsb_driver_9F89B84C(u32 *out)
 		return res;
 	}
 
-	u64 resp = 0;
-	int kres = sceKermit_driver_36666181(req, KERMIT_MODE_USB, 0x17B, 0, 0, &resp);
+	union {
+		u64 raw;
+		struct {
+			u32 lo;
+			u32 hi;
+		} parts;
+	} resp;
+	int kres = sceKermit_driver_36666181(req, KERMIT_MODE_USB, 0x17B, 0, 0, &resp.raw);
 	if (kres == 0) {
-		u32 lo = (u32)resp;
-		u32 hi = (u32)(resp >> 32);
-		if (lo != 0xFFFFFFFFu || hi != 0xFFFFFFFFu) {
-			out[0] = lo;
-			out[1] = hi;
+		if (resp.parts.lo != 0xFFFFFFFFu || resp.parts.hi != 0xFFFFFFFFu) {
+			out[0] = resp.parts.lo;
+			out[1] = resp.parts.hi;
 		}
 	}
 
@@ -466,12 +471,12 @@ static int _sceUsbInitKermit(void)
 
 static int _sceUsbKermitActivate(u32 pid)
 {
-	return _sceUsbKermitCmd1(0x176, pid);
+	return _sceUsbKermitSendCmdArg(0x176, pid);
 }
 
 static int _sceUsbKermitDeactivate(u32 pid)
 {
-	return _sceUsbKermitCmd1(0x15D, pid);
+	return _sceUsbKermitSendCmdArg(0x15D, pid);
 }
 
 int sceUsb_driver_BDA21CF7(const void *buf)
@@ -481,22 +486,22 @@ int sceUsb_driver_BDA21CF7(const void *buf)
 
 int sceUsb_driver_63E55EBE(void)
 {
-	return _sceUsbKermitCmd0(0x16D);
+	return _sceUsbKermitSendCmd(0x16D);
 }
 
 int sceUsb_driver_ED8C8695(void)
 {
-	return _sceUsbKermitCmd0(0x165);
+	return _sceUsbKermitSendCmd(0x165);
 }
 
 int sceUsb_driver_18DB54DC(void)
 {
-	return _sceUsbKermitCmd0(0x177);
+	return _sceUsbKermitSendCmd(0x177);
 }
 
 int sceUsb_driver_A119F065(void)
 {
-	return _sceUsbKermitCmd0(0x168);
+	return _sceUsbKermitSendCmd(0x168);
 }
 
 int sceUsb_driver_8C079564(const void *buf)
@@ -506,47 +511,47 @@ int sceUsb_driver_8C079564(const void *buf)
 
 int sceUsb_driver_D1F264A2(void)
 {
-	return _sceUsbKermitCmd0(0x15B);
+	return _sceUsbKermitSendCmd(0x15B);
 }
 
 int sceUsb_driver_3B578B06(void)
 {
-	return _sceUsbKermitCmd0(0x173);
+	return _sceUsbKermitSendCmd(0x173);
 }
 
 int sceUsb_driver_BFCDFDD1(void)
 {
-	return _sceUsbKermitCmd0(0x15C);
+	return _sceUsbKermitSendCmd(0x15C);
 }
 
 int sceUsb_driver_B3E9ABCE(void)
 {
-	return _sceUsbKermitCmd0(0x160);
+	return _sceUsbKermitSendCmd(0x160);
 }
 
-int sceUsb_driver_8839766F(u32 cmd, u32 arg0)
+int sceUsb_driver_8839766F(u32 cmd, u32 cmdArg)
 {
-	return _sceUsbKermitCmd1(cmd, arg0);
+	return _sceUsbKermitSendCmdArg(cmd, cmdArg);
 }
 
 int sceUsb_driver_292740A2(u32 cmd)
 {
-	return _sceUsbKermitCmd0(cmd);
+	return _sceUsbKermitSendCmd(cmd);
 }
 
-int sceUsb_driver_F183B4EF(u32 arg0)
+int sceUsb_driver_F183B4EF(u32 cmdArg)
 {
-	return _sceUsbKermitCmd1(0x17D, arg0);
+	return _sceUsbKermitSendCmdArg(0x17D, cmdArg);
 }
 
 int sceUsb_driver_A229F2CF(void)
 {
-	return _sceUsbKermitCmd0(0x17E);
+	return _sceUsbKermitSendCmd(0x17E);
 }
 
 int sceUsb_driver_E09431A0(void)
 {
-	return _sceUsbKermitCmd0(0x17F);
+	return _sceUsbKermitSendCmd(0x17F);
 }
 
 int sceUsb_driver_CCA3CDF7(const void *buf)
@@ -556,40 +561,40 @@ int sceUsb_driver_CCA3CDF7(const void *buf)
 
 int sceUsb_driver_1159202A(void)
 {
-	return _sceUsbKermitCmd0(0x17A);
+	return _sceUsbKermitSendCmd(0x17A);
 }
 
 int sceUsb_driver_469C73EB(void)
 {
-	return _sceUsbKermitCmd0(0x16F);
+	return _sceUsbKermitSendCmd(0x16F);
 }
 
 int sceUsb_driver_96A32FBC(void)
 {
-	return _sceUsbKermitCmd0(0x16A);
+	return _sceUsbKermitSendCmd(0x16A);
 }
 
-int sceUsb_driver_D27EDB31(u32 arg0)
+int sceUsb_driver_D27EDB31(u32 cmdArg)
 {
-	return _sceUsbKermitCmd1(0x16B, arg0);
+	return _sceUsbKermitSendCmdArg(0x16B, cmdArg);
 }
 
 int sceUsb_driver_8A2D38D7(void)
 {
-	return _sceUsbKermitCmd0(0x175);
+	return _sceUsbKermitSendCmd(0x175);
 }
 
 int sceUsb_driver_79545577(void)
 {
-	return _sceUsbKermitCmd0(0x163);
+	return _sceUsbKermitSendCmd(0x163);
 }
 
 int sceUsb_driver_CB30E794(void)
 {
-	return _sceUsbKermitCmd0(0x180);
+	return _sceUsbKermitSendCmd(0x180);
 }
 
-static int _sceUsbKermitCmd0(u32 cmd)
+static int _sceUsbKermitSendCmd(u32 cmd)
 {
 	u8 stack_buf[0x80];
 	SceKermitRequest *aligned = (SceKermitRequest *)(((u32)stack_buf + 0x3Fu) & ~0x3Fu);
@@ -602,14 +607,14 @@ static int _sceUsbKermitCmd0(u32 cmd)
 		return res;
 	}
 
-	u64 resp = 0;
+	u64 resp;
 	int kres = sceKermit_driver_36666181(req, KERMIT_MODE_USB, cmd, 0, 0, &resp);
 	int cmdRes = (kres == 0) ? (int)resp : kres;
 	res = sceKernelUnlockMutex(g_mutexId, 1);
 	return (res == 0) ? cmdRes : res;
 }
 
-static int _sceUsbKermitCmd1(u32 cmd, u32 arg0)
+static int _sceUsbKermitSendCmdArg(u32 cmd, u32 cmdArg)
 {
 	u8 stack_buf[0x80];
 	SceKermitRequest *aligned = (SceKermitRequest *)(((u32)stack_buf + 0x3Fu) & ~0x3Fu);
@@ -622,8 +627,8 @@ static int _sceUsbKermitCmd1(u32 cmd, u32 arg0)
 		return res;
 	}
 
-	req->args[0] = arg0;
-	u64 resp = 0;
+	req->argWords[0].lo = cmdArg;
+	u64 resp;
 	int kres = sceKermit_driver_36666181(req, KERMIT_MODE_USB, cmd, 1, 0, &resp);
 	int cmdRes = (kres == 0) ? (int)resp : kres;
 	res = sceKernelUnlockMutex(g_mutexId, 1);
@@ -647,7 +652,7 @@ static int _sceUsbKermitCmdBuf(u32 cmd, const void *buf, u32 size)
 	sceKernelMemcpy(work, buf, size);
 	sceKermitMemory_driver_AAF047AC(req, 0, work, size, 1);
 
-	u64 resp = 0;
+	u64 resp;
 	int kres = sceKermit_driver_36666181(req, KERMIT_MODE_USB, cmd, 1, 0, &resp);
 	int cmdRes = (kres == 0) ? (int)resp : kres;
 	res = sceKernelUnlockMutex(g_mutexId, 1);
@@ -866,7 +871,7 @@ int sceUsbStop(const char *driverName, int size, void *args)
 	return res;
 }
 
-int sceUsbGetDrvList(u32 r4flags, SceUsbDriverEntry *list, int size)
+int sceUsbGetDrvList(u32 stateMask, SceUsbDriverEntry *list, int size)
 {
 	u32 oldK1 = pspGetK1();
 	u32 shiftedK1 = oldK1 << 11;
@@ -876,7 +881,7 @@ int sceUsbGetDrvList(u32 r4flags, SceUsbDriverEntry *list, int size)
 		pspSetK1(oldK1);
 		return 0x80000103;
 	}
-	if ((r4flags & 3u) == 0) {
+	if ((stateMask & 3u) == 0) {
 		pspSetK1(oldK1);
 		return 0x80000105;
 	}
@@ -901,7 +906,7 @@ int sceUsbGetDrvList(u32 r4flags, SceUsbDriverEntry *list, int size)
 	int count = 0;
 	for (int i = 0; i < 7; i++) {
 		if (g_drvRegistered[i] != 0) {
-			if ((r4flags & (u32)g_drvStates[i]) != 0) {
+			if ((stateMask & (u32)g_drvStates[i]) != 0) {
 				u32 nameLen = strlen(g_usbDriverNames[i]) + 1u;
 				strncpy(list[count].name, g_usbDriverNames[i], nameLen);
 				list[count].state = (u32)g_drvStates[i];

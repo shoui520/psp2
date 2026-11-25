@@ -43,7 +43,13 @@ typedef struct SceKermitRequest {
 	SceUID sema_id;
 	struct SceKermitRequest *self;
 	u32 pad;
-	u64 args[14];
+	union {
+		u64 args[14];
+		struct {
+			u32 lo;
+			u32 hi;
+		} argWords[14];
+	};
 } SceKermitRequest;
 
 typedef struct SceKermitCommand {
@@ -56,7 +62,7 @@ typedef struct SceKermitResponse {
 	SceUID sema_id;
 	u32 pad;
 	u64 *resp_ptr;
-	u32 pad2[3];
+	u32 reserved[3];
 } SceKermitResponse;
 
 typedef struct SceKermitInterrupt {
@@ -105,7 +111,7 @@ typedef struct SceSysEventHandler {
 	char *name;
 	int type_mask;
 	int (*handler)(int ev_id, char *ev_name, void *param, int *result);
-	int r28;
+	int gp;
 	int busy;
 	struct SceSysEventHandler *next;
 	int reserved[9];
@@ -118,12 +124,12 @@ int sceKernelCpuSuspendIntr(void);
 void sceKernelCpuResumeIntr(int state);
 int sceKernelEnableIntr(int intr_code);
 int sceKernelDisableIntr(int intr_code);
-int sceKernelRegisterIntrHandler(int intr_code, int sub_intr, void *handler, void *arg1, void *arg2);
+int sceKernelRegisterIntrHandler(int intr_code, int subIntr, void *handler, void *common, void *opt);
 int sceKernelReleaseIntrHandler(int intr_code);
-int sceKernelRegisterSubIntrHandler(int intr_code, int sub_intr_code, void *handler, void *arg);
-int sceKernelReleaseSubIntrHandler(int intr_code, int sub_intr_code);
-int sceKernelEnableSubIntr(int intr_code, int sub_intr_code);
-int sceKernelDisableSubIntr(int intr_code, int sub_intr_code);
+int sceKernelRegisterSubIntrHandler(int intr_code, int subIntrCode, void *handler, void *arg);
+int sceKernelReleaseSubIntrHandler(int intr_code, int subIntrCode);
+int sceKernelEnableSubIntr(int intr_code, int subIntrCode);
+int sceKernelDisableSubIntr(int intr_code, int subIntrCode);
 int sceKernelIsIntrContext(void);
 
 SceUID sceKernelCreateSema(const char *name, SceUInt attr, int init_val, int max_val, void *option);
