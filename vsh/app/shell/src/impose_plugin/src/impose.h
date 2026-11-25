@@ -137,7 +137,7 @@ public:
 
 	paf::string m_name;
 	SceInt32 m_priority;
-	SceInt32 m_reserved1;
+	SceInt32 m_reserved;
 	paf::string m_pluginName;
 	paf::IDParam m_icon;
 	paf::string m_iconPath;

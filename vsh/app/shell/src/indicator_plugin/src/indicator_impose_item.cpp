@@ -55,7 +55,7 @@ IndicatorImposeItem::IndicatorImposeItem(Plugin *plugin, ui::Widget *widget)
 			int fixed = 0;
 
 			if (iface != NULL)
-				fixed = ((int (*)(void))iface->reserved2[6])();
+				fixed = iface->isVolumeFixed();
 			Update(fixed != 0);
 		}
 	}

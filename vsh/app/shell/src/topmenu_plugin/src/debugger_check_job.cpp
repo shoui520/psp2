@@ -158,10 +158,7 @@ TopmenuAppProcess::TopmenuAppProcess(const paf::string &titleId, const LsdbAppIn
 	  m_titleId(titleId),
 	  m_tabAppData(tabAppData),
 	  m_launchState(0),
-	  m_hasLaunchArg(false),
-	  m_launchArgBuf(NULL),
-	  m_launchArgSize(0),
-	  m_lastError(-1),
+	  m_parentAppId(-1),
 	  m_launchMode(launchMode),
 	  m_pendingDelete(false),
 	  m_appInfo(appInfo),
@@ -170,6 +167,9 @@ TopmenuAppProcess::TopmenuAppProcess(const paf::string &titleId, const LsdbAppIn
 	  m_launchedBgPartner(false),
 	  m_pendingResume(false)
 {
+	m_bgLayerOpt.useCustomColor = false;
+	m_bgLayerOpt.style = 0;
+	m_bgLayerOpt.color = 0;
 	if (autoStart && m_launchMode != 1 && m_launchMode != 2 && m_launchMode != 3) {
 		if (m_launchState >= 2) {
 			m_pendingStart = false;
@@ -246,20 +246,20 @@ bool TopmenuAppProcess::IsProcessRunning() const
 /* (0x81287218) */
 void TopmenuAppProcess::SetAttrFlags(const TopmenuAppAttrFlags *flags)
 {
-	if (m_hasLaunchArg != flags->hasFlagBitSeven ||
-	    reinterpret_cast<SceInt32>(m_launchArgBuf) != flags->flagBitEight ||
-	    static_cast<SceInt32>(m_launchArgSize) != flags->flagBitNine) {
-		m_hasLaunchArg = flags->hasFlagBitSeven;
-		m_launchArgBuf = reinterpret_cast<void *>(flags->flagBitEight);
-		m_launchArgSize = static_cast<SceSize>(flags->flagBitNine);
+	if (m_bgLayerOpt.useCustomColor != flags->hasFlagBitSeven ||
+	    m_bgLayerOpt.style != flags->flagBitEight ||
+	    m_bgLayerOpt.color != static_cast<SceUInt32>(flags->flagBitNine)) {
+		m_bgLayerOpt.useCustomColor = flags->hasFlagBitSeven;
+		m_bgLayerOpt.style = flags->flagBitEight;
+		m_bgLayerOpt.color = static_cast<SceUInt32>(flags->flagBitNine);
 	}
 }
 
 /* (0x81287244) */
 void TopmenuAppProcess::SetParentAppId(SceInt32 parentAppId)
 {
-	if (m_lastError != parentAppId)
-		m_lastError = parentAppId;
+	if (m_parentAppId != parentAppId)
+		m_parentAppId = parentAppId;
 }
 
 /* (0x8128724E) */
@@ -378,10 +378,11 @@ void TopmenuAppProcess::StartAppCheck(const char *debugBasePath)
 		lsdbSetText(infoMap, LSDB_KEY_CATEGORY, "gd");
 		lsdbSetText(infoMap, LSDB_KEY_APP_VER, "00.00");
 
-		if (m_hasLaunchArg || m_launchArgBuf != NULL || m_launchArgSize != 0) {
-			m_hasLaunchArg = false;
-			m_launchArgBuf = NULL;
-			m_launchArgSize = 0;
+		if (m_bgLayerOpt.useCustomColor || m_bgLayerOpt.style != 0 ||
+		    m_bgLayerOpt.color != 0) {
+			m_bgLayerOpt.useCustomColor = false;
+			m_bgLayerOpt.style = 0;
+			m_bgLayerOpt.color = 0;
 		}
 
 		paf::common::SharedPtr<paf::job::JobItem> job(new DebbugerCheckJob(this));

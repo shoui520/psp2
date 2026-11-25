@@ -254,19 +254,25 @@ typedef void (*TelephonyGeneralListener)(int event, int result, const TelephonyG
 
 struct TelephonyModem;
 struct TelephonyModemVtable {
-	void *reserved0[5];
-	/* PLACEHOLDER names: a general listener added and removed, with its argument */
+	void *dtorComplete;								/* +0x00 */
+	void *dtorDeleting;								/* +0x04 */
+	int (*startModem)(TelephonyModem *self);					/* +0x08 */
+	int (*stopModemSoft)(TelephonyModem *self);					/* +0x0C */
+	int (*stopModemForce)(TelephonyModem *self);					/* +0x10 */
 	int (*addGeneralListener)(TelephonyModem *self, TelephonyGeneralListener listener,
-				  void *arg);						/* +0x14 */
+				  void *userData);					/* +0x14 */
 	int (*removeGeneralListener)(TelephonyModem *self, TelephonyGeneralListener listener,
-				     void *arg);						/* +0x18 */
+				     void *userData);					/* +0x18 */
 	int (*getNetworkName)(TelephonyModem *self, char *name);			/* +0x1C */
-	/* PLACEHOLDER name: 0 when the initial check is not to be run (the shell's
-	   telephony setup) */
-	int (*needsInitialCheck)(TelephonyModem *self);				/* +0x20 */
-	void *reserved1[5];
+	int (*needsInitialCheck)(TelephonyModem *self);					/* +0x20 */
+	int (*checkSimConditionCode)(TelephonyModem *self);				/* +0x24 */
+	int (*getControlKeyStateCode)(TelephonyModem *self);				/* +0x28 */
+	int (*getControlKeyBlockTypeCode)(TelephonyModem *self);			/* +0x2C */
+	int (*getAntennaDisplayType)(TelephonyModem *self);				/* +0x30 */
+	int (*checkContentDownloadCode)(TelephonyModem *self, int serviceType);		/* +0x34 */
 	int (*getState)(TelephonyModem *self, int *query);				/* +0x38 */
 	int (*getCountryCode)(TelephonyModem *self, paf::string *country);		/* +0x3C */
+	int (*getProductTargetOperatorCode)(TelephonyModem *self, int *outOperator);	/* +0x40 */
 };
 struct TelephonyModem {
 	const TelephonyModemVtable *vtable;
@@ -274,21 +280,83 @@ struct TelephonyModem {
 
 struct TelephonyService;
 struct TelephonyServiceVtable {
-	void *reserved0[4];
-	/* PLACEHOLDER names, after impose_plugin's flight mode and mobile network switches: the
-	   modem's radio off with the flight mode, and the mobile data network on or off */
-	TelephonyResult (*setFlightMode)(TelephonyService *self, int on);		/* +0x10 */
-	TelephonyResult (*getFlightMode)(TelephonyService *self, SceUInt8 *on);	/* +0x14 */
-	TelephonyResult (*setDataEnabled)(TelephonyService *self, bool enabled);	/* +0x18 */
-	TelephonyResult (*getDataEnabled)(TelephonyService *self, SceUInt8 *enabled);	/* +0x1C */
-	void *reserved1[16];
-	TelephonyResult (*getPlmn)(TelephonyService *self, TelephonyPlmn *plmn);	/* +0x60 */
-	void *reserved4[7];
-	/* PLACEHOLDER name */
-	TelephonyResult (*getOperator)(TelephonyService *self, TelephonyOperator *op);	/* +0x80 */
-	void *reserved3[16];
-	TelephonyResult (*getRestriction)(TelephonyService *self, int *restriction);	/* +0xC4 */
-	void *reserved2[27];
+	void *dtorComplete;								/* +0x000 */
+	void *dtorDeleting;								/* +0x004 */
+	int (*stopServiceForce)(TelephonyService *self);				/* +0x008 */
+	TelephonyResult (*getGeneralLogicState)(TelephonyService *self, int *outState);	/* +0x00C */
+	TelephonyResult (*setFlightMode)(TelephonyService *self, int on);		/* +0x010 */
+	TelephonyResult (*getFlightMode)(TelephonyService *self, SceUInt8 *on);		/* +0x014 */
+	TelephonyResult (*setDataEnabled)(TelephonyService *self, bool enabled);	/* +0x018 */
+	TelephonyResult (*getDataEnabled)(TelephonyService *self, SceUInt8 *enabled);	/* +0x01C */
+	void *getPhoneNumber;								/* +0x020 */
+	void *getImei;									/* +0x024 */
+	void *getIccid;									/* +0x028 */
+	void *verifyPin;								/* +0x02C */
+	void *unblockPin;								/* +0x030 */
+	void *setPinProtection;								/* +0x034 */
+	void *getPinProtection;								/* +0x038 */
+	void *getPinStatus;								/* +0x03C */
+	void *getPinRemain;								/* +0x040 */
+	void *changePinCode;								/* +0x044 */
+	void *setEventCallback;								/* +0x048 */
+	void *setLegacyCallback;							/* +0x04C */
+	void *setApnInfo;								/* +0x050 */
+	void *setApnInfoWithBillingPlan;						/* +0x054 */
+	void *getUnsupportedProfile;							/* +0x058 */
+	void *restoreApnInfo;								/* +0x05C */
+	TelephonyResult (*getPlmn)(TelephonyService *self, TelephonyPlmn *plmn);	/* +0x060 */
+	void *getMccMncOfNetwork;							/* +0x064 */
+	void *getSimActivationState;							/* +0x068 */
+	void *getProductTargetOperator;							/* +0x06C */
+	void *getOperatorProfileCount;							/* +0x070 */
+	void *getOperatorProfile;							/* +0x074 */
+	void *getApnInfoListCount;							/* +0x078 */
+	void *getApnInfoListItem;							/* +0x07C */
+	TelephonyResult (*getOperator)(TelephonyService *self, TelephonyOperator *op);	/* +0x080 */
+	void *removeCurrentApnInfo;							/* +0x084 */
+	void *startNetworkScan;								/* +0x088 */
+	void *abortNetworkScan;								/* +0x08C */
+	void *getNetworkScanInfoCount;							/* +0x090 */
+	void *getNetworkScanInfo;							/* +0x094 */
+	void *setNetRegisterAuto;							/* +0x098 */
+	void *setNetRegisterInfo;							/* +0x09C */
+	void *getNetRegistrationInfo;							/* +0x0A0 */
+	void *getSavedNetworkSelection;							/* +0x0A4 */
+	void *setRegistrationAppNetMode;						/* +0x0A8 */
+	void *setDataRoamingPermission;							/* +0x0AC */
+	void *getDataRoamingPermission;							/* +0x0B0 */
+	void *setDataRoamingDefinition;							/* +0x0B4 */
+	void *checkSimCondition;							/* +0x0B8 */
+	void *getNetworkStatusReport;							/* +0x0BC */
+	void *getDeviceInfoReport;							/* +0x0C0 */
+	TelephonyResult (*getRestriction)(TelephonyService *self, int *restriction);	/* +0x0C4 */
+	void *getIsApnInit;								/* +0x0C8 */
+	void *isOpenSimModel;								/* +0x0CC */
+	void *getNetworkSelectionMode;							/* +0x0D0 */
+	void *getConditionError;							/* +0x0D4 */
+	void *deactivateSimLock;							/* +0x0D8 */
+	void *unblockSimLock;								/* +0x0DC */
+	void *getSimLockDeactivateRemain;						/* +0x0E0 */
+	void *getSimLockUnblockRemain;							/* +0x0E4 */
+	void *getControlKeyState;							/* +0x0E8 */
+	void *getControlKeyBlockType;							/* +0x0EC */
+	void *checkImsiForOperatorCode;							/* +0x0F0 */
+	void *getCurrentSignalLevel;							/* +0x0F4 */
+	void *setBillingPlan;								/* +0x0F8 */
+	void *getBillingPlan;								/* +0x0FC */
+	void *setDebugLogEnabled;							/* +0x100 */
+	void *readDebugLogLine;								/* +0x104 */
+	void *setDebugDiagFlag;								/* +0x108 */
+	void *getDebugDiagFlag;								/* +0x10C */
+	void *setDebugForceFlag;							/* +0x110 */
+	void *getDebugForceFlag;							/* +0x114 */
+	void *isSimActivated;								/* +0x118 */
+	void *getLatestArchiveVersion;							/* +0x11C */
+	void *getArchiveVersion;							/* +0x120 */
+	void *checkComVersion;								/* +0x124 */
+	void *releasePdpContext;							/* +0x128 */
+	void *startApnListDownload;							/* +0x12C */
+	void *checkContentDownloadAllowed;						/* +0x130 */
 	TelephonyResult (*getStatus)(TelephonyService *self, int type, int *status);	/* +0x134 */
 };
 struct TelephonyService {
@@ -302,14 +370,14 @@ struct TelephonyPluginInterface {
 };
 
 /*
- * a notice impose_plugin shows (PLACEHOLDER field names, after impose_plugin's use of them): its
- * name, its place in the queue (negative: at once), the icon (a texture of the plugin named, or
- * an image file), the message, and a callback told how it ended
+ * a notice impose_plugin shows: its name, its place in the queue (negative: at once),
+ * the icon (a texture of the plugin named, or an image file), the message, and a
+ * callback told how it ended
  */
 struct ImposeNotice {
 	const char *name;
 	int priority;
-	int reserved1;				/* copied, read by nothing */
+	int reserved;				/* copied, read by nothing */
 	const char *pluginName;			/* the plugin with the icon's texture; impose_plugin's
 						   where NULL */
 	paf::string iconId;			/* the icon's texture: name and hash, laid out as an
@@ -322,7 +390,7 @@ struct ImposeNotice {
 	void *callbackData;
 	SceUInt32 flags;			/* IMPOSE_NOTICE_FLAG_* */
 
-	ImposeNotice() : name(NULL), priority(0), reserved1(0), pluginName(NULL), iconId(""),
+	ImposeNotice() : name(NULL), priority(0), reserved(0), pluginName(NULL), iconId(""),
 		iconHash(0), iconPath(NULL), iconMode(0), message(NULL), callback(NULL),
 		callbackData(NULL), flags(0)
 	{
@@ -341,33 +409,44 @@ struct ImposeNotice {
 /* impose_plugin's GetInterface(1) */
 struct ImposePluginInterface {
 	int (*showNotice)(ImposeNotice *notice);
-	int (*removeNotice)(const char *name);	/* PLACEHOLDER name: the notice of that name taken down */
+	int (*removeNotice)(const char *name);
 	const wchar_t *(*getString)(const paf::IDParam &id);
-	void (*reserved0[3])(void);		/* PLACEHOLDER: no shell file calls them */
-	void (*screenshot)(void);		/* PLACEHOLDER name: a screenshot taken */
-	/* PLACEHOLDER names, after the accessibility zoom's calls: the zoom refused (a game holds it
-	   off, or the PlayStation TV shows 1080 lines) */
+	void (*openPsMenu)(void);
+	void (*closePsMenu)(void);
+	void (*setPsMenuLock)(bool locked);
+	void (*screenshot)(void);
 	void (*zoomRefuse)(void);
-	void (*reserved1[5])(void);		/* PLACEHOLDER: no shell file calls them */
+	void (*quitApp)(const char *name);
+	int (*isPsMenuOpen)(void);
+	void (*setPsMenuDisable)(bool disabled);
+	void (*openOverlay)(int mode);
+	void (*closeOverlay)(void);
 	void (*zoomBegin)(void);		/* before the zoom starts */
 	void (*zoomEnd)(void);			/* after it ended */
 	void (*zoomPrepare)(void);		/* first, on either way */
 	void (*zoomShow)(int x, int y);		/* the zoom on, at the viewport's offset */
 	void (*zoomHide)(int x, int y);		/* the zoom off, from the offset it had */
 	int (*zoomIsBlocked)(void);		/* nonzero: the zoom is not toggled */
-	void (*reserved2[8])(void);		/* PLACEHOLDER: no shell file calls them */
+	void (*lockTouchEmulation)(void);
+	void (*unlockTouchEmulation)(void);
+	void (*openParentalControl)(int mode);
+	void (*closeParentalControl)(void);
+	void (*showParentalNotice)(int mode);
+	void (*makeNotificationSpace)(void);
+	int (*isVolumeFixed)(void);
+	void (*showBusyScreen)(void (*onShown)(void *data), void *data);
 };
 
 /*
  * PLACEHOLDER name: format with its %s-style tokens replaced by the texts given, in order, the
  * texts not given empty (0x81343700, in the shell's own code)
  */
-paf::wstring shellFormatText(const wchar_t *format, const wchar_t *text1 = L"",
-			     const wchar_t *text2 = L"", const wchar_t *text3 = L"",
-			     const wchar_t *text4 = L"", const wchar_t *text5 = L"",
-			     const wchar_t *text6 = L"", const wchar_t *text7 = L"",
-			     const wchar_t *text8 = L"", const wchar_t *text9 = L"",
-			     const wchar_t *text10 = L"", const wchar_t *text11 = L"");
+paf::wstring shellFormatText(const wchar_t *format, const wchar_t *first = L"",
+			     const wchar_t *second = L"", const wchar_t *third = L"",
+			     const wchar_t *fourth = L"", const wchar_t *fifth = L"",
+			     const wchar_t *sixth = L"", const wchar_t *seventh = L"",
+			     const wchar_t *eighth = L"", const wchar_t *ninth = L"",
+			     const wchar_t *tenth = L"", const wchar_t *eleventh = L"");
 
 /*
  * PLACEHOLDER name: an RTC tick as the shell shows it, its date in the system's format and its

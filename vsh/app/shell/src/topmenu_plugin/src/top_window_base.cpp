@@ -493,7 +493,7 @@ void TopWindowBase::UpdateTabLayout(int layoutMode)
 	else if (m_layoutOrientation == 1)
 		LayoutVertical(layoutMode);
 	else if (m_layoutOrientation == 2)
-		LayoutCustom();
+		LayoutCustom(layoutMode);
 
 	for (SceUInt32 i = 0; i < m_tabs.size(); ++i)
 		m_tabs[i]->UpdateViewportVisibility();

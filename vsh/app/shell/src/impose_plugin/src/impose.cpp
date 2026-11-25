@@ -35,7 +35,7 @@ static void Impose_81141170(void);
 static int Impose_81141186(void);
 static void Impose_8114119C(bool arg);
 static void Impose_811411B4(bool arg);
-static void Impose_811411CC(void);
+static int Impose_811411CC(void);
 static void Impose_811411E0(void (*onShown)(void *data), void *data);
 static void imposeZoomRefuse(void);
 static void Impose_81141210(const char *name);
@@ -65,29 +65,29 @@ Impose::Impose(Plugin *plugin)
 	g_impose = this;
 
 	g_imposeInterface->getString = imposeGetString;
-	g_imposeInterface->reserved0[0] = Impose_8114115A;
-	g_imposeInterface->reserved0[1] = Impose_81141170;
-	g_imposeInterface->reserved1[1] = (void (*)(void))Impose_81141186;
-	g_imposeInterface->reserved0[2] = (void (*)(void))Impose_8114119C;
-	g_imposeInterface->reserved1[2] = (void (*)(void))Impose_811411B4;
-	g_imposeInterface->reserved2[6] = Impose_811411CC;
-	g_imposeInterface->reserved2[7] = (void (*)(void))Impose_811411E0;
+	g_imposeInterface->openPsMenu = Impose_8114115A;
+	g_imposeInterface->closePsMenu = Impose_81141170;
+	g_imposeInterface->isPsMenuOpen = Impose_81141186;
+	g_imposeInterface->setPsMenuLock = Impose_8114119C;
+	g_imposeInterface->setPsMenuDisable = Impose_811411B4;
+	g_imposeInterface->isVolumeFixed = Impose_811411CC;
+	g_imposeInterface->showBusyScreen = Impose_811411E0;
 	g_imposeInterface->zoomRefuse = imposeZoomRefuse;
-	g_imposeInterface->reserved1[0] = (void (*)(void))Impose_81141210;
-	g_imposeInterface->reserved1[3] = (void (*)(void))Impose_81141228;
-	g_imposeInterface->reserved1[4] = Impose_81141240;
+	g_imposeInterface->quitApp = Impose_81141210;
+	g_imposeInterface->openOverlay = Impose_81141228;
+	g_imposeInterface->closeOverlay = Impose_81141240;
 	g_imposeInterface->zoomBegin = imposeZoomBegin;
 	g_imposeInterface->zoomEnd = imposeZoomEnd;
 	g_imposeInterface->zoomShow = imposeZoomShow;
 	g_imposeInterface->zoomHide = imposeZoomHide;
 	g_imposeInterface->zoomPrepare = imposeZoomPrepare;
 	g_imposeInterface->zoomIsBlocked = imposeZoomIsBlocked;
-	g_imposeInterface->reserved2[0] = Impose_811412E2;
-	g_imposeInterface->reserved2[1] = Impose_811412F8;
-	g_imposeInterface->reserved2[2] = (void (*)(void))Impose_8114130E;
-	g_imposeInterface->reserved2[3] = Impose_81141326;
-	g_imposeInterface->reserved2[4] = (void (*)(void))Impose_8114133C;
-	g_imposeInterface->reserved2[5] = Impose_81141354;
+	g_imposeInterface->lockTouchEmulation = Impose_811412E2;
+	g_imposeInterface->unlockTouchEmulation = Impose_811412F8;
+	g_imposeInterface->openParentalControl = Impose_8114130E;
+	g_imposeInterface->closeParentalControl = Impose_81141326;
+	g_imposeInterface->showParentalNotice = Impose_8114133C;
+	g_imposeInterface->makeNotificationSpace = Impose_81141354;
 }
 
 /* (0x81140ED6) */
@@ -179,9 +179,9 @@ static void Impose_811411B4(bool arg)
 	g_impose->m_psMenu.Impose_8114DDBE(arg);
 }
 
-static void Impose_811411CC(void)
+static int Impose_811411CC(void)
 {
-	g_impose->m_volume.IsFixed();
+	return g_impose->m_volume.IsFixed();
 }
 
 static void Impose_811411E0(void (*onShown)(void *data), void *data)

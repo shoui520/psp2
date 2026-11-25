@@ -599,10 +599,9 @@ public:
 		m_attrFlags.flagBitNine = 0;
 		if (proc != NULL && proc->m_owner != NULL) {
 			TopmenuAppProcess *owner = proc->m_owner;
-			m_attrFlags.hasFlagBitSeven = owner->m_hasLaunchArg;
-			m_attrFlags.flagBitEight =
-				static_cast<SceInt32>(reinterpret_cast<intptr_t>(owner->m_launchArgBuf));
-			m_attrFlags.flagBitNine = static_cast<SceInt32>(owner->m_launchArgSize);
+			m_attrFlags.hasFlagBitSeven = owner->m_bgLayerOpt.useCustomColor;
+			m_attrFlags.flagBitEight = owner->m_bgLayerOpt.style;
+			m_attrFlags.flagBitNine = static_cast<SceInt32>(owner->m_bgLayerOpt.color);
 		}
 	}
 
@@ -620,10 +619,9 @@ public:
 			m_appInfo = *latestInfo;
 		if (m_process != NULL && m_process->m_owner != NULL) {
 			TopmenuAppProcess *owner = m_process->m_owner;
-			m_attrFlags.hasFlagBitSeven = owner->m_hasLaunchArg;
-			m_attrFlags.flagBitEight =
-				static_cast<SceInt32>(reinterpret_cast<intptr_t>(owner->m_launchArgBuf));
-			m_attrFlags.flagBitNine = static_cast<SceInt32>(owner->m_launchArgSize);
+			m_attrFlags.hasFlagBitSeven = owner->m_bgLayerOpt.useCustomColor;
+			m_attrFlags.flagBitEight = owner->m_bgLayerOpt.style;
+			m_attrFlags.flagBitNine = static_cast<SceInt32>(owner->m_bgLayerOpt.color);
 		}
 	}
 

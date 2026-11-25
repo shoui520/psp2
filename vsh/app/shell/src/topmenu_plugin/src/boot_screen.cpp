@@ -258,7 +258,7 @@ void TopmenuBootScreen::ShowSplash(const char *splashPath, TopmenuAppProcess *pr
 		m_jobQueue->Enqueue(job);
 	}
 
-	topmenuReleaseBootScreenOverlay(0, 0, 0);
+	topmenuSetDefaultBgStyle(0, NULL, false);
 }
 
 /* (0x8128EFEC) */

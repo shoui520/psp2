@@ -147,7 +147,7 @@ static void onPageTurnCloseTimer(int32_t eventType, paf::ui::Handler *self,
 	TopTabAppData *appData = (TopTabAppData *)userData;
 	TopTab *ownerTab = appData->m_ownerTab;
 	bool animate = false;
-	if (!topmenuIsLaunchSeqIdle(&g_topWindow->m_launchSeq)) {
+	if (topmenuIsLaunchSeqActive(&g_topWindow->m_launchSeq)) {
 		animate = false;
 	} else {
 		SceInt32 snapId = ownerTab->m_scrollView->GetSnapID(ownerTab->m_widget);
@@ -282,7 +282,7 @@ void TopTabScreenCopy::CaptureAndPublish()
 			m_copyObj->m_source = capturedSurf;
 			reverseEffect = false;
 		}
-		topmenuSetGateEffectSurface(reverseEffect, &capturedSurf);
+		topmenuSetGateEffectSurface(reverseEffect, &capturedSurf, gateX, gateY);
 	}
 }
 
@@ -414,7 +414,7 @@ TopTabAppData::~TopTabAppData()
 		sce_paf_memset(&req, 0, sizeof(req));
 		req.type = 8;
 		sce_paf_strncpy(req.titleId, m_titleId.c_str(), 10);
-		req.attr[2] = topmenuIsLaunchSeqIdle(&g_topWindow->m_launchSeq) ? 1 : 2;
+		req.attr[2] = topmenuIsLaunchSeqActive(&g_topWindow->m_launchSeq) ? 1 : 2;
 		shellMediaInfoWrite(&req, false);
 	}
 
@@ -765,7 +765,7 @@ void TopTabAppData::ReportLiveAreaOpen()
 	sce_paf_strncpy(req.titleId, m_titleId.c_str(), 10);
 	req.attr[0] = m_mediaAppType;
 	req.attr[1] = m_mediaStorageKind;
-	req.attr[2] = topmenuIsLaunchSeqIdle(&g_topWindow->m_launchSeq) ? 1 : 2;
+	req.attr[2] = topmenuIsLaunchSeqActive(&g_topWindow->m_launchSeq) ? 1 : 2;
 	req.attr[3] = g_topWindow->m_gateEffectActive ? 1 : 2;
 	shellMediaInfoWrite(&req, false);
 }
@@ -782,7 +782,7 @@ void TopTabAppData::ReportLiveAreaClose()
 	sce_paf_strncpy(req.titleId, m_titleId.c_str(), 10);
 	req.attr[0] = m_mediaAppType;
 	req.attr[1] = m_mediaStorageKind;
-	req.attr[2] = topmenuIsLaunchSeqIdle(&g_topWindow->m_launchSeq) ? 1 : 2;
+	req.attr[2] = topmenuIsLaunchSeqActive(&g_topWindow->m_launchSeq) ? 1 : 2;
 	shellMediaInfoWrite(&req, false);
 }
 

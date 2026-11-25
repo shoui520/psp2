@@ -251,7 +251,7 @@ TopTab::TopTab(paf::Plugin *plugin, bool isHomeTab)
 	  m_isActiveTab(true),
 	  m_orderStamp(0),
 	  m_isClosing(false),
-	  m_transitionFlag(0)
+	  m_hoverProgress(0.0f)
 {
 	m_contentRoot = m_widget->FindChild(paf::IDParam(TOP_TAB_CONTENT_ROOT_ID), 0);
 	if (!isHomeTab)

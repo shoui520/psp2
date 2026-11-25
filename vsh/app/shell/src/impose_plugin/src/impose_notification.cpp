@@ -110,7 +110,7 @@ ImposeNotificationItem::ImposeNotificationItem(const ImposeNotice &notice)
 {
 	m_name = notice.name;
 	m_priority = notice.priority;
-	m_reserved1 = notice.reserved1;
+	m_reserved = notice.reserved;
 	if (notice.pluginName != NULL)
 		m_pluginName = notice.pluginName;
 	m_icon.m_id = notice.iconId;
@@ -210,17 +210,15 @@ void ImposeNotification::ShowNext()
 		/* a texture of the plugin named; the ones listed kept in the cache */
 		Plugin *plugin = g_imposePlugin;
 		static IDParam s_cached[] = { IDParam("", IMPOSE_NOTIFICATION_TEX_CACHED) };
-		bool cached;
+		bool cached = false;
 		uint32_t i;
 
 		for (i = 0; i < sizeof(s_cached) / sizeof(s_cached[0]); i++) {
 			if (m_current->m_icon.m_idhash == s_cached[i].m_idhash) {
 				cached = true;
-				goto found;
+				break;
 			}
 		}
-		cached = false;
-found:
 		if (m_current->m_pluginName.length() != 0) {
 			plugin = Plugin::Find(m_current->m_pluginName.c_str());
 			cached = false;

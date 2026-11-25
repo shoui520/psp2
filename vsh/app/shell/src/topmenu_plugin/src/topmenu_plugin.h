@@ -107,7 +107,7 @@ struct TopmenuPluginInterface {
 	int (*notifyContentUpdated)(const char *const *updateArgs);
 	const char *(*getCurrentPageTitleId)(void);
 	void (*setPageMusicPlaying)(int pageKey, bool playing);
-	int (*getPageMusicState)(int pageKey);
+	const wchar_t *(*getPageTitle)(int pageKey);
 	int (*isTopmenuForeground)(void);
 	void (*onInitialBootReady)(void);
 	paf::ui::Widget *(*createPlane)(paf::ui::Widget *parent);

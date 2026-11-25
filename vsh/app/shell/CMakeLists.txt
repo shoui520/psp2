@@ -518,6 +518,7 @@ psp2_module(vs0_vsh_shell_shell KIND user COMPILER snc PARTIAL SOURCES
 	src/patch_chk_plugin/patch_chk_changeinfo.cpp
 	src/patch_chk_plugin/patch_chk_jobs.cpp
 	src/topmenu_plugin/src/topmenu_plugin.cpp
+	src/topmenu_plugin/src/top_window.cpp
 	src/topmenu_plugin/src/top_tab.cpp
 	src/topmenu_plugin/src/whats_new.cpp
 	src/topmenu_plugin/src/topmenu_heap.cpp
