@@ -152,51 +152,77 @@ void mailResidentPluginStop(paf::Plugin *plugin);
  */
 namespace paf { class IDParam; }
 
-/* what a telephony service method returns: a result code (methods out of line: 0x8124E288,
-   the destructor folded into an empty function) */
+/* what a telephony service method returns: a result code (0x8124E288) */
 class TelephonyResult {
 public:
+	TelephonyResult() : m_code(0) {}
+	TelephonyResult(int code) : m_code(code) {}
 	~TelephonyResult();
-	int GetCode();
+	int GetCode() const;
+	void SetCode(int code) { m_code = code; }
 
 private:
 	int m_code;
 };
 
-/* PLACEHOLDER: the network's country (MCC) and operator (MNC) codes, each with its number of
-   digits, and its name (methods out of line: 0x8124E28C, 0x8124E2B4, 0x813DD154, 0x813DD158) */
+/* the network's country (MCC) and operator (MNC) codes, each with its number of
+   digits, formatted strings, and network name (0x8124E28C..0x8124E57F, 0x813DD154..0x813DD158) */
 class TelephonyPlmn {
 public:
 	TelephonyPlmn();
 	virtual ~TelephonyPlmn();
+	virtual bool IsValid() const;
 
-	int GetMcc();
-	int GetMnc();
+	void SetMcc(SceUInt16 mcc, SceUInt16 digits);
+	void SetMnc(SceUInt16 mnc, SceUInt16 digits);
+	void SetMccMnc(SceUInt16 mcc, SceUInt16 mnc);
+	void SetMccMncStrings(const paf::string &mccStr, const paf::string &mncStr);
+	void SetPlmnString(const paf::string &plmnStr);
+	void SetName(const paf::string &name);
+
+	const char *GetMccString();
+	const char *GetMncString();
+	paf::string GetPlmnString() const;
+	paf::string GetName() const;
+	bool GetCountryCode(paf::string *outCountry) const;
+
+	int GetMcc() const;
+	int GetMnc() const;
+	SceUInt16 GetMccDigits() const { return m_mccDigits; }
+	SceUInt16 GetMncDigits() const { return m_mncDigits; }
 
 private:
 	SceUInt16 m_mcc;
 	SceUInt16 m_mccDigits;
-	SceUInt8 m_reserved0[6];
+	char m_mccStr[6];
 	SceUInt16 m_mnc;
 	SceUInt16 m_mncDigits;
-	SceUInt8 m_reserved1[6];
+	char m_mncStr[6];
 	paf::string m_name;
 };
 
-/* PLACEHOLDER: the network operator's names (methods out of line: 0x8124E070, 0x8124E094,
-   0x811FE00C, an accessor the build shares) */
+/* APN credentials / operator entry: name, user ID, password (0x8124E070..0x8124E287) */
 class TelephonyOperator {
 public:
 	TelephonyOperator();
-	~TelephonyOperator();
+	virtual ~TelephonyOperator();
+	virtual void *CloneObject() const;
+	virtual bool IsValid() const;
 
-	const paf::string &GetName();
+	TelephonyResult SetCredentials(const paf::string &name, const paf::string &userId,
+				       const paf::string &password);
+	TelephonyResult GetCredentials(paf::string *outName, paf::string *outUserId,
+				       paf::string *outPassword) const;
+	void SetFromRawRecord(const char *rawRecord);
 
-private:
-	const void *m_vtable;
+	const paf::string &GetName() const { return m_name; }
+	const paf::string &GetUserId() const { return m_userId; }
+	const paf::string &GetPassword() const { return m_password; }
+
+protected:
 	paf::string m_name;
-	paf::string m_shortName;
-	paf::string m_reserved;
+	paf::string m_userId;
+	paf::string m_password;
 };
 
 /*

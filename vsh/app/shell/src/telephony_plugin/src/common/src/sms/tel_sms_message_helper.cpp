@@ -1,0 +1,655 @@
+/*
+ * tel_sms_message_helper.cpp: SMS data models (TelSmsAddress, TelSmsMessageId,
+ * TelSmsPeerInfo, TelSmsMessage, TelSmsMessageBuilder), AT&T DataConnect Pass
+ * message formatter, and 3GPP TS 23.038 GSM-7 <-> UTF-16 conversion tables
+ * (3.65-CEX: 0x813E4C30..0x813E5CBB).
+ */
+#include <stddef.h>
+#include <scetypes.h>
+#include <std/string.h>
+#include <std/string.h>
+#include "../../tel_common.h"
+
+namespace telephony {
+
+namespace {
+
+struct Gsm7CharEntry {
+	SceUInt8 septetCount;
+	SceUInt8 firstByte;
+	SceUInt8 secondByte;
+	SceUInt8 unusedByte;
+	SceUInt16 unicodeChar;
+};
+
+struct Gsm7LanguageTables {
+	const Gsm7CharEntry *baseTable;
+	const Gsm7CharEntry *basicExtTable;
+	const Gsm7CharEntry *nationalExtTable;
+	int baseCount;
+	int basicExtCount;
+	int nationalExtCount;
+	int hasNationalShift;
+};
+
+/* 0x8152A9B0: 3GPP TS 23.038 GSM 7-bit Default Alphabet (127 entries, omits 0x1B ESC) */
+static const Gsm7CharEntry kGsm7DefaultBase[127] = {
+	{ 1, 0x00, 0x00, 0x00, 0x0040 }, { 1, 0x01, 0x00, 0x00, 0x00A3 },
+	{ 1, 0x02, 0x00, 0x00, 0x0024 }, { 1, 0x03, 0x00, 0x00, 0x00A5 },
+	{ 1, 0x04, 0x00, 0x00, 0x00E8 }, { 1, 0x05, 0x00, 0x00, 0x00E9 },
+	{ 1, 0x06, 0x00, 0x00, 0x00F9 }, { 1, 0x07, 0x00, 0x00, 0x00EC },
+	{ 1, 0x08, 0x00, 0x00, 0x00F2 }, { 1, 0x09, 0x00, 0x00, 0x00C7 },
+	{ 1, 0x0A, 0x00, 0x00, 0x000A }, { 1, 0x0B, 0x00, 0x00, 0x00D8 },
+	{ 1, 0x0C, 0x00, 0x00, 0x00F8 }, { 1, 0x0D, 0x00, 0x00, 0x000D },
+	{ 1, 0x0E, 0x00, 0x00, 0x00C5 }, { 1, 0x0F, 0x00, 0x00, 0x00E5 },
+	{ 1, 0x10, 0x00, 0x00, 0x0394 }, { 1, 0x11, 0x00, 0x00, 0x005F },
+	{ 1, 0x12, 0x00, 0x00, 0x03A6 }, { 1, 0x13, 0x00, 0x00, 0x0393 },
+	{ 1, 0x14, 0x00, 0x00, 0x039B }, { 1, 0x15, 0x00, 0x00, 0x03A9 },
+	{ 1, 0x16, 0x00, 0x00, 0x03A0 }, { 1, 0x17, 0x00, 0x00, 0x03A8 },
+	{ 1, 0x18, 0x00, 0x00, 0x03A3 }, { 1, 0x19, 0x00, 0x00, 0x0398 },
+	{ 1, 0x1A, 0x00, 0x00, 0x039E }, { 1, 0x1C, 0x00, 0x00, 0x00C6 },
+	{ 1, 0x1D, 0x00, 0x00, 0x00E6 }, { 1, 0x1E, 0x00, 0x00, 0x00DF },
+	{ 1, 0x1F, 0x00, 0x00, 0x00C9 }, { 1, 0x20, 0x00, 0x00, 0x0020 },
+	{ 1, 0x21, 0x00, 0x00, 0x0021 }, { 1, 0x22, 0x00, 0x00, 0x0022 },
+	{ 1, 0x23, 0x00, 0x00, 0x0023 }, { 1, 0x24, 0x00, 0x00, 0x00A4 },
+	{ 1, 0x25, 0x00, 0x00, 0x0025 }, { 1, 0x26, 0x00, 0x00, 0x0026 },
+	{ 1, 0x27, 0x00, 0x00, 0x0027 }, { 1, 0x28, 0x00, 0x00, 0x0028 },
+	{ 1, 0x29, 0x00, 0x00, 0x0029 }, { 1, 0x2A, 0x00, 0x00, 0x002A },
+	{ 1, 0x2B, 0x00, 0x00, 0x002B }, { 1, 0x2C, 0x00, 0x00, 0x002C },
+	{ 1, 0x2D, 0x00, 0x00, 0x002D }, { 1, 0x2E, 0x00, 0x00, 0x002E },
+	{ 1, 0x2F, 0x00, 0x00, 0x002F }, { 1, 0x30, 0x00, 0x00, 0x0030 },
+	{ 1, 0x31, 0x00, 0x00, 0x0031 }, { 1, 0x32, 0x00, 0x00, 0x0032 },
+	{ 1, 0x33, 0x00, 0x00, 0x0033 }, { 1, 0x34, 0x00, 0x00, 0x0034 },
+	{ 1, 0x35, 0x00, 0x00, 0x0035 }, { 1, 0x36, 0x00, 0x00, 0x0036 },
+	{ 1, 0x37, 0x00, 0x00, 0x0037 }, { 1, 0x38, 0x00, 0x00, 0x0038 },
+	{ 1, 0x39, 0x00, 0x00, 0x0039 }, { 1, 0x3A, 0x00, 0x00, 0x003A },
+	{ 1, 0x3B, 0x00, 0x00, 0x003B }, { 1, 0x3C, 0x00, 0x00, 0x003C },
+	{ 1, 0x3D, 0x00, 0x00, 0x003D }, { 1, 0x3E, 0x00, 0x00, 0x003E },
+	{ 1, 0x3F, 0x00, 0x00, 0x003F }, { 1, 0x40, 0x00, 0x00, 0x00A1 },
+	{ 1, 0x41, 0x00, 0x00, 0x0041 }, { 1, 0x42, 0x00, 0x00, 0x0042 },
+	{ 1, 0x43, 0x00, 0x00, 0x0043 }, { 1, 0x44, 0x00, 0x00, 0x0044 },
+	{ 1, 0x45, 0x00, 0x00, 0x0045 }, { 1, 0x46, 0x00, 0x00, 0x0046 },
+	{ 1, 0x47, 0x00, 0x00, 0x0047 }, { 1, 0x48, 0x00, 0x00, 0x0048 },
+	{ 1, 0x49, 0x00, 0x00, 0x0049 }, { 1, 0x4A, 0x00, 0x00, 0x004A },
+	{ 1, 0x4B, 0x00, 0x00, 0x004B }, { 1, 0x4C, 0x00, 0x00, 0x004C },
+	{ 1, 0x4D, 0x00, 0x00, 0x004D }, { 1, 0x4E, 0x00, 0x00, 0x004E },
+	{ 1, 0x4F, 0x00, 0x00, 0x004F }, { 1, 0x50, 0x00, 0x00, 0x0050 },
+	{ 1, 0x51, 0x00, 0x00, 0x0051 }, { 1, 0x52, 0x00, 0x00, 0x0052 },
+	{ 1, 0x53, 0x00, 0x00, 0x0053 }, { 1, 0x54, 0x00, 0x00, 0x0054 },
+	{ 1, 0x55, 0x00, 0x00, 0x0055 }, { 1, 0x56, 0x00, 0x00, 0x0056 },
+	{ 1, 0x57, 0x00, 0x00, 0x0057 }, { 1, 0x58, 0x00, 0x00, 0x0058 },
+	{ 1, 0x59, 0x00, 0x00, 0x0059 }, { 1, 0x5A, 0x00, 0x00, 0x005A },
+	{ 1, 0x5B, 0x00, 0x00, 0x00C4 }, { 1, 0x5C, 0x00, 0x00, 0x00D6 },
+	{ 1, 0x5D, 0x00, 0x00, 0x00D1 }, { 1, 0x5E, 0x00, 0x00, 0x00DC },
+	{ 1, 0x5F, 0x00, 0x00, 0x00A7 }, { 1, 0x60, 0x00, 0x00, 0x00BF },
+	{ 1, 0x61, 0x00, 0x00, 0x0061 }, { 1, 0x62, 0x00, 0x00, 0x0062 },
+	{ 1, 0x63, 0x00, 0x00, 0x0063 }, { 1, 0x64, 0x00, 0x00, 0x0064 },
+	{ 1, 0x65, 0x00, 0x00, 0x0065 }, { 1, 0x66, 0x00, 0x00, 0x0066 },
+	{ 1, 0x67, 0x00, 0x00, 0x0067 }, { 1, 0x68, 0x00, 0x00, 0x0068 },
+	{ 1, 0x69, 0x00, 0x00, 0x0069 }, { 1, 0x6A, 0x00, 0x00, 0x006A },
+	{ 1, 0x6B, 0x00, 0x00, 0x006B }, { 1, 0x6C, 0x00, 0x00, 0x006C },
+	{ 1, 0x6D, 0x00, 0x00, 0x006D }, { 1, 0x6E, 0x00, 0x00, 0x006E },
+	{ 1, 0x6F, 0x00, 0x00, 0x006F }, { 1, 0x70, 0x00, 0x00, 0x0070 },
+	{ 1, 0x71, 0x00, 0x00, 0x0071 }, { 1, 0x72, 0x00, 0x00, 0x0072 },
+	{ 1, 0x73, 0x00, 0x00, 0x0073 }, { 1, 0x74, 0x00, 0x00, 0x0074 },
+	{ 1, 0x75, 0x00, 0x00, 0x0075 }, { 1, 0x76, 0x00, 0x00, 0x0076 },
+	{ 1, 0x77, 0x00, 0x00, 0x0077 }, { 1, 0x78, 0x00, 0x00, 0x0078 },
+	{ 1, 0x79, 0x00, 0x00, 0x0079 }, { 1, 0x7A, 0x00, 0x00, 0x007A },
+	{ 1, 0x7B, 0x00, 0x00, 0x00E4 }, { 1, 0x7C, 0x00, 0x00, 0x00F6 },
+	{ 1, 0x7D, 0x00, 0x00, 0x00F1 }, { 1, 0x7E, 0x00, 0x00, 0x00FC },
+	{ 1, 0x7F, 0x00, 0x00, 0x00E0 }
+};
+
+/* 0x8152ACAA: 3GPP TS 23.038 Portuguese National Language Locking Shift Table (127 entries) */
+static const Gsm7CharEntry kGsm7PortugueseLockingBase[127] = {
+	{ 1, 0x00, 0x00, 0x00, 0x0040 }, { 1, 0x01, 0x00, 0x00, 0x00A3 },
+	{ 1, 0x02, 0x00, 0x00, 0x0024 }, { 1, 0x03, 0x00, 0x00, 0x00A5 },
+	{ 1, 0x04, 0x00, 0x00, 0x00EA }, { 1, 0x05, 0x00, 0x00, 0x00E9 },
+	{ 1, 0x06, 0x00, 0x00, 0x00FA }, { 1, 0x07, 0x00, 0x00, 0x00ED },
+	{ 1, 0x08, 0x00, 0x00, 0x00F3 }, { 1, 0x09, 0x00, 0x00, 0x00E7 },
+	{ 1, 0x0A, 0x00, 0x00, 0x000A }, { 1, 0x0B, 0x00, 0x00, 0x00D4 },
+	{ 1, 0x0C, 0x00, 0x00, 0x00F4 }, { 1, 0x0D, 0x00, 0x00, 0x000D },
+	{ 1, 0x0E, 0x00, 0x00, 0x00C1 }, { 1, 0x0F, 0x00, 0x00, 0x00E1 },
+	{ 1, 0x10, 0x00, 0x00, 0x0394 }, { 1, 0x11, 0x00, 0x00, 0x005F },
+	{ 1, 0x12, 0x00, 0x00, 0x00AA }, { 1, 0x13, 0x00, 0x00, 0x00C7 },
+	{ 1, 0x14, 0x00, 0x00, 0x00C0 }, { 1, 0x15, 0x00, 0x00, 0x221E },
+	{ 1, 0x16, 0x00, 0x00, 0x005E }, { 1, 0x17, 0x00, 0x00, 0x005C },
+	{ 1, 0x18, 0x00, 0x00, 0x20AC }, { 1, 0x19, 0x00, 0x00, 0x00D3 },
+	{ 1, 0x1A, 0x00, 0x00, 0x007C }, { 1, 0x1C, 0x00, 0x00, 0x00C2 },
+	{ 1, 0x1D, 0x00, 0x00, 0x00E2 }, { 1, 0x1E, 0x00, 0x00, 0x00CA },
+	{ 1, 0x1F, 0x00, 0x00, 0x00C9 }, { 1, 0x20, 0x00, 0x00, 0x0020 },
+	{ 1, 0x21, 0x00, 0x00, 0x0021 }, { 1, 0x22, 0x00, 0x00, 0x0022 },
+	{ 1, 0x23, 0x00, 0x00, 0x0023 }, { 1, 0x24, 0x00, 0x00, 0x00BA },
+	{ 1, 0x25, 0x00, 0x00, 0x0025 }, { 1, 0x26, 0x00, 0x00, 0x0026 },
+	{ 1, 0x27, 0x00, 0x00, 0x0027 }, { 1, 0x28, 0x00, 0x00, 0x0028 },
+	{ 1, 0x29, 0x00, 0x00, 0x0029 }, { 1, 0x2A, 0x00, 0x00, 0x002A },
+	{ 1, 0x2B, 0x00, 0x00, 0x002B }, { 1, 0x2C, 0x00, 0x00, 0x002C },
+	{ 1, 0x2D, 0x00, 0x00, 0x002D }, { 1, 0x2E, 0x00, 0x00, 0x002E },
+	{ 1, 0x2F, 0x00, 0x00, 0x002F }, { 1, 0x30, 0x00, 0x00, 0x0030 },
+	{ 1, 0x31, 0x00, 0x00, 0x0031 }, { 1, 0x32, 0x00, 0x00, 0x0032 },
+	{ 1, 0x33, 0x00, 0x00, 0x0033 }, { 1, 0x34, 0x00, 0x00, 0x0034 },
+	{ 1, 0x35, 0x00, 0x00, 0x0035 }, { 1, 0x36, 0x00, 0x00, 0x0036 },
+	{ 1, 0x37, 0x00, 0x00, 0x0037 }, { 1, 0x38, 0x00, 0x00, 0x0038 },
+	{ 1, 0x39, 0x00, 0x00, 0x0039 }, { 1, 0x3A, 0x00, 0x00, 0x003A },
+	{ 1, 0x3B, 0x00, 0x00, 0x003B }, { 1, 0x3C, 0x00, 0x00, 0x003C },
+	{ 1, 0x3D, 0x00, 0x00, 0x003D }, { 1, 0x3E, 0x00, 0x00, 0x003E },
+	{ 1, 0x3F, 0x00, 0x00, 0x003F }, { 1, 0x40, 0x00, 0x00, 0x00CD },
+	{ 1, 0x41, 0x00, 0x00, 0x0041 }, { 1, 0x42, 0x00, 0x00, 0x0042 },
+	{ 1, 0x43, 0x00, 0x00, 0x0043 }, { 1, 0x44, 0x00, 0x00, 0x0044 },
+	{ 1, 0x45, 0x00, 0x00, 0x0045 }, { 1, 0x46, 0x00, 0x00, 0x0046 },
+	{ 1, 0x47, 0x00, 0x00, 0x0047 }, { 1, 0x48, 0x00, 0x00, 0x0048 },
+	{ 1, 0x49, 0x00, 0x00, 0x0049 }, { 1, 0x4A, 0x00, 0x00, 0x004A },
+	{ 1, 0x4B, 0x00, 0x00, 0x004B }, { 1, 0x4C, 0x00, 0x00, 0x004C },
+	{ 1, 0x4D, 0x00, 0x00, 0x004D }, { 1, 0x4E, 0x00, 0x00, 0x004E },
+	{ 1, 0x4F, 0x00, 0x00, 0x004F }, { 1, 0x50, 0x00, 0x00, 0x0050 },
+	{ 1, 0x51, 0x00, 0x00, 0x0051 }, { 1, 0x52, 0x00, 0x00, 0x0052 },
+	{ 1, 0x53, 0x00, 0x00, 0x0053 }, { 1, 0x54, 0x00, 0x00, 0x0054 },
+	{ 1, 0x55, 0x00, 0x00, 0x0055 }, { 1, 0x56, 0x00, 0x00, 0x0056 },
+	{ 1, 0x57, 0x00, 0x00, 0x0057 }, { 1, 0x58, 0x00, 0x00, 0x0058 },
+	{ 1, 0x59, 0x00, 0x00, 0x0059 }, { 1, 0x5A, 0x00, 0x00, 0x005A },
+	{ 1, 0x5B, 0x00, 0x00, 0x00C3 }, { 1, 0x5C, 0x00, 0x00, 0x00D5 },
+	{ 1, 0x5D, 0x00, 0x00, 0x00DA }, { 1, 0x5E, 0x00, 0x00, 0x00DC },
+	{ 1, 0x5F, 0x00, 0x00, 0x00A7 }, { 1, 0x60, 0x00, 0x00, 0x007E },
+	{ 1, 0x61, 0x00, 0x00, 0x0061 }, { 1, 0x62, 0x00, 0x00, 0x0062 },
+	{ 1, 0x63, 0x00, 0x00, 0x0063 }, { 1, 0x64, 0x00, 0x00, 0x0064 },
+	{ 1, 0x65, 0x00, 0x00, 0x0065 }, { 1, 0x66, 0x00, 0x00, 0x0066 },
+	{ 1, 0x67, 0x00, 0x00, 0x0067 }, { 1, 0x68, 0x00, 0x00, 0x0068 },
+	{ 1, 0x69, 0x00, 0x00, 0x0069 }, { 1, 0x6A, 0x00, 0x00, 0x006A },
+	{ 1, 0x6B, 0x00, 0x00, 0x006B }, { 1, 0x6C, 0x00, 0x00, 0x006C },
+	{ 1, 0x6D, 0x00, 0x00, 0x006D }, { 1, 0x6E, 0x00, 0x00, 0x006E },
+	{ 1, 0x6F, 0x00, 0x00, 0x006F }, { 1, 0x70, 0x00, 0x00, 0x0070 },
+	{ 1, 0x71, 0x00, 0x00, 0x0071 }, { 1, 0x72, 0x00, 0x00, 0x0072 },
+	{ 1, 0x73, 0x00, 0x00, 0x0073 }, { 1, 0x74, 0x00, 0x00, 0x0074 },
+	{ 1, 0x75, 0x00, 0x00, 0x0075 }, { 1, 0x76, 0x00, 0x00, 0x0076 },
+	{ 1, 0x77, 0x00, 0x00, 0x0077 }, { 1, 0x78, 0x00, 0x00, 0x0078 },
+	{ 1, 0x79, 0x00, 0x00, 0x0079 }, { 1, 0x7A, 0x00, 0x00, 0x007A },
+	{ 1, 0x7B, 0x00, 0x00, 0x00E3 }, { 1, 0x7C, 0x00, 0x00, 0x00F5 },
+	{ 1, 0x7D, 0x00, 0x00, 0x0060 }, { 1, 0x7E, 0x00, 0x00, 0x00FC },
+	{ 1, 0x7F, 0x00, 0x00, 0x00E0 }
+};
+
+/* 0x8152AFA4: GSM 7-bit Basic Extension Table (11 entries) */
+static const Gsm7CharEntry kGsm7BasicExt[11] = {
+	{ 2, 0x1B, 0x0A, 0x00, 0x000C }, { 2, 0x1B, 0x14, 0x00, 0x005E },
+	{ 2, 0x1B, 0x1B, 0x00, 0x0020 }, { 2, 0x1B, 0x28, 0x00, 0x007B },
+	{ 2, 0x1B, 0x29, 0x00, 0x007D }, { 2, 0x1B, 0x2F, 0x00, 0x005C },
+	{ 2, 0x1B, 0x3C, 0x00, 0x005B }, { 2, 0x1B, 0x3D, 0x00, 0x007E },
+	{ 2, 0x1B, 0x3E, 0x00, 0x005D }, { 2, 0x1B, 0x40, 0x00, 0x007C },
+	{ 2, 0x1B, 0x65, 0x00, 0x20AC }
+};
+
+/* 0x8152AFE6: Spanish National Language Single Shift Table (9 entries) */
+static const Gsm7CharEntry kGsm7SpanishExt[9] = {
+	{ 2, 0x1B, 0x09, 0x00, 0x00E7 }, { 2, 0x1B, 0x41, 0x00, 0x00C1 },
+	{ 2, 0x1B, 0x49, 0x00, 0x00CD }, { 2, 0x1B, 0x4F, 0x00, 0x00D3 },
+	{ 2, 0x1B, 0x55, 0x00, 0x00DA }, { 2, 0x1B, 0x61, 0x00, 0x00E1 },
+	{ 2, 0x1B, 0x69, 0x00, 0x00ED }, { 2, 0x1B, 0x6F, 0x00, 0x00F3 },
+	{ 2, 0x1B, 0x75, 0x00, 0x00FA }
+};
+
+/* 0x8152B01C: Portuguese National Language Single Shift Table (27 entries) */
+static const Gsm7CharEntry kGsm7PortugueseExt[27] = {
+	{ 2, 0x1B, 0x05, 0x00, 0x00EA }, { 2, 0x1B, 0x09, 0x00, 0x00E7 },
+	{ 2, 0x1B, 0x0B, 0x00, 0x00D4 }, { 2, 0x1B, 0x0C, 0x00, 0x00F4 },
+	{ 2, 0x1B, 0x0E, 0x00, 0x00C1 }, { 2, 0x1B, 0x0F, 0x00, 0x00E1 },
+	{ 2, 0x1B, 0x12, 0x00, 0x03A6 }, { 2, 0x1B, 0x13, 0x00, 0x0393 },
+	{ 2, 0x1B, 0x15, 0x00, 0x03A9 }, { 2, 0x1B, 0x16, 0x00, 0x03A0 },
+	{ 2, 0x1B, 0x17, 0x00, 0x03A8 }, { 2, 0x1B, 0x18, 0x00, 0x03A3 },
+	{ 2, 0x1B, 0x19, 0x00, 0x0398 }, { 2, 0x1B, 0x1E, 0x00, 0x00CA },
+	{ 2, 0x1B, 0x41, 0x00, 0x00C0 }, { 2, 0x1B, 0x49, 0x00, 0x00CD },
+	{ 2, 0x1B, 0x4F, 0x00, 0x00D3 }, { 2, 0x1B, 0x55, 0x00, 0x00DA },
+	{ 2, 0x1B, 0x5B, 0x00, 0x00C3 }, { 2, 0x1B, 0x5C, 0x00, 0x00D5 },
+	{ 2, 0x1B, 0x61, 0x00, 0x00C2 }, { 2, 0x1B, 0x69, 0x00, 0x00ED },
+	{ 2, 0x1B, 0x6F, 0x00, 0x00F3 }, { 2, 0x1B, 0x75, 0x00, 0x00FA },
+	{ 2, 0x1B, 0x7B, 0x00, 0x00E3 }, { 2, 0x1B, 0x7C, 0x00, 0x00F5 },
+	{ 2, 0x1B, 0x7F, 0x00, 0x00E2 }
+};
+
+/* 0x8152B0C0 */
+static const Gsm7LanguageTables kGsm7Tables[3] = {
+	{ kGsm7DefaultBase, kGsm7BasicExt, NULL, 127, 11, 0, 0 },
+	{ kGsm7DefaultBase, kGsm7BasicExt, kGsm7SpanishExt, 127, 11, 9, 1 },
+	{ kGsm7DefaultBase, kGsm7BasicExt, kGsm7PortugueseExt, 127, 11, 27, 1 }
+};
+
+struct CarrierSmsTemplate {
+	const wchar_t *tag;
+	const wchar_t *format;
+};
+
+/* 0x815494A0: AT&T DataConnect Pass structured SMS templates */
+static const CarrierSmsTemplate kCarrierSmsTemplates[6] = {
+	{
+		L"ACTDOM",
+		L"Congratulations, your DataConnect Pass activation is complete.\n"
+		L"You have purchased the %5 rate plan. The plan will become active on %6.\n"
+		L"Your Mobile Device Number is %3.\n"
+		L"Your account login is: %2."
+	},
+	{
+		L"ACTINT",
+		L"Congratulations, your DataConnect Pass international activation is complete.\n"
+		L"You have purchased the %4 international rate plan. The plan will become active on %6.\n"
+		L"Your Mobile Device Number is %3.\n"
+		L"Your account login is: %2."
+	},
+	{
+		L"TIMEDM",
+		L"Your %5 rate plan has %7 time of the plan remaining. "
+		L"To purchase more, please go to www.att.com/buyasession."
+	},
+	{
+		L"TIMEIN",
+		L"Your %5 rate plan has %7 time of the plan remaining. "
+		L"To purchase more, please go to www.att.com/buyasession."
+	},
+	{
+		L"DATADM",
+		L"Your %5 rate plan has %8 data of the plan remaining. "
+		L"If you are set up for auto-renew then your next date is: %6. "
+		L"To purchase more prior to your next auto-renew date, "
+		L"please go to www.att.com/buyasession."
+	},
+	{
+		L"DATAIN",
+		L"Your %5 rate plan has %8 data of the plan remaining. "
+		L"To purchase more prior to your next auto-renew date, "
+		L"please go to www.att.com/buyasession."
+	}
+};
+
+} /* namespace */
+
+/* TelSmsMessageId (0x813E5594..0x813E55FB) */
+paf::common::SharedPtr<TelObject> TelSmsMessageId::Clone() const
+{
+	return paf::common::SharedPtr<TelObject>(new TelSmsMessageId(m_id));
+}
+
+/* TelSmsAddress (0x813E4C30..0x813E4D3B) */
+TelSmsAddress::TelSmsAddress()
+{
+	sce_paf_memset(m_alphaLabel, 0, sizeof(m_alphaLabel));
+}
+
+TelSmsAddress::TelSmsAddress(const TelPhoneNumber &number, const char *alphaLabel)
+	: m_number(number)
+{
+	sce_paf_memset(m_alphaLabel, 0, sizeof(m_alphaLabel));
+	if (alphaLabel != NULL)
+		sce_paf_strncpy(m_alphaLabel, alphaLabel, 32);
+}
+
+paf::common::SharedPtr<TelObject> TelSmsAddress::Clone() const
+{
+	return paf::common::SharedPtr<TelObject>(new TelSmsAddress(m_number, m_alphaLabel));
+}
+
+void TelSmsAddress::CopyFrom(const TelPhoneNumber &number, const char *alphaLabel)
+{
+	m_number = number;
+	sce_paf_memset(m_alphaLabel, 0, sizeof(m_alphaLabel));
+	if (alphaLabel != NULL)
+		sce_paf_strncpy(m_alphaLabel, alphaLabel, 32);
+}
+
+bool TelSmsAddress::IsValid() const
+{
+	return m_number.IsValid();
+}
+
+bool TelSmsAddress::IsEmpty() const
+{
+	return m_number.IsEmpty();
+}
+
+/* TelSmsPeerInfo (0x813E55FC..0x813E5797) */
+TelSmsPeerInfo::TelSmsPeerInfo(const TelSmsAddress &address, int status, bool unread,
+			       int peerFlags, int deliveryResult)
+	: m_address(address), m_status(status), m_peerFlags(peerFlags),
+	  m_unread(unread), m_deliveryResult(deliveryResult)
+{
+}
+
+TelSmsPeerInfo::TelSmsPeerInfo(const TelSmsPeerInfo &src)
+	: m_address(src.m_address), m_status(src.m_status), m_peerFlags(src.m_peerFlags),
+	  m_unread(src.m_unread), m_deliveryResult(src.m_deliveryResult)
+{
+}
+
+bool TelSmsPeerInfo::IsValid() const
+{
+	return !m_address.IsEmpty();
+}
+
+/* TelSmsMessage (0x813E4D3C..0x813E5173) */
+TelSmsMessage::TelSmsMessage()
+	: m_messageKind(1), m_messageType(1), m_protocolId(0),
+	  m_referenceNumber(0), m_codingScheme(1), m_body(L"")
+{
+	m_peers.reserve(10);
+}
+
+TelSmsMessage::TelSmsMessage(const TelSmsMessage &src)
+	: m_messageKind(2), m_messageType(1), m_protocolId(0),
+	  m_referenceNumber(0), m_codingScheme(1), m_messageId(src.m_messageId),
+	  m_peers(src.m_peers), m_body(src.m_body),
+	  m_historyTime(src.m_historyTime), m_deliverTime(src.m_deliverTime)
+{
+}
+
+paf::common::SharedPtr<TelObject> TelSmsMessage::Clone() const
+{
+	return paf::common::SharedPtr<TelObject>(new TelSmsMessage(*this));
+}
+
+/* 0x813E4EEA */
+void TelSmsMessage::SetReceivedData(const TelSmsMessageId &msgId, const TelSmsPeerInfo &peer,
+				    const paf::wstring &body, const TelDateTime &historyTime)
+{
+	m_messageId = msgId;
+	m_peers.push_back(peer);
+	m_body = body;
+	m_historyTime = historyTime;
+}
+
+/* 0x813E4F62 */
+void TelSmsMessage::SetSinglePeer(const TelSmsPeerInfo &peer)
+{
+	m_peers.clear();
+	m_peers.push_back(peer);
+}
+
+/* 0x813E4FEC */
+const TelSmsPeerInfo &TelSmsMessage::GetFirstPeer() const
+{
+	return m_peers[0];
+}
+
+/* 0x813E4FFC */
+void TelSmsMessage::SetPeers(const paf::vector<TelSmsPeerInfo> &peers)
+{
+	m_peers = peers;
+}
+
+/* 0x813E5078 */
+paf::wstring TelSmsMessage::FormatDisplayBody() const
+{
+	TelSmsMessageHelper helper;
+	bool isActivation = false;
+	return helper.FormatCarrierMessage(m_body, &isActivation);
+}
+
+/* 0x813E511C */
+bool TelSmsMessage::NeedsUcs2Encoding() const
+{
+	if (m_body.length() == 0)
+		return false;
+	return TelSmsMessageHelper::RequiresUcs2Default(m_body);
+}
+
+/* 0x813E513C */
+bool TelSmsMessage::IsValid() const
+{
+	if (m_peers.size() == 0)
+		return false;
+	for (SceSize idx = 0; idx < m_peers.size(); ++idx) {
+		if (!m_peers[idx].IsValid())
+			return false;
+	}
+	return true;
+}
+
+/* TelSmsMessageBuilder (0x813E5514..0x813E5593) */
+void TelSmsMessageBuilder::SetDirectionOutgoing(bool outgoing)
+{
+	if (m_target != NULL)
+		m_target->SetMessageKind(outgoing ? 2 : 1);
+}
+
+void TelSmsMessageBuilder::SetConcatenated(bool concat)
+{
+	if (m_target != NULL)
+		m_target->SetConcatenated(concat);
+}
+
+void TelSmsMessageBuilder::SetProtocolId(int protocolId)
+{
+	if (m_target != NULL)
+		m_target->SetProtocolId(protocolId);
+}
+
+void TelSmsMessageBuilder::SetReferenceNumber(int refNum)
+{
+	if (m_target != NULL)
+		m_target->SetReferenceNumber(refNum);
+}
+
+void TelSmsMessageBuilder::MarkComplete()
+{
+}
+
+/* TelSmsMessageHelper (0x813E5174..0x813E5CBB) */
+/* 0x813E5198 */
+void TelSmsMessageHelper::SplitWString(const paf::wstring &input,
+				       paf::vector<paf::wstring> *outTokens,
+				       const paf::wstring &delimiter)
+{
+	SceSize delimLen = delimiter.length();
+	SceSize pos = 0;
+	for (;;) {
+		SceSize found = input.find(delimiter, pos);
+		if (found == paf::wstring::npos)
+			break;
+		outTokens->push_back(input.substr(pos, found - pos));
+		pos = found + delimLen;
+	}
+	if (pos + 1 < input.length())
+		outTokens->push_back(input.substr(pos, input.length() - pos));
+}
+
+/* 0x813E52C4 */
+paf::wstring TelSmsMessageHelper::FormatCarrierMessage(const paf::wstring &rawMessage,
+						       bool *outIsActivationNotice) const
+{
+	paf::wstring formatted(rawMessage);
+	paf::vector<paf::wstring> parts;
+	SplitWString(rawMessage, &parts, paf::wstring(L";"));
+
+	if (parts.size() >= 8 && parts[0].length() == 6) {
+		SceSize priceLen = parts[3].length();
+		SceSize timePctLen = parts[6].length();
+		SceSize dataPctLen = parts[7].length();
+		bool hasPrice = (priceLen >= 2 && priceLen <= 8 && parts[3].c_str()[0] == L'$');
+		bool hasTimePct = (timePctLen >= 2 && timePctLen <= 4 &&
+				   parts[6].c_str()[timePctLen - 1] == L'%');
+		bool hasDataPct = (dataPctLen >= 2 && dataPctLen <= 4 &&
+				   parts[7].c_str()[dataPctLen - 1] == L'%');
+		if (hasPrice && hasTimePct && hasDataPct) {
+			for (int idx = 0; idx < 6; ++idx) {
+				if (sce_paf_wcscmp(parts[0].c_str(),
+						   kCarrierSmsTemplates[idx].tag) == 0) {
+					formatted = shellFormatText(
+						kCarrierSmsTemplates[idx].format,
+						parts[0].c_str(), parts[1].c_str(),
+						parts[2].c_str(), parts[3].c_str(),
+						parts[4].c_str(), parts[5].c_str(),
+						parts[6].c_str(), parts[7].c_str(),
+						L"", L"", L"");
+				}
+			}
+			if (sce_paf_wcscmp(parts[0].c_str(), kCarrierSmsTemplates[0].tag) == 0 ||
+			    sce_paf_wcscmp(parts[0].c_str(), kCarrierSmsTemplates[1].tag) == 0) {
+				*outIsActivationNotice = true;
+			}
+		}
+	}
+
+	/* Normalize standalone CR ('\r' not followed by '\n') to LF ('\n') */
+	if (formatted.length() > 1) {
+		wchar_t *chars = const_cast<wchar_t *>(formatted.c_str());
+		for (SceSize idx = 1; idx < formatted.length(); ++idx) {
+			if (chars[idx - 1] == L'\r' && chars[idx] != L'\n')
+				chars[idx - 1] = L'\n';
+		}
+	}
+	return formatted;
+}
+
+static const Gsm7CharEntry *findUnicodeInTable(const Gsm7CharEntry *table, int count,
+					       SceUInt16 ch)
+{
+	for (int idx = 0; idx < count; ++idx) {
+		if (table[idx].unicodeChar == ch)
+			return &table[idx];
+	}
+	return NULL;
+}
+
+/* 0x813E5798 */
+bool TelSmsMessageHelper::RequiresUcs2(const paf::wstring &text, TelGsm7Language lang)
+{
+	const Gsm7LanguageTables &tables = kGsm7Tables[(int)lang];
+	const wchar_t *cursor = text.c_str();
+	while (*cursor != L'\0') {
+		SceUInt16 ch = (SceUInt16)*cursor;
+		if (findUnicodeInTable(tables.baseTable, tables.baseCount, ch) == NULL &&
+		    findUnicodeInTable(tables.basicExtTable, tables.basicExtCount, ch) == NULL &&
+		    findUnicodeInTable(tables.nationalExtTable, tables.nationalExtCount, ch) == NULL)
+			return true;
+		++cursor;
+	}
+	return false;
+}
+
+/* 0x813E583C */
+bool TelSmsMessageHelper::RequiresUcs2Default(const paf::wstring &text)
+{
+	return RequiresUcs2(text, TEL_GSM7_LANG_DEFAULT);
+}
+
+/* 0x813E5868 */
+SceUInt16 TelSmsMessageHelper::GetGsm7EncodedLength(const paf::wstring &text, TelGsm7Language lang)
+{
+	if (RequiresUcs2(text, lang))
+		return 0;
+
+	const Gsm7LanguageTables &tables = kGsm7Tables[(int)lang];
+	SceUInt16 totalSeptets = 0;
+	const wchar_t *cursor = text.c_str();
+	while (*cursor != L'\0') {
+		SceUInt16 ch = (SceUInt16)*cursor;
+		const Gsm7CharEntry *found = findUnicodeInTable(tables.baseTable,
+								tables.baseCount, ch);
+		if (found == NULL)
+			found = findUnicodeInTable(tables.basicExtTable, tables.basicExtCount, ch);
+		if (found == NULL)
+			found = findUnicodeInTable(tables.nationalExtTable,
+						   tables.nationalExtCount, ch);
+		if (found == NULL)
+			return 0;
+		totalSeptets = (SceUInt16)(totalSeptets + found->septetCount);
+		++cursor;
+	}
+	return totalSeptets;
+}
+
+/* 0x813E5966 */
+SceUInt16 TelSmsMessageHelper::EncodeUtf16ToGsm7(const paf::wstring &text, TelGsm7Language lang,
+						 SceUInt8 *outSeptets)
+{
+	if (RequiresUcs2(text, lang) || outSeptets == NULL)
+		return 0;
+
+	const Gsm7LanguageTables &tables = kGsm7Tables[(int)lang];
+	SceUInt16 outPos = 0;
+	const wchar_t *cursor = text.c_str();
+	while (*cursor != L'\0') {
+		SceUInt16 ch = (SceUInt16)*cursor;
+		const Gsm7CharEntry *found = findUnicodeInTable(tables.baseTable,
+								tables.baseCount, ch);
+		if (found != NULL) {
+			outSeptets[outPos] = found->firstByte;
+			outPos = (SceUInt16)(outPos + found->septetCount);
+		} else {
+			found = findUnicodeInTable(tables.basicExtTable, tables.basicExtCount, ch);
+			if (found == NULL)
+				found = findUnicodeInTable(tables.nationalExtTable,
+							   tables.nationalExtCount, ch);
+			if (found == NULL)
+				return 0;
+			outSeptets[outPos] = found->firstByte;
+			outSeptets[outPos + 1] = found->secondByte;
+			outPos = (SceUInt16)(outPos + found->septetCount);
+		}
+		++cursor;
+	}
+	return outPos;
+}
+
+/* 0x813E5B0C */
+SceUInt16 TelSmsMessageHelper::DecodeGsm7ToUtf16(const SceUInt8 *septets, SceUInt16 septetCount,
+						 int lockingShiftLang, int singleShiftLang,
+						 wchar_t *outUtf16)
+{
+	const Gsm7CharEntry *baseTable = (lockingShiftLang == 2)
+		? kGsm7PortugueseLockingBase : kGsm7DefaultBase;
+
+	const Gsm7CharEntry *nationalExt = NULL;
+	int nationalCount = 0;
+	if (singleShiftLang == 1) {
+		nationalExt = kGsm7SpanishExt;
+		nationalCount = 9;
+	} else if (singleShiftLang == 2) {
+		nationalExt = kGsm7PortugueseExt;
+		nationalCount = 27;
+	}
+
+	SceUInt16 outCount = 0;
+	SceUInt16 pos = 0;
+	while (pos < septetCount) {
+		bool matched = false;
+		for (int idx = 0; idx < 127; ++idx) {
+			if (baseTable[idx].firstByte == septets[pos]) {
+				outUtf16[outCount++] = (wchar_t)baseTable[idx].unicodeChar;
+				pos = (SceUInt16)(pos + baseTable[idx].septetCount);
+				matched = true;
+				break;
+			}
+		}
+		if (matched)
+			continue;
+
+		for (int idx = 0; idx < 11; ++idx) {
+			if (kGsm7BasicExt[idx].firstByte == septets[pos] &&
+			    pos + 1 < septetCount &&
+			    kGsm7BasicExt[idx].secondByte == septets[pos + 1]) {
+				outUtf16[outCount++] = (wchar_t)kGsm7BasicExt[idx].unicodeChar;
+				pos = (SceUInt16)(pos + kGsm7BasicExt[idx].septetCount);
+				matched = true;
+				break;
+			}
+		}
+		if (matched)
+			continue;
+
+		for (int idx = 0; idx < nationalCount; ++idx) {
+			if (nationalExt != NULL &&
+			    nationalExt[idx].firstByte == septets[pos] &&
+			    pos + 1 < septetCount &&
+			    nationalExt[idx].secondByte == septets[pos + 1]) {
+				outUtf16[outCount++] = (wchar_t)nationalExt[idx].unicodeChar;
+				pos = (SceUInt16)(pos + nationalExt[idx].septetCount);
+				matched = true;
+				break;
+			}
+		}
+		if (!matched) {
+			outUtf16[outCount++] = L' ';
+			++pos;
+		}
+	}
+	return outCount;
+}
+
+} /* namespace telephony */

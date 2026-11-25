@@ -436,6 +436,26 @@ psp2_module(vs0_vsh_shell_shell KIND user COMPILER snc PARTIAL SOURCES
 	shell_util_server.cpp
 	shell_state_watcher.cpp
 	src/theme_plugin/src/theme_plugin.cpp
+	src/telephony_plugin/src/common/src/tel_mcc_mnc.cpp
+	src/telephony_plugin/src/common/src/tel_string_util.cpp
+	src/telephony_plugin/src/common/src/tel_ini_file_accessor.cpp
+	src/telephony_plugin/src/common/src/tel_attribute_manager.cpp
+	src/telephony_plugin/src/common/src/tel_ini_file_attribute_base.cpp
+	src/telephony_plugin/src/common/src/tel_registory_accessor.cpp
+	src/telephony_plugin/src/common/src/tel_registory_attribute_base.cpp
+	src/telephony_plugin/src/common/src/tel_temporary_attribute_base.cpp
+	src/telephony_plugin/src/common/src/tel_antenna_threshold_info_factory.cpp
+	src/telephony_plugin/src/common/src/tel_operator_apn_info.cpp
+	src/telephony_plugin/src/common/src/tel_apn_info_list.cpp
+	src/telephony_plugin/src/common/src/tel_mcc_mnc_util.cpp
+	src/telephony_plugin/src/common/src/tel_thread.cpp
+	src/telephony_plugin/src/common/src/tel_message_thread.cpp
+	src/telephony_plugin/src/common/src/tel_timer_manager.cpp
+	src/telephony_plugin/src/common/src/tel_network_info.cpp
+	src/telephony_plugin/src/common/src/tel_operator_profile.cpp
+	src/telephony_plugin/src/common/src/tel_phone_number_util.cpp
+	src/telephony_plugin/src/common/src/sms/tel_sms_message_helper.cpp
+	src/telephony_plugin/src/common/src/sms/tel_sms_protocol_data_unit.cpp
 	shell.c
 )
 target_include_directories(vs0_vsh_shell_shell PRIVATE "${PSP2_SRC}/vsh/paf/include"
