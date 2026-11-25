@@ -3,12 +3,12 @@
 SCE_MODULE_INFO("sceMpegbase_Driver", SCE_MODULE_KERNEL | SCE_MODULE_ATTR_EXCLUSIVE_LOAD | SCE_MODULE_ATTR_EXCLUSIVE_START, 1, 3);
 
 extern int sceDmacplus_driver_282CA0D7(void *lli);
-extern int sceDmacplus_driver_47D400CB(int a0, int a1);
-extern int sceDmacplus_driver_5FCF43BD(int a0, int a1);
+extern int sceDmacplus_driver_47D400CB(int mode, int flags);
+extern int sceDmacplus_driver_5FCF43BD(int mode, int flags);
 extern int sceDmacplus_driver_6945F1D3(void *lli);
 extern int sceDmacplus_driver_9C492B9B(void *rgb, void *rgb2, void *yuv);
-extern int sceDmacplus_driver_B269EAC9(int a0, int a1, void *coeff);
-extern int sceDmacplus_driver_BF0DB45E(int a0, int a1);
+extern int sceDmacplus_driver_B269EAC9(int mode, int width, void *coeff);
+extern int sceDmacplus_driver_BF0DB45E(int mode, int flags);
 extern int sceDmacplus_driver_D126494B(void *rgb, void *rgb2, void *yuv);
 extern int sceDmacplus_driver_F652F09D(int x, int y, int w, int h);
 extern int sceKernelDeleteSema(SceUID semaid);
@@ -87,7 +87,7 @@ int sceMpegBaseCscAvc(void *rgb, void *rgb2, int width, u32 *yuv)
     int k1 = pspShiftK1();
     u32 k1_mask = pspGetK1();
 
-    if (((u32)yuv | ((u32)yuv + 0x30)) & k1_mask) {
+    if ((s32)((((u32)yuv | ((u32)yuv + 0x30)) & k1_mask)) < 0) {
         pspSetK1(k1);
         return 0x80000023;
     }
@@ -100,17 +100,17 @@ int sceMpegBaseCscAvc(void *rgb, void *rgb2, int width, u32 *yuv)
     u32 c_size = blocks >> 3;
     u32 rgb_size = (stride * w) << 2;
 
-    if ((((u32)yuv | ((u32)yuv + 0x30)) & k1_mask) ||
-        ((yuv[4] | (yuv[4] + y_size)) & k1_mask) ||
-        ((yuv[6] | (yuv[6] + y_size)) & k1_mask) ||
-        ((yuv[8] | (yuv[8] + c_size)) & k1_mask) ||
-        ((yuv[10] | (yuv[10] + c_size)) & k1_mask) ||
-        ((yuv[5] | (yuv[5] + y_size)) & k1_mask) ||
-        ((yuv[7] | (yuv[7] + y_size)) & k1_mask) ||
-        ((yuv[9] | (yuv[9] + c_size)) & k1_mask) ||
-        ((yuv[11] | (yuv[11] + c_size)) & k1_mask) ||
-        (((u32)rgb | ((u32)rgb + rgb_size) | rgb_size) & k1_mask) ||
-        (rgb2 != NULL && (((u32)rgb2 | ((u32)rgb2 + rgb_size) | rgb_size) & k1_mask))) {
+    if (((s32)(((u32)yuv | ((u32)yuv + 0x30)) & k1_mask) < 0) ||
+        ((s32)((yuv[4] | (yuv[4] + y_size)) & k1_mask) < 0) ||
+        ((s32)((yuv[6] | (yuv[6] + y_size)) & k1_mask) < 0) ||
+        ((s32)((yuv[8] | (yuv[8] + c_size)) & k1_mask) < 0) ||
+        ((s32)((yuv[10] | (yuv[10] + c_size)) & k1_mask) < 0) ||
+        ((s32)((yuv[5] | (yuv[5] + y_size)) & k1_mask) < 0) ||
+        ((s32)((yuv[7] | (yuv[7] + y_size)) & k1_mask) < 0) ||
+        ((s32)((yuv[9] | (yuv[9] + c_size)) & k1_mask) < 0) ||
+        ((s32)((yuv[11] | (yuv[11] + c_size)) & k1_mask) < 0) ||
+        ((s32)((((u32)rgb | ((u32)rgb + rgb_size) | rgb_size) & k1_mask)) < 0) ||
+        (rgb2 != NULL && ((s32)((((u32)rgb2 | ((u32)rgb2 + rgb_size) | rgb_size) & k1_mask)) < 0))) {
         pspSetK1(k1);
         return 0x80000023;
     }
@@ -152,7 +152,7 @@ int sceMpegBaseCscVme(void *rgb, void *rgb2, int width, u32 *yuv)
     int k1 = pspShiftK1();
     u32 k1_mask = pspGetK1();
 
-    if (((u32)yuv | ((u32)yuv + 0x28)) & k1_mask) {
+    if ((s32)((((u32)yuv | ((u32)yuv + 0x28)) & k1_mask)) < 0) {
         pspSetK1(k1);
         return 0x80000023;
     }
@@ -165,14 +165,14 @@ int sceMpegBaseCscVme(void *rgb, void *rgb2, int width, u32 *yuv)
     u32 c_size = blocks >> 3;
     u32 rgb_size = (stride * w) << 2;
 
-    if (((yuv[4] | (yuv[4] + y_size)) & k1_mask) ||
-        ((yuv[5] | (yuv[5] + y_size)) & k1_mask) ||
-        ((yuv[6] | (yuv[6] + c_size)) & k1_mask) ||
-        ((yuv[7] | (yuv[7] + c_size)) & k1_mask) ||
-        ((yuv[8] | (yuv[8] + c_size)) & k1_mask) ||
-        ((yuv[9] | (yuv[9] + c_size)) & k1_mask) ||
-        (((u32)rgb | ((u32)rgb + rgb_size) | rgb_size) & k1_mask) ||
-        (rgb2 != NULL && (((u32)rgb2 | ((u32)rgb2 + rgb_size) | rgb_size) & k1_mask))) {
+    if (((s32)((yuv[4] | (yuv[4] + y_size)) & k1_mask) < 0) ||
+        ((s32)((yuv[5] | (yuv[5] + y_size)) & k1_mask) < 0) ||
+        ((s32)((yuv[6] | (yuv[6] + c_size)) & k1_mask) < 0) ||
+        ((s32)((yuv[7] | (yuv[7] + c_size)) & k1_mask) < 0) ||
+        ((s32)((yuv[8] | (yuv[8] + c_size)) & k1_mask) < 0) ||
+        ((s32)((yuv[9] | (yuv[9] + c_size)) & k1_mask) < 0) ||
+        ((s32)((((u32)rgb | ((u32)rgb + rgb_size) | rgb_size) & k1_mask)) < 0) ||
+        (rgb2 != NULL && ((s32)((((u32)rgb2 | ((u32)rgb2 + rgb_size) | rgb_size) & k1_mask)) < 0))) {
         pspSetK1(k1);
         return 0x80000023;
     }
@@ -208,8 +208,8 @@ int sceMpegBaseCscAvcRange(void *rgb, void *rgb2, u32 *range, int width, u32 *yu
     int k1 = pspShiftK1();
     u32 k1_mask = pspGetK1();
 
-    if ((((u32)range | ((u32)range + 0x10)) & k1_mask) ||
-        (((u32)yuv | ((u32)yuv + 0x30)) & k1_mask)) {
+    if (((s32)((((u32)range | ((u32)range + 0x10)) & k1_mask)) < 0) ||
+        ((s32)((((u32)yuv | ((u32)yuv + 0x30)) & k1_mask)) < 0)) {
         pspSetK1(k1);
         return 0x80000023;
     }
@@ -222,17 +222,17 @@ int sceMpegBaseCscAvcRange(void *rgb, void *rgb2, u32 *range, int width, u32 *yu
     u32 c_size = blocks >> 3;
     u32 rgb_size = (stride * w) << 2;
 
-    if ((((u32)yuv | ((u32)yuv + 0x30)) & k1_mask) ||
-        ((yuv[4] | (yuv[4] + y_size)) & k1_mask) ||
-        ((yuv[6] | (yuv[6] + y_size)) & k1_mask) ||
-        ((yuv[8] | (yuv[8] + c_size)) & k1_mask) ||
-        ((yuv[10] | (yuv[10] + c_size)) & k1_mask) ||
-        ((yuv[5] | (yuv[5] + y_size)) & k1_mask) ||
-        ((yuv[7] | (yuv[7] + y_size)) & k1_mask) ||
-        ((yuv[9] | (yuv[9] + c_size)) & k1_mask) ||
-        ((yuv[11] | (yuv[11] + c_size)) & k1_mask) ||
-        (((u32)rgb | ((u32)rgb + rgb_size) | rgb_size) & k1_mask) ||
-        (rgb2 != NULL && (((u32)rgb2 | ((u32)rgb2 + rgb_size) | rgb_size) & k1_mask))) {
+    if (((s32)((((u32)yuv | ((u32)yuv + 0x30)) & k1_mask)) < 0) ||
+        ((s32)((yuv[4] | (yuv[4] + y_size)) & k1_mask) < 0) ||
+        ((s32)((yuv[6] | (yuv[6] + y_size)) & k1_mask) < 0) ||
+        ((s32)((yuv[8] | (yuv[8] + c_size)) & k1_mask) < 0) ||
+        ((s32)((yuv[10] | (yuv[10] + c_size)) & k1_mask) < 0) ||
+        ((s32)((yuv[5] | (yuv[5] + y_size)) & k1_mask) < 0) ||
+        ((s32)((yuv[7] | (yuv[7] + y_size)) & k1_mask) < 0) ||
+        ((s32)((yuv[9] | (yuv[9] + c_size)) & k1_mask) < 0) ||
+        ((s32)((yuv[11] | (yuv[11] + c_size)) & k1_mask) < 0) ||
+        ((s32)((((u32)rgb | ((u32)rgb + rgb_size) | rgb_size) & k1_mask)) < 0) ||
+        (rgb2 != NULL && ((s32)((((u32)rgb2 | ((u32)rgb2 + rgb_size) | rgb_size) & k1_mask)) < 0))) {
         pspSetK1(k1);
         return 0x80000023;
     }
@@ -301,7 +301,7 @@ int sceMpegbase_AC9E717E(int width, const void *coeff)
     int k1 = pspShiftK1();
     u32 k1_mask = pspGetK1();
 
-    if (((u32)coeff | ((u32)coeff + 0x16)) & k1_mask) {
+    if ((s32)((((u32)coeff | ((u32)coeff + 0x16)) & k1_mask)) < 0) {
         pspSetK1(k1);
         return 0x80000023;
     }
@@ -494,7 +494,7 @@ int sceMpegBasePESpacketCopy(u32 *pkt)
     int k1 = pspShiftK1();
     u32 k1_mask = pspGetK1();
 
-    if ((u32)pkt & k1_mask) {
+    if ((s32)((u32)pkt & k1_mask) < 0) {
         pspSetK1(k1);
         return 0x80000023;
     }
@@ -567,8 +567,8 @@ int sceMpegBaseYCrCbCopy(u32 *dst, u32 *src, int flags)
     int k1 = pspShiftK1();
     u32 k1_mask = pspGetK1();
 
-    if ((((u32)src | ((u32)src + 0x30)) & k1_mask) ||
-        (((u32)dst | ((u32)dst + 0x30)) & k1_mask)) {
+    if (((s32)((((u32)src | ((u32)src + 0x30)) & k1_mask)) < 0) ||
+        ((s32)((((u32)dst | ((u32)dst + 0x30)) & k1_mask)) < 0)) {
         pspSetK1(k1);
         return 0x80000023;
     }
@@ -631,8 +631,8 @@ int sceMpegBaseYCrCbCopyVme(u32 *dst, u32 *src, int flags)
     int k1 = pspShiftK1();
     u32 k1_mask = pspGetK1();
 
-    if ((((u32)src | ((u32)src + 0x28)) & k1_mask) ||
-        (((u32)dst | ((u32)dst + 0x28)) & k1_mask)) {
+    if (((s32)((((u32)src | ((u32)src + 0x28)) & k1_mask)) < 0) ||
+        ((s32)((((u32)dst | ((u32)dst + 0x28)) & k1_mask)) < 0)) {
         pspSetK1(k1);
         return 0x80000023;
     }
