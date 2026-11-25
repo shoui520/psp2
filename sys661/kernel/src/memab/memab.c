@@ -69,33 +69,33 @@ static u64 unpack_u64_le(const u8 *src)
 }
 
 /* 0x0000: packAuthBuffer */
-static void packAuthBuffer(u8 *dst, const u8 *s1, u32 l1, const u8 *s2, u32 l2,
-                     const u8 *s3, u32 l3, const u8 *s4, u32 l4)
+static void packAuthBuffer(u8 *dst, const u8 *partA, u32 lenA, const u8 *partB, u32 lenB,
+                     const u8 *partC, u32 lenC, const u8 *partD, u32 lenD)
 {
-	if (l1 != 0) copy_bytes(dst, s1, l1);
-	dst += l1;
-	if (l2 != 0) copy_bytes(dst, s2, l2);
-	dst += l2;
-	if (l3 != 0) copy_bytes(dst, s3, l3);
-	dst += l3;
-	if (l4 != 0) copy_bytes(dst, s4, l4);
-	dst += l4;
-	u32 rem = 0xC0 - (l1 + l2 + l3 + l4);
+	if (lenA != 0) copy_bytes(dst, partA, lenA);
+	dst += lenA;
+	if (lenB != 0) copy_bytes(dst, partB, lenB);
+	dst += lenB;
+	if (lenC != 0) copy_bytes(dst, partC, lenC);
+	dst += lenC;
+	if (lenD != 0) copy_bytes(dst, partD, lenD);
+	dst += lenD;
+	u32 rem = 0xC0 - (lenA + lenB + lenC + lenD);
 	if (rem != 0) zero_bytes(dst, rem);
 }
 
 /* 0x00E4: kirkSha1Multi (SHA-1 via Kirk cmd 11) */
-static int kirkSha1Multi(u8 *buf, const u8 *s1, u32 l1, const u8 *s2, u32 l2,
-                    const u8 *s3, u32 l3)
+static int kirkSha1Multi(u8 *buf, const u8 *partA, u32 lenA, const u8 *partB, u32 lenB,
+                    const u8 *partC, u32 lenC)
 {
-	u32 total = l1 + l2 + l3;
+	u32 total = lenA + lenB + lenC;
 	*(u32 *)buf = total;
 	u8 *p = buf + 4;
-	if (l1 != 0) copy_bytes(p, s1, l1);
-	p += l1;
-	if (l2 != 0) copy_bytes(p, s2, l2);
-	p += l2;
-	if (l3 != 0) copy_bytes(p, s3, l3);
+	if (lenA != 0) copy_bytes(p, partA, lenA);
+	p += lenA;
+	if (lenB != 0) copy_bytes(p, partB, lenB);
+	p += lenB;
+	if (lenC != 0) copy_bytes(p, partC, lenC);
 	u32 in_sz = total + 4;
 	if (in_sz < 0x14) in_sz = 0x14;
 	int r = sceUtilsBufferCopyWithRange(buf, in_sz, buf, in_sz, 11);
@@ -127,11 +127,11 @@ static int loadAndVerifyIdStorageCert(u8 *cert_buf)
 }
 
 /* 0x02E0: kirkEncryptWithPrngIv (Kirk cmd 4 encrypt with IV from PRNG cmd 14) */
-static int kirkEncryptWithPrngIv(u8 *work, u32 keyslot, const u8 *s1, u32 l1, const u8 *s2, u32 l2,
-                    const u8 *s3, u32 l3, const u8 *s4, u32 l4, const u8 *s5, u32 l5,
-                    const u8 *s6, u32 l6)
+static int kirkEncryptWithPrngIv(u8 *work, u32 keyslot, const u8 *partA, u32 lenA, const u8 *partB, u32 lenB,
+                    const u8 *partC, u32 lenC, const u8 *partD, u32 lenD, const u8 *partE, u32 lenE,
+                    const u8 *partF, u32 lenF)
 {
-	u32 total = l1 + l2 + l3 + l4 + l5 + l6;
+	u32 total = lenA + lenB + lenC + lenD + lenE + lenF;
 	u32 aligned = (total + 0x1F) & ~0x0Fu;
 	if (sceUtilsBufferCopyWithRange(work, 0x14, NULL, 0, 14) != 0) {
 		return -0x100;
@@ -145,21 +145,21 @@ static int kirkEncryptWithPrngIv(u8 *work, u32 keyslot, const u8 *s1, u32 l1, co
 	p += 8;
 	KirkAESHeader *hdr = (KirkAESHeader *)work;
 	hdr->mode = 4;
-	hdr->reserved0 = 0;
-	hdr->reserved1 = 0;
+	hdr->pad[0] = 0;
+	hdr->pad[1] = 0;
 	hdr->keyIndex = keyslot;
 	hdr->dataSize = aligned;
-	if (l1 != 0) copy_bytes(p, s1, l1);
-	p += l1;
-	if (l2 != 0) copy_bytes(p, s2, l2);
-	p += l2;
-	if (l3 != 0) copy_bytes(p, s3, l3);
-	p += l3;
-	if (l4 != 0) copy_bytes(p, s4, l4);
-	p += l4;
-	if (l5 != 0) copy_bytes(p, s5, l5);
-	p += l5;
-	if (l6 != 0) copy_bytes(p, s6, l6);
+	if (lenA != 0) copy_bytes(p, partA, lenA);
+	p += lenA;
+	if (lenB != 0) copy_bytes(p, partB, lenB);
+	p += lenB;
+	if (lenC != 0) copy_bytes(p, partC, lenC);
+	p += lenC;
+	if (lenD != 0) copy_bytes(p, partD, lenD);
+	p += lenD;
+	if (lenE != 0) copy_bytes(p, partE, lenE);
+	p += lenE;
+	if (lenF != 0) copy_bytes(p, partF, lenF);
 	u32 sz = aligned + 0x14;
 	int r = sceUtilsBufferCopyWithRange(work, sz, work, sz, 4);
 	return (r == 0) ? 0 : -0x10A;
@@ -169,8 +169,8 @@ static int kirkEncryptInPlace(u8 *work, u32 len, u32 keyslot)
 {
 	KirkAESHeader *hdr = (KirkAESHeader *)work;
 	hdr->mode = 4;
-	hdr->reserved0 = 0;
-	hdr->reserved1 = 0;
+	hdr->pad[0] = 0;
+	hdr->pad[1] = 0;
 	hdr->keyIndex = keyslot;
 	hdr->dataSize = len;
 	u32 sz = len + 0x14;
@@ -182,8 +182,8 @@ static int kirkDecryptInPlace(u8 *work, u32 len, u32 keyslot)
 {
 	KirkAESHeader *hdr = (KirkAESHeader *)work;
 	hdr->mode = 5;
-	hdr->reserved0 = 0;
-	hdr->reserved1 = 0;
+	hdr->pad[0] = 0;
+	hdr->pad[1] = 0;
 	hdr->keyIndex = keyslot;
 	hdr->dataSize = len;
 	u32 sz = len + 0x14;
@@ -289,14 +289,14 @@ int module_start(SceSize args, void *argp)
 {
 	(void)args;
 	(void)argp;
-	SceUID s1 = sceKernelCreateSema("SceMemab1", 0, 1, 1, NULL);
-	g_sema1 = s1;
-	if (s1 <= 0) {
+	SceUID semaFirst = sceKernelCreateSema("SceMemab1", 0, 1, 1, NULL);
+	g_sema1 = semaFirst;
+	if (semaFirst <= 0) {
 		return 1;
 	}
-	SceUID s2 = sceKernelCreateSema("SceMemab2", 0, 1, 1, NULL);
-	g_sema2 = s2;
-	if (s2 <= 0) {
+	SceUID semaSecond = sceKernelCreateSema("SceMemab2", 0, 1, 1, NULL);
+	g_sema2 = semaSecond;
+	if (semaSecond <= 0) {
 		sceKernelDeleteSema(g_sema1);
 		return 1;
 	}

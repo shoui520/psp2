@@ -63,12 +63,6 @@
 #define KIRK_HEADER_HASH_INVALID    0x3
 #define KIRK_DATA_HASH_INVALID      0x4
 #define KIRK_SIG_CHECK_INVALID      0x5
-#define KIRK_UNK_1                  0x6
-#define KIRK_UNK_2                  0x7
-#define KIRK_UNK_3                  0x8
-#define KIRK_UNK_4                  0x9
-#define KIRK_UNK_5                  0xA
-#define KIRK_UNK_6                  0xB
 #define KIRK_NOT_INITIALIZED        0xC
 #define KIRK_INVALID_OPERATION      0xD
 #define KIRK_INVALID_SEED_CODE      0xE
@@ -82,8 +76,7 @@ typedef struct {
 
 typedef struct {
     s32 mode;
-    s32 reserved0;
-    s32 reserved1;
+    s32 pad[2];
     s32 keyIndex;
     SceSize dataSize;
 } KirkAESHeader;

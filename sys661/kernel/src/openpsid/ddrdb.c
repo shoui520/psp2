@@ -18,7 +18,7 @@
 #define IS_AES_BLOCK_LEN_MULTIPLE(o)    (((o) & (KIRK_AES_BLOCK_LEN - 1)) == 0)
 
 /* Work area used to contain the KIRK input/output data. */
-u8 g_workData1[SCE_DNAS_USER_DATA_MAX_LEN + sizeof(KirkAESHeader)] __attribute__((aligned(4))); //0x00003D00
+u8 g_workData[SCE_DNAS_USER_DATA_MAX_LEN + sizeof(KirkAESHeader)] __attribute__((aligned(4))); //0x00003D00
 
 const u8 g_pubKeySigForUser[KIRK_ECDSA_PUBLIC_KEY_LEN] = {
     0x44, 0x2E, 0x79, 0xE6, //0
@@ -34,7 +34,7 @@ const u8 g_pubKeySigForUser[KIRK_ECDSA_PUBLIC_KEY_LEN] = {
 }; //0x0000394C
 
 /* Pointer to the work area used to hold the KIRK input/output data. */
-u8 *g_pWorkData = g_workData1; // 0x00003A80
+u8 *g_pWorkData = g_workData; // 0x00003A80
 
 SceUID g_semaId; //0x00004540 
 
@@ -56,8 +56,8 @@ s32 sceDdrdbDecrypt(u8 *pSrcData, SceSize size)
         /* Set up the work area for KIRK. */
         KirkAESHeader *pAesHdr = (KirkAESHeader *)g_pWorkData;
         pAesHdr->mode = 5;
-        pAesHdr->reserved0 = 0;
-        pAesHdr->reserved1 = 0;
+        pAesHdr->pad[0] = 0;
+        pAesHdr->pad[1] = 0;
         pAesHdr->keyIndex = 0xB;
         pAesHdr->dataSize = size;
 
@@ -127,8 +127,8 @@ s32 sceDdrdbEncrypt(u8 *pSrcData, SceSize size)
         /* Set up the work area for KIRK. */
         KirkAESHeader *pAesHdr = (KirkAESHeader *)g_pWorkData;
         pAesHdr->mode = 4;
-        pAesHdr->reserved0 = 0;
-        pAesHdr->reserved1 = 0;
+        pAesHdr->pad[0] = 0;
+        pAesHdr->pad[1] = 0;
         pAesHdr->keyIndex = 0xB;
         pAesHdr->dataSize = size;
 
