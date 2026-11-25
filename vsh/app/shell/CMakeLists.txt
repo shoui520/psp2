@@ -345,6 +345,18 @@ psp2_module(vs0_vsh_shell_shell KIND user COMPILER snc PARTIAL SOURCES
 	src/shell_svc/src/shell_svc_server.cpp
 	src/shell_svc/src/shell_svc_livearea.cpp
 	src/shell_svc/src/shell_svc_livearea_path.cpp
+	src/shell_svc/src/shell_svc_activity.cpp
+	src/shell_svc/src/shell_svc_activity_dispatch.cpp
+	src/shell_svc/src/shell_svc_activity_jobs.cpp
+	src/shell_svc/src/shell_svc_appinfodb.cpp
+	src/shell_svc/src/shell_svc_appinfodb_dispatch.cpp
+	src/shell_svc/src/shell_svc_appinfodb_jobs.cpp
+	src/shell_svc/src/shell_svc_newevent_jobs.cpp
+	src/shell_svc/src/shell_svc_newevent.cpp
+	src/shell_svc/src/shell_svc_newevent_dispatch.cpp
+	src/shell_svc/src/shell_svc_patchcheck.cpp
+	src/shell_svc/src/shell_svc_patchcheck_dispatch.cpp
+	src/shell_svc/src/shell_svc_patchcheck_jobs.cpp
 	shell.c
 )
 target_include_directories(vs0_vsh_shell_shell PRIVATE "${PSP2_SRC}/vsh/paf/include"
