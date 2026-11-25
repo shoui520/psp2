@@ -1,0 +1,429 @@
+name: sceThreadManager
+attributes: 0x1007
+version: [1, 8]
+sdk_version: 0x06060110
+stub_order: [ExceptionManagerForKernel, InterruptManagerForKernel, KDebugForKernel, LoadCoreForKernel, SysMemForKernel, SysclibForKernel, sceSuspendForKernel]
+exports:
+  - name: syslib
+    version: [0, 0]
+    attributes: 0x8000
+    functions:
+      - module_bootstart: 0xd3744be0
+      - module_reboot_before: 0x2f064fa6
+    variables:
+      - module_info: 0xf01d73a7
+      - module_sdk_version: 0x11b97506
+  - name: ThreadManForUser
+    version: [0, 17]
+    attributes: 0x4001
+    len: 5
+    pad: 3
+    extra_words: [0x00040000]
+    bucket_words: [0x00010000, 0x00010001, 0x00070005, 0x000b0008, 0x000e000d, 0x00140010, 0x001b0015, 0x0023001f, 0x00250024, 0x00270026, 0x002c0029, 0x00320030, 0x00370033, 0x003c003a, 0x0043003e, 0x00450045, 0x004f0049, 0x00570055, 0x005a0059, 0x005e005c, 0x0060005f, 0x00650061, 0x00690066, 0x006e006c, 0x00760073, 0x00780077, 0x007d007a, 0x0084007f, 0x00860085, 0x008a0087, 0x0090008e, 0x00950092]
+    functions:
+      - sceKernelGetVTimerTime: 0x034a921f
+      - sceKernelRegisterThreadEventHandler: 0x0c106e53
+      - sceKernelPollMbx: 0x0d81716a
+      - sceKernelTryLockMutex: 0x0ddcd2c9
+      - _sceKernelReturnFromTimerHandler: 0x0e927aed
+      - sceKernelUSec2SysClock: 0x110dec9a
+      - sceKernelDelaySysClockThreadCB: 0x1181e963
+      - sceKernelReferThreadStatus: 0x17c1684e
+      - sceKernelReceiveMbx: 0x18260574
+      - sceKernelCreateLwMutex: 0x19cff145
+      - sceKernelDonateWakeupThread: 0x1af94d03
+      - sceKernelCancelVpl: 0x1d371b8a
+      - sceKernelSetEventFlag: 0x1fb15a32
+      - sceKernelCreateVTimer: 0x20fff560
+      - sceKernelWaitThreadEnd: 0x278c0df5
+      - sceKernelResumeDispatchThread: 0x27e22ec2
+      - sceKernelDeleteSema: 0x28b6489c
+      - ThreadManForUser_28BFD974: 0x28bfd974
+      - sceKernelGetThreadId: 0x293b45b8
+      - sceKernelGetCallbackCount: 0x2a3d44ff
+      - sceKernelReleaseWaitThread: 0x2c34e053
+      - sceKernelPollEventFlag: 0x30fd48f0
+      - _sceKernelLockLwMutexCB: 0x31327f19
+      - sceKernelWaitEventFlagCB: 0x328c546a
+      - sceKernelDeleteVTimer: 0x328f9e52
+      - sceKernelDeleteTlspl: 0x32bf938e
+      - sceKernelReferMsgPipeStatus: 0x33be4024
+      - sceKernelCancelMsgPipe: 0x349b864d
+      - sceKernelCheckCallback: 0x349d6d6c
+      - sceKernelGetSystemTimeLow: 0x369ed59d
+      - sceKernelReferThreadEventHandlerStatus: 0x369eeb6b
+      - sceKernelTerminateDeleteThread: 0x383f7bcc
+      - sceKernelReferVplStatus: 0x39810265
+      - sceKernelSuspendDispatchThread: 0x3ad58b8c
+      - sceKernelGetThreadExitStatus: 0x3b183e26
+      - sceKernelSignalSema: 0x3f53e640
+      - sceKernelWaitEventFlag: 0x402fcf22
+      - sceKernelCreateThread: 0x446d8de6
+      - sceKernelFreeTlspl: 0x4a719fb2
+      - sceKernelReferLwMutexStatusByID: 0x4c145944
+      - sceKernelWaitSema: 0x4e3a1105
+      - sceKernelGetThreadStackFreeSize: 0x52089ca1
+      - _sceKernelExitThread: 0x532a522e
+      - sceKernelSetVTimerHandlerWide: 0x53b00e9a
+      - sceKernelSetVTimerTime: 0x542ad630
+      - sceKernelCreateEventFlag: 0x55c20a00
+      - sceKernelCreateVpl: 0x56c039b5
+      - sceKernelGetThreadmanIdType: 0x57cf62dd
+      - sceKernelPollSema: 0x58b1f937
+      - sceKernelLockMutexCB: 0x5bf4dd27
+      - sceKernelReferVTimerStatus: 0x5f32beaa
+      - sceKernelDeleteLwMutex: 0x60107536
+      - sceKernelTerminateThread: 0x616403ba
+      - sceKernelTryAllocateFpl: 0x623ae665
+      - sceKernelReferSystemStatus: 0x627e6f3a
+      - sceKernelReferThreadProfiler: 0x64d4540e
+      - _sceKernelAllocateTlspl: 0x65f54ffb
+      - sceKernelSetAlarm: 0x6652b8ca
+      - sceKernelDelayThreadCB: 0x68da9e36
+      - sceKernelUnlockMutex: 0x6b30100f
+      - sceKernelWaitSemaCB: 0x6d212bac
+      - _sceKernelReturnFromCallback: 0x6e9ea350
+      - _sceKernelTryLockLwMutex: 0x71040d5c
+      - sceKernelChangeThreadPriority: 0x71bc9871
+      - sceKernelReferTlsplStatus: 0x721067f3
+      - sceKernelReleaseThreadEventHandler: 0x72f3c145
+      - sceKernelReferCallbackStatus: 0x730ed8bc
+      - sceKernelReceiveMsgPipe: 0x74829b76
+      - sceKernelResumeThread: 0x75156e8f
+      - sceKernelCreateMsgPipe: 0x7c0dc2a0
+      - sceKernelSendMsgPipeCB: 0x7c41f2c2
+      - _sceKernelLockLwMutex: 0x7cff8cf3
+      - sceKernelCancelAlarm: 0x7e65b999
+      - sceKernelExitDeleteThread: 0x809ce29b
+      - sceKernelClearEventFlag: 0x812346e4
+      - sceKernelCreateMbx: 0x8125221d
+      - sceKernelReferGlobalProfiler: 0x8218b4dd
+      - sceKernelSleepThreadCB: 0x82826f70
+      - sceKernelGetSystemTimeWide: 0x82bc5777
+      - sceKernelWaitThreadEndCB: 0x840e8133
+      - sceKernelDeleteMbx: 0x86255ada
+      - ThreadManForUser_8672E3D0: 0x8672e3d0
+      - sceKernelSendMsgPipe: 0x876dbfad
+      - sceKernelCancelReceiveMbx: 0x87d4dd36
+      - sceKernelCancelMutex: 0x87d9223c
+      - sceKernelTrySendMsgPipe: 0x884c9f90
+      - sceKernelDeleteVpl: 0x89b3d48c
+      - sceKernelCreateTlspl: 0x8daff657
+      - sceKernelCancelSema: 0x8ffdf9a2
+      - sceKernelRotateThreadReadyQueue: 0x912354a7
+      - sceKernelGetThreadmanIdList: 0x94416130
+      - sceKernelGetThreadCurrentPriority: 0x94aa61ee
+      - sceKernelSuspendThread: 0x9944f31f
+      - sceKernelSleepThread: 0x9ace131e
+      - sceKernelDeleteThread: 0x9fa03cd3
+      - _sceKernelReturnFromChangeStack: 0xa1f78052
+      - sceKernelReferEventFlagStatus: 0xa66b0120
+      - sceKernelCancelFpl: 0xa8aa591f
+      - sceKernelReferMbxStatus: 0xa8e8c846
+      - sceKernelReferMutexStatus: 0xa9c2cb9a
+      - sceKernelExitThread: 0xaa73c935
+      - sceKernelTryAllocateVpl: 0xaf36d708
+      - sceKernelLockMutex: 0xb011b11f
+      - sceKernelSetSysClockAlarm: 0xb2c25152
+      - sceKernelGetVTimerBase: 0xb3a59970
+      - sceKernelFreeVpl: 0xb736e9ff
+      - sceKernelGetVTimerBaseWide: 0xb7c18b77
+      - sceKernelCreateMutex: 0xb7d098c6
+      - sceKernelCancelCallback: 0xba4051d6
+      - sceKernelSysClock2USec: 0xba6b92e2
+      - sceKernelReferSemaStatus: 0xbc6febc5
+      - sceKernelExtendThreadStack: 0xbc80ec7c
+      - sceKernelDelaySysClockThread: 0xbd123d9e
+      - sceKernelAllocateVpl: 0xbed27435
+      - _sceKernelUnlockLwMutex: 0xbeed3a47
+      - sceKernelCreateFpl: 0xc07bb470
+      - sceKernelGetVTimerTimeWide: 0xc0b3ffd2
+      - sceKernelNotifyCallback: 0xc11ba8c4
+      - sceKernelStartVTimer: 0xc68d9437
+      - sceKernelUSec2SysClockWide: 0xc8cd158c
+      - sceKernelCancelEventFlag: 0xcd203292
+      - sceKernelDelayThread: 0xceadeb47
+      - sceKernelStopVTimer: 0xd0aeee87
+      - _sceKernelCheckThreadStack: 0xd13bde95
+      - sceKernelCancelVTimerHandler: 0xd2d615ef
+      - sceKernelWakeupThread: 0xd59ead2f
+      - sceKernelCreateSema: 0xd6da4ba1
+      - sceKernelReferFplStatus: 0xd8199e4c
+      - sceKernelSetVTimerHandler: 0xd8b299ae
+      - sceKernelAllocateFpl: 0xd979e9bf
+      - sceKernelReferAlarmStatus: 0xdaa3f564
+      - sceKernelGetSystemTime: 0xdb738f35
+      - sceKernelTryReceiveMsgPipe: 0xdf52098f
+      - sceKernelSysClock2USecWide: 0xe1619d7c
+      - sceKernelAllocateFplCB: 0xe7282cb6
+      - sceKernelCreateCallback: 0xe81caf8f
+      - sceKernelSendMbx: 0xe9b3061e
+      - sceKernelChangeCurrentThreadAttr: 0xea748e31
+      - sceKernelAllocateVplCB: 0xec0a693f
+      - sceKernelDeleteFpl: 0xed1410e0
+      - sceKernelDeleteCallback: 0xedba5844
+      - sceKernelDeleteEventFlag: 0xef9e4c70
+      - sceKernelDeleteMsgPipe: 0xf0b7da1c
+      - sceKernelReceiveMbxCB: 0xf3986382
+      - sceKernelStartThread: 0xf475845d
+      - sceKernelFreeFpl: 0xf6414a71
+      - sceKernelDeleteMutex: 0xf8170fbe
+      - sceKernelSetVTimerTimeWide: 0xfb6425c3
+      - sceKernelReceiveMsgPipeCB: 0xfbfa697d
+      - sceKernelCancelWakeupThread: 0xfccfad26
+      - sceKernelReferThreadRunStatus: 0xffc36a14
+  - name: ThreadManForKernel
+    version: [0, 17]
+    attributes: 0x0001
+    len: 5
+    pad: 1
+    extra_words: [0x00040000]
+    bucket_words: [0x00010000, 0x00020002, 0x00070005, 0x000a0008, 0x000d000c, 0x0012000f, 0x00180014, 0x0021001c, 0x00230022, 0x00240024, 0x00290027, 0x002f002d, 0x00330030, 0x00360034, 0x003b0037, 0x003d003d, 0x00460040, 0x004f004d, 0x00520051, 0x00560054, 0x00580057, 0x005d0059, 0x0061005e, 0x00670065, 0x006e006b, 0x0071006f, 0x00780073, 0x0080007a, 0x00820081, 0x00860083, 0x008c008a, 0x0092008f]
+    functions:
+      - sceKernelGetVTimerTime: 0x034a921f
+      - sceKernelAllocateKTLS: 0x04e72261
+      - sceKernelRegisterThreadEventHandler: 0x0c106e53
+      - sceKernelPollMbx: 0x0d81716a
+      - sceKernelTryLockMutex: 0x0ddcd2c9
+      - sceKernelUSec2SysClock: 0x110dec9a
+      - sceKernelDelaySysClockThreadCB: 0x1181e963
+      - sceKernelReferThreadStatus: 0x17c1684e
+      - sceKernelReceiveMbx: 0x18260574
+      - sceKernelDonateWakeupThread: 0x1af94d03
+      - sceKernelCancelVpl: 0x1d371b8a
+      - sceKernelSetEventFlag: 0x1fb15a32
+      - sceKernelCreateVTimer: 0x20fff560
+      - sceKernelWaitThreadEnd: 0x278c0df5
+      - sceKernelResumeDispatchThread: 0x27e22ec2
+      - sceKernelDeleteSema: 0x28b6489c
+      - sceKernelGetThreadId: 0x293b45b8
+      - sceKernelGetCallbackCount: 0x2a3d44ff
+      - sceKernelReleaseWaitThread: 0x2c34e053
+      - sceKernelReferThreadDebugStatus: 0x2d69d086
+      - sceKernelPollEventFlag: 0x30fd48f0
+      - sceKernelWaitEventFlagCB: 0x328c546a
+      - sceKernelDeleteVTimer: 0x328f9e52
+      - sceKernelReferMsgPipeStatus: 0x33be4024
+      - sceKernelCancelMsgPipe: 0x349b864d
+      - sceKernelCheckCallback: 0x349d6d6c
+      - sceKernelGetSystemTimeLow: 0x369ed59d
+      - sceKernelReferThreadEventHandlerStatus: 0x369eeb6b
+      - sceKernelTerminateDeleteThread: 0x383f7bcc
+      - sceKernelReferVplStatus: 0x39810265
+      - sceKernelSuspendDispatchThread: 0x3ad58b8c
+      - sceKernelGetThreadKTLS: 0x3ad875c3
+      - sceKernelGetThreadExitStatus: 0x3b183e26
+      - sceKernelSignalSema: 0x3f53e640
+      - sceKernelWaitEventFlag: 0x402fcf22
+      - sceKernelCreateThread: 0x446d8de6
+      - sceKernelReferLwMutexStatusByID: 0x4c145944
+      - sceKernelWaitSema: 0x4e3a1105
+      - sceKernelCheckThreadKernelStack: 0x4fe44d5e
+      - sceKernelGetThreadStackFreeSize: 0x52089ca1
+      - sceKernelSetVTimerHandlerWide: 0x53b00e9a
+      - sceKernelSetVTimerTime: 0x542ad630
+      - sceKernelCreateEventFlag: 0x55c20a00
+      - sceKernelCreateVpl: 0x56c039b5
+      - sceKernelGetThreadmanIdType: 0x57cf62dd
+      - sceKernelPollSema: 0x58b1f937
+      - sceKernelLockMutexCB: 0x5bf4dd27
+      - sceKernelReferVTimerStatus: 0x5f32beaa
+      - sceKernelTerminateThread: 0x616403ba
+      - sceKernelTryAllocateFpl: 0x623ae665
+      - sceKernelReferSystemStatus: 0x627e6f3a
+      - sceKernelSetAlarm: 0x6652b8ca
+      - sceKernelDelayThreadCB: 0x68da9e36
+      - sceKernelUnlockMutex: 0x6b30100f
+      - sceKernelWaitSemaCB: 0x6d212bac
+      - sceKernelChangeThreadPriority: 0x71bc9871
+      - sceKernelReferTlsplStatus: 0x721067f3
+      - sceKernelReleaseThreadEventHandler: 0x72f3c145
+      - sceKernelReferCallbackStatus: 0x730ed8bc
+      - sceKernelReceiveMsgPipe: 0x74829b76
+      - sceKernelResumeThread: 0x75156e8f
+      - sceKernelCreateMsgPipe: 0x7c0dc2a0
+      - sceKernelSendMsgPipeCB: 0x7c41f2c2
+      - sceKernelCancelAlarm: 0x7e65b999
+      - sceKernelExitDeleteThread: 0x809ce29b
+      - sceKernelRegisterDeadThreadHandler: 0x80ca77ba
+      - sceKernelClearEventFlag: 0x812346e4
+      - sceKernelCreateMbx: 0x8125221d
+      - sceKernelSleepThreadCB: 0x82826f70
+      - sceKernelGetSystemTimeWide: 0x82bc5777
+      - sceKernelWaitThreadEndCB: 0x840e8133
+      - sceKernelIsUserModeThread: 0x85a2a5bf
+      - sceKernelDeleteMbx: 0x86255ada
+      - ThreadManForUser_8672E3D0: 0x8672e3d0
+      - sceKernelSendMsgPipe: 0x876dbfad
+      - sceKernelCancelReceiveMbx: 0x87d4dd36
+      - sceKernelCancelMutex: 0x87d9223c
+      - sceKernelTrySendMsgPipe: 0x884c9f90
+      - sceKernelDeleteVpl: 0x89b3d48c
+      - sceKernelSuspendAllUserThreads: 0x8fd9f70c
+      - sceKernelCancelSema: 0x8ffdf9a2
+      - sceKernelRotateThreadReadyQueue: 0x912354a7
+      - sceKernelGetThreadmanIdList: 0x94416130
+      - sceKernelGetThreadCurrentPriority: 0x94aa61ee
+      - sceKernelSuspendThread: 0x9944f31f
+      - sceKernelSleepThread: 0x9ace131e
+      - sceKernelDeleteThread: 0x9fa03cd3
+      - sceKernelGetKTLS: 0xa249eaae
+      - sceKernelReferEventFlagStatus: 0xa66b0120
+      - sceKernelCancelFpl: 0xa8aa591f
+      - sceKernelReferMbxStatus: 0xa8e8c846
+      - sceKernelReferMutexStatus: 0xa9c2cb9a
+      - sceKernelExitThread: 0xaa73c935
+      - sceKernelTryAllocateVpl: 0xaf36d708
+      - sceKernelLockMutex: 0xb011b11f
+      - sceKernelSetSysClockAlarm: 0xb2c25152
+      - sceKernelGetVTimerBase: 0xb3a59970
+      - sceKernelSetThreadmanLogHandler: 0xb50f4e46
+      - sceKernelFreeVpl: 0xb736e9ff
+      - sceKernelGetVTimerBaseWide: 0xb7c18b77
+      - sceKernelCreateMutex: 0xb7d098c6
+      - sceKernelCancelCallback: 0xba4051d6
+      - sceKernelSysClock2USec: 0xba6b92e2
+      - sceKernelExtendKernelStack: 0xbc31c1b9
+      - sceKernelReferSemaStatus: 0xbc6febc5
+      - sceKernelDelaySysClockThread: 0xbd123d9e
+      - sceKernelAllocateVpl: 0xbed27435
+      - sceKernelCreateFpl: 0xc07bb470
+      - sceKernelGetVTimerTimeWide: 0xc0b3ffd2
+      - sceKernelNotifyCallback: 0xc11ba8c4
+      - sceKernelStartVTimer: 0xc68d9437
+      - sceKernelUSec2SysClockWide: 0xc8cd158c
+      - sceKernelGetThreadmanIdOwner: 0xc9bbe9a2
+      - sceKernelCancelEventFlag: 0xcd203292
+      - sceKernelDelayThread: 0xceadeb47
+      - sceKernelStopVTimer: 0xd0aeee87
+      - _sceKernelCheckThreadStack: 0xd13bde95
+      - sceKernelFreeKTLS: 0xd198b811
+      - sceKernelCancelVTimerHandler: 0xd2d615ef
+      - ThreadManForKernel_D366D35A: 0xd366d35a
+      - sceKernelWakeupThread: 0xd59ead2f
+      - sceKernelCreateSema: 0xd6da4ba1
+      - sceKernelReferFplStatus: 0xd8199e4c
+      - sceKernelGetThreadKernelStackFreeSize: 0xd890b370
+      - sceKernelSetVTimerHandler: 0xd8b299ae
+      - sceKernelAllocateFpl: 0xd979e9bf
+      - sceKernelReferAlarmStatus: 0xdaa3f564
+      - sceKernelGetSystemTime: 0xdb738f35
+      - sceKernelTryReceiveMsgPipe: 0xdf52098f
+      - sceKernelSysClock2USecWide: 0xe1619d7c
+      - sceKernelAllocateFplCB: 0xe7282cb6
+      - sceKernelCreateCallback: 0xe81caf8f
+      - sceKernelSendMbx: 0xe9b3061e
+      - sceKernelChangeCurrentThreadAttr: 0xea748e31
+      - sceKernelAllocateVplCB: 0xec0a693f
+      - sceKernelDeleteFpl: 0xed1410e0
+      - sceKernelDeleteCallback: 0xedba5844
+      - sceKernelDeleteEventFlag: 0xef9e4c70
+      - sceKernelDeleteMsgPipe: 0xf0b7da1c
+      - sceKernelReceiveMbxCB: 0xf3986382
+      - sceKernelStartThread: 0xf475845d
+      - sceKernelFreeFpl: 0xf6414a71
+      - sceKernelGetUserLevel: 0xf6427665
+      - sceKernelDeleteMutex: 0xf8170fbe
+      - sceKernelSetVTimerTimeWide: 0xfb6425c3
+      - sceKernelReceiveMsgPipeCB: 0xfbfa697d
+      - sceKernelGetSystemStatusFlag: 0xfcb5eb49
+      - sceKernelCancelWakeupThread: 0xfccfad26
+      - sceKernelReferThreadRunStatus: 0xffc36a14
+    variables:
+      - ThreadManForKernel_921B7ACD: 0x921b7acd
+imports:
+  - name: InterruptManagerForKernel
+    version: [0, 17]
+    attributes: 0x0009
+    len: 6
+    pad: 6
+    functions:
+      - sceKernelCpuEnableIntr: 0x02314986
+      - sceKernelCpuSuspendIntr: 0x092968f4
+      - sceKernelCpuResumeIntrWithSync: 0x3b84732d
+      - sceKernelEnableIntr: 0x4d6e7305
+      - InterruptManagerForKernel_551097F2: 0x551097f2
+      - sceKernelSetPrimarySyscallHandler: 0x55d18836
+      - sceKernelRegisterIntrHandler: 0x58dd8978
+      - sceKernelCpuResumeIntr: 0x5f10d406
+      - SaveThreadContext: 0x6042aee0
+      - sceKernelCallUserIntrHandler: 0xaf799f96
+      - sceKernelSetIntrLevel: 0xb941600e
+      - sceKernelGetUserIntrStack: 0xcd36eb65
+      - sceKernelDisableIntr: 0xd774ba45
+      - InterruptManagerForKernel_E790EAED: 0xe790eaed
+      - sceKernelQuerySystemCall: 0xf153b371
+      - sceKernelReleaseIntrHandler: 0xf987b1f0
+    variables:
+      - intInfo: 0x201a1a19
+  - name: ExceptionManagerForKernel
+    version: [0, 17]
+    attributes: 0x0001
+    len: 6
+    pad: 6
+    functions:
+      - sceKernelReleaseExceptionHandler: 0x54b0cad2
+      - ExceptionManagerForKernel_96D47F7E: 0x96d47f7e
+      - sceKernelRegisterExceptionHandler: 0xfbc2353a
+    variables:
+      - ExcepManCB: 0x6437d22a
+  - name: SysMemForKernel
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 4
+    functions:
+      - sceKernelHeapTotalFreeSize: 0x01810023
+      - sceKernelCreateUIDtype: 0x034129fb
+      - sceKernelCreateUID: 0x0a34c078
+      - sceKernelMemset32: 0x22a114dc
+      - sceKernelCallUIDObjCommonFunction: 0x235c2646
+      - sceKernelAllocHeapMemory: 0x23d81675
+      - sceKernelDeleteUID: 0x361f0f88
+      - sceKernelGetUIDcontrolBlockWithType: 0x44bdf332
+      - sceKernelGetInitialRandomValue: 0x4a325aa0
+      - sceKernelCreateHeap: 0x58148f07
+      - sceKernelAllocPartitionMemory: 0x7158ce7e
+      - sceKernelCallUIDObjFunction: 0x7d50ce82
+      - sceKernelFreeHeapMemory: 0x87c2ab85
+      - sceKernelGetCompiledSdkVersion: 0xb4f00cb5
+      - sceKernelFreePartitionMemory: 0xc1a26c6f
+      - sceKernelQueryMemoryPartitionInfo: 0xc4eeaf20
+      - sceKernelGetUIDcontrolBlock: 0xc90b0992
+      - sceKernelCreateUIDtypeInherit: 0xd222daa7
+      - sceKernelDeleteHeap: 0xdd6512d0
+      - sceKernelQueryMemoryBlockInfo: 0xe860be8f
+      - sceKernelGetBlockHeadAddr: 0xf12a62f7
+      - sceKernelAllocHeapMemoryWithOption: 0xf2284ecc
+      - sceKernelQueryMemoryInfo: 0xfaf29f34
+      - sceKernelIsKindOf: 0xffc63884
+  - name: KDebugForKernel
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 4
+    functions:
+      - Kprintf: 0x84f370bc
+      - sceKernelDipsw: 0x86010fcb
+      - sceKernelIsDevelopmentToolMode: 0xacf427dc
+  - name: sceSuspendForKernel
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 4
+    functions:
+      - sceKernelRegisterSuspendHandler: 0x91a77137
+      - sceKernelRegisterResumeHandler: 0xb43d1a8c
+  - name: SysclibForKernel
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 7
+    functions:
+      - memset: 0x10f3bb61
+      - memcpy: 0xab7592ff
+      - strncpy: 0xb49a7697
+      - snprintf: 0xc2145e80
+  - name: LoadCoreForKernel
+    version: [0, 17]
+    attributes: 0x0001
+    pad: 2
+    functions:
+      - sceKernelGetModuleGPByAddressForKernel: 0x410084f9
+      - sceKernelSetBootCallbackLevel: 0xf976ef41
