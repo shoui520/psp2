@@ -10,7 +10,6 @@
     .global sceKernelCpuSuspendIntr
     .global sceKernelCpuResumeIntr
     .global sceKernelCpuResumeIntrWithSync
-    .global sceKernelIsCpuIntrSuspended
     .global sceKernelIsCpuIntrEnable
 
 ##
@@ -73,16 +72,6 @@ sceKernelCpuResumeIntrWithSync:
     .end sceKernelCpuResumeIntrWithSync
 
 ##
-# Kernel_Library_47A0B729
-##
-
-    .ent sceKernelIsCpuIntrSuspended
-sceKernelIsCpuIntrSuspended:
-    jr          $ra
-    sltiu       $v0, $a0, 1
-    .end sceKernelIsCpuIntrSuspended
-
-##
 # Kernel_Library_B55249D2
 ##
 
@@ -90,13 +79,5 @@ sceKernelIsCpuIntrSuspended:
 sceKernelIsCpuIntrEnable:
     mfic        $v0, $0
     jr          $ra
-    nop
-    nop
-    nop
-    nop
-    nop
-    nop
-    nop
-    nop
     nop
     .end sceKernelIsCpuIntrEnable

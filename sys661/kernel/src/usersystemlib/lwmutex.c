@@ -35,7 +35,7 @@ s32 sceKernelTryLockLwMutex_600(SceLwMutex *mutex, s32 count)
         return SCE_ERROR_KERNEL_LWMUTEX_NOT_FOUND;
     }
 
-    if (mutex->thid == g_thread->id) { // loc_00000340
+    if (mutex->thid == g_thread->id) {
         if (!(mutex->flags & SCE_KERNEL_LWMUTEX_RECURSIVE)) {
             // 0x800201CF
             return SCE_ERROR_KERNEL_LWMUTEX_RECURSIVE_NOT_ALLOWED;
@@ -83,7 +83,7 @@ s32 sceKernelLockLwMutexCB(SceLwMutex *mutex, s32 count)
         return SCE_ERROR_KERNEL_CANNOT_BE_CALLED_FROM_INTERRUPT;
     }
 
-    if (!sceKernelIsCpuIntrEnable() || g_thread->dispatchDisabled != 0) {
+    if (pspMfic() == 0 || g_thread->dispatchDisabled != 0) {
         // 0x800201A7
         return SCE_ERROR_KERNEL_WAIT_CAN_NOT_WAIT;
     }
@@ -109,7 +109,7 @@ s32 sceKernelLockLwMutex(SceLwMutex *mutex, s32 count)
         return SCE_ERROR_KERNEL_CANNOT_BE_CALLED_FROM_INTERRUPT;
     }
 
-    if (!sceKernelIsCpuIntrEnable() || g_thread->dispatchDisabled != 0) {
+    if (pspMfic() == 0 || g_thread->dispatchDisabled != 0) {
         // 0x800201A7
         return SCE_ERROR_KERNEL_WAIT_CAN_NOT_WAIT;
     }
@@ -161,8 +161,6 @@ s32 sceKernelUnlockLwMutex(SceLwMutex *mutex, s32 count)
         mutex->lockCount -= count;
         return SCE_ERROR_OK;
     }
-
-    // loc_00000408
 
     if (mutex->lockCount - count < 0) {
         return SCE_ERROR_KERNEL_LWMUTEX_UNLOCK_UNDERFLOW;

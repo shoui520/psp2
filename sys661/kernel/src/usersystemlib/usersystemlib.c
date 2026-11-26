@@ -20,15 +20,16 @@ SCE_MODULE_START_THREAD_PARAMETER(3, SCE_KERNEL_MODULE_INIT_PRIORITY, 0x400, 0);
 SCE_MODULE_BOOTSTART("_UsersystemLibInit");
 SCE_SDK_VERSION(SDK_VERSION);
 
+static s32 g_stackSize = STACK_SIZE;
 SceGeLazy g_lazy = {
-    .dlId = -1, // b80
-    .stall = NULL, // b84
-    .count = 0, // b88
-    .max = 100 // b8c
+    .dlId = -1,
+    .stall = NULL,
+    .count = 0,
+    .max = 100
 };
-static u8 g_stack[STACK_SIZE]; // bc0
-SceThread *g_thread; // 2bc0
-static s32 g_cmdList[CMD_LIST_SIZE]; // 2c00
+static u8 g_stack[STACK_SIZE];
+SceThread *g_thread;
+static s32 g_cmdList[CMD_LIST_SIZE];
 
 // module_start
 s32 _UsersystemLibInit(SceSize argSize __attribute__((unused)), const void *argBlock __attribute__((unused)))
@@ -36,7 +37,7 @@ s32 _UsersystemLibInit(SceSize argSize __attribute__((unused)), const void *argB
     // InterruptManager_EEE43F47
     sceKernelRegisterUserSpaceIntrStack(
         (s32)g_stack, // 0xBC0
-        STACK_SIZE, // 0x2000
+        g_stackSize, // 0x2000
         (s32)&g_thread // 0x2BC0
     );
 

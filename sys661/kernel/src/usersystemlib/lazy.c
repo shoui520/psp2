@@ -5,7 +5,7 @@
 #include "usersystemlib_int.h"
 
 /*
- * Note: ge.prx patches the syscall instruction at (void *)sceGe_lazy_31129B95 + 204 (0xCC)
+ * Note: ge.prx patches the syscall instruction at offset 0xCC from sceGe_lazy_31129B95
  * at runtime to invoke sceGeListUpdateStallAddr, so sceGe_lazy_31129B95 must be exact
  * 200 bytes (50 instructions) followed immediately by sceGeListUpdateStallAddrSyscall (jr $ra; syscall 0).
  */
@@ -30,7 +30,7 @@ __asm__(
     "    beqz    $v1, 1f\n"
     "    nop\n"
     "    jr      $ra\n"
-    "    move    $v0, $zero\n"
+    "    addu    $v0, $zero, $zero\n"
     "1:\n"
     "    addiu   $sp, $sp, -0x10\n"
     "    sw      $a0, 0($sp)\n"
@@ -45,9 +45,9 @@ __asm__(
     "    sc      $v1, %lo(g_lazy)($at)\n"
     "    beqz    $v1, 2b\n"
     "    nop\n"
-    "    move    $a0, $a2\n"
+    "    addu    $a0, $a2, $zero\n"
     "    jal     sceGeListUpdateStallAddrSyscall\n"
-    "    move    $a1, $a3\n"
+    "    addu    $a1, $a3, $zero\n"
     "    lw      $a0, 0($sp)\n"
     "    lw      $a1, 4($sp)\n"
     "3:\n"
@@ -60,7 +60,7 @@ __asm__(
     "4:\n"
     "    ll      $v1, %lo(g_lazy)($at)\n"
     "    bgez    $v1, 5f\n"
-    "    move    $v1, $a0\n"
+    "    addu    $v1, $a0, $zero\n"
     "    sc      $v1, %lo(g_lazy)($at)\n"
     "    beqz    $v1, 4b\n"
     "    nop\n"
@@ -71,8 +71,12 @@ __asm__(
     "    lw      $ra, 8($sp)\n"
     "    jr      $ra\n"
     "    addiu   $sp, $sp, 0x10\n"
+    ".size sceGe_lazy_31129B95, . - sceGe_lazy_31129B95\n"
+    ".globl sceGeListUpdateStallAddrSyscall\n"
+    ".type sceGeListUpdateStallAddrSyscall, @function\n"
     "sceGeListUpdateStallAddrSyscall:\n"
     "    jr      $ra\n"
     "    syscall 0x0\n"
+    ".size sceGeListUpdateStallAddrSyscall, . - sceGeListUpdateStallAddrSyscall\n"
     ".set pop\n"
 );
