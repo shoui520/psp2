@@ -34,7 +34,28 @@ int SwMwCoreImportKeyBin(const void *data, int size);
 int _sceDtcpIpDownload(unsigned short port, void *buffer, int *size);
 int _sceDtcpIpActivate(int *result);
 int SwMwManagerParamTblThread(void *argument);
+
+/* the session helpers the manager's ensure path calls (the SWS core and records) */
+int SwMwManagerCheckParamTblDownloaded(int mode);
+int SwMwManagerInit(struct SwMwManager *manager, int mode);
+int SwMwManagerMarkStarted(int *started);
+int SwMwManagerStopStarted(int started);
+int SwMwManagerOpenRecordA(int *record);
+int SwMwManagerOpenRecordB(int *record);
+int SwMwManagerOpenRecordC(int *record);
+int SwMwManagerOpenRecordD(int *record);
+int SwMwManagerCloseRecordA(int record);
+int SwMwManagerCloseRecordB(int record);
+int SwMwManagerCloseRecordC(int record);
+int SwMwManagerCloseRecordD(int record);
+int SwMwManagerClearSlots(void *slots);
+int SwMwManagerCloseKeyBin(int keyBin);
+struct SwMwManager *SwMwManagerFree(struct SwMwManager *manager);
 }
+
+/* the manager the ensure path keeps for the process (0x8109e0e0) */
+static struct SwMwManager *g_swMwManager;
+
 
 extern "C" int SwMwManagerThreadCreate(struct SwMwManagerThread *thread, int (*entry)(void *),
 				void *argument, int type)
@@ -401,4 +422,104 @@ extern "C" int SwMwManagerDownloadParamTbl(void)
 	if (failed != 0)
 		return status;
 	return 0;
+}
+
+/* ensure the manager's session: the parameter table, the manager init, the session start,
+ * then the key bin, the started flag and the four records (0x810032d2) */
+extern "C" int SwMwManagerEnsureSession(struct SwMwManager *manager, int mode)
+{
+	int status;
+	int failed;
+
+	if (g_swMwManager == NULL) {
+		status = SwMwManagerCheckParamTblDownloaded(mode);
+		if (status == 0)
+			status = SwMwManagerInit(manager, 0);
+		if (status != 0)
+			return status;
+		g_swMwManager = manager;
+	}
+	status = SwMwManagerSessionStart(&manager->slots, (int)manager);
+	failed = 0;
+	if (status != 0) {
+		swMwTrace("[SWMW] Error %d in %s:%d\n", status, SWMW_MANAGER_SOURCE, 1257);
+		failed = 1;
+	}
+	if (failed == 0) {
+		status = SwMwManagerMarkStarted(&manager->started);
+		failed = 0;
+		if (status != 0) {
+			swMwTrace("[SWMW] Error %d in %s:%d\n", status, SWMW_MANAGER_SOURCE, 1276);
+			failed = 1;
+		}
+		if (failed == 0) {
+			status = SwMwManagerOpenRecordA(&manager->recordA);
+			if (status == 12005)
+				goto recordB;
+			failed = 0;
+			if (status != 0) {
+				swMwTrace("[SWMW] Error %d in %s:%d\n", status,
+					  SWMW_MANAGER_SOURCE, 1281);
+				failed = 1;
+			}
+			if (failed != 0)
+				goto teardown;
+recordB:
+			status = SwMwManagerOpenRecordB(&manager->recordB);
+			if (status == 12005)
+				goto recordC;
+			failed = 0;
+			if (status != 0) {
+				swMwTrace("[SWMW] Error %d in %s:%d\n", status,
+					  SWMW_MANAGER_SOURCE, 1284);
+				failed = 1;
+			}
+			if (failed != 0)
+				goto teardown;
+recordC:
+			if (manager->parameter1 == 0)
+				return 0;
+			status = SwMwManagerOpenRecordC(&manager->recordC);
+			if (status == 12005)
+				goto recordD;
+			failed = 0;
+			if (status != 0) {
+				swMwTrace("[SWMW] Error %d in %s:%d\n", status,
+					  SWMW_MANAGER_SOURCE, 1289);
+				failed = 1;
+			}
+			if (failed != 0)
+				goto teardown;
+recordD:
+			status = SwMwManagerOpenRecordD(&manager->recordD);
+			if (status == 12005)
+				return 0;
+			failed = 0;
+			if (status != 0) {
+				swMwTrace("[SWMW] Error %d in %s:%d\n", status,
+					  SWMW_MANAGER_SOURCE, 1291);
+				failed = 1;
+			}
+			if (failed == 0)
+				return 0;
+teardown:
+			SwMwManagerClearSlots(&manager->slots);
+		}
+	}
+	if (manager->object != NULL)
+		manager->object->close();
+	if (manager->keyBin != 0)
+		SwMwManagerCloseKeyBin(manager->keyBin);
+	if (manager->started != 0)
+		SwMwManagerStopStarted(manager->started);
+	if (manager->recordA != 0)
+		SwMwManagerCloseRecordA(manager->recordA);
+	if (manager->recordB != 0)
+		SwMwManagerCloseRecordB(manager->recordB);
+	if (manager->parameter1 != 0) {
+		SwMwManagerCloseRecordC(manager->recordC);
+		SwMwManagerCloseRecordD(manager->recordD);
+	}
+	operator delete(SwMwManagerFree(manager));
+	return status;
 }

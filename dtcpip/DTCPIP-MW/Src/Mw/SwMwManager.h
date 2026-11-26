@@ -7,6 +7,15 @@
 
 #include <scetypes.h>
 
+/* the session object the manager keeps in its first word: only its close slot (+0x0c) is
+ * called (the manager teardown's release) */
+struct SwMwManagerObject {
+	virtual void destroy();		/* 0x00 */
+	virtual void dispose();		/* 0x04 */
+	virtual void discard();		/* 0x08 */
+	virtual void close();		/* 0x0c */
+};
+
 /* the activation worker's state: its flag, the worker's status and the activation result */
 struct SwMwManagerActivation {
 	unsigned char state;		/* 0x00 */
@@ -41,6 +50,23 @@ struct SwMwManagerSinkSlots {
 	void *manager;		/* 0x128: the manager object */
 };
 
+/* the manager object: its first word, the device slots the session start uses, then the
+ * key bin, the started flag, the four record handles and the two parameters */
+struct SwMwManager {
+	struct SwMwManagerObject *object;	/* 0x000 */
+	struct SwMwManagerSinkSlots slots;	/* 0x004 */
+	int keyBin;				/* 0x130 */
+	int started;				/* 0x134 */
+	int recordA;				/* 0x138 */
+	int recordB;				/* 0x13C */
+	int recordC;				/* 0x140 */
+	int recordD;				/* 0x144 */
+	int padding[2];				/* 0x148 */
+	int parameter0;				/* 0x150 */
+	int parameter1;				/* 0x154 */
+};
+
+
 /* the SWS content support singleton's interface the start builds (0x81013790's class) */
 struct SwMwContentSupport {
 	virtual void destroy();				/* 0x00 */
@@ -60,6 +86,7 @@ int SwMwManagerGetActivationResult(int *result);
 int SwMwManagerActivationThread(void *argument);
 int SwMwManagerParamTblThread(void *argument);
 int SwMwManagerDownloadParamTbl(void);
+int SwMwManagerEnsureSession(struct SwMwManager *manager, int mode);
 int SwMwManagerThreadCreate(struct SwMwManagerThread *thread, int (*entry)(void *),
 			    void *argument, int type);
 int SwMwManagerSessionStart(struct SwMwManagerSinkSlots *slots, int mode);
