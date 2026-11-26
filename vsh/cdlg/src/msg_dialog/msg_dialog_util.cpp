@@ -119,6 +119,7 @@ static MsgDialogNumberFormat s_numberFormats[] = {
 
 const wchar_t *(*g_msgDialogFormatLetter)(wchar_t letter);
 
+#ifndef MSG_DIALOG_UTIL_2014
 /* checks the caller's SDK version against the system's, and keeps its level */
 int MsgDialogCheckSdkVersion(SceUInt32 sdkVersion)
 {
@@ -149,6 +150,7 @@ int MsgDialogCheckSdkVersion(SceUInt32 sdkVersion)
 	s_sdkLevel = level;
 	return SCE_OK;
 }
+#endif
 
 int MsgDialogGetSdkLevel(void)
 {

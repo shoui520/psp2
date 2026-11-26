@@ -571,6 +571,13 @@ int32_t ScePafGraphics_D811125C(Surface *surface, int32_t page, const void *src,
 	return 0;
 }
 
+#ifdef PAF_BUILD_2014
+extern "C" {
+int sceGxmTextureSetUAddrModeSafe(SceGxmTexture *texture, SceGxmTextureAddrMode mode);
+int sceGxmTextureSetVAddrModeSafe(SceGxmTexture *texture, SceGxmTextureAddrMode mode);
+}
+#endif
+
 namespace paf {
 namespace graph {
 
@@ -613,10 +620,17 @@ int32_t Surface::ActivateTexture(uint32_t map_type, float offset_u, float offset
 				sceGxmTextureSetMipFilter(
 					tex->texture,
 					(SceGxmTextureMipFilter)m_texture_param.mip_filter);
+#ifdef PAF_BUILD_2014
+				sceGxmTextureSetUAddrModeSafe(
+					tex->texture, (SceGxmTextureAddrMode)m_texture_param.wrap_s);
+				sceGxmTextureSetVAddrModeSafe(
+					tex->texture, (SceGxmTextureAddrMode)m_texture_param.wrap_t);
+#else
 				sceGxmTextureSetUAddrMode(
 					tex->texture, (SceGxmTextureAddrMode)m_texture_param.wrap_s);
 				sceGxmTextureSetVAddrMode(
 					tex->texture, (SceGxmTextureAddrMode)m_texture_param.wrap_t);
+#endif
 			}
 			m_texture_param_changed = false;
 			sceGxmTextureSetLodBias(tex->texture, m_texture_param.lod_bias);

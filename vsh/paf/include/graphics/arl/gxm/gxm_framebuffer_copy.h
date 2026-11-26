@@ -80,22 +80,36 @@ inline __attribute__((noinline)) TextureSource::TextureSource(const common::Shar
 }
 
 /* binds the texture to the unit for the program's kind, vertex or fragment */
+#ifdef PAF_BUILD_2014
+extern "C" SceGxmErrorCode _sceGxmSetVertexTexture(SceGxmContext *context, uint32_t textureIndex,
+						   const SceGxmTexture *texture);
+#endif
 template<>
 inline void ShaderParameter<TextureSource>::Apply()
 {
 	if (m_param != NULL) {
 		if (m_value.m_texture.get() != NULL) {
 			if (m_setup->m_program->m_type == ShaderProgram::VERTEX)
+#ifdef PAF_BUILD_2014
+				_sceGxmSetVertexTexture(m_setup->m_context, m_index,
+							m_value.m_texture->m_texture.get());
+#else
 				sceGxmSetVertexTexture(m_setup->m_context, m_index,
 						       m_value.m_texture->m_texture.get());
+#endif
 			if (m_setup->m_program->m_type == ShaderProgram::FRAGMENT)
 				sceGxmSetFragmentTexture(m_setup->m_context, m_index,
 							 m_value.m_texture->m_texture.get());
 		} else if (m_value.m_surface.get() != NULL) {
 			m_value.m_surface->Texturize();
 			if (m_setup->m_program->m_type == ShaderProgram::VERTEX)
+#ifdef PAF_BUILD_2014
+				_sceGxmSetVertexTexture(m_setup->m_context, m_index,
+							m_value.m_surface->GetRawTexture());
+#else
 				sceGxmSetVertexTexture(m_setup->m_context, m_index,
 						       m_value.m_surface->GetRawTexture());
+#endif
 			if (m_setup->m_program->m_type == ShaderProgram::FRAGMENT)
 				sceGxmSetFragmentTexture(m_setup->m_context, m_index,
 							 m_value.m_surface->GetRawTexture());

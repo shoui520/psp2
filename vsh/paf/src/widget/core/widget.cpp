@@ -1436,6 +1436,7 @@ extern "C" int32_t ScePafWidget_D3D0A7C3(Widget *widget, uint32_t port, uint32_t
 	map<uint32_t, TouchCapture *>::iterator it = widget->m_touch_captures.find(key);
 
 	if (reset_pad) {
+#ifndef PAF_BUILD_2014
 		for (int32_t i = 0; i < 5; i++) {
 			env->ReleasePadCaptureLow(i);
 			widget->m_env->ReleasePadCaptureHigh(i);
@@ -1445,6 +1446,9 @@ extern "C" int32_t ScePafWidget_D3D0A7C3(Widget *widget, uint32_t port, uint32_t
 			inputdevice::pad::Lock();
 			inputdevice::pad::Unlock();
 		}
+#else
+		(void)env;
+#endif
 	}
 	if (apply) {
 		if (it == widget->m_touch_captures.end()) {
@@ -3146,8 +3150,8 @@ next:
 	}
 	s_list_restruct.clear();
 	for (map<Scene *, int32_t>::iterator it = scenes.begin(); it != scenes.end(); ++it) {
-		it->first->UpdateLayerWeight();
 #ifndef PAF_BUILD_2014
+		it->first->UpdateLayerWeight();
 		if (it->first->m_env != NULL)
 			it->first->m_env->m_layer_weight_changed = true;
 #endif

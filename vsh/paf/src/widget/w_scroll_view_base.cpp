@@ -2089,8 +2089,13 @@ int32_t ScrollViewBase::HandleKeycodeEvent(Event *e)
 				Environment *env = m_env;
 				uint32_t port = (detail >> 20) & 0xF;
 
+#ifndef PAF_BUILD_2014
 				env->ReleasePadCaptureLow(port);
 				env->ReleasePadCaptureHigh(port);
+#else
+				(void)env;
+				(void)port;
+#endif
 				ScePafWidget_ABF05727(m_env, 0, true, NULL);
 				ScePafWidget_ABF05727(m_env, 1, true, NULL);
 				break;

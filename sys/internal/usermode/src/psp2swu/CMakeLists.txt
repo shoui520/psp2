@@ -193,7 +193,7 @@ set_source_files_properties(${swu_ft2_SOURCES} PROPERTIES
 	COMPILE_OPTIONS "-O3;-fstack-protector;-fhosted;-fbuiltin;-fdelete-null-pointer-checks;-ffunction-sections;-fdata-sections;-fsigned-char"
 	INCLUDE_DIRECTORIES "${FT2_DIR}/include;${FT2_SCE}/include;${FT2}/include;${FT2}/src;${FT2}/src/base")
 set_source_files_properties(${FT2_DIR}/libc.c PROPERTIES
-	COMPILE_DEFINITIONS "PSP2_COMPILER_GCC48;FT2_BUILD_LIBRARY"
+	COMPILE_DEFINITIONS "PSP2_COMPILER_GCC48;FT2_BUILD_LIBRARY;PAF_STATIC_BUILD"
 	COMPILE_OPTIONS "-ffreestanding;-fno-builtin;-fsigned-char")
 set_source_files_properties(${FT2_DIR}/setjmp.S PROPERTIES
 	COMPILE_DEFINITIONS PSP2_COMPILER_GCC48)
@@ -205,7 +205,7 @@ set(swu_pvf_SOURCES
 	${swu_pvf}/pvf_rasterizer.c
 )
 set_source_files_properties(${swu_pvf_SOURCES} PROPERTIES
-	COMPILE_DEFINITIONS PSP2_COMPILER_GCC48
+	COMPILE_DEFINITIONS "PSP2_COMPILER_GCC48;SCE_PVF_2014"
 	COMPILE_OPTIONS "-mfloat-abi=hard"
 	INCLUDE_DIRECTORIES "${FT2}/include")
 
@@ -261,7 +261,6 @@ psp2_module(${PSP2_TARGET} KIND user COMPILER snc PARTIAL SOURCES
 	${PAF}/src/file/localfile_platform.cpp
 	${PAF}/src/file/memfile.cpp
 	${PAF}/src/file/openurl.cpp
-	${PAF}/src/http/http.cpp
 	${PAF}/src/misc/image/image/image.cpp
 	${PAF}/src/misc/image/image/image_filter.cpp
 	${PAF}/src/misc/image/image/image_array.cpp
@@ -303,7 +302,6 @@ psp2_module(${PSP2_TARGET} KIND user COMPILER snc PARTIAL SOURCES
 	${swu_zlib_INFFAST}
 	${swu_squish_SOURCES}
 	${swu_tiff_CODECS}
-	${PAF}/src/inputdevice/hidkeyboard/hidkeyboard.cpp
 	${PAF}/src/inputdevice/inputdevice.cpp
 	${PAF}/src/file/httpfile.cpp
 	${PAF}/src/file/httpfile_reader.cpp
@@ -311,7 +309,6 @@ psp2_module(${PSP2_TARGET} KIND user COMPILER snc PARTIAL SOURCES
 	${PAF}/src/file/error.c
 	${PAF}/src/compress/compress.cpp
 	${PAF}/src/datetime/datetime.cpp
-	${PAF}/src/dir/dir.cpp
 	${PAF}/src/rtc/rtc.cpp
 	${PAF}/src/thread/callqueue.cpp
 	${PAF}/src/thread/cond.cpp
@@ -331,10 +328,8 @@ psp2_module(${PSP2_TARGET} KIND user COMPILER snc PARTIAL SOURCES
 	${PAF}/src/common/char_encoding.cpp
 	${PAF}/src/common/string_util.cpp
 	${PAF}/src/common/transition.cpp
-	${PAF}/src/inputdevice/hidrm/hidrm.cpp
 	${PAF}/src/graphics/debug/keyboard.cpp
 	${PAF}/src/graphics/debug/mouse.cpp
-	${PAF}/src/graphics/gpu_clock.cpp
 	${PAF}/src/url/uri.c
 	${PAF}/src/template_cache.cpp
 	${PAF}/src/graphics/camera_target.cpp
@@ -371,9 +366,6 @@ psp2_module(${PSP2_TARGET} KIND user COMPILER snc PARTIAL SOURCES
 	${PAF}/src/inputdevice/btrm/btrm.cpp
 	${PAF}/src/module/module.cpp
 	${PAF}/src/module/module_impl.cpp
-	${PAF}/src/system/system_param.cpp
-	${PAF}/src/system/capability.cpp
-	${PAF}/src/system/model.cpp
 	${PAF}/src/timer/timer.cpp
 	${PAF}/src/timer/timerlistener.cpp
 	${PAF}/src/timer/timerlistenerlist.cpp
@@ -451,11 +443,9 @@ psp2_module(${PSP2_TARGET} KIND user COMPILER snc PARTIAL SOURCES
 	${PAF}/src/graphics/effects/env_probe.cpp
 	${PAF}/src/graphics/effects/effect_unused.cpp
 	${PAF}/src/graphics/effects/effect_globals.cpp
-	${PAF}/src/graphics/effects/gate_blur.cpp
 	${PAF}/src/graphics/effects/wave_switch.cpp
 	${PAF}/src/graphics/drawobj/panel_obj_list.cpp
 	${PAF}/src/graphics/effects/custom_trail.cpp
-	${PAF}/src/graphics/effects/screen_copy.cpp
 	${PAF}/src/graphics/drawobj/drawobj_factory.cpp
 	${PAF}/src/widget/w_appicon2d.cpp
 	${PAF}/src/widget/w_appicon_base.cpp
@@ -465,7 +455,6 @@ psp2_module(${PSP2_TARGET} KIND user COMPILER snc PARTIAL SOURCES
 	${PAF}/src/widget/w_button.cpp
 	${PAF}/src/widget/w_button_base.cpp
 	${PAF}/src/widget/w_camera.cpp
-	${PAF}/src/widget/w_canvas.cpp
 	${PAF}/src/widget/w_state_button_base.cpp
 	${PAF}/src/widget/w_supplier.cpp
 	${PAF}/src/widget/w_text.cpp
@@ -518,7 +507,6 @@ psp2_module(${PSP2_TARGET} KIND user COMPILER snc PARTIAL SOURCES
 	${PAF}/src/graphics/effects/depth_of_field.cpp
 	${PAF}/src/graphics/effects/texture_ops.cpp
 	${PAF}/src/graphics/effects/skydome.cpp
-	${PAF}/src/widget/canvas_painter.cpp
 	${PAF}/src/widget/text_box_edit_menu.cpp
 	${PAF}/src/widget/text_auto_scroll.cpp
 	${PAF}/src/widget/text_box_ime_listener.cpp
@@ -558,7 +546,6 @@ psp2_module(${PSP2_TARGET} KIND user COMPILER snc PARTIAL SOURCES
 	${swu_dlmalloc_source}
 	${PAF}/src/std/string.c
 	${PAF}/src/std/memory.c
-	${PAF}/src/std/tty.cpp
 	${PAF}/src/std/printf.c
 	${PAF}/src/std/format.c
 	${PAF}/src/std/wprintf.c
@@ -593,7 +580,6 @@ psp2_module(${PSP2_TARGET} KIND user COMPILER snc PARTIAL SOURCES
 	${PSP2_SRC}/sys/sdk/target/src/libSceSblSsUpdateMgr_stub/update_mgr_stub.c
 	${PSP2_SRC}/sys/sdk/target/src/libSceVshBridge_stub/vshbridge_io_stub.c
 	${PSP2_SRC}/sys/sdk/target/src/libSceVshBridge_stub/vshbridge_nvs_stub.c
-	${PSP2_SRC}/sys/sdk/target/src/libSceVshBridge_stub/vshbridge_stub.c
 )
 
 # 2014 PAF GPU programs compiled from Cg
@@ -631,7 +617,9 @@ target_link_options(${PSP2_TARGET} PRIVATE
 	-Wl,--no-warn-mismatch
 	-Wl,--defsym=sceProcessParam=__sce_process_param
 	-Wl,--defsym=__stack_chk_guard=__sce_process_param
-	-Wl,--defsym=__stack_chk_fail=__cxa_pure_virtual)
+	-Wl,--defsym=__stack_chk_fail=__cxa_pure_virtual
+	-Wl,--defsym=SceFt2_04DCBE87=FT_New_Memory
+	-Wl,--defsym=sce_paf_private_exit=exit)
 
 set_source_files_properties(${PSP2_SRC}/sys/sdk/target/src/crt0/crt0_main.c PROPERTIES
 	COMPILE_DEFINITIONS SCE_CRT0_SDK_VERSION=0x00996100)
@@ -647,7 +635,7 @@ set_source_files_properties(
 	PROPERTIES COMPILE_OPTIONS -Xblxcall=1)
 
 set_source_files_properties(${PSP2_SRC}/sys/sdk/target/src/deflt/deflate.S PROPERTIES
-	COMPILE_DEFINITIONS DEFLATE_MEMCPY=sceClibMemcpy_safe)
+	COMPILE_DEFINITIONS DEFLATE_MEMCPY=sceClibMemcpy)
 set_source_files_properties(
 	${PSP2_SRC}/sys/sdk/target/src/deflt/zlibhdr.c
 	${PSP2_SRC}/sys/sdk/target/src/deflt/deflate_common.c PROPERTIES
@@ -655,7 +643,7 @@ set_source_files_properties(
 	COMPILE_OPTIONS "-Os;-funwind-tables;-ffunction-sections;-fdata-sections")
 
 set_source_files_properties(${PSP2_SRC}/sys/sdk/target/src/aes/libaes.c PROPERTIES
-	COMPILE_DEFINITIONS PSP2_COMPILER_GCC48
+	COMPILE_DEFINITIONS "PSP2_COMPILER_GCC48;SCE_AES_2014"
 	COMPILE_OPTIONS "-fno-stack-protector;-fno-toplevel-reorder;-ffunction-sections")
 set_source_files_properties(${PSP2_SRC}/sys/sdk/target/src/aes/aes.S PROPERTIES
 	COMPILE_DEFINITIONS PSP2_COMPILER_GCC48)
@@ -664,7 +652,7 @@ set_source_files_properties(${PSP2_SRC}/sys/sdk/target/src/sha256/libsha256.c PR
 	COMPILE_DEFINITIONS "PSP2_COMPILER_GCC48;SCE_PSP2_SDK_VERSION=0x03100010"
 	COMPILE_OPTIONS "-fno-stack-protector;-fno-toplevel-reorder;-ffunction-sections")
 set_source_files_properties(${PSP2_SRC}/sys/sdk/target/src/sha256/sha256.S PROPERTIES
-	COMPILE_DEFINITIONS PSP2_COMPILER_GCC48)
+	COMPILE_DEFINITIONS "PSP2_COMPILER_GCC48;SCE_PSP2_SDK_VERSION=0x03100010")
 
 set_source_files_properties(${PSP2_SRC}/sys/sdk/target/src/sha1/libsha1.c PROPERTIES
 	COMPILE_DEFINITIONS PSP2_COMPILER_GCC48
@@ -700,7 +688,7 @@ set_source_files_properties("${swu_dlmalloc_source}" PROPERTIES COMPILE_OPTIONS 
 set_source_files_properties(
 	${PAF}/src/buffer/buffer.cpp ${PAF}/src/cache/cache_base.cpp
 	${PAF}/src/cache/cache_manager.cpp ${PAF}/src/cache/cache_manager_impl.cpp
-	${PAF}/src/cache/cache_job_runner.cpp ${PAF}/src/dir/dir.cpp
+	${PAF}/src/cache/cache_job_runner.cpp
 	${PAF}/src/file/bufferedfile.cpp ${PAF}/src/job/job.cpp
 	${PAF}/src/math/matrix.cpp ${PAF}/src/math/rect.cpp
 	${PAF}/src/memory/heap_allocator.cpp ${PAF}/src/memory/range_allocator.cpp
@@ -716,9 +704,8 @@ set_source_files_properties(
 	${PAF}/src/inputdevice/gesturelistener.cpp
 	${PAF}/src/inputdevice/motionsensor/motionsensor.cpp
 	${PAF}/src/inputdevice/pad/pad.cpp ${PAF}/src/inputdevice/touchscreen/touchscreen.cpp
-	${PAF}/src/inputdevice/btrm/btrm.cpp ${PAF}/src/inputdevice/hidrm/hidrm.cpp
-	${PAF}/src/inputdevice/hidkeyboard/hidkeyboard.cpp
-	${PAF}/src/module/module.cpp ${PAF}/src/system/system_param.cpp
+	${PAF}/src/inputdevice/btrm/btrm.cpp
+	${PAF}/src/module/module.cpp
 	${PAF}/src/timer/timerlistener.cpp ${PAF}/src/timer/timerlistenerlist.cpp
 	${PAF}/src/timer/get_time.cpp ${PAF}/src/url/url.cpp ${PAF}/src/rtc/rtc.cpp
 	${PAF}/src/misc/autotest_tty.cpp ${PAF}/src/framework.cpp ${PAF}/src/plugin.cpp
@@ -746,7 +733,7 @@ set_source_files_properties(
 	${PAF}/src/graphics/surface/surface_display.cpp ${PAF}/src/graphics/surface/surface_texture.cpp
 	${PAF}/src/widget/w_box.cpp ${PAF}/src/widget/w_busyindicator.cpp
 	${PAF}/src/widget/w_button.cpp ${PAF}/src/widget/w_button_base.cpp
-	${PAF}/src/widget/w_camera.cpp ${PAF}/src/widget/w_canvas.cpp
+	${PAF}/src/widget/w_camera.cpp
 	${PAF}/src/widget/w_check_box.cpp ${PAF}/src/widget/w_composite_drawer.cpp
 	${PAF}/src/widget/w_corner_button.cpp ${PAF}/src/widget/w_dialog.cpp
 	${PAF}/src/widget/w_directbar.cpp ${PAF}/src/widget/w_file_list.cpp
@@ -780,7 +767,7 @@ set_source_files_properties(${PAF}/src/graphics/surface/surface_screen.cpp
 	${PAF}/src/graphics/effects/custom_trail.cpp
 	PROPERTIES COMPILE_OPTIONS -Xautoinlinesize=12)
 set_source_files_properties(${PAF}/src/graphics/text/text_graphics.cpp
-	${PAF}/src/graphics/text/text_queue.cpp ${PAF}/src/http/http.cpp
+	${PAF}/src/graphics/text/text_queue.cpp
 	PROPERTIES COMPILE_OPTIONS -Xautoinlinesize=20)
 set_source_files_properties(${PAF}/src/graphics/text/text_layout.cpp
 	${PAF}/src/graphics/arl/gxm/gxm_shader.cpp ${PAF}/src/common/property_list.cpp

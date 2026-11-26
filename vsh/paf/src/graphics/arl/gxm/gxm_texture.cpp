@@ -52,6 +52,13 @@ void TextureObject::Unused2()
 {
 }
 
+#ifdef PAF_BUILD_2014
+extern "C" {
+int sceGxmTextureSetUAddrModeSafe(SceGxmTexture *texture, SceGxmTextureAddrMode mode);
+int sceGxmTextureSetVAddrModeSafe(SceGxmTexture *texture, SceGxmTextureAddrMode mode);
+}
+#endif
+
 /* the border modes need a swizzled texture: others clamp to the edge */
 int TextureObject::setWrapS(TextureWrap wrap)
 {
@@ -61,7 +68,11 @@ int TextureObject::setWrapS(TextureWrap wrap)
 	if ((wrap == TEXTURE_WRAP_CLAMP_FULL_BORDER || wrap == TEXTURE_WRAP_CLAMP_HALF_BORDER) &&
 	    !swizzled)
 		wrap = TEXTURE_WRAP_CLAMP;
+#ifdef PAF_BUILD_2014
+	return sceGxmTextureSetUAddrModeSafe(texture, (SceGxmTextureAddrMode)wrap);
+#else
 	return sceGxmTextureSetUAddrMode(texture, (SceGxmTextureAddrMode)wrap);
+#endif
 }
 
 int TextureObject::setWrapT(TextureWrap wrap)
@@ -72,7 +83,11 @@ int TextureObject::setWrapT(TextureWrap wrap)
 	if ((wrap == TEXTURE_WRAP_CLAMP_FULL_BORDER || wrap == TEXTURE_WRAP_CLAMP_HALF_BORDER) &&
 	    !swizzled)
 		wrap = TEXTURE_WRAP_CLAMP;
+#ifdef PAF_BUILD_2014
+	return sceGxmTextureSetVAddrModeSafe(texture, (SceGxmTextureAddrMode)wrap);
+#else
 	return sceGxmTextureSetVAddrMode(texture, (SceGxmTextureAddrMode)wrap);
+#endif
 }
 
 }

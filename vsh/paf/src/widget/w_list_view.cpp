@@ -461,9 +461,11 @@ Cell::Cell(CellList *list, int32_t index)
 		m_item->SetBehind(list_view->m_first_header);
 	m_pos = math::v2(m_item->GetPos(1, NULL, math::v4(0.0f, 0.0f, 0.0f, 0.0f))
 				 .getImpl().getXY());
+#ifndef PAF_BUILD_2014
 	if (list_view->m_env != NULL && ScePafWidget_A6B659BB(list_view->m_env, 0) &&
 	    list_view->m_focus_list_pos.m_segment == param.m_segment && list_view->m_focus_list_pos.m_cell == m_index)
 		m_item->ScePafWidget_C98D1926(math::v2(0.0f, 0.0f));
+#endif
 	list_view->m_cell_map->Insert(this);
 }
 
@@ -1942,13 +1944,11 @@ void ListView::ScePafWidget_A838831E()
 #endif
 
 #ifdef PAF_BUILD_2014
-			math::v2 dir(0.0f, 0.0f);
+			if (false) {
 #else
 			math::v2 dir = m_focus_target;
-#endif
 
 			if (focused->m_item->ScePafWidget_C98D1926(dir)) {
-#ifndef PAF_BUILD_2014
 				m_focus_start = m_focus_target;
 				m_focus_target = math::v2(0.0f, 0.0f);
 #endif

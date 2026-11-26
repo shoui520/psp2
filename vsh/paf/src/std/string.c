@@ -934,6 +934,7 @@ char *sce_paf_strncpy(char *destination, const char *source, size_t num)
 	return result;
 }
 
+#ifndef PAF_BUILD_2014
 void *memcpy(void *dst, const void *src, size_t count)
 {
 	return sce_paf_memcpy(dst, src, count);
@@ -943,6 +944,7 @@ void *memset(void *dst, int ch, size_t count)
 {
 	return sce_paf_memset(dst, ch, count);
 }
+#endif
 
 void *sce_paf_memchr(const void *ptr, int ch, size_t count)
 {

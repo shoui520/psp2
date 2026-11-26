@@ -16,7 +16,9 @@ int __cxa_deleted_virtual(void)
 	__breakpoint(0);
 	return result;
 }
+#endif
 
+#if !defined(PAF_STATIC_BUILD) || defined(PAF_BUILD_2014)
 int ScePafStdc_D608246A(void)
 {
 	sce_paf_printf_dummy();

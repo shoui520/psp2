@@ -122,10 +122,15 @@ bool s_sound_storage_on_heap;
 static inline __attribute__((always_inline)) void
 ReleaseSoundStorage(ResourceObj *rscobj, bool create)
 {
+#ifdef PAF_BUILD_2014
+	(void)create;
+	sceKernelFreeMemBlock(s_sound_storage_uid);
+#else
 	if (create)
 		sceKernelFreeMemBlock(s_sound_storage_uid);
 	else
 		sceKernelCloseMemBlock(s_sound_storage_uid);
+#endif
 	s_sound_storage_addr = NULL;
 	s_sound_storage_base = NULL;
 	if (rscobj->m_sounds != NULL) {
@@ -558,7 +563,23 @@ static int32_t LoadSoundStorage(ResourceObj *rscobj, uint32_t align, bool create
 			return uid;
 		s_sound_storage_uid = uid;
 	} else {
+#ifdef PAF_BUILD_2014
+		SceKernelAllocMemBlockOpt block_opt;
+		size_t pad = 0;
+
+		if (total % 0x1000 != 0)
+			pad = 0x1000 - total % 0x1000;
+		sce_paf_memset(&block_opt, 0, sizeof(block_opt));
+		block_opt.size = sizeof(block_opt);
+		block_opt.attr = 0x01000200;
+		block_opt.strBaseBlockName = "ScePafCRSoundDataStorage";
+
+		SceUID uid = sceKernelAllocMemBlock("ScePafCRSoundDataStorageRef",
+						    SCE_KERNEL_MEMBLOCK_TYPE_USER_RW,
+						    total + pad, &block_opt);
+#else
 		SceUID uid = sceKernelOpenMemBlock("ScePafCRSoundDataStorage", MEMBLOCK_OPEN_RO);
+#endif
 
 		if (uid < 0)
 			return SCE_PAF_ERROR_RESOURCE_NO_SOUND_STORAGE;

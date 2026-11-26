@@ -36,7 +36,11 @@ int sceAesScheduleKey(SceAesContext *ctx, SceUInt32 blocksize, SceUInt32 keysize
 	ctx->keyWords = keyWords;
 	ctx->rounds = rounds;
 	totalWords = blockWords * (rounds + 1);
+#ifdef SCE_AES_2014
+	sceClibMemcpy(ctx->roundKeys, key, keyWords * sizeof(uint32_t));
+#else
 	sceClibMemcpy_safe(ctx->roundKeys, key, keyWords * sizeof(uint32_t));
+#endif
 	if (keyWords > 6) {
 		for (group = keyWords; group < totalWords; group += keyWords) {
 			uint32_t first = ctx->roundKeys[group - keyWords];

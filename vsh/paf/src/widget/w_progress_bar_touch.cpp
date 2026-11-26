@@ -513,12 +513,14 @@ void ProgressBarTouch::UpdateBar(BarId id, bool anim)
 	if (slider == NULL)
 		return;
 
+#ifndef PAF_BUILD_2014
 	FocusShape shape;
 	const math::v4 *size = slider->GetSize(0);
 
 	shape.m_shape = 4;
 	shape.m_size = math::v2(size->extract_x(), size->extract_y());
 	ScePafWidget_13B246E0(slider, &shape);
+#endif
 }
 
 void ProgressBarTouch::UpdateSliderPos(bool anim)

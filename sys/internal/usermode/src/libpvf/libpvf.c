@@ -15,6 +15,10 @@
 #include <libSceFt2/libSceFt2.h>
 #include "libpvf_internal.h"
 
+#ifdef SCE_PVF_2014
+#define sceClibMemcpy_safe	sceClibMemcpy
+#endif
+
 /* the system fonts: sa0:data/font/pvf/<fileName> */
 static const ScePvf_t_fontStyleInfo pvfSystemFonts[PVF_NUM_SYSTEM_FONTS] = {
 	{ .familyCode = SCE_PVF_FAMILY_SANSERIF, .style = SCE_PVF_STYLE_REGULAR,
@@ -939,8 +943,26 @@ static __attribute__((noclone)) PvfFontHandle *pvfOpenDefaultFontClient(PvfLib *
 	if (*errorCode != 0)
 		return NULL;
 	if (pvfGetSystemFontPath(lib, path, index) != 0 || sceIoGetstat(path, &u.stat) != 0 ||
-	    (size = (ScePvf_t_s32)u.stat.st_size) <= 0 ||
-	    (base = NULL, uid = sceKernelOpenMemBlock(name, MEMBLOCK_OPEN_RO)) < 0) {
+	    (size = (ScePvf_t_s32)u.stat.st_size) <= 0) {
+		*errorCode = SCE_PVF_ERROR_FILEOPEN;
+		return NULL;
+	}
+	base = NULL;
+#ifdef SCE_PVF_2014
+	{
+		SceKernelAllocMemBlockOpt opt;
+
+		sceClibMemset(&opt, 0, sizeof(opt));
+		opt.size = sizeof(opt);
+		opt.attr = 0x01000200;
+		opt.strBaseBlockName = name;
+		uid = sceKernelAllocMemBlock(name, SCE_KERNEL_MEMBLOCK_TYPE_USER_MAIN_RW,
+					     (size + 0xfff) & ~0xfff, &opt);
+	}
+#else
+	uid = sceKernelOpenMemBlock(name, MEMBLOCK_OPEN_RO);
+#endif
+	if (uid < 0) {
 		*errorCode = SCE_PVF_ERROR_FILEOPEN;
 		return NULL;
 	}

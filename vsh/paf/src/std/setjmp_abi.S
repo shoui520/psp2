@@ -63,6 +63,7 @@ sce_paf_longjmp:
 	.fnend
 	.size sce_paf_longjmp, . - sce_paf_longjmp
 
+#ifndef PAF_STATIC_BUILD
 /*
  * sce_paf_memfill32(dst, pattern, bytes): bytes of the 32-bit pattern from dst on, the pattern
  * turned a byte on with every byte stored before dst is word aligned, then words to a 32-byte
@@ -117,3 +118,4 @@ sce_paf_memfill32:
 	bx lr
 	.fnend
 	.size sce_paf_memfill32, . - sce_paf_memfill32
+#endif

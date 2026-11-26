@@ -494,6 +494,7 @@ namespace arl {
 void ArlInstance::Color(math::v4 color)
 {
 	m_color = color;
+#ifndef PAF_BUILD_2014
 	if (ScePafMisc_C51EF81D() & 4) {
 		if (m_debug_color_shift) {
 			math::v4 shift(0.2f, 0.2f, 0.2f, 0.0f);
@@ -506,6 +507,7 @@ void ArlInstance::Color(math::v4 color)
 		if (m_debug_alpha_double)
 			m_color = mulPerElem(m_color.getImpl(), Vector4(1.0f, 1.0f, 1.0f, 2.0f));
 	}
+#endif
 }
 
 void ArlInstance::Enable(EnableCap cap)

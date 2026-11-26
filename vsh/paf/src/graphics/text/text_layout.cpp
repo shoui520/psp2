@@ -191,9 +191,11 @@ int32_t TextLayout::GetLayoutAttribute(TextLayoutAttribute attr, float &val)
 	case TextLayoutAttribute_DrawLinePitch: {
 		float pitch = m_param.line_pitch;
 
+#ifndef PAF_BUILD_2014
 		if ((ScePafMisc_C51EF81D() & 1) != 0 &&
 		    (m_param.flags & TextLayoutParam::Flag_EnlargeLinePitch) != 0)
 			pitch *= ENLARGED_LINE_PITCH;
+#endif
 		val = pitch;
 		break;
 	}
@@ -947,9 +949,11 @@ static inline float GetDrawLinePitch(const TextLayoutParam &param)
 {
 	float pitch = param.line_pitch;
 
+#ifndef PAF_BUILD_2014
 	if ((ScePafMisc_C51EF81D() & 1) != 0 &&
 	    (param.flags & TextLayoutParam::Flag_EnlargeLinePitch) != 0)
 		pitch *= ENLARGED_LINE_PITCH;
+#endif
 	return pitch;
 }
 

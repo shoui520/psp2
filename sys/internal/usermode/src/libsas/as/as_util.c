@@ -227,7 +227,11 @@ int sceSasAsConfigParse(SceSasAsAllocator *allocator, const char *config, SceSas
 
 void *sceSasAsMemcpy(void *destination, const void *source, SceSize size)
 {
+#if defined(SCE_SAS_STATIC_RUNTIME) && defined(PAF_BUILD_2014)
+	return sceClibMemcpy(destination, source, size);
+#else
 	return sceClibMemcpy_safe(destination, source, size);
+#endif
 }
 
 void *sceSasAsMemZero(void *buffer, SceSize size)

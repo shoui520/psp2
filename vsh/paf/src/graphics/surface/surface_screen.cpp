@@ -95,6 +95,21 @@ int32_t ScreenSurface::InitDepthSurface()
 {
 	int32_t ret;
 
+#ifdef PAF_BUILD_2014
+	if (m_depth.get() == NULL)
+		return SCE_PAF_ERROR_GRAPHICS_INVALID_SURFACE;
+	if (m_depth_stencil_surface == NULL)
+		return 0;
+
+	int32_t format = ConvertDepthFormat(m_depth->m_format);
+
+	if (format == -1)
+		return SCE_PAF_ERROR_GRAPHICS_NOT_SUPPORTED;
+	ret = sceGxmDepthStencilSurfaceInit(m_depth_stencil_surface,
+					    (SceGxmDepthStencilFormat)format,
+					    SCE_GXM_DEPTH_STENCIL_SURFACE_LINEAR,
+					    m_depth->GetWidth(), (void *)m_depth_offset, NULL);
+#else
 	if (m_depth_stencil_surface == NULL)
 		return 0;
 	if (m_depth.get() != NULL && m_depth_offset != 0) {
@@ -109,6 +124,7 @@ int32_t ScreenSurface::InitDepthSurface()
 	} else {
 		ret = sceGxmDepthStencilSurfaceInitDisabled(m_depth_stencil_surface);
 	}
+#endif
 	if (ret < 0)
 		return ret;
 	return 0;
@@ -179,8 +195,13 @@ int32_t ScreenSurface::CreateRenderTarget(SceGxmRenderTarget **render_target,
 	params.driverMemBlock = -1;
 	if (sce_paf_is_common_dialog_mode)
 		params.flags = 4;
+#ifdef PAF_BUILD_2014
+	if (sceGxmGetRenderTargetMemSize(&params, &size) != 0)
+		common_internal::on_error();
+#else
 	if (sceGxmGetRenderTargetMemSizeInternal(&params, &size) != 0)
 		common_internal::on_error();
+#endif
 	if (mem_type == 0) {
 		mem_type = SCE_KERNEL_MEMBLOCK_TYPE_USER_NC_RW;
 		if (sce_paf_is_common_dialog_mode)
@@ -191,7 +212,11 @@ int32_t ScreenSurface::CreateRenderTarget(SceGxmRenderTarget **render_target,
 	if (params.driverMemBlock < 0)
 		common_internal::on_error();
 
+#ifdef PAF_BUILD_2014
+	int32_t ret = sceGxmCreateRenderTarget(&params, render_target);
+#else
 	int32_t ret = sceGxmCreateRenderTargetInternal(&params, render_target);
+#endif
 
 	if (ret != 0)
 		common_internal::on_error();

@@ -4,6 +4,17 @@
  */
 #include <image/image.h>
 #include <buffer/buffer.h>
+#ifdef PAF_BUILD_2014
+#include <gxm.h>
+extern "C" {
+int sceGxmTextureSetUAddrModeSafe(SceGxmTexture *texture, SceGxmTextureAddrMode mode);
+int sceGxmTextureSetVAddrModeSafe(SceGxmTexture *texture, SceGxmTextureAddrMode mode);
+uint32_t sceGxmTextureGetMipmapCountUnsafe(const SceGxmTexture *texture);
+}
+#define sceGxmTextureSetUAddrMode sceGxmTextureSetUAddrModeSafe
+#define sceGxmTextureSetVAddrMode sceGxmTextureSetVAddrModeSafe
+#define sceGxmTextureGetMipmapCount sceGxmTextureGetMipmapCountUnsafe
+#endif
 #include <gxt.h>
 #include "image_codec.h"
 #include "image_source.h"

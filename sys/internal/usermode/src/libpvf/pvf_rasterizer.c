@@ -18,6 +18,10 @@
 #include FT_MODULE_H
 #include "libpvf_internal.h"
 
+#ifdef SCE_PVF_2014
+#define sceClibMemcpy_safe	sceClibMemcpy
+#endif
+
 #define PVF_PI		3.141592653589793
 #define PVF_2PI		6.283185307179586
 #define PVF_PI_2	1.5707963267948966

@@ -50,6 +50,22 @@ SurfacePool::SurfacePool(void *pool_addr, int32_t pool_size, const char *pool_na
 		MemBlockUserOpt opt;
 
 		sce_paf_snprintf(name, sizeof(name), "%sOffset", pool_name);
+#ifdef PAF_BUILD_2014
+		{
+			SceKernelAllocMemBlockOpt block_opt;
+
+			sce_paf_memset(&block_opt, 0, sizeof(block_opt));
+			block_opt.size = sizeof(block_opt);
+			if (m_type == MemoryType_SharedClient) {
+				block_opt.attr = 0x01000200;
+				block_opt.strBaseBlockName = name;
+			} else {
+				block_opt.attr = 0x4000;
+			}
+			m_shared_uid = sceKernelAllocMemBlock(name, SCE_KERNEL_MEMBLOCK_TYPE_USER_MAIN_RW,
+							      SHARED_OFFSET_SIZE, &block_opt);
+		}
+#else
 		if (m_type != MemoryType_SharedClient) {
 			sce_paf_memset(&opt, 0, sizeof(opt));
 			opt.size = sizeof(opt);
@@ -63,6 +79,7 @@ SurfacePool::SurfacePool(void *pool_addr, int32_t pool_size, const char *pool_na
 		} else {
 			m_shared_uid = sceKernelOpenMemBlock(name, MEMBLOCK_OPEN_RO);
 		}
+#endif
 		if (m_shared_uid >= 0 &&
 		    sceKernelGetMemBlockBase(m_shared_uid, (void **)&m_shared_addr) == 0 &&
 		    m_type == MemoryType_SharedHost)
@@ -117,6 +134,22 @@ SurfacePool::SurfacePool(const Option *option)
 		MemBlockUserOpt opt;
 
 		sce_paf_snprintf(name, sizeof(name), "%sOffset", option->pool_name);
+#ifdef PAF_BUILD_2014
+		{
+			SceKernelAllocMemBlockOpt block_opt;
+
+			sce_paf_memset(&block_opt, 0, sizeof(block_opt));
+			block_opt.size = sizeof(block_opt);
+			if (m_type == MemoryType_SharedClient) {
+				block_opt.attr = 0x01000200;
+				block_opt.strBaseBlockName = name;
+			} else {
+				block_opt.attr = 0x4000;
+			}
+			m_shared_uid = sceKernelAllocMemBlock(name, SCE_KERNEL_MEMBLOCK_TYPE_USER_MAIN_RW,
+							      SHARED_OFFSET_SIZE, &block_opt);
+		}
+#else
 		if (m_type != MemoryType_SharedClient) {
 			sce_paf_memset(&opt, 0, sizeof(opt));
 			opt.size = sizeof(opt);
@@ -130,6 +163,7 @@ SurfacePool::SurfacePool(const Option *option)
 		} else {
 			m_shared_uid = sceKernelOpenMemBlock(name, MEMBLOCK_OPEN_RO);
 		}
+#endif
 		if (m_shared_uid >= 0 &&
 		    sceKernelGetMemBlockBase(m_shared_uid, (void **)&m_shared_addr) == 0 &&
 		    m_type == MemoryType_SharedHost)
@@ -171,9 +205,11 @@ SurfacePool::~SurfacePool()
 		m_allocator = NULL;
 	}
 	if (m_shared_uid >= 0) {
+#ifndef PAF_BUILD_2014
 		if (m_type == MemoryType_SharedClient)
 			sceKernelCloseMemBlock(m_shared_uid);
 		else
+#endif
 			sceKernelFreeMemBlock(m_shared_uid);
 		m_shared_uid = -1;
 	}

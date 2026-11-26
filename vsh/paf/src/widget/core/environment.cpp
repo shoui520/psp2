@@ -3509,7 +3509,6 @@ extern "C" void ScePafWidget_DC1B19DB(Environment *env)
 	graph::FlushPanelLayers();
 	ScePafGraphics_E7B32741(graph::arl::Gl());
 	ScePafGraphics_67C25F27();
-	graph::ScreenCopy::Draw();
 	gutil::debug::CallDebugGuiFuncs();
 }
 #else

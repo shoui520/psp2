@@ -64,11 +64,21 @@ ShaderProgram::~ShaderProgram()
 	unregister_program();
 }
 
+#ifdef PAF_BUILD_2014
+extern "C" const SceGxmProgramParameter *_sceGxmProgramFindParameterBySemantic(
+	const SceGxmProgram *program, SceGxmParameterSemantic semantic, uint32_t index);
+#endif
+
 const SceGxmProgramParameter *ShaderProgram::findParameterBySemantic(SceGxmParameterSemantic semantic,
 								     uint32_t index, bool required)
 {
+#ifdef PAF_BUILD_2014
+	const SceGxmProgramParameter *param = _sceGxmProgramFindParameterBySemantic(
+		sceGxmShaderPatcherGetProgramFromId(m_id), semantic, index);
+#else
 	const SceGxmProgramParameter *param = sceGxmProgramFindParameterBySemantic(
 		sceGxmShaderPatcherGetProgramFromId(m_id), semantic, index);
+#endif
 
 	if (param == NULL && !required)
 		return NULL;
@@ -233,12 +243,19 @@ FragCreateDependency::FragCreateDependency()
 /* blends only where the program does not use the native colour */
 int FragCreateDependency::createProgram(SceGxmFragmentProgram *&program)
 {
+#ifdef PAF_BUILD_2014
+	return sceGxmShaderPatcherCreateFragmentProgram(
+		m_program->m_patcher->m_patcher, m_program->m_id, m_output_format,
+		m_multisample_mode, &m_blend_info,
+		sceGxmVertexProgramGetProgram(m_vert_program->m_program), &program);
+#else
 	bool native_color = sceGxmProgramIsNativeColorUsed(m_program->GetProgram());
 
 	return sceGxmShaderPatcherCreateFragmentProgram(
 		m_program->m_patcher->m_patcher, m_program->m_id, m_output_format,
 		m_multisample_mode, native_color ? NULL : &m_blend_info,
 		sceGxmVertexProgramGetProgram(m_vert_program->m_program), &program);
+#endif
 }
 
 ShaderParameterBase::ShaderParameterBase(ShaderParameterSetupData &setup)

@@ -23,6 +23,7 @@
 #define free	sce_paf_free
 #define memcmp	sce_paf_memcmp
 #define strlen	sce_paf_strlen
+#define abs	sce_paf_abs
 #define floor	sce_paf_floor
 #define pow	sce_paf_pow
 #define setjmp	sce_paf_setjmp

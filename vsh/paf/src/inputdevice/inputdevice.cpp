@@ -22,8 +22,12 @@ using namespace paf;
 using namespace paf::inputdevice;
 
 /* the devices whose ownership sets the system impose state */
+#ifdef PAF_BUILD_2014
+#define DEVICE_IMPOSE	(DEVICE_PAD | DEVICE_TOUCHSCREEN_FRONT | DEVICE_TOUCHSCREEN_BACK)
+#else
 #define DEVICE_IMPOSE	(DEVICE_PAD | DEVICE_TOUCHSCREEN_FRONT | DEVICE_TOUCHSCREEN_BACK | \
 			 DEVICE_HIDRM | DEVICE_HIDKEYBOARD)
+#endif
 
 static int32_t s_impose_mode = 1;
 
@@ -111,17 +115,25 @@ int32_t paf::inputdevice::Init(InitParam &init_param)
 	int32_t ret = pad::Init(pad_param);
 	ret |= touchscreen::Init(touch_param);
 	ret |= motionsensor::Init(motion_param);
+#ifdef PAF_BUILD_2014
+	return btrm::Init(btrm_param) | ret;
+#else
 	ret |= btrm::Init(btrm_param);
 	ret |= hidrm::Init(hidrm_param);
 	return hidkeyboard::Init(keyboard_param) | ret;
+#endif
 }
 
 int32_t paf::inputdevice::End()
 {
+#ifdef PAF_BUILD_2014
+	int32_t ret = btrm::End();
+#else
 	int32_t ret = hidkeyboard::End();
 
 	ret |= hidrm::End();
 	ret |= btrm::End();
+#endif
 	ret |= motionsensor::End();
 	ret |= touchscreen::End();
 	return pad::End() | ret;
@@ -161,7 +173,11 @@ static void ReleaseOwnershipCompleted(uint32_t device)
 	if ((released & DEVICE_IMPOSE) != 0 &&
 	    ((released | free) & DEVICE_IMPOSE) == DEVICE_IMPOSE) {
 		ClearOwnership(DEVICE_IMPOSE);
+#ifdef PAF_BUILD_2014
+		sceAppMgrSetSystemImposeState(0);
+#else
 		sceAppMgrSetSystemImposeState2(0);
+#endif
 	}
 }
 
@@ -190,12 +206,14 @@ bool paf::inputdevice::IsOwnershipReleasable(uint32_t device, int32_t all)
 		case DEVICE_BTRM:
 			result = btrm::IsOwnershipReleasable();
 			break;
+#ifndef PAF_BUILD_2014
 		case DEVICE_HIDRM:
 			result = hidrm::IsOwnershipReleasable();
 			break;
 		case DEVICE_HIDKEYBOARD:
 			result = hidkeyboard::IsOwnershipReleasable();
 			break;
+#endif
 		default:
 			continue;
 		}
@@ -222,8 +240,10 @@ int32_t paf::inputdevice::Update(float diff_time)
 				   &s_data.m_touch_data_pre, &s_data.m_touch_rear_data_pre);
 	ret |= motionsensor::Update(diff_time, &s_data.m_motion_data, &s_data.m_motion_data_pre);
 	ret |= btrm::Update(diff_time, &s_data.m_btrm_data, &s_data.m_btrm_data_pre);
+#ifndef PAF_BUILD_2014
 	ret |= hidrm::Update(diff_time, &s_data.m_bdrmc_data, &s_data.m_bdrmc_data_pre);
 	ret |= hidkeyboard::Update(diff_time, &s_data.m_keyboard_data, &s_data.m_keyboard_data_pre);
+#endif
 
 	if (IsOwnershipReleasable(DEVICE_IMPOSE | DEVICE_MOTIONSENSOR, 1))
 		ReleaseOwnershipCompleted(DEVICE_IMPOSE | DEVICE_MOTIONSENSOR);
@@ -295,6 +315,7 @@ int32_t paf::inputdevice::AddInputListener(common::SharedPtr<InputListener> &inp
 		}
 		s_listener_count[type]++;
 		break;
+#ifndef PAF_BUILD_2014
 	case DEVICE_TYPE_HIDRM:
 		if (s_listener_count[type] == 0) {
 			ret = hidrm::Activate();
@@ -311,6 +332,7 @@ int32_t paf::inputdevice::AddInputListener(common::SharedPtr<InputListener> &inp
 		}
 		s_listener_count[type]++;
 		break;
+#endif
 	default:
 		break;
 	}
@@ -369,6 +391,7 @@ int32_t paf::inputdevice::DelInputListener(common::SharedPtr<InputListener> &inp
 		}
 		s_listener_count[type]--;
 		break;
+#ifndef PAF_BUILD_2014
 	case DEVICE_TYPE_HIDRM:
 		if (s_listener_count[type] == 1) {
 			ret = hidrm::Deactivate();
@@ -385,6 +408,7 @@ int32_t paf::inputdevice::DelInputListener(common::SharedPtr<InputListener> &inp
 		}
 		s_listener_count[type]--;
 		break;
+#endif
 	default:
 		break;
 	}
@@ -403,10 +427,12 @@ void paf::inputdevice::Lock(uint32_t device)
 		motionsensor::Lock();
 	if ((device & DEVICE_BTRM) != 0)
 		btrm::Lock();
+#ifndef PAF_BUILD_2014
 	if ((device & DEVICE_HIDRM) != 0)
 		hidrm::Lock();
 	if ((device & DEVICE_HIDKEYBOARD) != 0)
 		hidkeyboard::Lock();
+#endif
 }
 
 void paf::inputdevice::Unlock(uint32_t device)
@@ -421,10 +447,12 @@ void paf::inputdevice::Unlock(uint32_t device)
 		motionsensor::Unlock();
 	if ((device & DEVICE_BTRM) != 0)
 		btrm::Unlock();
+#ifndef PAF_BUILD_2014
 	if ((device & DEVICE_HIDRM) != 0)
 		hidrm::Unlock();
 	if ((device & DEVICE_HIDKEYBOARD) != 0)
 		hidkeyboard::Unlock();
+#endif
 }
 
 void ScePafMisc_CAABF0B0(uint32_t device, float time)
@@ -439,10 +467,12 @@ void ScePafMisc_CAABF0B0(uint32_t device, float time)
 		ScePafMisc_BB74B3B8(time);
 	if ((device & DEVICE_BTRM) != 0)
 		ScePafMisc_F9C3A155(time);
+#ifndef PAF_BUILD_2014
 	if ((device & DEVICE_HIDRM) != 0)
 		hidrm::LockTimer(time);
 	if ((device & DEVICE_HIDKEYBOARD) != 0)
 		hidkeyboard::LockTimer(time);
+#endif
 }
 
 bool paf::inputdevice::IsOwnershipGotten(uint32_t device, int32_t all)
@@ -489,7 +519,11 @@ void paf::inputdevice::GetOwnership(uint32_t device)
 	if ((gotten & DEVICE_BTRM) != 0)
 		sceAppMgrAcquireBtrm();
 	if ((gotten & DEVICE_IMPOSE) != 0 && (free & DEVICE_IMPOSE) == DEVICE_IMPOSE)
+#ifdef PAF_BUILD_2014
+		sceAppMgrSetSystemImposeState(s_impose_mode);
+#else
 		sceAppMgrSetSystemImposeState2(s_impose_mode);
+#endif
 
 	for (int32_t i = 0; i < DEVICE_NUM; i++) {
 		if (((1 << i) & device) != 0)
@@ -536,6 +570,10 @@ void paf::inputdevice::SetImposeMode(uint32_t mode)
 	if (s_impose_mode != impose_mode) {
 		s_impose_mode = impose_mode;
 		if ((GetOwnershipGotten() & (DEVICE_IMPOSE | DEVICE_MOTIONSENSOR)) != 0)
+#ifdef PAF_BUILD_2014
+			sceAppMgrSetSystemImposeState(impose_mode);
+#else
 			sceAppMgrSetSystemImposeState2(impose_mode);
+#endif
 	}
 }

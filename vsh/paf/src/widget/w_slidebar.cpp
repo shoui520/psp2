@@ -737,12 +737,14 @@ void SlideBar::UpdateSlider(bool anim)
 		else
 			slider->SetPos(pos);
 
+#ifndef PAF_BUILD_2014
 		/* the focus cursor a frame around the slider */
 		FocusShape shape;
 
 		shape.m_shape = 4;
 		shape.m_size = focus_size;
 		ScePafWidget_13B246E0(slider, &shape);
+#endif
 	}
 	if (bar != NULL) {
 		KillObjAnim(OBJ_BAR, 0x20100);

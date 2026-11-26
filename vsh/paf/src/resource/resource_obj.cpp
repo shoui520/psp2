@@ -848,6 +848,7 @@ bool ResourceObj::IsRegisteredID(uint32_t idhash)
 cxml::Element ResourceObj::GetOverrideElement(const cxml::Element &elm) const
 {
 	cxml::Element result = elm;
+#ifndef PAF_BUILD_2014
 	const char *name = elm.GetName();
 
 	if (name != NULL && sce_paf_strncmp(name, "override_", sce_paf_strlen("override_")) != 0) {
@@ -875,6 +876,7 @@ cxml::Element ResourceObj::GetOverrideElement(const cxml::Element &elm) const
 			}
 		}
 	}
+#endif
 	return result;
 }
 
@@ -887,6 +889,7 @@ IDParam ResourceObj::GetAliasID(const IDParam &id) const
 		cxml::Element elm = cxml::util::FindChildElement(table, "alias", "id", id.m_idhash);
 
 		if (elm) {
+#ifndef PAF_BUILD_2014
 			int32_t model = system::Model::GetType();
 
 			for (cxml::Element child = elm.GetFirstChild(); child;
@@ -900,6 +903,7 @@ IDParam ResourceObj::GetAliasID(const IDParam &id) const
 					break;
 				}
 			}
+#endif
 
 			cxml::Element entity;
 			uint32_t org_id;

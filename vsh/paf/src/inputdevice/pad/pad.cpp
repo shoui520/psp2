@@ -37,9 +37,14 @@ typedef struct SceCtrlPortInfo {
 extern "C" {
 int sceCtrlSetSamplingMode(SceUInt32 uiMode);
 int sceCtrlSetSamplingModeExt(SceUInt32 uiMode);
+#ifdef PAF_BUILD_2014
+int sceCtrlPeekBufferPositive(SceInt32 port, SceCtrlData *pData, SceInt32 nBufs);
+int sceCtrlPeekBufferPositiveExt(SceInt32 port, SceCtrlData *pData, SceInt32 nBufs);
+#else
 int sceCtrlPeekBufferPositive2(SceInt32 port, SceCtrlData2 *pData, SceInt32 nBufs);
 int sceCtrlPeekBufferPositiveExt2(SceInt32 port, SceCtrlData2 *pData, SceInt32 nBufs);
 int sceCtrlGetControllerPortInfo(SceCtrlPortInfo *pInfo);
+#endif
 }
 
 struct KeyMap {
@@ -195,6 +200,18 @@ int32_t paf::inputdevice::pad::Update(float diff_time, const Data **data, const 
 	Data port_data;
 
 	for (int32_t port = 0; port < PORT_MAX; port++) {
+#ifdef PAF_BUILD_2014
+		SceCtrlData ctrl;
+
+		sce_paf_memset(&ctrl, 0, sizeof(ctrl));
+		if (s_init_param.m_mode == InitParam::Mode_CommonDialog) {
+			if (sceCtrlPeekBufferPositiveExt(port, &ctrl, 1) < 0)
+				break;
+		} else {
+			if (sceCtrlPeekBufferPositive(port, &ctrl, 1) < 0)
+				break;
+		}
+#else
 		SceCtrlData2 ctrl;
 
 		sce_paf_memset(&ctrl, 0, sizeof(ctrl));
@@ -205,6 +222,7 @@ int32_t paf::inputdevice::pad::Update(float diff_time, const Data **data, const 
 			if (sceCtrlPeekBufferPositive2(port, &ctrl, 1) < 0)
 				break;
 		}
+#endif
 
 		int32_t main_port = s_main_port;
 		uint32_t buttons = 0;
@@ -422,6 +440,7 @@ int32_t paf::inputdevice::pad::SetCurrPort(int32_t port)
 	return s_port;
 }
 
+#ifndef PAF_BUILD_2014
 int32_t paf::inputdevice::pad::GetPortType(int32_t port)
 {
 	SceCtrlPortInfo info;
@@ -435,6 +454,7 @@ int32_t paf::inputdevice::pad::GetPortType(int32_t port)
 	}
 	return type;
 }
+#endif
 
 bool paf::inputdevice::pad::IsOwnershipReleasable()
 {

@@ -207,6 +207,7 @@ int32_t PageTurnBase::HandleTouchEvent(Event *e)
 
 int32_t PageTurnBase::HandleKeycodeEvent(Event *e)
 {
+#ifndef PAF_BUILD_2014
 	Environment *env = m_env;
 
 	if (env != NULL && ScePafWidget_A6B659BB(env, 0) && ((e->m_detail >> 24) & 1) != 0) {
@@ -269,6 +270,7 @@ int32_t PageTurnBase::HandleKeycodeEvent(Event *e)
 			e->Consume();
 		}
 	}
+#endif
 	return Widget::HandleKeycodeEvent(e);
 }
 

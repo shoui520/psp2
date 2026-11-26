@@ -10,6 +10,10 @@
 #include <display.h>
 #include <stddef.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /* name unknown: a plane's frame buffer and who owns it (SceDisplayForDriver_3BC165EF) */
 typedef struct SceDisplayFrameBufInfo {
 	SceSize size;			/* 0x00: sizeof(SceDisplayFrameBufInfo) */
@@ -169,3 +173,7 @@ int sceDisplayWaitVblankStartForUser(void);
 int sceDisplayWaitVblankStartCBForUser(void);
 int sceDisplayWaitVblankStartMultiForUser(SceUInt32 vcount);
 int sceDisplayWaitVblankStartMultiCBForUser(SceUInt32 vcount);
+
+#ifdef __cplusplus
+}
+#endif

@@ -12,6 +12,15 @@
 #include <appmgr/appmgr.h>
 #include <kernel/threadmgr.h>
 #include <libkernel/libkernel.h>
+#ifdef PAF_STATIC_BUILD
+extern "C" {
+int SceLibKernel_A7819967(SceKernelLwMutexWork *work, int count, unsigned int *timeout);
+int SceLibKernel_499EA781(SceKernelLwMutexWork *work, int count);
+}
+#define sceKernelLockLwMutex	SceLibKernel_A7819967
+#define sceKernelUnlockLwMutex	SceLibKernel_499EA781
+#define sceClibMemcpy_safe	sceClibMemcpy
+#endif
 extern "C" {
 #include <ctrl/ctrl.h>
 #include <hid/hid.h>
@@ -704,7 +713,9 @@ int32_t sceImeVshOpen(void **ime, const SceImeVshParam *param)
 					if (intercept == 0) {
 						ctx->intercepted = true;
 						sceCtrlSetButtonIntercept(1);
+#ifndef PAF_BUILD_2014
 						sceHidKeyboardSetIntercept(1);
+#endif
 					}
 					*ime = ctx;
 				}
@@ -1097,7 +1108,9 @@ int32_t sceImeVshClose(void *ime)
 			if (ctx->intercepted) {
 				ctx->intercepted = false;
 				sceCtrlSetButtonIntercept(0);
+#ifndef PAF_BUILD_2014
 				sceHidKeyboardSetIntercept(0);
+#endif
 			}
 			sceClibMemset(&serviceParam, 0, sizeof(serviceParam));
 			serviceParam.serial = ctx->serial;

@@ -39,7 +39,11 @@
 #ifdef UPDATER_CORE_2014
 #define PUP_CACHED_PATH_SIZE	256
 
-extern "C" int sceUpdaterGetState(void);
+extern "C" {
+int sceUpdaterGetState(void);
+int SceLibKernel_A7819967(SceKernelLwMutexWork *work, int count, unsigned int *timeout);
+int SceLibKernel_499EA781(SceKernelLwMutexWork *work, int count);
+}
 
 static SceUID s_cachedPupFd = -1;
 static char *s_cachedPupPath = NULL;
@@ -293,9 +297,9 @@ int PupController::FinalizeCache(void)
 	int ret;
 	int deleteRet;
 
-	sceKernelLockLwMutex(&s_cacheMutex, 1, NULL);
+	SceLibKernel_A7819967(&s_cacheMutex, 1, NULL);
 	ret = clearCache();
-	sceKernelUnlockLwMutex(&s_cacheMutex, 1);
+	SceLibKernel_499EA781(&s_cacheMutex, 1);
 	deleteRet = sceKernelDeleteLwMutex(&s_cacheMutex);
 	if (deleteRet < 0 && ret == 0)
 		return deleteRet;
@@ -306,10 +310,10 @@ int PupController::openCachedPup(const char *fileName)
 {
 	int ret = 0;
 
-	sceKernelLockLwMutex(&s_cacheMutex, 1, NULL);
+	SceLibKernel_A7819967(&s_cacheMutex, 1, NULL);
 	if (s_cachedPupFd != -1 && s_cachedPupPath != NULL &&
 	    sceClibStrncmp(s_cachedPupPath, fileName, PUP_CACHED_PATH_SIZE) == 0) {
-		sceKernelUnlockLwMutex(&s_cacheMutex, 1);
+		SceLibKernel_499EA781(&s_cacheMutex, 1);
 		return 0;
 	}
 	if (s_cachedPupFd != -1 && s_cachedPupPath != NULL)
@@ -334,7 +338,7 @@ int PupController::openCachedPup(const char *fileName)
 			}
 		}
 	}
-	sceKernelUnlockLwMutex(&s_cacheMutex, 1);
+	SceLibKernel_499EA781(&s_cacheMutex, 1);
 	return ret;
 }
 
@@ -345,7 +349,7 @@ int PupController::readCachedHeader(void)
 	SceSSize readRet;
 	int ret = 0;
 
-	sceKernelLockLwMutex(&s_cacheMutex, 1, NULL);
+	SceLibKernel_A7819967(&s_cacheMutex, 1, NULL);
 	s_cachedPupInfo = static_cast<SceUpdaterPupInformation *>(
 		g_updaterMemoryInfo.updaterCoreMemalign(PUP_READ_ALIGN,
 							sizeof(SceUpdaterPupInformation)));
@@ -380,7 +384,7 @@ int PupController::readCachedHeader(void)
 			}
 		}
 	}
-	sceKernelUnlockLwMutex(&s_cacheMutex, 1);
+	SceLibKernel_499EA781(&s_cacheMutex, 1);
 	return ret;
 }
 

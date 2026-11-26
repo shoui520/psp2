@@ -10,6 +10,16 @@
 #include <kernel/threadmgr.h>
 #include <kernel/iofilemgr.h>
 
+#ifdef PAF_STATIC_BUILD
+extern int SceLibKernel_A7819967(SceKernelLwMutexWork *work, int count, unsigned int *timeout);
+extern int SceLibKernel_499EA781(SceKernelLwMutexWork *work, int count);
+#define FT2_LOCK_LWMUTEX(m)	SceLibKernel_A7819967((m), 1, NULL)
+#define FT2_UNLOCK_LWMUTEX(m)	SceLibKernel_499EA781((m), 1)
+#else
+#define FT2_LOCK_LWMUTEX(m)	sceKernelLockLwMutex((m), 1, NULL)
+#define FT2_UNLOCK_LWMUTEX(m)	sceKernelUnlockLwMutex((m), 1)
+#endif
+
 #define FT2_NUM_FILES		20
 
 /* the FILE record the library keeps (36 bytes; fopen hands out a slot of the table) */
@@ -149,7 +159,7 @@ FILE *fopen(const char *path, const char *mode)
 
 	if (path == NULL || mode == NULL)
 		return NULL;
-	sceKernelLockLwMutex(&g_ioMutex, 1, NULL);
+	FT2_LOCK_LWMUTEX(&g_ioMutex);
 	/* a free slot: Sony tests the low byte of its mode */
 	for (i = 0; (SceUInt8)g_files[i].mode != 0; ) {
 		if (++i == FT2_NUM_FILES)
@@ -194,7 +204,7 @@ FILE *fopen(const char *path, const char *mode)
 	}
 	g_files[i].mode = flags | 1;
 	f = &g_files[i];
-	sceKernelUnlockLwMutex(&g_ioMutex, 1);
+	FT2_UNLOCK_LWMUTEX(&g_ioMutex);
 	f->state = 0;
 	f->fd = sceIoOpen(path, openFlags, 0606);
 	f->pushback = -1;
@@ -215,7 +225,7 @@ FILE *fopen(const char *path, const char *mode)
 	sceIoIoctl(f->fd, 0x1001, param, sizeof(param), NULL, 0);
 	return (FILE *)f;
 fail:
-	sceKernelUnlockLwMutex(&g_ioMutex, 1);
+	FT2_UNLOCK_LWMUTEX(&g_ioMutex);
 	return NULL;
 }
 

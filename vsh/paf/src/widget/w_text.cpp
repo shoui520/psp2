@@ -980,10 +980,12 @@ Text::Link *Text::SearchLinkFocus(int32_t dir, const math::v4 &rect, int32_t res
 	UpdateSize();
 	if (old != NULL && m_link_styles[LINK_STYLE_AUTO] != NULL)
 		SetStyle(old->m_index, old->m_len, *m_link_styles[LINK_STYLE_AUTO]);
+#ifndef PAF_BUILD_2014
 	if (m_focus_link != NULL && m_link_styles[LINK_STYLE_FOCUSED] != NULL && m_env != NULL &&
 	    ScePafWidget_529FB877(m_env, -1))
 		SetStyle(m_focus_link->m_index, m_focus_link->m_len,
 			 *m_link_styles[LINK_STYLE_FOCUSED]);
+#endif
 	return found;
 }
 
@@ -2692,6 +2694,7 @@ static void LinkStyleCB(int32_t type, Handler *self, Event *e, void *data)
 			graph::TextStyle *normal = text->m_link_styles[Text::LINK_STYLE_AUTO];
 
 			if (link != NULL) {
+#ifndef PAF_BUILD_2014
 				if (focused != NULL && ScePafWidget_529FB877(env, -1)) {
 					if (text->m_text != NULL) {
 						int32_t set = text->m_text->SetStyle(
@@ -2700,7 +2703,9 @@ static void LinkStyleCB(int32_t type, Handler *self, Event *e, void *data)
 						if (set > 0 && (set & 2))
 							text->ChangeState(3, -1);
 					}
-				} else if (normal != NULL) {
+				} else
+#endif
+				if (normal != NULL) {
 					if (text->m_text != NULL) {
 						int32_t set = text->m_text->SetStyle(
 							link->m_index, link->m_len, *normal);

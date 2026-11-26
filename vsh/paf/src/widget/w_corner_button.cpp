@@ -62,12 +62,14 @@ CornerButton::CornerButton(Widget *parent, CreateParam *param)
 		CreateCornerObj(this);
 	self->SetStyleAnimator(self->m_style_type);
 
+#ifndef PAF_BUILD_2014
 	FocusShape shape;
 
 	shape.m_texture = ScePafCommon_F820A54B(IDParam("_common_texture_keyfocus_corner_frame"));
 	shape.m_size = math::v2((float)shape.m_texture->GetWidth(),
 				(float)shape.m_texture->GetHeight());
 	ScePafWidget_13B246E0(this, &shape);
+#endif
 }
 
 static const struct {

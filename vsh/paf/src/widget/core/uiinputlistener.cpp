@@ -507,12 +507,14 @@ void UIPadListener::OnUpdate(const inputdevice::Data *data)
 	s_pad_port = inputdevice::pad::GetCurrPort();
 	if (s_pad_port < 8) {
 		int32_t mode = m_mode;
+#ifndef PAF_BUILD_2014
 		int32_t type = inputdevice::pad::GetPortType(s_pad_port);
 
 		if (type == 1)
 			mode = 2;
 		else if (type == 2)
 			mode = 3;
+#endif
 
 		uint32_t curr_mask = data->m_pad_data->buttons & 0xFFFFDFFF;
 		uint32_t prev_mask = data->m_pad_data_pre->buttons & 0xFFFFDFFF;
@@ -606,12 +608,14 @@ void UIPadHoldListener::OnUpdate(const inputdevice::Data *data)
 	s_pad_port = inputdevice::pad::GetCurrPort();
 	if (s_pad_port < 8) {
 		int32_t mode = m_mode;
+#ifndef PAF_BUILD_2014
 		int32_t type = inputdevice::pad::GetPortType(s_pad_port);
 
 		if (type == 1)
 			mode = 2;
 		else if (type == 2)
 			mode = 3;
+#endif
 
 		uint32_t curr_mask = data->m_pad_data->buttons & 0xFFFFDFFF;
 		uint32_t prev_mask = data->m_pad_data_pre->buttons & 0xFFFFDFFF;
@@ -1070,6 +1074,7 @@ void UIHidrmListener::OnUpdate(const inputdevice::Data *data)
 
 		if (pressed)
 			PostHidrmEvent(curr, 0);
+#ifndef PAF_BUILD_2014
 		if (released && (prev == 9 || prev == 8)) {
 			inputdevice::hidrm::Data locked = inputdevice::hidrm::GetLockedData();
 
@@ -1078,6 +1083,7 @@ void UIHidrmListener::OnUpdate(const inputdevice::Data *data)
 			else
 				PostHidrmEvent(prev, 1);
 		}
+#endif
 	}
 }
 

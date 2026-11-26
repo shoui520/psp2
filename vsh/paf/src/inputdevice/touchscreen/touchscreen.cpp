@@ -232,8 +232,10 @@ int32_t paf::inputdevice::touchscreen::Activate(uint32_t port)
 	if (s_init_param.m_mode == InitParam::Mode_CommonDialog)
 		return sceTouchSetSamplingStateExt(port, SCE_TOUCH_SAMPLING_STATE_START);
 	ret = sceTouchSetSamplingState(port, SCE_TOUCH_SAMPLING_STATE_START);
+#ifndef PAF_BUILD_2014
 	if (port == PORT_BACK && ret == 0)
 		return sceTouchEnableTouchForce(PORT_BACK);
+#endif
 	return ret;
 }
 
@@ -243,8 +245,10 @@ int32_t paf::inputdevice::touchscreen::Deactivate(uint32_t port)
 		return ERROR_INVALID_PORT;
 	if (s_init_param.m_mode == InitParam::Mode_CommonDialog)
 		return sceTouchSetSamplingStateExt(port, SCE_TOUCH_SAMPLING_STATE_STOP);
+#ifndef PAF_BUILD_2014
 	if (port == PORT_BACK)
 		sceTouchDisableTouchForce(PORT_BACK);
+#endif
 	return sceTouchSetSamplingState(port, SCE_TOUCH_SAMPLING_STATE_STOP);
 }
 

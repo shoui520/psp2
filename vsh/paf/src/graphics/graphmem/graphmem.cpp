@@ -78,9 +78,12 @@ void *AllocOSMemory(DeviceType device_type, uint32_t size, const char *name, Opt
 	void *base = NULL;
 	SceUID uid;
 
+#ifndef PAF_BUILD_2014
 	if (device_type == DeviceType_SharedMemory) {
 		uid = sceKernelOpenMemBlock(name, MEMBLOCK_OPEN_RW);
-	} else {
+	} else
+#endif
+	{
 		SceKernelMemBlockType type = s_memblock_type[device_type];
 
 		if (option != NULL) {
@@ -111,9 +114,11 @@ void *AllocOSMemory(DeviceType device_type, uint32_t size, const char *name, Opt
 	if (option != NULL && option->report_error && ret != 0)
 		common_internal::on_error();
 	if (ret != 0) {
+#ifndef PAF_BUILD_2014
 		if (device_type == DeviceType_SharedMemory)
 			sceKernelCloseMemBlock(uid);
 		else
+#endif
 			sceKernelFreeMemBlock(uid);
 		return NULL;
 	}
@@ -145,9 +150,11 @@ void *AllocOSMemory(DeviceType device_type, uint32_t size, const char *name, Opt
 	if (option != NULL && option->report_error && ret != 0)
 		common_internal::on_error();
 	if (ret != 0) {
+#ifndef PAF_BUILD_2014
 		if (device_type == DeviceType_SharedMemory)
 			sceKernelCloseMemBlock(uid);
 		else
+#endif
 			sceKernelFreeMemBlock(uid);
 		return NULL;
 	}
@@ -245,9 +252,11 @@ void FreeOSMemory(DeviceType device_type, void *p)
 	default:
 		break;
 	}
+#ifndef PAF_BUILD_2014
 	if (device_type == DeviceType_SharedMemory)
 		sceKernelCloseMemBlock(it->uid);
 	else
+#endif
 		sceKernelFreeMemBlock(it->uid);
 	s_os_memory.erase(it);
 	s_mutex.Unlock();

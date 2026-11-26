@@ -723,6 +723,7 @@ int32_t DisplaySurface::GetOutputPort()
 	return port;
 }
 
+#ifndef PAF_BUILD_2014
 bool DisplaySurface::UsesDisplayArea()
 {
 	DisplayFrameBufParam param;
@@ -732,6 +733,7 @@ bool DisplaySurface::UsesDisplayArea()
 	       param.frameBuf.size >= sizeof(param) &&
 	       (param.resolution & DISPLAY_RESOLUTION_DISPLAY_AREA) != 0;
 }
+#endif
 
 #ifndef PAF_BUILD_2014
 /* the viewport's x and y come in the other order */

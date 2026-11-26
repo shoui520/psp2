@@ -634,12 +634,16 @@ int32_t MotionGestureListener::OnUpdateMultiTouch(uint32_t bitmap, uint32_t bitm
 
 		if (!(ms < 1000.0f)) {
 			if (m_sampling) {
+#ifndef PAF_BUILD_2014
 stop:
+#endif
 				sceMotionStopSampling();
 				m_sampling = false;
 				sampling = false;
 			}
-		} else {
+		}
+#ifndef PAF_BUILD_2014
+		else {
 			if (force > 10 && !m_sampling && !m_still) {
 				sceMotionSetTiltCorrection(0);
 				sceMotionSetDeadband(0);
@@ -675,6 +679,7 @@ stop:
 				goto stop;
 		}
 done:
+#endif
 		if (m_still)
 			ret = 2;
 		MotionParam::Get().m_sampling = sampling;

@@ -63,6 +63,7 @@ int32_t HttpFileReaderConnection::CreateHandles(const HttpFileReaderConnectionPa
 	if (id <= 0)
 		return id;
 	*template_id = id;
+#ifndef PAF_BUILD_2014
 	if (param.template_option != 0) {
 		int32_t ret = SceHttp_43A7CC70(id, param.template_option);
 
@@ -77,6 +78,7 @@ int32_t HttpFileReaderConnection::CreateHandles(const HttpFileReaderConnectionPa
 			return ret;
 		id = *template_id;
 	}
+#endif
 	id = sceHttpCreateConnection(id, param.host.c_str(), param.scheme.c_str(), param.port,
 				     param.enable_keepalive);
 	if (id <= 0) {
@@ -87,6 +89,7 @@ int32_t HttpFileReaderConnection::CreateHandles(const HttpFileReaderConnectionPa
 	}
 	*connection_id = id;
 
+#ifndef PAF_BUILD_2014
 	uint32_t enable = 0;
 	uint32_t disable = 0;
 
@@ -122,6 +125,7 @@ int32_t HttpFileReaderConnection::CreateHandles(const HttpFileReaderConnectionPa
 	ret = sceHttpsDisableOption2(*connection_id, disable);
 	if (ret < 0)
 		return ret;
+#endif
 	return 0;
 }
 
@@ -277,9 +281,35 @@ int32_t HttpFileHttpReader::Open()
 		ret = HttpFileReaderContext::GetConnection(config->context, param, m_connection);
 		if (ret != 0)
 			goto unlock_error;
+#ifdef PAF_BUILD_2014
+		{
+			SceHttpMethods method_id = SCE_HTTP_METHOD_GET;
+
+			if (sce_paf_strcmp("GET", config->method) == 0)
+				method_id = SCE_HTTP_METHOD_GET;
+			else if (sce_paf_strcmp("HEAD", config->method) == 0)
+				method_id = SCE_HTTP_METHOD_HEAD;
+			else if (sce_paf_strcmp("POST", config->method) == 0)
+				method_id = SCE_HTTP_METHOD_POST;
+			else if (sce_paf_strcmp("PUT", config->method) == 0)
+				method_id = SCE_HTTP_METHOD_PUT;
+			else if (sce_paf_strcmp("DELETE", config->method) == 0)
+				method_id = SCE_HTTP_METHOD_DELETE;
+			else if (sce_paf_strcmp("TRACE", config->method) == 0)
+				method_id = SCE_HTTP_METHOD_TRACE;
+			else if (sce_paf_strcmp("CONNECT", config->method) == 0)
+				method_id = SCE_HTTP_METHOD_CONNECT;
+			else if (sce_paf_strcmp("OPTIONS", config->method) == 0)
+				method_id = SCE_HTTP_METHOD_OPTIONS;
+			m_request_id = sceHttpCreateRequest(m_connection->m_connection_id,
+							    method_id, config->uri,
+							    (uint64_t)body_size);
+		}
+#else
 		m_request_id = sceHttpCreateRequestWithURL2(m_connection->m_connection_id,
 							    config->method, config->uri,
 							    (uint64_t)body_size);
+#endif
 		if (m_request_id <= 0) {
 			ret = m_request_id;
 			goto unlock_error;
@@ -323,6 +353,7 @@ int32_t HttpFileHttpReader::Open()
 		m_lock.ReaderUnlock();
 		ret = sceHttpSendRequest(request_id, body, body_size);
 
+#ifndef PAF_BUILD_2014
 		int32_t error;
 		uint32_t detail;
 
@@ -343,6 +374,7 @@ int32_t HttpFileHttpReader::Open()
 			m_result[1] = 0;
 			m_result[2] = 0;
 		}
+#endif
 	}
 	ScePafMisc_F39DF886(&m_response_headers);
 	{
@@ -419,6 +451,7 @@ int32_t HttpFileHttpReader::Read(void *buf, size_t nbyte)
 
 	int32_t ret = sceHttpReadData(request_id, buf, nbyte);
 
+#ifndef PAF_BUILD_2014
 	if (ret == SCE_HTTP_ERROR_SSL) {
 		int32_t error;
 		uint32_t detail;
@@ -432,6 +465,7 @@ int32_t HttpFileHttpReader::Read(void *buf, size_t nbyte)
 		m_result[1] = 0;
 		m_result[2] = 0;
 	}
+#endif
 	if (ret >= 0)
 		m_position += ret;
 	return ret;

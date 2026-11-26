@@ -263,8 +263,10 @@ int32_t TextBoxImeListener::BeginEdit(TextBox *text_box)
 			param.arg = this;
 			param.handler = OnImeEvent;
 			param.work = m_work;
+#ifndef PAF_BUILD_2014
 			if (env != NULL)
 				param.focusShown = ScePafWidget_529FB877(env, -1);
+#endif
 
 			if (m_text_box == NULL) {
 				ret = sceImeVshOpen(&m_ime, &param);
@@ -284,11 +286,13 @@ int32_t TextBoxImeListener::BeginEdit(TextBox *text_box)
 				m_text_box = text_box;
 				text_box->AddEventCallback(Handler::CB_STATE_READY, OnStateReady, this);
 				m_text_box->GetPasswordMode(m_password);
+#ifndef PAF_BUILD_2014
 				if (env != NULL) {
 					m_focus_shown = ScePafWidget_A6B659BB(env, 0);
 					if (m_focus_shown)
 						ScePafWidget_B4A4660B(env, 0, -1, 1);
 				}
+#endif
 				PostEvent(EVENT_EDIT_BEGIN, math::v4(0.0f, 0.0f, 0.0f, 0.0f));
 			}
 		} else {
@@ -374,8 +378,10 @@ int32_t TextBoxImeListener::EndEdit(TextBox *text_box)
 			ClearPreedit();
 			Mask(0, 0, 0);
 			env = m_text_box->m_env;
+#ifndef PAF_BUILD_2014
 			if (env != NULL && m_focus_shown)
 				ScePafWidget_B4A4660B(env, 1, -1, 1);
+#endif
 			PostEvent(EVENT_EDIT_END, math::v4(0.0f, 0.0f, 0.0f, 0.0f));
 			m_text_box->DeleteEventCallback(Handler::CB_STATE_READY, OnStateReady,
 							this);
@@ -509,8 +515,12 @@ int32_t TextBoxImeListener::HandleImeEvent(const SceImeVshEvent *e)
 		Environment *env = m_text_box->m_env;
 
 		m_text_box->EndEdit();
+#ifndef PAF_BUILD_2014
 		if (e->param.showFocus && env != NULL)
 			env->ShowFocus(-1);
+#else
+		(void)env;
+#endif
 		break;
 	}
 	case SCE_IME_EVENT_PRESS_ENTER:

@@ -88,8 +88,10 @@ public:
 		} else if (button == PLUS_DIALOG_BUTTON_CANCEL) {
 			SceCommonGuiDialog_BC311DC0(value);
 		} else if (button == PLUS_DIALOG_BUTTON_CLOSE) {
+#ifndef COMMON_GUI_DIALOG_2014
 			if (m_uri != NULL)
 				sceAppMgrLaunchAppByUri(0x60000, m_uri);
+#endif
 		}
 		if (m_handler != NULL)
 			(*m_handler)(value, button);

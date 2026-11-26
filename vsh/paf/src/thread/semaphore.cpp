@@ -3,14 +3,24 @@
 #include <common/common_internal.h>
 #include <kernel/error.h>
 
+#ifdef PAF_STATIC_BUILD
+extern "C" SceUID sceKernelCreateSema_16XX(const char *name, SceUInt attr, int initVal, int maxVal,
+					   const SceKernelSemaOptParam *option);
+#endif
+
 namespace paf {
 namespace thread {
 
 Semaphore::Semaphore(const char *name, int initCount, int maxCount, int option)
 {
+#ifdef PAF_STATIC_BUILD
+	m_sema = sceKernelCreateSema_16XX(name, SCE_KERNEL_SEMA_ATTR_TH_PRIO, initCount, maxCount,
+					  NULL);
+#else
 	m_sema = sceKernelCreateSema(name, SCE_KERNEL_SEMA_ATTR_TH_PRIO, initCount, maxCount, NULL);
 	if (m_sema < 0)
 		common_internal::on_error();
+#endif
 }
 
 Semaphore::~Semaphore()

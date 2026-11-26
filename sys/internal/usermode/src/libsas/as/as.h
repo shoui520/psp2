@@ -286,16 +286,29 @@ static inline void sceSasAsMutexDelete(SceSasAsMutex *mutex)
 	}
 }
 
+#if defined(SCE_SAS_STATIC_RUNTIME) && defined(PAF_BUILD_2014)
+extern int SceLibKernel_A7819967(SceKernelLwMutexWork *work, int count, unsigned int *timeout);
+extern int SceLibKernel_499EA781(SceKernelLwMutexWork *work, int count);
+#endif
+
 static inline void sceSasAsMutexLock(SceSasAsMutex *mutex)
 {
 	if (mutex != NULL && mutex->created)
+#if defined(SCE_SAS_STATIC_RUNTIME) && defined(PAF_BUILD_2014)
+		SceLibKernel_A7819967(&mutex->work, 1, NULL);
+#else
 		sceKernelLockLwMutex(&mutex->work, 1, NULL);
+#endif
 }
 
 static inline void sceSasAsMutexUnlock(SceSasAsMutex *mutex)
 {
 	if (mutex != NULL && mutex->created)
+#if defined(SCE_SAS_STATIC_RUNTIME) && defined(PAF_BUILD_2014)
+		SceLibKernel_499EA781(&mutex->work, 1);
+#else
 		sceKernelUnlockLwMutex(&mutex->work, 1);
+#endif
 }
 
 /* a reference on a handle not destroyed yet: 1, else 0 */

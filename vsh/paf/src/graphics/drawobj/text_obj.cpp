@@ -47,8 +47,10 @@ TextObj::TextObj(const DrawStyle &style)
 	: DrawObj(style),
 	  m_layout(new TextLayout(new TextGraphicsImpl(GetTextGraphicsMutex()), GetTextLayoutMutex()))
 {
+#ifndef PAF_BUILD_2014
 	if (system::SystemParam::GetTextStyle() & 4)
 		m_draw_style.deepen_color = 1;
+#endif
 }
 
 TextObj::~TextObj()

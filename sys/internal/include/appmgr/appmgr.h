@@ -105,6 +105,7 @@ int sceAppMgrSendLiveBoardMode(int mode);
 int sceAppMgrSetBgmSubPriority(int enabled, int priority);
 int sceAppMgrSetBgmSubPriorityForSystemChat(int enabled);
 int sceAppMgrSetDisplayMergeConf(SceUInt32 setting, SceUInt32 alpha);
+int sceAppMgrSetSystemImposeState(int state);
 int sceAppMgrSetSystemImposeState2(int state);
 
 struct SceKernelProcessOpt;

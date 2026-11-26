@@ -88,14 +88,22 @@ SceGxmRenderTarget *RenderTargetPool::GetRenderTarget(Key size, const char *file
 			target->m_params.scenesPerFrame = scenes->second;
 		if (sce_paf_is_common_dialog_mode)
 			target->m_params.flags |= 4;
+#ifdef PAF_BUILD_2014
+		sceGxmGetRenderTargetMemSize(&target->m_params, &size);
+#else
 		sceGxmGetRenderTargetMemSizeInternal(&target->m_params, &size);
+#endif
 		m_mem_size += size;
 		target->m_params.driverMemBlock =
 			sceKernelAllocMemBlock("ScePafQglRenderTargetPool",
 					       sce_paf_is_common_dialog_mode ?
 					       SCE_KERNEL_MEMBLOCK_TYPE_USER_CDIALOG_NC_RW :
 					       SCE_KERNEL_MEMBLOCK_TYPE_USER_NC_RW, size, NULL);
+#ifdef PAF_BUILD_2014
+		sceGxmCreateRenderTarget(&target->m_params, &target->m_target);
+#else
 		sceGxmCreateRenderTargetInternal(&target->m_params, &target->m_target);
+#endif
 		list->push_back(target);
 		i = list->size() - 1;
 	}

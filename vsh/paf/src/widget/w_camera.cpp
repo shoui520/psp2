@@ -288,6 +288,7 @@ int32_t Camera::Setup(Screen *scr)
 
 	ScePafWidget_72F479CA(this);
 	m_pixel_snap = true;
+#ifndef PAF_BUILD_2014
 	if (SceLibKernel_9F793F84() >= CAMERA_SNAP_CHECK_VERSION) {
 		if (!scr->IsFullSize())
 			m_pixel_snap = false;
@@ -295,14 +296,14 @@ int32_t Camera::Setup(Screen *scr)
 			 !(math::v3(m_scene->GetScale(0)->getImpl().getXYZ()) ==
 			   math::v3(1.0f, 1.0f, 1.0f)))
 			m_pixel_snap = false;
-#ifndef PAF_BUILD_2014
 		else if (m_env->m_display_area_applied && m_env->m_display_area_scale != 1.0f)
 			m_pixel_snap = false;
-#endif
 	}
+#endif
 
 	math::matrix world = m_world_matrix;
 
+#ifndef PAF_BUILD_2014
 	if (m_scene != NULL && m_scene->IsDisplayAreaScaled()) {
 		float offset = GetDisplayAreaOffset();
 		float scale = GetDisplayAreaScale(m_env);
@@ -313,6 +314,7 @@ int32_t Camera::Setup(Screen *scr)
 					     math::v4(0.0f, offset,
 						      -(m_distance * (1.0f / scale - 1.0f)), 1.0f));
 	}
+#endif
 	m_view = math::matrix(Matrix4(-world.getImpl().getCol0(), world.getImpl().getCol1(),
 				      -world.getImpl().getCol2(), world.getImpl().getCol3()));
 
@@ -402,6 +404,7 @@ math::rect Camera::ScaleRect(math::rect rect)
 {
 	math::rect r = rect;
 
+#ifndef PAF_BUILD_2014
 	if (m_scene->IsDisplayAreaScaled() && !m_pixel_snap) {
 		float scale = GetDisplayAreaScale(m_env);
 
@@ -411,6 +414,7 @@ math::rect Camera::ScaleRect(math::rect rect)
 
 		r.set_center_y(y - GetDisplayAreaOffset() * scale);
 	}
+#endif
 	return r;
 }
 
