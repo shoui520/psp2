@@ -10,16 +10,12 @@
 
 static inline __attribute__((always_inline)) u16 bswap16(u16 v)
 {
-	u16 res;
-	__asm__("wsbh %0, %1" : "=r"(res) : "r"(v));
-	return res;
+	return (u16)((v << 8) | (v >> 8));
 }
 
 static inline __attribute__((always_inline)) u32 bswap32(u32 v)
 {
-	u32 res;
-	__asm__("wsbw %0, %1" : "=r"(res) : "r"(v));
-	return res;
+	return (v << 24) | ((v & 0x0000ff00u) << 8) | ((v >> 8) & 0x0000ff00u) | (v >> 24);
 }
 
 static inline __attribute__((always_inline)) u32 rotr32(u32 v, u32 n)
@@ -95,9 +91,9 @@ extern u32 sceNetRand(void);
 extern s32 sceNetStrtoul(const char *s, char **endptr, s32 base);
 extern void *sceNetMemmove(void *dst, const void *src, u32 n);
 extern char *sceNetStrcpy(char *dst, const char *src);
-extern s32 sceNetStrncmp(const char *s1, const char *s2, u32 n);
-extern s32 sceNetStrcasecmp(const char *s1, const char *s2);
-extern s32 sceNetStrcmp(const char *s1, const char *s2);
+extern s32 sceNetStrncmp(const char *lhs, const char *rhs, u32 n);
+extern s32 sceNetStrcasecmp(const char *lhs, const char *rhs);
+extern s32 sceNetStrcmp(const char *lhs, const char *rhs);
 extern char *sceNetStrncpy(char *dst, const char *src, u32 n);
 extern char *sceNetStrchr(const char *s, s32 c);
 extern s32 sceNetSprintf(char *dst, const char *fmt, ...);
@@ -141,7 +137,7 @@ typedef struct XmlSchema {
 } XmlSchema;
 
 typedef struct XmlParser XmlParser;
-typedef s32 (*XmlCallback)(XmlParser *p, s32 event, s32 depth, s32 idx, const char *val1, const char *val2, void *arg);
+typedef s32 (*XmlCallback)(XmlParser *p, s32 event, s32 depth, s32 idx, const char *text, const char *attr_val, void *arg);
 
 struct XmlParser {
 	const XmlSchema *schema;  /* 0x000 */
@@ -177,6 +173,10 @@ typedef struct UpnpHandler {
 	void *arg;                /* 0x08 */
 } UpnpHandler; /* 0x0c */
 
+typedef struct __attribute__((packed)) UnalignedU32 {
+	u32 value;
+} UnalignedU32;
+
 typedef struct UpnpNatInfoEx {
 	s32 upnp_status;          /* 0x00 */
 	s32 stun_status;          /* 0x04 */
@@ -184,9 +184,9 @@ typedef struct UpnpNatInfoEx {
 	u32 stun_result[4];       /* 0x0c..0x1b */
 	s32 stun_ext_ok;          /* 0x1c */
 	u16 ext_port;             /* 0x20 */
-	u8 stun_mapped_ip[4];     /* 0x22 */
-	u8 upnp_ext_ip[4];        /* 0x26 */
-	u8 reserved[2];             /* 0x2a */
+	UnalignedU32 stun_mapped_ip; /* 0x22 */
+	UnalignedU32 upnp_ext_ip;    /* 0x26 */
+	u8 reserved[2];           /* 0x2a */
 	s32 ip_match;             /* 0x2c */
 } UpnpNatInfoEx; /* 0x30 */
 
@@ -215,18 +215,18 @@ typedef struct UpnpCtx {
 	s32 stun_cb_status;       /* 0x0064 */
 	s32 stun_ext_ok;          /* 0x0068 */
 	u16 ext_port;             /* 0x006c */
-	u16 port2;                /* 0x006e */
-	u16 port3;                /* 0x0070 */
-	u16 reserved0;               /* 0x0072 */
-	u32 reserved1[2];            /* 0x0074 */
+	u16 default_tcp_ext_port; /* 0x006e */
+	u16 default_tcp_int_port; /* 0x0070 */
+	u16 port_pad;             /* 0x0072 */
+	u32 unused_ports[2];      /* 0x0074 */
 	u32 stun_mapped_ip;       /* 0x007c */
 	char http_buf[0x400];     /* 0x0080 */
 	char soap_buf[0x400];     /* 0x0480 */
 	char desc_path[0x80];     /* 0x0880 */
-	u32 local_ip;             /* 0x0900 */
+	u32 client_ip;            /* 0x0900 */
 	u32 gw_ip;                /* 0x0904 */
 	u16 gw_port;              /* 0x0908 */
-	u16 reserved2;              /* 0x090a */
+	u16 gw_port_pad;          /* 0x090a */
 	char url_base[0x400];     /* 0x090c */
 	s32 active_svc_idx;       /* 0x0d0c */
 	u32 found_svc_mask;       /* 0x0d10 */
@@ -242,7 +242,7 @@ typedef struct StunMsg {
 	void *user_arg;           /* 0x0c */
 	s32 sock_fd;              /* 0x10 */
 	u16 bind_port;            /* 0x14 */
-	u16 reserved;               /* 0x16 */
+	u16 reserved;             /* 0x16 */
 } StunMsg; /* 0x18 */
 
 typedef struct StunConfig {
@@ -266,7 +266,7 @@ typedef struct StunCtx {
 	s32 sock_fd;              /* 0x2c */
 	char host[0x40];          /* 0x30 */
 	u16 port;                 /* 0x70 */
-	u16 reserved0;               /* 0x72 */
+	u16 port_pad;             /* 0x72 */
 	StunConfig cfg;           /* 0x74 */
 	StunCallback cb;          /* 0x9c */
 	void *pkt_buf;            /* 0xa0 */

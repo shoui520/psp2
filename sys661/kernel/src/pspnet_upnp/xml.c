@@ -76,7 +76,7 @@ s32 xmlParserFeed(XmlParser *p, const char *data, s32 len)
 
 		case 2: {
 			u8 ch = (u8)*cur;
-			if (ch == ' ' || ch == '\t' || ch == '\r' || ch == '\n') {
+			if (ch == ' ' || ch == '\t' || ch == '\r' || ch == '\n' || ch == '/') {
 				cur++;
 			} else if (ch == '>') {
 				s32 d = p->depth;

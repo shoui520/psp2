@@ -136,42 +136,43 @@ static s32 stunCreateInternal(s32 stack_size, s32 prio, const char *host, u16 po
 	ctx->cb = cb;
 	ctx->sock_fd = -1;
 
-	if (ctx->cfg.has_ext_data != 0) {
-		ctx->ext_copy = sceNetMallocInternal(ctx->cfg.ext_data_len);
-		if (ctx->ext_copy == NULL) {
-			ret = (s32)0x8041170d;
-			goto fail;
+	do {
+		if (ctx->cfg.has_ext_data != 0) {
+			ctx->ext_copy = sceNetMallocInternal(ctx->cfg.ext_data_len);
+			if (ctx->ext_copy == NULL) {
+				ret = (s32)0x8041170d;
+				break;
+			}
+			sceKernelMemcpy(ctx->ext_copy, ctx->cfg.ext_data, ctx->cfg.ext_data_len);
+			ctx->pkt_buf_size = ctx->cfg.ext_data_len + 0x400;
+		} else {
+			ctx->pkt_buf_size = 0x400;
 		}
-		sceKernelMemcpy(ctx->ext_copy, ctx->cfg.ext_data, ctx->cfg.ext_data_len);
-		ctx->pkt_buf_size = ctx->cfg.ext_data_len + 0x400;
-	} else {
-		ctx->pkt_buf_size = 0x400;
-	}
 
-	ctx->pkt_buf = sceNetMallocInternal(ctx->pkt_buf_size);
-	if (ctx->pkt_buf == NULL) {
-		ret = (s32)0x8041170d;
-		goto fail;
-	}
+		ctx->pkt_buf = sceNetMallocInternal(ctx->pkt_buf_size);
+		if (ctx->pkt_buf == NULL) {
+			ret = (s32)0x8041170d;
+			break;
+		}
 
-	ret = sceKernelCreateMbx("SceNetStun", 0, NULL);
-	ctx->mbx_id = ret;
-	if (ret < 0)
-		goto fail;
+		ret = sceKernelCreateMbx("SceNetStun", 0, NULL);
+		ctx->mbx_id = ret;
+		if (ret < 0)
+			break;
 
-	ret = sceKernelCreateThread("SceNetStun", stunWorkerThread, prio, stack_size, 0, NULL);
-	ctx->thread_id = ret;
-	if (ret < 0)
-		goto fail;
+		ret = sceKernelCreateThread("SceNetStun", stunWorkerThread, prio, stack_size, 0, NULL);
+		ctx->thread_id = ret;
+		if (ret < 0)
+			break;
 
-	ret = sceKernelStartThread(ctx->thread_id, 4, &ctx);
-	if (ret < 0)
-		goto fail;
+		ret = sceKernelStartThread(ctx->thread_id, 4, &ctx);
+		if (ret < 0)
+			break;
 
-	*out_id = ctx->id;
-	return ret;
+		*out_id = ctx->id;
+		return ret;
+	} while (0);
 
-fail:
 	stunDestroyContext(idx);
 	return ret;
 }
@@ -309,8 +310,10 @@ static s32 stunWorkerThread(u32 args, void *argp)
 	StunMsg *msg = NULL;
 
 	for (;;) {
-		if (sceKernelReceiveMbx(ctx->mbx_id, (void **)&msg, NULL) < 0)
+		void *raw_msg = NULL;
+		if (sceKernelReceiveMbx(ctx->mbx_id, &raw_msg, NULL) < 0)
 			break;
+		msg = (StunMsg *)raw_msg;
 		switch (msg->cmd) {
 		case 1:
 			stunExecNatCheck(ctx, msg->user_arg);
@@ -372,7 +375,7 @@ static void stunDestroyContext(s32 idx)
 
 static void stunExecPortCheck(StunCtx *ctx, u16 port, s32 sock_fd, void *arg)
 {
-	SockAddrIn local_addr, srv_addr;
+	SockAddrIn bind_addr, srv_addr;
 	u8 mapped_out[8];
 	StunReqOpts req;
 	StunRespData resp;
@@ -381,76 +384,77 @@ static void stunExecPortCheck(StunCtx *ctx, u16 port, s32 sock_fd, void *arg)
 	s32 ret;
 
 	sceKernelMemset(mapped_out, 0, sizeof(mapped_out));
-	ret = stunResolveServer(ctx, ctx->host, &srv_addr);
-	if (ret < 0)
-		goto done;
-	srv_addr.sin_port = bswap16(ctx->port);
-
-	if (sock_fd == -1) {
-		ret = sceNetInetSocket(2, 2, 0);
+	do {
+		ret = stunResolveServer(ctx, ctx->host, &srv_addr);
 		if (ret < 0)
-			goto done;
-		ctx->sock_fd = ret;
+			break;
+		srv_addr.sin_port = bswap16(ctx->port);
 
-		sceKernelMemset(&local_addr, 0, sizeof(local_addr));
-		local_addr.sin_family = 2;
-		local_addr.sin_port = bswap16(port);
-		local_addr.sin_addr = 0;
-		ret = sceNetInetBind(ctx->sock_fd, &local_addr, sizeof(local_addr));
-		if (ret < 0)
-			goto done;
-	} else {
-		for (;;) {
-			sceKernelMemset(&rfds, 0, sizeof(rfds));
-			rfds.bits[sock_fd >> 5] |= (1u << (sock_fd & 31));
-			tv.tv_sec = 0;
-			tv.tv_usec = 0;
-			ret = sceNetInetSelect(sock_fd + 1, &rfds, NULL, NULL, &tv);
-			if (ret <= 0)
-				break;
-			ret = sceNetInetRecvfrom(sock_fd, ctx->pkt_buf, ctx->pkt_buf_size, 0, NULL, NULL);
+		if (sock_fd == -1) {
+			ret = sceNetInetSocket(2, 2, 0);
 			if (ret < 0)
 				break;
+			ctx->sock_fd = ret;
+
+			sceKernelMemset(&bind_addr, 0, sizeof(bind_addr));
+			bind_addr.sin_family = 2;
+			bind_addr.sin_port = bswap16(port);
+			bind_addr.sin_addr = 0;
+			ret = sceNetInetBind(ctx->sock_fd, &bind_addr, sizeof(bind_addr));
+			if (ret < 0)
+				break;
+		} else {
+			for (;;) {
+				sceKernelMemset(&rfds, 0, sizeof(rfds));
+				rfds.bits[sock_fd >> 5] |= (1u << (sock_fd & 31));
+				tv.tv_sec = 0;
+				tv.tv_usec = 0;
+				ret = sceNetInetSelect(sock_fd + 1, &rfds, NULL, NULL, &tv);
+				if (ret <= 0)
+					break;
+				ret = sceNetInetRecvfrom(sock_fd, ctx->pkt_buf, ctx->pkt_buf_size, 0, NULL, NULL);
+				if (ret < 0)
+					break;
+			}
+			if (ret < 0)
+				break;
+			ctx->sock_fd = sock_fd;
 		}
-		if (ret < 0)
-			goto done;
-		ctx->sock_fd = sock_fd;
-	}
 
-	sceKernelMemset(&req, 0, sizeof(req));
-	if (ctx->cfg.username != 0) {
-		req.username = &ctx->cfg.username;
-		req.username_len = 4;
-		req.hmac_key = ctx->cfg.key;
-		req.hmac_key_len = 20;
-	}
-	if (ctx->cfg.use_xor != 0)
-		req.use_xor = 1;
-	if (ctx->cfg.has_ext_data != 0) {
-		req.has_ext = 1;
-		req.ext_data = ctx->ext_copy;
-		req.ext_data_len = ctx->cfg.ext_data_len;
-	}
+		sceKernelMemset(&req, 0, sizeof(req));
+		if (ctx->cfg.username != 0) {
+			req.username = &ctx->cfg.username;
+			req.username_len = 4;
+			req.hmac_key = ctx->cfg.key;
+			req.hmac_key_len = 20;
+		}
+		if (ctx->cfg.use_xor != 0)
+			req.use_xor = 1;
+		if (ctx->cfg.has_ext_data != 0) {
+			req.has_ext = 1;
+			req.ext_data = ctx->ext_copy;
+			req.ext_data_len = ctx->cfg.ext_data_len;
+		}
 
-	sceKernelMemset(&resp, 0, sizeof(resp));
-	if (ctx->cfg.username != 0) {
-		resp.hmac_key = ctx->cfg.key;
-		resp.hmac_key_len = 20;
-	}
-	if (ctx->cfg.has_ext_data != 0) {
-		resp.ext_data = ctx->ext_copy;
-		resp.ext_data_len = ctx->cfg.ext_data_len;
-	}
+		sceKernelMemset(&resp, 0, sizeof(resp));
+		if (ctx->cfg.username != 0) {
+			resp.hmac_key = ctx->cfg.key;
+			resp.hmac_key_len = 20;
+		}
+		if (ctx->cfg.has_ext_data != 0) {
+			resp.ext_data = ctx->ext_copy;
+			resp.ext_data_len = ctx->cfg.ext_data_len;
+		}
 
-	ret = stunSendRecvRequest(ctx->sock_fd, ctx->sock_fd, &srv_addr, &srv_addr, &req, &resp,
-		(u8 *)ctx->pkt_buf, ctx->pkt_buf_size);
-	if (ret >= 0) {
-		u16 mport = bswap16(resp.mapped.port);
-		sceKernelMemcpy(mapped_out, &resp.mapped.addr, 4);
-		sceKernelMemcpy(mapped_out + 4, &mport, 2);
-	}
+		ret = stunSendRecvRequest(ctx->sock_fd, ctx->sock_fd, &srv_addr, &srv_addr, &req, &resp,
+			(u8 *)ctx->pkt_buf, ctx->pkt_buf_size);
+		if (ret >= 0) {
+			u16 mport = bswap16(resp.mapped.port);
+			sceKernelMemcpy(mapped_out, &resp.mapped.addr, 4);
+			sceKernelMemcpy(mapped_out + 4, &mport, 2);
+		}
+	} while (0);
 
-done:
 	if (ctx->sock_fd >= 0) {
 		if (sock_fd == -1)
 			sceNetInetClose(ctx->sock_fd);
@@ -474,9 +478,9 @@ static void stunExecNatCheck(StunCtx *ctx, void *arg)
 	u8 mapped_ev[8];
 	StunReqOpts req;
 	StunRespData resp;
-	SockAddrIn local_addr, alt_addr, srv_addr;
+	SockAddrIn bind_addr, alt_addr, srv_addr;
 	s32 namelen;
-	s32 first_d1 = 0, first_d2 = 0, retry_pass = 0;
+	s32 prev_delta_alt_port = 0, prev_delta_alt_ip = 0, retry_pass = 0;
 	s32 ret;
 
 	for (;;) {
@@ -493,16 +497,16 @@ static void stunExecNatCheck(StunCtx *ctx, void *arg)
 			break;
 		ctx->sock_fd = ret;
 
-		sceKernelMemset(&local_addr, 0, sizeof(local_addr));
-		local_addr.sin_family = 2;
-		local_addr.sin_port = 0;
-		local_addr.sin_addr = 0;
-		ret = sceNetInetBind(ctx->sock_fd, &local_addr, sizeof(local_addr));
+		sceKernelMemset(&bind_addr, 0, sizeof(bind_addr));
+		bind_addr.sin_family = 2;
+		bind_addr.sin_port = 0;
+		bind_addr.sin_addr = 0;
+		ret = sceNetInetBind(ctx->sock_fd, &bind_addr, sizeof(bind_addr));
 		if (ret < 0)
 			break;
 
-		namelen = sizeof(local_addr);
-		ret = sceNetInetGetsockname(ctx->sock_fd, &local_addr, &namelen);
+		namelen = sizeof(bind_addr);
+		ret = sceNetInetGetsockname(ctx->sock_fd, &bind_addr, &namelen);
 		if (ret < 0)
 			break;
 
@@ -535,14 +539,14 @@ static void stunExecNatCheck(StunCtx *ctx, void *arg)
 			ctx->cb(ctx->id, arg, 5, mapped_ev);
 		}
 
-		u16 port1 = resp.mapped.port;
+		u16 mapped_port_base = resp.mapped.port;
 		result[0] = resp.mapped.addr;
 		u32 src_ip = resp.source.addr;
 		u32 chg_ip = resp.changed.addr;
 		u16 chg_port = resp.changed.port;
-		result[2] = (local_addr.sin_port == port1) ? 1 : 0;
+		result[2] = (bind_addr.sin_port == mapped_port_base) ? 1 : 0;
 
-		/* Step 2: Binding request to primary IP, changed port */
+		/* Step 2: Binding request to same IP, changed port */
 		sceKernelMemset(&alt_addr, 0, sizeof(alt_addr));
 		alt_addr.sin_family = 2;
 		alt_addr.sin_port = chg_port;
@@ -569,10 +573,10 @@ static void stunExecNatCheck(StunCtx *ctx, void *arg)
 		if (ret < 0)
 			break;
 
-		u16 port2 = resp.mapped.port;
-		u32 diff1 = (u32)(u16)(bswap16(port2) - bswap16(port1));
-		result[3] = diff1;
-		if (port2 != port1) {
+		u16 mapped_port_alt_port = resp.mapped.port;
+		u32 delta_alt_port = (u32)(u16)(bswap16(mapped_port_alt_port) - bswap16(mapped_port_base));
+		result[3] = delta_alt_port;
+		if (mapped_port_alt_port != mapped_port_base) {
 			result[1] = 2;
 			break;
 		}
@@ -600,29 +604,29 @@ static void stunExecNatCheck(StunCtx *ctx, void *arg)
 		if (ret < 0)
 			break;
 
-		u16 port3 = resp.mapped.port;
-		result[1] = (port3 == port2) ? 0 : 1;
+		u16 mapped_port_alt_ip = resp.mapped.port;
+		result[1] = (mapped_port_alt_ip == mapped_port_alt_port) ? 0 : 1;
 
-		u32 diff2 = (u32)(u16)(bswap16(port3) - bswap16(port2));
-		if (diff2 == result[3])
+		u32 delta_alt_ip = (u32)(u16)(bswap16(mapped_port_alt_ip) - bswap16(mapped_port_alt_port));
+		if (delta_alt_ip == result[3])
 			break;
 
 		if (!retry_pass) {
-			if (diff2 == 1 || result[3] == 1) {
+			if (delta_alt_ip == 1 || result[3] == 1) {
 				result[3] = 1;
 				break;
 			}
-			first_d1 = (s32)(u16)result[3];
-			first_d2 = (s32)diff2;
+			prev_delta_alt_port = (s32)(u16)result[3];
+			prev_delta_alt_ip = (s32)delta_alt_ip;
 			retry_pass = 1;
 			continue;
 		} else {
-			if (diff2 == 1 || result[3] == 1) {
+			if (delta_alt_ip == 1 || result[3] == 1) {
 				result[3] = 1;
 				break;
 			}
-			if (diff2 == 2 || (result[3] == 2 && diff2 == result[3])) {
-				if (result[3] == 2 && first_d1 == 2 && (u32)first_d2 == diff2) {
+			if (delta_alt_ip == 2 || (result[3] == 2 && delta_alt_ip == result[3])) {
+				if (result[3] == 2 && prev_delta_alt_port == 2 && (u32)prev_delta_alt_ip == delta_alt_ip) {
 					result[3] = 2;
 					break;
 				}
@@ -653,116 +657,117 @@ static void stunExecExtNatCheck(StunCtx *ctx, void *arg)
 	u32 out_res[2];
 	StunReqOpts req;
 	StunRespData resp;
-	SockAddrIn local_addr, src_addr, expect_addr, srv_addr;
+	SockAddrIn bind_addr, src_addr, expect_addr, srv_addr;
 	s32 namelen;
 	u32 chg_ip;
 	s32 ret;
 
 	sceKernelMemset(out_res, 0, sizeof(out_res));
-	ret = stunResolveServer(ctx, ctx->host, &srv_addr);
-	if (ret < 0)
-		goto done;
-	srv_addr.sin_port = bswap16(ctx->port);
+	do {
+		ret = stunResolveServer(ctx, ctx->host, &srv_addr);
+		if (ret < 0)
+			break;
+		srv_addr.sin_port = bswap16(ctx->port);
 
-	ret = sceNetInetSocket(2, 2, 0);
-	if (ret < 0)
-		goto done;
-	ctx->sock_fd = ret;
+		ret = sceNetInetSocket(2, 2, 0);
+		if (ret < 0)
+			break;
+		ctx->sock_fd = ret;
 
-	sceKernelMemset(&local_addr, 0, sizeof(local_addr));
-	local_addr.sin_family = 2;
-	local_addr.sin_port = 0;
-	local_addr.sin_addr = 0;
-	ret = sceNetInetBind(ctx->sock_fd, &local_addr, sizeof(local_addr));
-	if (ret < 0)
-		goto done;
+		sceKernelMemset(&bind_addr, 0, sizeof(bind_addr));
+		bind_addr.sin_family = 2;
+		bind_addr.sin_port = 0;
+		bind_addr.sin_addr = 0;
+		ret = sceNetInetBind(ctx->sock_fd, &bind_addr, sizeof(bind_addr));
+		if (ret < 0)
+			break;
 
-	namelen = sizeof(local_addr);
-	ret = sceNetInetGetsockname(ctx->sock_fd, &local_addr, &namelen);
-	if (ret < 0)
-		goto done;
+		namelen = sizeof(bind_addr);
+		ret = sceNetInetGetsockname(ctx->sock_fd, &bind_addr, &namelen);
+		if (ret < 0)
+			break;
 
-	/* Request 1: basic binding */
-	sceKernelMemset(&req, 0, sizeof(req));
-	if (ctx->cfg.username != 0) {
-		req.username = &ctx->cfg.username;
-		req.username_len = 4;
-		req.hmac_key = ctx->cfg.key;
-		req.hmac_key_len = 20;
-	}
-	if (ctx->cfg.use_xor != 0)
-		req.use_xor = 1;
+		/* Request 1: basic binding */
+		sceKernelMemset(&req, 0, sizeof(req));
+		if (ctx->cfg.username != 0) {
+			req.username = &ctx->cfg.username;
+			req.username_len = 4;
+			req.hmac_key = ctx->cfg.key;
+			req.hmac_key_len = 20;
+		}
+		if (ctx->cfg.use_xor != 0)
+			req.use_xor = 1;
 
-	sceKernelMemset(&resp, 0, sizeof(resp));
-	if (ctx->cfg.username != 0) {
-		resp.hmac_key = ctx->cfg.key;
-		resp.hmac_key_len = 20;
-	}
+		sceKernelMemset(&resp, 0, sizeof(resp));
+		if (ctx->cfg.username != 0) {
+			resp.hmac_key = ctx->cfg.key;
+			resp.hmac_key_len = 20;
+		}
 
-	ret = stunSendRecvRequest(ctx->sock_fd, ctx->sock_fd, &srv_addr, &srv_addr, &req, &resp,
-		(u8 *)ctx->pkt_buf, ctx->pkt_buf_size);
-	if (ret < 0)
-		goto done;
+		ret = stunSendRecvRequest(ctx->sock_fd, ctx->sock_fd, &srv_addr, &srv_addr, &req, &resp,
+			(u8 *)ctx->pkt_buf, ctx->pkt_buf_size);
+		if (ret < 0)
+			break;
 
-	chg_ip = resp.changed.addr;
-	sceKernelMemset(&src_addr, 0, sizeof(src_addr));
-	src_addr.sin_family = 2;
-	src_addr.sin_port = resp.source.port;
-	src_addr.sin_addr = resp.source.addr;
+		chg_ip = resp.changed.addr;
+		sceKernelMemset(&src_addr, 0, sizeof(src_addr));
+		src_addr.sin_family = 2;
+		src_addr.sin_port = resp.source.port;
+		src_addr.sin_addr = resp.source.addr;
 
-	sceKernelMemset(&expect_addr, 0, sizeof(expect_addr));
-	expect_addr.sin_family = 2;
-	expect_addr.sin_port = resp.changed.port;
-	expect_addr.sin_addr = resp.source.addr;
+		sceKernelMemset(&expect_addr, 0, sizeof(expect_addr));
+		expect_addr.sin_family = 2;
+		expect_addr.sin_port = resp.changed.port;
+		expect_addr.sin_addr = resp.source.addr;
 
-	/* Request 2: CHANGE_PORT (2) */
-	sceKernelMemset(&req, 0, sizeof(req));
-	req.change_req = 2;
-	if (ctx->cfg.username != 0) {
-		req.username = &ctx->cfg.username;
-		req.username_len = 4;
-		req.hmac_key = ctx->cfg.key;
-		req.hmac_key_len = 20;
-	}
-	if (ctx->cfg.use_xor != 0)
-		req.use_xor = 1;
+		/* Request 2: CHANGE_PORT (2) */
+		sceKernelMemset(&req, 0, sizeof(req));
+		req.change_req = 2;
+		if (ctx->cfg.username != 0) {
+			req.username = &ctx->cfg.username;
+			req.username_len = 4;
+			req.hmac_key = ctx->cfg.key;
+			req.hmac_key_len = 20;
+		}
+		if (ctx->cfg.use_xor != 0)
+			req.use_xor = 1;
 
-	ret = stunSendRecvRequest(ctx->sock_fd, ctx->sock_fd, &src_addr, &expect_addr, &req, &resp,
-		(u8 *)ctx->pkt_buf, ctx->pkt_buf_size);
-	if (ret == (s32)0x80411703) {
-		out_res[0] = 2;
+		ret = stunSendRecvRequest(ctx->sock_fd, ctx->sock_fd, &src_addr, &expect_addr, &req, &resp,
+			(u8 *)ctx->pkt_buf, ctx->pkt_buf_size);
+		if (ret == (s32)0x80411703) {
+			out_res[0] = 2;
+			ret = stunTestChangedAddrReachable(ctx->sock_fd, &resp.mapped, out_res);
+			break;
+		}
+		if (ret < 0)
+			break;
+
+		/* Request 3: CHANGE_IP | CHANGE_PORT (6) */
+		expect_addr.sin_addr = chg_ip;
+		sceKernelMemset(&req, 0, sizeof(req));
+		req.change_req = 6;
+		if (ctx->cfg.username != 0) {
+			req.username = &ctx->cfg.username;
+			req.username_len = 4;
+			req.hmac_key = ctx->cfg.key;
+			req.hmac_key_len = 20;
+		}
+		if (ctx->cfg.use_xor != 0)
+			req.use_xor = 1;
+
+		ret = stunSendRecvRequest(ctx->sock_fd, ctx->sock_fd, &src_addr, &expect_addr, &req, &resp,
+			(u8 *)ctx->pkt_buf, ctx->pkt_buf_size);
+		if (ret == (s32)0x80411703) {
+			out_res[0] = 1;
+		} else if (ret < 0) {
+			break;
+		} else {
+			out_res[0] = 0;
+		}
+
 		ret = stunTestChangedAddrReachable(ctx->sock_fd, &resp.mapped, out_res);
-		goto done;
-	}
-	if (ret < 0)
-		goto done;
+	} while (0);
 
-	/* Request 3: CHANGE_IP | CHANGE_PORT (6) */
-	expect_addr.sin_addr = chg_ip;
-	sceKernelMemset(&req, 0, sizeof(req));
-	req.change_req = 6;
-	if (ctx->cfg.username != 0) {
-		req.username = &ctx->cfg.username;
-		req.username_len = 4;
-		req.hmac_key = ctx->cfg.key;
-		req.hmac_key_len = 20;
-	}
-	if (ctx->cfg.use_xor != 0)
-		req.use_xor = 1;
-
-	ret = stunSendRecvRequest(ctx->sock_fd, ctx->sock_fd, &src_addr, &expect_addr, &req, &resp,
-		(u8 *)ctx->pkt_buf, ctx->pkt_buf_size);
-	if (ret == (s32)0x80411703) {
-		out_res[0] = 1;
-	} else if (ret < 0) {
-		goto done;
-	} else {
-		out_res[0] = 0;
-	}
-
-	ret = stunTestChangedAddrReachable(ctx->sock_fd, &resp.mapped, out_res);
-
-done:
 	if (ctx->sock_fd >= 0) {
 		sceNetInetClose(ctx->sock_fd);
 		ctx->sock_fd = -1;
@@ -790,24 +795,20 @@ static s32 stunResolveServer(StunCtx *ctx, const char *host, SockAddrIn *out_add
 	u32 ip = sceNetInetInetAddr(host);
 	if (ip != 0xffffffffu) {
 		out_addr->sin_addr = ip;
-		goto cleanup;
+	} else {
+		res_buf = sceNetMallocInternal(0x300);
+		if (res_buf == NULL) {
+			ret = (s32)0x8041170d;
+		} else {
+			ret = sceNetResolverCreate(&ctx->resolver_id, res_buf, 0x300);
+			if (ret >= 0) {
+				ret = sceNetResolverStartNtoA(ctx->resolver_id, host, &out_addr->sin_addr, 1000000, 5);
+				if (ret >= 0)
+					ret = 0;
+			}
+		}
 	}
 
-	res_buf = sceNetMallocInternal(0x300);
-	if (res_buf == NULL) {
-		ret = (s32)0x8041170d;
-		goto cleanup;
-	}
-
-	ret = sceNetResolverCreate(&ctx->resolver_id, res_buf, 0x300);
-	if (ret < 0)
-		goto cleanup;
-
-	ret = sceNetResolverStartNtoA(ctx->resolver_id, host, &out_addr->sin_addr, 1000000, 5);
-	if (ret >= 0)
-		ret = 0;
-
-cleanup:
 	if (ctx->resolver_id > 0)
 		sceNetResolverDelete(ctx->resolver_id);
 	ctx->resolver_id = 0;
@@ -870,9 +871,7 @@ static s32 stunSendRecvRequest(s32 send_fd, s32 recv_fd, const SockAddrIn *dst_a
 				continue;
 			if (from.sin_family != expect_addr->sin_family)
 				continue;
-			u32 exp_ip;
-			sceKernelMemcpy(&exp_ip, &expect_addr->sin_addr, 4);
-			if (from.sin_addr != exp_ip)
+			if (from.sin_addr != expect_addr->sin_addr)
 				continue;
 
 			ret = stunParseBindingResponse(pkt_buf, pkt_buf_size, (const u8 *)tid, resp);
@@ -887,7 +886,7 @@ static s32 stunTestChangedAddrReachable(s32 sock_fd, const StunAddrAttr *dst, u3
 {
 	SockAddrIn addr;
 	TimeVal tv;
-	u8 probe[0x40];
+	u8 probe[0x40] __attribute__((aligned(16)));
 	FdSet rfds;
 	s32 i, ret;
 

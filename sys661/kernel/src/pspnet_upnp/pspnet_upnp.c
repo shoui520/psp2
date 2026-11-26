@@ -20,35 +20,35 @@ static const char *const g_service_types[2] = {
 	"urn:schemas-upnp-org:service:WANPPPConnection:1"
 };
 
-static const XmlTagEntry g_desc_l0[] = { { "root", 1 }, { "", 1 } };
-static const XmlTagEntry g_desc_l1[] = { { "URLBase", 1 }, { "device", 0 }, { "", 1 } };
-static const XmlTagEntry g_desc_l2[] = { { "serviceList", 0 }, { "deviceList", 0 }, { "", 1 } };
-static const XmlTagEntry g_desc_l3[] = { { "service", 0 }, { "device", 0 }, { "", 1 } };
-static const XmlTagEntry g_desc_l4[] = { { "serviceList", 0 }, { "deviceList", 0 }, { "", 1 } };
-static const XmlTagEntry g_desc_l5[] = { { "service", 0 }, { "device", 0 }, { "", 1 } };
-static const XmlTagEntry g_desc_l6[] = { { "serviceType", 1 }, { "controlURL", 1 }, { "serviceList", 0 }, { "", 1 } };
-static const XmlTagEntry g_desc_l7[] = { { "service", 0 }, { "", 1 } };
-static const XmlTagEntry g_desc_l8[] = { { "serviceType", 1 }, { "controlURL", 1 }, { "", 1 } };
+static const XmlTagEntry g_desc_root[] = { { "root", 1 }, { "", 1 } };
+static const XmlTagEntry g_desc_device[] = { { "URLBase", 1 }, { "device", 0 }, { "", 1 } };
+static const XmlTagEntry g_desc_dev_children[] = { { "serviceList", 0 }, { "deviceList", 0 }, { "", 1 } };
+static const XmlTagEntry g_desc_sub_device[] = { { "service", 0 }, { "device", 0 }, { "", 1 } };
+static const XmlTagEntry g_desc_sub_children[] = { { "serviceList", 0 }, { "deviceList", 0 }, { "", 1 } };
+static const XmlTagEntry g_desc_wan_device[] = { { "service", 0 }, { "device", 0 }, { "", 1 } };
+static const XmlTagEntry g_desc_wan_children[] = { { "serviceType", 1 }, { "controlURL", 1 }, { "serviceList", 0 }, { "", 1 } };
+static const XmlTagEntry g_desc_service[] = { { "service", 0 }, { "", 1 } };
+static const XmlTagEntry g_desc_service_fields[] = { { "serviceType", 1 }, { "controlURL", 1 }, { "", 1 } };
 
 static const XmlTagEntry *const g_desc_levels[9] = {
-	g_desc_l0, g_desc_l1, g_desc_l2, g_desc_l3, g_desc_l4,
-	g_desc_l5, g_desc_l6, g_desc_l7, g_desc_l8
+	g_desc_root, g_desc_device, g_desc_dev_children, g_desc_sub_device, g_desc_sub_children,
+	g_desc_wan_device, g_desc_wan_children, g_desc_service, g_desc_service_fields
 };
 static const XmlSchema g_desc_schema = { g_desc_levels, 9 };
 
-static const XmlTagEntry g_extip_l0[] = { { "NewExternalIPAddress", 1 }, { "", 1 } };
-static const XmlTagEntry *const g_extip_levels[1] = { g_extip_l0 };
+static const XmlTagEntry g_extip_root[] = { { "NewExternalIPAddress", 1 }, { "", 1 } };
+static const XmlTagEntry *const g_extip_levels[1] = { g_extip_root };
 static const XmlSchema g_extip_schema = { g_extip_levels, 1 };
 
-static const XmlTagEntry g_soap_l0[] = { { "Envelope", 0 }, { "", 1 } };
-static const XmlTagEntry g_soap_l1[] = { { "Body", 0 }, { "", 1 } };
-static const XmlTagEntry g_soap_l2[] = { { "AddPortMappingResponse", 0 }, { "Fault", 0 }, { "", 1 } };
-static const XmlTagEntry g_soap_l3[] = { { "detail", 0 }, { "", 1 } };
-static const XmlTagEntry g_soap_l4[] = { { "UPnPError", 0 }, { "", 1 } };
-static const XmlTagEntry g_soap_l5[] = { { "errorCode", 1 }, { "", 1 } };
+static const XmlTagEntry g_soap_envelope[] = { { "Envelope", 0 }, { "", 1 } };
+static const XmlTagEntry g_soap_body[] = { { "Body", 0 }, { "", 1 } };
+static const XmlTagEntry g_soap_response[] = { { "AddPortMappingResponse", 0 }, { "Fault", 0 }, { "", 1 } };
+static const XmlTagEntry g_soap_detail[] = { { "detail", 0 }, { "", 1 } };
+static const XmlTagEntry g_soap_upnp_error[] = { { "UPnPError", 0 }, { "", 1 } };
+static const XmlTagEntry g_soap_error_code[] = { { "errorCode", 1 }, { "", 1 } };
 
 static const XmlTagEntry *const g_soap_levels[6] = {
-	g_soap_l0, g_soap_l1, g_soap_l2, g_soap_l3, g_soap_l4, g_soap_l5
+	g_soap_envelope, g_soap_body, g_soap_response, g_soap_detail, g_soap_upnp_error, g_soap_error_code
 };
 static const XmlSchema g_soap_schema = { g_soap_levels, 6 };
 
@@ -59,9 +59,9 @@ static const u8 g_stun_hmac_key[20] = {
 };
 
 /* Forward declarations */
-static void sha1Compress(u32 *w, u32 *state);
 static s32 soapWriteEnvelopeHeader(char *buf, s32 bufsize, s32 action, s32 svc_type);
 static s32 soapWriteEnvelopeFooter(char *buf, s32 bufsize, s32 action);
+static s32 upnpSoapFaultXmlCallback(XmlParser *p, s32 event, s32 depth, s32 idx, const char *text, const char *attr_val, void *arg);
 static s32 upnpResolveControlUrl(const char *url, u32 *gw_ip, u16 *gw_port, const char *base_path, char *tmp_buf, u32 tmp_size, char *out_path, u32 out_size);
 static s32 httpBuildGetRequest(char *buf, s32 bufsize, const SockAddrIn *addr, const char *path);
 static s32 httpRecvResponse(s32 sock, char *buf, u32 bufsize, XmlParser *parser);
@@ -240,7 +240,7 @@ static s32 soapBuildAddPortMappingBody(char *buf, s32 bufsize, const char *clien
 
 	sceKernelMemset(line, 0, sizeof(line));
 	n = sceNetSprintf(line, " <%s>%s</%s>\r\n", "NewRemoteHost", "", "NewRemoteHost");
-	if (n < 0 || n >= rem)
+	if (((u32)n >> 31) | (n >= rem))
 		return (s32)0x80411685;
 	sceNetStrcpy(p, line);
 	p += n;
@@ -248,7 +248,7 @@ static s32 soapBuildAddPortMappingBody(char *buf, s32 bufsize, const char *clien
 
 	sceKernelMemset(line, 0, sizeof(line));
 	n = sceNetSprintf(line, " <%s>%d</%s>\r\n", "NewExternalPort", (u32)ext_port, "NewExternalPort");
-	if (n < 0 || n >= rem)
+	if (((u32)n >> 31) | (n >= rem))
 		return (s32)0x80411685;
 	sceNetStrcpy(p, line);
 	p += n;
@@ -256,7 +256,7 @@ static s32 soapBuildAddPortMappingBody(char *buf, s32 bufsize, const char *clien
 
 	sceKernelMemset(line, 0, sizeof(line));
 	n = sceNetSprintf(line, " <%s>%s</%s>\r\n", "NewProtocol", g_proto_names[proto], "NewProtocol");
-	if (n < 0 || n >= rem)
+	if (((u32)n >> 31) | (n >= rem))
 		return (s32)0x80411685;
 	sceNetStrcpy(p, line);
 	p += n;
@@ -264,7 +264,7 @@ static s32 soapBuildAddPortMappingBody(char *buf, s32 bufsize, const char *clien
 
 	sceKernelMemset(line, 0, sizeof(line));
 	n = sceNetSprintf(line, " <%s>%d</%s>\r\n", "NewInternalPort", (u32)int_port, "NewInternalPort");
-	if (n < 0 || n >= rem)
+	if (((u32)n >> 31) | (n >= rem))
 		return (s32)0x80411685;
 	sceNetStrcpy(p, line);
 	p += n;
@@ -272,7 +272,7 @@ static s32 soapBuildAddPortMappingBody(char *buf, s32 bufsize, const char *clien
 
 	sceKernelMemset(line, 0, sizeof(line));
 	n = sceNetSprintf(line, " <%s>%s</%s>\r\n", "NewInternalClient", client_ip, "NewInternalClient");
-	if (n < 0 || n >= rem)
+	if (((u32)n >> 31) | (n >= rem))
 		return (s32)0x80411685;
 	sceNetStrcpy(p, line);
 	p += n;
@@ -280,7 +280,7 @@ static s32 soapBuildAddPortMappingBody(char *buf, s32 bufsize, const char *clien
 
 	sceKernelMemset(line, 0, sizeof(line));
 	n = sceNetSprintf(line, " <%s>%d</%s>\r\n", "NewEnabled", 1, "NewEnabled");
-	if (n < 0 || n >= rem)
+	if (((u32)n >> 31) | (n >= rem))
 		return (s32)0x80411685;
 	sceNetStrcpy(p, line);
 	p += n;
@@ -290,7 +290,7 @@ static s32 soapBuildAddPortMappingBody(char *buf, s32 bufsize, const char *clien
 	n = sceNetSprintf(line, " <%s>%s:%d to %d (%s)</%s>\r\n",
 		"NewPortMappingDescription", client_ip, (u32)int_port, (u32)ext_port,
 		g_proto_names[proto], "NewPortMappingDescription");
-	if (n < 0 || n >= rem)
+	if (((u32)n >> 31) | (n >= rem))
 		return (s32)0x80411685;
 	sceNetStrcpy(p, line);
 	p += n;
@@ -298,7 +298,7 @@ static s32 soapBuildAddPortMappingBody(char *buf, s32 bufsize, const char *clien
 
 	sceKernelMemset(line, 0, sizeof(line));
 	n = sceNetSprintf(line, " <%s>%d</%s>\r\n", "NewLeaseDuration", 0, "NewLeaseDuration");
-	if (n < 0 || n >= rem)
+	if (((u32)n >> 31) | (n >= rem))
 		return (s32)0x80411685;
 	sceNetStrcpy(p, line);
 	p += n;
@@ -324,7 +324,7 @@ static s32 soapBuildDeletePortMappingBody(char *buf, s32 bufsize, s32 svc_type, 
 
 	sceKernelMemset(line, 0, sizeof(line));
 	n = sceNetSprintf(line, " <%s>%s</%s>\r\n", "NewRemoteHost", "", "NewRemoteHost");
-	if (n < 0 || n >= rem)
+	if (((u32)n >> 31) | (n >= rem))
 		return (s32)0x80411685;
 	sceNetStrcpy(p, line);
 	p += n;
@@ -332,7 +332,7 @@ static s32 soapBuildDeletePortMappingBody(char *buf, s32 bufsize, s32 svc_type, 
 
 	sceKernelMemset(line, 0, sizeof(line));
 	n = sceNetSprintf(line, " <%s>%d</%s>\r\n", "NewExternalPort", (u32)ext_port, "NewExternalPort");
-	if (n < 0 || n >= rem)
+	if (((u32)n >> 31) | (n >= rem))
 		return (s32)0x80411685;
 	sceNetStrcpy(p, line);
 	p += n;
@@ -340,7 +340,7 @@ static s32 soapBuildDeletePortMappingBody(char *buf, s32 bufsize, s32 svc_type, 
 
 	sceKernelMemset(line, 0, sizeof(line));
 	n = sceNetSprintf(line, " <%s>%s</%s>\r\n", "NewProtocol", g_proto_names[proto], "NewProtocol");
-	if (n < 0 || n >= rem)
+	if (((u32)n >> 31) | (n >= rem))
 		return (s32)0x80411685;
 	sceNetStrcpy(p, line);
 	p += n;
@@ -375,7 +375,7 @@ static s32 soapWriteEnvelopeHeader(char *buf, s32 bufsize, s32 action, s32 svc_t
 		"Envelope",
 		"http://schemas.xmlsoap.org/soap/envelope/",
 		"http://schemas.xmlsoap.org/soap/encoding/");
-	if (n < 0 || n >= rem)
+	if (((u32)n >> 31) | (n >= rem))
 		return (s32)0x80411685;
 	sceNetStrcpy(p, line);
 	p += n;
@@ -383,7 +383,7 @@ static s32 soapWriteEnvelopeHeader(char *buf, s32 bufsize, s32 action, s32 svc_t
 
 	sceKernelMemset(line, 0, sizeof(line));
 	n = sceNetSprintf(line, "   <s:%s>\r\n", "Body");
-	if (n < 0 || n >= rem)
+	if (((u32)n >> 31) | (n >= rem))
 		return (s32)0x80411685;
 	sceNetStrcpy(p, line);
 	p += n;
@@ -392,7 +392,7 @@ static s32 soapWriteEnvelopeHeader(char *buf, s32 bufsize, s32 action, s32 svc_t
 	sceKernelMemset(line, 0, sizeof(line));
 	n = sceNetSprintf(line, "      <u:%s xmlns:u=\"%s\">\r\n",
 		g_soap_actions[action], g_service_types[svc_type]);
-	if (n < 0 || n >= rem)
+	if (((u32)n >> 31) | (n >= rem))
 		return (s32)0x80411685;
 	sceNetStrcpy(p, line);
 	p += n;
@@ -408,7 +408,7 @@ static s32 soapWriteEnvelopeFooter(char *buf, s32 bufsize, s32 action)
 
 	sceKernelMemset(line, 0, sizeof(line));
 	n = sceNetSprintf(line, "      </u:%s>\r\n", g_soap_actions[action]);
-	if (n < 0 || n >= rem)
+	if (((u32)n >> 31) | (n >= rem))
 		return (s32)0x80411685;
 	sceNetStrcpy(p, line);
 	p += n;
@@ -416,7 +416,7 @@ static s32 soapWriteEnvelopeFooter(char *buf, s32 bufsize, s32 action)
 
 	sceKernelMemset(line, 0, sizeof(line));
 	n = sceNetSprintf(line, "   </s:%s>\r\n", "Body");
-	if (n < 0 || n >= rem)
+	if (((u32)n >> 31) | (n >= rem))
 		return (s32)0x80411685;
 	sceNetStrcpy(p, line);
 	p += n;
@@ -424,30 +424,30 @@ static s32 soapWriteEnvelopeFooter(char *buf, s32 bufsize, s32 action)
 
 	sceKernelMemset(line, 0, sizeof(line));
 	n = sceNetSprintf(line, "</s:%s>\r\n", "Envelope");
-	if (n < 0 || n >= rem)
+	if (((u32)n >> 31) | (n >= rem))
 		return (s32)0x80411685;
 	sceNetStrcpy(p, line);
 	p += n;
 	return (s32)(p - buf);
 }
 
-static s32 upnpDescXmlCallback(XmlParser *p, s32 event, s32 depth, s32 idx, const char *val1, const char *val2, void *arg)
+static s32 upnpDescXmlCallback(XmlParser *p, s32 event, s32 depth, s32 idx, const char *text, const char *attr_val, void *arg)
 {
 	UpnpCtx *ctx = (UpnpCtx *)arg;
 	s32 ret;
 
 	if (event == 3 && depth == 1 && idx == 0) {
-		ssdpParseLocationUrl((char *)val1, &ctx->gw_ip, &ctx->gw_port, ctx->url_base, 0x400);
+		ssdpParseLocationUrl((char *)text, &ctx->gw_ip, &ctx->gw_port, ctx->url_base, 0x400);
 		ctx->xml_parse_flags |= 1;
 	}
 
 	if (event == 3 && (depth == 4 || depth == 6 || depth == 8) && idx == 0) {
-		if (sceNetStrcmp("urn:schemas-upnp-org:service:WANIPConnection:1", val1) == 0) {
+		if (sceNetStrcmp("urn:schemas-upnp-org:service:WANIPConnection:1", text) == 0) {
 			g_xml_service_type = 0;
 			g_xml_found_service = 1;
 			g_xml_service_depth = depth;
 			g_xml_service_idx = idx;
-		} else if (sceNetStrcmp("urn:schemas-upnp-org:service:WANPPPConnection:1", val1) == 0) {
+		} else if (sceNetStrcmp("urn:schemas-upnp-org:service:WANPPPConnection:1", text) == 0) {
 			g_xml_service_type = 1;
 			g_xml_found_service = 1;
 			g_xml_service_depth = depth;
@@ -461,7 +461,7 @@ static s32 upnpDescXmlCallback(XmlParser *p, s32 event, s32 depth, s32 idx, cons
 		if (g_xml_service_type == 0) {
 			if (ctx->found_svc_mask & 1)
 				return 0;
-			ret = upnpResolveControlUrl(val1, &ctx->gw_ip, &ctx->gw_port, ctx->url_base,
+			ret = upnpResolveControlUrl(text, &ctx->gw_ip, &ctx->gw_port, ctx->url_base,
 				ctx->http_buf, 0x400, ctx->ctrl_url[0], 0x400);
 			if (ret < 0)
 				return ret;
@@ -469,7 +469,7 @@ static s32 upnpDescXmlCallback(XmlParser *p, s32 event, s32 depth, s32 idx, cons
 		} else if (g_xml_service_type == 1) {
 			if (ctx->found_svc_mask & 2)
 				return 0;
-			ret = upnpResolveControlUrl(val1, &ctx->gw_ip, &ctx->gw_port, ctx->url_base,
+			ret = upnpResolveControlUrl(text, &ctx->gw_ip, &ctx->gw_port, ctx->url_base,
 				ctx->http_buf, 0x400, ctx->ctrl_url[1], 0x400);
 			if (ret < 0)
 				return ret;
@@ -559,20 +559,21 @@ static s32 upnpSendSoapRequest(s32 sock, char *buf, u32 bufsize, const SockAddrI
 	return httpRecvResponse(sock, buf, bufsize, parser);
 }
 
-static s32 upnpExtIpXmlCallback(XmlParser *p, s32 event, s32 depth, s32 idx, const char *val1, const char *val2, void *arg)
+static s32 upnpExtIpXmlCallback(XmlParser *p, s32 event, s32 depth, s32 idx, const char *text, const char *attr_val, void *arg)
 {
 	UpnpCtx *ctx = (UpnpCtx *)arg;
+	s32 is_root = (depth == 0);
 	s32 ret = 0;
 
-	if (event == 3 && depth == 0 && idx == 0) {
-		if (sceNetStrlen(val1) >= 0x10)
+	if (((event == 3) & is_root) && idx == 0) {
+		if (sceNetStrlen(text) >= 0x10)
 			return (s32)0x80411609;
 		sceKernelMemset(ctx->ext_ip_str, 0, 0x10);
-		sceNetStrcpy(ctx->ext_ip_str, val1);
+		sceNetStrcpy(ctx->ext_ip_str, text);
 		ctx->xml_parse_flags |= 2;
 	}
 
-	if (event == 2 && depth == 0 && idx == 0) {
+	if (((event == 2) & is_root) && idx == 0) {
 		if (!(ctx->xml_parse_flags & 2))
 			return (s32)0x8041168d;
 		ctx->xml_parse_flags |= 0x80000000u;
@@ -599,13 +600,26 @@ static s32 upnpHttpGetXml(s32 sock, char *buf, u32 bufsize, const SockAddrIn *ad
 	return httpRecvResponse(sock, buf, bufsize, parser);
 }
 
-static s32 upnpSoapFaultXmlCallback(XmlParser *p, s32 event, s32 depth, s32 idx, const char *val1, const char *val2, void *arg)
+static s32 upnpInitSoapXmlParser(UpnpCtx *ctx, XmlParser *parser, s32 action)
+{
+	switch (action) {
+	case 0:
+	case 1:
+		return xmlParserInit(parser, &g_soap_schema, upnpSoapFaultXmlCallback, ctx);
+	case 2:
+		return xmlParserInit(parser, &g_extip_schema, upnpExtIpXmlCallback, ctx);
+	default:
+		return (s32)0x8041168f;
+	}
+}
+
+static s32 upnpSoapFaultXmlCallback(XmlParser *p, s32 event, s32 depth, s32 idx, const char *text, const char *attr_val, void *arg)
 {
 	UpnpCtx *ctx = (UpnpCtx *)arg;
 	s32 err = 0;
 
 	if (event == 3 && depth == 5 && idx == 0) {
-		s32 code = sceNetStrtoul(val1, NULL, 10);
+		s32 code = sceNetStrtoul(text, NULL, 10);
 		upnpMapErrorCode(&err, code);
 		return err;
 	}
@@ -614,15 +628,6 @@ static s32 upnpSoapFaultXmlCallback(XmlParser *p, s32 event, s32 depth, s32 idx,
 		ctx->xml_parse_flags |= 0x80000000u;
 	}
 	return err;
-}
-
-static s32 upnpInitSoapXmlParser(UpnpCtx *ctx, XmlParser *parser, s32 action)
-{
-	if (action == 0 || action == 1)
-		return xmlParserInit(parser, &g_soap_schema, upnpSoapFaultXmlCallback, ctx);
-	if (action == 2)
-		return xmlParserInit(parser, &g_extip_schema, upnpExtIpXmlCallback, ctx);
-	return (s32)0x8041168f;
 }
 
 static s32 httpBuildGetRequest(char *buf, s32 bufsize, const SockAddrIn *addr, const char *path)
@@ -635,7 +640,7 @@ static s32 httpBuildGetRequest(char *buf, s32 bufsize, const SockAddrIn *addr, c
 
 	sceKernelMemset(line, 0, sizeof(line));
 	n = sceNetSprintf(line, "GET %s HTTP/1.1\r\n", path);
-	if (n < 0 || n >= rem)
+	if (((u32)n >> 31) | (n >= rem))
 		return (s32)0x80411685;
 	sceNetStrcpy(p, line);
 	p += n;
@@ -644,7 +649,7 @@ static s32 httpBuildGetRequest(char *buf, s32 bufsize, const SockAddrIn *addr, c
 	sceKernelMemset(line, 0, sizeof(line));
 	const char *host = sceNetInetInetNtop(2, &addr->sin_addr, ip_str, sizeof(ip_str));
 	n = sceNetSprintf(line, "HOST: %s:%d\r\n", host, (u32)bswap16(addr->sin_port));
-	if (n < 0 || n >= rem)
+	if (((u32)n >> 31) | (n >= rem))
 		return (s32)0x80411685;
 	sceNetStrcpy(p, line);
 	p += n;
@@ -652,7 +657,7 @@ static s32 httpBuildGetRequest(char *buf, s32 bufsize, const SockAddrIn *addr, c
 
 	sceKernelMemset(line, 0, sizeof(line));
 	n = sceNetSprintf(line, "\r\n");
-	if (n < 0 || n >= rem)
+	if (((u32)n >> 31) | (n >= rem))
 		return (s32)0x80411685;
 	sceNetStrcpy(p, line);
 	p += n;
@@ -737,7 +742,7 @@ static s32 httpBuildSoapPostHeader(char *buf, s32 bufsize, const SockAddrIn *add
 
 	sceKernelMemset(line, 0, sizeof(line));
 	n = sceNetSprintf(line, "POST %s HTTP/1.1\r\n", path);
-	if (n < 0 || n >= rem)
+	if (((u32)n >> 31) | (n >= rem))
 		return (s32)0x80411685;
 	sceNetStrcpy(p, line);
 	p += n;
@@ -746,7 +751,7 @@ static s32 httpBuildSoapPostHeader(char *buf, s32 bufsize, const SockAddrIn *add
 	sceKernelMemset(line, 0, sizeof(line));
 	const char *host = sceNetInetInetNtop(2, &addr->sin_addr, ip_str, sizeof(ip_str));
 	n = sceNetSprintf(line, "HOST: %s:%d\r\n", host, (u32)bswap16(addr->sin_port));
-	if (n < 0 || n >= rem)
+	if (((u32)n >> 31) | (n >= rem))
 		return (s32)0x80411685;
 	sceNetStrcpy(p, line);
 	p += n;
@@ -754,7 +759,7 @@ static s32 httpBuildSoapPostHeader(char *buf, s32 bufsize, const SockAddrIn *add
 
 	sceKernelMemset(line, 0, sizeof(line));
 	n = sceNetSprintf(line, "Content-Length: %d\r\n", content_len);
-	if (n < 0 || n >= rem)
+	if (((u32)n >> 31) | (n >= rem))
 		return (s32)0x80411685;
 	sceNetStrcpy(p, line);
 	p += n;
@@ -762,7 +767,7 @@ static s32 httpBuildSoapPostHeader(char *buf, s32 bufsize, const SockAddrIn *add
 
 	sceKernelMemset(line, 0, sizeof(line));
 	n = sceNetSprintf(line, "Content-Type: %s\r\n", "text/xml; charset=\"utf-8\"");
-	if (n < 0 || n >= rem)
+	if (((u32)n >> 31) | (n >= rem))
 		return (s32)0x80411685;
 	sceNetStrcpy(p, line);
 	p += n;
@@ -771,7 +776,7 @@ static s32 httpBuildSoapPostHeader(char *buf, s32 bufsize, const SockAddrIn *add
 	sceKernelMemset(line, 0, sizeof(line));
 	n = sceNetSprintf(line, "SOAPACTION: \"%s#%s\"\r\n",
 		g_service_types[svc_type], g_soap_actions[action]);
-	if (n < 0 || n >= rem)
+	if (((u32)n >> 31) | (n >= rem))
 		return (s32)0x80411685;
 	sceNetStrcpy(p, line);
 	p += n;
@@ -779,7 +784,7 @@ static s32 httpBuildSoapPostHeader(char *buf, s32 bufsize, const SockAddrIn *add
 
 	sceKernelMemset(line, 0, sizeof(line));
 	n = sceNetSprintf(line, "\r\n");
-	if (n < 0 || n >= rem)
+	if (((u32)n >> 31) | (n >= rem))
 		return (s32)0x80411685;
 	sceNetStrcpy(p, line);
 	p += n;
@@ -892,49 +897,49 @@ static s32 upnpInitInternal(s32 stack_size, s32 prio)
 	sceKernelMemset(env_buf, 0, sizeof(env_buf));
 	sceKernelMemset(ctx->stun_host, 0, sizeof(ctx->stun_host));
 
-	ret = upnpReadRegistryString("/CONFIG/NP", "env", env_buf, sizeof(env_buf));
-	if (ret >= 0) {
-		sceNetSprintf(ctx->stun_host, "%s.%s.%s", "us", env_buf, "stun.playstation.net");
-	}
-	if (ret < 0)
-		goto fail;
+	do {
+		ret = upnpReadRegistryString("/CONFIG/NP", "env", env_buf, sizeof(env_buf));
+		if (ret >= 0)
+			sceNetSprintf(ctx->stun_host, "%s.%s.%s", "us", env_buf, "stun.playstation.net");
+		if (ret < 0)
+			break;
 
-	ctx->stack_size = stack_size;
-	ctx->thread_prio = prio;
-	ctx->state = 0;
-	ctx->apctl_handler_id = -1;
-	ctx->sock_fd = -1;
-	ctx->thread_id = -1;
-	ctx->evf_id = -1;
-	ctx->mutex_id = -1;
+		ctx->stack_size = stack_size;
+		ctx->thread_prio = prio;
+		ctx->state = 0;
+		ctx->apctl_handler_id = -1;
+		ctx->sock_fd = -1;
+		ctx->thread_id = -1;
+		ctx->evf_id = -1;
+		ctx->mutex_id = -1;
 
-	ret = sceKernelCreateEventFlag("SceNetUpnpEvf", 0, 0, NULL);
-	if (ret < 0)
-		goto fail;
-	ctx->evf_id = ret;
+		ret = sceKernelCreateEventFlag("SceNetUpnpEvf", 0, 0, NULL);
+		if (ret < 0)
+			break;
+		ctx->evf_id = ret;
 
-	ret = sceKernelCreateMutex("SceNetUpnpMutex", 0x200, 0, NULL);
-	if (ret < 0)
-		goto fail;
-	ctx->mutex_id = ret;
-	ctx->flags |= 8;
+		ret = sceKernelCreateMutex("SceNetUpnpMutex", 0x200, 0, NULL);
+		if (ret < 0)
+			break;
+		ctx->mutex_id = ret;
+		ctx->flags |= 8;
 
-	ret = sceKernelCreateThread("SceNetUpnpThread", upnpWorkerThread, ctx->thread_prio, ctx->stack_size, 0, NULL);
-	if (ret < 0)
-		goto fail;
-	ctx->thread_id = ret;
+		ret = sceKernelCreateThread("SceNetUpnpThread", upnpWorkerThread, ctx->thread_prio, ctx->stack_size, 0, NULL);
+		if (ret < 0)
+			break;
+		ctx->thread_id = ret;
 
-	ret = sceKernelStartThread(ctx->thread_id, 4, &ctx);
-	if (ret < 0)
-		goto fail;
+		ret = sceKernelStartThread(ctx->thread_id, 4, &ctx);
+		if (ret < 0)
+			break;
 
-	ret = stunInitGlobal();
-	if (ret < 0)
-		goto fail;
+		ret = stunInitGlobal();
+		if (ret < 0)
+			break;
 
-	return 0;
+		return 0;
+	} while (0);
 
-fail:
 	stunTermGlobal();
 	if (g_upnp.thread_id != -1) {
 		sceKernelWaitThreadEnd(g_upnp.thread_id, NULL);
@@ -985,8 +990,8 @@ static s32 upnpAddHandlerInternal(UpnpHandlerCb cb, void *arg, s32 *out_id)
 static s32 upnpGetNatInfoExInternal(UpnpNatInfoEx *info)
 {
 	sceKernelMemset(info, 0, sizeof(UpnpNatInfoEx));
-	sceKernelMemcpy(info->stun_mapped_ip, &g_upnp.stun_mapped_ip, 4);
-	sceNetInetInetPton(2, g_upnp.ext_ip_str, info->upnp_ext_ip);
+	sceKernelMemcpy(&info->stun_mapped_ip, &g_upnp.stun_mapped_ip, 4);
+	sceNetInetInetPton(2, g_upnp.ext_ip_str, &info->upnp_ext_ip);
 
 	if ((u32)(g_upnp.state - 5) >= 3u) {
 		info->ip_match = 0;
@@ -996,12 +1001,9 @@ static s32 upnpGetNatInfoExInternal(UpnpNatInfoEx *info)
 	}
 
 	if (g_upnp.flags & 4) {
-		u32 ip1, ip2;
 		info->upnp_status = 2;
 		info->ext_port = g_upnp.ext_port;
-		sceKernelMemcpy(&ip1, info->stun_mapped_ip, 4);
-		sceKernelMemcpy(&ip2, info->upnp_ext_ip, 4);
-		info->ip_match = (ip1 == ip2) ? 2 : 1;
+		info->ip_match = (info->stun_mapped_ip.value == info->upnp_ext_ip.value) ? 2 : 1;
 	} else {
 		info->ext_port = 0x0e4a;
 		info->ip_match = 1;
@@ -1022,7 +1024,7 @@ static s32 upnpGetNatInfoExInternal(UpnpNatInfoEx *info)
 	sceKernelMemcpy(info->stun_result, g_upnp.stun_result, 0x10);
 	info->stun_ext_ok = (g_upnp.stun_ext_ok == 1) ? 1 : 0;
 
-	if (info->stun_result[0] == g_upnp.local_ip) {
+	if (info->stun_result[0] == g_upnp.client_ip) {
 		info->nat_type = 1;
 	} else if (info->ip_match == 2) {
 		info->nat_type = 2;
@@ -1175,7 +1177,7 @@ static s32 upnpGetNatInfoInternal(UpnpNatInfo *info)
 		info->upnp_status = ex.upnp_status;
 		info->stun_status = ex.stun_status;
 		info->nat_type = ex.nat_type;
-		sceKernelMemcpy(info->stun_mapped_ip, ex.stun_mapped_ip, 4);
+		sceKernelMemcpy(info->stun_mapped_ip, &ex.stun_mapped_ip, 4);
 	}
 	return ret;
 }
@@ -1299,9 +1301,7 @@ static s32 ssdpParseLocationUrl(char *url, u32 *expected_ip, u16 *out_port, char
 	if (ip == 0xffffffffu)
 		return (s32)0x80411689;
 
-	u32 exp;
-	sceKernelMemcpy(&exp, expected_ip, 4);
-	if (ip != exp)
+	if (ip != *expected_ip)
 		return (s32)0x80411689;
 
 	return 0;
@@ -1415,7 +1415,7 @@ static s32 ssdpBuildMSearch(char *buf, s32 bufsize)
 
 	sceKernelMemset(line, 0, sizeof(line));
 	n = sceNetSprintf(line, "M-SEARCH * HTTP/1.1\r\n");
-	if (n < 0 || n >= rem)
+	if (((u32)n >> 31) | (n >= rem))
 		return (s32)0x80411685;
 	sceNetStrcpy(p, line);
 	p += n;
@@ -1423,7 +1423,7 @@ static s32 ssdpBuildMSearch(char *buf, s32 bufsize)
 
 	sceKernelMemset(line, 0, sizeof(line));
 	n = sceNetSprintf(line, "HOST: %s:%d\r\n", "239.255.255.250", 1900);
-	if (n < 0 || n >= rem)
+	if (((u32)n >> 31) | (n >= rem))
 		return (s32)0x80411685;
 	sceNetStrcpy(p, line);
 	p += n;
@@ -1431,7 +1431,7 @@ static s32 ssdpBuildMSearch(char *buf, s32 bufsize)
 
 	sceKernelMemset(line, 0, sizeof(line));
 	n = sceNetSprintf(line, "MAN: %s\r\n", "\"ssdp:discover\"");
-	if (n < 0 || n >= rem)
+	if (((u32)n >> 31) | (n >= rem))
 		return (s32)0x80411685;
 	sceNetStrcpy(p, line);
 	p += n;
@@ -1439,7 +1439,7 @@ static s32 ssdpBuildMSearch(char *buf, s32 bufsize)
 
 	sceKernelMemset(line, 0, sizeof(line));
 	n = sceNetSprintf(line, "MX: %d\r\n", 5);
-	if (n < 0 || n >= rem)
+	if (((u32)n >> 31) | (n >= rem))
 		return (s32)0x80411685;
 	sceNetStrcpy(p, line);
 	p += n;
@@ -1447,7 +1447,7 @@ static s32 ssdpBuildMSearch(char *buf, s32 bufsize)
 
 	sceKernelMemset(line, 0, sizeof(line));
 	n = sceNetSprintf(line, "ST: %s\r\n", "urn:schemas-upnp-org:device:InternetGatewayDevice:1");
-	if (n < 0 || n >= rem)
+	if (((u32)n >> 31) | (n >= rem))
 		return (s32)0x80411685;
 	sceNetStrcpy(p, line);
 	p += n;
@@ -1455,7 +1455,7 @@ static s32 ssdpBuildMSearch(char *buf, s32 bufsize)
 
 	sceKernelMemset(line, 0, sizeof(line));
 	n = sceNetSprintf(line, "\r\n");
-	if (n < 0 || n >= rem)
+	if (((u32)n >> 31) | (n >= rem))
 		return (s32)0x80411685;
 	sceNetStrcpy(p, line);
 	p += n;
@@ -1476,9 +1476,7 @@ static s32 ssdpDiscoverGateway(s32 sock, char *buf, u32 bufsize, u32 *gw_ip, u16
 	if (ret < 0)
 		return ret;
 
-	u32 exp_ip;
-	sceKernelMemcpy(&exp_ip, gw_ip, 4);
-	if (from.sin_addr != exp_ip)
+	if (from.sin_addr != *gw_ip)
 		return (s32)0x8041168a;
 
 	u32 rem = (u32)ret;
@@ -1530,93 +1528,100 @@ static s32 upnpStateDiscoverIgd(UpnpCtx *ctx, s32 cur_state, s32 *next_state, s3
 	s32 apctl_state;
 	u32 ev_bits;
 	s32 ret = 0;
+	s32 stopped = 0;
 
 	ctx->flags &= ~0x734u;
 	ctx->ext_port = 0x0e4a;
-	ctx->port2 = 0x244d;
-	ctx->port3 = 0x244d;
+	ctx->default_tcp_ext_port = 0x244d;
+	ctx->default_tcp_int_port = 0x244d;
 	ctx->last_error = 0;
 	sceKernelMemset(&ctx->stun_mapped_ip, 0, 4);
 
-	if (ctx->apctl_handler_id < 0) {
-		ret = sceNetApctlAddHandler(upnpApctlHandler, ctx);
-		if (ret < 0)
-			goto err_check;
-		ctx->apctl_handler_id = ret;
-	}
-
-	ret = sceNetApctlGetState(&apctl_state);
-	if (ret < 0)
-		goto err_check;
-
-	if (apctl_state != 4) {
-		upnpWaitEventBits(0x1c, &ev_bits);
-		if (ev_bits & 4) {
-			*out_event = 6;
-			*next_state = 0;
-			goto stop_done;
+	do {
+		if (ctx->apctl_handler_id < 0) {
+			ret = sceNetApctlAddHandler(upnpApctlHandler, ctx);
+			if (ret < 0)
+				break;
+			ctx->apctl_handler_id = ret;
 		}
-		if (ev_bits & 8)
-			goto err_check_poll;
-	}
 
-	ret = sceNetApctlGetInfo(8, ip_str);
-	if (ret < 0)
-		goto err_check;
-	ctx->local_ip = sceNetInetInetAddr(ip_str);
+		ret = sceNetApctlGetState(&apctl_state);
+		if (ret < 0)
+			break;
 
-	if (!ctx->use_upnp) {
-		*out_event = 10;
-		*next_state = 5;
+		if (apctl_state != 4) {
+			upnpWaitEventBits(0x1c, &ev_bits);
+			if (ev_bits & 4) {
+				stopped = 1;
+				break;
+			}
+			if (ev_bits & 8)
+				break;
+		}
+
+		ret = sceNetApctlGetInfo(8, ip_str);
+		if (ret < 0)
+			break;
+		ctx->client_ip = sceNetInetInetAddr(ip_str);
+
+		if (!ctx->use_upnp) {
+			*out_event = 10;
+			*next_state = 5;
+			return 0;
+		}
+
+		ret = sceNetApctlGetInfo(10, ip_str);
+		if (ret < 0)
+			break;
+		ctx->gw_ip = sceNetInetInetAddr(ip_str);
+
+		ret = sceNetInetSocket(2, 2, 0);
+		ctx->sock_fd = ret;
+		if (ret < 0)
+			break;
+
+		ret = ssdpRecvResponse(ctx->sock_fd, ctx->http_buf, 0x400, &ctx->gw_ip, &ctx->gw_port, ctx->desc_path, 0x80);
+		sceNetInetClose(ctx->sock_fd);
+		ctx->sock_fd = -1;
+		if (ret < 0)
+			break;
+
+		ret = upnpInitDescXmlParser(ctx, &parser);
+		if (ret < 0)
+			break;
+
+		ret = sceNetInetSocket(2, 1, 0);
+		ctx->sock_fd = ret;
+		if (ret < 0)
+			break;
+
+		sceKernelMemset(&addr, 0, sizeof(addr));
+		addr.sin_family = 2;
+		addr.sin_port = bswap16(ctx->gw_port);
+		addr.sin_addr = ctx->gw_ip;
+
+		ret = upnpHttpGetXml(ctx->sock_fd, ctx->http_buf, 0x400, &addr, ctx->desc_path, &parser);
+		sceNetInetClose(ctx->sock_fd);
+		ctx->sock_fd = -1;
+		if (ret < 0)
+			break;
+
+		*out_event = 1;
+		*next_state = 2;
+		upnpResetDescXmlState();
+		return 0;
+	} while (0);
+
+	if (stopped) {
+		*out_event = 6;
+		*next_state = 0;
+		ctx->flags &= ~1u;
+		upnpResetDescXmlState();
 		return 0;
 	}
 
-	ret = sceNetApctlGetInfo(10, ip_str);
-	if (ret < 0)
-		goto err_check;
-	ctx->gw_ip = sceNetInetInetAddr(ip_str);
-
-	ret = sceNetInetSocket(2, 2, 0);
-	if (ret < 0)
-		goto err_check;
-	ctx->sock_fd = ret;
-
-	ret = ssdpRecvResponse(ctx->sock_fd, ctx->http_buf, 0x400, &ctx->gw_ip, &ctx->gw_port, ctx->desc_path, 0x80);
-	sceNetInetClose(ctx->sock_fd);
-	ctx->sock_fd = -1;
-	if (ret < 0)
-		goto err_check;
-
-	ret = upnpInitDescXmlParser(ctx, &parser);
-	if (ret < 0)
-		goto err_check;
-
-	ret = sceNetInetSocket(2, 1, 0);
-	if (ret < 0)
-		goto err_check;
-	ctx->sock_fd = ret;
-
-	sceKernelMemset(&addr, 0, sizeof(addr));
-	addr.sin_family = 2;
-	addr.sin_port = bswap16(ctx->gw_port);
-	addr.sin_addr = ctx->gw_ip;
-
-	ret = upnpHttpGetXml(ctx->sock_fd, ctx->http_buf, 0x400, &addr, ctx->desc_path, &parser);
-	sceNetInetClose(ctx->sock_fd);
-	ctx->sock_fd = -1;
-	if (ret < 0)
-		goto err_check;
-
-	*out_event = 1;
-	*next_state = 2;
-	upnpResetDescXmlState();
-	return 0;
-
-err_check:
-err_check_poll:
 	if (upnpPollEventBits(0x24, &ev_bits) >= 0) {
 		if (ev_bits & 4) {
-stop_done:
 			*out_event = 6;
 			*next_state = 0;
 			ctx->flags &= ~1u;
@@ -1648,31 +1653,32 @@ static s32 upnpStateAddPortMapping(UpnpCtx *ctx, s32 cur_state, s32 *next_state,
 		if (ctx->found_svc_mask & (1u << svc_idx))
 			break;
 	}
-	if (svc_idx == 2) {
-		ret = (s32)0x8041160b;
-		*out_event = 9;
-		goto handle_err;
-	}
 
-	ctx->flags |= 0x20;
+	if (svc_idx < 2)
+		ctx->flags |= 0x20;
+
 	for (;;) {
-		ret = upnpExecSoapAction(ctx, svc_idx, 2, 0, 0, 0, &soap_err, 0);
-		if (ret == (s32)0x80411608) {
-			ret = soap_err;
-			*out_event = 4;
-		} else if (ret < 0) {
+		if (svc_idx == 2) {
+			ret = (s32)0x8041160b;
 			*out_event = 9;
-		} else if (ctx->ext_ip_str[0] == '\0') {
-			ret = (s32)0x8041167e;
-			*out_event = 4;
 		} else {
-			ctx->active_svc_idx = svc_idx;
-			*out_event = 3;
-			*next_state = 3;
-			return 0;
+			ret = upnpExecSoapAction(ctx, svc_idx, 2, 0, 0, 0, &soap_err, 0);
+			if (ret == (s32)0x80411608) {
+				ret = soap_err;
+				*out_event = 4;
+			} else if (ret < 0) {
+				*out_event = 9;
+			} else if (ctx->ext_ip_str[0] == '\0') {
+				ret = (s32)0x8041167e;
+				*out_event = 4;
+			} else {
+				ctx->active_svc_idx = svc_idx;
+				*out_event = 3;
+				*next_state = 3;
+				return 0;
+			}
 		}
 
-handle_err:
 		if (upnpPollEventBits(0x24, &ev_bits) >= 0) {
 			if (ev_bits & 4) {
 				*out_event = 6;
@@ -1694,7 +1700,7 @@ handle_err:
 				break;
 			svc_idx++;
 		}
-		if (svc_idx == 2) {
+		if (svc_idx >= 2) {
 			*next_state = 3;
 			return 0;
 		}
@@ -1760,96 +1766,99 @@ static s32 upnpStateRunStunProbe(UpnpCtx *ctx, s32 cur_state, s32 *next_state, s
 	s32 stun_id = 0;
 	u32 ev_bits;
 	void *ext_buf = NULL;
-	s32 ret;
+	s32 ret = 0;
 
 	sceKernelMemset(&cfg, 0, sizeof(cfg));
-	cfg.use_xor = 1;
 	cfg.username = bswap32(1);
+	cfg.use_xor = 1;
 	sceKernelMemcpy(cfg.key, g_stun_hmac_key, sizeof(g_stun_hmac_key));
 
-	if (ctx->flags & 0x800) {
-		cfg.ext_data_len = 0x800;
-		ext_buf = sceNetMallocInternal(0x800);
-		if (ext_buf == NULL) {
-			ret = (s32)0x80411604;
-			goto cleanup;
+	do {
+		if (ctx->flags & 0x800) {
+			cfg.ext_data_len = 0x800;
+			ext_buf = sceNetMallocInternal(0x800);
+			if (ext_buf == NULL) {
+				ret = (s32)0x80411604;
+				break;
+			}
+			cfg.has_ext_data = 1;
+			cfg.ext_data = ext_buf;
 		}
-		cfg.has_ext_data = 1;
-		cfg.ext_data = ext_buf;
-	}
 
-	ret = sceNetStun_EBF3C24D(ctx->stack_size, ctx->thread_prio, ctx->stun_host, 3478, &cfg, upnpStunCallback, &stun_id);
-	if (ret < 0)
-		goto stun_fail;
+		ret = sceNetStun_EBF3C24D(ctx->stack_size, ctx->thread_prio, ctx->stun_host, 3478, &cfg, upnpStunCallback, &stun_id);
+		if (ret < 0) {
+			*out_event = 9;
+			*next_state = 7;
+			ctx->last_error = ret;
+			break;
+		}
 
-	sceKernelMemset(ctx->stun_result, 0, sizeof(ctx->stun_result));
-	upnpSetEventBits(~0xc0u);
+		sceKernelMemset(ctx->stun_result, 0, sizeof(ctx->stun_result));
+		upnpSetEventBits(~0xc0u);
 
-	ret = sceNetStun_A0CF3A47(stun_id, ctx);
-	if (ret < 0)
-		goto stun_fail;
+		ret = sceNetStun_A0CF3A47(stun_id, ctx);
+		if (ret < 0) {
+			*out_event = 9;
+			*next_state = 7;
+			ctx->last_error = ret;
+			break;
+		}
 
-	upnpWaitEventBits(0x64, &ev_bits);
-	if (ev_bits & 4) {
-		if (sceNetStun_40971567(stun_id, ctx) >= 0)
-			upnpWaitEventBits(0x80, NULL);
-		ctx->flags &= ~1u;
-		*next_state = 0;
-		*out_event = 6;
-		goto cleanup;
-	}
-	if (ev_bits & 0x20) {
-		if (sceNetStun_40971567(stun_id, ctx) >= 0)
-			upnpWaitEventBits(0x80, NULL);
-		*out_event = 5;
-		*next_state = 1;
-		goto cleanup;
-	}
+		upnpWaitEventBits(0x64, &ev_bits);
+		if (ev_bits & 4) {
+			if (sceNetStun_40971567(stun_id, ctx) >= 0)
+				upnpWaitEventBits(0x80, NULL);
+			ctx->flags &= ~1u;
+			*next_state = 0;
+			*out_event = 6;
+			break;
+		}
+		if (ev_bits & 0x20) {
+			if (sceNetStun_40971567(stun_id, ctx) >= 0)
+				upnpWaitEventBits(0x80, NULL);
+			*out_event = 5;
+			*next_state = 1;
+			break;
+		}
 
-	if (ctx->stun_cb_status < 0) {
-		ctx->last_error = ctx->stun_cb_status;
-		*out_event = 8;
+		if (ctx->stun_cb_status < 0) {
+			ctx->last_error = ctx->stun_cb_status;
+			*out_event = 8;
+			*next_state = (ctx->flags & 4) ? 6 : 7;
+			break;
+		}
+
+		if (ctx->flags & 0x800) {
+			ctx->stun_ext_ok = 1;
+			ret = sceNetStun_FBF60C6B(stun_id, 0, ctx);
+			if (ret >= 0) {
+				upnpWaitEventBits(0x64, &ev_bits);
+				if (ev_bits & 4) {
+					if (sceNetStun_40971567(stun_id, ctx) >= 0)
+						upnpWaitEventBits(0x80, NULL);
+					ctx->flags &= ~1u;
+					*next_state = 0;
+					*out_event = 6;
+					break;
+				}
+				if (ev_bits & 0x20) {
+					if (sceNetStun_40971567(stun_id, ctx) >= 0)
+						upnpWaitEventBits(0x80, NULL);
+					*out_event = 5;
+					*next_state = 1;
+					break;
+				}
+				s32 st = ctx->stun_cb_status;
+				if (st == (s32)0x80411703 || st == (s32)0x8041170b || st == (s32)0x8041170c)
+					ctx->stun_ext_ok = 0;
+			}
+		}
+
+		ctx->flags |= 0x10;
+		*out_event = 7;
 		*next_state = (ctx->flags & 4) ? 6 : 7;
-		goto cleanup;
-	}
+	} while (0);
 
-	if (ctx->flags & 0x800) {
-		ctx->stun_ext_ok = 1;
-		ret = sceNetStun_FBF60C6B(stun_id, 0, ctx);
-		if (ret >= 0) {
-			upnpWaitEventBits(0x64, &ev_bits);
-			if (ev_bits & 4) {
-				if (sceNetStun_40971567(stun_id, ctx) >= 0)
-					upnpWaitEventBits(0x80, NULL);
-				ctx->flags &= ~1u;
-				*next_state = 0;
-				*out_event = 6;
-				goto cleanup;
-			}
-			if (ev_bits & 0x20) {
-				if (sceNetStun_40971567(stun_id, ctx) >= 0)
-					upnpWaitEventBits(0x80, NULL);
-				*out_event = 5;
-				*next_state = 1;
-				goto cleanup;
-			}
-			s32 st = ctx->stun_cb_status;
-			if (st == (s32)0x80411703 || st == (s32)0x8041170b || st == (s32)0x8041170c)
-				ctx->stun_ext_ok = 0;
-		}
-	}
-
-	ctx->flags |= 0x10;
-	*out_event = 7;
-	*next_state = (ctx->flags & 4) ? 6 : 7;
-	goto cleanup;
-
-stun_fail:
-	ctx->last_error = ret;
-	*out_event = 9;
-	*next_state = 7;
-
-cleanup:
 	if (stun_id != 0)
 		sceNetStun_4403D9E7(stun_id);
 	if (ext_buf != NULL)
@@ -1948,10 +1957,10 @@ static void upnpApctlHandler(s32 prev_state, s32 new_state, s32 event, s32 err, 
 		return;
 	if (!(ctx->flags & 1))
 		return;
-	if (new_state == 4 && event == 4) {
+	if (event == 4 && new_state == 4) {
 		g_apctl_connected = 1;
 		upnpClearEventBits(0x10);
-	} else if (new_state == 0 && g_apctl_connected != 0) {
+	} else if (g_apctl_connected != 0 && new_state == 0) {
 		upnpAbortInternal();
 		g_apctl_connected = 0;
 	}
@@ -1960,7 +1969,7 @@ static void upnpApctlHandler(s32 prev_state, s32 new_state, s32 event, s32 err, 
 static s32 upnpExecSoapAction(UpnpCtx *ctx, s32 svc_idx, s32 action, u16 ext_port, s32 proto,
                     u16 int_port, s32 *out_err, u32 timeout_us)
 {
-	char local_ip_str[0x80];
+	char client_ip_str[0x80];
 	SockAddrIn addr;
 	XmlParser parser;
 	TimeVal tv;
@@ -1968,10 +1977,10 @@ static s32 upnpExecSoapAction(UpnpCtx *ctx, s32 svc_idx, s32 action, u16 ext_por
 	s32 ret;
 
 	if (action == 0) {
-		ret = sceNetApctlGetInfo(8, local_ip_str);
+		ret = sceNetApctlGetInfo(8, client_ip_str);
 		if (ret < 0)
 			return ret;
-		body_len = soapBuildAddPortMappingBody(ctx->soap_buf, 0x400, local_ip_str, svc_idx, ext_port, proto, int_port);
+		body_len = soapBuildAddPortMappingBody(ctx->soap_buf, 0x400, client_ip_str, svc_idx, ext_port, proto, int_port);
 	} else if (action == 1) {
 		body_len = soapBuildDeletePortMappingBody(ctx->soap_buf, 0x400, svc_idx, ext_port, proto);
 	} else if (action == 2) {
@@ -1988,9 +1997,9 @@ static s32 upnpExecSoapAction(UpnpCtx *ctx, s32 svc_idx, s32 action, u16 ext_por
 		return ret;
 
 	ret = sceNetInetSocket(2, 1, 0);
+	ctx->sock_fd = ret;
 	if (ret < 0)
 		return ret;
-	ctx->sock_fd = ret;
 
 	if (timeout_us != 0) {
 		tv.tv_sec = (s32)(timeout_us / 1000000u);
