@@ -303,7 +303,7 @@ int sinkAddRequestHeader(const char *name, const char *value, unsigned int mode)
 	int ret;
 
 	dtcpIpLock(SCE_DTCP_IP_LOCK_HTTP);
-	ret = sceHttpAddRequestHeader(g_http.request, name, value, mode);
+	ret = sceHttpAddRequestHeader(g_http.template, name, value, mode);
 	dtcpIpUnlock(SCE_DTCP_IP_LOCK_HTTP);
 	return ret;
 }
@@ -314,7 +314,7 @@ int sinkRemoveRequestHeader(const char *name)
 	int ret;
 
 	dtcpIpLock(SCE_DTCP_IP_LOCK_HTTP);
-	ret = sceHttpRemoveRequestHeader(g_http.request, name);
+	ret = sceHttpRemoveRequestHeader(g_http.template, name);
 	dtcpIpUnlock(SCE_DTCP_IP_LOCK_HTTP);
 	return ret;
 }
