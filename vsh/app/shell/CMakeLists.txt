@@ -426,6 +426,9 @@ psp2_module(vs0_vsh_shell_shell KIND user COMPILER snc PARTIAL SOURCES
 	src/np/ipc/nptrophy/nptrophy_ipc_server.cpp
 	src/np/ipc/nptrophy/nptrophy_job.cpp
 	src/np/ipc/nptrophy/nptrophy_notify.cpp
+	src/np/trophy/nptrophy_runtime.cpp
+	src/np/trophy/nptrophy_io.cpp
+	src/np/trophy/nptrophy_sfm.cpp
 	src/nsx/nsx_clock_updater.cpp
 	src/nsx/nsx_push_info.cpp
 	src/nsx/nsx_whats_new.cpp

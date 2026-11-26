@@ -182,6 +182,7 @@ struct NpTrophyCommId {
 class NpTrophyQueue;
 
 class NpTrophyRuntimeJob {
+	friend class NpTrophyQueue;
 public:
 	NpTrophyRuntimeJob(const char *name);
 	virtual ~NpTrophyRuntimeJob();
