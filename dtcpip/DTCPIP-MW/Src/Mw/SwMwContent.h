@@ -9,20 +9,27 @@
 
 #include <scetypes.h>
 
-/* the SWS support library's URI value (0x14 bytes): its method table, the string data,
- * the ownership byte and the 16-bit length */
-struct SwMwUri {
+/* the SWS support library's URI text base (0x0c bytes): its method table, the string
+ * data and the ownership byte */
+struct SwMwUriText {
 	void *table;			/* 0x00 */
 	void *data;			/* 0x04 */
 	unsigned char owns;		/* 0x08 */
-	unsigned char reserved[7];	/* 0x09 */
+	unsigned char reserved[3];	/* 0x09 */
+};
+
+/* the full URI value: the text base and the 16-bit port/length at +0x10 */
+struct SwMwUri : SwMwUriText {
+	unsigned char gap[4];		/* 0x0C */
 	unsigned short length;		/* 0x10 */
 	unsigned char padding[2];	/* 0x12 */
 };
 
 extern "C" {
 int SwMwUriInit(struct SwMwUri *uri, const char *text);		/* 0x81052c04 */
-int SwMwUriDone(struct SwMwUri *uri);					/* 0x81052d6a */
+int SwMwUriDone(struct SwMwUriText *uri);				/* 0x81052d6a */
+int SwMwUriFormatText(struct SwMwUriText *text, const struct SwMwUri *uri); /* 0x81050822 */
+const char *SwMwUriTextGet(const struct SwMwUriText *text);		/* 0x8107b158 */
 int SwMwUriSet(struct SwMwUri *uri, const struct SwMwUri *text,
 	       unsigned short size);					/* 0x810507ba */
 int SwMwUriIsSet(const struct SwMwUri *uri);				/* 0x8105091c */

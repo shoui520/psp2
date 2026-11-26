@@ -55,11 +55,15 @@ int SwMwManagerCloseRecordB(int record);
 int SwMwManagerCloseRecordC(int record);
 int SwMwManagerCloseRecordD(int record);
 int SwMwManagerClearSlots(void *slots);
-int SwMwManagerCloseKeyBin(int keyBin);
+int SwMwManagerCloseKeyBin(void *keyBin);
 struct SwMwManager *SwMwManagerFree(struct SwMwManager *manager);
 int SwMwManagerFlushRecords(struct SwMwManager *manager);
 int SwMwManagerCancelDownload(void);
-int SwMwCoreRecordWrite(int keyBin, void *data, int size, int type);
+
+/* the SWS support library's URI text helpers (SwMwContent.h) */
+struct SwMwUriText;
+const char *SwMwUriTextGet(const struct SwMwUriText *text);
+int SwMwCoreRecordWrite(void *keyBin, void *data, int size, int type);
 
 /* the shared status mapper (SwMwContent.h) */
 int SwMwStatus(int status);
@@ -67,8 +71,9 @@ int SwMwStatus(int status);
 /* the manager's base constructor and the core/key-bin/session calls (the SWS library) */
 struct SwMwManager *SwMwManagerBaseConstruct(struct SwMwManager *manager);
 void SwMwCoreInitKey(void);
-int SwMwCoreKeyBinCreate(int *keyBin);
-int SwMwCoreKeyBinWrite(int keyBin, const void *data, int size);
+int SwMwCoreKeyBinCreate(void **keyBin);
+int SwMwCoreKeyBinWrite(void *keyBin, const void *data, int size);
+int SwMwCoreKeyBinRead(void *keyBin, void *data, int size, int *stored);
 int SwMwSessionInit(struct SwMwManager *manager);
 
 /* SceRegMgr (the SDK's libregmgr; the tree has no header for it yet) */
@@ -266,9 +271,9 @@ extern "C" int SwMwManagerSessionStart(struct SwMwManagerSinkSlots *slots, int m
 	int failed;
 	int i;
 
-	if (slots->starting != 0)
+	if (slots->owner != NULL)
 		return 12014;
-	slots->starting = mode;
+	slots->owner = (struct SwMwManager *)mode;
 	for (i = 0; i < 35; ++i) {
 		slots->sinks[i] = 0;
 		slots->moveSinks[i] = 0;
@@ -300,7 +305,7 @@ extern "C" int SwMwManagerSessionStart(struct SwMwManagerSinkSlots *slots, int m
 	status = SwMwManagerMapStatus(status);
 	((struct SwMwContentSupport *)slots->support)->release();
 	slots->content = NULL;
-	slots->starting = 0;
+	slots->owner = NULL;
 	return status;
 }
 
@@ -837,5 +842,84 @@ extern "C" int SwMwManagerCreate(struct SwMwManager **out, const int *config,
 		SwMwManagerCloseRecordD(manager->recordD);
 	}
 	::operator delete(SwMwManagerFree(manager));
+	return status;
+}
+
+/* the SWS core's SRM update callback (vtable 0x81099fbc's +0x18 slot): trace the
+ * address and size, then flush the manager's records (0x81004832) */
+extern "C" int SwMwManagerSrmUpdated(struct SwMwManagerSinkSlots *device, struct SwMwUri *uri,
+				     int unused, int size)
+{
+	int status;
+	struct SwMwUriText text;
+
+	SwMwUriFormatText(&text, uri);
+	swMwTrace("sw mw:SINK SRM UPDATED: %s, srm size = %d\n", SwMwUriTextGet(&text), size);
+	SwMwUriDone(&text);
+	status = SwMwManagerFlushRecords(device->owner);
+	if (status != 0) {
+		swMwTrace("[SWMW] Error %d in %s:%d\n", status, SWMW_MANAGER_SOURCE, 476);
+		status = 1;
+	}
+	return status;
+}
+
+/* compare the session's records with the key bin's and rewrite it when they differ
+ * (0x81003adc) */
+extern "C" int SwMwManagerSyncKeyBin(struct SwMwManager *manager)
+{
+	unsigned char *record;
+	unsigned char *stored;
+	unsigned int size;
+	int storedSize;
+	int status;
+	int failed;
+
+	record = (unsigned char *)malloc(0x1000);
+	failed = 0;
+	if (record == NULL) {
+		swMwTrace("[SWMW] ERROR in %s:%d\n", SWMW_MANAGER_SOURCE, 1795);
+		failed = 1;
+	}
+	if (failed != 0)
+		return 12008;
+	stored = (unsigned char *)malloc(0x1000);
+	failed = 0;
+	if (stored == NULL) {
+		swMwTrace("[SWMW] ERROR in %s:%d\n", SWMW_MANAGER_SOURCE, 1798);
+		failed = 1;
+	}
+	if (failed != 0)
+		return 12008;
+	status = SwMwManagerExchangeRecord((struct SwMwManager *)(void *)manager->keyBin,
+					   record, 0x1000, (int *)&size);
+	failed = 0;
+	if (status != 0) {
+		swMwTrace("[SWMW] Error %d in %s:%d\n", status, SWMW_MANAGER_SOURCE, 1801);
+		failed = 1;
+	}
+	if (failed == 0) {
+		status = SwMwCoreKeyBinRead(manager->keyBin, stored, 0x1000, &storedSize);
+		failed = 0;
+		if (status != 0) {
+			swMwTrace("[SWMW] Error %d in %s:%d\n", status,
+				  SWMW_MANAGER_SOURCE, 1804);
+			failed = 1;
+		}
+		if (failed == 0 && (size != (unsigned int)storedSize ||
+				    memcmp(record, stored, size) != 0)) {
+			status = SwMwCoreRecordWrite(manager->keyBin, record, (int)size, 2);
+			failed = 0;
+			if (status != 0) {
+				swMwTrace("[SWMW] Error %d in %s:%d\n", status,
+					  SWMW_MANAGER_SOURCE, 1808);
+				failed = 1;
+			}
+		}
+	}
+	if (record != NULL)
+		free(record);
+	if (stored != NULL)
+		free(stored);
 	return status;
 }

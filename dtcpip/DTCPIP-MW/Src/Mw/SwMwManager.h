@@ -6,6 +6,7 @@
 #pragma once
 
 #include <scetypes.h>
+#include "SwMwContent.h"
 
 /* the session object the manager keeps in its first word (the SWS content session's
  * library class): start, close, the record write and exchange, and the three interface
@@ -45,15 +46,19 @@ struct SwMwManagerThread {
 	void *argument;			/* 0x08 */
 };
 
-/* the device's two 35-entry session tables (the manager keeps its sinks and move sinks) */
+struct SwMwManager;
+
+/* the device object the manager keeps at +4: the SWS callback table the library calls
+ * (vtable 0x81099fbc), the two 35-entry session tables, the manager that owns it and the
+ * SWS objects the session start builds */
 struct SwMwManagerSinkSlots {
-	int reserved;		/* 0x000 */
-	int sinks[35];		/* 0x004: the sinks (0x81005060) */
-	int moveSinks[35];	/* 0x090: the move sinks (0x810050FC/0x8100514A) */
-	int starting;		/* 0x11C: the mode of the start in flight */
-	void *support;		/* 0x120: the content support (0x81013790) */
-	void *content;		/* 0x124: the content object (the streams' manager) */
-	void *manager;		/* 0x128: the manager object */
+	void *table;			/* 0x000: the callback table (0x81099fbc) */
+	int sinks[35];			/* 0x004: the sinks (0x81005060) */
+	int moveSinks[35];		/* 0x090: the move sinks (0x810050FC/0x8100514A) */
+	struct SwMwManager *owner;	/* 0x11C: the manager, set at session start */
+	void *support;			/* 0x120: the content support (0x81013790) */
+	void *content;			/* 0x124: the content object (the streams' manager) */
+	void *manager;			/* 0x128: the manager object */
 };
 
 /* the certification descriptor the manager create takes (0x81002de2): the template
@@ -72,7 +77,7 @@ struct SwMwManagerCertificate {
 struct SwMwManager {
 	struct SwMwManagerObject *object;	/* 0x000 */
 	struct SwMwManagerSinkSlots slots;	/* 0x004 */
-	int keyBin;				/* 0x130 */
+	void *keyBin;				/* 0x130: the SWS key bin object */
 	int started;				/* 0x134 */
 	int recordA;				/* 0x138 */
 	int recordB;				/* 0x13C */
@@ -105,6 +110,9 @@ int SwMwManagerActivationThread(void *argument);
 int SwMwManagerParamTblThread(void *argument);
 int SwMwManagerDownloadParamTbl(void);
 int SwMwManagerEnsureSession(struct SwMwManager *manager, int mode);
+int SwMwManagerSrmUpdated(struct SwMwManagerSinkSlots *device, struct SwMwUri *uri,
+			  int unused, int size);
+int SwMwManagerSyncKeyBin(struct SwMwManager *manager);
 int SwMwManagerCreate(struct SwMwManager **out, const int *config,
 		      struct SwMwManagerCertificate *certificate, int argument);
 int SwMwManagerTeardown(struct SwMwManager *manager);
