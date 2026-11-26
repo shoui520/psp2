@@ -1087,6 +1087,11 @@ void inputStateOff(void)
 		intp1Enable(1);
 		inputScanMode2(1);
 	}
+#elif HW_IS(0x00102403) && !FW_SINCE(0x00080502)
+	/* 0x00080307: the one scan timer, at the fast rate */
+	inputScan.interval = 1;
+	inputScan.hold = 0;
+	timerStart(INPUT_SCAN_TIMER, inputScan.interval);
 #else
 	inputScanMode1(1);
 #endif
@@ -1334,7 +1339,7 @@ void inputSuspend(void)
 	adcCloseForBoard();
 	inputKeysClose();
 #if BOARD_INPUTS_102603
-#if HW_IRT001
+#if HW_IRT001 || (HW_IS(0x00102403) && !FW_SINCE(0x00080502))
 	P127 = 0;
 #else
 	P12 &= (unsigned char)~0x80;
@@ -1363,6 +1368,11 @@ void inputStateSuspend(void)
 #else
 	inputScanMode2(1);
 #endif
+#elif HW_IS(0x00102403) && !FW_SINCE(0x00080502)
+	/* 0x00080307: the one scan timer, at the fast rate */
+	inputScan.interval = 1;
+	inputScan.hold = 0;
+	timerStart(INPUT_SCAN_TIMER, inputScan.interval);
 #else
 	inputScanMode1(1);
 #endif

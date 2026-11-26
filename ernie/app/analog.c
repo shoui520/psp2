@@ -941,7 +941,7 @@ unsigned char analogStart(unsigned int inputs)
 	if (inputs & 0x0020)
 		mask |= 0x0c;
 	if (inputs & 0x0001) {
-#if HW_IRT001
+#if HW_IRT001 || (HW_IS(0x00102403) && !FW_SINCE(0x00080502))
 		P127 = 0;
 #else
 		P12 &= (unsigned char)~0x80;
@@ -1219,7 +1219,7 @@ void analogEvent(unsigned int inputs)
 #endif
 #if BOARD_102603
 	if (inputs & 0x0001) {
-#if HW_IRT001
+#if HW_IRT001 || (HW_IS(0x00102403) && !FW_SINCE(0x00080502))
 		P127 = 1;
 #else
 		P12 |= 0x80;
