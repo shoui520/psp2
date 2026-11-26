@@ -682,20 +682,28 @@ extern "C" void SwsSetAffinity(int value)
 extern "C" int SwMwThreadCreate(struct SwMwCommThread *thread, int (*entry)(void *),
 				void *argument, int type)
 {
-	char name[32];
+	char name[20];
 	SceSize stackSize;
 	int priority;
 	int affinity;
 	int id;
+	struct SwMwThreadAttr {
+		int reserved[3];
+		int priority;
+	} attr;
 
 	thread->entry = entry;
 	thread->argument = argument;
 	stackSize = 0x4000;
 	memcpy(name, "SWS_THREAD_NO_NAME", 0x13);
 	name[19] = 0;
-	priority = 111;
+	attr.reserved[0] = 0;
+	attr.reserved[1] = 0;
+	attr.reserved[2] = 0;
+	attr.priority = 111;
 	if (SwsGetToolMode() == 0)
-		priority = 0x10000040;
+		attr.priority = 0x10000100;
+	priority = attr.priority;
 	affinity = 0;
 	switch (type) {
 	case 0:
