@@ -683,17 +683,20 @@ extern "C" int SwMwThreadCreate(struct SwMwCommThread *thread, int (*entry)(void
 				void *argument, int type)
 {
 	char name[32];
-	SceSize stackSize = 0x4000;
-	int priority = 111;
-	int affinity = 0;
+	SceSize stackSize;
+	int priority;
+	int affinity;
 	int id;
 
 	thread->entry = entry;
 	thread->argument = argument;
+	stackSize = 0x4000;
 	memcpy(name, "SWS_THREAD_NO_NAME", 0x13);
 	name[19] = 0;
+	priority = 111;
 	if (SwsGetToolMode() == 0)
 		priority = 0x10000040;
+	affinity = 0;
 	switch (type) {
 	case 0:
 		strncpy(name, "SWS_THREAD_TYPE_ANONYMOUS", 0x1F);
