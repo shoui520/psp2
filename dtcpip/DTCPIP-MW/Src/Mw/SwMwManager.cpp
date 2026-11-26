@@ -88,3 +88,52 @@ extern "C" int SwMwManagerUnregisterMoveSink(struct SwMwManagerSinkSlots *slots,
 	}
 	return 12008;
 }
+
+/* start a session: the support singleton, the content and the manager (0x81004e40) */
+extern "C" int SwMwManagerSessionStart(struct SwMwManagerSinkSlots *slots, int mode)
+{
+	int status;
+	int failed;
+	int i;
+
+	if (slots->starting != 0)
+		return 12014;
+	slots->starting = mode;
+	for (i = 0; i < 35; ++i) {
+		slots->sinks[i] = 0;
+		slots->moveSinks[i] = 0;
+	}
+	status = SwMwContentSupportCreate((struct SwMwContentSupport **)&slots->support);
+	failed = 0;
+	if (status != 0) {
+		swMwTrace("[SWMW] ERROR in %s:%d\n", SWMW_MANAGER_SOURCE, 284);
+		failed = 1;
+	}
+	if (failed != 0)
+		goto fail;
+	status = ((struct SwMwContentSupport *)slots->support)->createContent(&slots->content);
+	failed = 0;
+	if (status != 0) {
+		swMwTrace("[SWMW] ERROR in %s:%d\n", SWMW_MANAGER_SOURCE, 291);
+		failed = 1;
+	}
+	if (failed != 0)
+		goto fail;
+	status = ((struct SwMwContentSupport *)slots->support)->createManager(&slots->manager);
+	failed = 0;
+	if (status != 0) {
+		swMwTrace("[SWMW] ERROR in %s:%d\n", SWMW_MANAGER_SOURCE, 298);
+		failed = 1;
+	}
+	if (failed == 0)
+		return 0;
+	status = SwMwManagerMapStatus(status);
+	((struct SwMwContentSupport *)slots->support)->release();
+	slots->content = NULL;
+	slots->starting = 0;
+	return status;
+fail:
+	status = SwMwManagerMapStatus(status);
+	slots->starting = 0;
+	return status;
+}
