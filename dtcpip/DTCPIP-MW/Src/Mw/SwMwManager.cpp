@@ -7,6 +7,12 @@
 
 #include <stddef.h>
 #include <string.h>
+
+/* the SDK's <new> asks std::size_t of the freestanding headers */
+namespace std {
+using ::size_t;
+}
+#include <new>
 #include <stdlib.h>
 #include <scetypes.h>
 #include <kernel/threadmgr.h>
@@ -57,7 +63,23 @@ int SwMwCoreRecordWrite(int keyBin, void *data, int size, int type);
 
 /* the shared status mapper (SwMwContent.h) */
 int SwMwStatus(int status);
+
+/* the manager's base constructor and the core/key-bin/session calls (the SWS library) */
+struct SwMwManager *SwMwManagerBaseConstruct(struct SwMwManager *manager);
+void SwMwCoreInitKey(void);
+int SwMwCoreKeyBinCreate(int *keyBin);
+int SwMwCoreKeyBinWrite(int keyBin, const void *data, int size);
+int SwMwSessionInit(struct SwMwManager *manager);
+
+/* SceRegMgr (the SDK's libregmgr; the tree has no header for it yet) */
+int sceRegMgrGetKeyBin(const char *category, const char *name, void *buffer, int size);
+int sceRegMgrSetKeyBin(const char *category, const char *name, const void *buffer, int size);
 }
+
+/* the manager's configuration word (0x8109e0e4) and the certificate template (0x8108ce64) */
+static int g_swMwManagerConfig;
+extern unsigned char g_swMwCertificateTemplate[];
+
 
 /* the manager the ensure path keeps for the process (0x8109e0e0) */
 static struct SwMwManager *g_swMwManager;
@@ -656,5 +678,165 @@ extern "C" int SwMwManagerFlushRecords(struct SwMwManager *manager)
 		if (buffer != NULL)
 			free(buffer);
 	}
+	return status;
+}
+
+/* create the manager: its base, the key bin, the certificate descriptor's template and
+ * device certificate, then the session, the init and the parameter table (0x81002de2) */
+extern "C" int SwMwManagerCreate(struct SwMwManager **out, const int *config,
+				 struct SwMwManagerCertificate *certificate, int argument)
+{
+	struct SwMwManager *manager;
+	int status;
+	int failed;
+	int type;
+	int i;
+	int j;
+
+	manager = (struct SwMwManager *)::operator new(sizeof(struct SwMwManager),
+						       std::nothrow);
+	if (manager != NULL)
+		manager = SwMwManagerBaseConstruct(manager);
+	failed = 0;
+	if (manager == NULL) {
+		swMwTrace("[SWMW] ERROR in %s:%d\n", SWMW_MANAGER_SOURCE, 1089);
+		failed = 1;
+	}
+	if (failed != 0)
+		return 12008;
+	manager->parameter0 = config[0];
+	manager->parameter1 = config[1];
+	g_swMwManagerConfig = config[2];
+	if (config[3] != 0)
+		SwMwCoreInitKey();
+	status = SwMwCoreKeyBinCreate(&manager->keyBin);
+	failed = 0;
+	if (status != 0) {
+		swMwTrace("[SWMW] Error %d in %s:%d\n", status, SWMW_MANAGER_SOURCE, 1101);
+		failed = 1;
+	}
+	type = 0;
+	if (failed == 0 && certificate != NULL)
+		type = certificate->type;
+	if (failed == 0 && type > 2) {
+		if (type <= 3) {
+			if (certificate->device[0] != 0 || certificate->device[1] != 0 ||
+			    certificate->device[2] != 0) {
+				if (certificate != NULL) {
+					status = sceRegMgrSetKeyBin("/CONFIG/DTCPIP", "devcert",
+								   certificate->device, 3);
+					failed = 0;
+					if (status < 0) {
+						swMwTrace("[SWMW] ERROR in %s:%d\n",
+							  SWMW_MANAGER_SOURCE, 1149);
+						failed = 1;
+					}
+					if (failed == 0) {
+						status = SwMwCoreKeyBinWrite(manager->keyBin,
+									     certificate, argument);
+						if (status != 12005 && status != 0) {
+							swMwTrace("[SWMW] Error %d in %s:%d\n",
+								  status, SWMW_MANAGER_SOURCE, 1152);
+							failed = 1;
+						}
+					}
+				}
+			} else {
+				status = sceRegMgrGetKeyBin("/CONFIG/DTCPIP", "devcert",
+							    certificate->device, 3);
+				failed = 0;
+				if (status < 0) {
+					swMwTrace("[SWMW] ERROR in %s:%d\n",
+						  SWMW_MANAGER_SOURCE, 1130);
+					failed = 1;
+				}
+				for (i = 0; failed == 0 && i < 3; ++i) {
+					if (certificate->device[i] != 0)
+						break;
+				}
+				if (failed == 0 && i == 3) {
+					status = 13001;
+					failed = 1;
+				}
+				if (failed == 0) {
+					certificate->type = 3;
+					certificate->templatePtr = g_swMwCertificateTemplate;
+					status = SwMwCoreKeyBinWrite(manager->keyBin, certificate, 140);
+					if (status != 12005 && status != 0) {
+						swMwTrace("[SWMW] Error %d in %s:%d\n", status,
+							  SWMW_MANAGER_SOURCE, 1144);
+						failed = 1;
+					}
+				}
+			}
+		}
+	} else if (failed == 0 && type != 0) {
+		status = 12003;
+		failed = 1;
+	} else if (failed == 0) {
+		status = sceRegMgrGetKeyBin("/CONFIG/DTCPIP", "devcert", certificate->device, 3);
+		failed = 0;
+		if (status < 0) {
+			swMwTrace("[SWMW] ERROR in %s:%d\n", SWMW_MANAGER_SOURCE, 1115);
+			failed = 1;
+		}
+		for (j = 0; failed == 0 && j < 3; ++j) {
+			if (certificate->device[j] != 0)
+				break;
+		}
+		if (failed == 0 && j == 3) {
+			status = 13001;
+			failed = 1;
+		}
+	}
+	if (failed == 0) {
+		status = SwMwSessionInit(manager);
+		failed = 0;
+		if (status != 0) {
+			swMwTrace("[SWMW] ERROR in %s:%d\n", SWMW_MANAGER_SOURCE, 1171);
+			failed = 1;
+		}
+	}
+	if (failed == 0) {
+		status = manager->object->start();
+		failed = 0;
+		if (status != 0) {
+			swMwTrace("[SWMW] ERROR in %s:%d\n", SWMW_MANAGER_SOURCE, 1176);
+			failed = 1;
+		}
+	}
+	if (failed == 0) {
+		g_swMwParamTbl.state = -1;
+		status = SwMwManagerInit(manager, 1);
+		if (status != 0) {
+			if (status == 13002 || status == 13017 || status == 13018 ||
+			    status == 13019)
+				status = SwMwManagerDownloadParamTbl();
+		} else {
+			g_swMwManager = manager;
+		}
+		if (status != 0) {
+			swMwTrace("[SWMW] Error %d in %s:%d\n", status,
+				  SWMW_MANAGER_SOURCE, 1194);
+			failed = 1;
+		}
+	}
+	if (failed == 0) {
+		*out = manager;
+		return 0;
+	}
+	status = SwMwStatus(status);
+	if (manager->object != NULL)
+		manager->object->close();
+	if (manager->keyBin != 0)
+		SwMwManagerCloseKeyBin(manager->keyBin);
+	SwMwManagerStopStarted(manager->started);
+	SwMwManagerCloseRecordA(manager->recordA);
+	SwMwManagerCloseRecordB(manager->recordB);
+	if (manager->parameter1 != 0) {
+		SwMwManagerCloseRecordC(manager->recordC);
+		SwMwManagerCloseRecordD(manager->recordD);
+	}
+	::operator delete(SwMwManagerFree(manager));
 	return status;
 }

@@ -56,6 +56,17 @@ struct SwMwManagerSinkSlots {
 	void *manager;		/* 0x128: the manager object */
 };
 
+/* the certification descriptor the manager create takes (0x81002de2): the template
+ * pointer, the device certificate's three bytes at +4, the template type at +0x88 and its
+ * length at +0x8c */
+struct SwMwManagerCertificate {
+	void *templatePtr;		/* 0x000 */
+	unsigned char device[3];	/* 0x004 */
+	unsigned char padding[129];	/* 0x007 */
+	int type;			/* 0x088 */
+	int size;			/* 0x08c */
+};
+
 /* the manager object: its first word, the device slots the session start uses, then the
  * key bin, the started flag, the four record handles and the two parameters */
 struct SwMwManager {
@@ -93,6 +104,8 @@ int SwMwManagerActivationThread(void *argument);
 int SwMwManagerParamTblThread(void *argument);
 int SwMwManagerDownloadParamTbl(void);
 int SwMwManagerEnsureSession(struct SwMwManager *manager, int mode);
+int SwMwManagerCreate(struct SwMwManager **out, const int *config,
+		      struct SwMwManagerCertificate *certificate, int argument);
 int SwMwManagerTeardown(struct SwMwManager *manager);
 int SwMwManagerWriteRecord(struct SwMwManager *manager, int value, int size);
 int SwMwManagerWriteRecordDone(struct SwMwManager *manager, int value, int size, int *done);
