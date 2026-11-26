@@ -29,6 +29,24 @@ struct SwMwMoveSink {
 	unsigned char session[0x200];	/* 0x80: the move session's own area */
 };
 
+/* the information block the 0x2801 start command carries: the content id, the resume
+ * flag, the direct block, the certificate pointer and the payload */
+struct SwMwMoveSinkStreamInfoHeader {
+	unsigned int word[4];		/* 0x00: content id, resume, zero, block present */
+};
+
+struct SwMwMoveSinkStreamInfo {
+	struct SwMwMoveSinkStreamInfoHeader header;	/* 0x00 */
+	unsigned char second[16];	/* 0x10: the sender id */
+	unsigned char third[16];	/* 0x20: the receiver id */
+	int value0;			/* 0x30: the direct block's length */
+	int value1;			/* 0x34: the certificate object */
+	unsigned char byte;		/* 0x38 */
+	unsigned char reserved[3];	/* 0x39 */
+	int size;			/* 0x3C: the payload size */
+	unsigned char payload[0x200];	/* 0x40 */
+};
+
 /* one move record (0x230 bytes): the session id, its kind, the kxm label and key blocks,
  * the requested label, the session-data size and the payload */
 struct SwMwMoveRecord {

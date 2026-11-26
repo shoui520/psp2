@@ -39,25 +39,6 @@ int SwMwMoveSinkStreamCompleteLabel(int stream);
 void SwMwMoveSinkStreamGetWindow(int stream, int *window);
 }
 
-/* the information block's first 16 bytes, copied whole */
-struct SwMwMoveSinkStreamInfoHeader {
-	unsigned int word[4];
-};
-
-/* the move stream's information block: its head, the two 16-byte ids, a byte, the
- * 0x200-byte payload and the payload size */
-struct SwMwMoveSinkStreamInfo {
-	struct SwMwMoveSinkStreamInfoHeader header;	/* 0x00 */
-	unsigned char second[16];	/* 0x10 */
-	unsigned char third[16];	/* 0x20 */
-	int value0;			/* 0x30 */
-	int value1;			/* 0x34 */
-	unsigned char byte;		/* 0x38 */
-	unsigned char reserved[3];	/* 0x39 */
-	int size;			/* 0x3C */
-	unsigned char payload[0x200];	/* 0x40 */
-};
-
 /* the stream's shared-memory windows, in the middleware's order */
 struct SwMwMoveSinkStreamWindow {
 	unsigned char *receiveBase;	/* 0x00 */

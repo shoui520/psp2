@@ -31,6 +31,19 @@ int SwMwCoreContentManager(int device);
 /* the stream's bookkeeping mutex (SwMwSync.cpp's shared primitive, 0x8100c200/c4b6) */
 int SwMwSinkStreamMutexDelete(SceKernelLwMutexWork *mutex);
 
+/* the device's move-sink check (the SWS core, 0x81002d94) */
+int SwMwCoreCheckMoveSink(int device);
+
+/* the certificate block helpers (the SWS content library, 0x8100c82e/0x8100c882) */
+struct SwMwCertificateBlock {
+	unsigned char sender[16];	/* 0x00 */
+	unsigned char receiver[16];	/* 0x10 */
+	unsigned int length;		/* 0x20 */
+	unsigned char certificate[32];	/* 0x24 */
+};
+int SwMwCertificateCopy(int certificate, struct SwMwCertificateBlock *block);
+int SwMwCertificateId(const void *certificate);
+
 /* the move session's record list and the device label (SwMwMoveSink.cpp's calls) */
 int SwMwMoveRecordBegin(int manager, int id, int mode);
 int SwMwMoveRecordAppend(int manager, struct SwMwMoveRecord *record);
@@ -438,6 +451,135 @@ extern "C" int SwMwMoveSinkStreamCompleteLabel(struct SwMwSinkStream *stream)
 		sink->sessionState[2] = 1;
 	}
 	return 0;
+}
+
+/* start the move stream's transfer on its work area (0x8100a412) */
+extern "C" int SwMwMoveSinkStreamGetInfo(struct SwMwSinkStream *stream,
+					 struct SwMwMoveSinkStreamInfo *info)
+{
+	struct SwMwMoveSink *sink = (struct SwMwMoveSink *)stream->sink;
+	struct SwMwCertificateBlock block;
+	unsigned char label;
+	int receiveSize;
+	int sendBase;
+	int started;
+	int status;
+	int stage;
+
+	if (SwMwCoreCheckMoveSink(sink->device) == 0) {
+		swMwTrace("[SWMW] ERROR in %s:%d\n", SWMW_MOVESTREAM_SOURCE, 328);
+		return 12003;
+	}
+	if (info->header.word[2] != 0) {
+		swMwTrace("[SWMW] ERROR in %s:%d\n", SWMW_MOVESTREAM_SOURCE, 332);
+		return 12003;
+	}
+	status = SwMwCoreNotifyLabel(sink->device, info->header.word[0], 40);
+	if (status != 0) {
+		swMwTrace("[SWMW] Error %d in %s:%d\n", status, SWMW_MOVESTREAM_SOURCE, 338);
+		return status;
+	}
+	sink->sessionState[6] = info->header.word[0];
+	sink->sessionState[7] = info->size;
+	if (info->size != 0)
+		memcpy(sink->session, info->payload, info->size);
+	stream->contentId = info->header.word[0];
+	stream->receiveChunks = NULL;
+	stream->receiveCount = 0;
+	stream->receiveIndex = 0;
+	stream->receiveConsumed = 0;
+	stream->receiveHave = 0;
+	stream->sendChunks = NULL;
+	stream->sendCount = 0;
+	stream->sendIndex = 0;
+	stream->sendConsumed = 0;
+	stream->sendHave = 0;
+	stream->sendTotal = 0;
+	stream->finished = 0;
+	stream->status = 0;
+	stream->emptyStatus = 12401;
+	stream->endOfStream = 0;
+	stream->empty = 0;
+	memset(&stream->work, 0, sizeof(stream->work));
+	stream->work.tag = 0x90020001;
+	stream->work.eof = stream->window.reserved == 0;
+	if (info->value1 != 0) {
+		SwMwCertificateCopy(info->value1, &block);
+		memcpy(stream->work.sender, block.sender, 16);
+		memcpy(stream->work.receiver, block.receiver, 16);
+		stream->work.length = block.length >> 4;
+		memcpy(stream->work.certificate, block.certificate, 32);
+		stream->work.keyId = SwMwCertificateId((const void *)info->value1);
+	} else if (info->header.word[3] != 0) {
+		memcpy(stream->work.sender, info->second, 16);
+		memcpy(stream->work.receiver, info->third, 16);
+		stream->work.length = (unsigned int)info->value0 >> 4;
+	} else {
+		stream->work.length = 0;
+	}
+	stream->work.base = stream->window.receiveBase;
+	stream->work.sendSize = stream->window.sendSize;
+	swMwTrace("sw mw:MoveSinkStreamStart bufSyncLen=%d\n", stream->window.blockSize);
+	stream->work.blockSize = stream->window.blockSize;
+	swMwTrace("sw mw:MoveSinkStreamStart contentID=%d kxmLabel=0x%x\n",
+		  stream->contentId, sink->moveState);
+	label = (unsigned char)sink->moveState;
+	receiveSize = stream->window.receiveSize;
+	sendBase = (int)stream->window.sendBase;
+	started = stream->manager->createTransferOn(&stream->downloader, &sink->uri, 1,
+						     &stream->event, label, receiveSize,
+						     &stream->work, sendBase);
+	stage = 0;
+	if (started != 0) {
+		swMwTrace("[SWMW] ERROR in %s:%d\n", SWMW_MOVESTREAM_SOURCE, 422);
+		stage = 1;
+	}
+	if (stage == 0) {
+		if (((struct SwMwTransfer *)((unsigned char *)stream->downloader +
+		      (*(int **)(void *)stream->downloader)[-10]))->setParameter(50) != 0)
+			swMwTrace("[SWMW] ERROR in %s:%d\n", SWMW_MOVESTREAM_SOURCE, 428);
+		if (info->header.word[1] != 0 && stream->resume != 0) {
+			((struct SwMwTransfer *)((unsigned char *)stream->downloader +
+			 (*(int **)(void *)stream->downloader)[-10]))->setSessionData(
+				&stream->connectData[0]);
+			stream->resume = 0;
+		}
+		started = ((struct SwMwTransfer *)((unsigned char *)stream->downloader +
+			   (*(int **)(void *)stream->downloader)[-10]))->start();
+		stage = 0;
+		if (started != 0) {
+			swMwTrace("[SWMW] ERROR in %s:%d\n", SWMW_MOVESTREAM_SOURCE, 437);
+			stage = 1;
+		}
+	}
+	status = 0;
+	if (stage == 0) {
+		stream->reader = stream->work.reader;
+		if (stream->reader == NULL) {
+			swMwTrace("[SWMW] ERROR in %s:%d\n", SWMW_MOVESTREAM_SOURCE, 441);
+			status = 12004;
+			stage = 1;
+		}
+	}
+	if (stage == 0) {
+		if (stream->reader->noop(50) != 0)
+			swMwTrace("[SWMW] ERROR in %s:%d\n", SWMW_MOVESTREAM_SOURCE, 449);
+		stream->connected = 1;
+		return 0;
+	}
+	if (stream->downloader != NULL) {
+		struct SwMwTransfer *interface;
+
+		interface = (struct SwMwTransfer *)((unsigned char *)stream->downloader +
+					(*(int **)(void *)stream->downloader)[-13]);
+		stream->manager->releaseTransfer(interface);
+		stream->downloader = NULL;
+	}
+	if (stream->reader != NULL)
+		stream->reader = NULL;
+	if (status != 0)
+		return status;
+	return SwMwStatus(started);
 }
 
 /* hand the sink one of the reader's chunks (0x8100acf6) */

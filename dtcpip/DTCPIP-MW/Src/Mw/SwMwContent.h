@@ -67,7 +67,7 @@ struct SwMwTransfer {
 	virtual void destroy();				/* 0x00 */
 	virtual void dispose();				/* 0x04 */
 	virtual int setEvent(struct SwMwStreamEvent *event);	/* 0x08 */
-	virtual int start(int *out);			/* 0x0C */
+	virtual int start();				/* 0x0C */
 	virtual int reset();				/* 0x10 */
 	virtual int isReady();				/* 0x14 */
 	virtual int getState();				/* 0x18 */
@@ -111,6 +111,9 @@ struct SwSdiBuffer {
 	virtual int write(const void *buffer, unsigned int size);/* 0x30 */
 	virtual int getWriteChunkList(void **list);	/* 0x34 */
 	virtual int getReadChunkList(void **list);	/* 0x38 */
+	virtual int setError(int error);		/* 0x3c */
+	virtual int getError();				/* 0x40 */
+	virtual int noop(int value);			/* 0x44 */
 };
 
 struct SwMwContentManager {
@@ -118,9 +121,10 @@ struct SwMwContentManager {
 	virtual void dispose();						/* 0x04 */
 	virtual int createTransfer(struct SwMwTransfer **transfer);	/* 0x08 */
 	virtual int releaseTransfer(struct SwMwTransfer *transfer);	/* 0x0c */
-	virtual int createTransferOn(struct SwMwTransfer **transfer, int *device,
-				      int mode, void *channel, int label,
-				      int value, void *work, int value2);	/* 0x10 */
+	virtual int createTransferOn(struct SwMwTransfer **transfer, struct SwMwUri *uri,
+				      int mode, struct SwMwStreamEvent *event,
+				      unsigned char label, int receiveSize,
+				      struct SwMwSinkWork *work, int sendBase);	/* 0x10 */
 };
 
 /* the content object (14 dispatch slots, in table order) */

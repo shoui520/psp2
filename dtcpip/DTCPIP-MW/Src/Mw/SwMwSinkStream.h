@@ -45,6 +45,30 @@ struct SwMwStreamEvent {
 	unsigned char reserved[3];	/* 0x11 */
 };
 
+/* the library's per-transfer work area (0x498 bytes) the content factory builds in: the
+ * header and tail belong to the library, the fields below are the ones the middleware
+ * writes (the start tag, the end-of-stream flag, the certificate block, the reader the
+ * library stores at +0x84 and the window copies) */
+struct SwMwSinkWork {
+	unsigned char header[0x14];	/* 0x00: the library's own state */
+	unsigned int tag;		/* 0x14: 0x90020001, set at each start */
+	unsigned char flag;		/* 0x18 */
+	unsigned char eof;		/* 0x19: set when the window has no reserved word */
+	unsigned char spare[2];		/* 0x1A */
+	int keyId;			/* 0x1C: the certificate's id */
+	unsigned char sender[16];	/* 0x20 */
+	unsigned char receiver[16];	/* 0x30 */
+	unsigned int length;		/* 0x40: the certificate block's length */
+	unsigned char certificate[32];	/* 0x44 */
+	unsigned char reserved[0x20];	/* 0x64 */
+	struct SwSdiBuffer *reader;	/* 0x84: the SdiBuffer the start builds */
+	unsigned char library[4];	/* 0x88: the library's own word */
+	unsigned char *base;		/* 0x8C: the window's receive base */
+	int sendSize;			/* 0x90 */
+	int blockSize;			/* 0x94 */
+	unsigned char tail[0x400];	/* 0x98: the library's own state */
+};
+
 /* the stream object (0x700 bytes): the sink it belongs to, the two objects that move its
  * data, the window it shares with the library and the per-transfer state */
 struct SwMwSinkStream {
@@ -55,7 +79,7 @@ struct SwMwSinkStream {
 	struct SwSdiBuffer *reader;	/* 0x010: the SdiBuffer the stream drains */
 	struct SwMwStreamWindow window;	/* 0x014: the shared-memory windows */
 	struct SwMwStreamEvent event;	/* 0x02C: the reader's event object */
-	unsigned char work[0x498];	/* 0x040: the reader's work area */
+	struct SwMwSinkWork work;	/* 0x040: the reader's work area */
 	struct SwMwContentManager *manager;	/* 0x4D8: the content manager */
 	struct SwMwStreamChunk *receiveChunks;	/* 0x4DC */
 	int receiveCount;		/* 0x4E0 */
