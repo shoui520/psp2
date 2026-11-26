@@ -711,6 +711,10 @@ psp2_module(vs0_vsh_shell_shell KIND user COMPILER snc PARTIAL SOURCES
 	src/np/np_push_vsh/service/np_push_ipc_server.cpp
 	src/np/np_push_vsh/service/np_push_ipc_data.cpp
 	src/np/np_push_vsh/service/np_push_ipc_tlv.cpp
+	src/np/np_websocket/np_websocket_connection.cpp
+	src/np/np_websocket/np_websocket_handshake.cpp
+	src/np/np_websocket/np_websocket_net.cpp
+	src/np/np_websocket/util/np_websocket_util_stream.cpp
 	src/np/np_ipc2/np_ipc2_server.cpp
 	src/np/np_ipc2/np_ipc2_service_server.cpp
 	src/np/np_ipc2/np_ipc2_ipmi_server.cpp
