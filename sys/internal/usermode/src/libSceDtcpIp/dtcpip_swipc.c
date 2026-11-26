@@ -29,6 +29,10 @@
 /* the status the middleware answers with "not yet"; the pollers wait on it */
 #define SCE_DTCP_IP_IPC_STATUS_LATER		30
 
+/* the transport statuses a close treats as "the other side is gone already" */
+#define SCE_DTCP_IP_IPC_STATUS_PIPE		12011
+#define SCE_DTCP_IP_IPC_STATUS_CLOSED		12017
+
 /*
  * the middleware's status word, in the library's request statuses. The library's
  * request layer has its own statuses; the session layer maps them again
@@ -261,21 +265,13 @@ int dtcpIpIpcClose(int connection)
 	message.channel = 0;
 	message.size = 0;
 	ret = dtcpIpIpcRequest(object->stream, &message);
-	if (ret == 0 || ret == SCE_DTCP_IP_IPC_STATUS_LATER || ret == SCE_DTCP_IP_IPC_STATUS_BUSY) {
-		if (ret == 0) {
-			ret = message.result;
-			if (ret == 0) {
-				ret = dtcpIpIpcFiniStream(object->stream, message.result);
-				if (ret == 0 || ret == SCE_DTCP_IP_IPC_STATUS_BUSY
-				    || ret == SCE_DTCP_IP_IPC_STATUS_LATER) {
-					dtcpIpIpcFiniSession(object->session);
-					dtcpIpFree(object);
-					if (ret == 0)
-						return 0;
-				}
-			}
-		}
-	}
+	if ((ret == 0 || ret == SCE_DTCP_IP_IPC_STATUS_PIPE ||
+	     ret == SCE_DTCP_IP_IPC_STATUS_CLOSED) &&
+	    (ret != 0 || (ret = message.result, ret == 0)) &&
+	    ((ret = dtcpIpIpcFiniStream(object->stream, message.result)) == 0 ||
+	     ret == SCE_DTCP_IP_IPC_STATUS_CLOSED || ret == SCE_DTCP_IP_IPC_STATUS_PIPE) &&
+	    (dtcpIpIpcFiniSession(object->session), dtcpIpFree(object), ret == 0))
+		return 0;
 	return dtcpIpMapIpcStatus(ret);
 }
 
