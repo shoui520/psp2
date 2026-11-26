@@ -280,14 +280,18 @@ int dtcpIpIpcDestroy(int connection)
 {
 	struct SceDtcpIpIpcObject *object = (struct SceDtcpIpIpcObject *)connection;
 	struct SceDtcpIpIpcMessage message;
+	int ret;
 
 	if (connection == 0)
 		return 2;
 	message.command = SCE_DTCP_IP_IPC_DESTROY;
 	message.channel = 0;
 	message.size = 0;
-	if (dtcpIpIpcRequest(object->stream, &message) != 0 || message.result != 0)
-		return dtcpIpMapIpcStatus(0);
+	ret = dtcpIpIpcRequest(object->stream, &message);
+	if (ret != 0)
+		return dtcpIpMapIpcStatus(ret);
+	if (message.result != 0)
+		return dtcpIpMapIpcStatus(message.result);
 	return 0;
 }
 
@@ -428,14 +432,18 @@ int dtcpIpIpcOpenSession(void *connection)
 {
 	struct SceDtcpIpIpcObject *object = connection;
 	struct SceDtcpIpIpcMessage message;
+	int ret;
 
 	if (connection == NULL)
 		return 2;
 	message.command = SCE_DTCP_IP_IPC_OPEN_SESSION;
 	message.channel = 0;
 	message.size = 0;
-	if (dtcpIpIpcRequest(object->stream, &message) != 0 || message.result != 0)
-		return dtcpIpMapIpcStatus(0);
+	ret = dtcpIpIpcRequest(object->stream, &message);
+	if (ret != 0)
+		return dtcpIpMapIpcStatus(ret);
+	if (message.result != 0)
+		return dtcpIpMapIpcStatus(message.result);
 	return 0;
 }
 
