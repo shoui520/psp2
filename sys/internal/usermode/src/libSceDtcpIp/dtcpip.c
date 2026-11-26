@@ -817,8 +817,20 @@ int SceDtcpIp_6C6AC8E8(int *outEvent, int *outResult)
 				if (g_dtcpIp.commandState == SCE_DTCP_IP_COMMAND_DONE ||
 				    g_dtcpIp.commandState == SCE_DTCP_IP_COMMAND_RUNNING ||
 				    g_dtcpIp.commandState == SCE_DTCP_IP_COMMAND_QUEUED) {
-					if (g_dtcpIp.commandState == SCE_DTCP_IP_COMMAND_DONE) {
-take:
+					int take = g_dtcpIp.commandState == SCE_DTCP_IP_COMMAND_DONE;
+
+					if (take == 0) {
+						while (1) {
+							ret = dtcpIpWaitCond(SCE_DTCP_IP_COND_COMMAND, &timeout);
+							if (ret < 0)
+								break;
+							if (g_dtcpIp.commandState == SCE_DTCP_IP_COMMAND_DONE) {
+								take = 1;
+								break;
+							}
+						}
+					}
+					if (take != 0) {
 						event = 12;
 						if (dtcpIpCommandEventId(&event, g_command.common.id) == 0) {
 							*outEvent = event;
@@ -827,14 +839,6 @@ take:
 						g_dtcpIp.commandState = SCE_DTCP_IP_COMMAND_IDLE;
 						g_command.common.result = SCE_DTCP_IP_ERROR_SEQUENCE;
 						g_command.common.id = SCE_DTCP_IP_COMMAND_NONE;
-					} else {
-						while (1) {
-							ret = dtcpIpWaitCond(SCE_DTCP_IP_COND_COMMAND, &timeout);
-							if (ret < 0)
-								break;
-							if (g_dtcpIp.commandState == SCE_DTCP_IP_COMMAND_DONE)
-								goto take;
-						}
 					}
 				} else {
 					ret = SCE_DTCP_IP_ERROR_SEQUENCE;
