@@ -248,7 +248,7 @@ void NpImpsSvc::FillPresenceSnapshotFromFriend(NpImpsSvcPresenceSnapshot *outSna
 	sce_paf_strncpy(outSnapshot->titleName, titleNameBuf, sizeof(outSnapshot->titleName));
 
 	friendEntry->GetTitleId(&outSnapshot->titleId, platform);
-	friendEntry->GetCommId(&outSnapshot->commId);
+	friendEntry->GetCommId(&outSnapshot->commId, platform);
 
 	outSnapshot->gamePresence.size = 0;
 	outSnapshot->gamePresence.presenceType = friendEntry->GetGamePresenceType(platform);
@@ -270,7 +270,8 @@ void NpImpsSvc::FillPresenceSnapshotFromFriend(NpImpsSvcPresenceSnapshot *outSna
 	friendEntry->GetPartyTitle(outSnapshot->partyPresence.title, platform);
 	friendEntry->GetPartyStatus(outSnapshot->partyPresence.status, platform);
 	outSnapshot->partyPresence.partyDataSize = friendEntry->GetPartyDataSize(platform);
-	friendEntry->CopyPartyData(outSnapshot->partyPresence.partyData, platform);
+	friendEntry->CopyPartyData(outSnapshot->partyPresence.partyData,
+				   sizeof(outSnapshot->partyPresence.partyData), platform);
 
 	friendEntry->GetJoinableCommId(&outSnapshot->joinableCommId, platform);
 	friendEntry->GetContentId(outSnapshot->contentId, platform);
@@ -1276,32 +1277,32 @@ int NpImpsSvc::GetMyPresence(NpImpsSvcPresenceSnapshot *outSnapshot)
 }
 
 /* 0x812FB036..0x812FB11B: blocklist queries */
-int NpImpsSvc::GetBlockListCount(SceUInt32 *outCount, int listMode)
+int NpImpsSvc::GetBlockListCount(SceUInt32 *outCount, SceUInt8 *outLoaded)
 {
 	if (!m_sessionState.IsSignedIn())
 		return NP_IMPS_SVC_ERROR_SIGNED_OUT;
 	if (outCount == NULL)
 		return NP_IMPS_SVC_ERROR_INVALID_ARGUMENT;
-	*outCount = m_cacheCore->GetBlockStore()->GetCount(listMode);
+	*outCount = m_cacheCore->GetBlockStore()->GetCount(outLoaded);
 	return 0;
 }
 
 int NpImpsSvc::GetBlockListEntries(SceUInt32 startIndex, SceNpId *outEntries, SceUInt32 maxCount,
-				   SceUInt32 *outCount, int listMode)
+				   SceUInt32 *outCount, SceUInt8 *outLoaded)
 {
 	if (!m_sessionState.IsSignedIn())
 		return NP_IMPS_SVC_ERROR_SIGNED_OUT;
-	m_cacheCore->GetBlockStore()->CopyEntries(startIndex, outEntries, maxCount, outCount, listMode);
+	m_cacheCore->GetBlockStore()->CopyEntries(startIndex, outEntries, maxCount, outCount, outLoaded);
 	return 0;
 }
 
-int NpImpsSvc::IsBlocked(const SceNpId *npId, bool *outBlocked, int listMode)
+int NpImpsSvc::IsBlocked(const SceNpId *npId, bool *outBlocked, SceUInt8 *outLoaded)
 {
 	if (!m_sessionState.IsSignedIn())
 		return NP_IMPS_SVC_ERROR_SIGNED_OUT;
 	if (npId == NULL || outBlocked == NULL)
 		return NP_IMPS_SVC_ERROR_INVALID_ARGUMENT;
-	*outBlocked = m_cacheCore->GetBlockStore()->Contains(npId, listMode);
+	*outBlocked = m_cacheCore->GetBlockStore()->Contains(npId, outLoaded);
 	return 0;
 }
 
@@ -1449,69 +1450,69 @@ int NpImpsSvc::ReleaseFriendHandles(NpImpsCacheFriendPtr **handles, SceUInt32 co
 	return 0;
 }
 
-int NpImpsSvc::GetAcceptedFriendCount(SceUInt32 *outCount, int filterMode)
+int NpImpsSvc::GetAcceptedFriendCount(SceUInt32 *outCount, SceUInt8 *outLoaded)
 {
 	if (!m_sessionState.IsSignedIn())
 		return NP_IMPS_SVC_ERROR_SIGNED_OUT;
 	if (outCount == NULL)
 		return NP_IMPS_SVC_ERROR_INVALID_ARGUMENT;
-	*outCount = m_cacheCore->GetFriendStore()->GetAcceptedCount(filterMode);
+	*outCount = m_cacheCore->GetFriendStore()->GetAcceptedCount(outLoaded);
 	return 0;
 }
 
 int NpImpsSvc::GetAcceptedFriendEntries(SceUInt32 startIndex, SceNpId *outEntries, SceUInt32 maxCount,
-					SceUInt32 *outCount, int filterMode)
+					SceUInt32 *outCount, SceUInt8 *outLoaded)
 {
 	if (!m_sessionState.IsSignedIn())
 		return NP_IMPS_SVC_ERROR_SIGNED_OUT;
 	if (outEntries == NULL || outCount == NULL)
 		return NP_IMPS_SVC_ERROR_INVALID_ARGUMENT;
 	m_cacheCore->GetFriendStore()->CopyAcceptedNpIds(startIndex, outEntries, maxCount,
-							 outCount, filterMode);
+							 outCount, outLoaded);
 	return 0;
 }
 
-int NpImpsSvc::GetPendingFriendCount(SceUInt32 *outCount, int filterMode)
+int NpImpsSvc::GetPendingFriendCount(SceUInt32 *outCount, SceUInt8 *outLoaded)
 {
 	if (!m_sessionState.IsSignedIn())
 		return NP_IMPS_SVC_ERROR_SIGNED_OUT;
 	if (outCount == NULL)
 		return NP_IMPS_SVC_ERROR_INVALID_ARGUMENT;
-	*outCount = m_cacheCore->GetFriendStore()->GetPendingCount(filterMode);
+	*outCount = m_cacheCore->GetFriendStore()->GetPendingCount(outLoaded);
 	return 0;
 }
 
 int NpImpsSvc::GetPendingFriendEntries(SceUInt32 startIndex, SceNpId *outEntries, SceUInt32 maxCount,
-				       SceUInt32 *outCount, int filterMode)
+				       SceUInt32 *outCount, SceUInt8 *outLoaded)
 {
 	if (!m_sessionState.IsSignedIn())
 		return NP_IMPS_SVC_ERROR_SIGNED_OUT;
 	if (outEntries == NULL || outCount == NULL)
 		return NP_IMPS_SVC_ERROR_INVALID_ARGUMENT;
 	m_cacheCore->GetFriendStore()->CopyPendingNpIds(startIndex, outEntries, maxCount,
-							outCount, filterMode);
+							outCount, outLoaded);
 	return 0;
 }
 
-int NpImpsSvc::GetRequestedFriendCount(SceUInt32 *outCount, int filterMode)
+int NpImpsSvc::GetRequestedFriendCount(SceUInt32 *outCount, SceUInt8 *outLoaded)
 {
 	if (!m_sessionState.IsSignedIn())
 		return NP_IMPS_SVC_ERROR_SIGNED_OUT;
 	if (outCount == NULL)
 		return NP_IMPS_SVC_ERROR_INVALID_ARGUMENT;
-	*outCount = m_cacheCore->GetFriendStore()->GetRequestedCount(filterMode);
+	*outCount = m_cacheCore->GetFriendStore()->GetRequestedCount(outLoaded);
 	return 0;
 }
 
 int NpImpsSvc::GetRequestedFriendEntries(SceUInt32 startIndex, SceNpId *outEntries, SceUInt32 maxCount,
-					 SceUInt32 *outCount, int filterMode)
+					 SceUInt32 *outCount, SceUInt8 *outLoaded)
 {
 	if (!m_sessionState.IsSignedIn())
 		return NP_IMPS_SVC_ERROR_SIGNED_OUT;
 	if (outEntries == NULL || outCount == NULL)
 		return NP_IMPS_SVC_ERROR_INVALID_ARGUMENT;
 	m_cacheCore->GetFriendStore()->CopyRequestedNpIds(startIndex, outEntries, maxCount,
-							  outCount, filterMode);
+							  outCount, outLoaded);
 	return 0;
 }
 
@@ -1582,7 +1583,7 @@ int NpImpsSvc::GetFriendPresenceByHandle(NpImpsCacheFriendPtr *handle,
 		outSnapshot->titlePlatform = entry->GetTitlePlatform(platform);
 		entry->GetTitleName(outSnapshot->titleName, platform);
 		entry->GetTitleId(&outSnapshot->titleId, platform);
-		entry->GetCommId(&outSnapshot->commId);
+		entry->GetCommId(&outSnapshot->commId, platform);
 
 		outSnapshot->gamePresence.size = 0;
 		outSnapshot->gamePresence.presenceType = entry->GetGamePresenceType(platform);
@@ -1604,7 +1605,8 @@ int NpImpsSvc::GetFriendPresenceByHandle(NpImpsCacheFriendPtr *handle,
 			entry->GetPartyTitle(outSnapshot->partyPresence.title, platform);
 			entry->GetPartyStatus(outSnapshot->partyPresence.status, platform);
 			outSnapshot->partyPresence.partyDataSize = entry->GetPartyDataSize(platform);
-			ret = entry->CopyPartyData(outSnapshot->partyPresence.partyData, platform);
+			ret = entry->CopyPartyData(outSnapshot->partyPresence.partyData,
+						   sizeof(outSnapshot->partyPresence.partyData), platform);
 		}
 	}
 

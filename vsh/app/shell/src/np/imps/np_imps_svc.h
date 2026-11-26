@@ -628,10 +628,10 @@ public:
 	int GetAppTitleInfo(int appId, NpImpsAppTitleInfo *outInfo);
 	int IsBigAppGame(int appId);
 
-	int GetBlockListCount(SceUInt32 *outCount, int listMode);
+	int GetBlockListCount(SceUInt32 *outCount, SceUInt8 *outLoaded);
 	int GetBlockListEntries(SceUInt32 startIndex, SceNpId *outEntries, SceUInt32 maxCount,
-				SceUInt32 *outCount, int listMode);
-	int IsBlocked(const SceNpId *npId, bool *outBlocked, int listMode);
+				SceUInt32 *outCount, SceUInt8 *outLoaded);
+	int IsBlocked(const SceNpId *npId, bool *outBlocked, SceUInt8 *outLoaded);
 
 	int GetFriendCount(SceUInt32 *outCount);
 	int GetFriendEntries(SceUInt32 startIndex, SceNpId *outEntries, SceUInt32 maxCount,
@@ -646,15 +646,15 @@ public:
 	int ReleaseFriendHandles(NpImpsCacheFriendPtr **handles, SceUInt32 count,
 				 void (*freeFn)(void *));
 
-	int GetAcceptedFriendCount(SceUInt32 *outCount, int filterMode);
+	int GetAcceptedFriendCount(SceUInt32 *outCount, SceUInt8 *outLoaded);
 	int GetAcceptedFriendEntries(SceUInt32 startIndex, SceNpId *outEntries, SceUInt32 maxCount,
-				     SceUInt32 *outCount, int filterMode);
-	int GetPendingFriendCount(SceUInt32 *outCount, int filterMode);
+				     SceUInt32 *outCount, SceUInt8 *outLoaded);
+	int GetPendingFriendCount(SceUInt32 *outCount, SceUInt8 *outLoaded);
 	int GetPendingFriendEntries(SceUInt32 startIndex, SceNpId *outEntries, SceUInt32 maxCount,
-				    SceUInt32 *outCount, int filterMode);
-	int GetRequestedFriendCount(SceUInt32 *outCount, int filterMode);
+				    SceUInt32 *outCount, SceUInt8 *outLoaded);
+	int GetRequestedFriendCount(SceUInt32 *outCount, SceUInt8 *outLoaded);
 	int GetRequestedFriendEntries(SceUInt32 startIndex, SceNpId *outEntries, SceUInt32 maxCount,
-				      SceUInt32 *outCount, int filterMode);
+				      SceUInt32 *outCount, SceUInt8 *outLoaded);
 
 	int GetFriendPresenceByNpId(const SceNpId *npId, NpImpsSvcPresenceSnapshot *outSnapshot);
 	int GetFriendPresenceByHandle(NpImpsCacheFriendPtr *handle,
@@ -765,21 +765,30 @@ extern void npImpsCacheHeapClear(void);
 extern void *npImpsCacheMalloc(SceSize size);
 extern void npImpsCacheFree(void *ptr);
 
-/* SceNpImpsCache bridges (implemented in Batch C: np_imps_cache) */
+/* SceNpImpsCache bridges (implemented in np_imps_cache) */
 class NpImpsCacheFriendEntry : public paf::common::RefObj {
 public:
 	virtual ~NpImpsCacheFriendEntry() {}
-	virtual void GetNpId(SceNpId *outNpId) = 0;			/* +28 */
-	virtual int GetRelation() = 0;					/* +32 */
-	virtual void GetDate(paf::rtc::Tick *outTick) = 0;		/* +36 */
-	virtual int GetRequestDirection() = 0;				/* +40 */
-	virtual SceUInt8 GetIsNew() = 0;				/* +44 */
-	virtual void ReservedQuery() = 0;				/* +48 */
-	virtual int GetFriendContext() = 0;				/* +52 */
-	virtual int GetOnlineStatus(int platform) = 0;			/* +56 */
-	virtual int GetPlatform(int platform) = 0;			/* +60 */
-	virtual const char *GetComment(int platform) = 0;		/* +64 */
-	virtual int GetTitlePlatform(int platform) = 0;			/* +68 */
+	virtual void UpdateRosterData(int relation, const paf::rtc::Tick *date) = 0;	/* +8 */
+	virtual int UpdatePresenceDefault(NpImpsSvcPresenceData **newPresence,
+					  NpImpsSvcPresenceDiffFlags *outDiff,
+					  NpImpsSvcPresenceData **outPrev) = 0;		/* +12 */
+	virtual int UpdatePresenceForPlatform(NpImpsSvcPresenceData **newPresence,
+					      NpImpsSvcPresenceDiffFlags *outDiff,
+					      NpImpsSvcPresenceData **outPrev,
+					      int platform) = 0;			/* +16 */
+	virtual void GetNpId(SceNpId *outNpId) = 0;					/* +28 */
+	virtual int GetRelation() = 0;							/* +32 */
+	virtual void GetDate(paf::rtc::Tick *outTick) = 0;				/* +36 */
+	virtual int GetRequestDirection() = 0;						/* +40 */
+	virtual SceUInt8 GetIsNew() = 0;						/* +44 */
+	virtual void SetIsNew(SceUInt8 isNew) = 0;					/* +48 */
+	virtual int GetFriendContext() = 0;						/* +52 */
+	virtual int GetOnlineStatus(int platform) = 0;					/* +56 */
+	virtual int GetPlatform(int platform) = 0;					/* +60 */
+	virtual int CopyComment(char **outBuf, void *(*allocFn)(SceSize),
+				int platform) = 0;					/* +64 */
+	virtual int GetTitlePlatform(int platform) = 0;					/* +68 */
 	virtual void GetLastOnlineTick(paf::rtc::Tick *outTick, int platform) = 0;	/* +72 */
 	virtual void GetTitleId(SceNpCommunicationId *outId, int platform) = 0;		/* +76 */
 	virtual void GetTitleIdStr(char *outBuf, int platform) = 0;			/* +80 */
@@ -788,7 +797,7 @@ public:
 	virtual void GetJoinableCommId(SceNpCommunicationId *outId, int platform) = 0;	/* +92 */
 	virtual void GetContentId(char *outBuf, int platform) = 0;			/* +96 */
 	virtual int GetGamePresenceType(int platform) = 0;				/* +100 */
-	virtual void GetCommId(SceNpCommunicationId *outId) = 0;			/* +104 */
+	virtual void GetCommId(SceNpCommunicationId *outId, int platform) = 0;		/* +104 */
 	virtual void GetGameStatus(char *outBuf, int platform) = 0;			/* +108 */
 	virtual SceSize GetGameDataSize(int platform) = 0;				/* +112 */
 	virtual int CopyGameData(void *dst, SceSize maxLen, int platform) = 0;		/* +116 */
@@ -796,36 +805,41 @@ public:
 	virtual void GetPartyTitle(char *outBuf, int platform) = 0;			/* +124 */
 	virtual void GetPartyStatus(char *outBuf, int platform) = 0;			/* +128 */
 	virtual SceSize GetPartyDataSize(int platform) = 0;				/* +132 */
-	virtual int CopyPartyData(void *dst, int platform) = 0;				/* +136 */
+	virtual int CopyPartyData(void *dst, SceSize maxLen, int platform) = 0;		/* +136 */
+	virtual int FreeAllocatedString(void *ptr, void (*freeFn)(void *)) = 0;		/* +140 */
 };
 
 class NpImpsCacheFriendStore {
 public:
 	virtual ~NpImpsCacheFriendStore() {}
-	virtual void Lock() = 0;					/* +8 */
-	virtual void Unlock() = 0;					/* +12 */
-	virtual SceUInt32 GetCount() = 0;				/* +16 */
+	virtual void Lock() = 0;							/* +8 */
+	virtual void Unlock() = 0;							/* +12 */
+	virtual SceUInt32 GetCount() = 0;						/* +16 */
 	virtual int CopyHandles(NpImpsCacheFriendPtr *outHandles, SceUInt32 count) = 0;	/* +20 */
-	virtual SceUInt32 GetAcceptedCount(int filterMode) = 0;		/* +24 */
-	virtual int CopyAcceptedNpIds(SceUInt32 startIndex, SceNpId *outEntries,
-				      SceUInt32 maxCount, SceUInt32 *outCount, int filterMode) = 0;
-	virtual SceUInt32 GetPendingCount(int filterMode) = 0;		/* +32 */
-	virtual int CopyPendingNpIds(SceUInt32 startIndex, SceNpId *outEntries,
-				     SceUInt32 maxCount, SceUInt32 *outCount, int filterMode) = 0;
-	virtual SceUInt32 GetRequestedCount(int filterMode) = 0;	/* +40 */
-	virtual int CopyRequestedNpIds(SceUInt32 startIndex, SceNpId *outEntries,
-				       SceUInt32 maxCount, SceUInt32 *outCount, int filterMode) = 0;
+	virtual SceUInt32 GetAcceptedCount(SceUInt8 *outLoaded) = 0;			/* +24 */
+	virtual void CopyAcceptedNpIds(SceUInt32 startIndex, SceNpId *outEntries,
+				       SceUInt32 maxCount, SceUInt32 *outCount,
+				       SceUInt8 *outLoaded) = 0;			/* +28 */
+	virtual SceUInt32 GetPendingCount(SceUInt8 *outLoaded) = 0;			/* +32 */
+	virtual void CopyPendingNpIds(SceUInt32 startIndex, SceNpId *outEntries,
+				      SceUInt32 maxCount, SceUInt32 *outCount,
+				      SceUInt8 *outLoaded) = 0;				/* +36 */
+	virtual SceUInt32 GetRequestedCount(SceUInt8 *outLoaded) = 0;			/* +40 */
+	virtual void CopyRequestedNpIds(SceUInt32 startIndex, SceNpId *outEntries,
+					SceUInt32 maxCount, SceUInt32 *outCount,
+					SceUInt8 *outLoaded) = 0;			/* +44 */
 	virtual int CopyAllNpIds(SceUInt32 startIndex, SceNpId *outEntries,
 				 SceUInt32 maxCount, SceUInt32 *outCount) = 0;		/* +48 */
-	virtual int LookupEntry(const SceNpId *npId, NpImpsCacheFriendPtr *outEntry) = 0; /* +52 */
-	virtual bool Contains(const SceNpId *npId) = 0;			/* +56 */
+	virtual int GetRelation(const SceNpId *npId, int *outRelation) = 0;		/* +52 */
+	virtual int GetDate(const SceNpId *npId, paf::rtc::Tick *outTick) = 0;		/* +56 */
 	virtual int GetFriendContext(const SceNpId *npId, int *outContext) = 0;		/* +60 */
 	virtual int GetOnlineStatus(const SceNpId *npId, int *outStatus) = 0;		/* +64 */
 	virtual int GetTitlePlatform(const SceNpId *npId, int *outPlatform) = 0;	/* +68 */
-	virtual int GetComment(const SceNpId *npId, char *outComment) = 0;		/* +72 */
+	virtual int GetLastOnlineTick(const SceNpId *npId, paf::rtc::Tick *outTick,
+				      bool *outHasTick) = 0;				/* +72 */
 	virtual int GetTitleId(const SceNpId *npId, SceNpCommunicationId *outId) = 0;	/* +76 */
 	virtual int GetTitleName(const SceNpId *npId, char *outTitleName) = 0;		/* +80 */
-	virtual int GetJoinableCommId(const SceNpId *npId, SceNpCommunicationId *outId) = 0;
+	virtual int IsSystemTitle(const SceNpId *npId, SceUInt8 *outIsSystem) = 0;	/* +84 */
 	virtual int GetContentId(const SceNpId *npId, char *outContentId) = 0;		/* +88 */
 	virtual int GetGamePresenceType(const SceNpId *npId, int *outType) = 0;		/* +92 */
 	virtual int GetCommId(const SceNpId *npId, SceNpCommunicationId *outId) = 0;	/* +96 */
@@ -837,17 +851,34 @@ public:
 	virtual int GetPartyStatus(const SceNpId *npId, char *outStatus) = 0;		/* +120 */
 	virtual int GetPartyData(const SceNpId *npId, void *outData) = 0;		/* +124 */
 	virtual int GetPartyDataSize(const SceNpId *npId, SceSize *outSize) = 0;	/* +128 */
+	virtual bool Contains(const SceNpId *npId) = 0;					/* +132 */
+	virtual int GetTitleIdForPlatform(const SceNpId *npId, SceNpCommunicationId *outId,
+					  int platform) = 0;				/* +136 */
+	virtual int GetTitleNameForPlatform(const SceNpId *npId, char *outTitleName,
+					    int platform) = 0;				/* +140 */
+	virtual int GetGamePresenceTypeForPlatform(const SceNpId *npId, int *outType,
+						   int platform) = 0;			/* +144 */
+	virtual int GetCommIdForPlatform(const SceNpId *npId, SceNpCommunicationId *outId,
+					 int platform) = 0;				/* +148 */
+	virtual int GetGameStatusForPlatform(const SceNpId *npId, char *outStatus,
+					     int platform) = 0;				/* +152 */
+	virtual int GetGameDataForPlatform(const SceNpId *npId, void *outData,
+					   int platform) = 0;				/* +156 */
+	virtual int GetGameDataSizeForPlatform(const SceNpId *npId, SceSize *outSize,
+					       int platform) = 0;			/* +160 */
+	virtual int GetNpIdAt(SceUInt32 index, SceNpId *outNpId) = 0;			/* +164 */
 };
 
 class NpImpsCacheBlockStore {
 public:
 	virtual ~NpImpsCacheBlockStore() {}
-	virtual void Lock() = 0;					/* +8 */
-	virtual void Unlock() = 0;					/* +12 */
-	virtual SceUInt32 GetCount(int listMode) = 0;			/* +16 */
-	virtual int CopyEntries(SceUInt32 startIndex, SceNpId *outEntries,
-				SceUInt32 maxCount, SceUInt32 *outCount, int listMode) = 0;
-	virtual bool Contains(const SceNpId *npId, int listMode) = 0;	/* +24 */
+	virtual void Lock() = 0;							/* +8 */
+	virtual void Unlock() = 0;							/* +12 */
+	virtual SceUInt32 GetCount(SceUInt8 *outLoaded) = 0;				/* +16 */
+	virtual void CopyEntries(SceUInt32 startIndex, SceNpId *outEntries,
+				 SceUInt32 maxCount, SceUInt32 *outCount,
+				 SceUInt8 *outLoaded) = 0;				/* +20 */
+	virtual bool Contains(const SceNpId *npId, SceUInt8 *outLoaded) = 0;		/* +24 */
 };
 
 class NpImpsCacheRosterSync {

@@ -1588,7 +1588,7 @@ static int onIpmiSyncMethod(IPMI::Session *session, SceUInt32 methodId,
 	case NP_IMPS_METHOD_GET_ACCEPTED_FRIEND_CNT:
 		ret = npImpsUtilHandleGetAcceptedFriendCount(
 			session, static_cast<SceUInt32 *>(outList[0].pBuffer),
-			*static_cast<const SceUInt8 *>(outList[1].pBuffer));
+			static_cast<SceUInt8 *>(outList[1].pBuffer));
 		outList[0].outSize = sizeof(SceUInt32);
 		outList[1].outSize = sizeof(SceUInt8);
 		return session->respondToSyncMethodRequest(ret, outList, outCount);
@@ -1599,7 +1599,7 @@ static int onIpmiSyncMethod(IPMI::Session *session, SceUInt32 methodId,
 		ret = npImpsUtilHandleGetAcceptedFriendList(
 			session, rangeReq[0], static_cast<SceNpId *>(outList[0].pBuffer),
 			maxCount, static_cast<SceUInt32 *>(outList[1].pBuffer),
-			*static_cast<const SceUInt8 *>(outList[2].pBuffer));
+			static_cast<SceUInt8 *>(outList[2].pBuffer));
 		outList[0].outSize = sizeof(SceNpId) * maxCount;
 		outList[1].outSize = sizeof(SceUInt32);
 		outList[2].outSize = sizeof(SceUInt8);
@@ -1616,7 +1616,7 @@ static int onIpmiSyncMethod(IPMI::Session *session, SceUInt32 methodId,
 	case NP_IMPS_METHOD_GET_BLOCK_LIST_COUNT:
 		ret = npImpsUtilHandleGetBlockListCount(
 			session, static_cast<SceUInt32 *>(outList[0].pBuffer),
-			*static_cast<const SceUInt8 *>(outList[1].pBuffer));
+			static_cast<SceUInt8 *>(outList[1].pBuffer));
 		outList[0].outSize = sizeof(SceUInt32);
 		outList[1].outSize = sizeof(SceUInt8);
 		return session->respondToSyncMethodRequest(ret, outList, outCount);
@@ -1627,7 +1627,7 @@ static int onIpmiSyncMethod(IPMI::Session *session, SceUInt32 methodId,
 		ret = npImpsUtilHandleGetBlockListEntries(
 			session, rangeReq[0], static_cast<SceNpId *>(outList[0].pBuffer),
 			maxCount, static_cast<SceUInt32 *>(outList[1].pBuffer),
-			*static_cast<const SceUInt8 *>(outList[2].pBuffer));
+			static_cast<SceUInt8 *>(outList[2].pBuffer));
 		outList[0].outSize = sizeof(SceNpId) * maxCount;
 		outList[1].outSize = sizeof(SceUInt32);
 		outList[2].outSize = sizeof(SceUInt8);
@@ -1638,7 +1638,7 @@ static int onIpmiSyncMethod(IPMI::Session *session, SceUInt32 methodId,
 		ret = npImpsUtilHandleIsBlocked(
 			session, static_cast<const SceNpId *>(inList[0].pData),
 			static_cast<bool *>(outList[0].pBuffer),
-			*static_cast<const SceUInt8 *>(outList[1].pBuffer));
+			static_cast<SceUInt8 *>(outList[1].pBuffer));
 		outList[0].outSize = sizeof(SceUInt8);
 		outList[1].outSize = sizeof(SceUInt8);
 		return session->respondToSyncMethodRequest(ret, outList, outCount);
@@ -1805,7 +1805,7 @@ static int onIpmiSyncMethod(IPMI::Session *session, SceUInt32 methodId,
 	case NP_IMPS_METHOD_GET_PENDING_FRIEND_CNT:
 		ret = npImpsUtilHandleGetPendingFriendCount(
 			session, static_cast<SceUInt32 *>(outList[0].pBuffer),
-			*static_cast<const SceUInt8 *>(outList[1].pBuffer));
+			static_cast<SceUInt8 *>(outList[1].pBuffer));
 		outList[0].outSize = sizeof(SceUInt32);
 		outList[1].outSize = sizeof(SceUInt8);
 		return session->respondToSyncMethodRequest(ret, outList, outCount);
@@ -1816,7 +1816,7 @@ static int onIpmiSyncMethod(IPMI::Session *session, SceUInt32 methodId,
 		ret = npImpsUtilHandleGetPendingFriendList(
 			session, rangeReq[0], static_cast<SceNpId *>(outList[0].pBuffer),
 			maxCount, static_cast<SceUInt32 *>(outList[1].pBuffer),
-			*static_cast<const SceUInt8 *>(outList[2].pBuffer));
+			static_cast<SceUInt8 *>(outList[2].pBuffer));
 		outList[0].outSize = sizeof(SceNpId) * maxCount;
 		outList[1].outSize = sizeof(SceUInt32);
 		outList[2].outSize = sizeof(SceUInt8);
@@ -1826,7 +1826,7 @@ static int onIpmiSyncMethod(IPMI::Session *session, SceUInt32 methodId,
 	case NP_IMPS_METHOD_GET_REQ_FRIEND_CNT:
 		ret = npImpsUtilHandleGetRequestedFriendCount(
 			session, static_cast<SceUInt32 *>(outList[0].pBuffer),
-			*static_cast<const SceUInt8 *>(outList[1].pBuffer));
+			static_cast<SceUInt8 *>(outList[1].pBuffer));
 		outList[0].outSize = sizeof(SceUInt32);
 		outList[1].outSize = sizeof(SceUInt8);
 		return session->respondToSyncMethodRequest(ret, outList, outCount);
@@ -1837,7 +1837,7 @@ static int onIpmiSyncMethod(IPMI::Session *session, SceUInt32 methodId,
 		ret = npImpsUtilHandleGetRequestedFriendList(
 			session, rangeReq[0], static_cast<SceNpId *>(outList[0].pBuffer),
 			maxCount, static_cast<SceUInt32 *>(outList[1].pBuffer),
-			*static_cast<const SceUInt8 *>(outList[2].pBuffer));
+			static_cast<SceUInt8 *>(outList[2].pBuffer));
 		outList[0].outSize = sizeof(SceNpId) * maxCount;
 		outList[1].outSize = sizeof(SceUInt32);
 		outList[2].outSize = sizeof(SceUInt8);
@@ -2297,57 +2297,57 @@ int npImpsSvcReleaseFriendHandles(NpImpsCacheFriendPtr **handles, SceUInt32 coun
 }
 
 /* 0x812F8168 */
-int npImpsSvcGetAcceptedFriendCount(SceUInt32 *outCount, int filterMode)
+int npImpsSvcGetAcceptedFriendCount(SceUInt32 *outCount, SceUInt8 *outLoaded)
 {
 	if (s_svcInstance == NULL)
 		return NP_IMPS_SVC_ERROR_NOT_INITIALIZED;
-	return s_svcInstance->GetAcceptedFriendCount(outCount, filterMode);
+	return s_svcInstance->GetAcceptedFriendCount(outCount, outLoaded);
 }
 
 /* 0x812F818A */
 int npImpsSvcGetAcceptedFriendEntries(SceUInt32 startIndex, SceNpId *outEntries,
-				      SceUInt32 maxCount, SceUInt32 *outCount, int filterMode)
+				      SceUInt32 maxCount, SceUInt32 *outCount, SceUInt8 *outLoaded)
 {
 	if (s_svcInstance == NULL)
 		return NP_IMPS_SVC_ERROR_NOT_INITIALIZED;
 	return s_svcInstance->GetAcceptedFriendEntries(startIndex, outEntries, maxCount,
-						       outCount, filterMode);
+						       outCount, outLoaded);
 }
 
 /* 0x812F81BE */
-int npImpsSvcGetPendingFriendCount(SceUInt32 *outCount, int filterMode)
+int npImpsSvcGetPendingFriendCount(SceUInt32 *outCount, SceUInt8 *outLoaded)
 {
 	if (s_svcInstance == NULL)
 		return NP_IMPS_SVC_ERROR_NOT_INITIALIZED;
-	return s_svcInstance->GetPendingFriendCount(outCount, filterMode);
+	return s_svcInstance->GetPendingFriendCount(outCount, outLoaded);
 }
 
 /* 0x812F81E0 */
 int npImpsSvcGetPendingFriendEntries(SceUInt32 startIndex, SceNpId *outEntries,
-				     SceUInt32 maxCount, SceUInt32 *outCount, int filterMode)
+				     SceUInt32 maxCount, SceUInt32 *outCount, SceUInt8 *outLoaded)
 {
 	if (s_svcInstance == NULL)
 		return NP_IMPS_SVC_ERROR_NOT_INITIALIZED;
 	return s_svcInstance->GetPendingFriendEntries(startIndex, outEntries, maxCount,
-						      outCount, filterMode);
+						      outCount, outLoaded);
 }
 
 /* 0x812F8214 */
-int npImpsSvcGetRequestedFriendCount(SceUInt32 *outCount, int filterMode)
+int npImpsSvcGetRequestedFriendCount(SceUInt32 *outCount, SceUInt8 *outLoaded)
 {
 	if (s_svcInstance == NULL)
 		return NP_IMPS_SVC_ERROR_NOT_INITIALIZED;
-	return s_svcInstance->GetRequestedFriendCount(outCount, filterMode);
+	return s_svcInstance->GetRequestedFriendCount(outCount, outLoaded);
 }
 
 /* 0x812F8236 */
 int npImpsSvcGetRequestedFriendEntries(SceUInt32 startIndex, SceNpId *outEntries,
-				       SceUInt32 maxCount, SceUInt32 *outCount, int filterMode)
+				       SceUInt32 maxCount, SceUInt32 *outCount, SceUInt8 *outLoaded)
 {
 	if (s_svcInstance == NULL)
 		return NP_IMPS_SVC_ERROR_NOT_INITIALIZED;
 	return s_svcInstance->GetRequestedFriendEntries(startIndex, outEntries, maxCount,
-							outCount, filterMode);
+							outCount, outLoaded);
 }
 
 /* 0x812F826A */
@@ -2410,29 +2410,29 @@ int npImpsSvcGetMyOnlineStatus(int *outStatus)
 }
 
 /* 0x812F836E */
-int npImpsSvcGetBlockListCount(SceUInt32 *outCount, int listMode)
+int npImpsSvcGetBlockListCount(SceUInt32 *outCount, SceUInt8 *outLoaded)
 {
 	if (s_svcInstance == NULL)
 		return NP_IMPS_SVC_ERROR_NOT_INITIALIZED;
-	return s_svcInstance->GetBlockListCount(outCount, listMode);
+	return s_svcInstance->GetBlockListCount(outCount, outLoaded);
 }
 
 /* 0x812F8390 */
 int npImpsSvcGetBlockListEntries(SceUInt32 startIndex, SceNpId *outEntries,
-				 SceUInt32 maxCount, SceUInt32 *outCount, int listMode)
+				 SceUInt32 maxCount, SceUInt32 *outCount, SceUInt8 *outLoaded)
 {
 	if (s_svcInstance == NULL)
 		return NP_IMPS_SVC_ERROR_NOT_INITIALIZED;
 	return s_svcInstance->GetBlockListEntries(startIndex, outEntries, maxCount,
-						  outCount, listMode);
+						  outCount, outLoaded);
 }
 
 /* 0x812F83C4 */
-int npImpsSvcIsBlocked(const SceNpId *npId, bool *outBlocked, int listMode)
+int npImpsSvcIsBlocked(const SceNpId *npId, bool *outBlocked, SceUInt8 *outLoaded)
 {
 	if (s_svcInstance == NULL)
 		return NP_IMPS_SVC_ERROR_NOT_INITIALIZED;
-	return s_svcInstance->IsBlocked(npId, outBlocked, listMode);
+	return s_svcInstance->IsBlocked(npId, outBlocked, outLoaded);
 }
 
 /* 0x812F83EA */

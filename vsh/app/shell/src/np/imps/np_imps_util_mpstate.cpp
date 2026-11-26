@@ -2649,51 +2649,51 @@ int npImpsUtilHandleGetRawServiceState(IPMI::Session *session, int *outState)
 
 /* 0x812F6724..0x812F689D & 0x812F5F60..0x812F5FE9 */
 int npImpsUtilHandleGetAcceptedFriendCount(IPMI::Session *session, SceUInt32 *outCount,
-					   int filterMode)
+					   SceUInt8 *outLoaded)
 {
 	(void)session;
-	return npImpsSvcGetAcceptedFriendCount(outCount, filterMode);
+	return npImpsSvcGetAcceptedFriendCount(outCount, outLoaded);
 }
 
 int npImpsUtilHandleGetAcceptedFriendList(IPMI::Session *session, SceUInt32 startIndex,
 					  SceNpId *outEntries, SceUInt32 maxCount,
-					  SceUInt32 *outCount, int filterMode)
+					  SceUInt32 *outCount, SceUInt8 *outLoaded)
 {
 	(void)session;
 	return npImpsSvcGetAcceptedFriendEntries(startIndex, outEntries, maxCount,
-						 outCount, filterMode);
+						 outCount, outLoaded);
 }
 
 int npImpsUtilHandleGetPendingFriendCount(IPMI::Session *session, SceUInt32 *outCount,
-					  int filterMode)
+					  SceUInt8 *outLoaded)
 {
 	(void)session;
-	return npImpsSvcGetPendingFriendCount(outCount, filterMode);
+	return npImpsSvcGetPendingFriendCount(outCount, outLoaded);
 }
 
 int npImpsUtilHandleGetPendingFriendList(IPMI::Session *session, SceUInt32 startIndex,
 					 SceNpId *outEntries, SceUInt32 maxCount,
-					 SceUInt32 *outCount, int filterMode)
+					 SceUInt32 *outCount, SceUInt8 *outLoaded)
 {
 	(void)session;
 	return npImpsSvcGetPendingFriendEntries(startIndex, outEntries, maxCount,
-						outCount, filterMode);
+						outCount, outLoaded);
 }
 
 int npImpsUtilHandleGetRequestedFriendCount(IPMI::Session *session, SceUInt32 *outCount,
-					    int filterMode)
+					    SceUInt8 *outLoaded)
 {
 	(void)session;
-	return npImpsSvcGetRequestedFriendCount(outCount, filterMode);
+	return npImpsSvcGetRequestedFriendCount(outCount, outLoaded);
 }
 
 int npImpsUtilHandleGetRequestedFriendList(IPMI::Session *session, SceUInt32 startIndex,
 					   SceNpId *outEntries, SceUInt32 maxCount,
-					   SceUInt32 *outCount, int filterMode)
+					   SceUInt32 *outCount, SceUInt8 *outLoaded)
 {
 	(void)session;
 	return npImpsSvcGetRequestedFriendEntries(startIndex, outEntries, maxCount,
-						  outCount, filterMode);
+						  outCount, outLoaded);
 }
 
 int npImpsUtilHandleGetAllFriendCount(IPMI::Session *session, SceUInt32 *outCount)
@@ -2780,25 +2780,26 @@ int npImpsUtilHandleGetFriendGamePresence(IPMI::Session *session, const SceNpId 
 	return npImpsSvcGetFriendGamePresence(npId, outPresence);
 }
 
-int npImpsUtilHandleGetBlockListCount(IPMI::Session *session, SceUInt32 *outCount, int listMode)
+int npImpsUtilHandleGetBlockListCount(IPMI::Session *session, SceUInt32 *outCount,
+				      SceUInt8 *outLoaded)
 {
 	(void)session;
-	return npImpsSvcGetBlockListCount(outCount, listMode);
+	return npImpsSvcGetBlockListCount(outCount, outLoaded);
 }
 
 int npImpsUtilHandleGetBlockListEntries(IPMI::Session *session, SceUInt32 startIndex,
 					SceNpId *outEntries, SceUInt32 maxCount,
-					SceUInt32 *outCount, int listMode)
+					SceUInt32 *outCount, SceUInt8 *outLoaded)
 {
 	(void)session;
-	return npImpsSvcGetBlockListEntries(startIndex, outEntries, maxCount, outCount, listMode);
+	return npImpsSvcGetBlockListEntries(startIndex, outEntries, maxCount, outCount, outLoaded);
 }
 
 int npImpsUtilHandleIsBlocked(IPMI::Session *session, const SceNpId *npId,
-			      bool *outBlocked, int listMode)
+			      bool *outBlocked, SceUInt8 *outLoaded)
 {
 	(void)session;
-	return npImpsSvcIsBlocked(npId, outBlocked, listMode);
+	return npImpsSvcIsBlocked(npId, outBlocked, outLoaded);
 }
 
 /* 0x812F689E */

@@ -421,20 +421,20 @@ extern int npImpsUtilHandleDeleteBlockAsync(IPMI::Session *session, SceUInt32 re
 					    const SceUInt32 *ctxId, const SceNpId *npId);
 
 extern int npImpsUtilHandleGetAcceptedFriendCount(IPMI::Session *session, SceUInt32 *outCount,
-						  int filterMode);
+						  SceUInt8 *outLoaded);
 extern int npImpsUtilHandleGetAcceptedFriendList(IPMI::Session *session, SceUInt32 startIndex,
 						 SceNpId *outEntries, SceUInt32 maxCount,
-						 SceUInt32 *outCount, int filterMode);
+						 SceUInt32 *outCount, SceUInt8 *outLoaded);
 extern int npImpsUtilHandleGetPendingFriendCount(IPMI::Session *session, SceUInt32 *outCount,
-						 int filterMode);
+						 SceUInt8 *outLoaded);
 extern int npImpsUtilHandleGetPendingFriendList(IPMI::Session *session, SceUInt32 startIndex,
 						SceNpId *outEntries, SceUInt32 maxCount,
-						SceUInt32 *outCount, int filterMode);
+						SceUInt32 *outCount, SceUInt8 *outLoaded);
 extern int npImpsUtilHandleGetRequestedFriendCount(IPMI::Session *session, SceUInt32 *outCount,
-						   int filterMode);
+						   SceUInt8 *outLoaded);
 extern int npImpsUtilHandleGetRequestedFriendList(IPMI::Session *session, SceUInt32 startIndex,
 						  SceNpId *outEntries, SceUInt32 maxCount,
-						  SceUInt32 *outCount, int filterMode);
+						  SceUInt32 *outCount, SceUInt8 *outLoaded);
 extern int npImpsUtilHandleGetAllFriendCount(IPMI::Session *session, SceUInt32 *outCount);
 extern int npImpsUtilHandleGetAllFriendList(IPMI::Session *session, SceUInt32 startIndex,
 					    SceNpId *outEntries, SceUInt32 maxCount,
@@ -451,12 +451,12 @@ extern int npImpsUtilHandleGetFriendPresenceSys(IPMI::Session *session, const Sc
 extern int npImpsUtilHandleGetFriendGamePresence(IPMI::Session *session, const SceNpId *npId,
 						 NpImpsGamePresenceWithTitle *outPresence);
 extern int npImpsUtilHandleGetBlockListCount(IPMI::Session *session, SceUInt32 *outCount,
-					     int listMode);
+					     SceUInt8 *outLoaded);
 extern int npImpsUtilHandleGetBlockListEntries(IPMI::Session *session, SceUInt32 startIndex,
 					       SceNpId *outEntries, SceUInt32 maxCount,
-					       SceUInt32 *outCount, int listMode);
+					       SceUInt32 *outCount, SceUInt8 *outLoaded);
 extern int npImpsUtilHandleIsBlocked(IPMI::Session *session, const SceNpId *npId,
-				     bool *outBlocked, int listMode);
+				     bool *outBlocked, SceUInt8 *outLoaded);
 extern int npImpsUtilHandleSetPartyPresence(IPMI::Session *session,
 					    const NpImpsPartyPresence *party);
 extern int npImpsUtilHandleClearPartyPresence(IPMI::Session *session);
@@ -500,28 +500,29 @@ extern int npImpsSvcSnapshotFriendHandles(NpImpsCacheFriendPtr ***outHandles, Sc
 					  void *(*allocFn)(SceSize));
 extern int npImpsSvcReleaseFriendHandles(NpImpsCacheFriendPtr **handles, SceUInt32 count,
 					 void (*freeFn)(void *));
-extern int npImpsSvcGetAcceptedFriendCount(SceUInt32 *outCount, int filterMode);
+extern int npImpsSvcGetAcceptedFriendCount(SceUInt32 *outCount, SceUInt8 *outLoaded);
 extern int npImpsSvcGetAcceptedFriendEntries(SceUInt32 startIndex, SceNpId *outEntries,
 					     SceUInt32 maxCount, SceUInt32 *outCount,
-					     int filterMode);
-extern int npImpsSvcGetPendingFriendCount(SceUInt32 *outCount, int filterMode);
+					     SceUInt8 *outLoaded);
+extern int npImpsSvcGetPendingFriendCount(SceUInt32 *outCount, SceUInt8 *outLoaded);
 extern int npImpsSvcGetPendingFriendEntries(SceUInt32 startIndex, SceNpId *outEntries,
 					    SceUInt32 maxCount, SceUInt32 *outCount,
-					    int filterMode);
-extern int npImpsSvcGetRequestedFriendCount(SceUInt32 *outCount, int filterMode);
+					    SceUInt8 *outLoaded);
+extern int npImpsSvcGetRequestedFriendCount(SceUInt32 *outCount, SceUInt8 *outLoaded);
 extern int npImpsSvcGetRequestedFriendEntries(SceUInt32 startIndex, SceNpId *outEntries,
 					      SceUInt32 maxCount, SceUInt32 *outCount,
-					      int filterMode);
+					      SceUInt8 *outLoaded);
 extern int npImpsSvcGetFriendPresenceByHandle(NpImpsCacheFriendPtr *handle,
 					      NpImpsSvcPresenceSnapshot *outSnap);
 extern int npImpsSvcGetFriendPresenceByPlatform(NpImpsCacheFriendPtr *handle,
 						NpImpsSvcPresenceSnapshot *outSnap, int platform);
 extern int npImpsSvcGetFriendContextByNpId(const SceNpId *npId, int *outContext);
 extern int npImpsSvcGetMyOnlineStatus(int *outStatus);
-extern int npImpsSvcGetBlockListCount(SceUInt32 *outCount, int listMode);
+extern int npImpsSvcGetBlockListCount(SceUInt32 *outCount, SceUInt8 *outLoaded);
 extern int npImpsSvcGetBlockListEntries(SceUInt32 startIndex, SceNpId *outEntries,
-					SceUInt32 maxCount, SceUInt32 *outCount, int listMode);
-extern int npImpsSvcIsBlocked(const SceNpId *npId, bool *outBlocked, int listMode);
+					SceUInt32 maxCount, SceUInt32 *outCount,
+					SceUInt8 *outLoaded);
+extern int npImpsSvcIsBlocked(const SceNpId *npId, bool *outBlocked, SceUInt8 *outLoaded);
 extern int npImpsSvcGetMyPresence(NpImpsSvcPresenceSnapshot *outSnap);
 extern int npImpsSvcGetFriendGamePresence(const SceNpId *npId,
 					  NpImpsGamePresenceWithTitle *outPresence);
