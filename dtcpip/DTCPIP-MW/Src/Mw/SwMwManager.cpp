@@ -447,65 +447,44 @@ extern "C" int SwMwManagerEnsureSession(struct SwMwManager *manager, int mode)
 	}
 	if (failed == 0) {
 		status = SwMwManagerMarkStarted(&manager->started);
-		failed = 0;
 		if (status != 0) {
 			swMwTrace("[SWMW] Error %d in %s:%d\n", status, SWMW_MANAGER_SOURCE, 1276);
 			failed = 1;
 		}
-		if (failed == 0) {
-			status = SwMwManagerOpenRecordA(&manager->recordA);
-			if (status == 12005)
-				goto recordB;
-			failed = 0;
-			if (status != 0) {
-				swMwTrace("[SWMW] Error %d in %s:%d\n", status,
-					  SWMW_MANAGER_SOURCE, 1281);
-				failed = 1;
-			}
-			if (failed != 0)
-				goto teardown;
-recordB:
-			status = SwMwManagerOpenRecordB(&manager->recordB);
-			if (status == 12005)
-				goto recordC;
-			failed = 0;
-			if (status != 0) {
-				swMwTrace("[SWMW] Error %d in %s:%d\n", status,
-					  SWMW_MANAGER_SOURCE, 1284);
-				failed = 1;
-			}
-			if (failed != 0)
-				goto teardown;
-recordC:
-			if (manager->parameter1 == 0)
-				return 0;
-			status = SwMwManagerOpenRecordC(&manager->recordC);
-			if (status == 12005)
-				goto recordD;
-			failed = 0;
-			if (status != 0) {
-				swMwTrace("[SWMW] Error %d in %s:%d\n", status,
-					  SWMW_MANAGER_SOURCE, 1289);
-				failed = 1;
-			}
-			if (failed != 0)
-				goto teardown;
-recordD:
-			status = SwMwManagerOpenRecordD(&manager->recordD);
-			if (status == 12005)
-				return 0;
-			failed = 0;
-			if (status != 0) {
-				swMwTrace("[SWMW] Error %d in %s:%d\n", status,
-					  SWMW_MANAGER_SOURCE, 1291);
-				failed = 1;
-			}
-			if (failed == 0)
-				return 0;
-teardown:
-			SwMwManagerClearSlots(&manager->slots);
+	}
+	if (failed == 0) {
+		status = SwMwManagerOpenRecordA(&manager->recordA);
+		if (status != 12005 && status != 0) {
+			swMwTrace("[SWMW] Error %d in %s:%d\n", status, SWMW_MANAGER_SOURCE, 1281);
+			failed = 1;
 		}
 	}
+	if (failed == 0) {
+		status = SwMwManagerOpenRecordB(&manager->recordB);
+		if (status != 12005 && status != 0) {
+			swMwTrace("[SWMW] Error %d in %s:%d\n", status, SWMW_MANAGER_SOURCE, 1284);
+			failed = 1;
+		}
+	}
+	if (failed == 0 && manager->parameter1 == 0)
+		return 0;
+	if (failed == 0) {
+		status = SwMwManagerOpenRecordC(&manager->recordC);
+		if (status != 12005 && status != 0) {
+			swMwTrace("[SWMW] Error %d in %s:%d\n", status, SWMW_MANAGER_SOURCE, 1289);
+			failed = 1;
+		}
+	}
+	if (failed == 0) {
+		status = SwMwManagerOpenRecordD(&manager->recordD);
+		if (status != 12005 && status != 0) {
+			swMwTrace("[SWMW] Error %d in %s:%d\n", status, SWMW_MANAGER_SOURCE, 1291);
+			failed = 1;
+		}
+	}
+	if (failed == 0)
+		return 0;
+	SwMwManagerClearSlots(&manager->slots);
 	if (manager->object != NULL)
 		manager->object->close();
 	if (manager->keyBin != 0)
