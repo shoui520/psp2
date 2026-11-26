@@ -163,7 +163,10 @@ int dtcpIpStrmCloseSession(struct SwStrmClient *client)
 	message.channel = 0;
 	message.size = 0;
 	message.value0 = client->session;
-	if (dtcpIpIpcRequest(client->ipc->stream, &message) != 0 || message.result != 0)
+	ret = dtcpIpIpcRequest(client->ipc->stream, &message);
+	if (ret != 0)
+		result = dtcpIpMapIpcStatus3(ret);
+	else if (message.result != 0)
 		result = dtcpIpMapIpcStatus3(message.result);
 	sceKernelDeleteLwMutex(&client->mutex);
 	dtcpIpFree(client);
@@ -249,7 +252,10 @@ int dtcpIpStrmCloseStream(void *object)
 	message.channel = 0;
 	message.size = 0;
 	message.value0 = stream->id;
-	if (dtcpIpIpcRequest(stream->channel, &message) != 0 || message.result != 0)
+	ret = dtcpIpIpcRequest(stream->channel, &message);
+	if (ret != 0)
+		dtcpIpMapIpcStatus3(ret);
+	else if (message.result != 0)
 		dtcpIpMapIpcStatus3(message.result);
 	ret = dtcpIpIpcFiniStream(stream->channel, 0);
 	sceKernelDeleteLwMutex(&stream->mutex);
@@ -414,8 +420,8 @@ int dtcpIpStrmSend(void *object, void **buffer, SceSize *size, int timeout)
 			break;
 		chunk = message.out0;
 		length = message.out1;
-		*buffer = (char *)stream->buffer + chunk;
 		*size = length;
+		*buffer = (char *)stream->buffer + chunk;
 		if (ret != 0) {
 			stream->status = ret;
 			return dtcpIpMapIpcStatus3(ret);
