@@ -692,6 +692,22 @@ psp2_module(vs0_vsh_shell_shell KIND user COMPILER snc PARTIAL SOURCES
 	src/np/oauth/np_oauth_vsh.cpp
 	src/np/oauth/np_oauth_request.cpp
 	src/np/oauth/np_oauth_response.cpp
+	src/np/np_push_vsh/core/np_push_core.cpp
+	src/np/np_push_vsh/core/np_push_ctl.cpp
+	src/np/np_push_vsh/core/np_push_ctl_cmd.cpp
+	src/np/np_push_vsh/core/np_push_net.cpp
+	src/np/np_push_vsh/core/np_push_packet.cpp
+	src/np/np_push_vsh/core/np_push_user_request.cpp
+	src/np/np_push_vsh/core/np_push_callout.cpp
+	src/np/np_push_vsh/core/np_push_context.cpp
+	src/np/np_push_vsh/core/np_push_session.cpp
+	src/np/np_push_vsh/core/np_push_session_cmd.cpp
+	src/np/np_push_vsh/core/np_push_user_context.cpp
+	src/np/np_push_vsh/core/np_push_connection.cpp
+	src/np/np_push_vsh/core/np_push_request.cpp
+	src/np/np_push_vsh/core/np_push_get_server_addr_trans.cpp
+	src/np/np_push_vsh/service/np_push_dispatcher.cpp
+	src/np/np_push_vsh/service/np_push_ipc_context.cpp
 	${PSP2_SRC}/sys/sdk/target/src/mt19937/libmt19937.c
 	${PSP2_SRC}/sys/sdk/target/src/mt19937/mtrand.S
 	${PSP2_SRC}/sys/sdk/target/src/md5/libmd5.c
