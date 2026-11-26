@@ -618,6 +618,13 @@ psp2_module(vs0_vsh_shell_shell KIND user COMPILER snc PARTIAL SOURCES
 	src/topmenu_plugin/src/remove_savedata_job.cpp
 	src/topmenu_plugin/src/online_storage_delete_launcher.cpp
 	src/topmenu_plugin/src/topmenu_lsdb_sync.cpp
+	src/dbsetup/dbsetup_lib.cpp
+	src/dbsetup/dbrecovery_lib.cpp
+	src/dbsetup/id_dat.cpp
+	src/shell_svc/src/shell_svc_activity_client.cpp
+	src/sysupchk_plugin/sysupchk_plugin.cpp
+	src/sysupchk_plugin/sysupchk_np.cpp
+	src/rtc_util/rtc_util.cpp
 	shell.c
 )
 target_include_directories(vs0_vsh_shell_shell PRIVATE "${PSP2_SRC}/vsh/paf/include"
