@@ -167,10 +167,10 @@ typedef struct BxceDocument {
 	int attrNode;			/* where the last attributes were written */
 	BxceNameHash *attrNameHash;
 	BxceNameHash *elementNameHash;
-	int reserved3;			/* nothing reads or writes it */
+	char *writeCursor;		/* cursor used while converting DOM nodes to bX */
 	int alwaysZero;			/* cleared at init, allocate, reset and terminate; never set */
 	BxceDomNode *domRoot;		/* the DOM form's document node */
-	int alwaysZero2;		/* cleared like alwaysZero; never read */
+	void *ownerDocument;		/* owning sce::Xml::Dom::Document in libSceXml */
 } BxceDocument;
 
 /* the allocator: bXCe's malloc and free over its mspace */

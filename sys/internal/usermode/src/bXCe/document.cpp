@@ -66,7 +66,7 @@ BxceDocument *ScebXCe_63593407(BxceDocument *doc)
 	doc->attrNamesSize = 0;
 	doc->pendingAttrCount = 0;
 	doc->alwaysZero = 0;
-	doc->alwaysZero2 = 0;
+	doc->ownerDocument = NULL;
 	doc->domRoot = NULL;
 	return doc;
 }
@@ -510,7 +510,7 @@ int bxceDocumentInitializeWriter(BxceDocument *doc)
 	doc->pendingAttrCount = 0;
 	doc->alwaysZero = 0;
 	doc->domRoot = NULL;
-	doc->alwaysZero2 = 0;
+	doc->ownerDocument = NULL;
 
 	doc->nodes = (char *)ScebXCe_B8DDE741(BXCE_TABLE_INITIAL_SIZE);
 	if (doc->nodes == NULL) {
@@ -1565,7 +1565,7 @@ int ScebXCe_FAB50608(BxceDocument *doc, SceUInt8 isDom)
 		doc->alwaysZero = 0;
 		doc->domRoot = NULL;
 		doc->isBinary = 1;
-		doc->alwaysZero2 = 0;
+		doc->ownerDocument = NULL;
 		return 0;
 	}
 
@@ -1589,7 +1589,7 @@ int ScebXCe_FAB50608(BxceDocument *doc, SceUInt8 isDom)
 	doc->alwaysZero = 0;
 	doc->domRoot = NULL;
 	doc->isBinary = 1;
-	doc->alwaysZero2 = 0;
+	doc->ownerDocument = NULL;
 
 	doc->domRoot = (BxceDomNode *)ScebXCe_B8DDE741(sizeof(BxceDomNode));
 	if (doc->domRoot == NULL) {
