@@ -129,20 +129,58 @@ struct SceNetAdhocctlScanNode {
     char ssid[32];                       /* 0x0c..0x2b */
     u32 mode;                            /* 0x2c */
     u16 beacon_period;                   /* 0x30 */
-    u8 pad[0x2e];                        /* 0x32..0x5f */
+    u8 ie_prefix[0x1c];                  /* 0x32..0x4d */
+    u8 gm_ie_type;                       /* 0x4e */
+    u8 gm_ie_pad;                        /* 0x4f */
+    u8 gm_peer_count;                    /* 0x50 */
+    u8 gm_slot_start;                    /* 0x51 */
+    u8 gm_slot_step;                     /* 0x52 */
+    u8 tail_pad[0x0d];                   /* 0x53..0x5f */
 };
+
+typedef struct SceNetAdhocctlProductCode {
+    u32 type;
+    char product[12];
+} SceNetAdhocctlProductCode;
+
+typedef struct SceNetAdhocctlScanInfo {
+    struct SceNetAdhocctlScanInfo *next; /* 0x00 */
+    int channel;                         /* 0x04 */
+    char name[8];                        /* 0x08 */
+    u8 bssid[6];                         /* 0x10 */
+    u8 pad[2];                           /* 0x16 */
+    int mode;                            /* 0x18 */
+} SceNetAdhocctlScanInfo;
+
+typedef struct SceNetAdhocctlParameter {
+    int channel;                         /* 0x00 */
+    char group_name[8];                  /* 0x04 */
+    char nickname[0x80];                 /* 0x0c */
+    u8 bssid[6];                         /* 0x8c */
+} SceNetAdhocctlParameter;
+
+typedef struct SceNetAdhocctlWakeParam {
+    u32 flags;
+    u8 enable;
+    u8 channel;
+    char ssid[34];
+} SceNetAdhocctlWakeParam;
 
 typedef struct SceAdhocctlRegParam {
     u32 regtype;
     char name[256];
     u32 namelen;
-    u32 reserved1;
-    u32 reserved2;
+    u32 version;
+    u32 reg_flags;
 } SceAdhocctlRegParam;
 
 typedef struct SceAdhocctlScanReq {
     u32 bss_type;
-    u8 reserved04[0x38];
+    u8 bssid[6];
+    u8 channels[14];
+    u8 ssid_len;
+    u8 ssid_pad[3];
+    char ssid[32];
     u32 scan_type;
     u32 min_dwell;
     u32 max_dwell;
@@ -150,31 +188,29 @@ typedef struct SceAdhocctlScanReq {
 } SceAdhocctlScanReq;
 
 typedef struct SceAdhocctlBssParam {
-    u8 reserved00[0x28];
+    u8 bssid[6];
+    u8 channel;
+    u8 ssid_len;
+    char ssid[32];
     u32 bss_type;
     u32 beacon_period;
-    u8 reserved30[0x0e];
+    u8 dtim_pad[0x0e];
     u16 capability;
 } SceAdhocctlBssParam;
 
-typedef struct SceAdhocctlScanOut {
-    u8 reserved00[0x18];
-    int mode;
-} SceAdhocctlScanOut;
-
 typedef struct SceAdhocctlGameModeParam {
-    u8 reserved00[0x2e];
+    u8 bss_header[0x2e];
     u16 key_len;
     u8 key[0x10];
     u16 port_be;
-    u8 reserved42[0x08];
+    u8 gm_meta[0x08];
     u16 active_flag;
-    u16 reserved4c;
+    u16 active_pad;
     u16 beacon_period;
 } SceAdhocctlGameModeParam;
 
 typedef struct SceAdhocctlJoinParam {
-    u8 reserved00[0x6c];
+    u8 bss_desc[0x6c];
     u32 auth_flag;
 } SceAdhocctlJoinParam;
 
@@ -278,8 +314,8 @@ static int adhocctlRunGameModeClient(struct SceNetAdhocctlCtx *ctx, struct SceNe
 static int adhocctlSelectGameModeChannel(struct SceNetAdhocctlGameModeCtx *gm, u8 *ch_out, u8 *offset_out);
 static int adhocctlSetWlanPowerSave(int power_save);
 static void adhocctlCleanupGameMode(struct SceNetAdhocctlCtx *ctx, struct SceNetAdhocctlGameModeCtx *gm);
-static int adhocctlAcceptGameModePeers(struct SceNetAdhocctlGameModeCtx *gm, int unused, u32 start_lo, u32 start_hi, int listen_id, const void *ie_buf, int ie_len);
-static int adhocctlRecvGameModePacket(struct SceNetAdhocctlGameModeCtx *gm, int unused, u32 start_lo, u32 start_hi, int ptp_id, void *buf, int len);
+static int adhocctlAcceptGameModePeers(struct SceNetAdhocctlGameModeCtx *gm, s64 start_time, int listen_id, const void *ie_buf, int ie_len);
+static int adhocctlRecvGameModePacket(struct SceNetAdhocctlGameModeCtx *gm, s64 start_time, int ptp_id, void *buf, int len);
 static void *adhocctlFindIeTag(int tag, void *buf, u32 len, int *tag_len_out);
 static int adhocctlCreateLock(void);
 static void adhocctlDeleteLock(void);
@@ -302,13 +338,14 @@ int sceNetAdhocctlInit(int stackSize, int priority, const void *adhoc_id)
         return 0x80410b04;
     }
 
-    u32 type = *(const u32 *)adhoc_id;
+    const SceNetAdhocctlProductCode *prod = (const SceNetAdhocctlProductCode *)adhoc_id;
+    u32 type = prod->type;
     if (type >= 3) {
         g_initialized = 0;
         return 0x80410b04;
     }
 
-    const char *id_str = (const char *)adhoc_id + 4;
+    const char *id_str = prod->product;
     int i;
     for (i = 0; i < 9; i++) {
         if (id_str[i] == 0) {
@@ -347,7 +384,8 @@ int sceNetAdhocctlJoin(const void *scan_info)
     if (scan_info == NULL)
         return 0x80410b04;
 
-    const char *group_name = (const char *)scan_info + 8;
+    const SceNetAdhocctlScanInfo *info = (const SceNetAdhocctlScanInfo *)scan_info;
+    const char *group_name = info->name;
     if (group_name != NULL) {
         int i = 0;
         while (i < 8 && group_name[i] != 0) {
@@ -787,8 +825,8 @@ static void adhocctlLoadSsidPrefix(char *prefix)
 
     sceKernelMemset(reg_param, 0, 0x110);
     ((SceAdhocctlRegParam *)reg_param)->regtype = 1;
-    ((SceAdhocctlRegParam *)reg_param)->reserved1 = 1;
-    ((SceAdhocctlRegParam *)reg_param)->reserved2 = 1;
+    ((SceAdhocctlRegParam *)reg_param)->version = 1;
+    ((SceAdhocctlRegParam *)reg_param)->reg_flags = 1;
 
     if (sceRegOpenRegistry(reg_param, 2, &reg_hd) >= 0) {
         if (sceRegOpenCategory(reg_hd, "/CONFIG/NETWORK/ADHOC", 2, &cat_hd) >= 0) {
@@ -812,14 +850,17 @@ static void adhocctlLoadSsidPrefix(char *prefix)
 /* 0x12c0 */
 static int adhocctlDoConnect(struct SceNetAdhocctlCtx *ctx)
 {
+    int retry = 0;
+    int res;
+    int err;
+
     if (ctx->state != 0)
         return 0x80410b02;
     if (sceWlanGetSwitchState() == 0)
         return 0x80410b03;
 
-    int retry = 0;
     while (1) {
-        int res = sceWlanDevAttach();
+        res = sceWlanDevAttach();
         retry++;
         if (res == 0 || res == (int)0x80410d0f)
             break;
@@ -831,61 +872,63 @@ static int adhocctlDoConnect(struct SceNetAdhocctlCtx *ctx)
     }
 
     ctx->flags &= ~2u;
-    int res = sceNet_lib_5216CBF5("wlan");
-    if (res < 0)
-        goto fail;
-    res = sceNet_lib_AB7DD9A5("wlan", ctx->evfid, 8);
-    if (res < 0)
-        goto fail;
+    do {
+        char ssid[0x24];
+        char nickname[0x80];
+        u32 auth_opt[5];
+        int ch;
 
-    char ssid[0x24];
-    int ch;
-    sceKernelMemset(ssid, 0, 0x21);
-    res = adhocctlBuildGroupSsidAndChannel(ctx, ssid, &ch);
-    if (res < 0)
-        goto fail;
-    if (sceWlanGetSwitchState() == 0) {
-        res = 0x80410b03;
-        goto fail;
-    }
+        res = sceNet_lib_5216CBF5("wlan");
+        if (res < 0)
+            break;
+        res = sceNet_lib_AB7DD9A5("wlan", ctx->evfid, 8);
+        if (res < 0)
+            break;
 
-    sceNet_lib_D5B64E37("wlan", ssid, res);
-    res = adhocctlCheckCancelFlag(ctx);
-    if ((((u32)res >> 16) & 0xfff) == 0x41) {
+        sceKernelMemset(ssid, 0, 0x21);
+        res = adhocctlBuildGroupSsidAndChannel(ctx, ssid, &ch);
+        if (res < 0)
+            break;
+        if (sceWlanGetSwitchState() == 0) {
+            res = 0x80410b03;
+            break;
+        }
+
+        sceNet_lib_D5B64E37("wlan", ssid, res);
+        res = adhocctlCheckCancelFlag(ctx);
+        if ((((u32)res >> 16) & 0xfff) == 0x41) {
+            if (res >= 0)
+                return res;
+            break;
+        }
+        if (res < 0)
+            break;
+
+        res = sceUtilityGetSystemParamString(1, nickname, 0x80);
+        if (res < 0)
+            break;
+        res = adhocctlCheckCancelFlag(ctx);
+        if (res < 0)
+            break;
+
+        auth_opt[0] = 1000000;
+        auth_opt[1] = 500000;
+        auth_opt[2] = 5;
+        auth_opt[3] = 30000000;
+        auth_opt[4] = 300000000;
+        res = sceNetAdhocAuth_lib_89F2A732("wlan", 0x30, 0x2000, auth_opt, 16, nickname);
+        if (res < 0)
+            break;
+
+        ctx->state = 1;
+        ctx->channel = ch;
         if (res >= 0)
             return res;
-        goto fail;
-    }
-    if (res < 0)
-        goto fail;
+    } while (0);
 
-    char nickname[0x80];
-    res = sceUtilityGetSystemParamString(1, nickname, 0x80);
-    if (res < 0)
-        goto fail;
-    res = adhocctlCheckCancelFlag(ctx);
-    if (res < 0)
-        goto fail;
-
-    u32 auth_opt[5];
-    auth_opt[0] = 1000000;
-    auth_opt[1] = 500000;
-    auth_opt[2] = 5;
-    auth_opt[3] = 30000000;
-    auth_opt[4] = 300000000;
-    res = sceNetAdhocAuth_lib_89F2A732("wlan", 0x30, 0x2000, auth_opt, 16, nickname);
-    if (res < 0)
-        goto fail;
-
-    ctx->state = 1;
-    ctx->channel = ch;
-    if (res >= 0)
-        return res;
-
-fail:
     sceNetAdhocAuth_lib_2E6AA271();
     sceNet_lib_AB7DD9A5("wlan", 0, 0);
-    int err = 0;
+    err = 0;
     sceNet_lib_DA02F383("wlan", &err);
     sceNet_lib_D2422E4D("wlan");
     sceWlanDevDetach();
@@ -896,14 +939,15 @@ fail:
 static int adhocctlDoScan(struct SceNetAdhocctlCtx *ctx)
 {
     int lock_res = 0;
+    int retry = 0;
+    int res;
+
     if (ctx->state != 0)
         return 0x80410b02;
     if (sceWlanGetSwitchState() == 0)
         return 0x80410b03;
 
     ctx->state = 2;
-    int retry = 0;
-    int res;
     while (1) {
         res = sceWlanDevAttach();
         retry++;
@@ -934,53 +978,55 @@ static int adhocctlDoScan(struct SceNetAdhocctlCtx *ctx)
         return res;
     }
 
-    res = sceNet_lib_AB7DD9A5("wlan", ctx->evfid, 8);
-    if (res < 0)
-        goto detach;
-    if (sceWlanGetSwitchState() == 0) {
-        res = 0x80410b03;
-        goto detach;
-    }
+    do {
+        u8 scan_req[0x4c];
+        int ch = 0;
+        int err = 0;
+        int i;
 
-    lock_res = adhocctlLock();
-    u8 scan_req[0x4c];
-    sceKernelMemset(scan_req, 0, 0x4c);
-    sceKernelMemset(ctx->scan_buf, 0, 0x780);
-    ((SceAdhocctlScanReq *)scan_req)->bss_type = 2;
+        res = sceNet_lib_AB7DD9A5("wlan", ctx->evfid, 8);
+        if (res < 0)
+            break;
+        if (sceWlanGetSwitchState() == 0) {
+            res = 0x80410b03;
+            break;
+        }
 
-    int ch = 0;
-    res = sceUtilityGetSystemParamInt(2, &ch);
-    if (res < 0)
-        goto detach;
-    if (ch != 6 && ch != 11) {
-        if (ch != 1)
-            ch = 0;
-    }
+        lock_res = adhocctlLock();
+        sceKernelMemset(scan_req, 0, 0x4c);
+        sceKernelMemset(ctx->scan_buf, 0, 0x780);
+        ((SceAdhocctlScanReq *)scan_req)->bss_type = 2;
 
-    int i;
-    for (i = 0; i < 14; i++)
-        scan_req[0x0a + i] = 0;
+        res = sceUtilityGetSystemParamInt(2, &ch);
+        if (res < 0)
+            break;
+        if (ch != 6 && ch != 11) {
+            if (ch != 1)
+                ch = 0;
+        }
 
-    if (ch == 0) {
-        scan_req[0x0a] = 11;
-        scan_req[0x0b] = 6;
-        scan_req[0x0c] = 1;
-    } else {
-        scan_req[0x0a] = (u8)ch;
-    }
+        for (i = 0; i < 14; i++)
+            scan_req[0x0a + i] = 0;
 
-    ctx->scan_buf_len = 0x780;
-    ((SceAdhocctlScanReq *)scan_req)->scan_type = 1;
-    ((SceAdhocctlScanReq *)scan_req)->min_dwell = 0;
-    ((SceAdhocctlScanReq *)scan_req)->max_dwell = 6;
-    ((SceAdhocctlScanReq *)scan_req)->probe_delay = 100;
-    int err = 0;
-    sceNet_lib_7BA3ED91("wlan", scan_req, &ctx->scan_buf_len, ctx->scan_buf, &err);
-    res = adhocctlCheckCancelFlag(ctx);
-    if ((((u32)res >> 16) & 0xfff) != 0x41)
-        res = 0;
+        if (ch == 0) {
+            scan_req[0x0a] = 11;
+            scan_req[0x0b] = 6;
+            scan_req[0x0c] = 1;
+        } else {
+            scan_req[0x0a] = (u8)ch;
+        }
 
-detach:
+        ctx->scan_buf_len = 0x780;
+        ((SceAdhocctlScanReq *)scan_req)->scan_type = 1;
+        ((SceAdhocctlScanReq *)scan_req)->min_dwell = 0;
+        ((SceAdhocctlScanReq *)scan_req)->max_dwell = 6;
+        ((SceAdhocctlScanReq *)scan_req)->probe_delay = 100;
+        sceNet_lib_7BA3ED91("wlan", scan_req, &ctx->scan_buf_len, ctx->scan_buf, &err);
+        res = adhocctlCheckCancelFlag(ctx);
+        if ((((u32)res >> 16) & 0xfff) != 0x41)
+            res = 0;
+    } while (0);
+
     sceNet_lib_AB7DD9A5("wlan", 0, 0);
     sceNet_lib_D2422E4D("wlan");
     sceWlanDevDetach();
@@ -1012,24 +1058,27 @@ static int adhocctlDoScanQuiet(struct SceNetAdhocctlCtx *ctx)
     ((SceAdhocctlScanReq *)scan_req)->probe_delay = 100;
     int buflen = 0x60;
     int err = 0;
-    sceNet_lib_7BA3ED91("wlan", scan_req, &buflen, scan_buf, &err);
+    int scan_res = sceNet_lib_7BA3ED91("wlan", scan_req, &buflen, scan_buf, &err);
     int res = adhocctlCheckCancelFlag(ctx);
     if ((((u32)res >> 16) & 0xfff) == 0x41)
         return res;
-    return (res < 0) ? res : 0;
+    return (scan_res < 0) ? scan_res : 0;
 }
 
 /* 0x18a8 */
 static int adhocctlDoCreate(struct SceNetAdhocctlCtx *ctx)
 {
+    int retry = 0;
+    int res;
+    int err;
+
     if (ctx->state != 0)
         return 0x80410b02;
     if (sceWlanGetSwitchState() == 0)
         return 0x80410b03;
 
-    int retry = 0;
     while (1) {
-        int res = sceWlanDevAttach();
+        res = sceWlanDevAttach();
         retry++;
         if (res == 0 || res == (int)0x80410d0f)
             break;
@@ -1041,77 +1090,80 @@ static int adhocctlDoCreate(struct SceNetAdhocctlCtx *ctx)
     }
 
     ctx->flags &= ~2u;
-    int res = sceNet_lib_5216CBF5("wlan");
-    if (res < 0)
-        goto fail;
-    res = sceNet_lib_AB7DD9A5("wlan", ctx->evfid, 8);
-    if (res < 0)
-        goto fail;
-    res = adhocctlDoScanQuiet(ctx);
-    if (res < 0)
-        goto fail;
+    do {
+        char ssid[0x24];
+        u8 param[0x70];
+        char nickname[0x80];
+        u32 auth_opt[5];
+        int ch;
+        int ssid_len;
 
-    char ssid[0x24];
-    int ch;
-    sceKernelMemset(ssid, 0, 0x21);
-    int ssid_len = adhocctlBuildGroupSsidAndChannel(ctx, ssid, &ch);
-    if (ssid_len < 0) {
-        res = ssid_len;
-        goto fail;
-    }
-    res = adhocctlCheckCancelFlag(ctx);
-    if (res < 0)
-        goto fail;
+        res = sceNet_lib_5216CBF5("wlan");
+        if (res < 0)
+            break;
+        res = sceNet_lib_AB7DD9A5("wlan", ctx->evfid, 8);
+        if (res < 0)
+            break;
+        res = adhocctlDoScanQuiet(ctx);
+        if (res < 0)
+            break;
 
-    u8 param[0x70];
-    sceKernelMemset(param, 0, 0x70);
-    sceKernelMemcpy(param + 8, ssid, ssid_len);
-    param[6] = (u8)ch;
-    param[7] = (u8)ssid_len;
-    ((SceAdhocctlBssParam *)param)->bss_type = 2;
-    ((SceAdhocctlBssParam *)param)->beacon_period = 100;
-    ((SceAdhocctlBssParam *)param)->capability = 0x22;
-    int err = 0;
-    sceNet_lib_03164B12("wlan", param, &err);
-    res = adhocctlCheckCancelFlag(ctx);
-    if ((((u32)res >> 16) & 0xfff) == 0x41) {
-        if (res >= 0)
-            return res;
-        goto fail;
-    }
-    if (res < 0)
-        goto fail;
+        sceKernelMemset(ssid, 0, 0x21);
+        ssid_len = adhocctlBuildGroupSsidAndChannel(ctx, ssid, &ch);
+        if (ssid_len < 0) {
+            res = ssid_len;
+            break;
+        }
+        res = adhocctlCheckCancelFlag(ctx);
+        if (res < 0)
+            break;
 
-    res = adhocctlDoScanQuiet(ctx);
-    if (res < 0)
-        goto fail;
-    res = adhocctlCheckCancelFlag(ctx);
-    if (res < 0)
-        goto fail;
+        sceKernelMemset(param, 0, 0x70);
+        sceKernelMemcpy(param + 8, ssid, ssid_len);
+        param[6] = (u8)ch;
+        param[7] = (u8)ssid_len;
+        ((SceAdhocctlBssParam *)param)->bss_type = 2;
+        ((SceAdhocctlBssParam *)param)->beacon_period = 100;
+        ((SceAdhocctlBssParam *)param)->capability = 0x22;
+        err = 0;
+        sceNet_lib_03164B12("wlan", param, &err);
+        res = adhocctlCheckCancelFlag(ctx);
+        if ((((u32)res >> 16) & 0xfff) == 0x41) {
+            if (res >= 0)
+                return res;
+            break;
+        }
+        if (res < 0)
+            break;
 
-    char nickname[0x80];
-    res = sceUtilityGetSystemParamString(1, nickname, 0x80);
-    if (res < 0)
-        goto fail;
-    res = adhocctlCheckCancelFlag(ctx);
-    if (res < 0)
-        goto fail;
+        res = adhocctlDoScanQuiet(ctx);
+        if (res < 0)
+            break;
+        res = adhocctlCheckCancelFlag(ctx);
+        if (res < 0)
+            break;
 
-    u32 auth_opt[5];
-    auth_opt[0] = 1000000;
-    auth_opt[1] = 500000;
-    auth_opt[2] = 5;
-    auth_opt[3] = 30000000;
-    auth_opt[4] = 300000000;
-    res = sceNetAdhocAuth_lib_89F2A732("wlan", 0x30, 0x2000, auth_opt, 16, nickname);
-    if (res < 0)
-        goto fail;
+        res = sceUtilityGetSystemParamString(1, nickname, 0x80);
+        if (res < 0)
+            break;
+        res = adhocctlCheckCancelFlag(ctx);
+        if (res < 0)
+            break;
 
-    ctx->state = 1;
-    ctx->channel = ch;
-    return res;
+        auth_opt[0] = 1000000;
+        auth_opt[1] = 500000;
+        auth_opt[2] = 5;
+        auth_opt[3] = 30000000;
+        auth_opt[4] = 300000000;
+        res = sceNetAdhocAuth_lib_89F2A732("wlan", 0x30, 0x2000, auth_opt, 16, nickname);
+        if (res < 0)
+            break;
 
-fail:
+        ctx->state = 1;
+        ctx->channel = ch;
+        return res;
+    } while (0);
+
     sceNetAdhocAuth_lib_2E6AA271();
     sceNet_lib_AB7DD9A5("wlan", 0, 0);
     err = 0;
@@ -1124,14 +1176,17 @@ fail:
 /* 0x1b9c */
 static int adhocctlDoJoin(struct SceNetAdhocctlCtx *ctx)
 {
+    int retry = 0;
+    int res;
+    int err;
+
     if (ctx->state != 0)
         return 0x80410b02;
     if (sceWlanGetSwitchState() == 0)
         return 0x80410b03;
 
-    int retry = 0;
     while (1) {
-        int res = sceWlanDevAttach();
+        res = sceWlanDevAttach();
         retry++;
         if (res == 0 || res == (int)0x80410d0f)
             break;
@@ -1143,81 +1198,84 @@ static int adhocctlDoJoin(struct SceNetAdhocctlCtx *ctx)
     }
 
     ctx->flags &= ~2u;
-    int res = sceNet_lib_5216CBF5("wlan");
-    if (res < 0)
-        goto fail;
-    res = sceNet_lib_AB7DD9A5("wlan", ctx->evfid, 8);
-    if (res < 0)
-        goto fail;
+    do {
+        u8 param[0x70];
+        char nickname[0x80];
+        u32 auth_opt[5];
+        u8 *entry;
+        int idx = -1;
+        int sys_ch = 0;
+        int i;
 
-    int idx = -1;
-    int i;
-    for (i = 0; i < 20; i++) {
-        if (sceNet_lib_E0A81C7C(ctx->scan_buf + i * 0x60 + 4, ctx->join_bssid, 6) == 0) {
-            idx = i;
+        res = sceNet_lib_5216CBF5("wlan");
+        if (res < 0)
+            break;
+        res = sceNet_lib_AB7DD9A5("wlan", ctx->evfid, 8);
+        if (res < 0)
+            break;
+
+        for (i = 0; i < 20; i++) {
+            if (sceNet_lib_E0A81C7C(ctx->scan_buf + i * 0x60 + 4, ctx->join_bssid, 6) == 0) {
+                idx = i;
+                break;
+            }
+        }
+        if (idx < 0) {
+            res = 0x80410b0a;
             break;
         }
-    }
-    if (idx < 0) {
-        res = 0x80410b0a;
-        goto fail;
-    }
 
-    int sys_ch = 0;
-    res = sceUtilityGetSystemParamInt(2, &sys_ch);
-    if (res < 0)
-        goto fail;
-    if (sys_ch != 0 && sys_ch != ctx->join_channel) {
-        res = 0x80410b11;
-        goto fail;
-    }
-    if (sceWlanGetSwitchState() == 0) {
-        res = 0x80410b03;
-        goto fail;
-    }
+        res = sceUtilityGetSystemParamInt(2, &sys_ch);
+        if (res < 0)
+            break;
+        if (sys_ch != 0 && sys_ch != ctx->join_channel) {
+            res = 0x80410b11;
+            break;
+        }
+        if (sceWlanGetSwitchState() == 0) {
+            res = 0x80410b03;
+            break;
+        }
 
-    u8 param[0x70];
-    sceKernelMemset(param, 0, 0x70);
-    u8 *entry = ctx->scan_buf + idx * 0x60;
-    sceKernelMemcpy(param, entry + 4, 0x5c);
-    int err = 0;
-    sceNet_lib_389728AB("wlan", param, &err);
-    res = adhocctlCheckCancelFlag(ctx);
-    if ((((u32)res >> 16) & 0xfff) == 0x41) {
-        if (res >= 0)
-            return res;
-        goto fail;
-    }
-    if (res < 0)
-        goto fail;
+        sceKernelMemset(param, 0, 0x70);
+        entry = ctx->scan_buf + idx * 0x60;
+        sceKernelMemcpy(param, entry + 4, 0x5c);
+        err = 0;
+        sceNet_lib_389728AB("wlan", param, &err);
+        res = adhocctlCheckCancelFlag(ctx);
+        if ((((u32)res >> 16) & 0xfff) == 0x41) {
+            if (res >= 0)
+                return res;
+            break;
+        }
+        if (res < 0)
+            break;
 
-    res = adhocctlCheckCancelFlag(ctx);
-    if (res < 0)
-        goto fail;
+        res = adhocctlCheckCancelFlag(ctx);
+        if (res < 0)
+            break;
 
-    char nickname[0x80];
-    res = sceUtilityGetSystemParamString(1, nickname, 0x80);
-    if (res < 0)
-        goto fail;
-    res = adhocctlCheckCancelFlag(ctx);
-    if (res < 0)
-        goto fail;
+        res = sceUtilityGetSystemParamString(1, nickname, 0x80);
+        if (res < 0)
+            break;
+        res = adhocctlCheckCancelFlag(ctx);
+        if (res < 0)
+            break;
 
-    u32 auth_opt[5];
-    auth_opt[0] = 1000000;
-    auth_opt[1] = 500000;
-    auth_opt[2] = 5;
-    auth_opt[3] = 30000000;
-    auth_opt[4] = 300000000;
-    res = sceNetAdhocAuth_lib_89F2A732("wlan", 0x30, 0x2000, auth_opt, 16, nickname);
-    if (res < 0)
-        goto fail;
+        auth_opt[0] = 1000000;
+        auth_opt[1] = 500000;
+        auth_opt[2] = 5;
+        auth_opt[3] = 30000000;
+        auth_opt[4] = 300000000;
+        res = sceNetAdhocAuth_lib_89F2A732("wlan", 0x30, 0x2000, auth_opt, 16, nickname);
+        if (res < 0)
+            break;
 
-    ctx->state = 1;
-    ctx->channel = entry[0x0a];
-    return res;
+        ctx->state = 1;
+        ctx->channel = entry[0x0a];
+        return res;
+    } while (0);
 
-fail:
     sceNetAdhocAuth_lib_2E6AA271();
     sceNet_lib_AB7DD9A5("wlan", 0, 0);
     err = 0;
@@ -1230,14 +1288,16 @@ fail:
 /* 0x1ec8 */
 static int adhocctlDoConnectRaw(struct SceNetAdhocctlCtx *ctx)
 {
+    int retry = 0;
+    int res;
+
     if (ctx->state != 0)
         return 0x80410b02;
     if (sceWlanGetSwitchState() == 0)
         return 0x80410b03;
 
-    int retry = 0;
     while (1) {
-        int res = sceWlanDevAttach();
+        res = sceWlanDevAttach();
         retry++;
         if (res == 0 || res == (int)0x80410d0f)
             break;
@@ -1249,43 +1309,45 @@ static int adhocctlDoConnectRaw(struct SceNetAdhocctlCtx *ctx)
     }
 
     ctx->flags &= ~2u;
-    int res = sceNet_lib_5216CBF5("wlan");
-    if (res < 0)
-        goto fail;
-    res = sceNet_lib_AB7DD9A5("wlan", ctx->evfid, 8);
-    if (res < 0)
-        goto fail;
+    do {
+        char ssid[0x30];
+        SceNetAdhocctlWakeParam hd_param;
+        int ch;
 
-    char ssid[0x30];
-    int ch;
-    res = adhocctlBuildGroupSsidAndChannel(ctx, ssid, &ch);
-    if (res < 0)
-        goto fail;
+        res = sceNet_lib_5216CBF5("wlan");
+        if (res < 0)
+            break;
+        res = sceNet_lib_AB7DD9A5("wlan", ctx->evfid, 8);
+        if (res < 0)
+            break;
 
-    u8 hd_param[0x28];
-    sceKernelMemset(hd_param, 0, 0x28);
-    *(u32 *)(hd_param + 0) = 0;
-    hd_param[4] = 1;
-    hd_param[5] = (u8)ch;
-    sceKernelMemcpy(hd_param + 6, ssid, res);
+        res = adhocctlBuildGroupSsidAndChannel(ctx, ssid, &ch);
+        if (res < 0)
+            break;
 
-    if (sceWlanGetSwitchState() == 0) {
-        res = 0x80410b03;
-        goto fail;
-    }
+        sceKernelMemset(&hd_param, 0, sizeof(hd_param));
+        hd_param.flags = 0;
+        hd_param.enable = 1;
+        hd_param.channel = (u8)ch;
+        sceKernelMemcpy(hd_param.ssid, ssid, res);
 
-    res = adhocctlCheckCancelFlag(ctx);
-    if (res < 0)
-        goto fail;
-    res = sceWlanSetHostDiscover(1, hd_param);
-    if (res < 0)
-        goto fail;
+        if (sceWlanGetSwitchState() == 0) {
+            res = 0x80410b03;
+            break;
+        }
 
-    ctx->state = 4;
-    ctx->channel = ch;
-    return res;
+        res = adhocctlCheckCancelFlag(ctx);
+        if (res < 0)
+            break;
+        res = sceWlanSetHostDiscover(1, &hd_param);
+        if (res < 0)
+            break;
 
-fail:
+        ctx->state = 4;
+        ctx->channel = ch;
+        return res;
+    } while (0);
+
     sceNet_lib_AB7DD9A5("wlan", 0, 0);
     sceNet_lib_D2422E4D("wlan");
     sceWlanDevDetach();
@@ -1295,14 +1357,16 @@ fail:
 /* 0x20ac */
 static int adhocctlDoCreateRaw(struct SceNetAdhocctlCtx *ctx)
 {
+    int retry = 0;
+    int res;
+
     if (ctx->state != 0)
         return 0x80410b02;
     if (sceWlanGetSwitchState() == 0)
         return 0x80410b03;
 
-    int retry = 0;
     while (1) {
-        int res = sceWlanDevAttach();
+        res = sceWlanDevAttach();
         retry++;
         if (res == 0 || res == (int)0x80410d0f)
             break;
@@ -1314,48 +1378,50 @@ static int adhocctlDoCreateRaw(struct SceNetAdhocctlCtx *ctx)
     }
 
     ctx->flags &= ~2u;
-    int res = sceNet_lib_5216CBF5("wlan");
-    if (res < 0)
-        goto fail;
-    res = sceNet_lib_AB7DD9A5("wlan", ctx->evfid, 8);
-    if (res < 0)
-        goto fail;
+    do {
+        char ssid[0x30];
+        SceNetAdhocctlWakeParam wu_param;
+        int ch;
 
-    char ssid[0x30];
-    int ch;
-    res = adhocctlBuildGroupSsidAndChannel(ctx, ssid, &ch);
-    if (res < 0)
-        goto fail;
+        res = sceNet_lib_5216CBF5("wlan");
+        if (res < 0)
+            break;
+        res = sceNet_lib_AB7DD9A5("wlan", ctx->evfid, 8);
+        if (res < 0)
+            break;
 
-    u8 wu_param[0x28];
-    sceKernelMemset(wu_param, 0, 0x28);
-    *(u32 *)(wu_param + 0) = 0;
-    wu_param[4] = 1;
-    wu_param[5] = (u8)ch;
-    sceKernelMemcpy(wu_param + 6, ssid, res);
+        res = adhocctlBuildGroupSsidAndChannel(ctx, ssid, &ch);
+        if (res < 0)
+            break;
 
-    if (sceWlanGetSwitchState() == 0) {
-        res = 0x80410b03;
-        goto fail;
-    }
+        sceKernelMemset(&wu_param, 0, sizeof(wu_param));
+        wu_param.flags = 0;
+        wu_param.enable = 1;
+        wu_param.channel = (u8)ch;
+        sceKernelMemcpy(wu_param.ssid, ssid, res);
 
-    res = adhocctlCheckCancelFlag(ctx);
-    if (res < 0)
-        goto fail;
-    res = sceWlanSetWakeUp(1, wu_param);
-    if (res < 0)
-        goto fail;
-    res = scePowerRequestSuspend();
-    if (res < 0) {
-        sceWlanSetWakeUp(0, wu_param);
-        goto fail;
-    }
+        if (sceWlanGetSwitchState() == 0) {
+            res = 0x80410b03;
+            break;
+        }
 
-    ctx->state = 5;
-    ctx->channel = ch;
-    return res;
+        res = adhocctlCheckCancelFlag(ctx);
+        if (res < 0)
+            break;
+        res = sceWlanSetWakeUp(1, &wu_param);
+        if (res < 0)
+            break;
+        res = scePowerRequestSuspend();
+        if (res < 0) {
+            sceWlanSetWakeUp(0, &wu_param);
+            break;
+        }
 
-fail:
+        ctx->state = 5;
+        ctx->channel = ch;
+        return res;
+    } while (0);
+
     sceNet_lib_AB7DD9A5("wlan", 0, 0);
     sceNet_lib_D2422E4D("wlan");
     sceWlanDevDetach();
@@ -1464,8 +1530,8 @@ static int adhocctlNotifyHandlers(int event, int error)
                 int rem = _sceKernelCheckThreadStack() - g_ctx.min_stack;
                 if (rem > 0) {
                     u32 alloc = (rem + 15) & ~15;
-                    void * volatile dummy = __builtin_alloca(alloc);
-                    (void)dummy;
+                    void * volatile stack_pad = __builtin_alloca(alloc);
+                    (void)stack_pad;
                     g_handlers[i].func(event, error, g_handlers[i].arg);
                 } else {
                     g_handlers[i].func(event, error, g_handlers[i].arg);
@@ -1597,32 +1663,32 @@ static int adhocctlGetScanInfoInternal(int *buflen, void *buf)
     adhocctlCopySsidPrefix(prefix);
 
     struct SceNetAdhocctlScanNode *node = (struct SceNetAdhocctlScanNode *)g_ctx.scan_buf;
-    u8 *prev = NULL;
-    u8 *cur = (u8 *)buf;
+    SceNetAdhocctlScanInfo *prev = NULL;
+    SceNetAdhocctlScanInfo *cur = (SceNetAdhocctlScanInfo *)buf;
     int count = 0;
     int req_bytes = 0x1c;
 
     while (node != NULL) {
         if (node->ssid_len >= 0x10) {
             int plen = sceNet_lib_D8722983("PSP");
-            if (sceNet_lib_E0A81C7C(id_match, (const u8 *)node + plen + 0x0d, 10) == 0 &&
+            if (sceNet_lib_E0A81C7C(id_match, node->ssid + plen + 1, 10) == 0 &&
                 sceNet_lib_E0A81C7C(prefix, node->ssid, 3) == 0) {
                 if (buf != NULL) {
                     if (*buflen < req_bytes)
                         break;
                     if (prev != NULL)
-                        *(u32 *)prev = (u32)cur;
-                    *(u32 *)(cur + 4) = node->channel;
+                        prev->next = cur;
+                    cur->channel = node->channel;
                     u8 m = (u8)node->ssid[15];
                     if (m == 'L')
-                        ((SceAdhocctlScanOut *)cur)->mode = 0;
+                        cur->mode = 0;
                     else
-                        ((SceAdhocctlScanOut *)cur)->mode = (m == 'G') ? 1 : -1;
-                    sceKernelMemcpy(cur + 8, node->ssid + 17, 8);
-                    sceKernelMemcpy(cur + 0x10, node->bssid, 6);
-                    *(u32 *)(cur + 0) = 0;
+                        cur->mode = (m == 'G') ? 1 : -1;
+                    sceKernelMemcpy(cur->name, node->ssid + 17, 8);
+                    sceKernelMemcpy(cur->bssid, node->bssid, 6);
+                    cur->next = NULL;
                     prev = cur;
-                    cur += 0x1c;
+                    cur++;
                 }
                 count++;
                 req_bytes += 0x1c;
@@ -1752,10 +1818,11 @@ static int adhocctlRequestJoin(const void *scan_info)
     g_ctx.flags |= 1;
     if (scan_info == NULL)
         return 0x80410b04;
+    const SceNetAdhocctlScanInfo *info = (const SceNetAdhocctlScanInfo *)scan_info;
     sceKernelMemcpy(&g_ctx.join_next, scan_info, 0x1c);
     sceKernelMemset(g_ctx.group_name, 0, 8);
-    if ((const char *)scan_info + 8 != NULL)
-        sceNet_lib_B5CE388A(g_ctx.group_name, (const char *)scan_info + 8, 8);
+    if (info->name != NULL)
+        sceNet_lib_B5CE388A(g_ctx.group_name, info->name, 8);
     sceKernelSetEventFlag(g_ctx.evfid, 0x100);
     return 0;
 }
@@ -1868,16 +1935,17 @@ static int adhocctlGetAdhocIdInternal(void *adhoc_id)
 /* 0x34b0 */
 static int adhocctlGetParameterInternal(void *param)
 {
+    SceNetAdhocctlParameter *out = (SceNetAdhocctlParameter *)param;
     u8 bssid[0x60];
     if (g_ctx.state == 0)
         return 0x80410b09;
     int res = sceNet_lib_A55C914F("wlan", bssid);
     if (res < 0)
         return res;
-    sceKernelMemcpy((u8 *)param + 0x8c, bssid, 6);
-    *(int *)param = g_ctx.channel;
-    sceKernelMemcpy((u8 *)param + 4, g_ctx.group_name, 8);
-    return sceUtilityGetSystemParamString(1, (char *)param + 0x0c, 0x80);
+    sceKernelMemcpy(out->bssid, bssid, 6);
+    out->channel = g_ctx.channel;
+    sceKernelMemcpy(out->group_name, g_ctx.group_name, 8);
+    return sceUtilityGetSystemParamString(1, out->nickname, 0x80);
 }
 
 /* 0x3544 */
@@ -1996,78 +2064,73 @@ static int adhocctlWorkerThread(u32 arglen, void *argp)
                 }
             }
         }
-        if (bits & 1) {
-            sceKernelClearEventFlag(ctx->evfid, ~1u);
-            int res = adhocctlDoConnect(ctx);
-            if (res < 0)
-                goto err_out;
-            adhocctlNotifyHandlers(1, 0);
-        }
-        if (bits & 2) {
-            sceKernelClearEventFlag(ctx->evfid, ~2u);
-            adhocctlDisconnectWlan(ctx);
-            adhocctlNotifyHandlers(2, 0);
-        }
-        if (bits & 4) {
-            sceKernelClearEventFlag(ctx->evfid, ~4u);
-            int res = adhocctlDoScan(ctx);
-            if (res < 0)
-                goto err_out;
-            adhocctlNotifyHandlers(3, 0);
-        }
-        if (bits & 0x10) {
-            sceKernelClearEventFlag(ctx->evfid, ~0x10u);
-            int res = adhocctlRunGameModeHost(ctx, &g_gm_ctx);
-            if (res < 0)
-                goto err_out;
-            adhocctlNotifyHandlers(4, 0);
-        }
-        if (bits & 0x20) {
-            sceKernelClearEventFlag(ctx->evfid, ~0x20u);
-            int res = adhocctlRunGameModeClient(ctx, &g_gm_ctx);
-            if (res < 0)
-                goto err_out;
-            adhocctlNotifyHandlers(4, 0);
-        }
-        if (bits & 0x40) {
-            sceKernelClearEventFlag(ctx->evfid, ~0x40u);
-            adhocctlCleanupGameMode(ctx, &g_gm_ctx);
-            adhocctlNotifyHandlers(2, 0);
-        }
-        if (bits & 0x80) {
-            sceKernelClearEventFlag(ctx->evfid, ~0x80u);
-            int res = adhocctlDoCreate(ctx);
-            if (res < 0)
-                goto err_out;
-            adhocctlNotifyHandlers(1, 0);
-        }
-        if (bits & 0x100) {
-            sceKernelClearEventFlag(ctx->evfid, ~0x100u);
-            int res = adhocctlDoJoin(ctx);
-            if (res < 0)
-                goto err_out;
-            adhocctlNotifyHandlers(1, 0);
-        }
-        if (bits & 0x400) {
-            sceKernelClearEventFlag(ctx->evfid, ~0x400u);
-            int res = adhocctlDoConnectRaw(ctx);
-            if (res < 0)
-                goto err_out;
-            adhocctlNotifyGameModeHandlers(5, 1);
-        }
-        if (bits & 0x800) {
-            sceKernelClearEventFlag(ctx->evfid, ~0x800u);
-            int res = adhocctlDoCreateRaw(ctx);
-            if (res < 0) {
-            err_out:;
+        {
+            int err_res = 0;
+            int has_err = 0;
+            if (bits & 1) {
+                sceKernelClearEventFlag(ctx->evfid, ~1u);
+                err_res = adhocctlDoConnect(ctx);
+                if (err_res < 0) has_err = 1;
+                else adhocctlNotifyHandlers(1, 0);
+            }
+            if (!has_err && (bits & 2)) {
+                sceKernelClearEventFlag(ctx->evfid, ~2u);
+                adhocctlDisconnectWlan(ctx);
+                adhocctlNotifyHandlers(2, 0);
+            }
+            if (!has_err && (bits & 4)) {
+                sceKernelClearEventFlag(ctx->evfid, ~4u);
+                err_res = adhocctlDoScan(ctx);
+                if (err_res < 0) has_err = 1;
+                else adhocctlNotifyHandlers(3, 0);
+            }
+            if (!has_err && (bits & 0x10)) {
+                sceKernelClearEventFlag(ctx->evfid, ~0x10u);
+                err_res = adhocctlRunGameModeHost(ctx, &g_gm_ctx);
+                if (err_res < 0) has_err = 1;
+                else adhocctlNotifyHandlers(4, 0);
+            }
+            if (!has_err && (bits & 0x20)) {
+                sceKernelClearEventFlag(ctx->evfid, ~0x20u);
+                err_res = adhocctlRunGameModeClient(ctx, &g_gm_ctx);
+                if (err_res < 0) has_err = 1;
+                else adhocctlNotifyHandlers(4, 0);
+            }
+            if (!has_err && (bits & 0x40)) {
+                sceKernelClearEventFlag(ctx->evfid, ~0x40u);
+                adhocctlCleanupGameMode(ctx, &g_gm_ctx);
+                adhocctlNotifyHandlers(2, 0);
+            }
+            if (!has_err && (bits & 0x80)) {
+                sceKernelClearEventFlag(ctx->evfid, ~0x80u);
+                err_res = adhocctlDoCreate(ctx);
+                if (err_res < 0) has_err = 1;
+                else adhocctlNotifyHandlers(1, 0);
+            }
+            if (!has_err && (bits & 0x100)) {
+                sceKernelClearEventFlag(ctx->evfid, ~0x100u);
+                err_res = adhocctlDoJoin(ctx);
+                if (err_res < 0) has_err = 1;
+                else adhocctlNotifyHandlers(1, 0);
+            }
+            if (!has_err && (bits & 0x400)) {
+                sceKernelClearEventFlag(ctx->evfid, ~0x400u);
+                err_res = adhocctlDoConnectRaw(ctx);
+                if (err_res < 0) has_err = 1;
+                else adhocctlNotifyGameModeHandlers(5, 1);
+            }
+            if (!has_err && (bits & 0x800)) {
+                sceKernelClearEventFlag(ctx->evfid, ~0x800u);
+                err_res = adhocctlDoCreateRaw(ctx);
+                if (err_res < 0) has_err = 1;
+                else adhocctlNotifyGameModeHandlers(5, 1);
+            }
+            if (has_err) {
                 int poll_res = adhocctlCheckCancelFlag(ctx);
                 if (poll_res < 0)
-                    res = poll_res;
-                adhocctlNotifyHandlers(0, res);
-                ctx->flags &= ~1u;
-                continue;
+                    err_res = poll_res;
+                adhocctlNotifyHandlers(0, err_res);
             }
-            adhocctlNotifyGameModeHandlers(5, 1);
         }
         ctx->flags &= ~1u;
     }
@@ -2167,213 +2230,234 @@ static int adhocctlWaitWlanEvent(struct SceNetAdhocctlCtx *ctx, int *ev, int *re
 /* 0x3f34 */
 static int adhocctlRunGameModeHost(struct SceNetAdhocctlCtx *ctx, struct SceNetAdhocctlGameModeCtx *gm)
 {
+    s64 start_time;
+    u32 rem_timeout = 0;
+    int res = 0;
+    int err = 0;
+
     if (ctx->state != 0)
         return 0x80410b02;
     if (sceWlanGetSwitchState() == 0)
         return 0x80410b03;
 
-    s64 start_time = sceKernelGetSystemTimeWide();
+    start_time = sceKernelGetSystemTimeWide();
     g_saved_power_save = -1;
-    u32 rem_timeout = 0;
 
-    while (1) {
-        if (gm->timeout != 0) {
-            s64 elapsed = sceKernelGetSystemTimeWide() - start_time;
-            if ((u64)elapsed >= (u64)gm->timeout) {
-                int res = 0x80410b05;
-                goto fail_all;
+    do {
+        u8 param[0x70];
+        char nickname[0x80];
+        u32 auth_opt[5];
+        u16 wparam[8];
+        u8 ssid_len;
+        u16 key_len, saved_klen, bp;
+        int payload_len, total_len, retry_cnt, listen_id;
+        u32 be_len;
+        u8 *p;
+        u16 be_klen, be_plen, be_two, be_a4, be_one;
+        int i;
+
+        while (1) {
+            if (gm->timeout != 0) {
+                s64 elapsed = sceKernelGetSystemTimeWide() - start_time;
+                if ((u64)elapsed >= (u64)gm->timeout) {
+                    res = 0x80410b05;
+                    break;
+                }
+                rem_timeout = gm->timeout - (u32)elapsed;
+            } else {
+                rem_timeout = 0;
             }
-            rem_timeout = gm->timeout - (u32)elapsed;
-        } else {
-            rem_timeout = 0;
+            res = sceWlanDevAttach();
+            if (res == 0 || res == (int)0x80410d0f)
+                break;
+            if (res < 0 && res != (int)0x80410d0e)
+                return res;
+            sceKernelDelayThread(1000000);
         }
-        int res = sceWlanDevAttach();
-        if (res == 0 || res == (int)0x80410d0f)
+        if (res < 0 && res != (int)0x80410d0f)
             break;
-        if (res < 0 && res != (int)0x80410d0e)
-            return res;
-        sceKernelDelayThread(1000000);
-    }
 
-    ctx->flags &= ~2u;
-    int res = sceNet_lib_5216CBF5("wlan");
-    if (res < 0)
-        goto fail_all;
-    res = sceNet_lib_AB7DD9A5("wlan", ctx->evfid, 8);
-    if (res < 0)
-        goto fail_all;
-    if (sceWlanGetSwitchState() == 0) {
-        res = 0x80410b03;
-        goto fail_all;
-    }
-
-    if (!(gm->flag & 1)) {
-        char ssid[0x30];
-        sceKernelMemset(ssid, 0, 0x21);
-        res = adhocctlBuildGameModeSsid(ctx, ssid);
+        ctx->flags &= ~2u;
+        res = sceNet_lib_5216CBF5("wlan");
         if (res < 0)
-            goto fail_all;
-        gm->gm_param[0x0c] = (u8)res;
-        sceKernelMemcpy(gm->gm_param + 0x0e, ssid, res & 0xff);
-        u8 ch, offset;
-        adhocctlSelectGameModeChannel(gm, &ch, &offset);
+            break;
+        res = sceNet_lib_AB7DD9A5("wlan", ctx->evfid, 8);
+        if (res < 0)
+            break;
+        if (sceWlanGetSwitchState() == 0) {
+            res = 0x80410b03;
+            break;
+        }
+
+        if (!(gm->flag & 1)) {
+            char ssid[0x30];
+            u8 ch, offset;
+            sceKernelMemset(ssid, 0, 0x21);
+            res = adhocctlBuildGameModeSsid(ctx, ssid);
+            if (res < 0)
+                break;
+            gm->gm_param[0x0c] = (u8)res;
+            sceKernelMemcpy(gm->gm_param + 0x0e, ssid, res & 0xff);
+            adhocctlSelectGameModeChannel(gm, &ch, &offset);
+            res = adhocctlCheckCancelFlag(ctx);
+            if ((((u32)res >> 16) & 0xfff) == 0x41) {
+                if (res >= 0)
+                    return res;
+                break;
+            }
+            if (res < 0)
+                break;
+            gm->gm_param[0x46] = offset;
+            gm->gm_param[0x0d] = ch;
+        }
+
+        if (gm->flag & 2) {
+            res = adhocctlSetWlanPowerSave(4);
+            if (res < 0)
+                break;
+            g_saved_power_save = res;
+            res = sceWlanDrv_lib_5BAA1FE5(1);
+            if (res < 0)
+                break;
+        }
+
+        sceKernelMemset(param, 0, 0x70);
+        ssid_len = gm->gm_param[0x0c];
+        param[7] = ssid_len;
+        sceKernelMemcpy(param + 8, gm->gm_param + 0x0e, ssid_len);
+        param[6] = gm->gm_param[0x0d];
+        ((SceAdhocctlBssParam *)param)->bss_type = 2;
+        ((SceAdhocctlBssParam *)param)->beacon_period = ((SceAdhocctlGameModeParam *)gm->gm_param)->beacon_period;
+        ((SceAdhocctlBssParam *)param)->capability = 0x22;
+        err = 0;
+        sceNet_lib_03164B12("wlan", param, &err);
         res = adhocctlCheckCancelFlag(ctx);
-        if ((((u32)res >> 16) & 0xfff) == 0x41)
-            goto done_check;
+        if ((((u32)res >> 16) & 0xfff) == 0x41) {
+            if (res >= 0)
+                return res;
+            break;
+        }
         if (res < 0)
-            goto fail_all;
-        gm->gm_param[0x46] = offset;
-        gm->gm_param[0x0d] = ch;
-    }
+            break;
 
-    if (gm->flag & 2) {
-        res = adhocctlSetWlanPowerSave(4);
+        res = adhocctlDoScanQuiet(ctx);
         if (res < 0)
-            goto fail_all;
-        g_saved_power_save = res;
-        res = sceWlanDrv_lib_5BAA1FE5(1);
+            break;
+        res = adhocctlCheckCancelFlag(ctx);
         if (res < 0)
-            goto fail_all;
-    }
+            break;
 
-    u8 param[0x70];
-    sceKernelMemset(param, 0, 0x70);
-    u8 ssid_len = gm->gm_param[0x0c];
-    param[7] = ssid_len;
-    sceKernelMemcpy(param + 8, gm->gm_param + 0x0e, ssid_len);
-    param[6] = gm->gm_param[0x0d];
-    ((SceAdhocctlBssParam *)param)->bss_type = 2;
-    ((SceAdhocctlBssParam *)param)->beacon_period = ((SceAdhocctlGameModeParam *)gm->gm_param)->beacon_period;
-    ((SceAdhocctlBssParam *)param)->capability = 0x22;
-    int err = 0;
-    sceNet_lib_03164B12("wlan", param, &err);
-    res = adhocctlCheckCancelFlag(ctx);
-    if ((((u32)res >> 16) & 0xfff) == 0x41)
-        goto done_check;
-    if (res < 0)
-        goto fail_all;
+        res = sceUtilityGetSystemParamString(1, nickname, 0x80);
+        if (res < 0)
+            break;
+        res = adhocctlCheckCancelFlag(ctx);
+        if (res < 0)
+            break;
 
-    res = adhocctlDoScanQuiet(ctx);
-    if (res < 0)
-        goto fail_all;
-    res = adhocctlCheckCancelFlag(ctx);
-    if (res < 0)
-        goto fail_all;
+        auth_opt[0] = 1000000;
+        auth_opt[1] = 500000;
+        auth_opt[2] = 5;
+        auth_opt[3] = 30000000;
+        auth_opt[4] = 300000000;
+        res = sceNetAdhocAuth_lib_89F2A732("wlan", 0x30, 0x2000, auth_opt, 16, nickname);
+        if (res < 0)
+            break;
 
-    char nickname[0x80];
-    res = sceUtilityGetSystemParamString(1, nickname, 0x80);
-    if (res < 0)
-        goto fail_all;
-    res = adhocctlCheckCancelFlag(ctx);
-    if (res < 0)
-        goto fail_all;
+        key_len = ((SceAdhocctlGameModeParam *)gm->gm_param)->key_len;
+        payload_len = key_len + gm->num_peers * 6 + 19;
+        total_len = key_len + gm->num_peers * 6 + 25;
+        g_ptp_buf[0] = 1;
+        g_ptp_buf[1] = 1;
+        be_len = __builtin_bswap32(payload_len);
+        sceKernelMemcpy(g_ptp_buf + 2, &be_len, 4);
 
-    u32 auth_opt[5];
-    auth_opt[0] = 1000000;
-    auth_opt[1] = 500000;
-    auth_opt[2] = 5;
-    auth_opt[3] = 30000000;
-    auth_opt[4] = 300000000;
-    res = sceNetAdhocAuth_lib_89F2A732("wlan", 0x30, 0x2000, auth_opt, 16, nickname);
-    if (res < 0)
-        goto fail_all;
+        p = g_ptp_buf + 6;
+        p[0] = 1;
+        be_klen = __builtin_bswap16(key_len);
+        sceKernelMemcpy(p + 1, &be_klen, 2);
+        if (key_len != 0)
+            sceKernelMemcpy(p + 3, gm->gm_param + 0x30, key_len);
+        p += 3 + key_len;
 
-    u16 key_len = ((SceAdhocctlGameModeParam *)gm->gm_param)->key_len;
-    int payload_len = key_len + gm->num_peers * 6 + 19;
-    int total_len = key_len + gm->num_peers * 6 + 25;
-    g_ptp_buf[0] = 1;
-    g_ptp_buf[1] = 1;
-    u32 be_len = __builtin_bswap32(payload_len);
-    sceKernelMemcpy(g_ptp_buf + 2, &be_len, 4);
+        p[0] = 2;
+        be_plen = __builtin_bswap16((u16)(gm->num_peers * 6));
+        sceKernelMemcpy(p + 1, &be_plen, 2);
+        for (i = 0; i < gm->num_peers; i++)
+            sceKernelMemcpy(p + 3 + i * 6, gm->peers[i], 6);
+        p += 3 + gm->num_peers * 6;
 
-    u8 *p = g_ptp_buf + 6;
-    p[0] = 1;
-    u16 be_klen = __builtin_bswap16(key_len);
-    sceKernelMemcpy(p + 1, &be_klen, 2);
-    if (key_len != 0)
-        sceKernelMemcpy(p + 3, gm->gm_param + 0x30, key_len);
-    p += 3 + key_len;
+        p[0] = 3;
+        be_two = __builtin_bswap16(2);
+        sceKernelMemcpy(p + 1, &be_two, 2);
+        be_a4 = __builtin_bswap16(((SceAdhocctlGameModeParam *)gm->gm_param)->port_be);
+        sceKernelMemcpy(p + 3, &be_a4, 2);
 
-    p[0] = 2;
-    u16 be_plen = __builtin_bswap16((u16)(gm->num_peers * 6));
-    sceKernelMemcpy(p + 1, &be_plen, 2);
-    int i;
-    for (i = 0; i < gm->num_peers; i++)
-        sceKernelMemcpy(p + 3 + i * 6, gm->peers[i], 6);
-    p += 3 + gm->num_peers * 6;
+        p[5] = 4;
+        be_one = __builtin_bswap16(1);
+        sceKernelMemcpy(p + 6, &be_one, 2);
+        p[8] = gm->gm_param[0x46];
 
-    p[0] = 3;
-    u16 be_two = __builtin_bswap16(2);
-    sceKernelMemcpy(p + 1, &be_two, 2);
-    u16 be_a4 = __builtin_bswap16(((SceAdhocctlGameModeParam *)gm->gm_param)->port_be);
-    sceKernelMemcpy(p + 3, &be_a4, 2);
+        p[9] = 5;
+        sceKernelMemcpy(p + 10, &be_one, 2);
+        p[12] = gm->gm_param[0x47];
 
-    p[5] = 4;
-    u16 be_one = __builtin_bswap16(1);
-    sceKernelMemcpy(p + 6, &be_one, 2);
-    p[8] = gm->gm_param[0x46];
+        retry_cnt = (int)(gm->timeout / 200000) + 1;
+        listen_id = sceNetAdhocPtpListen(gm->peers[0], 0x8001, 0x2000, 200000, retry_cnt, gm->num_peers - 1, 0);
+        if (listen_id < 0) {
+            res = listen_id;
+            break;
+        }
 
-    p[9] = 5;
-    sceKernelMemcpy(p + 10, &be_one, 2);
-    p[12] = gm->gm_param[0x47];
+        res = adhocctlAcceptGameModePeers(gm, start_time, listen_id, g_ptp_buf, total_len);
+        if (res < 0) {
+            sceNetAdhocPtpClose(listen_id, 0);
+            break;
+        }
+        res = sceNetAdhocPtpClose(listen_id, 0);
+        if (res < 0)
+            break;
 
-    int retry_cnt = (int)(gm->timeout / 200000) + 1;
-    int listen_id = sceNetAdhocPtpListen(gm->peers[0], 0x8001, 0x2000, 200000, retry_cnt, gm->num_peers - 1, 0);
-    if (listen_id < 0) {
-        res = listen_id;
-        goto fail_all;
-    }
+        sceNetAdhocAuth_lib_6CE209A3();
+        res = sceWlanDrv_lib_56F467CA(wparam);
+        if (res < 0)
+            break;
+        bp = ((SceAdhocctlGameModeParam *)gm->gm_param)->beacon_period;
+        wparam[0] = bp - 2;
+        wparam[1] = 0xff;
+        wparam[2] = (1000 / (int)bp) + 1;
+        res = sceWlanDrv_lib_2D0FAE4E(wparam);
+        if (res < 0)
+            break;
+        res = adhocctlCheckCancelFlag(ctx);
+        if (res < 0)
+            break;
 
-    res = adhocctlAcceptGameModePeers(gm, 0, (u32)start_time, (u32)(start_time >> 32), listen_id, g_ptp_buf, total_len);
-    if (res < 0) {
-        sceNetAdhocPtpClose(listen_id, 0);
-        goto done_check;
-    }
-    res = sceNetAdhocPtpClose(listen_id, 0);
-    if (res < 0)
-        goto fail_all;
+        sceKernelMemcpy(gm->gm_param + 6, gm->peers[0], 6);
+        gm->gm_param[6] |= 3;
+        ((SceAdhocctlGameModeParam *)gm->gm_param)->active_flag = 1;
+        gm->gm_param[0x44] = (u8)gm->num_peers;
+        gm->gm_param[0x43] = 0;
+        sceNetAdhocAuth_lib_72AAC6D3(((SceAdhocctlGameModeParam *)gm->gm_param)->key_len, ((SceAdhocctlGameModeParam *)gm->gm_param)->key);
+        saved_klen = ((SceAdhocctlGameModeParam *)gm->gm_param)->key_len;
+        ((SceAdhocctlGameModeParam *)gm->gm_param)->key_len = 0;
+        err = 0;
+        sceNet_lib_0D633F53("wlan", gm->gm_param, gm->peers[0], &err);
+        ((SceAdhocctlGameModeParam *)gm->gm_param)->key_len = saved_klen;
+        res = adhocctlCheckCancelFlag(ctx);
+        if ((((u32)res >> 16) & 0xfff) == 0x41) {
+            if (res >= 0)
+                return res;
+            break;
+        }
+        if (res < 0)
+            break;
 
-    sceNetAdhocAuth_lib_6CE209A3();
-    u16 wparam[8];
-    res = sceWlanDrv_lib_56F467CA(wparam);
-    if (res < 0)
-        goto fail_all;
-    u16 bp = ((SceAdhocctlGameModeParam *)gm->gm_param)->beacon_period;
-    wparam[0] = bp - 2;
-    wparam[1] = 0xff;
-    wparam[2] = (1000 / (int)bp) + 1;
-    res = sceWlanDrv_lib_2D0FAE4E(wparam);
-    if (res < 0)
-        goto fail_all;
-    res = adhocctlCheckCancelFlag(ctx);
-    if (res < 0)
-        goto fail_all;
+        ctx->state = 3;
+        ctx->channel = gm->gm_param[0x0d];
+        if (res >= 0)
+            return res;
+    } while (0);
 
-    sceKernelMemcpy(gm->gm_param + 6, gm->peers[0], 6);
-    gm->gm_param[6] |= 3;
-    ((SceAdhocctlGameModeParam *)gm->gm_param)->active_flag = 1;
-    gm->gm_param[0x44] = (u8)gm->num_peers;
-    gm->gm_param[0x43] = 0;
-    sceNetAdhocAuth_lib_72AAC6D3(((SceAdhocctlGameModeParam *)gm->gm_param)->key_len, ((SceAdhocctlGameModeParam *)gm->gm_param)->key);
-    u16 saved_klen = ((SceAdhocctlGameModeParam *)gm->gm_param)->key_len;
-    ((SceAdhocctlGameModeParam *)gm->gm_param)->key_len = 0;
-    err = 0;
-    sceNet_lib_0D633F53("wlan", gm->gm_param, gm->peers[0], &err);
-    ((SceAdhocctlGameModeParam *)gm->gm_param)->key_len = saved_klen;
-    res = adhocctlCheckCancelFlag(ctx);
-    if ((((u32)res >> 16) & 0xfff) == 0x41)
-        goto done_check;
-    if (res < 0)
-        goto fail_all;
-
-    ctx->state = 3;
-    ctx->channel = gm->gm_param[0x0d];
-
-done_check:
-    if (res >= 0)
-        return res;
-
-fail_all:
     sceNetAdhocAuth_lib_72AAC6D3(0, NULL);
     sceNetAdhocAuth_lib_2E6AA271();
     sceNet_lib_AB7DD9A5("wlan", 0, 0);
@@ -2393,295 +2477,320 @@ fail_all:
 static int adhocctlRunGameModeClient(struct SceNetAdhocctlCtx *ctx, struct SceNetAdhocctlGameModeCtx *gm)
 {
     int ptp_id = -1;
+    s64 start_time;
+    u32 rem_timeout = 0;
+    int res = 0;
+    int err = 0;
+
     if (ctx->state != 0)
         return 0x80410b02;
     if (sceWlanGetSwitchState() == 0)
         return 0x80410b03;
 
-    s64 start_time = sceKernelGetSystemTimeWide();
+    start_time = sceKernelGetSystemTimeWide();
     g_saved_power_save = -1;
-    u32 rem_timeout = 0;
 
-    while (1) {
-        if (gm->timeout != 0) {
-            s64 elapsed = sceKernelGetSystemTimeWide() - start_time;
-            if ((u64)elapsed >= (u64)gm->timeout) {
-                int res = 0x80410b05;
-                goto fail_ptp;
+    do {
+        u8 scan_req[0x4c];
+        u8 join_param[0x70];
+        char nickname[0x80];
+        u32 auth_opt[5];
+        u8 self_mac[16];
+        u16 wparam[8];
+        struct SceNetAdhocctlScanNode *found = NULL;
+        u32 body_len;
+        int tag_len, i, self_idx;
+        void *val;
+        u16 klen, bp, saved_klen;
+        int scan_fail = 0;
+
+        while (1) {
+            if (gm->timeout != 0) {
+                s64 elapsed = sceKernelGetSystemTimeWide() - start_time;
+                if ((u64)elapsed >= (u64)gm->timeout) {
+                    res = 0x80410b05;
+                    break;
+                }
+                rem_timeout = gm->timeout - (u32)elapsed;
+            } else {
+                rem_timeout = 0;
             }
-            rem_timeout = gm->timeout - (u32)elapsed;
-        } else {
-            rem_timeout = 0;
+            res = sceWlanDevAttach();
+            if (res == 0 || res == (int)0x80410d0f)
+                break;
+            if (res < 0 && res != (int)0x80410d0e)
+                return res;
+            sceKernelDelayThread(1000000);
         }
-        int res = sceWlanDevAttach();
-        if (res == 0 || res == (int)0x80410d0f)
+        if (res < 0 && res != (int)0x80410d0f)
             break;
-        if (res < 0 && res != (int)0x80410d0e)
-            return res;
-        sceKernelDelayThread(1000000);
-    }
 
-    ctx->flags &= ~2u;
-    int res = sceNet_lib_5216CBF5("wlan");
-    if (res < 0)
-        goto fail_all;
-    res = sceNet_lib_AB7DD9A5("wlan", ctx->evfid, 8);
-    if (res < 0)
-        goto fail_all;
-    if (sceWlanGetSwitchState() == 0) {
-        res = 0x80410b03;
-        goto fail_ptp;
-    }
-
-    if (!(gm->flag & 1)) {
-        char ssid[0x30];
-        sceKernelMemset(ssid, 0, 0x21);
-        res = adhocctlBuildGameModeSsid(ctx, ssid);
+        ctx->flags &= ~2u;
+        res = sceNet_lib_5216CBF5("wlan");
         if (res < 0)
-            goto fail_all;
-        gm->gm_param[0x0c] = (u8)res;
-        sceKernelMemcpy(gm->gm_param + 0x0e, ssid, res & 0xff);
-    }
-
-    if (gm->flag & 2) {
-        res = adhocctlSetWlanPowerSave(4);
+            break;
+        res = sceNet_lib_AB7DD9A5("wlan", ctx->evfid, 8);
         if (res < 0)
-            goto fail_all;
-        g_saved_power_save = res;
-        res = sceWlanDrv_lib_5BAA1FE5(1);
-        if (res < 0)
-            goto fail_all;
-    }
-
-    u8 scan_req[0x4c];
-    sceKernelMemset(scan_req, 0, 0x4c);
-    sceKernelMemcpy(scan_req + 0x1c, gm->gm_param + 0x0e, gm->gm_param[0x0c]);
-    scan_req[0x18] = gm->gm_param[0x0c];
-    ((SceAdhocctlScanReq *)scan_req)->bss_type = 2;
-    sceKernelMemcpy(scan_req + 0x0a, g_channels, 3);
-    ((SceAdhocctlScanReq *)scan_req)->scan_type = 1;
-    ((SceAdhocctlScanReq *)scan_req)->min_dwell = 0;
-    ((SceAdhocctlScanReq *)scan_req)->max_dwell = 6;
-    ((SceAdhocctlScanReq *)scan_req)->probe_delay = 100;
-
-    struct SceNetAdhocctlScanNode *found = NULL;
-    while (1) {
-        sceKernelMemset(g_gm_scan_buf, 0, 0xc00);
-        int buflen = 0xc00;
-        int err = 0;
-        sceNet_lib_7BA3ED91("wlan", scan_req, &buflen, g_gm_scan_buf, &err);
-        res = adhocctlCheckCancelFlag(ctx);
-        if ((((u32)res >> 16) & 0xfff) == 0x41)
-            goto done_check;
-        if (res < 0)
-            goto fail_all;
-
-        if (gm->timeout != 0) {
-            s64 elapsed = sceKernelGetSystemTimeWide() - start_time;
-            if ((u64)elapsed >= (u64)gm->timeout) {
-                res = 0x80410b05;
-                goto fail_all;
-            }
-            rem_timeout = gm->timeout - (u32)elapsed;
-        } else {
-            rem_timeout = 0;
+            break;
+        if (sceWlanGetSwitchState() == 0) {
+            res = 0x80410b03;
+            break;
         }
 
-        if (buflen == 0)
-            continue;
+        if (!(gm->flag & 1)) {
+            char ssid[0x30];
+            sceKernelMemset(ssid, 0, 0x21);
+            res = adhocctlBuildGameModeSsid(ctx, ssid);
+            if (res < 0)
+                break;
+            gm->gm_param[0x0c] = (u8)res;
+            sceKernelMemcpy(gm->gm_param + 0x0e, ssid, res & 0xff);
+        }
 
-        struct SceNetAdhocctlScanNode *node = (struct SceNetAdhocctlScanNode *)g_gm_scan_buf;
-        while (node != NULL) {
-            if (sceNet_lib_E0A81C7C(node->ssid, gm->gm_param + 0x0e, 0x20) == 0 && node->mode == 2) {
-                found = node;
+        if (gm->flag & 2) {
+            res = adhocctlSetWlanPowerSave(4);
+            if (res < 0)
+                break;
+            g_saved_power_save = res;
+            res = sceWlanDrv_lib_5BAA1FE5(1);
+            if (res < 0)
+                break;
+        }
+
+        sceKernelMemset(scan_req, 0, 0x4c);
+        sceKernelMemcpy(scan_req + 0x1c, gm->gm_param + 0x0e, gm->gm_param[0x0c]);
+        scan_req[0x18] = gm->gm_param[0x0c];
+        ((SceAdhocctlScanReq *)scan_req)->bss_type = 2;
+        sceKernelMemcpy(scan_req + 0x0a, g_channels, 3);
+        ((SceAdhocctlScanReq *)scan_req)->scan_type = 1;
+        ((SceAdhocctlScanReq *)scan_req)->min_dwell = 0;
+        ((SceAdhocctlScanReq *)scan_req)->max_dwell = 6;
+        ((SceAdhocctlScanReq *)scan_req)->probe_delay = 100;
+
+        while (1) {
+            int buflen = 0xc00;
+            struct SceNetAdhocctlScanNode *node;
+            sceKernelMemset(g_gm_scan_buf, 0, 0xc00);
+            err = 0;
+            sceNet_lib_7BA3ED91("wlan", scan_req, &buflen, g_gm_scan_buf, &err);
+            res = adhocctlCheckCancelFlag(ctx);
+            if ((((u32)res >> 16) & 0xfff) == 0x41) {
+                if (res >= 0)
+                    return res;
+                scan_fail = 1;
                 break;
             }
-            node = node->next;
-        }
-        if (found != NULL)
-            break;
-    }
-
-    u8 join_param[0x70];
-    sceKernelMemset(join_param, 0, 0x70);
-    sceKernelMemcpy(join_param, (u8 *)found + 4, 0x5c);
-    ((SceAdhocctlJoinParam *)join_param)->auth_flag = 1;
-    int err = 0;
-    sceNet_lib_389728AB("wlan", join_param, &err);
-    res = adhocctlCheckCancelFlag(ctx);
-    if ((((u32)res >> 16) & 0xfff) == 0x41)
-        goto done_check;
-    if (res < 0)
-        goto fail_all;
-
-    char nickname[0x80];
-    res = sceUtilityGetSystemParamString(1, nickname, 0x80);
-    if (res < 0)
-        goto fail_all;
-    res = adhocctlCheckCancelFlag(ctx);
-    if (res < 0)
-        goto fail_all;
-
-    u32 auth_opt[5];
-    auth_opt[0] = (u32)-1;
-    auth_opt[1] = 500000;
-    auth_opt[2] = 5;
-    auth_opt[3] = 30000000;
-    auth_opt[4] = 300000000;
-    res = sceNetAdhocAuth_lib_89F2A732("wlan", 0x30, 0x2000, auth_opt, 16, nickname);
-    if (res < 0)
-        goto fail_all;
-
-    u8 local_mac[16];
-    res = sceNetGetLocalEtherAddr(local_mac);
-    if (res < 0)
-        goto fail_all;
-
-    while (1) {
-        int retry_cnt = (int)(gm->timeout / 200000) + 1;
-        ptp_id = sceNetAdhocPtpOpen(local_mac, 0x8001, gm->peers[0], 0x8001, 0x2000, 200000, retry_cnt, 0);
-        if (ptp_id < 0) {
-            res = ptp_id;
-            goto fail_all;
-        }
-        if (gm->timeout != 0) {
-            s64 elapsed = sceKernelGetSystemTimeWide() - start_time;
-            if ((u64)elapsed >= (u64)gm->timeout) {
-                res = 0x80410b05;
-                goto fail_ptp;
+            if (res < 0) {
+                scan_fail = 1;
+                break;
             }
-            rem_timeout = gm->timeout - (u32)elapsed;
-        } else {
-            rem_timeout = 0;
+
+            if (gm->timeout != 0) {
+                s64 elapsed = sceKernelGetSystemTimeWide() - start_time;
+                if ((u64)elapsed >= (u64)gm->timeout) {
+                    res = 0x80410b05;
+                    scan_fail = 1;
+                    break;
+                }
+                rem_timeout = gm->timeout - (u32)elapsed;
+            } else {
+                rem_timeout = 0;
+            }
+
+            if (buflen == 0)
+                continue;
+
+            node = (struct SceNetAdhocctlScanNode *)g_gm_scan_buf;
+            while (node != NULL) {
+                if (sceNet_lib_E0A81C7C(node->ssid, gm->gm_param + 0x0e, 0x20) == 0 && node->mode == 2) {
+                    found = node;
+                    break;
+                }
+                node = node->next;
+            }
+            if (found != NULL)
+                break;
         }
-        res = sceNetAdhocPtpConnect(ptp_id, rem_timeout, 0);
+        if (scan_fail)
+            break;
+
+        sceKernelMemset(join_param, 0, 0x70);
+        sceKernelMemcpy(join_param, found->bssid, 0x5c);
+        ((SceAdhocctlJoinParam *)join_param)->auth_flag = 1;
+        err = 0;
+        sceNet_lib_389728AB("wlan", join_param, &err);
+        res = adhocctlCheckCancelFlag(ctx);
+        if ((((u32)res >> 16) & 0xfff) == 0x41) {
+            if (res >= 0)
+                return res;
+            break;
+        }
+        if (res < 0)
+            break;
+
+        res = sceUtilityGetSystemParamString(1, nickname, 0x80);
+        if (res < 0)
+            break;
+        res = adhocctlCheckCancelFlag(ctx);
+        if (res < 0)
+            break;
+
+        auth_opt[0] = (u32)-1;
+        auth_opt[1] = 500000;
+        auth_opt[2] = 5;
+        auth_opt[3] = 30000000;
+        auth_opt[4] = 300000000;
+        res = sceNetAdhocAuth_lib_89F2A732("wlan", 0x30, 0x2000, auth_opt, 16, nickname);
+        if (res < 0)
+            break;
+
+        res = sceNetGetLocalEtherAddr(self_mac);
+        if (res < 0)
+            break;
+
+        while (1) {
+            int retry_cnt = (int)(gm->timeout / 200000) + 1;
+            ptp_id = sceNetAdhocPtpOpen(self_mac, 0x8001, gm->peers[0], 0x8001, 0x2000, 200000, retry_cnt, 0);
+            if (ptp_id < 0) {
+                res = ptp_id;
+                break;
+            }
+            if (gm->timeout != 0) {
+                s64 elapsed = sceKernelGetSystemTimeWide() - start_time;
+                if ((u64)elapsed >= (u64)gm->timeout) {
+                    res = 0x80410b05;
+                    break;
+                }
+                rem_timeout = gm->timeout - (u32)elapsed;
+            } else {
+                rem_timeout = 0;
+            }
+            res = sceNetAdhocPtpConnect(ptp_id, rem_timeout, 0);
+            if (res >= 0)
+                break;
+            if (res != (int)0x80410718)
+                break;
+            sceNetAdhocPtpClose(ptp_id, 0);
+            ptp_id = -1;
+            sceKernelDelayThread(1000000);
+        }
+        if (res < 0)
+            break;
+
+        res = adhocctlRecvGameModePacket(gm, start_time, ptp_id, g_ptp_buf, 6);
+        if (res < 0)
+            break;
+        if ((s8)g_ptp_buf[0] != 1 || g_ptp_buf[1] != g_ptp_buf[0]) {
+            res = 0x80410b82;
+            break;
+        }
+
+        sceKernelMemcpy(&body_len, g_ptp_buf + 2, 4);
+        body_len = __builtin_bswap32(body_len);
+        if ((int)body_len >= 0x3fb) {
+            res = 0x80410b83;
+            break;
+        }
+
+        res = adhocctlRecvGameModePacket(gm, start_time, ptp_id, g_ptp_buf + 6, body_len);
+        if (res < 0)
+            break;
+
+        res = sceNetAdhocPtpClose(ptp_id, 0);
+        ptp_id = -1;
+        if (res < 0)
+            break;
+
+        val = adhocctlFindIeTag(1, g_ptp_buf + 6, body_len, &tag_len);
+        if (val == NULL || tag_len >= 17) {
+            res = 0x80410b84;
+            break;
+        }
+        klen = (u16)tag_len;
+        ((SceAdhocctlGameModeParam *)gm->gm_param)->key_len = klen;
+        if (klen != 0)
+            sceKernelMemcpy(gm->gm_param + 0x30, val, klen);
+
+        val = adhocctlFindIeTag(2, g_ptp_buf + 6, body_len, &tag_len);
+        if (val == NULL || tag_len < 12 || tag_len >= 97 || (tag_len % 6) != 0) {
+            res = 0x80410b85;
+            break;
+        }
+        gm->num_peers = tag_len / 6;
+        for (i = 0; i < gm->num_peers; i++)
+            sceKernelMemcpy(gm->peers[i], (u8 *)val + i * 6, 6);
+
+        val = adhocctlFindIeTag(3, g_ptp_buf + 6, body_len, &tag_len);
+        if (val == NULL || tag_len != 2) {
+            res = 0x80410b86;
+            break;
+        }
+        sceKernelMemcpy(gm->gm_param + 0x40, val, 2);
+        ((SceAdhocctlGameModeParam *)gm->gm_param)->port_be = __builtin_bswap16(((SceAdhocctlGameModeParam *)gm->gm_param)->port_be);
+
+        val = adhocctlFindIeTag(4, g_ptp_buf + 6, body_len, &tag_len);
+        if (val == NULL || tag_len != 1) {
+            res = 0x80410b87;
+            break;
+        }
+        gm->gm_param[0x46] = *(u8 *)val;
+
+        val = adhocctlFindIeTag(5, g_ptp_buf + 6, body_len, &tag_len);
+        if (val == NULL || tag_len != 1) {
+            res = 0x80410b88;
+            break;
+        }
+        gm->gm_param[0x47] = *(u8 *)val;
+
+        sceNetAdhocAuth_lib_6CE209A3();
+        res = sceWlanDrv_lib_56F467CA(wparam);
+        if (res < 0)
+            break;
+        bp = found->beacon_period;
+        wparam[0] = bp - 2;
+        wparam[1] = 0xff;
+        wparam[2] = (1000 / (int)*(u32 *)&found->beacon_period) + 1;
+        res = sceWlanDrv_lib_2D0FAE4E(wparam);
+        if (res < 0)
+            break;
+        res = adhocctlCheckCancelFlag(ctx);
+        if (res < 0)
+            break;
+
+        sceKernelMemcpy(gm->gm_param + 6, gm->peers[0], 6);
+        gm->gm_param[6] |= 3;
+        ((SceAdhocctlGameModeParam *)gm->gm_param)->beacon_period = found->beacon_period;
+        for (self_idx = 1; self_idx < gm->num_peers; self_idx++) {
+            if (sceNet_lib_E0A81C7C(gm->peers[self_idx], self_mac, 6) == 0)
+                break;
+        }
+        ((SceAdhocctlGameModeParam *)gm->gm_param)->active_flag = 1;
+        gm->gm_param[0x43] = (u8)self_idx;
+        gm->gm_param[0x44] = (u8)gm->num_peers;
+        sceNetAdhocAuth_lib_72AAC6D3(((SceAdhocctlGameModeParam *)gm->gm_param)->key_len, ((SceAdhocctlGameModeParam *)gm->gm_param)->key);
+        saved_klen = ((SceAdhocctlGameModeParam *)gm->gm_param)->key_len;
+        ((SceAdhocctlGameModeParam *)gm->gm_param)->key_len = 0;
+        err = 0;
+        sceNet_lib_0D633F53("wlan", gm->gm_param, gm->peers[0], &err);
+        ((SceAdhocctlGameModeParam *)gm->gm_param)->key_len = saved_klen;
+        res = adhocctlCheckCancelFlag(ctx);
+        if ((((u32)res >> 16) & 0xfff) == 0x41) {
+            if (res >= 0)
+                return res;
+            break;
+        }
+        if (res < 0)
+            break;
+
+        ctx->state = 3;
+        ctx->channel = found->channel;
         if (res >= 0)
-            break;
-        if (res != (int)0x80410718)
-            goto done_check;
-        sceNetAdhocPtpClose(ptp_id, 0);
-        sceKernelDelayThread(1000000);
-    }
+            return res;
+    } while (0);
 
-    res = adhocctlRecvGameModePacket(gm, 0, (u32)start_time, (u32)(start_time >> 32), ptp_id, g_ptp_buf, 6);
-    if (res < 0)
-        goto fail_ptp;
-    if ((s8)g_ptp_buf[0] != 1 || g_ptp_buf[1] != g_ptp_buf[0]) {
-        res = 0x80410b82;
-        goto fail_ptp;
-    }
-
-    u32 body_len;
-    sceKernelMemcpy(&body_len, g_ptp_buf + 2, 4);
-    body_len = __builtin_bswap32(body_len);
-    if ((int)body_len >= 0x3fb) {
-        res = 0x80410b83;
-        goto fail_ptp;
-    }
-
-    res = adhocctlRecvGameModePacket(gm, 0, (u32)start_time, (u32)(start_time >> 32), ptp_id, g_ptp_buf + 6, body_len);
-    if (res < 0)
-        goto fail_ptp;
-
-    res = sceNetAdhocPtpClose(ptp_id, 0);
-    if (res < 0)
-        goto fail_all;
-    ptp_id = -1;
-
-    int tag_len;
-    void *val = adhocctlFindIeTag(1, g_ptp_buf + 6, body_len, &tag_len);
-    if (val == NULL || tag_len >= 17) {
-        res = 0x80410b84;
-        goto fail_ptp;
-    }
-    u16 klen = (u16)tag_len;
-    ((SceAdhocctlGameModeParam *)gm->gm_param)->key_len = klen;
-    if (klen != 0)
-        sceKernelMemcpy(gm->gm_param + 0x30, val, klen);
-
-    val = adhocctlFindIeTag(2, g_ptp_buf + 6, body_len, &tag_len);
-    if (val == NULL || tag_len < 12 || tag_len >= 97 || (tag_len % 6) != 0) {
-        res = 0x80410b85;
-        goto fail_ptp;
-    }
-    gm->num_peers = tag_len / 6;
-    int i;
-    for (i = 0; i < gm->num_peers; i++)
-        sceKernelMemcpy(gm->peers[i], (u8 *)val + i * 6, 6);
-
-    val = adhocctlFindIeTag(3, g_ptp_buf + 6, body_len, &tag_len);
-    if (val == NULL || tag_len != 2) {
-        res = 0x80410b86;
-        goto fail_ptp;
-    }
-    sceKernelMemcpy(gm->gm_param + 0x40, val, 2);
-    ((SceAdhocctlGameModeParam *)gm->gm_param)->port_be = __builtin_bswap16(((SceAdhocctlGameModeParam *)gm->gm_param)->port_be);
-
-    val = adhocctlFindIeTag(4, g_ptp_buf + 6, body_len, &tag_len);
-    if (val == NULL || tag_len != 1) {
-        res = 0x80410b87;
-        goto fail_ptp;
-    }
-    gm->gm_param[0x46] = *(u8 *)val;
-
-    val = adhocctlFindIeTag(5, g_ptp_buf + 6, body_len, &tag_len);
-    if (val == NULL || tag_len != 1) {
-        res = 0x80410b88;
-        goto fail_ptp;
-    }
-    gm->gm_param[0x47] = *(u8 *)val;
-
-    sceNetAdhocAuth_lib_6CE209A3();
-    u16 wparam[8];
-    res = sceWlanDrv_lib_56F467CA(wparam);
-    if (res < 0)
-        goto fail_all;
-    u16 bp = found->beacon_period;
-    wparam[0] = bp - 2;
-    wparam[1] = 0xff;
-    wparam[2] = (1000 / (int)*(u32 *)&found->beacon_period) + 1;
-    res = sceWlanDrv_lib_2D0FAE4E(wparam);
-    if (res < 0)
-        goto fail_all;
-    res = adhocctlCheckCancelFlag(ctx);
-    if (res < 0)
-        goto fail_all;
-
-    sceKernelMemcpy(gm->gm_param + 6, gm->peers[0], 6);
-    gm->gm_param[6] |= 3;
-    ((SceAdhocctlGameModeParam *)gm->gm_param)->beacon_period = found->beacon_period;
-    int self_idx = 1;
-    for (self_idx = 1; self_idx < gm->num_peers; self_idx++) {
-        if (sceNet_lib_E0A81C7C(gm->peers[self_idx], local_mac, 6) == 0)
-            break;
-    }
-    ((SceAdhocctlGameModeParam *)gm->gm_param)->active_flag = 1;
-    gm->gm_param[0x43] = (u8)self_idx;
-    gm->gm_param[0x44] = (u8)gm->num_peers;
-    sceNetAdhocAuth_lib_72AAC6D3(((SceAdhocctlGameModeParam *)gm->gm_param)->key_len, ((SceAdhocctlGameModeParam *)gm->gm_param)->key);
-    u16 saved_klen = ((SceAdhocctlGameModeParam *)gm->gm_param)->key_len;
-    ((SceAdhocctlGameModeParam *)gm->gm_param)->key_len = 0;
-    err = 0;
-    sceNet_lib_0D633F53("wlan", gm->gm_param, gm->peers[0], &err);
-    ((SceAdhocctlGameModeParam *)gm->gm_param)->key_len = saved_klen;
-    res = adhocctlCheckCancelFlag(ctx);
-    if ((((u32)res >> 16) & 0xfff) == 0x41)
-        goto done_check;
-    if (res < 0)
-        goto fail_all;
-
-    ctx->state = 3;
-    ctx->channel = found->channel;
-
-done_check:
-    if (res >= 0)
-        return res;
-
-fail_ptp:
     if (ptp_id >= 0)
         sceNetAdhocPtpClose(ptp_id, 0);
 
-fail_all:
     sceNetAdhocAuth_lib_72AAC6D3(0, NULL);
     sceNetAdhocAuth_lib_2E6AA271();
     sceNet_lib_AB7DD9A5("wlan", 0, 0);
@@ -2720,16 +2829,16 @@ static int adhocctlSelectGameModeChannel(struct SceNetAdhocctlGameModeCtx *gm, u
     if (buflen != 0) {
         struct SceNetAdhocctlScanNode *node = (struct SceNetAdhocctlScanNode *)g_gm_scan_buf;
         while (node != NULL) {
-            if (node->mode == 2 && ((u8 *)node)[0x4e] == 2) {
+            if (node->mode == 2 && node->gm_ie_type == 2) {
                 int cidx;
                 for (cidx = 0; cidx < 3; cidx++) {
                     if (node->channel == g_channels[cidx])
                         break;
                 }
                 if (cidx != 3) {
-                    int start_off = ((u8 *)node)[0x51];
-                    int n = ((u8 *)node)[0x50];
-                    int step = ((u8 *)node)[0x52];
+                    int start_off = node->gm_slot_start;
+                    int n = node->gm_peer_count;
+                    int step = node->gm_slot_step;
                     if (start_off >= 15 && start_off + step * (n - 1) < 256) {
                         int k;
                         for (k = 0; k < n; k++) {
@@ -2829,42 +2938,38 @@ static void adhocctlCleanupGameMode(struct SceNetAdhocctlCtx *ctx, struct SceNet
 }
 
 /* 0x5658 */
-static int adhocctlAcceptGameModePeers(struct SceNetAdhocctlGameModeCtx *gm, int unused, u32 start_lo, u32 start_hi, int listen_id, const void *ie_buf, int ie_len)
+static int adhocctlAcceptGameModePeers(struct SceNetAdhocctlGameModeCtx *gm, s64 start_time, int listen_id, const void *ie_buf, int ie_len)
 {
-    (void)unused;
     u8 accepted_macs[15][6];
     int accepted_cnt = 0;
     int res = 0;
     int client_id = -1;
-    s64 start_time = ((s64)start_hi << 32) | start_lo;
+    u8 *next_mac_slot = (u8 *)accepted_macs;
 
     sceKernelMemset(accepted_macs, 0, 0x5a);
-    if (gm->num_peers - 1 <= 0)
-        goto done;
-
-    u8 *next_mac_slot = (u8 *)accepted_macs;
     while (accepted_cnt < gm->num_peers - 1) {
         u32 rem = 0;
+        u8 peer_mac[6];
+        u16 peer_port;
+        int idx, dup, j, slen;
+
         if (gm->timeout != 0) {
             s64 elapsed = sceKernelGetSystemTimeWide() - start_time;
             if ((u64)elapsed >= (u64)gm->timeout) {
                 res = 0x80410b05;
-                goto done;
+                break;
             }
             rem = gm->timeout - (u32)elapsed;
         }
-        u8 peer_mac[6];
-        u16 peer_port;
         res = sceNetAdhocPtpAccept(listen_id, peer_mac, &peer_port, rem, 0);
         if (res < 0)
-            goto done;
+            break;
         client_id = res;
         if (peer_port != 0x8001) {
             sceNetAdhocPtpClose(client_id, 0);
             client_id = -1;
             continue;
         }
-        int idx;
         for (idx = 1; idx < gm->num_peers; idx++) {
             if (sceNet_lib_E0A81C7C(gm->peers[idx], peer_mac, 6) == 0)
                 break;
@@ -2874,8 +2979,7 @@ static int adhocctlAcceptGameModePeers(struct SceNetAdhocctlGameModeCtx *gm, int
             client_id = -1;
             continue;
         }
-        int dup = 0;
-        int j;
+        dup = 0;
         for (j = 0; j < accepted_cnt; j++) {
             if (sceNet_lib_E0A81C7C(accepted_macs[j], peer_mac, 6) == 0) {
                 sceNetAdhocPtpClose(client_id, 0);
@@ -2891,21 +2995,21 @@ static int adhocctlAcceptGameModePeers(struct SceNetAdhocctlGameModeCtx *gm, int
             s64 elapsed = sceKernelGetSystemTimeWide() - start_time;
             if ((u64)elapsed >= (u64)gm->timeout) {
                 res = 0x80410b05;
-                goto close_client;
+                break;
             }
             rem = gm->timeout - (u32)elapsed;
         }
-        int slen = ie_len;
+        slen = ie_len;
         res = sceNetAdhocPtpSend(client_id, ie_buf, &slen, rem, 0);
         if (res < 0)
-            goto close_client;
+            break;
 
         rem = 0;
         if (gm->timeout != 0) {
             s64 elapsed = sceKernelGetSystemTimeWide() - start_time;
             if ((u64)elapsed >= (u64)gm->timeout) {
                 res = 0x80410b05;
-                goto close_client;
+                break;
             }
             rem = gm->timeout - (u32)elapsed;
         }
@@ -2914,42 +3018,39 @@ static int adhocctlAcceptGameModePeers(struct SceNetAdhocctlGameModeCtx *gm, int
         res = sceNetAdhocPtpFlush(client_id, rem, 0);
         if (res < 0) {
             if (rem != 3000000 || (res != (int)0x80410715 && res != (int)0x8041070c))
-                goto close_client;
+                break;
         }
         res = sceNetAdhocPtpClose(client_id, 0);
-        if (res < 0)
-            goto done;
         client_id = -1;
+        if (res < 0)
+            break;
         sceKernelMemcpy(next_mac_slot, peer_mac, 6);
         next_mac_slot += 6;
         accepted_cnt++;
     }
 
-close_client:
     if (client_id >= 0)
         sceNetAdhocPtpClose(client_id, 0);
 
-done:
     if (accepted_cnt + 1 >= gm->min_peers && res == (int)0x80410715)
         res = 0;
     return res;
 }
 
 /* 0x5a18 */
-static int adhocctlRecvGameModePacket(struct SceNetAdhocctlGameModeCtx *gm, int unused, u32 start_lo, u32 start_hi, int ptp_id, void *buf, int len)
+static int adhocctlRecvGameModePacket(struct SceNetAdhocctlGameModeCtx *gm, s64 start_time, int ptp_id, void *buf, int len)
 {
-    (void)unused;
     int res = 0;
     u8 *p = (u8 *)buf;
-    s64 start_time = ((s64)start_hi << 32) | start_lo;
 
     while (len > 0) {
+        u32 timeout = gm->timeout;
         u32 rem = 0;
-        if (gm->timeout != 0) {
+        if (timeout != 0) {
             s64 elapsed = sceKernelGetSystemTimeWide() - start_time;
-            if ((u64)elapsed >= (u64)gm->timeout)
+            if ((u64)elapsed >= (u64)timeout)
                 return 0x80410b05;
-            rem = gm->timeout - (u32)elapsed;
+            rem = timeout - (u32)elapsed;
         }
         int rlen = len;
         res = sceNetAdhocPtpRecv(ptp_id, p, &rlen, rem, 0);
