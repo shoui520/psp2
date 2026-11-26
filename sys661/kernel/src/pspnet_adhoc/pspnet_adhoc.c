@@ -4,611 +4,651 @@ const u16 g_adhoc_ethertype = 0xC888;
 const u16 g_adhoc_hdr_ver = 0x0200;
 const u8 g_bcast_mac[6] = { 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF };
 const u8 g_zero_mac[6] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
+
 s32 g_adhoc_inited;
 u32 g_global_wait_head;
 static s32 g_last_sock_id;
+
 static struct {
-	AdhocMbuf *head;
-	AdhocMbuf *tail;
-	s32 count;
-	s32 max_count;
-	s32 drops;
+    AdhocMbuf *head;
+    AdhocMbuf *tail;
+    s32 count;
+    s32 max_count;
+    s32 drops;
 } g_rx_queue;
+
 static struct {
-	AdhocSocket *head;
-	AdhocSocket **tail;
+    AdhocSocket *head;
+    AdhocSocket **tail;
 } g_sock_list;
 
 static void adhocRxSoftIntr(void);
-static s32 adhocGetRxQueue(s32 a0, s32 a1, void **out);
-static void adhocIfDetachNotify(void *ifp);
-static s32 adhocPollSockets(void *arr, s32 count);
-static void adhocSockInit(void);
+static s32 adhocGetRxQueue(s32 unused_first, s32 unused_second, void **out);
+static void adhocIfDetachNotify(AdhocIfnet *ifp);
+static s32 adhocPollSockets(AdhocPollEntry *entries, s32 count);
+static s32 adhocSockInit(void);
 static void adhocSockTerm(void);
 static s32 adhocSockHasActive(void);
-static void adhocSockWakeWaiters(AdhocSocket *sock, s32 flags);
+static void adhocSockWakeWaiters(AdhocSocket *sock, s16 alert_flags);
 
-/* === sceNetAdhocInit @ 0x0000 === */
+static inline void adhocUnlinkWaiter(AdhocSocket *sock, AdhocWaiter *waiter)
+{
+    AdhocWaiter *cur = sock->wait_list;
+    if (cur == waiter) {
+        sock->wait_list = waiter->next;
+    } else {
+        while (cur->next != waiter)
+            cur = cur->next;
+        cur->next = waiter->next;
+    }
+}
+
+/* 0x000000 */
 s32 sceNetAdhocInit(void)
 {
-	s32 intr;
-	s32 ret;
+    s32 intr;
+    s32 ret;
 
-	if (_sceKernelCheckThreadStack() < 0x7f0)
-		return 0x80410005;
+    if (_sceKernelCheckThreadStack() < 2032)
+        return ADHOC_ERR_STACK_SMALL;
 
-	intr = sceNet_lib_94B44F26();
-	if (intr < 0)
-		return intr;
+    intr = sceNet_lib_94B44F26();
+    if (intr < 0)
+        return intr;
 
-	if (g_adhoc_inited > 0) {
-		ret = 0x80410713;
-		goto out;
-	}
+    ret = ADHOC_ERR_ALREADY_INITIALIZED;
+    if (g_adhoc_inited <= 0) {
+        sceKernelMemset(&g_rx_queue, 0, sizeof(g_rx_queue));
+        g_rx_queue.max_count = 50;
 
-	g_rx_queue.head = NULL;
-	g_rx_queue.tail = NULL;
-	g_rx_queue.count = 0;
-	g_rx_queue.max_count = 0x32;
-	g_rx_queue.drops = 0;
+        ret = adhocSockInit();
+        if (ret >= 0) {
+            ret = pdpInit();
+            if (ret >= 0) {
+                ret = ptpInit();
+                if (ret >= 0) {
+                    ret = sceNet_lib_B3A48B7F(adhocRxSoftIntr, adhocIfDetachNotify);
+                    if (ret >= 0) {
+                        ret = sceNet_lib_1F94AFD9(adhocGetRxQueue);
+                        if (ret >= 0) {
+                            if (gameModeInit() >= 0) {
+                                g_adhoc_inited = 1;
+                                sceNet_lib_515B2F33(intr);
+                                return 0;
+                            }
+                            sceNet_lib_0A5A8751();
+                        }
+                        sceNet_lib_949F1FBB();
+                    }
+                    ptpTerm();
+                }
+                pdpTerm();
+            }
+            adhocSockTerm();
+        }
+    }
 
-	adhocSockInit();
-	pdpInit();
-	ptpInit();
-
-	ret = sceNet_lib_B3A48B7F(adhocRxSoftIntr, adhocIfDetachNotify);
-	if (ret >= 0) {
-		ret = sceNet_lib_1F94AFD9(adhocGetRxQueue);
-		if (ret >= 0) {
-			ret = gameModeInit();
-			if (ret >= 0) {
-				g_adhoc_inited = 1;
-				ret = 0;
-				goto out;
-			}
-			sceNet_lib_0A5A8751();
-		}
-		sceNet_lib_949F1FBB();
-	}
-	ptpTerm();
-	pdpTerm();
-	adhocSockTerm();
-
-out:
-	sceNet_lib_515B2F33(intr);
-	return ret;
+    sceNet_lib_515B2F33(intr);
+    return ret;
 }
 
-/* === sceNetAdhocTerm @ 0x0148 === */
+/* 0x000148 */
 s32 sceNetAdhocTerm(void)
 {
-	s32 intr;
-	s32 ret;
-	AdhocMbuf *m;
+    s32 intr;
+    s32 ret = 0;
 
-	if (_sceKernelCheckThreadStack() < 0x7e0)
-		return 0x80410005;
+    if (_sceKernelCheckThreadStack() < 2016)
+        return ADHOC_ERR_STACK_SMALL;
 
-	intr = sceNet_lib_94B44F26();
-	if (intr < 0)
-		return intr;
+    intr = sceNet_lib_94B44F26();
+    if (intr < 0)
+        return intr;
 
-	ret = 0;
-	if (g_adhoc_inited != 0) {
-		if (adhocSockHasActive() != 0 || pdpHasActive() != 0 || ptpHasActive() != 0) {
-			ret = 0x80410714;
-		} else {
-			gameModeTerm();
-			sceNet_lib_0A5A8751();
-			sceNet_lib_949F1FBB();
-			ptpTerm();
-			pdpTerm();
-			adhocSockTerm();
-			for (;;) {
-				m = g_rx_queue.head;
-				if (m == NULL)
-					break;
-				g_rx_queue.head = m->m_nextpkt;
-				if (g_rx_queue.head == NULL)
-					g_rx_queue.tail = NULL;
-				g_rx_queue.count--;
-				m->m_nextpkt = NULL;
-				sceNetIfhandle_lib_F56FAC82(m);
-			}
-			g_adhoc_inited = 0;
-		}
-	}
+    if (g_adhoc_inited != 0) {
+        if (adhocSockHasActive() != 0) {
+            ret = ADHOC_ERR_BUSY;
+        } else {
+            AdhocMbuf *mbuf;
+            gameModeTerm();
+            sceNet_lib_0A5A8751();
+            sceNet_lib_949F1FBB();
+            ptpTerm();
+            pdpTerm();
+            adhocSockTerm();
+            while ((mbuf = g_rx_queue.head) != NULL) {
+                g_rx_queue.head = mbuf->m_nextpkt;
+                if (g_rx_queue.head == NULL)
+                    g_rx_queue.tail = NULL;
+                mbuf->m_nextpkt = NULL;
+                g_rx_queue.count--;
+                sceNetIfhandle_lib_F56FAC82(mbuf);
+            }
+            g_adhoc_inited = 0;
+        }
+    }
 
-	sceNet_lib_515B2F33(intr);
-	return ret;
+    sceNet_lib_515B2F33(intr);
+    return ret;
 }
 
-/* === adhocRxSoftIntr @ 0x0270 === */
-static void adhocRxSoftIntr(void)
+/* 0x000270 */
+static void __attribute__((noinline))
+adhocRxSoftIntr(void)
 {
-	AdhocMbuf *m;
-	u8 proto;
+    AdhocMbuf *mbuf;
+    u8 proto;
 
-	for (;;) {
-		m = g_rx_queue.head;
-		if (m == NULL)
-			return;
-		g_rx_queue.head = m->m_nextpkt;
-		if (g_rx_queue.head == NULL)
-			g_rx_queue.tail = NULL;
-		g_rx_queue.count--;
-		m->m_nextpkt = NULL;
+    while ((mbuf = g_rx_queue.head) != NULL) {
+        g_rx_queue.head = mbuf->m_nextpkt;
+        if (g_rx_queue.head == NULL)
+            g_rx_queue.tail = NULL;
+        mbuf->m_nextpkt = NULL;
+        g_rx_queue.count--;
 
-		if (m->m_pkthdr_len < 0x31) {
-			sceNetIfhandle_lib_F56FAC82(m);
-			continue;
-		}
-		if (m->m_len < 0x31) {
-			sceNetIfhandle_lib_9A6261EC(m, 0x30, 1, &proto);
-		} else {
-			proto = m->m_data[0x30];
-		}
-		if (proto == 1) {
-			pdpInputPacket(m);
-		} else if (proto == 2) {
-			ptpInputPacket(m);
-		} else {
-			sceNetIfhandle_lib_F56FAC82(m);
-		}
-	}
+        if (mbuf->m_pkthdr_len < 49) {
+            sceNetIfhandle_lib_F56FAC82(mbuf);
+            continue;
+        }
+        if (mbuf->m_len < 49)
+            sceNetIfhandle_lib_9A6261EC(mbuf, 48, 1, &proto);
+        else
+            proto = mbuf->m_data[48];
+
+        if (proto == 1)
+            pdpInputPacket(mbuf);
+        else if (proto == 2)
+            ptpInputPacket(mbuf);
+        else
+            sceNetIfhandle_lib_F56FAC82(mbuf);
+    }
 }
 
-/* === adhocIfOutput @ 0x036c === */
-s32 adhocIfOutput(void *ifp_arg, void *m_arg)
+/* 0x00036c */
+s32 __attribute__((noinline))
+adhocIfOutput(AdhocIfnet *ifp, AdhocMbuf *mbuf)
 {
-	AdhocIfnet *ifp = (AdhocIfnet *)ifp_arg;
-	AdhocMbuf *m = (AdhocMbuf *)m_arg;
-	u8 *sadl;
+    u8 *sadl = ifp->if_sadl;
+    s32 cmp = sceNet_lib_E0A81C7C(mbuf->m_data, sadl + sadl[5] + 8, 6);
+    if (cmp != 0) {
+        mbuf->m_nextpkt = NULL;
+        mbuf->m_flags |= 0x8000u;
+        if (ifp->snd_tail != NULL)
+            ifp->snd_tail->m_nextpkt = mbuf;
+        else
+            ifp->snd_head = mbuf;
+        ifp->snd_tail = mbuf;
+        ifp->snd_len++;
+        if ((ifp->if_flags & 0x400) == 0)
+            return ifp->if_start(ifp);
+        return cmp;
+    }
 
-	sadl = ifp->if_sadl;
-	if (sceNet_lib_E0A81C7C(m->m_data, sadl + sadl[5] + 8, 6) == 0) {
-		m->m_rcvif = ifp;
-		if (g_rx_queue.count >= g_rx_queue.max_count) {
-			g_rx_queue.drops++;
-			sceNetIfhandle_lib_F56FAC82(m);
-			return 0;
-		}
-		m->m_nextpkt = NULL;
-		if (g_rx_queue.tail == NULL)
-			g_rx_queue.head = m;
-		else
-			g_rx_queue.tail->m_nextpkt = m;
-		g_rx_queue.tail = m;
-		g_rx_queue.count++;
-		sceNet_lib_05D525E4(0x1d);
-		return 0;
-	}
+    if (g_rx_queue.count < g_rx_queue.max_count) {
+        mbuf->m_rcvif = ifp;
+        mbuf->m_nextpkt = NULL;
+        if (g_rx_queue.tail != NULL)
+            g_rx_queue.tail->m_nextpkt = mbuf;
+        else
+            g_rx_queue.head = mbuf;
+        g_rx_queue.tail = mbuf;
+        g_rx_queue.count++;
+        return sceNet_lib_05D525E4(29);
+    }
 
-	m->m_flags |= 0x8000;
-	m->m_nextpkt = NULL;
-	if (ifp->snd_tail == NULL)
-		ifp->snd_head = m;
-	else
-		ifp->snd_tail->m_nextpkt = m;
-	ifp->snd_tail = m;
-	ifp->snd_len++;
-	if (!(ifp->if_flags & 0x400))
-		ifp->if_start(ifp);
-	return 0;
+    g_rx_queue.drops++;
+    return (s32)sceNetIfhandle_lib_F56FAC82(mbuf);
 }
 
-/* === adhocGetRxQueue @ 0x047c === */
-static s32 adhocGetRxQueue(s32 a0, s32 a1, void **out)
+/* 0x00047c */
+static s32 __attribute__((noinline))
+adhocGetRxQueue(s32 unused_first, s32 unused_second, void **out)
 {
-	(void)a0;
-	(void)a1;
-	*out = &g_rx_queue;
-	return 0;
+    (void)unused_first;
+    (void)unused_second;
+    *out = &g_rx_queue;
+    return 0;
 }
 
-/* === adhocIfDetachNotify @ 0x0490 === */
-static void adhocIfDetachNotify(void *ifp)
+/* 0x000490 */
+static void __attribute__((noinline))
+adhocIfDetachNotify(AdhocIfnet *ifp)
 {
-	pdpIfDetach(ifp);
-	ptpIfDetach(ifp);
-	ptpIfDetachNoop(ifp);
+    pdpIfOutputWake(ifp);
 }
 
-/* === sceNetAdhoc_7A662D6B @ 0x04ac === */
-s32 sceNetAdhoc_7A662D6B(SceNetAdhocPollSd *sds, s32 count, u32 timeout, s32 nonblock)
+/* 0x0004ac */
+s32 sceNetAdhoc_7A662D6B(SceNetAdhocPollSd *sds, s32 count, u32 timeout, s32 flags)
 {
-	s32 intr;
-	s32 ret;
-	u32 rem_timeout;
-	void **arr;
-	s32 i, j;
-	AdhocSocket *s;
-	AdhocWaiter *w = NULL;
+    s32 err = 0;
+    s32 intr;
+    AdhocWaiter *waiter;
+    AdhocPollEntry *entries;
+    s64 start_time;
+    s32 i;
 
-	rem_timeout = timeout;
-	if (_sceKernelCheckThreadStack() < 0x7b0)
-		return 0x80410005;
-	if (sds == NULL)
-		return 0x80410708;
-	if (count <= 0)
-		return 0x80410710;
+    if (_sceKernelCheckThreadStack() < 1984)
+        return ADHOC_ERR_STACK_SMALL;
+    if (sds == NULL || count < 1 || (flags & ~1) != 0)
+        return ADHOC_ERR_INVALID_ARG;
 
-	if (nonblock == 0) {
-		w = (AdhocWaiter *)sceNet_lib_CA3CF5EB(&ret);
-		if (w == NULL)
-			return ret;
-	}
+    waiter = (AdhocWaiter *)sceNet_lib_CA3CF5EB(&err);
+    if (waiter == NULL)
+        return err;
 
-	intr = sceNet_lib_94B44F26();
-	if (intr < 0) {
-		if (w != NULL)
-			sceNet_lib_757085B0(w, 0);
-		return intr;
-	}
+    intr = sceNet_lib_94B44F26();
+    if (intr < 0) {
+        sceNet_lib_515B2F33(intr);
+        sceNet_lib_757085B0(waiter, 0);
+        return intr;
+    }
 
-	if (g_adhoc_inited == 0) {
-		ret = 0x80410712;
-		goto out;
-	}
-	if (sceWlanDevIsGameMode() != 0) {
-		ret = 0x8041071b;
-		goto out;
-	}
+    if (g_adhoc_inited == 0) {
+        sceNet_lib_515B2F33(intr);
+        sceNet_lib_757085B0(waiter, 0);
+        return ADHOC_ERR_NOT_INITIALIZED;
+    }
 
-	arr = (void **)sceNetIfhandle_lib_15CFE3C0((u32)(count << 3));
-	if (arr == NULL) {
-		ret = 0x80410709;
-		goto out;
-	}
+    entries = (AdhocPollEntry *)sceNetIfhandle_lib_15CFE3C0((u32)(count * 8));
+    start_time = 0;
+    if (entries == NULL) {
+        err = ADHOC_ERR_NO_MEM;
+    } else {
+        for (i = 0; i < count; i++) {
+            AdhocSocket *sock = g_sock_list.head;
+            while (sock != NULL && sock->id != sds[i].id)
+                sock = sock->next;
+            if (sock != NULL) {
+                entries[i].sock = sock;
+                entries[i].sd = &sds[i];
+            } else {
+                err = ADHOC_ERR_INVALID_SOCKET_ID;
+                sds[0].revents = 256;
+            }
+        }
 
-	for (i = 0; i < count; i++) {
-		s = adhocSockFind(0, sds[i].id);
-		if (s == NULL) {
-			ret = 0x80410707;
-			goto free_arr;
-		}
-		for (j = 0; j < i; j++) {
-			if ((AdhocSocket *)arr[j * 2] == s) {
-				ret = 0x80410708;
-				goto free_arr;
-			}
-		}
-		arr[i * 2] = s;
-		arr[i * 2 + 1] = &sds[i];
-	}
+        if (err >= 0) {
+            for (i = 0; i < count; i++) {
+                AdhocSocket *sock = entries[i].sock;
+                if ((sock->flags & 0x40u) != 0) {
+                    err = ADHOC_ERR_EXCEPTION_EVENT;
+                    entries[i].sd->revents = 1024;
+                }
+                if ((sock->flags & 0x8000u) != 0) {
+                    err = ADHOC_ERR_EXCEPTION_EVENT;
+                    entries[i].sd->revents = 2048;
+                }
+            }
+        }
 
-	for (;;) {
-		ret = adhocPollSockets(arr, count);
-		if (ret > 0 || nonblock != 0)
-			break;
+        if (err >= 0) {
+            for (;;) {
+                u32 wait_rem = 0;
+                err = adhocPollSockets(entries, count);
+                if (err != 0 || (flags & 1) != 0)
+                    break;
 
-		for (i = 0; i < count; i++) {
-			s = (AdhocSocket *)arr[i * 2];
-			s32 ev = ((SceNetAdhocPollSd *)arr[i * 2 + 1])->events;
-			if (s->type == 1) {
-				if (ev & 1)
-					s->flags |= 2;
-				if (ev & 2)
-					s->flags |= 1;
-			} else if (s->type == 2) {
-				PtpPcb *ptp = (PtpPcb *)s->pcb;
-				if (ptp != NULL) {
-					if (ptp->mode == 1) {
-						if (ev & 4)
-							ptp->flags |= 4;
-						if (ev & 1)
-							ptp->tx_flags |= 2;
-						if (ev & 2)
-							ptp->rx_flags |= 2;
-					} else if (ptp->mode == 2) {
-						if (ev & 8)
-							ptp->q_flags |= 2;
-					}
-				}
-			}
-		}
+                if (timeout != 0) {
+                    s64 now;
+                    if (start_time == 0)
+                        start_time = sceKernelGetSystemTimeWide();
+                    now = sceKernelGetSystemTimeWide();
+                    if ((u64)(now - start_time) >= (u64)timeout) {
+                        err = ADHOC_ERR_TIMEOUT;
+                        break;
+                    }
+                    wait_rem = timeout - (u32)(now - start_time);
+                }
 
-		s = (AdhocSocket *)arr[0];
-		for (i = 0; i < count; i++) {
-			AdhocSocket *cur = (AdhocSocket *)arr[i * 2];
-			cur->flags &= ~0x80;
-		}
+                for (i = 0; i < count; i++) {
+                    AdhocSocket *sock = entries[i].sock;
+                    waiter->next = sock->wait_list;
+                    sock->wait_list = waiter;
+                }
 
-		ret = sceNet_lib_F6DB0A0B(&g_global_wait_head, &rem_timeout);
+                err = sceNet_lib_F6DB0A0B(&g_global_wait_head, wait_rem);
 
-		for (i = 0; i < count; i++) {
-			s = (AdhocSocket *)arr[i * 2];
-			if (s->type == 1) {
-				s->flags &= ~3;
-			} else if (s->type == 2) {
-				PtpPcb *ptp = (PtpPcb *)s->pcb;
-				if (ptp != NULL) {
-					if (ptp->mode == 1) {
-						ptp->flags &= ~4;
-						ptp->tx_flags &= ~2;
-						ptp->rx_flags &= ~2;
-					} else if (ptp->mode == 2) {
-						ptp->q_flags &= ~2;
-					}
-				}
-			}
-		}
+                for (i = 0; i < count; i++) {
+                    AdhocSocket *sock = entries[i].sock;
+                    adhocUnlinkWaiter(sock, waiter);
+                    if ((sock->flags & 0x40u) != 0) {
+                        entries[i].sd->revents = 1024;
+                        err = 5;
+                    }
+                    if ((sock->flags & 0x8000u) != 0) {
+                        entries[i].sd->revents = 2048;
+                        err = 5;
+                    }
+                    if ((sock->flags & 1u) != 0) {
+                        entries[i].sd->revents = 512;
+                        err = 5;
+                        if (sock->wait_list == NULL) {
+                            if (sock->type == 1)
+                                pdpFreePcb(sock);
+                            else if (sock->type == 2)
+                                ptpFreePcb(sock);
+                            if (sock->pcb == NULL) {
+                                if (sock->next != NULL)
+                                    sock->next->prev = sock->prev;
+                                else
+                                    g_sock_list.tail = sock->prev;
+                                *sock->prev = sock->next;
+                                sceNetIfhandle_lib_76BAD213(sock);
+                            }
+                        }
+                    }
+                }
 
-		for (i = 0; i < count; i++) {
-			s = (AdhocSocket *)arr[i * 2];
-			if (s->flags & 0x80) {
-				s->flags &= ~0x80;
-				ret = 0x8041070c;
-				goto cleanup_socks;
-			}
-		}
+                if (err != 0) {
+                    if (err == 4)
+                        err = ADHOC_ERR_THREAD_ABORTED;
+                    else if (err == 5)
+                        err = ADHOC_ERR_EXCEPTION_EVENT;
+                    else if (err == 11)
+                        err = ADHOC_ERR_TIMEOUT;
+                    else
+                        err = ADHOC_ERR_INTERNAL;
+                    break;
+                }
+            }
+        }
 
-		if (ret < 0) {
-			if ((u32)ret == 0x80410186)
-				ret = 0;
-			else if ((u32)ret == 0x800201a4)
-				ret = 0x80410718;
-			break;
-		}
-	}
+        sceNetIfhandle_lib_76BAD213(entries);
+    }
 
-cleanup_socks:
-	for (i = 0; i < count; i++) {
-		s = (AdhocSocket *)arr[i * 2];
-		adhocSockTryFree(s);
-	}
-
-free_arr:
-	sceNetIfhandle_lib_76BAD213(arr);
-
-out:
-	sceNet_lib_515B2F33(intr);
-	if (w != NULL)
-		sceNet_lib_757085B0(w, 0);
-	return ret;
+    sceNet_lib_515B2F33(intr);
+    sceNet_lib_757085B0(waiter, 0);
+    return err;
 }
 
-/* === adhocPollSockets @ 0x0974 === */
-static s32 adhocPollSockets(void *arr_arg, s32 count)
+/* 0x000974 */
+static s32 __attribute__((noinline))
+adhocPollSockets(AdhocPollEntry *entries, s32 count)
 {
-	void **arr = (void **)arr_arg;
-	s32 ready = 0;
-	s32 i;
+    s32 ready = 0;
+    s32 i;
 
-	for (i = 0; i < count; i++) {
-		AdhocSocket *s = (AdhocSocket *)arr[i * 2];
-		SceNetAdhocPollSd *sd = (SceNetAdhocPollSd *)arr[i * 2 + 1];
-		s32 rev = 0;
-
-		if (s->type == 1) {
-			rev = pdpPollEvents(s, sd->events);
-		} else if (s->type == 2) {
-			rev = ptpPollEvents(s, sd->events);
-		}
-		sd->revents = rev;
-		if (rev != 0)
-			ready++;
-	}
-	return ready;
+    for (i = 0; i < count; i++) {
+        AdhocSocket *sock = entries[i].sock;
+        SceNetAdhocPollSd *sd = entries[i].sd;
+        if (sock->type == 1)
+            sd->revents = pdpPollEvents(sock, sd->events);
+        else if (sock->type == 2)
+            sd->revents = ptpPollEvents(sock, sd->events);
+        if (sd->revents != 0)
+            ready++;
+    }
+    return ready;
 }
 
-/* === sceNetAdhoc_73BFD52D @ 0x0a2c === */
-s32 sceNetAdhoc_73BFD52D(s32 id, s32 flag)
+/* 0x000a2c */
+s32 sceNetAdhoc_73BFD52D(s32 id, s32 alert_mask)
 {
-	s32 intr;
-	s32 ret;
-	AdhocSocket *s;
+    s32 ret = 0;
+    s32 intr;
 
-	if (_sceKernelCheckThreadStack() < 0x7e0)
-		return 0x80410005;
-	if (id <= 0)
-		return 0x80410707;
-	if ((flag & ~0x1f) != 0)
-		return 0x80410708;
+    if (_sceKernelCheckThreadStack() < 2016)
+        return ADHOC_ERR_STACK_SMALL;
 
-	intr = sceNet_lib_94B44F26();
-	if (intr < 0)
-		return intr;
+    intr = sceNet_lib_94B44F26();
+    if (intr < 0)
+        return intr;
 
-	if (g_adhoc_inited == 0) {
-		ret = 0x80410712;
-		goto out;
-	}
-	if (sceWlanDevIsGameMode() != 0) {
-		ret = 0x8041071b;
-		goto out;
-	}
+    if (g_adhoc_inited == 0) {
+        ret = ADHOC_ERR_NOT_INITIALIZED;
+    } else {
+        AdhocSocket *sock = g_sock_list.head;
+        while (sock != NULL && sock->id != id)
+            sock = sock->next;
 
-	if (flag & 0x10) {
-		for (s = g_sock_list.head; s != NULL; s = s->next) {
-			if (s->pcb != NULL) {
-				s->flags = (s->flags & ~0xff) | (u32)(flag & 0xff);
-				if (flag != 0)
-					sceNet_lib_6B294EE4(s, flag);
-			}
-		}
-		ret = 0;
-	} else {
-		s = adhocSockFind(0, id);
-		if (s == NULL) {
-			ret = 0x80410707;
-		} else {
-			s->flags = (s->flags & ~0xff) | (u32)(flag & 0xff);
-			if (flag != 0)
-				sceNet_lib_6B294EE4(s, flag);
-			ret = 0;
-		}
-	}
+        if (sock == NULL) {
+            ret = ADHOC_ERR_INVALID_SOCKET_ID;
+        } else {
+            s32 wake = 0;
+            if ((alert_mask & 0x10) != 0) {
+                if ((sock->flags & 0x10u) == 0) {
+                    sock->flags |= 0x10u;
+                    wake++;
+                }
+            } else {
+                sock->flags &= ~0x10u;
+            }
+            if ((alert_mask & 0x20) != 0) {
+                if ((sock->flags & 0x20u) == 0) {
+                    sock->flags |= 0x20u;
+                    wake++;
+                }
+            } else {
+                sock->flags &= ~0x20u;
+            }
+            if ((alert_mask & 0x40) != 0) {
+                if ((sock->flags & 0x40u) == 0) {
+                    sock->flags |= 0x40u;
+                    wake++;
+                }
+            } else {
+                sock->flags &= ~0x40u;
+            }
+            if ((alert_mask & 0x80) != 0) {
+                if ((sock->flags & 0x80u) == 0) {
+                    sock->flags |= 0x80u;
+                    wake++;
+                }
+            } else {
+                sock->flags &= ~0x80u;
+            }
+            if ((alert_mask & 0x100) != 0) {
+                if ((sock->flags & 0x100u) == 0) {
+                    sock->flags |= 0x100u;
+                    wake++;
+                }
+            } else {
+                sock->flags &= ~0x100u;
+            }
+            if ((alert_mask & 0x200) != 0) {
+                if ((sock->flags & 0x200u) == 0) {
+                    sock->flags |= 0x200u;
+                    wake++;
+                }
+            } else {
+                sock->flags &= ~0x200u;
+            }
+            if (wake != 0)
+                sceNet_lib_6B294EE4(sock, alert_mask);
+        }
+    }
 
-out:
-	sceNet_lib_515B2F33(intr);
-	return ret;
+    sceNet_lib_515B2F33(intr);
+    return ret;
 }
 
-/* === sceNetAdhoc_4D2CE199 @ 0x0c58 === */
-s32 sceNetAdhoc_4D2CE199(s32 id, s32 *flag)
+/* 0x000c58 */
+s32 sceNetAdhoc_4D2CE199(s32 id, s32 *out_alert)
 {
-	s32 intr;
-	s32 ret;
-	AdhocSocket *s;
+    s32 ret = 0;
+    s32 intr;
 
-	if (_sceKernelCheckThreadStack() < 0x7e0)
-		return 0x80410005;
-	if (id <= 0)
-		return 0x80410707;
-	if (flag == NULL)
-		return 0x80410708;
+    if (_sceKernelCheckThreadStack() < 2032)
+        return ADHOC_ERR_STACK_SMALL;
+    if (out_alert == NULL)
+        return ADHOC_ERR_INVALID_ARG;
 
-	intr = sceNet_lib_94B44F26();
-	if (intr < 0)
-		return intr;
+    intr = sceNet_lib_94B44F26();
+    if (intr < 0)
+        return intr;
 
-	if (g_adhoc_inited == 0) {
-		ret = 0x80410712;
-	} else if (sceWlanDevIsGameMode() != 0) {
-		ret = 0x8041071b;
-	} else {
-		s = adhocSockFind(0, id);
-		if (s == NULL) {
-			ret = 0x80410707;
-		} else {
-			*flag = (s32)(s->flags & 0xff);
-			ret = 0;
-		}
-	}
+    if (g_adhoc_inited == 0) {
+        ret = ADHOC_ERR_NOT_INITIALIZED;
+    } else {
+        AdhocSocket *sock = g_sock_list.head;
+        while (sock != NULL && sock->id != id)
+            sock = sock->next;
 
-	sceNet_lib_515B2F33(intr);
-	return ret;
+        if (sock == NULL) {
+            ret = ADHOC_ERR_INVALID_SOCKET_ID;
+        } else {
+            *out_alert = 0;
+            if ((sock->flags & 0x10u) != 0)
+                *out_alert = 0x10;
+            if ((sock->flags & 0x20u) != 0)
+                *out_alert |= 0x20;
+            if ((sock->flags & 0x40u) != 0)
+                *out_alert |= 0x40;
+            if ((sock->flags & 0x80u) != 0)
+                *out_alert |= 0x80;
+            if ((sock->flags & 0x100u) != 0)
+                *out_alert |= 0x100;
+            if ((sock->flags & 0x200u) != 0)
+                *out_alert |= 0x200;
+        }
+    }
+
+    sceNet_lib_515B2F33(intr);
+    return ret;
 }
 
-/* === adhocSockInit @ 0x0dd0 === */
-static void adhocSockInit(void)
+/* 0x000dd0 */
+static s32 __attribute__((noinline))
+adhocSockInit(void)
 {
-	g_sock_list.head = NULL;
-	g_sock_list.tail = &g_sock_list.head;
-	sceNet_lib_2E005032(adhocSockWakeWaiters);
-	g_last_sock_id = 0;
+    s32 ret;
+
+    g_sock_list.head = NULL;
+    g_sock_list.tail = &g_sock_list.head;
+    ret = sceNet_lib_2E005032(adhocSockWakeWaiters);
+    if (ret >= 0) {
+        g_last_sock_id = 0;
+        return 0;
+    }
+    return ret;
 }
 
-/* === adhocSockTerm @ 0x0e18 === */
-static void adhocSockTerm(void)
+/* 0x000e18 */
+static void __attribute__((noinline))
+adhocSockTerm(void)
 {
-	AdhocSocket *s;
-	AdhocSocket *next;
+    AdhocSocket *sock;
 
-	sceNet_lib_33B230BD();
-	for (s = g_sock_list.head; s != NULL; s = next) {
-		next = s->next;
-		if (s->pcb == NULL) {
-			if (s->next != NULL)
-				s->next->prev = s->prev;
-			else
-				g_sock_list.tail = s->prev;
-			*s->prev = s->next;
-			sceNetIfhandle_lib_76BAD213(s);
-		}
-	}
+    sceNet_lib_33B230BD();
+    sock = g_sock_list.head;
+    while (sock != NULL) {
+        if (sock->pcb != NULL) {
+            sock = g_sock_list.head;
+        } else {
+            if (sock->next != NULL)
+                sock->next->prev = sock->prev;
+            else
+                g_sock_list.tail = sock->prev;
+            *sock->prev = sock->next;
+            sceNetIfhandle_lib_76BAD213(sock);
+            sock = g_sock_list.head;
+        }
+    }
 }
 
-/* === adhocSockFind @ 0x0e90 === */
-AdhocSocket *adhocSockFind(s32 type, s32 id)
+/* 0x000e90 */
+AdhocSocket *__attribute__((noinline))
+adhocSockFind(u8 type, s32 id)
 {
-	AdhocSocket *s;
+    AdhocSocket *sock = g_sock_list.head;
 
-	for (s = g_sock_list.head; s != NULL; s = s->next) {
-		if (s->id == id) {
-			if (type == 0 || s->type == type)
-				return s;
-		}
-	}
-	return NULL;
+    while (sock != NULL) {
+        if (type == 0 || sock->type == type) {
+            if (sock->id == id)
+                return sock;
+        }
+        sock = sock->next;
+    }
+    return NULL;
 }
 
-/* === adhocSockAllocId @ 0x0ed8 === */
-s32 adhocSockAllocId(void)
+/* 0x000ed8 */
+s32 __attribute__((noinline))
+adhocSockAllocId(void)
 {
-	s32 cand = g_last_sock_id + 1;
-	s32 count = 0;
+    s32 cand = (g_last_sock_id == 255) ? 1 : (g_last_sock_id + 1);
 
-	if (cand >= 0xff)
-		cand = 1;
-
-	while (count < 0xfe) {
-		if (adhocSockFind(0, cand) == NULL) {
-			g_last_sock_id = cand;
-			return cand;
-		}
-		cand++;
-		if (cand >= 0xff)
-			cand = 1;
-		count++;
-	}
-	return -1;
+    while (cand != g_last_sock_id) {
+        AdhocSocket *sock = g_sock_list.head;
+        while (sock != NULL && sock->id != cand)
+            sock = sock->next;
+        if (sock == NULL) {
+            g_last_sock_id = cand;
+            return cand;
+        }
+        cand = (cand == 255) ? 1 : (cand + 1);
+    }
+    return -1;
 }
 
-/* === adhocSockCreate @ 0x0f60 === */
-s32 adhocSockCreate(s32 type, AdhocSocket **out_sock)
+/* 0x000f60 */
+s32 __attribute__((noinline))
+adhocSockCreate(u8 type, AdhocSocket **out_sock)
 {
-	AdhocSocket *s;
+    AdhocSocket *sock = (AdhocSocket *)sceNetIfhandle_lib_15CFE3C0(sizeof(AdhocSocket));
+    AdhocSocket **old_tail;
 
-	s = (AdhocSocket *)sceNetIfhandle_lib_15CFE3C0(0x28);
-	if (s == NULL)
-		return 0x80410709;
-	sceKernelMemset(s, 0, 0x28);
-	s->id = -1;
-	s->type = type;
-	s->next = NULL;
-	s->prev = g_sock_list.tail;
-	*g_sock_list.tail = s;
-	g_sock_list.tail = &s->next;
-	*out_sock = s;
-	return 0;
+    if (sock == NULL)
+        return ADHOC_ERR_NO_MEM;
+
+    sceKernelMemset(sock, 0, sizeof(AdhocSocket));
+    sock->type = type;
+    sock->next = NULL;
+    sock->prev = g_sock_list.tail;
+    old_tail = g_sock_list.tail;
+    g_sock_list.tail = &sock->next;
+    *old_tail = sock;
+    *out_sock = sock;
+    (*out_sock)->id = -1;
+    return 0;
 }
 
-/* === adhocSockTryFree @ 0x0ffc === */
-void adhocSockTryFree(AdhocSocket *sock)
+/* 0x000ffc */
+void __attribute__((noinline))
+adhocSockTryFree(AdhocSocket *sock)
 {
-	if (sock->pcb == NULL && sock->wait_list == NULL) {
-		if (sock->next != NULL)
-			sock->next->prev = sock->prev;
-		else
-			g_sock_list.tail = sock->prev;
-		*sock->prev = sock->next;
-		sceNetIfhandle_lib_76BAD213(sock);
-	}
+    if (sock->pcb == NULL) {
+        if (sock->next != NULL)
+            sock->next->prev = sock->prev;
+        else
+            g_sock_list.tail = sock->prev;
+        *sock->prev = sock->next;
+        sceNetIfhandle_lib_76BAD213(sock);
+    }
 }
 
-/* === adhocSockHasActive @ 0x1044 === */
-static s32 adhocSockHasActive(void)
+/* 0x001044 */
+static s32 __attribute__((noinline))
+adhocSockHasActive(void)
 {
-	AdhocSocket *s;
-
-	for (s = g_sock_list.head; s != NULL; s = s->next) {
-		if (s->wait_list != NULL)
-			return 1;
-	}
-	return 0;
+    AdhocSocket *sock = g_sock_list.head;
+    while (sock != NULL) {
+        if (sock->wait_list != NULL)
+            return 1;
+        sock = sock->next;
+    }
+    return 0;
 }
 
-/* === adhocSockWakeWaiters @ 0x1078 === */
-static void adhocSockWakeWaiters(AdhocSocket *sock, s32 flags)
+/* 0x001078 */
+static void __attribute__((noinline))
+adhocSockWakeWaiters(AdhocSocket *sock, s16 alert_flags)
 {
-	AdhocWaiter *w;
-	u32 chan;
+    AdhocWaiter *waiter = sock->wait_list;
+    s32 mask_poll = alert_flags & 0x40;
+    s32 mask_tx = alert_flags & 0x210;
+    s32 mask_rx = alert_flags & 0x1A0;
 
-	if (sock->wait_list == NULL)
-		return;
-
-	for (w = sock->wait_list; w != NULL; w = w->next) {
-		chan = w->wait_chan;
-		if (((flags & 1) && chan == sock->chan_rd) ||
-		    ((flags & 2) && chan == sock->chan_wr) ||
-		    ((flags & 4) && chan == sock->chan_ex) ||
-		    ((flags & 8) && chan == (u32)&g_global_wait_head)) {
-			if (chan == (u32)&g_global_wait_head)
-				sock->flags |= 0x80;
-			sceKernelSignalSema(w->sema_id, 1);
-		}
-	}
+    while (waiter != NULL) {
+        void *chan = waiter->wait_chan;
+        if (chan != NULL) {
+            if ((mask_tx != 0 && chan == sock->chan_tx) ||
+                (mask_rx != 0 && chan == sock->chan_rx) ||
+                (mask_poll != 0 && chan == sock->chan_poll)) {
+                waiter->wait_chan = NULL;
+                sceKernelSignalSema(waiter->sema_id, 1);
+            }
+        }
+        waiter = waiter->next;
+    }
 }
-

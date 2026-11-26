@@ -1,1027 +1,1003 @@
 #include "adhoc_int.h"
 
 static struct {
-	PdpPcb *head;
-	PdpPcb **tail;
+    PdpPcb *head;
+    PdpPcb **tail;
 } g_pdp_list;
+
 static u16 g_pdp_anon_port;
-static u32 g_pdp_stats[6];
 static u16 g_pdp_seq;
 
-static s32 pdpSendInternal(PdpPcb *pdp, const u8 *dst_mac, u16 dport, const void *data, s32 len, u32 timeout, s32 flags);
-static s32 pdpRecvInternal(PdpPcb *pdp, u8 *src_mac, u16 *sport, void *data, s32 *data_len, u32 timeout, s32 flags);
-static s32 pdpRecvById(s32 id, u8 *src_mac, u16 *sport, void *buf, s32 *len, u32 timeout, s32 flags);
-static void pdpFlushQueues(PdpPcb *pdp);
-static s32 pdpAllocPcb(PdpPcb **out_pdp);
-static s32 pdpBindPcb(PdpPcb *pdp, const u8 *mac, u16 port, u32 bufsize);
-static void pdpFreePcb(PdpPcb *pdp);
-static u16 pdpAllocAnonPort(void);
+static struct {
+    u32 rx_ok;
+    u32 rx_drop_full;
+    u32 rx_frags;
+    u32 rx_frag_err;
+    u32 rx_no_port;
+    u32 rx_frag_timeout;
+} g_pdp_stats;
 
-/* === sceNetAdhocPdpCreate @ 0x1130 === */
+static s32 pdpSendInternal(AdhocSocket *sock, const u8 *dst_mac, u16 dport, const void *buf, s32 len, u32 timeout, s32 flags);
+static s32 pdpRecvInternal(AdhocSocket *sock, u8 *src_mac, u16 *sport, void *buf, s32 *len, u32 timeout, s32 flags, PdpRecvExtra *extra);
+static s32 pdpRecvById(s32 id, u8 *src_mac, u16 *sport, void *buf, s32 *len, u32 timeout, s32 flags, PdpRecvExtra *extra);
+static void pdpFlushQueues(PdpPcb *pdp);
+static s32 pdpAllocPcb(AdhocSocket *sock);
+static s32 pdpBindPcb(PdpPcb *pdp, const u8 *mac, u16 port);
+static s32 pdpSetBufSize(PdpPcb *pdp, u32 bufsize);
+static s32 pdpFragTimeout(PdpFragEntry *frag);
+
+static inline void pdpUnlinkWaiter(AdhocSocket *sock, AdhocWaiter *waiter)
+{
+    AdhocWaiter *cur = sock->wait_list;
+    if (cur == waiter) {
+        sock->wait_list = waiter->next;
+    } else {
+        while (cur->next != waiter)
+            cur = cur->next;
+        cur->next = waiter->next;
+    }
+}
+
+/* 0x001130 */
 s32 sceNetAdhocPdpCreate(const u8 *mac, u16 port, u32 bufsize, s32 flags)
 {
-	s32 intr;
-	s32 ret;
-	AdhocSocket *sock;
-	PdpPcb *pdp;
-	s32 id;
-	u32 delay;
+    u32 delay;
+    s32 intr;
+    s32 ret;
+    s32 id;
+    AdhocSocket *sock = NULL;
 
-	if (_sceKernelCheckThreadStack() < 0x7e0)
-		return 0x80410005;
-	if (mac == NULL)
-		return 0x80410701;
-	if (bufsize == 0)
-		return 0x80410705;
-	if (flags != 0)
-		return 0x80410708;
+    if (_sceKernelCheckThreadStack() < 2000)
+        return ADHOC_ERR_STACK_SMALL;
+    if (mac == NULL || flags != 0)
+        return ADHOC_ERR_INVALID_ARG;
 
-	delay = sceNetIfhandle_lib_07505747(3);
-	if (delay != 0)
-		sceKernelDelayThread(delay);
+    delay = sceNetIfhandle_lib_07505747(3);
+    if (delay != 0)
+        sceKernelDelayThread(delay);
 
-	intr = sceNet_lib_94B44F26();
-	if (intr < 0)
-		return intr;
+    intr = sceNet_lib_94B44F26();
+    if (intr < 0)
+        return intr;
 
-	if (g_adhoc_inited == 0) {
-		ret = 0x80410712;
-		goto out;
-	}
-	if (sceWlanDevIsGameMode() != 0) {
-		ret = 0x8041071b;
-		goto out;
-	}
+    ret = ADHOC_ERR_NOT_INITIALIZED;
+    if (g_adhoc_inited != 0) {
+        id = adhocSockAllocId();
+        ret = ADHOC_ERR_SOCKET_ID_NOT_AVAIL;
+        if (id >= 0) {
+            ret = adhocSockCreate(1, &sock);
+            if (ret >= 0) {
+                ret = pdpAllocPcb(sock);
+                if (ret >= 0) {
+                    ret = pdpSetBufSize((PdpPcb *)sock->pcb, bufsize);
+                    if (ret >= 0) {
+                        ret = pdpBindPcb((PdpPcb *)sock->pcb, mac, port);
+                        if (ret >= 0) {
+                            sock->id = id;
+                            sceNet_lib_515B2F33(intr);
+                            return id;
+                        }
+                        pdpFlushQueues((PdpPcb *)sock->pcb);
+                    }
+                    pdpFreePcb(sock);
+                }
+                adhocSockTryFree(sock);
+            }
+        }
+    }
 
-	ret = adhocSockCreate(1, &sock);
-	if (ret < 0)
-		goto out;
-
-	ret = pdpAllocPcb(&pdp);
-	if (ret < 0) {
-		adhocSockTryFree(sock);
-		goto out;
-	}
-
-	ret = pdpBindPcb(pdp, mac, port, bufsize);
-	if (ret < 0) {
-		pdpFreePcb(pdp);
-		adhocSockTryFree(sock);
-		goto out;
-	}
-
-	id = adhocSockAllocId();
-	if (id < 0) {
-		pdpFreePcb(pdp);
-		adhocSockTryFree(sock);
-		ret = 0x8041070b;
-		goto out;
-	}
-
-	sock->id = id;
-	sock->pcb = pdp;
-	sock->chan_rd = (u32)&pdp->rx_head;
-	sock->chan_wr = (u32)&pdp->state_flags;
-	sock->chan_ex = 0;
-	pdp->sock = sock;
-	ret = id;
-
-out:
-	sceNet_lib_515B2F33(intr);
-	return ret;
+    sceNet_lib_515B2F33(intr);
+    return ret;
 }
 
-/* === sceNetAdhocPdpSend @ 0x12ac === */
-s32 sceNetAdhocPdpSend(s32 id, const u8 *dst_mac, u16 dport, const void *data, s32 len, u32 timeout, s32 nonblock)
+/* 0x0012ac */
+s32 sceNetAdhocPdpSend(s32 id, const u8 *dst_mac, u16 dport, const void *buf, s32 len, u32 timeout, s32 flags)
 {
-	s32 intr;
-	s32 ret;
-	AdhocSocket *sock;
-	AdhocWaiter *w = NULL;
+    s32 err = 0;
+    AdhocWaiter *waiter;
+    s32 intr;
 
-	if (_sceKernelCheckThreadStack() < 0x7c0)
-		return 0x80410005;
-	if (id <= 0)
-		return 0x80410707;
-	if (dst_mac == NULL)
-		return 0x80410701;
-	if (dport == 0)
-		return 0x80410702;
-	if (len < 0 || len > 0xffff)
-		return 0x80410705;
-	if (len > 0 && data == NULL)
-		return 0x80410706;
-	if ((nonblock & ~1) != 0)
-		return 0x80410708;
+    if (_sceKernelCheckThreadStack() < 1984)
+        return ADHOC_ERR_STACK_SMALL;
+    if (dst_mac == NULL || (flags & ~1) != 0)
+        return ADHOC_ERR_INVALID_ARG;
 
-	if (nonblock == 0) {
-		w = (AdhocWaiter *)sceNet_lib_CA3CF5EB(&ret);
-		if (w == NULL)
-			return ret;
-	}
+    waiter = (AdhocWaiter *)sceNet_lib_CA3CF5EB(&err);
+    if (waiter == NULL)
+        return err;
 
-	intr = sceNet_lib_94B44F26();
-	if (intr < 0) {
-		if (w != NULL)
-			sceNet_lib_757085B0(w, 0);
-		return intr;
-	}
+    intr = sceNet_lib_94B44F26();
+    if (intr < 0) {
+        err = intr;
+    } else if (g_adhoc_inited == 0) {
+        err = ADHOC_ERR_NOT_INITIALIZED;
+    } else {
+        AdhocSocket *sock = adhocSockFind(1, id);
+        if (sock == NULL) {
+            err = ADHOC_ERR_INVALID_SOCKET_ID;
+        } else {
+            waiter->next = sock->wait_list;
+            sock->wait_list = waiter;
+            err = pdpSendInternal(sock, dst_mac, dport, buf, len, timeout, flags);
+            pdpUnlinkWaiter(sock, waiter);
+            if ((sock->flags & 1u) != 0) {
+                if (sock->wait_list == NULL) {
+                    pdpFreePcb(sock);
+                    adhocSockTryFree(sock);
+                }
+                err = ADHOC_ERR_SOCKET_DELETED;
+            }
+        }
+    }
 
-	if (g_adhoc_inited == 0) {
-		ret = 0x80410712;
-		goto out;
-	}
-	if (sceWlanDevIsGameMode() != 0) {
-		ret = 0x8041071b;
-		goto out;
-	}
-
-	sock = adhocSockFind(1, id);
-	if (sock == NULL || sock->pcb == NULL) {
-		ret = 0x80410707;
-		goto out;
-	}
-
-	ret = pdpSendInternal((PdpPcb *)sock->pcb, dst_mac, dport, data, len, timeout, nonblock);
-	adhocSockTryFree(sock);
-
-out:
-	sceNet_lib_515B2F33(intr);
-	if (w != NULL)
-		sceNet_lib_757085B0(w, 0);
-	return ret;
+    sceNet_lib_515B2F33(intr);
+    sceNet_lib_757085B0(waiter, 0);
+    return err;
 }
 
-/* === sceNetAdhocPdpDelete @ 0x1470 === */
+/* 0x001470 */
 s32 sceNetAdhocPdpDelete(s32 id, s32 flags)
 {
-	s32 intr;
-	s32 ret;
-	AdhocSocket *sock;
-	PdpPcb *pdp;
+    s32 ret = 0;
+    s32 intr;
 
-	if (_sceKernelCheckThreadStack() < 0x7e0)
-		return 0x80410005;
-	if (id <= 0)
-		return 0x80410707;
-	if (flags != 0)
-		return 0x80410708;
+    if (_sceKernelCheckThreadStack() < 2016)
+        return ADHOC_ERR_STACK_SMALL;
+    if (flags != 0)
+        return ADHOC_ERR_INVALID_ARG;
 
-	intr = sceNet_lib_94B44F26();
-	if (intr < 0)
-		return intr;
+    intr = sceNet_lib_94B44F26();
+    if (intr < 0)
+        return intr;
 
-	if (g_adhoc_inited == 0) {
-		ret = 0x80410712;
-		goto out;
-	}
-	if (sceWlanDevIsGameMode() != 0) {
-		ret = 0x8041071b;
-		goto out;
-	}
+    if (g_adhoc_inited == 0) {
+        ret = ADHOC_ERR_NOT_INITIALIZED;
+    } else {
+        AdhocSocket *sock = adhocSockFind(1, id);
+        if (sock == NULL) {
+            ret = ADHOC_ERR_INVALID_SOCKET_ID;
+        } else {
+            PdpPcb *pdp = (PdpPcb *)sock->pcb;
+            AdhocIfnet *ifp;
 
-	sock = adhocSockFind(1, id);
-	if (sock == NULL || sock->pcb == NULL) {
-		ret = 0x80410707;
-		goto out;
-	}
+            if ((pdp->rx_wait_flags & 1u) != 0) {
+                pdp->rx_wait_flags &= ~1u;
+                sceNet_lib_7574FDA1(&pdp->rx_head);
+            }
+            if ((pdp->rx_wait_flags & 2u) != 0) {
+                pdp->rx_wait_flags &= ~2u;
+                sceNet_lib_7574FDA1(&g_global_wait_head);
+            }
 
-	pdp = (PdpPcb *)sock->pcb;
-	sock->pcb = NULL;
-	pdp->sock = NULL;
-	pdpFreePcb(pdp);
+            ifp = (AdhocIfnet *)sceNet_lib_D60225A3(pdp->mac);
+            if (ifp != NULL) {
+                if ((ifp->snd_wait_flags & 1u) != 0) {
+                    ifp->snd_wait_flags &= ~1u;
+                    sceNet_lib_7574FDA1(&ifp->snd_head);
+                }
+                if ((ifp->snd_wait_flags & 2u) != 0) {
+                    ifp->snd_wait_flags &= ~2u;
+                    sceNet_lib_7574FDA1(&g_global_wait_head);
+                }
+            } else {
+                sceNet_lib_7574FDA1(sock->chan_tx);
+                sceNet_lib_7574FDA1(&g_global_wait_head);
+            }
 
-	if (sock->wait_list != NULL) {
-		if (sock->flags & 1)
-			sceNet_lib_7574FDA1((void *)sock->chan_rd);
-		if (sock->flags & 2)
-			sceNet_lib_7574FDA1((void *)sock->chan_wr);
-		sceNet_lib_7574FDA1(&g_global_wait_head);
-	}
-	adhocSockTryFree(sock);
-	ret = 0;
+            pdpFlushQueues(pdp);
+            sock->flags |= 1u;
+            sock->id = -1;
+            if (sock->wait_list == NULL) {
+                pdpFreePcb(sock);
+                adhocSockTryFree(sock);
+            }
+        }
+    }
 
-out:
-	sceNet_lib_515B2F33(intr);
-	return ret;
+    sceNet_lib_515B2F33(intr);
+    return ret;
 }
 
-/* === pdpSendInternal @ 0x1620 === */
-static s32 pdpSendInternal(PdpPcb *pdp, const u8 *dst_mac, u16 dport, const void *data, s32 len, u32 timeout, s32 flags)
+/* 0x001620 */
+static s32 __attribute__((noinline))
+pdpSendInternal(AdhocSocket *sock, const u8 *dst_mac, u16 dport, const void *buf, s32 len, u32 timeout, s32 flags)
 {
-	u32 rem_timeout = timeout;
-	AdhocIfnet *ifp;
-	s32 frag_cnt;
-	u16 seq;
-	s32 cur_off;
-	s32 rem_len;
-	s32 ret;
+    PdpPcb *pdp = (PdpPcb *)sock->pcb;
+    const u8 *src_bytes = (const u8 *)buf;
+    s32 is_bcast = 0;
+    u16 seq;
+    u16 be_dport;
+    u16 be_seq;
+    s32 is_empty;
+    u32 offset = 0;
+    s32 rem;
+    AdhocMbuf *chain_head = NULL;
+    AdhocMbuf **chain_tail = NULL;
+    s32 ret = 0;
 
-	if ((dst_mac[0] & 1) && sceNet_lib_E0A81C7C(dst_mac, g_bcast_mac, 6) != 0)
-		return 0x80410701;
+    if (sceNet_lib_E0A81C7C(dst_mac, g_zero_mac, 6) == 0)
+        return ADHOC_ERR_INVALID_ADDR;
 
-	ifp = (AdhocIfnet *)sceNet_lib_D60225A3();
-	if (ifp == NULL)
-		return 0x80410715;
+    if ((dst_mac[0] & 1u) != 0) {
+        is_bcast = 1;
+        if (sceNet_lib_E0A81C7C(dst_mac, g_bcast_mac, 6) != 0)
+            return ADHOC_ERR_INVALID_ADDR;
+    }
 
-	frag_cnt = (len + 0x54f) / 0x550;
-	if (frag_cnt == 0)
-		frag_cnt = 1;
+    if (dport == 0 || dport == 0xFFFF)
+        return ADHOC_ERR_INVALID_PORT;
+    if ((u32)len > 0xFFF3u || (len != 0 && buf == NULL))
+        return ADHOC_ERR_INVALID_BUFLEN;
 
-	if (frag_cnt > ifp->snd_maxlen)
-		return 0x80410705;
+    seq = g_pdp_seq++;
+    be_dport = adhocSwap16(dport);
+    be_seq = adhocSwap16(seq);
+    is_empty = (len == 0);
+    rem = len;
 
-	while (ifp->snd_maxlen - ifp->snd_len < frag_cnt) {
-		if (flags & 1)
-			return 0x80410709;
-		pdp->state_flags |= 1;
-		ret = sceNet_lib_F6DB0A0B(&pdp->state_flags, &rem_timeout);
-		if (pdp->sock == NULL)
-			return 0x8041070c;
-		if (ret < 0) {
-			if ((u32)ret == 0x80410186)
-				return 0x80410715;
-			if ((u32)ret == 0x800201a4)
-				return 0x80410718;
-			return ret;
-		}
-		ifp = (AdhocIfnet *)sceNet_lib_D60225A3();
-		if (ifp == NULL)
-			return 0x80410715;
-	}
+    for (;;) {
+        s32 chunk = (rem < 1444) ? rem : 1444;
+        s32 pad_len = (chunk + 12) % 16;
+        AdhocMbuf *mbuf;
+        u8 *hdr;
+        u16 be_word;
+        u16 next_off;
 
-	seq = g_pdp_seq++;
-	cur_off = 0;
-	rem_len = len;
+        mbuf = (AdhocMbuf *)sceNetIfhandle_lib_15CFE3C0(sizeof(AdhocMbuf));
+        if (mbuf == NULL) {
+            ret = ADHOC_ERR_NO_MEM;
+            break;
+        }
+        mbuf->m_type = 1;
+        mbuf->m_data = mbuf->payload.inline_buf;
+        mbuf->m_flags = 2;
+        mbuf->m_next = NULL;
+        mbuf->m_nextpkt = NULL;
+        mbuf->m_pkthdr_aux = 0;
 
-	do {
-		s32 chunk = rem_len;
-		u16 off_field;
-		s32 tot_body;
-		s32 pad_len;
-		s32 alloc_len;
-		AdhocMbuf *m;
-		u8 *hdr;
-		u16 tmp16;
+        if (pad_len > 0)
+            pad_len = 16 - pad_len;
 
-		if (chunk > 0x550) {
-			chunk = 0x550;
-			off_field = (u16)(cur_off | 0x8000);
-		} else {
-			off_field = (u16)cur_off;
-		}
+        if (chunk + pad_len + 60 >= 209) {
+            void *ext = sceNetIfhandle_lib_15CFE3C0(2048);
+            if (ext == NULL)
+                ext = sceNetIfhandle_lib_15CFE3C0(2048);
+            mbuf->payload.ext.ext_buf = ext;
+            if (ext != NULL) {
+                mbuf->m_data = (u8 *)ext;
+                mbuf->m_flags |= 9u;
+                mbuf->payload.ext.ext_size = 2048;
+                mbuf->payload.ext.ext_free_fn = 0;
+                mbuf->payload.ext.ext_arg = 0;
+                mbuf->payload.ext.ext_prevref = mbuf;
+                mbuf->payload.ext.ext_nextref = mbuf;
+            }
+            if ((mbuf->m_flags & 1u) == 0) {
+                sceNetIfhandle_lib_F8825DC4(mbuf);
+                ret = ADHOC_ERR_NO_MEM;
+                break;
+            }
+        }
 
-		tot_body = chunk + 8;
-		pad_len = tot_body & 0x0f;
-		if (pad_len > 0)
-			pad_len = 0x10 - pad_len;
-		alloc_len = chunk + pad_len;
+        hdr = mbuf->m_data;
+        sceKernelMemcpy(hdr, dst_mac, 6);
+        sceKernelMemcpy(hdr + 6, pdp->mac, 6);
+        sceKernelMemcpy(hdr + 12, &g_adhoc_ethertype, 2);
+        sceKernelMemcpy(hdr + 14, &g_adhoc_hdr_ver, 2);
 
-		m = (AdhocMbuf *)sceNetIfhandle_lib_15CFE3C0(0x100);
-		if (m == NULL) {
-			g_pdp_stats[5]++;
-			return 0x80410709;
-		}
-		m->m_next = NULL;
-		m->m_nextpkt = NULL;
-		m->m_data = (u8 *)m + 0x30;
-		m->m_type = 1;
-		m->m_flags = 2;
-		m->m_pkthdr_Aux = 0;
+        hdr = mbuf->m_data;
+        next_off = (u16)(offset + (u32)chunk);
+        hdr[48] = 1;
+        hdr[49] = (next_off != (u16)len) ? 1 : 0;
+        be_word = adhocSwap16((u16)(chunk + 12));
+        sceKernelMemcpy(hdr + 50, &be_word, 2);
+        be_word = adhocSwap16(pdp->port);
+        sceKernelMemcpy(hdr + 52, &be_word, 2);
+        sceKernelMemcpy(hdr + 54, &be_dport, 2);
+        sceKernelMemcpy(hdr + 56, &be_seq, 2);
+        be_word = adhocSwap16((u16)offset);
+        sceKernelMemcpy(hdr + 58, &be_word, 2);
 
-		if (alloc_len + 0x38 >= 0xd1) {
-			void *ext = sceNetIfhandle_lib_15CFE3C0(0x800);
-			if (ext == NULL)
-				ext = sceNetIfhandle_lib_15CFE3C0(0x800);
-			*(void **)((u8 *)m + 0x30) = ext;
-			if (ext != NULL) {
-				m->m_data = (u8 *)ext;
-				m->m_flags |= 9;
-				*(u32 *)((u8 *)m + 0x3c) = 0x800;
-				*(u32 *)((u8 *)m + 0x34) = 0;
-				*(u32 *)((u8 *)m + 0x38) = 0;
-				*(AdhocMbuf **)((u8 *)m + 0x48) = m;
-				*(AdhocMbuf **)((u8 *)m + 0x44) = m;
-			}
-			if (!(m->m_flags & 1)) {
-				sceNetIfhandle_lib_F8825DC4(m);
-				g_pdp_stats[5]++;
-				return 0x80410709;
-			}
-		}
+        if (chunk > 0)
+            sceKernelMemcpy(mbuf->m_data + 60, src_bytes + offset, (u32)chunk);
+        if (pad_len > 0)
+            sceKernelMemset(mbuf->m_data + 60 + chunk, 0, (u32)pad_len);
 
-		hdr = m->m_data;
-		sceKernelMemcpy(hdr, dst_mac, 6);
-		sceKernelMemcpy(hdr + 6, pdp->mac, 6);
-		sceKernelMemcpy(hdr + 0x0c, &g_adhoc_ethertype, 2);
-		sceKernelMemcpy(hdr + 0x0e, &g_adhoc_hdr_ver, 2);
+        mbuf->m_len = chunk + pad_len + 60;
+        if (is_bcast != 0)
+            mbuf->m_flags |= 0x100u;
+        mbuf->m_rcvif = NULL;
+        mbuf->m_pkthdr_len = mbuf->m_len;
 
-		hdr = m->m_data;
-		hdr[0x30] = 1;
-		hdr[0x31] = 0;
-		tmp16 = bswap16((u16)tot_body);
-		sceKernelMemcpy(hdr + 0x32, &tmp16, 2);
-		tmp16 = bswap16(pdp->port);
-		sceKernelMemcpy(hdr + 0x34, &tmp16, 2);
-		tmp16 = bswap16(dport);
-		sceKernelMemcpy(hdr + 0x36, &tmp16, 2);
-		tmp16 = bswap16(seq);
-		sceKernelMemcpy(hdr + 0x38, &tmp16, 2);
-		tmp16 = bswap16(off_field);
-		sceKernelMemcpy(hdr + 0x3a, &tmp16, 2);
+        if (chain_head != NULL) {
+            *chain_tail = mbuf;
+            chain_tail = &mbuf->m_nextpkt;
+        } else {
+            chain_head = mbuf;
+            chain_tail = &mbuf->m_nextpkt;
+        }
 
-		if (chunk > 0)
-			sceKernelMemcpy(m->m_data + 0x3c, (const u8 *)data + cur_off, (u32)chunk);
-		if (pad_len > 0)
-			sceKernelMemset(m->m_data + 0x3c + chunk, 0, (u32)pad_len);
+        offset = next_off;
+        rem = len - (s32)next_off;
+        if ((s32)next_off >= len && (!is_empty || chain_head != NULL)) {
+            s64 start_time = 0;
+            for (;;) {
+                AdhocIfnet *ifp;
+                u32 wait_rem = 0;
+                s32 wait_err;
 
-		ret = sceNetAdhocAuth_lib_AAB06250(m->m_data + 0x10, (u32)(alloc_len + 0x2c));
-		if (ret < 0) {
-			sceNetIfhandle_lib_F8825DC4(m);
-			return ret;
-		}
+                if ((sock->flags & 0x10u) != 0) {
+                    ret = ADHOC_ERR_SOCKET_ALERTED;
+                    break;
+                }
+                ifp = (AdhocIfnet *)sceNet_lib_D60225A3(pdp->mac);
+                if (ifp == NULL) {
+                    ret = 0;
+                    break;
+                }
+                if (ifp->snd_len < ifp->snd_maxlen) {
+                    AdhocMbuf *pkt = chain_head;
+                    chain_head = pkt->m_nextpkt;
+                    pkt->m_nextpkt = NULL;
+                    ifp->if_obytes += (u64)(s64)pkt->m_pkthdr_len;
+                    adhocIfOutput(ifp, pkt);
+                    if (chain_head == NULL)
+                        return 0;
+                    continue;
+                }
+                if ((flags & 1) != 0) {
+                    ret = ADHOC_ERR_WOULD_BLOCK;
+                    break;
+                }
+                if (timeout != 0) {
+                    s64 now;
+                    if (start_time == 0)
+                        start_time = sceKernelGetSystemTimeWide();
+                    now = sceKernelGetSystemTimeWide();
+                    if ((u64)(now - start_time) >= (u64)timeout) {
+                        ret = ADHOC_ERR_TIMEOUT;
+                        break;
+                    }
+                    wait_rem = timeout - (u32)(now - start_time);
+                }
 
-		m->m_rcvif = NULL;
-		m->m_pkthdr_len = alloc_len + 0x3c;
-		m->m_len = alloc_len + 0x3c;
-		{
-			u32 pkt_len = (u32)(alloc_len + 0x3c);
-			u32 new_lo = ifp->if_obytes_lo + pkt_len;
-			u32 carry = (new_lo < pkt_len) ? 1 : 0;
-			ifp->if_obytes_lo = new_lo;
-			ifp->if_obytes_hi += carry;
-		}
-		adhocIfOutput(ifp, m);
-		g_pdp_stats[4]++;
+                ifp->snd_wait_flags |= 1u;
+                wait_err = sceNet_lib_F6DB0A0B(&ifp->snd_head, wait_rem);
+                if ((sock->flags & 0x10u) != 0)
+                    wait_err = 5;
+                if ((sock->flags & 1u) != 0)
+                    wait_err = 32;
+                if (wait_err != 0) {
+                    if (wait_err == 4)
+                        ret = ADHOC_ERR_THREAD_ABORTED;
+                    else if (wait_err == 5)
+                        ret = ADHOC_ERR_SOCKET_ALERTED;
+                    else if (wait_err == 11)
+                        ret = ADHOC_ERR_TIMEOUT;
+                    else if (wait_err == 32)
+                        ret = ADHOC_ERR_SOCKET_DELETED;
+                    else
+                        ret = ADHOC_ERR_INTERNAL;
+                    break;
+                }
+            }
+            break;
+        }
+    }
 
-		cur_off += chunk;
-		rem_len -= chunk;
-	} while (rem_len > 0);
-
-	return 0;
+    while (chain_head != NULL) {
+        AdhocMbuf *next = chain_head->m_nextpkt;
+        chain_head->m_nextpkt = NULL;
+        sceNetIfhandle_lib_F56FAC82(chain_head);
+        chain_head = next;
+    }
+    return ret;
 }
 
-/* === pdpRecvInternal @ 0x1c48 === */
-static s32 pdpRecvInternal(PdpPcb *pdp, u8 *src_mac, u16 *sport, void *data, s32 *data_len, u32 timeout, s32 flags)
+/* 0x001c48 */
+static s32 __attribute__((noinline))
+pdpRecvInternal(AdhocSocket *sock, u8 *src_mac, u16 *sport, void *buf, s32 *len, u32 timeout, s32 flags, PdpRecvExtra *extra)
 {
-	u32 rem_timeout = timeout;
-	AdhocMbuf *m;
-	AdhocMbuf *cur;
-	s32 pkt_len;
-	u8 hdr_buf[8];
-	s32 copy_off;
-	s32 ret;
+    s64 start_time = 0;
+    PdpPcb *pdp = (PdpPcb *)sock->pcb;
+    AdhocMbuf *mbuf;
+    u8 *pkt;
+    u16 raw_word;
+    s32 payload_len;
 
-	for (;;) {
-		m = pdp->rx_head;
-		if (m != NULL)
-			break;
-		if (flags & 1)
-			return 0x80410709;
-		pdp->state_flags |= 2;
-		ret = sceNet_lib_F6DB0A0B(&pdp->rx_head, &rem_timeout);
-		if (pdp->sock == NULL)
-			return 0x8041070c;
-		if (ret < 0) {
-			if ((u32)ret == 0x80410186)
-				return 0x80410715;
-			if ((u32)ret == 0x800201a4)
-				return 0x80410718;
-			return ret;
-		}
-	}
+    for (;;) {
+        u32 wait_rem = 0;
+        s32 wait_err;
 
-	pkt_len = m->m_pkthdr_len - 8;
-	if (*data_len < pkt_len) {
-		*data_len = pkt_len;
-		return 0x8041070a;
-	}
+        if ((sock->flags & 0x20u) != 0)
+            return ADHOC_ERR_SOCKET_ALERTED;
+        mbuf = pdp->rx_head;
+        if (mbuf != NULL)
+            break;
+        if ((flags & 1) != 0)
+            return ADHOC_ERR_WOULD_BLOCK;
 
-	pdp->rx_head = m->m_nextpkt;
-	if (pdp->rx_head == NULL)
-		pdp->rx_tail = NULL;
-	pdp->rx_cc -= (u32)pkt_len;
-	m->m_nextpkt = NULL;
+        if (timeout != 0) {
+            s64 now;
+            if (start_time == 0)
+                start_time = sceKernelGetSystemTimeWide();
+            now = sceKernelGetSystemTimeWide();
+            if ((u64)(now - start_time) >= (u64)timeout) {
+                sceNetIfhandle_lib_F56FAC82(NULL);
+                return ADHOC_ERR_TIMEOUT;
+            }
+            wait_rem = timeout - (u32)(now - start_time);
+        }
 
-	if (m->m_len < 8) {
-		sceNetIfhandle_lib_9A6261EC(m, 0, 8, hdr_buf);
-		sceKernelMemcpy(src_mac, hdr_buf, 6);
-		sceKernelMemcpy(sport, hdr_buf + 6, 2);
-	} else {
-		sceKernelMemcpy(src_mac, m->m_data, 6);
-		sceKernelMemcpy(sport, m->m_data + 6, 2);
-	}
-	sceNetIfhandle_lib_BFF3CEA5(m, 8);
+        pdp->rx_wait_flags |= 1u;
+        wait_err = sceNet_lib_F6DB0A0B(&pdp->rx_head, wait_rem);
+        if ((sock->flags & 0x20u) != 0)
+            wait_err = 5;
+        if ((sock->flags & 1u) != 0)
+            wait_err = 32;
+        if (wait_err != 0) {
+            switch (wait_err) {
+            case 4:
+                return ADHOC_ERR_THREAD_ABORTED;
+            case 5:
+                return ADHOC_ERR_SOCKET_ALERTED;
+            case 11:
+                return ADHOC_ERR_TIMEOUT;
+            case 32:
+                return ADHOC_ERR_SOCKET_DELETED;
+            default:
+                return ADHOC_ERR_INTERNAL;
+            }
+        }
+    }
 
-	if (flags & 2) {
-		*(AdhocMbuf **)data = m;
-		*data_len = pkt_len;
-		return 0;
-	}
+    pdp->rx_head = mbuf->m_nextpkt;
+    if (pdp->rx_head == NULL)
+        pdp->rx_tail = NULL;
+    mbuf->m_nextpkt = NULL;
+    pdp->rx_cc = pdp->rx_cc - (u32)mbuf->m_pkthdr_len + 60u;
 
-	copy_off = 0;
-	for (cur = m; cur != NULL; cur = cur->m_next) {
-		if (cur->m_len > 0) {
-			sceKernelMemcpy((u8 *)data + copy_off, cur->m_data, (u32)cur->m_len);
-			copy_off += cur->m_len;
-		}
-	}
-	*data_len = copy_off;
-	sceNetIfhandle_lib_F56FAC82(m);
-	return 0;
+    pkt = mbuf->m_data;
+    if (src_mac != NULL) {
+        sceKernelMemcpy(src_mac, pkt + 6, 6);
+        pkt = mbuf->m_data;
+    }
+    sceKernelMemcpy(&raw_word, pkt + 52, 2);
+    if (sport != NULL)
+        *sport = adhocSwap16(raw_word);
+
+    sceKernelMemcpy(&raw_word, pkt + 50, 2);
+    payload_len = (s32)adhocSwap16(raw_word) - 12;
+    if (*len < payload_len) {
+        mbuf->m_nextpkt = pdp->rx_head;
+        if (pdp->rx_tail == NULL)
+            pdp->rx_tail = mbuf;
+        pdp->rx_head = mbuf;
+        pdp->rx_cc = pdp->rx_cc + (u32)mbuf->m_pkthdr_len - 60u;
+        *len = payload_len;
+        return ADHOC_ERR_BUFFER_TOO_SMALL;
+    }
+
+    *len = payload_len;
+    if (payload_len > 0)
+        sceNetIfhandle_lib_9A6261EC(mbuf, 60, payload_len, buf);
+    if (extra != NULL) {
+        extra->rssi = mbuf->hdr_meta.meta.rssi;
+        extra->rate = mbuf->hdr_meta.meta.rate;
+    }
+    sceNetIfhandle_lib_F56FAC82(mbuf);
+    return 0;
 }
 
-/* === sceNetAdhocPdpRecv @ 0x1f30 === */
-s32 sceNetAdhocPdpRecv(s32 id, u8 *src_mac, u16 *sport, void *buf, s32 *len, u32 timeout, s32 nonblock)
+/* 0x001f30 */
+s32 sceNetAdhocPdpRecv(s32 id, u8 *src_mac, u16 *sport, void *buf, s32 *len, u32 timeout, s32 flags)
 {
-	if (_sceKernelCheckThreadStack() < 0x7e0)
-		return 0x80410005;
-	if (id <= 0)
-		return 0x80410707;
-	if (src_mac == NULL || sport == NULL || buf == NULL || len == NULL)
-		return 0x80410706;
-	if (*len <= 0)
-		return 0x80410705;
-	if ((nonblock & ~1) != 0)
-		return 0x80410708;
-
-	return pdpRecvById(id, src_mac, sport, buf, len, timeout, nonblock);
+    if (_sceKernelCheckThreadStack() < 2016)
+        return ADHOC_ERR_STACK_SMALL;
+    if (buf == NULL || len == NULL || (flags & ~1) != 0)
+        return ADHOC_ERR_INVALID_ARG;
+    return pdpRecvById(id, src_mac, sport, buf, len, timeout, flags, NULL);
 }
 
-/* === sceNetAdhoc_67346A2A @ 0x2004 === */
-s32 sceNetAdhoc_67346A2A(s32 id, u8 *src_mac, u16 *sport, void *buf, s32 *len, u32 timeout, s32 nonblock)
+/* 0x002004 */
+s32 sceNetAdhoc_67346A2A(s32 id, u8 *src_mac, u16 *sport, void *buf, s32 *len, u32 timeout, s32 flags, PdpRecvExtra *extra)
 {
-	if ((nonblock & ~1) != 0)
-		return 0x80410708;
-	return pdpRecvById(id, src_mac, sport, buf, len, timeout, nonblock | 2);
+    if (buf == NULL || len == NULL || (flags & ~1) != 0 || extra == NULL)
+        return ADHOC_ERR_INVALID_ARG;
+    return pdpRecvById(id, src_mac, sport, buf, len, timeout, flags, extra);
 }
 
-/* === sceNetAdhoc_lib_F9240FBA @ 0x2060 === */
+/* 0x002060 */
 void sceNetAdhoc_lib_F9240FBA(void)
 {
-	sceKernelMemset(g_pdp_stats, 0, 0x18);
+    sceKernelMemset(&g_pdp_stats, 0, sizeof(g_pdp_stats));
 }
 
-/* === sceNetAdhoc_lib_1059683E @ 0x2088 === */
-s32 sceNetAdhoc_lib_1059683E(void *dst)
+/* 0x002088 */
+s32 sceNetAdhoc_lib_1059683E(void *out_stats)
 {
-	if (dst == NULL)
-		return 0x80410708;
-	sceKernelMemcpy(dst, g_pdp_stats, 0x18);
-	return 0;
+    if (out_stats == NULL)
+        return ADHOC_ERR_INVALID_ARG;
+    sceKernelMemcpy(out_stats, &g_pdp_stats, sizeof(g_pdp_stats));
+    return 0;
 }
 
-/* === pdpRecvById @ 0x20c4 === */
-static s32 pdpRecvById(s32 id, u8 *src_mac, u16 *sport, void *buf, s32 *len, u32 timeout, s32 flags)
+/* 0x0020c4 */
+static s32 __attribute__((noinline))
+pdpRecvById(s32 id, u8 *src_mac, u16 *sport, void *buf, s32 *len, u32 timeout, s32 flags, PdpRecvExtra *extra)
 {
-	s32 intr;
-	s32 ret;
-	AdhocSocket *sock;
-	AdhocWaiter *w = NULL;
+    s32 err = 0;
+    AdhocWaiter *waiter = (AdhocWaiter *)sceNet_lib_CA3CF5EB(&err);
+    s32 intr;
 
-	if (id <= 0)
-		return 0x80410707;
-	if (src_mac == NULL || sport == NULL || buf == NULL || len == NULL)
-		return 0x80410706;
-	if (*len <= 0)
-		return 0x80410705;
+    if (waiter == NULL)
+        return err;
 
-	if ((flags & 1) == 0) {
-		w = (AdhocWaiter *)sceNet_lib_CA3CF5EB(&ret);
-		if (w == NULL)
-			return ret;
-	}
+    intr = sceNet_lib_94B44F26();
+    if (intr < 0) {
+        err = intr;
+    } else if (g_adhoc_inited == 0) {
+        err = ADHOC_ERR_NOT_INITIALIZED;
+    } else {
+        AdhocSocket *sock = adhocSockFind(1, id);
+        if (sock == NULL) {
+            err = ADHOC_ERR_INVALID_SOCKET_ID;
+        } else {
+            waiter->next = sock->wait_list;
+            sock->wait_list = waiter;
+            err = pdpRecvInternal(sock, src_mac, sport, buf, len, timeout, flags, extra);
+            pdpUnlinkWaiter(sock, waiter);
+            if ((sock->flags & 1u) != 0) {
+                if (sock->wait_list == NULL) {
+                    pdpFreePcb(sock);
+                    adhocSockTryFree(sock);
+                }
+                err = ADHOC_ERR_SOCKET_DELETED;
+            }
+        }
+    }
 
-	intr = sceNet_lib_94B44F26();
-	if (intr < 0) {
-		if (w != NULL)
-			sceNet_lib_757085B0(w, 0);
-		return intr;
-	}
-
-	if (g_adhoc_inited == 0) {
-		ret = 0x80410712;
-		goto out;
-	}
-	if (sceWlanDevIsGameMode() != 0) {
-		ret = 0x8041071b;
-		goto out;
-	}
-
-	sock = adhocSockFind(1, id);
-	if (sock == NULL || sock->pcb == NULL) {
-		ret = 0x80410707;
-		goto out;
-	}
-
-	ret = pdpRecvInternal((PdpPcb *)sock->pcb, src_mac, sport, buf, len, timeout, flags);
-	adhocSockTryFree(sock);
-
-out:
-	sceNet_lib_515B2F33(intr);
-	if (w != NULL)
-		sceNet_lib_757085B0(w, 0);
-	return ret;
+    sceNet_lib_515B2F33(intr);
+    sceNet_lib_757085B0(waiter, 0);
+    return err;
 }
 
-/* === pdpFlushQueues @ 0x225c === */
-static void pdpFlushQueues(PdpPcb *pdp)
+/* 0x00225c */
+static void __attribute__((noinline))
+pdpFlushQueues(PdpPcb *pdp)
 {
-	AdhocMbuf *m;
-	PdpFragEntry *fe;
+    AdhocMbuf *mbuf;
+    PdpFragEntry *frag;
 
-	while ((m = pdp->rx_head) != NULL) {
-		pdp->rx_head = m->m_nextpkt;
-		if (pdp->rx_head == NULL)
-			pdp->rx_tail = NULL;
-		m->m_nextpkt = NULL;
-		pdp->rx_cc = (pdp->rx_cc - (u32)m->m_pkthdr_len) + 0x3c;
-		sceNetIfhandle_lib_F56FAC82(m);
-	}
-	pdp->rx_cc = 0;
+    while ((mbuf = pdp->rx_head) != NULL) {
+        pdp->rx_head = mbuf->m_nextpkt;
+        if (pdp->rx_head == NULL)
+            pdp->rx_tail = NULL;
+        mbuf->m_nextpkt = NULL;
+        pdp->rx_cc = pdp->rx_cc - (u32)mbuf->m_pkthdr_len + 60u;
+        sceNetIfhandle_lib_F56FAC82(mbuf);
+    }
+    pdp->rx_hiwat = 0;
 
-	while ((fe = pdp->frag_head) != NULL) {
-		sceNet_lib_A93A93E9(fe->timer);
-		sceNetIfhandle_lib_F56FAC82(fe->m_head);
-		if (fe->next != NULL)
-			fe->next->prev = fe->prev;
-		else
-			pdp->frag_tail = fe->prev;
-		*fe->prev = fe->next;
-		sceNetIfhandle_lib_76BAD213(fe);
-	}
+    while ((frag = pdp->frag_head) != NULL) {
+        sceNet_lib_A93A93E9(&frag->timer);
+        sceNetIfhandle_lib_F56FAC82(frag->m_head);
+        if (frag->next != NULL)
+            frag->next->prev = frag->prev;
+        else
+            pdp->frag_tail = frag->prev;
+        *frag->prev = frag->next;
+        sceNetIfhandle_lib_76BAD213(frag);
+    }
 }
 
-/* === pdpInputPacket @ 0x231c === */
-void pdpInputPacket(AdhocMbuf *m)
+/* 0x00231c */
+void __attribute__((noinline))
+pdpInputPacket(AdhocMbuf *mbuf)
 {
-	u8 dst_mac[6];
-	u8 src_mac[6];
-	u16 body_len;
-	u16 sport;
-	u16 dport;
-	u16 seq;
-	u16 off_field;
-	u16 frag_off;
-	s32 payload_len;
-	PdpPcb *pdp;
-	u8 *hdr;
-	s32 is_bcast;
+    u8 *hdr;
+    u8 *pdp_hdr;
+    u16 raw_word;
+    u32 body_len;
+    s32 pkt_total;
+    u16 dport;
+    PdpPcb *pdp;
 
-	if (m->m_pkthdr_len < 0x3c) {
-		sceNetIfhandle_lib_F56FAC82(m);
-		g_pdp_stats[0]++;
-		return;
-	}
-	if (m->m_len < 0x3c) {
-		m = (AdhocMbuf *)sceNetIfhandle_lib_49EDBB18(m, 0x3c);
-		if (m == NULL) {
-			g_pdp_stats[0]++;
-			return;
-		}
-	}
+    if (mbuf->m_pkthdr_len < 60) {
+        sceNetIfhandle_lib_F56FAC82(mbuf);
+        return;
+    }
 
-	hdr = m->m_data;
-	if (hdr[0x31] != 0) {
-		sceNetIfhandle_lib_F56FAC82(m);
-		g_pdp_stats[0]++;
-		return;
-	}
+    if (mbuf->m_len < 60) {
+        mbuf = (AdhocMbuf *)sceNetIfhandle_lib_49EDBB18(mbuf, 60);
+        if (mbuf == NULL)
+            return;
+    }
+    hdr = mbuf->m_data;
 
-	sceKernelMemcpy(&body_len, hdr + 0x32, 2);
-	body_len = bswap16(body_len);
-	if (body_len < 8 || m->m_pkthdr_len < (s32)body_len + 0x34) {
-		sceNetIfhandle_lib_F56FAC82(m);
-		g_pdp_stats[0]++;
-		return;
-	}
+    sceKernelMemcpy(&raw_word, hdr + 50, 2);
+    body_len = adhocSwap16(raw_word);
+    pdp_hdr = hdr + 48;
+    if (body_len < 12u || mbuf->m_pkthdr_len < (s32)(body_len + 48u)) {
+        sceNetIfhandle_lib_F56FAC82(mbuf);
+        return;
+    }
 
-	payload_len = (s32)body_len - 8;
-	sceKernelMemcpy(dst_mac, hdr, 6);
-	sceKernelMemcpy(src_mac, hdr + 6, 6);
-	sceKernelMemcpy(&sport, hdr + 0x34, 2);
-	sport = bswap16(sport);
-	sceKernelMemcpy(&dport, hdr + 0x36, 2);
-	dport = bswap16(dport);
-	sceKernelMemcpy(&seq, hdr + 0x38, 2);
-	seq = bswap16(seq);
-	sceKernelMemcpy(&off_field, hdr + 0x3a, 2);
-	off_field = bswap16(off_field);
+    pkt_total = (s32)(body_len + 48u);
+    if (pkt_total < mbuf->m_pkthdr_len) {
+        if (mbuf->m_len == mbuf->m_pkthdr_len) {
+            mbuf->m_pkthdr_len = pkt_total;
+            mbuf->m_len = pkt_total;
+        } else {
+            sceNetIfhandle_lib_BFF3CEA5(mbuf, pkt_total - mbuf->m_pkthdr_len);
+        }
+    }
 
-	if (sport == 0 || dport == 0) {
-		sceNetIfhandle_lib_F56FAC82(m);
-		g_pdp_stats[0]++;
-		return;
-	}
+    sceKernelMemcpy(&raw_word, hdr + 54, 2);
+    dport = adhocSwap16(raw_word);
 
-	is_bcast = (sceNet_lib_E0A81C7C(dst_mac, g_bcast_mac, 6) == 0);
-	for (pdp = g_pdp_list.head; pdp != NULL; pdp = pdp->next) {
-		if (pdp->port == dport) {
-			if (is_bcast || sceNet_lib_E0A81C7C(pdp->mac, dst_mac, 6) == 0)
-				break;
-		}
-	}
-	if (pdp == NULL) {
-		sceNetIfhandle_lib_F56FAC82(m);
-		g_pdp_stats[1]++;
-		return;
-	}
+    if (sceNet_lib_E0A81C7C(g_bcast_mac, hdr, 6) != 0) {
+        pdp = g_pdp_list.head;
+        while (pdp != NULL) {
+            if (sceNet_lib_E0A81C7C(pdp->mac, hdr, 6) == 0 && pdp->port == dport)
+                break;
+            pdp = pdp->next;
+        }
+    } else {
+        AdhocIfnet *ifp = (AdhocIfnet *)mbuf->m_rcvif;
+        u8 *sadl = ifp->if_sadl;
+        u8 *if_mac = sadl + sadl[5] + 8;
+        pdp = g_pdp_list.head;
+        while (pdp != NULL) {
+            if (sceNet_lib_E0A81C7C(pdp->mac, if_mac, 6) == 0 && pdp->port == dport)
+                break;
+            pdp = pdp->next;
+        }
+    }
 
-	if (sceNetAdhocAuth_lib_015A8A64(m->m_data + 0x10, (u32)(m->m_pkthdr_len - 0x10)) < 0) {
-		sceNetIfhandle_lib_F56FAC82(m);
-		return;
-	}
+    if (pdp == NULL) {
+        g_pdp_stats.rx_no_port++;
+        sceNetIfhandle_lib_F56FAC82(mbuf);
+        return;
+    }
 
-	{
-		s32 pad_trim = (payload_len + 0x3c) - m->m_pkthdr_len;
-		if (pad_trim < 0)
-			sceNetIfhandle_lib_BFF3CEA5(m, pad_trim);
-	}
+    if (pdp_hdr[10] != 0 || pdp_hdr[11] != 0 || (pdp_hdr[1] & 1u) != 0) {
+        u8 *base = mbuf->m_data;
+        u8 *cur_pdp = base + 48;
+        PdpFragEntry *frag = pdp->frag_head;
 
-	frag_off = (u16)(off_field & 0x7fff);
-	if (frag_off == 0 && !(off_field & 0x8000)) {
-		PdpFragEntry *fe;
-		PdpFragEntry *next_fe;
+        while (frag != NULL) {
+            u8 *first_hdr = frag->m_head->m_data;
+            if (sceNet_lib_E0A81C7C(base + 6, first_hdr + 6, 6) == 0 &&
+                sceNet_lib_E0A81C7C(cur_pdp + 8, first_hdr + 56, 2) == 0) {
+                break;
+            }
+            frag = frag->next;
+        }
 
-		for (fe = pdp->frag_head; fe != NULL; fe = next_fe) {
-			next_fe = fe->next;
-			if (sceNet_lib_E0A81C7C(fe->src_mac, src_mac, 6) == 0 && fe->sport == sport) {
-				if (fe->next != NULL)
-					fe->next->prev = fe->prev;
-				else
-					pdp->frag_tail = fe->prev;
-				*fe->prev = fe->next;
-				pdp->frag_count--;
-				sceNetIfhandle_lib_F56FAC82(fe->m_head);
-				sceNetIfhandle_lib_76BAD213(fe);
-			}
-		}
+        if (frag == NULL) {
+            if (pdp_hdr[10] != 0 || pdp_hdr[11] != 0) {
+                g_pdp_stats.rx_frag_err++;
+                sceNetIfhandle_lib_F56FAC82(mbuf);
+                return;
+            }
+            frag = (PdpFragEntry *)sceNetIfhandle_lib_15CFE3C0(sizeof(PdpFragEntry));
+            if (frag == NULL) {
+                g_pdp_stats.rx_frag_err++;
+                sceNetIfhandle_lib_F56FAC82(mbuf);
+                return;
+            }
+            sceKernelMemcpy(&frag->total_len, pdp_hdr + 2, 2);
+            frag->total_len = adhocSwap16(frag->total_len);
+            frag->m_head = mbuf;
+            sceNet_lib_25CC373A(&frag->timer);
+            frag->next = NULL;
+            frag->prev = pdp->frag_tail;
+            *pdp->frag_tail = frag;
+            pdp->frag_tail = &frag->next;
+            frag->owner = pdp;
+            g_pdp_stats.rx_frags++;
+            sceNet_lib_A8B6205A(&frag->timer, 1000000, pdpFragTimeout, frag);
+            return;
+        }
 
-		sceNetIfhandle_lib_BFF3CEA5(m, 0x34);
-		sceKernelMemcpy(m->m_data, src_mac, 6);
-		sceKernelMemcpy(m->m_data + 6, &sport, 2);
-	} else {
-		PdpFragEntry *fe;
+        sceKernelMemcpy(&raw_word, pdp_hdr + 10, 2);
+        if (adhocSwap16(raw_word) != (u16)(frag->total_len - 12)) {
+            sceNet_lib_A93A93E9(&frag->timer);
+            sceNetIfhandle_lib_F56FAC82(frag->m_head);
+            if (frag->next != NULL)
+                frag->next->prev = frag->prev;
+            else
+                pdp->frag_tail = frag->prev;
+            *frag->prev = frag->next;
+            sceNetIfhandle_lib_76BAD213(frag);
+            g_pdp_stats.rx_frag_err++;
+            sceNetIfhandle_lib_F56FAC82(mbuf);
+            return;
+        }
 
-		sceNetIfhandle_lib_BFF3CEA5(m, 0x3c);
-		for (fe = pdp->frag_head; fe != NULL; fe = fe->next) {
-			if (sceNet_lib_E0A81C7C(fe->src_mac, src_mac, 6) == 0 && fe->sport == sport)
-				break;
-		}
+        {
+            u8 *first_hdr = frag->m_head->m_data;
+            u8 more_frags = pdp_hdr[1];
+            u16 new_total;
 
-		if (frag_off == 0) {
-			AdhocMbuf *hdr_m;
+            sceKernelMemcpy(&raw_word, pdp_hdr + 2, 2);
+            new_total = (u16)(frag->total_len + adhocSwap16(raw_word) - 12);
+            frag->total_len = new_total;
+            raw_word = adhocSwap16(new_total);
+            sceKernelMemcpy(first_hdr + 50, &raw_word, 2);
 
-			if (fe != NULL) {
-				if (fe->next != NULL)
-					fe->next->prev = fe->prev;
-				else
-					pdp->frag_tail = fe->prev;
-				*fe->prev = fe->next;
-				pdp->frag_count--;
-				sceNetIfhandle_lib_F56FAC82(fe->m_head);
-				sceNetIfhandle_lib_76BAD213(fe);
-			}
+            sceNetIfhandle_lib_BFF3CEA5(mbuf, 60);
+            frag->m_head->m_pkthdr_len += mbuf->m_pkthdr_len;
+            sceNetIfhandle_lib_3E8DD3F8(frag->m_head, mbuf);
+            g_pdp_stats.rx_frags++;
 
-			if (pdp->frag_count >= 4) {
-				PdpFragEntry *old = pdp->frag_head;
-				if (old != NULL) {
-					if (old->next != NULL)
-						old->next->prev = old->prev;
-					else
-						pdp->frag_tail = old->prev;
-					*old->prev = old->next;
-					pdp->frag_count--;
-					sceNetIfhandle_lib_F56FAC82(old->m_head);
-					sceNetIfhandle_lib_76BAD213(old);
-				}
-			}
+            if ((more_frags & 1u) != 0) {
+                sceNet_lib_A8B6205A(&frag->timer, 1000000, pdpFragTimeout, frag);
+                return;
+            }
 
-			fe = (PdpFragEntry *)sceNetIfhandle_lib_15CFE3C0(0x34);
-			if (fe == NULL) {
-				sceNetIfhandle_lib_F56FAC82(m);
-				g_pdp_stats[2]++;
-				return;
-			}
-			sceKernelMemcpy(fe->src_mac, src_mac, 6);
-			fe->sport = sport;
-			fe->seq = seq;
-			fe->cur_off = (u16)payload_len;
+            sceNet_lib_A93A93E9(&frag->timer);
+            mbuf = frag->m_head;
+            if (frag->next != NULL)
+                frag->next->prev = frag->prev;
+            else
+                pdp->frag_tail = frag->prev;
+            *frag->prev = frag->next;
+            sceNetIfhandle_lib_76BAD213(frag);
+        }
+    }
 
-			hdr_m = (AdhocMbuf *)sceNetIfhandle_lib_15CFE3C0(0x100);
-			if (hdr_m == NULL) {
-				sceNetIfhandle_lib_76BAD213(fe);
-				sceNetIfhandle_lib_F56FAC82(m);
-				g_pdp_stats[2]++;
-				return;
-			}
-			hdr_m->m_next = m;
-			hdr_m->m_nextpkt = NULL;
-			hdr_m->m_data = (u8 *)hdr_m + 0x30;
-			hdr_m->m_len = 8;
-			hdr_m->m_type = 1;
-			hdr_m->m_flags = 2;
-			hdr_m->m_rcvif = NULL;
-			hdr_m->m_pkthdr_len = payload_len + 8;
-			hdr_m->m_pkthdr_Aux = 0;
-			sceKernelMemcpy(hdr_m->m_data, src_mac, 6);
-			sceKernelMemcpy(hdr_m->m_data + 6, &sport, 2);
+    if (pdp->rx_hiwat < pdp->rx_cc + (u32)mbuf->m_pkthdr_len - 60u) {
+        g_pdp_stats.rx_drop_full++;
+        sceNetIfhandle_lib_F56FAC82(mbuf);
+        return;
+    }
 
-			fe->m_head = hdr_m;
-			fe->next = NULL;
-			fe->prev = pdp->frag_tail;
-			*pdp->frag_tail = fe;
-			pdp->frag_tail = &fe->next;
-			pdp->frag_count++;
-			return;
-		} else {
-			if (fe == NULL || fe->seq != seq || fe->cur_off != frag_off ||
-			    (s32)fe->cur_off + payload_len > 0xffff) {
-				if (fe != NULL) {
-					if (fe->next != NULL)
-						fe->next->prev = fe->prev;
-					else
-						pdp->frag_tail = fe->prev;
-					*fe->prev = fe->next;
-					pdp->frag_count--;
-					sceNetIfhandle_lib_F56FAC82(fe->m_head);
-					sceNetIfhandle_lib_76BAD213(fe);
-				}
-				sceNetIfhandle_lib_F56FAC82(m);
-				g_pdp_stats[0]++;
-				return;
-			}
+    mbuf->m_nextpkt = NULL;
+    if (pdp->rx_tail != NULL)
+        pdp->rx_tail->m_nextpkt = mbuf;
+    else
+        pdp->rx_head = mbuf;
+    pdp->rx_tail = mbuf;
+    pdp->rx_cc = pdp->rx_cc + (u32)mbuf->m_pkthdr_len - 60u;
 
-			sceNetIfhandle_lib_3E8DD3F8(fe->m_head, m);
-			fe->m_head->m_pkthdr_len += payload_len;
-			fe->cur_off = (u16)(fe->cur_off + payload_len);
-
-			if (off_field & 0x8000)
-				return;
-
-			m = fe->m_head;
-			fe->m_head = NULL;
-			if (fe->next != NULL)
-				fe->next->prev = fe->prev;
-			else
-				pdp->frag_tail = fe->prev;
-			*fe->prev = fe->next;
-			pdp->frag_count--;
-			sceNetIfhandle_lib_76BAD213(fe);
-			payload_len = m->m_pkthdr_len - 8;
-		}
-	}
-
-	if (pdp->rx_hiwat - pdp->rx_cc < (u32)payload_len) {
-		pdp->rx_drops++;
-		sceNetIfhandle_lib_F56FAC82(m);
-		g_pdp_stats[2]++;
-		return;
-	}
-
-	m->m_nextpkt = NULL;
-	if (pdp->rx_tail == NULL)
-		pdp->rx_head = m;
-	else
-		pdp->rx_tail->m_nextpkt = m;
-	pdp->rx_tail = m;
-	pdp->rx_cc += (u32)payload_len;
-
-	if (pdp->state_flags & 2) {
-		pdp->state_flags &= ~2;
-		sceNet_lib_7574FDA1(&pdp->rx_head);
-	}
-	if (pdp->sock != NULL && (pdp->sock->flags & 1)) {
-		pdp->sock->flags &= ~1;
-		sceNet_lib_7574FDA1(&g_global_wait_head);
-	}
-	g_pdp_stats[3]++;
+    if ((pdp->rx_wait_flags & 1u) != 0) {
+        pdp->rx_wait_flags &= ~1u;
+        sceNet_lib_7574FDA1(&pdp->rx_head);
+    }
+    if ((pdp->rx_wait_flags & 2u) != 0) {
+        pdp->rx_wait_flags &= ~2u;
+        sceNet_lib_7574FDA1(&g_global_wait_head);
+    }
+    g_pdp_stats.rx_ok++;
 }
 
-/* === sceNetAdhocGetPdpStat @ 0x2850 === */
-s32 sceNetAdhocGetPdpStat(s32 *buflen, void *buf)
+/* 0x002850 */
+s32 sceNetAdhocGetPdpStat(s32 *buflen, ScePdpStatOut *buf)
 {
-	s32 intr;
-	s32 ret;
-	PdpPcb *pdp;
-	s32 total_bytes;
-	u8 *out;
+    s32 ret = 0;
+    s32 intr;
+    s32 written = 0;
+    ScePdpStatOut *prev = NULL;
 
-	if (_sceKernelCheckThreadStack() < 0x7e0)
-		return 0x80410005;
-	if (buflen == NULL)
-		return 0x80410708;
-	if (*buflen < 0)
-		return 0x80410705;
+    if (_sceKernelCheckThreadStack() < 2000)
+        return ADHOC_ERR_STACK_SMALL;
+    if (buflen == NULL)
+        return ADHOC_ERR_INVALID_ARG;
+    if (((u32)buf & 3u) != 0)
+        return ADHOC_ERR_INVALID_ALIGNMENT;
 
-	intr = sceNet_lib_94B44F26();
-	if (intr < 0)
-		return intr;
+    intr = sceNet_lib_94B44F26();
+    if (intr < 0)
+        return intr;
 
-	if (g_adhoc_inited == 0) {
-		ret = 0x80410712;
-		goto out;
-	}
-	if (sceWlanDevIsGameMode() != 0) {
-		ret = 0x8041071b;
-		goto out;
-	}
+    if (g_adhoc_inited == 0) {
+        ret = ADHOC_ERR_NOT_INITIALIZED;
+    } else {
+        PdpPcb *pdp = g_pdp_list.head;
+        ScePdpStatOut *out = buf;
+        while (pdp != NULL) {
+            if (buf != NULL) {
+                if (*buflen < written + (s32)sizeof(ScePdpStatOut))
+                    break;
+                out->next = NULL;
+                out->pdp_id = pdp->sock->id;
+                sceKernelMemcpy(out->mac, pdp->mac, 6);
+                out->port = pdp->port;
+                out->rcvd_data = pdp->rx_cc;
+                if (prev != NULL)
+                    prev->next = out;
+                prev = out;
+                out++;
+            }
+            written += (s32)sizeof(ScePdpStatOut);
+            pdp = pdp->next;
+        }
+    }
 
-	if (buf == NULL) {
-		total_bytes = 0;
-		for (pdp = g_pdp_list.head; pdp != NULL; pdp = pdp->next)
-			total_bytes += 0x14;
-		*buflen = total_bytes;
-		ret = 0;
-	} else {
-		s32 max_len = *buflen;
-		out = (u8 *)buf;
-		total_bytes = 0;
-		for (pdp = g_pdp_list.head; pdp != NULL; pdp = pdp->next) {
-			if (total_bytes + 0x14 > max_len)
-				break;
-			((ScePdpStatOut *)out)->next = NULL;
-			((ScePdpStatOut *)out)->pdp_id = (pdp->sock != NULL) ? pdp->sock->id : -1;
-			sceKernelMemcpy(out + 0x08, pdp->mac, 6);
-			((ScePdpStatOut *)out)->port = pdp->port;
-			((ScePdpStatOut *)out)->rcvd_data = pdp->rx_cc;
-			if (total_bytes >= 0x14)
-				*(void **)(out - 0x14) = out;
-			out += 0x14;
-			total_bytes += 0x14;
-		}
-		*buflen = total_bytes;
-		ret = 0;
-	}
-
-out:
-	sceNet_lib_515B2F33(intr);
-	return ret;
+    sceNet_lib_515B2F33(intr);
+    *buflen = written;
+    return ret;
 }
 
-/* === pdpInit @ 0x29ac === */
-void pdpInit(void)
+/* 0x0029ac */
+s32 __attribute__((noinline))
+pdpInit(void)
 {
-	g_pdp_list.head = NULL;
-	g_pdp_list.tail = &g_pdp_list.head;
-	g_pdp_anon_port = (u16)((sceNet_lib_1858883D() % 0xc000) + 0x4000);
-	sceKernelMemset(g_pdp_stats, 0, 0x18);
-	g_pdp_seq = (u16)(sceNet_lib_1858883D() / 0x8001);
+    g_pdp_list.head = NULL;
+    g_pdp_list.tail = &g_pdp_list.head;
+    g_pdp_anon_port = (u16)(sceNet_lib_1858883D() / 0x20009u + 0x4000u);
+    g_pdp_seq = (u16)(sceNet_lib_1858883D() / 0x8001u);
+    return 0;
 }
 
-/* === pdpTerm @ 0x2a18 === */
-void pdpTerm(void)
+/* 0x002a18 */
+void __attribute__((noinline))
+pdpTerm(void)
 {
-	PdpPcb *pdp;
+    PdpPcb *pdp;
 
-	while ((pdp = g_pdp_list.head) != NULL) {
-		if (pdp->sock != NULL) {
-			pdp->sock->pcb = NULL;
-			adhocSockTryFree(pdp->sock);
-			pdp->sock = NULL;
-		}
-		pdpFreePcb(pdp);
-	}
+    while ((pdp = g_pdp_list.head) != NULL) {
+        AdhocSocket *sock = pdp->sock;
+        PdpPcb *victim = (PdpPcb *)sock->pcb;
+        pdpFlushQueues(pdp);
+        sock->pcb = NULL;
+        if (victim->next != NULL)
+            victim->next->prev = victim->prev;
+        else
+            g_pdp_list.tail = victim->prev;
+        *victim->prev = victim->next;
+        sceNetIfhandle_lib_76BAD213(victim);
+    }
 }
 
-/* === pdpAllocPcb @ 0x2a9c === */
-static s32 pdpAllocPcb(PdpPcb **out_pdp)
+/* 0x002a9c */
+static s32 __attribute__((noinline))
+pdpAllocPcb(AdhocSocket *sock)
 {
-	PdpPcb *pdp;
+    PdpPcb *pdp = (PdpPcb *)sceNetIfhandle_lib_15CFE3C0(sizeof(PdpPcb));
+    PdpPcb **old_tail;
 
-	pdp = (PdpPcb *)sceNetIfhandle_lib_15CFE3C0(0x3c);
-	if (pdp == NULL)
-		return 0x80410709;
-	sceKernelMemset(pdp, 0, 0x3c);
-	pdp->frag_head = NULL;
-	pdp->frag_tail = &pdp->frag_head;
-	pdp->next = NULL;
-	pdp->prev = g_pdp_list.tail;
-	*g_pdp_list.tail = pdp;
-	g_pdp_list.tail = &pdp->next;
-	*out_pdp = pdp;
-	return 0;
+    if (pdp == NULL)
+        return ADHOC_ERR_NO_MEM;
+
+    sceKernelMemset(pdp, 0, sizeof(PdpPcb));
+    pdp->next = NULL;
+    pdp->prev = g_pdp_list.tail;
+    old_tail = g_pdp_list.tail;
+    sock->pcb = pdp;
+    g_pdp_list.tail = &pdp->next;
+    *old_tail = pdp;
+    ((PdpPcb *)sock->pcb)->frag_head = NULL;
+    ((PdpPcb *)sock->pcb)->sock = sock;
+    ((PdpPcb *)sock->pcb)->frag_tail = &pdp->frag_head;
+    return 0;
 }
 
-/* === pdpBindPcb @ 0x2b2c === */
-static s32 pdpBindPcb(PdpPcb *pdp, const u8 *mac, u16 port, u32 bufsize)
+/* 0x002b2c */
+static s32 __attribute__((noinline))
+pdpBindPcb(PdpPcb *pdp, const u8 *mac, u16 port)
 {
-	u8 local_mac[8];
-	PdpPcb *cur;
-	s32 ret;
+    AdhocIfnet *ifp = (AdhocIfnet *)sceNet_lib_D60225A3(mac);
+    u16 chosen_port = port;
 
-	ret = sceNetGetLocalEtherAddr(local_mac);
-	if (ret < 0)
-		return ret;
-	if (sceNet_lib_E0A81C7C(mac, local_mac, 6) != 0)
-		return 0x80410701;
+    if (ifp == NULL)
+        return ADHOC_ERR_INVALID_ADDR;
 
-	if (port == 0) {
-		port = pdpAllocAnonPort();
-		if (port == 0)
-			return 0x8041070b;
-	} else {
-		for (cur = g_pdp_list.head; cur != NULL; cur = cur->next) {
-			if (cur != pdp && cur->port == port &&
-			    sceNet_lib_E0A81C7C(cur->mac, mac, 6) == 0)
-				return 0x80410703;
-		}
-	}
+    if (chosen_port == 0) {
+        u16 cand = (g_pdp_anon_port == 0x7FFF) ? 0x4000 : (u16)(g_pdp_anon_port + 1);
+        chosen_port = 0;
+        while (cand != g_pdp_anon_port) {
+            PdpPcb *cur = g_pdp_list.head;
+            while (cur != NULL) {
+                if (sceNet_lib_E0A81C7C(cur->mac, mac, 6) == 0 && cur->port == cand)
+                    break;
+                cur = cur->next;
+            }
+            if (cur == NULL) {
+                g_pdp_anon_port = cand;
+                chosen_port = cand;
+                break;
+            }
+            cand = (cand == 0x7FFF) ? 0x4000 : (u16)(cand + 1);
+        }
+        if (chosen_port == 0)
+            return ADHOC_ERR_PORT_NOT_AVAIL;
+    } else {
+        PdpPcb *cur;
+        if (chosen_port == 0xFFFF)
+            return ADHOC_ERR_INVALID_PORT;
+        cur = g_pdp_list.head;
+        while (cur != NULL) {
+            if (sceNet_lib_E0A81C7C(cur->mac, mac, 6) == 0 && cur->port == chosen_port)
+                return ADHOC_ERR_PORT_IN_USE;
+            cur = cur->next;
+        }
+    }
 
-	sceKernelMemcpy(pdp->mac, mac, 6);
-	pdp->port = port;
-	pdp->rx_hiwat = bufsize;
-	return 0;
+    sceKernelMemcpy(pdp->mac, mac, 6);
+    pdp->port = chosen_port;
+    pdp->sock->chan_tx = &ifp->snd_head;
+    pdp->sock->chan_rx = &pdp->rx_head;
+    pdp->sock->chan_poll = &g_global_wait_head;
+    return 0;
 }
 
-/* === pdpFreePcb @ 0x2d04 === */
-static void pdpFreePcb(PdpPcb *pdp)
+/* 0x002d04 */
+void __attribute__((noinline))
+pdpFreePcb(AdhocSocket *sock)
 {
-	pdpFlushQueues(pdp);
-	if (pdp->next != NULL)
-		pdp->next->prev = pdp->prev;
-	else
-		g_pdp_list.tail = pdp->prev;
-	*pdp->prev = pdp->next;
-	sceNetIfhandle_lib_76BAD213(pdp);
+    PdpPcb *pdp = (PdpPcb *)sock->pcb;
+    sock->pcb = NULL;
+    if (pdp->next != NULL)
+        pdp->next->prev = pdp->prev;
+    else
+        g_pdp_list.tail = pdp->prev;
+    *pdp->prev = pdp->next;
+    sceNetIfhandle_lib_76BAD213(pdp);
 }
 
-/* === pdpHasActive @ 0x2d50 === */
-s32 pdpHasActive(void)
+/* 0x002d50 */
+static s32 __attribute__((noinline))
+pdpSetBufSize(PdpPcb *pdp, u32 bufsize)
 {
-	return (g_pdp_list.head != NULL) ? 1 : 0;
+    pdp->rx_hiwat = bufsize;
+    return 0;
 }
 
-/* === pdpIfDetach @ 0x2d5c === */
-void pdpIfDetach(void *ifp_arg)
+/* 0x002d5c */
+s32 __attribute__((noinline))
+pdpIfOutputWake(AdhocIfnet *ifp)
 {
-	AdhocIfnet *ifp = (AdhocIfnet *)ifp_arg;
-	PdpPcb *pdp;
-
-	for (pdp = g_pdp_list.head; pdp != NULL; pdp = pdp->next) {
-		if (pdp->state_flags & 1) {
-			pdp->state_flags &= ~1;
-			sceNet_lib_7574FDA1(&pdp->state_flags);
-		}
-		if (pdp->sock != NULL && (pdp->sock->flags & 2)) {
-			if (ifp->snd_len < ifp->snd_maxlen) {
-				pdp->sock->flags &= ~2;
-				sceNet_lib_7574FDA1(&g_global_wait_head);
-			}
-		}
-	}
+    if ((ifp->snd_wait_flags & 1u) != 0) {
+        ifp->snd_wait_flags &= ~1u;
+        sceNet_lib_7574FDA1(&ifp->snd_head);
+    }
+    if ((ifp->snd_wait_flags & 2u) != 0) {
+        ifp->snd_wait_flags &= ~2u;
+        return sceNet_lib_7574FDA1(&g_global_wait_head);
+    }
+    return 0;
 }
 
-/* === pdpPollEvents @ 0x2dc4 === */
-s32 pdpPollEvents(AdhocSocket *sock, s32 events)
+/* 0x002dc4 */
+s32 __attribute__((noinline))
+pdpPollEvents(AdhocSocket *sock, s32 events)
 {
-	PdpPcb *pdp = (PdpPcb *)sock->pcb;
-	s32 rev = 0;
+    PdpPcb *pdp = (PdpPcb *)sock->pcb;
+    AdhocIfnet *ifp = (AdhocIfnet *)sceNet_lib_D60225A3(pdp->mac);
+    s32 revents = 0;
 
-	if (pdp == NULL)
-		return 0x10;
+    if ((events & 2) != 0 && pdp->rx_head != NULL)
+        revents = 2;
 
-	if (events & 1) {
-		AdhocIfnet *ifp = (AdhocIfnet *)sceNet_lib_D60225A3();
-		if (ifp == NULL)
-			return 0x100;
-		if (ifp->snd_len < ifp->snd_maxlen)
-			rev |= 1;
-	}
-	if (events & 2) {
-		if (pdp->rx_head != NULL)
-			rev |= 2;
-	}
-	return rev;
+    if ((events & 1) != 0) {
+        if (ifp == NULL || ifp->snd_len < ifp->snd_maxlen)
+            revents |= 1;
+    }
+
+    if (revents == 0) {
+        if ((events & 2) != 0)
+            pdp->rx_wait_flags |= 2u;
+        if ((events & 1) != 0 && ifp != NULL)
+            ifp->snd_wait_flags |= 2u;
+    }
+    return revents;
 }
 
-/* === pdpAllocAnonPort @ 0x2e78 === */
-static u16 pdpAllocAnonPort(void)
+/* 0x002e78 */
+static s32 __attribute__((noinline))
+pdpFragTimeout(PdpFragEntry *frag)
 {
-	u16 cand = g_pdp_anon_port;
-	s32 count = 0;
-	PdpPcb *cur;
-
-	while (count < 0x4000) {
-		s32 used = 0;
-		for (cur = g_pdp_list.head; cur != NULL; cur = cur->next) {
-			if (cur->port == cand) {
-				used = 1;
-				break;
-			}
-		}
-		cand++;
-		if (cand < 0xc000)
-			cand = 0xc000;
-		if (!used) {
-			g_pdp_anon_port = cand;
-			return (u16)(cand == 0xc000 ? 0xffff : cand - 1);
-		}
-		count++;
-	}
-	return 0;
+    sceNet_lib_A93A93E9(&frag->timer);
+    sceNetIfhandle_lib_F56FAC82(frag->m_head);
+    if (frag->next != NULL)
+        frag->next->prev = frag->prev;
+    else
+        frag->owner->frag_tail = frag->prev;
+    *frag->prev = frag->next;
+    sceNetIfhandle_lib_76BAD213(frag);
+    g_pdp_stats.rx_frag_timeout++;
+    return 0;
 }
-
-
-s32 sceNetAdhoc_lib_67346A2A(s32 id, u8 *src_mac, u16 *sport, void *buf, s32 *len, u32 timeout, s32 nonblock)
-	__attribute__((alias("sceNetAdhoc_67346A2A")));
