@@ -689,6 +689,9 @@ psp2_module(vs0_vsh_shell_shell KIND user COMPILER snc PARTIAL SOURCES
 	src/teleport/teleport_http_server.cpp
 	src/teleport/teleport_http_protocol.cpp
 	src/teleport/teleport_multicast.cpp
+	src/np/oauth/np_oauth_vsh.cpp
+	src/np/oauth/np_oauth_request.cpp
+	src/np/oauth/np_oauth_response.cpp
 	${PSP2_SRC}/sys/sdk/target/src/mt19937/libmt19937.c
 	${PSP2_SRC}/sys/sdk/target/src/mt19937/mtrand.S
 	${PSP2_SRC}/sys/sdk/target/src/md5/libmd5.c
