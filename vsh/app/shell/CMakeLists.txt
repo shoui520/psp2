@@ -671,6 +671,22 @@ psp2_module(vs0_vsh_shell_shell KIND user COMPILER snc PARTIAL SOURCES
 	exclusive_func_auth_reset.cpp
 	exclusive_func_location.cpp
 	src/patch_chk_plugin/patch_chk_cache_enqueue.cpp
+	src/np/ipc/npparty/server/np_party_vsh_service.cpp
+	src/np/ipc/npparty/server/np_party_ipc_server.cpp
+	src/np/profile/np_utility_profile.cpp
+	src/nsx/nsx_xml_dom.cpp
+	${PSP2_SRC}/sys/sdk/target/src/md5/libmd5.c
+	${PSP2_SRC}/sys/internal/usermode/src/ces/libces/src/ces_context.c
+	${PSP2_SRC}/sys/internal/usermode/src/ces/libces/src/UCS/ces_ucs_context.c
+	${PSP2_SRC}/sys/internal/usermode/src/ces/libces/src/UCS/ces_ucs_callback.c
+	${PSP2_SRC}/sys/internal/usermode/src/ces/libces/src/UCS/Str_UTF8_UCS2.c
+	${PSP2_SRC}/sys/internal/usermode/src/ces/libces/src/UCS/Str_UTF16_UTF8.c
+	${PSP2_SRC}/sys/internal/usermode/src/ces/libces/src/UCS/UTF8.c
+	${PSP2_SRC}/sys/internal/usermode/src/ces/libces/src/UCS/UTF16.c
+	${PSP2_SRC}/sys/internal/usermode/src/ces/libces/src/UCS/UTF16_UTF8.c
+	${PSP2_SRC}/sys/internal/usermode/src/ces/libces/src/UCS/UTF16BE.c
+	${PSP2_SRC}/sys/internal/usermode/src/ces/libces/src/UCS/UTF16BE_UTF8.c
+	${PSP2_SRC}/sys/internal/usermode/src/ces/libces/src/UCS/UTF32_UTF8.c
 	shell.c
 )
 target_include_directories(vs0_vsh_shell_shell PRIVATE "${PSP2_SRC}/vsh/paf/include"

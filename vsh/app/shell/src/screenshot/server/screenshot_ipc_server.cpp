@@ -4,6 +4,7 @@
  * 3.65-CEX: 0x81244AF4 - 0x81246A77, 0x81248436 - 0x81248A0F
  */
 #include "screenshot_server.h"
+#include <ces/libces_ucs.h>
 
 #include <stddef.h>
 #include <scetypes.h>
@@ -134,12 +135,13 @@ static bool validateUtf8MaxChars(const char *text, SceUInt32 maxChars)
 	SceInt32 remaining = static_cast<SceInt32>(totalBytes);
 	SceUInt32 charCount = 0;
 	while (offset < totalBytes) {
-		int charBytes = 0;
-		if (shellUtf8DecodeChar(copy.c_str() + offset, remaining, &charBytes) != 0)
+		uint32_t charBytes = 0;
+		if (sceCesUtf8CheckCode(reinterpret_cast<const uint8_t *>(copy.c_str() + offset),
+					static_cast<uint32_t>(remaining), &charBytes) != 0)
 			return false;
 		++charCount;
 		offset += static_cast<SceUInt32>(charBytes);
-		remaining -= charBytes;
+		remaining -= static_cast<SceInt32>(charBytes);
 	}
 	return charCount < maxChars;
 }

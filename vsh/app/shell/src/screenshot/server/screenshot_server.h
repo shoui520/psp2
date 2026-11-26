@@ -164,8 +164,6 @@ int pictureExifInitDefaults(PictureExifData *exif);		/* 0x81366678 */
 int pictureMakerNoteInit(PictureMakerNote *makerNote);		/* 0x813667FC */
 int pictureExifSetDateTime(PictureExifData *exif,
 			   paf::rtc::Tick tick);		/* 0x81366876 */
-int shellUtf8DecodeChar(const char *str, int maxLen,
-			int *outCharBytes);			/* 0x81389820 */
 int shellShutterSoundPlay(SceUInt32 soundType, int useCameraVol); /* 0x8124448E */
 
 extern "C" paf::memory::HeapAllocator *GetGlobalHeapAllocator(void);
