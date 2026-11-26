@@ -19,6 +19,7 @@ int swMwTrace(const char *format, ...);
 /* the activation and download cancels (dtcpip_activate.c / dtcpip_download.c) */
 int _sceDtcpIpCancelActivation(void);
 int _sceDtcpIpCancelDownload(void);
+int _sceDtcpIpCheckActivation(int *activated);
 }
 
 /* the manager's error translation: -7..0 map to the manager statuses, anything else to
@@ -132,4 +133,24 @@ extern "C" int SwMwManagerSessionStart(struct SwMwManagerSinkSlots *slots, int m
 	slots->content = NULL;
 	slots->starting = 0;
 	return status;
+}
+
+/* whether the device certificate exists: 0 active, 13001 to activate (0x810045dc) */
+extern "C" int SwMwManagerCheckActivation(void)
+{
+	int activated;
+	int status;
+	int failed;
+
+	status = _sceDtcpIpCheckActivation(&activated);
+	failed = 0;
+	if (status != 0) {
+		swMwTrace("[SWMW] Error %d in %s:%d\n", status, SWMW_MANAGER_SOURCE, 2385);
+		failed = 1;
+	}
+	if (failed != 0)
+		return SwMwManagerMapStatus(status);
+	if (activated == 1)
+		return 0;
+	return 13001;
 }

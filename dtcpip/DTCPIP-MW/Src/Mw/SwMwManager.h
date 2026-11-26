@@ -30,6 +30,7 @@ struct SwMwContentSupport {
 extern "C" {
 int SwMwManagerMapStatus(int status);
 int SwMwManagerCancel(void);
+int SwMwManagerCheckActivation(void);
 int SwMwManagerSessionStart(struct SwMwManagerSinkSlots *slots, int mode);
 int SwMwContentSupportCreate(struct SwMwContentSupport **support);
 int SwMwManagerRegisterMoveSink(struct SwMwManagerSinkSlots *slots, int sink);

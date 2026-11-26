@@ -42,6 +42,47 @@ int _sceDtcpIpActivateTerm(void)
 	return sceKernelDeleteLwMutex(&g_dtcpIpActivateMutex);
 }
 
+/* SceRegMgr's key reader (the SDK's libregmgr; the tree has no header for it yet) */
+int sceRegMgrGetKeyBin(const char *category, const char *name, void *buffer, int size);
+
+/* whether the device certificate is present: the activation's state (0x810110f6) */
+int _sceDtcpIpCheckActivation(int *activated)
+{
+	unsigned char cert[3];
+	int result;
+	int i;
+
+	DTCPIP_ACTIVATE_TRACE(660);
+	result = 0;
+	cert[0] = 0;
+	cert[1] = 0;
+	cert[2] = 0;
+	i = 0;
+	if (activated != NULL) {
+		result = sceRegMgrGetKeyBin("/CONFIG/DTCPIP", "devcert", cert, 3);
+		if (result >= 0) {
+			for (i = 0; i < 3; ++i) {
+				sceClibPrintf(DTCPIP_ACTIVATE_SOURCE
+					      "(679) : cert[%d] = %02d\n", i, (char)cert[i]);
+				if (cert[i] != 0)
+					break;
+			}
+			if (i < 3) {
+				*activated = 1;
+			} else {
+				sceClibPrintf(DTCPIP_ACTIVATE_SOURCE "(686) : Need Activate\n");
+				*activated = 0;
+			}
+		} else {
+			sceClibPrintf(DTCPIP_ACTIVATE_SOURCE
+				      "(673) : ERROR!! ret=0x%08x(%d)\n", result, result);
+		}
+	} else {
+		result = -2;
+	}
+	return result;
+}
+
 int _sceDtcpIpCancelActivation(void)
 {
 	int result;
