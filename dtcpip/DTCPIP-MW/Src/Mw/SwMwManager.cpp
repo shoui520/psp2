@@ -110,7 +110,7 @@ extern "C" int SwMwManagerSessionStart(struct SwMwManagerSinkSlots *slots, int m
 		failed = 1;
 	}
 	if (failed != 0)
-		goto fail;
+		return SwMwManagerMapStatus(status);
 	status = ((struct SwMwContentSupport *)slots->support)->createContent(&slots->content);
 	failed = 0;
 	if (status != 0) {
@@ -118,7 +118,7 @@ extern "C" int SwMwManagerSessionStart(struct SwMwManagerSinkSlots *slots, int m
 		failed = 1;
 	}
 	if (failed != 0)
-		goto fail;
+		return SwMwManagerMapStatus(status);
 	status = ((struct SwMwContentSupport *)slots->support)->createManager(&slots->manager);
 	failed = 0;
 	if (status != 0) {
@@ -130,10 +130,6 @@ extern "C" int SwMwManagerSessionStart(struct SwMwManagerSinkSlots *slots, int m
 	status = SwMwManagerMapStatus(status);
 	((struct SwMwContentSupport *)slots->support)->release();
 	slots->content = NULL;
-	slots->starting = 0;
-	return status;
-fail:
-	status = SwMwManagerMapStatus(status);
 	slots->starting = 0;
 	return status;
 }
