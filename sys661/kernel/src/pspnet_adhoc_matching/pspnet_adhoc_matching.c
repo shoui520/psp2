@@ -1,2716 +1,2415 @@
 /*
- * ePSP 6.61 pspnet_adhoc_matching.prx (sceNetAdhocMatching_Library v1.6)
- * Reimplemented from 3.650.011-TOOL pcff flash0:/kd/pspnet_adhoc_matching.prx
+ * ePSP 6.61 pspnet_adhoc_matching.prx (sceNetAdhocMatching_Library)
+ * Reimplemented from the Vita ePSP 6.61 binary.
  */
 
-#include <common_imp.h>
+#include <psptypes.h>
 
-#ifndef NULL
-#define NULL ((void *)0)
-#endif
-
-typedef struct SceKernelLwMutexWork {
-	u32 data[8];
-} SceKernelLwMutexWork;
-
-typedef struct SceKernelVplInfo {
-	u32 size;
-	char name[32];
-	u32 attr;
-	int poolSize;
-	int freeSize;
-	int numWaitThreads;
-} SceKernelVplInfo;
-
-typedef struct SceNetAdhocMatchingPoolStat {
-	int size;
-	int maxsize;
-	int freesize;
-} SceNetAdhocMatchingPoolStat;
-
-/* External imports */
-extern int sceNetFreeThreadinfo(int thid);
-extern int sceNet_lib_1858883D(int arg0);
-extern int sceNet_lib_E0A81C7C(const void *mac1, const void *mac2);
-
-extern int sceNetAdhocPdpCreate(const void *mac, u16 port, u32 bufsize, int flag);
-extern int sceNetAdhoc_73BFD52D(int id, int flag);
-extern int sceNetAdhocPdpDelete(int id, int flag);
-extern int sceNetAdhocPdpSend(int id, const void *destMacAddr, u16 port, const void *data, unsigned int len, unsigned int timeout, int nonblock);
-extern int sceNetAdhocPdpRecv(int id, void *srcMacAddr, u16 *port, void *data, void *dataLength, unsigned int timeout, int nonblock);
-
-extern int sceKernelGetCompiledSdkVersion(void);
-extern int sceWlanGetEtherAddr(void *etherAddr);
-
+/* Kernel_Library */
 extern int sceKernelCpuSuspendIntr(void);
-extern void *sceKernelMemset(void *dst, int c, u32 n);
-extern int sceKernelLockLwMutex(SceKernelLwMutexWork *work, int count, u32 *timeout);
-extern int _sceKernelCheckThreadStack(void);
-extern int sceKernelUnlockLwMutex(SceKernelLwMutexWork *work, int count);
-extern void *sceKernelMemcpy(void *dst, const void *src, u32 n);
 extern void sceKernelCpuResumeIntr(int intr);
+extern void *sceKernelMemset(void *dst, int c, u32 n);
+extern void *sceKernelMemcpy(void *dst, const void *src, u32 n);
+extern int sceKernelLockLwMutex(void *workarea, int count, u32 *timeout);
+extern int sceKernelUnlockLwMutex(void *workarea, int count);
+extern int _sceKernelCheckThreadStack(void);
 
-extern int sceKernelGetModuleGPByAddress(const void *addr, u32 *gp);
+/* ModuleMgrForUser */
+extern int sceKernelGetModuleGPByAddress(void *addr, u32 *gp);
 
-extern int sceKernelSendMbx(int mbxid, void *msg);
+/* SysMemUserForUser */
+extern int sceKernelGetCompiledSdkVersion(void);
+
+/* ThreadManForUser */
+extern int sceKernelCreateThread(const char *name, void *entry, int prio, int stack, u32 attr, void *opt);
+extern int sceKernelDeleteThread(int thid);
 extern int sceKernelStartThread(int thid, u32 arglen, void *argp);
 extern int sceKernelWaitThreadEnd(int thid, u32 *timeout);
-extern int sceKernelGetSystemTimeLow(void);
-extern int sceKernelReferVplStatus(int uid, SceKernelVplInfo *info);
-extern int sceKernelCreateThread(const char *name, int (*entry)(u32, void *), int initPriority, int stackSize, u32 attr, void *option);
-extern int sceKernelCreateVpl(const char *name, int part, int attr, unsigned int size, void *opt);
-extern int sceKernelDeleteLwMutex(SceKernelLwMutexWork *work);
+extern int sceKernelCreateMbx(const char *name, u32 attr, void *opt);
+extern int sceKernelDeleteMbx(int mbxid);
+extern int sceKernelSendMbx(int mbxid, void *msg);
+extern int sceKernelReceiveMbx(int mbxid, void **msg, u32 *timeout);
+extern int sceKernelCreateVpl(const char *name, int part, u32 attr, u32 size, void *opt);
+extern int sceKernelDeleteVpl(int vplid);
+extern int sceKernelTryAllocateVpl(int vplid, u32 size, void **data);
+extern int sceKernelFreeVpl(int vplid, void *data);
+extern int sceKernelReferVplStatus(int vplid, void *info);
 extern int sceKernelSetAlarm(u32 clock, u32 (*handler)(void *), void *common);
 extern int sceKernelCancelAlarm(int alarmid);
-extern int sceKernelCreateMbx(const char *name, u32 attr, void *option);
-extern int sceKernelDeleteMbx(int mbxid);
-extern int sceKernelDeleteVpl(int uid);
-extern int sceKernelReceiveMbx(int mbxid, void **pmessage, u32 *timeout);
-extern int sceKernelDeleteThread(int thid);
-extern int sceKernelCreateLwMutex(SceKernelLwMutexWork *work, const char *name, u32 attr, int initCount, void *opt);
-extern int sceKernelTryAllocateVpl(int uid, unsigned int size, void **data);
-extern int sceKernelFreeVpl(int uid, void *data);
+extern u32 sceKernelGetSystemTimeLow(void);
+extern int sceKernelCreateLwMutex(void *workarea, const char *name, u32 attr, int initCount, void *opt);
+extern int sceKernelDeleteLwMutex(void *workarea);
 
-/* Segment 1 globals (0x4b40..0x4b8c) */
-int g_vpl_id = -1;                           /* 0x4b40 */
-int g_is_init = 0;                           /* 0x4b44 */
-SceNetAdhocMatchingPoolStat g_pool_stat;     /* 0x4b48: size(0x4b48), maxsize(0x4b4c), freesize(0x4b50) */
-u32 g_max_alloc = 0;                         /* 0x4b54 */
-void *g_ctx_list = NULL;                     /* 0x4b5c */
-SceKernelLwMutexWork g_lock;                 /* 0x4b64..0x4b83 */
-u8 g_local_mac[8];                           /* 0x4b84..0x4b8b */
+/* sceNet */
+extern int sceNetFreeThreadinfo(int thid);
 
-/* Matching peer structure (0x88 bytes) */
+/* sceNet_lib */
+extern u32 sceNet_lib_1858883D(void);
+extern int sceNet_lib_E0A81C7C(const void *lhs, const void *rhs, u32 len);
+
+/* sceNetAdhoc */
+extern int sceNetAdhocPdpCreate(const u8 *mac, u16 port, u32 bufsize, int flag);
+extern int sceNetAdhocPdpDelete(int id, int flag);
+extern int sceNetAdhocPdpSend(int id, const u8 *dstmac, u16 port, const void *data, int len, u32 timeout, int flag);
+extern int sceNetAdhocPdpRecv(int id, u8 *srcmac, u16 *port, void *data, int *len, u32 timeout, int flag);
+extern int sceNetAdhoc_73BFD52D(int id, int flag);
+
+/* sceWlanDrv */
+extern int sceWlanGetEtherAddr(u8 *mac);
+
+/* Error codes */
+#define MATCHING_ERR_STACK_SMALL        ((int)0x80410005)
+#define MATCHING_ERR_PDP_WOULDBLOCK     ((int)0x80410709)
+#define MATCHING_ERR_INVALID_MODE       ((int)0x80410801)
+#define MATCHING_ERR_INVALID_MAXNUM     ((int)0x80410803)
+#define MATCHING_ERR_RXBUF_TOO_SHORT    ((int)0x80410804)
+#define MATCHING_ERR_INVALID_OPTLEN     ((int)0x80410805)
+#define MATCHING_ERR_INVALID_ARG        ((int)0x80410806)
+#define MATCHING_ERR_INVALID_ID         ((int)0x80410807)
+#define MATCHING_ERR_ID_NOT_AVAIL       ((int)0x80410808)
+#define MATCHING_ERR_NO_SPACE           ((int)0x80410809)
+#define MATCHING_ERR_IS_RUNNING         ((int)0x8041080A)
+#define MATCHING_ERR_NOT_RUNNING        ((int)0x8041080B)
+#define MATCHING_ERR_UNKNOWN_TARGET     ((int)0x8041080C)
+#define MATCHING_ERR_TARGET_NOT_READY   ((int)0x8041080D)
+#define MATCHING_ERR_EXCEED_MAXNUM      ((int)0x8041080E)
+#define MATCHING_ERR_REQUEST_IN_PROGRESS ((int)0x8041080F)
+#define MATCHING_ERR_ALREADY_ESTABLISHED ((int)0x80410810)
+#define MATCHING_ERR_BUSY               ((int)0x80410811)
+#define MATCHING_ERR_ALREADY_INITIALIZED ((int)0x80410812)
+#define MATCHING_ERR_NOT_INITIALIZED    ((int)0x80410813)
+#define MATCHING_ERR_PORT_IN_USE        ((int)0x80410814)
+#define MATCHING_ERR_STACKSIZE_TOO_SHORT ((int)0x80410815)
+#define MATCHING_ERR_INVALID_DATALEN    ((int)0x80410816)
+#define MATCHING_ERR_NOT_ESTABLISHED    ((int)0x80410817)
+#define MATCHING_ERR_DATA_BUSY          ((int)0x80410818)
+#define MATCHING_ERR_UNALIGNED          ((int)0x80410819)
+
+/* Modes */
+#define MATCHING_MODE_HOST   1
+#define MATCHING_MODE_CLIENT 2
+#define MATCHING_MODE_PTP    3
+
+/* Peer states */
+#define PEER_STATE_IDLE        1
+#define PEER_STATE_JOIN_RECV   2
+#define PEER_STATE_ACCEPTED    3
+#define PEER_STATE_SELECT_SENT 4
+#define PEER_STATE_ESTABLISHED 5
+
+/* Data states */
+#define DATA_STATE_IDLE    1
+#define DATA_STATE_SENDING 2
+
+/* Wire packet types */
+#define PKT_HELLO          1
+#define PKT_JOIN           2
+#define PKT_ACCEPT         3
+#define PKT_COMPLETE       4
+#define PKT_CANCEL         5
+#define PKT_KEEPALIVE      6
+#define PKT_KEEPALIVE_ACK  7
+#define PKT_BYE            8
+#define PKT_JOIN_ACK       9
+#define PKT_DATA          10
+#define PKT_DATA_ACK      11
+
+/* User callback events */
+#define MATCHING_EV_HELLO          1
+#define MATCHING_EV_JOIN           2
+#define MATCHING_EV_LEFT           3
+#define MATCHING_EV_REJECT         4
+#define MATCHING_EV_CANCEL         5
+#define MATCHING_EV_ACCEPT         6
+#define MATCHING_EV_ESTABLISHED    7
+#define MATCHING_EV_TIMEOUT        8
+#define MATCHING_EV_ERROR          9
+#define MATCHING_EV_BYE           10
+#define MATCHING_EV_DATA          11
+#define MATCHING_EV_DATA_CONFIRM  12
+#define MATCHING_EV_DATA_TIMEOUT  13
+
+/* Internal mailbox message types */
+#define MBX_MSG_PACKET     1
+#define MBX_MSG_CTRL_RETRY 2
+#define MBX_MSG_KEEPALIVE  3
+#define MBX_MSG_HELLO      4
+#define MBX_MSG_DATA_RETRY 5
+
+typedef void (*SceNetAdhocMatchingHandler)(int matchingid, int event, const u8 *mac, int optlen, void *opt);
+
+typedef struct MatchingPoolStat {
+    u32 size;
+    u32 maxsize;
+    u32 freesize;
+} MatchingPoolStat;
+
+typedef struct MatchingMember {
+    struct MatchingMember *next;
+    u8 mac[6];
+    u8 pad[2];
+} MatchingMember;
+
+typedef struct MatchingVplInfo {
+    u32 size;
+    char name[32];
+    u32 attr;
+    int pool_size;
+    int free_size;
+    int wait_threads;
+} MatchingVplInfo;
+
+typedef struct MatchingThreadOpt {
+    u32 size;
+    int stack_mpid;
+} MatchingThreadOpt;
+
+struct MatchingPeer;
+
+typedef struct MatchingMbxMsg {
+    u32 mbx_next;
+    u32 mbx_pad;
+    int msg_type;
+    struct MatchingPeer *peer;
+    u32 pending_flag;
+} MatchingMbxMsg;
+
 typedef struct MatchingPeer {
-	struct MatchingPeer *next; /* 0x00 */
-	int state;                 /* 0x04 */
-	u8 mac[6];                 /* 0x08 */
-	u8 pad0e[2];               /* 0x0e */
-	int stateFlags;              /* 0x10 */
-	int member_count;          /* 0x14 */
-	u8 *member_macs;           /* 0x18 */
-	void *hello_buf;           /* 0x1c */
-	int opt_len;               /* 0x20 */
-	void *opt_data;            /* 0x24 */
-	u32 last_recv_time;        /* 0x28 */
-	u32 timeout_us;            /* 0x2c */
-	u32 last_send_time;        /* 0x30 */
-	u32 last_keepalive_time;   /* 0x34 */
-	int peerState;              /* 0x38 */
-	u8 pad3c[68];              /* 0x3c..0x7f */
-	int bulk_len;              /* 0x80 */
-	void *bulk_data;           /* 0x84 */
+    struct MatchingPeer *next;      /* 0x00 (0) */
+    int state;                      /* 0x04 (1) */
+    u8 mac[6];                      /* 0x08 (2) */
+    u8 mac_pad[2];                  /* 0x0E */
+    u32 peer_hello_delay;           /* 0x10 (4) */
+    u32 peer_ping_delay;            /* 0x14 (5) */
+    int rx_raw_len;                 /* 0x18 (6) */
+    u8 *rx_pkt;                     /* 0x1C (7) */
+    int rx_wire_len;                /* 0x20 (8) */
+    int opt_len;                    /* 0x24 (9) */
+    void *opt_buf;                  /* 0x28 (10) */
+    MatchingMbxMsg rx_msg;          /* 0x2C (11..15) */
+    MatchingMbxMsg ctrl_alarm_msg;  /* 0x40 (16..20) */
+    int ctrl_alarm_id;              /* 0x54 (21) */
+    int ping_retry;                 /* 0x58 (22) */
+    int select_retry;               /* 0x5C (23) */
+    int event_mbx;                  /* 0x60 (24) */
+    u32 peer_caps;                  /* 0x64 (25) */
+    int pending_free;               /* 0x68 (26) */
+    u32 own_session_id;           /* 0x6C (27) */
+    u32 remote_session_id;          /* 0x70 (28) */
+    u32 tx_seq;                     /* 0x74 (29) */
+    u32 rx_expected_seq;            /* 0x78 (30) */
+    int data_state;                 /* 0x7C (31) */
+    int data_len;                   /* 0x80 (32) */
+    void *data_buf;                 /* 0x84 (33) */
+    MatchingMbxMsg data_alarm_msg;  /* 0x88 (34..38) */
+    int data_alarm_id;              /* 0x9C (39) */
+    int data_retry;                 /* 0xA0 (40) */
 } MatchingPeer;
 
-/* Note on MatchingPeer offsets from disassembly:
- * 0x00: next
- * 0x04: state
- * 0x08..0x0d: mac[6]
- * 0x14: member_count
- * 0x18: member_macs (inside hello_buf)
- * 0x1c: hello_buf
- * 0x24: opt_len
- * 0x28: opt_data
- * 0x2c: last_recv_time
- * 0x30: timeout_us
- * 0x34: last_send_time
- * 0x38: last_keepalive_time
- * 0x3c: keepalive_retry_count
- * 0x80: bulk_len
- * 0x84: bulk_data
- */
-typedef struct PeerNode {
-	struct PeerNode *next;     /* 0x00 */
-	int state;                 /* 0x04 */
-	u8 mac[6];                 /* 0x08 */
-	u8 pad0e[2];               /* 0x0e */
-	u32 pad10;                 /* 0x10 */
-	int member_count;          /* 0x14 */
-	u8 *member_macs;           /* 0x18 */
-	u8 *hello_buf;             /* 0x1c */
-	u32 pad20;                 /* 0x20 */
-	int opt_len;               /* 0x24 */
-	void *opt_data;            /* 0x28 */
-	u32 last_recv_time;        /* 0x2c */
-	u32 timeout_us;            /* 0x30 */
-	u32 last_send_time;        /* 0x34 */
-	u32 last_keepalive_time;   /* 0x38 */
-	int keepalive_count;       /* 0x3c */
-	u8 pad40[0x40];            /* 0x40..0x7f */
-	int bulk_len;              /* 0x80 */
-	void *bulk_data;           /* 0x84 */
-} PeerNode;
-
-/* Matching context structure (0x90 bytes) */
 typedef struct MatchingCtx {
-	struct MatchingCtx *next;  /* 0x00 */
-	int id;                    /* 0x04 */
-	int running;               /* 0x08 */
-	int mode;                  /* 0x0c */
-	int max_peers;             /* 0x10 */
-	u16 port;                  /* 0x14 */
-	u16 pad16;                 /* 0x16 */
-	int rx_buflen;             /* 0x18 */
-	void *rx_buf;              /* 0x1c */
-	u32 hello_delay;           /* 0x20 */
-	u32 ping_delay;            /* 0x24 */
-	int init_count;            /* 0x28 */
-	u32 rexmt_int;             /* 0x2c */
-	u32 keepalive_timeout;     /* 0x30 */
-	u32 timeout_total;         /* 0x34 */
-	void (*handler)(int, int, void *, int, void *); /* 0x38 */
-	u32 handler_gp;            /* 0x3c */
-	int pdp_id;                /* 0x40 */
-	int event_thid;            /* 0x44 */
-	int input_thid;            /* 0x48 */
-	int event_stack_size;      /* 0x4c */
-	int input_stack_size;      /* 0x50 */
-	int event_mbx;             /* 0x54 */
-	int send_mbx;              /* 0x58 */
-	int stop_event_thread;     /* 0x5c */
-	int stop_input_thread;     /* 0x60 */
-	int hello_pkt_len;         /* 0x64 */
-	u8 *hello_pkt;             /* 0x68 */
-	int hello_opt_len;         /* 0x6c */
-	void *hello_opt_data;      /* 0x70 */
-	PeerNode *peer_list;       /* 0x74 */
-	int alarm1_id;             /* 0x78 */
-	int alarm2_id;             /* 0x7c */
-	int join_opt_len;          /* 0x80 */
-	void *join_opt_data;       /* 0x84 */
-	u8 local_mac[6];           /* 0x88 */
-	u8 pad8e[2];               /* 0x8e */
+    struct MatchingCtx *next;       /* 0x00 (0) */
+    int id;                         /* 0x04 (1) */
+    int running;                    /* 0x08 (2) */
+    int mode;                       /* 0x0C (3) */
+    int max_peers;                  /* 0x10 (4) */
+    u16 port;                       /* 0x14 (5) */
+    u16 port_pad;                   /* 0x16 */
+    int rx_buflen;                  /* 0x18 (6) */
+    u8 *rx_buf;                     /* 0x1C (7) */
+    u32 hello_delay;                /* 0x20 (8) */
+    u32 ping_delay;                 /* 0x24 (9) */
+    int init_count;                 /* 0x28 (10) */
+    u32 msg_delay;                  /* 0x2C (11) */
+    SceNetAdhocMatchingHandler handler; /* 0x30 (12) */
+    int min_stack;                  /* 0x34 (13) */
+    int pdp_id;                     /* 0x38 (14) */
+    int event_thid;                 /* 0x3C (15) */
+    int event_mbx;                  /* 0x40 (16) */
+    int input_thid;                 /* 0x44 (17) */
+    int hello_pkt_len;              /* 0x48 (18) */
+    u8 *hello_pkt;                  /* 0x4C (19) */
+    MatchingMbxMsg hello_msg;       /* 0x50 (20..24) */
+    int members_pkt_len;            /* 0x64 (25) */
+    u8 *members_pkt;                /* 0x68 (26) */
+    int hello_alarm_id;             /* 0x6C (27) */
+    u8 hello_trailer[4];            /* 0x70 (28) */
+    MatchingPeer *peers;            /* 0x74 (29) */
+    u32 handler_gp;                 /* 0x78 (30) */
 } MatchingCtx;
 
-typedef struct EventMsg {
-	void *hdr_next;            /* 0x00 */
-	u8 hdr_prio;               /* 0x04 */
-	u8 hdr_resv[3];            /* 0x05 */
-	struct EventMsg *next;     /* 0x08 */
-	int event;                 /* 0x0c */
-	u8 mac[6];                 /* 0x10 */
-	u8 pad16[2];               /* 0x16 */
-	int opt_len;               /* 0x18 */
-	void *opt_data;            /* 0x1c */
-	int state;                 /* 0x20 */
-} EventMsg;
+static int g_vpl_id = -1;
+static int g_initialized;
+static int g_pool_max_alloc;
+static int g_mutex_created;
+static MatchingCtx *g_ctx_list;
+static int g_last_ctx_id;
+static u8 g_mutex_work[0x20];
+static u8 g_self_mac[6];
 
-typedef struct SendMsg {
-	void *hdr_next;            /* 0x00 */
-	u8 hdr_prio;               /* 0x04 */
-	u8 hdr_resv[3];            /* 0x05 */
-	struct SendMsg *next;      /* 0x08 */
-	int pkt_type;              /* 0x0c */
-	u8 mac[6];                 /* 0x10 */
-	u8 pad16[2];               /* 0x16 */
-	int pkt_len;               /* 0x18 */
-	u8 *pkt_data;              /* 0x1c */
-} SendMsg;
-
-/* Forward declarations of internal helpers */
-static int matchingStartInternal(int matchingId, int evPri, int evStack, int evPart, int inPri, int inStack, int inPart, int optLen, const void *optData);
-static int matchingSelectTargetInternal(int matchingId, const u8 *mac, int optLen, const void *optData);
-static void *matchingAlloc(u32 size);
-static int matchingEventThread(u32 args, void *argp);
-static MatchingCtx *matchingFindCtxById(int matchingId);
-static int matchingAllocCtxId(void);
-static MatchingCtx *matchingFindCtxByPort(u16 port);
-static void matchingUnlinkCtx(MatchingCtx *ctx);
-static int matchingPostEvent(MatchingCtx *ctx, int event, const u8 *mac, int optLen, const void *optData);
-static int matchingQueueControlPkt(MatchingCtx *ctx, int pktType, const u8 *mac, int optLen, const void *optData);
-static int matchingQueueDataPkt(MatchingCtx *ctx, const u8 *mac, int dataLen, const void *data);
-static void matchingFlushQueues(MatchingCtx *ctx);
-static void matchingDropSendMsgsForPeer(MatchingCtx *ctx, PeerNode *peer);
-static int matchingHasSendMsgsForPeer(MatchingCtx *ctx, PeerNode *peer);
-static u32 matchingHelloAlarmHandler(void *common);
-static u32 matchingKeepAliveAlarmHandler(void *common);
-static void matchingCheckPeerTimeouts(MatchingCtx *ctx, u32 now);
-static int matchingFreeOptBuffers(MatchingCtx *ctx);
-static void matchingDrainSendQueue(MatchingCtx *ctx);
-static int matchingInputThread(u32 args, void *argp);
-static PeerNode *matchingHandleHelloPeer(MatchingCtx *ctx, const u8 *mac, int optLen, const void *optData);
-static void matchingDropEventMsgsForPeer(MatchingCtx *ctx, PeerNode *peer);
-static int matchingHandleDataPacket(MatchingCtx *ctx, PeerNode *peer, const u8 *rxBuf, u32 rxLen);
-static void matchingHandleHostForward(MatchingCtx *ctx, PeerNode *peer, u32 rxLen);
-static PeerNode *matchingCreatePeer(MatchingCtx *ctx, const u8 *mac, int optLen, const void *optData);
-static PeerNode *matchingFindPeerByMac(MatchingCtx *ctx, const u8 *mac);
-static PeerNode *matchingFindParentPeer(MatchingCtx *ctx, int state);
-static int matchingRemovePeer(MatchingCtx *ctx, PeerNode *peer);
-static void matchingDestroyAllPeers(MatchingCtx *ctx);
-static void matchingCollectPeerMacs(MatchingCtx *ctx, int minState, u8 *dstMacs, int *pCount);
-static int matchingCountPeersByState(MatchingCtx *ctx, int minState);
-static void matchingExportHelloMembers(MatchingCtx *ctx, int *pSize, u8 *buf);
-static int matchingIsLocalMacLower(const PeerNode *peer);
-
-/* 0x0000: sceNetAdhocMatchingInit */
-int sceNetAdhocMatchingInit(u32 memsize)
+static inline u16 matchingSwap16(u16 x)
 {
-	if (_sceKernelCheckThreadStack() < 0xbe0)
-		return 0x80410005;
-	if (g_is_init != 0)
-		return 0x80410812;
-	if (memsize == 0)
-		memsize = 0x8000;
-	if (memsize < 0x800)
-		return 0x80410815;
-
-	int ret = sceKernelCreateLwMutex(&g_lock, "SceNetAdhocMatchingLock", 0x200, 0, NULL);
-	if (ret < 0)
-		return ret;
-
-	int vpl = sceKernelCreateVpl("SceNetAdhocMatchingMemoryPool", 2, 0x100, memsize, NULL);
-	if (vpl < 0) {
-		sceKernelDeleteLwMutex(&g_lock);
-		return 0x8041080c;
-	}
-	g_vpl_id = vpl;
-	g_pool_stat.size = memsize - 0x20;
-	g_pool_stat.maxsize = 0;
-	g_pool_stat.freesize = memsize - 0x20;
-	g_ctx_list = NULL;
-	g_is_init = 1;
-	return 0;
+    return (u16)__builtin_allegrex_wsbh(x);
 }
 
-/* 0x00dc: sceNetAdhocMatchingCreate */
-int sceNetAdhocMatchingCreate(int mode, int maxPeers, u16 port, int bufSize, u32 helloDelay, u32 pingDelay, int initCount, u32 msgDelay, void (*handler)(int, int, void *, int, void *))
+static inline u32 matchingSwap32(u32 x)
 {
-	u32 gp_val[4];
-
-	if (_sceKernelCheckThreadStack() < 0xb80)
-		return 0x80410005;
-	if (g_is_init == 0)
-		return 0x80410813;
-	if ((u32)(mode - 1) >= 3u)
-		return 0x80410801;
-	if (mode == 3) {
-		if (maxPeers != 2)
-			return 0x80410802;
-	} else {
-		if ((u32)(maxPeers - 2) >= 0xfu)
-			return 0x80410802;
-	}
-	if (port == 0)
-		return 0x8041080b;
-	if (bufSize <= 0)
-		return 0x80410803;
-	if (mode != 2 && helloDelay == 0)
-		return 0x80410806;
-	if (pingDelay == 0)
-		return 0x80410806;
-	if ((u32)(initCount - 1) >= 0xffu)
-		return 0x80410808;
-	if (msgDelay == 0)
-		return 0x80410806;
-	if (handler == NULL)
-		return 0x80410807;
-
-	sceKernelLockLwMutex(&g_lock, 1, NULL);
-	if (matchingFindCtxByPort(port) != NULL) {
-		sceKernelUnlockLwMutex(&g_lock, 1);
-		return 0x80410810;
-	}
-
-	MatchingCtx *ctx = (MatchingCtx *)matchingAlloc(0x90);
-	if (ctx == NULL) {
-		sceKernelUnlockLwMutex(&g_lock, 1);
-		return 0x8041080c;
-	}
-	sceKernelMemset(ctx, 0, 0x90);
-
-	void *rx_buf = matchingAlloc(bufSize);
-	ctx->rx_buf = rx_buf;
-	if (rx_buf == NULL) {
-		sceKernelFreeVpl(g_vpl_id, ctx);
-		sceKernelUnlockLwMutex(&g_lock, 1);
-		return 0x8041080c;
-	}
-	sceKernelMemset(rx_buf, 0, bufSize);
-
-	int id = matchingAllocCtxId();
-	if (id <= 0) {
-		sceKernelFreeVpl(g_vpl_id, ctx->rx_buf);
-		sceKernelFreeVpl(g_vpl_id, ctx);
-		sceKernelUnlockLwMutex(&g_lock, 1);
-		return 0x80410809;
-	}
-
-	ctx->id = id;
-	ctx->mode = mode;
-	ctx->max_peers = maxPeers;
-	ctx->port = port;
-	ctx->rx_buflen = bufSize;
-	ctx->hello_delay = helloDelay;
-	ctx->ping_delay = pingDelay;
-	ctx->init_count = initCount;
-	ctx->rexmt_int = msgDelay;
-	ctx->keepalive_timeout = pingDelay * initCount;
-	ctx->timeout_total = pingDelay * initCount + 500000;
-	ctx->handler = handler;
-
-	if (sceKernelGetCompiledSdkVersion() >= 0x02060000) {
-		if (sceKernelGetModuleGPByAddress(handler, gp_val) >= 0) {
-			ctx->handler_gp = gp_val[0];
-		} else {
-			register u32 cur_gp asm("gp");
-			ctx->handler_gp = cur_gp;
-		}
-	} else {
-		ctx->handler_gp = 0;
-	}
-
-	ctx->next = (MatchingCtx *)g_ctx_list;
-	g_ctx_list = ctx;
-	sceKernelUnlockLwMutex(&g_lock, 1);
-	return ctx->id;
+    return (u32)__builtin_allegrex_wsbw(x);
 }
 
-/* Helper functions factored out to match original call structure */
-static int matchingLock(void)
+static inline __attribute__((always_inline))
+void matchingInvokeHandler(MatchingCtx *ctx, int event, const u8 *mac, int optlen, void *opt)
 {
-	return sceKernelLockLwMutex(&g_lock, 1, NULL);
+    int rem = _sceKernelCheckThreadStack() - ctx->min_stack;
+    SceNetAdhocMatchingHandler cb = ctx->handler;
+    int pad = (rem > 0) ? rem : 0;
+    if (cb != NULL) {
+        u32 saved_gp;
+        __asm__ volatile ("move %0, $gp" : "=r"(saved_gp));
+        __asm__ volatile ("move $gp, %0" : : "r"(ctx->handler_gp));
+        {
+            void * volatile stack_pad = __builtin_alloca(((u32)pad + 15u) & ~15u);
+            (void)stack_pad;
+            cb(ctx->id, event, mac, optlen, opt);
+        }
+        __asm__ volatile ("move $gp, %0" : : "r"(saved_gp));
+    }
 }
 
-static void matchingUnlock(int lock_ret)
+/* Forward declarations in original binary address order */
+static int matchingStartInternal(int id, int evth_prio, int evth_stack, int evth_mpid, int inth_prio, int inth_stack, int inth_mpid, int optlen, const void *opt);
+static int matchingCancelTargetInternal(int id, const u8 *target, int optlen, const void *opt);
+static int matchingStartEventThread(MatchingCtx *ctx, int prio, int stack, int mpid);
+static int matchingStopEventThread(MatchingCtx *ctx, int *lock_res);
+static int matchingEventThread(u32 arglen, void *argp);
+static void matchingProcessPacket(MatchingCtx *ctx, MatchingPeer *peer);
+static void matchingHandleCtrlRetry(MatchingCtx *ctx, MatchingPeer *peer);
+static int matchingSendCtrlPkt(MatchingCtx *ctx, MatchingPeer *peer, int pkt_type, int optlen, const void *opt);
+static int matchingCreatePdp(MatchingCtx *ctx);
+static int matchingDeletePdp(MatchingCtx *ctx);
+static int matchingSendDataPkt(MatchingCtx *ctx, MatchingPeer *peer, int pkt_type, int datalen, const void *data);
+static int matchingBuildHelloPkt(MatchingCtx *ctx, int optlen, const void *opt);
+static void matchingFreeHelloPkt(MatchingCtx *ctx);
+static int matchingBroadcastHello(MatchingCtx *ctx);
+static int matchingBuildMembersPkt(MatchingCtx *ctx);
+static int matchingSendMembersPkt(MatchingCtx *ctx, MatchingPeer *peer);
+static int matchingCopyMembersPkt(MatchingCtx *ctx, const void *pkt, int len);
+static void matchingFreeMembersPkt(MatchingCtx *ctx);
+static int matchingBroadcastBye(MatchingCtx *ctx);
+static int matchingStartInputThread(MatchingCtx *ctx, int prio, int stack, int mpid);
+static int matchingStopInputThread(MatchingCtx *ctx, int *lock_res);
+static int matchingInputThread(u32 arglen, void *argp);
+static int matchingSetCtrlRetryAlarm(MatchingCtx *ctx, MatchingPeer *peer);
+static int matchingSetDataRetryAlarm(MatchingCtx *ctx, MatchingPeer *peer);
+static int matchingSetKeepAliveAlarm(MatchingCtx *ctx, MatchingPeer *peer);
+static int matchingSetHelloAlarm(MatchingCtx *ctx, u32 delay);
+static int matchingCancelPeerAlarms(MatchingPeer *peer);
+static int matchingCancelDataAlarm(MatchingPeer *peer);
+static int matchingCancelHelloAlarm(MatchingCtx *ctx);
+static u32 matchingCtrlRetryAlarmCb(void *common);
+static u32 matchingDataRetryAlarmCb(void *common);
+static u32 matchingKeepAliveAlarmCb(void *common);
+static u32 matchingHelloAlarmCb(void *common);
+static void matchingRemovePeer(MatchingCtx *ctx, MatchingPeer *peer);
+static void matchingSetPeerState(MatchingCtx *ctx, MatchingPeer *peer, int new_state);
+static void matchingSetPeerDataState(MatchingCtx *ctx, MatchingPeer *peer, int new_state);
+static int matchingCreateLock(void);
+static void matchingDeleteLock(void);
+static int matchingLock(void);
+static void matchingUnlock(int lock_res);
+static int matchingInitCtxList(void);
+static int matchingFreeAllCtxs(void);
+static int matchingCheckNoActiveCtx(void);
+static int matchingCreateVpl(int poolsize);
+static void matchingDeleteVpl(void);
+static void *matchingAllocVpl(int size);
+static int matchingFreeVpl(void *ptr);
+static int matchingGetPoolMaxAllocInternal(void);
+static int matchingGetPoolStatInternal(MatchingPoolStat *stat);
+static int matchingAllocCtx(u16 port);
+static int matchingFreeCtx(MatchingCtx *ctx);
+static MatchingCtx *matchingFindCtxById(int id);
+static MatchingPeer *matchingCreatePeer(MatchingCtx *ctx, const u8 *mac);
+static MatchingPeer *matchingFindPeerByMac(MatchingCtx *ctx, const u8 *mac);
+static int matchingDestroyAllPeers(MatchingCtx *ctx);
+static void matchingCollectPeerMacs(MatchingCtx *ctx, int min_state, u8 *out, int *count_inout);
+static int matchingCountPeersAtLeast(MatchingCtx *ctx, int min_state);
+static void matchingGetMembersInternal(MatchingCtx *ctx, int *buflen, void *buf);
+static int matchingCompareMac(const MatchingPeer *peer);
+
+/* 0x000000 */
+int sceNetAdhocMatchingInit(int poolsize)
 {
-	sceKernelUnlockLwMutex(&g_lock, 1);
+    u8 mac[16];
+    int ret;
+
+    if (_sceKernelCheckThreadStack() < 3040)
+        return MATCHING_ERR_STACK_SMALL;
+    if (g_initialized > 0)
+        return MATCHING_ERR_ALREADY_INITIALIZED;
+
+    ret = matchingCreateLock();
+    if (ret < 0)
+        return ret;
+    ret = matchingCreateVpl(poolsize);
+    if (ret >= 0) {
+        ret = matchingInitCtxList();
+        if (ret >= 0) {
+            ret = sceWlanGetEtherAddr(mac);
+            if (ret >= 0) {
+                sceKernelMemcpy(g_self_mac, mac, 6);
+                g_initialized = 1;
+                return 0;
+            }
+            matchingFreeAllCtxs();
+        }
+        matchingDeleteVpl();
+    }
+    matchingDeleteLock();
+    return ret;
 }
 
-static void matchingStopInputThread(MatchingCtx *ctx)
+/* 0x0000dc */
+int sceNetAdhocMatchingCreate(int mode, int maxpeers, u16 port, int bufsize,
+                              u32 hellodelay, u32 pingdelay, int initcount,
+                              u32 msgdelay, SceNetAdhocMatchingHandler callback)
 {
-	if (ctx->input_thid > 0) {
-		ctx->stop_input_thread = 1;
-		sceKernelUnlockLwMutex(&g_lock, 1);
-		sceKernelWaitThreadEnd(ctx->input_thid, NULL);
-		sceKernelLockLwMutex(&g_lock, 1, NULL);
-		sceNetFreeThreadinfo(ctx->input_thid);
-		sceKernelDeleteThread(ctx->input_thid);
-		ctx->input_thid = 0;
-	}
+    int lock_res;
+    int ret;
+
+    if (_sceKernelCheckThreadStack() < 3008)
+        return MATCHING_ERR_STACK_SMALL;
+    if (g_initialized == 0)
+        return MATCHING_ERR_NOT_INITIALIZED;
+
+    lock_res = matchingLock();
+    if (lock_res < 0)
+        return lock_res;
+
+    ret = MATCHING_ERR_INVALID_MODE;
+    if ((u32)(mode - 1) < 3u) {
+        ret = MATCHING_ERR_INVALID_MAXNUM;
+        if ((u32)(maxpeers - 2) < 15u) {
+            ret = MATCHING_ERR_RXBUF_TOO_SHORT;
+            if (bufsize >= maxpeers * 6 + 4) {
+                ret = MATCHING_ERR_INVALID_ARG;
+                if (((mode != MATCHING_MODE_HOST && mode != MATCHING_MODE_PTP) ||
+                     (hellodelay != 0 && pingdelay != 0)) &&
+                    initcount >= 0 && msgdelay != 0) {
+                    int id = matchingAllocCtx(port);
+                    ret = id;
+                    if (id >= 0) {
+                        MatchingCtx *ctx = matchingFindCtxById(id);
+                        void *rx_buf;
+                        ctx->mode = mode;
+                        ctx->max_peers = (mode == MATCHING_MODE_HOST) ? maxpeers : 2;
+                        ctx->port = port;
+                        ctx->rx_buflen = bufsize;
+                        rx_buf = matchingAllocVpl(bufsize);
+                        ctx->rx_buf = (u8 *)rx_buf;
+                        if (rx_buf != NULL) {
+                            u32 cur_gp;
+                            ctx->hello_delay = hellodelay;
+                            ctx->ping_delay = pingdelay;
+                            ctx->init_count = initcount;
+                            ctx->msg_delay = msgdelay;
+                            ctx->handler = callback;
+                            ctx->hello_alarm_id = -1;
+                            ctx->hello_trailer[0] = 1;
+                            ctx->hello_trailer[1] = 0;
+                            ctx->hello_trailer[2] = 0;
+                            ctx->hello_trailer[3] = 0;
+                            ctx->peers = NULL;
+                            if (sceKernelGetModuleGPByAddress((void *)callback, &ctx->handler_gp) < 0) {
+                                __asm__ volatile ("move %0, $gp" : "=r"(cur_gp));
+                                ctx->handler_gp = cur_gp;
+                            }
+                            ret = id;
+                        } else {
+                            matchingFreeCtx(ctx);
+                            ret = MATCHING_ERR_NO_SPACE;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    matchingUnlock(lock_res);
+    return ret;
 }
 
-static void matchingStopEventThread(MatchingCtx *ctx)
+/* 0x000304 */
+int sceNetAdhocMatchingStop(int matchingid)
 {
-	if (ctx->event_thid > 0) {
-		ctx->stop_event_thread = 1;
-		sceKernelUnlockLwMutex(&g_lock, 1);
-		sceKernelWaitThreadEnd(ctx->event_thid, NULL);
-		sceKernelLockLwMutex(&g_lock, 1, NULL);
-		sceNetFreeThreadinfo(ctx->event_thid);
-		sceKernelDeleteThread(ctx->event_thid);
-		ctx->event_thid = 0;
-	}
+    int lock_res;
+    int ret = 0;
+    MatchingCtx *ctx;
+
+    if (_sceKernelCheckThreadStack() < 3040)
+        return MATCHING_ERR_STACK_SMALL;
+    if (g_initialized == 0)
+        return MATCHING_ERR_NOT_INITIALIZED;
+
+    lock_res = matchingLock();
+    if (lock_res < 0)
+        return lock_res;
+
+    ctx = matchingFindCtxById(matchingid);
+    if (ctx != NULL) {
+        if (ctx->running == 2) {
+            ctx->running = 1;
+            matchingStopInputThread(ctx, &lock_res);
+            matchingStopEventThread(ctx, &lock_res);
+            if (ctx->mode == MATCHING_MODE_HOST || ctx->mode == MATCHING_MODE_PTP) {
+                matchingCancelHelloAlarm(ctx);
+                matchingFreeHelloPkt(ctx);
+                ctx->hello_msg.pending_flag &= ~1u;
+            }
+            matchingDestroyAllPeers(ctx);
+            matchingFreeMembersPkt(ctx);
+            matchingDeletePdp(ctx);
+            ctx->running = 0;
+        }
+    } else {
+        ret = MATCHING_ERR_INVALID_ID;
+    }
+
+    matchingUnlock(lock_res);
+    return ret;
 }
 
-static void matchingCleanupCtx(MatchingCtx *ctx)
+/* 0x000424 */
+int sceNetAdhocMatchingDelete(int matchingid)
 {
-	sceKernelCancelAlarm(ctx->alarm1_id);
-	sceKernelCancelAlarm(ctx->alarm2_id);
-	matchingFlushQueues(ctx);
-	sceKernelDeleteMbx(ctx->event_mbx);
-	ctx->event_mbx = 0;
-	sceKernelDeleteMbx(ctx->send_mbx);
-	ctx->send_mbx = 0;
-	sceNetAdhocPdpDelete(ctx->pdp_id, 0);
-	ctx->pdp_id = 0;
+    int lock_res;
+    int ret = 0;
+    MatchingCtx *ctx;
+
+    if (_sceKernelCheckThreadStack() < 3056)
+        return MATCHING_ERR_STACK_SMALL;
+    if (g_initialized == 0)
+        return MATCHING_ERR_NOT_INITIALIZED;
+
+    lock_res = matchingLock();
+    if (lock_res < 0)
+        return lock_res;
+
+    ctx = matchingFindCtxById(matchingid);
+    if (ctx != NULL) {
+        if (ctx->running != 0) {
+            ret = MATCHING_ERR_IS_RUNNING;
+        } else {
+            matchingFreeVpl(ctx->rx_buf);
+            ctx->rx_buf = NULL;
+            matchingFreeCtx(ctx);
+        }
+    } else {
+        ret = MATCHING_ERR_INVALID_ID;
+    }
+
+    matchingUnlock(lock_res);
+    return ret;
 }
 
-static int matchingSetHelloOptInternal(MatchingCtx *ctx, int optLen, const void *optData)
+/* 0x0004f0 */
+int sceNetAdhocMatchingSelectTarget(int matchingid, const u8 *target, int optlen, const void *opt)
 {
-	if (optLen < 0 || (optLen != 0 && optData == NULL))
-		return 0x80410805;
-	if (optLen > ctx->rx_buflen)
-		return 0x80410805;
+    int lock_res;
+    int ret = 0;
+    MatchingCtx *ctx;
 
-	void *new_buf = NULL;
-	if (optLen > 0) {
-		new_buf = matchingAlloc(optLen);
-		if (new_buf == NULL)
-			return 0x8041080c;
-		sceKernelMemcpy(new_buf, optData, optLen);
-	}
-	if (ctx->hello_opt_len > 0)
-		sceKernelFreeVpl(g_vpl_id, ctx->hello_opt_data);
-	ctx->hello_opt_len = optLen;
-	ctx->hello_opt_data = new_buf;
-	return 0;
+    if (_sceKernelCheckThreadStack() < 3040)
+        return MATCHING_ERR_STACK_SMALL;
+    if (g_initialized == 0)
+        return MATCHING_ERR_NOT_INITIALIZED;
+    if (target == NULL)
+        return MATCHING_ERR_INVALID_ARG;
+
+    lock_res = matchingLock();
+    if (lock_res < 0)
+        return lock_res;
+
+    ctx = matchingFindCtxById(matchingid);
+    if (ctx == NULL) {
+        ret = MATCHING_ERR_INVALID_ID;
+    } else if (ctx->running != 2) {
+        ret = MATCHING_ERR_NOT_RUNNING;
+    } else {
+        MatchingPeer *peer = matchingFindPeerByMac(ctx, target);
+        if (peer == NULL) {
+            ret = MATCHING_ERR_UNKNOWN_TARGET;
+        } else if ((u32)optlen > 0xFFD7u || (optlen > 0 && opt == NULL)) {
+            ret = MATCHING_ERR_INVALID_OPTLEN;
+        } else {
+            int active_count = matchingCountPeersAtLeast(ctx, PEER_STATE_ACCEPTED);
+            switch (peer->state) {
+            case PEER_STATE_IDLE:
+                if (ctx->mode == MATCHING_MODE_HOST) {
+                    ret = MATCHING_ERR_TARGET_NOT_READY;
+                } else if (active_count + 1 >= ctx->max_peers) {
+                    ret = MATCHING_ERR_EXCEED_MAXNUM;
+                } else {
+                    if (peer->opt_len > 0) {
+                        matchingFreeVpl(peer->opt_buf);
+                        peer->opt_len = 0;
+                        peer->opt_buf = NULL;
+                    }
+                    if (optlen > 0) {
+                        void *buf = matchingAllocVpl(optlen);
+                        peer->opt_buf = buf;
+                        if (buf == NULL) {
+                            ret = MATCHING_ERR_NO_SPACE;
+                            break;
+                        }
+                        sceKernelMemcpy(buf, opt, (u32)optlen);
+                        peer->opt_len = optlen;
+                    }
+                    peer->own_session_id++;
+                    if (peer->own_session_id == 0)
+                        peer->own_session_id = 1;
+                    matchingSendCtrlPkt(ctx, peer, PKT_JOIN, peer->opt_len, peer->opt_buf);
+                    matchingSetCtrlRetryAlarm(ctx, peer);
+                    matchingSetPeerState(ctx, peer, PEER_STATE_SELECT_SENT);
+                    peer->select_retry = ctx->init_count;
+                }
+                break;
+            case PEER_STATE_JOIN_RECV:
+                if (active_count + 1 >= ctx->max_peers) {
+                    ret = MATCHING_ERR_EXCEED_MAXNUM;
+                } else {
+                    if (peer->opt_len > 0) {
+                        matchingFreeVpl(peer->opt_buf);
+                        peer->opt_len = 0;
+                        peer->opt_buf = NULL;
+                    }
+                    if (optlen > 0) {
+                        void *buf = matchingAllocVpl(optlen);
+                        peer->opt_buf = buf;
+                        if (buf == NULL) {
+                            ret = MATCHING_ERR_NO_SPACE;
+                            break;
+                        }
+                        sceKernelMemcpy(buf, opt, (u32)optlen);
+                        peer->opt_len = optlen;
+                    }
+                    peer->own_session_id++;
+                    if (peer->own_session_id == 0)
+                        peer->own_session_id = 1;
+                    matchingSendCtrlPkt(ctx, peer, PKT_ACCEPT, peer->opt_len, peer->opt_buf);
+                    matchingSetCtrlRetryAlarm(ctx, peer);
+                    matchingSetPeerState(ctx, peer, PEER_STATE_ACCEPTED);
+                    peer->select_retry = ctx->init_count;
+                }
+                break;
+            case PEER_STATE_ACCEPTED:
+            case PEER_STATE_SELECT_SENT:
+                ret = MATCHING_ERR_REQUEST_IN_PROGRESS;
+                break;
+            case PEER_STATE_ESTABLISHED:
+                ret = MATCHING_ERR_ALREADY_ESTABLISHED;
+                break;
+            default:
+                break;
+            }
+        }
+    }
+
+    matchingUnlock(lock_res);
+    return ret;
 }
 
-static int matchingGetPoolStatInternal(SceNetAdhocMatchingPoolStat *poolstat)
+/* 0x0007f4 */
+int sceNetAdhocMatchingSetHelloOpt(int matchingid, int optlen, const void *opt)
 {
-	SceKernelVplInfo info;
+    int lock_res;
+    int ret;
+    MatchingCtx *ctx;
 
-	sceKernelMemset(&info, 0, sizeof(info));
-	info.size = sizeof(info);
-	int ret = sceKernelReferVplStatus(g_vpl_id, &info);
-	if (ret < 0)
-		return 0;
+    if (_sceKernelCheckThreadStack() < 3040)
+        return MATCHING_ERR_STACK_SMALL;
+    if (g_initialized == 0)
+        return MATCHING_ERR_NOT_INITIALIZED;
 
-	g_pool_stat.size = info.poolSize;
-	g_pool_stat.freesize = info.freeSize;
-	g_pool_stat.maxsize = g_max_alloc;
-	sceKernelMemcpy(poolstat, &g_pool_stat, sizeof(g_pool_stat));
-	return 0;
+    lock_res = matchingLock();
+    if (lock_res < 0)
+        return lock_res;
+
+    ret = MATCHING_ERR_INVALID_ID;
+    ctx = matchingFindCtxById(matchingid);
+    if (ctx != NULL) {
+        ret = MATCHING_ERR_INVALID_MODE;
+        if (ctx->mode != MATCHING_MODE_CLIENT) {
+            ret = MATCHING_ERR_NOT_RUNNING;
+            if (ctx->running == 2)
+                ret = matchingBuildHelloPkt(ctx, optlen, opt);
+        }
+    }
+
+    matchingUnlock(lock_res);
+    return ret;
 }
 
-static void sub_443c_all(MatchingCtx *ctx, int *pSize, void *buf)
+/* 0x0008e0 */
+int sceNetAdhocMatchingGetHelloOpt(int matchingid, int *optlen, void *opt)
 {
-	if (ctx->mode == 2) {
-		if (matchingFindParentPeer(ctx, 7) != NULL) {
-			matchingExportHelloMembers(ctx, pSize, (u8 *)buf);
-		} else {
-			*pSize = 0;
-		}
-	} else {
-		int count = matchingCountPeersByState(ctx, 7);
-		if (count <= 0) {
-			*pSize = 0;
-		} else if (ctx->mode == 1) {
-			matchingExportHelloMembers(ctx, pSize, (u8 *)buf);
-		} else {
-			u8 *p = (u8 *)buf;
-			if (p != NULL) {
-				if (*pSize < 24) {
-					*pSize = 0;
-				} else {
-					PeerNode *peer = matchingFindParentPeer(ctx, 7);
-					*(void **)(p + 0) = p + 12;
-					sceKernelMemcpy(p + 4, ctx->local_mac, 6);
-					*(void **)(p + 12) = NULL;
-					sceKernelMemcpy(p + 16, peer->mac, 6);
-					*pSize = 24;
-				}
-			} else {
-				*pSize = (count + 1) * 12;
-			}
-		}
-	}
+    int lock_res;
+    int ret = 0;
+    MatchingCtx *ctx;
+
+    if (_sceKernelCheckThreadStack() < 3040)
+        return MATCHING_ERR_STACK_SMALL;
+    if (g_initialized == 0)
+        return MATCHING_ERR_NOT_INITIALIZED;
+    if (optlen == NULL)
+        return MATCHING_ERR_INVALID_ARG;
+
+    lock_res = matchingLock();
+    if (lock_res < 0)
+        return lock_res;
+
+    ctx = matchingFindCtxById(matchingid);
+    if (ctx != NULL) {
+        if (ctx->mode == MATCHING_MODE_CLIENT) {
+            ret = MATCHING_ERR_INVALID_MODE;
+        } else if (ctx->running == 2) {
+            int len = ctx->hello_pkt_len - 12;
+            if (opt != NULL && len > 0) {
+                if (*optlen < len)
+                    len = *optlen;
+                sceKernelMemcpy(opt, ctx->hello_pkt + 12, (u32)len);
+            }
+            *optlen = len;
+        } else {
+            ret = MATCHING_ERR_NOT_RUNNING;
+        }
+    } else {
+        ret = MATCHING_ERR_INVALID_ID;
+    }
+
+    matchingUnlock(lock_res);
+    return ret;
 }
 
-/* 0x0304: sceNetAdhocMatchingStop */
-int sceNetAdhocMatchingStop(int matchingId)
+/* 0x000a08 */
+int sceNetAdhocMatchingGetMembers(int matchingid, int *buflen, void *buf)
 {
-	if (_sceKernelCheckThreadStack() < 0xbe0)
-		return 0x80410005;
-	if (g_is_init == 0)
-		return 0x80410813;
+    int lock_res;
+    int ret = 0;
+    MatchingCtx *ctx;
 
-	int lret = matchingLock();
-	if (lret < 0)
-		return lret;
+    if (_sceKernelCheckThreadStack() < 3040)
+        return MATCHING_ERR_STACK_SMALL;
+    if (g_initialized == 0)
+        return MATCHING_ERR_NOT_INITIALIZED;
+    if (((u32)buf & 3u) != 0)
+        return MATCHING_ERR_UNALIGNED;
+    if (buflen == NULL)
+        return MATCHING_ERR_INVALID_ARG;
 
-	MatchingCtx *ctx = matchingFindCtxById(matchingId);
-	if (ctx == NULL) {
-		matchingUnlock(lret);
-		return 0x80410807;
-	}
-	if (ctx->running == 0) {
-		matchingUnlock(lret);
-		return 0x80410814;
-	}
-	ctx->running = 0;
+    lock_res = matchingLock();
+    if (lock_res < 0)
+        return lock_res;
 
-	if (ctx->pdp_id > 0)
-		sceNetAdhoc_73BFD52D(ctx->pdp_id, 0);
+    ctx = matchingFindCtxById(matchingid);
+    if (ctx != NULL) {
+        if (ctx->running == 2)
+            matchingGetMembersInternal(ctx, buflen, buf);
+        else
+            ret = MATCHING_ERR_NOT_RUNNING;
+    } else {
+        ret = MATCHING_ERR_INVALID_ID;
+    }
 
-	matchingStopInputThread(ctx);
-	matchingStopEventThread(ctx);
-	matchingDestroyAllPeers(ctx);
-	matchingCleanupCtx(ctx);
-	matchingUnlock(lret);
-	return 0;
+    matchingUnlock(lock_res);
+    return ret;
 }
 
-/* 0x0424: sceNetAdhocMatchingDelete */
-int sceNetAdhocMatchingDelete(int matchingId)
+/* 0x000b00 */
+int sceNetAdhocMatchingSendData(int matchingid, const u8 *target, int datalen, const void *data)
 {
-	if (_sceKernelCheckThreadStack() < 0xfa0)
-		return 0x80410005;
-	if (g_is_init == 0)
-		return 0x80410813;
-	if (matchingId <= 0)
-		return 0x80410804;
+    int lock_res;
+    int ret = 0;
+    MatchingCtx *ctx;
 
-	sceKernelLockLwMutex(&g_lock, 1, NULL);
-	MatchingCtx *ctx = matchingFindCtxById(matchingId);
-	if (ctx == NULL) {
-		sceKernelUnlockLwMutex(&g_lock, 1);
-		return 0x80410804;
-	}
-	if (ctx->running != 0) {
-		sceKernelUnlockLwMutex(&g_lock, 1);
-		return 0x8041080a;
-	}
-	sceKernelFreeVpl(g_vpl_id, ctx->rx_buf);
-	matchingUnlinkCtx(ctx);
-	sceKernelFreeVpl(g_vpl_id, ctx);
-	sceKernelUnlockLwMutex(&g_lock, 1);
-	return 0;
+    if (_sceKernelCheckThreadStack() < 3040)
+        return MATCHING_ERR_STACK_SMALL;
+    if (g_initialized == 0)
+        return MATCHING_ERR_NOT_INITIALIZED;
+    if (target == NULL)
+        return MATCHING_ERR_INVALID_ARG;
+
+    lock_res = matchingLock();
+    if (lock_res < 0)
+        return lock_res;
+
+    ctx = matchingFindCtxById(matchingid);
+    if (ctx != NULL) {
+        if (ctx->running == 2) {
+            MatchingPeer *peer = matchingFindPeerByMac(ctx, target);
+            if (peer != NULL) {
+                if ((u32)(datalen - 1) > 0xFFD6u) {
+                    ret = MATCHING_ERR_INVALID_DATALEN;
+                } else if (data != NULL) {
+                    if (peer->state == PEER_STATE_ESTABLISHED) {
+                        if (peer->data_state == DATA_STATE_IDLE) {
+                            void *buf;
+                            if (peer->data_len > 0) {
+                                matchingFreeVpl(peer->data_buf);
+                                peer->data_len = 0;
+                                peer->data_buf = NULL;
+                            }
+                            buf = matchingAllocVpl(datalen);
+                            peer->data_buf = buf;
+                            if (buf != NULL) {
+                                sceKernelMemcpy(buf, data, (u32)datalen);
+                                peer->data_len = datalen;
+                                peer->tx_seq++;
+                                matchingSendDataPkt(ctx, peer, PKT_DATA, datalen, peer->data_buf);
+                                matchingSetDataRetryAlarm(ctx, peer);
+                                matchingSetPeerDataState(ctx, peer, DATA_STATE_SENDING);
+                                peer->data_retry = ctx->init_count;
+                            } else {
+                                ret = MATCHING_ERR_NO_SPACE;
+                            }
+                        } else if (peer->data_state == DATA_STATE_SENDING) {
+                            ret = MATCHING_ERR_DATA_BUSY;
+                        }
+                    } else {
+                        ret = MATCHING_ERR_NOT_ESTABLISHED;
+                    }
+                } else {
+                    ret = MATCHING_ERR_INVALID_ARG;
+                }
+            } else {
+                ret = MATCHING_ERR_UNKNOWN_TARGET;
+            }
+        } else {
+            ret = MATCHING_ERR_NOT_RUNNING;
+        }
+    } else {
+        ret = MATCHING_ERR_INVALID_ID;
+    }
+
+    matchingUnlock(lock_res);
+    return ret;
 }
 
-/* 0x04f0: sceNetAdhocMatchingSelectTarget */
-int sceNetAdhocMatchingSelectTarget(int matchingId, const u8 *mac, int optLen, const void *optData)
+/* 0x000d00 */
+int sceNetAdhocMatchingAbortSendData(int matchingid, const u8 *target)
 {
-	if (_sceKernelCheckThreadStack() < 0xb80)
-		return 0x80410005;
-	if (g_is_init == 0)
-		return 0x80410813;
-	if (matchingId <= 0)
-		return 0x80410804;
-	if (mac == NULL)
-		return 0x8041080f;
-	if (optLen < 0 || (optLen != 0 && optData == NULL))
-		return 0x80410805;
+    int lock_res;
+    int ret = 0;
+    MatchingCtx *ctx;
 
-	sceKernelLockLwMutex(&g_lock, 1, NULL);
-	MatchingCtx *ctx = matchingFindCtxById(matchingId);
-	if (ctx == NULL) {
-		sceKernelUnlockLwMutex(&g_lock, 1);
-		return 0x80410804;
-	}
-	if (ctx->running == 0) {
-		sceKernelUnlockLwMutex(&g_lock, 1);
-		return 0x80410814;
-	}
-	if (optLen > ctx->rx_buflen) {
-		sceKernelUnlockLwMutex(&g_lock, 1);
-		return 0x80410805;
-	}
+    if (_sceKernelCheckThreadStack() < 3040)
+        return MATCHING_ERR_STACK_SMALL;
+    if (g_initialized == 0)
+        return MATCHING_ERR_NOT_INITIALIZED;
+    if (target == NULL)
+        return MATCHING_ERR_INVALID_ARG;
 
-	PeerNode *peer = matchingFindPeerByMac(ctx, mac);
-	if (peer == NULL) {
-		sceKernelUnlockLwMutex(&g_lock, 1);
-		return 0x8041080e;
-	}
+    lock_res = matchingLock();
+    if (lock_res < 0)
+        return lock_res;
 
-	int mode = ctx->mode;
-	int ret = 0;
-	if (mode == 2) {
-		if (matchingFindParentPeer(ctx, 1) != NULL) {
-			sceKernelUnlockLwMutex(&g_lock, 1);
-			return 0x80410811;
-		}
-		if (peer->state != 1) {
-			sceKernelUnlockLwMutex(&g_lock, 1);
-			return 0x80410811;
-		}
-		if (matchingCountPeersByState(ctx, 4) != 0) {
-			sceKernelUnlockLwMutex(&g_lock, 1);
-			return 0x80410811;
-		}
-		ret = matchingQueueControlPkt(ctx, 2, mac, optLen, optData);
-		if (ret == 0) {
-			peer->timeout_us = ctx->rexmt_int;
-			peer->state = 4;
-		}
-	} else if (mode < 2) {
-		if (mode == 1) {
-			if (peer->state != 3) {
-				sceKernelUnlockLwMutex(&g_lock, 1);
-				return 0x80410811;
-			}
-			if (matchingCountPeersByState(ctx, 7) >= ctx->max_peers - 1) {
-				sceKernelUnlockLwMutex(&g_lock, 1);
-				return 0x8041080d;
-			}
-			if (optLen > 0) {
-				if (ctx->join_opt_len != 0) {
-					ctx->join_opt_len = 0;
-					sceKernelFreeVpl(g_vpl_id, ctx->join_opt_data);
-					ctx->join_opt_data = NULL;
-				}
-				void *buf = matchingAlloc(optLen);
-				ctx->join_opt_data = buf;
-				if (buf == NULL) {
-					sceKernelUnlockLwMutex(&g_lock, 1);
-					return 0x8041080c;
-				}
-				sceKernelMemcpy(buf, optData, optLen);
-				ctx->join_opt_len = optLen;
-			}
-			ret = matchingQueueControlPkt(ctx, 3, mac, optLen, optData);
-			if (ret == 0) {
-				peer->timeout_us = ctx->rexmt_int;
-				peer->state = 5;
-			}
-		}
-	} else if (mode == 3) {
-		if (matchingCountPeersByState(ctx, 7) >= ctx->max_peers - 1) {
-			sceKernelUnlockLwMutex(&g_lock, 1);
-			return 0x8041080d;
-		}
-		int st = peer->state;
-		if (st == 1) {
-			if (matchingCountPeersByState(ctx, 4) != 0) {
-				sceKernelUnlockLwMutex(&g_lock, 1);
-				return 0x80410811;
-			}
-			ret = matchingQueueControlPkt(ctx, 2, mac, optLen, optData);
-			if (ret == 0) {
-				peer->timeout_us = ctx->rexmt_int;
-				peer->state = 4;
-			}
-		} else if (st == 3) {
-			if (optLen > 0) {
-				if (ctx->join_opt_len != 0) {
-					ctx->join_opt_len = 0;
-					sceKernelFreeVpl(g_vpl_id, ctx->join_opt_data);
-					ctx->join_opt_data = NULL;
-				}
-				void *buf = matchingAlloc(optLen);
-				ctx->join_opt_data = buf;
-				if (buf == NULL) {
-					sceKernelUnlockLwMutex(&g_lock, 1);
-					return 0x8041080c;
-				}
-				sceKernelMemcpy(buf, optData, optLen);
-				ctx->join_opt_len = optLen;
-			}
-			ret = matchingQueueControlPkt(ctx, 3, mac, optLen, optData);
-			if (ret == 0) {
-				peer->timeout_us = ctx->rexmt_int;
-				peer->state = 5;
-			}
-		} else {
-			sceKernelUnlockLwMutex(&g_lock, 1);
-			return 0x80410811;
-		}
-	}
+    ctx = matchingFindCtxById(matchingid);
+    if (ctx != NULL) {
+        if (ctx->running == 2) {
+            MatchingPeer *peer = matchingFindPeerByMac(ctx, target);
+            if (peer != NULL) {
+                matchingCancelDataAlarm(peer);
+                matchingSetPeerDataState(ctx, peer, DATA_STATE_IDLE);
+            } else {
+                ret = MATCHING_ERR_UNKNOWN_TARGET;
+            }
+        } else {
+            ret = MATCHING_ERR_NOT_RUNNING;
+        }
+    } else {
+        ret = MATCHING_ERR_INVALID_ID;
+    }
 
-	sceKernelUnlockLwMutex(&g_lock, 1);
-	return ret;
+    matchingUnlock(lock_res);
+    return ret;
 }
 
-/* 0x07f4: sceNetAdhocMatchingSetHelloOpt */
-int sceNetAdhocMatchingSetHelloOpt(int matchingId, int optLen, const void *optData)
-{
-	if (_sceKernelCheckThreadStack() < 0xbe0)
-		return 0x80410005;
-	if (g_is_init == 0)
-		return 0x80410813;
-
-	int lret = matchingLock();
-	if (lret < 0)
-		return lret;
-
-	int ret = 0x80410807;
-	MatchingCtx *ctx = matchingFindCtxById(matchingId);
-	if (ctx != NULL) {
-		if (ctx->mode == 2) {
-			ret = 0x80410801;
-		} else if (ctx->running == 0) {
-			ret = 0x8041080b;
-		} else {
-			ret = matchingSetHelloOptInternal(ctx, optLen, optData);
-		}
-	}
-	matchingUnlock(lret);
-	return ret;
-}
-
-/* 0x08e0: sceNetAdhocMatchingGetHelloOpt */
-int sceNetAdhocMatchingGetHelloOpt(int matchingId, int *pOptLen, void *optData)
-{
-	if (_sceKernelCheckThreadStack() < 0xbd0)
-		return 0x80410005;
-	if (g_is_init == 0)
-		return 0x80410813;
-	if (matchingId <= 0)
-		return 0x80410804;
-	if (pOptLen == NULL)
-		return 0x8041080f;
-
-	sceKernelLockLwMutex(&g_lock, 1, NULL);
-	MatchingCtx *ctx = matchingFindCtxById(matchingId);
-	if (ctx == NULL) {
-		sceKernelUnlockLwMutex(&g_lock, 1);
-		return 0x80410804;
-	}
-	if (ctx->mode == 2) {
-		sceKernelUnlockLwMutex(&g_lock, 1);
-		return 0x8041080a;
-	}
-	if (ctx->running == 0) {
-		sceKernelUnlockLwMutex(&g_lock, 1);
-		return 0x80410814;
-	}
-
-	int cur_len = ctx->hello_opt_len;
-	if (cur_len > 0 && optData != NULL) {
-		int copy_len = *pOptLen;
-		if (cur_len < copy_len)
-			copy_len = cur_len;
-		if (copy_len > 0)
-			sceKernelMemcpy(optData, ctx->hello_opt_data, copy_len);
-		cur_len = ctx->hello_opt_len;
-	}
-	*pOptLen = cur_len;
-	sceKernelUnlockLwMutex(&g_lock, 1);
-	return 0;
-}
-
-/* 0x0a08: sceNetAdhocMatchingGetMembers */
-int sceNetAdhocMatchingGetMembers(int matchingId, int *pSize, void *buf)
-{
-	if (_sceKernelCheckThreadStack() < 0xbe0)
-		return 0x80410005;
-	if (g_is_init == 0)
-		return 0x80410813;
-	if (((u32)buf & 3) != 0)
-		return 0x80410819;
-	if (pSize == NULL)
-		return 0x80410806;
-
-	int lret = matchingLock();
-	if (lret < 0)
-		return lret;
-
-	int ret = 0;
-	MatchingCtx *ctx = matchingFindCtxById(matchingId);
-	if (ctx == NULL) {
-		ret = 0x80410807;
-	} else if (ctx->running == 0) {
-		ret = 0x8041080b;
-	} else {
-		sub_443c_all(ctx, pSize, buf);
-	}
-	matchingUnlock(lret);
-	return ret;
-}
-
-/* 0x0b00: sceNetAdhocMatchingSendData */
-int sceNetAdhocMatchingSendData(int matchingId, const u8 *mac, int dataLen, const void *data)
-{
-	if (_sceKernelCheckThreadStack() < 0xfa0)
-		return 0x80410005;
-	if (g_is_init == 0)
-		return 0x80410813;
-	if (matchingId <= 0)
-		return 0x80410804;
-	if (mac == NULL)
-		return 0x8041080f;
-	if (dataLen <= 0 || data == NULL)
-		return 0x80410805;
-
-	sceKernelLockLwMutex(&g_lock, 1, NULL);
-	MatchingCtx *ctx = matchingFindCtxById(matchingId);
-	if (ctx == NULL) {
-		sceKernelUnlockLwMutex(&g_lock, 1);
-		return 0x80410804;
-	}
-	if (ctx->running == 0) {
-		sceKernelUnlockLwMutex(&g_lock, 1);
-		return 0x80410814;
-	}
-	if (dataLen > ctx->rx_buflen) {
-		sceKernelUnlockLwMutex(&g_lock, 1);
-		return 0x80410805;
-	}
-
-	PeerNode *peer = matchingFindPeerByMac(ctx, mac);
-	if (peer == NULL) {
-		sceKernelUnlockLwMutex(&g_lock, 1);
-		return 0x8041080e;
-	}
-
-	int st = peer->state;
-	if (st != 7) {
-		if (st == 8) {
-			sceKernelUnlockLwMutex(&g_lock, 1);
-			return 0x80410817;
-		}
-		sceKernelUnlockLwMutex(&g_lock, 1);
-		return 0x8041080e;
-	}
-
-	if (ctx->mode == 2 && matchingFindParentPeer(ctx, 1) != NULL) {
-		u8 *p = ctx->hello_pkt + 4;
-		int found = 0;
-		for (int i = 4; i < ctx->hello_pkt_len; i += 6, p += 6) {
-			if (sceNet_lib_E0A81C7C(p, mac) == 0) {
-				found = 1;
-				break;
-			}
-		}
-		if (!found) {
-			sceKernelUnlockLwMutex(&g_lock, 1);
-			return 0x8041080e;
-		}
-	}
-
-	int ret = matchingQueueDataPkt(ctx, mac, dataLen, data);
-	if (ret != 0) {
-		sceKernelUnlockLwMutex(&g_lock, 1);
-		return ret;
-	}
-
-	if (peer->bulk_len > 0) {
-		peer->bulk_len = 0;
-		sceKernelFreeVpl(g_vpl_id, peer->bulk_data);
-		peer->bulk_data = NULL;
-	}
-
-	void *buf = matchingAlloc(dataLen);
-	peer->bulk_data = buf;
-	if (buf == NULL) {
-		sceKernelUnlockLwMutex(&g_lock, 1);
-		return 0x8041080c;
-	}
-	sceKernelMemcpy(buf, data, dataLen);
-	peer->bulk_len = dataLen;
-	peer->timeout_us = ctx->rexmt_int;
-	peer->state = 8;
-	sceKernelUnlockLwMutex(&g_lock, 1);
-	return 0;
-}
-
-/* 0x0d00: sceNetAdhocMatchingAbortSendData */
-int sceNetAdhocMatchingAbortSendData(int matchingId, const u8 *mac)
-{
-	if (_sceKernelCheckThreadStack() < 0xbb0)
-		return 0x80410005;
-	if (g_is_init == 0)
-		return 0x80410813;
-	if (matchingId <= 0)
-		return 0x80410804;
-	if (mac == NULL)
-		return 0x8041080f;
-
-	sceKernelLockLwMutex(&g_lock, 1, NULL);
-	MatchingCtx *ctx = matchingFindCtxById(matchingId);
-	if (ctx == NULL) {
-		sceKernelUnlockLwMutex(&g_lock, 1);
-		return 0x80410804;
-	}
-	if (ctx->running == 0) {
-		sceKernelUnlockLwMutex(&g_lock, 1);
-		return 0x80410814;
-	}
-
-	PeerNode *peer = matchingFindPeerByMac(ctx, mac);
-	if (peer == NULL) {
-		sceKernelUnlockLwMutex(&g_lock, 1);
-		return 0x8041080e;
-	}
-	if (peer->state != 8) {
-		sceKernelUnlockLwMutex(&g_lock, 1);
-		return 0x8041080a;
-	}
-
-	peer->state = 7;
-	peer->timeout_us = ctx->keepalive_timeout;
-	if (peer->bulk_len > 0) {
-		peer->bulk_len = 0;
-		sceKernelFreeVpl(g_vpl_id, peer->bulk_data);
-		peer->bulk_data = NULL;
-	}
-	matchingDropSendMsgsForPeer(ctx, peer);
-	sceKernelUnlockLwMutex(&g_lock, 1);
-	return 0;
-}
-
-/* 0x0e08: sceNetAdhocMatchingTerm */
+/* 0x000e08 */
 int sceNetAdhocMatchingTerm(void)
 {
-	if (_sceKernelCheckThreadStack() < 0xbe0)
-		return 0x80410005;
-	if (g_is_init == 0)
-		return 0;
-	if (g_ctx_list != NULL)
-		return 0x8041080a;
+    int ret;
 
-	int ret = sceKernelDeleteLwMutex(&g_lock);
-	if (ret < 0)
-		return ret;
-	ret = sceKernelDeleteVpl(g_vpl_id);
-	if (ret < 0)
-		return ret;
-	g_vpl_id = -1;
-	g_is_init = 0;
-	return 0;
+    if (_sceKernelCheckThreadStack() < 3056)
+        return MATCHING_ERR_STACK_SMALL;
+    if (g_initialized == 0)
+        return 0;
+
+    ret = matchingCheckNoActiveCtx();
+    if (ret >= 0) {
+        matchingFreeAllCtxs();
+        matchingDeleteVpl();
+        matchingDeleteLock();
+        g_initialized = 0;
+    }
+    return ret;
 }
 
-/* 0x0e88: sceNetAdhocMatchingStart */
-int sceNetAdhocMatchingStart(int matchingId, int evPri, int evStack, int inPri, int inStack, int optLen, const void *optData)
+/* 0x000e88 */
+int sceNetAdhocMatchingStart(int matchingid, int evthpri, int evthstack, int inthpri, int inthstack, int optlen, const void *opt)
 {
-	if (_sceKernelCheckThreadStack() < 0xbd0)
-		return 0x80410005;
-	return matchingStartInternal(matchingId, evPri, evStack, 2, inPri, inStack, 2, optLen, optData);
+    if (_sceKernelCheckThreadStack() < 3024)
+        return MATCHING_ERR_STACK_SMALL;
+    return matchingStartInternal(matchingid, evthpri, evthstack, 2, inthpri, inthstack, 2, optlen, opt);
 }
 
-/* 0x0f34: sceNetAdhocMatching_E8454C65 */
-int sceNetAdhocMatching_E8454C65(int matchingId, int evPri, int evStack, int evPart, int inPri, int inStack, int inPart, int optLen, const void *optData)
+/* 0x000f34 */
+int sceNetAdhocMatching_E8454C65(int matchingid, int evthpri, int evthstack, int evthmpid,
+                                 int inthpri, int inthstack, int inthmpid, int optlen, const void *opt)
 {
-	if (_sceKernelCheckThreadStack() < 0xbd0)
-		return 0x80410005;
-	return matchingStartInternal(matchingId, evPri, evStack, evPart, inPri, inStack, inPart, optLen, optData);
+    if (_sceKernelCheckThreadStack() < 3024)
+        return MATCHING_ERR_STACK_SMALL;
+    return matchingStartInternal(matchingid, evthpri, evthstack, evthmpid, inthpri, inthstack, inthmpid, optlen, opt);
 }
 
-/* 0x0ff0: sceNetAdhocMatchingCancelTarget */
-int sceNetAdhocMatchingCancelTarget(int matchingId, const u8 *mac)
+/* 0x000ff0 */
+int sceNetAdhocMatchingCancelTarget(int matchingid, const u8 *target)
 {
-	if (_sceKernelCheckThreadStack() < 0xb80)
-		return 0x80410005;
-	if (g_is_init == 0)
-		return 0x80410813;
-	if (matchingId <= 0)
-		return 0x80410804;
-	if (mac == NULL)
-		return 0x8041080f;
-
-	return matchingSelectTargetInternal(matchingId, mac, 0, NULL);
+    if (_sceKernelCheckThreadStack() < 3056)
+        return MATCHING_ERR_STACK_SMALL;
+    return matchingCancelTargetInternal(matchingid, target, 0, NULL);
 }
 
-/* 0x1050: sceNetAdhocMatchingCancelTargetWithOpt */
-int sceNetAdhocMatchingCancelTargetWithOpt(int matchingId, const u8 *mac, int optLen, const void *optData)
+/* 0x001050 */
+int sceNetAdhocMatchingCancelTargetWithOpt(int matchingid, const u8 *target, int optlen, const void *opt)
 {
-	if (_sceKernelCheckThreadStack() < 0xb80)
-		return 0x80410005;
-	if (g_is_init == 0)
-		return 0x80410813;
-	if (matchingId <= 0)
-		return 0x80410804;
-	if (mac == NULL)
-		return 0x8041080f;
-	if (optLen < 0 || (optLen != 0 && optData == NULL))
-		return 0x80410805;
-
-	return matchingSelectTargetInternal(matchingId, mac, optLen, optData);
+    if (_sceKernelCheckThreadStack() < 3040)
+        return MATCHING_ERR_STACK_SMALL;
+    return matchingCancelTargetInternal(matchingid, target, optlen, opt);
 }
 
-/* 0x10c8: sceNetAdhocMatchingGetPoolMaxAlloc */
+/* 0x0010c8 */
 int sceNetAdhocMatchingGetPoolMaxAlloc(void)
 {
-	if (_sceKernelCheckThreadStack() < 0xbe0)
-		return 0x80410005;
-	if (g_is_init == 0)
-		return 0x80410813;
-	return g_max_alloc;
+    if (_sceKernelCheckThreadStack() < 3056)
+        return MATCHING_ERR_STACK_SMALL;
+    return matchingGetPoolMaxAllocInternal();
 }
 
-/* 0x1104: sceNetAdhocMatchingGetPoolStat */
-int sceNetAdhocMatchingGetPoolStat(SceNetAdhocMatchingPoolStat *poolstat)
+/* 0x001104 */
+int sceNetAdhocMatchingGetPoolStat(MatchingPoolStat *poolstat)
 {
-	if (_sceKernelCheckThreadStack() < 0xbf0)
-		return 0x80410005;
-	if (g_is_init == 0)
-		return 0x80410813;
-	if (poolstat == NULL)
-		return 0x80410806;
-
-	return matchingGetPoolStatInternal(poolstat);
+    if (_sceKernelCheckThreadStack() < 3056)
+        return MATCHING_ERR_STACK_SMALL;
+    if (g_initialized == 0)
+        return MATCHING_ERR_NOT_INITIALIZED;
+    if (poolstat == NULL)
+        return MATCHING_ERR_INVALID_ARG;
+    return matchingGetPoolStatInternal(poolstat);
 }
 
-/* 0x116c: matchingStartInternal */
-static int matchingStartInternal(int matchingId, int evPri, int evStack, int evPart, int inPri, int inStack, int inPart, int optLen, const void *optData)
+/* 0x00116c */
+static int __attribute__((noinline))
+matchingStartInternal(int id, int evth_prio, int evth_stack, int evth_mpid,
+                      int inth_prio, int inth_stack, int inth_mpid, int optlen, const void *opt)
 {
-	if (g_is_init == 0)
-		return 0x80410813;
-	if (evStack < 0xc00)
-		return 0x80410815;
-	if ((evPart != 2 && evPart != 5) || (inPart != 2 && inPart != 5))
-		return 0x80410807;
-	(void)inStack;
+    int lock_res;
+    MatchingCtx *ctx;
+    int ret;
 
-	sceKernelLockLwMutex(&g_lock, 1, NULL);
-	MatchingCtx *ctx = matchingFindCtxById(matchingId);
-	if (ctx == NULL) {
-		sceKernelUnlockLwMutex(&g_lock, 1);
-		return 0x80410804;
-	}
-	if (ctx->running != 0) {
-		sceKernelUnlockLwMutex(&g_lock, 1);
-		return 0x80410812;
-	}
-	if (optLen > 0) {
-		if (ctx->mode == 2) {
-			sceKernelUnlockLwMutex(&g_lock, 1);
-			return 0x8041080a;
-		}
-		if (optLen > ctx->rx_buflen) {
-			sceKernelUnlockLwMutex(&g_lock, 1);
-			return 0x80410805;
-		}
-	}
+    (void)inth_stack;
+    if (g_initialized == 0)
+        return MATCHING_ERR_NOT_INITIALIZED;
+    if (evth_stack < 3072)
+        return MATCHING_ERR_STACKSIZE_TOO_SHORT;
+    if ((evth_mpid != 2 && evth_mpid != 5) || (inth_mpid != 2 && inth_mpid != 5))
+        return MATCHING_ERR_INVALID_ID;
 
-	int ret = sceWlanGetEtherAddr(ctx->local_mac);
-	if (ret < 0) {
-		sceKernelUnlockLwMutex(&g_lock, 1);
-		return ret;
-	}
-	ret = sceWlanGetEtherAddr(g_local_mac);
-	if (ret < 0) {
-		sceKernelUnlockLwMutex(&g_lock, 1);
-		return ret;
-	}
+    lock_res = matchingLock();
+    if (lock_res < 0)
+        return lock_res;
 
-	int pdp = sceNetAdhocPdpCreate(ctx->local_mac, ctx->port, ctx->rx_buflen * 2, 0);
-	ctx->pdp_id = pdp;
-	if (pdp < 0) {
-		sceKernelUnlockLwMutex(&g_lock, 1);
-		return pdp;
-	}
+    ctx = matchingFindCtxById(id);
+    ret = MATCHING_ERR_INVALID_ID;
+    if (ctx != NULL) {
+        ret = MATCHING_ERR_IS_RUNNING;
+        if (ctx->running == 0) {
+            if (((u32)optlen <= 0xFFCFu && (optlen <= 0 || opt != NULL)) ||
+                sceKernelGetCompiledSdkVersion() <= 0x05FFFFFF) {
+                ret = matchingCreatePdp(ctx);
+                if (ret >= 0) {
+                    ret = matchingStartEventThread(ctx, evth_prio, evth_stack, evth_mpid);
+                    if (ret >= 0) {
+                        ret = matchingStartInputThread(ctx, inth_prio, 3072, inth_mpid);
+                        if (ret >= 0) {
+                            if (ctx->mode == MATCHING_MODE_HOST || ctx->mode == MATCHING_MODE_PTP) {
+                                ret = matchingBuildHelloPkt(ctx, optlen, opt);
+                                if (ret >= 0) {
+                                    u32 now = sceKernelGetSystemTimeLow();
+                                    matchingSetHelloAlarm(ctx, now / (0xFFFFFFFFu / ctx->hello_delay + 1u));
+                                }
+                            }
+                            if (ret >= 0) {
+                                matchingBuildMembersPkt(ctx);
+                                ctx->min_stack = evth_stack - 3072;
+                                ctx->running = 2;
+                                matchingUnlock(lock_res);
+                                return 0;
+                            }
+                            matchingStopInputThread(ctx, &lock_res);
+                        }
+                        matchingStopEventThread(ctx, &lock_res);
+                    }
+                    matchingDeletePdp(ctx);
+                }
+            } else {
+                ret = MATCHING_ERR_INVALID_OPTLEN;
+            }
+        }
+    }
 
-	ret = matchingFreeOptBuffers(ctx);
-	if (ret < 0)
-		goto fail_pdp;
-
-	if (optLen > 0) {
-		void *buf = matchingAlloc(optLen);
-		ctx->hello_opt_data = buf;
-		if (buf == NULL) {
-			ret = 0x8041080c;
-			goto fail_hello;
-		}
-		sceKernelMemcpy(buf, optData, optLen);
-	}
-	ctx->hello_opt_len = optLen;
-
-	int mbx1 = sceKernelCreateMbx("SceNetAdhocMatchingEvent", 0, NULL);
-	ctx->event_mbx = mbx1;
-	if (mbx1 <= 0) {
-		ret = mbx1;
-		goto fail_opt;
-	}
-
-	int mbx2 = sceKernelCreateMbx("SceNetAdhocMatchingInput", 0, NULL);
-	ctx->send_mbx = mbx2;
-	if (mbx2 <= 0) {
-		ret = mbx2;
-		goto fail_mbx1;
-	}
-
-	ctx->event_stack_size = evStack;
-	ctx->input_stack_size = inStack;
-	ctx->stop_event_thread = 0;
-
-	int th1 = sceKernelCreateThread("SceNetAdhocMatchingEvent", matchingEventThread, evPri, evStack, 0, NULL);
-	ctx->event_thid = th1;
-	if (th1 <= 0) {
-		ret = th1;
-		goto fail_mbx2;
-	}
-	ret = sceKernelStartThread(th1, 4, &ctx->id);
-	if (ret < 0)
-		goto fail_th1;
-
-	ctx->stop_input_thread = 0;
-	int th2 = sceKernelCreateThread("SceNetAdhocMatchingInput", matchingInputThread, inPri, inStack, 0, NULL);
-	ctx->input_thid = th2;
-	if (th2 <= 0) {
-		ret = th2;
-		goto fail_th1_run;
-	}
-	ret = sceKernelStartThread(th2, 4, &ctx->id);
-	if (ret < 0)
-		goto fail_th2;
-
-	ctx->running = 1;
-	sceKernelUnlockLwMutex(&g_lock, 1);
-	return 0;
-
-fail_th2:
-	sceNetFreeThreadinfo(ctx->input_thid);
-	sceKernelDeleteThread(ctx->input_thid);
-fail_th1_run:
-	ctx->stop_event_thread = 1;
-	sceKernelWaitThreadEnd(ctx->event_thid, NULL);
-fail_th1:
-	sceNetFreeThreadinfo(ctx->event_thid);
-	sceKernelDeleteThread(ctx->event_thid);
-fail_mbx2:
-	sceKernelDeleteMbx(ctx->send_mbx);
-fail_mbx1:
-	sceKernelDeleteMbx(ctx->event_mbx);
-fail_opt:
-	if (optLen > 0) {
-		sceKernelFreeVpl(g_vpl_id, ctx->hello_opt_data);
-		ctx->hello_opt_data = NULL;
-	}
-fail_hello:
-	sceKernelFreeVpl(g_vpl_id, ctx->hello_pkt);
-	ctx->hello_pkt = NULL;
-fail_pdp:
-	sceNetAdhocPdpDelete(ctx->pdp_id, 0);
-	sceKernelUnlockLwMutex(&g_lock, 1);
-	return ret;
+    matchingUnlock(lock_res);
+    return ret;
 }
 
-/* 0x1424: matchingSelectTargetInternal */
-static int matchingSelectTargetInternal(int matchingId, const u8 *mac, int optLen, const void *optData)
+/* 0x0013cc */
+static int __attribute__((noinline))
+matchingCancelTargetInternal(int id, const u8 *target, int optlen, const void *opt)
 {
-	sceKernelLockLwMutex(&g_lock, 1, NULL);
-	MatchingCtx *ctx = matchingFindCtxById(matchingId);
-	if (ctx == NULL) {
-		sceKernelUnlockLwMutex(&g_lock, 1);
-		return 0x80410804;
-	}
-	if (ctx->running == 0) {
-		sceKernelUnlockLwMutex(&g_lock, 1);
-		return 0x80410814;
-	}
+    int lock_res;
+    int ret = 0;
+    void *opt_copy = NULL;
+    MatchingCtx *ctx;
 
-	PeerNode *peer = matchingFindPeerByMac(ctx, mac);
-	if (peer == NULL) {
-		sceKernelUnlockLwMutex(&g_lock, 1);
-		return 0x8041080e;
-	}
+    if (g_initialized == 0)
+        return MATCHING_ERR_NOT_INITIALIZED;
+    if (target == NULL)
+        return MATCHING_ERR_INVALID_ARG;
 
-	int mode = ctx->mode;
-	int st = peer->state;
-	if (mode == 2) {
-		if (st != 4 && st != 7 && st != 8) {
-			sceKernelUnlockLwMutex(&g_lock, 1);
-			return 0x80410811;
-		}
-	} else if (mode < 2) {
-		if (mode == 1) {
-			if (st != 3 && st != 5 && st != 7 && st != 8) {
-				sceKernelUnlockLwMutex(&g_lock, 1);
-				return 0x80410811;
-			}
-		}
-	} else if (mode == 3) {
-		if ((u32)(st - 3) >= 6u || st == 6) {
-			sceKernelUnlockLwMutex(&g_lock, 1);
-			return 0x80410811;
-		}
-	}
+    lock_res = matchingLock();
+    if (lock_res < 0)
+        return lock_res;
 
-	if (peer->bulk_len > 0) {
-		peer->bulk_len = 0;
-		sceKernelFreeVpl(g_vpl_id, peer->bulk_data);
-		peer->bulk_data = NULL;
-	}
-	matchingDropSendMsgsForPeer(ctx, peer);
+    ctx = matchingFindCtxById(id);
+    if (ctx == NULL) {
+        ret = MATCHING_ERR_INVALID_ID;
+    } else if (ctx->running != 2) {
+        ret = MATCHING_ERR_NOT_RUNNING;
+    } else {
+        MatchingPeer *peer = matchingFindPeerByMac(ctx, target);
+        if (peer == NULL) {
+            ret = MATCHING_ERR_UNKNOWN_TARGET;
+        } else if ((u32)optlen > 0xFFD7u || (optlen > 0 && opt == NULL)) {
+            ret = MATCHING_ERR_INVALID_OPTLEN;
+        } else if (peer->state != PEER_STATE_IDLE) {
+            int ok = 1;
+            if (peer->state > 0 && peer->state < 6 && optlen > 0) {
+                opt_copy = matchingAllocVpl(optlen);
+                if (opt_copy == NULL) {
+                    ret = MATCHING_ERR_NO_SPACE;
+                    ok = 0;
+                } else {
+                    sceKernelMemcpy(opt_copy, opt, (u32)optlen);
+                }
+            }
+            if (ok) {
+                matchingCancelPeerAlarms(peer);
+                matchingSendCtrlPkt(ctx, peer, PKT_CANCEL, optlen, opt);
+                matchingSetPeerState(ctx, peer, PEER_STATE_IDLE);
+                if (peer->opt_len > 0) {
+                    matchingFreeVpl(peer->opt_buf);
+                    peer->opt_len = 0;
+                    peer->opt_buf = NULL;
+                }
+                if (optlen > 0) {
+                    peer->opt_buf = opt_copy;
+                    peer->opt_len = optlen;
+                }
+            }
+        }
+    }
 
-	int ret = 0;
-	if (ctx->mode == 1 && peer->state == 3) {
-		ret = matchingQueueControlPkt(ctx, 5, mac, optLen, optData);
-		if (ret == 0) {
-			peer->timeout_us = ctx->timeout_total;
-			peer->state = 2;
-		}
-	} else if (ctx->mode == 1 && peer->state == 5) {
-		ret = matchingQueueControlPkt(ctx, 6, mac, optLen, optData);
-		if (ret == 0)
-			matchingRemovePeer(ctx, peer);
-	} else if (ctx->mode == 2) {
-		PeerNode *parent = matchingFindParentPeer(ctx, 1);
-		if (parent != NULL && parent != peer) {
-			if (peer->state == 7 || peer->state == 8) {
-				matchingRemovePeer(ctx, peer);
-			} else {
-				sceKernelUnlockLwMutex(&g_lock, 1);
-				return 0x8041080e;
-			}
-		} else {
-			ret = matchingQueueControlPkt(ctx, 6, mac, optLen, optData);
-			if (ret == 0)
-				matchingDestroyAllPeers(ctx);
-		}
-	} else if (ctx->mode == 3 && peer->state == 3) {
-		ret = matchingQueueControlPkt(ctx, 5, mac, optLen, optData);
-		if (ret == 0) {
-			peer->timeout_us = ctx->timeout_total;
-			peer->state = 1;
-		}
-	} else {
-		ret = matchingQueueControlPkt(ctx, 6, mac, optLen, optData);
-		if (ret == 0) {
-			matchingRemovePeer(ctx, peer);
-			int count = matchingCountPeersByState(ctx, 7);
-			if (count > 0) {
-				u8 *pkt = ctx->hello_pkt;
-				int pkt_len = (count + 1) * 6 + 4;
-				ctx->hello_pkt_len = pkt_len;
-				sceKernelMemset(pkt, 0, pkt_len);
-				int actual = count;
-				matchingCollectPeerMacs(ctx, 7, pkt + 10, &actual);
-				pkt[0] = 8;
-				int total_members = actual + 1;
-				pkt[2] = (u8)((u32)total_members >> 8);
-				pkt[3] = (u8)total_members;
-				sceKernelMemcpy(pkt + 4, ctx->local_mac, 6);
-				for (PeerNode *it = ctx->peer_list; it != NULL; it = it->next) {
-					if (it->state >= 7 && sceNet_lib_E0A81C7C(it->mac, mac) != 0)
-						matchingQueueControlPkt(ctx, 8, it->mac, 0, NULL);
-				}
-			} else {
-				matchingFreeOptBuffers(ctx);
-			}
-		}
-	}
-
-	sceKernelUnlockLwMutex(&g_lock, 1);
-	return ret;
+    matchingUnlock(lock_res);
+    return ret;
 }
 
-/* 0x1678: matchingAlloc */
-static void *matchingAlloc(u32 size)
+/* 0x001598 */
+static int __attribute__((noinline))
+matchingStartEventThread(MatchingCtx *ctx, int prio, int stack, int mpid)
 {
-	void *ptr;
-	SceKernelVplInfo info;
+    MatchingThreadOpt opt;
+    MatchingCtx *arg = ctx;
+    int mbx;
+    int thid;
+    int ret;
 
-	int intr = sceKernelCpuSuspendIntr();
-	int ret = sceKernelTryAllocateVpl(g_vpl_id, size, &ptr);
-	if (ret != 0) {
-		sceKernelCpuResumeIntr(intr);
-		return NULL;
-	}
-	sceKernelMemset(&info, 0, sizeof(info));
-	info.size = sizeof(info);
-	if (sceKernelReferVplStatus(g_vpl_id, &info) >= 0) {
-		u32 used = info.poolSize - info.freeSize;
-		if (g_max_alloc < used)
-			g_max_alloc = used;
-	}
-	sceKernelCpuResumeIntr(intr);
-	return ptr;
+    mbx = sceKernelCreateMbx("SceNetAdhocMatchingEvent", 0, NULL);
+    arg->event_mbx = mbx;
+    if (mbx < 0)
+        return arg->event_mbx;
+
+    sceKernelMemset(&opt, 0, sizeof(opt));
+    opt.size = sizeof(opt);
+    opt.stack_mpid = mpid;
+    thid = sceKernelCreateThread("SceNetAdhocMatchingEvent", (void *)matchingEventThread, prio, stack, 0, &opt);
+    arg->event_thid = thid;
+    if (thid < 0) {
+        ret = arg->event_thid;
+    } else {
+        ret = sceKernelStartThread(arg->event_thid, 4, &arg);
+        if (ret >= 0)
+            return 0;
+        sceKernelDeleteThread(arg->event_thid);
+    }
+    sceKernelDeleteMbx(arg->event_mbx);
+    return ret;
 }
 
-/* Helper to call user handler with its module GP */
-static void call_handler(MatchingCtx *ctx, int id, int event, void *mac, int optLen, void *optData)
+/* 0x0016ac */
+static int __attribute__((noinline))
+matchingStopEventThread(MatchingCtx *ctx, int *lock_res)
 {
-	void (*fn)(int, int, void *, int, void *) = ctx->handler;
-	u32 new_gp = ctx->handler_gp;
-	if (new_gp != 0) {
-		u32 saved_gp;
-		__asm__ volatile (
-			"move %0, $gp\n\t"
-			"move $gp, %1"
-			: "=&r"(saved_gp)
-			: "r"(new_gp)
-		);
-		fn(id, event, mac, optLen, optData);
-		__asm__ volatile (
-			"move $gp, %0"
-			:
-			: "r"(saved_gp)
-		);
-	} else {
-		fn(id, event, mac, optLen, optData);
-	}
+    sceKernelDeleteMbx(ctx->event_mbx);
+    matchingUnlock(*lock_res);
+    sceKernelWaitThreadEnd(ctx->event_thid, NULL);
+    *lock_res = matchingLock();
+    sceNetFreeThreadinfo(ctx->event_thid);
+    return sceKernelDeleteThread(ctx->event_thid);
 }
 
-/* 0x1710: matchingEventThread ("SceNetAdhocMatchingEvent" thread) */
-static int matchingEventThread(u32 args, void *argp)
+/* 0x001710 */
+static int matchingEventThread(u32 arglen, void *argp)
 {
-	u32 timeout;
-	EventMsg *msg;
+    MatchingCtx *ctx = *(MatchingCtx **)argp;
+    void *raw_msg;
 
-	sceKernelLockLwMutex(&g_lock, 1, NULL);
-	MatchingCtx *ctx = matchingFindCtxById(*(int *)argp);
-	if (ctx == NULL) {
-		sceKernelUnlockLwMutex(&g_lock, 1);
-		return 0;
-	}
-	sceNet_lib_1858883D(0);
+    (void)arglen;
+    while (sceKernelReceiveMbx(ctx->event_mbx, &raw_msg, NULL) >= 0) {
+        MatchingMbxMsg *msg = (MatchingMbxMsg *)raw_msg;
+        int lock_res = matchingLock();
+        int msg_type = msg->msg_type;
+        MatchingPeer *peer = msg->peer;
+        int intr = sceKernelCpuSuspendIntr();
+        msg->pending_flag &= ~1u;
+        sceKernelCpuResumeIntr(intr);
 
-	while (!ctx->stop_event_thread) {
-		msg = NULL;
-		timeout = 100000;
-		sceKernelUnlockLwMutex(&g_lock, 1);
-		int ret = sceKernelReceiveMbx(ctx->event_mbx, (void **)&msg, &timeout);
-		sceKernelLockLwMutex(&g_lock, 1, NULL);
-		if (ret != 0)
-			continue;
+        switch (msg_type) {
+        case MBX_MSG_PACKET:
+            matchingProcessPacket(ctx, peer);
+            if (peer->rx_pkt != NULL)
+                matchingFreeVpl(peer->rx_pkt);
+            peer->rx_raw_len = 0;
+            peer->rx_pkt = NULL;
+            peer->rx_wire_len = 0;
+            break;
+        case MBX_MSG_CTRL_RETRY:
+            matchingHandleCtrlRetry(ctx, peer);
+            break;
+        case MBX_MSG_KEEPALIVE:
+            if (peer->state == PEER_STATE_ESTABLISHED) {
+                peer->ping_retry--;
+                if (peer->ping_retry > 0) {
+                    if (ctx->mode == MATCHING_MODE_HOST ||
+                        (ctx->mode == MATCHING_MODE_PTP && matchingCompareMac(peer) != 0)) {
+                        matchingSendMembersPkt(ctx, peer);
+                    }
+                    matchingSetKeepAliveAlarm(ctx, peer);
+                } else {
+                    matchingSetPeerState(ctx, peer, PEER_STATE_IDLE);
+                    matchingSendCtrlPkt(ctx, peer, PKT_CANCEL, 0, NULL);
+                    matchingInvokeHandler(ctx, MATCHING_EV_TIMEOUT, peer->mac, 0, NULL);
+                }
+            }
+            break;
+        case MBX_MSG_HELLO:
+            if (matchingCountPeersAtLeast(ctx, PEER_STATE_ACCEPTED) + 1 < ctx->max_peers)
+                matchingBroadcastHello(ctx);
+            matchingSetHelloAlarm(ctx, ctx->hello_delay);
+            break;
+        case MBX_MSG_DATA_RETRY:
+            if (peer->data_state == DATA_STATE_SENDING) {
+                peer->data_retry--;
+                if (peer->data_retry <= 0) {
+                    matchingSetPeerDataState(ctx, peer, DATA_STATE_IDLE);
+                    matchingInvokeHandler(ctx, MATCHING_EV_DATA_TIMEOUT, peer->mac, 0, NULL);
+                } else {
+                    matchingSendDataPkt(ctx, peer, PKT_DATA, peer->data_len, peer->data_buf);
+                    matchingSetDataRetryAlarm(ctx, peer);
+                }
+            }
+            break;
+        default:
+            break;
+        }
 
-		PeerNode *peer = matchingFindPeerByMac(ctx, msg->mac);
-		if (peer != NULL) {
-			int ev = msg->event;
-			int mode = ctx->mode;
-			int st = peer->state;
-
-			switch (ev) {
-			case 1: /* HELLO */
-				if ((mode == 2 && st == 1 && matchingFindParentPeer(ctx, 1) == NULL) ||
-				    (mode == 3 && st == 1)) {
-					int id = ctx->id;
-					int olen = msg->opt_len;
-					void *odata = msg->opt_data;
-					if (olen <= 0)
-						odata = NULL;
-					sceKernelUnlockLwMutex(&g_lock, 1);
-					call_handler(ctx, id, ev, msg->mac, olen, odata);
-					sceKernelLockLwMutex(&g_lock, 1, NULL);
-				}
-				break;
-
-			case 2: /* JOIN */
-				if ((mode == 1 && st == 3) || (mode == 3 && st == 3)) {
-					int id = ctx->id;
-					int olen = msg->opt_len;
-					void *odata = msg->opt_data;
-					if (olen <= 0)
-						odata = NULL;
-					sceKernelUnlockLwMutex(&g_lock, 1);
-					call_handler(ctx, id, ev, msg->mac, olen, odata);
-					sceKernelLockLwMutex(&g_lock, 1, NULL);
-				}
-				break;
-
-			case 3: /* LEFT */
-				if ((mode == 1 && (st == 2 || st == 7 || st == 8)) ||
-				    (mode == 2 && (st == 7 || st == 8)) ||
-				    (mode == 3 && (st == 1 || st == 7 || st == 8))) {
-					int id = ctx->id;
-					int olen = msg->opt_len;
-					void *odata = msg->opt_data;
-					if (olen <= 0)
-						odata = NULL;
-					sceKernelUnlockLwMutex(&g_lock, 1);
-					call_handler(ctx, id, ev, msg->mac, olen, odata);
-					sceKernelLockLwMutex(&g_lock, 1, NULL);
-					peer = matchingFindPeerByMac(ctx, msg->mac);
-					if (peer != NULL && (peer->state == 7 || peer->state == 8)) {
-						if (ctx->mode == 1 || ctx->mode == 3) {
-							matchingRemovePeer(ctx, peer);
-							int count = matchingCountPeersByState(ctx, 7);
-							if (count > 0) {
-								u8 *pkt = ctx->hello_pkt;
-								int pkt_len = (count + 1) * 6 + 4;
-								ctx->hello_pkt_len = pkt_len;
-								sceKernelMemset(pkt, 0, pkt_len);
-								int actual = count;
-								matchingCollectPeerMacs(ctx, 7, pkt + 10, &actual);
-								pkt[0] = 8;
-								int total = actual + 1;
-								pkt[2] = (u8)((u32)total >> 8);
-								pkt[3] = (u8)total;
-								sceKernelMemcpy(pkt + 4, ctx->local_mac, 6);
-								for (PeerNode *it = ctx->peer_list; it != NULL; it = it->next) {
-									if (it->state >= 7 && sceNet_lib_E0A81C7C(it->mac, msg->mac) != 0)
-										matchingQueueControlPkt(ctx, 8, it->mac, 0, NULL);
-								}
-							} else {
-								matchingFreeOptBuffers(ctx);
-							}
-						} else if (ctx->mode == 2) {
-							PeerNode *parent = matchingFindParentPeer(ctx, 1);
-							if (parent != NULL) {
-								if (parent == peer) {
-									matchingDestroyAllPeers(ctx);
-								} else if (peer->state == 7 || peer->state == 8) {
-									matchingRemovePeer(ctx, peer);
-								}
-							}
-						}
-					}
-				}
-				break;
-
-			case 4: /* REJECT */
-				if ((mode == 2 && st == 1) || (mode == 3 && st == 1)) {
-					int id = ctx->id;
-					int olen = msg->opt_len;
-					void *odata = msg->opt_data;
-					if (olen <= 0)
-						odata = NULL;
-					sceKernelUnlockLwMutex(&g_lock, 1);
-					call_handler(ctx, id, ev, msg->mac, olen, odata);
-					sceKernelLockLwMutex(&g_lock, 1, NULL);
-				}
-				break;
-
-			case 5: /* CANCEL */
-				if ((mode == 1 && st == 2) ||
-				    (mode == 2 && st == 1) ||
-				    (mode == 3 && st == 1)) {
-					int id = ctx->id;
-					int olen = msg->opt_len;
-					void *odata = msg->opt_data;
-					if (olen <= 0)
-						odata = NULL;
-					sceKernelUnlockLwMutex(&g_lock, 1);
-					call_handler(ctx, id, ev, msg->mac, olen, odata);
-					sceKernelLockLwMutex(&g_lock, 1, NULL);
-				}
-				break;
-
-			case 6: /* ACCEPT */
-				if ((mode == 1 && st == 6) ||
-				    (mode == 2 && st == 6) ||
-				    (mode == 3 && st == 6)) {
-					int id = ctx->id;
-					int olen = msg->opt_len;
-					void *odata = msg->opt_data;
-					if (olen <= 0)
-						odata = NULL;
-					sceKernelUnlockLwMutex(&g_lock, 1);
-					call_handler(ctx, id, ev, msg->mac, olen, odata);
-					sceKernelLockLwMutex(&g_lock, 1, NULL);
-				}
-				break;
-
-			case 7: /* COMPLETE */
-				if ((mode == 1 && (st == 7 || st == 8)) ||
-				    (mode == 2 && (st == 7 || st == 8)) ||
-				    (mode == 3 && (st == 7 || st == 8))) {
-					int id = ctx->id;
-					int olen = msg->opt_len;
-					void *odata = msg->opt_data;
-					if (olen <= 0)
-						odata = NULL;
-					sceKernelUnlockLwMutex(&g_lock, 1);
-					call_handler(ctx, id, ev, msg->mac, olen, odata);
-					sceKernelLockLwMutex(&g_lock, 1, NULL);
-					peer = matchingFindPeerByMac(ctx, msg->mac);
-					if (peer != NULL) {
-						if (ctx->mode == 2) {
-							u8 *pmac = peer->member_macs + 6;
-							for (int i = 1; i < peer->member_count; i++, pmac += 6) {
-								if (sceNet_lib_E0A81C7C(ctx->local_mac, pmac) == 0)
-									continue;
-								PeerNode *m = matchingFindPeerByMac(ctx, pmac);
-								if (m == NULL) {
-									m = matchingCreatePeer(ctx, pmac, 0, NULL);
-									if (m == NULL)
-										break;
-								}
-								m->state = 7;
-								m->timeout_us = 0;
-								sceKernelUnlockLwMutex(&g_lock, 1);
-								call_handler(ctx, ctx->id, 7, pmac, 0, NULL);
-								sceKernelLockLwMutex(&g_lock, 1, NULL);
-							}
-							int total = peer->member_count;
-							u8 *pkt = ctx->hello_pkt;
-							ctx->hello_pkt_len = total * 6 + 4;
-							pkt[0] = 8;
-							pkt[1] = 0;
-							pkt[2] = (u8)((u32)total >> 8);
-							pkt[3] = (u8)total;
-							sceKernelMemcpy(pkt + 4, peer->member_macs, total * 6);
-							peer->member_count = 0;
-							peer->member_macs = NULL;
-							sceKernelFreeVpl(g_vpl_id, peer->hello_buf);
-							peer->hello_buf = NULL;
-						} else if (ctx->mode == 1 || ctx->mode == 3) {
-							for (PeerNode *it = ctx->peer_list; it != NULL; it = it->next) {
-								if (it->state >= 7 && sceNet_lib_E0A81C7C(it->mac, peer->mac) != 0)
-									matchingQueueControlPkt(ctx, 7, it->mac, 0, NULL);
-							}
-							if (ctx->mode == 3) {
-								for (PeerNode *it = ctx->peer_list; it != NULL; it = it->next) {
-									if (it != peer && (it->state == 3 || it->state == 4 || it->state == 5)) {
-										if (matchingQueueControlPkt(ctx, 6, it->mac, 0, NULL) == 0) {
-											it->timeout_us = ctx->timeout_total;
-											it->state = 1;
-										}
-									}
-								}
-							}
-						}
-					}
-				}
-				break;
-
-			case 8: /* TIMEOUT */
-				{
-					int mstate = msg->state;
-					if ((mode == 1 && (mstate == 3 || mstate == 5 || mstate == 6 || mstate == 7 || mstate == 8)) ||
-					    (mode == 2 && (mstate == 4 || mstate == 6 || mstate == 7 || mstate == 8)) ||
-					    (mode == 3 && ((u32)(mstate - 3) < 6u))) {
-						int id = ctx->id;
-						int olen = msg->opt_len;
-						void *odata = msg->opt_data;
-						if (olen <= 0)
-							odata = NULL;
-						sceKernelUnlockLwMutex(&g_lock, 1);
-						call_handler(ctx, id, ev, msg->mac, olen, odata);
-						sceKernelLockLwMutex(&g_lock, 1, NULL);
-						peer = matchingFindPeerByMac(ctx, msg->mac);
-						if (peer != NULL) {
-							int m = ctx->mode;
-							if (m == 2) {
-								int pst = msg->state;
-								if (pst == 6 || pst == 7 || pst == 8) {
-									matchingDestroyAllPeers(ctx);
-								} else if (pst == 4) {
-									matchingRemovePeer(ctx, peer);
-								}
-							} else if (m < 2) {
-								if (m == 1) {
-									int pst = msg->state;
-									if (pst == 6 || pst == 7 || pst == 8) {
-										matchingRemovePeer(ctx, peer);
-										int count = matchingCountPeersByState(ctx, 7);
-										if (count > 0) {
-											u8 *pkt = ctx->hello_pkt;
-											int pkt_len = (count + 1) * 6 + 4;
-											ctx->hello_pkt_len = pkt_len;
-											sceKernelMemset(pkt, 0, pkt_len);
-											int actual = count;
-											matchingCollectPeerMacs(ctx, 7, pkt + 10, &actual);
-											pkt[0] = 8;
-											int total = actual + 1;
-											pkt[2] = (u8)((u32)total >> 8);
-											pkt[3] = (u8)total;
-											sceKernelMemcpy(pkt + 4, ctx->local_mac, 6);
-											for (PeerNode *it = ctx->peer_list; it != NULL; it = it->next) {
-												if (it->state >= 7 && sceNet_lib_E0A81C7C(it->mac, msg->mac) != 0)
-													matchingQueueControlPkt(ctx, 8, it->mac, 0, NULL);
-											}
-										} else {
-											matchingFreeOptBuffers(ctx);
-										}
-									} else if (pst == 3 || pst == 5) {
-										matchingRemovePeer(ctx, peer);
-									}
-								}
-							} else if (m == 3) {
-								int pst = msg->state;
-								if (pst == 6 || pst == 7 || pst == 8) {
-									matchingDestroyAllPeers(ctx);
-								} else if (pst >= 3 && pst <= 5) {
-									matchingRemovePeer(ctx, peer);
-								}
-							}
-						}
-					}
-				}
-				break;
-
-			case 9: /* ERROR */
-				if ((mode == 1 && (st == 7 || st == 8)) ||
-				    (mode == 2 && (st == 7 || st == 8)) ||
-				    (mode == 3 && (st == 7 || st == 8))) {
-					int id = ctx->id;
-					int olen = msg->opt_len;
-					void *odata = msg->opt_data;
-					if (olen <= 0)
-						odata = NULL;
-					sceKernelUnlockLwMutex(&g_lock, 1);
-					call_handler(ctx, id, ev, msg->mac, olen, odata);
-					sceKernelLockLwMutex(&g_lock, 1, NULL);
-					peer = matchingFindPeerByMac(ctx, msg->mac);
-					if (peer != NULL)
-						matchingDestroyAllPeers(ctx);
-				}
-				break;
-
-			case 10: /* DATA */
-			case 11: /* DATA_CONFIRM */
-				if ((mode == 1 && (st == 7 || st == 8)) ||
-				    (mode == 2 && (st == 7 || st == 8)) ||
-				    (mode == 3 && (st == 7 || st == 8))) {
-					int id = ctx->id;
-					int olen = msg->opt_len;
-					void *odata = msg->opt_data;
-					if (olen <= 0)
-						odata = NULL;
-					sceKernelUnlockLwMutex(&g_lock, 1);
-					call_handler(ctx, id, ev, msg->mac, olen, odata);
-					sceKernelLockLwMutex(&g_lock, 1, NULL);
-				}
-				break;
-
-			case 12: /* DATA_TIMEOUT */
-				if ((mode == 1 && st == 7) ||
-				    (mode == 2 && st == 7) ||
-				    (mode == 3 && st == 7)) {
-					int id = ctx->id;
-					int olen = msg->opt_len;
-					void *odata = msg->opt_data;
-					if (olen <= 0)
-						odata = NULL;
-					sceKernelUnlockLwMutex(&g_lock, 1);
-					call_handler(ctx, id, ev, msg->mac, olen, odata);
-					sceKernelLockLwMutex(&g_lock, 1, NULL);
-					peer = matchingFindPeerByMac(ctx, msg->mac);
-					if (peer != NULL)
-						matchingDropSendMsgsForPeer(ctx, peer);
-				}
-				break;
-
-			case 101: /* Established internal notification (0x65) */
-				if (mode == 2 && st == 7) {
-					int id = ctx->id;
-					int olen = msg->opt_len;
-					void *odata = msg->opt_data;
-					if (olen <= 0)
-						odata = NULL;
-					sceKernelUnlockLwMutex(&g_lock, 1);
-					call_handler(ctx, id, 7, msg->mac, olen, odata);
-					sceKernelLockLwMutex(&g_lock, 1, NULL);
-				}
-				break;
-
-			case 102: /* Left internal notification (0x66) */
-				if (mode == 2 && (st == 7 || st == 8)) {
-					int id = ctx->id;
-					int olen = msg->opt_len;
-					void *odata = msg->opt_data;
-					if (olen <= 0)
-						odata = NULL;
-					sceKernelUnlockLwMutex(&g_lock, 1);
-					call_handler(ctx, id, 3, msg->mac, olen, odata);
-					sceKernelLockLwMutex(&g_lock, 1, NULL);
-					peer = matchingFindPeerByMac(ctx, msg->mac);
-					if (peer != NULL && (peer->state == 7 || peer->state == 8))
-						matchingRemovePeer(ctx, peer);
-				}
-				break;
-
-			default:
-				break;
-			}
-		}
-
-		if (msg->opt_data != NULL)
-			sceKernelFreeVpl(g_vpl_id, msg->opt_data);
-		sceKernelFreeVpl(g_vpl_id, msg);
-	}
-
-	sceKernelUnlockLwMutex(&g_lock, 1);
-	return 0;
+        if (peer != NULL &&
+            peer->pending_free == 1 &&
+            (peer->rx_msg.pending_flag & 1u) == 0 &&
+            (peer->ctrl_alarm_msg.pending_flag & 1u) == 0) {
+            matchingRemovePeer(ctx, peer);
+        }
+        matchingUnlock(lock_res);
+    }
+    return 0;
 }
 
-/* 0x2890: matchingFindCtxById */
-static MatchingCtx *matchingFindCtxById(int matchingId)
+/* 0x001a40 */
+static void __attribute__((noinline))
+matchingProcessPacket(MatchingCtx *ctx, MatchingPeer *peer)
 {
-	for (MatchingCtx *ctx = (MatchingCtx *)g_ctx_list; ctx != NULL; ctx = ctx->next) {
-		if (ctx->id == matchingId)
-			return ctx;
-	}
-	return NULL;
+    u32 pkt_sess_id = 0;
+    u32 pkt_seq;
+    int mode = ctx->mode;
+    u32 pkt_type = peer->rx_pkt[1];
+    int active_count;
+
+    if (mode == MATCHING_MODE_CLIENT) {
+        if (pkt_type == PKT_JOIN || pkt_type == PKT_KEEPALIVE_ACK)
+            return;
+    } else if (mode == MATCHING_MODE_HOST) {
+        if (pkt_type == PKT_HELLO || pkt_type == PKT_KEEPALIVE)
+            return;
+    } else if (mode == MATCHING_MODE_PTP) {
+        u32 blocked = (matchingCompareMac(peer) != 0) ? PKT_KEEPALIVE : PKT_KEEPALIVE_ACK;
+        if (pkt_type == blocked)
+            return;
+    }
+
+    if (pkt_type == PKT_JOIN || pkt_type == PKT_ACCEPT) {
+        int wire_len = peer->rx_wire_len;
+        if (peer->rx_raw_len - wire_len >= 16) {
+            sceKernelMemcpy(&pkt_sess_id, peer->rx_pkt + wire_len, 4);
+            pkt_sess_id = matchingSwap32(pkt_sess_id);
+            if (pkt_sess_id != peer->remote_session_id) {
+                switch (peer->state) {
+                case PEER_STATE_JOIN_RECV:
+                case PEER_STATE_ACCEPTED:
+                    matchingSetPeerState(ctx, peer, PEER_STATE_IDLE);
+                    matchingCancelPeerAlarms(peer);
+                    matchingInvokeHandler(ctx, MATCHING_EV_CANCEL, peer->mac, 0, NULL);
+                    break;
+                case PEER_STATE_ESTABLISHED:
+                    matchingSetPeerState(ctx, peer, PEER_STATE_IDLE);
+                    matchingCancelPeerAlarms(peer);
+                    matchingInvokeHandler(ctx, MATCHING_EV_LEFT, peer->mac, 0, NULL);
+                    break;
+                default:
+                    break;
+                }
+            }
+        }
+    }
+
+    active_count = matchingCountPeersAtLeast(ctx, PEER_STATE_ACCEPTED);
+    switch (pkt_type) {
+    case PKT_HELLO:
+        if (peer->rx_wire_len - 4 >= 8 && peer->state == PEER_STATE_IDLE) {
+            u32 h_delay, p_delay;
+            int wire_len;
+            sceKernelMemcpy(&h_delay, peer->rx_pkt + 4, 4);
+            peer->peer_hello_delay = matchingSwap32(h_delay);
+            sceKernelMemcpy(&p_delay, peer->rx_pkt + 8, 4);
+            peer->peer_ping_delay = matchingSwap32(p_delay);
+            wire_len = peer->rx_wire_len;
+            if (peer->rx_raw_len - wire_len >= 16)
+                sceKernelMemcpy(&peer->peer_caps, peer->rx_pkt + wire_len, 4);
+            if (active_count + 1 < ctx->max_peers) {
+                int optlen = peer->rx_wire_len - 12;
+                void *opt = peer->rx_pkt + 12;
+                if (optlen > 0)
+                    matchingInvokeHandler(ctx, MATCHING_EV_HELLO, peer->mac, optlen, opt);
+                else
+                    matchingInvokeHandler(ctx, MATCHING_EV_HELLO, peer->mac, 0, NULL);
+            }
+        }
+        break;
+    case PKT_JOIN:
+        switch (peer->state) {
+        case PEER_STATE_IDLE:
+            if (active_count + 1 >= ctx->max_peers) {
+                matchingSendCtrlPkt(ctx, peer, PKT_CANCEL, 0, NULL);
+            } else {
+                int optlen = peer->rx_wire_len - 4;
+                void *opt = peer->rx_pkt + 4;
+                matchingSetPeerState(ctx, peer, PEER_STATE_JOIN_RECV);
+                peer->remote_session_id = pkt_sess_id;
+                matchingSendCtrlPkt(ctx, peer, PKT_JOIN_ACK, 0, NULL);
+                if (optlen > 0)
+                    matchingInvokeHandler(ctx, MATCHING_EV_JOIN, peer->mac, optlen, opt);
+                else
+                    matchingInvokeHandler(ctx, MATCHING_EV_JOIN, peer->mac, 0, NULL);
+            }
+            break;
+        case PEER_STATE_JOIN_RECV:
+            if (active_count + 1 < ctx->max_peers) {
+                matchingSendCtrlPkt(ctx, peer, PKT_JOIN_ACK, 0, NULL);
+            } else {
+                matchingSetPeerState(ctx, peer, PEER_STATE_IDLE);
+                matchingCancelPeerAlarms(peer);
+                matchingSendCtrlPkt(ctx, peer, PKT_CANCEL, 0, NULL);
+                matchingInvokeHandler(ctx, MATCHING_EV_CANCEL, peer->mac, 0, NULL);
+            }
+            break;
+        case PEER_STATE_ACCEPTED:
+            matchingSendCtrlPkt(ctx, peer, PKT_ACCEPT, peer->opt_len, peer->opt_buf);
+            matchingSetCtrlRetryAlarm(ctx, peer);
+            break;
+        case PEER_STATE_SELECT_SENT: {
+            int optlen = peer->rx_wire_len - 4;
+            void *opt = peer->rx_pkt + 4;
+            matchingSetPeerState(ctx, peer, PEER_STATE_ACCEPTED);
+            peer->remote_session_id = pkt_sess_id;
+            matchingSendCtrlPkt(ctx, peer, PKT_ACCEPT, peer->opt_len, peer->opt_buf);
+            matchingSetCtrlRetryAlarm(ctx, peer);
+            if (optlen > 0)
+                matchingInvokeHandler(ctx, MATCHING_EV_ACCEPT, peer->mac, optlen, opt);
+            else
+                matchingInvokeHandler(ctx, MATCHING_EV_ACCEPT, peer->mac, 0, NULL);
+            break;
+        }
+        case PEER_STATE_ESTABLISHED:
+            matchingSetPeerState(ctx, peer, PEER_STATE_IDLE);
+            matchingCancelPeerAlarms(peer);
+            matchingSendCtrlPkt(ctx, peer, PKT_CANCEL, 0, NULL);
+            matchingInvokeHandler(ctx, MATCHING_EV_ERROR, peer->mac, 0, NULL);
+            break;
+        default:
+            break;
+        }
+        break;
+    case PKT_ACCEPT:
+        switch (peer->state) {
+        case PEER_STATE_IDLE:
+            matchingSendCtrlPkt(ctx, peer, PKT_CANCEL, peer->opt_len, peer->opt_buf);
+            break;
+        case PEER_STATE_JOIN_RECV:
+            matchingSetPeerState(ctx, peer, PEER_STATE_IDLE);
+            matchingCancelPeerAlarms(peer);
+            matchingSendCtrlPkt(ctx, peer, PKT_CANCEL, 0, NULL);
+            matchingInvokeHandler(ctx, MATCHING_EV_ERROR, peer->mac, 0, NULL);
+            break;
+        case PEER_STATE_ACCEPTED:
+            matchingSetPeerState(ctx, peer, PEER_STATE_ESTABLISHED);
+            matchingSendCtrlPkt(ctx, peer, PKT_COMPLETE, 0, NULL);
+            matchingSetKeepAliveAlarm(ctx, peer);
+            peer->ping_retry = ctx->init_count;
+            matchingInvokeHandler(ctx, MATCHING_EV_ESTABLISHED, peer->mac, 0, NULL);
+            break;
+        case PEER_STATE_SELECT_SENT: {
+            int optlen = peer->rx_wire_len - 4;
+            void *opt = peer->rx_pkt + 4;
+            matchingSetPeerState(ctx, peer, PEER_STATE_ESTABLISHED);
+            peer->remote_session_id = pkt_sess_id;
+            matchingSendCtrlPkt(ctx, peer, PKT_COMPLETE, 0, NULL);
+            matchingSetKeepAliveAlarm(ctx, peer);
+            peer->ping_retry = ctx->init_count;
+            if (optlen > 0)
+                matchingInvokeHandler(ctx, MATCHING_EV_ACCEPT, peer->mac, optlen, opt);
+            else
+                matchingInvokeHandler(ctx, MATCHING_EV_ACCEPT, peer->mac, 0, NULL);
+            matchingInvokeHandler(ctx, MATCHING_EV_ESTABLISHED, peer->mac, 0, NULL);
+            break;
+        }
+        case PEER_STATE_ESTABLISHED:
+            matchingSendCtrlPkt(ctx, peer, PKT_COMPLETE, 0, NULL);
+            break;
+        default:
+            break;
+        }
+        break;
+    case PKT_COMPLETE:
+        switch (peer->state) {
+        case PEER_STATE_IDLE:
+            matchingSendCtrlPkt(ctx, peer, PKT_CANCEL, peer->opt_len, peer->opt_buf);
+            break;
+        case PEER_STATE_JOIN_RECV:
+        case PEER_STATE_SELECT_SENT:
+            matchingSetPeerState(ctx, peer, PEER_STATE_IDLE);
+            matchingCancelPeerAlarms(peer);
+            matchingSendCtrlPkt(ctx, peer, PKT_CANCEL, 0, NULL);
+            matchingInvokeHandler(ctx, MATCHING_EV_ERROR, peer->mac, 0, NULL);
+            break;
+        case PEER_STATE_ACCEPTED:
+            matchingSetPeerState(ctx, peer, PEER_STATE_ESTABLISHED);
+            matchingSetKeepAliveAlarm(ctx, peer);
+            peer->ping_retry = ctx->init_count;
+            matchingInvokeHandler(ctx, MATCHING_EV_ESTABLISHED, peer->mac, 0, NULL);
+            break;
+        default:
+            break;
+        }
+        break;
+    case PKT_CANCEL:
+        switch (peer->state) {
+        case PEER_STATE_JOIN_RECV:
+        case PEER_STATE_ACCEPTED: {
+            int optlen = peer->rx_wire_len - 4;
+            void *opt = peer->rx_pkt + 4;
+            matchingSetPeerState(ctx, peer, PEER_STATE_IDLE);
+            matchingCancelPeerAlarms(peer);
+            if (optlen > 0)
+                matchingInvokeHandler(ctx, MATCHING_EV_CANCEL, peer->mac, optlen, opt);
+            else
+                matchingInvokeHandler(ctx, MATCHING_EV_CANCEL, peer->mac, 0, NULL);
+            break;
+        }
+        case PEER_STATE_SELECT_SENT: {
+            int optlen = peer->rx_wire_len - 4;
+            void *opt = peer->rx_pkt + 4;
+            matchingSetPeerState(ctx, peer, PEER_STATE_IDLE);
+            matchingCancelPeerAlarms(peer);
+            if (optlen > 0)
+                matchingInvokeHandler(ctx, MATCHING_EV_REJECT, peer->mac, optlen, opt);
+            else
+                matchingInvokeHandler(ctx, MATCHING_EV_REJECT, peer->mac, 0, NULL);
+            break;
+        }
+        case PEER_STATE_ESTABLISHED: {
+            int optlen = peer->rx_wire_len - 4;
+            void *opt = peer->rx_pkt + 4;
+            matchingSetPeerState(ctx, peer, PEER_STATE_IDLE);
+            matchingCancelPeerAlarms(peer);
+            if (optlen > 0)
+                matchingInvokeHandler(ctx, MATCHING_EV_LEFT, peer->mac, optlen, opt);
+            else
+                matchingInvokeHandler(ctx, MATCHING_EV_LEFT, peer->mac, 0, NULL);
+            break;
+        }
+        default:
+            break;
+        }
+        break;
+    case PKT_KEEPALIVE:
+        switch (peer->state) {
+        case PEER_STATE_IDLE:
+            matchingSendCtrlPkt(ctx, peer, PKT_CANCEL, peer->opt_len, peer->opt_buf);
+            break;
+        case PEER_STATE_JOIN_RECV:
+        case PEER_STATE_SELECT_SENT:
+            matchingSetPeerState(ctx, peer, PEER_STATE_IDLE);
+            matchingCancelPeerAlarms(peer);
+            matchingSendCtrlPkt(ctx, peer, PKT_CANCEL, 0, NULL);
+            matchingInvokeHandler(ctx, MATCHING_EV_ERROR, peer->mac, 0, NULL);
+            break;
+        case PEER_STATE_ACCEPTED:
+            matchingSetPeerState(ctx, peer, PEER_STATE_ESTABLISHED);
+            matchingSendCtrlPkt(ctx, peer, PKT_KEEPALIVE_ACK, 0, NULL);
+            matchingSetKeepAliveAlarm(ctx, peer);
+            peer->ping_retry = ctx->init_count;
+            if (ctx->mode == MATCHING_MODE_CLIENT)
+                matchingCopyMembersPkt(ctx, peer->rx_pkt, peer->rx_wire_len);
+            matchingInvokeHandler(ctx, MATCHING_EV_ESTABLISHED, peer->mac, 0, NULL);
+            break;
+        case PEER_STATE_ESTABLISHED:
+            matchingSendCtrlPkt(ctx, peer, PKT_KEEPALIVE_ACK, 0, NULL);
+            peer->ping_retry = ctx->init_count;
+            if (ctx->mode == MATCHING_MODE_CLIENT)
+                matchingCopyMembersPkt(ctx, peer->rx_pkt, peer->rx_wire_len);
+            break;
+        default:
+            break;
+        }
+        break;
+    case PKT_KEEPALIVE_ACK:
+        if (peer->state == PEER_STATE_ESTABLISHED) {
+            peer->ping_retry = ctx->init_count;
+        } else if (peer->state == PEER_STATE_IDLE) {
+            matchingSendCtrlPkt(ctx, peer, PKT_CANCEL, peer->opt_len, peer->opt_buf);
+        } else if (peer->state >= PEER_STATE_JOIN_RECV && peer->state < PEER_STATE_ESTABLISHED) {
+            matchingSetPeerState(ctx, peer, PEER_STATE_IDLE);
+            matchingCancelPeerAlarms(peer);
+            matchingSendCtrlPkt(ctx, peer, PKT_CANCEL, 0, NULL);
+            matchingInvokeHandler(ctx, MATCHING_EV_ERROR, peer->mac, 0, NULL);
+        }
+        break;
+    case PKT_BYE:
+        if (peer->state >= PEER_STATE_JOIN_RECV && peer->state <= PEER_STATE_ESTABLISHED) {
+            matchingSetPeerState(ctx, peer, PEER_STATE_IDLE);
+            matchingCancelPeerAlarms(peer);
+        }
+        matchingInvokeHandler(ctx, MATCHING_EV_BYE, peer->mac, 0, NULL);
+        peer->pending_free = 1;
+        break;
+    case PKT_JOIN_ACK:
+        if (peer->state == PEER_STATE_SELECT_SENT)
+            peer->select_retry = ctx->init_count;
+        /* When already established, fall through to DATA/DATA_ACK handling */
+        if (peer->state != PEER_STATE_ESTABLISHED)
+            break;
+        /* fall through */
+    case PKT_DATA:
+    case PKT_DATA_ACK:
+        if (peer->state != PEER_STATE_ESTABLISHED)
+            break;
+        sceKernelMemcpy(&pkt_sess_id, peer->rx_pkt + 4, 4);
+        pkt_sess_id = matchingSwap32(pkt_sess_id);
+        sceKernelMemcpy(&pkt_seq, peer->rx_pkt + 8, 4);
+        pkt_seq = matchingSwap32(pkt_seq);
+        if (pkt_sess_id != peer->remote_session_id)
+            break;
+        if (pkt_type == PKT_DATA) {
+            if (pkt_seq >= peer->rx_expected_seq) {
+                int datalen = peer->rx_wire_len - 12;
+                void *data = peer->rx_pkt + 12;
+                peer->rx_expected_seq = pkt_seq + 1;
+                if (datalen > 0)
+                    matchingInvokeHandler(ctx, MATCHING_EV_DATA, peer->mac, datalen, data);
+                else
+                    matchingInvokeHandler(ctx, MATCHING_EV_DATA, peer->mac, 0, NULL);
+            }
+            matchingSendDataPkt(ctx, peer, PKT_DATA_ACK, 0, NULL);
+        } else if (peer->data_state == DATA_STATE_SENDING && pkt_seq == peer->tx_seq) {
+            matchingSetPeerDataState(ctx, peer, DATA_STATE_IDLE);
+            matchingInvokeHandler(ctx, MATCHING_EV_DATA_CONFIRM, peer->mac, 0, NULL);
+        }
+        break;
+    default:
+        break;
+    }
 }
 
-/* 0x28c8: matchingAllocCtxId */
-static int matchingAllocCtxId(void)
+/* 0x002884 */
+static void __attribute__((noinline))
+matchingHandleCtrlRetry(MatchingCtx *ctx, MatchingPeer *peer)
 {
-	MatchingCtx *head = (MatchingCtx *)g_ctx_list;
-	int id = 1;
-	do {
-		MatchingCtx *it = head;
-		int used = 0;
-		while (it != NULL) {
-			if (it->id == id) {
-				used = 1;
-				break;
-			}
-			it = it->next;
-		}
-		if (!used)
-			return id;
-		id++;
-	} while (id < 0x7fff);
-	return 0;
+    if (peer->state == PEER_STATE_SELECT_SENT) {
+        if ((peer->peer_caps & 1u) != 0) {
+            peer->select_retry--;
+            if (peer->select_retry <= 0) {
+                matchingSetPeerState(ctx, peer, PEER_STATE_IDLE);
+                matchingSendCtrlPkt(ctx, peer, PKT_CANCEL, 0, NULL);
+                matchingInvokeHandler(ctx, MATCHING_EV_TIMEOUT, peer->mac, 0, NULL);
+            } else {
+                matchingSendCtrlPkt(ctx, peer, PKT_JOIN, peer->opt_len, peer->opt_buf);
+                matchingSetCtrlRetryAlarm(ctx, peer);
+            }
+        } else {
+            matchingSendCtrlPkt(ctx, peer, PKT_JOIN, peer->opt_len, peer->opt_buf);
+            matchingSetCtrlRetryAlarm(ctx, peer);
+        }
+    }
+    if (peer->state == PEER_STATE_ACCEPTED) {
+        peer->select_retry--;
+        if (peer->select_retry <= 0) {
+            matchingSetPeerState(ctx, peer, PEER_STATE_IDLE);
+            matchingSendCtrlPkt(ctx, peer, PKT_CANCEL, 0, NULL);
+            matchingInvokeHandler(ctx, MATCHING_EV_TIMEOUT, peer->mac, 0, NULL);
+        } else {
+            matchingSendCtrlPkt(ctx, peer, PKT_ACCEPT, peer->opt_len, peer->opt_buf);
+            matchingSetCtrlRetryAlarm(ctx, peer);
+        }
+    }
 }
 
-/* 0x293c: matchingFindCtxByPort */
-static MatchingCtx *matchingFindCtxByPort(u16 port)
+/* 0x002a6c */
+static int __attribute__((noinline))
+matchingSendCtrlPkt(MatchingCtx *ctx, MatchingPeer *peer, int pkt_type, int optlen, const void *opt)
 {
-	for (MatchingCtx *ctx = (MatchingCtx *)g_ctx_list; ctx != NULL; ctx = ctx->next) {
-		if (ctx->port == port)
-			return ctx;
-	}
-	return NULL;
+    int has_trailer = ((u32)(pkt_type - 2) < 2u);
+    int total_len = has_trailer ? (optlen + 20) : (optlen + 4);
+    u8 *pkt = (u8 *)matchingAllocVpl(total_len);
+    u16 be_len = matchingSwap16((u16)optlen);
+    u32 be_sess;
+    int ret;
+
+    if (pkt == NULL)
+        return MATCHING_ERR_NO_SPACE;
+
+    pkt[0] = 1;
+    pkt[1] = (u8)pkt_type;
+    sceKernelMemcpy(pkt + 2, &be_len, 2);
+    if (optlen > 0)
+        sceKernelMemcpy(pkt + 4, opt, (u32)optlen);
+    if (has_trailer) {
+        be_sess = matchingSwap32(peer->own_session_id);
+        sceKernelMemcpy(pkt + optlen + 4, &be_sess, 4);
+        sceKernelMemset(pkt + optlen + 8, 0, 12);
+    }
+    ret = sceNetAdhocPdpSend(ctx->pdp_id, peer->mac, ctx->port, pkt, total_len, 0, 1);
+    matchingFreeVpl(pkt);
+    return (ret == MATCHING_ERR_PDP_WOULDBLOCK) ? 0 : ret;
 }
 
-/* 0x2974: matchingUnlinkCtx */
-static void matchingUnlinkCtx(MatchingCtx *ctx)
+/* 0x002bc4 */
+static int __attribute__((noinline))
+matchingCreatePdp(MatchingCtx *ctx)
 {
-	MatchingCtx *cur = (MatchingCtx *)g_ctx_list;
-	if (cur == NULL)
-		return;
-	if (cur == ctx) {
-		g_ctx_list = cur->next;
-		return;
-	}
-	MatchingCtx *prev = cur;
-	for (cur = cur->next; cur != NULL; prev = cur, cur = cur->next) {
-		if (cur == ctx) {
-			prev->next = cur->next;
-			return;
-		}
-	}
+    int pdp = sceNetAdhocPdpCreate(g_self_mac, ctx->port, (u32)ctx->rx_buflen, 0);
+    if (pdp >= 0) {
+        ctx->pdp_id = pdp;
+        return 0;
+    }
+    return pdp;
 }
 
-/* 0x29d0: matchingPostEvent */
-static int matchingPostEvent(MatchingCtx *ctx, int event, const u8 *mac, int optLen, const void *optData)
+/* 0x002c10 */
+static int __attribute__((noinline))
+matchingDeletePdp(MatchingCtx *ctx)
 {
-	EventMsg *msg = (EventMsg *)matchingAlloc(0x24);
-	if (msg == NULL)
-		return 0x8041080c;
-	sceKernelMemset(msg, 0, 0x24);
-
-	if (optLen > 0) {
-		void *buf = matchingAlloc(optLen);
-		msg->opt_data = buf;
-		if (buf == NULL) {
-			sceKernelFreeVpl(g_vpl_id, msg);
-			return 0x8041080c;
-		}
-		sceKernelMemcpy(buf, optData, optLen);
-	} else {
-		msg->opt_data = NULL;
-	}
-
-	msg->event = event;
-	sceKernelMemcpy(msg->mac, mac, 6);
-	msg->opt_len = optLen;
-	msg->next = NULL;
-
-	PeerNode *peer = matchingFindPeerByMac(ctx, mac);
-	if (peer != NULL)
-		msg->state = peer->state;
-
-	sceKernelSendMbx(ctx->event_mbx, msg);
-	return 0;
+    int ret = sceNetAdhocPdpDelete(ctx->pdp_id, 0);
+    ctx->pdp_id = 0;
+    return ret;
 }
 
-/* 0x2ac4: matchingQueueControlPkt */
-static int matchingQueueControlPkt(MatchingCtx *ctx, int pktType, const u8 *mac, int optLen, const void *optData)
+/* 0x002c40 */
+static int __attribute__((noinline))
+matchingSendDataPkt(MatchingCtx *ctx, MatchingPeer *peer, int pkt_type, int datalen, const void *data)
 {
-	SendMsg *msg = (SendMsg *)matchingAlloc(0x20);
-	if (msg == NULL)
-		return 0x8041080c;
-	sceKernelMemset(msg, 0, 0x20);
+    int total_len = datalen + 12;
+    u8 *pkt = (u8 *)matchingAllocVpl(total_len);
+    u16 be_len = matchingSwap16((u16)(datalen + 8));
+    u32 be_val;
+    int ret;
 
-	int pkt_len = optLen + 4;
-	u8 *pkt = (u8 *)matchingAlloc(pkt_len);
-	msg->pkt_data = pkt;
-	if (pkt == NULL) {
-		sceKernelFreeVpl(g_vpl_id, msg);
-		return 0x8041080c;
-	}
-	sceKernelMemset(pkt, 0, pkt_len);
-	pkt[0] = (u8)pktType;
-	pkt[2] = (u8)((u32)optLen >> 8);
-	pkt[3] = (u8)optLen;
-	if (optLen > 0)
-		sceKernelMemcpy(pkt + 4, optData, optLen);
+    if (pkt == NULL)
+        return MATCHING_ERR_NO_SPACE;
 
-	msg->pkt_type = pktType;
-	sceKernelMemcpy(msg->mac, mac, 6);
-	msg->pkt_len = pkt_len;
-	msg->next = NULL;
-	sceKernelSendMbx(ctx->send_mbx, msg);
-	return 0;
+    pkt[0] = 1;
+    pkt[1] = (u8)pkt_type;
+    sceKernelMemcpy(pkt + 2, &be_len, 2);
+    be_val = matchingSwap32(peer->own_session_id);
+    sceKernelMemcpy(pkt + 4, &be_val, 4);
+    be_val = matchingSwap32((pkt_type == PKT_DATA) ? peer->tx_seq : (peer->rx_expected_seq - 1));
+    sceKernelMemcpy(pkt + 8, &be_val, 4);
+    if (datalen > 0)
+        sceKernelMemcpy(pkt + 12, data, (u32)datalen);
+
+    ret = sceNetAdhocPdpSend(ctx->pdp_id, peer->mac, ctx->port, pkt, total_len, 0, 1);
+    matchingFreeVpl(pkt);
+    return (ret == MATCHING_ERR_PDP_WOULDBLOCK) ? 0 : ret;
 }
 
-/* 0x2ba8: matchingQueueDataPkt */
-static int matchingQueueDataPkt(MatchingCtx *ctx, const u8 *mac, int dataLen, const void *data)
+/* 0x002d88 */
+static int __attribute__((noinline))
+matchingBuildHelloPkt(MatchingCtx *ctx, int optlen, const void *opt)
 {
-	SendMsg *msg = (SendMsg *)matchingAlloc(0x20);
-	if (msg == NULL)
-		return 0x8041080c;
-	sceKernelMemset(msg, 0, 0x20);
+    int total_len = optlen + 28;
+    u8 *pkt = (u8 *)matchingAllocVpl(total_len);
+    u16 be_len = matchingSwap16((u16)(optlen + 8));
+    u32 be_val;
 
-	int pkt_len = dataLen + 11;
-	u8 *pkt = (u8 *)matchingAlloc(pkt_len);
-	msg->pkt_data = pkt;
-	if (pkt == NULL) {
-		sceKernelFreeVpl(g_vpl_id, msg);
-		return 0x8041080c;
-	}
-	sceKernelMemset(pkt, 0, pkt_len);
-	pkt[0] = 10;
-	pkt[1] = (u8)((u32)dataLen >> 16);
-	pkt[2] = (u8)((u32)dataLen >> 8);
-	pkt[3] = (u8)dataLen;
-	if (ctx->mode == 2 && matchingFindParentPeer(ctx, 1) != NULL) {
-		sceKernelMemcpy(pkt + 4, mac, 6);
-		pkt[10] = 1;
-	} else {
-		sceKernelMemset(pkt + 4, 0, 7);
-	}
-	sceKernelMemcpy(pkt + 11, data, dataLen);
+    if (pkt == NULL)
+        return MATCHING_ERR_NO_SPACE;
 
-	msg->pkt_type = 10;
-	if (ctx->mode == 2) {
-		PeerNode *parent = matchingFindParentPeer(ctx, 1);
-		if (parent != NULL)
-			mac = parent->mac;
-	}
-	sceKernelMemcpy(msg->mac, mac, 6);
-	msg->pkt_len = pkt_len;
-	msg->next = NULL;
-	sceKernelSendMbx(ctx->send_mbx, msg);
-	return 0;
+    pkt[0] = 1;
+    pkt[1] = PKT_HELLO;
+    sceKernelMemcpy(pkt + 2, &be_len, 2);
+    be_val = matchingSwap32(ctx->hello_delay);
+    sceKernelMemcpy(pkt + 4, &be_val, 4);
+    be_val = matchingSwap32(ctx->ping_delay);
+    sceKernelMemcpy(pkt + 8, &be_val, 4);
+    if (optlen > 0)
+        sceKernelMemcpy(pkt + 12, opt, (u32)optlen);
+    sceKernelMemcpy(pkt + optlen + 12, ctx->hello_trailer, 4);
+    sceKernelMemset(pkt + optlen + 16, 0, 12);
+
+    if (ctx->hello_pkt != NULL)
+        matchingFreeVpl(ctx->hello_pkt);
+    ctx->hello_pkt = pkt;
+    ctx->hello_pkt_len = total_len;
+    return 0;
 }
 
-/* 0x2d18: matchingFlushQueues */
-static void matchingFlushQueues(MatchingCtx *ctx)
+/* 0x002ebc */
+static void __attribute__((noinline))
+matchingFreeHelloPkt(MatchingCtx *ctx)
 {
-	u32 timeout;
-	EventMsg *ev_msg;
-	SendMsg *snd_msg;
-
-	for (;;) {
-		ev_msg = NULL;
-		timeout = 0;
-		if (sceKernelReceiveMbx(ctx->event_mbx, (void **)&ev_msg, &timeout) != 0)
-			break;
-		if (ev_msg != NULL) {
-			if (ev_msg->opt_data != NULL)
-				sceKernelFreeVpl(g_vpl_id, ev_msg->opt_data);
-			sceKernelFreeVpl(g_vpl_id, ev_msg);
-		}
-	}
-
-	for (;;) {
-		snd_msg = NULL;
-		timeout = 0;
-		if (sceKernelReceiveMbx(ctx->send_mbx, (void **)&snd_msg, &timeout) != 0)
-			break;
-		if (snd_msg != NULL) {
-			if (snd_msg->pkt_data != NULL)
-				sceKernelFreeVpl(g_vpl_id, snd_msg->pkt_data);
-			sceKernelFreeVpl(g_vpl_id, snd_msg);
-		}
-	}
+    if (ctx->hello_pkt_len > 0) {
+        matchingFreeVpl(ctx->hello_pkt);
+        ctx->hello_pkt = NULL;
+        ctx->hello_pkt_len = 0;
+    }
 }
 
-/* 0x2ddc: matchingDropSendMsgsForPeer */
-static void matchingDropSendMsgsForPeer(MatchingCtx *ctx, PeerNode *peer)
+/* 0x002ef4 */
+static int __attribute__((noinline))
+matchingBroadcastHello(MatchingCtx *ctx)
 {
-	u32 timeout;
-	SendMsg *msg;
-	SendMsg *keep_head = NULL;
-	SendMsg *keep_tail = NULL;
+    u8 bcast[16];
+    int ret;
 
-	for (;;) {
-		msg = NULL;
-		timeout = 0;
-		if (sceKernelReceiveMbx(ctx->send_mbx, (void **)&msg, &timeout) != 0)
-			break;
-		if (msg != NULL) {
-			if (msg->pkt_type == 10 && sceNet_lib_E0A81C7C(msg->mac, peer->mac) == 0) {
-				if (msg->pkt_data != NULL)
-					sceKernelFreeVpl(g_vpl_id, msg->pkt_data);
-				sceKernelFreeVpl(g_vpl_id, msg);
-			} else {
-				if (keep_head == NULL)
-					keep_head = msg;
-				else
-					keep_tail->next = msg;
-				keep_tail = msg;
-			}
-		}
-	}
-
-	for (msg = keep_head; msg != NULL; msg = keep_tail) {
-		keep_tail = msg->next;
-		sceKernelSendMbx(ctx->send_mbx, msg);
-	}
+    sceKernelMemset(bcast, 0xFF, 6);
+    ret = sceNetAdhocPdpSend(ctx->pdp_id, bcast, ctx->port, ctx->hello_pkt, ctx->hello_pkt_len, 0, 1);
+    return (ret == MATCHING_ERR_PDP_WOULDBLOCK) ? 0 : ret;
 }
 
-/* 0x2e98: matchingHasSendMsgsForPeer */
-static int matchingHasSendMsgsForPeer(MatchingCtx *ctx, PeerNode *peer)
+/* 0x002f54 */
+static int __attribute__((noinline))
+matchingBuildMembersPkt(MatchingCtx *ctx)
 {
-	u32 timeout;
-	SendMsg *msg;
-	SendMsg *keep_head = NULL;
-	SendMsg *keep_tail = NULL;
-	int count = 0;
+    int count = matchingCountPeersAtLeast(ctx, PEER_STATE_ESTABLISHED);
+    int total_len = count * 6 + 10;
+    u8 *pkt = (u8 *)matchingAllocVpl(total_len);
+    u16 be_len = matchingSwap16((u16)(count * 6 + 6));
 
-	for (;;) {
-		msg = NULL;
-		timeout = 0;
-		if (sceKernelReceiveMbx(ctx->send_mbx, (void **)&msg, &timeout) != 0)
-			break;
-		if (msg != NULL) {
-			if (msg->pkt_type == 10 && sceNet_lib_E0A81C7C(msg->mac, peer->mac) == 0)
-				count++;
-			if (keep_head == NULL)
-				keep_head = msg;
-			else
-				keep_tail->next = msg;
-			keep_tail = msg;
-		}
-	}
+    if (pkt == NULL)
+        return MATCHING_ERR_NO_SPACE;
 
-	for (msg = keep_head; msg != NULL; msg = keep_tail) {
-		keep_tail = msg->next;
-		sceKernelSendMbx(ctx->send_mbx, msg);
-	}
-	return count;
+    pkt[0] = 1;
+    pkt[1] = PKT_KEEPALIVE;
+    sceKernelMemcpy(pkt + 2, &be_len, 2);
+    sceKernelMemcpy(pkt + 4, g_self_mac, 6);
+    matchingCollectPeerMacs(ctx, PEER_STATE_ESTABLISHED, pkt + 10, &count);
+    if (ctx->members_pkt != NULL)
+        matchingFreeVpl(ctx->members_pkt);
+    ctx->members_pkt = pkt;
+    ctx->members_pkt_len = total_len;
+    return 0;
 }
 
-/* 0x2f08: matchingHelloAlarmHandler */
-static u32 matchingHelloAlarmHandler(void *common)
+/* 0x003040 */
+static int __attribute__((noinline))
+matchingSendMembersPkt(MatchingCtx *ctx, MatchingPeer *peer)
 {
-	MatchingCtx *ctx = (MatchingCtx *)common;
-	static const u8 bcast_mac[6] = { 0xff, 0xff, 0xff, 0xff, 0xff, 0xff };
-
-	if (ctx->mode == 1) {
-		if (matchingCountPeersByState(ctx, 7) < ctx->max_peers - 1)
-			matchingQueueControlPkt(ctx, 1, bcast_mac, ctx->hello_opt_len, ctx->hello_opt_data);
-	} else if (matchingCountPeersByState(ctx, 4) == 0) {
-		matchingQueueControlPkt(ctx, 1, bcast_mac, ctx->hello_opt_len, ctx->hello_opt_data);
-	}
-	return ctx->hello_delay;
+    int ret = sceNetAdhocPdpSend(ctx->pdp_id, peer->mac, ctx->port, ctx->members_pkt, ctx->members_pkt_len, 0, 1);
+    return (ret == MATCHING_ERR_PDP_WOULDBLOCK) ? 0 : ret;
 }
 
-/* 0x2f68: matchingKeepAliveAlarmHandler */
-static u32 matchingKeepAliveAlarmHandler(void *common)
+/* 0x003088 */
+static int __attribute__((noinline))
+matchingCopyMembersPkt(MatchingCtx *ctx, const void *pkt, int len)
 {
-	MatchingCtx *ctx = (MatchingCtx *)common;
-	static const u8 bcast_mac[6] = { 0xff, 0xff, 0xff, 0xff, 0xff, 0xff };
-
-	for (PeerNode *it = ctx->peer_list; it != NULL; it = it->next) {
-		int st = it->state;
-		if ((u32)(st - 3) < 6u) {
-			matchingQueueControlPkt(ctx, 9, bcast_mac, 0, NULL);
-			return ctx->ping_delay;
-		}
-	}
-	return ctx->ping_delay;
+    u8 *buf = (u8 *)matchingAllocVpl(len);
+    if (buf == NULL)
+        return MATCHING_ERR_NO_SPACE;
+    sceKernelMemcpy(buf, pkt, (u32)len);
+    if (ctx->members_pkt != NULL)
+        matchingFreeVpl(ctx->members_pkt);
+    ctx->members_pkt_len = len;
+    ctx->members_pkt = buf;
+    return 0;
 }
 
-/* 0x2fc8: matchingCheckPeerTimeouts */
-static void matchingCheckPeerTimeouts(MatchingCtx *ctx, u32 now)
+/* 0x00311c */
+static void __attribute__((noinline))
+matchingFreeMembersPkt(MatchingCtx *ctx)
 {
-	PeerNode *next;
-	for (PeerNode *peer = ctx->peer_list; peer != NULL; peer = next) {
-		next = peer->next;
-		u32 timeout = peer->timeout_us;
-		if (timeout != 0 && timeout < now - peer->last_recv_time) {
-			int mode = ctx->mode;
-			int st = peer->state;
-			if ((mode == 1 && (st == 1 || st == 2)) ||
-			    (mode == 2 && st == 1) ||
-			    (mode == 3 && st == 1)) {
-				matchingRemovePeer(ctx, peer);
-			} else if (st == 8) {
-				if (peer->bulk_len > 0) {
-					peer->bulk_len = 0;
-					sceKernelFreeVpl(g_vpl_id, peer->bulk_data);
-					peer->bulk_data = NULL;
-				}
-				peer->state = 7;
-				peer->timeout_us = ctx->keepalive_timeout;
-				matchingPostEvent(ctx, 12, peer->mac, 0, NULL);
-			} else {
-				matchingPostEvent(ctx, 8, peer->mac, 0, NULL);
-				peer->timeout_us = 0;
-			}
-		}
-
-		if (peer != NULL && (peer->state == 4 || peer->state == 5 || peer->state == 6 || peer->state == 8)) {
-			if (now - peer->last_keepalive_time > ctx->ping_delay) {
-				int count = peer->keepalive_count + 1;
-				peer->keepalive_count = count;
-				if (count < ctx->init_count && now - peer->last_send_time > ctx->ping_delay) {
-					int st = peer->state;
-					if (st == 5) {
-						matchingQueueControlPkt(ctx, 3, peer->mac, ctx->join_opt_len, ctx->join_opt_data);
-					} else if (st < 5) {
-						if (st == 4)
-							matchingQueueControlPkt(ctx, 2, peer->mac, peer->opt_len, peer->opt_data);
-					} else if (st == 6) {
-						matchingQueueControlPkt(ctx, 4, peer->mac, ctx->hello_pkt_len, ctx->hello_pkt);
-					} else if (st == 8) {
-						if (matchingHasSendMsgsForPeer(ctx, peer) == 0)
-							matchingQueueDataPkt(ctx, peer->mac, peer->bulk_len, peer->bulk_data);
-					}
-					peer->last_keepalive_time = now;
-				}
-			}
-		}
-	}
+    if (ctx->members_pkt_len > 0) {
+        matchingFreeVpl(ctx->members_pkt);
+        ctx->members_pkt = NULL;
+        ctx->members_pkt_len = 0;
+    }
 }
 
-/* 0x3154: matchingFreeOptBuffers */
-static int matchingFreeOptBuffers(MatchingCtx *ctx)
+/* 0x003154 */
+static int __attribute__((noinline))
+matchingBroadcastBye(MatchingCtx *ctx)
 {
-	if (ctx->hello_opt_len > 0) {
-		ctx->hello_opt_len = 0;
-		sceKernelFreeVpl(g_vpl_id, ctx->hello_opt_data);
-		ctx->hello_opt_data = NULL;
-	}
-	if (ctx->join_opt_len > 0) {
-		ctx->join_opt_len = 0;
-		sceKernelFreeVpl(g_vpl_id, ctx->join_opt_data);
-		ctx->join_opt_data = NULL;
-	}
-	int max_pkt_len = ctx->max_peers * 6 + 4;
-	if (ctx->hello_pkt == NULL) {
-		u8 *buf = (u8 *)matchingAlloc(max_pkt_len);
-		ctx->hello_pkt = buf;
-		if (buf == NULL)
-			return 0x8041080c;
-	}
-	sceKernelMemset(ctx->hello_pkt, 0, max_pkt_len);
-	ctx->hello_pkt_len = 0;
-	return 0;
+    u8 bcast[16];
+    u8 pkt[4];
+    int ret;
+
+    sceKernelMemset(bcast, 0xFF, 6);
+    pkt[0] = 1;
+    pkt[1] = PKT_BYE;
+    sceKernelMemset(pkt + 2, 0, 2);
+    ret = sceNetAdhocPdpSend(ctx->pdp_id, bcast, ctx->port, pkt, 4, 0, 1);
+    return (ret == MATCHING_ERR_PDP_WOULDBLOCK) ? 0 : ret;
 }
 
-/* 0x3208: matchingDrainSendQueue */
-static void matchingDrainSendQueue(MatchingCtx *ctx)
+/* 0x0031d4 */
+static int __attribute__((noinline))
+matchingStartInputThread(MatchingCtx *ctx, int prio, int stack, int mpid)
 {
-	u32 timeout;
-	SendMsg *msg;
-	u8 bcast_mac[8];
+    MatchingThreadOpt opt;
+    MatchingCtx *arg = ctx;
+    int thid;
+    int ret;
 
-	bcast_mac[0] = 0xff;
-	bcast_mac[1] = 0xff;
-	bcast_mac[2] = 0xff;
-	bcast_mac[3] = 0xff;
-	bcast_mac[4] = 0xff;
-	bcast_mac[5] = 0xff;
+    sceKernelMemset(&opt, 0, sizeof(opt));
+    opt.size = sizeof(opt);
+    opt.stack_mpid = mpid;
+    thid = sceKernelCreateThread("SceNetAdhocMatchingInput", (void *)matchingInputThread, prio, stack, 0, &opt);
+    arg->input_thid = thid;
+    if (thid < 0)
+        return arg->input_thid;
 
-	for (;;) {
-		msg = NULL;
-		timeout = 0;
-		if (sceKernelReceiveMbx(ctx->send_mbx, (void **)&msg, &timeout) != 0)
-			break;
-		if (msg != NULL) {
-			if (ctx->stop_input_thread) {
-				if (msg->pkt_data != NULL)
-					sceKernelFreeVpl(g_vpl_id, msg->pkt_data);
-				sceKernelFreeVpl(g_vpl_id, msg);
-				break;
-			}
-			sceNetAdhocPdpSend(ctx->pdp_id, msg->mac, ctx->port, msg->pkt_data, msg->pkt_len, 0, 1);
-			u32 now = sceKernelGetSystemTimeLow();
-			if (sceNet_lib_E0A81C7C(msg->mac, bcast_mac) == 0) {
-				for (PeerNode *it = ctx->peer_list; it != NULL; it = it->next)
-					it->last_send_time = now;
-			} else {
-				PeerNode *peer = matchingFindPeerByMac(ctx, msg->mac);
-				if (peer != NULL)
-					peer->last_send_time = now;
-			}
-			if (msg->pkt_data != NULL)
-				sceKernelFreeVpl(g_vpl_id, msg->pkt_data);
-			sceKernelFreeVpl(g_vpl_id, msg);
-		}
-	}
+    ret = sceKernelStartThread(arg->input_thid, 4, &arg);
+    if (ret >= 0)
+        return 0;
+    sceKernelDeleteThread(arg->input_thid);
+    return ret;
 }
 
-/* 0x330c: matchingInputThread ("SceNetAdhocMatchingInput" thread) */
-static int matchingInputThread(u32 args, void *argp)
+/* 0x0032a4 */
+static int __attribute__((noinline))
+matchingStopInputThread(MatchingCtx *ctx, int *lock_res)
 {
-	u8 src_mac[8];
-	u16 src_port;
-	u32 rx_len;
-
-	sceKernelLockLwMutex(&g_lock, 1, NULL);
-	MatchingCtx *ctx = matchingFindCtxById(*(int *)argp);
-	if (ctx == NULL) {
-		sceKernelUnlockLwMutex(&g_lock, 1);
-		return 0;
-	}
-	sceNet_lib_1858883D(0);
-
-	if (ctx->mode != 2)
-		ctx->alarm1_id = sceKernelSetAlarm(ctx->hello_delay, matchingHelloAlarmHandler, ctx);
-	ctx->alarm2_id = sceKernelSetAlarm(ctx->ping_delay, matchingKeepAliveAlarmHandler, ctx);
-	sceKernelUnlockLwMutex(&g_lock, 1);
-
-	while (!ctx->stop_input_thread) {
-		rx_len = ctx->rx_buflen * 2;
-		int ret = sceNetAdhocPdpRecv(ctx->pdp_id, src_mac, &src_port, ctx->rx_buf, &rx_len, 100000, 0);
-		sceKernelLockLwMutex(&g_lock, 1, NULL);
-		u32 now = sceKernelGetSystemTimeLow();
-
-		if (ret == 0 && rx_len > 0 && src_port == ctx->port) {
-			u8 *buf = (u8 *)ctx->rx_buf;
-			u8 pkt_type = buf[0];
-			PeerNode *peer = matchingFindPeerByMac(ctx, src_mac);
-			int mode = ctx->mode;
-
-			switch (pkt_type) {
-			case 1: /* HELLO */
-				if ((mode == 2 && matchingCountPeersByState(ctx, 4) == 0) ||
-				    (mode == 3 && matchingCountPeersByState(ctx, 7) < ctx->max_peers - 1 && matchingCountPeersByState(ctx, 4) == 0)) {
-					int olen = ((u32)buf[2] << 8) | buf[3];
-					if ((u32)(olen + 4) <= rx_len) {
-						u8 *odata = (olen > 0) ? (buf + 4) : NULL;
-						peer = matchingHandleHelloPeer(ctx, src_mac, olen, odata);
-					}
-				}
-				break;
-
-			case 2: /* JOIN */
-				if ((mode == 1 || mode == 3) && matchingCountPeersByState(ctx, 7) < ctx->max_peers - 1) {
-					int olen = ((u32)buf[2] << 8) | buf[3];
-					if ((u32)(olen + 4) <= rx_len) {
-						u8 *odata = (olen > 0) ? (buf + 4) : NULL;
-						if (ctx->mode == 1) {
-							if (peer == NULL) {
-								peer = matchingCreatePeer(ctx, src_mac, olen, odata);
-								if (peer != NULL) {
-									peer->state = 3;
-									peer->timeout_us = ctx->timeout_total;
-									matchingPostEvent(ctx, 2, src_mac, olen, odata);
-								}
-							} else if (peer->state == 3) {
-								peer->timeout_us = ctx->timeout_total;
-							}
-						} else if (ctx->mode == 3) {
-							if (peer == NULL) {
-								peer = matchingCreatePeer(ctx, src_mac, olen, odata);
-								if (peer == NULL)
-									break;
-							}
-							int st = peer->state;
-							if (st == 2 || st == 1) {
-								peer->state = 3;
-								peer->timeout_us = ctx->timeout_total;
-								matchingPostEvent(ctx, 2, src_mac, olen, odata);
-							} else if (st == 4) {
-								if (matchingIsLocalMacLower(peer) >= 0) {
-									peer->state = 3;
-									peer->timeout_us = ctx->timeout_total;
-									matchingPostEvent(ctx, 2, src_mac, olen, odata);
-								}
-							} else if (st == 3) {
-								peer->timeout_us = ctx->timeout_total;
-							}
-						}
-					}
-				}
-				break;
-
-			case 3: /* ACCEPT */
-				if (peer != NULL &&
-				    ((mode == 2 && peer->state == 4 && matchingFindParentPeer(ctx, 1) == NULL) ||
-				     (mode == 3 && peer->state == 4))) {
-					int olen = ((u32)buf[2] << 8) | buf[3];
-					if ((u32)(olen + 4) <= rx_len) {
-						u8 *odata = (olen > 0) ? (buf + 4) : NULL;
-						if (peer->opt_len > 0) {
-							peer->opt_len = 0;
-							sceKernelFreeVpl(g_vpl_id, peer->opt_data);
-							peer->opt_data = NULL;
-						}
-						int count = matchingCountPeersByState(ctx, 7);
-						u8 *pkt = ctx->hello_pkt;
-						int pkt_len = (count + 2) * 6 + 4;
-						ctx->hello_pkt_len = pkt_len;
-						sceKernelMemset(pkt, 0, pkt_len);
-						int actual = count + 1;
-						matchingCollectPeerMacs(ctx, 7, pkt + 10, &actual);
-						pkt[0] = 4;
-						int total = actual + 2;
-						pkt[2] = (u8)((u32)total >> 8);
-						pkt[3] = (u8)total;
-						sceKernelMemcpy(pkt + 4, ctx->local_mac, 6);
-						sceKernelMemcpy(pkt + 4 + (actual + 1) * 6, src_mac, 6);
-						if (matchingQueueControlPkt(ctx, 4, src_mac, ctx->hello_pkt_len, ctx->hello_pkt) == 0) {
-							peer->timeout_us = ctx->rexmt_int;
-							peer->state = 6;
-							matchingPostEvent(ctx, 6, src_mac, olen, odata);
-						} else {
-							matchingFreeOptBuffers(ctx);
-						}
-					}
-				}
-				break;
-
-			case 4: /* COMPLETE */
-				if (peer != NULL &&
-				    ((mode == 1 && (peer->state == 5 || peer->state == 7)) ||
-				     (mode == 3 && (peer->state == 5 || peer->state == 7)))) {
-					int mcount = (((u32)buf[2] << 8) | buf[3]) / 6;
-					if (mcount > 1 && (u32)(mcount * 6 + 8) <= rx_len) {
-						if (ctx->join_opt_len != 0) {
-							ctx->join_opt_len = 0;
-							sceKernelFreeVpl(g_vpl_id, ctx->join_opt_data);
-							ctx->join_opt_data = NULL;
-						}
-						if (matchingQueueControlPkt(ctx, 4, src_mac, 0, NULL) == 0) {
-							if (peer->state == 5) {
-								if (ctx->mode == 1) {
-									u8 *hbuf = (u8 *)matchingAlloc(rx_len - 4);
-									peer->hello_buf = hbuf;
-									if (hbuf == NULL)
-										break;
-									peer->member_count = mcount;
-									peer->member_macs = hbuf + 4;
-									sceKernelMemcpy(hbuf, buf + 4, rx_len - 4);
-								}
-								peer->state = 7;
-								peer->timeout_us = ctx->keepalive_timeout;
-								matchingPostEvent(ctx, 6, src_mac, ctx->join_opt_len, ctx->join_opt_data);
-								matchingPostEvent(ctx, 7, src_mac, 0, NULL);
-							}
-						}
-					} else if (peer->state == 6) {
-						peer->state = 7;
-						peer->timeout_us = ctx->keepalive_timeout;
-						matchingPostEvent(ctx, 7, src_mac, 0, NULL);
-					}
-				} else if (peer != NULL && peer->state == 6 &&
-				           (mode == 1 || mode == 2 || mode == 3)) {
-					peer->state = 7;
-					peer->timeout_us = ctx->keepalive_timeout;
-					matchingPostEvent(ctx, 7, src_mac, 0, NULL);
-				}
-				break;
-
-			case 5: /* REJECT */
-				if (peer != NULL &&
-				    ((mode == 2 && peer->state == 4 && matchingFindParentPeer(ctx, 1) == NULL) ||
-				     (mode == 3 && peer->state == 4))) {
-					int olen = ((u32)buf[2] << 8) | buf[3];
-					if ((u32)(olen + 4) <= rx_len) {
-						u8 *odata = (olen > 0) ? (buf + 4) : NULL;
-						if (peer->opt_len > 0) {
-							peer->opt_len = 0;
-							sceKernelFreeVpl(g_vpl_id, peer->opt_data);
-							peer->opt_data = NULL;
-						}
-						peer->timeout_us = ctx->timeout_total;
-						peer->state = 1;
-						matchingPostEvent(ctx, 4, src_mac, olen, odata);
-					}
-				}
-				break;
-
-			case 6: /* CANCEL / LEAVE */
-				if (peer != NULL &&
-				    ((mode == 1 && (peer->state == 3 || peer->state == 6 || peer->state == 7 || peer->state == 8)) ||
-				     (mode == 2 && (peer->state == 4 || peer->state == 6 || peer->state == 7 || peer->state == 8)) ||
-				     (mode == 3 && ((u32)(peer->state - 3) < 6u)))) {
-					int olen = ((u32)buf[2] << 8) | buf[3];
-					if ((u32)(olen + 4) <= rx_len) {
-						u8 *odata = (olen > 0) ? (buf + 4) : NULL;
-						matchingDropEventMsgsForPeer(ctx, peer);
-						int pst = peer->state;
-						if (pst == 3) {
-							peer->timeout_us = ctx->timeout_total;
-							int next_st = 2;
-							if (ctx->mode != 1)
-								next_st = (ctx->mode == 3) ? 1 : 0;
-							peer->state = next_st;
-							matchingPostEvent(ctx, 5, src_mac, olen, odata);
-						} else if (pst == 7 || pst == 8) {
-							matchingPostEvent(ctx, 3, src_mac, olen, odata);
-						} else {
-							matchingRemovePeer(ctx, peer);
-						}
-					}
-				}
-				break;
-
-			case 7: /* BIRTH (new member joined parent) */
-				if (mode == 2 && peer != NULL && (peer->state == 7 || peer->state == 8) &&
-				    peer == matchingFindParentPeer(ctx, 1) && rx_len >= 10) {
-					u8 *new_mac = buf + 4;
-					if (sceNet_lib_E0A81C7C(new_mac, ctx->local_mac) != 0) {
-						PeerNode *m = matchingFindPeerByMac(ctx, new_mac);
-						if (m == NULL)
-							m = matchingCreatePeer(ctx, new_mac, 0, NULL);
-						if (m != NULL) {
-							m->state = 7;
-							m->timeout_us = 0;
-							int new_len = ctx->hello_pkt_len + 6;
-							ctx->hello_pkt_len = new_len;
-							u8 *pkt = ctx->hello_pkt;
-							int count = (new_len - 4) / 6;
-							pkt[2] = (u8)((u32)count >> 8);
-							pkt[3] = (u8)count;
-							sceKernelMemcpy(pkt + new_len - 6, new_mac, 6);
-							matchingPostEvent(ctx, 101, new_mac, 0, NULL);
-						} else {
-							matchingPostEvent(ctx, 9, peer->mac, 0, NULL);
-						}
-					}
-				}
-				break;
-
-			case 8: /* DEATH (member left parent) */
-				if (mode == 2 && peer != NULL && (peer->state == 7 || peer->state == 8) &&
-				    peer == matchingFindParentPeer(ctx, 1)) {
-					int mcount = (((u32)buf[2] << 8) | buf[3]) / 6;
-					if (mcount > 0 && (u32)(mcount * 6 + 8) <= rx_len) {
-						PeerNode *next_it;
-						for (PeerNode *it = ctx->peer_list; it != NULL; it = next_it) {
-							next_it = it->next;
-							u8 *pmac = buf + 8;
-							int found = 0;
-							for (int i = 0; i < mcount; i++, pmac += 6) {
-								if (sceNet_lib_E0A81C7C(it->mac, pmac) == 0) {
-									found = 1;
-									break;
-								}
-							}
-							if (!found && (it->state == 7 || it->state == 8)) {
-								matchingDropEventMsgsForPeer(ctx, it);
-								matchingPostEvent(ctx, 102, it->mac, 0, NULL);
-							}
-						}
-						int pkt_len = mcount * 6 + 4;
-						ctx->hello_pkt_len = pkt_len;
-						u8 *pkt = ctx->hello_pkt;
-						sceKernelMemset(pkt, 0, pkt_len);
-						pkt[0] = 8;
-						pkt[2] = (u8)((u32)mcount >> 8);
-						pkt[3] = (u8)mcount;
-						sceKernelMemcpy(pkt + 4, buf + 8, mcount * 6);
-					}
-				}
-				break;
-
-			case 9: /* KEEPALIVE */
-				break;
-
-			case 10: /* DATA */
-				if (peer != NULL && (peer->state == 7 || peer->state == 8))
-					matchingHandleDataPacket(ctx, peer, buf, rx_len);
-				break;
-
-			case 11: /* DATA ACK */
-				if (peer != NULL)
-					matchingHandleHostForward(ctx, peer, rx_len);
-				break;
-
-			default:
-				break;
-			}
-
-			if (peer != NULL) {
-				peer->last_recv_time = now;
-				peer->keepalive_count = 0;
-			}
-		}
-
-		matchingCheckPeerTimeouts(ctx, now);
-		matchingDrainSendQueue(ctx);
-		sceKernelUnlockLwMutex(&g_lock, 1);
-	}
-
-	return 0;
+    sceNetAdhoc_73BFD52D(ctx->pdp_id, 0x20);
+    matchingUnlock(*lock_res);
+    sceKernelWaitThreadEnd(ctx->input_thid, NULL);
+    *lock_res = matchingLock();
+    sceNetFreeThreadinfo(ctx->input_thid);
+    return sceKernelDeleteThread(ctx->input_thid);
 }
 
-/* 0x3d64: matchingHandleHelloPeer */
-static PeerNode *matchingHandleHelloPeer(MatchingCtx *ctx, const u8 *mac, int optLen, const void *optData)
+/* 0x00330c */
+static int matchingInputThread(u32 arglen, void *argp)
 {
-	PeerNode *peer = matchingFindPeerByMac(ctx, mac);
-	if (peer == NULL) {
-		if (matchingCountPeersByState(ctx, 1) >= ctx->max_peers - 1)
-			return NULL;
-		peer = matchingCreatePeer(ctx, mac, optLen, optData);
-		if (peer == NULL)
-			return NULL;
-		peer->state = 1;
-	} else if (peer->state != 1) {
-		return peer;
-	}
-	peer->timeout_us = ctx->timeout_total;
-	matchingPostEvent(ctx, 1, mac, optLen, optData);
-	return peer;
+    MatchingCtx *ctx = *(MatchingCtx **)argp;
+    u8 src_mac[16];
+    u16 src_port;
+    u16 body_len;
+    int recv_len;
+
+    (void)arglen;
+    for (;;) {
+        recv_len = ctx->rx_buflen;
+        if (sceNetAdhocPdpRecv(ctx->pdp_id, src_mac, &src_port, ctx->rx_buf, &recv_len, 0, 0) < 0)
+            return 0;
+        if (sceNet_lib_E0A81C7C(g_self_mac, src_mac, 6) == 0)
+            continue;
+        if (src_port != ctx->port)
+            continue;
+        if (ctx->rx_buf[0] != 1)
+            continue;
+        sceKernelMemcpy(&body_len, ctx->rx_buf + 2, 2);
+        {
+            int wire_len = (int)matchingSwap16(body_len) + 4;
+            int lock_res;
+            MatchingPeer *peer;
+
+            if (recv_len < wire_len)
+                continue;
+
+            lock_res = matchingLock();
+            peer = matchingFindPeerByMac(ctx, src_mac);
+            if (peer == NULL) {
+                u8 pkt_type = ctx->rx_buf[1];
+                if ((pkt_type == PKT_JOIN && (ctx->mode == MATCHING_MODE_HOST || ctx->mode == MATCHING_MODE_PTP)) ||
+                    (pkt_type == PKT_HELLO && (u32)(ctx->mode - 2) < 2u)) {
+                    peer = matchingCreatePeer(ctx, src_mac);
+                }
+            }
+            if (peer != NULL && (peer->rx_msg.pending_flag & 1u) == 0) {
+                u8 *pkt_copy = (u8 *)matchingAllocVpl(recv_len);
+                if (pkt_copy != NULL) {
+                    sceKernelMemcpy(pkt_copy, ctx->rx_buf, (u32)recv_len);
+                    peer->rx_wire_len = wire_len;
+                    peer->rx_raw_len = recv_len;
+                    peer->rx_pkt = pkt_copy;
+                    peer->rx_msg.msg_type = MBX_MSG_PACKET;
+                    peer->rx_msg.peer = peer;
+                    peer->rx_msg.pending_flag |= 1u;
+                    sceKernelSendMbx(ctx->event_mbx, &peer->rx_msg);
+                }
+            }
+            matchingUnlock(lock_res);
+        }
+    }
 }
 
-/* 0x3de0: matchingDropEventMsgsForPeer */
-static void matchingDropEventMsgsForPeer(MatchingCtx *ctx, PeerNode *peer)
+/* 0x003508 */
+static int __attribute__((noinline))
+matchingSetCtrlRetryAlarm(MatchingCtx *ctx, MatchingPeer *peer)
 {
-	u32 timeout;
-	EventMsg *msg;
-	EventMsg *keep_head = NULL;
-	EventMsg *keep_tail = NULL;
-
-	if (peer->opt_len > 0) {
-		peer->opt_len = 0;
-		sceKernelFreeVpl(g_vpl_id, peer->opt_data);
-		peer->opt_data = NULL;
-	}
-	if (peer->bulk_len > 0) {
-		peer->bulk_len = 0;
-		sceKernelFreeVpl(g_vpl_id, peer->bulk_data);
-		peer->bulk_data = NULL;
-	}
-	matchingDropSendMsgsForPeer(ctx, peer);
-
-	for (;;) {
-		msg = NULL;
-		timeout = 0;
-		if (sceKernelReceiveMbx(ctx->event_mbx, (void **)&msg, &timeout) != 0)
-			break;
-		if (msg != NULL) {
-			if (sceNet_lib_E0A81C7C(msg->mac, peer->mac) == 0) {
-				if (msg->opt_data != NULL)
-					sceKernelFreeVpl(g_vpl_id, msg->opt_data);
-				sceKernelFreeVpl(g_vpl_id, msg);
-			} else {
-				if (keep_head == NULL)
-					keep_head = msg;
-				else
-					keep_tail->next = msg;
-				keep_tail = msg;
-			}
-		}
-	}
-
-	for (msg = keep_head; msg != NULL; msg = keep_tail) {
-		keep_tail = msg->next;
-		sceKernelSendMbx(ctx->event_mbx, msg);
-	}
+    int intr = sceKernelCpuSuspendIntr();
+    if (peer->ctrl_alarm_id >= 0) {
+        sceKernelCancelAlarm(peer->ctrl_alarm_id);
+        peer->ctrl_alarm_id = -1;
+    }
+    sceKernelCpuResumeIntr(intr);
+    peer->ctrl_alarm_id = sceKernelSetAlarm(ctx->msg_delay, matchingCtrlRetryAlarmCb, peer);
+    return peer->ctrl_alarm_id;
 }
 
-/* 0x3efc: matchingHandleDataPacket */
-static int matchingHandleDataPacket(MatchingCtx *ctx, PeerNode *peer, const u8 *rxBuf, u32 rxLen)
+/* 0x003580 */
+static int __attribute__((noinline))
+matchingSetDataRetryAlarm(MatchingCtx *ctx, MatchingPeer *peer)
 {
-	if (rxLen < 12)
-		return -1;
-	int dlen = ((u32)rxBuf[1] << 16) | ((u32)rxBuf[2] << 8) | rxBuf[3];
-	if (dlen <= 0 || (u32)(dlen + 11) > rxLen)
-		return -1;
-
-	if (ctx->mode == 1 && rxBuf[10] != 0) {
-		const u8 *dest_mac = rxBuf + 4;
-		PeerNode *dest_peer = matchingFindPeerByMac(ctx, dest_mac);
-		if (dest_peer == NULL)
-			return -1;
-		SendMsg *msg = (SendMsg *)matchingAlloc(0x20);
-		if (msg == NULL)
-			return -1;
-		sceKernelMemset(msg, 0, 0x20);
-		u8 *pkt = (u8 *)matchingAlloc(rxLen);
-		msg->pkt_data = pkt;
-		if (pkt == NULL) {
-			sceKernelFreeVpl(g_vpl_id, msg);
-			return -1;
-		}
-		sceKernelMemcpy(pkt, rxBuf, rxLen);
-		sceKernelMemcpy(pkt + 4, peer->mac, 6);
-		pkt[10] = 0;
-		msg->pkt_type = 10;
-		sceKernelMemcpy(msg->mac, dest_mac, 6);
-		msg->pkt_len = rxLen;
-		msg->next = NULL;
-		sceKernelSendMbx(ctx->send_mbx, msg);
-		return 0;
-	}
-
-	const u8 *ack_mac = peer->mac;
-	u8 ack_opt[7];
-	int ack_opt_len = 0;
-	u8 *ack_opt_ptr = NULL;
-
-	if (ctx->mode == 2 && peer == matchingFindParentPeer(ctx, 1)) {
-		ack_mac = rxBuf + 4;
-		ack_opt_ptr = ack_opt;
-		sceKernelMemcpy(ack_opt, ack_mac, 6);
-		ack_opt[6] = 1;
-		ack_opt_len = 7;
-	}
-
-	if (matchingQueueControlPkt(ctx, 11, peer->mac, ack_opt_len, ack_opt_ptr) != 0)
-		return -1;
-	matchingPostEvent(ctx, 10, ack_mac, dlen, rxBuf + 11);
-	return 0;
+    int intr = sceKernelCpuSuspendIntr();
+    if (peer->data_alarm_id >= 0) {
+        sceKernelCancelAlarm(peer->data_alarm_id);
+        peer->data_alarm_id = -1;
+    }
+    sceKernelCpuResumeIntr(intr);
+    peer->data_alarm_id = sceKernelSetAlarm(ctx->msg_delay, matchingDataRetryAlarmCb, peer);
+    return peer->data_alarm_id;
 }
 
-/* 0x4018: matchingHandleHostForward */
-static void matchingHandleHostForward(MatchingCtx *ctx, PeerNode *peer, u32 rxLen)
+/* 0x0035f8 */
+static int __attribute__((noinline))
+matchingSetKeepAliveAlarm(MatchingCtx *ctx, MatchingPeer *peer)
 {
-	if (ctx->mode == 1 && rxLen >= 11) {
-		u8 *rx = (u8 *)ctx->rx_buf;
-		if (rx[10] != 0) {
-			matchingQueueControlPkt(ctx, 11, rx + 4, 7, peer->mac);
-			return;
-		}
-	}
-	if (ctx->mode == 2 && rxLen >= 11 && peer == matchingFindParentPeer(ctx, 1)) {
-		u8 *rx = (u8 *)ctx->rx_buf;
-		peer = matchingFindPeerByMac(ctx, rx + 4);
-		if (peer == NULL)
-			return;
-	}
-	if (peer->state != 8)
-		return;
-	if (peer->bulk_len > 0) {
-		peer->bulk_len = 0;
-		sceKernelFreeVpl(g_vpl_id, peer->bulk_data);
-		peer->bulk_data = NULL;
-	}
-	peer->state = 7;
-	peer->timeout_us = ctx->keepalive_timeout;
-	matchingPostEvent(ctx, 11, peer->mac, 0, NULL);
+    u32 delay = (ctx->mode == MATCHING_MODE_CLIENT) ? peer->peer_ping_delay : ctx->ping_delay;
+    int intr = sceKernelCpuSuspendIntr();
+    if (peer->ctrl_alarm_id >= 0) {
+        sceKernelCancelAlarm(peer->ctrl_alarm_id);
+        peer->ctrl_alarm_id = -1;
+    }
+    sceKernelCpuResumeIntr(intr);
+    peer->ctrl_alarm_id = sceKernelSetAlarm(delay, matchingKeepAliveAlarmCb, peer);
+    return peer->ctrl_alarm_id;
 }
 
-/* 0x40b8: matchingCreatePeer */
-static PeerNode *matchingCreatePeer(MatchingCtx *ctx, const u8 *mac, int optLen, const void *optData)
+/* 0x003684 */
+static int __attribute__((noinline))
+matchingSetHelloAlarm(MatchingCtx *ctx, u32 delay)
 {
-	PeerNode *peer = (PeerNode *)matchingAlloc(0x88);
-	if (peer == NULL)
-		return NULL;
-	sceKernelMemset(peer, 0, 0x88);
-
-	if (optLen > 0) {
-		void *buf = matchingAlloc(optLen);
-		peer->opt_data = buf;
-		if (buf == NULL) {
-			sceKernelFreeVpl(g_vpl_id, peer);
-			return NULL;
-		}
-		sceKernelMemcpy(buf, optData, optLen);
-	}
-
-	peer->state = 2;
-	sceKernelMemcpy(peer->mac, mac, 6);
-	peer->opt_len = optLen;
-	u32 now = sceKernelGetSystemTimeLow();
-	peer->last_recv_time = now;
-	peer->timeout_us = 0;
-	peer->last_send_time = now;
-	peer->next = NULL;
-
-	PeerNode *head = ctx->peer_list;
-	if (head == NULL) {
-		ctx->peer_list = peer;
-	} else {
-		while (head->next != NULL)
-			head = head->next;
-		head->next = peer;
-	}
-	return peer;
+    int intr = sceKernelCpuSuspendIntr();
+    if (ctx->hello_alarm_id >= 0) {
+        sceKernelCancelAlarm(ctx->hello_alarm_id);
+        ctx->hello_alarm_id = -1;
+    }
+    sceKernelCpuResumeIntr(intr);
+    ctx->hello_alarm_id = sceKernelSetAlarm(delay, matchingHelloAlarmCb, ctx);
+    return ctx->hello_alarm_id;
 }
 
-/* 0x418c: matchingFindPeerByMac */
-static PeerNode *matchingFindPeerByMac(MatchingCtx *ctx, const u8 *mac)
+/* 0x0036fc */
+static int __attribute__((noinline))
+matchingCancelPeerAlarms(MatchingPeer *peer)
 {
-	for (PeerNode *it = ctx->peer_list; it != NULL; it = it->next) {
-		if (sceNet_lib_E0A81C7C(it->mac, mac) == 0)
-			return it;
-	}
-	return NULL;
+    int intr = sceKernelCpuSuspendIntr();
+    if (peer->ctrl_alarm_id >= 0) {
+        sceKernelCancelAlarm(peer->ctrl_alarm_id);
+        peer->ctrl_alarm_id = -1;
+    }
+    if (peer->data_alarm_id >= 0) {
+        sceKernelCancelAlarm(peer->data_alarm_id);
+        peer->data_alarm_id = -1;
+    }
+    sceKernelCpuResumeIntr(intr);
+    return 0;
 }
 
-/* 0x41ec: matchingFindParentPeer */
-static PeerNode *matchingFindParentPeer(MatchingCtx *ctx, int state)
+/* 0x00376c */
+static int __attribute__((noinline))
+matchingCancelDataAlarm(MatchingPeer *peer)
 {
-	if (ctx->mode == 2 && state == 1) {
-		u8 *parent_mac = ctx->hello_pkt + 4;
-		for (PeerNode *it = ctx->peer_list; it != NULL; it = it->next) {
-			if (sceNet_lib_E0A81C7C(it->mac, parent_mac) == 0)
-				return it;
-		}
-		return NULL;
-	}
-	for (PeerNode *it = ctx->peer_list; it != NULL; it = it->next) {
-		if (it->state == state)
-			return it;
-	}
-	return NULL;
+    int intr = sceKernelCpuSuspendIntr();
+    if (peer->data_alarm_id >= 0) {
+        sceKernelCancelAlarm(peer->data_alarm_id);
+        peer->data_alarm_id = -1;
+    }
+    sceKernelCpuResumeIntr(intr);
+    return 0;
 }
 
-/* 0x4238: matchingRemovePeer */
-static int matchingRemovePeer(MatchingCtx *ctx, PeerNode *peer)
+/* 0x0037c0 */
+static int __attribute__((noinline))
+matchingCancelHelloAlarm(MatchingCtx *ctx)
 {
-	PeerNode *cur = ctx->peer_list;
-	if (cur == NULL)
-		return 0;
-
-	if (cur == peer) {
-		ctx->peer_list = cur->next;
-	} else {
-		PeerNode *prev = cur;
-		for (cur = cur->next; cur != NULL; prev = cur, cur = cur->next) {
-			if (cur == peer) {
-				prev->next = cur->next;
-				break;
-			}
-		}
-		if (cur == NULL)
-			return 0;
-	}
-
-	if (peer->opt_len > 0)
-		sceKernelFreeVpl(g_vpl_id, peer->opt_data);
-	if (peer->bulk_len > 0)
-		sceKernelFreeVpl(g_vpl_id, peer->bulk_data);
-	if (peer->hello_buf != NULL)
-		sceKernelFreeVpl(g_vpl_id, peer->hello_buf);
-	return sceKernelFreeVpl(g_vpl_id, peer);
+    int intr = sceKernelCpuSuspendIntr();
+    if (ctx->hello_alarm_id >= 0) {
+        sceKernelCancelAlarm(ctx->hello_alarm_id);
+        ctx->hello_alarm_id = -1;
+    }
+    sceKernelCpuResumeIntr(intr);
+    return 0;
 }
 
-/* 0x4294: matchingDestroyAllPeers */
-static void matchingDestroyAllPeers(MatchingCtx *ctx)
+/* 0x003814 */
+static u32 matchingCtrlRetryAlarmCb(void *common)
 {
-	PeerNode *next;
-	for (PeerNode *it = ctx->peer_list; it != NULL; it = next) {
-		matchingDropEventMsgsForPeer(ctx, it);
-		if (it->opt_len > 0)
-			sceKernelFreeVpl(g_vpl_id, it->opt_data);
-		if (it->bulk_len > 0)
-			sceKernelFreeVpl(g_vpl_id, it->bulk_data);
-		if (it->hello_buf != NULL)
-			sceKernelFreeVpl(g_vpl_id, it->hello_buf);
-		next = it->next;
-		sceKernelFreeVpl(g_vpl_id, it);
-	}
-	ctx->peer_list = NULL;
-	matchingFreeOptBuffers(ctx);
+    MatchingPeer *peer = (MatchingPeer *)common;
+    if ((peer->ctrl_alarm_msg.pending_flag & 1u) == 0) {
+        peer->ctrl_alarm_msg.pending_flag |= 1u;
+        peer->ctrl_alarm_msg.msg_type = MBX_MSG_CTRL_RETRY;
+        peer->ctrl_alarm_msg.peer = peer;
+        sceKernelSendMbx(peer->event_mbx, &peer->ctrl_alarm_msg);
+    }
+    peer->ctrl_alarm_id = -1;
+    return 0;
 }
 
-/* 0x4354: matchingCollectPeerMacs */
-static void matchingCollectPeerMacs(MatchingCtx *ctx, int minState, u8 *dstMacs, int *pCount)
+/* 0x003874 */
+static u32 matchingDataRetryAlarmCb(void *common)
 {
-	int count = 0;
-	u8 *dst = dstMacs;
-	for (PeerNode *it = ctx->peer_list; it != NULL; it = it->next) {
-		if (it->state >= minState) {
-			if (dstMacs != NULL) {
-				if (count >= *pCount) {
-					*pCount = count;
-					return;
-				}
-				sceKernelMemcpy(dst, it->mac, 6);
-			}
-			dst += 6;
-			count++;
-		}
-	}
-	*pCount = count;
+    MatchingPeer *peer = (MatchingPeer *)common;
+    if ((peer->data_alarm_msg.pending_flag & 1u) == 0) {
+        peer->data_alarm_msg.pending_flag |= 1u;
+        peer->data_alarm_msg.msg_type = MBX_MSG_DATA_RETRY;
+        peer->data_alarm_msg.peer = peer;
+        sceKernelSendMbx(peer->event_mbx, &peer->data_alarm_msg);
+    }
+    peer->data_alarm_id = -1;
+    return 0;
 }
 
-/* 0x4404: matchingCountPeersByState */
-static int matchingCountPeersByState(MatchingCtx *ctx, int minState)
+/* 0x0038d4 */
+static u32 matchingKeepAliveAlarmCb(void *common)
 {
-	int count = 0;
-	for (PeerNode *it = ctx->peer_list; it != NULL; it = it->next) {
-		if (it->state >= minState)
-			count++;
-	}
-	return count;
+    MatchingPeer *peer = (MatchingPeer *)common;
+    if ((peer->ctrl_alarm_msg.pending_flag & 1u) == 0) {
+        peer->ctrl_alarm_msg.pending_flag |= 1u;
+        peer->ctrl_alarm_msg.msg_type = MBX_MSG_KEEPALIVE;
+        peer->ctrl_alarm_msg.peer = peer;
+        sceKernelSendMbx(peer->event_mbx, &peer->ctrl_alarm_msg);
+    }
+    peer->ctrl_alarm_id = -1;
+    return 0;
 }
 
-/* 0x443c: matchingExportHelloMembers */
-static void matchingExportHelloMembers(MatchingCtx *ctx, int *pSize, u8 *buf)
+/* 0x003934 */
+static u32 matchingHelloAlarmCb(void *common)
 {
-	int offset = 0;
-	u8 *prev = NULL;
-	for (int i = 4; i < ctx->hello_pkt_len; i += 6) {
-		u8 *cur = buf + offset;
-		int next_offset = offset + 12;
-		if (buf != NULL) {
-			if (*pSize < next_offset) {
-				*pSize = offset;
-				return;
-			}
-			sceKernelMemcpy(cur + 4, ctx->hello_pkt + i, 6);
-			*(void **)cur = NULL;
-			if (prev != NULL)
-				*(void **)prev = cur;
-			prev = cur;
-		}
-		offset = next_offset;
-	}
-	*pSize = offset;
+    MatchingCtx *ctx = (MatchingCtx *)common;
+    if ((ctx->hello_msg.pending_flag & 1u) == 0) {
+        ctx->hello_msg.pending_flag |= 1u;
+        ctx->hello_msg.msg_type = MBX_MSG_HELLO;
+        ctx->hello_msg.peer = NULL;
+        sceKernelSendMbx(ctx->event_mbx, &ctx->hello_msg);
+    }
+    ctx->hello_alarm_id = -1;
+    return 0;
 }
 
-/* 0x4504: matchingIsLocalMacLower */
-static int matchingIsLocalMacLower(const PeerNode *peer)
+/* 0x003994 */
+static void __attribute__((noinline))
+matchingRemovePeer(MatchingCtx *ctx, MatchingPeer *peer)
 {
-	u32 local_hi = ((u32)g_local_mac[0] << 16) | ((u32)g_local_mac[1] << 8) | g_local_mac[2];
-	u32 peer_hi = ((u32)peer->mac[0] << 16) | ((u32)peer->mac[1] << 8) | peer->mac[2];
-	if (local_hi < peer_hi)
-		return 1;
-	if (peer_hi < local_hi)
-		return 0;
-	u32 local_lo = ((u32)g_local_mac[3] << 16) | ((u32)g_local_mac[4] << 8) | g_local_mac[5];
-	u32 peer_lo = ((u32)peer->mac[3] << 16) | ((u32)peer->mac[4] << 8) | peer->mac[5];
-	if (local_lo < peer_lo)
-		return 1;
-	if (peer_lo < local_lo)
-		return 0;
-	return -1;
+    MatchingPeer *prev = NULL;
+    MatchingPeer *cur = ctx->peers;
+
+    while (cur != NULL && cur != peer) {
+        prev = cur;
+        cur = cur->next;
+    }
+    if (cur == NULL)
+        return;
+
+    if (prev != NULL)
+        prev->next = cur->next;
+    else
+        ctx->peers = cur->next;
+
+    if (peer->opt_len > 0)
+        sceKernelFreeVpl(g_vpl_id, peer->opt_buf);
+    if (peer->rx_pkt != NULL)
+        sceKernelFreeVpl(g_vpl_id, peer->rx_pkt);
+    if (peer->data_len > 0)
+        sceKernelFreeVpl(g_vpl_id, peer->data_buf);
+    sceKernelFreeVpl(g_vpl_id, peer);
+}
+
+/* 0x003a58 */
+static void __attribute__((noinline))
+matchingSetPeerState(MatchingCtx *ctx, MatchingPeer *peer, int new_state)
+{
+    int old_state = peer->state;
+    if (old_state == new_state)
+        return;
+
+    if ((old_state == PEER_STATE_ACCEPTED || old_state == PEER_STATE_SELECT_SENT) &&
+        new_state != PEER_STATE_ACCEPTED && new_state != PEER_STATE_SELECT_SENT &&
+        peer->opt_len > 0) {
+        sceKernelFreeVpl(g_vpl_id, peer->opt_buf);
+        peer->opt_len = 0;
+        peer->opt_buf = NULL;
+    }
+    if (old_state != PEER_STATE_ESTABLISHED && new_state == PEER_STATE_ESTABLISHED) {
+        peer->rx_expected_seq = 0;
+        peer->tx_seq = 0;
+    }
+    if (old_state == PEER_STATE_ESTABLISHED && new_state != PEER_STATE_ESTABLISHED)
+        matchingSetPeerDataState(ctx, peer, DATA_STATE_IDLE);
+
+    peer->state = new_state;
+    if (old_state == PEER_STATE_ESTABLISHED || new_state == PEER_STATE_ESTABLISHED)
+        matchingBuildMembersPkt(ctx);
+}
+
+/* 0x003b50 */
+static void __attribute__((noinline))
+matchingSetPeerDataState(MatchingCtx *ctx, MatchingPeer *peer, int new_state)
+{
+    int old_state = peer->data_state;
+    int closing = (old_state == DATA_STATE_SENDING) & (new_state == DATA_STATE_IDLE);
+    (void)ctx;
+    if (old_state != new_state) {
+        if (closing && peer->data_len > 0) {
+            sceKernelFreeVpl(g_vpl_id, peer->data_buf);
+            peer->data_len = 0;
+            peer->data_buf = NULL;
+        }
+        peer->data_state = new_state;
+    }
+}
+
+/* 0x003bc4 */
+static int __attribute__((noinline))
+matchingCreateLock(void)
+{
+    int ret = sceKernelCreateLwMutex(g_mutex_work, "SceNetAdhocMatchingLock", 0x200, 0, NULL);
+    if (ret >= 0) {
+        g_mutex_created = 1;
+        return 0;
+    }
+    return ret;
+}
+
+/* 0x003c14 */
+static void __attribute__((noinline))
+matchingDeleteLock(void)
+{
+    if (g_mutex_created != 0)
+        sceKernelDeleteLwMutex(g_mutex_work);
+    g_mutex_created = 0;
+}
+
+/* 0x003c58 */
+static int __attribute__((noinline))
+matchingLock(void)
+{
+    return sceKernelLockLwMutex(g_mutex_work, 1, NULL);
+}
+
+/* 0x003c80 */
+static void __attribute__((noinline))
+matchingUnlock(int lock_res)
+{
+    if (lock_res == 0)
+        sceKernelUnlockLwMutex(g_mutex_work, 1);
+}
+
+/* 0x003cb8 */
+static int __attribute__((noinline))
+matchingInitCtxList(void)
+{
+    g_ctx_list = NULL;
+    return 0;
+}
+
+/* 0x003cc8 */
+static int __attribute__((noinline))
+matchingFreeAllCtxs(void)
+{
+    MatchingCtx *cur = g_ctx_list;
+    while (cur != NULL) {
+        MatchingCtx *next = cur->next;
+        sceKernelFreeVpl(g_vpl_id, cur->rx_buf);
+        cur->rx_buf = NULL;
+        sceKernelFreeVpl(g_vpl_id, cur);
+        cur = next;
+    }
+    return 0;
+}
+
+/* 0x003d34 */
+static int __attribute__((noinline))
+matchingCheckNoActiveCtx(void)
+{
+    MatchingCtx *cur = g_ctx_list;
+    while (cur != NULL) {
+        if (cur->running != 0)
+            return MATCHING_ERR_BUSY;
+        cur = cur->next;
+    }
+    return 0;
+}
+
+/* 0x003d6c */
+static int __attribute__((noinline))
+matchingCreateVpl(int poolsize)
+{
+    int vpl = sceKernelCreateVpl("SceNetAdhocMatchingMemoryPool", 2, 0, (u32)poolsize, NULL);
+    g_vpl_id = vpl;
+    if (vpl >= 0) {
+        g_pool_max_alloc = 0;
+        return 0;
+    }
+    return vpl;
+}
+
+/* 0x003dbc */
+static void __attribute__((noinline))
+matchingDeleteVpl(void)
+{
+    if (g_vpl_id >= 0) {
+        sceKernelDeleteVpl(g_vpl_id);
+        g_vpl_id = -1;
+    }
+}
+
+/* 0x003df8 */
+static void *__attribute__((noinline))
+matchingAllocVpl(int size)
+{
+    void *ptr;
+    MatchingVplInfo info;
+    if (sceKernelTryAllocateVpl(g_vpl_id, (u32)size, &ptr) < 0)
+        return NULL;
+    info.size = sizeof(info);
+    if (sceKernelReferVplStatus(g_vpl_id, &info) == 0) {
+        int used = info.pool_size - info.free_size;
+        if (used > g_pool_max_alloc)
+            g_pool_max_alloc = used;
+    }
+    return ptr;
+}
+
+/* 0x003e6c */
+static int __attribute__((noinline))
+matchingFreeVpl(void *ptr)
+{
+    return sceKernelFreeVpl(g_vpl_id, ptr);
+}
+
+/* 0x003e94 */
+static int __attribute__((noinline))
+matchingGetPoolMaxAllocInternal(void)
+{
+    return g_pool_max_alloc;
+}
+
+/* 0x003ea0 */
+static int __attribute__((noinline))
+matchingGetPoolStatInternal(MatchingPoolStat *stat)
+{
+    MatchingVplInfo info;
+    int ret;
+
+    info.size = sizeof(info);
+    ret = sceKernelReferVplStatus(g_vpl_id, &info);
+    if (ret >= 0) {
+        stat->size = (u32)info.pool_size;
+        stat->maxsize = (u32)g_pool_max_alloc;
+        stat->freesize = (u32)info.free_size;
+        ret = 0;
+    }
+    return ret;
+}
+
+/* 0x003f04 */
+static int __attribute__((noinline))
+matchingAllocCtx(u16 port)
+{
+    MatchingCtx *cur = g_ctx_list;
+    int cand;
+    int chosen = MATCHING_ERR_ID_NOT_AVAIL;
+    MatchingCtx *ctx;
+    void *raw = NULL;
+    MatchingVplInfo info;
+
+    while (cur != NULL) {
+        if (cur->port == port)
+            return MATCHING_ERR_PORT_IN_USE;
+        cur = cur->next;
+    }
+
+    cand = (g_last_ctx_id == 15) ? 1 : (g_last_ctx_id + 1);
+    while (cand != g_last_ctx_id) {
+        MatchingCtx *it = g_ctx_list;
+        while (it != NULL && it->id != cand)
+            it = it->next;
+        if (it == NULL) {
+            chosen = cand;
+            g_last_ctx_id = cand;
+            break;
+        }
+        cand = (cand == 15) ? 1 : (cand + 1);
+    }
+
+    if (chosen < 0)
+        return chosen;
+
+    if (sceKernelTryAllocateVpl(g_vpl_id, sizeof(MatchingCtx), &raw) < 0)
+        return MATCHING_ERR_NO_SPACE;
+    info.size = sizeof(info);
+    if (sceKernelReferVplStatus(g_vpl_id, &info) == 0) {
+        int used = info.pool_size - info.free_size;
+        if (used > g_pool_max_alloc)
+            g_pool_max_alloc = used;
+    }
+    ctx = (MatchingCtx *)raw;
+    if (ctx == NULL)
+        return MATCHING_ERR_NO_SPACE;
+
+    sceKernelMemset(ctx, 0, sizeof(MatchingCtx));
+    ctx->id = chosen;
+    ctx->next = g_ctx_list;
+    g_ctx_list = ctx;
+    return chosen;
+}
+
+/* 0x00407c */
+static int __attribute__((noinline))
+matchingFreeCtx(MatchingCtx *ctx)
+{
+    MatchingCtx *cur = g_ctx_list;
+    MatchingCtx *prev = NULL;
+
+    if (cur != NULL) {
+        while (cur != NULL && cur != ctx) {
+            prev = cur;
+            cur = cur->next;
+        }
+        if (cur != NULL) {
+            if (prev != NULL)
+                prev->next = ctx->next;
+            else
+                g_ctx_list = ctx->next;
+            cur->next = NULL;
+        }
+    }
+    return sceKernelFreeVpl(g_vpl_id, ctx);
+}
+
+/* 0x0040e8 */
+static MatchingCtx *__attribute__((noinline))
+matchingFindCtxById(int id)
+{
+    MatchingCtx *cur = g_ctx_list;
+    while (cur != NULL && cur->id != id)
+        cur = cur->next;
+    return cur;
+}
+
+/* 0x004118 */
+static MatchingPeer *__attribute__((noinline))
+matchingCreatePeer(MatchingCtx *ctx, const u8 *mac)
+{
+    MatchingPeer *peer;
+    void *raw = NULL;
+    MatchingVplInfo info;
+    u32 sess;
+
+    if (sceKernelTryAllocateVpl(g_vpl_id, sizeof(MatchingPeer), &raw) < 0)
+        return NULL;
+    info.size = sizeof(info);
+    if (sceKernelReferVplStatus(g_vpl_id, &info) == 0) {
+        int used = info.pool_size - info.free_size;
+        if (used > g_pool_max_alloc)
+            g_pool_max_alloc = used;
+    }
+    peer = (MatchingPeer *)raw;
+    if (peer == NULL)
+        return NULL;
+
+    sceKernelMemset(peer, 0, sizeof(MatchingPeer));
+    matchingSetPeerState(ctx, peer, PEER_STATE_IDLE);
+    sceKernelMemcpy(peer->mac, mac, 6);
+    peer->event_mbx = ctx->event_mbx;
+    sess = sceNet_lib_1858883D();
+    peer->own_session_id = (sess == 0) ? 1u : sess;
+    peer->ctrl_alarm_id = -1;
+    matchingSetPeerDataState(ctx, peer, DATA_STATE_IDLE);
+    peer->data_alarm_id = -1;
+    peer->next = ctx->peers;
+    ctx->peers = peer;
+    return peer;
+}
+
+/* 0x004230 */
+static MatchingPeer *__attribute__((noinline))
+matchingFindPeerByMac(MatchingCtx *ctx, const u8 *mac)
+{
+    MatchingPeer *cur = ctx->peers;
+    while (cur != NULL) {
+        if (sceNet_lib_E0A81C7C(cur->mac, mac, 6) == 0 && cur->pending_free == 0)
+            return cur;
+        cur = cur->next;
+    }
+    return NULL;
+}
+
+/* 0x004294 */
+static int __attribute__((noinline))
+matchingDestroyAllPeers(MatchingCtx *ctx)
+{
+    MatchingPeer *cur = ctx->peers;
+    while (cur != NULL) {
+        MatchingPeer *next = cur->next;
+        matchingCancelPeerAlarms(cur);
+        if (cur->opt_len > 0)
+            sceKernelFreeVpl(g_vpl_id, cur->opt_buf);
+        if (cur->data_len > 0)
+            sceKernelFreeVpl(g_vpl_id, cur->data_buf);
+        if (cur->rx_pkt != NULL)
+            sceKernelFreeVpl(g_vpl_id, cur->rx_pkt);
+        sceKernelFreeVpl(g_vpl_id, cur);
+        cur = next;
+    }
+    ctx->peers = NULL;
+    return matchingBroadcastBye(ctx);
+}
+
+/* 0x004354 */
+static void __attribute__((noinline))
+matchingCollectPeerMacs(MatchingCtx *ctx, int min_state, u8 *out, int *count_inout)
+{
+    MatchingPeer *cur = ctx->peers;
+    int count = 0;
+    u8 *dst = out;
+
+    while (cur != NULL) {
+        if (cur->state >= min_state) {
+            if (out != NULL) {
+                if (count >= *count_inout) {
+                    *count_inout = count;
+                    return;
+                }
+                sceKernelMemcpy(dst, cur->mac, 6);
+            }
+            dst += 6;
+            count++;
+        }
+        cur = cur->next;
+    }
+    *count_inout = count;
+}
+
+/* 0x004404 */
+static int __attribute__((noinline))
+matchingCountPeersAtLeast(MatchingCtx *ctx, int min_state)
+{
+    MatchingPeer *cur = ctx->peers;
+    int count = 0;
+    while (cur != NULL) {
+        if (cur->state >= min_state)
+            count++;
+        cur = cur->next;
+    }
+    return count;
+}
+
+/* 0x00443c */
+static void __attribute__((noinline))
+matchingGetMembersInternal(MatchingCtx *ctx, int *buflen, void *buf)
+{
+    int written = 0;
+    int off = 4;
+    MatchingMember *prev = NULL;
+    MatchingMember *base = (MatchingMember *)buf;
+
+    while (off < ctx->members_pkt_len) {
+        int next_len = written + (int)sizeof(MatchingMember);
+        if (buf != NULL) {
+            MatchingMember *slot = &base[written / (int)sizeof(MatchingMember)];
+            if (*buflen < next_len) {
+                *buflen = written;
+                return;
+            }
+            sceKernelMemcpy(slot->mac, ctx->members_pkt + off, 6);
+            slot->next = NULL;
+            if (prev != NULL)
+                prev->next = slot;
+            prev = slot;
+        }
+        off += 6;
+        written = next_len;
+    }
+    *buflen = written;
+}
+
+/* 0x004504 */
+static int __attribute__((noinline))
+matchingCompareMac(const MatchingPeer *peer)
+{
+    u32 peer_hi = ((u32)peer->mac[0] << 16) | ((u32)peer->mac[1] << 8) | peer->mac[2];
+    u32 self_hi = ((u32)g_self_mac[0] << 16) | ((u32)g_self_mac[1] << 8) | g_self_mac[2];
+    u32 peer_lo;
+    u32 self_lo;
+
+    if (self_hi < peer_hi)
+        return 1;
+    if (peer_hi < self_hi)
+        return 0;
+
+    peer_lo = ((u32)peer->mac[3] << 16) | ((u32)peer->mac[4] << 8) | peer->mac[5];
+    self_lo = ((u32)g_self_mac[3] << 16) | ((u32)g_self_mac[4] << 8) | g_self_mac[5];
+    if (self_lo < peer_lo)
+        return 1;
+    if (peer_lo < self_lo)
+        return 0;
+    return -1;
 }
