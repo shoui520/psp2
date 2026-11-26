@@ -1,47 +1,50 @@
 #include "apctl_internal.h"
 
 /* =========================================================================
- * RC4 (OpenSSL-compatible)
+ * RC4 (OpenSSL-derived, placed at module offset 0x0000 in original PRX)
  * ========================================================================= */
 
 void rc4_crypt(Rc4Key *key, u32 len, const u8 *in, u8 *out)
 {
-    u32 x, y;
-    u32 *d;
-    u32 tx, ty;
-    u32 blocks;
-    u32 rem;
+    u32 x = key->x;
+    u32 y = key->y;
+    u32 *s = key->s;
+    u32 n = len >> 3;
 
-    if (len == 0)
-        return;
-
-    d = key->s;
-    x = key->x;
-    y = key->y;
-    blocks = len >> 3;
-
-    while (blocks-- != 0) {
-        int k;
-        for (k = 0; k < 8; k++) {
-            x = (x + 1u) & 0xFFu;
-            tx = d[x];
-            y = (y + tx) & 0xFFu;
-            ty = d[y];
-            d[x] = ty;
-            d[y] = tx;
-            *out++ = (u8)(*in++ ^ d[(tx + ty) & 0xFFu]);
-        }
+    while (n > 0) {
+        u32 tx, ty;
+#define RC4_STEP(idx)                                   \
+        do {                                            \
+            x = (x + 1u) & 0xFFu;                       \
+            tx = s[x];                                  \
+            y = (tx + y) & 0xFFu;                       \
+            ty = s[y];                                  \
+            s[x] = ty;                                  \
+            s[y] = tx;                                  \
+            out[(idx)] = (u8)(in[(idx)] ^ s[(tx + ty) & 0xFFu]); \
+        } while (0)
+        RC4_STEP(0);
+        RC4_STEP(1);
+        RC4_STEP(2);
+        RC4_STEP(3);
+        RC4_STEP(4);
+        RC4_STEP(5);
+        RC4_STEP(6);
+        RC4_STEP(7);
+        in += 8;
+        out += 8;
+        n--;
     }
 
-    rem = len & 7u;
-    while (rem-- != 0) {
-        x = (x + 1u) & 0xFFu;
-        tx = d[x];
-        y = (y + tx) & 0xFFu;
-        ty = d[y];
-        d[x] = ty;
-        d[y] = tx;
-        *out++ = (u8)(*in++ ^ d[(tx + ty) & 0xFFu]);
+    len &= 7u;
+    if (len > 0) {
+        u32 tx, ty;
+        u32 idx = 0;
+        while (idx < len) {
+            RC4_STEP(idx);
+            idx++;
+        }
+#undef RC4_STEP
     }
 
     key->x = x;
@@ -50,23 +53,24 @@ void rc4_crypt(Rc4Key *key, u32 len, const u8 *in, u8 *out)
 
 void rc4_set_key(Rc4Key *key, int len, const u8 *data)
 {
+    u32 *s = key->s;
     u32 i;
-    u32 id1 = 0;
-    u32 id2 = 0;
-    u32 *d = key->s;
+    u32 id_key = 0;
+    u32 id_state = 0;
 
     key->x = 0;
     key->y = 0;
     for (i = 0; i < 256u; i++)
-        d[i] = i;
+        s[i] = i;
 
     for (i = 0; i < 256u; i++) {
-        u32 tmp = d[i];
-        id2 = (data[id1] + tmp + id2) & 0xFFu;
-        if (++id1 == (u32)len)
-            id1 = 0;
-        d[i] = d[id2];
-        d[id2] = tmp;
+        u32 tmp = s[i];
+        id_state = (data[id_key] + tmp + id_state) & 0xFFu;
+        id_key++;
+        if ((int)id_key == len)
+            id_key = 0;
+        s[i] = s[id_state];
+        s[id_state] = tmp;
     }
 }
 
@@ -87,73 +91,94 @@ static const u32 g_wpa_akm_psk     = 0x02F25000u; /* 00:50:F2:02 */
 
 typedef struct WpaEvent {
     int type;
-    void *arg1;
+    void *context;
     u8 *pkt;
     int pkt_len;
 } WpaEvent;
 
-/*
- * Flat layout matching 0x17D70 .. 0x181BC (1100 bytes):
- *   0x000 (w0)  : state (0..5)
- *   0x004 (w1)  : initialized
- *   0x008 (w2)  : flags (bit 0 = connected notified)
- *   0x00C (w3)  : thid
- *   0x010 (w4)  : evf
- *   0x014 (w5)  : bpf_fd
- *   0x018 (w6)  : alarm_id
- *   0x020 (w8)  : timeout_us
- *   0x024 (w9..10) : last_mic_err_time (64-bit)
- *   0x02C (w11..12): last_gtk_time (64-bit)
- *   0x044 (w17) : auth_mode (0=PSK, 1=802.1X)
- *   0x048 (w18) : cipher (0=TKIP, 1=CCMP)
- *   0x04C (w19) : callback(void *info, int err)
- *   0x050 (w20) : local_mac[6]
- *   0x056       : bssid[6]
- *   0x05C (w23) : rx_buf[256]
- *   0x15C (w87) : rx_buf_size
- *   0x162       : tx_frame[256]
- *   0x268       : bss_info[92] (0x17FD8; ssid_len at +7 = 0x26F, ssid at +8 = 0x270, caps at +0x51 = 0x2B9)
- *   0x2C4 (w177): replay_counter[8]
- *   0x2CC (w179): prng_counter[32]
- *   0x2EC (w187): snonce[32]
- *   0x30C (w195): psk_passphrase_type
- *   0x310       : passphrase[64]
- *   0x350 (w212): pmk[32]
- *   0x370 (w220): ptk[64] (kck=+0, kek=+16, tk=+32)
- *   0x3B0 (w236): gtk[32] (0x18120)
- *   0x3D0 (w244): kck_ptr
- *   0x3D4 (w245): kek_ptr
- *   0x3D8 (w246): tk_ptr (0x18148)
- *   0x3DC       : config[112] (0x1814C; ssid_len at +8 = 0x3E4, ssid at +12 = 0x3E8)
- */
-static u8 g_wpa_ctx_buf[1100];
-static WpaEvent g_wpa_event;
+typedef struct WpaNotifyMsg {
+    int code;
+    u8 key[32];
+} WpaNotifyMsg;
 
-#define WPA_W(c, i)   (((int *)(c))[(i)])
-#define WPA_U32(c, o) (*(u32 *)(((u8 *)(c)) + (o)))
-#define WPA_S32(c, o) (*(int *)(((u8 *)(c)) + (o)))
-#define WPA_U16(c, o) (*(u16 *)(((u8 *)(c)) + (o)))
+typedef struct WpaPrngSeed {
+    u8 prefix[48];
+    u32 counter;
+} WpaPrngSeed;
+
+typedef struct WpaConfig {
+    int auth_mode;          /* +0x00 */
+    int cipher;             /* +0x04 */
+    u8 ssid_len;            /* +0x08 */
+    u8 pad_ssid[3];         /* +0x09 */
+    u8 ssid[32];            /* +0x0C */
+    int psk_type;           /* +0x2C (word 11) */
+    u8 key_material[64];    /* +0x30 (word 12) */
+} WpaConfig; /* 112 bytes */
+
+typedef struct WpaSupplicantCtx {
+    int state;                          /* 0x000 */
+    int initialized;                    /* 0x004 */
+    int flags;                          /* 0x008 (bit 0 = connected notified) */
+    SceUID thid;                        /* 0x00C */
+    SceUID evf;                         /* 0x010 */
+    int bpf_fd;                         /* 0x014 */
+    SceUID alarm_id;                    /* 0x018 */
+    int pad_alarm;                      /* 0x01C */
+    u32 timeout_us;                     /* 0x020 */
+    u32 last_mic_err_lo;                /* 0x024 */
+    u32 last_mic_err_hi;                /* 0x028 */
+    u32 last_gtk_lo;                    /* 0x02C */
+    u32 last_gtk_hi;                    /* 0x030 */
+    u8 pad_time[16];                    /* 0x034 */
+    int auth_mode;                      /* 0x044 (0=PSK, 1=802.1X) */
+    int cipher;                         /* 0x048 (0=TKIP, 1=CCMP) */
+    void (*callback)(void *, int);      /* 0x04C */
+    u8 sta_mac[6];                      /* 0x050 */
+    u8 bssid[6];                        /* 0x056 */
+    u8 rx_buf[256];                     /* 0x05C */
+    u32 rx_buf_size;                    /* 0x15C */
+    u8 pad_tx[2];                       /* 0x160 */
+    u8 tx_frame[256];                   /* 0x162 */
+    u8 pad_bss[6];                      /* 0x262 */
+    u8 bss_info[92];                    /* 0x268 (+7=ssid_len, +8=ssid, +0x51=caps) */
+    u8 replay_counter[8];               /* 0x2C4 */
+    u8 prng_counter[32];                /* 0x2CC */
+    u8 snonce[32];                      /* 0x2EC */
+    int psk_passphrase_type;            /* 0x30C */
+    char passphrase[64];                /* 0x310 */
+    u8 pmk[32];                         /* 0x350 */
+    u8 ptk[64];                         /* 0x370 (kck=+0, kek=+16, tk=+32) */
+    u8 gtk[32];                         /* 0x3B0 */
+    u8 *kck_ptr;                        /* 0x3D0 */
+    u8 *kek_ptr;                        /* 0x3D4 */
+    u8 *tk_ptr;                         /* 0x3D8 */
+    WpaConfig config;                   /* 0x3DC (112 bytes) */
+} WpaSupplicantCtx; /* 1100 bytes */
+
+static WpaSupplicantCtx g_wpa_ctx;
+static WpaEvent g_wpa_event;
 
 static int wpa_notify(int code, int err)
 {
-    void (*cb)(void *, int) = *(void (**)(void *, int))(g_wpa_ctx_buf + 0x4C);
+    void (*cb)(void *, int) = g_wpa_ctx.callback;
     if (cb != NULL) {
-        u8 msg[36];
-        sceKernelMemset(msg, 0, sizeof(msg));
-        *(int *)msg = code;
+        WpaNotifyMsg msg;
+        sceKernelMemset(&msg, 0, sizeof(msg));
+        msg.code = code;
         if (code == 2)
-            sceKernelMemcpy(msg + 4, *(void **)(g_wpa_ctx_buf + 0x3D8), 32);
+            sceKernelMemcpy(msg.key, g_wpa_ctx.tk_ptr, 32);
         else if (code == 3)
-            sceKernelMemcpy(msg + 4, g_wpa_ctx_buf + 0x3B0, 32);
-        cb(msg, err);
+            sceKernelMemcpy(msg.key, g_wpa_ctx.gtk, 32);
+        cb(&msg, err);
     }
     return 0;
 }
 
-static int wpa_eapol_send(int fd, u8 *frame, const u8 *src_mac, const u8 *dst_mac,
+static int wpa_eapol_send(int bpf_fd, u8 *frame, const u8 *src_mac, const u8 *dst_mac,
                           u8 type, u16 len)
 {
-    return eapol_bpf_send(fd, frame, src_mac, dst_mac, 0, 1, type, len);
+    return eapol_bpf_send(bpf_fd, frame, src_mac, dst_mac, 0, 1, type, len);
 }
 
 static void wpa_pbkdf2_f(const char *pass, const u8 *ssid, int ssid_len,
@@ -329,7 +354,8 @@ static void wpa_inc_counter(u8 *ctr, int len)
     sceKernelMemset(ctr, 0, (SceSize)len);
 }
 
-static void wpa_derive_ptk_common(u8 *ctx, const u8 *pkt, int ptk_len)
+static inline __attribute__((always_inline))
+void wpa_derive_ptk_common(WpaSupplicantCtx *ctx, const u8 *pkt, int ptk_len)
 {
     u8 snonce_tmp[112];
     u8 seed_nonce[16];
@@ -337,68 +363,68 @@ static void wpa_derive_ptk_common(u8 *ctx, const u8 *pkt, int ptk_len)
     u8 ptk_out[144];
     int lbl_len;
 
-    sceKernelMemcpy(seed_nonce, ctx + 0x50, 6);
+    sceKernelMemcpy(seed_nonce, ctx->sta_mac, 6);
     sceKernelGetSystemTime(seed_nonce + 8);
     lbl_len = sceNet_lib_D8722983("Init Counter");
-    wpa_prf(ctx + 0x2CC, 32u, "Init Counter", lbl_len, seed_nonce, 16, snonce_tmp, 32);
-    sceKernelMemcpy(ctx + 0x2EC, snonce_tmp, 32);
+    wpa_prf(ctx->prng_counter, 32u, "Init Counter", lbl_len, seed_nonce, 16, snonce_tmp, 32);
+    sceKernelMemcpy(ctx->snonce, snonce_tmp, 32);
 
-    sceKernelMemcpy(ptk_data + 0,  wpa_min_bytes(ctx + 0x50, ctx + 0x56, 6), 6);
-    sceKernelMemcpy(ptk_data + 6,  wpa_max_bytes(ctx + 0x50, ctx + 0x56, 6), 6);
-    sceKernelMemcpy(ptk_data + 12, wpa_min_bytes(ctx + 0x2EC, pkt + 31, 32), 32);
-    sceKernelMemcpy(ptk_data + 44, wpa_max_bytes(ctx + 0x2EC, pkt + 31, 32), 32);
+    sceKernelMemcpy(ptk_data + 0,  wpa_min_bytes(ctx->sta_mac, ctx->bssid, 6), 6);
+    sceKernelMemcpy(ptk_data + 6,  wpa_max_bytes(ctx->sta_mac, ctx->bssid, 6), 6);
+    sceKernelMemcpy(ptk_data + 12, wpa_min_bytes(ctx->snonce, pkt + 31, 32), 32);
+    sceKernelMemcpy(ptk_data + 44, wpa_max_bytes(ctx->snonce, pkt + 31, 32), 32);
 
     lbl_len = sceNet_lib_D8722983("Pairwise key expansion");
-    wpa_prf(ctx + 0x350, 32u, "Pairwise key expansion", lbl_len, ptk_data, 76, ptk_out, ptk_len);
-    sceKernelMemcpy(ctx + 0x370, ptk_out, (SceSize)ptk_len);
+    wpa_prf(ctx->pmk, 32u, "Pairwise key expansion", lbl_len, ptk_data, 76, ptk_out, ptk_len);
+    sceKernelMemcpy(ctx->ptk, ptk_out, (SceSize)ptk_len);
 
-    *(u8 **)(ctx + 0x3D0) = ctx + 0x370; /* KCK */
-    *(u8 **)(ctx + 0x3D4) = ctx + 0x380; /* KEK */
-    *(u8 **)(ctx + 0x3D8) = ctx + 0x390; /* TK  */
+    ctx->kck_ptr = ctx->ptk;
+    ctx->kek_ptr = ctx->ptk + 16;
+    ctx->tk_ptr = ctx->ptk + 32;
 }
 
-static void wpa_derive_ptk_tkip(u8 *ctx, const u8 *pkt)
+static void wpa_derive_ptk_tkip(WpaSupplicantCtx *ctx, const u8 *pkt)
 {
     wpa_derive_ptk_common(ctx, pkt, 64);
 }
 
-static void wpa_derive_ptk_ccmp(u8 *ctx, const u8 *pkt)
+static void wpa_derive_ptk_ccmp(WpaSupplicantCtx *ctx, const u8 *pkt)
 {
     wpa_derive_ptk_common(ctx, pkt, 48);
 }
 
-static void wpa_decrypt_gtk_tkip(u8 *ctx, const u8 *pkt)
+static void wpa_decrypt_gtk_tkip(WpaSupplicantCtx *ctx, const u8 *pkt)
 {
     u8 rc4_key[32];
     sceKernelMemcpy(rc4_key, pkt + 63, 16);
-    sceKernelMemcpy(rc4_key + 16, *(u8 **)(ctx + 0x3D4), 16);
-    wpa_rc4_decrypt(rc4_key, 32, pkt + 113, 32u, ctx + 0x3B0);
+    sceKernelMemcpy(rc4_key + 16, ctx->kek_ptr, 16);
+    wpa_rc4_decrypt(rc4_key, 32, pkt + 113, 32u, ctx->gtk);
 }
 
-static void wpa_decrypt_gtk_ccmp(u8 *ctx, const u8 *pkt)
+static void wpa_decrypt_gtk_ccmp(WpaSupplicantCtx *ctx, const u8 *pkt)
 {
     u8 gtk_tmp[32];
     u16 key_data_len = bswap16((u16)((pkt[112] << 8) | pkt[111]));
-    wpa_aes_unwrap(*(u8 **)(ctx + 0x3D4), 16, pkt + 113, key_data_len, gtk_tmp);
-    sceKernelMemcpy(ctx + 0x3B0, gtk_tmp, 32);
+    wpa_aes_unwrap(ctx->kek_ptr, 16, pkt + 113, key_data_len, gtk_tmp);
+    sceKernelMemcpy(ctx->gtk, gtk_tmp, 32);
 }
 
 static int wpa_notify_ptk(void) { return wpa_notify(2, 0); }
 static int wpa_notify_gtk(void) { return wpa_notify(3, 0); }
 
-static int wpa_send_start(u8 *ctx)
+static int wpa_send_start(WpaSupplicantCtx *ctx)
 {
-    u8 *tx = ctx + 0x162;
+    u8 *tx = ctx->tx_frame;
     tx[14] = 1;
     tx[15] = 1;
     tx[16] = 0;
     tx[17] = 0;
-    return wpa_eapol_send(WPA_S32(ctx, 0x14), tx, ctx + 0x50, ctx + 0x56, 1, 0);
+    return wpa_eapol_send(ctx->bpf_fd, tx, ctx->sta_mac, ctx->bssid, 1, 0);
 }
 
-static int wpa_send_msg2_tkip(u8 *ctx, const u8 *pkt)
+static int wpa_send_msg2_tkip(WpaSupplicantCtx *ctx, const u8 *pkt)
 {
-    u8 *tx = ctx + 0x162;
+    u8 *tx = ctx->tx_frame;
     u16 be_val;
     u8 mic[48];
 
@@ -413,7 +439,7 @@ static int wpa_send_msg2_tkip(u8 *ctx, const u8 *pkt)
     sceKernelMemcpy(tx + 19, &be_val, 2);
     sceKernelMemset(tx + 21, 0, 2);
     sceKernelMemcpy(tx + 23, pkt + 23, 8);
-    sceKernelMemcpy(tx + 31, ctx + 0x2EC, 32);
+    sceKernelMemcpy(tx + 31, ctx->snonce, 32);
     be_val = bswap16(0x18u);
     sceKernelMemcpy(tx + 111, &be_val, 2);
     tx[113] = 0xDD;
@@ -427,51 +453,58 @@ static int wpa_send_msg2_tkip(u8 *ctx, const u8 *pkt)
     sceKernelMemcpy(tx + 127, &g_wpa_oui_tkip, 4);
     tx[131] = 1;
     tx[132] = 0;
-    if (WPA_S32(ctx, 0x44) == 0)
+    if (ctx->auth_mode == 0)
         sceKernelMemcpy(tx + 133, &g_wpa_akm_psk, 4);
-    else if (WPA_S32(ctx, 0x44) == 1)
+    else if (ctx->auth_mode == 1)
         sceKernelMemcpy(tx + 133, &g_wpa_akm_8021x, 4);
 
     sceKernelMemset(mic, 0, 36);
-    wpa_hmac_md5(*(u8 **)(ctx + 0x3D0), 16u, tx + 14, 123, mic);
+    wpa_hmac_md5(ctx->kck_ptr, 16u, tx + 14, 123, mic);
     sceKernelMemcpy(tx + 95, mic, 16);
 
-    wpa_eapol_send(WPA_S32(ctx, 0x14), tx, ctx + 0x50, ctx + 0x56, 3, 0x77u);
-    WPA_S32(ctx, 0) = 3;
+    wpa_eapol_send(ctx->bpf_fd, tx, ctx->sta_mac, ctx->bssid, 3, 0x77u);
+    ctx->state = 3;
     return 0;
 }
 
-static int wpa_send_msg4_tkip(u8 *ctx, const u8 *pkt)
+static int wpa_send_msg4_tkip(WpaSupplicantCtx *ctx, const u8 *pkt)
 {
-    u8 *tx = ctx + 0x162;
-    u16 be_val;
+    u8 *tx = ctx->tx_frame;
+    u16 key_info;
+    u16 key_info_copy;
+    u16 body_len;
+    u16 key_info_be;
     u8 mic[48];
 
     sceKernelMemset(tx, 0, 113);
     tx[14] = 1;
     tx[15] = 3;
-    be_val = bswap16(0x5Fu);
-    tx[16] = (u8)be_val;
-    tx[17] = (u8)(be_val >> 8);
+    body_len = bswap16(0x5Fu);
+    tx[16] = (u8)body_len;
+    tx[17] = (u8)(body_len >> 8);
     tx[18] = 0xFE;
-    be_val = bswap16(0x0109u);
-    sceKernelMemcpy(tx + 19, &be_val, 2);
-    sceKernelMemset(tx + 21, 0, 2);
+    sceKernelMemset(&key_info, 0, 2);
+    key_info = (u16)((key_info & ~7u) | 0x0109u);
+    sceKernelMemcpy(&key_info_copy, &key_info, 2);
+    key_info_be = bswap16(key_info_copy);
+    tx[19] = (u8)key_info_be;
+    tx[20] = (u8)(key_info_be >> 8);
     sceKernelMemcpy(tx + 23, pkt + 23, 8);
+    sceKernelMemset(tx + 21, 0, 2);
     sceKernelMemset(tx + 111, 0, 2);
 
     sceKernelMemset(mic, 0, 36);
-    wpa_hmac_md5(*(u8 **)(ctx + 0x3D0), 16u, tx + 14, 99, mic);
+    wpa_hmac_md5(ctx->kck_ptr, 16u, tx + 14, 99, mic);
     sceKernelMemcpy(tx + 95, mic, 16);
 
-    wpa_eapol_send(WPA_S32(ctx, 0x14), tx, ctx + 0x50, ctx + 0x56, 3, 0x5Fu);
-    WPA_S32(ctx, 0) = 4;
+    wpa_eapol_send(ctx->bpf_fd, tx, ctx->sta_mac, ctx->bssid, 3, 0x5Fu);
+    ctx->state = 4;
     return 4;
 }
 
-static int wpa_send_group2_tkip(u8 *ctx, const u8 *pkt)
+static int wpa_send_group2_tkip(WpaSupplicantCtx *ctx, const u8 *pkt)
 {
-    u8 *tx = ctx + 0x162;
+    u8 *tx = ctx->tx_frame;
     u16 be_val;
     u8 mic[48];
 
@@ -489,47 +522,56 @@ static int wpa_send_group2_tkip(u8 *ctx, const u8 *pkt)
     sceKernelMemset(tx + 111, 0, 2);
 
     sceKernelMemset(mic, 0, 36);
-    wpa_hmac_md5(*(u8 **)(ctx + 0x3D0), 16u, tx + 14, 99, mic);
+    wpa_hmac_md5(ctx->kck_ptr, 16u, tx + 14, 99, mic);
     sceKernelMemcpy(tx + 95, mic, 16);
 
-    wpa_eapol_send(WPA_S32(ctx, 0x14), tx, ctx + 0x50, ctx + 0x56, 3, 0x5Fu);
-    if (WPA_S32(ctx, 0x18) != 0) {
-        sceKernelCancelAlarm(WPA_S32(ctx, 0x18));
-        WPA_S32(ctx, 0x18) = 0;
+    wpa_eapol_send(ctx->bpf_fd, tx, ctx->sta_mac, ctx->bssid, 3, 0x5Fu);
+    if (ctx->alarm_id != 0) {
+        sceKernelCancelAlarm(ctx->alarm_id);
+        ctx->alarm_id = 0;
     }
-    if ((WPA_S32(ctx, 0x08) & 1) == 0) {
-        WPA_S32(ctx, 0x08) |= 1;
+    if ((ctx->flags & 1) == 0) {
+        ctx->flags |= 1;
         wpa_notify(0, 0);
     }
-    WPA_S32(ctx, 0) = 5;
+    ctx->state = 5;
     return 0;
 }
 
-static int wpa_send_msg2_ccmp(u8 *ctx, const u8 *pkt)
+static int wpa_send_msg2_ccmp(WpaSupplicantCtx *ctx, const u8 *pkt)
 {
-    u8 *tx = ctx + 0x162;
-    u16 be_val;
+    u8 *tx = ctx->tx_frame;
+    u16 key_info;
+    u16 key_info_copy;
+    u16 body_len;
+    u16 key_info_be;
     u8 mic[48];
+    int ret;
 
     sceKernelMemset(tx, 0, 137);
     tx[14] = 1;
     tx[15] = 3;
-    be_val = bswap16(0x77u);
-    sceKernelMemcpy(tx + 16, &be_val, 2);
+    body_len = bswap16(0x77u);
+    tx[16] = (u8)body_len;
+    tx[17] = (u8)(body_len >> 8);
     tx[18] = 0xFE;
-    be_val = bswap16(0x010Au);
-    sceKernelMemcpy(tx + 19, &be_val, 2);
-    sceKernelMemset(tx + 21, 0, 2);
+    sceKernelMemset(&key_info, 0, 2);
+    key_info = (u16)((key_info & ~7u) | 0x010Au);
+    sceKernelMemcpy(&key_info_copy, &key_info, 2);
+    key_info_be = bswap16(key_info_copy);
+    tx[19] = (u8)key_info_be;
+    tx[20] = (u8)(key_info_be >> 8);
     sceKernelMemcpy(tx + 23, pkt + 23, 8);
-    sceKernelMemcpy(tx + 31, ctx + 0x2EC, 32);
-    be_val = bswap16(0x18u);
-    sceKernelMemcpy(tx + 111, &be_val, 2);
+    sceKernelMemset(tx + 21, 0, 2);
+    sceKernelMemcpy(tx + 31, ctx->snonce, 32);
+    key_info_copy = bswap16(0x18u);
+    sceKernelMemcpy(tx + 111, &key_info_copy, 2);
     tx[113] = 0xDD;
     tx[114] = 22;
     sceKernelMemcpy(tx + 115, &g_wpa_oui_tag, 4);
     tx[119] = 1;
     tx[120] = 0;
-    if ((ctx[0x2B9] & 4) != 0)
+    if ((ctx->bss_info[0x51] & 4) != 0)
         sceKernelMemcpy(tx + 121, &g_wpa_oui_tkip, 4);
     else
         sceKernelMemcpy(tx + 121, &g_wpa_oui_ccmp, 4);
@@ -538,51 +580,58 @@ static int wpa_send_msg2_ccmp(u8 *ctx, const u8 *pkt)
     sceKernelMemcpy(tx + 127, &g_wpa_oui_ccmp, 4);
     tx[131] = 1;
     tx[132] = 0;
-    if (WPA_S32(ctx, 0x44) == 0)
+    if (ctx->auth_mode == 0)
         sceKernelMemcpy(tx + 133, &g_wpa_akm_psk, 4);
-    else if (WPA_S32(ctx, 0x44) == 1)
+    else if (ctx->auth_mode == 1)
         sceKernelMemcpy(tx + 133, &g_wpa_akm_8021x, 4);
 
     sceKernelMemset(mic, 0, 36);
-    wpa_hmac_sha1(*(u8 **)(ctx + 0x3D0), 16u, tx + 14, 123, mic);
+    wpa_hmac_sha1(ctx->kck_ptr, 16u, tx + 14, 123, mic);
     sceKernelMemcpy(tx + 95, mic, 16);
 
-    wpa_eapol_send(WPA_S32(ctx, 0x14), tx, ctx + 0x50, ctx + 0x56, 3, 0x77u);
-    WPA_S32(ctx, 0) = 3;
-    return 0;
+    ret = wpa_eapol_send(ctx->bpf_fd, tx, ctx->sta_mac, ctx->bssid, 3, 0x77u);
+    ctx->state = 3;
+    return ret;
 }
 
-static int wpa_send_msg4_ccmp(u8 *ctx, const u8 *pkt)
+static int wpa_send_msg4_ccmp(WpaSupplicantCtx *ctx, const u8 *pkt)
 {
-    u8 *tx = ctx + 0x162;
-    u16 be_val;
+    u8 *tx = ctx->tx_frame;
+    u16 key_info;
+    u16 key_info_copy;
+    u16 body_len;
+    u16 key_info_be;
     u8 mic[48];
 
     sceKernelMemset(tx, 0, 113);
     tx[14] = 1;
     tx[15] = 3;
-    be_val = bswap16(0x5Fu);
-    tx[16] = (u8)be_val;
-    tx[17] = (u8)(be_val >> 8);
+    body_len = bswap16(0x5Fu);
+    tx[16] = (u8)body_len;
+    tx[17] = (u8)(body_len >> 8);
     tx[18] = 0xFE;
-    be_val = bswap16(0x010Au);
-    sceKernelMemcpy(tx + 19, &be_val, 2);
-    sceKernelMemset(tx + 21, 0, 2);
+    sceKernelMemset(&key_info, 0, 2);
+    key_info = (u16)((key_info & ~7u) | 0x010Au);
+    sceKernelMemcpy(&key_info_copy, &key_info, 2);
+    key_info_be = bswap16(key_info_copy);
+    tx[19] = (u8)key_info_be;
+    tx[20] = (u8)(key_info_be >> 8);
     sceKernelMemcpy(tx + 23, pkt + 23, 8);
+    sceKernelMemset(tx + 21, 0, 2);
     sceKernelMemset(tx + 111, 0, 2);
 
     sceKernelMemset(mic, 0, 36);
-    wpa_hmac_sha1(*(u8 **)(ctx + 0x3D0), 16u, tx + 14, 99, mic);
+    wpa_hmac_sha1(ctx->kck_ptr, 16u, tx + 14, 99, mic);
     sceKernelMemcpy(tx + 95, mic, 16);
 
-    wpa_eapol_send(WPA_S32(ctx, 0x14), tx, ctx + 0x50, ctx + 0x56, 3, 0x5Fu);
-    WPA_S32(ctx, 0) = 4;
+    wpa_eapol_send(ctx->bpf_fd, tx, ctx->sta_mac, ctx->bssid, 3, 0x5Fu);
+    ctx->state = 4;
     return 4;
 }
 
-static int wpa_send_group2_ccmp(u8 *ctx, const u8 *pkt)
+static int wpa_send_group2_ccmp(WpaSupplicantCtx *ctx, const u8 *pkt)
 {
-    u8 *tx = ctx + 0x162;
+    u8 *tx = ctx->tx_frame;
     u16 be_val;
     u8 mic[48];
 
@@ -600,25 +649,25 @@ static int wpa_send_group2_ccmp(u8 *ctx, const u8 *pkt)
     sceKernelMemset(tx + 111, 0, 2);
 
     sceKernelMemset(mic, 0, 36);
-    wpa_hmac_sha1(*(u8 **)(ctx + 0x3D0), 16u, tx + 14, 99, mic);
+    wpa_hmac_sha1(ctx->kck_ptr, 16u, tx + 14, 99, mic);
     sceKernelMemcpy(tx + 95, mic, 16);
 
-    wpa_eapol_send(WPA_S32(ctx, 0x14), tx, ctx + 0x50, ctx + 0x56, 3, 0x5Fu);
-    if (WPA_S32(ctx, 0x18) != 0) {
-        sceKernelCancelAlarm(WPA_S32(ctx, 0x18));
-        WPA_S32(ctx, 0x18) = 0;
+    wpa_eapol_send(ctx->bpf_fd, tx, ctx->sta_mac, ctx->bssid, 3, 0x5Fu);
+    if (ctx->alarm_id != 0) {
+        sceKernelCancelAlarm(ctx->alarm_id);
+        ctx->alarm_id = 0;
     }
-    if ((WPA_S32(ctx, 0x08) & 1) == 0) {
-        WPA_S32(ctx, 0x08) |= 1;
+    if ((ctx->flags & 1) == 0) {
+        ctx->flags |= 1;
         wpa_notify(0, 0);
     }
-    WPA_S32(ctx, 0) = 5;
+    ctx->state = 5;
     return 0;
 }
 
-static int wpa_send_mic_err_tkip(u8 *ctx, int is_group)
+static int wpa_send_mic_err_tkip(WpaSupplicantCtx *ctx, int is_group)
 {
-    u8 *tx = ctx + 0x162;
+    u8 *tx = ctx->tx_frame;
     u16 key_info = 0x0F01u;
     u16 be_val;
     u8 mic[48];
@@ -634,18 +683,18 @@ static int wpa_send_mic_err_tkip(u8 *ctx, int is_group)
         key_info |= 8u;
     be_val = bswap16(key_info);
     sceKernelMemcpy(tx + 19, &be_val, 2);
-    wpa_inc_counter(ctx + 0x2C4, 8);
-    sceKernelMemcpy(tx + 23, ctx + 0x2C4, 8);
+    wpa_inc_counter(ctx->replay_counter, 8);
+    sceKernelMemcpy(tx + 23, ctx->replay_counter, 8);
 
     sceKernelMemset(mic, 0, 36);
-    wpa_hmac_md5(*(u8 **)(ctx + 0x3D0), 16u, tx + 14, 99, mic);
+    wpa_hmac_md5(ctx->kck_ptr, 16u, tx + 14, 99, mic);
     sceKernelMemcpy(tx + 95, mic, 16);
-    return wpa_eapol_send(WPA_S32(ctx, 0x14), tx, ctx + 0x50, ctx + 0x56, 3, 0x5Fu);
+    return wpa_eapol_send(ctx->bpf_fd, tx, ctx->sta_mac, ctx->bssid, 3, 0x5Fu);
 }
 
-static int wpa_send_mic_err_ccmp(u8 *ctx, int is_group)
+static int wpa_send_mic_err_ccmp(WpaSupplicantCtx *ctx, int is_group)
 {
-    u8 *tx = ctx + 0x162;
+    u8 *tx = ctx->tx_frame;
     u16 key_info = 0x0F02u;
     u16 be_val;
     u8 mic[48];
@@ -663,14 +712,15 @@ static int wpa_send_mic_err_ccmp(u8 *ctx, int is_group)
     sceKernelMemcpy(tx + 19, &be_val, 2);
 
     sceKernelMemset(mic, 0, 36);
-    wpa_hmac_sha1(*(u8 **)(ctx + 0x3D0), 16u, tx + 14, 99, mic);
+    wpa_hmac_sha1(ctx->kck_ptr, 16u, tx + 14, 99, mic);
     sceKernelMemcpy(tx + 95, mic, 16);
-    return wpa_eapol_send(WPA_S32(ctx, 0x14), tx, ctx + 0x50, ctx + 0x56, 3, 0x5Fu);
+    return wpa_eapol_send(ctx->bpf_fd, tx, ctx->sta_mac, ctx->bssid, 3, 0x5Fu);
 }
 
-static int wpa_handle_msg1(u8 *ctx, WpaEvent *ev)
+static int wpa_handle_msg1(WpaSupplicantCtx *ctx, WpaEvent *ev)
 {
-    u8 *pkt = ev->pkt + *(u16 *)(ev->pkt + 16);
+    const BpfHdr *bh = (const BpfHdr *)ev->pkt;
+    u8 *pkt = ev->pkt + bh->hdrlen;
     u16 eapol_len = (u16)((pkt[17] << 8) | pkt[16]);
     u16 key_info;
     u16 key_len;
@@ -678,7 +728,7 @@ static int wpa_handle_msg1(u8 *ctx, WpaEvent *ev)
     if (eapol_len < 0x5Fu)
         return 0;
 
-    sceKernelMemcpy(ctx + 0x2C4, pkt + 23, 8);
+    sceKernelMemcpy(ctx->replay_counter, pkt + 23, 8);
     if (pkt[18] != 0xFE)
         return 0;
 
@@ -686,12 +736,12 @@ static int wpa_handle_msg1(u8 *ctx, WpaEvent *ev)
     if (((key_info & 7u) - 1u) < 2u && (key_info & 0x0DC8u) == 0x0088u) {
         key_len = bswap16((u16)((pkt[22] << 8) | pkt[21]));
         if ((key_info & 7u) == 1u) {
-            if (WPA_S32(ctx, 0x48) == 0 && key_len == 32u) {
+            if (ctx->cipher == 0 && key_len == 32u) {
                 wpa_derive_ptk_tkip(ctx, pkt);
                 wpa_send_msg2_tkip(ctx, pkt);
             }
         } else if ((key_info & 7u) == 2u) {
-            if (WPA_S32(ctx, 0x48) == 1 && key_len == 16u) {
+            if (ctx->cipher == 1 && key_len == 16u) {
                 wpa_derive_ptk_ccmp(ctx, pkt);
                 wpa_send_msg2_ccmp(ctx, pkt);
             }
@@ -700,9 +750,10 @@ static int wpa_handle_msg1(u8 *ctx, WpaEvent *ev)
     return 0;
 }
 
-static int wpa_handle_msg3(u8 *ctx, WpaEvent *ev)
+static int wpa_handle_msg3(WpaSupplicantCtx *ctx, WpaEvent *ev)
 {
-    u8 *pkt = ev->pkt + *(u16 *)(ev->pkt + 16);
+    const BpfHdr *bh = (const BpfHdr *)ev->pkt;
+    u8 *pkt = ev->pkt + bh->hdrlen;
     u16 eapol_len = (u16)((pkt[17] << 8) | pkt[16]);
     u16 key_info;
     u8 rx_mic[16];
@@ -713,30 +764,30 @@ static int wpa_handle_msg3(u8 *ctx, WpaEvent *ev)
 
     key_info = bswap16((u16)((pkt[20] << 8) | pkt[19]));
     if (((key_info & 7u) - 1u) >= 2u) {
-        if (WPA_S32(ctx, 0x44) == 0)
+        if (ctx->auth_mode == 0)
             wpa_send_start(ctx);
-        WPA_S32(ctx, 0) = 2;
+        ctx->state = 2;
         return 0;
     }
 
     if ((key_info & 0x0D88u) != 0x0188u) {
         if ((key_info & 0x0DC8u) == 0x0088u)
             return wpa_handle_msg1(ctx, ev);
-        if (WPA_S32(ctx, 0x44) == 0)
+        if (ctx->auth_mode == 0)
             wpa_send_start(ctx);
-        WPA_S32(ctx, 0) = 2;
+        ctx->state = 2;
         return 0;
     }
 
     if ((key_info & 7u) == 1u) {
         sceKernelMemcpy(rx_mic, pkt + 95, 16);
         sceKernelMemset(pkt + 95, 0, 16);
-        wpa_hmac_md5(*(u8 **)(ctx + 0x3D0), 16u, pkt + 14,
+        wpa_hmac_md5(ctx->kck_ptr, 16u, pkt + 14,
                      bswap16(eapol_len) + 4, calc_mic);
         if (wpa_memcmp(rx_mic, calc_mic, 16) < 0)
             return 0;
-        if (wpa_max_bytes(pkt + 23, ctx + 0x2C4, 8) == pkt + 23 &&
-            WPA_S32(ctx, 0x48) == 0 &&
+        if (wpa_max_bytes(pkt + 23, ctx->replay_counter, 8) == pkt + 23 &&
+            ctx->cipher == 0 &&
             bswap16((u16)((pkt[22] << 8) | pkt[21])) == 32u) {
             wpa_send_msg4_tkip(ctx, pkt);
             wpa_notify_ptk();
@@ -744,40 +795,41 @@ static int wpa_handle_msg3(u8 *ctx, WpaEvent *ev)
     } else if ((key_info & 7u) == 2u) {
         sceKernelMemcpy(rx_mic, pkt + 95, 16);
         sceKernelMemset(pkt + 95, 0, 16);
-        wpa_hmac_sha1(*(u8 **)(ctx + 0x3D0), 16u, pkt + 14,
+        wpa_hmac_sha1(ctx->kck_ptr, 16u, pkt + 14,
                       bswap16(eapol_len) + 4, calc_mic);
         if (wpa_memcmp(rx_mic, calc_mic, 16) < 0)
             return 0;
-        if (wpa_max_bytes(pkt + 23, ctx + 0x2C4, 8) == pkt + 23 &&
-            WPA_S32(ctx, 0x48) == 1 &&
+        if (wpa_max_bytes(pkt + 23, ctx->replay_counter, 8) == pkt + 23 &&
+            ctx->cipher == 1 &&
             bswap16((u16)((pkt[22] << 8) | pkt[21])) == 16u) {
             wpa_send_msg4_ccmp(ctx, pkt);
             wpa_notify_ptk();
         }
     }
 
-    sceKernelMemcpy(ctx + 0x2C4, pkt + 23, 8);
+    sceKernelMemcpy(ctx->replay_counter, pkt + 23, 8);
     return 0;
 }
 
-static int wpa_handle_group(u8 *ctx, WpaEvent *ev)
+static int wpa_handle_group(WpaSupplicantCtx *ctx, WpaEvent *ev)
 {
-    u8 *pkt = ev->pkt + *(u16 *)(ev->pkt + 16);
+    const BpfHdr *bh = (const BpfHdr *)ev->pkt;
+    u8 *pkt = ev->pkt + bh->hdrlen;
     u16 eapol_len = (u16)((pkt[17] << 8) | pkt[16]);
     u16 key_info;
     u8 rx_mic[16];
     u8 calc_mic[48];
     u8 prev_gtk[32];
-    u8 now[8];
+    u32 now[2];
 
     if (eapol_len < 0x5Fu)
         return 0;
 
     key_info = bswap16((u16)((pkt[20] << 8) | pkt[19]));
     if (((key_info & 7u) - 1u) >= 2u) {
-        if (WPA_S32(ctx, 0x44) == 0)
+        if (ctx->auth_mode == 0)
             wpa_send_start(ctx);
-        WPA_S32(ctx, 0) = 2;
+        ctx->state = 2;
         return 0;
     }
 
@@ -786,130 +838,133 @@ static int wpa_handle_group(u8 *ctx, WpaEvent *ev)
             return wpa_handle_msg3(ctx, ev);
         if ((key_info & 0x0DC8u) == 0x0088u)
             return wpa_handle_msg1(ctx, ev);
-        if (WPA_S32(ctx, 0x44) == 0)
+        if (ctx->auth_mode == 0)
             wpa_send_start(ctx);
-        WPA_S32(ctx, 0) = 2;
+        ctx->state = 2;
         return 0;
     }
 
-    if (sceKernelGetSystemTime(now) >= 0)
-        sceKernelMemcpy(ctx + 0x2C, now, 8);
+    if (sceKernelGetSystemTime(now) >= 0) {
+        ctx->last_gtk_lo = now[0];
+        ctx->last_gtk_hi = now[1];
+    }
 
     if ((key_info & 7u) == 1u) {
         sceKernelMemcpy(rx_mic, pkt + 95, 16);
         sceKernelMemset(pkt + 95, 0, 16);
-        wpa_hmac_md5(*(u8 **)(ctx + 0x3D0), 16u, pkt + 14, 131, calc_mic);
+        wpa_hmac_md5(ctx->kck_ptr, 16u, pkt + 14, 131, calc_mic);
         if (wpa_memcmp(rx_mic, calc_mic, 16) < 0)
             return 0;
-        if (wpa_max_bytes(pkt + 23, ctx + 0x2C4, 8) == pkt + 23) {
-            sceKernelMemcpy(prev_gtk, ctx + 0x3B0, 32);
+        if (wpa_max_bytes(pkt + 23, ctx->replay_counter, 8) == pkt + 23) {
+            sceKernelMemcpy(prev_gtk, ctx->gtk, 32);
             wpa_decrypt_gtk_tkip(ctx, pkt);
-            if (sceNet_lib_E0A81C7C(prev_gtk, ctx + 0x3B0, 32) != 0)
+            if (sceNet_lib_E0A81C7C(prev_gtk, ctx->gtk, 32) != 0)
                 wpa_notify_gtk();
-            if (WPA_S32(ctx, 0x48) == 0 &&
+            if (ctx->cipher == 0 &&
                 bswap16((u16)((pkt[22] << 8) | pkt[21])) == 32u)
                 wpa_send_group2_tkip(ctx, pkt);
         }
     } else if ((key_info & 7u) == 2u) {
         sceKernelMemcpy(rx_mic, pkt + 95, 16);
         sceKernelMemset(pkt + 95, 0, 16);
-        wpa_hmac_sha1(*(u8 **)(ctx + 0x3D0), 16u, pkt + 14,
+        wpa_hmac_sha1(ctx->kck_ptr, 16u, pkt + 14,
                       bswap16(eapol_len) + 4, calc_mic);
         if (wpa_memcmp(rx_mic, calc_mic, 16) < 0)
             return 0;
-        if (wpa_max_bytes(pkt + 23, ctx + 0x2C4, 8) == pkt + 23) {
+        if (wpa_max_bytes(pkt + 23, ctx->replay_counter, 8) == pkt + 23) {
             u16 key_len;
-            sceKernelMemcpy(prev_gtk, ctx + 0x3B0, 32);
+            sceKernelMemcpy(prev_gtk, ctx->gtk, 32);
             wpa_decrypt_gtk_ccmp(ctx, pkt);
-            if (sceNet_lib_E0A81C7C(prev_gtk, ctx + 0x3B0, 32) != 0)
+            if (sceNet_lib_E0A81C7C(prev_gtk, ctx->gtk, 32) != 0)
                 wpa_notify_gtk();
             key_len = bswap16((u16)((pkt[22] << 8) | pkt[21]));
-            if (WPA_S32(ctx, 0x48) == 1 && (key_len == 16u || key_len == 32u))
+            if (ctx->cipher == 1 && (key_len == 16u || key_len == 32u))
                 wpa_send_group2_ccmp(ctx, pkt);
         }
     }
 
-    sceKernelMemcpy(ctx + 0x2C4, pkt + 23, 8);
+    sceKernelMemcpy(ctx->replay_counter, pkt + 23, 8);
     return 0;
 }
 
-static int wpa_handle_mic_err(u8 *ctx, WpaEvent *ev)
+static int wpa_handle_mic_err(WpaSupplicantCtx *ctx, WpaEvent *ev)
 {
     u32 now[2];
-    int is_group = (int)ev->arg1;
+    int is_group = (int)ev->context;
 
-    if (WPA_S32(ctx, 0x48) != 0 || sceKernelGetSystemTime(now) < 0)
+    if (ctx->cipher != 0 || sceKernelGetSystemTime(now) < 0)
         return 0;
 
-    if (WPA_U32(ctx, 0x2C) != 0) {
-        if (WPA_U32(ctx, 0x30) == now[1] && (now[0] - WPA_U32(ctx, 0x2C)) <= 4999999u)
+    if (ctx->last_gtk_lo != 0) {
+        if (ctx->last_gtk_hi == now[1] && (now[0] - ctx->last_gtk_lo) <= 4999999u)
             return 0;
-        if (now[1] == WPA_U32(ctx, 0x28) - 1u)
+        if (now[1] == ctx->last_mic_err_hi - 1u)
             return 0;
     }
 
-    if (WPA_S32(ctx, 0x48) == 0)
+    if (ctx->cipher == 0)
         wpa_send_mic_err_tkip(ctx, is_group);
-    else if (WPA_S32(ctx, 0x48) == 1)
+    else if (ctx->cipher == 1)
         wpa_send_mic_err_ccmp(ctx, is_group);
 
-    if (WPA_U32(ctx, 0x24) != 0) {
-        if ((WPA_U32(ctx, 0x28) == now[1] && (now[0] - WPA_U32(ctx, 0x24)) <= 59999999u) ||
-            now[1] == WPA_U32(ctx, 0x28) - 1u) {
+    if (ctx->last_mic_err_lo != 0) {
+        if ((ctx->last_mic_err_hi == now[1] && (now[0] - ctx->last_mic_err_lo) <= 59999999u) ||
+            now[1] == ctx->last_mic_err_hi - 1u) {
             wpa_notify(4, (int)0x80411082);
             return 0;
         }
     }
-    sceKernelMemcpy(ctx + 0x24, now, 8);
+    sceKernelMemcpy(&ctx->last_mic_err_lo, now, 8);
     return 0;
 }
 
-static int wpa_alloc_event(u8 *ctx, WpaEvent **out)
+static int wpa_alloc_event(WpaSupplicantCtx *ctx, WpaEvent **out)
 {
     (void)ctx;
     *out = &g_wpa_event;
     return 0;
 }
 
-static int wpa_free_event(u8 *ctx, WpaEvent *ev)
+static int __attribute__((noinline))
+wpa_free_event(WpaSupplicantCtx *ctx, WpaEvent *ev)
 {
     (void)ctx;
     (void)ev;
     return 0;
 }
 
-static int wpa_state_noop(u8 *ctx, WpaEvent *ev)
+static int wpa_state_noop(WpaSupplicantCtx *ctx, WpaEvent *ev)
 {
     (void)ctx;
     (void)ev;
     return 0;
 }
 
-static int wpa_state_start(u8 *ctx, WpaEvent *ev)
+static int wpa_state_start(WpaSupplicantCtx *ctx, WpaEvent *ev)
 {
     (void)ev;
-    if (WPA_S32(ctx, 0x44) == 0)
+    if (ctx->auth_mode == 0)
         wpa_send_start(ctx);
-    WPA_S32(ctx, 0) = 2;
+    ctx->state = 2;
     return 0;
 }
 
-static int wpa_state_timeout(u8 *ctx, WpaEvent *ev)
+static int wpa_state_timeout(WpaSupplicantCtx *ctx, WpaEvent *ev)
 {
     (void)ev;
     wpa_notify(4, (int)0x80411081);
-    WPA_S32(ctx, 0) = 0;
+    ctx->state = 0;
     return -1;
 }
 
-static int wpa_state_stop(u8 *ctx, WpaEvent *ev)
+static int wpa_state_stop(WpaSupplicantCtx *ctx, WpaEvent *ev)
 {
     (void)ev;
-    WPA_S32(ctx, 0) = 0;
+    ctx->state = 0;
     return -1;
 }
 
-typedef int (*WpaHandler)(u8 *ctx, WpaEvent *ev);
+typedef int (*WpaHandler)(WpaSupplicantCtx *ctx, WpaEvent *ev);
 
 static const WpaHandler g_wpa_state_table[6][6] = {
     { wpa_state_noop, wpa_state_noop,  wpa_state_noop,   wpa_state_noop,    wpa_state_noop,     wpa_state_stop },
@@ -922,56 +977,59 @@ static const WpaHandler g_wpa_state_table[6][6] = {
 
 static u32 wpa_alarm_cb(void *common)
 {
-    u8 *ctx = (u8 *)common;
-    sceKernelSetEventFlag(WPA_S32(ctx, 0x10), 4u);
+    WpaSupplicantCtx *ctx = (WpaSupplicantCtx *)common;
+    sceKernelSetEventFlag(ctx->evf, 4u);
     return 0;
 }
 
-static int wpa_get_event(u8 *ctx, WpaEvent **out)
+static int wpa_get_event(WpaSupplicantCtx *ctx, WpaEvent **out)
 {
-    u32 bits = 0;
-    u8 *pkt = NULL;
-    int pkt_len = 0;
+    u32 bits;
+    u8 *pkt;
+    int pkt_len;
     int ret;
+    WpaEvent *ev;
 
-    if (sceKernelPollEventFlag(WPA_S32(ctx, 0x10), 31u, 1u, &bits) >= 0) {
+    if (sceKernelPollEventFlag(ctx->evf, 31u, 1u, &bits) >= 0) {
         if ((bits & 1u) != 0) {
-            sceKernelClearEventFlag(WPA_S32(ctx, 0x10), ~1u);
+            sceKernelClearEventFlag(ctx->evf, ~1u);
             wpa_alloc_event(ctx, out);
             (*out)->type = 1;
             return 0;
         }
         if ((bits & 2u) != 0) {
-            sceKernelClearEventFlag(WPA_S32(ctx, 0x10), ~2u);
+            sceKernelClearEventFlag(ctx->evf, ~2u);
             wpa_alloc_event(ctx, out);
             (*out)->type = 5;
             return 0;
         }
         if ((bits & 4u) != 0) {
-            sceKernelClearEventFlag(WPA_S32(ctx, 0x10), ~4u);
+            sceKernelClearEventFlag(ctx->evf, ~4u);
             wpa_alloc_event(ctx, out);
             (*out)->type = 3;
             return 0;
         }
         if ((bits & 8u) != 0) {
-            sceKernelClearEventFlag(WPA_S32(ctx, 0x10), ~8u);
+            sceKernelClearEventFlag(ctx->evf, ~8u);
             wpa_alloc_event(ctx, out);
-            (*out)->type = 4;
-            (*out)->arg1 = (void *)0;
+            ev = *out;
+            ev->type = 4;
+            ev->context = (void *)0;
             return 0;
         }
         if ((bits & 16u) != 0) {
-            sceKernelClearEventFlag(WPA_S32(ctx, 0x10), ~16u);
+            sceKernelClearEventFlag(ctx->evf, ~16u);
             wpa_alloc_event(ctx, out);
-            (*out)->type = 4;
-            (*out)->arg1 = (void *)1;
+            ev = *out;
+            ev->type = 4;
+            ev->context = (void *)1;
             return 0;
         }
         return 0;
     }
 
-    ret = eapol_bpf_recv_wpa(WPA_S32(ctx, 0x14), ctx + 0x5C,
-                             WPA_U32(ctx, 0x15C), ctx + 0x50, &pkt, &pkt_len);
+    ret = eapol_bpf_recv_wpa(ctx->bpf_fd, ctx->rx_buf,
+                             ctx->rx_buf_size, ctx->sta_mac, &pkt, &pkt_len);
     if (ret < 0) {
         sceKernelDelayThread(1000000);
         return -1;
@@ -980,102 +1038,104 @@ static int wpa_get_event(u8 *ctx, WpaEvent **out)
         return -1;
 
     wpa_alloc_event(ctx, out);
-    (*out)->type = 2;
-    (*out)->arg1 = ctx;
-    (*out)->pkt = pkt;
-    (*out)->pkt_len = pkt_len;
+    ev = *out;
+    ev->type = 2;
+    ev->context = ctx;
+    ev->pkt = pkt;
+    ev->pkt_len = pkt_len;
     return 0;
 }
 
 static int wpa_supplicant_thread(SceSize args, void *argp)
 {
-    u8 *ctx = NULL;
+    WpaSupplicantCtx *ctx = NULL;
     u8 prng_out[112];
-    u8 seed[52];
+    WpaPrngSeed seed;
     u32 iter;
     WpaEvent *ev;
 
-    if (args != 4u || argp == NULL)
-        goto exit_thread;
-
-    ctx = *(u8 **)argp;
-    if (WPA_U32(ctx, 0x20) != 0) {
-        SceUID alarm = sceKernelSetAlarm(WPA_U32(ctx, 0x20), wpa_alarm_cb, ctx);
-        if (alarm < 0)
-            goto exit_thread;
-        WPA_S32(ctx, 0x18) = alarm;
-    }
-
-    sceKernelMemset(prng_out, 0, sizeof(prng_out));
-    sceKernelMemset(seed, 0, sizeof(seed));
-    sceKernelMemcpy(seed, ctx + 0x50, 6);
-    sceKernelGetSystemTime(seed + 8);
-
-    for (iter = 0; iter < 32u; iter++) {
-        *(u32 *)(seed + 48) = iter;
-        wpa_prf(NULL, 0, "Init Counter", 12, seed, 52, prng_out, 32);
-    }
-    sceKernelMemcpy(ctx + 0x2CC, prng_out, 32);
-
-    WPA_S32(ctx, 0) = 1;
-    sceKernelSetEventFlag(WPA_S32(ctx, 0x10), 1u);
-
-    for (;;) {
-        int r;
-        if (wpa_get_event(ctx, &ev) < 0)
-            continue;
-        if ((u32)ev->type >= 6u) {
-            wpa_free_event(ctx, ev);
-            continue;
-        }
-        r = g_wpa_state_table[WPA_S32(ctx, 0)][ev->type](ctx, ev);
-        wpa_free_event(ctx, ev);
-        if (r < 0)
+    do {
+        if (args != 4u || argp == NULL)
             break;
-    }
 
-exit_thread:
+        ctx = *(WpaSupplicantCtx **)argp;
+        if (ctx->timeout_us != 0) {
+            SceUID alarm = sceKernelSetAlarm(ctx->timeout_us, wpa_alarm_cb, ctx);
+            if (alarm < 0)
+                break;
+            ctx->alarm_id = alarm;
+        }
+
+        sceKernelMemset(prng_out, 0, sizeof(prng_out));
+        sceKernelMemset(&seed, 0, sizeof(seed));
+        sceKernelMemcpy(seed.prefix, ctx->sta_mac, 6);
+        sceKernelGetSystemTime(seed.prefix + 8);
+
+        for (iter = 0; iter < 32u; iter++) {
+            seed.counter = iter;
+            wpa_prf(NULL, 0, "Init Counter", 12, (const u8 *)&seed, sizeof(seed), prng_out, 32);
+        }
+        sceKernelMemcpy(ctx->prng_counter, prng_out, 32);
+
+        ctx->state = 1;
+        sceKernelSetEventFlag(ctx->evf, 1u);
+
+        for (;;) {
+            int r;
+            if (wpa_get_event(ctx, &ev) < 0)
+                continue;
+            if ((u32)ev->type >= 6u) {
+                wpa_free_event(ctx, ev);
+                continue;
+            }
+            r = g_wpa_state_table[ctx->state][ev->type](ctx, ev);
+            wpa_free_event(ctx, ev);
+            if (r < 0)
+                break;
+        }
+    } while (0);
+
     wpa_notify(1, 0);
-    if (ctx != NULL && WPA_S32(ctx, 0x18) != 0)
-        sceKernelCancelAlarm(WPA_S32(ctx, 0x18));
+    if (ctx != NULL && ctx->alarm_id != 0)
+        sceKernelCancelAlarm(ctx->alarm_id);
     sceKernelExitThread(0);
     return 0;
 }
 
-static int wpa_set_config_impl(const int *cfg)
+static int wpa_set_config_impl(const WpaConfig *cfg)
 {
     u8 pmk_tmp[64];
-    int auth = cfg[0];
-    int cipher = cfg[1];
+    int auth = cfg->auth_mode;
+    int cipher = cfg->cipher;
 
-    sceKernelMemset(g_wpa_ctx_buf, 0, sizeof(g_wpa_ctx_buf));
-    sceKernelMemcpy(g_wpa_ctx_buf + 0x3DC, cfg, 112);
-    WPA_S32(g_wpa_ctx_buf, 4) = 1;
+    sceKernelMemset(&g_wpa_ctx, 0, sizeof(g_wpa_ctx));
+    sceKernelMemcpy(&g_wpa_ctx.config, cfg, sizeof(WpaConfig));
+    g_wpa_ctx.initialized = 1;
 
     if (auth == 0) {
         const u8 *pmk_src;
-        if (cfg[11] == 1) {
-            sceKernelMemcpy(g_wpa_ctx_buf + 0x310, cfg + 12, 64);
-            wpa_pbkdf2_sha1((const char *)(g_wpa_ctx_buf + 0x310),
-                            g_wpa_ctx_buf + 0x3E8, g_wpa_ctx_buf[0x3E4], pmk_tmp);
+        if (cfg->psk_type == 1) {
+            sceKernelMemcpy(g_wpa_ctx.passphrase, cfg->key_material, 64);
+            wpa_pbkdf2_sha1(g_wpa_ctx.passphrase,
+                            g_wpa_ctx.config.ssid, g_wpa_ctx.config.ssid_len, pmk_tmp);
             pmk_src = pmk_tmp;
         } else {
-            pmk_src = (const u8 *)(cfg + 12);
+            pmk_src = cfg->key_material;
         }
-        sceKernelMemcpy(g_wpa_ctx_buf + 0x350, pmk_src, 32);
-        WPA_S32(g_wpa_ctx_buf, 0x44) = 0;
-        WPA_S32(g_wpa_ctx_buf, 0x30C) = cfg[11];
+        sceKernelMemcpy(g_wpa_ctx.pmk, pmk_src, 32);
+        g_wpa_ctx.auth_mode = 0;
+        g_wpa_ctx.psk_passphrase_type = cfg->psk_type;
     } else if (auth == 1) {
-        sceKernelMemcpy(g_wpa_ctx_buf + 0x350, cfg + 11, 32);
-        WPA_S32(g_wpa_ctx_buf, 0x44) = 1;
+        sceKernelMemcpy(g_wpa_ctx.pmk, &cfg->psk_type, 32);
+        g_wpa_ctx.auth_mode = 1;
     }
 
     if (cipher == 0) {
-        WPA_S32(g_wpa_ctx_buf, 0x48) = 0;
+        g_wpa_ctx.cipher = 0;
     } else if (cipher == 1) {
-        WPA_S32(g_wpa_ctx_buf, 0x48) = 1;
+        g_wpa_ctx.cipher = 1;
     } else {
-        WPA_S32(g_wpa_ctx_buf, 4) = 0;
+        g_wpa_ctx.initialized = 0;
         return (int)0x80411080;
     }
     return 0;
@@ -1088,28 +1148,28 @@ static int wpa_start_impl(const char *ifname, void (*cb)(void *, int),
     SceUID evf;
     SceUID thid;
     u8 pmk_tmp[64];
-    void *ctx_ptr = g_wpa_ctx_buf;
+    WpaSupplicantCtx *ctx_ptr = &g_wpa_ctx;
 
     (void)ifname;
 
-    if (WPA_S32(g_wpa_ctx_buf, 4) != 0) {
+    if (g_wpa_ctx.initialized != 0) {
         evf = sceKernelCreateEventFlag("SceNetWpaSupplicantEvf", 0, 0, NULL);
         ret = evf;
         if (evf >= 0) {
-            WPA_S32(g_wpa_ctx_buf, 0x10) = evf;
-            sceKernelMemcpy(g_wpa_ctx_buf + 0x268, bss, 92);
-            sceKernelMemcpy(g_wpa_ctx_buf + 0x56, g_wpa_ctx_buf + 0x268, 6);
-            *(void (**)(void *, int))(g_wpa_ctx_buf + 0x4C) = cb;
-            WPA_S32(g_wpa_ctx_buf, 0x20) = timeout;
+            g_wpa_ctx.evf = evf;
+            sceKernelMemcpy(g_wpa_ctx.bss_info, bss, 92);
+            sceKernelMemcpy(g_wpa_ctx.bssid, g_wpa_ctx.bss_info, 6);
+            g_wpa_ctx.callback = cb;
+            g_wpa_ctx.timeout_us = (u32)timeout;
 
-            if (WPA_S32(g_wpa_ctx_buf, 0x3DC) == 0) {
-                u8 bss_ssid_len = g_wpa_ctx_buf[0x26F];
-                if (bss_ssid_len != g_wpa_ctx_buf[0x3E4] ||
-                    sceNet_lib_E0A81C7C(g_wpa_ctx_buf + 0x270,
-                                        g_wpa_ctx_buf + 0x3E8, bss_ssid_len) != 0) {
-                    wpa_pbkdf2_sha1((const char *)(g_wpa_ctx_buf + 0x310),
-                                    g_wpa_ctx_buf + 0x270, bss_ssid_len, pmk_tmp);
-                    sceKernelMemcpy(g_wpa_ctx_buf + 0x350, pmk_tmp, 32);
+            if (g_wpa_ctx.config.auth_mode == 0) {
+                u8 bss_ssid_len = g_wpa_ctx.bss_info[7];
+                if (bss_ssid_len != g_wpa_ctx.config.ssid_len ||
+                    sceNet_lib_E0A81C7C(g_wpa_ctx.bss_info + 8,
+                                        g_wpa_ctx.config.ssid, bss_ssid_len) != 0) {
+                    wpa_pbkdf2_sha1(g_wpa_ctx.passphrase,
+                                    g_wpa_ctx.bss_info + 8, bss_ssid_len, pmk_tmp);
+                    sceKernelMemcpy(g_wpa_ctx.pmk, pmk_tmp, 32);
                 }
             }
 
@@ -1117,7 +1177,7 @@ static int wpa_start_impl(const char *ifname, void (*cb)(void *, int),
                                          prio, stack, 0, NULL);
             ret = thid;
             if (thid >= 0) {
-                WPA_S32(g_wpa_ctx_buf, 0x0C) = thid;
+                g_wpa_ctx.thid = thid;
                 ret = sceKernelStartThread(thid, 4, &ctx_ptr);
                 if (ret >= 0)
                     return 0;
@@ -1125,17 +1185,17 @@ static int wpa_start_impl(const char *ifname, void (*cb)(void *, int),
         }
     }
 
-    if (WPA_S32(g_wpa_ctx_buf, 0x14) != 0) {
-        eapol_bpf_close(WPA_S32(g_wpa_ctx_buf, 0x14));
-        WPA_S32(g_wpa_ctx_buf, 0x14) = 0;
+    if (g_wpa_ctx.bpf_fd != 0) {
+        eapol_bpf_close(g_wpa_ctx.bpf_fd);
+        g_wpa_ctx.bpf_fd = 0;
     }
-    if (WPA_S32(g_wpa_ctx_buf, 0x10) != 0) {
-        sceKernelDeleteEventFlag(WPA_S32(g_wpa_ctx_buf, 0x10));
-        WPA_S32(g_wpa_ctx_buf, 0x10) = 0;
+    if (g_wpa_ctx.evf != 0) {
+        sceKernelDeleteEventFlag(g_wpa_ctx.evf);
+        g_wpa_ctx.evf = 0;
     }
-    if (WPA_S32(g_wpa_ctx_buf, 0x0C) != 0) {
-        sceKernelDeleteThread(WPA_S32(g_wpa_ctx_buf, 0x0C));
-        WPA_S32(g_wpa_ctx_buf, 0x0C) = 0;
+    if (g_wpa_ctx.thid != 0) {
+        sceKernelDeleteThread(g_wpa_ctx.thid);
+        g_wpa_ctx.thid = 0;
     }
     return ret;
 }
@@ -1143,8 +1203,8 @@ static int wpa_start_impl(const char *ifname, void (*cb)(void *, int),
 static int wpa_stop_impl(void)
 {
     u32 timeout = 5000000u;
-    SceUID thid = WPA_S32(g_wpa_ctx_buf, 0x0C);
-    SceUID evf = WPA_S32(g_wpa_ctx_buf, 0x10);
+    SceUID thid = g_wpa_ctx.thid;
+    SceUID evf = g_wpa_ctx.evf;
 
     if (thid != 0) {
         if (sceKernelSetEventFlag(evf, 2u) < 0 ||
@@ -1154,24 +1214,24 @@ static int wpa_stop_impl(void)
         sceKernelDeleteThread(thid);
         sceNetFreeThreadinfo(thid);
     }
-    WPA_S32(g_wpa_ctx_buf, 0x0C) = 0;
+    g_wpa_ctx.thid = 0;
 
-    if (WPA_S32(g_wpa_ctx_buf, 0x14) != 0) {
-        eapol_bpf_close(WPA_S32(g_wpa_ctx_buf, 0x14));
-        WPA_S32(g_wpa_ctx_buf, 0x14) = 0;
+    if (g_wpa_ctx.bpf_fd != 0) {
+        eapol_bpf_close(g_wpa_ctx.bpf_fd);
+        g_wpa_ctx.bpf_fd = 0;
     }
     if (evf != 0) {
         sceKernelDeleteEventFlag(evf);
-        WPA_S32(g_wpa_ctx_buf, 0x10) = 0;
+        g_wpa_ctx.evf = 0;
     }
-    WPA_S32(g_wpa_ctx_buf, 4) = 0;
-    *(void **)(g_wpa_ctx_buf + 0x4C) = NULL;
+    g_wpa_ctx.initialized = 0;
+    g_wpa_ctx.callback = NULL;
     return 0;
 }
 
 int wpa_set_config(void *cfg)
 {
-    return wpa_set_config_impl((const int *)cfg);
+    return wpa_set_config_impl((const WpaConfig *)cfg);
 }
 
 int wpa_start(const char *ifname, void (*cb)(void *, int), int stack,
@@ -1188,7 +1248,7 @@ int wpa_stop(void)
 
 int wpa_notify_mic_err_unicast(void)
 {
-    SceUID evf = WPA_S32(g_wpa_ctx_buf, 0x10);
+    SceUID evf = g_wpa_ctx.evf;
     if (evf != 0)
         sceKernelSetEventFlag(evf, 8u);
     return 0;
@@ -1196,7 +1256,7 @@ int wpa_notify_mic_err_unicast(void)
 
 int wpa_notify_mic_err_multicast(void)
 {
-    SceUID evf = WPA_S32(g_wpa_ctx_buf, 0x10);
+    SceUID evf = g_wpa_ctx.evf;
     if (evf != 0)
         sceKernelSetEventFlag(evf, 16u);
     return 0;

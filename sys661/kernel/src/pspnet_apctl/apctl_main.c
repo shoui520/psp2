@@ -31,71 +31,188 @@ typedef struct ApctlHandler {
     u32 gp;
 } ApctlHandler;
 
+typedef struct WlanScanReq {
+    u32 scan_type;            /* +0 */
+    u8 pad_ch[6];             /* +4 */
+    u8 channels[14];          /* +10 */
+    u8 ssid_len;              /* +24 */
+    u8 pad_ssid[3];           /* +25 */
+    char ssid[32];            /* +28 */
+    u32 probe_count;          /* +60 */
+    u32 min_ch_time;          /* +64 */
+    u32 max_ch_time;          /* +68 */
+    u32 scan_timeout;         /* +72 */
+} WlanScanReq; /* 76 bytes */
+
+typedef struct WlanScanEntry {
+    struct WlanScanEntry *next; /* +0 */
+    u8 bssid[6];                /* +4 */
+    u8 channel;                 /* +10 */
+    u8 ssid_len;                /* +11 */
+    char ssid[32];              /* +12 */
+    u32 bss_type;               /* +44 */
+    u8 mid_ie[18];              /* +48 */
+    u16 caps;                   /* +66 */
+    u8 mid_tail[8];             /* +68 */
+    u8 rssi;                    /* +76 */
+    u8 sec_pad[7];              /* +77 */
+    u8 wpa_present;             /* +84 */
+    u8 wpa_unicast;             /* +85 */
+    u8 wpa_multicast;           /* +86 */
+    u8 wpa_akm;                 /* +87 */
+    u8 rsn_pad[2];              /* +88 */
+    u8 rsn_present;             /* +90 */
+    u8 pad_end;                 /* +91 */
+} WlanScanEntry;
+
+typedef struct WlanDrvInfo {
+    u8 bssid[6];              /* +0 */
+    char ssid[33];            /* +6 */
+    u8 ssid_len;              /* +39 */
+    char name[64];            /* +40 */
+    u8 pad_name[2];           /* +104 */
+    u16 rssi_caps;            /* +106 */
+    u8 channel;               /* +108 */
+    u8 pad_ch[3];             /* +109 */
+    u32 assoc_mode;           /* +112 */
+    u32 security;             /* +116 */
+    u32 pad_sec;              /* +120 */
+    u32 ip_addr;              /* +124 */
+    u32 netmask;              /* +128 */
+    u32 gateway;              /* +132 */
+    u32 dns_a;                /* +136 */
+    u32 dns_b;                /* +140 */
+} WlanDrvInfo; /* 144 bytes */
+
+typedef struct ApctlBssInfo {
+    u8 bssid[6];              /* +0 (4032) */
+    u8 channel;               /* +6 (4038) */
+    u8 ssid_len;              /* +7 (4039) */
+    char ssid[32];            /* +8 (4040) */
+    u32 assoc_mode;           /* +40 (4072) */
+    u8 mid[28];               /* +44 (4076) */
+    u16 rssi_caps;            /* +72 (4104) */
+    u8 tail[18];              /* +74 (4106) */
+} ApctlBssInfo; /* 92 bytes */
+
+typedef struct ApctlDhcpCfg {
+    u32 dns_flag;
+    char dns_a[16];
+    char dns_b[16];
+    char hostname[256];
+    u32 mcast_flag;
+    u32 req_ip;
+} ApctlDhcpCfg; /* 300 bytes */
+
+typedef struct ApctlPppoeCfg {
+    u32 dns_flag;
+    char dns_a[16];
+    char dns_b[16];
+    char user[128];
+    char pass[128];
+} ApctlPppoeCfg; /* 292 bytes */
+
+typedef struct Apctl8021xCfg {
+    u32 eap_type;
+    u8 bssid[6];
+    char user[128];
+    char pass[128];
+    u8 pad[2];
+} Apctl8021xCfg; /* 268 bytes */
+
+typedef struct ApctlBtdunCfg {
+    u32 device_id;
+    char init_cmd[65];
+    char dial_num[33];
+    char user[128];
+    char pass[128];
+    u8 pad[2];
+    u32 dns_flag;
+    char dns_a[16];
+    char dns_b[16];
+    void (*log_cb)(void);
+} ApctlBtdunCfg; /* 400 bytes */
+
+typedef struct ApctlWpaCfg {
+    u32 auth_mode;
+    u32 cipher;
+    u8 ssid_len;
+    u8 pad_ssid[3];
+    char ssid[32];
+    u32 key_type;
+    u8 key[64];
+} ApctlWpaCfg; /* 112 bytes */
+
 /* Main Apctl context (5408 bytes = 0x1520, matching original offsets) */
 typedef struct ApctlCtx {
     char ifname[16];          /* 0x0000 (0) */
-    int state;                /* 0x0010 (4) */
-    int event;                /* 0x0014 (5) */
-    SceUID thid;              /* 0x0018 (6) */
-    SceUID evf;               /* 0x001C (7) */
-    int mtx_inited;           /* 0x0020 (8) */
-    u32 mtx[8];               /* 0x0024 (9..16) */
-    int prio;                 /* 0x0044 (17) */
-    u8 scan1_ssid[32];        /* 0x0048 (18..25) */
-    u32 scan1_ssid_len;       /* 0x0068 (26) */
-    u8 scan1_buf[1920];       /* 0x006C (27..506) */
-    u32 scan1_len;            /* 0x07EC (507) */
-    u8 scan2_ssid[32];        /* 0x07F0 (508..515) */
-    u32 scan2_ssid_len;       /* 0x0810 (516) */
-    u8 scan2_buf[1920];       /* 0x0814 (517..996) */
-    u32 scan2_len;            /* 0x0F94 (997) */
-    int config_id;            /* 0x0F98 (998) */
-    int last_error;           /* 0x0F9C (999) */
-    int auth_mode;            /* 0x0FA0 (1000) */
-    u32 flags;                /* 0x0FA4 (1001) */
-    u32 extra_stack;          /* 0x0FA8 (1002) */
-    u32 pad_fac;              /* 0x0FAC (1003) */
-    int roam_enabled;         /* 0x0FB0 (1004) */
-    u32 roam_start_sec;       /* 0x0FB4 (1005) */
-    void (*btdun_at_cb)(void); /* 0x0FB8 (1006) */
-    u32 btdun_at_gp;          /* 0x0FBC (1007) */
-    u8 bss_info[92];          /* 0x0FC0..0x101B (1008..1030) */
-    u32 ip_addr;              /* 0x101C (1031) */
-    u32 netmask;              /* 0x1020 (1032) */
-    u32 gateway;              /* 0x1024 (1033) */
-    u32 primary_dns;          /* 0x1028 (1034) */
-    u32 secondary_dns;        /* 0x102C (1035) */
-    char cfg_name[64];        /* 0x1030 (1036..1051) */
-    char cfg_ssid[36];        /* 0x1070 (1052..1060) */
-    int cfg_security;         /* 0x1094 (1061) */
-    u8 cfg_wep_pad[16];       /* 0x1098 (1062..1065) */
-    int cfg_eap_pad;          /* 0x10A8 (1066) */
-    int cfg_ip_mode;          /* 0x10AC (1067) */
-    char cfg_pppoe_user[128]; /* 0x10B0 (1068..1099) */
-    char cfg_pppoe_pass[128]; /* 0x1130 (1100..1131) */
-    int cfg_dns_flag;         /* 0x11B0 (1132) */
-    char cfg_dns1[16];        /* 0x11B4 (1133..1136) */
-    char cfg_dns2[16];        /* 0x11C4 (1137..1140) */
-    int cfg_proxy_use;        /* 0x11D4 (1141) */
-    char cfg_proxy_url[128];  /* 0x11D8 (1142..1173) */
-    u16 cfg_proxy_port;       /* 0x1258 */
-    u16 cfg_proxy_pad;        /* 0x125A */
-    int cfg_eap_type;         /* 0x125C (1175) */
-    char cfg_eap_user[128];   /* 0x1260 (1176..1207) */
-    char cfg_eap_pass[128];   /* 0x12E0 (1208..1239) */
-    int cfg_wpa_key_type;     /* 0x1360 (1240) */
-    u8 cfg_wpa_key[64];       /* 0x1364 (1241..1256) */
-    int cfg_browser_flag;     /* 0x13A4 (1257) */
-    int cfg_wifisvc_flag;     /* 0x13A8 (1258) */
-    u32 cfg_wifisvc_ip;       /* 0x13AC (1259) */
-    int cfg_dev_type;         /* 0x13B0 (1260) */
-    int cfg_btdun_id;         /* 0x13B4 (1261) */
-    char cfg_btdun_init[65];  /* 0x13B8 (1262..1278) */
-    char cfg_btdun_dial[33];  /* 0x13F9 */
-    u8 cfg_btdun_pad[2];
-    char cfg_extra_str[257];  /* 0x141C (1287..) */
-    u8 tail_pad[3];
-} ApctlCtx;
+    int state;                /* 0x0010 (16) */
+    int event;                /* 0x0014 (20) */
+    SceUID thid;              /* 0x0018 (24) */
+    SceUID evf;               /* 0x001C (28) */
+    int mtx_inited;           /* 0x0020 (32) */
+    u32 mtx[8];               /* 0x0024 (36) */
+    int prio;                 /* 0x0044 (68) */
+    u8 scan_a_ssid[32];       /* 0x0048 (72) */
+    u32 scan_a_ssid_len;      /* 0x0068 (104) */
+    u8 scan_a_buf[1920];      /* 0x006C (108) */
+    u32 scan_a_len;           /* 0x07EC (2028) */
+    u8 scan_b_ssid[32];       /* 0x07F0 (2032) */
+    u32 scan_b_ssid_len;      /* 0x0810 (2064) */
+    u8 scan_b_buf[1920];      /* 0x0814 (2068) */
+    u32 scan_b_len;           /* 0x0F94 (3988) */
+    int config_id;            /* 0x0F98 (3992) */
+    int last_error;           /* 0x0F9C (3996) */
+    int auth_mode;            /* 0x0FA0 (4000) */
+    u32 flags;                /* 0x0FA4 (4004) */
+    u32 extra_stack;          /* 0x0FA8 (4008) */
+    u8 signal_strength;       /* 0x0FAC (4012) */
+    u8 pad_sig[3];            /* 0x0FAD (4013) */
+    int roam_enabled;         /* 0x0FB0 (4016) */
+    u32 roam_start_sec;       /* 0x0FB4 (4020) */
+    void (*btdun_at_cb)(void); /* 0x0FB8 (4024) */
+    u32 btdun_at_gp;          /* 0x0FBC (4028) */
+    ApctlBssInfo bss;         /* 0x0FC0 (4032, 92 bytes) */
+    u32 ip_params[5];         /* 0x101C (4124: ip, mask, gw, dns_a, dns_b) */
+    char cfg_name[64];        /* 0x1030 (4144) */
+    char cfg_ssid[36];        /* 0x1070 (4208) */
+    int cfg_security;         /* 0x1094 (4244) */
+    u8 cfg_wep_key[16];       /* 0x1098 (4248) */
+    int cfg_eap_mode;         /* 0x10A8 (4264) */
+    int cfg_ip_mode;          /* 0x10AC (4268) */
+    union {
+        char pppoe_user[128];
+        struct {
+            char ip[16];
+            char mask[16];
+            char gw[16];
+            char rest[80];
+        } static_ip;
+    } cfg_addr;               /* 0x10B0 (4272) */
+    char cfg_pppoe_pass[128]; /* 0x1130 (4400) */
+    int cfg_dns_flag;         /* 0x11B0 (4528) */
+    char cfg_dns_a[16];       /* 0x11B4 (4532) */
+    char cfg_dns_b[16];       /* 0x11C4 (4548) */
+    int cfg_proxy_use;        /* 0x11D4 (4564) */
+    char cfg_proxy_url[128];  /* 0x11D8 (4568) */
+    u16 cfg_proxy_port;       /* 0x1258 (4696) */
+    u16 cfg_proxy_pad;        /* 0x125A (4698) */
+    int cfg_eap_type;         /* 0x125C (4700) */
+    char cfg_eap_user[128];   /* 0x1260 (4704) */
+    char cfg_eap_pass[128];   /* 0x12E0 (4832) */
+    int cfg_wpa_key_type;     /* 0x1360 (4960) */
+    u8 cfg_wpa_key[64];       /* 0x1364 (4964) */
+    int cfg_browser_flag;     /* 0x13A4 (5028) */
+    int cfg_wifisvc_flag;     /* 0x13A8 (5032) */
+    u32 cfg_wifisvc_ip;       /* 0x13AC (5036) */
+    int cfg_dev_type;         /* 0x13B0 (5040) */
+    int cfg_btdun_id;         /* 0x13B4 (5044) */
+    char cfg_btdun_init[65];  /* 0x13B8 (5048) */
+    char cfg_btdun_dial[33];  /* 0x13F9 (5113) */
+    u8 cfg_btdun_pad[2];      /* 0x141A (5146) */
+    char cfg_extra_str[257];  /* 0x141C (5148) */
+    u8 tail_pad[3];           /* 0x151D (5405) */
+} ApctlCtx; /* 5408 bytes */
 
 static int g_apctl_inited = 0;
 static ApctlCtx g_apctl;
@@ -122,10 +239,10 @@ static int apctl_get_info_internal(ApctlCtx *ctx, int state, int code, void *out
 static int apctl_load_wlan_info(ApctlCtx *ctx);
 static int apctl_check_roam(ApctlCtx *ctx);
 static int apctl_wlan_detach(ApctlCtx *ctx, int event);
-static int apctl_scan1(ApctlCtx *ctx);
-static int apctl_scan2(ApctlCtx *ctx);
-static void apctl_scan2_in_state(ApctlCtx *ctx);
-static void apctl_poll_scan2_clear(ApctlCtx *ctx);
+static int apctl_scan_a(ApctlCtx *ctx);
+static int apctl_scan_b(ApctlCtx *ctx);
+static u32 apctl_scan_b_in_state(ApctlCtx *ctx);
+static void apctl_poll_scan_b_clear(ApctlCtx *ctx);
 static int apctl_load_default_config(ApctlCtx *ctx);
 static int apctl_wlan_clear(void);
 static int apctl_save_ip_param(ApctlCtx *ctx, const void *ip);
@@ -135,12 +252,20 @@ static int apctl_add_handler_internal(void *fn, void *arg, int *id_out, int tabl
 static int apctl_del_handler_internal(int id, int table);
 static int apctl_notify_all(ApctlCtx *ctx, int old_s, int new_s, int ev, int err);
 static int apctl_notify_lib(ApctlCtx *ctx, int old_s, int new_s, int ev, int err);
-static int apctl_connect_internal(int conn_idx, int mode, int arg2, int bt_id, const char *bt_init, void *bt_cb);
+static int apctl_notify_state_change(ApctlCtx *ctx, int prev_state);
+static int apctl_connect_internal(int conn_idx, int mode, int extra_flag, int bt_id, const char *bt_init, void *bt_cb);
 static int apctl_get_info_wrapper(int code, void *out, int allow_ext);
 static int apctl_get_state_internal(int *state_out);
 static int apctl_disconnect_internal(void);
-static int apctl_req_scan1(const char *ssid, u32 len);
-static int apctl_req_scan2(const char *ssid, u32 len);
+static int apctl_req_scan_a(const char *ssid, u32 len);
+static int apctl_req_scan_b(const char *ssid, u32 len);
+static int apctl_get_bss_list_a(u32 *size_inout, void *buf);
+static int apctl_get_bss_entry_a(int id, int code, void *out);
+static int apctl_get_bss_list_b(u32 *size_inout, void *buf);
+static int apctl_get_bss_entry_b(int id, int code, void *out);
+static int apctl_set_roam_enabled(int enable);
+static int apctl_get_extra_str(char **out_ptr);
+static int apctl_set_extra_str(const char *str);
 static int apctl_wait_events(ApctlCtx *ctx, u32 mask, u32 *out_bits, int wait);
 static int apctl_drain_wlan_events(ApctlCtx *ctx, u32 *out_bits);
 static int apctl_clients_init(ApctlCtx *ctx);
@@ -152,6 +277,8 @@ static int apctl_setup_8021x(ApctlCtx *ctx);
 static int apctl_setup_wpa(ApctlCtx *ctx);
 static int apctl_setup_btdun_dial(ApctlCtx *ctx);
 static int apctl_setup_btdun_ip(ApctlCtx *ctx);
+static int apctl_set_eap_flag_wrapper(ApctlCtx *ctx, int val);
+static int apctl_dispatch_mic_err(ApctlCtx *ctx, int ev);
 static int apctl_wpa_prepare(ApctlCtx *ctx);
 static void apctl_stop_auth_clients(void);
 static void apctl_stop_all_clients(ApctlCtx *ctx);
@@ -163,13 +290,14 @@ static void apctl_stop_btdun(void);
 
 int sceNetApctlInit(u32 stackSize, int initPriority)
 {
+    int ret;
     if (_sceKernelCheckThreadStack() < 5104)
         return APCTL_ERR_STACK_SMALL;
     if (g_apctl_inited > 0)
         return APCTL_ERR_ALREADY_INIT;
     if (stackSize < 0x1400)
         return APCTL_ERR_STACK_TOO_SMALL;
-    int ret = apctl_core_init((int)stackSize, initPriority);
+    ret = apctl_core_init((int)stackSize, initPriority);
     if (ret < 0)
         return ret;
     g_apctl_inited = 1;
@@ -178,11 +306,12 @@ int sceNetApctlInit(u32 stackSize, int initPriority)
 
 int sceNetApctlTerm(void)
 {
+    int ret;
     if (_sceKernelCheckThreadStack() < 5104)
         return APCTL_ERR_STACK_SMALL;
     if (g_apctl_inited == 0)
         return 0;
-    int ret = apctl_core_term();
+    ret = apctl_core_term();
     if (ret >= 0)
         g_apctl_inited = 0;
     return ret;
@@ -191,11 +320,12 @@ int sceNetApctlTerm(void)
 int sceNetApctlAddHandler(void *handler, void *arg)
 {
     int id = 0;
+    int ret;
     if (_sceKernelCheckThreadStack() < 5088)
         return APCTL_ERR_STACK_SMALL;
     if (g_apctl_inited == 0)
         return APCTL_ERR_NOT_INIT;
-    int ret = apctl_add_handler_internal(handler, arg, &id, 0);
+    ret = apctl_add_handler_internal(handler, arg, &id, 0);
     return (ret >= 0) ? id : ret;
 }
 
@@ -232,27 +362,29 @@ int sceNetApctl_lib_B3CF6849(void)
         return APCTL_ERR_STACK_SMALL;
     if (g_apctl_inited == 0)
         return APCTL_ERR_NOT_INIT;
-    return apctl_req_scan1(NULL, 0);
+    return apctl_req_scan_a(NULL, 0);
 }
 
 int sceNetApctl_lib_A9721D11(const char *ssid)
 {
+    u32 len;
     if (_sceKernelCheckThreadStack() < 5104)
         return APCTL_ERR_STACK_SMALL;
     if (g_apctl_inited == 0)
         return APCTL_ERR_NOT_INIT;
-    u32 len = (ssid != NULL) ? (u32)sceNet_lib_D8722983(ssid) : 0;
-    return apctl_req_scan1(ssid, len);
+    len = (ssid != NULL) ? (u32)sceNet_lib_D8722983(ssid) : 0;
+    return apctl_req_scan_a(ssid, len);
 }
 
 int sceNetApctlScanSSID2(const char *ssid)
 {
+    u32 len;
     if (_sceKernelCheckThreadStack() < 5104)
         return APCTL_ERR_STACK_SMALL;
     if (g_apctl_inited == 0)
         return APCTL_ERR_NOT_INIT;
-    u32 len = (ssid != NULL) ? (u32)sceNet_lib_D8722983(ssid) : 0;
-    return apctl_req_scan2(ssid, len);
+    len = (ssid != NULL) ? (u32)sceNet_lib_D8722983(ssid) : 0;
+    return apctl_req_scan_b(ssid, len);
 }
 
 int sceNetApctl_lib_0C7FFA5C(u32 *size_inout, void *buf)
@@ -263,7 +395,7 @@ int sceNetApctl_lib_0C7FFA5C(u32 *size_inout, void *buf)
         return APCTL_ERR_NOT_INIT;
     if (size_inout == NULL)
         return APCTL_ERR_INVALID_PARAM;
-    return apctl_get_bss_list(&g_apctl, size_inout, buf, g_apctl.scan1_len, g_apctl.scan1_buf);
+    return apctl_get_bss_list_a(size_inout, buf);
 }
 
 int sceNetApctlGetBSSDescIDList2(u32 *size_inout, void *buf)
@@ -274,7 +406,7 @@ int sceNetApctlGetBSSDescIDList2(u32 *size_inout, void *buf)
         return APCTL_ERR_NOT_INIT;
     if (size_inout == NULL)
         return APCTL_ERR_INVALID_PARAM;
-    return apctl_get_bss_list(&g_apctl, size_inout, buf, g_apctl.scan2_len, g_apctl.scan2_buf);
+    return apctl_get_bss_list_b(size_inout, buf);
 }
 
 int sceNetApctl_lib_96BEB231(int id, int code, void *out)
@@ -285,7 +417,7 @@ int sceNetApctl_lib_96BEB231(int id, int code, void *out)
         return APCTL_ERR_NOT_INIT;
     if (out == NULL)
         return APCTL_ERR_INVALID_PARAM;
-    return apctl_get_bss_entry(&g_apctl, id, code, out, g_apctl.scan1_len, g_apctl.scan1_buf);
+    return apctl_get_bss_entry_a(id, code, out);
 }
 
 int sceNetApctlGetBSSDescEntry2(int id, int code, void *out)
@@ -296,7 +428,7 @@ int sceNetApctlGetBSSDescEntry2(int id, int code, void *out)
         return APCTL_ERR_NOT_INIT;
     if (out == NULL)
         return APCTL_ERR_INVALID_PARAM;
-    return apctl_get_bss_entry(&g_apctl, id, code, out, g_apctl.scan2_len, g_apctl.scan2_buf);
+    return apctl_get_bss_entry_b(id, code, out);
 }
 
 int sceNetApctlGetInfo(int code, void *info)
@@ -346,11 +478,12 @@ int sceNetApctlGetState(int *state)
 int sceNetApctl_lib_7CFAB990(void *handler, void *arg)
 {
     int id = 0;
+    int ret;
     if (_sceKernelCheckThreadStack() < 5088)
         return APCTL_ERR_STACK_SMALL;
     if (g_apctl_inited == 0)
         return APCTL_ERR_NOT_INIT;
-    int ret = apctl_add_handler_internal(handler, arg, &id, 1);
+    ret = apctl_add_handler_internal(handler, arg, &id, 1);
     return (ret >= 0) ? id : ret;
 }
 
@@ -369,7 +502,7 @@ int sceNetApctl_E9B2E5E6(void)
         return APCTL_ERR_STACK_SMALL;
     if (g_apctl_inited == 0)
         return APCTL_ERR_NOT_INIT;
-    return apctl_req_scan1(NULL, 0);
+    return apctl_req_scan_a(NULL, 0);
 }
 
 int sceNetApctl_6BDDCB8C(u32 *size_inout, void *buf)
@@ -380,7 +513,7 @@ int sceNetApctl_6BDDCB8C(u32 *size_inout, void *buf)
         return APCTL_ERR_NOT_INIT;
     if (size_inout == NULL)
         return APCTL_ERR_INVALID_PARAM;
-    return apctl_get_bss_list(&g_apctl, size_inout, buf, g_apctl.scan1_len, g_apctl.scan1_buf);
+    return apctl_get_bss_list_a(size_inout, buf);
 }
 
 int sceNetApctl_04776994(int id, int code, void *out)
@@ -391,17 +524,18 @@ int sceNetApctl_04776994(int id, int code, void *out)
         return APCTL_ERR_NOT_INIT;
     if (out == NULL)
         return APCTL_ERR_INVALID_PARAM;
-    return apctl_get_bss_entry(&g_apctl, id, code, out, g_apctl.scan1_len, g_apctl.scan1_buf);
+    return apctl_get_bss_entry_a(id, code, out);
 }
 
 int sceNetApctl_A7BB73DF(void *handler, void *arg)
 {
     int id = 0;
+    int ret;
     if (_sceKernelCheckThreadStack() < 5088)
         return APCTL_ERR_STACK_SMALL;
     if (g_apctl_inited == 0)
         return APCTL_ERR_NOT_INIT;
-    int ret = apctl_add_handler_internal(handler, arg, &id, 2);
+    ret = apctl_add_handler_internal(handler, arg, &id, 2);
     return (ret >= 0) ? id : ret;
 }
 
@@ -418,17 +552,16 @@ int sceNetApctl_lib_C519EDCD(int enable)
 {
     if (_sceKernelCheckThreadStack() < 5104)
         return APCTL_ERR_STACK_SMALL;
-    g_apctl.roam_enabled = enable;
-    return 0;
+    return apctl_set_roam_enabled(enable);
 }
 
-int sceNetApctl_lib2_C20A144C(int connIndex, int arg2)
+int sceNetApctl_lib2_C20A144C(int connIndex, int extra_flag)
 {
     if (_sceKernelCheckThreadStack() < 5088)
         return APCTL_ERR_STACK_SMALL;
     if (g_apctl_inited == 0)
         return APCTL_ERR_NOT_INIT;
-    return apctl_connect_internal(connIndex, 2, arg2, 0, NULL, NULL);
+    return apctl_connect_internal(connIndex, 2, extra_flag, 0, NULL, NULL);
 }
 
 int sceNetApctl_lib2_9D352B37(int connIndex)
@@ -446,8 +579,7 @@ int sceNetApctl_lib2_69745F0A(char **out_ptr)
         return APCTL_ERR_STACK_SMALL;
     if (g_apctl_inited == 0)
         return APCTL_ERR_NOT_INIT;
-    *out_ptr = g_apctl.cfg_extra_str;
-    return 0;
+    return apctl_get_extra_str(out_ptr);
 }
 
 int sceNetApctl_lib2_3895B348(const char *str)
@@ -456,9 +588,7 @@ int sceNetApctl_lib2_3895B348(const char *str)
         return APCTL_ERR_STACK_SMALL;
     if (g_apctl_inited == 0)
         return APCTL_ERR_NOT_INIT;
-    sceNet_lib_B5CE388A(g_apctl.cfg_extra_str, str, 257);
-    g_apctl.cfg_extra_str[256] = '\0';
-    return 0;
+    return apctl_set_extra_str(str);
 }
 
 /* =========================================================================
@@ -487,41 +617,44 @@ static int apctl_wlan_attach(ApctlCtx *ctx, u32 *ev_out)
 
 static int apctl_wlan_scan(const char *ifname, const void *ssid, u32 ssid_len, void *buf, u32 *len_inout)
 {
-    u8 req[76];
+    WlanScanReq req;
     u32 status = 0;
     int i;
 
-    sceKernelMemset(req, 0, sizeof(req));
+    sceKernelMemset(&req, 0, sizeof(req));
     if (ssid_len != 0) {
-        sceKernelMemcpy(req + 28, ssid, ssid_len);
-        req[24] = (u8)ssid_len;
+        sceKernelMemcpy(req.ssid, ssid, ssid_len);
+        req.ssid_len = (u8)ssid_len;
     }
-    *(u32 *)req = 1;
+    req.scan_type = 1;
     for (i = 0; i < 14; i++)
-        req[10 + i] = (u8)(i + 1);
-    *(u32 *)(req + 60) = 1;
-    *(u32 *)(req + 64) = 0;
-    *(u32 *)(req + 68) = 6;
-    *(u32 *)(req + 72) = 100;
+        req.channels[i] = (u8)(i + 1);
+    req.probe_count = 1;
+    req.min_ch_time = 0;
+    req.max_ch_time = 6;
+    req.scan_timeout = 100;
 
     sceKernelMemset(buf, 0, *len_inout);
-    return sceNet_lib_7BA3ED91(ifname, req, len_inout, buf, &status);
+    return sceNet_lib_7BA3ED91(ifname, &req, len_inout, buf, &status);
 }
 
-static int apctl_get_bss_list(ApctlCtx *ctx, u32 *size_inout, void *buf, u32 scan_len, void *scan_buf)
+static int __attribute__((noinline))
+apctl_get_bss_list(ApctlCtx *ctx, u32 *size_inout, void *buf, u32 scan_len, void *scan_buf)
 {
-    (void)ctx;
     u32 *prev = NULL;
     u32 count = 0;
+    (void)ctx;
+
     if (scan_len != 0) {
-        u32 *cur = (u32 *)scan_buf;
+        WlanScanEntry *cur = (WlanScanEntry *)scan_buf;
         int id = 1;
         while (cur != NULL) {
-            if (cur[11] == 1) {
+            if (cur->bss_type == 1) {
                 if (buf != NULL) {
+                    u32 *ent;
                     if (*size_inout < (count + 1) * 8)
                         break;
-                    u32 *ent = (u32 *)((u8 *)buf + count * 8);
+                    ent = (u32 *)buf + count * 2;
                     if (prev != NULL)
                         prev[0] = (u32)ent;
                     sceKernelMemset(ent, 0, 8);
@@ -530,7 +663,7 @@ static int apctl_get_bss_list(ApctlCtx *ctx, u32 *size_inout, void *buf, u32 sca
                 }
                 count++;
             }
-            cur = (u32 *)cur[0];
+            cur = cur->next;
             id++;
         }
     }
@@ -538,18 +671,22 @@ static int apctl_get_bss_list(ApctlCtx *ctx, u32 *size_inout, void *buf, u32 sca
     return 0;
 }
 
-static int apctl_get_bss_entry(ApctlCtx *ctx, int id, int code, void *out, u32 scan_len, void *scan_buf)
+static int __attribute__((noinline))
+apctl_get_bss_entry(ApctlCtx *ctx, int id, int code, void *out, u32 scan_len, void *scan_buf)
 {
+    WlanScanEntry *cur;
+    int idx;
     (void)ctx;
+
     if ((u32)id >= 20)
         return APCTL_ERR_BAD_INDEX;
     if (scan_len == 0)
         return APCTL_ERR_NOT_FOUND;
 
-    u8 *cur = (u8 *)scan_buf;
-    int idx = 1;
+    cur = (WlanScanEntry *)scan_buf;
+    idx = 1;
     while (cur != NULL && idx < id) {
-        cur = *(u8 **)cur;
+        cur = cur->next;
         idx++;
     }
     if (cur == NULL)
@@ -557,35 +694,35 @@ static int apctl_get_bss_entry(ApctlCtx *ctx, int id, int code, void *out, u32 s
 
     switch (code) {
     case 0:
-        sceKernelMemcpy(out, cur + 4, 6);
+        sceKernelMemcpy(out, cur->bssid, 6);
         return 0;
     case 1:
-        sceKernelMemcpy(out, cur + 12, 33);
+        sceKernelMemcpy(out, cur->ssid, 33);
         return 0;
     case 2:
-        *(u32 *)out = cur[11];
+        *(u32 *)out = cur->ssid_len;
         return 0;
     case 3:
-        *(u8 *)out = cur[10];
+        *(u8 *)out = cur->channel;
         return 0;
     case 4:
-        *(u8 *)out = cur[76];
+        *(u8 *)out = cur->rssi;
         return 0;
     case 5: {
         u32 sec;
-        if ((*(u16 *)(cur + 66) & 0x10) == 0) {
+        if ((cur->caps & 0x10) == 0) {
             sec = 0;
-        } else if (cur[84] == 1) {
-            if ((cur[85] & 4) && (cur[86] & 4) && (cur[87] & 2))
+        } else if (cur->wpa_present == 1) {
+            if ((cur->wpa_unicast & 4) && (cur->wpa_multicast & 4) && (cur->wpa_akm & 2))
                 sec = 2;
-            else if ((cur[85] & 8) && (cur[86] & 8) && (cur[87] & 2))
+            else if ((cur->wpa_unicast & 8) && (cur->wpa_multicast & 8) && (cur->wpa_akm & 2))
                 sec = 4;
-            else if (cur[85] & 3)
+            else if (cur->wpa_unicast & 3)
                 sec = 1;
             else
                 sec = 3;
         } else {
-            sec = (cur[90] == 1) ? 3 : 1;
+            sec = (cur->rsn_present == 1) ? 3 : 1;
         }
         *(u32 *)out = sec;
         return 0;
@@ -598,22 +735,21 @@ static int apctl_get_bss_entry(ApctlCtx *ctx, int id, int code, void *out, u32 s
 static int apctl_get_info_internal(ApctlCtx *ctx, int state, int code, void *out, int allow_ext)
 {
     (void)state;
-    u8 *base = (u8 *)ctx;
     switch (code) {
     case 0:
-        sceNet_lib_80C9F02A((char *)out, (const char *)(base + 4144));
+        sceNet_lib_80C9F02A((char *)out, ctx->cfg_name);
         return 0;
     case 1:
-        sceKernelMemcpy(out, base + 4032, 6);
+        sceKernelMemcpy(out, ctx->bss.bssid, 6);
         return 0;
     case 2:
-        sceKernelMemcpy(out, base + 4040, 32);
+        sceKernelMemcpy(out, ctx->bss.ssid, 32);
         return 0;
     case 3:
-        *(u32 *)out = base[4039];
+        *(u32 *)out = ctx->bss.ssid_len;
         return 0;
     case 4:
-        switch (*(u32 *)(base + 4244)) {
+        switch (ctx->cfg_security) {
         case 0: *(u32 *)out = 0; break;
         case 1: case 2: *(u32 *)out = 1; break;
         case 3: *(u32 *)out = 2; break;
@@ -622,43 +758,41 @@ static int apctl_get_info_internal(ApctlCtx *ctx, int state, int code, void *out
         }
         return 0;
     case 5:
-        *(u8 *)out = base[4012];
+        *(u8 *)out = ctx->signal_strength;
         return 0;
     case 6:
-        *(u8 *)out = base[4038];
+        *(u8 *)out = ctx->bss.channel;
         return 0;
     case 7:
-        *(u8 *)out = base[4264];
+        *(u8 *)out = (u8)ctx->cfg_eap_mode;
         return 0;
-    case 8: case 9: case 10: case 11: case 12: {
-        static const u32 offs[5] = { 4124, 4128, 4132, 4136, 4140 };
+    case 8: case 9: case 10: case 11: case 12:
         if ((ctx->flags & 0x40) == 0)
             return APCTL_ERR_NO_IP;
-        if (sceNetInetInetNtop(2, base + offs[code - 8], (char *)out, 16) == NULL)
+        if (sceNetInetInetNtop(2, &ctx->ip_params[code - 8], (char *)out, 16) == NULL)
             return APCTL_ERR_INVALID_PARAM;
         return 0;
-    }
-    case 13: *(u32 *)out = *(u32 *)(base + 4564); return 0;
-    case 14: sceNet_lib_80C9F02A((char *)out, (const char *)(base + 4568)); return 0;
-    case 15: *(u16 *)out = *(u16 *)(base + 4696); return 0;
-    case 16: *(u32 *)out = *(u32 *)(base + 4700); return 0;
-    case 17: *(u32 *)out = *(u32 *)(base + 5028); return 0;
-    case 18: *(u32 *)out = *(u32 *)(base + 5032); return 0;
+    case 13: *(u32 *)out = (u32)ctx->cfg_proxy_use; return 0;
+    case 14: sceNet_lib_80C9F02A((char *)out, ctx->cfg_proxy_url); return 0;
+    case 15: *(u16 *)out = ctx->cfg_proxy_port; return 0;
+    case 16: *(u32 *)out = (u32)ctx->cfg_eap_type; return 0;
+    case 17: *(u32 *)out = (u32)ctx->cfg_browser_flag; return 0;
+    case 18: *(u32 *)out = (u32)ctx->cfg_wifisvc_flag; return 0;
     case 19:
         if (!allow_ext) return APCTL_ERR_INVALID_ID;
-        *(u32 *)out = *(u32 *)(base + 5040);
+        *(u32 *)out = (u32)ctx->cfg_dev_type;
         return 0;
     case 20:
         if (!allow_ext) return APCTL_ERR_INVALID_ID;
-        *(u32 *)out = *(u32 *)(base + 5044);
+        *(u32 *)out = (u32)ctx->cfg_btdun_id;
         return 0;
     case 21:
         if (!allow_ext) return APCTL_ERR_INVALID_ID;
-        sceNet_lib_80C9F02A((char *)out, (const char *)(base + 5048));
+        sceNet_lib_80C9F02A((char *)out, ctx->cfg_btdun_init);
         return 0;
     case 22:
         if (!allow_ext) return APCTL_ERR_INVALID_ID;
-        sceNet_lib_80C9F02A((char *)out, (const char *)(base + 5113));
+        sceNet_lib_80C9F02A((char *)out, ctx->cfg_btdun_dial);
         return 0;
     default:
         return APCTL_ERR_INVALID_ID;
@@ -667,48 +801,48 @@ static int apctl_get_info_internal(ApctlCtx *ctx, int state, int code, void *out
 
 static int apctl_load_wlan_info(ApctlCtx *ctx)
 {
-    u8 info[144];
-    u8 *base = (u8 *)ctx;
-    int ret = sceWlanDrv_lib_CAC1FB0D(info);
+    WlanDrvInfo info;
+    int ret = sceWlanDrv_lib_CAC1FB0D(&info);
     if (ret < 0)
         return ret;
 
-    sceKernelMemcpy(base + 4032, info, 6);
-    *(u32 *)(base + 4072) = *(u32 *)(info + 112);
-    *(u16 *)(base + 4104) = *(u16 *)(info + 106);
-    base[4038] = info[108];
-    base[4039] = info[39];
-    sceNet_lib_B5CE388A((char *)(base + 4040), (const char *)(info + 6), 32);
-    sceNet_lib_B5CE388A((char *)(base + 4144), (const char *)(info + 40), 64);
-    *(u32 *)(base + 4124) = *(u32 *)(info + 124);
-    *(u32 *)(base + 4128) = *(u32 *)(info + 128);
-    *(u32 *)(base + 4132) = *(u32 *)(info + 132);
-    *(u32 *)(base + 4136) = *(u32 *)(info + 136);
-    *(u32 *)(base + 4140) = *(u32 *)(info + 140);
-    base[4012] = info[106];
-    *(u32 *)(base + 4244) = *(u32 *)(info + 116);
-    sceNetInetInetNtop(2, info + 124, (char *)(base + 4272), 16);
-    sceNetInetInetNtop(2, info + 128, (char *)(base + 4288), 16);
-    sceNetInetInetNtop(2, info + 132, (char *)(base + 4304), 16);
-    sceNetInetInetNtop(2, info + 136, (char *)(base + 4532), 16);
-    sceNetInetInetNtop(2, info + 140, (char *)(base + 4548), 16);
+    sceKernelMemcpy(ctx->bss.bssid, info.bssid, 6);
+    ctx->bss.assoc_mode = info.assoc_mode;
+    ctx->bss.rssi_caps = info.rssi_caps;
+    ctx->bss.channel = info.channel;
+    ctx->bss.ssid_len = info.ssid_len;
+    sceNet_lib_B5CE388A(ctx->bss.ssid, info.ssid, 32);
+    sceNet_lib_B5CE388A(ctx->cfg_name, info.name, 64);
+    ctx->ip_params[0] = info.ip_addr;
+    ctx->ip_params[1] = info.netmask;
+    ctx->ip_params[2] = info.gateway;
+    ctx->ip_params[3] = info.dns_a;
+    ctx->ip_params[4] = info.dns_b;
+    ctx->signal_strength = (u8)info.rssi_caps;
+    ctx->cfg_security = (int)info.security;
+    sceNetInetInetNtop(2, &info.ip_addr, ctx->cfg_addr.static_ip.ip, 16);
+    sceNetInetInetNtop(2, &info.netmask, ctx->cfg_addr.static_ip.mask, 16);
+    sceNetInetInetNtop(2, &info.gateway, ctx->cfg_addr.static_ip.gw, 16);
+    sceNetInetInetNtop(2, &info.dns_a, ctx->cfg_dns_a, 16);
+    sceNetInetInetNtop(2, &info.dns_b, ctx->cfg_dns_b, 16);
     return 0;
 }
 
 static int apctl_check_roam(ApctlCtx *ctx)
 {
-    u8 *base = (u8 *)ctx;
     u8 sig;
     u8 scan_buf[192];
     u32 scan_len = sizeof(scan_buf);
     u32 ev = 0;
+    WlanScanEntry *cur;
+    int ret;
 
-    int ret = sceNet_lib_F355C73B(ctx->ifname, 5, &sig);
+    ret = sceNet_lib_F355C73B(ctx->ifname, 5, &sig);
     if (ret < 0)
         return ret;
-    base[4012] = sig;
+    ctx->signal_strength = sig;
     ctx->flags |= 0x80;
-    ret = apctl_wlan_scan(ctx->ifname, base + 4040, base[4039], scan_buf, &scan_len);
+    ret = apctl_wlan_scan(ctx->ifname, ctx->bss.ssid, ctx->bss.ssid_len, scan_buf, &scan_len);
     ctx->flags &= ~0x80u;
     apctl_wait_events(ctx, 42, &ev, 0);
     if (ev & 2)
@@ -718,13 +852,13 @@ static int apctl_check_roam(ApctlCtx *ctx)
     if (ret < 0)
         return ret;
 
-    u8 *cur = scan_buf;
+    cur = (WlanScanEntry *)scan_buf;
     while (cur != NULL) {
-        if (*(u32 *)(cur + 44) == 1 && cur[11] == base[4039] &&
-            sceNet_lib_E0A81C7C(cur + 12, base + 4040, cur[11]) == 0) {
-            return (sceNet_lib_E0A81C7C(cur + 4, base + 4032, 6) != 0) ? 1 : 0;
+        if (cur->bss_type == 1 && cur->ssid_len == ctx->bss.ssid_len &&
+            sceNet_lib_E0A81C7C(cur->ssid, ctx->bss.ssid, cur->ssid_len) == 0) {
+            return (sceNet_lib_E0A81C7C(cur->bssid, ctx->bss.bssid, 6) != 0) ? 1 : 0;
         }
-        cur = *(u8 **)cur;
+        cur = cur->next;
     }
     return 0;
 }
@@ -757,43 +891,45 @@ static int apctl_wlan_detach(ApctlCtx *ctx, int event)
     return 0;
 }
 
-static int apctl_scan1(ApctlCtx *ctx)
+static int apctl_scan_a(ApctlCtx *ctx)
 {
     int ret = sceNet_lib_5216CBF5(ctx->ifname);
     if (ret >= 0) {
-        ctx->scan1_len = 1920;
-        ret = apctl_wlan_scan(ctx->ifname, ctx->scan1_ssid, ctx->scan1_ssid_len, ctx->scan1_buf, &ctx->scan1_len);
+        ctx->scan_a_len = 1920;
+        ret = apctl_wlan_scan(ctx->ifname, ctx->scan_a_ssid, ctx->scan_a_ssid_len, ctx->scan_a_buf, &ctx->scan_a_len);
     }
     sceNet_lib_D2422E4D(ctx->ifname);
     return ret;
 }
 
-static int apctl_scan2(ApctlCtx *ctx)
+static int apctl_scan_b(ApctlCtx *ctx)
 {
     int ret = sceNet_lib_5216CBF5(ctx->ifname);
     if (ret >= 0) {
-        ctx->scan2_len = 1920;
-        ret = apctl_wlan_scan(ctx->ifname, ctx->scan2_ssid, ctx->scan2_ssid_len, ctx->scan2_buf, &ctx->scan2_len);
+        ctx->scan_b_len = 1920;
+        ret = apctl_wlan_scan(ctx->ifname, ctx->scan_b_ssid, ctx->scan_b_ssid_len, ctx->scan_b_buf, &ctx->scan_b_len);
     }
     sceNet_lib_D2422E4D(ctx->ifname);
     return ret;
 }
 
-static void apctl_scan2_in_state(ApctlCtx *ctx)
+static u32 apctl_scan_b_in_state(ApctlCtx *ctx)
 {
     u8 sig;
+    int ret;
     if (sceNet_lib_F355C73B(ctx->ifname, 5, &sig) >= 0) {
-        ((u8 *)ctx)[4012] = sig;
+        ctx->signal_strength = sig;
         ctx->flags |= 0x80;
     }
-    ctx->scan2_len = 1920;
-    int ret = apctl_wlan_scan(ctx->ifname, ctx->scan2_ssid, ctx->scan2_ssid_len, ctx->scan2_buf, &ctx->scan2_len);
+    ctx->scan_b_len = 1920;
+    ret = apctl_wlan_scan(ctx->ifname, ctx->scan_b_ssid, ctx->scan_b_ssid_len, ctx->scan_b_buf, &ctx->scan_b_len);
     ctx->flags &= ~0x80u;
     apctl_notify_all(ctx, ctx->state, ctx->state, 11, ret);
     ctx->flags &= ~0x200u;
+    return ctx->flags;
 }
 
-static void apctl_poll_scan2_clear(ApctlCtx *ctx)
+static void apctl_poll_scan_b_clear(ApctlCtx *ctx)
 {
     u32 ev = 0;
     apctl_wait_events(ctx, 512, &ev, 0);
@@ -801,19 +937,18 @@ static void apctl_poll_scan2_clear(ApctlCtx *ctx)
 
 static int apctl_load_default_config(ApctlCtx *ctx)
 {
-    u8 *base = (u8 *)ctx;
-    sceNet_lib_80C9F02A((char *)(base + 4144), "Net Config1");
-    sceNet_lib_80C9F02A((char *)(base + 4208), "ABCDEFG");
-    *(u32 *)(base + 4268) = 1;
-    *(u32 *)(base + 4244) = 0;
-    *(u32 *)(base + 4264) = 0;
-    *(u32 *)(base + 4528) = 0;
-    sceNet_lib_80C9F02A((char *)(base + 4532), "192.168.11.1");
-    sceNet_lib_80C9F02A((char *)(base + 4548), "192.168.11.1");
-    *(u32 *)(base + 5028) = 1;
-    *(u32 *)(base + 5032) = 0;
-    *(u32 *)(base + 4564) = 0;
-    *(u32 *)(base + 4700) = 0;
+    sceNet_lib_80C9F02A(ctx->cfg_name, "Net Config1");
+    sceNet_lib_80C9F02A(ctx->cfg_ssid, "ABCDEFG");
+    ctx->cfg_ip_mode = 1;
+    ctx->cfg_security = 0;
+    ctx->cfg_eap_mode = 0;
+    ctx->cfg_dns_flag = 0;
+    sceNet_lib_80C9F02A(ctx->cfg_dns_a, "192.168.11.1");
+    sceNet_lib_80C9F02A(ctx->cfg_dns_b, "192.168.11.1");
+    ctx->cfg_browser_flag = 1;
+    ctx->cfg_wifisvc_flag = 0;
+    ctx->cfg_proxy_use = 0;
+    ctx->cfg_eap_type = 0;
     ctx->auth_mode = 0;
     return 0;
 }
@@ -826,8 +961,9 @@ static int apctl_wlan_clear(void)
 static int apctl_save_ip_param(ApctlCtx *ctx, const void *ip)
 {
     char buf[128];
+    int ret;
     sceUtility_netparam_internal_61D0686E(0);
-    int ret = sceUtility_netparam_internal_6B1BC62C(0);
+    ret = sceUtility_netparam_internal_6B1BC62C(0);
     if (ret < 0)
         return ret;
     ret = sceUtility_netparam_internal_4CB183A4(ctx->config_id, 0);
@@ -845,11 +981,12 @@ static int apctl_save_ip_param(ApctlCtx *ctx, const void *ip)
  * State machine handlers & thread
  * ========================================================================= */
 
-static int apctl_state_scan2_idle(ApctlCtx *ctx, int *next_state, int *event)
+static int apctl_state_scan_b_idle(ApctlCtx *ctx, int *next_state, int *event)
 {
     u32 ev = 0;
+    int ret;
     sceNet_lib_B5CE388A(ctx->ifname, "wlan", 16);
-    int ret = apctl_wlan_attach(ctx, &ev);
+    ret = apctl_wlan_attach(ctx, &ev);
     if (ret < 0) {
         *event = 6;
         ctx->last_error = ret;
@@ -858,7 +995,7 @@ static int apctl_state_scan2_idle(ApctlCtx *ctx, int *next_state, int *event)
     } else {
         sceNet_lib_AB7DD9A5(ctx->ifname, 0, 0);
         ret = sceNet_lib_AB7DD9A5(ctx->ifname, ctx->evf, 32);
-        if (ret >= 0 && sceWlanGetSwitchState() != 0 && (ret = apctl_scan2(ctx)) >= 0) {
+        if (ret >= 0 && sceWlanGetSwitchState() != 0 && (ret = apctl_scan_b(ctx)) >= 0) {
             *event = 11;
         } else {
             if (ret >= 0)
@@ -868,11 +1005,14 @@ static int apctl_state_scan2_idle(ApctlCtx *ctx, int *next_state, int *event)
         ctx->last_error = ret;
     }
     apctl_wlan_detach(ctx, *event);
-    if (*event != 5)
-        *event = 11;
-    *next_state = 0;
-    ctx->flags &= ~0x200u;
-    return 0;
+    {
+        int prev_ev = *event;
+        if (*event != 5)
+            *event = 11;
+        *next_state = 0;
+        ctx->flags &= ~0x200u;
+        return prev_ev;
+    }
 }
 
 static int apctl_state_disconnected(ApctlCtx *ctx, int prev, int *next_state, int *event)
@@ -886,12 +1026,12 @@ static int apctl_state_disconnected(ApctlCtx *ctx, int prev, int *next_state, in
         ctx->roam_start_sec = 0;
         ctx->flags &= 0xFFFFF28Fu;
         ctx->last_error = 0;
-        sceKernelMemset((u8 *)ctx + 4144, 0, 1004);
-        sceKernelMemset((u8 *)ctx + 5148, 0, 257);
+        sceKernelMemset(ctx->cfg_name, 0, 1004);
+        sceKernelMemset(ctx->cfg_extra_str, 0, 257);
         sceKernelWaitEventFlag(ctx->evf, 0xFFFFFFFFu, 33, &bits, NULL);
         if ((bits & 0x200) == 0)
             break;
-        apctl_state_scan2_idle(ctx, next_state, event);
+        apctl_state_scan_b_idle(ctx, next_state, event);
         if (*event == 11) {
             apctl_notify_all(ctx, ctx->state, *next_state, 11, ctx->last_error);
         } else if (*event == 5) {
@@ -922,37 +1062,46 @@ static int apctl_state_disconnected(ApctlCtx *ctx, int prev, int *next_state, in
 static int apctl_state_scanning(ApctlCtx *ctx, int prev, int *next_state, int *event)
 {
     u32 ev = 0;
+    int ret;
+    int set_err = 1;
     (void)prev;
+
     sceNet_lib_B5CE388A(ctx->ifname, "wlan", 16);
-    int ret = apctl_wlan_attach(ctx, &ev);
-    if (ret >= 0) {
+    do {
+        ret = apctl_wlan_attach(ctx, &ev);
+        if (ret < 0)
+            break;
         if (ev & 2) {
             *event = 5;
-            goto done;
+            set_err = 0;
+            break;
         }
         sceNet_lib_AB7DD9A5(ctx->ifname, 0, 0);
         ret = sceNet_lib_AB7DD9A5(ctx->ifname, ctx->evf, 32);
-        if (ret >= 0) {
-            if (sceWlanGetSwitchState() == 0) {
-                ret = APCTL_ERR_WLAN_SWITCH_OFF;
-            } else {
-                ret = apctl_scan1(ctx);
-                ev = 0;
-                apctl_wait_events(ctx, 34, &ev, 0);
-                if (ev != 0) {
-                    *event = (ev & 2) ? 5 : 6;
-                    goto done;
-                }
-                if (ret >= 0) {
-                    *event = 2;
-                    goto done;
-                }
-            }
+        if (ret < 0)
+            break;
+        if (sceWlanGetSwitchState() == 0) {
+            ret = APCTL_ERR_WLAN_SWITCH_OFF;
+            break;
         }
+        ret = apctl_scan_a(ctx);
+        ev = 0;
+        apctl_wait_events(ctx, 34, &ev, 0);
+        if (ev != 0) {
+            *event = (ev & 2) ? 5 : 6;
+            set_err = 0;
+            break;
+        }
+        if (ret >= 0) {
+            *event = 2;
+            set_err = 0;
+        }
+    } while (0);
+
+    if (set_err) {
+        *event = 6;
+        ctx->last_error = ret;
     }
-    *event = 6;
-    ctx->last_error = ret;
-done:
     *next_state = 0;
     ctx->flags |= 1;
     apctl_wlan_detach(ctx, *event);
@@ -961,9 +1110,12 @@ done:
 
 static int apctl_state_btdun_joining(ApctlCtx *ctx, int prev, int *next_state, int *event)
 {
+    int ret;
+    int ok = 0;
     (void)prev;
+
     sceNet_lib_B5CE388A(ctx->ifname, "btdun", 16);
-    int ret = sceBtdun_lib_412DA4A1();
+    ret = sceBtdun_lib_412DA4A1();
     if (ret >= 0) {
         sceNet_lib_AB7DD9A5(ctx->ifname, 0, 0);
         ret = sceNet_lib_AB7DD9A5(ctx->ifname, ctx->evf, 32);
@@ -977,18 +1129,19 @@ static int apctl_state_btdun_joining(ApctlCtx *ctx, int prev, int *next_state, i
                     *next_state = 3;
                     *event = 3;
                 }
-                goto check_fail;
+                ok = 1;
             }
         }
     }
-    *next_state = 0;
-    if (ret == APCTL_ERR_CANCELED) {
-        *event = 5;
-    } else {
-        *event = 6;
-        ctx->last_error = ret;
+    if (!ok) {
+        *next_state = 0;
+        if (ret == APCTL_ERR_CANCELED) {
+            *event = 5;
+        } else {
+            *event = 6;
+            ctx->last_error = ret;
+        }
     }
-check_fail:
     if (*next_state == 0) {
         apctl_stop_btdun();
         sceBtdun_lib_523FA5A5();
@@ -1000,99 +1153,124 @@ check_fail:
 static int apctl_state_joining(ApctlCtx *ctx, int prev, int *next_state, int *event)
 {
     u32 ev = 0;
-    int ret = apctl_load_default_config(ctx);
-    if (ret < 0)
-        goto fail;
-    if (sceWlanGetSwitchState() == 0) {
-        ret = APCTL_ERR_WLAN_SWITCH_OFF;
-        goto fail;
-    }
-    if (ctx->cfg_dev_type == 2)
+    int ret;
+    int failed = 0;
+    int ev_aborted = 0;
+    int done = 0;
+
+    ret = apctl_load_default_config(ctx);
+    if (ret >= 0 && sceWlanGetSwitchState() != 0 && ctx->cfg_dev_type == 2)
         return apctl_state_btdun_joining(ctx, prev, next_state, event);
 
-    sceNet_lib_B5CE388A(ctx->ifname, "wlan", 16);
-    if ((ctx->flags & 0x10) == 0) {
-        ret = apctl_wlan_attach(ctx, &ev);
-        if (ret < 0)
-            goto fail;
-        if (ev != 0)
-            goto ev_abort;
-    }
-
-    sceNet_lib_AB7DD9A5(ctx->ifname, 0, 0);
-    ret = sceNet_lib_AB7DD9A5(ctx->ifname, ctx->evf, 32);
-    if (ret < 0)
-        goto fail;
-
-    if (ctx->auth_mode == 2 || ctx->auth_mode == 4) {
-        ret = apctl_wpa_prepare(ctx);
-        if (ret < 0)
-            goto fail;
-    }
-
-    ev = 0;
-    ret = apctl_wait_events(ctx, 42, &ev, 0);
-    if (ev != 0)
-        goto ev_abort;
-
-    for (;;) {
-        ret = apctl_load_wlan_info(ctx);
-        apctl_poll_scan2_clear(ctx);
-        ev = 0;
-        apctl_wait_events(ctx, 42, &ev, 0);
-        if (ev != 0) {
-            if (ev & 2) {
-                *next_state = 0;
-                *event = 5;
-                goto finish;
-            }
-            if (ctx->last_error != APCTL_ERR_ROAM_CHECK) {
-                *next_state = 0;
-                *event = 6;
-                goto finish;
-            }
-        }
-        if (ret >= 0)
+    do {
+        if (ret < 0) {
+            failed = 1;
             break;
-        if (ctx->flags & 0x10) {
-            if ((ctx->flags & 0x20) == 0 ||
-                (ret != (int)0x80410106 && ret != (int)0x80410107 &&
-                 ret != (int)0x80410D07 && ret != (int)0x80410D09 &&
-                 ret != (int)0x80410D11) ||
-                sceNet_lib_75D9985C() >= ctx->roam_start_sec + 10) {
-                ret = APCTL_ERR_DISCONNECTED;
-                goto fail;
-            }
-        } else {
-            if ((u32)(ctx->cfg_security - 1) >= 2 || ret != (int)0x80410D09)
-                goto fail;
         }
+        if (sceWlanGetSwitchState() == 0) {
+            ret = APCTL_ERR_WLAN_SWITCH_OFF;
+            failed = 1;
+            break;
+        }
+
+        sceNet_lib_B5CE388A(ctx->ifname, "wlan", 16);
+        if ((ctx->flags & 0x10) == 0) {
+            ret = apctl_wlan_attach(ctx, &ev);
+            if (ret < 0) {
+                failed = 1;
+                break;
+            }
+            if (ev != 0) {
+                ev_aborted = 1;
+                break;
+            }
+        }
+
+        sceNet_lib_AB7DD9A5(ctx->ifname, 0, 0);
+        ret = sceNet_lib_AB7DD9A5(ctx->ifname, ctx->evf, 32);
+        if (ret < 0) {
+            failed = 1;
+            break;
+        }
+
+        if (ctx->auth_mode == 2 || ctx->auth_mode == 4) {
+            ret = apctl_wpa_prepare(ctx);
+            if (ret < 0) {
+                failed = 1;
+                break;
+            }
+        }
+
+        ev = 0;
+        ret = apctl_wait_events(ctx, 42, &ev, 0);
+        if (ev != 0) {
+            ev_aborted = 1;
+            break;
+        }
+
+        for (;;) {
+            ret = apctl_load_wlan_info(ctx);
+            apctl_poll_scan_b_clear(ctx);
+            ev = 0;
+            apctl_wait_events(ctx, 42, &ev, 0);
+            if (ev != 0) {
+                if (ev & 2) {
+                    *next_state = 0;
+                    *event = 5;
+                    done = 1;
+                    break;
+                }
+                if (ctx->last_error != APCTL_ERR_ROAM_CHECK) {
+                    *next_state = 0;
+                    *event = 6;
+                    done = 1;
+                    break;
+                }
+            }
+            if (ret >= 0)
+                break;
+            if (ctx->flags & 0x10) {
+                if ((ctx->flags & 0x20) == 0 ||
+                    (ret != (int)0x80410106 && ret != (int)0x80410107 &&
+                     ret != (int)0x80410D07 && ret != (int)0x80410D09 &&
+                     ret != (int)0x80410D11) ||
+                    sceNet_lib_75D9985C() >= ctx->roam_start_sec + 10) {
+                    ret = APCTL_ERR_DISCONNECTED;
+                    failed = 1;
+                    break;
+                }
+            } else {
+                if ((u32)(ctx->cfg_security - 1) >= 2 || ret != (int)0x80410D09) {
+                    failed = 1;
+                    break;
+                }
+            }
+        }
+        if (done || failed)
+            break;
+
+        if (ctx->auth_mode == 2) {
+            *next_state = 6;
+        } else if (ctx->auth_mode == 1 || ctx->auth_mode == 4) {
+            *next_state = 5;
+        } else if (ctx->flags & 0x40) {
+            *next_state = 4;
+            ctx->flags &= ~0x30u;
+        } else {
+            *next_state = 3;
+        }
+        *event = 3;
+    } while (0);
+
+    if (ev_aborted) {
+        *next_state = 0;
+        *event = (ev & 2) ? 5 : 6;
+    } else if (failed) {
+        *next_state = 0;
+        *event = 6;
+        ctx->last_error = ret;
     }
 
-    if (ctx->auth_mode == 2) {
-        *next_state = 6;
-    } else if (ctx->auth_mode == 1 || ctx->auth_mode == 4) {
-        *next_state = 5;
-    } else if (ctx->flags & 0x40) {
-        *next_state = 4;
-        ctx->flags &= ~0x30u;
-    } else {
-        *next_state = 3;
-    }
-    *event = 3;
-    goto finish;
-
-ev_abort:
-    *next_state = 0;
-    *event = (ev & 2) ? 5 : 6;
-    goto finish;
-
-fail:
-    *next_state = 0;
-    *event = 6;
-    ctx->last_error = ret;
-
-finish:
     if (*next_state == 0) {
         ctx->flags &= ~0x30u;
         apctl_stop_all_clients(ctx);
@@ -1105,13 +1283,14 @@ finish:
 
 static int apctl_state_eap(ApctlCtx *ctx, int prev, int *next_state, int *event)
 {
+    int ret;
     (void)prev;
-    int ret = apctl_setup_8021x(ctx);
+    ret = apctl_setup_8021x(ctx);
     if (ret >= 0) {
         if (ctx->auth_mode == 4) {
             *next_state = 6;
         } else {
-            eap8021x_set_eap_flag(1);
+            apctl_set_eap_flag_wrapper(ctx, 1);
             if (ctx->flags & 0x40) {
                 *next_state = 4;
                 ctx->flags &= ~0x30u;
@@ -1150,11 +1329,12 @@ static int apctl_state_eap(ApctlCtx *ctx, int prev, int *next_state, int *event)
 
 static int apctl_state_wpa(ApctlCtx *ctx, int prev, int *next_state, int *event)
 {
+    int ret;
     (void)prev;
-    int ret = apctl_setup_wpa(ctx);
+    ret = apctl_setup_wpa(ctx);
     if (ret >= 0) {
         if (ctx->auth_mode == 4)
-            eap8021x_set_eap_flag(1);
+            apctl_set_eap_flag_wrapper(ctx, 1);
         if (ctx->flags & 0x40) {
             *next_state = 4;
             ctx->flags &= ~0x30u;
@@ -1218,7 +1398,7 @@ static int apctl_state_getting_ip(ApctlCtx *ctx, int prev, int *next_state, int 
         *next_state = 4;
         *event = 4;
         if (ctx->cfg_wifisvc_flag == 3)
-            apctl_save_ip_param(ctx, &ctx->ip_addr);
+            apctl_save_ip_param(ctx, &ctx->ip_params[0]);
         ctx->flags = (ctx->flags & ~0x70u) | 0x40;
     }
 
@@ -1251,12 +1431,13 @@ static int apctl_state_got_ip(ApctlCtx *ctx, int prev, int *next_state, int *eve
     ctx->roam_start_sec = 0;
 
     for (;;) {
+        int roam;
         for (;;) {
             ev = 0;
             apctl_wait_events(ctx, 554, &ev, 1);
             if ((ev & 0x200) == 0)
                 break;
-            apctl_scan2_in_state(ctx);
+            apctl_scan_b_in_state(ctx);
             ev &= ~0x200u;
             if (ev != 0)
                 break;
@@ -1279,7 +1460,7 @@ static int apctl_state_got_ip(ApctlCtx *ctx, int prev, int *next_state, int *eve
             *event = 6;
             break;
         }
-        int roam = apctl_check_roam(ctx);
+        roam = apctl_check_roam(ctx);
         if (roam == APCTL_ERR_CANCELED) {
             *event = 5;
             break;
@@ -1340,8 +1521,7 @@ static int apctl_thread(SceSize args, void *argp)
         prev = ctx->state;
         ctx->state = next;
         ctx->event = ev;
-        int err = (ev == 6 || ev == 11) ? ctx->last_error : 0;
-        apctl_notify_all(ctx, prev, ctx->state, ctx->event, err);
+        apctl_notify_state_change(ctx, prev);
     }
     sceNet_lib_AB7DD9A5(ctx->ifname, 0, 0);
     return 0;
@@ -1357,51 +1537,52 @@ static int apctl_core_init(int stack_size, int prio)
     ApctlCtx *ctx = &g_apctl;
     int ret;
 
-    ret = apctl_clients_init(ctx);
-    if (ret < 0)
-        goto fail;
+    do {
+        ret = apctl_clients_init(ctx);
+        if (ret < 0)
+            break;
 
-    sceKernelMemset(g_handlers_pub, 0, sizeof(g_handlers_pub));
-    sceKernelMemset(g_handlers_lib, 0, sizeof(g_handlers_lib));
-    sceKernelMemset(g_handlers_ext, 0, sizeof(g_handlers_ext));
-    sceKernelMemset(ctx, 0, sizeof(ApctlCtx));
-    ctx->thid = -1;
-    ctx->evf = -1;
-    ctx->flags |= 1;
-    ctx->prio = prio;
-    ctx->roam_enabled = 1;
-    sceNet_lib_B5CE388A(ctx->ifname, "wlan", 16);
+        sceKernelMemset(g_handlers_pub, 0, sizeof(g_handlers_pub));
+        sceKernelMemset(g_handlers_lib, 0, sizeof(g_handlers_lib));
+        sceKernelMemset(g_handlers_ext, 0, sizeof(g_handlers_ext));
+        sceKernelMemset(ctx, 0, sizeof(ApctlCtx));
+        ctx->thid = -1;
+        ctx->evf = -1;
+        ctx->flags |= 1;
+        ctx->prio = prio;
+        ctx->roam_enabled = 1;
+        sceNet_lib_B5CE388A(ctx->ifname, "wlan", 16);
 
-    ret = sceKernelCreateLwMutex(ctx->mtx, "SceNetApctl", 0x200, 0, NULL);
-    if (ret < 0)
-        goto fail;
-    ctx->mtx_inited = 1;
+        ret = sceKernelCreateLwMutex(ctx->mtx, "SceNetApctl", 0x200, 0, NULL);
+        if (ret < 0)
+            break;
+        ctx->mtx_inited = 1;
 
-    ret = sceKernelCreateEventFlag("SceNetApctl", 0, 0, NULL);
-    if (ret < 0)
-        goto fail;
-    ctx->evf = ret;
+        ret = sceKernelCreateEventFlag("SceNetApctl", 0, 0, NULL);
+        if (ret < 0)
+            break;
+        ctx->evf = ret;
 
-    opt.size = 8;
-    ret = sceKernelQueryMemoryInfo(ctx, &opt.mpid, NULL);
-    if (ret < 0)
-        goto fail;
+        opt.size = 8;
+        ret = sceKernelQueryMemoryInfo(ctx, &opt.mpid, NULL);
+        if (ret < 0)
+            break;
 
-    ret = sceKernelCreateThread("SceNetApctl", apctl_thread, ctx->prio, stack_size, 0, &opt);
-    if (ret < 0)
-        goto fail;
-    ctx->thid = ret;
+        ret = sceKernelCreateThread("SceNetApctl", apctl_thread, ctx->prio, stack_size, 0, &opt);
+        if (ret < 0)
+            break;
+        ctx->thid = ret;
 
-    ret = sceKernelStartThread(ctx->thid, 4, &ctx);
-    if (ret < 0)
-        goto fail;
+        ret = sceKernelStartThread(ctx->thid, 4, &ctx);
+        if (ret < 0)
+            break;
 
-    ctx->extra_stack = (u32)(stack_size - 5120);
-    if (opt.mpid == 5)
-        ctx->flags |= 8;
-    return 0;
+        ctx->extra_stack = (u32)(stack_size - 5120);
+        if (opt.mpid == 5)
+            ctx->flags |= 8;
+        return 0;
+    } while (0);
 
-fail:
     if (ctx->thid >= 0) {
         sceKernelTerminateThread(ctx->thid);
         sceKernelDeleteThread(ctx->thid);
@@ -1445,7 +1626,8 @@ static int apctl_core_term(void)
     return 0;
 }
 
-static ApctlHandler *get_handler_table(int table)
+static inline __attribute__((always_inline))
+ApctlHandler *get_handler_table(int table)
 {
     if (table == 1) return g_handlers_lib;
     if (table == 2) return g_handlers_ext;
@@ -1454,11 +1636,12 @@ static ApctlHandler *get_handler_table(int table)
 
 static int apctl_add_handler_internal(void *fn, void *arg, int *id_out, int table)
 {
+    ApctlHandler *tbl;
+    int i;
     int ret = sceKernelLockLwMutex(g_apctl.mtx, 1, NULL);
     if (ret < 0)
         return ret;
-    ApctlHandler *tbl = get_handler_table(table);
-    int i;
+    tbl = get_handler_table(table);
     for (i = 0; i < 2; i++) {
         if (tbl[i].fn == NULL)
             break;
@@ -1535,9 +1718,18 @@ static int apctl_notify_lib(ApctlCtx *ctx, int old_s, int new_s, int ev, int err
     return 0;
 }
 
-static int apctl_connect_internal(int conn_idx, int mode, int arg2, int bt_id, const char *bt_init, void *bt_cb)
+static int __attribute__((noinline))
+apctl_notify_state_change(ApctlCtx *ctx, int prev_state)
 {
-    (void)arg2;
+    int err = 0;
+    if (ctx->event == 6 || ctx->event == 11)
+        err = ctx->last_error;
+    return apctl_notify_all(ctx, prev_state, ctx->state, ctx->event, err);
+}
+
+static int apctl_connect_internal(int conn_idx, int mode, int extra_flag, int bt_id, const char *bt_init, void *bt_cb)
+{
+    (void)extra_flag;
     if ((g_apctl.flags & 1) == 0)
         return APCTL_ERR_BUSY;
     g_apctl.flags &= ~0x501u;
@@ -1547,11 +1739,13 @@ static int apctl_connect_internal(int conn_idx, int mode, int arg2, int bt_id, c
         g_apctl.flags |= 0x400;
     } else if (mode == 4) {
         char buf[68];
+        u32 val;
+        int ret;
         sceUtility_netparam_internal_61D0686E(0);
-        int ret = sceUtility_netparam_internal_6B1BC62C(0);
+        ret = sceUtility_netparam_internal_6B1BC62C(0);
         if (ret < 0)
             return ret;
-        u32 val = 2;
+        val = 2;
         ret = sceUtility_netparam_internal_239F260D(17, &val);
         if (ret < 0)
             return ret;
@@ -1608,7 +1802,7 @@ static int apctl_disconnect_internal(void)
     return 0;
 }
 
-static int apctl_req_scan1(const char *ssid, u32 len)
+static int apctl_req_scan_a(const char *ssid, u32 len)
 {
     if (len >= 33)
         return APCTL_ERR_SSID_TOO_LONG;
@@ -1616,17 +1810,17 @@ static int apctl_req_scan1(const char *ssid, u32 len)
         return APCTL_ERR_BUSY;
     g_apctl.flags &= ~1u;
     if (ssid != NULL) {
-        sceKernelMemcpy(g_apctl.scan1_ssid, ssid, len);
-        g_apctl.scan1_ssid_len = len;
+        sceKernelMemcpy(g_apctl.scan_a_ssid, ssid, len);
+        g_apctl.scan_a_ssid_len = len;
     } else {
-        sceKernelMemset(g_apctl.scan1_ssid, 0, 32);
-        g_apctl.scan1_ssid_len = 0;
+        sceKernelMemset(g_apctl.scan_a_ssid, 0, 32);
+        g_apctl.scan_a_ssid_len = 0;
     }
     sceKernelSetEventFlag(g_apctl.evf, 4);
     return 0;
 }
 
-static int apctl_req_scan2(const char *ssid, u32 len)
+static int apctl_req_scan_b(const char *ssid, u32 len)
 {
     if (len >= 33)
         return APCTL_ERR_SSID_TOO_LONG;
@@ -1634,13 +1828,59 @@ static int apctl_req_scan2(const char *ssid, u32 len)
         return APCTL_ERR_BUSY;
     g_apctl.flags |= 0x200;
     if (ssid != NULL) {
-        sceKernelMemcpy(g_apctl.scan2_ssid, ssid, len);
-        g_apctl.scan2_ssid_len = len;
+        sceKernelMemcpy(g_apctl.scan_b_ssid, ssid, len);
+        g_apctl.scan_b_ssid_len = len;
     } else {
-        sceKernelMemset(g_apctl.scan2_ssid, 0, 32);
-        g_apctl.scan2_ssid_len = 0;
+        sceKernelMemset(g_apctl.scan_b_ssid, 0, 32);
+        g_apctl.scan_b_ssid_len = 0;
     }
     sceKernelSetEventFlag(g_apctl.evf, 512);
+    return 0;
+}
+
+static int __attribute__((noinline))
+apctl_get_bss_list_a(u32 *size_inout, void *buf)
+{
+    return apctl_get_bss_list(&g_apctl, size_inout, buf, g_apctl.scan_a_len, g_apctl.scan_a_buf);
+}
+
+static int __attribute__((noinline))
+apctl_get_bss_entry_a(int id, int code, void *out)
+{
+    return apctl_get_bss_entry(&g_apctl, id, code, out, g_apctl.scan_a_len, g_apctl.scan_a_buf);
+}
+
+static int __attribute__((noinline))
+apctl_get_bss_list_b(u32 *size_inout, void *buf)
+{
+    return apctl_get_bss_list(&g_apctl, size_inout, buf, g_apctl.scan_b_len, g_apctl.scan_b_buf);
+}
+
+static int __attribute__((noinline))
+apctl_get_bss_entry_b(int id, int code, void *out)
+{
+    return apctl_get_bss_entry(&g_apctl, id, code, out, g_apctl.scan_b_len, g_apctl.scan_b_buf);
+}
+
+static int __attribute__((noinline))
+apctl_set_roam_enabled(int enable)
+{
+    g_apctl.roam_enabled = enable;
+    return 0;
+}
+
+static int __attribute__((noinline))
+apctl_get_extra_str(char **out_ptr)
+{
+    *out_ptr = g_apctl.cfg_extra_str;
+    return 0;
+}
+
+static int __attribute__((noinline))
+apctl_set_extra_str(const char *str)
+{
+    sceNet_lib_B5CE388A(g_apctl.cfg_extra_str, str, 257);
+    g_apctl.cfg_extra_str[256] = '\0';
     return 0;
 }
 
@@ -1720,18 +1960,17 @@ static int apctl_drain_wlan_events(ApctlCtx *ctx, u32 *out_bits)
             *out_bits &= ~0x20u;
             break;
         case 10:
-        case 11:
-            if (g_wpa_started != 0) {
-                int wret = (ev == 10) ? wpa_notify_mic_err_unicast() : wpa_notify_mic_err_multicast();
-                if (wret < 0) {
-                    *out_bits |= 8;
-                    ctx->last_error = wret;
-                    fatal++;
-                    break;
-                }
+        case 11: {
+            int wret = apctl_dispatch_mic_err(ctx, (int)ev);
+            if (wret < 0) {
+                *out_bits |= 8;
+                ctx->last_error = wret;
+                fatal++;
+                break;
             }
             *out_bits &= ~0x20u;
             break;
+        }
         case 13:
             if (ctx->roam_enabled == 0) {
                 *out_bits &= ~0x20u;
@@ -1797,12 +2036,14 @@ static void pppoe_cb(int ev, int err)
 
 static void eap_cb(int ev, int err)
 {
-    if (ev == 0) {
-        if (g_client_ctx->state == 5)
-            sceKernelSetEventFlag(g_client_ctx->evf, 128);
-    } else if (ev == 1) {
-        g_client_ctx->last_error = err;
-        sceKernelSetEventFlag(g_client_ctx->evf, 8);
+    if (ev == 1) {
+        ApctlCtx *ctx = g_client_ctx;
+        ctx->last_error = err;
+        sceKernelSetEventFlag(ctx->evf, 8);
+    } else if (ev == 0) {
+        ApctlCtx *ctx = g_client_ctx;
+        if (ctx->state == 5)
+            sceKernelSetEventFlag(ctx->evf, 128);
     }
 }
 
@@ -1844,16 +2085,18 @@ static void btdun_cb(int ev, int err)
     }
 }
 
-static int apctl_wait_client_loop(ApctlCtx *ctx, u32 wait_mask, u32 done_bit)
+static inline __attribute__((always_inline))
+int apctl_wait_client_loop(ApctlCtx *ctx, u32 wait_mask, u32 done_bit)
 {
     u32 ev = 0;
     for (;;) {
+        int roam;
         for (;;) {
             ev = 0;
             apctl_wait_events(ctx, wait_mask, &ev, 1);
             if ((ev & 0x200) == 0)
                 break;
-            apctl_scan2_in_state(ctx);
+            apctl_scan_b_in_state(ctx);
             ev &= ~0x200u;
             if (ev != 0)
                 break;
@@ -1864,7 +2107,7 @@ static int apctl_wait_client_loop(ApctlCtx *ctx, u32 wait_mask, u32 done_bit)
             return 0;
         if (ctx->last_error != APCTL_ERR_ROAM_CHECK)
             return ctx->last_error;
-        int roam = apctl_check_roam(ctx);
+        roam = apctl_check_roam(ctx);
         if (roam < 0)
             return roam;
         if (roam != 0) {
@@ -1881,83 +2124,93 @@ static int apctl_wait_client_loop(ApctlCtx *ctx, u32 wait_mask, u32 done_bit)
 
 static int apctl_setup_dhcp(ApctlCtx *ctx)
 {
-    u32 zero1 = 0, zero2 = 0;
-    u8 cfg[300];
-    int ret = sceNetInet_lib_AAF4895A(&zero1, &zero2);
-    if (ret < 0)
-        goto fail;
+    u32 zero_a = 0, zero_b = 0;
+    u32 clr_a, clr_b;
+    ApctlDhcpCfg cfg;
+    int ret;
 
-    sceKernelMemset(cfg, 0, sizeof(cfg));
-    *(u32 *)cfg = (u32)ctx->cfg_dns_flag;
-    sceNet_lib_80C9F02A((char *)(cfg + 4), ctx->cfg_dns1);
-    sceNet_lib_80C9F02A((char *)(cfg + 20), ctx->cfg_dns2);
-    if (ctx->flags & 0x100)
-        *(u32 *)(cfg + 292) = 1;
-    if (ctx->cfg_wifisvc_flag == 3)
-        *(u32 *)(cfg + 296) = ctx->cfg_wifisvc_ip;
+    do {
+        ret = sceNetInet_lib_AAF4895A(&zero_a, &zero_b);
+        if (ret < 0)
+            break;
 
-    ret = dhcp_start("wlan", dhcp_cb, 0x4000, ctx->prio, 0, cfg);
-    if (ret < 0)
-        goto fail;
+        sceKernelMemset(&cfg, 0, sizeof(cfg));
+        cfg.dns_flag = (u32)ctx->cfg_dns_flag;
+        sceNet_lib_80C9F02A(cfg.dns_a, ctx->cfg_dns_a);
+        sceNet_lib_80C9F02A(cfg.dns_b, ctx->cfg_dns_b);
+        if (ctx->flags & 0x100)
+            cfg.mcast_flag = 1;
+        if (ctx->cfg_wifisvc_flag == 3)
+            cfg.req_ip = ctx->cfg_wifisvc_ip;
 
-    ret = apctl_wait_client_loop(ctx, 570, 16);
-    if (ret == 0) {
-        g_dhcp_active = 1;
-        return 0;
-    }
-    dhcp_stop();
-fail:
-    zero1 = 0; zero2 = 0;
-    sceNetInet_lib_AAF4895A(&zero1, &zero2);
+        ret = dhcp_start("wlan", dhcp_cb, 0x4000, ctx->prio, 0, &cfg);
+        if (ret < 0)
+            break;
+
+        ret = apctl_wait_client_loop(ctx, 570, 16);
+        if (ret == 0) {
+            g_dhcp_active = 1;
+            return 0;
+        }
+        dhcp_stop();
+    } while (0);
+
+    clr_a = 0; clr_b = 0;
+    sceNetInet_lib_AAF4895A(&clr_a, &clr_b);
     return ret;
 }
 
 static int apctl_setup_pppoe(ApctlCtx *ctx)
 {
-    u32 zero1 = 0, zero2 = 0;
-    u8 cfg[292];
-    int ret = sceNetInet_lib_AAF4895A(&zero1, &zero2);
-    if (ret < 0)
-        goto fail;
+    u32 zero_a = 0, zero_b = 0;
+    u32 clr_a, clr_b;
+    ApctlPppoeCfg cfg;
+    int ret;
 
-    sceKernelMemset(cfg, 0, sizeof(cfg));
-    *(u32 *)cfg = (u32)ctx->cfg_dns_flag;
-    sceNet_lib_80C9F02A((char *)(cfg + 4), ctx->cfg_dns1);
-    sceNet_lib_80C9F02A((char *)(cfg + 20), ctx->cfg_dns2);
-    sceNet_lib_80C9F02A((char *)(cfg + 36), ctx->cfg_pppoe_user);
-    sceNet_lib_80C9F02A((char *)(cfg + 164), ctx->cfg_pppoe_pass);
+    do {
+        ret = sceNetInet_lib_AAF4895A(&zero_a, &zero_b);
+        if (ret < 0)
+            break;
 
-    ret = pppoe_start("wlan", pppoe_cb, 0x4000, ctx->prio, 0, cfg);
-    if (ret < 0)
-        goto fail;
+        sceKernelMemset(&cfg, 0, sizeof(cfg));
+        cfg.dns_flag = (u32)ctx->cfg_dns_flag;
+        sceNet_lib_80C9F02A(cfg.dns_a, ctx->cfg_dns_a);
+        sceNet_lib_80C9F02A(cfg.dns_b, ctx->cfg_dns_b);
+        sceNet_lib_80C9F02A(cfg.user, ctx->cfg_addr.pppoe_user);
+        sceNet_lib_80C9F02A(cfg.pass, ctx->cfg_pppoe_pass);
 
-    ret = apctl_wait_client_loop(ctx, 570, 16);
-    if (ret == 0) {
-        g_pppoe_active = 1;
-        return 0;
-    }
-    pppoe_stop_signal();
-    pppoe_stop_wait();
-fail:
-    zero1 = 0; zero2 = 0;
-    sceNetInet_lib_AAF4895A(&zero1, &zero2);
+        ret = pppoe_start("wlan", pppoe_cb, 0x4000, ctx->prio, 0, &cfg);
+        if (ret < 0)
+            break;
+
+        ret = apctl_wait_client_loop(ctx, 570, 16);
+        if (ret == 0) {
+            g_pppoe_active = 1;
+            return 0;
+        }
+        pppoe_stop_signal();
+        pppoe_stop_wait();
+    } while (0);
+
+    clr_a = 0; clr_b = 0;
+    sceNetInet_lib_AAF4895A(&clr_a, &clr_b);
     return ret;
 }
 
 static int apctl_setup_8021x(ApctlCtx *ctx)
 {
     u8 bssid[128];
-    u8 cfg[268];
+    Apctl8021xCfg cfg;
     int ret = apctl_get_info_internal(ctx, ctx->state, 1, bssid, 1);
     if (ret < 0)
         return ret;
-    sceKernelMemset(cfg, 0, sizeof(cfg));
-    *(u32 *)cfg = (u32)ctx->cfg_eap_type;
-    sceKernelMemcpy(cfg + 4, bssid, 6);
-    sceNet_lib_80C9F02A((char *)(cfg + 10), ctx->cfg_eap_user);
-    sceNet_lib_80C9F02A((char *)(cfg + 138), ctx->cfg_eap_pass);
+    sceKernelMemset(&cfg, 0, sizeof(cfg));
+    cfg.eap_type = (u32)ctx->cfg_eap_type;
+    sceKernelMemcpy(cfg.bssid, bssid, 6);
+    sceNet_lib_80C9F02A(cfg.user, ctx->cfg_eap_user);
+    sceNet_lib_80C9F02A(cfg.pass, ctx->cfg_eap_pass);
 
-    ret = eap8021x_start("wlan", eap_cb, 0x4000, ctx->prio, 0, cfg);
+    ret = eap8021x_start("wlan", eap_cb, 0x4000, ctx->prio, 0, &cfg);
     if (ret < 0)
         return ret;
 
@@ -1972,7 +2225,7 @@ static int apctl_setup_8021x(ApctlCtx *ctx)
 
 static int apctl_setup_wpa(ApctlCtx *ctx)
 {
-    int ret = wpa_start("wlan", wpa_cb, 0x4000, ctx->prio, 0, ctx->bss_info);
+    int ret = wpa_start("wlan", wpa_cb, 0x4000, ctx->prio, 0, &ctx->bss);
     if (ret < 0)
         return ret;
     g_wpa_started = 1;
@@ -1987,25 +2240,25 @@ static int apctl_setup_wpa(ApctlCtx *ctx)
 
 static int apctl_setup_btdun_dial(ApctlCtx *ctx)
 {
-    u32 zero1 = 0, zero2 = 0;
-    u8 cfg[400];
-    int ret = sceNetInet_lib_AAF4895A(&zero1, &zero2);
+    u32 zero_a = 0, zero_b = 0;
+    ApctlBtdunCfg cfg;
+    int ret = sceNetInet_lib_AAF4895A(&zero_a, &zero_b);
     if (ret < 0)
         return ret;
-    sceKernelMemset(cfg, 0, sizeof(cfg));
-    *(u32 *)cfg = (u32)ctx->cfg_btdun_id;
-    sceKernelMemcpy(cfg + 4, ctx->cfg_btdun_init, 65);
+    sceKernelMemset(&cfg, 0, sizeof(cfg));
+    cfg.device_id = (u32)ctx->cfg_btdun_id;
+    sceKernelMemcpy(cfg.init_cmd, ctx->cfg_btdun_init, 65);
     if (ctx->flags & 0x800) {
-        *(void (**)(void))(cfg + 396) = apctl_btdun_at_trampoline;
+        cfg.log_cb = apctl_btdun_at_trampoline;
     } else {
-        sceKernelMemcpy(cfg + 69, ctx->cfg_btdun_dial, 33);
-        sceKernelMemcpy(cfg + 102, ctx->cfg_pppoe_user, 128);
-        sceKernelMemcpy(cfg + 230, ctx->cfg_pppoe_pass, 128);
-        *(u32 *)(cfg + 360) = (u32)ctx->cfg_dns_flag;
-        sceKernelMemcpy(cfg + 364, ctx->cfg_dns1, 16);
-        sceKernelMemcpy(cfg + 380, ctx->cfg_dns2, 16);
+        sceKernelMemcpy(cfg.dial_num, ctx->cfg_btdun_dial, 33);
+        sceKernelMemcpy(cfg.user, ctx->cfg_addr.pppoe_user, 128);
+        sceKernelMemcpy(cfg.pass, ctx->cfg_pppoe_pass, 128);
+        cfg.dns_flag = (u32)ctx->cfg_dns_flag;
+        sceKernelMemcpy(cfg.dns_a, ctx->cfg_dns_a, 16);
+        sceKernelMemcpy(cfg.dns_b, ctx->cfg_dns_b, 16);
     }
-    ret = btdun_start(btdun_cb, 0, 0x4000, ctx->prio, cfg);
+    ret = btdun_start(btdun_cb, 0, 0x4000, ctx->prio, &cfg);
     if (ret < 0)
         return ret;
     ret = apctl_wait_client_loop(ctx, 1546, 1024);
@@ -2025,65 +2278,91 @@ static int apctl_setup_btdun_ip(ApctlCtx *ctx)
     return ret;
 }
 
-static int apctl_parse_static_ip(ApctlCtx *ctx, void *ip, void *mask, void *gw, u32 *dns1, void *dns2)
+static int __attribute__((noinline))
+apctl_set_eap_flag_wrapper(ApctlCtx *ctx, int val)
 {
-    u8 *base = (u8 *)ctx;
-    if (sceNetInetInetPton(2, (const char *)(base + 4272), ip) <= 0 ||
-        sceNetInetInetPton(2, (const char *)(base + 4288), mask) <= 0 ||
-        sceNetInetInetPton(2, (const char *)(base + 4304), gw) <= 0)
+    (void)ctx;
+    eap8021x_set_eap_flag(val);
+    return 0;
+}
+
+static int __attribute__((noinline))
+apctl_dispatch_mic_err(ApctlCtx *ctx, int ev)
+{
+    (void)ctx;
+    if (g_wpa_started != 0) {
+        if (ev == 10)
+            return wpa_notify_mic_err_unicast();
+        if (ev == 11)
+            return wpa_notify_mic_err_multicast();
+    }
+    return 0;
+}
+
+static int apctl_parse_static_ip(ApctlCtx *ctx, void *ip, void *mask, void *gw, u32 *dns_a, void *dns_b)
+{
+    int ret;
+    if (sceNetInetInetPton(2, ctx->cfg_addr.static_ip.ip, ip) <= 0 ||
+        sceNetInetInetPton(2, ctx->cfg_addr.static_ip.mask, mask) <= 0 ||
+        sceNetInetInetPton(2, ctx->cfg_addr.static_ip.gw, gw) <= 0)
         return APCTL_ERR_INVALID_PARAM;
-    sceKernelMemset(dns1, 0, 4);
-    sceKernelMemset(dns2, 0, 4);
-    int ret = sceNetInetInetAton((const char *)(base + 4532), dns1);
-    if (*dns1 != 0)
-        return sceNetInetInetAton((const char *)(base + 4548), dns2);
+    sceKernelMemset(dns_a, 0, 4);
+    sceKernelMemset(dns_b, 0, 4);
+    ret = sceNetInetInetAton(ctx->cfg_dns_a, dns_a);
+    if (*dns_a != 0)
+        return sceNetInetInetAton(ctx->cfg_dns_b, dns_b);
     return ret;
 }
 
 static int apctl_setup_static_ip(ApctlCtx *ctx)
 {
-    u32 ip, mask, gw, dns1, dns2;
-    u32 zero1 = 0, zero2 = 0;
-    int ret = sceNetInet_lib_AAF4895A(&zero1, &zero2);
-    if (ret < 0)
-        goto fail;
-    ret = apctl_parse_static_ip(ctx, &ip, &mask, &gw, &dns1, &dns2);
-    if (ret < 0)
-        goto fail;
-    ret = sceNetInet_lib_4F68DB0E(ctx->ifname, &ip, NULL, &mask);
-    if (ret >= 0) {
-        sceNetInet_lib_7776A492(&gw);
-        ret = sceNetInet_lib_AAF4895A(&dns1, &dns2);
-        if (ret >= 0)
-            sceNetInet_lib_A94A75E7(&ip);
-    }
-    if (ret < 0)
-        goto fail;
-    g_static_ip_active = 1;
-    return 0;
+    u32 ip, mask, gw, dns_a, dns_b;
+    u32 zero_a = 0, zero_b = 0;
+    u32 clr_a, clr_b;
+    int ret;
 
-fail:
+    do {
+        ret = sceNetInet_lib_AAF4895A(&zero_a, &zero_b);
+        if (ret < 0)
+            break;
+        ret = apctl_parse_static_ip(ctx, &ip, &mask, &gw, &dns_a, &dns_b);
+        if (ret < 0)
+            break;
+        ret = sceNetInet_lib_4F68DB0E(ctx->ifname, &ip, NULL, &mask);
+        if (ret >= 0) {
+            sceNetInet_lib_7776A492(&gw);
+            ret = sceNetInet_lib_AAF4895A(&dns_a, &dns_b);
+            if (ret >= 0)
+                sceNetInet_lib_A94A75E7(&ip);
+        }
+        if (ret < 0)
+            break;
+        g_static_ip_active = 1;
+        return ret;
+    } while (0);
+
     if (sceNetInet_lib_6A046357(ctx->ifname) >= 0) {
         g_static_ip_active = 0;
-        zero1 = 0; zero2 = 0;
-        sceNetInet_lib_AAF4895A(&zero1, &zero2);
+        clr_a = 0; clr_b = 0;
+        sceNetInet_lib_AAF4895A(&clr_a, &clr_b);
     }
     return ret;
 }
 
 static int apctl_wpa_prepare(ApctlCtx *ctx)
 {
-    u8 cfg[112];
-    sceKernelMemset(cfg, 0, sizeof(cfg));
+    ApctlWpaCfg cfg;
+    int ret;
+    sceKernelMemset(&cfg, 0, sizeof(cfg));
     if ((u32)(ctx->cfg_security - 3) >= 2)
         return APCTL_ERR_WPA_CONFIG;
-    *(u32 *)(cfg + 0) = 0;
-    *(u32 *)(cfg + 4) = (ctx->cfg_security != 3) ? 1 : 0;
-    *(u32 *)(cfg + 44) = (u32)ctx->cfg_wpa_key_type;
-    sceKernelMemcpy(cfg + 48, ctx->cfg_wpa_key, 64);
-    sceKernelMemcpy(cfg + 12, ctx->cfg_ssid, 32);
-    cfg[8] = (u8)sceNet_lib_D8722983(ctx->cfg_ssid);
-    int ret = wpa_set_config(cfg);
+    cfg.auth_mode = 0;
+    cfg.cipher = (ctx->cfg_security != 3) ? 1 : 0;
+    cfg.key_type = (u32)ctx->cfg_wpa_key_type;
+    sceKernelMemcpy(cfg.key, ctx->cfg_wpa_key, 64);
+    sceKernelMemcpy(cfg.ssid, ctx->cfg_ssid, 32);
+    cfg.ssid_len = (u8)sceNet_lib_D8722983(ctx->cfg_ssid);
+    ret = wpa_set_config(&cfg);
     return (ret < 0) ? ret : 0;
 }
 
@@ -2112,25 +2391,25 @@ static void apctl_stop_auth_clients(void)
 
 static void apctl_stop_all_clients(ApctlCtx *ctx)
 {
-    u32 z1 = 0, z2 = 0;
+    u32 zero_a = 0, zero_b = 0;
     if (g_static_ip_active > 0) {
         if (sceNetInet_lib_6A046357(ctx->ifname) >= 0) {
             g_static_ip_active = 0;
-            sceNetInet_lib_AAF4895A(&z1, &z2);
+            sceNetInet_lib_AAF4895A(&zero_a, &zero_b);
         }
     }
     if (g_dhcp_active > 0) {
         dhcp_stop();
         g_dhcp_active = 0;
-        z1 = 0; z2 = 0;
-        sceNetInet_lib_AAF4895A(&z1, &z2);
+        zero_a = 0; zero_b = 0;
+        sceNetInet_lib_AAF4895A(&zero_a, &zero_b);
     }
     if (g_pppoe_active > 0) {
         pppoe_stop_signal();
         pppoe_stop_wait();
         g_pppoe_active = 0;
-        z1 = 0; z2 = 0;
-        sceNetInet_lib_AAF4895A(&z1, &z2);
+        zero_a = 0; zero_b = 0;
+        sceNetInet_lib_AAF4895A(&zero_a, &zero_b);
     }
     apctl_stop_auth_clients();
 }

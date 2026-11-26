@@ -15,11 +15,8 @@ typedef signed short s16;
 typedef signed int s32;
 typedef signed long long s64;
 
-static inline u16 bswap16(u16 x) { return (u16)((x >> 8) | (x << 8)); }
-static inline u32 bswap32(u32 x) {
-    return ((x & 0x000000FFu) << 24) | ((x & 0x0000FF00u) << 8) |
-           ((x & 0x00FF0000u) >> 8)  | ((x & 0xFF000000u) >> 24);
-}
+static inline u16 bswap16(u16 x) { return (u16)__builtin_allegrex_wsbh(x); }
+static inline u32 bswap32(u32 x) { return (u32)__builtin_allegrex_wsbw(x); }
 
 /* Kernel_Library */
 extern void *sceKernelMemset(void *dst, int c, SceSize len);
@@ -95,15 +92,15 @@ extern int sceNet_lib_8DA79EB0(const char *ifname, const void *key);
 extern int sceNet_lib_AB375964(const char *ifname, const void *key);
 extern int sceNet_lib_AB7DD9A5(const char *ifname, SceUID evf, u32 bits);
 extern char *sceNet_lib_B5CE388A(char *dst, const char *src, int n);
-extern int sceNet_lib_B6FC0A5B(int fd, void *buf, u32 len);
-extern int sceNet_lib_B9085A96(const char *s1, const char *s2, int n);
-extern int sceNet_lib_C431A214(int fd, const void *buf, u32 len);
+extern int sceNet_lib_B6FC0A5B(int bpf_fd, void *buf, u32 len);
+extern int sceNet_lib_B9085A96(const char *lhs, const char *rhs, int n);
+extern int sceNet_lib_C431A214(int bpf_fd, const void *buf, u32 len);
 extern int sceNet_lib_D1BE2CE9(const char *ifname, u32 *ev, u32 *arg);
 extern int sceNet_lib_D2422E4D(const char *ifname);
 extern int sceNet_lib_D8722983(const char *s);
-extern int sceNet_lib_DB88F458(int fd);
-extern int sceNet_lib_E0A81C7C(const void *s1, const void *s2, int n);
-extern int sceNet_lib_E1F4696F(int fd, u32 cmd, void *arg);
+extern int sceNet_lib_DB88F458(int bpf_fd);
+extern int sceNet_lib_E0A81C7C(const void *lhs, const void *rhs, int n);
+extern int sceNet_lib_E1F4696F(int bpf_fd, u32 cmd, void *arg);
 extern int sceNet_lib_F355C73B(const char *ifname, int type, void *out);
 
 /* sceNetInet / sceNetInet_lib */
@@ -153,6 +150,15 @@ typedef struct BpfProgram {
     BpfInsn *insns;
 } BpfProgram;
 
+typedef struct BpfHdr {
+    u32 tv_sec;
+    u32 tv_usec;
+    u32 caplen;
+    u32 datalen;
+    u16 hdrlen;
+    u16 pad;
+} BpfHdr;
+
 /* Cross-file hooks between apctl_main and protocol clients */
 extern int dhcp_start(const char *ifname, void (*cb)(int, int), int stack, int prio, int timeout, void *cfg);
 extern int dhcp_stop(void);
@@ -172,11 +178,11 @@ extern int btdun_stop(void);
 
 /* Shared EAPOL BPF helpers (in apctl_8021x.c, used by apctl_wpa.c) */
 extern int eapol_bpf_open(const char *ifname, BpfProgram *prog, const u8 *mac, u8 type_filter, int bufsize, u32 timeout_us);
-extern int eapol_bpf_send(int fd, u8 *frame, const u8 *src_mac, const u8 *dst_mac, int write_hdr, u8 ver, u8 type, u16 len);
-extern int eapol_bpf_parse(int fd, u8 *pkt, u32 pkt_len, const u8 *local_mac, int check_ver, u8 *out_type, u8 **out_body, u8 **out_next, int *out_valid);
-extern int eapol_bpf_close(int fd);
-extern int eapol_bpf_read(int fd, void *buf, u32 len);
-extern int eapol_bpf_recv_wpa(int fd, u8 *buf, u32 bufsize, const u8 *mac, u8 **out_pkt, int *out_len);
+extern int eapol_bpf_send(int bpf_fd, u8 *frame, const u8 *src_mac, const u8 *dst_mac, int write_hdr, u8 ver, u8 type, u16 len);
+extern int eapol_bpf_parse(int bpf_fd, u8 *pkt, u32 pkt_len, const u8 *sta_mac, int check_ver, u8 *out_type, u8 **out_body, u8 **out_next, int *out_valid);
+extern int eapol_bpf_close(int bpf_fd);
+extern int eapol_bpf_read(int bpf_fd, void *buf, u32 len);
+extern int eapol_bpf_recv_wpa(int bpf_fd, u8 *buf, u32 bufsize, const u8 *mac, u8 **out_pkt, int *out_len);
 extern void apctl_hmac_sha1(const u8 *data, int data_len, u8 *key, u32 key_len, u8 *out);
 extern void apctl_hmac_md5(const u8 *data, int data_len, u8 *key, u32 key_len, u8 *out);
 
