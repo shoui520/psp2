@@ -684,6 +684,13 @@ psp2_module(vs0_vsh_shell_shell KIND user COMPILER snc PARTIAL SOURCES
 	src/import_savedata_plugin/import_savedata_job_manager.cpp
 	src/import_savedata_plugin/import_savedata_dialog.cpp
 	src/import_savedata_plugin/import_savedata_jobs.cpp
+	src/teleport/teleport_service.cpp
+	src/teleport/teleport_app_helper.cpp
+	src/teleport/teleport_http_server.cpp
+	src/teleport/teleport_http_protocol.cpp
+	src/teleport/teleport_multicast.cpp
+	${PSP2_SRC}/sys/sdk/target/src/mt19937/libmt19937.c
+	${PSP2_SRC}/sys/sdk/target/src/mt19937/mtrand.S
 	${PSP2_SRC}/sys/sdk/target/src/md5/libmd5.c
 	${PSP2_SRC}/sys/internal/usermode/src/ces/libces/src/ces_context.c
 	${PSP2_SRC}/sys/internal/usermode/src/ces/libces/src/UCS/ces_ucs_context.c
@@ -724,11 +731,15 @@ set_source_files_properties(
 	${PSP2_SRC}/sys/internal/kernel/src/gcauthmgr/rsa_digest.c
 	${PSP2_SRC}/sys/internal/driver/src/marlin_hci/rsa_exponent.c
 	PROPERTIES COMPILE_DEFINITIONS "_Static_assert(c,m)=")
-# SDK AES library (handwritten Thumb-2 assembly in aes.S)
-set_source_files_properties(${PSP2_SRC}/sys/sdk/target/src/aes/libaes.c
+# SDK AES and MT19937 libraries (handwritten Thumb-2 assembly in aes.S / mtrand.S)
+set_source_files_properties(
+	${PSP2_SRC}/sys/sdk/target/src/aes/libaes.c
+	${PSP2_SRC}/sys/sdk/target/src/mt19937/libmt19937.c
 	PROPERTIES COMPILE_DEFINITIONS PSP2_COMPILER_GCC48
 	COMPILE_OPTIONS "-fno-stack-protector;-fno-toplevel-reorder;-ffunction-sections")
-set_source_files_properties(${PSP2_SRC}/sys/sdk/target/src/aes/aes.S
+set_source_files_properties(
+	${PSP2_SRC}/sys/sdk/target/src/aes/aes.S
+	${PSP2_SRC}/sys/sdk/target/src/mt19937/mtrand.S
 	PROPERTIES COMPILE_DEFINITIONS PSP2_COMPILER_GCC48)
 # User-mode build of appmgr FAT/exFAT formatter
 set_source_files_properties(
