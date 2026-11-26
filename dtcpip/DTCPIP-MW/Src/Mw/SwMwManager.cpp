@@ -60,3 +60,31 @@ extern "C" int SwMwManagerCancel(void)
 	}
 	return 0;
 }
+
+/* give a move sink a slot in the device's move table (0x810050fc) */
+extern "C" int SwMwManagerRegisterMoveSink(struct SwMwManagerSinkSlots *slots, int sink)
+{
+	int i;
+
+	for (i = 0; i < 35; ++i) {
+		if (slots->moveSinks[i] == 0) {
+			slots->moveSinks[i] = sink;
+			return 0;
+		}
+	}
+	return 12008;
+}
+
+/* free a move sink's slot in the device's move table (0x8100514a) */
+extern "C" int SwMwManagerUnregisterMoveSink(struct SwMwManagerSinkSlots *slots, int sink)
+{
+	int i;
+
+	for (i = 0; i < 35; ++i) {
+		if (slots->moveSinks[i] == sink) {
+			slots->moveSinks[i] = 0;
+			return 0;
+		}
+	}
+	return 12008;
+}
