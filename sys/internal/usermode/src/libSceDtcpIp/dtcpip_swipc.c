@@ -468,11 +468,13 @@ int dtcpIpIpcSetState(int *hold, void *connection, unsigned int state)
 	} else if (state != 0) {
 		busy = 1;
 	}
-	if (busy && client->state != 0) {
-		sceKernelUnlockLwMutex(&client->mutex, 1);
-		return 12004;
+	if (busy) {
+		if (((struct SceDtcpIpIpcClientState *)hold[0])->state != 0) {
+			sceKernelUnlockLwMutex(&client->mutex, 1);
+			return 12004;
+		}
 	}
-	client->state |= hold[1];
+	((struct SceDtcpIpIpcClientState *)hold[0])->state |= hold[1];
 	sceKernelUnlockLwMutex(&client->mutex, 1);
 	return 0;
 }
