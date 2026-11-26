@@ -4,14 +4,19 @@
  * Roster Request Context & Global State
  * ========================================================================= */
 
+typedef struct NpRosterFriendEntry {
+    u32 status;
+    NpId npid;
+} NpRosterFriendEntry; /* 40 bytes */
+
 typedef struct NpRosterReq {
-    struct NpRosterReq *next; /* 0x000 */
-    int id;                   /* 0x004 */
-    int conn_id;              /* 0x008 */
-    int req_id;               /* 0x00C */
-    SceUID mutex;             /* 0x010 */
-    int aborted;              /* 0x014 */
-    u8 buf[3072];             /* 0x018 .. 0xC17 */
+    struct NpRosterReq *next;
+    int id;
+    int conn_id;
+    int req_id;
+    SceUID mutex;
+    int aborted;
+    u8 packet_buf[3072];
 } NpRosterReq; /* 3096 bytes */
 
 static int g_roster_init = 0;
@@ -20,164 +25,243 @@ static int g_roster_last_id = 0;
 static char g_roster_url[64];
 
 /* =========================================================================
- * TLV Binary Packet Encoders
+ * Inline TLV Wire Primitives
  * ========================================================================= */
 
-static void tlv_put_u16(u8 *dst, u16 val)
+static inline __attribute__((always_inline)) void tlv_put_hdr(u8 *dst, u16 tag, u16 len)
+{
+    u16 be = bswap16(tag);
+    sceKernelMemcpy(dst, &be, 2);
+    be = bswap16(len);
+    sceKernelMemcpy(dst + 2, &be, 2);
+}
+
+static inline __attribute__((always_inline)) void tlv_put_u16(u8 *dst, u16 val)
 {
     u16 be = bswap16(val);
     sceKernelMemcpy(dst, &be, 2);
 }
 
-static u16 tlv_get_u16(const u8 *src)
+static inline __attribute__((always_inline)) void tlv_put_u8(u8 *dst, u8 val)
+{
+    u8 octet = val;
+    sceKernelMemcpy(dst, &octet, 1);
+}
+
+static inline __attribute__((always_inline)) u16 tlv_get_u16(const u8 *src)
 {
     u16 be;
     sceKernelMemcpy(&be, src, 2);
     return bswap16(be);
 }
 
-static int tlv_encode_u8_item(u8 *dst, u16 tag, u8 val)
+static inline __attribute__((always_inline)) u8 tlv_get_u8(const u8 *src)
 {
-    tlv_put_u16(dst + 0, tag);
-    tlv_put_u16(dst + 2, 5);
-    tlv_put_u16(dst + 4, 0);
-    tlv_put_u16(dst + 6, 1);
-    dst[8] = val;
-    return 9;
+    u8 octet;
+    sceKernelMemcpy(&octet, src, 1);
+    return octet;
 }
 
-static int tlv_encode_blob_item(u8 *dst, u16 tag, const void *data, u16 len)
+static inline __attribute__((always_inline)) void tlv_write_common_hdr(u8 *dst)
 {
-    tlv_put_u16(dst + 0, tag);
-    tlv_put_u16(dst + 2, (u16)(len + 4));
-    tlv_put_u16(dst + 4, 0);
-    tlv_put_u16(dst + 6, len);
-    sceKernelMemcpy(dst + 8, data, len);
+    tlv_put_hdr(dst + 4, 0x9001, 2);
+    tlv_put_u16(dst + 8, 1);
+    tlv_put_hdr(dst + 10, 0x9000, 1);
+    tlv_put_u8(dst + 14, 2);
+}
+
+static inline __attribute__((always_inline)) int tlv_encode_blob_inline(u8 *dst, u16 tag, const void *payload, u16 len)
+{
+    tlv_put_hdr(dst + 0, tag, (u16)(len + 4));
+    tlv_put_hdr(dst + 4, 0, len);
+    sceKernelMemcpy(dst + 8, payload, len);
     return (int)len + 8;
 }
 
-static int tlv_encode_npid_item(u8 *dst, const u8 *npid)
+static inline __attribute__((always_inline)) int tlv_encode_npid_inline(u8 *dst, const NpId *npid)
 {
-    tlv_put_u16(dst + 0, 0x1003);
-    tlv_put_u16(dst + 2, 28);
-    tlv_put_u16(dst + 4, 0);
-    tlv_put_u16(dst + 6, 24);
-    sceKernelMemcpy(dst + 8, npid, 16);
-    sceKernelMemcpy(dst + 24, npid + 20, 2);
-    sceKernelMemcpy(dst + 26, npid + 22, 2);
+    tlv_put_hdr(dst + 0, 0x1003, 28);
+    tlv_put_hdr(dst + 4, 0, 24);
+    sceKernelMemcpy(dst + 8, npid->handle, 16);
+    sceKernelMemcpy(dst + 24, npid->opt_country, 2);
+    sceKernelMemcpy(dst + 26, npid->opt_region, 2);
     sceKernelMemset(dst + 28, 0, 4);
     return 32;
 }
 
-static int tlv_encode_npid_list(u8 *dst, u8 count, u16 item_tag, const u8 *npids)
+/* =========================================================================
+ * TLV Binary Packet Encoders
+ * ========================================================================= */
+
+static int __attribute__((noinline)) tlv_encode_u8_item(u8 *dst, u16 tag, u8 val)
 {
-    u8 *p = dst + 15;
+    tlv_put_hdr(dst + 0, tag, 5);
+    tlv_put_hdr(dst + 4, 0, 1);
+    tlv_put_u8(dst + 8, val);
+    return 9;
+}
+
+static int __attribute__((noinline)) tlv_encode_blob_item(u8 *dst, u16 tag, const void *payload, u16 len)
+{
+    return tlv_encode_blob_inline(dst, tag, payload, len);
+}
+
+static int __attribute__((noinline)) tlv_encode_npid_item(u8 *dst, const NpId *npid)
+{
+    return tlv_encode_npid_inline(dst, npid);
+}
+
+static int __attribute__((noinline)) tlv_encode_npid_list(u8 *dst, u8 count, u16 item_tag, const NpId *npids)
+{
+    u8 *cursor = dst + 15;
     u16 total;
 
-    tlv_put_u16(dst + 4, 0x9002);
-    tlv_put_u16(dst + 6, 1);
-    dst[8] = count;
-    tlv_put_u16(dst + 9, 0x9006);
-    tlv_put_u16(dst + 11, 2);
+    tlv_put_hdr(dst + 4, 0x9002, 1);
+    tlv_put_u8(dst + 8, count);
+    tlv_put_hdr(dst + 9, 0x9006, 2);
     tlv_put_u16(dst + 13, item_tag);
 
     if (item_tag == 0x1003 && count != 0) {
         int i;
         for (i = 0; i < count; i++) {
-            tlv_put_u16(p + 0, item_tag);
-            tlv_put_u16(p + 2, 28);
-            tlv_put_u16(p + 4, 0);
-            tlv_put_u16(p + 6, 24);
-            sceKernelMemcpy(p + 8, npids, 16);
-            sceKernelMemcpy(p + 24, npids + 20, 2);
-            sceKernelMemcpy(p + 26, npids + 22, 2);
-            sceKernelMemset(p + 28, 0, 4);
-            p += 32;
-            npids += 36;
+            tlv_put_hdr(cursor + 0, item_tag, 28);
+            tlv_put_hdr(cursor + 4, 0, 24);
+            sceKernelMemcpy(cursor + 8, npids[i].handle, 16);
+            sceKernelMemcpy(cursor + 24, npids[i].opt_country, 2);
+            sceKernelMemcpy(cursor + 26, npids[i].opt_region, 2);
+            sceKernelMemset(cursor + 28, 0, 4);
+            cursor += 32;
         }
     }
 
-    total = (u16)(p - dst);
-    tlv_put_u16(dst + 0, 0x1005);
-    tlv_put_u16(dst + 2, (u16)(total - 4));
+    total = (u16)(cursor - dst);
+    tlv_put_hdr(dst + 0, 0x1005, (u16)(total - 4));
     return total;
 }
 
-static void tlv_write_common_hdr(u8 *dst)
+static int __attribute__((noinline)) tlv_encode_add_friend(u8 *dst, const void *ticket, u16 tlen,
+                                                           const NpId *npid, const char *msg)
 {
-    tlv_put_u16(dst + 4, 0x9001);
-    tlv_put_u16(dst + 6, 2);
-    tlv_put_u16(dst + 8, 1);
-    tlv_put_u16(dst + 10, 0x9000);
-    tlv_put_u16(dst + 12, 1);
-    dst[14] = 2;
-}
-
-static int tlv_encode_add_friend(u8 *dst, const void *ticket, u16 tlen,
-                                 const u8 *npid, const char *msg)
-{
-    u8 *p;
+    u8 *cursor;
     u16 total;
 
     tlv_write_common_hdr(dst);
-    p = dst + 15;
-    p += tlv_encode_blob_item(p, 0x1002, ticket, tlen);
-    p += tlv_encode_npid_item(p, npid);
+    cursor = dst + 15;
+    cursor += tlv_encode_blob_inline(cursor, 0x1002, ticket, tlen);
+    cursor += tlv_encode_npid_inline(cursor, npid);
     if (msg != NULL) {
         u16 mlen = (u16)sceNet_lib_D8722983(msg);
-        p += tlv_encode_blob_item(p, 0x1004, msg, mlen);
+        cursor += tlv_encode_blob_inline(cursor, 0x1004, msg, mlen);
     }
-    total = (u16)(p - dst);
-    tlv_put_u16(dst + 0, 0x1000);
-    tlv_put_u16(dst + 2, (u16)(total - 4));
+    total = (u16)(cursor - dst);
+    tlv_put_hdr(dst + 0, 0x1000, (u16)(total - 4));
     return total;
 }
 
-static int tlv_encode_get_list(u8 *dst, u16 outer_tag, const void *ticket, u16 tlen,
-                               u8 start, u8 count)
+static int __attribute__((noinline)) tlv_encode_get_friends(u8 *dst, const void *ticket, u16 tlen,
+                                                            u8 start, u8 count)
 {
-    u8 *p;
+    u8 *cursor;
     u16 total;
 
     tlv_write_common_hdr(dst);
-    p = dst + 15;
-    p += tlv_encode_blob_item(p, 0x1002, ticket, tlen);
-    p += tlv_encode_u8_item(p, 0x1006, start);
-    p += tlv_encode_u8_item(p, 0x1008, count);
-    total = (u16)(p - dst);
-    tlv_put_u16(dst + 0, outer_tag);
-    tlv_put_u16(dst + 2, (u16)(total - 4));
+    cursor = dst + 15;
+    cursor += tlv_encode_blob_item(cursor, 0x1002, ticket, tlen);
+    cursor += tlv_encode_u8_item(cursor, 0x1006, start);
+    cursor += tlv_encode_u8_item(cursor, 0x1008, count);
+    total = (u16)(cursor - dst);
+    tlv_put_hdr(dst + 0, 0x1000, (u16)(total - 4));
     return total;
 }
 
-static int tlv_encode_single_npid(u8 *dst, u16 outer_tag, const void *ticket, u16 tlen,
-                                  const u8 *npid)
+static int __attribute__((noinline)) tlv_encode_del_friend(u8 *dst, const void *ticket, u16 tlen,
+                                                           const NpId *npid)
 {
-    u8 *p;
+    u8 *cursor;
     u16 total;
 
     tlv_write_common_hdr(dst);
-    p = dst + 15;
-    p += tlv_encode_blob_item(p, 0x1002, ticket, tlen);
-    p += tlv_encode_npid_item(p, npid);
-    total = (u16)(p - dst);
-    tlv_put_u16(dst + 0, outer_tag);
-    tlv_put_u16(dst + 2, (u16)(total - 4));
+    cursor = dst + 15;
+    cursor += tlv_encode_blob_item(cursor, 0x1002, ticket, tlen);
+    cursor += tlv_encode_npid_item(cursor, npid);
+    total = (u16)(cursor - dst);
+    tlv_put_hdr(dst + 0, 0x1000, (u16)(total - 4));
     return total;
 }
 
-static int tlv_encode_get_msg(u8 *dst, const void *ticket, u16 tlen, u8 count, const u8 *npids)
+static int __attribute__((noinline)) tlv_encode_accept_friend(u8 *dst, const void *ticket, u16 tlen,
+                                                              const NpId *npid)
 {
-    u8 *p;
+    u8 *cursor;
     u16 total;
 
     tlv_write_common_hdr(dst);
-    p = dst + 15;
-    p += tlv_encode_blob_item(p, 0x1002, ticket, tlen);
-    p += tlv_encode_npid_list(p, count, 0x1003, npids);
-    total = (u16)(p - dst);
-    tlv_put_u16(dst + 0, 0x1000);
-    tlv_put_u16(dst + 2, (u16)(total - 4));
+    cursor = dst + 15;
+    cursor += tlv_encode_blob_item(cursor, 0x1002, ticket, tlen);
+    cursor += tlv_encode_npid_item(cursor, npid);
+    total = (u16)(cursor - dst);
+    tlv_put_hdr(dst + 0, 0x1000, (u16)(total - 4));
+    return total;
+}
+
+static int __attribute__((noinline)) tlv_encode_get_msg(u8 *dst, const void *ticket, u16 tlen,
+                                                        u8 count, const NpId *npids)
+{
+    u8 *cursor;
+    u16 total;
+
+    tlv_write_common_hdr(dst);
+    cursor = dst + 15;
+    cursor += tlv_encode_blob_item(cursor, 0x1002, ticket, tlen);
+    cursor += tlv_encode_npid_list(cursor, count, 0x1003, npids);
+    total = (u16)(cursor - dst);
+    tlv_put_hdr(dst + 0, 0x1000, (u16)(total - 4));
+    return total;
+}
+
+static int __attribute__((noinline)) tlv_encode_get_blocks(u8 *dst, const void *ticket, u16 tlen,
+                                                           u8 start, u8 count)
+{
+    u8 *cursor;
+    u16 total;
+
+    tlv_write_common_hdr(dst);
+    cursor = dst + 15;
+    cursor += tlv_encode_blob_item(cursor, 0x1002, ticket, tlen);
+    cursor += tlv_encode_u8_item(cursor, 0x1006, start);
+    cursor += tlv_encode_u8_item(cursor, 0x1008, count);
+    total = (u16)(cursor - dst);
+    tlv_put_hdr(dst + 0, 0x1001, (u16)(total - 4));
+    return total;
+}
+
+static int __attribute__((noinline)) tlv_encode_add_block(u8 *dst, const void *ticket, u16 tlen,
+                                                          const NpId *npid)
+{
+    u8 *cursor;
+    u16 total;
+
+    tlv_write_common_hdr(dst);
+    cursor = dst + 15;
+    cursor += tlv_encode_blob_item(cursor, 0x1002, ticket, tlen);
+    cursor += tlv_encode_npid_item(cursor, npid);
+    total = (u16)(cursor - dst);
+    tlv_put_hdr(dst + 0, 0x1001, (u16)(total - 4));
+    return total;
+}
+
+static int __attribute__((noinline)) tlv_encode_del_block(u8 *dst, const void *ticket, u16 tlen,
+                                                          const NpId *npid)
+{
+    u8 *cursor;
+    u16 total;
+
+    tlv_write_common_hdr(dst);
+    cursor = dst + 15;
+    cursor += tlv_encode_blob_item(cursor, 0x1002, ticket, tlen);
+    cursor += tlv_encode_npid_item(cursor, npid);
+    total = (u16)(cursor - dst);
+    tlv_put_hdr(dst + 0, 0x1001, (u16)(total - 4));
     return total;
 }
 
@@ -185,7 +269,7 @@ static int tlv_encode_get_msg(u8 *dst, const void *ticket, u16 tlen, u8 count, c
  * TLV Binary Packet Decoders
  * ========================================================================= */
 
-static int tlv_decode_raw(const u8 *src, u16 expected_tag, void *out, const u16 *expected_len)
+static int __attribute__((noinline)) tlv_decode_raw(const u8 *src, u16 expected_tag, void *out, const u16 *expected_len)
 {
     u16 tag = tlv_get_u16(src);
     u16 len = tlv_get_u16(src + 2);
@@ -201,11 +285,11 @@ static int tlv_decode_raw(const u8 *src, u16 expected_tag, void *out, const u16 
     return len;
 }
 
-static int tlv_decode_header(const u8 *src, u16 expected_tag, u16 *body_len_out)
+static int __attribute__((noinline)) tlv_decode_header(const u8 *src, u16 expected_tag, u16 *body_len_out)
 {
     u16 tag = tlv_get_u16(src);
     u16 len = tlv_get_u16(src + 2);
-    const u8 *p;
+    const u8 *cursor;
     u8 err_code;
 
     if (tag != expected_tag)
@@ -213,55 +297,55 @@ static int tlv_decode_header(const u8 *src, u16 expected_tag, u16 *body_len_out)
     if (body_len_out != NULL)
         *body_len_out = len;
 
-    p = src + 4;
-    if (tlv_get_u16(p) != 0x9001) return (int)0x80550A81;
-    if (tlv_get_u16(p + 2) != 2)  return (int)0x80550A83;
-    if (tlv_get_u16(p + 4) != 1)  return (int)0x80550A84;
+    cursor = src + 4;
+    if (tlv_get_u16(cursor) != 0x9001) return (int)0x80550A81;
+    if (tlv_get_u16(cursor + 2) != 2)  return (int)0x80550A83;
+    if (tlv_get_u16(cursor + 4) != 1)  return (int)0x80550A84;
 
-    p += 6;
-    if (tlv_get_u16(p) != 0x9000) return (int)0x80550A81;
-    if (tlv_get_u16(p + 2) != 1)  return (int)0x80550A83;
-    if (p[4] != 2)                return (int)0x80550A85;
+    cursor += 6;
+    if (tlv_get_u16(cursor) != 0x9000) return (int)0x80550A81;
+    if (tlv_get_u16(cursor + 2) != 1)  return (int)0x80550A83;
+    if (tlv_get_u8(cursor + 4) != 2)   return (int)0x80550A85;
 
-    p += 5;
-    if (tlv_get_u16(p) != 0x9004) return (int)0x80550A81;
-    if (tlv_get_u16(p + 2) != 1)  return (int)0x80550A83;
-    err_code = p[4];
+    cursor += 5;
+    if (tlv_get_u16(cursor) != 0x9004) return (int)0x80550A81;
+    if (tlv_get_u16(cursor + 2) != 1)  return (int)0x80550A83;
+    err_code = tlv_get_u8(cursor + 4);
     if (err_code != 0) {
         u32 mapped = (u32)err_code | 0x80550B00u;
         if (mapped == 0x80550B4Cu)
             return (int)0x80550007;
         return (int)mapped;
     }
-    return (int)((p + 5) - src);
+    return (int)((cursor + 5) - src);
 }
 
-static int tlv_decode_u8_item(const u8 *src, u16 expected_tag, u8 *out)
+static int __attribute__((noinline)) tlv_decode_u8_item(const u8 *src, u16 expected_tag, u8 *out)
 {
     if (tlv_get_u16(src) != expected_tag) return (int)0x80550A81;
     if (tlv_get_u16(src + 2) != 5)        return (int)0x80550A83;
     if (tlv_get_u16(src + 4) != 0)        return (int)0x80550A81;
     if (tlv_get_u16(src + 6) != 1)        return (int)0x80550A83;
-    *out = src[8];
+    sceKernelMemcpy(out, src + 8, 1);
     return 9;
 }
 
-static int tlv_decode_npid_item(const u8 *src, u16 expected_tag, u8 *npid_out)
+static int __attribute__((noinline)) tlv_decode_npid_item(const u8 *src, u16 expected_tag, NpId *npid_out)
 {
     if (tlv_get_u16(src) != expected_tag) return (int)0x80550A81;
     if (tlv_get_u16(src + 2) != 28)       return (int)0x80550A83;
     if (tlv_get_u16(src + 4) != 0)        return (int)0x80550A81;
     if (tlv_get_u16(src + 6) != 24)       return (int)0x80550A83;
-    sceKernelMemcpy(npid_out, src + 8, 16);
-    sceKernelMemcpy(npid_out + 20, src + 24, 2);
-    sceKernelMemcpy(npid_out + 22, src + 26, 2);
-    sceKernelMemcpy(npid_out + 24, "psp", 4);
-    sceKernelMemset(npid_out + 28, 0, 8);
-    npid_out[28] = 1;
+    sceKernelMemcpy(npid_out->handle, src + 8, 16);
+    sceKernelMemcpy(npid_out->opt_country, src + 24, 2);
+    sceKernelMemcpy(npid_out->opt_region, src + 26, 2);
+    sceKernelMemcpy(npid_out->platform, "psp", 4);
+    sceKernelMemset(npid_out->opt_flags, 0, 8);
+    npid_out->opt_flags[0] = 1;
     return 32;
 }
 
-static int tlv_decode_friend_item(const u8 *src, u8 *out)
+static int __attribute__((noinline)) tlv_decode_friend_item(const u8 *src, NpRosterFriendEntry *out)
 {
     u8 raw_npid[24];
     u16 npid_len = 24;
@@ -272,21 +356,21 @@ static int tlv_decode_friend_item(const u8 *src, u8 *out)
     if (tlv_get_u16(src + 4) != 0x9005) return (int)0x80550A81;
     if (tlv_get_u16(src + 6) != 1)      return (int)0x80550A83;
 
-    *(u32 *)out = src[8];
+    out->status = tlv_get_u8(src + 8);
     ret = tlv_decode_raw(src + 9, 0, raw_npid, &npid_len);
     if (ret < 0)
         return ret;
 
-    sceKernelMemcpy(out + 4, raw_npid, 16);
-    sceKernelMemcpy(out + 24, raw_npid + 16, 2);
-    sceKernelMemcpy(out + 26, raw_npid + 18, 2);
-    sceKernelMemcpy(out + 28, "psp", 4);
-    sceKernelMemset(out + 32, 0, 8);
-    out[32] = 1;
+    sceKernelMemcpy(out->npid.handle, raw_npid, 16);
+    sceKernelMemcpy(out->npid.opt_country, raw_npid + 16, 2);
+    sceKernelMemcpy(out->npid.opt_region, raw_npid + 18, 2);
+    sceKernelMemcpy(out->npid.platform, "psp", 4);
+    sceKernelMemset(out->npid.opt_flags, 0, 8);
+    out->npid.opt_flags[0] = 1;
     return 41;
 }
 
-static int tlv_decode_msg_item(const u8 *src, void *msg_out, u8 *npid_out)
+static int __attribute__((noinline)) tlv_decode_msg_item(const u8 *src, void *msg_out, NpId *npid_out)
 {
     u16 tag = tlv_get_u16(src);
     u16 len = tlv_get_u16(src + 2);
@@ -300,12 +384,12 @@ static int tlv_decode_msg_item(const u8 *src, void *msg_out, u8 *npid_out)
     if (npid_out != NULL) {
         if (tlv_get_u16(src + 4) != 0x9003) return (int)0x80550A81;
         if (tlv_get_u16(src + 6) != 24)     return (int)0x80550A83;
-        sceKernelMemcpy(npid_out, src + 8, 16);
-        sceKernelMemcpy(npid_out + 20, src + 24, 2);
-        sceKernelMemcpy(npid_out + 22, src + 26, 2);
-        sceKernelMemcpy(npid_out + 24, "psp", 4);
-        sceKernelMemset(npid_out + 28, 0, 8);
-        npid_out[28] = 1;
+        sceKernelMemcpy(npid_out->handle, src + 8, 16);
+        sceKernelMemcpy(npid_out->opt_country, src + 24, 2);
+        sceKernelMemcpy(npid_out->opt_region, src + 26, 2);
+        sceKernelMemcpy(npid_out->platform, "psp", 4);
+        sceKernelMemset(npid_out->opt_flags, 0, 8);
+        npid_out->opt_flags[0] = 1;
     }
 
     ret = tlv_decode_raw(src + 32, 0, msg_out, &text_len);
@@ -314,21 +398,21 @@ static int tlv_decode_msg_item(const u8 *src, void *msg_out, u8 *npid_out)
     return (int)len + 4;
 }
 
-static int tlv_decode_list(const u8 *src, u16 expected_item_tag, u8 *out_buf, u8 max_count, u8 *count_out)
+static int __attribute__((noinline)) tlv_decode_list(const u8 *src, u16 expected_item_tag, void *out_buf, u8 max_count, u8 *count_out)
 {
     u16 tag = tlv_get_u16(src);
     u16 body_len = tlv_get_u16(src + 2);
     u8 count;
     u16 item_tag_be;
     u16 tag_len = 2;
-    const u8 *p;
+    const u8 *cursor;
     int ret;
 
     if (tag != 0x1005)                  return (int)0x80550A81;
     if (tlv_get_u16(src + 4) != 0x9002) return (int)0x80550A81;
     if (tlv_get_u16(src + 6) != 1)      return (int)0x80550A83;
 
-    count = src[8];
+    count = tlv_get_u8(src + 8);
     if (max_count != 0 && max_count < count)
         return (int)0x80550A86;
     if (count_out != NULL)
@@ -340,106 +424,178 @@ static int tlv_decode_list(const u8 *src, u16 expected_item_tag, u8 *out_buf, u8
     if (bswap16(item_tag_be) != expected_item_tag)
         return (int)0x80550A81;
 
-    p = src + 15;
+    cursor = src + 15;
     if (max_count == 0 || out_buf == NULL)
         return (int)body_len + 4;
 
     if (expected_item_tag == 0x1003) {
+        NpId *npids = (NpId *)out_buf;
         int i;
-        for (i = 0; i < count; i++) {
-            ret = tlv_decode_npid_item(p, 0x1003, out_buf + 36 * i);
+        for (i = 0; i < *count_out; i++) {
+            ret = tlv_decode_npid_item(cursor, 0x1003, &npids[i]);
             if (ret < 0) return ret;
-            p += 32;
+            cursor += 32;
         }
         return (int)body_len + 4;
     }
     if (expected_item_tag == 0x1009) {
+        NpRosterFriendEntry *friends = (NpRosterFriendEntry *)out_buf;
         int i;
-        for (i = 0; i < count; i++) {
-            ret = tlv_decode_friend_item(p, out_buf + 40 * i);
+        for (i = 0; i < *count_out; i++) {
+            ret = tlv_decode_friend_item(cursor, &friends[i]);
             if (ret < 0) return ret;
-            p += 37;
+            cursor += 37;
         }
         return (int)body_len + 4;
     }
     if (expected_item_tag == 0x1004) {
         int i;
         int last_ret = ret;
-        for (i = 0; i < count; i++) {
-            last_ret = tlv_decode_msg_item(p, out_buf, NULL);
+        for (i = 0; i < *count_out; i++) {
+            last_ret = tlv_decode_msg_item(cursor, out_buf, NULL);
             if (last_ret < 0) return last_ret;
-            p += last_ret;
+            cursor += last_ret;
         }
         return last_ret;
     }
     return (int)0x80550A81;
 }
 
-static int tlv_decode_list_resp(const u8 *src, u16 outer_tag, u16 item_tag,
-                                u8 max_count, int expected_start,
-                                int *total_out, int *got_out, void *entries_out)
+static int __attribute__((noinline)) tlv_decode_get_friends_resp(const u8 *src, int max_count, int expected_start,
+                                                                 int *total_out, int *got_out, void *entries_out)
 {
-    u16 body_len = 0;
-    u8 val = 0;
-    const u8 *p;
-    int r;
+    u16 body_len;
+    u8 val;
+    const u8 *cursor;
+    int ret;
 
-    r = tlv_decode_header(src, outer_tag, &body_len);
-    if (r < 0) return r;
-    p = src + r;
+    ret = tlv_decode_header(src, 0x1000, &body_len);
+    if (ret < 0) return ret;
+    cursor = src + ret;
 
-    r = tlv_decode_u8_item(p, 0x1006, &val);
-    if (r < 0) return r;
+    ret = tlv_decode_u8_item(cursor, 0x1006, &val);
+    if (ret < 0) return ret;
     if (expected_start != val)
         return (int)0x80550A88;
-    p += r;
+    cursor += ret;
 
-    r = tlv_decode_u8_item(p, 0x1007, &val);
-    if (r < 0) return r;
+    ret = tlv_decode_u8_item(cursor, 0x1007, &val);
+    if (ret < 0) return ret;
     if (total_out != NULL)
         *total_out = val;
-    p += r;
+    cursor += ret;
 
-    r = tlv_decode_list(p, item_tag, (u8 *)entries_out, max_count, &val);
-    if (r < 0) return r;
+    ret = tlv_decode_list(cursor, 0x1009, entries_out, (u8)max_count, &val);
+    if (ret < 0) return ret;
     if (got_out != NULL)
         *got_out = val;
-    return (int)((p + r) - src);
+    return (int)((cursor + ret) - src);
 }
 
-static int tlv_decode_simple_resp(const u8 *src, u16 outer_tag)
+static int __attribute__((noinline)) tlv_decode_get_blocks_resp(const u8 *src, int max_count, int expected_start,
+                                                                int *total_out, int *got_out, void *entries_out)
 {
-    u16 body_len = 0;
-    return tlv_decode_header(src, outer_tag, &body_len);
+    u16 body_len;
+    u8 val;
+    const u8 *cursor;
+    int ret;
+
+    ret = tlv_decode_header(src, 0x1001, &body_len);
+    if (ret < 0) return ret;
+    cursor = src + ret;
+
+    ret = tlv_decode_u8_item(cursor, 0x1006, &val);
+    if (ret < 0) return ret;
+    if (expected_start != val)
+        return (int)0x80550A88;
+    cursor += ret;
+
+    ret = tlv_decode_u8_item(cursor, 0x1007, &val);
+    if (ret < 0) return ret;
+    if (total_out != NULL)
+        *total_out = val;
+    cursor += ret;
+
+    ret = tlv_decode_list(cursor, 0x1003, entries_out, (u8)max_count, &val);
+    if (ret < 0) return ret;
+    if (got_out != NULL)
+        *got_out = val;
+    return (int)((cursor + ret) - src);
 }
 
-static int tlv_decode_msg_resp(const u8 *src, u8 max_count, int *got_out, void *msg_out)
+static int __attribute__((noinline)) tlv_decode_add_friend_resp(const u8 *src)
 {
-    u16 body_len = 0;
-    u8 cnt = (u8)(*got_out);
-    int r;
-    int r2;
+    u16 body_len;
+    int ret = tlv_decode_header(src, 0x1000, &body_len);
+    if (ret >= 0)
+        return (int)((src + ret) - src);
+    return ret;
+}
 
-    r = tlv_decode_header(src, 0x1000, &body_len);
-    if (r < 0) return r;
-    r2 = tlv_decode_list(src + r, 0x1004, (u8 *)msg_out, max_count, &cnt);
-    if (r2 < 0) return r2;
+static int __attribute__((noinline)) tlv_decode_del_friend_resp(const u8 *src)
+{
+    u16 body_len;
+    int ret = tlv_decode_header(src, 0x1000, &body_len);
+    if (ret >= 0)
+        return (int)((src + ret) - src);
+    return ret;
+}
+
+static int __attribute__((noinline)) tlv_decode_accept_friend_resp(const u8 *src)
+{
+    u16 body_len;
+    int ret = tlv_decode_header(src, 0x1000, &body_len);
+    if (ret >= 0)
+        return (int)((src + ret) - src);
+    return ret;
+}
+
+static int __attribute__((noinline)) tlv_decode_get_msg_resp(const u8 *src, int max_count, int *got_out, void *msg_out)
+{
+    u16 body_len;
+    u8 cnt;
+    int hdr_ret;
+    int list_ret;
+
+    hdr_ret = tlv_decode_header(src, 0x1000, &body_len);
+    if (hdr_ret < 0) return hdr_ret;
+    cnt = *(const u8 *)got_out;
+    list_ret = tlv_decode_list(src + hdr_ret, 0x1004, msg_out, (u8)max_count, &cnt);
+    if (list_ret < 0) return list_ret;
     *got_out = cnt;
-    return r + r2;
+    return hdr_ret + list_ret;
+}
+
+static int __attribute__((noinline)) tlv_decode_add_block_resp(const u8 *src)
+{
+    u16 body_len;
+    int ret = tlv_decode_header(src, 0x1001, &body_len);
+    if (ret >= 0)
+        return (int)((src + ret) - src);
+    return ret;
+}
+
+static int __attribute__((noinline)) tlv_decode_del_block_resp(const u8 *src)
+{
+    u16 body_len;
+    int ret = tlv_decode_header(src, 0x1001, &body_len);
+    if (ret >= 0)
+        return (int)((src + ret) - src);
+    return ret;
 }
 
 /* =========================================================================
  * Roster HTTP Transport & Request Lifecycle
  * ========================================================================= */
 
-static int roster_map_ssl_error(int req_id, int err)
+static int __attribute__((noinline)) roster_map_ssl_error(int req_id, int err)
 {
     if (err == (int)0x80431075) {
         int ssl_err = 0;
         u32 detail = 0;
-        int r = sceHttpsGetSslError(req_id, &ssl_err, &detail);
-        if (r < 0)
-            return r;
+        int ret = sceHttpsGetSslError(req_id, &ssl_err, &detail);
+        if (ret < 0)
+            return ret;
         if (ssl_err == (int)0x80435060) {
             if ((detail & 4u) != 0)    return (int)0x80550A8B;
             if ((detail & 0x20u) != 0) return (int)0x80550A8C;
@@ -452,7 +608,7 @@ static int roster_map_ssl_error(int req_id, int err)
     return err;
 }
 
-static int roster_build_url(char *dst, u32 size)
+static int __attribute__((noinline)) roster_build_url(char *dst, u32 size)
 {
     char env[16];
     char region[16];
@@ -488,7 +644,7 @@ static int roster_build_url(char *dst, u32 size)
     return ret;
 }
 
-static int roster_open_conn(NpRosterReq *req)
+static int __attribute__((noinline)) roster_open_conn(NpRosterReq *req)
 {
     int tid = sceHttpCreateTemplate("PSP NP/1.0", 0, 0);
     int ret = tid;
@@ -519,7 +675,7 @@ static int roster_open_conn(NpRosterReq *req)
     return ret;
 }
 
-static void roster_close_conn(NpRosterReq *req)
+static void __attribute__((noinline)) roster_close_conn(NpRosterReq *req)
 {
     if (req->conn_id > 0) {
         sceHttpDeleteConnection(req->conn_id);
@@ -527,24 +683,24 @@ static void roster_close_conn(NpRosterReq *req)
     }
 }
 
-static int roster_http_post(NpRosterReq *req, const char *path, void *buf,
-                            u32 req_len, u32 max_resp_len, u64 *resp_len_out)
+static int __attribute__((noinline)) roster_http_post(NpRosterReq *req, const char *path, void *packet_buf,
+                                                      u64 req_len, u64 max_resp_len, u64 *resp_len_out)
 {
     int rid;
     int ret;
     int status = 0;
 
-    if (req == NULL || path == NULL || buf == NULL || resp_len_out == NULL)
+    if (req == NULL || path == NULL || packet_buf == NULL || resp_len_out == NULL)
         return (int)0x80550A04;
 
-    rid = sceHttpCreateRequest(req->conn_id, 1, path, (u64)req_len);
+    rid = sceHttpCreateRequest(req->conn_id, 1, path, req_len);
     ret = rid;
     if (rid >= 0) {
         req->req_id = rid;
         if (req->aborted > 0) {
             ret = (int)0x80550A05;
         } else {
-            ret = sceHttpSendRequest(rid, buf, req_len);
+            ret = sceHttpSendRequest(rid, packet_buf, (u32)req_len);
             if (ret < 0) {
                 ret = roster_map_ssl_error(req->req_id, ret);
             } else {
@@ -555,14 +711,14 @@ static int roster_http_post(NpRosterReq *req, const char *path, void *buf,
                     } else {
                         ret = sceHttpGetContentLength(req->req_id, resp_len_out);
                         if (ret >= 0) {
-                            if (*resp_len_out > (u64)max_resp_len) {
+                            if (*resp_len_out > max_resp_len) {
                                 ret = (int)0x80550A89;
                             } else if (*resp_len_out == 0) {
                                 ret = (int)0x80550A08;
                             } else if (req->aborted > 0) {
                                 ret = (int)0x80550A05;
                             } else {
-                                ret = sceHttpReadData(req->req_id, buf, max_resp_len);
+                                ret = sceHttpReadData(req->req_id, packet_buf, (u32)max_resp_len);
                                 if (ret < 0)
                                     ret = roster_map_ssl_error(req->req_id, ret);
                             }
@@ -574,14 +730,21 @@ static int roster_http_post(NpRosterReq *req, const char *path, void *buf,
     }
 
     if (req->req_id > 0) {
-        sceHttpDeleteRequest(req->req_id);
+        int del_id = req->req_id;
         req->req_id = 0;
+        sceHttpDeleteRequest(del_id);
     }
     req->aborted = 0;
     return ret;
 }
 
-static NpRosterReq *roster_find_req(int id)
+static int __attribute__((noinline)) roster_init_list(void)
+{
+    g_roster_head = NULL;
+    return 0;
+}
+
+static NpRosterReq * __attribute__((noinline)) roster_find_req(int id)
 {
     int intr = sceKernelCpuSuspendIntr();
     NpRosterReq *cur = g_roster_head;
@@ -591,7 +754,7 @@ static NpRosterReq *roster_find_req(int id)
     return cur;
 }
 
-static void roster_destroy_req_obj(NpRosterReq *req)
+static void __attribute__((noinline)) roster_destroy_req_obj(NpRosterReq *req)
 {
     int intr = sceKernelCpuSuspendIntr();
     NpRosterReq *cur = g_roster_head;
@@ -621,7 +784,7 @@ static void roster_destroy_req_obj(NpRosterReq *req)
     }
 }
 
-static int roster_create_req_obj(void)
+static int __attribute__((noinline)) roster_create_req_obj(void)
 {
     NpRosterReq *req = (NpRosterReq *)sceNpService_C5094BE6(sizeof(NpRosterReq));
     int intr;
@@ -678,7 +841,7 @@ static int roster_create_req_obj(void)
     return ret;
 }
 
-static int roster_term_all(void)
+static int __attribute__((noinline)) roster_term_all(void)
 {
     NpRosterReq *cur = g_roster_head;
     while (cur != NULL) {
@@ -696,171 +859,171 @@ static int roster_term_all(void)
 
 /* --- Internal Roster Operations --- */
 
-static int roster_op_get_friends(NpRosterReq *req, u8 count, int start,
-                                 int *total_out, int *got_out, void *entries)
+static int __attribute__((noinline)) roster_op_get_friends(NpRosterReq *req, int count, int start,
+                                                           int *total_out, int *got_out, void *entries)
 {
-    u16 tlen = 0;
-    void *ticket = NULL;
-    u64 resp_len = 0;
+    u16 tlen;
+    void *ticket;
+    u64 resp_len;
     int ret;
 
     ret = sceNp_67BCF9E3(0, &tlen);
     if (ret >= 0) {
         ret = sceNp_9B87B19B(&ticket);
         if (ret >= 0) {
-            int plen = tlv_encode_get_list(req->buf, 0x1000, ticket, tlen, (u8)start, count);
+            int plen = tlv_encode_get_friends(req->packet_buf, ticket, tlen, (u8)start, (u8)count);
             ret = roster_http_post(req, "/imgw/sec/psp/friend/get_friend_list",
-                                   req->buf, (u32)plen, 3072u, &resp_len);
+                                   req->packet_buf, (u64)(u32)plen, 3072ULL, &resp_len);
             if (ret >= 0)
-                return tlv_decode_list_resp(req->buf, 0x1000, 0x1009, count, start, total_out, got_out, entries);
+                return tlv_decode_get_friends_resp(req->packet_buf, count, start, total_out, got_out, entries);
         }
     }
     return ret;
 }
 
-static int roster_op_add_friend(NpRosterReq *req, const u8 *npid, const char *msg)
+static int __attribute__((noinline)) roster_op_add_friend(NpRosterReq *req, const NpId *npid, const char *msg)
 {
-    u16 tlen = 0;
-    void *ticket = NULL;
-    u64 resp_len = 0;
+    u16 tlen;
+    void *ticket;
+    u64 resp_len;
     int ret;
 
     ret = sceNp_67BCF9E3(0, &tlen);
     if (ret >= 0) {
         ret = sceNp_9B87B19B(&ticket);
         if (ret >= 0) {
-            int plen = tlv_encode_add_friend(req->buf, ticket, tlen, npid, msg);
+            int plen = tlv_encode_add_friend(req->packet_buf, ticket, tlen, npid, msg);
             ret = roster_http_post(req, "/imgw/sec/psp/friend/add_friend",
-                                   req->buf, (u32)plen, 3072u, &resp_len);
+                                   req->packet_buf, (u64)(u32)plen, 3072ULL, &resp_len);
             if (ret >= 0)
-                return tlv_decode_simple_resp(req->buf, 0x1000);
+                return tlv_decode_add_friend_resp(req->packet_buf);
         }
     }
     return ret;
 }
 
-static int roster_op_del_friend(NpRosterReq *req, const u8 *npid)
+static int __attribute__((noinline)) roster_op_del_friend(NpRosterReq *req, const NpId *npid)
 {
-    u16 tlen = 0;
-    void *ticket = NULL;
-    u64 resp_len = 0;
+    u16 tlen;
+    void *ticket;
+    u64 resp_len;
     int ret;
 
     ret = sceNp_67BCF9E3(0, &tlen);
     if (ret >= 0) {
         ret = sceNp_9B87B19B(&ticket);
         if (ret >= 0) {
-            int plen = tlv_encode_single_npid(req->buf, 0x1000, ticket, tlen, npid);
+            int plen = tlv_encode_del_friend(req->packet_buf, ticket, tlen, npid);
             ret = roster_http_post(req, "/imgw/sec/psp/friend/remove_friend",
-                                   req->buf, (u32)plen, 3072u, &resp_len);
+                                   req->packet_buf, (u64)(u32)plen, 3072ULL, &resp_len);
             if (ret >= 0)
-                return tlv_decode_simple_resp(req->buf, 0x1000);
+                return tlv_decode_del_friend_resp(req->packet_buf);
         }
     }
     return ret;
 }
 
-static int roster_op_accept_friend(NpRosterReq *req, const u8 *npid)
+static int __attribute__((noinline)) roster_op_accept_friend(NpRosterReq *req, const NpId *npid)
 {
-    u16 tlen = 0;
-    void *ticket = NULL;
-    u64 resp_len = 0;
+    u16 tlen;
+    void *ticket;
+    u64 resp_len;
     int ret;
 
     ret = sceNp_67BCF9E3(0, &tlen);
     if (ret >= 0) {
         ret = sceNp_9B87B19B(&ticket);
         if (ret >= 0) {
-            int plen = tlv_encode_single_npid(req->buf, 0x1000, ticket, tlen, npid);
+            int plen = tlv_encode_accept_friend(req->packet_buf, ticket, tlen, npid);
             ret = roster_http_post(req, "/imgw/sec/psp/friend/accept_friend",
-                                   req->buf, (u32)plen, 3072u, &resp_len);
+                                   req->packet_buf, (u64)(u32)plen, 3072ULL, &resp_len);
             if (ret >= 0)
-                return tlv_decode_simple_resp(req->buf, 0x1000);
+                return tlv_decode_accept_friend_resp(req->packet_buf);
         }
     }
     return ret;
 }
 
-static int roster_op_get_msg(NpRosterReq *req, u8 count, int *got_out, const u8 *npid, void *msg_out)
+static int __attribute__((noinline)) roster_op_get_msg(NpRosterReq *req, int count, int *got_out, const NpId *npid, void *msg_out)
 {
-    u16 tlen = 0;
-    void *ticket = NULL;
-    u64 resp_len = 0;
+    u16 tlen;
+    void *ticket;
+    u64 resp_len;
     int ret;
 
     ret = sceNp_67BCF9E3(0, &tlen);
     if (ret >= 0) {
         ret = sceNp_9B87B19B(&ticket);
         if (ret >= 0) {
-            int plen = tlv_encode_get_msg(req->buf, ticket, tlen, count, npid);
+            int plen = tlv_encode_get_msg(req->packet_buf, ticket, tlen, (u8)count, npid);
             ret = roster_http_post(req, "/imgw/sec/psp/friend/get_friend_message_list",
-                                   req->buf, (u32)plen, 3072u, &resp_len);
+                                   req->packet_buf, (u64)(u32)plen, 3072ULL, &resp_len);
             if (ret >= 0)
-                return tlv_decode_msg_resp(req->buf, count, got_out, msg_out);
+                return tlv_decode_get_msg_resp(req->packet_buf, count, got_out, msg_out);
         }
     }
     return ret;
 }
 
-static int roster_op_get_blocks(NpRosterReq *req, u8 count, int start,
-                                int *total_out, int *got_out, void *entries)
+static int __attribute__((noinline)) roster_op_get_blocks(NpRosterReq *req, int count, int start,
+                                                          int *total_out, int *got_out, void *entries)
 {
-    u16 tlen = 0;
-    void *ticket = NULL;
-    u64 resp_len = 0;
+    u16 tlen;
+    void *ticket;
+    u64 resp_len;
     int ret;
 
     ret = sceNp_67BCF9E3(0, &tlen);
     if (ret >= 0) {
         ret = sceNp_9B87B19B(&ticket);
         if (ret >= 0) {
-            int plen = tlv_encode_get_list(req->buf, 0x1001, ticket, tlen, (u8)start, count);
+            int plen = tlv_encode_get_blocks(req->packet_buf, ticket, tlen, (u8)start, (u8)count);
             ret = roster_http_post(req, "/imgw/sec/psp/block/get_block_list",
-                                   req->buf, (u32)plen, 3072u, &resp_len);
+                                   req->packet_buf, (u64)(u32)plen, 3072ULL, &resp_len);
             if (ret >= 0)
-                return tlv_decode_list_resp(req->buf, 0x1001, 0x1003, count, start, total_out, got_out, entries);
+                return tlv_decode_get_blocks_resp(req->packet_buf, count, start, total_out, got_out, entries);
         }
     }
     return ret;
 }
 
-static int roster_op_add_block(NpRosterReq *req, const u8 *npid)
+static int __attribute__((noinline)) roster_op_add_block(NpRosterReq *req, const NpId *npid)
 {
-    u16 tlen = 0;
-    void *ticket = NULL;
-    u64 resp_len = 0;
+    u16 tlen;
+    void *ticket;
+    u64 resp_len;
     int ret;
 
     ret = sceNp_67BCF9E3(0, &tlen);
     if (ret >= 0) {
         ret = sceNp_9B87B19B(&ticket);
         if (ret >= 0) {
-            int plen = tlv_encode_single_npid(req->buf, 0x1001, ticket, tlen, npid);
+            int plen = tlv_encode_add_block(req->packet_buf, ticket, tlen, npid);
             ret = roster_http_post(req, "/imgw/sec/psp/block/add_block_list",
-                                   req->buf, (u32)plen, 3072u, &resp_len);
+                                   req->packet_buf, (u64)(u32)plen, 3072ULL, &resp_len);
             if (ret >= 0)
-                return tlv_decode_simple_resp(req->buf, 0x1001);
+                return tlv_decode_add_block_resp(req->packet_buf);
         }
     }
     return ret;
 }
 
-static int roster_op_del_block(NpRosterReq *req, const u8 *npid)
+static int __attribute__((noinline)) roster_op_del_block(NpRosterReq *req, const NpId *npid)
 {
-    u16 tlen = 0;
-    void *ticket = NULL;
-    u64 resp_len = 0;
+    u16 tlen;
+    void *ticket;
+    u64 resp_len;
     int ret;
 
     ret = sceNp_67BCF9E3(0, &tlen);
     if (ret >= 0) {
         ret = sceNp_9B87B19B(&ticket);
         if (ret >= 0) {
-            int plen = tlv_encode_single_npid(req->buf, 0x1001, ticket, tlen, npid);
+            int plen = tlv_encode_del_block(req->packet_buf, ticket, tlen, npid);
             ret = roster_http_post(req, "/imgw/sec/psp/block/remove_block_list",
-                                   req->buf, (u32)plen, 3072u, &resp_len);
+                                   req->packet_buf, (u64)(u32)plen, 3072ULL, &resp_len);
             if (ret >= 0)
-                return tlv_decode_simple_resp(req->buf, 0x1001);
+                return tlv_decode_del_block_resp(req->packet_buf);
         }
     }
     return ret;
@@ -876,7 +1039,7 @@ int np_roster_init(void)
         return (int)0x80550004;
     if (g_roster_init > 0)
         return (int)0x80550A01;
-    g_roster_head = NULL;
+    roster_init_list();
     g_roster_init = 1;
     return 0;
 }
@@ -969,7 +1132,7 @@ int sceNpRosterGetFriendListEntry(int req_id, u8 count, int start,
     return ret;
 }
 
-int sceNpRosterAddFriendListEntry(int req_id, const u8 *npid, const char *msg, const u32 *opt)
+int sceNpRosterAddFriendListEntry(int req_id, const NpId *npid, const char *msg, const u32 *opt)
 {
     NpRosterReq *req;
     int ret;
@@ -987,7 +1150,7 @@ int sceNpRosterAddFriendListEntry(int req_id, const u8 *npid, const char *msg, c
     return ret;
 }
 
-int sceNpRosterDeleteFriendListEntry(int req_id, const u8 *npid, const u32 *opt)
+int sceNpRosterDeleteFriendListEntry(int req_id, const NpId *npid, const u32 *opt)
 {
     NpRosterReq *req;
     int ret;
@@ -1005,7 +1168,7 @@ int sceNpRosterDeleteFriendListEntry(int req_id, const u8 *npid, const u32 *opt)
     return ret;
 }
 
-int sceNpRosterAcceptFriendListEntry(int req_id, const u8 *npid, const u32 *opt)
+int sceNpRosterAcceptFriendListEntry(int req_id, const NpId *npid, const u32 *opt)
 {
     NpRosterReq *req;
     int ret;
@@ -1023,10 +1186,10 @@ int sceNpRosterAcceptFriendListEntry(int req_id, const u8 *npid, const u32 *opt)
     return ret;
 }
 
-int sceNpRosterGetFriendListMessage(int req_id, const u8 *npid, void *msg_out, const u32 *opt)
+int sceNpRosterGetFriendListMessage(int req_id, const NpId *npid, void *msg_out, const u32 *opt)
 {
     NpRosterReq *req;
-    int got = 0;
+    int got;
     int ret;
 
     if (_sceKernelCheckThreadStack() < 14288) return (int)0x80550004;
@@ -1089,7 +1252,7 @@ int sceNpRosterGetBlockListEntry(int req_id, u8 count, int start,
     return ret;
 }
 
-int sceNpRosterAddBlockListEntry(int req_id, const u8 *npid, const u32 *opt)
+int sceNpRosterAddBlockListEntry(int req_id, const NpId *npid, const u32 *opt)
 {
     NpRosterReq *req;
     int ret;
@@ -1107,7 +1270,7 @@ int sceNpRosterAddBlockListEntry(int req_id, const u8 *npid, const u32 *opt)
     return ret;
 }
 
-int sceNpRosterDeleteBlockListEntry(int req_id, const u8 *npid, const u32 *opt)
+int sceNpRosterDeleteBlockListEntry(int req_id, const NpId *npid, const u32 *opt)
 {
     NpRosterReq *req;
     int ret;
