@@ -33,6 +33,7 @@ int SwMwCoreGetPort(unsigned short *port);
 int SwMwCoreImportKeyBin(const void *data, int size);
 int _sceDtcpIpDownload(unsigned short port, void *buffer, int *size);
 int _sceDtcpIpActivate(int *result);
+int SwMwManagerParamTblThread(void *argument);
 }
 
 extern "C" int SwMwManagerThreadCreate(struct SwMwManagerThread *thread, int (*entry)(void *),
@@ -361,5 +362,43 @@ extern "C" int SwMwManagerActivationThread(void *argument)
 		}
 	}
 	activation->state = 1;
+	return 0;
+}
+
+/* the parameter table's worker: download it and import it (0x810052f6) */
+extern "C" int SwMwManagerParamTblThread(void *argument)
+{
+	struct SwMwManagerParamTbl *table = (struct SwMwManagerParamTbl *)argument;
+	unsigned short port;
+	int size;
+
+	size = 612;
+	SwMwCoreGetPort(&port);
+	table->state = 0;
+	table->status = _sceDtcpIpDownload(port, table->data, &size);
+	if (table->status >= 0)
+		SwMwCoreImportKeyBin(table->data, size);
+	table->state = 1;
+	return 0;
+}
+
+/* start the parameter table's download in the background (0x8100536e) */
+extern "C" int SwMwManagerDownloadParamTbl(void)
+{
+	static struct SwMwManagerParamTbl table;
+	static struct SwMwManagerThread thread;
+	int status;
+	int failed;
+
+	swMwTrace("sw mw:SwMwManagerDownloadParamTbl\n");
+	table.state = 0;
+	status = SwMwManagerThreadCreate(&thread, SwMwManagerParamTblThread, &table, 0);
+	failed = 0;
+	if (status != 0) {
+		swMwTrace("[SWMW] Error %d in %s:%d\n", status, SWMW_MANAGER_SOURCE, 1654);
+		failed = 1;
+	}
+	if (failed != 0)
+		return status;
 	return 0;
 }

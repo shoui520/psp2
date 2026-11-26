@@ -15,6 +15,14 @@ struct SwMwManagerActivation {
 	int result;			/* 0x08 */
 };
 
+/* the parameter table worker's buffer: 612 bytes, its state flag and its status */
+struct SwMwManagerParamTbl {
+	unsigned char data[612];	/* 0x000 */
+	unsigned char state;		/* 0x264 */
+	unsigned char padding[3];	/* 0x265 */
+	int status;			/* 0x268 */
+};
+
 /* one of the manager's threads: its entry, its id once started and its argument */
 struct SwMwManagerThread {
 	int (*entry)(void *argument);	/* 0x00 */
@@ -50,6 +58,8 @@ int SwMwManagerJoinThread(struct SwMwManagerThread *thread);
 int SwMwManagerStartActivation(void);
 int SwMwManagerGetActivationResult(int *result);
 int SwMwManagerActivationThread(void *argument);
+int SwMwManagerParamTblThread(void *argument);
+int SwMwManagerDownloadParamTbl(void);
 int SwMwManagerThreadCreate(struct SwMwManagerThread *thread, int (*entry)(void *),
 			    void *argument, int type);
 int SwMwManagerSessionStart(struct SwMwManagerSinkSlots *slots, int mode);
