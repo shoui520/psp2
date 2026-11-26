@@ -34,110 +34,132 @@ s32 http_ensure_connected(HttpRequest *req)
 {
     HttpConnection *conn = req->redir_conn != NULL ? req->redir_conn : req->conn;
     s32 ret = 0;
+    s32 fail_stage = 0; /* 1 = net_err, 2 = fail_reset, 3 = fail_close */
 
-    if (conn->state == HTTP_CONN_SENDING ||
-        (conn->state == HTTP_CONN_SENDING_BODY && req->sending_body != 1)) {
-        if (http_is_tcp_established(conn) == 1) {
-            ret = http_apply_socket_options(conn->sock_fd, &req->cfg);
-            if (ret < 0)
-                goto net_err;
-        } else {
-            http_close_connection(conn);
+    do {
+        if (conn->state == HTTP_CONN_SENDING ||
+            (conn->state == HTTP_CONN_SENDING_BODY && req->sending_body != 1)) {
+            if (http_is_tcp_established(conn) == 1) {
+                ret = http_apply_socket_options(conn->sock_fd, &req->cfg);
+                if (ret < 0) {
+                    fail_stage = 1;
+                    break;
+                }
+            } else {
+                http_close_connection(conn);
+                conn->state = HTTP_CONN_CONNECTING;
+            }
+        }
+
+        while (conn->state == HTTP_CONN_CONNECTING) {
+            s32 sock;
+            u32 nonblock;
+
+            if (conn->resolved != 1) {
+                ret = http_resolve_connection_host(conn);
+                if (ret < 0) {
+                    fail_stage = 2;
+                    break;
+                }
+            }
+
+            sock = sceNetInetSocket(2, 1, 0);
+            if (sock < 0) {
+                fail_stage = 1;
+                break;
+            }
+
+            conn->sock_fd = sock;
             conn->state = HTTP_CONN_CONNECTING;
-        }
-    }
 
-    while (conn->state == HTTP_CONN_CONNECTING) {
-        s32 sock;
-        u32 nonblock;
+            if (http_apply_socket_options(sock, &req->cfg) < 0) {
+                fail_stage = 1;
+                break;
+            }
 
-        if (conn->resolved != 1) {
-            ret = http_resolve_connection_host(conn);
-            if (ret < 0)
-                goto fail_reset;
-        }
+            nonblock = 1;
+            if (sceNetInetSetsockopt(sock, 0xFFFF, 4105, &nonblock, 4) < 0) {
+                fail_stage = 1;
+                break;
+            }
 
-        sock = sceNetInetSocket(2, 1, 0);
-        if (sock < 0)
-            goto net_err;
+            ret = http_connect_with_timeout(sock, &conn->addr, req->cfg.connect_timeout,
+                                            &conn->net_errno, &conn->net_psp_err);
+            if (ret < 0) {
+                fail_stage = 2;
+                break;
+            }
 
-        conn->sock_fd = sock;
-        conn->state = HTTP_CONN_CONNECTING;
+            nonblock = 0;
+            ret = sceNetInetSetsockopt(sock, 0xFFFF, 4105, &nonblock, 4);
+            if (ret < 0) {
+                fail_stage = 1;
+                break;
+            }
 
-        if (http_apply_socket_options(sock, &req->cfg) < 0)
-            goto net_err;
-
-        nonblock = 1;
-        if (sceNetInetSetsockopt(sock, 0xFFFF, 4105, &nonblock, 4) < 0)
-            goto net_err;
-
-        ret = http_connect_with_timeout(sock, &conn->addr, req->cfg.connect_timeout,
-                                        &conn->net_errno, &conn->net_psp_err);
-        if (ret < 0)
-            goto fail_reset;
-
-        nonblock = 0;
-        ret = sceNetInetSetsockopt(sock, 0xFFFF, 4105, &nonblock, 4);
-        if (ret < 0)
-            goto net_err;
-
-        if (conn->scheme == HTTP_SCHEME_HTTPS) {
-            if (conn->cfg.use_proxy == 1) {
-                http_apply_cached_proxy_auth(req, conn);
-                ret = http_ssl_proxy_connect(req, sock);
-                if (ret == SCE_HTTP_ERROR_SSL) {
-                    http_copy_ssl_errors(conn, req);
-                    if (conn->ssl_err == SCE_HTTPS_ERROR_PROXY && req->res_info.status_code == 407) {
-                        if (http_handle_auth_response(req) > 0) {
-                            if (http_is_tcp_established(conn) == 1) {
-                                ret = http_apply_socket_options(conn->sock_fd, &req->cfg);
-                                if (ret < 0)
-                                    goto net_err;
-                            } else {
-                                http_close_connection(conn);
-                                conn->state = HTTP_CONN_CONNECTING;
+            if (conn->scheme == HTTP_SCHEME_HTTPS) {
+                if (conn->cfg.use_proxy == 1) {
+                    http_apply_cached_proxy_auth(req, conn);
+                    ret = http_ssl_proxy_connect(req, sock);
+                    if (ret == SCE_HTTP_ERROR_SSL) {
+                        http_copy_ssl_errors(conn, req);
+                        if (conn->ssl_err == SCE_HTTPS_ERROR_PROXY && req->res_info.status_code == 407) {
+                            if (http_handle_auth_response(req) > 0) {
+                                if (http_is_tcp_established(conn) == 1) {
+                                    ret = http_apply_socket_options(conn->sock_fd, &req->cfg);
+                                    if (ret < 0) {
+                                        fail_stage = 1;
+                                        break;
+                                    }
+                                } else {
+                                    http_close_connection(conn);
+                                    conn->state = HTTP_CONN_CONNECTING;
+                                }
+                                continue;
                             }
+                            if (req->method != HTTP_METHOD_HEAD)
+                                req->state = HTTP_REQ_PROXY_AUTH_FAIL;
+                        }
+                        fail_stage = 3;
+                        break;
+                    }
+                }
+
+                ret = http_ssl_handshake(req, sock);
+                if (ret < 0) {
+                    if (ret == SCE_HTTP_ERROR_SSL) {
+                        if (conn->ssl_err == SCE_HTTPS_ERROR_HANDSHAKE && conn->cfg.ssl_version == 1) {
+                            http_close_connection(conn);
+                            conn->state = HTTP_CONN_CONNECTING;
+                            conn->ssl_err = 0;
+                            conn->cfg.ssl_version = 0;
                             continue;
                         }
-                        if (req->method != HTTP_METHOD_HEAD)
-                            req->state = HTTP_REQ_PROXY_AUTH_FAIL;
+                        http_copy_ssl_errors(conn, req);
                     }
-                    goto fail_close;
+                    fail_stage = 3;
+                    break;
                 }
             }
 
-            ret = http_ssl_handshake(req, sock);
-            if (ret < 0) {
-                if (ret == SCE_HTTP_ERROR_SSL) {
-                    if (conn->ssl_err == SCE_HTTPS_ERROR_HANDSHAKE && conn->cfg.ssl_version == 1) {
-                        http_close_connection(conn);
-                        conn->state = HTTP_CONN_CONNECTING;
-                        conn->ssl_err = 0;
-                        conn->cfg.ssl_version = 0;
-                        continue;
-                    }
-                    http_copy_ssl_errors(conn, req);
-                }
-                goto fail_close;
-            }
+            if (req->method == HTTP_METHOD_POST || req->method == HTTP_METHOD_PUT)
+                conn->state = HTTP_CONN_SENDING_BODY;
+            else
+                conn->state = HTTP_CONN_SENDING;
+            return ret;
         }
+    } while (0);
 
-        if (req->method == HTTP_METHOD_POST || req->method == HTTP_METHOD_PUT)
-            conn->state = HTTP_CONN_SENDING_BODY;
-        else
-            conn->state = HTTP_CONN_SENDING;
+    if (fail_stage == 0)
         return ret;
+
+    if (fail_stage == 1) {
+        conn->net_errno = sceNetInetGetErrno();
+        conn->net_psp_err = sceNetInetGetPspError();
+        ret = SCE_HTTP_ERROR_NETWORK;
     }
-
-    return ret;
-
-net_err:
-    conn->net_errno = sceNetInetGetErrno();
-    conn->net_psp_err = sceNetInetGetPspError();
-    ret = SCE_HTTP_ERROR_NETWORK;
-fail_reset:
-    conn->state = HTTP_CONN_IDLE;
-fail_close:
+    if (fail_stage <= 2)
+        conn->state = HTTP_CONN_IDLE;
     if (conn->sock_fd > 0 && conn->state != HTTP_CONN_PROXY_TUNNEL) {
         sceNetInetClose(conn->sock_fd);
         conn->sock_fd = 0;
@@ -149,7 +171,7 @@ fail_close:
 typedef struct HttpTcpCbStat {
     struct HttpTcpCbStat *next;
     u8                    reserved[16];
-    u16                   local_port;
+    u16                   bound_port;
     u16                   remote_port;
     u16                   tcp_state;
     u16                   pad;
@@ -157,8 +179,8 @@ typedef struct HttpTcpCbStat {
 
 s32 http_is_tcp_established(HttpConnection *conn)
 {
-    HttpSockAddrIn local_addr;
-    s32 addr_len = sizeof(local_addr);
+    HttpSockAddrIn bound_addr;
+    s32 addr_len = sizeof(bound_addr);
     s32 buf_len = 0;
     HttpTcpCbStat *stat_buf;
     HttpTcpCbStat *cur;
@@ -166,7 +188,7 @@ s32 http_is_tcp_established(HttpConnection *conn)
 
     if (conn->resolved == 0)
         return 0;
-    if (sceNetInetGetsockname(conn->sock_fd, &local_addr, &addr_len) < 0)
+    if (sceNetInetGetsockname(conn->sock_fd, &bound_addr, &addr_len) < 0)
         return 0;
     if (sceNetInetGetTcpcbstat(&buf_len, NULL) < 0 || buf_len == 0)
         return 0;
@@ -177,7 +199,7 @@ s32 http_is_tcp_established(HttpConnection *conn)
 
     if (sceNetInetGetTcpcbstat(&buf_len, stat_buf) >= 0) {
         for (cur = stat_buf; cur != NULL; cur = cur->next) {
-            if (cur->local_port == local_addr.port) {
+            if (cur->bound_port == bound_addr.port) {
                 if (cur->tcp_state == 4)
                     established = 1;
                 break;
@@ -301,7 +323,7 @@ s32 http_buffered_recv(HttpRequest *req, u8 *dst, u32 len, s32 flags, s32 peek)
                 fill_cap = conn->recv_buf_size;
             }
 
-            n = http_transport_recv(conn, fill_ptr, fill_cap);
+            n = http_transport_recv(conn, fill_ptr, fill_cap, flags);
             if (n == SCE_HTTP_ERROR_SSL) {
                 http_copy_ssl_errors(conn, req);
                 http_close_connection(conn);
@@ -366,7 +388,7 @@ s32 http_connect_with_timeout(s32 sock_fd, const HttpSockAddrIn *addr, u32 timeo
     u32 tv[2];
     s32 ret;
     u32 bit;
-    u32 word_idx;
+    u32 mask_idx;
 
     ret = sceNetInetConnect(sock_fd, addr, sizeof(*addr));
     if (ret < 0) {
@@ -381,9 +403,9 @@ s32 http_connect_with_timeout(s32 sock_fd, const HttpSockAddrIn *addr, u32 timeo
         return 0;
 
     sceKernelMemset(rfds, 0, sizeof(rfds));
-    word_idx = (u32)sock_fd >> 5;
+    mask_idx = (u32)sock_fd >> 5;
     bit = 1U << ((u32)sock_fd & 31);
-    rfds[word_idx] |= bit;
+    rfds[mask_idx] |= bit;
     sceKernelMemcpy(wfds, rfds, sizeof(wfds));
 
     tv[0] = timeout_usec / 1000000U;
@@ -392,7 +414,7 @@ s32 http_connect_with_timeout(s32 sock_fd, const HttpSockAddrIn *addr, u32 timeo
     if (sceNetInetSelect(sock_fd + 1, rfds, wfds, NULL, timeout_usec != 0 ? tv : NULL) == 0)
         return SCE_HTTP_ERROR_TIMEOUT;
 
-    if ((rfds[word_idx] & bit) != 0 || (wfds[word_idx] & bit) != 0) {
+    if ((rfds[mask_idx] & bit) != 0 || (wfds[mask_idx] & bit) != 0) {
         s32 opt_len = 4;
         s32 gs_ret = sceNetInetGetsockopt(sock_fd, 0xFFFF, 4103, psp_err_out, &opt_len);
         if (gs_ret < 0 || *psp_err_out != 0) {
@@ -671,99 +693,100 @@ s32 http_create_request_core(s32 conn_id, s32 method, const char *path,
     swept_path = (char *)http_malloc(path_len + 1);
     if (swept_path == NULL)
         return SCE_HTTP_ERROR_OUT_OF_MEMORY;
-    ret = sceUriSweepPath(swept_path, path, path_len + 1);
-    if (ret < 0)
-        goto fail;
-
-    if (query != NULL) {
-        query_copy = (char *)http_malloc(sceNet_lib_D8722983(query) + 1);
-        if (query_copy == NULL) { ret = SCE_HTTP_ERROR_OUT_OF_MEMORY; goto fail; }
-        sceNet_lib_80C9F02A(query_copy, query);
-    }
-    if (fragment != NULL) {
-        frag_copy = (char *)http_malloc(sceNet_lib_D8722983(fragment) + 1);
-        if (frag_copy == NULL) { ret = SCE_HTTP_ERROR_OUT_OF_MEMORY; goto fail; }
-        sceNet_lib_80C9F02A(frag_copy, fragment);
-    }
-    if (user != NULL) {
-        user_copy = (char *)http_malloc(sceNet_lib_D8722983(user) + 1);
-        if (user_copy == NULL) { ret = SCE_HTTP_ERROR_OUT_OF_MEMORY; goto fail; }
-        sceNet_lib_80C9F02A(user_copy, user);
-    }
-    if (pass != NULL) {
-        pass_copy = (char *)http_malloc(sceNet_lib_D8722983(pass) + 1);
-        if (pass_copy == NULL) { ret = SCE_HTTP_ERROR_OUT_OF_MEMORY; goto fail; }
-        sceNet_lib_80C9F02A(pass_copy, pass);
-    }
-
-    req = (HttpRequest *)http_malloc(sizeof(*req));
-    if (req == NULL) { ret = SCE_HTTP_ERROR_OUT_OF_MEMORY; goto fail; }
-    sceKernelMemset(req, 0, sizeof(*req));
-
-    intr = http_intr_suspend();
-    ret = http_lock_connection(conn_id, &conn);
-    if (conn != NULL) {
-        req->conn = conn;
-        ret = http_template_copy(&conn->cfg, &req->cfg);
-    }
-    http_intr_resume(intr);
-    if (ret < 0)
-        goto fail;
-
-    {
-        const char *hdr_host = (host_override != NULL && sceNet_lib_A0F16ABD(conn->host, host_override) != 0)
-                               ? host_override : conn->host;
-        ret = http_format_host_header(&host_hdr, conn->scheme, hdr_host, conn->port);
+    do {
+        ret = sceUriSweepPath(swept_path, path, path_len + 1);
         if (ret < 0)
-            goto fail;
-        ret = http_header_node_alloc(&host_node, "Host", host_hdr);
-        if (ret < 0)
-            goto fail;
-        http_free(host_hdr);
-        host_hdr = NULL;
-    }
+            break;
 
-    if (req->cfg.headers == NULL) {
-        req->cfg.headers = host_node;
-    } else {
-        HttpHeaderNode *tail = req->cfg.headers;
-        while (tail->next != NULL)
-            tail = tail->next;
-        tail->next = host_node;
-    }
+        if (query != NULL) {
+            query_copy = (char *)http_malloc(sceNet_lib_D8722983(query) + 1);
+            if (query_copy == NULL) { ret = SCE_HTTP_ERROR_OUT_OF_MEMORY; break; }
+            sceNet_lib_80C9F02A(query_copy, query);
+        }
+        if (fragment != NULL) {
+            frag_copy = (char *)http_malloc(sceNet_lib_D8722983(fragment) + 1);
+            if (frag_copy == NULL) { ret = SCE_HTTP_ERROR_OUT_OF_MEMORY; break; }
+            sceNet_lib_80C9F02A(frag_copy, fragment);
+        }
+        if (user != NULL) {
+            user_copy = (char *)http_malloc(sceNet_lib_D8722983(user) + 1);
+            if (user_copy == NULL) { ret = SCE_HTTP_ERROR_OUT_OF_MEMORY; break; }
+            sceNet_lib_80C9F02A(user_copy, user);
+        }
+        if (pass != NULL) {
+            pass_copy = (char *)http_malloc(sceNet_lib_D8722983(pass) + 1);
+            if (pass_copy == NULL) { ret = SCE_HTTP_ERROR_OUT_OF_MEMORY; break; }
+            sceNet_lib_80C9F02A(pass_copy, pass);
+        }
 
-    req->state = HTTP_REQ_CREATED;
-    req->method = method;
-    req->path = swept_path;   swept_path = NULL;
-    req->query = query_copy;  query_copy = NULL;
-    req->fragment = frag_copy; frag_copy = NULL;
+        req = (HttpRequest *)http_malloc(sizeof(*req));
+        if (req == NULL) { ret = SCE_HTTP_ERROR_OUT_OF_MEMORY; break; }
+        sceKernelMemset(req, 0, sizeof(*req));
 
-    if ((user != NULL && sceNet_lib_D8722983(user) == 0) ||
-        (pass != NULL && sceNet_lib_D8722983(pass) == 0)) {
-        if (req->cfg.auth_user != NULL) http_free(req->cfg.auth_user);
-        if (req->cfg.auth_pass != NULL) http_free(req->cfg.auth_pass);
-        req->cfg.auth_user = user_copy; user_copy = NULL;
-        req->cfg.auth_pass = pass_copy; pass_copy = NULL;
-    }
-
-    req->req_content_len = content_len;
-    req->res_header_buf = (char *)http_malloc(1500);
-    if (req->res_header_buf == NULL) {
         intr = http_intr_suspend();
-        conn->ref_count--;
+        ret = http_lock_connection(conn_id, &conn);
+        if (conn != NULL) {
+            req->conn = conn;
+            ret = http_template_copy(&conn->cfg, &req->cfg);
+        }
         http_intr_resume(intr);
-        ret = SCE_HTTP_ERROR_OUT_OF_MEMORY;
-        goto fail;
-    }
-    sceKernelMemset(req->res_header_buf, 0, 1500);
+        if (ret < 0)
+            break;
 
-    ret = http_register_request(req);
-    if (ret >= 0) {
-        req->url_full = http_build_request_url(req);
-        return ret;
-    }
+        {
+            const char *hdr_host = (host_override != NULL && sceNet_lib_A0F16ABD(conn->host, host_override) != 0)
+                                   ? host_override : conn->host;
+            ret = http_format_host_header(&host_hdr, conn->scheme, hdr_host, conn->port);
+            if (ret < 0)
+                break;
+            ret = http_header_node_alloc(&host_node, "Host", host_hdr);
+            if (ret < 0)
+                break;
+            http_free(host_hdr);
+            host_hdr = NULL;
+        }
 
-fail:
+        if (req->cfg.headers == NULL) {
+            req->cfg.headers = host_node;
+        } else {
+            HttpHeaderNode *tail = req->cfg.headers;
+            while (tail->next != NULL)
+                tail = tail->next;
+            tail->next = host_node;
+        }
+
+        req->state = HTTP_REQ_CREATED;
+        req->method = method;
+        req->path = swept_path;   swept_path = NULL;
+        req->query = query_copy;  query_copy = NULL;
+        req->fragment = frag_copy; frag_copy = NULL;
+
+        if ((user != NULL && sceNet_lib_D8722983(user) == 0) ||
+            (pass != NULL && sceNet_lib_D8722983(pass) == 0)) {
+            if (req->cfg.auth_user != NULL) http_free(req->cfg.auth_user);
+            if (req->cfg.auth_pass != NULL) http_free(req->cfg.auth_pass);
+            req->cfg.auth_user = user_copy; user_copy = NULL;
+            req->cfg.auth_pass = pass_copy; pass_copy = NULL;
+        }
+
+        req->req_content_len = content_len;
+        req->res_header_buf = (char *)http_malloc(1500);
+        if (req->res_header_buf == NULL) {
+            intr = http_intr_suspend();
+            conn->ref_count--;
+            http_intr_resume(intr);
+            ret = SCE_HTTP_ERROR_OUT_OF_MEMORY;
+            break;
+        }
+        sceKernelMemset(req->res_header_buf, 0, 1500);
+
+        ret = http_register_request(req);
+        if (ret >= 0) {
+            req->url_full = http_build_request_url(req);
+            return ret;
+        }
+    } while (0);
+
     if (req != NULL) {
         if (req->res_header_buf != NULL)
             http_free(req->res_header_buf);
@@ -842,81 +865,82 @@ s32 http_create_connection_core(s32 tmpl_id, const char *host, const char *schem
         return SCE_HTTP_ERROR_OUT_OF_MEMORY;
     sceKernelMemset(conn, 0, sizeof(*conn));
 
-    if (host == NULL) {
-        ret = SCE_HTTP_ERROR_INVALID_VALUE;
-        goto fail;
-    }
-
-    {
-        u32 host_len = sceNet_lib_D8722983(host) + 1;
-        host_copy = (char *)http_malloc(host_len);
-        if (host_copy == NULL) { ret = SCE_HTTP_ERROR_OUT_OF_MEMORY; goto fail; }
-        sceKernelMemcpy(host_copy, host, host_len);
-        host_copy[host_len - 1] = '\0';
-    }
-
-    conn->port = port;
-    conn->scheme = scheme_id;
-    conn->host = host_copy;
-    conn->state = HTTP_CONN_IDLE;
-
-    if (redir_mode == 1 || redir_mode == 2) {
-        ret = http_template_copy(&owner_req->conn->cfg, &conn->cfg);
-    } else {
-        HttpTemplate *tmpl = NULL;
-        if (user != NULL) {
-            u32 len = sceNet_lib_D8722983(user) + 1;
-            user_copy = (char *)http_malloc(len);
-            if (user_copy == NULL) { ret = SCE_HTTP_ERROR_OUT_OF_MEMORY; goto fail; }
-            sceKernelMemcpy(user_copy, user, len);
+    do {
+        if (host == NULL) {
+            ret = SCE_HTTP_ERROR_INVALID_VALUE;
+            break;
         }
-        if (pass != NULL) {
-            u32 len = sceNet_lib_D8722983(pass) + 1;
-            pass_copy = (char *)http_malloc(len);
-            if (pass_copy == NULL) { ret = SCE_HTTP_ERROR_OUT_OF_MEMORY; goto fail; }
-            sceKernelMemcpy(pass_copy, pass, len);
+
+        {
+            u32 host_len = sceNet_lib_D8722983(host) + 1;
+            host_copy = (char *)http_malloc(host_len);
+            if (host_copy == NULL) { ret = SCE_HTTP_ERROR_OUT_OF_MEMORY; break; }
+            sceKernelMemcpy(host_copy, host, host_len);
+            host_copy[host_len - 1] = '\0';
         }
-        intr = http_intr_suspend();
-        ret = http_lock_template(tmpl_id, &tmpl);
-        if (tmpl != NULL) {
-            ret = http_template_copy(tmpl, &conn->cfg);
-            tmpl->ref_count--;
+
+        conn->port = port;
+        conn->scheme = scheme_id;
+        conn->host = host_copy;
+        conn->state = HTTP_CONN_IDLE;
+
+        if (redir_mode == 1 || redir_mode == 2) {
+            ret = http_template_copy(&owner_req->conn->cfg, &conn->cfg);
+        } else {
+            HttpTemplate *tmpl = NULL;
+            if (user != NULL) {
+                u32 len = sceNet_lib_D8722983(user) + 1;
+                user_copy = (char *)http_malloc(len);
+                if (user_copy == NULL) { ret = SCE_HTTP_ERROR_OUT_OF_MEMORY; break; }
+                sceKernelMemcpy(user_copy, user, len);
+            }
+            if (pass != NULL) {
+                u32 len = sceNet_lib_D8722983(pass) + 1;
+                pass_copy = (char *)http_malloc(len);
+                if (pass_copy == NULL) { ret = SCE_HTTP_ERROR_OUT_OF_MEMORY; break; }
+                sceKernelMemcpy(pass_copy, pass, len);
+            }
+            intr = http_intr_suspend();
+            ret = http_lock_template(tmpl_id, &tmpl);
+            if (tmpl != NULL) {
+                ret = http_template_copy(tmpl, &conn->cfg);
+                tmpl->ref_count--;
+            }
+            http_intr_resume(intr);
         }
-        http_intr_resume(intr);
-    }
-    if (ret < 0)
-        goto fail;
-
-    conn->recv_buf = (u8 *)http_malloc(conn->cfg.recv_block_size);
-    if (conn->recv_buf == NULL) { ret = SCE_HTTP_ERROR_OUT_OF_MEMORY; goto fail; }
-    conn->recv_buf_size = conn->cfg.recv_block_size;
-    sceKernelMemset(conn->recv_buf, 0, conn->recv_buf_size);
-
-    if (user_copy != NULL || pass_copy != NULL) {
-        if (conn->cfg.auth_user != NULL) http_free(conn->cfg.auth_user);
-        if (conn->cfg.auth_pass != NULL) http_free(conn->cfg.auth_pass);
-        conn->cfg.auth_user = user_copy; user_copy = NULL;
-        conn->cfg.auth_pass = pass_copy; pass_copy = NULL;
-    }
-    conn->cfg.keep_alive = keep_alive;
-
-    if (redir_mode != 1 && redir_mode != 2) {
-        ret = http_register_connection(conn);
         if (ret < 0)
-            goto fail;
-        return ret;
-    }
+            break;
 
-    intr = http_intr_suspend();
-    if (owner_req->conn->redir_chain_next != NULL)
-        conn->redir_chain_next = owner_req->conn->redir_chain_next;
-    owner_req->conn->redir_chain_next = conn;
-    conn->ref_count++;
-    owner_req->redir_conn = conn;
-    http_intr_resume(intr);
-    return 0;
+        conn->recv_buf = (u8 *)http_malloc(conn->cfg.recv_block_size);
+        if (conn->recv_buf == NULL) { ret = SCE_HTTP_ERROR_OUT_OF_MEMORY; break; }
+        conn->recv_buf_size = conn->cfg.recv_block_size;
+        sceKernelMemset(conn->recv_buf, 0, conn->recv_buf_size);
 
-fail:
+        if (user_copy != NULL || pass_copy != NULL) {
+            if (conn->cfg.auth_user != NULL) http_free(conn->cfg.auth_user);
+            if (conn->cfg.auth_pass != NULL) http_free(conn->cfg.auth_pass);
+            conn->cfg.auth_user = user_copy; user_copy = NULL;
+            conn->cfg.auth_pass = pass_copy; pass_copy = NULL;
+        }
+        conn->cfg.keep_alive = keep_alive;
+
+        if (redir_mode != 1 && redir_mode != 2) {
+            ret = http_register_connection(conn);
+            if (ret < 0)
+                break;
+            return ret;
+        }
+
+        intr = http_intr_suspend();
+        if (owner_req->conn->redir_chain_next != NULL)
+            conn->redir_chain_next = owner_req->conn->redir_chain_next;
+        owner_req->conn->redir_chain_next = conn;
+        conn->ref_count++;
+        owner_req->redir_conn = conn;
+        http_intr_resume(intr);
+        return 0;
+    } while (0);
+
     if (conn != NULL) {
         if (conn->recv_buf != NULL)
             http_free(conn->recv_buf);
@@ -1099,7 +1123,7 @@ s32 http_find_redir_connection(HttpRequest *req, const char *host, s32 scheme, u
 /* -------------------------------------------------------------------------
  * Template object management
  * ------------------------------------------------------------------------- */
-static void http_append_header_node(HttpHeaderNode **head, HttpHeaderNode *node)
+HTTP_ALWAYS_INLINE void http_append_header_node(HttpHeaderNode **head, HttpHeaderNode *node)
 {
     if (*head == NULL) {
         *head = node;
@@ -1128,46 +1152,47 @@ s32 http_create_template_internal(const char *user_agent, u32 http_ver, s32 auto
 
     sdk_ver = sceKernelGetCompiledSdkVersion();
 
-    if (user_agent != NULL) {
-        ret = http_header_node_alloc(&node, "User-Agent", user_agent);
-        if (ret < 0) goto fail;
+    do {
+        if (user_agent != NULL) {
+            ret = http_header_node_alloc(&node, "User-Agent", user_agent);
+            if (ret < 0) break;
+            http_append_header_node(&tmpl->headers, node);
+        }
+
+        ret = http_header_node_alloc(&node, "Accept", "*/*;q=0.01");
+        if (ret < 0) break;
         http_append_header_node(&tmpl->headers, node);
-    }
 
-    ret = http_header_node_alloc(&node, "Accept", "*/*;q=0.01");
-    if (ret < 0) goto fail;
-    http_append_header_node(&tmpl->headers, node);
+        ret = http_header_node_alloc(&node, "Accept-Encoding", "");
+        if (ret < 0) break;
+        http_append_header_node(&tmpl->headers, node);
 
-    ret = http_header_node_alloc(&node, "Accept-Encoding", "");
-    if (ret < 0) goto fail;
-    http_append_header_node(&tmpl->headers, node);
+        ret = http_header_node_alloc(&node, "Accept-Charset", "iso-8859-1;q=0.01");
+        if (ret < 0) break;
+        http_append_header_node(&tmpl->headers, node);
 
-    ret = http_header_node_alloc(&node, "Accept-Charset", "iso-8859-1;q=0.01");
-    if (ret < 0) goto fail;
-    http_append_header_node(&tmpl->headers, node);
+        if (http_ver >= 2) {
+            ret = SCE_HTTP_ERROR_UNKNOWN_VERSION;
+            break;
+        }
 
-    if (http_ver >= 2) {
-        ret = SCE_HTTP_ERROR_UNKNOWN_VERSION;
-        goto fail;
-    }
+        tmpl->http_version = (s32)http_ver;
+        tmpl->use_default_proxy = (u16)auto_proxy;
+        tmpl->resolve_timeout = 3000000;
+        tmpl->resolve_retry = 10;
+        tmpl->res_header_max_size = 5000;
+        tmpl->recv_block_size = 1500;
+        tmpl->max_redirects = 6;
+        tmpl->max_auth_retries = 6;
+        tmpl->auto_redirect = 1;
+        tmpl->cache_mode = HTTP_CACHE_NONE;
+        tmpl->cookie_enabled = 1;
+        tmpl->auth_enabled = 1;
+        tmpl->ssl_version = (sdk_ver > 0x060600FF) ? 2 : 1;
 
-    tmpl->http_version = (s32)http_ver;
-    tmpl->use_default_proxy = (u16)auto_proxy;
-    tmpl->resolve_timeout = 3000000;
-    tmpl->resolve_retry = 10;
-    tmpl->res_header_max_size = 5000;
-    tmpl->recv_block_size = 1500;
-    tmpl->max_redirects = 6;
-    tmpl->max_auth_retries = 6;
-    tmpl->auto_redirect = 1;
-    tmpl->cache_mode = HTTP_CACHE_NONE;
-    tmpl->cookie_enabled = 1;
-    tmpl->auth_enabled = 1;
-    tmpl->ssl_version = (sdk_ver > 0x060600FF) ? 2 : 1;
+        return http_register_template(tmpl);
+    } while (0);
 
-    return http_register_template(tmpl);
-
-fail:
     http_header_list_free(tmpl->headers);
     http_free(tmpl);
     return ret;
@@ -1356,27 +1381,28 @@ s32 http_template_copy(const HttpTemplate *src, HttpTemplate *dst)
     dst->ssl_cb = src->ssl_cb;
     dst->ssl_cb_arg = src->ssl_cb_arg;
 
-    if (src->proxy_server != NULL) {
-        dst->proxy_server = (char *)http_malloc(sceNet_lib_D8722983(src->proxy_server) + 1);
-        if (dst->proxy_server == NULL) { ret = SCE_HTTP_ERROR_OUT_OF_MEMORY; goto fail; }
-        sceNet_lib_80C9F02A(dst->proxy_server, src->proxy_server);
-    }
-    if (src->auth_user != NULL && sceNet_lib_D8722983(src->auth_user) != 0) {
-        dst->auth_user = (char *)http_malloc(sceNet_lib_D8722983(src->auth_user) + 1);
-        if (dst->auth_user == NULL) { ret = SCE_HTTP_ERROR_OUT_OF_MEMORY; goto fail; }
-        sceNet_lib_80C9F02A(dst->auth_user, src->auth_user);
-    }
-    if (src->auth_pass != NULL && sceNet_lib_D8722983(src->auth_pass) != 0) {
-        dst->auth_pass = (char *)http_malloc(sceNet_lib_D8722983(src->auth_pass) + 1);
-        if (dst->auth_pass == NULL) { ret = SCE_HTTP_ERROR_OUT_OF_MEMORY; goto fail; }
-        sceNet_lib_80C9F02A(dst->auth_pass, src->auth_pass);
-    }
+    do {
+        if (src->proxy_server != NULL) {
+            dst->proxy_server = (char *)http_malloc(sceNet_lib_D8722983(src->proxy_server) + 1);
+            if (dst->proxy_server == NULL) { ret = SCE_HTTP_ERROR_OUT_OF_MEMORY; break; }
+            sceNet_lib_80C9F02A(dst->proxy_server, src->proxy_server);
+        }
+        if (src->auth_user != NULL && sceNet_lib_D8722983(src->auth_user) != 0) {
+            dst->auth_user = (char *)http_malloc(sceNet_lib_D8722983(src->auth_user) + 1);
+            if (dst->auth_user == NULL) { ret = SCE_HTTP_ERROR_OUT_OF_MEMORY; break; }
+            sceNet_lib_80C9F02A(dst->auth_user, src->auth_user);
+        }
+        if (src->auth_pass != NULL && sceNet_lib_D8722983(src->auth_pass) != 0) {
+            dst->auth_pass = (char *)http_malloc(sceNet_lib_D8722983(src->auth_pass) + 1);
+            if (dst->auth_pass == NULL) { ret = SCE_HTTP_ERROR_OUT_OF_MEMORY; break; }
+            sceNet_lib_80C9F02A(dst->auth_pass, src->auth_pass);
+        }
 
-    ret = http_header_list_clone(&dst->headers, src->headers);
-    if (ret >= 0)
-        return 0;
+        ret = http_header_list_clone(&dst->headers, src->headers);
+        if (ret >= 0)
+            return 0;
+    } while (0);
 
-fail:
     http_template_free_fields(dst);
     return ret;
 }
@@ -1393,7 +1419,7 @@ void http_template_list_init(void)
 void http_strip_proxy_host(char *host_buf)
 {
     SceUriElement uri;
-    u32 work_size = 0;
+    u32 work_size;
     void *uri_work;
 
     if (host_buf == NULL || sceUriParse(NULL, host_buf, NULL, &work_size, 0) < 0)
@@ -1573,7 +1599,7 @@ u64 http_parse_u64(const char *str)
             break;
         if (idx >= 21)
             break;
-        val = val * 10ULL + (u64)(u8)(str[idx] - '0');
+        val = val * 10ULL + (s8)str[idx] - '0';
         idx++;
     }
     return val;
@@ -1642,7 +1668,7 @@ s32 http_storage_write_tlv_hdr(s32 id, u8 tag, u16 len)
 /* -------------------------------------------------------------------------
  * HTTP response cache (memory & fixed-pool modes)
  * ------------------------------------------------------------------------- */
-static s32 http_is_pool_ptr(const void *ptr)
+HTTP_ALWAYS_INLINE s32 http_is_pool_ptr(const void *ptr)
 {
     u32 addr = (u32)ptr;
     return g_cache_pool_inited == 1 &&
@@ -2000,43 +2026,44 @@ HttpCacheEntry *http_cache_mem_alloc_entry(HttpRequest *req)
     if (!reserved)
         return NULL;
 
-    url = http_build_request_url(req);
-    if (url == NULL)
-        goto fail;
+    do {
+        url = http_build_request_url(req);
+        if (url == NULL)
+            break;
 
-    entry = (HttpCacheEntry *)http_malloc(sizeof(*entry));
-    if (entry == NULL)
-        goto fail;
+        entry = (HttpCacheEntry *)http_malloc(sizeof(*entry));
+        if (entry == NULL)
+            break;
 
-    data = (HttpCacheData *)http_malloc(sizeof(*data));
-    if (data == NULL)
-        goto fail;
-    sceKernelMemset(data, 0, sizeof(*data));
+        data = (HttpCacheData *)http_malloc(sizeof(*data));
+        if (data == NULL)
+            break;
+        sceKernelMemset(data, 0, sizeof(*data));
 
-    if (req->res_header_len != 0) {
-        data->header_size = req->res_header_len;
-        data->header_buf = http_malloc(req->res_header_len);
-        if (data->header_buf == NULL)
-            goto fail;
-    }
+        if (req->res_header_len != 0) {
+            data->header_size = req->res_header_len;
+            data->header_buf = http_malloc(req->res_header_len);
+            if (data->header_buf == NULL)
+                break;
+        }
 
-    if (req->res_info.content_length != 0) {
-        if ((req->res_info.content_length >> 32) != 0)
-            goto fail;
-        data->body_size = (u32)req->res_info.content_length;
-        data->body_buf = http_malloc(data->body_size);
-        if (data->body_buf == NULL)
-            goto fail;
-    }
+        if (req->res_info.content_length != 0) {
+            if ((req->res_info.content_length >> 32) != 0)
+                break;
+            data->body_size = (u32)req->res_info.content_length;
+            data->body_buf = http_malloc(data->body_size);
+            if (data->body_buf == NULL)
+                break;
+        }
 
-    sceKernelMemset(entry, 0, sizeof(*entry));
-    http_md5_digest(url, sceNet_lib_D8722983(url), entry->url_md5);
-    entry->url = url;
-    entry->method = req->method;
-    entry->data = data;
-    return entry;
+        sceKernelMemset(entry, 0, sizeof(*entry));
+        http_md5_digest(url, sceNet_lib_D8722983(url), entry->url_md5);
+        entry->url = url;
+        entry->method = req->method;
+        entry->data = data;
+        return entry;
+    } while (0);
 
-fail:
     if (reserved)
         g_cache_mem_cur_size -= reserve_size;
     if (url != NULL)
@@ -2106,7 +2133,7 @@ void http_cache_pool_free_data(HttpCacheData *data)
         http_cache_pool_free_chain((HttpCacheBlock *)data->body_buf);
 }
 
-static void http_cache_pool_unlink_and_free(HttpCacheEntry *entry)
+HTTP_ALWAYS_INLINE void http_cache_pool_unlink_and_free(HttpCacheEntry *entry)
 {
     http_cache_hash_remove(g_cache_pool_buckets, entry);
     if (entry->lru_prev != NULL) {
@@ -2167,28 +2194,29 @@ HttpCacheEntry *http_cache_pool_alloc_entry(HttpRequest *req)
     data = (HttpCacheData *)((u8 *)blk + 72);
     entry->url = (char *)((u8 *)blk + 112);
 
-    if (req->res_header_len != 0) {
-        data->header_size = req->res_header_len;
-        data->header_buf = http_cache_pool_alloc_block();
-        if (data->header_buf == NULL)
-            goto fail;
-    }
+    do {
+        if (req->res_header_len != 0) {
+            data->header_size = req->res_header_len;
+            data->header_buf = http_cache_pool_alloc_block();
+            if (data->header_buf == NULL)
+                break;
+        }
 
-    if (!(req->res_info.has_content_length == 1 && req->res_info.content_length == 0)) {
-        data->body_size = (u32)req->res_info.content_length;
-        data->body_buf = http_cache_pool_alloc_block();
-        if (data->body_buf == NULL)
-            goto fail;
-    }
+        if (!(req->res_info.has_content_length == 1 && req->res_info.content_length == 0)) {
+            data->body_size = (u32)req->res_info.content_length;
+            data->body_buf = http_cache_pool_alloc_block();
+            if (data->body_buf == NULL)
+                break;
+        }
 
-    http_md5_digest(url, sceNet_lib_D8722983(url), entry->url_md5);
-    sceNet_lib_80C9F02A(entry->url, url);
-    entry->data = data;
-    entry->method = req->method;
-    http_free(url);
-    return entry;
+        http_md5_digest(url, sceNet_lib_D8722983(url), entry->url_md5);
+        sceNet_lib_80C9F02A(entry->url, url);
+        entry->data = data;
+        entry->method = req->method;
+        http_free(url);
+        return entry;
+    } while (0);
 
-fail:
     http_cache_pool_free_data(data);
     *(void **)entry = NULL;
     http_cache_pool_free_chain(blk);
@@ -2266,7 +2294,7 @@ void http_cache_hash_remove(HttpCacheEntry **buckets, HttpCacheEntry *entry)
     }
 }
 
-static void http_cache_lru_promote(HttpCacheEntry *entry, HttpCacheEntry **head, HttpCacheEntry **tail)
+HTTP_ALWAYS_INLINE void http_cache_lru_promote(HttpCacheEntry *entry, HttpCacheEntry **head, HttpCacheEntry **tail)
 {
     if (entry->lru_prev != NULL) {
         entry->lru_prev->lru_next = entry->lru_next;
@@ -2336,7 +2364,7 @@ s32 http_cache_mem_reserve(u32 needed)
 /* -------------------------------------------------------------------------
  * Request query APIs
  * ------------------------------------------------------------------------- */
-static s32 http_ensure_response_ready(HttpRequest *req)
+HTTP_ALWAYS_INLINE s32 http_ensure_response_ready(HttpRequest *req)
 {
     HttpConnection *conn = req->redir_conn != NULL ? req->redir_conn : req->conn;
 
@@ -2473,7 +2501,26 @@ s32 sceHttpGetAllHeader(s32 req_id, char **hdr_out, u32 *len_out)
 
     ret = http_lock_request(req_id, &req);
     if (ret >= 0) {
-        ret = http_ensure_response_ready(req);
+        HttpConnection *conn = req->redir_conn != NULL ? req->redir_conn : req->conn;
+        switch (req->state) {
+        case HTTP_REQ_CREATED:
+            ret = SCE_HTTP_ERROR_BEFORE_SEND;
+            break;
+        case HTTP_REQ_ERROR:
+            ret = SCE_HTTP_ERROR_NETWORK;
+            break;
+        case HTTP_REQ_ABORTED:
+            ret = SCE_HTTP_ERROR_ABORTED;
+            break;
+        case HTTP_REQ_SENT:
+            if (conn->current_req_id != req->id)
+                ret = SCE_HTTP_ERROR_NOT_CURRENT_REQ;
+            else
+                ret = http_process_response(req);
+            break;
+        default:
+            break;
+        }
         if (ret >= 0) {
             if (req->all_header_buf == NULL)
                 ret = http_copy_all_response_headers(req);
@@ -2497,22 +2544,21 @@ s32 sceHttpGetAllHeader(s32 req_id, char **hdr_out, u32 *len_out)
  * ------------------------------------------------------------------------- */
 s32 http_load_cached_response_header(HttpRequest *req)
 {
-    HttpCacheData *cdata = req->cache_read_entry->data;
-
-    if (cdata->header_size >= 1500) {
-        char *buf = (char *)http_malloc(cdata->header_size + 1);
+    if (req->cache_read_entry->data->header_size >= 1500) {
+        char *buf = (char *)http_malloc(req->cache_read_entry->data->header_size + 1);
         if (buf == NULL)
             return SCE_HTTP_ERROR_OUT_OF_MEMORY;
         http_free(req->res_header_buf);
         req->res_header_buf = buf;
     }
 
-    http_cache_read_bytes(req->res_header_buf, &cdata->header_buf, 0, cdata->header_size);
-    req->res_header_buf[cdata->header_size] = '\0';
-    req->res_header_len = cdata->header_size;
+    http_cache_read_bytes(req->res_header_buf, &req->cache_read_entry->data->header_buf,
+                          0, req->cache_read_entry->data->header_size);
+    req->res_header_buf[req->cache_read_entry->data->header_size] = '\0';
+    req->res_header_len = req->cache_read_entry->data->header_size;
     http_parse_response_fields(req->res_header_buf, req->res_header_len, &req->res_info);
     req->res_info.has_content_length = 1;
-    req->res_info.content_length = cdata->body_size;
+    req->res_info.content_length = req->cache_read_entry->data->body_size;
     return 0;
 }
 
@@ -2623,22 +2669,21 @@ s32 http_header_node_alloc(HttpHeaderNode **out_node, const char *name, const ch
 
     name_len = sceNet_lib_D8722983(name);
     node->name = (char *)http_malloc(name_len + 1);
-    if (node->name == NULL)
-        goto fail;
-    sceKernelMemcpy(node->name, name, name_len);
-    node->name[name_len] = '\0';
+    if (node->name != NULL) {
+        sceKernelMemcpy(node->name, name, name_len);
+        node->name[name_len] = '\0';
 
-    val_len = sceNet_lib_D8722983(value);
-    node->value = (char *)http_malloc(val_len + 1);
-    if (node->value == NULL)
-        goto fail;
-    sceKernelMemcpy(node->value, value, val_len);
-    node->value[val_len] = '\0';
+        val_len = sceNet_lib_D8722983(value);
+        node->value = (char *)http_malloc(val_len + 1);
+        if (node->value != NULL) {
+            sceKernelMemcpy(node->value, value, val_len);
+            node->value[val_len] = '\0';
 
-    *out_node = node;
-    return 0;
+            *out_node = node;
+            return 0;
+        }
+    }
 
-fail:
     if (node->name != NULL)  http_free(node->name);
     if (node->value != NULL) http_free(node->value);
     http_free(node);
@@ -2846,7 +2891,7 @@ s32 http_parse_response_fields(const char *hdr, u32 hdr_len, HttpResponseInfo *i
     return 0;
 }
 
-static void http_finalize_auth_slot(HttpAuthEntry **slot, s32 rejected)
+HTTP_ALWAYS_INLINE void http_finalize_auth_slot(HttpAuthEntry **slot, s32 rejected)
 {
     HttpAuthEntry *entry = *slot;
     if (entry == NULL)
@@ -3038,9 +3083,7 @@ s32 http_format_host_header(char **out_str, s32 scheme, const char *host, u16 po
     ret = sceUriBuild(NULL, &req_len, 0, &uri, 6);
     if (ret >= 0) {
         built = (char *)http_malloc(req_len);
-        if (built == NULL) {
-            ret = SCE_HTTP_ERROR_OUT_OF_MEMORY;
-        } else {
+        if (built != NULL) {
             ret = sceUriBuild(built, NULL, req_len, &uri, 6);
             if (ret >= 0) {
                 http_free(host_copy);
@@ -3083,12 +3126,12 @@ s32 http_build_request_header_buf(char **out_buf, HttpRequest *req)
 s32 http_copy_all_response_headers(HttpRequest *req)
 {
     char *buf = (char *)http_malloc(req->res_header_len + 1);
+    req->all_header_buf = buf;
     if (buf == NULL)
         return SCE_HTTP_ERROR_OUT_OF_MEMORY;
 
-    req->all_header_buf = buf;
     sceKernelMemcpy(buf, req->res_header_buf, req->res_header_len);
-    buf[req->res_header_len] = '\0';
+    req->all_header_buf[req->res_header_len] = '\0';
     req->all_header_len = req->res_header_len + 1;
     return 0;
 }
@@ -3112,20 +3155,21 @@ s32 http_storage_reset_file(s32 id)
 {
     u32 zero_len = 0;
     s32 ret = sceHttpStorage_driver_700AAD44(id, 0x02000602, 0644);
-    if (ret >= 0) {
-        ret = sceHttpStorage_driver_24AA94F4(id, &zero_len, 4);
-        if (ret >= 0)
-            ret = sceHttpStorage_driver_24AA94F4(id, g_md5_empty_digest, 16);
+    if (ret < 0 ||
+        (ret = sceHttpStorage_driver_24AA94F4(id, &zero_len, 4)) < 0 ||
+        (ret = sceHttpStorage_driver_24AA94F4(id, g_md5_empty_digest, 16)) < 0) {
+        sceHttpStorage_driver_CDA3D8F6(id);
+        return ret;
     }
     sceHttpStorage_driver_CDA3D8F6(id);
-    return ret < 0 ? ret : 0;
+    return 0;
 }
 
 s32 http_storage_open_body(s32 id, s32 flags, s32 mode)
 {
     s32 ret = sceHttpStorage_driver_700AAD44(id, flags, mode);
     if (ret >= 0)
-        ret = sceHttpStorage_driver_B33389CE(id, 0, 20, 0, 0);
+        ret = sceHttpStorage_driver_B33389CE(id, 20, 0);
     if (ret < 0)
         sceHttpStorage_driver_CDA3D8F6(id);
     return ret;
@@ -3147,39 +3191,45 @@ s32 http_storage_verify(s32 id, u32 *size_out)
     u8 md5_ctx[96];
     u32 rem;
 
-    if (sceHttpStorage_driver_2D8DAE58(id, &st) < 0)
-        goto fail;
-    if (sceHttpStorage_driver_700AAD44(id, 1, 0) < 0)
-        goto fail;
-    if (sceHttpStorage_driver_CDDF1103(id, &body_size, 4) < 0)
-        goto fail;
-    if (st.size < 20 || (u64)(st.size - 20) < (u64)body_size)
-        goto fail;
-    if (sceHttpStorage_driver_CDDF1103(id, expected_md5, 16) < 0)
-        goto fail;
-    if (sceHttpStorage_driver_B33389CE(id, 0, 20, 0, 0) < 0)
-        goto fail;
-    if (http_md5_init(md5_ctx) < 0)
-        goto fail;
+    do {
+        s32 failed = 0;
 
-    rem = body_size;
-    while (rem != 0) {
-        u32 chunk = rem < sizeof(g_storage_md5_buf) ? rem : sizeof(g_storage_md5_buf);
-        if (sceHttpStorage_driver_CDDF1103(id, g_storage_md5_buf, (s32)chunk) < 0)
-            goto fail;
-        if (http_md5_update(md5_ctx, g_storage_md5_buf, chunk) < 0)
-            goto fail;
-        rem -= chunk;
-    }
+        if (sceHttpStorage_driver_2D8DAE58(id, &st) < 0)
+            break;
+        if (sceHttpStorage_driver_700AAD44(id, 1, 0) < 0)
+            break;
+        if (sceHttpStorage_driver_CDDF1103(id, &body_size, 4) < 0)
+            break;
+        if (st.size < 20 || (u64)(st.size - 20) < (u64)body_size)
+            break;
+        if (sceHttpStorage_driver_CDDF1103(id, expected_md5, 16) < 0)
+            break;
+        if (sceHttpStorage_driver_B33389CE(id, 20, 0) < 0)
+            break;
+        if (http_md5_init(md5_ctx) < 0)
+            break;
 
-    if (http_md5_result(md5_ctx, actual_md5) >= 0 &&
-        sceNet_lib_E0A81C7C(expected_md5, actual_md5, 16) == 0) {
-        *size_out = body_size;
-        sceHttpStorage_driver_CDA3D8F6(id);
-        return 1;
-    }
+        rem = body_size;
+        while (rem != 0) {
+            u32 chunk = rem < sizeof(g_storage_md5_buf) ? rem : sizeof(g_storage_md5_buf);
+            if (sceHttpStorage_driver_CDDF1103(id, g_storage_md5_buf, (s32)chunk) < 0 ||
+                http_md5_update(md5_ctx, g_storage_md5_buf, chunk) < 0) {
+                failed = 1;
+                break;
+            }
+            rem -= chunk;
+        }
+        if (failed)
+            break;
 
-fail:
+        if (http_md5_result(md5_ctx, actual_md5) >= 0 &&
+            sceNet_lib_E0A81C7C(expected_md5, actual_md5, 16) == 0) {
+            *size_out = body_size;
+            sceHttpStorage_driver_CDA3D8F6(id);
+            return 1;
+        }
+    } while (0);
+
     sceHttpStorage_driver_CDA3D8F6(id);
     return 0;
 }
@@ -3192,40 +3242,42 @@ s32 http_storage_commit_checksum(s32 id, u32 body_size)
     u32 rem;
     s32 ret;
 
-    ret = sceHttpStorage_driver_2D8DAE58(id, &st);
-    if (ret < 0)
-        goto fail;
-    if (st.size < 20 || (u64)(st.size - 20) < (u64)body_size) {
-        ret = -1;
-        goto fail;
-    }
+    do {
+        ret = sceHttpStorage_driver_2D8DAE58(id, &st);
+        if (ret < 0)
+            break;
+        if (st.size < 20 || (u64)(st.size - 20) < (u64)body_size) {
+            ret = -1;
+            break;
+        }
 
-    ret = sceHttpStorage_driver_700AAD44(id, 3, 0);
-    if (ret < 0) goto fail;
-    ret = sceHttpStorage_driver_B33389CE(id, 0, 20, 0, 0);
-    if (ret < 0) goto fail;
-    ret = http_md5_init(md5_ctx);
-    if (ret < 0) goto fail;
+        ret = sceHttpStorage_driver_700AAD44(id, 3, 0);
+        if (ret < 0) break;
+        ret = sceHttpStorage_driver_B33389CE(id, 20, 0);
+        if (ret < 0) break;
+        ret = http_md5_init(md5_ctx);
+        if (ret < 0) break;
 
-    rem = body_size;
-    while (rem != 0) {
-        u32 chunk = rem < sizeof(g_storage_md5_buf) ? rem : sizeof(g_storage_md5_buf);
-        ret = sceHttpStorage_driver_CDDF1103(id, g_storage_md5_buf, (s32)chunk);
-        if (ret < 0) goto fail;
-        ret = http_md5_update(md5_ctx, g_storage_md5_buf, chunk);
-        if (ret < 0) goto fail;
-        rem -= chunk;
-    }
+        rem = body_size;
+        while (rem != 0) {
+            u32 chunk = rem < sizeof(g_storage_md5_buf) ? rem : sizeof(g_storage_md5_buf);
+            ret = sceHttpStorage_driver_CDDF1103(id, g_storage_md5_buf, (s32)chunk);
+            if (ret < 0) break;
+            ret = http_md5_update(md5_ctx, g_storage_md5_buf, chunk);
+            if (ret < 0) break;
+            rem -= chunk;
+        }
+        if (ret < 0) break;
 
-    ret = http_md5_result(md5_ctx, digest);
-    if (ret < 0) goto fail;
-    ret = sceHttpStorage_driver_B33389CE(id, 0, 0, 0, 0);
-    if (ret < 0) goto fail;
-    ret = sceHttpStorage_driver_24AA94F4(id, &body_size, 4);
-    if (ret < 0) goto fail;
-    ret = sceHttpStorage_driver_24AA94F4(id, digest, 16);
+        ret = http_md5_result(md5_ctx, digest);
+        if (ret < 0) break;
+        ret = sceHttpStorage_driver_B33389CE(id, 0, 0);
+        if (ret < 0) break;
+        ret = sceHttpStorage_driver_24AA94F4(id, &body_size, 4);
+        if (ret < 0) break;
+        ret = sceHttpStorage_driver_24AA94F4(id, digest, 16);
+    } while (0);
 
-fail:
     sceHttpStorage_driver_CDA3D8F6(id);
     return ret;
 }
@@ -3271,7 +3323,7 @@ s32 http_storage_write_exact(s32 id, const void *buf, s32 len)
     return ret;
 }
 
-s32 http_storage_seek(s32 id, s32 pad, s32 lo, s32 hi, s32 whence)
+s32 http_storage_seek(s32 id, s64 offset, s32 whence)
 {
-    return sceHttpStorage_driver_B33389CE(id, pad, lo, hi, whence);
+    return sceHttpStorage_driver_B33389CE(id, offset, whence);
 }

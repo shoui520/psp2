@@ -19,7 +19,7 @@ HttpCookieDomain *g_cookie_buckets[16];
 /* -------------------------------------------------------------------------
  * Auth cache helpers & persistent storage
  * ------------------------------------------------------------------------- */
-static void http_auth_promote_lru(HttpAuthEntry *entry)
+HTTP_ALWAYS_INLINE void http_auth_promote_lru(HttpAuthEntry *entry)
 {
     if (entry->prev != NULL) {
         entry->prev->next = entry->next;
@@ -114,47 +114,48 @@ HttpAuthEntry *http_auth_cache_alloc(HttpRequest *req, s32 auth_type, const char
     if (slot == NULL)
         return NULL;
 
-    if (auth_type == HTTP_AUTH_PROXY_BASIC || auth_type == HTTP_AUTH_PROXY_DIGEST) {
-        u32 host_len = sceNet_lib_D8722983(conn->host);
-        slot->host = (char *)http_malloc(host_len + 1);
-        if (slot->host == NULL)
-            goto fail;
-        sceNet_lib_80C9F02A(slot->host, conn->cfg.proxy_server);
-        slot->port = conn->cfg.proxy_port;
-    } else {
-        const char *path_src;
-        const char *slash;
-        u32 host_len = sceNet_lib_D8722983(conn->host);
+    do {
+        if (auth_type == HTTP_AUTH_PROXY_BASIC || auth_type == HTTP_AUTH_PROXY_DIGEST) {
+            u32 host_len = sceNet_lib_D8722983(conn->host);
+            slot->host = (char *)http_malloc(host_len + 1);
+            if (slot->host == NULL)
+                break;
+            sceNet_lib_80C9F02A(slot->host, conn->cfg.proxy_server);
+            slot->port = conn->cfg.proxy_port;
+        } else {
+            const char *path_src;
+            const char *slash;
+            u32 host_len = sceNet_lib_D8722983(conn->host);
 
-        slot->host = (char *)http_malloc(host_len + 1);
-        if (slot->host == NULL)
-            goto fail;
-        sceNet_lib_80C9F02A(slot->host, conn->host);
+            slot->host = (char *)http_malloc(host_len + 1);
+            if (slot->host == NULL)
+                break;
+            sceNet_lib_80C9F02A(slot->host, conn->host);
 
-        path_src = (req->path != NULL && sceNet_lib_D8722983(req->path) != 0) ? req->path : "/";
-        slash = sceNet_lib_F48963C6(path_src, '/');
-        if (slash == NULL)
-            goto fail;
-        {
-            u32 dir_len = (u32)(slash - path_src) + 1;
-            slot->path = (char *)http_malloc(dir_len + 1);
-            if (slot->path == NULL)
-                goto fail;
-            sceKernelMemcpy(slot->path, path_src, dir_len);
-            slot->path[dir_len] = '\0';
+            path_src = (req->path != NULL && sceNet_lib_D8722983(req->path) != 0) ? req->path : "/";
+            slash = sceNet_lib_F48963C6(path_src, '/');
+            if (slash == NULL)
+                break;
+            {
+                u32 dir_len = (u32)(slash - path_src) + 1;
+                slot->path = (char *)http_malloc(dir_len + 1);
+                if (slot->path == NULL)
+                    break;
+                sceKernelMemcpy(slot->path, path_src, dir_len);
+                slot->path[dir_len] = '\0';
+            }
+            slot->port = conn->port;
         }
-        slot->port = conn->port;
-    }
 
-    if (realm != NULL && sceNet_lib_D8722983(realm) != 0)
-        http_md5_digest(realm, sceNet_lib_D8722983(realm), slot->realm_md5);
+        if (realm != NULL && sceNet_lib_D8722983(realm) != 0)
+            http_md5_digest(realm, sceNet_lib_D8722983(realm), slot->realm_md5);
 
-    slot->auth_type = auth_type;
-    slot->scheme = conn->scheme;
-    slot->status = 0;
-    return slot;
+        slot->auth_type = auth_type;
+        slot->scheme = conn->scheme;
+        slot->status = 0;
+        return slot;
+    } while (0);
 
-fail:
     if (slot->host != NULL)
         http_free(slot->host);
     if (slot->path != NULL)
@@ -196,6 +197,7 @@ s32 sceHttp_77EE5319(void)
 
     if (http_storage_verify(0, &rem_size) == 1 &&
         http_storage_open_body(0, 1, 0) >= 0 && rem_size != 0) {
+        s32 abort_read = 0;
         while (rem_size != 0) {
             u8 tag;
             u16 field_len;
@@ -206,9 +208,11 @@ s32 sceHttp_77EE5319(void)
                     while (victim != NULL && victim->ref_count != 0)
                         victim = victim->prev;
                     if (victim == NULL)
-                        goto finish;
+                        break;
                     http_auth_entry_mark_deleted(victim);
                 }
+                if (entry == NULL)
+                    break;
                 g_auth_free_list = entry->free_next;
             }
 
@@ -223,44 +227,46 @@ s32 sceHttp_77EE5319(void)
             switch (tag) {
             case 1: {
                 s32 auth_type;
-                if (field_len != 4 || http_storage_read_exact(0, &auth_type, 4) < 0)
-                    goto abort_entry;
+                if (field_len != 4 || http_storage_read_exact(0, &auth_type, 4) < 0) {
+                    abort_read = 1;
+                    break;
+                }
                 entry->auth_type = auth_type;
                 break;
             }
             case 2:
                 if (field_len != 4 || http_storage_read_exact(0, &entry->scheme, 4) < 0)
-                    goto abort_entry;
+                    abort_read = 1;
                 break;
             case 3:
                 if (field_len != 2 || http_storage_read_exact(0, &entry->port, 2) < 0)
-                    goto abort_entry;
+                    abort_read = 1;
                 break;
             case 4:
                 if (entry->host != NULL)
                     http_free(entry->host);
                 entry->host = (char *)http_malloc(field_len);
                 if (entry->host == NULL || http_storage_read_exact(0, entry->host, field_len) < 0)
-                    goto abort_entry;
+                    abort_read = 1;
                 break;
             case 5:
                 if (entry->path != NULL)
                     http_free(entry->path);
                 entry->path = (char *)http_malloc(field_len);
                 if (entry->path == NULL || http_storage_read_exact(0, entry->path, field_len) < 0)
-                    goto abort_entry;
+                    abort_read = 1;
                 break;
             case 6:
                 if (field_len != 16 || http_storage_read_exact(0, entry->realm_md5, 16) < 0)
-                    goto abort_entry;
+                    abort_read = 1;
                 break;
             case 7:
                 if (field_len != 256 || http_storage_read_exact(0, entry->username, 256) < 0)
-                    goto abort_entry;
+                    abort_read = 1;
                 break;
             case 8:
                 if (field_len != 256 || http_storage_read_exact(0, entry->password, 256) < 0)
-                    goto abort_entry;
+                    abort_read = 1;
                 break;
             case 255:
                 entry->prev = NULL;
@@ -275,15 +281,16 @@ s32 sceHttp_77EE5319(void)
                 entry = NULL;
                 break;
             default:
-                http_storage_seek(0, field_len, field_len, 0, 1);
+                http_storage_seek(0, (s64)field_len, 1);
                 break;
             }
 
+            if (abort_read)
+                break;
             rem_size -= field_len;
         }
     }
 
-abort_entry:
     if (entry != NULL) {
         if (entry->host != NULL)
             http_free(entry->host);
@@ -294,13 +301,12 @@ abort_entry:
         g_auth_free_list = entry;
     }
 
-finish:
     http_storage_close(0);
     http_storage_unlock();
     return 0;
 }
 
-static s32 http_storage_write_tlv(s32 id, u8 tag, const void *data, u16 len, u32 *written)
+HTTP_ALWAYS_INLINE s32 http_storage_write_tlv(s32 id, u8 tag, const void *data, u16 len, u32 *written)
 {
     if (http_storage_write_tlv_hdr(id, tag, len) < 0)
         return -1;
@@ -397,7 +403,13 @@ void http_auth_entry_free_unused(HttpAuthEntry *entry)
 s32 http_digest_append_kv(char *dst, u32 dst_size, u32 *written_out,
                           const char *key, const char *val, s32 do_write)
 {
-    u32 needed = sceNet_lib_D8722983(key) + 1 + 1 + sceNet_lib_D8722983(val) + 1 + 1 + 1;
+    u32 needed = sceNet_lib_D8722983(key) +
+                 sceNet_lib_D8722983("=") +
+                 sceNet_lib_D8722983("\"") +
+                 sceNet_lib_D8722983(val) +
+                 sceNet_lib_D8722983("\"") +
+                 sceNet_lib_D8722983(",") +
+                 sceNet_lib_D8722983(" ");
 
     if (written_out != NULL)
         *written_out = needed;
@@ -448,7 +460,7 @@ s32 http_path_prefix_match(const char *prefix, const char *path)
     prefix_len = sceNet_lib_D8722983(prefix);
     if (sceNet_lib_D8722983(path) < prefix_len)
         return 0;
-    return sceNet_lib_E0A81C7C(prefix, path, prefix_len) == 0;
+    return sceNet_lib_E0A81C7C(prefix, path, sceNet_lib_D8722983(prefix)) == 0;
 }
 
 /* -------------------------------------------------------------------------
@@ -459,7 +471,7 @@ s32 sceHttpSaveSystemCookie(void)
     return 0;
 }
 
-static s32 http_storage_read_cstr(s32 id, char **dst, u16 len)
+HTTP_ALWAYS_INLINE s32 http_storage_read_cstr(s32 id, char **dst, u16 len)
 {
     char *buf;
     s32 ret;
@@ -494,125 +506,132 @@ s32 sceHttpLoadSystemCookie(void)
         return SCE_HTTP_ERROR_OUT_OF_STACK;
 
     sceKernelMemset(&tmp, 0, sizeof(tmp));
-    if (http_is_inited() != 1)
-        return SCE_HTTP_ERROR_BEFORE_INIT;
-    if ((u32)http_pool_get_size() <= 0x207FF)
-        return SCE_HTTP_ERROR_POOL_TOO_SMALL;
-
-    g_cookie_loaded = 1;
-    ret = http_rtc_get_tick(&now_tick);
-    if (ret < 0)
-        goto cleanup;
-
-    http_cookie_jar_term();
-    http_cookie_jar_init();
-
-    ret = http_storage_lock();
-    if (ret < 0)
-        return ret;
-
-    if (http_storage_verify(1, &rem_size) == 1) {
-        ret = http_storage_open_body(1, 1, 0);
-        if (ret >= 0) {
-            while (rem_size != 0) {
-                u8 tag;
-                u16 field_len;
-
-                if (rem_size < 3)
-                    goto cleanup;
-                ret = http_storage_read_tlv_hdr(1, &tag, &field_len);
-                if (ret < 0)
-                    goto cleanup;
-                rem_size -= 3;
-                if (rem_size < field_len)
-                    goto cleanup;
-
-                switch (tag) {
-                case 1:
-                    if (field_len != 8)
-                        goto cleanup;
-                    ret = http_storage_read_exact(1, &tmp.expires, 8);
-                    if (ret < 0)
-                        goto cleanup;
-                    if (tmp.expires < now_tick)
-                        expired = 1;
-                    break;
-                case 2:
-                    ret = http_storage_read_cstr(1, &tmp.domain, field_len);
-                    if (ret < 0)
-                        goto cleanup;
-                    break;
-                case 3:
-                    ret = http_storage_read_cstr(1, &tmp.name, field_len);
-                    if (ret < 0)
-                        goto cleanup;
-                    break;
-                case 4:
-                    ret = http_storage_read_cstr(1, &tmp.value, field_len);
-                    if (ret < 0)
-                        goto cleanup;
-                    break;
-                case 5:
-                    ret = http_storage_read_cstr(1, &tmp.path, field_len);
-                    if (ret < 0)
-                        goto cleanup;
-                    break;
-                case 6:
-                    ret = http_storage_read_cstr(1, &tmp.comment, field_len);
-                    if (ret < 0)
-                        goto cleanup;
-                    break;
-                case 7:
-                    ret = http_storage_read_cstr(1, &tmp.comment_url, field_len);
-                    if (ret < 0)
-                        goto cleanup;
-                    break;
-                case 8:
-                    if (tmp.ports != NULL)
-                        http_free(tmp.ports);
-                    tmp.ports = (u16 *)http_malloc((u32)field_len + 1);
-                    ret = http_storage_read_exact(1, tmp.ports, field_len);
-                    if (ret < 0)
-                        goto cleanup;
-                    break;
-                case 9:
-                    if (field_len != 4)
-                        goto cleanup;
-                    ret = http_storage_read_exact(0, &tmp.port_count, 4);
-                    if (ret < 0)
-                        goto cleanup;
-                    break;
-                case 255:
-                    if (!expired && tmp.domain != NULL && (tmp.name != NULL || tmp.value != NULL)) {
-                        ret = http_cookie_alloc_entry(&created, tmp.name, tmp.value,
-                                                      tmp.comment, tmp.comment_url,
-                                                      tmp.domain, tmp.path,
-                                                      tmp.ports, tmp.port_count,
-                                                      &tmp.expires, tmp.version,
-                                                      tmp.secure, expired, 0);
-                        if (ret < 0)
-                            goto cleanup;
-                        ret = http_cookie_jar_insert(created, created->size_bytes, 1);
-                        if (ret < 0)
-                            http_cookie_free_fields(created);
-                    }
-                    http_cookie_free_fields(&tmp);
-                    sceKernelMemset(&tmp, 0, sizeof(tmp));
-                    expired = 0;
-                    created = NULL;
-                    break;
-                default:
-                    http_storage_seek(0, field_len, field_len, 0, 1);
-                    break;
-                }
-
-                rem_size -= field_len;
-            }
-            ret = 0;
+    do {
+        if (http_is_inited() != 1) {
+            ret = SCE_HTTP_ERROR_BEFORE_INIT;
+            break;
         }
-    }
+        if ((u32)http_pool_get_size() <= 0x207FF) {
+            ret = SCE_HTTP_ERROR_POOL_TOO_SMALL;
+            break;
+        }
 
-cleanup:
+        g_cookie_loaded = 1;
+        ret = http_rtc_get_tick(&now_tick);
+        if (ret < 0)
+            break;
+
+        http_cookie_jar_term();
+        http_cookie_jar_init();
+
+        ret = http_storage_lock();
+        if (ret < 0)
+            return ret;
+
+        if (http_storage_verify(1, &rem_size) == 1) {
+            ret = http_storage_open_body(1, 1, 0);
+            if (ret >= 0) {
+                s32 abort_load = 0;
+
+                while (rem_size != 0) {
+                    u8 tag;
+                    u16 field_len;
+
+                    if (rem_size < 3) {
+                        abort_load = 1;
+                        break;
+                    }
+                    ret = http_storage_read_tlv_hdr(1, &tag, &field_len);
+                    if (ret < 0) {
+                        abort_load = 1;
+                        break;
+                    }
+                    rem_size -= 3;
+                    if (rem_size < field_len) {
+                        abort_load = 1;
+                        break;
+                    }
+
+                    switch (tag) {
+                    case 1:
+                        if (field_len != 8 || (ret = http_storage_read_exact(1, &tmp.expires, 8)) < 0) {
+                            abort_load = 1;
+                            break;
+                        }
+                        if (tmp.expires < now_tick)
+                            expired = 1;
+                        break;
+                    case 2:
+                        ret = http_storage_read_cstr(1, &tmp.domain, field_len);
+                        if (ret < 0) abort_load = 1;
+                        break;
+                    case 3:
+                        ret = http_storage_read_cstr(1, &tmp.name, field_len);
+                        if (ret < 0) abort_load = 1;
+                        break;
+                    case 4:
+                        ret = http_storage_read_cstr(1, &tmp.value, field_len);
+                        if (ret < 0) abort_load = 1;
+                        break;
+                    case 5:
+                        ret = http_storage_read_cstr(1, &tmp.path, field_len);
+                        if (ret < 0) abort_load = 1;
+                        break;
+                    case 6:
+                        ret = http_storage_read_cstr(1, &tmp.comment, field_len);
+                        if (ret < 0) abort_load = 1;
+                        break;
+                    case 7:
+                        ret = http_storage_read_cstr(1, &tmp.comment_url, field_len);
+                        if (ret < 0) abort_load = 1;
+                        break;
+                    case 8:
+                        if (tmp.ports != NULL)
+                            http_free(tmp.ports);
+                        tmp.ports = (u16 *)http_malloc((u32)field_len + 1);
+                        ret = http_storage_read_exact(1, tmp.ports, field_len);
+                        if (ret < 0) abort_load = 1;
+                        break;
+                    case 9:
+                        if (field_len != 4 || (ret = http_storage_read_exact(0, &tmp.port_count, 4)) < 0)
+                            abort_load = 1;
+                        break;
+                    case 255:
+                        if (!expired && tmp.domain != NULL && (tmp.name != NULL || tmp.value != NULL)) {
+                            ret = http_cookie_alloc_entry(&created, tmp.name, tmp.value,
+                                                          tmp.comment, tmp.comment_url,
+                                                          tmp.domain, tmp.path,
+                                                          tmp.ports, tmp.port_count,
+                                                          &tmp.expires, tmp.version,
+                                                          tmp.secure, expired, 0);
+                            if (ret < 0) {
+                                abort_load = 1;
+                                break;
+                            }
+                            ret = http_cookie_jar_insert(created, created->size_bytes, 1);
+                            if (ret < 0)
+                                http_cookie_free_fields(created);
+                        }
+                        http_cookie_free_fields(&tmp);
+                        sceKernelMemset(&tmp, 0, sizeof(tmp));
+                        expired = 0;
+                        created = NULL;
+                        break;
+                    default:
+                        http_storage_seek(0, (s64)field_len, 1);
+                        break;
+                    }
+
+                    if (abort_load)
+                        break;
+                    rem_size -= field_len;
+                }
+                if (!abort_load)
+                    ret = 0;
+            }
+        }
+    } while (0);
+
     http_cookie_free_fields(&tmp);
     http_storage_close(1);
     http_storage_unlock();
@@ -625,31 +644,28 @@ s32 sceHttpGetCookie(const char *url, u8 *cookie_buf, u32 *len_out, u32 buf_size
     HttpCookieRefNode *refs = NULL;
     void *uri_work = NULL;
     SceUriElement uri;
-    u32 uri_work_size = 0;
+    u32 uri_work_size;
     s32 ret;
 
     if (_sceKernelCheckThreadStack() < 1952)
         return SCE_HTTP_ERROR_OUT_OF_STACK;
 
     ret = sceUriParse(NULL, url, NULL, &uri_work_size, 0);
-    if (ret < 0)
-        goto cleanup;
-
-    uri_work = http_malloc(uri_work_size);
-    if (uri_work == NULL) {
-        ret = SCE_HTTP_ERROR_OUT_OF_MEMORY;
-        goto cleanup;
-    }
-
-    ret = sceUriParse(&uri, url, uri_work, NULL, uri_work_size);
     if (ret >= 0) {
-        if (http_cookie_jar_lookup(&chunks, uri.host, uri.path, is_secure == 1, &refs) < 0 || chunks == NULL)
-            ret = SCE_HTTP_ERROR_NOT_FOUND;
-        else
-            ret = http_cookie_format_header(cookie_buf, chunks, len_out, buf_size);
+        uri_work = http_malloc(uri_work_size);
+        if (uri_work == NULL) {
+            ret = SCE_HTTP_ERROR_OUT_OF_MEMORY;
+        } else {
+            ret = sceUriParse(&uri, url, uri_work, NULL, uri_work_size);
+            if (ret >= 0) {
+                if (http_cookie_jar_lookup(&chunks, uri.host, uri.path, is_secure == 1, &refs) < 0 || chunks == NULL)
+                    ret = SCE_HTTP_ERROR_NOT_FOUND;
+                else
+                    ret = http_cookie_format_header(cookie_buf, chunks, len_out, buf_size);
+            }
+        }
     }
 
-cleanup:
     if (chunks != NULL || refs != NULL)
         http_cookie_lookup_free(chunks, refs);
     if (uri_work != NULL)
@@ -661,7 +677,7 @@ s32 sceHttpAddCookie(const char *url, const char *header_val, u32 header_len)
 {
     SceUriElement uri;
     void *uri_work = NULL;
-    u32 uri_work_size = 0;
+    u32 uri_work_size;
     s32 ret;
 
     if (_sceKernelCheckThreadStack() < 1952)
@@ -716,7 +732,7 @@ u32 http_cookie_free_fields(HttpCookie *cookie)
     return bytes;
 }
 
-static void http_cookie_lru_promote(HttpCookieDomain *dom)
+HTTP_ALWAYS_INLINE void http_cookie_lru_promote(HttpCookieDomain *dom)
 {
     if (dom->lru_prev != NULL) {
         dom->lru_prev->lru_next = dom->lru_next;
@@ -1057,7 +1073,7 @@ s32 http_cookie_jar_lookup(HttpCookieSortChunk **out_chunks, const char *host,
             ret = http_cookie_ref_push(out_refs, dom);
             if (ret < 0) {
                 http_cookie_domain_release(dom);
-                goto fail;
+                break;
             }
             http_cookie_lru_promote(dom);
             http_cookie_collect_matching(chunk, dom->cookies, path, is_secure);
@@ -1069,11 +1085,10 @@ s32 http_cookie_jar_lookup(HttpCookieSortChunk **out_chunks, const char *host,
                 return 0;
             }
             ret = SCE_HTTP_ERROR_NOT_FOUND;
-            goto fail;
+            break;
         }
     }
 
-fail:
     if (chunk != NULL || *out_refs != NULL) {
         http_cookie_lookup_free(chunk, *out_refs);
         *out_refs = NULL;
@@ -1237,31 +1252,28 @@ s32 http_cookie_add_raw(const char *header_val, u32 header_len, const char *host
     s32 ret;
 
     ret = http_cookie_parse_kv((const u8 *)header_val, header_len, &kv_list, &secure, &discard, is_v2);
-    if (ret < 0)
-        goto fail;
-
-    ret = http_cookie_build_from_kv(&cookies, &bytes, &count, kv_list, host, path, port,
-                                    (s32)secure, (s32)discard, is_v2);
-    if (ret < 0)
-        goto fail;
-
-    if (cookies == NULL) {
-        if (kv_list != NULL)
-            http_kv_list_free(kv_list);
-        return 0;
-    }
-
-    http_cookie_evict_if_needed(bytes, count);
-    if (g_cookie_max_bytes - g_cookie_cur_bytes >= bytes) {
-        ret = http_cookie_jar_insert(cookies, bytes, count);
+    if (ret >= 0) {
+        ret = http_cookie_build_from_kv(&cookies, &bytes, &count, kv_list, host, path, port,
+                                        (s32)secure, (s32)discard, is_v2);
         if (ret >= 0) {
-            if (kv_list != NULL)
-                http_kv_list_free(kv_list);
-            return 0;
+            if (cookies == NULL) {
+                if (kv_list != NULL)
+                    http_kv_list_free(kv_list);
+                return 0;
+            }
+
+            http_cookie_evict_if_needed(bytes, count);
+            if (g_cookie_max_bytes - g_cookie_cur_bytes >= bytes) {
+                ret = http_cookie_jar_insert(cookies, bytes, count);
+                if (ret >= 0) {
+                    if (kv_list != NULL)
+                        http_kv_list_free(kv_list);
+                    return 0;
+                }
+            }
         }
     }
 
-fail:
     if (kv_list != NULL)
         http_kv_list_free(kv_list);
     while (cookies != NULL) {
@@ -1316,141 +1328,160 @@ s32 http_cookie_build_from_kv(HttpCookie **out_list, u32 *out_bytes, u32 *out_co
     if (default_path == NULL)
         return SCE_HTTP_ERROR_OUT_OF_MEMORY;
 
-    while (cur != NULL) {
-        if (cur->next == NULL) {
-            HttpHeaderNode *pair = (HttpHeaderNode *)http_malloc(sizeof(*pair));
-            if (pair == NULL) {
-                ret = SCE_HTTP_ERROR_OUT_OF_MEMORY;
-                goto fail;
-            }
-            sceKernelMemset(pair, 0, sizeof(*pair));
-            pair->next = pairs;
-            pairs = pair;
+    do {
+        s32 failed = 0;
 
-            if (cur->name != NULL) {
-                pair->name = (char *)http_malloc(sceNet_lib_D8722983(cur->name) + 1);
-                if (pair->name == NULL) {
+        while (cur != NULL) {
+            if (cur->next == NULL) {
+                HttpHeaderNode *pair = (HttpHeaderNode *)http_malloc(sizeof(*pair));
+                if (pair == NULL) {
                     ret = SCE_HTTP_ERROR_OUT_OF_MEMORY;
-                    goto fail;
+                    failed = 1;
+                    break;
                 }
-                sceNet_lib_80C9F02A(pair->name, cur->name);
-            }
-            if (cur->value != NULL) {
-                pair->value = (char *)http_malloc(sceNet_lib_D8722983(cur->value) + 1);
-                if (pair->value == NULL) {
-                    ret = SCE_HTTP_ERROR_OUT_OF_MEMORY;
-                    goto fail;
+                sceKernelMemset(pair, 0, sizeof(*pair));
+                pair->next = pairs;
+                pairs = pair;
+
+                if (cur->name != NULL) {
+                    pair->name = (char *)http_malloc(sceNet_lib_D8722983(cur->name) + 1);
+                    if (pair->name == NULL) {
+                        ret = SCE_HTTP_ERROR_OUT_OF_MEMORY;
+                        failed = 1;
+                        break;
+                    }
+                    sceNet_lib_80C9F02A(pair->name, cur->name);
                 }
-                sceNet_lib_80C9F02A(pair->value, cur->value);
-            }
-        } else if (cur->name != NULL) {
-            if (is_v2 == 1 || is_v2 == 2) {
-                if (sceNet_lib_9CFBC7E3(cur->name, "Comment") == 0) {
-                    comment_val = cur->value;
-                    cur = cur->next;
-                    continue;
+                if (cur->value != NULL) {
+                    pair->value = (char *)http_malloc(sceNet_lib_D8722983(cur->value) + 1);
+                    if (pair->value == NULL) {
+                        ret = SCE_HTTP_ERROR_OUT_OF_MEMORY;
+                        failed = 1;
+                        break;
+                    }
+                    sceNet_lib_80C9F02A(pair->value, cur->value);
                 }
-                if (sceNet_lib_9CFBC7E3(cur->name, "Max-Age") == 0) {
+            } else if (cur->name != NULL) {
+                if (is_v2 == 1 || is_v2 == 2) {
+                    if (sceNet_lib_9CFBC7E3(cur->name, "Comment") == 0) {
+                        comment_val = cur->value;
+                        cur = cur->next;
+                        continue;
+                    }
+                    if (sceNet_lib_9CFBC7E3(cur->name, "Max-Age") == 0) {
+                        if (cur->value != NULL) {
+                            max_age = http_parse_u64(cur->value);
+                            ret = http_rtc_get_tick(&expires);
+                            if (ret < 0) {
+                                failed = 1;
+                                break;
+                            }
+                            ret = http_rtc_add_seconds(&expires, &expires, (s64)max_age);
+                            if (ret < 0) {
+                                failed = 1;
+                                break;
+                            }
+                        }
+                        cur = cur->next;
+                        continue;
+                    }
+                    if (sceNet_lib_9CFBC7E3(cur->name, "Version") == 0) {
+                        if (cur->value != NULL)
+                            version = sceNet_lib_1FB2FDDD(cur->value);
+                        cur = cur->next;
+                        continue;
+                    }
+                }
+
+                if (is_v2 == 2 && sceNet_lib_9CFBC7E3(cur->name, "CommentURL") == 0) {
+                    comment_url_val = cur->value;
+                } else if (is_v2 == 2 && sceNet_lib_9CFBC7E3(cur->name, "Port") == 0) {
                     if (cur->value != NULL) {
-                        max_age = http_parse_u64(cur->value);
-                        ret = http_rtc_get_tick(&expires);
-                        if (ret < 0)
-                            goto fail;
-                        ret = http_rtc_add_seconds(&expires, &expires, (s64)max_age);
-                        if (ret < 0)
-                            goto fail;
+                        s32 pc = http_parse_port_list_alloc(cur->value, port, &port_list);
+                        if (pc <= 0) {
+                            ret = SCE_HTTP_ERROR_NOT_FOUND;
+                            failed = 1;
+                            break;
+                        }
+                        port_count = (u32)pc;
                     }
-                    cur = cur->next;
-                    continue;
-                }
-                if (sceNet_lib_9CFBC7E3(cur->name, "Version") == 0) {
+                } else if (is_v2 == 0 && sceNet_lib_9CFBC7E3(cur->name, "expires") == 0) {
+                    if (cur->value != NULL && max_age == 0) {
+                        if (http_rtc_parse_datetime(&expires, cur->value) < 0)
+                            expires = 0;
+                    }
+                } else if (sceNet_lib_9CFBC7E3(cur->name, "Domain") == 0) {
+                    if (cur->value != NULL) {
+                        if (http_cookie_normalize_domain(cur->value) == NULL) {
+                            failed = 1;
+                            break;
+                        }
+                        domain_val = cur->value;
+                    }
+                } else if (sceNet_lib_9CFBC7E3(cur->name, "Path") == 0) {
                     if (cur->value != NULL)
-                        version = sceNet_lib_1FB2FDDD(cur->value);
-                    cur = cur->next;
-                    continue;
+                        path_val = cur->value;
                 }
             }
+            cur = cur->next;
+        }
+        if (failed)
+            break;
 
-            if (is_v2 == 2 && sceNet_lib_9CFBC7E3(cur->name, "CommentURL") == 0) {
-                comment_url_val = cur->value;
-            } else if (is_v2 == 2 && sceNet_lib_9CFBC7E3(cur->name, "Port") == 0) {
-                if (cur->value != NULL) {
-                    s32 pc = http_parse_port_list_alloc(cur->value, port, &port_list);
-                    if (pc <= 0) {
-                        ret = SCE_HTTP_ERROR_NOT_FOUND;
-                        goto fail;
-                    }
-                    port_count = (u32)pc;
-                }
-            } else if (is_v2 == 0 && sceNet_lib_9CFBC7E3(cur->name, "expires") == 0) {
-                if (cur->value != NULL && max_age == 0) {
-                    if (http_rtc_parse_datetime(&expires, cur->value) < 0)
-                        expires = 0;
-                }
-            } else if (sceNet_lib_9CFBC7E3(cur->name, "Domain") == 0) {
-                if (cur->value != NULL) {
-                    if (http_cookie_normalize_domain(cur->value) == NULL)
-                        goto fail;
-                    domain_val = cur->value;
-                }
-            } else if (sceNet_lib_9CFBC7E3(cur->name, "Path") == 0) {
-                if (cur->value != NULL)
-                    path_val = cur->value;
+        if (path_val == NULL)
+            path_val = default_path;
+
+        if (domain_val == NULL)
+            domain_val = host;
+
+        if (domain_val[0] != '.' && http_inet_pton(2, domain_val, ip_tmp) != 1) {
+            dot_domain = (char *)http_malloc(sceNet_lib_D8722983(domain_val) + 2);
+            if (dot_domain == NULL) {
+                ret = SCE_HTTP_ERROR_OUT_OF_MEMORY;
+                break;
             }
+            dot_domain[0] = '.';
+            sceNet_lib_80C9F02A(dot_domain + 1, domain_val);
+            domain_val = dot_domain;
         }
-        cur = cur->next;
-    }
 
-    if (path_val == NULL)
-        path_val = default_path;
+        if (http_cookie_domain_match(domain_val, host) != 0)
+            break;
 
-    if (domain_val == NULL)
-        domain_val = host;
-
-    if (domain_val[0] != '.' && http_inet_pton(2, domain_val, ip_tmp) != 1) {
-        dot_domain = (char *)http_malloc(sceNet_lib_D8722983(domain_val) + 2);
-        if (dot_domain == NULL) {
-            ret = SCE_HTTP_ERROR_OUT_OF_MEMORY;
-            goto fail;
+        {
+            HttpHeaderNode *pair = pairs;
+            while (pair != NULL) {
+                HttpCookie *item = NULL;
+                ret = http_cookie_alloc_entry(&item, pair->name, pair->value,
+                                              comment_val, comment_url_val,
+                                              domain_val, path_val,
+                                              port_list, port_count,
+                                              &expires, version, secure, discard, is_v2);
+                if (ret < 0) {
+                    failed = 1;
+                    break;
+                }
+                (*out_count)++;
+                *out_bytes += item->size_bytes;
+                item->next = result_list;
+                result_list = item;
+                pair = pair->next;
+            }
+            if (failed)
+                break;
         }
-        dot_domain[0] = '.';
-        sceNet_lib_80C9F02A(dot_domain + 1, domain_val);
-        domain_val = dot_domain;
-    }
 
-    if (http_cookie_domain_match(domain_val, host) != 0)
-        goto fail;
+        *out_list = result_list;
+        if (pairs != NULL)
+            http_kv_list_free(pairs);
+        if (port_list != NULL)
+            http_free(port_list);
+        http_free(default_path);
+        if (dot_domain != NULL)
+            http_free(dot_domain);
+        return (s32)*out_bytes;
+    } while (0);
 
-    {
-        HttpHeaderNode *pair = pairs;
-        while (pair != NULL) {
-            HttpCookie *item = NULL;
-            ret = http_cookie_alloc_entry(&item, pair->name, pair->value,
-                                          comment_val, comment_url_val,
-                                          domain_val, path_val,
-                                          port_list, port_count,
-                                          &expires, version, secure, discard, is_v2);
-            if (ret < 0)
-                goto fail;
-            (*out_count)++;
-            *out_bytes += item->size_bytes;
-            item->next = result_list;
-            result_list = item;
-            pair = pair->next;
-        }
-    }
-
-    *out_list = result_list;
-    if (pairs != NULL)
-        http_kv_list_free(pairs);
-    if (port_list != NULL)
-        http_free(port_list);
-    http_free(default_path);
-    if (dot_domain != NULL)
-        http_free(dot_domain);
-    return (s32)*out_bytes;
-
-fail:
     if (pairs != NULL)
         http_kv_list_free(pairs);
     while (result_list != NULL) {
@@ -1468,7 +1499,7 @@ fail:
     return ret;
 }
 
-static s32 http_cookie_dup_field(char **dst, const char *src, u32 *size_acc, u32 max_limit)
+HTTP_ALWAYS_INLINE s32 http_cookie_dup_field(char **dst, const char *src, u32 *size_acc, u32 max_limit)
 {
     u32 len = sceNet_lib_D8722983(src) + 1;
     char *copy;
@@ -1501,73 +1532,74 @@ s32 http_cookie_alloc_entry(HttpCookie **out_cookie, const char *name, const cha
         return SCE_HTTP_ERROR_OUT_OF_MEMORY;
     sceKernelMemset(cookie, 0, sizeof(*cookie));
 
-    if (name != NULL) {
-        ret = http_cookie_dup_field(&cookie->name, name, &size_acc, g_cookie_max_single);
-        if (ret < 0) goto fail;
-    }
-    if (value != NULL) {
-        ret = http_cookie_dup_field(&cookie->value, value, &size_acc, g_cookie_max_single);
-        if (ret < 0) goto fail;
-    }
-    if (comment != NULL) {
-        ret = http_cookie_dup_field(&cookie->comment, comment, &size_acc, meta_limit);
-        if (ret < 0) goto fail;
-    }
-    if (comment_url != NULL) {
-        ret = http_cookie_dup_field(&cookie->comment_url, comment_url, &size_acc, meta_limit);
-        if (ret < 0) goto fail;
-    }
-    if (domain != NULL) {
-        ret = http_cookie_dup_field(&cookie->domain, domain, &size_acc, meta_limit);
-        if (ret < 0) goto fail;
-    }
-    if (path != NULL) {
-        u32 plen = sceNet_lib_D8722983(path) + 1;
-        size_acc += plen;
-        if (meta_limit < size_acc) {
-            ret = SCE_HTTP_ERROR_OUT_OF_SIZE;
-            goto fail;
+    do {
+        if (name != NULL) {
+            ret = http_cookie_dup_field(&cookie->name, name, &size_acc, g_cookie_max_single);
+            if (ret < 0) break;
         }
-        cookie->path = (char *)http_malloc(plen);
-        if (cookie->path == NULL) {
-            ret = SCE_HTTP_ERROR_OUT_OF_MEMORY;
-            goto fail;
+        if (value != NULL) {
+            ret = http_cookie_dup_field(&cookie->value, value, &size_acc, g_cookie_max_single);
+            if (ret < 0) break;
         }
-        ret = sceUriSweepPath(cookie->path, path, plen);
-        if (ret < 0)
-            goto fail;
-    }
-    if (ports != NULL) {
-        size_acc += 2 * port_count;
-        if (meta_limit < size_acc) {
-            ret = SCE_HTTP_ERROR_OUT_OF_SIZE;
-            goto fail;
+        if (comment != NULL) {
+            ret = http_cookie_dup_field(&cookie->comment, comment, &size_acc, meta_limit);
+            if (ret < 0) break;
         }
-        cookie->ports = (u16 *)http_malloc(2 * port_count);
-        if (cookie->ports == NULL) {
-            ret = SCE_HTTP_ERROR_OUT_OF_MEMORY;
-            goto fail;
+        if (comment_url != NULL) {
+            ret = http_cookie_dup_field(&cookie->comment_url, comment_url, &size_acc, meta_limit);
+            if (ret < 0) break;
         }
-        sceKernelMemcpy(cookie->ports, ports, 2 * port_count);
-        cookie->port_count = port_count;
-    }
+        if (domain != NULL) {
+            ret = http_cookie_dup_field(&cookie->domain, domain, &size_acc, meta_limit);
+            if (ret < 0) break;
+        }
+        if (path != NULL) {
+            u32 plen = sceNet_lib_D8722983(path) + 1;
+            size_acc += plen;
+            if (meta_limit < size_acc) {
+                ret = SCE_HTTP_ERROR_OUT_OF_SIZE;
+                break;
+            }
+            cookie->path = (char *)http_malloc(plen);
+            if (cookie->path == NULL) {
+                ret = SCE_HTTP_ERROR_OUT_OF_MEMORY;
+                break;
+            }
+            ret = sceUriSweepPath(cookie->path, path, plen);
+            if (ret < 0)
+                break;
+        }
+        if (ports != NULL) {
+            size_acc += 2 * port_count;
+            if (meta_limit < size_acc) {
+                ret = SCE_HTTP_ERROR_OUT_OF_SIZE;
+                break;
+            }
+            cookie->ports = (u16 *)http_malloc(2 * port_count);
+            if (cookie->ports == NULL) {
+                ret = SCE_HTTP_ERROR_OUT_OF_MEMORY;
+                break;
+            }
+            sceKernelMemcpy(cookie->ports, ports, 2 * port_count);
+            cookie->port_count = port_count;
+        }
 
-    cookie->expires = *expires;
-    cookie->version = version;
-    cookie->secure = secure;
-    cookie->discard = discard;
-    cookie->is_v2 = is_v2;
-    cookie->size_bytes = size_acc;
-    *out_cookie = cookie;
-    return 0;
+        cookie->expires = *expires;
+        cookie->version = version;
+        cookie->secure = secure;
+        cookie->discard = discard;
+        cookie->is_v2 = is_v2;
+        cookie->size_bytes = size_acc;
+        *out_cookie = cookie;
+        return 0;
+    } while (0);
 
-fail:
     http_cookie_free_fields(cookie);
     http_free(cookie);
     return ret;
 }
 
-static void http_trim_trailing_ws(char *str)
+HTTP_ALWAYS_INLINE void http_trim_trailing_ws(char *str)
 {
     u32 len;
 

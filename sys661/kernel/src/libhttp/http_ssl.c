@@ -148,7 +148,7 @@ s32 http_domain_parse_tld(const char *domain, const char **tld_out, s32 *tld_len
     return labels + (domain[0] != '.');
 }
 
-static s32 http_cookie_sort_cmp(const HttpCookie *lhs, const HttpCookie *rhs)
+HTTP_ALWAYS_INLINE s32 http_cookie_sort_cmp(const HttpCookie *lhs, const HttpCookie *rhs)
 {
     s32 diff = (s32)sceNet_lib_D8722983(lhs->path) - (s32)sceNet_lib_D8722983(rhs->path);
     if (diff == 0)
@@ -262,257 +262,286 @@ s32 http_ssl_verify_callback(void *ssl, void **certs, s32 cert_count, HttpConnec
     s32 chain_idx;
     s32 idx;
 
+    s32 failed = 0;
+
     (void)ssl;
 
-    if ((opts & 1) == 0) {
-        host_ok = 1;
-        *err_out = 0;
-        goto finalize;
-    }
-    if (cert_count == 0)
+    if (cert_count == 0 && (opts & 1) != 0)
         return 0;
 
-    for (idx = 0; idx < cert_count; idx++) {
-        u8 tag[4];
-        char *field_ptr = NULL;
-        s32 field_len = 0;
-        u8 hash_buf[32];
-        s32 hash_len = 0;
-        void *issuer;
+    do {
+        if ((opts & 1) == 0) {
+            host_ok = 1;
+            *err_out = 0;
+            break;
+        }
 
-        if (sceSsl_lib_9299C6CE(certs[idx], tag, &field_ptr, &field_len) != 0) {
-            if (field_ptr != NULL) {
+        for (idx = 0; idx < cert_count; idx++) {
+            u8 tag[4];
+            char *field_ptr = NULL;
+            s32 field_len = 0;
+            u8 hash_buf[32];
+            s32 hash_len = 0;
+            void *issuer;
+
+            if (sceSsl_lib_9299C6CE(certs[idx], tag, &field_ptr, &field_len) != 0) {
+                if (field_ptr != NULL) {
+                    sceSsl_lib_5E5C873A(field_ptr);
+                    field_ptr = NULL;
+                }
+            }
+
+            issuer = sceSsl_lib_4BE9030A(certs[idx]);
+            if (issuer != NULL) {
+                http_ssl_scan_x509_name(issuer);
+            } else {
+                *err_out = 2;
+                cert_flags |= 2;
+            }
+
+            if ((opts & 0x10) != 0 &&
+                sceSsl_lib_341843AB(certs[idx], tag, &field_ptr, &field_len) != 0) {
+                char time_buf[256];
+                void *now_t;
+                void *not_before_t;
+
+                sceKernelMemset(time_buf, 0, sizeof(time_buf));
+                sceKernelMemcpy(time_buf, field_ptr, (u32)field_len);
                 sceSsl_lib_5E5C873A(field_ptr);
                 field_ptr = NULL;
-            }
-        }
 
-        issuer = sceSsl_lib_4BE9030A(certs[idx]);
-        if (issuer != NULL) {
-            http_ssl_scan_x509_name(issuer);
-        } else {
-            *err_out = 2;
-            cert_flags |= 2;
-        }
-
-        if ((opts & 0x10) != 0 &&
-            sceSsl_lib_341843AB(certs[idx], tag, &field_ptr, &field_len) != 0) {
-            char time_buf[256];
-            void *now_t;
-            void *not_before_t;
-
-            sceKernelMemset(time_buf, 0, sizeof(time_buf));
-            sceKernelMemcpy(time_buf, field_ptr, (u32)field_len);
-            sceSsl_lib_5E5C873A(field_ptr);
-            field_ptr = NULL;
-
-            now_t = sceSsl_lib_0861D934(12);
-            not_before_t = sceSsl_lib_0861D934(12);
-            if (now_t == NULL || not_before_t == NULL) {
-                if (now_t != NULL) sceSsl_lib_5E5C873A(now_t);
-                if (not_before_t != NULL) sceSsl_lib_5E5C873A(not_before_t);
-                *err_out = 17;
-                conn->ssl_err = SCE_HTTPS_ERROR_INTERNAL;
-                goto fail;
-            }
-            sceSsl_lib_E7BFC0EF(time_buf, field_len, 1, not_before_t);
-            sceSsl_lib_A7BED83B(now_t);
-            if (sceSsl_lib_047AB6BB(now_t, not_before_t) == -1) {
-                cert_flags |= 0x10;
-                *err_out = 9;
-            }
-            sceSsl_lib_5E5C873A(now_t);
-            sceSsl_lib_5E5C873A(not_before_t);
-        }
-
-        if ((opts & 0x08) != 0 &&
-            sceSsl_lib_05E019A4(certs[idx], tag, &field_ptr, &field_len) != 0) {
-            char time_buf[256];
-            void *now_t;
-            void *not_after_t;
-
-            sceKernelMemset(time_buf, 0, sizeof(time_buf));
-            sceKernelMemcpy(time_buf, field_ptr, (u32)field_len);
-            sceSsl_lib_5E5C873A(field_ptr);
-            field_ptr = NULL;
-
-            now_t = sceSsl_lib_0861D934(12);
-            not_after_t = sceSsl_lib_0861D934(12);
-            if (now_t == NULL || not_after_t == NULL) {
-                if (now_t != NULL) sceSsl_lib_5E5C873A(now_t);
-                if (not_after_t != NULL) sceSsl_lib_5E5C873A(not_after_t);
-                *err_out = 17;
-                goto fail;
-            }
-            sceSsl_lib_E7BFC0EF(time_buf, field_len, 1, not_after_t);
-            sceSsl_lib_A7BED83B(now_t);
-            if (sceSsl_lib_047AB6BB(now_t, not_after_t) == 1) {
-                cert_flags |= 0x08;
-                *err_out = 10;
-            }
-            sceSsl_lib_5E5C873A(now_t);
-            sceSsl_lib_5E5C873A(not_after_t);
-        }
-
-        sceSsl_lib_37C7B76C(certs[idx], hash_buf, &hash_len);
-    }
-
-    if ((opts & 0x04) != 0) {
-        u8 *san_data = NULL;
-        s32 san_len = 0;
-
-        cb_ret = sceSsl_lib_76A46EDA(certs[0], g_oid_subject_alt_name, 0, &san_data, &san_len);
-        if (cb_ret == 1 && san_data != NULL) {
-            HttpAsn1Item item;
-            cb_ret = sceSsl_lib_C85F6FCE(&item, san_data, san_len);
-            if (cb_ret == 0) {
-                s32 rem = san_len - item.hdr_len;
-                while (rem > 0) {
-                    cb_ret = sceSsl_lib_C85F6FCE(&item, item.data, rem);
-                    if (cb_ret != 0)
-                        break;
-                    cb_ret = http_ssl_match_hostname((const char *)item.data, item.len, conn->host);
-                    if (cb_ret == 0) {
-                        host_ok = 1;
-                        break;
-                    }
-                    rem -= (s32)(item.hdr_len + item.len);
-                    item.data += item.len;
-                }
-            }
-        }
-
-        if (!host_ok) {
-            void *subj = sceSsl_lib_12C7718F(certs[0]);
-            if (subj != NULL) {
-                cb_ret = http_ssl_check_cn(subj, conn->host);
-                if (cb_ret == 0)
-                    host_ok = 1;
-            }
-        }
-    }
-
-    for (chain_idx = 0; chain_idx < cert_count; chain_idx++) {
-        void *issuer = sceSsl_lib_4BE9030A(certs[chain_idx]);
-        s32 found_anchor = 0;
-
-        if ((opts & 0x180) == 0 && g_https_ca_count > 0) {
-            s32 ca_idx;
-            for (ca_idx = 0; ca_idx < g_https_ca_count; ca_idx++) {
-                void *ca_subj = sceSsl_lib_12C7718F(g_https_ca_list[ca_idx]);
-                if (issuer != NULL && ca_subj != NULL && sceSsl_lib_7D0E41F4(ca_subj, issuer) == 0) {
-                    found_anchor = 1;
+                now_t = sceSsl_lib_0861D934(12);
+                not_before_t = sceSsl_lib_0861D934(12);
+                if (now_t == NULL || not_before_t == NULL) {
+                    if (now_t != NULL) sceSsl_lib_5E5C873A(now_t);
+                    if (not_before_t != NULL) sceSsl_lib_5E5C873A(not_before_t);
+                    *err_out = 17;
+                    conn->ssl_err = SCE_HTTPS_ERROR_INTERNAL;
+                    failed = 1;
                     break;
                 }
+                sceSsl_lib_E7BFC0EF(time_buf, field_len, 1, not_before_t);
+                sceSsl_lib_A7BED83B(now_t);
+                if (sceSsl_lib_047AB6BB(now_t, not_before_t) == -1) {
+                    cert_flags |= 0x10;
+                    *err_out = 9;
+                }
+                sceSsl_lib_5E5C873A(now_t);
+                sceSsl_lib_5E5C873A(not_before_t);
             }
-        }
 
-        if (!found_anchor && (opts & 0x40) != 0) {
-            HttpCertIter iter;
-            sceKernelMemset(&iter, 0, sizeof(iter));
-            for (;;) {
-                cb_ret = http_ssl_load_next_system_cert(&iter, &loaded_ca, opts);
-                if (cb_ret < 0)
-                    goto fail;
-                if (loaded_ca == NULL)
+            if ((opts & 0x08) != 0 &&
+                sceSsl_lib_05E019A4(certs[idx], tag, &field_ptr, &field_len) != 0) {
+                char time_buf[256];
+                void *now_t;
+                void *not_after_t;
+
+                sceKernelMemset(time_buf, 0, sizeof(time_buf));
+                sceKernelMemcpy(time_buf, field_ptr, (u32)field_len);
+                sceSsl_lib_5E5C873A(field_ptr);
+                field_ptr = NULL;
+
+                now_t = sceSsl_lib_0861D934(12);
+                not_after_t = sceSsl_lib_0861D934(12);
+                if (now_t == NULL || not_after_t == NULL) {
+                    if (now_t != NULL) sceSsl_lib_5E5C873A(now_t);
+                    if (not_after_t != NULL) sceSsl_lib_5E5C873A(not_after_t);
+                    *err_out = 17;
+                    failed = 1;
                     break;
-                {
-                    void *ca_subj = sceSsl_lib_12C7718F(loaded_ca);
-                    if (issuer != NULL && ca_subj != NULL && sceSsl_lib_7D0E41F4(ca_subj, issuer) == 0) {
-                        void *pubkey = sceSsl_lib_B87FFE37(loaded_ca);
-                        if (pubkey == NULL) {
-                            *err_out = 17;
-                            conn->ssl_err = SCE_HTTPS_ERROR_INTERNAL;
-                            goto fail;
+                }
+                sceSsl_lib_E7BFC0EF(time_buf, field_len, 1, not_after_t);
+                sceSsl_lib_A7BED83B(now_t);
+                if (sceSsl_lib_047AB6BB(now_t, not_after_t) == 1) {
+                    cert_flags |= 0x08;
+                    *err_out = 10;
+                }
+                sceSsl_lib_5E5C873A(now_t);
+                sceSsl_lib_5E5C873A(not_after_t);
+            }
+
+            sceSsl_lib_37C7B76C(certs[idx], hash_buf, &hash_len);
+        }
+        if (failed)
+            break;
+
+        if ((opts & 0x04) != 0) {
+            u8 *san_data = NULL;
+            s32 san_len = 0;
+
+            cb_ret = sceSsl_lib_76A46EDA(certs[0], g_oid_subject_alt_name, 0, &san_data, &san_len);
+            if (cb_ret == 1 && san_data != NULL) {
+                HttpAsn1Item item;
+                cb_ret = sceSsl_lib_C85F6FCE(&item, san_data, san_len);
+                if (cb_ret == 0) {
+                    s32 rem = san_len - item.hdr_len;
+                    while (rem > 0) {
+                        cb_ret = sceSsl_lib_C85F6FCE(&item, item.data, rem);
+                        if (cb_ret != 0)
+                            break;
+                        cb_ret = http_ssl_match_hostname((const char *)item.data, item.len, conn->host);
+                        if (cb_ret == 0) {
+                            host_ok = 1;
+                            break;
                         }
-                        if (sceSsl_lib_0FF7BA68(certs[chain_idx], pubkey) != 0) {
+                        rem -= (s32)(item.hdr_len + item.len);
+                        item.data += item.len;
+                    }
+                }
+            }
+
+            if (!host_ok) {
+                void *subj = sceSsl_lib_12C7718F(certs[0]);
+                if (subj != NULL) {
+                    cb_ret = http_ssl_check_cn(subj, conn->host);
+                    if (cb_ret == 0)
+                        host_ok = 1;
+                }
+            }
+        }
+
+        {
+            s32 chain_matched = 0;
+
+            for (chain_idx = 0; chain_idx < cert_count; chain_idx++) {
+                void *issuer = sceSsl_lib_4BE9030A(certs[chain_idx]);
+                s32 found_anchor = 0;
+
+                if ((opts & 0x180) == 0 && g_https_ca_count > 0) {
+                    s32 ca_idx;
+                    for (ca_idx = 0; ca_idx < g_https_ca_count; ca_idx++) {
+                        void *ca_subj = sceSsl_lib_12C7718F(g_https_ca_list[ca_idx]);
+                        if (issuer != NULL && ca_subj != NULL && sceSsl_lib_7D0E41F4(ca_subj, issuer) == 0) {
                             found_anchor = 1;
                             break;
                         }
                     }
                 }
-                sceSsl_lib_C1A2E14B(loaded_ca);
-                loaded_ca = NULL;
-            }
-        }
 
-        if (found_anchor) {
-            if (sceKernelGetCompiledSdkVersion() > 0x060600FF) {
-                s32 verify_idx = chain_idx;
-                while (verify_idx > 0) {
-                    void *pubkey = sceSsl_lib_B87FFE37(certs[verify_idx]);
-                    if (pubkey == NULL) {
-                        *err_out = 17;
-                        conn->ssl_err = SCE_HTTPS_ERROR_INTERNAL;
-                        goto fail;
-                    }
-                    if (sceSsl_lib_0FF7BA68(certs[verify_idx - 1], pubkey) == 0)
-                        goto fail;
-                    verify_idx--;
-                }
-            }
-
-            {
-                s32 bc_idx = chain_idx;
-                while (bc_idx >= 0) {
-                    u8 is_ca[4];
-                    s32 path_len = 10;
-                    s32 has_path_len = 0;
-
-                    if (bc_idx > 0 && sceSsl_lib_CFA2F8EB(certs[bc_idx], is_ca, &path_len, &has_path_len) == 1) {
-                        if (has_path_len != 0) {
-                            if ((u32)(path_len + 1) < (u32)bc_idx)
-                                goto fail;
-                        } else {
-                            cert_flags |= 2;
+                if (!found_anchor && (opts & 0x40) != 0) {
+                    HttpCertIter iter;
+                    sceKernelMemset(&iter, 0, sizeof(iter));
+                    for (;;) {
+                        cb_ret = http_ssl_load_next_system_cert(&iter, &loaded_ca, opts);
+                        if (cb_ret < 0) {
+                            failed = 1;
+                            break;
                         }
+                        if (loaded_ca == NULL)
+                            break;
+                        {
+                            void *ca_subj = sceSsl_lib_12C7718F(loaded_ca);
+                            if (issuer != NULL && ca_subj != NULL && sceSsl_lib_7D0E41F4(ca_subj, issuer) == 0) {
+                                void *pubkey = sceSsl_lib_B87FFE37(loaded_ca);
+                                if (pubkey == NULL) {
+                                    *err_out = 17;
+                                    conn->ssl_err = SCE_HTTPS_ERROR_INTERNAL;
+                                    failed = 1;
+                                    break;
+                                }
+                                if (sceSsl_lib_0FF7BA68(certs[chain_idx], pubkey) != 0) {
+                                    found_anchor = 1;
+                                    break;
+                                }
+                            }
+                        }
+                        sceSsl_lib_C1A2E14B(loaded_ca);
+                        loaded_ca = NULL;
                     }
-                    bc_idx--;
+                    if (failed)
+                        break;
+                }
+
+                if (found_anchor) {
+                    if (sceKernelGetCompiledSdkVersion() > 0x060600FF) {
+                        s32 verify_idx = chain_idx;
+                        while (verify_idx > 0) {
+                            void *pubkey = sceSsl_lib_B87FFE37(certs[verify_idx]);
+                            if (pubkey == NULL) {
+                                *err_out = 17;
+                                conn->ssl_err = SCE_HTTPS_ERROR_INTERNAL;
+                                failed = 1;
+                                break;
+                            }
+                            if (sceSsl_lib_0FF7BA68(certs[verify_idx - 1], pubkey) == 0) {
+                                failed = 1;
+                                break;
+                            }
+                            verify_idx--;
+                        }
+                        if (failed)
+                            break;
+                    }
+
+                    {
+                        s32 bc_idx = chain_idx;
+                        while (bc_idx >= 0) {
+                            u8 is_ca[4];
+                            s32 path_len = 10;
+                            s32 has_path_len = 0;
+
+                            if (bc_idx > 0 && sceSsl_lib_CFA2F8EB(certs[bc_idx], is_ca, &path_len, &has_path_len) == 1) {
+                                if (has_path_len != 0) {
+                                    if ((u32)(path_len + 1) < (u32)bc_idx) {
+                                        failed = 1;
+                                        break;
+                                    }
+                                } else {
+                                    cert_flags |= 2;
+                                }
+                            }
+                            bc_idx--;
+                        }
+                        if (failed)
+                            break;
+                    }
+                    chain_matched = 1;
+                    break;
+                }
+
+                if (chain_idx + 1 < cert_count) {
+                    void *next_subj = sceSsl_lib_12C7718F(certs[chain_idx + 1]);
+                    if (issuer == NULL || next_subj == NULL || sceSsl_lib_7D0E41F4(issuer, next_subj) != 0) {
+                        failed = 1;
+                        break;
+                    }
                 }
             }
-            goto finalize;
+
+            if (!failed && !chain_matched && (opts & 0x20) != 0)
+                cert_flags |= 0x20;
+        }
+    } while (0);
+
+    if (!failed) {
+        if ((opts & 0x04) != 0 && host_ok != 1)
+            cert_flags |= 0x04;
+
+        if (cert_flags != 0) {
+            conn->ssl_cert_flags = cert_flags;
+            conn->ssl_err = SCE_HTTPS_ERROR_CERT;
+            cb_ret = -1;
         }
 
-        if (chain_idx + 1 < cert_count) {
-            void *next_subj = sceSsl_lib_12C7718F(certs[chain_idx + 1]);
-            if (issuer == NULL || next_subj == NULL || sceSsl_lib_7D0E41F4(issuer, next_subj) != 0)
-                goto fail;
+        if (conn->cfg.ssl_cb != NULL) {
+            typedef s32 (*SslCb)(u32, void **, s32, void *);
+            _sceKernelCheckThreadStack();
+            cb_ret = ((SslCb)conn->cfg.ssl_cb)(cert_flags, certs, cert_count, conn->cfg.ssl_cb_arg);
+            if (cb_ret >= 0) {
+                conn->ssl_err = 0;
+                conn->ssl_cert_flags = 0;
+            }
+        }
+
+        if (!(cb_ret < 0 && (g_https_ca_count != 0 || (opts & 0x40) != 0))) {
+            conn->ssl_handshake_done = 1;
+            if (loaded_ca != NULL)
+                sceSsl_lib_C1A2E14B(loaded_ca);
+            *err_out = 0;
+            return 1;
         }
     }
 
-    if ((opts & 0x20) != 0)
-        cert_flags |= 0x20;
-
-finalize:
-    if ((opts & 0x04) != 0 && host_ok != 1)
-        cert_flags |= 0x04;
-
-    if (cert_flags != 0) {
-        conn->ssl_cert_flags = cert_flags;
-        conn->ssl_err = SCE_HTTPS_ERROR_CERT;
-        cb_ret = -1;
-    }
-
-    if (conn->cfg.ssl_cb != NULL) {
-        typedef s32 (*SslCb)(u32, void **, s32, void *);
-        _sceKernelCheckThreadStack();
-        cb_ret = ((SslCb)conn->cfg.ssl_cb)(cert_flags, certs, cert_count, conn->cfg.ssl_cb_arg);
-        if (cb_ret >= 0) {
-            conn->ssl_err = 0;
-            conn->ssl_cert_flags = 0;
-        }
-    }
-
-    if (cb_ret < 0 && (g_https_ca_count != 0 || (opts & 0x40) != 0))
-        goto fail;
-
-    conn->ssl_handshake_done = 1;
-    if (loaded_ca != NULL)
-        sceSsl_lib_C1A2E14B(loaded_ca);
-    *err_out = 0;
-    return 1;
-
-fail:
     if (loaded_ca != NULL)
         sceSsl_lib_C1A2E14B(loaded_ca);
     conn->ssl_handshake_done = 1;
@@ -523,12 +552,13 @@ s32 http_ssl_client_cert_callback(void *ca_list, void **cert_out, void **key_out
 {
     const u8 *der_ptr = (const u8 *)g_https_client_cert;
     void *cert;
-    void *bio;
+    void *bio = NULL;
     void *key = NULL;
     void *issuer;
     s32 ca_count;
     s32 idx;
     s32 matched = 0;
+    s32 ok = 0;
 
     *cert_out = NULL;
     *key_out = NULL;
@@ -541,37 +571,43 @@ s32 http_ssl_client_cert_callback(void *ca_list, void **cert_out, void **key_out
     if (cert == NULL)
         return 0;
 
-    bio = sceSsl_lib_58352068();
-    if (bio == NULL)
-        goto fail;
-
-    sceSsl_lib_3454E622(bio, "%s", g_https_client_key);
-    key = sceSsl_lib_0217E73C((void *)sceSsl_lib_A920B39E, "PRIVATE KEY", bio, NULL, NULL);
-    if (key == NULL)
-        goto fail;
-
-    issuer = sceSsl_lib_4BE9030A(cert);
-    if (issuer == NULL)
-        goto fail;
-
-    for (idx = 0; idx < ca_count; idx++) {
-        void *ca_name = sceSsl_lib_7BDAF864(ca_list, idx);
-        if (ca_name == NULL)
-            goto fail;
-        if (sceSsl_lib_7D0E41F4(ca_name, issuer) == 0) {
-            matched = 1;
+    do {
+        bio = sceSsl_lib_58352068();
+        if (bio == NULL)
             break;
+
+        sceSsl_lib_3454E622(bio, "%s", g_https_client_key);
+        key = sceSsl_lib_0217E73C((void *)sceSsl_lib_A920B39E, "PRIVATE KEY", bio, NULL, NULL);
+        if (key == NULL)
+            break;
+
+        issuer = sceSsl_lib_4BE9030A(cert);
+        if (issuer == NULL)
+            break;
+
+        ok = 1;
+        for (idx = 0; idx < ca_count; idx++) {
+            void *ca_name = sceSsl_lib_7BDAF864(ca_list, idx);
+            if (ca_name == NULL) {
+                ok = 0;
+                break;
+            }
+            if (sceSsl_lib_7D0E41F4(ca_name, issuer) == 0) {
+                matched = 1;
+                break;
+            }
         }
+    } while (0);
+
+    if (ok) {
+        if (matched) {
+            *cert_out = cert;
+            *key_out = key;
+        }
+        sceSsl_lib_3E040FD4(bio);
+        return matched;
     }
 
-    if (matched) {
-        *cert_out = cert;
-        *key_out = key;
-    }
-    sceSsl_lib_3E040FD4(bio);
-    return matched;
-
-fail:
     sceSsl_lib_C1A2E14B(cert);
     if (key != NULL)
         sceSsl_lib_7317C1BC(key);
@@ -651,95 +687,99 @@ s32 sceHttpsInit(s32 ca_count, HttpCertSlot **ca_list, HttpCertSlot *client_cert
     g_https_ca_count = 0;
     g_https_ca_list = NULL;
 
-    if (ca_list != NULL && ca_count > 0) {
-        s32 idx;
-        g_https_ca_count = ca_count;
-        g_https_ca_list = (void **)http_malloc((u32)(4 * ca_count));
-        if (g_https_ca_list == NULL) {
-            ret = SCE_HTTP_ERROR_OUT_OF_MEMORY;
-            goto fail;
-        }
-        sceKernelMemset(g_https_ca_list, 0, (u32)(4 * ca_count));
+    ret = 0;
+    do {
+        if (ca_list != NULL && ca_count > 0) {
+            s32 idx;
+            g_https_ca_count = ca_count;
+            g_https_ca_list = (void **)http_malloc((u32)(4 * ca_count));
+            if (g_https_ca_list == NULL) {
+                ret = SCE_HTTP_ERROR_OUT_OF_MEMORY;
+                break;
+            }
+            sceKernelMemset(g_https_ca_list, 0, (u32)(4 * ca_count));
 
-        for (idx = 0; idx < ca_count; idx++) {
+            for (idx = 0; idx < ca_count; idx++) {
+                u32 der_cap = 0;
+                u32 der_len = 0;
+                const u8 *der_ptr;
+                void *cert;
+
+                pem_buf = (char *)sceSsl_lib_0861D934(ca_list[idx]->size + 1);
+                if (pem_buf == NULL) {
+                    ret = SCE_HTTP_ERROR_OUT_OF_MEMORY;
+                    break;
+                }
+                sceKernelMemcpy(pem_buf, ca_list[idx]->data, ca_list[idx]->size);
+                pem_buf[ca_list[idx]->size] = '\0';
+
+                if (http_pem_to_der(pem_buf, NULL, &der_cap, 0) < 0) {
+                    ret = SCE_HTTP_ERROR_SSL;
+                    break;
+                }
+                der_buf = (u8 *)sceSsl_lib_0861D934(der_cap);
+                if (http_pem_to_der(pem_buf, der_buf, &der_len, der_cap) < 0) {
+                    ret = SCE_HTTP_ERROR_SSL;
+                    break;
+                }
+                der_ptr = der_buf;
+                cert = sceSsl_lib_6038DEDE(NULL, &der_ptr, (s32)der_len);
+                if (cert == NULL) {
+                    ret = SCE_HTTP_ERROR_SSL;
+                    break;
+                }
+                sceSsl_lib_5E5C873A(pem_buf);
+                sceSsl_lib_5E5C873A(der_buf);
+                pem_buf = NULL;
+                der_buf = NULL;
+                g_https_ca_list[idx] = cert;
+            }
+            if (ret < 0)
+                break;
+        }
+
+        if (client_cert != NULL) {
             u32 der_cap = 0;
             u32 der_len = 0;
-            const u8 *der_ptr;
-            void *x509;
 
-            pem_buf = (char *)sceSsl_lib_0861D934(ca_list[idx]->size + 1);
+            pem_buf = (char *)sceSsl_lib_0861D934(client_cert->size + 1);
             if (pem_buf == NULL) {
                 ret = SCE_HTTP_ERROR_OUT_OF_MEMORY;
-                goto fail;
+                break;
             }
-            sceKernelMemcpy(pem_buf, ca_list[idx]->data, ca_list[idx]->size);
-            pem_buf[ca_list[idx]->size] = '\0';
+            sceKernelMemcpy(pem_buf, client_cert->data, client_cert->size);
+            pem_buf[client_cert->size] = '\0';
 
             if (http_pem_to_der(pem_buf, NULL, &der_cap, 0) < 0) {
                 ret = SCE_HTTP_ERROR_SSL;
-                goto fail;
+                break;
             }
             der_buf = (u8 *)sceSsl_lib_0861D934(der_cap);
             if (http_pem_to_der(pem_buf, der_buf, &der_len, der_cap) < 0) {
                 ret = SCE_HTTP_ERROR_SSL;
-                goto fail;
+                break;
             }
-            der_ptr = der_buf;
-            x509 = sceSsl_lib_6038DEDE(NULL, &der_ptr, (s32)der_len);
-            if (x509 == NULL) {
-                ret = SCE_HTTP_ERROR_SSL;
-                goto fail;
-            }
-            sceSsl_lib_5E5C873A(pem_buf);
-            sceSsl_lib_5E5C873A(der_buf);
-            pem_buf = NULL;
+            g_https_client_cert = der_buf;
+            g_https_client_cert_len = der_len;
             der_buf = NULL;
-            g_https_ca_list[idx] = x509;
+            sceSsl_lib_5E5C873A(pem_buf);
+            pem_buf = NULL;
         }
-    }
 
-    if (client_cert != NULL) {
-        u32 der_cap = 0;
-        u32 der_len = 0;
-
-        pem_buf = (char *)sceSsl_lib_0861D934(client_cert->size + 1);
-        if (pem_buf == NULL) {
-            ret = SCE_HTTP_ERROR_OUT_OF_MEMORY;
-            goto fail;
+        if (client_key != NULL) {
+            g_https_client_key = (char *)sceSsl_lib_0861D934(client_key->size + 1);
+            if (g_https_client_key == NULL) {
+                ret = SCE_HTTP_ERROR_OUT_OF_MEMORY;
+                break;
+            }
+            sceKernelMemcpy(g_https_client_key, client_key->data, client_key->size);
+            g_https_client_key[client_key->size] = '\0';
         }
-        sceKernelMemcpy(pem_buf, client_cert->data, client_cert->size);
-        pem_buf[client_cert->size] = '\0';
 
-        if (http_pem_to_der(pem_buf, NULL, &der_cap, 0) < 0) {
-            ret = SCE_HTTP_ERROR_SSL;
-            goto fail;
-        }
-        der_buf = (u8 *)sceSsl_lib_0861D934(der_cap);
-        if (http_pem_to_der(pem_buf, der_buf, &der_len, der_cap) < 0) {
-            ret = SCE_HTTP_ERROR_SSL;
-            goto fail;
-        }
-        g_https_client_cert = der_buf;
-        g_https_client_cert_len = der_len;
-        der_buf = NULL;
-        sceSsl_lib_5E5C873A(pem_buf);
-        pem_buf = NULL;
-    }
+        g_https_inited = 1;
+        return 0;
+    } while (0);
 
-    if (client_key != NULL) {
-        g_https_client_key = (char *)sceSsl_lib_0861D934(client_key->size + 1);
-        if (g_https_client_key == NULL) {
-            ret = SCE_HTTP_ERROR_OUT_OF_MEMORY;
-            goto fail;
-        }
-        sceKernelMemcpy(g_https_client_key, client_key->data, client_key->size);
-        g_https_client_key[client_key->size] = '\0';
-    }
-
-    g_https_inited = 1;
-    return 0;
-
-fail:
     if (pem_buf != NULL)
         sceSsl_lib_5E5C873A(pem_buf);
     if (der_buf != NULL)
@@ -749,7 +789,7 @@ fail:
     return ret;
 }
 
-s32 sceHttp_68AB0F86(s32 param_a, s32 param_b, s32 param_c)
+s32 sceHttp_68AB0F86(s32 ca_count, s32 ca_list, s32 client_cert)
 {
     s32 ret;
 
@@ -761,7 +801,7 @@ s32 sceHttp_68AB0F86(s32 param_a, s32 param_b, s32 param_c)
     ret = sceSsl_lib_9266C0D5();
     if (ret == SCE_KERNEL_ERROR_NO_MOD)
         return ret;
-    if ((param_a | param_b | param_c) != 0)
+    if ((ca_count | ca_list | client_cert) != 0)
         return SCE_HTTP_ERROR_NOT_SUPPORTED;
 
     g_https_inited = 1;
@@ -808,50 +848,52 @@ s32 sceHttpsLoadDefaultCert(u32 group, u32 bit)
         new_list = (void **)http_malloc((u32)(4 * (g_https_ca_count + ret)));
         if (new_list == NULL) {
             ret = SCE_HTTP_ERROR_OUT_OF_MEMORY;
-            goto fail;
+        } else {
+            sceKernelMemset(new_list, 0, (u32)(4 * (g_https_ca_count + ret)));
+
+            for (idx = 0; idx < g_https_ca_count; idx++)
+                new_list[idx] = g_https_ca_list[idx];
+
+            while (cur != NULL) {
+                u32 der_cap = 0;
+                u32 der_len = 0;
+                const u8 *der_ptr;
+                void *cert;
+
+                if (http_pem_to_der(cur->pem, NULL, &der_cap, 0) < 0) {
+                    ret = SCE_HTTP_ERROR_SSL;
+                    break;
+                }
+                der_buf = (u8 *)http_malloc(der_cap);
+                if (der_buf == NULL) {
+                    ret = SCE_HTTP_ERROR_OUT_OF_MEMORY;
+                    break;
+                }
+                if (http_pem_to_der(cur->pem, der_buf, &der_len, der_cap) < 0) {
+                    ret = SCE_HTTP_ERROR_SSL;
+                    break;
+                }
+                der_ptr = der_buf;
+                cert = sceSsl_lib_6038DEDE(NULL, &der_ptr, (s32)der_len);
+                if (cert == NULL) {
+                    ret = SCE_HTTP_ERROR_SSL;
+                    break;
+                }
+                http_free(der_buf);
+                der_buf = NULL;
+                new_list[g_https_ca_count + added] = cert;
+                added++;
+                cur = cur->next;
+            }
+
+            if (ret >= 0) {
+                if (g_https_ca_list != NULL)
+                    http_free(g_https_ca_list);
+                g_https_ca_list = new_list;
+                g_https_ca_count += added;
+                new_list = NULL;
+            }
         }
-        sceKernelMemset(new_list, 0, (u32)(4 * (g_https_ca_count + ret)));
-
-        for (idx = 0; idx < g_https_ca_count; idx++)
-            new_list[idx] = g_https_ca_list[idx];
-
-        while (cur != NULL) {
-            u32 der_cap = 0;
-            u32 der_len = 0;
-            const u8 *der_ptr;
-            void *x509;
-
-            if (http_pem_to_der(cur->pem, NULL, &der_cap, 0) < 0) {
-                ret = SCE_HTTP_ERROR_SSL;
-                goto fail;
-            }
-            der_buf = (u8 *)http_malloc(der_cap);
-            if (der_buf == NULL) {
-                ret = SCE_HTTP_ERROR_OUT_OF_MEMORY;
-                goto fail;
-            }
-            if (http_pem_to_der(cur->pem, der_buf, &der_len, der_cap) < 0) {
-                ret = SCE_HTTP_ERROR_SSL;
-                goto fail;
-            }
-            der_ptr = der_buf;
-            x509 = sceSsl_lib_6038DEDE(NULL, &der_ptr, (s32)der_len);
-            if (x509 == NULL) {
-                ret = SCE_HTTP_ERROR_SSL;
-                goto fail;
-            }
-            http_free(der_buf);
-            der_buf = NULL;
-            new_list[g_https_ca_count + added] = x509;
-            added++;
-            cur = cur->next;
-        }
-
-        if (g_https_ca_list != NULL)
-            http_free(g_https_ca_list);
-        g_https_ca_list = new_list;
-        g_https_ca_count += added;
-        new_list = NULL;
     }
 
     if (ret >= 0) {
@@ -859,7 +901,6 @@ s32 sceHttpsLoadDefaultCert(u32 group, u32 bit)
         return sceKernelGetCompiledSdkVersion() > 0x02050010 ? ret : 0;
     }
 
-fail:
     if (new_list != NULL)
         http_free(new_list);
     if (der_buf != NULL)
@@ -897,7 +938,7 @@ s32 http_ssl_end_internal(void)
     return 0;
 }
 
-static s32 http_ssl_modify_flags(s32 id, u32 flags, s32 enable)
+HTTP_ALWAYS_INLINE s32 http_ssl_modify_flags(s32 id, u32 flags, s32 enable)
 {
     s32 type;
     s32 intr;
@@ -1423,32 +1464,29 @@ s32 http_ssl_load_next_system_cert(HttpCertIter *iter, void **cert_out, u32 flag
         return SCE_HTTP_ERROR_OUT_OF_MEMORY;
 
     ret = sceCertLoader_DD629A24(iter->group, iter->bit, &cert_node, work_buf, work_size, &out_size);
-    if (ret < 0)
-        goto fail;
-
-    if (ret == 1 && http_pem_to_der(cert_node->pem, NULL, &work_size, 0) >= 0) {
-        der_buf = (u8 *)sceSsl_lib_0861D934(work_size);
-        if (der_buf == NULL) {
-            ret = SCE_HTTP_ERROR_OUT_OF_MEMORY;
-            goto fail;
-        }
-        if (http_pem_to_der(cert_node->pem, der_buf, &out_size, work_size) >= 0) {
-            const u8 *der_ptr = der_buf;
-            void *x509;
-            sceSsl_lib_5E5C873A(work_buf);
-            work_buf = NULL;
-            x509 = sceSsl_lib_6038DEDE(NULL, &der_ptr, (s32)out_size);
-            *cert_out = x509;
-            ret = (x509 != NULL) ? 0 : SCE_HTTP_ERROR_SSL;
-            goto done;
+    if (ret >= 0) {
+        if (ret == 1 && http_pem_to_der(cert_node->pem, NULL, &work_size, 0) >= 0) {
+            der_buf = (u8 *)sceSsl_lib_0861D934(work_size);
+            if (der_buf == NULL) {
+                ret = SCE_HTTP_ERROR_OUT_OF_MEMORY;
+            } else if (http_pem_to_der(cert_node->pem, der_buf, &out_size, work_size) >= 0) {
+                const u8 *der_ptr = der_buf;
+                void *cert;
+                sceSsl_lib_5E5C873A(work_buf);
+                work_buf = NULL;
+                cert = sceSsl_lib_6038DEDE(NULL, &der_ptr, (s32)out_size);
+                *cert_out = cert;
+                ret = (cert != NULL) ? 0 : SCE_HTTP_ERROR_SSL;
+            } else {
+                ret = SCE_HTTP_ERROR_SSL;
+            }
+        } else {
+            ret = SCE_HTTP_ERROR_SSL;
         }
     }
-    ret = SCE_HTTP_ERROR_SSL;
 
-fail:
     if (work_buf != NULL)
         sceSsl_lib_5E5C873A(work_buf);
-done:
     if (der_buf != NULL)
         sceSsl_lib_5E5C873A(der_buf);
     return ret;
@@ -1491,118 +1529,119 @@ s32 http_handle_auth_response(HttpRequest *req)
         req->cfg.auth_cb_legacy == NULL && req->cfg.auth_cb == NULL)
         return 0;
 
-    if (req->cfg.auth_user != NULL && sceNet_lib_D8722983(req->cfg.auth_user) != 0 &&
-        req->cfg.auth_pass != NULL && sceNet_lib_D8722983(req->cfg.auth_pass) != 0) {
-        user_ptr = req->cfg.auth_user;
-        pass_ptr = req->cfg.auth_pass;
-    } else {
-        realm_buf = (char *)http_malloc(chal.realm_len + 1);
-        if (realm_buf == NULL)
-            return SCE_HTTP_ERROR_OUT_OF_MEMORY;
-        sceKernelMemcpy(realm_buf, chal.realm, chal.realm_len);
-        realm_buf[chal.realm_len] = '\0';
+    do {
+        if (req->cfg.auth_user != NULL && sceNet_lib_D8722983(req->cfg.auth_user) != 0 &&
+            req->cfg.auth_pass != NULL && sceNet_lib_D8722983(req->cfg.auth_pass) != 0) {
+            user_ptr = req->cfg.auth_user;
+            pass_ptr = req->cfg.auth_pass;
+        } else {
+            realm_buf = (char *)http_malloc(chal.realm_len + 1);
+            if (realm_buf == NULL)
+                return SCE_HTTP_ERROR_OUT_OF_MEMORY;
+            sceKernelMemcpy(realm_buf, chal.realm, chal.realm_len);
+            realm_buf[chal.realm_len] = '\0';
 
-        user_ptr = req->auth_user_buf;
-        pass_ptr = req->auth_pass_buf;
+            user_ptr = req->auth_user_buf;
+            pass_ptr = req->auth_pass_buf;
 
-        entry = http_auth_cache_find(req, (u32)chal.type, realm_buf);
-        if (entry != NULL) {
-            sceKernelMemcpy(user_ptr, entry->username, 256);
-            sceKernelMemcpy(pass_ptr, entry->password, 256);
-            save_flag = entry->save_flag;
-        } else if (chal.type == HTTP_AUTH_PROXY_BASIC || chal.type == HTTP_AUTH_PROXY_DIGEST) {
-            sceKernelMemset(user_ptr, 0, 256);
-            sceKernelMemset(pass_ptr, 0, 256);
-        }
-
-        if (entry != NULL && chal.stale == 1)
-            entry->status = 2;
-
-        if (entry == NULL || entry->status != 2) {
-            s32 cb_ret;
-            if (req->cfg.auth_cb != NULL) {
-                typedef s32 (*AuthCb)(s32, s32, const char *, char *, char *, s32,
-                                      const void **, u32 *, s32 *, void *);
-                _sceKernelCheckThreadStack();
-                cb_ret = ((AuthCb)req->cfg.auth_cb)(req->id, chal.type, realm_buf,
-                                                    user_ptr, pass_ptr, 0,
-                                                    &entity, &entity_len, &save_flag,
-                                                    req->cfg.auth_cb_arg);
-            } else {
-                typedef s32 (*LegacyAuthCb)(s32, s32, const char *, char *, char *, s32,
-                                            const void **, u32 *, s32 *);
-                _sceKernelCheckThreadStack();
-                cb_ret = ((LegacyAuthCb)req->cfg.auth_cb_legacy)(req->id, chal.type, realm_buf,
-                                                                 user_ptr, pass_ptr, 0,
-                                                                 &entity, &entity_len, &save_flag);
+            entry = http_auth_cache_find(req, (u32)chal.type, realm_buf);
+            if (entry != NULL) {
+                sceKernelMemcpy(user_ptr, entry->username, 256);
+                sceKernelMemcpy(pass_ptr, entry->password, 256);
+                save_flag = entry->save_flag;
+            } else if (chal.type == HTTP_AUTH_PROXY_BASIC || chal.type == HTTP_AUTH_PROXY_DIGEST) {
+                sceKernelMemset(user_ptr, 0, 256);
+                sceKernelMemset(pass_ptr, 0, 256);
             }
-            if (cb_ret < 0) {
-                if (entry != NULL)
-                    http_auth_entry_release_locked(entry);
-                ret = 0;
-                goto cleanup;
+
+            if (entry != NULL && chal.stale == 1)
+                entry->status = 2;
+
+            if (entry == NULL || entry->status != 2) {
+                s32 cb_ret;
+                if (req->cfg.auth_cb != NULL) {
+                    typedef s32 (*AuthCb)(s32, s32, const char *, char *, char *, s32,
+                                          const void **, u32 *, s32 *, void *);
+                    _sceKernelCheckThreadStack();
+                    cb_ret = ((AuthCb)req->cfg.auth_cb)(req->id, chal.type, realm_buf,
+                                                        user_ptr, pass_ptr, 0,
+                                                        &entity, &entity_len, &save_flag,
+                                                        req->cfg.auth_cb_arg);
+                } else {
+                    typedef s32 (*LegacyAuthCb)(s32, s32, const char *, char *, char *, s32,
+                                                const void **, u32 *, s32 *);
+                    _sceKernelCheckThreadStack();
+                    cb_ret = ((LegacyAuthCb)req->cfg.auth_cb_legacy)(req->id, chal.type, realm_buf,
+                                                                     user_ptr, pass_ptr, 0,
+                                                                     &entity, &entity_len, &save_flag);
+                }
+                if (cb_ret < 0) {
+                    if (entry != NULL)
+                        http_auth_entry_release_locked(entry);
+                    ret = 0;
+                    break;
+                }
+            }
+
+            if (entry == NULL)
+                entry = http_auth_cache_alloc(req, chal.type, realm_buf);
+            if (entry != NULL) {
+                sceKernelMemcpy(entry->username, user_ptr, 256);
+                sceKernelMemcpy(entry->password, pass_ptr, 256);
+                entry->save_flag = save_flag;
+                if (chal.type >= HTTP_AUTH_PROXY_BASIC)
+                    req->proxy_auth_entry = entry;
+                else
+                    req->auth_entry = entry;
             }
         }
 
-        if (entry == NULL)
-            entry = http_auth_cache_alloc(req, chal.type, realm_buf);
-        if (entry != NULL) {
-            sceKernelMemcpy(entry->username, user_ptr, 256);
-            sceKernelMemcpy(entry->password, pass_ptr, 256);
-            entry->save_flag = save_flag;
-            if (chal.type >= HTTP_AUTH_PROXY_BASIC)
-                req->proxy_auth_entry = entry;
-            else
-                req->auth_entry = entry;
-        }
-    }
+        ret = http_drain_and_reset_request(req);
+        if (ret < 0)
+            break;
 
-    ret = http_drain_and_reset_request(req);
-    if (ret < 0)
-        goto cleanup;
-
-    req->auth_retry_count++;
-    if (chal.type == HTTP_AUTH_BASIC || chal.type == HTTP_AUTH_PROXY_BASIC) {
-        s32 is_proxy = (chal.type == HTTP_AUTH_PROXY_BASIC);
-        ret = http_attach_basic_auth_header(req, user_ptr, pass_ptr, is_proxy);
-        if (is_proxy) {
-            sceKernelMemset(user_ptr, 0, 256);
-            sceKernelMemset(pass_ptr, 0, 256);
-        }
-        if (ret >= 0) {
-            ret = 1;
-            goto cleanup;
-        }
-    } else if (chal.type == HTTP_AUTH_DIGEST || chal.type == HTTP_AUTH_PROXY_DIGEST) {
-        ret = http_init_digest_params(&dparams, &chal);
-        if (ret >= 0) {
-            s32 is_proxy = (chal.type == HTTP_AUTH_PROXY_DIGEST);
-            ret = http_attach_digest_auth_header(req, user_ptr, pass_ptr,
-                                                 entity, entity_len, &dparams, is_proxy);
+        req->auth_retry_count++;
+        if (chal.type == HTTP_AUTH_BASIC || chal.type == HTTP_AUTH_PROXY_BASIC) {
+            s32 is_proxy = (chal.type == HTTP_AUTH_PROXY_BASIC);
+            ret = http_attach_basic_auth_header(req, user_ptr, pass_ptr, is_proxy);
             if (is_proxy) {
                 sceKernelMemset(user_ptr, 0, 256);
                 sceKernelMemset(pass_ptr, 0, 256);
             }
             if (ret >= 0) {
-                if (entry != NULL) {
-                    http_digest_params_free(&entry->digest);
-                    sceKernelMemcpy(&entry->digest, &dparams, sizeof(dparams));
-                } else {
-                    http_digest_params_free(&dparams);
-                }
                 ret = 1;
-                goto cleanup;
+                break;
             }
+        } else if (chal.type == HTTP_AUTH_DIGEST || chal.type == HTTP_AUTH_PROXY_DIGEST) {
+            ret = http_init_digest_params(&dparams, &chal);
+            if (ret >= 0) {
+                s32 is_proxy = (chal.type == HTTP_AUTH_PROXY_DIGEST);
+                ret = http_attach_digest_auth_header(req, user_ptr, pass_ptr,
+                                                     entity, entity_len, &dparams, is_proxy);
+                if (is_proxy) {
+                    sceKernelMemset(user_ptr, 0, 256);
+                    sceKernelMemset(pass_ptr, 0, 256);
+                }
+                if (ret >= 0) {
+                    if (entry != NULL) {
+                        http_digest_params_free(&entry->digest);
+                        sceKernelMemcpy(&entry->digest, &dparams, sizeof(dparams));
+                    } else {
+                        http_digest_params_free(&dparams);
+                    }
+                    ret = 1;
+                    break;
+                }
+            }
+        } else {
+            ret = 1;
+            break;
         }
-    } else {
-        ret = 1;
-        goto cleanup;
-    }
 
-    if (ret != SCE_HTTP_ERROR_OUT_OF_MEMORY)
-        ret = 0;
+        if (ret != SCE_HTTP_ERROR_OUT_OF_MEMORY)
+            ret = 0;
+    } while (0);
 
-cleanup:
     if (realm_buf != NULL)
         http_free(realm_buf);
     return ret;
@@ -1620,7 +1659,7 @@ s32 http_handle_redirect(HttpRequest *req)
 {
     HttpConnection *conn;
     SceUriElement uri;
-    char *loc_str = NULL;
+    char *location_str = NULL;
     void *uri_work = NULL;
     char *new_path = NULL;
     char *new_query = NULL;
@@ -1652,210 +1691,211 @@ s32 http_handle_redirect(HttpRequest *req)
     if (req->res_info.location_ptr == NULL)
         return SCE_HTTP_ERROR_BAD_RESPONSE;
 
-    loc_str = (char *)http_malloc(req->res_info.location_len + 1);
-    if (loc_str == NULL)
+    location_str = (char *)http_malloc(req->res_info.location_len + 1);
+    if (location_str == NULL)
         return SCE_HTTP_ERROR_OUT_OF_MEMORY;
-    sceKernelMemcpy(loc_str, req->res_info.location_ptr, req->res_info.location_len);
-    loc_str[req->res_info.location_len] = '\0';
+    sceKernelMemcpy(location_str, req->res_info.location_ptr, req->res_info.location_len);
+    location_str[req->res_info.location_len] = '\0';
 
-    if (req->cfg.redirect_cb != NULL) {
-        typedef s32 (*RedirCb)(s32, s32, s32 *, const char *, void *);
-        _sceKernelCheckThreadStack();
-        if (((RedirCb)req->cfg.redirect_cb)(req->id, status, &req->method,
-                                            loc_str, req->cfg.redirect_cb_arg) < 0) {
-            ret = 0;
-            goto cleanup;
+    do {
+        if (req->cfg.redirect_cb != NULL) {
+            typedef s32 (*RedirCb)(s32, s32, s32 *, const char *, void *);
+            _sceKernelCheckThreadStack();
+            if (((RedirCb)req->cfg.redirect_cb)(req->id, status, &req->method,
+                                                location_str, req->cfg.redirect_cb_arg) < 0) {
+                ret = 0;
+                break;
+            }
         }
-    }
 
-    ret = sceUriParse(NULL, loc_str, NULL, &work_size, 0);
-    if (ret < 0)
-        goto cleanup;
-    uri_work = http_malloc(work_size);
-    if (uri_work == NULL) {
-        ret = SCE_HTTP_ERROR_OUT_OF_MEMORY;
-        goto cleanup;
-    }
-    ret = sceUriParse(&uri, loc_str, uri_work, NULL, work_size);
-    if (ret < 0)
-        goto cleanup;
-
-    if (uri.query != NULL && sceNet_lib_D8722983(uri.query) != 0) {
-        work_size = sceNet_lib_D8722983(uri.query) + 1;
-        new_query = (char *)http_malloc(work_size);
-        if (new_query == NULL) {
-            ret = SCE_HTTP_ERROR_OUT_OF_MEMORY;
-            goto cleanup;
-        }
-        sceKernelMemcpy(new_query, uri.query, work_size);
-    }
-    if (uri.fragment != NULL && sceNet_lib_D8722983(uri.fragment) != 0) {
-        work_size = sceNet_lib_D8722983(uri.fragment) + 1;
-        new_frag = (char *)http_malloc(work_size);
-        if (new_frag == NULL) {
-            ret = SCE_HTTP_ERROR_OUT_OF_MEMORY;
-            goto cleanup;
-        }
-        sceKernelMemcpy(new_frag, uri.fragment, work_size);
-    }
-
-    ret = http_drain_and_reset_request(req);
-    if (ret < 0)
-        goto cleanup;
-
-    req->redirect_count++;
-    if (req->res_info.status_code == 301) {
-        old_url = http_build_request_url(req);
-        if (old_url == NULL) {
-            ret = SCE_HTTP_ERROR_OUT_OF_MEMORY;
-            goto cleanup;
-        }
-    }
-
-    if (req->res_info.status_code != 305) {
-        if (uri.opaque != 1 && req->path != NULL) {
-            http_free(req->path);
-            req->path = NULL;
-        }
-        if (req->query != NULL) {
-            http_free(req->query);
-            req->query = NULL;
-        }
-        if (req->fragment != NULL) {
-            http_free(req->fragment);
-            req->fragment = NULL;
-        }
-    }
-
-    if (uri.opaque == 1) {
-        ret = sceUriBuild(NULL, &work_size, 0, &uri, 10);
-        if (ret < 0) goto cleanup;
-        rel_path = (char *)http_malloc(work_size);
-        if (rel_path == NULL) { ret = SCE_HTTP_ERROR_OUT_OF_MEMORY; goto cleanup; }
-        ret = sceUriBuild(rel_path, NULL, work_size, &uri, 10);
-        if (ret < 0) goto cleanup;
-
-        http_free(uri_work);
-        uri_work = NULL;
-        sceKernelMemset(&uri, 0, sizeof(uri));
-
-        ret = sceUriParse(NULL, req->path, NULL, &work_size, 0);
-        if (ret < 0) goto cleanup;
+        ret = sceUriParse(NULL, location_str, NULL, &work_size, 0);
+        if (ret < 0)
+            break;
         uri_work = http_malloc(work_size);
-        if (uri_work == NULL) { ret = SCE_HTTP_ERROR_OUT_OF_MEMORY; goto cleanup; }
-        ret = sceUriParse(&uri, req->path, uri_work, NULL, work_size);
-        if (ret < 0) goto cleanup;
+        if (uri_work == NULL) {
+            ret = SCE_HTTP_ERROR_OUT_OF_MEMORY;
+            break;
+        }
+        ret = sceUriParse(&uri, location_str, uri_work, NULL, work_size);
+        if (ret < 0)
+            break;
 
-        if (req->path != NULL) {
-            http_free(req->path);
-            req->path = NULL;
+        if (uri.query != NULL && sceNet_lib_D8722983(uri.query) != 0) {
+            work_size = sceNet_lib_D8722983(uri.query) + 1;
+            new_query = (char *)http_malloc(work_size);
+            if (new_query == NULL) {
+                ret = SCE_HTTP_ERROR_OUT_OF_MEMORY;
+                break;
+            }
+            sceKernelMemcpy(new_query, uri.query, work_size);
+        }
+        if (uri.fragment != NULL && sceNet_lib_D8722983(uri.fragment) != 0) {
+            work_size = sceNet_lib_D8722983(uri.fragment) + 1;
+            new_frag = (char *)http_malloc(work_size);
+            if (new_frag == NULL) {
+                ret = SCE_HTTP_ERROR_OUT_OF_MEMORY;
+                break;
+            }
+            sceKernelMemcpy(new_frag, uri.fragment, work_size);
         }
 
-        ret = sceUriBuild(NULL, &work_size, 0, &uri, 10);
-        if (ret < 0) goto cleanup;
-        base_path = (char *)http_malloc(work_size);
-        if (base_path == NULL) { ret = SCE_HTTP_ERROR_OUT_OF_MEMORY; goto cleanup; }
-        ret = sceUriBuild(base_path, NULL, work_size, &uri, 10);
-        if (ret < 0) goto cleanup;
+        ret = http_drain_and_reset_request(req);
+        if (ret < 0)
+            break;
 
-        new_path = http_resolve_relative_path(base_path, rel_path);
-        if (new_path == NULL) { ret = SCE_HTTP_ERROR_OUT_OF_MEMORY; goto cleanup; }
-
-        http_free(base_path); base_path = NULL;
-        http_free(rel_path);  rel_path = NULL;
-
-        req->path = new_path;     new_path = NULL;
-        req->query = new_query;   new_query = NULL;
-        req->fragment = new_frag; new_frag = NULL;
-
-        if (req->next_pipelined_id != 0) {
-            const char *scheme_str = (conn->scheme == HTTP_SCHEME_HTTPS) ? "https" : "http";
-            ret = http_create_connection_internal(0, conn->host, scheme_str, NULL, NULL,
-                                                  conn->port, conn->cfg.keep_alive, 2, req);
-            if (ret < 0)
-                goto cleanup;
-        }
-    } else if (sceNet_lib_A0F16ABD(uri.host, conn->host) == 0 &&
-               req->next_pipelined_id == 0 &&
-               http_parse_scheme(uri.scheme) == conn->scheme &&
-               conn->port == uri.port) {
-        work_size = sceNet_lib_D8722983(uri.path) + 1;
-        new_path = (char *)http_malloc(work_size);
-        if (new_path == NULL) { ret = SCE_HTTP_ERROR_OUT_OF_MEMORY; goto cleanup; }
-        sceNet_lib_80C9F02A(new_path, uri.path);
-        http_free(uri_work); uri_work = NULL;
-
-        req->path = new_path;     new_path = NULL;
-        req->query = new_query;   new_query = NULL;
-        req->fragment = new_frag; new_frag = NULL;
-    } else {
-        s32 cur_status = req->res_info.status_code;
-        if (req->method == HTTP_METHOD_POST && cur_status != 305 && cur_status != 307 &&
-            conn->scheme == HTTP_SCHEME_HTTPS && http_parse_scheme(uri.scheme) == HTTP_SCHEME_HTTP) {
-            req->method = HTTP_METHOD_GET;
+        req->redirect_count++;
+        if (req->res_info.status_code == 301) {
+            old_url = http_build_request_url(req);
+            if (old_url == NULL) {
+                ret = SCE_HTTP_ERROR_OUT_OF_MEMORY;
+                break;
+            }
         }
 
-        if (cur_status == 305) {
-            proxy_host = (char *)http_malloc(sceNet_lib_D8722983(uri.host) + 1);
-            if (proxy_host == NULL) { ret = SCE_HTTP_ERROR_OUT_OF_MEMORY; goto cleanup; }
-            sceNet_lib_80C9F02A(proxy_host, uri.host);
+        if (req->res_info.status_code != 305) {
+            if (uri.opaque != 1 && req->path != NULL) {
+                http_free(req->path);
+                req->path = NULL;
+            }
+            if (req->query != NULL) {
+                http_free(req->query);
+                req->query = NULL;
+            }
+            if (req->fragment != NULL) {
+                http_free(req->fragment);
+                req->fragment = NULL;
+            }
+        }
 
-            tmp_url = http_build_request_url(req);
-            if (tmp_url == NULL) { ret = SCE_HTTP_ERROR_OUT_OF_MEMORY; goto cleanup; }
+        if (uri.opaque == 1) {
+            ret = sceUriBuild(NULL, &work_size, 0, &uri, 10);
+            if (ret < 0) break;
+            rel_path = (char *)http_malloc(work_size);
+            if (rel_path == NULL) { ret = SCE_HTTP_ERROR_OUT_OF_MEMORY; break; }
+            ret = sceUriBuild(rel_path, NULL, work_size, &uri, 10);
+            if (ret < 0) break;
 
-            ret = http_create_connection_with_url_internal(0, tmp_url, req->cfg.keep_alive, 1, req);
-            if (ret < 0)
-                goto cleanup;
-            http_free(tmp_url);
-            tmp_url = NULL;
+            http_free(uri_work);
+            uri_work = NULL;
+            sceKernelMemset(&uri, 0, sizeof(uri));
 
-            req->redir_conn->cfg.use_proxy = 1;
-            req->redir_conn->cfg.proxy_port = uri.port;
-            req->redir_conn->cfg.use_default_proxy = 0;
-            req->redir_conn->cfg.proxy_server = proxy_host;
-            proxy_host = NULL;
-        } else {
-            s32 new_scheme;
-            work_size = sceNet_lib_D8722983(uri.path) + 1;
-            new_path = (char *)http_malloc(work_size);
-            if (new_path == NULL) { ret = SCE_HTTP_ERROR_OUT_OF_MEMORY; goto cleanup; }
-            sceNet_lib_80C9F02A(new_path, uri.path);
+            ret = sceUriParse(NULL, req->path, NULL, &work_size, 0);
+            if (ret < 0) break;
+            uri_work = http_malloc(work_size);
+            if (uri_work == NULL) { ret = SCE_HTTP_ERROR_OUT_OF_MEMORY; break; }
+            ret = sceUriParse(&uri, req->path, uri_work, NULL, work_size);
+            if (ret < 0) break;
+
+            if (req->path != NULL) {
+                http_free(req->path);
+                req->path = NULL;
+            }
+
+            ret = sceUriBuild(NULL, &work_size, 0, &uri, 10);
+            if (ret < 0) break;
+            base_path = (char *)http_malloc(work_size);
+            if (base_path == NULL) { ret = SCE_HTTP_ERROR_OUT_OF_MEMORY; break; }
+            ret = sceUriBuild(base_path, NULL, work_size, &uri, 10);
+            if (ret < 0) break;
+
+            new_path = http_resolve_relative_path(base_path, rel_path);
+            if (new_path == NULL) { ret = SCE_HTTP_ERROR_OUT_OF_MEMORY; break; }
+
+            http_free(base_path); base_path = NULL;
+            http_free(rel_path);  rel_path = NULL;
 
             req->path = new_path;     new_path = NULL;
             req->query = new_query;   new_query = NULL;
             req->fragment = new_frag; new_frag = NULL;
 
-            new_scheme = http_parse_scheme(uri.scheme);
-            ret = http_format_host_header(&host_hdr, new_scheme, uri.host, uri.port);
-            if (ret < 0)
-                goto cleanup;
-            http_add_header_internal(req->id, "Host", host_hdr, 0);
-            http_free(host_hdr);
-            host_hdr = NULL;
+            if (req->next_pipelined_id != 0) {
+                const char *scheme_str = (conn->scheme == HTTP_SCHEME_HTTPS) ? "https" : "http";
+                ret = http_create_connection_internal(0, conn->host, scheme_str, NULL, NULL,
+                                                      conn->port, conn->cfg.keep_alive, 2, req);
+                if (ret < 0)
+                    break;
+            }
+        } else if (sceNet_lib_A0F16ABD(uri.host, conn->host) == 0 &&
+                   req->next_pipelined_id == 0 &&
+                   http_parse_scheme(uri.scheme) == conn->scheme &&
+                   conn->port == uri.port) {
+            work_size = sceNet_lib_D8722983(uri.path) + 1;
+            new_path = (char *)http_malloc(work_size);
+            if (new_path == NULL) { ret = SCE_HTTP_ERROR_OUT_OF_MEMORY; break; }
+            sceNet_lib_80C9F02A(new_path, uri.path);
+            http_free(uri_work); uri_work = NULL;
 
-            ret = http_create_connection_with_url_internal(0, loc_str, req->cfg.keep_alive, 1, req);
-            if (ret < 0)
-                goto cleanup;
+            req->path = new_path;     new_path = NULL;
+            req->query = new_query;   new_query = NULL;
+            req->fragment = new_frag; new_frag = NULL;
+        } else {
+            s32 cur_status = req->res_info.status_code;
+            if (req->method == HTTP_METHOD_POST && cur_status != 305 && cur_status != 307 &&
+                conn->scheme == HTTP_SCHEME_HTTPS && http_parse_scheme(uri.scheme) == HTTP_SCHEME_HTTP) {
+                req->method = HTTP_METHOD_GET;
+            }
+
+            if (cur_status == 305) {
+                proxy_host = (char *)http_malloc(sceNet_lib_D8722983(uri.host) + 1);
+                if (proxy_host == NULL) { ret = SCE_HTTP_ERROR_OUT_OF_MEMORY; break; }
+                sceNet_lib_80C9F02A(proxy_host, uri.host);
+
+                tmp_url = http_build_request_url(req);
+                if (tmp_url == NULL) { ret = SCE_HTTP_ERROR_OUT_OF_MEMORY; break; }
+
+                ret = http_create_connection_with_url_internal(0, tmp_url, req->cfg.keep_alive, 1, req);
+                if (ret < 0)
+                    break;
+                http_free(tmp_url);
+                tmp_url = NULL;
+
+                req->redir_conn->cfg.use_proxy = 1;
+                req->redir_conn->cfg.proxy_port = uri.port;
+                req->redir_conn->cfg.use_default_proxy = 0;
+                req->redir_conn->cfg.proxy_server = proxy_host;
+                proxy_host = NULL;
+            } else {
+                s32 new_scheme;
+                work_size = sceNet_lib_D8722983(uri.path) + 1;
+                new_path = (char *)http_malloc(work_size);
+                if (new_path == NULL) { ret = SCE_HTTP_ERROR_OUT_OF_MEMORY; break; }
+                sceNet_lib_80C9F02A(new_path, uri.path);
+
+                req->path = new_path;     new_path = NULL;
+                req->query = new_query;   new_query = NULL;
+                req->fragment = new_frag; new_frag = NULL;
+
+                new_scheme = http_parse_scheme(uri.scheme);
+                ret = http_format_host_header(&host_hdr, new_scheme, uri.host, uri.port);
+                if (ret < 0)
+                    break;
+                http_add_header_internal(req->id, "Host", host_hdr, 0);
+                http_free(host_hdr);
+                host_hdr = NULL;
+
+                ret = http_create_connection_with_url_internal(0, location_str, req->cfg.keep_alive, 1, req);
+                if (ret < 0)
+                    break;
+            }
         }
-    }
 
-    if (req->res_info.status_code == 301) {
-        new_url = http_build_request_url(req);
-        if (new_url == NULL) { ret = SCE_HTTP_ERROR_OUT_OF_MEMORY; goto cleanup; }
-        http_redir_cache_add(old_url, req->method, NULL, new_url);
-    }
+        if (req->res_info.status_code == 301) {
+            new_url = http_build_request_url(req);
+            if (new_url == NULL) { ret = SCE_HTTP_ERROR_OUT_OF_MEMORY; break; }
+            http_redir_cache_add(old_url, req->method, NULL, new_url);
+        }
 
-    if (uri_work != NULL) { http_free(uri_work); uri_work = NULL; }
-    if (loc_str != NULL)  { http_free(loc_str);  loc_str = NULL; }
-    if (old_url != NULL)  { http_free(old_url);  old_url = NULL; }
-    if (new_url != NULL)  { http_free(new_url);  new_url = NULL; }
+        if (uri_work != NULL)     { http_free(uri_work);     uri_work = NULL; }
+        if (location_str != NULL) { http_free(location_str); location_str = NULL; }
+        if (old_url != NULL)      { http_free(old_url);      old_url = NULL; }
+        if (new_url != NULL)      { http_free(new_url);      new_url = NULL; }
 
-    ret = http_send_request_core(req);
-    if (ret >= 0)
-        return ret;
+        ret = http_send_request_core(req);
+        if (ret >= 0)
+            return ret;
+    } while (0);
 
-cleanup:
-    if (loc_str != NULL)    http_free(loc_str);
+    if (location_str != NULL) http_free(location_str);
     if (uri_work != NULL)   http_free(uri_work);
     if (new_path != NULL)   http_free(new_path);
     if (new_query != NULL)  http_free(new_query);

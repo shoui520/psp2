@@ -113,6 +113,8 @@ typedef signed long long   s64;
 /* -------------------------------------------------------------------------
  * Helpers
  * ------------------------------------------------------------------------- */
+#define HTTP_ALWAYS_INLINE static inline __attribute__((always_inline))
+
 static inline u16 http_bswap16(u16 val)
 {
     return (u16)((val << 8) | (val >> 8));
@@ -137,7 +139,7 @@ typedef struct SceUriElement {
     char *fragment;
     u16   port;
     u16   pad;
-    u32   reserved;
+    u32   reserved[2];
 } SceUriElement;
 
 typedef struct HttpHeaderNode {
@@ -168,7 +170,7 @@ typedef struct HttpTemplate {
     u32             res_header_max_size;
     u32             recv_block_size;
     u32             cache_content_max_size;
-    u32             reserved_34;
+    u32             pad_cache_max;
     u32             max_redirects;
     u32             max_auth_retries;
     char           *proxy_server;
@@ -195,8 +197,7 @@ typedef struct HttpTemplate {
     void           *ssl_cb;
     void           *ssl_cb_arg;
     HttpHeaderNode *headers;
-    u32             reserved_9c;
-    u32             reserved_a0;
+    u32             pad_headers[2];
     struct HttpTemplate *next;
     struct HttpTemplate *prev;
     u16             proxy_port;
@@ -219,14 +220,14 @@ typedef struct HttpConnection {
     s32                    sock_fd;
     s32                    state;
     char                  *host;
-    u32                    reserved_3c;
+    u32                    pad_host;
     s32                    resolved;
-    u32                    reserved_44;
+    u32                    pad_resolved;
     s32                    close_on_complete;
     void                  *ssl_handle;
     void                  *ssl_ctx;
     s32                    ssl_handshake_done;
-    u32                    reserved_58[22];
+    u32                    pad_ssl[22];
     HttpTemplate           cfg;
     HttpSockAddrIn         addr;
     u8                    *recv_buf;
@@ -338,14 +339,14 @@ typedef struct HttpCacheBlock {
 
 typedef struct HttpCacheData {
     u64   timestamp;
-    u32   reserved_08;
+    u32   pad_timestamp;
     u32   body_size;
     u32   header_size;
     u32   written_size;
     void *extra_buf;
     void *header_buf;
     void *body_buf;
-    u32   reserved_24;
+    u32   pad_tail;
 } HttpCacheData;
 
 typedef struct HttpCacheEntry {
@@ -385,7 +386,7 @@ typedef struct HttpRequest {
     u32                 chunk_remaining;
     u32                 all_header_len;
     s32                 force_close;
-    u32                 reserved_64;
+    u32                 pad_force_close;
     s32                 sending_body;
     char               *url_full;
     char               *path;
@@ -397,6 +398,7 @@ typedef struct HttpRequest {
     HttpTemplate        cfg;
     char                auth_user_buf[256];
     char                auth_pass_buf[256];
+    u32                 pad_res_info[2];
     HttpResponseInfo    res_info;
     HttpConnection     *conn;
     HttpConnection     *redir_conn;
@@ -425,7 +427,7 @@ typedef struct HttpCookie {
     u32                size_bytes;
     s32                is_v2;
     struct HttpCookie *next;
-    u32                reserved_44;
+    u32                pad_tail;
 } HttpCookie;
 
 typedef struct HttpCookieDomain {
@@ -534,7 +536,7 @@ extern s32   sceCertLoader_DD629A24(u32 group, u32 bit, void *out_list, void *bu
 extern s32   sceHttpStorage_driver_24AA94F4(s32 id, const void *buf, s32 size);
 extern s32   sceHttpStorage_driver_2D8DAE58(s32 id, void *stat_buf);
 extern s32   sceHttpStorage_driver_700AAD44(s32 id, s32 flags, s32 mode);
-extern s32   sceHttpStorage_driver_B33389CE(s32 id, s32 pad, s32 lo, s32 hi, s32 whence);
+extern s32   sceHttpStorage_driver_B33389CE(s32 id, s64 offset, s32 whence);
 extern s32   sceHttpStorage_driver_CDA3D8F6(s32 id);
 extern s32   sceHttpStorage_driver_CDDF1103(s32 id, void *buf, s32 size);
 extern s32   sceKernelCpuResumeIntr(s32 intr);
@@ -794,7 +796,7 @@ s32            http_is_inited(void);
 s32            http_recv_chunked(HttpRequest *req, u8 *dst, u32 len, s32 flags);
 s32            http_recv_raw(HttpRequest *req, void *dst, u32 len, s32 flags);
 s32            http_read_chunk_size(HttpRequest *req, u32 *size_out, s32 flags);
-s32            http_transport_recv(HttpConnection *conn, void *buf, u32 len);
+s32            http_transport_recv(HttpConnection *conn, void *buf, u32 len, s32 flags);
 s32            http_resolve_connection_host(HttpConnection *conn);
 
 /* http_io.c */
@@ -915,7 +917,7 @@ void           http_storage_unlock(void);
 s32            http_storage_close(s32 id);
 s32            http_storage_read_exact(s32 id, void *buf, s32 len);
 s32            http_storage_write_exact(s32 id, const void *buf, s32 len);
-s32            http_storage_seek(s32 id, s32 pad, s32 lo, s32 hi, s32 whence);
+s32            http_storage_seek(s32 id, s64 offset, s32 whence);
 
 /* Exported API declarations */
 s32 sceHttpInit(u32 pool_size);
@@ -992,7 +994,7 @@ s32 sceHttp_739C2D79(void *pool_mem, u32 pool_size);
 s32 sceHttp_B0257723(void);
 s32 sceHttp_A461A167(void);
 s32 sceHttpsInit(s32 ca_count, HttpCertSlot **ca_list, HttpCertSlot *client_cert, HttpCertSlot *client_key);
-s32 sceHttp_68AB0F86(s32 param_a, s32 param_b, s32 param_c);
+s32 sceHttp_68AB0F86(s32 ca_count, s32 ca_list, s32 client_cert);
 s32 sceHttpsLoadDefaultCert(u32 group, u32 bit);
 s32 sceHttp_87F1E666(s32 id, u32 flags);
 s32 sceHttp_3C478044(s32 id, u32 flags);

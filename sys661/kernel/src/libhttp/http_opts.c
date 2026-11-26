@@ -226,7 +226,7 @@ s32 sceHttpSetResolveTimeOut(s32 id, u32 usec)
     return ret;
 }
 
-static s32 http_set_tmpl_or_conn_u32(s32 id, u32 val, u32 tmpl_off)
+HTTP_ALWAYS_INLINE s32 http_set_tmpl_or_conn_u32(s32 id, u32 val, u32 tmpl_off)
 {
     s32 type;
     s32 ret;
@@ -370,7 +370,7 @@ s32 sceHttpDisableKeepAlive(s32 id)
     return http_set_tmpl_or_conn_u32(id, 0, offsetof(HttpTemplate, keep_alive));
 }
 
-static s32 http_set_any_u32_locked(s32 id, u32 val, u32 tmpl_off)
+HTTP_ALWAYS_INLINE s32 http_set_any_u32_locked(s32 id, u32 val, u32 tmpl_off)
 {
     s32 type;
     s32 intr;
@@ -416,7 +416,7 @@ static s32 http_set_any_u32_locked(s32 id, u32 val, u32 tmpl_off)
     return ret;
 }
 
-static s32 http_set_any_u16_locked(s32 id, u16 val, u32 tmpl_off)
+HTTP_ALWAYS_INLINE s32 http_set_any_u16_locked(s32 id, u16 val, u32 tmpl_off)
 {
     s32 type;
     s32 intr;
@@ -565,7 +565,7 @@ s32 sceHttpDisableCache(s32 id)
     return http_set_any_u32_locked(id, HTTP_CACHE_NONE, offsetof(HttpTemplate, cache_mode));
 }
 
-static s32 http_set_callback_pair(s32 id, void *cb, void *arg, u32 cb_off, u32 arg_off, s32 has_arg)
+HTTP_ALWAYS_INLINE s32 http_set_callback_pair(s32 id, void *cb, void *arg, u32 cb_off, u32 arg_off, s32 has_arg)
 {
     s32 type;
     s32 intr;
@@ -668,56 +668,57 @@ s32 http_add_header_internal(s32 id, const char *name, const char *value, s32 mo
     if (mode == 0)
         http_delete_header_internal(id, name);
 
-    ret = http_header_node_alloc(&node, name, value);
-    if (ret < 0)
-        goto fail;
-
-    type = http_handle_type(id);
-    if (type < 0) {
-        ret = type;
-        goto fail;
-    }
-
-    if (type == HTTP_HANDLE_TEMPLATE) {
-        ret = http_lock_template(id, &cfg);
+    do {
+        ret = http_header_node_alloc(&node, name, value);
         if (ret < 0)
-            goto fail;
-    } else if (type == HTTP_HANDLE_CONNECTION) {
-        ret = http_lock_connection(id, &conn);
-        if (ret < 0)
-            goto fail;
-        cfg = &conn->cfg;
-    } else if (type == HTTP_HANDLE_REQUEST) {
-        ret = http_lock_request(id, &req);
-        if (ret < 0)
-            goto fail;
-        cfg = &req->cfg;
-    } else {
-        ret = SCE_HTTP_ERROR_INVALID_ID;
-        goto fail;
-    }
+            break;
 
-    intr = http_intr_suspend();
-    if (cfg->headers == NULL) {
-        cfg->headers = node;
-    } else {
-        HttpHeaderNode *tail = cfg->headers;
-        while (tail->next != NULL)
-            tail = tail->next;
-        tail->next = node;
-    }
+        type = http_handle_type(id);
+        if (type < 0) {
+            ret = type;
+            break;
+        }
 
-    if (req != NULL)
-        req->ref_count--;
-    else if (conn != NULL)
-        conn->ref_count--;
-    else if (cfg != NULL)
-        cfg->ref_count--;
+        if (type == HTTP_HANDLE_TEMPLATE) {
+            ret = http_lock_template(id, &cfg);
+            if (ret < 0)
+                break;
+        } else if (type == HTTP_HANDLE_CONNECTION) {
+            ret = http_lock_connection(id, &conn);
+            if (ret < 0)
+                break;
+            cfg = &conn->cfg;
+        } else if (type == HTTP_HANDLE_REQUEST) {
+            ret = http_lock_request(id, &req);
+            if (ret < 0)
+                break;
+            cfg = &req->cfg;
+        } else {
+            ret = SCE_HTTP_ERROR_INVALID_ID;
+            break;
+        }
 
-    http_intr_resume(intr);
-    return 0;
+        intr = http_intr_suspend();
+        if (cfg->headers == NULL) {
+            cfg->headers = node;
+        } else {
+            HttpHeaderNode *tail = cfg->headers;
+            while (tail->next != NULL)
+                tail = tail->next;
+            tail->next = node;
+        }
 
-fail:
+        if (req != NULL)
+            req->ref_count--;
+        else if (conn != NULL)
+            conn->ref_count--;
+        else if (cfg != NULL)
+            cfg->ref_count--;
+
+        http_intr_resume(intr);
+        return 0;
+    } while (0);
+
     http_header_list_free(node);
     return ret;
 }
@@ -828,57 +829,58 @@ s32 sceHttpSetProxy(s32 id, s32 use_proxy, s32 proxy_mode, const char *server, u
         http_strip_proxy_host(server_copy);
     }
 
-    type = http_handle_type(id);
-    if (type < 0) {
-        ret = type;
-        goto fail;
-    }
+    do {
+        type = http_handle_type(id);
+        if (type < 0) {
+            ret = type;
+            break;
+        }
 
-    if (type == HTTP_HANDLE_TEMPLATE) {
-        ret = http_lock_template(id, &cfg);
+        if (type == HTTP_HANDLE_TEMPLATE) {
+            ret = http_lock_template(id, &cfg);
+            if (ret < 0)
+                break;
+        } else if (type == HTTP_HANDLE_CONNECTION) {
+            ret = http_lock_connection(id, &conn);
+            if (ret < 0)
+                break;
+            cfg = &conn->cfg;
+            conn->resolved = 0;
+        } else {
+            ret = SCE_HTTP_ERROR_INVALID_ID;
+            break;
+        }
+
+        ret = http_refresh_apctl_proxy(cfg);
         if (ret < 0)
-            goto fail;
-    } else if (type == HTTP_HANDLE_CONNECTION) {
-        ret = http_lock_connection(id, &conn);
-        if (ret < 0)
-            goto fail;
-        cfg = &conn->cfg;
-        conn->resolved = 0;
-    } else {
-        ret = SCE_HTTP_ERROR_INVALID_ID;
-        goto fail;
-    }
+            break;
 
-    ret = http_refresh_apctl_proxy(cfg);
-    if (ret < 0)
-        goto fail;
-
-    intr = http_intr_suspend();
-    if (use_proxy != 0) {
-        if (proxy_mode == 0) {
-            cfg->use_default_proxy = 1;
-        } else if (proxy_mode == 1) {
-            if (cfg->proxy_server != NULL)
-                http_free(cfg->proxy_server);
-            cfg->proxy_server = server_copy;
-            server_copy = NULL;
-            cfg->proxy_port = port;
-            cfg->use_proxy = 1;
+        intr = http_intr_suspend();
+        if (use_proxy != 0) {
+            if (proxy_mode == 0) {
+                cfg->use_default_proxy = 1;
+            } else if (proxy_mode == 1) {
+                if (cfg->proxy_server != NULL)
+                    http_free(cfg->proxy_server);
+                cfg->proxy_server = server_copy;
+                server_copy = NULL;
+                cfg->proxy_port = port;
+                cfg->use_proxy = 1;
+                cfg->use_default_proxy = 0;
+            }
+        } else {
+            cfg->use_proxy = 0;
             cfg->use_default_proxy = 0;
         }
-    } else {
-        cfg->use_proxy = 0;
-        cfg->use_default_proxy = 0;
-    }
 
-    if (conn != NULL)
-        conn->ref_count--;
-    else if (cfg != NULL)
-        cfg->ref_count--;
-    http_intr_resume(intr);
-    return 0;
+        if (conn != NULL)
+            conn->ref_count--;
+        else if (cfg != NULL)
+            cfg->ref_count--;
+        http_intr_resume(intr);
+        return 0;
+    } while (0);
 
-fail:
     if (conn != NULL)
         http_unlock_connection(conn);
     else if (cfg != NULL)
@@ -1044,7 +1046,7 @@ s32 http_set_cache_mode(s32 id, s32 mode)
 /* -------------------------------------------------------------------------
  * 301 Redirect cache
  * ------------------------------------------------------------------------- */
-static void http_redir_unlink_and_free(HttpRedirEntry *entry)
+HTTP_ALWAYS_INLINE void http_redir_unlink_and_free(HttpRedirEntry *entry)
 {
     if (entry->prev != NULL) {
         entry->prev->next = entry->next;
@@ -1067,7 +1069,7 @@ static void http_redir_unlink_and_free(HttpRedirEntry *entry)
     g_redir_free_list = entry;
 }
 
-static void http_cache_mem_unlink_and_free(HttpCacheEntry *entry)
+HTTP_ALWAYS_INLINE void http_cache_mem_unlink_and_free(HttpCacheEntry *entry)
 {
     http_cache_hash_remove(g_cache_mem_buckets, entry);
     if (entry->lru_prev != NULL) {
@@ -1469,10 +1471,10 @@ s32 http_read_chunk_size(HttpRequest *req, u32 *size_out, s32 flags)
     return 0;
 }
 
-s32 http_transport_recv(HttpConnection *conn, void *buf, u32 len)
+s32 http_transport_recv(HttpConnection *conn, void *buf, u32 len, s32 flags)
 {
     if (conn->scheme != HTTP_SCHEME_HTTPS || conn->state == HTTP_CONN_PROXY_TUNNEL)
-        return sceNetInetRecv(conn->sock_fd, buf, len, 0);
+        return sceNetInetRecv(conn->sock_fd, buf, len, flags);
     return http_ssl_recv(conn, buf, (s32)len);
 }
 
