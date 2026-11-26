@@ -47,6 +47,9 @@ typedef __typeof__(static_cast<paf::ui::Widget *>(NULL)->m_pos) PafVec4;
 extern "C" {
 int sceAppMgrLaunchAppByName(unsigned int flags, const char *name, const char *param);
 int sceAppMgrLaunchAppByUri(unsigned int flags, const char *uri);
+int sceAppMgrWorkDirMount(int id, char *mountPoint);
+int sceAppMgrUmount(const char *mountPoint);
+int sceRtcFormatRFC3339(char *outBuf, const SceRtcTick *utcTick, int tzOffsetMinutes);
 
 /* SceActivityDb query handle methods (imported by NID in SceShell) */
 void *SceActivityDb_6C98B745(void *handle);
@@ -65,10 +68,44 @@ int SceActivityDb_D512F568(void *handle, paf::vector<SceInt64> *rowids,
 int SceActivityDb_7ED9033C(void *handle, int *outCount, SceUInt64 *outLastReadTime,
 			   SceUInt64 *outLastUpdateTime, SceUInt64 *outLatestActivityTime);
 int SceActivityDb_738D4B49(void);
+int SceActivityDb_8D4B7F73(void *handle, const SceInt64 *statusRowid,
+			   ActivityDbGoodJob *outGoodJob);
+
+/* SceActivityDb sync handle methods (imported by NID in SceShell) */
+void *SceActivityDb_B83F0A77(void *syncHandle);
+void *SceActivityDb_937D49BA(void *syncHandle);
+int SceActivityDb_5B44F019(void *syncHandle);
+int SceActivityDb_FEB3A02F(void *syncHandle, const SceInt64 *statusRowid,
+			   const paf::string *titleId, const void *netCallback);
+int SceActivityDb_2929CAD1(void *syncHandle, const SceInt64 *statusRowid);
+int SceActivityDb_DF874DD2(void *syncHandle, const SceInt64 *statusRowid);
+int SceActivityDb_C715B8BC(ActivityDbComment *outComment, const paf::string *message);
+int SceActivityDb_3F501885(void *syncHandle, const SceInt64 *statusRowid,
+			   const ActivityDbComment *comment);
+int SceActivityDb_5FC8EE9A(void *syncHandle, const SceInt64 *statusRowid);
+int SceActivityDb_2A7ABB45(void *syncHandle, const SceInt64 *statusRowid,
+			   const SceInt64 *commentRowid);
 }
+
+/* ActivityDrawObj (vsh/app/common/src/activity_drawobj/, 0x8138B178..0x8138BC26) */
+class ActivityDrawObj : public paf::graph::DrawObj {
+public:
+	static const char *DrawObjType();
+	ActivityDrawObj();
+	virtual ~ActivityDrawObj();
+
+	void SetMode(int mode);
+	void SetVariant(int variant);
+};
 
 /* External shell helpers used by the filelist / activity UI framework */
 extern paf::wstring shellTickText(const paf::rtc::Tick *tick, bool flag);
+extern paf::wstring shellFormatText(const wchar_t *format, const wchar_t *first = L"",
+				    const wchar_t *second = L"", const wchar_t *third = L"",
+				    const wchar_t *fourth = L"", const wchar_t *fifth = L"",
+				    const wchar_t *sixth = L"", const wchar_t *seventh = L"",
+				    const wchar_t *eighth = L"", const wchar_t *ninth = L"",
+				    const wchar_t *tenth = L"", const wchar_t *eleventh = L"");
 extern paf::common::SharedPtr<paf::graph::Shader> *activityUiGetIconShader(void);
 extern paf::common::SharedPtr<paf::graph::Shader> *activityUiGetPanelShader(void);
 extern paf::job::JobQueue *activityUiGetNetworkJobQueue(void);
@@ -347,6 +384,10 @@ public:
 
 	void SetAccessorFactory(const paf::common::SharedPtr<Live2AccessorFactory> &accessorFactory);
 	void RequestRefresh(int refreshMode);
+	void SetRefreshMode(int refreshMode)
+	{
+		m_refreshMode = refreshMode;
+	}
 	void SetCountCallback(CountCallback callback, int arg);
 
 	static void OnQueryJobRemoved(uint32_t slotIndex,
@@ -542,6 +583,10 @@ public:
 	void ApplyAvatarIcon(paf::ui::Widget *avatarWidget);
 	int GetCategory() const;
 	void SetDisplayMode(int displayMode);
+	int GetDisplayMode() const
+	{
+		return m_displayMode;
+	}
 	void UpdateCategory();
 
 	static int CreateActivityImageCache(const paf::string &url,
@@ -578,6 +623,342 @@ int activityUiInvokeNetAcquire(void);
 int activityUiInvokeNetRelease(void);
 int activityUiInvokeNetConnect(void);
 int activityUiGetDialogPriority(void);
+
+/* Opaque handle matching SceActivityDb's ActivityDbSyncHandle (4 bytes) */
+struct ActivitySyncHandle {
+	ActivitySyncHandle() : impl(NULL)
+	{
+		SceActivityDb_B83F0A77(this);
+	}
+
+	~ActivitySyncHandle()
+	{
+		SceActivityDb_937D49BA(this);
+	}
+
+	void *impl;
+};
+
+/* Callback pair passed to SceActivityDb_FEB3A02F (SyncDetail) */
+struct ActivityDetailSyncCallback {
+	void (*func)(int errorCode, int dialogId);
+	int dialogId;
+};
+
+/* Forward declarations for Batch L3 classes */
+class ActivityStatusDialog;
+class Lv2CommentActivityVisualizer;
+
+/*
+ * ActivityBusyFooter (20 bytes, lv2comment_activity_visualizer.cpp):
+ * manages the busy indicator segment header shown while posting comments.
+ */
+class ActivityBusyFooter {
+public:
+	ActivityBusyFooter(int segmentIndex, paf::Plugin *plugin);
+	virtual ~ActivityBusyFooter();
+
+	virtual void SetState(int state, paf::ui::Widget *header);
+	virtual void AttachSegment(bool showHeader);
+	virtual void DetachSegment();
+	virtual void ShowBusyHeader();
+	virtual void HideBusyHeader();
+	virtual paf::IDParam GetTemplateId();
+	virtual paf::IDParam GetHeaderId();
+	virtual void StartBusyIndicator();
+
+	void SetListView(paf::ui::FileList *listView)
+	{
+		m_listView = listView;
+	}
+
+	int m_segmentIndex;
+	paf::Plugin *m_plugin;
+	paf::ui::FileList *m_listView;
+	int m_state;
+};
+
+/*
+ * Lv1StatusActivityVisualizer (108 bytes, lv1status_activity2_visualizer.cpp):
+ * renders a level-1 activity status card with avatar, panel art, body text,
+ * timestamp, vote/comment badges, and busy overlay.
+ */
+class Lv1StatusActivityVisualizer : public BaseActivityVisualizer {
+public:
+	static const char *TypeName();
+
+	Lv1StatusActivityVisualizer(paf::ui::Widget *parent, paf::Plugin *plugin,
+				    paf::cache::CacheManager *cacheManager,
+				    const paf::common::SharedPtr<Live2Iterator> &iterator,
+				    SceInt64 cellId);
+	virtual ~Lv1StatusActivityVisualizer();
+
+	virtual bool IsInherit(const char *type) const;
+	virtual const char *GetTypeName() const;
+	virtual void Stop();
+	virtual void OnRecordUpdated();
+
+	virtual paf::graph::TextObj *GetBodyTextObj(paf::ui::Widget *panel);
+	virtual paf::graph::TextObj *GetTimeTextObj(paf::ui::Widget *panel);
+	virtual paf::graph::DrawObj *GetNewlineMarkObj(paf::ui::Widget *panel);
+	virtual paf::graph::TextObj *GetVoteCountTextObj(paf::ui::Widget *panel);
+	virtual paf::graph::TextObj *GetCommentCountTextObj(paf::ui::Widget *panel);
+	virtual void OnActionIconDecide(int eventId, paf::ui::Handler *handler,
+					paf::ui::Event *event);
+	virtual void OnPanelDecide(int eventId, paf::ui::Handler *handler,
+				   paf::ui::Event *event);
+	virtual bool CustomizeActionIcon(paf::ui::Widget *iconWidget);
+	virtual PafVec4 GetPreferredSize();
+	virtual bool HasNewComment();
+	virtual bool ShouldShowTitleName();
+	virtual void UpdateBadges();
+	virtual paf::ui::Widget *GetSubWidget(int kind);
+
+	void ShowBusy();
+	void HideBusy();
+	void StopBusyIndicator(paf::ui::Widget *panel);
+	void UpdateVoteAndCommentCounts(paf::ui::Widget *panel);
+	void UpdateTimeText(paf::graph::TextObj *timeText);
+	void UpdateStatusText(paf::ui::Widget *listItem, paf::ui::Widget *panel);
+	void UpdatePanel(paf::ui::Widget *listItem, paf::ui::Widget *panel);
+	void ShowDeleteErrorDialog(int errorCode);
+	void CloseErrorDialog();
+
+	static void LayoutCountsCallback(int eventId, paf::ui::Handler *handler,
+					 paf::ui::Event *event, void *userdata);
+	static void AvatarDecideThunk(int eventId, paf::ui::Handler *handler,
+				      paf::ui::Event *event, void *userdata);
+	static void ActionIconDecideThunk(int eventId, paf::ui::Handler *handler,
+					  paf::ui::Event *event, void *userdata);
+	static void PanelDecideThunk(int eventId, paf::ui::Handler *handler,
+				     paf::ui::Event *event, void *userdata);
+	static void OnPanelImageLoaded(int eventId, paf::ui::Handler *handler,
+				       paf::ui::Event *event, void *userdata);
+
+	int m_errorDialogId;
+};
+
+class Lv1StatusVisualizerFactory : public Live2VisualizerFactory {
+public:
+	Lv1StatusVisualizerFactory(paf::Plugin *plugin, paf::cache::CacheManager *cacheManager);
+	virtual ~Lv1StatusVisualizerFactory();
+
+	virtual paf::intrusive_ptr<paf::ui::filelist::Visualizer> CreateVisualizer(
+		paf::ui::Widget *parent,
+		const paf::common::SharedPtr<Live2Iterator> &iterator,
+		int index, SceInt64 cellId);
+	virtual PafVec4 GetVisualSize();
+
+	paf::Plugin *m_plugin;
+	paf::cache::CacheManager *m_cacheManager;
+};
+
+/*
+ * ActivityStatusDialog (192 bytes, lv1status_activity2_visualizer.cpp):
+ * full status detail dialog showing the status card, "Good Job" vote bar,
+ * comment FileList, and comment input TextBox.
+ */
+class ActivityStatusDialog {
+public:
+	ActivityStatusDialog(paf::ui::Widget *parent, paf::Plugin *plugin,
+			     paf::cache::CacheManager *cacheManager,
+			     const paf::intrusive_ptr<Live2Record> &record,
+			     int displayMode,
+			     const paf::common::SharedPtr<Live2AccessorProxy> &accessorProxy,
+			     const paf::common::SharedPtr<Live2VisualizerFactory> &commentFactory);
+	virtual ~ActivityStatusDialog();
+
+	virtual void OnStatusActionDecide(int eventId, paf::ui::Handler *handler,
+					  paf::ui::Event *event);
+	virtual bool CustomizeStatusActionIcon(paf::ui::Widget *iconWidget);
+	virtual void Open(paf::ui::ListItem *anchorItem);
+	virtual void Close();
+	virtual void CloseWithReason(int reason);
+	virtual bool ShouldShowTitleName();
+	virtual void OnBackPressed();
+
+	void SetupPanel();
+	void SetupHeader(paf::ui::Widget *headerWidget);
+	void SetupCommentList(const paf::common::SharedPtr<Live2AccessorProxy> &accessorProxy,
+			      const paf::common::SharedPtr<Live2VisualizerFactory> &commentFactory);
+	void SetupControls();
+	void RefreshCommentBoxState(bool immediate);
+	void UpdateGoodJobArea(int voteCount, bool hasVoteInfo);
+	void RequestVoteInfo();
+	void OnVoteInfoReady(int errorCode, const ActivityDbGoodJob &goodJob);
+	void OnVoteFinished(int errorCode, bool isNewVote);
+	void OnPostCommentFinished(int errorCode);
+	void OnDeleteStatusFinished(int errorCode);
+	void OnDeleteCommentFinished(int errorCode, SceInt64 commentRowid);
+	void OnGriefReportFinished(int errorCode, SceInt64 commentRowid);
+	void OnDetailSyncFinished(int errorCode);
+	void OnCacheInfoUpdated();
+	void OnCommentCountChanged(int count);
+	void SetAnimateNewComment(bool animate);
+	void ClosePopupIfSelectedComment(Lv2CommentActivityVisualizer *visualizer);
+	void OpenDeleteCommentMenu(paf::ui::Widget *anchorWidget,
+				   Lv2CommentActivityVisualizer *visualizer);
+	void OpenDeleteOrReportCommentMenu(paf::ui::Widget *anchorWidget,
+					   Lv2CommentActivityVisualizer *visualizer);
+	void OpenStatusOptionMenu(paf::ui::Widget *anchorWidget);
+	void ShowDeleteStatusConfirmDialog();
+	void ShowDeleteCommentConfirmDialog(const paf::intrusive_ptr<Live2Record> &commentRecord);
+	void ShowErrorDialog(int errorCode, bool closeStatusDialogOnDismiss);
+	void ShowTooManyJobsDialog();
+	void StartDeleteStatus();
+	void StartDeleteComment(const paf::intrusive_ptr<Live2Record> &commentRecord);
+	void StartGriefReport(const paf::intrusive_ptr<Live2Record> &commentRecord);
+	void OnSendComment();
+	void OnVoteGoodJob();
+	void OnCancelGoodJob();
+	void OnCommentBoxBeginEdit(paf::ui::Widget *textBox);
+	void OnCommentBoxEndEdit(paf::ui::Widget *textBox);
+	void SetInputEnabled(bool enabled);
+	void StartPostCommentAnimation(paf::ui::Widget *commentWidget);
+	void UpdateDialogLayout();
+
+	int m_dialogId;
+	paf::Plugin *m_plugin;
+	ActivityBusyFooter m_busyFooter;
+	paf::cache::CacheManager *m_cacheManager;
+	paf::intrusive_ptr<Live2Record> m_record;
+	int m_displayMode;
+	paf::ui::Widget *m_dialogRoot;
+	paf::ui::FileList *m_listView;
+	paf::common::JobSlots m_jobSlots;
+	ActivitySyncHandle m_syncHandle;
+	ActivityDbGoodJob m_voteInfo;
+	float m_goodJobY;
+	int m_commonDialogId;
+	bool m_popupMenuOpen;
+	bool m_syncingDetail;
+	bool m_postingComment;
+	bool m_inputDisabled;
+	bool m_animateNewComment;
+	int m_commentCount;
+	Lv2CommentActivityVisualizer *m_selectedCommentVis;
+	paf::ui::Widget *m_postAnimWidget;
+	float m_postAnimTime;
+	PafVec4 m_postAnimStartPos;
+	PafVec4 m_postAnimStartSize;
+	PafVec4 m_anchorSize;
+};
+
+/*
+ * Lv2CommentActivityVisualizer (108 bytes, lv2comment_activity_visualizer.cpp):
+ * renders a comment row inside ActivityStatusDialog.
+ */
+class Lv2CommentActivityVisualizer : public BaseActivityVisualizer {
+public:
+	static const char *TypeName();
+
+	Lv2CommentActivityVisualizer(paf::ui::Widget *parent, paf::Plugin *plugin,
+				     paf::cache::CacheManager *cacheManager,
+				     const paf::common::SharedPtr<Live2Iterator> &iterator,
+				     SceInt64 cellId,
+				     const paf::intrusive_ptr<Live2Record> &parentRecord);
+	virtual ~Lv2CommentActivityVisualizer();
+
+	virtual bool IsInherit(const char *type) const;
+	virtual const char *GetTypeName() const;
+	virtual void Stop();
+	virtual void OnRecordUpdated();
+
+	virtual paf::graph::TextObj *GetBodyTextObj(paf::ui::Widget *panel);
+	virtual paf::graph::TextObj *GetTimeTextObj(paf::ui::Widget *panel);
+	virtual void OnDeleteOptionDecide(int eventId, paf::ui::Handler *handler,
+					  paf::ui::Event *event);
+	virtual void OnDeleteOrReportOptionDecide(int eventId, paf::ui::Handler *handler,
+						  paf::ui::Event *event);
+	virtual void UpdateUnreadBadge();
+	virtual paf::ui::Widget *GetSubWidget(int kind);
+
+	void StartCommentBusyOnButton(paf::ui::Widget *optionButton);
+	void ShowCommentBusy();
+	void StopCommentBusyOnButton(paf::ui::Widget *optionButton);
+	void OnDeleteFinished(int errorCode);
+	void OnGriefReportFinished();
+	void UpdateCommentTime(paf::graph::TextObj *timeText);
+	void UpdateCommentText(paf::ui::Widget *panel, paf::ui::Widget *bodyWidget,
+			       bool newlyCreated);
+	void UpdateCommentPanel(paf::ui::Widget *panel, paf::ui::Widget *bodyWidget);
+
+	static void AnimateNewComment(paf::ui::Widget *commentWidget);
+	static void OnCommentSizeReady(int eventId, paf::ui::Handler *handler,
+				       paf::ui::Event *event, void *userdata);
+	static void DeleteOptionDecideThunk(int eventId, paf::ui::Handler *handler,
+					    paf::ui::Event *event, void *userdata);
+
+	paf::intrusive_ptr<Live2Record> m_parentRecord;
+};
+
+class Lv2CommentVisualizerFactory : public Live2VisualizerFactory {
+public:
+	Lv2CommentVisualizerFactory(paf::Plugin *plugin, paf::cache::CacheManager *cacheManager,
+				    const paf::intrusive_ptr<Live2Record> &parentRecord);
+	virtual ~Lv2CommentVisualizerFactory();
+
+	virtual paf::intrusive_ptr<paf::ui::filelist::Visualizer> CreateVisualizer(
+		paf::ui::Widget *parent,
+		const paf::common::SharedPtr<Live2Iterator> &iterator,
+		int index, SceInt64 cellId);
+	virtual PafVec4 GetVisualSize();
+
+	paf::Plugin *m_plugin;
+	paf::cache::CacheManager *m_cacheManager;
+	paf::intrusive_ptr<Live2Record> m_parentRecord;
+};
+
+/*
+ * NullVisualizerFactory & NullCellSource (28 bytes, null_cell_source.cpp):
+ * simple count-driven CellSource backed by a single-method factory.
+ */
+class NullVisualizerFactory {
+public:
+	virtual paf::intrusive_ptr<paf::ui::filelist::Visualizer> CreateVisualizer(
+		paf::ui::Widget *parent, int index) = 0;
+};
+
+class NullCellSource : public paf::ui::filelist::CellSource {
+public:
+	static const char *TypeName();
+
+	NullCellSource(const paf::common::SharedPtr<NullVisualizerFactory> &factory,
+		       int initialCount);
+	virtual ~NullCellSource();
+
+	virtual bool IsInherit(const char *type) const;
+	virtual const char *GetTypeName() const;
+	virtual bool IsDirty();
+	virtual void Update(paf::ui::filelist::CellListAccessor &accessor);
+	virtual int64_t GetID(int32_t index);
+	virtual paf::intrusive_ptr<paf::ui::filelist::Visualizer> GetVisualizer(
+		paf::ui::filelist::VisualizerBindParam &param);
+
+	paf::common::SharedPtr<NullVisualizerFactory> m_factory;
+	int m_pendingCount;
+	int m_focusIndex;
+	int m_pendingFocus;
+};
+
+/* Activity service & dialog registry cross-unit helpers (lv1status_activity2_visualizer.cpp) */
+ActivityStatusDialog *activityUiFindDialogByStatusRowid(const SceInt64 *statusRowid);
+ActivityStatusDialog *activityUiFindDialogById(int dialogId);
+bool activityUiIsStatusDeleting(const SceInt64 *statusRowid);
+bool activityUiIsCommentDeleting(const SceInt64 *commentRowid);
+bool activityUiIsStatusPostingComment(const SceInt64 *statusRowid);
+void activityUiOpenDeleteCommentMenu(const SceInt64 *statusRowid, paf::ui::Widget *anchorWidget,
+				     Lv2CommentActivityVisualizer *visualizer);
+void activityUiOpenDeleteOrReportCommentMenu(const SceInt64 *statusRowid,
+					     paf::ui::Widget *anchorWidget,
+					     Lv2CommentActivityVisualizer *visualizer);
+void activityUiInitFileList(paf::ui::FileList *fileList);
+void activityUiCloseDialog(int dialogId);
+
+/* Activity grief report export helpers (grief_report.cpp) */
+int activityGriefReportBegin(const ActivityDbStatus *status, const ActivityDbComment *comment);
+int activityGriefReportAppendComment(const ActivityDbComment *comment);
+int activityGriefReportEnd(bool launchReportApp);
 
 } /* namespace filelist */
 

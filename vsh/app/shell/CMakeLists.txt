@@ -478,6 +478,10 @@ psp2_module(vs0_vsh_shell_shell KIND user COMPILER snc PARTIAL SOURCES
 	src/filelist/basic_visualizer.cpp
 	src/filelist/live2_cell_source.cpp
 	src/filelist/live2_visualizer.cpp
+	src/filelist/lv1status_activity2_visualizer.cpp
+	src/filelist/lv2comment_activity_visualizer.cpp
+	src/filelist/null_cell_source.cpp
+	src/filelist/grief_report.cpp
 	src/np/auth/np_auth_core.cpp
 	src/np/ipc/np_job_queue.cpp
 	src/np/manager/np_manager_core.cpp
