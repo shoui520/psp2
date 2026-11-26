@@ -82,7 +82,7 @@ typedef struct SceSysEventHandler {
     const char *name;
     int typeMask;
     int (*handler)(int evId, const char *evName, void *param, int *result);
-    int r28;
+    int gpVal;
     int busy;
     struct SceSysEventHandler *next;
     int reserved[9];
@@ -108,7 +108,7 @@ extern int sceMgr_driver_0C813CF1(int dstSlot, const void *src, int srcSlot);
 extern int sceMgr_driver_0EBA1587(void *dst, const void *src, u32 size, int keySlot, const void *iv);
 extern int sceMgr_driver_156A83C3(int handle, void *rngCtx);
 extern int sceMgr_driver_1B4DB19C(void *mac, const void *data, const void *iv, u32 size, int keySlot);
-extern int sceMgr_driver_1B63AFF9(void *out32, int keySlot1, int keySlot2);
+extern int sceMgr_driver_1B63AFF9(void *out32, int srcKeySlot, int ekbKeySlot);
 extern int sceMgr_driver_20610CDF(int handle);
 extern int sceMgr_driver_275C6686(int handle, int page, const void *buf, u32 size);
 extern int sceMgr_driver_2D1CB2B8(u64 *out);
@@ -146,9 +146,11 @@ extern int sceMgr_driver_CF1EC2ED(void *dst, const void *src, const void *iv);
 extern int sceMgr_driver_DA7D8C82(void *mac, const void *data, const void *iv, u32 size, int keySlot);
 extern int sceMgr_driver_E6A203F8(int keySlot);
 extern int sceMgr_driver_EA241D32(int dstSlot, const void *src, int srcSlot);
-extern int sceMgr_driver_EBED61A7(void *out32, int keySlot1, int keySlot2);
+extern int sceMgr_driver_EBED61A7(void *out32, int srcKeySlot, int ekbKeySlot);
 extern int sceMgr_driver_EDEAAA00(int keySlot, const void *ekbData, u32 ekbSize);
 extern int sceMgr_driver_FDF97B95(void *dst, const void *src, const void *iv, u32 size);
+
+#define NOINLINE __attribute__((noinline))
 
 /* Inline helpers */
 static inline u32 getK1(void) {
@@ -172,9 +174,107 @@ static inline u16 readBe16(const u8 *p) {
     return (u16)(((u16)p[0] << 8) | p[1]);
 }
 
+static inline u32 readBe32(const u8 *p) {
+    return ((u32)p[0] << 24) | ((u32)p[1] << 16) | ((u32)p[2] << 8) | (u32)p[3];
+}
+
 /* =========================================================================
  * Structures
  * ========================================================================= */
+
+typedef struct ScePspDateTime {
+    u16 year;
+    u16 month;
+    u16 day;
+    u16 hour;
+    u16 minute;
+    u16 second;
+    s32 microsecond;
+} ScePspDateTime;
+
+typedef struct MgvMac16 {
+    u32 w[4];
+} MgvMac16;
+
+typedef struct MgvCid {
+    u8 header[8];
+    u64 deviceId;
+    u32 randLo;
+    u32 randHi;
+} MgvCid;
+
+typedef struct MgvKeyEntry {
+    u32 keyLo;
+    u32 keyHi;
+    u32 rangeMinBe;
+    u32 rangeMaxBe;
+} MgvKeyEntry;
+
+typedef struct MgvPageBuf {
+    u8 pageId;
+    u8 flags;
+    u8 sizeHi;
+    u8 sizeLo;
+    u32 seqBe;
+    u8 payload[512];
+    u32 mac[2];
+    u8 trailing[496];
+} MgvPageBuf;
+
+typedef struct MgvIkvHdr {
+    u32 magic;
+    u16 reserved;
+    u16 version;
+    u32 padWords[2];
+    u32 salt[4];
+    u32 mediaId[4];
+    u32 ekbId;
+    u32 ekbPad[3];
+} MgvIkvHdr;
+
+typedef struct MgvMgl3Hdr {
+    u32 magic;
+    u16 pktType;
+    u16 totalLen;
+    u32 zeroLo;
+    u32 zeroHi;
+} MgvMgl3Hdr;
+
+typedef struct MgvMgv1Hdr {
+    u32 magic;
+    u16 msgType;
+    u8 lenHi;
+    u8 lenLo;
+    u32 zeroLo;
+    u32 zeroHi;
+    u8 version;
+    u8 reserved[15];
+} MgvMgv1Hdr;
+
+typedef struct MgvMgv1SigHdr {
+    u8 version;
+    u8 reserved;
+    u16 algType;
+    u8 ekbLenHi;
+    u8 ekbLenLo;
+    u8 padBytes[10];
+    u32 mac[4];
+} MgvMgv1SigHdr;
+
+typedef struct MgvClockPayload {
+    u8 bcdTime[8];
+    u32 reservedBe;
+    u32 timeoutMsBe;
+} MgvClockPayload;
+
+typedef struct MgvLcksHdr {
+    u32 magic;
+    u16 reserved;
+    u8 versionLo;
+    u8 versionHi;
+    u32 ekbId;
+    u32 zeroWord;
+} MgvLcksHdr;
 
 typedef struct MgvBufDesc {
     void *ptr;
@@ -183,7 +283,7 @@ typedef struct MgvBufDesc {
 
 typedef struct MgvStreamSlot {
     u32 iv[4];          /* +0x00 (words 0..3) */
-    const u8 *keyPtr;   /* +0x10 (word 4): non-NULL for CTR/range mode */
+    const MgvKeyEntry *keyPtr; /* +0x10 (word 4): non-NULL for CTR/range mode */
     u32 rangeMin;       /* +0x14 (word 5) */
     u32 rangeMax;       /* +0x18 (word 6) */
     s32 keyMode;        /* +0x1C (word 7): 0=unused, -1=plain/copy, or ptr to key16 */
@@ -199,18 +299,18 @@ typedef struct MgvContentCtx {
     s16 keyCount;               /* +0x16 */
     u8 cid[24];                 /* +0x18 (words 6..11) */
     int mgrKeySlot;             /* +0x30 (word 12) */
-    u32 pad13[3];               /* +0x34..+0x3F */
-    u8 keys[48];                /* +0x40..+0x6F (3 x 16B keys) */
+    u32 slotPad[3];             /* +0x34..+0x3F */
+    MgvKeyEntry keys[3];        /* +0x40..+0x6F (3 x 16B keys) */
     MgvStreamSlot streams[4];   /* +0x70..+0x12F (4 x 48B = 192B) */
 } MgvContentCtx; /* 304 bytes (0x130) */
 
 typedef struct MgvMediaCtx {
-    u8 pad0[1984];              /* +0x000..+0x7BF */
+    u8 scratchArea[1984];       /* +0x000..+0x7BF */
     u8 icvTable[512];           /* +0x7C0..+0x9BF (32 x 16B) */
     u8 hashTable[256];          /* +0x9C0..+0xABF (32 x 8B) */
     u8 ekbMacTable[256];        /* +0xAC0..+0xBBF (32 x 8B) */
     u8 rootKey[16];             /* +0xBC0..+0xBCF (words 752..755) */
-    u32 pad756;                 /* +0xBD0 (word 756) */
+    u32 rootKeyPad;             /* +0xBD0 (word 756) */
     int mgrHandle;              /* +0xBD4 (word 757) */
     u32 state;                  /* +0xBD8 (word 758): 0=init, 1=open, 2=mounted, 3=verified */
     u32 verifiedMask;           /* +0xBDC (word 759) */
@@ -218,11 +318,11 @@ typedef struct MgvMediaCtx {
     int mediaType;              /* +0xBE4 (word 761): 0=MS, 1=HDD, -1=none */
     int refCount;               /* +0xBE8 (word 762) */
     int devType;                /* +0xBEC (word 763): 16=HDD, 32=MS */
-    u32 pad764[2];              /* +0xBF0..+0xBF7 */
+    u32 devPad[2];              /* +0xBF0..+0xBF7 */
     int macKeySlot;             /* +0xBF8 (word 766) */
     int (*deriveIkvKey)(int dstSlot, const void *src, int srcSlot);     /* +0xBFC (word 767) */
     int (*deriveContentKey)(int dstSlot, const void *src, int srcSlot); /* +0xC00 (word 768) */
-    int (*exportKey)(void *out32, int keySlot1, int keySlot2);          /* +0xC04 (word 769) */
+    int (*exportKey)(void *out32, int srcKeySlot, int ekbKeySlot);      /* +0xC04 (word 769) */
     int (*getMediaId)(int handle, void *out16);                         /* +0xC08 (word 770) */
     int (*getEkb)(void *buf, u32 size);                                 /* +0xC0C (word 771) */
     int (*openMedia)(struct MgvMediaCtx *ctx, void *rngCtx);            /* +0xC10 (word 772) */
@@ -235,7 +335,7 @@ typedef struct MgvMediaCtx {
     u8 challengeNonce[16];      /* +0xC30 (words 780..783) */
     s16 lastKeyIndex;           /* +0xC40 */
     s16 lastTitleIndex;         /* +0xC42 */
-    u32 pad785[3];              /* +0xC44..+0xC4F (3152 bytes total) */
+    u32 tailPad[3];             /* +0xC44..+0xC4F (3152 bytes total) */
 } MgvMediaCtx;
 
 typedef struct MgvCapList {
@@ -248,10 +348,50 @@ typedef struct MgvCapList {
  * ========================================================================= */
 
 static const u32 g_zero16[4] = { 0, 0, 0, 0 };
-static const u8  g_maxBcdTime[8] = { 0x99, 0x99, 0x12, 0x31, 0x23, 0x59, 0x59, 0x99 };
+
+static const struct {
+    char keyring[12];
+    u8   maxBcdTime[8];
+} g_keyringAndMaxTime = {
+    { 'K','E','Y','R','I','N','G',' ',' ',' ',' ',' ' },
+    { 0x99, 0x99, 0x12, 0x31, 0x23, 0x59, 0x59, 0x99 }
+};
+#define g_keyringTag  (g_keyringAndMaxTime.keyring)
+#define g_maxBcdTime  (g_keyringAndMaxTime.maxBcdTime)
+
+static const char g_tagStartT[8]  = { 's','t','a','r','t','_','t',' ' };
+static const char g_tagEndT[8]    = { 'e','n','d','_','t',' ',' ',' ' };
+static const char g_tagAvout[8]   = { 'a','v','o','u','t',' ',' ',' ' };
+static const char g_tagPeriod[8]  = { 'p','e','r','i','o','d',' ',' ' };
+static const char g_tagStartT2[8] = { 's','t','a','r','t','_','t','2' };
+static const char g_tagEndT2[8]   = { 'e','n','d','_','t','2',' ',' ' };
 static const u8  g_minBcdTime[8] = { 0x00, 0x01, 0x01, 0x01, 0x00, 0x00, 0x00, 0x00 };
 static const u8  g_defaultAvout[8] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00 };
 static const u8  g_zeroPeriod[8] = { 0, 0, 0, 0, 0, 0, 0, 0 };
+
+static const struct {
+    char comment[12];
+    char cid[12];
+    char refid[12];
+    char playL[12];
+    char playP[12];
+    char playS[12];
+    char bindL[12];
+    char copyL[12];
+    char moveL[12];
+    char bindCount[16];
+} g_sectionTags = {
+    { '!','C','O','M','M','E','N','T',' ',' ',' ',' ' },
+    { '!','C','I','D',' ',' ',' ',' ',' ',' ',' ',' ' },
+    { '!','R','E','F','I','D',' ',' ',' ',' ',' ',' ' },
+    { 'P','L','A','Y','_','L',' ',' ',' ',' ',' ',' ' },
+    { 'P','L','A','Y','_','P',' ',' ',' ',' ',' ',' ' },
+    { 'P','L','A','Y','_','S',' ',' ',' ',' ',' ',' ' },
+    { 'B','I','N','D','_','L',' ',' ',' ',' ',' ',' ' },
+    { 'C','O','P','Y','_','L',' ',' ',' ',' ',' ',' ' },
+    { 'M','O','V','E','_','L',' ',' ',' ',' ',' ',' ' },
+    "P_BindCount    "
+};
 
 /* Embedded fallback EKB2 (860 bytes from firmware 0xA380) */
 static const u8 g_embeddedEkb2[860] = {
@@ -371,20 +511,27 @@ static const MgvCapList g_hddCapLists[2] = {
     { g_hddCapsClock2, 10 },
 };
 
-static const char *const g_tagsBind[2]   = { "!REFID      ", "BIND_L      " };
-static const char *const g_tagsCopy[2]   = { "!REFID      ", "COPY_L      " };
-static const char *const g_tagsMove[2]   = { "!REFID      ", "MOVE_L      " };
-static const char *const g_tagsPlay[5]   = { "!CID        ", "!REFID      ", "PLAY_L      ", "PLAY_P      ", "PLAY_S      " };
-static const char *const g_tagsPlay4[4]  = { "!REFID      ", "PLAY_L      ", "PLAY_P      ", "PLAY_S      " };
-static const char *const g_tagsPerm4[4]  = { "!REFID      ", "BIND_L      ", "COPY_L      ", "MOVE_L      " };
+static const char *const g_tagsBind[2]   = { g_sectionTags.refid, g_sectionTags.bindL };
+static const char *const g_tagsCopy[2]   = { g_sectionTags.refid, g_sectionTags.copyL };
+static const char *const g_tagsMove[2]   = { g_sectionTags.refid, g_sectionTags.moveL };
+static const char *const g_tagsPlay[5]   = { g_sectionTags.cid, g_sectionTags.refid, g_sectionTags.playL, g_sectionTags.playP, g_sectionTags.playS };
+static const char *const g_tagsPlay4[4]  = { g_sectionTags.refid, g_sectionTags.playL, g_sectionTags.playP, g_sectionTags.playS };
+static const char *const g_tagsPerm4[4]  = { g_sectionTags.refid, g_sectionTags.bindL, g_sectionTags.copyL, g_sectionTags.moveL };
 
 /* =========================================================================
  * Global State (BSS & Data)
  * ========================================================================= */
 
-static u8 g_pageBuf[1024];
-static int g_initRefCount = 0;
-static u8 g_rngCtx[16];
+static struct {
+    u8 pageBuf[1024];
+    int initRefCount;
+    u32 alignPad;
+    u64 rngCtx[2];
+} g_mgvGlobal;
+#define g_pageBuf      (g_mgvGlobal.pageBuf)
+#define g_initRefCount (g_mgvGlobal.initRefCount)
+#define g_rngCtx       (g_mgvGlobal.rngCtx)
+
 static int g_mediaFplIds[2] = { -1, -1 };
 static MgvMediaCtx *g_mediaCtxs[2] = { NULL, NULL };
 static MgvContentCtx g_contentCtxs[2];
@@ -405,11 +552,12 @@ static SceSysEventHandler g_sysEventHandler = {
 static int mapMgrError(int err) {
     if (err == (int)0x80501001) return MGV_ERR_MGR_ERROR_21;
     if (err < (int)0x80501001) {
-        if (err == (int)0x80500001) return MGV_ERR_MGR_ERROR_32;
-        if (err == (int)0x80500002) return MGV_ERR_NOT_OPENED;
-        if ((u32)(err - (int)0x804FF000) < 3u || (u32)(err - (int)0x80500000) < 3u)
-            return MGV_ERR_IO_ERROR;
-        return err;
+        if (err == (int)0x804FF001) return MGV_ERR_MGR_ERROR_32;
+        if (err < (int)0x804FF001) {
+            return ((u32)(err - (int)0x804FE000) < 3u) ? MGV_ERR_IO_ERROR : err;
+        }
+        if (err == (int)0x804FF002) return MGV_ERR_NOT_OPENED;
+        return ((u32)(err - (int)0x80500000) < 3u) ? MGV_ERR_IO_ERROR : err;
     }
     if (err == (int)0x80501005) return MGV_ERR_NOT_OPENED;
     if (err > (int)0x80501005) {
@@ -438,18 +586,18 @@ static int mapRuleError(int err) {
     }
 }
 
-static int checkBoxSizeAddr(const u32 *boxPtr) {
+static NOINLINE int checkBoxSizeAddr(const u32 *boxPtr) {
     u32 k1 = getK1();
     u32 addr = (u32)(uintptr_t)boxPtr;
     if ((k1 & addr & 0x80000000u) != 0)
         return SCE_KERNEL_ERROR_ILLEGAL_ADDR;
-    u32 sz = bswap32(*boxPtr);
+    u32 sz = readBe32((const u8 *)boxPtr);
     if ((k1 & ((addr + sz) | addr | sz) & 0x80000000u) != 0)
         return SCE_KERNEL_ERROR_ILLEGAL_ADDR;
     return (int)sz;
 }
 
-static int copyBufDesc(MgvBufDesc *dst, const MgvBufDesc *src) {
+static inline __attribute__((always_inline)) int copyBufDescImpl(MgvBufDesc *dst, const MgvBufDesc *src) {
     u32 k1 = getK1();
     u32 srcAddr = (u32)(uintptr_t)src;
     if (src == NULL) {
@@ -470,7 +618,11 @@ static int copyBufDesc(MgvBufDesc *dst, const MgvBufDesc *src) {
     return 0;
 }
 
-static int checkUserRangeUncached(const void *ptr, u32 size) {
+static NOINLINE int copyEkbBufDesc(MgvBufDesc *dst, const MgvBufDesc *src) {
+    return copyBufDescImpl(dst, src);
+}
+
+static NOINLINE int checkUserRangeUncached(const void *ptr, u32 size) {
     u32 k1 = getK1();
     u32 addr = (u32)(uintptr_t)ptr & 0x9FFFFFFFu;
     if ((k1 & ((addr + size) | addr | size) & 0x80000000u) != 0)
@@ -478,7 +630,15 @@ static int checkUserRangeUncached(const void *ptr, u32 size) {
     return 0;
 }
 
-static int checkUserRange(const void *ptr, u32 size) {
+static NOINLINE int copyIkvBufDesc(MgvBufDesc *dst, const MgvBufDesc *src) {
+    return copyBufDescImpl(dst, src);
+}
+
+static NOINLINE int copyLckBufDesc(MgvBufDesc *dst, const MgvBufDesc *src) {
+    return copyBufDescImpl(dst, src);
+}
+
+static NOINLINE int checkUserRange(const void *ptr, u32 size) {
     u32 k1 = getK1();
     u32 addr = (u32)(uintptr_t)ptr;
     if ((k1 & ((addr + size) | addr | size) & 0x80000000u) != 0)
@@ -486,7 +646,15 @@ static int checkUserRange(const void *ptr, u32 size) {
     return 0;
 }
 
-static int stripEkb2Header(MgvBufDesc *desc) {
+static NOINLINE int copyPktBufDesc(MgvBufDesc *dst, const MgvBufDesc *src) {
+    return copyBufDescImpl(dst, src);
+}
+
+static NOINLINE int copyMsgBufDesc(MgvBufDesc *dst, const MgvBufDesc *src) {
+    return copyBufDescImpl(dst, src);
+}
+
+static NOINLINE int stripEkb2Header(MgvBufDesc *desc) {
     if (desc->ptr == NULL)
         return MGV_ERR_INVALID_ARG;
     if (desc->size < 0x50u)
@@ -498,19 +666,25 @@ static int stripEkb2Header(MgvBufDesc *desc) {
     return 0;
 }
 
-static int checkIkvDesc(const MgvBufDesc *desc) {
+static NOINLINE int checkIkvDesc(const MgvBufDesc *desc) {
     if (desc->ptr == NULL) return MGV_ERR_INVALID_ARG;
     if (desc->size != 0x3EB0u) return MGV_ERR_INVALID_DATA;
     return 0;
 }
 
-static int checkLckDesc(const MgvBufDesc *desc) {
+static NOINLINE int checkLckDesc(const MgvBufDesc *desc) {
     if (desc->ptr == NULL) return MGV_ERR_INVALID_ARG;
     if (desc->size < 0x50u) return MGV_ERR_INVALID_DATA;
     return 0;
 }
 
-static int checkMinDesc(const MgvBufDesc *desc, u32 minSize) {
+static NOINLINE int checkPktMinDesc(const MgvBufDesc *desc, u32 minSize) {
+    if (desc->ptr == NULL) return MGV_ERR_INVALID_ARG;
+    if (desc->size < minSize) return MGV_ERR_INVALID_DATA;
+    return 0;
+}
+
+static NOINLINE int checkMsgMinDesc(const MgvBufDesc *desc, u32 minSize) {
     if (desc->ptr == NULL) return MGV_ERR_INVALID_ARG;
     if (desc->size < minSize) return MGV_ERR_INVALID_DATA;
     return 0;
@@ -520,7 +694,7 @@ static int checkMinDesc(const MgvBufDesc *desc, u32 minSize) {
  * BCD Time & RTC Helpers
  * ========================================================================= */
 
-static int bcdToDec(u8 b) {
+static NOINLINE int bcdToDec(u8 b) {
     u32 lo = b & 0xFu;
     u32 hi = b >> 4;
     if (lo < 10 && hi < 10)
@@ -528,7 +702,7 @@ static int bcdToDec(u8 b) {
     return -1;
 }
 
-static int bcd2ToDec(u16 w) {
+static NOINLINE int bcd2ToDec(u16 w) {
     int lo = bcdToDec((u8)w);
     if (lo < 0) return -1;
     int hi = bcdToDec((u8)(w >> 8));
@@ -536,23 +710,13 @@ static int bcd2ToDec(u16 w) {
     return 100 * hi + lo;
 }
 
-static int bcdTimeToTick(u64 *tickOut, const u8 *bcd) {
+static NOINLINE int bcdTimeToTick(u64 *tickOut, const u8 *bcd) {
     if (bcd == NULL) {
         *tickOut = 0;
         return 0;
     }
-    struct {
-        u16 year;
-        u16 month;
-        u16 day;
-        u16 hour;
-        u16 minute;
-        u16 second;
-        u32 microsecond;
-    } dt;
-    u16 rawYear;
-    memcpy(&rawYear, bcd, 2);
-    int yr = bcd2ToDec(bswap16(rawYear));
+    ScePspDateTime dt;
+    int yr = bcd2ToDec(readBe16(bcd));
     if ((u32)(yr - 1) >= 9999u) return -1;
     dt.year = (u16)yr;
     int mo = bcdToDec(bcd[2]);
@@ -573,54 +737,55 @@ static int bcdTimeToTick(u64 *tickOut, const u8 *bcd) {
     int cs = bcdToDec(bcd[7]);
     u32 us = (u32)(10000 * cs);
     if (us > 999999u) return -1;
-    dt.microsecond = us;
+    dt.microsecond = (s32)us;
     if (sceRtcGetTick(&dt, tickOut) < 0)
         return -1;
     return 0;
 }
 
-static u8 decToBcd(u8 v) {
-    return (u8)(((v / 10u) << 4) | (v % 10u));
+static NOINLINE u32 decToBcd(int val) {
+    u32 b = (u8)val;
+    u32 tens = (u8)(b / 10u);
+    u32 ones = b % 10u;
+    return (u8)((tens << 4) | ones);
 }
 
-static void pspTimeToBcd(u8 *bcd, const u16 *dt) {
-    bcd[0] = decToBcd((u8)(dt[0] / 100u));
-    bcd[1] = decToBcd((u8)(dt[0] % 100u));
-    bcd[2] = decToBcd((u8)dt[1]);
-    bcd[3] = decToBcd((u8)dt[2]);
-    bcd[4] = decToBcd((u8)dt[3]);
-    bcd[5] = decToBcd((u8)dt[4]);
-    bcd[6] = decToBcd((u8)dt[5]);
-    u32 us;
-    memcpy(&us, dt + 6, 4);
-    bcd[7] = decToBcd((u8)(us / 10000u));
+static NOINLINE void pspTimeToBcd(u8 *bcd, const ScePspDateTime *dt) {
+    bcd[0] = (u8)decToBcd((u16)(dt->year / 100u));
+    bcd[1] = (u8)decToBcd((u16)(dt->year % 100u));
+    bcd[2] = (u8)decToBcd(dt->month);
+    bcd[3] = (u8)decToBcd(dt->day);
+    bcd[4] = (u8)decToBcd(dt->hour);
+    bcd[5] = (u8)decToBcd(dt->minute);
+    bcd[6] = (u8)decToBcd(dt->second);
+    bcd[7] = (u8)decToBcd(dt->microsecond / 10000);
 }
 
-static int addHoursToBcdTime(u8 *bcd, int hours) {
+static NOINLINE int addHoursToBcdTime(u8 *bcd, int hours) {
     u64 tick;
-    u16 dt[8];
+    ScePspDateTime dt;
     if (bcdTimeToTick(&tick, bcd) < 0)
         return -2;
     int ret = sceRtc_driver_8413CADC(&tick, &tick, hours);
     if (ret < 0) return ret;
-    ret = sceRtcSetTick(dt, &tick);
+    ret = sceRtcSetTick(&dt, &tick);
     if (ret < 0) return ret;
-    pspTimeToBcd(bcd, dt);
+    pspTimeToBcd(bcd, &dt);
     return 0;
 }
 
-static int getCurrentBcdTime(u8 *bcd, int secureClock) {
+static NOINLINE int getCurrentBcdTime(u8 *bcd, int secureClock) {
     u64 tick;
-    u16 dt[8];
+    ScePspDateTime dt;
     int ret = secureClock ? sceRtc_driver_CEEF238F(&tick) : sceRtcGetCurrentTick(&tick);
     if (ret < 0) return -3;
-    ret = sceRtcSetTick(dt, &tick);
+    ret = sceRtcSetTick(&dt, &tick);
     if (ret < 0) return ret;
-    pspTimeToBcd(bcd, dt);
+    pspTimeToBcd(bcd, &dt);
     return 0;
 }
 
-static int setSecureClockFromBcd(const u8 *bcd) {
+static NOINLINE int setSecureClockFromBcd(const u8 *bcd) {
     u64 tick;
     if (bcdTimeToTick(&tick, bcd) < 0)
         return -2;
@@ -633,7 +798,7 @@ static int setSecureClockFromBcd(const u8 *bcd) {
  * License / Rule Engine (KEYRING, !CID, !REFID, PLAY_L/P/S, BIND/COPY/MOVE)
  * ========================================================================= */
 
-static const u8 *findParamInSection(const u8 *data, int len, const char *key8) {
+static NOINLINE const u8 *findParamInSection(const u8 *data, int len, const char *key8) {
     if (data == NULL)
         return NULL;
     while (len >= 16) {
@@ -645,20 +810,24 @@ static const u8 *findParamInSection(const u8 *data, int len, const char *key8) {
     return NULL;
 }
 
-static const MgvCapList *getMediaCapLists(int mediaType) {
+static NOINLINE const MgvCapList *getMediaCapLists(int mediaType) {
     if (mediaType == 0) return g_msCapLists;
     if (mediaType == 1) return g_hddCapLists;
     return NULL;
 }
 
-static int checkPlayPeriod2(const u8 *playS, const u8 *curTime) {
-    const u8 *data = playS ? (playS + 16) : NULL;
-    int len = playS ? (16 * readBe16(playS + 14)) : 0;
+static NOINLINE int checkPlayPeriod2(const u8 *playS, const u8 *curTime) {
+    const u8 *data = NULL;
+    int len = 0;
+    if (playS != NULL) {
+        data = playS + 16;
+        len = 16 * readBe16(playS + 14);
+    }
 
-    const u8 *endT2 = findParamInSection(data, len, "end_t2  ");
+    const u8 *endT2 = findParamInSection(data, len, g_tagEndT2);
     if (endT2 == NULL || memcmp(g_maxBcdTime, endT2, 8) == 0)
         return -15;
-    const u8 *startT2 = findParamInSection(data, len, "start_t2");
+    const u8 *startT2 = findParamInSection(data, len, g_tagStartT2);
     if (startT2 == NULL)
         startT2 = g_maxBcdTime;
     if (curTime == NULL)
@@ -668,11 +837,15 @@ static int checkPlayPeriod2(const u8 *playS, const u8 *curTime) {
     return (memcmp(startT2, endT2, 8) <= 0) ? -4 : -5;
 }
 
-static int checkPlayPeriod(const u8 *playP, const u8 *playS, const u8 *curTime) {
-    const u8 *data = playP ? (playP + 16) : NULL;
-    int len = playP ? (16 * readBe16(playP + 14)) : 0;
+static NOINLINE int checkPlayPeriod(const u8 *playP, const u8 *playS, const u8 *curTime) {
+    const u8 *data = NULL;
+    int len = 0;
+    if (playP != NULL) {
+        data = playP + 16;
+        len = 16 * readBe16(playP + 14);
+    }
 
-    const u8 *period = findParamInSection(data, len, "period  ");
+    const u8 *period = findParamInSection(data, len, g_tagPeriod);
     if (period == NULL)
         period = g_zeroPeriod;
     if (readBe16(period + 6) != 0) {
@@ -681,10 +854,10 @@ static int checkPlayPeriod(const u8 *playP, const u8 *playS, const u8 *curTime) 
             return r;
     }
 
-    const u8 *startT = findParamInSection(data, len, "start_t ");
+    const u8 *startT = findParamInSection(data, len, g_tagStartT);
     if (startT == NULL)
         startT = g_minBcdTime;
-    const u8 *endT = findParamInSection(data, len, "end_t   ");
+    const u8 *endT = findParamInSection(data, len, g_tagEndT);
     if (endT == NULL)
         endT = g_maxBcdTime;
 
@@ -698,22 +871,30 @@ static int checkPlayPeriod(const u8 *playP, const u8 *playS, const u8 *curTime) 
     return (memcmp(startT, endT, 8) <= 0) ? -4 : -5;
 }
 
-static int getPlayParams(const u8 *playP, const u8 **periodOut, const u8 **startOut,
-                         const u8 **endOut, const u8 **avoutOut) {
-    const u8 *data = playP ? (playP + 16) : NULL;
-    int len = playP ? (16 * readBe16(playP + 14)) : 0;
-    if (periodOut) *periodOut = findParamInSection(data, len, "period  ");
-    if (startOut)  *startOut  = findParamInSection(data, len, "start_t ");
-    if (endOut)    *endOut    = findParamInSection(data, len, "end_t   ");
-    if (avoutOut)  *avoutOut  = findParamInSection(data, len, "avout   ");
+static NOINLINE int getPlayParams(const u8 *playP, const u8 **periodOut, const u8 **startOut,
+                                  const u8 **endOut, const u8 **avoutOut) {
+    const u8 *data = NULL;
+    int len = 0;
+    if (playP != NULL) {
+        data = playP + 16;
+        len = 16 * readBe16(playP + 14);
+    }
+    if (periodOut) *periodOut = findParamInSection(data, len, g_tagPeriod);
+    if (startOut)  *startOut  = findParamInSection(data, len, g_tagStartT);
+    if (endOut)    *endOut    = findParamInSection(data, len, g_tagEndT);
+    if (avoutOut)  *avoutOut  = findParamInSection(data, len, g_tagAvout);
     return 0;
 }
 
-static int getPlayStateParams(const u8 *playS, const u8 **start2Out, const u8 **end2Out) {
-    const u8 *data = playS ? (playS + 16) : NULL;
-    int len = playS ? (16 * readBe16(playS + 14)) : 0;
-    if (start2Out) *start2Out = findParamInSection(data, len, "start_t2");
-    if (end2Out)   *end2Out   = findParamInSection(data, len, "end_t2  ");
+static NOINLINE int getPlayStateParams(const u8 *playS, const u8 **start2Out, const u8 **end2Out) {
+    const u8 *data = NULL;
+    int len = 0;
+    if (playS != NULL) {
+        data = playS + 16;
+        len = 16 * readBe16(playS + 14);
+    }
+    if (start2Out) *start2Out = findParamInSection(data, len, g_tagStartT2);
+    if (end2Out)   *end2Out   = findParamInSection(data, len, g_tagEndT2);
     return 0;
 }
 
@@ -744,14 +925,14 @@ static int findSections(const u8 *buf, int bufLen, const char *const *names, con
 static int extractCid(u8 *cidOut, const u8 *cidSec) {
     if (cidSec == NULL) return -2;
     if ((u32)(16 * readBe16(cidSec + 14)) < 32u) return -2;
-    memcpy(cidOut, cidSec + 16, 24);
+    __builtin_memcpy(cidOut, cidSec + 16, 24);
     return 16;
 }
 
 static int extractRefId(u8 *refIdOut, const u8 *refSec) {
     if (refSec == NULL) return 0;
     if ((u32)(16 * readBe16(refSec + 14)) < 16u) return -2;
-    memcpy(refIdOut, refSec + 16, 16);
+    __builtin_memcpy(refIdOut, refSec + 16, 16);
     if (refIdOut[0] == 2)
         return 16;
     int i;
@@ -994,30 +1175,28 @@ static int queryPlayInfo(const MgvCapList *lists, u32 *out, const u8 *data, int 
     int clkType = getPlayClockType(lists, secs[0], secs[1]);
     if (clkType < 0) return clkType;
 
-    u64 nowTick;
-    int tr = (clkType < 2) ? sceRtcGetCurrentTick(&nowTick) : sceRtc_driver_CEEF238F(&nowTick);
-    if (tr < 0) nowTick = 0;
-    memcpy(out, &nowTick, 8);
+    int tr = (clkType < 2) ? sceRtcGetCurrentTick((u64 *)out) : sceRtc_driver_CEEF238F((u64 *)out);
+    if (tr < 0) {
+        out[0] = 0;
+        out[1] = 0;
+    }
 
-    getPlayParams(secs[2], &period, &startT, &endT, &avout);
-    getPlayStateParams(secs[3], &startT2, &endT2);
+    r = getPlayParams(secs[2], &period, &startT, &endT, &avout);
+    if (r < 0) return r;
+    r = getPlayStateParams(secs[3], &startT2, &endT2);
+    if (r < 0) return r;
 
-    u64 tmp;
-    if (bcdTimeToTick(&tmp, startT) < 0) return -1;
-    memcpy(out + 2, &tmp, 8);
-    if (bcdTimeToTick(&tmp, endT) < 0) return -1;
-    memcpy(out + 4, &tmp, 8);
+    if (bcdTimeToTick((u64 *)(out + 2), startT) < 0) return -1;
+    if (bcdTimeToTick((u64 *)(out + 4), endT) < 0) return -1;
 
     if (avout == NULL) avout = g_defaultAvout;
-    memcpy(out + 6, avout, 8);
+    __builtin_memcpy(out + 6, avout, 8);
 
     if (period == NULL) period = g_zeroPeriod;
     out[12] = 3600u * readBe16(period + 6);
 
-    if (bcdTimeToTick(&tmp, startT2) < 0) return -1;
-    memcpy(out + 8, &tmp, 8);
-    if (bcdTimeToTick(&tmp, endT2) < 0) return -1;
-    memcpy(out + 10, &tmp, 8);
+    if (bcdTimeToTick((u64 *)(out + 8), startT2) < 0) return -1;
+    if (bcdTimeToTick((u64 *)(out + 10), endT2) < 0) return -1;
     return 0;
 }
 
@@ -1061,8 +1240,8 @@ static int queryLicenseInfo(int mediaType, int queryType, u32 *out, const u8 *da
     return -1;
 }
 
-static int insertPlayStartTimeFields(u8 *base, int curLen, u32 maxLen, u8 *playS,
-                                     u8 **start2InOut, u8 **end2InOut) {
+static NOINLINE int insertPlayStartTimeFields(u8 *base, int curLen, u32 maxLen, u8 *playS,
+                                              u8 **start2InOut, u8 **end2InOut) {
     if (playS != NULL) {
         if (*start2InOut == NULL && *end2InOut == NULL) {
             u32 newLen = (u32)curLen + 32u;
@@ -1071,8 +1250,8 @@ static int insertPlayStartTimeFields(u8 *base, int curLen, u32 maxLen, u8 *playS
             u16 blocks = (u16)(readBe16(playS + 14) + 2);
             playS[14] = (u8)(blocks >> 8);
             playS[15] = (u8)blocks;
-            memcpy(playS + 16, "start_t2", 8);
-            memcpy(playS + 32, "end_t2  ", 8);
+            __builtin_memcpy(playS + 16, g_tagStartT2, 8);
+            __builtin_memcpy(playS + 32, g_tagEndT2, 8);
             *start2InOut = playS + 24;
             *end2InOut   = playS + 40;
             return (int)newLen;
@@ -1085,25 +1264,25 @@ static int insertPlayStartTimeFields(u8 *base, int curLen, u32 maxLen, u8 *playS
         playS[14] = (u8)(blocks >> 8);
         playS[15] = (u8)blocks;
         if (*start2InOut == NULL) {
-            memcpy(insPos, "start_t2", 8);
+            __builtin_memcpy(insPos, g_tagStartT2, 8);
             *start2InOut = insPos + 8;
             *end2InOut += 16;
             return (int)newLen;
         }
-        memcpy(insPos, "end_t2  ", 8);
+        __builtin_memcpy(insPos, g_tagEndT2, 8);
         *end2InOut = insPos + 8;
         return (int)newLen;
     } else {
         u32 newLen = (u32)curLen + 48u;
         if (maxLen < newLen) return -1;
         u8 *p = base + curLen;
-        memcpy(p, "PLAY_S      ", 12);
+        __builtin_memcpy(p, g_sectionTags.playS, 12);
         p[12] = 0;
         p[13] = 8;
         p[14] = 0;
         p[15] = 2;
-        memcpy(p + 16, "start_t2", 8);
-        memcpy(p + 32, "end_t2  ", 8);
+        __builtin_memcpy(p + 16, g_tagStartT2, 8);
+        __builtin_memcpy(p + 32, g_tagEndT2, 8);
         *start2InOut = p + 24;
         *end2InOut   = p + 40;
         return (int)newLen;
@@ -1183,20 +1362,20 @@ static int buildLicenseSections(u8 *dst, u32 dstSize, const u8 *cid24, const u8 
         noSvr = 0;
     }
     if (comment != NULL) {
-        memcpy(p, "!COMMENT    ", 12);
+        __builtin_memcpy(p, g_sectionTags.comment, 12);
         p[12] = 0; p[13] = 16; p[14] = 0; p[15] = 1;
         memset(p + 16, 0, 16);
         strncpy((char *)(p + 16), comment, 15);
         p += 32;
     }
 
-    memcpy(p, "!CID        ", 12);
+    __builtin_memcpy(p, g_sectionTags.cid, 12);
     p[12] = 0; p[13] = 16; p[14] = 0; p[15] = 2;
-    memcpy(p + 16, cid24, 24);
+    __builtin_memcpy(p + 16, cid24, 24);
     memset(p + 40, 0, 8);
     p += 48;
 
-    memcpy(p, "!REFID      ", 12);
+    __builtin_memcpy(p, g_sectionTags.refid, 12);
     p[12] = 0; p[13] = 16; p[14] = 0; p[15] = 1;
     memset(p + 16, 0, 16);
     p[16] = 2; p[17] = 0; p[18] = 0; p[19] = 0; p[20] = 0;
@@ -1214,32 +1393,32 @@ static int buildLicenseSections(u8 *dst, u32 dstSize, const u8 *cid24, const u8 
     p += 32;
 
     u8 *playL = p;
-    memcpy(playL, "PLAY_L      ", 12);
+    __builtin_memcpy(playL, g_sectionTags.playL, 12);
     playL[12] = 0; playL[13] = 16; playL[14] = 0;
     u8 *cur = playL + 16;
     if (!noSvr) {
-        memcpy(cur, "T_SVR          ", 15);
+        __builtin_memcpy(cur, "T_SVR          ", 15);
         cur[15] = 0x82;
         cur += 16;
     }
     if (hasAvout2) {
-        memcpy(cur, "P_PlayAVOUT    ", 15);
+        __builtin_memcpy(cur, "P_PlayAVOUT    ", 15);
         cur[15] = 2;
         cur += 16;
-        memcpy(cur, "P_PlayAVOUT2   ", 15);
+        __builtin_memcpy(cur, "P_PlayAVOUT2   ", 15);
         cur[15] = 0x82;
         cur += 16;
     }
     u8 cnt = (u8)((cur - playL) >> 4);
-    memcpy(cur, "T_MagicGateV   ", 15);
+    __builtin_memcpy(cur, "T_MagicGateV   ", 15);
     cur[15] = 0x81;
     playL[15] = cnt;
     cur += 16;
 
-    memcpy(cur, "PLAY_P      ", 12);
+    __builtin_memcpy(cur, g_sectionTags.playP, 12);
     cur[12] = 0; cur[13] = 8; cur[14] = 0; cur[15] = 1;
-    memcpy(cur + 16, "avout   ", 8);
-    memcpy(cur + 24, avout8, 8);
+    __builtin_memcpy(cur + 16, g_tagAvout, 8);
+    __builtin_memcpy(cur + 24, avout8, 8);
     cur += 32;
     return (int)(cur - dst);
 }
@@ -1321,7 +1500,7 @@ static int deriveMsgKeySlot(const void *encKey, const MgvBufDesc *ekbDesc) {
 }
 
 static int parseKeyringHeader(const u8 *kr) {
-    if (memcmp(kr, "KEYRING     ", 12) != 0)
+    if (memcmp(kr, g_keyringTag, 12) != 0)
         return MGV_ERR_INVALID_DATA;
     if (readBe16(kr + 18) != 3)
         return MGV_ERR_UNSUPPORTED_VER;
@@ -1358,15 +1537,15 @@ static int generateKeyring(u8 *dst, u8 *keyInfo, int mode) {
     memcpy(dst + 32, keyInfo, 16);
 
     for (i = 2; i >= 0; i--) {
-        u8 *entry = dst + 48 + 16 * i;
+        MgvKeyEntry *entry = (MgvKeyEntry *)(dst + 48) + i;
         ret = sceMgr_driver_02117F1E(entry, g_rngCtx);
         if (ret < 0) return mapMgrError(ret);
         if (mode != 2 && mode != 4) {
-            ret = sceMgr_driver_02117F1E(entry + 8, g_rngCtx);
+            ret = sceMgr_driver_02117F1E(&entry->rangeMinBe, g_rngCtx);
             if (ret < 0) return mapMgrError(ret);
         } else {
-            *(u32 *)(entry + 8)  = 0;
-            *(u32 *)(entry + 12) = 0xFFFFFFFFu;
+            entry->rangeMinBe = 0;
+            entry->rangeMaxBe = 0xFFFFFFFFu;
         }
     }
     return 16 * readBe16(dst + 14) + 16;
@@ -1510,50 +1689,52 @@ static int openLckStackCb(void *arg) {
     u32 ikvEntry[4];
     u32 mac[4];
     int keySlot = -1;
+    int ret;
 
-    int ret = readIkvEntryVerified(a->ctx, ikvEntry, a->ikvBuf, a->keyIdx, a->titleIdx);
-    if (ret < 0) goto done;
-    if ((ikvEntry[0] | ikvEntry[1] | ikvEntry[2] | ikvEntry[3]) == 0) {
-        ret = MGV_ERR_EMPTY_ENTRY;
-        goto done;
-    }
+    do {
+        ret = readIkvEntryVerified(a->ctx, ikvEntry, a->ikvBuf, a->keyIdx, a->titleIdx);
+        if (ret < 0) break;
+        if ((ikvEntry[0] | ikvEntry[1] | ikvEntry[2] | ikvEntry[3]) == 0) {
+            ret = MGV_ERR_EMPTY_ENTRY;
+            break;
+        }
 
-    const u8 *lckBody = (const u8 *)a->lckDesc->ptr + 16;
-    int krLen = parseKeyringHeader(lckBody);
-    if (krLen < 0) {
-        ret = krLen;
-        goto done;
-    }
-    memcpy(a->keyringHdrOut, lckBody, 96);
+        const u8 *lckBody = (const u8 *)a->lckDesc->ptr + 16;
+        int krLen = parseKeyringHeader(lckBody);
+        if (krLen < 0) {
+            ret = krLen;
+            break;
+        }
+        memcpy(a->keyringHdrOut, lckBody, 96);
 
-    keySlot = deriveContentKeySlot(a->ctx, a->keyringHdrOut + 32, a->ekbDesc);
-    if (keySlot < 0) {
-        ret = keySlot;
-        goto done;
-    }
+        keySlot = deriveContentKeySlot(a->ctx, a->keyringHdrOut + 32, a->ekbDesc);
+        if (keySlot < 0) {
+            ret = keySlot;
+            break;
+        }
 
-    u32 bodyLen = a->lckDesc->size - 16u;
-    if (bodyLen >= 0x1231u) {
-        ret = MGV_ERR_INVALID_DATA;
-        goto done;
-    }
-    memcpy(lckCopy, lckBody, bodyLen);
+        u32 bodyLen = a->lckDesc->size - 16u;
+        if (bodyLen >= 0x1231u) {
+            ret = MGV_ERR_INVALID_DATA;
+            break;
+        }
+        memcpy(lckCopy, lckBody, bodyLen);
 
-    ret = sceMgr_driver_DA7D8C82(mac, lckCopy, NULL, bodyLen, keySlot);
-    if (ret < 0) {
-        ret = mapMgrError(ret);
-        goto done;
-    }
-    if (mac[0] != ikvEntry[0] || mac[1] != ikvEntry[1] ||
-        mac[2] != ikvEntry[2] || mac[3] != ikvEntry[3]) {
-        ret = MGV_ERR_HASH_MISMATCH;
-        goto done;
-    }
+        ret = sceMgr_driver_DA7D8C82(mac, lckCopy, NULL, bodyLen, keySlot);
+        if (ret < 0) {
+            ret = mapMgrError(ret);
+            break;
+        }
+        if (mac[0] != ikvEntry[0] || mac[1] != ikvEntry[1] ||
+            mac[2] != ikvEntry[2] || mac[3] != ikvEntry[3]) {
+            ret = MGV_ERR_HASH_MISMATCH;
+            break;
+        }
 
-    int ruleRet = checkPlayLicense(a->ctx->mediaType, a->cidOut, lckCopy + (krLen & ~15), (int)(bodyLen - (u32)krLen));
-    ret = (ruleRet < 0) ? mapRuleError(ruleRet) : keySlot;
+        int ruleRet = checkPlayLicense(a->ctx->mediaType, a->cidOut, lckCopy + (krLen & ~15), (int)(bodyLen - (u32)krLen));
+        ret = (ruleRet < 0) ? mapRuleError(ruleRet) : keySlot;
+    } while (0);
 
-done:
     if (ret < 0 && keySlot >= 0)
         sceMgr_driver_E6A203F8(keySlot);
     return ret;
@@ -1575,8 +1756,8 @@ static int getHddEkb(void *buf, u32 size) {
     if (ret < 0) return mapMgrError(ret);
     if (ret == 0) return 0;
     if (buf != NULL) {
-        int r2 = sceMgr_driver_09C11491(buf, size);
-        if (r2 < 0) return mapMgrError(r2);
+        int readRet = sceMgr_driver_09C11491(buf, size);
+        if (readRet < 0) return mapMgrError(readRet);
     }
     return ret;
 }
@@ -1594,8 +1775,8 @@ static int getMsEkb(void *buf, u32 size) {
         return (int)sizeof(g_embeddedEkb2);
     }
     if (buf != NULL) {
-        int r2 = sceMgr_driver_864EA078(buf, size);
-        if (r2 < 0) return mapMgrError(r2);
+        int readRet = sceMgr_driver_864EA078(buf, size);
+        if (readRet < 0) return mapMgrError(readRet);
     }
     return ret;
 }
@@ -1609,14 +1790,13 @@ static int hddReadPage(MgvMediaCtx *ctx, int page, u8 *buf) {
 }
 
 static int hddWritePage(MgvMediaCtx *ctx, int page, u8 *buf) {
-    u32 seq;
-    memcpy(&seq, buf + 4, 4);
-    seq = bswap32(bswap32(seq) + 1);
-    buf[0] = (u8)page;
-    buf[1] = 0xA0;
-    buf[2] = 0x02;
-    buf[3] = 0x00;
-    memcpy(buf + 4, &seq, 4);
+    MgvPageBuf *pg = (MgvPageBuf *)buf;
+    u32 seq = bswap32(bswap32(pg->seqBe) + 1);
+    pg->pageId = (u8)page;
+    pg->flags = 0xA0;
+    pg->sizeHi = 0x02;
+    pg->sizeLo = 0x00;
+    pg->seqBe = seq;
 
     int ret = sceMgr_driver_BBF6C182(ctx->mgrHandle, page, buf, 1024);
     if (ret < 0) {
@@ -1627,9 +1807,7 @@ static int hddWritePage(MgvMediaCtx *ctx, int page, u8 *buf) {
     ret = hddReadPage(ctx, page, buf);
     if (ret < 0 && ret != MGV_ERR_MGR_ERROR_23)
         return ret;
-    u32 readSeq;
-    memcpy(&readSeq, buf + 4, 4);
-    return (readSeq == seq) ? 0 : MGV_ERR_IO_ERROR;
+    return (pg->seqBe == seq) ? 0 : MGV_ERR_IO_ERROR;
 }
 
 static int hddErasePage(MgvMediaCtx *ctx, int page, u8 *buf) {
@@ -1659,38 +1837,38 @@ static int isBlankPage(const u8 *buf) {
 
 static int msReadPage(MgvMediaCtx *ctx, int page, u8 *buf) {
     u32 mac[2];
+    MgvPageBuf *pg = (MgvPageBuf *)buf;
     int ret = sceMgr_driver_7EC9DF8B(ctx->mgrHandle, page, buf, 1024);
     if (ret < 0) return mapMgrError(ret);
-    if (readBe16(buf + 2) != 0x200u || (buf[1] & 0xE0u) != 0xA0u)
+    if (readBe16(buf + 2) != 0x200u || (pg->flags & 0xE0u) != 0xA0u)
         return MGV_ERR_MGR_ERROR_23;
-    if (*(const u32 *)(buf + 520) == 0 && *(const u32 *)(buf + 524) == 0)
+    if (pg->mac[0] == 0 && pg->mac[1] == 0)
         return MGV_ERR_NOT_OPENED;
-    if ((s8)buf[1] < 0) {
-        const void *iv = (buf[1] & 0x40u) ? g_zero16 : NULL;
-        ret = sceMgr_driver_CF1EC2ED(buf + 8, buf + 8, iv);
+    if ((s8)pg->flags < 0) {
+        const void *iv = (pg->flags & 0x40u) ? g_zero16 : NULL;
+        ret = sceMgr_driver_CF1EC2ED(pg->payload, pg->payload, iv);
         if (ret < 0) return mapMgrError(ret);
     }
     ret = sceMgr_driver_B53B2B5B(mac, buf, NULL, 520);
     if (ret < 0) return mapMgrError(ret);
-    if (mac[0] != *(const u32 *)(buf + 520) || mac[1] != *(const u32 *)(buf + 524))
+    if (mac[0] != pg->mac[0] || mac[1] != pg->mac[1])
         return MGV_ERR_NOT_OPENED;
     return 0;
 }
 
 static int msWritePage(MgvMediaCtx *ctx, int page, u8 *buf) {
-    u32 seq;
-    memcpy(&seq, buf + 4, 4);
-    seq = bswap32(bswap32(seq) + 1);
-    buf[0] = (u8)page;
-    buf[1] = 0xA0;
-    buf[2] = 0x02;
-    buf[3] = 0x00;
-    memcpy(buf + 4, &seq, 4);
+    MgvPageBuf *pg = (MgvPageBuf *)buf;
+    u32 seq = bswap32(bswap32(pg->seqBe) + 1);
+    pg->pageId = (u8)page;
+    pg->flags = 0xA0;
+    pg->sizeHi = 0x02;
+    pg->sizeLo = 0x00;
+    pg->seqBe = seq;
 
-    int ret = sceMgr_driver_B53B2B5B(buf + 520, buf, NULL, 520);
+    int ret = sceMgr_driver_B53B2B5B(pg->mac, buf, NULL, 520);
     if (ret < 0) return mapMgrError(ret);
-    if ((s8)buf[1] < 0) {
-        ret = sceMgr_driver_FDF97B95(buf + 8, buf + 8, NULL, 512);
+    if ((s8)pg->flags < 0) {
+        ret = sceMgr_driver_FDF97B95(pg->payload, pg->payload, NULL, 512);
         if (ret < 0) return mapMgrError(ret);
     }
     ret = sceMgr_driver_275C6686(ctx->mgrHandle, page, buf, 1024);
@@ -1702,24 +1880,21 @@ static int msWritePage(MgvMediaCtx *ctx, int page, u8 *buf) {
     }
     ret = msReadPage(ctx, page, buf);
     if (ret < 0) return ret;
-    u32 readSeq;
-    memcpy(&readSeq, buf + 4, 4);
-    return (readSeq == seq) ? 0 : MGV_ERR_IO_ERROR;
+    return (pg->seqBe == seq) ? 0 : MGV_ERR_IO_ERROR;
 }
 
 static int msErasePage(MgvMediaCtx *ctx, int page, u8 *buf) {
+    MgvPageBuf *pg = (MgvPageBuf *)buf;
     int ret = msReadPage(ctx, page, buf);
     if (ret < 0 && ret != MGV_ERR_MGR_ERROR_23 && ret != MGV_ERR_NOT_OPENED)
         return ret;
-    u32 seq;
-    memcpy(&seq, buf + 4, 4);
-    seq = bswap32(bswap32(seq) + 1);
+    u32 seq = bswap32(bswap32(pg->seqBe) + 1);
     memset(buf, 0xFF, 1024);
-    buf[0] = (u8)page;
-    buf[1] = 0;
-    buf[2] = 0;
-    buf[3] = 0;
-    memcpy(buf + 4, &seq, 4);
+    pg->pageId = (u8)page;
+    pg->flags = 0;
+    pg->sizeHi = 0;
+    pg->sizeLo = 0;
+    pg->seqBe = seq;
 
     ret = sceMgr_driver_275C6686(ctx->mgrHandle, page, buf, 1024);
     if (ret < 0) {
@@ -1731,9 +1906,7 @@ static int msErasePage(MgvMediaCtx *ctx, int page, u8 *buf) {
     ret = msReadPage(ctx, page, buf);
     if (ret < 0 && ret != MGV_ERR_MGR_ERROR_23)
         return ret;
-    u32 readSeq;
-    memcpy(&readSeq, buf + 4, 4);
-    return (readSeq == seq) ? 0 : MGV_ERR_IO_ERROR;
+    return (pg->seqBe == seq) ? 0 : MGV_ERR_IO_ERROR;
 }
 
 static int loadIcvTable(MgvMediaCtx *ctx, u8 *buf) {
@@ -1765,7 +1938,7 @@ static int allocTempBuf(void **outPtr, u32 size) {
     int fpl = sceKernelCreateFpl("mgvideo", 1, 0x4000, size + 16, 1, NULL);
     if (fpl < 0)
         return (fpl == SCE_KERNEL_ERROR_NO_MEMORY) ? MGV_ERR_NO_MEMORY : fpl;
-    void *blk = NULL;
+    void *blk;
     int ret = sceKernelTryAllocateFpl(fpl, &blk);
     if (ret < 0) {
         sceKernelDeleteFpl(fpl);
@@ -1822,8 +1995,11 @@ static void freeAllContentSlots(void) {
 
 static void initContentSlots(void) {
     memset(g_contentCtxs, 0, sizeof(g_contentCtxs));
-    g_contentCtxs[0].mgrKeySlot = -1;
-    g_contentCtxs[1].mgrKeySlot = -1;
+    int i;
+    for (i = 0; i < 2; i++) {
+        g_contentCtxs[i].mgrKeySlot = -1;
+        g_contentCtxs[i].inUse = 0;
+    }
 }
 
 static void markAllSuspended(void) {
@@ -1973,6 +2149,7 @@ static void hddCloseMedia(MgvMediaCtx *ctx) {
 static int msOpenMedia(MgvMediaCtx *ctx, void *rngCtx) {
     int h = sceMgr_driver_6B4C5BC5(rngCtx);
     int ret = h;
+    int mapped = 0;
     if (h >= 0) {
         ctx->mgrHandle = h;
         ret = sceMgr_driver_20610CDF(h);
@@ -1980,16 +2157,17 @@ static int msOpenMedia(MgvMediaCtx *ctx, void *rngCtx) {
             ctx->mediaFlags = (u32)ret;
             if ((ret & 4) == 0) {
                 ret = MGV_ERR_MGR_ERROR_27;
-                goto fail;
+                mapped = 1;
+            } else {
+                ctx->macKeySlot = -1;
+                ret = sceMgr_driver_156A83C3(ctx->mgrHandle, rngCtx);
+                if (ret >= 0)
+                    return ret;
             }
-            ctx->macKeySlot = -1;
-            ret = sceMgr_driver_156A83C3(ctx->mgrHandle, rngCtx);
-            if (ret >= 0)
-                return ret;
         }
     }
-    ret = mapMgrError(ret);
-fail:
+    if (!mapped)
+        ret = mapMgrError(ret);
     if (ret < 0 && ctx->macKeySlot >= 0) {
         sceMgr_driver_E6A203F8(ctx->macKeySlot);
         ctx->macKeySlot = -1;
@@ -1997,12 +2175,15 @@ fail:
     return ret;
 }
 
-static void msCloseMedia(MgvMediaCtx *ctx) {
+static int msCloseMedia(MgvMediaCtx *ctx) {
     sceMgr_driver_B8626BA2(ctx->mgrHandle);
-    if (ctx->macKeySlot >= 0) {
-        sceMgr_driver_E6A203F8(ctx->macKeySlot);
+    int slot = ctx->macKeySlot;
+    if (slot >= 0) {
+        sceMgr_driver_E6A203F8(slot);
         ctx->macKeySlot = -1;
+        return -1;
     }
+    return slot;
 }
 
 static int msTermMedia(MgvMediaCtx *ctx) {
@@ -2025,7 +2206,7 @@ static int initMsMedia(MgvMediaCtx *ctx) {
     ctx->getMediaId       = sceMgr_driver_97B245D5;
     ctx->getEkb           = getMsEkb;
     ctx->openMedia        = msOpenMedia;
-    ctx->closeMedia       = msCloseMedia;
+    ctx->closeMedia       = (void (*)(struct MgvMediaCtx *))msCloseMedia;
     ctx->termMedia        = msTermMedia;
     ctx->readPage         = msReadPage;
     ctx->writePage        = msWritePage;
@@ -2039,7 +2220,7 @@ static int initMsMedia(MgvMediaCtx *ctx) {
         ret = ctx->getEkb(ekbHdr, 64);
         if (ret >= 0) {
             ctx->mgrHandle = -1;
-            memcpy(ctx->rootKey, ekbHdr + 12, 16);
+            __builtin_memcpy(ctx->rootKey, ekbHdr + 12, 16);
             return 0;
         }
     }
@@ -2070,7 +2251,7 @@ static int initHddMedia(MgvMediaCtx *ctx) {
         ctx->mediaType = 1;
         ret = ctx->getEkb(ekbHdr, 64);
         if (ret >= 0) {
-            memcpy(ctx->rootKey, ekbHdr + 12, 16);
+            __builtin_memcpy(ctx->rootKey, ekbHdr + 12, 16);
             ret = sceMgr_driver_CEE87932();
             if (ret >= 0) {
                 ctx->mgrHandle = ret;
@@ -2140,16 +2321,26 @@ static int parseSchiBox(u32 *algOut, u8 *cidOut, u32 *ivOut, const u32 *schi) {
         u32 sz = bswap32(*(const u32 *)cur);
         if (cur + sz > end || sz == 0)
             break;
-        if (ksid == NULL && matchFullBoxHeader(cur, "ksid", 0) == 0) {
-            if (sz < 0x24u) return MGV_ERR_INVALID_DATA;
+        if (ksid == NULL) {
+            if (matchFullBoxHeader(cur, "ksid", 0) != 0) {
+                cur += sz;
+                continue;
+            }
             ksid = cur;
-        } else if (kyid == NULL && matchFullBoxHeader(cur, "kyid", 0) == 0) {
-            if (sz < 0x0Eu) return MGV_ERR_INVALID_DATA;
+            if (sz < 0x24u) return MGV_ERR_INVALID_DATA;
+        }
+        if (kyid == NULL) {
+            if (matchFullBoxHeader(cur, "kyid", 0) != 0) {
+                cur += sz;
+                continue;
+            }
             kyid = cur;
-        } else if (ealg == NULL && matchFullBoxHeader(cur, "ealg", 0) == 0) {
-            if (sz < 0x10u) return MGV_ERR_INVALID_DATA;
+            if (sz < 0x0Eu) return MGV_ERR_INVALID_DATA;
+        }
+        if (ealg == NULL && matchFullBoxHeader(cur, "ealg", 0) == 0) {
             ealg = cur;
-            u32 alg = bswap32(*(const u32 *)(cur + 12));
+            if (sz < 0x10u) return MGV_ERR_INVALID_DATA;
+            u32 alg = readBe32(cur + 12);
             *algOut = alg;
             if (alg == 8 && sz - 16u < 16u)
                 return MGV_ERR_INVALID_DATA;
@@ -2160,8 +2351,8 @@ static int parseSchiBox(u32 *algOut, u8 *cidOut, u32 *ivOut, const u32 *schi) {
     if (ksid == NULL || kyid == NULL || ealg == NULL)
         return MGV_ERR_INVALID_DATA;
 
-    memcpy(cidOut, ksid + 12, 24);
-    memcpy(ivOut, ealg + 16, 16);
+    __builtin_memcpy(cidOut, ksid + 12, 24);
+    __builtin_memcpy(ivOut, ealg + 16, 16);
     return (int)readBe16(kyid + 12);
 }
 
@@ -2222,7 +2413,7 @@ static int freeStreamSlot(u32 contentIdx, int streamIdx) {
 static int lookupStream(int handle, MgvStreamSlot **slotOut, MgvContentCtx **cctxOut) {
     if (handle < 0)
         return MGV_ERR_INVALID_ARG;
-    MgvContentCtx *cctx = getContentSlot((u32)handle >> 8);
+    MgvContentCtx *cctx = getContentSlot((u32)(handle >> 8));
     if (cctx == NULL || cctx->media == NULL)
         return MGV_ERR_INVALID_ARG;
     if (cctx->media->state < 2u)
@@ -2339,20 +2530,20 @@ static int updateIkvEntries(IkvUpdateArgs *args) {
 
 static int writeSingleIkvEntry(MgvMediaCtx *ctx, u32 keyIdx, int titleIdx, const u8 *entryMac,
                                u8 *ikvBuf, const MgvBufDesc *ekbDesc) {
+    MgvIkvHdr *ikvHdr = (MgvIkvHdr *)ikvBuf;
     const u32 *curIcv = (const u32 *)(ctx->icvTable + 16 * keyIdx);
     if ((curIcv[0] | curIcv[1] | curIcv[2] | curIcv[3]) == 0) {
         memset(ikvBuf, 0, 16048);
-        *(u32 *)ikvBuf = 0x54534B4Du; /* "MKST" */
-        int ret = sceMgr_driver_02117F1E(ikvBuf + 16, g_rngCtx);
+        ikvHdr->magic = 0x54534B4Du; /* "MKST" */
+        int ret = sceMgr_driver_02117F1E(&ikvHdr->salt[0], g_rngCtx);
         if (ret < 0) return mapMgrError(ret);
-        ret = sceMgr_driver_02117F1E(ikvBuf + 24, g_rngCtx);
+        ret = sceMgr_driver_02117F1E(&ikvHdr->salt[2], g_rngCtx);
         if (ret < 0) return mapMgrError(ret);
-        if ((*(u32 *)(ikvBuf + 16) | *(u32 *)(ikvBuf + 20) |
-             *(u32 *)(ikvBuf + 24) | *(u32 *)(ikvBuf + 28)) == 0) {
-            ret = sceMgr_driver_02117F1E(ikvBuf + 16, g_rngCtx);
+        if ((ikvHdr->salt[0] | ikvHdr->salt[1] | ikvHdr->salt[2] | ikvHdr->salt[3]) == 0) {
+            ret = sceMgr_driver_02117F1E(&ikvHdr->salt[0], g_rngCtx);
             if (ret < 0) return mapMgrError(ret);
         }
-        ret = getMediaId(ctx, ikvBuf + 32);
+        ret = getMediaId(ctx, ikvHdr->mediaId);
         if (ret < 0) return ret;
     }
 
@@ -2380,11 +2571,11 @@ static int writeSingleIkvEntry(MgvMediaCtx *ctx, u32 keyIdx, int titleIdx, const
             };
             ret = updateIkvEntries(&uargs);
             if (ret >= 0) {
-                memcpy(ikvBuf + 48, &ekbId, 4);
+                ikvHdr->ekbId = ekbId;
                 memcpy(ctx->ekbMacTable + 8 * keyIdx, newEkbMac, 8);
                 memcpy(ctx->hashTable + 8 * keyIdx, newHash, 8);
                 memcpy(ctx->icvTable + 16 * keyIdx, newIcv, 16);
-                *(u16 *)(ikvBuf + 6) = 35;
+                ikvHdr->version = 35;
                 ret = 0;
             }
         }
@@ -2399,23 +2590,25 @@ static int writeSingleIkvEntry(MgvMediaCtx *ctx, u32 keyIdx, int titleIdx, const
  * ========================================================================= */
 
 static int parseMgl3Header(const u8 *buf, int bufSize) {
-    if (*(const u32 *)buf != 0x33504B4Du) /* "MKP3" */
+    const MgvMgl3Hdr *hdr = (const MgvMgl3Hdr *)buf;
+    if (hdr->magic != 0x33504B4Du) /* "MKP3" */
         return MGV_ERR_INVALID_DATA;
-    u16 len = *(const u16 *)(buf + 6);
+    u16 len = hdr->totalLen;
     if (bufSize < (int)len || len < 0x70u)
         return MGV_ERR_INVALID_DATA;
-    u16 type = *(const u16 *)(buf + 4);
+    u16 type = hdr->pktType;
     if (type != 508 && type != 509 && type != 510)
         return MGV_ERR_INVALID_DATA;
     return (int)len;
 }
 
 static int buildMgl3Packet(u8 *macOut, u8 *buf, int bodyLen, int keySlot, int pktType) {
-    *(u32 *)buf = 0x33504B4Du; /* "MKP3" */
-    *(u16 *)(buf + 4) = (u16)pktType;
-    *(u16 *)(buf + 6) = (u16)(bodyLen + 16);
-    *(u32 *)(buf + 8) = 0;
-    *(u32 *)(buf + 12) = 0;
+    MgvMgl3Hdr *hdr = (MgvMgl3Hdr *)buf;
+    hdr->magic = 0x33504B4Du; /* "MKP3" */
+    hdr->pktType = (u16)pktType;
+    hdr->totalLen = (u16)(bodyLen + 16);
+    hdr->zeroLo = 0;
+    hdr->zeroHi = 0;
 
     if (pktType == 508) {
         memcpy(macOut, buf + 48, 16);
@@ -2433,34 +2626,46 @@ static int buildMgl3Packet(u8 *macOut, u8 *buf, int bodyLen, int keySlot, int pk
 }
 
 static int verifyMgl3Packet(MgvMediaCtx *ctx, const u8 *pkt, u8 *payload, int ekbSlot) {
+    const MgvMgl3Hdr *hdr = (const MgvMgl3Hdr *)pkt;
     int keySlot = sceMgr_driver_C0B28CED(4);
     if (keySlot < 0) return mapMgrError(keySlot);
 
-    u32 bodyLen = (u32)(*(const u16 *)(pkt + 6) - 16);
+    u32 bodyLen = (u32)(hdr->totalLen - 16);
     const u8 *tailMac = pkt + (bodyLen & ~15u);
-    int ret;
+    int ret = 0;
 
-    if (*(const u16 *)(pkt + 4) == 508) {
+    if (hdr->pktType == 508) {
         ret = ctx->deriveContentKey(keySlot, tailMac, ekbSlot);
-        if (ret < 0) { ret = mapMgrError(ret); goto fail; }
-        ret = sceMgr_driver_DA7D8C82(payload + 32, tailMac, NULL, 16, keySlot);
-        if (ret < 0) { ret = mapMgrError(ret); goto fail; }
-        ret = ctx->deriveContentKey(keySlot, payload + 32, ekbSlot);
-        if (ret < 0) { ret = mapMgrError(ret); goto fail; }
-        return keySlot;
+        if (ret < 0) {
+            ret = mapMgrError(ret);
+        } else {
+            ret = sceMgr_driver_DA7D8C82(payload + 32, tailMac, NULL, 16, keySlot);
+            if (ret < 0) {
+                ret = mapMgrError(ret);
+            } else {
+                ret = ctx->deriveContentKey(keySlot, payload + 32, ekbSlot);
+                if (ret < 0)
+                    ret = mapMgrError(ret);
+                else
+                    return keySlot;
+            }
+        }
     } else {
         u32 calc[4];
         ret = sceMgr_driver_9973CD5B(keySlot, payload + 32);
-        if (ret < 0) { ret = mapMgrError(ret); goto fail; }
-        ret = sceMgr_driver_DA7D8C82(calc, pkt, NULL, bodyLen, keySlot);
-        if (ret < 0) { ret = mapMgrError(ret); goto fail; }
-        if (memcmp(calc, tailMac, 16) != 0) {
-            ret = MGV_ERR_INVALID_DATA;
-            goto fail;
+        if (ret < 0) {
+            ret = mapMgrError(ret);
+        } else {
+            ret = sceMgr_driver_DA7D8C82(calc, pkt, NULL, bodyLen, keySlot);
+            if (ret < 0) {
+                ret = mapMgrError(ret);
+            } else if (memcmp(calc, tailMac, 16) != 0) {
+                ret = MGV_ERR_INVALID_DATA;
+            } else {
+                return keySlot;
+            }
         }
-        return keySlot;
     }
-fail:
     sceMgr_driver_E6A203F8(keySlot);
     return ret;
 }
@@ -2471,35 +2676,37 @@ static int verifyLckForTransfer(MgvMediaCtx *ctx, int keyIdx, int titleIdx,
     u32 ikvEntry[4];
     u32 mac[4];
     int keySlot = -1;
+    int ret;
 
-    int ret = readIkvEntryVerified(ctx, ikvEntry, ikvBuf, keyIdx, titleIdx);
-    if (ret < 0) goto done;
-    if ((ikvEntry[0] | ikvEntry[1] | ikvEntry[2] | ikvEntry[3]) == 0) {
-        ret = MGV_ERR_EMPTY_ENTRY;
-        goto done;
-    }
+    do {
+        ret = readIkvEntryVerified(ctx, ikvEntry, ikvBuf, keyIdx, titleIdx);
+        if (ret < 0) break;
+        if ((ikvEntry[0] | ikvEntry[1] | ikvEntry[2] | ikvEntry[3]) == 0) {
+            ret = MGV_ERR_EMPTY_ENTRY;
+            break;
+        }
 
-    int krLen = parseKeyringHeader(lckBody);
-    if (krLen < 0) { ret = krLen; goto done; }
+        int krLen = parseKeyringHeader(lckBody);
+        if (krLen < 0) { ret = krLen; break; }
 
-    keySlot = deriveContentKeySlot(ctx, lckBody + 32, ekbDesc);
-    if (keySlot < 0) { ret = keySlot; goto done; }
+        keySlot = deriveContentKeySlot(ctx, lckBody + 32, ekbDesc);
+        if (keySlot < 0) { ret = keySlot; break; }
 
-    ret = sceMgr_driver_DA7D8C82(mac, lckBody, NULL, (u32)bodyLen, keySlot);
-    if (ret < 0) { ret = mapMgrError(ret); goto done; }
-    if (memcmp(mac, ikvEntry, 16) != 0) {
-        ret = MGV_ERR_HASH_MISMATCH;
-        goto done;
-    }
+        ret = sceMgr_driver_DA7D8C82(mac, lckBody, NULL, (u32)bodyLen, keySlot);
+        if (ret < 0) { ret = mapMgrError(ret); break; }
+        if (memcmp(mac, ikvEntry, 16) != 0) {
+            ret = MGV_ERR_HASH_MISMATCH;
+            break;
+        }
 
-    const u8 *rules = lckBody + (krLen & ~15);
-    int rulesLen = bodyLen - krLen;
-    int rret = (op == 3) ? checkCopyLicense(ctx->mediaType, rules, rulesLen)
-             : (op == 4) ? checkMoveLicense(ctx->mediaType, rules, rulesLen)
-             : -2;
-    ret = (rret < 0) ? mapRuleError(rret) : keySlot;
+        const u8 *rules = lckBody + (krLen & ~15);
+        int rulesLen = bodyLen - krLen;
+        int rret = (op == 3) ? checkCopyLicense(ctx->mediaType, rules, rulesLen)
+                 : (op == 4) ? checkMoveLicense(ctx->mediaType, rules, rulesLen)
+                 : -2;
+        ret = (rret < 0) ? mapRuleError(rret) : keySlot;
+    } while (0);
 
-done:
     if (ret < 0 && keySlot >= 0)
         sceMgr_driver_E6A203F8(keySlot);
     return ret;
@@ -2507,7 +2714,7 @@ done:
 
 static int generateCid(u8 *cidOut) {
     u64 id;
-    u8 rnd[8];
+    u32 rnd[2];
     int ret = sceMgr_driver_2D1CB2B8(&id);
     if (ret < 0) return mapMgrError(ret);
     ret = sceMgr_driver_02117F1E(rnd, g_rngCtx);
@@ -2515,13 +2722,14 @@ static int generateCid(u8 *cidOut) {
     memset(cidOut, 0, 8);
     cidOut[3] = 1;
     cidOut[4] = 2;
-    memcpy(cidOut + 8, &id, 8);
-    memcpy(cidOut + 16, rnd, 8);
+    __builtin_memcpy(cidOut + 8, &id, 8);
+    __builtin_memcpy(cidOut + 16, rnd, 8);
     return 0;
 }
 
 static int createLicenseBody(const MgvBufDesc *outDesc, u8 *keyInfo, const u8 *avout8, int mode) {
     u8 flags = avout8[5];
+    u8 *dst = (u8 *)outDesc->ptr;
     u32 sub = (flags >> 1) & 3u;
     int permMode = ((flags & 1u) == 0) ? 1 : 0;
     if (sub != 0) {
@@ -2534,7 +2742,6 @@ static int createLicenseBody(const MgvBufDesc *outDesc, u8 *keyInfo, const u8 *a
     int ret = generateCid(keyInfo + 34);
     if (ret < 0) return ret;
 
-    u8 *dst = (u8 *)outDesc->ptr;
     int krLen = generateKeyring(dst + 16, keyInfo, mode);
     if (krLen < 0) return krLen;
     int off = 16 + krLen;
@@ -2544,19 +2751,19 @@ static int createLicenseBody(const MgvBufDesc *outDesc, u8 *keyInfo, const u8 *a
         return MGV_ERR_INVALID_ARG;
     off += secLen;
 
-    u8 mac[16];
-    buildMgl3Packet(mac, dst, off, -1, 508);
-    memcpy(dst + off, mac, 16);
+    MgvMac16 mac;
+    buildMgl3Packet((u8 *)&mac, dst, off, -1, 508);
+    *(MgvMac16 *)(dst + off) = mac;
     return off + 16;
 }
 
 static int generateChallengeNonce(MgvMediaCtx *ctx, u8 *nonceOut) {
+    u32 *words = (u32 *)nonceOut;
     int ret = sceMgr_driver_02117F1E(nonceOut, g_rngCtx);
     if (ret < 0) return mapMgrError(ret);
     ret = sceMgr_driver_02117F1E(nonceOut + 8, g_rngCtx);
     if (ret < 0) return mapMgrError(ret);
-    if ((*(u32 *)(nonceOut + 0) | *(u32 *)(nonceOut + 4) |
-         *(u32 *)(nonceOut + 8) | *(u32 *)(nonceOut + 12)) == 0) {
+    if ((words[0] | words[1] | words[2] | words[3]) == 0) {
         ret = sceMgr_driver_02117F1E(nonceOut, g_rngCtx);
         if (ret < 0) return mapMgrError(ret);
     }
@@ -2566,9 +2773,10 @@ static int generateChallengeNonce(MgvMediaCtx *ctx, u8 *nonceOut) {
 }
 
 static int parseMgv1Header(int expectedType, const u8 *buf, int bufSize) {
-    if (*(const u32 *)buf != 0x314E4B4Du) /* "MKN1" */
+    const MgvMgv1Hdr *hdr = (const MgvMgv1Hdr *)buf;
+    if (hdr->magic != 0x314E4B4Du) /* "MKN1" */
         return MGV_ERR_MSG_FORMAT;
-    u16 type = *(const u16 *)(buf + 4);
+    u16 type = hdr->msgType;
     if (type != (u16)expectedType)
         return MGV_ERR_MSG_FORMAT;
     int len = (int)readBe16(buf + 6);
@@ -2580,7 +2788,8 @@ static int parseMgv1Header(int expectedType, const u8 *buf, int bufSize) {
 }
 
 static int verifyMgv1Mac(const u8 *msg, const u8 *sig, u32 sigLen) {
-    if (sig[0] != 2)
+    const MgvMgv1SigHdr *sigHdr = (const MgvMgv1SigHdr *)sig;
+    if (sigHdr->version != 2)
         return MGV_ERR_MSG_VERSION;
     if (sigLen < 0x20u)
         return MGV_ERR_MSG_FORMAT;
@@ -2601,12 +2810,12 @@ static int verifyMgv1Mac(const u8 *msg, const u8 *sig, u32 sigLen) {
     }
 
     int res = MGV_ERR_MSG_FORMAT;
-    if (*(const u16 *)(sig + 2) == 0x1000u) {
+    if (sigHdr->algType == 0x1000u) {
         u32 mac[4];
         ret = sceMgr_driver_4FD151B7(mac, msg, NULL, msgLen, slot);
         if (ret < 0) {
             res = mapMgrError(ret);
-        } else if (memcmp(mac, sig + 16, 16) == 0) {
+        } else if (memcmp(mac, sigHdr->mac, 16) == 0) {
             res = 0;
         } else {
             res = MGV_ERR_MSG_MAC;
@@ -2620,11 +2829,15 @@ static int buildClockChallenge(MgvMediaCtx *ctx, const MgvBufDesc *outDesc) {
     if (outDesc->size < 0x30u)
         return MGV_ERR_INVALID_ARG;
     u8 *dst = (u8 *)outDesc->ptr;
-    *(u32 *)dst = 0x314E4B4Du; /* "MKN1" */
-    *(u16 *)(dst + 4) = 4;
-    dst[6] = 0; dst[7] = 48;
-    memset(dst + 8, 0, 24);
-    dst[16] = 2;
+    MgvMgv1Hdr *hdr = (MgvMgv1Hdr *)dst;
+    hdr->magic = 0x314E4B4Du; /* "MKN1" */
+    hdr->msgType = 4;
+    hdr->lenHi = 0;
+    hdr->lenLo = 48;
+    hdr->zeroLo = 0;
+    hdr->zeroHi = 0;
+    hdr->version = 2;
+    memset(hdr->reserved, 0, 15);
     int ret = generateChallengeNonce(ctx, dst + 32);
     if (ret < 0) return ret;
     ctx->challengeTick = sceRtc_driver_C0F36B91();
@@ -2632,16 +2845,17 @@ static int buildClockChallenge(MgvMediaCtx *ctx, const MgvBufDesc *outDesc) {
 }
 
 static int applyClockResponse(MgvMediaCtx *ctx, const u8 *payload) {
-    if (bswap32(*(const u32 *)(payload + 8)) != 0)
+    const MgvClockPayload *clk = (const MgvClockPayload *)payload;
+    if (bswap32(clk->reservedBe) != 0)
         return MGV_ERR_MSG_FORMAT;
     if (ctx->challengeTick == 0)
         return MGV_ERR_MSG_SESSION;
     u64 now = sceRtc_driver_C0F36B91();
-    u64 timeoutMs = bswap32(*(const u32 *)(payload + 12));
+    u64 timeoutMs = bswap32(clk->timeoutMsBe);
     u64 maxDelta = timeoutMs * (u64)(sceRtc_driver_C66D9686() / 1000u);
     if (now - ctx->challengeTick > maxDelta)
         return MGV_ERR_MSG_TIMEOUT;
-    if (setSecureClockFromBcd(payload) < 0)
+    if (setSecureClockFromBcd(clk->bcdTime) < 0)
         return MGV_ERR_MSG_FORMAT;
     ctx->challengeTick = 0;
     memset(ctx->challengeNonce, 0, 16);
@@ -2672,10 +2886,15 @@ static int buildBindChallenge(MgvMediaCtx *ctx, const MgvBufDesc *outDesc) {
     if (ctx->state < 2u) return MGV_ERR_NOT_OPENED;
     if (outDesc->size < 0x40u) return MGV_ERR_INVALID_ARG;
     u8 *dst = (u8 *)outDesc->ptr;
-    *(u32 *)dst = 0x314E4B4Du; /* "MKN1" */
-    *(u16 *)(dst + 4) = 3;
-    dst[6] = 0; dst[7] = 64;
-    memset(dst + 8, 0, 24);
+    MgvMgv1Hdr *hdr = (MgvMgv1Hdr *)dst;
+    hdr->magic = 0x314E4B4Du; /* "MKN1" */
+    hdr->msgType = 3;
+    hdr->lenHi = 0;
+    hdr->lenLo = 64;
+    hdr->zeroLo = 0;
+    hdr->zeroHi = 0;
+    hdr->version = 0;
+    memset(hdr->reserved, 0, 15);
     int ret = getMediaId(ctx, dst + 32);
     if (ret < 0) return ret;
     ret = checkMediaWritable(ctx);
@@ -2724,7 +2943,7 @@ int module_stop(void) {
 }
 
 int sceMgVideo_driver_44B6C121(void) {
-    MgvMediaCtx *ctx = NULL;
+    MgvMediaCtx *ctx;
     int initRet = mgvCoreInit();
     if (initRet < 0)
         return initRet;
@@ -2748,7 +2967,7 @@ int sceMgVideo_driver_44B6C121(void) {
 }
 
 int sceMgVideo_driver_B593C4A9(void) {
-    MgvMediaCtx *ctx = NULL;
+    MgvMediaCtx *ctx;
     if (findMediaCtx(16, &ctx, 1u) >= 0)
         closeMediaCtx(ctx);
     if (findMediaCtx(32, &ctx, 1u) >= 0)
@@ -2757,7 +2976,7 @@ int sceMgVideo_driver_B593C4A9(void) {
 }
 
 int sceMgVideo_driver_7894CCE9(int devType) {
-    MgvMediaCtx *ctx = NULL;
+    MgvMediaCtx *ctx;
     int ret = findMediaCtx(devType, &ctx, 1u);
     if (ret < 0) return ret;
     if (ctx->state >= 2u)
@@ -2778,50 +2997,51 @@ int sceMgVideo_driver_C189C37B(int devType, u32 keyIdx, const MgvBufDesc *ikvArg
     int ekbSlot = -1;
     int ret;
 
-    ret = findMediaCtx(devType, &ctx, 2u);
-    if (ret < 0) goto done;
-    if (keyIdx >= 32u) { ret = MGV_ERR_INVALID_ARG; goto done; }
-    ret = copyBufDesc(&ikvDesc, ikvArg);
-    if (ret < 0) goto done;
+    do {
+        ret = findMediaCtx(devType, &ctx, 2u);
+        if (ret < 0) break;
+        if (keyIdx >= 32u) { ret = MGV_ERR_INVALID_ARG; break; }
+        ret = copyIkvBufDesc(&ikvDesc, ikvArg);
+        if (ret < 0) break;
 
-    if (ikvDesc.ptr != NULL) {
-        if (ikvDesc.size != 16048u) { ret = MGV_ERR_INVALID_DATA; goto done; }
-        ret = copyBufDesc(&ekbDesc, ekbArg);
-        if (ret < 0) goto done;
-        ret = stripEkb2Header(&ekbDesc);
-        if (ret < 0) goto done;
-        if (bswap32(*(const u32 *)ekbDesc.ptr) != bswap32(*(const u32 *)((const u8 *)ikvDesc.ptr + 48))) {
-            ret = MGV_ERR_INVALID_ARG;
-            goto done;
+        if (ikvDesc.ptr != NULL) {
+            if (ikvDesc.size != 16048u) { ret = MGV_ERR_INVALID_DATA; break; }
+            ret = copyEkbBufDesc(&ekbDesc, ekbArg);
+            if (ret < 0) break;
+            ret = stripEkb2Header(&ekbDesc);
+            if (ret < 0) break;
+            const MgvIkvHdr *ikvHdr = (const MgvIkvHdr *)ikvDesc.ptr;
+            if (bswap32(*(const u32 *)ekbDesc.ptr) != bswap32(ikvHdr->ekbId)) {
+                ret = MGV_ERR_INVALID_ARG;
+                break;
+            }
+            ekbSlot = loadEkbKeySlot(&ekbDesc);
+            if (ekbSlot < 0) { ret = ekbSlot; break; }
+            ret = verifyIkv(ctx, icv, hash, ekbMac, (const u8 *)ikvDesc.ptr, ekbSlot);
+            if (ret < 0) break;
+        } else {
+            memset(icv, 0, sizeof(icv));
         }
-        ekbSlot = loadEkbKeySlot(&ekbDesc);
-        if (ekbSlot < 0) { ret = ekbSlot; goto done; }
-        ret = verifyIkv(ctx, icv, hash, ekbMac, (const u8 *)ikvDesc.ptr, ekbSlot);
-        if (ret < 0) goto free_slot;
-    } else {
-        memset(icv, 0, sizeof(icv));
-    }
 
-    if (memcmp(icv, ctx->icvTable + 16 * keyIdx, 16) != 0) {
-        ret = MGV_ERR_HASH_MISMATCH;
-        goto free_slot;
-    }
+        if (memcmp(icv, ctx->icvTable + 16 * keyIdx, 16) != 0) {
+            ret = MGV_ERR_HASH_MISMATCH;
+            break;
+        }
 
-    if (ikvDesc.ptr != NULL) {
-        memcpy(ctx->ekbMacTable + 8 * keyIdx, ekbMac, 8);
-        memcpy(ctx->hashTable + 8 * keyIdx, hash, 8);
-    } else {
-        memset(ctx->ekbMacTable + 8 * keyIdx, 0, 8);
-        memset(ctx->hashTable + 8 * keyIdx, 0, 8);
-    }
-    ctx->state = 3;
-    ctx->verifiedMask |= (1u << keyIdx);
-    ret = 0;
+        if (ikvDesc.ptr != NULL) {
+            memcpy(ctx->ekbMacTable + 8 * keyIdx, ekbMac, 8);
+            memcpy(ctx->hashTable + 8 * keyIdx, hash, 8);
+        } else {
+            memset(ctx->ekbMacTable + 8 * keyIdx, 0, 8);
+            memset(ctx->hashTable + 8 * keyIdx, 0, 8);
+        }
+        ctx->state = 3;
+        ctx->verifiedMask |= (1u << keyIdx);
+        ret = 0;
+    } while (0);
 
-free_slot:
     if (ekbSlot >= 0)
         sceMgr_driver_E6A203F8(ekbSlot);
-done:
     if ((u32)(ret - MGV_ERR_MGR_ERROR_21) < 2u && ctx != NULL)
         ctx->state = 1;
     return ret;
@@ -2836,54 +3056,53 @@ int sceMgVideo_driver_8CFD3E08(int devType, u32 keyIdx, int titleIdx,
     int slot = -1;
     int ret;
 
-    ret = findMediaCtx(devType, &ctx, 2u);
-    if (ret < 0) goto done;
-    if (ctx->state < 3u) { ret = MGV_ERR_NOT_VERIFIED; goto done; }
-    if (keyIdx >= 32u || (u32)(titleIdx - 1) >= 999u) { ret = MGV_ERR_INVALID_ARG; goto done; }
+    do {
+        ret = findMediaCtx(devType, &ctx, 2u);
+        if (ret < 0) break;
+        if (ctx->state < 3u) { ret = MGV_ERR_NOT_VERIFIED; break; }
+        if (keyIdx >= 32u || (u32)(titleIdx - 1) >= 999u) { ret = MGV_ERR_INVALID_ARG; break; }
 
-    ret = copyBufDesc(&lckDesc, lckArg);
-    if (ret < 0) goto done;
-    ret = checkLckDesc(&lckDesc);
-    if (ret < 0) goto done;
-    ret = copyBufDesc(&ikvDesc, ikvArg);
-    if (ret < 0) goto done;
-    ret = checkIkvDesc(&ikvDesc);
-    if (ret < 0) goto done;
-    ret = copyBufDesc(&ekbDesc, ekbArg);
-    if (ret < 0) goto done;
-    ret = stripEkb2Header(&ekbDesc);
-    if (ret < 0) goto done;
+        ret = copyLckBufDesc(&lckDesc, lckArg);
+        if (ret < 0) break;
+        ret = checkLckDesc(&lckDesc);
+        if (ret < 0) break;
+        ret = copyIkvBufDesc(&ikvDesc, ikvArg);
+        if (ret < 0) break;
+        ret = checkIkvDesc(&ikvDesc);
+        if (ret < 0) break;
+        ret = copyEkbBufDesc(&ekbDesc, ekbArg);
+        if (ret < 0) break;
+        ret = stripEkb2Header(&ekbDesc);
+        if (ret < 0) break;
 
-    slot = allocContentSlot(ctx);
-    if (slot < 0) { ret = slot; goto done; }
+        slot = allocContentSlot(ctx);
+        if (slot < 0) { ret = slot; break; }
 
-    MgvContentCtx *cctx = getContentSlot((u32)slot);
-    int needLock = (ctx->mediaFlags & 0x20u) != 0;
-    if (needLock) sceKernelPowerLock(0);
+        MgvContentCtx *cctx = getContentSlot((u32)slot);
+        int needLock = (ctx->mediaFlags & 0x20u) != 0;
+        if (needLock) sceKernelPowerLock(0);
 
-    int keySlot = openLck(ctx, keyringHdr, cid, (int)keyIdx, titleIdx, &lckDesc, (const u8 *)ikvDesc.ptr, &ekbDesc);
-    if (keySlot < 0) {
-        if (needLock) sceKernelPowerUnlock(0);
-        ret = keySlot;
-        goto fail_slot;
-    }
-    cctx->mgrKeySlot = keySlot;
-    if (needLock) {
-        ret = saveContentKey(cctx);
-        sceKernelPowerUnlock(0);
-        if (ret < 0) goto fail_slot;
-    }
+        int keySlot = openLck(ctx, keyringHdr, cid, (int)keyIdx, titleIdx, &lckDesc, (const u8 *)ikvDesc.ptr, &ekbDesc);
+        if (keySlot < 0) {
+            if (needLock) sceKernelPowerUnlock(0);
+            ret = keySlot;
+            break;
+        }
+        cctx->mgrKeySlot = keySlot;
+        if (needLock) {
+            ret = saveContentKey(cctx);
+            sceKernelPowerUnlock(0);
+            if (ret < 0) break;
+        }
 
-    memcpy(cctx->keys, keyringHdr + 48, 48);
-    cctx->keyCount = (s16)readBe16(keyringHdr + 20);
-    memcpy(cctx->cid, cid, 24);
-    ret = slot;
-    goto done;
+        memcpy(cctx->keys, keyringHdr + 48, sizeof(cctx->keys));
+        cctx->keyCount = (s16)readBe16(keyringHdr + 20);
+        memcpy(cctx->cid, cid, 24);
+        ret = slot;
+    } while (0);
 
-fail_slot:
-    if (slot >= 0)
+    if (ret < 0 && slot >= 0)
         freeContentSlot((u32)slot);
-done:
     if ((u32)(ret - MGV_ERR_MGR_ERROR_21) < 2u && ctx != NULL)
         ctx->state = 1;
     return ret;
@@ -2898,57 +3117,59 @@ int sceMgVideo_driver_68E28BCE(u32 contentIdx) {
 int sceMgVideo_driver_5BDB10E1(u32 contentIdx, const u32 *sinfBox) {
     int streamIdx = -1;
     int ret = MGV_ERR_NOT_INITIALIZED;
-    if (g_initRefCount <= 0) goto done;
 
-    MgvContentCtx *cctx = getContentSlot(contentIdx);
-    if (cctx == NULL) { ret = MGV_ERR_INVALID_ARG; goto done; }
-    if (cctx->media->state < 2u) { ret = MGV_ERR_NOT_OPENED; goto done; }
-    if (sinfBox == NULL) { ret = MGV_ERR_INVALID_ARG; goto done; }
+    do {
+        if (g_initRefCount <= 0) break;
 
-    int sinfSize = checkBoxSizeAddr(sinfBox);
-    if (sinfSize < 0) { ret = sinfSize; goto done; }
+        MgvContentCtx *cctx = getContentSlot(contentIdx);
+        if (cctx == NULL) { ret = MGV_ERR_INVALID_ARG; break; }
+        if (cctx->media->state < 2u) { ret = MGV_ERR_NOT_OPENED; break; }
+        if (sinfBox == NULL) { ret = MGV_ERR_INVALID_ARG; break; }
 
-    const u32 *schi = NULL;
-    ret = parseSinfBox(&schi, (const u8 *)sinfBox, (u32)sinfSize);
-    if (ret < 0) goto done;
+        int sinfSize = checkBoxSizeAddr(sinfBox);
+        if (sinfSize < 0) { ret = sinfSize; break; }
 
-    streamIdx = allocStreamSlot(cctx);
-    if (streamIdx < 0) { ret = streamIdx; goto done; }
+        const u32 *schi = NULL;
+        ret = parseSinfBox(&schi, (const u8 *)sinfBox, (u32)sinfSize);
+        if (ret < 0) break;
 
-    MgvStreamSlot *slot = &cctx->streams[streamIdx];
-    u32 alg = 0;
-    u8 cid[24];
-    int keyId = parseSchiBox(&alg, cid, slot->iv, schi);
-    if (keyId < 0) { ret = keyId; goto done; }
-    if (memcmp(cid, cctx->cid, 24) != 0 || keyId >= cctx->keyCount) {
-        ret = MGV_ERR_INVALID_DATA;
-        goto done;
-    }
-    if (keyId >= 3) { ret = MGV_ERR_UNSUPPORTED_VER; goto done; }
+        streamIdx = allocStreamSlot(cctx);
+        if (streamIdx < 0) { ret = streamIdx; break; }
 
-    slot->streamType = (keyId == 0) ? 1u : (keyId == 1) ? 2u : 0u;
-    const u8 *keyPtr = cctx->keys + 16 * keyId;
-    if (alg == 8) {
-        slot->keyPtr = keyPtr;
-        slot->rangeMin = bswap32(*(const u32 *)(keyPtr + 8));
-        slot->rangeMax = bswap32(*(const u32 *)(keyPtr + 12));
-    } else if (alg == 9) {
-        slot->keyPtr = NULL;
-    } else {
-        ret = MGV_ERR_UNSUPPORTED_VER;
-        goto done;
-    }
-    slot->keyMode = (s32)(uintptr_t)keyPtr;
-    ret = (int)((contentIdx << 8) | (u8)streamIdx);
+        MgvStreamSlot *slot = &cctx->streams[streamIdx];
+        u32 alg = 0;
+        u8 cid[24];
+        int keyId = parseSchiBox(&alg, cid, slot->iv, schi);
+        if (keyId < 0) { ret = keyId; break; }
+        if (memcmp(cid, cctx->cid, 24) != 0 || keyId >= cctx->keyCount) {
+            ret = MGV_ERR_INVALID_DATA;
+            break;
+        }
+        if (keyId >= 3) { ret = MGV_ERR_UNSUPPORTED_VER; break; }
 
-done:
+        slot->streamType = (keyId == 0) ? 1u : (keyId == 1) ? 2u : 0u;
+        const MgvKeyEntry *keyEntry = &cctx->keys[keyId];
+        if (alg == 8) {
+            slot->keyPtr = keyEntry;
+            slot->rangeMin = bswap32(keyEntry->rangeMinBe);
+            slot->rangeMax = bswap32(keyEntry->rangeMaxBe);
+        } else if (alg == 9) {
+            slot->keyPtr = NULL;
+        } else {
+            ret = MGV_ERR_UNSUPPORTED_VER;
+            break;
+        }
+        slot->keyMode = (s32)(uintptr_t)keyEntry;
+        ret = (int)((contentIdx << 8) | (u8)streamIdx);
+    } while (0);
+
     if (ret < 0 && (s32)contentIdx >= 0)
         freeStreamSlot(contentIdx, streamIdx);
     return ret;
 }
 
 int sceMgVideo_driver_3F5EC8C7(int streamHandle) {
-    u32 cidx = (u32)streamHandle >> 8;
+    u32 cidx = (u32)(streamHandle >> 8);
     u8 sidx = (u8)streamHandle;
     if (g_initRefCount > 0 && getContentSlot(cidx) != NULL)
         freeStreamSlot(cidx, sidx);
@@ -2967,82 +3188,80 @@ int sceMgVideo_driver_8B2D15A2(int streamHandle) {
 int sceMgVideo_driver_68908973(u32 contentIdx, const u8 *hdr, u32 hdrSize, u32 format) {
     int streamIdx = -1;
     int ret = MGV_ERR_NOT_INITIALIZED;
-    if (g_initRefCount <= 0) goto done;
 
-    MgvContentCtx *cctx = getContentSlot(contentIdx);
-    if (cctx == NULL) { ret = MGV_ERR_INVALID_ARG; goto done; }
-    if (cctx->media->state < 2u) { ret = MGV_ERR_NOT_OPENED; goto done; }
-    if (hdr == NULL || hdrSize < 0x40u) { ret = MGV_ERR_INVALID_ARG; goto done; }
-    ret = checkUserRangeUncached(hdr, hdrSize);
-    if (ret < 0) goto done;
+    do {
+        if (g_initRefCount <= 0) break;
 
-    streamIdx = allocStreamSlot(cctx);
-    if (streamIdx < 0) { ret = streamIdx; goto done; }
+        MgvContentCtx *cctx = getContentSlot(contentIdx);
+        if (cctx == NULL) { ret = MGV_ERR_INVALID_ARG; break; }
+        if (cctx->media->state < 2u) { ret = MGV_ERR_NOT_OPENED; break; }
+        if (hdr == NULL || hdrSize < 0x40u) { ret = MGV_ERR_INVALID_ARG; break; }
+        ret = checkUserRangeUncached(hdr, hdrSize);
+        if (ret < 0) break;
 
-    MgvStreamSlot *slot = &cctx->streams[streamIdx];
-    const u8 *ivSrc;
-    const u8 *cidSrc;
-    int keyId;
-    int encMode;
-    switch (format) {
-        case 2:
+        streamIdx = allocStreamSlot(cctx);
+        if (streamIdx < 0) { ret = streamIdx; break; }
+
+        MgvStreamSlot *slot = &cctx->streams[streamIdx];
+        const u8 *ivSrc;
+        const u8 *cidSrc;
+        int keyId;
+        int encMode;
+        if (format == 2) {
             encMode = readBe16(hdr + 22);
             ivSrc = (hdrSize >= 0xA0u) ? (hdr + 144) : (const u8 *)g_zero16;
             keyId = 0;
             cidSrc = hdr + 24;
-            break;
-        case 3:
+        } else if (format == 3) {
             encMode = readBe16(hdr + 8);
             ivSrc = (hdrSize >= 0x50u) ? (hdr + 64) : (const u8 *)g_zero16;
             keyId = 0;
             cidSrc = hdr + 32;
-            break;
-        case 4:
+        } else if (format == 4) {
             encMode = readBe16(hdr + 8);
             ivSrc = (hdrSize >= 0x40u) ? (hdr + 48) : (const u8 *)g_zero16;
             keyId = 2;
             cidSrc = hdr + 16;
-            break;
-        default:
-            ret = MGV_ERR_INVALID_ARG;
-            goto done;
-    }
-
-    memcpy(slot->iv, ivSrc, 16);
-    if (memcmp(cidSrc, cctx->cid, 24) != 0 || keyId >= cctx->keyCount) {
-        ret = MGV_ERR_INVALID_DATA;
-        goto done;
-    }
-
-    const u8 *keyPtr = cctx->keys + 16 * keyId;
-    if (encMode == 0) {
-        slot->keyMode = -1;
-    } else if (encMode == 1) {
-        slot->keyPtr = NULL;
-        slot->keyMode = (s32)(uintptr_t)keyPtr;
-    } else if (encMode == 2) {
-        if (keyId != 2) {
-            slot->keyPtr = keyPtr;
-            slot->rangeMin = bswap32(*(const u32 *)(keyPtr + 8));
-            slot->rangeMax = bswap32(*(const u32 *)(keyPtr + 12));
         } else {
-            slot->keyPtr = NULL;
+            ret = MGV_ERR_INVALID_ARG;
+            break;
         }
-        slot->keyMode = (s32)(uintptr_t)keyPtr;
-    } else {
-        ret = MGV_ERR_UNSUPPORTED_VER;
-        goto done;
-    }
-    ret = (int)((contentIdx << 8) | (u8)streamIdx);
 
-done:
+        memcpy(slot->iv, ivSrc, 16);
+        if (memcmp(cidSrc, cctx->cid, 24) != 0 || keyId >= cctx->keyCount) {
+            ret = MGV_ERR_INVALID_DATA;
+            break;
+        }
+
+        const MgvKeyEntry *keyEntry = &cctx->keys[keyId];
+        if (encMode == 0) {
+            slot->keyMode = -1;
+        } else if (encMode == 1) {
+            slot->keyPtr = NULL;
+            slot->keyMode = (s32)(uintptr_t)keyEntry;
+        } else if (encMode == 2) {
+            if (keyId != 2) {
+                slot->keyPtr = keyEntry;
+                slot->rangeMin = bswap32(keyEntry->rangeMinBe);
+                slot->rangeMax = bswap32(keyEntry->rangeMaxBe);
+            } else {
+                slot->keyPtr = NULL;
+            }
+            slot->keyMode = (s32)(uintptr_t)keyEntry;
+        } else {
+            ret = MGV_ERR_UNSUPPORTED_VER;
+            break;
+        }
+        ret = (int)((contentIdx << 8) | (u8)streamIdx);
+    } while (0);
+
     if (ret < 0 && (s32)contentIdx >= 0)
         freeStreamSlot(contentIdx, streamIdx);
     return ret;
 }
 
 int sceMgVideo_driver_AD6C48A0(int streamHandle) {
-    u32 cidx = (u32)streamHandle >> 8;
+    u32 cidx = (u32)(streamHandle >> 8);
     u8 sidx = (u8)streamHandle;
     if (g_initRefCount > 0 && getContentSlot(cidx) != NULL)
         freeStreamSlot(cidx, sidx);
@@ -3054,66 +3273,68 @@ int sceMgVideo_driver_6F1D18F4(int streamHandle, u8 *dst, const u8 *src, u32 siz
     MgvContentCtx *cctx = NULL;
     int ret = MGV_ERR_NOT_INITIALIZED;
 
-    if (g_initRefCount <= 0) goto done;
-    if (streamHandle < 0 || dst == NULL || src == NULL || (size & 0xFu) != 0 || size < 0x11u) {
-        ret = MGV_ERR_INVALID_ARG;
-        goto done;
-    }
-    ret = checkUserRangeUncached(src, size);
-    if (ret < 0) goto done;
-    ret = checkUserRangeUncached(dst, size);
-    if (ret < 0) goto done;
-
-    ret = lookupStream(streamHandle, &slot, &cctx);
-    if (ret < 0) goto done;
-    if (slot->keyMode == 0 || slot->keyMode == -1) {
-        ret = MGV_ERR_INVALID_ARG;
-        goto done;
-    }
-
-    u32 payloadSize = size - 16u;
-    const void *keyData = (const void *)(uintptr_t)slot->keyMode;
-    const void *ivData  = src;
-    u32 ctrKey[4];
-
-    if (slot->keyPtr != NULL) {
-        u32 rawIdx = *(const u32 *)(src + 12);
-        u32 idx = bswap32(rawIdx);
-        if (idx < slot->rangeMin || idx >= slot->rangeMax) {
-            ret = MGV_ERR_INVALID_DATA;
-            goto done;
+    do {
+        if (g_initRefCount <= 0) break;
+        if (streamHandle < 0 || dst == NULL || src == NULL || (size & 0xFu) != 0 || size < 0x11u) {
+            ret = MGV_ERR_INVALID_ARG;
+            break;
         }
-        ctrKey[0] = *(const u32 *)(slot->keyPtr + 0);
-        ctrKey[1] = *(const u32 *)(slot->keyPtr + 4);
-        ctrKey[2] = 0;
-        ctrKey[3] = rawIdx;
-        keyData = ctrKey;
-        ivData  = slot->iv;
-    }
+        ret = checkUserRangeUncached(src, size);
+        if (ret < 0) break;
+        ret = checkUserRangeUncached(dst, size);
+        if (ret < 0) break;
 
-    int decSlot = sceMgr_driver_C0B28CED(5);
-    if (decSlot < 0) {
-        ret = mapMgrError(decSlot);
-        goto done;
-    }
+        ret = lookupStream(streamHandle, &slot, &cctx);
+        if (ret < 0) break;
+        if (slot->keyMode == 0 || slot->keyMode == -1) {
+            ret = MGV_ERR_INVALID_ARG;
+            break;
+        }
 
-    sceKernelPowerLock(0);
-    ret = ensureKeyLoaded(cctx);
-    if (ret >= 0)
-        ret = sceMgr_driver_7DB1B0E5(decSlot, keyData, cctx->mgrKeySlot);
-    if (ret >= 0)
-        ret = sceMgr_driver_9AE6ED58(dst, src + 16, payloadSize, decSlot, ivData);
-    sceKernelPowerUnlock(0);
-    sceMgr_driver_E6A203F8(decSlot);
+        u32 payloadSize = size - 16u;
+        const void *keyData = (const void *)(uintptr_t)slot->keyMode;
+        const void *ivData  = src;
+        u32 ctrKey[4];
 
-    if (ret < 0) {
-        ret = mapMgrError(ret);
-    } else {
-        u8 pad = dst[payloadSize - 1];
-        ret = (pad < 17u) ? (int)(payloadSize - pad) : MGV_ERR_INVALID_DATA;
-    }
+        if (slot->keyPtr != NULL) {
+            const u32 *srcWords = (const u32 *)src;
+            u32 rawIdx = srcWords[3];
+            u32 idx = bswap32(rawIdx);
+            if (idx < slot->rangeMin || idx >= slot->rangeMax) {
+                ret = MGV_ERR_INVALID_DATA;
+                break;
+            }
+            ctrKey[0] = slot->keyPtr->keyLo;
+            ctrKey[1] = slot->keyPtr->keyHi;
+            ctrKey[2] = 0;
+            ctrKey[3] = rawIdx;
+            keyData = ctrKey;
+            ivData  = slot->iv;
+        }
 
-done:
+        int decSlot = sceMgr_driver_C0B28CED(5);
+        if (decSlot < 0) {
+            ret = mapMgrError(decSlot);
+            break;
+        }
+
+        sceKernelPowerLock(0);
+        ret = ensureKeyLoaded(cctx);
+        if (ret >= 0)
+            ret = sceMgr_driver_7DB1B0E5(decSlot, keyData, cctx->mgrKeySlot);
+        if (ret >= 0)
+            ret = sceMgr_driver_9AE6ED58(dst, src + 16, payloadSize, decSlot, ivData);
+        sceKernelPowerUnlock(0);
+        sceMgr_driver_E6A203F8(decSlot);
+
+        if (ret < 0) {
+            ret = mapMgrError(ret);
+        } else {
+            u8 pad = dst[payloadSize - 1];
+            ret = (pad < 17u) ? (int)(payloadSize - pad) : MGV_ERR_INVALID_DATA;
+        }
+    } while (0);
+
     if ((u32)(ret - MGV_ERR_MGR_ERROR_21) < 2u && cctx != NULL && cctx->media != NULL)
         cctx->media->state = 1;
     return ret;
@@ -3125,64 +3346,65 @@ static int cryptStreamCommon(int streamHandle, u8 *dst, const u8 *src, u32 size,
     MgvContentCtx *cctx = NULL;
     int ret = MGV_ERR_NOT_INITIALIZED;
 
-    if (g_initRefCount <= 0) goto done;
-    if (streamHandle < 0 || dst == NULL || src == NULL || size < 16u || (size & 0xFu) != 0) {
-        ret = MGV_ERR_INVALID_ARG;
-        goto done;
-    }
-    ret = checkUserRangeUncached(src, size);
-    if (ret < 0) goto done;
-    ret = checkUserRangeUncached(dst, size);
-    if (ret < 0) goto done;
-    if (ivArg != NULL && ((getK1() << 11) & (u32)(uintptr_t)ivArg & 0x80000000u) != 0) {
-        ret = SCE_KERNEL_ERROR_ILLEGAL_ADDR;
-        goto done;
-    }
-
-    ret = lookupStream(streamHandle, &slot, &cctx);
-    if (ret < 0) goto done;
-    if (slot->keyMode == 0) {
-        ret = MGV_ERR_INVALID_ARG;
-        goto done;
-    }
-    if (slot->keyMode == -1) {
-        memcpy(dst, src, size);
-        return (int)size;
-    }
-
-    const void *keyData = (const void *)(uintptr_t)slot->keyMode;
-    u32 ctrKey[4];
-    if (slot->keyPtr != NULL) {
-        if (blockIdx < slot->rangeMin || blockIdx >= slot->rangeMax) {
-            ret = MGV_ERR_INVALID_DATA;
-            goto done;
+    do {
+        if (g_initRefCount <= 0) break;
+        if (streamHandle < 0 || dst == NULL || src == NULL || size < 16u || (size & 0xFu) != 0) {
+            ret = MGV_ERR_INVALID_ARG;
+            break;
         }
-        ctrKey[0] = *(const u32 *)(slot->keyPtr + 0);
-        ctrKey[1] = *(const u32 *)(slot->keyPtr + 4);
-        ctrKey[2] = 0;
-        ctrKey[3] = bswap32(blockIdx);
-        keyData = ctrKey;
-    }
+        ret = checkUserRangeUncached(src, size);
+        if (ret < 0) break;
+        ret = checkUserRangeUncached(dst, size);
+        if (ret < 0) break;
+        if (ivArg != NULL && ((getK1() << 11) & (u32)(uintptr_t)ivArg & 0x80000000u) != 0) {
+            ret = SCE_KERNEL_ERROR_ILLEGAL_ADDR;
+            break;
+        }
 
-    const void *iv = (ivArg != NULL) ? ivArg : slot->iv;
-    int decSlot = sceMgr_driver_C0B28CED(5);
-    if (decSlot < 0) {
-        ret = mapMgrError(decSlot);
-        goto done;
-    }
+        ret = lookupStream(streamHandle, &slot, &cctx);
+        if (ret < 0) break;
+        if (slot->keyMode == 0) {
+            ret = MGV_ERR_INVALID_ARG;
+            break;
+        }
+        if (slot->keyMode == -1) {
+            memcpy(dst, src, size);
+            return (int)size;
+        }
 
-    sceKernelPowerLock(0);
-    ret = ensureKeyLoaded(cctx);
-    if (ret >= 0)
-        ret = sceMgr_driver_7DB1B0E5(decSlot, keyData, cctx->mgrKeySlot);
-    if (ret >= 0)
-        ret = cryptFn(dst, src, size, decSlot, iv);
-    sceKernelPowerUnlock(0);
-    sceMgr_driver_E6A203F8(decSlot);
+        const void *keyData = (const void *)(uintptr_t)slot->keyMode;
+        u32 ctrKey[4];
+        if (slot->keyPtr != NULL) {
+            if (blockIdx < slot->rangeMin || blockIdx >= slot->rangeMax) {
+                ret = MGV_ERR_INVALID_DATA;
+                break;
+            }
+            ctrKey[0] = slot->keyPtr->keyLo;
+            ctrKey[1] = slot->keyPtr->keyHi;
+            ctrKey[2] = 0;
+            ctrKey[3] = bswap32(blockIdx);
+            keyData = ctrKey;
+        }
 
-    ret = (ret < 0) ? mapMgrError(ret) : (int)size;
+        const void *iv = (ivArg != NULL) ? ivArg : slot->iv;
+        int decSlot = sceMgr_driver_C0B28CED(5);
+        if (decSlot < 0) {
+            ret = mapMgrError(decSlot);
+            break;
+        }
 
-done:
+        sceKernelPowerLock(0);
+        ret = ensureKeyLoaded(cctx);
+        if (ret >= 0)
+            ret = sceMgr_driver_7DB1B0E5(decSlot, keyData, cctx->mgrKeySlot);
+        if (ret >= 0)
+            ret = cryptFn(dst, src, size, decSlot, iv);
+        sceKernelPowerUnlock(0);
+        sceMgr_driver_E6A203F8(decSlot);
+
+        ret = (ret < 0) ? mapMgrError(ret) : (int)size;
+    } while (0);
+
     if ((u32)(ret - MGV_ERR_MGR_ERROR_21) < 2u && cctx != NULL && cctx->media != NULL)
         cctx->media->state = 1;
     return ret;
@@ -3200,82 +3422,86 @@ int sceMgVideo_driver_37E95490(int devType, u32 keyIdx, const MgvBufDesc *ikvArg
                                const s16 *indices, int count, const MgvBufDesc *ekbArg) {
     MgvMediaCtx *ctx = NULL;
     MgvBufDesc ikvDesc, ekbDesc;
-    int ret = findMediaCtx(devType, &ctx, 1u);
-    if (ret < 0) goto done;
-    if (keyIdx >= 32u) { ret = MGV_ERR_INVALID_ARG; goto done; }
+    int ret;
 
-    if (count == -1) {
-        memset(ctx->ekbMacTable + 8 * keyIdx, 0, 8);
-        memset(ctx->hashTable + 8 * keyIdx, 0, 8);
-        memset(ctx->icvTable + 16 * keyIdx, 0, 16);
-        ctx->state = 3;
-        ctx->verifiedMask |= (1u << keyIdx);
-        return 0;
-    }
-    if (count < 0) { ret = MGV_ERR_INVALID_ARG; goto done; }
-    if (ctx->state < 3u || (ctx->verifiedMask & (1u << keyIdx)) == 0) {
-        ret = MGV_ERR_NOT_VERIFIED;
-        goto done;
-    }
+    do {
+        ret = findMediaCtx(devType, &ctx, 1u);
+        if (ret < 0) break;
+        if (keyIdx >= 32u) { ret = MGV_ERR_INVALID_ARG; break; }
 
-    ret = copyBufDesc(&ikvDesc, ikvArg);
-    if (ret < 0) goto done;
-    ret = checkIkvDesc(&ikvDesc);
-    if (ret < 0) goto done;
-    if (count > 0) {
-        if (indices == NULL) { ret = MGV_ERR_INVALID_ARG; goto done; }
-        ret = checkUserRangeUncached(indices, (u32)(2 * count));
-        if (ret < 0) goto done;
-    }
-    ret = copyBufDesc(&ekbDesc, ekbArg);
-    if (ret < 0) goto done;
-    ret = stripEkb2Header(&ekbDesc);
-    if (ret < 0) goto done;
-
-    int ekbSlot = loadEkbKeySlot(&ekbDesc);
-    if (ekbSlot < 0) { ret = ekbSlot; goto done; }
-
-    u8 *ikvBuf = (u8 *)ikvDesc.ptr;
-    u8 hdr48[48];
-    memcpy(hdr48, ikvBuf + 16, 48);
-    u32 ekbId = *(const u32 *)ekbDesc.ptr;
-    memcpy(hdr48 + 32, &ekbId, 4);
-
-    u8 newIcv[16];
-    u32 newHash[2], newEkbMac[2];
-    int slot = deriveIkvMacs(ctx, newIcv, newHash, newEkbMac, hdr48, ekbSlot, ctx->macKeySlot);
-    ret = slot;
-    if (slot >= 0) {
-        ret = verifyMediaId(ctx, (const u32 *)(hdr48 + 16));
-        if (ret >= 0)
-            ret = verifyEkbMac(ctx, (int)keyIdx, newEkbMac, &ekbDesc, ekbSlot);
-        if (ret >= 0) {
-            IkvUpdateArgs uargs = {
-                ctx, (int)keyIdx, ikvBuf + 64, indices, count,
-                g_zero16, newIcv, newHash, slot
-            };
-            ret = updateIkvEntries(&uargs);
-            if (ret >= 0) {
-                memcpy(ikvBuf + 48, &ekbId, 4);
-                memcpy(ctx->ekbMacTable + 8 * keyIdx, newEkbMac, 8);
-                memcpy(ctx->hashTable + 8 * keyIdx, newHash, 8);
-                memcpy(ctx->icvTable + 16 * keyIdx, newIcv, 16);
-                *(u16 *)(ikvBuf + 6) = 35;
-                ret = 0;
-            }
+        if (count == -1) {
+            memset(ctx->ekbMacTable + 8 * keyIdx, 0, 8);
+            memset(ctx->hashTable + 8 * keyIdx, 0, 8);
+            memset(ctx->icvTable + 16 * keyIdx, 0, 16);
+            ctx->state = 3;
+            ctx->verifiedMask |= (1u << keyIdx);
+            return 0;
         }
-        sceMgr_driver_E6A203F8(slot);
-    }
-    sceMgr_driver_E6A203F8(ekbSlot);
+        if (count < 0) { ret = MGV_ERR_INVALID_ARG; break; }
+        if (ctx->state < 3u || (ctx->verifiedMask & (1u << keyIdx)) == 0) {
+            ret = MGV_ERR_NOT_VERIFIED;
+            break;
+        }
 
-done:
+        ret = copyIkvBufDesc(&ikvDesc, ikvArg);
+        if (ret < 0) break;
+        ret = checkIkvDesc(&ikvDesc);
+        if (ret < 0) break;
+        if (count > 0) {
+            if (indices == NULL) { ret = MGV_ERR_INVALID_ARG; break; }
+            ret = checkUserRangeUncached(indices, (u32)(2 * count));
+            if (ret < 0) break;
+        }
+        ret = copyEkbBufDesc(&ekbDesc, ekbArg);
+        if (ret < 0) break;
+        ret = stripEkb2Header(&ekbDesc);
+        if (ret < 0) break;
+
+        int ekbSlot = loadEkbKeySlot(&ekbDesc);
+        if (ekbSlot < 0) { ret = ekbSlot; break; }
+
+        u8 *ikvBuf = (u8 *)ikvDesc.ptr;
+        MgvIkvHdr *ikvHdr = (MgvIkvHdr *)ikvBuf;
+        u8 hdr48[48];
+        memcpy(hdr48, ikvBuf + 16, 48);
+        u32 ekbId = *(const u32 *)ekbDesc.ptr;
+        memcpy(hdr48 + 32, &ekbId, 4);
+
+        u8 newIcv[16];
+        u32 newHash[2], newEkbMac[2];
+        int slot = deriveIkvMacs(ctx, newIcv, newHash, newEkbMac, hdr48, ekbSlot, ctx->macKeySlot);
+        ret = slot;
+        if (slot >= 0) {
+            ret = verifyMediaId(ctx, (const u32 *)(hdr48 + 16));
+            if (ret >= 0)
+                ret = verifyEkbMac(ctx, (int)keyIdx, newEkbMac, &ekbDesc, ekbSlot);
+            if (ret >= 0) {
+                IkvUpdateArgs uargs = {
+                    ctx, (int)keyIdx, ikvBuf + 64, indices, count,
+                    g_zero16, newIcv, newHash, slot
+                };
+                ret = updateIkvEntries(&uargs);
+                if (ret >= 0) {
+                    ikvHdr->ekbId = ekbId;
+                    memcpy(ctx->ekbMacTable + 8 * keyIdx, newEkbMac, 8);
+                    memcpy(ctx->hashTable + 8 * keyIdx, newHash, 8);
+                    memcpy(ctx->icvTable + 16 * keyIdx, newIcv, 16);
+                    ikvHdr->version = 35;
+                    ret = 0;
+                }
+            }
+            sceMgr_driver_E6A203F8(slot);
+        }
+        sceMgr_driver_E6A203F8(ekbSlot);
+    } while (0);
+
     if ((u32)(ret - MGV_ERR_MGR_ERROR_21) < 2u && ctx != NULL)
         ctx->state = 1;
     return ret;
 }
 
 int sceMgVideo_driver_62FF3C70(int devType) {
-    MgvMediaCtx *ctx = NULL;
+    MgvMediaCtx *ctx;
     int ret = findMediaCtx(devType, &ctx, 3u);
     if (ret >= 0) {
         clearChallenge(ctx);
@@ -3291,7 +3517,7 @@ int sceMgVideo_driver_62FF3C70(int devType) {
 }
 
 int sceMgVideo_driver_39712740(int devType) {
-    MgvMediaCtx *ctx = NULL;
+    MgvMediaCtx *ctx;
     int ret = findMediaCtx(devType, &ctx, 1u);
     if (ret >= 0) {
         ctx->state = 1;
@@ -3315,7 +3541,7 @@ int sceMgVideo_driver_39712740(int devType) {
 }
 
 int sceMgVideo_driver_2C046DAE(int devType, u32 *out, u32 outSize, const MgvBufDesc *lckArg, u32 queryType) {
-    MgvMediaCtx *ctx = NULL;
+    MgvMediaCtx *ctx;
     MgvBufDesc lckDesc;
     u32 tmp[13];
 
@@ -3324,7 +3550,7 @@ int sceMgVideo_driver_2C046DAE(int devType, u32 *out, u32 outSize, const MgvBufD
     if (out == NULL) return MGV_ERR_INVALID_ARG;
     ret = checkUserRange(out, outSize);
     if (ret < 0) return ret;
-    ret = copyBufDesc(&lckDesc, lckArg);
+    ret = copyLckBufDesc(&lckDesc, lckArg);
     if (ret < 0) return ret;
     ret = checkLckDesc(&lckDesc);
     if (ret < 0) return ret;
@@ -3338,20 +3564,20 @@ int sceMgVideo_driver_2C046DAE(int devType, u32 *out, u32 outSize, const MgvBufD
             ret = queryLicenseInfo(ctx->mediaType, 1, tmp, body, bodyLen);
             if (ret < 0) return mapRuleError(ret);
             memset(out, 0, outSize);
-            memcpy(out, tmp, 52);
+            __builtin_memcpy(out, tmp, 52);
             return 0;
         case 2:
             if (outSize < 0x14u) return MGV_ERR_INVALID_ARG;
             ret = queryLicenseInfo(ctx->mediaType, 2, tmp, body, bodyLen);
             if (ret < 0) return mapRuleError(ret);
-            memcpy(out, tmp, 20);
+            __builtin_memcpy(out, tmp, 20);
             return 0;
         case 3:
         case 4:
             if (outSize < 0x0Cu) return MGV_ERR_INVALID_ARG;
             ret = queryLicenseInfo(ctx->mediaType, (int)queryType, tmp, body, bodyLen);
             if (ret < 0) return mapRuleError(ret);
-            memcpy(out, tmp, 12);
+            __builtin_memcpy(out, tmp, 12);
             return 0;
         default:
             return MGV_ERR_INVALID_ARG;
@@ -3359,11 +3585,11 @@ int sceMgVideo_driver_2C046DAE(int devType, u32 *out, u32 outSize, const MgvBufD
 }
 
 int sceMgVideo_driver_85471E34(int devType, const MgvBufDesc *ekbArg) {
-    MgvMediaCtx *ctx = NULL;
+    MgvMediaCtx *ctx;
     MgvBufDesc desc;
     int ret = findMediaCtx(devType, &ctx, 1u);
     if (ret < 0) return ret;
-    ret = copyBufDesc(&desc, ekbArg);
+    ret = copyEkbBufDesc(&desc, ekbArg);
     if (ret < 0) return ret;
     if (desc.ptr == NULL)
         desc.size = 0;
@@ -3387,98 +3613,99 @@ static int exportLicenseCommon(int devType, u32 keyIdx, int titleIdx,
     int newSlot = -1;
     int ret;
 
-    ret = findMediaCtx(devType, &ctx, 3u);
-    if (ret < 0) goto cleanup;
-    if (keyIdx >= 32u || (u32)(titleIdx - 1) >= 999u) { ret = MGV_ERR_INVALID_ARG; goto cleanup; }
+    do {
+        ret = findMediaCtx(devType, &ctx, 3u);
+        if (ret < 0) break;
+        if (keyIdx >= 32u || (u32)(titleIdx - 1) >= 999u) { ret = MGV_ERR_INVALID_ARG; break; }
 
-    ret = copyBufDesc(&lckDesc, lckArg);
-    if (ret < 0) goto cleanup;
-    ret = checkLckDesc(&lckDesc);
-    if (ret < 0) goto cleanup;
-    ret = copyBufDesc(&ikvDesc, ikvArg);
-    if (ret < 0) goto cleanup;
-    ret = checkIkvDesc(&ikvDesc);
-    if (ret < 0) goto cleanup;
-    ret = copyBufDesc(&ekbDesc, ekbArg);
-    if (ret < 0) goto cleanup;
-    ret = stripEkb2Header(&ekbDesc);
-    if (ret < 0) goto cleanup;
-    if (newEkbArg != NULL) {
-        ret = copyBufDesc(&newEkbDesc, newEkbArg);
-        if (ret < 0) goto cleanup;
-        ret = stripEkb2Header(&newEkbDesc);
-        if (ret < 0) goto cleanup;
-    }
-    ret = copyBufDesc(&outDesc, outArg);
-    if (ret < 0) goto cleanup;
-    u32 totalSize = lckDesc.size + 16u;
-    ret = checkMinDesc(&outDesc, totalSize);
-    if (ret < 0) goto cleanup;
-    if (totalSize >= 0x52B1u) { ret = MGV_ERR_INVALID_DATA; goto cleanup; }
+        ret = copyLckBufDesc(&lckDesc, lckArg);
+        if (ret < 0) break;
+        ret = checkLckDesc(&lckDesc);
+        if (ret < 0) break;
+        ret = copyIkvBufDesc(&ikvDesc, ikvArg);
+        if (ret < 0) break;
+        ret = checkIkvDesc(&ikvDesc);
+        if (ret < 0) break;
+        ret = copyEkbBufDesc(&ekbDesc, ekbArg);
+        if (ret < 0) break;
+        ret = stripEkb2Header(&ekbDesc);
+        if (ret < 0) break;
+        if (newEkbArg != NULL) {
+            ret = copyEkbBufDesc(&newEkbDesc, newEkbArg);
+            if (ret < 0) break;
+            ret = stripEkb2Header(&newEkbDesc);
+            if (ret < 0) break;
+        }
+        ret = copyPktBufDesc(&outDesc, outArg);
+        if (ret < 0) break;
+        u32 totalSize = lckDesc.size + 16u;
+        ret = checkPktMinDesc(&outDesc, totalSize);
+        if (ret < 0) break;
+        if (totalSize >= 0x52B1u) { ret = MGV_ERR_INVALID_DATA; break; }
 
-    ret = allocTempBuf(&tmpBuf, totalSize);
-    if (ret < 0) goto cleanup;
+        ret = allocTempBuf(&tmpBuf, totalSize);
+        if (ret < 0) break;
 
-    u32 bodyLen = lckDesc.size - 16u;
-    memcpy((u8 *)tmpBuf + 16, (const u8 *)lckDesc.ptr + 16, bodyLen);
+        u32 bodyLen = lckDesc.size - 16u;
+        memcpy((u8 *)tmpBuf + 16, (const u8 *)lckDesc.ptr + 16, bodyLen);
 
-    keySlot = verifyLckForTransfer(ctx, (int)keyIdx, titleIdx, (const u8 *)tmpBuf + 16,
-                                   (int)bodyLen, (const u8 *)ikvDesc.ptr, &ekbDesc, op);
-    if (keySlot < 0) { ret = keySlot; goto cleanup; }
+        keySlot = verifyLckForTransfer(ctx, (int)keyIdx, titleIdx, (const u8 *)tmpBuf + 16,
+                                       (int)bodyLen, (const u8 *)ikvDesc.ptr, &ekbDesc, op);
+        if (keySlot < 0) { ret = keySlot; break; }
 
-    u32 pktBodyLen = (op == 3) ? 16u : (bodyLen + 16u);
-    int pktType = (op == 3) ? 509 : 510;
-    u8 mac[16];
-    ret = buildMgl3Packet(mac, (u8 *)tmpBuf, (int)pktBodyLen, keySlot, pktType);
-    if (ret < 0) goto cleanup;
+        u32 pktBodyLen = (op == 3) ? 16u : (bodyLen + 16u);
+        int pktType = (op == 3) ? 509 : 510;
+        u8 mac[16];
+        ret = buildMgl3Packet(mac, (u8 *)tmpBuf, (int)pktBodyLen, keySlot, pktType);
+        if (ret < 0) break;
 
-    memcpy(outDesc.ptr, tmpBuf, pktBodyLen);
-    if (op == 3) {
+        memcpy(outDesc.ptr, tmpBuf, pktBodyLen);
+        if (op == 3) {
+            memcpy((u8 *)outDesc.ptr + pktBodyLen, mac, 16);
+            ret = (int)(pktBodyLen + 16u);
+            break;
+        }
+
+        sceMgr_driver_E6A203F8(keySlot);
+        keySlot = -1;
+
+        newEkbSlot = loadEkbKeySlot(&newEkbDesc);
+        if (newEkbSlot < 0) { ret = newEkbSlot; break; }
+
+        u8 *ikvBuf = (u8 *)ikvDesc.ptr;
+        u8 hdr48[48];
+        memcpy(hdr48, ikvBuf + 16, 48);
+        u32 newEkbId = *(const u32 *)newEkbDesc.ptr;
+        memcpy(hdr48 + 32, &newEkbId, 4);
+
+        u8 newIcv[16];
+        u32 newHash[2], newEkbMac[2];
+        newSlot = deriveIkvMacs(ctx, newIcv, newHash, newEkbMac, hdr48, newEkbSlot, ctx->macKeySlot);
+        if (newSlot < 0) { ret = newSlot; break; }
+
+        ret = verifyMediaId(ctx, (const u32 *)(hdr48 + 16));
+        if (ret < 0) break;
+        ret = verifyEkbMac(ctx, (int)keyIdx, newEkbMac, &newEkbDesc, newEkbSlot);
+        if (ret < 0) break;
+
+        s16 idx = (s16)titleIdx;
+        u32 zeros[4] = { 0, 0, 0, 0 };
+        IkvUpdateArgs uargs = {
+            ctx, (int)keyIdx, ikvBuf + 64, &idx, 1, zeros, newIcv, newHash, newSlot
+        };
+        ret = updateIkvEntries(&uargs);
+        if (ret < 0) break;
+
+        memcpy(ikvBuf + 48, &newEkbId, 4);
+        memcpy(ctx->ekbMacTable + 8 * keyIdx, newEkbMac, 8);
+        memcpy(ctx->hashTable + 8 * keyIdx, newHash, 8);
+        memcpy(ctx->icvTable + 16 * keyIdx, newIcv, 16);
+        ikvBuf[6] = 35;
+        ikvBuf[7] = 0;
         memcpy((u8 *)outDesc.ptr + pktBodyLen, mac, 16);
         ret = (int)(pktBodyLen + 16u);
-        goto cleanup;
-    }
+    } while (0);
 
-    sceMgr_driver_E6A203F8(keySlot);
-    keySlot = -1;
-
-    newEkbSlot = loadEkbKeySlot(&newEkbDesc);
-    if (newEkbSlot < 0) { ret = newEkbSlot; goto cleanup; }
-
-    u8 *ikvBuf = (u8 *)ikvDesc.ptr;
-    u8 hdr48[48];
-    memcpy(hdr48, ikvBuf + 16, 48);
-    u32 newEkbId = *(const u32 *)newEkbDesc.ptr;
-    memcpy(hdr48 + 32, &newEkbId, 4);
-
-    u8 newIcv[16];
-    u32 newHash[2], newEkbMac[2];
-    newSlot = deriveIkvMacs(ctx, newIcv, newHash, newEkbMac, hdr48, newEkbSlot, ctx->macKeySlot);
-    if (newSlot < 0) { ret = newSlot; goto cleanup; }
-
-    ret = verifyMediaId(ctx, (const u32 *)(hdr48 + 16));
-    if (ret < 0) goto cleanup;
-    ret = verifyEkbMac(ctx, (int)keyIdx, newEkbMac, &newEkbDesc, newEkbSlot);
-    if (ret < 0) goto cleanup;
-
-    s16 idx = (s16)titleIdx;
-    u32 zeros[4] = { 0, 0, 0, 0 };
-    IkvUpdateArgs uargs = {
-        ctx, (int)keyIdx, ikvBuf + 64, &idx, 1, zeros, newIcv, newHash, newSlot
-    };
-    ret = updateIkvEntries(&uargs);
-    if (ret < 0) goto cleanup;
-
-    memcpy(ikvBuf + 48, &newEkbId, 4);
-    memcpy(ctx->ekbMacTable + 8 * keyIdx, newEkbMac, 8);
-    memcpy(ctx->hashTable + 8 * keyIdx, newHash, 8);
-    memcpy(ctx->icvTable + 16 * keyIdx, newIcv, 16);
-    ikvBuf[6] = 35;
-    ikvBuf[7] = 0;
-    memcpy((u8 *)outDesc.ptr + pktBodyLen, mac, 16);
-    ret = (int)(pktBodyLen + 16u);
-
-cleanup:
     if (newSlot >= 0)    sceMgr_driver_E6A203F8(newSlot);
     if (newEkbSlot >= 0) sceMgr_driver_E6A203F8(newEkbSlot);
     if (keySlot >= 0)    sceMgr_driver_E6A203F8(keySlot);
@@ -3505,13 +3732,13 @@ int sceMgVideo_driver_70960650(int devType, u32 keyIdx, int titleIdx,
 }
 
 int sceMgVideo_driver_362459AD(int devType, const MgvBufDesc *outArg, u8 *keyInfo, const u8 *avout8, u32 mode) {
-    MgvMediaCtx *ctx = NULL;
+    MgvMediaCtx *ctx;
     MgvBufDesc outDesc;
     int ret = findMediaCtx(devType, &ctx, 1u);
     if (ret < 0) return ret;
-    ret = copyBufDesc(&outDesc, outArg);
+    ret = copyPktBufDesc(&outDesc, outArg);
     if (ret < 0) return ret;
-    if (checkMinDesc(&outDesc, 0x5240u) < 0)
+    if (checkPktMinDesc(&outDesc, 0x5240u) < 0)
         return MGV_ERR_INVALID_ARG;
     ret = checkUserRangeUncached(keyInfo, 144);
     if (ret < 0) return ret;
@@ -3530,78 +3757,81 @@ int sceMgVideo_driver_AC0757DF(int devType, u32 keyIdx, int titleIdx,
     void *tmpBuf = NULL;
     int ret;
 
-    ret = findMediaCtx(devType, &ctx, 3u);
-    if (ret < 0) goto done;
-    if (keyIdx >= 32u || (u32)(titleIdx - 1) >= 999u) { ret = MGV_ERR_INVALID_ARG; goto done; }
+    do {
+        ret = findMediaCtx(devType, &ctx, 3u);
+        if (ret < 0) break;
+        if (keyIdx >= 32u || (u32)(titleIdx - 1) >= 999u) { ret = MGV_ERR_INVALID_ARG; break; }
 
-    ret = copyBufDesc(&pktDesc, pktArg);
-    if (ret < 0) goto done;
-    ret = copyBufDesc(&ikvDesc, ikvArg);
-    if (ret < 0) goto done;
-    ret = checkIkvDesc(&ikvDesc);
-    if (ret < 0) goto done;
-    ret = copyBufDesc(&ekbDesc, ekbArg);
-    if (ret < 0) goto done;
-    ret = stripEkb2Header(&ekbDesc);
-    if (ret < 0) goto done;
-    ret = copyBufDesc(&ikvEkbDesc, ikvEkbArg);
-    if (ret < 0) goto done;
-    ret = stripEkb2Header(&ikvEkbDesc);
-    if (ret < 0) goto done;
-    if ((ctx->verifiedMask & (1u << keyIdx)) == 0) { ret = MGV_ERR_NOT_VERIFIED; goto done; }
+        ret = copyPktBufDesc(&pktDesc, pktArg);
+        if (ret < 0) break;
+        ret = copyIkvBufDesc(&ikvDesc, ikvArg);
+        if (ret < 0) break;
+        ret = checkIkvDesc(&ikvDesc);
+        if (ret < 0) break;
+        ret = copyEkbBufDesc(&ekbDesc, ekbArg);
+        if (ret < 0) break;
+        ret = stripEkb2Header(&ekbDesc);
+        if (ret < 0) break;
+        ret = copyEkbBufDesc(&ikvEkbDesc, ikvEkbArg);
+        if (ret < 0) break;
+        ret = stripEkb2Header(&ikvEkbDesc);
+        if (ret < 0) break;
+        if ((ctx->verifiedMask & (1u << keyIdx)) == 0) { ret = MGV_ERR_NOT_VERIFIED; break; }
 
-    u32 allocLen = (pktDesc.size < 0x52B1u) ? pktDesc.size : 21168u;
-    ret = allocTempBuf(&tmpBuf, allocLen);
-    if (ret < 0) goto done;
-    memcpy(tmpBuf, pktDesc.ptr, allocLen);
+        u32 allocLen = (pktDesc.size < 0x52B1u) ? pktDesc.size : 21168u;
+        ret = allocTempBuf(&tmpBuf, allocLen);
+        if (ret < 0) break;
+        memcpy(tmpBuf, pktDesc.ptr, allocLen);
 
-    int pktLen = parseMgl3Header((const u8 *)tmpBuf, (int)pktDesc.size);
-    if (pktLen < 0) { ret = pktLen; goto done; }
-    if ((u32)pktLen >= 0x52B1u) { ret = MGV_ERR_INVALID_DATA; goto done; }
+        int pktLen = parseMgl3Header((const u8 *)tmpBuf, (int)pktDesc.size);
+        if (pktLen < 0) { ret = pktLen; break; }
+        if ((u32)pktLen >= 0x52B1u) { ret = MGV_ERR_INVALID_DATA; break; }
 
-    u8 *payload = (u8 *)tmpBuf + 16;
-    u32 payloadLen = (u32)(pktLen - 16);
-    int ekbSlot = loadEkbKeySlot(&ekbDesc);
-    if (ekbSlot < 0) { ret = ekbSlot; goto done; }
+        u8 *payload = (u8 *)tmpBuf + 16;
+        u32 payloadLen = (u32)(pktLen - 16);
+        int ekbSlot = loadEkbKeySlot(&ekbDesc);
+        if (ekbSlot < 0) { ret = ekbSlot; break; }
 
-    int keySlot = verifyMgl3Packet(ctx, (const u8 *)tmpBuf, payload, ekbSlot);
-    if (keySlot >= 0) {
-        u32 krBytes = (u32)readBe16(payload + 12) * ((u32)readBe16(payload + 14) + 1u);
-        int bindRet = checkBindLicense(ctx->mediaType, payload + krBytes, (int)(payloadLen - 16u - krBytes));
-        if (bindRet < 0) {
-            ret = mapRuleError(bindRet);
-            sceMgr_driver_E6A203F8(keySlot);
-        } else {
-            ret = ctx->exportKey(payload + 32, keySlot, ekbSlot);
-            if (ret >= 0) {
-                u8 mac[16];
-                ret = sceMgr_driver_DA7D8C82(mac, payload, NULL, payloadLen - 16u, keySlot);
-                if (ret < 0) ret = mapMgrError(ret);
+        int keySlot = verifyMgl3Packet(ctx, (const u8 *)tmpBuf, payload, ekbSlot);
+        if (keySlot >= 0) {
+            u32 krBytes = (u32)readBe16(payload + 12) * ((u32)readBe16(payload + 14) + 1u);
+            int bindRet = checkBindLicense(ctx->mediaType, payload + krBytes, (int)(payloadLen - 16u - krBytes));
+            if (bindRet < 0) {
+                ret = mapRuleError(bindRet);
+                sceMgr_driver_E6A203F8(keySlot);
+            } else {
+                ret = ctx->exportKey(payload + 32, keySlot, ekbSlot);
                 if (ret >= 0) {
-                    sceMgr_driver_E6A203F8(keySlot);
-                    keySlot = -1;
-                    ret = writeSingleIkvEntry(ctx, keyIdx, titleIdx, mac, (u8 *)ikvDesc.ptr, &ikvEkbDesc);
+                    u8 mac[16];
+                    ret = sceMgr_driver_DA7D8C82(mac, payload, NULL, payloadLen - 16u, keySlot);
+                    if (ret < 0) ret = mapMgrError(ret);
                     if (ret >= 0) {
-                        u8 *out = (u8 *)pktDesc.ptr;
-                        *(u32 *)out = 0x53434B4Cu; /* "LCKS" */
-                        *(u16 *)(out + 4) = 0;
-                        out[6] = 35; out[7] = 0;
-                        *(u32 *)(out + 8) = *(const u32 *)ekbDesc.ptr;
-                        *(u32 *)(out + 12) = 0;
-                        memcpy(out + 16, payload, payloadLen - 16u);
-                        ret = (int)payloadLen;
+                        sceMgr_driver_E6A203F8(keySlot);
+                        keySlot = -1;
+                        ret = writeSingleIkvEntry(ctx, keyIdx, titleIdx, mac, (u8 *)ikvDesc.ptr, &ikvEkbDesc);
+                        if (ret >= 0) {
+                            u8 *out = (u8 *)pktDesc.ptr;
+                            MgvLcksHdr *lcks = (MgvLcksHdr *)out;
+                            lcks->magic = 0x53434B4Cu; /* "LCKS" */
+                            lcks->reserved = 0;
+                            lcks->versionLo = 35;
+                            lcks->versionHi = 0;
+                            lcks->ekbId = *(const u32 *)ekbDesc.ptr;
+                            lcks->zeroWord = 0;
+                            memcpy(out + 16, payload, payloadLen - 16u);
+                            ret = (int)payloadLen;
+                        }
                     }
                 }
+                if (keySlot >= 0)
+                    sceMgr_driver_E6A203F8(keySlot);
             }
-            if (keySlot >= 0)
-                sceMgr_driver_E6A203F8(keySlot);
+        } else {
+            ret = keySlot;
         }
-    } else {
-        ret = keySlot;
-    }
-    sceMgr_driver_E6A203F8(ekbSlot);
+        sceMgr_driver_E6A203F8(ekbSlot);
+    } while (0);
 
-done:
     if (tmpBuf != NULL)
         freeTempBuf(tmpBuf);
     if ((u32)(ret - MGV_ERR_MGR_ERROR_21) < 2u && ctx != NULL)
@@ -3617,84 +3847,87 @@ int sceMgVideo_driver_B8F2B2B5(int devType, u32 keyIdx, int titleIdx,
     void *tmpBuf = NULL;
     int ret;
 
-    ret = findMediaCtx(devType, &ctx, 3u);
-    if (ret < 0) goto done;
-    if (keyIdx >= 32u || (u32)(titleIdx - 1) >= 999u) { ret = MGV_ERR_INVALID_ARG; goto done; }
+    do {
+        ret = findMediaCtx(devType, &ctx, 3u);
+        if (ret < 0) break;
+        if (keyIdx >= 32u || (u32)(titleIdx - 1) >= 999u) { ret = MGV_ERR_INVALID_ARG; break; }
 
-    ret = copyBufDesc(&lckDesc, lckArg);
-    if (ret < 0) goto done;
-    ret = checkLckDesc(&lckDesc);
-    if (ret < 0) goto done;
-    ret = copyBufDesc(&ikvDesc, ikvArg);
-    if (ret < 0) goto done;
-    ret = checkIkvDesc(&ikvDesc);
-    if (ret < 0) goto done;
-    ret = copyBufDesc(&ekbDesc, ekbArg);
-    if (ret < 0) goto done;
-    ret = stripEkb2Header(&ekbDesc);
-    if (ret < 0) goto done;
-    ret = copyBufDesc(&ikvEkbDesc, ikvEkbArg);
-    if (ret < 0) goto done;
-    ret = stripEkb2Header(&ikvEkbDesc);
-    if (ret < 0) goto done;
-    if (reserved != 0) { ret = MGV_ERR_INVALID_ARG; goto done; }
-    if ((ctx->verifiedMask & (1u << keyIdx)) == 0) { ret = MGV_ERR_NOT_VERIFIED; goto done; }
+        ret = copyLckBufDesc(&lckDesc, lckArg);
+        if (ret < 0) break;
+        ret = checkLckDesc(&lckDesc);
+        if (ret < 0) break;
+        ret = copyIkvBufDesc(&ikvDesc, ikvArg);
+        if (ret < 0) break;
+        ret = checkIkvDesc(&ikvDesc);
+        if (ret < 0) break;
+        ret = copyEkbBufDesc(&ekbDesc, ekbArg);
+        if (ret < 0) break;
+        ret = stripEkb2Header(&ekbDesc);
+        if (ret < 0) break;
+        ret = copyEkbBufDesc(&ikvEkbDesc, ikvEkbArg);
+        if (ret < 0) break;
+        ret = stripEkb2Header(&ikvEkbDesc);
+        if (ret < 0) break;
+        if (reserved != 0) { ret = MGV_ERR_INVALID_ARG; break; }
+        if ((ctx->verifiedMask & (1u << keyIdx)) == 0) { ret = MGV_ERR_NOT_VERIFIED; break; }
 
-    u32 maxBody = (lckDesc.size < 0x52B1u) ? (lckDesc.size - 16u) : 21152u;
-    u32 actualBody = measureLicenseLength((const u8 *)lckDesc.ptr + 16, maxBody);
-    lckDesc.size = actualBody + 16u;
+        u32 maxBody = (lckDesc.size < 0x52B1u) ? (lckDesc.size - 16u) : 21152u;
+        u32 actualBody = measureLicenseLength((const u8 *)lckDesc.ptr + 16, maxBody);
+        lckDesc.size = actualBody + 16u;
 
-    ret = allocTempBuf(&tmpBuf, maxBody);
-    if (ret < 0) goto done;
-    memcpy(tmpBuf, lckDesc.ptr, lckDesc.size);
-    lckDesc.ptr = tmpBuf;
+        ret = allocTempBuf(&tmpBuf, maxBody);
+        if (ret < 0) break;
+        memcpy(tmpBuf, lckDesc.ptr, lckDesc.size);
+        lckDesc.ptr = tmpBuf;
 
-    u8 keyringHdr[96];
-    int keySlot = openLck(ctx, keyringHdr, NULL, (int)keyIdx, titleIdx, &lckDesc, (const u8 *)ikvDesc.ptr, &ekbDesc);
-    if (keySlot >= 0) {
-        sceMgr_driver_E6A203F8(keySlot);
-        ret = 0;
-        goto done;
-    }
-    ret = keySlot;
-    if (keySlot == MGV_ERR_NEED_PLAY_START) {
-        u32 krBytes = (u32)readBe16(keyringHdr + 12) * ((u32)readBe16(keyringHdr + 14) + 1u);
-        u8 *rules = (u8 *)tmpBuf + 16 + krBytes;
-        u32 rulesLen = actualBody - krBytes;
-        int r = checkBindLicense(ctx->mediaType, rules, (int)rulesLen);
-        if (r < 0) { ret = mapRuleError(r); goto done; }
-
-        int newRulesLen = activatePlayPeriod(ctx->mediaType, rules, rulesLen, maxBody - krBytes);
-        if (newRulesLen < 0) { ret = mapRuleError(newRulesLen); goto done; }
-        if (newRulesLen == 0) { ret = 0; goto done; }
-
-        u32 newTotal = krBytes + (u32)newRulesLen;
-        r = checkPlayLicense(ctx->mediaType, NULL, rules, newRulesLen);
-        if (r < 0) { ret = mapRuleError(r); goto done; }
-
-        keySlot = deriveContentKeySlot(ctx, keyringHdr + 32, &ekbDesc);
-        if (keySlot < 0) { ret = keySlot; goto done; }
-
-        u8 mac[16];
-        ret = sceMgr_driver_DA7D8C82(mac, (const u8 *)tmpBuf + 16, NULL, newTotal, keySlot);
-        if (ret < 0) ret = mapMgrError(ret);
-        if (ret >= 0) {
-            ret = writeSingleIkvEntry(ctx, keyIdx, titleIdx, mac, (u8 *)ikvDesc.ptr, &ikvEkbDesc);
-            if (ret >= 0) {
-                u8 *out = (u8 *)lckArg->ptr;
-                *(u32 *)out = 0x53434B4Cu; /* "LCKS" */
-                *(u16 *)(out + 4) = 0;
-                out[6] = 35; out[7] = 0;
-                *(u32 *)(out + 8) = *(const u32 *)ekbDesc.ptr;
-                *(u32 *)(out + 12) = 0;
-                memcpy(out + 16, (const u8 *)tmpBuf + 16, newTotal);
-                ret = (int)(newTotal + 16u);
-            }
+        u8 keyringHdr[96];
+        int keySlot = openLck(ctx, keyringHdr, NULL, (int)keyIdx, titleIdx, &lckDesc, (const u8 *)ikvDesc.ptr, &ekbDesc);
+        if (keySlot >= 0) {
+            sceMgr_driver_E6A203F8(keySlot);
+            ret = 0;
+            break;
         }
-        sceMgr_driver_E6A203F8(keySlot);
-    }
+        ret = keySlot;
+        if (keySlot == MGV_ERR_NEED_PLAY_START) {
+            u32 krBytes = (u32)readBe16(keyringHdr + 12) * ((u32)readBe16(keyringHdr + 14) + 1u);
+            u8 *rules = (u8 *)tmpBuf + 16 + krBytes;
+            u32 rulesLen = actualBody - krBytes;
+            int r = checkBindLicense(ctx->mediaType, rules, (int)rulesLen);
+            if (r < 0) { ret = mapRuleError(r); break; }
 
-done:
+            int newRulesLen = activatePlayPeriod(ctx->mediaType, rules, rulesLen, maxBody - krBytes);
+            if (newRulesLen < 0) { ret = mapRuleError(newRulesLen); break; }
+            if (newRulesLen == 0) { ret = 0; break; }
+
+            u32 newTotal = krBytes + (u32)newRulesLen;
+            r = checkPlayLicense(ctx->mediaType, NULL, rules, newRulesLen);
+            if (r < 0) { ret = mapRuleError(r); break; }
+
+            keySlot = deriveContentKeySlot(ctx, keyringHdr + 32, &ekbDesc);
+            if (keySlot < 0) { ret = keySlot; break; }
+
+            u8 mac[16];
+            ret = sceMgr_driver_DA7D8C82(mac, (const u8 *)tmpBuf + 16, NULL, newTotal, keySlot);
+            if (ret < 0) ret = mapMgrError(ret);
+            if (ret >= 0) {
+                ret = writeSingleIkvEntry(ctx, keyIdx, titleIdx, mac, (u8 *)ikvDesc.ptr, &ikvEkbDesc);
+                if (ret >= 0) {
+                    u8 *out = (u8 *)lckArg->ptr;
+                    MgvLcksHdr *lcks = (MgvLcksHdr *)out;
+                    lcks->magic = 0x53434B4Cu; /* "LCKS" */
+                    lcks->reserved = 0;
+                    lcks->versionLo = 35;
+                    lcks->versionHi = 0;
+                    lcks->ekbId = *(const u32 *)ekbDesc.ptr;
+                    lcks->zeroWord = 0;
+                    memcpy(out + 16, (const u8 *)tmpBuf + 16, newTotal);
+                    ret = (int)(newTotal + 16u);
+                }
+            }
+            sceMgr_driver_E6A203F8(keySlot);
+        }
+    } while (0);
+
     if (tmpBuf != NULL)
         freeTempBuf(tmpBuf);
     if ((u32)(ret - MGV_ERR_MGR_ERROR_21) < 2u && ctx != NULL)
@@ -3703,7 +3936,7 @@ done:
 }
 
 int sceMgVideo_driver_BD83E45F(const MgvBufDesc *msgArg) {
-    MgvMediaCtx *ctx = NULL;
+    MgvMediaCtx *ctx;
     MgvBufDesc msgDesc;
     u8 msgHdr[64];
 
@@ -3712,9 +3945,9 @@ int sceMgVideo_driver_BD83E45F(const MgvBufDesc *msgArg) {
         ret = findMediaCtx(16, &ctx, 1u);
     if (ret < 0) return ret;
 
-    ret = copyBufDesc(&msgDesc, msgArg);
+    ret = copyMsgBufDesc(&msgDesc, msgArg);
     if (ret < 0) return ret;
-    ret = checkMinDesc(&msgDesc, 0x40u);
+    ret = checkMsgMinDesc(&msgDesc, 0x40u);
     if (ret < 0) return ret;
 
     memcpy(msgHdr, msgDesc.ptr, sizeof(msgHdr));
@@ -3736,94 +3969,97 @@ int sceMgVideo_driver_DAA1AAA7(int devType, u32 keyIdx, int titleIdx,
     void *tmpBuf = NULL;
     int ret;
 
-    ret = findMediaCtx(devType, &ctx, 3u);
-    if (ret < 0) goto done;
-    if (keyIdx >= 32u || (u32)(titleIdx - 1) >= 999u) { ret = MGV_ERR_INVALID_ARG; goto done; }
+    do {
+        ret = findMediaCtx(devType, &ctx, 3u);
+        if (ret < 0) break;
+        if (keyIdx >= 32u || (u32)(titleIdx - 1) >= 999u) { ret = MGV_ERR_INVALID_ARG; break; }
 
-    if ((ctx->lastKeyIndex >= 0 && ctx->lastKeyIndex != (s16)keyIdx) ||
-        (ctx->lastTitleIndex >= 0 && ctx->lastTitleIndex != (s16)titleIdx)) {
-        ret = MGV_ERR_MSG_SESSION;
-        goto done;
-    }
-    if ((ctx->verifiedMask & (1u << keyIdx)) == 0) { ret = MGV_ERR_NOT_VERIFIED; goto done; }
-
-    ret = copyBufDesc(&msgDesc, msgArg);
-    if (ret < 0) goto done;
-    ret = checkMinDesc(&msgDesc, 0x90u);
-    if (ret < 0) goto done;
-    ret = copyBufDesc(&ikvDesc, ikvArg);
-    if (ret < 0) goto done;
-    ret = checkIkvDesc(&ikvDesc);
-    if (ret < 0) goto done;
-    ret = copyBufDesc(&ekbDesc, ekbArg);
-    if (ret < 0) goto done;
-    ret = stripEkb2Header(&ekbDesc);
-    if (ret < 0) goto done;
-    ret = copyBufDesc(&ikvEkbDesc, ikvEkbArg);
-    if (ret < 0) goto done;
-    ret = stripEkb2Header(&ikvEkbDesc);
-    if (ret < 0) goto done;
-
-    u32 allocLen = (msgDesc.size < 0x52B1u) ? msgDesc.size : 21168u;
-    ret = allocTempBuf(&tmpBuf, allocLen);
-    if (ret < 0) goto done;
-    memcpy(tmpBuf, msgDesc.ptr, allocLen);
-
-    int msgLen = parseMgv1Header(259, (const u8 *)tmpBuf, (int)msgDesc.size);
-    if (msgLen < 0) { ret = msgLen; goto done; }
-    if ((u32)msgLen >= 0x52B1u) { ret = MGV_ERR_MSG_FORMAT; goto done; }
-
-    ret = verifyMgv1Mac((const u8 *)tmpBuf, (const u8 *)msgDesc.ptr + ((u32)msgLen & ~15u), msgDesc.size - (u32)msgLen);
-    if (ret < 0) goto done;
-
-    u8 *payload = (u8 *)tmpBuf + 32;
-    int lckLen = parseBindPayload(payload, (u32)msgLen);
-    if (lckLen < 0) { ret = lckLen; goto done; }
-
-    u32 alignedLen = (u32)msgLen & ~15u;
-    if (memcmp((const u8 *)tmpBuf + alignedLen - 32, ctx->challengeNonce, 16) != 0) {
-        ret = MGV_ERR_MSG_SESSION;
-        goto done;
-    }
-    ret = verifyMediaId(ctx, (const u32 *)((const u8 *)tmpBuf + alignedLen - 48));
-    if (ret < 0) goto done;
-
-    u32 krBytes = readBe16((const u8 *)tmpBuf + 40);
-    int bindRet = checkBindLicense(ctx->mediaType, payload + 16 + krBytes, lckLen - (int)krBytes);
-    if (bindRet < 0) {
-        ret = mapRuleError(bindRet);
-        if (ret == MGV_ERR_INVALID_DATA)
-            ret = MGV_ERR_MSG_FORMAT;
-        goto done;
-    }
-
-    int keySlot = rewrapBindKey(ctx, payload, lckLen, &ekbDesc);
-    if (keySlot < 0) { ret = keySlot; goto done; }
-
-    u8 mac[16];
-    ret = sceMgr_driver_DA7D8C82(mac, (const u8 *)tmpBuf + 48, NULL, (u32)lckLen, keySlot);
-    if (ret < 0) ret = mapMgrError(ret);
-    if (ret >= 0) {
-        sceMgr_driver_E6A203F8(keySlot);
-        keySlot = -1;
-        ret = writeSingleIkvEntry(ctx, keyIdx, titleIdx, mac, (u8 *)ikvDesc.ptr, &ikvEkbDesc);
-        if (ret >= 0) {
-            ctx->lastKeyIndex = (s16)keyIdx;
-            ctx->lastTitleIndex = (s16)titleIdx;
-            u8 *out = (u8 *)msgDesc.ptr;
-            *(u32 *)out = 0x53434B4Cu; /* "LCKS" */
-            *(u16 *)(out + 4) = 0;
-            out[6] = 35; out[7] = 0;
-            *(u32 *)(out + 8) = *(const u32 *)ekbDesc.ptr;
-            *(u32 *)(out + 12) = 0;
-            memcpy(out + 16, (const u8 *)tmpBuf + 48, (size_t)lckLen);
-            ret = lckLen + 16;
+        if ((ctx->lastKeyIndex >= 0 && ctx->lastKeyIndex != (s16)keyIdx) ||
+            (ctx->lastTitleIndex >= 0 && ctx->lastTitleIndex != (s16)titleIdx)) {
+            ret = MGV_ERR_MSG_SESSION;
+            break;
         }
-    }
-    if (keySlot >= 0)
-        sceMgr_driver_E6A203F8(keySlot);
+        if ((ctx->verifiedMask & (1u << keyIdx)) == 0) { ret = MGV_ERR_NOT_VERIFIED; break; }
 
-done:
+        ret = copyMsgBufDesc(&msgDesc, msgArg);
+        if (ret < 0) break;
+        ret = checkMsgMinDesc(&msgDesc, 0x90u);
+        if (ret < 0) break;
+        ret = copyIkvBufDesc(&ikvDesc, ikvArg);
+        if (ret < 0) break;
+        ret = checkIkvDesc(&ikvDesc);
+        if (ret < 0) break;
+        ret = copyEkbBufDesc(&ekbDesc, ekbArg);
+        if (ret < 0) break;
+        ret = stripEkb2Header(&ekbDesc);
+        if (ret < 0) break;
+        ret = copyEkbBufDesc(&ikvEkbDesc, ikvEkbArg);
+        if (ret < 0) break;
+        ret = stripEkb2Header(&ikvEkbDesc);
+        if (ret < 0) break;
+
+        u32 allocLen = (msgDesc.size < 0x52B1u) ? msgDesc.size : 21168u;
+        ret = allocTempBuf(&tmpBuf, allocLen);
+        if (ret < 0) break;
+        memcpy(tmpBuf, msgDesc.ptr, allocLen);
+
+        int msgLen = parseMgv1Header(259, (const u8 *)tmpBuf, (int)msgDesc.size);
+        if (msgLen < 0) { ret = msgLen; break; }
+        if ((u32)msgLen >= 0x52B1u) { ret = MGV_ERR_MSG_FORMAT; break; }
+
+        ret = verifyMgv1Mac((const u8 *)tmpBuf, (const u8 *)msgDesc.ptr + ((u32)msgLen & ~15u), msgDesc.size - (u32)msgLen);
+        if (ret < 0) break;
+
+        u8 *payload = (u8 *)tmpBuf + 32;
+        int lckLen = parseBindPayload(payload, (u32)msgLen);
+        if (lckLen < 0) { ret = lckLen; break; }
+
+        u32 alignedLen = (u32)msgLen & ~15u;
+        if (memcmp((const u8 *)tmpBuf + alignedLen - 32, ctx->challengeNonce, 16) != 0) {
+            ret = MGV_ERR_MSG_SESSION;
+            break;
+        }
+        ret = verifyMediaId(ctx, (const u32 *)((const u8 *)tmpBuf + alignedLen - 48));
+        if (ret < 0) break;
+
+        u32 krBytes = readBe16((const u8 *)tmpBuf + 40);
+        int bindRet = checkBindLicense(ctx->mediaType, payload + 16 + krBytes, lckLen - (int)krBytes);
+        if (bindRet < 0) {
+            ret = mapRuleError(bindRet);
+            if (ret == MGV_ERR_INVALID_DATA)
+                ret = MGV_ERR_MSG_FORMAT;
+            break;
+        }
+
+        int keySlot = rewrapBindKey(ctx, payload, lckLen, &ekbDesc);
+        if (keySlot < 0) { ret = keySlot; break; }
+
+        u8 mac[16];
+        ret = sceMgr_driver_DA7D8C82(mac, (const u8 *)tmpBuf + 48, NULL, (u32)lckLen, keySlot);
+        if (ret < 0) ret = mapMgrError(ret);
+        if (ret >= 0) {
+            sceMgr_driver_E6A203F8(keySlot);
+            keySlot = -1;
+            ret = writeSingleIkvEntry(ctx, keyIdx, titleIdx, mac, (u8 *)ikvDesc.ptr, &ikvEkbDesc);
+            if (ret >= 0) {
+                ctx->lastKeyIndex = (s16)keyIdx;
+                ctx->lastTitleIndex = (s16)titleIdx;
+                u8 *out = (u8 *)msgDesc.ptr;
+                MgvLcksHdr *lcks = (MgvLcksHdr *)out;
+                lcks->magic = 0x53434B4Cu; /* "LCKS" */
+                lcks->reserved = 0;
+                lcks->versionLo = 35;
+                lcks->versionHi = 0;
+                lcks->ekbId = *(const u32 *)ekbDesc.ptr;
+                lcks->zeroWord = 0;
+                memcpy(out + 16, (const u8 *)tmpBuf + 48, (size_t)lckLen);
+                ret = lckLen + 16;
+            }
+        }
+        if (keySlot >= 0)
+            sceMgr_driver_E6A203F8(keySlot);
+    } while (0);
+
     if (tmpBuf != NULL)
         freeTempBuf(tmpBuf);
     if ((u32)(ret - MGV_ERR_MGR_ERROR_21) < 2u && ctx != NULL)
@@ -3842,7 +4078,7 @@ int sceMgVideo_driver_B8304DF9(int devType, u32 cmd, const MgvBufDesc *outArg) {
         if (ctx->state == 0) {
             ret = MGV_ERR_NOT_INITIALIZED;
         } else {
-            ret = copyBufDesc(&outDesc, outArg);
+            ret = copyMsgBufDesc(&outDesc, outArg);
             if (ret >= 0) {
                 if (outDesc.ptr == NULL) {
                     ret = MGV_ERR_INVALID_ARG;
