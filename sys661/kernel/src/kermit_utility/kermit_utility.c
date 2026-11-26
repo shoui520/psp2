@@ -3,10 +3,9 @@
 /* Imported functions declared in scetables.S */
 extern int sceKernelBootFrom(void);
 extern int sceKernelApplicationType(void);
-extern int sceKernelInitDiscImage(const char *path);
+extern int sceKernelInitDiscImage(void);
 extern int sceIoDevctl(const char *dev, u32 cmd, void *indata, int inlen, void *outdata, int outlen);
 extern int sceKernelIsToolMode(void);
-extern int Kprintf(const char *fmt, ...);
 extern int sceKernelDipsw(int bit);
 extern int sceKernelIsDevelopmentToolMode(void);
 extern int sceKernelUnloadModule(SceUID modid);
@@ -16,2269 +15,3783 @@ extern SceUID sceKernelLoadModuleToBlock(const char *path, SceUID block_id, SceU
 extern SceUID sceKernelSearchModuleByName(const char *name);
 extern int sceKernelStopModule(SceUID modid, SceSize argsize, void *argp, int *status, void *opt);
 extern int sceKernelGetModel(void);
-extern void *sceKernelMemcpy(void *dst, const void *src, SceSize size);
-extern int sceKernelJointMemoryBlock(SceUID id1, SceUID id2);
-extern int sceKernelMemset32(void *dst, int val, SceSize size);
+extern int sceKernelJointMemoryBlock(SceUID first_block, SceUID second_block);
+extern int sceKernelMemset32(void *dst, u32 fill_word, SceSize size);
 extern SceUID sceKernelAllocPartitionMemory(int mpid, const char *name, int type, SceSize size, void *addr);
-extern int sceKernelMemset(void *dst, int val, SceSize size);
 extern int sceKernelGetCompiledSdkVersion(void);
 extern int sceKernelFreePartitionMemory(SceUID block_id);
-extern int sceKernelQueryMemoryBlockInfo(SceUID block_id, void *info);
+extern int sceKernelQueryMemoryBlockInfo(SceUID block_id, void *mem_info);
 extern void *sceKernelGetGameInfo(void);
-extern void *memset(void *dst, int val, SceSize n);
-extern SceSize strlen(const char *s);
-extern char *strncpy(char *dst, const char *src, SceSize n);
-extern int strcmp(const char *s1, const char *s2);
-extern int snprintf(char *buf, SceSize size, const char *fmt, ...);
+extern void *memset(void *dst, int ch, SceSize count);
+extern SceSize strlen(const char *text);
+extern char *strncpy(char *dst, const char *src, SceSize count);
+extern int strcmp(const char *lhs, const char *rhs);
+extern int snprintf(char *out_buf, SceSize size, const char *fmt, ...);
 extern int sceKernelWaitThreadEnd(SceUID thid, SceUInt *timeout);
 extern SceUID sceKernelGetThreadId(void);
-extern u32 sceKernelGetSystemTimeLow(void);
-extern SceUID sceKernelCreateThread(const char *name, int (*entry)(SceSize, void *), int prio, int stackSize, SceUInt attr, void *opt);
-extern int sceKernelUnlockMutex(SceUID mutexid, int count);
+extern SceUID sceKernelCreateThread(const char *name, int (*entry)(SceSize, void *), int prio, int stack_size, SceUInt attr, void *opt);
 extern int sceKernelExitDeleteThread(int status);
 extern int sceKernelDeleteThread(SceUID thid);
-extern int sceKernelLockMutex(SceUID mutexid, int count, SceUInt *timeout);
-extern SceUID sceKernelCreateMutex(const char *name, SceUInt attr, int init_count, void *opt);
-extern int sceKernelExtendKernelStack(int type, void (*cb)(void *), void *arg);
-extern int sceKernelDelayThread(SceUInt delay);
+extern int sceKernelExtendKernelStack(SceSize stack_size, int (*callback)(void *), void *arg);
 extern int sceKernelStartThread(SceUID thid, SceSize arglen, void *argp);
-extern int sceCtrlPeekBufferPositive(void *pad_data, int count);
-extern int sceCtrlSetSamplingMode(int mode);
-extern int sceCtrlGetSamplingMode(int *pmode);
-extern int sceKermitPeripheral_driver_61BEA1D2(int flag);
-extern int sceMeBootStart(int mebooterType);
-extern int scePower_driver_315B8CB6(int a0);
-extern int scePower_driver_766CD857(int a0);
-extern int sceNpDrmSetDebugMode(int mode);
-extern int sceRegGetKeyValueByName(u32 cat, const char *name, void *buf, SceSize size);
-extern int sceRegCreateKey(u32 cat, const char *name, int type, SceSize size);
-extern int sceRegSetKeyValue(u32 cat, const char *name, const void *buf, SceSize size);
+extern int sceCtrlPeekBufferPositive(void *pad_buf, int count);
+extern int sceCtrlSetSamplingMode(int sampling_mode);
+extern int sceCtrlGetSamplingMode(int *out_mode);
+extern int sceKermitPeripheral_driver_61BEA1D2(int enable_flag);
+extern int sceMeBootStart(int booter_type);
+extern int scePower_driver_315B8CB6(int power_arg);
+extern int scePower_driver_766CD857(int power_arg);
+extern int sceNpDrmSetDebugMode(int debug_mode);
+extern int sceRegGetKeyValueByName(u32 cat, const char *name, void *out_buf, SceSize size);
+extern int sceRegCreateKey(u32 cat, const char *name, int key_type, SceSize size);
+extern int sceRegSetKeyValue(u32 cat, const char *name, const void *value_buf, SceSize size);
 extern int sceRegCloseRegistry(u32 reg);
-extern int sceRegOpenCategory(u32 reg, const char *dir, int mode, u32 *cat);
+extern int sceRegOpenCategory(u32 reg, const char *dir_path, int access_mode, u32 *out_cat);
 extern int sceRegFlushRegistry(u32 reg);
-extern int sceRegRemoveCategory(u32 reg, const char *dir);
-extern int sceRegGetKeyInfo(u32 cat, const char *name, u32 *kh, u32 *type, SceSize *size);
+extern int sceRegRemoveCategory(u32 reg, const char *dir_path);
+extern int sceRegGetKeyInfo(u32 cat, const char *name, u32 *out_handle, u32 *out_type, SceSize *out_size);
 extern int sceRegFlushCategory(u32 cat);
-extern int sceRegOpenRegistry(void *param, int mode, u32 *reg);
-extern int sceRegGetKeyInfoByName(u32 cat, const char *name, u32 *type, SceSize *size);
-extern int sceRegGetKeyValue(u32 cat, u32 kh, void *buf, SceSize size);
+extern int sceRegOpenRegistry(void *reg_param, int access_mode, u32 *out_reg);
+extern int sceRegGetKeyInfoByName(u32 cat, const char *name, u32 *out_type, SceSize *out_size);
+extern int sceRegGetKeyValue(u32 cat, u32 key_handle, void *out_buf, SceSize size);
 extern int sceRegCloseCategory(u32 cat);
-extern int sceKernelPowerUnlockForUser(int type);
-extern int sceKernelVolatileMemLock(int type, void **paddr, int *psize);
-extern int sceKernelVolatileMemUnlock(int type);
-extern int sceKernelPowerLockForUser(int type);
+extern int sceKernelVolatileMemLock(int lock_type, void **out_addr, int *out_size);
+extern int sceKernelVolatileMemUnlock(int lock_type);
 
-#define GET_K1() ({ u32 _k1; __asm__ volatile("move %0, $k1" : "=r"(_k1)); _k1; })
-#define SET_K1(v) ({ __asm__ volatile("move $k1, %0" : : "r"(v)); })
+#define UTILITY_NOINLINE __attribute__((noinline))
 
-/* Public / Exported prototypes */
-int sceUtility_driver_F062AEA6(void);
-int sceUtility_driver_20C68C34(void);
-int sceUtilityLoadModule(u32 id);
-int sceUtilityUnloadModule(u32 id);
-int sceUtility_private_59EB3A17(int flag);
+#define SCE_UTILITY_ERROR_INVALID_STATUS        ((int)0x80110001)
+#define SCE_UTILITY_ERROR_INVALID_ADDR          ((int)0x80110002)
+#define SCE_UTILITY_ERROR_INVALID_TYPE          ((int)0x80110003)
+#define SCE_UTILITY_ERROR_INVALID_SIZE          ((int)0x80110004)
+#define SCE_UTILITY_ERROR_INVALID_DIALOG        ((int)0x80110005)
 
-/* Forward declarations */
-static int utilityDialogInitStart(u32 type, void *params);
-static int utilityDialogShutdownStart(u32 type);
-static int utilityDialogInitWrapper(u32 type, void *params);
-static int utilitySysEventHandler(int ev_id, char *ev_name, void *param, int *result);
-static int utilityDialogUpdate(u32 type, int speed);
-static int utilityDialogGetStatus(u32 type);
-static int utilityDialogAbort(u32 type);
-int utilityDialogThread(SceSize args, void *argp);
-int utilityAppletLoadThread(SceSize args, void *argp);
-int utilityAppletUnloadThread(SceSize args, void *argp);
-int utilityDialogUnloadThread(SceSize args, void *argp);
-int utilityStopUnloadModuleA(SceUID modid, int reason);
-int utilityStopUnloadModuleB(SceUID modid, int reason);
-int utilityClearDialogVmem(void);
-int utilityAppletInitStart(u32 type, void *params);
-static int utilityAppletShutdownStart(u32 type);
-static int utilityAppletInitSync(void);
-static int utilityAppletTermSync(void);
-static int utilityAppletUpdate(u32 type, int speed);
-static int utilityAppletGetStatus(u32 type);
-static int utilityCheckAppletParamSize(u32 type, u32 size, void *params);
-static SceUID utilityLoadModuleWithRetry(const char *path, SceUID *block_p, int flags, void *opt);
-static int utilityUnloadModuleWithRetry(SceUID modid);
-static SceUID utilityLoadStartModule(const char *path, int mpid, SceSize argsize, void *argp, SceUID *block_p);
-static int utilityIsDevToolMode(void);
-static void utilityFlushMemBlock(SceUID block_id);
-static void utilityLogMemBlockStep(int step, SceUID block_id);
-static int utilityCheckDiscBootMode(void);
-static int utilityNetModuleInit(void);
-static int utilityNpModuleInit(void);
-static int utilityLoadModuleToPartition(const char *path, int arg1);
-static int utilityStopAndUnloadModule(SceUID modid);
-static int utilityLoadUsbModByIdx(int idx);
-static int utilityUsbModuleInit(void);
-static int utilityLoadUsbModule(u32 id);
-static int utilityUnloadUsbModule(u32 id);
-static int utilityLoadAvModRaw(u32 id);
-static int utilityUnloadAvModRaw(u32 id);
-static int utilityLoadAvModWithMe(u32 id);
-static int utilityLoadAvModule(u32 id);
-static int utilityUnloadAvModule(u32 id);
-static int utilityAvModuleInit(void);
-static int utilityUpdownModuleInit(void);
-static int utilityLoadUpdownModule(u32 id, int a1);
-static int utilityUnloadUpdownModule(u32 id, int a1);
-static int utilityLoadNpModRaw(u32 id);
-static int utilityUnloadNpModRaw(u32 id);
-static int utilityLoadNpModChecked(u32 id);
-static int utilityNpNoop1(void);
-static int utilityLoadNpModule(u32 id);
-static int utilityNpNoop2(void);
-static int utilityUnloadNpModule(u32 id, int a1);
-static int utilityModMutexInit(void);
-static int utilityLoadModuleById(u32 id);
-static int utilityUnloadModuleById(u32 id);
-static int utilityIsValidModuleId(u32 id);
-static int utilityLoadModuleBatch(int count, const u32 *ids);
-static int utilityUnloadModuleBatch(int count, const u32 *ids);
-static int utilityLoadSingleModule(u32 id);
-static int utilityUnloadSingleModule(u32 id);
-static int utilityModuleNoopArg(u32 id);
-static int utilityModuleNoop(void);
-static int utilityOskMutexInit(void);
-static int utilitySetSystemParamIntInternal(u32 id, u32 val);
-static int utilityGetSystemParamIntInternal(u32 id, u32 *val);
-static int utilityRegWriteInt(const char *dir, const char *name, u32 val);
-static int utilityRegReadInt(const char *dir, const char *name, u32 *val, u32 defval);
-static int utilityRegWriteStr(const char *dir, const char *name, const char *str, int size);
-static int utilityRegReadStr(const char *dir, const char *name, char *buf, int size, const char *defstr);
-static int utilitySetSystemParamStrInternal(u32 id, const char *str);
-int utilityGetSystemParamStrInternal(u32 id, char *str, int len);
-static int utilityNetParamDeleteEntry(int idx);
-static int utilityNetParamLock(int idx);
-static int utilityNetParamUnlock(int idx);
-static int utilityNetParamGetFirstValid(void *buf);
-static int utilityNetParamCheckEntry(int idx);
-static int utilityNetParamSetData(int idx, int param, const void *data);
-static int utilityNetParamGetData(int idx, int param, void *data);
-static int utilityNetParamRemoveRegCat(const char *dir, int idx);
-static int utilityNetParamCopyEntry(int dst_idx, int src_idx);
-static int utilityNetParamSwapEntries(int a0, int a1);
-static int utilityNetParamCheckByIdx(int idx);
-static int utilityNetParamSyncFromKermit(void);
-static int utilityNetParamCheckSlot(int idx);
-static int utilityNetParamCheckSlot1(int idx);
-static int utilityNetParamAccessData(int idx, int param, void *data, int set_mode);
-static int utilityKermitFetchNetParam(void);
-static int utilityNetParamDefaultSlot(int *idx_p);
-static int utilityNetParamFormatPath(char *out_dir, int idx);
-static int utilityNetParamEnsureRegCat(const char *dir, int a1);
-static int utilityNetParamValidateIdx(int idx);
-static int utilityRegOpenSystem(u32 *reg_p);
-static int utilityRegFlushClose(u32 reg);
-static int utilityKermitStartDialog(u32 type, u32 sub_mode);
-static int utilityKermitSetPowerMode(int mode);
-static int utilityKermitEndDialog(void);
-static void utilityClearStatusFlags(void);
-static u32 utilityGetStatusFlags(void);
-static int utilityKermitSendRequest(int a0, int a1, void *a2);
-static int utilityKermitSendRequestWrap(int a0, int a1, void *a2);
+#define SCE_UTILITY_SYSPARAM_ERROR_INVALID_TYPE ((int)0x80110101)
+#define SCE_UTILITY_SYSPARAM_ERROR_INVALID_SIZE ((int)0x80110102)
+#define SCE_UTILITY_SYSPARAM_ERROR_INVALID_ID   ((int)0x80110103)
+#define SCE_UTILITY_SYSPARAM_ERROR_INVALID_VAL  ((int)0x80110104)
 
-/* Data structures */
-typedef struct {
-    const char *path;
-    int mpid;
-    int group;
-    u32 dep_mask;
-    int state_and_modid;
-    int loaded_by_type;
-} SceUtilityModEntry;
+#define SCE_UTILITY_NETPARAM_ERROR_NOT_FOUND    ((int)0x80110601)
+#define SCE_UTILITY_NETPARAM_ERROR_INVALID_ID   ((int)0x80110602)
+#define SCE_UTILITY_NETPARAM_ERROR_INVALID_PTR  ((int)0x80110603)
+#define SCE_UTILITY_NETPARAM_ERROR_INVALID_KEY  ((int)0x80110604)
+#define SCE_UTILITY_NETPARAM_ERROR_INVALID_VAL  ((int)0x80110605)
+#define SCE_UTILITY_NETPARAM_ERROR_REG_MISMATCH ((int)0x80110606)
+#define SCE_UTILITY_NETPARAM_ERROR_EXISTS       ((int)0x80110681)
+#define SCE_UTILITY_NETPARAM_ERROR_PATH_SMALL   ((int)0x80110682)
+#define SCE_UTILITY_NETPARAM_ERROR_TYPE_MISMATCH ((int)0x80110683)
+#define SCE_UTILITY_NETPARAM_ERROR_KEY_TOO_BIG  ((int)0x80110684)
+#define SCE_UTILITY_NETPARAM_ERROR_BUF_TOO_SMALL ((int)0x80110685)
 
-typedef struct {
-    SceUID thid;              /* 0x00 (0xc400) */
-    SceUID suspend_evf;       /* 0x04 (0xc404) */
-    SceUID worktime_evf;      /* 0x08 (0xc408) */
-    u32 active_type;          /* 0x0c (0xc40c) */
-    u32 status;               /* 0x10 (0xc410) */
-    u32 abort_flag;           /* 0x14 (0xc414) */
-    int emulated_ms;          /* 0x18 (0xc418) */
-    u32 speed;                /* 0x1c (0xc41c) */
-    void *params;             /* 0x20 (0xc420) */
-    u32 params_size;          /* 0x24 (0xc424) */
-    const char *mod_path;     /* 0x28 (0xc428) */
-    SceUID chnnlsv_modid;     /* 0x2c (0xc42c) */
-    SceUID psheet_modid;      /* 0x30 (0xc430) */
-    SceUID common_modid;      /* 0x34 (0xc434) */
-    SceUID net_modid;         /* 0x38 (0xc438) */
-    SceUID paf_modid;         /* 0x3c (0xc43c) */
-    SceUID main_modid;        /* 0x40 (0xc440) */
-    int devctl_res;           /* 0x44 (0xc444) */
-    void *ext_data;           /* 0x48 (0xc448) */
-    u32 ext_size;             /* 0x4c (0xc44c) */
-    u32 saved_unk0c;          /* 0x50 (0xc450) */
-    u32 saved_unk28;          /* 0x54 (0xc454) */
-    u32 saved_unk2c;          /* 0x58 (0xc458) */
-    u32 devctl_out[4];        /* 0x50..0x5c */
-    int sdk_ver_override;     /* 0x5c (0xc45c) */
-    void *vmem_addr;          /* 0x60 (0xc460) */
-    u32 vmem_size;            /* 0x64 (0xc464) */
+#define SCE_UTILITY_NET_ERROR_INVALID_ID        ((int)0x80110801)
+#define SCE_UTILITY_USB_ERROR_INVALID_ID        ((int)0x80110E01)
+#define SCE_UTILITY_AV_ERROR_INVALID_ID         ((int)0x80110F01)
+
+#define SCE_UTILITY_MOD_ERROR_INVALID_ID        ((int)0x80111101)
+#define SCE_UTILITY_MOD_ERROR_ALREADY_LOADED    ((int)0x80111102)
+#define SCE_UTILITY_MOD_ERROR_NOT_LOADED        ((int)0x80111103)
+#define SCE_UTILITY_MOD_ERROR_START_FAILED      ((int)0x80111104)
+
+#define SCE_KERNEL_ERROR_NO_MEMORY              ((int)0x80000042)
+#define SCE_KERNEL_ERROR_UNSUPPORTED            ((int)0x80000004)
+#define SCE_KERNEL_ERROR_NO_FILE                ((int)0x80010002)
+#define SCE_KERNEL_ERROR_INVALID_PTR            ((int)0x8001000E)
+#define SCE_KERNEL_ERROR_NO_FREE_SLOT           ((int)0x8001001C)
+#define SCE_KERNEL_ERROR_ILLEGAL_ADDR           ((int)0x800200D3)
+#define SCE_KERNEL_ERROR_CANNOT_STOP            ((int)0x8002012E)
+#define SCE_REG_ERROR_CAT_NOT_FOUND             ((int)0x80082718)
+#define SCE_REG_ERROR_KEY_NOT_FOUND             ((int)0x8008271D)
+
+#define KERMIT_OSK_SHARED_BASE                  0xABD68000u
+#define KERMIT_OSK_WORK_BASE                    0xABD6C000u
+#define KERMIT_OSK_SHARED_SIZE                  0x8000u
+#define KERMIT_OSK_WORK_SIZE                    0x4000u
+
+static inline u32 utilityEnterKernel(void)
+{
+	u32 old_k1 = pspGetK1();
+	pspSetK1(old_k1 << 11);
+	return old_k1;
+}
+
+static inline void utilityLeaveKernel(u32 old_k1)
+{
+	pspSetK1(old_k1);
+}
+
+static inline int utilityIsBadRange(const void *ptr, u32 size)
+{
+	u32 addr = (u32)ptr;
+	return ((s32)(((addr + size) | addr) & pspGetK1())) < 0;
+}
+
+static inline int utilityIsBadSpan(const void *ptr, u32 size)
+{
+	u32 addr = (u32)ptr;
+	return ((s32)(((addr + size) | addr | size) & pspGetK1())) < 0;
+}
+
+static inline int utilityIsBadPtr(const void *ptr)
+{
+	return ((s32)((u32)ptr & pspGetK1())) < 0;
+}
+
+/* Kernel and utility parameter structures */
+typedef struct SceKernelLMOption {
+	SceSize size;
+	SceUID mpid_text;
+	SceUID mpid_data;
+	u32 flags;
+	u8 position;
+	u8 access;
+	u8 c_reserved[2];
+} SceKernelLMOption;
+
+typedef struct SceKernelSMOption {
+	SceSize size;
+	SceUID mpid_stack;
+	SceSize stack_size;
+	int priority;
+	u32 attribute;
+} SceKernelSMOption;
+
+typedef struct SceKernelSysMemInfo {
+	SceSize size;
+	char name[32];
+	u32 attr;
+	void *addr;
+	u32 mem_size;
+	u32 other_size;
+} SceKernelSysMemInfo;
+
+typedef struct SceKernelGameInfo {
+	u32 size;
+	u32 flags;
+	char str_umd_data[16];
+	char str_reserved[4];
+	u32 sdk_version;
+	u32 compiler_version;
+	u32 dnas_flags;
+	u32 utility_flags;
+	char boot_path[24];
+	char product_code[16];
+	u32 game_type;
+	char title_code[24];
+	u32 emu_flags;
+} SceKernelGameInfo;
+
+typedef struct SceRegParam {
+	u32 reg_type;
+	char name[256];
+	u32 name_len;
+	u32 sys_flag_open;
+	u32 sys_flag_compat;
+} SceRegParam;
+
+typedef struct SceCtrlData {
+	u32 time_stamp;
+	u32 buttons;
+	u8 analog_x;
+	u8 analog_y;
+	u8 reserved[6];
+} SceCtrlData;
+
+typedef struct SceUtilityDialogCommon {
+	u32 size;
+	int language;
+	int button_swap;
+	int graphics_thread;
+	int access_thread;
+	int font_thread;
+	int sound_thread;
+	int result;
+	int reserved[4];
+} SceUtilityDialogCommon;
+
+typedef struct SceUtilitySavedataHeader {
+	SceUtilityDialogCommon base;
+	u32 operation_mode;
+} SceUtilitySavedataHeader;
+
+typedef struct SceUtilityGameSharingHeader {
+	SceUtilityDialogCommon base;
+	u32 game_info_words[6];
+	void *data_ptr;
+	u32 data_size;
+	u32 extra_words[3];
+	void *ext_buf;
+	u32 ext_size;
+} SceUtilityGameSharingHeader;
+
+typedef struct SceUtilityStoreHeader {
+	SceUtilityDialogCommon base;
+	u32 header_words[4];
+	void *buffer_ptr;
+	u32 item_count;
+	u32 middle_words[4];
+	u32 item_stride;
+} SceUtilityStoreHeader;
+
+typedef struct SceUtilityFriendHeader {
+	SceUtilityDialogCommon base;
+	u32 request_kind;
+} SceUtilityFriendHeader;
+
+typedef struct SceUtilityHtmlViewerHeader {
+	SceUtilityDialogCommon base;
+	void *mem_addr;
+	u32 mem_size;
+	u32 viewer_words[5];
+	u32 init_flags;
+} SceUtilityHtmlViewerHeader;
+
+typedef struct SceUtilityDialogStartArg {
+	u32 size;
+	int model;
+	u32 dialog_type;
+	u32 dialog_submode;
+	void *params;
+	u32 api_version;
+	int boot_from;
+} SceUtilityDialogStartArg;
+
+typedef struct SceUtilityAppletStartArg {
+	u32 size;
+	int model;
+	u32 applet_type;
+	void *params;
+	u32 api_version;
+	char product_code[16];
+	int boot_from;
+} SceUtilityAppletStartArg;
+
+typedef struct SceUtilityDialogState {
+	SceUID dialog_thid;
+	SceUID suspend_evf;
+	SceUID worktime_evf;
+	u32 active_type;
+	u32 dialog_submode;
+	u32 status;
+	u32 in_suspend;
+	u32 abort_flag;
+	void *params;
+	u32 api_version;
+	int speed;
+	SceUID chnnlsv_modid;
+	SceUID psheet_modid;
+	SceUID common_gui_modid;
+	SceUID common_util_modid;
+	SceUID paf_modid;
+	SceUID main_modid;
+	SceUID init_thid;
+	int devctl_result;
+	u32 devctl_out[4];
+	int emulated_ms;
+	void *vmem_addr;
+	int vmem_size;
 } SceUtilityDialogState;
 
-typedef struct {
-    SceUID shutdown_thid;     /* 0x00 (0xc468) */
-    SceUID worktime_evf;      /* 0x04 (0xc46c) */
-    u32 active_type;          /* 0x08 (0xc470) */
-    u32 status;               /* 0x0c (0xc474) */
-    void *params;             /* 0x10 (0xc478) */
-    u32 params_size;          /* 0x14 (0xc47c) */
-    u32 speed;                /* 0x18 (0xc480) */
-    SceUID modid;             /* 0x1c (0xc484) */
-    SceUID block_id;          /* 0x20 (0xc488) */
-    const char *mod_path;     /* 0x24 (0xc48c) */
-    SceUID init_thid;         /* 0x28 (0xc490) */
+typedef struct SceUtilityAppletState {
+	SceUID applet_thid;
+	SceUID worktime_evf;
+	u32 active_type;
+	u32 status;
+	void *params;
+	u32 api_version;
+	int speed;
+	SceUID main_modid;
+	SceUID block_id;
+	const char *mod_path;
+	SceUID init_thid;
 } SceUtilityAppletState;
 
-typedef struct {
-    SceUID block_id;
-    SceUID modid;
-} SceUtilityAppletBlockMod;
+typedef struct SceUtilityAppletModSlot {
+	SceUID block_id;
+	SceUID modid;
+} SceUtilityAppletModSlot;
 
 typedef struct SceUtilityDialogMemNode {
-    struct SceUtilityDialogMemNode *next;
-    struct SceUtilityDialogMemNode *prev;
-    SceUID block_id;
-    SceUID modid;
+	struct SceUtilityDialogMemNode *next;
+	struct SceUtilityDialogMemNode *prev;
+	SceUID block_id;
+	SceUID modid;
 } SceUtilityDialogMemNode;
 
-typedef struct {
-    const char *name;
-    const char *path;
-} SceUtilityPluginMap;
+typedef struct SceUtilityModStartOpt {
+	int mpid;
+	SceSize argsize;
+	void *argp;
+	const SceKernelLMOption *lm_opt;
+} SceUtilityModStartOpt;
 
-static const SceUtilityPluginMap g_plugin_map[] = {
-    { "auth_plugin",                 "flash0:/vsh/module/auth_plugin.prx" },
-    { "auto_connect",                "flash0:/vsh/module/auto_connect.prx" },
-    { "dnas_plugin",                 "flash0:/vsh/module/dnas_plugin.prx" },
-    { "dd_helper",                   "flash0:/vsh/module/dd_helper.prx" },
-    { "file_parser_base",            "flash0:/vsh/module/file_parser_base.prx" },
-    { "game_install_plugin",         "flash0:/vsh/module/game_install_plugin.prx" },
-    { "gamedata_install_plugin",     "flash0:/vsh/module/gamedata_install_plugin.prx" },
-    { "libupdown",                   "flash0:/kd/libupdown.prx" },
-    { "msgdialog_plugin",            "flash0:/vsh/module/msgdialog_plugin.prx" },
-    { "netconf_plugin",              "flash0:/vsh/module/netconf_plugin.prx" },
-    { "netconf_bt_plugin",           "flash0:/vsh/module/netconf_bt_plugin.prx" },
-    { "netconf_plugin_auto_nec",     "flash0:/vsh/module/netconf_plugin_auto_nec.prx" },
-    { "netconf_plugin_auto_bfl",     "flash0:/vsh/module/netconf_plugin_auto_bfl.prx" },
-    { "netplay_server_utility",      "flash0:/vsh/module/netplay_server_utility.prx" },
-    { "netplay_server2_utility",     "flash0:/vsh/module/netplay_server2_utility.prx" },
-    { "netplay_server_plus_utility", "flash0:/vsh/module/netplay_server_plus_utility.prx" },
-    { "npsignin_plugin",             "flash0:/vsh/module/npsignin_plugin.prx" },
-    { "npinstaller_plugin",          "flash0:/vsh/module/npinstaller_plugin.prx" },
-    { "np_commerce2_regcam",         "flash0:/kd/np_commerce2_regcam.prx" },
-    { "np_commerce2_store",          "flash0:/kd/np_commerce2_store.prx" },
-    { "osk_plugin",                  "flash0:/vsh/module/kermit_osk_plugin.prx" },
-    { "pspnet_wispr",                "flash0:/vsh/module/pspnet_wispr.prx" },
-    { "ps3scan_plugin",              "flash0:/vsh/module/ps3scan_plugin.prx" },
-    { "psn_utility",                 "flash0:/vsh/module/psn_utility.prx" },
-    { "rss_subscriber",              "flash0:/vsh/module/rss_subscriber.prx" },
-    { "rss_common",                  "flash0:/vsh/module/rss_common.prx" },
-    { "rss_reader",                  "flash0:/vsh/module/rss_reader.prx" },
-    { "savedata_utility",            "flash0:/vsh/module/savedata_utility.prx" },
-    { "savedata_auto_dialog",        "flash0:/vsh/module/savedata_auto_dialog.prx" },
-    { "screenshot_plugin",           "flash0:/vsh/module/screenshot_plugin.prx" },
-    { "store_checkout_utility",      "flash0:/vsh/module/store_checkout_utility.prx" },
+typedef struct SceUtilityKernMod {
+	const char *path;
+	const SceUtilityModStartOpt *opt;
+	SceUID modid;
+} SceUtilityKernMod;
+
+typedef struct SceUtilityUserMod {
+	const char *path;
+	const SceUtilityModStartOpt *opt;
+	SceUID modid;
+	SceUID block_id;
+} SceUtilityUserMod;
+
+typedef struct SceUtilityModuleGroup {
+	u16 ref_count;
+	u8 kern_count;
+	u8 user_count;
+	SceUtilityKernMod *kern_mods;
+	SceUtilityUserMod *user_mods;
+	SceSize user_mem_size;
+	SceUID rem_block;
+	u32 guard_seed;
+} SceUtilityModuleGroup;
+
+typedef struct SceUtilityOskItem {
+	int input_config[4];
+	u16 *desc_ptr;
+	u16 *init_text_ptr;
+	int out_text_limit;
+	u16 *out_text_ptr;
+	int result;
+	int out_text_len;
+} SceUtilityOskItem;
+
+typedef struct SceUtilityOskParams {
+	SceUtilityDialogCommon base;
+	int item_count;
+	SceUtilityOskItem *items;
+	int state;
+	int error_code;
+} SceUtilityOskParams;
+
+typedef struct SceUtilityOskSharedArea {
+	SceUtilityOskParams params;
+	SceUtilityOskItem item;
+	u32 pad_words[3];
+	u16 init_text[544];
+	u16 desc_text[544];
+	u16 out_text[512];
+} SceUtilityOskSharedArea;
+
+typedef struct SceUtilityOskState {
+	SceUtilityOskParams *user_params;
+	SceUtilityOskSharedArea *shared_params;
+	int status;
+	int current_item;
+	int item_count;
+	int pending_next;
+	SceUID mutex_id;
+	void *shared_base;
+	SceUtilityOskSharedArea *work_area;
+	u32 work_size;
+} SceUtilityOskState;
+
+typedef struct SceUtilityNetParamKey {
+	u32 reg_type;
+	s32 key_size;
+	const char *name;
+} SceUtilityNetParamKey;
+
+typedef struct SceUtilityNetParamHandle {
+	u32 main_cat;
+	u32 child_cat;
+} SceUtilityNetParamHandle;
+
+typedef struct SceUtilityNetParamSlotArg {
+	int slot;
+	int result;
+} SceUtilityNetParamSlotArg;
+
+typedef struct SceUtilityNetParamCopyArg {
+	int src_slot;
+	int dst_slot;
+	int result;
+} SceUtilityNetParamCopyArg;
+
+typedef struct SceUtilityNetParamGetArg {
+	int slot;
+	int param;
+	s32 buf_size;
+	void *out_buf;
+	int result;
+} SceUtilityNetParamGetArg;
+
+typedef struct SceUtilityNetParamSetArg {
+	int slot;
+	int param;
+	const void *value;
+	int result;
+} SceUtilityNetParamSetArg;
+
+typedef struct SceUtilityCompatEntry {
+	const char *product_code;
+	u32 dialog_type;
+	u32 dialog_submode;
+	u32 flags;
+	u32 delays[1];
+} SceUtilityCompatEntry;
+
+/* Forward declarations */
+int sceUtility_driver_F062AEA6(void);
+int sceUtility_driver_20C68C34(void);
+int sceUtility_private_59EB3A17(int flag);
+int sceUtility_private_5ED16EBA(const char *name, int flags, const void *opt);
+int sceUtility_private_5DCBD3C0(void);
+int sceUtility_private_390A738F(void);
+int sceUtility_ECE1D3E5(const char *name_buf);
+int sceUtility_70267ADF(const char *key_buf);
+
+static UTILITY_NOINLINE int utilityDialogInitStart(u32 dialog_type, void *params);
+static UTILITY_NOINLINE int utilityDialogShutdownStart(u32 dialog_type);
+static UTILITY_NOINLINE int utilityDialogResume(u32 dialog_type, void *params);
+static UTILITY_NOINLINE int utilitySysEventHandler(int ev_id, char *ev_name, void *param, int *result);
+static UTILITY_NOINLINE int utilityDialogUpdate(u32 dialog_type, int speed);
+static UTILITY_NOINLINE int utilityDialogGetStatus(u32 dialog_type);
+static UTILITY_NOINLINE int utilityDialogAbort(u32 dialog_type);
+static UTILITY_NOINLINE int utilityDialogLoadThread(SceSize args, void *argp);
+static UTILITY_NOINLINE int utilityAppletLoadThread(SceSize args, void *argp);
+static UTILITY_NOINLINE int utilityDialogUnloadThread(SceSize args, void *argp);
+static UTILITY_NOINLINE int utilityAppletUnloadThread(SceSize args, void *argp);
+static UTILITY_NOINLINE int utilityDialogStopUnloadModule(SceUID modid, int mpid);
+static UTILITY_NOINLINE int utilityAppletStopUnloadModule(SceUID modid, int mpid);
+static UTILITY_NOINLINE int utilityIsDialogMemGuardEnabled(void);
+static UTILITY_NOINLINE int utilityAppletInitStart(u32 applet_type, void *params);
+static UTILITY_NOINLINE int utilityAppletShutdownStart(u32 applet_type);
+static UTILITY_NOINLINE int utilityAppletInit(void);
+static UTILITY_NOINLINE int utilityAppletTerm(void);
+static UTILITY_NOINLINE int utilityAppletUpdate(u32 applet_type, int speed);
+static UTILITY_NOINLINE int utilityAppletGetStatus(u32 applet_type);
+static UTILITY_NOINLINE SceSize utilityAppletGetPartitionSize(u32 applet_type, u32 api_version, const SceUtilityHtmlViewerHeader *params);
+static UTILITY_NOINLINE SceUID utilityAppletLoadModule(const char *path, SceUID *block_p, int flags, void *opt);
+static UTILITY_NOINLINE int utilityAppletUnloadModule(SceUID modid);
+static UTILITY_NOINLINE SceUID utilityAppletLoadStartModule(const char *path, int mpid, SceSize argsize, void *argp, SceUID *block_p);
+static UTILITY_NOINLINE int utilityIsDialogModuleGuardEnabled(void);
+static UTILITY_NOINLINE int utilityFillDialogModuleGuard(SceUID block_id);
+static UTILITY_NOINLINE int utilityCheckDialogModuleGuard(SceUID block_id);
+
+static UTILITY_NOINLINE int utilityLoadNetModuleGroup(u32 mod_id);
+static UTILITY_NOINLINE int utilityInitNetModules(void);
+static UTILITY_NOINLINE int utilityUnloadNetModuleGroup(u32 mod_id);
+static UTILITY_NOINLINE int utilityInitDnasModules(void);
+static UTILITY_NOINLINE SceUtilityModuleGroup *utilityFindNetModuleGroup(u32 mod_id);
+static UTILITY_NOINLINE SceUtilityModuleGroup *utilityFindUsbModuleGroup(u32 mod_id);
+static UTILITY_NOINLINE SceUtilityModuleGroup *utilityFindAvModuleGroup(u32 mod_id);
+static UTILITY_NOINLINE int utilityInitUsbModules(void);
+static UTILITY_NOINLINE int utilityLoadUsbModuleGroup(u32 mod_id);
+static UTILITY_NOINLINE int utilityUnloadUsbModuleGroup(u32 mod_id);
+static UTILITY_NOINLINE SceUtilityModuleGroup *utilityFindLegacyUsbModuleGroup(u32 mod_id);
+static UTILITY_NOINLINE SceUtilityModuleGroup *utilityFindUsbAccessoryGroup(u32 mod_id);
+static UTILITY_NOINLINE int utilityIsUsbGpsSerialDriver(void);
+static UTILITY_NOINLINE int utilityLoadAvModuleGroup(u32 mod_id);
+static UTILITY_NOINLINE int utilityUnloadAvModuleGroup(u32 mod_id);
+static UTILITY_NOINLINE int utilityInitAvModules(void);
+static UTILITY_NOINLINE int utilityInitNpModules(void);
+static UTILITY_NOINLINE int utilityLoadNpModuleGroup(u32 mod_id);
+static UTILITY_NOINLINE int utilityUnloadNpModuleGroup(u32 mod_id);
+static UTILITY_NOINLINE int utilityLoadNpDrmModuleGroup(u32 mod_id);
+static UTILITY_NOINLINE int utilityUnloadNpDrmModuleGroup(u32 mod_id);
+static UTILITY_NOINLINE int utilityIsNpDrmCheckEnabled(void);
+static UTILITY_NOINLINE int utilityInitNpDrmModules(void);
+static UTILITY_NOINLINE int utilityLoadIrModuleGroup(u32 mod_id);
+static UTILITY_NOINLINE int utilityInitIrModules(void);
+static UTILITY_NOINLINE int utilityUnloadIrModuleGroup(u32 mod_id);
+static UTILITY_NOINLINE int utilityInitNpInstModules(void);
+static UTILITY_NOINLINE int utilityLoadModuleGroup(SceUtilityModuleGroup *group);
+static UTILITY_NOINLINE int utilityUnloadModuleGroup(SceUtilityModuleGroup *group);
+static UTILITY_NOINLINE int utilityInitModuleGroup(SceUtilityModuleGroup *group);
+static UTILITY_NOINLINE int utilityLoadKernelModule(SceUtilityKernMod *entry);
+static UTILITY_NOINLINE int utilityUnloadKernelModule(SceUtilityKernMod *entry);
+static UTILITY_NOINLINE int utilityLoadUserModule(SceUtilityUserMod *entry, SceUID block_id, SceUID *rem_block);
+static UTILITY_NOINLINE int utilityUnloadUserModule(SceUtilityUserMod *entry);
+static UTILITY_NOINLINE int utilityIsModuleGuardEnabled(void);
+
+static UTILITY_NOINLINE int utilityKermitOskInit(void);
+static UTILITY_NOINLINE int utilityKermitOskStartItem(SceUtilityOskParams *params, int item_index);
+static UTILITY_NOINLINE int utilityKermitOskFinishItem(int item_index);
+
+static UTILITY_NOINLINE int utilityRegGetSysParamInt(const char *cat_path, const char *key_name, s32 *out_val);
+static UTILITY_NOINLINE int utilityRegGetNetInt(const char *cat_path, const char *key_name, s32 *out_val);
+static UTILITY_NOINLINE int utilityRegSetSysParamInt(const char *cat_path, const char *key_name, s32 value);
+static UTILITY_NOINLINE int utilityRegSetNetInt(const char *cat_path, const char *key_name, s32 value);
+static UTILITY_NOINLINE int utilityRegGetSysParamString(const char *cat_path, const char *key_name, char *out_buf, s32 buf_size);
+static UTILITY_NOINLINE int utilityRegGetMessengerString(const char *cat_path, const char *key_name, char *out_buf, s32 buf_size);
+
+static UTILITY_NOINLINE int utilityNetParamCheckCb(void *arg);
+static UTILITY_NOINLINE int utilityNetParamCreateCb(void *arg);
+static UTILITY_NOINLINE int utilityNetParamDeleteCb(void *arg);
+static UTILITY_NOINLINE int utilityNetParamCopyCb(void *arg);
+static UTILITY_NOINLINE int utilityNetParamGetCb(void *arg);
+static UTILITY_NOINLINE int utilityNetParamSetCb(void *arg);
+static UTILITY_NOINLINE int utilityRegSetMessengerString(const char *cat_path, const char *key_name, const char *str_buf, s32 size);
+static UTILITY_NOINLINE int utilityNetParamOpenSlot(int slot, SceUtilityNetParamHandle *handle, int create);
+static UTILITY_NOINLINE int utilityNetParamRemoveSlot(int slot);
+static UTILITY_NOINLINE int utilityNetParamInitSlot(int slot);
+static UTILITY_NOINLINE int utilityNetParamCopyHandle(SceUtilityNetParamHandle *src, SceUtilityNetParamHandle *dst);
+static UTILITY_NOINLINE int utilityNetParamFormatPath(int slot, char *out_buf, u32 buf_size);
+static UTILITY_NOINLINE int utilityNetParamCloseSlot(SceUtilityNetParamHandle *handle);
+static UTILITY_NOINLINE int utilityNetParamReadParam(SceUtilityNetParamHandle *handle, int param, s32 buf_size, void *out_buf);
+static UTILITY_NOINLINE int utilityNetParamWriteParamWrap(SceUtilityNetParamHandle *handle, int param, const void *value);
+static UTILITY_NOINLINE int utilityNetParamWriteParam(SceUtilityNetParamHandle *handle, int param, const void *value);
+static UTILITY_NOINLINE int utilityNetParamCreateDefaults(SceUtilityNetParamHandle *handle);
+static UTILITY_NOINLINE int utilityNetParamCopyKey(SceUtilityNetParamHandle *src, SceUtilityNetParamHandle *dst, int param, s32 buf_size, void *scratch);
+static UTILITY_NOINLINE int utilityNetParamValidateValue(int param, u32 key_size, const u32 *value);
+static UTILITY_NOINLINE int utilityNetParamUpsertKey(SceUtilityNetParamHandle *handle, int param, const void *value);
+static UTILITY_NOINLINE int utilityNetParamSlotExists(int slot);
+static UTILITY_NOINLINE int utilityNetParamKeyExists(u32 cat, const char *key_name);
+static UTILITY_NOINLINE int utilityNetParamGetRegKey(u32 cat, const char *key_name, u32 expected_type, s32 max_key_size, s32 buf_size, void *out_buf);
+static UTILITY_NOINLINE int utilityNetParamSetOrCreateKey(u32 cat, const char *key_name, u32 key_type, s32 key_size, s32 write_size, const void *value);
+static UTILITY_NOINLINE int utilityNetParamOpenCategory(const char *path, int create, u32 *out_cat);
+static UTILITY_NOINLINE int utilityNetParamOpenRegistry(void);
+static UTILITY_NOINLINE int utilityNetParamCloseRegistry(void);
+static UTILITY_NOINLINE int utilityNetParamFlushCloseCategory(u32 cat);
+static UTILITY_NOINLINE int utilityNetParamFlushRegistry(void);
+static UTILITY_NOINLINE int utilityNetParamSetRegValue(u32 cat, const char *key_name, s32 size, const void *value);
+static UTILITY_NOINLINE int utilityNetParamCreateAndSetKey(u32 cat, const char *key_name, u32 key_type, s32 key_size, s32 write_size, const void *value);
+static UTILITY_NOINLINE int utilityNetParamRemoveCategory(const char *path);
+
+static UTILITY_NOINLINE void utilityCompatMatchGame(u32 dialog_type, u32 dialog_submode);
+static UTILITY_NOINLINE int utilityKermitSetDialogActive(int active);
+static UTILITY_NOINLINE int utilityKermitFetchCapabilities(void);
+static UTILITY_NOINLINE void utilityCompatClear(void);
+static UTILITY_NOINLINE u32 utilityCompatGetFlags(void);
+static UTILITY_NOINLINE int utilityCompatDelay(u32 dialog_type, int delay_slot);
+static UTILITY_NOINLINE u64 utilityKermitQueryCapability(int cap_index);
+
+/* Read-only tables */
+static const SceKernelLMOption g_net_adhoc_compat_lm_opt = {
+	sizeof(SceKernelLMOption), 0, 0, 0, 1, 1, { 0, 0 }
 };
 
-/* .data globals */
+static const SceUtilityModStartOpt g_net_adhoc_compat_opt = {
+	0, 0, NULL, &g_net_adhoc_compat_lm_opt
+};
+
+static const u16 g_osk_empty_utf16 = 0;
+
+typedef struct SceUtilityNetParamDefaults {
+	const char *cnf_name;
+	const char *ssid;
+	u32 auth_proto;
+	u8 wep_key[16];
+	s32 wep_key_len;
+	u32 how_to_set_ip;
+	const char *ip_address;
+	const char *netmask;
+	const char *default_route;
+	u32 dns_flag;
+	const char *dns_main;
+	const char *dns_alt;
+	const char *auth_name;
+	const char *auth_key;
+	u32 http_proxy_flag;
+	const char *http_proxy_server;
+	u32 http_proxy_port;
+	u32 version;
+	u32 device;
+	u32 auth_dot1x_type;
+	const char *auth_dot1x_name;
+	const char *auth_dot1x_key;
+	u32 wpa_key_type;
+	u8 wpa_key[64];
+	u32 browser_flag;
+	u32 wifisvc_config;
+	const char *wifisvc_auth_name;
+	const char *wifisvc_auth_key;
+	u32 wifisvc_option;
+	const char *last_leased_dhcp;
+	u32 bt_id;
+	const char *at_command;
+	const char *phone_number;
+} SceUtilityNetParamDefaults;
+
+extern const SceUtilityNetParamKey g_netparam_keys[32];
+extern const SceUtilityNetParamDefaults g_netparam_defaults;
+
+static const SceUtilityCompatEntry g_game_compat_table[17] = {
+	{ "ULJM05005", 1, 1, 0x0, { 250000 } },
+	{ "ULUS10005", 1, 1, 0x0, { 250000 } },
+	{ "ULES00016", 1, 1, 0x0, { 250000 } },
+	{ "ULJM05026", 1, 0, 0x1, { 0 } },
+	{ "ULJM05026", 1, 1, 0x1, { 0 } },
+	{ "ULUS10021", 6, 0, 0x1, { 0 } },
+	{ "ULUS10021", 1, 0, 0x1, { 0 } },
+	{ "ULJM05289", 1, 1, 0x2, { 0 } },
+	{ "ULAS42113", 1, 1, 0x2, { 0 } },
+	{ "ULUS10294", 1, 1, 0x2, { 0 } },
+	{ "ULES00920", 1, 1, 0x2, { 0 } },
+	{ "ULES00921", 1, 1, 0x2, { 0 } },
+	{ "ULJM05289", 6, 0, 0x2, { 0 } },
+	{ "ULAS42113", 6, 0, 0x2, { 0 } },
+	{ "ULUS10294", 6, 0, 0x2, { 0 } },
+	{ "ULES00920", 6, 0, 0x2, { 0 } },
+	{ "ULES00921", 6, 0, 0x2, { 0 } },
+};
+
+/* Initialized module tables (.data) */
 static SceSysEventHandler g_sys_ev_handler = {
-    0x40,
-    "SceUtility",
-    0x00FFFF00,
-    utilitySysEventHandler,
-    0, 0, NULL,
-    { 0, 0, 0, 0, 0, 0, 0, 0, 0 }
+	sizeof(SceSysEventHandler),
+	"SceUtility",
+	0x00FFFF00,
+	utilitySysEventHandler,
+	0, 0, NULL,
+	{ 0, 0, 0, 0, 0, 0, 0, 0, 0 }
 };
 
-static SceUtilityModEntry g_mods_01[25] = {
-    { "flash0:/kd/pspnet.prx",                2, 1, 0, 0, 0 },
-    { "flash0:/kd/pspnet_adhoc.prx",          2, 1, 1, 0, 0 },
-    { "flash0:/kd/pspnet_adhocctl.prx",       2, 1, 3, 0, 0 },
-    { "flash0:/kd/pspnet_adhoc_matching.prx", 2, 1, 3, 0, 0 },
-    { "flash0:/kd/pspnet_adhoc_download.prx", 2, 1, 5, 0, 0 },
-    { "flash0:/kd/pspnet_inet.prx",           2, 1, 1, 0, 0 },
-    { "flash0:/kd/pspnet_apctl.prx",          2, 1, 0x21, 0, 0 },
-    { "flash0:/kd/parseuri.prx",              2, 1, 0x20, 0, 0 },
-    { "flash0:/kd/parsehttp.prx",             2, 1, 0x80, 0, 0 },
-    { "flash0:/kd/libhttp.prx",               2, 1, 0x1e0, 0, 0 },
-    { "flash0:/kd/libssl.prx",                2, 1, 0x20, 0, 0 },
-    { "flash0:/kd/np_core.prx",               1, 2, 0, 0, 0 },
-    { "flash0:/kd/np.prx",                    2, 2, 0xe60, 0, 0 },
-    { "flash0:/kd/np_service.prx",            2, 2, 0x1e60, 0, 0 },
-    { "flash0:/kd/np_matching2.prx",          2, 2, 0x1e60, 0, 0 },
-    { "flash0:/kd/np_auth.prx",               2, 2, 0x1000, 0, 0 },
-    { "flash0:/kd/libupnp.prx",               2, 1, 0x2e0, 0, 0 },
-    { "flash0:/kd/pspnet_upnp.prx",           2, 1, 0x102e0, 0, 0 },
-    { "flash0:/kd/rhttp.prx",                 2, 1, 0x6e0, 0, 0 },
-    { "flash0:/kd/np_commerce2.prx",          2, 2, 0x1600, 0, 0 },
-    { "flash0:/kd/np_inst.prx",               1, 2, 0, 0, 0 },
-    { "flash0:/kd/np_campaign.prx",           2, 2, 0x16e0, 0, 0 },
-    { "flash0:/kd/libdnssock.prx",            2, 1, 0x20, 0, 0 },
-    { "flash0:/kd/pspnet_adhoc_discover.prx", 2, 1, 4, 0, 0 },
-    { "flash0:/kd/pspnet_adhoc_auth.prx",     1, 1, 3, 0, 0 },
+/* Net module groups */
+static SceUtilityKernMod g_net_common_kern[1] = {
+	{ "flash0:/kd/ifhandle.prx", NULL, 0 },
+};
+static SceUtilityUserMod g_net_common_user[1] = {
+	{ "flash0:/kd/pspnet.prx", NULL, 0, 0 },
+};
+static SceUtilityKernMod g_net_adhoc_kern[2] = {
+	{ "flash0:/kd/memab.prx", NULL, 0 },
+	{ "flash0:/kd/pspnet_adhoc_auth.prx", NULL, 0 },
+};
+static SceUtilityUserMod g_net_adhoc_user[5] = {
+	{ "flash0:/kd/pspnet_adhoc.prx", NULL, 0, 0 },
+	{ "flash0:/kd/pspnet_adhocctl.prx", NULL, 0, 0 },
+	{ "flash0:/kd/pspnet_adhoc_matching.prx", NULL, 0, 0 },
+	{ "flash0:/kd/pspnet_adhoc_download.prx", NULL, 0, 0 },
+	{ "flash0:/kd/pspnet_adhoc_discover.prx", NULL, 0, 0 },
+};
+static SceUtilityUserMod g_net_inet_user[3] = {
+	{ "flash0:/kd/pspnet_inet.prx", NULL, 0, 0 },
+	{ "flash0:/kd/pspnet_apctl.prx", NULL, 0, 0 },
+	{ "flash0:/kd/pspnet_resolver.prx", NULL, 0, 0 },
+};
+static SceUtilityUserMod g_net_parseuri_user[1] = {
+	{ "flash0:/kd/libparse_uri.prx", NULL, 0, 0 },
+};
+static SceUtilityUserMod g_net_parsehttp_user[1] = {
+	{ "flash0:/kd/libparse_http.prx", NULL, 0, 0 },
+};
+static SceUtilityKernMod g_net_http_kern[1] = {
+	{ "flash0:/kd/http_storage.prx", NULL, 0 },
+};
+static SceUtilityUserMod g_net_http_user[1] = {
+	{ "flash0:/kd/libhttp.prx", NULL, 0, 0 },
+};
+static SceUtilityKernMod g_net_ssl_kern[1] = {
+	{ "flash0:/kd/cert_loader.prx", NULL, 0 },
+};
+static SceUtilityUserMod g_net_ssl_user[1] = {
+	{ "flash0:/kd/libssl.prx", NULL, 0, 0 },
+};
+static SceUtilityUserMod g_net_upnp_user[1] = {
+	{ "flash0:/kd/pspnet_upnp.prx", NULL, 0, 0 },
+};
+static SceUtilityUserMod g_net_gameupdate_user[1] = {
+	{ "flash0:/kd/libgameupdate.prx", NULL, 0, 0 },
 };
 
-static SceUtilityModEntry g_mods_02[5] = {
-    { "flash0:/kd/usbpspcm.prx", 1, 0, 0, 0, 0 },
-    { "flash0:/kd/usbstor.prx",  1, 0, 0, 0, 0 },
-    { "flash0:/kd/usbmic.prx",   1, 0, 0, 0, 0 },
-    { "flash0:/kd/usbcam.prx",   1, 0, 0, 0, 0 },
-    { "flash0:/kd/usbgps.prx",   1, 0, 0, 0, 0 },
+static SceUtilityModuleGroup g_net_groups[9] = {
+	{ 0, 1, 1, g_net_common_kern, g_net_common_user, 0x14000, 0, 0 },
+	{ 0, 2, 5, g_net_adhoc_kern, g_net_adhoc_user, 0x20000, 0, 0 },
+	{ 0, 0, 3, NULL, g_net_inet_user, 0x58000, 0, 0 },
+	{ 0, 0, 1, NULL, g_net_parseuri_user, 0x6000, 0, 0 },
+	{ 0, 0, 1, NULL, g_net_parsehttp_user, 0x2000, 0, 0 },
+	{ 0, 1, 1, g_net_http_kern, g_net_http_user, 0x28000, 0, 0 },
+	{ 0, 1, 1, g_net_ssl_kern, g_net_ssl_user, 0x44000, 0, 0 },
+	{ 0, 0, 1, NULL, g_net_upnp_user, 0x10000, 0, 0 },
+	{ 0, 0, 1, NULL, g_net_gameupdate_user, 0x8000, 0, 0 },
 };
 
-static SceUtilityModEntry g_mods_03[11] = {
-    { "flash0:/kd/avcodec.prx",        1, 1, 0, 0, 0 },
-    { "flash0:/kd/vaudio.prx",         1, 1, 0, 0, 0 },
-    { "flash0:/kd/vshbridge_msapp.prx", 1, 1, 1, 0, 0 },
-    { "flash0:/kd/mpeg_vsh.prx",       2, 1, 1, 0, 0 },
-    { "flash0:/kd/mp4msv.prx",         2, 2, 0, 0, 0 },
-    { "flash0:/kd/libatrac3plus.prx",  2, 1, 1, 0, 0 },
-    { "flash0:/kd/mediasync.prx",      1, 1, 0, 0, 0 },
-    { "flash0:/kd/libaac.prx",         2, 1, 1, 0, 0 },
-    { "flash0:/kd/libmp3.prx",         2, 1, 1, 0, 0 },
-    { "flash0:/kd/sc_sascore.prx",     1, 1, 0, 0, 0 },
-    { "flash0:/kd/g729.prx",           1, 1, 0, 0, 0 },
+/* DNAS module group */
+static SceUtilityKernMod g_dnas_kern[2] = {
+	{ "flash0:/kd/mcctrl.prx", NULL, 0 },
+	{ "flash0:/kd/libdnas_core.prx", NULL, 0 },
+};
+static SceUtilityUserMod g_dnas_user[1] = {
+	{ "flash0:/kd/libdnas.prx", NULL, 0, 0 },
+};
+static SceUtilityModuleGroup g_dnas_group = {
+	0, 2, 1, g_dnas_kern, g_dnas_user, 0x8000, 0, 0
 };
 
-static SceUtilityModEntry g_mods_04[2] = {
-    { "flash0:/kd/http_storage.prx", 1, 0, 0, 0, 0 },
-    { "flash0:/vsh/module/updown.prx", 2, 0, 1, 0, 0 },
+/* USB module groups */
+static SceUtilityKernMod g_usb_pspcm_kern[1] = { { "flash0:/kd/usbpspcm.prx", NULL, 0 } };
+static SceUtilityKernMod g_usb_mic_kern[1]   = { { "flash0:/kd/usbmic.prx", NULL, 0 } };
+static SceUtilityKernMod g_usb_cam_kern[1]   = { { "flash0:/kd/usbcam.prx", NULL, 0 } };
+static SceUtilityKernMod g_usb_gps_kern[1]   = { { "flash0:/kd/usbgps.prx", NULL, 0 } };
+static char g_usbdmb_path[] = "flash0:/kd/usbdmb.prx";
+static SceUtilityKernMod g_usb_dmb_kern[1]   = { { g_usbdmb_path, NULL, 0 } };
+static SceUtilityKernMod g_usb_acc_kern[1]   = { { "flash0:/kd/usbacc.prx", NULL, 0 } };
+static SceUtilityKernMod g_usb_gps_serial_kern[1] = { { "flash0:/kd/usbgps_serial.prx", NULL, 0 } };
+
+static SceUtilityModuleGroup g_usb_groups[4] = {
+	{ 0, 1, 0, g_usb_pspcm_kern, NULL, 0, 0, 0 },
+	{ 0, 1, 0, g_usb_mic_kern, NULL, 0, 0, 0 },
+	{ 0, 1, 0, g_usb_cam_kern, NULL, 0, 0, 0 },
+	{ 0, 1, 0, g_usb_gps_kern, NULL, 0, 0, 0 },
+};
+static SceUtilityModuleGroup g_usb_dmb_group = {
+	0, 1, 0, g_usb_dmb_kern, NULL, 0, 0, 0
+};
+static SceUtilityModuleGroup g_usb_aux_groups[3] = {
+	{ 0, 1, 0, g_usb_acc_kern, NULL, 0, 0, 0 },
+	{ 0, 1, 0, g_usb_gps_serial_kern, NULL, 0, 0, 0 },
+	{ 0, 0, 0, NULL, NULL, 0, 0, 0 },
 };
 
-static SceUtilityModEntry g_mods_05[3] = {
-    { "flash0:/kd/amctrl.prx",  1, 0, 0, 0, 0 },
-    { "flash0:/kd/npdrm.prx",   1, 0, 1, 0, 0 },
-    { "flash0:/kd/iofilemgr_dnas.prx", 1, 0, 3, 0, 0 },
+/* AV module groups */
+static SceUtilityKernMod g_av_codec_kern[1]   = { { "flash0:/kd/avcodec.prx", NULL, 0 } };
+static SceUtilityKernMod g_av_sascore_kern[1] = { { "flash0:/kd/sc_sascore.prx", NULL, 0 } };
+static SceUtilityKernMod g_av_vaudio_kern[1]  = { { "flash0:/kd/vaudio.prx", NULL, 0 } };
+static SceUtilityUserMod g_av_atrac_user[1]   = { { "flash0:/kd/libatrac3plus.prx", NULL, 0, 0 } };
+static SceUtilityUserMod g_av_mpeg_user[1]    = { { "flash0:/kd/mpeg.prx", NULL, 0, 0 } };
+static SceUtilityUserMod g_av_asf_user[1]     = { { "flash0:/kd/libasfparser.prx", NULL, 0, 0 } };
+static int g_mp3_compat_flag = 1;
+static SceUtilityUserMod g_av_mp3_user[1]     = { { "flash0:/kd/libmp3.prx", NULL, 0, 0 } };
+static SceUtilityUserMod g_av_aac_user[1]     = { { "flash0:/kd/libaac.prx", NULL, 0, 0 } };
+static SceUtilityKernMod g_av_g729_kern[1]    = { { "flash0:/kd/g729.prx", NULL, 0 } };
+static SceUtilityUserMod g_av_mp4_user[2]     = {
+	{ "flash0:/kd/mp4msv.prx", NULL, 0, 0 },
+	{ "flash0:/kd/libmp4.prx", NULL, 0, 0 },
 };
 
-static SceUtilityModEntry g_mods_06[2] = {
-    { "flash0:/kd/irda.prx", 1, 0, 0, 0, 0 },
-    { "flash0:/kd/sircs.prx", 1, 0, 0, 0, 0 },
+static SceUtilityModuleGroup g_av_groups[9] = {
+	{ 0, 1, 0, g_av_codec_kern, NULL, 0, 0, 0 },
+	{ 0, 1, 0, g_av_sascore_kern, NULL, 0, 0, 0 },
+	{ 0, 0, 1, NULL, g_av_atrac_user, 0x8000, 0, 0 },
+	{ 0, 0, 1, NULL, g_av_mpeg_user, 0xC000, 0, 0 },
+	{ 0, 0, 1, NULL, g_av_mp3_user, 0x4000, 0, 0 },
+	{ 0, 1, 0, g_av_vaudio_kern, NULL, 0, 0, 0 },
+	{ 0, 0, 1, NULL, g_av_aac_user, 0x4000, 0, 0 },
+	{ 0, 1, 0, g_av_g729_kern, NULL, 0, 0, 0 },
+	{ 0, 0, 2, NULL, g_av_mp4_user, 0x3C000, 0, 0 },
+};
+static SceUtilityModuleGroup g_av_wma_group = {
+	0, 0, 1, NULL, g_av_asf_user, 0x14000, 0, 0
 };
 
-/* .bss globals */
+/* NP module groups */
+static SceUtilityKernMod g_np_common_kern[1]   = { { "flash0:/kd/np_core.prx", NULL, 0 } };
+static SceUtilityUserMod g_np_common_user[2]   = {
+	{ "flash0:/kd/np.prx", NULL, 0, 0 },
+	{ "flash0:/kd/np_auth.prx", NULL, 0, 0 },
+};
+static SceUtilityUserMod g_np_service_user[1]  = { { "flash0:/kd/np_service.prx", NULL, 0, 0 } };
+static SceUtilityUserMod g_np_matching_user[1] = { { "flash0:/kd/np_matching2.prx", NULL, 0, 0 } };
+static SceUtilityUserMod g_np_commerce_user[1] = { { "flash0:/kd/np_commerce2.prx", NULL, 0, 0 } };
+
+static SceUtilityModuleGroup g_np_groups[4] = {
+	{ 0, 1, 2, g_np_common_kern, g_np_common_user, 0xC000, 0, 0 },
+	{ 0, 0, 1, NULL, g_np_service_user, 0x18000, 0, 0 },
+	{ 0, 0, 1, NULL, g_np_matching_user, 0x48000, 0, 0 },
+	{ 0, 0, 1, NULL, g_np_commerce_user, 0xE000, 0, 0 },
+};
+
+/* NPDRM module groups */
+static SceUtilityKernMod g_npdrm_retail_kern[1] = { { "flash0:/kd/npdrm.prx", NULL, 0 } };
+static SceUtilityKernMod g_npdrm_tool_kern[1]   = { { "flash0:/kd/npdrm_tool.prx", NULL, 0 } };
+static SceUtilityModuleGroup g_npdrm_groups[2] = {
+	{ 0, 1, 0, g_npdrm_retail_kern, NULL, 0, 0, 0 },
+	{ 0, 1, 0, g_npdrm_tool_kern, NULL, 0, 0, 0 },
+};
+
+/* IrDA / SIRCS module groups */
+static SceUtilityKernMod g_irda_kern[1]  = { { "flash0:/kd/irda.prx", NULL, 0 } };
+static SceUtilityKernMod g_sircs_kern[1] = { { "flash0:/kd/sircs.prx", NULL, 0 } };
+static SceUtilityModuleGroup g_ir_groups[2] = {
+	{ 0, 1, 0, g_irda_kern, NULL, 0, 0, 0 },
+	{ 0, 1, 0, g_sircs_kern, NULL, 0, 0, 0 },
+};
+
+/* NP installer module group */
+static SceUtilityKernMod g_np_inst_kern[1] = { { "flash0:/kd/np_inst.prx", NULL, 0 } };
+static SceUtilityModuleGroup g_np_inst_group = {
+	0, 1, 0, g_np_inst_kern, NULL, 0, 0, 0
+};
+
+/* Uninitialized globals (.bss) */
 static SceUtilityDialogState g_dialog;
 static SceUtilityAppletState g_applet;
-static SceUtilityAppletBlockMod g_applet_mods[8];
+static SceUtilityAppletModSlot g_applet_mods[8];
 static int g_dialog_mem_inited;
-static u32 g_net_mod_flags;
-static SceUID g_net_block_id;
-static SceUID g_usb_mutex;
-static SceUID g_av_mutex;
-static SceUID g_updown_mutex;
-static SceUID g_np_mutex;
-static SceUID g_mod_mutex;
-static SceUID g_osk_mutex;
-static int g_netparam_locked;
-static u8 g_kermit_buf[64] __attribute__((aligned(64)));
-static u8 g_kermit_net_buf[512] __attribute__((aligned(64)));
+static SceUtilityModStartOpt g_mp3_compat_opt;
+static SceUtilityOskState g_osk;
+static int g_netparam_reg_refs;
+static u32 g_netparam_reg_handle;
+static const SceUtilityCompatEntry *g_active_compat;
+static u64 g_kermit_caps[3];
 static SceUtilityDialogMemNode g_dialog_mem_nodes[3];
 static SceUtilityDialogMemNode g_dialog_mem_head;
-static u32 g_dialog_mem_time;
-static u32 g_status_flags;
+static u32 g_dialog_mem_guard_seed;
 
 /* Module entry points */
-int module_start(SceSize args, void *argp)
-{
-    (void)args;
-    (void)argp;
-    sceUtility_driver_F062AEA6();
-    return 0;
-}
-
 int sceUtility_driver_F062AEA6(void)
 {
-    int ret;
+	int ret;
 
-    utilityOskMutexInit();
-    utilityKermitEndDialog();
+	ret = utilityKermitOskInit();
+	if (ret < 0)
+		return ret;
 
-    g_dialog.worktime_evf = sceKernelCreateEventFlag("SceUtilityWorktime", 0x200, 0, NULL);
-    if (g_dialog.worktime_evf < 0)
-        return 0x80000042;
+	ret = utilityKermitFetchCapabilities();
+	if (ret < 0)
+		return ret;
 
-    g_dialog.suspend_evf = sceKernelCreateEventFlag("SceUtilitySuspend", 0x200, 3, NULL);
-    if (g_dialog.suspend_evf < 0)
-        return 0x80000042;
+	g_dialog.worktime_evf = sceKernelCreateEventFlag("SceUtilityWorktime", 0x200, 0, NULL);
+	if (g_dialog.worktime_evf < 0)
+		return SCE_KERNEL_ERROR_NO_MEMORY;
 
-    g_dialog.emulated_ms = -1;
-    sceKernelRegisterSysEventHandler(&g_sys_ev_handler);
+	g_dialog.suspend_evf = sceKernelCreateEventFlag("SceUtilitySuspend", 0x200, 3, NULL);
+	if (g_dialog.suspend_evf < 0)
+		return SCE_KERNEL_ERROR_NO_MEMORY;
 
-    ret = utilityAppletInitSync();
-    if (ret < 0) return ret;
-    ret = utilityCheckDiscBootMode();
-    if (ret < 0) return ret;
-    ret = utilityNetModuleInit();
-    if (ret < 0) return ret;
-    ret = utilityUsbModuleInit();
-    if (ret < 0) return ret;
-    ret = utilityAvModuleInit();
-    if (ret < 0) return ret;
-    ret = utilityUpdownModuleInit();
-    if (ret < 0) return ret;
-    ret = utilityNpNoop1();
-    if (ret < 0) return ret;
-    ret = utilityNpNoop2();
-    if (ret < 0) return ret;
-    ret = utilityNpModuleInit();
-    if (ret < 0) return ret;
-    ret = utilityModMutexInit();
-    if (ret < 0) return ret;
+	g_dialog.emulated_ms = -1;
+	g_dialog.active_type = 0;
+	g_dialog.dialog_submode = 0;
+	g_dialog.status = 0;
+	g_dialog.in_suspend = 0;
+	g_dialog.abort_flag = 0;
+	g_dialog.params = NULL;
+	g_dialog.api_version = 0;
 
-    return 0;
+	sceKernelRegisterSysEventHandler(&g_sys_ev_handler);
+	utilityAppletInit();
+	utilityInitNetModules();
+	utilityInitUsbModules();
+	utilityInitAvModules();
+	utilityInitNpModules();
+	utilityInitNpDrmModules();
+	utilityInitIrModules();
+	utilityInitDnasModules();
+	utilityInitNpInstModules();
+	return 0;
 }
 
-int sceUtility_driver_20C68C34(void)
+static UTILITY_NOINLINE int utilityDialogInitStart(u32 dialog_type, void *params)
 {
-    utilityAppletTermSync();
-    utilityModuleNoop();
-    sceKernelUnregisterSysEventHandler(&g_sys_ev_handler);
-    return 0;
+	u32 dialog_submode = 0;
+	u32 api_version = 0;
+	int ret;
+	SceUtilityDialogCommon *common = (SceUtilityDialogCommon *)params;
+	const char *ms_dev;
+
+	if (g_dialog.status != 0)
+		return SCE_UTILITY_ERROR_INVALID_STATUS;
+
+	if (utilityIsBadRange(params, sizeof(SceUtilityDialogCommon)))
+		return SCE_UTILITY_ERROR_INVALID_ADDR;
+
+	switch (dialog_type) {
+	case 1: {
+		SceUtilitySavedataHeader *sd = (SceUtilitySavedataHeader *)params;
+		u32 sz = common->size;
+		u32 mode;
+
+		if (sz == 1536) {
+			api_version = 200;
+		} else if (sz == 1500) {
+			api_version = 150;
+		} else if (sz == 1480) {
+			api_version = 103;
+		} else {
+			return SCE_UTILITY_ERROR_INVALID_SIZE;
+		}
+		if (utilityIsBadRange(params, sz))
+			return SCE_UTILITY_ERROR_INVALID_ADDR;
+
+		mode = sd->operation_mode;
+		if (mode < 2 || mode == 8 || mode == 9 || (mode >= 11 && mode <= 22))
+			dialog_submode = 1;
+		break;
+	}
+	case 3: {
+		SceUtilityGameSharingHeader *gs = (SceUtilityGameSharingHeader *)params;
+		u32 sz = common->size;
+
+		if (sz == 100) {
+			api_version = 570;
+			if (utilityIsBadRange(params, 100))
+				return SCE_UTILITY_ERROR_INVALID_ADDR;
+			if (utilityIsBadSpan(gs->ext_buf, gs->ext_size))
+				return SCE_UTILITY_ERROR_INVALID_ADDR;
+		} else {
+			if (sz == 84)
+				api_version = 150;
+			else if (sz == 80)
+				api_version = 103;
+			else
+				return SCE_UTILITY_ERROR_INVALID_SIZE;
+
+			if (utilityIsBadRange(params, sz))
+				return SCE_UTILITY_ERROR_INVALID_ADDR;
+			if (utilityIsBadRange(gs->data_ptr, 4))
+				return SCE_UTILITY_ERROR_INVALID_ADDR;
+		}
+		break;
+	}
+	case 4: {
+		u32 sz = common->size;
+		if (sz == 68)
+			api_version = 300;
+		else if (sz == 64)
+			api_version = 200;
+		else if (sz == 56)
+			api_version = 150;
+		else
+			return SCE_UTILITY_ERROR_INVALID_SIZE;
+		if (utilityIsBadRange(params, sz))
+			return SCE_UTILITY_ERROR_INVALID_ADDR;
+		break;
+	}
+	case 5: {
+		u32 sz = common->size;
+		if (sz == 708)
+			api_version = 370;
+		else if (sz == 580)
+			api_version = 150;
+		else if (sz == 572)
+			api_version = 103;
+		else
+			return SCE_UTILITY_ERROR_INVALID_SIZE;
+		if (utilityIsBadRange(params, sz))
+			return SCE_UTILITY_ERROR_INVALID_ADDR;
+		break;
+	}
+	case 6: {
+		u32 sz = common->size;
+		if (sz == 64)
+			api_version = 103;
+		else if (sz == 68)
+			api_version = 1001;
+		else
+			return SCE_UTILITY_ERROR_INVALID_SIZE;
+		if (utilityIsBadRange(params, sz))
+			return SCE_UTILITY_ERROR_INVALID_ADDR;
+		break;
+	}
+	case 7:
+		if (common->size != 56)
+			return SCE_UTILITY_ERROR_INVALID_SIZE;
+		api_version = 200;
+		if (utilityIsBadRange(params, 56))
+			return SCE_UTILITY_ERROR_INVALID_ADDR;
+		break;
+	case 8:
+		if (common->size != 52)
+			return SCE_UTILITY_ERROR_INVALID_SIZE;
+		api_version = 200;
+		if (utilityIsBadRange(params, 52))
+			return SCE_UTILITY_ERROR_INVALID_ADDR;
+		break;
+	case 9:
+		if (common->size == 100) {
+			api_version = 200;
+			if (utilityIsBadRange(params, 100))
+				return SCE_UTILITY_ERROR_INVALID_ADDR;
+		}
+		break;
+	case 10:
+		if (common->size != 48)
+			return SCE_UTILITY_ERROR_INVALID_SIZE;
+		api_version = 280;
+		if (utilityIsBadRange(params, 48))
+			return SCE_UTILITY_ERROR_INVALID_ADDR;
+		break;
+	case 11: {
+		SceUtilityStoreHeader *st = (SceUtilityStoreHeader *)params;
+		u32 sz = common->size;
+		u32 check_size;
+
+		if (sz == 932) {
+			api_version = 600;
+			check_size = 932;
+		} else if (sz == 928) {
+			api_version = 380;
+			check_size = 928;
+		} else if (sz == 436) {
+			api_version = 370;
+			check_size = 932;
+		} else {
+			return SCE_UTILITY_ERROR_INVALID_SIZE;
+		}
+		if (utilityIsBadRange(params, check_size))
+			return SCE_UTILITY_ERROR_INVALID_ADDR;
+		if (utilityIsBadSpan(st->buffer_ptr, st->item_count * st->item_stride))
+			return SCE_UTILITY_ERROR_INVALID_ADDR;
+		break;
+	}
+	case 12:
+		if (common->size != 64)
+			return SCE_UTILITY_ERROR_INVALID_SIZE;
+		if (((u32)params & 7) != 0)
+			return SCE_UTILITY_ERROR_INVALID_ADDR;
+		api_version = 370;
+		if (utilityIsBadRange(params, 64))
+			return SCE_UTILITY_ERROR_INVALID_ADDR;
+		break;
+	case 13:
+		if (common->size != 224)
+			return SCE_UTILITY_ERROR_INVALID_SIZE;
+		api_version = 380;
+		if (utilityIsBadRange(params, 224))
+			return SCE_UTILITY_ERROR_INVALID_ADDR;
+		break;
+	case 14:
+		if (common->size != 84)
+			return SCE_UTILITY_ERROR_INVALID_SIZE;
+		api_version = 380;
+		if (utilityIsBadRange(params, 84))
+			return SCE_UTILITY_ERROR_INVALID_ADDR;
+		break;
+	case 15:
+		if (common->size != 112)
+			return SCE_UTILITY_ERROR_INVALID_SIZE;
+		api_version = 391;
+		if (utilityIsBadRange(params, 112))
+			return SCE_UTILITY_ERROR_INVALID_ADDR;
+		break;
+	case 16: {
+		u32 sz = common->size;
+		sceKermitPeripheral_driver_61BEA1D2(0);
+		if (sz == 80)
+			api_version = 600;
+		else if (sz == 76)
+			api_version = 500;
+		else
+			return SCE_UTILITY_ERROR_INVALID_SIZE;
+		if (utilityIsBadRange(params, sz))
+			return SCE_UTILITY_ERROR_INVALID_ADDR;
+		break;
+	}
+	case 17: {
+		u32 sz = common->size;
+		if (sz == 1432)
+			api_version = 630;
+		else if (sz == 1424)
+			api_version = 620;
+		else
+			return SCE_UTILITY_ERROR_INVALID_SIZE;
+		if (utilityIsBadRange(params, sz))
+			return SCE_UTILITY_ERROR_INVALID_ADDR;
+		break;
+	}
+	case 18: {
+		SceUtilityFriendHeader *fr = (SceUtilityFriendHeader *)params;
+		u32 sz = common->size;
+		if (sz == 84) {
+			if (fr->request_kind == 1)
+				sceKermitPeripheral_driver_61BEA1D2(0);
+			api_version = 635;
+		} else if (sz == 80) {
+			if (fr->request_kind == 1)
+				sceKermitPeripheral_driver_61BEA1D2(0);
+			api_version = 630;
+		} else {
+			return SCE_UTILITY_ERROR_INVALID_SIZE;
+		}
+		if (utilityIsBadRange(params, sz))
+			return SCE_UTILITY_ERROR_INVALID_ADDR;
+		break;
+	}
+	case 19:
+		if (common->size != 56)
+			return SCE_UTILITY_ERROR_INVALID_SIZE;
+		api_version = 600;
+		if (utilityIsBadRange(params, 56))
+			return SCE_UTILITY_ERROR_INVALID_ADDR;
+		break;
+	default:
+		return SCE_UTILITY_ERROR_INVALID_TYPE;
+	}
+
+	g_dialog.params = params;
+	g_dialog.dialog_submode = dialog_submode;
+	g_dialog.api_version = api_version;
+	g_dialog.status = 1;
+	g_dialog.active_type = dialog_type;
+
+	utilityCompatMatchGame(dialog_type, dialog_submode);
+
+	ms_dev = "mscmhc0:";
+	if (dialog_type == 1) {
+		if (sceUtility_private_59EB3A17(2) == 1)
+			ms_dev = "mscmhcemu0:";
+	} else if (dialog_type == 9) {
+		if (sceUtility_private_59EB3A17(4) == 1)
+			ms_dev = "mscmhcemu0:";
+	}
+	g_dialog.devctl_result = sceIoDevctl(ms_dev, 0x0202580A, NULL, 0, g_dialog.devctl_out, 16);
+
+	g_dialog.init_thid = sceKernelCreateThread(
+		"SceUtilityInit", utilityDialogLoadThread,
+		common->access_thread, 2048, 0x00100000, NULL);
+	if (g_dialog.init_thid <= 0) {
+		ret = g_dialog.init_thid;
+		g_dialog.init_thid = 0;
+		return ret;
+	}
+
+	ret = sceKernelStartThread(g_dialog.init_thid, 0, NULL);
+	if (ret != 0) {
+		sceKernelDeleteThread(g_dialog.init_thid);
+		g_dialog.init_thid = 0;
+		return ret;
+	}
+	return 0;
 }
 
-static int utilitySysEventHandler(int ev_id, char *ev_name, void *param, int *result)
+static UTILITY_NOINLINE int utilityDialogShutdownStart(u32 dialog_type)
 {
-    int status;
-    (void)ev_name;
-    (void)param;
-    (void)result;
+	int ret;
+	SceUtilityDialogCommon *common;
 
-    if (ev_id == 0x20f || ev_id == 0x400) {
-        if ((utilityGetStatusFlags() & 1) == 0) {
-            status = g_dialog.status;
-            if (status != 0 && (u32)(status - 4) >= 2) {
-                if (sceKernelWaitEventFlag(g_dialog.suspend_evf, 1, 0, NULL, NULL) == 0)
-                    return 0;
-                return 0x80110006;
-            }
-        }
-        sceKernelClearEventFlag(g_dialog.suspend_evf, ~1);
-    } else if (ev_id == 0x210) {
-        sceKernelSetEventFlag(g_dialog.suspend_evf, 1);
-    } else if (ev_id == 0x4000) {
-        sceKernelClearEventFlag(g_dialog.suspend_evf, ~2);
-    } else if (ev_id == 0x10000 || ev_id == 0x100000) {
-        sceKernelSetEventFlag(g_dialog.suspend_evf, 2);
-    }
-    return 0;
+	if (g_dialog.active_type != dialog_type)
+		return SCE_UTILITY_ERROR_INVALID_DIALOG;
+	if (g_dialog.status != 3)
+		return SCE_UTILITY_ERROR_INVALID_STATUS;
+
+	if (g_dialog.active_type == 16 || g_dialog.active_type == 18)
+		sceKermitPeripheral_driver_61BEA1D2(1);
+
+	g_dialog.status = 4;
+	common = (SceUtilityDialogCommon *)g_dialog.params;
+	g_dialog.init_thid = sceKernelCreateThread(
+		"SceUtilityShutdown", utilityDialogUnloadThread,
+		common->access_thread, 2048, 0x00100000, NULL);
+	if (g_dialog.init_thid <= 0) {
+		ret = g_dialog.init_thid;
+		g_dialog.init_thid = 0;
+		return ret;
+	}
+
+	ret = sceKernelStartThread(g_dialog.init_thid, 0, NULL);
+	if (ret != 0) {
+		sceKernelDeleteThread(g_dialog.init_thid);
+		g_dialog.init_thid = 0;
+		return ret;
+	}
+	return 0;
 }
 
-/* Dialog core */
-static int utilityDialogInitStart(u32 type, void *params)
+static UTILITY_NOINLINE int utilityDialogResume(u32 dialog_type, void *params)
 {
-    int intr, ret;
-    u32 size, ver = 0, sub_mode = 0;
-    u32 *p = (u32 *)params;
-    u32 k1 = GET_K1();
+	u32 api_version = 0;
+	SceUtilityDialogCommon *common = (SceUtilityDialogCommon *)params;
 
-    if (g_dialog.status != 0) {
-        if (g_dialog.active_type != type)
-            return 0x80110005;
-        return 0x80110001;
-    }
+	if (g_dialog.status != 5)
+		return SCE_UTILITY_ERROR_INVALID_STATUS;
+	if (utilityIsBadRange(params, sizeof(SceUtilityDialogCommon)))
+		return SCE_UTILITY_ERROR_INVALID_ADDR;
+	if (g_dialog.active_type != dialog_type)
+		return SCE_UTILITY_ERROR_INVALID_DIALOG;
 
-    if (p == NULL)
-        return 0x80110002;
+	if (dialog_type == 11) {
+		SceUtilityStoreHeader *st = (SceUtilityStoreHeader *)params;
+		u32 sz = common->size;
 
-    intr = sceKernelCpuSuspendIntr();
-    g_dialog.status = 1;
-    g_dialog.active_type = type;
-    g_dialog.params = params;
-    g_dialog.abort_flag = 0;
-    g_dialog.sdk_ver_override = 0;
-    sceKernelCpuResumeIntr(intr);
+		if (sz == 932)
+			api_version = 600;
+		else if (sz == 928)
+			api_version = 380;
+		else
+			return SCE_UTILITY_ERROR_INVALID_SIZE;
 
-    size = p[0];
-    if ((((u32)params + size) | (u32)params | size) & k1) {
-        ret = 0x80110004;
-        goto err;
-    }
+		if (utilityIsBadRange(params, sz))
+			return SCE_UTILITY_ERROR_INVALID_ADDR;
+		if (utilityIsBadSpan(st->buffer_ptr, st->item_count * st->item_stride))
+			return SCE_UTILITY_ERROR_INVALID_ADDR;
+	} else if (dialog_type == 15) {
+		if (common->size != 112)
+			return SCE_UTILITY_ERROR_INVALID_SIZE;
+		api_version = 391;
+		if (utilityIsBadRange(params, 112))
+			return SCE_UTILITY_ERROR_INVALID_ADDR;
+	}
 
-    g_dialog.params_size = size;
-    g_dialog.mod_path = NULL;
-    g_dialog.ext_data = NULL;
-    g_dialog.ext_size = 0;
+	g_dialog.active_type = dialog_type;
+	g_dialog.params = params;
+	g_dialog.api_version = api_version;
+	g_dialog.status = 2;
+	g_dialog.dialog_submode = 0;
 
-    switch (type) {
-    case 1: /* Savedata */
-        if (size == 0x5c8) {
-            ver = 1;
-        } else if (size == 0x5dc) {
-            ver = 2;
-        } else if (size == 0x600) {
-            ver = 3;
-        } else {
-            ret = 0x80110004;
-            goto err;
-        }
-        g_dialog.saved_unk0c = p[3];
-        if (ver >= 2) {
-            g_dialog.saved_unk28 = p[10];
-            g_dialog.saved_unk2c = p[11];
-        }
-        if (p[12] <= 1 || (p[12] >= 8 && p[12] <= 22))
-            sub_mode = 1;
-        p[3] = ver;
-        g_dialog.mod_path = "flash0:/vsh/module/savedata_utility.prx";
-        break;
-    case 3: /* GameSharing */
-        if (size != 0x94 && size != 0x38 && size != 0x40 && size != 0x44) { ret = 0x80110004; goto err; }
-        g_dialog.mod_path = "flash0:/vsh/module/gamesharing_utility.prx";
-        break;
-    case 4: /* Netconf */
-        if (size == 0x3c || size == 0x50) {
-            g_dialog.saved_unk0c = p[3];
-            p[3] = 1;
-        } else if (size == 0x44 || size == 0x54) {
-            g_dialog.saved_unk0c = p[3];
-            p[3] = 2;
-        } else if (size == 0x4c || size == 0x64) {
-            g_dialog.saved_unk0c = p[3];
-            p[3] = 3;
-        } else {
-            ret = 0x80110004;
-            goto err;
-        }
-        g_dialog.mod_path = "flash0:/vsh/module/netconf_utility.prx";
-        break;
-    case 5: /* MsgDialog */
-        if (size == 0x240 || size == 0x23c) {
-            g_dialog.saved_unk0c = p[3];
-            p[3] = 1;
-        } else if (size == 0x24c || size == 0x244) {
-            g_dialog.saved_unk0c = p[3];
-            p[3] = 2;
-        } else if (size == 0x2cc || size == 0x2c4) {
-            g_dialog.saved_unk0c = p[3];
-            p[3] = 3;
-        } else {
-            ret = 0x80110004;
-            goto err;
-        }
-        g_dialog.mod_path = "flash0:/vsh/module/msgdialog_utility.prx";
-        break;
-    case 6: /* Osk */
-        if (size != 0x3c && size != 0x40 && size != 0x44) { ret = 0x80110004; goto err; }
-        g_dialog.mod_path = "flash0:/vsh/module/osk_utility.prx";
-        break;
-    case 7: /* Netplay */
-        if (size != 0x5c && size != 0x38) { ret = 0x80110004; goto err; }
-        g_dialog.mod_path = "flash0:/vsh/module/netplay_Dialog.prx";
-        break;
-    case 8: /* GamedataInstall */
-        if (size != 0x688 && size != 0x30) { ret = 0x80110004; goto err; }
-        g_dialog.mod_path = "flash0:/vsh/module/gamedata_utility.prx";
-        break;
-    case 9: /* RssSubscriber / GamedataInstall */
-        if (size != 0x38 && size != 0x688) { ret = 0x80110004; goto err; }
-        g_dialog.mod_path = "flash0:/vsh/module/rss_subscriber.prx";
-        break;
-    case 10:
-        if (size != 0x38) { ret = 0x80110004; goto err; }
-        g_dialog.mod_path = "flash0:/vsh/module/rss_subscriber.prx";
-        break;
-    case 11: /* StoreCheckout / Screenshot */
-        if (size != 0x40 && size != 0x1b4 && size != 0x3a0 && size != 0x3a4) { ret = 0x80110004; goto err; }
-        g_dialog.mod_path = "flash0:/vsh/module/store_checkout_utility.prx";
-        break;
-    case 12: /* RssReader */
-        if (size != 0x50 && size != 0x40) { ret = 0x80110004; goto err; }
-        g_dialog.mod_path = "flash0:/vsh/module/rss_reader.prx";
-        break;
-    case 13: /* Eula */
-        if (size != 0x34 && size != 0xe0) { ret = 0x80110004; goto err; }
-        g_dialog.mod_path = "flash0:/vsh/module/eula_netconf_utility.prx";
-        break;
-    case 14: /* Screenshot */
-        if (size != 0x3a4 && size != 0x54) { ret = 0x80110004; goto err; }
-        g_dialog.mod_path = "flash0:/vsh/module/screenshot_utility.prx";
-        break;
-    case 15: /* NpSignin */
-        if (size != 0x3c && size != 0x70) { ret = 0x80110004; goto err; }
-        g_dialog.mod_path = "flash0:/vsh/module/np_signin_utility.prx";
-        break;
-    case 16: /* Hick */
-        sceKermitPeripheral_driver_61BEA1D2(0);
-        if (size != 0x84 && size != 0x4c && size != 0x50) { ret = 0x80110004; goto err; }
-        g_dialog.mod_path = "flash0:/vsh/module/hick_utility.prx";
-        break;
-    case 17:
-        if (size != 0x109c && size != 0x590 && size != 0x598) { ret = 0x80110004; goto err; }
-        g_dialog.mod_path = "flash0:/vsh/module/savedata_utility.prx";
-        break;
-    case 18:
-        if (size != 0x3c && size != 0x50 && size != 0x54) { ret = 0x80110004; goto err; }
-        if (p[12] == 1)
-            sceKermitPeripheral_driver_61BEA1D2(0);
-        g_dialog.mod_path = "flash0:/vsh/module/np_friend_utility.prx";
-        break;
-    case 19:
-        if (size != 0x10d8 && size != 0x38) { ret = 0x80110004; goto err; }
-        g_dialog.mod_path = "flash0:/vsh/module/psn_utility.prx";
-        break;
-    default:
-        ret = 0x80110003;
-        goto err;
-    }
-
-    utilityKermitStartDialog(type, sub_mode);
-    if (type == 1) {
-        const char *dev = sceUtility_private_59EB3A17(2) ? "mscmhcemu0:" : "mscmhc0:";
-        g_dialog.devctl_res = sceIoDevctl(dev, 0x0202580A, NULL, 0, g_dialog.devctl_out, 16);
-    } else if (type == 9) {
-        const char *dev = sceUtility_private_59EB3A17(4) ? "mscmhcemu0:" : "mscmhc0:";
-        g_dialog.devctl_res = sceIoDevctl(dev, 0x0202580A, NULL, 0, g_dialog.devctl_out, 16);
-    }
-
-    ret = sceKernelVolatileMemLock(0, &g_dialog.vmem_addr, (int *)&g_dialog.vmem_size);
-    if (ret < 0)
-        goto err;
-
-    utilityKermitSetPowerMode(1);
-    sceKernelClearEventFlag(g_dialog.worktime_evf, 0);
-    g_dialog.thid = sceKernelCreateThread("SceUtilityInit", utilityDialogThread, p[4], 0x1000, 0x00100000, NULL);
-    if (g_dialog.thid <= 0) {
-        ret = g_dialog.thid;
-        sceKernelVolatileMemUnlock(0);
-        utilityKermitSetPowerMode(0);
-        goto err;
-    }
-
-    ret = sceKernelStartThread(g_dialog.thid, 0, NULL);
-    if (ret != 0) {
-        sceKernelDeleteThread(g_dialog.thid);
-        sceKernelVolatileMemUnlock(0);
-        utilityKermitSetPowerMode(0);
-        goto err;
-    }
-
-    return 0;
-
-err:
-    intr = sceKernelCpuSuspendIntr();
-    g_dialog.status = 0;
-    g_dialog.active_type = 0;
-    g_dialog.params = NULL;
-    g_dialog.params_size = 0;
-    sceKernelCpuResumeIntr(intr);
-    return ret;
+	sceKernelSetEventFlag(g_dialog.worktime_evf, 0x10);
+	sceKernelWaitEventFlag(g_dialog.worktime_evf, 0x20, 0x20, NULL, NULL);
+	return 0;
 }
 
-static int utilityDialogShutdownStart(u32 type)
+int sceUtility_private_363A12E2(u32 *out_buf)
 {
-    int ret;
-    u32 *p;
+	u32 old_k1 = pspGetK1();
 
-    if (g_dialog.active_type != type)
-        return 0x80110005;
-    if (g_dialog.status != 3)
-        return 0x80110001;
+	if (((s32)((((u32)out_buf + 16) | (u32)out_buf) & (old_k1 << 11))) < 0)
+		return SCE_UTILITY_ERROR_INVALID_ADDR;
+	if (g_dialog.devctl_result != 0)
+		return g_dialog.devctl_result;
 
-    if (type == 16 || type == 18)
-        sceKermitPeripheral_driver_61BEA1D2(1);
-
-    g_dialog.status = 4;
-    p = (u32 *)g_dialog.params;
-    g_dialog.thid = sceKernelCreateThread("SceUtilityShutdown", utilityAppletUnloadThread, p[4], 0x1000, 0x00100000, NULL);
-    if (g_dialog.thid <= 0) {
-        g_dialog.thid = 0;
-        return g_dialog.thid;
-    }
-
-    ret = sceKernelStartThread(g_dialog.thid, 0, NULL);
-    if (ret != 0) {
-        sceKernelDeleteThread(g_dialog.thid);
-        g_dialog.thid = 0;
-        return ret;
-    }
-
-    return 0;
-}
-
-static int utilityDialogInitWrapper(u32 type, void *params)
-{
-    int ret;
-
-    ret = utilityDialogInitStart(type, params);
-    if (ret == 0)
-        g_dialog.sdk_ver_override = 0x06060110;
-    return ret;
-}
-
-static int utilityDialogUpdate(u32 type, int speed)
-{
-    if (g_dialog.active_type != type)
-        return 0x80110005;
-    if (g_dialog.status != 2)
-        return 0x80110001;
-
-    g_dialog.speed = speed;
-    sceKernelSetEventFlag(g_dialog.worktime_evf, 0x10);
-    sceKernelWaitEventFlag(g_dialog.worktime_evf, 0x20, 0x20, NULL, NULL);
-    return 0;
-}
-
-static int utilityDialogGetStatus(u32 type)
-{
-    if (g_dialog.active_type != type) {
-        if (g_dialog.status == 0)
-            return 0;
-        return 0x80110005;
-    }
-    return g_dialog.status;
-}
-
-static int utilityDialogAbort(u32 type)
-{
-    if (g_dialog.active_type != type)
-        return 0x80110005;
-    if ((u32)(g_dialog.status - 1) >= 2)
-        return 0x80110001;
-    g_dialog.abort_flag = 1;
-    while (g_dialog.status == 2)
-        sceKernelDelayThread(10000);
-    return 0;
-}
-
-/* sceUtility_private dialog helpers */
-int sceUtility_private_363A12E2(u32 *out)
-{
-    u32 k1 = GET_K1();
-    if (out == NULL || ((((u32)out + 16) | (u32)out) & k1))
-        return 0x80110004;
-    if (g_dialog.devctl_res != 0)
-        return g_dialog.devctl_res;
-    out[0] = g_dialog.devctl_out[0];
-    out[1] = g_dialog.devctl_out[1];
-    out[2] = g_dialog.devctl_out[2];
-    out[3] = g_dialog.devctl_out[3];
-    return 0;
+	out_buf[0] = g_dialog.devctl_out[0];
+	out_buf[1] = g_dialog.devctl_out[1];
+	out_buf[2] = g_dialog.devctl_out[2];
+	out_buf[3] = g_dialog.devctl_out[3];
+	return 0;
 }
 
 int sceUtility_private_59EB3A17(int flag)
 {
-    u32 k1 = GET_K1();
-    SET_K1(0);
+	u32 old_k1 = utilityEnterKernel();
+	int mask = flag;
+	int ret;
 
-    u32 *gi = (u32 *)sceKernelGetGameInfo();
-    if (gi == NULL) {
-        SET_K1(k1);
-        return 0;
-    }
+	if ((u32)g_dialog.emulated_ms < 2 && flag == 2) {
+		ret = g_dialog.emulated_ms;
+		utilityLeaveKernel(old_k1);
+		return ret;
+	}
 
-    int res = 0;
-    if (flag == 1) {
-        res = (gi[28] >> 24) & 1;
-    } else if (flag == 2) {
-        if (g_dialog.emulated_ms >= 0)
-            res = (g_dialog.emulated_ms != 0);
-        else
-            res = (gi[28] >> 25) & 1;
-    } else if (flag == 4) {
-        if (g_dialog.emulated_ms >= 0)
-            res = (g_dialog.emulated_ms != 0);
-        else
-            res = (gi[28] >> 26) & 1;
-    } else if (flag == 8) {
-        res = (gi[28] >> 27) & 1;
-    }
+	if (flag != 2 && flag != 4 && flag != 8 && flag != 16 && flag != 32 && flag != 64)
+		mask = 1;
 
-    SET_K1(k1);
-    return res;
+	{
+		SceKernelGameInfo *game_info = (SceKernelGameInfo *)sceKernelGetGameInfo();
+		ret = (game_info->emu_flags & (u32)mask) != 0;
+	}
+	utilityLeaveKernel(old_k1);
+	return ret;
 }
 
-int sceUtility_private_78EC982D(int type, int val)
+int sceUtility_private_78EC982D(int kind, int value)
 {
-    if (type != 2)
-        return -1;
-    g_dialog.emulated_ms = val;
-    return 0;
+	if (kind != 2)
+		return -1;
+	g_dialog.emulated_ms = value;
+	return value;
 }
 
-int sceUtility_private_5ED16EBA(const char *name, int flags, void *opt)
+int sceUtility_private_5ED16EBA(const char *name, int flags, const void *opt)
 {
-    u32 k1 = GET_K1();
-    if (name == NULL || ((((u32)name + 32) | (u32)name) & k1))
-        return 0x80110004;
-    if (opt != NULL && ((((u32)opt + 0x2c) | (u32)opt) & k1))
-        return 0x80110004;
-    SET_K1(0);
+	u32 old_k1 = utilityEnterKernel();
+	const char *path = NULL;
+	int ret;
 
-    const char *path = NULL;
-    for (u32 i = 0; i < sizeof(g_plugin_map) / sizeof(g_plugin_map[0]); i++) {
-        if (strcmp(name, g_plugin_map[i].name) == 0) {
-            path = g_plugin_map[i].path;
-            break;
-        }
-    }
+	if (utilityIsBadPtr(name) || utilityIsBadRange(opt, sizeof(SceKernelLMOption))) {
+		utilityLeaveKernel(old_k1);
+		return SCE_UTILITY_ERROR_INVALID_ADDR;
+	}
 
-    if (path == NULL) {
-        SET_K1(k1);
-        return 0x80110004;
-    }
+	switch (name[0]) {
+	case 'a':
+		if (strcmp(name, "auth_plugin") == 0)
+			path = "flash0:/vsh/module/auth_plugin.prx";
+		else if (strcmp(name, "auto_connect") == 0)
+			path = "flash0:/vsh/module/auto_connect.prx";
+		break;
+	case 'd':
+		if (strcmp(name, "dnas_plugin") == 0)
+			path = "flash0:/vsh/module/dnas_plugin.prx";
+		else if (strcmp(name, "dd_helper") == 0)
+			path = "flash0:/vsh/module/dd_helper_utility.prx";
+		break;
+	case 'f':
+		if (strcmp(name, "file_parser_base") == 0)
+			path = "flash0:/vsh/module/file_parser_base.prx";
+		break;
+	case 'g':
+		if (strcmp(name, "game_install_plugin") == 0 || strcmp(name, "gamedata_install_plugin") == 0)
+			path = "flash0:/vsh/module/game_install_plugin.prx";
+		break;
+	case 'l':
+		if (strcmp(name, "libupdown") == 0)
+			path = "flash0:/kd/libupdown.prx";
+		break;
+	case 'm':
+		if (strcmp(name, "msgdialog_plugin") == 0)
+			path = "flash0:/vsh/module/msgdialog_plugin.prx";
+		break;
+	case 'n':
+		if (strcmp(name, "netconf_plugin") == 0)
+			path = "flash0:/vsh/module/netconf_plugin.prx";
+		else if (strcmp(name, "netconf_bt_plugin") == 0)
+			path = "flash0:/vsh/module/netconf_bt_plugin.prx";
+		else if (strcmp(name, "netconf_plugin_auto_nec") == 0)
+			path = "flash0:/vsh/module/netconf_plugin_auto_nec.prx";
+		else if (strcmp(name, "netconf_plugin_auto_bfl") == 0)
+			path = "flash0:/vsh/module/netconf_plugin_auto_bfl.prx";
+		else if (strcmp(name, "netplay_server_utility") == 0)
+			path = "flash0:/vsh/module/netplay_server_utility.prx";
+		else if (strcmp(name, "netplay_server2_utility") == 0)
+			path = "flash0:/vsh/module/netplay_server2_utility.prx";
+		else if (strcmp(name, "netplay_server_plus_utility") == 0)
+			path = "flash0:/vsh/module/netplay_server_plus_utility.prx";
+		else if (strcmp(name, "npsignin_plugin") == 0)
+			path = "flash0:/vsh/module/npsignin_plugin.prx";
+		else if (strcmp(name, "npinstaller_plugin") == 0)
+			path = "flash0:/vsh/module/npinstaller_plugin.prx";
+		else if (strcmp(name, "np_commerce2_regcam") == 0)
+			path = "flash0:/kd/np_commerce2_regcam.prx";
+		else if (strcmp(name, "np_commerce2_store") == 0)
+			path = "flash0:/kd/np_commerce2_store.prx";
+		break;
+	case 'o':
+		if (strcmp(name, "osk_plugin") == 0)
+			path = "flash0:/vsh/module/kermit_osk_plugin.prx";
+		break;
+	case 'p':
+		if (strcmp(name, "pspnet_wispr") == 0)
+			path = "flash0:/kd/pspnet_wispr.prx";
+		else if (strcmp(name, "ps3scan_plugin") == 0)
+			path = "flash0:/vsh/module/ps3scan_plugin.prx";
+		else if (strcmp(name, "psn_utility") == 0)
+			path = "flash0:/vsh/module/psn_utility.prx";
+		break;
+	case 'r':
+		if (strcmp(name, "rss_subscriber") == 0)
+			path = "flash0:/vsh/module/rss_subscriber.prx";
+		else if (strcmp(name, "rss_common") == 0)
+			path = "flash0:/vsh/module/rss_common.prx";
+		else if (strcmp(name, "rss_reader") == 0)
+			path = "flash0:/vsh/module/rss_reader.prx";
+		break;
+	case 's':
+		if (strcmp(name, "savedata_utility") == 0)
+			path = "flash0:/vsh/module/savedata_utility.prx";
+		else if (strcmp(name, "savedata_auto_dialog") == 0)
+			path = "flash0:/vsh/module/savedata_auto_dialog.prx";
+		else if (strcmp(name, "screenshot_plugin") == 0)
+			path = "flash0:/vsh/module/screenshot_plugin.prx";
+		else if (strcmp(name, "store_checkout_utility") == 0)
+			path = "flash0:/vsh/module/store_checkout_utility.prx";
+		break;
+	default:
+		break;
+	}
 
-    int res = sceKernelLoadModuleForKernel(path, flags, opt);
-    SET_K1(k1);
-    return res;
+	if (path == NULL)
+		ret = SCE_KERNEL_ERROR_NO_FILE;
+	else
+		ret = sceKernelLoadModuleForKernel(path, flags, (void *)opt);
+
+	utilityLeaveKernel(old_k1);
+	return ret;
 }
 
-int sceUtility_private_E8EE4E87(void *pad_data, int count)
+int sceUtility_private_E8EE4E87(SceCtrlData *pad_buf, int count)
 {
-    u32 k1 = GET_K1();
-    if (pad_data == NULL || ((((u32)pad_data + (u32)count * 16) | (u32)pad_data) & k1))
-        return 0x80110004;
-    SET_K1(0);
+	u32 old_k1 = utilityEnterKernel();
+	int ret;
+	int idx;
 
-    int res = sceCtrlPeekBufferPositive(pad_data, count);
-    if (res > 0) {
-        u32 *p = (u32 *)pad_data;
-        for (int i = 0; i < res; i++)
-            p[i * 4 + 1] &= 0x0002F3F9;
-    }
+	if (utilityIsBadSpan(pad_buf, (u32)(count * 16))) {
+		utilityLeaveKernel(old_k1);
+		return SCE_UTILITY_ERROR_INVALID_ADDR;
+	}
 
-    SET_K1(k1);
-    return res;
+	ret = sceCtrlPeekBufferPositive(pad_buf, count);
+	for (idx = 0; idx < count; idx++)
+		pad_buf[idx].buttons &= 0x0002F3F9u;
+
+	utilityLeaveKernel(old_k1);
+	return ret;
+}
+
+static UTILITY_NOINLINE int utilitySysEventHandler(int ev_id, char *ev_name, void *param, int *result)
+{
+	u32 compat_flags;
+	int should_suspend;
+	(void)ev_name;
+	(void)param;
+	(void)result;
+
+	compat_flags = utilityCompatGetFlags();
+	should_suspend = ((((compat_flags ^ 1u) & 1u) & (u32)(ev_id == 0x20F)) != 0 ||
+	                  ((compat_flags & 1u) & (u32)(ev_id == 0x210)) != 0);
+	if (should_suspend) {
+		sceKernelClearEventFlag(g_dialog.suspend_evf, ~1u);
+		g_dialog.in_suspend = 1;
+		sceKernelWaitEventFlag(g_dialog.suspend_evf, 2, 0, NULL, NULL);
+		g_dialog.in_suspend = 0;
+	} else if (ev_id == 0x400000) {
+		sceKernelSetEventFlag(g_dialog.suspend_evf, 1);
+	}
+	return 0;
+}
+
+int module_start(SceSize args, void *argp)
+{
+	(void)args;
+	(void)argp;
+	sceUtility_driver_F062AEA6();
+	return 0;
+}
+
+int sceUtility_driver_20C68C34(void)
+{
+	utilityAppletTerm();
+	sceKernelUnregisterSysEventHandler(&g_sys_ev_handler);
+	return 0;
+}
+
+static UTILITY_NOINLINE int utilityDialogUpdate(u32 dialog_type, int speed)
+{
+	g_dialog.speed = speed;
+	if (g_dialog.active_type != dialog_type)
+		return SCE_UTILITY_ERROR_INVALID_DIALOG;
+	if (g_dialog.status != 2 && g_dialog.status != 5)
+		return SCE_UTILITY_ERROR_INVALID_STATUS;
+
+	sceKernelSetEventFlag(g_dialog.worktime_evf, 0x10);
+	sceKernelWaitEventFlag(g_dialog.worktime_evf, 0x20, 0x20, NULL, NULL);
+	return 0;
+}
+
+static UTILITY_NOINLINE int utilityDialogGetStatus(u32 dialog_type)
+{
+	if (g_dialog.active_type != dialog_type)
+		return SCE_UTILITY_ERROR_INVALID_DIALOG;
+	utilityCompatDelay(dialog_type, 0);
+	return (int)g_dialog.status;
+}
+
+static UTILITY_NOINLINE int utilityDialogAbort(u32 dialog_type)
+{
+	if (g_dialog.active_type != dialog_type)
+		return SCE_UTILITY_ERROR_INVALID_DIALOG;
+	if (g_dialog.status != 2)
+		return SCE_UTILITY_ERROR_INVALID_STATUS;
+	g_dialog.abort_flag = 1;
+	g_dialog.in_suspend = 1;
+	return 0;
 }
 
 int sceUtility_private_14E94D25(void)
 {
-    sceKernelWaitEventFlag(g_dialog.worktime_evf, 1, 0x20, NULL, NULL);
-    return 0;
+	u32 old_k1 = utilityEnterKernel();
+	sceKernelWaitEventFlag(g_dialog.worktime_evf, 1, 0x20, NULL, NULL);
+	utilityLeaveKernel(old_k1);
+	return 0;
 }
 
 int sceUtility_private_0D6B23A4(void)
 {
-    sceKernelSetEventFlag(g_dialog.worktime_evf, 2);
-    return 0;
+	u32 old_k1 = utilityEnterKernel();
+	sceKernelSetEventFlag(g_dialog.worktime_evf, 2);
+	utilityLeaveKernel(old_k1);
+	return 0;
 }
 
 int sceUtility_private_0027D953(void)
 {
-    sceKernelWaitEventFlag(g_dialog.worktime_evf, 4, 0x20, NULL, NULL);
-    return 0;
+	u32 old_k1 = utilityEnterKernel();
+	sceKernelWaitEventFlag(g_dialog.worktime_evf, 4, 0x20, NULL, NULL);
+	utilityLeaveKernel(old_k1);
+	return 0;
 }
 
 int sceUtility_private_C1916D25(void)
 {
-    sceKernelSetEventFlag(g_dialog.worktime_evf, 8);
-    return 0;
+	u32 old_k1 = utilityEnterKernel();
+	sceKernelSetEventFlag(g_dialog.worktime_evf, 8);
+	utilityLeaveKernel(old_k1);
+	return 0;
 }
 
 int sceUtility_private_AC7FD75C(void)
 {
-    sceKernelWaitEventFlag(g_dialog.worktime_evf, 0x10, 0x20, NULL, NULL);
-    return 0;
+	u32 old_k1 = utilityEnterKernel();
+	sceKernelWaitEventFlag(g_dialog.worktime_evf, 0x10, 0x20, NULL, NULL);
+	utilityLeaveKernel(old_k1);
+	return 0;
 }
 
 int sceUtility_private_8D681EE0(void)
 {
-    sceKernelSetEventFlag(g_dialog.worktime_evf, 0x20);
-    return 0;
+	u32 old_k1 = utilityEnterKernel();
+	sceKernelSetEventFlag(g_dialog.worktime_evf, 0x20);
+	utilityLeaveKernel(old_k1);
+	return 0;
 }
 
-int sceUtility_private_39E7692B(int status)
+int sceUtility_private_39E7692B(u32 status)
 {
-    g_dialog.status = status;
-    return 0;
+	g_dialog.status = status;
+	return 0;
 }
 
 int sceUtility_private_EA446CD5(void)
 {
-    return g_dialog.active_type;
+	return (int)g_dialog.status;
 }
 
-void *sceUtility_private_A25E0194(void)
+int sceUtility_private_A25E0194(void)
 {
-    return g_dialog.params;
+	return (int)g_dialog.active_type;
 }
 
-u32 sceUtility_private_DF025E50(void)
+void *sceUtility_private_DF025E50(void)
 {
-    return g_dialog.params_size;
+	return g_dialog.params;
 }
 
 u32 sceUtility_private_5809B44A(void)
 {
-    return g_dialog.speed;
+	return g_dialog.api_version;
 }
 
-u32 sceUtility_private_1E82FB49(void)
+int sceUtility_private_1E82FB49(void)
 {
-    return g_dialog.abort_flag;
+	return g_dialog.speed;
 }
 
-void *sceUtility_private_5DCBD3C0(void)
+int sceUtility_private_5DCBD3C0(void)
 {
-    return g_dialog.ext_data;
+	return (int)g_dialog.in_suspend;
 }
 
 u32 sceUtility_private_10D1B3FF(void)
 {
-    return g_dialog.ext_size;
+	return g_dialog.abort_flag;
 }
 
 int sceUtility_private_A1348D82(SceUID thid)
 {
-    g_dialog.thid = thid;
-    return 0;
+	g_dialog.dialog_thid = thid;
+	return 0;
 }
 
 int sceUtility_private_421E2726(void)
 {
-    u32 k1 = GET_K1();
-    SET_K1(0);
-    u32 *gi = (u32 *)sceKernelGetGameInfo();
-    int res = gi ? (int)gi[21] : 0;
-    SET_K1(k1);
-    return res;
+	u32 old_k1 = utilityEnterKernel();
+	SceKernelGameInfo *game_info = (SceKernelGameInfo *)sceKernelGetGameInfo();
+	int ret = (int)game_info->game_type;
+	utilityLeaveKernel(old_k1);
+	return ret;
 }
 
-int sceUtility_private_A6B323E1(char *out)
+int sceUtility_private_A6B323E1(char *out_buf)
 {
-    u32 k1 = GET_K1();
-    if (out == NULL || ((((u32)out + 8) | (u32)out) & k1))
-        return 0x80110004;
-    SET_K1(0);
-    char *gi = (char *)sceKernelGetGameInfo();
-    if (gi != NULL) {
-        strncpy(out, gi + 0x58, 7);
-        out[7] = 0;
-    } else if (g_dialog.sdk_ver_override != 0) {
-        SET_K1(k1);
-        return g_dialog.sdk_ver_override;
-    } else {
-        sceKernelGetCompiledSdkVersion();
-    }
-    SET_K1(k1);
-    return 0;
+	u32 old_k1 = utilityEnterKernel();
+
+	if (utilityIsBadRange(out_buf, 8)) {
+		utilityLeaveKernel(old_k1);
+		return SCE_UTILITY_ERROR_INVALID_ADDR;
+	}
+
+	{
+		SceKernelGameInfo *game_info = (SceKernelGameInfo *)sceKernelGetGameInfo();
+		strncpy(out_buf, game_info->title_code, 7);
+		out_buf[7] = '\0';
+	}
+
+	utilityLeaveKernel(old_k1);
+	return 0;
 }
 
-int sceUtility_private_031D0944(int lockType)
+int sceUtility_private_031D0944(int lock_type)
 {
-    u32 k1 = GET_K1();
-    SET_K1(0);
-    int res = sceKernelPowerLockForUser(lockType);
-    SET_K1(k1);
-    return res;
+	u32 old_k1 = utilityEnterKernel();
+	int ret = sceKernelPowerLockForUser(lock_type);
+	utilityLeaveKernel(old_k1);
+	return ret;
 }
 
-int sceUtility_private_B9D9C78F(int lockType)
+int sceUtility_private_B9D9C78F(int lock_type)
 {
-    u32 k1 = GET_K1();
-    SET_K1(0);
-    int res = sceKernelPowerUnlockForUser(lockType);
-    SET_K1(k1);
-    return res;
+	u32 old_k1 = utilityEnterKernel();
+	int ret = sceKernelPowerUnlockForUser(lock_type);
+	utilityLeaveKernel(old_k1);
+	return ret;
 }
 
-int sceUtility_private_31516141(int mode)
+int sceUtility_private_31516141(int sampling_mode)
 {
-    u32 k1 = GET_K1();
-    SET_K1(0);
-    int res = sceCtrlSetSamplingMode(mode);
-    SET_K1(k1);
-    return res;
+	u32 old_k1 = utilityEnterKernel();
+	int ret = sceCtrlSetSamplingMode(sampling_mode);
+	utilityLeaveKernel(old_k1);
+	return ret;
 }
 
-int sceUtility_private_186A2C84(void);
-
-int utilityDialogThread(SceSize args, void *argp)
+int sceUtility_private_966912D2(int *out_mode)
 {
-    int status = 0;
+	u32 old_k1 = utilityEnterKernel();
+	int ret;
 
-    if (args == 0 && argp == NULL) {
-        if (sceKernelSearchModuleByName("scePaf_Module") < 0) {
-            g_dialog.paf_modid = utilityLoadModuleToPartition("flash0:/vsh/module/pafmini.prx", 2);
-            if (g_dialog.paf_modid >= 0)
-                sceKernelStartModule(g_dialog.paf_modid, 0, NULL, &status, NULL);
-        }
-    }
+	if (utilityIsBadRange(out_mode, 4)) {
+		utilityLeaveKernel(old_k1);
+		return SCE_UTILITY_ERROR_INVALID_ADDR;
+	}
 
-    sceKernelSetEventFlag(g_dialog.worktime_evf, 1);
-    sceKernelWaitEventFlag(g_dialog.worktime_evf, 2, 0x20, NULL, NULL);
-    return sceKernelExitDeleteThread(0);
+	ret = sceCtrlGetSamplingMode(out_mode);
+	utilityLeaveKernel(old_k1);
+	return ret;
 }
 
-int sceUtility_private_966912D2(int *pmode)
+static inline __attribute__((always_inline)) SceUID utilityLoadStartDialogModule(const char *path, int mpid, SceSize argsize, void *argp)
 {
-    u32 k1 = GET_K1();
-    if (pmode == NULL || ((((u32)pmode + 4) | (u32)pmode) & k1))
-        return 0x80110004;
-    SET_K1(0);
-    int res = sceCtrlGetSamplingMode(pmode);
-    SET_K1(k1);
-    return res;
+	SceKernelLMOption lm_opt;
+	SceKernelSMOption sm_opt;
+	SceUID modid;
+	int status;
+	int ret;
+	SceUtilityDialogCommon *common = (SceUtilityDialogCommon *)g_dialog.params;
+
+	lm_opt.size = sizeof(SceKernelLMOption);
+	lm_opt.mpid_text = mpid;
+	lm_opt.mpid_data = mpid;
+	lm_opt.position = 0;
+	lm_opt.access = 1;
+
+	modid = sceKernelLoadModuleForKernel(path, 0, &lm_opt);
+	if (modid < 0)
+		return modid;
+
+	sm_opt.size = sizeof(SceKernelSMOption);
+	sm_opt.mpid_stack = mpid;
+	sm_opt.stack_size = 4096;
+	sm_opt.priority = common->access_thread;
+	sm_opt.attribute = 0;
+
+	ret = sceKernelStartModule(modid, argsize, argp, &status, &sm_opt);
+	if (ret < 0)
+		return ret;
+	return modid;
 }
 
-int sceUtility_private_186A2C84(void)
+static UTILITY_NOINLINE int utilityDialogLoadThread(SceSize args, void *argp)
 {
-    sceKernelWaitEventFlag(g_applet.worktime_evf, 1, 0x20, NULL, NULL);
-    return 0;
+	SceUtilityDialogStartArg start_arg;
+	(void)args;
+	(void)argp;
+
+	sceKernelWaitEventFlag(g_dialog.suspend_evf, 3, 0x20, NULL, NULL);
+	sceKernelSetEventFlag(g_dialog.suspend_evf, 1);
+	sceKernelVolatileMemLock(0, &g_dialog.vmem_addr, &g_dialog.vmem_size);
+	utilityKermitSetDialogActive(1);
+
+	if ((g_dialog.active_type == 1 && sceKernelApplicationType() != 0x300) ||
+	    g_dialog.active_type == 9 || g_dialog.active_type == 17) {
+		g_dialog.chnnlsv_modid = utilityLoadStartDialogModule("flash0:/kd/chnnlsv.prx", 1, 0, NULL);
+	}
+
+	if (g_dialog.active_type == 9 || g_dialog.active_type == 17) {
+		g_dialog.psheet_modid = utilityLoadStartDialogModule("flash0:/kd/psheet.prx", 1, 0, NULL);
+	}
+
+	start_arg.size = sizeof(SceUtilityDialogStartArg);
+	start_arg.model = sceKernelGetModel();
+	start_arg.boot_from = sceKernelBootFrom();
+	start_arg.params = g_dialog.params;
+	start_arg.api_version = g_dialog.api_version;
+	start_arg.dialog_type = g_dialog.active_type;
+	start_arg.dialog_submode = g_dialog.dialog_submode;
+
+	if (g_dialog.active_type == 1 && g_dialog.dialog_submode == 1) {
+		g_dialog.main_modid = utilityLoadStartDialogModule(
+			"flash0:/vsh/module/savedata_auto_dialog.prx", 5,
+			sizeof(SceUtilityDialogStartArg), &start_arg);
+	} else {
+		if (sceKernelSearchModuleByName("scePaf_Module") < 0) {
+			do {
+				g_dialog.paf_modid = utilityLoadStartDialogModule("flash0:/vsh/module/pafmini.prx", 5, 0, NULL);
+			} while (g_dialog.paf_modid <= 0);
+		} else {
+			g_dialog.paf_modid = 0;
+		}
+		g_dialog.common_gui_modid = utilityLoadStartDialogModule("flash0:/vsh/module/common_gui.prx", 5, 0, NULL);
+		g_dialog.common_util_modid = utilityLoadStartDialogModule("flash0:/vsh/module/common_util.prx", 5, 0, NULL);
+		g_dialog.main_modid = utilityLoadStartDialogModule(
+			"flash0:/vsh/module/dialogmain.prx", 5,
+			sizeof(SceUtilityDialogStartArg), &start_arg);
+	}
+
+	sceKernelSetEventFlag(g_dialog.worktime_evf, 1);
+	sceKernelWaitEventFlag(g_dialog.worktime_evf, 2, 0x20, NULL, NULL);
+	sceKernelExitDeleteThread(0);
+	return 0;
 }
 
-int utilityAppletLoadThread(SceSize args, void *argp)
+static UTILITY_NOINLINE int utilityAppletLoadThread(SceSize args, void *argp)
 {
-    g_applet.modid = utilityLoadStartModule(g_applet.mod_path, 2, args, argp, &g_applet.block_id);
-    sceKernelSetEventFlag(g_applet.worktime_evf, 1);
-    sceKernelWaitEventFlag(g_applet.worktime_evf, 2, 0x20, NULL, NULL);
-    return sceKernelExitDeleteThread(0);
+	g_applet.main_modid = utilityAppletLoadStartModule(g_applet.mod_path, 2, args, argp, &g_applet.block_id);
+	sceKernelSetEventFlag(g_applet.worktime_evf, 1);
+	sceKernelWaitEventFlag(g_applet.worktime_evf, 2, 0x20, NULL, NULL);
+	sceKernelExitDeleteThread(0);
+	return 0;
 }
 
-int utilityAppletUnloadThread(SceSize args, void *argp)
+static UTILITY_NOINLINE int utilityDialogUnloadThread(SceSize args, void *argp)
 {
-    int intr;
-    (void)args;
-    (void)argp;
+	int intr;
+	(void)args;
+	(void)argp;
 
-    sceKernelSetEventFlag(g_dialog.worktime_evf, 4);
-    sceKernelWaitEventFlag(g_dialog.worktime_evf, 8, 0x20, NULL, NULL);
-    sceKernelWaitThreadEnd(g_dialog.thid, NULL);
+	sceKernelSetEventFlag(g_dialog.worktime_evf, 4);
+	sceKernelWaitEventFlag(g_dialog.worktime_evf, 8, 0x20, NULL, NULL);
+	sceKernelWaitThreadEnd(g_dialog.dialog_thid, NULL);
 
-    utilityStopUnloadModuleA(g_dialog.main_modid, 5);
-    g_dialog.main_modid = 0;
-    utilityStopUnloadModuleA(g_dialog.net_modid, 5);
-    g_dialog.net_modid = 0;
-    utilityStopUnloadModuleA(g_dialog.common_modid, 5);
-    g_dialog.common_modid = 0;
-    if (g_dialog.paf_modid != 0) {
-        utilityStopUnloadModuleA(g_dialog.paf_modid, 5);
-        g_dialog.paf_modid = 0;
-    }
+	if (g_dialog.active_type == 1 && g_dialog.dialog_submode == 1) {
+		utilityDialogStopUnloadModule(g_dialog.main_modid, 5);
+		g_dialog.main_modid = 0;
+	} else {
+		utilityDialogStopUnloadModule(g_dialog.main_modid, 5);
+		g_dialog.main_modid = 0;
+		utilityDialogStopUnloadModule(g_dialog.common_util_modid, 5);
+		g_dialog.common_util_modid = 0;
+		utilityDialogStopUnloadModule(g_dialog.common_gui_modid, 5);
+		g_dialog.common_gui_modid = 0;
+		if (g_dialog.paf_modid != 0) {
+			utilityDialogStopUnloadModule(g_dialog.paf_modid, 5);
+			g_dialog.paf_modid = 0;
+		}
+	}
 
-    utilityClearDialogVmem();
-    utilityClearStatusFlags();
-    intr = sceKernelCpuSuspendIntr();
-    g_dialog.status = 0;
-    g_dialog.params = NULL;
-    g_dialog.params_size = 0;
-    g_dialog.abort_flag = 0;
-    g_dialog.emulated_ms = 0;
-    g_dialog.speed = 0;
-    sceKernelCpuResumeIntr(intr);
+	if ((g_dialog.active_type == 1 && sceKernelApplicationType() != 0x300) ||
+	    g_dialog.active_type == 9 || g_dialog.active_type == 17) {
+		utilityDialogStopUnloadModule(g_dialog.chnnlsv_modid, 1);
+		g_dialog.chnnlsv_modid = 0;
+	}
 
-    utilityKermitSetPowerMode(0);
-    sceKernelVolatileMemUnlock(0);
-    sceKernelSetEventFlag(g_dialog.suspend_evf, 2);
-    return sceKernelExitDeleteThread(0);
+	if (g_dialog.active_type == 9 || g_dialog.active_type == 17) {
+		utilityDialogStopUnloadModule(g_dialog.psheet_modid, 1);
+		g_dialog.psheet_modid = 0;
+	}
+
+	if ((utilityCompatGetFlags() & 2) != 0) {
+		sceKernelMemset32(g_dialog.vmem_addr, 0, (SceSize)g_dialog.vmem_size);
+	} else if (g_dialog.active_type == 1 && g_dialog.dialog_submode == 1 &&
+	           sceKernelGetCompiledSdkVersion() <= 0x0307FFFF) {
+		sceKernelMemset32(g_dialog.vmem_addr, 0, 0x40000);
+	}
+
+	if (utilityIsDialogMemGuardEnabled() != 0) {
+		u32 seed = sceKernelGetSystemTimeLow() + (u32)sceKernelGetThreadId();
+		sceKernelMemset32(g_dialog.vmem_addr, seed, (SceSize)g_dialog.vmem_size);
+	}
+
+	utilityCompatClear();
+
+	intr = sceKernelCpuSuspendIntr();
+	g_dialog.dialog_submode = 0;
+	g_dialog.params = NULL;
+	g_dialog.api_version = 0;
+	g_dialog.status = 0;
+	g_dialog.in_suspend = 0;
+	g_dialog.abort_flag = 0;
+	sceKernelCpuResumeIntr(intr);
+
+	utilityKermitSetDialogActive(0);
+	sceKernelVolatileMemUnlock(0);
+	sceKernelSetEventFlag(g_dialog.suspend_evf, 2);
+	sceKernelExitDeleteThread(0);
+	return 0;
 }
 
-int utilityClearDialogVmem(void)
+static UTILITY_NOINLINE int utilityAppletUnloadThread(SceSize args, void *argp)
 {
-    if (g_dialog.vmem_addr == NULL || g_dialog.vmem_size == 0)
-        return 0;
-    if (utilityIsDevToolMode() != 0) {
-        u32 seed = sceKernelGetSystemTimeLow() + (u32)sceKernelGetThreadId();
-        return sceKernelMemset32(g_dialog.vmem_addr, (int)seed, g_dialog.vmem_size);
-    }
-    return sceKernelMemset(g_dialog.vmem_addr, 0, g_dialog.vmem_size);
+	int intr;
+	(void)args;
+	(void)argp;
+
+	sceKernelSetEventFlag(g_applet.worktime_evf, 4);
+	sceKernelWaitEventFlag(g_applet.worktime_evf, 8, 0x20, NULL, NULL);
+	sceKernelWaitThreadEnd(g_applet.applet_thid, NULL);
+
+	utilityAppletStopUnloadModule(g_applet.main_modid, 0);
+	if (g_applet.block_id > 0) {
+		sceKernelFreePartitionMemory(g_applet.block_id);
+		g_applet.block_id = 0;
+	}
+
+	intr = sceKernelCpuSuspendIntr();
+	g_applet.status = 0;
+	g_applet.params = NULL;
+	g_applet.api_version = 0;
+	sceKernelCpuResumeIntr(intr);
+
+	sceKernelExitDeleteThread(0);
+	return 0;
 }
 
-int utilityDialogUnloadThread(SceSize args, void *argp)
+static UTILITY_NOINLINE int utilityDialogStopUnloadModule(SceUID modid, int mpid)
 {
-    int intr;
-    (void)args;
-    (void)argp;
+	SceKernelSMOption sm_opt;
+	SceUtilityDialogCommon *common = (SceUtilityDialogCommon *)g_dialog.params;
+	int status;
+	int ret;
 
-    sceKernelSetEventFlag(g_applet.worktime_evf, 4);
-    sceKernelWaitEventFlag(g_applet.worktime_evf, 8, 0x20, NULL, NULL);
-    sceKernelWaitThreadEnd(g_applet.shutdown_thid, NULL);
-    utilityStopUnloadModuleB(g_applet.modid, 0);
-    if (g_applet.block_id > 0) {
-        sceKernelFreePartitionMemory(g_applet.block_id);
-        g_applet.block_id = 0;
-    }
-    intr = sceKernelCpuSuspendIntr();
-    g_applet.status = 0;
-    g_applet.params = NULL;
-    g_applet.params_size = 0;
-    sceKernelCpuResumeIntr(intr);
-    return sceKernelExitDeleteThread(0);
+	sm_opt.size = sizeof(SceKernelSMOption);
+	sm_opt.mpid_stack = mpid;
+	sm_opt.stack_size = 4096;
+	sm_opt.priority = common->access_thread;
+	sm_opt.attribute = 0;
+
+	ret = sceKernelStopModule(modid, 0, NULL, &status, &sm_opt);
+	if (ret >= 0) {
+		ret = sceKernelUnloadModule(modid);
+		if (ret > 0)
+			ret = 0;
+	}
+	return ret;
 }
 
-int utilityStopUnloadModuleA(SceUID modid, int reason)
+static UTILITY_NOINLINE int utilityAppletStopUnloadModule(SceUID modid, int mpid)
 {
-    int status, ret;
-    u32 opt[5];
+	SceKernelSMOption sm_opt;
+	SceUtilityDialogCommon *common = (SceUtilityDialogCommon *)g_applet.params;
+	int status;
+	int ret;
 
-    opt[0] = 0x14;
-    opt[1] = reason;
-    opt[2] = 0x1000;
-    opt[3] = ((u32 *)g_dialog.params)[4];
-    opt[4] = 0;
+	sm_opt.size = sizeof(SceKernelSMOption);
+	sm_opt.mpid_stack = mpid;
+	sm_opt.stack_size = 4096;
+	sm_opt.priority = common->access_thread;
+	sm_opt.attribute = 0;
 
-    ret = sceKernelStopModule(modid, 0, NULL, &status, opt);
-    if (ret >= 0) {
-        ret = sceKernelUnloadModule(modid);
-        if (ret > 0)
-            ret = 0;
-    }
-    return ret;
+	ret = sceKernelStopModule(modid, 0, NULL, &status, &sm_opt);
+	if (ret >= 0) {
+		ret = utilityAppletUnloadModule(modid);
+		if (ret > 0)
+			ret = 0;
+	}
+	return ret;
 }
 
-int utilityStopUnloadModuleB(SceUID modid, int reason)
+static UTILITY_NOINLINE int utilityIsDialogMemGuardEnabled(void)
 {
-    int status, ret;
-    u32 opt[5];
-
-    opt[0] = 0x14;
-    opt[1] = reason;
-    opt[2] = 0x1000;
-    opt[3] = ((u32 *)g_applet.params)[4];
-    opt[4] = 0;
-
-    ret = sceKernelStopModule(modid, 0, NULL, &status, opt);
-    if (ret >= 0) {
-        ret = utilityUnloadModuleWithRetry(modid);
-        if (ret > 0)
-            ret = 0;
-    }
-    return ret;
+	if (!sceKernelIsToolMode())
+		return 0;
+	if (sceKernelIsDevelopmentToolMode()) {
+		if (sceKernelDipsw(25) != 0)
+			return 0;
+	} else {
+		if (sceKernelDipsw(24) == 0)
+			return 0;
+	}
+	return sceKernelGetCompiledSdkVersion() > 0x0307FFFF;
 }
 
 /* Applet core (HtmlViewer) */
-int utilityAppletInitStart(u32 type, void *params)
+static UTILITY_NOINLINE int utilityAppletInitStart(u32 applet_type, void *params)
 {
-    u32 *p = (u32 *)params;
-    u32 size, ver, part_size;
-    SceUID block;
-    int ret;
-    u32 arg[10];
-    void *game_info;
+	SceUtilityHtmlViewerHeader *hv = (SceUtilityHtmlViewerHeader *)params;
+	u32 sz;
+	u32 api_version;
+	SceSize part_size;
+	SceUID block;
+	SceUtilityAppletStartArg start_arg;
+	SceKernelGameInfo *game_info;
+	int ret;
 
-    if (g_applet.status != 0)
-        return 0x80110001;
-    if (type != 1)
-        return 0x80110003;
+	if (g_applet.status != 0)
+		return SCE_UTILITY_ERROR_INVALID_STATUS;
+	if (utilityIsBadRange(params, sizeof(SceUtilityDialogCommon)))
+		return SCE_UTILITY_ERROR_INVALID_ADDR;
+	if (applet_type != 1)
+		return SCE_UTILITY_ERROR_INVALID_TYPE;
 
-    size = p[0];
-    g_applet.mod_path = "flash0:/vsh/module/htmlviewer_utility.prx";
-    if (size == 0x70) ver = 0xc8;
-    else if (size == 0x78) ver = 0xfa;
-    else if (size == 0x80) ver = 0x104;
-    else if (size == 0x98) ver = 0x10e;
-    else if (size == 0xa4) ver = 0x118;
-    else if (size == 0xa8) ver = 0x12c;
-    else return 0x80110004;
+	sz = hv->base.size;
+	g_applet.mod_path = "flash0:/vsh/module/htmlviewer_utility.prx";
+	switch (sz) {
+	case 112: api_version = 200; break;
+	case 120: api_version = 250; break;
+	case 128: api_version = 260; break;
+	case 152: api_version = 270; break;
+	case 164: api_version = 280; break;
+	case 168: api_version = 300; break;
+	default:
+		return SCE_UTILITY_ERROR_INVALID_SIZE;
+	}
 
-    part_size = utilityCheckAppletParamSize(type, ver, params);
-    block = sceKernelAllocPartitionMemory(2, "SceUtilityAppletPartition", 0, part_size, NULL);
-    if (block <= 0)
-        return block;
+	if (utilityIsBadSpan(params, sz))
+		return SCE_UTILITY_ERROR_INVALID_ADDR;
+	if (utilityIsBadSpan(hv->mem_addr, hv->mem_size))
+		return SCE_UTILITY_ERROR_INVALID_ADDR;
 
-    g_applet.status = 1;
-    g_applet.active_type = type;
-    g_applet.params_size = ver;
-    g_applet.block_id = block;
-    g_applet.params = params;
+	part_size = utilityAppletGetPartitionSize(1, api_version, hv);
+	block = sceKernelAllocPartitionMemory(2, "SceUtilityAppletPartition", 0, part_size, NULL);
+	if (block <= 0)
+		return block;
 
-    arg[0] = 0x28;
-    arg[1] = sceKernelGetModel();
-    arg[9] = sceKernelBootFrom();
-    arg[2] = type;
-    arg[4] = ver;
-    arg[3] = (u32)params;
-    game_info = sceKernelGetGameInfo();
-    strncpy((char *)&arg[5], (const char *)game_info + 0x44, 13);
-    ((char *)arg)[0x21] = '\0';
+	g_applet.status = 1;
+	g_applet.active_type = 1;
+	g_applet.api_version = api_version;
+	g_applet.block_id = block;
+	g_applet.params = params;
 
-    g_applet.init_thid = sceKernelCreateThread("SceUtilityAppletInit", utilityAppletLoadThread, p[4], 0x800, 0x00100000, NULL);
-    if (g_applet.init_thid <= 0) {
-        ret = g_applet.init_thid;
-        g_applet.init_thid = 0;
-        return ret;
-    }
+	start_arg.size = sizeof(SceUtilityAppletStartArg);
+	start_arg.model = sceKernelGetModel();
+	start_arg.boot_from = sceKernelBootFrom();
+	start_arg.applet_type = 1;
+	start_arg.api_version = api_version;
+	start_arg.params = params;
+	game_info = (SceKernelGameInfo *)sceKernelGetGameInfo();
+	strncpy(start_arg.product_code, game_info->product_code, 13);
+	start_arg.product_code[13] = '\0';
 
-    ret = sceKernelStartThread(g_applet.init_thid, 0x28, arg);
-    if (ret != 0) {
-        sceKernelDeleteThread(g_applet.init_thid);
-        g_applet.init_thid = 0;
-        return ret;
-    }
+	g_applet.init_thid = sceKernelCreateThread(
+		"SceUtilityAppletInit", utilityAppletLoadThread,
+		hv->base.access_thread, 2048, 0x00100000, NULL);
+	if (g_applet.init_thid <= 0) {
+		ret = g_applet.init_thid;
+		g_applet.init_thid = 0;
+		return ret;
+	}
 
-    return 0;
+	ret = sceKernelStartThread(g_applet.init_thid, sizeof(SceUtilityAppletStartArg), &start_arg);
+	if (ret != 0) {
+		sceKernelDeleteThread(g_applet.init_thid);
+		g_applet.init_thid = 0;
+		return ret;
+	}
+	return 0;
 }
 
-static int utilityAppletShutdownStart(u32 type)
+static UTILITY_NOINLINE int utilityAppletShutdownStart(u32 applet_type)
 {
-    int ret;
-    u32 *p;
+	SceUtilityDialogCommon *common;
+	int ret;
 
-    if (g_applet.active_type != type)
-        return 0x80110005;
-    if (g_applet.status != 3)
-        return 0x80110001;
+	if (g_applet.active_type != applet_type)
+		return SCE_UTILITY_ERROR_INVALID_DIALOG;
+	if (g_applet.status != 3)
+		return SCE_UTILITY_ERROR_INVALID_STATUS;
 
-    g_applet.status = 4;
-    p = (u32 *)g_applet.params;
-    g_applet.init_thid = sceKernelCreateThread("SceUtilityAppletShutdown", utilityDialogUnloadThread, p[4], 0x800, 0x00100000, NULL);
-    if (g_applet.init_thid <= 0) {
-        ret = g_applet.init_thid;
-        g_applet.init_thid = 0;
-        return ret;
-    }
+	g_applet.status = 4;
+	common = (SceUtilityDialogCommon *)g_applet.params;
+	g_applet.init_thid = sceKernelCreateThread(
+		"SceUtilityAppletShutdown", utilityAppletUnloadThread,
+		common->access_thread, 2048, 0x00100000, NULL);
+	if (g_applet.init_thid <= 0) {
+		ret = g_applet.init_thid;
+		g_applet.init_thid = 0;
+		return ret;
+	}
 
-    ret = sceKernelStartThread(g_applet.init_thid, 0, NULL);
-    if (ret != 0) {
-        sceKernelDeleteThread(g_applet.init_thid);
-        g_applet.init_thid = 0;
-        return ret;
-    }
-    return 0;
+	ret = sceKernelStartThread(g_applet.init_thid, 0, NULL);
+	if (ret != 0) {
+		sceKernelDeleteThread(g_applet.init_thid);
+		g_applet.init_thid = 0;
+		return ret;
+	}
+	return 0;
 }
 
 int sceUtility_private_048BFC46(const char *name, int flags, void *opt)
 {
-    const char *path = NULL;
+	u32 old_k1 = utilityEnterKernel();
+	const char *path = NULL;
+	int ret;
 
-    if (strcmp(name, "htmlviewer_ui") == 0)
-        path = "flash0:/vsh/module/htmlviewer_ui.prx";
-    else if (strcmp(name, "hvauth_r") == 0)
-        path = "flash0:/vsh/module/hvauth_r.prx";
-    else if (strcmp(name, "hvauth_t") == 0)
-        path = "flash0:/vsh/module/hvauth_t.prx";
-    else if (strcmp(name, "netfront") == 0)
-        path = "flash0:/vsh/module/netfront.prx";
-    else if (strcmp(name, "mgvideo") == 0)
-        path = "flash0:/kd/mgvideo.prx";
-    else if (strcmp(name, "mm_flash") == 0)
-        path = "flash0:/vsh/module/mm_flash.prx";
-    else if (strcmp(name, "libslim") == 0)
-        path = "flash0:/vsh/module/libslim.prx";
-    else if (strcmp(name, "libwww") == 0)
-        path = "flash0:/vsh/module/libwww.prx";
-    else if (strcmp(name, "libfont_hv") == 0)
-        path = "flash0:/vsh/module/libfont_hv.prx";
-    else
-        return 0x80010002;
+	if (utilityIsBadPtr(name) || utilityIsBadRange(opt, sizeof(SceKernelLMOption))) {
+		utilityLeaveKernel(old_k1);
+		return SCE_UTILITY_ERROR_INVALID_ADDR;
+	}
 
-    return utilityLoadModuleWithRetry(path, &g_applet.block_id, flags, opt);
+	switch (name[0]) {
+	case 'h':
+		if (strcmp(name, "htmlviewer_ui") == 0)
+			path = "flash0:/vsh/module/htmlviewer_ui.prx";
+		else if (strcmp(name, "hvauth_r") == 0)
+			path = "flash0:/vsh/module/hvauth_r.prx";
+		else if (strcmp(name, "hvauth_t") == 0)
+			path = "flash0:/vsh/module/hvauth_t.prx";
+		break;
+	case 'l':
+		if (strcmp(name, "libslim") == 0)
+			path = "flash0:/vsh/module/libslim.prx";
+		else if (strcmp(name, "libwww") == 0)
+			path = "flash0:/vsh/module/libwww.prx";
+		else if (strcmp(name, "libfont_hv") == 0)
+			path = "flash0:/vsh/module/libfont_hv.prx";
+		break;
+	case 'm':
+		if (strcmp(name, "mgvideo") == 0)
+			path = "flash0:/kd/mgvideo.prx";
+		else if (strcmp(name, "mm_flash") == 0)
+			path = "flash0:/vsh/module/mm_flash.prx";
+		break;
+	case 'n':
+		if (strcmp(name, "netfront") == 0)
+			path = "flash0:/vsh/module/netfront.prx";
+		break;
+	default:
+		break;
+	}
+
+	if (path == NULL)
+		ret = SCE_KERNEL_ERROR_NO_FILE;
+	else
+		ret = utilityAppletLoadModule(path, &g_applet.block_id, flags, opt);
+
+	utilityLeaveKernel(old_k1);
+	return ret;
 }
 
-static int utilityAppletInitSync(void)
+static UTILITY_NOINLINE int utilityAppletInit(void)
 {
-    g_applet.worktime_evf = sceKernelCreateEventFlag("SceUtilityAppletWorktime", 0x200, 0, NULL);
-    if (g_applet.worktime_evf < 0)
-        return 0x80000042;
-    g_applet.params_size = 0;
-    g_applet.active_type = 0;
-    g_applet.status = 0;
-    g_applet.params = NULL;
-    return 0;
+	g_applet.worktime_evf = sceKernelCreateEventFlag("SceUtilityAppletWorktime", 0x200, 0, NULL);
+	if (g_applet.worktime_evf < 0)
+		return SCE_KERNEL_ERROR_NO_MEMORY;
+
+	g_applet.api_version = 0;
+	g_applet.active_type = 0;
+	g_applet.status = 0;
+	g_applet.params = NULL;
+	return 0;
 }
 
-static int utilityAppletTermSync(void)
+static UTILITY_NOINLINE int utilityAppletTerm(void)
 {
-    if (g_applet.worktime_evf > 0)
-        sceKernelDeleteEventFlag(g_applet.worktime_evf);
-    return 0;
+	if (g_applet.worktime_evf > 0)
+		sceKernelDeleteEventFlag(g_applet.worktime_evf);
+	return 0;
 }
 
-static int utilityAppletUpdate(u32 type, int speed)
+static UTILITY_NOINLINE int utilityAppletUpdate(u32 applet_type, int speed)
 {
-    if (g_applet.active_type != type)
-        return 0x80110005;
-    g_applet.speed = speed;
-    if (g_applet.status != 2)
-        return 0x80110001;
-    sceKernelSetEventFlag(g_applet.worktime_evf, 0x10);
-    sceKernelWaitEventFlag(g_applet.worktime_evf, 0x20, 0x20, NULL, NULL);
-    return 0;
+	g_applet.speed = speed;
+	if (g_applet.active_type != applet_type)
+		return SCE_UTILITY_ERROR_INVALID_DIALOG;
+	if (g_applet.status != 2)
+		return SCE_UTILITY_ERROR_INVALID_STATUS;
+
+	sceKernelSetEventFlag(g_applet.worktime_evf, 0x10);
+	sceKernelWaitEventFlag(g_applet.worktime_evf, 0x20, 0x20, NULL, NULL);
+	return 0;
 }
 
-static int utilityAppletGetStatus(u32 type)
+static UTILITY_NOINLINE int utilityAppletGetStatus(u32 applet_type)
 {
-    if (g_applet.active_type != type)
-        return 0x80110005;
-    return g_applet.status;
+	if (g_applet.active_type != applet_type)
+		return SCE_UTILITY_ERROR_INVALID_DIALOG;
+	return (int)g_applet.status;
+}
+
+int sceUtility_private_186A2C84(void)
+{
+	u32 old_k1 = utilityEnterKernel();
+	sceKernelWaitEventFlag(g_applet.worktime_evf, 1, 0x20, NULL, NULL);
+	utilityLeaveKernel(old_k1);
+	return 0;
 }
 
 int sceUtility_private_29AFE096(void)
 {
-    sceKernelSetEventFlag(g_applet.worktime_evf, 2);
-    return 0;
+	u32 old_k1 = utilityEnterKernel();
+	sceKernelSetEventFlag(g_applet.worktime_evf, 2);
+	utilityLeaveKernel(old_k1);
+	return 0;
 }
 
 int sceUtility_private_E0F5DEC1(void)
 {
-    sceKernelWaitEventFlag(g_applet.worktime_evf, 4, 0x20, NULL, NULL);
-    return 0;
+	u32 old_k1 = utilityEnterKernel();
+	sceKernelWaitEventFlag(g_applet.worktime_evf, 4, 0x20, NULL, NULL);
+	utilityLeaveKernel(old_k1);
+	return 0;
 }
 
 int sceUtility_private_8024FCA7(void)
 {
-    sceKernelSetEventFlag(g_applet.worktime_evf, 8);
-    return 0;
+	u32 old_k1 = utilityEnterKernel();
+	sceKernelSetEventFlag(g_applet.worktime_evf, 8);
+	utilityLeaveKernel(old_k1);
+	return 0;
 }
 
 int sceUtility_private_7E0D4BCD(void)
 {
-    sceKernelWaitEventFlag(g_applet.worktime_evf, 0x10, 0x20, NULL, NULL);
-    return 0;
+	u32 old_k1 = utilityEnterKernel();
+	sceKernelWaitEventFlag(g_applet.worktime_evf, 0x10, 0x20, NULL, NULL);
+	utilityLeaveKernel(old_k1);
+	return 0;
 }
 
 int sceUtility_private_CDEEBEE2(void)
 {
-    sceKernelSetEventFlag(g_applet.worktime_evf, 0x20);
-    return 0;
+	u32 old_k1 = utilityEnterKernel();
+	sceKernelSetEventFlag(g_applet.worktime_evf, 0x20);
+	utilityLeaveKernel(old_k1);
+	return 0;
 }
 
 int sceUtility_private_86AA70BC(u32 status)
 {
-    g_applet.status = status;
-    return 0;
+	g_applet.status = status;
+	return 0;
 }
 
 u32 sceUtility_private_FC841AC3(void)
 {
-    return g_applet.active_type;
+	return g_applet.active_type;
 }
 
 void *sceUtility_private_369D25E4(void)
 {
-    return g_applet.params;
+	return g_applet.params;
 }
 
 u32 sceUtility_private_ED4E37CA(void)
 {
-    return g_applet.params_size;
+	return g_applet.api_version;
 }
 
-u32 sceUtility_private_BAFFB9D5(void)
+int sceUtility_private_BAFFB9D5(void)
 {
-    return g_applet.speed;
+	return g_applet.speed;
 }
 
 int sceUtility_private_69AB28E8(SceUID thid)
 {
-    g_applet.shutdown_thid = thid;
-    return 0;
+	g_applet.applet_thid = thid;
+	return 0;
 }
 
 int sceUtility_private_78A2FE0C(SceUID modid)
 {
-    return utilityUnloadModuleWithRetry(modid);
+	return utilityAppletUnloadModule(modid);
 }
 
-int sceUtility_private_4F6FFC7C(int a0)
+int sceUtility_private_4F6FFC7C(int power_arg)
 {
-    return scePower_driver_766CD857(a0);
+	u32 old_k1 = utilityEnterKernel();
+	int ret = scePower_driver_766CD857(power_arg);
+	utilityLeaveKernel(old_k1);
+	return ret;
 }
 
-int sceUtility_private_34340686(int a0)
+int sceUtility_private_34340686(int power_arg)
 {
-    return scePower_driver_315B8CB6(a0);
+	u32 old_k1 = utilityEnterKernel();
+	int ret = scePower_driver_315B8CB6(power_arg);
+	utilityLeaveKernel(old_k1);
+	return ret;
 }
 
-static int utilityCheckAppletParamSize(u32 type, u32 size, void *params)
+static UTILITY_NOINLINE SceSize utilityAppletGetPartitionSize(u32 applet_type, u32 api_version, const SceUtilityHtmlViewerHeader *params)
 {
-    if (type != 1)
-        return 0;
-    if (size < 0x10e)
-        return 0x380000;
-    if (((u32 *)params)[19] & 0x400)
-        return 0x480000;
-    return 0x380000;
+	if (applet_type == 1) {
+		if (api_version >= 270 && (params->init_flags & 0x400) != 0)
+			return 0x480000;
+		return 0x380000;
+	}
+	return 0;
 }
 
-static SceUID utilityLoadModuleWithRetry(const char *path, SceUID *block_p, int flags, void *opt)
+static UTILITY_NOINLINE SceUID utilityAppletLoadModule(const char *path, SceUID *block_p, int flags, void *opt)
 {
-    SceUID modid, new_block = 0;
-    int i;
+	SceUID rem_block;
+	SceUID modid;
+	int idx;
 
-    if (*block_p != 0)
-        modid = sceKernelLoadModuleToBlock(path, *block_p, &new_block, flags, opt);
-    else
-        modid = sceKernelLoadModuleForKernel(path, flags, opt);
+	if (*block_p != 0)
+		modid = sceKernelLoadModuleToBlock(path, *block_p, &rem_block, flags, opt);
+	else
+		modid = sceKernelLoadModuleForKernel(path, flags, opt);
 
-    if (modid > 0) {
-        for (i = 0; i < 8; i++) {
-            if (g_applet_mods[i].modid == 0) {
-                g_applet_mods[i].block_id = *block_p;
-                g_applet_mods[i].modid = modid;
-                break;
-            }
-        }
-        if (*block_p != 0)
-            *block_p = new_block;
-    }
-    return modid;
+	if (modid > 0) {
+		for (idx = 0; idx < 8; idx++) {
+			if (g_applet_mods[idx].modid == 0) {
+				g_applet_mods[idx].block_id = *block_p;
+				g_applet_mods[idx].modid = modid;
+				break;
+			}
+		}
+		if (*block_p != 0)
+			*block_p = rem_block;
+	}
+	return modid;
 }
 
-static int utilityUnloadModuleWithRetry(SceUID modid)
+static UTILITY_NOINLINE int utilityAppletUnloadModule(SceUID modid)
 {
-    int ret, i;
+	int ret = sceKernelUnloadModule(modid);
+	int idx;
 
-    ret = sceKernelUnloadModule(modid);
-    for (i = 0; i < 8; i++) {
-        if (g_applet_mods[i].modid == modid) {
-            if (g_applet_mods[i].block_id != 0)
-                sceKernelFreePartitionMemory(g_applet_mods[i].block_id);
-            g_applet_mods[i].modid = 0;
-            break;
-        }
-    }
-    return ret;
+	for (idx = 0; idx < 8; idx++) {
+		if (g_applet_mods[idx].modid == modid) {
+			if (g_applet_mods[idx].block_id != 0)
+				sceKernelFreePartitionMemory(g_applet_mods[idx].block_id);
+			g_applet_mods[idx].modid = 0;
+			break;
+		}
+	}
+	return ret;
 }
 
-static SceUID utilityLoadStartModule(const char *path, int mpid, SceSize argsize, void *argp, SceUID *block_p)
+static UTILITY_NOINLINE SceUID utilityAppletLoadStartModule(const char *path, int mpid, SceSize argsize, void *argp, SceUID *block_p)
 {
-    SceUID modid;
-    int status, ret;
-    u32 load_opt[5];
-    u32 start_opt[5];
+	SceKernelLMOption lm_opt;
+	SceKernelSMOption sm_opt;
+	SceUtilityDialogCommon *common = (SceUtilityDialogCommon *)g_applet.params;
+	SceUID modid;
+	int status;
+	int ret;
 
-    load_opt[0] = 0x14;
-    load_opt[1] = mpid;
-    load_opt[2] = mpid;
-    load_opt[3] = 0;
-    ((u8 *)load_opt)[16] = 0;
-    ((u8 *)load_opt)[17] = 1;
+	lm_opt.size = sizeof(SceKernelLMOption);
+	lm_opt.mpid_text = mpid;
+	lm_opt.mpid_data = mpid;
+	lm_opt.position = 0;
+	lm_opt.access = 1;
 
-    modid = utilityLoadModuleWithRetry(path, block_p, 0, load_opt);
-    if (modid < 0)
-        return modid;
+	modid = utilityAppletLoadModule(path, block_p, 0, &lm_opt);
+	if (modid < 0)
+		return modid;
 
-    start_opt[0] = 0x14;
-    start_opt[1] = mpid;
-    start_opt[2] = 0x1000;
-    start_opt[3] = ((u32 *)g_applet.params)[4];
-    start_opt[4] = 0;
+	sm_opt.size = sizeof(SceKernelSMOption);
+	sm_opt.mpid_stack = mpid;
+	sm_opt.stack_size = 4096;
+	sm_opt.priority = common->access_thread;
+	sm_opt.attribute = 0;
 
-    ret = sceKernelStartModule(modid, argsize, argp, &status, start_opt);
-    if (ret >= 0)
-        return modid;
-    return ret;
+	ret = sceKernelStartModule(modid, argsize, argp, &status, &sm_opt);
+	if (ret < 0)
+		return ret;
+	return modid;
 }
 
 /* Dialog module memory management */
 int sceUtility_private_0C0AE566(SceSize size)
 {
-    int i;
-    SceUID block;
+	u32 old_k1 = utilityEnterKernel();
+	int idx;
+	SceUID block;
 
-    if (g_dialog_mem_inited != 0)
-        return 0x80110001;
+	if (g_dialog_mem_inited != 0) {
+		utilityLeaveKernel(old_k1);
+		return SCE_UTILITY_ERROR_INVALID_STATUS;
+	}
 
-    for (i = 0; i < 3; i++) {
-        g_dialog_mem_nodes[i].next = NULL;
-        g_dialog_mem_nodes[i].prev = NULL;
-        g_dialog_mem_nodes[i].block_id = -1;
-        g_dialog_mem_nodes[i].modid = -1;
-    }
+	for (idx = 0; idx < 3; idx++) {
+		g_dialog_mem_nodes[idx].next = NULL;
+		g_dialog_mem_nodes[idx].prev = NULL;
+		g_dialog_mem_nodes[idx].block_id = -1;
+		g_dialog_mem_nodes[idx].modid = -1;
+	}
+	g_dialog_mem_head.next = &g_dialog_mem_head;
+	g_dialog_mem_head.prev = &g_dialog_mem_head;
 
-    g_dialog_mem_head.next = &g_dialog_mem_head;
-    g_dialog_mem_head.prev = &g_dialog_mem_head;
+	block = sceKernelAllocPartitionMemory(2, "SceUtilityDialogModule", 0, size, NULL);
+	if (block < 0) {
+		utilityLeaveKernel(old_k1);
+		return block;
+	}
 
-    block = sceKernelAllocPartitionMemory(2, "SceUtilityDialogModule", 0, size, NULL);
-    if (block < 0)
-        return block;
+	g_dialog_mem_nodes[0].block_id = block;
+	g_dialog_mem_nodes[0].next = g_dialog_mem_head.next;
+	g_dialog_mem_nodes[0].prev = &g_dialog_mem_head;
+	g_dialog_mem_head.next->prev = &g_dialog_mem_nodes[0];
+	g_dialog_mem_head.next = &g_dialog_mem_nodes[0];
 
-    g_dialog_mem_nodes[0].block_id = block;
-    g_dialog_mem_nodes[0].next = g_dialog_mem_head.next;
-    g_dialog_mem_nodes[0].prev = &g_dialog_mem_head;
-    g_dialog_mem_head.next->prev = &g_dialog_mem_nodes[0];
-    g_dialog_mem_head.next = &g_dialog_mem_nodes[0];
+	if (utilityIsDialogModuleGuardEnabled() != 0) {
+		g_dialog_mem_guard_seed = sceKernelGetSystemTimeLow();
+		utilityFillDialogModuleGuard(g_dialog_mem_nodes[0].block_id);
+	}
 
-    if (utilityIsDevToolMode() != 0) {
-        g_dialog_mem_time = sceKernelGetSystemTimeLow() + (u32)sceKernelGetThreadId();
-        utilityFlushMemBlock(g_dialog_mem_nodes[0].block_id);
-    }
-
-    g_dialog_mem_inited = 1;
-    return 0;
+	g_dialog_mem_inited = 1;
+	utilityLeaveKernel(old_k1);
+	return 0;
 }
 
 int sceUtility_private_B34EC4AD(void)
 {
-    SceUtilityDialogMemNode *node;
+	u32 old_k1 = utilityEnterKernel();
+	SceUtilityDialogMemNode *node;
 
-    if (g_dialog_mem_inited == 0)
-        return 0x80110001;
+	if (g_dialog_mem_inited != 1) {
+		utilityLeaveKernel(old_k1);
+		return SCE_UTILITY_ERROR_INVALID_STATUS;
+	}
 
-    for (node = g_dialog_mem_head.next; node != &g_dialog_mem_head; node = node->next) {
-        if (node->modid >= 0)
-            return 0x80110001;
-    }
+	while (g_dialog_mem_head.prev != &g_dialog_mem_head) {
+		node = g_dialog_mem_head.prev;
+		if (node->modid < 0 && node->block_id >= 0) {
+			if (utilityIsDialogModuleGuardEnabled() != 0)
+				utilityCheckDialogModuleGuard(node->block_id);
+		}
+		if (node->modid >= 0) {
+			sceKernelUnloadModule(node->modid);
+			node->modid = -1;
+		}
+		if (node->block_id >= 0) {
+			sceKernelFreePartitionMemory(node->block_id);
+			node->block_id = -1;
+		}
+		node->next->prev = node->prev;
+		node->prev->next = node->next;
+		node->prev = NULL;
+		node->next = NULL;
+	}
 
-    for (node = g_dialog_mem_head.next; node != &g_dialog_mem_head; node = node->next) {
-        if (utilityIsDevToolMode() != 0)
-            utilityLogMemBlockStep(1, node->block_id);
-        if (node != &g_dialog_mem_nodes[0] && node->block_id >= 0) {
-            sceKernelJointMemoryBlock(g_dialog_mem_nodes[0].block_id, node->block_id);
-            node->block_id = -1;
-        }
-    }
-
-    if (g_dialog_mem_nodes[0].block_id >= 0) {
-        sceKernelFreePartitionMemory(g_dialog_mem_nodes[0].block_id);
-        g_dialog_mem_nodes[0].block_id = -1;
-    }
-
-    g_dialog_mem_inited = 0;
-    return 0;
+	g_dialog_mem_inited = 0;
+	utilityLeaveKernel(old_k1);
+	return 0;
 }
 
-SceUID sceUtility_private_ACB67A01(const char *path, int flags, void *opt)
+SceUID sceUtility_private_ACB67A01(const char *name, int flags, const SceKernelLMOption *opt)
 {
-    SceUtilityDialogMemNode *node, *free_node = NULL;
-    SceUID modid, rem_block = 0;
-    int i;
+	u32 old_k1 = utilityEnterKernel();
+	const char *path = NULL;
+	SceUtilityDialogMemNode *free_node = NULL;
+	SceUtilityDialogMemNode *head_node;
+	SceKernelLMOption load_opt;
+	SceUID rem_block;
+	SceUID modid;
+	int idx;
 
-    if (g_dialog_mem_inited == 0)
-        return 0x80110001;
+	if (g_dialog_mem_inited != 1) {
+		utilityLeaveKernel(old_k1);
+		return SCE_UTILITY_ERROR_INVALID_STATUS;
+	}
 
-    for (i = 0; i < 3; i++) {
-        if (g_dialog_mem_nodes[i].next == NULL && g_dialog_mem_nodes[i].prev == NULL) {
-            free_node = &g_dialog_mem_nodes[i];
-            break;
-        }
-    }
+	if (utilityIsBadPtr(name) || utilityIsBadRange(opt, sizeof(SceKernelLMOption))) {
+		utilityLeaveKernel(old_k1);
+		return SCE_UTILITY_ERROR_INVALID_ADDR;
+	}
 
-    for (node = g_dialog_mem_head.next; node != &g_dialog_mem_head; node = node->next) {
-        if (node->modid < 0 && node->block_id >= 0) {
-            if (utilityIsDevToolMode() != 0)
-                utilityLogMemBlockStep(2, node->block_id);
-            modid = sceKernelLoadModuleToBlock(path, node->block_id, &rem_block, flags, opt);
-            if (modid >= 0) {
-                node->modid = modid;
-                if (rem_block > 0 && free_node != NULL) {
-                    free_node->block_id = rem_block;
-                    free_node->modid = -1;
-                    free_node->next = node->next;
-                    free_node->prev = node;
-                    node->next->prev = free_node;
-                    node->next = free_node;
-                    if (utilityIsDevToolMode() != 0)
-                        utilityFlushMemBlock(rem_block);
-                }
-                return modid;
-            }
-        }
-    }
-    return 0x800200d9;
+	if (name[0] == 'n') {
+		if (strcmp(name, "npsignup_plugin") == 0)
+			path = "flash0:/vsh/module/npsignup_plugin.prx";
+	} else if (name[0] == 's') {
+		if (strcmp(name, "store_browser_plugin") == 0)
+			path = "flash0:/vsh/module/store_browser_plugin.prx";
+		if (strcmp(name, "store_checkout_plugin") == 0)
+			path = "flash0:/vsh/module/store_checkout_plugin.prx";
+	}
+
+	if (path == NULL) {
+		utilityLeaveKernel(old_k1);
+		return sceUtility_private_5ED16EBA(name, flags, opt);
+	}
+
+	for (idx = 0; idx < 3; idx++) {
+		if (g_dialog_mem_nodes[idx].block_id < 0 && g_dialog_mem_nodes[idx].modid < 0) {
+			free_node = &g_dialog_mem_nodes[idx];
+			break;
+		}
+	}
+
+	if (free_node == NULL || g_dialog_mem_head.next == &g_dialog_mem_head) {
+		utilityLeaveKernel(old_k1);
+		return SCE_KERNEL_ERROR_NO_FREE_SLOT;
+	}
+
+	head_node = g_dialog_mem_head.next;
+	if (utilityIsDialogModuleGuardEnabled() != 0)
+		utilityCheckDialogModuleGuard(head_node->block_id);
+
+	load_opt = *opt;
+	load_opt.mpid_text = 2;
+	load_opt.mpid_data = 2;
+
+	modid = sceKernelLoadModuleToBlock(path, head_node->block_id, &rem_block, flags, &load_opt);
+	if (modid < 0) {
+		utilityLeaveKernel(old_k1);
+		return modid;
+	}
+
+	head_node->modid = modid;
+	if (utilityIsDialogModuleGuardEnabled() != 0)
+		utilityFillDialogModuleGuard(rem_block);
+
+	free_node->block_id = rem_block;
+	free_node->next = g_dialog_mem_head.next;
+	free_node->prev = &g_dialog_mem_head;
+	g_dialog_mem_head.next->prev = free_node;
+	g_dialog_mem_head.next = free_node;
+
+	utilityLeaveKernel(old_k1);
+	return modid;
 }
 
 int sceUtility_private_BBCD1885(SceUID modid)
 {
-    SceUtilityDialogMemNode *node;
-    int ret;
+	u32 old_k1 = utilityEnterKernel();
+	SceUtilityDialogMemNode *node;
+	int ret;
 
-    if (g_dialog_mem_inited == 0)
-        return 0x80110001;
+	if (g_dialog_mem_inited != 1) {
+		utilityLeaveKernel(old_k1);
+		return SCE_UTILITY_ERROR_INVALID_STATUS;
+	}
 
-    for (node = g_dialog_mem_head.next; node != &g_dialog_mem_head; node = node->next) {
-        if (node->modid == modid) {
-            ret = sceKernelUnloadModule(modid);
-            if (ret < 0)
-                return ret;
-            node->modid = -1;
-            if (utilityIsDevToolMode() != 0)
-                utilityFlushMemBlock(node->block_id);
+	ret = sceKernelUnloadModule(modid);
+	if (ret < 0) {
+		utilityLeaveKernel(old_k1);
+		return ret;
+	}
 
-            /* Merge with next free block if adjacent */
-            if (node->next != &g_dialog_mem_head && node->next->modid < 0) {
-                SceUtilityDialogMemNode *next = node->next;
-                if (sceKernelJointMemoryBlock(node->block_id, next->block_id) >= 0) {
-                    next->prev->next = next->next;
-                    next->next->prev = next->prev;
-                    next->next = NULL;
-                    next->prev = NULL;
-                    next->block_id = -1;
-                }
-            }
-            /* Merge with prev free block if adjacent */
-            if (node->prev != &g_dialog_mem_head && node->prev->modid < 0) {
-                SceUtilityDialogMemNode *prev = node->prev;
-                if (sceKernelJointMemoryBlock(prev->block_id, node->block_id) >= 0) {
-                    node->prev->next = node->next;
-                    node->next->prev = node->prev;
-                    node->next = NULL;
-                    node->prev = NULL;
-                    node->block_id = -1;
-                }
-            }
-            return ret;
-        }
-    }
-    return 0x8002013e;
+	for (node = g_dialog_mem_head.prev; node != &g_dialog_mem_head; node = node->prev) {
+		if (node->modid == modid) {
+			node->modid = -1;
+			if (utilityIsDialogModuleGuardEnabled() != 0)
+				utilityFillDialogModuleGuard(node->block_id);
+
+			for (node = g_dialog_mem_head.prev; node != &g_dialog_mem_head; ) {
+				if (node->block_id >= 0 && node->modid < 0) {
+					SceUtilityDialogMemNode *cur = node->prev;
+					while (cur != &g_dialog_mem_head && cur->modid < 0) {
+						SceUtilityDialogMemNode *prev_link = cur->prev;
+						SceUID merged = sceKernelJointMemoryBlock(node->block_id, cur->block_id);
+						if (merged >= 0) {
+							node->block_id = merged;
+							cur->block_id = -1;
+							cur->next->prev = cur->prev;
+							cur->prev->next = cur->next;
+							cur->prev = NULL;
+							cur->next = NULL;
+						}
+						cur = prev_link;
+					}
+					if (cur == &g_dialog_mem_head)
+						break;
+					node = cur->prev;
+				} else {
+					node = node->prev;
+				}
+			}
+			break;
+		}
+	}
+
+	utilityLeaveKernel(old_k1);
+	return ret;
 }
 
-static int utilityIsDevToolMode(void)
+static UTILITY_NOINLINE int utilityIsDialogModuleGuardEnabled(void)
 {
-    if (!sceKernelIsToolMode())
-        return 0;
-    if (sceKernelIsDevelopmentToolMode())
-        return (sceKernelDipsw(0x19) == 0) ? 1 : 0;
-    return (sceKernelDipsw(0x18) != 0) ? 1 : 0;
+	int enabled;
+
+	if (!sceKernelIsToolMode())
+		return 0;
+	if (sceKernelIsDevelopmentToolMode())
+		enabled = (sceKernelDipsw(25) == 0);
+	else
+		enabled = sceKernelDipsw(24);
+	return enabled != 0;
 }
 
-static void utilityFlushMemBlock(SceUID block_id)
+static UTILITY_NOINLINE int utilityFillDialogModuleGuard(SceUID block_id)
 {
-    u32 info[14];
-    info[0] = 0x38;
-    if (sceKernelQueryMemoryBlockInfo(block_id, info) >= 0)
-        sceKernelMemset32((void *)info[10], g_dialog_mem_time, info[11]);
+	SceKernelSysMemInfo mem_info;
+	int ret;
+
+	mem_info.size = sizeof(SceKernelSysMemInfo);
+	ret = sceKernelQueryMemoryBlockInfo(block_id, &mem_info);
+	if (ret >= 0)
+		return sceKernelMemset32(mem_info.addr, g_dialog_mem_guard_seed, mem_info.mem_size);
+	return ret;
 }
 
-static void utilityLogMemBlockStep(int step, SceUID block_id)
+static UTILITY_NOINLINE int utilityCheckDialogModuleGuard(SceUID block_id)
 {
-    u32 info[14];
-    info[0] = 0x38;
-    if (sceKernelQueryMemoryBlockInfo(block_id, info) >= 0) {
-        u32 *ptr = (u32 *)info[10];
-        u32 words = info[11] / 4;
-        for (u32 i = 0; i < words; i++) {
-            if (ptr[i] != g_dialog_mem_time) {
-                Kprintf("utility.c:%s:%04d: Step %d: Data is broken at %p!\n",
-                    __FUNCTION__, __LINE__, step, &ptr[i]);
-                break;
-            }
-        }
-    }
+	SceKernelSysMemInfo mem_info;
+	int ret;
+
+	mem_info.size = sizeof(SceKernelSysMemInfo);
+	ret = sceKernelQueryMemoryBlockInfo(block_id, &mem_info);
+	if (ret >= 0) {
+		u32 *words = (u32 *)mem_info.addr;
+		u32 count = mem_info.mem_size >> 2;
+		u32 idx;
+
+		for (idx = 0; idx < count; idx++) {
+			if (words[idx] != g_dialog_mem_guard_seed) {
+				Kprintf("SceUtilityDialogModule reserved memory has been violated 0x%p ... stop\n", &words[idx]);
+				__asm__ volatile("break 0");
+			}
+		}
+	}
+	return ret;
 }
 
-/* NetModule / UsbModule / AvModule / LoadModule */
-static int utilityCheckDiscBootMode(void)
+/* Unified module loader */
+static UTILITY_NOINLINE int utilityLoadNetModuleGroup(u32 mod_id)
 {
-    if (sceKernelApplicationType() == 0x200) {
-        if (sceKernelBootFrom() == 0x20)
-            sceKernelInitDiscImage("flash0:/kd/discimage.img");
-    }
-    return 0;
+	u32 old_k1 = utilityEnterKernel();
+	SceUtilityModuleGroup *group = utilityFindNetModuleGroup(mod_id);
+	int ret;
+
+	if (mod_id == 0x101 || mod_id == 2) {
+		SceKernelGameInfo *game_info = (SceKernelGameInfo *)sceKernelGetGameInfo();
+		const char *code = game_info->product_code;
+
+		if (strcmp(code, "ULJS00048") == 0 ||
+		    strcmp(code, "ULUS10139") == 0 ||
+		    strcmp(code, "UCES00356") == 0 ||
+		    strcmp(code, "UCKS45027") == 0 ||
+		    strcmp(code, "UCAS40099") == 0) {
+			group->user_mods[4].opt = &g_net_adhoc_compat_opt;
+			group->user_mods[3].opt = &g_net_adhoc_compat_opt;
+		}
+	}
+
+	if (group == NULL)
+		ret = SCE_UTILITY_MOD_ERROR_INVALID_ID;
+	else
+		ret = utilityLoadModuleGroup(group);
+
+	utilityLeaveKernel(old_k1);
+	return ret;
 }
 
-static int utilityNetModuleInit(void)
+static UTILITY_NOINLINE int utilityInitNetModules(void)
 {
-    g_net_mod_flags = 0;
-    g_net_block_id = -1;
-    return 0;
+	u32 idx;
+	for (idx = 0; idx < 9; idx++)
+		utilityInitModuleGroup(&g_net_groups[idx]);
+	return 0;
 }
 
-int sceUtilityLoadNetModule(u32 id)
+static UTILITY_NOINLINE int utilityUnloadNetModuleGroup(u32 mod_id)
 {
-    int ret = sceUtilityLoadModule(id - 1 + 0x100);
-    if (ret < 0 && ret != (int)0x80111102 && ret != (int)0x80111103)
-        return ret;
-    return 0;
+	u32 old_k1 = utilityEnterKernel();
+	SceUtilityModuleGroup *group = utilityFindNetModuleGroup(mod_id);
+	int ret;
+
+	if (group == NULL)
+		ret = SCE_UTILITY_MOD_ERROR_INVALID_ID;
+	else
+		ret = utilityUnloadModuleGroup(group);
+
+	utilityLeaveKernel(old_k1);
+	return ret;
 }
 
-int sceUtilityUnloadNetModule(u32 id)
+int sceUtilityLoadNetModule(u32 mod_id)
 {
-    int ret = sceUtilityUnloadModule(id - 1 + 0x100);
-    if (ret < 0 && ret != (int)0x80111102 && ret != (int)0x80111103)
-        return ret;
-    return 0;
+	int ret;
+
+	if (mod_id - 1 >= 7)
+		return SCE_UTILITY_NET_ERROR_INVALID_ID;
+	ret = utilityLoadNetModuleGroup(mod_id);
+	if (ret < 0)
+		return (int)(((u32)ret & 0xFFFF00FFu) | 0x0800u);
+	return ret;
 }
 
-static int utilityNpModuleInit(void)
+int sceUtilityUnloadNetModule(u32 mod_id)
 {
-    g_np_mutex = sceKernelCreateMutex("SceUtilityNpModule", 0, 0, NULL);
-    return (g_np_mutex < 0) ? g_np_mutex : 0;
+	int ret;
+
+	if (mod_id - 1 >= 7)
+		return SCE_UTILITY_NET_ERROR_INVALID_ID;
+	ret = utilityUnloadNetModuleGroup(mod_id);
+	if (ret < 0)
+		return (int)(((u32)ret & 0xFFFF00FFu) | 0x0800u);
+	return ret;
 }
 
-int sceUtility_private_C7D5983F(u32 id)
+static UTILITY_NOINLINE int utilityInitDnasModules(void)
 {
-    u32 k1 = GET_K1();
-    SET_K1(0);
-    int ret = utilityLoadNpModule(id);
-    SET_K1(k1);
-    return ret;
+	utilityInitModuleGroup(&g_dnas_group);
+	return 0;
 }
 
-int sceUtility_private_5C494AC6(u32 id)
+int sceUtility_private_C7D5983F(void)
 {
-    u32 k1 = GET_K1();
-    SET_K1(0);
-    int ret = utilityUnloadNpModule(id, 0);
-    SET_K1(k1);
-    return ret;
+	u32 old_k1 = utilityEnterKernel();
+	int ret = utilityLoadModuleGroup(&g_dnas_group);
+	utilityLeaveKernel(old_k1);
+	return ret;
 }
 
-static int utilityLoadModuleToPartition(const char *path, int mpid)
+int sceUtility_private_5C494AC6(void)
 {
-    u32 opt[5];
-    opt[0] = 0x14;
-    opt[1] = mpid;
-    opt[2] = mpid;
-    opt[3] = 0;
-    ((u8 *)opt)[16] = 0;
-    ((u8 *)opt)[17] = 1;
-    return sceKernelLoadModuleForKernel(path, 0, opt);
+	u32 old_k1 = utilityEnterKernel();
+	int ret = utilityUnloadModuleGroup(&g_dnas_group);
+	utilityLeaveKernel(old_k1);
+	return ret;
 }
 
-static int utilityStopAndUnloadModule(SceUID modid)
+static UTILITY_NOINLINE SceUtilityModuleGroup *utilityFindNetModuleGroup(u32 mod_id)
 {
-    int status, ret;
-    ret = sceKernelStopModule(modid, 0, NULL, &status, NULL);
-    if (ret >= 0)
-        ret = sceKernelUnloadModule(modid);
-    return ret;
+	u32 idx = mod_id & 0xFFFF00FFu;
+	if ((mod_id & 0x100u) == 0)
+		idx = mod_id - 1u;
+	if (idx >= 9)
+		return NULL;
+	return &g_net_groups[idx];
 }
 
-static int utilityLoadUsbModByIdx(int idx)
+static UTILITY_NOINLINE SceUtilityModuleGroup *utilityFindUsbModuleGroup(u32 mod_id)
 {
-    if (idx < 0 || idx >= 5)
-        return 0x80110201;
-    return utilityLoadModuleById(0x200 + idx);
+	if (mod_id == 0x203 && utilityIsUsbGpsSerialDriver() != 0)
+		return &g_usb_aux_groups[1];
+
+	if (mod_id == 0x2FF) {
+		if (sceKernelGetModel() != 0 || sceKernelIsDevelopmentToolMode() != 0)
+			return &g_usb_dmb_group;
+		return NULL;
+	}
+
+	{
+		u32 idx = mod_id & 0xFFFF00FFu;
+		if (idx < 4)
+			return &g_usb_groups[idx];
+	}
+	return NULL;
 }
 
-static int utilityUsbModuleInit(void)
+static UTILITY_NOINLINE SceUtilityModuleGroup *utilityFindAvModuleGroup(u32 mod_id)
 {
-    g_usb_mutex = sceKernelCreateMutex("SceUtilityUsbModule", 0, 0, NULL);
-    return (g_usb_mutex < 0) ? g_usb_mutex : 0;
+	u32 idx = ((mod_id & 0x300u) != 0) ? (mod_id & 0xFFFF00FFu) : mod_id;
+
+	if (idx >= 9)
+		return NULL;
+
+	if (idx == 4) {
+		SceKernelGameInfo *game_info = (SceKernelGameInfo *)sceKernelGetGameInfo();
+		if (game_info != NULL) {
+			if (strcmp(game_info->product_code, "ULUS10322") != 0) {
+				g_mp3_compat_flag = 1;
+				g_mp3_compat_opt.argsize = 0;
+				g_mp3_compat_opt.argp = NULL;
+				g_av_groups[4].user_mods[0].opt = NULL;
+			} else {
+				g_mp3_compat_flag = 0;
+				g_mp3_compat_opt.argsize = 4;
+				g_mp3_compat_opt.argp = &g_mp3_compat_flag;
+				g_av_groups[4].user_mods[0].opt = &g_mp3_compat_opt;
+			}
+		}
+	}
+	return &g_av_groups[idx];
 }
 
-static int utilityLoadUsbModule(u32 id)
+static UTILITY_NOINLINE int utilityInitUsbModules(void)
 {
-    sceKernelLockMutex(g_usb_mutex, 1, NULL);
-    int ret = utilityLoadUsbModByIdx((int)id - 1);
-    sceKernelUnlockMutex(g_usb_mutex, 1);
-    return ret;
+	u32 idx;
+	for (idx = 0; idx < 4; idx++)
+		utilityInitModuleGroup(&g_usb_groups[idx]);
+	for (idx = 0; idx < 3; idx++)
+		utilityInitModuleGroup(&g_usb_aux_groups[idx]);
+	utilityInitModuleGroup(&g_usb_dmb_group);
+	return 0;
 }
 
-static int utilityUnloadUsbModule(u32 id)
+static UTILITY_NOINLINE int utilityLoadUsbModuleGroup(u32 mod_id)
 {
-    sceKernelLockMutex(g_usb_mutex, 1, NULL);
-    int ret = utilityUnloadModuleById(id - 1 + 0x200);
-    sceKernelUnlockMutex(g_usb_mutex, 1);
-    return ret;
+	u32 old_k1 = utilityEnterKernel();
+	SceUtilityModuleGroup *group = utilityFindUsbModuleGroup(mod_id);
+	SceUtilityModuleGroup *acc_group;
+	int ret;
+
+	if (group == NULL) {
+		utilityLeaveKernel(old_k1);
+		return SCE_UTILITY_MOD_ERROR_INVALID_ID;
+	}
+
+	acc_group = utilityFindUsbAccessoryGroup(mod_id);
+	if (acc_group != NULL) {
+		if (acc_group->ref_count != 0) {
+			acc_group->ref_count++;
+		} else {
+			ret = utilityLoadModuleGroup(acc_group);
+			if (ret < 0) {
+				utilityLeaveKernel(old_k1);
+				return ret;
+			}
+		}
+	}
+
+	ret = utilityLoadModuleGroup(group);
+	if (ret < 0 && acc_group != NULL) {
+		if (acc_group->ref_count < 2)
+			utilityUnloadModuleGroup(acc_group);
+		else
+			acc_group->ref_count--;
+	}
+
+	utilityLeaveKernel(old_k1);
+	return ret;
 }
 
-int sceUtilityLoadUsbModule(u32 id)
+static UTILITY_NOINLINE int utilityUnloadUsbModuleGroup(u32 mod_id)
 {
-    u32 k1 = GET_K1();
-    SET_K1(0);
-    if (id < 1 || id > 5) {
-        SET_K1(k1);
-        return 0x80110e01;
-    }
-    int ret = utilityLoadUsbModule(id);
-    if (ret < 0) {
-        ret = (ret & (int)0xFFFF00FF) | 0xE00;
-    }
-    SET_K1(k1);
-    return ret;
+	u32 old_k1 = utilityEnterKernel();
+	SceUtilityModuleGroup *group = utilityFindUsbModuleGroup(mod_id);
+	int ret;
+
+	if (group == NULL) {
+		utilityLeaveKernel(old_k1);
+		return SCE_UTILITY_MOD_ERROR_INVALID_ID;
+	}
+
+	ret = utilityUnloadModuleGroup(group);
+	if (ret >= 0) {
+		SceUtilityModuleGroup *acc_group = utilityFindUsbAccessoryGroup(mod_id);
+		if (acc_group != NULL) {
+			if (acc_group->ref_count < 2)
+				ret = utilityUnloadModuleGroup(acc_group);
+			else {
+				acc_group->ref_count--;
+				ret = 0;
+			}
+		}
+	}
+
+	utilityLeaveKernel(old_k1);
+	return ret;
 }
 
-int sceUtilityUnloadUsbModule(u32 id)
+int sceUtilityLoadUsbModule(u32 mod_id)
 {
-    u32 k1 = GET_K1();
-    SET_K1(0);
-    if (id < 1 || id > 5) {
-        SET_K1(k1);
-        return 0x80110e01;
-    }
-    int ret = utilityUnloadUsbModule(id);
-    if (ret < 0) {
-        ret = (ret & (int)0xFFFF00FF) | 0xE00;
-    }
-    SET_K1(k1);
-    return ret;
+	u32 old_k1;
+	SceUtilityModuleGroup *group;
+	int ret;
+
+	if (mod_id - 1 >= 5)
+		return SCE_UTILITY_USB_ERROR_INVALID_ID;
+
+	old_k1 = utilityEnterKernel();
+	group = utilityFindLegacyUsbModuleGroup(mod_id);
+	if (group == NULL)
+		ret = SCE_UTILITY_MOD_ERROR_INVALID_ID;
+	else
+		ret = utilityLoadModuleGroup(group);
+	utilityLeaveKernel(old_k1);
+
+	if (ret < 0)
+		return (int)(((u32)ret & 0xFFFF00FFu) | 0x0E00u);
+	return ret;
 }
 
-static int utilityLoadAvModRaw(u32 id)
+int sceUtilityUnloadUsbModule(u32 mod_id)
 {
-    return utilityLoadModuleById(id + 0x300);
+	u32 old_k1;
+	SceUtilityModuleGroup *group;
+	int ret;
+
+	if (mod_id - 1 >= 5)
+		return SCE_UTILITY_USB_ERROR_INVALID_ID;
+
+	old_k1 = utilityEnterKernel();
+	group = utilityFindLegacyUsbModuleGroup(mod_id);
+	if (group == NULL)
+		ret = SCE_UTILITY_MOD_ERROR_INVALID_ID;
+	else
+		ret = utilityUnloadModuleGroup(group);
+	utilityLeaveKernel(old_k1);
+
+	if (ret < 0)
+		return (int)(((u32)ret & 0xFFFF00FFu) | 0x0E00u);
+	return ret;
 }
 
-static int utilityUnloadAvModRaw(u32 id)
+static UTILITY_NOINLINE SceUtilityModuleGroup *utilityFindLegacyUsbModuleGroup(u32 mod_id)
 {
-    return utilityUnloadModuleById(id + 0x300);
+	if (mod_id == 5 && utilityIsUsbGpsSerialDriver() != 0)
+		return &g_usb_aux_groups[1];
+	if (mod_id == 2) {
+		if (utilityIsUsbGpsSerialDriver() == 0)
+			return &g_usb_aux_groups[0];
+		return &g_usb_aux_groups[2];
+	}
+	if (mod_id == 1)
+		return &g_usb_groups[0];
+	if (mod_id - 3 < 3)
+		return &g_usb_groups[mod_id - 2];
+	return NULL;
 }
 
-static int utilityLoadAvModWithMe(u32 id)
+static UTILITY_NOINLINE SceUtilityModuleGroup *utilityFindUsbAccessoryGroup(u32 mod_id)
 {
-    if (id == 1 || id == 4)
-        sceMeBootStart(1);
-    return utilityLoadAvModRaw(id);
+	if (mod_id == 0x203) {
+		if (utilityIsUsbGpsSerialDriver() != 0)
+			return NULL;
+		return &g_usb_aux_groups[0];
+	}
+	if (mod_id == 0x2FF || (mod_id >= 0x201 && mod_id < 0x204))
+		return &g_usb_aux_groups[0];
+	return NULL;
 }
 
-static int utilityLoadAvModule(u32 id)
+static UTILITY_NOINLINE int utilityIsUsbGpsSerialDriver(void)
 {
-    sceKernelLockMutex(g_av_mutex, 1, NULL);
-    int ret = utilityLoadAvModWithMe(id);
-    sceKernelUnlockMutex(g_av_mutex, 1);
-    return ret;
+	SceRegParam reg_param;
+	u32 reg;
+	u32 cat;
+	u32 key_type;
+	SceSize key_size;
+	u32 value;
+	int is_serial = 0;
+
+	memset(&reg_param, 0, sizeof(reg_param));
+	reg_param.reg_type = 1;
+	strncpy(reg_param.name, "flash1/registry/system", sizeof(reg_param.name));
+	reg_param.name_len = 22;
+	reg_param.sys_flag_open = 1;
+	reg_param.sys_flag_compat = 1;
+
+	if (sceRegOpenRegistry(&reg_param, 2, &reg) == 0) {
+		if (sceRegOpenCategory(reg, "/TOOL/CONFIG", 2, &cat) == 0) {
+			if (sceRegGetKeyInfoByName(cat, "usbgps_driver_type", &key_type, &key_size) == 0 &&
+			    key_type == 2 && key_size == 4 &&
+			    sceRegGetKeyValueByName(cat, "usbgps_driver_type", &value, 4) == 0) {
+				is_serial = (value == 1);
+			}
+			sceRegCloseCategory(cat);
+		}
+		sceRegCloseRegistry(reg);
+	}
+	return is_serial;
 }
 
-static int utilityUnloadAvModule(u32 id)
+static UTILITY_NOINLINE int utilityLoadAvModuleGroup(u32 mod_id)
 {
-    sceKernelLockMutex(g_av_mutex, 1, NULL);
-    int ret = utilityUnloadAvModRaw(id);
-    sceKernelUnlockMutex(g_av_mutex, 1);
-    return ret;
+	u32 old_k1 = utilityEnterKernel();
+	SceUtilityModuleGroup *group;
+	int ret;
+
+	if (mod_id == 0x3FF) {
+		if (sceKernelGetModel() == 0)
+			sceKernelIsDevelopmentToolMode();
+		ret = sceMeBootStart(4);
+		utilityLeaveKernel(old_k1);
+		return ret;
+	}
+
+	if (mod_id == 0x3FE) {
+		s32 wma_play;
+		if (utilityRegGetNetInt("/CONFIG/MUSIC", "wma_play", &wma_play) < 0 || wma_play != 1) {
+			utilityLeaveKernel(old_k1);
+			return SCE_KERNEL_ERROR_UNSUPPORTED;
+		}
+		sceMeBootStart(3);
+		group = &g_av_wma_group;
+	} else {
+		group = utilityFindAvModuleGroup(mod_id);
+	}
+
+	if (group == NULL)
+		ret = SCE_UTILITY_MOD_ERROR_INVALID_ID;
+	else
+		ret = utilityLoadModuleGroup(group);
+
+	utilityLeaveKernel(old_k1);
+	return ret;
 }
 
-static int utilityAvModuleInit(void)
+static UTILITY_NOINLINE int utilityUnloadAvModuleGroup(u32 mod_id)
 {
-    g_av_mutex = sceKernelCreateMutex("SceUtilityAvModule", 0, 0, NULL);
-    return (g_av_mutex < 0) ? g_av_mutex : 0;
+	u32 old_k1 = utilityEnterKernel();
+	SceUtilityModuleGroup *group;
+	int ret;
+
+	if (mod_id == 0x3FF) {
+		if (sceKernelGetModel() == 0)
+			sceKernelIsDevelopmentToolMode();
+		ret = sceMeBootStart(2);
+		utilityLeaveKernel(old_k1);
+		return ret;
+	}
+
+	if (mod_id == 0x3FE)
+		group = &g_av_wma_group;
+	else
+		group = utilityFindAvModuleGroup(mod_id);
+
+	if (group == NULL)
+		ret = SCE_UTILITY_MOD_ERROR_INVALID_ID;
+	else
+		ret = utilityUnloadModuleGroup(group);
+
+	utilityLeaveKernel(old_k1);
+	return ret;
 }
 
-int sceUtilityLoadAvModule(u32 id)
+static UTILITY_NOINLINE int utilityInitAvModules(void)
 {
-    if (id > 7)
-        return 0x80110301;
-    return utilityLoadAvModule(id);
+	u32 idx;
+	for (idx = 0; idx < 9; idx++)
+		utilityInitModuleGroup(&g_av_groups[idx]);
+	return 0;
 }
 
-int sceUtilityUnloadAvModule(u32 id)
+int sceUtilityLoadAvModule(u32 mod_id)
 {
-    if (id > 7)
-        return 0x80110301;
-    return utilityUnloadAvModule(id);
+	int ret;
+
+	if (mod_id >= 4)
+		return SCE_UTILITY_AV_ERROR_INVALID_ID;
+	ret = utilityLoadAvModuleGroup(mod_id);
+	if (ret < 0)
+		return (int)(((u32)ret & 0xFFFF00FFu) | 0x0F00u);
+	return ret;
 }
 
-static int utilityUpdownModuleInit(void)
+int sceUtilityUnloadAvModule(u32 mod_id)
 {
-    g_updown_mutex = sceKernelCreateMutex("SceUtilityUpdownModule", 0, 0, NULL);
-    return (g_updown_mutex < 0) ? g_updown_mutex : 0;
+	int ret;
+
+	if (mod_id >= 4)
+		return SCE_UTILITY_AV_ERROR_INVALID_ID;
+	ret = utilityUnloadAvModuleGroup(mod_id);
+	if (ret < 0)
+		return (int)(((u32)ret & 0xFFFF00FFu) | 0x0F00u);
+	return ret;
 }
 
-static int utilityLoadUpdownModule(u32 id, int a1)
+static UTILITY_NOINLINE int utilityInitNpModules(void)
 {
-    (void)a1;
-    sceKernelLockMutex(g_updown_mutex, 1, NULL);
-    int ret = utilityLoadModuleById(id);
-    sceKernelUnlockMutex(g_updown_mutex, 1);
-    return ret;
+	u32 idx;
+	for (idx = 0; idx < 4; idx++)
+		utilityInitModuleGroup(&g_np_groups[idx]);
+	return 0;
 }
 
-static int utilityUnloadUpdownModule(u32 id, int a1)
+static UTILITY_NOINLINE int utilityLoadNpModuleGroup(u32 mod_id)
 {
-    (void)a1;
-    sceKernelLockMutex(g_updown_mutex, 1, NULL);
-    int ret = utilityUnloadModuleById(id);
-    sceKernelUnlockMutex(g_updown_mutex, 1);
-    return ret;
+	u32 old_k1 = utilityEnterKernel();
+	u32 idx = mod_id & 0xFFFF00FFu;
+	SceUtilityModuleGroup *group = (idx < 4) ? &g_np_groups[idx] : NULL;
+	int ret;
+
+	if (group == NULL)
+		ret = SCE_UTILITY_MOD_ERROR_INVALID_ID;
+	else
+		ret = utilityLoadModuleGroup(group);
+
+	utilityLeaveKernel(old_k1);
+	return ret;
 }
 
-static int utilityLoadNpModRaw(u32 id)
+static UTILITY_NOINLINE int utilityUnloadNpModuleGroup(u32 mod_id)
 {
-    return utilityLoadModuleById(id);
+	u32 old_k1 = utilityEnterKernel();
+	u32 idx = mod_id & 0xFFFF00FFu;
+	SceUtilityModuleGroup *group = (idx < 4) ? &g_np_groups[idx] : NULL;
+	int ret;
+
+	if (group == NULL)
+		ret = SCE_UTILITY_MOD_ERROR_INVALID_ID;
+	else
+		ret = utilityUnloadModuleGroup(group);
+
+	utilityLeaveKernel(old_k1);
+	return ret;
 }
 
-static int utilityUnloadNpModRaw(u32 id)
+static UTILITY_NOINLINE int utilityLoadNpDrmModuleGroup(u32 mod_id)
 {
-    return utilityUnloadModuleById(id);
+	u32 old_k1 = utilityEnterKernel();
+	SceUtilityModuleGroup *group = NULL;
+	int ret;
+
+	if (mod_id == 0x500 && sceKernelIsToolMode() != 0)
+		group = &g_npdrm_groups[1];
+	else if ((mod_id & 0xFFFF00FFu) == 0)
+		group = &g_npdrm_groups[0];
+
+	if (group == NULL) {
+		utilityLeaveKernel(old_k1);
+		return SCE_UTILITY_MOD_ERROR_INVALID_ID;
+	}
+
+	ret = 0;
+	if (sceKernelInitDiscImage() == 0) {
+		if (group->ref_count == 0)
+			ret = utilityLoadModuleGroup(group);
+		else
+			group->ref_count++;
+	}
+	if (ret == 0)
+		sceNpDrmSetDebugMode(utilityIsNpDrmCheckEnabled());
+
+	utilityLeaveKernel(old_k1);
+	return ret;
 }
 
-static int utilityLoadNpModChecked(u32 id)
+static UTILITY_NOINLINE int utilityUnloadNpDrmModuleGroup(u32 mod_id)
 {
-    if (id == 0x502)
-        sceNpDrmSetDebugMode(1);
-    return utilityLoadNpModRaw(id);
+	u32 old_k1 = utilityEnterKernel();
+	SceUtilityModuleGroup *group = NULL;
+	int ret;
+
+	if (mod_id == 0x500 && sceKernelIsToolMode() != 0)
+		group = &g_npdrm_groups[1];
+	else if ((mod_id & 0xFFFF00FFu) == 0)
+		group = &g_npdrm_groups[0];
+
+	if (group == NULL) {
+		utilityLeaveKernel(old_k1);
+		return SCE_UTILITY_MOD_ERROR_INVALID_ID;
+	}
+
+	ret = 0;
+	if (sceKernelInitDiscImage() == 0) {
+		if (group->ref_count < 2)
+			ret = utilityUnloadModuleGroup(group);
+		else
+			group->ref_count--;
+	}
+
+	utilityLeaveKernel(old_k1);
+	return ret;
 }
 
-static int utilityNpNoop1(void)
+static UTILITY_NOINLINE int utilityIsNpDrmCheckEnabled(void)
 {
-    return 0;
+	SceRegParam reg_param;
+	u32 reg;
+	u32 cat;
+	u32 key_type;
+	SceSize key_size;
+	u32 value;
+	int check_drm = 0;
+
+	memset(&reg_param, 0, sizeof(reg_param));
+	reg_param.reg_type = 1;
+	strncpy(reg_param.name, "flash1/registry/system", sizeof(reg_param.name));
+	reg_param.name_len = 22;
+	reg_param.sys_flag_open = 1;
+	reg_param.sys_flag_compat = 1;
+
+	if (sceRegOpenRegistry(&reg_param, 2, &reg) == 0) {
+		if (sceRegOpenCategory(reg, "/CONFIG/NP", 2, &cat) == 0) {
+			if (sceRegGetKeyInfoByName(cat, "check_drm", &key_type, &key_size) == 0 &&
+			    key_type == 2 && key_size == 4 &&
+			    sceRegGetKeyValueByName(cat, "check_drm", &value, 4) == 0) {
+				check_drm = (value == 1);
+			}
+			sceRegCloseCategory(cat);
+		}
+		sceRegCloseRegistry(reg);
+	}
+	return check_drm;
 }
 
-static int utilityLoadNpModule(u32 id)
+static UTILITY_NOINLINE int utilityInitNpDrmModules(void)
 {
-    sceKernelLockMutex(g_np_mutex, 1, NULL);
-    int ret = utilityLoadNpModChecked(id);
-    sceKernelUnlockMutex(g_np_mutex, 1);
-    return ret;
+	u32 idx;
+	for (idx = 0; idx < 2; idx++)
+		utilityInitModuleGroup(&g_npdrm_groups[idx]);
+	return 0;
 }
 
-static int utilityNpNoop2(void)
+static UTILITY_NOINLINE int utilityLoadIrModuleGroup(u32 mod_id)
 {
-    return 0;
+	u32 old_k1 = utilityEnterKernel();
+	u32 idx = mod_id & 0xFFFF00FFu;
+	u32 peer_idx = (mod_id ^ 1u) & 0xFFFF00FFu;
+	SceUtilityModuleGroup *group = (idx < 2) ? &g_ir_groups[idx] : NULL;
+	SceUtilityModuleGroup *peer_group;
+	int ret;
+
+	if (group == NULL) {
+		utilityLeaveKernel(old_k1);
+		return SCE_UTILITY_MOD_ERROR_INVALID_ID;
+	}
+
+	peer_group = (peer_idx < 2) ? &g_ir_groups[peer_idx] : NULL;
+	if (peer_group->kern_mods[0].modid >= 0) {
+		utilityLeaveKernel(old_k1);
+		return SCE_UTILITY_MOD_ERROR_ALREADY_LOADED;
+	}
+
+	ret = utilityLoadModuleGroup(group);
+	utilityLeaveKernel(old_k1);
+	return ret;
 }
 
-static int utilityUnloadNpModule(u32 id, int a1)
+static UTILITY_NOINLINE int utilityInitIrModules(void)
 {
-    (void)a1;
-    sceKernelLockMutex(g_np_mutex, 1, NULL);
-    int ret = utilityUnloadNpModRaw(id);
-    sceKernelUnlockMutex(g_np_mutex, 1);
-    return ret;
+	u32 idx;
+	for (idx = 0; idx < 2; idx++)
+		utilityInitModuleGroup(&g_ir_groups[idx]);
+	return 0;
 }
 
-static int utilityModMutexInit(void)
+static UTILITY_NOINLINE int utilityUnloadIrModuleGroup(u32 mod_id)
 {
-    g_mod_mutex = sceKernelCreateMutex("SceUtilityModule", 0, 0, NULL);
-    return (g_mod_mutex < 0) ? g_mod_mutex : 0;
+	u32 old_k1 = utilityEnterKernel();
+	u32 idx = mod_id & 0xFFFF00FFu;
+	SceUtilityModuleGroup *group = (idx < 2) ? &g_ir_groups[idx] : NULL;
+	int ret;
+
+	if (group == NULL)
+		ret = SCE_UTILITY_MOD_ERROR_INVALID_ID;
+	else
+		ret = utilityUnloadModuleGroup(group);
+
+	utilityLeaveKernel(old_k1);
+	return ret;
 }
 
-int sceUtility_private_7EBD6208(u32 id)
+static UTILITY_NOINLINE int utilityInitNpInstModules(void)
 {
-    u32 k1 = GET_K1();
-    SET_K1(0);
-    int ret = utilityLoadUpdownModule(id, 0);
-    SET_K1(k1);
-    return ret;
+	utilityInitModuleGroup(&g_np_inst_group);
+	return 0;
 }
 
-int sceUtility_private_40FBA532(u32 id)
+int sceUtility_private_7EBD6208(void)
 {
-    u32 k1 = GET_K1();
-    SET_K1(0);
-    int ret = utilityUnloadUpdownModule(id, 0);
-    SET_K1(k1);
-    return ret;
+	u32 old_k1 = utilityEnterKernel();
+	int ret = utilityLoadModuleGroup(&g_np_inst_group);
+	utilityLeaveKernel(old_k1);
+	return ret;
 }
 
-static SceUtilityModEntry *get_mod_table(u32 id, u32 *out_idx, u32 *out_count)
+int sceUtility_private_40FBA532(void)
 {
-    u32 cat = id >> 8;
-    u32 idx = id & 0xFF;
-
-    switch (cat) {
-    case 1:
-        if (idx == 0 || idx > 25) return NULL;
-        *out_idx = idx - 1;
-        *out_count = 25;
-        return g_mods_01;
-    case 2:
-        if (idx == 0 || idx > 5) return NULL;
-        *out_idx = idx - 1;
-        *out_count = 5;
-        return g_mods_02;
-    case 3:
-        if (idx == 0 || idx > 11) return NULL;
-        *out_idx = idx - 1;
-        *out_count = 11;
-        return g_mods_03;
-    case 4:
-        if (idx == 0 || idx > 2) return NULL;
-        *out_idx = idx - 1;
-        *out_count = 2;
-        return g_mods_04;
-    case 5:
-        if (idx == 0 || idx > 3) return NULL;
-        *out_idx = idx - 1;
-        *out_count = 3;
-        return g_mods_05;
-    case 6:
-        if (idx == 0 || idx > 2) return NULL;
-        *out_idx = idx - 1;
-        *out_count = 2;
-        return g_mods_06;
-    default:
-        return NULL;
-    }
+	u32 old_k1 = utilityEnterKernel();
+	int ret = utilityUnloadModuleGroup(&g_np_inst_group);
+	utilityLeaveKernel(old_k1);
+	return ret;
 }
 
-static int utilityLoadModuleById(u32 id)
+static UTILITY_NOINLINE int utilityLoadModuleGroup(SceUtilityModuleGroup *group)
 {
-    u32 idx, count;
-    SceUtilityModEntry *tab = get_mod_table(id, &idx, &count);
-    SceUID modid;
+	int idx;
+	int ret = 0;
 
-    if (tab == NULL)
-        return 0x80111101;
-    if (tab[idx].state_and_modid > 0)
-        return 0x80111102;
+	if (group->ref_count != 0)
+		return SCE_UTILITY_MOD_ERROR_ALREADY_LOADED;
 
-    modid = utilityLoadModuleToPartition(tab[idx].path, tab[idx].mpid);
-    if (modid < 0)
-        return modid;
-    tab[idx].state_and_modid = modid;
-    return 0;
+	for (idx = 0; idx < (int)group->kern_count; idx++) {
+		ret = utilityLoadKernelModule(&group->kern_mods[idx]);
+		if (ret < 0)
+			break;
+	}
+
+	if (ret >= 0 && group->user_count != 0) {
+		SceUID cur_block = sceKernelAllocPartitionMemory(2, "SceUtilityModule", 0, group->user_mem_size, NULL);
+		ret = cur_block;
+		if (cur_block >= 0) {
+			SceUID rem_block = -1;
+			for (idx = 0; idx < (int)group->user_count; idx++) {
+				rem_block = -1;
+				ret = utilityLoadUserModule(&group->user_mods[idx], cur_block, &rem_block);
+				if (ret < 0) {
+					int rev;
+					for (rev = (int)group->user_count - 1; rev >= 0; rev--)
+						utilityUnloadUserModule(&group->user_mods[rev]);
+					if (rem_block >= 0)
+						sceKernelFreePartitionMemory(rem_block);
+					sceKernelFreePartitionMemory(cur_block);
+					break;
+				}
+				cur_block = rem_block;
+			}
+
+			if (ret >= 0) {
+				group->rem_block = rem_block;
+				if (utilityIsModuleGuardEnabled() != 0) {
+					SceKernelSysMemInfo mem_info;
+					group->guard_seed = sceKernelGetSystemTimeLow();
+					mem_info.size = sizeof(SceKernelSysMemInfo);
+					if (sceKernelQueryMemoryBlockInfo(rem_block, &mem_info) >= 0)
+						sceKernelMemset32(mem_info.addr, group->guard_seed, mem_info.mem_size);
+				}
+			}
+		}
+	}
+
+	if (ret >= 0) {
+		group->ref_count = 1;
+		return 0;
+	}
+
+	for (idx = (int)group->kern_count - 1; idx >= 0; idx--)
+		utilityUnloadKernelModule(&group->kern_mods[idx]);
+	return ret;
 }
 
-static int utilityUnloadModuleById(u32 id)
+static UTILITY_NOINLINE int utilityUnloadModuleGroup(SceUtilityModuleGroup *group)
 {
-    u32 idx, count;
-    SceUtilityModEntry *tab = get_mod_table(id, &idx, &count);
-    int ret;
+	int ret = 0;
+	int idx;
 
-    if (tab == NULL)
-        return 0x80111101;
-    if (tab[idx].state_and_modid <= 0)
-        return 0x80111103;
+	if (group->ref_count == 0)
+		return SCE_UTILITY_MOD_ERROR_NOT_LOADED;
 
-    ret = utilityStopAndUnloadModule(tab[idx].state_and_modid);
-    if (ret >= 0)
-        tab[idx].state_and_modid = 0;
-    return ret;
+	for (idx = (int)group->user_count - 1; idx >= 0; idx--)
+		ret = utilityUnloadUserModule(&group->user_mods[idx]);
+
+	if (group->rem_block >= 0) {
+		if (utilityIsModuleGuardEnabled() != 0) {
+			SceKernelSysMemInfo mem_info;
+			u32 *words;
+			u32 count;
+			u32 pos;
+
+			mem_info.size = sizeof(SceKernelSysMemInfo);
+			sceKernelQueryMemoryBlockInfo(group->rem_block, &mem_info);
+			words = (u32 *)mem_info.addr;
+			count = mem_info.mem_size >> 2;
+			for (pos = 0; pos < count; pos++) {
+				if (words[pos] != group->guard_seed) {
+					Kprintf("utility_module reserved memory has been violated 0x%p ... stop\n", &words[pos]);
+					__asm__ volatile("break 0");
+				}
+			}
+		}
+		sceKernelFreePartitionMemory(group->rem_block);
+		group->rem_block = -1;
+	}
+
+	for (idx = (int)group->kern_count - 1; idx >= 0; idx--)
+		ret = utilityUnloadKernelModule(&group->kern_mods[idx]);
+
+	if (ret < 0 && (int)group->user_count + (int)group->kern_count == 1)
+		return ret;
+
+	group->ref_count = 0;
+	return 0;
 }
 
-static int utilityIsValidModuleId(u32 id)
+static UTILITY_NOINLINE int utilityInitModuleGroup(SceUtilityModuleGroup *group)
 {
-    u32 idx = 0, count = 0;
-    return (get_mod_table(id, &idx, &count) != NULL) ? 0 : (int)0x80111101;
+	int idx;
+
+	group->rem_block = -1;
+	group->ref_count = 0;
+
+	for (idx = 0; idx < (int)group->kern_count; idx++)
+		group->kern_mods[idx].modid = -1;
+
+	for (idx = 0; idx < (int)group->user_count; idx++) {
+		group->user_mods[idx].modid = -1;
+		group->user_mods[idx].block_id = -1;
+	}
+	return 0;
 }
 
-int sceUtilityLoadModule(u32 id)
+int sceUtilityLoadModule(u32 mod_id)
 {
-    u32 k1 = GET_K1();
-    SET_K1(0);
-
-    int ret = utilityIsValidModuleId(id);
-    if (ret < 0) {
-        SET_K1(k1);
-        return ret;
-    }
-
-    sceKernelLockMutex(g_mod_mutex, 1, NULL);
-    u32 cat = id >> 8;
-    if (cat == 2)
-        ret = utilityLoadUsbModule(id & 0xFF);
-    else if (cat == 3)
-        ret = utilityLoadAvModule(id & 0xFF);
-    else if (cat == 5)
-        ret = utilityLoadNpModule(id);
-    else
-        ret = utilityLoadModuleById(id);
-    sceKernelUnlockMutex(g_mod_mutex, 1);
-
-    SET_K1(k1);
-    return ret;
+	switch (mod_id & 0xFF00u) {
+	case 0x100: return utilityLoadNetModuleGroup(mod_id);
+	case 0x200: return utilityLoadUsbModuleGroup(mod_id);
+	case 0x300: return utilityLoadAvModuleGroup(mod_id);
+	case 0x400: return utilityLoadNpModuleGroup(mod_id);
+	case 0x500: return utilityLoadNpDrmModuleGroup(mod_id);
+	case 0x600: return utilityLoadIrModuleGroup(mod_id);
+	default:    return SCE_UTILITY_MOD_ERROR_INVALID_ID;
+	}
 }
 
-int sceUtilityUnloadModule(u32 id)
+int sceUtilityUnloadModule(u32 mod_id)
 {
-    u32 k1 = GET_K1();
-    SET_K1(0);
-
-    int ret = utilityIsValidModuleId(id);
-    if (ret < 0) {
-        SET_K1(k1);
-        return ret;
-    }
-
-    sceKernelLockMutex(g_mod_mutex, 1, NULL);
-    u32 cat = id >> 8;
-    if (cat == 2)
-        ret = utilityUnloadUsbModule(id & 0xFF);
-    else if (cat == 3)
-        ret = utilityUnloadAvModule(id & 0xFF);
-    else if (cat == 5)
-        ret = utilityUnloadNpModule(id, 0);
-    else
-        ret = utilityUnloadModuleById(id);
-    sceKernelUnlockMutex(g_mod_mutex, 1);
-
-    SET_K1(k1);
-    return ret;
+	switch (mod_id & 0xFF00u) {
+	case 0x100: return utilityUnloadNetModuleGroup(mod_id);
+	case 0x200: return utilityUnloadUsbModuleGroup(mod_id);
+	case 0x300: return utilityUnloadAvModuleGroup(mod_id);
+	case 0x400: return utilityUnloadNpModuleGroup(mod_id);
+	case 0x500: return utilityUnloadNpDrmModuleGroup(mod_id);
+	case 0x600: return utilityUnloadIrModuleGroup(mod_id);
+	default:    return SCE_UTILITY_MOD_ERROR_INVALID_ID;
+	}
 }
 
-static int utilityLoadModuleBatch(int count, const u32 *ids)
+static UTILITY_NOINLINE int utilityLoadKernelModule(SceUtilityKernMod *entry)
 {
-    int i, ret = 0;
-    for (i = 0; i < count; i++) {
-        ret = utilityLoadModuleById(ids[i]);
-        if (ret < 0 && ret != (int)0x80111102)
-            break;
-        ret = 0;
-    }
-    return ret;
+	SceKernelLMOption lm_opt;
+	SceSize argsize = 0;
+	void *argp = NULL;
+	SceUID modid;
+	int status;
+	int ret;
+
+	lm_opt.size = sizeof(SceKernelLMOption);
+	lm_opt.mpid_text = 0;
+	lm_opt.mpid_data = 0;
+	lm_opt.flags = 0;
+	lm_opt.position = 0;
+	lm_opt.access = 0;
+	lm_opt.c_reserved[0] = 0;
+	lm_opt.c_reserved[1] = 0;
+
+	if (entry->opt != NULL) {
+		lm_opt.mpid_text = entry->opt->mpid;
+		argsize = entry->opt->argsize;
+		argp = entry->opt->argp;
+	} else {
+		lm_opt.mpid_text = 1;
+	}
+
+	modid = sceKernelLoadModuleForKernel(entry->path, 0, &lm_opt);
+	if (modid < 0)
+		return modid;
+
+	ret = sceKernelStartModule(modid, argsize, argp, &status, NULL);
+	if (ret <= 0) {
+		sceKernelUnloadModule(modid);
+		if (ret == 0)
+			return SCE_UTILITY_MOD_ERROR_START_FAILED;
+		return ret;
+	}
+
+	entry->modid = modid;
+	return 0;
 }
 
-static int utilityUnloadModuleBatch(int count, const u32 *ids)
+static UTILITY_NOINLINE int utilityUnloadKernelModule(SceUtilityKernMod *entry)
 {
-    int i, ret = 0;
-    for (i = count - 1; i >= 0; i--) {
-        ret = utilityUnloadModuleById(ids[i]);
-        if (ret < 0 && ret != (int)0x80111103)
-            break;
-        ret = 0;
-    }
-    return ret;
+	int status;
+
+	if (entry->modid >= 0) {
+		if (sceKernelStopModule(entry->modid, 0, NULL, &status, NULL) == SCE_KERNEL_ERROR_CANNOT_STOP) {
+			if (sceKernelGetCompiledSdkVersion() > 0x0307FFFF)
+				return SCE_KERNEL_ERROR_CANNOT_STOP;
+		}
+		sceKernelUnloadModule(entry->modid);
+	}
+	entry->modid = -1;
+	return 0;
 }
 
-static int utilityLoadSingleModule(u32 id)
+static UTILITY_NOINLINE int utilityLoadUserModule(SceUtilityUserMod *entry, SceUID block_id, SceUID *rem_block)
 {
-    return utilityLoadModuleById(id);
+	SceSize argsize = 0;
+	void *argp = NULL;
+	const SceKernelLMOption *lm_opt = NULL;
+	SceUID modid;
+	int status;
+	int ret;
+
+	if (entry->opt != NULL) {
+		argsize = entry->opt->argsize;
+		argp = entry->opt->argp;
+		lm_opt = entry->opt->lm_opt;
+	}
+
+	modid = sceKernelLoadModuleToBlock(entry->path, block_id, rem_block, 0, (void *)lm_opt);
+	if (modid < 0)
+		return modid;
+
+	ret = sceKernelStartModule(modid, argsize, argp, &status, NULL);
+	if (ret <= 0) {
+		sceKernelUnloadModule(modid);
+		if (ret == 0)
+			return SCE_UTILITY_MOD_ERROR_START_FAILED;
+		return ret;
+	}
+
+	entry->block_id = block_id;
+	entry->modid = modid;
+	return 0;
 }
 
-static int utilityUnloadSingleModule(u32 id)
+static UTILITY_NOINLINE int utilityUnloadUserModule(SceUtilityUserMod *entry)
 {
-    return utilityUnloadModuleById(id);
+	int status;
+
+	if (entry->modid >= 0) {
+		if (sceKernelStopModule(entry->modid, 0, NULL, &status, NULL) == SCE_KERNEL_ERROR_CANNOT_STOP) {
+			if (sceKernelGetCompiledSdkVersion() > 0x0307FFFF)
+				return SCE_KERNEL_ERROR_CANNOT_STOP;
+		}
+		sceKernelUnloadModule(entry->modid);
+	}
+	if (entry->block_id >= 0)
+		sceKernelFreePartitionMemory(entry->block_id);
+	entry->block_id = -1;
+	entry->modid = -1;
+	return 0;
 }
 
-static int utilityModuleNoopArg(u32 id)
+static UTILITY_NOINLINE int utilityIsModuleGuardEnabled(void)
 {
-    (void)id;
-    return 0;
+	if (!sceKernelIsToolMode())
+		return 0;
+	if (sceKernelIsDevelopmentToolMode()) {
+		if (sceKernelDipsw(25) != 0)
+			return 0;
+	} else {
+		if (sceKernelDipsw(24) == 0)
+			return 0;
+	}
+	return sceKernelGetCompiledSdkVersion() > 0x0306FFFF;
 }
 
-static int utilityModuleNoop(void)
+/* Kermit OSK bridge */
+int sceUtility_private_3B6D7CED(SceUtilityOskParams *params)
 {
-    return 0;
+	u32 old_k1 = utilityEnterKernel();
+	int ret;
+
+	if (utilityIsBadRange(params, sizeof(SceUtilityOskParams))) {
+		utilityLeaveKernel(old_k1);
+		return SCE_KERNEL_ERROR_ILLEGAL_ADDR;
+	}
+
+	g_osk.status = 2;
+	g_osk.current_item = 0;
+
+	if (sceUtility_private_5DCBD3C0() != 0) {
+		utilityLeaveKernel(old_k1);
+		return -1;
+	}
+
+	ret = utilityKermitOskStartItem(params, g_osk.current_item);
+	if (ret < 0)
+		g_osk.status = 0;
+
+	utilityLeaveKernel(old_k1);
+	return ret;
 }
 
-int sceUtility_private_3B6D7CED(int count, const u32 *ids)
+int sceUtility_private_CF6799A3(void)
 {
-    int ret;
-    sceKernelLockMutex(g_mod_mutex, 1, NULL);
-    ret = utilityLoadModuleBatch(count, ids);
-    sceKernelUnlockMutex(g_mod_mutex, 1);
-    return ret;
+	u32 old_k1 = utilityEnterKernel();
+	int idx;
+
+	utilityKermitOskFinishItem(g_osk.current_item);
+	g_osk.user_params->base.result = 2;
+	for (idx = 0; idx < g_osk.item_count; idx++) {
+		SceUtilityOskItem *item = &g_osk.user_params->items[idx];
+		if (!utilityIsBadRange(&item->result, sizeof(item->result)))
+			item->result = 1;
+	}
+	sceUtility_private_390A738F();
+	utilityLeaveKernel(old_k1);
+	return 0;
 }
 
-int sceUtility_private_CF6799A3(int count, const u32 *ids)
+int sceUtility_private_390A738F(void)
 {
-    int ret;
-    sceKernelLockMutex(g_mod_mutex, 1, NULL);
-    ret = utilityUnloadModuleBatch(count, ids);
-    sceKernelUnlockMutex(g_mod_mutex, 1);
-    return ret;
+	u32 old_k1 = utilityEnterKernel();
+	g_osk.item_count = 0;
+	g_osk.user_params = NULL;
+	g_osk.shared_params = NULL;
+	g_osk.status = 0;
+	utilityLeaveKernel(old_k1);
+	return 0;
 }
 
-int sceUtility_private_390A738F(u32 id)
+int sceUtility_private_48B0FBCD(void)
 {
-    return utilityLoadSingleModule(id);
+	u32 old_k1 = utilityEnterKernel();
+	u8 req_buf[128];
+	u32 aligned;
+	SceKermitRequest *req;
+	u64 resp;
+	int status;
+	int ret;
+
+	if (sceUtility_private_5DCBD3C0() != 0) {
+		utilityLeaveKernel(old_k1);
+		return -1;
+	}
+
+	aligned = ((u32)req_buf + 63u) & ~63u;
+	sceKernelDcacheInvalidateRange((void *)aligned, 64);
+	req = KERMIT_UNCACHED(aligned);
+	ret = sceKermit_driver_36666181(req, KERMIT_MODE_UTILITY, 270, 0, 0, &resp);
+	status = (ret == 0) ? (int)resp : ret;
+	if (status < 0) {
+		utilityLeaveKernel(old_k1);
+		return status;
+	}
+
+	if (g_osk.pending_next == 0) {
+		if (status == 3) {
+			if (sceUtility_private_5DCBD3C0() != 0) {
+				utilityLeaveKernel(old_k1);
+				return -1;
+			}
+			ret = utilityKermitOskFinishItem(g_osk.current_item);
+			if (ret < 0) {
+				utilityLeaveKernel(old_k1);
+				return ret;
+			}
+			if (g_osk.user_params->base.result == 1) {
+				int idx;
+				for (idx = 0; idx < g_osk.item_count; idx++) {
+					SceUtilityOskItem *item = &g_osk.user_params->items[idx];
+					if (!utilityIsBadRange(&item->result, sizeof(item->result)))
+						item->result = 1;
+				}
+				g_osk.status = 3;
+				utilityLeaveKernel(old_k1);
+				return 0;
+			}
+			g_osk.current_item++;
+			if (g_osk.current_item < g_osk.item_count) {
+				g_osk.pending_next = 1;
+				g_osk.status = 2;
+				utilityLeaveKernel(old_k1);
+				return 0;
+			}
+			g_osk.status = 3;
+		} else if (status == 2) {
+			g_osk.status = 2;
+		}
+		utilityLeaveKernel(old_k1);
+		return 0;
+	}
+
+	if (status == 0) {
+		if (sceUtility_private_5DCBD3C0() != 0) {
+			utilityLeaveKernel(old_k1);
+			return -1;
+		}
+		ret = utilityKermitOskStartItem(g_osk.user_params, g_osk.current_item);
+		if (ret < 0) {
+			utilityLeaveKernel(old_k1);
+			return ret;
+		}
+		g_osk.pending_next = 0;
+	}
+
+	g_osk.status = 2;
+	utilityLeaveKernel(old_k1);
+	return 0;
 }
 
-int sceUtility_private_48B0FBCD(int cmd, void *inbuf, u32 insize, void *outbuf, u32 outsize)
+/* Public dialog & applet wrappers */
+int sceUtilityGameSharingInitStart(void *params)
 {
-    u32 k1 = GET_K1();
-    if (inbuf != NULL && ((((u32)inbuf + insize) | (u32)inbuf | insize) & k1))
-        return 0x80110004;
-    if (outbuf != NULL && ((((u32)outbuf + outsize) | (u32)outbuf | outsize) & k1))
-        return 0x80110004;
-    SET_K1(0);
-
-    sceKernelLockMutex(g_osk_mutex, 1, NULL);
-
-    SceKermitRequest *req = (SceKermitRequest *)KERMIT_UNCACHED(&g_kermit_buf[0]);
-    req->cmd = (u32)cmd;
-    req->args[0] = (u32)inbuf;
-    req->args[1] = insize;
-    req->args[2] = (u32)outbuf;
-    req->args[3] = outsize;
-
-    if (inbuf != NULL && insize > 0)
-        sceKermitMemory_driver_AAF047AC(req, 0, inbuf, insize, 1);
-    if (outbuf != NULL && outsize > 0)
-        sceKermitMemory_driver_AAF047AC(req, 2, outbuf, outsize, 2);
-
-    u64 resp = 0;
-    int ret = sceKermit_driver_36666181(req, 9, (u32)cmd, 4, 0, &resp);
-
-    if (outbuf != NULL && outsize > 0)
-        sceKermitMemory_driver_90B662D0(outbuf, outsize);
-
-    if (ret >= 0)
-        ret = (int)resp;
-
-    sceKernelUnlockMutex(g_osk_mutex, 1);
-    SET_K1(k1);
-    return ret;
+	u32 old_k1 = utilityEnterKernel();
+	int ret = utilityDialogInitStart(3, params);
+	utilityLeaveKernel(old_k1);
+	return ret;
 }
 
-/* Public Dialog Wrappers */
-int sceUtilityGameSharingInitStart(void *params) { return utilityDialogInitStart(3, params); }
-int sceUtilityGameSharingShutdownStart(void) { return utilityDialogShutdownStart(3); }
-int sceUtilityGameSharingUpdate(int speed) { return utilityDialogUpdate(3, speed); }
-int sceUtilityGameSharingGetStatus(void) { return utilityDialogGetStatus(3); }
-
-int sceUtilityNetconfInitStart(void *params) { return utilityDialogInitStart(4, params); }
-int sceUtilityNetconfShutdownStart(void) { return utilityDialogShutdownStart(4); }
-int sceUtilityNetconfUpdate(int speed) { return utilityDialogUpdate(4, speed); }
-int sceUtilityNetconfGetStatus(void) { return utilityDialogGetStatus(4); }
-
-int sceUtilitySavedataInitStart(void *params) { return utilityDialogInitStart(1, params); }
-int sceUtilitySavedataShutdownStart(void) { return utilityDialogShutdownStart(1); }
-int sceUtilitySavedataUpdate(int speed) { return utilityDialogUpdate(1, speed); }
-int sceUtilitySavedataGetStatus(void) { return utilityDialogGetStatus(1); }
-
-int sceUtilityMsgDialogInitStart(void *params) { return utilityDialogInitStart(5, params); }
-int sceUtilityMsgDialogShutdownStart(void) { return utilityDialogShutdownStart(5); }
-int sceUtilityMsgDialogUpdate(int speed) { return utilityDialogUpdate(5, speed); }
-int sceUtilityMsgDialogGetStatus(void) { return utilityDialogGetStatus(5); }
-int sceUtilityMsgDialogAbort(void) { return utilityDialogAbort(5); }
-
-int sceUtilityOskInitStart(void *params) { return utilityDialogInitStart(6, params); }
-int sceUtilityOskShutdownStart(void) { return utilityDialogShutdownStart(6); }
-int sceUtilityOskUpdate(int speed) { return utilityDialogUpdate(6, speed); }
-int sceUtilityOskGetStatus(void) { return utilityDialogGetStatus(6); }
-
-static int utilityOskMutexInit(void)
+int sceUtilityGameSharingShutdownStart(void)
 {
-    g_osk_mutex = sceKernelCreateMutex("SceKermitOsk", 0, 0, NULL);
-    return (g_osk_mutex < 0) ? g_osk_mutex : 0;
+	u32 old_k1 = utilityEnterKernel();
+	int ret = utilityDialogShutdownStart(3);
+	utilityLeaveKernel(old_k1);
+	return ret;
+}
+
+int sceUtilityGameSharingUpdate(int speed)
+{
+	u32 old_k1 = utilityEnterKernel();
+	int ret = utilityDialogUpdate(3, speed);
+	utilityLeaveKernel(old_k1);
+	return ret;
+}
+
+int sceUtilityGameSharingGetStatus(void)
+{
+	u32 old_k1 = utilityEnterKernel();
+	int ret = utilityDialogGetStatus(3);
+	utilityLeaveKernel(old_k1);
+	return ret;
+}
+
+int sceUtilityNetconfInitStart(void *params)
+{
+	u32 old_k1 = utilityEnterKernel();
+	int ret = utilityDialogInitStart(4, params);
+	utilityLeaveKernel(old_k1);
+	return ret;
+}
+
+int sceUtilityNetconfShutdownStart(void)
+{
+	u32 old_k1 = utilityEnterKernel();
+	int ret = utilityDialogShutdownStart(4);
+	utilityLeaveKernel(old_k1);
+	return ret;
+}
+
+int sceUtilityNetconfUpdate(int speed)
+{
+	u32 old_k1 = utilityEnterKernel();
+	int ret = utilityDialogUpdate(4, speed);
+	utilityLeaveKernel(old_k1);
+	return ret;
+}
+
+int sceUtilityNetconfGetStatus(void)
+{
+	u32 old_k1 = utilityEnterKernel();
+	int ret = utilityDialogGetStatus(4);
+	utilityLeaveKernel(old_k1);
+	return ret;
+}
+
+int sceUtilitySavedataInitStart(void *params)
+{
+	u32 old_k1 = utilityEnterKernel();
+	int ret = utilityDialogInitStart(1, params);
+	utilityLeaveKernel(old_k1);
+	return ret;
+}
+
+int sceUtilitySavedataShutdownStart(void)
+{
+	u32 old_k1 = utilityEnterKernel();
+	int ret = utilityDialogShutdownStart(1);
+	utilityLeaveKernel(old_k1);
+	return ret;
+}
+
+int sceUtilitySavedataUpdate(int speed)
+{
+	u32 old_k1 = utilityEnterKernel();
+	int ret = utilityDialogUpdate(1, speed);
+	utilityLeaveKernel(old_k1);
+	return ret;
+}
+
+int sceUtilitySavedataGetStatus(void)
+{
+	u32 old_k1 = utilityEnterKernel();
+	int ret = utilityDialogGetStatus(1);
+	utilityLeaveKernel(old_k1);
+	return ret;
+}
+
+int sceUtilityMsgDialogInitStart(void *params)
+{
+	u32 old_k1 = utilityEnterKernel();
+	int ret = utilityDialogInitStart(5, params);
+	utilityLeaveKernel(old_k1);
+	return ret;
+}
+
+int sceUtilityMsgDialogShutdownStart(void)
+{
+	u32 old_k1 = utilityEnterKernel();
+	int ret = utilityDialogShutdownStart(5);
+	utilityLeaveKernel(old_k1);
+	return ret;
+}
+
+int sceUtilityMsgDialogUpdate(int speed)
+{
+	u32 old_k1 = utilityEnterKernel();
+	int ret = utilityDialogUpdate(5, speed);
+	utilityLeaveKernel(old_k1);
+	return ret;
+}
+
+int sceUtilityMsgDialogGetStatus(void)
+{
+	u32 old_k1 = utilityEnterKernel();
+	int ret = utilityDialogGetStatus(5);
+	utilityLeaveKernel(old_k1);
+	return ret;
+}
+
+int sceUtilityMsgDialogAbort(void)
+{
+	u32 old_k1 = utilityEnterKernel();
+	int ret = utilityDialogAbort(5);
+	utilityLeaveKernel(old_k1);
+	return ret;
+}
+
+int sceUtilityOskInitStart(void *params)
+{
+	u32 old_k1 = utilityEnterKernel();
+	int ret = utilityDialogInitStart(6, params);
+	utilityLeaveKernel(old_k1);
+	return ret;
+}
+
+int sceUtilityOskShutdownStart(void)
+{
+	u32 old_k1 = utilityEnterKernel();
+	int ret = utilityDialogShutdownStart(6);
+	utilityLeaveKernel(old_k1);
+	return ret;
+}
+
+int sceUtilityOskUpdate(int speed)
+{
+	u32 old_k1 = utilityEnterKernel();
+	int ret = utilityDialogUpdate(6, speed);
+	utilityLeaveKernel(old_k1);
+	return ret;
+}
+
+int sceUtilityOskGetStatus(void)
+{
+	u32 old_k1 = utilityEnterKernel();
+	int ret = utilityDialogGetStatus(6);
+	utilityLeaveKernel(old_k1);
+	return ret;
+}
+
+static UTILITY_NOINLINE int utilityKermitOskInit(void)
+{
+	sceKernelMemset((void *)KERMIT_OSK_SHARED_BASE, 0, KERMIT_OSK_SHARED_SIZE);
+	g_osk.shared_base = (void *)KERMIT_OSK_SHARED_BASE;
+	g_osk.work_area = (SceUtilityOskSharedArea *)KERMIT_OSK_WORK_BASE;
+	g_osk.work_size = KERMIT_OSK_WORK_SIZE;
+	g_osk.mutex_id = sceKernelCreateMutex("SceKermitOsk", 0x100, 0, NULL);
+	return g_osk.mutex_id < 1;
 }
 
 int sceUtility_private_B08B2B48(void)
 {
-    return (int)g_dialog.status;
+	return g_osk.status;
 }
 
-int sceUtility_DDE5389D(void *params) { return utilityDialogInitStart(7, params); }
-int sceUtility_149A7895(void) { return utilityDialogShutdownStart(7); }
-int sceUtility_4A833BA4(int speed) { return utilityDialogUpdate(7, speed); }
-int sceUtility_A50E5B30(void) { return utilityDialogGetStatus(7); }
+int sceUtility_DDE5389D(void *params) { u32 old_k1 = utilityEnterKernel(); int r = utilityDialogInitStart(7, params); utilityLeaveKernel(old_k1); return r; }
+int sceUtility_149A7895(void)         { u32 old_k1 = utilityEnterKernel(); int r = utilityDialogShutdownStart(7); utilityLeaveKernel(old_k1); return r; }
+int sceUtility_4A833BA4(int speed)    { u32 old_k1 = utilityEnterKernel(); int r = utilityDialogUpdate(7, speed); utilityLeaveKernel(old_k1); return r; }
+int sceUtility_A50E5B30(void)         { u32 old_k1 = utilityEnterKernel(); int r = utilityDialogGetStatus(7); utilityLeaveKernel(old_k1); return r; }
 
-int sceUtility_943CBA46(void *params) { return utilityDialogInitStart(8, params); }
-int sceUtility_0F3EEAAC(void) { return utilityDialogShutdownStart(8); }
-int sceUtility_147F7C85(int speed) { return utilityDialogUpdate(8, speed); }
-int sceUtility_16A1A8D8(void) { return utilityDialogGetStatus(8); }
+int sceUtility_943CBA46(void *params) { u32 old_k1 = utilityEnterKernel(); int r = utilityDialogInitStart(8, params); utilityLeaveKernel(old_k1); return r; }
+int sceUtility_0F3EEAAC(void)         { u32 old_k1 = utilityEnterKernel(); int r = utilityDialogShutdownStart(8); utilityLeaveKernel(old_k1); return r; }
+int sceUtility_147F7C85(int speed)    { u32 old_k1 = utilityEnterKernel(); int r = utilityDialogUpdate(8, speed); utilityLeaveKernel(old_k1); return r; }
+int sceUtility_16A1A8D8(void)         { u32 old_k1 = utilityEnterKernel(); int r = utilityDialogGetStatus(8); utilityLeaveKernel(old_k1); return r; }
 
-int sceUtility_1281DA8E(void *params) { return utilityDialogInitStart(9, params); }
-int sceUtility_5EF1C24A(void) { return utilityDialogShutdownStart(9); }
-int sceUtility_A03D29BA(int speed) { return utilityDialogUpdate(9, speed); }
-int sceUtility_C4700FA3(void) { return utilityDialogGetStatus(9); }
+int sceUtility_1281DA8E(void *params) { u32 old_k1 = utilityEnterKernel(); int r = utilityDialogInitStart(9, params); utilityLeaveKernel(old_k1); return r; }
+int sceUtility_5EF1C24A(void)         { u32 old_k1 = utilityEnterKernel(); int r = utilityDialogShutdownStart(9); utilityLeaveKernel(old_k1); return r; }
+int sceUtility_A03D29BA(int speed)    { u32 old_k1 = utilityEnterKernel(); int r = utilityDialogUpdate(9, speed); utilityLeaveKernel(old_k1); return r; }
+int sceUtility_C4700FA3(void)         { u32 old_k1 = utilityEnterKernel(); int r = utilityDialogGetStatus(9); utilityLeaveKernel(old_k1); return r; }
 
-int sceUtility_24AC31EB(void *params) { return utilityDialogInitStart(17, params); }
-int sceUtility_32E32DCB(void) { return utilityDialogShutdownStart(17); }
-int sceUtility_4AECD179(int speed) { return utilityDialogUpdate(17, speed); }
-int sceUtility_B57E95D9(void) { return utilityDialogGetStatus(17); }
-int sceUtility_180F7B62(void) { return utilityDialogAbort(17); }
+int sceUtility_24AC31EB(void *params) { u32 old_k1 = utilityEnterKernel(); int r = utilityDialogInitStart(17, params); utilityLeaveKernel(old_k1); return r; }
+int sceUtility_32E32DCB(void)         { u32 old_k1 = utilityEnterKernel(); int r = utilityDialogShutdownStart(17); utilityLeaveKernel(old_k1); return r; }
+int sceUtility_4AECD179(int speed)    { u32 old_k1 = utilityEnterKernel(); int r = utilityDialogUpdate(17, speed); utilityLeaveKernel(old_k1); return r; }
+int sceUtility_B57E95D9(void)         { u32 old_k1 = utilityEnterKernel(); int r = utilityDialogGetStatus(17); utilityLeaveKernel(old_k1); return r; }
+int sceUtility_180F7B62(void)         { u32 old_k1 = utilityEnterKernel(); int r = utilityDialogAbort(17); utilityLeaveKernel(old_k1); return r; }
 
-int sceUtility_private_756A93B3(void *params) { return utilityDialogInitStart(10, params); }
-int sceUtility_private_26D0B065(void) { return utilityDialogShutdownStart(10); }
-int sceUtility_private_CE484145(int speed) { return utilityDialogUpdate(10, speed); }
-int sceUtility_private_981FFD72(void) { return utilityDialogGetStatus(10); }
+int sceUtility_private_756A93B3(void *params) { u32 old_k1 = utilityEnterKernel(); int r = utilityDialogInitStart(10, params); utilityLeaveKernel(old_k1); return r; }
+int sceUtility_private_26D0B065(void)         { u32 old_k1 = utilityEnterKernel(); int r = utilityDialogShutdownStart(10); utilityLeaveKernel(old_k1); return r; }
+int sceUtility_private_CE484145(int speed)    { u32 old_k1 = utilityEnterKernel(); int r = utilityDialogUpdate(10, speed); utilityLeaveKernel(old_k1); return r; }
+int sceUtility_private_981FFD72(void)         { u32 old_k1 = utilityEnterKernel(); int r = utilityDialogGetStatus(10); utilityLeaveKernel(old_k1); return r; }
 
-int sceUtility_0251B134(void *params) { return utilityDialogInitStart(11, params); }
-int sceUtility_F9E0008C(void) { return utilityDialogShutdownStart(11); }
-int sceUtility_AB083EA9(int speed) { return utilityDialogUpdate(11, speed); }
-int sceUtility_D81957B7(void) { return utilityDialogGetStatus(11); }
+int sceUtility_0251B134(void *params) { u32 old_k1 = utilityEnterKernel(); int r = utilityDialogInitStart(11, params); utilityLeaveKernel(old_k1); return r; }
+int sceUtility_F9E0008C(void)         { u32 old_k1 = utilityEnterKernel(); int r = utilityDialogShutdownStart(11); utilityLeaveKernel(old_k1); return r; }
+int sceUtility_AB083EA9(int speed)    { u32 old_k1 = utilityEnterKernel(); int r = utilityDialogUpdate(11, speed); utilityLeaveKernel(old_k1); return r; }
+int sceUtility_D81957B7(void)         { u32 old_k1 = utilityEnterKernel(); int r = utilityDialogGetStatus(11); utilityLeaveKernel(old_k1); return r; }
 
-int sceUtility_16D02AF0(void *params) { return utilityDialogInitStart(12, params); }
-int sceUtility_E19C97D6(void) { return utilityDialogShutdownStart(12); }
-int sceUtility_F3FBC572(int speed) { return utilityDialogUpdate(12, speed); }
-int sceUtility_86ABDB1B(void) { return utilityDialogGetStatus(12); }
+int sceUtility_16D02AF0(void *params) { u32 old_k1 = utilityEnterKernel(); int r = utilityDialogInitStart(12, params); utilityLeaveKernel(old_k1); return r; }
+int sceUtility_E19C97D6(void)         { u32 old_k1 = utilityEnterKernel(); int r = utilityDialogShutdownStart(12); utilityLeaveKernel(old_k1); return r; }
+int sceUtility_F3FBC572(int speed)    { u32 old_k1 = utilityEnterKernel(); int r = utilityDialogUpdate(12, speed); utilityLeaveKernel(old_k1); return r; }
+int sceUtility_86ABDB1B(void)         { u32 old_k1 = utilityEnterKernel(); int r = utilityDialogGetStatus(12); utilityLeaveKernel(old_k1); return r; }
 
-int sceUtility_42071A83(void *params) { return utilityDialogInitStart(13, params); }
-int sceUtility_D17A0573(void) { return utilityDialogShutdownStart(13); }
-int sceUtility_D852CDCE(int speed) { return utilityDialogUpdate(13, speed); }
-int sceUtility_89317C8F(void) { return utilityDialogGetStatus(13); }
+int sceUtility_42071A83(void *params) { u32 old_k1 = utilityEnterKernel(); int r = utilityDialogInitStart(13, params); utilityLeaveKernel(old_k1); return r; }
+int sceUtility_D17A0573(void)         { u32 old_k1 = utilityEnterKernel(); int r = utilityDialogShutdownStart(13); utilityLeaveKernel(old_k1); return r; }
+int sceUtility_D852CDCE(int speed)    { u32 old_k1 = utilityEnterKernel(); int r = utilityDialogUpdate(13, speed); utilityLeaveKernel(old_k1); return r; }
+int sceUtility_89317C8F(void)         { u32 old_k1 = utilityEnterKernel(); int r = utilityDialogGetStatus(13); utilityLeaveKernel(old_k1); return r; }
 
-int sceUtility_4B0A8FE5(void *params) { return utilityDialogInitStart(14, params); }
-int sceUtility_06A48659(void) { return utilityDialogShutdownStart(14); }
-int sceUtility_A084E056(int speed) { return utilityDialogUpdate(14, speed); }
-int sceUtility_2B96173B(void) { return utilityDialogGetStatus(14); }
+int sceUtility_4B0A8FE5(void *params) { u32 old_k1 = utilityEnterKernel(); int r = utilityDialogInitStart(14, params); utilityLeaveKernel(old_k1); return r; }
+int sceUtility_06A48659(void)         { u32 old_k1 = utilityEnterKernel(); int r = utilityDialogShutdownStart(14); utilityLeaveKernel(old_k1); return r; }
+int sceUtility_A084E056(int speed)    { u32 old_k1 = utilityEnterKernel(); int r = utilityDialogUpdate(14, speed); utilityLeaveKernel(old_k1); return r; }
+int sceUtility_2B96173B(void)         { u32 old_k1 = utilityEnterKernel(); int r = utilityDialogGetStatus(14); utilityLeaveKernel(old_k1); return r; }
 
-int sceUtility_81C44706(void *params) { return utilityDialogInitStart(15, params); }
-int sceUtility_E7B778D8(void) { return utilityDialogShutdownStart(15); }
-int sceUtility_6F56F9CF(int speed) { return utilityDialogUpdate(15, speed); }
-int sceUtility_8326AB05(void) { return utilityDialogGetStatus(15); }
+int sceUtility_81C44706(void *params) { u32 old_k1 = utilityEnterKernel(); int r = utilityDialogInitStart(15, params); utilityLeaveKernel(old_k1); return r; }
+int sceUtility_E7B778D8(void)         { u32 old_k1 = utilityEnterKernel(); int r = utilityDialogShutdownStart(15); utilityLeaveKernel(old_k1); return r; }
+int sceUtility_6F56F9CF(int speed)    { u32 old_k1 = utilityEnterKernel(); int r = utilityDialogUpdate(15, speed); utilityLeaveKernel(old_k1); return r; }
+int sceUtility_8326AB05(void)         { u32 old_k1 = utilityEnterKernel(); int r = utilityDialogGetStatus(15); utilityLeaveKernel(old_k1); return r; }
 
-int sceUtility_DA97F1AA(void *params) { return utilityDialogInitStart(16, params); }
-int sceUtility_54A5C62F(void) { return utilityDialogShutdownStart(16); }
-int sceUtility_B8592D5F(int speed) { return utilityDialogUpdate(16, speed); }
-int sceUtility_3AAD51DC(void) { return utilityDialogGetStatus(16); }
+int sceUtility_DA97F1AA(void *params) { u32 old_k1 = utilityEnterKernel(); int r = utilityDialogInitStart(16, params); utilityLeaveKernel(old_k1); return r; }
+int sceUtility_54A5C62F(void)         { u32 old_k1 = utilityEnterKernel(); int r = utilityDialogShutdownStart(16); utilityLeaveKernel(old_k1); return r; }
+int sceUtility_B8592D5F(int speed)    { u32 old_k1 = utilityEnterKernel(); int r = utilityDialogUpdate(16, speed); utilityLeaveKernel(old_k1); return r; }
+int sceUtility_3AAD51DC(void)         { u32 old_k1 = utilityEnterKernel(); int r = utilityDialogGetStatus(16); utilityLeaveKernel(old_k1); return r; }
 
-int sceUtility_A7BB7C67(void *params) { return utilityDialogInitStart(18, params); }
-int sceUtility_C130D441(void) { return utilityDialogShutdownStart(18); }
-int sceUtility_0940A1B9(int speed) { return utilityDialogUpdate(18, speed); }
-int sceUtility_094198B8(void) { return utilityDialogGetStatus(18); }
+int sceUtility_A7BB7C67(void *params) { u32 old_k1 = utilityEnterKernel(); int r = utilityDialogInitStart(18, params); utilityLeaveKernel(old_k1); return r; }
+int sceUtility_C130D441(void)         { u32 old_k1 = utilityEnterKernel(); int r = utilityDialogShutdownStart(18); utilityLeaveKernel(old_k1); return r; }
+int sceUtility_0940A1B9(int speed)    { u32 old_k1 = utilityEnterKernel(); int r = utilityDialogUpdate(18, speed); utilityLeaveKernel(old_k1); return r; }
+int sceUtility_094198B8(void)         { u32 old_k1 = utilityEnterKernel(); int r = utilityDialogGetStatus(18); utilityLeaveKernel(old_k1); return r; }
 
-int sceUtility_3A15CD0A(void *params) { return utilityDialogInitStart(19, params); }
-int sceUtility_9F313D14(void) { return utilityDialogShutdownStart(19); }
-int sceUtility_D23665F4(int speed) { return utilityDialogUpdate(19, speed); }
-int sceUtility_D4C2BD73(void) { return utilityDialogGetStatus(19); }
-int sceUtility_0E0C27AF(void) { return utilityDialogAbort(19); }
+int sceUtility_3A15CD0A(void *params) { u32 old_k1 = utilityEnterKernel(); int r = utilityDialogInitStart(19, params); utilityLeaveKernel(old_k1); return r; }
+int sceUtility_9F313D14(void)         { u32 old_k1 = utilityEnterKernel(); int r = utilityDialogShutdownStart(19); utilityLeaveKernel(old_k1); return r; }
+int sceUtility_D23665F4(int speed)    { u32 old_k1 = utilityEnterKernel(); int r = utilityDialogUpdate(19, speed); utilityLeaveKernel(old_k1); return r; }
+int sceUtility_D4C2BD73(void)         { u32 old_k1 = utilityEnterKernel(); int r = utilityDialogGetStatus(19); utilityLeaveKernel(old_k1); return r; }
+int sceUtility_0E0C27AF(void)         { u32 old_k1 = utilityEnterKernel(); int r = utilityDialogAbort(19); utilityLeaveKernel(old_k1); return r; }
 
-int sceUtility_B0FB7FF5(void *params) { return utilityDialogInitWrapper(15, params); }
-int sceUtility_86A03A27(void *params) { return utilityDialogInitWrapper(11, params); }
+int sceUtility_B0FB7FF5(void *params) { u32 old_k1 = utilityEnterKernel(); int r = utilityDialogResume(15, params); utilityLeaveKernel(old_k1); return r; }
+int sceUtility_86A03A27(void *params) { u32 old_k1 = utilityEnterKernel(); int r = utilityDialogResume(11, params); utilityLeaveKernel(old_k1); return r; }
 
-int sceUtilityHtmlViewerInitStart(void *params) { return utilityAppletInitStart(1, params); }
-int sceUtilityHtmlViewerShutdownStart(void) { return utilityAppletShutdownStart(1); }
-int sceUtilityHtmlViewerUpdate(int speed) { return utilityAppletUpdate(1, speed); }
-int sceUtilityHtmlViewerGetStatus(void) { return utilityAppletGetStatus(1); }
+int sceUtilityHtmlViewerInitStart(void *params) { u32 old_k1 = utilityEnterKernel(); int r = utilityAppletInitStart(1, params); utilityLeaveKernel(old_k1); return r; }
+int sceUtilityHtmlViewerShutdownStart(void)     { u32 old_k1 = utilityEnterKernel(); int r = utilityAppletShutdownStart(1); utilityLeaveKernel(old_k1); return r; }
+int sceUtilityHtmlViewerUpdate(int speed)       { u32 old_k1 = utilityEnterKernel(); int r = utilityAppletUpdate(1, speed); utilityLeaveKernel(old_k1); return r; }
+int sceUtilityHtmlViewerGetStatus(void)         { u32 old_k1 = utilityEnterKernel(); int r = utilityAppletGetStatus(1); utilityLeaveKernel(old_k1); return r; }
 
 void sceUtility_3AD50AE7(void) {}
 void sceUtility_BC6B6296(void) {}
@@ -2289,737 +3802,1561 @@ void sceUtility_B62A4061(void) {}
 void sceUtility_ED0FAD38(void) {}
 void sceUtility_88BC7406(void) {}
 
-/* SystemParam & Registry */
-typedef struct {
-    u32 id;
-    u32 val;
-    u32 *val_p;
-    const char *str;
-    char *buf;
-    int len;
-    int res;
-} SceUtilitySysParamStackArg;
-
-static void sysparam_set_int_cb(void *arg)
-{
-    SceUtilitySysParamStackArg *a = (SceUtilitySysParamStackArg *)arg;
-    a->res = utilitySetSystemParamIntInternal(a->id, a->val);
-}
-
-static void sysparam_get_int_cb(void *arg)
-{
-    SceUtilitySysParamStackArg *a = (SceUtilitySysParamStackArg *)arg;
-    a->res = utilityGetSystemParamIntInternal(a->id, a->val_p);
-}
-
-static void sysparam_set_str_cb(void *arg)
-{
-    SceUtilitySysParamStackArg *a = (SceUtilitySysParamStackArg *)arg;
-    a->res = utilitySetSystemParamStrInternal(a->id, a->str);
-}
-
-static void sysparam_get_str_cb(void *arg)
-{
-    SceUtilitySysParamStackArg *a = (SceUtilitySysParamStackArg *)arg;
-    a->res = utilityGetSystemParamStrInternal(a->id, a->buf, a->len);
-}
-
-static int utilityRegWriteInt(const char *dir, const char *name, u32 val)
-{
-    u32 reg = 0, cat = 0, type = 0;
-    SceSize size = 0;
-    int ret;
-
-    ret = utilityRegOpenSystem(&reg);
-    if (ret == 0) {
-        ret = sceRegOpenCategory(reg, dir, 2, &cat);
-        if (ret == 0) {
-            if (sceRegGetKeyInfoByName(cat, name, &type, &size) < 0)
-                sceRegCreateKey(cat, name, 2, 4);
-            ret = sceRegSetKeyValue(cat, name, &val, 4);
-            if (ret == 0)
-                ret = sceRegFlushCategory(cat);
-            sceRegCloseCategory(cat);
-        }
-        utilityRegFlushClose(reg);
-    }
-    return ret;
-}
-
-static int utilityRegReadInt(const char *dir, const char *name, u32 *val, u32 defval)
-{
-    u32 reg = 0, cat = 0, kh = 0, type = 0;
-    SceSize size = 0;
-    int ret;
-
-    ret = utilityRegOpenSystem(&reg);
-    if (ret == 0) {
-        ret = sceRegOpenCategory(reg, dir, 1, &cat);
-        if (ret == 0) {
-            ret = sceRegGetKeyInfo(cat, name, &kh, &type, &size);
-            if (ret == 0)
-                ret = sceRegGetKeyValue(cat, kh, val, 4);
-            else
-                ret = sceRegGetKeyValueByName(cat, name, val, 4);
-            sceRegCloseCategory(cat);
-        }
-        utilityRegFlushClose(reg);
-    }
-    if (ret < 0)
-        *val = defval;
-    return ret;
-}
-
-static int utilityRegWriteStr(const char *dir, const char *name, const char *str, int size)
-{
-    u32 reg = 0, cat = 0;
-    int ret;
-    char buf[128];
-
-    memset(buf, 0, sizeof(buf));
-    strncpy(buf, str, size);
-    ret = utilityRegOpenSystem(&reg);
-    if (ret == 0) {
-        ret = sceRegOpenCategory(reg, dir, 2, &cat);
-        if (ret == 0) {
-            ret = sceRegSetKeyValue(cat, name, buf, size);
-            if (ret == 0)
-                ret = sceRegFlushCategory(cat);
-            sceRegCloseCategory(cat);
-        }
-        utilityRegFlushClose(reg);
-    }
-    return ret;
-}
-
-static int utilityRegReadStr(const char *dir, const char *name, char *buf, int size, const char *defstr)
-{
-    u32 reg = 0, cat = 0, kh = 0, type = 0;
-    SceSize ksize = 0;
-    int ret;
-
-    ret = utilityRegOpenSystem(&reg);
-    if (ret == 0) {
-        ret = sceRegOpenCategory(reg, dir, 1, &cat);
-        if (ret == 0) {
-            ret = sceRegGetKeyInfo(cat, name, &kh, &type, &ksize);
-            if (ret == 0)
-                ret = sceRegGetKeyValue(cat, kh, buf, size);
-            sceRegCloseCategory(cat);
-        }
-        utilityRegFlushClose(reg);
-    }
-    if (ret < 0 && defstr != NULL) {
-        strncpy(buf, defstr, size);
-        buf[size - 1] = '\0';
-    }
-    return ret;
-}
-
-static int utilitySetSystemParamIntInternal(u32 id, u32 val)
-{
-    switch (id) {
-    case 2:
-        if (val > 1) return 0x80110102;
-        return utilityRegWriteInt("/CONFIG/SYSTEM/NET", "adhoc_channel", val);
-    case 3:
-        if (val > 11) return 0x80110102;
-        return utilityRegWriteInt("/CONFIG/DATE", "date_format", val);
-    case 4:
-        if (val > 2) return 0x80110102;
-        return utilityRegWriteInt("/CONFIG/DATE", "time_format", val);
-    case 5:
-        return utilityRegWriteInt("/CONFIG/DATE", "time_zone", val);
-    case 6:
-        if (val > 1) return 0x80110102;
-        return utilityRegWriteInt("/CONFIG/DATE", "summer_time", val);
-    case 7:
-        if (val > 11) return 0x80110102;
-        return utilityRegWriteInt("/CONFIG/SYSTEM/XMB", "language", val);
-    case 8:
-        if (val > 1) return 0x80110102;
-        return utilityRegWriteInt("/CONFIG/SYSTEM/XMB", "button_assign", val);
-    case 9:
-        if (val > 1) return 0x80110102;
-        return utilityRegWriteInt("/CONFIG/MUSIC", "wma_play", val);
-    case 10:
-        if (val > 1) return 0x80110102;
-        return utilityRegWriteInt("/CONFIG/BROWSER", "flash_activated", val);
-    default:
-        return 0x80110101;
-    }
-}
-
-static int utilityGetSystemParamIntInternal(u32 id, u32 *val)
-{
-    switch (id) {
-    case 2:
-        return utilityRegReadInt("/CONFIG/SYSTEM/NET", "adhoc_channel", val, 0);
-    case 3:
-        return utilityRegReadInt("/CONFIG/DATE", "date_format", val, 0);
-    case 4:
-        return utilityRegReadInt("/CONFIG/DATE", "time_format", val, 0);
-    case 5:
-        return utilityRegReadInt("/CONFIG/DATE", "time_zone", val, 0);
-    case 6:
-        return utilityRegReadInt("/CONFIG/DATE", "summer_time", val, 0);
-    case 7:
-        return utilityRegReadInt("/CONFIG/SYSTEM/XMB", "language", val, 1);
-    case 8:
-        return utilityRegReadInt("/CONFIG/SYSTEM/XMB", "button_assign", val, 0);
-    case 9:
-        return utilityRegReadInt("/CONFIG/MUSIC", "wma_play", val, 0);
-    case 10:
-        return utilityRegReadInt("/CONFIG/BROWSER", "flash_activated", val, 0);
-    default:
-        return 0x80110101;
-    }
-}
-
-int sceUtilitySetSystemParamInt(u32 id, u32 val)
-{
-    u32 k1 = GET_K1();
-    if (k1 != 0 && id != 2 && id != 6)
-        return 0x80110103;
-    SET_K1(0);
-
-    SceUtilitySysParamStackArg arg;
-    arg.id = id;
-    arg.val = val;
-    arg.res = 0;
-    sceKernelExtendKernelStack(0x2000, sysparam_set_int_cb, &arg);
-
-    SET_K1(k1);
-    return arg.res;
-}
-
-int sceUtilityGetSystemParamInt(u32 id, u32 *val)
-{
-    u32 k1 = GET_K1();
-    if (val == NULL || ((((u32)val + 4) | (u32)val) & k1))
-        return 0x80110104;
-    SET_K1(0);
-
-    SceUtilitySysParamStackArg arg;
-    arg.id = id;
-    arg.val_p = val;
-    arg.res = 0;
-    sceKernelExtendKernelStack(0x2000, sysparam_get_int_cb, &arg);
-
-    SET_K1(k1);
-    return arg.res;
-}
-
-__attribute__((noinline))
-static int utilitySetSystemParamStrInternal(u32 id, const char *str)
-{
-    if (id != 1)
-        return 0x80110101;
-    if (str == NULL || strlen(str) >= 0x80)
-        return 0x80110104;
-    SceUtilitySysParamStackArg arg;
-    arg.id = id;
-    arg.str = str;
-    arg.res = utilityRegWriteStr("/CONFIG/SYSTEM", "owner_name", str, 0x80);
-    return arg.res;
-}
-
-int sceUtilitySetSystemParamString(u32 id, const char *str)
-{
-    return utilitySetSystemParamStrInternal(id, str);
-}
-
-int sceUtilityGetSystemParamString(u32 id, char *str, int len)
-{
-    u32 k1 = GET_K1();
-    if (str == NULL || len <= 0 || ((((u32)str + 0x80) | (u32)str) & k1))
-        return 0x80110104;
-    SET_K1(0);
-
-    SceUtilitySysParamStackArg arg;
-    arg.id = id;
-    arg.buf = str;
-    arg.len = len;
-    arg.res = 0;
-    sceKernelExtendKernelStack(0x2000, sysparam_get_str_cb, &arg);
-
-    SET_K1(k1);
-    return arg.res;
-}
-
-int utilityGetSystemParamStrInternal(u32 id, char *str, int len)
-{
-    if (id != 1)
-        return 0x80110101;
-    if (str == NULL)
-        return 0x80110104;
-    if (len < 0x80)
-        return 0x80110103;
-    return utilityRegReadStr("/CONFIG/SYSTEM", "owner_name", str, 0x80, "");
-}
-
-/* NetParam & Kermit WLAN sync */
-typedef struct {
-    int op;
-    int id;
-    int dst;
-    int param;
-    void *data;
-    int res;
-} SceUtilityNetParamStackArg;
-
-static void netparam_stack_cb(void *arg)
-{
-    SceUtilityNetParamStackArg *a = (SceUtilityNetParamStackArg *)arg;
-    switch (a->op) {
-    case 0: a->res = utilityNetParamDeleteEntry(a->id); break;
-    case 1: a->res = utilityNetParamGetFirstValid(a->data); break;
-    case 2: a->res = utilityNetParamCheckEntry(a->id); break;
-    case 3: a->res = utilityNetParamCopyEntry(a->dst, a->id); break;
-    case 4: a->res = utilityNetParamGetData(a->id, a->param, a->data); break;
-    case 5: a->res = utilityNetParamSetData(a->id, a->param, a->data); break;
-    case 6: a->res = utilityNetParamLock(a->id); break;
-    case 7: a->res = utilityNetParamUnlock(a->id); break;
-    case 8: a->res = utilityNetParamSwapEntries(a->id, a->dst); break;
-    case 9: a->res = utilityNetParamCheckByIdx(a->id); break;
-    case 10: a->res = utilityNetParamSyncFromKermit(); break;
-    case 11: a->res = utilityNetParamCheckSlot(a->id); break;
-    default: a->res = 0; break;
-    }
-}
-
-static int run_netparam_op(int op, int id, int dst, int param, void *data, u32 check_size)
-{
-    u32 k1 = GET_K1();
-    if (check_size > 0 && (data == NULL || ((((u32)data + check_size) | (u32)data) & k1)))
-        return 0x80110604;
-    SET_K1(0);
-
-    SceUtilityNetParamStackArg arg;
-    arg.op = op;
-    arg.id = id;
-    arg.dst = dst;
-    arg.param = param;
-    arg.data = data;
-    arg.res = 0;
-    sceKernelExtendKernelStack(0x2000, netparam_stack_cb, &arg);
-
-    SET_K1(k1);
-    return arg.res;
-}
-
-int sceUtilityCheckNetParam(int id)
-{
-    u32 k1 = GET_K1();
-    if (id < 1 || id > 24)
-        return 0x80110601;
-    SET_K1(0);
-    SceUtilityNetParamStackArg arg = { 0, id, 0, 0, NULL, 0 };
-    sceKernelExtendKernelStack(0x2000, netparam_stack_cb, &arg);
-    SET_K1(k1);
-    return arg.res;
-}
-
-int sceUtility_netparam_internal_6B1BC62C(void *buf)
-{
-    u32 k1 = GET_K1();
-    if (buf == NULL || ((((u32)buf + 4) | (u32)buf) & k1))
-        return 0x80110604;
-    SET_K1(0);
-    SceUtilityNetParamStackArg arg = { 1, 0, 0, 0, buf, 0 };
-    sceKernelExtendKernelStack(0x2000, netparam_stack_cb, &arg);
-    SET_K1(k1);
-    return arg.res;
-}
-
-int sceUtility_netparam_internal_61D0686E(int id)
-{
-    u32 k1 = GET_K1();
-    if (id < 0 || id > 24)
-        return 0x80110601;
-    SET_K1(0);
-    SceUtilityNetParamStackArg arg = { 2, id, 0, 0, NULL, 0 };
-    sceKernelExtendKernelStack(0x2000, netparam_stack_cb, &arg);
-    SET_K1(k1);
-    return arg.res;
-}
-
-int sceUtility_netparam_internal_4CB183A4(int dst, int src)
-{
-    u32 k1 = GET_K1();
-    if (dst < 0 || dst > 24 || src < 0 || src > 24)
-        return 0x80110601;
-    SET_K1(0);
-    SceUtilityNetParamStackArg arg = { 3, src, dst, 0, NULL, 0 };
-    sceKernelExtendKernelStack(0x2000, netparam_stack_cb, &arg);
-    SET_K1(k1);
-    return arg.res;
-}
-
-int sceUtilityGetNetParam(int id, int param, void *data)
-{
-    u32 k1 = GET_K1();
-    if (id < 1 || id > 24)
-        return 0x80110601;
-    if (data == NULL || ((((u32)data + 128) | (u32)data) & k1))
-        return 0x80110604;
-    return run_netparam_op(4, id, 0, param, data, 4);
-}
-
-int sceUtility_netparam_internal_67C2105B(int id, int param, void *data)
-{
-    u32 k1 = GET_K1();
-    if (id < 0 || id > 24)
-        return 0x80110601;
-    if (data == NULL || ((((u32)data + 128) | (u32)data) & k1))
-        return 0x80110604;
-    return run_netparam_op(4, id, 0, param, data, 4);
-}
-
-int sceUtility_netparam_internal_5D63AA06(int id, int param, const void *data)
-{
-    u32 k1 = GET_K1();
-    if (id < 0 || id > 24)
-        return 0x80110601;
-    if (data == NULL || ((((u32)data + 128) | (u32)data) & k1))
-        return 0x80110604;
-    return run_netparam_op(5, id, 0, param, (void *)data, 4);
-}
-
-int sceUtility_netparam_internal_239F260D(int id, int param, const void *data)
-{
-    u32 k1 = GET_K1();
-    if (data == NULL || ((((u32)data + 128) | (u32)data) & k1))
-        return 0x80110604;
-    return run_netparam_op(5, id, 0, param, (void *)data, 4);
-}
-
-int sceUtility_ECE1D3E5(int id)
-{
-    u32 k1 = GET_K1();
-    if (id < 1 || id > 24)
-        return 0x80110601;
-    SET_K1(0);
-    SceUtilityNetParamStackArg arg = { 6, id, 0, 0, NULL, 0 };
-    sceKernelExtendKernelStack(0x2000, netparam_stack_cb, &arg);
-    SET_K1(k1);
-    return arg.res;
-}
-
-int sceUtility_28D35634(int id, int param, const void *data)
-{
-    u32 k1 = GET_K1();
-    if (id < 1 || id > 24)
-        return 0x80110601;
-    if (data == NULL || ((((u32)data + 128) | (u32)data) & k1))
-        return 0x80110604;
-    return run_netparam_op(5, id, 0, param, (void *)data, 4);
-}
-
-int sceUtility_70267ADF(int id)
-{
-    u32 k1 = GET_K1();
-    if (id < 1 || id > 24)
-        return 0x80110601;
-    SET_K1(0);
-    SceUtilityNetParamStackArg arg = { 7, id, 0, 0, NULL, 0 };
-    sceKernelExtendKernelStack(0x2000, netparam_stack_cb, &arg);
-    SET_K1(k1);
-    return arg.res;
-}
-
-int sceUtility_EF3582B2(int dst, int src)
-{
-    u32 k1 = GET_K1();
-    if (dst < 1 || dst > 24 || src < 1 || src > 24)
-        return 0x80110601;
-    SET_K1(0);
-    SceUtilityNetParamStackArg arg = { 3, src, dst, 0, NULL, 0 };
-    sceKernelExtendKernelStack(0x2000, netparam_stack_cb, &arg);
-    SET_K1(k1);
-    return arg.res;
-}
-
-int sceUtility_netparam_internal_02598DB8(int a0, int a1)
-{
-    u32 k1 = GET_K1();
-    SET_K1(0);
-    int ret = utilityNetParamSwapEntries(a0, a1);
-    if (ret == 0) {
-        int r2 = utilityNetParamCheckByIdx(a0);
-        if (r2 < 0)
-            ret = r2;
-    }
-    SET_K1(k1);
-    return run_netparam_op(8, a0, a1, 0, NULL, 0);
-}
-
-int sceUtility_netparam_internal_09905636(int id)
-{
-    u32 k1 = GET_K1();
-    SET_K1(0);
-    int ret = utilityNetParamCheckByIdx(id);
-    if (ret == 0)
-        ret = utilityNetParamCheckSlot(id);
-    SET_K1(k1);
-    return run_netparam_op(9, id, 0, 0, NULL, 0);
-}
-
-int sceUtility_netparam_internal_6D77B975(void)
-{
-    return utilityNetParamSyncFromKermit();
-}
-
-int sceUtility_4FED24D8(int id)
-{
-    return utilityNetParamCheckSlot(id);
-}
-
-static int utilityNetParamDeleteEntry(int idx)
-{
-    char dir[48];
-    int ret = utilityNetParamFormatPath(dir, idx);
-    if (ret < 0)
-        return ret;
-    return utilityNetParamEnsureRegCat(dir, 1);
-}
-
-static int utilityNetParamLock(int idx)
-{
-    if (g_netparam_locked != 0)
-        return 0x80110602;
-    g_netparam_locked = idx;
-    return 0;
-}
-
-static int utilityNetParamUnlock(int idx)
-{
-    if (g_netparam_locked != idx)
-        return 0x80110602;
-    g_netparam_locked = 0;
-    return 0;
-}
-
-static int utilityNetParamGetFirstValid(void *buf)
-{
-    int idx = 0;
-    int ret = utilityNetParamDefaultSlot(&idx);
-    if (ret < 0)
-        return ret;
-    if (buf != NULL)
-        *(int *)buf = idx;
-    return 0;
-}
-
-static int utilityNetParamCheckEntry(int idx)
-{
-    char dir[48];
-    int ret = utilityNetParamFormatPath(dir, idx);
-    if (ret < 0)
-        return ret;
-    return utilityNetParamRemoveRegCat(dir, idx);
-}
-
-static int utilityNetParamSetData(int idx, int param, const void *data)
-{
-    return utilityNetParamAccessData(idx, param, (void *)data, 1);
-}
-
-static int utilityNetParamGetData(int idx, int param, void *data)
-{
-    return utilityNetParamAccessData(idx, param, data, 0);
-}
-
-static int utilityNetParamRemoveRegCat(const char *dir, int idx)
-{
-    u32 reg = 0;
-    (void)idx;
-    if (utilityRegOpenSystem(&reg) == 0) {
-        sceRegRemoveCategory(reg, dir);
-        utilityRegFlushClose(reg);
-    }
-    return 0;
-}
-
-static int utilityNetParamCopyEntry(int dst_idx, int src_idx)
-{
-    char src_dir[48], dst_dir[48];
-    if (utilityNetParamFormatPath(src_dir, src_idx) < 0 || utilityNetParamFormatPath(dst_dir, dst_idx) < 0)
-        return 0x80110601;
-    sceKernelMemcpy(dst_dir, src_dir, sizeof(dst_dir));
-    return 0;
-}
-
-static int utilityNetParamSwapEntries(int a0, int a1)
-{
-    char dir0[48], dir1[48];
-    if (utilityNetParamFormatPath(dir0, a0) < 0 || utilityNetParamFormatPath(dir1, a1) < 0)
-        return 0x80110601;
-    int r0 = utilityNetParamEnsureRegCat(dir0, 1);
-    int r1 = utilityNetParamEnsureRegCat(dir1, 1);
-    return (r0 == 0 && r1 == 0) ? 0 : (int)0x80110601;
-}
-
-static int utilityNetParamCheckByIdx(int idx)
-{
-    return utilityNetParamValidateIdx(idx);
-}
-
-static int utilityNetParamSyncFromKermit(void)
-{
-    return utilityKermitFetchNetParam();
-}
-
-static int utilityNetParamCheckSlot(int idx)
-{
-    return utilityNetParamCheckSlot1(idx);
-}
-
-static int utilityNetParamCheckSlot1(int idx)
-{
-    if (idx != 1)
-        return 0x80110601;
-    return utilityKermitFetchNetParam();
-}
-
-static int utilityNetParamAccessData(int idx, int param, void *data, int set_mode)
-{
-    char dir[48];
-    int ret;
-    (void)param;
-
-    if (data == NULL)
-        return 0x80110604;
-    ret = utilityNetParamFormatPath(dir, idx);
-    if (ret < 0)
-        return ret;
-    if (set_mode)
-        return utilityRegWriteInt(dir, "conf_serial_no", *(u32 *)data);
-    return utilityRegReadInt(dir, "conf_serial_no", (u32 *)data, 0);
-}
-
-static int utilityKermitFetchNetParam(void)
-{
-    sceKernelDcacheInvalidateRange(g_kermit_net_buf, sizeof(g_kermit_net_buf));
-    int ret = utilityKermitSendRequestWrap(3, 13, g_kermit_net_buf);
-    if (ret == 0) {
-        utilityRegWriteStr("/CONFIG/NETWORK/INFRASTRUCTURE/1", "conf_name", (const char *)g_kermit_net_buf, 0x80);
-    }
-    return ret;
-}
-
-static int utilityNetParamDefaultSlot(int *idx_p)
-{
-    if (idx_p != NULL)
-        *idx_p = 1;
-    return 0;
-}
-
-static int utilityNetParamFormatPath(char *out_dir, int idx)
-{
-    if (idx < 0 || idx > 24)
-        return 0x80110601;
-    snprintf(out_dir, 48, "/CONFIG/NETWORK/INFRASTRUCTURE/%d", idx);
-    return 0;
-}
-
-static int utilityNetParamEnsureRegCat(const char *dir, int a1)
-{
-    u32 reg = 0, cat = 0;
-    int ret;
-    (void)a1;
-
-    ret = utilityRegOpenSystem(&reg);
-    if (ret == 0) {
-        ret = sceRegOpenCategory(reg, dir, 1, &cat);
-        if (ret == 0)
-            sceRegCloseCategory(cat);
-        utilityRegFlushClose(reg);
-    }
-    return (ret < 0) ? 0x80110601 : 0;
-}
-
-static int utilityNetParamValidateIdx(int idx)
-{
-    char dir[48];
-    if (utilityNetParamFormatPath(dir, idx) < 0)
-        return 0x80110601;
-    return utilityNetParamRemoveRegCat(dir, idx);
-}
-
-static int utilityRegOpenSystem(u32 *reg_p)
-{
-    u32 param[8];
-    memset(param, 0, sizeof(param));
-    param[0] = 1;
-    param[1] = 7;
-    strncpy((char *)&param[2], "/system", 8);
-    return sceRegOpenRegistry(param, 2, reg_p);
-}
-
-static int utilityRegFlushClose(u32 reg)
-{
-    int ret = sceRegFlushRegistry(reg);
-    if (ret == 0)
-        ret = sceRegCloseRegistry(reg);
-    return ret;
-}
-
-static int utilityKermitStartDialog(u32 type, u32 sub_mode)
-{
-    (void)sub_mode;
-    g_status_flags = 0;
-    char *gi = (char *)sceKernelGetGameInfo();
-    if (gi != NULL && type == 1) {
-        if (strcmp(gi + 0x44, "ULJM05011") == 0)
-            g_status_flags = 1;
-    }
-    return 0;
-}
-
-static int utilityKermitSetPowerMode(int mode)
-{
-    return utilityKermitSendRequest(9, (mode != 0) ? 3 : 4, NULL);
-}
-
-int sceUtility_private_74E69D03(void *buf)
-{
-    return utilityKermitSendRequest(9, 1, buf);
-}
-
-static int utilityKermitEndDialog(void)
-{
-    utilityKermitSetPowerMode(0);
-    utilityKermitSendRequestWrap(3, 0, NULL);
-    return 0;
-}
-
-static void utilityClearStatusFlags(void)
-{
-    g_status_flags = 0;
-}
-
-static u32 utilityGetStatusFlags(void)
-{
-    return g_status_flags;
-}
-
-static int utilityKermitSendRequest(int fac, int cmd, void *arg)
-{
-    SceKermitRequest *req;
-    u64 resp = 0;
-    int ret;
-
-    req = (SceKermitRequest *)KERMIT_UNCACHED(&g_kermit_buf[0]);
-    req->cmd = cmd;
-    req->args[0] = (u32)arg;
-    ret = sceKermit_driver_36666181(req, fac, cmd, 1, 0, &resp);
-    if (ret < 0)
-        return ret;
-    return (int)resp;
-}
-
-static int utilityKermitSendRequestWrap(int fac, int cmd, void *arg)
-{
-    return utilityKermitSendRequest(fac, cmd, arg);
-}
+static UTILITY_NOINLINE int utilityKermitOskStartItem(SceUtilityOskParams *params, int item_index)
+{
+	u8 req_buf[128];
+	u32 aligned;
+	SceKermitRequest *req;
+	SceUtilityOskSharedArea *area;
+	SceUtilityOskItem *user_item;
+	const u16 *src_ptr;
+	int chars;
+	u32 copy_bytes;
+	u64 resp;
+	int lock_ret;
+	int ret;
+
+	if (utilityIsBadSpan(params, sizeof(SceUtilityOskParams)))
+		return SCE_KERNEL_ERROR_ILLEGAL_ADDR;
+
+	aligned = ((u32)req_buf + 63u) & ~63u;
+	sceKernelDcacheInvalidateRange((void *)aligned, 64);
+	req = KERMIT_UNCACHED(aligned);
+
+	lock_ret = sceKernelLockMutex(g_osk.mutex_id, 1, NULL);
+	if (lock_ret != 0)
+		return lock_ret;
+
+	g_osk.item_count = params->item_count;
+	area = g_osk.work_area;
+	g_osk.user_params = params;
+
+	ret = SCE_KERNEL_ERROR_ILLEGAL_ADDR;
+	if (!utilityIsBadSpan(params, sizeof(SceUtilityOskParams))) {
+		sceKernelMemcpy(&area->params, params, sizeof(SceUtilityOskParams));
+		user_item = &params->items[item_index];
+		if (!utilityIsBadRange(user_item, sizeof(SceUtilityOskItem))) {
+			sceKernelMemcpy(&area->item, user_item, sizeof(SceUtilityOskItem));
+
+			src_ptr = area->item.init_text_ptr;
+			if (src_ptr == NULL)
+				src_ptr = &g_osk_empty_utf16;
+			chars = 0;
+			while (chars < 512 && src_ptr[chars] != 0)
+				chars++;
+			memset(area->init_text, 0, sizeof(area->init_text));
+			copy_bytes = (u32)(chars * 2 + 2);
+			if (!utilityIsBadSpan(src_ptr, copy_bytes) ||
+			    (src_ptr == &g_osk_empty_utf16 && copy_bytes < 3)) {
+				sceKernelMemcpy(area->init_text, src_ptr, copy_bytes);
+
+				src_ptr = area->item.desc_ptr;
+				if (src_ptr == NULL)
+					src_ptr = &g_osk_empty_utf16;
+				chars = 0;
+				while (chars < 512 && src_ptr[chars] != 0)
+					chars++;
+				memset(area->desc_text, 0, sizeof(area->desc_text));
+				copy_bytes = (u32)(chars * 2 + 2);
+				if (!utilityIsBadSpan(src_ptr, copy_bytes) ||
+				    (src_ptr == &g_osk_empty_utf16 && copy_bytes < 3)) {
+					sceKernelMemcpy(area->desc_text, src_ptr, copy_bytes);
+
+					area->item.desc_ptr = area->desc_text;
+					area->item.init_text_ptr = area->init_text;
+					area->item.out_text_ptr = area->out_text;
+					area->params.items = &area->item;
+
+					sceKermitMemory_driver_AAF047AC(req, 0, area, sizeof(SceUtilityOskParams), 3);
+					g_osk.shared_params = area;
+					ret = sceKermit_driver_36666181(req, KERMIT_MODE_UTILITY, 269, 1, 0, &resp);
+					if (ret == 0)
+						ret = (int)resp;
+				}
+			}
+		}
+	}
+
+	lock_ret = sceKernelUnlockMutex(g_osk.mutex_id, 1);
+	if (lock_ret != 0)
+		return lock_ret;
+	return ret;
+}
+
+static UTILITY_NOINLINE int utilityKermitOskFinishItem(int item_index)
+{
+	u8 req_buf[128];
+	u32 aligned;
+	SceKermitRequest *req;
+	u64 resp;
+	int lock_ret;
+	int ret;
+
+	aligned = ((u32)req_buf + 63u) & ~63u;
+	sceKernelDcacheInvalidateRange((void *)aligned, 64);
+	req = KERMIT_UNCACHED(aligned);
+
+	lock_ret = sceKernelLockMutex(g_osk.mutex_id, 1, NULL);
+	if (lock_ret != 0)
+		return lock_ret;
+
+	ret = sceKermit_driver_36666181(req, KERMIT_MODE_UTILITY, 268, 0, 0, &resp);
+	if (ret == 0) {
+		SceUtilityOskItem *user_item;
+		ret = (int)resp;
+
+		sceKermitMemory_driver_90B662D0(g_osk.shared_params->params.items, 64);
+		user_item = &g_osk.user_params->items[item_index];
+		if (!utilityIsBadRange(&user_item->result, sizeof(user_item->result)))
+			user_item->result = g_osk.shared_params->params.items->result;
+
+		sceKermitMemory_driver_90B662D0(g_osk.shared_params, sizeof(SceUtilityOskParams));
+		g_osk.user_params->base.result = g_osk.shared_params->params.base.result;
+
+		if (g_osk.shared_params->params.base.result == 0) {
+			u16 *shared_out = g_osk.shared_params->params.items->out_text_ptr;
+			sceKermitMemory_driver_90B662D0(shared_out, 1024);
+
+			if (utilityIsBadPtr(user_item)) {
+				ret = SCE_KERNEL_ERROR_ILLEGAL_ADDR;
+			} else if (user_item->out_text_ptr != NULL) {
+				u32 max_bytes = (u32)(user_item->out_text_limit * 2);
+				int chars = 0;
+				u32 copy_bytes;
+
+				if (max_bytes > 1024)
+					max_bytes = 1024;
+				while (chars < 512 && shared_out[chars] != 0)
+					chars++;
+				copy_bytes = (u32)(chars * 2 + 2);
+				if (max_bytes < copy_bytes)
+					copy_bytes = max_bytes;
+
+				if (utilityIsBadSpan(user_item->out_text_ptr, copy_bytes)) {
+					ret = SCE_KERNEL_ERROR_ILLEGAL_ADDR;
+				} else {
+					sceKernelMemcpy(user_item->out_text_ptr, shared_out, copy_bytes);
+					ret = 0;
+				}
+			}
+		}
+	}
+
+	lock_ret = sceKernelUnlockMutex(g_osk.mutex_id, 1);
+	if (lock_ret != 0)
+		return lock_ret;
+	return ret;
+}
+
+/* SystemParam */
+int sceUtilitySetSystemParamInt(int sysparam_id, u32 value)
+{
+	u32 old_k1 = utilityEnterKernel();
+	int ret;
+
+	if (sysparam_id == 2) {
+		if (value == 0 || value == 1 || value == 6 || value == 11)
+			ret = utilityRegSetSysParamInt("/CONFIG/NETWORK/ADHOC", "channel", (s32)value);
+		else
+			ret = SCE_UTILITY_SYSPARAM_ERROR_INVALID_VAL;
+	} else if (sysparam_id == 3) {
+		u32 clamped = (value < 2) ? value : 1u;
+		ret = utilityRegSetSysParamInt("/CONFIG/SYSTEM/POWER_SAVING", "wlan_mode", (s32)clamped);
+	} else {
+		ret = SCE_UTILITY_SYSPARAM_ERROR_INVALID_ID;
+	}
+
+	utilityLeaveKernel(old_k1);
+	return ret;
+}
+
+int sceUtilityGetSystemParamInt(int sysparam_id, s32 *out_val)
+{
+	u32 old_k1 = utilityEnterKernel();
+	int ret;
+
+	switch (sysparam_id) {
+	case 2:  ret = utilityRegGetSysParamInt("/CONFIG/NETWORK/ADHOC", "channel", out_val); break;
+	case 3:  ret = utilityRegGetSysParamInt("/CONFIG/SYSTEM/POWER_SAVING", "wlan_mode", out_val); break;
+	case 4:  ret = utilityRegGetSysParamInt("/CONFIG/DATE", "date_format", out_val); break;
+	case 5:  ret = utilityRegGetSysParamInt("/CONFIG/DATE", "time_format", out_val); break;
+	case 6:  ret = utilityRegGetSysParamInt("/CONFIG/DATE", "time_zone_offset", out_val); break;
+	case 7:  ret = utilityRegGetSysParamInt("/CONFIG/DATE", "summer_time", out_val); break;
+	case 8:  ret = utilityRegGetSysParamInt("/CONFIG/SYSTEM/XMB", "language", out_val); break;
+	case 9:  ret = utilityRegGetSysParamInt("/CONFIG/SYSTEM/XMB", "button_assign", out_val); break;
+	case 10: ret = utilityRegGetSysParamInt("/CONFIG/SYSTEM/LOCK", "parental_level", out_val); break;
+	default: ret = SCE_UTILITY_SYSPARAM_ERROR_INVALID_ID; break;
+	}
+
+	utilityLeaveKernel(old_k1);
+	return ret;
+}
+
+static UTILITY_NOINLINE int utilityRegGetSysParamInt(const char *cat_path, const char *key_name, s32 *out_val)
+{
+	SceRegParam reg_param;
+	u32 reg;
+	u32 cat;
+	u32 key_handle;
+	u32 key_type;
+	SceSize key_size;
+	int ret;
+
+	memset(&reg_param, 0, sizeof(reg_param));
+	reg_param.reg_type = 1;
+	reg_param.sys_flag_open = 1;
+	reg_param.sys_flag_compat = 1;
+
+	ret = sceRegOpenRegistry(&reg_param, 2, &reg);
+	if (ret != 0) {
+		Kprintf("couldn't open registry - 0x%x\n", ret);
+		return ret;
+	}
+
+	ret = sceRegOpenCategory(reg, cat_path, 2, &cat);
+	if (ret == 0) {
+		ret = sceRegGetKeyInfo(cat, key_name, &key_handle, &key_type, &key_size);
+		if (ret == 0) {
+			if (key_type != 2) {
+				sceRegCloseCategory(cat);
+				sceRegCloseRegistry(reg);
+				return SCE_UTILITY_SYSPARAM_ERROR_INVALID_TYPE;
+			}
+			if (key_size != 4) {
+				sceRegCloseCategory(cat);
+				sceRegCloseRegistry(reg);
+				return SCE_UTILITY_SYSPARAM_ERROR_INVALID_SIZE;
+			}
+			if (utilityIsBadRange(out_val, 4)) {
+				sceRegCloseCategory(cat);
+				sceRegCloseRegistry(reg);
+				return SCE_UTILITY_ERROR_INVALID_ADDR;
+			}
+			ret = sceRegGetKeyValue(cat, key_handle, out_val, 4);
+		}
+		sceRegCloseCategory(cat);
+	}
+	sceRegCloseRegistry(reg);
+	return ret;
+}
+
+static UTILITY_NOINLINE int utilityRegGetNetInt(const char *cat_path, const char *key_name, s32 *out_val)
+{
+	SceRegParam reg_param;
+	u32 reg;
+	u32 cat;
+	u32 key_handle;
+	u32 key_type;
+	SceSize key_size;
+	int ret;
+
+	memset(&reg_param, 0, sizeof(reg_param));
+	reg_param.reg_type = 1;
+	reg_param.sys_flag_open = 1;
+	reg_param.sys_flag_compat = 1;
+
+	ret = sceRegOpenRegistry(&reg_param, 2, &reg);
+	if (ret != 0) {
+		Kprintf("couldn't open registry - 0x%x\n", ret);
+		return ret;
+	}
+
+	ret = sceRegOpenCategory(reg, cat_path, 2, &cat);
+	if (ret == 0) {
+		ret = sceRegGetKeyInfo(cat, key_name, &key_handle, &key_type, &key_size);
+		if (ret == 0) {
+			if (key_type != 2 || key_size != 4) {
+				sceRegCloseCategory(cat);
+				sceRegCloseRegistry(reg);
+				return SCE_UTILITY_NETPARAM_ERROR_REG_MISMATCH;
+			}
+			if (utilityIsBadRange(out_val, 4))
+				return SCE_KERNEL_ERROR_INVALID_PTR;
+			ret = sceRegGetKeyValue(cat, key_handle, out_val, 4);
+		}
+		sceRegCloseCategory(cat);
+	}
+	sceRegCloseRegistry(reg);
+	return ret;
+}
+
+static UTILITY_NOINLINE int utilityRegSetSysParamInt(const char *cat_path, const char *key_name, s32 value)
+{
+	SceRegParam reg_param;
+	u32 reg;
+	u32 cat;
+	s32 write_val = value;
+	int ret;
+
+	memset(&reg_param, 0, sizeof(reg_param));
+	reg_param.reg_type = 1;
+	reg_param.sys_flag_open = 1;
+	reg_param.sys_flag_compat = 1;
+
+	ret = sceRegOpenRegistry(&reg_param, 2, &reg);
+	if (ret != 0) {
+		Kprintf("couldn't open registry - 0x%x\n", ret);
+		return ret;
+	}
+
+	ret = sceRegOpenCategory(reg, cat_path, 2, &cat);
+	if (ret == 0) {
+		ret = sceRegSetKeyValue(cat, key_name, &write_val, 4);
+		if (ret == 0) {
+			sceRegFlushCategory(cat);
+			sceRegCloseCategory(cat);
+			sceRegFlushRegistry(reg);
+			sceRegCloseRegistry(reg);
+			return 0;
+		}
+		sceRegCloseCategory(cat);
+	}
+	sceRegCloseRegistry(reg);
+	return ret;
+}
+
+static UTILITY_NOINLINE int utilityRegSetNetInt(const char *cat_path, const char *key_name, s32 value)
+{
+	SceRegParam reg_param;
+	u32 reg;
+	u32 cat;
+	s32 write_val = value;
+	int ret;
+
+	memset(&reg_param, 0, sizeof(reg_param));
+	reg_param.reg_type = 1;
+	reg_param.sys_flag_open = 1;
+	reg_param.sys_flag_compat = 1;
+
+	ret = sceRegOpenRegistry(&reg_param, 2, &reg);
+	if (ret != 0) {
+		Kprintf("couldn't open registry - 0x%x\n", ret);
+		return ret;
+	}
+
+	ret = sceRegOpenCategory(reg, cat_path, 2, &cat);
+	if (ret == 0) {
+		ret = sceRegSetKeyValue(cat, key_name, &write_val, 4);
+		if (ret == 0) {
+			sceRegFlushCategory(cat);
+			sceRegCloseCategory(cat);
+			sceRegFlushRegistry(reg);
+			sceRegCloseRegistry(reg);
+			return 0;
+		}
+		sceRegCloseCategory(cat);
+	}
+	sceRegCloseRegistry(reg);
+	return ret;
+}
+
+int sceUtilitySetSystemParamString(int sysparam_id, const char *str_buf)
+{
+	u32 old_k1 = utilityEnterKernel();
+	(void)sysparam_id;
+	(void)str_buf;
+	utilityLeaveKernel(old_k1);
+	return SCE_UTILITY_SYSPARAM_ERROR_INVALID_ID;
+}
+
+int sceUtilityGetSystemParamString(int sysparam_id, char *out_buf, s32 buf_size)
+{
+	u32 old_k1 = utilityEnterKernel();
+	int ret;
+
+	if (sysparam_id == 1)
+		ret = utilityRegGetSysParamString("/CONFIG/SYSTEM", "owner_name", out_buf, buf_size);
+	else
+		ret = SCE_UTILITY_SYSPARAM_ERROR_INVALID_ID;
+
+	utilityLeaveKernel(old_k1);
+	return ret;
+}
+
+static UTILITY_NOINLINE int utilityRegGetSysParamString(const char *cat_path, const char *key_name, char *out_buf, s32 buf_size)
+{
+	SceRegParam reg_param;
+	u32 reg;
+	u32 cat;
+	u32 key_handle;
+	u32 key_type;
+	SceSize key_size;
+	int ret;
+
+	memset(&reg_param, 0, sizeof(reg_param));
+	reg_param.reg_type = 1;
+	reg_param.sys_flag_open = 1;
+	reg_param.sys_flag_compat = 1;
+
+	ret = sceRegOpenRegistry(&reg_param, 2, &reg);
+	if (ret != 0) {
+		Kprintf("couldn't open registry - 0x%x\n", ret);
+		return ret;
+	}
+
+	ret = sceRegOpenCategory(reg, cat_path, 2, &cat);
+	if (ret == 0) {
+		ret = sceRegGetKeyInfo(cat, key_name, &key_handle, &key_type, &key_size);
+		if (ret == 0) {
+			if (key_type != 3) {
+				sceRegCloseCategory(cat);
+				sceRegCloseRegistry(reg);
+				return SCE_UTILITY_SYSPARAM_ERROR_INVALID_TYPE;
+			}
+			if (buf_size < (s32)key_size) {
+				sceRegCloseCategory(cat);
+				sceRegCloseRegistry(reg);
+				return SCE_UTILITY_SYSPARAM_ERROR_INVALID_SIZE;
+			}
+			if (utilityIsBadSpan(out_buf, (u32)buf_size)) {
+				sceRegCloseCategory(cat);
+				sceRegCloseRegistry(reg);
+				return SCE_UTILITY_ERROR_INVALID_ADDR;
+			}
+			ret = sceRegGetKeyValue(cat, key_handle, out_buf, (SceSize)buf_size);
+			if (ret == 0) {
+				if (out_buf[key_size - 1] != '\0') {
+					Kprintf("registry entry is not terminated correctly.\n");
+					out_buf[key_size - 1] = '\0';
+				}
+			}
+		}
+		sceRegCloseCategory(cat);
+	}
+	sceRegCloseRegistry(reg);
+	return ret;
+}
+
+static UTILITY_NOINLINE int utilityRegGetMessengerString(const char *cat_path, const char *key_name, char *out_buf, s32 buf_size)
+{
+	SceRegParam reg_param;
+	u32 reg;
+	u32 cat;
+	u32 key_handle;
+	u32 key_type;
+	SceSize key_size;
+	int ret;
+
+	memset(&reg_param, 0, sizeof(reg_param));
+	reg_param.reg_type = 1;
+	reg_param.sys_flag_open = 1;
+	reg_param.sys_flag_compat = 1;
+
+	ret = sceRegOpenRegistry(&reg_param, 2, &reg);
+	if (ret != 0) {
+		Kprintf("couldn't open registry - 0x%x\n", ret);
+		return ret;
+	}
+
+	ret = sceRegOpenCategory(reg, cat_path, 2, &cat);
+	if (ret == 0) {
+		ret = sceRegGetKeyInfo(cat, key_name, &key_handle, &key_type, &key_size);
+		if (ret == 0) {
+			if (key_type != 3 || buf_size < (s32)key_size) {
+				sceRegCloseCategory(cat);
+				sceRegCloseRegistry(reg);
+				return SCE_UTILITY_NETPARAM_ERROR_REG_MISMATCH;
+			}
+			ret = sceRegGetKeyValue(cat, key_handle, out_buf, (SceSize)buf_size);
+			if (ret == 0) {
+				if (out_buf[key_size - 1] != '\0') {
+					Kprintf("registry entry is not terminated correctly.\n");
+					out_buf[key_size - 1] = '\0';
+				}
+			}
+		}
+		sceRegCloseCategory(cat);
+	}
+	sceRegCloseRegistry(reg);
+	return ret;
+}
+
+/* NetParam */
+int sceUtilityCheckNetParam(int slot)
+{
+	u32 old_k1 = utilityEnterKernel();
+	SceUtilityNetParamSlotArg arg;
+	int ret;
+
+	if (slot < 0) {
+		utilityLeaveKernel(old_k1);
+		return SCE_UTILITY_NETPARAM_ERROR_INVALID_ID;
+	}
+
+	arg.slot = slot;
+	arg.result = 0;
+	ret = sceKernelExtendKernelStack(4096, utilityNetParamCheckCb, &arg);
+	if (ret >= 0)
+		ret = arg.result;
+
+	utilityLeaveKernel(old_k1);
+	return ret;
+}
+
+int sceUtility_netparam_internal_6B1BC62C(int slot)
+{
+	u32 old_k1 = utilityEnterKernel();
+	SceUtilityNetParamSlotArg arg;
+	int ret;
+
+	if (slot < 0) {
+		utilityLeaveKernel(old_k1);
+		return SCE_UTILITY_NETPARAM_ERROR_INVALID_ID;
+	}
+
+	arg.slot = slot;
+	arg.result = 0;
+	ret = sceKernelExtendKernelStack(4096, utilityNetParamCreateCb, &arg);
+	if (ret >= 0)
+		ret = arg.result;
+
+	utilityLeaveKernel(old_k1);
+	return ret;
+}
+
+int sceUtility_netparam_internal_61D0686E(int slot)
+{
+	u32 old_k1 = utilityEnterKernel();
+	SceUtilityNetParamSlotArg arg;
+	int ret;
+
+	if (slot < 0) {
+		utilityLeaveKernel(old_k1);
+		return SCE_UTILITY_NETPARAM_ERROR_INVALID_ID;
+	}
+
+	arg.slot = slot;
+	arg.result = 0;
+	ret = sceKernelExtendKernelStack(4096, utilityNetParamDeleteCb, &arg);
+	if (ret >= 0)
+		ret = arg.result;
+
+	utilityLeaveKernel(old_k1);
+	return ret;
+}
+
+int sceUtility_netparam_internal_4CB183A4(int src_slot, int dst_slot)
+{
+	u32 old_k1 = utilityEnterKernel();
+	SceUtilityNetParamCopyArg arg;
+	int ret;
+
+	if ((src_slot | dst_slot) < 0) {
+		utilityLeaveKernel(old_k1);
+		return SCE_UTILITY_NETPARAM_ERROR_INVALID_ID;
+	}
+
+	arg.src_slot = src_slot;
+	arg.dst_slot = dst_slot;
+	arg.result = 0;
+	ret = sceKernelExtendKernelStack(4096, utilityNetParamCopyCb, &arg);
+	if (ret >= 0)
+		ret = arg.result;
+
+	utilityLeaveKernel(old_k1);
+	return ret;
+}
+
+int sceUtilityGetNetParam(int slot, int param, void *out_buf)
+{
+	u32 old_k1 = utilityEnterKernel();
+	SceUtilityNetParamGetArg arg;
+	int ret;
+
+	if (slot < 0) {
+		utilityLeaveKernel(old_k1);
+		return SCE_UTILITY_NETPARAM_ERROR_INVALID_ID;
+	}
+	if (out_buf == NULL) {
+		utilityLeaveKernel(old_k1);
+		return SCE_UTILITY_NETPARAM_ERROR_INVALID_PTR;
+	}
+	if (utilityIsBadRange(out_buf, 128)) {
+		utilityLeaveKernel(old_k1);
+		return SCE_UTILITY_ERROR_INVALID_ADDR;
+	}
+	if (param >= 32 || (u32)(param - 25) < 7) {
+		utilityLeaveKernel(old_k1);
+		return SCE_UTILITY_NETPARAM_ERROR_INVALID_KEY;
+	}
+
+	arg.slot = slot;
+	arg.param = param;
+	arg.buf_size = 128;
+	arg.out_buf = out_buf;
+	arg.result = 0;
+	ret = sceKernelExtendKernelStack(4096, utilityNetParamGetCb, &arg);
+	if (ret >= 0)
+		ret = arg.result;
+
+	utilityLeaveKernel(old_k1);
+	return ret;
+}
+
+int sceUtility_netparam_internal_67C2105B(int slot, int param, void *out_buf)
+{
+	u32 old_k1 = utilityEnterKernel();
+	SceUtilityNetParamGetArg arg;
+	int ret;
+
+	if (slot < 0) {
+		utilityLeaveKernel(old_k1);
+		return SCE_UTILITY_NETPARAM_ERROR_INVALID_ID;
+	}
+	if (out_buf == NULL) {
+		utilityLeaveKernel(old_k1);
+		return SCE_UTILITY_NETPARAM_ERROR_INVALID_PTR;
+	}
+	if (utilityIsBadRange(out_buf, 128)) {
+		utilityLeaveKernel(old_k1);
+		return SCE_UTILITY_ERROR_INVALID_ADDR;
+	}
+	if (param >= 32) {
+		utilityLeaveKernel(old_k1);
+		return SCE_UTILITY_NETPARAM_ERROR_INVALID_KEY;
+	}
+
+	arg.slot = slot;
+	arg.param = param;
+	arg.buf_size = 128;
+	arg.out_buf = out_buf;
+	arg.result = 0;
+	ret = sceKernelExtendKernelStack(4096, utilityNetParamGetCb, &arg);
+	if (ret >= 0)
+		ret = arg.result;
+
+	utilityLeaveKernel(old_k1);
+	return ret;
+}
+
+int sceUtility_netparam_internal_5D63AA06(int param, const void *value)
+{
+	u32 old_k1 = utilityEnterKernel();
+	SceUtilityNetParamSetArg arg;
+	int ret;
+
+	if (value == NULL) {
+		utilityLeaveKernel(old_k1);
+		return SCE_UTILITY_NETPARAM_ERROR_INVALID_PTR;
+	}
+	if (utilityIsBadRange(value, 128)) {
+		utilityLeaveKernel(old_k1);
+		return SCE_UTILITY_ERROR_INVALID_ADDR;
+	}
+	if (param >= 32 || (u32)(param - 25) < 7) {
+		utilityLeaveKernel(old_k1);
+		return SCE_UTILITY_NETPARAM_ERROR_INVALID_KEY;
+	}
+
+	arg.slot = 0;
+	arg.param = param;
+	arg.value = value;
+	arg.result = 0;
+	ret = sceKernelExtendKernelStack(4096, utilityNetParamSetCb, &arg);
+	if (ret >= 0)
+		ret = arg.result;
+
+	utilityLeaveKernel(old_k1);
+	return ret;
+}
+
+int sceUtility_netparam_internal_239F260D(int param, const void *value)
+{
+	u32 old_k1 = utilityEnterKernel();
+	SceUtilityNetParamSetArg arg;
+	int ret;
+
+	if (value == NULL) {
+		utilityLeaveKernel(old_k1);
+		return SCE_UTILITY_NETPARAM_ERROR_INVALID_PTR;
+	}
+	if (utilityIsBadRange(value, 128)) {
+		utilityLeaveKernel(old_k1);
+		return SCE_UTILITY_ERROR_INVALID_ADDR;
+	}
+	if (param >= 32) {
+		utilityLeaveKernel(old_k1);
+		return SCE_UTILITY_NETPARAM_ERROR_INVALID_KEY;
+	}
+
+	arg.slot = 0;
+	arg.param = param;
+	arg.value = value;
+	arg.result = 0;
+	ret = sceKernelExtendKernelStack(4096, utilityNetParamSetCb, &arg);
+	if (ret >= 0)
+		ret = arg.result;
+
+	utilityLeaveKernel(old_k1);
+	return ret;
+}
+
+int sceUtility_ECE1D3E5(const char *name_buf)
+{
+	u32 old_k1 = utilityEnterKernel();
+	int ret;
+
+	if (name_buf == NULL) {
+		utilityLeaveKernel(old_k1);
+		return SCE_UTILITY_NETPARAM_ERROR_INVALID_PTR;
+	}
+	if (utilityIsBadRange(name_buf, 64)) {
+		utilityLeaveKernel(old_k1);
+		return SCE_UTILITY_ERROR_INVALID_ADDR;
+	}
+
+	ret = utilityRegSetMessengerString("/CONFIG/NETWORK/GO_MESSENGER", "auth_name", name_buf, 64);
+	utilityLeaveKernel(old_k1);
+	return ret;
+}
+
+int sceUtility_28D35634(char *out_buf)
+{
+	u32 old_k1 = utilityEnterKernel();
+	int ret;
+
+	if (out_buf == NULL) {
+		utilityLeaveKernel(old_k1);
+		return SCE_UTILITY_NETPARAM_ERROR_INVALID_PTR;
+	}
+	if (utilityIsBadRange(out_buf, 64)) {
+		utilityLeaveKernel(old_k1);
+		return SCE_UTILITY_ERROR_INVALID_ADDR;
+	}
+
+	ret = utilityRegGetMessengerString("/CONFIG/NETWORK/GO_MESSENGER", "auth_name", out_buf, 64);
+	utilityLeaveKernel(old_k1);
+	return ret;
+}
+
+int sceUtility_70267ADF(const char *key_buf)
+{
+	u32 old_k1 = utilityEnterKernel();
+	int ret;
+
+	if (key_buf == NULL) {
+		utilityLeaveKernel(old_k1);
+		return SCE_UTILITY_NETPARAM_ERROR_INVALID_PTR;
+	}
+	if (utilityIsBadRange(key_buf, 64)) {
+		utilityLeaveKernel(old_k1);
+		return SCE_UTILITY_ERROR_INVALID_ADDR;
+	}
+
+	ret = utilityRegSetMessengerString("/CONFIG/NETWORK/GO_MESSENGER", "auth_key", key_buf, 64);
+	utilityLeaveKernel(old_k1);
+	return ret;
+}
+
+int sceUtility_EF3582B2(char *out_buf)
+{
+	u32 old_k1 = utilityEnterKernel();
+	int ret;
+
+	if (out_buf == NULL) {
+		utilityLeaveKernel(old_k1);
+		return SCE_UTILITY_NETPARAM_ERROR_INVALID_PTR;
+	}
+	if (utilityIsBadRange(out_buf, 64)) {
+		utilityLeaveKernel(old_k1);
+		return SCE_UTILITY_ERROR_INVALID_ADDR;
+	}
+
+	ret = utilityRegGetMessengerString("/CONFIG/NETWORK/GO_MESSENGER", "auth_key", out_buf, 64);
+	utilityLeaveKernel(old_k1);
+	return ret;
+}
+
+int sceUtility_netparam_internal_02598DB8(void)
+{
+	u32 old_k1 = utilityEnterKernel();
+	SceUtilityNetParamGetArg get_arg;
+	SceUtilityNetParamSlotArg del_arg;
+	u32 cfg_buf[32];
+	char auth_name[64];
+	char auth_key[64];
+	int slot;
+
+	for (slot = 0; slot < 10; slot++) {
+		get_arg.slot = slot;
+		get_arg.param = 24;
+		get_arg.buf_size = 128;
+		get_arg.out_buf = cfg_buf;
+		get_arg.result = 0;
+		if (sceKernelExtendKernelStack(4096, utilityNetParamGetCb, &get_arg) >= 0 && cfg_buf[0] == 3) {
+			del_arg.slot = slot;
+			del_arg.result = 0;
+			sceKernelExtendKernelStack(4096, utilityNetParamDeleteCb, &del_arg);
+		}
+	}
+
+	memset(auth_name, 0, sizeof(auth_name));
+	sceUtility_ECE1D3E5(auth_name);
+	memset(auth_key, 0, sizeof(auth_key));
+	sceUtility_70267ADF(auth_key);
+
+	utilityLeaveKernel(old_k1);
+	return 0;
+}
+
+int sceUtility_netparam_internal_09905636(void)
+{
+	u32 old_k1 = utilityEnterKernel();
+	SceUtilityNetParamGetArg get_arg;
+	SceUtilityNetParamSetArg set_arg;
+	s32 dev_buf[32];
+	int slot;
+
+	for (slot = 0; slot < 10; slot++) {
+		get_arg.slot = slot;
+		get_arg.param = 17;
+		get_arg.buf_size = 128;
+		get_arg.out_buf = dev_buf;
+		get_arg.result = 0;
+		if (sceKernelExtendKernelStack(4096, utilityNetParamGetCb, &get_arg) >= 0 && dev_buf[0] <= 0) {
+			dev_buf[0] = 1;
+			set_arg.slot = slot;
+			set_arg.param = 17;
+			set_arg.value = dev_buf;
+			set_arg.result = 0;
+			sceKernelExtendKernelStack(4096, utilityNetParamSetCb, &set_arg);
+		}
+	}
+
+	utilityLeaveKernel(old_k1);
+	return 0;
+}
+
+int sceUtility_netparam_internal_6D77B975(s32 latest_id)
+{
+	u32 old_k1 = utilityEnterKernel();
+	int ret = utilityRegSetNetInt("/CONFIG/NETWORK/INFRASTRUCTURE", "latest_id", latest_id);
+	utilityLeaveKernel(old_k1);
+	return ret;
+}
+
+int sceUtility_4FED24D8(s32 *out_latest_id)
+{
+	u32 old_k1 = utilityEnterKernel();
+	int ret = utilityRegGetNetInt("/CONFIG/NETWORK/INFRASTRUCTURE", "latest_id", out_latest_id);
+	utilityLeaveKernel(old_k1);
+	return ret;
+}
+
+static UTILITY_NOINLINE int utilityNetParamCheckCb(void *arg_ptr)
+{
+	SceUtilityNetParamSlotArg *arg = (SceUtilityNetParamSlotArg *)arg_ptr;
+	SceUtilityNetParamHandle handle;
+	int ret = utilityNetParamOpenRegistry();
+
+	if (ret >= 0) {
+		ret = utilityNetParamOpenSlot(arg->slot, &handle, 0);
+		if (ret >= 0)
+			utilityNetParamCloseSlot(&handle);
+	}
+	utilityNetParamCloseRegistry();
+	arg->result = ret;
+	return ret;
+}
+
+static UTILITY_NOINLINE int utilityNetParamCreateCb(void *arg_ptr)
+{
+	SceUtilityNetParamSlotArg *arg = (SceUtilityNetParamSlotArg *)arg_ptr;
+	int ret = utilityNetParamOpenRegistry();
+
+	if (ret >= 0)
+		ret = utilityNetParamInitSlot(arg->slot);
+	utilityNetParamFlushRegistry();
+	utilityNetParamCloseRegistry();
+	arg->result = ret;
+	return ret;
+}
+
+static UTILITY_NOINLINE int utilityNetParamDeleteCb(void *arg_ptr)
+{
+	SceUtilityNetParamSlotArg *arg = (SceUtilityNetParamSlotArg *)arg_ptr;
+	int ret = utilityNetParamOpenRegistry();
+
+	if (ret >= 0)
+		ret = utilityNetParamRemoveSlot(arg->slot);
+	utilityNetParamFlushRegistry();
+	utilityNetParamCloseRegistry();
+	arg->result = ret;
+	return ret;
+}
+
+static UTILITY_NOINLINE int utilityNetParamCopyCb(void *arg_ptr)
+{
+	SceUtilityNetParamCopyArg *arg = (SceUtilityNetParamCopyArg *)arg_ptr;
+	SceUtilityNetParamHandle src_handle;
+	SceUtilityNetParamHandle dst_handle;
+	int opened_dst = 0;
+	int ret = utilityNetParamOpenRegistry();
+
+	if (ret >= 0) {
+		ret = utilityNetParamOpenSlot(arg->src_slot, &src_handle, 0);
+		if (ret >= 0) {
+			ret = utilityNetParamOpenSlot(arg->dst_slot, &dst_handle, 0);
+			if (ret >= 0) {
+				opened_dst = 1;
+				ret = utilityNetParamCopyHandle(&src_handle, &dst_handle);
+			}
+			utilityNetParamCloseSlot(&src_handle);
+			if (opened_dst > 0)
+				utilityNetParamCloseSlot(&dst_handle);
+		}
+	}
+	utilityNetParamFlushRegistry();
+	utilityNetParamCloseRegistry();
+	arg->result = ret;
+	return ret;
+}
+
+static UTILITY_NOINLINE int utilityNetParamGetCb(void *arg_ptr)
+{
+	SceUtilityNetParamGetArg *arg = (SceUtilityNetParamGetArg *)arg_ptr;
+	SceUtilityNetParamHandle handle;
+	int ret = utilityNetParamOpenRegistry();
+
+	if (ret >= 0) {
+		ret = utilityNetParamOpenSlot(arg->slot, &handle, 0);
+		if (ret >= 0) {
+			ret = utilityNetParamReadParam(&handle, arg->param, arg->buf_size, arg->out_buf);
+			utilityNetParamCloseSlot(&handle);
+		}
+	}
+	utilityNetParamCloseRegistry();
+	arg->result = ret;
+	return ret;
+}
+
+static UTILITY_NOINLINE int utilityNetParamSetCb(void *arg_ptr)
+{
+	SceUtilityNetParamSetArg *arg = (SceUtilityNetParamSetArg *)arg_ptr;
+	SceUtilityNetParamHandle handle;
+	int ret = utilityNetParamOpenRegistry();
+
+	if (ret >= 0) {
+		ret = utilityNetParamOpenSlot(arg->slot, &handle, 0);
+		if (ret >= 0) {
+			ret = utilityNetParamWriteParamWrap(&handle, arg->param, arg->value);
+			utilityNetParamCloseSlot(&handle);
+		}
+	}
+	utilityNetParamFlushRegistry();
+	utilityNetParamCloseRegistry();
+	arg->result = ret;
+	return ret;
+}
+
+static UTILITY_NOINLINE int utilityRegSetMessengerString(const char *cat_path, const char *key_name, const char *str_buf, s32 size)
+{
+	SceRegParam reg_param;
+	u32 reg;
+	u32 cat;
+	int ret;
+
+	memset(&reg_param, 0, sizeof(reg_param));
+	reg_param.reg_type = 1;
+	reg_param.sys_flag_open = 1;
+	reg_param.sys_flag_compat = 1;
+
+	ret = sceRegOpenRegistry(&reg_param, 2, &reg);
+	if (ret != 0) {
+		Kprintf("couldn't open registry - 0x%x\n", ret);
+		return ret;
+	}
+
+	ret = sceRegOpenCategory(reg, cat_path, 2, &cat);
+	if (ret == 0) {
+		ret = sceRegSetKeyValue(cat, key_name, str_buf, (SceSize)size);
+		if (ret == 0) {
+			sceRegFlushCategory(cat);
+			sceRegCloseCategory(cat);
+			sceRegFlushRegistry(reg);
+			sceRegCloseRegistry(reg);
+			return 0;
+		}
+		sceRegCloseCategory(cat);
+	}
+	sceRegCloseRegistry(reg);
+	return ret;
+}
+
+static UTILITY_NOINLINE int utilityNetParamOpenSlot(int slot, SceUtilityNetParamHandle *handle, int create)
+{
+	char path[64];
+	int ret;
+
+	if (slot < 0)
+		return SCE_UTILITY_NETPARAM_ERROR_INVALID_ID;
+
+	snprintf(path, 50, "%s/%d", "/CONFIG/NETWORK/INFRASTRUCTURE", slot);
+	ret = utilityNetParamOpenCategory(path, create, &handle->main_cat);
+	if (ret < 0)
+		return ret;
+
+	snprintf(path, 50, "%s/%d/%s", "/CONFIG/NETWORK/INFRASTRUCTURE", slot, "SUB1");
+	ret = utilityNetParamOpenCategory(path, create, &handle->child_cat);
+	if (ret == SCE_UTILITY_NETPARAM_ERROR_NOT_FOUND)
+		ret = utilityNetParamOpenCategory(path, 1, &handle->child_cat);
+	if (ret < 0) {
+		utilityNetParamFlushCloseCategory(handle->main_cat);
+		return ret;
+	}
+	return 0;
+}
+
+static UTILITY_NOINLINE int utilityNetParamRemoveSlot(int slot)
+{
+	char path[64];
+	int ret;
+
+	if (slot < 0)
+		return SCE_UTILITY_NETPARAM_ERROR_INVALID_ID;
+
+	snprintf(path, 50, "%s/%d/%s", "/CONFIG/NETWORK/INFRASTRUCTURE", slot, "SUB1");
+	ret = utilityNetParamRemoveCategory(path);
+	if ((ret < 0) & (ret != SCE_REG_ERROR_CAT_NOT_FOUND))
+		return ret;
+
+	snprintf(path, 50, "%s/%d", "/CONFIG/NETWORK/INFRASTRUCTURE", slot);
+	return utilityNetParamRemoveCategory(path);
+}
+
+static UTILITY_NOINLINE int utilityNetParamInitSlot(int slot)
+{
+	SceUtilityNetParamHandle handle;
+	int exists = utilityNetParamSlotExists(slot);
+	int ret;
+
+	if (exists < 0)
+		return exists;
+	if (exists > 0)
+		return SCE_UTILITY_NETPARAM_ERROR_EXISTS;
+
+	ret = utilityNetParamOpenSlot(slot, &handle, 1);
+	if (ret < 0)
+		return ret;
+
+	ret = utilityNetParamCreateDefaults(&handle);
+	utilityNetParamFlushCloseCategory(handle.child_cat);
+	utilityNetParamFlushCloseCategory(handle.main_cat);
+	if (ret < 0)
+		utilityNetParamRemoveSlot(slot);
+	return ret;
+}
+
+static UTILITY_NOINLINE int utilityNetParamCopyHandle(SceUtilityNetParamHandle *src, SceUtilityNetParamHandle *dst)
+{
+	u32 child_scratch[32];
+	u32 main_scratch[32];
+	int param;
+	int ret = 0;
+
+	for (param = 0; param < 32; param++) {
+		void *scratch = ((u32)(param - 25) < 7) ? (void *)child_scratch : (void *)main_scratch;
+		ret = utilityNetParamCopyKey(src, dst, param, 128, scratch);
+		if (ret < 0)
+			break;
+	}
+	return ret;
+}
+
+static UTILITY_NOINLINE int utilityNetParamFormatPath(int slot, char *out_buf, u32 buf_size)
+{
+	if (buf_size < 50)
+		return SCE_UTILITY_NETPARAM_ERROR_PATH_SMALL;
+	snprintf(out_buf, buf_size, "%s/%d", "/CONFIG/NETWORK/INFRASTRUCTURE", slot);
+	return 0;
+}
+
+static UTILITY_NOINLINE int utilityNetParamCloseSlot(SceUtilityNetParamHandle *handle)
+{
+	utilityNetParamFlushCloseCategory(handle->child_cat);
+	return utilityNetParamFlushCloseCategory(handle->main_cat);
+}
+
+static UTILITY_NOINLINE int utilityNetParamReadParam(SceUtilityNetParamHandle *handle, int param, s32 buf_size, void *out_buf)
+{
+	u32 cat = ((u32)(param - 25) < 7) ? handle->child_cat : handle->main_cat;
+	const SceUtilityNetParamKey *key = &g_netparam_keys[param];
+	return utilityNetParamGetRegKey(cat, key->name, key->reg_type, key->key_size, buf_size, out_buf);
+}
+
+static UTILITY_NOINLINE int utilityNetParamWriteParamWrap(SceUtilityNetParamHandle *handle, int param, const void *value)
+{
+	return utilityNetParamWriteParam(handle, param, value);
+}
+
+static UTILITY_NOINLINE int utilityNetParamWriteParam(SceUtilityNetParamHandle *handle, int param, const void *value)
+{
+	u32 cat = ((u32)(param - 25) < 7) ? handle->child_cat : handle->main_cat;
+	const SceUtilityNetParamKey *key = &g_netparam_keys[param];
+	s32 key_size = key->key_size;
+	int ret = utilityNetParamValidateValue(param, (u32)key_size, (const u32 *)value);
+
+	if (ret < 0)
+		return ret;
+	return utilityNetParamSetRegValue(cat, key->name, key_size, value);
+}
+
+static UTILITY_NOINLINE int utilityNetParamCreateDefaults(SceUtilityNetParamHandle *handle)
+{
+	int ret;
+
+	ret = utilityNetParamCreateAndSetKey(handle->main_cat, g_netparam_keys[16].name, g_netparam_keys[16].reg_type, g_netparam_keys[16].key_size, 4, &g_netparam_defaults.version);
+	if (ret < 0) return ret;
+	ret = utilityNetParamCreateAndSetKey(handle->main_cat, g_netparam_keys[17].name, g_netparam_keys[17].reg_type, g_netparam_keys[17].key_size, 4, &g_netparam_defaults.device);
+	if (ret < 0) return ret;
+	ret = utilityNetParamCreateAndSetKey(handle->main_cat, g_netparam_keys[0].name, g_netparam_keys[0].reg_type, g_netparam_keys[0].key_size, (s32)strlen(g_netparam_defaults.cnf_name) + 1, g_netparam_defaults.cnf_name);
+	if (ret < 0) return ret;
+	ret = utilityNetParamCreateAndSetKey(handle->main_cat, g_netparam_keys[1].name, g_netparam_keys[1].reg_type, g_netparam_keys[1].key_size, (s32)strlen(g_netparam_defaults.ssid) + 1, g_netparam_defaults.ssid);
+	if (ret < 0) return ret;
+	ret = utilityNetParamCreateAndSetKey(handle->main_cat, g_netparam_keys[2].name, g_netparam_keys[2].reg_type, g_netparam_keys[2].key_size, 4, &g_netparam_defaults.auth_proto);
+	if (ret < 0) return ret;
+	ret = utilityNetParamCreateAndSetKey(handle->main_cat, g_netparam_keys[3].name, g_netparam_keys[3].reg_type, g_netparam_keys[3].key_size, g_netparam_defaults.wep_key_len, g_netparam_defaults.wep_key);
+	if (ret < 0) return ret;
+	ret = utilityNetParamCreateAndSetKey(handle->main_cat, g_netparam_keys[4].name, g_netparam_keys[4].reg_type, g_netparam_keys[4].key_size, 4, &g_netparam_defaults.how_to_set_ip);
+	if (ret < 0) return ret;
+	ret = utilityNetParamCreateAndSetKey(handle->main_cat, g_netparam_keys[5].name, g_netparam_keys[5].reg_type, g_netparam_keys[5].key_size, (s32)strlen(g_netparam_defaults.ip_address) + 1, g_netparam_defaults.ip_address);
+	if (ret < 0) return ret;
+	ret = utilityNetParamCreateAndSetKey(handle->main_cat, g_netparam_keys[6].name, g_netparam_keys[6].reg_type, g_netparam_keys[6].key_size, (s32)strlen(g_netparam_defaults.netmask) + 1, g_netparam_defaults.netmask);
+	if (ret < 0) return ret;
+	ret = utilityNetParamCreateAndSetKey(handle->main_cat, g_netparam_keys[7].name, g_netparam_keys[7].reg_type, g_netparam_keys[7].key_size, (s32)strlen(g_netparam_defaults.default_route) + 1, g_netparam_defaults.default_route);
+	if (ret < 0) return ret;
+	ret = utilityNetParamCreateAndSetKey(handle->main_cat, g_netparam_keys[8].name, g_netparam_keys[8].reg_type, g_netparam_keys[8].key_size, 4, &g_netparam_defaults.dns_flag);
+	if (ret < 0) return ret;
+	ret = utilityNetParamCreateAndSetKey(handle->main_cat, g_netparam_keys[9].name, g_netparam_keys[9].reg_type, g_netparam_keys[9].key_size, (s32)strlen(g_netparam_defaults.dns_main) + 1, g_netparam_defaults.dns_main);
+	if (ret < 0) return ret;
+	ret = utilityNetParamCreateAndSetKey(handle->main_cat, g_netparam_keys[10].name, g_netparam_keys[10].reg_type, g_netparam_keys[10].key_size, (s32)strlen(g_netparam_defaults.dns_alt) + 1, g_netparam_defaults.dns_alt);
+	if (ret < 0) return ret;
+	ret = utilityNetParamCreateAndSetKey(handle->main_cat, g_netparam_keys[11].name, g_netparam_keys[11].reg_type, g_netparam_keys[11].key_size, (s32)strlen(g_netparam_defaults.auth_name) + 1, g_netparam_defaults.auth_name);
+	if (ret < 0) return ret;
+	ret = utilityNetParamCreateAndSetKey(handle->main_cat, g_netparam_keys[12].name, g_netparam_keys[12].reg_type, g_netparam_keys[12].key_size, (s32)strlen(g_netparam_defaults.auth_key) + 1, g_netparam_defaults.auth_key);
+	if (ret < 0) return ret;
+	ret = utilityNetParamCreateAndSetKey(handle->main_cat, g_netparam_keys[13].name, g_netparam_keys[13].reg_type, g_netparam_keys[13].key_size, 4, &g_netparam_defaults.http_proxy_flag);
+	if (ret < 0) return ret;
+	ret = utilityNetParamCreateAndSetKey(handle->main_cat, g_netparam_keys[14].name, g_netparam_keys[14].reg_type, g_netparam_keys[14].key_size, (s32)strlen(g_netparam_defaults.http_proxy_server) + 1, g_netparam_defaults.http_proxy_server);
+	if (ret < 0) return ret;
+	ret = utilityNetParamCreateAndSetKey(handle->main_cat, g_netparam_keys[15].name, g_netparam_keys[15].reg_type, g_netparam_keys[15].key_size, 4, &g_netparam_defaults.http_proxy_port);
+	if (ret < 0) return ret;
+	ret = utilityNetParamCreateAndSetKey(handle->main_cat, g_netparam_keys[18].name, g_netparam_keys[18].reg_type, g_netparam_keys[18].key_size, 4, &g_netparam_defaults.auth_dot1x_type);
+	if (ret < 0) return ret;
+	ret = utilityNetParamCreateAndSetKey(handle->main_cat, g_netparam_keys[19].name, g_netparam_keys[19].reg_type, g_netparam_keys[19].key_size, (s32)strlen(g_netparam_defaults.auth_dot1x_name) + 1, g_netparam_defaults.auth_dot1x_name);
+	if (ret < 0) return ret;
+	ret = utilityNetParamCreateAndSetKey(handle->main_cat, g_netparam_keys[20].name, g_netparam_keys[20].reg_type, g_netparam_keys[20].key_size, (s32)strlen(g_netparam_defaults.auth_dot1x_key) + 1, g_netparam_defaults.auth_dot1x_key);
+	if (ret < 0) return ret;
+	ret = utilityNetParamCreateAndSetKey(handle->main_cat, g_netparam_keys[21].name, g_netparam_keys[21].reg_type, g_netparam_keys[21].key_size, 4, &g_netparam_defaults.wpa_key_type);
+	if (ret < 0) return ret;
+	ret = utilityNetParamCreateAndSetKey(handle->main_cat, g_netparam_keys[22].name, g_netparam_keys[22].reg_type, g_netparam_keys[22].key_size, 64, g_netparam_defaults.wpa_key);
+	if (ret < 0) return ret;
+	ret = utilityNetParamCreateAndSetKey(handle->main_cat, g_netparam_keys[23].name, g_netparam_keys[23].reg_type, g_netparam_keys[23].key_size, 4, &g_netparam_defaults.browser_flag);
+	if (ret < 0) return ret;
+	ret = utilityNetParamCreateAndSetKey(handle->main_cat, g_netparam_keys[24].name, g_netparam_keys[24].reg_type, g_netparam_keys[24].key_size, 4, &g_netparam_defaults.wifisvc_config);
+	if (ret < 0) return ret;
+	ret = utilityNetParamCreateAndSetKey(handle->child_cat, g_netparam_keys[25].name, g_netparam_keys[25].reg_type, g_netparam_keys[25].key_size, (s32)strlen(g_netparam_defaults.wifisvc_auth_name) + 1, g_netparam_defaults.wifisvc_auth_name);
+	if (ret < 0) return ret;
+	ret = utilityNetParamCreateAndSetKey(handle->child_cat, g_netparam_keys[26].name, g_netparam_keys[26].reg_type, g_netparam_keys[26].key_size, (s32)strlen(g_netparam_defaults.wifisvc_auth_key) + 1, g_netparam_defaults.wifisvc_auth_key);
+	if (ret < 0) return ret;
+	ret = utilityNetParamCreateAndSetKey(handle->child_cat, g_netparam_keys[27].name, g_netparam_keys[27].reg_type, g_netparam_keys[27].key_size, 4, &g_netparam_defaults.wifisvc_option);
+	if (ret < 0) return ret;
+	ret = utilityNetParamCreateAndSetKey(handle->child_cat, g_netparam_keys[28].name, g_netparam_keys[28].reg_type, g_netparam_keys[28].key_size, (s32)strlen(g_netparam_defaults.last_leased_dhcp) + 1, g_netparam_defaults.last_leased_dhcp);
+	if (ret < 0) return ret;
+	ret = utilityNetParamCreateAndSetKey(handle->child_cat, g_netparam_keys[29].name, g_netparam_keys[29].reg_type, g_netparam_keys[29].key_size, 4, &g_netparam_defaults.bt_id);
+	if (ret < 0) return ret;
+	ret = utilityNetParamCreateAndSetKey(handle->child_cat, g_netparam_keys[30].name, g_netparam_keys[30].reg_type, g_netparam_keys[30].key_size, (s32)strlen(g_netparam_defaults.at_command) + 1, g_netparam_defaults.at_command);
+	if (ret < 0) return ret;
+	return utilityNetParamCreateAndSetKey(handle->child_cat, g_netparam_keys[31].name, g_netparam_keys[31].reg_type, g_netparam_keys[31].key_size, (s32)strlen(g_netparam_defaults.phone_number) + 1, g_netparam_defaults.phone_number);
+}
+
+static UTILITY_NOINLINE int utilityNetParamCopyKey(SceUtilityNetParamHandle *src, SceUtilityNetParamHandle *dst, int param, s32 buf_size, void *scratch)
+{
+	u32 src_cat = ((u32)(param - 25) < 7) ? src->child_cat : src->main_cat;
+	const SceUtilityNetParamKey *key = &g_netparam_keys[param];
+	int ret;
+
+	ret = utilityNetParamKeyExists(src_cat, key->name);
+	if (ret <= 0)
+		return ret;
+
+	ret = utilityNetParamGetRegKey(src_cat, key->name, key->reg_type, key->key_size, buf_size, scratch);
+	if (ret < 0)
+		return ret;
+
+	if (param == 16) {
+		s32 dst_ver[32];
+		ret = utilityNetParamGetRegKey(dst->main_cat, "version", 2, 4, 128, dst_ver);
+		if (ret < 0 || *(const s32 *)scratch < dst_ver[0])
+			return ret;
+	}
+	return utilityNetParamUpsertKey(dst, param, scratch);
+}
+
+static UTILITY_NOINLINE int utilityNetParamValidateValue(int param, u32 key_size, const u32 *value)
+{
+	switch (param) {
+	case 2:
+		if (*value >= 5)
+			return SCE_UTILITY_NETPARAM_ERROR_INVALID_VAL;
+		break;
+	case 3:
+		if (key_size != 5 && key_size != 13)
+			return SCE_UTILITY_NETPARAM_ERROR_INVALID_VAL;
+		break;
+	case 4:
+		if (*value >= 3)
+			return SCE_UTILITY_NETPARAM_ERROR_INVALID_VAL;
+		break;
+	case 8:
+	case 13:
+	case 18:
+	case 21:
+	case 23:
+		if (*value >= 2)
+			return SCE_UTILITY_NETPARAM_ERROR_INVALID_VAL;
+		break;
+	case 15:
+		if (*value - 1u > 0xFFFEu)
+			return SCE_UTILITY_NETPARAM_ERROR_INVALID_VAL;
+		break;
+	case 17:
+		if (*value - 1u >= 2)
+			return SCE_UTILITY_NETPARAM_ERROR_INVALID_VAL;
+		break;
+	case 22:
+		if (key_size < 9)
+			return SCE_UTILITY_NETPARAM_ERROR_INVALID_VAL;
+		break;
+	case 24:
+		if (*value >= 4)
+			return SCE_UTILITY_NETPARAM_ERROR_INVALID_VAL;
+		break;
+	case 27:
+		if ((*value & ~1u) != 0)
+			return SCE_UTILITY_NETPARAM_ERROR_INVALID_VAL;
+		break;
+	default:
+		break;
+	}
+	return 0;
+}
+
+static UTILITY_NOINLINE int utilityNetParamUpsertKey(SceUtilityNetParamHandle *handle, int param, const void *value)
+{
+	u32 cat = ((u32)(param - 25) < 7) ? handle->child_cat : handle->main_cat;
+	const SceUtilityNetParamKey *key = &g_netparam_keys[param];
+	s32 key_size = key->key_size;
+	int ret = utilityNetParamValidateValue(param, (u32)key_size, (const u32 *)value);
+
+	if (ret < 0)
+		return ret;
+	return utilityNetParamSetOrCreateKey(cat, key->name, key->reg_type, key_size, key_size, value);
+}
+
+static UTILITY_NOINLINE int utilityNetParamSlotExists(int slot)
+{
+	char path[64];
+	u32 cat;
+	int ret = utilityNetParamFormatPath(slot, path, 50);
+
+	if (ret < 0)
+		return ret;
+
+	ret = sceRegOpenCategory(g_netparam_reg_handle, path, 2, &cat);
+	if (ret == 0) {
+		sceRegCloseCategory(cat);
+		return 1;
+	}
+	if (ret == SCE_REG_ERROR_CAT_NOT_FOUND)
+		return 0;
+	return ret;
+}
+
+static UTILITY_NOINLINE int utilityNetParamKeyExists(u32 cat, const char *key_name)
+{
+	u32 key_type;
+	SceSize key_size;
+	int ret = sceRegGetKeyInfoByName(cat, key_name, &key_type, &key_size);
+
+	if (ret == 0)
+		return 1;
+	if (ret == SCE_REG_ERROR_KEY_NOT_FOUND)
+		return 0;
+	return ret;
+}
+
+static UTILITY_NOINLINE int utilityNetParamGetRegKey(u32 cat, const char *key_name, u32 expected_type, s32 max_key_size, s32 buf_size, void *out_buf)
+{
+	u32 key_type;
+	SceSize key_size;
+	int ret = sceRegGetKeyInfoByName(cat, key_name, &key_type, &key_size);
+
+	if (ret < 0)
+		return ret;
+	if (key_type != expected_type)
+		return SCE_UTILITY_NETPARAM_ERROR_TYPE_MISMATCH;
+	if (max_key_size < (s32)key_size)
+		return SCE_UTILITY_NETPARAM_ERROR_KEY_TOO_BIG;
+	if (buf_size < (s32)key_size)
+		return SCE_UTILITY_NETPARAM_ERROR_BUF_TOO_SMALL;
+	return sceRegGetKeyValueByName(cat, key_name, out_buf, (SceSize)buf_size);
+}
+
+static UTILITY_NOINLINE int utilityNetParamSetOrCreateKey(u32 cat, const char *key_name, u32 key_type, s32 key_size, s32 write_size, const void *value)
+{
+	u32 existing_type;
+	SceSize existing_size;
+	int ret = sceRegGetKeyInfoByName(cat, key_name, &existing_type, &existing_size);
+
+	if (ret == 0)
+		return sceRegSetKeyValue(cat, key_name, value, (SceSize)write_size);
+	if (ret == SCE_REG_ERROR_KEY_NOT_FOUND) {
+		ret = sceRegCreateKey(cat, key_name, (int)key_type, (SceSize)key_size);
+		if (ret >= 0)
+			return sceRegSetKeyValue(cat, key_name, value, (SceSize)write_size);
+	}
+	return ret;
+}
+
+static UTILITY_NOINLINE int utilityNetParamOpenCategory(const char *path, int create, u32 *out_cat)
+{
+	int access_mode = (create > 0) ? 1 : 2;
+	int ret = sceRegOpenCategory(g_netparam_reg_handle, path, access_mode, out_cat);
+
+	if ((create == 0) & (ret == SCE_REG_ERROR_CAT_NOT_FOUND))
+		return SCE_UTILITY_NETPARAM_ERROR_NOT_FOUND;
+	return ret;
+}
+
+static UTILITY_NOINLINE int utilityNetParamOpenRegistry(void)
+{
+	SceRegParam reg_param;
+	u32 reg;
+	int ret;
+
+	memset(&reg_param, 0, sizeof(reg_param));
+	reg_param.reg_type = 1;
+	strncpy(reg_param.name, "flash2/registry/system", sizeof(reg_param.name));
+	reg_param.name_len = 22;
+	reg_param.sys_flag_open = 1;
+	reg_param.sys_flag_compat = 1;
+
+	ret = sceRegOpenRegistry(&reg_param, 2, &reg);
+	if (ret >= 0) {
+		g_netparam_reg_handle = reg;
+		g_netparam_reg_refs++;
+	}
+	return ret;
+}
+
+static UTILITY_NOINLINE int utilityNetParamCloseRegistry(void)
+{
+	if (g_netparam_reg_refs > 0) {
+		sceRegFlushRegistry(g_netparam_reg_handle);
+		sceRegCloseRegistry(g_netparam_reg_handle);
+		g_netparam_reg_refs--;
+	}
+	return 0;
+}
+
+static UTILITY_NOINLINE int utilityNetParamFlushCloseCategory(u32 cat)
+{
+	sceRegFlushCategory(cat);
+	sceRegCloseCategory(cat);
+	return 0;
+}
+
+static UTILITY_NOINLINE int utilityNetParamFlushRegistry(void)
+{
+	sceRegFlushRegistry(g_netparam_reg_handle);
+	return 0;
+}
+
+static UTILITY_NOINLINE int utilityNetParamSetRegValue(u32 cat, const char *key_name, s32 size, const void *value)
+{
+	return sceRegSetKeyValue(cat, key_name, value, (SceSize)size);
+}
+
+static UTILITY_NOINLINE int utilityNetParamCreateAndSetKey(u32 cat, const char *key_name, u32 key_type, s32 key_size, s32 write_size, const void *value)
+{
+	int ret = sceRegCreateKey(cat, key_name, (int)key_type, (SceSize)key_size);
+	if (ret >= 0)
+		return sceRegSetKeyValue(cat, key_name, value, (SceSize)write_size);
+	return ret;
+}
+
+static UTILITY_NOINLINE int utilityNetParamRemoveCategory(const char *path)
+{
+	return sceRegRemoveCategory(g_netparam_reg_handle, path);
+}
+
+/* Game compatibility and Kermit peripheral helpers */
+static UTILITY_NOINLINE void utilityCompatMatchGame(u32 dialog_type, u32 dialog_submode)
+{
+	SceKernelGameInfo *game_info = (SceKernelGameInfo *)sceKernelGetGameInfo();
+	const char *code = game_info->product_code;
+	int idx;
+
+	g_active_compat = NULL;
+	for (idx = 0; idx < 17; idx++) {
+		if (g_game_compat_table[idx].dialog_type == dialog_type &&
+		    g_game_compat_table[idx].dialog_submode == dialog_submode) {
+			if (strcmp(code, g_game_compat_table[idx].product_code) == 0)
+				g_active_compat = &g_game_compat_table[idx];
+		}
+	}
+}
+
+static UTILITY_NOINLINE int utilityKermitSetDialogActive(int active)
+{
+	u32 old_k1 = utilityEnterKernel();
+	u8 req_buf[128];
+	u32 aligned = ((u32)req_buf + 63u) & ~63u;
+	SceKermitRequest *req;
+	u64 resp;
+	int ret;
+
+	sceKernelDcacheInvalidateRange((void *)aligned, 64);
+	req = KERMIT_UNCACHED(aligned);
+	req->cmd = 1063;
+	req->argWords[0].lo = (u32)active;
+	ret = sceKermit_driver_36666181(req, KERMIT_MODE_PERIPHERAL, 1063, 1, 0, &resp);
+	if (ret == 0)
+		ret = (int)resp;
+
+	utilityLeaveKernel(old_k1);
+	return ret;
+}
+
+u64 sceUtility_private_74E69D03(int cap_index)
+{
+	if (cap_index >= 0) {
+		if (cap_index < 3)
+			return g_kermit_caps[cap_index];
+	}
+	return 0;
+}
+
+static UTILITY_NOINLINE int utilityKermitFetchCapabilities(void)
+{
+	int idx;
+	for (idx = 0; idx < 3; idx++)
+		g_kermit_caps[idx] = utilityKermitQueryCapability(idx);
+	return 0;
+}
+
+static UTILITY_NOINLINE void utilityCompatClear(void)
+{
+	g_active_compat = NULL;
+}
+
+static UTILITY_NOINLINE u32 utilityCompatGetFlags(void)
+{
+	if (g_active_compat != NULL)
+		return g_active_compat->flags;
+	return 0;
+}
+
+static UTILITY_NOINLINE int utilityCompatDelay(u32 dialog_type, int delay_slot)
+{
+	(void)dialog_type;
+	if (g_active_compat != NULL && g_active_compat->delays[delay_slot] != 0)
+		return sceKernelDelayThread(g_active_compat->delays[delay_slot]);
+	return delay_slot * 4;
+}
+
+static UTILITY_NOINLINE u64 utilityKermitQueryCapability(int cap_index)
+{
+	u32 old_k1 = utilityEnterKernel();
+	u8 req_buf[128];
+	u32 aligned = ((u32)req_buf + 63u) & ~63u;
+	SceKermitRequest *req;
+	u64 resp;
+	int ret;
+
+	sceKernelDcacheInvalidateRange((void *)aligned, 64);
+	req = KERMIT_UNCACHED(aligned);
+	req->cmd = 1042;
+	req->argWords[0].lo = (u32)cap_index;
+	ret = sceKermit_driver_36666181(req, KERMIT_MODE_PERIPHERAL, 1042, 1, 0, &resp);
+	utilityLeaveKernel(old_k1);
+	if (ret == 0)
+		return resp;
+	return 0;
+}
+
+const SceUtilityNetParamKey g_netparam_keys[32] = {
+	{ 3,  64, "cnf_name" },
+	{ 3,  33, "ssid" },
+	{ 2,   4, "auth_proto" },
+	{ 4,  13, "wep_key" },
+	{ 2,   4, "how_to_set_ip" },
+	{ 3,  16, "ip_address" },
+	{ 3,  16, "netmask" },
+	{ 3,  16, "default_route" },
+	{ 2,   4, "dns_flag" },
+	{ 3,  16, "primary_dns" },
+	{ 3,  16, "secondary_dns" },
+	{ 3, 128, "auth_name" },
+	{ 3, 128, "auth_key" },
+	{ 2,   4, "http_proxy_flag" },
+	{ 3, 128, "http_proxy_server" },
+	{ 2,   4, "http_proxy_port" },
+	{ 2,   4, "version" },
+	{ 2,   4, "device" },
+	{ 2,   4, "auth_8021x_type" },
+	{ 3, 128, "auth_8021x_auth_name" },
+	{ 3, 128, "auth_8021x_auth_key" },
+	{ 2,   4, "wpa_key_type" },
+	{ 4,  64, "wpa_key" },
+	{ 2,   4, "browser_flag" },
+	{ 2,   4, "wifisvc_config" },
+	{ 3, 128, "wifisvc_auth_name" },
+	{ 3, 128, "wifisvc_auth_key" },
+	{ 2,   4, "wifisvc_option" },
+	{ 3,  16, "last_leased_dhcp_addr" },
+	{ 2,   4, "bt_id" },
+	{ 3,  65, "at_command" },
+	{ 3,  33, "phone_number" },
+};
+
+
+
+static const char g_netparam_empty_str[] = "";
+
+const SceUtilityNetParamDefaults g_netparam_defaults = {
+	g_netparam_empty_str,
+	g_netparam_empty_str,
+	0,
+	{ 0 },
+	5,
+	0,
+	g_netparam_empty_str,
+	g_netparam_empty_str,
+	g_netparam_empty_str,
+	0,
+	g_netparam_empty_str,
+	g_netparam_empty_str,
+	g_netparam_empty_str,
+	g_netparam_empty_str,
+	0,
+	g_netparam_empty_str,
+	8080,
+	5,
+	1,
+	0,
+	g_netparam_empty_str,
+	g_netparam_empty_str,
+	0,
+	{ 0 },
+	0,
+	0,
+	g_netparam_empty_str,
+	g_netparam_empty_str,
+	0,
+	g_netparam_empty_str,
+	0,
+	g_netparam_empty_str,
+	g_netparam_empty_str,
+};
