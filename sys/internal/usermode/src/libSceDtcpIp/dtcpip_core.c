@@ -178,12 +178,14 @@ int dtcpIpMapError(int status)
 		g_session.status = status;
 		error = SCE_DTCP_IP_ERROR_IPC_TIMEOUT;
 		break;
+#if FW_VERSION != 0x03630011
 	case 37:
 		error = SCE_DTCP_IP_ERROR_SESSION_CHECK;	/* -2146404583, 0x80107719 */
 		break;
 	case 38:
 		error = SCE_DTCP_IP_ERROR_SESSION_CHECK_2;	/* -2146404584, 0x80107718 */
 		break;
+#endif
 	default:
 		error = SCE_DTCP_IP_ERROR_GENERIC;
 		break;
