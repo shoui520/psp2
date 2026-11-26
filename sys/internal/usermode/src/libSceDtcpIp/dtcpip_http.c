@@ -414,14 +414,14 @@ int sinkOpenStreamReader(void)
 			goto created;
 		}
 	} else if (g_http.mode != 0) {
-		SceUInt64 startSeconds = dtcpIpDivide64(g_http.start, 1000);
-		int startMillis = (int)(g_http.start % 1000);
+		SceUInt64 startSeconds = (g_http.start / 1000);
+		int startMillis = (int)(g_http.start - startSeconds * 1000);
 
 		if (g_http.end == 0) {
 			length = dtcpIpSnprintf(value, "npt=%llu.%03d-", startSeconds, startMillis);
 		} else {
-			SceUInt64 endSeconds = dtcpIpDivide64(g_http.end, 1000);
-			int endMillis = (int)(g_http.end % 1000);
+			SceUInt64 endSeconds = (g_http.end / 1000);
+			int endMillis = (int)(g_http.end - endSeconds * 1000);
 
 			length = dtcpIpSnprintf(value, "npt=%llu.%03d-%llu.%03d", startSeconds,
 						startMillis, endSeconds, endMillis);
