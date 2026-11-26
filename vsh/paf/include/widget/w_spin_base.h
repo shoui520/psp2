@@ -68,12 +68,14 @@ public:
 	/* the string shown in place of the value */
 	virtual int32_t SetString(const wstring &str);
 	using Widget::SetString;
+#ifndef PAF_BUILD_2014
 	/* the drum's, else Widget's */
 	virtual int32_t SetFocus(SetFocusInfo *info);
 	/* Widget's (ScePafWidget 566E18A6), and the drum's */
 	virtual void SetFocusDirection(int32_t dir, IDParam id);
 	/* Widget's (ScePafWidget C71B79B2), and the drum's */
 	virtual void SetFocusDirectionWidget(int32_t dir, Widget *widget);
+#endif
 
 	/* the slot after Widget's, at 0x170: the string of a value (name ours) */
 	virtual wstring GetValueString(int32_t value) = 0;
@@ -173,11 +175,13 @@ public:
 	virtual int32_t SetString(const wstring &str);
 	using Widget::SetString;
 
+#ifndef PAF_BUILD_2014
 	/* up and down only, while its focus directions are off */
 	virtual int32_t GetFocusDirectionMask()
 	{
 		return m_focus_direction_off ? 2 : 7;
 	}
+#endif
 
 	/* the value at the offset, m_pos */
 	void UpdatePos(float offset);

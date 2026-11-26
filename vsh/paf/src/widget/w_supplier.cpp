@@ -133,10 +133,12 @@ static VersatileParam *NewSupplierLayoutParam()
 	return new WidgetLayoutParam;
 }
 
+#ifndef PAF_BUILD_2014
 static VersatileParam *NewSupplierFocusParam()
 {
 	return new WidgetFocusParam;
 }
+#endif
 
 static VersatileParam *NewSupplierStyleParam()
 {
@@ -158,7 +160,9 @@ FactoryFuncTable g_factorySupplier = {
 	NewSupplier,
 	NewSupplierParam,
 	NewSupplierLayoutParam,
+#ifndef PAF_BUILD_2014
 	NewSupplierFocusParam,
+#endif
 	NewSupplierStyleParam,
 	NewSupplierHandlerParam,
 	NewSupplierSoundParam,

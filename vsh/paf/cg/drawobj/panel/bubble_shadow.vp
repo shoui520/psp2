@@ -1,0 +1,12 @@
+/*
+ * Shadow under a bubble: a flat quad scaled into world space with its shadow texture UVs.
+ */
+void main(float4 IN : POSITION,
+	  uniform float4x4 MVP,
+	  uniform float WorldScaleHack,
+	  out float4 oPosition : POSITION,
+	  out float2 oTexcoord : TEXCOORD0)
+{
+	oPosition = mul(float4(IN.xy * WorldScaleHack, 0, 1), MVP);
+	oTexcoord = IN.zw;
+}

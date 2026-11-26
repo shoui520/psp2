@@ -174,7 +174,7 @@ public:
 		}
 
 		/* copy.vp built by psp2cgc */
-		static const uint8_t s_binary[288];
+		static const uint8_t s_binary[PAF_SHADER_SIZE(288, 336)];
 	};
 
 	/* the fragment shader: the texture copied */
@@ -214,7 +214,7 @@ public:
 		}
 
 		/* copy.fp built by psp2cgc */
-		static const uint8_t s_binary[260];
+		static const uint8_t s_binary[PAF_SHADER_SIZE(260, 232)];
 
 		ShaderParameter<TextureSource> m_source;
 	};

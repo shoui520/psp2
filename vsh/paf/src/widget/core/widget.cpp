@@ -461,7 +461,13 @@ ResolutionData *Widget::get_resolution_data(ResolutionData *array, uint32_t num,
 	if (array == NULL || num == 0)
 		return NULL;
 
+#ifdef PAF_BUILD_2014
+	SceneResolution *resolution = m_env != NULL
+		? m_env->FindResolution(m_env->m_resolutions, m_env->m_resolution_num, id)
+		: NULL;
+#else
 	SceneResolution *resolution = ScePafWidget_CDC90BA2(m_scene->m_env_param, id);
+#endif
 
 	if (resolution == NULL)
 		return array;
@@ -667,6 +673,7 @@ extern "C" void ScePafWidget_83214DB9(Widget *widget, bool on, bool force)
 			if (widget->m_focused)
 				widget->ReleaseFocus();
 
+#ifndef PAF_BUILD_2014
 			Widget *owner = widget;
 
 			while (owner != NULL) {
@@ -681,6 +688,7 @@ extern "C" void ScePafWidget_83214DB9(Widget *widget, bool on, bool force)
 					break;
 				owner = owner->m_parent;
 			}
+#endif
 		}
 		widget->m_destroy_protected = on;
 		for (list<Widget *>::iterator it = widget->m_children.begin();
@@ -802,9 +810,15 @@ extern "C" void ScePafWidget_A96A0B4A(Widget *widget, int32_t add)
 
 extern "C" bool ScePafWidget_DB0FFD33(Widget *widget)
 {
+#ifdef PAF_BUILD_2014
+	if (widget != NULL && widget->IsInputTarget() && widget->m_meta_a_sum >= 0.5f &&
+	    !widget->m_culled)
+		return true;
+#else
 	if (widget != NULL && (widget->m_drag_begun || (widget->IsInputTarget() && widget->m_meta_a_sum >= 0.5f)) &&
 	    !widget->m_fit_to_scene && !widget->m_culled)
 		return true;
+#endif
 	return false;
 }
 
@@ -1302,12 +1316,14 @@ int32_t Widget::SetPos(const ResolutionData *pos, uint32_t num, Timer *t, int32_
    short of the scene (name ours) */
 static inline Widget *FindFocusRoot(Widget *widget)
 {
+#ifndef PAF_BUILD_2014
 	for (Widget *root = widget; root != NULL; root = root->m_parent) {
 		if (root->m_focus_root != NULL)
 			return root;
 		if (static_cast<Widget *>(widget->m_scene) == root)
 			return NULL;
 	}
+#endif
 	return NULL;
 }
 
@@ -1387,18 +1403,25 @@ extern "C" int32_t ScePafWidget_2B1A1493(Widget *widget, int32_t index)
 
 	if (env->m_sound_callback == NULL)
 		return -1;
+#ifdef PAF_BUILD_2014
+	env->m_sound_callback(sound->m_buffer1, sound->m_size1, sound->m_buffer2, sound->m_size2,
+			      sound->m_samplerate, false, env->m_sound_callback_data);
+#else
 	env->m_sound_callback(sound->m_buffer1, sound->m_size1, sound->m_buffer2, sound->m_size2,
 			      sound->m_samplerate, sound->reserved2, false, env->m_sound_callback_data);
+#endif
 	return 0;
 }
 
 void Widget::SetGroupCurrent(bool current)
 {
+#ifndef PAF_BUILD_2014
 	if (m_group_current != current) {
 		m_group_current = current;
 		if (!current && m_pad_button_port >= 0)
 			ReleasePadCaptureButton(255, true);
 	}
+#endif
 }
 
 extern "C" int32_t ScePafWidget_D3D0A7C3(Widget *widget, uint32_t port, uint32_t id, bool apply,
@@ -1443,11 +1466,13 @@ extern "C" int32_t ScePafWidget_D3D0A7C3(Widget *widget, uint32_t port, uint32_t
 	if (widget->m_touch_captures.size() == 1) {
 		if (widget->m_touch_gesture_mask != 0 && port == 0) {
 			widget->apply_touch_gesture_mask(0, id, widget->m_touch_gesture_mask);
+#ifndef PAF_BUILD_2014
 			if ((widget->m_event_enable & 0x400) != 0 && widget->IsTextEventEnabled() &&
 			    widget->m_touch_gesture_mask != 0 && !widget->m_env->m_focus_auto_off) {
 				widget->m_env->ReleaseFocusBeyond(widget);
 				widget->SetFocus(NULL);
 			}
+#endif
 		}
 	} else if (widget->m_touch_captures.size() > 1) {
 		uint32_t mask = widget->m_touch_gesture_mask;
@@ -1523,6 +1548,9 @@ extern "C" int32_t ScePafWidget_093F1C89(Widget *widget, uint32_t port, uint32_t
 
 int32_t Widget::CapturePadButton(uint32_t port, uint32_t key, bool reset)
 {
+#ifdef PAF_BUILD_2014
+	return 0;
+#else
 	if (port >= 5)
 		return -1;
 	if (m_env == NULL)
@@ -1561,10 +1589,14 @@ int32_t Widget::CapturePadButton(uint32_t port, uint32_t key, bool reset)
 		m_env->m_ev_queue.PushBack(e);
 	}
 	return 0;
+#endif
 }
 
 int32_t Widget::CapturePadDir(uint32_t port, uint32_t key, bool reset)
 {
+#ifdef PAF_BUILD_2014
+	return 0;
+#else
 	if (port >= 5)
 		return -1;
 
@@ -1602,8 +1634,10 @@ int32_t Widget::CapturePadDir(uint32_t port, uint32_t key, bool reset)
 		m_env->m_ev_queue.PushBack(e);
 	}
 	return 0;
+#endif
 }
 
+#ifndef PAF_BUILD_2014
 /* a direction key that m_keycode does not bind (inline in Sony's CapturePad; name ours) */
 static __attribute__((always_inline)) bool IsPadDirKey(Widget *widget, uint32_t key)
 {
@@ -1615,9 +1649,13 @@ static __attribute__((always_inline)) bool IsPadDirKey(Widget *widget, uint32_t 
 	}
 	return false;
 }
+#endif
 
 int32_t Widget::CapturePad(uint32_t port, uint32_t key, bool reset, bool reset_touch)
 {
+#ifdef PAF_BUILD_2014
+	return 0;
+#else
 	if (m_env == NULL)
 		return -1;
 	if (reset_touch) {
@@ -1634,6 +1672,7 @@ int32_t Widget::CapturePad(uint32_t port, uint32_t key, bool reset, bool reset_t
 		return CapturePadButton(port, key, reset);
 	}
 	return -1;
+#endif
 }
 
 extern "C" int32_t ScePafWidget_4E47E55A(Widget *widget, uint32_t mode, DragState *drag)
@@ -2551,6 +2590,9 @@ extern "C" int32_t ScePafWidget_54DFB062(Widget *widget, int32_t port)
 
 extern "C" int32_t ScePafWidget_00AA6519(Widget *widget)
 {
+#ifdef PAF_BUILD_2014
+	return 0;
+#else
 	if (widget->m_focus_root != NULL)
 		return 0;
 
@@ -2618,10 +2660,14 @@ extern "C" int32_t ScePafWidget_00AA6519(Widget *widget)
 	if (auto_off)
 		widget->m_env->m_focus_auto_off = auto_off;
 	return 0;
+#endif
 }
 
 extern "C" int32_t ScePafWidget_929C3278(Widget *widget)
 {
+#ifdef PAF_BUILD_2014
+	return 0;
+#else
 	FocusRoot *root = widget->m_focus_root;
 
 	if (root == NULL)
@@ -2637,18 +2683,21 @@ extern "C" int32_t ScePafWidget_929C3278(Widget *widget)
 	widget->SetFocusRootState(0);
 	widget->m_env->m_focus_candidates.Remove(widget);
 	return 0;
+#endif
 }
 
 /* the first widget of the nearest focus root at or above the widget, up to its scene (0x81150cac;
    name ours) */
 extern "C" Widget *FindRootFocus(Widget *widget)
 {
+#ifndef PAF_BUILD_2014
 	for (Widget *w = widget; w != NULL; w = w->m_parent) {
 		if (w->m_focus_root != NULL)
 			return w->m_focus_root->m_init_focus;
 		if ((Widget *)widget->m_scene == w)
 			break;
 	}
+#endif
 	return NULL;
 }
 
@@ -2661,6 +2710,11 @@ extern "C" int32_t ScePafWidget_0253DC9C(Widget *widget, bool on)
 	if (widget->m_ordered == on)
 		return 0;
 	widget->m_ordered = on;
+#ifdef PAF_BUILD_2014
+	if (!on)
+		return env->RemoveOrderedWidget(widget);
+	return env->AddOrderedWidget(widget);
+#else
 	ScePafWidget_00AA6519(widget);
 	env = widget->m_env;
 	if (!on)
@@ -2669,10 +2723,12 @@ extern "C" int32_t ScePafWidget_0253DC9C(Widget *widget, bool on)
 		return -1;
 	env->m_ordered_widgets.Sort();
 	return env->m_ordered_widgets.Add(widget, -1) != NULL ? 0 : -1;
+#endif
 }
 
 extern "C" void ScePafWidget_EC6175D6(Widget *widget, bool on)
 {
+#ifndef PAF_BUILD_2014
 	Widget *root = FindFocusRoot(widget);
 
 	if (root == NULL)
@@ -2689,6 +2745,7 @@ extern "C" void ScePafWidget_EC6175D6(Widget *widget, bool on)
 	} else if (focus->m_init_focus == widget) {
 		focus->m_init_focus = NULL;
 	}
+#endif
 }
 
 void Widget::SetGestureMask(uint32_t mask, bool update)
@@ -2725,12 +2782,16 @@ Widget *Widget::FindChild(Widget *child, int32_t option)
 /* whether it is the widget its focus root focuses first */
 bool Widget::IsInitFocus()
 {
+#ifdef PAF_BUILD_2014
+	return false;
+#else
 	Widget *root = FindFocusRoot(this);
 	bool init = false;
 
 	if (root != NULL && root->m_focus_root != NULL && root->m_focus_root->m_init_focus == this)
 		init = true;
 	return init;
+#endif
 }
 
 int32_t Widget::EventExecDispatch(Event *e)
@@ -2831,12 +2892,16 @@ int32_t Widget::HandleKeycodeEvent(Event *e)
 				}
 			} else if ((uint16_t)type > 0x10) {
 				if ((uint16_t)type <= 0x11) {
+#ifdef PAF_BUILD_2014
+					if (ScePafWidget_DB0FFD33(this)) {
+#else
 					uint32_t mask;
 
 					if (ScePafWidget_DB0FFD33(this) ||
 					    (m_keycode_capture &&
 					     (mask = KeycodeToMask((uint8_t)e->m_detail), m_bound_keycode) &&
 					     (mask & m_keycode) != 0)) {
+#endif
 						CapturePad((e->m_detail >> 20) & 0xf, (uint8_t)e->m_detail, true, true);
 						e->m_type = (e->m_type & 0xf0ffffff) | Event::STATE_CONSUME;
 					}
@@ -2922,8 +2987,10 @@ void Widget::UpdateAnims()
 void Widget::OnUpdate()
 {
 	Update();
+#ifndef PAF_BUILD_2014
 	if (m_focus_root != NULL)
 		m_focus_root->m_focus_hold = 0;
+#endif
 	if (m_children.size() != 0) {
 		list<Widget *>::iterator end = m_children.end();
 
@@ -2938,6 +3005,7 @@ void Widget::OnUpdate()
 		UpdateShowTimer();
 	UpdateAfterChildren();
 
+#ifndef PAF_BUILD_2014
 	FocusRoot *own = m_focus_root;
 
 	if (own != NULL) {
@@ -2969,6 +3037,7 @@ void Widget::OnUpdate()
 			}
 		}
 	}
+#endif
 	if (!m_transition_in && !m_transition_out) {
 		if (m_hold_count <= 0)
 			UpdateTimer();
@@ -3078,8 +3147,10 @@ next:
 	s_list_restruct.clear();
 	for (map<Scene *, int32_t>::iterator it = scenes.begin(); it != scenes.end(); ++it) {
 		it->first->UpdateLayerWeight();
+#ifndef PAF_BUILD_2014
 		if (it->first->m_env != NULL)
 			it->first->m_env->m_layer_weight_changed = true;
+#endif
 	}
 }
 
@@ -3101,6 +3172,20 @@ void Widget::detach_environment()
 		return;
 	if (m_texture_request_count > 0)
 		env->RemoveTextureRequests(this);
+#ifdef PAF_BUILD_2014
+	if (m_modal_mode != 2) {
+		m_env->RemoveModalWidget(this);
+		m_modal_mode = 2;
+	}
+	if (m_ordered)
+		ScePafWidget_0253DC9C(this, false);
+	ScePafWidget_931AD41E(this, false);
+	m_env->ClearHitInfo(this);
+	if (m_focused)
+		ReleaseFocus();
+	if (m_touch_region_registered)
+		m_env->RemoveTouchDeviceRegion(this);
+#else
 	if (m_pad_dir_port >= 0)
 		ReleasePadCaptureDir(255, true);
 	if (m_bound_keycode) {
@@ -3157,6 +3242,7 @@ void Widget::detach_environment()
 		ScePafWidget_929C3278(this);
 	if (m_touch_region_registered)
 		m_env->RemoveTouchDeviceRegion(this);
+#endif
 }
 
 int32_t Widget::ReleaseTouchCapture(map<uint32_t, TouchCapture *>::iterator it, TouchCapture *capture,
@@ -3283,6 +3369,165 @@ int32_t Widget::ClearDragState(DragState *state)
 	return 0;
 }
 
+#ifdef PAF_BUILD_2014
+static int32_t SetFocusChildChain(Widget *parent, Widget *child, bool recursive)
+{
+	if (child == NULL || child->m_hold_count > 0)
+		return -1;
+	parent->m_focus_child = child;
+	if (recursive && parent->m_parent != NULL)
+		return SetFocusChildChain(parent->m_parent, parent, true);
+	return 0;
+}
+
+void Widget::SetFocusState(bool focused)
+{
+	if (m_focused != focused) {
+		m_focused = focused;
+		if (focused) {
+			Event e(0x401, this, Event::ROUTE_TERM, 0);
+
+			if (m_env != NULL)
+				m_env->m_ev_queue.PushBack(e);
+			DoEvent(0x20040001, &e);
+		} else {
+			Event e(0x402, this, Event::ROUTE_TERM, 0);
+
+			if (m_env != NULL)
+				m_env->m_ev_queue.PushBack(e);
+			DoEvent(0x20040002, &e);
+		}
+	}
+}
+
+int32_t Widget::SetFocus(bool find_child, int32_t port)
+{
+	if (m_hold_count > 0)
+		return -1;
+	if ((m_event_enable & 0x400) == 0)
+		return -2;
+	if (m_env == NULL)
+		return -3;
+	if (find_child) {
+		FocusSearchInfo info(21);
+		Widget *found = SearchFocus(&info, this, 1);
+
+		if (found != NULL)
+			return found->SetFocus(false, port);
+		return -1;
+	}
+	if (m_env->SetFocusWidget(this, port) != 0)
+		return -1;
+	if (m_parent != NULL && SetFocusChildChain(m_parent, this, true) != 0)
+		return -1;
+	return 0;
+}
+
+Widget *Widget::SearchFocusChildren(FocusSearchInfo *info, Widget *skip)
+{
+	if (info == NULL)
+		return NULL;
+
+	Widget *found = NULL;
+	int32_t best = 0;
+
+	info->m_distance = 0;
+	for (list<Widget *>::iterator it = m_children.begin(); it != m_children.end(); ++it) {
+		Widget *child = *it;
+
+		if (child->m_hold_count > 0 || IsShowHeld(child))
+			continue;
+		if (!child->IsInputTarget() || child->m_meta_a_sum < 0.5f)
+			continue;
+
+		int32_t score = 0;
+
+		if ((child->m_event_enable & 0x400) != 0 && !child->m_culled &&
+		    child->m_hit_detect_mode != 3) {
+			Focuser *focuser = child->m_focuser;
+
+			if (focuser != NULL)
+				score = focuser->ScePafWidget_97020684(info);
+		}
+		if (best < score) {
+			best = score;
+			found = child;
+		}
+		if (child != skip && child->m_focus_count != 0 && !child->m_focus_leaf &&
+		    child->m_children.size() != 0) {
+			Widget *sub = child->SearchFocusChildren(info, NULL);
+
+			if (best < info->m_distance) {
+				best = info->m_distance;
+				found = sub;
+			}
+		}
+	}
+	info->m_distance = best;
+	return found;
+}
+
+Widget *Widget::SearchFocus(FocusSearchInfo *info, Widget *from, uint32_t mode)
+{
+	if (info == NULL || m_parent == NULL)
+		return NULL;
+	if (mode != 0) {
+		if (!m_focus_leaf) {
+			Widget *found = SearchFocusChildren(info, NULL);
+
+			if (found != NULL)
+				return found;
+		}
+		if (!m_focus_skip && (m_event_enable & 0x400) != 0)
+			return this;
+		return NULL;
+	}
+	if (!m_focus_skip_sibling) {
+		Widget *found = m_parent->SearchFocusChildren(info, this);
+
+		if (found != NULL)
+			return found;
+	}
+	if (this == static_cast<Widget *>(m_scene) || m_focus_stop_parent)
+		return NULL;
+	return m_parent->SearchFocus(info, this, 0);
+}
+
+extern "C" int32_t ScePafWidget_164BFFA5(Widget *widget, uint32_t mask)
+{
+	return 0;
+}
+
+extern "C" int32_t ScePafWidget_21125870(Widget *widget, uint32_t keycode)
+{
+	return 0;
+}
+
+extern "C" int32_t ScePafWidget_42C5A4D4(Widget *widget, int32_t mode, int32_t option)
+{
+	Environment *env = widget->m_env;
+
+	if (env == NULL)
+		return -1;
+
+	uint32_t previous = widget->m_modal_mode;
+
+	if (mode == (int32_t)previous)
+		return 0;
+	if (mode == 2) {
+		widget->m_modal_mode = mode;
+		return env->RemoveModalWidget(widget);
+	}
+	if (previous != 2) {
+		widget->m_modal_mode = 2;
+		env->RemoveModalWidget(widget);
+	}
+	if (mode != 0 && mode != 1)
+		return -1;
+	widget->m_modal_mode = mode;
+	return env->AddModalWidget(widget, mode);
+}
+#else
 int32_t Widget::SetFocus(SetFocusInfo *info)
 {
 	if (m_hold_count > 0)
@@ -3713,6 +3958,7 @@ extern "C" int32_t ScePafWidget_42C5A4D4(Widget *widget, int32_t mode, int32_t o
 		ScePafWidget_00AA6519(widget);
 	return result;
 }
+#endif
 
 void Widget::SetInputTarget(bool on)
 {
@@ -3769,6 +4015,7 @@ extern "C" int32_t ScePafWidget_4588699E(Widget *widget, Timer *t, int32_t opt, 
  * value set otherwise is written back into the entry; then the widget's cursor
  * is made a copy of the shape.
  */
+#ifndef PAF_BUILD_2014
 extern "C" void ScePafWidget_13B246E0(Widget *widget, FocusShape *shape)
 {
 	ResolutionData *entry;
@@ -3842,6 +4089,7 @@ extern "C" void ScePafWidget_13B246E0(Widget *widget, FocusShape *shape)
 	focus->m_use_parts = shape->m_use_parts;
 	focus->m_changed = shape->m_changed;
 }
+#endif
 
 extern "C" float ScePafWidget_44B22ACA(Widget *widget, common::transition::Type type, float delay,
 				       HandlerCB cb, void *data)
@@ -3850,7 +4098,9 @@ extern "C" float ScePafWidget_44B22ACA(Widget *widget, common::transition::Type 
 	if (widget->m_transition_complete) {
 		delay = 0.0f;
 	} else {
+#ifndef PAF_BUILD_2014
 		widget->m_transition = type;
+#endif
 		widget->m_transition_complete = true;
 		if (type == 255)
 			delay = widget->DoTransition_core(delay, false);
@@ -3865,7 +4115,9 @@ extern "C" float ScePafWidget_44B22ACA(Widget *widget, common::transition::Type 
 extern "C" float ScePafWidget_F1176ACC(Widget *widget, common::transition::Type type, float delay,
 				       HandlerCB cb, void *data)
 {
+#ifndef PAF_BUILD_2014
 	widget->m_transition = type;
+#endif
 	widget->m_transition_complete = false;
 	if (type == 255)
 		delay = widget->DoTransitionReverse_core(delay, false);
@@ -3879,6 +4131,9 @@ extern "C" float ScePafWidget_F1176ACC(Widget *widget, common::transition::Type 
 
 int32_t Widget::HandleFocusSwitchEvent(Event *e)
 {
+#ifdef PAF_BUILD_2014
+	return Handler::HandleFocusSwitchEvent(e);
+#else
 	Environment *env = m_env;
 
 	if (env == NULL)
@@ -4018,10 +4273,14 @@ int32_t Widget::HandleFocusSwitchEvent(Event *e)
 			env->m_focus_cursor.AddFocusHistory(cursor_target, target, dir);
 	}
 	return 0;
+#endif
 }
 
 bool Widget::IsFocusFree()
 {
+#ifdef PAF_BUILD_2014
+	return false;
+#else
 	Environment *env = m_env;
 
 	if (env == NULL)
@@ -4036,10 +4295,12 @@ bool Widget::IsFocusFree()
 	if (m_focus_root == NULL || m_focus_root->m_pending == 0)
 		return true;
 	return false;
+#endif
 }
 
 void Widget::UpdateAfterChildren()
 {
+#ifndef PAF_BUILD_2014
 	FocusRoot *focus_root = m_focus_root;
 
 	if (focus_root == NULL)
@@ -4101,6 +4362,7 @@ void Widget::UpdateAfterChildren()
 	focus_root->m_focus_moved++;
 	if (focus_root->m_focus_moved >= 60)
 		focus_root->m_focus_moved = 0;
+#endif
 }
 
 extern "C" int32_t ScePafWidget_11D537AF(Widget *widget, uint32_t id, Timer *t, bool children)
@@ -4179,10 +4441,12 @@ void Widget::ReleaseShowHolds(bool recursive)
 {
 	if (m_touch_captures.size() != 0)
 		ScePafWidget_931AD41E(this, true);
+#ifndef PAF_BUILD_2014
 	if (m_pad_dir_port >= 0)
 		ReleasePadCaptureDir(255, true);
 	if (m_pad_button_port >= 0)
 		ReleasePadCaptureButton(255, true);
+#endif
 	if (recursive) {
 		list<Widget *>::iterator it = m_children.begin();
 
@@ -4195,6 +4459,7 @@ void Widget::ReleaseShowHolds(bool recursive)
 
 void Widget::SetCursorOn(bool on, Widget *from, Widget *to)
 {
+#ifndef PAF_BUILD_2014
 	if (m_cursor_on == on)
 		return;
 	m_cursor_on = on;
@@ -4215,6 +4480,7 @@ void Widget::SetCursorOn(bool on, Widget *from, Widget *to)
 		if (m_pad_dir_port >= 0)
 			ReleasePadCaptureDir(27, true);
 	}
+#endif
 }
 
 void Widget::NotifyCursorGroup(bool on, Widget *from, Widget *to)
@@ -4403,7 +4669,9 @@ int32_t Widget::EnableTouchRearEvent(bool on_off)
 bool Widget::RemoveChild(Widget *obj)
 {
 	bool found = false;
+#ifndef PAF_BUILD_2014
 	int32_t index = 0;
+#endif
 	list<Widget *>::iterator it = m_children.begin();
 
 	while (it != m_children.end()) {
@@ -4428,41 +4696,60 @@ bool Widget::RemoveChild(Widget *obj)
 			if (it == m_children.end())
 				break;
 		}
+#ifndef PAF_BUILD_2014
 		(*it)->m_priority = index++;
+#endif
 		++it;
 	}
+#ifdef PAF_BUILD_2014
+	if (found && m_focus_child == obj)
+		m_focus_child = NULL;
+#endif
 	return found;
 }
 
 void Widget::RegisterChild(Widget *obj, Widget *sibling)
 {
 	if (sibling != NULL && sibling->m_parent == this) {
+#ifndef PAF_BUILD_2014
 		int32_t index = 0;
+#endif
 		list<Widget *>::iterator pos = m_children.begin();
 
 		if (pos != m_children.end()) {
 			while (*pos != sibling) {
 				++pos;
+#ifndef PAF_BUILD_2014
 				index++;
+#endif
 				if (pos == m_children.end())
 					goto insert;
 			}
+#ifndef PAF_BUILD_2014
 			index++;
+#endif
 		}
 insert:
 		list<Widget *>::iterator it = m_children.insert(pos, obj);
-
+#ifndef PAF_BUILD_2014
 		while (it != m_children.end()) {
 			(*it)->m_priority = index;
 			++it;
 			index++;
 		}
+#else
+		(void)it;
+#endif
 	} else {
+#ifndef PAF_BUILD_2014
 		obj->m_priority = m_children.size();
+#endif
 		m_children.push_back(obj);
 	}
+#ifndef PAF_BUILD_2014
 	obj->ApplyParentState(m_input_target, m_surface_draw, m_transition_in, m_destroy_protected,
 			      m_layer + 1, m_show_a_sum, m_meta_a_sum);
+#endif
 	if (obj->m_prepare_count + (obj->m_state == 3) != 0)
 		CountPrepareChildren(obj->m_prepare_count + (obj->m_state == 3));
 
@@ -4510,6 +4797,7 @@ bool Widget::UpdateSurfaceDraw(bool on)
 	return true;
 }
 
+#ifndef PAF_BUILD_2014
 void Widget::ApplyParentState(bool input_target, bool surface_draw, bool transition_in,
 			      bool destroy_protected, uint32_t layer, float parent_show_sum,
 			      float parent_meta_sum)
@@ -4531,13 +4819,16 @@ void Widget::ApplyParentState(bool input_target, bool surface_draw, bool transit
 						m_meta_a_sum);
 	}
 }
+#endif
 
 bool Widget::ReorderChild(Widget *obj, Widget *sibling)
 {
 	if (obj == sibling)
 		return true;
 
+#ifndef PAF_BUILD_2014
 	int32_t index = 0;
+#endif
 	bool found = false;
 	list<Widget *>::iterator it = m_children.begin();
 
@@ -4550,34 +4841,45 @@ bool Widget::ReorderChild(Widget *obj, Widget *sibling)
 			if (it == m_children.end())
 				break;
 		}
+#ifndef PAF_BUILD_2014
 		(*it)->m_priority = index++;
+#endif
 		++it;
 	}
 	if (!found)
 		return false;
 	if (sibling != NULL && sibling->m_parent == this) {
+#ifndef PAF_BUILD_2014
 		index = 0;
-
+#endif
 		list<Widget *>::iterator pos = m_children.begin();
 
 		if (pos != m_children.end()) {
 			while (*pos != sibling) {
 				++pos;
+#ifndef PAF_BUILD_2014
 				index++;
+#endif
 				if (pos == m_children.end())
 					goto insert;
 			}
+#ifndef PAF_BUILD_2014
 			index++;
+#endif
 		}
 insert:
 		it = m_children.insert(pos, obj);
+#ifndef PAF_BUILD_2014
 		while (it != m_children.end()) {
 			(*it)->m_priority = index;
 			++it;
 			index++;
 		}
+#endif
 	} else {
+#ifndef PAF_BUILD_2014
 		obj->m_priority = m_children.size();
+#endif
 		m_children.push_back(obj);
 	}
 	return true;
@@ -4634,6 +4936,7 @@ int32_t Widget::ChangeResolution_core(uint32_t id, bool children, bool update)
 				SetRot(math::v4(entry->m_value[0], entry->m_value[1],
 						entry->m_value[2], 0.0f),
 				       0, NULL, ANIM_ROT, 0, 0.0f, NULL, NULL);
+#ifndef PAF_BUILD_2014
 			if (m_focus_shape != NULL)
 				ScePafWidget_13B246E0(this, m_focus_shape);
 			if (this != m_scene) {
@@ -4662,6 +4965,7 @@ int32_t Widget::ChangeResolution_core(uint32_t id, bool children, bool update)
 					ScePafWidget_FF5BC957(this, NULL, 2, 0.0f, NULL);
 				}
 			}
+#endif
 			if (m_layouter != NULL)
 				m_layouter->SetDirty(1);
 		}
@@ -4687,6 +4991,28 @@ int32_t Widget::SetParent_core(Widget *parent, Widget *sibling)
 		return 0;
 	}
 
+#ifdef PAF_BUILD_2014
+	if (old_parent != NULL) {
+		LayoutDirty(this, 0xFFFF);
+		m_parent->RemoveChild(this);
+		m_parent = NULL;
+	}
+	if (parent == NULL) {
+		SetScene_core(NULL);
+		m_parent = parent;
+		return 0;
+	}
+	m_parent = parent;
+	parent->RegisterChild(this, sibling);
+	SetScene_core(m_parent->m_scene);
+	SetEnvironment(m_parent->m_env);
+	SetUpdateParam(2);
+	ChangeResolution_core(m_parent->m_resolution_id, true, true);
+	if (m_drag_state[0] != NULL)
+		ScePafWidget_E17C2B53(this, m_drag_state[0], NULL, 1.0f);
+	LayoutDirty(this, 0xFFFF);
+	return 0;
+#else
 	bool focus_auto_off = false;
 	Environment *env = m_env;
 
@@ -4761,6 +5087,7 @@ int32_t Widget::SetParent_core(Widget *parent, Widget *sibling)
 		ScePafWidget_E17C2B53(this, m_drag_state[0], NULL, 1.0f);
 	LayoutDirty(this, 0xFFFF);
 	return 0;
+#endif
 }
 
 /* the vector's lanes weighted by the matrix's columns, as Sony's CalcBound has it inline (name
@@ -5917,7 +6244,9 @@ common::SharedPtr<inputdevice::GestureListener> Widget::apply_pad_gesture_tap(ui
 			tap->m_target = 2;
 		else if ((type & 1) != 0)
 			tap->m_target = 1;
+#ifndef PAF_BUILD_2014
 		tap->m_param.m_on_press = m_pad_tap_on_press;
+#endif
 	}
 	return listener;
 }
@@ -6007,7 +6336,11 @@ common::SharedPtr<inputdevice::GestureListener> ScePafWidget_DE7EC3CF(Widget *wi
 		}
 	}
 	if (listener.get() == NULL) {
+#ifdef PAF_BUILD_2014
+		if (port == 1)
+#else
 		if (port == 1 && widget->m_env->m_motion_noise_filter)
+#endif
 			listener = common::SharedPtr<inputdevice::GestureListener>(
 				new MotionGestureListener(port, touch_id, widget));
 		if (listener.get() != NULL) {
@@ -6221,8 +6554,10 @@ void Widget::apply_touch_gesture_mask(uint32_t port_id, uint32_t touch_id, uint3
 	math::rect hit = CalcHitRect();
 	math::rect *rect = NULL;
 
+#ifndef PAF_BUILD_2014
 	if (m_enable_tap)
 		rect = &hit;
+#endif
 	if ((type & 1) != 0 || (type & 2) != 0)
 		ScePafWidget_5E7757AA(this, port_id, touch_id, type, rect);
 	if ((type & 4) != 0 || (type & 8) != 0)
@@ -6291,6 +6626,9 @@ static uint32_t PadKeyMask(int32_t keycode)
 
 int32_t Widget::ReleasePadCaptureDir(uint32_t key, bool reset)
 {
+#ifdef PAF_BUILD_2014
+	return -1;
+#else
 	int8_t port = m_pad_dir_port;
 
 	if (port < 0)
@@ -6318,10 +6656,14 @@ int32_t Widget::ReleasePadCaptureDir(uint32_t key, bool reset)
 		return 0;
 	}
 	return -1;
+#endif
 }
 
 int32_t Widget::ReleasePadCaptureButton(uint32_t key, bool reset)
 {
+#ifdef PAF_BUILD_2014
+	return -1;
+#else
 	int8_t port = m_pad_button_port;
 
 	if (port < 0)
@@ -6349,10 +6691,14 @@ int32_t Widget::ReleasePadCaptureButton(uint32_t key, bool reset)
 		return 0;
 	}
 	return -1;
+#endif
 }
 
 int32_t Widget::SetFocusRootFocus(Widget *target, bool notify)
 {
+#ifdef PAF_BUILD_2014
+	return -1;
+#else
 	Environment *env = m_env;
 
 	if (env == NULL)
@@ -6380,10 +6726,16 @@ int32_t Widget::SetFocusRootFocus(Widget *target, bool notify)
 	else
 		env->UpdateFocus(notify ? this : NULL, NULL);
 	return 0;
+#endif
 }
 
 int32_t Widget::ReleaseFocus()
 {
+#ifdef PAF_BUILD_2014
+	if (m_env == NULL)
+		return -1;
+	return m_env->ReleaseFocusWidget(this);
+#else
 	Widget *root = FindFocusRoot(this);
 
 	if (root == NULL)
@@ -6391,8 +6743,10 @@ int32_t Widget::ReleaseFocus()
 	if ((Widget *)root->m_focus_root->m_state == this)
 		return root->SetFocusRootFocus(NULL, true);
 	return -1;
+#endif
 }
 
+#ifndef PAF_BUILD_2014
 /* a layer's count in the scene changed, the weights marked to be made again (inline in Sony's
    code; name ours) */
 static inline void AddLayerRange(Scene *scene, uint32_t layer, int32_t delta)
@@ -6404,6 +6758,7 @@ static inline void AddLayerRange(Scene *scene, uint32_t layer, int32_t delta)
 		scene->m_layer_range[layer] = count + delta;
 	}
 }
+#endif
 
 int32_t Widget::SetDrawObjMaskBit(const void *param, int32_t obj)
 {
@@ -6519,7 +6874,9 @@ void Widget::detach_scene()
 	Scene *scene = m_scene;
 
 	if (scene != NULL) {
+#ifndef PAF_BUILD_2014
 		AddLayerRange(scene, m_layer_old, -1);
+#endif
 		if (m_draw_target == 1) {
 			scene->RemoveSurfaceWidget(this);
 			scene = m_scene;
@@ -6575,6 +6932,7 @@ void Widget::DestroyWidget()
 	for (vector<DrawObjEntry>::iterator it = m_drawobjs.begin(); it != m_drawobjs.end(); ++it)
 		it->m_obj->ReleaseAll();
 
+#ifndef PAF_BUILD_2014
 	FocusReferrers *referrers = m_focus_referrers;
 
 	if (referrers != NULL) {
@@ -6643,6 +7001,7 @@ void Widget::DestroyWidget()
 				RemoveFromList(member->m_focus_referrers->m_roots, this);
 		}
 	}
+#endif
 
 	if (m_timer_pending) {
 		DropTimer(s_destroy_timers, this);
@@ -6666,6 +7025,27 @@ void Widget::DestroyWidget()
 
 int32_t Widget::SetScene_core(Scene *scene)
 {
+#ifdef PAF_BUILD_2014
+	if (m_scene != scene && m_hold_count <= 0) {
+		if (m_draw_target == 1) {
+			if (m_scene != NULL)
+				m_scene->RemoveSurfaceWidget(this);
+			if (scene != NULL) {
+				if (scene->m_surface_widgets.size() == 0)
+					scene->CreateBgLayer();
+
+				Scene::SurfaceWidget surface = {};
+
+				surface.m_widget = this;
+				scene->m_surface_widgets.push_back(surface);
+			}
+		}
+		m_scene = scene;
+		for (list<Widget *>::iterator it = m_children.begin(); it != m_children.end();
+		     it++)
+			(*it)->SetScene_core(scene);
+	}
+#else
 	if ((m_scene != scene || m_layer != m_layer_old) && m_hold_count <= 0) {
 		if (m_scene != NULL)
 			detach_scene();
@@ -6687,6 +7067,7 @@ int32_t Widget::SetScene_core(Scene *scene)
 		     it++)
 			(*it)->SetScene_core(scene);
 	}
+#endif
 	return 0;
 }
 
@@ -6701,8 +7082,15 @@ int32_t Widget::get_resolution_data2(const ResolutionData *array, uint32_t num, 
 	*a = NULL;
 	*b = NULL;
 
+#ifdef PAF_BUILD_2014
+	SceneResolution *resolution_a = m_env->FindResolution(
+		m_env->m_resolutions, m_env->m_resolution_num, id_a);
+	SceneResolution *resolution_b = m_env->FindResolution(
+		m_env->m_resolutions, m_env->m_resolution_num, id_b);
+#else
 	SceneResolution *resolution_a = ScePafWidget_CDC90BA2(m_scene->m_env_param, id_a);
 	SceneResolution *resolution_b = ScePafWidget_CDC90BA2(m_scene->m_env_param, id_b);
+#endif
 
 	if (resolution_a == NULL || resolution_b == NULL)
 		return -1;
@@ -7333,8 +7721,14 @@ int32_t Widget::SetSize_core(const math::v4 &size, uint32_t notify_layout, bool 
 			height = screen.height();
 		}
 		if (this == m_scene) {
+#ifdef PAF_BUILD_2014
+			SceneResolution *resolution = m_env->FindResolution(
+				m_env->m_resolutions, m_env->m_resolution_num,
+				m_scene->m_resolution_id);
+#else
 			SceneResolution *resolution =
 				ScePafWidget_CDC90BA2(m_scene->m_env_param, m_scene->m_resolution_id);
+#endif
 
 			if (resolution != NULL && m_scene->IsResolutionActMorph(m_scene->m_resolution_id)) {
 				width = (float)resolution->m_width;
@@ -7689,7 +8083,13 @@ static inline ResolutionData *FindResolutionData(Widget *w, ResolutionData *arra
 	if (array == NULL || num == 0)
 		return NULL;
 
+#ifdef PAF_BUILD_2014
+	SceneResolution *resolution = w->m_env != NULL
+		? w->m_env->FindResolution(w->m_env->m_resolutions, w->m_env->m_resolution_num, id)
+		: NULL;
+#else
 	SceneResolution *resolution = ScePafWidget_CDC90BA2(w->m_scene->m_env_param, id);
+#endif
 
 	if (resolution == NULL)
 		return NULL;
@@ -7723,10 +8123,18 @@ void Widget::UpdateResolutionTimer()
 		m_resolution_id_next = 0xFF;
 		if (this == scene && m_env != NULL) {
 			/* the scene: its screen resized where the sizes change, and itself */
+#ifdef PAF_BUILD_2014
+			SceneResolution *pre = m_env->FindResolution(
+				m_env->m_resolutions, m_env->m_resolution_num, m_resolution_id_pre);
+			SceneResolution *resolution = m_env->FindResolution(
+				m_env->m_resolutions, m_env->m_resolution_num,
+				m_scene->m_resolution_id);
+#else
 			SceneResolution *pre =
 				ScePafWidget_CDC90BA2(scene->m_env_param, m_resolution_id_pre);
 			SceneResolution *resolution =
 				ScePafWidget_CDC90BA2(m_scene->m_env_param, m_scene->m_resolution_id);
+#endif
 
 			if (resolution != NULL &&
 			    (pre == NULL || pre->m_viewport_width != resolution->m_viewport_width ||
@@ -7763,6 +8171,7 @@ void Widget::UpdateResolutionTimer()
 
 				SetRot(rot, 0, t, ANIM_ROT, 2, 0.0f, NULL, NULL);
 			}
+#ifndef PAF_BUILD_2014
 			if (m_focus_shape != NULL)
 				ScePafWidget_13B246E0(this, m_focus_shape);
 			if (m_transition != 0xFF && m_transition_complete) {
@@ -7770,6 +8179,7 @@ void Widget::UpdateResolutionTimer()
 				ScePafWidget_F1176ACC(this, (common::transition::Type)m_transition, 0.0f,
 						      NULL, NULL);
 			}
+#endif
 		}
 	}
 
@@ -7779,11 +8189,13 @@ void Widget::UpdateResolutionTimer()
 	if (timer != NULL && timer->m_state == Timer::State_Finished) {
 		delete timer;
 		m_resolution_timer = NULL;
+#ifndef PAF_BUILD_2014
 		if (m_transition != 0xFF && m_resolution_morph) {
 			ScePafWidget_44B22ACA(this, (common::transition::Type)m_transition, 0.0f, NULL,
 					      NULL);
 			m_resolution_morph = false;
 		}
+#endif
 		if (m_scene != NULL && m_scene->IsResolutionActMorph(m_resolution_id))
 			m_resolution_id_pre = m_resolution_id;
 		if (m_layouter != NULL)
@@ -8417,7 +8829,11 @@ static inline void SetDrawObjSurfaceDraw(Widget *widget, graph::DrawObj *obj)
 {
 	graph::SurfaceDrawParam param;
 
+#ifdef PAF_BUILD_2014
+	param.m_font_flags = 128;
+#else
 	param.m_font_flags = widget->m_scene != NULL ? widget->m_scene->m_font_flags : 128;
+#endif
 	param.m_surface_draw = widget->m_surface_draw;
 	obj->SetSurfaceDraw(param);
 }
@@ -8433,12 +8849,14 @@ void Widget::AddDrawObj(const DrawObjEntry &entry, bool update)
 		UpdateSize();
 }
 
+#ifndef PAF_BUILD_2014
 uint64_t Widget::GetLayerDepth()
 {
 	if ((Widget *)m_scene == this)
 		return 0;
 	return m_parent->GetLayerDepth() + (uint64_t)m_priority * m_scene->m_layer_weight[m_layer];
 }
+#endif
 
 void Widget::InsertDrawObj(vector<DrawObjEntry>::iterator it, const DrawObjEntry &entry,
 			   bool update)
@@ -8623,6 +9041,7 @@ int32_t Widget::DoEvent(int32_t type, Event *e)
 	return 0;
 }
 
+#ifndef PAF_BUILD_2014
 int32_t Widget::HandlerProc(Event *e)
 {
 	if (e == NULL)
@@ -8631,6 +9050,7 @@ int32_t Widget::HandlerProc(Event *e)
 		return Handler::HandlerProc(e);
 	return -1;
 }
+#endif
 
 int32_t Widget::HandleTouchEvent(Event *e)
 {
@@ -8648,6 +9068,7 @@ void Widget::EnableFocusEvent(bool on_off)
 			if (!on_off && m_focused)
 				ReleaseFocus();
 
+#ifndef PAF_BUILD_2014
 			Widget *root = m_parent != NULL ? FindFocusRoot(m_parent) : NULL;
 
 			if (!on_off && root != NULL) {
@@ -8659,6 +9080,7 @@ void Widget::EnableFocusEvent(bool on_off)
 				if (state == (uint32_t)this)
 					root->SetFocusRootState(0);
 			}
+#endif
 			if (m_parent != NULL)
 				m_parent->CountFocusEnableChildren(on_off ? 1 : -1);
 		}
@@ -8668,7 +9090,11 @@ void Widget::EnableFocusEvent(bool on_off)
 extern "C" int32_t ScePafWidget_A1193AAB(Widget *widget, bool on, bool option)
 {
 	widget->m_touch_region_registered = on;
+#ifndef PAF_BUILD_2014
 	widget->m_touch_region_option = option;
+#else
+	(void)option;
+#endif
 
 	Environment *env = widget->m_env;
 
@@ -8856,8 +9282,10 @@ Widget::~Widget()
 	DeletePoison(m_layouter);
 	DeletePoison(m_animator);
 	DeletePoison(m_focuser);
+#ifndef PAF_BUILD_2014
 	DeletePoison(m_focus_shape);
 	m_focus_parts.clear();
+#endif
 	DeletePoison(m_layout_rect);
 	DeleteArrayPoison(m_hit_box);
 	DeletePoison(m_inverse_matrix);
@@ -8901,8 +9329,10 @@ Widget::~Widget()
 	m_env = reinterpret_cast<Environment *>(-1);
 	m_scene = reinterpret_cast<Scene *>(-1);
 	m_adjust_param = reinterpret_cast<AdjustParam *>(-1);
+#ifndef PAF_BUILD_2014
 	DeletePoison(m_focus_root);
 	DeletePoison(m_focus_referrers);
+#endif
 	s_instance_count--;
 }
 
@@ -8928,14 +9358,19 @@ Widget::Widget(Widget *parent, CreateParam *param) : Handler(0x5080)
 	m_env = NULL;
 	m_parent = NULL;
 	m_scene = NULL;
+#ifdef PAF_BUILD_2014
+	m_focus_child = NULL;
+#else
 	reserved3b0 = 0x7F;
 	m_dim_held = true;
 	reserved3c0 = 0x7F;
 	m_dim_held_enable = true;
+#endif
 	m_prepare_count = 0;
 	m_focus_count = 0;
 	m_touch_rear_children = 0;
 	m_update_flag = 3;
+#ifndef PAF_BUILD_2014
 	m_transition = 0xFF;
 	m_keycode = 0;
 	m_priority = 0;
@@ -8943,24 +9378,35 @@ Widget::Widget(Widget *parent, CreateParam *param) : Handler(0x5080)
 	m_layer_old = 0;
 	m_modal_mode = 2;
 	m_modal_option = 0;
+#else
+	m_modal_mode = 2;
+#endif
 	m_show_hold = 0;
 	m_texture_request_count = 0;
 	m_clip_mode = 0;
+#ifndef PAF_BUILD_2014
 	reserved3x3 = 0;
+#endif
 	m_draw_target = 0;
 	m_flip_x = false;
 	m_flip_y = false;
 	m_flip_z = false;
+#ifndef PAF_BUILD_2014
 	reserved3x4 = false;
+#endif
 	m_touch_front_event = true;
+#ifndef PAF_BUILD_2014
 	m_focus_in_group = true;
 	m_focus_direction_off = true;
 	m_focus_target = true;
+#endif
 	m_draw_before_children = true;
 	m_debug_events = true;
 	m_input_target = true;
+#ifndef PAF_BUILD_2014
 	m_resolution_morph = true;
 	m_pad_tap_on_press = true;
+#endif
 	m_touch_gesture_mask = 0;
 	m_show_alpha = 1.0f;
 	m_show_a_sum = 1.0f;
@@ -9010,9 +9456,11 @@ Widget::Widget(Widget *parent, CreateParam *param) : Handler(0x5080)
 	m_layouter = NULL;
 	m_animator = NULL;
 	m_focuser = NULL;
+#ifndef PAF_BUILD_2014
 	m_focus_shape = NULL;
 	m_focus_root = NULL;
 	m_focus_referrers = NULL;
+#endif
 	m_layout_notify_mask = 0x9FF;
 	m_animator_notify_mask = 0xFFFF;
 	m_keep_cb = NULL;

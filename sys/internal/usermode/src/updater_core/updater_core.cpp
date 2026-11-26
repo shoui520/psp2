@@ -75,50 +75,69 @@ int UpdaterLogPrintf(const char *format, ...)
 	return 0;
 }
 
+#ifdef UPDATER_CORE_2014
+#define UPDATER_CORE_LINE(line2014, line365) (line2014)
+#else
+#define UPDATER_CORE_LINE(line2014, line365) (line365)
+#endif
+
 extern "C" {
 
 int sceUpdaterInitialize(const SceUpdaterMemoryInfo *memoryInfo)
 {
+#ifdef UPDATER_CORE_2014
+	PupController pup;
+#endif
+
 	if (s_state == UPDATER_STATE_INITIALIZED || s_state == UPDATER_STATE_UPDATING ||
 	    s_state == UPDATER_STATE_UPDATED || s_state == UPDATER_STATE_INSPECTING ||
 	    s_state == UPDATER_STATE_INSPECTED) {
-		UPDATER_ERROR_FMT(98, "%d", s_state);
+		UPDATER_ERROR_FMT(UPDATER_CORE_LINE(90, 98), "%d", s_state);
 		return SCE_UPDATER_ERROR_INVALID_STATE;
 	}
 	if (memoryInfo == NULL) {
-		UPDATER_ERROR(103);
+		UPDATER_ERROR(UPDATER_CORE_LINE(95, 103));
 		return SCE_UPDATER_ERROR_INVALID_ARGUMENT;
 	}
 	if (memoryInfo->updaterCoreAlloc == NULL) {
-		UPDATER_ERROR(107);
+		UPDATER_ERROR(UPDATER_CORE_LINE(99, 107));
 		return SCE_UPDATER_ERROR_INVALID_ARGUMENT;
 	}
 	if (memoryInfo->updaterCoreFree == NULL) {
-		UPDATER_ERROR(111);
+		UPDATER_ERROR(UPDATER_CORE_LINE(103, 111));
 		return SCE_UPDATER_ERROR_INVALID_ARGUMENT;
 	}
 	if (memoryInfo->updaterCoreMemalign == NULL) {
-		UPDATER_ERROR(115);
+		UPDATER_ERROR(UPDATER_CORE_LINE(107, 115));
 		return SCE_UPDATER_ERROR_INVALID_ARGUMENT;
 	}
 	g_updaterMemoryInfo = *memoryInfo;
 	g_spkgGroupManager = new SpkgGroupManager(0);
 	s_state = UPDATER_STATE_INITIALIZED;
+#ifdef UPDATER_CORE_2014
+	pup.InitializeCache();
+#endif
 	return 0;
 }
 
 int sceUpdaterFinalize(int reboot)
 {
 	UpdateUtility utility;
+#ifdef UPDATER_CORE_2014
+	PupController pup;
+#endif
 	int result;
 
 	if (s_state == UPDATER_STATE_NONE || s_state == UPDATER_STATE_FINALIZED) {
-		UPDATER_ERROR_FMT(147, "%d", s_state);
+		UPDATER_ERROR_FMT(UPDATER_CORE_LINE(143, 147), "%d", s_state);
 		return SCE_UPDATER_ERROR_INVALID_STATE;
 	}
 	result = g_spkgGroupManager->GetResult();
 	g_spkgGroupManager->Terminate();
 	delete g_spkgGroupManager;
+#ifdef UPDATER_CORE_2014
+	pup.FinalizeCache();
+#endif
 	s_state = UPDATER_STATE_FINALIZED;
 	return utility.PowerControl(reboot, result);
 }
@@ -135,11 +154,11 @@ int sceUpdaterUpdateAllSpackage(const char *fileName)
 	if (s_state == UPDATER_STATE_NONE || s_state == UPDATER_STATE_INITIALIZED ||
 	    s_state == UPDATER_STATE_FINALIZED || s_state == UPDATER_STATE_UPDATING ||
 	    s_state == UPDATER_STATE_INSPECTING) {
-		UPDATER_ERROR_FMT(196, "%d", s_state);
+		UPDATER_ERROR_FMT(UPDATER_CORE_LINE(195, 196), "%d", s_state);
 		return SCE_UPDATER_ERROR_INVALID_STATE;
 	}
 	if (fileName == NULL) {
-		UPDATER_ERROR(201);
+		UPDATER_ERROR(UPDATER_CORE_LINE(200, 201));
 		return SCE_UPDATER_ERROR_INVALID_ARGUMENT;
 	}
 	s_state = UPDATER_STATE_UPDATING;
@@ -154,11 +173,11 @@ int sceUpdaterInspectAllSpackage(const char *fileName)
 
 	if (s_state == UPDATER_STATE_NONE || s_state == UPDATER_STATE_FINALIZED ||
 	    s_state == UPDATER_STATE_UPDATING || s_state == UPDATER_STATE_INSPECTING) {
-		UPDATER_ERROR_FMT(238, "%d", s_state);
+		UPDATER_ERROR_FMT(UPDATER_CORE_LINE(237, 238), "%d", s_state);
 		return SCE_UPDATER_ERROR_INVALID_STATE;
 	}
 	if (fileName == NULL) {
-		UPDATER_ERROR(243);
+		UPDATER_ERROR(UPDATER_CORE_LINE(242, 243));
 		return SCE_UPDATER_ERROR_INVALID_ARGUMENT;
 	}
 	s_state = UPDATER_STATE_INSPECTING;
@@ -171,7 +190,7 @@ int sceUpdaterGetSpackageHeader(int type, SceUpdaterSpkgHeader *header)
 {
 	if (s_state == UPDATER_STATE_NONE || s_state == UPDATER_STATE_FINALIZED ||
 	    s_state == UPDATER_STATE_UPDATING || s_state == UPDATER_STATE_INSPECTING) {
-		UPDATER_ERROR_FMT(269, "%d", s_state);
+		UPDATER_ERROR_FMT(UPDATER_CORE_LINE(268, 269), "%d", s_state);
 		return SCE_UPDATER_ERROR_INVALID_STATE;
 	}
 	return g_spkgGroupManager->GetSpackageHeader(type, header);
@@ -182,11 +201,11 @@ int sceUpdaterGetProgress(SceUpdaterProgress *progress)
 	if (s_state == UPDATER_STATE_NONE || s_state == UPDATER_STATE_INITIALIZED ||
 	    s_state == UPDATER_STATE_FINALIZED || s_state == UPDATER_STATE_UPDATED ||
 	    s_state == UPDATER_STATE_INSPECTED) {
-		UPDATER_ERROR_FMT(293, "%d", s_state);
+		UPDATER_ERROR_FMT(UPDATER_CORE_LINE(292, 293), "%d", s_state);
 		return SCE_UPDATER_ERROR_INVALID_STATE;
 	}
 	if (progress == NULL) {
-		UPDATER_ERROR(298);
+		UPDATER_ERROR(UPDATER_CORE_LINE(297, 298));
 		return SCE_UPDATER_ERROR_INVALID_ARGUMENT;
 	}
 	return g_spkgGroupManager->GetProgress(progress);
@@ -195,7 +214,7 @@ int sceUpdaterGetProgress(SceUpdaterProgress *progress)
 int sceUpdaterGetEstimateProcessTime(const char *fileName, SceUpdaterEstimateTime *estimateTime)
 {
 	if (estimateTime == NULL) {
-		UPDATER_ERROR(320);
+		UPDATER_ERROR(UPDATER_CORE_LINE(319, 320));
 		return SCE_UPDATER_ERROR_INVALID_ARGUMENT;
 	}
 	return g_spkgGroupManager->GetEstimateProcessTime(fileName, estimateTime);
@@ -208,11 +227,11 @@ int sceUpdaterVerifyPup(const char *fileName)
 
 	ret = UpdateUtility::CheckDeviceStatus();
 	if (ret != 0) {
-		UPDATER_ERROR_FMT(344, "%x", ret);
+		UPDATER_ERROR_FMT(UPDATER_CORE_LINE(343, 344), "%x", ret);
 		return ret;
 	}
 	if (fileName == NULL) {
-		UPDATER_ERROR(349);
+		UPDATER_ERROR(UPDATER_CORE_LINE(348, 349));
 		return SCE_UPDATER_ERROR_INVALID_ARGUMENT;
 	}
 	return pup.VerifyPup(fileName);
@@ -312,11 +331,11 @@ int sceUpdaterGetPupInformation(const char *fileName, SceUpdaterPupInformation *
 	PupController pup;
 
 	if (fileName == NULL) {
-		UPDATER_ERROR(544);
+		UPDATER_ERROR(UPDATER_CORE_LINE(548, 544));
 		return SCE_UPDATER_ERROR_INVALID_ARGUMENT;
 	}
 	if (information == NULL) {
-		UPDATER_ERROR(548);
+		UPDATER_ERROR(UPDATER_CORE_LINE(552, 548));
 		return SCE_UPDATER_ERROR_INVALID_ARGUMENT;
 	}
 	return pup.GetPupInformation(fileName, information);
@@ -415,7 +434,7 @@ int sceUpdaterGetDeviceInfo(SceUpdaterDeviceInfo *deviceInfo)
 	UpdateUtility utility;
 
 	if (deviceInfo == NULL) {
-		UPDATER_ERROR(755);
+		UPDATER_ERROR(UPDATER_CORE_LINE(759, 755));
 		return SCE_UPDATER_ERROR_INVALID_ARGUMENT;
 	}
 	return utility.GetDeviceInfo(deviceInfo);
@@ -433,7 +452,7 @@ int sceUpdaterGetUpdateMode(SceUInt8 *mode)
 	UpdateUtility utility;
 
 	if (mode == NULL) {
-		UPDATER_ERROR(795);
+		UPDATER_ERROR(UPDATER_CORE_LINE(799, 795));
 		return SCE_UPDATER_ERROR_INVALID_ARGUMENT;
 	}
 	return utility.GetUpdateMode(mode);
@@ -478,14 +497,15 @@ int sceUpdaterLogStart(void)
 	sceClibStrncpy(path, sceUpdaterGetWorkingDirectory(), sizeof(path));
 	sceClibStrncat(path, UPDATER_LOG_FILE_NAME, sizeof(path));
 	if (s_logState == UPDATER_OPEN_OPENED) {
-		UPDATER_ERROR_FMT(884, "%d", s_logState);
+		UPDATER_ERROR_FMT(UPDATER_CORE_LINE(888, 884), "%d", s_logState);
 		return SCE_UPDATER_ERROR_INVALID_STATE;
 	}
 	s_logState = UPDATER_OPEN_OPENED;
 	s_logFd = sceIoOpen(path, SCE_O_WRONLY | SCE_O_CREAT | SCE_O_TRUNC,
 			    UPDATER_LOG_FILE_MODE);
 	if (s_logFd < 0) {
-		UPDATER_ERROR_FMT(894, "%s %o : %x", path, UPDATER_LOG_FILE_MODE, s_logFd);
+		UPDATER_ERROR_FMT(UPDATER_CORE_LINE(898, 894), "%s %o : %x", path,
+				  UPDATER_LOG_FILE_MODE, s_logFd);
 		return SCE_UPDATER_ERROR_LOG_OPEN;
 	}
 	return 0;
@@ -496,13 +516,13 @@ int sceUpdaterLogEnd(void)
 	int ret;
 
 	if (s_logState == UPDATER_OPEN_NONE || s_logState == UPDATER_OPEN_CLOSED) {
-		UPDATER_ERROR_FMT(915, "%d", s_logState);
+		UPDATER_ERROR_FMT(UPDATER_CORE_LINE(919, 915), "%d", s_logState);
 		return SCE_UPDATER_ERROR_INVALID_STATE;
 	}
 	s_logState = UPDATER_OPEN_CLOSED;
 	ret = sceIoClose(s_logFd);
 	if (ret < 0) {
-		UPDATER_ERROR_FMT(924, "%x", ret);
+		UPDATER_ERROR_FMT(UPDATER_CORE_LINE(928, 924), "%x", ret);
 		return SCE_UPDATER_ERROR_LOG_CLOSE;
 	}
 	s_logFd = -1;
@@ -561,6 +581,13 @@ void sceUpdaterSetProgressCallback(SceUpdaterProgressCallback callback, SceUInt3
 	g_updaterProgressCallback = callback;
 	g_updaterProgressInterval = interval;
 }
+
+#ifdef UPDATER_CORE_2014
+int sceUpdaterGetState(void)
+{
+	return s_state;
+}
+#endif
 
 int sceUpdaterCopyFile(SceUpdaterCopyFileTarget *src, SceUpdaterCopyFileTarget *dst,
 		       SceUpdaterCopyFileOption *option)

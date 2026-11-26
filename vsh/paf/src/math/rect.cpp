@@ -75,6 +75,12 @@ rect::rect(float xvalue, float yvalue, float wvalue, float hvalue)
 	set(xvalue, yvalue, wvalue, hvalue);
 }
 
+#ifdef PAF_BUILD_2014
+rect::~rect()
+{
+}
+#endif
+
 void rect::clear()
 {
 	m_x_center = 0.0f;

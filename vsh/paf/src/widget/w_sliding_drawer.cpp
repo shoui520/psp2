@@ -467,10 +467,12 @@ static VersatileParam *NewSlidingDrawerLayoutParam()
 	return new SlidingDrawerLayoutParam;
 }
 
+#ifndef PAF_BUILD_2014
 static VersatileParam *NewSlidingDrawerFocusParam()
 {
 	return new WidgetFocusParam;
 }
+#endif
 
 static VersatileParam *NewSlidingDrawerStyleParam()
 {
@@ -492,7 +494,9 @@ FactoryFuncTable g_factorySlidingDrawer = {
 	NewSlidingDrawer,
 	NewSlidingDrawerParam,
 	NewSlidingDrawerLayoutParam,
+#ifndef PAF_BUILD_2014
 	NewSlidingDrawerFocusParam,
+#endif
 	NewSlidingDrawerStyleParam,
 	NewSlidingDrawerHandlerParam,
 	NewSlidingDrawerSoundParam,

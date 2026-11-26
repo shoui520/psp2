@@ -655,10 +655,12 @@ static VersatileParam *NewImageButtonLayoutParam()
 	return new WidgetLayoutParam;
 }
 
+#ifndef PAF_BUILD_2014
 static VersatileParam *NewImageButtonFocusParam()
 {
 	return new WidgetFocusParam;
 }
+#endif
 
 static VersatileParam *NewImageButtonStyleParam()
 {
@@ -680,7 +682,9 @@ FactoryFuncTable g_factoryImageButton = {
 	NewImageButton,
 	NewImageButtonParam,
 	NewImageButtonLayoutParam,
+#ifndef PAF_BUILD_2014
 	NewImageButtonFocusParam,
+#endif
 	NewImageButtonStyleParam,
 	NewImageButtonHandlerParam,
 	NewImageButtonSoundParam,

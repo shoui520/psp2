@@ -358,37 +358,55 @@ public:
 	virtual void OnPartsLayoutUpdated(bool is_dirty);
 	virtual void UpdateMovableDirection();
 	virtual int32_t HandleKeycodeEvent(Event *e);
+#ifndef PAF_BUILD_2014
 	virtual void ScePafWidget_22EF63CE();
 	/* each frame: the focus moved on into its cells, taken or let go */
 	virtual void ScePafWidget_B6CECFDF();
+#else
+	void ScePafWidget_22EF63CE();
+#endif
 	/* the position the focus takes the view to: the cell, segment or end of the scroll range
 	   it snaps to (no name found) */
 	virtual bool ScePafWidget_C8C679BB(math::v2 &pos, const math::v2 &focus);
+#ifndef PAF_BUILD_2014
 	/* the focus root's focus set; a change between two widgets is passed to OnFocusLeave */
 	virtual void SetFocusRootState(uint32_t state);
+#endif
 	virtual bool OnFocusIn(Event *e);
 	/* the view moved, its cells synced to it */
 	virtual void MoveViewParent(const math::v2 &pos, Timer *timer);
+#ifndef PAF_BUILD_2014
 	virtual void ScePafWidget_D95AFF11(math::v2 &move, bool dragging, bool locked, bool reset);
+#else
+	void ScePafWidget_D95AFF11(math::v2 &move, bool dragging, bool locked, bool reset);
+#endif
 	/* a touch let go: its focus is dropped, and where the view still moves the time and the
 	   cell it goes to are kept */
 	virtual void ScePafWidget_E9C7617A(uint32_t touch_id);
+#ifdef PAF_BUILD_2014
+	virtual bool ScrollByKey(const math::v2 &dir);
+#else
 	/* the focus moved the way given from the widget (or the focus): to a header, along its
 	   cells or out of it, the view scrolling where it cannot move */
 	virtual bool ScePafWidget_AD706F2A(const math::v2 &dir, Widget *from);
+#endif
 	/* a flick along its axis keeps the focus where it is (m_focus_pending) */
 	virtual void ScePafWidget_D9FE36A6(int32_t id, math::v2 &dir, math::v2 &velocity);
+#ifndef PAF_BUILD_2014
 	virtual bool OnFocusEnter(Event *e);
 	virtual bool OnFocusLeave(Event *e);
+#endif
 	virtual bool OnFocusOut(Event *e);
 
 	/* the slots after ScrollViewBase's, from 0x26c (index 155) */
 	virtual void BeginDrag(int32_t segment, int32_t cell, int32_t index);
 	virtual void EndDrag(int32_t index);
 	virtual void SetFocus(int32_t segment, int32_t cell, FocusAlignType align, Timer *timer);
+#ifndef PAF_BUILD_2014
 	/* a key moving the cell dragged: it moves in its segment (17 press, 19 repeat) and the
 	   view shows it; true where it took the key (no name found) */
 	virtual bool ScePafWidget_5EEE4313(Event *e);
+#endif
 	virtual void OnCellUnGrab(listview::Cell *cell);
 	virtual void OnCellDragMove(listview::Cell *cell);
 	virtual void OnCellMoved(int32_t segment, int32_t from, int32_t to);
@@ -398,6 +416,7 @@ public:
 	{
 		if (!on_off && !(m_focus_pos == math::v2(-1.0f, -1.0f))) {
 			m_focus_pos = math::v2(-1.0f, -1.0f);
+#ifndef PAF_BUILD_2014
 			m_focus_start = math::v2(0.0f, 0.0f);
 			m_focus_target = math::v2(0.0f, 0.0f);
 			Environment *env = m_env;
@@ -407,6 +426,7 @@ public:
 				env->m_focus_cursor_rear.m_touch_move = math::v4(0.0f, 0.0f, 0.0f, 0.0f);
 				env->m_focus_cursor_rear.m_moving_only = true;
 			}
+#endif
 		}
 		Widget::EnableFocusEvent(on_off);
 	}
@@ -506,9 +526,11 @@ public:
 	/* once a flick ends: the view snapped to the ends of its scroll range, or by its snap mode
 	   to a cell or a segment (no name found) */
 	void ScePafWidget_697CD413();
+#ifndef PAF_BUILD_2014
 	/* each interval-th frame the focus moved the way it goes, to a cell shown where search is
 	   set, and taken by the list view where take is set (name ours) */
 	void UpdateFocus(bool search, bool take, uint32_t interval);
+#endif
 	/* the item of the index-th cell shown (no name found) */
 	ListItem *ScePafWidget_E744731A(int32_t index);
 	ListItem *GetListItem(int32_t segment, int32_t cell);

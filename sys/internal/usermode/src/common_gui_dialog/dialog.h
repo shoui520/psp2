@@ -47,9 +47,15 @@ public:
 	static void SetDefaultPriority(int32_t priority);
 
 	/* opens the page and the dialog of the layout: 0, or an error */
+#ifdef COMMON_GUI_DIALOG_2014
+	int32_t Open(paf::Plugin *plugin, int32_t priority, bool waitTransition, bool notifyClose,
+		     int32_t dimmer, const CommonGuiDialogPage *page,
+		     const paf::ui::Dialog::PartsList *parts, float *transitionTime);
+#else
 	int32_t Open(paf::Plugin *plugin, int32_t priority, bool waitTransition, bool notifyClose,
 		     int32_t dimmer, int32_t pageOption, const CommonGuiDialogPage *page,
 		     const paf::ui::Dialog::PartsList *parts, float *transitionTime);
+#endif
 	/* closes the dialog once nothing holds it and no handler runs */
 	void Close();
 	/* closes it at once */
@@ -143,7 +149,9 @@ public:
 static inline void ShowWidget(paf::ui::Widget *widget, paf::Timer *timer)
 {
 	if (!widget->m_transition_complete) {
+#ifndef PAF_BUILD_2014
 		widget->m_transition = 0xff;
+#endif
 		widget->m_transition_complete = true;
 		widget->DoTransition_core(0.0f, true);
 	}
@@ -154,7 +162,9 @@ static inline void ShowWidget(paf::ui::Widget *widget, paf::Timer *timer)
 static inline void HideWidget(paf::ui::Widget *widget, paf::Timer *timer)
 {
 	widget->m_transition_complete = false;
+#ifndef PAF_BUILD_2014
 	widget->m_transition = 0xff;
+#endif
 	widget->DoTransitionReverse_core(0.0f, true);
 	ScePafWidget_4588699E(widget, timer, 2, 0.0f, NULL);
 }

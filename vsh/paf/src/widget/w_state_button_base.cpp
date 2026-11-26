@@ -221,6 +221,7 @@ void StateButtonBase::SetCheck(bool onoff, float time, bool ch_anim)
 		ScePafWidget_2B1A1493(this, m_is_checked ? SOUND_CHECK : SOUND_UNCHECK);
 }
 
+#ifndef PAF_BUILD_2014
 int32_t StateButtonBase::SetTextAutoScrollOrigin(const math::v2 &pos)
 {
 	m_text_auto_scroll_origin = pos;
@@ -232,15 +233,22 @@ int32_t StateButtonBase::GetTextAutoScrollOrigin(math::v2 &pos)
 	pos = m_text_auto_scroll_origin;
 	return 0;
 }
+#endif
 
 void StateButtonBase::UpdateAdjustSize()
 {
 	UpdateButtonSize();
 }
 
+#ifdef PAF_BUILD_2014
+int32_t StateButtonBase::DoButtonEvent(int32_t type)
+{
+	int32_t ret = ButtonBase::DoButtonEvent(type);
+#else
 int32_t StateButtonBase::DoButtonEvent(int32_t type, Event *e)
 {
 	int32_t ret = ButtonBase::DoButtonEvent(type, e);
+#endif
 
 	if (m_tuck) {
 		if (type == CB_BTN_PRESS)
@@ -593,10 +601,12 @@ static VersatileParam *NewStateButtonBaseLayoutParam()
 	return new WidgetLayoutParam;
 }
 
+#ifndef PAF_BUILD_2014
 static VersatileParam *NewStateButtonBaseFocusParam()
 {
 	return new WidgetFocusParam;
 }
+#endif
 
 static VersatileParam *NewStateButtonBaseStyleParam()
 {
@@ -618,7 +628,9 @@ FactoryFuncTable g_factoryStateButtonBase = {
 	NewStateButtonBase,
 	NewStateButtonBaseParam,
 	NewStateButtonBaseLayoutParam,
+#ifndef PAF_BUILD_2014
 	NewStateButtonBaseFocusParam,
+#endif
 	NewStateButtonBaseStyleParam,
 	NewStateButtonBaseHandlerParam,
 	NewStateButtonBaseSoundParam,

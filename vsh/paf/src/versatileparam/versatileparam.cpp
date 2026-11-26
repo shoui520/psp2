@@ -627,8 +627,16 @@ int32_t WidgetLayoutParam::GetEach(Widget *widget)
 
 	m_resolution_id = resolution_id;
 	if (scene != NULL) {
+#ifdef PAF_BUILD_2014
+		SceneResolution *resolution = scene->m_env != NULL
+			? scene->m_env->FindResolution(scene->m_env->m_resolutions,
+						       scene->m_env->m_resolution_num,
+						       resolution_id)
+			: NULL;
+#else
 		SceneResolution *resolution =
 			ScePafWidget_CDC90BA2(scene->m_env_param, resolution_id);
+#endif
 
 		if (resolution != NULL)
 			m_base_resolution_id = resolution->m_base_id;
@@ -735,7 +743,12 @@ int32_t WidgetLayoutParam::Read(const cxml::Element *elem)
 		int32_t resolution_id;
 
 		if (m_pos_array[i].m_id != 0) {
+#ifdef PAF_BUILD_2014
+			resolution_id = scene->m_env->FindResolutionIdByResource(
+				scene->m_env->m_resolutions, scene->m_env->m_resolution_num, id);
+#else
 			resolution_id = ScePafWidget_36505C86(scene->m_env_param, id);
+#endif
 			m_pos_array[i].m_id = resolution_id < 0 ? -1 : resolution_id;
 		} else {
 			resolution_id = -1;
@@ -748,7 +761,13 @@ int32_t WidgetLayoutParam::Read(const cxml::Element *elem)
 		if (m_rot_array[i].m_id != 0) {
 			if (m_pos_array[i].m_id == (uint32_t)-1) {
 				id.m_idhash = m_rot_array[i].m_id;
+#ifdef PAF_BUILD_2014
+				resolution_id = scene->m_env->FindResolutionIdByResource(
+					scene->m_env->m_resolutions,
+					scene->m_env->m_resolution_num, id);
+#else
 				resolution_id = ScePafWidget_36505C86(scene->m_env_param, id);
+#endif
 			}
 			m_rot_array[i].m_id = resolution_id < 0 ? -1 : resolution_id;
 		} else {
@@ -761,7 +780,13 @@ int32_t WidgetLayoutParam::Read(const cxml::Element *elem)
 		if (m_size_array[i].m_id != 0) {
 			if (m_pos_array[i].m_id == (uint32_t)-1 && m_rot_array[i].m_id == (uint32_t)-1) {
 				id.m_idhash = m_size_array[i].m_id;
+#ifdef PAF_BUILD_2014
+				resolution_id = scene->m_env->FindResolutionIdByResource(
+					scene->m_env->m_resolutions,
+					scene->m_env->m_resolution_num, id);
+#else
 				resolution_id = ScePafWidget_36505C86(scene->m_env_param, id);
+#endif
 			}
 			m_size_array[i].m_id = resolution_id < 0 ? -1 : resolution_id;
 		} else {
@@ -826,8 +851,14 @@ int32_t WidgetLayoutParam::Write(common::SharedPtr<File> fp, uint32_t type, uint
 		if (scene == NULL)
 			continue;
 
+#ifdef PAF_BUILD_2014
+		IDParam resource = scene->m_env->GetResolutionResource(
+			scene->m_env->m_resolutions, scene->m_env->m_resolution_num,
+			m_pos_array[i].m_id);
+#else
 		IDParam resource =
 			ScePafWidget_E963EAEE(scene->m_env_param, m_pos_array[i].m_id);
+#endif
 		ResourceParam *child = new ResourceParam();
 
 		if (child != NULL) {
@@ -907,6 +938,7 @@ void WidgetLayoutParam::delete_cb(Widget *widget, void *param)
 }
 
 
+#ifndef PAF_BUILD_2014
 const char *const WidgetFocusParam::s_names[] = {
 	"enable",
 	"init",
@@ -1337,6 +1369,7 @@ void WidgetFocusParam::delete_cb(Widget *widget, void *param)
 {
 	static_cast<WidgetFocusParam *>(param)->Attach(NULL);
 }
+#endif
 
 
 const char WidgetStyleParam::m_param_name[] = "style_widget";

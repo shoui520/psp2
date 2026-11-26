@@ -147,6 +147,7 @@ public:
 	virtual bool IsInherit(const char *type) const;
 	virtual char *GetTypeName() const;
 
+#ifndef PAF_BUILD_2014
 	/* whether its link event is on, with a link callback and links (name ours) */
 	virtual bool IsTextEventEnabled()
 	{
@@ -171,6 +172,7 @@ public:
 		}
 		return mask;
 	}
+#endif
 
 	/* the focus event on or off; on, its links sorted and the first one focused */
 	virtual void EnableFocusEvent(bool on_off)
@@ -223,13 +225,17 @@ public:
 	virtual void DestroyWidget();
 	virtual int32_t HandleTouchEvent(Event *e);
 	virtual int32_t HandleGestureEvent(Event *e);
+#ifndef PAF_BUILD_2014
 	/* the focus put on a link of its own where the search is among them */
 	virtual Widget *SetFocusOption(const void *param, int32_t option);
+#endif
 	/* a key moves the focus among its links, the focus event puts it on one */
 	virtual int32_t HandleKeycodeEvent(Event *e);
 	virtual int32_t HandleFocusEvent(Event *e);
+#ifndef PAF_BUILD_2014
 	/* kept only while it is smaller than its scene */
 	virtual void SetFitToScene(bool on_off);
+#endif
 	/* its focused link's cursor laid out a part per line, and its text object sized to it
 	   less its margins */
 	virtual void UpdateSize();

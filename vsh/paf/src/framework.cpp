@@ -30,11 +30,17 @@
 #include <timer/timerlistenerlist.h>
 #include <widget/core/environment.h>
 #include <widget/factory.h>
+#ifdef PAF_BUILD_2014
+#include <widget/w_scene.h>
+#endif
 #include <widget/wutil.h>
 #include "avout/sound.h"
 #include "paf_types.h"
 
 extern "C" int sceRegMgrUtilityGetInt(int id, int *value);
+#ifdef PAF_BUILD_2014
+extern "C" int scePowerSetGpuClockFrequency(int frequency);
+#endif
 
 /* the system settings the Framework reads */
 #define REGMGR_BUTTON_ASSIGN	0x683dcd
@@ -56,6 +62,19 @@ int32_t PowerCallback(int32_t notify_id, int32_t notify_count, int32_t power_inf
 Framework *Framework::framework;
 /* what Update runs now: 1 while the Framework is made, 0 between the steps */
 static int32_t s_update_phase = 1;
+#ifdef PAF_BUILD_2014
+static ui::wutil::InitParam s_wutil_param;
+static ui::SceneResolution s_default_resolutions[4] = {
+	{ 1, 9, IDParam("landscape_padkey_footside"), IDParam("landscape"), 0.0f, 960, 544, 960,
+	  544, 960, 544, 960, 544 },
+	{ 2, 10, IDParam("portrait_padkey_leftside"), IDParam("portrait"), 1.5707964f, 960, 544,
+	  960, 544, 960, 544, 544, 960 },
+	{ 0, 9, IDParam("landscape_padkey_headside"), IDParam("landscape"), 3.1415927f, 960, 544,
+	  960, 544, 960, 544, 960, 544 },
+	{ 3, 10, IDParam("portrait_padkey_rightside"), IDParam("portrait"), -1.5707964f, 960, 544,
+	  960, 544, 960, 544, 544, 960 }
+};
+#endif
 
 int32_t Framework::UnloadPreaction(Plugin *plugin)
 {
@@ -107,9 +126,11 @@ Framework::Framework(const InitParam &init_param)
 	m_common_resource_plugin = NULL;
 	m_load_finish_callback = NULL;
 	m_unload_finish_callback = NULL;
+#ifndef PAF_BUILD_2014
 	m_shutdown_callback = NULL;
 	m_shutdown_callback_data = NULL;
 	m_job_ready = true;
+#endif
 	m_decode_heap = NULL;
 	m_decode_heap_created = false;
 	m_plugin_heap = NULL;
@@ -127,13 +148,17 @@ Framework::Framework(const InitParam &init_param)
 	m_sound_output = NULL;
 	m_shutdown_requested = false;
 	m_power_cb_id = -1;
+#ifndef PAF_BUILD_2014
 	m_env_param = NULL;
+#endif
 
 	framework = this;
+#ifndef PAF_BUILD_2014
 	if (m_mode == Mode_ApplicationB || m_mode == Mode_ApplicationC) {
 		sce_paf_printf_dummy();
 		sce_paf_printf_dummy();
 	}
+#endif
 
 	thread::ThreadIDCache::SetCurrentType(thread::ThreadIDCache::Type_Main);
 	LocalFile::SetThreadDefaultPriority(14);
@@ -163,6 +188,138 @@ Framework::Framework(const InitParam &init_param)
 	if (m_mode == Mode_CommonDialog)
 		m_option |= Option_OneFrameMode;
 
+#ifdef PAF_BUILD_2014
+	ui::SceneResolution *resolutions = init_param.env_param;
+	int32_t res_num = init_param.env_param_num;
+	int32_t res_id = init_param.resolution_id;
+
+	if (resolutions == NULL) {
+		resolutions = s_default_resolutions;
+		res_num = 4;
+		res_id = 1;
+	}
+
+	gutil::DevInitParam dev_param = ui::wutil::debug::DevInit(
+		init_param.screen_width, init_param.screen_height, resolutions, res_num, res_id);
+
+	dev_param.display_list_size = init_param.display_list_size;
+	dev_param.parameter_buffer_size = init_param.parameter_buffer_size;
+	dev_param.parameter_buffer_location = init_param.parameter_buffer_location;
+	dev_param.graph_heap_size_on_main_memory = init_param.graph_heap_size_on_main_memory;
+	dev_param.graph_heap_size_on_video_memory = init_param.graph_heap_size_on_video_memory;
+	switch (m_mode) {
+	case Mode_Shell:
+		dev_param.frame_buffer_mode = gutil::FrameBuffer_Shared_Create;
+		break;
+	case Mode_Application:
+	case Mode_ApplicationC:
+		dev_param.frame_buffer_mode = gutil::FrameBuffer_Shared_Share;
+		break;
+	case Mode_ApplicationB:
+		dev_param.frame_buffer_mode = gutil::FrameBuffer_Shared_OffScreen;
+		break;
+	case Mode_CommonDialog:
+		dev_param.frame_buffer_mode = gutil::FrameBuffer_Given;
+		break;
+	default:
+		dev_param.frame_buffer_mode = gutil::FrameBuffer_Normal;
+		break;
+	}
+	ui::wutil::DevInit(dev_param);
+
+	ScePafWidget_5245A0F2(&s_wutil_param, &dev_param.whandle, init_param.screen_width,
+			      init_param.screen_height, resolutions, res_num, res_id);
+	s_wutil_param.surf_dev_mem_addr = init_param.surf_dev_mem_addr;
+	s_wutil_param.surf_dev_mem_size = init_param.surf_dev_mem_size;
+	s_wutil_param.fov = 0.80285144f;
+	s_wutil_param.surf_def_pool_size = init_param.surface_pool_size;
+	s_wutil_param.text_surface_pool_size = init_param.text_surface_pool_size;
+
+	GraphMem::DeviceType dev_type = (m_mode == Mode_Shell)
+		? GraphMem::DeviceType_VideoMemory
+		: GraphMem::DeviceType_SystemMemory;
+
+	if (s_wutil_param.surf_def_pool_size != 0)
+		s_wutil_param.surf_def_pool_addr = GraphMem::AllocOSMemory(
+			dev_type, s_wutil_param.surf_def_pool_size, "ScePafDefaultSurfacePool",
+			NULL);
+	if (s_wutil_param.text_surface_pool_size != 0)
+		s_wutil_param.text_surface_pool_addr = GraphMem::AllocOSMemory(
+			dev_type, s_wutil_param.text_surface_pool_size, "ScePafTextSurfacePool",
+			NULL);
+	s_wutil_param.pvf_heap_size = init_param.pvf_heap_size;
+	s_wutil_param.locale = init_param.locale;
+	s_wutil_param.mem_pvf_japanese_addr = init_param.mem_pvf_japanese_addr;
+	s_wutil_param.mem_pvf_japanese_size = init_param.mem_pvf_japanese_size;
+	s_wutil_param.mem_pvf_latin_addr = init_param.mem_pvf_latin_addr;
+	s_wutil_param.mem_pvf_latin_size = init_param.mem_pvf_latin_size;
+	s_wutil_param.mem_pvf_hangul_addr = init_param.mem_pvf_hangul_addr;
+	s_wutil_param.mem_pvf_hangul_size = init_param.mem_pvf_hangul_size;
+	s_wutil_param.mem_pvf_chinese_addr = init_param.mem_pvf_chinese_addr;
+	s_wutil_param.mem_pvf_chinese_size = init_param.mem_pvf_chinese_size;
+	s_wutil_param.mem_emoji_font_addr = init_param.mem_emoji_font_addr;
+	s_wutil_param.mem_emoji_font_size = init_param.mem_emoji_font_size;
+	s_wutil_param.edit_listener = init_param.edit_listener;
+	s_wutil_param.web_edit_listener = init_param.web_edit_listener;
+	s_wutil_param.message_dialog_listener = init_param.message_dialog_listener;
+	s_wutil_param.webview_listener = init_param.webview_listener;
+	switch (m_mode) {
+	case Mode_Shell:
+		s_wutil_param.input_device_mode = 1;
+		break;
+	case Mode_CommonDialog:
+		s_wutil_param.input_device_mode = 2;
+		break;
+	default:
+		s_wutil_param.input_device_mode = 0;
+		break;
+	}
+	if (m_option & Option_4)
+		s_wutil_param.no_text = true;
+	ui::wutil::Init(s_wutil_param);
+
+	ScePafMisc_0D1B028E(init_param.enter_button_assign);
+
+	if (init_param.decode_heap_size != 0) {
+		char name[32];
+		memory::HeapAllocator::Option heap_option;
+
+		sce_paf_snprintf(name, sizeof(name), "ScePafFwDecodeHeap");
+		heap_option.entry_max = 0;
+		heap_option.warning_size = 0;
+		heap_option.disable_dbgprint = false;
+		heap_option.disable_assert_on_alloc_failure = false;
+		heap_option.memblk_type = (m_mode == Mode_CommonDialog)
+			? memory::AllocationBlockType_User_Cdlg
+			: memory::AllocationBlockType_User;
+		m_decode_heap = new memory::HeapAllocator(NULL, init_param.decode_heap_size, name,
+							  &heap_option);
+		m_decode_heap_created = true;
+	}
+	if (init_param.plugin_heap_size != 0) {
+		char name[32];
+		memory::HeapAllocator::Option heap_option;
+
+		sce_paf_snprintf(name, sizeof(name), "ScePafFwDefaultPluginHeap");
+		heap_option.entry_max = 0;
+		heap_option.warning_size = 0;
+		heap_option.disable_dbgprint = false;
+		heap_option.disable_assert_on_alloc_failure = false;
+		heap_option.memblk_type = (m_mode == Mode_CommonDialog)
+			? memory::AllocationBlockType_User_Cdlg
+			: memory::AllocationBlockType_User;
+		m_plugin_heap = new memory::HeapAllocator(NULL, init_param.plugin_heap_size, name,
+							  &heap_option);
+		m_plugin_heap_created = true;
+	}
+
+	m_env = new ui::Environment(resolutions, res_num, res_id);
+	m_env->m_sound_callback_data = this;
+	m_env->m_sound_callback = ScePafToplevel_85EF6EC0;
+	m_env->m_create_widget_callback_data = this;
+	m_env->m_create_widget_callback = ScePafToplevel_E37EC9D8;
+	ui::wutil::SetEnv(m_env);
+#else
 	if (init_param.env_param == NULL)
 		m_env_param = new ui::Resolution();
 	else
@@ -337,6 +494,7 @@ Framework::Framework(const InitParam &init_param)
 	if (init_param.text_style != TEXT_STYLE_UNSET)
 		system::SystemParam::SetTextStyle(init_param.text_style);
 	m_env->m_env_option = init_param.env_option;
+#endif
 
 	s_update_phase = 1;
 	Plugin::Init();
@@ -365,6 +523,12 @@ Framework::Framework(const InitParam &init_param)
 	Plugin::RegistFactoryTable(g_factoryImageSlideBar.m_name, g_factoryImageSlideBar);
 	Plugin::RegistFactoryTable(g_factoryProgressBar.m_name, g_factoryProgressBar);
 	Plugin::RegistFactoryTable(g_factoryProgressBarTouch.m_name, g_factoryProgressBarTouch);
+#ifdef PAF_BUILD_2014
+#ifdef PAF_HAS_WEBVIEW
+	Plugin::RegistFactoryTable(g_factoryWebView.m_name, g_factoryWebView);
+	Plugin::RegistFactoryTable(g_factoryMapView.m_name, g_factoryMapView);
+#endif
+#endif
 	Plugin::RegistFactoryTable(g_factoryFileList.m_name, g_factoryFileList);
 	Plugin::RegistFactoryTable(g_factorySlidingDrawer.m_name, g_factorySlidingDrawer);
 	Plugin::RegistFactoryTable(g_factoryRichText.m_name, g_factoryRichText);
@@ -373,7 +537,9 @@ Framework::Framework(const InitParam &init_param)
 	Plugin::RegistFactoryTable(g_factorySpeechBalloon.m_name, g_factorySpeechBalloon);
 	Plugin::RegistFactoryTable(g_factoryNumSpin.m_name, g_factoryNumSpin);
 	Plugin::RegistFactoryTable(g_factoryCompositeDrawer.m_name, g_factoryCompositeDrawer);
+#ifndef PAF_BUILD_2014
 	Plugin::RegistFactoryTable(g_factoryCompositeButton.m_name, g_factoryCompositeButton);
+#endif
 	Plugin::RegistFactoryTable(g_factoryAppIconSimple.m_name, g_factoryAppIconSimple);
 	Plugin::RegistFactoryDrawObj(g_factoryPlaneObj.m_name, g_factoryPlaneObj);
 	Plugin::RegistFactoryDrawObj(g_factoryTextObj.m_name, g_factoryTextObj);
@@ -439,17 +605,28 @@ Framework::Framework(const InitParam &init_param)
 		break;
 	}
 
+#ifdef PAF_BUILD_2014
+	if (m_mode != Mode_CommonDialog) {
+		m_power_cb_id = sceKernelCreateCallback("ScePafPowerCallback", 0, PowerCallback,
+							NULL);
+		if (m_power_cb_id >= 0)
+			scePowerRegisterCallback(m_power_cb_id);
+	}
+#else
 	m_power_cb_id = sceKernelCreateCallback("ScePafPowerCallback", 0, PowerCallback, NULL);
 	if (m_power_cb_id >= 0)
 		scePowerRegisterCallback(m_power_cb_id);
+#endif
 }
 
 bool Framework::IsShutdownDone()
 {
 	if (!m_shutdown_requested)
 		return false;
+#ifndef PAF_BUILD_2014
 	if (!m_job_ready)
 		return false;
+#endif
 	if (job::JobQueue::NumQueues() != 0 || job::JobQueue::default_queue->NumItems() != 0)
 		return false;
 
@@ -462,8 +639,10 @@ bool Framework::IsShutdownDone()
 
 void Framework::RequestShutdown()
 {
+#ifndef PAF_BUILD_2014
 	if (!m_shutdown_requested && m_shutdown_callback != NULL)
 		m_shutdown_callback(m_shutdown_callback_data);
+#endif
 	m_shutdown_requested = true;
 }
 
@@ -498,9 +677,22 @@ Framework::~Framework()
 		delete m_plugin_heap;
 	if (m_decode_heap_created)
 		delete m_decode_heap;
+#ifdef PAF_BUILD_2014
+	GraphMem::DeviceType dev_type = (m_mode == Mode_Shell)
+		? GraphMem::DeviceType_VideoMemory
+		: GraphMem::DeviceType_SystemMemory;
+
+	if (s_wutil_param.text_surface_pool_addr != NULL)
+		GraphMem::FreeOSMemory(dev_type, s_wutil_param.text_surface_pool_addr);
+	if (s_wutil_param.surf_def_pool_addr != NULL)
+		GraphMem::FreeOSMemory(dev_type, s_wutil_param.surf_def_pool_addr);
+	ui::wutil::DevTerm();
+	ui::wutil::debug::DevTerm();
+#else
 	ui::wutil::DevTerm();
 	ui::wutil::debug::DevTerm();
 	delete m_env_param;
+#endif
 	framework = NULL;
 }
 
@@ -523,6 +715,13 @@ int32_t ScePafToplevel_1EEFAECD(paf::Framework *framework, bool **done)
 
 	s_update_phase = 0;
 	*done = &finished;
+#ifdef PAF_BUILD_2014
+	if (framework->m_option & Framework::Option_OneFrameMode) {
+		framework->m_update_mutex->Lock();
+		framework->m_run_loop_count++;
+		framework->m_update_mutex->Unlock();
+	}
+#endif
 
 	while (!framework->IsShutdownDone()) {
 		if (resume) {
@@ -577,6 +776,18 @@ call_queue:
 		    framework->m_loading_plugin_count == 0) {
 			thread::RWLock *lock = framework->m_list_lock;
 
+#ifdef PAF_BUILD_2014
+			lock->WriterLock();
+			while (framework->m_plugin_list.size() != 0) {
+				Plugin *plugin =
+					framework->m_plugin_list[framework->m_plugin_list.size() - 1];
+
+				lock->WriterUnlock();
+				Plugin::UnloadAsync(plugin, NULL, 0);
+				lock->WriterLock();
+			}
+			lock->WriterUnlock();
+#else
 			lock->ReaderLock();
 			vector<Plugin *>::iterator it = framework->m_plugin_list.end();
 			while (it != framework->m_plugin_list.begin()) {
@@ -585,6 +796,7 @@ call_queue:
 					Plugin::UnloadAsync(*it, NULL, 0);
 			}
 			lock->ReaderUnlock();
+#endif
 		}
 		if (framework->m_mode == Framework::Mode_Normal ||
 		    framework->m_mode == Framework::Mode_Shell ||
@@ -617,6 +829,14 @@ event_loop:
 			framework->m_env->RequestTerm();
 	}
 
+#ifdef PAF_BUILD_2014
+	if (framework->m_option & Framework::Option_OneFrameMode) {
+		framework->m_update_mutex->Lock();
+		framework->m_update_cond->Notify();
+		framework->m_run_loop_count--;
+		framework->m_update_mutex->Unlock();
+	}
+#endif
 	s_update_phase = phase;
 	*done = NULL;
 	return 0;
@@ -630,19 +850,23 @@ int32_t Framework::Run()
 
 	if (m_mode != Mode_Shell)
 		sceKernelChangeThreadPriority(0, 0x100000ED);
+#ifndef PAF_BUILD_2014
 	if (m_option & Option_OneFrameMode) {
 		m_update_mutex->Lock();
 		m_run_loop_count++;
 		m_update_mutex->Unlock();
 	}
+#endif
 	done = NULL;
 	ScePafToplevel_1EEFAECD(this, &done);
+#ifndef PAF_BUILD_2014
 	if (m_option & Option_OneFrameMode) {
 		m_update_mutex->Lock();
 		m_update_cond->Notify();
 		m_run_loop_count--;
 		m_update_mutex->Unlock();
 	}
+#endif
 	if (done != NULL)
 		*done = true;
 	return 0;
@@ -675,6 +899,7 @@ void Framework::SetLocale(Locale locale)
 
 }
 
+#ifndef PAF_BUILD_2014
 bool ScePafToplevel_072EE507(void)
 {
 	bool changed = false;
@@ -688,6 +913,7 @@ bool ScePafToplevel_072EE507(void)
 	}
 	return changed;
 }
+#endif
 
 int32_t ScePafToplevel_397DD062(paf::Framework *framework, const char *dir, uint32_t effects)
 {
@@ -803,8 +1029,12 @@ void Framework::LoadCommonResourceAsync(CommonResourceInitParam &cr_param,
 void Framework::UnLoadCommonResourceAsync(UnloadCRFinishCallback callback)
 {
 	m_unload_finish_callback = callback;
+#ifdef PAF_BUILD_2014
+	Plugin::UnloadAsync(m_common_resource_plugin, NULL, 0);
+#else
 	if (!m_common_resource_plugin->m_unloading)
 		Plugin::UnloadAsync(m_common_resource_plugin, NULL, 0);
+#endif
 }
 
 const wchar_t *Framework::GetCommonString(const IDParam &id) const
@@ -889,8 +1119,10 @@ int32_t Framework::InitCommonSE()
 		"_common_snd37", "_common_snd38", "_common_snd39", "_common_snd40",
 		"_common_snd41", "_common_snd42", "_common_snd43", "_common_snd44",
 		"_common_snd45", "_common_snd46", "_common_snd47", "_common_snd48",
-		"_common_snd49", "_common_snd50", "_common_snd51", NULL, NULL, "_common_snd54",
-		"_common_snd55"
+		"_common_snd49", "_common_snd50", "_common_snd51", NULL, NULL
+#ifndef PAF_BUILD_2014
+		, "_common_snd54", "_common_snd55"
+#endif
 	};
 
 	if (m_sound_output == NULL)
@@ -1047,7 +1279,11 @@ int32_t ScePafToplevel_1AEDE4E0(int32_t language)
 	case SCE_SYSTEM_PARAM_LANG_TURKISH:
 		return SCE_SYSTEM_PARAM_LANG_TURKISH;
 	default:
+#ifdef PAF_BUILD_2014
+		return SCE_SYSTEM_PARAM_LANG_JAPANESE;
+#else
 		return SCE_SYSTEM_PARAM_LANG_ENGLISH_GB;
+#endif
 	}
 }
 
@@ -1187,8 +1423,10 @@ Plugin *Framework::FindPlugin(const char *name, bool include_unloading)
 	}
 	m_list_lock->ReaderUnlock();
 
+#ifndef PAF_BUILD_2014
 	if (!include_unloading && plugin != NULL && plugin->m_unloading)
 		return NULL;
+#endif
 	return plugin;
 }
 
@@ -1196,6 +1434,7 @@ inline void Framework::UnloadInitAction(Plugin *plugin, const char *name, int32_
 {
 	if ((option & Plugin::LoadUnloadOption_DontLockInputDevice) == 0)
 		inputdevice::Lock(INPUT_DEVICE_ALL);
+#ifndef PAF_BUILD_2014
 	if (plugin != NULL) {
 		plugin->m_unloading = true;
 	} else if (name != NULL) {
@@ -1203,6 +1442,7 @@ inline void Framework::UnloadInitAction(Plugin *plugin, const char *name, int32_
 		if (plugin != NULL)
 			plugin->m_unloading = true;
 	}
+#endif
 }
 
 Plugin *Framework::FindPlugin(Plugin *plugin, bool include_unloading)
@@ -1220,14 +1460,39 @@ Plugin *Framework::FindPlugin(Plugin *plugin, bool include_unloading)
 
 	if (it == m_plugin_list.end())
 		return NULL;
+#ifdef PAF_BUILD_2014
+	return *it;
+#else
 	if (include_unloading || !(*it)->m_unloading)
 		return *it;
 	return NULL;
+#endif
 }
 
 int32_t Framework::RequestUnloadPlugin(Plugin *plugin, const char *name,
 				       Plugin::UnloadFinishCallback finish, int32_t option)
 {
+#ifdef PAF_BUILD_2014
+	if (plugin == NULL && name != NULL)
+		plugin = FindPlugin(name, false);
+	if ((option & Plugin::LoadUnloadOption_DontLockInputDevice) == 0)
+		inputdevice::Lock(INPUT_DEVICE_ALL);
+	if (plugin != NULL)
+		UnloadPreaction(plugin);
+
+	DestructPluginData *data = new DestructPluginData;
+
+	data->framework = this;
+	data->plugin = plugin;
+	data->name = name;
+	data->option = option;
+	data->finish_callback = finish;
+
+	common::SharedPtr<Job_PluginUnLoad> item(new Job_PluginUnLoad("Job_PluginUnLoad", data));
+
+	return job::JobQueue::default_queue->Enqueue(
+		reinterpret_cast<common::SharedPtr<job::JobItem> &>(item));
+#else
 	if ((plugin == NULL && name == NULL) || (plugin != NULL && name != NULL)) {
 		common_internal::on_error();
 		return SCE_PAF_ERROR_TOPLEVEL_ARGUMENT;
@@ -1251,6 +1516,7 @@ int32_t Framework::RequestUnloadPlugin(Plugin *plugin, const char *name,
 
 	return job::JobQueue::default_queue->Enqueue(
 		reinterpret_cast<common::SharedPtr<job::JobItem> &>(item));
+#endif
 }
 
 void Framework::SetLocaleAllPlugin(Locale locale)
@@ -1265,6 +1531,22 @@ void Framework::SetLocaleAllPlugin(Locale locale)
 
 void Framework::UnloadRunAction(DestructPluginData *data)
 {
+#ifdef PAF_BUILD_2014
+	Plugin *plugin = data->plugin;
+
+	if (plugin != NULL && plugin->m_rscobj != NULL && plugin->m_rscobj->m_num_sounds != 0 &&
+	    data->framework->m_sound_output != NULL)
+		data->framework->m_sound_output->WaitSoundStopped();
+	if (data->plugin == NULL) {
+		data->plugin = data->framework->FindPlugin(data->name.c_str(), true);
+		thread::RMutex::main_thread_mutex.Lock();
+		if (data->plugin != NULL)
+			data->framework->UnloadPreaction(data->plugin);
+		thread::RMutex::main_thread_mutex.Unlock();
+	}
+	if (data->plugin != NULL)
+		data->plugin->Exit();
+#else
 	Framework *framework = data->framework;
 
 	if (data->plugin == NULL)
@@ -1287,6 +1569,7 @@ void Framework::UnloadRunAction(DestructPluginData *data)
 		common_internal::on_error();
 	synccall->Call(UnloadPreactionCall, data);
 	data->plugin->Exit();
+#endif
 }
 
 void Framework::UnloadFinishedAction(DestructPluginData *data)
@@ -1326,7 +1609,9 @@ void Framework::CRLoadFinishCallback(Plugin *plugin)
 	SetCommonTemplateOpenFunction(CommonTemplateOpen);
 	SetCommonStringFunction(CommonString);
 	SetCommonTextureFunction(CommonTexture);
+#ifndef PAF_BUILD_2014
 	ScePafWidget_B6C64486(intrusive_ptr<graph::Surface>(), 0);
+#endif
 }
 
 }
@@ -1337,6 +1622,17 @@ void ScePafToplevel_C9C02705(void *userdata)
 
 	paf::Framework *framework = paf::Framework::framework;
 
+#ifdef PAF_BUILD_2014
+	if (framework->m_surface_pool != NULL) {
+		delete framework->m_surface_pool;
+		framework->m_surface_pool = NULL;
+	}
+	if (framework->m_surface_pool_addr != NULL) {
+		paf::GraphMem::FreeOSMemory(paf::GraphMem::DeviceType_VideoMemory,
+					    framework->m_surface_pool_addr);
+		framework->m_surface_pool_addr = NULL;
+	}
+#else
 	if (framework->m_surface_pool != NULL) {
 		if (framework->m_surface_pool_addr != NULL) {
 			if (framework->m_surface_pool->m_type ==
@@ -1351,6 +1647,7 @@ void ScePafToplevel_C9C02705(void *userdata)
 		delete framework->m_surface_pool;
 		framework->m_surface_pool = NULL;
 	}
+#endif
 	if (paf::Framework::framework->m_unload_finish_callback != NULL)
 		paf::Framework::framework->m_unload_finish_callback();
 }
@@ -1365,6 +1662,16 @@ namespace paf {
 int32_t PowerCallback(int32_t notify_id, int32_t notify_count, int32_t power_info,
 		      void *common)
 {
+#ifdef PAF_BUILD_2014
+	if (power_info & SCE_POWER_CALLBACKARG_RESERVED_22) {
+		Framework::framework->m_env->m_suspended = true;
+		scePowerSetGpuClockFrequency(41);
+	} else if (power_info & SCE_POWER_CALLBACKARG_RESERVED_23) {
+		Framework::framework->m_env->m_suspended = false;
+		scePowerSetGpuClockFrequency(111);
+	}
+	return 0;
+#else
 	int32_t mode = Framework::framework->m_mode;
 
 	if (power_info & SCE_POWER_CALLBACKARG_RESERVED_22) {
@@ -1396,6 +1703,7 @@ int32_t PowerCallback(int32_t notify_id, int32_t notify_count, int32_t power_inf
 			env->UpdateDisplayAreaSettings();
 	}
 	return 0;
+#endif
 }
 
 Framework *Framework::Instance()
@@ -1445,10 +1753,17 @@ sound::Output *Framework::GetSoundInstance()
 
 using namespace paf;
 
+#ifdef PAF_BUILD_2014
+int32_t ScePafToplevel_85EF6EC0(const char *buffer1, uint32_t size1, const char *buffer2,
+				uint32_t size2, int32_t samplerate, bool ignore_init, void *data)
+{
+	float vol = 1.0f;
+#else
 int32_t ScePafToplevel_85EF6EC0(const char *buffer1, uint32_t size1, const char *buffer2,
 				uint32_t size2, int32_t samplerate, float vol, bool ignore_init,
 				void *data)
 {
+#endif
 	Framework *framework = static_cast<Framework *>(data);
 
 	if (framework == NULL)
@@ -1488,6 +1803,45 @@ namespace paf {
 
 Framework::InitParam::InitParam()
 {
+#ifdef PAF_BUILD_2014
+	display_list_size = 0x100000;
+	parameter_buffer_size = 0x200000;
+	parameter_buffer_location = 0;
+	surface_pool_size = 0x800000;
+	graph_heap_size_on_main_memory = 0x100000;
+	graph_heap_size_on_video_memory = 0;
+	text_surface_pool_size = 0x100000;
+	surf_dev_mem_addr = NULL;
+	surf_dev_mem_size = 0;
+	mem_pvf_japanese_addr = NULL;
+	mem_pvf_japanese_size = 0;
+	mem_pvf_latin_addr = NULL;
+	mem_pvf_latin_size = 0;
+	mem_pvf_hangul_addr = NULL;
+	mem_pvf_hangul_size = 0;
+	mem_pvf_chinese_addr = NULL;
+	mem_pvf_chinese_size = 0;
+	mem_emoji_font_addr = NULL;
+	mem_emoji_font_size = 0;
+	pvf_heap_size = 0;
+	decode_heap_size = 0;
+	plugin_heap_size = 0;
+	image_mode = ImageMode_RGBA8888;
+	screen_width = 960;
+	screen_height = 544;
+	mode = Mode_Normal;
+	option = 0;
+	locale = Locale_JP;
+	enter_button_assign = 0;
+	env_param = NULL;
+	env_param_num = 0;
+	resolution_id = 0;
+	edit_listener = NULL;
+	web_edit_listener = NULL;
+	message_dialog_listener = NULL;
+	webview_listener = NULL;
+	sound_mode = sound::Output::Mode_Normal;
+#else
 	display_list_size = 0x100000;
 	parameter_buffer_size = 0x200000;
 	ext_control = false;
@@ -1534,6 +1888,7 @@ Framework::InitParam::InitParam()
 	webview_listener = NULL;
 	listener_E638AA1F = NULL;
 	sound_mode = sound::Output::Mode_Normal;
+#endif
 
 	int value;
 

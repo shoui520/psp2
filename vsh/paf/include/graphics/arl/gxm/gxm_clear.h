@@ -57,7 +57,7 @@ public:
 		}
 
 		/* clear.vp built by psp2cgc */
-		static const uint8_t s_binary[288];
+		static const uint8_t s_binary[PAF_SHADER_SIZE(288, 296)];
 
 		ShaderParameter<math::v4> m_clear_color;
 	};
@@ -93,7 +93,7 @@ public:
 		}
 
 		/* clear.fp built by psp2cgc */
-		static const uint8_t s_binary[204];
+		static const uint8_t s_binary[PAF_SHADER_SIZE(204, 208)];
 	};
 
 	ClearBase();

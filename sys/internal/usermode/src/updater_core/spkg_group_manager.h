@@ -17,7 +17,11 @@
 class SpkgGroup;
 struct SpkgEntry;
 
+#ifdef UPDATER_CORE_2014
+#define SPKG_GROUP_MAX		23
+#else
 #define SPKG_GROUP_MAX		20
+#endif
 
 enum SpkgOperationType {
 	SPKG_OP_NONE	= 0,
@@ -156,7 +160,11 @@ private:
 	SceUpdaterProgress m_lastProgress;
 	SceKernelSysClock m_inspectStartTime;
 	SceKernelSysClock m_updateStartTime;
+#ifdef UPDATER_CORE_2014
+	SceUInt8 m_reserved[120];
+#else
 	SceUInt8 m_reserved[132];
+#endif
 	int m_hasDiffGroup;
 };
 

@@ -22,6 +22,9 @@ public:
 	int UpdateModeGetLastError(int *error);
 	int PowerControl(int operation, int flags);
 	static int CheckDeviceStatus(void);
+#ifdef UPDATER_CORE_2014
+	int GetHardwareModel(int *model);
+#endif
 
 private:
 	void getResultFilePath(char *path, SceSize size);

@@ -17,6 +17,9 @@
 #include <graphics/drawobj/panel_obj.h>
 #include <graphics/effects/custom_trail.h>
 #include <graphics/effects/panel_renderer.h>
+#ifdef PAF_BUILD_2014
+#include <graphics/effects/particles.h>
+#endif
 #include <graphics/signed_angle.h>
 #include <std/list>
 
@@ -40,10 +43,17 @@ bool s_trail_on;
 bool s_custom_on = true;
 
 /* the custom renderer */
+#ifdef PAF_BUILD_2014
+static inline Particles *TrailRenderer()
+{
+	return ScePafGraphics_4E038C05()->m_ptr->GetCustomRenderer(false).get();
+}
+#else
 static inline CustomRenderer *TrailRenderer()
 {
 	return ScePafGraphics_4E038C05()->m_ptr->GetCustomRenderer(false).get();
 }
+#endif
 
 /* x to the power, in each component, keeping its sign (an inline function Sony's link keeps
    once; name ours) */
@@ -264,6 +274,42 @@ void ScePafGraphics_0C2B6324(void)
 	if (!s_trail_ready)
 		return;
 
+#ifdef PAF_BUILD_2014
+	common::SharedPtr<Particles> &renderer =
+		ScePafGraphics_4E038C05()->m_ptr->GetCustomRenderer(false);
+
+	if (renderer.get() == NULL)
+		return;
+
+	math::v4 point = renderer->m_pattern2.m_trail.m_points[renderer->m_pattern2.m_trail.m_last];
+
+	renderer->m_pattern2.m_sample_touch = false;
+	ScePafGraphics_4CA96E38(&point);
+	if (s_trail_on && !renderer->m_pattern2.m_sample_touch) {
+		if (point.extract_w() > 0.01f) {
+			common::SharedPtr<Camera> camera =
+				TrailRenderer()->m_camera;
+
+			point = math::v4(Vector4((point / camera->GetUnit()).getImpl().getXYZ(), 1.0f));
+		} else {
+			point = math::v4(mulPerElem(point.getImpl(), Vector4(1.0f, 1.0f, 1.0f, 0.0f)));
+		}
+
+		CustomTrailPoints &trail = renderer->m_pattern2.m_trail;
+		uint32_t index = trail.m_next;
+		uint32_t next = (index + 1) % trail.m_count;
+
+		trail.m_last = index;
+		trail.m_points[index] = point;
+		trail.m_next = next;
+	}
+	renderer->m_pattern1.m_enabled = s_custom_on;
+	renderer->m_pattern2.SetEnabled(s_trail_on);
+	ScePafGraphics_4E038C05();
+	renderer->m_pattern1.m_rs_particles_pattern1->m_draw_mode = s_custom_on ? 1 : 2;
+	ScePafGraphics_4E038C05();
+	renderer->m_pattern2.m_rs_particles_pattern2->m_draw_mode = s_trail_on ? 1 : 2;
+#else
 	common::SharedPtr<CustomRenderer> &renderer =
 		ScePafGraphics_4E038C05()->m_ptr->GetCustomRenderer(false);
 
@@ -298,6 +344,7 @@ void ScePafGraphics_0C2B6324(void)
 	renderer->m_rs_custom->m_draw_mode = s_custom_on ? 1 : 2;
 	ScePafGraphics_4E038C05();
 	renderer->m_rs_trail->m_draw_mode = s_trail_on ? 1 : 2;
+#endif
 }
 
 void ScePafGraphics_67C25F27(void)
@@ -305,12 +352,21 @@ void ScePafGraphics_67C25F27(void)
 	if (!s_trail_ready)
 		return;
 
+#ifdef PAF_BUILD_2014
+	if (TrailRenderer()->m_pattern1.m_rs_particles_pattern1->m_state == 1)
+		ScePafGraphics_4E038C05()->m_ptr->m_draw_env->FlushLayers(
+			TrailRenderer()->m_pattern1.m_rs_particles_pattern1);
+	if (TrailRenderer()->m_pattern2.m_rs_particles_pattern2->m_state == 1)
+		ScePafGraphics_4E038C05()->m_ptr->m_draw_env->FlushLayers(
+			TrailRenderer()->m_pattern2.m_rs_particles_pattern2);
+#else
 	if (TrailRenderer()->m_rs_custom->m_state == 1)
 		ScePafGraphics_4E038C05()->m_ptr->m_draw_env->FlushLayers(
 			TrailRenderer()->m_rs_custom);
 	if (TrailRenderer()->m_rs_trail->m_state == 1)
 		ScePafGraphics_4E038C05()->m_ptr->m_draw_env->FlushLayers(
 			TrailRenderer()->m_rs_trail);
+#endif
 }
 
 void ScePafGraphics_9569E74C(int32_t iboot, float time)
@@ -319,6 +375,15 @@ void ScePafGraphics_9569E74C(int32_t iboot, float time)
 		return;
 
 	s_trail_iboot = iboot != 0;
+#ifdef PAF_BUILD_2014
+	if (iboot == 1) {
+		TrailRenderer()->m_pattern1.m_manager.StartTransition("iboot", time, 0, 0.09f);
+		TrailRenderer()->m_pattern2.m_manager.StartTransition("iboot", time, 0, 0.09f);
+	} else {
+		TrailRenderer()->m_pattern1.m_manager.StartTransition("default", time, 0, 0.09f);
+		TrailRenderer()->m_pattern2.m_manager.StartTransition("default", time, 0, 0.09f);
+	}
+#else
 	if (iboot == 1) {
 		TrailRenderer()->m_manager.StartTransition("iboot", time, 0, 0.09f);
 		TrailRenderer()->m_trail_manager.StartTransition("iboot", time, 0, 0.09f);
@@ -326,6 +391,7 @@ void ScePafGraphics_9569E74C(int32_t iboot, float time)
 		TrailRenderer()->m_manager.StartTransition("default", time, 0, 0.09f);
 		TrailRenderer()->m_trail_manager.StartTransition("default", time, 0, 0.09f);
 	}
+#endif
 }
 
 void ScePafGraphics_DF94063C(const math::v4 &pos, const math::v4 &size, Timer *timer)

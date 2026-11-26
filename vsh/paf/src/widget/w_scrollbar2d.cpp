@@ -478,10 +478,12 @@ static VersatileParam *NewScrollBar2dLayoutParam()
 	return new WidgetLayoutParam;
 }
 
+#ifndef PAF_BUILD_2014
 static VersatileParam *NewScrollBar2dFocusParam()
 {
 	return new WidgetFocusParam;
 }
+#endif
 
 static VersatileParam *NewScrollBar2dStyleParam()
 {
@@ -503,7 +505,9 @@ FactoryFuncTable g_factoryScrollBar2d = {
 	NewScrollBar2d,
 	NewScrollBar2dParam,
 	NewScrollBar2dLayoutParam,
+#ifndef PAF_BUILD_2014
 	NewScrollBar2dFocusParam,
+#endif
 	NewScrollBar2dStyleParam,
 	NewScrollBar2dHandlerParam,
 	NewScrollBar2dSoundParam,

@@ -36,6 +36,10 @@ public:
 	int32_t m_encoding;
 	string *m_string;
 	wstring *m_wstring;
+
+	void Construct(const char *src, int encoding);
+	const wchar_t *GetWideString();
+	void Destroy();
 };
 
 }
@@ -168,6 +172,27 @@ paf::string *ScePafMisc_51E1E267(paf::common::EncodedString *self);
 paf::wstring *ScePafMisc_B672E71C(paf::common::EncodedString *self);
 paf::common::EncodedString *ScePafMisc_B9C99123(paf::common::EncodedString *self);
 
+}
+
+namespace paf {
+namespace common {
+
+inline void EncodedString::Construct(const char *src, int encoding)
+{
+	ScePafMisc_86181366(this, src, encoding);
+}
+
+inline const wchar_t *EncodedString::GetWideString()
+{
+	return ScePafMisc_53948F03(this);
+}
+
+inline void EncodedString::Destroy()
+{
+	ScePafMisc_B45A7521(this);
+}
+
+}
 }
 
 #endif

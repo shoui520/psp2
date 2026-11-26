@@ -80,11 +80,15 @@ static inline math::v2 Ceil(math::v2 v)
 /* the environment's display area scale, 1 outside (0, 1] */
 static inline float GetDisplayAreaScale(Environment *env)
 {
+#ifdef PAF_BUILD_2014
+	return 1.0f;
+#else
 	float scale = env != NULL ? env->m_display_area_scale : 1.0f;
 
 	if (scale <= 0.0f || scale > 1.0f)
 		scale = 1.0f;
 	return scale;
+#endif
 }
 
 /* the rectangle, within the clip stack's top, pushed on the clip stack */
@@ -171,9 +175,11 @@ Camera::Camera(Widget *parent, CreateParam *param)
 	SetAnchor(100, 100, 100, NULL);
 	m_parent_protected = true;
 	ScePafWidget_72F479CA(this);
+#ifndef PAF_BUILD_2014
 	if (!m_drag_begun)
 		m_focus_target = false;
 	m_not_hit_target = true;
+#endif
 }
 
 Camera::~Camera()
@@ -289,8 +295,10 @@ int32_t Camera::Setup(Screen *scr)
 			 !(math::v3(m_scene->GetScale(0)->getImpl().getXYZ()) ==
 			   math::v3(1.0f, 1.0f, 1.0f)))
 			m_pixel_snap = false;
+#ifndef PAF_BUILD_2014
 		else if (m_env->m_display_area_applied && m_env->m_display_area_scale != 1.0f)
 			m_pixel_snap = false;
+#endif
 	}
 
 	math::matrix world = m_world_matrix;
@@ -783,18 +791,22 @@ int32_t Camera::add_obj(Widget *root, graph::DrawInfo &info)
 
 		if (!(out.extract_x() < 0.0f) || !(out.extract_y() < 0.0f)) {
 			root->m_culled = true;
+#ifndef PAF_BUILD_2014
 			root->SetFitToScene(true);
+#endif
 		} else {
 			root->m_culled = false;
 			if (!root->m_draw_always)
 				ret = DrawWidget(this, root, info);
 
+#ifndef PAF_BUILD_2014
 			math::v2 inner = offs - s_scissor_size * 0.5f;
 
 			if (!(inner.extract_x() < 0.0f) || !(inner.extract_y() < 0.0f))
 				root->SetFitToScene(true);
 			else
 				root->SetFitToScene(false);
+#endif
 		}
 		if (root->m_draw_always)
 			return DrawWidget(this, root, info);
@@ -802,7 +814,9 @@ int32_t Camera::add_obj(Widget *root, graph::DrawInfo &info)
 	}
 culled:
 	root->m_culled = true;
+#ifndef PAF_BUILD_2014
 	root->SetFitToScene(true);
+#endif
 	return 0;
 }
 
@@ -850,6 +864,7 @@ void ScePafWidget_1A6D5164(Camera *camera, Widget *widget, graph::DrawInfo &info
 			++info.m_layer;
 		}
 
+#ifndef PAF_BUILD_2014
 		Environment *env = camera->m_env;
 
 		if (env != NULL && widget->m_focus_root != NULL && ScePafWidget_A6B659BB(env, 0)) {
@@ -879,6 +894,7 @@ void ScePafWidget_1A6D5164(Camera *camera, Widget *widget, graph::DrawInfo &info
 				}
 			}
 		}
+#endif
 	}
 	if ((uint32_t)info.m_max_layer < (uint32_t)info.m_layer)
 		info.m_max_layer = info.m_layer;
@@ -889,10 +905,14 @@ void ScePafWidget_80946FB9(Camera *camera)
 	Scene *scene = camera->m_scene;
 
 	if (scene->m_scissor_to_scene) {
+#ifdef PAF_BUILD_2014
+		{
+#else
 		Environment *env = camera->m_env;
 
 		if (!env->m_display_area_applied || env->m_display_area_scale == 1.0f ||
 		    env->m_display_area_scene != scene) {
+#endif
 			math::v4 center = scene->GetPosCenter(0, NULL, math::v4(0.0f, 0.0f, 0.0f, 0.0f));
 			math::rect rect(math::v2(center.getImpl().getXY()),
 					math::v2(camera->m_scene->GetSize(0)->getImpl().getXY()));

@@ -40,7 +40,9 @@ class BasicLineVertShader;
 class BasicImageVertShader;
 class BasicRectFragShader;
 class BasicImageFragShader;
+#ifndef PAF_BUILD_2014
 class BasicImageCopyFragShader;
+#endif
 class BasicDualImageFragShader;
 class BasicShadowFragShader;
 class BasicEmbossFragShader;
@@ -111,7 +113,9 @@ private:
 	typedef arl::ShaderInstance<BasicImageVertShader, arl::VertShaderObject> ImageVert;
 	typedef arl::ShaderInstance<BasicRectFragShader, arl::FragShaderObject> RectFrag;
 	typedef arl::ShaderInstance<BasicImageFragShader, arl::FragShaderObject> ImageFrag;
+#ifndef PAF_BUILD_2014
 	typedef arl::ShaderInstance<BasicImageCopyFragShader, arl::FragShaderObject> ImageCopyFrag;
+#endif
 	typedef arl::ShaderInstance<BasicDualImageFragShader, arl::FragShaderObject> DualImageFrag;
 	typedef arl::ShaderInstance<BasicShadowFragShader, arl::FragShaderObject> ShadowFrag;
 	typedef arl::ShaderInstance<BasicEmbossFragShader, arl::FragShaderObject> EmbossFrag;
@@ -129,8 +133,10 @@ private:
 	ImageVert *m_image_vert;
 	RectFrag *m_rect_frag;
 	ImageFrag *m_image_frag;
+#ifndef PAF_BUILD_2014
 	/* the texture alone, for the scene's colour white */
 	ImageCopyFrag *m_image_copy_frag;
+#endif
 	DualImageFrag *m_dual_image_frag;
 	ShadowFrag *m_shadow_frag;
 	EmbossFrag *m_emboss_frag;

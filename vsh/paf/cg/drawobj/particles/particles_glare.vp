@@ -1,0 +1,72 @@
+/*
+ * Particle glare pass: camera-aligned billboards scaled by Glare.y * specular and lit only
+ * by the iridescent specular term.
+ */
+struct VertexInput {
+	float4 pos : POSITION;
+	float4 uv0 : TEXCOORD0;
+};
+
+void main(VertexInput vin,
+	  uniform float4x4 ModelviewProjection,
+	  uniform float4x4 Modelview,
+	  uniform float3 ParticleSize,
+	  uniform float4 LightPack[4],
+	  uniform float2 Transparency,
+	  uniform float4 Focus,
+	  uniform float2 FocusRangesRcp,
+	  uniform float3 FocusCurves,
+	  uniform float4x4 FrontFacingMatrix,
+	  uniform float4 NearControl,
+	  uniform float3 LifeBoundsMin,
+	  uniform float3 LifeBoundsMax,
+	  uniform float2 Darkness,
+	  uniform float4 Glare,
+	  uniform float WorldScaleHack,
+	  uniform float3 Color,
+	  uniform sampler2D IridescentTex : TEXUNIT0,
+	  uniform sampler2D RotationsTex : TEXUNIT1,
+	  out float4 oPosition : POSITION,
+	  out half4 oTexcoord : TEXCOORD0,
+	  out float3 oColor : TEXCOORD1)
+{
+	half4 rotSample = tex2Dlod<half4>(RotationsTex, float4(vin.pos.w, 0.5, 0, 0));
+	float4 rot = (float4)normalize(rotSample);
+	float3 toEye = LightPack[0].xyz - vin.pos.xyz;
+	float eyeDist = length(toEye);
+	float3 eyeDir = toEye / eyeDist;
+	float nearT = (clamp(eyeDist, Focus.x, Focus.y) - Focus.y) * FocusRangesRcp.x;
+	float farT = (clamp(eyeDist, Focus.z, Focus.w) - Focus.z) * FocusRangesRcp.y;
+	float nearBlur = nearT * nearT * nearT;
+	float farBlur = farT * farT;
+	float size = ParticleSize.x + nearBlur * ParticleSize.y + farBlur * ParticleSize.z;
+	float angular = FocusCurves.z * atan(size / eyeDist);
+	float3 lightDir = normalize(LightPack[1].xyz - vin.pos.xyz);
+	float3 halfVec = normalize(lightDir + eyeDir);
+	float3 rotNormal = float3(2 * (rot.x * rot.z + rot.w * rot.y),
+				  2 * (rot.y * rot.z - rot.w * rot.x),
+				  1 - 2 * (rot.x * rot.x + rot.y * rot.y));
+	float lifeFade = 1 - max(abs(vin.pos.w - 0.5) * 50 - 24, 0);
+	float3 boundsDist = min(vin.pos.xyz - LifeBoundsMin, LifeBoundsMax - vin.pos.xyz);
+	float boundsFade = saturate(min(boundsDist.x, min(boundsDist.y, boundsDist.z)) * 5);
+	float2 viewNormalXY = mul(rotNormal, (float3x2)Modelview);
+	float3 irisTex = tex2Dlod(IridescentTex, float4(viewNormalXY * 0.5 + 0.5, 0, 0)).rgb;
+	float3 iridescence = lerp(float3(1, 1, 1), irisTex, LightPack[3].w);
+	float spec = pow(abs(dot(halfVec, rotNormal)), LightPack[1].w);
+	float3 radiance = iridescence * (LightPack[3].y * spec);
+	float3 toneMapped = 1 - exp(-LightPack[3].z * radiance);
+	float2 quadOffset = vin.uv0.xy - 0.5;
+	float glareSize = Glare.y * size * spec;
+	float3 worldPos = vin.pos.xyz +
+			  glareSize * (FrontFacingMatrix[0].xyz * quadOffset.x +
+				       FrontFacingMatrix[1].xyz * quadOffset.y);
+	float fresnel = 1 - pow(abs(1 - abs(dot(FrontFacingMatrix[2].xyz, eyeDir))), Transparency.x);
+	float nearDark = saturate(nearT * Darkness.x * angular);
+	float farDark = saturate(farT * Darkness.y * angular);
+	float alpha = lifeFade * Transparency.y * fresnel * (1 - farDark) * (1 - nearDark);
+
+	oPosition = mul(float4(worldPos * WorldScaleHack, 1), ModelviewProjection);
+	oTexcoord = half4(vin.uv0.xy, farBlur + nearBlur,
+			  lerp(0.85, NearControl.y, nearBlur));
+	oColor = Color * (boundsFade * alpha) * toneMapped * Glare.x;
+}

@@ -137,7 +137,7 @@ public:
 	{
 	}
 
-	WAVE_SHADER_BINARY("paf/cg/drawobj/page_turn/page_turn_bottom_round.vp", 0x3d4);
+	WAVE_SHADER_BINARY("paf/cg/drawobj/page_turn/page_turn_bottom_round.vp", PAF_SHADER_SIZE(0x3d4, 1124));
 
 	virtual void SetMVP(const math::matrix &value)
 	{
@@ -261,7 +261,7 @@ public:
 	{
 	}
 
-	WAVE_SHADER_BINARY("paf/cg/drawobj/page_turn/page_turn_bottom_round.fp", 0x20c);
+	WAVE_SHADER_BINARY("paf/cg/drawobj/page_turn/page_turn_bottom_round.fp", PAF_SHADER_SIZE(0x20c, 504));
 
 	virtual void SetGrep(const math::v2 &value)
 	{
@@ -393,7 +393,7 @@ public:
 	{
 	}
 
-	WAVE_SHADER_BINARY("paf/cg/drawobj/page_turn/page_turn_bottom_round_empty.vp", 0x258);
+	WAVE_SHADER_BINARY("paf/cg/drawobj/page_turn/page_turn_bottom_round_empty.vp", PAF_SHADER_SIZE(0x258, 720));
 
 	virtual void SetMVP(const math::matrix &value)
 	{
@@ -519,7 +519,7 @@ public:
 	{
 	}
 
-	WAVE_SHADER_BINARY("paf/cg/drawobj/page_turn/page_turn_bottom_round_empty.fp", 0x2bc);
+	WAVE_SHADER_BINARY("paf/cg/drawobj/page_turn/page_turn_bottom_round_empty.fp", PAF_SHADER_SIZE(0x2bc, 704));
 
 	virtual void SetGrep(const math::v2 &value)
 	{
@@ -665,7 +665,7 @@ public:
 	{
 	}
 
-	WAVE_SHADER_BINARY("paf/cg/drawobj/page_turn/page_turn_top_round.vp", 0x678);
+	WAVE_SHADER_BINARY("paf/cg/drawobj/page_turn/page_turn_top_round.vp", PAF_SHADER_SIZE(0x678, 1896));
 
 	virtual void SetMVP(const math::matrix &value)
 	{
@@ -797,7 +797,7 @@ public:
 	{
 	}
 
-	WAVE_SHADER_BINARY("paf/cg/drawobj/page_turn/page_turn_top_round.fp", 0x258);
+	WAVE_SHADER_BINARY("paf/cg/drawobj/page_turn/page_turn_top_round.fp", PAF_SHADER_SIZE(0x258, 596));
 
 	virtual void SetGrep(const math::v2 &value)
 	{
@@ -937,7 +937,7 @@ public:
 	{
 	}
 
-	WAVE_SHADER_BINARY("paf/cg/drawobj/page_turn/page_turn_bottom.vp", 0x3b4);
+	WAVE_SHADER_BINARY("paf/cg/drawobj/page_turn/page_turn_bottom.vp", PAF_SHADER_SIZE(0x3b4, 1052));
 
 	virtual void SetMVP(const math::matrix &value)
 	{
@@ -1055,7 +1055,7 @@ public:
 	{
 	}
 
-	WAVE_SHADER_BINARY("paf/cg/drawobj/page_turn/page_turn_bottom.fp", 0x108);
+	WAVE_SHADER_BINARY("paf/cg/drawobj/page_turn/page_turn_bottom.fp", PAF_SHADER_SIZE(0x108, 236));
 
 	virtual void SetGrep(const math::v2 &value)
 	{
@@ -1189,7 +1189,7 @@ public:
 	{
 	}
 
-	WAVE_SHADER_BINARY("paf/cg/drawobj/page_turn/page_turn_top.vp", 0x610);
+	WAVE_SHADER_BINARY("paf/cg/drawobj/page_turn/page_turn_top.vp", PAF_SHADER_SIZE(0x610, 1824));
 
 	virtual void SetMVP(const math::matrix &value)
 	{
@@ -1317,7 +1317,7 @@ public:
 	{
 	}
 
-	WAVE_SHADER_BINARY("paf/cg/drawobj/page_turn/page_turn_top.fp", 0x1bc);
+	WAVE_SHADER_BINARY("paf/cg/drawobj/page_turn/page_turn_top.fp", PAF_SHADER_SIZE(0x1bc, 416));
 
 	virtual void SetGrep(const math::v2 &value)
 	{
@@ -1461,7 +1461,7 @@ public:
 	{
 	}
 
-	WAVE_SHADER_BINARY("paf/cg/drawobj/page_turn/pure_copy.fp", 0x104);
+	WAVE_SHADER_BINARY("paf/cg/drawobj/page_turn/pure_copy.fp", PAF_SHADER_SIZE(0x104, 232));
 
 	arl::ShaderParameter<arl::TextureSource> m_source;
 };
@@ -1494,7 +1494,7 @@ public:
 	{
 	}
 
-	WAVE_SHADER_BINARY("paf/cg/drawobj/page_turn/page_turn_shadow.fp", 0x1c4);
+	WAVE_SHADER_BINARY("paf/cg/drawobj/page_turn/page_turn_shadow.fp", PAF_SHADER_SIZE(0x1c4, 448));
 
 	arl::ShaderParameter<arl::TextureSource> m_tex;
 	arl::ShaderParameter<math::v4> m_border;
@@ -1841,7 +1841,9 @@ public:
 	arl::TextureSource m_distance;
 	/* the back of the page (PageTurnObj::SetBgTexture) */
 	arl::TextureSource m_background;
+#ifndef PAF_BUILD_2014
 	ui::Screen *m_screen;
+#endif
 };
 
 /* Sony's build keeps the page set's instance destructor out of line */

@@ -230,6 +230,7 @@ void RichText::LinkFocus()
 		if (prev == m_items.end()) {
 			ScePafWidget_EC6175D6(widget, true);
 		} else {
+#ifndef PAF_BUILD_2014
 			int32_t dir = 0;
 			int32_t back = 1;
 
@@ -239,6 +240,7 @@ void RichText::LinkFocus()
 			}
 			widget->SetFocusDirectionWidget(dir, (*prev)->m_widget);
 			(*prev)->m_widget->SetFocusDirectionWidget(back, (*it)->m_widget);
+#endif
 		}
 		prev = it;
 	}
@@ -2080,6 +2082,7 @@ void RichText::OnPartsLayoutUpdated(bool is_dirty)
 	ScrollViewBase::OnPartsLayoutUpdated(is_dirty);
 }
 
+#ifndef PAF_BUILD_2014
 /* whether the two are equal, compared lane by lane */
 static inline bool IsSame(const math::v2 &a, const math::v2 &b)
 {
@@ -2178,6 +2181,7 @@ bool RichText::ScePafWidget_AD706F2A(const math::v2 &dir, Widget *from)
 	}
 	return moved;
 }
+#endif
 
 /* the number the digits at the start of the string give, and where they end */
 static inline const char *ReadNumber(const string &str, uint32_t &value)
@@ -2760,10 +2764,12 @@ static VersatileParam *NewRichTextLayoutParam()
 	return new WidgetLayoutParam;
 }
 
+#ifndef PAF_BUILD_2014
 static VersatileParam *NewRichTextFocusParam()
 {
 	return new WidgetFocusParam;
 }
+#endif
 
 static VersatileParam *NewRichTextStyleParam()
 {
@@ -2806,7 +2812,9 @@ FactoryFuncTable g_factoryRichText = {
 	NewRichText,
 	NewRichTextParam,
 	NewRichTextLayoutParam,
+#ifndef PAF_BUILD_2014
 	NewRichTextFocusParam,
+#endif
 	NewRichTextStyleParam,
 	NewRichTextHandlerParam,
 	NewRichTextSoundParam,

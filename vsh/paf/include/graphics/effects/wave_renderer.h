@@ -108,7 +108,7 @@ public:
 	{
 	}
 
-	WAVE_SHADER_BINARY("paf/cg/drawobj/wave/wave.vp", 0x238);
+	WAVE_SHADER_BINARY("paf/cg/drawobj/wave/wave.vp", PAF_SHADER_SIZE(0x238, 544));
 
 	arl::ShaderParameter<math::matrix> m_vp;
 	arl::ShaderParameter<math::matrix> m_model_matrix;
@@ -138,7 +138,7 @@ public:
 	{
 	}
 
-	WAVE_SHADER_BINARY("paf/cg/drawobj/wave/wave.fp", 0x104);
+	WAVE_SHADER_BINARY("paf/cg/drawobj/wave/wave.fp", PAF_SHADER_SIZE(0x104, 232));
 
 	arl::ShaderParameter<arl::TextureSource> m_lit_tex;
 };
@@ -164,7 +164,7 @@ public:
 	{
 	}
 
-	WAVE_SHADER_BINARY("paf/cg/drawobj/wave/wave_pos.vp", 0x134);
+	WAVE_SHADER_BINARY("paf/cg/drawobj/wave/wave_pos.vp", PAF_SHADER_SIZE(0x134, 316));
 
 	arl::ShaderParameter<math::matrix> m_mvp;
 };
@@ -208,7 +208,7 @@ public:
 	{
 	}
 
-	WAVE_SHADER_BINARY("paf/cg/drawobj/wave/wave_pos.fp", 0x4b0);
+	WAVE_SHADER_BINARY("paf/cg/drawobj/wave/wave_pos.fp", PAF_SHADER_SIZE(0x4b0, 1508));
 
 	arl::ShaderParameter<arl::TextureSource> m_height_map;
 	arl::ShaderParameter<float> m_distortion_scale;
@@ -266,7 +266,7 @@ public:
 	{
 	}
 
-	WAVE_SHADER_BINARY("paf/cg/drawobj/wave/wave_lit_tex.fp", 0x58c);
+	WAVE_SHADER_BINARY("paf/cg/drawobj/wave/wave_lit_tex.fp", PAF_SHADER_SIZE(0x58c, 1672));
 
 	arl::ShaderParameter<math::matrix> m_model_matrix;
 	arl::ShaderParameter<arl::TextureSource> m_pos_tex;
@@ -338,7 +338,7 @@ public:
 	{
 	}
 
-	WAVE_SHADER_BINARY("paf/cg/drawobj/wave/skydome.vp", 0x70c);
+	WAVE_SHADER_BINARY("paf/cg/drawobj/wave/skydome.vp", PAF_SHADER_SIZE(0x70c, 2132));
 
 	arl::ShaderParameter<math::matrix> m_vp;
 	arl::ShaderParameter<math::matrix> m_m;
@@ -373,7 +373,7 @@ public:
 	{
 	}
 
-	WAVE_SHADER_BINARY("paf/cg/drawobj/wave/skydome.fp", 0xcc);
+	WAVE_SHADER_BINARY("paf/cg/drawobj/wave/skydome.fp", PAF_SHADER_SIZE(0xcc, 208));
 };
 
 /* a vertex of the waves' grid: where it is and its normal (names ours); 0x20 bytes */

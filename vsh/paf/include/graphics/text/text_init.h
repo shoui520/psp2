@@ -15,6 +15,31 @@ class TextInitParam {
 public:
 	TextInitParam();
 
+#ifdef PAF_BUILD_2014
+	void *text_surface_pool_addr;
+	uint32_t text_surface_pool_size;
+	uint32_t pvf_heap_size;
+	/* the Locale, -1 for the system's */
+	int32_t locale;
+	void *mem_pvf_japanese_addr;
+	uint32_t mem_pvf_japanese_size;
+	void *mem_pvf_latin_addr;
+	uint32_t mem_pvf_latin_size;
+	void *mem_pvf_hangul_addr;
+	uint32_t mem_pvf_hangul_size;
+	void *mem_pvf_chinese_addr;
+	uint32_t mem_pvf_chinese_size;
+	/* the fonts' files, read when not in memory (names ours) */
+	char *path_pvf_japanese;
+	char *path_pvf_latin;
+	char *path_pvf_hangul;
+	char *path_pvf_chinese;
+	/* the emoji font already in memory, in place of path_emoji_font */
+	void *mem_emoji_font_addr;
+	uint32_t mem_emoji_font_size;
+	/* the emoji font, vs0:data/external/font/emoji/imagefont.bin when NULL */
+	char *path_emoji_font;
+#else
 	uint32_t text_surface_pool_size;
 	uint32_t pvf_heap_size;
 	uint32_t pvf_option;
@@ -43,6 +68,7 @@ public:
 	uint32_t mem_emoji_font_size;
 	/* the emoji font, vs0:data/external/font/emoji/imagefont.bin when NULL */
 	char *path_emoji_font;
+#endif
 };
 
 int32_t InitText(const TextInitParam &param);

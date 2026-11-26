@@ -346,7 +346,7 @@ public:
 	}
 
 	/* background_image.fp built by psp2cgc */
-	static const uint8_t s_binary[264];
+	static const uint8_t s_binary[PAF_SHADER_SIZE(264, 236)];
 
 	arl::ShaderParameter<arl::TextureSource> m_color_map;
 };
@@ -416,7 +416,7 @@ public:
 	}
 
 	/* rect2env.vp built by psp2cgc */
-	static const uint8_t s_binary[296];
+	static const uint8_t s_binary[PAF_SHADER_SIZE(296, 344)];
 };
 
 /* rect2env.fp: the screen (Source) mapped onto the sphere through Rect2SphereMap and blended
@@ -467,7 +467,7 @@ public:
 	}
 
 	/* rect2env.fp built by psp2cgc */
-	static const uint8_t s_binary[504];
+	static const uint8_t s_binary[PAF_SHADER_SIZE(504, 468)];
 
 	arl::ShaderParameter<arl::TextureSource> m_source;
 	arl::ShaderParameter<arl::TextureSource> m_rect2sphere_map;

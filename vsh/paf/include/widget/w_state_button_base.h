@@ -68,6 +68,7 @@ public:
 
 	using ButtonBase::GetString;
 
+#ifndef PAF_BUILD_2014
 	/* Widget's, or only down while its focus directions are off */
 	virtual int32_t GetFocusDirectionMask()
 	{
@@ -87,6 +88,9 @@ public:
 	virtual int32_t DoButtonEvent(int32_t type, Event *e);
 	virtual int32_t SetTextAutoScrollOrigin(const math::v2 &pos);
 	virtual int32_t GetTextAutoScrollOrigin(math::v2 &pos);
+#else
+	virtual int32_t DoButtonEvent(int32_t type);
+#endif
 	virtual graph::DrawObj *CreateDrawObj(int32_t obj);
 	/* checked or not, the image's animation played over the time, and its sound played with
 	   ch_anim */

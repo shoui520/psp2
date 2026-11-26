@@ -392,8 +392,13 @@ float PageTurn::DoTransitionReverse_core(float parameter, bool set)
 	if (m_plane != NULL && !m_plane->m_flags.m_visible)
 		return 0.0f;
 
+#ifdef PAF_BUILD_2014
+	SceneResolution *resolution = m_env->FindResolution(
+		m_env->m_resolutions, m_env->m_resolution_num, m_scene->m_resolution_id);
+#else
 	SceneResolution *resolution = ScePafWidget_CDC90BA2(m_scene->m_env_param,
 							    m_scene->m_resolution_id);
+#endif
 
 	KillAnim(ANIM_TURN_OFFSET);
 
@@ -625,10 +630,12 @@ static VersatileParam *NewPageTurnLayoutParam()
 	return new WidgetLayoutParam;
 }
 
+#ifndef PAF_BUILD_2014
 static VersatileParam *NewPageTurnFocusParam()
 {
 	return new WidgetFocusParam;
 }
+#endif
 
 static VersatileParam *NewPageTurnStyleParam()
 {
@@ -650,7 +657,9 @@ FactoryFuncTable g_factoryPageTurn = {
 	NewPageTurn,
 	NewPageTurnParam,
 	NewPageTurnLayoutParam,
+#ifndef PAF_BUILD_2014
 	NewPageTurnFocusParam,
+#endif
 	NewPageTurnStyleParam,
 	NewPageTurnHandlerParam,
 	NewPageTurnSoundParam,

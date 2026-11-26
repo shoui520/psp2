@@ -19,12 +19,20 @@
 int MsgDialogCheckSdkVersion(SceUInt32 sdkVersion);
 int MsgDialogGetSdkLevel(void);
 void MsgDialogFormatSize(paf::wstring *out, SceUInt32 sizeKiB);
+#ifdef MSG_DIALOG_UTIL_2014
+paf::wstring MsgDialogFormat(const wchar_t *format, const wchar_t *firstArg = L"",
+			     const wchar_t *secondArg = L"", const wchar_t *thirdArg = L"",
+			     const wchar_t *fourthArg = L"", const wchar_t *fifthArg = L"",
+			     const wchar_t *sixthArg = L"", const wchar_t *seventhArg = L"",
+			     const wchar_t *eighthArg = L"", const wchar_t *ninthArg = L"");
+#else
 paf::wstring MsgDialogFormat(const wchar_t *format, const wchar_t *arg1 = L"",
 			     const wchar_t *arg2 = L"", const wchar_t *arg3 = L"",
 			     const wchar_t *arg4 = L"", const wchar_t *arg5 = L"",
 			     const wchar_t *arg6 = L"", const wchar_t *arg7 = L"",
 			     const wchar_t *arg8 = L"", const wchar_t *arg9 = L"",
 			     const wchar_t *arg10 = L"", const wchar_t *arg11 = L"");
+#endif
 
 /* what MsgDialogFormat puts for %A..%Z and %a..%z: nothing while it is not set */
 extern const wchar_t *(*g_msgDialogFormatLetter)(wchar_t letter);

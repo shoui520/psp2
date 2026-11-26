@@ -221,10 +221,12 @@ static VersatileParam *NewCompositeDrawerLayoutParam()
 	return new WidgetLayoutParam;
 }
 
+#ifndef PAF_BUILD_2014
 static VersatileParam *NewCompositeDrawerFocusParam()
 {
 	return new WidgetFocusParam;
 }
+#endif
 
 static VersatileParam *NewCompositeDrawerStyleParam()
 {
@@ -246,7 +248,9 @@ FactoryFuncTable g_factoryCompositeDrawer = {
 	NewCompositeDrawer,
 	NewCompositeDrawerParam,
 	NewCompositeDrawerLayoutParam,
+#ifndef PAF_BUILD_2014
 	NewCompositeDrawerFocusParam,
+#endif
 	NewCompositeDrawerStyleParam,
 	NewCompositeDrawerHandlerParam,
 	NewCompositeDrawerSoundParam,

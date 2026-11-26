@@ -39,10 +39,20 @@ private:
 	int convertErrorCodeExtractStatus(int packageType, int error);
 	int convertErrorCodeExtractRequest(int packageType, int error);
 	int extractSpkg(SceUID pupFd, const SpkgEntry *entry, void *outputBuffer);
+#ifdef UPDATER_CORE_2014
+	int addTarFileToMemoryFs(SceUID pupFd, const char *tarPath, const char *fileName,
+				 SceIoStat *stat, bool directWrite);
+	int applyManifestDirectory(SceUID pupFd);
+	int decodeSerialDateTime(SceDateTime *dateTime);
+	int applyManifestDirect(SceUID pupFd);
+	int updateDirect(SceUID pupFd);
+	int mountTargetPartition(bool writable);
+#else
 	int addTarFileToMemoryFs(SceUID pupFd, const char *tarPath, const char *fileName,
 				 SceIoStat *stat);
 	int applyManifestDirectory(SceUID pupFd);
 	int mountTargetPartition(void);
+#endif
 	int allocateTarBuffer(void);
 	int allocateImageMemBlock(void);
 	int setupMemoryFs(void);

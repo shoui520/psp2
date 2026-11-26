@@ -15,6 +15,9 @@
 #include <graphics/arl/gxm/gxm_arl_frontend.h>
 #include <graphics/drawobj/draw_env.h>
 #include <graphics/effects/panel_renderer.h>
+#ifdef PAF_BUILD_2014
+#include <graphics/effects/particles.h>
+#endif
 #include <graphics/drawobj/plane_obj.h>
 #include <graphics/graphmem/graphmem.h>
 #include <graphics/gutil.h>
@@ -40,6 +43,17 @@ namespace gutil {
 /* what gutil keeps between Init and Term (names ours) */
 class State {
 public:
+#ifdef PAF_BUILD_2014
+	State() : m_debug_heap(NULL), m_default_surface_pool(NULL)
+	{
+	}
+
+	memory::HeapAllocator *m_debug_heap;
+	DevInitParam m_dev_param;
+	InitParam m_param;
+	graph::SurfacePool *m_default_surface_pool;
+	common::SharedPtr<graph::Shader> m_default_shader;
+#else
 	State() : m_debug_heap(NULL), m_gxm_initialized(false), m_frame_buffer_mode(FrameBuffer_Normal),
 		  m_default_surface_pool(NULL)
 	{
@@ -51,6 +65,7 @@ public:
 	InitParam m_param;
 	graph::SurfacePool *m_default_surface_pool;
 	common::SharedPtr<graph::Shader> m_default_shader;
+#endif
 };
 
 /* a function the debug GUI calls each frame with its userdata (names ours) */
@@ -68,15 +83,31 @@ static State s_state;
 static vector<DebugGuiFunc> s_debug_gui_funcs((allocator<DebugGuiFunc>()));
 
 InitParam::InitParam()
+#ifdef PAF_BUILD_2014
+	: surf_dev_mem_addr(NULL), surf_dev_mem_size(0), surf_def_pool_addr(NULL),
+	  surf_def_pool_size(0), text_surface_pool_addr(NULL), text_surface_pool_size(0),
+	  pvf_heap_size(0), locale(-1), mem_pvf_japanese_addr(NULL), mem_pvf_japanese_size(0),
+	  mem_pvf_latin_addr(NULL), mem_pvf_latin_size(0), mem_pvf_hangul_addr(NULL),
+	  mem_pvf_hangul_size(0), mem_pvf_chinese_addr(NULL), mem_pvf_chinese_size(0),
+	  mem_emoji_font_addr(NULL), mem_emoji_font_size(0), no_text(false), screen_width(0),
+	  screen_height(0), fov(0.0f)
+#else
 	: surf_dev_mem_addr(NULL), surf_dev_mem_size(0), surf_def_pool_addr(NULL),
 	  surf_def_pool_size(0), screen_width(0), screen_height(0), fov(0.0f), text_param(NULL)
+#endif
 {
 }
 
 DevInitParam::DevInitParam()
+#ifdef PAF_BUILD_2014
+	: frame_buffer_mode(FrameBuffer_Normal), graph_heap_size_on_main_memory(0x100000),
+	  graph_heap_size_on_video_memory(0), display_list_size(0), parameter_buffer_size(0),
+	  parameter_buffer_location(0)
+#else
 	: parameter_buffer_size(0), parameter_buffer_location(0),
 	  graph_heap_size_on_main_memory(0x100000), graph_heap_size_on_video_memory(0),
 	  display_list_size(0)
+#endif
 {
 }
 
@@ -198,10 +229,15 @@ void DevTerm()
 {
 	ScePafGraphics_501B8EB8();
 	GraphMem::Exit();
+#ifdef PAF_BUILD_2014
+	if (s_state.m_dev_param.frame_buffer_mode != FrameBuffer_Given)
+		sceGxmTerminate();
+#else
 	if (s_state.m_frame_buffer_mode != FrameBuffer_Given && s_state.m_gxm_initialized) {
 		sceGxmTerminate();
 		s_state.m_gxm_initialized = false;
 	}
+#endif
 }
 
 int32_t Init(const InitParam &param)
@@ -221,17 +257,21 @@ int32_t Init(const InitParam &param)
 	ScePafGraphics_4E038C05()->m_ptr->m_camera_2d->Reset(1.0f);
 
 	float aspect = width / height;
+#ifndef PAF_BUILD_2014
 	float half_width = width * 0.5f;
+#endif
 
 	ScePafGraphics_4E038C05()->m_ptr->m_camera->m_projection.SetAspect(aspect);
 	ScePafGraphics_4E038C05()->m_ptr->m_camera_2d->m_projection.SetAspect(aspect);
 
+#ifndef PAF_BUILD_2014
 	float fov_x = ScePafGraphics_4E038C05()->m_ptr->m_camera->m_projection.GetFovX();
 	math::v4 eye = math::v4(sce::Vectormath::Simd::Aos::Vector4::zAxis()) * half_width;
 
 	ScePafGraphics_4E038C05()->m_ptr->m_camera->SetPosition(eye / sce_paf_tanf(fov_x * 0.5f));
 	fov_x = ScePafGraphics_4E038C05()->m_ptr->m_camera_2d->m_projection.GetFovX();
 	ScePafGraphics_4E038C05()->m_ptr->m_camera_2d->SetPosition(eye / sce_paf_tanf(fov_x * 0.5f));
+#endif
 
 	if (param.surf_def_pool_size != 0)
 		s_state.m_default_surface_pool = new graph::SurfacePool(
@@ -239,8 +279,30 @@ int32_t Init(const InitParam &param)
 			"ScePafGUtilDefaultSurfacePool", NULL, graph::SurfacePool::MemoryType_Normal);
 	s_state.m_default_shader = common::SharedPtr<graph::Shader>(new graph::DefaultShader());
 	s_state.m_param = param;
+#ifdef PAF_BUILD_2014
+	if (!param.no_text) {
+		graph::TextInitParam text_param;
+
+		text_param.text_surface_pool_addr = s_state.m_param.text_surface_pool_addr;
+		text_param.text_surface_pool_size = s_state.m_param.text_surface_pool_size;
+		text_param.pvf_heap_size = s_state.m_param.pvf_heap_size;
+		text_param.locale = s_state.m_param.locale;
+		text_param.mem_pvf_japanese_addr = s_state.m_param.mem_pvf_japanese_addr;
+		text_param.mem_pvf_japanese_size = s_state.m_param.mem_pvf_japanese_size;
+		text_param.mem_pvf_latin_addr = s_state.m_param.mem_pvf_latin_addr;
+		text_param.mem_pvf_latin_size = s_state.m_param.mem_pvf_latin_size;
+		text_param.mem_pvf_hangul_addr = s_state.m_param.mem_pvf_hangul_addr;
+		text_param.mem_pvf_hangul_size = s_state.m_param.mem_pvf_hangul_size;
+		text_param.mem_pvf_chinese_addr = s_state.m_param.mem_pvf_chinese_addr;
+		text_param.mem_pvf_chinese_size = s_state.m_param.mem_pvf_chinese_size;
+		text_param.mem_emoji_font_addr = s_state.m_param.mem_emoji_font_addr;
+		text_param.mem_emoji_font_size = s_state.m_param.mem_emoji_font_size;
+		graph::InitText(text_param);
+	}
+#else
 	if (param.text_param != NULL)
 		graph::InitText(*param.text_param);
+#endif
 	return 0;
 }
 
@@ -257,10 +319,17 @@ int32_t LoadResource(uint32_t flags, const string &path)
 		ScePafGraphics_71E2CB77(ScePafGraphics_4E038C05()->m_ptr, true);
 	if (flags & 0x10) {
 		ScePafGraphics_4E038C05()->m_ptr->GetCustomRenderer(true);
+#ifdef PAF_BUILD_2014
+		ScePafGraphics_4E038C05()->m_ptr->GetCustomRenderer(false)->m_pattern1.m_enabled =
+			false;
+		ScePafGraphics_4E038C05()->m_ptr->GetCustomRenderer(false)->m_pattern2.SetEnabled(
+			false);
+#else
 		ScePafGraphics_4E038C05()->m_ptr->GetCustomRenderer(false)->GetOption()->SetEnabled(
 			false);
 		ScePafGraphics_4E038C05()->m_ptr->GetCustomRenderer(false)->GetOption()->SetEnabled(
 			false);
+#endif
 	}
 	return 0;
 }
@@ -275,6 +344,62 @@ common::SharedPtr<graph::Shader> *GetDefaultShader()
 	return &s_state.m_default_shader;
 }
 
+#ifdef PAF_BUILD_2014
+void SetFrameBufferMode(FrameBufferMode mode)
+{
+	s_state.m_dev_param.frame_buffer_mode = mode;
+}
+
+FrameBufferMode GetFrameBufferMode()
+{
+	return s_state.m_dev_param.frame_buffer_mode;
+}
+
+int32_t DevInit(const DevInitParam &param)
+{
+	graph::arl::InitParam arl_param;
+
+	arl_param.m_ring_buffer_size = param.display_list_size;
+	arl_param.m_memory_mode = param.frame_buffer_mode;
+	if (param.frame_buffer_mode == FrameBuffer_Given) {
+		GraphMem::Init(param.graph_heap_size_on_main_memory,
+			       param.graph_heap_size_on_video_memory,
+			       GraphMem::ModeType_CommonDialog);
+	} else {
+		SceGxmInitializeParams params;
+
+		sce_paf_memset(&params, 0, sizeof(params));
+		params.flags = 2;
+		params.displayQueueMaxPendingCount = 1;
+		params.parameterBufferSize = param.parameter_buffer_size;
+		switch (param.frame_buffer_mode) {
+		case FrameBuffer_Normal:
+			params.displayQueueCallback = graph::DisplaySurface::displayCallback;
+			params.displayQueueCallbackDataSize = 32;
+			break;
+		case FrameBuffer_Shared_Create:
+			params.flags = 6;
+			params.displayQueueCallback = graph::DisplaySurface::displayCallback;
+			params.displayQueueCallbackDataSize = 32;
+			break;
+		case FrameBuffer_Shared_Share:
+		case FrameBuffer_Shared_OffScreen:
+			params.flags = 10;
+			break;
+		default:
+			break;
+		}
+		sceGxmVshInitialize(&params);
+		GraphMem::Init(param.graph_heap_size_on_main_memory,
+			       param.graph_heap_size_on_video_memory,
+			       GraphMem::ModeType_Normal);
+	}
+	ScePafGraphics_38901781(arl_param);
+	s_state.m_dev_param = param;
+	common::internal::ResetFrameCount();
+	return 0;
+}
+#else
 void SetFrameBufferMode(FrameBufferMode mode)
 {
 	s_state.m_frame_buffer_mode = mode;
@@ -345,6 +470,7 @@ int32_t DevInit(const DevInitParam &param)
 	common::internal::ResetFrameCount();
 	return 0;
 }
+#endif
 
 void Term()
 {

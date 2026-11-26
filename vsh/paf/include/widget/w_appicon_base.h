@@ -48,6 +48,7 @@ public:
 	virtual int32_t SetString(const wstring &str, int32_t obj);
 	virtual int32_t GetString(wstring &str, int32_t obj);
 
+#ifndef PAF_BUILD_2014
 	/* every direction while its focus directions are on; else up and down, or only one way
 	   when something listens for 0x10000001 or 0x10000002 */
 	virtual int32_t GetFocusDirectionMask()
@@ -60,6 +61,7 @@ public:
 			return 2;
 		return 3;
 	}
+#endif
 
 
 	/* the widget's size for an icon of the size: the label's height added */

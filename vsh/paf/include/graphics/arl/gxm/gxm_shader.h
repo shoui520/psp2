@@ -337,6 +337,12 @@ public:
 };
 
 /* a shader's binary and its parameters, set up when the shader object is */
+#ifdef PAF_BUILD_2014
+#define PAF_SHADER_SIZE(size_365, size_2014) (size_2014)
+#else
+#define PAF_SHADER_SIZE(size_365, size_2014) (size_365)
+#endif
+
 class ShaderInterfaceBase {
 public:
 	virtual ~ShaderInterfaceBase()

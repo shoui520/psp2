@@ -112,6 +112,7 @@ int SceCommonGuiDialog_D6B6809B(const CommonGuiPlusDialogParam *param)
 	layoutParam.notifyClose = true;
 	layoutParam.handler = new PlusDialogHandler(param->handler);
 	id = SceCommonGuiDialog_CCFCD9A6(&layoutParam);
+#ifndef COMMON_GUI_DIALOG_2014
 	if (id >= 0 && layoutParam.resourcePlugin->m_locale == PLUS_DIALOG_LOCALE_ENLARGED) {
 		Widget *part = SceCommonGuiDialog_8947FC23(id, LIST_DIALOG_PART_ENLARGED);
 
@@ -123,6 +124,7 @@ int SceCommonGuiDialog_D6B6809B(const CommonGuiPlusDialogParam *param)
 					graph::TextStyleAttribute_EnlargeFontSize, 0, 0, false);
 		}
 	}
+#endif
 	return id;
 }
 
@@ -484,6 +486,9 @@ void CommonGuiDialog::OnTerm()
 		m_inHandler = true;
 		(*m_handler)(m_id, 0);
 		m_inHandler = false;
+#ifdef COMMON_GUI_DIALOG_2014
+		Close();
+#endif
 	}
 	delete this;
 }
@@ -538,8 +543,13 @@ void CommonGuiDialog::PlaySound()
 		return;
 	env = m_dialog->m_env;
 	if (env->m_sound_callback != NULL)
+#ifdef COMMON_GUI_DIALOG_2014
+		env->m_sound_callback(buffer1, size1, buffer2, size2, samplerate, false,
+				      env->m_sound_callback_data);
+#else
 		env->m_sound_callback(buffer1, size1, buffer2, size2, samplerate, -1.0f, false,
 				      env->m_sound_callback_data);
+#endif
 }
 
 void CommonGuiDialog::Select(int32_t button)
@@ -597,22 +607,37 @@ void CommonGuiDialog::SetDefaultPriority(int32_t priority)
 /* a functor called once the dialog has opened */
 class ReadyListener : public EventListener {
 public:
+#ifdef COMMON_GUI_DIALOG_2014
+	ReadyListener(CommonGuiDialog *dialog, CommonGuiLayoutDialogOpenHandler *functor)
+		: m_dialog(dialog), m_functor(functor)
+	{
+	}
+#else
 	ReadyListener(int32_t id, CommonGuiLayoutDialogOpenHandler *functor)
 		: m_id(id), m_functor(functor)
 	{
 	}
+#endif
 
 	virtual ~ReadyListener();
 	virtual int32_t Do(int32_t type, Handler *self, Event *e);
 
+#ifdef COMMON_GUI_DIALOG_2014
+	CommonGuiDialog *m_dialog;
+#else
 	int32_t m_id;
+#endif
 	CommonGuiLayoutDialogOpenHandler *m_functor;
 };
 
 void CommonGuiDialog::AddReadyListener(CommonGuiLayoutDialogOpenHandler *functor)
 {
+#ifdef COMMON_GUI_DIALOG_2014
+	m_dialog->AddEventListener(Handler::CB_STATE_READY, new ReadyListener(this, functor));
+#else
 	if (m_open)
 		m_dialog->AddEventListener(Handler::CB_STATE_READY, new ReadyListener(m_id, functor));
+#endif
 }
 
 /* the dialog's page and widgets: the default ones where its page names none */
@@ -623,6 +648,9 @@ void CommonGuiDialog::AddReadyListener(CommonGuiLayoutDialogOpenHandler *functor
 #define DIALOG_FRAME			0x5066F91C
 #define DIALOG_BACKGROUND		0x2C5B8B18
 #define DIALOG_BACKGROUND_TEXTURE	0xE880BF7A
+#ifdef COMMON_GUI_DIALOG_2014
+#define DIALOG_BACKGROUND_TEXTURE_DARK	0x32DC4FB8
+#endif
 #define DIALOG_DIVIDER_TOP		0x1BCD9CA1
 #define DIALOG_DIVIDER_BOTTOM		0x85A75B2E
 
@@ -630,16 +658,31 @@ void CommonGuiDialog::AddReadyListener(CommonGuiLayoutDialogOpenHandler *functor
 #define DIALOG_WIDTH_FULL		960.0f
 
 /* the dimmer's colours: covered, plain, and a full-screen dialog's */
+#ifdef COMMON_GUI_DIALOG_2014
+static const math::v4 s_dimmerColorDark(math::v4(14.0f, 14.0f, 18.0f, 255.0f) / 255.0f);
+static const math::v4 s_dividerColorDark(math::v4(30.0f, 30.0f, 38.0f, 255.0f) / 255.0f);
+#endif
 static const math::v4 s_dimmerColorOpaque(math::v4(0.0f, 0.0f, 0.0f, 255.0f) / 255.0f);
 static const math::v4 s_dividerColor(math::v4(12.0f, 12.0f, 17.0f, 255.0f) / 255.0f);
+#ifndef COMMON_GUI_DIALOG_2014
 static const math::v4 s_dimmerColorFull(math::v4(39.0f, 40.0f, 55.0f, 255.0f) / 255.0f);
+#endif
 
+#ifdef COMMON_GUI_DIALOG_2014
+int32_t CommonGuiDialog::Open(Plugin *plugin, int32_t priority, bool waitTransition,
+			      bool notifyClose, int32_t dimmer,
+			      const CommonGuiDialogPage *page, const Dialog::PartsList *parts,
+			      float *transitionTime)
+#else
 int32_t CommonGuiDialog::Open(Plugin *plugin, int32_t priority, bool waitTransition,
 			      bool notifyClose, int32_t dimmer, int32_t pageOption,
 			      const CommonGuiDialogPage *page, const Dialog::PartsList *parts,
 			      float *transitionTime)
+#endif
 {
+#ifndef COMMON_GUI_DIALOG_2014
 	bool newDimmer;
+#endif
 	Widget *dialog;
 	Widget *contents;
 	int32_t ret;
@@ -659,12 +702,106 @@ int32_t CommonGuiDialog::Open(Plugin *plugin, int32_t priority, bool waitTransit
 			priority = s_defaultPriority;
 		openParam.overwrite_draw_priority = priority;
 		openParam.option = 1;
+#ifndef COMMON_GUI_DIALOG_2014
 		openParam.graphics_flag = pageOption;
+#endif
 		m_page = m_plugin->PageOpen(IDParam(m_pageName), openParam);
 		if (m_page == NULL)
 			return -1;
 		ScePafWidget_A1193AAB(m_page, 1, 0);
 	}
+#ifdef COMMON_GUI_DIALOG_2014
+	if (m_dimmer == NULL) {
+		m_dimmer = new Plane(m_page, NULL);
+		if (m_dimmer == NULL)
+			return COMMON_GUI_DIALOG_ERROR_NO_MEMORY;
+		math::rect screen(m_page->m_screen->sp);
+		m_dimmer->SetSize(math::v4(screen.width(), screen.height(), 0.0f, 0.0f));
+		ScePafWidget_42C5A4D4(m_dimmer, 0, 0);
+		if (m_dimmerType == 0) {
+			Framework *framework = Framework::Instance();
+			int32_t mode = framework->GetMode();
+
+			if (mode == 4)
+				mode = framework->GetMode_ApplicationC();
+			m_dimmer->SetColor(math::v4(0.0f, 0.0f, 0.0f, mode == 3 ? 0.0f : 0.3f));
+		} else {
+			m_dimmer->SetColor(m_dimmerType == 1 ? s_dimmerColorDark :
+							       s_dimmerColorOpaque);
+			m_dimmer->GetDrawObj(0)->m_draw_style.blend = 0;
+		}
+		if (m_dimmerType == 0)
+			ScePafCommon_6CF3A3C8(0.0f, m_dimmer, common::transition::Type_FadeinSlow,
+					      false, false);
+	}
+	ret = m_plugin->TemplateOpen(m_dimmer,
+				     IDParam(page->id[0] != 0 ? page->id[0] : DIALOG_TEMPLATE),
+				     Plugin::TemplateOpenParam());
+	if (ret != 0)
+		return ret;
+	dialog = m_page->FindChild(IDParam(page->id[1] != 0 ? page->id[1] : DIALOG_WIDGET), 0);
+	if (dialog == NULL)
+		return -1;
+	if (page->id[2] != 0) {
+		ret = m_plugin->TemplateOpen(dialog, IDParam(page->id[2]),
+					     Plugin::TemplateOpenParam());
+		if (ret != 0)
+			return ret;
+	}
+	if (!dialog->IsInherit(Dialog::TypeName()))
+		return COMMON_GUI_DIALOG_ERROR_NO_DIALOG;
+	m_dialog = (Dialog *)dialog;
+	if (m_dimmerType > 0) {
+		m_dialog->GetDrawObj(0)->m_draw_style.blend = 0;
+		if (m_dimmerType > 0) {
+			Widget *part;
+
+			part = m_dialog->FindChild(IDParam((uint32_t)DIALOG_FRAME), 0);
+			if (part != NULL)
+				part->DestroyWidget();
+			part = m_dialog->FindChild(IDParam((uint32_t)DIALOG_BACKGROUND), 0);
+			if (part != NULL) {
+				uint32_t texId = m_dimmerType == 1 ?
+					DIALOG_BACKGROUND_TEXTURE_DARK : DIALOG_BACKGROUND_TEXTURE;
+
+				part->SetColor(math::v4(1.0f, 1.0f, 1.0f, 1.0f));
+				part->GetDrawObj(0)->m_draw_style.blend = 0;
+				part->SetTexture(m_plugin->GetTexture(IDParam(texId)));
+			}
+			math::v4 color = m_dimmerType == 1 ? s_dividerColorDark : s_dividerColor;
+
+			part = m_dialog->FindChild(IDParam((uint32_t)DIALOG_DIVIDER_TOP), 0);
+			if (part != NULL)
+				part->SetColor(color);
+			part = m_dialog->FindChild(IDParam((uint32_t)DIALOG_DIVIDER_BOTTOM), 0);
+			if (part != NULL)
+				part->SetColor(color);
+		}
+	}
+	time = ScePafCommon_6CF3A3C8(0.0f, m_dialog, common::transition::Type_Popup1, true, false);
+	if (waitTransition)
+		m_dialog->SetTimeoutEvent(0, time, OnOpenTimer, (void *)m_id);
+	contents = m_dialog->FindChild(IDParam((uint32_t)DIALOG_CONTENTS), 0);
+	if (contents != NULL) {
+		contents->SetMetaAlpha(0.0f);
+		contents->SetMetaAlpha(1.0f, new Timer(time * 0.8f, Timer::FUNC_QUART_IN));
+	}
+	if (transitionTime != NULL)
+		*transitionTime = time + 150.0f;
+
+	static const Dialog::PartsList s_parts[] = {
+		{ 5, IDParam((uint32_t)0x34B37956) },
+		{ 6, IDParam((uint32_t)0x5B219F0A) },
+		{ 9, IDParam((uint32_t)0x019BC95D) },
+		{ 0, IDParam() },
+	};
+
+	m_dialog->SetPartsList(s_parts);
+	m_dialog->SetPartsList(parts);
+	AddReadyListener(NULL);
+	m_open = true;
+	return 0;
+#else
 	newDimmer = false;
 	if (m_dimmer == NULL) {
 		newDimmer = true;
@@ -761,14 +898,17 @@ int32_t CommonGuiDialog::Open(Plugin *plugin, int32_t priority, bool waitTransit
 	if (m_open)
 		m_dialog->AddEventListener(Handler::CB_STATE_READY, new ReadyListener(m_id, NULL));
 	return 0;
+#endif
 }
 
 void CommonGuiDialog::Hide()
 {
 	float time;
 
+#ifndef COMMON_GUI_DIALOG_2014
 	if (!m_open)
 		return;
+#endif
 	time = ScePafCommon_B48C9BDC(0.0f, m_dialog, common::transition::Type_Popup1, false, false);
 	m_dialog->m_name.m_idhash = 0;
 	ScePafWidget_5A9793B0(m_dialog, time + 50.0f);
@@ -777,8 +917,10 @@ void CommonGuiDialog::Hide()
 
 Widget *CommonGuiDialog::GetPart(int32_t index)
 {
+#ifndef COMMON_GUI_DIALOG_2014
 	if (!m_open)
 		return NULL;
+#endif
 	if (index == 3)
 		return m_dialog->m_parent;
 	if (index == 4)
@@ -827,23 +969,39 @@ void CommonGuiDialog::HidePart(int32_t index)
 /* a functor called every interval */
 class IntervalListener : public EventListener {
 public:
+#ifdef COMMON_GUI_DIALOG_2014
+	IntervalListener(CommonGuiDialog *dialog, CommonGuiLayoutDialogOpenHandler *functor)
+		: m_dialog(dialog), m_functor(functor)
+	{
+	}
+#else
 	IntervalListener(int32_t id, CommonGuiLayoutDialogOpenHandler *functor)
 		: m_id(id), m_functor(functor)
 	{
 	}
+#endif
 
 	virtual ~IntervalListener();
 	virtual int32_t Do(int32_t type, Handler *self, Event *e);
 
+#ifdef COMMON_GUI_DIALOG_2014
+	CommonGuiDialog *m_dialog;
+#else
 	int32_t m_id;
+#endif
 	CommonGuiLayoutDialogOpenHandler *m_functor;
 };
 
 void CommonGuiDialog::SetInterval(CommonGuiLayoutDialogOpenHandler *functor, float interval)
 {
+#ifdef COMMON_GUI_DIALOG_2014
+	m_dialog->SetTimerListener(Handler::CB_INTERVAL | 1, interval,
+				   new IntervalListener(this, functor));
+#else
 	if (m_open)
 		m_dialog->SetTimerListener(Handler::CB_INTERVAL | 1, interval,
 					   new IntervalListener(m_id, functor));
+#endif
 }
 
 void CommonGuiDialog::KillInterval()
@@ -895,6 +1053,35 @@ public:
 
 void CommonGuiDialog::SetButtons(const CommonGuiDialogButton *buttons)
 {
+#ifdef COMMON_GUI_DIALOG_2014
+	if (buttons == NULL)
+		return;
+	for (; buttons->index != 0; buttons++) {
+		Widget *part = m_dialog->GetPartsWidget(buttons->index);
+
+		if (part == NULL)
+			continue;
+		if (buttons->labelId != 0) {
+			const wchar_t *label = m_plugin->GetString(IDParam(buttons->labelId));
+
+			part->SetString(wstring(label));
+		}
+		if (buttons->styleId != 0) {
+			WidgetSoundParam::Sound *sounds;
+			uint32_t num;
+			int32_t ret;
+
+			ret = ScePafToplevel_DA3D4AF0(m_plugin, IDParam(buttons->styleId), &sounds,
+						      &num);
+			if (ret == 0) {
+				part->m_sounds = sounds;
+				part->m_sound_num = num;
+			}
+		}
+		part->AddEventListener(DIALOG_BUTTON_EVENT,
+				       new ButtonListener(this, buttons->button));
+	}
+#else
 	int32_t focused;
 
 	if (buttons == NULL || !m_open)
@@ -962,6 +1149,7 @@ void CommonGuiDialog::SetButtons(const CommonGuiDialogButton *buttons)
 			focused++;
 		}
 	}
+#endif
 }
 
 void CommonGuiDialog::OnOpenTimer(int32_t type, Handler *self, Event *e, void *data)
@@ -981,10 +1169,15 @@ IntervalListener::~IntervalListener()
 
 int32_t IntervalListener::Do(int32_t type, Handler *self, Event *e)
 {
+#ifdef COMMON_GUI_DIALOG_2014
+	if (m_dialog->m_open && m_functor != NULL)
+		(*m_functor)(m_dialog->m_id);
+#else
 	CommonGuiDialog *dialog = CommonGuiDialog::Find(m_id);
 
 	if (dialog != NULL && dialog->m_open && m_functor != NULL)
 		(*m_functor)(m_id);
+#endif
 	return 0;
 }
 
@@ -997,6 +1190,18 @@ ReadyListener::~ReadyListener()
 
 int32_t ReadyListener::Do(int32_t type, Handler *self, Event *e)
 {
+#ifdef COMMON_GUI_DIALOG_2014
+	if (!m_dialog->m_open)
+		return 0;
+	m_dialog->m_inHandler = true;
+	if (m_functor != NULL)
+		(*m_functor)(m_dialog->m_id);
+	m_dialog->m_dialog->DeleteEventListener(Handler::CB_STATE_READY, this);
+	m_dialog->PlaySound();
+	m_dialog->m_inHandler = false;
+	m_dialog->Close();
+	return 0;
+#else
 	CommonGuiDialog *dialog = CommonGuiDialog::Find(m_id);
 
 	if (dialog == NULL || !dialog->m_open)
@@ -1009,6 +1214,7 @@ int32_t ReadyListener::Do(int32_t type, Handler *self, Event *e)
 	dialog->m_inHandler = false;
 	dialog->Close();
 	return 0;
+#endif
 }
 
 int32_t ButtonListener::Do(int32_t type, Handler *self, Event *e)

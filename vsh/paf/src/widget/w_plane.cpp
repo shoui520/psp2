@@ -283,10 +283,12 @@ static VersatileParam *NewPlaneLayoutParam()
 	return new WidgetLayoutParam;
 }
 
+#ifndef PAF_BUILD_2014
 static VersatileParam *NewPlaneFocusParam()
 {
 	return new WidgetFocusParam;
 }
+#endif
 
 static VersatileParam *NewPlaneStyleParam()
 {
@@ -308,7 +310,9 @@ FactoryFuncTable g_factoryPlane = {
 	NewPlane,
 	NewPlaneParam,
 	NewPlaneLayoutParam,
+#ifndef PAF_BUILD_2014
 	NewPlaneFocusParam,
+#endif
 	NewPlaneStyleParam,
 	NewPlaneHandlerParam,
 	NewPlaneSoundParam,

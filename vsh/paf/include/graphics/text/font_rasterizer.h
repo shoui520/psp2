@@ -92,9 +92,13 @@ public:
 		Font_Latin = 1,
 		Font_Hangul = 2,
 		Font_Chinese = 3,
+#ifdef PAF_BUILD_2014
+		Font_Num = 4
+#else
 		Font_Arib = 4,
 		Font_Family = 5,
 		Font_Num = 6
+#endif
 	};
 
 	/* the fonts the PVF library opens: from memory, else from their files */
@@ -116,13 +120,17 @@ public:
 		uint32_t mem_hangul_size;
 		void *mem_chinese_addr;
 		uint32_t mem_chinese_size;
+#ifndef PAF_BUILD_2014
 		void *mem_arib_addr;
 		uint32_t mem_arib_size;
+#endif
 		char *path_japanese;
 		char *path_latin;
 		char *path_hangul;
 		char *path_chinese;
+#ifndef PAF_BUILD_2014
 		char *path_arib;
+#endif
 	};
 
 	class InitParam {
@@ -136,13 +144,16 @@ public:
 		}
 
 		uint32_t heap_size;
+#ifndef PAF_BUILD_2014
 		/* Option_* */
 		uint32_t option;
+#endif
 		/* the Locale */
 		int32_t locale;
 		FontParam font;
 	};
 
+#ifndef PAF_BUILD_2014
 	/* InitParam's option bits (names ours) */
 	enum {
 		/* the ARIB music symbols font draws its characters */
@@ -155,6 +166,7 @@ public:
 		Option_MemoryArib = 0x20,
 		Option_MemoryFamily = 0x40
 	};
+#endif
 
 	FontRasterizerPvf();
 	virtual ~FontRasterizerPvf();
@@ -180,6 +192,9 @@ public:
 
 		ScePvf_t_fontId m_id;
 		bool m_opened;
+#ifdef PAF_BUILD_2014
+		bool m_memory_opened;
+#endif
 	};
 
 private:
@@ -188,6 +203,17 @@ private:
 
 	/* the style's fonts let go */
 	int32_t ReleaseFonts();
+#ifdef PAF_BUILD_2014
+	/* the font index a slot opens for the family and style */
+	ScePvf_t_fontIndex GetFontIndex(int32_t slot, uint16_t family, uint16_t style_code);
+	/* the style's fonts opened, or found open, and its line metrics */
+	int32_t LoadFonts(uint16_t family, uint16_t style_code);
+	/* the style's attributes read again and its fonts loaded, after a change */
+	int32_t ApplyStyle();
+	/* the slot whose font draws a character */
+	int32_t GetFontSlot(ScePvf_t_charCode c);
+	int32_t GetCharInfo(int32_t slot, ScePvf_t_charCode c, ScePvf_t_charInfo *info);
+#else
 	/* the font index a slot opens for the style */
 	ScePvf_t_fontIndex GetFontIndex(int32_t slot);
 	/* the style's fonts opened, or found open, and its line metrics */
@@ -198,17 +224,25 @@ private:
 	int32_t GetFontSlot(ScePvf_t_charCode *c);
 	int32_t GetCharInfo(int32_t slot, ScePvf_t_fontId font, ScePvf_t_charCode c,
 			    ScePvf_t_charInfo *info);
+#endif
 	/* the characters drawn into the surface's page */
 	int32_t DrawChars(const wchar_t *str, uint32_t len, intrusive_ptr<Surface> &surface);
 
 	common::SharedPtr<TextStyle> m_style;
 	/* the style changed since its fonts were loaded */
 	bool m_dirty;
+#ifdef PAF_BUILD_2014
+	float m_point;
+	bool m_bold;
+	bool m_oblique;
+	bool m_shadow;
+#else
 	math::v2 m_point;
 	bool m_bold;
 	bool m_oblique;
 	bool m_shadow;
 	int32_t m_family;
+#endif
 	/* the line's height and ascender in pixels */
 	int32_t m_height;
 	int32_t m_ascender;

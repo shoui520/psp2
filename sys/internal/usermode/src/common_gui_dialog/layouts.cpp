@@ -111,51 +111,57 @@ const CommonGuiDialogPage g_page04D71470 = {
 	{ 0x3A918C2C, 0x438C7285, 0xF6FC5F73 }
 };
 
+#ifdef COMMON_GUI_DIALOG_2014
+#define DIALOG_PART_OFFSET	1
+#else
+#define DIALOG_PART_OFFSET	0
+#endif
+
 /* the buttons: the part, its label, the button the handler is told and its look */
 const CommonGuiDialogButton g_okButtons[] = {
-	{ 12, 0x805BECA6, 2, 0x20413274 },
+	{ 12 - DIALOG_PART_OFFSET, 0x805BECA6, 2, 0x20413274 },
 	{ 0, 0, 0, 0 },
 };
 
 static const CommonGuiDialogButton s_cancelButtons[] = {
-	{ 12, 0xADCD9ADF, 3, 0xC17D7980 },
+	{ 12 - DIALOG_PART_OFFSET, 0xADCD9ADF, 3, 0xC17D7980 },
 	{ 0, 0, 0, 0 },
 };
 
 const CommonGuiDialogButton g_noYesButtons[] = {
-	{ 12, 0xA060AED9, 5, 0xC17D7980 },
-	{ 13, 0x18A9DA04, 4, 0x20413274 },
+	{ 12 - DIALOG_PART_OFFSET, 0xA060AED9, 5, 0xC17D7980 },
+	{ 13 - DIALOG_PART_OFFSET, 0x18A9DA04, 4, 0x20413274 },
 	{ 0, 0, 0, 0 },
 };
 
 static const CommonGuiDialogButton s_cancelOkButtons[] = {
-	{ 12, 0xADCD9ADF, 3, 0xC17D7980 },
-	{ 13, 0x805BECA6, 2, 0x20413274 },
+	{ 12 - DIALOG_PART_OFFSET, 0xADCD9ADF, 3, 0xC17D7980 },
+	{ 13 - DIALOG_PART_OFFSET, 0x805BECA6, 2, 0x20413274 },
 	{ 0, 0, 0, 0 },
 };
 
 static const CommonGuiDialogButton s_yesNoButtons[] = {
-	{ 12, 0x18A9DA04, 4, 0x20413274 },
-	{ 13, 0xA060AED9, 5, 0xC17D7980 },
+	{ 12 - DIALOG_PART_OFFSET, 0x18A9DA04, 4, 0x20413274 },
+	{ 13 - DIALOG_PART_OFFSET, 0xA060AED9, 5, 0xC17D7980 },
 	{ 0, 0, 0, 0 },
 };
 
 static const CommonGuiDialogButton s_yesNoCancelButtons[] = {
-	{ 12, 0x18A9DA04, 4, 0x20413274 },
-	{ 13, 0xA060AED9, 5, 0xC17D7980 },
-	{ 14, 0xADCD9ADF, 3, 0xC17D7980 },
+	{ 12 - DIALOG_PART_OFFSET, 0x18A9DA04, 4, 0x20413274 },
+	{ 13 - DIALOG_PART_OFFSET, 0xA060AED9, 5, 0xC17D7980 },
+	{ 14 - DIALOG_PART_OFFSET, 0xADCD9ADF, 3, 0xC17D7980 },
 	{ 0, 0, 0, 0 },
 };
 
 const CommonGuiDialogButton g_04D71470Buttons[] = {
-	{ 12, 0x0D47D642, 7, 0x20413274 },
-	{ 13, 0xADCD9ADF, 3, 0xC17D7980 },
-	{ 23, 0x96DA3F40, 8, 0x6622F138 },
+	{ 12 - DIALOG_PART_OFFSET, 0x0D47D642, 7, 0x20413274 },
+	{ 13 - DIALOG_PART_OFFSET, 0xADCD9ADF, 3, 0xC17D7980 },
+	{ 23 - DIALOG_PART_OFFSET, 0x96DA3F40, 8, 0x6622F138 },
 	{ 0, 0, 0, 0 },
 };
 
 const CommonGuiDialogButton g_panelButtons[] = {
-	{ 8, 0x00000000, 1, 0x25D6D211 },
+	{ 8 - DIALOG_PART_OFFSET, 0x00000000, 1, 0x25D6D211 },
 	{ 0, 0, 0, 0 },
 };
 
@@ -166,56 +172,56 @@ const CommonGuiDialogButton g_noButtons[] = {
 /* the parts: each index to its widget's ID */
 Dialog::PartsList g_partsAF75CA6D[] = {
 	{ 1, IDParam((uint32_t)0xD0791765) },
-	{ 12, IDParam((uint32_t)0x5049F5E4) },
+	{ 12 - DIALOG_PART_OFFSET, IDParam((uint32_t)0x5049F5E4) },
 	{ 0, IDParam() },
 };
 
 static Dialog::PartsList s_parts6CD802FC[] = {
 	{ 1, IDParam((uint32_t)0xD0791765) },
-	{ 12, IDParam((uint32_t)0x5049F5E4) },
-	{ 13, IDParam((uint32_t)0xBD559A97) },
+	{ 12 - DIALOG_PART_OFFSET, IDParam((uint32_t)0x5049F5E4) },
+	{ 13 - DIALOG_PART_OFFSET, IDParam((uint32_t)0xBD559A97) },
 	{ 0, IDParam() },
 };
 
 static Dialog::PartsList s_parts78399261[] = {
 	{ 1, IDParam((uint32_t)0xD0791765) },
-	{ 12, IDParam((uint32_t)0x5049F5E4) },
-	{ 13, IDParam((uint32_t)0xBD559A97) },
-	{ 14, IDParam((uint32_t)0xBCFBF95C) },
+	{ 12 - DIALOG_PART_OFFSET, IDParam((uint32_t)0x5049F5E4) },
+	{ 13 - DIALOG_PART_OFFSET, IDParam((uint32_t)0xBD559A97) },
+	{ 14 - DIALOG_PART_OFFSET, IDParam((uint32_t)0xBCFBF95C) },
 	{ 0, IDParam() },
 };
 
 static Dialog::PartsList s_parts446F8B49[] = {
 	{ 1, IDParam((uint32_t)0xD0791765) },
-	{ 12, IDParam((uint32_t)0x5049F5E4) },
-	{ 18, IDParam((uint32_t)0x8EED7923) },
-	{ 19, IDParam((uint32_t)0x71D8557B) },
+	{ 12 - DIALOG_PART_OFFSET, IDParam((uint32_t)0x5049F5E4) },
+	{ 18 - DIALOG_PART_OFFSET, IDParam((uint32_t)0x8EED7923) },
+	{ 19 - DIALOG_PART_OFFSET, IDParam((uint32_t)0x71D8557B) },
 	{ 0, IDParam() },
 };
 
 static Dialog::PartsList s_parts95087497[] = {
 	{ 1, IDParam((uint32_t)0xD0791765) },
 	{ 2, IDParam((uint32_t)0x66EA7A2F) },
-	{ 12, IDParam((uint32_t)0x5049F5E4) },
-	{ 18, IDParam((uint32_t)0x8EED7923) },
-	{ 19, IDParam((uint32_t)0x71D8557B) },
+	{ 12 - DIALOG_PART_OFFSET, IDParam((uint32_t)0x5049F5E4) },
+	{ 18 - DIALOG_PART_OFFSET, IDParam((uint32_t)0x8EED7923) },
+	{ 19 - DIALOG_PART_OFFSET, IDParam((uint32_t)0x71D8557B) },
 	{ 0, IDParam() },
 };
 
 static Dialog::PartsList s_partsEA557911[] = {
 	{ 1, IDParam((uint32_t)0xD0791765) },
 	{ 2, IDParam((uint32_t)0x66EA7A2F) },
-	{ 12, IDParam((uint32_t)0x5049F5E4) },
-	{ 13, IDParam((uint32_t)0xBD559A97) },
-	{ 18, IDParam((uint32_t)0x8EED7923) },
-	{ 19, IDParam((uint32_t)0x71D8557B) },
+	{ 12 - DIALOG_PART_OFFSET, IDParam((uint32_t)0x5049F5E4) },
+	{ 13 - DIALOG_PART_OFFSET, IDParam((uint32_t)0xBD559A97) },
+	{ 18 - DIALOG_PART_OFFSET, IDParam((uint32_t)0x8EED7923) },
+	{ 19 - DIALOG_PART_OFFSET, IDParam((uint32_t)0x71D8557B) },
 	{ 0, IDParam() },
 };
 
 static Dialog::PartsList s_partsA0E0A437[] = {
 	{ 1, IDParam((uint32_t)0xD0791765) },
-	{ 18, IDParam((uint32_t)0x8EED7923) },
-	{ 19, IDParam((uint32_t)0x71D8557B) },
+	{ 18 - DIALOG_PART_OFFSET, IDParam((uint32_t)0x8EED7923) },
+	{ 19 - DIALOG_PART_OFFSET, IDParam((uint32_t)0x71D8557B) },
 	{ 0, IDParam() },
 };
 
@@ -225,57 +231,57 @@ static Dialog::PartsList s_parts7AEA192C[] = {
 };
 
 Dialog::PartsList g_partsInternal[] = {
-	{ 9, IDParam((uint32_t)0xE9C61C2C) },
-	{ 10, IDParam((uint32_t)0x019BC95D) },
+	{ 9 - DIALOG_PART_OFFSET, IDParam((uint32_t)0xE9C61C2C) },
+	{ 10 - DIALOG_PART_OFFSET, IDParam((uint32_t)0x019BC95D) },
 	{ 0, IDParam() },
 };
 
 Dialog::PartsList g_partsE872FB5D[] = {
-	{ 9, IDParam((uint32_t)0xE9C61C2C) },
-	{ 10, IDParam((uint32_t)0x019BC95D) },
-	{ 8, IDParam((uint32_t)0xC57612A0) },
+	{ 9 - DIALOG_PART_OFFSET, IDParam((uint32_t)0xE9C61C2C) },
+	{ 10 - DIALOG_PART_OFFSET, IDParam((uint32_t)0x019BC95D) },
+	{ 8 - DIALOG_PART_OFFSET, IDParam((uint32_t)0xC57612A0) },
 	{ 0, IDParam() },
 };
 
 Dialog::PartsList g_parts1424609E[] = {
-	{ 9, IDParam((uint32_t)0xE9C61C2C) },
-	{ 10, IDParam((uint32_t)0x019BC95D) },
-	{ 12, IDParam((uint32_t)0x5049F5E4) },
+	{ 9 - DIALOG_PART_OFFSET, IDParam((uint32_t)0xE9C61C2C) },
+	{ 10 - DIALOG_PART_OFFSET, IDParam((uint32_t)0x019BC95D) },
+	{ 12 - DIALOG_PART_OFFSET, IDParam((uint32_t)0x5049F5E4) },
 	{ 0, IDParam() },
 };
 
 Dialog::PartsList g_parts3AC06BC6[] = {
-	{ 9, IDParam((uint32_t)0xE9C61C2C) },
-	{ 10, IDParam((uint32_t)0x019BC95D) },
-	{ 12, IDParam((uint32_t)0x5049F5E4) },
-	{ 13, IDParam((uint32_t)0xBD559A97) },
+	{ 9 - DIALOG_PART_OFFSET, IDParam((uint32_t)0xE9C61C2C) },
+	{ 10 - DIALOG_PART_OFFSET, IDParam((uint32_t)0x019BC95D) },
+	{ 12 - DIALOG_PART_OFFSET, IDParam((uint32_t)0x5049F5E4) },
+	{ 13 - DIALOG_PART_OFFSET, IDParam((uint32_t)0xBD559A97) },
 	{ 0, IDParam() },
 };
 
 static Dialog::PartsList s_partsDDC59760[] = {
-	{ 11, IDParam((uint32_t)0xD635CD6F) },
-	{ 8, IDParam((uint32_t)0xC57612A0) },
+	{ 11 - DIALOG_PART_OFFSET, IDParam((uint32_t)0xD635CD6F) },
+	{ 8 - DIALOG_PART_OFFSET, IDParam((uint32_t)0xC57612A0) },
 	{ 0, IDParam() },
 };
 
 static Dialog::PartsList s_parts3785AD25[] = {
-	{ 11, IDParam((uint32_t)0xD635CD6F) },
-	{ 12, IDParam((uint32_t)0x5049F5E4) },
+	{ 11 - DIALOG_PART_OFFSET, IDParam((uint32_t)0xD635CD6F) },
+	{ 12 - DIALOG_PART_OFFSET, IDParam((uint32_t)0x5049F5E4) },
 	{ 0, IDParam() },
 };
 
 static Dialog::PartsList s_parts7D8FE85E[] = {
 	{ 5, IDParam((uint32_t)0x2A35777A) },
 	{ 1, IDParam((uint32_t)0xD0791765) },
-	{ 12, IDParam((uint32_t)0x5049F5E4) },
+	{ 12 - DIALOG_PART_OFFSET, IDParam((uint32_t)0x5049F5E4) },
 	{ 0, IDParam() },
 };
 
 static Dialog::PartsList s_partsC4A714DE[] = {
 	{ 5, IDParam((uint32_t)0x2A35777A) },
 	{ 1, IDParam((uint32_t)0xD0791765) },
-	{ 12, IDParam((uint32_t)0x5049F5E4) },
-	{ 13, IDParam((uint32_t)0xBD559A97) },
+	{ 12 - DIALOG_PART_OFFSET, IDParam((uint32_t)0x5049F5E4) },
+	{ 13 - DIALOG_PART_OFFSET, IDParam((uint32_t)0xBD559A97) },
 	{ 0, IDParam() },
 };
 
@@ -288,15 +294,15 @@ static Dialog::PartsList s_parts52A53037[] = {
 static Dialog::PartsList s_partsDEDA75E4[] = {
 	{ 1, IDParam((uint32_t)0xD0791765) },
 	{ 2, IDParam((uint32_t)0x66EA7A2F) },
-	{ 12, IDParam((uint32_t)0x5049F5E4) },
+	{ 12 - DIALOG_PART_OFFSET, IDParam((uint32_t)0x5049F5E4) },
 	{ 0, IDParam() },
 };
 
 Dialog::PartsList g_parts04D71470[] = {
 	{ 1, IDParam((uint32_t)0xD0791765) },
-	{ 12, IDParam((uint32_t)0x5049F5E4) },
-	{ 13, IDParam((uint32_t)0xBD559A97) },
-	{ 23, IDParam((uint32_t)0xEEE519F6) },
+	{ 12 - DIALOG_PART_OFFSET, IDParam((uint32_t)0x5049F5E4) },
+	{ 13 - DIALOG_PART_OFFSET, IDParam((uint32_t)0xBD559A97) },
+	{ 23 - DIALOG_PART_OFFSET, IDParam((uint32_t)0xEEE519F6) },
 	{ 0, IDParam() },
 };
 

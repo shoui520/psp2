@@ -111,10 +111,12 @@ static VersatileParam *NewDialogLayoutParam()
 	return new BoxLayoutParam;
 }
 
+#ifndef PAF_BUILD_2014
 static VersatileParam *NewDialogFocusParam()
 {
 	return new WidgetFocusParam;
 }
+#endif
 
 static VersatileParam *NewDialogStyleParam()
 {
@@ -136,7 +138,9 @@ FactoryFuncTable g_factoryDialog = {
 	NewDialog,
 	NewDialogParam,
 	NewDialogLayoutParam,
+#ifndef PAF_BUILD_2014
 	NewDialogFocusParam,
+#endif
 	NewDialogStyleParam,
 	NewDialogHandlerParam,
 	NewDialogSoundParam,

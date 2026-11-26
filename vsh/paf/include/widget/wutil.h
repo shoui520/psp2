@@ -20,6 +20,9 @@ namespace ui {
 
 class Environment;
 class Handler;
+#ifdef PAF_BUILD_2014
+class SceneResolution;
+#endif
 class TextBoxEditListener;
 class TextBoxEditMenuListener;
 
@@ -99,6 +102,40 @@ public:
 	int32_t surf_dev_mem_size;
 	void *surf_def_pool_addr;
 	int32_t surf_def_pool_size;
+#ifdef PAF_BUILD_2014
+	void *text_surface_pool_addr;
+	int32_t text_surface_pool_size;
+	uint32_t pvf_heap_size;
+	int32_t locale;
+	void *mem_pvf_japanese_addr;
+	uint32_t mem_pvf_japanese_size;
+	void *mem_pvf_latin_addr;
+	uint32_t mem_pvf_latin_size;
+	void *mem_pvf_hangul_addr;
+	uint32_t mem_pvf_hangul_size;
+	void *mem_pvf_chinese_addr;
+	uint32_t mem_pvf_chinese_size;
+	void *mem_emoji_font_addr;
+	uint32_t mem_emoji_font_size;
+	bool no_text;
+	int32_t screen_width;
+	int32_t screen_height;
+	int32_t view_width;
+	int32_t view_height;
+	float fov;
+	int32_t env_param_num;
+	int32_t default_resolution_id;
+	SceneResolution *env_param;
+	uint32_t input_device_mode;
+	void *input_handler_pad;
+	void *input_handler_touch;
+	void *input_handler_touch_rear;
+	void *input_handler_motion_sensor;
+	void *edit_listener;
+	void *web_edit_listener;
+	void *message_dialog_listener;
+	void *webview_listener;
+#else
 	int32_t surf_def_pool_device_type;
 	/* the screen, and the size and field of view the camera projects with */
 	int32_t screen_width;
@@ -119,9 +156,14 @@ public:
 	void *listener_A55215E5;
 	void *webview_listener;
 	void *listener_E638AA1F;
+#endif
 };
 
+#ifdef PAF_BUILD_2014
+int32_t Init(InitParam &param);
+#else
 int32_t Init(const InitParam &param);
+#endif
 int32_t Term();
 void DevTerm();
 int32_t DevInit(const gutil::DevInitParam &param);
@@ -142,7 +184,12 @@ void *GetWebViewListener();
 
 namespace debug {
 
+#ifdef PAF_BUILD_2014
+gutil::DevInitParam DevInit(uint32_t width, uint32_t height, SceneResolution *env_param,
+			    int32_t env_param_num, int32_t default_resolution_id);
+#else
 gutil::DevInitParam DevInit(uint32_t width, uint32_t height);
+#endif
 void DevTerm();
 /* gives back the memory a program without the Framework had */
 int32_t Term(InitParam &param);
@@ -158,8 +205,17 @@ int32_t LoadPngTexture(const string &path, intrusive_ptr<graph::Surface> &surfac
 
 extern "C" {
 /* the window, the screen size and the field of view, from the window */
+#ifdef PAF_BUILD_2014
+paf::ui::wutil::InitParam *ScePafWidget_5245A0F2(paf::ui::wutil::InitParam *param,
+						 const paf::gutil::WinHandle *whandle,
+						 int32_t width, int32_t height,
+						 paf::ui::SceneResolution *env_param,
+						 int32_t env_param_num,
+						 int32_t default_resolution_id);
+#else
 paf::ui::wutil::InitParam *ScePafWidget_5245A0F2(paf::ui::wutil::InitParam *param,
 						 const paf::gutil::WinHandle *whandle);
+#endif
 /* what a program without the Framework is made with, from its window (the text set up with the
    graphics is the one it keeps) */
 paf::ui::wutil::InitParam ScePafWidget_63D72B1C(const paf::gutil::WinHandle *whandle);

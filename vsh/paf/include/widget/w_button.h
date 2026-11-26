@@ -68,6 +68,7 @@ public:
 
 	using ButtonBase::GetString;
 
+#ifndef PAF_BUILD_2014
 	virtual int32_t SetTextAutoScrollOrigin(const math::v2 &pos);
 	virtual int32_t GetTextAutoScrollOrigin(math::v2 &pos);
 	virtual int32_t GetTextAutoScrollSpeedByPos(const math::v2 &pos, float &speed,
@@ -75,6 +76,7 @@ public:
 	virtual int32_t StartTextAutoScroll(Text::ScrollType type);
 	virtual int32_t StopTextAutoScroll();
 	virtual int32_t SetTextAutoScrollSpeed(float speed);
+#endif
 	virtual graph::DrawObj *CreateDrawObj(int32_t obj);
 	virtual uint32_t ChangeButtonState(ButtonState state);
 	virtual bool UpdateObjsSize();

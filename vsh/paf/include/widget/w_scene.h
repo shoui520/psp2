@@ -31,6 +31,11 @@ public:
 	/* the resource variants (strings' and textures') of m_id and of m_base_id */
 	IDParam m_resource;
 	IDParam m_base_resource;
+#ifdef PAF_BUILD_2014
+	float m_roll;
+	int32_t m_screen_width;
+	int32_t m_screen_height;
+#endif
 	/* the sizes of the scene's screen viewport and scissor (Screen's vp and sp; names
 	   ours) */
 	int32_t m_viewport_width;
@@ -85,17 +90,25 @@ public:
 
 	typedef void (*DrawFunc)(const DrawArg &arg);
 
+#ifdef PAF_BUILD_2014
+	typedef SceneResolutionAct ResolutionAct;
+
+	Scene(Environment *env, int32_t priority, CreateParam *param);
+#else
 	/* a page in the environment, drawn at the priority (export 0xECB1A10D) */
 	Scene(Environment *env, int32_t priority, CreateParam *param, Resolution *env_param,
 	      int32_t graphics_flag);
+#endif
 	virtual ~Scene();
 
 	virtual int32_t HandleKeycodeEvent(Event *e);
 
+#ifndef PAF_BUILD_2014
 	virtual int32_t HandleFocusSwitchEvent(Event *e)
 	{
 		return 0;
 	}
+#endif
 
 	virtual int32_t HandleSystemEvent(Event *e);
 	virtual bool IsInherit(const char *type) const;
@@ -109,11 +122,13 @@ public:
 
 	virtual void UpdateAdjustSize();
 
+#ifndef PAF_BUILD_2014
 	/* every direction, or the first while its focus directions are off */
 	virtual int32_t GetFocusDirectionMask()
 	{
 		return m_focus_direction_off ? 1 : 7;
 	}
+#endif
 
 	static const char m_widget_type[];
 	static const char *TypeName();
@@ -155,6 +170,19 @@ public:
 	Camera *m_camera;
 	/* what a widget's depth in the scene is ordered by first (ButtonBase::Update; name ours) */
 	int32_t m_scene_priority;
+#ifdef PAF_BUILD_2014
+	uint32_t m_plugin_id;
+	int32_t m_resolution_act_num;
+	ResolutionAct *m_resolution_act_table;
+	bool m_hidden;
+	bool m_hide_transparent;
+	bool m_scissor_to_scene;
+	list<SurfaceWidget> m_surface_widgets;
+	graph::DrawLayer *m_layer;
+	graph::DrawLayer *m_bg_layer;
+	DrawFunc m_draw_func;
+	DrawArg m_draw_arg;
+#else
 	/* the entry it was added to (name ours, after ScePaf-RE's) */
 	int32_t m_entry;
 	/* the ID hash of the plugin that opened the page */
@@ -192,6 +220,7 @@ public:
 	   scaled, more not (name ours) */
 	uint8_t m_display_area_mode;
 	uint8_t reserved2c[3];
+#endif
 	/* the debug mode and its state (names after ScePaf-RE) */
 	uint32_t m_debug_mode;
 	Widget *m_debug_focus;

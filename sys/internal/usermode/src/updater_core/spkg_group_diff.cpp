@@ -6,6 +6,7 @@
  */
 #include <stddef.h>
 #include <scetypes.h>
+#include <kernel/error.h>
 #include <kernel/iofilemgr.h>
 #include <kernel/sysmem/memblock.h>
 #include <libkernel/libkernel.h>
@@ -33,7 +34,11 @@ extern "C" {
 #define DIFF_BLOCK_WRITE_CHUNK		0x400000U
 #define DIFF_FAT_SECTOR_SIZE		512U
 #define DIFF_PARTITION_CONF_COUNT	16
+#ifdef UPDATER_CORE_2014
+#define DIFF_SPKG_TABLE_COUNT		29
+#else
 #define DIFF_SPKG_TABLE_COUNT		25
+#endif
 
 #define DIFF_ESTIMATE_COPY_SPEED	4374.0f
 #define DIFF_ESTIMATE_FLUSH_SPEED	6005.0f
@@ -73,6 +78,9 @@ static const SceInt32 s_partitionVolumeSize[DIFF_SPKG_TABLE_COUNT] = {
 	0, 0, 0, 0, 0, 0, 0, 0,
 	0, 0, 0, 0, 0, 0x01000000, 0x10000000, 0,
 	0,
+#ifdef UPDATER_CORE_2014
+	0, 0, 0, 0x13000000,
+#endif
 };
 
 /* memblock size for "Updater Memory File System" by SPKG type (0x81018a24) */
@@ -81,6 +89,9 @@ static const SceSize s_memBlockAllocSize[DIFF_SPKG_TABLE_COUNT] = {
 	0, 0, 0, 0, 0, 0, 0, 0,
 	0, 0, 0, 0, 0, 0x01000000, 0x0c800000, 0,
 	0,
+#ifdef UPDATER_CORE_2014
+	0, 0, 0, 0,
+#endif
 };
 
 /* partition_conf partition code by SPKG type (0x81018a88) */
@@ -89,6 +100,9 @@ static const SceUInt8 s_partitionCode[DIFF_SPKG_TABLE_COUNT] = {
 	0, 0, 0, 0, 0, 0, 0, 0,
 	0, 0, 0, 0, 0, 3, 4, 0,
 	0,
+#ifdef UPDATER_CORE_2014
+	0, 0, 0, 0,
+#endif
 };
 
 /* VSH mount ID for mounting the source partition during diff build (0x81018aa4) */
@@ -97,6 +111,9 @@ static const int s_vshMountId[DIFF_SPKG_TABLE_COUNT] = {
 	0, 0, 0, 0, 0, 0, 0, 0,
 	0, 0, 0, 0, 0, 0, 0x300, 0,
 	0,
+#ifdef UPDATER_CORE_2014
+	0, 0, 0, 0xc00,
+#endif
 };
 
 /* mount prefix by SPKG type (0x81018b1c) */
@@ -105,6 +122,9 @@ static const char *const s_mountPrefix[DIFF_SPKG_TABLE_COUNT] = {
 	"", "", "", "", "", "", "", "",
 	"", "", "", "", "", "os0:", "vs0:", "",
 	"",
+#ifdef UPDATER_CORE_2014
+	"", "", "", "pd0:",
+#endif
 };
 
 /* block device path by SPKG type (0x81018bb4) */
@@ -113,6 +133,9 @@ static const char *const s_blockDevicePath[DIFF_SPKG_TABLE_COUNT] = {
 	"", "", "", "", "", "", "", "",
 	"", "", "", "", "", "sdstor0:int-lp-ina-os", "sdstor0:int-lp-ign-vsh", "",
 	"",
+#ifdef UPDATER_CORE_2014
+	"", "", "", "sdstor0:int-lp-ign-pidata",
+#endif
 };
 
 SpkgGroupDiff::SpkgGroupDiff()
@@ -143,17 +166,29 @@ int SpkgGroupDiff::EnqueueUpdate(SceUID pupFd)
 	ret = g_spkgGroupManager->GetParallelOperation()->GetFreeChannel().Pop(
 		reinterpret_cast<void **>(&element), true);
 	if (ret < 0) {
+#ifdef UPDATER_CORE_2014
+		UPDATER_ERROR_FMT(300, "%x", ret);
+#else
 		UPDATER_ERROR_FMT(274, "%x", ret);
+#endif
 		return ret;
 	}
 	ret = element->SetTask(0, SPKG_OP_UPDATE, this, 0);
 	if (ret < 0) {
+#ifdef UPDATER_CORE_2014
+		UPDATER_ERROR_FMT(309, "%x", ret);
+#else
 		UPDATER_ERROR_FMT(283, "%x", ret);
+#endif
 		return ret;
 	}
 	ret = g_spkgGroupManager->GetParallelOperation()->GetFullChannel().Push(element, true);
 	if (ret < 0) {
+#ifdef UPDATER_CORE_2014
+		UPDATER_ERROR_FMT(323, "%x", ret);
+#else
 		UPDATER_ERROR_FMT(297, "%x", ret);
+#endif
 		return ret;
 	}
 	return 0;
@@ -165,7 +200,11 @@ int SpkgGroupDiff::freeImageMemBlock(void)
 
 	ret = sceKernelFreeMemBlock(m_memBlockId);
 	if (ret < 0) {
+#ifdef UPDATER_CORE_2014
+		UPDATER_ERROR_FMT(645, "%x", ret);
+#else
 		UPDATER_ERROR_FMT(582, "%x", ret);
+#endif
 		return SCE_UPDATER_ERROR_MEMBLOCK_FREE;
 	}
 	return ret;
@@ -315,7 +354,11 @@ int SpkgGroupDiff::commitHeaderSpkg(SceUID pupFd)
 	ret = sceSblUsAllocateBuffer((SceSize)firstEntry->segmentSize, &spkgBuffer);
 	if (ret != 0) {
 		firstEntry = static_cast<SpkgEntry *>(m_spkgList.Get(0));
+#ifdef UPDATER_CORE_2014
+		UPDATER_ERROR_FMT(1367, "%d: %x", (SceSize)firstEntry->segmentSize, ret);
+#else
 		UPDATER_ERROR_FMT(1254, "%d: %x", (SceSize)firstEntry->segmentSize, ret);
+#endif
 		switch (ret) {
 		case SCE_SBL_US_ERROR_INVALID_ARGUMENT:
 			ret = SCE_UPDATER_ERROR_ALLOC_BUF_INVALID_ARG;
@@ -340,8 +383,13 @@ int SpkgGroupDiff::commitHeaderSpkg(SceUID pupFd)
 						     flags, &requestId);
 			if (ret != 0) {
 				firstEntry = static_cast<SpkgEntry *>(m_spkgList.Get(0));
+#ifdef UPDATER_CORE_2014
+				UPDATER_ERROR_FMT(1392, "%d %d %x : %x", packageType,
+						  (SceSize)firstEntry->segmentSize, flags, ret);
+#else
 				UPDATER_ERROR_FMT(1279, "%d %d %x : %x", packageType,
 						  (SceSize)firstEntry->segmentSize, flags, ret);
+#endif
 				ret = convertErrorCodeUpdateRequest(packageType, ret);
 			} else {
 				ret = WaitStatus(SPKG_NODE_TYPE_UPDATE, requestId, &statusResult);
@@ -354,7 +402,11 @@ int SpkgGroupDiff::commitHeaderSpkg(SceUID pupFd)
 	}
 	releaseRet = sceSblUsReleaseBuffer(spkgBuffer);
 	if (releaseRet != 0) {
+#ifdef UPDATER_CORE_2014
+		UPDATER_ERROR_FMT(1413, "%x", releaseRet);
+#else
 		UPDATER_ERROR_FMT(1300, "%x", releaseRet);
+#endif
 		if (releaseRet == SCE_SBL_US_ERROR_INVALID_ARGUMENT)
 			releaseRet = SCE_UPDATER_ERROR_FREE_BUF_INVALID_ARG;
 		else if (releaseRet == SCE_SBL_US_ERROR_NOT_PERMITTED)
@@ -382,7 +434,11 @@ int SpkgGroupDiff::flushImageAndCommit(SceUID pupFd)
 		return ret;
 	fd = sceIoOpen(devicePath, SCE_O_RDWR, 0);
 	if (fd < 0) {
+#ifdef UPDATER_CORE_2014
+		UPDATER_ERROR_FMT(1278, "%s : %x", devicePath, fd);
+#else
 		UPDATER_ERROR_FMT(1165, "%s : %x", devicePath, fd);
+#endif
 		return SCE_UPDATER_ERROR_BLOCK_OPEN;
 	}
 	{
@@ -394,7 +450,11 @@ int SpkgGroupDiff::flushImageAndCommit(SceUID pupFd)
 			SceSSize written = sceIoWrite(fd, m_memBlockBase, writeSize);
 
 			if (written < 0) {
+#ifdef UPDATER_CORE_2014
+				UPDATER_ERROR_FMT(1297, "%x %d : %x", fd, writeSize, written);
+#else
 				UPDATER_ERROR_FMT(1184, "%x %d : %x", fd, writeSize, written);
+#endif
 				ret = SCE_UPDATER_ERROR_BLOCK_WRITE;
 				break;
 			}
@@ -412,7 +472,11 @@ int SpkgGroupDiff::flushImageAndCommit(SceUID pupFd)
 	}
 	closeRet = sceIoClose(fd);
 	if (closeRet < 0) {
+#ifdef UPDATER_CORE_2014
+		UPDATER_ERROR_FMT(1322, "%x : %x", fd, closeRet);
+#else
 		UPDATER_ERROR_FMT(1209, "%x : %x", fd, closeRet);
+#endif
 		if (ret == 0)
 			return SCE_UPDATER_ERROR_BLOCK_CLOSE;
 		return ret;
@@ -552,7 +616,11 @@ int SpkgGroupDiff::extractSpkg(SceUID pupFd, const SpkgEntry *entry, void *outpu
 
 	ret = sceSblUsAllocateBuffer((SceSize)entry->segmentSize, &spkgBuffer);
 	if (ret != 0) {
+#ifdef UPDATER_CORE_2014
+		UPDATER_ERROR_FMT(1148, "%d: %x", (SceSize)entry->segmentSize, ret);
+#else
 		UPDATER_ERROR_FMT(1041, "%d: %x", (SceSize)entry->segmentSize, ret);
+#endif
 		switch (ret) {
 		case SCE_SBL_US_ERROR_INVALID_ARGUMENT:
 			ret = SCE_UPDATER_ERROR_ALLOC_BUF_INVALID_ARG;
@@ -575,8 +643,13 @@ int SpkgGroupDiff::extractSpkg(SceUID pupFd, const SpkgEntry *entry, void *outpu
 						      (SceSize)entry->segmentSize, flags,
 						      &requestId);
 			if (ret != 0) {
+#ifdef UPDATER_CORE_2014
+				UPDATER_ERROR_FMT(1190, "%d %lld %x : %x", SPKG_NODE_TYPE_EXTRACT,
+						  entry->segmentSize, flags, ret);
+#else
 				UPDATER_ERROR_FMT(1081, "%d %lld %x : %x", SPKG_NODE_TYPE_EXTRACT,
 						  entry->segmentSize, flags, ret);
+#endif
 				ret = convertErrorCodeExtractRequest((int)entry->type, ret);
 			} else {
 				ret = WaitStatus(SPKG_NODE_TYPE_EXTRACT, requestId, &statusResult);
@@ -592,11 +665,19 @@ int SpkgGroupDiff::extractSpkg(SceUID pupFd, const SpkgEntry *entry, void *outpu
 									 (SceSize)entry->finalSize,
 									 outputBuffer);
 					if (ret != 0) {
+#ifdef UPDATER_CORE_2014
+						UPDATER_ERROR_FMT(1222,
+								  "%d %d %lld %lld : %x",
+								  SPKG_NODE_TYPE_EXTRACT, requestId,
+								  entry->decryptedSize,
+								  entry->finalSize, ret);
+#else
 						UPDATER_ERROR_FMT(1110,
 								  "%d %d %lld %lld : %x",
 								  SPKG_NODE_TYPE_EXTRACT, requestId,
 								  entry->decryptedSize,
 								  entry->finalSize, ret);
+#endif
 						ret = convertErrorCodeGetExtract((int)entry->type,
 										 ret);
 					}
@@ -606,7 +687,11 @@ int SpkgGroupDiff::extractSpkg(SceUID pupFd, const SpkgEntry *entry, void *outpu
 	}
 	releaseRet = sceSblUsReleaseBuffer(spkgBuffer);
 	if (releaseRet != 0) {
+#ifdef UPDATER_CORE_2014
+		UPDATER_ERROR_FMT(1230, "%x", releaseRet);
+#else
 		UPDATER_ERROR_FMT(1118, "%x", releaseRet);
+#endif
 		if (releaseRet == SCE_SBL_US_ERROR_INVALID_ARGUMENT)
 			releaseRet = SCE_UPDATER_ERROR_FREE_BUF_INVALID_ARG;
 		else if (releaseRet == SCE_SBL_US_ERROR_NOT_PERMITTED)
@@ -617,8 +702,13 @@ int SpkgGroupDiff::extractSpkg(SceUID pupFd, const SpkgEntry *entry, void *outpu
 	return ret;
 }
 
+#ifdef UPDATER_CORE_2014
+int SpkgGroupDiff::addTarFileToMemoryFs(SceUID pupFd, const char *tarPath, const char *fileName,
+					SceIoStat *stat, bool directWrite)
+#else
 int SpkgGroupDiff::addTarFileToMemoryFs(SceUID pupFd, const char *tarPath, const char *fileName,
 					SceIoStat *stat)
+#endif
 {
 	int fileCount = 0;
 	SceUInt32 fileSize;
@@ -642,8 +732,39 @@ int SpkgGroupDiff::addTarFileToMemoryFs(SceUID pupFd, const char *tarPath, const
 	if (ret != 0)
 		return ret;
 	stat->st_size = (SceOff)(SceInt32)fileSize;
+#ifdef UPDATER_CORE_2014
+	if (directWrite) {
+		SceUID fd = sceIoOpen(fileName, SCE_O_RDWR | SCE_O_CREAT | SCE_O_TRUNC,
+				      stat->st_mode);
+
+		if (fd < 0) {
+			UPDATER_ERROR_FMT(2121, "%s : %x", fileName, fd);
+			ret = SCE_UPDATER_ERROR_BLOCK_OPEN;
+		} else {
+			SceSize writeSize = (SceSize)stat->st_size;
+			SceSSize written = sceIoWrite(fd, m_tarBuffer + fileOffset, writeSize);
+			int closeRet;
+
+			ret = 0;
+			if (written < 0) {
+				UPDATER_ERROR_FMT(2130, "%x %d : %x", fd, writeSize, written);
+				ret = SCE_UPDATER_ERROR_BLOCK_WRITE;
+			}
+			closeRet = sceIoClose(fd);
+			if (closeRet < 0) {
+				UPDATER_ERROR_FMT(2138, "%x : %x", fd, closeRet);
+				if (ret == 0)
+					ret = SCE_UPDATER_ERROR_BLOCK_CLOSE;
+			}
+		}
+	} else {
+		stat->st_mode = SCE_STM_FREG;
+		ret = m_fatFs.AddFileFromMemory(fileName, stat, m_tarBuffer + fileOffset);
+	}
+#else
 	stat->st_mode = SCE_STM_FREG;
 	ret = m_fatFs.AddFileFromMemory(fileName, stat, m_tarBuffer + fileOffset);
+#endif
 	if (ret == 0 && m_tarArchive.GetRemainingFileCount() == 0) {
 		m_tarArchive.Clear();
 		m_tarSpkgIndex++;
@@ -746,7 +867,11 @@ int SpkgGroupDiff::applyManifestDirectory(SceUID pupFd)
 					m_manifestOffset++;
 			}
 		} else if (kind == 'F') {
+#ifdef UPDATER_CORE_2014
+			ret = addTarFileToMemoryFs(pupFd, entryPath, entryName, &entryStat, false);
+#else
 			ret = addTarFileToMemoryFs(pupFd, entryPath, entryName, &entryStat);
+#endif
 			if (ret != 0)
 				return ret;
 			m_manifestOffset++;
@@ -759,6 +884,26 @@ int SpkgGroupDiff::applyManifestDirectory(SceUID pupFd)
 	return ret;
 }
 
+#ifdef UPDATER_CORE_2014
+int SpkgGroupDiff::mountTargetPartition(bool writable)
+{
+	int ret = 0;
+	SceUInt32 spkgType = static_cast<SpkgEntry *>(m_spkgList.Get(0))->type;
+
+	if (s_vshMountId[spkgType] != 0) {
+		int flags = writable ? 2 : 0;
+
+		spkgType = static_cast<SpkgEntry *>(m_spkgList.Get(0))->type;
+		ret = (int)vshIoMount(s_vshMountId[spkgType], NULL, flags, NULL, 0, 0);
+		if (ret < 0) {
+			spkgType = static_cast<SpkgEntry *>(m_spkgList.Get(0))->type;
+			UPDATER_ERROR_FMT(840, "[%d] : %x", spkgType, ret);
+			return SCE_UPDATER_ERROR_DIFF_MOUNT;
+		}
+	}
+	return ret;
+}
+#else
 int SpkgGroupDiff::mountTargetPartition(void)
 {
 	int ret = 0;
@@ -775,6 +920,7 @@ int SpkgGroupDiff::mountTargetPartition(void)
 	}
 	return ret;
 }
+#endif
 
 int SpkgGroupDiff::allocateTarBuffer(void)
 {
@@ -790,7 +936,11 @@ int SpkgGroupDiff::allocateTarBuffer(void)
 	}
 	m_tarBuffer = static_cast<SceUInt8 *>(g_updaterMemoryInfo.updaterCoreAlloc(maxSize));
 	if (m_tarBuffer == NULL) {
+#ifdef UPDATER_CORE_2014
+		UPDATER_ERROR_FMT(805, "%d", maxSize);
+#else
 		UPDATER_ERROR_FMT(718, "%d", maxSize);
+#endif
 		return SCE_UPDATER_ERROR_NO_MEMORY;
 	}
 	return 0;
@@ -806,12 +956,20 @@ int SpkgGroupDiff::allocateImageMemBlock(void)
 					      SCE_KERNEL_MEMBLOCK_TYPE_USER_RW,
 					      s_memBlockAllocSize[spkgType], NULL);
 	if (m_memBlockId < 0) {
+#ifdef UPDATER_CORE_2014
+		UPDATER_ERROR_FMT(614, "%x", m_memBlockId);
+#else
 		UPDATER_ERROR_FMT(551, "%x", m_memBlockId);
+#endif
 		return SCE_UPDATER_ERROR_MEMBLOCK_ALLOC;
 	}
 	ret = sceKernelGetMemBlockBase(m_memBlockId, &base);
 	if (ret < 0) {
+#ifdef UPDATER_CORE_2014
+		UPDATER_ERROR_FMT(622, "%d : %x", m_memBlockId, ret);
+#else
 		UPDATER_ERROR_FMT(559, "%d : %x", m_memBlockId, ret);
+#endif
 		freeImageMemBlock();
 		return SCE_UPDATER_ERROR_MEMBLOCK_BASE;
 	}
@@ -842,7 +1000,11 @@ int SpkgGroupDiff::setupMemoryFs(void)
 				int freeRet = freeImageMemBlock();
 
 				if (freeRet != 0)
+#ifdef UPDATER_CORE_2014
+					UPDATER_ERROR_FMT(584, "%x", freeRet);
+#else
 					UPDATER_ERROR_FMT(521, "%x", freeRet);
+#endif
 			}
 			return ret;
 		}
@@ -860,7 +1022,11 @@ int SpkgGroupDiff::parseManifestSerialNumber(void)
 
 	if (sceClibStrncmp(m_manifestBuffer, prefix, prefixLen) != 0) {
 		UpdaterLogPrintf("ERROR : ");
+#ifdef UPDATER_CORE_2014
+		UpdaterLogPrintf("0x%08x (%d)\n", SCE_UPDATER_ERROR_DIFF_MANIFEST_HEADER, 735);
+#else
 		UpdaterLogPrintf("0x%08x (%d)\n", SCE_UPDATER_ERROR_DIFF_MANIFEST_HEADER, 651);
+#endif
 		return SCE_UPDATER_ERROR_DIFF_MANIFEST_HEADER;
 	}
 	m_serialNumber = 0;
@@ -875,8 +1041,13 @@ int SpkgGroupDiff::parseManifestSerialNumber(void)
 		}
 		if ((SceInt32)offset >= (SceInt32)limit) {
 			UpdaterLogPrintf("ERROR : ");
+#ifdef UPDATER_CORE_2014
+			UpdaterLogPrintf("0x%08x (%d)\n",
+					 SCE_UPDATER_ERROR_DIFF_MANIFEST_HEADER, 749);
+#else
 			UpdaterLogPrintf("0x%08x (%d)\n",
 					 SCE_UPDATER_ERROR_DIFF_MANIFEST_HEADER, 665);
+#endif
 			return SCE_UPDATER_ERROR_DIFF_MANIFEST_HEADER;
 		}
 		value <<= 4;
@@ -889,8 +1060,13 @@ int SpkgGroupDiff::parseManifestSerialNumber(void)
 			value |= (SceUInt32)(ch - 'a' + 10);
 		} else {
 			UpdaterLogPrintf("ERROR : ");
+#ifdef UPDATER_CORE_2014
+			UpdaterLogPrintf("0x%08x (%d)\n",
+					 SCE_UPDATER_ERROR_DIFF_MANIFEST_HEADER, 765);
+#else
 			UpdaterLogPrintf("0x%08x (%d)\n",
 					 SCE_UPDATER_ERROR_DIFF_MANIFEST_HEADER, 681);
+#endif
 			return SCE_UPDATER_ERROR_DIFF_MANIFEST_HEADER;
 		}
 		m_serialNumber = value;
@@ -907,7 +1083,11 @@ int SpkgGroupDiff::extractManifest(SceUID pupFd)
 	m_manifestBuffer = static_cast<char *>(
 		g_updaterMemoryInfo.updaterCoreAlloc((SceSize)m_manifestSpkg.finalSize));
 	if (m_manifestBuffer == NULL) {
+#ifdef UPDATER_CORE_2014
+		UPDATER_ERROR_FMT(667, "%lld", m_manifestSpkg.finalSize);
+#else
 		UPDATER_ERROR_FMT(604, "%lld", m_manifestSpkg.finalSize);
+#endif
 		return SCE_UPDATER_ERROR_NO_MEMORY;
 	}
 	ret = extractSpkg(pupFd, &m_manifestSpkg, m_manifestBuffer);
@@ -918,12 +1098,152 @@ int SpkgGroupDiff::extractManifest(SceUID pupFd)
 	return ret;
 }
 
+#ifdef UPDATER_CORE_2014
+int SpkgGroupDiff::decodeSerialDateTime(SceDateTime *dateTime)
+{
+	SceUInt32 serial = m_serialNumber;
+
+	dateTime->year = (SceUInt16)((serial >> 25) + 1980);
+	dateTime->month = (SceUInt16)((serial >> 21) & 0xf);
+	dateTime->day = (SceUInt16)((serial >> 16) & 0x1f);
+	dateTime->hour = (SceUInt16)((serial >> 11) & 0x1f);
+	dateTime->minute = (SceUInt16)((serial >> 5) & 0x3f);
+	dateTime->second = (SceUInt16)((serial & 0x1f) * 2);
+	dateTime->microsecond = 0;
+	return 0;
+}
+
+int SpkgGroupDiff::applyManifestDirect(SceUID pupFd)
+{
+	SceIoStat entryStat;
+	SceDateTime timestamp;
+	char entryPath[256];
+	char dstPath[256];
+	int pos = 0;
+	int ret = 0;
+
+	decodeSerialDateTime(&timestamp);
+	entryStat.st_ctime = timestamp;
+	entryStat.st_atime = timestamp;
+	entryStat.st_mtime = timestamp;
+	while (m_manifestOffset < (int)m_manifestSpkg.finalSize) {
+		char ch = m_manifestBuffer[m_manifestOffset];
+
+		if (ch != ':') {
+			entryPath[pos++] = ch;
+			m_manifestOffset++;
+			continue;
+		}
+		entryPath[pos] = '\0';
+		m_manifestOffset += 3;
+		if (m_manifestBuffer[m_manifestOffset] == '5')
+			entryStat.st_mode = 0x106;
+		else
+			entryStat.st_mode = 0x006;
+		if (entryPath[pos - 1] == '/')
+			entryPath[pos - 1] = '\0';
+		(void)sceClibStrrchr(entryPath, '/');
+		{
+			SpkgEntry *firstEntry = static_cast<SpkgEntry *>(m_spkgList.Get(0));
+
+			sceClibStrncpy(dstPath, s_mountPrefix[firstEntry->type], sizeof(dstPath));
+			sceClibStrncat(dstPath, entryPath + 1, sizeof(dstPath));
+		}
+		m_manifestOffset += 2;
+		char kind = m_manifestBuffer[m_manifestOffset];
+		if (kind == 'K') {
+			int mkdirRet = sceIoMkdir(dstPath, entryStat.st_mode);
+
+			if (mkdirRet >= 0) {
+				int chstatRet = sceIoChstat(dstPath, &entryStat, 57);
+
+				if (chstatRet < 0) {
+					UpdaterLogPrintf("ERROR : ");
+					UpdaterLogPrintf("sceIoChstat(%s) : %x\n",
+							 dstPath, chstatRet);
+					return chstatRet;
+				}
+			} else if (mkdirRet != (int)SCE_ERROR_ERRNO_EEXIST) {
+				UpdaterLogPrintf("ERROR : ");
+				UpdaterLogPrintf("sceIoMkdir(%s) : %x\n", dstPath, mkdirRet);
+				return mkdirRet;
+			}
+			m_manifestOffset += 2;
+			if (m_manifestBuffer[m_manifestOffset + 1] == '\n')
+				m_manifestOffset++;
+			m_manifestOffset--;
+		} else if (kind == 'F') {
+			ret = addTarFileToMemoryFs(pupFd, entryPath, dstPath, &entryStat, true);
+			if (ret != 0)
+				return ret;
+			{
+				int chstatRet = sceIoChstat(dstPath, &entryStat, 57);
+
+				if (chstatRet < 0) {
+					UpdaterLogPrintf("ERROR : ");
+					UpdaterLogPrintf("sceIoChstat(%s) : %x\n",
+							 dstPath, chstatRet);
+					return chstatRet;
+				}
+			}
+			m_manifestOffset++;
+			if (m_manifestBuffer[m_manifestOffset + 1] == '\n')
+				m_manifestOffset++;
+		}
+		pos = 0;
+		m_manifestOffset++;
+	}
+	return ret;
+}
+
+int SpkgGroupDiff::updateDirect(SceUID pupFd)
+{
+	int ret;
+
+	ret = extractManifest(pupFd);
+	if (ret == 0) {
+		ret = parseManifestSerialNumber();
+		if (ret == 0) {
+			ret = allocateTarBuffer();
+			if (ret == 0) {
+				ret = mountTargetPartition(true);
+				if (ret == 0) {
+					ret = applyManifestDirect(pupFd);
+					unmountTargetPartition();
+					freeTarBuffer();
+				}
+			}
+		}
+	}
+	if (m_manifestBuffer != NULL) {
+		g_updaterMemoryInfo.updaterCoreFree(m_manifestBuffer);
+		m_manifestBuffer = NULL;
+	}
+	return ret;
+}
+#endif
+
 int SpkgGroupDiff::UpdateSpkg(SpkgOperationElement *element)
 {
 	SceUID pupFd = g_spkgGroupManager->GetParallelOperation()->GetPupFd();
 	int ret;
 
 	(void)element;
+#ifdef UPDATER_CORE_2014
+	{
+		SpkgEntry *firstEntry = static_cast<SpkgEntry *>(m_spkgList.Get(0));
+
+		if (firstEntry->type == 28) {
+			ret = updateDirect(pupFd);
+			if (ret == 0)
+				ret = commitHeaderSpkg(pupFd);
+			return ret;
+		}
+		if ((firstEntry->type == 21 || firstEntry->type == 22) &&
+		    (SceUInt16)firstEntry->platform != 0)
+			return updateDirect(pupFd);
+	}
+#endif
 	ret = extractManifest(pupFd);
 	if (ret == 0) {
 		ret = parseManifestSerialNumber();
@@ -932,7 +1252,11 @@ int SpkgGroupDiff::UpdateSpkg(SpkgOperationElement *element)
 			if (ret == 0) {
 				ret = allocateTarBuffer();
 				if (ret == 0) {
+#ifdef UPDATER_CORE_2014
+					ret = mountTargetPartition(false);
+#else
 					ret = mountTargetPartition();
+#endif
 					if (ret == 0)
 						ret = applyManifestDirectory(pupFd);
 					if (ret == 0) {
@@ -970,12 +1294,38 @@ void SpkgGroupDiff::EstimateTime(SceUpdaterEstimateTime *estimateTime)
 
 	ret = sceFsUtilGetDevInfo(s_mountPrefix[spkgType], &maxSize, &freeSize);
 	if (ret < 0)
+#ifdef UPDATER_CORE_2014
+		UPDATER_ERROR_FMT(462, "%x", ret);
+#else
 		UPDATER_ERROR_FMT(408, "%x", ret);
+#endif
 	totalSizeFloat = (float)m_totalSize;
 	inspectMs = (SceUInt64)((totalSizeFloat / g_spkgReadSpeed +
 				 totalSizeFloat / g_spkgInspectSpeed) +
 				(float)(int)m_spkgList.GetCount() * g_spkgInspectOverheadMs);
+	m_estimatedInspectMs = inspectMs;
 	manifestSizeFloat = (float)m_manifestSpkg.segmentSize;
+#ifdef UPDATER_CORE_2014
+	{
+		SpkgEntry *firstEntry = static_cast<SpkgEntry *>(m_spkgList.Get(0));
+		double baseMs = (double)(manifestSizeFloat / g_spkgReadSpeed +
+					 manifestSizeFloat / g_spkgInspectSpeed) +
+				(double)inspectMs * DIFF_ESTIMATE_INSPECT_SCALE;
+
+		if ((SceUInt16)firstEntry->platform == 0) {
+			usedSizeFloat = (float)(maxSize - freeSize);
+			maxSizeFloat = (float)maxSize;
+			updateMs = (SceUInt64)(baseMs +
+					       (double)(usedSizeFloat / DIFF_ESTIMATE_COPY_SPEED) +
+					       (double)(maxSizeFloat / DIFF_ESTIMATE_FLUSH_SPEED));
+		} else {
+			float finalSizeFloat = (float)m_inspectedSize;
+
+			updateMs = (SceUInt64)(baseMs +
+					       (double)(finalSizeFloat / DIFF_ESTIMATE_FLUSH_SPEED));
+		}
+	}
+#else
 	usedSizeFloat = (float)(maxSize - freeSize);
 	maxSizeFloat = (float)maxSize;
 	updateMs = (SceUInt64)(((double)(manifestSizeFloat / g_spkgReadSpeed +
@@ -983,7 +1333,7 @@ void SpkgGroupDiff::EstimateTime(SceUpdaterEstimateTime *estimateTime)
 				(double)inspectMs * DIFF_ESTIMATE_INSPECT_SCALE) +
 			       (double)(usedSizeFloat / DIFF_ESTIMATE_COPY_SPEED) +
 			       (double)(maxSizeFloat / DIFF_ESTIMATE_FLUSH_SPEED));
-	m_estimatedInspectMs = inspectMs;
+#endif
 	m_estimatedUpdateMs = updateMs;
 	estimateTime->inspectMs = inspectMs;
 	estimateTime->updateMs = updateMs;

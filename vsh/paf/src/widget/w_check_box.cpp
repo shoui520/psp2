@@ -16,6 +16,7 @@ namespace ui {
 
 CheckBox::CheckBox(Widget *parent, CreateParam *param) : StateButtonBase(parent, param)
 {
+#ifndef PAF_BUILD_2014
 	static math::v2 s_focus_size(46.0f, 46.0f);
 
 	if (m_focus_shape != NULL) {
@@ -27,6 +28,7 @@ CheckBox::CheckBox(Widget *parent, CreateParam *param) : StateButtonBase(parent,
 		shape.m_size = s_focus_size;
 		ScePafWidget_13B246E0(this, &shape);
 	}
+#endif
 }
 
 const char CheckBox::m_widget_type[] = "check_box";
@@ -52,6 +54,7 @@ void CheckBox::UpdateSize()
 {
 	ButtonBase::UpdateSize();
 
+#ifndef PAF_BUILD_2014
 	FocusShape *shape = m_focus_shape;
 	graph::PlaneObj *image = NULL;
 
@@ -77,6 +80,7 @@ void CheckBox::UpdateSize()
 	else if (align_y == graph::PlaneObj::ALIGN_PLUS)
 		offs_y = (size - shape->m_size).extract_y() * 0.5f;
 	shape->m_offset = math::v3(offs_x, offs_y, 0.0f);
+#endif
 }
 
 /* toggled with its sound, the image's whole animation played (a negative time) */
@@ -106,10 +110,12 @@ static VersatileParam *NewCheckBoxLayoutParam()
 	return new WidgetLayoutParam;
 }
 
+#ifndef PAF_BUILD_2014
 static VersatileParam *NewCheckBoxFocusParam()
 {
 	return new WidgetFocusParam;
 }
+#endif
 
 static VersatileParam *NewCheckBoxStyleParam()
 {
@@ -131,7 +137,9 @@ FactoryFuncTable g_factoryCheckBox = {
 	NewCheckBox,
 	NewCheckBoxParam,
 	NewCheckBoxLayoutParam,
+#ifndef PAF_BUILD_2014
 	NewCheckBoxFocusParam,
+#endif
 	NewCheckBoxStyleParam,
 	NewCheckBoxHandlerParam,
 	NewCheckBoxSoundParam,

@@ -220,7 +220,9 @@ int32_t AppIconSimple::EnableTap(bool on_off)
 			EnableFocusEvent(true);
 		m_event_enable |= 0x4F0;
 		SetGestureMask(m_touch_gesture_mask | 1, true);
+#ifndef PAF_BUILD_2014
 		m_enable_tap = true;
+#endif
 		m_tap_enabled = true;
 		return 1;
 	}
@@ -229,7 +231,9 @@ int32_t AppIconSimple::EnableTap(bool on_off)
 	m_event_enable &= ~0x4F0;
 	SetGestureMask(m_touch_gesture_mask & ~1, true);
 	m_tap_enabled = false;
+#ifndef PAF_BUILD_2014
 	m_enable_tap = false;
+#endif
 	return ScePafWidget_931AD41E(this, false);
 }
 
@@ -350,10 +354,12 @@ static VersatileParam *NewAppIconSimpleLayoutParam()
 	return new WidgetLayoutParam;
 }
 
+#ifndef PAF_BUILD_2014
 static VersatileParam *NewAppIconSimpleFocusParam()
 {
 	return new WidgetFocusParam;
 }
+#endif
 
 static VersatileParam *NewAppIconSimpleStyleParam()
 {
@@ -375,7 +381,9 @@ FactoryFuncTable g_factoryAppIconSimple = {
 	NewAppIconSimple,
 	NewAppIconSimpleParam,
 	NewAppIconSimpleLayoutParam,
+#ifndef PAF_BUILD_2014
 	NewAppIconSimpleFocusParam,
+#endif
 	NewAppIconSimpleStyleParam,
 	NewAppIconSimpleHandlerParam,
 	NewAppIconSimpleSoundParam,

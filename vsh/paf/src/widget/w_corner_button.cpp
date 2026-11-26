@@ -189,6 +189,7 @@ static inline void SetPlaneRot(CornerButton *button, int32_t id, const math::v3 
 		plane->SetRot(rot);
 }
 
+#ifndef PAF_BUILD_2014
 /* the focus frame's offset and rotation, when it has one */
 static inline void SetFocusShape(CornerButton *button, const math::v3 &offset, const math::v3 &rot)
 {
@@ -199,6 +200,7 @@ static inline void SetFocusShape(CornerButton *button, const math::v3 &offset, c
 		shape->m_offset = offset;
 	}
 }
+#endif
 
 void ScePafWidget_DFEF98E2(CornerButton *button, int32_t type)
 {
@@ -216,9 +218,11 @@ void ScePafWidget_DFEF98E2(CornerButton *button, int32_t type)
 		button->SetAnchor(110, 111, 0, NULL);
 		if (type & 8)
 			button->SetPos(math::v4(0.0f, -32.0f, 0.0f, 0.0f), NULL, Widget::ANIM_MOVE);
+#ifndef PAF_BUILD_2014
 		SetFocusShape(button, math::v3(3.0f, -3.0f, 0.0f), math::v3(0.0f, pi, pi));
 		button->SetFocusDirection(0, button->m_name);
 		button->SetFocusDirection(2, button->m_name);
+#endif
 		break;
 	case 1:
 		SetPlaneRot(button, Button::OBJ_BG, math::v3(pi, pi, 0.0f));
@@ -230,16 +234,20 @@ void ScePafWidget_DFEF98E2(CornerButton *button, int32_t type)
 		button->SetAnchor(111, 111, 0, NULL);
 		if (type & 8)
 			button->SetPos(math::v4(0.0f, -32.0f, 0.0f, 0.0f), NULL, Widget::ANIM_MOVE);
+#ifndef PAF_BUILD_2014
 		SetFocusShape(button, math::v3(-3.0f, -3.0f, 0.0f), math::v3(0.0f, 0.0f, pi));
 		button->SetFocusDirection(0, button->m_name);
 		button->SetFocusDirection(3, button->m_name);
+#endif
 		break;
 	case 2:
 		button->SetAlign(Widget::ALIGN_LEFT, Widget::ALIGN_BOTTOM, Widget::ALIGN_CENTER, NULL);
 		button->SetAnchor(110, 110, 0, NULL);
+#ifndef PAF_BUILD_2014
 		SetFocusShape(button, math::v3(3.0f, 3.0f, 0.0f), math::v3(0.0f, 0.0f, 0.0f));
 		button->SetFocusDirection(1, button->m_name);
 		button->SetFocusDirection(2, button->m_name);
+#endif
 		break;
 	case 3:
 		SetPlaneRot(button, Button::OBJ_BG, math::v3(0.0f, pi, 0.0f));
@@ -249,9 +257,11 @@ void ScePafWidget_DFEF98E2(CornerButton *button, int32_t type)
 	case 7:
 		button->SetAlign(Widget::ALIGN_RIGHT, Widget::ALIGN_BOTTOM, Widget::ALIGN_CENTER, NULL);
 		button->SetAnchor(111, 110, 0, NULL);
+#ifndef PAF_BUILD_2014
 		SetFocusShape(button, math::v3(-3.0f, 3.0f, 0.0f), math::v3(0.0f, pi, 0.0f));
 		button->SetFocusDirection(1, button->m_name);
 		button->SetFocusDirection(3, button->m_name);
+#endif
 		break;
 	case 6:
 		break;
@@ -379,10 +389,12 @@ static VersatileParam *NewCornerButtonLayoutParam()
 	return new CornerButtonLayoutParam;
 }
 
+#ifndef PAF_BUILD_2014
 static VersatileParam *NewCornerButtonFocusParam()
 {
 	return new WidgetFocusParam;
 }
+#endif
 
 static VersatileParam *NewCornerButtonStyleParam()
 {
@@ -404,7 +416,9 @@ FactoryFuncTable g_factoryCornerButton = {
 	NewCornerButton,
 	NewCornerButtonParam,
 	NewCornerButtonLayoutParam,
+#ifndef PAF_BUILD_2014
 	NewCornerButtonFocusParam,
+#endif
 	NewCornerButtonStyleParam,
 	NewCornerButtonHandlerParam,
 	NewCornerButtonSoundParam,

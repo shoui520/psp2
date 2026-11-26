@@ -77,10 +77,12 @@ static VersatileParam *NewRadioButtonLayoutParam()
 	return new WidgetLayoutParam;
 }
 
+#ifndef PAF_BUILD_2014
 static VersatileParam *NewRadioButtonFocusParam()
 {
 	return new WidgetFocusParam;
 }
+#endif
 
 static VersatileParam *NewRadioButtonStyleParam()
 {
@@ -102,7 +104,9 @@ FactoryFuncTable g_factoryRadioButton = {
 	NewRadioButton,
 	NewRadioButtonParam,
 	NewRadioButtonLayoutParam,
+#ifndef PAF_BUILD_2014
 	NewRadioButtonFocusParam,
+#endif
 	NewRadioButtonStyleParam,
 	NewRadioButtonHandlerParam,
 	NewRadioButtonSoundParam,

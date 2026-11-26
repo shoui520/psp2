@@ -248,9 +248,29 @@ public:
 	{
 	}
 
+#ifdef PAF_BUILD_2014
+	virtual void SetAmbientColor(const math::v4 &value)
+	{
+	}
+#endif
+
 	virtual void SetDiffuseColor(const math::v4 &value)
 	{
 	}
+
+#ifdef PAF_BUILD_2014
+	virtual void SetBackColor(const math::v4 &value)
+	{
+	}
+
+	virtual void SetBackgroundSize(const math::v4 &value)
+	{
+	}
+
+	virtual void SetBackgroundRatio(const math::v2 &value)
+	{
+	}
+#endif
 
 	virtual void SetView(const math::matrix &value)
 	{
@@ -259,6 +279,12 @@ public:
 	virtual void SetEyePos(const math::v4 &value)
 	{
 	}
+
+#ifdef PAF_BUILD_2014
+	virtual void SetSpecularFactor(const math::v4 &value)
+	{
+	}
+#endif
 
 	virtual void SetBackColorZRange(const math::v2 &value)
 	{
@@ -272,9 +298,45 @@ public:
 	{
 	}
 
+#ifdef PAF_BUILD_2014
+	virtual void SetMaterialPack(const math::matrix &value)
+	{
+	}
+
+	virtual void SetLightPos(const math::v3 &value)
+	{
+	}
+
+	virtual void SetAmbientColor(const math::v4 &value)
+	{
+	}
+
+	virtual void SetDiffuseColor(const math::v4 &value)
+	{
+	}
+#endif
+
 	virtual void SetBackColor(const math::v4 &value)
 	{
 	}
+
+#ifdef PAF_BUILD_2014
+	virtual void SetBackgroundSize(const math::v4 &value)
+	{
+	}
+
+	virtual void SetBackgroundRatio(const math::v2 &value)
+	{
+	}
+
+	virtual void SetView(const math::matrix &value)
+	{
+	}
+
+	virtual void SetEyePos(const math::v4 &value)
+	{
+	}
+#endif
 
 	virtual void SetSpecularFactor(const math::v4 &value)
 	{
@@ -283,6 +345,12 @@ public:
 	virtual void SetColorMap(const arl::TextureSource &value)
 	{
 	}
+
+#ifdef PAF_BUILD_2014
+	virtual void SetBackground(const arl::TextureSource &value)
+	{
+	}
+#endif
 
 	virtual void SetEnvMapDetail(const arl::TextureSource &value)
 	{
@@ -337,7 +405,7 @@ public:
 	{
 	}
 
-	WAVE_SHADER_BINARY("paf/cg/drawobj/panel/panel_glass_border.vp", 0x784);
+	WAVE_SHADER_BINARY("paf/cg/drawobj/panel/panel_glass_border.vp", PAF_SHADER_SIZE(0x784, 2260));
 
 	virtual void SetMVP(const math::matrix &value)
 	{
@@ -499,7 +567,7 @@ public:
 	{
 	}
 
-	WAVE_SHADER_BINARY("paf/cg/drawobj/panel/panel_glass_top.vp", 0x61c);
+	WAVE_SHADER_BINARY("paf/cg/drawobj/panel/panel_glass_top.vp", PAF_SHADER_SIZE(0x61c, 1908));
 
 	virtual void SetMVP(const math::matrix &value)
 	{
@@ -645,7 +713,7 @@ public:
 	{
 	}
 
-	WAVE_SHADER_BINARY("paf/cg/drawobj/panel/panel_glass.fp", 0x20c);
+	WAVE_SHADER_BINARY("paf/cg/drawobj/panel/panel_glass.fp", PAF_SHADER_SIZE(0x20c, 496));
 
 	virtual void SetMaterialPack(const math::matrix &value)
 	{
@@ -773,7 +841,7 @@ public:
 	{
 	}
 
-	WAVE_SHADER_BINARY("paf/cg/drawobj/panel/panel_opaque_border.vp", 0x714);
+	WAVE_SHADER_BINARY("paf/cg/drawobj/panel/panel_opaque_border.vp", PAF_SHADER_SIZE(0x714, 2140));
 
 	virtual void SetMVP(const math::matrix &value)
 	{
@@ -927,7 +995,7 @@ public:
 	{
 	}
 
-	WAVE_SHADER_BINARY("paf/cg/drawobj/panel/panel_opaque_top.vp", 0x5b4);
+	WAVE_SHADER_BINARY("paf/cg/drawobj/panel/panel_opaque_top.vp", PAF_SHADER_SIZE(0x5b4, 1780));
 
 	virtual void SetMVP(const math::matrix &value)
 	{
@@ -1069,7 +1137,7 @@ public:
 	{
 	}
 
-	WAVE_SHADER_BINARY("paf/cg/drawobj/panel/panel_opaque.fp", 0x1b8);
+	WAVE_SHADER_BINARY("paf/cg/drawobj/panel/panel_opaque.fp", PAF_SHADER_SIZE(0x1b8, 412));
 
 	virtual void SetMaterialPack(const math::matrix &value)
 	{
@@ -1205,7 +1273,7 @@ public:
 	{
 	}
 
-	WAVE_SHADER_BINARY("paf/cg/drawobj/panel/panel_glass_border_glowing.vp", 0xa14);
+	WAVE_SHADER_BINARY("paf/cg/drawobj/panel/panel_glass_border_glowing.vp", PAF_SHADER_SIZE(0xa14, 2972));
 
 	virtual void SetMVP(const math::matrix &value)
 	{
@@ -1359,7 +1427,7 @@ public:
 	{
 	}
 
-	WAVE_SHADER_BINARY("paf/cg/drawobj/panel/panel_glass_glowing.fp", 0x234);
+	WAVE_SHADER_BINARY("paf/cg/drawobj/panel/panel_glass_glowing.fp", PAF_SHADER_SIZE(0x234, 536));
 
 	virtual void SetMaterialPack(const math::matrix &value)
 	{
@@ -1495,7 +1563,7 @@ public:
 	{
 	}
 
-	WAVE_SHADER_BINARY("paf/cg/drawobj/panel/panel_opaque_wave_border.vp", 0x5c8);
+	WAVE_SHADER_BINARY("paf/cg/drawobj/panel/panel_opaque_wave_border.vp", PAF_SHADER_SIZE(0x5c8, 1640));
 
 	virtual void SetMVP(const math::matrix &value)
 	{
@@ -1661,7 +1729,7 @@ public:
 	{
 	}
 
-	WAVE_SHADER_BINARY("paf/cg/drawobj/panel/panel_opaque_wave_top.vp", 0x438);
+	WAVE_SHADER_BINARY("paf/cg/drawobj/panel/panel_opaque_wave_top.vp", PAF_SHADER_SIZE(0x438, 1248));
 
 	virtual void SetMVP(const math::matrix &value)
 	{
@@ -1803,7 +1871,7 @@ public:
 	{
 	}
 
-	WAVE_SHADER_BINARY("paf/cg/drawobj/panel/panel_opaque_wave.fp", 0x100);
+	WAVE_SHADER_BINARY("paf/cg/drawobj/panel/panel_opaque_wave.fp", PAF_SHADER_SIZE(0x100, 260));
 
 	virtual void SetMaterialPack(const math::matrix &value)
 	{
@@ -1885,6 +1953,168 @@ public:
 	arl::ShaderParameter<math::v4> m_color;
 };
 
+#ifdef PAF_BUILD_2014
+/* paf/cg/drawobj/panel/bubble_glass.vp */
+class BubbleGlassVertShader : public arl::ShaderInterfaceBase, public BubbleVertShaderParams {
+public:
+	BubbleGlassVertShader()
+		: m_mvp(m_setup), m_height(m_setup), m_transform_inverse_transpose(m_setup), m_transform(m_setup), m_material_pack(m_setup), m_light_pos(m_setup), m_diffuse_color(m_setup), m_background_ratio(m_setup), m_view(m_setup), m_eye_pos(m_setup), m_back_color_z_range(m_setup)
+	{
+	}
+
+	virtual void Init()
+	{
+		m_mvp.init("MVP", arl::ShaderParameterBase::UNIFORM, 0);
+		m_height.init("Height", arl::ShaderParameterBase::UNIFORM, 0);
+		m_transform_inverse_transpose.init("TransformInverseTranspose", arl::ShaderParameterBase::UNIFORM, 0);
+		m_transform.init("Transform", arl::ShaderParameterBase::UNIFORM, 0);
+		m_material_pack.init("cargs.MaterialPack", arl::ShaderParameterBase::UNIFORM, 0);
+		m_light_pos.init("cargs.LightPos", arl::ShaderParameterBase::UNIFORM, 0);
+		m_diffuse_color.init("cargs.DiffuseColor", arl::ShaderParameterBase::UNIFORM, 0);
+		m_background_ratio.init("cargs.BackgroundRatio", arl::ShaderParameterBase::UNIFORM, 0);
+		m_view.init("cargs.View", arl::ShaderParameterBase::UNIFORM, 0);
+		m_eye_pos.init("cargs.EyePos", arl::ShaderParameterBase::UNIFORM, 0);
+		m_back_color_z_range.init("BackColorZRange", arl::ShaderParameterBase::UNIFORM, 0);
+	}
+
+	virtual void Apply()
+	{
+		m_mvp.Apply();
+		m_height.Apply();
+		m_transform_inverse_transpose.Apply();
+		m_transform.Apply();
+		m_material_pack.Apply();
+		m_light_pos.Apply();
+		m_diffuse_color.Apply();
+		m_background_ratio.Apply();
+		m_view.Apply();
+		m_eye_pos.Apply();
+		m_back_color_z_range.Apply();
+	}
+
+	virtual void Unused()
+	{
+	}
+
+	WAVE_SHADER_BINARY("paf/cg/drawobj/panel/bubble_glass.vp", 1780);
+
+	virtual void SetMVP(const math::matrix &value)
+	{
+		m_mvp.Set(value);
+	}
+
+	virtual void SetHeight(const math::v2 &value)
+	{
+		m_height.Set(value);
+	}
+
+	virtual void SetTransformInverseTranspose(const math::matrix &value)
+	{
+		m_transform_inverse_transpose.Set(value);
+	}
+
+	virtual void SetTransform(const math::matrix &value)
+	{
+		m_transform.Set(value);
+	}
+
+	virtual void SetMaterialPack(const math::matrix &value)
+	{
+		m_material_pack.Set(value);
+	}
+
+	virtual void SetLightPos(const math::v3 &value)
+	{
+		m_light_pos.Set(value);
+	}
+
+	virtual void SetDiffuseColor(const math::v4 &value)
+	{
+		m_diffuse_color.Set(value);
+	}
+
+	virtual void SetBackgroundRatio(const math::v2 &value)
+	{
+		m_background_ratio.Set(value);
+	}
+
+	virtual void SetView(const math::matrix &value)
+	{
+		m_view.Set(value);
+	}
+
+	virtual void SetEyePos(const math::v4 &value)
+	{
+		m_eye_pos.Set(value);
+	}
+
+	virtual void SetBackColorZRange(const math::v2 &value)
+	{
+		m_back_color_z_range.Set(value);
+	}
+
+	arl::ShaderParameter<math::matrix> m_mvp;
+	arl::ShaderParameter<math::v2> m_height;
+	arl::ShaderParameter<math::matrix> m_transform_inverse_transpose;
+	arl::ShaderParameter<math::matrix> m_transform;
+	arl::ShaderParameter<math::matrix> m_material_pack;
+	arl::ShaderParameter<math::v3> m_light_pos;
+	arl::ShaderParameter<math::v4> m_diffuse_color;
+	arl::ShaderParameter<math::v2> m_background_ratio;
+	arl::ShaderParameter<math::matrix> m_view;
+	arl::ShaderParameter<math::v4> m_eye_pos;
+	arl::ShaderParameter<math::v2> m_back_color_z_range;
+};
+
+/* paf/cg/drawobj/panel/bubble_glass.fp */
+class BubbleGlassFragShader : public arl::ShaderInterfaceBase, public BubbleFragShaderParams {
+public:
+	BubbleGlassFragShader()
+		: m_specular_factor(m_setup), m_background(m_setup), m_env_map_detail(m_setup)
+	{
+	}
+
+	virtual void Init()
+	{
+		m_specular_factor.init("cargs.SpecularFactor", arl::ShaderParameterBase::UNIFORM, 0);
+		m_background.init("cargs.Background", 0, 0);
+		m_env_map_detail.init("cargs.EnvMapDetail", 1, 0);
+	}
+
+	virtual void Apply()
+	{
+		m_specular_factor.Apply();
+		m_background.Apply();
+		m_env_map_detail.Apply();
+	}
+
+	virtual void Unused()
+	{
+	}
+
+	WAVE_SHADER_BINARY("paf/cg/drawobj/panel/bubble_glass.fp", 428);
+
+	virtual void SetSpecularFactor(const math::v4 &value)
+	{
+		m_specular_factor.Set(value);
+	}
+
+	virtual void SetBackground(const arl::TextureSource &value)
+	{
+		m_background.Set(value);
+	}
+
+	virtual void SetEnvMapDetail(const arl::TextureSource &value)
+	{
+		m_env_map_detail.Set(value);
+	}
+
+	arl::ShaderParameter<math::v4> m_specular_factor;
+	arl::ShaderParameter<arl::TextureSource> m_background;
+	arl::ShaderParameter<arl::TextureSource> m_env_map_detail;
+};
+#endif
+
 /* paf/cg/drawobj/panel/bubble_image.vp */
 class BubbleImageVertShader : public arl::ShaderInterfaceBase, public BubbleVertShaderParams {
 public:
@@ -1925,7 +2155,7 @@ public:
 	{
 	}
 
-	WAVE_SHADER_BINARY("paf/cg/drawobj/panel/bubble_image.vp", 0x3b8);
+	WAVE_SHADER_BINARY("paf/cg/drawobj/panel/bubble_image.vp", PAF_SHADER_SIZE(0x3b8, 1136));
 
 	virtual void SetMVP(const math::matrix &value)
 	{
@@ -1956,6 +2186,13 @@ public:
 	{
 		m_light_pos.Set(value);
 	}
+
+#ifdef PAF_BUILD_2014
+	virtual void SetAmbientColor(const math::v4 &value)
+	{
+		m_ambient_color.Set(value);
+	}
+#endif
 
 	virtual void SetDiffuseColor(const math::v4 &value)
 	{
@@ -2012,7 +2249,7 @@ public:
 	{
 	}
 
-	WAVE_SHADER_BINARY("paf/cg/drawobj/panel/bubble_image.fp", 0x168);
+	WAVE_SHADER_BINARY("paf/cg/drawobj/panel/bubble_image.fp", PAF_SHADER_SIZE(0x168, 332));
 
 	virtual void SetBackColor(const math::v4 &value)
 	{
@@ -2080,7 +2317,7 @@ public:
 	{
 	}
 
-	WAVE_SHADER_BINARY("paf/cg/drawobj/panel/bubble_opaque.vp", 0x614);
+	WAVE_SHADER_BINARY("paf/cg/drawobj/panel/bubble_opaque.vp", PAF_SHADER_SIZE(0x614, 1892));
 
 	virtual void SetMVP(const math::matrix &value)
 	{
@@ -2174,7 +2411,7 @@ public:
 	{
 	}
 
-	WAVE_SHADER_BINARY("paf/cg/drawobj/panel/bubble_opaque.fp", 0x1fc);
+	WAVE_SHADER_BINARY("paf/cg/drawobj/panel/bubble_opaque.fp", PAF_SHADER_SIZE(0x1fc, 488));
 
 	virtual void SetBackColor(const math::v4 &value)
 	{
@@ -2208,6 +2445,7 @@ public:
 	arl::ShaderParameter<float> m_alpha;
 };
 
+#ifndef PAF_BUILD_2014
 /* paf/cg/drawobj/panel/bubble_opaque_folder.fp */
 class BubbleOpaqueFolderFragShader : public arl::ShaderInterfaceBase, public BubbleFragShaderParams {
 public:
@@ -2271,6 +2509,227 @@ public:
 	arl::ShaderParameter<arl::TextureSource> m_env_map_detail;
 	arl::ShaderParameter<float> m_alpha;
 };
+#else
+/* paf/cg/drawobj/panel/bubble_opaque_simple.vp */
+class BubbleOpaqueSimpleVertShader : public arl::ShaderInterfaceBase, public BubbleVertShaderParams {
+public:
+	BubbleOpaqueSimpleVertShader()
+		: m_mvp(m_setup), m_height(m_setup), m_transform_inverse_transpose(m_setup), m_transform(m_setup), m_material_pack(m_setup), m_light_pos(m_setup), m_diffuse_color(m_setup), m_view(m_setup), m_eye_pos(m_setup), m_back_color_z_range(m_setup)
+	{
+	}
+
+	virtual void Init()
+	{
+		m_mvp.init("MVP", arl::ShaderParameterBase::UNIFORM, 0);
+		m_height.init("Height", arl::ShaderParameterBase::UNIFORM, 0);
+		m_transform_inverse_transpose.init("TransformInverseTranspose", arl::ShaderParameterBase::UNIFORM, 0);
+		m_transform.init("Transform", arl::ShaderParameterBase::UNIFORM, 0);
+		m_material_pack.init("cargs.MaterialPack", arl::ShaderParameterBase::UNIFORM, 0);
+		m_light_pos.init("cargs.LightPos", arl::ShaderParameterBase::UNIFORM, 0);
+		m_diffuse_color.init("cargs.DiffuseColor", arl::ShaderParameterBase::UNIFORM, 0);
+		m_view.init("cargs.View", arl::ShaderParameterBase::UNIFORM, 0);
+		m_eye_pos.init("cargs.EyePos", arl::ShaderParameterBase::UNIFORM, 0);
+		m_back_color_z_range.init("BackColorZRange", arl::ShaderParameterBase::UNIFORM, 0);
+	}
+
+	virtual void Apply()
+	{
+		m_mvp.Apply();
+		m_height.Apply();
+		m_transform_inverse_transpose.Apply();
+		m_transform.Apply();
+		m_material_pack.Apply();
+		m_light_pos.Apply();
+		m_diffuse_color.Apply();
+		m_view.Apply();
+		m_eye_pos.Apply();
+		m_back_color_z_range.Apply();
+	}
+
+	virtual void Unused()
+	{
+	}
+
+	WAVE_SHADER_BINARY("paf/cg/drawobj/panel/bubble_opaque_simple.vp", 1516);
+
+	virtual void SetMVP(const math::matrix &value)
+	{
+		m_mvp.Set(value);
+	}
+
+	virtual void SetHeight(const math::v2 &value)
+	{
+		m_height.Set(value);
+	}
+
+	virtual void SetTransformInverseTranspose(const math::matrix &value)
+	{
+		m_transform_inverse_transpose.Set(value);
+	}
+
+	virtual void SetTransform(const math::matrix &value)
+	{
+		m_transform.Set(value);
+	}
+
+	virtual void SetMaterialPack(const math::matrix &value)
+	{
+		m_material_pack.Set(value);
+	}
+
+	virtual void SetLightPos(const math::v3 &value)
+	{
+		m_light_pos.Set(value);
+	}
+
+	virtual void SetDiffuseColor(const math::v4 &value)
+	{
+		m_diffuse_color.Set(value);
+	}
+
+	virtual void SetView(const math::matrix &value)
+	{
+		m_view.Set(value);
+	}
+
+	virtual void SetEyePos(const math::v4 &value)
+	{
+		m_eye_pos.Set(value);
+	}
+
+	virtual void SetBackColorZRange(const math::v2 &value)
+	{
+		m_back_color_z_range.Set(value);
+	}
+
+	arl::ShaderParameter<math::matrix> m_mvp;
+	arl::ShaderParameter<math::v2> m_height;
+	arl::ShaderParameter<math::matrix> m_transform_inverse_transpose;
+	arl::ShaderParameter<math::matrix> m_transform;
+	arl::ShaderParameter<math::matrix> m_material_pack;
+	arl::ShaderParameter<math::v3> m_light_pos;
+	arl::ShaderParameter<math::v4> m_diffuse_color;
+	arl::ShaderParameter<math::matrix> m_view;
+	arl::ShaderParameter<math::v4> m_eye_pos;
+	arl::ShaderParameter<math::v2> m_back_color_z_range;
+};
+
+/* paf/cg/drawobj/panel/bubble_opaque_simple.fp */
+class BubbleOpaqueSimpleFragShader : public arl::ShaderInterfaceBase, public BubbleFragShaderParams {
+public:
+	BubbleOpaqueSimpleFragShader()
+		: m_back_color(m_setup), m_specular_factor(m_setup), m_color_map(m_setup), m_alpha(m_setup)
+	{
+	}
+
+	virtual void Init()
+	{
+		m_back_color.init("cargs.BackColor", arl::ShaderParameterBase::UNIFORM, 0);
+		m_specular_factor.init("cargs.SpecularFactor", arl::ShaderParameterBase::UNIFORM, 0);
+		m_color_map.init("cargs.ColorMap", 2, 0);
+		m_alpha.init("Alpha", arl::ShaderParameterBase::UNIFORM, 0);
+	}
+
+	virtual void Apply()
+	{
+		m_back_color.Apply();
+		m_specular_factor.Apply();
+		m_color_map.Apply();
+		m_alpha.Apply();
+	}
+
+	virtual void Unused()
+	{
+	}
+
+	WAVE_SHADER_BINARY("paf/cg/drawobj/panel/bubble_opaque_simple.fp", 452);
+
+	virtual void SetBackColor(const math::v4 &value)
+	{
+		m_back_color.Set(value);
+	}
+
+	virtual void SetSpecularFactor(const math::v4 &value)
+	{
+		m_specular_factor.Set(value);
+	}
+
+	virtual void SetColorMap(const arl::TextureSource &value)
+	{
+		m_color_map.Set(value);
+	}
+
+	virtual void SetAlpha(const float &value)
+	{
+		m_alpha.Set(value);
+	}
+
+	arl::ShaderParameter<math::v4> m_back_color;
+	arl::ShaderParameter<math::v4> m_specular_factor;
+	arl::ShaderParameter<arl::TextureSource> m_color_map;
+	arl::ShaderParameter<float> m_alpha;
+};
+
+/* paf/cg/drawobj/panel/bubble_shadow.vp */
+class BubbleShadowVertShader : public arl::ShaderInterfaceBase {
+public:
+	BubbleShadowVertShader()
+		: m_mvp(m_setup), m_world_scale_hack(m_setup)
+	{
+	}
+
+	virtual void Init()
+	{
+		m_mvp.init("MVP", arl::ShaderParameterBase::UNIFORM, 0);
+		m_world_scale_hack.init("WorldScaleHack", arl::ShaderParameterBase::UNIFORM, 0);
+	}
+
+	virtual void Apply()
+	{
+		m_mvp.Apply();
+		m_world_scale_hack.Apply();
+	}
+
+	virtual void Unused()
+	{
+	}
+
+	WAVE_SHADER_BINARY("paf/cg/drawobj/panel/bubble_shadow.vp", 352);
+
+	arl::ShaderParameter<math::matrix> m_mvp;
+	arl::ShaderParameter<float> m_world_scale_hack;
+};
+
+/* paf/cg/drawobj/panel/bubble_shadow.fp */
+class BubbleShadowFragShader : public arl::ShaderInterfaceBase {
+public:
+	BubbleShadowFragShader()
+		: m_shadow_tex(m_setup), m_shadow_level(m_setup)
+	{
+	}
+
+	virtual void Init()
+	{
+		m_shadow_tex.init("ShadowTex", 0, 0);
+		m_shadow_level.init("ShadowLevel", arl::ShaderParameterBase::UNIFORM, 0);
+	}
+
+	virtual void Apply()
+	{
+		m_shadow_tex.Apply();
+		m_shadow_level.Apply();
+	}
+
+	virtual void Unused()
+	{
+	}
+
+	WAVE_SHADER_BINARY("paf/cg/drawobj/panel/bubble_shadow.fp", 296);
+
+	arl::ShaderParameter<arl::TextureSource> m_shadow_tex;
+	arl::ShaderParameter<float> m_shadow_level;
+};
+#endif
 
 /* a shader's parameters, to be set, and its shader object, as the renderer picks them (names
    ours) */
@@ -2296,11 +2755,17 @@ enum PanelKind {
 	PanelKind_GlassGlowing = 1,
 	PanelKind_Opaque = 2,
 	PanelKind_OpaqueWave = 3,
+#ifdef PAF_BUILD_2014
+	PanelKind_BubbleGlass = 4,
+	PanelKind_BubbleOpaque = 5,
+	PanelKind_BubbleOpaqueSimple = 6
+#else
 	PanelKind_Bubble = 4,
 	PanelKind_BubbleFolder = 5
+#endif
 };
 
-/* the panel renderer's shaders (names ours); 0x24e8 bytes */
+/* the panel renderer's shaders (names ours); 0x24e8 bytes (0x2dd8 in PAF_BUILD_2014) */
 class PanelShaders {
 public:
 	/* 0x810ba570: the vertex shader of a panel's border, or of its top */
@@ -2326,12 +2791,25 @@ public:
 	arl::ShaderInstance<PanelOpaqueWaveTopVertShader, arl::VertShaderObject>
 		m_opaque_wave_top_vert;
 	arl::ShaderInstance<PanelOpaqueWaveFragShader, arl::FragShaderObject> m_opaque_wave_frag;
+#ifdef PAF_BUILD_2014
+	arl::ShaderInstance<BubbleGlassVertShader, arl::VertShaderObject> m_bubble_glass_vert;
+	arl::ShaderInstance<BubbleGlassFragShader, arl::FragShaderObject> m_bubble_glass_frag;
+#endif
 	arl::ShaderInstance<BubbleImageVertShader, arl::VertShaderObject> m_bubble_image_vert;
 	arl::ShaderInstance<BubbleImageFragShader, arl::FragShaderObject> m_bubble_image_frag;
 	arl::ShaderInstance<BubbleOpaqueVertShader, arl::VertShaderObject> m_bubble_opaque_vert;
 	arl::ShaderInstance<BubbleOpaqueFragShader, arl::FragShaderObject> m_bubble_opaque_frag;
+#ifdef PAF_BUILD_2014
+	arl::ShaderInstance<BubbleOpaqueSimpleVertShader, arl::VertShaderObject>
+		m_bubble_opaque_simple_vert;
+	arl::ShaderInstance<BubbleOpaqueSimpleFragShader, arl::FragShaderObject>
+		m_bubble_opaque_simple_frag;
+	arl::ShaderInstance<BubbleShadowVertShader, arl::VertShaderObject> m_bubble_shadow_vert;
+	arl::ShaderInstance<BubbleShadowFragShader, arl::FragShaderObject> m_bubble_shadow_frag;
+#else
 	arl::ShaderInstance<BubbleOpaqueFolderFragShader, arl::FragShaderObject>
 		m_bubble_opaque_folder_frag;
+#endif
 };
 
 /* the wave a touch sends across a panel */
@@ -2587,8 +3065,10 @@ public:
 
 	/* 0x810ba384: the material of a kind of panel (names ours from here) */
 	MaterialParamSet *GetMaterial(uint32_t material);
+#ifndef PAF_BUILD_2014
 	/* 0x810ba3b8: the screen panels are drawn on */
 	void CreateScreen();
+#endif
 	/* 0x810ba45a: the GPU's state for a kind of panel, blended or not */
 	void SetRenderStates(const int32_t &kind, bool blend);
 	/* 0x810ba50e: an empty member nothing calls */
@@ -2602,6 +3082,12 @@ public:
 
 	/* 0x810bba40: the programs DrawSolid3x3Panel began ended */
 	void EndSolid3x3Panel(const int32_t &kind, const bool &top);
+#ifdef PAF_BUILD_2014
+	/* 2014: begin/draw/end bubble programs in one pass */
+	void BeginBubble(const int32_t &kind, const uint32_t &material, const bool &blend);
+	void DrawBubble(const int32_t &kind, const BubbleParam &param);
+	void EndBubble(const int32_t &kind);
+#else
 	/* 0x810bbaf8: the bubbles' vertex program begun for a material (Sony's marker
 	   "draw_revolution_panel") */
 	void DrawRevolutionPanel(const uint32_t &material);
@@ -2614,6 +3100,7 @@ public:
 	void EndBubbleFrag(const int32_t &kind);
 	/* 0x810bc4ea: the vertex program DrawRevolutionPanel began ended */
 	void EndRevolutionPanel();
+#endif
 	/* 0x810bc562: an empty member nothing calls */
 	void Unused1();
 
@@ -2629,6 +3116,22 @@ public:
 	/* the light of a kind of panel */
 	PointLightSphereParamSet *GetLight(const uint32_t &material)
 	{
+#ifdef PAF_BUILD_2014
+		switch (material) {
+		case 0:
+		case 1:
+		case 2:
+		case 3:
+			return &m_bubble_light.m_set;
+		case 4:
+		case 5:
+			return &m_panel_light.m_set;
+		case 6:
+			return &m_color_chip_light.m_set;
+		default:
+			return &m_panel_light.m_set;
+		}
+#else
 		switch (material) {
 		case 0:
 			return &m_bubble_light.m_set;
@@ -2640,6 +3143,7 @@ public:
 		default:
 			return &m_panel_light.m_set;
 		}
+#endif
 	}
 
 	/* a texture's width and height, and their reciprocals */
@@ -2664,13 +3168,27 @@ public:
 	PanelShaders *m_shaders;
 	PanelMeshes m_meshes;
 	ProfileMeshArray m_profiles;
+#ifdef PAF_BUILD_2014
+	ProfileMesh m_profile[3];
+	arl::VertexArray m_shadow_circle;
+	uint32_t m_shadow_circle_verts;
+	/* the frame of the last update, -1 before it */
+	int32_t m_frame;
+#else
 	ProfileMesh m_profile;
 	/* the frame of the last update, -1 before it */
 	int32_t m_frame;
 	ui::Screen *m_screen;
+#endif
 	ParamSetKeysManager m_manager;
 	ParamSetKeysManager m_color_chip_manager;
+#ifdef PAF_BUILD_2014
+	ParamSetInstance<MaterialParamSet> m_bubble_glass_material;
 	ParamSetInstance<MaterialParamSet> m_bubble_material;
+	ParamSetInstance<MaterialParamSet> m_bubble_opaque_simple_material;
+#else
+	ParamSetInstance<MaterialParamSet> m_bubble_material;
+#endif
 	ParamSetInstance<PointLightSphereParamSet> m_bubble_light;
 	ParamSetInstance<MaterialParamSet> m_panel_material;
 	ParamSetInstance<MaterialParamSet> m_panel_opaque_material;
@@ -2691,8 +3209,13 @@ public:
 	bool m_unread_flag;
 	/* the panels drawn as lines */
 	bool m_wireframe;
+#ifdef PAF_BUILD_2014
+	float m_shadow_edge;
+	common::SharedPtr<arl::Texture2D> m_shadow_texture;
+#else
 	/* a word nothing in libpaf reads or writes */
 	uint32_t m_reserved;
+#endif
 	/* the wave renderer whose parameter sets light an opaque wave panel of the same name:
 	   cleared by the constructor, and set by nothing in libpaf */
 	common::SharedPtr<WaveRenderer> m_wave_renderer;

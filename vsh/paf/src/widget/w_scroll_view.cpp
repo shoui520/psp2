@@ -434,10 +434,12 @@ static VersatileParam *NewScrollViewLayoutParam()
 	return new WidgetLayoutParam;
 }
 
+#ifndef PAF_BUILD_2014
 static VersatileParam *NewScrollViewFocusParam()
 {
 	return new WidgetFocusParam;
 }
+#endif
 
 static VersatileParam *NewScrollViewStyleParam()
 {
@@ -459,7 +461,9 @@ FactoryFuncTable g_factoryScrollView = {
 	NewScrollView,
 	NewScrollViewParam,
 	NewScrollViewLayoutParam,
+#ifndef PAF_BUILD_2014
 	NewScrollViewFocusParam,
+#endif
 	NewScrollViewStyleParam,
 	NewScrollViewHandlerParam,
 	NewScrollViewSoundParam,

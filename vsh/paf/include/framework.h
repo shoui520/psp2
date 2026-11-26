@@ -27,9 +27,14 @@ extern "C" {
 /* runs the frames until the framework may end; nested, it goes on from the step it was called in */
 int32_t ScePafToplevel_1EEFAECD(paf::Framework *framework, bool **done);
 /* plays a sound through the framework's Output for the widgets (the Environment's callback) */
+#ifdef PAF_BUILD_2014
+int32_t ScePafToplevel_85EF6EC0(const char *buffer1, uint32_t size1, const char *buffer2,
+				uint32_t size2, int32_t samplerate, bool ignore_init, void *data);
+#else
 int32_t ScePafToplevel_85EF6EC0(const char *buffer1, uint32_t size1, const char *buffer2,
 				uint32_t size2, int32_t samplerate, float vol, bool ignore_init,
 				void *data);
+#endif
 /* makes a widget from the common resource (the Environment's callback) */
 paf::ui::Widget *ScePafToplevel_E37EC9D8(paf::ui::Widget *parent, const char *type,
 					 const paf::IDParam &id, const paf::IDParam &style,
@@ -120,14 +125,18 @@ public:
 		uint32_t mem_pvf_hangul_size;
 		void *mem_pvf_chinese_addr;
 		uint32_t mem_pvf_chinese_size;
+#ifndef PAF_BUILD_2014
 		/* the ARIB music symbols font (names ours, after FontRasterizerPvf's use; were
 		   ScePaf-RE's path_pvf_japanese and path_pvf_latin) */
 		void *mem_pvf_arib_addr;
 		uint32_t mem_pvf_arib_size;
+#endif
 		/* the emoji font already in memory, the text system's in place of its file (names ours) */
 		void *mem_emoji_font_addr;
 		uint32_t mem_emoji_font_size;
+#ifndef PAF_BUILD_2014
 		uint32_t pvf_option;
+#endif
 		uint32_t pvf_heap_size;
 		uint32_t decode_heap_size;
 		uint32_t plugin_heap_size;
@@ -140,6 +149,16 @@ public:
 		/* the Locale */
 		int32_t locale;
 		uint32_t enter_button_assign;
+#ifdef PAF_BUILD_2014
+		ui::SceneResolution *env_param;
+		int32_t env_param_num;
+		int32_t resolution_id;
+		void *edit_listener;
+		void *web_edit_listener;
+		void *message_dialog_listener;
+		void *webview_listener;
+		uint32_t sound_mode;
+#else
 		bool allow_button_control;
 		bool show_focus;
 		bool ext_control;
@@ -159,6 +178,7 @@ public:
 		uint32_t sound_mode;
 		/* handed to the Environment */
 		bool env_option;
+#endif
 	};
 
 	enum {
@@ -270,10 +290,17 @@ public:
 private:
 	friend class Plugin;
 	friend class TemplateCache;
+#ifdef PAF_BUILD_2014
+	friend int32_t (::ScePafToplevel_85EF6EC0)(const char *buffer1, uint32_t size1,
+						    const char *buffer2, uint32_t size2,
+						    int32_t samplerate, bool ignore_init,
+						    void *data);
+#else
 	friend int32_t (::ScePafToplevel_85EF6EC0)(const char *buffer1, uint32_t size1,
 						    const char *buffer2, uint32_t size2,
 						    int32_t samplerate, float vol, bool ignore_init,
 						    void *data);
+#endif
 	friend int32_t (::ScePafToplevel_1EEFAECD)(Framework *framework, bool **done);
 	friend void (::ScePafToplevel_C9C02705)(void *userdata);
 	friend int32_t (::ScePafToplevel_1AB2DB65)(Plugin *plugin, const IDParam &id, IDParam *alias);
@@ -317,9 +344,11 @@ private:
 	Plugin *m_common_resource_plugin;
 	LoadCRFinishCallback m_load_finish_callback;
 	UnloadCRFinishCallback m_unload_finish_callback;
+#ifndef PAF_BUILD_2014
 	ShutdownCallback m_shutdown_callback;
 	void *m_shutdown_callback_data;
 	bool m_job_ready;
+#endif
 	memory::HeapAllocator *m_decode_heap;
 	bool m_decode_heap_created;
 	memory::HeapAllocator *m_plugin_heap;
@@ -337,7 +366,9 @@ private:
 	sound::Output *m_sound_output;
 	bool m_shutdown_requested;
 	SceUID m_power_cb_id;
+#ifndef PAF_BUILD_2014
 	ui::Resolution *m_env_param;
+#endif
 };
 
 }

@@ -68,7 +68,11 @@ private:
 	};
 
 	enum {
+#ifdef PAF_BUILD_2014
+		COMMON_SE_NUM = 53
+#else
 		COMMON_SE_NUM = 55
+#endif
 	};
 
 	CommonSE m_common_se[COMMON_SE_NUM];
@@ -79,7 +83,11 @@ private:
 	unsigned int m_se_num;
 };
 
+#ifdef PAF_BUILD_2014
+typedef char OutputSizeCheck[sizeof(Output) == 0x568 ? 1 : -1];
+#else
 typedef char OutputSizeCheck[sizeof(Output) == 0x598 ? 1 : -1];
+#endif
 
 }
 }

@@ -173,6 +173,15 @@ void MsgDialogFormatSize(wstring *out, SceUInt32 sizeKiB)
  * The format with %1..%9, %(10) and %(11) replaced by the arguments, %% by %, and a letter by
  * what g_msgDialogFormatLetter gives for it; a % at the end stops it.
  */
+#ifdef MSG_DIALOG_UTIL_2014
+wstring MsgDialogFormat(const wchar_t *format, const wchar_t *firstArg, const wchar_t *secondArg,
+			const wchar_t *thirdArg, const wchar_t *fourthArg, const wchar_t *fifthArg,
+			const wchar_t *sixthArg, const wchar_t *seventhArg, const wchar_t *eighthArg,
+			const wchar_t *ninthArg)
+{
+	const wchar_t *args[9] = { firstArg, secondArg, thirdArg, fourthArg, fifthArg,
+				   sixthArg, seventhArg, eighthArg, ninthArg };
+#else
 wstring MsgDialogFormat(const wchar_t *format, const wchar_t *arg1, const wchar_t *arg2,
 			const wchar_t *arg3, const wchar_t *arg4, const wchar_t *arg5,
 			const wchar_t *arg6, const wchar_t *arg7, const wchar_t *arg8,
@@ -180,6 +189,7 @@ wstring MsgDialogFormat(const wchar_t *format, const wchar_t *arg1, const wchar_
 {
 	const wchar_t *args[11] = { arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10,
 				    arg11 };
+#endif
 	wstring out;
 	const wchar_t *p = format;
 	const wchar_t *percent;
@@ -201,6 +211,7 @@ wstring MsgDialogFormat(const wchar_t *format, const wchar_t *arg1, const wchar_
 				arg = g_msgDialogFormatLetter(c);
 				out.append(arg, sce_paf_wcslen(arg));
 			}
+#ifndef MSG_DIALOG_UTIL_2014
 		} else if (c == L'(') {
 			if (percent[2] == L'1' && percent[3] >= L'0' && percent[3] <= L'1' &&
 			    percent[4] == L')') {
@@ -210,6 +221,7 @@ wstring MsgDialogFormat(const wchar_t *format, const wchar_t *arg1, const wchar_
 				count++;
 				continue;
 			}
+#endif
 		} else if (c == L'\0') {
 			return out;
 		}

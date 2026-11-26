@@ -24,13 +24,16 @@ public:
 
 	RadioBox(Widget *parent, CreateParam *param);
 
+#ifndef PAF_BUILD_2014
 	virtual int32_t HandleKeycodeEvent(Event *e);
 	virtual int32_t HandleFocusEvent(Event *e);
+#endif
 	virtual bool IsInherit(const char *type) const;
 	virtual char *GetTypeName() const;
 	virtual void DestroyWidget();
 	virtual void Update();
 
+#ifndef PAF_BUILD_2014
 	/* left and right too, where the base takes none */
 	virtual int32_t GetFocusDirectionMask()
 	{
@@ -38,20 +41,24 @@ public:
 
 		return mask != 0 ? mask : 6;
 	}
+#endif
 
 	/* the widget moved over the checked button, hidden until one is checked */
 	virtual void SetSlider(Widget *widget);
 
+#ifndef PAF_BUILD_2014
 	/* the focus comes back to the radio button it last left */
 	virtual void SetKeepFocus(bool keep)
 	{
 		m_keep_focus = keep;
 	}
+#endif
 
 	/* the button checked or unchecked: the others unchecked, the slider moved over it */
 	virtual void OnValueChanged(RadioButton *radio_button);
 	/* the checked button destroyed: the slider hidden */
 	virtual void OnDestroyChecked(Widget *widget);
+#ifndef PAF_BUILD_2014
 	/* the focus events 0x401 to 0x404 (HandleFocusEvent), as ScrollViewBase's */
 	virtual bool OnFocusIn(Event *e);
 	virtual bool OnFocusEnter(Event *e);
@@ -59,19 +66,24 @@ public:
 	virtual bool OnFocusOut(Event *e);
 	/* an arrow key pressed: the focus moved to the radio button that way */
 	virtual bool OnDirKey(Event *e);
+#endif
 
 	/* the event sent to its listeners with the four values */
 	void SendEvent(int32_t type, int32_t v0, int32_t v1, int32_t v2, int32_t v3);
+#ifndef PAF_BUILD_2014
 	/* the widget the focus goes to the direction, from from or the focus */
 	Widget *SearchFocus(const math::v2 &dir, Widget *from);
+#endif
 
 	static void CBDestroyChecked(Widget *widget, void *data);
 
 	Widget *m_slider;
 	RadioButton *m_checked;
+#ifndef PAF_BUILD_2014
 	/* the radio button the focus last left, or the one checked */
 	Widget *m_last_focus;
 	bool m_keep_focus;
+#endif
 };
 
 class RadioBoxParam : public WidgetParam {

@@ -67,7 +67,11 @@ public:
 void SetMode(ModeType mode);
 void *AllocOSMemory(DeviceType device_type, uint32_t size, const char *name, Option *option);
 /* the system and video memory heaps made, of the sizes given (0: none; name ours) */
+#ifdef PAF_BUILD_2014
+void Init(uint32_t system_heap_size, uint32_t video_heap_size, ModeType mode);
+#else
 void Init(uint32_t system_heap_size, uint32_t video_heap_size);
+#endif
 void FreeOSMemory(DeviceType device_type, void *p);
 void Exit();
 

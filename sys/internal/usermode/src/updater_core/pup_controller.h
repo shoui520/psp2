@@ -21,8 +21,19 @@ public:
 	int NetworkCheckBaseVersion(SceUInt32 version, int *result);
 	int CheckNewerThanSystemVersion(SceUInt32 version, int *result);
 	SceUInt64 GetSegmentAnalysisSize(void);
+#ifdef UPDATER_CORE_2014
+	static int InitializeCache(void);
+	static int FinalizeCache(void);
+#endif
 
 private:
+#ifdef UPDATER_CORE_2014
+	static int clearCache(void);
+	int openCachedPup(const char *fileName);
+	int readCachedHeader(void);
+	int getPupInfoCached(const char *fileName, SceUpdaterPupInformation *information);
+	int getPupInfoDirect(const char *fileName, SceUpdaterPupInformation *information);
+#endif
 	int getSegmentInfo(const char *fileName, SceUInt64 segmentId, SceUInt64 *size,
 			   SceUInt64 *offset);
 };

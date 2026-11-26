@@ -180,10 +180,12 @@ static VersatileParam *NewSpeechBalloonLayoutParam()
 	return new WidgetLayoutParam;
 }
 
+#ifndef PAF_BUILD_2014
 static VersatileParam *NewSpeechBalloonFocusParam()
 {
 	return new WidgetFocusParam;
 }
+#endif
 
 static VersatileParam *NewSpeechBalloonStyleParam()
 {
@@ -205,7 +207,9 @@ FactoryFuncTable g_factorySpeechBalloon = {
 	NewSpeechBalloon,
 	NewSpeechBalloonParam,
 	NewSpeechBalloonLayoutParam,
+#ifndef PAF_BUILD_2014
 	NewSpeechBalloonFocusParam,
+#endif
 	NewSpeechBalloonStyleParam,
 	NewSpeechBalloonHandlerParam,
 	NewSpeechBalloonSoundParam,

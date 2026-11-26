@@ -32,8 +32,10 @@ ListItem::ListItem(Widget *parent, CreateParam *param)
 	m_hit_detect_mode = 0;
 	m_hit_detect_b_mode = 0;
 	m_hit_check = 1;
+#ifndef PAF_BUILD_2014
 	m_not_hit_target = true;
 	m_list_item = true;
+#endif
 	if (param == NULL || param->m_create_drawobj)
 		AddDrawObj(DrawObjEntry(new graph::PlaneObj(graph::PlaneObjStyle()), OBJ_BG), false);
 }
@@ -196,6 +198,7 @@ void ListItem::EndDrag(int32_t index)
 	ScePafWidget_5ABB3393(this, 0, index, 0);
 }
 
+#ifndef PAF_BUILD_2014
 Widget *SearchListItemFocus(ListItem *item, math::v2 dir, Widget *from, int32_t reserved)
 {
 	if (item->m_env == NULL)
@@ -277,6 +280,7 @@ bool ListItem::ScePafWidget_C98D1926(const math::v2 &dir)
 	}
 	return true;
 }
+#endif
 
 void ListItem::ScePafWidget_1F9DB221()
 {
@@ -393,8 +397,10 @@ static bool IsShownFocusTarget(Widget *widget)
    ours) */
 static bool IsEnabledFocusTarget(Widget *widget)
 {
+#ifndef PAF_BUILD_2014
 	if (!widget->IsTextEventEnabled())
 		return false;
+#endif
 	if (widget->m_meta_a_sum < 0.5f)
 		return false;
 	return IsShownFocusTarget(widget);
@@ -421,10 +427,12 @@ static VersatileParam *NewListItemLayoutParam()
 	return new WidgetLayoutParam;
 }
 
+#ifndef PAF_BUILD_2014
 static VersatileParam *NewListItemFocusParam()
 {
 	return new WidgetFocusParam;
 }
+#endif
 
 static VersatileParam *NewListItemStyleParam()
 {
@@ -446,7 +454,9 @@ FactoryFuncTable g_factoryListItem = {
 	NewListItem,
 	NewListItemParam,
 	NewListItemLayoutParam,
+#ifndef PAF_BUILD_2014
 	NewListItemFocusParam,
+#endif
 	NewListItemStyleParam,
 	NewListItemHandlerParam,
 	NewListItemSoundParam,

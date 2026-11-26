@@ -79,7 +79,7 @@ public:
 	}
 
 	/* clear.fp built by psp2cgc */
-	static const uint8_t s_binary[232];
+	static const uint8_t s_binary[PAF_SHADER_SIZE(232, 244)];
 
 	arl::ShaderParameter<math::v4> m_clear_color;
 };
@@ -126,7 +126,7 @@ public:
 	}
 
 	/* bicubic.fp built by psp2cgc */
-	static const uint8_t s_binary[604];
+	static const uint8_t s_binary[PAF_SHADER_SIZE(604, 584)];
 
 	arl::ShaderParameter<arl::TextureSource> m_source;
 	arl::ShaderParameter<arl::TextureSource> m_table;
@@ -172,7 +172,7 @@ public:
 	}
 
 	/* bicubic_slow.fp built by psp2cgc */
-	static const uint8_t s_binary[1896];
+	static const uint8_t s_binary[PAF_SHADER_SIZE(1896, 2204)];
 
 	arl::ShaderParameter<arl::TextureSource> m_source;
 	arl::ShaderParameter<math::v4> m_source_size;
@@ -215,7 +215,7 @@ public:
 	}
 
 	/* half.fp built by psp2cgc */
-	static const uint8_t s_binary[268];
+	static const uint8_t s_binary[PAF_SHADER_SIZE(268, 240)];
 
 	arl::ShaderParameter<arl::TextureSource> m_source;
 };
@@ -259,7 +259,7 @@ public:
 	}
 
 	/* copy.fp built by psp2cgc */
-	static const uint8_t s_binary[308];
+	static const uint8_t s_binary[PAF_SHADER_SIZE(308, 280)];
 
 	arl::ShaderParameter<arl::TextureSource> m_source;
 	arl::ShaderParameter<float> m_alpha;
@@ -302,7 +302,7 @@ public:
 	}
 
 	/* pure_copy.fp built by psp2cgc */
-	static const uint8_t s_binary[260];
+	static const uint8_t s_binary[PAF_SHADER_SIZE(260, 232)];
 
 	arl::ShaderParameter<arl::TextureSource> m_source;
 };
@@ -347,7 +347,7 @@ public:
 	}
 
 	/* grid_normal.fp built by psp2cgc */
-	static const uint8_t s_binary[488];
+	static const uint8_t s_binary[PAF_SHADER_SIZE(488, 452)];
 
 	arl::ShaderParameter<arl::TextureSource> m_source;
 	arl::ShaderParameter<math::v4> m_source_du_dv;
@@ -392,7 +392,7 @@ public:
 	}
 
 	/* grid_normal_8.fp built by psp2cgc */
-	static const uint8_t s_binary[496];
+	static const uint8_t s_binary[PAF_SHADER_SIZE(496, 484)];
 
 	arl::ShaderParameter<arl::TextureSource> m_source;
 	arl::ShaderParameter<math::v4> m_source_du_dv;
@@ -450,7 +450,7 @@ public:
 	}
 
 	/* flipquad.fp built by psp2cgc */
-	static const uint8_t s_binary[648];
+	static const uint8_t s_binary[PAF_SHADER_SIZE(648, 644)];
 
 	arl::ShaderParameter<arl::TextureSource> m_source;
 	arl::ShaderParameter<math::v2> m_offset0;
@@ -510,7 +510,7 @@ public:
 	}
 
 	/* fliptri.fp built by psp2cgc */
-	static const uint8_t s_binary[592];
+	static const uint8_t s_binary[PAF_SHADER_SIZE(592, 588)];
 
 	arl::ShaderParameter<arl::TextureSource> m_source;
 	arl::ShaderParameter<math::v2> m_offset0;
@@ -576,7 +576,7 @@ public:
 	}
 
 	/* box_blur_n.fp built by psp2cgc */
-	static const uint8_t s_binary[536];
+	static const uint8_t s_binary[PAF_SHADER_SIZE(536, 548)];
 
 	arl::ShaderParameter<arl::TextureSource> m_source;
 	arl::ShaderParameter<math::v2> m_step;
@@ -637,7 +637,7 @@ public:
 	}
 
 	/* box_blur_1.fp built by psp2cgc */
-	static const uint8_t s_binary[440];
+	static const uint8_t s_binary[PAF_SHADER_SIZE(440, 420)];
 
 	arl::ShaderParameter<arl::TextureSource> m_source;
 	arl::ShaderParameter<math::v2> m_step;
@@ -697,7 +697,7 @@ public:
 	}
 
 	/* box_blur_2.fp built by psp2cgc */
-	static const uint8_t s_binary[496];
+	static const uint8_t s_binary[PAF_SHADER_SIZE(496, 516)];
 
 	arl::ShaderParameter<arl::TextureSource> m_source;
 	arl::ShaderParameter<math::v2> m_step;
@@ -757,7 +757,7 @@ public:
 	}
 
 	/* box_blur_3.fp built by psp2cgc */
-	static const uint8_t s_binary[568];
+	static const uint8_t s_binary[PAF_SHADER_SIZE(568, 580)];
 
 	arl::ShaderParameter<arl::TextureSource> m_source;
 	arl::ShaderParameter<math::v2> m_step;
@@ -817,7 +817,7 @@ public:
 	}
 
 	/* box_blur_4.fp built by psp2cgc */
-	static const uint8_t s_binary[616];
+	static const uint8_t s_binary[PAF_SHADER_SIZE(616, 644)];
 
 	arl::ShaderParameter<arl::TextureSource> m_source;
 	arl::ShaderParameter<math::v2> m_step;
@@ -877,7 +877,7 @@ public:
 	}
 
 	/* box_blur_5.fp built by psp2cgc */
-	static const uint8_t s_binary[680];
+	static const uint8_t s_binary[PAF_SHADER_SIZE(680, 708)];
 
 	arl::ShaderParameter<arl::TextureSource> m_source;
 	arl::ShaderParameter<math::v2> m_step;
@@ -947,7 +947,7 @@ public:
 	}
 
 	/* box_blur_n_modulate.fp built by psp2cgc */
-	static const uint8_t s_binary[536];
+	static const uint8_t s_binary[PAF_SHADER_SIZE(536, 548)];
 
 	arl::ShaderParameter<arl::TextureSource> m_source;
 	arl::ShaderParameter<math::v2> m_step;
@@ -1016,7 +1016,7 @@ public:
 	}
 
 	/* box_blur_1_modulate.fp built by psp2cgc */
-	static const uint8_t s_binary[440];
+	static const uint8_t s_binary[PAF_SHADER_SIZE(440, 420)];
 
 	arl::ShaderParameter<arl::TextureSource> m_source;
 	arl::ShaderParameter<math::v2> m_step;
@@ -1084,7 +1084,7 @@ public:
 	}
 
 	/* box_blur_2_modulate.fp built by psp2cgc */
-	static const uint8_t s_binary[496];
+	static const uint8_t s_binary[PAF_SHADER_SIZE(496, 516)];
 
 	arl::ShaderParameter<arl::TextureSource> m_source;
 	arl::ShaderParameter<math::v2> m_step;
@@ -1152,7 +1152,7 @@ public:
 	}
 
 	/* box_blur_3_modulate.fp built by psp2cgc */
-	static const uint8_t s_binary[568];
+	static const uint8_t s_binary[PAF_SHADER_SIZE(568, 580)];
 
 	arl::ShaderParameter<arl::TextureSource> m_source;
 	arl::ShaderParameter<math::v2> m_step;
@@ -1220,7 +1220,7 @@ public:
 	}
 
 	/* box_blur_4_modulate.fp built by psp2cgc */
-	static const uint8_t s_binary[616];
+	static const uint8_t s_binary[PAF_SHADER_SIZE(616, 644)];
 
 	arl::ShaderParameter<arl::TextureSource> m_source;
 	arl::ShaderParameter<math::v2> m_step;
@@ -1288,7 +1288,7 @@ public:
 	}
 
 	/* box_blur_5_modulate.fp built by psp2cgc */
-	static const uint8_t s_binary[680];
+	static const uint8_t s_binary[PAF_SHADER_SIZE(680, 708)];
 
 	arl::ShaderParameter<arl::TextureSource> m_source;
 	arl::ShaderParameter<math::v2> m_step;

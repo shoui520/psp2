@@ -29,13 +29,16 @@ enum TextStyleAttribute {
 	TextStyleAttribute_Strike = 10,
 	TextStyleAttribute_Mask = 11,
 	TextStyleAttribute_Shadow = 12,
-	TextStyleAttribute_Emboss = 13,
+	TextStyleAttribute_Emboss = 13
+#ifndef PAF_BUILD_2014
+	,
 	TextStyleAttribute_EnlargeFontSize = 14,
 	TextStyleAttribute_ForceBold = 15,
 	/* the point and the boldness as drawn, after the system's text style (names ours, as
 	   TextLayoutAttribute_DrawLinePitch) */
 	TextStyleAttribute_DrawPoint = 16,
 	TextStyleAttribute_DrawBold = 17
+#endif
 };
 
 class TextStyle {
@@ -48,9 +51,12 @@ public:
 		Flag_Strike = 0x008,
 		Flag_Mask = 0x010,
 		Flag_Shadow = 0x020,
-		Flag_Emboss = 0x040,
+		Flag_Emboss = 0x040
+#ifndef PAF_BUILD_2014
+		,
 		Flag_EnlargeFontSize = 0x080,
 		Flag_ForceBold = 0x100
+#endif
 	};
 
 	TextStyle();
@@ -75,14 +81,21 @@ public:
 	int32_t GetStyleAttribute(TextStyleAttribute attr, bool &val) const;
 
 	int8_t m_family;
+#ifdef PAF_BUILD_2014
+	uint8_t m_flag;
+	float m_point;
+#else
 	int16_t m_flag;
 	math::v2 m_point;
+#endif
 	uint32_t m_color;
 	uint32_t m_shadowColor;
 	uint32_t m_backColor;
 	uint32_t m_underlineColor;
 	uint32_t m_strikeColor;
+#ifndef PAF_BUILD_2014
 	int32_t reserved;
+#endif
 };
 
 }

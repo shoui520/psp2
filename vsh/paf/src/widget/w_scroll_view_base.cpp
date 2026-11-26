@@ -680,8 +680,10 @@ static inline bool MoveViewByAnalog(ScrollViewBase *view, const math::v2 &move)
 
 void AnalogScrollListener::OnUpdate(const inputdevice::Data *data)
 {
+#ifndef PAF_BUILD_2014
 	if (!m_env->m_analog_scroll)
 		return;
+#endif
 
 	string func(__func__);
 	string scope = "AnalogScrollListener::" + func;
@@ -727,15 +729,25 @@ void AnalogScrollListener::OnUpdate(const inputdevice::Data *data)
 	for (it = views.begin(); it != views.end(); ++it) {
 		ScrollViewBase *view = *it;
 
+#ifdef PAF_BUILD_2014
+		if (IsAnalogScrollable(view) &&
+		    (view->m_movable_dir & ScrollViewBase::MoveDir_X) != 0)
+#else
 		if (IsAnalogScrollable(view) && !view->m_fit_to_scene &&
 		    (view->m_movable_dir & ScrollViewBase::MoveDir_X) != 0)
+#endif
 			view_x = view;
 	}
 	for (it = views.begin(); it != views.end(); ++it) {
 		ScrollViewBase *view = *it;
 
+#ifdef PAF_BUILD_2014
+		if (IsAnalogScrollable(view) &&
+		    (view->m_movable_dir & ScrollViewBase::MoveDir_Y) != 0)
+#else
 		if (IsAnalogScrollable(view) && !view->m_fit_to_scene &&
 		    (view->m_movable_dir & ScrollViewBase::MoveDir_Y) != 0)
+#endif
 			view_y = view;
 	}
 
@@ -945,14 +957,20 @@ ScrollViewBase::ScrollViewBase(Widget *parent, CreateParam *param)
 	  m_fit_dir(MoveDir_XY), m_movable_dir(MoveDir_None), m_movable_dir_y(MoveDir_None),
 	  m_movable_dir_on(MoveDir_None), m_movable_dir_off(MoveDir_None), m_move_dir(0),
 	  m_scroll_flags(0), m_world_rot_pre(m_world_rot), m_focus_pos(0.0f, 0.0f),
-	  m_focus_target(0.0f, 0.0f), m_focus_start(0.0f, 0.0f), m_focus_timer(NULL),
+#ifndef PAF_BUILD_2014
+	  m_focus_target(0.0f, 0.0f), m_focus_start(0.0f, 0.0f),
+#endif
+	  m_focus_timer(NULL),
 	  m_block_count(0), m_debug(NULL), m_scroll_param(NULL), m_over_scroll(NULL),
 	  m_anchor(NULL), m_enable_analog(true), m_limit_focus(true), m_snap_power(25.0f),
 	  m_preferred_snap_id(-1), m_snap_time(200.0f), m_key_step(4.0f),
 	  m_over_scroll_length(20.0f), m_bar_fade_time(200.0f), m_bar_reset(true),
 	  m_jump(true), m_scroll_touch(true), m_scroll_analog(true), m_scroll_lock(false),
 	  m_ime_padding(false), m_ime_height(0.0f), m_scroll_ended(false), m_drag_dir(0),
-	  m_touch_mask_on(0), m_focus_wrap(false), m_focus_lock(false)
+	  m_touch_mask_on(0)
+#ifndef PAF_BUILD_2014
+	  , m_focus_wrap(false), m_focus_lock(false)
+#endif
 {
 	if (!(m_event_enable & 0x400))
 		EnableFocusEvent(true);
@@ -1198,7 +1216,9 @@ void ScrollViewScrollBarController::UpdateLayout(const ScrollViewBarLayout &layo
 static inline void HideNow(Widget *widget)
 {
 	widget->m_transition_complete = false;
+#ifndef PAF_BUILD_2014
 	widget->m_transition = 0xff;
+#endif
 	widget->DoTransitionReverse_core(0.0f, true);
 	ScePafWidget_4588699E(widget, NULL, 2, 0.0f, NULL);
 }
@@ -1271,7 +1291,9 @@ void ScrollViewScrollBarController::UpdateScrollBar(ScrollBar *bar, float value,
 		bool shown = bar->m_show_a_sum >= 0.02f;
 
 		if (!bar->m_transition_complete) {
+#ifndef PAF_BUILD_2014
 			bar->m_transition = 0xff;
+#endif
 			bar->m_transition_complete = true;
 			bar->DoTransition_core(0.0f, true);
 		}
@@ -1985,10 +2007,12 @@ int32_t ScrollViewBase::HandleGestureEvent(Event *e)
 				if (TrackDrag(e))
 					e->Consume();
 				break;
+#ifndef PAF_BUILD_2014
 			case 0x16:
 				if (TrackPan(e))
 					e->Consume();
 				break;
+#endif
 			}
 		} else if (port == 1) {
 			switch ((detail >> 8) & 0x7F) {
@@ -2072,6 +2096,7 @@ int32_t ScrollViewBase::HandleKeycodeEvent(Event *e)
 				break;
 			}
 			}
+#ifndef PAF_BUILD_2014
 			m_focus_lock = true;
 
 			ScrollViewBase *parent = GetParentView();
@@ -2083,6 +2108,7 @@ int32_t ScrollViewBase::HandleKeycodeEvent(Event *e)
 			ScrollViewBase *parent = GetParentView();
 			if (parent != NULL)
 				parent->m_focus_lock = false;
+#endif
 		}
 	}
 	if (m_track_port != -1)
@@ -2094,6 +2120,7 @@ int32_t ScrollViewBase::HandleFocusSwitchEvent(Event *e)
 {
 	int32_t ret = Widget::HandleFocusSwitchEvent(e);
 
+#ifndef PAF_BUILD_2014
 	if ((e->m_type & Event::STATE_CONSUME) != 0) {
 		Environment *env = m_env;
 
@@ -2101,6 +2128,7 @@ int32_t ScrollViewBase::HandleFocusSwitchEvent(Event *e)
 		    m_env->m_focus_history_on)
 			m_env->m_focus_cursor.RemoveFocusHistory(this);
 	}
+#endif
 	return ret;
 }
 
@@ -2112,6 +2140,12 @@ int32_t ScrollViewBase::HandleFocusEvent(Event *e)
 			if (OnFocusIn(e))
 				e->Consume();
 			break;
+#ifdef PAF_BUILD_2014
+		case 0x402:
+			if (OnFocusOut(e))
+				e->Consume();
+			break;
+#else
 		case 0x402:
 			if (OnFocusEnter(e))
 				e->Consume();
@@ -2124,6 +2158,7 @@ int32_t ScrollViewBase::HandleFocusEvent(Event *e)
 			if (OnFocusOut(e))
 				e->Consume();
 			break;
+#endif
 		}
 	}
 	return Handler::HandleFocusEvent(e);
@@ -2201,7 +2236,9 @@ ScrollViewBase::~ScrollViewBase()
 void ScrollViewBase::UpdateAfterChildren()
 {
 	ScePafWidget_22EF63CE();
+#ifndef PAF_BUILD_2014
 	ScePafWidget_B6CECFDF();
+#endif
 }
 
 math::v2 ScrollViewBase::GetTrackPos()
@@ -2824,9 +2861,13 @@ bool TouchScrollSupplier::TakeTouch(ScrollViewBase *view, uint32_t touch_id)
 	if (!on_bar && !IsGestureTaken() && (moving || m_mochi.m_points.size() != 0)) {
 		ScePafWidget_2B1A1493(first, 1);
 		ScePafWidget_D3D0A7C3(first, 0, touch_id, true, true);
+#ifdef PAF_BUILD_2014
+		first->SetFocus(false, 0);
+#else
 		first->SetFocus(NULL);
 		first->m_env->m_focus_cursor.m_touch_move = math::v4(0.0f, 0.0f, 0.0f, 0.0f);
 		first->m_env->m_focus_cursor_rear.m_touch_move = math::v4(0.0f, 0.0f, 0.0f, 0.0f);
+#endif
 		return true;
 	}
 	AttachGesture(dir);
@@ -3114,6 +3155,7 @@ bool ScrollViewBase::TrackDrag(Event *e)
 	return true;
 }
 
+#ifndef PAF_BUILD_2014
 bool ScrollViewBase::TrackPan(Event *e)
 {
 	if (m_track_port == -1)
@@ -3134,6 +3176,7 @@ bool ScrollViewBase::TrackPan(Event *e)
 	}
 	return true;
 }
+#endif
 
 void ScrollViewBase::ScrollToRect(const math::rect &rect, Timer *timer)
 {
@@ -3328,7 +3371,11 @@ bool ScrollViewBase::OnUpKey(Event *e)
 	if (m_track_port != -1)
 		return false;
 	if (IsKeyPress(e))
+#ifdef PAF_BUILD_2014
+		return ScrollByKey(math::v2(0.0f, 1.0f));
+#else
 		return ScePafWidget_AD706F2A(math::v2(0.0f, 1.0f), NULL);
+#endif
 	return false;
 }
 
@@ -3337,7 +3384,11 @@ bool ScrollViewBase::OnDownKey(Event *e)
 	if (m_track_port != -1)
 		return false;
 	if (IsKeyPress(e))
+#ifdef PAF_BUILD_2014
+		return ScrollByKey(math::v2(0.0f, -1.0f));
+#else
 		return ScePafWidget_AD706F2A(math::v2(0.0f, -1.0f), NULL);
+#endif
 	return false;
 }
 
@@ -3346,7 +3397,11 @@ bool ScrollViewBase::OnLeftKey(Event *e)
 	if (m_track_port != -1)
 		return false;
 	if (IsKeyPress(e))
+#ifdef PAF_BUILD_2014
+		return ScrollByKey(math::v2(-1.0f, 0.0f));
+#else
 		return ScePafWidget_AD706F2A(math::v2(-1.0f, 0.0f), NULL);
+#endif
 	return false;
 }
 
@@ -3355,10 +3410,27 @@ bool ScrollViewBase::OnRightKey(Event *e)
 	if (m_track_port != -1)
 		return false;
 	if (IsKeyPress(e))
+#ifdef PAF_BUILD_2014
+		return ScrollByKey(math::v2(1.0f, 0.0f));
+#else
 		return ScePafWidget_AD706F2A(math::v2(1.0f, 0.0f), NULL);
+#endif
 	return false;
 }
 
+#ifdef PAF_BUILD_2014
+bool ScrollViewBase::OnFocusIn(Event *e)
+{
+	(void)e;
+	return false;
+}
+
+bool ScrollViewBase::OnFocusOut(Event *e)
+{
+	(void)e;
+	return false;
+}
+#else
 void ReleaseRootFocus(Widget *widget)
 {
 	Widget *focus = widget->m_env->m_focus_cursor.m_target;
@@ -3499,6 +3571,7 @@ bool ScrollViewBase::OnFocusOut(Event *e)
 		parent->OnFocusOut(e);
 	return true;
 }
+#endif
 
 bool ScrollViewBase::OnFlick(Event *e)
 {
@@ -4903,6 +4976,37 @@ void ScrollViewBase::ScePafWidget_D9FE36A6(int32_t id, math::v2 &dir, math::v2 &
 	UpdateScrollRange();
 }
 
+#ifdef PAF_BUILD_2014
+bool ScrollViewBase::ScrollByKey(const math::v2 &dir)
+{
+	uint32_t mask = MoveDir_None;
+
+	if (dir.extract_x() != 0.0f)
+		mask |= MoveDir_X;
+	if (dir.extract_y() != 0.0f)
+		mask |= MoveDir_Y;
+	if ((m_movable_dir & mask) == 0)
+		return false;
+	if (m_snap_list.size() != 0) {
+		math::v4 pos = m_view_parent->GetPos(1, NULL, math::v4(0.0f, 0.0f, 0.0f, 0.0f));
+		math::v2 focus(pos.getImpl().getXY());
+		list<Snap>::iterator it = FindSnapPointToward(focus, dir);
+
+		if (it != m_snap_list.end() && !IsSame(focus, it->m_pos * -1.0f)) {
+			ScePafWidget_A0538225(it->m_id);
+			return true;
+		}
+		return false;
+	}
+	math::v4 pos = m_view_parent->GetPos(0, NULL, math::v4(0.0f, 0.0f, 0.0f, 0.0f));
+	math::v2 focus(pos.getImpl().getXY());
+
+	if (LimitFocus(focus - dir, false).m_dir != MoveDir_None)
+		return false;
+	m_velocity = m_velocity - math::v2(dir.extract_x() * 1200.0f, dir.extract_y() * 800.0f);
+	return true;
+}
+#else
 bool ScrollViewBase::ScrollParentByKey(const math::v2 &dir)
 {
 	ScrollViewBase *parent = GetParentScrollView(this);
@@ -5129,6 +5233,7 @@ scroll:
 	m_focus_target = math::v2(0.0f, 0.0f);
 	return ScrollParentByKey(math::v2(dir));
 }
+#endif
 
 void ScrollViewBase::ScePafWidget_1E6F658F()
 {
@@ -5175,6 +5280,7 @@ void ScrollViewBase::ScePafWidget_22EF63CE()
 	ScePafWidget_77E369F4();
 }
 
+#ifndef PAF_BUILD_2014
 void ScrollViewBase::ScePafWidget_B6CECFDF()
 {
 	FocusRoot *root = m_focus_root;
@@ -5281,6 +5387,7 @@ void ScrollViewBase::ScePafWidget_B6CECFDF()
 		focus_root->m_focus_moved = 0;
 	}
 }
+#endif
 
 math::v2 ScrollViewBase::ScePafWidget_A503544D()
 {
@@ -5327,8 +5434,14 @@ void ScrollViewOverScrollStretch::GetTransform(math::v4 &offset, math::v4 &scale
 		return;
 
 	/* the stretch per pixel past the end, from the screen */
+#ifdef PAF_BUILD_2014
+	static SceneResolution *s_resolution = m_view->m_env->FindResolution(
+		m_view->m_env->m_resolutions, m_view->m_env->m_resolution_num,
+		m_view->m_scene->m_resolution_id);
+#else
 	static SceneResolution *s_resolution = ScePafWidget_CDC90BA2(
 		m_view->m_scene->m_env_param, m_view->m_scene->m_resolution_id);
+#endif
 	static math::v2 s_rate(0.217f / (s_resolution->m_width - 72),
 			       0.217f / (s_resolution->m_height - 72));
 
@@ -5574,10 +5687,12 @@ static VersatileParam *NewScrollViewBaseLayoutParam()
 	return new WidgetLayoutParam;
 }
 
+#ifndef PAF_BUILD_2014
 static VersatileParam *NewScrollViewBaseFocusParam()
 {
 	return new WidgetFocusParam;
 }
+#endif
 
 static VersatileParam *NewScrollViewBaseStyleParam()
 {
@@ -5599,7 +5714,9 @@ FactoryFuncTable g_factoryScrollViewBase = {
 	NewScrollViewBase,
 	NewScrollViewBaseParam,
 	NewScrollViewBaseLayoutParam,
+#ifndef PAF_BUILD_2014
 	NewScrollViewBaseFocusParam,
+#endif
 	NewScrollViewBaseStyleParam,
 	NewScrollViewBaseHandlerParam,
 	NewScrollViewBaseSoundParam,

@@ -255,7 +255,7 @@ public:
 	}
 
 	/* uniform_blur.fp built by psp2cgc */
-	static const uint8_t s_binary[312];
+	static const uint8_t s_binary[PAF_SHADER_SIZE(312, 284)];
 
 	arl::ShaderParameter<arl::TextureSource> m_blur_levels;
 	arl::ShaderParameter<float> m_alpha;
@@ -303,7 +303,7 @@ public:
 	}
 
 	/* variable_blur.fp built by psp2cgc */
-	static const uint8_t s_binary[452];
+	static const uint8_t s_binary[PAF_SHADER_SIZE(452, 480)];
 
 	arl::ShaderParameter<arl::TextureSource> m_blur_levels;
 	arl::ShaderParameter<arl::TextureSource> m_mask;
@@ -446,7 +446,7 @@ public:
 	}
 
 	/* dob_init.fp built by psp2cgc */
-	static const uint8_t s_binary[552];
+	static const uint8_t s_binary[PAF_SHADER_SIZE(552, 596)];
 
 	arl::ShaderParameter<arl::TextureSource> m_depth;
 	arl::ShaderParameter<math::v2> m_near_far;
@@ -494,7 +494,7 @@ public:
 	}
 
 	/* dob_spread.fp built by psp2cgc */
-	static const uint8_t s_binary[592];
+	static const uint8_t s_binary[PAF_SHADER_SIZE(592, 660)];
 
 	arl::ShaderParameter<arl::TextureSource> m_source;
 	arl::ShaderParameter<math::v2> m_step;
@@ -540,7 +540,7 @@ public:
 	}
 
 	/* dob_combine.fp built by psp2cgc */
-	static const uint8_t s_binary[332];
+	static const uint8_t s_binary[PAF_SHADER_SIZE(332, 304)];
 
 	arl::ShaderParameter<arl::TextureSource> m_dob;
 	arl::ShaderParameter<arl::TextureSource> m_dob_blurred;

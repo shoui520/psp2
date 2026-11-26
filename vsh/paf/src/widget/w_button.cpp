@@ -140,7 +140,10 @@ static inline __attribute__((always_inline)) void SetStyleType(Button *button,
 
 Button::Button(Widget *parent, CreateParam *param)
 	: ButtonBase(parent, param), m_unused0(0), m_unused1(0), m_unused2(0),
-	  m_style_type(STYLE_AUTO), m_frame_num(0), m_frame_time(0.0f), m_text_auto_scroll(NULL)
+	  m_style_type(STYLE_AUTO), m_frame_num(0), m_frame_time(0.0f)
+#ifndef PAF_BUILD_2014
+	  , m_text_auto_scroll(NULL)
+#endif
 {
 	/* through the vtable, as Sony's */
 	Button *self = this;
@@ -232,10 +235,12 @@ char *Button::GetTypeName() const
 
 Button::~Button()
 {
+#ifndef PAF_BUILD_2014
 	if (m_text_auto_scroll != NULL) {
 		delete m_text_auto_scroll;
 		m_text_auto_scroll = NULL;
 	}
+#endif
 }
 
 int32_t Button::SetTexture(const intrusive_ptr<graph::Surface> &surf, int32_t obj, uint32_t index)
@@ -484,6 +489,7 @@ graph::DrawObj *Button::CreateDrawObj(int32_t obj)
 	}
 }
 
+#ifndef PAF_BUILD_2014
 int32_t Button::IsTextAutoScroll()
 {
 	if (m_text_auto_scroll == NULL)
@@ -633,6 +639,7 @@ int32_t Button::SetTextAutoScrollSpeed(float speed)
 	}
 	return m_text_auto_scroll->SetSpeed(speed, 2);
 }
+#endif
 
 void Button::SetStyleAnimator(StyleType style_type)
 {
@@ -681,6 +688,7 @@ int32_t ButtonParam::Set()
 
 	Button *button = (Button *)m_widget;
 
+#ifndef PAF_BUILD_2014
 	if (m_enable_long_press_text_auto_scroll != button->IsLongPressTextAutoScrollEnabled() &&
 	    m_enable_long_press_text_auto_scroll) {
 		if (m_long_press_text_auto_scroll_begin_msec == -1)
@@ -688,6 +696,9 @@ int32_t ButtonParam::Set()
 		else
 			button->EnableLongPressTextAutoScroll(m_long_press_text_auto_scroll_begin_msec);
 	}
+#else
+	(void)button;
+#endif
 	return 0;
 }
 
@@ -697,8 +708,10 @@ int32_t ButtonParam::Get()
 
 	if (ret < 0)
 		return ret;
+#ifndef PAF_BUILD_2014
 	m_enable_long_press_text_auto_scroll =
 		((Button *)m_widget)->IsLongPressTextAutoScrollEnabled();
+#endif
 	return 0;
 }
 
@@ -868,10 +881,12 @@ static VersatileParam *NewButtonLayoutParam()
 	return new WidgetLayoutParam;
 }
 
+#ifndef PAF_BUILD_2014
 static VersatileParam *NewButtonFocusParam()
 {
 	return new WidgetFocusParam;
 }
+#endif
 
 static VersatileParam *NewButtonStyleParam()
 {
@@ -893,7 +908,9 @@ FactoryFuncTable g_factoryButton = {
 	NewButton,
 	NewButtonParam,
 	NewButtonLayoutParam,
+#ifndef PAF_BUILD_2014
 	NewButtonFocusParam,
+#endif
 	NewButtonStyleParam,
 	NewButtonHandlerParam,
 	NewButtonSoundParam,

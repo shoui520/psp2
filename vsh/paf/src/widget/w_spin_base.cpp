@@ -294,6 +294,7 @@ void SpinBase::Refresh()
 	drum->m_loop = loop;
 	drum->m_commit_on_release = commit_on_release;
 	drum->UpdateDigits(0.0f);
+#ifndef PAF_BUILD_2014
 	for (int32_t i = 0; i <= 3; i++) {
 		if (m_focuser != NULL) {
 			Widget *widget = ScePafWidget_71349B04(m_focuser, i);
@@ -310,6 +311,7 @@ void SpinBase::Refresh()
 				m_drum->SetFocusDirection(i, id);
 		}
 	}
+#endif
 }
 
 int32_t SpinBase::SetValue(int32_t value)
@@ -449,6 +451,7 @@ void SpinBase::SetSpinState(int32_t state)
 	}
 }
 
+#ifndef PAF_BUILD_2014
 int32_t SpinBase::SetFocus(SetFocusInfo *info)
 {
 	if (m_drum == NULL)
@@ -535,6 +538,7 @@ void SpinBase::SetFocusDirectionWidget(int32_t dir, Widget *widget)
 	if (m_drum != NULL)
 		m_drum->SetFocusDirectionWidget(dir, widget);
 }
+#endif
 
 graph::DrawObj *SpinBase::GetDrawObj(int32_t obj)
 {

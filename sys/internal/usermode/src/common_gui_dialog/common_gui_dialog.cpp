@@ -18,6 +18,16 @@ using namespace paf::ui;
 /* the dialog's parts this file uses */
 #define DIALOG_PART_DIMMER		3
 #define DIALOG_PART_BOX			4
+#ifdef COMMON_GUI_DIALOG_2014
+#define DIALOG_PART_HEADING		5
+#define DIALOG_PART_HEADING_LINE	6
+#define DIALOG_PART_CANCEL		7
+#define DIALOG_PART_VIEW		8
+#define DIALOG_PART_CONTENTS		9
+#define DIALOG_PART_LIST_VIEW		10
+#define DIALOG_PART_BUTTONS		11
+#define DIALOG_PART_CHECK_BOX		14
+#else
 #define DIALOG_PART_IMAGE		5
 #define DIALOG_PART_HEADING		6
 #define DIALOG_PART_HEADING_LINE	7
@@ -27,6 +37,7 @@ using namespace paf::ui;
 #define DIALOG_PART_LIST_VIEW		11
 #define DIALOG_PART_BUTTONS		12
 #define DIALOG_PART_CHECK_BOX		15
+#endif
 
 /* the box's children: the space above its contents, its background and dividers, and its
    waiting animation */
@@ -48,14 +59,23 @@ using namespace paf::ui;
 /* the scroll view of a dialog: its scroll bar placed by the dialog's layout */
 class DialogScrollBarController : public ScrollViewScrollBarController {
 public:
+#ifdef COMMON_GUI_DIALOG_2014
+	DialogScrollBarController(ScrollViewBase *view)
+		: m_view(view), m_height(0.0f)
+	{
+	}
+#else
 	DialogScrollBarController(CommonGuiDialog *dialog, ScrollViewBase *view)
 		: m_dialog(dialog), m_view(view), m_height(0.0f)
 	{
 	}
+#endif
 
 	virtual void UpdateRange(const ScrollViewBarRange &range);
 
+#ifndef COMMON_GUI_DIALOG_2014
 	CommonGuiDialog *m_dialog;
+#endif
 	ScrollViewBase *m_view;
 	/* the view's height the view box was last fitted to */
 	float m_height;
@@ -247,21 +267,32 @@ static int32_t SetHeading(CommonGuiDialog *dialog, const wstring &heading)
 	Widget *space;
 	float height;
 	int32_t ret;
+#ifndef COMMON_GUI_DIALOG_2014
 	bool wide;
+#endif
 
 	if (box == NULL)
 		return COMMON_GUI_DIALOG_ERROR_NO_DIALOG;
+#ifndef COMMON_GUI_DIALOG_2014
 	wide = box->GetSize(0)->extract_x() >= DIALOG_WIDE_WIDTH;
+#endif
 	ret = dialog->m_dialog->SetPartsString(DIALOG_PART_HEADING, heading);
 	if (ret != 0)
 		return ret;
 	if (heading.length() != 0) {
 		dialog->ShowPart(DIALOG_PART_HEADING_LINE);
 		height = 76.0f;
+#ifndef COMMON_GUI_DIALOG_2014
 		if (wide)
 			height = 64.0f;
+#endif
 	} else {
 		dialog->HidePart(DIALOG_PART_HEADING_LINE);
+#ifdef COMMON_GUI_DIALOG_2014
+		height = 12.0f;
+		if (dialog->GetPart(DIALOG_PART_CANCEL) != NULL)
+			height = 76.0f;
+#else
 		if (!wide) {
 			height = 12.0f;
 			if (dialog->GetPart(DIALOG_PART_CANCEL) != NULL)
@@ -269,6 +300,7 @@ static int32_t SetHeading(CommonGuiDialog *dialog, const wstring &heading)
 		} else {
 			height = 0.0f;
 		}
+#endif
 	}
 	space = box->FindChild(IDParam((uint32_t)DIALOG_HEADING_SPACE), 0);
 	if (space != NULL)
@@ -280,22 +312,33 @@ static int32_t SetHeading(CommonGuiDialog *dialog, const wstring &heading)
  * Opens the dialog with the ID again, or a new one, with the layout, heading and text, which calls
  * the handler (taken over): its ID, or a negative error.
  */
+#ifdef COMMON_GUI_DIALOG_2014
+static int32_t OpenDialog(Plugin *plugin, int32_t dialogId, int32_t priority, bool waitTransition,
+			  bool notifyClose, int32_t dimmer, const wstring &heading,
+			  const wstring &text, const CommonGuiDialogLayout *layout,
+			  CommonGuiDialogHandler *handler)
+#else
 static int32_t OpenDialog(Plugin *plugin, int32_t dialogId, int32_t priority, bool waitTransition,
 			  bool notifyClose, int32_t dimmer, int32_t pageOption, const wstring &heading,
 			  const wstring &text, const CommonGuiDialogLayout *layout,
 			  CommonGuiDialogHandler *handler)
+#endif
 {
 	CommonGuiDialog *dialog;
 	ScrollViewBase *view;
 	Widget *busy;
+#ifndef COMMON_GUI_DIALOG_2014
 	bool reopened = false;
+#endif
 	float time;
 	int32_t ret;
 
 	dialog = CommonGuiDialog::Find(dialogId);
 	if (dialog != NULL) {
 		dialog->Hide();
+#ifndef COMMON_GUI_DIALOG_2014
 		reopened = true;
+#endif
 	} else {
 		dialog = new CommonGuiDialog();
 	}
@@ -309,8 +352,13 @@ static int32_t OpenDialog(Plugin *plugin, int32_t dialogId, int32_t priority, bo
 		delete dialog;
 		return -1;
 	}
+#ifdef COMMON_GUI_DIALOG_2014
+	ret = dialog->Open(plugin, priority, waitTransition, notifyClose, dimmer,
+			   layout->page, layout->parts, &time);
+#else
 	ret = dialog->Open(plugin, priority, waitTransition, notifyClose, dimmer, pageOption,
 			   layout->page, layout->parts, &time);
+#endif
 	if (ret != 0) {
 		delete dialog;
 		return ret;
@@ -319,7 +367,11 @@ static int32_t OpenDialog(Plugin *plugin, int32_t dialogId, int32_t priority, bo
 	dialog->m_dialog->SetPartsString(1, text);
 	view = GetScrollView(dialog);
 	if (view != NULL) {
+#ifdef COMMON_GUI_DIALOG_2014
+		view->SetScrollBarController(new DialogScrollBarController(view));
+#else
 		view->SetScrollBarController(new DialogScrollBarController(dialog, view));
+#endif
 		view->m_clip_mode = 1;
 		view->SetTimerListener(DIALOG_OPEN_TIMER, time, new DialogOpenListener(view));
 	}
@@ -328,8 +380,12 @@ static int32_t OpenDialog(Plugin *plugin, int32_t dialogId, int32_t priority, bo
 		((BusyIndicator *)busy)->Start();
 	dialog->SetButtons(layout->buttons);
 	ret = dialog->m_id;
+#ifdef COMMON_GUI_DIALOG_2014
+	dialog->m_refCount++;
+#else
 	if (!reopened)
 		dialog->m_refCount++;
+#endif
 	return ret;
 }
 
@@ -495,9 +551,15 @@ int SceCommonGuiDialog_CCFCD9A6(CommonGuiLayoutDialogParam *param)
 			delete handler;
 		handler = new DialogWaitHandler();
 	}
+#ifdef COMMON_GUI_DIALOG_2014
+	id = OpenDialog(param->resourcePlugin, param->dialogId, param->priority,
+			param->waitTransition, param->notifyClose, param->dimmer,
+			param->heading, param->text, &param->layout, handler);
+#else
 	id = OpenDialog(param->resourcePlugin, param->dialogId, param->priority,
 			param->waitTransition, param->notifyClose, param->dimmer, param->pageOption,
 			param->heading, param->text, &param->layout, handler);
+#endif
 	if (id < 0) {
 		SceCommonGuiDialog_BC311DC0(-1);
 		if (openHandler != NULL)
@@ -508,12 +570,14 @@ int SceCommonGuiDialog_CCFCD9A6(CommonGuiLayoutDialogParam *param)
 	}
 	if (param->outId != NULL)
 		*param->outId = id;
+#ifndef COMMON_GUI_DIALOG_2014
 	if (param->image.get() != NULL)
 		SetPartTexture(id, DIALOG_PART_IMAGE, param->image, 0);
 	if (param->cachedImage.get() != NULL)
 		SetPartCacheImage(id, DIALOG_PART_IMAGE, param->cachedImage);
 	if (param->secondImage.get() != NULL)
 		SetPartTexture(id, DIALOG_PART_IMAGE, param->secondImage, 1);
+#endif
 	if (!(SceCommonGuiDialog_EF2C5382 == ColorV4(param->bgColor)))
 		SceCommonGuiDialog_0C2B57DC(id, ColorV4(param->bgColor));
 	if (!(SceCommonGuiDialog_EF2C5382 == param->textColor))
@@ -534,16 +598,25 @@ int SceCommonGuiDialog_CCFCD9A6(CommonGuiLayoutDialogParam *param)
 int SceCommonGuiDialog_FA31832E(Plugin *plugin, const wstring &heading, const wstring &text,
 				const CommonGuiDialogLayout *layout, CommonGuiDialogHandler *handler)
 {
+#ifdef COMMON_GUI_DIALOG_2014
+	return OpenDialog(plugin, -1, -1, false, false, 0, heading, text, layout, handler);
+#else
 	return OpenDialog(plugin, -1, -1, false, false, 0, DIALOG_PAGE_OPTION, heading, text,
 			  layout, handler);
+#endif
 }
 
 int SceCommonGuiDialog_6CE14F66(Plugin *plugin, const wstring &heading, const wstring &text,
 				const CommonGuiDialogLayout *layout, CommonGuiDialogFunction func,
 				void *arg)
 {
+#ifdef COMMON_GUI_DIALOG_2014
+	return OpenDialog(plugin, -1, -1, false, false, 0, heading, text,
+			  layout, new DialogFunctionHandler(func, arg));
+#else
 	return OpenDialog(plugin, -1, -1, false, false, 0, DIALOG_PAGE_OPTION, heading, text,
 			  layout, new DialogFunctionHandler(func, arg));
+#endif
 }
 
 void SceCommonGuiDialog_D0B729B2(int dialogId)
@@ -703,8 +776,13 @@ int SceCommonGuiDialog_B59AE4AD(Plugin *plugin, const wstring &heading, const ws
 {
 	int id;
 
+#ifdef COMMON_GUI_DIALOG_2014
+	id = OpenDialog(plugin, -1, -1, false, false, 0, heading, text, layout,
+			new DialogWaitHandler());
+#else
 	id = OpenDialog(plugin, -1, -1, false, false, 0, DIALOG_PAGE_OPTION, heading, text, layout,
 			new DialogWaitHandler());
+#endif
 	if (id < 0) {
 		if (handler != NULL)
 			delete handler;
@@ -745,6 +823,35 @@ int SceCommonGuiDialog_061DD12B(int dialogId, int index, CommonGuiDialogWidgetFa
 
 void DialogScrollBarController::UpdateRange(const ScrollViewBarRange &range)
 {
+#ifdef COMMON_GUI_DIALOG_2014
+	ScrollView *view;
+	math::v4 size;
+	float height;
+
+	ScrollViewScrollBarController::UpdateRange(range);
+	view = NULL;
+	if (m_view != NULL && m_view->IsInherit(ScrollView::TypeName()))
+		view = (ScrollView *)m_view;
+	if (view != NULL) {
+		Widget *first = view->GetInternalWidget()->GetChild(0);
+
+		if (first == NULL || first->m_state != 0)
+			return;
+	}
+	size = *m_view->GetSize(0);
+	height = size.extract_y();
+	if (view != NULL && m_height != height) {
+		m_view->SetViewFocus(math::v2(0.0f, height * -0.5f), NULL, true, true);
+		m_height = height;
+	}
+	if (m_view->GetMovableDirection(false) != 0) {
+		m_view->m_clip_children = true;
+		m_view->SetSnapTime(-1.0f);
+	} else {
+		m_view->m_clip_children = false;
+		m_view->SetSnapTime(0.0f);
+	}
+#else
 	Widget *box = m_dialog->GetPart(DIALOG_PART_BOX);
 	Widget *space;
 	Widget *contents;
@@ -820,6 +927,7 @@ void DialogScrollBarController::UpdateRange(const ScrollViewBarRange &range)
 		m_view->m_clip_children = false;
 		m_view->SetSnapTime(0.0f);
 	}
+#endif
 }
 
 int32_t DialogOpenListener::Do(int32_t type, Handler *self, Event *e)

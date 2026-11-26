@@ -102,7 +102,7 @@ public:
 	}
 
 	/* cube_map.fp built by psp2cgc */
-	static const uint8_t s_binary[264];
+	static const uint8_t s_binary[PAF_SHADER_SIZE(264, 236)];
 
 	arl::ShaderParameter<arl::TextureSource> m_tex;
 };

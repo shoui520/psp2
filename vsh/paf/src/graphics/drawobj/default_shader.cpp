@@ -53,7 +53,7 @@ public:
 	{
 	}
 
-	WAVE_SHADER_BINARY("paf/cg/drawobj/basic_rect.vp", 320);
+	WAVE_SHADER_BINARY("paf/cg/drawobj/basic_rect.vp", PAF_SHADER_SIZE(320, 312));
 
 	arl::ShaderParameter<math::matrix> m_mvp;
 };
@@ -79,7 +79,7 @@ public:
 	{
 	}
 
-	WAVE_SHADER_BINARY("paf/cg/drawobj/basic_line.vp", 320);
+	WAVE_SHADER_BINARY("paf/cg/drawobj/basic_line.vp", PAF_SHADER_SIZE(320, 312));
 
 	arl::ShaderParameter<math::matrix> m_mvp;
 };
@@ -107,7 +107,7 @@ public:
 	{
 	}
 
-	WAVE_SHADER_BINARY("paf/cg/drawobj/basic_image.vp", 368);
+	WAVE_SHADER_BINARY("paf/cg/drawobj/basic_image.vp", PAF_SHADER_SIZE(368, 392));
 
 	arl::ShaderParameter<math::matrix> m_mvp;
 	arl::ShaderParameter<math::v4> m_region0;
@@ -134,7 +134,7 @@ public:
 	{
 	}
 
-	WAVE_SHADER_BINARY("paf/cg/drawobj/basic_rect.fp", 228);
+	WAVE_SHADER_BINARY("paf/cg/drawobj/basic_rect.fp", PAF_SHADER_SIZE(228, 232));
 
 	arl::ShaderParameter<math::v4> m_color;
 };
@@ -162,12 +162,13 @@ public:
 	{
 	}
 
-	WAVE_SHADER_BINARY("paf/cg/drawobj/basic_image.fp", 300);
+	WAVE_SHADER_BINARY("paf/cg/drawobj/basic_image.fp", PAF_SHADER_SIZE(300, 272));
 
 	arl::ShaderParameter<math::v4> m_color;
 	arl::ShaderParameter<arl::TextureSource> m_texture0;
 };
 
+#ifndef PAF_BUILD_2014
 /* paf/cg/drawobj/basic_image_copy.fp: the texture alone */
 class BasicImageCopyFragShader : public arl::ShaderInterfaceBase {
 public:
@@ -193,6 +194,7 @@ public:
 
 	arl::ShaderParameter<arl::TextureSource> m_texture0;
 };
+#endif
 
 /* paf/cg/drawobj/basic_dual_image.fp: two textures and the colour */
 class BasicDualImageFragShader : public arl::ShaderInterfaceBase {
@@ -219,7 +221,7 @@ public:
 	{
 	}
 
-	WAVE_SHADER_BINARY("paf/cg/drawobj/basic_dual_image.fp", 348);
+	WAVE_SHADER_BINARY("paf/cg/drawobj/basic_dual_image.fp", PAF_SHADER_SIZE(348, 320));
 
 	arl::ShaderParameter<math::v4> m_color;
 	arl::ShaderParameter<arl::TextureSource> m_texture0;
@@ -251,7 +253,7 @@ public:
 	{
 	}
 
-	WAVE_SHADER_BINARY("paf/cg/drawobj/basic_shadow.fp", 680);
+	WAVE_SHADER_BINARY("paf/cg/drawobj/basic_shadow.fp", PAF_SHADER_SIZE(680, 700));
 
 	arl::ShaderParameter<math::v4> m_color;
 	arl::ShaderParameter<arl::TextureSource> m_texture0;
@@ -284,7 +286,7 @@ public:
 	{
 	}
 
-	WAVE_SHADER_BINARY("paf/cg/drawobj/basic_emboss.fp", 568);
+	WAVE_SHADER_BINARY("paf/cg/drawobj/basic_emboss.fp", PAF_SHADER_SIZE(568, 564));
 
 	arl::ShaderParameter<math::v4> m_color;
 	arl::ShaderParameter<arl::TextureSource> m_texture0;
@@ -404,8 +406,11 @@ static inline void DrawMeshes(arl::ArlInstance *gl, const PlaneObjDrawParams &pa
 
 DefaultShader::DefaultShader()
 	: m_rect_vert(NULL), m_line_vert(NULL), m_image_vert(NULL), m_rect_frag(NULL),
-	  m_image_frag(NULL), m_image_copy_frag(NULL), m_dual_image_frag(NULL),
-	  m_shadow_frag(NULL), m_emboss_frag(NULL)
+	  m_image_frag(NULL),
+#ifndef PAF_BUILD_2014
+	  m_image_copy_frag(NULL),
+#endif
+	  m_dual_image_frag(NULL), m_shadow_frag(NULL), m_emboss_frag(NULL)
 {
 }
 
@@ -416,7 +421,9 @@ DefaultShader::~DefaultShader()
 	delete m_image_vert;
 	delete m_rect_frag;
 	delete m_image_frag;
+#ifndef PAF_BUILD_2014
 	delete m_image_copy_frag;
+#endif
 	delete m_dual_image_frag;
 	delete m_shadow_frag;
 	delete m_emboss_frag;
@@ -581,7 +588,23 @@ int32_t DefaultShader::DrawImage(PlaneObjDrawParams &params)
 
 	if (m_image_vert == NULL && !NewVert(m_image_vert, gl, params))
 		return SCE_PAF_ERROR_NO_MEMORY;
+#ifdef PAF_BUILD_2014
+	if (m_image_frag == NULL && !NewFrag(m_image_frag, gl))
+		return SCE_PAF_ERROR_NO_MEMORY;
 
+	m_image_vert->m_interface.m_mvp.Set(gl->GetModelViewProjection());
+	SetRegion(m_image_vert->m_interface, params);
+	m_image_frag->m_interface.m_color.Set(gl->m_color);
+	m_image_frag->m_interface.m_texture0.Set(SurfaceSource(params.m_textures[0]));
+
+	m_image_vert->m_object.begin();
+	m_image_frag->m_object.begin();
+	DrawMeshes(gl, params);
+	m_image_frag->m_object.end();
+	m_image_vert->m_object.end();
+
+	m_image_frag->m_interface.m_texture0.Set(arl::TextureSource());
+#else
 	m_image_vert->m_interface.m_mvp.Set(gl->GetModelViewProjection());
 	SetRegion(m_image_vert->m_interface, params);
 
@@ -613,6 +636,7 @@ int32_t DefaultShader::DrawImage(PlaneObjDrawParams &params)
 		m_image_vert->m_object.end();
 		m_image_frag->m_interface.m_texture0.Set(arl::TextureSource());
 	}
+#endif
 	return SCE_PAF_OK;
 }
 

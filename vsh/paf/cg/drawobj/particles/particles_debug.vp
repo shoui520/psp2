@@ -1,0 +1,53 @@
+/*
+ * Debug particle quads: oriented and sized like particles_quads.vp, with flat Color * Glare.x.
+ */
+struct VertexInput {
+	float4 pos : POSITION;
+	float4 uv0 : TEXCOORD0;
+};
+
+void main(VertexInput vin,
+	  uniform float4x4 ModelviewProjection,
+	  uniform float3 ParticleSize,
+	  uniform float4 LightPack[4],
+	  uniform float4 Focus,
+	  uniform float2 FocusRangesRcp,
+	  uniform float3 FocusCurves,
+	  uniform float4 FrontFacingQuaternion,
+	  uniform float4 NearControl,
+	  uniform float GlobalAlign,
+	  uniform float4 Glare,
+	  uniform float WorldScaleHack,
+	  uniform float3 Color,
+	  uniform sampler2D RotationsTex : TEXUNIT0,
+	  out float4 oPosition : POSITION,
+	  out half4 oTexcoord : TEXCOORD0,
+	  out float3 oColor : TEXCOORD1)
+{
+	half4 rotSample = tex2Dlod<half4>(RotationsTex, float4(vin.pos.w, 0.5, 0, 0));
+	float4 rot = (float4)normalize(rotSample);
+	float eyeDist = length(LightPack[0].xyz - vin.pos.xyz);
+	float nearT = (clamp(eyeDist, Focus.x, Focus.y) - Focus.y) * FocusRangesRcp.x;
+	float farT = (clamp(eyeDist, Focus.z, Focus.w) - Focus.z) * FocusRangesRcp.y;
+	float nearBlur = nearT * nearT * nearT;
+	float farBlur = farT * farT;
+	float size = ParticleSize.x + nearBlur * ParticleSize.y + farBlur * ParticleSize.z;
+	float angular = FocusCurves.z * atan(size / eyeDist);
+	float farAlign = saturate((eyeDist - Focus.z) * 5 + 2);
+	float align = saturate(farAlign + nearBlur * NearControl.z + GlobalAlign +
+			       angular * NearControl.x);
+	float4 quadQuat = normalize(lerp(rot, FrontFacingQuaternion, align));
+	float2 quadOffset = vin.uv0.xy - 0.5;
+	float3 qx = float3(1 - 2 * (quadQuat.y * quadQuat.y + quadQuat.z * quadQuat.z),
+			   2 * (quadQuat.x * quadQuat.y + quadQuat.w * quadQuat.z),
+			   2 * (quadQuat.x * quadQuat.z - quadQuat.w * quadQuat.y));
+	float3 qy = float3(2 * (quadQuat.x * quadQuat.y - quadQuat.w * quadQuat.z),
+			   1 - 2 * (quadQuat.x * quadQuat.x + quadQuat.z * quadQuat.z),
+			   2 * (quadQuat.y * quadQuat.z + quadQuat.w * quadQuat.x));
+	float3 worldPos = vin.pos.xyz + size * (qx * quadOffset.x + qy * quadOffset.y);
+
+	oPosition = mul(float4(worldPos * WorldScaleHack, 1), ModelviewProjection);
+	oTexcoord = half4(vin.uv0.xy, farBlur + nearBlur,
+			  lerp(0.85, NearControl.y, nearBlur));
+	oColor = Color * Glare.x;
+}

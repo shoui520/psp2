@@ -163,6 +163,22 @@ public:
 		CB_INTERVAL_END = 0x200FFFF
 	};
 
+#ifdef PAF_BUILD_2014
+	enum {
+		CB_STATE = 0x80000,
+		CB_STATE_INIT = 0x80001,
+		CB_STATE_TERM = 0x80002,
+		CB_STATE_PREPARE = 0x80003,
+		CB_STATE_READY = 0x80004,
+		CB_STATE_READY_CACHEIMAGE = 0x80005,
+		CB_COMMAND = 0x80008
+	};
+
+	enum {
+		CB_MODAL_TOUCH_OUTSIDE = 0x2001b,
+		CB_MODAL_RELEASE_OUTSIDE = 0x2001c
+	};
+#else
 	enum {
 		CB_STATE = 0x100000,
 		CB_STATE_INIT = 0x100001,
@@ -179,6 +195,7 @@ public:
 		CB_MODAL_TOUCH_OUTSIDE = 0x20019,
 		CB_MODAL_RELEASE_OUTSIDE = 0x2001a
 	};
+#endif
 
 	Handler(uint32_t enable);
 
@@ -191,8 +208,10 @@ public:
 	virtual int32_t HandleAnalogEvent(Event *e);
 	/* passes the event on as input event 0x10013 */
 	virtual int32_t HandleInputEvent(Event *e);
+#ifndef PAF_BUILD_2014
 	/* passes the event on to HandleKeycodeEvent */
 	virtual int32_t HandleKeyEvent(Event *e);
+#endif
 	virtual int32_t HandlePointEvent(Event *e);
 	virtual int32_t HandleTouchEvent(Event *e);
 	virtual int32_t HandleGestureEvent(Event *e);

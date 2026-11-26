@@ -104,7 +104,11 @@ int32_t TextBoxEditMenu::ZoomOut()
 
 			if (text_box->m_env != NULL) {
 				text_box->m_modal_mode = 2;
+#ifdef PAF_BUILD_2014
+				text_box->m_env->RemoveModalWidget(text_box);
+#else
 				text_box->m_env->m_modal_widgets.Remove(text_box);
+#endif
 			}
 		}
 		m_camera_pos = math::v4(0.0f, 0.0f, 0.0f, 0.0f);
@@ -334,7 +338,9 @@ int32_t TextBoxEditMenu::OpenMenu()
 					Widget *menu = m_menu;
 
 					menu->m_transition_complete = false;
+#ifndef PAF_BUILD_2014
 					menu->m_transition = 0xff;
+#endif
 					menu->DoTransitionReverse_core(0.0f, true);
 					ScePafWidget_4588699E(menu, NULL, 2, 0.0f, NULL);
 					m_menu_box = m_menu->FindChild(

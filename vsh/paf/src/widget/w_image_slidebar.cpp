@@ -661,10 +661,12 @@ static VersatileParam *NewImageSlideBarLayoutParam()
 	return new WidgetLayoutParam;
 }
 
+#ifndef PAF_BUILD_2014
 static VersatileParam *NewImageSlideBarFocusParam()
 {
 	return new WidgetFocusParam;
 }
+#endif
 
 static VersatileParam *NewImageSlideBarStyleParam()
 {
@@ -686,7 +688,9 @@ FactoryFuncTable g_factoryImageSlideBar = {
 	NewImageSlideBar,
 	NewImageSlideBarParam,
 	NewImageSlideBarLayoutParam,
+#ifndef PAF_BUILD_2014
 	NewImageSlideBarFocusParam,
+#endif
 	NewImageSlideBarStyleParam,
 	NewImageSlideBarHandlerParam,
 	NewImageSlideBarSoundParam,

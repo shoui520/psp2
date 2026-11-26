@@ -57,11 +57,32 @@ public:
 	uint32_t surf_dev_mem_size;
 	void *surf_def_pool_addr;
 	uint32_t surf_def_pool_size;
+#ifdef PAF_BUILD_2014
+	void *text_surface_pool_addr;
+	uint32_t text_surface_pool_size;
+	uint32_t pvf_heap_size;
+	int32_t locale;
+	void *mem_pvf_japanese_addr;
+	uint32_t mem_pvf_japanese_size;
+	void *mem_pvf_latin_addr;
+	uint32_t mem_pvf_latin_size;
+	void *mem_pvf_hangul_addr;
+	uint32_t mem_pvf_hangul_size;
+	void *mem_pvf_chinese_addr;
+	uint32_t mem_pvf_chinese_size;
+	void *mem_emoji_font_addr;
+	uint32_t mem_emoji_font_size;
+	bool no_text;
+	int32_t screen_width;
+	int32_t screen_height;
+	float fov;
+#else
 	int32_t screen_width;
 	int32_t screen_height;
 	float fov;
 	/* the text set up with it when not NULL */
 	const graph::TextInitParam *text_param;
+#endif
 };
 
 /* what GXM is initialized with */
@@ -69,12 +90,22 @@ class DevInitParam {
 public:
 	DevInitParam();
 
+#ifdef PAF_BUILD_2014
+	WinHandle whandle;
+	FrameBufferMode frame_buffer_mode;
+	uint32_t graph_heap_size_on_main_memory;
+	uint32_t graph_heap_size_on_video_memory;
+	uint32_t display_list_size;
+	uint32_t parameter_buffer_size;
+	uint32_t parameter_buffer_location;
+#else
 	uint32_t parameter_buffer_size;
 	uint32_t parameter_buffer_location;
 	WinHandle whandle;
 	uint32_t graph_heap_size_on_main_memory;
 	uint32_t graph_heap_size_on_video_memory;
 	uint32_t display_list_size;
+#endif
 };
 
 int32_t Init(const InitParam &param);

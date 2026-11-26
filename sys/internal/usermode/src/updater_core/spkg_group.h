@@ -20,7 +20,7 @@ enum SpkgEntryStatus {
 	SPKG_ENTRY_STATUS_UPDATED	= 3,
 };
 
-/* metadata for one SPKG segment extracted from a PUP (72 bytes) */
+/* metadata for one SPKG segment extracted from a PUP (72 bytes; 80 bytes in 2014) */
 struct SpkgEntry {
 	SceUInt32 type;
 	SceUInt32 status;
@@ -32,6 +32,9 @@ struct SpkgEntry {
 	SceUInt64 chunkIndex;
 	SceUInt64 decryptedSize;
 	SceUInt64 finalSize;
+#ifdef UPDATER_CORE_2014
+	SceUInt32 platform;
+#endif
 };
 
 /* shared time-estimation constants defined in spkg_group.cpp */
@@ -40,7 +43,11 @@ extern const float g_spkgInspectSpeed;
 extern const float g_spkgCompressedWriteSpeed;
 extern const float g_spkgInspectOverheadMs;
 extern const float g_spkgUpdateOverheadMs;
+#ifdef UPDATER_CORE_2014
+extern const float g_spkgWriteSpeedTable[29];
+#else
 extern const float g_spkgWriteSpeedTable[26];
+#endif
 
 class SpkgGroup : public UpdaterObject {
 public:

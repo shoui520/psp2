@@ -73,6 +73,7 @@ struct FocusCandidate {
 	math::v2 m_half_view;
 };
 
+#ifndef PAF_BUILD_2014
 /* the focus of the widget's focus root, NULL for none (the focus root's m_state holds it) */
 inline Widget *GetRootFocus(Widget *widget)
 {
@@ -82,6 +83,7 @@ inline Widget *GetRootFocus(Widget *widget)
 		return NULL;
 	return root->m_focus_root != NULL ? (Widget *)root->m_focus_root->m_state : NULL;
 }
+#endif
 
 /* the focus search's direction for the move (FocusSearchInfo::m_dir; 255 for none) */
 inline int32_t GetFocusDir(const math::v2 &dir)

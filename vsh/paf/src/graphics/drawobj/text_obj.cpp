@@ -184,12 +184,16 @@ void TextObj::SetSurfaceDraw(const SurfaceDrawParam &param)
 	int32_t flags = param.m_font_flags;
 
 	if (flags != 128) {
+#ifndef PAF_BUILD_2014
 		bool enlarge_font_size = (flags & 1) ? true : false;
 		bool force_bold = (flags & 2) != 0;
+#endif
 		bool deepen_color = (flags & 4) != 0;
 
+#ifndef PAF_BUILD_2014
 		SetStyleAttribute(TextStyleAttribute_EnlargeFontSize, 0, 0, enlarge_font_size);
 		SetStyleAttribute(TextStyleAttribute_ForceBold, 0, 0, force_bold);
+#endif
 		m_draw_style.deepen_color = deepen_color;
 	}
 	m_draw_style.surface_draw = param.m_surface_draw;
@@ -815,10 +819,12 @@ int32_t TextObjParam::SetEach(DrawObj *obj)
 	style.SetStyleAttribute(TextStyleAttribute_Mask, m_mask);
 	style.SetStyleAttribute(TextStyleAttribute_Shadow, m_shadow);
 	style.SetStyleAttribute(TextStyleAttribute_Emboss, m_emboss);
+#ifndef PAF_BUILD_2014
 	if (m_enlarge_font_size != -1)
 		style.SetStyleAttribute(TextStyleAttribute_EnlargeFontSize, m_enlarge_font_size != 0);
 	if (m_force_bold != -1)
 		style.SetStyleAttribute(TextStyleAttribute_ForceBold, m_force_bold != 0);
+#endif
 	text->SetStyle(0, 0, style);
 	return ret;
 }
@@ -868,8 +874,10 @@ int32_t TextObjParam::GetEach(DrawObj *obj)
 	style.GetStyleAttribute(TextStyleAttribute_Mask, m_mask);
 	style.GetStyleAttribute(TextStyleAttribute_Shadow, m_shadow);
 	style.GetStyleAttribute(TextStyleAttribute_Emboss, m_emboss);
+#ifndef PAF_BUILD_2014
 	style.GetStyleAttribute(TextStyleAttribute_EnlargeFontSize, (bool &)m_enlarge_font_size);
 	style.GetStyleAttribute(TextStyleAttribute_ForceBold, (bool &)m_force_bold);
+#endif
 	return ret;
 }
 

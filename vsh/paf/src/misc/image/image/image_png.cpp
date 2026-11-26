@@ -16,6 +16,10 @@
 #include "image_source.h"
 #include "../../../paf_types.h"
 
+#if PNG_LIBPNG_VER < 10400
+typedef png_size_t png_alloc_size_t;
+#endif
+
 using namespace paf;
 using namespace paf::image;
 using paf::memory::HeapAllocator;

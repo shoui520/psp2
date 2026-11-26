@@ -194,7 +194,9 @@ Box::Box(Widget *parent, CreateParam *param)
 	SetAdjust(2, 2, 2);
 	SetLayoutType(LAYOUT_MANUAL);
 	m_transition_complete = false;
+#ifndef PAF_BUILD_2014
 	m_transition = 0xff;
+#endif
 	/* through the vtable, as Sony's */
 	Widget *self = this;
 
@@ -740,7 +742,9 @@ uint32_t Box::ChangeState(uint32_t state, int32_t ev_type)
 {
 	if (m_state != state && state == 0 && m_auto_show) {
 		if (!m_transition_complete) {
+#ifndef PAF_BUILD_2014
 			m_transition = 0xff;
+#endif
 			m_transition_complete = true;
 			DoTransition_core(0.0f, true);
 		}
@@ -1279,10 +1283,12 @@ static VersatileParam *NewBoxLayoutParam()
 	return new BoxLayoutParam;
 }
 
+#ifndef PAF_BUILD_2014
 static VersatileParam *NewBoxFocusParam()
 {
 	return new WidgetFocusParam;
 }
+#endif
 
 static VersatileParam *NewBoxStyleParam()
 {
@@ -1304,7 +1310,9 @@ FactoryFuncTable g_factoryBox = {
 	NewBox,
 	NewBoxParam,
 	NewBoxLayoutParam,
+#ifndef PAF_BUILD_2014
 	NewBoxFocusParam,
+#endif
 	NewBoxStyleParam,
 	NewBoxHandlerParam,
 	NewBoxSoundParam,

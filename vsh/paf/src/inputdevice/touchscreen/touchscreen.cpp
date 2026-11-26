@@ -750,6 +750,39 @@ static int32_t UpdateRegion(uint32_t port, uint32_t region_id, const math::rect 
 	return ret;
 }
 
+#ifdef PAF_BUILD_2014
+int32_t paf::inputdevice::touchscreen::SetRegion(uint32_t port, uint32_t region_id,
+						 const math::rect &rect)
+{
+	return UpdateRegion(port, region_id, rect);
+}
+
+int32_t paf::inputdevice::touchscreen::ActivateRegion(uint32_t port, uint32_t region_id,
+						      bool activate)
+{
+	if (port >= MAX_PORT)
+		return ERROR_INVALID_PORT;
+	if (region_id >= MAX_REGION_NUM)
+		return ERROR_INVALID_REGION;
+
+	uint32_t id = region_id + 1;
+	int32_t ret;
+
+	if ((s_active_region[port] & REGION_DEFAULT) != 0 ||
+	    s_init_param.m_mode == InitParam::Mode_CommonDialog)
+		activate = false;
+	ret = sceTouchActivateRegion(port, id, activate ? 1 : 0);
+	if (ret == 0) {
+		uint32_t bit = 1 << id;
+
+		if (activate)
+			s_active_region[port] |= bit;
+		else
+			s_active_region[port] &= ~bit;
+	}
+	return ret;
+}
+#else
 int32_t paf::inputdevice::touchscreen::SetRegion(uint32_t port, uint32_t region_id,
 						 const math::rect &rect, bool activate,
 						 bool hide_upper_layer)
@@ -789,6 +822,7 @@ int32_t paf::inputdevice::touchscreen::SetRegion(uint32_t port, uint32_t region_
 	}
 	return ret;
 }
+#endif
 
 /* The default region is active while the default or the ownership asks for it. */
 static int32_t RequestDefaultRegion(uint32_t port, uint32_t request, bool activate)

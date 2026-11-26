@@ -140,7 +140,7 @@ public:
 	{
 	}
 
-	WAVE_SHADER_BINARY("paf/cg/drawobj/progress_signal.vp", 452);
+	WAVE_SHADER_BINARY("paf/cg/drawobj/progress_signal.vp", PAF_SHADER_SIZE(452, 444));
 
 	graph::arl::ShaderParameter<math::matrix> m_mvp;
 	graph::arl::ShaderParameter<math::v2> m_uv_offset;
@@ -170,7 +170,7 @@ public:
 	{
 	}
 
-	WAVE_SHADER_BINARY("paf/cg/drawobj/progress_signal.fp", 404);
+	WAVE_SHADER_BINARY("paf/cg/drawobj/progress_signal.fp", PAF_SHADER_SIZE(404, 392));
 
 	graph::arl::ShaderParameter<math::v4> m_color;
 	graph::arl::ShaderParameter<graph::arl::TextureSource> m_texture0;
@@ -1155,7 +1155,9 @@ void ProgressBar::UpdateLabel()
 
 			if (max > 1) {
 				if (!label->m_transition_complete) {
+#ifndef PAF_BUILD_2014
 					label->m_transition = 0xff;
+#endif
 					label->m_transition_complete = true;
 					label->DoTransition_core(0.0f, true);
 				}
@@ -1172,7 +1174,9 @@ void ProgressBar::UpdateLabel()
 				label->SetString(wstring(buffer));
 			} else {
 				label->m_transition_complete = false;
+#ifndef PAF_BUILD_2014
 				label->m_transition = 0xff;
+#endif
 				label->DoTransitionReverse_core(0.0f, true);
 				ScePafWidget_4588699E(label, NULL, 2, 0.0f, NULL);
 			}
@@ -1567,10 +1571,12 @@ static VersatileParam *NewProgressBarLayoutParam()
 	return new WidgetLayoutParam;
 }
 
+#ifndef PAF_BUILD_2014
 static VersatileParam *NewProgressBarFocusParam()
 {
 	return new WidgetFocusParam;
 }
+#endif
 
 static VersatileParam *NewProgressBarStyleParam()
 {
@@ -1592,7 +1598,9 @@ FactoryFuncTable g_factoryProgressBar = {
 	NewProgressBar,
 	NewProgressBarParam,
 	NewProgressBarLayoutParam,
+#ifndef PAF_BUILD_2014
 	NewProgressBarFocusParam,
+#endif
 	NewProgressBarStyleParam,
 	NewProgressBarHandlerParam,
 	NewProgressBarSoundParam,

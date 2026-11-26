@@ -223,6 +223,7 @@ public:
 	using Widget::GetTexture;
 	using Widget::SetString;
 	using Widget::GetString;
+#ifndef PAF_BUILD_2014
 	/* Widget's, with the direction the focus came from kept as the focus target */
 	virtual int32_t SetFocus(SetFocusInfo *info)
 	{
@@ -246,6 +247,7 @@ public:
 	{
 		return m_movable_dir != 0 || m_focus_count > 0;
 	}
+#endif
 
 	/* the slots after Widget's, from 0x170 (index 92) */
 	virtual void SetVerticalScrollBar(ScrollBar *scroll_bar);
@@ -269,8 +271,10 @@ public:
 	virtual bool TrackGrab(Event *e);
 	virtual bool TrackMove(Event *e);
 	virtual bool TrackDrag(Event *e);
+#ifndef PAF_BUILD_2014
 	/* the views moved by gesture 0x16, the touch's pan, by its move (E0FAE144; name ours) */
 	virtual bool TrackPan(Event *e);
+#endif
 	/* a text box in the view begins editing: the view padded above the IME, the text box
 	   kept in sight (TextBoxImeListener::EVENT_EDIT_BEGIN; 4770835D, name ours) */
 	virtual bool OnEditBegin(Event *e);
@@ -290,8 +294,10 @@ public:
 	   focus going out moving the view on where it can still scroll, and passed to the
 	   parent views (33742E18, 797EE334, 7B155BE4, 08D85CB4) */
 	virtual bool OnFocusIn(Event *e);
+#ifndef PAF_BUILD_2014
 	virtual bool OnFocusEnter(Event *e);
 	virtual bool OnFocusLeave(Event *e);
+#endif
 	virtual bool OnFocusOut(Event *e);
 	/* the tracked touch flicked: the views captured and dragged by the flick's velocity over
 	   a frame (gesture 3; 2FDBFE08, name ours) */
@@ -340,21 +346,29 @@ public:
 	virtual void OnChildRemoved(Widget *child);
 	virtual void OnDestroyTimer(ScrollViewTimer *timer);
 	virtual void OnScrollBarChanged(int32_t type, Handler *self, Event *e);
+#ifndef PAF_BUILD_2014
 	/* the view moved by the drag's move, the part of it the view could not move left in move
 	   (no name found) */
 	virtual void ScePafWidget_D95AFF11(math::v2 &move, bool dragging, bool locked, bool reset);
+#endif
 	/* the touch it tracks (m_track_port; no name found) */
 	virtual void ScePafWidget_E9C7617A(uint32_t touch_id);
 	/* the touch released: the view flicked in the direction, at the velocity, toward the snap
 	   point after the one of the ID; the direction and velocity are cleared along the axes it
 	   does not take them */
 	virtual void ScePafWidget_D9FE36A6(int32_t id, math::v2 &dir, math::v2 &velocity);
+#ifdef PAF_BUILD_2014
+	virtual bool ScrollByKey(const math::v2 &dir);
+	void ScePafWidget_D95AFF11(math::v2 &move, bool dragging, bool locked, bool reset);
+	void ScePafWidget_22EF63CE();
+#else
 	/* the focus moved in the direction, from the widget or the focus (no name found) */
 	virtual bool ScePafWidget_AD706F2A(const math::v2 &dir, Widget *from);
 	virtual void ScePafWidget_22EF63CE();
 	/* each frame: the focus moved into the view where it has none, or along with the key's
 	   scroll (no name found) */
 	virtual void ScePafWidget_B6CECFDF();
+#endif
 
 	ScrollViewSnapPoint GetSnapPoint(int32_t snap_id);
 	int32_t FindSnapID(const ScrollViewSnapPoint &snap_point);
@@ -366,12 +380,14 @@ public:
 	/* the view moved on by its velocity for the frame, slowing, and pulled back within its
 	   limits once it stops while a touch holds it (no name found) */
 	void ScePafWidget_77E369F4();
+#ifndef PAF_BUILD_2014
 	/* the scroll view it is in scrolled in the direction by a key, where its focus event is
 	   on (AD706F2A; name ours) */
 	__attribute__((noinline)) bool ScrollParentByKey(const math::v2 &dir);
 	/* the view scrolled in the direction by a key: to the next snap point where it has them,
 	   else moved on at a key's velocity; false where it does not scroll (name ours) */
 	bool ScrollByKey(const math::v2 &dir);
+#endif
 	/* where a touch scrolls the view, the first view the touch scrolls lets go of its gesture
 	   (no name found) */
 	void ScePafWidget_1E6F658F();
@@ -450,9 +466,11 @@ public:
 	/* the focus kept within the view's limits, at the center along the axes that fit where
 	   center_fit is set (ScePafWidget 1EB87BE1; name ours) */
 	ScrollViewFocusLimit LimitFocus(const math::v2 &focus, bool center_fit);
+#ifndef PAF_BUILD_2014
 	/* the widget the focus goes to in the direction, from the widget or the focus; NULL for
 	   none or itself (name ours) */
 	Widget *SearchFocus(const math::v2 &dir, Widget *from);
+#endif
 	/* the scroll bars' jet tails as long as the view moved since the last tick, along the
 	   axes (MoveDir; name ours) */
 	void UpdateJetTail(uint32_t dir);
@@ -519,8 +537,10 @@ public:
 	/* its world rotation when the scroll range was last updated */
 	math::quaternion m_world_rot_pre;
 	math::v2 m_focus_pos;
+#ifndef PAF_BUILD_2014
 	math::v2 m_focus_target;
 	math::v2 m_focus_start;
+#endif
 	/* the timer the view moves by */
 	ScrollViewTimer *m_focus_timer;
 	/* how many times BlockUpdateViewPort is in force */
@@ -560,8 +580,10 @@ public:
 	/* the axes a touch drags it along (MoveDir; name ours) */
 	uint32_t m_drag_dir;
 	uint32_t m_touch_mask_on;
+#ifndef PAF_BUILD_2014
 	bool m_focus_wrap;
 	bool m_focus_lock;
+#endif
 };
 
 /* the widget a ScrollViewBase's children sit in: it moves it, and scales it where it is
@@ -800,9 +822,11 @@ public:
 	int32_t m_auto_bound;
 };
 
+#ifndef PAF_BUILD_2014
 /* the focus taken off the widget's focus root's focus where it is not the environment's focus
    target (name ours) */
 void ReleaseRootFocus(Widget *widget);
+#endif
 
 }
 }

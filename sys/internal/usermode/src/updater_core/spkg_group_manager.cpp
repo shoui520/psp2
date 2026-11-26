@@ -19,6 +19,9 @@
 #include "spkg_group_diff.h"
 #include "spkg_group_full.h"
 #include "spkg_group_manager.h"
+#ifdef UPDATER_CORE_2014
+#include "update_utility.h"
+#endif
 
 #define UPDATER_FILE_ID			0xf1080714
 
@@ -31,9 +34,18 @@
 #define PUP_SPKG_SEG_BASE		0x300ULL
 
 #define SPKG_TYPE_DIFF_MANIFEST		4
+#ifdef UPDATER_CORE_2014
+#define SPKG_DIFF_GROUP_MANIFEST_INDEX	22
+#define SPKG_GROUP_INDEX_OS0		2
+#define SPKG_GROUP_INDEX_OS0_EXT	3
+#define SPKG_GROUP_INDEX_VS0		5
+#define SPKG_GROUP_INDEX_VS0_EXT	6
+#define SPKG_GROUP_INDEX_PD0		9
+#else
 #define SPKG_DIFF_GROUP_MANIFEST_INDEX	19
 #define SPKG_GROUP_INDEX_OS0		2
 #define SPKG_GROUP_INDEX_VS0		4
+#endif
 
 #define VSH_MOUNT_ID_VS0		0x300
 #define VSH_MOUNT_ID_SA0		0xb00
@@ -56,12 +68,21 @@ struct CertifiedFileHeader {
 };
 
 /* whether a given SPKG type uses differential update (SpkgGroupDiff) */
+#ifdef UPDATER_CORE_2014
+static const SceUInt8 s_isDiffSpkgType[29] = {
+	0, 0, 0, 0, 1, 0, 0, 0,
+	0, 0, 0, 0, 0, 0, 0, 0,
+	0, 0, 0, 0, 0, 1, 1, 0,
+	0, 0, 0, 0, 1,
+};
+#else
 static const SceUInt8 s_isDiffSpkgType[26] = {
 	0, 0, 0, 0, 1, 0, 0, 0,
 	0, 0, 0, 0, 0, 0, 0, 0,
 	0, 0, 0, 0, 0, 1, 1, 0,
 	0, 0,
 };
+#endif
 
 static int s_updatePhaseCount = 0;
 
@@ -82,7 +103,11 @@ int SpkgOperationElement::ReleaseBuffer(void)
 	if (m_buffer != NULL) {
 		ret = sceSblUsReleaseBuffer(m_buffer);
 		if (ret != 0) {
+#ifdef UPDATER_CORE_2014
+			UPDATER_ERROR_FMT(1421, "%x", ret);
+#else
 			UPDATER_ERROR_FMT(1288, "%x", ret);
+#endif
 			if (ret == SCE_SBL_US_ERROR_INVALID_ARGUMENT)
 				ret = SCE_UPDATER_ERROR_FREE_BUF_INVALID_ARG;
 			else if (ret == SCE_SBL_US_ERROR_NOT_PERMITTED)
@@ -108,7 +133,11 @@ int SpkgOperationElement::AllocateBuffer(SceSize size)
 		if (size != 0) {
 			ret = sceSblUsAllocateBuffer(size, &m_buffer);
 			if (ret != 0) {
+#ifdef UPDATER_CORE_2014
+				UPDATER_ERROR_FMT(1389, "%d : %x", size, ret);
+#else
 				UPDATER_ERROR_FMT(1256, "%d : %x", size, ret);
+#endif
 				switch (ret) {
 				case SCE_SBL_US_ERROR_INVALID_ARGUMENT:
 					ret = SCE_UPDATER_ERROR_ALLOC_BUF_INVALID_ARG;
@@ -165,7 +194,11 @@ int SpkgOperationElement::Operate(void)
 		ret = m_group->InspectSpkg(this);
 		break;
 	default:
+#ifdef UPDATER_CORE_2014
+		UPDATER_ERROR(1364);
+#else
 		UPDATER_ERROR(1231);
+#endif
 		ret = SCE_UPDATER_ERROR_INVALID_ARGUMENT;
 		break;
 	}
@@ -250,7 +283,11 @@ int SpkgParallelOperation::mainOperation(void *arg)
 	int ret;
 
 	if (arg != NULL)
+#ifdef UPDATER_CORE_2014
+		UPDATER_ERROR(1449);
+#else
 		UPDATER_ERROR(1316);
+#endif
 	switch (m_operation) {
 	case SPKG_OP_UPDATE:
 		ret = g_spkgGroupManager->updateAllGroups(m_pupFd);
@@ -259,7 +296,11 @@ int SpkgParallelOperation::mainOperation(void *arg)
 		ret = g_spkgGroupManager->inspectAllGroups(m_pupFd);
 		break;
 	default:
+#ifdef UPDATER_CORE_2014
+		UPDATER_ERROR_FMT(1464, "%d", m_operation);
+#else
 		UPDATER_ERROR_FMT(1331, "%d", m_operation);
+#endif
 		ret = SCE_UPDATER_ERROR_INVALID_ARGUMENT;
 		break;
 	}
@@ -299,6 +340,9 @@ void SpkgGroupManager::Terminate(void)
 		}
 	}
 	m_activeGroups.Clear();
+#ifdef UPDATER_CORE_2014
+	m_initialized = false;
+#endif
 	m_estimatedInspectMs = 0;
 	m_estimatedUpdateMs = 0;
 }
@@ -318,17 +362,29 @@ int SpkgGroupManager::unmountPartitions(void)
 
 	ret = vshIoUmount(VSH_MOUNT_ID_VS0, 1, 0, 0);
 	if (ret != 0 && ret != (int)SCE_ERROR_ERRNO_ENOENT) {
+#ifdef UPDATER_CORE_2014
+		UPDATER_ERROR_FMT(202, "%x", ret);
+#else
 		UPDATER_ERROR_FMT(198, "%x", ret);
+#endif
 		return ret;
 	}
 	ret = vshIoUmount(VSH_MOUNT_ID_SA0, 1, 0, 0);
 	if (ret != 0 && ret != (int)SCE_ERROR_ERRNO_ENOENT) {
+#ifdef UPDATER_CORE_2014
+		UPDATER_ERROR_FMT(214, "%x", ret);
+#else
 		UPDATER_ERROR_FMT(210, "%x", ret);
+#endif
 		return ret;
 	}
 	ret = vshIoUmount(VSH_MOUNT_ID_PD0, 1, 0, 0);
 	if (ret != 0 && ret != (int)SCE_ERROR_ERRNO_ENOENT) {
+#ifdef UPDATER_CORE_2014
+		UPDATER_ERROR_FMT(226, "%x", ret);
+#else
 		UPDATER_ERROR_FMT(222, "%x", ret);
+#endif
 		return ret;
 	}
 	return 0;
@@ -347,18 +403,30 @@ int SpkgGroupManager::UpdateAllSpkg(const char *fileName)
 	s_updatePhaseCount = 0;
 	fd = sceIoOpen(fileName, SCE_O_RDONLY, 0);
 	if (fd < 0) {
+#ifdef UPDATER_CORE_2014
+		UPDATER_ERROR_FMT(150, "%s %o : %x", fileName, 0, fd);
+#else
 		UPDATER_ERROR_FMT(146, "%s %o : %x", fileName, 0, fd);
+#endif
 		return SCE_UPDATER_ERROR_SPKG_OPEN;
 	}
 	if (m_parallelOp != NULL) {
 		m_parallelOp->SetOperation(SPKG_OP_UPDATE, fd);
 		ret = m_parallelOp->ExecuteOperation(NULL);
 	} else {
+#ifdef UPDATER_CORE_2014
+		UPDATER_ERROR(157);
+#else
 		UPDATER_ERROR(153);
+#endif
 	}
 	closeRet = sceIoClose(fd);
 	if (closeRet < 0) {
+#ifdef UPDATER_CORE_2014
+		UPDATER_ERROR_FMT(170, "%x", closeRet);
+#else
 		UPDATER_ERROR_FMT(166, "%x", closeRet);
+#endif
 		if (ret == 0)
 			return SCE_UPDATER_ERROR_SPKG_CLOSE;
 	}
@@ -384,6 +452,75 @@ int SpkgGroupManager::getGroupIndex(int spkgType)
 {
 	int index = -1;
 
+#ifdef UPDATER_CORE_2014
+	switch (spkgType) {
+	case 9:
+		index = 0;
+		break;
+	case 1:
+		index = 1;
+		break;
+	case 21:
+		index = 2;
+		break;
+	case 10:
+		index = 4;
+		break;
+	case 22:
+		index = 5;
+		break;
+	case 23:
+		index = 7;
+		break;
+	case 24:
+		index = 8;
+		break;
+	case 28:
+		index = 9;
+		break;
+	case 14:
+		index = 10;
+		break;
+	case 12:
+		index = 11;
+		break;
+	case 15:
+		index = 12;
+		break;
+	case 16:
+		index = 13;
+		break;
+	case 17:
+		index = 14;
+		break;
+	case 13:
+		index = 15;
+		break;
+	case 18:
+		index = 16;
+		break;
+	case 19:
+		index = 17;
+		break;
+	case 11:
+		index = 18;
+		break;
+	case 20:
+		index = 19;
+		break;
+	case 25:
+		index = 20;
+		break;
+	case 8:
+		index = 21;
+		break;
+	case 4:
+		index = 22;
+		break;
+	default:
+		break;
+	}
+#else
 	switch (spkgType) {
 	case 9:
 		index = 0;
@@ -448,6 +585,7 @@ int SpkgGroupManager::getGroupIndex(int spkgType)
 	default:
 		break;
 	}
+#endif
 	return index;
 }
 
@@ -458,20 +596,50 @@ int SpkgGroupManager::registerSpkg(SpkgEntry *entry, SceUInt64 segmentId)
 
 	index = getGroupIndex((int)entry->type);
 	if (index == -1) {
+#ifdef UPDATER_CORE_2014
+		UPDATER_ERROR_FMT(722, "0x%x", entry->type);
+#else
 		UPDATER_ERROR_FMT(648, "0x%x", entry->type);
+#endif
 		return 0;
 	}
+#ifdef UPDATER_CORE_2014
+	if (index == SPKG_DIFF_GROUP_MANIFEST_INDEX) {
+		if (segmentId == 0x220ULL || segmentId == 0x230ULL)
+			index = SPKG_GROUP_INDEX_OS0_EXT;
+		else if (segmentId == 0x221ULL || segmentId == 0x231ULL)
+			index = SPKG_GROUP_INDEX_VS0_EXT;
+		else if (segmentId == 0x240ULL)
+			index = SPKG_GROUP_INDEX_PD0;
+		else if (entry->hardwareInfo == 1)
+			index = SPKG_GROUP_INDEX_OS0;
+		else
+			index = SPKG_GROUP_INDEX_VS0;
+	} else if (index == SPKG_GROUP_INDEX_OS0) {
+		if ((SceUInt16)entry->platform != 0)
+			index = SPKG_GROUP_INDEX_OS0_EXT;
+	} else if (index == SPKG_GROUP_INDEX_VS0) {
+		if ((SceUInt16)entry->platform != 0)
+			index = SPKG_GROUP_INDEX_VS0_EXT;
+	}
+#else
 	if (index == SPKG_DIFF_GROUP_MANIFEST_INDEX) {
 		if (entry->hardwareInfo == 1)
 			index = SPKG_GROUP_INDEX_OS0;
 		else
 			index = SPKG_GROUP_INDEX_VS0;
 	}
+#endif
 	group = m_groups[index];
 	if (group == NULL) {
 		if (s_isDiffSpkgType[entry->type] != 0) {
 			group = new SpkgGroupDiff();
+#ifdef UPDATER_CORE_2014
+			if (index == SPKG_GROUP_INDEX_OS0 || index == SPKG_GROUP_INDEX_VS0)
+				m_hasDiffGroup = 1;
+#else
 			m_hasDiffGroup = 1;
+#endif
 		} else {
 			group = new SpkgGroupFull();
 		}
@@ -497,6 +665,10 @@ int SpkgGroupManager::parsePup(SceUID pupFd)
 	SceUInt8 *readBuffer;
 	SceUInt64 segmentCount;
 	int i;
+#ifdef UPDATER_CORE_2014
+	UpdateUtility utility;
+	int modelType;
+#endif
 
 	if (m_initialized)
 		return 0;
@@ -504,29 +676,49 @@ int SpkgGroupManager::parsePup(SceUID pupFd)
 	ret = sceSblUsGetSpkgInfo(SCE_SBL_US_SPKG_TYPE_SYSTEM, &systemInfo);
 	if (ret != 0) {
 		UpdaterLogPrintf("ERROR : ");
+#ifdef UPDATER_CORE_2014
+		UpdaterLogPrintf("0x%08x (%d) :\n", UPDATER_FILE_ID, 461);
+#else
 		UpdaterLogPrintf("0x%08x (%d) :\n", UPDATER_FILE_ID, 454);
+#endif
 		return ret;
 	}
 	seekRet = sceIoLseek(pupFd, 0, SCE_SEEK_SET);
 	if (seekRet < 0) {
+#ifdef UPDATER_CORE_2014
+		UPDATER_ERROR_FMT(468, "%lld", seekRet);
+#else
 		UPDATER_ERROR_FMT(461, "%lld", seekRet);
+#endif
 		return SCE_UPDATER_ERROR_SPKG_SEEK;
 	}
 	readRet = sceIoRead(pupFd, &header, sizeof(header));
 	if (readRet < 0) {
+#ifdef UPDATER_CORE_2014
+		UPDATER_ERROR_FMT(476, "%x", readRet);
+#else
 		UPDATER_ERROR_FMT(469, "%x", readRet);
+#endif
 		return SCE_UPDATER_ERROR_SPKG_READ;
 	}
 	segmentCount = header.m_segment_num;
 	segments = static_cast<PupSegment *>(
 		g_updaterMemoryInfo.updaterCoreAlloc((SceSize)(segmentCount * sizeof(PupSegment))));
 	if (segments == NULL) {
+#ifdef UPDATER_CORE_2014
+		UPDATER_ERROR_FMT(493, "%d %lld", (int)sizeof(PupSegment), segmentCount);
+#else
 		UPDATER_ERROR_FMT(486, "%d %lld", (int)sizeof(PupSegment), segmentCount);
+#endif
 		return SCE_UPDATER_ERROR_NO_MEMORY;
 	}
 	readRet = sceIoRead(pupFd, segments, (SceSize)(segmentCount * sizeof(PupSegment)));
 	if (readRet < 0) {
+#ifdef UPDATER_CORE_2014
+		UPDATER_ERROR_FMT(501, "%x", readRet);
+#else
 		UPDATER_ERROR_FMT(494, "%x", readRet);
+#endif
 		g_updaterMemoryInfo.updaterCoreFree(segments);
 		return SCE_UPDATER_ERROR_SPKG_READ;
 	}
@@ -534,15 +726,34 @@ int SpkgGroupManager::parsePup(SceUID pupFd)
 		g_updaterMemoryInfo.updaterCoreMemalign(PUP_PARSE_BUFFER_ALIGN,
 							PUP_PARSE_BUFFER_SIZE));
 	if (readBuffer == NULL) {
+#ifdef UPDATER_CORE_2014
+		UPDATER_ERROR_FMT(512, "%d %d", PUP_PARSE_BUFFER_ALIGN, PUP_PARSE_BUFFER_SIZE);
+#else
 		UPDATER_ERROR_FMT(505, "%d %d", PUP_PARSE_BUFFER_ALIGN, PUP_PARSE_BUFFER_SIZE);
+#endif
 		g_updaterMemoryInfo.updaterCoreFree(segments);
 		return SCE_UPDATER_ERROR_NO_MEMORY;
 	}
+#ifdef UPDATER_CORE_2014
+	ret = utility.GetHardwareModel(&modelType);
+	if (ret != 0) {
+		g_updaterMemoryInfo.updaterCoreFree(segments);
+		return ret;
+	}
+#endif
 	for (i = 0; (SceInt64)i < (SceInt64)segmentCount; ++i) {
 		SceUInt64 segId = segments[i].segment_id;
 
+#ifdef UPDATER_CORE_2014
+		if ((segId & PUP_DIFF_MANIFEST_SEG_MASK) == PUP_DIFF_MANIFEST_SEG_BASE ||
+		    (segId & PUP_SPKG_SEG_MASK) == PUP_SPKG_SEG_BASE ||
+		    segId == 0x220ULL || segId == 0x221ULL ||
+		    segId == 0x230ULL || segId == 0x231ULL ||
+		    segId == 0x240ULL || segId == 0x250ULL || segId == 0x260ULL) {
+#else
 		if ((segId & PUP_DIFF_MANIFEST_SEG_MASK) == PUP_DIFF_MANIFEST_SEG_BASE ||
 		    (segId & PUP_SPKG_SEG_MASK) == PUP_SPKG_SEG_BASE) {
+#endif
 			CertifiedFileHeader certHeader;
 			SpkgPackageInfo pkgInfo;
 			SpkgChunkInfo chunkInfo;
@@ -551,19 +762,50 @@ int SpkgGroupManager::parsePup(SceUID pupFd)
 			SceInt32 headerAlignedPos;
 			SceUInt8 *infoPtr;
 
+#ifdef UPDATER_CORE_2014
+			switch (segId) {
+			case 0x220ULL:
+			case 0x230ULL:
+			case 0x250ULL:
+			case 0x260ULL:
+				UpdaterLogPrintf("ERROR : ");
+				UpdaterLogPrintf("segment ID (%llx) is not support\n", segId);
+				g_updaterMemoryInfo.updaterCoreFree(segments);
+				return SCE_UPDATER_ERROR_NOT_SUPPORTED;
+			case 0x221ULL:
+				if (modelType != 1)
+					continue;
+				break;
+			case 0x231ULL:
+				if (modelType != 2)
+					continue;
+				break;
+			default:
+				break;
+			}
+#endif
 			alignedPos = (SceInt32)((segments[i].offset >> PUP_SECTOR_SHIFT)
 						<< PUP_SECTOR_SHIFT);
 			seekRet = sceIoLseek(pupFd, (SceOff)alignedPos, SCE_SEEK_SET);
 			if (seekRet < 0) {
+#ifdef UPDATER_CORE_2014
+				UPDATER_ERROR_FMT(583, "%lld : %lld",
+						  segments[i].offset, seekRet);
+#else
 				UPDATER_ERROR_FMT(531, "%lld : %lld",
 						  segments[i].offset, seekRet);
+#endif
 				g_updaterMemoryInfo.updaterCoreFree(readBuffer);
 				g_updaterMemoryInfo.updaterCoreFree(segments);
 				return SCE_UPDATER_ERROR_SPKG_SEEK;
 			}
 			readRet = sceIoRead(pupFd, readBuffer, PUP_PARSE_BUFFER_SIZE);
 			if (readRet < 0) {
+#ifdef UPDATER_CORE_2014
+				UPDATER_ERROR_FMT(592, "%x", readRet);
+#else
 				UPDATER_ERROR_FMT(540, "%x", readRet);
+#endif
 				g_updaterMemoryInfo.updaterCoreFree(readBuffer);
 				g_updaterMemoryInfo.updaterCoreFree(segments);
 				return SCE_UPDATER_ERROR_SPKG_READ;
@@ -575,14 +817,22 @@ int SpkgGroupManager::parsePup(SceUID pupFd)
 						       >> PUP_SECTOR_SHIFT) << PUP_SECTOR_SHIFT);
 			seekRet = sceIoLseek(pupFd, (SceOff)headerAlignedPos, SCE_SEEK_SET);
 			if (seekRet < 0) {
+#ifdef UPDATER_CORE_2014
+				UPDATER_ERROR_FMT(606, "%d : %lld", headerAlignedPos, seekRet);
+#else
 				UPDATER_ERROR_FMT(554, "%d : %lld", headerAlignedPos, seekRet);
+#endif
 				g_updaterMemoryInfo.updaterCoreFree(readBuffer);
 				g_updaterMemoryInfo.updaterCoreFree(segments);
 				return SCE_UPDATER_ERROR_SPKG_SEEK;
 			}
 			readRet = sceIoRead(pupFd, readBuffer, PUP_PARSE_BUFFER_SIZE);
 			if (readRet < 0) {
+#ifdef UPDATER_CORE_2014
+				UPDATER_ERROR_FMT(615, "%x", readRet);
+#else
 				UPDATER_ERROR_FMT(563, "%x", readRet);
+#endif
 				g_updaterMemoryInfo.updaterCoreFree(readBuffer);
 				g_updaterMemoryInfo.updaterCoreFree(segments);
 				return SCE_UPDATER_ERROR_SPKG_READ;
@@ -592,6 +842,12 @@ int SpkgGroupManager::parsePup(SceUID pupFd)
 				   (SceUInt32)headerAlignedPos);
 			sceClibMemcpy(&pkgInfo, infoPtr, sizeof(pkgInfo));
 			sceClibMemcpy(&chunkInfo, infoPtr + sizeof(pkgInfo), sizeof(chunkInfo));
+#ifdef UPDATER_CORE_2014
+			if ((pkgInfo.type == 21 || pkgInfo.type == 22) &&
+			    (((SceUInt16)pkgInfo.platform == 1 && modelType != 1) ||
+			     ((SceUInt16)pkgInfo.platform == 2 && modelType != 2)))
+				continue;
+#endif
 			entry.type = pkgInfo.type;
 			entry.version = (SceUInt32)(pkgInfo.updateVersion & 0xffffffffULL);
 			entry.buildNo = (SceUInt32)(pkgInfo.updateVersion >> 32);
@@ -601,11 +857,18 @@ int SpkgGroupManager::parsePup(SceUID pupFd)
 			entry.chunkIndex = chunkInfo.chunkIndex;
 			entry.decryptedSize = pkgInfo.decryptedSize;
 			entry.finalSize = pkgInfo.finalSize;
+#ifdef UPDATER_CORE_2014
+			entry.platform = pkgInfo.platform;
+#endif
 			if (pkgInfo.decryptedSize != pkgInfo.finalSize &&
 			    systemInfo.version != 0 &&
 			    systemInfo.version < MIN_COMPRESSED_SPKG_VERSION) {
 				UpdaterLogPrintf("ERROR : ");
+#ifdef UPDATER_CORE_2014
+				UpdaterLogPrintf("0x%08x (%d) :\n", UPDATER_FILE_ID, 675);
+#else
 				UpdaterLogPrintf("0x%08x (%d) :\n", UPDATER_FILE_ID, 603);
+#endif
 				g_updaterMemoryInfo.updaterCoreFree(segments);
 				return SCE_UPDATER_ERROR_UNSUPPORTED_SYSTEM;
 			}
@@ -637,7 +900,11 @@ int SpkgGroupManager::GetEstimateProcessTime(const char *fileName,
 	}
 	fd = sceIoOpen(fileName, SCE_O_RDONLY, 0);
 	if (fd < 0) {
+#ifdef UPDATER_CORE_2014
+		UPDATER_ERROR_FMT(938, "%s %o %x", fileName, 0, fd);
+#else
 		UPDATER_ERROR_FMT(813, "%s %o %x", fileName, 0, fd);
+#endif
 		return SCE_UPDATER_ERROR_SPKG_OPEN;
 	}
 	ret = parsePup(fd);
@@ -647,7 +914,11 @@ int SpkgGroupManager::GetEstimateProcessTime(const char *fileName,
 	}
 	closeRet = sceIoClose(fd);
 	if (closeRet < 0) {
+#ifdef UPDATER_CORE_2014
+		UPDATER_ERROR_FMT(955, "%x", closeRet);
+#else
 		UPDATER_ERROR_FMT(830, "%x", closeRet);
+#endif
 		return SCE_UPDATER_ERROR_SPKG_CLOSE;
 	}
 	estimateTime->inspectMs = m_estimatedInspectMs;
@@ -667,7 +938,11 @@ int SpkgGroupManager::InspectAllSpackage(const char *fileName)
 	s_updatePhaseCount = 0;
 	fd = sceIoOpen(fileName, SCE_O_RDONLY, 0);
 	if (fd < 0) {
+#ifdef UPDATER_CORE_2014
+		UPDATER_ERROR_FMT(343, "%s %o : %x", fileName, 0, fd);
+#else
 		UPDATER_ERROR_FMT(339, "%s %o : %x", fileName, 0, fd);
+#endif
 		return SCE_UPDATER_ERROR_SPKG_OPEN;
 	}
 	ret = parsePup(fd);
@@ -702,7 +977,11 @@ int SpkgGroupManager::InspectAllSpackage(const char *fileName)
 	}
 	closeRet = sceIoClose(fd);
 	if (closeRet < 0) {
+#ifdef UPDATER_CORE_2014
+		UPDATER_ERROR_FMT(399, "%x", closeRet);
+#else
 		UPDATER_ERROR_FMT(395, "%x", closeRet);
+#endif
 		if (ret == 0)
 			return SCE_UPDATER_ERROR_SPKG_CLOSE;
 	} else if (ret == 0) {

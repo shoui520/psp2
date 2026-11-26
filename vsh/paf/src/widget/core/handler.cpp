@@ -187,8 +187,10 @@ int32_t Handler::HandlerProc(Event *e)
 			return HandlePointFwEvent(e);
 		return HandlePointEvent(e);
 	case 0x10:
+#ifndef PAF_BUILD_2014
 		if (e->m_detail & Event::STATE_CONSUME)
 			return HandleKeyEvent(e);
+#endif
 		return HandleKeycodeEvent(e);
 	default:
 		return -1;
@@ -277,6 +279,19 @@ int32_t Handler::HandleKeycodeEvent(Event *e)
 {
 	uint32_t type = e->m_type;
 
+#ifdef PAF_BUILD_2014
+	if ((uint16_t)type > 0x11) {
+		if ((uint16_t)type <= 0x12) {
+			DoEvent(0x10002, e);
+			type = e->m_type;
+		}
+	} else if ((uint16_t)type > 0x10) {
+		DoEvent(0x10001, e);
+		type = e->m_type;
+	}
+	if (!(type & Event::STATE_CONSUME) && (uint16_t)type == 0x11)
+		HandleFocusSwitchEvent(e);
+#else
 	if ((uint16_t)type > 0x11) {
 		if ((uint16_t)type <= 0x12) {
 			DoEvent(0x10002, e);
@@ -291,6 +306,7 @@ int32_t Handler::HandleKeycodeEvent(Event *e)
 	}
 	if (!(type & Event::STATE_CONSUME) && ((uint16_t)type == 0x11 || (uint16_t)type == 0x13))
 		HandleFocusSwitchEvent(e);
+#endif
 	return 0;
 }
 
@@ -313,11 +329,13 @@ int32_t Handler::HandleInputEvent(Event *e)
 	return 0;
 }
 
+#ifndef PAF_BUILD_2014
 int32_t Handler::HandleKeyEvent(Event *e)
 {
 	HandleKeycodeEvent(e);
 	return 0;
 }
+#endif
 
 int32_t Handler::HandlePointEvent(Event *e)
 {
@@ -331,6 +349,91 @@ int32_t Handler::HandleTouchEvent(Event *e)
 
 int32_t Handler::HandleGestureEvent(Event *e)
 {
+#ifdef PAF_BUILD_2014
+	int32_t kind = (e->m_detail >> 8) & 0xFF;
+
+	switch (kind) {
+	case 0:
+		DoEvent(0x20004, e);
+		break;
+	case 2:
+		DoEvent(0x20005, e);
+		break;
+	case 3:
+		DoEvent(0x20006, e);
+		break;
+	case 4:
+		DoEvent(0x20001, e);
+		break;
+	case 5:
+		DoEvent(0x20002, e);
+		break;
+	case 6:
+		DoEvent(0x20003, e);
+		break;
+	case 7:
+		DoEvent(0x20007, e);
+		break;
+	case 8:
+		DoEvent(0x20008, e);
+		break;
+	case 9:
+		DoEvent(0x20009, e);
+		break;
+	case 10:
+		DoEvent(0x2000A, e);
+		break;
+	case 11:
+		DoEvent(0x2000B, e);
+		break;
+	case 12:
+		DoEvent(0x2000C, e);
+		break;
+	case 13:
+		DoEvent(0x2000D, e);
+		break;
+	case 14:
+		DoEvent(0x2000E, e);
+		break;
+	case 15:
+		DoEvent(0x2000F, e);
+		break;
+	case 16:
+		DoEvent(0x20013, e);
+		break;
+	case 17:
+		DoEvent(0x20010, e);
+		break;
+	case 18:
+		DoEvent(0x20011, e);
+		break;
+	case 19:
+		DoEvent(0x20014, e);
+		break;
+	case 20:
+		DoEvent(0x20015, e);
+		break;
+	case 21:
+		DoEvent(0x20016, e);
+		break;
+	case 22:
+		DoEvent(0x2001A, e);
+		break;
+	case 23:
+		DoEvent(0x20017, e);
+		break;
+	case 24:
+		DoEvent(0x20018, e);
+		break;
+	case 25:
+		DoEvent(0x2001D, e);
+		break;
+	default:
+		if (kind >= 26)
+			DoEvent(kind + 0x200E6, e);
+		break;
+	}
+#else
 	int32_t kind = (e->m_detail >> 8) & 0x7F;
 
 	switch (kind) {
@@ -414,6 +517,7 @@ int32_t Handler::HandleGestureEvent(Event *e)
 			DoEvent(kind + 0x200E5, e);
 		break;
 	}
+#endif
 	return 0;
 }
 
@@ -421,6 +525,19 @@ int32_t Handler::HandleFocusEvent(Event *e)
 {
 	uint32_t type = (uint16_t)e->m_type;
 
+#ifdef PAF_BUILD_2014
+	if (type > 0x401) {
+		if (type <= 0x402) {
+			DoEvent(0x40002, e);
+			return 0;
+		}
+		return -1;
+	}
+	if (type <= 0x400)
+		return -1;
+	DoEvent(0x40001, e);
+	return 0;
+#else
 	if (type <= 0x402) {
 		if (type > 0x400) {
 			if (type <= 0x401)
@@ -439,12 +556,27 @@ int32_t Handler::HandleFocusEvent(Event *e)
 		DoEvent(0x40004, e);
 	}
 	return 0;
+#endif
 }
 
 int32_t Handler::HandleFocusSwitchEvent(Event *e)
 {
 	uint32_t kind = (uint8_t)e->m_detail;
 
+#ifdef PAF_BUILD_2014
+	if (kind > 2) {
+		if (kind <= 3)
+			DoEvent(0x40005, e);
+		else if (kind <= 4)
+			DoEvent(0x40006, e);
+	} else if (kind != 0) {
+		if (kind > 1)
+			DoEvent(0x40004, e);
+		else
+			DoEvent(0x40003, e);
+	}
+	e->m_type = (e->m_type & 0xF0FFFFFF) | Event::STATE_CONSUME;
+#else
 	if (kind > 2) {
 		if (kind <= 3)
 			DoEvent(0x40007, e);
@@ -456,6 +588,7 @@ int32_t Handler::HandleFocusSwitchEvent(Event *e)
 		else
 			DoEvent(0x40005, e);
 	}
+#endif
 	return 0;
 }
 
@@ -463,6 +596,19 @@ int32_t Handler::HandleGrabEvent(Event *e)
 {
 	uint32_t type = (uint16_t)e->m_type;
 
+#ifdef PAF_BUILD_2014
+	if (type > 0x801) {
+		if (type <= 0x802) {
+			DoEvent(0x40008, e);
+			return 0;
+		}
+		return -1;
+	}
+	if (type <= 0x800)
+		return -1;
+	DoEvent(0x40007, e);
+	return 0;
+#else
 	if (type > 0x801) {
 		if (type <= 0x802) {
 			DoEvent(0x4000B, e);
@@ -474,10 +620,44 @@ int32_t Handler::HandleGrabEvent(Event *e)
 		return -1;
 	DoEvent(0x4000A, e);
 	return 0;
+#endif
 }
 
 int32_t Handler::HandleStateEvent(Event *e)
 {
+#ifdef PAF_BUILD_2014
+	switch ((uint16_t)e->m_type) {
+	case 0x1001:
+		DoEvent(0x80001, e);
+		break;
+	case 0x1002:
+		DoEvent(0x80002, e);
+		break;
+	case 0x1003:
+		DoEvent(0x80004, e);
+		break;
+	case 0x1004:
+		DoEvent(0x80003, e);
+		break;
+	case 0x1005:
+		DoEvent(0x80005, e);
+		break;
+	case 0x1006:
+		DoEvent(0x80006, e);
+		break;
+	case 0x1007:
+		DoEvent(0x80007, e);
+		break;
+	case 0x1008:
+		DoEvent(0x2001B, e);
+		break;
+	case 0x1009:
+		DoEvent(0x2001C, e);
+		break;
+	default:
+		return 0;
+	}
+#else
 	switch ((uint16_t)e->m_type) {
 	case 0x1001:
 		DoEvent(0x100001, e);
@@ -512,18 +692,27 @@ int32_t Handler::HandleStateEvent(Event *e)
 	default:
 		return 0;
 	}
+#endif
 	return 0;
 }
 
 int32_t Handler::HandleCommandEvent(Event *e)
 {
+#ifdef PAF_BUILD_2014
+	DoEvent(0x80008, e);
+#else
 	DoEvent(0x100009, e);
+#endif
 	return 0;
 }
 
 int32_t Handler::HandleSystemEvent(Event *e)
 {
+#ifdef PAF_BUILD_2014
+	DoEvent(0x100000, e);
+#else
 	DoEvent(0x800000, e);
+#endif
 	return 0;
 }
 

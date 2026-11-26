@@ -130,7 +130,9 @@ ButtonBase::ButtonBase(Widget *parent, CreateParam *param)
 	m_hit_detect_b_mode = 0;
 	SetGestureMask(1, false);
 	m_hit_check = 0;
+#ifndef PAF_BUILD_2014
 	m_enable_tap = true;
+#endif
 	m_sound_mask = 0x3E;
 	m_sound_list.clear();
 }
@@ -274,7 +276,9 @@ int32_t ButtonBase::HandleTouchEvent(Event *e)
 			}
 			break;
 		case 0x42:
+#ifndef PAF_BUILD_2014
 			EndLongPressTextAutoScroll(e);
+#endif
 			ScePafWidget_5ABB3393(this, port, id, false);
 			if (!m_keep_press)
 				ChangeButtonState(ST_BTN_NORMAL);
@@ -285,7 +289,9 @@ int32_t ButtonBase::HandleTouchEvent(Event *e)
 			}
 			break;
 		case 0x47:
+#ifndef PAF_BUILD_2014
 			EndLongPressTextAutoScroll(e);
+#endif
 			ScePafWidget_5ABB3393(this, port, id, false);
 			ChangeButtonState(ST_BTN_NORMAL);
 			e->Consume();
@@ -295,7 +301,9 @@ int32_t ButtonBase::HandleTouchEvent(Event *e)
 			}
 			break;
 		case 0x43:
+#ifndef PAF_BUILD_2014
 			UpdateLongPressTextAutoScroll(e);
+#endif
 			break;
 		}
 	}
@@ -323,12 +331,16 @@ int32_t ButtonBase::HandleKeycodeEvent(Event *e)
 			}
 		} else if (type > 0x10) {
 			if (type <= 0x11) {
+#ifdef PAF_BUILD_2014
+				if (IsInputTarget()) {
+#else
 				uint32_t mask;
 
 				if (IsInputTarget() ||
 				    (m_keycode_capture && (mask = KeycodeToMask(detail & 0xFF),
 						    detail = e->m_detail, m_bound_keycode) &&
 				     (mask & m_keycode) != 0)) {
+#endif
 					CapturePad((detail >> 20) & 0xF, detail & 0xFF, true, true);
 					ScePafWidget_2B1A1493(this, SOUND_PRESS);
 					ChangeButtonState(ST_BTN_PRESS);
@@ -428,7 +440,11 @@ int32_t ButtonBase::HandleGestureEvent(Event *e)
 
 	switch ((detail >> 8) & 0x7F) {
 	case 0:
+#ifdef PAF_BUILD_2014
+		DoButtonEvent(CB_BTN_DECIDE);
+#else
 		DoButtonEvent(CB_BTN_DECIDE, e);
+#endif
 		ScePafWidget_2B1A1493(this, SOUND_DECIDE);
 		ChangeButtonState(ST_BTN_NORMAL);
 		SetGlowAnim(GLOW_DECIDE, false);
@@ -453,14 +469,22 @@ int32_t ButtonBase::HandleGestureEvent(Event *e)
 		}
 		break;
 	case 2:
+#ifdef PAF_BUILD_2014
+		DoButtonEvent(CB_BTN_MULTI_TAP);
+#else
 		DoButtonEvent(CB_BTN_MULTI_TAP, e);
+#endif
 		ScePafWidget_2B1A1493(this, SOUND_MULTI_TAP);
 		ChangeButtonState(ST_BTN_NORMAL);
 		SetGlowAnim(GLOW_DECIDE, false);
 		break;
 	case 4:
+#ifdef PAF_BUILD_2014
+		DoButtonEvent(CB_BTN_LONG_PRESS);
+#else
 		BeginLongPressTextAutoScroll(e);
 		DoButtonEvent(CB_BTN_LONG_PRESS, e);
+#endif
 		ScePafWidget_2B1A1493(this, SOUND_LONG_PRESS);
 		if (m_touch_gesture_mask & 8) {
 			ChangeButtonState(ST_BTN_PRESS_REPEAT);
@@ -470,13 +494,21 @@ int32_t ButtonBase::HandleGestureEvent(Event *e)
 		}
 		break;
 	case 5:
+#ifdef PAF_BUILD_2014
+		DoButtonEvent(CB_BTN_PRESS_REPEAT);
+#else
 		DoButtonEvent(CB_BTN_PRESS_REPEAT, e);
+#endif
 		ScePafWidget_2B1A1493(this, SOUND_LONG_PRESS);
 		m_repeat_count = 5;
 		SetGlowAnim(GLOW_REPEAT, false);
 		break;
 	case 6:
+#ifdef PAF_BUILD_2014
+		DoButtonEvent(CB_BTN_PRESS_REPEAT_END);
+#else
 		DoButtonEvent(CB_BTN_PRESS_REPEAT_END, e);
+#endif
 		ChangeButtonState(ST_BTN_NORMAL);
 		break;
 	default:
@@ -544,6 +576,7 @@ void ButtonBase::OnTouchCaptureChanged(uint32_t port, uint32_t id, int32_t arg)
 	}
 }
 
+#ifndef PAF_BUILD_2014
 /* the pad's gesture listener of the port, the button its user data (inline in Sony's code,
    name ours) */
 static inline common::SharedPtr<inputdevice::GestureListener> GetPadGesture(Environment *env,
@@ -582,6 +615,7 @@ void ButtonBase::OnPadCaptureChanged(bool captured, int32_t group, uint32_t port
 	if (!captured && m_btn_state != ST_BTN_NORMAL)
 		ChangeButtonState(ST_BTN_NORMAL);
 }
+#endif
 
 /* the color, the RGB of its bytes times the mix of white and the disable color at the fade (0 to
    200), and the alpha times the mix's (inline in Sony's code, name ours) */
@@ -715,10 +749,12 @@ void ButtonBase::SetButtonMode(uint32_t mode)
 {
 	if (m_btn_mode != mode) {
 		m_btn_mode = mode;
+#ifndef PAF_BUILD_2014
 		if (mode == 2)
 			m_enable_tap = false;
 		else
 			m_enable_tap = true;
+#endif
 	}
 }
 
@@ -765,6 +801,7 @@ void ButtonBase::EnableRepeat(uint32_t begin_msec, uint32_t repeat_msec)
 	SetGestureMask(m_touch_gesture_mask | 8, false);
 }
 
+#ifndef PAF_BUILD_2014
 /* the long press scrolls the text from where it is held, stopping another button's scroll */
 int32_t ButtonBase::BeginLongPressTextAutoScroll(Event *e)
 {
@@ -800,6 +837,7 @@ int32_t ButtonBase::EndLongPressTextAutoScroll(Event *e)
 	m_text_auto_scroll_locked = false;
 	return 0;
 }
+#endif
 
 graph::DrawObj *ButtonBase::CreateDrawObj(int32_t obj)
 {
@@ -850,7 +888,11 @@ uint32_t ButtonBase::ChangeButtonState(ButtonState state)
 	case ST_BTN_NORMAL:
 		m_btn_state = state;
 		SetGlowAnim(GLOW_OFF, false);
+#ifdef PAF_BUILD_2014
+		DoButtonEvent(CB_BTN_NORMAL);
+#else
 		DoButtonEvent(CB_BTN_NORMAL, NULL);
+#endif
 		break;
 	case ST_BTN_DISABLE:
 		m_btn_state = state;
@@ -858,7 +900,11 @@ uint32_t ButtonBase::ChangeButtonState(ButtonState state)
 		ScePafWidget_931AD41E(this, false);
 		ReleasePadCaptureDir(255, false);
 		ReleasePadCaptureButton(255, false);
+#ifdef PAF_BUILD_2014
+		DoButtonEvent(CB_BTN_DISABLE);
+#else
 		DoButtonEvent(CB_BTN_DISABLE, NULL);
+#endif
 		m_disable_fade = 0;
 		break;
 	case ST_BTN_PRESS:
@@ -866,14 +912,22 @@ uint32_t ButtonBase::ChangeButtonState(ButtonState state)
 			m_btn_state = state;
 			SetGlowAnim(GLOW_PRESS, false);
 		}
+#ifdef PAF_BUILD_2014
+		DoButtonEvent(CB_BTN_PRESS);
+#else
 		DoButtonEvent(CB_BTN_PRESS, NULL);
+#endif
 		break;
 	case ST_BTN_PRESS_OUT:
 		if (m_state == 0) {
 			m_btn_state = state;
 			SetGlowAnim(GLOW_PRESS_OUT, false);
 		}
+#ifdef PAF_BUILD_2014
+		DoButtonEvent(CB_BTN_PRESS_OUT);
+#else
 		DoButtonEvent(CB_BTN_PRESS_OUT, NULL);
+#endif
 		break;
 	case ST_BTN_PRESS_REPEAT:
 		if (m_state == 0) {
@@ -887,6 +941,7 @@ uint32_t ButtonBase::ChangeButtonState(ButtonState state)
 	return m_btn_state;
 }
 
+#ifndef PAF_BUILD_2014
 /* where its scene orders first: the scene's priority over the inverted priority of the scene as
    a widget (inline in Sony's code, name ours) */
 static inline int32_t GetSceneOrder(Widget *widget)
@@ -904,11 +959,13 @@ static inline uint64_t GetInvertedDepth(Widget *widget)
 		return ~widget->GetLayerDepth();
 	return ~(uint64_t)0;
 }
+#endif
 
 /* where it takes the keys bound to it, it is disabled below the top modal widget (modal with
    option 1); Sony's code compares the modal widget's depth with itself */
 void ButtonBase::Update()
 {
+#ifndef PAF_BUILD_2014
 	if (m_bound_keycode && (m_keycode & 0x20) && m_env != NULL) {
 		Widget *modal = m_env->m_top_modal_widget;
 
@@ -931,6 +988,7 @@ void ButtonBase::Update()
 			UpdateButtonState(IsButtonEnabled());
 		}
 	}
+#endif
 	Widget::Update();
 }
 
@@ -1024,8 +1082,10 @@ int32_t ButtonBaseStyleParam::SetEach(Widget *widget)
 		((ButtonBase *)widget)->m_glow_max = glow_max;
 		if (!m_key_focus)
 			widget->EnableFocusEvent(false);
+#ifndef PAF_BUILD_2014
 		if (!m_focus_in_group)
 			widget->m_focus_in_group = false;
+#endif
 		if (m_direct_key != 0) {
 			uint32_t keycode = 0;
 
@@ -1102,10 +1162,12 @@ static VersatileParam *NewButtonBaseLayoutParam()
 	return new WidgetLayoutParam;
 }
 
+#ifndef PAF_BUILD_2014
 static VersatileParam *NewButtonBaseFocusParam()
 {
 	return new WidgetFocusParam;
 }
+#endif
 
 static VersatileParam *NewButtonBaseStyleParam()
 {
@@ -1127,7 +1189,9 @@ FactoryFuncTable g_factoryButtonBase = {
 	NewButtonBase,
 	NewButtonBaseParam,
 	NewButtonBaseLayoutParam,
+#ifndef PAF_BUILD_2014
 	NewButtonBaseFocusParam,
+#endif
 	NewButtonBaseStyleParam,
 	NewButtonBaseHandlerParam,
 	NewButtonBaseSoundParam,

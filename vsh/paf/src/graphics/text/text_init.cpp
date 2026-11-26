@@ -37,8 +37,10 @@ static FontRasterizer *s_emoji_rasterizers[TEXT_THREAD_NUM] = { NULL };
 static TextThread *s_threads[TEXT_THREAD_NUM] = { NULL };
 static void *s_mem_emoji_font_addr = NULL;
 static uint32_t s_mem_emoji_font_size = 0;
+#ifndef PAF_BUILD_2014
 static void *s_cache_memory = NULL;
 static GraphMem::DeviceType s_device_type = GraphMem::DeviceType_SystemMemory;
+#endif
 
 static thread::RMutex s_graphics_mutex("ScePafTextGraphicsMutex", 0);
 static thread::RMutex s_layout_mutex("ScePafTextLayoutMutex", 0);
@@ -46,6 +48,27 @@ static string s_emoji_font_path("");
 
 TextInitParam::TextInitParam()
 {
+#ifdef PAF_BUILD_2014
+	text_surface_pool_addr = NULL;
+	text_surface_pool_size = 0;
+	pvf_heap_size = 0;
+	locale = -1;
+	mem_pvf_japanese_addr = NULL;
+	mem_pvf_japanese_size = 0;
+	mem_pvf_latin_addr = NULL;
+	mem_pvf_latin_size = 0;
+	mem_pvf_hangul_addr = NULL;
+	mem_pvf_hangul_size = 0;
+	mem_pvf_chinese_addr = NULL;
+	mem_pvf_chinese_size = 0;
+	path_pvf_japanese = NULL;
+	path_pvf_latin = NULL;
+	path_pvf_hangul = NULL;
+	path_pvf_chinese = NULL;
+	mem_emoji_font_addr = NULL;
+	path_emoji_font = NULL;
+	mem_emoji_font_size = 0;
+#else
 	text_surface_pool_size = 0;
 	pvf_heap_size = 0;
 	pvf_option = 0;
@@ -68,6 +91,7 @@ TextInitParam::TextInitParam()
 	mem_emoji_font_addr = NULL;
 	path_emoji_font = NULL;
 	mem_emoji_font_size = 0;
+#endif
 }
 
 void StopTextThreads()
@@ -110,10 +134,12 @@ void TermText()
 		delete s_cache;
 		s_cache = NULL;
 	}
+#ifndef PAF_BUILD_2014
 	if (s_cache_memory != NULL) {
 		GraphMem::FreeOSMemory(s_device_type, s_cache_memory);
 		s_cache_memory = NULL;
 	}
+#endif
 	if (s_queue != NULL) {
 		delete s_queue;
 		s_queue = NULL;
@@ -122,7 +148,9 @@ void TermText()
 	s_mem_emoji_font_addr = NULL;
 	s_mem_emoji_font_size = 0;
 	s_emoji_font_path = "";
+#ifndef PAF_BUILD_2014
 	s_device_type = GraphMem::DeviceType_SystemMemory;
+#endif
 }
 
 int32_t StartTextThreads()
@@ -135,9 +163,16 @@ int32_t StartTextThreads()
 			char name[32];
 
 			sce_paf_snprintf(name, sizeof(name), "ScePafTextThread%d", i);
+#ifdef PAF_BUILD_2014
+			s_threads[i] = new TextThread(thread::GetPriority()->low,
+						      TEXT_THREAD_STACK_SIZE, name, NULL, s_queue,
+						      s_rasterizers[i], s_emoji_rasterizers[i],
+						      s_cache);
+#else
 			s_threads[i] = new TextThread(TEXT_THREAD_PRIORITY, TEXT_THREAD_STACK_SIZE, name,
 						      NULL, s_queue, s_rasterizers[i],
 						      s_emoji_rasterizers[i], s_cache);
+#endif
 			if (s_threads[i] != NULL)
 				ret = s_threads[i]->Start();
 		}
@@ -180,16 +215,20 @@ int32_t InitText(const TextInitParam &param)
 		s_emoji_font_path = path;
 	}
 
+#ifndef PAF_BUILD_2014
 	bool shell = false;
 
 	if (Framework::Instance() != NULL)
 		shell = Framework::Instance()->GetMode() == Framework::Mode_Shell;
 	s_device_type = (GraphMem::DeviceType)shell;
+#endif
 
 	FontRasterizerPvf::InitParam pvf_param;
 
 	pvf_param.heap_size = param.pvf_heap_size;
+#ifndef PAF_BUILD_2014
 	pvf_param.option = param.pvf_option;
+#endif
 	pvf_param.locale = param.locale;
 	pvf_param.font.mem_japanese_addr = param.mem_pvf_japanese_addr;
 	pvf_param.font.mem_japanese_size = param.mem_pvf_japanese_size;
@@ -199,17 +238,35 @@ int32_t InitText(const TextInitParam &param)
 	pvf_param.font.mem_hangul_size = param.mem_pvf_hangul_size;
 	pvf_param.font.mem_chinese_addr = param.mem_pvf_chinese_addr;
 	pvf_param.font.mem_chinese_size = param.mem_pvf_chinese_size;
+#ifndef PAF_BUILD_2014
 	pvf_param.font.mem_arib_addr = param.mem_pvf_arib_addr;
 	pvf_param.font.mem_arib_size = param.mem_pvf_arib_size;
+#endif
 	pvf_param.font.path_japanese = param.path_pvf_japanese;
 	pvf_param.font.path_latin = param.path_pvf_latin;
 	pvf_param.font.path_hangul = param.path_pvf_hangul;
 	pvf_param.font.path_chinese = param.path_pvf_chinese;
+#ifndef PAF_BUILD_2014
 	pvf_param.font.path_arib = param.path_pvf_arib;
+#endif
 	FontRasterizerPvf::Init(pvf_param);
 
 	s_queue = new TextQueue();
 	if (s_queue != NULL) {
+#ifdef PAF_BUILD_2014
+		s_cache = new TextSurfaceCache(param.text_surface_pool_addr,
+					       param.text_surface_pool_size,
+					       "ScePafTextSurfaceCache");
+		if (s_cache != NULL) {
+			for (int32_t i = 0; i < TEXT_THREAD_NUM; i++) {
+				s_rasterizers[i] = CreateFontRasterizer();
+				s_emoji_rasterizers[i] = CreateEmojiFontRasterizer();
+			}
+			ret = StartTextThreads();
+			if (ret >= 0)
+				return ret;
+		}
+#else
 		uint32_t size = param.text_surface_pool_size;
 
 		if (size == 0)
@@ -228,6 +285,7 @@ int32_t InitText(const TextInitParam &param)
 					return ret;
 			}
 		}
+#endif
 	}
 	TermText();
 	return ret;

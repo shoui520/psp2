@@ -91,8 +91,13 @@ void GetScreenResolution(uint32_t &width, uint32_t &height);
 void SetScreenViewport(int32_t x, int32_t y, uint32_t width, uint32_t height);
 void GetScreenViewport(int32_t &x, int32_t &y, uint32_t &width, uint32_t &height);
 void GetEdgeCorrection(uint32_t port, float *correction);
+#ifdef PAF_BUILD_2014
+int32_t SetRegion(uint32_t port, uint32_t region_id, const math::rect &rect);
+int32_t ActivateRegion(uint32_t port, uint32_t region_id, bool activate);
+#else
 int32_t SetRegion(uint32_t port, uint32_t region_id, const math::rect &rect, bool activate,
 		  bool hide_upper_layer);
+#endif
 int32_t ActivateDefaultRegion(uint32_t port, bool activate);
 int32_t ActivateOwnershipRegion(uint32_t port, bool activate);
 int32_t GetPointFromTopleft(uint32_t port, uint32_t id, float &x, float &y);

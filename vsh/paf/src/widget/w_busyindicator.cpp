@@ -339,7 +339,9 @@ void BusyIndicator::Update()
 
 			if (!fading && m_anim_state == ANIM_STOPPING) {
 				m_transition_complete = false;
+#ifndef PAF_BUILD_2014
 				m_transition = 0xff;
+#endif
 				DoTransitionReverse_core(0.0f, true);
 				ScePafWidget_4588699E(this, NULL, 2, 0.0f, NULL);
 				m_anim_state = ANIM_STOPPED;
@@ -368,7 +370,9 @@ void BusyIndicator::Start()
 {
 	if (m_anim_state == ANIM_STOPPED) {
 		if (!m_transition_complete) {
+#ifndef PAF_BUILD_2014
 			m_transition = 0xff;
+#endif
 			m_transition_complete = true;
 			DoTransition_core(0.0f, true);
 		}
@@ -513,10 +517,12 @@ static VersatileParam *NewBusyIndicatorLayoutParam()
 	return new WidgetLayoutParam;
 }
 
+#ifndef PAF_BUILD_2014
 static VersatileParam *NewBusyIndicatorFocusParam()
 {
 	return new WidgetFocusParam;
 }
+#endif
 
 static VersatileParam *NewBusyIndicatorStyleParam()
 {
@@ -538,7 +544,9 @@ FactoryFuncTable g_factoryBusyIndicator = {
 	NewBusyIndicator,
 	NewBusyIndicatorParam,
 	NewBusyIndicatorLayoutParam,
+#ifndef PAF_BUILD_2014
 	NewBusyIndicatorFocusParam,
+#endif
 	NewBusyIndicatorStyleParam,
 	NewBusyIndicatorHandlerParam,
 	NewBusyIndicatorSoundParam,

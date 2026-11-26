@@ -57,6 +57,7 @@ void AppIconBase::SetLabelString(const wstring &str)
 	float width = 160.0f;
 	float height = 52.0f;
 
+#ifndef PAF_BUILD_2014
 	if (ScePafMisc_C51EF81D() & 1) {
 		bool enlarge;
 
@@ -66,6 +67,7 @@ void AppIconBase::SetLabelString(const wstring &str)
 			height *= 1.35f;
 		}
 	}
+#endif
 	if (width != m_label_width || height != m_label_height) {
 		m_label_width = width;
 		m_label_height = height;
@@ -203,7 +205,9 @@ AppIconBase::AppIconBase(Widget *parent, CreateParam *param)
 	m_hit_detect_b_mode = 0;
 	m_hit_check = 1;
 	SetHitBox(1, math::v4(36.0f, 12.0f, 0.0f, 0.0f), zero);
+#ifndef PAF_BUILD_2014
 	m_enable_tap = true;
+#endif
 	ReserveDrawObj(4);
 
 	DrawObjAttr icon_attr(0);
@@ -360,7 +364,11 @@ int32_t AppIconBase::OnDraw(graph::DrawInfo &info)
 	uint32_t color = m_color;
 	float alpha = m_color_alpha * m_meta_a_sum * m_show_a_sum;
 
+#ifdef PAF_BUILD_2014
+	if (m_icon_state == 1 && m_icon_mode != 1) {
+#else
 	if (m_icon_state == 1 && (m_icon_mode != 1 || (m_dim_held_enable && m_dim_held))) {
+#endif
 		uint32_t r = ((color & 0xff) * 0x67 + 0x66) >> 8;
 		uint32_t g = (((color >> 8) & 0xff) * 0x67 + 0x66) >> 8;
 		uint32_t b = (((color >> 16) & 0xff) * 0x67 + 0x66) >> 8;

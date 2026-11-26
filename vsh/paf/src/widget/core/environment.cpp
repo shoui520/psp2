@@ -34,6 +34,9 @@
 #include <widget/w_pageturn.h>
 #include <widget/w_scroll_view_base.h>
 #include <widget/w_supplier.h>
+#ifdef PAF_BUILD_2014
+#include <widget/w_plane.h>
+#endif
 
 extern "C" int sceAppMgrGetRecommendedScreenOrientation(int32_t *orientation);
 extern "C" int sceAppMgrSetShellScreenOrientation(int32_t orientation);
@@ -72,6 +75,7 @@ _Tree<_Tmap_traits<int32_t, ui::Widget *, less<int32_t> > >::find(const int32_t 
 	return iterator(_Find(key));
 }
 
+#ifndef PAF_BUILD_2014
 /* Sony has the lookup in the widget groups inline too. */
 template<>
 inline __attribute__((always_inline)) _Tree<_Tmap_traits<uint32_t, ui::ModalWidgetList, less<uint32_t> > >::iterator
@@ -79,6 +83,7 @@ _Tree<_Tmap_traits<uint32_t, ui::ModalWidgetList, less<uint32_t> > >::find(const
 {
 	return iterator(_Find(key));
 }
+#endif
 
 /* Sony has the unlinking of a texture request inline. */
 template<>
@@ -146,6 +151,7 @@ _Tree<_Tmap_traits<int32_t, ui::Widget *, less<int32_t> > >::erase(const int32_t
 		_Erase(node);
 }
 
+#ifndef PAF_BUILD_2014
 template<>
 inline __attribute__((always_inline)) void
 _Tree<_Tmap_traits<uint32_t, ui::ModalWidgetList, less<uint32_t> > >::erase(const uint32_t &key)
@@ -155,6 +161,7 @@ _Tree<_Tmap_traits<uint32_t, ui::ModalWidgetList, less<uint32_t> > >::erase(cons
 	if (node != NULL && !node->isnil)
 		_Erase(node);
 }
+#endif
 
 /* Sony's Environment constructor calls its lists' and maps' constructors out of line. */
 #define PAF_ENV_LIST_CTOR(T) \
@@ -188,10 +195,12 @@ inline __attribute__((noinline)) map<int32_t, ui::Widget *>::map(const allocator
 {
 }
 
+#ifndef PAF_BUILD_2014
 template<>
 inline __attribute__((noinline)) map<uint32_t, ui::ModalWidgetList>::map(const allocator_type &al)
 {
 }
+#endif
 
 /* Sony's UpdateRestructScene calls the scene list's push_back rather than inlining it. */
 template<>
@@ -219,6 +228,7 @@ inline __attribute__((noinline)) void list<ui::Scene *>::push_back(ui::Scene *co
 
 namespace ui {
 
+#ifndef PAF_BUILD_2014
 enum {
 	/* the system setting the display area scale is in, in billionths (name ours) */
 	SYSTEM_PARAM_DISPLAY_AREA_SCALE = 3137460
@@ -256,6 +266,7 @@ void Environment::UpdateDisplayAreaSettings()
 {
 	ReadDisplayAreaSettings(this);
 }
+#endif
 
 int32_t Environment::ReleaseTouchCapture(TouchCapture *capture)
 {
@@ -287,6 +298,100 @@ extern "C" DragState *ScePafWidget_DE6905E2(Environment *env, TouchCapture *capt
 	return state;
 }
 
+#ifdef PAF_BUILD_2014
+void Environment::UpdateOrderedTop()
+{
+	vector<OrderEntry> &entries = m_ordered_lists[m_ordered_buf_index];
+
+	if (m_ordered_unsorted) {
+		if (entries.size() != 0)
+			sort(entries.begin(), entries.end());
+		m_ordered_unsorted = false;
+	}
+	m_display_area_scene = NULL;
+	m_second_modal_widget = NULL;
+	for (vector<OrderEntry>::iterator it = entries.begin(); it != entries.end(); ++it) {
+		Widget *widget = it->m_widget;
+
+		if (widget->IsInputTarget() &&
+		    (widget->m_color_alpha * widget->m_meta_a_sum) * widget->m_show_a_sum >= 0.95f) {
+			m_second_modal_widget = widget;
+			m_display_area_scene = widget->m_scene;
+			break;
+		}
+	}
+}
+
+void Environment::UpdateModalWidgets()
+{
+	vector<OrderEntry> &entries = m_modal_lists[m_modal_buf_index];
+
+	if (m_modal_unsorted) {
+		if (entries.size() != 0)
+			sort(entries.begin(), entries.end());
+		m_modal_unsorted = false;
+	}
+
+	bool cancel_found = false;
+	bool top_found = false;
+
+	for (vector<OrderEntry>::iterator it = entries.begin(); it != entries.end(); ++it) {
+		Widget *widget = it->m_widget;
+
+		if (widget->IsInputTarget() || widget->m_show_a_sum >= 0.02f ||
+		    widget->m_transition_in || widget->m_transition_out) {
+			if (it->m_mark == 0) {
+				if (m_top_modal_widget == NULL)
+					inputdevice::touchscreen::Lock(1);
+				m_top_modal_widget = it->m_widget;
+				top_found = true;
+				break;
+			}
+			if (it->m_mark == 1 && !cancel_found) {
+				m_cancel_widget = widget;
+				cancel_found = true;
+			}
+		}
+	}
+	if (!top_found && m_top_modal_widget != NULL) {
+		inputdevice::touchscreen::Unlock(1);
+		m_top_modal_widget = NULL;
+	}
+	if (!cancel_found && m_cancel_widget != NULL)
+		m_cancel_widget = NULL;
+}
+
+void Environment::OnUpdatePre()
+{
+	sce_paf_memcpy(m_touch_hit_last, m_touch_hit, sizeof(m_touch_hit));
+	for (list<EntryRequest>::iterator it = m_pending.begin(); it != m_pending.end(); ++it) {
+		Scene *scene = static_cast<Scene *>(it->m_scene);
+
+		scene->SetEnvironment(this);
+		scene->SetEntry(it->m_entry);
+	}
+	m_pending.clear();
+	Widget::UpdateRestruct();
+	ScePafWidget_D2E7815D();
+	ScePafWidget_CEA2BE4E();
+	for (map<int32_t, Widget *>::iterator it = m_scene_entries.begin();
+	     it != m_scene_entries.end();) {
+		Widget *root = it->second;
+
+		root->UpdateDestroy();
+		if (root->m_children.size() == 0) {
+			delete root;
+			m_scene_entries.erase(it++);
+		} else {
+			++it;
+		}
+	}
+	UpdateModalWidgets();
+	UpdateRestructScene();
+	UpdateScreenResolution();
+	UpdateTextureRequests();
+}
+#else
 void Environment::ReleaseFocusBeyond(Widget *widget)
 {
 	if (!m_release_focus_beyond)
@@ -426,6 +531,7 @@ void Environment::OnUpdatePre()
 	UpdateScreenOrientation();
 	UpdateTextureRequests();
 }
+#endif
 
 int32_t Environment::AddTextureRequest(Widget *widget, const intrusive_ptr<TextureSource> *source,
 				       int32_t obj, int32_t bit)
@@ -536,6 +642,7 @@ int32_t Environment::RemoveTextureRequests(Widget *widget)
 	return -1;
 }
 
+#ifndef PAF_BUILD_2014
 void Environment::ApplyResize()
 {
 	if (m_resize_pending && Screen::s_root_surface != NULL) {
@@ -553,6 +660,7 @@ void Environment::ApplyResize()
 		m_resize_pending = false;
 	}
 }
+#endif
 
 void Environment::UpdateTextureRequests()
 {
@@ -606,6 +714,327 @@ int32_t Environment::RemoveTextureRequestOf(const TextureRequest &request)
 	return -1;
 }
 
+#ifdef PAF_BUILD_2014
+void FocusInfo::Hide()
+{
+	m_enabled = false;
+	if (m_cursor != NULL) {
+		m_cursor->Hide(0xff, new Timer(100.0f), NULL, 0.0f);
+		m_cursor->SetMetaAlpha(1.0f, NULL, Widget::ANIM_META_ALPHA, 0, 0.0f, NULL, NULL);
+		m_cursor->SetColor(math::v4(1.0f, 1.0f, 1.0f, 1.0f), NULL, Widget::ANIM_COLOR, 0,
+				   0.0f, NULL, NULL);
+	}
+}
+
+void FocusInfo::AddFocusHistory(Widget *widget, Widget *next, uint32_t dir)
+{
+	if (widget != next) {
+		uint32_t count = m_history_count;
+
+		if (count == 5) {
+			for (uint32_t i = 0; i < 4; i++)
+				m_history[i] = m_history[i + 1];
+			count = m_history_count - 1;
+		}
+		m_history_count = count + 1;
+		m_history[count].m_widget = widget;
+		m_history[count].m_next = next;
+		m_history[count].m_dir = dir;
+	}
+}
+
+void FocusInfo::RemoveFocusHistory(Widget *widget)
+{
+	uint32_t count = m_history_count;
+
+	if (count != 0) {
+		if (widget != NULL) {
+			History *begin = &m_history[0];
+			History *end = begin + count;
+			History *found = end;
+
+			if (end != begin) {
+				while (found[-1].m_widget != widget && found[-1].m_next != widget) {
+					found--;
+					if (found == begin)
+						return;
+				}
+
+				History *from = found;
+				History *to = begin;
+
+				if (found != end) {
+					do {
+						*to = *from;
+						from++;
+						to++;
+					} while (from != end);
+					count = m_history_count;
+				}
+				m_history_count = count - (found - begin);
+			}
+		} else {
+			m_history_count = 0;
+		}
+	}
+}
+
+Widget *FocusInfo::FindFocusHistory(Widget *widget, uint32_t dir)
+{
+	const uint32_t opposite[4][2] = { { 1, 2 }, { 2, 1 }, { 3, 4 }, { 4, 3 } };
+	Widget *result = NULL;
+
+	if (m_history_count != 0) {
+		int32_t i = 0;
+
+		while (opposite[i][0] != dir) {
+			i++;
+			if (i >= 4)
+				return result;
+		}
+
+		uint32_t want = opposite[i][1];
+
+		if (want != 0) {
+			History *begin = &m_history[0];
+			History *entry = begin + m_history_count;
+
+			if (entry != begin) {
+				while (entry[-1].m_next != widget || want != entry[-1].m_dir) {
+					entry--;
+					if (entry == begin)
+						return result;
+				}
+				result = entry[-1].m_widget;
+				m_history_count = m_history_count - (begin + m_history_count - entry);
+			}
+		}
+	}
+	return result;
+}
+
+void Environment::Init()
+{
+	for (int32_t port = 0; port < 2; port++) {
+		for (int32_t id = 0; id < 8; id++) {
+			m_touch_state[port][id].m_id = id;
+			m_touch_state[port][id].m_port = port;
+		}
+	}
+	m_scene_entries.clear();
+	for (int32_t i = 0; i < 2; i++) {
+		if (m_modal_lists[i].ptr != NULL) {
+			operator delete(m_modal_lists[i].ptr);
+			m_modal_lists[i].ptr = NULL;
+			m_modal_lists[i].count = 0;
+			m_modal_lists[i].limit = 0;
+		}
+	}
+	for (int32_t i = 0; i < 2; i++) {
+		if (m_ordered_lists[i].ptr != NULL) {
+			operator delete(m_ordered_lists[i].ptr);
+			m_ordered_lists[i].ptr = NULL;
+			m_ordered_lists[i].count = 0;
+			m_ordered_lists[i].limit = 0;
+		}
+	}
+	for (int32_t i = 0; i < 2; i++) {
+		if (m_modal_lists[i].limit < 8)
+			m_modal_lists[i].reserve(8);
+	}
+	for (int32_t i = 0; i < 2; i++) {
+		if (m_ordered_lists[i].limit < 8)
+			m_ordered_lists[i].reserve(8);
+	}
+	m_ev_doevent.clear();
+	m_ev_subrouting.clear();
+	m_ev_queue.Clear();
+	m_touch_region_mask = 0;
+	m_touch_region_mask_pre = 0;
+	sce_paf_memset(m_touch_region, 0, sizeof(m_touch_region));
+	Widget::SetBaseDestroyCount(2);
+}
+
+Environment::Environment(SceneResolution *resolutions, int32_t resolution_num,
+			 int32_t resolution_id)
+	: m_bg_color_enabled(false), m_bg_color(0.0f, 0.0f, 0.0f, 0.0f),
+	  m_scene_restruct(false), m_texture_requests_busy(false),
+	  m_resolutions(resolutions), m_cur_resolution(NULL), m_resolution_num(resolution_num),
+	  m_resolution_id(resolution_id), m_next_resolution_id(-1), m_orientation_timer(NULL),
+	  m_root_widget(NULL), m_root_camera(NULL), m_camera_roll_mode(0),
+	  m_next_camera_roll_mode(0), m_frame_state(0), m_draw_frame(false),
+	  m_term_requested(false), m_suspended(false), m_sound_callback(NULL),
+	  m_sound_callback_data(NULL), m_create_widget_callback(NULL),
+	  m_create_widget_callback_data(NULL), m_cancel_widget(NULL), m_top_modal_widget(NULL),
+	  m_modal_buf_index(0), m_modal_unsorted(false), m_display_area_scene(NULL),
+	  m_second_modal_widget(NULL), m_ordered_buf_index(0), m_ordered_unsorted(false),
+	  m_ev_queue(32), m_screen(NULL)
+{
+	m_resolution_act_table[0] = NULL;
+	m_resolution_act_table[1] = NULL;
+	m_resolution_act_table[2] = NULL;
+	m_resolution_act_table[3] = NULL;
+
+	Init();
+	SetScreen(new Screen());
+
+	if (resolutions != NULL && resolution_num != 0) {
+		SceneResolution *cur = NULL;
+
+		for (int32_t i = 0; i < resolution_num; i++) {
+			if ((int32_t)resolutions[i].m_id == resolution_id) {
+				cur = &resolutions[i];
+				m_resolution_id = resolution_id;
+				m_cur_resolution = cur;
+				break;
+			}
+		}
+
+		m_resolution_act_table[0] = new SceneResolutionAct[resolution_num];
+		m_resolution_act_table[1] = new SceneResolutionAct[resolution_num];
+		m_resolution_act_table[2] = new SceneResolutionAct[resolution_num];
+		m_resolution_act_table[3] = new SceneResolutionAct[resolution_num];
+		for (int32_t i = 0; i < resolution_num; i++) {
+			int32_t id = (int32_t)resolutions[i].m_id;
+
+			m_resolution_act_table[0][i].id = id;
+			m_resolution_act_table[0][i].roll = 1;
+			m_resolution_act_table[0][i].morph = 1;
+
+			m_resolution_act_table[1][i].id = id;
+			m_resolution_act_table[1][i].roll = 1;
+			m_resolution_act_table[1][i].morph = 0;
+
+			m_resolution_act_table[2][i].id = id;
+			m_resolution_act_table[2][i].roll = 0;
+			m_resolution_act_table[2][i].morph = 1;
+
+			m_resolution_act_table[3][i].id = id;
+			m_resolution_act_table[3][i].roll = 0;
+			m_resolution_act_table[3][i].morph = 0;
+		}
+		if (cur != NULL) {
+			m_screen->vp = math::rect(0.0f, 0.0f, (float)cur->m_viewport_width,
+						  (float)cur->m_viewport_height);
+			m_screen->sp = math::rect(0.0f, 0.0f, (float)cur->m_scissor_width,
+						  (float)cur->m_scissor_height);
+		}
+	}
+
+	m_pad_gesture_listener =
+		common::SharedPtr<inputdevice::InputListener>(new UIPadListener(this));
+	m_touch_gesture_listener_front =
+		common::SharedPtr<inputdevice::InputListener>(new UITouchListener(this, 0));
+	m_touch_gesture_listener_rear =
+		common::SharedPtr<inputdevice::InputListener>(new UITouchRearListener(this));
+	m_motion_gesture_listener =
+		common::SharedPtr<inputdevice::InputListener>(new UIMotionListener(this));
+	m_btrm_gesture_listener =
+		common::SharedPtr<inputdevice::InputListener>(new UIBtrmListener(this));
+	inputdevice::AddInputListener(m_touch_gesture_listener_front);
+
+	m_root_widget = new Scene(this, 0, NULL);
+
+	Scene *root = static_cast<Scene *>(m_root_widget);
+
+	root->m_screen->vp = math::rect(Screen::s_root_screen->vp);
+	root->m_screen->sp = math::rect(Screen::s_root_screen->sp);
+	root->m_scissor_to_scene = false;
+	m_root_widget->m_name = IDParam(string("env_top_screen"));
+	m_root_camera = new Camera(m_root_widget, NULL);
+
+	m_debug_texture = intrusive_ptr<graph::Surface>(new graph::Surface(
+		gutil::GetDefaultSurfacePool(), 8, 8, ImageMode_RGBA8888, ImageOrder_Linear, 1, 1,
+		false));
+
+	uint32_t *pixels = (uint32_t *)m_debug_texture->Lock(0);
+
+	sce_paf_memset(pixels, 0xFF, m_debug_texture->GetPageSize());
+	for (int32_t y = 2; y < 6; y++) {
+		for (int32_t x = 2; x < 6; x++)
+			pixels[y * 8 + x] = 0x00FFFFFF;
+	}
+	m_debug_texture->Unlock();
+	m_debug_texture->SetDivideMode(3);
+
+	for (int32_t port = 0; port < 2; port++) {
+		Plane *cursor = new Plane(m_root_widget, NULL);
+
+		m_focus_cursor[port].m_cursor = cursor;
+		cursor->m_hit_detect_mode = 2;
+		cursor->m_hit_detect_b_mode = 2;
+		cursor->Hide(0xff, NULL, NULL, 0.0f);
+		cursor->SetTexture(m_debug_texture, 0, 0);
+	}
+}
+
+Environment::~Environment()
+{
+	inputdevice::DelInputListener(m_pad_gesture_listener);
+	inputdevice::DelInputListener(m_touch_gesture_listener_front);
+	inputdevice::DelInputListener(m_touch_gesture_listener_rear);
+	inputdevice::DelInputListener(m_motion_gesture_listener);
+	inputdevice::DelInputListener(m_btrm_gesture_listener);
+
+	delete m_screen;
+
+	m_ev_doevent.clear();
+	m_ev_subrouting.clear();
+	m_ev_queue.Clear();
+
+	for (int32_t i = 0; i < 4; i++) {
+		if (m_resolution_act_table[i] != NULL)
+			delete[] m_resolution_act_table[i];
+	}
+}
+
+SceneResolution *Environment::FindResolution(SceneResolution *res, int32_t num, int32_t id)
+{
+	if (res == NULL)
+		return NULL;
+	for (int32_t i = 0; i < num; i++) {
+		if ((int32_t)res[i].m_id == id)
+			return &res[i];
+	}
+	return NULL;
+}
+
+int32_t Environment::FindResolutionIdByResource(SceneResolution *res, int32_t num,
+						const IDParam &id)
+{
+	if (res == NULL)
+		return -1;
+	for (int32_t i = 0; i < num; i++) {
+		if (res[i].m_resource.m_idhash == id.m_idhash)
+			return (int32_t)res[i].m_id;
+		if (res[i].m_base_resource.m_idhash == id.m_idhash)
+			return (int32_t)res[i].m_base_id;
+	}
+	return -1;
+}
+
+IDParam Environment::GetResolutionResource(SceneResolution *res, int32_t num, int32_t id)
+{
+	if (res != NULL) {
+		for (int32_t i = 0; i < num; i++) {
+			if ((int32_t)res[i].m_id == id)
+				return res[i].m_resource;
+			if ((int32_t)res[i].m_base_id == id)
+				return res[i].m_base_resource;
+		}
+	}
+	return IDParam();
+}
+
+int32_t Environment::SetBgColor(const math::v4 *color)
+{
+	if (color != NULL) {
+		m_bg_color_enabled = true;
+		m_bg_color = *color;
+	}
+	return 0;
+}
+#else
 void Environment::Init()
 {
 	for (int32_t port = 0; port < 2; port++) {
@@ -746,7 +1175,9 @@ Environment::~Environment()
 	m_ev_queue.Clear();
 	m_delayed_events.clear();
 }
+#endif
 
+#ifndef PAF_BUILD_2014
 extern "C" int32_t ScePafWidget_094DF388(Environment *env, const EntryRange *range)
 {
 	uint32_t first = range->m_first;
@@ -803,6 +1234,7 @@ extern "C" int32_t ScePafWidget_E8F38C84(Environment *env, uint16_t width, uint1
 	env->m_resize_pending = true;
 	return 0;
 }
+#endif
 
 extern "C" int32_t ScePafWidget_E6D215ED(Environment *env, Widget *scene, int32_t entry)
 {
@@ -820,6 +1252,7 @@ extern "C" int32_t ScePafWidget_E6D215ED(Environment *env, Widget *scene, int32_
 	return 0;
 }
 
+#ifndef PAF_BUILD_2014
 extern "C" int32_t ScePafWidget_F5842A6B(Environment *env, uint32_t priority, const EntryRange **range)
 {
 	for (vector<EntryRange>::iterator it = env->m_entry_ranges.begin(); it != env->m_entry_ranges.end(); ++it) {
@@ -1051,12 +1484,17 @@ void Environment::ApplyDisplayAreaSettings()
 		ReadDisplayAreaSettings(this);
 	}
 }
+#endif
 
 
 enum {
 	/* no such scene entry, and the error the touch device regions give when all six are used
 	   (0x80AF410F; name ours) */
+#ifdef PAF_BUILD_2014
+	ENV_ERROR_NO_ENTRY = -1
+#else
 	ENV_ERROR_NO_ENTRY = -2135998193
+#endif
 };
 
 int32_t Environment::RegisterTouchDeviceRegion(Widget *widget)
@@ -1159,7 +1597,7 @@ int32_t Environment::AddScene(Widget *scene, int32_t entry, Widget *before)
 		root = it->second;
 	}
 	scene->SetParent_core(root, before);
-
+#ifndef PAF_BUILD_2014
 	Scene *added = static_cast<Scene *>(scene);
 	uint32_t priority = added->m_scene_priority;
 	uint32_t group = priority;
@@ -1172,6 +1610,7 @@ int32_t Environment::AddScene(Widget *scene, int32_t entry, Widget *before)
 		}
 	}
 	added->m_entry = group;
+#endif
 	m_scene_restruct = true;
 	return 0;
 }
@@ -1193,7 +1632,11 @@ int32_t Environment::RemoveScene(Widget *scene)
 				return 0;
 			}
 		}
+#ifdef PAF_BUILD_2014
+		return -1;
+#else
 		return -2135998204;
+#endif
 	}
 	it->second->RemoveChild(scene);
 	m_scene_restruct = true;
@@ -1239,7 +1682,9 @@ int32_t Environment::ShowSceneEntry(int32_t entry)
 	Widget *scene = it->second;
 
 	if (!scene->m_transition_complete) {
+#ifndef PAF_BUILD_2014
 		scene->m_transition = 0xFF;
+#endif
 		scene->m_transition_complete = true;
 		scene->DoTransition_core(0.0f, true);
 	}
@@ -1257,7 +1702,9 @@ int32_t Environment::HideSceneEntry(int32_t entry)
 	Widget *scene = it->second;
 
 	scene->m_transition_complete = false;
+#ifndef PAF_BUILD_2014
 	scene->m_transition = 0xFF;
+#endif
 	scene->DoTransitionReverse_core(0.0f, true);
 	ScePafWidget_4588699E(scene, NULL, 2, 0.0f, NULL);
 	return 0;
@@ -1295,6 +1742,7 @@ int32_t Environment::GetLastHitStack(HitInfo *info)
 }
 
 extern "C" void ScePafWidget_28D590B6(Environment *env, Event *e);
+#ifndef PAF_BUILD_2014
 static void FlushDelayedEvents(int32_t type, Handler *self, Event *e, void *data);
 
 /* the event kept for the widget it is for, whose interval timer 0x8000 (0 seconds, made where it
@@ -1508,6 +1956,7 @@ static void FlushDelayedEvents(int32_t type, Handler *self, Event *e, void *data
 	}
 	self->KillIntervalEvent(0x8000);
 }
+#endif
 
 bool Environment::IsHitStackParent(Widget *widget)
 {
@@ -1535,6 +1984,87 @@ static inline void ResetTouchHits(Environment *env, uint32_t id)
 		sce_paf_memset(&env->m_touch_hit[0][id], 0, sizeof(HitInfo));
 }
 
+#ifdef PAF_BUILD_2014
+extern "C" void ScePafWidget_28D590B6(Environment *env, Event *e)
+{
+	vector<OrderEntry> &entries = env->m_modal_lists[env->m_modal_buf_index];
+
+	if (entries.size() == 0)
+		return;
+
+	Widget *top = env->m_top_modal_widget;
+
+	if (top == NULL && env->m_cancel_widget == NULL)
+		return;
+
+	uint32_t detail = e->m_detail;
+	uint32_t port = (detail >> 20) & 0xf;
+	uint32_t touch_id = (uint8_t)detail;
+
+	if (port < 2 && touch_id < 8 && env->m_touch_capture[port][touch_id].m_widget != NULL)
+		return;
+
+	uint32_t type = e->m_type;
+
+	switch (type & 0xffff) {
+	case 0x42:
+	case 0x22:
+		e->m_type = (type & 0xffff0000) | 0x1009;
+		break;
+	case 0x41:
+	case 0x21:
+		e->m_type = (type & 0xffff0000) | 0x1008;
+		break;
+	}
+
+	uint32_t order = 0xffff;
+
+	if (touch_id < 8) {
+		HitInfo *hit = &env->m_touch_hit[0][touch_id];
+
+		if (hit->m_widget != NULL)
+			order = (uint32_t)hit->m_widget->m_scene->m_scene_priority;
+	}
+	if (top != NULL && env->m_cancel_widget == NULL) {
+		if (((type & 0x40) == 0 || port != 1) &&
+		    order >= (uint32_t)top->m_scene->m_scene_priority &&
+		    !env->IsHitStackParent(top)) {
+			uint32_t id = (uint8_t)e->m_detail;
+
+			e->SetTarget(env->m_top_modal_widget);
+			ResetTouchHits(env, id);
+
+			Event cancel(0x44, Event::MODE_DISPATCH, Event::ROUTE_FORWARD, 0, 0, 0, 0, 0);
+
+			env->m_ev_queue.Cancel(cancel, 1);
+			cancel.m_type = (cancel.m_type & 0xffff0000) | 0x25;
+			env->m_ev_queue.Cancel(cancel, 1);
+			env->m_ev_queue.PushFront(*e);
+		}
+		return;
+	}
+	for (vector<OrderEntry>::iterator it = entries.begin();
+	     it != env->m_modal_lists[env->m_modal_buf_index].end(); ++it) {
+		Widget *widget = it->m_widget;
+
+		if (!widget->IsInputTarget() || ((type & 0x40) != 0 && port == 1))
+			continue;
+		if (order < (uint32_t)widget->m_scene->m_scene_priority)
+			break;
+		if (env->IsHitStackParent(widget))
+			break;
+
+		uint32_t id = (uint8_t)e->m_detail;
+
+		e->SetTarget(it->m_widget);
+		if (it->m_mark == 0)
+			ResetTouchHits(env, id);
+		env->m_ev_queue.PushBack(*e);
+		if (it->m_mark == 0)
+			break;
+	}
+}
+#else
 /* the order of the widget's scene: its scene priority over 255 less its priority (inline in
    Sony's 28D590B6, as in OrderEntry::Init; name ours) */
 static inline uint32_t SceneOrder(Widget *widget)
@@ -1620,6 +2150,7 @@ extern "C" void ScePafWidget_28D590B6(Environment *env, Event *e)
 		env->m_ev_queue.PushFront(*e);
 	}
 }
+#endif
 
 bool Environment::IsTermAvailable()
 {
@@ -1632,7 +2163,9 @@ int32_t Environment::RequestTerm()
 		m_ev_doevent.clear();
 		m_ev_subrouting.clear();
 		m_ev_queue.Clear();
+#ifndef PAF_BUILD_2014
 		m_delayed_events.clear();
+#endif
 		for (map<int32_t, Widget *>::iterator it = m_scene_entries.begin();
 		     it != m_scene_entries.end(); ++it) {
 			Widget *scene = it->second;
@@ -1666,6 +2199,602 @@ int32_t Environment::SetScreen(Screen *screen)
 	return 0;
 }
 
+#ifdef PAF_BUILD_2014
+void Environment::OnUpdateTouchDeviceRegion()
+{
+	uint32_t mask = m_touch_region_mask;
+
+	if (mask == 0 && m_touch_region_mask_pre == 0)
+		return;
+
+	uint32_t bit = 1;
+
+	for (uint32_t i = 0; i < 6; i++, bit *= 2) {
+		Widget *widget = m_touch_region[i];
+
+		if ((mask & bit) != 0) {
+			if (widget->m_show_a_sum >= 0.02f) {
+				math::rect hit = widget->CalcHitRect();
+
+				inputdevice::touchscreen::SetRegion(0, i, hit);
+				inputdevice::touchscreen::ActivateRegion(0, i, true);
+			} else {
+				inputdevice::touchscreen::ActivateRegion(0, i, false);
+			}
+			mask = m_touch_region_mask;
+		} else if ((m_touch_region_mask_pre & bit) != 0) {
+			inputdevice::touchscreen::ActivateRegion(0, i, false);
+			mask = m_touch_region_mask;
+		}
+	}
+	m_touch_region_mask_pre = mask;
+}
+
+void Environment::UpdateFocusCursor(int32_t port, float time)
+{
+	if (m_term_requested)
+		return;
+
+	const math::v4 white(1.0f, 1.0f, 1.0f, 1.0f);
+
+	for (int32_t i = 0; i < 2; i++) {
+		if (port >= 0 && port != i)
+			continue;
+
+		Widget *cursor = m_focus_cursor[i].m_cursor;
+
+		if (cursor == NULL)
+			continue;
+		if (cursor->m_hold_count > 0) {
+			m_focus_cursor[i].m_cursor = NULL;
+			continue;
+		}
+		if (!m_focus_cursor[i].m_enabled)
+			continue;
+
+		Widget *target = m_focus_cursor[i].m_target;
+
+		if (target == NULL || target->GetTypeName() == Scene::TypeName()) {
+			cursor->Hide(0xff, new Timer(100.0f), NULL, 0.0f);
+			cursor->SetMetaAlpha(1.0f, NULL, Widget::ANIM_META_ALPHA, 0, 0.0f, NULL,
+					     NULL);
+			cursor->SetColor(white, NULL, Widget::ANIM_COLOR, 0, 0.0f, NULL, NULL);
+			continue;
+		}
+		if (cursor->m_show_a_sum < 0.02f) {
+			cursor->Show(0xff, new Timer(100.0f), NULL, 0.0f);
+			cursor->SetMetaAlpha(1.0f, new Timer(600.0f, Timer::FUNC_QUAD_OUT),
+					     Widget::ANIM_META_ALPHA | 0x10000000, 0, 0.0f, NULL,
+					     NULL);
+			cursor->SetMetaAlpha(0.3f, new Timer(600.0f, Timer::FUNC_QUAD_IN),
+					     Widget::ANIM_META_ALPHA | 0x10000000, 0, 0.0f, NULL,
+					     NULL);
+			cursor->SetColor(math::v4(1.0f, 0.3f, 0.2f, 1.0f), new Timer(1200.0f),
+					 Widget::ANIM_COLOR | 0x10000000, 0, 0.0f, NULL, NULL);
+			cursor->SetColor(math::v4(0.2f, 1.0f, 0.3f, 1.0f), new Timer(1200.0f),
+					 Widget::ANIM_COLOR | 0x10000000, 0, 0.0f, NULL, NULL);
+			cursor->SetColor(math::v4(0.2f, 3.0f, 1.0f, 1.0f), new Timer(1200.0f),
+					 Widget::ANIM_COLOR | 0x10000000, 0, 0.0f, NULL, NULL);
+		}
+		if ((target->m_update_flag & 7) != 0)
+			target->UpdateMatrix();
+
+		math::v4 pos = target->m_world_matrix.w();
+
+		pos.set_w(1.0f);
+
+		math::v4 size = *target->GetSize(0);
+
+		if (!(pos == m_focus_cursor[i].m_target_pos)) {
+			if (time > 0.0f)
+				cursor->SetPos(pos, new Timer(100.0f, Timer::FUNC_QUAD_OUT),
+					       Widget::ANIM_MOVE, 1, 0.0f, NULL, NULL);
+			else
+				cursor->SetPos(pos, NULL, Widget::ANIM_MOVE, 0, 0.0f, NULL, NULL);
+			m_focus_cursor[i].m_target_pos = pos;
+		}
+		if (!(size == m_focus_cursor[i].m_target_size)) {
+			if (time > 0.0f)
+				cursor->SetSize(size, new Timer(100.0f, Timer::FUNC_QUAD_OUT),
+						Widget::ANIM_SIZE, 1, 0.0f, NULL, NULL);
+			else
+				cursor->SetSize(size, NULL, Widget::ANIM_SIZE, 0, 0.0f, NULL, NULL);
+			m_focus_cursor[i].m_target_size = size;
+		}
+	}
+}
+
+void Environment::OnUpdatePost()
+{
+	for (list<Scene *>::iterator it = m_scenes_onupdate.begin(); it != m_scenes_onupdate.end();
+	     ++it)
+		(*it)->OnUpdate();
+	graph::DrawObj::SetDirtyCount(2);
+	UpdateRestructScene();
+	UpdateFocusCursor(-1, 0.0f);
+	for (list<Scene *>::iterator it = m_scenes_onupdate.begin(); it != m_scenes_onupdate.end();
+	     ++it)
+		(*it)->OnUpdatePost();
+	OnUpdateTouchDeviceRegion();
+	graph::DrawObj::SetDirtyCount(1);
+}
+
+Widget *Environment::GetFocusWidget(int32_t port)
+{
+	if (port < 0 || port > 2)
+		port = 0;
+	return m_focus_cursor[port].m_target;
+}
+
+void Environment::HideFocus(int32_t port)
+{
+	if (port <= 2) {
+		if (port >= 0) {
+			m_focus_cursor[port].Hide();
+		} else {
+			m_focus_cursor[0].Hide();
+			m_focus_cursor[1].Hide();
+		}
+	}
+}
+
+int32_t Environment::ReleaseFocusWidget(Widget *w)
+{
+	if (w == NULL)
+		return -1;
+
+	int32_t port = 0;
+
+	for (; port < 2; port++) {
+		if (m_focus_cursor[port].m_target == w)
+			break;
+	}
+	if (port == 2)
+		return -1;
+	w->SetFocusState(false);
+	m_focus_cursor[port].m_target = NULL;
+
+	Event e;
+
+	e.m_target = w;
+	e.m_type = (e.m_type & 0xFF0FFFFF) | Event::MODE_DO;
+	e.m_dotype = 0x40002;
+	m_ev_doevent.push_back(e);
+	return 0;
+}
+
+int32_t Environment::SetFocusWidget(Widget *w, int32_t port)
+{
+	if (port < 0)
+		port = 0;
+	else if (port >= 2)
+		return -1;
+
+	Widget *old = m_focus_cursor[port].m_target;
+
+	if (old != NULL)
+		ReleaseFocusWidget(old);
+	m_focus_cursor[port].m_target = w;
+	if (w != NULL) {
+		w->SetFocusState(true);
+		UpdateFocusCursor(-1, 0.0f);
+
+		Event e;
+
+		e.m_target = w;
+		e.m_type = (e.m_type & 0xFF0FFFFF) | Event::MODE_DO;
+		e.m_dotype = 0x40001;
+		m_ev_doevent.push_back(e);
+	}
+	return 0;
+}
+
+void Environment::EventLoop()
+{
+	Widget::SetBaseDestroyCount(1);
+
+	Event e;
+	bool touched = false;
+
+	while (true) {
+		if (m_ev_doevent.size() != 0) {
+			e = m_ev_doevent.front();
+			m_ev_doevent.pop_front();
+		} else if (m_ev_subrouting.size() != 0) {
+			e = m_ev_subrouting.front();
+			m_ev_subrouting.pop_front();
+		} else if (m_ev_queue.PopFront(e) != 0) {
+			break;
+		}
+
+		uint32_t type = e.m_type;
+
+		if ((type & Event::MODE_DISPATCH) != 0) {
+			Widget *w = static_cast<Widget *>(e.m_target);
+
+			if (w == NULL) {
+				uint32_t port = e.m_detail >> 28;
+
+				if (port > 2)
+					port = 0;
+				w = m_focus_cursor[port].m_target;
+			}
+			if (w != NULL) {
+				e.m_type = (e.m_type & 0xFFF0FFFF) | Event::ROUTE_TERM;
+				w->EventExecDispatch(&e);
+			}
+			inputdevice::UpdateGesture(true);
+		} else if ((type & Event::MODE_BROADCAST) != 0 && m_scenes_onupdate.size() != 0) {
+			list<Scene *>::iterator it = m_scenes_onupdate.end();
+			int32_t result = 0;
+
+			while (it != m_scenes_onupdate.begin()) {
+				--it;
+
+				Event ev(e);
+				Scene *scene = static_cast<Scene *>(*it);
+
+				if ((e.m_type & 0x20) != 0 || (e.m_type & 0x40) != 0) {
+					Camera *cam = scene->GetCamera();
+
+					if (cam != NULL) {
+						float roll = cam->GetRollScreen(0);
+
+						if (__builtin_fabsf(roll) >= 0.001f) {
+							float x = (float)e.m_data[0];
+							float y = (float)e.m_data[1];
+							float c = sce_paf_cosf(roll);
+							float s = sce_paf_sinf(roll);
+
+							ev.m_data[0] = (int32_t)(x * c - y * s);
+							ev.m_data[1] = (int32_t)(y * c + x * s);
+						}
+					}
+				}
+				result = scene->EventExecBroadcast(&ev);
+				if (result > 0)
+					break;
+			}
+			if ((e.m_type & 0x20) != 0 || (e.m_type & 0x40) != 0) {
+				touched = true;
+				ScePafWidget_28D590B6(this, &e);
+				if (it == m_scenes_onupdate.begin() && result == 0) {
+					uint32_t detail = e.m_detail;
+					HitInfo hit;
+
+					hit.m_hit_valid = 0;
+					hit.m_widget = NULL;
+					ScePafWidget_08CE1C4B(*it, &e, (detail >> 20) & 0xF,
+							      (uint8_t)detail, &hit);
+				}
+			}
+			inputdevice::UpdateGesture(true);
+		} else if ((type & Event::MODE_DIRECT) != 0) {
+			if (e.m_target != NULL) {
+				static_cast<Widget *>(e.m_target)->EventExecDirect(&e);
+				inputdevice::UpdateGesture(true);
+			}
+		} else if ((type & Event::MODE_DO) != 0) {
+			if (e.m_target != NULL) {
+				static_cast<Widget *>(e.m_target)->EventExecDo(&e);
+				inputdevice::UpdateGesture(true);
+			}
+		} else {
+			inputdevice::UpdateGesture(true);
+		}
+	}
+	if (!touched)
+		sce_paf_memset(m_touch_hit, 0, sizeof(m_touch_hit));
+	Widget::SetBaseDestroyCount(2);
+}
+
+int32_t Environment::CalcOrderEntry(OrderEntry *out, Widget *widget,
+				    vector<OrderEntry>::iterator begin,
+				    vector<OrderEntry>::iterator end)
+{
+	Scene *scene = widget->m_scene;
+
+	if (scene == NULL)
+		return -1;
+
+	int32_t priority = scene->m_scene_priority;
+	map<int32_t, Widget *>::iterator map_it = m_scene_entries.find(priority);
+
+	if (map_it != m_scene_entries.end() && map_it->second->m_children.size() == 0)
+		return -1;
+
+	out->m_widget = widget;
+	out->m_scene_priority = priority;
+	out->m_scene_index = 0;
+	out->m_nested_order = 255;
+
+	list<Widget *>::iterator top;
+
+	GetSceneTop(priority, top);
+
+	list<Widget *>::iterator child_it;
+
+	map_it = m_scene_entries.find(priority);
+	if (map_it != m_scene_entries.end())
+		child_it = map_it->second->m_children.end();
+
+	--child_it;
+
+	int32_t index = 0;
+	bool found = false;
+
+	for (;;) {
+		if (*child_it == scene) {
+			found = true;
+			break;
+		}
+		if (child_it == top)
+			break;
+		--child_it;
+		index++;
+	}
+	if (!found)
+		return -1;
+
+	out->m_scene_index = index;
+
+	uint32_t base_key = ((uint32_t)index << 8) + ((uint32_t)out->m_scene_priority << 16);
+	int32_t nested_order = 255;
+
+	for (vector<OrderEntry>::iterator it = begin; it != end; ++it) {
+		if (it->m_widget == widget)
+			return -1;
+
+		uint32_t diff = it->m_key - base_key;
+
+		if (diff < 0x100) {
+			nested_order = (diff != 0) ? (int32_t)(diff - 1) : 0;
+			break;
+		}
+	}
+	out->m_nested_order = nested_order;
+	out->m_key = base_key + (uint32_t)nested_order;
+	return (int32_t)out->m_key;
+}
+
+int32_t Environment::AddOrderedWidget(Widget *widget)
+{
+	if (widget == NULL)
+		return -1;
+
+	vector<OrderEntry> &entries = m_ordered_lists[m_ordered_buf_index];
+
+	if (m_ordered_unsorted && entries.size() != 0)
+		sort(entries.begin(), entries.end());
+
+	OrderEntry entry;
+
+	if (CalcOrderEntry(&entry, widget, entries.begin(), entries.end()) < 0)
+		return -1;
+	entries.push_back(entry);
+	m_ordered_unsorted = true;
+	return 0;
+}
+
+int32_t Environment::AddModalWidget(Widget *widget, int32_t mark)
+{
+	vector<OrderEntry> &entries = m_modal_lists[m_modal_buf_index];
+
+	if (m_modal_unsorted && entries.size() != 0)
+		sort(entries.begin(), entries.end());
+
+	OrderEntry entry;
+	int32_t key = CalcOrderEntry(&entry, widget, entries.begin(), entries.end());
+
+	if (key >= 0) {
+		entry.m_mark = mark;
+		entries.push_back(entry);
+		m_modal_unsorted = true;
+	}
+	return key;
+}
+
+int32_t Environment::RegisterModalWidget(Widget *widget, uint32_t mode)
+{
+	if (mode >= 2 || widget == NULL)
+		return -1;
+
+	int32_t key = AddModalWidget(widget, (int32_t)mode);
+
+	if (key < 0)
+		return -1;
+
+	vector<OrderEntry> &entries = m_modal_lists[m_modal_buf_index];
+
+	sort(entries.begin(), entries.end());
+	m_modal_unsorted = false;
+	if ((int32_t)entries[0].m_key == key)
+		widget->SetFocus(true, 0);
+	return 0;
+}
+
+int32_t Environment::RemoveModalWidget(Widget *widget)
+{
+	if (widget == NULL)
+		return -1;
+
+	vector<OrderEntry> &entries = m_modal_lists[m_modal_buf_index];
+
+	if (entries.size() == 0)
+		return -1;
+	for (vector<OrderEntry>::iterator it = entries.begin(); it != entries.end(); ++it) {
+		if (it->m_widget == widget) {
+			entries.erase(it, it + 1);
+			m_modal_unsorted = true;
+			return 0;
+		}
+	}
+	return -1;
+}
+
+int32_t Environment::RemoveOrderedWidget(Widget *widget)
+{
+	if (widget == NULL)
+		return -1;
+
+	vector<OrderEntry> &entries = m_ordered_lists[m_ordered_buf_index];
+
+	if (entries.size() == 0)
+		return -1;
+	for (vector<OrderEntry>::iterator it = entries.begin(); it != entries.end(); ++it) {
+		if (it->m_widget == widget) {
+			entries.erase(it, it + 1);
+			m_ordered_unsorted = true;
+			return 0;
+		}
+	}
+	return -1;
+}
+
+void Environment::UpdateRestructScene()
+{
+	Widget::UpdateRestruct();
+	if (!m_scene_restruct)
+		return;
+
+	int32_t bg_priority = 100;
+	int32_t priority = 300;
+
+	m_scenes_onupdate.clear();
+	for (map<int32_t, Widget *>::iterator entry = m_scene_entries.end();
+	     entry != m_scene_entries.begin();) {
+		--entry;
+
+		Widget *root = entry->second;
+
+		for (list<Widget *>::iterator it = root->m_children.begin();
+		     it != root->m_children.end(); ++it) {
+			Scene *scene = static_cast<Scene *>(*it);
+
+			m_scenes_onupdate.push_back(scene);
+
+			graph::DrawLayer *layer = scene->m_layer;
+
+			if (layer != NULL)
+				graph::DrawCalls()->SetPriority(layer, priority++);
+			layer = scene->m_bg_layer;
+			if (layer != NULL)
+				graph::DrawCalls()->SetPriority(layer, bg_priority++);
+		}
+	}
+
+	int32_t old_modal = m_modal_buf_index;
+
+	m_modal_buf_index = (old_modal + 1) & 1;
+	for (vector<OrderEntry>::iterator it = m_modal_lists[old_modal].begin();
+	     it != m_modal_lists[old_modal].end(); ++it)
+		AddModalWidget(it->m_widget, it->m_mark);
+	if (m_modal_lists[old_modal].ptr != NULL) {
+		operator delete(m_modal_lists[old_modal].ptr);
+		m_modal_lists[old_modal].ptr = NULL;
+		m_modal_lists[old_modal].count = 0;
+		m_modal_lists[old_modal].limit = 0;
+	}
+
+	int32_t old_ordered = m_ordered_buf_index;
+
+	m_ordered_buf_index = (old_ordered + 1) & 1;
+	for (vector<OrderEntry>::iterator it = m_ordered_lists[old_ordered].begin();
+	     it != m_ordered_lists[old_ordered].end(); ++it)
+		AddOrderedWidget(it->m_widget);
+	if (m_ordered_lists[old_ordered].ptr != NULL) {
+		operator delete(m_ordered_lists[old_ordered].ptr);
+		m_ordered_lists[old_ordered].ptr = NULL;
+		m_ordered_lists[old_ordered].count = 0;
+		m_ordered_lists[old_ordered].limit = 0;
+	}
+	m_scene_restruct = false;
+}
+
+void Environment::UpdateScreenResolution()
+{
+	if (m_orientation_timer != NULL) {
+		if (m_orientation_timer->IsFinished()) {
+			delete m_orientation_timer;
+			m_orientation_timer = NULL;
+
+			Event e(0x2001, 0x200000, 0x40000, 0, 0, 0, 0, 0);
+
+			e.m_data[0] = 1;
+			e.m_data[1] = m_resolution_id;
+			m_ev_queue.PushBack(e);
+		}
+		if (m_orientation_timer != NULL) {
+			m_orientation_timer->DoTick();
+			return;
+		}
+	}
+
+	int32_t next_id = m_next_resolution_id;
+
+	if (next_id < 0)
+		return;
+	m_next_resolution_id = -1;
+	if (m_resolutions == NULL)
+		return;
+
+	int32_t old_id = m_resolution_id;
+
+	if (old_id == next_id)
+		return;
+
+	SceneResolution *found = FindResolution(m_resolutions, m_resolution_num, next_id);
+
+	if (found == NULL)
+		return;
+
+	uint8_t old_roll_mode = m_camera_roll_mode;
+
+	m_resolution_id = next_id;
+	m_cur_resolution = found;
+	m_camera_roll_mode = m_next_camera_roll_mode;
+
+	Event e(0x2001, 0x200000, 0x40000, 0, 0, 0, 0, 0);
+
+	e.m_data[0] = 0;
+	e.m_data[1] = m_resolution_id;
+	e.m_data[2] = old_id;
+	e.m_data[3] = 500;
+	m_ev_queue.PushBack(e);
+
+	m_orientation_timer = new Timer(500.0f);
+	if (m_root_camera != NULL) {
+		if (m_camera_roll_mode == 1)
+			m_root_camera->SetRollScreen(found->m_roll,
+						     new Timer(500.0f, Timer::FUNC_ANGULAR));
+		else if (m_camera_roll_mode == 0 && old_roll_mode != 0)
+			m_root_camera->SetRollScreen(0.0f,
+						     new Timer(500.0f, Timer::FUNC_ANGULAR));
+	}
+	for (map<int32_t, Widget *>::iterator entry = m_scene_entries.end();
+	     entry != m_scene_entries.begin();) {
+		--entry;
+
+		Widget *root = entry->second;
+
+		for (list<Widget *>::iterator it = root->m_children.begin();
+		     it != root->m_children.end(); ++it) {
+			Scene *scene = static_cast<Scene *>(*it);
+
+			if (scene->m_camera != m_root_camera) {
+				scene->ResetCameraRoll(500.0f);
+				if (scene->IsResolutionActMorph(m_resolution_id))
+					ScePafWidget_11D537AF(
+						scene, (uint32_t)m_resolution_id,
+						new Timer(500.0f, Timer::FUNC_ANGULAR), true);
+				else
+					scene->ChangeResolution_core((uint32_t)m_resolution_id,
+								     true, false);
+			}
+		}
+	}
+}
+#else
 void Environment::OnUpdateTouchDeviceRegion()
 {
 	uint32_t mask = m_touch_region_mask;
@@ -2318,7 +3447,72 @@ void Environment::UpdateRestructScene()
 		RefreshOrderLists(false);
 	}
 }
+#endif
 
+#ifdef PAF_BUILD_2014
+#ifdef PAF_HAS_WEBVIEW
+namespace graph {
+extern void UpdateMapLayers();
+extern void FlushMapLayers();
+}
+#endif
+
+extern "C" void ScePafWidget_DC1B19DB(Environment *env)
+{
+	env->UpdateRestructScene();
+	env->UpdateOrderedTop();
+
+	bool in_area = env->m_display_area_scene != NULL;
+
+	if (!env->m_draw_frame)
+		return;
+	if (env->m_root_camera != NULL) {
+		graph::arl::ArlInstance *gl = graph::arl::Gl();
+
+		gl->Projection().Load(env->m_root_camera->m_projection);
+		gl->View().Load(env->m_root_camera->m_inv_view);
+		gl->m_model.LoadIdentity();
+	}
+	ScePafGraphics_4EF30D15();
+	ScePafGraphics_4E038C05()->m_ptr->Update();
+#ifdef PAF_HAS_WEBVIEW
+	graph::UpdateMapLayers();
+#endif
+	ScePafGraphics_1612A18D();
+	ScePafGraphics_0C2B6324();
+	graph::UpdatePanelLayers();
+	graph::DrawCalls()->BeginFrame(false);
+
+	list<Scene *>::iterator it;
+
+	for (it = env->m_scenes_onupdate.begin(); it != env->m_scenes_onupdate.end(); ++it) {
+		Scene *scene = static_cast<Scene *>(*it);
+
+		if (scene->m_bg_layer == NULL)
+			continue;
+		ScePafWidget_687B21CA(scene, scene->m_parent == NULL ||
+						     !(scene->m_parent->m_show_a_sum >= 0.02f) ||
+						     in_area);
+	}
+#ifdef PAF_HAS_WEBVIEW
+	graph::FlushMapLayers();
+#endif
+	graph::FlushPanelReflections();
+	for (it = env->m_scenes_onupdate.begin(); it != env->m_scenes_onupdate.end(); ++it) {
+		Scene *scene = static_cast<Scene *>(*it);
+
+		if (in_area && scene == env->m_display_area_scene)
+			in_area = false;
+		scene->DrawScene(scene->m_parent == NULL || !(scene->m_parent->m_show_a_sum >= 0.02f) ||
+				 in_area);
+	}
+	graph::FlushPanelLayers();
+	ScePafGraphics_E7B32741(graph::arl::Gl());
+	ScePafGraphics_67C25F27();
+	graph::ScreenCopy::Draw();
+	gutil::debug::CallDebugGuiFuncs();
+}
+#else
 /* whether the display area scene was set and the frame drawn the frame before (names ours) */
 static bool s_last_drawn;
 static bool s_last_area;
@@ -2413,6 +3607,7 @@ extern "C" void ScePafWidget_DC1B19DB(Environment *env)
 	graph::ScreenCopy::Draw();
 	gutil::debug::CallDebugGuiFuncs();
 }
+#endif
 
 /* a frame drawn on the root surface: begun, the scenes drawn, ended (0x8113c31c) */
 void Environment::OnDraw()
@@ -2422,6 +3617,7 @@ void Environment::OnDraw()
 	ScePafWidget_851911CB(this);
 }
 
+#ifndef PAF_BUILD_2014
 void Environment::UpdateScreenOrientation()
 {
 	if (m_orientation_timer != NULL) {
@@ -2527,9 +3723,87 @@ extern "C" bool ScePafWidget_529FB877(Environment *env, int32_t port)
 	}
 	return shown;
 }
+#endif
 
 extern "C" {
 
+#ifdef PAF_BUILD_2014
+void ScePafWidget_9D4A5A0E(Environment *env)
+{
+	graph::DisplaySurface *surface = Screen::s_root_surface;
+	int32_t state = 0;
+
+	if (surface != NULL) {
+		surface->StartFrame();
+		state = surface->m_frame_state;
+	}
+	env->m_frame_state = state;
+	env->m_draw_frame = state == 1;
+	if (env->m_suspended) {
+		if (env->m_screen != NULL) {
+			env->m_screen->OnTarget();
+			env->m_screen->OnFinish();
+		}
+		env->m_draw_frame = false;
+	}
+}
+
+void ScePafWidget_BA5195CA(Environment *env)
+{
+	vector<Screen *> &targets = Screen::s_target_list;
+
+	if (targets.ptr != NULL) {
+		operator delete(targets.ptr);
+		targets.ptr = NULL;
+		targets.count = 0;
+		targets.limit = 0;
+	}
+
+	Screen *root = Screen::s_root_screen;
+
+	if (root != NULL && root->OnTarget() == 0) {
+		graph::DisplaySurface *display = Screen::s_root_surface;
+
+		if (display->m_frame_buffer_mode <= 1) {
+			if (ScePafGraphics_DD2002B4() && env->m_draw_frame)
+				display->MarkCleared();
+			else
+				root->OnClear();
+		}
+		root->OnFinish();
+	}
+	if (env->m_draw_frame) {
+		ScePafGraphics_BE4C5403();
+
+		graph::DrawEnv *draw_env = graph::DrawCalls().get();
+
+		draw_env->m_counted = false;
+		draw_env->m_count++;
+	}
+	ScePafGraphics_E7B32741(graph::arl::Gl());
+	env->m_draw_frame = false;
+}
+
+void ScePafWidget_851911CB(Environment *env)
+{
+	if (env->m_draw_frame) {
+		ScePafGraphics_47F42806();
+		ScePafGraphics_3AFA1144();
+		ScePafGraphics_9409C495();
+	}
+
+	graph::DisplaySurface *surface = Screen::s_root_surface;
+	int32_t state = 0;
+
+	if (surface != NULL) {
+		surface->EndFrame();
+		surface->Swap();
+		state = surface->m_frame_state;
+	}
+	env->m_frame_state = state;
+	ScePafWidget_BA5195CA(env);
+}
+#else
 void ScePafWidget_9D4A5A0E(Environment *env)
 {
 	graph::DisplaySurface *surface = Screen::s_root_surface;
@@ -2638,6 +3912,7 @@ void ScePafWidget_851911CB(Environment *env)
 		ScePafGraphics_E4B3B1D2(graph::arl::Gl());
 	ScePafWidget_BA5195CA(env);
 }
+#endif
 
 static inline inputdevice::InputGestureListener *GestureListenerOf(Environment *env, uint32_t port)
 {
@@ -2709,6 +3984,7 @@ TouchCapture *ScePafWidget_451DE355(Environment *env, uint32_t port, uint32_t id
 	return capture;
 }
 
+#ifndef PAF_BUILD_2014
 Widget *ScePafWidget_0775F78F(Environment *env, uint32_t id)
 {
 	if (env->m_widget_groups.size() == 0)
@@ -2834,6 +4110,7 @@ void ScePafWidget_75FB31F1(Environment *env, bool enable)
 		env->m_focus_cursor_rear.Update(0.0f);
 	}
 }
+#endif
 
 int32_t ScePafWidget_F67517A0(Environment *env)
 {
@@ -2887,6 +4164,7 @@ int32_t Environment::Term()
 	return m_term_requested;
 }
 
+#ifndef PAF_BUILD_2014
 int32_t Environment::SetPadCaptureHigh(uint32_t port, Widget *widget)
 {
 	if (port >= 5)
@@ -2936,6 +4214,7 @@ int32_t Environment::ReleasePadCaptureLow(uint32_t port)
 		return widget->ReleasePadCaptureDir(255, true);
 	return -1;
 }
+#endif
 
 bool Environment::IsDrawSkipped()
 {
@@ -2950,6 +4229,7 @@ float Environment::GetRollScreen()
 	return 0.0f;
 }
 
+#ifndef PAF_BUILD_2014
 float Environment::GetOrientationRoll(int32_t orientation)
 {
 	float roll = 0.0f;
@@ -2964,6 +4244,7 @@ float Environment::GetOrientationRoll(int32_t orientation)
 	}
 	return roll;
 }
+#endif
 
 }
 }

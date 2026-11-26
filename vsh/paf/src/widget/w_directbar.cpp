@@ -294,6 +294,7 @@ void DirectBar::AnimDBarState(int32_t state, float time)
 
 void DirectBar::UpdateFocusShape()
 {
+#ifndef PAF_BUILD_2014
 	float x = (m_type & 1) ? 7.5f : -7.5f;
 	FocusShape local;
 	FocusShape *shape = m_focus_shape;
@@ -317,6 +318,7 @@ void DirectBar::UpdateFocusShape()
 		shape->m_offset = math::v3(0.0f, m_launchbtn_y, 0.0f);
 	}
 	ScePafWidget_13B246E0(this, shape);
+#endif
 }
 
 }
@@ -917,10 +919,12 @@ void ScePafWidget_A0CEFD28(DirectBar *bar, int32_t index, bool key, float time)
 
 			bar->SetAnimListener(0x20103, move, 2);
 			move->m_cb_anim = DirectBar::OnBalloonMove;
+#ifndef PAF_BUILD_2014
 			if (bar->m_focus_shape != NULL) {
 				bar->m_focus_shape->m_shape = 3;
 				ScePafWidget_13B246E0(bar, bar->m_focus_shape);
 			}
+#endif
 		} else {
 			AnimListenerObj *move = new AnimListenerObj(
 				key ? (time == 240.0f ? new Timer(bar->m_repeat_count < 5 ? 140.0f :
@@ -1290,6 +1294,7 @@ void DirectBar::OrientNormalState(Event *e)
 
 int32_t DirectBar::HandleTouchEvent(Event *e)
 {
+#ifndef PAF_BUILD_2014
 	if (ScePafWidget_529FB877(m_env, -1)) {
 		Widget *focus = m_env->m_focus_cursor.m_cursor;
 
@@ -1298,6 +1303,7 @@ int32_t DirectBar::HandleTouchEvent(Event *e)
 		focus->DoTransitionReverse_core(0.0f, true);
 		ScePafWidget_4588699E(focus, NULL, 2, 0.0f, NULL);
 	}
+#endif
 	switch (m_state) {
 	case ST_DBAR_OPEN:
 		OrientNormalState(e);
@@ -1450,14 +1456,18 @@ int32_t DirectBar::Show(float time)
 		Timer *t = new Timer(time);
 
 		if (!m_transition_complete) {
+#ifndef PAF_BUILD_2014
 			m_transition = 0xff;
+#endif
 			m_transition_complete = true;
 			DoTransition_core(0.0f, true);
 		}
 		return ScePafWidget_FF5BC957(this, t, 2, 0.0f, NULL);
 	}
 	if (!m_transition_complete) {
+#ifndef PAF_BUILD_2014
 		m_transition = 0xff;
+#endif
 		m_transition_complete = true;
 		DoTransition_core(0.0f, true);
 	}
@@ -1471,12 +1481,16 @@ int32_t DirectBar::Hide(float time)
 		Timer *t = new Timer(time);
 
 		m_transition_complete = false;
+#ifndef PAF_BUILD_2014
 		m_transition = 0xff;
+#endif
 		DoTransitionReverse_core(t != NULL ? t->GetTotalTime() : 0.0f, true);
 		return ScePafWidget_4588699E(this, t, 2, 0.0f, NULL);
 	}
 	m_transition_complete = false;
+#ifndef PAF_BUILD_2014
 	m_transition = 0xff;
+#endif
 	DoTransitionReverse_core(0.0f, true);
 	return ScePafWidget_4588699E(this, NULL, 2, 0.0f, NULL);
 }
@@ -1513,6 +1527,7 @@ void DirectBar::SetLaunchBtnY(float y)
 void DirectBar::OnBalloonMove(Timer *t, AnimListener *listener, void *data1, void *data2,
 			      void *data3)
 {
+#ifndef PAF_BUILD_2014
 	Widget *widget = listener->m_widget;
 
 	if (widget == NULL || !widget->IsInherit(DirectBar::m_widget_type))
@@ -1547,6 +1562,7 @@ void DirectBar::OnBalloonMove(Timer *t, AnimListener *listener, void *data1, voi
 	}
 	shape->m_size = math::v2(56.0f, 18.0f);
 	ScePafWidget_13B246E0(bar, shape);
+#endif
 }
 
 const char DirectBarParam::m_param_name[] = "directbar_base";
@@ -1673,10 +1689,12 @@ static VersatileParam *NewDirectBarLayoutParam()
 	return new WidgetLayoutParam;
 }
 
+#ifndef PAF_BUILD_2014
 static VersatileParam *NewDirectBarFocusParam()
 {
 	return new WidgetFocusParam;
 }
+#endif
 
 static VersatileParam *NewDirectBarStyleParam()
 {
@@ -1698,7 +1716,9 @@ FactoryFuncTable g_factoryDirectBar = {
 	NewDirectBar,
 	NewDirectBarParam,
 	NewDirectBarLayoutParam,
+#ifndef PAF_BUILD_2014
 	NewDirectBarFocusParam,
+#endif
 	NewDirectBarStyleParam,
 	NewDirectBarHandlerParam,
 	NewDirectBarSoundParam,

@@ -38,8 +38,10 @@ public:
 	virtual bool IsInherit(const char *type) const;
 	virtual char *GetTypeName() const;
 	virtual void UpdateSize();
+#ifndef PAF_BUILD_2014
 	/* up and down only while its focus directions are off */
 	virtual int32_t GetFocusDirectionMask();
+#endif
 };
 
 /* the two vectors multiplied lane by lane (name ours) */
@@ -1222,10 +1224,12 @@ char *SlideBarSlider::GetTypeName() const
 	return (char *)m_widget_type;
 }
 
+#ifndef PAF_BUILD_2014
 int32_t SlideBarSlider::GetFocusDirectionMask()
 {
 	return m_focus_direction_off ? 2 : 7;
 }
+#endif
 
 /* its glow sized to its plane */
 void SlideBarSlider::UpdateSize()
@@ -1261,10 +1265,12 @@ static VersatileParam *NewSlideBarLayoutParam()
 	return new WidgetLayoutParam;
 }
 
+#ifndef PAF_BUILD_2014
 static VersatileParam *NewSlideBarFocusParam()
 {
 	return new WidgetFocusParam;
 }
+#endif
 
 static VersatileParam *NewSlideBarStyleParam()
 {
@@ -1286,7 +1292,9 @@ FactoryFuncTable g_factorySlideBar = {
 	NewSlideBar,
 	NewSlideBarParam,
 	NewSlideBarLayoutParam,
+#ifndef PAF_BUILD_2014
 	NewSlideBarFocusParam,
+#endif
 	NewSlideBarStyleParam,
 	NewSlideBarHandlerParam,
 	NewSlideBarSoundParam,

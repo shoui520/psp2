@@ -282,7 +282,11 @@ void PageTurnBase::UpdateAfterChildren()
 		ScePafWidget_85CB1F24(m_touch_id, &pos);
 		m_current = math::v2(pos.getImpl().getXY());
 	} else if (state == ST_PAGETURN_KEY) {
+#ifdef PAF_BUILD_2014
+		if (m_culled) {
+#else
 		if (m_fit_to_scene || m_culled) {
+#endif
 			SendEvent(this, CB_PAGETURN_CANCEL, NULL);
 			ScePafWidget_A4245073(ST_PAGETURN_IDLE);
 		}
@@ -421,10 +425,12 @@ static VersatileParam *NewPageTurnBaseLayoutParam()
 	return new WidgetLayoutParam;
 }
 
+#ifndef PAF_BUILD_2014
 static VersatileParam *NewPageTurnBaseFocusParam()
 {
 	return new WidgetFocusParam;
 }
+#endif
 
 static VersatileParam *NewPageTurnBaseStyleParam()
 {
@@ -446,7 +452,9 @@ FactoryFuncTable g_factoryPageTurnBase = {
 	NewPageTurnBase,
 	NewPageTurnBaseParam,
 	NewPageTurnBaseLayoutParam,
+#ifndef PAF_BUILD_2014
 	NewPageTurnBaseFocusParam,
+#endif
 	NewPageTurnBaseStyleParam,
 	NewPageTurnBaseHandlerParam,
 	NewPageTurnBaseSoundParam,

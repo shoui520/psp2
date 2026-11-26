@@ -1,0 +1,60 @@
+/*
+ * The earth globe: a UV grid mapped onto a sphere of radius Radius, lit by the point light
+ * with half-Lambert diffuse, Blinn-Phong specular, Fresnel environment weight, and an edge
+ * iridescence falloff.
+ */
+struct LitParams {
+	float4 MaterialPack[4];
+	float4 PointLightPack2[4];
+	float4 PointLightPack1[4];
+	float4 Eye;
+};
+
+struct VertexInput {
+	float4 uv : POSITION;
+};
+
+void main(VertexInput vin,
+	  uniform float4x4 MVP,
+	  uniform float4x4 Model,
+	  uniform float Radius,
+	  uniform float WorldScaleHack,
+	  uniform float4 EdgeIrisControl,
+	  uniform LitParams lit_params,
+	  out float4 oPosition : POSITION,
+	  out float4 oTexcoord : TEXCOORD0,
+	  out half4 oLight : TEXCOORD1,
+	  out half4 oFactor : TEXCOORD2)
+{
+	float theta = (1 - vin.uv.y) * 3.14159265;
+	float phi = vin.uv.x * 6.28318531;
+	float sinTheta = sin(theta);
+	float3 unit = float3(sinTheta * sin(phi), cos(theta), sinTheta * cos(phi));
+	float3 normal = mul(unit, (float3x3)Model);
+	float3 world = mul(float4(unit * Radius, 1), Model).xyz;
+	float3 eye = normalize(lit_params.Eye.xyz - world);
+	float oneMinusNdotV = abs(1 - dot(eye, normal));
+	float3 reflected = reflect(-eye, normal);
+	float distance = sqrt(dot(reflected.zx, reflected.zx));
+	float angle = atan2(distance, reflected.y);
+	float3 light = normalize(lit_params.PointLightPack1[0].xyz - world);
+	float3 halfVec = normalize(light + eye);
+	float diffuse = dot(normal, light) * 0.5 + 0.5;
+	float irisPower = pow(oneMinusNdotV, EdgeIrisControl.y * 40);
+	float envPower = pow(oneMinusNdotV, lit_params.MaterialPack[2].y * 40);
+	float edgeBand = saturate((vin.uv.y - EdgeIrisControl.w) / (1 - EdgeIrisControl.w));
+	float edgeSmooth = edgeBand * edgeBand * (3 - 2 * edgeBand);
+	float exponent = lit_params.MaterialPack[1].z;
+	float specular = pow(max(dot(normal, halfVec), 0), exponent) *
+			 lit_params.MaterialPack[1].y * ((exponent + 2) * 0.125);
+
+	oPosition = mul(float4(world * WorldScaleHack, 1), MVP);
+	oTexcoord.xy = float2(vin.uv.x, (half)(1 - vin.uv.y));
+	oTexcoord.zw = reflected.zx * (angle / distance) * 0.15915494 + 0.5;
+	oLight = lit_params.PointLightPack2[2] *
+		 (lit_params.MaterialPack[1].x * (diffuse * diffuse));
+	oFactor.x = EdgeIrisControl.z * edgeSmooth * lerp(EdgeIrisControl.x, 1, irisPower);
+	oFactor.y = irisPower;
+	oFactor.z = lit_params.MaterialPack[2].z * lerp(lit_params.MaterialPack[2].x, 1, envPower);
+	oFactor.w = specular;
+}

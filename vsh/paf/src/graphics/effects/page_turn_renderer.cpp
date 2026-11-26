@@ -224,7 +224,10 @@ PageTurnRenderer::PageTurnRenderer(const string &dir)
 	  m_light(m_manager, ""), m_shadow_light(m_manager, "for_shadow"),
 	  m_turn_page(m_manager, ""), m_draw_material(true),
 	  m_corner(arl::TextureSource::OutOfLine()), m_distance(arl::TextureSource::OutOfLine()),
-	  m_background(arl::TextureSource::OutOfLine()), m_screen(NULL)
+	  m_background(arl::TextureSource::OutOfLine())
+#ifndef PAF_BUILD_2014
+	  , m_screen(NULL)
+#endif
 {
 	m_exp_minus.Init(128, 5.0f);
 
@@ -359,8 +362,10 @@ PageTurnRenderer::~PageTurnRenderer()
 {
 	delete m_shaders;
 	m_shaders = NULL;
+#ifndef PAF_BUILD_2014
 	delete m_screen;
 	m_screen = NULL;
+#endif
 }
 
 void PageTurnRenderer::Unused0()
@@ -470,10 +475,12 @@ void PageTurnRenderer::Draw(PageTurnParam *param, PageTurnMesh *mesh)
 
 	float one = 1.0f;
 
+#ifndef PAF_BUILD_2014
 	if (m_screen != NULL) {
 		m_screen->GetSurface()->ActivatePage(ui::Screen::s_root_surface->GetPageCounter());
 		m_screen->OnTarget();
 	}
+#endif
 
 	math::v2 aspect = param->m_page_size / param->m_page_size.extract_y();
 
@@ -702,8 +709,10 @@ void PageTurnRenderer::Draw(PageTurnParam *param, PageTurnMesh *mesh)
 	if (m_wireframe)
 		gl->PolygonMode(arl::POLYGON_MODE_FILL, arl::FRONT_AND_BACK);
 	gl->m_model.Pop();
+#ifndef PAF_BUILD_2014
 	if (m_screen != NULL)
 		m_screen->OnFinish();
+#endif
 }
 
 /* a shader's interface, its setters called through its vtable (name ours) */

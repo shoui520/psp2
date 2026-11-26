@@ -36,17 +36,29 @@ intrusive_ptr<graph::Surface> Screen::SetSurface(intrusive_ptr<graph::Surface> s
 
 	m_surface = surface;
 	if (m_surface.get() != NULL) {
+#ifdef PAF_BUILD_2014
+		m_surface_size = math::v2((float)m_surface->GetWidth(),
+					  (float)m_surface->GetHeight());
+		vp = math::rect(math::v2(0.0f, 0.0f), m_surface_size);
+		sp = math::rect(math::v2(0.0f, 0.0f), m_surface_size);
+#else
 		math::v2 size((float)m_surface->GetWidth(), (float)m_surface->GetHeight());
 
 		vp = math::rect(math::v2(0.0f, 0.0f), size);
 		sp = math::rect(math::v2(0.0f, 0.0f), size);
+#endif
 	}
 	return old;
 }
 
 Screen::Screen()
+#ifdef PAF_BUILD_2014
+	: clear_color(0.0f, 0.0f, 0.0f, 0.0f), is_auto_delete(true), is_cleared(false), vp(), sp(),
+	  clear_policy(240)
+#else
 	: clear_color(0.0f, 0.0f, 0.0f, 0.0f), is_auto_delete(true), is_cleared(false), vp(), sp(),
 	  clear_policy(240), m_yuv_csc_index(0), m_yuv_profile(0)
+#endif
 {
 	if (s_root_screen != NULL) {
 		SetSurface(s_root_screen->m_surface);
@@ -57,16 +69,26 @@ Screen::Screen()
 }
 
 Screen::Screen(intrusive_ptr<graph::Surface> surface)
+#ifdef PAF_BUILD_2014
+	: clear_color(0.0f, 0.0f, 0.0f, 0.0f), is_auto_delete(true), is_cleared(false), vp(), sp(),
+	  clear_policy(240)
+#else
 	: clear_color(0.0f, 0.0f, 0.0f, 0.0f), is_auto_delete(true), is_cleared(false), vp(), sp(),
 	  clear_policy(240), m_yuv_csc_index(0), m_yuv_profile(0)
+#endif
 {
 	SetSurface(surface);
 	sce_paf_memset(&m_whandle, 0, sizeof(m_whandle));
 }
 
 Screen::Screen(Screen *base)
+#ifdef PAF_BUILD_2014
+	: clear_color(0.0f, 0.0f, 0.0f, 0.0f), is_auto_delete(true), is_cleared(false), vp(), sp(),
+	  clear_policy(240)
+#else
 	: clear_color(0.0f, 0.0f, 0.0f, 0.0f), is_auto_delete(true), is_cleared(false), vp(), sp(),
 	  clear_policy(240), m_yuv_csc_index(0), m_yuv_profile(0)
+#endif
 {
 	if (base != NULL) {
 		SetSurface(base->m_surface);
@@ -85,8 +107,13 @@ math::rect Screen::ToSurfaceRect(const math::rect &rect)
 {
 	math::v2 origin(vp.width() * -0.5f, vp.height() * 0.5f);
 	math::v2 direction(1.0f, -1.0f);
+#ifdef PAF_BUILD_2014
+	math::v2 scale(sce::Vectormath::Simd::Aos::divPerElem(m_surface_size.getImpl(),
+							      vp.size().getImpl()));
+#else
 	math::v2 size((float)m_surface->GetWidth(), (float)m_surface->GetHeight());
 	math::v2 scale(sce::Vectormath::Simd::Aos::divPerElem(size.getImpl(), vp.size().getImpl()));
+#endif
 
 	return rect.convert(origin, direction, scale);
 }
@@ -152,10 +179,12 @@ int32_t Screen::PushTarget(Screen *screen)
 		math::rect rect = screen->ToSurfaceRect(screen->sp);
 
 		surface->SetScissor(rect.left(), rect.bottom(), rect.right(), rect.top(), false);
+#ifndef PAF_BUILD_2014
 		if (screen->m_yuv_csc_index < 2) {
 			surface->m_yuv_csc_index = screen->m_yuv_csc_index;
 			surface->m_yuv_profile = (SceGxmYuvProfile)screen->m_yuv_profile;
 		}
+#endif
 		surface->BeginScene();
 	}
 	s_target_list.push_back(screen);
@@ -228,6 +257,30 @@ void Screen::SetRootScreen(Screen *screen)
 	}
 }
 
+#ifdef PAF_BUILD_2014
+int32_t Screen::Init(gutil::WinHandle whandle, int32_t vp_width, int32_t vp_height,
+		     gutil::FrameBufferMode fb_mode)
+{
+	intrusive_ptr<graph::Surface> surface = new graph::DisplaySurface(
+		whandle.width, whandle.height, ImageMode_RGBA8888, ImageOrder_Swizzle, 2,
+		(ImageMode)101, ImageOrder_Swizzle, fb_mode);
+
+	Screen *screen = new Screen(surface);
+
+	screen->m_whandle = whandle;
+	screen->is_auto_delete = false;
+	SetRootScreen(screen);
+	if (vp_width > 0 && vp_height > 0) {
+		screen->vp = math::rect(0.0f, 0.0f, (float)vp_width, (float)vp_height);
+		screen->sp = math::rect(0.0f, 0.0f, (float)vp_width, (float)vp_height);
+	}
+	graph::arl::Gl()->SetSceneData(surface);
+	inputdevice::touchscreen::SetScreenResolution(whandle.width, whandle.height);
+	inputdevice::touchscreen::SetScreenViewport(0, 0, vp_width, vp_height);
+	s_target_list.clear();
+	return 0;
+}
+#else
 int32_t Screen::Init(gutil::WinHandle whandle, int32_t vp_width, int32_t vp_height)
 {
 	graph::ScreenSurface::Param param;
@@ -266,6 +319,7 @@ int32_t Screen::Init(gutil::WinHandle whandle, int32_t vp_width, int32_t vp_heig
 	s_target_list.clear();
 	return 0;
 }
+#endif
 
 int32_t Screen::Term()
 {

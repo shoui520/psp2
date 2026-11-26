@@ -43,7 +43,9 @@ const float TextBox::c_caretWidth = 2.0f;
 static inline __attribute__((always_inline)) void ShowBar(ScrollBar *bar)
 {
 	if (!bar->m_transition_complete) {
+#ifndef PAF_BUILD_2014
 		bar->m_transition = 0xff;
+#endif
 		bar->m_transition_complete = true;
 		bar->DoTransition_core(0.0f, true);
 	}
@@ -53,7 +55,9 @@ static inline __attribute__((always_inline)) void ShowBar(ScrollBar *bar)
 static inline __attribute__((always_inline)) void HideBar(ScrollBar *bar)
 {
 	bar->m_transition_complete = false;
+#ifndef PAF_BUILD_2014
 	bar->m_transition = 0xff;
+#endif
 	bar->DoTransitionReverse_core(0.0f, true);
 	ScePafWidget_4588699E(bar, NULL, 2, 0.0f, NULL);
 }
@@ -1432,10 +1436,12 @@ static VersatileParam *NewTextBoxLayoutParam()
 	return new WidgetLayoutParam;
 }
 
+#ifndef PAF_BUILD_2014
 static VersatileParam *NewTextBoxFocusParam()
 {
 	return new WidgetFocusParam;
 }
+#endif
 
 static VersatileParam *NewTextBoxStyleParam()
 {
@@ -1457,7 +1463,9 @@ FactoryFuncTable g_factoryTextBox = {
 	NewTextBox,
 	NewTextBoxParam,
 	NewTextBoxLayoutParam,
+#ifndef PAF_BUILD_2014
 	NewTextBoxFocusParam,
+#endif
 	NewTextBoxStyleParam,
 	NewTextBoxHandlerParam,
 	NewTextBoxSoundParam,

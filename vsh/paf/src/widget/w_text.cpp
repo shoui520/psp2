@@ -665,6 +665,7 @@ math::v4 Text::GetLinkRect(const Link *link)
 
 void Text::UpdateSize()
 {
+#ifndef PAF_BUILD_2014
 	if (m_focus_link != NULL && m_cursor_on) {
 		FocusShape own;
 		FocusShape *shape = m_focus_shape;
@@ -766,6 +767,7 @@ void Text::UpdateSize()
 			index = line.index;
 		}
 	}
+#endif
 
 	if (m_plane != NULL) {
 		if (m_text == NULL)
@@ -1087,6 +1089,7 @@ void Text::UpdatePost()
 			       math::v3(left - right, bottom - top, 0.0f) * 0.5f);
 	}
 
+#ifndef PAF_BUILD_2014
 	if (Text::IsTextEventEnabled() && m_cursor_on && m_focus_link == NULL) {
 		FocusSearchInfo info(255);
 
@@ -1099,6 +1102,7 @@ void Text::UpdatePost()
 				m_focus_shape->m_use_parts = false;
 		}
 	}
+#endif
 }
 
 int32_t Text::OnDraw(graph::DrawInfo &info)
@@ -2670,7 +2674,11 @@ static void LinkStyleCB(int32_t type, Handler *self, Event *e, void *data)
 	if (text->m_touch_captures.size() == 0) {
 		Environment *env = text->m_env;
 
+#ifdef PAF_BUILD_2014
+		if (env != NULL && env->m_focus_cursor[0].m_target == text) {
+#else
 		if (env != NULL && env->m_focus_cursor.m_target == text) {
+#endif
 			Text::Link *link = text->m_focus_link;
 
 			if (link == NULL) {
@@ -2712,6 +2720,7 @@ static void LinkStyleCB(int32_t type, Handler *self, Event *e, void *data)
 namespace paf {
 namespace ui {
 
+#ifndef PAF_BUILD_2014
 Widget *Text::SetFocusOption(const void *param, int32_t option)
 {
 	if (param != NULL) {
@@ -2731,6 +2740,7 @@ Widget *Text::SetFocusOption(const void *param, int32_t option)
 	}
 	return Widget::SetFocusOption(param, option);
 }
+#endif
 
 int32_t Text::HandleKeycodeEvent(Event *e)
 {
@@ -2753,8 +2763,10 @@ int32_t Text::HandleKeycodeEvent(Event *e)
 			math::v4 search = rect;
 
 			if (SearchLinkFocus(dir, search, 0) != NULL) {
+#ifndef PAF_BUILD_2014
 				if (m_env->m_focus_history_on)
 					m_env->m_focus_cursor.RemoveFocusHistory(this);
+#endif
 				e->m_type = (e->m_type & 0xf0ffffff) | 0x1000000;
 			} else {
 				CheckLinkFocusInView();
@@ -2782,6 +2794,7 @@ int32_t Text::HandleFocusEvent(Event *e)
 						ChangeState(3, -1);
 				}
 
+#ifndef PAF_BUILD_2014
 				FocusShape *shape = m_focus_shape;
 
 				if (shape != NULL && m_focus_link != NULL) {
@@ -2789,6 +2802,7 @@ int32_t Text::HandleFocusEvent(Event *e)
 					shape->m_size = math::v2(GetSize(0)->getImpl().getXY());
 					ScePafWidget_13B246E0(this, shape);
 				}
+#endif
 			}
 		} else if (type > 0x400) {
 			FocusSearchInfo info(255);
@@ -2798,8 +2812,10 @@ int32_t Text::HandleFocusEvent(Event *e)
 			TextFocusCB(NULL, this, NULL, &info);
 			if (m_focus_link != NULL) {
 				UpdateSize();
+#ifndef PAF_BUILD_2014
 				if (m_focus_shape != NULL)
 					m_focus_shape->m_use_parts = false;
+#endif
 				e->m_type = (e->m_type & 0xf0ffffff) | 0x1000000;
 			}
 		}
@@ -2807,6 +2823,7 @@ int32_t Text::HandleFocusEvent(Event *e)
 	return Handler::HandleFocusEvent(e);
 }
 
+#ifndef PAF_BUILD_2014
 void Text::SetFitToScene(bool on_off)
 {
 	if (!(m_size.extract_x() < m_scene->GetSize(0)->extract_x()) ||
@@ -2815,6 +2832,7 @@ void Text::SetFitToScene(bool on_off)
 	else
 		m_fit_to_scene = on_off;
 }
+#endif
 
 }
 }
@@ -3051,10 +3069,12 @@ static VersatileParam *NewTextLayoutParam()
 	return new WidgetLayoutParam;
 }
 
+#ifndef PAF_BUILD_2014
 static VersatileParam *NewTextFocusParam()
 {
 	return new WidgetFocusParam;
 }
+#endif
 
 static VersatileParam *NewTextStyleParam()
 {
@@ -3076,7 +3096,9 @@ FactoryFuncTable g_factoryText = {
 	NewText,
 	NewTextParam,
 	NewTextLayoutParam,
+#ifndef PAF_BUILD_2014
 	NewTextFocusParam,
+#endif
 	NewTextStyleParam,
 	NewTextHandlerParam,
 	NewTextSoundParam,

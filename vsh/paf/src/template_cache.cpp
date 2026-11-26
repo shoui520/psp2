@@ -108,7 +108,9 @@ int32_t TemplateCache::Item::Clear()
 	m_created = false;
 	m_node = cxml::Element();
 	m_layout = cxml::Element();
+#ifndef PAF_BUILD_2014
 	m_focus = cxml::Element();
+#endif
 	m_id.m_idhash = 0;
 	m_style_id.m_idhash = 0;
 	sce_paf_memset(&m_factory, 0, sizeof(m_factory));
@@ -122,10 +124,12 @@ int32_t TemplateCache::Item::Clear()
 		delete m_layout_param;
 		m_layout_param = NULL;
 	}
+#ifndef PAF_BUILD_2014
 	if (m_focus_param != NULL) {
 		delete m_focus_param;
 		m_focus_param = NULL;
 	}
+#endif
 	m_list_layout.clear();
 	for (list<Item *>::iterator it = m_children.begin(); it != m_children.end();) {
 		Item *child = *it;
@@ -146,7 +150,10 @@ int32_t TemplateCache::Item::Clear()
 
 TemplateCache::Item::Item()
 	: m_id(s_empty_name, 0), m_style_id(s_empty_name, 0), m_style_param(NULL),
-	  m_sound_param(NULL), m_wparam(NULL), m_layout_param(NULL), m_focus_param(NULL),
+	  m_sound_param(NULL), m_wparam(NULL), m_layout_param(NULL),
+#ifndef PAF_BUILD_2014
+	  m_focus_param(NULL),
+#endif
 	  m_template(NULL)
 {
 	Clear();
@@ -158,14 +165,14 @@ int32_t TemplateCache::Item::SetSoundParam(Plugin *plugin, const IDParam &id)
 
 	name += m_node.GetName();
 	m_sound_param = static_cast<ui::WidgetSoundParam *>(
-		plugin->m_sound_param_manager->FindParam(name.c_str(), id));
+		PAF_PARAM_MGR(plugin->m_sound_param_manager)->FindParam(name.c_str(), id));
 	if (m_sound_param == NULL) {
 		Plugin *common = Framework::Instance()->m_common_resource_plugin;
 
 		if (common == NULL)
 			return -1;
 		m_sound_param = static_cast<ui::WidgetSoundParam *>(
-			common->m_sound_param_manager->FindParam(name.c_str(), id));
+			PAF_PARAM_MGR(common->m_sound_param_manager)->FindParam(name.c_str(), id));
 	}
 	if (m_sound_param != NULL)
 		return 0;
@@ -178,14 +185,14 @@ int32_t TemplateCache::Item::SetStyleParam(Plugin *plugin, const IDParam &id)
 
 	name += m_node.GetName();
 	m_style_param = static_cast<ui::WidgetStyleParam *>(
-		plugin->m_style_param_manager->FindParam(name.c_str(), id));
+		PAF_PARAM_MGR(plugin->m_style_param_manager)->FindParam(name.c_str(), id));
 	if (m_style_param == NULL) {
 		Plugin *common = Framework::Instance()->m_common_resource_plugin;
 
 		if (common == NULL)
 			return -1;
 		m_style_param = static_cast<ui::WidgetStyleParam *>(
-			common->m_style_param_manager->FindParam(name.c_str(), id));
+			PAF_PARAM_MGR(common->m_style_param_manager)->FindParam(name.c_str(), id));
 	}
 	if (m_style_param != NULL)
 		return 0;
@@ -293,10 +300,12 @@ int32_t TemplateCache::Item::Create(Plugin *plugin, const cxml::Element &elm)
 		ret = 0;
 		goto error;
 	}
+#ifndef PAF_BUILD_2014
 	if (sce_paf_strncmp(name, "focus_", 6) == 0) {
 		ret = 0;
 		goto error;
 	}
+#endif
 	if (sce_paf_strncmp(name, "template_ref", 12) == 0) {
 		ret = CreateTemplateRef(plugin, elm, &m_template);
 		if (ret == 0)
@@ -379,10 +388,12 @@ int32_t TemplateCache::Item::Create(Plugin *plugin, const cxml::Element &elm)
 				};
 
 				m_list_layout.push_back(data);
+#ifndef PAF_BUILD_2014
 			} else if (child_name[0] == 'f' &&
 				   sce_paf_strncmp("focus_", child_name, 6) == 0) {
 				if (m_focus.doc == NULL || m_focus.offset < 0)
 					m_focus = child;
+#endif
 			} else {
 				Item *item = new Item();
 
@@ -472,6 +483,7 @@ int32_t TemplateCache::Item::Open(Plugin *plugin, ui::Widget *parent,
 			}
 		}
 	}
+#ifndef PAF_BUILD_2014
 	if (m_focus.doc != NULL && m_focus.offset >= 0) {
 		if (m_focus_param != NULL) {
 			m_focus_param->m_widget = widget;
@@ -495,6 +507,7 @@ int32_t TemplateCache::Item::Open(Plugin *plugin, ui::Widget *parent,
 			}
 		}
 	}
+#endif
 	plugin->InstantiateWidget_InitEventHandler(m_id, widget, event_handler_table);
 	for (list<Item *>::iterator it = m_children.begin(); it != m_children.end(); it++) {
 		if ((*it)->Open(plugin, widget->GetInternalWidget(), event_handler_table, sibling) != 0)

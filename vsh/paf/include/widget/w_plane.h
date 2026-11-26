@@ -34,6 +34,7 @@ public:
 	virtual int32_t GetTexture(intrusive_ptr<graph::Surface> &surf, int32_t obj,
 				   uint32_t index);
 
+#ifndef PAF_BUILD_2014
 	/* Widget's, and the down direction while it listens to event 0x10001 */
 	virtual int32_t GetFocusDirectionMask()
 	{
@@ -43,6 +44,7 @@ public:
 			return 2;
 		return mask;
 	}
+#endif
 
 	/* the plane, draw object 0 */
 	graph::PlaneObj *m_plane;

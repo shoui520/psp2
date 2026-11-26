@@ -27,8 +27,13 @@ namespace graph {
 #define DEFAULT_SHADOW_COLOR	0x66000000
 
 /* the attributes the font is made from: EqualFontType's, and EqualFontStyle's with the point */
+#ifdef PAF_BUILD_2014
+#define FONT_TYPE_FLAGS		(Flag_Bold | Flag_Oblique | Flag_Shadow)
+#define FONT_STYLE_FLAGS	FONT_TYPE_FLAGS
+#else
 #define FONT_TYPE_FLAGS		(Flag_Bold | Flag_Oblique | Flag_Shadow | Flag_ForceBold)
 #define FONT_STYLE_FLAGS	(FONT_TYPE_FLAGS | Flag_EnlargeFontSize)
+#endif
 
 /* the color as RGBA bytes, each saturated, and back */
 static inline uint32_t PackColor(const math::v4 &color)
@@ -48,6 +53,21 @@ static inline math::v4 UnpackColor(uint32_t color)
 }
 
 TextStyle::TextStyle()
+#ifdef PAF_BUILD_2014
+	: m_family(0), m_flag(0), m_point(0.0f), m_color(DEFAULT_COLOR),
+	  m_shadowColor(DEFAULT_SHADOW_COLOR), m_backColor(0), m_underlineColor(0),
+	  m_strikeColor(0)
+{
+}
+
+TextStyle::TextStyle(const TextStyle &style)
+	: m_family(0), m_flag(0), m_point(0.0f), m_color(DEFAULT_COLOR),
+	  m_shadowColor(DEFAULT_SHADOW_COLOR), m_backColor(0), m_underlineColor(0),
+	  m_strikeColor(0)
+{
+	*this = style;
+}
+#else
 	: m_family(0), m_flag(0), m_point(0.0f, 0.0f), m_color(DEFAULT_COLOR),
 	  m_shadowColor(DEFAULT_SHADOW_COLOR), m_backColor(0), m_underlineColor(0),
 	  m_strikeColor(0)
@@ -65,6 +85,7 @@ TextStyle::TextStyle(const TextStyle &style)
 {
 	*this = style;
 }
+#endif
 
 TextStyle::~TextStyle()
 {
@@ -85,22 +106,38 @@ TextStyle &TextStyle::operator=(const TextStyle &style)
 
 bool TextStyle::operator==(const TextStyle &style)
 {
+#ifdef PAF_BUILD_2014
+	return m_family == style.m_family && m_flag == style.m_flag &&
+	       m_point == style.m_point &&
+	       m_color == style.m_color && m_shadowColor == style.m_shadowColor &&
+	       m_backColor == style.m_backColor && m_underlineColor == style.m_underlineColor &&
+	       m_strikeColor == style.m_strikeColor;
+#else
 	return m_family == style.m_family && m_flag == style.m_flag &&
 	       ((style.m_point.getImpl().getX() == m_point.getImpl().getX()) &
 		(style.m_point.getImpl().getY() == m_point.getImpl().getY())).getAsBool() &&
 	       m_color == style.m_color && m_shadowColor == style.m_shadowColor &&
 	       m_backColor == style.m_backColor && m_underlineColor == style.m_underlineColor &&
 	       m_strikeColor == style.m_strikeColor;
+#endif
 }
 
 bool TextStyle::operator!=(const TextStyle &style)
 {
+#ifdef PAF_BUILD_2014
+	return m_family != style.m_family || m_flag != style.m_flag ||
+	       m_point != style.m_point ||
+	       m_color != style.m_color || m_shadowColor != style.m_shadowColor ||
+	       m_backColor != style.m_backColor || m_underlineColor != style.m_underlineColor ||
+	       m_strikeColor != style.m_strikeColor;
+#else
 	return m_family != style.m_family || m_flag != style.m_flag ||
 	       !((m_point.getImpl().getX() == style.m_point.getImpl().getX()) &
 		 (m_point.getImpl().getY() == style.m_point.getImpl().getY())).getAsBool() ||
 	       m_color != style.m_color || m_shadowColor != style.m_shadowColor ||
 	       m_backColor != style.m_backColor || m_underlineColor != style.m_underlineColor ||
 	       m_strikeColor != style.m_strikeColor;
+#endif
 }
 
 int32_t TextStyle::SetStyleAttribute(TextStyleAttribute attr, int32_t val)
@@ -130,7 +167,11 @@ int32_t TextStyle::SetStyleAttribute(TextStyleAttribute attr, float val)
 	int32_t ret = SCE_PAF_OK;
 
 	if (attr == TextStyleAttribute_Point)
+#ifdef PAF_BUILD_2014
+		m_point = val;
+#else
 		m_point = math::v2(val, val);
+#endif
 	else
 		ret = SCE_PAF_ERROR_TEXT_INVALID_ARGUMENT;
 	return ret;
@@ -140,6 +181,12 @@ int32_t TextStyle::GetStyleAttribute(TextStyleAttribute attr, float &val) const
 {
 	int32_t ret = SCE_PAF_OK;
 
+#ifdef PAF_BUILD_2014
+	if (attr == TextStyleAttribute_Point)
+		val = m_point;
+	else
+		ret = SCE_PAF_ERROR_TEXT_INVALID_ARGUMENT;
+#else
 	switch (attr) {
 	case TextStyleAttribute_Point:
 		val = m_point.extract_y();
@@ -156,6 +203,7 @@ int32_t TextStyle::GetStyleAttribute(TextStyleAttribute attr, float &val) const
 		ret = SCE_PAF_ERROR_TEXT_INVALID_ARGUMENT;
 		break;
 	}
+#endif
 	return ret;
 }
 
@@ -164,7 +212,11 @@ int32_t TextStyle::SetStyleAttribute(TextStyleAttribute attr, const math::v2 &va
 	int32_t ret = SCE_PAF_OK;
 
 	if (attr == TextStyleAttribute_Point)
+#ifdef PAF_BUILD_2014
+		m_point = val.extract_y();
+#else
 		m_point = val;
+#endif
 	else
 		ret = SCE_PAF_ERROR_TEXT_INVALID_ARGUMENT;
 	return ret;
@@ -174,6 +226,12 @@ int32_t TextStyle::GetStyleAttribute(TextStyleAttribute attr, math::v2 &val) con
 {
 	int32_t ret = SCE_PAF_OK;
 
+#ifdef PAF_BUILD_2014
+	if (attr == TextStyleAttribute_Point)
+		val = math::v2(m_point, m_point);
+	else
+		ret = SCE_PAF_ERROR_TEXT_INVALID_ARGUMENT;
+#else
 	switch (attr) {
 	case TextStyleAttribute_Point:
 		val = m_point;
@@ -190,6 +248,7 @@ int32_t TextStyle::GetStyleAttribute(TextStyleAttribute attr, math::v2 &val) con
 		ret = SCE_PAF_ERROR_TEXT_INVALID_ARGUMENT;
 		break;
 	}
+#endif
 	return ret;
 }
 
@@ -289,12 +348,14 @@ int32_t TextStyle::SetStyleAttribute(TextStyleAttribute attr, bool val)
 	case TextStyleAttribute_Emboss:
 		SET_FLAG(Flag_Emboss);
 		break;
+#ifndef PAF_BUILD_2014
 	case TextStyleAttribute_EnlargeFontSize:
 		SET_FLAG(Flag_EnlargeFontSize);
 		break;
 	case TextStyleAttribute_ForceBold:
 		SET_FLAG(Flag_ForceBold);
 		break;
+#endif
 	default:
 		ret = SCE_PAF_ERROR_TEXT_INVALID_ARGUMENT;
 		break;
@@ -328,6 +389,7 @@ int32_t TextStyle::GetStyleAttribute(TextStyleAttribute attr, bool &val) const
 	case TextStyleAttribute_Emboss:
 		val = (m_flag & Flag_Emboss) ? true : false;
 		break;
+#ifndef PAF_BUILD_2014
 	case TextStyleAttribute_EnlargeFontSize:
 		val = (m_flag & Flag_EnlargeFontSize) ? true : false;
 		break;
@@ -342,6 +404,7 @@ int32_t TextStyle::GetStyleAttribute(TextStyleAttribute attr, bool &val) const
 		val = bold;
 		break;
 	}
+#endif
 	default:
 		ret = SCE_PAF_ERROR_TEXT_INVALID_ARGUMENT;
 		break;
@@ -351,9 +414,14 @@ int32_t TextStyle::GetStyleAttribute(TextStyleAttribute attr, bool &val) const
 
 bool TextStyle::EqualFontStyle(const TextStyle &style)
 {
+#ifdef PAF_BUILD_2014
+	return m_family == style.m_family && ((m_flag ^ style.m_flag) & FONT_STYLE_FLAGS) == 0 &&
+	       m_point == style.m_point;
+#else
 	return m_family == style.m_family && ((m_flag ^ style.m_flag) & FONT_STYLE_FLAGS) == 0 &&
 	       ((style.m_point.getImpl().getX() == m_point.getImpl().getX()) &
 		(style.m_point.getImpl().getY() == m_point.getImpl().getY())).getAsBool();
+#endif
 }
 
 bool TextStyle::EqualFontType(const TextStyle &style)

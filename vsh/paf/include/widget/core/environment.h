@@ -67,7 +67,12 @@ public:
 
 	/* the root screen made of a surface of the window's size, with the viewport size given
 	   (below 1: the surface's) (0x81148184; name ours), and given up (0x811483c8) */
+#ifdef PAF_BUILD_2014
+	static int32_t Init(gutil::WinHandle whandle, int32_t vp_width, int32_t vp_height,
+			    gutil::FrameBufferMode fb_mode);
+#else
 	static int32_t Init(gutil::WinHandle whandle, int32_t vp_width, int32_t vp_height);
+#endif
 	static int32_t Term();
 	/* the root screen given up for another, which is the one the root surface is of */
 	static void SetRootScreen(Screen *screen);
@@ -102,14 +107,19 @@ public:
 	math::v4 clear_color;
 	bool is_auto_delete;
 	bool is_cleared;
+#ifdef PAF_BUILD_2014
+	math::v2 m_surface_size;
+#endif
 	math::rect vp;
 	math::rect sp;
 	int32_t clear_policy;
 	intrusive_ptr<graph::Surface> m_surface;
 	gutil::WinHandle m_whandle;
+#ifndef PAF_BUILD_2014
 	/* the YUV conversion the surface is drawn with (ScreenSurface's, names ours) */
 	uint32_t m_yuv_csc_index;
 	int32_t m_yuv_profile;
+#endif
 
 	static Screen *s_root_screen;
 	/* where widgets whose camera does not roll the screen are drawn from */
@@ -123,6 +133,15 @@ public:
 class Widget;
 class Camera;
 class SceneResolution;
+
+#ifdef PAF_BUILD_2014
+class SceneResolutionAct {
+public:
+	int32_t id;
+	int32_t roll;
+	int32_t morph;
+};
+#endif
 
 /*
  * The screen resolutions the layouts are made for and the ones to use (Sony's class name, by the
@@ -196,6 +215,25 @@ public:
 /* a widget in an ordered list of the environment's (32 bytes; names ours) */
 class OrderEntry {
 public:
+#ifdef PAF_BUILD_2014
+	OrderEntry()
+		: m_widget(NULL), m_mark(-1), m_scene_priority(-1), m_scene_index(-1),
+		  m_nested_order(-1), m_key((uint32_t)-1)
+	{
+	}
+
+	bool operator<(const OrderEntry &rhs) const
+	{
+		return m_key < rhs.m_key;
+	}
+
+	Widget *m_widget;
+	int32_t m_mark;
+	int32_t m_scene_priority;
+	int32_t m_scene_index;
+	int32_t m_nested_order;
+	uint32_t m_key;
+#else
 	OrderEntry() : m_widget(NULL), m_mark(-1), m_order(-1), m_depth(-1), m_group(-1)
 	{
 	}
@@ -219,6 +257,7 @@ public:
 	uint64_t m_depth;
 	/* the scene's entry */
 	uint32_t m_group;
+#endif
 };
 
 /* the environment keeps three of these: the modal widgets, the widgets of m_ordered and the
@@ -425,6 +464,38 @@ public:
    from its exports; the members' names ours) */
 class FocusInfo {
 public:
+#ifdef PAF_BUILD_2014
+	FocusInfo()
+		: m_cursor(NULL), m_target(NULL), m_previous(NULL),
+		  m_enabled(false), m_history_count(0)
+	{
+	}
+
+	~FocusInfo()
+	{
+	}
+
+	void Hide();
+	void RemoveFocusHistory(Widget *widget);
+	Widget *FindFocusHistory(Widget *widget, uint32_t dir);
+	void AddFocusHistory(Widget *widget, Widget *next, uint32_t dir);
+
+	class History {
+	public:
+		Widget *m_widget;
+		Widget *m_next;
+		uint32_t m_dir;
+	};
+
+	Widget *m_cursor;
+	Widget *m_target;
+	Widget *m_previous;
+	math::v4 m_target_pos;
+	math::v4 m_target_size;
+	bool m_enabled : 1;
+	History m_history[5];
+	uint32_t m_history_count;
+#else
 	/* no cursor yet, the colour and the time set, the focus shader made (0x811416a8) */
 	FocusInfo();
 	/* the focus shader and the texture given back (0x81141738) */
@@ -549,6 +620,7 @@ public:
 	uint8_t reserved5[3];
 	/* the frames the shown state waited to change, up to five (Update; name ours) */
 	int32_t m_show_wait;
+#endif
 };
 
 /* a scene asked to be added to an entry, kept in the environment's pending list (names ours) */
@@ -608,9 +680,15 @@ public:
 
 class Environment {
 public:
+#ifdef PAF_BUILD_2014
+	typedef int32_t (*SoundCallback)(const char *buffer1, uint32_t size1, const char *buffer2,
+					 uint32_t size2, int32_t samplerate, bool ignore_init,
+					 void *data);
+#else
 	typedef int32_t (*SoundCallback)(const char *buffer1, uint32_t size1, const char *buffer2,
 					 uint32_t size2, int32_t samplerate, float vol,
 					 bool ignore_init, void *data);
+#endif
 
 	/* the focus cursor hidden on the port (-1: all) */
 	void HideFocus(int32_t port);
@@ -618,11 +696,33 @@ public:
 						const IDParam &id, const IDParam &style,
 						void *data);
 
+#ifdef PAF_BUILD_2014
+	Environment(SceneResolution *resolutions, int32_t resolution_num, int32_t resolution_id);
+#else
 	/* the environment of the resolution set and the screen orientation mode: its screen, the
 	   input listeners, the root scene "env_top_screen" with its camera, the debug texture and
 	   the two focus cursors (export 393F0EF0) */
 	Environment(Resolution *env_param, int32_t screen_orientation_mode);
+#endif
 	virtual ~Environment();
+
+#ifdef PAF_BUILD_2014
+	SceneResolution *FindResolution(SceneResolution *res, int32_t num, int32_t id);
+	int32_t FindResolutionIdByResource(SceneResolution *res, int32_t num, const IDParam &id);
+	IDParam GetResolutionResource(SceneResolution *res, int32_t num, int32_t id);
+	int32_t CalcOrderEntry(OrderEntry *out, Widget *widget, vector<OrderEntry>::iterator begin,
+			       vector<OrderEntry>::iterator end);
+	int32_t AddOrderedWidget(Widget *widget);
+	int32_t AddModalWidget(Widget *widget, int32_t mark);
+	int32_t RemoveModalWidget(Widget *widget);
+	int32_t RemoveOrderedWidget(Widget *widget);
+	Widget *GetFocusWidget(int32_t port);
+	int32_t ReleaseFocusWidget(Widget *w);
+	int32_t SetFocusWidget(Widget *w, int32_t port);
+	void UpdateFocusCursor(int32_t port, float time);
+	void UpdateScreenResolution();
+	int32_t SetBgColor(const math::v4 *color);
+#endif
 
 	/* the widget kept as a touch device region (up to 6), at the first free slot or at the index
 	   (0x8113f3ce, 0x8113f3a2); taken off again (0x8113f40a) */
@@ -770,6 +870,69 @@ public:
 		return common::SharedPtr<inputdevice::InputGestureListener>();
 	}
 
+#ifdef PAF_BUILD_2014
+	bool m_bg_color_enabled;
+	math::v4 m_bg_color;
+	map<int32_t, Widget *> m_scene_entries;
+	list<EntryRequest> m_pending;
+	bool m_scene_restruct;
+	list<TextureRequest> m_texture_requests;
+	list<TextureRequest> m_texture_requests_add;
+	list<TextureRequest> m_texture_requests_remove;
+	bool m_texture_requests_busy;
+	common::SharedPtr<inputdevice::InputListener> m_pad_gesture_listener;
+	common::SharedPtr<inputdevice::InputListener> m_touch_gesture_listener_front;
+	common::SharedPtr<inputdevice::InputListener> m_touch_gesture_listener_rear;
+	common::SharedPtr<inputdevice::InputListener> m_motion_gesture_listener;
+	common::SharedPtr<inputdevice::InputListener> m_btrm_gesture_listener;
+	SceneResolution *m_resolutions;
+	SceneResolution *m_cur_resolution;
+	int32_t m_resolution_num;
+	int32_t m_resolution_id;
+	int32_t m_next_resolution_id;
+	Timer *m_orientation_timer;
+	SceneResolutionAct *m_resolution_act_table[4];
+	Widget *m_root_widget;
+	Camera *m_root_camera;
+	uint8_t m_camera_roll_mode;
+	uint8_t m_next_camera_roll_mode;
+	int32_t m_frame_state;
+	bool m_draw_frame;
+	bool m_term_requested;
+	bool m_suspended;
+	SoundCallback m_sound_callback;
+	void *m_sound_callback_data;
+	CreateWidgetCallback m_create_widget_callback;
+	void *m_create_widget_callback_data;
+	Widget *m_cancel_widget;
+	Widget *m_top_modal_widget;
+	int32_t m_modal_buf_index;
+	bool m_modal_unsorted;
+	vector<OrderEntry> m_modal_lists[2];
+	Widget *m_display_area_scene;
+	Widget *m_second_modal_widget;
+	int32_t m_ordered_buf_index;
+	bool m_ordered_unsorted;
+	vector<OrderEntry> m_ordered_lists[2];
+	FocusInfo m_focus_cursor[2];
+	intrusive_ptr<graph::Surface> m_debug_texture;
+	EventQueue m_ev_queue;
+	list<Event> m_ev_subrouting;
+	list<Event> m_ev_doevent;
+	list<Scene *> m_scenes_onupdate;
+	Screen *m_screen;
+	TouchInfo m_touch_state[2][8];
+	HitInfo m_touch_hit[2][8];
+	HitInfo m_touch_hit_last[2][8];
+	TouchCapture m_touch_capture[2][8];
+	DragState m_drag_state[2][8];
+	PinchState m_pinch_state[2];
+	list<HitInfo> m_touch_hits;
+	list<Widget *> m_hit_stack;
+	uint32_t m_touch_region_mask;
+	uint32_t m_touch_region_mask_pre;
+	Widget *m_touch_region[6];
+#else
 	/* set: the widgets the focus leaves are kept in its history (name ours) */
 	bool m_focus_history_on;
 	uint8_t reserved_5a[3];
@@ -956,6 +1119,7 @@ public:
 	void (*m_pre_draw)(void);
 	void (*m_post_draw)(void);
 	uint8_t reserved6b[4];
+#endif
 };
 
 }

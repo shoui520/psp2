@@ -178,8 +178,13 @@ void DrawPanelObj(DrawObj *obj, int32_t kind, int32_t flags)
 	} else if (kind == 1) {
 		PanelParam *param = static_cast<PanelObj *>(obj)->m_param;
 
+#ifdef PAF_BUILD_2014
+		PanelObjRenderer()->GetPanelRenderer(false)->AddSolid3x3Panel(
+			*param, param->m_revolution.m_axis[1] > 0.0f, 4);
+#else
 		PanelObjRenderer()->GetPanelRenderer(false)->AddSolid3x3Panel(
 			*param, param->m_revolution.m_axis[1] > 0.0f, 1);
+#endif
 		s_draws_panel++;
 	}
 }

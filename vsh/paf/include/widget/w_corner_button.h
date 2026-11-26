@@ -63,6 +63,7 @@ public:
 		return SetTexture(surf, OBJ_CORNER, 0);
 	}
 
+#ifndef PAF_BUILD_2014
 	/* first in the focus search up and down */
 	virtual int32_t GetFocusPriority(int32_t dir)
 	{
@@ -70,6 +71,7 @@ public:
 			return 1;
 		return 0;
 	}
+#endif
 
 	virtual graph::DrawObj *CreateDrawObj(int32_t obj);
 	virtual bool UpdateObjsSize();

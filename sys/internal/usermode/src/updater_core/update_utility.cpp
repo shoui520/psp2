@@ -35,6 +35,12 @@
 #define UTILITY_ERROR_RELEASE_CHECK_MODE	0x80182802
 #define UTILITY_ERROR_SYSTEM_VERSION		0x80182804
 #define UTILITY_ERROR_DVT1			0x8018280a
+#ifdef UPDATER_CORE_2014
+#define SCE_SBL_US_ERROR_RELEASE_CHECK_MODE	((int)0x800f0233)
+#define UTILITY_POWER_CHECK_RELEASE_MODE	8
+#define UTILITY_SUB_CODE_DOLCE_MASK		0x200
+#define UTILITY_SUB_CODE_DOLCE_EXTRA		0x408
+#endif
 
 /* the system versions the update installs over */
 #define UTILITY_SYSTEM_VERSION_MIN	0x00996000
@@ -44,12 +50,14 @@
 #define UTILITY_PRODUCT_SUB_CODE_DVT1	3
 #define UTILITY_PRODUCT_SUB_CODE_MANUF	9
 
+#ifndef UPDATER_CORE_2014
 /*
  * The weak import's address, in a data word the loader leaves 0 where the system lacks it
  * (Sony's compiler made the word; SNC 3.57 tests the address in the code, so it is written
  * out here, as cui_view.c's are).
  */
 SceUInt32 (*updateUtilityIsDevelopmentMode)(void) = vshSblSsIsDevelopmentMode;
+#endif
 
 UpdateUtility::UpdateUtility()
 {
@@ -260,9 +268,11 @@ int UpdateUtility::CheckDeviceStatus(void)
 {
 	SceSblUsSpkgInfo info;
 	ScePsCode pscode;
+#ifndef UPDATER_CORE_2014
 	int isTool;
 	int isTest;
 	int mode;
+#endif
 	int ret;
 
 	ret = vshSblAimgrGetPscode(&pscode);
@@ -270,6 +280,11 @@ int UpdateUtility::CheckDeviceStatus(void)
 		UPDATER_ERROR_FMT(569, "%x", ret);
 		return ret;
 	}
+#ifdef UPDATER_CORE_2014
+	if (sceSblUsPowerControl(UTILITY_POWER_CHECK_RELEASE_MODE, 0) ==
+	    SCE_SBL_US_ERROR_RELEASE_CHECK_MODE)
+		return UTILITY_ERROR_RELEASE_CHECK_MODE;
+#else
 	isTool = vshSblAimgrIsTool() == 1;
 	isTest = vshSblAimgrIsTest() == 1;
 	if (isTool || isTest) {
@@ -288,6 +303,7 @@ int UpdateUtility::CheckDeviceStatus(void)
 	} else {
 		sceClibPrintf("[INFO]skip release check mode check.\n");
 	}
+#endif
 	if (pscode.product_code == UTILITY_PRODUCT_CODE_DEVKIT &&
 	    pscode.product_sub_code == UTILITY_PRODUCT_SUB_CODE_DVT1) {
 		sceClibPrintf("[ERROR]DVT1 is not supported.\n");
@@ -317,3 +333,23 @@ int UpdateUtility::CheckDeviceStatus(void)
 	}
 	return 0;
 }
+
+#ifdef UPDATER_CORE_2014
+int UpdateUtility::GetHardwareModel(int *model)
+{
+	ScePsCode pscode;
+	int ret;
+
+	ret = vshSblAimgrGetPscode(&pscode);
+	if (ret < 0) {
+		UPDATER_ERROR_FMT(597, "%x", ret);
+		return ret;
+	}
+	if ((pscode.product_sub_code & UTILITY_SUB_CODE_DOLCE_MASK) != 0 ||
+	    pscode.product_sub_code == UTILITY_SUB_CODE_DOLCE_EXTRA)
+		*model = 2;
+	else
+		*model = 1;
+	return ret;
+}
+#endif

@@ -558,8 +558,10 @@ public:
 		ScrollViewBase::SetViewFocus(pos, timer, flag_a, flag_b);
 	}
 	virtual void OnPartsLayoutUpdated(bool is_dirty);
+#ifndef PAF_BUILD_2014
 	/* the focus moved in the direction: in scroll mode 1 as the view's, else to a link */
 	virtual bool ScePafWidget_AD706F2A(const math::v2 &dir, Widget *from);
+#endif
 
 	/* its text from the UTF-8 marked-up string of the length */
 	int32_t SetCText(const char *text, size_t len);

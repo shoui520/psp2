@@ -42,6 +42,9 @@ int sceGxmVshSyncObjectClose(uint32_t id, SceGxmSyncObject *sync_object);
 int sceDisplayGetMaximumFrameBufResolution(int *width, int *height);
 /* SceVshBridge's, through its stub library */
 int vshDisplaySetViewportConf(SceUInt32 head, SceUInt32 plane, const SceDisplayViewportConf *conf);
+#ifdef PAF_BUILD_2014
+SceUID SceSharedFb_D2B27255(int index);
+#endif
 }
 
 namespace paf {
@@ -141,6 +144,73 @@ int32_t DisplaySurface::Init()
 	return 0;
 }
 
+#ifdef PAF_BUILD_2014
+DisplaySurface::DisplaySurface(int32_t width, int32_t height, ImageMode format, ImageOrder order,
+			       int32_t num_page, ImageMode depth_format, ImageOrder depth_order,
+			       gutil::FrameBufferMode mode)
+	: ScreenSurface(width, height, format, order, num_page, depth_format, depth_order,
+			AllocFrameBuffer(mode, width, height, format, order, num_page,
+					 depth_format, depth_order),
+			TypeDisplay),
+	  m_sync_objects(NULL), m_page_dirty(NULL), m_vsh_sync_ids(NULL), m_callback_data(),
+	  m_shown_page(0), m_hold(false), m_swap(false), m_pending(false),
+	  m_mutex("ScePafDisplaySurfaceMutex", 0), m_cond(m_mutex, "ScePafDisplaySurfaceCond", 0)
+{
+	m_frame_buffer_mode = mode;
+	m_initialized = false;
+	m_vblank_count = 0;
+	m_frame_state = 1;
+
+	size_t count = num_page;
+
+	if (count != 0) {
+		switch (m_frame_buffer_mode) {
+		case gutil::FrameBuffer_Normal:
+			m_sync_objects = new SceGxmSyncObject *[count];
+			sce_paf_memset(m_sync_objects, 0, sizeof(SceGxmSyncObject *) * count);
+			m_page_dirty = new bool[count];
+			sce_paf_memset(m_page_dirty, 0xff, count);
+			break;
+		case gutil::FrameBuffer_Shared_Create: {
+			m_sync_objects = new SceGxmSyncObject *[count];
+			sce_paf_memset(m_sync_objects, 0, sizeof(SceGxmSyncObject *) * count);
+			m_page_dirty = new bool[count];
+			sce_paf_memset(m_page_dirty, 0xff, count);
+			m_vsh_sync_ids = new uint32_t[count];
+			sce_paf_memset(m_vsh_sync_ids, 0, sizeof(uint32_t) * count);
+
+			ScreenSurface *offscreen = new ScreenSurface(
+				width, height, format, order, 1, ImageMode_NONE, ImageOrder_Linear,
+				m_offscreen_base, TypeDisplay);
+
+			s_offscreen = offscreen;
+			((ScreenSurface *)s_offscreen.get())->InitColorSurface();
+			s_offscreen->GenTexture();
+			break;
+		}
+		case gutil::FrameBuffer_Shared_Share:
+		case gutil::FrameBuffer_Shared_OffScreen:
+			m_sync_objects = new SceGxmSyncObject *[count];
+			sce_paf_memset(m_sync_objects, 0, sizeof(SceGxmSyncObject *) * count);
+			break;
+		default:
+			break;
+		}
+	}
+	if (num_page > 1)
+		ActivatePage(1);
+
+	m_callback_data.base = NULL;
+	m_callback_data.pitch = (m_stride * 8) >> m_pixel_bits;
+	m_callback_data.width = m_width;
+	m_callback_data.height = m_height;
+	m_callback_data.port = 0;
+	m_callback_data.pending = &m_pending;
+	m_callback_data.mutex = &m_mutex;
+	m_callback_data.cond = &m_cond;
+	Init();
+}
+#else
 void DisplaySurface::SetFullDisplay()
 {
 	m_callback_data.resolution = DISPLAY_RESOLUTION_FULL;
@@ -201,6 +271,7 @@ DisplaySurface::DisplaySurface(gutil::FrameBufferMode mode, const Param *param, 
 	SetFullDisplay();
 	Init();
 }
+#endif
 
 int32_t DisplaySurface::Begin(uint32_t flags)
 {
@@ -221,6 +292,7 @@ void DisplaySurface::SetDirty(bool dirty)
 {
 	if (m_page_dirty != NULL)
 		m_page_dirty[m_page_counter] = true;
+#ifndef PAF_BUILD_2014
 	if (dirty) {
 		if (m_wait_vblank == -1)
 			m_wait_vblank = 1;
@@ -229,6 +301,7 @@ void DisplaySurface::SetDirty(bool dirty)
 	}
 	if (!m_keep_gpu_clock && m_frame_buffer_mode != gutil::FrameBuffer_Given)
 		SetGpuClockLevel(255);
+#endif
 }
 
 void DisplaySurface::Clear(const math::v4 &color, uint32_t clear_mask)
@@ -245,7 +318,9 @@ void DisplaySurface::Clear(const math::v4 &color, uint32_t clear_mask)
 	} else {
 		Surface::Clear(color, clear_mask);
 	}
+#ifndef PAF_BUILD_2014
 	m_wait_vblank = -1;
+#endif
 }
 
 void DisplaySurface::Swap()
@@ -291,6 +366,23 @@ void DisplaySurface::WaitFrame()
 void DisplaySurface::displayCallback(const void *callback_data)
 {
 	const CallbackData *data = (const CallbackData *)callback_data;
+#ifdef PAF_BUILD_2014
+	SceDisplayFrameBuf fb;
+
+	fb.size = sizeof(fb);
+	fb.base = data->base;
+	fb.pitch = data->pitch;
+	fb.pixelformat = 0;
+	fb.width = data->width;
+	fb.height = data->height;
+	sceDisplaySetFrameBufInternal(0, data->port, &fb, 1);
+	sceDisplaySetFrameBufInternal(1, data->port, &fb, 1);
+	sceDisplayWaitVblankStart();
+	data->mutex->Lock();
+	*data->pending = false;
+	data->cond->Notify();
+	data->mutex->Unlock();
+#else
 	DisplayFrameBufParam param;
 	SceDisplayFrameBuf *frame_buf = NULL;
 	int32_t plane = 0;
@@ -339,6 +431,7 @@ void DisplaySurface::displayCallback(const void *callback_data)
 	data->cond->Notify();
 	data->mutex->Unlock();
 	SetGpuClockLevel(255);
+#endif
 }
 
 SceUID DisplaySurface::GetFbId()
@@ -408,10 +501,12 @@ void DisplaySurface::Unlock()
 	}
 }
 
+#ifndef PAF_BUILD_2014
 void DisplaySurface::SetDisplayArea()
 {
 	m_callback_data.resolution = DISPLAY_RESOLUTION_FULL | DISPLAY_RESOLUTION_DISPLAY_AREA;
 }
+#endif
 
 void DisplaySurface::Update(const UpdateInfo *info)
 {
@@ -453,9 +548,11 @@ int32_t DisplaySurface::SetFrameBuffer(const void *frame_buffer)
 		update->width = buffer->width;
 		update->height = buffer->height;
 		update->format = buffer->format;
+#ifndef PAF_BUILD_2014
 		m_given_surface_type = buffer->surface_type;
 		m_full_size = false;
 		m_output_register_size = SCE_GXM_OUTPUT_REGISTER_SIZE_32BIT;
+#endif
 		m_sync_objects[m_page_counter] = buffer->sync_object;
 		Update(update);
 	} else {
@@ -464,6 +561,70 @@ int32_t DisplaySurface::SetFrameBuffer(const void *frame_buffer)
 	return 0;
 }
 
+#ifdef PAF_BUILD_2014
+void *DisplaySurface::AllocFrameBuffer(gutil::FrameBufferMode mode, int32_t width, int32_t height,
+				       ImageMode format, ImageOrder order, int32_t num_page,
+				       ImageMode depth_format, ImageOrder depth_order)
+{
+	void *base = NULL;
+
+	m_offscreen_base = NULL;
+	switch (mode) {
+	case gutil::FrameBuffer_Normal: {
+		uint32_t size = ScePafGraphics_48FBF58D(TypeDisplay, width, height, format, order,
+							1, 0, 0, num_page) *
+				num_page;
+
+		if (ConvertDepthFormat(depth_format) != -1)
+			size += GetDepthSize(width, height, depth_format, depth_order);
+		size = (size + 0x3ffff) & ~0x3ffff;
+		base = GraphMem::AllocOSMemory(GraphMem::DeviceType_VideoMemory, size,
+					       "ScePafFrameBufferMemory", NULL);
+		break;
+	}
+	case gutil::FrameBuffer_Shared_Create: {
+		uint32_t page_size = ScePafGraphics_48FBF58D(TypeDisplay, width, height, format,
+							     order, 1, 0, 0, num_page);
+		uint32_t size = page_size * num_page;
+
+		if (ConvertDepthFormat(depth_format) != -1)
+			size += GetDepthSize(width, height, depth_format, depth_order);
+
+		SceSharedFbCreate create;
+		SharedFbInfo info;
+
+		sce_paf_memset(&create, 0, sizeof(create));
+		create.AllocMemSize = (page_size + size + 0x3ffff) & ~0x3ffff;
+		s_fb_id = sceSharedFbCreate(1, &create);
+		if (s_fb_id >= 0 && sceSharedFbGetInfo(s_fb_id, &info) == 0) {
+			if (sceGxmMapMemory(info.base, info.size,
+					    SCE_GXM_MEMORY_ATTRIB_READ |
+					    SCE_GXM_MEMORY_ATTRIB_WRITE) >= 0) {
+				base = info.base;
+				m_offscreen_base = (uint8_t *)info.base + size;
+			}
+		}
+		break;
+	}
+	case gutil::FrameBuffer_Shared_Share:
+	case gutil::FrameBuffer_Shared_OffScreen: {
+		SharedFbInfo info;
+
+		s_fb_id = SceSharedFb_D2B27255(1);
+		if (s_fb_id >= 0 && sceSharedFbGetInfo(s_fb_id, &info) == 0) {
+			sceGxmMapMemory(info.base, info.size,
+					SCE_GXM_MEMORY_ATTRIB_READ |
+					SCE_GXM_MEMORY_ATTRIB_WRITE);
+		}
+		break;
+	}
+	case gutil::FrameBuffer_Given:
+	default:
+		break;
+	}
+	return base;
+}
+#else
 void DisplaySurface::GetMaximumResolution(int32_t *width, int32_t *height)
 {
 	if (width != NULL && height != NULL)
@@ -548,6 +709,7 @@ void *DisplaySurface::AllocFrameBuffer(gutil::FrameBufferMode mode, Param *param
 	}
 	return base;
 }
+#endif
 
 int32_t DisplaySurface::GetOutputPort()
 {
@@ -571,6 +733,7 @@ bool DisplaySurface::UsesDisplayArea()
 	       (param.resolution & DISPLAY_RESOLUTION_DISPLAY_AREA) != 0;
 }
 
+#ifndef PAF_BUILD_2014
 /* the viewport's x and y come in the other order */
 void DisplaySurface::SetDisplayViewport(uint32_t y, uint32_t x, uint32_t width, uint32_t height)
 {
@@ -579,6 +742,7 @@ void DisplaySurface::SetDisplayViewport(uint32_t y, uint32_t x, uint32_t width, 
 	m_viewport.width = width;
 	m_viewport.height = height;
 }
+#endif
 
 int32_t DisplaySurface::GetUpdateInfo(UpdateInfo *info)
 {
@@ -752,8 +916,17 @@ int32_t DisplaySurface::OnStartFrame()
 		m_cleared = 1;
 
 		UpdateInfo *update = GetUpdate();
+#ifdef PAF_BUILD_2014
+		SceGxmColorSurfaceType type = GetColorSurfaceOrder();
+
+		if (type == (SceGxmColorSurfaceType)-1)
+			return SCE_PAF_ERROR_GRAPHICS_NOT_SUPPORTED;
+		int32_t ret = SetColorSurface(m_page_counter, update->format, type,
+					      update->pitch, update->base);
+#else
 		int32_t ret = SetColorSurface(m_page_counter, update->format, m_given_surface_type,
 					      update->pitch, update->base);
+#endif
 
 		if (ret < 0)
 			return ret;
@@ -771,8 +944,13 @@ int32_t DisplaySurface::OnEndFrame()
 	int32_t wait = 0;
 
 	s_frame_time = (uint32_t)(time / 1000000.0f * 1000.0f * 1000.0f);
+#ifdef PAF_BUILD_2014
+	if (s_wait_vblank_count != 0 || !s_page_opened)
+		wait = 1;
+#else
 	if (s_wait_vblank_count != 0 || !s_page_opened || m_wait_vblank == 1)
 		wait = 1;
+#endif
 	if (m_vblank_count > 1)
 		wait = m_vblank_count;
 	if (wait != 0) {
@@ -803,6 +981,29 @@ int32_t DisplaySurface::OnEndFrame()
 				port = 0;
 		}
 
+#ifdef PAF_BUILD_2014
+		if (m_page_dirty[shown] || m_page_dirty[page] || m_callback_data.port != port) {
+			ScePafGraphics_E7B32741(arl::Gl());
+			if (s_page_opened) {
+				m_callback_data.port = port;
+				m_pending = true;
+				if (m_hold) {
+					m_callback_data.base = GetPagePtr(shown);
+					ret = sceGxmDisplayQueueAddEntry(m_sync_objects[shown],
+									 m_sync_objects[shown],
+									 &m_callback_data);
+					m_swap = false;
+				} else {
+					m_callback_data.base = GetPagePtr(page);
+					ret = sceGxmDisplayQueueAddEntry(m_sync_objects[shown],
+									 m_sync_objects[page],
+									 &m_callback_data);
+					m_shown_page = page;
+					m_swap = true;
+				}
+			}
+		}
+#else
 		if (m_page_dirty[shown] || m_page_dirty[page] || m_callback_data.port != port) {
 			ScePafGraphics_E7B32741(arl::Gl());
 			if (s_page_opened) {
@@ -839,18 +1040,24 @@ int32_t DisplaySurface::OnEndFrame()
 				SetGpuClockLevel(2);
 			}
 		}
+#endif
 		break;
 	}
 	case gutil::FrameBuffer_Shared_Share:
 	case gutil::FrameBuffer_Shared_OffScreen:
 		if (m_frame_state != 2) {
 			ScePafGraphics_E7B32741(arl::Gl());
+#ifndef PAF_BUILD_2014
 			if (GetGpuClockLevel() == 1) {
 				SaveGpuClock();
 				SetGpuClockLevel(2);
 			}
+#endif
 			ret = sceSharedFbEnd(s_fb_id);
 		}
+#ifdef PAF_BUILD_2014
+		s_fb_info.base = NULL;
+#endif
 		break;
 	default:
 		ScePafGraphics_E7B32741(arl::Gl());

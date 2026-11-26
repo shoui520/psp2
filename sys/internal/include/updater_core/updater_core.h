@@ -35,6 +35,7 @@ typedef struct SceUpdaterMemoryInfo {
 #define SCE_UPDATER_ERROR_ANALYSIS_STATE	0x8018000a
 #define SCE_UPDATER_ERROR_CHANNEL_FULL		0x8018000b
 #define SCE_UPDATER_ERROR_CHANNEL_EMPTY		0x8018000c
+#define SCE_UPDATER_ERROR_NOT_SUPPORTED		0x8018000d
 #define SCE_UPDATER_ERROR_LOG_OPEN		0x80180011
 #define SCE_UPDATER_ERROR_PUP_OPEN		0x80180012
 #define SCE_UPDATER_ERROR_RESULT_OPEN		0x80180013
@@ -226,6 +227,9 @@ int sceUpdaterPowerUnlock(void);
 void sceUpdaterSetProgressCallback(SceUpdaterProgressCallback callback, SceUInt32 interval);
 int sceUpdaterCopyFile(SceUpdaterCopyFileTarget *src, SceUpdaterCopyFileTarget *dst,
 		       SceUpdaterCopyFileOption *option);
+#ifdef UPDATER_CORE_2014
+int sceUpdaterGetState(void);
+#endif
 
 #ifdef __cplusplus
 }

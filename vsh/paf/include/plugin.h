@@ -224,6 +224,12 @@ public:
 		int32_t page_priority;
 	};
 
+#ifdef PAF_BUILD_2014
+#define PAF_PARAM_MGR(x) (&(x))
+#else
+#define PAF_PARAM_MGR(x) (x)
+#endif
+
 	/* what a plugin's set_param_func may change before the plugin is made */
 	class InitParam2 {
 	public:
@@ -232,7 +238,9 @@ public:
 		int32_t draw_priority;
 		uint32_t surface_pool_size;
 		int32_t texture_load_filter;
+#ifndef PAF_BUILD_2014
 		int32_t graphics_flag;
+#endif
 	};
 
 	class InitParam {
@@ -265,19 +273,23 @@ public:
 		NotifyCallback notify_callback;
 		UnloadCallback unload_callback;
 		void *param;
+#ifndef PAF_BUILD_2014
 		ui::Resolution *env_param;
 		int32_t graphics_flag;
+#endif
 	};
 
 	class PageOpenParam {
 	public:
 		PageOpenParam();
 
+#ifndef PAF_BUILD_2014
 		~PageOpenParam()
 		{
 			if (timer != NULL)
 				delete timer;
 		}
+#endif
 
 		int32_t draw_layer;
 		int32_t draw_mask;
@@ -288,8 +300,10 @@ public:
 		float fade_time_ms;
 		TransitionType transition_type;
 		Timer *timer;
+#ifndef PAF_BUILD_2014
 		ui::Resolution *env_param;
 		int32_t graphics_flag;
+#endif
 	};
 
 	/* how PageClose closes the page */
@@ -297,11 +311,13 @@ public:
 	public:
 		PageCloseParam();
 
+#ifndef PAF_BUILD_2014
 		~PageCloseParam()
 		{
 			if (timer != NULL)
 				delete timer;
 		}
+#endif
 
 		bool fade;
 		float fade_time_ms;
@@ -514,9 +530,15 @@ public:
 	map<uint32_t, TemplateCache *> m_template_table;
 	vector<DrawOrderElement> m_draw_order;
 	resource::ResourceObj *m_rscobj;
+#ifdef PAF_BUILD_2014
+	VersatileParamManager m_style_param_manager;
+	VersatileParamManager m_obj_param_manager;
+	VersatileParamManager m_sound_param_manager;
+#else
 	VersatileParamManager *m_style_param_manager;
 	VersatileParamManager *m_obj_param_manager;
 	VersatileParamManager *m_sound_param_manager;
+#endif
 	memory::HeapAllocator *m_private_heap;
 	bool m_private_heap_created;
 	memory::HeapAllocator *m_decode_heap;
@@ -542,11 +564,13 @@ public:
 	/* a ResolutionDebugMode: the debug focus adds resolutions to widgets without them */
 	uint32_t m_resolution_debug_mode;
 	int32_t m_page_debug_mode;
+#ifndef PAF_BUILD_2014
 	ui::Resolution *m_env_param;
 	bool m_env_param_created;
 	/* the text style (SystemParam's, the InitParam's or the InitParam2's) */
 	char m_graphics_flag;
 	bool m_unloading;
+#endif
 };
 
 /*
@@ -653,7 +677,9 @@ public:
 	cxml::Element m_node;
 	/* the first "layout_" and "focus_" children */
 	cxml::Element m_layout;
+#ifndef PAF_BUILD_2014
 	cxml::Element m_focus;
+#endif
 	IDParam m_id;
 	IDParam m_style_id;
 	/* the widget type's factories */
@@ -662,7 +688,9 @@ public:
 	ui::WidgetSoundParam *m_sound_param;
 	ui::WidgetParam *m_wparam;
 	ui::WidgetLayoutParam *m_layout_param;
+#ifndef PAF_BUILD_2014
 	ui::WidgetFocusParam *m_focus_param;
+#endif
 	list<WidgetResourceInfo::LayoutData> m_list_layout;
 	list<Item *> m_children;
 	/* a "template_ref" element's template */

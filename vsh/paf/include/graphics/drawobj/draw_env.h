@@ -147,6 +147,10 @@ public:
 class PanelRenderer;
 
 class WaveRenderer;
+#ifdef PAF_BUILD_2014
+class Particles;
+class EarthRenderer;
+#endif
 
 /* the waves' surface computed by FFT (its parameters' set is named "FFTWave"); nothing in
    libpaf makes one */
@@ -677,6 +681,9 @@ public:
 class Renderer {
 public:
 	Renderer(common::SharedPtr<DrawEnv> draw_env);
+#ifdef PAF_BUILD_2014
+	~Renderer();
+#endif
 
 	/* the layers' draws */
 	void DrawDummyBackground();
@@ -689,7 +696,11 @@ public:
 	common::SharedPtr<PanelRenderer> &GetPanelRenderer(bool create);
 	common::SharedPtr<WaveRenderer> &GetWaveRenderer(bool create);
 	/* by the function the renderer is given */
+#ifdef PAF_BUILD_2014
+	common::SharedPtr<Particles> &GetCustomRenderer(bool create);
+#else
 	common::SharedPtr<CustomRenderer> &GetCustomRenderer(bool create);
+#endif
 	common::SharedPtr<PageTurnRenderer> &GetPageTurnRenderer(bool create);
 
 	void SetRoll(float roll);
@@ -704,10 +715,17 @@ public:
 	common::SharedPtr<PanelRenderer> m_panel_renderer;
 	common::SharedPtr<FFTWave> m_fft_wave;
 	common::SharedPtr<WaveRenderer> m_wave_renderer;
+#ifdef PAF_BUILD_2014
+	common::SharedPtr<Particles> m_custom_renderer;
+	common::SharedPtr<PageTurnRenderer> m_page_turn_renderer;
+	/* made by ScePafGraphics_71E2CB77 */
+	common::SharedPtr<EarthRenderer> m_effect_renderer;
+#else
 	common::SharedPtr<CustomRenderer> m_custom_renderer;
 	common::SharedPtr<PageTurnRenderer> m_page_turn_renderer;
 	/* made by ScePafGraphics_71E2CB77 */
 	common::SharedPtr<EffectRenderer> m_effect_renderer;
+#endif
 	/* nothing in libpaf makes these */
 	common::SharedPtr<EffectRenderer> m_reserved_renderer;
 	common::SharedPtr<EffectRenderer> m_reserved_renderer2;
@@ -741,10 +759,12 @@ public:
 	DrawLayer *m_rs_copy_screen_for_refractions;
 	DrawLayer *m_rs_capture_blur;
 	uint32_t m_reserved_word;
+#ifndef PAF_BUILD_2014
 	/* set by ScePafWidget_1955B85D */
 	EffectRenderer *(*m_effect_renderer_factory)();
 	CustomRenderer *(*m_custom_renderer_factory)();
 	uint32_t m_reserved_word2;
+#endif
 };
 
 /* a pointer kept in a global: the static initializer sets it to NULL */
@@ -774,8 +794,13 @@ void ScePafGraphics_0B4F6C24();
 void ScePafGraphics_505CD74E(bool flag);
 /* the renderer's effect renderer, made at the first call that asks for it (the flag 8 of
    gutil::LoadResource) */
+#ifdef PAF_BUILD_2014
+paf::common::SharedPtr<paf::graph::EarthRenderer> &
+ScePafGraphics_71E2CB77(paf::graph::Renderer *renderer, bool create);
+#else
 paf::common::SharedPtr<paf::graph::EffectRenderer> &
 ScePafGraphics_71E2CB77(paf::graph::Renderer *renderer, bool create);
+#endif
 }
 
 PAF_VECTOR_INLINE_DTOR(graph::DrawLayer::Key)

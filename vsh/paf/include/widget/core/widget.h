@@ -439,6 +439,27 @@ int32_t DefaultFocusCB(Focuser *focuser, Widget *widget, void *data, void *move)
 /* a widget's focus: the function that moves it, and the hint where it goes (names ours) */
 class Focuser {
 public:
+#ifdef PAF_BUILD_2014
+	Focuser(FocusCB cb) : m_widget(NULL), m_cb(cb)
+	{
+	}
+
+	virtual ~Focuser()
+	{
+	}
+
+	virtual int32_t ScePafWidget_97020684(void *move);
+
+	void BindWidget(Widget *w)
+	{
+		m_widget = w;
+	}
+
+	static Focuser *s_enter_focuser;
+
+	Widget *m_widget;
+	FocusCB m_cb;
+#else
 	Focuser(FocusCB cb) : m_widget(NULL), m_cb(cb), m_hint(NULL), m_data(NULL)
 	{
 	}
@@ -511,6 +532,7 @@ public:
 	FocusHint *m_hint;
 	/* the widgets the focus moves to in each direction (SetFocusDirectionWidget) */
 	FocusDirectionWidget *m_data;
+#endif
 };
 
 /* the widgets whose focus directions name a widget (SetFocusDirectionWidget; names ours) */
@@ -812,7 +834,9 @@ public:
 	Widget(Widget *parent, CreateParam *param);
 	virtual ~Widget();
 
+#ifndef PAF_BUILD_2014
 	virtual int32_t HandlerProc(Event *e);
+#endif
 	virtual int32_t HandleKeycodeEvent(Event *e);
 	virtual int32_t HandleTouchEvent(Event *e);
 	virtual int32_t HandleGestureEvent(Event *e);
@@ -885,11 +909,13 @@ public:
 	virtual int32_t SetSize_core_force(const math::v4 &v, uint32_t notify_layout,
 					   bool force);
 	virtual void UpdateSize();
+#ifndef PAF_BUILD_2014
 	/* Text keeps the flag only while it fits in its scene */
 	virtual void SetFitToScene(bool on_off)
 	{
 		m_fit_to_scene = on_off;
 	}
+#endif
 
 	virtual void Update();
 	virtual void UpdateAfterChildren();
@@ -908,11 +934,13 @@ public:
 	{
 	}
 
+#ifndef PAF_BUILD_2014
 	/* a key of the pad port has been captured (captured) or let go; group 1 for the keys of
 	   pad capture 0x17c, 0 for those of 0x17d (names ours) */
 	virtual void OnPadCaptureChanged(bool captured, int32_t group, uint32_t port, uint32_t key)
 	{
 	}
+#endif
 
 	/* the gesture listener of the touch, made by the environment's gesture priority for the
 	   gestures mask enables, with the parameter set where there is one (0x8115c05c) */
@@ -1038,6 +1066,10 @@ public:
 	{
 	}
 
+#ifdef PAF_BUILD_2014
+	int32_t SetFocus(bool find_child, int32_t port = 0);
+	void SetFocusState(bool focused);
+#else
 	virtual void SetFocusRootState(uint32_t state)
 	{
 		if (m_focus_root != NULL)
@@ -1074,17 +1106,20 @@ public:
 	virtual math::v4 GetFocusShapeWorldPos();
 	/* its size, or the focus shape's where that is set (0x8122230c) */
 	virtual math::v4 GetFocusShapeSize();
+#endif
 	virtual int32_t EventExecDispatch(Event *e);
 	virtual int32_t EventExecBroadcast(Event *e);
 	virtual int32_t EventExecDirect(Event *e);
 	/* the event done as the listeners of its type ask: run now, or kept for the environment's
 	   next frame (0x81161baa) */
 	int32_t EventExecDo(Event *e);
+#ifndef PAF_BUILD_2014
 	/* ui::Text's: whether it handles its text events (name ours) */
 	virtual bool IsTextEventEnabled()
 	{
 		return true;
 	}
+#endif
 
 	/* the sound with the ID (export 6811A0CF, name ours) */
 	WidgetSoundParam::Sound *FindSound(int32_t id);
@@ -1349,7 +1384,9 @@ public:
 	void SetCulled(bool culled)
 	{
 		m_culled = culled;
+#ifndef PAF_BUILD_2014
 		SetFitToScene(culled);
+#endif
 		for (list<Widget *>::iterator it = m_children.begin(); it != m_children.end(); ++it)
 			(*it)->SetCulled(culled);
 	}
@@ -1666,6 +1703,67 @@ public:
 	math::v4 m_scale;
 	math::v4 m_size;
 	math::v4 m_rot;
+#ifdef PAF_BUILD_2014
+	math::quaternion m_quat;
+	math::quaternion m_world_rot;
+	math::matrix m_local_matrix;
+	math::matrix m_world_matrix;
+	math::v4 m_align_offs;
+	math::v4 m_anchor_offs;
+	math::v4 m_origin_offs;
+	math::matrix *m_inverse_matrix;
+	IDParam m_name;
+	uint32_t m_state;
+	void *m_user_data[2];
+	UserData *m_user_data2[2];
+	Environment *m_env;
+	Widget *m_parent;
+	Scene *m_scene;
+	Widget *m_focus_child;
+	list<Widget *> m_children;
+	uint16_t m_prepare_count;
+	uint16_t m_focus_count;
+	uint16_t m_touch_rear_children;
+	uint8_t m_update_flag;
+	uint8_t m_show_hold : 4;
+	uint8_t m_texture_request_count : 4;
+	uint16_t m_clip_mode : 4;
+	uint16_t : 4;
+	uint16_t m_draw_target : 4;
+	uint16_t m_flip_x : 1;
+	uint16_t m_flip_y : 1;
+	uint16_t m_flip_z : 1;
+	uint16_t : 1;
+	bool m_touch_front_event : 1;
+	bool m_touch_rear_event : 1;
+	bool m_focused : 1;
+	bool m_pre_dispatch : 1;
+	bool m_focus_skip : 1;
+	bool m_focus_leaf : 1;
+	bool m_focus_stop_parent : 1;
+	bool m_focus_skip_sibling : 1;
+	bool m_draw_before_children : 1;
+	bool m_parent_protected : 1;
+	bool m_under_template : 1;
+	bool m_debug_events : 1;
+	bool m_clip_children : 1;
+	bool m_input_target : 1;
+	bool m_transition_complete : 1;
+	bool m_touch_region_registered : 1;
+	bool m_surface_draw : 1;
+	bool m_anim_deferred : 1;
+	bool m_timer_pending : 1;
+	bool m_destroy_protected : 1;
+	bool m_transition_in : 1;
+	bool m_transition_out : 1;
+	bool m_rot_euler : 1;
+	bool m_culled : 1;
+	bool m_focus_hidden : 1;
+	bool m_draw_always : 1;
+	bool m_ordered : 1;
+	bool m_show_timer_pending : 1;
+	uint8_t : 4;
+#else
 	/* its rotation combined with its parents', as UpdateMatrix made it (name ours) */
 	math::quaternion m_world_rot;
 	/* its matrix in its parent's space, which UpdateMatrix multiplies by the parent's (name
@@ -1840,6 +1938,7 @@ public:
 	   name ours) */
 	bool m_pad_tap_on_press : 1;
 	uint8_t reserved3p2 : 6;
+#endif
 	/* the gestures a touch it captures is given (ScePafWidget D3D0A7C3 applies them; name
 	   from that use) */
 	uint32_t m_touch_gesture_mask;
@@ -1897,6 +1996,24 @@ public:
 	uint16_t m_pinch_mode;
 	/* the drag mode kept while it is dragged by a touch, -1 for none (name ours) */
 	int16_t m_saved_drag_mode;
+#ifdef PAF_BUILD_2014
+	uint32_t m_modal_mode : 8;
+	uint32_t m_align_x : 4;
+	uint32_t m_align_y : 4;
+	uint32_t m_align_z : 4;
+	uint32_t m_origin_x : 4;
+	uint32_t m_origin_y : 4;
+	uint32_t m_origin_z : 4;
+	uint32_t m_anchor_x : 4;
+	uint32_t m_anchor_y : 4;
+	uint32_t m_anchor_z : 4;
+	uint32_t m_adjust_x : 4;
+	uint32_t m_adjust_y : 4;
+	uint32_t m_adjust_z : 4;
+	uint32_t m_drag_quant_x : 8;
+	uint8_t m_drag_quant_y;
+	uint8_t m_drag_quant_z;
+#else
 	uint32_t m_align_x : 4;
 	uint32_t m_align_y : 4;
 	uint32_t m_align_z : 4;
@@ -1918,6 +2035,7 @@ public:
 	uint8_t m_drag_quant_y;
 	uint8_t m_drag_quant_z;
 	uint8_t reserved7;
+#endif
 	/* the bounds its drag keeps it in, its smallest and largest position (or, pinched, its
 	   scale), made by SetDragMode (names ours) */
 	SceFVector3 *m_drag_limit;
@@ -1931,6 +2049,7 @@ public:
 	Animator *m_animator;
 	/* its focus state, its focus cursor and the focus of its children (names ours) */
 	Focuser *m_focuser;
+#ifndef PAF_BUILD_2014
 	FocusShape *m_focus_shape;
 	/* the shapes the cursor is drawn as where its shape uses parts: a text's focused link,
 	   a shape per line (name ours) */
@@ -1938,6 +2057,7 @@ public:
 	FocusRoot *m_focus_root;
 	/* the widgets whose focus directions name this one, made by the first */
 	FocusReferrers *m_focus_referrers;
+#endif
 	/* the layout changes it tells its parent's layouter of (NotifyLayoutDirty): the low byte
 	   the kinds, the high byte the ones it passes on; a scroll view's child passes 0x300 on
 	   (ScrollView::OnChildRegistered; name ours) */
@@ -2134,7 +2254,9 @@ int32_t ScePafWidget_FF5BC957(paf::ui::Widget *widget, paf::Timer *t, int32_t op
 inline void paf::ui::Widget::Show(uint8_t type, Timer *t, AnimCB cb_fin, float delay)
 {
 	if (!m_transition_complete) {
+#ifndef PAF_BUILD_2014
 		m_transition = type;
+#endif
 		m_transition_complete = true;
 		if (type == 0xff)
 			DoTransition_core(delay, true);
@@ -2149,7 +2271,9 @@ inline void paf::ui::Widget::Hide(uint8_t type, Timer *t, AnimCB cb_fin, float d
 	float time = delay + (t != NULL ? t->m_total * 1000.0f : 0.0f);
 
 	m_transition_complete = false;
+#ifndef PAF_BUILD_2014
 	m_transition = type;
+#endif
 	if (type == 0xff)
 		DoTransitionReverse_core(time, true);
 	else
@@ -2238,6 +2362,7 @@ int32_t ScePafWidget_B1C23134(paf::ui::Widget *widget, const paf::ui::AdjustPara
 namespace paf {
 namespace ui {
 
+#ifndef PAF_BUILD_2014
 /* inline in Sony's header: the modules that derive from Widget carry their own copies
    (libpaf_web_map_view) */
 inline void Widget::SetFocusDirection(int32_t dir, IDParam id)
@@ -2338,6 +2463,7 @@ inline void Widget::EnableFocusSearchRect(bool on_off)
 	if (m_focuser != NULL)
 		m_focuser->GetHint()->m_search_rect_enable = on_off;
 }
+#endif
 
 inline AdjustParam *Widget::GetHitRegion()
 {
@@ -2353,6 +2479,7 @@ inline int32_t Widget::SetHitRegion(const AdjustParam &param)
 	return ScePafWidget_B1C23134(this, param);
 }
 
+#ifndef PAF_BUILD_2014
 inline math::v4 Widget::GetFocusShapePos()
 {
 	math::v4 pos = GetPos(0, NULL, math::v4(0.0f, 0.0f, 0.0f, 0.0f));
@@ -2386,6 +2513,7 @@ inline math::v4 Widget::GetFocusShapeSize()
 	}
 	return size;
 }
+#endif
 
 }
 }

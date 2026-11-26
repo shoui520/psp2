@@ -30,6 +30,7 @@
 namespace paf {
 namespace ui {
 
+#ifndef PAF_BUILD_2014
 /* the box drawn around the debug focus in the layout modes: a plane on each of its six faces */
 class DebugCube : public CompositeDrawer {
 public:
@@ -177,6 +178,7 @@ public:
 
 /* the scene SetDebugFocus was last called on (name ours) */
 static Scene *s_debug_scene;
+#endif
 
 const char Scene::m_widget_type[] = "page";
 
@@ -201,7 +203,9 @@ const char *Scene::TypeName()
 static inline void ShowNow(Widget *w)
 {
 	if (!w->m_transition_complete) {
+#ifndef PAF_BUILD_2014
 		w->m_transition = 0xff;
+#endif
 		w->m_transition_complete = true;
 		w->DoTransition_core(0.0f, true);
 	}
@@ -211,13 +215,70 @@ static inline void ShowNow(Widget *w)
 static inline void HideNow(Widget *w)
 {
 	w->m_transition_complete = false;
+#ifndef PAF_BUILD_2014
 	w->m_transition = 0xff;
+#endif
 	w->DoTransitionReverse_core(0.0f, true);
 	ScePafWidget_4588699E(w, NULL, 2, 0.0f, NULL);
 }
 
 void Scene::SetDebugFocus(Widget *w)
 {
+#ifdef PAF_BUILD_2014
+	Widget *prev = m_debug_focus;
+
+	if (prev == w)
+		return;
+	if (w != NULL) {
+		if (FindChild(w, 0) == NULL)
+			return;
+		prev = m_debug_focus;
+	}
+
+	m_debug_focus = w;
+	m_debug_grab_restore = w != NULL ? w->m_hit_check : 0;
+	m_debug_drag_restore = w != NULL ? w->m_drag_mode : 0;
+	m_debug_hitfind_restore = w != NULL ? w->m_hit_find_mode : 0;
+	if (w != NULL) {
+		m_debug_quant_x_restore = w->m_drag_quant_x;
+		m_debug_quant_y_restore = w->m_drag_quant_y;
+		m_debug_quant_z_restore = w->m_drag_quant_z;
+	}
+
+	uint32_t mode = m_debug_mode;
+
+	if (mode == DEBUG_AUTH_LAYOUT || mode == DEBUG_AUTH_PARAMVIEW) {
+		if (prev != NULL) {
+			prev->m_hit_check = m_debug_grab_restore;
+			prev->SetDragMode(m_debug_drag_restore);
+			prev->m_hit_find_mode = m_debug_hitfind_restore;
+			prev->SetDragQuant(m_debug_quant_x_restore, m_debug_quant_y_restore,
+					   m_debug_quant_z_restore);
+		}
+		if (w != NULL && m_debug_mode == DEBUG_AUTH_LAYOUT) {
+			w->m_hit_check = 1;
+			w->SetDragMode(0x110);
+			w->m_hit_find_mode = 0;
+			w->SetDragQuant(m_debug_quant_x, m_debug_quant_y, m_debug_quant_z);
+			m_debug_cube_child->m_hit_check = 1;
+		} else {
+			m_debug_cube_child->m_hit_check = 0;
+		}
+		if (m_debug_focus_func != NULL)
+			m_debug_focus_func(m_debug_focus, prev, NULL);
+		if (m_debug_cube != NULL && m_debug_focus != NULL) {
+			m_debug_cube->SetForward(m_debug_focus);
+			m_debug_cube->SetMetaAlpha(0.6f, new Timer(500.0f),
+						   ANIM_META_ALPHA | ANIM_OPTION_LOOP, 0, 0.0f);
+			m_debug_cube->SetMetaAlpha(0.3f, new Timer(500.0f),
+						   ANIM_META_ALPHA | ANIM_OPTION_LOOP, 0, 0.0f);
+			m_debug_cube_child->SetSize(math::v4(10.0f, 10.0f, 0.0f, 0.0f));
+		}
+	} else if (mode == DEBUG_OFF || mode == DEBUG_AUTH_HIDEALL) {
+		if (m_debug_focus_func != NULL)
+			m_debug_focus_func(NULL, prev, NULL);
+	}
+#else
 	Widget *prev = m_debug_focus;
 
 	s_debug_scene = this;
@@ -291,10 +352,63 @@ void Scene::SetDebugFocus(Widget *w)
 		if (m_debug_focus_func != NULL)
 			m_debug_focus_func(NULL, prev, NULL);
 	}
+#endif
 }
 
 void Scene::SetDebugMode(uint32_t mode)
 {
+#ifdef PAF_BUILD_2014
+	if (m_debug_mode == mode)
+		return;
+
+	m_debug_mode = mode;
+	if (mode == DEBUG_AUTH_HIDEALL) {
+		m_debug_showalpha_restore = m_show_alpha;
+		SetShowAlpha_core(0.0f);
+	} else {
+		SetShowAlpha_core(m_debug_showalpha_restore);
+	}
+
+	if (mode == DEBUG_OFF || mode == DEBUG_AUTH_HIDEALL) {
+		if (m_debug_cube != NULL) {
+			m_debug_cube->DestroyWidget();
+			m_debug_cube = NULL;
+			m_debug_cube_child = NULL;
+		}
+		if (m_debug_focus != NULL) {
+			m_debug_focus->m_hit_check = m_debug_grab_restore;
+			m_debug_focus->SetDragMode(m_debug_drag_restore);
+			m_debug_focus->m_hit_find_mode = m_debug_hitfind_restore;
+			m_debug_focus->SetDragQuant(m_debug_quant_x_restore, m_debug_quant_y_restore,
+						    m_debug_quant_z_restore);
+		}
+	} else if (mode == DEBUG_AUTH_LAYOUT || mode == DEBUG_AUTH_PARAMVIEW) {
+		Plane *cube = new Plane(this, NULL);
+
+		m_debug_cube = cube;
+		cube->SetTexture(intrusive_ptr<graph::Surface>(m_env->m_debug_texture), 0, 0);
+		if (m_debug_focus != NULL)
+			m_debug_cube->SetForward(m_debug_focus);
+		m_debug_cube->m_event_enable |= 0x60;
+		m_debug_cube->m_debug_events = false;
+		HideNow(m_debug_cube);
+		m_debug_cube->m_hit_find_mode = 0;
+		m_debug_cube->m_hit_detect_mode = 2;
+		m_debug_cube->m_hit_detect_b_mode = 2;
+
+		Plane *child = new Plane(m_debug_cube, NULL);
+
+		m_debug_cube_child = child;
+		child->m_event_enable |= 0x60;
+		m_debug_cube_child->m_debug_events = false;
+		m_debug_cube_child->SetSize(math::v4(10.0f, 10.0f, 0.0f, 0.0f));
+		m_debug_cube_child->m_hit_check = 1;
+		m_debug_cube_child->SetDragMode(0x110);
+		m_debug_cube_child->m_hit_detect_mode = 0;
+		m_debug_cube_child->m_hit_detect_b_mode = 0;
+	}
+	SetDebugFocus(NULL);
+#else
 	uint32_t old = m_debug_mode;
 
 	if (old == mode)
@@ -363,15 +477,48 @@ void Scene::SetDebugMode(uint32_t mode)
 		}
 	}
 	SetDebugFocus(NULL);
+#endif
 }
 
 bool Scene::IsResolutionActRoll(int32_t id)
 {
+#ifdef PAF_BUILD_2014
+	for (int32_t i = 0; i < m_resolution_act_num; i++) {
+		if (m_resolution_act_table[i].id == id)
+			return m_resolution_act_table[i].roll != 0;
+	}
 	return true;
+#else
+	return true;
+#endif
 }
 
 int32_t Scene::ResetCameraRoll(float time)
 {
+#ifdef PAF_BUILD_2014
+	if (m_env == NULL || m_env->m_cur_resolution == NULL || m_camera == NULL)
+		return -1;
+
+	Timer *t = NULL;
+
+	if (time > 0.0f)
+		t = new Timer(time, Timer::FUNC_ANGULAR);
+
+	bool roll_act = IsResolutionActRoll(m_env->m_resolution_id);
+
+	if (m_env->m_camera_roll_mode == 0) {
+		if (roll_act)
+			m_camera->SetRollScreen(-m_env->m_cur_resolution->m_roll, t);
+		else
+			m_camera->SetRollScreen(0.0f, t);
+	} else if (m_env->m_camera_roll_mode == 1) {
+		if (roll_act)
+			m_camera->SetRollScreen(0.0f, t);
+		else
+			m_camera->SetRollScreen(m_env->m_cur_resolution->m_roll, t);
+	}
+	return 0;
+#else
 	if (m_env == NULL)
 		return -1;
 
@@ -394,10 +541,58 @@ int32_t Scene::ResetCameraRoll(float time)
 	else if (m_env->m_camera_roll_mode == 1)
 		m_camera->SetRollScreen(0.0f, t);
 	return 0;
+#endif
 }
 
 int32_t Scene::SetEntry(int32_t entry)
 {
+#ifdef PAF_BUILD_2014
+	Environment *env = m_env;
+
+	if (env == NULL)
+		return -1;
+	if (m_scene_priority >= 0) {
+		m_env->RemoveScene(this);
+		env = m_env;
+	}
+	if (entry < 0)
+		entry = 0;
+	else if (entry > 0xffff)
+		entry = 0xffff;
+	m_scene_priority = entry;
+	env->AddScene(this, entry, NULL);
+
+	if (m_screen == NULL) {
+		Screen *screen = new Screen(m_env->m_screen);
+
+		if (m_screen != NULL && m_screen->is_auto_delete)
+			delete m_screen;
+		m_screen = screen;
+	}
+
+	if (m_env->m_resolution_id < 0) {
+		SceneResolution *res = m_env->FindResolution(m_env->m_resolutions,
+							     m_env->m_resolution_num,
+							     m_env->m_resolution_id);
+		math::v4 size = m_size;
+		math::v2 screen;
+
+		if (res != NULL)
+			screen = math::v2(res->m_width, res->m_height);
+		else
+			screen = math::rect(m_screen->vp).size();
+		if (m_adjust_x == 4)
+			size.set_x(screen.extract_x());
+		if (m_adjust_y == 4)
+			size.set_y(screen.extract_y());
+		SetSize(size);
+	} else {
+		ChangeResolution_core(m_env->m_resolution_id, true,
+				      IsResolutionActMorph(m_env->m_resolution_id));
+	}
+	ResetCameraRoll(0.0f);
+	return 0;
+#else
 	Environment *env = m_env;
 
 	if (env == NULL)
@@ -447,8 +642,39 @@ int32_t Scene::SetEntry(int32_t entry)
 	}
 	ResetCameraRoll(0.0f);
 	return 0;
+#endif
 }
 
+#ifdef PAF_BUILD_2014
+Scene::Scene(Environment *env, int32_t priority, CreateParam *param)
+	: Widget(NULL, param), m_screen(NULL), m_camera(NULL), m_scene_priority(-1), m_plugin_id(0),
+	  m_resolution_act_num(0), m_resolution_act_table(NULL), m_hidden(false),
+	  m_hide_transparent(false), m_scissor_to_scene(true), m_layer(NULL), m_bg_layer(NULL),
+	  m_draw_func(NULL), m_debug_mode(DEBUG_OFF), m_debug_focus(NULL), m_debug_cube(NULL),
+	  m_debug_grab_restore(0), m_debug_drag_restore(0), m_debug_hitfind_restore(0),
+	  m_debug_quant_x(1), m_debug_quant_y(1), m_debug_quant_z(1), m_debug_quant_x_restore(0),
+	  m_debug_quant_y_restore(0), m_debug_quant_z_restore(0), m_debug_showalpha_restore(1.0f),
+	  m_debug_focus_func(NULL)
+{
+	m_draw_arg.m_data = NULL;
+	m_layer = graph::DrawCalls()->AddLayer("Scene", 300, 0, 0x2000);
+	m_bg_layer = NULL;
+	m_surface_widgets.clear();
+	m_scene = this;
+	SetAdjust(4, 4, 4);
+	SetEnvironment(env);
+	SetEntry(priority);
+	m_state = 0;
+	m_event_enable |= 0xfbf0;
+	ChangeState(1, -1);
+	m_hit_check = 0;
+	m_hit_find_mode = 0;
+	m_hit_detect_mode = 2;
+	m_hit_detect_b_mode = 2;
+	m_debug_events = false;
+	SetDebugMode(DEBUG_OFF);
+}
+#else
 Scene::Scene(Environment *env, int32_t priority, CreateParam *param, Resolution *env_param,
 	     int32_t graphics_flag)
 	: Widget(NULL, param), m_screen(NULL), m_camera(NULL), m_scene_priority(-1), m_entry(-1),
@@ -494,6 +720,7 @@ Scene::Scene(Environment *env, int32_t priority, CreateParam *param, Resolution 
 	ScePafWidget_00AA6519(this);
 	m_not_hit_target = true;
 }
+#endif
 
 Scene::~Scene()
 {
@@ -510,9 +737,16 @@ Scene::~Scene()
 	if (m_env != NULL)
 		m_env->RemoveScene(this);
 	m_scene_priority = -1;
+#ifdef PAF_BUILD_2014
+	if (m_resolution_act_table != NULL) {
+		delete[] m_resolution_act_table;
+		m_resolution_act_table = NULL;
+	}
+#else
 	if (m_env_param_owned && m_env_param != NULL)
 		delete m_env_param;
 	m_env_param = (Resolution *)-1;
+#endif
 }
 
 void Scene::DestroyWidget()
@@ -579,6 +813,46 @@ void Scene::UpdateDebugCube()
 		return;
 	}
 
+#ifdef PAF_BUILD_2014
+	math::v4 pos = focus->GetPos(0, this, math::v4(0.0f, 0.0f, 0.0f, 0.0f));
+	math::v4 size = *focus->GetSize(0);
+	math::v4 rot = focus->GetRot(0, this, math::v4(0.0f, 0.0f, 0.0f, 0.0f), 0);
+
+	ShowNow(m_debug_cube);
+	if (m_debug_cube_child->m_drag_state[0] != NULL) {
+		math::v4 grip = m_debug_cube_child->GetPos(0, NULL,
+							   math::v4(0.0f, 0.0f, 0.0f, 0.0f));
+		math::v4 corner(grip.extract_x(), -grip.extract_y(), grip.extract_z(),
+				grip.extract_w());
+		math::v4 grow = corner * 2.0f - size;
+
+		if (focus->m_align_x != 0)
+			grow.set_x(grow.extract_x() * 0.5f);
+		if (focus->m_align_y != 0)
+			grow.set_y(grow.extract_y() * 0.5f);
+		if (focus->m_align_z != 0)
+			grow.set_z(grow.extract_z() * 0.5f);
+		if (!(grow == math::v4(0.0f, 0.0f, 0.0f, 0.0f))) {
+			focus->SetSize_core(*m_debug_focus->GetSize(0) + grow, 0xff02, true);
+			m_debug_cube->SetSize(*m_debug_focus->GetSize(0) +
+					      math::v4(4.0f, 4.0f, 4.0f, 4.0f));
+		}
+	} else {
+		m_debug_cube->SetAlign(focus->m_align_x, focus->m_align_y, focus->m_align_z, NULL);
+		if (!(m_debug_cube->GetRot(0, NULL, math::v4(0.0f, 0.0f, 0.0f, 0.0f), 0) == rot))
+			m_debug_cube->SetRot(rot, 0, NULL, ANIM_ROT, 0, 0.0f, NULL, NULL);
+		if (!(m_debug_cube->GetPos(0, NULL, math::v4(0.0f, 0.0f, 0.0f, 0.0f)) == pos))
+			m_debug_cube->SetPos(pos);
+		if (!(*m_debug_cube->GetSize(0) == size)) {
+			m_debug_cube->SetSize(size + math::v4(4.0f, 4.0f, 4.0f, 4.0f));
+
+			math::v4 half = *focus->GetSize(0) * 0.5f;
+
+			m_debug_cube_child->SetPos(math::v4(half.extract_x(), -half.extract_y(),
+							    half.extract_z(), half.extract_w()));
+		}
+	}
+#else
 	if (m_debug_mode == DEBUG_AUTH_PARAMVIEW_INPUT) {
 		if (focus->IsInputTarget())
 			ShowNow(cube);
@@ -640,6 +914,7 @@ void Scene::UpdateDebugCube()
 			}
 		}
 	}
+#endif
 }
 
 void Scene::UpdateAdjustSize()
@@ -649,7 +924,15 @@ void Scene::UpdateAdjustSize()
 
 bool Scene::IsResolutionActMorph(int32_t id)
 {
+#ifdef PAF_BUILD_2014
+	for (int32_t i = 0; i < m_resolution_act_num; i++) {
+		if (m_resolution_act_table[i].id == id)
+			return m_resolution_act_table[i].morph != 0;
+	}
 	return true;
+#else
+	return true;
+#endif
 }
 
 }
@@ -663,7 +946,13 @@ int32_t ScePafWidget_29BCC252(Scene *scene, int32_t *width, int32_t *height)
 	if (width == NULL || height == NULL || scene->m_env == NULL)
 		return -1;
 
+#ifdef PAF_BUILD_2014
+	SceneResolution *res = scene->m_env->FindResolution(scene->m_env->m_resolutions,
+							    scene->m_env->m_resolution_num,
+							    scene->m_resolution_id);
+#else
 	SceneResolution *res = ScePafWidget_CDC90BA2(scene->m_env_param, scene->m_resolution_id);
+#endif
 
 	if (res == NULL)
 		return -1;
@@ -675,6 +964,7 @@ int32_t ScePafWidget_29BCC252(Scene *scene, int32_t *width, int32_t *height)
 namespace paf {
 namespace ui {
 
+#ifndef PAF_BUILD_2014
 bool Scene::IsOrientationAvailable(int32_t orientation)
 {
 	return m_env_param->GetResolutionId(m_resolution_id, orientation) != 0xff;
@@ -698,6 +988,7 @@ int32_t Scene::ChangeOrientation(int32_t orientation, float time)
 	ResetCameraRoll(time);
 	return 0;
 }
+#endif
 
 int32_t Scene::DrawScene(bool hide)
 {
@@ -712,6 +1003,26 @@ int32_t Scene::DrawScene(bool hide)
 
 		DoEvent(0x20001000, &e);
 	}
+#ifdef PAF_BUILD_2014
+	if (m_screen != NULL && m_screen->OnTarget() == 0)
+		m_screen->OnClear();
+	if (m_camera->Setup(m_screen) != 0) {
+		graph::DrawCalls()->FlushLayers(m_layer);
+	} else {
+		graph::g_scene_draw_layer.m_ptr = m_layer;
+		graph::g_scene_draw_layer2.m_ptr = NULL;
+		if (m_draw_func != NULL) {
+			m_draw_arg.m_alpha = m_meta_a_sum * m_show_a_sum;
+			graph::g_scene_draw_layer.m_ptr->Push(0x10000000, 0, m_draw_func, m_draw_arg);
+		}
+		ScePafWidget_80946FB9(m_camera);
+		graph::DrawCalls()->FlushLayers(graph::g_scene_draw_layer.m_ptr);
+		graph::g_scene_draw_layer.m_ptr = NULL;
+		graph::g_scene_draw_layer2.m_ptr = NULL;
+	}
+	if (m_screen != NULL)
+		m_screen->OnFinish();
+#else
 	if (m_camera->Setup(m_screen) != 0) {
 		graph::DrawCalls()->FlushLayers(m_layer);
 	} else {
@@ -726,6 +1037,7 @@ int32_t Scene::DrawScene(bool hide)
 		graph::g_scene_draw_layer.m_ptr = NULL;
 		graph::g_scene_draw_layer2.m_ptr = NULL;
 	}
+#endif
 	if (m_map_e_listener.size() != 0) {
 		Event e(0x8000, Event::MODE_DISPATCH, Event::ROUTE_FORWARD, 0);
 
@@ -747,6 +1059,23 @@ int32_t ScePafWidget_687B21CA(Scene *scene, bool hide)
 		return -1;
 	}
 
+#ifdef PAF_BUILD_2014
+	if (scene->m_screen != NULL && scene->m_screen->OnTarget() == 0)
+		scene->m_screen->OnClear();
+	graph::g_scene_draw_layer.m_ptr = scene->m_layer;
+	graph::g_scene_draw_layer2.m_ptr = scene->m_bg_layer;
+	scene->m_bg_layer->Push(0, 0, Camera::DrawBegin, scene->m_camera);
+	scene->m_bg_layer->Push(2048, 0, Camera::DrawEnd, scene->m_camera);
+	for (list<Scene::SurfaceWidget>::iterator it = scene->m_surface_widgets.begin();
+	     it != scene->m_surface_widgets.end(); ++it)
+		it->m_widget->OnDraw(it->m_info);
+	graph::DrawCalls()->FlushLayers(scene->m_bg_layer);
+	graph::g_scene_draw_layer.m_ptr = NULL;
+	graph::g_scene_draw_layer2.m_ptr = NULL;
+	if (scene->m_screen != NULL)
+		scene->m_screen->OnFinish();
+	return 0;
+#else
 	graph::g_scene_draw_layer.m_ptr = scene->m_layer;
 	graph::g_scene_draw_layer2.m_ptr = scene->m_bg_layer;
 	for (list<Scene::SurfaceWidget>::iterator it = scene->m_surface_widgets.begin();
@@ -763,6 +1092,7 @@ int32_t ScePafWidget_687B21CA(Scene *scene, bool hide)
 	graph::g_scene_draw_layer.m_ptr = NULL;
 	graph::g_scene_draw_layer2.m_ptr = NULL;
 	return 0;
+#endif
 }
 
 int32_t ScePafWidget_4AD02636(Scene *scene, uint32_t size)
@@ -779,6 +1109,7 @@ int32_t ScePafWidget_4AD02636(Scene *scene, uint32_t size)
 namespace paf {
 namespace ui {
 
+#ifndef PAF_BUILD_2014
 bool Scene::IsDisplayAreaScaled()
 {
 	if (m_display_area_mode != 0)
@@ -789,6 +1120,7 @@ bool Scene::IsDisplayAreaScaled()
 		return m_env->m_display_area_scale != 1.0f;
 	return false;
 }
+#endif
 
 int32_t Scene::HandleKeycodeEvent(Event *e)
 {
@@ -811,6 +1143,18 @@ int32_t Scene::HandleSystemEvent(Event *e)
 	switch (e->GetType()) {
 	case 0x2001:
 		if (e->m_data[0] == 0)
+#ifdef PAF_BUILD_2014
+			DoEvent(0x100006, e);
+		else if (e->m_data[0] == 1)
+			DoEvent(0x100007, e);
+		break;
+	case 0x2002:
+		DoEvent(0x100008, e);
+		break;
+	case 0x2003:
+		DoEvent(0x100009, e);
+		break;
+#else
 			DoEvent(0x800006, e);
 		else if (e->m_data[0] == 1)
 			DoEvent(0x800007, e);
@@ -824,6 +1168,7 @@ int32_t Scene::HandleSystemEvent(Event *e)
 	case 0x2004:
 		DoEvent(0x80000a, e);
 		break;
+#endif
 	default:
 		DoEvent(CB_SCENE_SYSTEM, e);
 		break;
@@ -853,6 +1198,7 @@ void Scene::RemoveSurfaceWidget(Widget *widget)
 	}
 }
 
+#ifndef PAF_BUILD_2014
 void Scene::UpdateLayerWeight()
 {
 	if (!m_layer_weight_dirty)
@@ -864,10 +1210,18 @@ void Scene::UpdateLayerWeight()
 		m_env->m_layer_weight_changed = true;
 	m_layer_weight_dirty = false;
 }
+#endif
 
 void Scene::UpdateScreenSize(Timer *t)
 {
+#ifdef PAF_BUILD_2014
+	SceneResolution *res = m_env != NULL
+		? m_env->FindResolution(m_env->m_resolutions, m_env->m_resolution_num,
+					m_resolution_id)
+		: NULL;
+#else
 	SceneResolution *res = ScePafWidget_CDC90BA2(m_env_param, m_resolution_id);
+#endif
 
 	if (res == NULL)
 		return;

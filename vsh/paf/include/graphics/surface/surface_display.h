@@ -33,13 +33,17 @@ public:
 		uint32_t height;
 		/* the plane the frame buffer goes to */
 		int32_t port;
+#ifndef PAF_BUILD_2014
 		/* the display's resolution flags (DisplayFrameBufParam's) */
 		uint32_t resolution;
+#endif
 		bool *pending;
 		thread::Mutex *mutex;
 		thread::Cond *cond;
+#ifndef PAF_BUILD_2014
 		/* set again on the display, then cleared, when not all 0 */
 		SceDisplayViewportConf *viewport;
+#endif
 	};
 
 	/* what a shared frame buffer's update holds: the page shown and how (names ours) */
@@ -71,7 +75,13 @@ public:
 		SceGxmSyncObject *sync_object;
 	};
 
+#ifdef PAF_BUILD_2014
+	DisplaySurface(int32_t width, int32_t height, ImageMode format, ImageOrder order,
+		       int32_t num_page, ImageMode depth_format, ImageOrder depth_order,
+		       gutil::FrameBufferMode mode);
+#else
 	DisplaySurface(gutil::FrameBufferMode mode, const Param *param, void *bp);
+#endif
 	virtual ~DisplaySurface();
 	/* told of each draw into the surface: the page drawn has changed */
 	virtual void SetDirty(bool dirty);
@@ -101,11 +111,18 @@ public:
 	static SceUID GetFbId();
 	/* GXM's display queue callback, given the data of the frame to show */
 	static void displayCallback(const void *callback_data);
+#ifdef PAF_BUILD_2014
+	/* the frame buffer a mode needs, setting m_offscreen_base for Shared_Create (name ours) */
+	void *AllocFrameBuffer(gutil::FrameBufferMode mode, int32_t width, int32_t height,
+			       ImageMode format, ImageOrder order, int32_t num_page,
+			       ImageMode depth_format, ImageOrder depth_order);
+#else
 	/* the frame buffer a mode needs for a surface made as param says; the shared one's size
 	   back in param (name ours) */
 	static void *AllocFrameBuffer(gutil::FrameBufferMode mode, Param *param);
 	/* the largest frame buffer the display takes (name ours) */
 	static void GetMaximumResolution(int32_t *width, int32_t *height);
+#endif
 
 	/* NOT_SUPPORTED for a texture */
 	int32_t StartFrame();
@@ -148,29 +165,39 @@ public:
 	int32_t m_shown_page;
 	/* show the page shown again, not the page drawn */
 	bool m_hold;
+#ifndef PAF_BUILD_2014
 	bool m_hold_page;
 	/* the GPU clock is the power callback's: no change on a draw or a frame */
 	bool m_keep_gpu_clock;
 	/* show nothing */
 	bool m_blank;
+#endif
 	/* the page drawn is to be shown: Swap turns the pages */
 	bool m_swap;
 	/* a frame queued that the display has not shown yet */
 	bool m_pending;
 	thread::Mutex m_mutex;
 	thread::Cond m_cond;
+#ifdef PAF_BUILD_2014
+	void *m_offscreen_base;
+#else
 	SceDisplayViewportConf m_viewport;
+#endif
 	gutil::FrameBufferMode m_frame_buffer_mode;
 	bool m_initialized;
+#ifndef PAF_BUILD_2014
 	/* a draw asked to wait for the next vblank (1), none did (0), not told (-1) */
 	int8_t m_wait_vblank;
+#endif
 	/* the vblanks each frame lasts at least */
 	uint32_t m_vblank_count;
 	/* 1 while a frame begins, 2 when the shared frame buffer could not be begun, 0 after the
 	   frame */
 	int32_t m_frame_state;
+#ifndef PAF_BUILD_2014
 	/* the colour surface type of the frame buffer given (FrameBuffer_Given) */
 	SceGxmColorSurfaceType m_given_surface_type;
+#endif
 };
 
 /* the frame's time in microseconds (names ours) */

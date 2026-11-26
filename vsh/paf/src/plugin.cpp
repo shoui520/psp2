@@ -235,7 +235,7 @@ void ScePafToplevel_C1BE28B4(Plugin *plugin)
 			param->Create(1);
 			param->Read(&node);
 			param->Destroy(1);
-			plugin->m_sound_param_manager->AddParam(name, id, param);
+			PAF_PARAM_MGR(plugin->m_sound_param_manager)->AddParam(name, id, param);
 		}
 	}
 }
@@ -281,7 +281,7 @@ void Plugin::LoadResourceTable_Style()
 			param->Create(1);
 			param->Read(&node);
 			param->Destroy(1);
-			m_style_param_manager->AddParam(name, id, param);
+			PAF_PARAM_MGR(m_style_param_manager)->AddParam(name, id, param);
 		}
 	}
 }
@@ -477,7 +477,11 @@ intrusive_ptr<graph::Surface> Plugin::GetTexture(const cxml::Element &node,
 	if (surface.get() != NULL)
 		return surface;
 
+#ifdef PAF_BUILD_2014
+	cxml::Element elm = node;
+#else
 	cxml::Element elm = m_rscobj->GetOverrideElement(node);
+#endif
 	cxml::File src;
 	void *buf;
 	uint32_t size, type;
@@ -619,12 +623,17 @@ Plugin::Plugin(const InitParam *param)
 	  m_monitoring_callback_pageopen(NULL), m_monitoring_callback_pageactivate(NULL),
 	  m_monitoring_callback_pageclose(NULL), m_resource_data(param->resource_data),
 	  m_resource_data_size(param->resource_data_size), m_resolution_debug_mode(0),
-	  m_page_debug_mode(0), m_env_param(NULL), m_env_param_created(false),
+	  m_page_debug_mode(0)
+#ifndef PAF_BUILD_2014
+	  , m_env_param(NULL), m_env_param_created(false),
 	  m_graphics_flag(system::SystemParam::GetTextStyle()), m_unloading(false)
+#endif
 {
+#ifndef PAF_BUILD_2014
 	m_style_param_manager = new VersatileParamManager();
 	m_obj_param_manager = new VersatileParamManager();
 	m_sound_param_manager = new VersatileParamManager();
+#endif
 
 	if (param->module_file.size() != 0) {
 		char path[256];
@@ -635,6 +644,9 @@ Plugin::Plugin(const InitParam *param)
 
 		if (Framework::framework->GetMode() == Framework::Mode_CommonDialog)
 			option |= Module::Option_LoadTypeCdlg;
+#ifdef PAF_BUILD_2014
+		m_module = new Module(path, NULL, option, NULL);
+#else
 		for (uint32_t i = 0; i < 100; i++) {
 			m_module = new Module(path, NULL, option, NULL);
 			if (m_module == NULL || m_module->GetStatus() == 0)
@@ -643,6 +655,7 @@ Plugin::Plugin(const InitParam *param)
 			m_module = NULL;
 			thread::Sleep(100);
 		}
+#endif
 	}
 	if (m_module != NULL && (param->module_option & Module::Option_UseInterface)) {
 		const ModuleInterface *iface = static_cast<const ModuleInterface *>(
@@ -726,9 +739,16 @@ Plugin::Plugin(const InitParam *param)
 		sce_paf_snprintf(name, sizeof(name), "ScePafSurfacePool(%s)", m_name.c_str());
 		m_surface_pool_addr = GraphMem::AllocOSMemory(GraphMem::DeviceType_SystemMemory,
 							      param2.surface_pool_size, name, NULL);
+#ifdef PAF_BUILD_2014
+		m_surface_pool = new graph::SurfacePool(m_surface_pool_addr,
+							param2.surface_pool_size, m_name.c_str(),
+							NULL,
+							graph::SurfacePool::MemoryType_Normal);
+#else
 		m_surface_pool = new graph::SurfacePool(m_surface_pool_addr,
 							param2.surface_pool_size, name, NULL,
 							graph::SurfacePool::MemoryType_Normal);
+#endif
 	} else {
 		m_surface_pool = gutil::GetDefaultSurfacePool();
 	}
@@ -762,6 +782,7 @@ Plugin::Plugin(const InitParam *param)
 		}
 	}
 
+#ifndef PAF_BUILD_2014
 	ui::Environment *env = Framework::framework->m_env;
 
 	if (env != NULL) {
@@ -797,6 +818,7 @@ Plugin::Plugin(const InitParam *param)
 		m_graphics_flag = param->graphics_flag;
 	else if (param2.graphics_flag != 128)
 		m_graphics_flag = param2.graphics_flag;
+#endif
 
 	if (m_rscobj != NULL) {
 		ScePafResource_42E4E566(m_rscobj, m_locale, m_decode_heap);
@@ -829,7 +851,11 @@ Plugin::Plugin(const InitParam *param)
 						for (node = table.GetFirstChild();
 						     node.doc != NULL && node.offset >= 0;
 						     node = node.GetNextSibling()) {
-							cxml::Element elm = m_rscobj->GetOverrideElement(node);
+						#ifdef PAF_BUILD_2014
+	cxml::Element elm = node;
+#else
+	cxml::Element elm = m_rscobj->GetOverrideElement(node);
+#endif
 							const char *value;
 							uint32_t len;
 
@@ -956,17 +982,44 @@ void ScePafToplevel_340EE53C(Plugin *plugin, ui::Widget *page,
 			float total = timer != NULL ? timer->GetTotalTime() : 0.0f;
 
 			page->m_transition_complete = false;
+#ifndef PAF_BUILD_2014
 			page->m_transition = 0xff;
+#endif
 			page->DoTransitionReverse_core(total, true);
 			ScePafWidget_4588699E(page, timer, 2, 0.0f, NULL);
 		} else {
 			page->m_transition_complete = false;
+#ifndef PAF_BUILD_2014
 			page->m_transition = 0xff;
+#endif
 			page->DoTransitionReverse_core(0.0f, true);
 			ScePafWidget_4588699E(page, NULL, 2, 0.0f, NULL);
 		}
 		time = param.fade_time_ms;
 	}
+#ifdef PAF_BUILD_2014
+	if (param.timer != NULL) {
+		if (param.timer->m_total * 1000.0f > time)
+			time = param.timer->m_total * 1000.0f;
+		delete param.timer;
+	}
+	switch (param.transition_type) {
+	case Plugin::TransitionType_SlideFromTop:
+		ScePafCommon_B48C9BDC(0.0f, page, (common::transition::Type)13, true, false);
+		break;
+	case Plugin::TransitionType_SlideFromBottom:
+		ScePafCommon_B48C9BDC(0.0f, page, (common::transition::Type)14, true, false);
+		break;
+	case Plugin::TransitionType_SlideFromLeft:
+		ScePafCommon_B48C9BDC(0.0f, page, (common::transition::Type)15, true, false);
+		break;
+	case Plugin::TransitionType_SlideFromRight:
+		ScePafCommon_B48C9BDC(0.0f, page, (common::transition::Type)16, true, false);
+		break;
+	default:
+		break;
+	}
+#else
 	switch (param.transition_type) {
 	case Plugin::TransitionType_SlideFromTop:
 		ScePafCommon_B48C9BDC(0.0f, page, common::transition::Type_SlideFromTop3, true, false);
@@ -986,6 +1039,7 @@ void ScePafToplevel_340EE53C(Plugin *plugin, ui::Widget *page,
 	default:
 		break;
 	}
+#endif
 	if (time < 0.0f)
 		time = 0.0f;
 	ScePafWidget_AC0C81D5(page, time);
@@ -1145,16 +1199,20 @@ Plugin::~Plugin()
 	if (m_surface_pool_addr != NULL) {
 		if (m_surface_pool != NULL)
 			delete m_surface_pool;
+#ifndef PAF_BUILD_2014
 		if (Framework::framework->GetMode() == 5)
 			ScePafGraphics_E4B3B1D2(graph::arl::Gl());
+#endif
 		GraphMem::FreeOSMemory(GraphMem::DeviceType_SystemMemory, m_surface_pool_addr);
 	}
+#ifndef PAF_BUILD_2014
 	if (m_sound_param_manager != NULL)
 		delete m_sound_param_manager;
 	if (m_obj_param_manager != NULL)
 		delete m_obj_param_manager;
 	if (m_style_param_manager != NULL)
 		delete m_style_param_manager;
+#endif
 	if (m_module != NULL)
 		delete m_module;
 	if (m_decode_heap_created && m_decode_heap != NULL)
@@ -1166,8 +1224,10 @@ Plugin::~Plugin()
 		if (*it != NULL)
 			(*it)(m_param);
 	}
+#ifndef PAF_BUILD_2014
 	if (m_env_param_created && m_env_param != NULL)
 		delete m_env_param;
+#endif
 }
 
 void Plugin::PageActivateActually()
@@ -1247,7 +1307,9 @@ void ScePafToplevel_995AE4B6(Plugin *plugin, ui::Widget *page, const Plugin::Pag
 
 	if (param.fade) {
 		page->m_transition_complete = false;
+#ifndef PAF_BUILD_2014
 		page->m_transition = 0xff;
+#endif
 		page->DoTransitionReverse_core(0.0f, true);
 		ScePafWidget_4588699E(page, NULL, 2, 0.0f, NULL);
 
@@ -1257,14 +1319,18 @@ void ScePafToplevel_995AE4B6(Plugin *plugin, ui::Widget *page, const Plugin::Pag
 			Timer *timer = new Timer(fade_time_ms);
 
 			if (!page->m_transition_complete) {
+#ifndef PAF_BUILD_2014
 				page->m_transition = 0xff;
+#endif
 				page->m_transition_complete = true;
 				page->DoTransition_core(0.0f, true);
 			}
 			ScePafWidget_FF5BC957(page, timer, 2, 0.0f, NULL);
 		} else {
 			if (!page->m_transition_complete) {
+#ifndef PAF_BUILD_2014
 				page->m_transition = 0xff;
+#endif
 				page->m_transition_complete = true;
 				page->DoTransition_core(0.0f, true);
 			}
@@ -1272,6 +1338,26 @@ void ScePafToplevel_995AE4B6(Plugin *plugin, ui::Widget *page, const Plugin::Pag
 		}
 		time = param.fade_time_ms;
 	}
+#ifdef PAF_BUILD_2014
+	if (param.timer != NULL)
+		delete param.timer;
+	switch (param.transition_type) {
+	case Plugin::TransitionType_SlideFromTop:
+		ScePafCommon_6CF3A3C8(0.0f, page, (common::transition::Type)13, false, false);
+		break;
+	case Plugin::TransitionType_SlideFromBottom:
+		ScePafCommon_6CF3A3C8(0.0f, page, (common::transition::Type)14, false, false);
+		break;
+	case Plugin::TransitionType_SlideFromLeft:
+		ScePafCommon_6CF3A3C8(0.0f, page, (common::transition::Type)15, false, false);
+		break;
+	case Plugin::TransitionType_SlideFromRight:
+		ScePafCommon_6CF3A3C8(0.0f, page, (common::transition::Type)16, false, false);
+		break;
+	default:
+		break;
+	}
+#else
 	switch (param.transition_type) {
 	case Plugin::TransitionType_SlideFromTop:
 		ScePafCommon_6CF3A3C8(0.0f, page, common::transition::Type_SlideFromTop3, false, false);
@@ -1291,6 +1377,7 @@ void ScePafToplevel_995AE4B6(Plugin *plugin, ui::Widget *page, const Plugin::Pag
 	default:
 		break;
 	}
+#endif
 	if (time < 0.0f)
 		time = 0.0f;
 	ScePafWidget_AC0C81D5(page, time);
@@ -1363,14 +1450,15 @@ void ScePafToplevel_2E1F0393(Plugin *plugin, const cxml::Element &elm, ui::Widge
 	sce_paf_strncat(name, type, len);
 
 	ui::WidgetSoundParam *param =
-		static_cast<ui::WidgetSoundParam *>(plugin->m_sound_param_manager->FindParam(name, id));
+		static_cast<ui::WidgetSoundParam *>(
+			PAF_PARAM_MGR(plugin->m_sound_param_manager)->FindParam(name, id));
 
 	if (param == NULL) {
 		Plugin *common = Framework::framework->m_common_resource_plugin;
 
 		if (common != NULL)
 			param = static_cast<ui::WidgetSoundParam *>(
-				common->m_sound_param_manager->FindParam(name, id));
+				PAF_PARAM_MGR(common->m_sound_param_manager)->FindParam(name, id));
 	}
 	if (param != NULL) {
 		param->AddWidget(widget);
@@ -1406,6 +1494,7 @@ void Plugin::InstantiateWidget_InitEventHandler(const IDParam &id, ui::Widget *w
 	widget->AddEventCallback(ui::Handler::CB_STATE_INIT, GetInitEventHandler(id));
 }
 
+#ifndef PAF_BUILD_2014
 /* called whole by InstantiateWidget_Focus */
 __attribute__((noinline)) VersatileParam *Plugin::CallFactoryFocus(const char *name)
 {
@@ -1445,6 +1534,7 @@ void Plugin::InstantiateWidget_Focus(const cxml::Element &elm, ui::Widget *widge
 	param->Destroy(1);
 	delete param;
 }
+#endif
 
 /* Sony's build calls this vector's push_back rather than inlining it. */
 template<>
@@ -1550,14 +1640,14 @@ ui::Widget *Plugin::CreateWidgetWithStyleType(ui::Widget *parent, const char *ty
 	}
 
 	ui::WidgetStyleParam *style_param = static_cast<ui::WidgetStyleParam *>(
-		m_style_param_manager->FindParam(style_type, style));
+		PAF_PARAM_MGR(m_style_param_manager)->FindParam(style_type, style));
 
 	if (style_param == NULL) {
 		Plugin *common = Framework::framework->m_common_resource_plugin;
 
 		if (common != NULL)
 			style_param = static_cast<ui::WidgetStyleParam *>(
-				common->m_style_param_manager->FindParam(style_type, style));
+				PAF_PARAM_MGR(common->m_style_param_manager)->FindParam(style_type, style));
 		if (style_param == NULL && style_id.m_idhash != 0)
 			return NULL;
 	}
@@ -1655,12 +1745,21 @@ void Plugin::InstantiateWidget(const cxml::Element &elm, ui::Widget *parent, boo
 {
 	const char *name = elm.GetName();
 
+#ifdef PAF_BUILD_2014
+	if (name == NULL || parent == NULL || sce_paf_strncmp(name, "layout_", 7) == 0)
+		return;
+#else
 	if (name == NULL || parent == NULL || sce_paf_strncmp(name, "layout_", 7) == 0 ||
 	    sce_paf_strncmp(name, "focus_", 6) == 0)
 		return;
+#endif
 
 	if (sce_paf_strncmp(name, "template_ref", 12) == 0) {
+#ifdef PAF_BUILD_2014
+		cxml::Element node = elm;
+#else
 		cxml::Element node = m_rscobj->GetOverrideElement(elm);
+#endif
 		cxml::Element entity;
 		uint32_t idhash;
 
@@ -1711,7 +1810,9 @@ void Plugin::InstantiateWidget(const cxml::Element &elm, ui::Widget *parent, boo
 		info->m_node = elm;
 		InstantiateWidget_Layout(elm, widget, info);
 	}
+#ifndef PAF_BUILD_2014
 	InstantiateWidget_Focus(elm, widget);
+#endif
 	InstantiateWidget_InitEventHandler(id, widget, event_handler_table);
 
 	cxml::Element child;
@@ -1757,6 +1858,12 @@ ui::Scene *Plugin::PageOpen(const cxml::Element &node, const PageOpenParam &para
 
 	ScePafToplevel_3B003F16(this, &id.m_id, idhash, false);
 
+#ifdef PAF_BUILD_2014
+	ui::Scene *page = new ui::Scene(Framework::framework->m_env,
+					param.overwrite_draw_priority >= 0 ?
+						param.overwrite_draw_priority : m_draw_priority,
+					NULL);
+#else
 	ui::Resolution *env_param = m_env_param;
 	int32_t graphics_flag = m_graphics_flag;
 
@@ -1768,6 +1875,7 @@ ui::Scene *Plugin::PageOpen(const cxml::Element &node, const PageOpenParam &para
 					param.overwrite_draw_priority >= 0 ?
 						param.overwrite_draw_priority : m_draw_priority,
 					NULL, env_param, graphics_flag);
+#endif
 
 	InstantiateWidget_InitEventHandler(id, page, param.event_handler_table);
 	SetNodeEntity_Widget(node, page);
@@ -1838,7 +1946,9 @@ Plugin::InitParam2::InitParam2()
 	draw_priority = 150;
 	surface_pool_size = 0;
 	texture_load_filter = 0;
+#ifndef PAF_BUILD_2014
 	graphics_flag = 128;
+#endif
 }
 
 Plugin::PageOpenParam::PageOpenParam()
@@ -1852,8 +1962,10 @@ Plugin::PageOpenParam::PageOpenParam()
 	fade_time_ms = 200.0f;
 	transition_type = TransitionType_None;
 	timer = NULL;
+#ifndef PAF_BUILD_2014
 	env_param = NULL;
 	graphics_flag = 128;
+#endif
 }
 
 void Plugin::Start()
@@ -1915,6 +2027,12 @@ ui::Scene *Plugin::PageOpen(const IDParam &id, const PageOpenParam &param)
 		if (GetNodeEntity_Widget(id) != NULL)
 			return NULL;
 
+#ifdef PAF_BUILD_2014
+		ui::Scene *page = new ui::Scene(Framework::framework->m_env,
+						param.overwrite_draw_priority >= 0 ?
+							param.overwrite_draw_priority : m_draw_priority,
+						NULL);
+#else
 		ui::Resolution *env_param = m_env_param;
 		int32_t graphics_flag = m_graphics_flag;
 
@@ -1926,6 +2044,7 @@ ui::Scene *Plugin::PageOpen(const IDParam &id, const PageOpenParam &param)
 						param.overwrite_draw_priority >= 0 ?
 							param.overwrite_draw_priority : m_draw_priority,
 						NULL, env_param, graphics_flag);
+#endif
 
 		SetNodeEntity_Widget(id, page);
 		SetNodeEntity_CreatePage(id, page);
@@ -2168,7 +2287,7 @@ int32_t Plugin::CreateStyle(const char *type, const IDParam &id)
 		sce_paf_strncat(name, type, len);
 		param->m_id = id;
 		param->AttachPlugin(this);
-		m_style_param_manager->AddParam(name, id, param);
+		PAF_PARAM_MGR(m_style_param_manager)->AddParam(name, id, param);
 	} else {
 		ret = -1;
 	}
@@ -2358,18 +2477,18 @@ int32_t Plugin::WriteStyleTable(common::SharedPtr<File> fp, bool table)
 	int32_t indent = 0;
 	int32_t ret = 0;
 
-	if (m_style_param_manager->m_param_table.begin() ==
-	    m_style_param_manager->m_param_table.end())
+	if (PAF_PARAM_MGR(m_style_param_manager)->m_param_table.begin() ==
+	    PAF_PARAM_MGR(m_style_param_manager)->m_param_table.end())
 		return 0;
 	if (table) {
 		if (ScePafResource_D74427E6(fp, 4, 1, false) != 0)
 			return -1;
 		indent = 1;
 	}
-	for (VersatileParamManager::iterator it = m_style_param_manager->begin();
-	     it != m_style_param_manager->end(); ++it) {
-		VersatileParam *param = m_style_param_manager->FindParam(it.GetTag().c_str(),
-									 it.GetID());
+	for (VersatileParamManager::iterator it = PAF_PARAM_MGR(m_style_param_manager)->begin();
+	     it != PAF_PARAM_MGR(m_style_param_manager)->end(); ++it) {
+		VersatileParam *param = PAF_PARAM_MGR(m_style_param_manager)->FindParam(
+			it.GetTag().c_str(), it.GetID());
 		string id;
 
 		param->Create(1);
@@ -2645,8 +2764,8 @@ int32_t Plugin::GetResourceStyles(const char *type, vector<string> *styles)
 
 	if (styles == NULL)
 		return -1;
-	for (VersatileParamManager::iterator it = m_style_param_manager->begin();
-	     it != m_style_param_manager->end(); ++it) {
+	for (VersatileParamManager::iterator it = PAF_PARAM_MGR(m_style_param_manager)->begin();
+	     it != PAF_PARAM_MGR(m_style_param_manager)->end(); ++it) {
 		if (type != NULL) {
 			char tag[32] = "style_";
 			size_t len = sce_paf_strlen(type) + 1;
@@ -2654,7 +2773,7 @@ int32_t Plugin::GetResourceStyles(const char *type, vector<string> *styles)
 			if (len > 26)
 				len = 25;
 			sce_paf_strncat(tag, type, len);
-			if (m_style_param_manager->FindParam(tag, it.GetID()) == NULL)
+			if (PAF_PARAM_MGR(m_style_param_manager)->FindParam(tag, it.GetID()) == NULL)
 				continue;
 		}
 		if (m_rscobj != NULL) {
@@ -2711,7 +2830,8 @@ bool Plugin::IsRegisteredID(const IDParam &id)
 				return true;
 		}
 	}
-	return m_style_param_manager->FindParam(id) != NULL || GetNodeEntity_AddTexture(id) != NULL;
+	return PAF_PARAM_MGR(m_style_param_manager)->FindParam(id) != NULL ||
+	       GetNodeEntity_AddTexture(id) != NULL;
 }
 
 void Plugin::SetNodeEntity_AddTexture(const IDParam &id, AddTextureInfo &info)
@@ -3107,8 +3227,8 @@ int32_t Plugin::PageDebugFocusCB(ui::Widget *focus, ui::Widget *prev, void *user
 		if (len > 26)
 			len = 25;
 		sce_paf_strncat(tag, type, len);
-		s_debug_style_param = info->m_plugin->m_style_param_manager->FindParam(tag,
-										     info->m_style_id);
+		s_debug_style_param = PAF_PARAM_MGR(info->m_plugin->m_style_param_manager)
+					      ->FindParam(tag, info->m_style_id);
 		if (s_debug_style_param != NULL)
 			s_debug_style_param->Create(2);
 	}
@@ -3269,8 +3389,10 @@ Plugin::InitParam::InitParam()
 	notify_callback = NULL;
 	unload_callback = NULL;
 	param = NULL;
+#ifndef PAF_BUILD_2014
 	env_param = NULL;
 	graphics_flag = 128;
+#endif
 }
 
 }
@@ -3296,15 +3418,15 @@ int32_t ScePafToplevel_CA3E606F(Plugin *plugin, const IDParam &id, const char **
 int32_t ScePafToplevel_DA3D4AF0(Plugin *plugin, const IDParam &id,
 				ui::WidgetSoundParam::Sound **sounds, uint32_t *num)
 {
-	ui::WidgetSoundParam *param =
-		static_cast<ui::WidgetSoundParam *>(plugin->m_sound_param_manager->FindParam(id));
+	ui::WidgetSoundParam *param = static_cast<ui::WidgetSoundParam *>(
+		PAF_PARAM_MGR(plugin->m_sound_param_manager)->FindParam(id));
 
 	if (param == NULL) {
 		Plugin *common = Framework::framework->m_common_resource_plugin;
 
 		if (common != NULL)
 			param = static_cast<ui::WidgetSoundParam *>(
-				common->m_sound_param_manager->FindParam(id));
+				PAF_PARAM_MGR(common->m_sound_param_manager)->FindParam(id));
 	}
 	if (param == NULL) {
 		*sounds = NULL;

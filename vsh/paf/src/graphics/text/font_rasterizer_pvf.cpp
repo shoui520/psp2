@@ -30,6 +30,7 @@ extern "C" int sceAppMgrConvertVs0UserDrivePath(const char *path, char *out, int
 namespace paf {
 namespace graph {
 
+#ifndef PAF_BUILD_2014
 /* the system fonts a font index from 0x10000 opens (name ours) */
 static const char *const s_font_paths[] = {
 	"sa0:data/font/pvf/music_arib.pvf",
@@ -41,6 +42,7 @@ static const char *const s_font_paths[] = {
 	"vs0:data/external/font/pvf/k006004ds.ttf",
 	"vs0:data/external/font/pvf/c041056ts.ttf"
 };
+#endif
 
 /* the glyphs' colour table: white, its alpha the 4-bit coverage (name ours) */
 static const uint32_t s_clut_table[16] = {
@@ -53,8 +55,12 @@ static const uint32_t s_clut_table[16] = {
 /* where a slot's font comes from and how it is drawn (names ours) */
 class FontSource {
 public:
+#ifdef PAF_BUILD_2014
+	FontSource() : mem_addr(NULL), mem_size(0), path(""), font(NULL)
+#else
 	FontSource() : mem_addr(NULL), mem_size(0), path(""), font(NULL),
 		       mode(SCE_PVF_FILEBASEDSTREAM)
+#endif
 	{
 		embolden_rate[0] = 0.0f;
 		embolden_rate[1] = 0.0f;
@@ -71,8 +77,10 @@ public:
 	string path;
 	/* the system's font on shared memory */
 	ScePvf_t_fontId font;
+#ifndef PAF_BUILD_2014
 	/* the ScePvfDataAccessMode it is opened with */
 	uint32_t mode;
+#endif
 	/* by the style's boldness and obliqueness */
 	float embolden_rate[2];
 	float skew_value[2];
@@ -86,7 +94,12 @@ static ScePvf_t_libId s_lib = NULL;
 /* the Locale */
 static int32_t s_locale = -1;
 
+#ifdef PAF_BUILD_2014
+static uint32_t s_latin_mem_count;
+static uint32_t s_latin_mem_max;
+#else
 static uint32_t s_option;
+#endif
 static intrusive_ptr<SurfaceCLUT> s_clut(NULL);
 static FontSource s_fonts[FontRasterizerPvf::Font_Num];
 /* the fonts open, by font index */
@@ -150,9 +163,11 @@ int32_t FontRasterizerPvf::SetFont(const FontParam &param)
 	s_fonts[Font_Chinese].mem_addr = param.mem_chinese_addr;
 	s_fonts[Font_Chinese].mem_size = param.mem_chinese_size;
 	s_fonts[Font_Chinese].path = param.path_chinese;
+#ifndef PAF_BUILD_2014
 	s_fonts[Font_Arib].mem_addr = param.mem_arib_addr;
 	s_fonts[Font_Arib].mem_size = param.mem_arib_size;
 	s_fonts[Font_Arib].path = param.path_arib;
+#endif
 	return 0;
 }
 
@@ -171,19 +186,28 @@ int32_t FontRasterizerPvf::Init(const InitParam &param)
 
 	if (param.heap_size != 0)
 		size = param.heap_size;
+#ifdef PAF_BUILD_2014
+	s_latin_mem_max = 0;
+	if (size < 0x100000)
+		s_latin_mem_max = 0;
+#endif
 	cdlg = false;
 	option.entry_max = 0;
 	option.warning_size = 0;
 	option.disable_dbgprint = true;
 	option.disable_assert_on_alloc_failure = true;
 	option.memblk_type = memory::AllocationBlockType_User;
+#ifndef PAF_BUILD_2014
 	option.alignment = 0;
+#endif
 	if (Framework::Instance() != NULL &&
 	    Framework::Instance()->GetMode() == Framework::Mode_CommonDialog) {
 		cdlg = true;
 		option.memblk_type = memory::AllocationBlockType_User_Cdlg;
 	}
+#ifndef PAF_BUILD_2014
 	s_option = param.option;
+#endif
 	s_locale = 0;
 	s_heap = new memory::HeapAllocator(NULL, size, "ScePafFontRasterizerPvfHeap", &option);
 	if (s_heap != NULL) {
@@ -221,6 +245,7 @@ int32_t FontRasterizerPvf::Init(const InitParam &param)
 	if (error == 0) {
 		float rate;
 
+#ifndef PAF_BUILD_2014
 		if (s_option & Option_MemoryJapanese)
 			s_fonts[Font_Japanese].mode = SCE_PVF_MEMORYBASEDSTREAM;
 		if (s_option & Option_MemoryLatin)
@@ -233,6 +258,7 @@ int32_t FontRasterizerPvf::Init(const InitParam &param)
 			s_fonts[Font_Arib].mode = SCE_PVF_MEMORYBASEDSTREAM;
 		if (s_option & Option_MemoryFamily)
 			s_fonts[Font_Family].mode = SCE_PVF_MEMORYBASEDSTREAM;
+#endif
 		rate = 5.0f;
 		if (!cdlg)
 			rate = 0.0f;
@@ -252,6 +278,7 @@ int32_t FontRasterizerPvf::Init(const InitParam &param)
 		s_fonts[Font_Chinese].embolden_rate[1] = 3.0f;
 		s_fonts[Font_Chinese].skew_value[0] = 0.0f;
 		s_fonts[Font_Chinese].skew_value[1] = 15.0f;
+#ifndef PAF_BUILD_2014
 		s_fonts[Font_Arib].embolden_rate[0] = rate;
 		s_fonts[Font_Arib].embolden_rate[1] = 5.0f;
 		s_fonts[Font_Arib].skew_value[0] = 0.0f;
@@ -260,6 +287,7 @@ int32_t FontRasterizerPvf::Init(const InitParam &param)
 		s_fonts[Font_Family].embolden_rate[1] = 5.0f;
 		s_fonts[Font_Family].skew_value[0] = 0.0f;
 		s_fonts[Font_Family].skew_value[1] = 15.0f;
+#endif
 	}
 	if (error < 0)
 		Term();
@@ -267,8 +295,13 @@ int32_t FontRasterizerPvf::Init(const InitParam &param)
 }
 
 FontRasterizerPvf::FontRasterizerPvf()
+#ifdef PAF_BUILD_2014
+	: m_dirty(false), m_point(0.0f), m_bold(false), m_oblique(false), m_shadow(false),
+	  m_height(0), m_ascender(0)
+#else
 	: m_dirty(false), m_point(0.0f, 0.0f), m_bold(false), m_oblique(false), m_shadow(false),
 	  m_family(0), m_height(0), m_ascender(0)
+#endif
 {
 }
 
@@ -282,7 +315,11 @@ int32_t FontRasterizerPvf::ReleaseFonts()
 	m_oblique = false;
 	m_shadow = false;
 	m_height = 0;
+#ifdef PAF_BUILD_2014
+	m_point = 0.0f;
+#else
 	m_point = math::v2(0.0f, 0.0f);
+#endif
 	m_ascender = 0;
 	return 0;
 }
@@ -292,6 +329,151 @@ FontRasterizerPvf::~FontRasterizerPvf()
 	ReleaseFonts();
 }
 
+#ifdef PAF_BUILD_2014
+FontRasterizerPvf::Font::Font(int32_t slot, ScePvf_t_fontIndex index)
+	: m_id(NULL), m_opened(false), m_memory_opened(false)
+{
+	ScePvf_t_error error = SCE_PAF_ERROR_TEXT_ABORTED;
+	FontSource *source = &s_fonts[slot];
+
+	if (source->font != NULL) {
+		m_id = source->font;
+	} else if (source->mem_addr != NULL) {
+		m_id = scePvfOpenUserMemory(s_lib, source->mem_addr, source->mem_size, &error);
+	} else {
+		uint32_t mode = SCE_PVF_FILEBASEDSTREAM;
+
+		if (slot == Font_Latin && s_latin_mem_count < s_latin_mem_max) {
+			s_latin_mem_count++;
+			mode = SCE_PVF_MEMORYBASEDSTREAM;
+			m_memory_opened = true;
+		}
+		if (source->path == "")
+			m_id = scePvfOpen(s_lib, index, mode, &error);
+		else
+			m_id = scePvfOpenUserFile(s_lib, (ScePvf_t_pointer)source->path.c_str(),
+						  mode, &error);
+	}
+	if (error == 0)
+		m_opened = true;
+}
+
+ScePvf_t_fontIndex FontRasterizerPvf::GetFontIndex(int32_t slot, uint16_t family,
+						   uint16_t style_code)
+{
+	ScePvf_t_error error;
+	FontSource *source = &s_fonts[slot];
+
+	if (source->font != NULL || source->mem_addr != NULL || source->path != "") {
+		family = 0;
+		style_code = 0;
+	}
+
+	ScePvf_t_fontStyleInfo style;
+
+	sce_paf_memset(&style, 0, sizeof(style));
+	style.familyCode = family;
+	style.style = style_code;
+	switch (slot) {
+	case Font_Japanese:
+		style.languageCode = SCE_PVF_LANGUAGE_J;
+		break;
+	case Font_Latin:
+		style.languageCode = SCE_PVF_LANGUAGE_LATIN;
+		break;
+	case Font_Hangul:
+		style.languageCode = SCE_PVF_LANGUAGE_K;
+		break;
+	default:
+		style.languageCode = SCE_PVF_LANGUAGE_C;
+		break;
+	}
+	return scePvfFindOptimumFont(s_lib, &style, &error);
+}
+
+int32_t FontRasterizerPvf::LoadFonts(uint16_t family, uint16_t style_code)
+{
+	s_mutex.Lock();
+	scePvfSetEM(s_lib, 1.0f / m_point);
+	for (int32_t slot = Font_Chinese; slot >= 0; slot--) {
+		ScePvf_t_fontIndex index = GetFontIndex(slot, family, style_code);
+
+		if (index < 0)
+			continue;
+
+		FontMap::iterator it = s_font_map.find(index);
+
+		if (it != s_font_map.end()) {
+			m_fonts[slot] = it->second;
+		} else {
+			it = s_font_map.end();
+			while (it != s_font_map.begin() && s_font_map.size() >= 4) {
+				--it;
+				if (it->second.get() == NULL ||
+				    it->second.m_ref_counter->m_counter <= 1)
+					s_font_map.erase(it++);
+			}
+			m_fonts[slot] = common::SharedPtr<Font>(new Font(slot, index));
+			if (m_fonts[slot].get() != NULL)
+				s_font_map[index] = m_fonts[slot];
+		}
+
+		Font *font = m_fonts[slot].get();
+		ScePvf_t_fontInfo info;
+
+		if (font != NULL && font->m_id != NULL && scePvfGetFontInfo(font->m_id, &info) == 0) {
+			int32_t ascender = info.maxIGlyphMetrics.ascender64;
+
+			if (m_height < ascender - info.maxIGlyphMetrics.descender64)
+				m_height = ascender - info.maxIGlyphMetrics.descender64;
+			if (m_ascender < ascender)
+				m_ascender = ascender;
+		}
+	}
+	s_mutex.Unlock();
+	m_height = Round64(m_height);
+	m_ascender = Round64(m_ascender);
+
+	int32_t margin = (int32_t)(m_point * 0.1f);
+
+	if (m_height > 0)
+		m_height = margin + m_height + 3;
+	if (m_ascender > 0)
+		m_ascender = m_ascender + margin;
+	return 0;
+}
+
+int32_t FontRasterizerPvf::ApplyStyle()
+{
+	if (m_dirty) {
+		ReleaseFonts();
+		if (m_style.get() != NULL) {
+			int32_t family;
+
+			m_style->GetStyleAttribute(TextStyleAttribute_Point, m_point);
+			m_style->GetStyleAttribute(TextStyleAttribute_Bold, m_bold);
+			m_style->GetStyleAttribute(TextStyleAttribute_Oblique, m_oblique);
+			m_style->GetStyleAttribute(TextStyleAttribute_Shadow, m_shadow);
+			m_style->GetStyleAttribute(TextStyleAttribute_Family, family);
+
+			uint16_t family_code = SCE_PVF_DEFAULT_FAMILY_CODE;
+
+			if (family == 1)
+				family_code = SCE_PVF_FAMILY_SANSERIF;
+			else if (family == 2)
+				family_code = SCE_PVF_FAMILY_SERIF;
+			LoadFonts(family_code, 0);
+		}
+		m_dirty = false;
+	}
+	return 0;
+}
+
+int32_t FontRasterizerPvf::Update()
+{
+	return 0;
+}
+#else
 FontRasterizerPvf::Font::Font(int32_t slot, ScePvf_t_fontIndex index) : m_id(NULL), m_opened(false)
 {
 	ScePvf_t_error error = SCE_PAF_ERROR_TEXT_ABORTED;
@@ -457,6 +639,7 @@ int32_t FontRasterizerPvf::Update()
 	LoadFonts();
 	return 0;
 }
+#endif
 
 int32_t FontRasterizerPvf::SetStyle(const common::SharedPtr<TextStyle> &style)
 {
@@ -484,14 +667,231 @@ int32_t FontRasterizerPvf::GetFontMetrics(FontMetrics &metrics)
 {
 	if (m_style.get() == NULL)
 		return SCE_PAF_ERROR_TEXT_ABORTED;
+#ifdef PAF_BUILD_2014
+	int32_t ret = ApplyStyle();
+
+	if (ret != 0)
+		return ret;
+#else
 	if (m_dirty)
 		ApplyStyle();
+#endif
 	metrics.scale = 1.0f;
 	metrics.height = (float)m_height;
 	metrics.ascender = (float)m_ascender;
 	return 0;
 }
 
+#ifdef PAF_BUILD_2014
+int32_t FontRasterizerPvf::GetCharInfo(int32_t slot, ScePvf_t_charCode c, ScePvf_t_charInfo *info)
+{
+	int32_t ret = 0;
+
+	switch (slot) {
+	case Font_Hangul:
+		info->glyphMetrics.width64 = HangulWidth64(m_point, 72.0f);
+		info->glyphMetrics.horizontalBearingX64 = HangulBearingX64(m_point, 72.0f);
+		info->glyphMetrics.horizontalAdvance64 = HangulAdvance64(c, m_point, 72.0f);
+		break;
+	case Font_Chinese:
+		info->glyphMetrics.width64 = ChineseWidth64(m_point, 72.0f);
+		info->glyphMetrics.horizontalBearingX64 = ChineseBearingX64(m_point, 72.0f);
+		info->glyphMetrics.horizontalAdvance64 = ChineseAdvance64(c, m_point, 72.0f);
+		break;
+	default:
+		ret = scePvfGetCharInfo(m_fonts[slot]->m_id, c, info);
+		break;
+	}
+	return ret;
+}
+
+int32_t FontRasterizerPvf::GetFontSlot(ScePvf_t_charCode c)
+{
+	int32_t slot = Font_Japanese;
+	ScePvf_t_charCode high = c & 0xff00;
+
+	switch (high) {
+	case 0xff00:
+		if ((c >= 0xffa0 && c <= 0xffdf) || c == 0xffe6)
+			return Font_Hangul;
+		break;
+	case 0x3200:
+		if ((c >= 0x3200 && c <= 0x321f) || (c >= 0x3260 && c <= 0x327f))
+			return Font_Hangul;
+		break;
+	case 0x3100:
+		if (c >= 0x3130 && c <= 0x318f)
+			return Font_Hangul;
+		break;
+	default:
+		if (high == 0x0400 || high == 0x0100 || high == 0x0000)
+			return Font_Latin;
+		if (c >= 0xac00 && c <= 0xd7af)
+			return Font_Hangul;
+		if (s_locale == SCE_SYSTEM_PARAM_LANG_KOREAN &&
+		    ((c >= 0x4e00 && c <= 0x9fff) || (c >= 0xf900 && c <= 0xfaff)))
+			return Font_Chinese;
+		break;
+	}
+
+	Font *japanese = m_fonts[Font_Japanese].get();
+
+	if (japanese == NULL || japanese->m_id == NULL)
+		return slot;
+
+	Font *chinese = m_fonts[Font_Chinese].get();
+
+	if (chinese == NULL || chinese->m_id == NULL)
+		return slot;
+
+	ScePvf_t_bool in_japanese = scePvfIsElement(japanese->m_id, c);
+	ScePvf_t_bool in_chinese = scePvfIsElement(chinese->m_id, c);
+
+	switch (s_locale) {
+	case SCE_SYSTEM_PARAM_LANG_KOREAN:
+	case SCE_SYSTEM_PARAM_LANG_CHINESE_T:
+	case SCE_SYSTEM_PARAM_LANG_CHINESE_S:
+		if (!in_japanese || in_chinese)
+			return Font_Chinese;
+		break;
+	default:
+		if (!in_japanese && in_chinese)
+			return Font_Chinese;
+		break;
+	}
+	return slot;
+}
+
+int32_t FontRasterizerPvf::GetCharMetrics(wchar_t c, CharMetrics &metrics)
+{
+	int32_t ret = SCE_PAF_ERROR_TEXT_ABORTED;
+	int32_t slot;
+
+	if (m_style.get() == NULL)
+		return ret;
+	ret = ApplyStyle();
+	if (ret != 0)
+		return ret;
+	slot = Font_Latin;
+	if (c <= 0x1f || (c >= 0x7f && c <= 0x9f)) {
+		metrics.left = 0.0f;
+		metrics.right = 0.0f;
+		metrics.advance = 0.0f;
+	} else {
+		s_mutex.Lock();
+		slot = GetFontSlot(c);
+
+		Font *font = m_fonts[slot].get();
+		ScePvf_t_fontId id;
+
+		if (font != NULL && (id = font->m_id) != NULL) {
+			ScePvf_t_charInfo info;
+
+			scePvfSetCharSize(id, m_point, m_point);
+			scePvfSetEmboldenRate(id, s_fonts[slot].embolden_rate[m_bold]);
+			scePvfSetSkewValue(id, 0.0f, s_fonts[slot].skew_value[m_oblique]);
+			ret = GetCharInfo(slot, c, &info);
+			if (ret == 0) {
+				metrics.left = (float)Round64(info.glyphMetrics.horizontalBearingX64);
+				metrics.right = (float)Round64(info.glyphMetrics.horizontalBearingX64 +
+							       info.glyphMetrics.width64);
+				metrics.advance =
+					(float)Round64(info.glyphMetrics.horizontalAdvance64);
+			}
+		}
+		s_mutex.Unlock();
+		if (ret != 0)
+			return ret;
+	}
+	metrics.left = metrics.left - 1.0f;
+	if (s_fonts[slot].embolden_rate[m_bold] > 0.0f)
+		metrics.right = metrics.right + (float)(int32_t)(m_point * 0.1f);
+	if (s_fonts[slot].skew_value[m_oblique] > 0.0f)
+		metrics.right = metrics.right + (float)(int32_t)(m_point * 0.1f);
+	if (m_shadow)
+		metrics.right = metrics.right + 3.0f;
+	metrics.font.scale = 1.0f;
+	metrics.font.height = (float)m_height;
+	metrics.font.ascender = (float)m_ascender;
+	return ret;
+}
+
+int32_t FontRasterizerPvf::DrawChars(const wchar_t *str, uint32_t len,
+				     intrusive_ptr<Surface> &surface)
+{
+	uint8_t *bits = (uint8_t *)surface->Lock(0);
+	int32_t ret = SCE_PAF_ERROR_TEXT_ABORTED;
+
+	if (bits != NULL) {
+		ScePvf_t_userImageBufferRec image;
+		bool styled[Font_Num];
+
+		sce_paf_memset(bits, 0, surface->GetPageSize());
+		image.pixelFormat = SCE_PVF_USERIMAGE_DIRECT4_L;
+		image.rect.width = surface->GetWidth();
+		image.rect.height = surface->GetHeight();
+		image.bytesPerLine = surface->GetStride();
+		image.buffer = bits;
+		for (int32_t i = 0; i < Font_Num; i++)
+			styled[i] = false;
+		image.xPos64 = 0;
+		image.yPos64 = m_ascender << 6;
+		s_mutex.Lock();
+		for (uint32_t i = 0; i < len; i++) {
+			ScePvf_t_charCode c = *str++;
+
+			if (c <= 0x1f || (c >= 0x7f && c <= 0x9f))
+				continue;
+
+			int32_t slot = GetFontSlot(c);
+			Font *font = m_fonts[slot].get();
+			ScePvf_t_fontId id;
+
+			if (font == NULL || (id = font->m_id) == NULL)
+				continue;
+			if (!styled[slot]) {
+				scePvfSetCharSize(id, m_point, m_point);
+				scePvfSetEmboldenRate(id, s_fonts[slot].embolden_rate[m_bold]);
+				scePvfSetSkewValue(id, 0.0f, s_fonts[slot].skew_value[m_oblique]);
+				styled[slot] = true;
+			}
+
+			ScePvf_t_charInfo info;
+
+			ret = GetCharInfo(slot, c, &info);
+			if (ret != 0)
+				continue;
+
+			int32_t left = Round64(info.glyphMetrics.horizontalBearingX64) - 1;
+
+			info.glyphMetrics.horizontalBearingX64 = left << 6;
+			info.glyphMetrics.horizontalAdvance64 =
+				(info.glyphMetrics.horizontalAdvance64 >= 0 ?
+					 info.glyphMetrics.horizontalAdvance64 + 63 :
+					 info.glyphMetrics.horizontalAdvance64 - 63) & ~63;
+			if (image.xPos64 == 0 || image.xPos64 + (left << 6) < 0)
+				image.xPos64 = -64 * left;
+			ret = scePvfGetCharGlyphImage(id, c, &image);
+			if (ret == 0)
+				image.xPos64 = image.xPos64 + info.glyphMetrics.horizontalAdvance64;
+		}
+		s_mutex.Unlock();
+		surface->Unlock();
+		if (s_clut.get() != NULL) {
+			ret = 0;
+		} else {
+			Surface *target = surface.get();
+
+			if (target->GetCLUT().get() != NULL) {
+				ret = ScePafGraphics_F4986A3A(target->GetCLUT().get(), s_clut_table);
+				if (ret == 0)
+					s_clut = target->GetCLUT().get();
+			}
+		}
+	}
+	return ret;
+}
+#else
 int32_t FontRasterizerPvf::GetCharInfo(int32_t slot, ScePvf_t_fontId font, ScePvf_t_charCode c,
 				       ScePvf_t_charInfo *info)
 {
@@ -760,6 +1160,7 @@ int32_t FontRasterizerPvf::DrawChars(const wchar_t *str, uint32_t len,
 	}
 	return ret;
 }
+#endif
 
 int32_t FontRasterizerPvf::Rasterize(TextSurfaceCache *cache, int32_t width, int32_t height,
 				     const wchar_t *str, uint32_t len, uint32_t hash,
@@ -770,12 +1171,22 @@ int32_t FontRasterizerPvf::Rasterize(TextSurfaceCache *cache, int32_t width, int
 	if (cache != NULL) {
 		ret = cache->Find(width, height, m_style, str, len, hash, surface);
 		if (ret < 0) {
+#ifdef PAF_BUILD_2014
+			ret = ApplyStyle();
+			if (ret == 0) {
+				ret = cache->Allocate(width, height, ImageMode_index4, 1, true,
+						      m_style, str, len, hash, s_clut, surface);
+				if (ret == 0)
+					DrawChars(str, len, surface);
+			}
+#else
 			if (m_dirty)
 				ApplyStyle();
 			ret = cache->Allocate(width, height, ImageMode_index4, 1, true, m_style, str,
 					      len, hash, s_clut, surface);
 			if (ret == 0)
 				DrawChars(str, len, surface);
+#endif
 		}
 	}
 	return ret;
@@ -829,6 +1240,10 @@ FontRasterizerPvf::Font::~Font()
 {
 	if (m_opened)
 		scePvfClose(m_id);
+#ifdef PAF_BUILD_2014
+	if (m_memory_opened)
+		s_latin_mem_count--;
+#endif
 }
 
 }

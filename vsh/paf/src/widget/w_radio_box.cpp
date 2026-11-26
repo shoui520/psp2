@@ -26,7 +26,9 @@ namespace ui {
 static inline void ShowWidget(Widget *widget, Timer *t)
 {
 	if (!widget->m_transition_complete) {
+#ifndef PAF_BUILD_2014
 		widget->m_transition = 0xff;
+#endif
 		widget->m_transition_complete = true;
 		widget->DoTransition_core(0.0f, true);
 	}
@@ -36,7 +38,9 @@ static inline void ShowWidget(Widget *widget, Timer *t)
 static inline void HideWidget(Widget *widget, Timer *t)
 {
 	widget->m_transition_complete = false;
+#ifndef PAF_BUILD_2014
 	widget->m_transition = 0xff;
+#endif
 	widget->DoTransitionReverse_core(t != NULL ? t->GetTotalTime() : 0.0f, true);
 	ScePafWidget_4588699E(widget, t, 2, 0.0f, NULL);
 }
@@ -50,15 +54,19 @@ static inline math::v4 PosOver(Widget *slider, Widget *widget)
 }
 
 RadioBox::RadioBox(Widget *parent, CreateParam *param)
-	: Widget(parent, param), m_slider(NULL), m_checked(NULL), m_last_focus(NULL),
-	  m_keep_focus(false)
+	: Widget(parent, param), m_slider(NULL), m_checked(NULL)
+#ifndef PAF_BUILD_2014
+	  , m_last_focus(NULL), m_keep_focus(false)
+#endif
 {
 	m_hit_find_mode = 0;
 	m_hit_detect_b_mode = 2;
 	m_hit_detect_mode = 2;
+#ifndef PAF_BUILD_2014
 	m_pre_dispatch = true;
 	m_event_enable |= 0x10;
 	EnableFocusEvent(true);
+#endif
 	SetAdjust(2, 2, 2);
 }
 
@@ -92,14 +100,18 @@ void RadioBox::SetSlider(Widget *widget)
 	HideWidget(widget, NULL);
 }
 
+#ifndef PAF_BUILD_2014
 static void CBDestroyLastFocus(Widget *widget, void *data);
+#endif
 
 void RadioBox::DestroyWidget()
 {
 	if (m_checked != NULL)
 		m_checked->RemoveDeleteCB(CBDestroyChecked, this);
+#ifndef PAF_BUILD_2014
 	if (m_last_focus != NULL)
 		m_last_focus->RemoveDeleteCB(CBDestroyLastFocus, this);
+#endif
 	Widget::DestroyWidget();
 }
 
@@ -124,6 +136,7 @@ void RadioBox::Update()
 	Widget::Update();
 }
 
+#ifndef PAF_BUILD_2014
 int32_t RadioBox::HandleFocusEvent(Event *e)
 {
 	if (e != NULL) {
@@ -171,6 +184,7 @@ int32_t RadioBox::HandleKeycodeEvent(Event *e)
 	}
 	return Widget::HandleKeycodeEvent(e);
 }
+#endif
 
 /* the function called on each widget depth levels below the widget */
 static void ForEachChild(Widget *widget, int32_t depth, void (*func)(Widget *, void *),
@@ -196,10 +210,12 @@ void RadioBox::OnValueChanged(RadioButton *radio_button)
 			m_checked->RemoveDeleteCB(CBDestroyChecked, this);
 			m_checked = NULL;
 		}
+#ifndef PAF_BUILD_2014
 		if (m_last_focus != NULL) {
 			m_last_focus->RemoveDeleteCB(CBDestroyLastFocus, this);
 			m_last_focus = NULL;
 		}
+#endif
 
 		int32_t depth = 0;
 
@@ -208,8 +224,10 @@ void RadioBox::OnValueChanged(RadioButton *radio_button)
 		ForEachChild(this, depth, UncheckOther, radio_button);
 		m_checked = radio_button;
 		radio_button->AddDeleteCB(CBDestroyChecked, this);
+#ifndef PAF_BUILD_2014
 		m_last_focus = m_checked;
 		m_checked->AddDeleteCB(CBDestroyLastFocus, this);
+#endif
 
 		Widget *slider = m_slider;
 
@@ -228,10 +246,12 @@ void RadioBox::OnValueChanged(RadioButton *radio_button)
 			m_checked->RemoveDeleteCB(CBDestroyChecked, this);
 			m_checked = NULL;
 		}
+#ifndef PAF_BUILD_2014
 		if (m_last_focus != NULL) {
 			m_last_focus->RemoveDeleteCB(CBDestroyLastFocus, this);
 			m_last_focus = NULL;
 		}
+#endif
 		if (m_slider != NULL) {
 			m_slider->KillAnim(ANIM_META_ALPHA);
 			HideWidget(m_slider, new Timer(100.0f));
@@ -258,6 +278,7 @@ void RadioBox::OnDestroyChecked(Widget *widget)
 		HideWidget(m_slider, new Timer(100.0f));
 }
 
+#ifndef PAF_BUILD_2014
 /* the last button left forgotten when it goes */
 static void CBDestroyLastFocus(Widget *widget, void *data)
 {
@@ -391,6 +412,7 @@ bool RadioBox::OnDirKey(Event *e)
 	}
 	return false;
 }
+#endif
 
 const char *RadioBoxParam::GetParamName() const
 {
@@ -466,10 +488,12 @@ static VersatileParam *NewRadioBoxLayoutParam()
 	return new WidgetLayoutParam;
 }
 
+#ifndef PAF_BUILD_2014
 static VersatileParam *NewRadioBoxFocusParam()
 {
 	return new WidgetFocusParam;
 }
+#endif
 
 static VersatileParam *NewRadioBoxStyleParam()
 {
@@ -498,7 +522,9 @@ FactoryFuncTable g_factoryRadioBox = {
 	NewRadioBox,
 	NewRadioBoxParam,
 	NewRadioBoxLayoutParam,
+#ifndef PAF_BUILD_2014
 	NewRadioBoxFocusParam,
+#endif
 	NewRadioBoxStyleParam,
 	NewRadioBoxHandlerParam,
 	NewRadioBoxSoundParam,

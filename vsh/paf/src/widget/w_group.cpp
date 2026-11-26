@@ -49,10 +49,12 @@ static VersatileParam *NewGroupLayoutParam()
 	return new WidgetLayoutParam;
 }
 
+#ifndef PAF_BUILD_2014
 static VersatileParam *NewGroupFocusParam()
 {
 	return new WidgetFocusParam;
 }
+#endif
 
 static VersatileParam *NewGroupStyleParam()
 {
@@ -74,7 +76,9 @@ FactoryFuncTable g_factoryGroup = {
 	NewGroup,
 	NewGroupParam,
 	NewGroupLayoutParam,
+#ifndef PAF_BUILD_2014
 	NewGroupFocusParam,
+#endif
 	NewGroupStyleParam,
 	NewGroupHandlerParam,
 	NewGroupSoundParam,

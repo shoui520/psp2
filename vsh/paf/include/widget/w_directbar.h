@@ -84,6 +84,7 @@ public:
 	virtual int32_t SetString(const wstring &str, int32_t obj);
 	virtual int32_t GetString(wstring &str, int32_t obj);
 
+#ifndef PAF_BUILD_2014
 	/* up and down always */
 	virtual int32_t GetFocusDirectionMask()
 	{
@@ -93,6 +94,7 @@ public:
 			return 2;
 		return mask;
 	}
+#endif
 
 	virtual ~DirectBar();
 	virtual int32_t SetObjColor(const math::v4 &color, int32_t obj);

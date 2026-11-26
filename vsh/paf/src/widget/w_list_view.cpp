@@ -240,7 +240,9 @@ void Segment::SetHeaderVisible(bool visible)
 		Widget *header = m_header;
 
 		if (!header->m_transition_complete) {
+#ifndef PAF_BUILD_2014
 			header->m_transition = 0xff;
+#endif
 			header->m_transition_complete = true;
 			header->DoTransition_core(0.0f, true);
 		}
@@ -249,7 +251,9 @@ void Segment::SetHeaderVisible(bool visible)
 		Widget *header = m_header;
 
 		header->m_transition_complete = false;
+#ifndef PAF_BUILD_2014
 		header->m_transition = 0xff;
+#endif
 		header->DoTransitionReverse_core(0.0f, true);
 		ScePafWidget_4588699E(header, NULL, 2, 0.0f, NULL);
 	}
@@ -1830,11 +1834,14 @@ Cell::~Cell()
 
 	m_item->EndDrag(-1);
 
+#ifndef PAF_BUILD_2014
 	ListItem *item = m_item;
 	Widget *target = list_view->m_env->m_focus_cursor.m_target;
+#endif
 
 	if (list_view->m_grab_cell == this)
 		list_view->m_grab_cell = NULL;
+#ifndef PAF_BUILD_2014
 	if (item != NULL && item->FindChild(GetRootFocus(list_view), 0) != NULL &&
 	    list_view->FindChild(target, 0) != NULL) {
 		Widget::SetFocusInfo info;
@@ -1847,6 +1854,7 @@ Cell::~Cell()
 	}
 	if (m_item != NULL && m_item->FindChild(GetRootFocus(list_view), 0) != NULL)
 		list_view->SetFocusRootState(0);
+#endif
 	if (m_started) {
 		ItemFactory::StopParam param;
 
@@ -1921,6 +1929,7 @@ void ListView::ScePafWidget_A838831E()
 	if (m_focus_list_pos.m_segment >= 0) {
 		focused = m_cell_map->Find(m_focus_list_pos.m_segment, m_focus_list_pos.m_cell);
 		if (focused != NULL) {
+#ifndef PAF_BUILD_2014
 			if (FindListItemFocusChild(focused->m_item, 1) == NULL) {
 				Environment *env = m_env;
 
@@ -1930,13 +1939,21 @@ void ListView::ScePafWidget_A838831E()
 				env->m_focus_cursor.m_moving_only = true;
 				env->m_focus_cursor_rear.m_moving_only = true;
 			}
+#endif
 
+#ifdef PAF_BUILD_2014
+			math::v2 dir(0.0f, 0.0f);
+#else
 			math::v2 dir = m_focus_target;
+#endif
 
 			if (focused->m_item->ScePafWidget_C98D1926(dir)) {
+#ifndef PAF_BUILD_2014
 				m_focus_start = m_focus_target;
 				m_focus_target = math::v2(0.0f, 0.0f);
+#endif
 				m_grab_cell = focused;
+#ifndef PAF_BUILD_2014
 				if (!(m_focus_pos == math::v2(-1.0f, -1.0f))) {
 					m_focus_pos = math::v2(
 						m_view_parent->GetPos(1, NULL, math::v4(0.0f, 0.0f, 0.0f, 0.0f))
@@ -1948,9 +1965,12 @@ void ListView::ScePafWidget_A838831E()
 					env->m_focus_cursor.m_moving_only = false;
 					env->m_focus_cursor_rear.m_moving_only = false;
 				}
+#endif
 			}
+#ifndef PAF_BUILD_2014
 			if (!m_focus_in_group)
 				ReleaseRootFocus(this);
+#endif
 		}
 	}
 	for (listview::CellMap::iterator it = m_cell_map->begin(); it != m_cell_map->end(); ++it) {
@@ -2124,10 +2144,12 @@ __attribute__((noinline)) listview::ListPos ListView::FindFocusCell(const math::
 void ListView::ScePafWidget_7F28F5B7()
 {
 	FindFocusCell(math::v2(0.0f, 0.0f));
+#ifndef PAF_BUILD_2014
 	if (m_focus_root != NULL)
 		m_focus_root->m_focus_moved = 0;
 	m_focus_start = m_focus_target;
 	m_focus_target = math::v2(0.0f, 0.0f);
+#endif
 	ScePafWidget_A838831E();
 }
 
@@ -2367,8 +2389,10 @@ void ListView::InsertCell(int32_t segment, int32_t cell, uint32_t num)
 	if (m_focus_list_pos.m_segment < 0 && segment == 0 && cell == 0) {
 		m_focus_list_pos.m_segment = 0;
 		m_focus_list_pos.m_cell = 0;
+#ifndef PAF_BUILD_2014
 		if (m_focus_root != NULL)
 			m_focus_root->m_focus_moved = 0;
+#endif
 		ScePafWidget_A838831E();
 	}
 	if (m_grab_cell != NULL) {
@@ -2386,8 +2410,10 @@ void ListView::InsertCell(int32_t segment, int32_t cell, uint32_t num)
 			m_focus_list_pos.m_cell = grab_cell;
 		}
 	}
+#ifndef PAF_BUILD_2014
 	if (!IsCellVisible(m_grab_cell, true) && FindChild(m_env->m_focus_cursor.m_target, 0) != NULL)
 		m_env->HideFocus(-1);
+#endif
 }
 
 /* the place before the given one: the cell before it in its segment (a grid's only in its row),
@@ -2621,8 +2647,10 @@ void ListView::DeleteCell(int32_t segment, int32_t cell, uint32_t num)
 					m_focus_list_pos.m_cell = prev.m_cell;
 				}
 			}
+#ifndef PAF_BUILD_2014
 			if (m_focus_root != NULL)
 				m_focus_root->m_focus_moved = 0;
+#endif
 			ScePafWidget_A838831E();
 		}
 	}
@@ -2979,8 +3007,10 @@ void ListView::DeleteSegment(int32_t segment, uint32_t num)
 				m_focus_list_pos.m_cell = prev.m_cell;
 			}
 		}
+#ifndef PAF_BUILD_2014
 		if (m_focus_root != NULL)
 			m_focus_root->m_focus_moved = 0;
+#endif
 		ScePafWidget_A838831E();
 	}
 	ScePafWidget_8AB4F072();
@@ -3439,11 +3469,13 @@ void ListView::BeginDrag(int32_t segment, int32_t cell, int32_t index)
 	if (found == NULL)
 		return;
 
+#ifndef PAF_BUILD_2014
 	Widget *root = ScePafWidget_CFA1EB7A(this);
 	uint32_t focus = 0;
 
 	if (root != NULL && root->m_focus_root != NULL)
 		focus = root->m_focus_root->m_state;
+#endif
 	if (found->BeginDrag(index)) {
 		ScePafWidget_1E6F658F();
 		m_drag_cell = found;
@@ -3451,12 +3483,14 @@ void ListView::BeginDrag(int32_t segment, int32_t cell, int32_t index)
 					      .getImpl()
 					      .getXY());
 		OnCellDragStart(segment, cell);
+#ifndef PAF_BUILD_2014
 	} else if (focus != 0) {
 		m_drag_cell = found;
 		OnCellDragStart(segment, cell);
 		m_drag_begun = true;
 		m_focus_direction_off = false;
 		Widget::m_focus_target = false;
+#endif
 	}
 }
 
@@ -3637,18 +3671,22 @@ void ListView::SetFocus(int32_t segment, int32_t cell, FocusAlignType align, Tim
 							.getImpl()
 							.getXY());
 
+#ifndef PAF_BUILD_2014
 					Environment *env = m_env;
 
 					env->m_focus_cursor.m_moving_only = false;
 					env->m_focus_cursor_rear.m_moving_only = false;
+#endif
 				}
 			} else {
 				m_focus_pos = math::v2(-1.0f, -1.0f);
 
+#ifndef PAF_BUILD_2014
 				Environment *env = m_env;
 
 				env->m_focus_cursor.m_moving_only = true;
 				env->m_focus_cursor_rear.m_moving_only = true;
+#endif
 			}
 			SetViewFocus(pos, timer, true, true);
 		}
@@ -3657,8 +3695,10 @@ void ListView::SetFocus(int32_t segment, int32_t cell, FocusAlignType align, Tim
 	}
 	m_focus_list_pos.m_segment = segment;
 	m_focus_list_pos.m_cell = cell;
+#ifndef PAF_BUILD_2014
 	if (m_focus_root != NULL)
 		m_focus_root->m_focus_moved = 0;
+#endif
 	ScePafWidget_A838831E();
 }
 
@@ -3704,8 +3744,10 @@ void ListView::SetViewFocus(const math::v2 &pos, Timer *timer, bool flag_a, bool
 		m_focus_list_pos.m_cell = item->GetCellIndex();
 	}
 moved:
+#ifndef PAF_BUILD_2014
 	if (m_focus_root != NULL)
 		m_focus_root->m_focus_moved = 0;
+#endif
 	ScePafWidget_A838831E();
 }
 
@@ -3972,6 +4014,7 @@ static void PassTextAutoScroll(ListView *view, Event *e, ListItem *item)
 
 	if (target_text != NULL)
 		ScePafWidget_222D55C7(target_text, &follow);
+#ifndef PAF_BUILD_2014
 	if (target_button != NULL && target_button != button &&
 	    target_button->IsLongPressTextAutoScrollEnabled() &&
 	    !target_button->IsTextAutoScrollLocked()) {
@@ -3997,6 +4040,7 @@ static void PassTextAutoScroll(ListView *view, Event *e, ListItem *item)
 		target_button->BeginLongPressTextAutoScroll(&ev);
 		target_button->SetTextAutoScrollOrigin(origin);
 	}
+#endif
 	if (target_text == NULL || target_text == text || !follow)
 		return;
 
@@ -4009,10 +4053,13 @@ static void PassTextAutoScroll(ListView *view, Event *e, ListItem *item)
 
 	math::v2 origin(0.0f, 0.0f);
 
+#ifndef PAF_BUILD_2014
 	if (button != NULL) {
 		button->GetTextAutoScrollOrigin(origin);
 		button->EndLongPressTextAutoScroll(&ev);
-	} else if (text != NULL) {
+	} else
+#endif
+	if (text != NULL) {
 		ScePafWidget_4608F7EF(text, &origin);
 		text->m_touch_held = false;
 	}
@@ -4055,9 +4102,14 @@ int32_t ListView::HandleTouchEvent(Event *e)
 
 		bool on;
 
+#ifdef PAF_BUILD_2014
+		if (!(text != NULL && (on = false, ScePafWidget_222D55C7(text, &on), on) &&
+		      text->m_touch_held))
+#else
 		if (!((button != NULL && button->IsTextAutoScrollLocked()) ||
 		      (text != NULL && (on = false, ScePafWidget_222D55C7(text, &on), on) &&
 		       text->m_touch_held)))
+#endif
 			goto base;
 
 		ListItem *item = ListItem::GetListItem(captured);
@@ -4114,8 +4166,10 @@ base:
 
 int32_t ListView::HandleKeycodeEvent(Event *e)
 {
+#ifndef PAF_BUILD_2014
 	if (ScePafWidget_5EEE4313(e))
 		return 0;
+#endif
 	return ScrollViewBase::HandleKeycodeEvent(e);
 }
 
@@ -4602,6 +4656,7 @@ void ListView::ScePafWidget_22EF63CE()
 	ScePafWidget_697CD413();
 }
 
+#ifndef PAF_BUILD_2014
 /* the widget the focus may go to: one that takes events, is focusable and is shown */
 static inline bool CanFocus(Widget *widget)
 {
@@ -5002,6 +5057,7 @@ void ListView::ScePafWidget_B6CECFDF()
 		m_focus_root->m_focus_moved = 0;
 	}
 }
+#endif
 
 bool ListView::ScePafWidget_C8C679BB(math::v2 &pos, const math::v2 &focus)
 {
@@ -5116,6 +5172,22 @@ bool ListView::ScePafWidget_C8C679BB(math::v2 &pos, const math::v2 &focus)
 	return true;
 }
 
+#ifdef PAF_BUILD_2014
+bool ListView::OnFocusIn(Event *e)
+{
+	(void)e;
+	ScrollByKey(math::v2(0.0f, 0.0f));
+	ScePafWidget_A838831E();
+	return true;
+}
+
+bool ListView::OnFocusOut(Event *e)
+{
+	(void)e;
+	ScePafWidget_A838831E();
+	return true;
+}
+#else
 bool ListView::OnFocusIn(Event *e)
 {
 	if (m_track_port == -1 && IsSame(m_velocity, math::v2(0.0f, 0.0f)) &&
@@ -5221,7 +5293,7 @@ bool ListView::OnFocusOut(Event *e)
 	}
 	return ScrollViewBase::OnFocusOut(e);
 }
-
+#endif
 
 void ListView::MoveViewParent(const math::v2 &pos, Timer *timer)
 {
@@ -5238,10 +5310,12 @@ void ListView::ScePafWidget_E9C7617A(uint32_t touch_id)
 {
 	ScrollViewBase::ScePafWidget_E9C7617A(touch_id);
 	FindFocusCell(math::v2(0.0f, 0.0f));
+#ifndef PAF_BUILD_2014
 	if (m_focus_root != NULL)
 		m_focus_root->m_focus_moved = 0;
 	m_focus_start = m_focus_target;
 	m_focus_target = math::v2(0.0f, 0.0f);
+#endif
 	ScePafWidget_A838831E();
 	if (m_view_parent->FindAnim(0x10000) != NULL) {
 		m_release_time = ScePafMisc_256F9060[0];
@@ -5268,6 +5342,44 @@ void ListView::ScePafWidget_D9FE36A6(int32_t id, math::v2 &dir, math::v2 &veloci
 }
 
 
+#ifdef PAF_BUILD_2014
+bool ListView::ScrollByKey(const math::v2 &dir)
+{
+	if (m_snap_list.size() != 0)
+		return ScrollViewBase::ScrollByKey(dir);
+
+	float along = m_scroll_type != SCROLL_TYPE_VERTICAL ? dir.extract_x() : -dir.extract_y();
+
+	if (along == 0.0f) {
+		if (!IsSame(dir, math::v2(0.0f, 0.0f)))
+			return false;
+		if (m_focus_list_pos.m_segment >= 0)
+			return true;
+	}
+	if (m_focus_list_pos.m_segment < 0) {
+		listview::ListPos found = FindFocusCell(math::v2(0.0f, 0.0f));
+
+		m_focus_list_pos.m_segment = found.m_segment;
+		m_focus_list_pos.m_cell = found.m_cell;
+		if (found.m_segment < 0)
+			return false;
+		SetFocus(found.m_segment, found.m_cell, FOCUS_ALIGN_TYPE_NEAR,
+			 new Timer(m_snap_time, Timer::FUNC_QUART_OUT));
+		return true;
+	}
+
+	listview::ListPos next =
+		along < 0.0f ? ScePafWidget_8DC5A8AE(m_focus_list_pos, false)
+			     : ScePafWidget_E60EAA9F(m_focus_list_pos, false);
+
+	if (next.m_segment < 0 ||
+	    (m_focus_list_pos.m_segment == next.m_segment && m_focus_list_pos.m_cell == next.m_cell))
+		return false;
+	SetFocus(next.m_segment, next.m_cell, FOCUS_ALIGN_TYPE_NEAR,
+		 new Timer(m_snap_time, Timer::FUNC_QUART_OUT));
+	return true;
+}
+#else
 /* the focus going off the first or last cell of its segment: the view snaps to that end of its
    scroll box where it is not there yet; false where it stays (name ours) */
 static __attribute__((noinline)) bool ShowListEnd(ListView *view, const math::v2 &dir)
@@ -5886,7 +5998,7 @@ void ListView::SetFocusRootState(uint32_t state)
 		OnFocusLeave(&e);
 	}
 }
-
+#endif
 
 void ListView::FocusRect(const math::v4 &rect, Timer *timer)
 {
@@ -5944,6 +6056,7 @@ void ListView::FocusRect(const math::v4 &rect, Timer *timer)
 	}
 }
 
+#ifndef PAF_BUILD_2014
 bool ListView::ScePafWidget_5EEE4313(Event *e)
 {
 	if (e == NULL)
@@ -6006,6 +6119,7 @@ bool ListView::ScePafWidget_5EEE4313(Event *e)
 	e->Consume();
 	return true;
 }
+#endif
 
 math::v2 ListView::GetFocusedViewPos()
 {
@@ -6031,9 +6145,11 @@ void ListView::OnCellUnGrab(listview::Cell *cell)
 		m_drag_cell = NULL;
 		cell->ResetPos(true);
 		OnCellDragStop(cell->GetSegment()->m_index, cell->m_index);
+#ifndef PAF_BUILD_2014
 		m_focus_direction_off = true;
 		m_drag_begun = false;
 		Widget::m_focus_target = true;
+#endif
 	}
 }
 
@@ -6325,10 +6441,12 @@ static VersatileParam *NewListViewLayoutParam()
 	return new WidgetLayoutParam;
 }
 
+#ifndef PAF_BUILD_2014
 static VersatileParam *NewListViewFocusParam()
 {
 	return new WidgetFocusParam;
 }
+#endif
 
 static VersatileParam *NewListViewStyleParam()
 {
@@ -6350,7 +6468,9 @@ FactoryFuncTable g_factoryListView = {
 	NewListView,
 	NewListViewParam,
 	NewListViewLayoutParam,
+#ifndef PAF_BUILD_2014
 	NewListViewFocusParam,
+#endif
 	NewListViewStyleParam,
 	NewListViewHandlerParam,
 	NewListViewSoundParam,

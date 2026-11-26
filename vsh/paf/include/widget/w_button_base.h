@@ -92,7 +92,9 @@ public:
 	virtual int32_t OnDraw(graph::DrawInfo &info);
 	virtual int32_t ApplyDrawObjState(graph::DrawInfo &info);
 	virtual void OnTouchCaptureChanged(uint32_t port, uint32_t id, int32_t arg);
+#ifndef PAF_BUILD_2014
 	virtual void OnPadCaptureChanged(bool captured, int32_t group, uint32_t port, uint32_t key);
+#endif
 	virtual int32_t SetTexture(const intrusive_ptr<graph::Surface> &surf, int32_t obj,
 				   uint32_t index);
 	using Widget::SetTexture;
@@ -105,6 +107,14 @@ public:
 	virtual WidgetSoundParam::Sound *GetSound(int32_t id);
 	virtual void AddSound(uint32_t index, WidgetSoundParam::Sound &sound);
 
+#ifdef PAF_BUILD_2014
+	virtual int32_t DoButtonEvent(int32_t type)
+	{
+		Event ev(0x8000, Event::MODE_DISPATCH, Event::ROUTE_FORWARD, 0, 0, 0, 0, 0);
+
+		return DoEvent(type, &ev);
+	}
+#else
 	/* it takes the text events where a decide or press handler is set */
 	virtual bool IsTextEventEnabled()
 	{
@@ -228,6 +238,7 @@ public:
 	{
 		return 0;
 	}
+#endif
 
 	/* the draw object of the ID made (export A97A1993, Sony's name from Button's D941B8C3) */
 	virtual graph::DrawObj *CreateDrawObj(int32_t obj);

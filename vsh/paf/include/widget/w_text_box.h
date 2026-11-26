@@ -107,6 +107,7 @@ public:
 	/* the glow object's texture, the glow made first (obj OBJ_GLOW) */
 	virtual int32_t SetTexture(const intrusive_ptr<graph::Surface> &surf, int32_t obj,
 				   uint32_t index);
+#ifndef PAF_BUILD_2014
 	/* it takes the text events while edited, or where event 0x20004 or a tap has a listener */
 	virtual bool IsTextEventEnabled()
 	{
@@ -114,7 +115,9 @@ public:
 		       m_map_e_listener.find(0x20004) != m_map_e_listener.end() ||
 		       m_map_e_listener.find(CB_TEXT_BOX_TAPPED) != m_map_e_listener.end();
 	}
+#endif
 	virtual void UpdateTouchMode();
+#ifndef PAF_BUILD_2014
 	/* where the focus moves: down only once tapping or editing takes it (name ours) */
 	virtual int32_t GetFocusDirectionMask()
 	{
@@ -129,6 +132,7 @@ public:
 		}
 		return mask;
 	}
+#endif
 	virtual int32_t ReplaceString(uint32_t index, uint32_t len, const wstring &str);
 	virtual int32_t MoveCaretUp();
 	virtual int32_t MoveCaretDown();

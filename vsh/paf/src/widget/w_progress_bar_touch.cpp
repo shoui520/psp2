@@ -38,8 +38,10 @@ public:
 	virtual bool IsInherit(const char *type) const;
 	virtual char *GetTypeName() const;
 	virtual void UpdateSize();
+#ifndef PAF_BUILD_2014
 	/* up and down only while its focus directions are off */
 	virtual int32_t GetFocusDirectionMask();
+#endif
 };
 
 const char ProgressBarTouch::m_widget_type[] = "progressbar_touch";
@@ -93,7 +95,9 @@ static inline void SetEventFloat(Event &ev, int32_t index, float value)
 static inline void ShowLabelSlider(Widget *label)
 {
 	if (!label->m_transition_complete) {
+#ifndef PAF_BUILD_2014
 		label->m_transition = 0xff;
+#endif
 		label->m_transition_complete = true;
 		label->DoTransition_core(0.0f, true);
 	}
@@ -103,7 +107,9 @@ static inline void ShowLabelSlider(Widget *label)
 static inline void HideLabelSlider(Widget *label)
 {
 	label->m_transition_complete = false;
+#ifndef PAF_BUILD_2014
 	label->m_transition = 0xff;
+#endif
 	label->DoTransitionReverse_core(0.0f, true);
 	ScePafWidget_4588699E(label, NULL, 2, 0.0f, NULL);
 }
@@ -873,10 +879,12 @@ char *ProgressBarTouchSlider::GetTypeName() const
 	return (char *)m_widget_type;
 }
 
+#ifndef PAF_BUILD_2014
 int32_t ProgressBarTouchSlider::GetFocusDirectionMask()
 {
 	return m_focus_direction_off ? 2 : 7;
 }
+#endif
 
 /* its glow sized to its plane */
 void ProgressBarTouchSlider::UpdateSize()
@@ -912,10 +920,12 @@ static VersatileParam *NewProgressBarTouchLayoutParam()
 	return new WidgetLayoutParam;
 }
 
+#ifndef PAF_BUILD_2014
 static VersatileParam *NewProgressBarTouchFocusParam()
 {
 	return new WidgetFocusParam;
 }
+#endif
 
 static VersatileParam *NewProgressBarTouchStyleParam()
 {
@@ -937,7 +947,9 @@ FactoryFuncTable g_factoryProgressBarTouch = {
 	NewProgressBarTouch,
 	NewProgressBarTouchParam,
 	NewProgressBarTouchLayoutParam,
+#ifndef PAF_BUILD_2014
 	NewProgressBarTouchFocusParam,
+#endif
 	NewProgressBarTouchStyleParam,
 	NewProgressBarTouchHandlerParam,
 	NewProgressBarTouchSoundParam,

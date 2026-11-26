@@ -34,6 +34,7 @@ public:
 	virtual int32_t GetTexture(intrusive_ptr<graph::Surface> &surf, int32_t obj,
 				   uint32_t index);
 
+#ifndef PAF_BUILD_2014
 	/* the widget's mask, else one way when something listens for 0x10000001 and up and down
 	   without */
 	virtual int32_t GetFocusDirectionMask()
@@ -44,6 +45,7 @@ public:
 			return mask;
 		return m_map_e_listener.find(0x10000001) != m_map_e_listener.end() ? 2 : 3;
 	}
+#endif
 
 	/* taps make it shrink and spring back (Sony's name from the export) */
 	int32_t EnableTap(bool on_off);

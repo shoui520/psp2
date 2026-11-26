@@ -10,6 +10,10 @@
 #include <graphics/camera.h>
 #include <graphics/drawobj/draw_env.h>
 #include <graphics/effects/background.h>
+#ifdef PAF_BUILD_2014
+#include <graphics/effects/earth_renderer.h>
+#include <graphics/effects/particles.h>
+#endif
 #include <graphics/effects/page_turn_renderer.h>
 #include <graphics/effects/panel_renderer.h>
 #include <graphics/effects/post_effects.h>
@@ -95,8 +99,10 @@ void Renderer::DrawNothing()
 Renderer::Renderer(common::SharedPtr<DrawEnv> draw_env)
 	: m_frame(-1), m_reserved_frame(-1), m_blur_amount(0.0f), m_reserved_flag(false),
 	  m_rs_world_grid(NULL), m_rs_dummy_background(NULL), m_rs_capture_reflections(NULL),
-	  m_rs_copy_screen_for_refractions(NULL), m_rs_capture_blur(NULL), m_reserved_word(0),
-	  m_effect_renderer_factory(NULL), m_custom_renderer_factory(NULL)
+	  m_rs_copy_screen_for_refractions(NULL), m_rs_capture_blur(NULL), m_reserved_word(0)
+#ifndef PAF_BUILD_2014
+	  , m_effect_renderer_factory(NULL), m_custom_renderer_factory(NULL)
+#endif
 {
 	m_draw_env = draw_env;
 
@@ -127,27 +133,35 @@ Renderer::Renderer(common::SharedPtr<DrawEnv> draw_env)
 	m_env->Load(ResourcePath(m_resource_path));
 	m_background = m_env;
 
+#ifdef PAF_BUILD_2014
+	const uint32_t k_layer_kind = 0;
+	const uint32_t k_blur_kind = 0x10000000;
+#else
+	const uint32_t k_layer_kind = 0x40000000;
+	const uint32_t k_blur_kind = 0x50000000;
+#endif
+
 	m_rs_world_grid = m_draw_env->AddLayer("m_rs_world_grid", 101, 2, 0x4000);
-	m_rs_world_grid->Push(0x40000000, 0, &Camera::DrawNothing, m_camera_2d.get());
+	m_rs_world_grid->Push(k_layer_kind, 0, &Camera::DrawNothing, m_camera_2d.get());
 	m_rs_world_grid->m_draw_mode = 2;
 
 	m_rs_dummy_background = m_draw_env->AddLayer("m_rs_dummy_background", 10, 2, 0x4000);
-	m_rs_dummy_background->Push(0x40000000, 0, &Renderer::DrawDummyBackground, this);
+	m_rs_dummy_background->Push(k_layer_kind, 0, &Renderer::DrawDummyBackground, this);
 	m_rs_dummy_background->m_draw_mode = 2;
 
 	m_rs_capture_reflections = m_draw_env->AddLayer("m_rs_capture_reflections", 200, 2, 0x4000);
-	m_rs_capture_reflections->Push(0x40000000, 0, &EnvAuto::captureReflections, m_env.get());
+	m_rs_capture_reflections->Push(k_layer_kind, 0, &EnvAuto::captureReflections, m_env.get());
 	m_rs_capture_reflections->m_draw_mode = 2;
 
 	m_rs_copy_screen_for_refractions =
 		m_draw_env->AddLayer("m_rs_copy_screen_for_refractions", 202, 2, 0x4000);
-	m_rs_copy_screen_for_refractions->Push(0x40000000, 0, &EnvAuto::CopyScreenForRefractions,
+	m_rs_copy_screen_for_refractions->Push(k_layer_kind, 0, &EnvAuto::CopyScreenForRefractions,
 					       m_env.get());
 	m_rs_copy_screen_for_refractions->m_draw_mode = 2;
 
 	m_rs_capture_blur = m_draw_env->AddLayer("m_rs_capture_blur", 500, 2, 0x4000);
-	m_rs_capture_blur->Push(0x40000000, 0, &Renderer::CaptureBlur, this);
-	m_rs_capture_blur->Push(0x50000000, 0, &Renderer::DrawBlur, this);
+	m_rs_capture_blur->Push(k_layer_kind, 0, &Renderer::CaptureBlur, this);
+	m_rs_capture_blur->Push(k_blur_kind, 0, &Renderer::DrawBlur, this);
 	m_rs_capture_blur->m_draw_mode = 2;
 
 	arl::ArlInstance *gl = arl::Gl();
@@ -157,6 +171,12 @@ Renderer::Renderer(common::SharedPtr<DrawEnv> draw_env)
 	gl->AddScenes(small, 4);
 	gl->AddScenes(large, 1);
 }
+
+#ifdef PAF_BUILD_2014
+Renderer::~Renderer()
+{
+}
+#endif
 
 common::SharedPtr<PanelRenderer> &Renderer::GetPanelRenderer(bool create)
 {
@@ -179,6 +199,18 @@ common::SharedPtr<WaveRenderer> &Renderer::GetWaveRenderer(bool create)
 	return m_wave_renderer;
 }
 
+#ifdef PAF_BUILD_2014
+common::SharedPtr<Particles> &Renderer::GetCustomRenderer(bool create)
+{
+	if (m_custom_renderer.get() == NULL && create) {
+		m_custom_renderer = common::SharedPtr<Particles>(new Particles());
+		m_custom_renderer->Init(m_camera_2d, m_draw_env);
+		m_custom_renderer->Load(ResourcePath(m_resource_path), 1024,
+					ResourcePath(m_resource_path), 256);
+	}
+	return m_custom_renderer;
+}
+#else
 common::SharedPtr<CustomRenderer> &Renderer::GetCustomRenderer(bool create)
 {
 	if (m_custom_renderer.get() == NULL && create) {
@@ -191,6 +223,7 @@ common::SharedPtr<CustomRenderer> &Renderer::GetCustomRenderer(bool create)
 	}
 	return m_custom_renderer;
 }
+#endif
 
 common::SharedPtr<PageTurnRenderer> &Renderer::GetPageTurnRenderer(bool create)
 {
@@ -206,6 +239,19 @@ common::SharedPtr<PageTurnRenderer> &Renderer::GetPageTurnRenderer(bool create)
 using namespace paf;
 using namespace paf::graph;
 
+#ifdef PAF_BUILD_2014
+common::SharedPtr<EarthRenderer> &ScePafGraphics_71E2CB77(Renderer *renderer, bool create)
+{
+	if (renderer->m_effect_renderer.get() == NULL && create) {
+		renderer->m_effect_renderer =
+			common::SharedPtr<EarthRenderer>(new EarthRenderer());
+		renderer->m_effect_renderer->Init(renderer->m_camera, renderer->m_background,
+						  renderer->m_draw_env, renderer->m_texture_ops);
+		renderer->m_effect_renderer->Load(ResourcePath(renderer->m_resource_path));
+	}
+	return renderer->m_effect_renderer;
+}
+#else
 common::SharedPtr<EffectRenderer> &ScePafGraphics_71E2CB77(Renderer *renderer, bool create)
 {
 	if (renderer->m_effect_renderer.get() == NULL && create) {
@@ -219,6 +265,7 @@ common::SharedPtr<EffectRenderer> &ScePafGraphics_71E2CB77(Renderer *renderer, b
 	}
 	return renderer->m_effect_renderer;
 }
+#endif
 
 namespace paf {
 namespace graph {
@@ -245,11 +292,21 @@ void Renderer::Update()
 		m_page_turn_renderer->Update();
 	if (m_custom_renderer.get() != NULL) {
 		if (m_wave_renderer.get() != NULL) {
+#ifdef PAF_BUILD_2014
+			m_custom_renderer->m_pattern1.m_wave_x = m_wave_renderer->m_wave_x;
+			m_custom_renderer->m_pattern1.m_wave_y = m_wave_renderer->m_wave_y;
+#else
 			m_custom_renderer->m_wave_x = m_wave_renderer->m_wave_x;
 			m_custom_renderer->m_wave_y = m_wave_renderer->m_wave_y;
+#endif
 		} else {
+#ifdef PAF_BUILD_2014
+			m_custom_renderer->m_pattern1.m_wave_x = 0.0f;
+			m_custom_renderer->m_pattern1.m_wave_y = 0.0f;
+#else
 			m_custom_renderer->m_wave_x = 0.0f;
 			m_custom_renderer->m_wave_y = 0.0f;
+#endif
 		}
 	}
 	if (m_effect_renderer.get() != NULL)

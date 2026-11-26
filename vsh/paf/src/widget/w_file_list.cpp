@@ -856,7 +856,9 @@ void Manager::PostTask(QueueType type, const char *name, void (*func)(void *), v
 void ManagerImpl::PushCacheItem(uint32_t type, ListItem *item)
 {
 	item->m_transition_complete = false;
+#ifndef PAF_BUILD_2014
 	item->m_transition = 0xff;
+#endif
 	item->DoTransitionReverse_core(0.0f, true);
 	ScePafWidget_4588699E(item, NULL, 2, 0.0f, NULL);
 	m_cache.Get(type, item->m_parent).push_back(item);
@@ -879,7 +881,9 @@ ListItem *ManagerImpl::PopCacheItem(uint32_t type, Widget *parent)
 	list.pop_back();
 	item->SetPos(math::v4(0.0f, 0.0f, 0.0f, 0.0f));
 	if (!item->m_transition_complete) {
+#ifndef PAF_BUILD_2014
 		item->m_transition = 0xff;
+#endif
 		item->m_transition_complete = true;
 		item->DoTransition_core(0.0f, true);
 	}
@@ -966,10 +970,12 @@ static VersatileParam *NewFileListLayoutParam()
 	return new WidgetLayoutParam;
 }
 
+#ifndef PAF_BUILD_2014
 static VersatileParam *NewFileListFocusParam()
 {
 	return new WidgetFocusParam;
 }
+#endif
 
 static VersatileParam *NewFileListStyleParam()
 {
@@ -1005,7 +1011,9 @@ FactoryFuncTable g_factoryFileList = {
 	NewFileList,
 	NewFileListParam,
 	NewFileListLayoutParam,
+#ifndef PAF_BUILD_2014
 	NewFileListFocusParam,
+#endif
 	NewFileListStyleParam,
 	NewFileListHandlerParam,
 	NewFileListSoundParam,

@@ -35,6 +35,7 @@ public:
 
 static FocusWork s_focus_work;
 
+#ifndef PAF_BUILD_2014
 /* the widget of the direction, the first for any other value (ScePafWidget_71349B04 inlined) */
 static inline __attribute__((always_inline)) Widget *DirectionWidgetOf(FocusDirectionWidget *data,
 								      int32_t dir)
@@ -65,9 +66,11 @@ static inline __attribute__((always_inline)) IDParam *DirectionIDOf(FocusHint *h
 	}
 	return id;
 }
+#endif
 
 Focuser *Focuser::s_enter_focuser;
 
+#ifndef PAF_BUILD_2014
 Widget *Focuser::GetHintWidget(int32_t dir)
 {
 	if (m_widget == NULL)
@@ -106,6 +109,7 @@ void Focuser::GetHintID(int32_t dir, IDParam *id)
 	if (m_widget != NULL && m_hint != NULL)
 		*id = *DirectionIDOf(m_hint, dir);
 }
+#endif
 
 int32_t Focuser::ScePafWidget_97020684(void *move)
 {
@@ -276,6 +280,10 @@ extern "C" int32_t ScePafWidget_5D4941E8(const FocusCandidate *candidate,
 static inline __attribute__((always_inline)) void GetFocusPlace(Widget *widget, math::v4 *pos,
 								  math::v4 *size)
 {
+#ifdef PAF_BUILD_2014
+	*pos = widget->GetWorldMatrix().w();
+	*size = *widget->GetSize(0);
+#else
 	Focuser *focuser = widget->m_focuser;
 	FocusHint *hint = focuser != NULL ? focuser->m_hint : NULL;
 
@@ -286,6 +294,7 @@ static inline __attribute__((always_inline)) void GetFocusPlace(Widget *widget, 
 		*pos = widget->GetFocusShapeWorldPos();
 		*size = widget->GetFocusShapeSize();
 	}
+#endif
 }
 
 int32_t DefaultFocusCB(Focuser *focuser, Widget *widget, void *data, void *move)
@@ -310,6 +319,10 @@ int32_t DefaultFocusCB(Focuser *focuser, Widget *widget, void *data, void *move)
 	if (origin == widget)
 		return 0;
 
+#ifdef PAF_BUILD_2014
+	math::v4 to_pos = widget->GetWorldMatrix().w();
+	math::v4 to_size = *widget->GetSize(0);
+#else
 	math::v4 to_pos = widget->GetFocusShapeWorldPos();
 	math::v4 to_size = widget->GetFocusShapeSize();
 	Focuser *own = widget->m_focuser;
@@ -322,6 +335,7 @@ int32_t DefaultFocusCB(Focuser *focuser, Widget *widget, void *data, void *move)
 			to_size = *widget->GetSize(0);
 		}
 	}
+#endif
 	if (!info->m_search_outside) {
 		from_pos = origin->GetWorldMatrix().w();
 		from_size = *origin->GetSize(0);
@@ -353,6 +367,7 @@ int32_t DefaultFocusCB(Focuser *focuser, Widget *widget, void *data, void *move)
 	return ScePafWidget_5D4941E8(&candidate, info);
 }
 
+#ifndef PAF_BUILD_2014
 /* whether the widget's hint says its own place and size are searched, not a rectangle */
 static inline __attribute__((always_inline)) bool SearchesOwnPlace(Widget *widget)
 {
@@ -408,6 +423,7 @@ extern "C" void ScePafWidget_EA117CF8(Widget::FocusSearchInfo *info, Widget *wid
 		info->m_rect = rect;
 	}
 }
+#endif
 
 }
 }

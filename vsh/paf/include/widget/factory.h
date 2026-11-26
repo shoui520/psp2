@@ -26,8 +26,10 @@ public:
 	Widget *(*m_factory_widget)(Widget *parent);
 	WidgetParam *(*m_factory_param)();
 	VersatileParam *(*m_factory_layout)();
+#ifndef PAF_BUILD_2014
 	/* the type's WidgetFocusParam */
 	VersatileParam *(*m_factory_resource_param)();
+#endif
 	VersatileParam *(*m_factory_style)();
 	VersatileParam *(*m_factory_handler)();
 	VersatileParam *(*m_factory_sound)();
@@ -79,7 +81,12 @@ extern paf::ui::FactoryFuncTable g_factoryBusyIndicator;
 extern paf::ui::FactoryFuncTable g_factorySpeechBalloon;
 extern paf::ui::FactoryFuncTable g_factoryNumSpin;
 extern paf::ui::FactoryFuncTable g_factoryCompositeDrawer;
+#ifdef PAF_BUILD_2014
+extern paf::ui::FactoryFuncTable g_factoryWebView;
+extern paf::ui::FactoryFuncTable g_factoryMapView;
+#else
 extern paf::ui::FactoryFuncTable g_factoryCompositeButton;
+#endif
 extern paf::ui::FactoryFuncTable g_factoryAppIconSimple;
 extern paf::ui::FactoryFuncDrawObj g_factoryPlaneObj;
 extern paf::ui::FactoryFuncDrawObj g_factoryTextObj;

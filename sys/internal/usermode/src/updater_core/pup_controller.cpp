@@ -6,6 +6,9 @@
 #include <stddef.h>
 #include <scetypes.h>
 #include <kernel/iofilemgr.h>
+#ifdef UPDATER_CORE_2014
+#include <kernel/threadmgr.h>
+#endif
 #include <libkernel/libkernel.h>
 #include <ss_mgr/ss_mgr.h>
 #include <update_mgr/update_mgr.h>
@@ -32,6 +35,21 @@
 #define PUP_READ_ALIGN		512
 #define PUP_READ_SIZE		0x40000
 #define PUP_SEGMENT_ANALYSIS_SIZE	0x80
+
+#ifdef UPDATER_CORE_2014
+#define PUP_CACHED_PATH_SIZE	256
+
+extern "C" int sceUpdaterGetState(void);
+
+static SceUID s_cachedPupFd = -1;
+static char *s_cachedPupPath = NULL;
+static SceUpdaterPupInformation *s_cachedPupInfo = NULL;
+static PupSegment *s_cachedSegments = NULL;
+static int s_hasCachedHeader = 0;
+static SceUInt64 s_cachedSegmentCount = 0;
+static int s_hasCachedSegments = 0;
+static SceKernelLwMutexWork s_cacheMutex;
+#endif
 
 PupController::PupController()
 {
@@ -232,8 +250,162 @@ int PupController::GetSegmentSize(const char *fileName, SceUInt64 segmentId, Sce
 	return getSegmentInfo(fileName, segmentId, size, &offset);
 }
 
+#ifdef UPDATER_CORE_2014
+int PupController::clearCache(void)
+{
+	int ret = 0;
+
+	if (s_cachedPupFd != -1) {
+		int closeRet = sceIoClose(s_cachedPupFd);
+
+		if (closeRet < 0) {
+			UPDATER_ERROR_FMT(1147, "%x", closeRet);
+			ret = SCE_UPDATER_ERROR_PUP_CLOSE;
+		}
+		s_cachedPupFd = -1;
+	}
+	if (s_cachedPupPath != NULL) {
+		g_updaterMemoryInfo.updaterCoreFree(s_cachedPupPath);
+		s_cachedPupPath = NULL;
+	}
+	if (s_cachedPupInfo != NULL) {
+		g_updaterMemoryInfo.updaterCoreFree(s_cachedPupInfo);
+		s_cachedPupInfo = NULL;
+	}
+	s_hasCachedHeader = 0;
+	if (s_cachedSegments != NULL) {
+		g_updaterMemoryInfo.updaterCoreFree(s_cachedSegments);
+		s_cachedSegments = NULL;
+	}
+	s_cachedSegmentCount = 0;
+	s_hasCachedSegments = 0;
+	return ret;
+}
+
+int PupController::InitializeCache(void)
+{
+	return sceKernelCreateLwMutex(&s_cacheMutex, "SceUpdaterCore PupController",
+				      SCE_KERNEL_LW_MUTEX_ATTR_RECURSIVE, 0, NULL);
+}
+
+int PupController::FinalizeCache(void)
+{
+	int ret;
+	int deleteRet;
+
+	sceKernelLockLwMutex(&s_cacheMutex, 1, NULL);
+	ret = clearCache();
+	sceKernelUnlockLwMutex(&s_cacheMutex, 1);
+	deleteRet = sceKernelDeleteLwMutex(&s_cacheMutex);
+	if (deleteRet < 0 && ret == 0)
+		return deleteRet;
+	return ret;
+}
+
+int PupController::openCachedPup(const char *fileName)
+{
+	int ret = 0;
+
+	sceKernelLockLwMutex(&s_cacheMutex, 1, NULL);
+	if (s_cachedPupFd != -1 && s_cachedPupPath != NULL &&
+	    sceClibStrncmp(s_cachedPupPath, fileName, PUP_CACHED_PATH_SIZE) == 0) {
+		sceKernelUnlockLwMutex(&s_cacheMutex, 1);
+		return 0;
+	}
+	if (s_cachedPupFd != -1 && s_cachedPupPath != NULL)
+		ret = clearCache();
+	if (ret == 0) {
+		if (s_cachedPupPath == NULL) {
+			s_cachedPupPath = static_cast<char *>(
+				g_updaterMemoryInfo.updaterCoreMemalign(PUP_READ_ALIGN,
+									PUP_CACHED_PATH_SIZE));
+		}
+		if (s_cachedPupPath == NULL) {
+			UPDATER_ERROR_FMT(946, "%d %d", PUP_READ_ALIGN, PUP_CACHED_PATH_SIZE);
+			ret = SCE_UPDATER_ERROR_NO_MEMORY;
+		} else {
+			s_cachedPupFd = sceIoOpen(fileName, SCE_O_RDONLY, 0);
+			if (s_cachedPupFd < 0) {
+				UPDATER_ERROR_FMT(956, "%s %o : %x", fileName, 0, s_cachedPupFd);
+				ret = SCE_UPDATER_ERROR_PUP_OPEN;
+				clearCache();
+			} else {
+				sceClibStrncpy(s_cachedPupPath, fileName, PUP_CACHED_PATH_SIZE);
+			}
+		}
+	}
+	sceKernelUnlockLwMutex(&s_cacheMutex, 1);
+	return ret;
+}
+
+int PupController::readCachedHeader(void)
+{
+	PupHeader header;
+	SceOff seekRet;
+	SceSSize readRet;
+	int ret = 0;
+
+	sceKernelLockLwMutex(&s_cacheMutex, 1, NULL);
+	s_cachedPupInfo = static_cast<SceUpdaterPupInformation *>(
+		g_updaterMemoryInfo.updaterCoreMemalign(PUP_READ_ALIGN,
+							sizeof(SceUpdaterPupInformation)));
+	if (s_cachedPupInfo == NULL) {
+		UPDATER_ERROR_FMT(990, "%d %u", PUP_READ_ALIGN,
+				  (unsigned int)sizeof(SceUpdaterPupInformation));
+		ret = SCE_UPDATER_ERROR_NO_MEMORY;
+	} else {
+		seekRet = sceIoLseek(s_cachedPupFd, 0, SCE_SEEK_SET);
+		if (seekRet < 0) {
+			UPDATER_ERROR_FMT(997, "%lld : %lld", 0LL, seekRet);
+			ret = SCE_UPDATER_ERROR_PUP_SEEK;
+		} else {
+			readRet = sceIoRead(s_cachedPupFd, &header, sizeof(header));
+			if (readRet < 0) {
+				UPDATER_ERROR_FMT(1005, "%x", readRet);
+				ret = SCE_UPDATER_ERROR_PUP_READ;
+			} else {
+				s_cachedPupInfo->magicVersion = header.m_magic[7];
+				s_cachedPupInfo->version = header.m_format_version;
+				s_cachedPupInfo->fileSize = header.m_file_offset + header.m_file_size;
+				s_cachedPupInfo->attribute[0] = header.m_attribute[0];
+				s_cachedPupInfo->attribute[1] = header.m_attribute[1];
+				s_cachedPupInfo->attribute[2] = header.m_attribute[2];
+				s_cachedPupInfo->attribute[3] = header.m_attribute[3];
+				s_cachedPupInfo->platform = header.platform;
+				s_cachedPupInfo->formatPolicy = header.formatPolicy;
+				s_cachedPupInfo->supportList = header.m_support_list;
+				s_cachedPupInfo->baseVersion = header.m_base_version;
+				s_cachedPupInfo->baseBuildNo = header.m_base_buildno;
+				s_cachedSegmentCount = header.m_segment_num;
+			}
+		}
+	}
+	sceKernelUnlockLwMutex(&s_cacheMutex, 1);
+	return ret;
+}
+
+int PupController::getPupInfoCached(const char *fileName, SceUpdaterPupInformation *information)
+{
+	int ret;
+
+	ret = openCachedPup(fileName);
+	if (ret != 0)
+		return ret;
+	if (!s_hasCachedHeader) {
+		s_hasCachedHeader = 1;
+		ret = readCachedHeader();
+		if (ret != 0)
+			return ret;
+	}
+	*information = *s_cachedPupInfo;
+	return 0;
+}
+
+int PupController::getPupInfoDirect(const char *fileName, SceUpdaterPupInformation *information)
+#else
 /* reads the PUP's header */
 int PupController::GetPupInformation(const char *fileName, SceUpdaterPupInformation *information)
+#endif
 {
 	PupHeader header;
 	SceUID fd;
@@ -270,6 +442,18 @@ int PupController::GetPupInformation(const char *fileName, SceUpdaterPupInformat
 	}
 	return result;
 }
+
+#ifdef UPDATER_CORE_2014
+/* reads the PUP's header, using the cached descriptor while the updater is initialized */
+int PupController::GetPupInformation(const char *fileName, SceUpdaterPupInformation *information)
+{
+	int state = sceUpdaterGetState();
+
+	if (state != 0 && state != 2)
+		return getPupInfoCached(fileName, information);
+	return getPupInfoDirect(fileName, information);
+}
+#endif
 
 /* checks the PUP's header, and on a retail console that may take only QA's PUPs its version */
 int PupController::IsApplicablePup(const char *fileName)

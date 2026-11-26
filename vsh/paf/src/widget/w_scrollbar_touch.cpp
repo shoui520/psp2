@@ -533,10 +533,12 @@ static VersatileParam *NewScrollBarTouchLayoutParam()
 	return new WidgetLayoutParam;
 }
 
+#ifndef PAF_BUILD_2014
 static VersatileParam *NewScrollBarTouchFocusParam()
 {
 	return new WidgetFocusParam;
 }
+#endif
 
 static VersatileParam *NewScrollBarTouchStyleParam()
 {
@@ -558,7 +560,9 @@ FactoryFuncTable g_factoryScrollBarTouch = {
 	NewScrollBarTouch,
 	NewScrollBarTouchParam,
 	NewScrollBarTouchLayoutParam,
+#ifndef PAF_BUILD_2014
 	NewScrollBarTouchFocusParam,
+#endif
 	NewScrollBarTouchStyleParam,
 	NewScrollBarTouchHandlerParam,
 	NewScrollBarTouchSoundParam,

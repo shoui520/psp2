@@ -199,6 +199,24 @@ void ProfileMesh::Init(PointArray points, int32_t columns, uint32_t flags)
 
 MaterialParamSet *PanelRenderer::GetMaterial(uint32_t material)
 {
+#ifdef PAF_BUILD_2014
+	switch (material) {
+	case 0:
+		return &m_bubble_glass_material.m_set;
+	case 1:
+		return &m_bubble_material.m_set;
+	case 2:
+		return &m_bubble_opaque_simple_material.m_set;
+	case 4:
+		return &m_panel_material.m_set;
+	case 5:
+		return &m_panel_opaque_material.m_set;
+	case 6:
+		return &m_color_chip_material.m_set;
+	default:
+		return &m_panel_material.m_set;
+	}
+#else
 	switch (material) {
 	case 0:
 		return &m_bubble_material.m_set;
@@ -211,8 +229,10 @@ MaterialParamSet *PanelRenderer::GetMaterial(uint32_t material)
 	default:
 		return &m_panel_material.m_set;
 	}
+#endif
 }
 
+#ifndef PAF_BUILD_2014
 void PanelRenderer::CreateScreen()
 {
 	DisplaySurface *root = ui::Screen::s_root_surface;
@@ -227,6 +247,7 @@ void PanelRenderer::CreateScreen()
 	m_screen = new ui::Screen(intrusive_ptr<Surface>(new ScreenSurface(&param, page,
 									    Surface::TypeRenderTarget)));
 }
+#endif
 
 void PanelRenderer::SetRenderStates(const int32_t &kind, bool blend)
 {
@@ -234,6 +255,34 @@ void PanelRenderer::SetRenderStates(const int32_t &kind, bool blend)
 
 	gl->CullMode(arl::CULL_CW);
 	gl->ColorMask(true, true, true, true);
+#ifdef PAF_BUILD_2014
+	if (kind == PanelKind_BubbleOpaqueSimple)
+		gl->Disable(arl::DEPTH_TEST);
+	else
+		gl->Enable(arl::DEPTH_TEST);
+	gl->DepthFunc(arl::DEPTH_LEQUAL, arl::FRONT_AND_BACK);
+	gl->DepthMask(true, arl::FRONT_AND_BACK);
+	switch (kind) {
+	case PanelKind_Glass:
+	case PanelKind_GlassGlowing:
+	case PanelKind_Opaque:
+	case PanelKind_OpaqueWave:
+	case PanelKind_BubbleOpaque:
+	case PanelKind_BubbleOpaqueSimple:
+		if (blend) {
+			gl->BlendFunc(arl::SRC_ALPHA, arl::ONE_MINUS_SRC_ALPHA, arl::ONE,
+				      arl::ZERO);
+			gl->BlendEquation(arl::FUNC_ADD, arl::FUNC_ADD);
+			gl->Enable(arl::BLEND);
+		} else {
+			gl->Disable(arl::BLEND);
+		}
+		break;
+	case PanelKind_BubbleGlass:
+		gl->Disable(arl::BLEND);
+		break;
+	}
+#else
 	gl->Disable(arl::DEPTH_TEST);
 	gl->DepthFunc(arl::DEPTH_ALWAYS, arl::FRONT_AND_BACK);
 	gl->DepthMask(true, arl::FRONT_AND_BACK);
@@ -254,6 +303,7 @@ void PanelRenderer::SetRenderStates(const int32_t &kind, bool blend)
 		}
 		break;
 	}
+#endif
 }
 
 /* an empty member nothing calls (name ours) */
@@ -318,11 +368,13 @@ void PanelRenderer::DrawSolid3x3Panel(const int32_t &kind, const uint32_t &mater
 	bool blend = (flags & DRAW_BLEND) != 0;
 	arl::ArlInstance *gl = arl::Gl();
 
+#ifndef PAF_BUILD_2014
 	if (m_screen != NULL) {
 		m_screen->GetSurface()->ActivatePage(ui::Screen::s_root_surface->GetPageCounter());
 		m_screen->OnTarget();
 	}
 	gl->PushMarker("draw_solid_3x3_panel");
+#endif
 	if (m_wireframe)
 		gl->PolygonMode(arl::POLYGON_MODE_LINE, arl::FRONT_AND_BACK);
 
@@ -480,11 +532,191 @@ void PanelRenderer::EndSolid3x3Panel(const int32_t &kind, const bool &top)
 	vert.m_object->end();
 	if (m_wireframe)
 		gl->PolygonMode(arl::POLYGON_MODE_FILL, arl::FRONT_AND_BACK);
+#ifndef PAF_BUILD_2014
 	gl->PopMarker();
 	if (m_screen != NULL)
 		m_screen->OnFinish();
+#endif
 }
 
+#ifdef PAF_BUILD_2014
+BubbleFragShaderPair PanelShaders::GetBubbleFrag(int32_t kind)
+{
+	switch (kind) {
+	case PanelKind_BubbleGlass:
+		return BubbleFragShaderPair(&m_bubble_glass_frag.m_interface,
+					    &m_bubble_glass_frag.m_object);
+	case PanelKind_BubbleOpaque:
+		return BubbleFragShaderPair(&m_bubble_opaque_frag.m_interface,
+					    &m_bubble_opaque_frag.m_object);
+	case PanelKind_BubbleOpaqueSimple:
+		return BubbleFragShaderPair(&m_bubble_opaque_simple_frag.m_interface,
+					    &m_bubble_opaque_simple_frag.m_object);
+	default:
+		return BubbleFragShaderPair(NULL, NULL);
+	}
+}
+
+BubbleVertShaderPair PanelShaders::GetBubbleVert(int32_t kind)
+{
+	switch (kind) {
+	case PanelKind_BubbleGlass:
+		return BubbleVertShaderPair(&m_bubble_glass_vert.m_interface,
+					    &m_bubble_glass_vert.m_object);
+	case PanelKind_BubbleOpaque:
+		return BubbleVertShaderPair(&m_bubble_opaque_vert.m_interface,
+					    &m_bubble_opaque_vert.m_object);
+	case PanelKind_BubbleOpaqueSimple:
+		return BubbleVertShaderPair(&m_bubble_opaque_simple_vert.m_interface,
+					    &m_bubble_opaque_simple_vert.m_object);
+	default:
+		return BubbleVertShaderPair(NULL, NULL);
+	}
+}
+
+void PanelRenderer::BeginBubble(const int32_t &kind, const uint32_t &material, const bool &blend)
+{
+	BubbleVertShaderPair vert = m_shaders->GetBubbleVert(kind);
+	BubbleFragShaderPair frag = m_shaders->GetBubbleFrag(kind);
+	arl::ArlInstance *gl = arl::Gl();
+
+	if (m_wireframe)
+		gl->PolygonMode(arl::POLYGON_MODE_LINE, arl::FRONT_AND_BACK);
+
+	math::v4 specular(Vector4(GetMaterial(material)->m_values.m_specular_coeff.m_value));
+
+	SetRenderStates(kind, blend);
+
+	vert.m_params->SetMVP(m_camera->GetViewProjection());
+	vert.m_params->SetEyePos(m_camera->GetEyePos());
+	vert.m_params->SetMaterialPack(GetMaterial(material)->m_values.GetPack());
+	vert.m_params->SetAmbientColor(
+		math::v4(GetLight(material)->m_values.m_ambient_color.m_value, 1.0f));
+	vert.m_params->SetDiffuseColor(
+		math::v4(GetLight(material)->m_values.m_diffuse_color.m_value, 1.0f));
+	vert.m_params->SetLightPos(GetLight(material)->m_values.GetPosition());
+	vert.m_params->SetBackgroundSize(GetTextureSize(*m_background->GetSharedTexture()));
+	vert.m_params->SetBackgroundRatio(GetTextureRatio(*m_background->GetSharedTexture()));
+	vert.m_params->SetView(m_camera->m_transform.m_inverse);
+	vert.m_params->SetSpecularFactor(specular);
+	{
+		const ShadowParamSet::Values &shadow = m_shadow.m_set.m_values;
+
+		vert.m_params->SetBackColorZRange(math::v2(shadow.m_back_color_begin.m_value,
+							   1.0f / (shadow.m_back_color_end.m_value -
+								   shadow.m_back_color_begin.m_value)));
+	}
+	vert.m_object->begin();
+
+	frag.m_params->SetEyePos(m_camera->GetEyePos());
+	frag.m_params->SetMaterialPack(GetMaterial(material)->m_values.GetPack());
+	frag.m_params->SetAmbientColor(
+		math::v4(GetLight(material)->m_values.m_ambient_color.m_value, 1.0f));
+	frag.m_params->SetDiffuseColor(
+		math::v4(GetLight(material)->m_values.m_diffuse_color.m_value, 1.0f));
+	frag.m_params->SetLightPos(GetLight(material)->m_values.GetPosition());
+	frag.m_params->SetEnvMapDetail(m_background->GetReflectionTexture());
+	{
+		arl::DefaultTextures *textures = gl;
+		common::SharedPtr<arl::TextureObject> texture = textures->m_white;
+		arl::TextureSource source;
+
+		source = texture;
+		frag.m_params->SetColorMap(source);
+	}
+	{
+		common::SharedPtr<arl::Texture2D> texture = m_background->GetSharedTexture();
+		arl::TextureSource source;
+
+		source.m_texture = texture;
+		source.m_surface.clear();
+		frag.m_params->SetBackground(source);
+	}
+	frag.m_params->SetBackgroundSize(GetTextureSize(*m_background->GetSharedTexture()));
+	frag.m_params->SetBackgroundRatio(GetTextureRatio(*m_background->GetSharedTexture()));
+	frag.m_params->SetView(m_camera->m_transform.m_inverse);
+	frag.m_params->SetSpecularFactor(specular);
+	frag.m_object->begin();
+}
+
+void PanelRenderer::DrawBubble(const int32_t &kind, const BubbleParam &param)
+{
+	BubbleVertShaderPair vert = m_shaders->GetBubbleVert(kind);
+	BubbleFragShaderPair frag = m_shaders->GetBubbleFrag(kind);
+	arl::ArlInstance *gl = arl::Gl();
+	math::matrix world(math::quaternion(sce::Vectormath::Simd::Aos::Quat(param.m_rot)));
+
+	world.set_w(math::v4(Vector4(param.m_pos)));
+
+	Vector4 half = Vector4(param.m_scale) * 0.5f;
+
+	vert.m_params->SetTransform(world * math::matrix(sce::Vectormath::Simd::Aos::Matrix4::scale(
+					       half.getXYZ())));
+	vert.m_params->SetTransformInverseTranspose(
+		(math::matrix(sce::Vectormath::Simd::Aos::Matrix4::scale(
+			 recipPerElem(half).getXYZ())) *
+		 world.inverse1())
+			.transpose());
+
+	ProfileMesh &profile = m_profiles.m_meshes[param.m_profile];
+
+	vert.m_params->SetHeight(math::v2(profile.m_bottom,
+					  1.0f / (profile.m_top - profile.m_bottom)));
+	vert.m_params->SetBackColor(
+		math::v4(Vector4(Vector4(param.m_back_color).getXYZ(), 1.0f)));
+	if (param.m_refract) {
+		const MaterialParamSet::Values &material = GetMaterial(1)->m_values;
+
+		vert.m_params->SetMaterialPack(math::matrix(
+			material.m_color.m_value,
+			math::v4(material.m_diffuse_coeff.m_value, material.m_specular_coeff.m_value,
+				 material.m_specular_power.m_value, 0.0f),
+			math::v4(material.m_fresnel_front.m_value, material.m_fresnel_control.m_value,
+				 material.m_fresnel_coeff.m_value, 0.0f),
+			math::v4(param.m_refract_scale, 0.0f, param.m_refract_offset,
+				 material.m_second_reflection.m_value)));
+	}
+	if (param.m_fixed_light)
+		vert.m_params->SetLightPos(param.GetFixedLightPos());
+	frag.m_params->SetColorMap(param.m_texture);
+
+	float alpha = vgetq_lane_f32(param.m_color, 3);
+
+	frag.m_params->SetAlpha(alpha);
+	frag.m_params->SetBackColor(math::v4(Vector4(Vector4(param.m_back_color).getXYZ(), 1.0f)));
+
+	float extent = param.m_extent;
+
+	if (extent < 0.0f)
+		extent = 0.0f;
+	if (!(extent < 1.0f))
+		extent = 1.0f;
+
+	uint32_t rows = (int32_t)((float)(profile.m_mesh.m_height - 1) * extent);
+
+	if (m_wireframe)
+		profile.m_mesh.DrawLines(gl);
+	else
+		profile.m_mesh.Draw(gl, rows);
+
+	if (param.m_refract)
+		vert.m_params->SetMaterialPack(GetMaterial(1)->m_values.GetPack());
+	if (param.m_fixed_light)
+		vert.m_params->SetLightPos(m_bubble_light.m_set.m_values.GetPosition());
+}
+
+void PanelRenderer::EndBubble(const int32_t &kind)
+{
+	BubbleVertShaderPair vert = m_shaders->GetBubbleVert(kind);
+	BubbleFragShaderPair frag = m_shaders->GetBubbleFrag(kind);
+	arl::ArlInstance *gl = arl::Gl();
+
+	frag.m_object->end();
+	vert.m_object->end();
+	if (m_wireframe)
+		gl->PolygonMode(arl::POLYGON_MODE_FILL, arl::FRONT_AND_BACK);
+}
+#else
 void PanelRenderer::DrawRevolutionPanel(const uint32_t &material)
 {
 	arl::ArlInstance *gl = arl::Gl();
@@ -644,12 +876,29 @@ void PanelRenderer::EndRevolutionPanel()
 	if (m_screen != NULL)
 		m_screen->OnFinish();
 }
+#endif
 
 void PanelRenderer::Unused1()
 {
 }
 
 PanelRenderer::PanelRenderer()
+#ifdef PAF_BUILD_2014
+	: m_shaders(new PanelShaders), m_profiles(m_profile, 3, 3), m_frame(-1),
+	  m_manager("PanelRenderer"), m_color_chip_manager("PanelRendererColorChip"),
+	  m_bubble_glass_material(m_manager, "bubble_glass"),
+	  m_bubble_material(m_manager, "bubble_opaque"),
+	  m_bubble_opaque_simple_material(m_manager, "bubble_opaque_simple"),
+	  m_bubble_light(m_manager, "bubble"), m_panel_material(m_manager, "panel"),
+	  m_panel_opaque_material(m_manager, "panel_opaque"), m_panel_light(m_manager, "panel"),
+	  m_touch_wave(m_manager, "panel"), m_shadow(m_manager, "bubble"),
+	  m_color_chip_material(m_color_chip_manager, "color_chip"),
+	  m_color_chip_light(m_color_chip_manager, "color_chip"), m_touch_time(0.0f),
+	  m_unread_flag(false), m_wireframe(false), m_rs_solid_3x3_panel(NULL),
+	  m_rs_bubble_glass(NULL), m_rs_bubble_opaque(NULL), m_rs_panel_debug(NULL)
+{
+}
+#else
 	: m_shaders(new PanelShaders), m_profiles(&m_profile, 1, 1), m_frame(-1), m_screen(NULL),
 	  m_manager("PanelRenderer"), m_color_chip_manager("PanelRendererColorChip"),
 	  m_bubble_material(m_manager, "bubble_opaque"), m_bubble_light(m_manager, "bubble"),
@@ -662,13 +911,16 @@ PanelRenderer::PanelRenderer()
 {
 	CreateScreen();
 }
+#endif
 
 PanelRenderer::~PanelRenderer()
 {
 	delete m_shaders;
 	m_shaders = NULL;
+#ifndef PAF_BUILD_2014
 	delete m_screen;
 	m_screen = NULL;
+#endif
 }
 
 void PanelRenderer::Init(common::SharedPtr<Camera> camera, common::SharedPtr<Camera> camera_2d,
@@ -710,7 +962,11 @@ void PanelRenderer::AddSolid3x3Panel(const PanelParam &param, int32_t kind, uint
 	DrawKey key;
 
 	key.m_word = 0;
+#ifdef PAF_BUILD_2014
+	key.m_type = 0;
+#else
 	key.m_type = 1;
+#endif
 	key.m_order0 = blend;
 	key.m_order2 = kind;
 	key.m_material = material;
@@ -750,6 +1006,23 @@ void PanelRenderer::AddBubble(const BubbleParam &param, int32_t kind, uint32_t m
 	PanelRenderer *self = this;
 	DrawKey key;
 
+#ifdef PAF_BUILD_2014
+	key.m_word = 0;
+	key.m_type = 0;
+	key.m_order0 = 1;
+	key.m_order1 = blend;
+	key.m_order3 = kind;
+	key.m_material = material;
+	if (layer->AddKey(DrawLayer::Key(key.m_word, 0))) {
+		key.m_order2 = 0;
+		layer->Push(key.m_word, 0, &PanelRenderer::BeginBubble, self, kind, material,
+			    blend);
+		key.m_order2 = 2;
+		layer->Push(key.m_word, 0, &PanelRenderer::EndBubble, self, kind);
+	}
+	key.m_order2 = 1;
+	layer->Push(key.m_word, 0, &PanelRenderer::DrawBubble, self, kind, param);
+#else
 	key.m_word = 0;
 	key.m_type = 1;
 	key.m_order0 = 1;
@@ -782,11 +1055,27 @@ void PanelRenderer::AddBubble(const BubbleParam &param, int32_t kind, uint32_t m
 	}
 	key.m_order2 = pass + 1;
 	layer->Push(key.m_word, 0, &PanelRenderer::DrawBubble, self, kind, param);
+#endif
 }
 
 void PanelRenderer::AddBubbleObj(BubbleParam *param, int32_t type, const common::SharedPtr<WaveRenderer> &wave_renderer,
 				 DrawLayer *layer)
 {
+#ifdef PAF_BUILD_2014
+	if (type == 0)
+		param->m_profile = 0;
+	else if (type == 1)
+		param->m_profile = 1;
+	if (type == 0) {
+		DrawLayer *target = layer != NULL ? layer : m_rs_bubble_opaque;
+
+		AddBubble(*param, PanelKind_BubbleOpaque, 1, target);
+	} else if (type == 1) {
+		DrawLayer *target = layer != NULL ? layer : m_rs_bubble_opaque;
+
+		AddBubble(*param, PanelKind_BubbleOpaqueSimple, 2, target);
+	}
+#else
 	if (type == 0 || type == 1)
 		param->m_profile = 0;
 	if (type == 0) {
@@ -798,6 +1087,7 @@ void PanelRenderer::AddBubbleObj(BubbleParam *param, int32_t type, const common:
 
 		AddBubble(*param, PanelKind_BubbleFolder, 0, target);
 	}
+#endif
 }
 
 math::matrix PanelRenderer::GetPointLightPack1()
@@ -890,6 +1180,31 @@ static void MakeBubbleProfile(vector<ProfilePoint> *points)
 	points->push_back(ProfilePoint(-4.37114e-08f, -0.3f));
 }
 
+#ifdef PAF_BUILD_2014
+static float SmoothStep(float edge_min, float edge_max, float value)
+{
+	float clamped = value;
+
+	if (clamped < edge_min)
+		clamped = edge_min;
+	if (clamped > edge_max)
+		clamped = edge_max;
+
+	float factor = (clamped - edge_min) / (edge_max - edge_min);
+
+	return factor * factor * (3.0f - 2.0f * factor);
+}
+
+static float ClampFloat(float value, float min_val, float max_val)
+{
+	if (value < min_val)
+		value = min_val;
+	if (value > max_val)
+		value = max_val;
+	return value;
+}
+#endif
+
 /* the columns the bubble's profile is swept into: nothing sets it (name ours) */
 static int32_t s_profile_columns;
 
@@ -898,6 +1213,2764 @@ void PanelRenderer::Load(const string &dir)
 	arl::ArlInstance *gl = arl::Gl();
 
 	m_meshes.Init(9, 6, 8);
+#ifdef PAF_BUILD_2014
+	{
+		int32_t columns = s_profile_columns;
+
+		for (int32_t idx = 0; idx < 2; idx++) {
+			vector<ProfilePoint> points((allocator<ProfilePoint>()));
+
+			MakeBubbleProfile(&points);
+			NormalizeProfile(&points, false, true);
+
+			vector<math::v2> profile((allocator<math::v2>()));
+
+			for (uint32_t i = 0; i < points.size(); i++)
+				profile.push_back(points.at(i).m_point);
+			m_profiles.m_meshes[idx].Init(profile, columns, 6);
+		}
+	}
+	{
+		vector<math::v2> profile((allocator<math::v2>()));
+
+		for (int32_t i = 0; i < 48; i++) {
+			float angle = 1.5707964f - ((float)i / 47.0f) * 3.1415927f;
+
+			profile.push_back(math::v2(sce_paf_cosf(angle), sce_paf_sinf(angle)));
+		}
+		m_profiles.m_meshes[2].Init(profile, 48, 6);
+	}
+	{
+		math::v4 circle[16];
+
+		for (uint32_t i = 0; i < 16; i++) {
+			float angle = ((float)i / 15.0f) * 6.2831855f;
+			Vector2 uv = Vector2(sce_paf_cosf(angle), sce_paf_sinf(angle)) * 0.5f +
+				     Vector2(0.5f, 0.5f);
+
+			circle[i] = math::v4(Vector4(uv, uv));
+		}
+		m_shadow_circle_verts = 16;
+		m_shadow_circle = arl::VertexArray(
+			gl->m_default_allocator,
+			ScePafGraphics_4D1E289A(gl, arl::VertexArraySpec::ATTRIB0_F4,
+						SCE_GXM_INDEX_SOURCE_INDEX_16BIT),
+			circle, m_shadow_circle_verts);
+	}
+	m_shadow_edge = 0.6f;
+	{
+		vector<uint8_t> pixels(64 * 64, (uint8_t)0);
+
+		for (int32_t y = 0; y < 64; y++) {
+			for (int32_t x = 0; x < 64; x++) {
+				Vector2 pos = Vector2((float)x, (float)y) * (1.0f / 63.0f) -
+					      Vector2(0.5f, 0.5f);
+				float val = 1.0f - SmoothStep(m_shadow_edge, 1.0f,
+							      length(pos) * 2.0f);
+
+				val = ClampFloat(val, 0.0f, 1.0f);
+				pixels[y * 64 + x] = (uint8_t)(uint32_t)(val * 255.0f);
+			}
+		}
+		m_shadow_texture = arl::CreateTexture<ImageMode_L8>(
+			gl->m_default_allocator, arl::SurfaceSize(64, 64), &pixels[0],
+			arl::SurfaceFlags(), 0);
+	}
+
+	common::SharedPtr<arl::VertexArraySpec> &border_spec = m_meshes.m_borders[0].m_vertices.m_spec;
+	common::SharedPtr<arl::VertexArraySpec> &face_spec = m_meshes.m_face.m_vertices.m_spec;
+	common::SharedPtr<arl::VertexArraySpec> &profile_spec =
+		m_profiles.m_meshes[0].m_mesh.m_vertices.m_spec;
+
+	m_shaders->m_glass_border_vert.m_object.init(*gl, border_spec,
+		common::SharedPtr<arl::VertexArraySpec>(), common::SharedPtr<arl::VertexArraySpec>(),
+		common::SharedPtr<arl::VertexArraySpec>());
+	m_shaders->m_glass_top_vert.m_object.init(*gl, face_spec,
+		common::SharedPtr<arl::VertexArraySpec>(), common::SharedPtr<arl::VertexArraySpec>(),
+		common::SharedPtr<arl::VertexArraySpec>());
+	m_shaders->m_glass_frag.m_object.init(*gl);
+	m_shaders->m_opaque_border_vert.m_object.init(*gl, border_spec,
+		common::SharedPtr<arl::VertexArraySpec>(), common::SharedPtr<arl::VertexArraySpec>(),
+		common::SharedPtr<arl::VertexArraySpec>());
+	m_shaders->m_opaque_top_vert.m_object.init(*gl, face_spec,
+		common::SharedPtr<arl::VertexArraySpec>(), common::SharedPtr<arl::VertexArraySpec>(),
+		common::SharedPtr<arl::VertexArraySpec>());
+	m_shaders->m_opaque_frag.m_object.init(*gl);
+	m_shaders->m_opaque_wave_border_vert.m_object.init(*gl, border_spec,
+		common::SharedPtr<arl::VertexArraySpec>(), common::SharedPtr<arl::VertexArraySpec>(),
+		common::SharedPtr<arl::VertexArraySpec>());
+	m_shaders->m_opaque_wave_top_vert.m_object.init(*gl, face_spec,
+		common::SharedPtr<arl::VertexArraySpec>(), common::SharedPtr<arl::VertexArraySpec>(),
+		common::SharedPtr<arl::VertexArraySpec>());
+	m_shaders->m_opaque_wave_frag.m_object.init(*gl);
+	m_shaders->m_glass_border_glowing_vert.m_object.init(*gl, border_spec,
+		common::SharedPtr<arl::VertexArraySpec>(), common::SharedPtr<arl::VertexArraySpec>(),
+		common::SharedPtr<arl::VertexArraySpec>());
+	m_shaders->m_glass_glowing_frag.m_object.init(*gl);
+	m_shaders->m_bubble_glass_vert.m_object.init(*gl, profile_spec,
+		common::SharedPtr<arl::VertexArraySpec>(), common::SharedPtr<arl::VertexArraySpec>(),
+		common::SharedPtr<arl::VertexArraySpec>());
+	m_shaders->m_bubble_glass_frag.m_object.init(*gl);
+	m_shaders->m_bubble_image_vert.m_object.init(*gl, profile_spec,
+		common::SharedPtr<arl::VertexArraySpec>(), common::SharedPtr<arl::VertexArraySpec>(),
+		common::SharedPtr<arl::VertexArraySpec>());
+	m_shaders->m_bubble_image_frag.m_object.init(*gl);
+	m_shaders->m_bubble_opaque_vert.m_object.init(*gl, profile_spec,
+		common::SharedPtr<arl::VertexArraySpec>(), common::SharedPtr<arl::VertexArraySpec>(),
+		common::SharedPtr<arl::VertexArraySpec>());
+	m_shaders->m_bubble_opaque_frag.m_object.init(*gl);
+	m_shaders->m_bubble_opaque_simple_vert.m_object.init(*gl, profile_spec,
+		common::SharedPtr<arl::VertexArraySpec>(), common::SharedPtr<arl::VertexArraySpec>(),
+		common::SharedPtr<arl::VertexArraySpec>());
+	m_shaders->m_bubble_opaque_simple_frag.m_object.init(*gl);
+	m_shaders->m_bubble_shadow_vert.m_object.init(*gl, m_shadow_circle.m_spec,
+		common::SharedPtr<arl::VertexArraySpec>(), common::SharedPtr<arl::VertexArraySpec>(),
+		common::SharedPtr<arl::VertexArraySpec>());
+	m_shaders->m_bubble_shadow_frag.m_object.init(*gl);
+
+	m_rs_solid_3x3_panel = m_draw_env->AddLayer("m_rs_solid_3x3_panel", 232, 1, 0x4000);
+	m_rs_solid_3x3_panel->m_draw_mode = 2;
+	m_rs_bubble_opaque = m_draw_env->AddLayer("m_rs_bubble_opaque", 230, 1, 0x4000);
+	m_rs_bubble_opaque->m_draw_mode = 2;
+	m_rs_bubble_glass = m_draw_env->AddLayer("m_rs_bubble_glass", 225, 1, 0x4000);
+	m_rs_bubble_glass->m_draw_mode = 2;
+	m_rs_panel_debug = m_draw_env->AddLayer("m_rs_panel_debug", 900, 2, 0x4000);
+	m_rs_panel_debug->Push(0, 0, &PanelRenderer::DrawDebug, this);
+	m_rs_panel_debug->m_draw_mode = 2;
+
+	m_bubble_light.m_keys.m_default.m_values.m_distance.SetRange(0.0f, 10000.0f);
+	m_panel_light.m_keys.m_default.m_values.m_distance.SetRange(0.0f, 10000.0f);
+	m_bubble_light.m_set.m_values.m_distance.SetRange(0.0f, 10000.0f);
+	m_panel_light.m_set.m_values.m_distance.SetRange(0.0f, 10000.0f);
+	m_bubble_material.m_keys.m_default.m_values.m_specular_power.SetRange(0.8f, 200.0f);
+	m_bubble_opaque_simple_material.m_keys.m_default.m_values.m_specular_power.SetRange(
+		0.8f, 200.0f);
+	m_bubble_material.m_set.m_values.m_specular_power.SetRange(0.8f, 200.0f);
+	m_bubble_opaque_simple_material.m_set.m_values.m_specular_power.SetRange(0.8f, 200.0f);
+
+	m_manager.SetPaths(dir, "panel/psets");
+	m_color_chip_manager.SetPaths(dir, "panel/psets");
+
+	MaterialParamSet &bubble_glass_material = m_bubble_glass_material.m_keys.m_default;
+
+	bubble_glass_material.findParamAndSet("color", 0.901785f, 0.901785f, 1.0f, 1.0f);
+	bubble_glass_material.findParamAndSet("diffuse_coeff", 0.472221f);
+	bubble_glass_material.findParamAndSet("specular_coeff", 0.051476f);
+	bubble_glass_material.findParamAndSet("specular_power", 97.32143f);
+	bubble_glass_material.findParamAndSet("fresnel_front", 0.0f);
+	bubble_glass_material.findParamAndSet("fresnel_control", 0.749091f);
+	bubble_glass_material.findParamAndSet("fresnel_coeff", 0.645983f);
+	bubble_glass_material.findParamAndSet("refraction_coeff", 2.277776f);
+	bubble_glass_material.findParamAndSet("refraction_amount", 0.0f);
+	bubble_glass_material.findParamAndSet("second_reflection", 0.0f);
+	m_bubble_glass_material.m_keys.GetKey("effects_0406_ruby", true)->m_values = bubble_glass_material.m_values;
+
+	bubble_glass_material.findParamAndSet("color", 0.901785f, 0.901785f, 1.0f, 1.0f);
+	bubble_glass_material.findParamAndSet("diffuse_coeff", 0.472221f);
+	bubble_glass_material.findParamAndSet("specular_coeff", 0.051476f);
+	bubble_glass_material.findParamAndSet("specular_power", 97.32143f);
+	bubble_glass_material.findParamAndSet("fresnel_front", 0.0f);
+	bubble_glass_material.findParamAndSet("fresnel_control", 0.749091f);
+	bubble_glass_material.findParamAndSet("fresnel_coeff", 0.645983f);
+	bubble_glass_material.findParamAndSet("refraction_coeff", 2.277776f);
+	bubble_glass_material.findParamAndSet("refraction_amount", 0.0f);
+	bubble_glass_material.findParamAndSet("second_reflection", 0.0f);
+	m_bubble_glass_material.m_keys.GetKey("effects_0407_purple_01", true)->m_values = bubble_glass_material.m_values;
+
+	bubble_glass_material.findParamAndSet("color", 0.901785f, 0.901785f, 1.0f, 1.0f);
+	bubble_glass_material.findParamAndSet("diffuse_coeff", 0.472221f);
+	bubble_glass_material.findParamAndSet("specular_coeff", 0.051476f);
+	bubble_glass_material.findParamAndSet("specular_power", 97.32143f);
+	bubble_glass_material.findParamAndSet("fresnel_front", 0.0f);
+	bubble_glass_material.findParamAndSet("fresnel_control", 0.749091f);
+	bubble_glass_material.findParamAndSet("fresnel_coeff", 0.645983f);
+	bubble_glass_material.findParamAndSet("refraction_coeff", 2.277776f);
+	bubble_glass_material.findParamAndSet("refraction_amount", 0.0f);
+	bubble_glass_material.findParamAndSet("second_reflection", 0.0f);
+	m_bubble_glass_material.m_keys.GetKey("effects_0408_01_orange", true)->m_values = bubble_glass_material.m_values;
+
+	bubble_glass_material.findParamAndSet("color", 0.901785f, 0.901785f, 1.0f, 1.0f);
+	bubble_glass_material.findParamAndSet("diffuse_coeff", 0.472221f);
+	bubble_glass_material.findParamAndSet("specular_coeff", 0.051476f);
+	bubble_glass_material.findParamAndSet("specular_power", 97.32143f);
+	bubble_glass_material.findParamAndSet("fresnel_front", 0.0f);
+	bubble_glass_material.findParamAndSet("fresnel_control", 0.749091f);
+	bubble_glass_material.findParamAndSet("fresnel_coeff", 0.645983f);
+	bubble_glass_material.findParamAndSet("refraction_coeff", 2.277776f);
+	bubble_glass_material.findParamAndSet("refraction_amount", 0.0f);
+	bubble_glass_material.findParamAndSet("second_reflection", 0.0f);
+	m_bubble_glass_material.m_keys.GetKey("effects_0411_purple_02", true)->m_values = bubble_glass_material.m_values;
+
+	bubble_glass_material.findParamAndSet("color", 0.901785f, 0.901785f, 1.0f, 1.0f);
+	bubble_glass_material.findParamAndSet("diffuse_coeff", 0.472221f);
+	bubble_glass_material.findParamAndSet("specular_coeff", 0.051476f);
+	bubble_glass_material.findParamAndSet("specular_power", 97.32143f);
+	bubble_glass_material.findParamAndSet("fresnel_front", 0.0f);
+	bubble_glass_material.findParamAndSet("fresnel_control", 0.749091f);
+	bubble_glass_material.findParamAndSet("fresnel_coeff", 0.645983f);
+	bubble_glass_material.findParamAndSet("refraction_coeff", 2.277776f);
+	bubble_glass_material.findParamAndSet("refraction_amount", 0.0f);
+	bubble_glass_material.findParamAndSet("second_reflection", 0.0f);
+	m_bubble_glass_material.m_keys.GetKey("effects_0415_A5", true)->m_values = bubble_glass_material.m_values;
+
+	bubble_glass_material.findParamAndSet("color", 0.901785f, 0.901785f, 1.0f, 1.0f);
+	bubble_glass_material.findParamAndSet("diffuse_coeff", 0.472221f);
+	bubble_glass_material.findParamAndSet("specular_coeff", 0.051476f);
+	bubble_glass_material.findParamAndSet("specular_power", 97.32143f);
+	bubble_glass_material.findParamAndSet("fresnel_front", 0.0f);
+	bubble_glass_material.findParamAndSet("fresnel_control", 0.749091f);
+	bubble_glass_material.findParamAndSet("fresnel_coeff", 0.645983f);
+	bubble_glass_material.findParamAndSet("refraction_coeff", 2.277776f);
+	bubble_glass_material.findParamAndSet("refraction_amount", 0.0f);
+	bubble_glass_material.findParamAndSet("second_reflection", 0.0f);
+	m_bubble_glass_material.m_keys.GetKey("effects_0518_dalia", true)->m_values = bubble_glass_material.m_values;
+
+	bubble_glass_material.findParamAndSet("color", 0.901785f, 0.901785f, 1.0f, 1.0f);
+	bubble_glass_material.findParamAndSet("diffuse_coeff", 0.472221f);
+	bubble_glass_material.findParamAndSet("specular_coeff", 0.051476f);
+	bubble_glass_material.findParamAndSet("specular_power", 97.32143f);
+	bubble_glass_material.findParamAndSet("fresnel_front", 0.0f);
+	bubble_glass_material.findParamAndSet("fresnel_control", 0.749091f);
+	bubble_glass_material.findParamAndSet("fresnel_coeff", 0.645983f);
+	bubble_glass_material.findParamAndSet("refraction_coeff", 2.277776f);
+	bubble_glass_material.findParamAndSet("refraction_amount", 0.0f);
+	bubble_glass_material.findParamAndSet("second_reflection", 0.0f);
+	m_bubble_glass_material.m_keys.GetKey("effects_0518_gray_FLAT", true)->m_values = bubble_glass_material.m_values;
+
+	bubble_glass_material.findParamAndSet("color", 0.901785f, 0.901785f, 1.0f, 1.0f);
+	bubble_glass_material.findParamAndSet("diffuse_coeff", 0.472221f);
+	bubble_glass_material.findParamAndSet("specular_coeff", 0.051476f);
+	bubble_glass_material.findParamAndSet("specular_power", 97.32143f);
+	bubble_glass_material.findParamAndSet("fresnel_front", 0.0f);
+	bubble_glass_material.findParamAndSet("fresnel_control", 0.749091f);
+	bubble_glass_material.findParamAndSet("fresnel_coeff", 0.645983f);
+	bubble_glass_material.findParamAndSet("refraction_coeff", 2.277776f);
+	bubble_glass_material.findParamAndSet("refraction_amount", 0.0f);
+	bubble_glass_material.findParamAndSet("second_reflection", 0.0f);
+	m_bubble_glass_material.m_keys.GetKey("effects_0518_ruby", true)->m_values = bubble_glass_material.m_values;
+
+	bubble_glass_material.findParamAndSet("color", 0.901785f, 0.901785f, 1.0f, 1.0f);
+	bubble_glass_material.findParamAndSet("diffuse_coeff", 0.472221f);
+	bubble_glass_material.findParamAndSet("specular_coeff", 0.051476f);
+	bubble_glass_material.findParamAndSet("specular_power", 97.32143f);
+	bubble_glass_material.findParamAndSet("fresnel_front", 0.0f);
+	bubble_glass_material.findParamAndSet("fresnel_control", 0.749091f);
+	bubble_glass_material.findParamAndSet("fresnel_coeff", 0.645983f);
+	bubble_glass_material.findParamAndSet("refraction_coeff", 2.277776f);
+	bubble_glass_material.findParamAndSet("refraction_amount", 0.0f);
+	bubble_glass_material.findParamAndSet("second_reflection", 0.0f);
+	m_bubble_glass_material.m_keys.GetKey("effects_A1", true)->m_values = bubble_glass_material.m_values;
+
+	bubble_glass_material.findParamAndSet("color", 0.901785f, 0.901785f, 1.0f, 1.0f);
+	bubble_glass_material.findParamAndSet("diffuse_coeff", 0.472221f);
+	bubble_glass_material.findParamAndSet("specular_coeff", 0.051476f);
+	bubble_glass_material.findParamAndSet("specular_power", 97.32143f);
+	bubble_glass_material.findParamAndSet("fresnel_front", 0.0f);
+	bubble_glass_material.findParamAndSet("fresnel_control", 0.749091f);
+	bubble_glass_material.findParamAndSet("fresnel_coeff", 0.645983f);
+	bubble_glass_material.findParamAndSet("refraction_coeff", 2.277776f);
+	bubble_glass_material.findParamAndSet("refraction_amount", 0.0f);
+	bubble_glass_material.findParamAndSet("second_reflection", 0.0f);
+	m_bubble_glass_material.m_keys.GetKey("effects_black", true)->m_values = bubble_glass_material.m_values;
+
+	bubble_glass_material.findParamAndSet("color", 0.901785f, 0.901785f, 1.0f, 1.0f);
+	bubble_glass_material.findParamAndSet("diffuse_coeff", 0.472221f);
+	bubble_glass_material.findParamAndSet("specular_coeff", 0.051476f);
+	bubble_glass_material.findParamAndSet("specular_power", 97.32143f);
+	bubble_glass_material.findParamAndSet("fresnel_front", 0.0f);
+	bubble_glass_material.findParamAndSet("fresnel_control", 0.749091f);
+	bubble_glass_material.findParamAndSet("fresnel_coeff", 0.645983f);
+	bubble_glass_material.findParamAndSet("refraction_coeff", 2.277776f);
+	bubble_glass_material.findParamAndSet("refraction_amount", 0.0f);
+	bubble_glass_material.findParamAndSet("second_reflection", 0.0f);
+	m_bubble_glass_material.m_keys.GetKey("effects_blueTB_0513_01", true)->m_values = bubble_glass_material.m_values;
+
+	bubble_glass_material.findParamAndSet("color", 0.901785f, 0.901785f, 1.0f, 1.0f);
+	bubble_glass_material.findParamAndSet("diffuse_coeff", 0.472221f);
+	bubble_glass_material.findParamAndSet("specular_coeff", 0.051476f);
+	bubble_glass_material.findParamAndSet("specular_power", 97.32143f);
+	bubble_glass_material.findParamAndSet("fresnel_front", 0.0f);
+	bubble_glass_material.findParamAndSet("fresnel_control", 0.749091f);
+	bubble_glass_material.findParamAndSet("fresnel_coeff", 0.645983f);
+	bubble_glass_material.findParamAndSet("refraction_coeff", 2.277776f);
+	bubble_glass_material.findParamAndSet("refraction_amount", 0.0f);
+	bubble_glass_material.findParamAndSet("second_reflection", 0.0f);
+	m_bubble_glass_material.m_keys.GetKey("effects_blue_FLAT", true)->m_values = bubble_glass_material.m_values;
+
+	bubble_glass_material.findParamAndSet("color", 0.901785f, 0.901785f, 1.0f, 1.0f);
+	bubble_glass_material.findParamAndSet("diffuse_coeff", 0.472221f);
+	bubble_glass_material.findParamAndSet("specular_coeff", 0.051476f);
+	bubble_glass_material.findParamAndSet("specular_power", 97.32143f);
+	bubble_glass_material.findParamAndSet("fresnel_front", 0.0f);
+	bubble_glass_material.findParamAndSet("fresnel_control", 0.749091f);
+	bubble_glass_material.findParamAndSet("fresnel_coeff", 0.645983f);
+	bubble_glass_material.findParamAndSet("refraction_coeff", 2.277776f);
+	bubble_glass_material.findParamAndSet("refraction_amount", 0.0f);
+	bubble_glass_material.findParamAndSet("second_reflection", 0.0f);
+	m_bubble_glass_material.m_keys.GetKey("effects_bluewhite_05", true)->m_values = bubble_glass_material.m_values;
+
+	bubble_glass_material.findParamAndSet("color", 0.901785f, 0.901785f, 1.0f, 1.0f);
+	bubble_glass_material.findParamAndSet("diffuse_coeff", 0.472221f);
+	bubble_glass_material.findParamAndSet("specular_coeff", 0.051476f);
+	bubble_glass_material.findParamAndSet("specular_power", 97.32143f);
+	bubble_glass_material.findParamAndSet("fresnel_front", 0.0f);
+	bubble_glass_material.findParamAndSet("fresnel_control", 0.749091f);
+	bubble_glass_material.findParamAndSet("fresnel_coeff", 0.645983f);
+	bubble_glass_material.findParamAndSet("refraction_coeff", 2.277776f);
+	bubble_glass_material.findParamAndSet("refraction_amount", 0.0f);
+	bubble_glass_material.findParamAndSet("second_reflection", 0.0f);
+	m_bubble_glass_material.m_keys.GetKey("effects_casis", true)->m_values = bubble_glass_material.m_values;
+
+	bubble_glass_material.findParamAndSet("color", 0.901785f, 0.901785f, 1.0f, 1.0f);
+	bubble_glass_material.findParamAndSet("diffuse_coeff", 0.472221f);
+	bubble_glass_material.findParamAndSet("specular_coeff", 0.051476f);
+	bubble_glass_material.findParamAndSet("specular_power", 97.32143f);
+	bubble_glass_material.findParamAndSet("fresnel_front", 0.0f);
+	bubble_glass_material.findParamAndSet("fresnel_control", 0.749091f);
+	bubble_glass_material.findParamAndSet("fresnel_coeff", 0.645983f);
+	bubble_glass_material.findParamAndSet("refraction_coeff", 2.277776f);
+	bubble_glass_material.findParamAndSet("refraction_amount", 0.0f);
+	bubble_glass_material.findParamAndSet("second_reflection", 0.0f);
+	m_bubble_glass_material.m_keys.GetKey("effects_default_0512_01", true)->m_values = bubble_glass_material.m_values;
+
+	bubble_glass_material.findParamAndSet("color", 0.901785f, 0.901785f, 1.0f, 1.0f);
+	bubble_glass_material.findParamAndSet("diffuse_coeff", 0.472221f);
+	bubble_glass_material.findParamAndSet("specular_coeff", 0.051476f);
+	bubble_glass_material.findParamAndSet("specular_power", 97.32143f);
+	bubble_glass_material.findParamAndSet("fresnel_front", 0.0f);
+	bubble_glass_material.findParamAndSet("fresnel_control", 0.749091f);
+	bubble_glass_material.findParamAndSet("fresnel_coeff", 0.645983f);
+	bubble_glass_material.findParamAndSet("refraction_coeff", 2.277776f);
+	bubble_glass_material.findParamAndSet("refraction_amount", 0.0f);
+	bubble_glass_material.findParamAndSet("second_reflection", 0.0f);
+	m_bubble_glass_material.m_keys.GetKey("effects_green_0512_01", true)->m_values = bubble_glass_material.m_values;
+
+	bubble_glass_material.findParamAndSet("color", 0.901785f, 0.901785f, 1.0f, 1.0f);
+	bubble_glass_material.findParamAndSet("diffuse_coeff", 0.472221f);
+	bubble_glass_material.findParamAndSet("specular_coeff", 0.051476f);
+	bubble_glass_material.findParamAndSet("specular_power", 97.32143f);
+	bubble_glass_material.findParamAndSet("fresnel_front", 0.0f);
+	bubble_glass_material.findParamAndSet("fresnel_control", 0.749091f);
+	bubble_glass_material.findParamAndSet("fresnel_coeff", 0.645983f);
+	bubble_glass_material.findParamAndSet("refraction_coeff", 2.277776f);
+	bubble_glass_material.findParamAndSet("refraction_amount", 0.0f);
+	bubble_glass_material.findParamAndSet("second_reflection", 0.0f);
+	m_bubble_glass_material.m_keys.GetKey("effects_koiao_0512_01", true)->m_values = bubble_glass_material.m_values;
+
+	bubble_glass_material.findParamAndSet("color", 0.901785f, 0.901785f, 1.0f, 1.0f);
+	bubble_glass_material.findParamAndSet("diffuse_coeff", 0.472221f);
+	bubble_glass_material.findParamAndSet("specular_coeff", 0.051476f);
+	bubble_glass_material.findParamAndSet("specular_power", 97.32143f);
+	bubble_glass_material.findParamAndSet("fresnel_front", 0.0f);
+	bubble_glass_material.findParamAndSet("fresnel_control", 0.749091f);
+	bubble_glass_material.findParamAndSet("fresnel_coeff", 0.645983f);
+	bubble_glass_material.findParamAndSet("refraction_coeff", 2.277776f);
+	bubble_glass_material.findParamAndSet("refraction_amount", 0.0f);
+	bubble_glass_material.findParamAndSet("second_reflection", 0.0f);
+	m_bubble_glass_material.m_keys.GetKey("effects_limegreen_0513_02", true)->m_values = bubble_glass_material.m_values;
+
+	bubble_glass_material.findParamAndSet("color", 0.901785f, 0.901785f, 1.0f, 1.0f);
+	bubble_glass_material.findParamAndSet("diffuse_coeff", 0.472221f);
+	bubble_glass_material.findParamAndSet("specular_coeff", 0.051476f);
+	bubble_glass_material.findParamAndSet("specular_power", 97.32143f);
+	bubble_glass_material.findParamAndSet("fresnel_front", 0.0f);
+	bubble_glass_material.findParamAndSet("fresnel_control", 0.749091f);
+	bubble_glass_material.findParamAndSet("fresnel_coeff", 0.645983f);
+	bubble_glass_material.findParamAndSet("refraction_coeff", 2.277776f);
+	bubble_glass_material.findParamAndSet("refraction_amount", 0.0f);
+	bubble_glass_material.findParamAndSet("second_reflection", 0.0f);
+	m_bubble_glass_material.m_keys.GetKey("effects_maintosh", true)->m_values = bubble_glass_material.m_values;
+
+	bubble_glass_material.findParamAndSet("color", 0.901785f, 0.901785f, 1.0f, 1.0f);
+	bubble_glass_material.findParamAndSet("diffuse_coeff", 0.472221f);
+	bubble_glass_material.findParamAndSet("specular_coeff", 0.051476f);
+	bubble_glass_material.findParamAndSet("specular_power", 97.32143f);
+	bubble_glass_material.findParamAndSet("fresnel_front", 0.0f);
+	bubble_glass_material.findParamAndSet("fresnel_control", 0.749091f);
+	bubble_glass_material.findParamAndSet("fresnel_coeff", 0.645983f);
+	bubble_glass_material.findParamAndSet("refraction_coeff", 2.277776f);
+	bubble_glass_material.findParamAndSet("refraction_amount", 0.0f);
+	bubble_glass_material.findParamAndSet("second_reflection", 0.0f);
+	m_bubble_glass_material.m_keys.GetKey("effects_marrygold", true)->m_values = bubble_glass_material.m_values;
+
+	bubble_glass_material.findParamAndSet("color", 0.901785f, 0.901785f, 1.0f, 1.0f);
+	bubble_glass_material.findParamAndSet("diffuse_coeff", 0.472221f);
+	bubble_glass_material.findParamAndSet("specular_coeff", 0.051476f);
+	bubble_glass_material.findParamAndSet("specular_power", 97.32143f);
+	bubble_glass_material.findParamAndSet("fresnel_front", 0.0f);
+	bubble_glass_material.findParamAndSet("fresnel_control", 0.749091f);
+	bubble_glass_material.findParamAndSet("fresnel_coeff", 0.645983f);
+	bubble_glass_material.findParamAndSet("refraction_coeff", 2.277776f);
+	bubble_glass_material.findParamAndSet("refraction_amount", 0.0f);
+	bubble_glass_material.findParamAndSet("second_reflection", 0.0f);
+	m_bubble_glass_material.m_keys.GetKey("effects_peach_0512_001", true)->m_values = bubble_glass_material.m_values;
+
+	bubble_glass_material.findParamAndSet("color", 0.901785f, 0.901785f, 1.0f, 1.0f);
+	bubble_glass_material.findParamAndSet("diffuse_coeff", 0.472221f);
+	bubble_glass_material.findParamAndSet("specular_coeff", 0.051476f);
+	bubble_glass_material.findParamAndSet("specular_power", 97.32143f);
+	bubble_glass_material.findParamAndSet("fresnel_front", 0.0f);
+	bubble_glass_material.findParamAndSet("fresnel_control", 0.749091f);
+	bubble_glass_material.findParamAndSet("fresnel_coeff", 0.645983f);
+	bubble_glass_material.findParamAndSet("refraction_coeff", 2.277776f);
+	bubble_glass_material.findParamAndSet("refraction_amount", 0.0f);
+	bubble_glass_material.findParamAndSet("second_reflection", 0.0f);
+	m_bubble_glass_material.m_keys.GetKey("effects_purple_01", true)->m_values = bubble_glass_material.m_values;
+
+	bubble_glass_material.findParamAndSet("color", 0.901785f, 0.901785f, 1.0f, 1.0f);
+	bubble_glass_material.findParamAndSet("diffuse_coeff", 0.472221f);
+	bubble_glass_material.findParamAndSet("specular_coeff", 0.051476f);
+	bubble_glass_material.findParamAndSet("specular_power", 97.32143f);
+	bubble_glass_material.findParamAndSet("fresnel_front", 0.0f);
+	bubble_glass_material.findParamAndSet("fresnel_control", 0.749091f);
+	bubble_glass_material.findParamAndSet("fresnel_coeff", 0.645983f);
+	bubble_glass_material.findParamAndSet("refraction_coeff", 2.277776f);
+	bubble_glass_material.findParamAndSet("refraction_amount", 0.0f);
+	bubble_glass_material.findParamAndSet("second_reflection", 0.0f);
+	m_bubble_glass_material.m_keys.GetKey("effects_purplered", true)->m_values = bubble_glass_material.m_values;
+
+	bubble_glass_material.findParamAndSet("color", 0.901785f, 0.901785f, 1.0f, 1.0f);
+	bubble_glass_material.findParamAndSet("diffuse_coeff", 0.472221f);
+	bubble_glass_material.findParamAndSet("specular_coeff", 0.051476f);
+	bubble_glass_material.findParamAndSet("specular_power", 97.32143f);
+	bubble_glass_material.findParamAndSet("fresnel_front", 0.0f);
+	bubble_glass_material.findParamAndSet("fresnel_control", 0.749091f);
+	bubble_glass_material.findParamAndSet("fresnel_coeff", 0.645983f);
+	bubble_glass_material.findParamAndSet("refraction_coeff", 2.277776f);
+	bubble_glass_material.findParamAndSet("refraction_amount", 0.0f);
+	bubble_glass_material.findParamAndSet("second_reflection", 0.0f);
+	m_bubble_glass_material.m_keys.GetKey("effects_redTB_0513_01", true)->m_values = bubble_glass_material.m_values;
+
+	bubble_glass_material.findParamAndSet("color", 0.901785f, 0.901785f, 1.0f, 1.0f);
+	bubble_glass_material.findParamAndSet("diffuse_coeff", 0.472221f);
+	bubble_glass_material.findParamAndSet("specular_coeff", 0.051476f);
+	bubble_glass_material.findParamAndSet("specular_power", 97.32143f);
+	bubble_glass_material.findParamAndSet("fresnel_front", 0.0f);
+	bubble_glass_material.findParamAndSet("fresnel_control", 0.749091f);
+	bubble_glass_material.findParamAndSet("fresnel_coeff", 0.645983f);
+	bubble_glass_material.findParamAndSet("refraction_coeff", 2.277776f);
+	bubble_glass_material.findParamAndSet("refraction_amount", 0.0f);
+	bubble_glass_material.findParamAndSet("second_reflection", 0.0f);
+	m_bubble_glass_material.m_keys.GetKey("effects_turquoise_0513_01", true)->m_values = bubble_glass_material.m_values;
+
+	bubble_glass_material.findParamAndSet("color", 0.901785f, 0.901785f, 1.0f, 1.0f);
+	bubble_glass_material.findParamAndSet("diffuse_coeff", 0.472221f);
+	bubble_glass_material.findParamAndSet("specular_coeff", 0.051476f);
+	bubble_glass_material.findParamAndSet("specular_power", 97.32143f);
+	bubble_glass_material.findParamAndSet("fresnel_front", 0.0f);
+	bubble_glass_material.findParamAndSet("fresnel_control", 0.749091f);
+	bubble_glass_material.findParamAndSet("fresnel_coeff", 0.645983f);
+	bubble_glass_material.findParamAndSet("refraction_coeff", 2.277776f);
+	bubble_glass_material.findParamAndSet("refraction_amount", 0.0f);
+	bubble_glass_material.findParamAndSet("second_reflection", 0.0f);
+	m_bubble_glass_material.m_keys.GetKey("effects_yellow_0512_01", true)->m_values = bubble_glass_material.m_values;
+
+	bubble_glass_material.findParamAndSet("color", 0.901785f, 0.901785f, 1.0f, 1.0f);
+	bubble_glass_material.findParamAndSet("diffuse_coeff", 0.472221f);
+	bubble_glass_material.findParamAndSet("specular_coeff", 0.051476f);
+	bubble_glass_material.findParamAndSet("specular_power", 97.32143f);
+	bubble_glass_material.findParamAndSet("fresnel_front", 0.0f);
+	bubble_glass_material.findParamAndSet("fresnel_control", 0.749091f);
+	bubble_glass_material.findParamAndSet("fresnel_coeff", 0.645983f);
+	bubble_glass_material.findParamAndSet("refraction_coeff", 2.277776f);
+	bubble_glass_material.findParamAndSet("refraction_amount", 0.0f);
+	bubble_glass_material.findParamAndSet("second_reflection", 0.0f);
+	m_bubble_glass_material.m_keys.GetKey("iboot", true)->m_values = bubble_glass_material.m_values;
+
+
+	MaterialParamSet &bubble_material = m_bubble_material.m_keys.m_default;
+
+	bubble_material.findParamAndSet("color", 1.0f, 1.0f, 1.0f, 1.0f);
+	bubble_material.findParamAndSet("diffuse_coeff", 0.964285f);
+	bubble_material.findParamAndSet("specular_coeff", 0.029041f);
+	bubble_material.findParamAndSet("specular_power", 153.75714f);
+	bubble_material.findParamAndSet("fresnel_front", 0.0f);
+	bubble_material.findParamAndSet("fresnel_control", 0.517115f);
+	bubble_material.findParamAndSet("fresnel_coeff", 0.804327f);
+	bubble_material.findParamAndSet("refraction_coeff", 1.02451f);
+	bubble_material.findParamAndSet("refraction_amount", -0.053567f);
+	bubble_material.findParamAndSet("second_reflection", 0.0f);
+	m_bubble_material.m_keys.GetKey("effects_0406_ruby", true)->m_values = bubble_material.m_values;
+
+	bubble_material.findParamAndSet("color", 1.0f, 1.0f, 1.0f, 1.0f);
+	bubble_material.findParamAndSet("diffuse_coeff", 0.964285f);
+	bubble_material.findParamAndSet("specular_coeff", 0.029041f);
+	bubble_material.findParamAndSet("specular_power", 153.75714f);
+	bubble_material.findParamAndSet("fresnel_front", 0.0f);
+	bubble_material.findParamAndSet("fresnel_control", 0.474925f);
+	bubble_material.findParamAndSet("fresnel_coeff", 0.721903f);
+	bubble_material.findParamAndSet("refraction_coeff", 1.02451f);
+	bubble_material.findParamAndSet("refraction_amount", -0.053567f);
+	bubble_material.findParamAndSet("second_reflection", 0.0f);
+	m_bubble_material.m_keys.GetKey("effects_0407_purple_01", true)->m_values = bubble_material.m_values;
+
+	bubble_material.findParamAndSet("color", 1.0f, 1.0f, 1.0f, 1.0f);
+	bubble_material.findParamAndSet("diffuse_coeff", 0.964285f);
+	bubble_material.findParamAndSet("specular_coeff", 0.029041f);
+	bubble_material.findParamAndSet("specular_power", 153.75714f);
+	bubble_material.findParamAndSet("fresnel_front", 0.0f);
+	bubble_material.findParamAndSet("fresnel_control", 0.398339f);
+	bubble_material.findParamAndSet("fresnel_coeff", 0.893615f);
+	bubble_material.findParamAndSet("refraction_coeff", 1.02451f);
+	bubble_material.findParamAndSet("refraction_amount", -0.053567f);
+	bubble_material.findParamAndSet("second_reflection", 0.0f);
+	m_bubble_material.m_keys.GetKey("effects_0408_01_orange", true)->m_values = bubble_material.m_values;
+
+	bubble_material.findParamAndSet("color", 1.0f, 1.0f, 1.0f, 1.0f);
+	bubble_material.findParamAndSet("diffuse_coeff", 0.964285f);
+	bubble_material.findParamAndSet("specular_coeff", 0.029041f);
+	bubble_material.findParamAndSet("specular_power", 153.75714f);
+	bubble_material.findParamAndSet("fresnel_front", 0.0f);
+	bubble_material.findParamAndSet("fresnel_control", 0.273296f);
+	bubble_material.findParamAndSet("fresnel_coeff", 1.206423f);
+	bubble_material.findParamAndSet("refraction_coeff", 1.02451f);
+	bubble_material.findParamAndSet("refraction_amount", -0.053567f);
+	bubble_material.findParamAndSet("second_reflection", 0.0f);
+	m_bubble_material.m_keys.GetKey("effects_0411_purple_02", true)->m_values = bubble_material.m_values;
+
+	bubble_material.findParamAndSet("color", 1.0f, 1.0f, 1.0f, 1.0f);
+	bubble_material.findParamAndSet("diffuse_coeff", 0.964285f);
+	bubble_material.findParamAndSet("specular_coeff", 0.029041f);
+	bubble_material.findParamAndSet("specular_power", 153.75714f);
+	bubble_material.findParamAndSet("fresnel_front", 0.0f);
+	bubble_material.findParamAndSet("fresnel_control", 0.416545f);
+	bubble_material.findParamAndSet("fresnel_coeff", 0.893615f);
+	bubble_material.findParamAndSet("refraction_coeff", 1.02451f);
+	bubble_material.findParamAndSet("refraction_amount", -0.053567f);
+	bubble_material.findParamAndSet("second_reflection", 0.0f);
+	m_bubble_material.m_keys.GetKey("effects_0415_A5", true)->m_values = bubble_material.m_values;
+
+	bubble_material.findParamAndSet("color", 1.0f, 1.0f, 1.0f, 1.0f);
+	bubble_material.findParamAndSet("diffuse_coeff", 0.964285f);
+	bubble_material.findParamAndSet("specular_coeff", 0.029041f);
+	bubble_material.findParamAndSet("specular_power", 153.75714f);
+	bubble_material.findParamAndSet("fresnel_front", 0.0f);
+	bubble_material.findParamAndSet("fresnel_control", 0.474925f);
+	bubble_material.findParamAndSet("fresnel_coeff", 0.893615f);
+	bubble_material.findParamAndSet("refraction_coeff", 1.02451f);
+	bubble_material.findParamAndSet("refraction_amount", -0.053567f);
+	bubble_material.findParamAndSet("second_reflection", 0.0f);
+	m_bubble_material.m_keys.GetKey("effects_0518_dalia", true)->m_values = bubble_material.m_values;
+
+	bubble_material.findParamAndSet("color", 1.0f, 1.0f, 1.0f, 1.0f);
+	bubble_material.findParamAndSet("diffuse_coeff", 0.964285f);
+	bubble_material.findParamAndSet("specular_coeff", 0.029041f);
+	bubble_material.findParamAndSet("specular_power", 153.75714f);
+	bubble_material.findParamAndSet("fresnel_front", 0.0f);
+	bubble_material.findParamAndSet("fresnel_control", 0.260046f);
+	bubble_material.findParamAndSet("fresnel_coeff", 1.821123f);
+	bubble_material.findParamAndSet("refraction_coeff", 1.02451f);
+	bubble_material.findParamAndSet("refraction_amount", -0.053567f);
+	bubble_material.findParamAndSet("second_reflection", 0.0f);
+	m_bubble_material.m_keys.GetKey("effects_0518_gray_FLAT", true)->m_values = bubble_material.m_values;
+
+	bubble_material.findParamAndSet("color", 1.0f, 1.0f, 1.0f, 1.0f);
+	bubble_material.findParamAndSet("diffuse_coeff", 0.964285f);
+	bubble_material.findParamAndSet("specular_coeff", 0.029041f);
+	bubble_material.findParamAndSet("specular_power", 153.75714f);
+	bubble_material.findParamAndSet("fresnel_front", 0.0f);
+	bubble_material.findParamAndSet("fresnel_control", 0.43537f);
+	bubble_material.findParamAndSet("fresnel_coeff", 0.804327f);
+	bubble_material.findParamAndSet("refraction_coeff", 1.02451f);
+	bubble_material.findParamAndSet("refraction_amount", -0.053567f);
+	bubble_material.findParamAndSet("second_reflection", 0.0f);
+	m_bubble_material.m_keys.GetKey("effects_0518_ruby", true)->m_values = bubble_material.m_values;
+
+	bubble_material.findParamAndSet("color", 1.0f, 1.0f, 1.0f, 1.0f);
+	bubble_material.findParamAndSet("diffuse_coeff", 0.964285f);
+	bubble_material.findParamAndSet("specular_coeff", 0.029041f);
+	bubble_material.findParamAndSet("specular_power", 153.75714f);
+	bubble_material.findParamAndSet("fresnel_front", 0.0f);
+	bubble_material.findParamAndSet("fresnel_control", 0.539229f);
+	bubble_material.findParamAndSet("fresnel_coeff", 0.512249f);
+	bubble_material.findParamAndSet("refraction_coeff", 1.02451f);
+	bubble_material.findParamAndSet("refraction_amount", -0.053567f);
+	bubble_material.findParamAndSet("second_reflection", 0.0f);
+	m_bubble_material.m_keys.GetKey("effects_A1", true)->m_values = bubble_material.m_values;
+
+	bubble_material.findParamAndSet("color", 1.0f, 1.0f, 1.0f, 1.0f);
+	bubble_material.findParamAndSet("diffuse_coeff", 0.964285f);
+	bubble_material.findParamAndSet("specular_coeff", 0.029041f);
+	bubble_material.findParamAndSet("specular_power", 153.75714f);
+	bubble_material.findParamAndSet("fresnel_front", 0.0f);
+	bubble_material.findParamAndSet("fresnel_control", 0.585595f);
+	bubble_material.findParamAndSet("fresnel_coeff", 0.512249f);
+	bubble_material.findParamAndSet("refraction_coeff", 1.02451f);
+	bubble_material.findParamAndSet("refraction_amount", -0.053567f);
+	bubble_material.findParamAndSet("second_reflection", 0.0f);
+	m_bubble_material.m_keys.GetKey("effects_black", true)->m_values = bubble_material.m_values;
+
+	bubble_material.findParamAndSet("color", 1.0f, 1.0f, 1.0f, 1.0f);
+	bubble_material.findParamAndSet("diffuse_coeff", 0.964285f);
+	bubble_material.findParamAndSet("specular_coeff", 0.029041f);
+	bubble_material.findParamAndSet("specular_power", 153.75714f);
+	bubble_material.findParamAndSet("fresnel_front", 0.0f);
+	bubble_material.findParamAndSet("fresnel_control", 0.474925f);
+	bubble_material.findParamAndSet("fresnel_coeff", 0.893615f);
+	bubble_material.findParamAndSet("refraction_coeff", 1.02451f);
+	bubble_material.findParamAndSet("refraction_amount", -0.053567f);
+	bubble_material.findParamAndSet("second_reflection", 0.0f);
+	m_bubble_material.m_keys.GetKey("effects_blueTB_0513_01", true)->m_values = bubble_material.m_values;
+
+	bubble_material.findParamAndSet("color", 1.0f, 1.0f, 1.0f, 1.0f);
+	bubble_material.findParamAndSet("diffuse_coeff", 0.964285f);
+	bubble_material.findParamAndSet("specular_coeff", 0.029041f);
+	bubble_material.findParamAndSet("specular_power", 153.75714f);
+	bubble_material.findParamAndSet("fresnel_front", 0.0f);
+	bubble_material.findParamAndSet("fresnel_control", 0.495684f);
+	bubble_material.findParamAndSet("fresnel_coeff", 0.76228f);
+	bubble_material.findParamAndSet("refraction_coeff", 1.02451f);
+	bubble_material.findParamAndSet("refraction_amount", -0.053567f);
+	bubble_material.findParamAndSet("second_reflection", 0.0f);
+	m_bubble_material.m_keys.GetKey("effects_blue_FLAT", true)->m_values = bubble_material.m_values;
+
+	bubble_material.findParamAndSet("color", 1.0f, 1.0f, 1.0f, 1.0f);
+	bubble_material.findParamAndSet("diffuse_coeff", 0.964285f);
+	bubble_material.findParamAndSet("specular_coeff", 0.029041f);
+	bubble_material.findParamAndSet("specular_power", 153.75714f);
+	bubble_material.findParamAndSet("fresnel_front", 0.0f);
+	bubble_material.findParamAndSet("fresnel_control", 0.495684f);
+	bubble_material.findParamAndSet("fresnel_coeff", 0.683152f);
+	bubble_material.findParamAndSet("refraction_coeff", 1.02451f);
+	bubble_material.findParamAndSet("refraction_amount", -0.053567f);
+	bubble_material.findParamAndSet("second_reflection", 0.0f);
+	m_bubble_material.m_keys.GetKey("effects_bluewhite_05", true)->m_values = bubble_material.m_values;
+
+	bubble_material.findParamAndSet("color", 1.0f, 1.0f, 1.0f, 1.0f);
+	bubble_material.findParamAndSet("diffuse_coeff", 0.964285f);
+	bubble_material.findParamAndSet("specular_coeff", 0.029041f);
+	bubble_material.findParamAndSet("specular_power", 153.75714f);
+	bubble_material.findParamAndSet("fresnel_front", 0.0f);
+	bubble_material.findParamAndSet("fresnel_control", 0.363721f);
+	bubble_material.findParamAndSet("fresnel_coeff", 0.610351f);
+	bubble_material.findParamAndSet("refraction_coeff", 1.02451f);
+	bubble_material.findParamAndSet("refraction_amount", -0.053567f);
+	bubble_material.findParamAndSet("second_reflection", 0.0f);
+	m_bubble_material.m_keys.GetKey("effects_casis", true)->m_values = bubble_material.m_values;
+
+	bubble_material.findParamAndSet("color", 1.0f, 1.0f, 1.0f, 1.0f);
+	bubble_material.findParamAndSet("diffuse_coeff", 0.964285f);
+	bubble_material.findParamAndSet("specular_coeff", 0.029041f);
+	bubble_material.findParamAndSet("specular_power", 153.75714f);
+	bubble_material.findParamAndSet("fresnel_front", 0.0f);
+	bubble_material.findParamAndSet("fresnel_control", 0.609865f);
+	bubble_material.findParamAndSet("fresnel_coeff", 0.940949f);
+	bubble_material.findParamAndSet("refraction_coeff", 1.02451f);
+	bubble_material.findParamAndSet("refraction_amount", -0.053567f);
+	bubble_material.findParamAndSet("second_reflection", 0.0f);
+	m_bubble_material.m_keys.GetKey("effects_default_0512_01", true)->m_values = bubble_material.m_values;
+
+	bubble_material.findParamAndSet("color", 1.0f, 1.0f, 1.0f, 1.0f);
+	bubble_material.findParamAndSet("diffuse_coeff", 0.964285f);
+	bubble_material.findParamAndSet("specular_coeff", 0.029041f);
+	bubble_material.findParamAndSet("specular_power", 153.75714f);
+	bubble_material.findParamAndSet("fresnel_front", 0.0f);
+	bubble_material.findParamAndSet("fresnel_control", 0.539229f);
+	bubble_material.findParamAndSet("fresnel_coeff", 0.482351f);
+	bubble_material.findParamAndSet("refraction_coeff", 1.02451f);
+	bubble_material.findParamAndSet("refraction_amount", -0.053567f);
+	bubble_material.findParamAndSet("second_reflection", 0.0f);
+	m_bubble_material.m_keys.GetKey("effects_green_0512_01", true)->m_values = bubble_material.m_values;
+
+	bubble_material.findParamAndSet("color", 1.0f, 1.0f, 1.0f, 1.0f);
+	bubble_material.findParamAndSet("diffuse_coeff", 0.964285f);
+	bubble_material.findParamAndSet("specular_coeff", 0.029041f);
+	bubble_material.findParamAndSet("specular_power", 153.75714f);
+	bubble_material.findParamAndSet("fresnel_front", 0.0f);
+	bubble_material.findParamAndSet("fresnel_control", 0.161334f);
+	bubble_material.findParamAndSet("fresnel_coeff", 1.524467f);
+	bubble_material.findParamAndSet("refraction_coeff", 1.02451f);
+	bubble_material.findParamAndSet("refraction_amount", -0.053567f);
+	bubble_material.findParamAndSet("second_reflection", 0.0f);
+	m_bubble_material.m_keys.GetKey("effects_koiao_0512_01", true)->m_values = bubble_material.m_values;
+
+	bubble_material.findParamAndSet("color", 1.0f, 1.0f, 1.0f, 1.0f);
+	bubble_material.findParamAndSet("diffuse_coeff", 0.964285f);
+	bubble_material.findParamAndSet("specular_coeff", 0.029041f);
+	bubble_material.findParamAndSet("specular_power", 153.75714f);
+	bubble_material.findParamAndSet("fresnel_front", 0.0f);
+	bubble_material.findParamAndSet("fresnel_control", 0.585595f);
+	bubble_material.findParamAndSet("fresnel_coeff", 0.804327f);
+	bubble_material.findParamAndSet("refraction_coeff", 1.02451f);
+	bubble_material.findParamAndSet("refraction_amount", -0.053567f);
+	bubble_material.findParamAndSet("second_reflection", 0.0f);
+	m_bubble_material.m_keys.GetKey("effects_limegreen_0513_02", true)->m_values = bubble_material.m_values;
+
+	bubble_material.findParamAndSet("color", 1.0f, 1.0f, 1.0f, 1.0f);
+	bubble_material.findParamAndSet("diffuse_coeff", 0.964285f);
+	bubble_material.findParamAndSet("specular_coeff", 0.029041f);
+	bubble_material.findParamAndSet("specular_power", 153.75714f);
+	bubble_material.findParamAndSet("fresnel_front", 0.0f);
+	bubble_material.findParamAndSet("fresnel_control", 0.495684f);
+	bubble_material.findParamAndSet("fresnel_coeff", 0.893615f);
+	bubble_material.findParamAndSet("refraction_coeff", 1.02451f);
+	bubble_material.findParamAndSet("refraction_amount", -0.053567f);
+	bubble_material.findParamAndSet("second_reflection", 0.0f);
+	m_bubble_material.m_keys.GetKey("effects_maintosh", true)->m_values = bubble_material.m_values;
+
+	bubble_material.findParamAndSet("color", 1.0f, 1.0f, 1.0f, 1.0f);
+	bubble_material.findParamAndSet("diffuse_coeff", 0.964285f);
+	bubble_material.findParamAndSet("specular_coeff", 0.029041f);
+	bubble_material.findParamAndSet("specular_power", 153.75714f);
+	bubble_material.findParamAndSet("fresnel_front", 0.0f);
+	bubble_material.findParamAndSet("fresnel_control", 0.539233f);
+	bubble_material.findParamAndSet("fresnel_coeff", 0.54353f);
+	bubble_material.findParamAndSet("refraction_coeff", 1.02451f);
+	bubble_material.findParamAndSet("refraction_amount", -0.053567f);
+	bubble_material.findParamAndSet("second_reflection", 0.0f);
+	m_bubble_material.m_keys.GetKey("effects_marrygold", true)->m_values = bubble_material.m_values;
+
+	bubble_material.findParamAndSet("color", 1.0f, 1.0f, 1.0f, 1.0f);
+	bubble_material.findParamAndSet("diffuse_coeff", 0.964285f);
+	bubble_material.findParamAndSet("specular_coeff", 0.029041f);
+	bubble_material.findParamAndSet("specular_power", 153.75714f);
+	bubble_material.findParamAndSet("fresnel_front", 0.0f);
+	bubble_material.findParamAndSet("fresnel_control", 0.585595f);
+	bubble_material.findParamAndSet("fresnel_coeff", 1.094278f);
+	bubble_material.findParamAndSet("refraction_coeff", 1.02451f);
+	bubble_material.findParamAndSet("refraction_amount", -0.053567f);
+	bubble_material.findParamAndSet("second_reflection", 0.0f);
+	m_bubble_material.m_keys.GetKey("effects_peach_0512_001", true)->m_values = bubble_material.m_values;
+
+	bubble_material.findParamAndSet("color", 1.0f, 1.0f, 1.0f, 1.0f);
+	bubble_material.findParamAndSet("diffuse_coeff", 0.964285f);
+	bubble_material.findParamAndSet("specular_coeff", 0.029041f);
+	bubble_material.findParamAndSet("specular_power", 153.75714f);
+	bubble_material.findParamAndSet("fresnel_front", 0.0f);
+	bubble_material.findParamAndSet("fresnel_control", 0.517115f);
+	bubble_material.findParamAndSet("fresnel_coeff", 0.683152f);
+	bubble_material.findParamAndSet("refraction_coeff", 1.02451f);
+	bubble_material.findParamAndSet("refraction_amount", -0.053567f);
+	bubble_material.findParamAndSet("second_reflection", 0.0f);
+	m_bubble_material.m_keys.GetKey("effects_purple_01", true)->m_values = bubble_material.m_values;
+
+	bubble_material.findParamAndSet("color", 1.0f, 1.0f, 1.0f, 1.0f);
+	bubble_material.findParamAndSet("diffuse_coeff", 0.964285f);
+	bubble_material.findParamAndSet("specular_coeff", 0.029041f);
+	bubble_material.findParamAndSet("specular_power", 153.75714f);
+	bubble_material.findParamAndSet("fresnel_front", 0.0f);
+	bubble_material.findParamAndSet("fresnel_control", 0.43537f);
+	bubble_material.findParamAndSet("fresnel_coeff", 0.54353f);
+	bubble_material.findParamAndSet("refraction_coeff", 1.02451f);
+	bubble_material.findParamAndSet("refraction_amount", -0.053567f);
+	bubble_material.findParamAndSet("second_reflection", 0.0f);
+	m_bubble_material.m_keys.GetKey("effects_purplered", true)->m_values = bubble_material.m_values;
+
+	bubble_material.findParamAndSet("color", 1.0f, 1.0f, 1.0f, 1.0f);
+	bubble_material.findParamAndSet("diffuse_coeff", 0.964285f);
+	bubble_material.findParamAndSet("specular_coeff", 0.029041f);
+	bubble_material.findParamAndSet("specular_power", 153.75714f);
+	bubble_material.findParamAndSet("fresnel_front", 0.0f);
+	bubble_material.findParamAndSet("fresnel_control", 0.301304f);
+	bubble_material.findParamAndSet("fresnel_coeff", 0.645983f);
+	bubble_material.findParamAndSet("refraction_coeff", 1.02451f);
+	bubble_material.findParamAndSet("refraction_amount", -0.053567f);
+	bubble_material.findParamAndSet("second_reflection", 0.0f);
+	m_bubble_material.m_keys.GetKey("effects_redTB_0513_01", true)->m_values = bubble_material.m_values;
+
+	bubble_material.findParamAndSet("color", 1.0f, 1.0f, 1.0f, 1.0f);
+	bubble_material.findParamAndSet("diffuse_coeff", 0.964285f);
+	bubble_material.findParamAndSet("specular_coeff", 0.029041f);
+	bubble_material.findParamAndSet("specular_power", 153.75714f);
+	bubble_material.findParamAndSet("fresnel_front", 0.0f);
+	bubble_material.findParamAndSet("fresnel_control", 0.495684f);
+	bubble_material.findParamAndSet("fresnel_coeff", 0.610351f);
+	bubble_material.findParamAndSet("refraction_coeff", 1.02451f);
+	bubble_material.findParamAndSet("refraction_amount", -0.053567f);
+	bubble_material.findParamAndSet("second_reflection", 0.0f);
+	m_bubble_material.m_keys.GetKey("effects_turquoise_0513_01", true)->m_values = bubble_material.m_values;
+
+	bubble_material.findParamAndSet("color", 1.0f, 1.0f, 1.0f, 1.0f);
+	bubble_material.findParamAndSet("diffuse_coeff", 0.964285f);
+	bubble_material.findParamAndSet("specular_coeff", 0.029041f);
+	bubble_material.findParamAndSet("specular_power", 153.75714f);
+	bubble_material.findParamAndSet("fresnel_front", 0.0f);
+	bubble_material.findParamAndSet("fresnel_control", 0.517115f);
+	bubble_material.findParamAndSet("fresnel_coeff", 0.54353f);
+	bubble_material.findParamAndSet("refraction_coeff", 1.02451f);
+	bubble_material.findParamAndSet("refraction_amount", -0.053567f);
+	bubble_material.findParamAndSet("second_reflection", 0.0f);
+	m_bubble_material.m_keys.GetKey("effects_yellow_0512_01", true)->m_values = bubble_material.m_values;
+
+	bubble_material.findParamAndSet("color", 1.0f, 1.0f, 1.0f, 1.0f);
+	bubble_material.findParamAndSet("diffuse_coeff", 0.964285f);
+	bubble_material.findParamAndSet("specular_coeff", 0.029041f);
+	bubble_material.findParamAndSet("specular_power", 153.75714f);
+	bubble_material.findParamAndSet("fresnel_front", 0.0f);
+	bubble_material.findParamAndSet("fresnel_control", 0.771703f);
+	bubble_material.findParamAndSet("fresnel_coeff", 0.576211f);
+	bubble_material.findParamAndSet("refraction_coeff", 1.02451f);
+	bubble_material.findParamAndSet("refraction_amount", -0.053567f);
+	bubble_material.findParamAndSet("second_reflection", 0.0f);
+	m_bubble_material.m_keys.GetKey("iboot", true)->m_values = bubble_material.m_values;
+
+
+	MaterialParamSet &bubble_opaque_simple_material = m_bubble_opaque_simple_material.m_keys.m_default;
+
+	bubble_opaque_simple_material.findParamAndSet("color", 1.0f, 1.0f, 1.0f, 1.0f);
+	bubble_opaque_simple_material.findParamAndSet("diffuse_coeff", 1.0f);
+	bubble_opaque_simple_material.findParamAndSet("specular_coeff", 0.033774f);
+	bubble_opaque_simple_material.findParamAndSet("specular_power", 2e+02f);
+	bubble_opaque_simple_material.findParamAndSet("fresnel_front", 0.0f);
+	bubble_opaque_simple_material.findParamAndSet("fresnel_control", 0.801524f);
+	bubble_opaque_simple_material.findParamAndSet("fresnel_coeff", 0.329452f);
+	bubble_opaque_simple_material.findParamAndSet("refraction_coeff", 1.02451f);
+	bubble_opaque_simple_material.findParamAndSet("refraction_amount", -0.053567f);
+	bubble_opaque_simple_material.findParamAndSet("second_reflection", 0.0f);
+	m_bubble_opaque_simple_material.m_keys.GetKey("effects_0406_ruby", true)->m_values = bubble_opaque_simple_material.m_values;
+
+	bubble_opaque_simple_material.findParamAndSet("color", 1.0f, 1.0f, 1.0f, 1.0f);
+	bubble_opaque_simple_material.findParamAndSet("diffuse_coeff", 1.0f);
+	bubble_opaque_simple_material.findParamAndSet("specular_coeff", 0.033774f);
+	bubble_opaque_simple_material.findParamAndSet("specular_power", 2e+02f);
+	bubble_opaque_simple_material.findParamAndSet("fresnel_front", 0.0f);
+	bubble_opaque_simple_material.findParamAndSet("fresnel_control", 0.801524f);
+	bubble_opaque_simple_material.findParamAndSet("fresnel_coeff", 0.329452f);
+	bubble_opaque_simple_material.findParamAndSet("refraction_coeff", 1.02451f);
+	bubble_opaque_simple_material.findParamAndSet("refraction_amount", -0.053567f);
+	bubble_opaque_simple_material.findParamAndSet("second_reflection", 0.0f);
+	m_bubble_opaque_simple_material.m_keys.GetKey("effects_0407_purple_01", true)->m_values = bubble_opaque_simple_material.m_values;
+
+	bubble_opaque_simple_material.findParamAndSet("color", 1.0f, 1.0f, 1.0f, 1.0f);
+	bubble_opaque_simple_material.findParamAndSet("diffuse_coeff", 1.0f);
+	bubble_opaque_simple_material.findParamAndSet("specular_coeff", 0.033774f);
+	bubble_opaque_simple_material.findParamAndSet("specular_power", 2e+02f);
+	bubble_opaque_simple_material.findParamAndSet("fresnel_front", 0.0f);
+	bubble_opaque_simple_material.findParamAndSet("fresnel_control", 0.801524f);
+	bubble_opaque_simple_material.findParamAndSet("fresnel_coeff", 0.329452f);
+	bubble_opaque_simple_material.findParamAndSet("refraction_coeff", 1.02451f);
+	bubble_opaque_simple_material.findParamAndSet("refraction_amount", -0.053567f);
+	bubble_opaque_simple_material.findParamAndSet("second_reflection", 0.0f);
+	m_bubble_opaque_simple_material.m_keys.GetKey("effects_0408_01_orange", true)->m_values = bubble_opaque_simple_material.m_values;
+
+	bubble_opaque_simple_material.findParamAndSet("color", 1.0f, 1.0f, 1.0f, 1.0f);
+	bubble_opaque_simple_material.findParamAndSet("diffuse_coeff", 1.0f);
+	bubble_opaque_simple_material.findParamAndSet("specular_coeff", 0.033774f);
+	bubble_opaque_simple_material.findParamAndSet("specular_power", 2e+02f);
+	bubble_opaque_simple_material.findParamAndSet("fresnel_front", 0.0f);
+	bubble_opaque_simple_material.findParamAndSet("fresnel_control", 0.801524f);
+	bubble_opaque_simple_material.findParamAndSet("fresnel_coeff", 0.329452f);
+	bubble_opaque_simple_material.findParamAndSet("refraction_coeff", 1.02451f);
+	bubble_opaque_simple_material.findParamAndSet("refraction_amount", -0.053567f);
+	bubble_opaque_simple_material.findParamAndSet("second_reflection", 0.0f);
+	m_bubble_opaque_simple_material.m_keys.GetKey("effects_0411_purple_02", true)->m_values = bubble_opaque_simple_material.m_values;
+
+	bubble_opaque_simple_material.findParamAndSet("color", 1.0f, 1.0f, 1.0f, 1.0f);
+	bubble_opaque_simple_material.findParamAndSet("diffuse_coeff", 1.0f);
+	bubble_opaque_simple_material.findParamAndSet("specular_coeff", 0.033774f);
+	bubble_opaque_simple_material.findParamAndSet("specular_power", 2e+02f);
+	bubble_opaque_simple_material.findParamAndSet("fresnel_front", 0.0f);
+	bubble_opaque_simple_material.findParamAndSet("fresnel_control", 0.801524f);
+	bubble_opaque_simple_material.findParamAndSet("fresnel_coeff", 0.329452f);
+	bubble_opaque_simple_material.findParamAndSet("refraction_coeff", 1.02451f);
+	bubble_opaque_simple_material.findParamAndSet("refraction_amount", -0.053567f);
+	bubble_opaque_simple_material.findParamAndSet("second_reflection", 0.0f);
+	m_bubble_opaque_simple_material.m_keys.GetKey("effects_0415_A5", true)->m_values = bubble_opaque_simple_material.m_values;
+
+	bubble_opaque_simple_material.findParamAndSet("color", 1.0f, 1.0f, 1.0f, 1.0f);
+	bubble_opaque_simple_material.findParamAndSet("diffuse_coeff", 1.0f);
+	bubble_opaque_simple_material.findParamAndSet("specular_coeff", 0.033774f);
+	bubble_opaque_simple_material.findParamAndSet("specular_power", 2e+02f);
+	bubble_opaque_simple_material.findParamAndSet("fresnel_front", 0.0f);
+	bubble_opaque_simple_material.findParamAndSet("fresnel_control", 0.801524f);
+	bubble_opaque_simple_material.findParamAndSet("fresnel_coeff", 0.329452f);
+	bubble_opaque_simple_material.findParamAndSet("refraction_coeff", 1.02451f);
+	bubble_opaque_simple_material.findParamAndSet("refraction_amount", -0.053567f);
+	bubble_opaque_simple_material.findParamAndSet("second_reflection", 0.0f);
+	m_bubble_opaque_simple_material.m_keys.GetKey("effects_0518_dalia", true)->m_values = bubble_opaque_simple_material.m_values;
+
+	bubble_opaque_simple_material.findParamAndSet("color", 1.0f, 1.0f, 1.0f, 1.0f);
+	bubble_opaque_simple_material.findParamAndSet("diffuse_coeff", 1.0f);
+	bubble_opaque_simple_material.findParamAndSet("specular_coeff", 0.033774f);
+	bubble_opaque_simple_material.findParamAndSet("specular_power", 2e+02f);
+	bubble_opaque_simple_material.findParamAndSet("fresnel_front", 0.0f);
+	bubble_opaque_simple_material.findParamAndSet("fresnel_control", 0.801524f);
+	bubble_opaque_simple_material.findParamAndSet("fresnel_coeff", 0.329452f);
+	bubble_opaque_simple_material.findParamAndSet("refraction_coeff", 1.02451f);
+	bubble_opaque_simple_material.findParamAndSet("refraction_amount", -0.053567f);
+	bubble_opaque_simple_material.findParamAndSet("second_reflection", 0.0f);
+	m_bubble_opaque_simple_material.m_keys.GetKey("effects_0518_gray_FLAT", true)->m_values = bubble_opaque_simple_material.m_values;
+
+	bubble_opaque_simple_material.findParamAndSet("color", 1.0f, 1.0f, 1.0f, 1.0f);
+	bubble_opaque_simple_material.findParamAndSet("diffuse_coeff", 1.0f);
+	bubble_opaque_simple_material.findParamAndSet("specular_coeff", 0.033774f);
+	bubble_opaque_simple_material.findParamAndSet("specular_power", 2e+02f);
+	bubble_opaque_simple_material.findParamAndSet("fresnel_front", 0.0f);
+	bubble_opaque_simple_material.findParamAndSet("fresnel_control", 0.801524f);
+	bubble_opaque_simple_material.findParamAndSet("fresnel_coeff", 0.329452f);
+	bubble_opaque_simple_material.findParamAndSet("refraction_coeff", 1.02451f);
+	bubble_opaque_simple_material.findParamAndSet("refraction_amount", -0.053567f);
+	bubble_opaque_simple_material.findParamAndSet("second_reflection", 0.0f);
+	m_bubble_opaque_simple_material.m_keys.GetKey("effects_0518_ruby", true)->m_values = bubble_opaque_simple_material.m_values;
+
+	bubble_opaque_simple_material.findParamAndSet("color", 1.0f, 1.0f, 1.0f, 1.0f);
+	bubble_opaque_simple_material.findParamAndSet("diffuse_coeff", 1.0f);
+	bubble_opaque_simple_material.findParamAndSet("specular_coeff", 0.033774f);
+	bubble_opaque_simple_material.findParamAndSet("specular_power", 2e+02f);
+	bubble_opaque_simple_material.findParamAndSet("fresnel_front", 0.0f);
+	bubble_opaque_simple_material.findParamAndSet("fresnel_control", 0.801524f);
+	bubble_opaque_simple_material.findParamAndSet("fresnel_coeff", 0.329452f);
+	bubble_opaque_simple_material.findParamAndSet("refraction_coeff", 1.02451f);
+	bubble_opaque_simple_material.findParamAndSet("refraction_amount", -0.053567f);
+	bubble_opaque_simple_material.findParamAndSet("second_reflection", 0.0f);
+	m_bubble_opaque_simple_material.m_keys.GetKey("effects_A1", true)->m_values = bubble_opaque_simple_material.m_values;
+
+	bubble_opaque_simple_material.findParamAndSet("color", 1.0f, 1.0f, 1.0f, 1.0f);
+	bubble_opaque_simple_material.findParamAndSet("diffuse_coeff", 1.0f);
+	bubble_opaque_simple_material.findParamAndSet("specular_coeff", 0.033774f);
+	bubble_opaque_simple_material.findParamAndSet("specular_power", 2e+02f);
+	bubble_opaque_simple_material.findParamAndSet("fresnel_front", 0.0f);
+	bubble_opaque_simple_material.findParamAndSet("fresnel_control", 0.801524f);
+	bubble_opaque_simple_material.findParamAndSet("fresnel_coeff", 0.329452f);
+	bubble_opaque_simple_material.findParamAndSet("refraction_coeff", 1.02451f);
+	bubble_opaque_simple_material.findParamAndSet("refraction_amount", -0.053567f);
+	bubble_opaque_simple_material.findParamAndSet("second_reflection", 0.0f);
+	m_bubble_opaque_simple_material.m_keys.GetKey("effects_black", true)->m_values = bubble_opaque_simple_material.m_values;
+
+	bubble_opaque_simple_material.findParamAndSet("color", 1.0f, 1.0f, 1.0f, 1.0f);
+	bubble_opaque_simple_material.findParamAndSet("diffuse_coeff", 1.0f);
+	bubble_opaque_simple_material.findParamAndSet("specular_coeff", 0.033774f);
+	bubble_opaque_simple_material.findParamAndSet("specular_power", 2e+02f);
+	bubble_opaque_simple_material.findParamAndSet("fresnel_front", 0.0f);
+	bubble_opaque_simple_material.findParamAndSet("fresnel_control", 0.801524f);
+	bubble_opaque_simple_material.findParamAndSet("fresnel_coeff", 0.329452f);
+	bubble_opaque_simple_material.findParamAndSet("refraction_coeff", 1.02451f);
+	bubble_opaque_simple_material.findParamAndSet("refraction_amount", -0.053567f);
+	bubble_opaque_simple_material.findParamAndSet("second_reflection", 0.0f);
+	m_bubble_opaque_simple_material.m_keys.GetKey("effects_blueTB_0513_01", true)->m_values = bubble_opaque_simple_material.m_values;
+
+	bubble_opaque_simple_material.findParamAndSet("color", 1.0f, 1.0f, 1.0f, 1.0f);
+	bubble_opaque_simple_material.findParamAndSet("diffuse_coeff", 1.0f);
+	bubble_opaque_simple_material.findParamAndSet("specular_coeff", 0.033774f);
+	bubble_opaque_simple_material.findParamAndSet("specular_power", 2e+02f);
+	bubble_opaque_simple_material.findParamAndSet("fresnel_front", 0.0f);
+	bubble_opaque_simple_material.findParamAndSet("fresnel_control", 0.801524f);
+	bubble_opaque_simple_material.findParamAndSet("fresnel_coeff", 0.329452f);
+	bubble_opaque_simple_material.findParamAndSet("refraction_coeff", 1.02451f);
+	bubble_opaque_simple_material.findParamAndSet("refraction_amount", -0.053567f);
+	bubble_opaque_simple_material.findParamAndSet("second_reflection", 0.0f);
+	m_bubble_opaque_simple_material.m_keys.GetKey("effects_blue_FLAT", true)->m_values = bubble_opaque_simple_material.m_values;
+
+	bubble_opaque_simple_material.findParamAndSet("color", 1.0f, 1.0f, 1.0f, 1.0f);
+	bubble_opaque_simple_material.findParamAndSet("diffuse_coeff", 1.0f);
+	bubble_opaque_simple_material.findParamAndSet("specular_coeff", 0.033774f);
+	bubble_opaque_simple_material.findParamAndSet("specular_power", 2e+02f);
+	bubble_opaque_simple_material.findParamAndSet("fresnel_front", 0.0f);
+	bubble_opaque_simple_material.findParamAndSet("fresnel_control", 0.801524f);
+	bubble_opaque_simple_material.findParamAndSet("fresnel_coeff", 0.329452f);
+	bubble_opaque_simple_material.findParamAndSet("refraction_coeff", 1.02451f);
+	bubble_opaque_simple_material.findParamAndSet("refraction_amount", -0.053567f);
+	bubble_opaque_simple_material.findParamAndSet("second_reflection", 0.0f);
+	m_bubble_opaque_simple_material.m_keys.GetKey("effects_bluewhite_05", true)->m_values = bubble_opaque_simple_material.m_values;
+
+	bubble_opaque_simple_material.findParamAndSet("color", 1.0f, 1.0f, 1.0f, 1.0f);
+	bubble_opaque_simple_material.findParamAndSet("diffuse_coeff", 1.0f);
+	bubble_opaque_simple_material.findParamAndSet("specular_coeff", 0.033774f);
+	bubble_opaque_simple_material.findParamAndSet("specular_power", 2e+02f);
+	bubble_opaque_simple_material.findParamAndSet("fresnel_front", 0.0f);
+	bubble_opaque_simple_material.findParamAndSet("fresnel_control", 0.801524f);
+	bubble_opaque_simple_material.findParamAndSet("fresnel_coeff", 0.329452f);
+	bubble_opaque_simple_material.findParamAndSet("refraction_coeff", 1.02451f);
+	bubble_opaque_simple_material.findParamAndSet("refraction_amount", -0.053567f);
+	bubble_opaque_simple_material.findParamAndSet("second_reflection", 0.0f);
+	m_bubble_opaque_simple_material.m_keys.GetKey("effects_casis", true)->m_values = bubble_opaque_simple_material.m_values;
+
+	bubble_opaque_simple_material.findParamAndSet("color", 1.0f, 1.0f, 1.0f, 1.0f);
+	bubble_opaque_simple_material.findParamAndSet("diffuse_coeff", 1.0f);
+	bubble_opaque_simple_material.findParamAndSet("specular_coeff", 0.033774f);
+	bubble_opaque_simple_material.findParamAndSet("specular_power", 2e+02f);
+	bubble_opaque_simple_material.findParamAndSet("fresnel_front", 0.0f);
+	bubble_opaque_simple_material.findParamAndSet("fresnel_control", 0.801524f);
+	bubble_opaque_simple_material.findParamAndSet("fresnel_coeff", 0.329452f);
+	bubble_opaque_simple_material.findParamAndSet("refraction_coeff", 1.02451f);
+	bubble_opaque_simple_material.findParamAndSet("refraction_amount", -0.053567f);
+	bubble_opaque_simple_material.findParamAndSet("second_reflection", 0.0f);
+	m_bubble_opaque_simple_material.m_keys.GetKey("effects_default_0512_01", true)->m_values = bubble_opaque_simple_material.m_values;
+
+	bubble_opaque_simple_material.findParamAndSet("color", 1.0f, 1.0f, 1.0f, 1.0f);
+	bubble_opaque_simple_material.findParamAndSet("diffuse_coeff", 1.0f);
+	bubble_opaque_simple_material.findParamAndSet("specular_coeff", 0.033774f);
+	bubble_opaque_simple_material.findParamAndSet("specular_power", 2e+02f);
+	bubble_opaque_simple_material.findParamAndSet("fresnel_front", 0.0f);
+	bubble_opaque_simple_material.findParamAndSet("fresnel_control", 0.801524f);
+	bubble_opaque_simple_material.findParamAndSet("fresnel_coeff", 0.329452f);
+	bubble_opaque_simple_material.findParamAndSet("refraction_coeff", 1.02451f);
+	bubble_opaque_simple_material.findParamAndSet("refraction_amount", -0.053567f);
+	bubble_opaque_simple_material.findParamAndSet("second_reflection", 0.0f);
+	m_bubble_opaque_simple_material.m_keys.GetKey("effects_green_0512_01", true)->m_values = bubble_opaque_simple_material.m_values;
+
+	bubble_opaque_simple_material.findParamAndSet("color", 1.0f, 1.0f, 1.0f, 1.0f);
+	bubble_opaque_simple_material.findParamAndSet("diffuse_coeff", 1.0f);
+	bubble_opaque_simple_material.findParamAndSet("specular_coeff", 0.033774f);
+	bubble_opaque_simple_material.findParamAndSet("specular_power", 2e+02f);
+	bubble_opaque_simple_material.findParamAndSet("fresnel_front", 0.0f);
+	bubble_opaque_simple_material.findParamAndSet("fresnel_control", 0.801524f);
+	bubble_opaque_simple_material.findParamAndSet("fresnel_coeff", 0.329452f);
+	bubble_opaque_simple_material.findParamAndSet("refraction_coeff", 1.02451f);
+	bubble_opaque_simple_material.findParamAndSet("refraction_amount", -0.053567f);
+	bubble_opaque_simple_material.findParamAndSet("second_reflection", 0.0f);
+	m_bubble_opaque_simple_material.m_keys.GetKey("effects_koiao_0512_01", true)->m_values = bubble_opaque_simple_material.m_values;
+
+	bubble_opaque_simple_material.findParamAndSet("color", 1.0f, 1.0f, 1.0f, 1.0f);
+	bubble_opaque_simple_material.findParamAndSet("diffuse_coeff", 1.0f);
+	bubble_opaque_simple_material.findParamAndSet("specular_coeff", 0.033774f);
+	bubble_opaque_simple_material.findParamAndSet("specular_power", 2e+02f);
+	bubble_opaque_simple_material.findParamAndSet("fresnel_front", 0.0f);
+	bubble_opaque_simple_material.findParamAndSet("fresnel_control", 0.801524f);
+	bubble_opaque_simple_material.findParamAndSet("fresnel_coeff", 0.329452f);
+	bubble_opaque_simple_material.findParamAndSet("refraction_coeff", 1.02451f);
+	bubble_opaque_simple_material.findParamAndSet("refraction_amount", -0.053567f);
+	bubble_opaque_simple_material.findParamAndSet("second_reflection", 0.0f);
+	m_bubble_opaque_simple_material.m_keys.GetKey("effects_limegreen_0513_02", true)->m_values = bubble_opaque_simple_material.m_values;
+
+	bubble_opaque_simple_material.findParamAndSet("color", 1.0f, 1.0f, 1.0f, 1.0f);
+	bubble_opaque_simple_material.findParamAndSet("diffuse_coeff", 1.0f);
+	bubble_opaque_simple_material.findParamAndSet("specular_coeff", 0.033774f);
+	bubble_opaque_simple_material.findParamAndSet("specular_power", 2e+02f);
+	bubble_opaque_simple_material.findParamAndSet("fresnel_front", 0.0f);
+	bubble_opaque_simple_material.findParamAndSet("fresnel_control", 0.801524f);
+	bubble_opaque_simple_material.findParamAndSet("fresnel_coeff", 0.329452f);
+	bubble_opaque_simple_material.findParamAndSet("refraction_coeff", 1.02451f);
+	bubble_opaque_simple_material.findParamAndSet("refraction_amount", -0.053567f);
+	bubble_opaque_simple_material.findParamAndSet("second_reflection", 0.0f);
+	m_bubble_opaque_simple_material.m_keys.GetKey("effects_maintosh", true)->m_values = bubble_opaque_simple_material.m_values;
+
+	bubble_opaque_simple_material.findParamAndSet("color", 1.0f, 1.0f, 1.0f, 1.0f);
+	bubble_opaque_simple_material.findParamAndSet("diffuse_coeff", 1.0f);
+	bubble_opaque_simple_material.findParamAndSet("specular_coeff", 0.033774f);
+	bubble_opaque_simple_material.findParamAndSet("specular_power", 2e+02f);
+	bubble_opaque_simple_material.findParamAndSet("fresnel_front", 0.0f);
+	bubble_opaque_simple_material.findParamAndSet("fresnel_control", 0.801524f);
+	bubble_opaque_simple_material.findParamAndSet("fresnel_coeff", 0.329452f);
+	bubble_opaque_simple_material.findParamAndSet("refraction_coeff", 1.02451f);
+	bubble_opaque_simple_material.findParamAndSet("refraction_amount", -0.053567f);
+	bubble_opaque_simple_material.findParamAndSet("second_reflection", 0.0f);
+	m_bubble_opaque_simple_material.m_keys.GetKey("effects_marrygold", true)->m_values = bubble_opaque_simple_material.m_values;
+
+	bubble_opaque_simple_material.findParamAndSet("color", 1.0f, 1.0f, 1.0f, 1.0f);
+	bubble_opaque_simple_material.findParamAndSet("diffuse_coeff", 1.0f);
+	bubble_opaque_simple_material.findParamAndSet("specular_coeff", 0.033774f);
+	bubble_opaque_simple_material.findParamAndSet("specular_power", 2e+02f);
+	bubble_opaque_simple_material.findParamAndSet("fresnel_front", 0.0f);
+	bubble_opaque_simple_material.findParamAndSet("fresnel_control", 0.801524f);
+	bubble_opaque_simple_material.findParamAndSet("fresnel_coeff", 0.329452f);
+	bubble_opaque_simple_material.findParamAndSet("refraction_coeff", 1.02451f);
+	bubble_opaque_simple_material.findParamAndSet("refraction_amount", -0.053567f);
+	bubble_opaque_simple_material.findParamAndSet("second_reflection", 0.0f);
+	m_bubble_opaque_simple_material.m_keys.GetKey("effects_peach_0512_001", true)->m_values = bubble_opaque_simple_material.m_values;
+
+	bubble_opaque_simple_material.findParamAndSet("color", 1.0f, 1.0f, 1.0f, 1.0f);
+	bubble_opaque_simple_material.findParamAndSet("diffuse_coeff", 1.0f);
+	bubble_opaque_simple_material.findParamAndSet("specular_coeff", 0.033774f);
+	bubble_opaque_simple_material.findParamAndSet("specular_power", 2e+02f);
+	bubble_opaque_simple_material.findParamAndSet("fresnel_front", 0.0f);
+	bubble_opaque_simple_material.findParamAndSet("fresnel_control", 0.801524f);
+	bubble_opaque_simple_material.findParamAndSet("fresnel_coeff", 0.329452f);
+	bubble_opaque_simple_material.findParamAndSet("refraction_coeff", 1.02451f);
+	bubble_opaque_simple_material.findParamAndSet("refraction_amount", -0.053567f);
+	bubble_opaque_simple_material.findParamAndSet("second_reflection", 0.0f);
+	m_bubble_opaque_simple_material.m_keys.GetKey("effects_purple_01", true)->m_values = bubble_opaque_simple_material.m_values;
+
+	bubble_opaque_simple_material.findParamAndSet("color", 1.0f, 1.0f, 1.0f, 1.0f);
+	bubble_opaque_simple_material.findParamAndSet("diffuse_coeff", 1.0f);
+	bubble_opaque_simple_material.findParamAndSet("specular_coeff", 0.033774f);
+	bubble_opaque_simple_material.findParamAndSet("specular_power", 2e+02f);
+	bubble_opaque_simple_material.findParamAndSet("fresnel_front", 0.0f);
+	bubble_opaque_simple_material.findParamAndSet("fresnel_control", 0.801524f);
+	bubble_opaque_simple_material.findParamAndSet("fresnel_coeff", 0.329452f);
+	bubble_opaque_simple_material.findParamAndSet("refraction_coeff", 1.02451f);
+	bubble_opaque_simple_material.findParamAndSet("refraction_amount", -0.053567f);
+	bubble_opaque_simple_material.findParamAndSet("second_reflection", 0.0f);
+	m_bubble_opaque_simple_material.m_keys.GetKey("effects_purplered", true)->m_values = bubble_opaque_simple_material.m_values;
+
+	bubble_opaque_simple_material.findParamAndSet("color", 1.0f, 1.0f, 1.0f, 1.0f);
+	bubble_opaque_simple_material.findParamAndSet("diffuse_coeff", 1.0f);
+	bubble_opaque_simple_material.findParamAndSet("specular_coeff", 0.033774f);
+	bubble_opaque_simple_material.findParamAndSet("specular_power", 2e+02f);
+	bubble_opaque_simple_material.findParamAndSet("fresnel_front", 0.0f);
+	bubble_opaque_simple_material.findParamAndSet("fresnel_control", 0.801524f);
+	bubble_opaque_simple_material.findParamAndSet("fresnel_coeff", 0.329452f);
+	bubble_opaque_simple_material.findParamAndSet("refraction_coeff", 1.02451f);
+	bubble_opaque_simple_material.findParamAndSet("refraction_amount", -0.053567f);
+	bubble_opaque_simple_material.findParamAndSet("second_reflection", 0.0f);
+	m_bubble_opaque_simple_material.m_keys.GetKey("effects_redTB_0513_01", true)->m_values = bubble_opaque_simple_material.m_values;
+
+	bubble_opaque_simple_material.findParamAndSet("color", 1.0f, 1.0f, 1.0f, 1.0f);
+	bubble_opaque_simple_material.findParamAndSet("diffuse_coeff", 1.0f);
+	bubble_opaque_simple_material.findParamAndSet("specular_coeff", 0.033774f);
+	bubble_opaque_simple_material.findParamAndSet("specular_power", 2e+02f);
+	bubble_opaque_simple_material.findParamAndSet("fresnel_front", 0.0f);
+	bubble_opaque_simple_material.findParamAndSet("fresnel_control", 0.801524f);
+	bubble_opaque_simple_material.findParamAndSet("fresnel_coeff", 0.329452f);
+	bubble_opaque_simple_material.findParamAndSet("refraction_coeff", 1.02451f);
+	bubble_opaque_simple_material.findParamAndSet("refraction_amount", -0.053567f);
+	bubble_opaque_simple_material.findParamAndSet("second_reflection", 0.0f);
+	m_bubble_opaque_simple_material.m_keys.GetKey("effects_turquoise_0513_01", true)->m_values = bubble_opaque_simple_material.m_values;
+
+	bubble_opaque_simple_material.findParamAndSet("color", 1.0f, 1.0f, 1.0f, 1.0f);
+	bubble_opaque_simple_material.findParamAndSet("diffuse_coeff", 1.0f);
+	bubble_opaque_simple_material.findParamAndSet("specular_coeff", 0.033774f);
+	bubble_opaque_simple_material.findParamAndSet("specular_power", 2e+02f);
+	bubble_opaque_simple_material.findParamAndSet("fresnel_front", 0.0f);
+	bubble_opaque_simple_material.findParamAndSet("fresnel_control", 0.801524f);
+	bubble_opaque_simple_material.findParamAndSet("fresnel_coeff", 0.329452f);
+	bubble_opaque_simple_material.findParamAndSet("refraction_coeff", 1.02451f);
+	bubble_opaque_simple_material.findParamAndSet("refraction_amount", -0.053567f);
+	bubble_opaque_simple_material.findParamAndSet("second_reflection", 0.0f);
+	m_bubble_opaque_simple_material.m_keys.GetKey("effects_yellow_0512_01", true)->m_values = bubble_opaque_simple_material.m_values;
+
+	bubble_opaque_simple_material.findParamAndSet("color", 1.0f, 1.0f, 1.0f, 1.0f);
+	bubble_opaque_simple_material.findParamAndSet("diffuse_coeff", 1.0f);
+	bubble_opaque_simple_material.findParamAndSet("specular_coeff", 0.033774f);
+	bubble_opaque_simple_material.findParamAndSet("specular_power", 2e+02f);
+	bubble_opaque_simple_material.findParamAndSet("fresnel_front", 0.0f);
+	bubble_opaque_simple_material.findParamAndSet("fresnel_control", 0.801524f);
+	bubble_opaque_simple_material.findParamAndSet("fresnel_coeff", 0.329452f);
+	bubble_opaque_simple_material.findParamAndSet("refraction_coeff", 1.02451f);
+	bubble_opaque_simple_material.findParamAndSet("refraction_amount", -0.053567f);
+	bubble_opaque_simple_material.findParamAndSet("second_reflection", 0.0f);
+	m_bubble_opaque_simple_material.m_keys.GetKey("iboot", true)->m_values = bubble_opaque_simple_material.m_values;
+
+
+	MaterialParamSet &panel_material = m_panel_material.m_keys.m_default;
+
+	panel_material.findParamAndSet("color", 1.0f, 1.0f, 1.0f, 1.0f);
+	panel_material.findParamAndSet("diffuse_coeff", 0.455357f);
+	panel_material.findParamAndSet("specular_coeff", 0.106742f);
+	panel_material.findParamAndSet("specular_power", 10.542857f);
+	panel_material.findParamAndSet("fresnel_front", 0.0f);
+	panel_material.findParamAndSet("fresnel_control", 0.749091f);
+	panel_material.findParamAndSet("fresnel_coeff", 0.721903f);
+	panel_material.findParamAndSet("refraction_coeff", 2.188555f);
+	panel_material.findParamAndSet("refraction_amount", 0.04464f);
+	panel_material.findParamAndSet("second_reflection", 0.0f);
+	m_panel_material.m_keys.GetKey("effects_0406_ruby", true)->m_values = panel_material.m_values;
+
+	panel_material.findParamAndSet("color", 1.0f, 1.0f, 1.0f, 1.0f);
+	panel_material.findParamAndSet("diffuse_coeff", 0.455357f);
+	panel_material.findParamAndSet("specular_coeff", 0.106742f);
+	panel_material.findParamAndSet("specular_power", 10.542857f);
+	panel_material.findParamAndSet("fresnel_front", 0.0f);
+	panel_material.findParamAndSet("fresnel_control", 0.749091f);
+	panel_material.findParamAndSet("fresnel_coeff", 0.721903f);
+	panel_material.findParamAndSet("refraction_coeff", 2.188555f);
+	panel_material.findParamAndSet("refraction_amount", 0.04464f);
+	panel_material.findParamAndSet("second_reflection", 0.0f);
+	m_panel_material.m_keys.GetKey("effects_0407_purple_01", true)->m_values = panel_material.m_values;
+
+	panel_material.findParamAndSet("color", 1.0f, 1.0f, 1.0f, 1.0f);
+	panel_material.findParamAndSet("diffuse_coeff", 0.455357f);
+	panel_material.findParamAndSet("specular_coeff", 0.106742f);
+	panel_material.findParamAndSet("specular_power", 10.542857f);
+	panel_material.findParamAndSet("fresnel_front", 0.0f);
+	panel_material.findParamAndSet("fresnel_control", 0.749091f);
+	panel_material.findParamAndSet("fresnel_coeff", 0.721903f);
+	panel_material.findParamAndSet("refraction_coeff", 2.188555f);
+	panel_material.findParamAndSet("refraction_amount", 0.04464f);
+	panel_material.findParamAndSet("second_reflection", 0.0f);
+	m_panel_material.m_keys.GetKey("effects_0408_01_orange", true)->m_values = panel_material.m_values;
+
+	panel_material.findParamAndSet("color", 1.0f, 1.0f, 1.0f, 1.0f);
+	panel_material.findParamAndSet("diffuse_coeff", 0.455357f);
+	panel_material.findParamAndSet("specular_coeff", 0.106742f);
+	panel_material.findParamAndSet("specular_power", 10.542857f);
+	panel_material.findParamAndSet("fresnel_front", 0.0f);
+	panel_material.findParamAndSet("fresnel_control", 0.749091f);
+	panel_material.findParamAndSet("fresnel_coeff", 0.721903f);
+	panel_material.findParamAndSet("refraction_coeff", 2.188555f);
+	panel_material.findParamAndSet("refraction_amount", 0.04464f);
+	panel_material.findParamAndSet("second_reflection", 0.0f);
+	m_panel_material.m_keys.GetKey("effects_0411_purple_02", true)->m_values = panel_material.m_values;
+
+	panel_material.findParamAndSet("color", 1.0f, 1.0f, 1.0f, 1.0f);
+	panel_material.findParamAndSet("diffuse_coeff", 0.455357f);
+	panel_material.findParamAndSet("specular_coeff", 0.106742f);
+	panel_material.findParamAndSet("specular_power", 10.542857f);
+	panel_material.findParamAndSet("fresnel_front", 0.0f);
+	panel_material.findParamAndSet("fresnel_control", 0.749091f);
+	panel_material.findParamAndSet("fresnel_coeff", 0.721903f);
+	panel_material.findParamAndSet("refraction_coeff", 2.188555f);
+	panel_material.findParamAndSet("refraction_amount", 0.04464f);
+	panel_material.findParamAndSet("second_reflection", 0.0f);
+	m_panel_material.m_keys.GetKey("effects_0415_A5", true)->m_values = panel_material.m_values;
+
+	panel_material.findParamAndSet("color", 1.0f, 1.0f, 1.0f, 1.0f);
+	panel_material.findParamAndSet("diffuse_coeff", 0.455357f);
+	panel_material.findParamAndSet("specular_coeff", 0.106742f);
+	panel_material.findParamAndSet("specular_power", 10.542857f);
+	panel_material.findParamAndSet("fresnel_front", 0.0f);
+	panel_material.findParamAndSet("fresnel_control", 0.749091f);
+	panel_material.findParamAndSet("fresnel_coeff", 0.721903f);
+	panel_material.findParamAndSet("refraction_coeff", 2.188555f);
+	panel_material.findParamAndSet("refraction_amount", 0.04464f);
+	panel_material.findParamAndSet("second_reflection", 0.0f);
+	m_panel_material.m_keys.GetKey("effects_0518_dalia", true)->m_values = panel_material.m_values;
+
+	panel_material.findParamAndSet("color", 1.0f, 1.0f, 1.0f, 1.0f);
+	panel_material.findParamAndSet("diffuse_coeff", 0.455357f);
+	panel_material.findParamAndSet("specular_coeff", 0.106742f);
+	panel_material.findParamAndSet("specular_power", 10.542857f);
+	panel_material.findParamAndSet("fresnel_front", 0.0f);
+	panel_material.findParamAndSet("fresnel_control", 0.749091f);
+	panel_material.findParamAndSet("fresnel_coeff", 0.721903f);
+	panel_material.findParamAndSet("refraction_coeff", 2.188555f);
+	panel_material.findParamAndSet("refraction_amount", 0.04464f);
+	panel_material.findParamAndSet("second_reflection", 0.0f);
+	m_panel_material.m_keys.GetKey("effects_0518_gray_FLAT", true)->m_values = panel_material.m_values;
+
+	panel_material.findParamAndSet("color", 1.0f, 1.0f, 1.0f, 1.0f);
+	panel_material.findParamAndSet("diffuse_coeff", 0.455357f);
+	panel_material.findParamAndSet("specular_coeff", 0.106742f);
+	panel_material.findParamAndSet("specular_power", 10.542857f);
+	panel_material.findParamAndSet("fresnel_front", 0.0f);
+	panel_material.findParamAndSet("fresnel_control", 0.749091f);
+	panel_material.findParamAndSet("fresnel_coeff", 0.721903f);
+	panel_material.findParamAndSet("refraction_coeff", 2.188555f);
+	panel_material.findParamAndSet("refraction_amount", 0.04464f);
+	panel_material.findParamAndSet("second_reflection", 0.0f);
+	m_panel_material.m_keys.GetKey("effects_0518_ruby", true)->m_values = panel_material.m_values;
+
+	panel_material.findParamAndSet("color", 1.0f, 1.0f, 1.0f, 1.0f);
+	panel_material.findParamAndSet("diffuse_coeff", 0.455357f);
+	panel_material.findParamAndSet("specular_coeff", 0.106742f);
+	panel_material.findParamAndSet("specular_power", 10.542857f);
+	panel_material.findParamAndSet("fresnel_front", 0.0f);
+	panel_material.findParamAndSet("fresnel_control", 0.749091f);
+	panel_material.findParamAndSet("fresnel_coeff", 0.721903f);
+	panel_material.findParamAndSet("refraction_coeff", 2.188555f);
+	panel_material.findParamAndSet("refraction_amount", 0.04464f);
+	panel_material.findParamAndSet("second_reflection", 0.0f);
+	m_panel_material.m_keys.GetKey("effects_A1", true)->m_values = panel_material.m_values;
+
+	panel_material.findParamAndSet("color", 1.0f, 1.0f, 1.0f, 1.0f);
+	panel_material.findParamAndSet("diffuse_coeff", 0.455357f);
+	panel_material.findParamAndSet("specular_coeff", 0.106742f);
+	panel_material.findParamAndSet("specular_power", 10.542857f);
+	panel_material.findParamAndSet("fresnel_front", 0.0f);
+	panel_material.findParamAndSet("fresnel_control", 0.749091f);
+	panel_material.findParamAndSet("fresnel_coeff", 0.721903f);
+	panel_material.findParamAndSet("refraction_coeff", 2.188555f);
+	panel_material.findParamAndSet("refraction_amount", 0.04464f);
+	panel_material.findParamAndSet("second_reflection", 0.0f);
+	m_panel_material.m_keys.GetKey("effects_black", true)->m_values = panel_material.m_values;
+
+	panel_material.findParamAndSet("color", 1.0f, 1.0f, 1.0f, 1.0f);
+	panel_material.findParamAndSet("diffuse_coeff", 0.455357f);
+	panel_material.findParamAndSet("specular_coeff", 0.106742f);
+	panel_material.findParamAndSet("specular_power", 10.542857f);
+	panel_material.findParamAndSet("fresnel_front", 0.0f);
+	panel_material.findParamAndSet("fresnel_control", 0.749091f);
+	panel_material.findParamAndSet("fresnel_coeff", 0.721903f);
+	panel_material.findParamAndSet("refraction_coeff", 2.188555f);
+	panel_material.findParamAndSet("refraction_amount", 0.04464f);
+	panel_material.findParamAndSet("second_reflection", 0.0f);
+	m_panel_material.m_keys.GetKey("effects_blueTB_0513_01", true)->m_values = panel_material.m_values;
+
+	panel_material.findParamAndSet("color", 1.0f, 1.0f, 1.0f, 1.0f);
+	panel_material.findParamAndSet("diffuse_coeff", 0.455357f);
+	panel_material.findParamAndSet("specular_coeff", 0.106742f);
+	panel_material.findParamAndSet("specular_power", 10.542857f);
+	panel_material.findParamAndSet("fresnel_front", 0.0f);
+	panel_material.findParamAndSet("fresnel_control", 0.749091f);
+	panel_material.findParamAndSet("fresnel_coeff", 0.721903f);
+	panel_material.findParamAndSet("refraction_coeff", 2.188555f);
+	panel_material.findParamAndSet("refraction_amount", 0.04464f);
+	panel_material.findParamAndSet("second_reflection", 0.0f);
+	m_panel_material.m_keys.GetKey("effects_blue_FLAT", true)->m_values = panel_material.m_values;
+
+	panel_material.findParamAndSet("color", 1.0f, 1.0f, 1.0f, 1.0f);
+	panel_material.findParamAndSet("diffuse_coeff", 0.455357f);
+	panel_material.findParamAndSet("specular_coeff", 0.106742f);
+	panel_material.findParamAndSet("specular_power", 10.542857f);
+	panel_material.findParamAndSet("fresnel_front", 0.0f);
+	panel_material.findParamAndSet("fresnel_control", 0.749091f);
+	panel_material.findParamAndSet("fresnel_coeff", 0.721903f);
+	panel_material.findParamAndSet("refraction_coeff", 2.188555f);
+	panel_material.findParamAndSet("refraction_amount", 0.04464f);
+	panel_material.findParamAndSet("second_reflection", 0.0f);
+	m_panel_material.m_keys.GetKey("effects_bluewhite_05", true)->m_values = panel_material.m_values;
+
+	panel_material.findParamAndSet("color", 1.0f, 1.0f, 1.0f, 1.0f);
+	panel_material.findParamAndSet("diffuse_coeff", 0.455357f);
+	panel_material.findParamAndSet("specular_coeff", 0.106742f);
+	panel_material.findParamAndSet("specular_power", 10.542857f);
+	panel_material.findParamAndSet("fresnel_front", 0.0f);
+	panel_material.findParamAndSet("fresnel_control", 0.749091f);
+	panel_material.findParamAndSet("fresnel_coeff", 0.721903f);
+	panel_material.findParamAndSet("refraction_coeff", 2.188555f);
+	panel_material.findParamAndSet("refraction_amount", 0.04464f);
+	panel_material.findParamAndSet("second_reflection", 0.0f);
+	m_panel_material.m_keys.GetKey("effects_casis", true)->m_values = panel_material.m_values;
+
+	panel_material.findParamAndSet("color", 1.0f, 1.0f, 1.0f, 1.0f);
+	panel_material.findParamAndSet("diffuse_coeff", 0.455357f);
+	panel_material.findParamAndSet("specular_coeff", 0.106742f);
+	panel_material.findParamAndSet("specular_power", 10.542857f);
+	panel_material.findParamAndSet("fresnel_front", 0.0f);
+	panel_material.findParamAndSet("fresnel_control", 0.749091f);
+	panel_material.findParamAndSet("fresnel_coeff", 0.721903f);
+	panel_material.findParamAndSet("refraction_coeff", 2.188555f);
+	panel_material.findParamAndSet("refraction_amount", 0.04464f);
+	panel_material.findParamAndSet("second_reflection", 0.0f);
+	m_panel_material.m_keys.GetKey("effects_default_0512_01", true)->m_values = panel_material.m_values;
+
+	panel_material.findParamAndSet("color", 1.0f, 1.0f, 1.0f, 1.0f);
+	panel_material.findParamAndSet("diffuse_coeff", 0.455357f);
+	panel_material.findParamAndSet("specular_coeff", 0.106742f);
+	panel_material.findParamAndSet("specular_power", 10.542857f);
+	panel_material.findParamAndSet("fresnel_front", 0.0f);
+	panel_material.findParamAndSet("fresnel_control", 0.749091f);
+	panel_material.findParamAndSet("fresnel_coeff", 0.721903f);
+	panel_material.findParamAndSet("refraction_coeff", 2.188555f);
+	panel_material.findParamAndSet("refraction_amount", 0.04464f);
+	panel_material.findParamAndSet("second_reflection", 0.0f);
+	m_panel_material.m_keys.GetKey("effects_green_0512_01", true)->m_values = panel_material.m_values;
+
+	panel_material.findParamAndSet("color", 1.0f, 1.0f, 1.0f, 1.0f);
+	panel_material.findParamAndSet("diffuse_coeff", 0.455357f);
+	panel_material.findParamAndSet("specular_coeff", 0.106742f);
+	panel_material.findParamAndSet("specular_power", 10.542857f);
+	panel_material.findParamAndSet("fresnel_front", 0.0f);
+	panel_material.findParamAndSet("fresnel_control", 0.749091f);
+	panel_material.findParamAndSet("fresnel_coeff", 0.721903f);
+	panel_material.findParamAndSet("refraction_coeff", 2.188555f);
+	panel_material.findParamAndSet("refraction_amount", 0.04464f);
+	panel_material.findParamAndSet("second_reflection", 0.0f);
+	m_panel_material.m_keys.GetKey("effects_koiao_0512_01", true)->m_values = panel_material.m_values;
+
+	panel_material.findParamAndSet("color", 1.0f, 1.0f, 1.0f, 1.0f);
+	panel_material.findParamAndSet("diffuse_coeff", 0.455357f);
+	panel_material.findParamAndSet("specular_coeff", 0.106742f);
+	panel_material.findParamAndSet("specular_power", 10.542857f);
+	panel_material.findParamAndSet("fresnel_front", 0.0f);
+	panel_material.findParamAndSet("fresnel_control", 0.749091f);
+	panel_material.findParamAndSet("fresnel_coeff", 0.721903f);
+	panel_material.findParamAndSet("refraction_coeff", 2.188555f);
+	panel_material.findParamAndSet("refraction_amount", 0.04464f);
+	panel_material.findParamAndSet("second_reflection", 0.0f);
+	m_panel_material.m_keys.GetKey("effects_limegreen_0513_02", true)->m_values = panel_material.m_values;
+
+	panel_material.findParamAndSet("color", 1.0f, 1.0f, 1.0f, 1.0f);
+	panel_material.findParamAndSet("diffuse_coeff", 0.455357f);
+	panel_material.findParamAndSet("specular_coeff", 0.106742f);
+	panel_material.findParamAndSet("specular_power", 10.542857f);
+	panel_material.findParamAndSet("fresnel_front", 0.0f);
+	panel_material.findParamAndSet("fresnel_control", 0.749091f);
+	panel_material.findParamAndSet("fresnel_coeff", 0.721903f);
+	panel_material.findParamAndSet("refraction_coeff", 2.188555f);
+	panel_material.findParamAndSet("refraction_amount", 0.04464f);
+	panel_material.findParamAndSet("second_reflection", 0.0f);
+	m_panel_material.m_keys.GetKey("effects_maintosh", true)->m_values = panel_material.m_values;
+
+	panel_material.findParamAndSet("color", 1.0f, 1.0f, 1.0f, 1.0f);
+	panel_material.findParamAndSet("diffuse_coeff", 0.455357f);
+	panel_material.findParamAndSet("specular_coeff", 0.106742f);
+	panel_material.findParamAndSet("specular_power", 10.542857f);
+	panel_material.findParamAndSet("fresnel_front", 0.0f);
+	panel_material.findParamAndSet("fresnel_control", 0.749091f);
+	panel_material.findParamAndSet("fresnel_coeff", 0.721903f);
+	panel_material.findParamAndSet("refraction_coeff", 2.188555f);
+	panel_material.findParamAndSet("refraction_amount", 0.04464f);
+	panel_material.findParamAndSet("second_reflection", 0.0f);
+	m_panel_material.m_keys.GetKey("effects_marrygold", true)->m_values = panel_material.m_values;
+
+	panel_material.findParamAndSet("color", 1.0f, 1.0f, 1.0f, 1.0f);
+	panel_material.findParamAndSet("diffuse_coeff", 0.455357f);
+	panel_material.findParamAndSet("specular_coeff", 0.106742f);
+	panel_material.findParamAndSet("specular_power", 10.542857f);
+	panel_material.findParamAndSet("fresnel_front", 0.0f);
+	panel_material.findParamAndSet("fresnel_control", 0.749091f);
+	panel_material.findParamAndSet("fresnel_coeff", 0.721903f);
+	panel_material.findParamAndSet("refraction_coeff", 2.188555f);
+	panel_material.findParamAndSet("refraction_amount", 0.04464f);
+	panel_material.findParamAndSet("second_reflection", 0.0f);
+	m_panel_material.m_keys.GetKey("effects_peach_0512_001", true)->m_values = panel_material.m_values;
+
+	panel_material.findParamAndSet("color", 1.0f, 1.0f, 1.0f, 1.0f);
+	panel_material.findParamAndSet("diffuse_coeff", 0.455357f);
+	panel_material.findParamAndSet("specular_coeff", 0.106742f);
+	panel_material.findParamAndSet("specular_power", 10.542857f);
+	panel_material.findParamAndSet("fresnel_front", 0.0f);
+	panel_material.findParamAndSet("fresnel_control", 0.749091f);
+	panel_material.findParamAndSet("fresnel_coeff", 0.721903f);
+	panel_material.findParamAndSet("refraction_coeff", 2.188555f);
+	panel_material.findParamAndSet("refraction_amount", 0.04464f);
+	panel_material.findParamAndSet("second_reflection", 0.0f);
+	m_panel_material.m_keys.GetKey("effects_purple_01", true)->m_values = panel_material.m_values;
+
+	panel_material.findParamAndSet("color", 1.0f, 1.0f, 1.0f, 1.0f);
+	panel_material.findParamAndSet("diffuse_coeff", 0.455357f);
+	panel_material.findParamAndSet("specular_coeff", 0.106742f);
+	panel_material.findParamAndSet("specular_power", 10.542857f);
+	panel_material.findParamAndSet("fresnel_front", 0.0f);
+	panel_material.findParamAndSet("fresnel_control", 0.749091f);
+	panel_material.findParamAndSet("fresnel_coeff", 0.721903f);
+	panel_material.findParamAndSet("refraction_coeff", 2.188555f);
+	panel_material.findParamAndSet("refraction_amount", 0.04464f);
+	panel_material.findParamAndSet("second_reflection", 0.0f);
+	m_panel_material.m_keys.GetKey("effects_purplered", true)->m_values = panel_material.m_values;
+
+	panel_material.findParamAndSet("color", 1.0f, 1.0f, 1.0f, 1.0f);
+	panel_material.findParamAndSet("diffuse_coeff", 0.455357f);
+	panel_material.findParamAndSet("specular_coeff", 0.106742f);
+	panel_material.findParamAndSet("specular_power", 10.542857f);
+	panel_material.findParamAndSet("fresnel_front", 0.0f);
+	panel_material.findParamAndSet("fresnel_control", 0.749091f);
+	panel_material.findParamAndSet("fresnel_coeff", 0.721903f);
+	panel_material.findParamAndSet("refraction_coeff", 2.188555f);
+	panel_material.findParamAndSet("refraction_amount", 0.04464f);
+	panel_material.findParamAndSet("second_reflection", 0.0f);
+	m_panel_material.m_keys.GetKey("effects_redTB_0513_01", true)->m_values = panel_material.m_values;
+
+	panel_material.findParamAndSet("color", 1.0f, 1.0f, 1.0f, 1.0f);
+	panel_material.findParamAndSet("diffuse_coeff", 0.455357f);
+	panel_material.findParamAndSet("specular_coeff", 0.106742f);
+	panel_material.findParamAndSet("specular_power", 10.542857f);
+	panel_material.findParamAndSet("fresnel_front", 0.0f);
+	panel_material.findParamAndSet("fresnel_control", 0.749091f);
+	panel_material.findParamAndSet("fresnel_coeff", 0.721903f);
+	panel_material.findParamAndSet("refraction_coeff", 2.188555f);
+	panel_material.findParamAndSet("refraction_amount", 0.04464f);
+	panel_material.findParamAndSet("second_reflection", 0.0f);
+	m_panel_material.m_keys.GetKey("effects_turquoise_0513_01", true)->m_values = panel_material.m_values;
+
+	panel_material.findParamAndSet("color", 1.0f, 1.0f, 1.0f, 1.0f);
+	panel_material.findParamAndSet("diffuse_coeff", 0.455357f);
+	panel_material.findParamAndSet("specular_coeff", 0.106742f);
+	panel_material.findParamAndSet("specular_power", 10.542857f);
+	panel_material.findParamAndSet("fresnel_front", 0.0f);
+	panel_material.findParamAndSet("fresnel_control", 0.749091f);
+	panel_material.findParamAndSet("fresnel_coeff", 0.721903f);
+	panel_material.findParamAndSet("refraction_coeff", 2.188555f);
+	panel_material.findParamAndSet("refraction_amount", 0.04464f);
+	panel_material.findParamAndSet("second_reflection", 0.0f);
+	m_panel_material.m_keys.GetKey("effects_yellow_0512_01", true)->m_values = panel_material.m_values;
+
+	panel_material.findParamAndSet("color", 1.0f, 1.0f, 1.0f, 1.0f);
+	panel_material.findParamAndSet("diffuse_coeff", 0.455357f);
+	panel_material.findParamAndSet("specular_coeff", 0.106742f);
+	panel_material.findParamAndSet("specular_power", 10.542857f);
+	panel_material.findParamAndSet("fresnel_front", 0.0f);
+	panel_material.findParamAndSet("fresnel_control", 0.749091f);
+	panel_material.findParamAndSet("fresnel_coeff", 0.721903f);
+	panel_material.findParamAndSet("refraction_coeff", 2.188555f);
+	panel_material.findParamAndSet("refraction_amount", 0.04464f);
+	panel_material.findParamAndSet("second_reflection", 0.0f);
+	m_panel_material.m_keys.GetKey("iboot", true)->m_values = panel_material.m_values;
+
+
+	MaterialParamSet &panel_opaque_material = m_panel_opaque_material.m_keys.m_default;
+
+	panel_opaque_material.findParamAndSet("color", 1.0f, 1.0f, 1.0f, 1.0f);
+	panel_opaque_material.findParamAndSet("diffuse_coeff", 1.0f);
+	panel_opaque_material.findParamAndSet("specular_coeff", 2.735693f);
+	panel_opaque_material.findParamAndSet("specular_power", 10.542857f);
+	panel_opaque_material.findParamAndSet("fresnel_front", 0.0f);
+	panel_opaque_material.findParamAndSet("fresnel_control", 0.749091f);
+	panel_opaque_material.findParamAndSet("fresnel_coeff", 0.893615f);
+	panel_opaque_material.findParamAndSet("refraction_coeff", 2.188555f);
+	panel_opaque_material.findParamAndSet("refraction_amount", 0.04464f);
+	panel_opaque_material.findParamAndSet("second_reflection", 0.0f);
+	m_panel_opaque_material.m_keys.GetKey("effects_0406_ruby", true)->m_values = panel_opaque_material.m_values;
+
+	panel_opaque_material.findParamAndSet("color", 1.0f, 1.0f, 1.0f, 1.0f);
+	panel_opaque_material.findParamAndSet("diffuse_coeff", 1.0f);
+	panel_opaque_material.findParamAndSet("specular_coeff", 2.735693f);
+	panel_opaque_material.findParamAndSet("specular_power", 10.542857f);
+	panel_opaque_material.findParamAndSet("fresnel_front", 0.0f);
+	panel_opaque_material.findParamAndSet("fresnel_control", 0.749091f);
+	panel_opaque_material.findParamAndSet("fresnel_coeff", 0.893615f);
+	panel_opaque_material.findParamAndSet("refraction_coeff", 2.188555f);
+	panel_opaque_material.findParamAndSet("refraction_amount", 0.04464f);
+	panel_opaque_material.findParamAndSet("second_reflection", 0.0f);
+	m_panel_opaque_material.m_keys.GetKey("effects_0407_purple_01", true)->m_values = panel_opaque_material.m_values;
+
+	panel_opaque_material.findParamAndSet("color", 1.0f, 1.0f, 1.0f, 1.0f);
+	panel_opaque_material.findParamAndSet("diffuse_coeff", 1.0f);
+	panel_opaque_material.findParamAndSet("specular_coeff", 2.735693f);
+	panel_opaque_material.findParamAndSet("specular_power", 10.542857f);
+	panel_opaque_material.findParamAndSet("fresnel_front", 0.0f);
+	panel_opaque_material.findParamAndSet("fresnel_control", 0.749091f);
+	panel_opaque_material.findParamAndSet("fresnel_coeff", 0.893615f);
+	panel_opaque_material.findParamAndSet("refraction_coeff", 2.188555f);
+	panel_opaque_material.findParamAndSet("refraction_amount", 0.04464f);
+	panel_opaque_material.findParamAndSet("second_reflection", 0.0f);
+	m_panel_opaque_material.m_keys.GetKey("effects_0408_01_orange", true)->m_values = panel_opaque_material.m_values;
+
+	panel_opaque_material.findParamAndSet("color", 1.0f, 1.0f, 1.0f, 1.0f);
+	panel_opaque_material.findParamAndSet("diffuse_coeff", 1.0f);
+	panel_opaque_material.findParamAndSet("specular_coeff", 2.735693f);
+	panel_opaque_material.findParamAndSet("specular_power", 10.542857f);
+	panel_opaque_material.findParamAndSet("fresnel_front", 0.0f);
+	panel_opaque_material.findParamAndSet("fresnel_control", 0.749091f);
+	panel_opaque_material.findParamAndSet("fresnel_coeff", 0.893615f);
+	panel_opaque_material.findParamAndSet("refraction_coeff", 2.188555f);
+	panel_opaque_material.findParamAndSet("refraction_amount", 0.04464f);
+	panel_opaque_material.findParamAndSet("second_reflection", 0.0f);
+	m_panel_opaque_material.m_keys.GetKey("effects_0411_purple_02", true)->m_values = panel_opaque_material.m_values;
+
+	panel_opaque_material.findParamAndSet("color", 1.0f, 1.0f, 1.0f, 1.0f);
+	panel_opaque_material.findParamAndSet("diffuse_coeff", 1.0f);
+	panel_opaque_material.findParamAndSet("specular_coeff", 2.735693f);
+	panel_opaque_material.findParamAndSet("specular_power", 10.542857f);
+	panel_opaque_material.findParamAndSet("fresnel_front", 0.0f);
+	panel_opaque_material.findParamAndSet("fresnel_control", 0.749091f);
+	panel_opaque_material.findParamAndSet("fresnel_coeff", 0.893615f);
+	panel_opaque_material.findParamAndSet("refraction_coeff", 2.188555f);
+	panel_opaque_material.findParamAndSet("refraction_amount", 0.04464f);
+	panel_opaque_material.findParamAndSet("second_reflection", 0.0f);
+	m_panel_opaque_material.m_keys.GetKey("effects_0415_A5", true)->m_values = panel_opaque_material.m_values;
+
+	panel_opaque_material.findParamAndSet("color", 1.0f, 1.0f, 1.0f, 1.0f);
+	panel_opaque_material.findParamAndSet("diffuse_coeff", 1.0f);
+	panel_opaque_material.findParamAndSet("specular_coeff", 2.735693f);
+	panel_opaque_material.findParamAndSet("specular_power", 10.542857f);
+	panel_opaque_material.findParamAndSet("fresnel_front", 0.0f);
+	panel_opaque_material.findParamAndSet("fresnel_control", 0.749091f);
+	panel_opaque_material.findParamAndSet("fresnel_coeff", 0.893615f);
+	panel_opaque_material.findParamAndSet("refraction_coeff", 2.188555f);
+	panel_opaque_material.findParamAndSet("refraction_amount", 0.04464f);
+	panel_opaque_material.findParamAndSet("second_reflection", 0.0f);
+	m_panel_opaque_material.m_keys.GetKey("effects_0518_dalia", true)->m_values = panel_opaque_material.m_values;
+
+	panel_opaque_material.findParamAndSet("color", 1.0f, 1.0f, 1.0f, 1.0f);
+	panel_opaque_material.findParamAndSet("diffuse_coeff", 1.0f);
+	panel_opaque_material.findParamAndSet("specular_coeff", 2.735693f);
+	panel_opaque_material.findParamAndSet("specular_power", 10.542857f);
+	panel_opaque_material.findParamAndSet("fresnel_front", 0.0f);
+	panel_opaque_material.findParamAndSet("fresnel_control", 0.749091f);
+	panel_opaque_material.findParamAndSet("fresnel_coeff", 0.893615f);
+	panel_opaque_material.findParamAndSet("refraction_coeff", 2.188555f);
+	panel_opaque_material.findParamAndSet("refraction_amount", 0.04464f);
+	panel_opaque_material.findParamAndSet("second_reflection", 0.0f);
+	m_panel_opaque_material.m_keys.GetKey("effects_0518_gray_FLAT", true)->m_values = panel_opaque_material.m_values;
+
+	panel_opaque_material.findParamAndSet("color", 1.0f, 1.0f, 1.0f, 1.0f);
+	panel_opaque_material.findParamAndSet("diffuse_coeff", 1.0f);
+	panel_opaque_material.findParamAndSet("specular_coeff", 2.735693f);
+	panel_opaque_material.findParamAndSet("specular_power", 10.542857f);
+	panel_opaque_material.findParamAndSet("fresnel_front", 0.0f);
+	panel_opaque_material.findParamAndSet("fresnel_control", 0.749091f);
+	panel_opaque_material.findParamAndSet("fresnel_coeff", 0.893615f);
+	panel_opaque_material.findParamAndSet("refraction_coeff", 2.188555f);
+	panel_opaque_material.findParamAndSet("refraction_amount", 0.04464f);
+	panel_opaque_material.findParamAndSet("second_reflection", 0.0f);
+	m_panel_opaque_material.m_keys.GetKey("effects_0518_ruby", true)->m_values = panel_opaque_material.m_values;
+
+	panel_opaque_material.findParamAndSet("color", 1.0f, 1.0f, 1.0f, 1.0f);
+	panel_opaque_material.findParamAndSet("diffuse_coeff", 1.0f);
+	panel_opaque_material.findParamAndSet("specular_coeff", 2.735693f);
+	panel_opaque_material.findParamAndSet("specular_power", 10.542857f);
+	panel_opaque_material.findParamAndSet("fresnel_front", 0.0f);
+	panel_opaque_material.findParamAndSet("fresnel_control", 0.749091f);
+	panel_opaque_material.findParamAndSet("fresnel_coeff", 0.893615f);
+	panel_opaque_material.findParamAndSet("refraction_coeff", 2.188555f);
+	panel_opaque_material.findParamAndSet("refraction_amount", 0.04464f);
+	panel_opaque_material.findParamAndSet("second_reflection", 0.0f);
+	m_panel_opaque_material.m_keys.GetKey("effects_A1", true)->m_values = panel_opaque_material.m_values;
+
+	panel_opaque_material.findParamAndSet("color", 1.0f, 1.0f, 1.0f, 1.0f);
+	panel_opaque_material.findParamAndSet("diffuse_coeff", 1.0f);
+	panel_opaque_material.findParamAndSet("specular_coeff", 2.735693f);
+	panel_opaque_material.findParamAndSet("specular_power", 10.542857f);
+	panel_opaque_material.findParamAndSet("fresnel_front", 0.0f);
+	panel_opaque_material.findParamAndSet("fresnel_control", 0.749091f);
+	panel_opaque_material.findParamAndSet("fresnel_coeff", 0.893615f);
+	panel_opaque_material.findParamAndSet("refraction_coeff", 2.188555f);
+	panel_opaque_material.findParamAndSet("refraction_amount", 0.04464f);
+	panel_opaque_material.findParamAndSet("second_reflection", 0.0f);
+	m_panel_opaque_material.m_keys.GetKey("effects_black", true)->m_values = panel_opaque_material.m_values;
+
+	panel_opaque_material.findParamAndSet("color", 1.0f, 1.0f, 1.0f, 1.0f);
+	panel_opaque_material.findParamAndSet("diffuse_coeff", 1.0f);
+	panel_opaque_material.findParamAndSet("specular_coeff", 2.735693f);
+	panel_opaque_material.findParamAndSet("specular_power", 10.542857f);
+	panel_opaque_material.findParamAndSet("fresnel_front", 0.0f);
+	panel_opaque_material.findParamAndSet("fresnel_control", 0.749091f);
+	panel_opaque_material.findParamAndSet("fresnel_coeff", 0.893615f);
+	panel_opaque_material.findParamAndSet("refraction_coeff", 2.188555f);
+	panel_opaque_material.findParamAndSet("refraction_amount", 0.04464f);
+	panel_opaque_material.findParamAndSet("second_reflection", 0.0f);
+	m_panel_opaque_material.m_keys.GetKey("effects_blueTB_0513_01", true)->m_values = panel_opaque_material.m_values;
+
+	panel_opaque_material.findParamAndSet("color", 1.0f, 1.0f, 1.0f, 1.0f);
+	panel_opaque_material.findParamAndSet("diffuse_coeff", 1.0f);
+	panel_opaque_material.findParamAndSet("specular_coeff", 2.735693f);
+	panel_opaque_material.findParamAndSet("specular_power", 10.542857f);
+	panel_opaque_material.findParamAndSet("fresnel_front", 0.0f);
+	panel_opaque_material.findParamAndSet("fresnel_control", 0.749091f);
+	panel_opaque_material.findParamAndSet("fresnel_coeff", 0.893615f);
+	panel_opaque_material.findParamAndSet("refraction_coeff", 2.188555f);
+	panel_opaque_material.findParamAndSet("refraction_amount", 0.04464f);
+	panel_opaque_material.findParamAndSet("second_reflection", 0.0f);
+	m_panel_opaque_material.m_keys.GetKey("effects_blue_FLAT", true)->m_values = panel_opaque_material.m_values;
+
+	panel_opaque_material.findParamAndSet("color", 1.0f, 1.0f, 1.0f, 1.0f);
+	panel_opaque_material.findParamAndSet("diffuse_coeff", 1.0f);
+	panel_opaque_material.findParamAndSet("specular_coeff", 2.735693f);
+	panel_opaque_material.findParamAndSet("specular_power", 10.542857f);
+	panel_opaque_material.findParamAndSet("fresnel_front", 0.0f);
+	panel_opaque_material.findParamAndSet("fresnel_control", 0.749091f);
+	panel_opaque_material.findParamAndSet("fresnel_coeff", 0.893615f);
+	panel_opaque_material.findParamAndSet("refraction_coeff", 2.188555f);
+	panel_opaque_material.findParamAndSet("refraction_amount", 0.04464f);
+	panel_opaque_material.findParamAndSet("second_reflection", 0.0f);
+	m_panel_opaque_material.m_keys.GetKey("effects_bluewhite_05", true)->m_values = panel_opaque_material.m_values;
+
+	panel_opaque_material.findParamAndSet("color", 1.0f, 1.0f, 1.0f, 1.0f);
+	panel_opaque_material.findParamAndSet("diffuse_coeff", 1.0f);
+	panel_opaque_material.findParamAndSet("specular_coeff", 2.735693f);
+	panel_opaque_material.findParamAndSet("specular_power", 10.542857f);
+	panel_opaque_material.findParamAndSet("fresnel_front", 0.0f);
+	panel_opaque_material.findParamAndSet("fresnel_control", 0.749091f);
+	panel_opaque_material.findParamAndSet("fresnel_coeff", 0.893615f);
+	panel_opaque_material.findParamAndSet("refraction_coeff", 2.188555f);
+	panel_opaque_material.findParamAndSet("refraction_amount", 0.04464f);
+	panel_opaque_material.findParamAndSet("second_reflection", 0.0f);
+	m_panel_opaque_material.m_keys.GetKey("effects_casis", true)->m_values = panel_opaque_material.m_values;
+
+	panel_opaque_material.findParamAndSet("color", 1.0f, 1.0f, 1.0f, 1.0f);
+	panel_opaque_material.findParamAndSet("diffuse_coeff", 1.0f);
+	panel_opaque_material.findParamAndSet("specular_coeff", 2.735693f);
+	panel_opaque_material.findParamAndSet("specular_power", 10.542857f);
+	panel_opaque_material.findParamAndSet("fresnel_front", 0.0f);
+	panel_opaque_material.findParamAndSet("fresnel_control", 0.749091f);
+	panel_opaque_material.findParamAndSet("fresnel_coeff", 0.893615f);
+	panel_opaque_material.findParamAndSet("refraction_coeff", 2.188555f);
+	panel_opaque_material.findParamAndSet("refraction_amount", 0.04464f);
+	panel_opaque_material.findParamAndSet("second_reflection", 0.0f);
+	m_panel_opaque_material.m_keys.GetKey("effects_default_0512_01", true)->m_values = panel_opaque_material.m_values;
+
+	panel_opaque_material.findParamAndSet("color", 1.0f, 1.0f, 1.0f, 1.0f);
+	panel_opaque_material.findParamAndSet("diffuse_coeff", 1.0f);
+	panel_opaque_material.findParamAndSet("specular_coeff", 2.735693f);
+	panel_opaque_material.findParamAndSet("specular_power", 10.542857f);
+	panel_opaque_material.findParamAndSet("fresnel_front", 0.0f);
+	panel_opaque_material.findParamAndSet("fresnel_control", 0.749091f);
+	panel_opaque_material.findParamAndSet("fresnel_coeff", 0.893615f);
+	panel_opaque_material.findParamAndSet("refraction_coeff", 2.188555f);
+	panel_opaque_material.findParamAndSet("refraction_amount", 0.04464f);
+	panel_opaque_material.findParamAndSet("second_reflection", 0.0f);
+	m_panel_opaque_material.m_keys.GetKey("effects_green_0512_01", true)->m_values = panel_opaque_material.m_values;
+
+	panel_opaque_material.findParamAndSet("color", 1.0f, 1.0f, 1.0f, 1.0f);
+	panel_opaque_material.findParamAndSet("diffuse_coeff", 1.0f);
+	panel_opaque_material.findParamAndSet("specular_coeff", 2.735693f);
+	panel_opaque_material.findParamAndSet("specular_power", 10.542857f);
+	panel_opaque_material.findParamAndSet("fresnel_front", 0.0f);
+	panel_opaque_material.findParamAndSet("fresnel_control", 0.749091f);
+	panel_opaque_material.findParamAndSet("fresnel_coeff", 0.893615f);
+	panel_opaque_material.findParamAndSet("refraction_coeff", 2.188555f);
+	panel_opaque_material.findParamAndSet("refraction_amount", 0.04464f);
+	panel_opaque_material.findParamAndSet("second_reflection", 0.0f);
+	m_panel_opaque_material.m_keys.GetKey("effects_koiao_0512_01", true)->m_values = panel_opaque_material.m_values;
+
+	panel_opaque_material.findParamAndSet("color", 1.0f, 1.0f, 1.0f, 1.0f);
+	panel_opaque_material.findParamAndSet("diffuse_coeff", 1.0f);
+	panel_opaque_material.findParamAndSet("specular_coeff", 2.735693f);
+	panel_opaque_material.findParamAndSet("specular_power", 10.542857f);
+	panel_opaque_material.findParamAndSet("fresnel_front", 0.0f);
+	panel_opaque_material.findParamAndSet("fresnel_control", 0.749091f);
+	panel_opaque_material.findParamAndSet("fresnel_coeff", 0.893615f);
+	panel_opaque_material.findParamAndSet("refraction_coeff", 2.188555f);
+	panel_opaque_material.findParamAndSet("refraction_amount", 0.04464f);
+	panel_opaque_material.findParamAndSet("second_reflection", 0.0f);
+	m_panel_opaque_material.m_keys.GetKey("effects_limegreen_0513_02", true)->m_values = panel_opaque_material.m_values;
+
+	panel_opaque_material.findParamAndSet("color", 1.0f, 1.0f, 1.0f, 1.0f);
+	panel_opaque_material.findParamAndSet("diffuse_coeff", 1.0f);
+	panel_opaque_material.findParamAndSet("specular_coeff", 2.735693f);
+	panel_opaque_material.findParamAndSet("specular_power", 10.542857f);
+	panel_opaque_material.findParamAndSet("fresnel_front", 0.0f);
+	panel_opaque_material.findParamAndSet("fresnel_control", 0.749091f);
+	panel_opaque_material.findParamAndSet("fresnel_coeff", 0.893615f);
+	panel_opaque_material.findParamAndSet("refraction_coeff", 2.188555f);
+	panel_opaque_material.findParamAndSet("refraction_amount", 0.04464f);
+	panel_opaque_material.findParamAndSet("second_reflection", 0.0f);
+	m_panel_opaque_material.m_keys.GetKey("effects_maintosh", true)->m_values = panel_opaque_material.m_values;
+
+	panel_opaque_material.findParamAndSet("color", 1.0f, 1.0f, 1.0f, 1.0f);
+	panel_opaque_material.findParamAndSet("diffuse_coeff", 1.0f);
+	panel_opaque_material.findParamAndSet("specular_coeff", 2.735693f);
+	panel_opaque_material.findParamAndSet("specular_power", 10.542857f);
+	panel_opaque_material.findParamAndSet("fresnel_front", 0.0f);
+	panel_opaque_material.findParamAndSet("fresnel_control", 0.749091f);
+	panel_opaque_material.findParamAndSet("fresnel_coeff", 0.893615f);
+	panel_opaque_material.findParamAndSet("refraction_coeff", 2.188555f);
+	panel_opaque_material.findParamAndSet("refraction_amount", 0.04464f);
+	panel_opaque_material.findParamAndSet("second_reflection", 0.0f);
+	m_panel_opaque_material.m_keys.GetKey("effects_marrygold", true)->m_values = panel_opaque_material.m_values;
+
+	panel_opaque_material.findParamAndSet("color", 1.0f, 1.0f, 1.0f, 1.0f);
+	panel_opaque_material.findParamAndSet("diffuse_coeff", 1.0f);
+	panel_opaque_material.findParamAndSet("specular_coeff", 2.735693f);
+	panel_opaque_material.findParamAndSet("specular_power", 10.542857f);
+	panel_opaque_material.findParamAndSet("fresnel_front", 0.0f);
+	panel_opaque_material.findParamAndSet("fresnel_control", 0.749091f);
+	panel_opaque_material.findParamAndSet("fresnel_coeff", 0.893615f);
+	panel_opaque_material.findParamAndSet("refraction_coeff", 2.188555f);
+	panel_opaque_material.findParamAndSet("refraction_amount", 0.04464f);
+	panel_opaque_material.findParamAndSet("second_reflection", 0.0f);
+	m_panel_opaque_material.m_keys.GetKey("effects_peach_0512_001", true)->m_values = panel_opaque_material.m_values;
+
+	panel_opaque_material.findParamAndSet("color", 1.0f, 1.0f, 1.0f, 1.0f);
+	panel_opaque_material.findParamAndSet("diffuse_coeff", 1.0f);
+	panel_opaque_material.findParamAndSet("specular_coeff", 2.735693f);
+	panel_opaque_material.findParamAndSet("specular_power", 10.542857f);
+	panel_opaque_material.findParamAndSet("fresnel_front", 0.0f);
+	panel_opaque_material.findParamAndSet("fresnel_control", 0.749091f);
+	panel_opaque_material.findParamAndSet("fresnel_coeff", 0.893615f);
+	panel_opaque_material.findParamAndSet("refraction_coeff", 2.188555f);
+	panel_opaque_material.findParamAndSet("refraction_amount", 0.04464f);
+	panel_opaque_material.findParamAndSet("second_reflection", 0.0f);
+	m_panel_opaque_material.m_keys.GetKey("effects_purple_01", true)->m_values = panel_opaque_material.m_values;
+
+	panel_opaque_material.findParamAndSet("color", 1.0f, 1.0f, 1.0f, 1.0f);
+	panel_opaque_material.findParamAndSet("diffuse_coeff", 1.0f);
+	panel_opaque_material.findParamAndSet("specular_coeff", 2.735693f);
+	panel_opaque_material.findParamAndSet("specular_power", 10.542857f);
+	panel_opaque_material.findParamAndSet("fresnel_front", 0.0f);
+	panel_opaque_material.findParamAndSet("fresnel_control", 0.749091f);
+	panel_opaque_material.findParamAndSet("fresnel_coeff", 0.893615f);
+	panel_opaque_material.findParamAndSet("refraction_coeff", 2.188555f);
+	panel_opaque_material.findParamAndSet("refraction_amount", 0.04464f);
+	panel_opaque_material.findParamAndSet("second_reflection", 0.0f);
+	m_panel_opaque_material.m_keys.GetKey("effects_purplered", true)->m_values = panel_opaque_material.m_values;
+
+	panel_opaque_material.findParamAndSet("color", 1.0f, 1.0f, 1.0f, 1.0f);
+	panel_opaque_material.findParamAndSet("diffuse_coeff", 1.0f);
+	panel_opaque_material.findParamAndSet("specular_coeff", 2.735693f);
+	panel_opaque_material.findParamAndSet("specular_power", 10.542857f);
+	panel_opaque_material.findParamAndSet("fresnel_front", 0.0f);
+	panel_opaque_material.findParamAndSet("fresnel_control", 0.749091f);
+	panel_opaque_material.findParamAndSet("fresnel_coeff", 0.893615f);
+	panel_opaque_material.findParamAndSet("refraction_coeff", 2.188555f);
+	panel_opaque_material.findParamAndSet("refraction_amount", 0.04464f);
+	panel_opaque_material.findParamAndSet("second_reflection", 0.0f);
+	m_panel_opaque_material.m_keys.GetKey("effects_redTB_0513_01", true)->m_values = panel_opaque_material.m_values;
+
+	panel_opaque_material.findParamAndSet("color", 1.0f, 1.0f, 1.0f, 1.0f);
+	panel_opaque_material.findParamAndSet("diffuse_coeff", 1.0f);
+	panel_opaque_material.findParamAndSet("specular_coeff", 2.735693f);
+	panel_opaque_material.findParamAndSet("specular_power", 10.542857f);
+	panel_opaque_material.findParamAndSet("fresnel_front", 0.0f);
+	panel_opaque_material.findParamAndSet("fresnel_control", 0.749091f);
+	panel_opaque_material.findParamAndSet("fresnel_coeff", 0.893615f);
+	panel_opaque_material.findParamAndSet("refraction_coeff", 2.188555f);
+	panel_opaque_material.findParamAndSet("refraction_amount", 0.04464f);
+	panel_opaque_material.findParamAndSet("second_reflection", 0.0f);
+	m_panel_opaque_material.m_keys.GetKey("effects_turquoise_0513_01", true)->m_values = panel_opaque_material.m_values;
+
+	panel_opaque_material.findParamAndSet("color", 1.0f, 1.0f, 1.0f, 1.0f);
+	panel_opaque_material.findParamAndSet("diffuse_coeff", 1.0f);
+	panel_opaque_material.findParamAndSet("specular_coeff", 2.735693f);
+	panel_opaque_material.findParamAndSet("specular_power", 10.542857f);
+	panel_opaque_material.findParamAndSet("fresnel_front", 0.0f);
+	panel_opaque_material.findParamAndSet("fresnel_control", 0.749091f);
+	panel_opaque_material.findParamAndSet("fresnel_coeff", 0.893615f);
+	panel_opaque_material.findParamAndSet("refraction_coeff", 2.188555f);
+	panel_opaque_material.findParamAndSet("refraction_amount", 0.04464f);
+	panel_opaque_material.findParamAndSet("second_reflection", 0.0f);
+	m_panel_opaque_material.m_keys.GetKey("effects_yellow_0512_01", true)->m_values = panel_opaque_material.m_values;
+
+	panel_opaque_material.findParamAndSet("color", 1.0f, 1.0f, 1.0f, 1.0f);
+	panel_opaque_material.findParamAndSet("diffuse_coeff", 1.0f);
+	panel_opaque_material.findParamAndSet("specular_coeff", 2.735693f);
+	panel_opaque_material.findParamAndSet("specular_power", 10.542857f);
+	panel_opaque_material.findParamAndSet("fresnel_front", 0.0f);
+	panel_opaque_material.findParamAndSet("fresnel_control", 0.749091f);
+	panel_opaque_material.findParamAndSet("fresnel_coeff", 0.893615f);
+	panel_opaque_material.findParamAndSet("refraction_coeff", 2.188555f);
+	panel_opaque_material.findParamAndSet("refraction_amount", 0.04464f);
+	panel_opaque_material.findParamAndSet("second_reflection", 0.0f);
+	m_panel_opaque_material.m_keys.GetKey("iboot", true)->m_values = panel_opaque_material.m_values;
+
+
+	PointLightSphereParamSet &bubble_light = m_bubble_light.m_keys.m_default;
+
+	bubble_light.findParamAndSet("theta_phi", 1.150047f, -0.056096f);
+	bubble_light.findParamAndSet("distance", 939.0627f);
+	bubble_light.findParamAndSet("attn", 1.0f, 0.0f, 0.0f);
+	bubble_light.findParamAndSet("ambient_color", 0.2f, 0.2f, 0.2f);
+	bubble_light.findParamAndSet("diffuse_color", 1.0f, 1.0f, 1.0f);
+	bubble_light.findParamAndSet("fade", 1.0f);
+	m_bubble_light.m_keys.GetKey("effects_0406_ruby", true)->m_values = bubble_light.m_values;
+
+	bubble_light.findParamAndSet("theta_phi", 1.150047f, -0.056096f);
+	bubble_light.findParamAndSet("distance", 939.0627f);
+	bubble_light.findParamAndSet("attn", 1.0f, 0.0f, 0.0f);
+	bubble_light.findParamAndSet("ambient_color", 0.2f, 0.2f, 0.2f);
+	bubble_light.findParamAndSet("diffuse_color", 1.0f, 1.0f, 1.0f);
+	bubble_light.findParamAndSet("fade", 1.0f);
+	m_bubble_light.m_keys.GetKey("effects_0407_purple_01", true)->m_values = bubble_light.m_values;
+
+	bubble_light.findParamAndSet("theta_phi", 1.150047f, -0.056096f);
+	bubble_light.findParamAndSet("distance", 939.0627f);
+	bubble_light.findParamAndSet("attn", 1.0f, 0.0f, 0.0f);
+	bubble_light.findParamAndSet("ambient_color", 0.2f, 0.2f, 0.2f);
+	bubble_light.findParamAndSet("diffuse_color", 1.0f, 1.0f, 1.0f);
+	bubble_light.findParamAndSet("fade", 1.0f);
+	m_bubble_light.m_keys.GetKey("effects_0408_01_orange", true)->m_values = bubble_light.m_values;
+
+	bubble_light.findParamAndSet("theta_phi", 1.150047f, -0.056096f);
+	bubble_light.findParamAndSet("distance", 939.0627f);
+	bubble_light.findParamAndSet("attn", 1.0f, 0.0f, 0.0f);
+	bubble_light.findParamAndSet("ambient_color", 0.2f, 0.2f, 0.2f);
+	bubble_light.findParamAndSet("diffuse_color", 1.0f, 1.0f, 1.0f);
+	bubble_light.findParamAndSet("fade", 1.0f);
+	m_bubble_light.m_keys.GetKey("effects_0411_purple_02", true)->m_values = bubble_light.m_values;
+
+	bubble_light.findParamAndSet("theta_phi", 1.150047f, -0.056096f);
+	bubble_light.findParamAndSet("distance", 939.0627f);
+	bubble_light.findParamAndSet("attn", 1.0f, 0.0f, 0.0f);
+	bubble_light.findParamAndSet("ambient_color", 0.2f, 0.2f, 0.2f);
+	bubble_light.findParamAndSet("diffuse_color", 1.0f, 1.0f, 1.0f);
+	bubble_light.findParamAndSet("fade", 1.0f);
+	m_bubble_light.m_keys.GetKey("effects_0415_A5", true)->m_values = bubble_light.m_values;
+
+	bubble_light.findParamAndSet("theta_phi", 1.150047f, -0.056096f);
+	bubble_light.findParamAndSet("distance", 939.0627f);
+	bubble_light.findParamAndSet("attn", 1.0f, 0.0f, 0.0f);
+	bubble_light.findParamAndSet("ambient_color", 0.2f, 0.2f, 0.2f);
+	bubble_light.findParamAndSet("diffuse_color", 1.0f, 1.0f, 1.0f);
+	bubble_light.findParamAndSet("fade", 1.0f);
+	m_bubble_light.m_keys.GetKey("effects_0518_dalia", true)->m_values = bubble_light.m_values;
+
+	bubble_light.findParamAndSet("theta_phi", 1.150047f, -0.056096f);
+	bubble_light.findParamAndSet("distance", 939.0627f);
+	bubble_light.findParamAndSet("attn", 1.0f, 0.0f, 0.0f);
+	bubble_light.findParamAndSet("ambient_color", 0.2f, 0.2f, 0.2f);
+	bubble_light.findParamAndSet("diffuse_color", 1.0f, 1.0f, 1.0f);
+	bubble_light.findParamAndSet("fade", 1.0f);
+	m_bubble_light.m_keys.GetKey("effects_0518_gray_FLAT", true)->m_values = bubble_light.m_values;
+
+	bubble_light.findParamAndSet("theta_phi", 1.150047f, -0.056096f);
+	bubble_light.findParamAndSet("distance", 939.0627f);
+	bubble_light.findParamAndSet("attn", 1.0f, 0.0f, 0.0f);
+	bubble_light.findParamAndSet("ambient_color", 0.2f, 0.2f, 0.2f);
+	bubble_light.findParamAndSet("diffuse_color", 1.0f, 1.0f, 1.0f);
+	bubble_light.findParamAndSet("fade", 1.0f);
+	m_bubble_light.m_keys.GetKey("effects_0518_ruby", true)->m_values = bubble_light.m_values;
+
+	bubble_light.findParamAndSet("theta_phi", 1.150047f, -0.056096f);
+	bubble_light.findParamAndSet("distance", 939.0627f);
+	bubble_light.findParamAndSet("attn", 1.0f, 0.0f, 0.0f);
+	bubble_light.findParamAndSet("ambient_color", 0.2f, 0.2f, 0.2f);
+	bubble_light.findParamAndSet("diffuse_color", 1.0f, 1.0f, 1.0f);
+	bubble_light.findParamAndSet("fade", 1.0f);
+	m_bubble_light.m_keys.GetKey("effects_A1", true)->m_values = bubble_light.m_values;
+
+	bubble_light.findParamAndSet("theta_phi", 1.150047f, -0.056096f);
+	bubble_light.findParamAndSet("distance", 939.0627f);
+	bubble_light.findParamAndSet("attn", 1.0f, 0.0f, 0.0f);
+	bubble_light.findParamAndSet("ambient_color", 0.2f, 0.2f, 0.2f);
+	bubble_light.findParamAndSet("diffuse_color", 1.0f, 1.0f, 1.0f);
+	bubble_light.findParamAndSet("fade", 1.0f);
+	m_bubble_light.m_keys.GetKey("effects_black", true)->m_values = bubble_light.m_values;
+
+	bubble_light.findParamAndSet("theta_phi", 1.150047f, -0.056096f);
+	bubble_light.findParamAndSet("distance", 939.0627f);
+	bubble_light.findParamAndSet("attn", 1.0f, 0.0f, 0.0f);
+	bubble_light.findParamAndSet("ambient_color", 0.2f, 0.2f, 0.2f);
+	bubble_light.findParamAndSet("diffuse_color", 1.0f, 1.0f, 1.0f);
+	bubble_light.findParamAndSet("fade", 1.0f);
+	m_bubble_light.m_keys.GetKey("effects_blueTB_0513_01", true)->m_values = bubble_light.m_values;
+
+	bubble_light.findParamAndSet("theta_phi", 1.150047f, -0.056096f);
+	bubble_light.findParamAndSet("distance", 939.0627f);
+	bubble_light.findParamAndSet("attn", 1.0f, 0.0f, 0.0f);
+	bubble_light.findParamAndSet("ambient_color", 0.2f, 0.2f, 0.2f);
+	bubble_light.findParamAndSet("diffuse_color", 1.0f, 1.0f, 1.0f);
+	bubble_light.findParamAndSet("fade", 1.0f);
+	m_bubble_light.m_keys.GetKey("effects_blue_FLAT", true)->m_values = bubble_light.m_values;
+
+	bubble_light.findParamAndSet("theta_phi", 1.150047f, -0.056096f);
+	bubble_light.findParamAndSet("distance", 939.0627f);
+	bubble_light.findParamAndSet("attn", 1.0f, 0.0f, 0.0f);
+	bubble_light.findParamAndSet("ambient_color", 0.2f, 0.2f, 0.2f);
+	bubble_light.findParamAndSet("diffuse_color", 1.0f, 1.0f, 1.0f);
+	bubble_light.findParamAndSet("fade", 1.0f);
+	m_bubble_light.m_keys.GetKey("effects_bluewhite_05", true)->m_values = bubble_light.m_values;
+
+	bubble_light.findParamAndSet("theta_phi", 1.150047f, -0.056096f);
+	bubble_light.findParamAndSet("distance", 939.0627f);
+	bubble_light.findParamAndSet("attn", 1.0f, 0.0f, 0.0f);
+	bubble_light.findParamAndSet("ambient_color", 0.2f, 0.2f, 0.2f);
+	bubble_light.findParamAndSet("diffuse_color", 1.0f, 1.0f, 1.0f);
+	bubble_light.findParamAndSet("fade", 1.0f);
+	m_bubble_light.m_keys.GetKey("effects_casis", true)->m_values = bubble_light.m_values;
+
+	bubble_light.findParamAndSet("theta_phi", 1.150047f, -0.056096f);
+	bubble_light.findParamAndSet("distance", 939.0627f);
+	bubble_light.findParamAndSet("attn", 1.0f, 0.0f, 0.0f);
+	bubble_light.findParamAndSet("ambient_color", 0.2f, 0.2f, 0.2f);
+	bubble_light.findParamAndSet("diffuse_color", 1.0f, 1.0f, 1.0f);
+	bubble_light.findParamAndSet("fade", 1.0f);
+	m_bubble_light.m_keys.GetKey("effects_default_0512_01", true)->m_values = bubble_light.m_values;
+
+	bubble_light.findParamAndSet("theta_phi", 1.150047f, -0.056096f);
+	bubble_light.findParamAndSet("distance", 939.0627f);
+	bubble_light.findParamAndSet("attn", 1.0f, 0.0f, 0.0f);
+	bubble_light.findParamAndSet("ambient_color", 0.2f, 0.2f, 0.2f);
+	bubble_light.findParamAndSet("diffuse_color", 1.0f, 1.0f, 1.0f);
+	bubble_light.findParamAndSet("fade", 1.0f);
+	m_bubble_light.m_keys.GetKey("effects_green_0512_01", true)->m_values = bubble_light.m_values;
+
+	bubble_light.findParamAndSet("theta_phi", 1.150047f, -0.056096f);
+	bubble_light.findParamAndSet("distance", 939.0627f);
+	bubble_light.findParamAndSet("attn", 1.0f, 0.0f, 0.0f);
+	bubble_light.findParamAndSet("ambient_color", 0.2f, 0.2f, 0.2f);
+	bubble_light.findParamAndSet("diffuse_color", 1.0f, 1.0f, 1.0f);
+	bubble_light.findParamAndSet("fade", 1.0f);
+	m_bubble_light.m_keys.GetKey("effects_koiao_0512_01", true)->m_values = bubble_light.m_values;
+
+	bubble_light.findParamAndSet("theta_phi", 1.150047f, -0.056096f);
+	bubble_light.findParamAndSet("distance", 939.0627f);
+	bubble_light.findParamAndSet("attn", 1.0f, 0.0f, 0.0f);
+	bubble_light.findParamAndSet("ambient_color", 0.2f, 0.2f, 0.2f);
+	bubble_light.findParamAndSet("diffuse_color", 1.0f, 1.0f, 1.0f);
+	bubble_light.findParamAndSet("fade", 1.0f);
+	m_bubble_light.m_keys.GetKey("effects_limegreen_0513_02", true)->m_values = bubble_light.m_values;
+
+	bubble_light.findParamAndSet("theta_phi", 1.150047f, -0.056096f);
+	bubble_light.findParamAndSet("distance", 939.0627f);
+	bubble_light.findParamAndSet("attn", 1.0f, 0.0f, 0.0f);
+	bubble_light.findParamAndSet("ambient_color", 0.2f, 0.2f, 0.2f);
+	bubble_light.findParamAndSet("diffuse_color", 1.0f, 1.0f, 1.0f);
+	bubble_light.findParamAndSet("fade", 1.0f);
+	m_bubble_light.m_keys.GetKey("effects_maintosh", true)->m_values = bubble_light.m_values;
+
+	bubble_light.findParamAndSet("theta_phi", 1.150047f, -0.056096f);
+	bubble_light.findParamAndSet("distance", 939.0627f);
+	bubble_light.findParamAndSet("attn", 1.0f, 0.0f, 0.0f);
+	bubble_light.findParamAndSet("ambient_color", 0.2f, 0.2f, 0.2f);
+	bubble_light.findParamAndSet("diffuse_color", 1.0f, 1.0f, 1.0f);
+	bubble_light.findParamAndSet("fade", 1.0f);
+	m_bubble_light.m_keys.GetKey("effects_marrygold", true)->m_values = bubble_light.m_values;
+
+	bubble_light.findParamAndSet("theta_phi", 1.150047f, -0.056096f);
+	bubble_light.findParamAndSet("distance", 939.0627f);
+	bubble_light.findParamAndSet("attn", 1.0f, 0.0f, 0.0f);
+	bubble_light.findParamAndSet("ambient_color", 0.2f, 0.2f, 0.2f);
+	bubble_light.findParamAndSet("diffuse_color", 1.0f, 1.0f, 1.0f);
+	bubble_light.findParamAndSet("fade", 1.0f);
+	m_bubble_light.m_keys.GetKey("effects_peach_0512_001", true)->m_values = bubble_light.m_values;
+
+	bubble_light.findParamAndSet("theta_phi", 1.150047f, -0.056096f);
+	bubble_light.findParamAndSet("distance", 939.0627f);
+	bubble_light.findParamAndSet("attn", 1.0f, 0.0f, 0.0f);
+	bubble_light.findParamAndSet("ambient_color", 0.2f, 0.2f, 0.2f);
+	bubble_light.findParamAndSet("diffuse_color", 1.0f, 1.0f, 1.0f);
+	bubble_light.findParamAndSet("fade", 1.0f);
+	m_bubble_light.m_keys.GetKey("effects_purple_01", true)->m_values = bubble_light.m_values;
+
+	bubble_light.findParamAndSet("theta_phi", 1.150047f, -0.056096f);
+	bubble_light.findParamAndSet("distance", 939.0627f);
+	bubble_light.findParamAndSet("attn", 1.0f, 0.0f, 0.0f);
+	bubble_light.findParamAndSet("ambient_color", 0.2f, 0.2f, 0.2f);
+	bubble_light.findParamAndSet("diffuse_color", 1.0f, 1.0f, 1.0f);
+	bubble_light.findParamAndSet("fade", 1.0f);
+	m_bubble_light.m_keys.GetKey("effects_purplered", true)->m_values = bubble_light.m_values;
+
+	bubble_light.findParamAndSet("theta_phi", 1.150047f, -0.056096f);
+	bubble_light.findParamAndSet("distance", 939.0627f);
+	bubble_light.findParamAndSet("attn", 1.0f, 0.0f, 0.0f);
+	bubble_light.findParamAndSet("ambient_color", 0.2f, 0.2f, 0.2f);
+	bubble_light.findParamAndSet("diffuse_color", 1.0f, 1.0f, 1.0f);
+	bubble_light.findParamAndSet("fade", 1.0f);
+	m_bubble_light.m_keys.GetKey("effects_redTB_0513_01", true)->m_values = bubble_light.m_values;
+
+	bubble_light.findParamAndSet("theta_phi", 1.150047f, -0.056096f);
+	bubble_light.findParamAndSet("distance", 939.0627f);
+	bubble_light.findParamAndSet("attn", 1.0f, 0.0f, 0.0f);
+	bubble_light.findParamAndSet("ambient_color", 0.2f, 0.2f, 0.2f);
+	bubble_light.findParamAndSet("diffuse_color", 1.0f, 1.0f, 1.0f);
+	bubble_light.findParamAndSet("fade", 1.0f);
+	m_bubble_light.m_keys.GetKey("effects_turquoise_0513_01", true)->m_values = bubble_light.m_values;
+
+	bubble_light.findParamAndSet("theta_phi", 1.150047f, -0.056096f);
+	bubble_light.findParamAndSet("distance", 939.0627f);
+	bubble_light.findParamAndSet("attn", 1.0f, 0.0f, 0.0f);
+	bubble_light.findParamAndSet("ambient_color", 0.2f, 0.2f, 0.2f);
+	bubble_light.findParamAndSet("diffuse_color", 1.0f, 1.0f, 1.0f);
+	bubble_light.findParamAndSet("fade", 1.0f);
+	m_bubble_light.m_keys.GetKey("effects_yellow_0512_01", true)->m_values = bubble_light.m_values;
+
+	bubble_light.findParamAndSet("theta_phi", 1.150047f, -0.056096f);
+	bubble_light.findParamAndSet("distance", 939.0627f);
+	bubble_light.findParamAndSet("attn", 1.0f, 0.0f, 0.0f);
+	bubble_light.findParamAndSet("ambient_color", 0.2f, 0.2f, 0.2f);
+	bubble_light.findParamAndSet("diffuse_color", 1.0f, 1.0f, 1.0f);
+	bubble_light.findParamAndSet("fade", 1.0f);
+	m_bubble_light.m_keys.GetKey("iboot", true)->m_values = bubble_light.m_values;
+
+
+	PointLightSphereParamSet &panel_light = m_panel_light.m_keys.m_default;
+
+	panel_light.findParamAndSet("theta_phi", 1.430546f, 0.336599f);
+	panel_light.findParamAndSet("distance", 1582.0312f);
+	panel_light.findParamAndSet("attn", 1.0f, 0.0f, 0.0f);
+	panel_light.findParamAndSet("ambient_color", 0.2f, 0.2f, 0.2f);
+	panel_light.findParamAndSet("diffuse_color", 1.0f, 1.0f, 1.0f);
+	panel_light.findParamAndSet("fade", 1.0f);
+	m_panel_light.m_keys.GetKey("effects_0406_ruby", true)->m_values = panel_light.m_values;
+
+	panel_light.findParamAndSet("theta_phi", 1.430546f, 0.336599f);
+	panel_light.findParamAndSet("distance", 1582.0312f);
+	panel_light.findParamAndSet("attn", 1.0f, 0.0f, 0.0f);
+	panel_light.findParamAndSet("ambient_color", 0.2f, 0.2f, 0.2f);
+	panel_light.findParamAndSet("diffuse_color", 1.0f, 1.0f, 1.0f);
+	panel_light.findParamAndSet("fade", 1.0f);
+	m_panel_light.m_keys.GetKey("effects_0407_purple_01", true)->m_values = panel_light.m_values;
+
+	panel_light.findParamAndSet("theta_phi", 1.430546f, 0.336599f);
+	panel_light.findParamAndSet("distance", 1582.0312f);
+	panel_light.findParamAndSet("attn", 1.0f, 0.0f, 0.0f);
+	panel_light.findParamAndSet("ambient_color", 0.2f, 0.2f, 0.2f);
+	panel_light.findParamAndSet("diffuse_color", 1.0f, 1.0f, 1.0f);
+	panel_light.findParamAndSet("fade", 1.0f);
+	m_panel_light.m_keys.GetKey("effects_0408_01_orange", true)->m_values = panel_light.m_values;
+
+	panel_light.findParamAndSet("theta_phi", 1.430546f, 0.336599f);
+	panel_light.findParamAndSet("distance", 1582.0312f);
+	panel_light.findParamAndSet("attn", 1.0f, 0.0f, 0.0f);
+	panel_light.findParamAndSet("ambient_color", 0.2f, 0.2f, 0.2f);
+	panel_light.findParamAndSet("diffuse_color", 1.0f, 1.0f, 1.0f);
+	panel_light.findParamAndSet("fade", 1.0f);
+	m_panel_light.m_keys.GetKey("effects_0411_purple_02", true)->m_values = panel_light.m_values;
+
+	panel_light.findParamAndSet("theta_phi", 1.430546f, 0.336599f);
+	panel_light.findParamAndSet("distance", 1582.0312f);
+	panel_light.findParamAndSet("attn", 1.0f, 0.0f, 0.0f);
+	panel_light.findParamAndSet("ambient_color", 0.2f, 0.2f, 0.2f);
+	panel_light.findParamAndSet("diffuse_color", 1.0f, 1.0f, 1.0f);
+	panel_light.findParamAndSet("fade", 1.0f);
+	m_panel_light.m_keys.GetKey("effects_0415_A5", true)->m_values = panel_light.m_values;
+
+	panel_light.findParamAndSet("theta_phi", 1.430546f, 0.336599f);
+	panel_light.findParamAndSet("distance", 1582.0312f);
+	panel_light.findParamAndSet("attn", 1.0f, 0.0f, 0.0f);
+	panel_light.findParamAndSet("ambient_color", 0.2f, 0.2f, 0.2f);
+	panel_light.findParamAndSet("diffuse_color", 1.0f, 1.0f, 1.0f);
+	panel_light.findParamAndSet("fade", 1.0f);
+	m_panel_light.m_keys.GetKey("effects_0518_dalia", true)->m_values = panel_light.m_values;
+
+	panel_light.findParamAndSet("theta_phi", 1.430546f, 0.336599f);
+	panel_light.findParamAndSet("distance", 1582.0312f);
+	panel_light.findParamAndSet("attn", 1.0f, 0.0f, 0.0f);
+	panel_light.findParamAndSet("ambient_color", 0.2f, 0.2f, 0.2f);
+	panel_light.findParamAndSet("diffuse_color", 1.0f, 1.0f, 1.0f);
+	panel_light.findParamAndSet("fade", 1.0f);
+	m_panel_light.m_keys.GetKey("effects_0518_gray_FLAT", true)->m_values = panel_light.m_values;
+
+	panel_light.findParamAndSet("theta_phi", 1.430546f, 0.336599f);
+	panel_light.findParamAndSet("distance", 1582.0312f);
+	panel_light.findParamAndSet("attn", 1.0f, 0.0f, 0.0f);
+	panel_light.findParamAndSet("ambient_color", 0.2f, 0.2f, 0.2f);
+	panel_light.findParamAndSet("diffuse_color", 1.0f, 1.0f, 1.0f);
+	panel_light.findParamAndSet("fade", 1.0f);
+	m_panel_light.m_keys.GetKey("effects_0518_ruby", true)->m_values = panel_light.m_values;
+
+	panel_light.findParamAndSet("theta_phi", 1.430546f, 0.336599f);
+	panel_light.findParamAndSet("distance", 1582.0312f);
+	panel_light.findParamAndSet("attn", 1.0f, 0.0f, 0.0f);
+	panel_light.findParamAndSet("ambient_color", 0.2f, 0.2f, 0.2f);
+	panel_light.findParamAndSet("diffuse_color", 1.0f, 1.0f, 1.0f);
+	panel_light.findParamAndSet("fade", 1.0f);
+	m_panel_light.m_keys.GetKey("effects_A1", true)->m_values = panel_light.m_values;
+
+	panel_light.findParamAndSet("theta_phi", 1.430546f, 0.336599f);
+	panel_light.findParamAndSet("distance", 1582.0312f);
+	panel_light.findParamAndSet("attn", 1.0f, 0.0f, 0.0f);
+	panel_light.findParamAndSet("ambient_color", 0.2f, 0.2f, 0.2f);
+	panel_light.findParamAndSet("diffuse_color", 1.0f, 1.0f, 1.0f);
+	panel_light.findParamAndSet("fade", 1.0f);
+	m_panel_light.m_keys.GetKey("effects_black", true)->m_values = panel_light.m_values;
+
+	panel_light.findParamAndSet("theta_phi", 1.430546f, 0.336599f);
+	panel_light.findParamAndSet("distance", 1582.0312f);
+	panel_light.findParamAndSet("attn", 1.0f, 0.0f, 0.0f);
+	panel_light.findParamAndSet("ambient_color", 0.2f, 0.2f, 0.2f);
+	panel_light.findParamAndSet("diffuse_color", 1.0f, 1.0f, 1.0f);
+	panel_light.findParamAndSet("fade", 1.0f);
+	m_panel_light.m_keys.GetKey("effects_blueTB_0513_01", true)->m_values = panel_light.m_values;
+
+	panel_light.findParamAndSet("theta_phi", 1.430546f, 0.336599f);
+	panel_light.findParamAndSet("distance", 1582.0312f);
+	panel_light.findParamAndSet("attn", 1.0f, 0.0f, 0.0f);
+	panel_light.findParamAndSet("ambient_color", 0.2f, 0.2f, 0.2f);
+	panel_light.findParamAndSet("diffuse_color", 1.0f, 1.0f, 1.0f);
+	panel_light.findParamAndSet("fade", 1.0f);
+	m_panel_light.m_keys.GetKey("effects_blue_FLAT", true)->m_values = panel_light.m_values;
+
+	panel_light.findParamAndSet("theta_phi", 1.430546f, 0.336599f);
+	panel_light.findParamAndSet("distance", 1582.0312f);
+	panel_light.findParamAndSet("attn", 1.0f, 0.0f, 0.0f);
+	panel_light.findParamAndSet("ambient_color", 0.2f, 0.2f, 0.2f);
+	panel_light.findParamAndSet("diffuse_color", 1.0f, 1.0f, 1.0f);
+	panel_light.findParamAndSet("fade", 1.0f);
+	m_panel_light.m_keys.GetKey("effects_bluewhite_05", true)->m_values = panel_light.m_values;
+
+	panel_light.findParamAndSet("theta_phi", 1.430546f, 0.336599f);
+	panel_light.findParamAndSet("distance", 1582.0312f);
+	panel_light.findParamAndSet("attn", 1.0f, 0.0f, 0.0f);
+	panel_light.findParamAndSet("ambient_color", 0.2f, 0.2f, 0.2f);
+	panel_light.findParamAndSet("diffuse_color", 1.0f, 1.0f, 1.0f);
+	panel_light.findParamAndSet("fade", 1.0f);
+	m_panel_light.m_keys.GetKey("effects_casis", true)->m_values = panel_light.m_values;
+
+	panel_light.findParamAndSet("theta_phi", 1.430546f, 0.336599f);
+	panel_light.findParamAndSet("distance", 1582.0312f);
+	panel_light.findParamAndSet("attn", 1.0f, 0.0f, 0.0f);
+	panel_light.findParamAndSet("ambient_color", 0.2f, 0.2f, 0.2f);
+	panel_light.findParamAndSet("diffuse_color", 1.0f, 1.0f, 1.0f);
+	panel_light.findParamAndSet("fade", 1.0f);
+	m_panel_light.m_keys.GetKey("effects_default_0512_01", true)->m_values = panel_light.m_values;
+
+	panel_light.findParamAndSet("theta_phi", 1.430546f, 0.336599f);
+	panel_light.findParamAndSet("distance", 1582.0312f);
+	panel_light.findParamAndSet("attn", 1.0f, 0.0f, 0.0f);
+	panel_light.findParamAndSet("ambient_color", 0.2f, 0.2f, 0.2f);
+	panel_light.findParamAndSet("diffuse_color", 1.0f, 1.0f, 1.0f);
+	panel_light.findParamAndSet("fade", 1.0f);
+	m_panel_light.m_keys.GetKey("effects_green_0512_01", true)->m_values = panel_light.m_values;
+
+	panel_light.findParamAndSet("theta_phi", 1.430546f, 0.336599f);
+	panel_light.findParamAndSet("distance", 1582.0312f);
+	panel_light.findParamAndSet("attn", 1.0f, 0.0f, 0.0f);
+	panel_light.findParamAndSet("ambient_color", 0.2f, 0.2f, 0.2f);
+	panel_light.findParamAndSet("diffuse_color", 1.0f, 1.0f, 1.0f);
+	panel_light.findParamAndSet("fade", 1.0f);
+	m_panel_light.m_keys.GetKey("effects_koiao_0512_01", true)->m_values = panel_light.m_values;
+
+	panel_light.findParamAndSet("theta_phi", 1.430546f, 0.336599f);
+	panel_light.findParamAndSet("distance", 1582.0312f);
+	panel_light.findParamAndSet("attn", 1.0f, 0.0f, 0.0f);
+	panel_light.findParamAndSet("ambient_color", 0.2f, 0.2f, 0.2f);
+	panel_light.findParamAndSet("diffuse_color", 1.0f, 1.0f, 1.0f);
+	panel_light.findParamAndSet("fade", 1.0f);
+	m_panel_light.m_keys.GetKey("effects_limegreen_0513_02", true)->m_values = panel_light.m_values;
+
+	panel_light.findParamAndSet("theta_phi", 1.430546f, 0.336599f);
+	panel_light.findParamAndSet("distance", 1582.0312f);
+	panel_light.findParamAndSet("attn", 1.0f, 0.0f, 0.0f);
+	panel_light.findParamAndSet("ambient_color", 0.2f, 0.2f, 0.2f);
+	panel_light.findParamAndSet("diffuse_color", 1.0f, 1.0f, 1.0f);
+	panel_light.findParamAndSet("fade", 1.0f);
+	m_panel_light.m_keys.GetKey("effects_maintosh", true)->m_values = panel_light.m_values;
+
+	panel_light.findParamAndSet("theta_phi", 1.430546f, 0.336599f);
+	panel_light.findParamAndSet("distance", 1582.0312f);
+	panel_light.findParamAndSet("attn", 1.0f, 0.0f, 0.0f);
+	panel_light.findParamAndSet("ambient_color", 0.2f, 0.2f, 0.2f);
+	panel_light.findParamAndSet("diffuse_color", 1.0f, 1.0f, 1.0f);
+	panel_light.findParamAndSet("fade", 1.0f);
+	m_panel_light.m_keys.GetKey("effects_marrygold", true)->m_values = panel_light.m_values;
+
+	panel_light.findParamAndSet("theta_phi", 1.430546f, 0.336599f);
+	panel_light.findParamAndSet("distance", 1582.0312f);
+	panel_light.findParamAndSet("attn", 1.0f, 0.0f, 0.0f);
+	panel_light.findParamAndSet("ambient_color", 0.2f, 0.2f, 0.2f);
+	panel_light.findParamAndSet("diffuse_color", 1.0f, 1.0f, 1.0f);
+	panel_light.findParamAndSet("fade", 1.0f);
+	m_panel_light.m_keys.GetKey("effects_peach_0512_001", true)->m_values = panel_light.m_values;
+
+	panel_light.findParamAndSet("theta_phi", 1.430546f, 0.336599f);
+	panel_light.findParamAndSet("distance", 1582.0312f);
+	panel_light.findParamAndSet("attn", 1.0f, 0.0f, 0.0f);
+	panel_light.findParamAndSet("ambient_color", 0.2f, 0.2f, 0.2f);
+	panel_light.findParamAndSet("diffuse_color", 1.0f, 1.0f, 1.0f);
+	panel_light.findParamAndSet("fade", 1.0f);
+	m_panel_light.m_keys.GetKey("effects_purple_01", true)->m_values = panel_light.m_values;
+
+	panel_light.findParamAndSet("theta_phi", 1.430546f, 0.336599f);
+	panel_light.findParamAndSet("distance", 1582.0312f);
+	panel_light.findParamAndSet("attn", 1.0f, 0.0f, 0.0f);
+	panel_light.findParamAndSet("ambient_color", 0.2f, 0.2f, 0.2f);
+	panel_light.findParamAndSet("diffuse_color", 1.0f, 1.0f, 1.0f);
+	panel_light.findParamAndSet("fade", 1.0f);
+	m_panel_light.m_keys.GetKey("effects_purplered", true)->m_values = panel_light.m_values;
+
+	panel_light.findParamAndSet("theta_phi", 1.430546f, 0.336599f);
+	panel_light.findParamAndSet("distance", 1582.0312f);
+	panel_light.findParamAndSet("attn", 1.0f, 0.0f, 0.0f);
+	panel_light.findParamAndSet("ambient_color", 0.2f, 0.2f, 0.2f);
+	panel_light.findParamAndSet("diffuse_color", 1.0f, 1.0f, 1.0f);
+	panel_light.findParamAndSet("fade", 1.0f);
+	m_panel_light.m_keys.GetKey("effects_redTB_0513_01", true)->m_values = panel_light.m_values;
+
+	panel_light.findParamAndSet("theta_phi", 1.430546f, 0.336599f);
+	panel_light.findParamAndSet("distance", 1582.0312f);
+	panel_light.findParamAndSet("attn", 1.0f, 0.0f, 0.0f);
+	panel_light.findParamAndSet("ambient_color", 0.2f, 0.2f, 0.2f);
+	panel_light.findParamAndSet("diffuse_color", 1.0f, 1.0f, 1.0f);
+	panel_light.findParamAndSet("fade", 1.0f);
+	m_panel_light.m_keys.GetKey("effects_turquoise_0513_01", true)->m_values = panel_light.m_values;
+
+	panel_light.findParamAndSet("theta_phi", 1.430546f, 0.336599f);
+	panel_light.findParamAndSet("distance", 1582.0312f);
+	panel_light.findParamAndSet("attn", 1.0f, 0.0f, 0.0f);
+	panel_light.findParamAndSet("ambient_color", 0.2f, 0.2f, 0.2f);
+	panel_light.findParamAndSet("diffuse_color", 1.0f, 1.0f, 1.0f);
+	panel_light.findParamAndSet("fade", 1.0f);
+	m_panel_light.m_keys.GetKey("effects_yellow_0512_01", true)->m_values = panel_light.m_values;
+
+	panel_light.findParamAndSet("theta_phi", 1.430546f, 0.336599f);
+	panel_light.findParamAndSet("distance", 1582.0312f);
+	panel_light.findParamAndSet("attn", 1.0f, 0.0f, 0.0f);
+	panel_light.findParamAndSet("ambient_color", 0.2f, 0.2f, 0.2f);
+	panel_light.findParamAndSet("diffuse_color", 1.0f, 1.0f, 1.0f);
+	panel_light.findParamAndSet("fade", 1.0f);
+	m_panel_light.m_keys.GetKey("iboot", true)->m_values = panel_light.m_values;
+
+
+	ShadowParamSet &shadow = m_shadow.m_keys.m_default;
+
+	shadow.findParamAndSet("scale_tweak", 0.792855f);
+	shadow.findParamAndSet("transparency", 0.0f);
+	shadow.findParamAndSet("transparency_fade_start", 517.8571f);
+	shadow.findParamAndSet("transparency_fade_len", 196.42857f);
+	shadow.findParamAndSet("color", 0.625f, 1.0f, 0.830357f);
+	shadow.findParamAndSet("plane_z", 0.039999f);
+	shadow.findParamAndSet("back_color_begin", 0.287331f);
+	shadow.findParamAndSet("back_color_end", 0.802326f);
+	shadow.findParamAndSet("wave_shadow_blend", 1.0f);
+	shadow.findParamAndSet("wave_shadow_filter", 0.1f);
+	m_shadow.m_keys.GetKey("effects_0406_ruby", true)->m_values = shadow.m_values;
+
+	shadow.findParamAndSet("scale_tweak", 0.792855f);
+	shadow.findParamAndSet("transparency", 0.0f);
+	shadow.findParamAndSet("transparency_fade_start", 517.8571f);
+	shadow.findParamAndSet("transparency_fade_len", 196.42857f);
+	shadow.findParamAndSet("color", 0.625f, 1.0f, 0.830357f);
+	shadow.findParamAndSet("plane_z", 0.039999f);
+	shadow.findParamAndSet("back_color_begin", 0.287331f);
+	shadow.findParamAndSet("back_color_end", 0.802326f);
+	shadow.findParamAndSet("wave_shadow_blend", 1.0f);
+	shadow.findParamAndSet("wave_shadow_filter", 0.1f);
+	m_shadow.m_keys.GetKey("effects_0407_purple_01", true)->m_values = shadow.m_values;
+
+	shadow.findParamAndSet("scale_tweak", 0.792855f);
+	shadow.findParamAndSet("transparency", 0.0f);
+	shadow.findParamAndSet("transparency_fade_start", 517.8571f);
+	shadow.findParamAndSet("transparency_fade_len", 196.42857f);
+	shadow.findParamAndSet("color", 0.625f, 1.0f, 0.830357f);
+	shadow.findParamAndSet("plane_z", 0.039999f);
+	shadow.findParamAndSet("back_color_begin", 0.287331f);
+	shadow.findParamAndSet("back_color_end", 0.802326f);
+	shadow.findParamAndSet("wave_shadow_blend", 1.0f);
+	shadow.findParamAndSet("wave_shadow_filter", 0.1f);
+	m_shadow.m_keys.GetKey("effects_0408_01_orange", true)->m_values = shadow.m_values;
+
+	shadow.findParamAndSet("scale_tweak", 0.792855f);
+	shadow.findParamAndSet("transparency", 0.0f);
+	shadow.findParamAndSet("transparency_fade_start", 517.8571f);
+	shadow.findParamAndSet("transparency_fade_len", 196.42857f);
+	shadow.findParamAndSet("color", 0.625f, 1.0f, 0.830357f);
+	shadow.findParamAndSet("plane_z", 0.039999f);
+	shadow.findParamAndSet("back_color_begin", 0.287331f);
+	shadow.findParamAndSet("back_color_end", 0.802326f);
+	shadow.findParamAndSet("wave_shadow_blend", 1.0f);
+	shadow.findParamAndSet("wave_shadow_filter", 0.1f);
+	m_shadow.m_keys.GetKey("effects_0411_purple_02", true)->m_values = shadow.m_values;
+
+	shadow.findParamAndSet("scale_tweak", 0.792855f);
+	shadow.findParamAndSet("transparency", 0.0f);
+	shadow.findParamAndSet("transparency_fade_start", 517.8571f);
+	shadow.findParamAndSet("transparency_fade_len", 196.42857f);
+	shadow.findParamAndSet("color", 0.625f, 1.0f, 0.830357f);
+	shadow.findParamAndSet("plane_z", 0.039999f);
+	shadow.findParamAndSet("back_color_begin", 0.287331f);
+	shadow.findParamAndSet("back_color_end", 0.802326f);
+	shadow.findParamAndSet("wave_shadow_blend", 1.0f);
+	shadow.findParamAndSet("wave_shadow_filter", 0.1f);
+	m_shadow.m_keys.GetKey("effects_0415_A5", true)->m_values = shadow.m_values;
+
+	shadow.findParamAndSet("scale_tweak", 0.792855f);
+	shadow.findParamAndSet("transparency", 0.0f);
+	shadow.findParamAndSet("transparency_fade_start", 517.8571f);
+	shadow.findParamAndSet("transparency_fade_len", 196.42857f);
+	shadow.findParamAndSet("color", 0.625f, 1.0f, 0.830357f);
+	shadow.findParamAndSet("plane_z", 0.039999f);
+	shadow.findParamAndSet("back_color_begin", 0.287331f);
+	shadow.findParamAndSet("back_color_end", 0.802326f);
+	shadow.findParamAndSet("wave_shadow_blend", 1.0f);
+	shadow.findParamAndSet("wave_shadow_filter", 0.1f);
+	m_shadow.m_keys.GetKey("effects_0518_dalia", true)->m_values = shadow.m_values;
+
+	shadow.findParamAndSet("scale_tweak", 0.792855f);
+	shadow.findParamAndSet("transparency", 0.0f);
+	shadow.findParamAndSet("transparency_fade_start", 517.8571f);
+	shadow.findParamAndSet("transparency_fade_len", 196.42857f);
+	shadow.findParamAndSet("color", 0.625f, 1.0f, 0.830357f);
+	shadow.findParamAndSet("plane_z", 0.039999f);
+	shadow.findParamAndSet("back_color_begin", 0.287331f);
+	shadow.findParamAndSet("back_color_end", 0.802326f);
+	shadow.findParamAndSet("wave_shadow_blend", 1.0f);
+	shadow.findParamAndSet("wave_shadow_filter", 0.1f);
+	m_shadow.m_keys.GetKey("effects_0518_gray_FLAT", true)->m_values = shadow.m_values;
+
+	shadow.findParamAndSet("scale_tweak", 0.792855f);
+	shadow.findParamAndSet("transparency", 0.0f);
+	shadow.findParamAndSet("transparency_fade_start", 517.8571f);
+	shadow.findParamAndSet("transparency_fade_len", 196.42857f);
+	shadow.findParamAndSet("color", 0.625f, 1.0f, 0.830357f);
+	shadow.findParamAndSet("plane_z", 0.039999f);
+	shadow.findParamAndSet("back_color_begin", 0.287331f);
+	shadow.findParamAndSet("back_color_end", 0.802326f);
+	shadow.findParamAndSet("wave_shadow_blend", 1.0f);
+	shadow.findParamAndSet("wave_shadow_filter", 0.1f);
+	m_shadow.m_keys.GetKey("effects_0518_ruby", true)->m_values = shadow.m_values;
+
+	shadow.findParamAndSet("scale_tweak", 0.792855f);
+	shadow.findParamAndSet("transparency", 0.0f);
+	shadow.findParamAndSet("transparency_fade_start", 517.8571f);
+	shadow.findParamAndSet("transparency_fade_len", 196.42857f);
+	shadow.findParamAndSet("color", 0.625f, 1.0f, 0.830357f);
+	shadow.findParamAndSet("plane_z", 0.039999f);
+	shadow.findParamAndSet("back_color_begin", 0.287331f);
+	shadow.findParamAndSet("back_color_end", 0.802326f);
+	shadow.findParamAndSet("wave_shadow_blend", 1.0f);
+	shadow.findParamAndSet("wave_shadow_filter", 0.1f);
+	m_shadow.m_keys.GetKey("effects_A1", true)->m_values = shadow.m_values;
+
+	shadow.findParamAndSet("scale_tweak", 0.792855f);
+	shadow.findParamAndSet("transparency", 0.0f);
+	shadow.findParamAndSet("transparency_fade_start", 517.8571f);
+	shadow.findParamAndSet("transparency_fade_len", 196.42857f);
+	shadow.findParamAndSet("color", 0.625f, 1.0f, 0.830357f);
+	shadow.findParamAndSet("plane_z", 0.039999f);
+	shadow.findParamAndSet("back_color_begin", 0.287331f);
+	shadow.findParamAndSet("back_color_end", 0.802326f);
+	shadow.findParamAndSet("wave_shadow_blend", 1.0f);
+	shadow.findParamAndSet("wave_shadow_filter", 0.1f);
+	m_shadow.m_keys.GetKey("effects_black", true)->m_values = shadow.m_values;
+
+	shadow.findParamAndSet("scale_tweak", 0.792855f);
+	shadow.findParamAndSet("transparency", 0.0f);
+	shadow.findParamAndSet("transparency_fade_start", 517.8571f);
+	shadow.findParamAndSet("transparency_fade_len", 196.42857f);
+	shadow.findParamAndSet("color", 0.625f, 1.0f, 0.830357f);
+	shadow.findParamAndSet("plane_z", 0.039999f);
+	shadow.findParamAndSet("back_color_begin", 0.287331f);
+	shadow.findParamAndSet("back_color_end", 0.802326f);
+	shadow.findParamAndSet("wave_shadow_blend", 1.0f);
+	shadow.findParamAndSet("wave_shadow_filter", 0.1f);
+	m_shadow.m_keys.GetKey("effects_blueTB_0513_01", true)->m_values = shadow.m_values;
+
+	shadow.findParamAndSet("scale_tweak", 0.792855f);
+	shadow.findParamAndSet("transparency", 0.0f);
+	shadow.findParamAndSet("transparency_fade_start", 517.8571f);
+	shadow.findParamAndSet("transparency_fade_len", 196.42857f);
+	shadow.findParamAndSet("color", 0.625f, 1.0f, 0.830357f);
+	shadow.findParamAndSet("plane_z", 0.039999f);
+	shadow.findParamAndSet("back_color_begin", 0.287331f);
+	shadow.findParamAndSet("back_color_end", 0.802326f);
+	shadow.findParamAndSet("wave_shadow_blend", 1.0f);
+	shadow.findParamAndSet("wave_shadow_filter", 0.1f);
+	m_shadow.m_keys.GetKey("effects_blue_FLAT", true)->m_values = shadow.m_values;
+
+	shadow.findParamAndSet("scale_tweak", 0.792855f);
+	shadow.findParamAndSet("transparency", 0.0f);
+	shadow.findParamAndSet("transparency_fade_start", 517.8571f);
+	shadow.findParamAndSet("transparency_fade_len", 196.42857f);
+	shadow.findParamAndSet("color", 0.625f, 1.0f, 0.830357f);
+	shadow.findParamAndSet("plane_z", 0.039999f);
+	shadow.findParamAndSet("back_color_begin", 0.287331f);
+	shadow.findParamAndSet("back_color_end", 0.802326f);
+	shadow.findParamAndSet("wave_shadow_blend", 1.0f);
+	shadow.findParamAndSet("wave_shadow_filter", 0.1f);
+	m_shadow.m_keys.GetKey("effects_bluewhite_05", true)->m_values = shadow.m_values;
+
+	shadow.findParamAndSet("scale_tweak", 0.792855f);
+	shadow.findParamAndSet("transparency", 0.0f);
+	shadow.findParamAndSet("transparency_fade_start", 517.8571f);
+	shadow.findParamAndSet("transparency_fade_len", 196.42857f);
+	shadow.findParamAndSet("color", 0.625f, 1.0f, 0.830357f);
+	shadow.findParamAndSet("plane_z", 0.039999f);
+	shadow.findParamAndSet("back_color_begin", 0.287331f);
+	shadow.findParamAndSet("back_color_end", 0.802326f);
+	shadow.findParamAndSet("wave_shadow_blend", 1.0f);
+	shadow.findParamAndSet("wave_shadow_filter", 0.1f);
+	m_shadow.m_keys.GetKey("effects_casis", true)->m_values = shadow.m_values;
+
+	shadow.findParamAndSet("scale_tweak", 0.792855f);
+	shadow.findParamAndSet("transparency", 0.0f);
+	shadow.findParamAndSet("transparency_fade_start", 517.8571f);
+	shadow.findParamAndSet("transparency_fade_len", 196.42857f);
+	shadow.findParamAndSet("color", 0.625f, 1.0f, 0.830357f);
+	shadow.findParamAndSet("plane_z", 0.039999f);
+	shadow.findParamAndSet("back_color_begin", 0.287331f);
+	shadow.findParamAndSet("back_color_end", 0.802326f);
+	shadow.findParamAndSet("wave_shadow_blend", 1.0f);
+	shadow.findParamAndSet("wave_shadow_filter", 0.1f);
+	m_shadow.m_keys.GetKey("effects_default_0512_01", true)->m_values = shadow.m_values;
+
+	shadow.findParamAndSet("scale_tweak", 0.792855f);
+	shadow.findParamAndSet("transparency", 0.0f);
+	shadow.findParamAndSet("transparency_fade_start", 517.8571f);
+	shadow.findParamAndSet("transparency_fade_len", 196.42857f);
+	shadow.findParamAndSet("color", 0.625f, 1.0f, 0.830357f);
+	shadow.findParamAndSet("plane_z", 0.039999f);
+	shadow.findParamAndSet("back_color_begin", 0.287331f);
+	shadow.findParamAndSet("back_color_end", 0.802326f);
+	shadow.findParamAndSet("wave_shadow_blend", 1.0f);
+	shadow.findParamAndSet("wave_shadow_filter", 0.1f);
+	m_shadow.m_keys.GetKey("effects_green_0512_01", true)->m_values = shadow.m_values;
+
+	shadow.findParamAndSet("scale_tweak", 0.792855f);
+	shadow.findParamAndSet("transparency", 0.0f);
+	shadow.findParamAndSet("transparency_fade_start", 517.8571f);
+	shadow.findParamAndSet("transparency_fade_len", 196.42857f);
+	shadow.findParamAndSet("color", 0.625f, 1.0f, 0.830357f);
+	shadow.findParamAndSet("plane_z", 0.039999f);
+	shadow.findParamAndSet("back_color_begin", 0.287331f);
+	shadow.findParamAndSet("back_color_end", 0.802326f);
+	shadow.findParamAndSet("wave_shadow_blend", 1.0f);
+	shadow.findParamAndSet("wave_shadow_filter", 0.1f);
+	m_shadow.m_keys.GetKey("effects_koiao_0512_01", true)->m_values = shadow.m_values;
+
+	shadow.findParamAndSet("scale_tweak", 0.792855f);
+	shadow.findParamAndSet("transparency", 0.0f);
+	shadow.findParamAndSet("transparency_fade_start", 517.8571f);
+	shadow.findParamAndSet("transparency_fade_len", 196.42857f);
+	shadow.findParamAndSet("color", 0.625f, 1.0f, 0.830357f);
+	shadow.findParamAndSet("plane_z", 0.039999f);
+	shadow.findParamAndSet("back_color_begin", 0.287331f);
+	shadow.findParamAndSet("back_color_end", 0.802326f);
+	shadow.findParamAndSet("wave_shadow_blend", 1.0f);
+	shadow.findParamAndSet("wave_shadow_filter", 0.1f);
+	m_shadow.m_keys.GetKey("effects_limegreen_0513_02", true)->m_values = shadow.m_values;
+
+	shadow.findParamAndSet("scale_tweak", 0.792855f);
+	shadow.findParamAndSet("transparency", 0.0f);
+	shadow.findParamAndSet("transparency_fade_start", 517.8571f);
+	shadow.findParamAndSet("transparency_fade_len", 196.42857f);
+	shadow.findParamAndSet("color", 0.625f, 1.0f, 0.830357f);
+	shadow.findParamAndSet("plane_z", 0.039999f);
+	shadow.findParamAndSet("back_color_begin", 0.287331f);
+	shadow.findParamAndSet("back_color_end", 0.802326f);
+	shadow.findParamAndSet("wave_shadow_blend", 1.0f);
+	shadow.findParamAndSet("wave_shadow_filter", 0.1f);
+	m_shadow.m_keys.GetKey("effects_maintosh", true)->m_values = shadow.m_values;
+
+	shadow.findParamAndSet("scale_tweak", 0.792855f);
+	shadow.findParamAndSet("transparency", 0.0f);
+	shadow.findParamAndSet("transparency_fade_start", 517.8571f);
+	shadow.findParamAndSet("transparency_fade_len", 196.42857f);
+	shadow.findParamAndSet("color", 0.625f, 1.0f, 0.830357f);
+	shadow.findParamAndSet("plane_z", 0.039999f);
+	shadow.findParamAndSet("back_color_begin", 0.287331f);
+	shadow.findParamAndSet("back_color_end", 0.802326f);
+	shadow.findParamAndSet("wave_shadow_blend", 1.0f);
+	shadow.findParamAndSet("wave_shadow_filter", 0.1f);
+	m_shadow.m_keys.GetKey("effects_marrygold", true)->m_values = shadow.m_values;
+
+	shadow.findParamAndSet("scale_tweak", 0.792855f);
+	shadow.findParamAndSet("transparency", 0.0f);
+	shadow.findParamAndSet("transparency_fade_start", 517.8571f);
+	shadow.findParamAndSet("transparency_fade_len", 196.42857f);
+	shadow.findParamAndSet("color", 0.625f, 1.0f, 0.830357f);
+	shadow.findParamAndSet("plane_z", 0.039999f);
+	shadow.findParamAndSet("back_color_begin", 0.287331f);
+	shadow.findParamAndSet("back_color_end", 0.802326f);
+	shadow.findParamAndSet("wave_shadow_blend", 1.0f);
+	shadow.findParamAndSet("wave_shadow_filter", 0.1f);
+	m_shadow.m_keys.GetKey("effects_peach_0512_001", true)->m_values = shadow.m_values;
+
+	shadow.findParamAndSet("scale_tweak", 0.792855f);
+	shadow.findParamAndSet("transparency", 0.0f);
+	shadow.findParamAndSet("transparency_fade_start", 517.8571f);
+	shadow.findParamAndSet("transparency_fade_len", 196.42857f);
+	shadow.findParamAndSet("color", 0.625f, 1.0f, 0.830357f);
+	shadow.findParamAndSet("plane_z", 0.039999f);
+	shadow.findParamAndSet("back_color_begin", 0.287331f);
+	shadow.findParamAndSet("back_color_end", 0.802326f);
+	shadow.findParamAndSet("wave_shadow_blend", 1.0f);
+	shadow.findParamAndSet("wave_shadow_filter", 0.1f);
+	m_shadow.m_keys.GetKey("effects_purple_01", true)->m_values = shadow.m_values;
+
+	shadow.findParamAndSet("scale_tweak", 0.792855f);
+	shadow.findParamAndSet("transparency", 0.0f);
+	shadow.findParamAndSet("transparency_fade_start", 517.8571f);
+	shadow.findParamAndSet("transparency_fade_len", 196.42857f);
+	shadow.findParamAndSet("color", 0.625f, 1.0f, 0.830357f);
+	shadow.findParamAndSet("plane_z", 0.039999f);
+	shadow.findParamAndSet("back_color_begin", 0.287331f);
+	shadow.findParamAndSet("back_color_end", 0.802326f);
+	shadow.findParamAndSet("wave_shadow_blend", 1.0f);
+	shadow.findParamAndSet("wave_shadow_filter", 0.1f);
+	m_shadow.m_keys.GetKey("effects_purplered", true)->m_values = shadow.m_values;
+
+	shadow.findParamAndSet("scale_tweak", 0.792855f);
+	shadow.findParamAndSet("transparency", 0.0f);
+	shadow.findParamAndSet("transparency_fade_start", 517.8571f);
+	shadow.findParamAndSet("transparency_fade_len", 196.42857f);
+	shadow.findParamAndSet("color", 0.625f, 1.0f, 0.830357f);
+	shadow.findParamAndSet("plane_z", 0.039999f);
+	shadow.findParamAndSet("back_color_begin", 0.287331f);
+	shadow.findParamAndSet("back_color_end", 0.802326f);
+	shadow.findParamAndSet("wave_shadow_blend", 1.0f);
+	shadow.findParamAndSet("wave_shadow_filter", 0.1f);
+	m_shadow.m_keys.GetKey("effects_redTB_0513_01", true)->m_values = shadow.m_values;
+
+	shadow.findParamAndSet("scale_tweak", 0.792855f);
+	shadow.findParamAndSet("transparency", 0.0f);
+	shadow.findParamAndSet("transparency_fade_start", 517.8571f);
+	shadow.findParamAndSet("transparency_fade_len", 196.42857f);
+	shadow.findParamAndSet("color", 0.625f, 1.0f, 0.830357f);
+	shadow.findParamAndSet("plane_z", 0.039999f);
+	shadow.findParamAndSet("back_color_begin", 0.287331f);
+	shadow.findParamAndSet("back_color_end", 0.802326f);
+	shadow.findParamAndSet("wave_shadow_blend", 1.0f);
+	shadow.findParamAndSet("wave_shadow_filter", 0.1f);
+	m_shadow.m_keys.GetKey("effects_turquoise_0513_01", true)->m_values = shadow.m_values;
+
+	shadow.findParamAndSet("scale_tweak", 0.792855f);
+	shadow.findParamAndSet("transparency", 0.0f);
+	shadow.findParamAndSet("transparency_fade_start", 517.8571f);
+	shadow.findParamAndSet("transparency_fade_len", 196.42857f);
+	shadow.findParamAndSet("color", 0.625f, 1.0f, 0.830357f);
+	shadow.findParamAndSet("plane_z", 0.039999f);
+	shadow.findParamAndSet("back_color_begin", 0.287331f);
+	shadow.findParamAndSet("back_color_end", 0.802326f);
+	shadow.findParamAndSet("wave_shadow_blend", 1.0f);
+	shadow.findParamAndSet("wave_shadow_filter", 0.1f);
+	m_shadow.m_keys.GetKey("effects_yellow_0512_01", true)->m_values = shadow.m_values;
+
+	shadow.findParamAndSet("scale_tweak", 0.792855f);
+	shadow.findParamAndSet("transparency", 0.0f);
+	shadow.findParamAndSet("transparency_fade_start", 517.8571f);
+	shadow.findParamAndSet("transparency_fade_len", 196.42857f);
+	shadow.findParamAndSet("color", 0.625f, 1.0f, 0.830357f);
+	shadow.findParamAndSet("plane_z", 0.039999f);
+	shadow.findParamAndSet("back_color_begin", 0.287331f);
+	shadow.findParamAndSet("back_color_end", 0.802326f);
+	shadow.findParamAndSet("wave_shadow_blend", 1.0f);
+	shadow.findParamAndSet("wave_shadow_filter", 0.1f);
+	m_shadow.m_keys.GetKey("iboot", true)->m_values = shadow.m_values;
+
+
+	TouchWaveParamSet &touch_wave = m_touch_wave.m_keys.m_default;
+
+	touch_wave.findParamAndSet("half_width", 0.35f);
+	touch_wave.findParamAndSet("speed", 3.0f);
+	touch_wave.findParamAndSet("fade", 2.5f);
+	touch_wave.findParamAndSet("scale", 151.0f);
+	m_touch_wave.m_keys.GetKey("effects_0406_ruby", true)->m_values = touch_wave.m_values;
+
+	touch_wave.findParamAndSet("half_width", 0.35f);
+	touch_wave.findParamAndSet("speed", 3.0f);
+	touch_wave.findParamAndSet("fade", 2.5f);
+	touch_wave.findParamAndSet("scale", 151.0f);
+	m_touch_wave.m_keys.GetKey("effects_0407_purple_01", true)->m_values = touch_wave.m_values;
+
+	touch_wave.findParamAndSet("half_width", 0.35f);
+	touch_wave.findParamAndSet("speed", 3.0f);
+	touch_wave.findParamAndSet("fade", 2.5f);
+	touch_wave.findParamAndSet("scale", 151.0f);
+	m_touch_wave.m_keys.GetKey("effects_0408_01_orange", true)->m_values = touch_wave.m_values;
+
+	touch_wave.findParamAndSet("half_width", 0.35f);
+	touch_wave.findParamAndSet("speed", 3.0f);
+	touch_wave.findParamAndSet("fade", 2.5f);
+	touch_wave.findParamAndSet("scale", 151.0f);
+	m_touch_wave.m_keys.GetKey("effects_0411_purple_02", true)->m_values = touch_wave.m_values;
+
+	touch_wave.findParamAndSet("half_width", 0.35f);
+	touch_wave.findParamAndSet("speed", 3.0f);
+	touch_wave.findParamAndSet("fade", 2.5f);
+	touch_wave.findParamAndSet("scale", 151.0f);
+	m_touch_wave.m_keys.GetKey("effects_0415_A5", true)->m_values = touch_wave.m_values;
+
+	touch_wave.findParamAndSet("half_width", 0.35f);
+	touch_wave.findParamAndSet("speed", 3.0f);
+	touch_wave.findParamAndSet("fade", 2.5f);
+	touch_wave.findParamAndSet("scale", 151.0f);
+	m_touch_wave.m_keys.GetKey("effects_0518_dalia", true)->m_values = touch_wave.m_values;
+
+	touch_wave.findParamAndSet("half_width", 0.35f);
+	touch_wave.findParamAndSet("speed", 3.0f);
+	touch_wave.findParamAndSet("fade", 2.5f);
+	touch_wave.findParamAndSet("scale", 151.0f);
+	m_touch_wave.m_keys.GetKey("effects_0518_gray_FLAT", true)->m_values = touch_wave.m_values;
+
+	touch_wave.findParamAndSet("half_width", 0.35f);
+	touch_wave.findParamAndSet("speed", 3.0f);
+	touch_wave.findParamAndSet("fade", 2.5f);
+	touch_wave.findParamAndSet("scale", 151.0f);
+	m_touch_wave.m_keys.GetKey("effects_0518_ruby", true)->m_values = touch_wave.m_values;
+
+	touch_wave.findParamAndSet("half_width", 0.35f);
+	touch_wave.findParamAndSet("speed", 3.0f);
+	touch_wave.findParamAndSet("fade", 2.5f);
+	touch_wave.findParamAndSet("scale", 151.0f);
+	m_touch_wave.m_keys.GetKey("effects_A1", true)->m_values = touch_wave.m_values;
+
+	touch_wave.findParamAndSet("half_width", 0.35f);
+	touch_wave.findParamAndSet("speed", 3.0f);
+	touch_wave.findParamAndSet("fade", 2.5f);
+	touch_wave.findParamAndSet("scale", 151.0f);
+	m_touch_wave.m_keys.GetKey("effects_black", true)->m_values = touch_wave.m_values;
+
+	touch_wave.findParamAndSet("half_width", 0.35f);
+	touch_wave.findParamAndSet("speed", 3.0f);
+	touch_wave.findParamAndSet("fade", 2.5f);
+	touch_wave.findParamAndSet("scale", 151.0f);
+	m_touch_wave.m_keys.GetKey("effects_blueTB_0513_01", true)->m_values = touch_wave.m_values;
+
+	touch_wave.findParamAndSet("half_width", 0.35f);
+	touch_wave.findParamAndSet("speed", 3.0f);
+	touch_wave.findParamAndSet("fade", 2.5f);
+	touch_wave.findParamAndSet("scale", 151.0f);
+	m_touch_wave.m_keys.GetKey("effects_blue_FLAT", true)->m_values = touch_wave.m_values;
+
+	touch_wave.findParamAndSet("half_width", 0.35f);
+	touch_wave.findParamAndSet("speed", 3.0f);
+	touch_wave.findParamAndSet("fade", 2.5f);
+	touch_wave.findParamAndSet("scale", 151.0f);
+	m_touch_wave.m_keys.GetKey("effects_bluewhite_05", true)->m_values = touch_wave.m_values;
+
+	touch_wave.findParamAndSet("half_width", 0.35f);
+	touch_wave.findParamAndSet("speed", 3.0f);
+	touch_wave.findParamAndSet("fade", 2.5f);
+	touch_wave.findParamAndSet("scale", 151.0f);
+	m_touch_wave.m_keys.GetKey("effects_casis", true)->m_values = touch_wave.m_values;
+
+	touch_wave.findParamAndSet("half_width", 0.35f);
+	touch_wave.findParamAndSet("speed", 3.0f);
+	touch_wave.findParamAndSet("fade", 2.5f);
+	touch_wave.findParamAndSet("scale", 151.0f);
+	m_touch_wave.m_keys.GetKey("effects_default_0512_01", true)->m_values = touch_wave.m_values;
+
+	touch_wave.findParamAndSet("half_width", 0.35f);
+	touch_wave.findParamAndSet("speed", 3.0f);
+	touch_wave.findParamAndSet("fade", 2.5f);
+	touch_wave.findParamAndSet("scale", 151.0f);
+	m_touch_wave.m_keys.GetKey("effects_green_0512_01", true)->m_values = touch_wave.m_values;
+
+	touch_wave.findParamAndSet("half_width", 0.35f);
+	touch_wave.findParamAndSet("speed", 3.0f);
+	touch_wave.findParamAndSet("fade", 2.5f);
+	touch_wave.findParamAndSet("scale", 151.0f);
+	m_touch_wave.m_keys.GetKey("effects_koiao_0512_01", true)->m_values = touch_wave.m_values;
+
+	touch_wave.findParamAndSet("half_width", 0.35f);
+	touch_wave.findParamAndSet("speed", 3.0f);
+	touch_wave.findParamAndSet("fade", 2.5f);
+	touch_wave.findParamAndSet("scale", 151.0f);
+	m_touch_wave.m_keys.GetKey("effects_limegreen_0513_02", true)->m_values = touch_wave.m_values;
+
+	touch_wave.findParamAndSet("half_width", 0.35f);
+	touch_wave.findParamAndSet("speed", 3.0f);
+	touch_wave.findParamAndSet("fade", 2.5f);
+	touch_wave.findParamAndSet("scale", 151.0f);
+	m_touch_wave.m_keys.GetKey("effects_maintosh", true)->m_values = touch_wave.m_values;
+
+	touch_wave.findParamAndSet("half_width", 0.35f);
+	touch_wave.findParamAndSet("speed", 3.0f);
+	touch_wave.findParamAndSet("fade", 2.5f);
+	touch_wave.findParamAndSet("scale", 151.0f);
+	m_touch_wave.m_keys.GetKey("effects_marrygold", true)->m_values = touch_wave.m_values;
+
+	touch_wave.findParamAndSet("half_width", 0.35f);
+	touch_wave.findParamAndSet("speed", 3.0f);
+	touch_wave.findParamAndSet("fade", 2.5f);
+	touch_wave.findParamAndSet("scale", 151.0f);
+	m_touch_wave.m_keys.GetKey("effects_peach_0512_001", true)->m_values = touch_wave.m_values;
+
+	touch_wave.findParamAndSet("half_width", 0.35f);
+	touch_wave.findParamAndSet("speed", 3.0f);
+	touch_wave.findParamAndSet("fade", 2.5f);
+	touch_wave.findParamAndSet("scale", 151.0f);
+	m_touch_wave.m_keys.GetKey("effects_purple_01", true)->m_values = touch_wave.m_values;
+
+	touch_wave.findParamAndSet("half_width", 0.35f);
+	touch_wave.findParamAndSet("speed", 3.0f);
+	touch_wave.findParamAndSet("fade", 2.5f);
+	touch_wave.findParamAndSet("scale", 151.0f);
+	m_touch_wave.m_keys.GetKey("effects_purplered", true)->m_values = touch_wave.m_values;
+
+	touch_wave.findParamAndSet("half_width", 0.35f);
+	touch_wave.findParamAndSet("speed", 3.0f);
+	touch_wave.findParamAndSet("fade", 2.5f);
+	touch_wave.findParamAndSet("scale", 151.0f);
+	m_touch_wave.m_keys.GetKey("effects_redTB_0513_01", true)->m_values = touch_wave.m_values;
+
+	touch_wave.findParamAndSet("half_width", 0.35f);
+	touch_wave.findParamAndSet("speed", 3.0f);
+	touch_wave.findParamAndSet("fade", 2.5f);
+	touch_wave.findParamAndSet("scale", 151.0f);
+	m_touch_wave.m_keys.GetKey("effects_turquoise_0513_01", true)->m_values = touch_wave.m_values;
+
+	touch_wave.findParamAndSet("half_width", 0.35f);
+	touch_wave.findParamAndSet("speed", 3.0f);
+	touch_wave.findParamAndSet("fade", 2.5f);
+	touch_wave.findParamAndSet("scale", 151.0f);
+	m_touch_wave.m_keys.GetKey("effects_yellow_0512_01", true)->m_values = touch_wave.m_values;
+
+	touch_wave.findParamAndSet("half_width", 0.35f);
+	touch_wave.findParamAndSet("speed", 3.0f);
+	touch_wave.findParamAndSet("fade", 2.5f);
+	touch_wave.findParamAndSet("scale", 151.0f);
+	m_touch_wave.m_keys.GetKey("iboot", true)->m_values = touch_wave.m_values;
+
+
+	MaterialParamSet &color_chip_material = m_color_chip_material.m_keys.m_default;
+
+	color_chip_material.findParamAndSet("color", 1.0f, 1.0f, 1.0f, 1.0f);
+	color_chip_material.findParamAndSet("diffuse_coeff", 1.0f);
+	color_chip_material.findParamAndSet("specular_coeff", 2.735693f);
+	color_chip_material.findParamAndSet("specular_power", 10.542857f);
+	color_chip_material.findParamAndSet("fresnel_front", 0.0f);
+	color_chip_material.findParamAndSet("fresnel_control", 0.749091f);
+	color_chip_material.findParamAndSet("fresnel_coeff", 0.893615f);
+	color_chip_material.findParamAndSet("refraction_coeff", 2.188555f);
+	color_chip_material.findParamAndSet("refraction_amount", 0.04464f);
+	m_color_chip_material.m_keys.GetKey("default", true)->m_values = color_chip_material.m_values;
+
+
+	PointLightSphereParamSet &color_chip_light = m_color_chip_light.m_keys.m_default;
+
+	color_chip_light.findParamAndSet("theta_phi", 1.430546f, 0.336599f);
+	color_chip_light.findParamAndSet("distance", 1582.0312f);
+	color_chip_light.findParamAndSet("attn", 1.0f, 0.0f, 0.0f);
+	color_chip_light.findParamAndSet("ambient_color", 0.2f, 0.2f, 0.2f);
+	color_chip_light.findParamAndSet("diffuse_color", 1.0f, 1.0f, 1.0f);
+	color_chip_light.findParamAndSet("fade", 1.0f);
+	m_color_chip_light.m_keys.GetKey("default", true)->m_values = color_chip_light.m_values;
+
+	m_manager.AddVariant("effects_default_0512_01");
+	m_manager.AddVariant("iboot");
+	m_manager.AddVariant("effects_0406_ruby");
+	m_manager.AddVariant("effects_0407_purple_01");
+	m_manager.AddVariant("effects_0408_01_orange");
+	m_manager.AddVariant("effects_0411_purple_02");
+	m_manager.AddVariant("effects_0415_A5");
+	m_manager.AddVariant("effects_0518_dalia");
+	m_manager.AddVariant("effects_0518_gray_FLAT");
+	m_manager.AddVariant("effects_0518_ruby");
+	m_manager.AddVariant("effects_A1");
+	m_manager.AddVariant("effects_black");
+	m_manager.AddVariant("effects_blue_FLAT");
+	m_manager.AddVariant("effects_blueTB_0513_01");
+	m_manager.AddVariant("effects_bluewhite_05");
+	m_manager.AddVariant("effects_casis");
+	m_manager.AddVariant("effects_green_0512_01");
+	m_manager.AddVariant("effects_koiao_0512_01");
+	m_manager.AddVariant("effects_maintosh");
+	m_manager.AddVariant("effects_marrygold");
+	m_manager.AddVariant("effects_peach_0512_001");
+	m_manager.AddVariant("effects_purple_01");
+	m_manager.AddVariant("effects_purplered");
+	m_manager.AddVariant("effects_yellow_0512_01");
+	m_manager.AddVariant("effects_redTB_0513_01");
+	m_manager.AddVariant("effects_limegreen_0513_02");
+	m_manager.AddVariant("effects_turquoise_0513_01");
+	m_manager.SetVariant("effects_default_0512_01");
+	m_color_chip_manager.AddVariant("default");
+	m_color_chip_manager.SetVariant("default");
+#else
 	{
 		int32_t columns = s_profile_columns;
 		vector<ProfilePoint> points((allocator<ProfilePoint>()));
@@ -2812,6 +5885,7 @@ void PanelRenderer::Load(const string &dir)
 	m_manager.SetVariant("effects_default_0512_01");
 	m_color_chip_manager.AddVariant("default");
 	m_color_chip_manager.SetVariant("default");
+#endif
 }
 
 PanelVertex PanelBorderVertex::operator()(const math::v2 &uv) const

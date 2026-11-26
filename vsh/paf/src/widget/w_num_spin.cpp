@@ -128,10 +128,12 @@ static VersatileParam *NewNumSpinLayoutParam()
 	return new WidgetLayoutParam;
 }
 
+#ifndef PAF_BUILD_2014
 static VersatileParam *NewNumSpinFocusParam()
 {
 	return new WidgetFocusParam;
 }
+#endif
 
 static VersatileParam *NewNumSpinStyleParam()
 {
@@ -153,7 +155,9 @@ FactoryFuncTable g_factoryNumSpin = {
 	NewNumSpin,
 	NewNumSpinParam,
 	NewNumSpinLayoutParam,
+#ifndef PAF_BUILD_2014
 	NewNumSpinFocusParam,
+#endif
 	NewNumSpinStyleParam,
 	NewNumSpinHandlerParam,
 	NewNumSpinSoundParam,

@@ -687,10 +687,12 @@ static VersatileParam *NewScrollBarLayoutParam()
 	return new WidgetLayoutParam;
 }
 
+#ifndef PAF_BUILD_2014
 static VersatileParam *NewScrollBarFocusParam()
 {
 	return new WidgetFocusParam;
 }
+#endif
 
 static VersatileParam *NewScrollBarStyleParam()
 {
@@ -712,7 +714,9 @@ FactoryFuncTable g_factoryScrollBar = {
 	NewScrollBar,
 	NewScrollBarParam,
 	NewScrollBarLayoutParam,
+#ifndef PAF_BUILD_2014
 	NewScrollBarFocusParam,
+#endif
 	NewScrollBarStyleParam,
 	NewScrollBarHandlerParam,
 	NewScrollBarSoundParam,

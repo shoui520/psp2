@@ -39,7 +39,11 @@ const float g_spkgCompressedWriteSpeed = 4877.99f;
 const float g_spkgInspectOverheadMs = 20.3f;
 const float g_spkgUpdateOverheadMs = 180.0f;
 
+#ifdef UPDATER_CORE_2014
+const float g_spkgWriteSpeedTable[29] = {
+#else
 const float g_spkgWriteSpeedTable[26] = {
+#endif
 	1.0f,		/* 0 */
 	4930.52f,	/* 1 */
 	1.0f,		/* 2 */
@@ -66,6 +70,11 @@ const float g_spkgWriteSpeedTable[26] = {
 	4930.52f,	/* 23 */
 	4930.52f,	/* 24 */
 	1.0f,		/* 25 */
+#ifdef UPDATER_CORE_2014
+	1.0f,		/* 26 */
+	1.0f,		/* 27 */
+	1.0f,		/* 28 */
+#endif
 };
 
 SceUpdaterProgressCallback g_updaterProgressCallback = NULL;
@@ -387,6 +396,11 @@ int SpkgGroup::GetUpdatePackageType(int index)
 	case 25:
 		packageType = 25;
 		break;
+#ifdef UPDATER_CORE_2014
+	case 28:
+		packageType = 28;
+		break;
+#endif
 	default:
 		break;
 	}
@@ -753,8 +767,13 @@ int SpkgGroup::InspectSpkg(SpkgOperationElement *element)
 	ret = sceSblUsInspectSpackage(packageType, element->GetBuffer(),
 				      (SceSize)entry->segmentSize, flags, &requestId);
 	if (ret != 0) {
+#ifdef UPDATER_CORE_2014
+		UPDATER_ERROR_FMT(258, "%d %lld %x : %x", packageType, entry->segmentSize,
+				  flags, ret);
+#else
 		UPDATER_ERROR_FMT(253, "%d %lld %x : %x", packageType, entry->segmentSize,
 				  flags, ret);
+#endif
 		ret = ConvertErrorCodeInspectRequest(packageType, ret);
 		if ((ret != SCE_SBL_US_ERROR_BAD_VERSION ||
 		     (packageType != 9 && packageType != 1 && packageType != 10 &&

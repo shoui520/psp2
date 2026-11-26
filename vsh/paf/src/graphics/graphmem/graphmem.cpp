@@ -161,6 +161,23 @@ void *AllocOSMemory(DeviceType device_type, uint32_t size, const char *name, Opt
 	return base;
 }
 
+#ifdef PAF_BUILD_2014
+void Init(uint32_t system_heap_size, uint32_t video_heap_size, ModeType mode)
+{
+	s_mode = mode;
+	s_system_memory = AllocOSMemory(DeviceType_SystemMemory, system_heap_size,
+					"ScePafGraphMemSystem", NULL);
+	if (s_system_memory != NULL)
+		s_system_heap = common::SharedPtr<GraphHeapAllocator>(new GraphHeapAllocator(
+			s_system_memory, system_heap_size, "ScePafGraphMemSystem"));
+
+	s_video_memory = AllocOSMemory(DeviceType_VideoMemory, video_heap_size,
+				       "ScePafGraphMemVideo", NULL);
+	if (s_video_memory != NULL)
+		s_video_heap = common::SharedPtr<GraphHeapAllocator>(new GraphHeapAllocator(
+			s_video_memory, video_heap_size, "ScePafGraphMemVideo"));
+}
+#else
 void Init(uint32_t system_heap_size, uint32_t video_heap_size)
 {
 	s_system_memory = NULL;
@@ -188,6 +205,7 @@ void Init(uint32_t system_heap_size, uint32_t video_heap_size)
 				s_video_memory, video_heap_size, "ScePafGraphMemVideo"));
 	}
 }
+#endif
 
 void FreeOSMemory(DeviceType device_type, void *p)
 {

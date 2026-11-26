@@ -20,6 +20,9 @@ public:
 	rect(const rect &obj);
 	rect(const v2 &center, const v2 &size);
 	rect(float xvalue, float yvalue, float wvalue, float hvalue);
+#ifdef PAF_BUILD_2014
+	virtual ~rect();
+#endif
 
 	void set(const v2 &center, const v2 &size);
 	void set(float xvalue, float yvalue, float wvalue, float hvalue);
