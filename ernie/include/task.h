@@ -23,8 +23,27 @@ extern __sreg unsigned int taskPending;
    interrupts and the timers' handlers (task<n>ISetFlag) */
 #define TASK_FLAG_SETTERS	(BOARD_USS1001 && SOURCE_0104)
 
+/* 0x00080307 has none of this (no task.c): the events go to the kernel as they are, and
+   nothing is marked pending */
+#define TASK_PENDING_MARKS	FW_SINCE(0x00080502)
+
+#if !TASK_PENDING_MARKS
+#define task1SendMessage(mbxid, msg)	snd_mbx(mbxid, msg)
+#define task2SetFlag(flgid, setptn)	set_flg(flgid, setptn)
+#define task5SetFlag(flgid, setptn)	set_flg(flgid, setptn)
+#define task3SetFlag(flgid, setptn)	set_flg(flgid, setptn)
+#define task4SetFlag(flgid, setptn)	set_flg(flgid, setptn)
+#define task6SetFlag(flgid, setptn)	set_flg(flgid, setptn)
+#define task2ISetFlag(setptn)	iset_flg(3, setptn)
+#define task5ISetFlag(setptn)	iset_flg(4, setptn)
+#define task3ISetFlag(setptn)	iset_flg(2, setptn)
+#define task4ISetFlag(setptn)	iset_flg(1, setptn)
+#define task6ISetFlag(setptn)	iset_flg(6, setptn)
+#else
 extern ER task1SendMessage(ID mbxid, T_MSG *msg);
-#if TASK_FLAG_SETTERS
+#endif
+#if !TASK_PENDING_MARKS
+#elif TASK_FLAG_SETTERS
 extern ER task2SetPattern(FLGPTN setptn);
 extern ER task2ISetFlag(FLGPTN setptn);
 extern ER task5SetPattern(FLGPTN setptn);
@@ -54,6 +73,7 @@ extern ER task6SetFlag(ID flgid, FLGPTN setptn);
 #define task4ISetFlag(setptn)	task4SetFlag(1, setptn)
 #define task6ISetFlag(setptn)	task6SetFlag(6, setptn)
 #endif
+#if TASK_PENDING_MARKS
 extern void task1Idle(void);
 extern void task2Idle(void);
 extern void task5Idle(void);
@@ -67,6 +87,7 @@ extern void taskSetPending(unsigned int pending);
 extern void taskClearPending(unsigned int pending);
 #endif
 extern unsigned int taskGetPending(void);
+#endif
 extern int taskStandbyHalt(void);
 extern unsigned int taskPending1(void);
 extern void taskHookState(void);

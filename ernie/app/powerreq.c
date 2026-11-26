@@ -2194,7 +2194,9 @@ static void powerRequestWriteCookieReg(void)
 {
 	unsigned char result;
 	unsigned char write[3];
+#if FW_SINCE(0x00080502)
 	unsigned char index;
+#endif
 
 	if (powerRequest.length == 3) {
 #if BOARD_DOL1001
@@ -2208,6 +2210,7 @@ static void powerRequestWriteCookieReg(void)
 		write[1] = powerRequestData[2];
 		write[2] = powerRequestData[1];
 		result = powerResult(cookieWrite(write, 3));
+#if FW_SINCE(0x00080502)	/* 0x00080307 keeps no copy */
 		if (result == 0) {
 #if BOARD_DOL1001
 			if (write[0] >= cookieReg(3) && write[0] <= cookieReg(8)) {
@@ -2226,6 +2229,7 @@ static void powerRequestWriteCookieReg(void)
 				cookieRegs[index].byte[1] = write[2];
 			}
 		}
+#endif
 	} else
 		result = 0x3b;
 	powerRequestDone(result);

@@ -12,6 +12,12 @@
 #include "kernel.h"
 #include "task.h"
 
+/* 0x00080307 sets the flags from the interrupt itself */
+#if !TASK_PENDING_MARKS
+#define dmaSetFlag(flgid, setptn)	iset_flg(flgid, setptn)
+#else
+#define dmaSetFlag(flgid, setptn)	task3SetFlag(flgid, setptn)
+#endif
 
 /* sets channel 0 up for a transfer from request->sfr; 1 if one is running */
 unsigned char dma0Setup(struct DmaRequest *request)
@@ -106,11 +112,11 @@ void dma0Interrupt(void)
 	dma0End();
 	dma1End();
 	if ((0x0f & DMC0) == DMA_TRIGGER_SR0)
-		task3SetFlag(2, 0x0002);
+		dmaSetFlag(2, 0x0002);
 	else if ((0x0f & DMC0) == DMA_TRIGGER_CSI10)
-		task3SetFlag(2, 0x0001);
+		dmaSetFlag(2, 0x0001);
 	else if ((0x0f & DMC0) == DMA_TRIGGER_CSI00) {
 		csi.state &= ~CSI_BUSY;
-		task3SetFlag(1, 0x0002);
+		dmaSetFlag(1, 0x0002);
 	}
 }

@@ -23,7 +23,12 @@ void task6(VP_INT exinf)
 	bbmcInit();
 #endif
 	for (;;) {
+#if FW_SINCE(0x00080502)
 		ercd = wai_flg(6, 0x7000 | BBMC_EVENTS, TWF_ORW, &ptn);
+#else
+		/* no UART3 bit 0x4000 in 0x00080307 */
+		ercd = wai_flg(6, 0x3000 | BBMC_EVENTS, TWF_ORW, &ptn);
+#endif
 		if (ercd != E_OK)
 			continue;
 		if (ptn & BBMC_EVENTS) {
@@ -34,8 +39,12 @@ void task6(VP_INT exinf)
 		}
 		if (ptn & 0x3000)
 			clr_flg(6, ~(ptn & 0x3000));
+#if FW_SINCE(0x00080502)
 		if (ptn & 0x4000)
 			clr_flg(6, ~(ptn & 0x4000));
+#endif
+#if TASK_PENDING_MARKS
 		task6Idle();
+#endif
 	}
 }

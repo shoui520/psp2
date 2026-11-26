@@ -63,13 +63,17 @@ void task1(VP_INT exinf)
 			stateEvent(&event);
 			powerSequence();
 		}
+#if TASK_PENDING_MARKS
 		task1Idle();
+#endif
 	}
 }
 
 void systemInit(void)
 {
+#if FW_SINCE(0x00080502) || SOURCE_0103
 	struct TimerHandler timer;
+#endif
 #if FW_SINCE(0x00090502)
 	unsigned char cause;
 #endif
@@ -181,10 +185,14 @@ void systemInit(void)
 	/* 0x00090009 keeps no reset flags and opens the settings in task2On */
 	timerInit();
 	paramInit();
+#if TASK_PENDING_MARKS
 	taskClearPending(-1);
 	taskSetPending(1);
+#endif
+#if FW_SINCE(0x00080502)	/* 0x00080307 has no state check timer */
 	timer.handler = stateCheck;
 	timerSetHandler(TIMER_RTC(0x1a), &timer);
+#endif
 	versionInit();
 #if FW_SINCE(0x00090502)
 	cause = getResetCause() & 0xf0;

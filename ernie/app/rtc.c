@@ -28,8 +28,10 @@
 unsigned char alarmMode;
 #endif
 
+#if FW_SINCE(0x00080502)
 /* the clock's low word at the last interrupt: odd every other one, once a second */
 static __sreg unsigned int rtcClockLow;
+#endif
 
 /* the counters at 0 (1 January), the 24-hour clock, an interrupt every 0.5 s */
 void rtcInit(void)
@@ -119,6 +121,16 @@ void setClock(unsigned long clock)
 	return;
 }
 
+#if !FW_SINCE(0x00080502)
+/* 0x00080307: the interrupt's count of the clock */
+void clockIncrement(void)
+{
+	DI();
+	keepRam.clock++;
+	EI();
+}
+#endif
+
 union RtcTick getAlarm(void)
 {
 	union RtcTick tick;
@@ -169,6 +181,25 @@ unsigned char getAlarmMode(void)
  * second the check that resets the system after 8 failing seconds, then the RTC timers
  * whose time came.
  */
+#if !FW_SINCE(0x00080502)
+/* 0x00080307: the interrupts counted apart from the clock, odd once a second (after the
+   clock's and the alarm's return buffers) */
+static unsigned char rtcCount;
+
+/* 0x00080307: the clock counted, task 2's flags 0x0040 (every 2 s, outside state 0x0010) and
+   0x8000 (once a second), level monitor 1 polled; no RTC timers */
+void rtcInterrupt(void)
+{
+	clockIncrement();
+	rtcCount++;
+	if (stateGet() != 0x0010 && (rtcCount & 0x03) == 0)
+		task2ISetFlag(0x0040);
+	if (stateGet() & 0x0810)
+		levelMonitor1Poll();
+	if (rtcCount & 0x01)
+		task2SetFlag(3, 0x8000);
+}
+#else
 void rtcInterrupt(void)
 {
 	unsigned char i;
@@ -285,3 +316,4 @@ void rtcInterrupt(void)
 	}
 #endif
 }
+#endif

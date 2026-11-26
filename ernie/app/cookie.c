@@ -1274,7 +1274,7 @@ unsigned char cookieCtrlCharge(unsigned char on)
 	result = cookieCtrlChargeAc(on);
 	return result;
 }
-#else
+#elif FW_SINCE(0x00080502)	/* 0x00080307 has none */
 /* 0x00090206: register 3's bits 6 and 7 clear while on and nothing holds them */
 unsigned char cookieCtrlCharge(unsigned char on)
 {

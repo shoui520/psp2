@@ -105,9 +105,15 @@ semWait:	DS	12	; (no semaphores are configured)
 flgWaitTask:	DS	3	; the task waiting on a flag, 0xff none
 mbxHead:	DS	2	; a mailbox's first message (a far pointer, CS 0xff none)
 mbxHeadSeg:	DS	1
+$_IF (ERNIE_FW<0x00080502)	; 0x00080307: two mailboxes, a second entry in each table
+mbxWait:	DS	5	; its waiting tasks
+mbxTail:	DS	2
+mbxTailSeg:	DS	6
+$ELSE
 mbxWait:	DS	1	; its waiting tasks
 mbxTail:	DS	2
 mbxTailSeg:	DS	2
+$ENDIF
 mpfFree:	DS	2	; a pool's first free block (a far pointer)
 mpfFreeSeg:	DS	1
 mbxMsgCount:			; a prioritised mailbox's count of messages
@@ -125,6 +131,11 @@ $_IF (ERNIE_HW>=0x00700000)	; USS-1001 and DOL-1001 (their own short data before
 kResult		EQU	0FFE78H
 kTemp		EQU	0FFE7AH
 kTimeout	EQU	0FFE7CH
+$ELSE
+$_IF (ERNIE_FW<0x00080502)	; 0x00080307 (no task pending marks)
+kResult		EQU	0FFE6AH
+kTemp		EQU	0FFE6CH
+kTimeout	EQU	0FFE6EH
 $ELSE
 $_IF (ERNIE_FW<0x00090203)	; (no charge LED blink bytes)
 kResult		EQU	0FFE6EH		; a service's result, or an index it keeps
@@ -144,6 +155,7 @@ $ELSE
 kResult		EQU	0FFE74H
 kTemp		EQU	0FFE76H
 kTimeout	EQU	0FFE78H
+$ENDIF
 $ENDIF
 $ENDIF
 $ENDIF

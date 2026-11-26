@@ -2,7 +2,12 @@
  * The timer array units: TAU0 and TAU1 powered on and off, and the interval timers on
  * channels 0 of TAU0 and 0 and 1 of TAU1 started and stopped. TM10 is the tick.
  */
+#if ERNIE_FW >= 0x00080502
 #pragma rtos_interrupt INTTM10 tickInterrupt
+#else
+/* 0x00080307: the tick on TM00, which hdwinit starts */
+#pragma rtos_interrupt INTTM00 tickInterrupt
+#endif
 #pragma sfr
 
 #include "ernie.h"

@@ -78,6 +78,12 @@ struct Timer {
 #elif FW_SINCE(0x00090006)
 #define TIMER_RTC_FIRST		0x13
 #define TIMER_RTC(id)		((id) - 1)
+#elif !FW_SINCE(0x00080502)
+/* 0x00080307 has no RTC timers: the later builds' are timers of its own, counting the 4 ms
+   ticks (TIMER_RTC_TICKS(), 125 to each 0.5 s) */
+#define TIMER_RTC_FIRST		TIMER_COUNT
+#define TIMER_RTC(id)		((id) == 0x14 ? 0x03 : (id) == 0x15 ? 0x04 : (id) == 0x17 ? 0x06 : \
+				 (id) == 0x18 ? 0x14 : (id) == 0x19 ? 0x15 : (id) - 3)
 #else
 #define TIMER_RTC_FIRST		0x11
 #define TIMER_RTC(id)		((id) - 3)
@@ -88,6 +94,9 @@ struct Timer {
 #elif FW_SINCE(0x0100060B) && (!defined(ERNIE_UPDATER) || FW_SINCE(0x0100060D))
 /* the application's since 0x0100060B, the updater's since 0x0100060D */
 #define TIMER(id)		((id) - 2)
+#elif !defined(ERNIE_UPDATER) && !FW_SINCE(0x00080502)
+/* 0x00080307: three later */
+#define TIMER(id)		((id) + 3)
 #elif defined(ERNIE_UPDATER) || FW_SINCE(0x01000104) || !FW_SINCE(0x00090006)
 #define TIMER(id)		(id)
 #else
@@ -113,12 +122,20 @@ struct Timer {
 #define TIMER_COUNT		0x1f
 #elif FW_SINCE(0x00090502)
 #define TIMER_COUNT		0x1e	/* 0x00090804: no timer 0x1e */
+#elif !FW_SINCE(0x00080502)
+#define TIMER_COUNT		0x16
 #elif FW_SINCE(0x00090006)
 #define TIMER_COUNT		0x1b	/* 0x00090206: no power timers 9 and 10 (TIMER()), and
 					   the RTC's end at 0x1c (TIMER_RTC()) */
 #else
 #define TIMER_COUNT		0x18	/* 0x00080504: timers 0x0c and up at their numbers, the RTC's
 					   from 0x11 (TIMER_RTC()), no watchdog timer */
+#endif
+
+#if FW_SINCE(0x00080502)
+#define TIMER_RTC_TICKS(ticks)	(ticks)
+#else
+#define TIMER_RTC_TICKS(ticks)	((ticks) * 125)
 #endif
 
 extern __near struct Timer timers[TIMER_COUNT];

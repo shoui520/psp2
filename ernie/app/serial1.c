@@ -382,7 +382,9 @@ static unsigned char serial1Command0101(struct SerialBuffer *request, struct Ser
 #endif
 	getHardwareInfo(serial1Data.version.hardwareInfo);
 	getErnieVersion(serial1Data.version.version);
+#if FW_SINCE(0x00080502)	/* 0x00080307 reports no updater's version */
 	getErnieDlVersion(serial1Data.version.dlVersion);
+#endif
 #if SOURCE_0103
 	serial1Data.version.flags = getResetFlags();
 	serial1Data.version.resetCause = getResetCause();
@@ -395,7 +397,12 @@ static unsigned char serial1Command0101(struct SerialBuffer *request, struct Ser
 #elif FW_SINCE(0x00090203)
 	serial1Data.version.flags = resetFlags;
 #endif
+#if !FW_SINCE(0x00080502)
+	memset(serial1Data.version.dlVersion, 0,
+	       sizeof(serial1Data.version.dlVersion) + sizeof(serial1Data.version.reserved));
+#else
 	memset(serial1Data.version.reserved, 0, sizeof(serial1Data.version.reserved));
+#endif
 #endif
 	response->data = serial1Data.byte;
 	response->length = sizeof(serial1Data.version);
@@ -648,6 +655,46 @@ static unsigned char serial1Command0105(struct SerialBuffer *request, struct Ser
 		serialSetAnswer(SERIAL_ANSWER);
 		return 0x33;
 #endif
+	} else {
+		serialSetAnswer(SERIAL_ANSWER);
+		return 0x33;
+	}
+	return result;
+}
+#elif !FW_SINCE(0x00080502)
+/* 0x00080307's 0x0105: the lock checked first, and the states tested as masks (0: 0x53 from
+   states 0x08 and 0x20; 2: 9 from 4 or 8; 3: 0x11 from 4) */
+static unsigned char serial1Command0105(struct SerialBuffer *request, struct SerialBuffer *response)
+{
+	STATE_TRANSITION_EVENT
+	unsigned char mode;
+	unsigned char result;
+
+	result = 0;
+	mode = request->data[0];
+	response->length = 0;
+	SERIAL1_UNLOCKED_CHECK();
+	if (mode == 0) {
+		if (stateGet() & ~0x0028) {
+			serialSetAnswer(SERIAL_ANSWER);
+			return 0x50;
+		}
+		result = STATE_TRANSITION(0x53);
+		serialSetAnswer(SERIAL_ANSWER_LATER);
+	} else if (mode == 2) {
+		if (stateGet() & ~0x000c) {
+			serialSetAnswer(SERIAL_ANSWER);
+			return 0x50;
+		}
+		result = STATE_TRANSITION(9);
+		serialSetAnswer(SERIAL_ANSWER_LATER);
+	} else if (mode == 3) {
+		if (stateGet() & ~0x0004) {
+			serialSetAnswer(SERIAL_ANSWER);
+			return 0x50;
+		}
+		result = STATE_TRANSITION(0x11);
+		serialSetAnswer(SERIAL_ANSWER_LATER);
 	} else {
 		serialSetAnswer(SERIAL_ANSWER);
 		return 0x33;
@@ -2507,7 +2554,11 @@ static unsigned char serial1Command0913(struct SerialBuffer *request, struct Ser
 	unsigned char *packet;
 
 	id = request->data[0];
+#if !FW_SINCE(0x00080502)
+	if (id == 0 || id > 2) {	/* 0x00080307's two mailboxes */
+#else
 	if (id != SERIAL1_KERNEL_MAILBOX) {
+#endif
 		response->length = 0;
 		serialSetAnswer(SERIAL_ANSWER);
 		return 0x33;

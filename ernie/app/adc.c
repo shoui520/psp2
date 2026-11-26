@@ -232,7 +232,11 @@ void adcOpenForBoard(void)
 /* and the sticks stopped and the converter closed */
 void adcCloseForBoard(void)
 {
+#if !FW_SINCE(0x00080502)
+	analogStop();
+#else
 	analogSetMode(0);
+#endif
 	adcClose();
 }
 #elif ADC_AVERAGE

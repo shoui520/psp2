@@ -598,6 +598,7 @@ void handshakeUnused(const char *tag, unsigned char *data)
 }
 #endif
 
+#if FW_SINCE(0x00080502)	/* 0x00080307 has none */
 /* a host request refused while mode 0x0b is locked: transition 0x36 */
 unsigned char handshakeRefuse(void)
 {
@@ -608,8 +609,16 @@ unsigned char handshakeRefuse(void)
 	return (unsigned char)STATE_TRANSITION_NOMASK(0x32);
 #endif
 }
+#endif
 
-#if !FW_SINCE(0x0100060B)
+#if !FW_SINCE(0x00080502)
+/* 0x00080307 ships the header and the keys blank */
+static const unsigned char handshakeHeader[4] = { 0 };
+static const unsigned char mode11Check[16] = { 0 };
+static const unsigned char mode11Key1[16] = { 0 };
+const unsigned long randomKey[4] = { 0 };
+const unsigned char handshakeIv[16] = { 0 };
+#elif !FW_SINCE(0x0100060B)
 /* (since 0x0100060B the keys object, authkeys.c, holds these) */
 /* the packet header the serial side sends (unused here), then the IV and the keys */
 static const unsigned char handshakeHeader[4] = {

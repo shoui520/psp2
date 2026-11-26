@@ -15,11 +15,21 @@
 #include "tau.h"
 
 
+#if FW_SINCE(0x00080502)
 void standbyPrepare(void);
 void standbyResume(void);
+#endif
 
 void standby(void)
 {
+#if !FW_SINCE(0x00080502)
+	/* 0x00080307 only halts, in every state */
+	if (stateGet() != 0x0010) {
+		HALT();
+		return;
+	}
+	HALT();
+#else
 	switch (stateGet()) {
 	case 0x0004:
 	case 0x0008:
@@ -39,8 +49,10 @@ void standby(void)
 		return;
 	}
 	HALT();
+#endif
 }
 
+#if FW_SINCE(0x00080502)
 void standbyPrepare(void)
 {
 	serialClose3();
@@ -58,3 +70,4 @@ void standbyResume(void)
 	tickStart();
 	return;
 }
+#endif

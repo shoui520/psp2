@@ -140,7 +140,9 @@ extern void analogCenterSet1(void);
 extern void analogResetSet1(void);
 extern void analogCenter(void);
 extern void analogCalibrationReset(void);
+#if FW_SINCE(0x00080502)
 extern void analogCalibrationDefault(void);
+#endif
 extern int analogStoreRead(unsigned char *data, unsigned char command,
 			   void (*done)(unsigned char command, unsigned char result));
 extern int analogStoreWrite(unsigned char *data, unsigned char command,
@@ -165,7 +167,11 @@ extern unsigned int analogMedian(unsigned int __far *samples);
 #endif
 extern unsigned char analogLevelFind(unsigned char input, const struct AnalogLevel *levels,
 				     unsigned char count);
+#if !FW_SINCE(0x00080502) && !BOARD_USS1001 && !BOARD_DOL1001
+extern void analogOn(void);	/* 0x00080307's, for analogSetMode's modes */
+#else
 extern void analogSetMode(unsigned char mode);
+#endif
 extern void analogStop(void);
 extern void analogStart80(void);
 extern void analogStop80(void);

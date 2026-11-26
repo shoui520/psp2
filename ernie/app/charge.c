@@ -1167,6 +1167,15 @@ void chargeUpdate(void)
 		CHARGE_FACTOR_STATUS3 = powerStatus.bits.ac ? 1 : (cookieStatus2.bits.usb & 2) ? 1 : 0;
 		sleepFactorSetStatus3(CHARGE_FACTOR_STATUS3);
 		if (CHARGE_FACTOR_STATUS3 != ac) {
+#if !FW_SINCE(0x00080502)
+			/* 0x00080307 leaves the update's period as it is */
+			if (CHARGE_FACTOR_STATUS3) {
+				if (!(stateGetWakeMask() & 0x00400000))
+					CHARGE_AC_DUE = 1;
+			} else {
+				CHARGE_AC_DUE = 0;
+			}
+#else
 			if (CHARGE_FACTOR_STATUS3) {
 				charge.acDelay = 10;
 				if (!(stateGetWakeMask() & 0x00400000))
@@ -1176,6 +1185,7 @@ void chargeUpdate(void)
 				charge.acDelay = 0x3c;
 			}
 			timerStart(TIMER_RTC(0x17), charge.acDelay);
+#endif
 		}
 		if ((cookieStatus2.byte[1] & 0x0c) == 0x04 && (cookieStatus1.byte[1] & 0xc0) == 0x80)
 			CHARGE_FACTOR_STATUS4 = 1;
@@ -1317,8 +1327,12 @@ void chargeUpdate(void)
 		if (charge.checkTicks - charge.tempTicks >= 0x79)
 			charge.tempTicks = charge.checkTicks;
 #else
+#if !FW_SINCE(0x00080502)
+		timerGetTicks(&chargeCheckTicks);	/* 0x00080307: 4 ms ticks */
+#else
 		timerGetRtcTicks(&chargeCheckTicks);
-		if (chargeCheckTicks - chargeTempTicks >= 0x79)
+#endif
+		if (chargeCheckTicks - chargeTempTicks >= TIMER_RTC_TICKS(0x78) + 1)
 			chargeTempTicks = chargeCheckTicks;
 #endif
 	}
@@ -1802,11 +1816,13 @@ int chargeUsbRequestUpdate(void)
 void chargeTimer(void)
 {
 	if (charge.flags & 0x8000)
-		timerStart(TIMER_RTC(0x17), 1);
+		timerStart(TIMER_RTC(0x17), TIMER_RTC_TICKS(1));
 	else
 		timerStart(TIMER_RTC(0x17), charge.acDelay);
 #ifdef ERNIE_UPDATER
 	updEventSet(0x82);
+#elif !TASK_PENDING_MARKS
+	task5SetFlag(4, 0x0020);	/* 0x00080307: set_flg, not iset_flg */
 #else
 	task5ISetFlag(0x0020);
 #endif
@@ -1859,7 +1875,11 @@ void chargeUpdateSoon(void)
 	if (!input1Bit7Active())
 		chargeUsbMode = 0;
 #endif
+#if !TASK_PENDING_MARKS
+	task5SetFlag(4, 0x0020);	/* 0x00080307: set_flg, not iset_flg */
+#else
 	task5ISetFlag(0x0020);
+#endif
 #if CHARGE_SINCE(0x00090203) && !BOARD_DOL1001	/* 0x00090009 and the PS TV have no flag 0x1000 */
 	task5ISetFlag(0x1000);
 #elif BOARD_IS(0x00406000) && !CHARGE_SINCE(0x00090203)	/* PCH-1000's 0x00090007: with the start's chargeLedOffReleased */

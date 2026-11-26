@@ -51,12 +51,12 @@ unsigned int powerCutRegs[POWER_CUT_REGS];	/* registers 0xb0-0xb2 (the slim's: 0
 #if FW_SINCE(0x01000306)
 #define POWER_JOB_AC_DELAY()	chargeSetAcDelay()
 #else
-#define POWER_JOB_AC_DELAY()	(charge.acDelay = 10)
+#define POWER_JOB_AC_DELAY()	(charge.acDelay = TIMER_RTC_TICKS(10))
 #endif
 /* after an off or a suspend: 60 in PCH-1000's and 0x00411000's 0x010001xx */
 #if (FW_RETAIL_10X && BOARD_IS(0x00406000)) || \
     (BOARD_IS(0x00411000) && FW_SINCE(0x01000104) && !FW_SINCE(0x01000306))
-#define POWER_JOB_AC_DELAY_DOWN()	(charge.acDelay = 0x3c)
+#define POWER_JOB_AC_DELAY_DOWN()	(charge.acDelay = TIMER_RTC_TICKS(0x3c))
 #else
 #define POWER_JOB_AC_DELAY_DOWN()	POWER_JOB_AC_DELAY()
 #endif
@@ -514,7 +514,7 @@ static void powerJobOn(void)
 	powerResumed = 0;
 #elif !FW_SINCE(0x00090502)
 	chargeLedInit();
-	timerStart(TIMER_RTC(0x17), 1);
+	timerStart(TIMER_RTC(0x17), TIMER_RTC_TICKS(1));
 #else
 	if (configGet()->start.bits.chargeLedOff) {
 		cookieCtrlReg3Bit2(0);
@@ -646,7 +646,7 @@ static void powerJobOff(void)
 #if FW_SINCE(0x00090502)
 	cookieCtrlBatteryCharge(1);
 #endif
-	charge.acDelay = 0x3c;
+	charge.acDelay = TIMER_RTC_TICKS(0x3c);
 	task5SetFlag(4, 0x20);
 	POWER_JOB_VBUS_ON();
 #if FW_SINCE(0x00090502)
@@ -747,7 +747,7 @@ static void powerJobSuspend(void)
 static void powerJobSuspend(void)
 {
 	powerSeqSuspend();
-	charge.acDelay = 0x3c;
+	charge.acDelay = TIMER_RTC_TICKS(0x3c);
 	task5SetFlag(4, 0x20);
 	POWER_JOB_VBUS_ON();
 #if FW_SINCE(0x00090502)

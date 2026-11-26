@@ -2087,6 +2087,14 @@ void touchIdentify0(void)
 		result = touchRead(0x0000, (unsigned char *)&touch.panel[0], 4, 0);
 		if (result != 0)
 			memset(&touch.panel[0], 0xff, 4);
+#if !FW_SINCE(0x00080502)
+		/* 0x00080307 knows version 0x17 only */
+		else if (touch.panel[0].version == 0x17) {
+			touch.panel[0].objects.report = 0x0358;
+			touch.panel[0].objects.numTouch = 0x011a;
+			touch.panel[0].objects.reset = 0x00fb;
+		}
+#else
 		else if (touch.panel[0].version < 0x20) {
 			touch.panel[0].objects.report = 0x0358;
 			touch.panel[0].objects.numTouch = 0x011a;
@@ -2108,6 +2116,7 @@ void touchIdentify0(void)
 			touch.panel[0].objects.numTouch = 0x01a0;
 			touch.panel[0].objects.reset = 0x0177;
 		}
+#endif
 	} else
 		memset(&touch.panel[0], 0xff, 4);
 }
@@ -2120,6 +2129,14 @@ void touchIdentify1(void)
 		result = touchRead(0x0000, (unsigned char *)&touch.panel[1], 4, 1);
 		if (result != 0)
 			memset(&touch.panel[1], 0xff, 4);
+#if !FW_SINCE(0x00080502)
+		/* 0x00080307 knows version 0x17 only */
+		else if (touch.panel[1].version == 0x17) {
+			touch.panel[1].objects.report = 0x0358;
+			touch.panel[1].objects.numTouch = 0x011a;
+			touch.panel[1].objects.reset = 0x00fb;
+		}
+#else
 		else if (touch.panel[1].version < 0x20) {
 			touch.panel[1].objects.report = 0x0358;
 			touch.panel[1].objects.numTouch = 0x011a;
@@ -2141,6 +2158,7 @@ void touchIdentify1(void)
 			touch.panel[1].objects.numTouch = 0x01a0;
 			touch.panel[1].objects.reset = 0x0177;
 		}
+#endif
 	} else
 		memset(&touch.panel[1], 0xff, 4);
 }

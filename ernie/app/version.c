@@ -415,7 +415,7 @@ static int copyTimeStamp(unsigned char *out, const char *stamp)
 	return 0;
 }
 #endif
-#else
+#elif FW_SINCE(0x00080502)	/* 0x00080307's host command copies it itself */
 void getErnieDlVersion(unsigned char *buf)
 {
 	memcpy(buf, UPDATER_VERSION_INFO->dlVersion, 4);

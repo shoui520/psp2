@@ -183,12 +183,15 @@ static const struct HostCommand hostCommands[] = {
 	{ 0x0a00, hostCommand0a00, 0 },
 #endif
 	{ 0x1100, hostCommandErnieDlVersion, 0 },
+#if FW_SINCE(0x00080502)	/* 0x00080307 has no settings */
 	{ 0x1300, hostCommandConfigVersions, 0 },
+#endif
 #if SOURCE_0103
 	{ 0x1310, hostCommand1310, 0 },
 #endif
 };
 
+#if FW_SINCE(0x00080502)	/* 0x00080307 has no handshake: every command is taken */
 static const struct HostCommand hostBaseCommands[] = {
 	{ 0x0000, hostCommandNull, 0 },
 	{ 0x0001, hostCommandErnieVersion, 0 },
@@ -214,14 +217,17 @@ static const struct HostCommand hostBaseCommands[] = {
 #endif
 	{ 0x1300, hostCommandConfigVersions, 0 },
 };
+#endif
 
 #if BOARD_USS1001 && SOURCE_0104
 #elif FW_SINCE(0x0100060B)
 static const char hostRevision[] = "$Rev: 4066 $";
 #elif FW_SINCE(0x00090903)
 static const char hostRevision[] = "$Rev: 2579 $";
-#else
+#elif FW_SINCE(0x00080502)
 static const char hostRevision[] = "$Rev: 1800 $";
+#else
+static const char hostRevision[] = "$Rev: 1344 $";
 #endif
 
 int hostStep(FLGPTN flgptn);
@@ -242,10 +248,12 @@ unsigned int hostCommandCount(void)
 	return sizeof(hostCommands) / sizeof(hostCommands[0]);
 }
 
+#if FW_SINCE(0x00080502)
 unsigned int hostBaseCommandCount(void)
 {
 	return sizeof(hostBaseCommands) / sizeof(hostBaseCommands[0]);
 }
+#endif
 
 void hostIntInit(void)
 {
@@ -303,7 +311,9 @@ int hostInit(void)
 	hostThrottle.idleLimit = configGet()->hostIdleLimit;
 	hostThrottle.pause = configGet()->hostPause;
 #endif
+#if FW_SINCE(0x00080502)	/* 0x00080307's TAU0 is on since hdwinit */
 	tau0PowerOn();
+#endif
 	TMR02 = 0x8000;
 	TDR02 = 0xffff;
 	TMMK02 = 1;
@@ -837,11 +847,16 @@ int hostDispatch(unsigned int command, unsigned char *out, unsigned char *length
 	unsigned int middle;
 	unsigned int high;
 	const struct HostCommand *entry;
+#if FW_SINCE(0x00080502)
 	const struct HostCommand *table;
+#endif
 	unsigned char n;
 	struct HostStream *stream;
 
 	low = 0;
+#if !FW_SINCE(0x00080502)
+	high = hostCommandCount();
+#else
 	if (handshakeUnlocked11()) {
 		high = hostCommandCount();
 		table = hostCommands;
@@ -849,9 +864,14 @@ int hostDispatch(unsigned int command, unsigned char *out, unsigned char *length
 		high = hostBaseCommandCount();
 		table = hostBaseCommands;
 	}
+#endif
 	while (low < high) {
 		middle = (low + high) / 2;
+#if !FW_SINCE(0x00080502)
+		entry = &hostCommands[middle];
+#else
 		entry = &table[middle];
+#endif
 		if (entry->command == command) {
 			if (entry->type == 0)
 				return entry->handler(out, length) & 0x3f;

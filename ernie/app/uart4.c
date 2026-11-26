@@ -311,7 +311,11 @@ UART4_INTERRUPT void uart4SendInterrupt(void)
 		SDR20 = p->txBuffer[p->txRead];
 		p->txRead = p->txRead + 1 & p->txMask;
 	} else
+#if !TASK_PENDING_MARKS
+		task2ISetFlag(0x0200);	/* 0x00080307: iset_flg */
+#else
 		task2SetFlag(3, 0x0200);
+#endif
 }
 #endif
 #endif

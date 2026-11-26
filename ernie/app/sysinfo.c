@@ -18,10 +18,12 @@ SYSINFO_NEAR unsigned int idRecordsLength;	/* the lengths of id records 0x0f, 0x
 SYSINFO_NEAR unsigned long idRecord1;		/* id record 1 */
 #endif
 
+#if FW_SINCE(0x00080502)	/* 0x00080307 has no hang reset */
 int hangLimitReached(void)
 {
 	return hangCount == (configGet()->hangLimit < 8 ? 8 : configGet()->hangLimit);
 }
+#endif
 
 #if !FW_SINCE(0x01000104)
 #elif BOARD_HANG_PINS && BOARD_CEM3000NE2 || BOARD_102603 && !HW_IRT001

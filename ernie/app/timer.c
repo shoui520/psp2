@@ -77,6 +77,19 @@ int timerStart(unsigned char id, unsigned int ticks)
 		return 0;
 	}
 }
+#elif !FW_SINCE(0x00080502)
+/* 0x00080307: every timer counts the ticks */
+int timerStart(unsigned char id, unsigned int ticks)
+{
+	if (id < TIMER_COUNT) {
+		DI();
+		timers[id].time = ticks + timerTicks + 1;
+		timers[id].state = 1;
+		EI();
+		return 0;
+	}
+	return 1;
+}
 #else
 int timerStart(unsigned char id, unsigned int ticks)
 {
@@ -131,6 +144,7 @@ int timerSetTicks(unsigned int *ticks)
 	return 0;
 }
 
+#if FW_SINCE(0x00080502)	/* 0x00080307 has neither */
 /* 1 while any of timers 0x00-0x14 is armed */
 int timerArmed(void)
 {
@@ -172,6 +186,7 @@ int timerGetRtcTicks(unsigned int *ticks)
 	return 0;
 }
 #endif
+#endif	/* FW_SINCE(0x00080502) */
 
 /* cyclic handler 7: a tick */
 void timerTick(void)

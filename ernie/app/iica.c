@@ -53,8 +53,10 @@ unsigned char iicaInit(void)
 {
 	unsigned char i;
 
+#if FW_SINCE(0x00080502)	/* 0x00080307 sets it up again */
 	if (IICAEN)
 		return 0;
+#endif
 	IICAEN = 1;
 	IICE = 0;
 	IICWL = 0x0b;
@@ -345,6 +347,10 @@ void iicaInterrupt(void)
 stop:
 	SPT = 1;
 	iicaRequest.state = IICA_DONE;
+#if !TASK_PENDING_MARKS
+	task5SetFlag(4, 0x0010);	/* 0x00080307: set_flg */
+#else
 	task5ISetFlag(0x0010);
+#endif
 }
 #endif

@@ -99,7 +99,9 @@ void task5(VP_INT exinf)
 				powerSleepFactor21();
 			}
 		}
+#if TASK_PENDING_MARKS
 		task5Idle();
+#endif
 	}
 #else
 	for (;;) {
@@ -213,7 +215,9 @@ void task5(VP_INT exinf)
 			if (ptn & 0x8000)
 				clr_flg(4, ~0x8000);
 		}
+#if TASK_PENDING_MARKS
 		task5Idle();
+#endif
 	}
 #endif
 }

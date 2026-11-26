@@ -201,7 +201,9 @@ void stateHostStart(void)
 void stateEvent(struct StateEvent *event)
 {
 	unsigned char i;
+#if TASK_PENDING_MARKS
 	unsigned int status;
+#endif
 
 	for (i = 0; i < sizeof(stateTable) / sizeof(stateTable[0]); i++) {
 		if (stateTable[i].state == powerState) {
@@ -229,6 +231,7 @@ void stateEvent(struct StateEvent *event)
 				if (statePhase != 0)
 					return;
 				break;
+#if TASK_PENDING_MARKS	/* 0x00080307 checks nothing */
 			case STATE_EVENT_CHECK:
 				status = taskGetPending();
 				if (status & 0x20)
@@ -245,6 +248,7 @@ void stateEvent(struct StateEvent *event)
 					timerStart(TIMER_RTC(0x1a), 0x14);
 #endif
 				return;
+#endif
 			}
 			if (stateEvents & stateTable[i].events) {
 				stateNext = stateNextOf();
@@ -344,6 +348,9 @@ void stateInit(void)
 	mask &= ~configGet()->BOARD_WAKE_MASKS.off;
 	if (configGet()->start.bits.wakeUnmask22)
 		mask &= ~0x00400000UL;
+#elif !FW_SINCE(0x00080502)
+	/* 0x00080307 never wakes on factors 22 and 15 */
+	stateSetWakeMask(~0x00408000UL);
 #elif !FW_SINCE(0x00090006)
 	/* 0x00080504 wakes on everything */
 	stateSetWakeMask(0xffffffff);
@@ -527,8 +534,10 @@ static int stateOffEnter(void)
 	serial4Answer0205();
 #endif
 	serialAnswer0105();
+#if FW_SINCE(0x00080502)	/* 0x00080307 stops no TAU0 and checks nothing */
 	tau0PowerOff();
 	stateCheck();
+#endif
 #if FW_SINCE(0x00090903)
 	switch (stateCause) {
 	case 0x31:
@@ -639,8 +648,10 @@ static int stateSuspendEnter(void)
 	STATE_TRANSITION_EVENT
 #endif
 	stateInputSuspend();
+#if FW_SINCE(0x00080502)	/* 0x00080307 stops no TAU0 and checks nothing */
 	tau0PowerOff();
 	stateCheck();
+#endif
 #if FW_SINCE(0x00090903)
 	if (sleepFactorGet() & 0x00800000)
 		logEvent(0x0b);
@@ -657,16 +668,20 @@ static int stateSuspendEnter(void)
 static int stateShutdownEnter(void)
 {
 	stateInputShutdown();
+#if FW_SINCE(0x00080502)	/* 0x00080307 stops no TAU0 and checks nothing */
 	tau0PowerOff();
 	stateCheck();
+#endif
 	return 0;
 }
 
 static int stateCutEnter(void)
 {
 	stateInputCut();
+#if FW_SINCE(0x00080502)	/* 0x00080307 stops no TAU0 and checks nothing */
 	tau0PowerOff();
 	stateCheck();
+#endif
 #if SOURCE_0103
 	setResetCause(0x20);
 #endif
@@ -1276,6 +1291,17 @@ int stateSerialLock(void)
 	return (unsigned char)STATE_TRANSITION_NOMASK(0x32);
 #endif
 }
+
+#if !TASK_PENDING_MARKS
+/* 0x00080307 has no task.c: its hooks, empty, are here */
+void taskHookState(void)
+{
+}
+
+void taskHookEvent(void *event)
+{
+}
+#endif
 
 #if SOURCE_0103
 /* the slim's: the modes a resume keeps at battery level 9 (USS-1002's powerResume tells the

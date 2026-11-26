@@ -2311,7 +2311,7 @@ out:
 	TT0L = 0x08;
 	TMMK03 = 1;
 #if !FW_SINCE(0x0100060B)
-	powerStartTimer(1, 4, 0x1c);
+	powerStartTimer(1, POWER_TIMER(4), 0x1c);
 #endif
 	return result;
 }
@@ -2376,7 +2376,7 @@ out:
 	TT0L = 0x08;
 	TMMK03 = 1;
 #if !FW_SINCE(0x0100060B)
-	powerStartTimer(1, 4, 0x1c);
+	powerStartTimer(1, POWER_TIMER(4), 0x1c);
 #endif
 	return result;
 }

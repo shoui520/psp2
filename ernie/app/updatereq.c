@@ -212,7 +212,11 @@ void updaterRequestInit(void)
 /* 0x1100 (sceSysconGetErnieDLVersion) */
 unsigned char hostCommandErnieDlVersion(unsigned char *out, unsigned char *length)
 {
+#if !FW_SINCE(0x00080502)
+	memcpy(out, UPDATER_VERSION_INFO->dlVersion, 4);	/* 0x00080307 has no getErnieDlVersion */
+#else
 	getErnieDlVersion(out);
+#endif
 	*length = 4;
 	return 0;
 }
@@ -367,8 +371,10 @@ void updaterStartDownloader(void)
 	serialClose1();
 	serialClose2();
 	serialOpen3(3);
+#if FW_SINCE(0x00080502)	/* 0x00080307 has no settings */
 	if (configPrepareUpdate())
 		;
+#endif
 #endif
 	snapshot = sleepFactorSnapshot();
 	sleepFactor = sleepFactorGet();

@@ -21,6 +21,7 @@
 #include "task.h"
 #include "timer.h"
 
+#if TASK_PENDING_MARKS	/* 0x00080307 has no task.c */
 #if BOARD_STANDBY_STOP && !FW_SINCE(0x00090203)
 extern unsigned char input1Bit5Active(void);
 #endif
@@ -485,3 +486,5 @@ void taskHookStandby(void)
 void taskHookTick(void)
 {
 }
+
+#endif	/* TASK_PENDING_MARKS */

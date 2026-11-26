@@ -54,7 +54,12 @@ extern unsigned char cookieReadVersion(unsigned char *version);
 extern unsigned char cookieCtrlChargingCurrent(unsigned char current);
 extern unsigned char cookieCtrlReg8(unsigned char value);
 extern unsigned char cookieCtrlBatteryCharge(unsigned char on);
+#if FW_SINCE(0x00080502)
 extern unsigned char cookieCtrlCharge(unsigned char on);
+#else
+/* 0x00080307 has no cookieCtrlCharge: its charge goes through register 3's bit 15 */
+#define cookieCtrlCharge(on)	cookieCtrlBatteryCharge(on)
+#endif
 extern unsigned char cookieCtrlSupplyCurrentUsb(unsigned char current);
 extern unsigned char cookieCtrlSupplyCurrentAc(unsigned char current);
 extern unsigned char cookieCtrlReg7(unsigned char value);

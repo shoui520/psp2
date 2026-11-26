@@ -85,15 +85,23 @@ void powerDeviceInit(void)
 	powerJobState.id = 0;
 	powerJobState.flag = 0;
 	powerDevicePending = 0;
+#if !FW_SINCE(0x00080502)
+	/* 0x00080307 sets TM03 up here, TAU0 being on since hdwinit */
+	TMR03 = 0x8008;
+	TDR03 = 0;
+	TMMK03 = 1;
+#endif
 }
 
 /* TM03, one count at a time; its interrupt sets bit 2 of event flag 4 */
 void powerWaitInit(void)
 {
+#if FW_SINCE(0x00080502)
 	tau0PowerOn();
 	TMR03 = 0x8008;
 	TDR03 = 0;
 	TMMK03 = 1;
+#endif
 	TS0L = 0x08;
 	TMIF03 = 0;
 	TMMK03 = 0;
@@ -334,7 +342,7 @@ void powerTimersInit(void)
 	powerTimers = 0;
 #if !FW_SINCE(0x0100060B)
 	handler.handler = powerTimerEnd0;
-	timerSetHandler(0x04, &handler);
+	timerSetHandler(POWER_TIMER(0x04), &handler);
 #endif
 #if !(BOARD_USS1001 && SOURCE_0104)	/* USS-1002 leaves bit 1's timer unset */
 	handler.handler = powerTimerEnd1;
@@ -344,7 +352,7 @@ void powerTimersInit(void)
 	timerSetHandler(POWER_TIMER(0x06), &handler);
 #if !FW_SINCE(0x0100060B)
 	handler.handler = powerTimerEnd3;
-	timerSetHandler(0x07, &handler);
+	timerSetHandler(POWER_TIMER(0x07), &handler);
 #endif
 	handler.handler = powerTimerEnd4;
 	timerSetHandler(POWER_TIMER(0x08), &handler);
@@ -356,9 +364,9 @@ void powerTimersInit(void)
 	timerSetHandler(POWER_TIMER(0x0b), &handler);
 #if !FW_SINCE(0x01000104)
 	handler.handler = powerTimerEnd9;
-	timerSetHandler(0x0c, &handler);
+	timerSetHandler(POWER_TIMER(0x0c), &handler);
 	handler.handler = powerTimerEnd10;
-	timerSetHandler(0x0d, &handler);
+	timerSetHandler(POWER_TIMER(0x0d), &handler);
 #endif
 	handler.handler = powerTimerEnd11;
 	timerSetHandler(POWER_TIMER11, &handler);

@@ -92,10 +92,12 @@ void task2(VP_INT exinf)
 				clr_flg(3, ~0x8000);
 				task2Tick();
 			}
+#if FW_SINCE(0x00080502)	/* 0x00080307 has no settings requests */
 			if (ptn & 0x4000) {
 				clr_flg(3, ~0x4000);
 				configRequestEvent(ptn);
 			}
+#endif
 #if FW_SINCE(0x00090903)
 			if (ptn & 0x0040) {
 				clr_flg(3, ~(ptn & 0x0040));
@@ -103,7 +105,9 @@ void task2(VP_INT exinf)
 			}
 #endif
 		}
+#if TASK_PENDING_MARKS
 		task2Idle();
+#endif
 	}
 }
 
@@ -260,12 +264,12 @@ unsigned char task2On(void)
 unsigned char task2On(void)
 {
 	unsigned char ret;
-#if !FW_SINCE(0x00090203)
+#if !FW_SINCE(0x00090203) && FW_SINCE(0x00080502)
 	unsigned char config;
 #endif
 
 	ret = 0;
-#if !FW_SINCE(0x00090203)
+#if !FW_SINCE(0x00090203) && FW_SINCE(0x00080502)
 	/* 0x00090009 opens the settings here; its result is tested and nothing done (an empty
 	   statement, as a print left out of the build) */
 	config = configInit();
@@ -321,11 +325,13 @@ unsigned char task2Off(void)
 		boardSetMultiCnOutput(0);
 	else
 		boardMultiCnStop();
-#else
+#elif FW_SINCE(0x00080502)
 	boardSetMultiCnOutput(0);
 #endif
 	updaterRequestInit();
+#if FW_SINCE(0x00080502)
 	configRequestInit();
+#endif
 #if HOST_WATCHDOG
 	watchdogStop();
 #endif
@@ -403,7 +409,7 @@ unsigned char task2Suspend(void)
 		boardSetMultiCnOutput(0);
 	else
 		boardMultiCnStop();
-#else
+#elif FW_SINCE(0x00080502)
 	boardSetMultiCnOutput(0);
 #endif
 #if HOST_WATCHDOG
@@ -498,14 +504,18 @@ unsigned char task2Tick(void)
 #else
 	unsigned char ret;
 	STATE_TRANSITION_EVENT
+#if FW_SINCE(0x00080502)
 	unsigned int state;
+#endif
 #if FW_SINCE(0x00090903)
 	unsigned char clock;
 #endif
 #endif
 
 	ret = 0;
+#if FW_SINCE(0x00080502)
 	state = stateGet();
+#endif
 #if FW_SINCE(0x00090903)
 	clock = getClock().byte[0];
 #endif
@@ -521,6 +531,9 @@ unsigned char task2Tick(void)
 #endif
 #if FW_SINCE(0x01000104)
 			if ((state == 0x0004 && getAlarmMode() != 1) || state == 0x0008)
+#elif !FW_SINCE(0x00080502)
+			/* 0x00080307 reads the state twice, and not in a transition (0x8000) */
+			if (!(stateGet() & 0x8000) && (stateGet() & 0x000c))
 #else
 			if (state == 0x0004 || state == 0x0008)
 #endif
@@ -536,9 +549,11 @@ unsigned char task2Tick(void)
 #if FW_SINCE(0x00090502)
 	logUpdate();
 #endif
+#if FW_SINCE(0x00080502)	/* 0x00080307 has no task hooks */
 	if (state != 0x0004 && state != 0x0008)
 		taskHookStandby();
 	taskHookTick();
+#endif
 #if BOARD_DEBUG_PINS_POWER
 	debugPinSet((unsigned char)(P4.0 ^ 1));	/* toggled at each tick */
 #endif

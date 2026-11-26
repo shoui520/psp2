@@ -116,7 +116,17 @@ void hdwinit(void)
 	boardInit();
 #endif
 	intInit();
+#if FW_SINCE(0x00080502)
 	tickStart();
+#else
+	/* 0x00080307: the tick on TM00, every 32000 clocks */
+	TAU0EN = 1;
+	TPS0L = 0x80;
+	TMR00 = 0x0000;
+	TDR00 = 32000;
+	TMMK00 = 0;
+	TS0L = 0x01;
+#endif
 	rtcInit();
 	clockOutputStop();
 	return;

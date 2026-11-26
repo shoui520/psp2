@@ -159,8 +159,12 @@ static unsigned char serial2Command0201(struct SerialBuffer *request, struct Ser
 {
 	getHardwareInfo(&serial2Data[0]);
 	getErnieVersion(&serial2Data[4]);
+#if FW_SINCE(0x00080502)
 	getErnieDlVersion(&serial2Data[8]);
 	memset(&serial2Data[12], 0, 4);
+#else
+	memset(&serial2Data[8], 0, 8);	/* 0x00080307 reports no updater's version */
+#endif
 	response->data = serial2Data;
 	response->length = 0x10;
 	serial4SetAnswer(SERIAL_ANSWER);
@@ -231,6 +235,38 @@ static unsigned char serial2Command0204(struct SerialBuffer *request, struct Ser
 
 /* 0x0205: data[0] 0 runs transition 0x52 from state 0x20 or 8, 2 transition 0x0e from state
    4 or 8 */
+#if !FW_SINCE(0x00080502)
+/* 0x00080307 tests the states as masks */
+static unsigned char serial2Command0205(struct SerialBuffer *request, struct SerialBuffer *response)
+{
+	STATE_TRANSITION_EVENT
+	unsigned char mode;
+	unsigned char result;
+
+	result = 0;
+	mode = request->data[0];
+	response->length = 0;
+	if (mode == 0) {
+		if (stateGet() & ~0x0028) {
+			serial4SetAnswer(SERIAL_ANSWER);
+			return 0x50;
+		}
+		result = STATE_TRANSITION(0x52);
+		serial4SetAnswer(SERIAL_ANSWER_LATER);
+	} else if (mode == 2) {
+		if (stateGet() & ~0x000c) {
+			serial4SetAnswer(SERIAL_ANSWER);
+			return 0x50;
+		}
+		result = STATE_TRANSITION(0x0e);
+		serial4SetAnswer(SERIAL_ANSWER_LATER);
+	} else {
+		serial4SetAnswer(SERIAL_ANSWER);
+		return 0x33;
+	}
+	return result;
+}
+#else
 static unsigned char serial2Command0205(struct SerialBuffer *request, struct SerialBuffer *response)
 {
 	STATE_TRANSITION_EVENT
@@ -290,6 +326,7 @@ static unsigned char serial2Command0205(struct SerialBuffer *request, struct Ser
 	}
 	return result;
 }
+#endif
 
 /* 0x0206: the system state */
 static unsigned char serial2Command0206(struct SerialBuffer *request, struct SerialBuffer *response)

@@ -482,7 +482,7 @@ unsigned char serial4Event(FLGPTN ptn)
 /* the timer handlers: USS-1002's set the flag the interrupts' way */
 void serial4PostTimeout(void)
 {
-#if BOARD_USS1001 && SOURCE_0104
+#if (BOARD_USS1001 && SOURCE_0104) || !TASK_PENDING_MARKS	/* and 0x00080307's */
 	task2ISetFlag(0x0400);
 #else
 	task2SetFlag(3, 0x0400);
@@ -492,7 +492,7 @@ void serial4PostTimeout(void)
 /* UART3's timeout (as serialPostTimeout) */
 void serial4PostTimeout3(void)
 {
-#if BOARD_USS1001 && SOURCE_0104
+#if (BOARD_USS1001 && SOURCE_0104) || !TASK_PENDING_MARKS
 	task2ISetFlag(0x0004);
 #else
 	task2SetFlag(3, 0x0004);

@@ -936,6 +936,11 @@ static void controlsRequest0180(void)
 			analogSetMode(controlsRequest.data[0]);
 		else
 			analogStop();
+#elif !FW_SINCE(0x00080502)
+		if (controlsRequest.data[0] == 1)	/* 0x00080307: on (1) or off */
+			analogOn();
+		else
+			analogStop();
 #else
 		analogSetMode(controlsRequest.data[0]);
 #endif
@@ -1553,7 +1558,9 @@ static void touchRequestStart(void)
 		if (rate != 0xff && touch.rate != rate) {
 			touch.rate = rate;
 			if (touch.rate != 0) {
+#if FW_SINCE(0x00080502)	/* 0x00080307 keeps TAU0 on */
 				tau0PowerOn();
+#endif
 				TT0L = 0x10;
 				TMR04 = 0x8000;
 				TDR04 = touch.rate * 1000U / 32 - 1;
@@ -1683,7 +1690,9 @@ static void touchRequestStart(void)
 		if (rate != 0xff && touch.rate != rate) {
 			touch.rate = rate;
 			if (touch.rate != 0) {
+#if FW_SINCE(0x00080502)	/* 0x00080307 keeps TAU0 on */
 				tau0PowerOn();
+#endif
 				TT0L = 0x10;
 				TMR04 = 0x8000;
 				TDR04 = touch.rate * 1000U / 32 - 1;

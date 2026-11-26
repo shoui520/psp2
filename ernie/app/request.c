@@ -25,7 +25,9 @@ struct HostRequest * const hostRequests[] = {
 	&updaterRequest,
 	&powerRequest,
 	&batteryRequest,
+#if FW_SINCE(0x00080502)	/* 0x00080307 has no settings */
 	&configRequest,
+#endif
 };
 
 #define HOST_REQUESTS		(sizeof(hostRequests) / sizeof(hostRequests[0]))

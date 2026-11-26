@@ -173,12 +173,30 @@ extern void button2HoldReset(void);
 extern void inputScanHold(unsigned int ticks);
 extern void intp11Enable(unsigned char enable);
 /* the scan timer: mode 1 runs timer 3, mode 2 timer 0x16, every interval; hold ticks of
-   timer 3 first (inputScanHold) */
+   timer 3 first (inputScanHold); 0x00080307 has no modes, its one timer is 5 */
 struct InputScan {
+#if FW_SINCE(0x00080502)
 	unsigned char	mode;
+#endif
 	unsigned int	interval;
 	unsigned int	hold;
 };
+
+/* the scan's timers: the ticks' (the slim's 0x0105 has no timers 0-2) and the RTC's */
+#if BOARD_USS1001 && SOURCE_0104
+#define INPUT_SCAN_TIMER	0
+#elif !FW_SINCE(0x00080502)
+#define INPUT_SCAN_TIMER	5	/* 0x00080307's one scan timer */
+#else
+#define INPUT_SCAN_TIMER	3
+#endif
+
+/* the scan not in mode 1 (0x00080307, without modes: not every tick) */
+#if !FW_SINCE(0x00080502)
+#define INPUT_SCAN_NOT_MODE1()	(inputScan.interval != 1)
+#else
+#define INPUT_SCAN_NOT_MODE1()	(inputScan.mode != 1)
+#endif
 
 #if !FW_SINCE(0x00090502)
 extern struct InputScan inputScan;

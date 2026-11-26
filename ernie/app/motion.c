@@ -63,7 +63,9 @@ void motionStart(void)
 	if (P6.3 && !(inputKeys.state & 0x0010)) {
 		motion.block = 0;
 		inputKeys.state |= 0x0010;
+#if FW_SINCE(0x00080502)
 		tau0PowerOn();
+#endif
 		TMR01 = 0x8000;
 		TDR01 = (unsigned int)motionPeriod * 100 / 32 - 1;
 		TMMK01 = 0;

@@ -664,7 +664,9 @@ unsigned char powerOff(void)
 	POWER_WAIT(2, 0x19);
 	powerPendingClear(2);
 #endif
+#if FW_SINCE(0x00080502)	/* 0x00080307 leaves PER0 bit 2 set in an off or a suspend */
 	PER0.2 = 0;
+#endif
 #if FW_SINCE(0x0100060B)
 	if (stateCause == 0x56 || stateCause == 0x5c)
 #elif FW_SINCE(0x00090006)	/* 0x00080504 has no off end job */
@@ -775,7 +777,9 @@ unsigned char powerSuspend(void)
 	POWER_WAIT(2, 0x19);
 	powerPendingClear(2);
 #endif
+#if FW_SINCE(0x00080502)	/* 0x00080307 leaves PER0 bit 2 set in an off or a suspend */
 	PER0.2 = 0;
+#endif
 	if (powerPendingGet() != 0)
 		result = 1;
 	return result;

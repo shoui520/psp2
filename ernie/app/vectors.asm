@@ -92,7 +92,11 @@ $ELSE
 $ENDIF
 _vector_INTIICA:
 	DW	LOWW(_iicaInterrupt)	; 2AH
+$_IF (ERNIE_FW<0x00080502)	; 0x00080307: the tick on TM00
+	DW	LOWW(_tickInterrupt)	; 2CH
+$ELSE
 	DW	0			; 2CH
+$ENDIF
 _vector_INTTM01:
 $_IF (ERNIE_FW<0x0100060B)	; BOARD_MOTION
 	DW	LOWW(_tm01Interrupt)	; 2EH
@@ -145,7 +149,11 @@ $ELSE
 	DW	LOWW(_intp11Interrupt)	; 54H
 $ENDIF
 _vector_INTTM10:
+$_IF (ERNIE_FW<0x00080502)
+	DW	0			; 56H
+$ELSE
 	DW	LOWW(_tickInterrupt)	; 56H
+$ENDIF
 _vector_INTTM11:
 $_IF (ERNIE_FW<0x0100060B&&ERNIE_FW>=0x00090203)	; HANG_TIMER
 	DW	LOWW(_tm11Interrupt)	; 58H

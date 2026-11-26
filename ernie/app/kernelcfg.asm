@@ -82,7 +82,11 @@ _rtos_init_table:
 _rtos_task_count:
 	DB	6, 0			; tasks
 	DB	6			; event flags
+$_IF (ERNIE_FW<0x00080502)
+	DB	2			; mailboxes (0x00080307 has two)
+$ELSE
 	DB	1			; mailboxes
+$ENDIF
 	DB	0			; mailboxes with prioritised messages
 	DB	2			; fixed-size pools
 	DB	1			; cyclic handlers

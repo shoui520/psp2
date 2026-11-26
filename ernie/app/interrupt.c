@@ -48,6 +48,7 @@
 #include "sysinfo.h"
 #include "task.h"
 #include "tau.h"
+#include "timer.h"
 #include "touch.h"
 
 #if BOARD_MOTION
@@ -83,7 +84,14 @@ void intp1Interrupt(void)
 	/* in 0x00090206 the interrupt is turned off and the scan runs in mode 1 */
 	if (!BOARD_INTP1_PIN) {
 		intp1Enable(0);
+#if !FW_SINCE(0x00080502)
+		if (inputScan.interval != 1) {	/* 0x00080307: the scan every tick */
+			inputScan.interval = 1;
+			timerStart(INPUT_SCAN_TIMER, 1);
+		}
+#else
 		inputScanMode1(1);
+#endif
 	}
 #endif
 }
@@ -126,7 +134,7 @@ void intp2Interrupt(void)
 #endif
 		inputGroup1.prev &= ~0x10;
 #if !FW_SINCE(0x00090502)
-		if (inputScan.mode != 1)
+		if (INPUT_SCAN_NOT_MODE1())
 #endif
 		inputScanHold(0x1a);
 	}
@@ -143,7 +151,7 @@ void intp7Interrupt(void)
 			pinMonitor2Enable(1);
 			pinMonitors.pin[2].last = 0;
 #if !FW_SINCE(0x00090502)
-			if (inputScan.mode != 1)
+			if (INPUT_SCAN_NOT_MODE1())
 #endif
 			inputScanHold(0x1a);
 		} else
@@ -190,7 +198,7 @@ void intp4Interrupt(void)
 		if (pinMonitors.pin[3].config.reload != 0) {
 			pinMonitor3Enable(1);
 			pinMonitors.pin[3].last = 0;
-			if (inputScan.mode != 1)
+			if (INPUT_SCAN_NOT_MODE1())
 				inputScanHold(0x1a);
 		} else
 			pinMonitors.pin[3].config.handler();
@@ -227,7 +235,7 @@ void intp3Interrupt(void)
 			pinMonitor4Enable(1);
 			pinMonitors.pin[4].last = 0;
 #if !FW_SINCE(0x00090502)
-			if (inputScan.mode != 1)
+			if (INPUT_SCAN_NOT_MODE1())
 #endif
 			inputScanHold(0x1a);
 		} else
@@ -246,7 +254,7 @@ void intp10Interrupt(void)
 			pinMonitor5Enable(1);
 			pinMonitors.pin[5].last = 0;
 #if !FW_SINCE(0x00090502)
-			if (inputScan.mode != 1)
+			if (INPUT_SCAN_NOT_MODE1())
 #endif
 			inputScanHold(0x1a);
 		} else
@@ -280,7 +288,9 @@ void intp11Interrupt(void)
 	/* 0x00090009: P7.7 high, INTP11 off and the scan held, unless it scans in mode 1 */
 	if (P7.7) {
 		intp11Enable(0);
-		if (inputScan.mode != 1)
+#if FW_SINCE(0x00080502)	/* 0x00080307 holds it whatever the scan */
+		if (INPUT_SCAN_NOT_MODE1())
+#endif
 			inputScanHold(0x1a);
 	}
 #endif
@@ -322,7 +332,14 @@ void sre0Interrupt(void)
 #else
 		intp13Enable(0);
 		inputGroup1.prev &= ~0x01;
+#if !FW_SINCE(0x00080502)
+		if (inputScan.interval != 1) {	/* 0x00080307: the scan every tick */
+			inputScan.interval = 1;
+			timerStart(INPUT_SCAN_TIMER, 1);
+		}
+#else
 		inputScanMode1(1);
+#endif
 #endif
 	}
 }

@@ -87,7 +87,9 @@ void task3(VP_INT exinf)
 			}
 #endif
 		}
+#if TASK_PENDING_MARKS
 		task3Idle();
+#endif
 	}
 	ext_tsk();
 }
@@ -157,7 +159,9 @@ void task3(VP_INT exinf)
 			}
 #endif
 		}
+#if TASK_PENDING_MARKS
 		task3Idle();
+#endif
 	}
 	ext_tsk();
 }

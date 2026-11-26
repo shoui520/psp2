@@ -643,7 +643,11 @@ void uart3SendInterrupt(void)
 #else
 		if (serial.mode != 3)
 #endif
+#if !TASK_PENDING_MARKS
+			task2ISetFlag(2);	/* 0x00080307: iset_flg */
+#else
 			task2SetFlag(3, 2);
+#endif
 	}
 }
 #endif

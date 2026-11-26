@@ -17,6 +17,9 @@
 #define POWER_TIMER(id)		((id) < 7 ? (id) - 4 : (id) - 5)
 #elif FW_SINCE(0x0100060B)
 #define POWER_TIMER(id)		((id) < 7 ? (id) - 1 : (id) - 2)
+#elif !FW_SINCE(0x00080502)
+/* 0x00080307: three later (the input scan's and two others before them) */
+#define POWER_TIMER(id)		((id) + 3)
 #else
 #define POWER_TIMER(id)		(id)
 #endif
@@ -24,6 +27,8 @@
 /* bit 11's timer: after 9 and 10's, in 0x00080504 the last power timer (no bits 12 and 13) */
 #if FW_SINCE(0x00090006) || defined(ERNIE_UPDATER)
 #define POWER_TIMER11		TIMER(0x0c)
+#elif !FW_SINCE(0x00080502)
+#define POWER_TIMER11		0x11	/* 0x00080307: three later, as POWER_TIMER() */
 #else
 #define POWER_TIMER11		0x0e
 #endif

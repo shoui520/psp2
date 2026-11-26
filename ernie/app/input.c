@@ -68,12 +68,6 @@ extern unsigned char getResetCause(void);
 #define INPUT_SET_FLAG(flag, pattern)	set_flg(flag, pattern)
 #endif
 
-/* the scan's timers: the ticks' (the slim's 0x0105 has no timers 0-2) and the RTC's */
-#if BOARD_USS1001 && SOURCE_0104
-#define INPUT_SCAN_TIMER	0
-#else
-#define INPUT_SCAN_TIMER	3
-#endif
 #define INPUT_SCAN_RTC_TIMER	TIMER_RTC(0x16)
 #if ANALOG_THERMISTOR
 /* DOL-1002's thermistor's: a reading every two ticks */
@@ -841,12 +835,17 @@ void inputInit(void)
 	levelMonitor1.enable = 0;
 	levelMonitor2.enable = 0;
 #endif
+#if FW_SINCE(0x00080502)	/* 0x00080307 leaves the scan as it is and has no RTC timer */
 	inputScan.mode = 0;
 	inputScan.interval = 0;
 	inputScan.hold = 0;
 	timer.handler = inputScanTimer;
 	timerSetHandler(INPUT_SCAN_TIMER, &timer);
 	timerSetHandler(INPUT_SCAN_RTC_TIMER, &timer);
+#else
+	timer.handler = inputScanTimer;
+	timerSetHandler(INPUT_SCAN_TIMER, &timer);
+#endif
 }
 #endif
 
@@ -881,7 +880,13 @@ void inputResumePrepare(void)
 	intp10Enable(0);
 	intp8Enable(0);
 #endif
+#if !FW_SINCE(0x00080502)
+	inputScan.hold = 0;
+	inputScan.interval = 1;
+	timerStart(INPUT_SCAN_TIMER, 1);
+#else
 	inputScanMode1(1);
+#endif
 }
 
 void inputResumeOpen(void)
@@ -1063,7 +1068,14 @@ void inputStateOff(void)
 	intp1Enable(1);
 	intp13Enable(1);
 	intp11Enable(1);
+#if !FW_SINCE(0x00080502)
+	/* 0x00080307: the one scan timer, slowed down */
+	inputScan.interval = 0x7d;
+	inputScan.hold = 0;
+	timerStart(INPUT_SCAN_TIMER, inputScan.interval);
+#else
 	inputScanMode2(1);
+#endif
 #elif BOARD_OFF_WAKE
 	intp13Enable(1);
 #if BOARD_INTP11	/* not PCH-1000's 0x00090007 */
@@ -1130,7 +1142,9 @@ void inputStateShutdown(void)
 	inputShutdownMark();
 #endif
 	timerStop(INPUT_SCAN_TIMER);
+#if FW_SINCE(0x00080502)	/* 0x00080307 has one scan timer */
 	timerStop(INPUT_SCAN_RTC_TIMER);
+#endif
 }
 
 void inputCut(void)
@@ -1160,7 +1174,12 @@ void inputStateCut(void)
 {
 	levelMonitor2Start();
 	levelMonitor1Start();
+#if !FW_SINCE(0x00080502)
+	inputScan.interval = 1;
+	timerStart(INPUT_SCAN_TIMER, 1);
+#else
 	inputScanMode2(1);
+#endif
 }
 
 void inputSuspend(void)
@@ -1206,7 +1225,9 @@ void inputSuspend(void)
 		if (!P3.0) {
 			pinMonitor4Enable(1);
 			pinMonitors.pin[4].last = 0;
+#if FW_SINCE(0x00080502)	/* 0x00080307 holds nothing */
 			inputScanHold(0x1a);
+#endif
 		} else
 			intp3Enable(1);
 	}
@@ -1214,7 +1235,9 @@ void inputSuspend(void)
 		if (!P3.1) {
 			pinMonitor3Enable(1);
 			pinMonitors.pin[3].last = 0;
+#if FW_SINCE(0x00080502)	/* 0x00080307 holds nothing */
 			inputScanHold(0x1a);
+#endif
 		} else
 			intp4Enable(1);
 	}
@@ -1223,7 +1246,9 @@ void inputSuspend(void)
 		if (!P14.1) {
 			pinMonitor2Enable(1);
 			pinMonitors.pin[2].last = 0;
+#if FW_SINCE(0x00080502)	/* 0x00080307 holds nothing */
 			inputScanHold(0x1a);
+#endif
 		} else
 			intp7Enable(1);
 #endif
@@ -1232,7 +1257,9 @@ void inputSuspend(void)
 		if (!P7.6) {
 			pinMonitor5Enable(1);
 			pinMonitors.pin[5].last = 0;
+#if FW_SINCE(0x00080502)	/* 0x00080307 holds nothing */
 			inputScanHold(0x1a);
+#endif
 		} else
 			intp10Enable(1);
 	}
@@ -1327,7 +1354,15 @@ void inputStateSuspend(void)
 #if BOARD_INTP11 && !FW_SINCE(0x00090203)
 	intp11Enable(1);
 #endif
+#if !FW_SINCE(0x00080502)
+	/* 0x00080307: the one scan timer, slowed down after a hold */
+	inputScan.interval = 0x7d;
+	inputScanHold(0x1a);
+	inputScan.hold = 0;
+	timerStart(INPUT_SCAN_TIMER, inputScan.interval);
+#else
 	inputScanMode2(1);
+#endif
 #else
 	inputScanMode1(1);
 #endif
@@ -1345,7 +1380,7 @@ void inputReset(void)
 #if BOARD_MOTION
 	motionStop();
 #endif
-#if FW_SINCE(0x0100010B)
+#if FW_SINCE(0x0100010B) || !FW_SINCE(0x00080502)
 	analogStop();
 #else
 	analogSetMode(0);
@@ -2749,6 +2784,10 @@ void input1Bit2High(void)
 
 void inputMultiCnChanged(void)
 {
+#if !FW_SINCE(0x00080502)
+	/* 0x00080307: the sleep factor from the pin first, none cleared after */
+	sleepFactorSet5(inputState1.5 ? 0 : 1);
+#endif
 	if (input1Bit5Active() == 1) {
 #if !FW_SINCE(0x0100010B)
 		if (stateGet() != 0x0020) {
@@ -2762,7 +2801,9 @@ void inputMultiCnChanged(void)
 		analogMultiCnStop();
 #endif
 		powerDeviceSetPending(BOARD_INPUTS_102603 && !SOURCE_0103 ? 2 : 0x20);
+#if FW_SINCE(0x00080502)
 		sleepFactorSet5(0);
+#endif
 		analogMultiCnInit();
 	}
 #if FW_SINCE(0x00090502)	/* 0x00090206 wakes no task */
@@ -2794,6 +2835,14 @@ void input1Bit0Changed(void)
 void inputScanHold(unsigned int ticks)
 {
 	DI();
+#if !FW_SINCE(0x00080502)
+	{	/* 0x00080307: the hold set, the one timer started */
+		inputScan.hold = ticks;
+		timerStart(INPUT_SCAN_TIMER, 1);
+	}
+	EI();
+}
+#else
 #if FW_SINCE(0x00090804)
 	if (inputScan.hold < ticks) {
 #else
@@ -2808,6 +2857,7 @@ void inputScanHold(unsigned int ticks)
 	}
 	EI();
 }
+#endif
 
 /* the scan timer's handler (timers 3 and 0x16): the key bits latched, task 3 woken and the
    timer restarted, the delays counted down */
@@ -2972,6 +3022,15 @@ void inputScanTimer(void)
 		inputKeys.events |= inputKeys.state & 0x000c;
 	if (toggled & 0x04)
 		inputKeys.events |= inputKeys.state & 0x00a1;
+#if !FW_SINCE(0x00080502)
+	iset_flg(2, 0x0008);
+	if (inputScan.hold != 0) {
+		inputScan.hold--;
+		timerStart(INPUT_SCAN_TIMER, 1);
+	} else {
+		timerStart(INPUT_SCAN_TIMER, inputScan.interval);
+	}
+#else
 	task3SetFlag(2, 0x0008);
 	if (inputScan.hold != 0) {
 		inputScan.hold--;
@@ -2981,6 +3040,7 @@ void inputScanTimer(void)
 	} else {
 		timerStart(INPUT_SCAN_TIMER, inputScan.interval);
 	}
+#endif
 }
 #else
 void inputScanTimer(void)
@@ -3181,6 +3241,7 @@ void inputShutdownMark(void)
 }
 #endif
 
+#if FW_SINCE(0x00080502)	/* 0x00080307 sets the scan in place */
 /* the scan on timer 3 every interval */
 void inputScanMode1(unsigned int interval)
 {
@@ -3212,6 +3273,7 @@ void inputScanMode2(unsigned int interval)
 	EI();
 	return;
 }
+#endif
 
 #if FW_SINCE(0x00090502)	/* 0x00090206 has no input 1 bit 7 */
 void input1Bit7Changed(void)

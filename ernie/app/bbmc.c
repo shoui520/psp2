@@ -42,6 +42,8 @@
 /* the link timeout's timer: 0x00090206 gives it timer 0x13, its first RTC timer */
 #if FW_SINCE(0x00090502)
 #define BBMC_LINK_TIMER		TIMER(0x13)
+#elif !FW_SINCE(0x00080502)
+#define BBMC_LINK_TIMER		TIMER_RTC(0x14)	/* 0x00080307: 3 */
 #else
 #define BBMC_LINK_TIMER		TIMER_RTC_FIRST	/* 0x13 (0x00080504: 0x11) */
 #endif
@@ -218,15 +220,15 @@ unsigned char bbmcPowerOn(void)
 #if FW_SINCE(0x01000104)
 		timerStart(BBMC_LINK_TIMER, 5000);
 #else
-		timerStart(BBMC_LINK_TIMER, 0x28);
+		timerStart(BBMC_LINK_TIMER, TIMER_RTC_TICKS(0x28));
 #endif
-		timerStart(TIMER_RTC(0x15), 0xa0);
+		timerStart(TIMER_RTC(0x15), TIMER_RTC_TICKS(0xa0));
 		break;
 	}
 #else
 	if (bbmc.state != 3) {
-		timerStart(BBMC_LINK_TIMER, 0x28);
-		timerStart(TIMER_RTC(0x15), 0xa0);
+		timerStart(BBMC_LINK_TIMER, TIMER_RTC_TICKS(0x28));
+		timerStart(TIMER_RTC(0x15), TIMER_RTC_TICKS(0xa0));
 	}
 #endif
 #if FW_SINCE(0x01000104)
@@ -332,7 +334,7 @@ unsigned char bbmcStart(void)
 		bbmc.state = 3;
 #endif
 		powerSleep(100);
-		timerStart(TIMER_RTC(0x19), 0x14);
+		timerStart(TIMER_RTC(0x19), TIMER_RTC_TICKS(0x14));
 		break;
 	case 6:
 	case 7:
@@ -344,7 +346,7 @@ unsigned char bbmcStart(void)
 		P125 = 1;
 	case 6:
 		bbmc.state = 3;
-		timerStart(TIMER_RTC(0x19), 0x14);
+		timerStart(TIMER_RTC(0x19), TIMER_RTC_TICKS(0x14));
 		break;
 #endif
 	default:
@@ -578,7 +580,7 @@ unsigned char bbmcEvent(FLGPTN ptn)
 #if FW_SINCE(0x01000104)
 		timerStart(BBMC_LINK_TIMER, 5000);
 #else
-		timerStart(BBMC_LINK_TIMER, 0x28);
+		timerStart(BBMC_LINK_TIMER, TIMER_RTC_TICKS(0x28));
 #endif
 	}
 #endif
@@ -782,7 +784,7 @@ void bbmcReceive(void)
 #else
 			/* before 0x01000104 a packet is answered whatever its checksum and its
 			   repeats */
-			timerStart(BBMC_LINK_TIMER, 0x28);
+			timerStart(BBMC_LINK_TIMER, TIMER_RTC_TICKS(0x28));
 			bbmcTrace("RX", (unsigned char *)&bbmc.rx);
 			if (bbmc.rx.data[bbmc.rx.length - 3] == bbmcChecksum((unsigned char *)&bbmc.rx))
 				;

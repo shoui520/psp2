@@ -114,6 +114,10 @@ static __near unsigned char analogMinRange;	/* the high byte of a range that cal
 						   (0x00090009: unused) */
 #if FW_SINCE(0x00090203)
 static __near unsigned int analogScales[ANALOG_SETS];	/* each set's margin, 1/1000 of the range */
+#elif !FW_SINCE(0x00080502)
+/* 0x00080307 has no modes: the margin always 0x57 >> 9 of the range */
+#define analogScale		0x57
+#define analogScaleShift	9
 #else
 static __near unsigned char analogScale;	/* the margin, range * analogScale >> */
 static __near unsigned char analogScaleShift;	/* analogScaleShift: 0x57 >> 9 or (mode 2) 0x31 */
@@ -659,8 +663,10 @@ void analogInit(void)
 	analogAxes[1].calibrated = 0;
 	analogAxes[2].calibrated = 0;
 	analogAxes[3].calibrated = 0;
+#if FW_SINCE(0x00080502)
 	analogScale = 0x57;
 	analogScaleShift = 9;
+#endif
 }
 
 void analogCenterSet0(void)
@@ -693,11 +699,13 @@ void analogCalibrationReset(void)
 }
 #endif
 
+#if FW_SINCE(0x00080502)	/* 0x00080307's settings keep no calibration */
 /* the settings' calibration */
 void analogCalibrationDefault(void)
 {
 	analogCalibration = configGet()->analogCalibration;
 }
+#endif
 
 /* reads the calibration kept in the NVS's syscon area into data; done(command, result) when
    it is read */
@@ -745,12 +753,20 @@ static void analogCalibrationLoaded(unsigned char command, unsigned char result)
 			    analogCalibration.axis[i].max < ANALOG_SAMPLE_CENTER ||
 			    ANALOG_HIGH(range) < 0x64) {
 #endif
+#if !FW_SINCE(0x00080502)
+				analogCalibrationReset();
+#else
 				analogCalibrationDefault();
+#endif
 				return;
 			}
 		}
 	} else
+#if !FW_SINCE(0x00080502)
+		analogCalibrationReset();
+#else
 		analogCalibrationDefault();
+#endif
 }
 
 /* stores the calibration and waits until it is written */
@@ -1156,7 +1172,9 @@ void analogEvent(unsigned int inputs)
 				adcClose();
 #endif
 			sleepFactorSet6(1);
+#if FW_SINCE(0x00080502)	/* not in 0x00080307 */
 			sleepFactorSet5(1);
+#endif
 #if FW_SINCE(0x00090502)
 			task2SetFlag(3, 0x0001);
 #else
@@ -2845,6 +2863,18 @@ void analogSetMode(unsigned char mode)
 		break;
 	}
 	ena_dsp();
+}
+#elif !FW_SINCE(0x00080502)
+/* 0x00080307 has no modes: the sticks on, or off and centred */
+void analogOn(void)
+{
+	inputKeys.state |= 0x0002;
+}
+
+void analogStop(void)
+{
+	inputKeys.state &= ~0x0002;
+	analogCenterSet0();
 }
 #else
 /* the sticks on, computing set 0 (mode 1), set 1 (2) or both (3); the set not computed
