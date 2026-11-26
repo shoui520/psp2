@@ -199,6 +199,152 @@ extern "C" int SwMwMoveSinkStreamDestroy(struct SwMwSinkStream *stream)
 	return 0;
 }
 
+/* the move stream's two-phase MV_COMPLETE over the sink (0x8100ba4e) */
+extern "C" int SwMwMoveSinkStreamComplete(struct SwMwSinkStream *stream)
+{
+	struct SwMwMoveSink *sink = (struct SwMwMoveSink *)stream->sink;
+	int value;
+	int status;
+
+	if (sink == NULL || sink->content == NULL)
+		return 12004;
+	if (sink->finalized == 0)
+		return 12004;
+	SwMwMoveSinkStreamMutexLock(&sink->mutex);
+	if (stream->finished != 0) {
+		sink->finalized = 0;
+		sink->sessionState[0] = 0;
+		sink->sessionState[1] = 0;
+		SwMwMoveSinkStreamMutexUnlock(&sink->mutex);
+		return 12015;
+	}
+	if (sink->sessionState[0] == 0) {
+		SwMwMoveSinkStreamMutexUnlock(&sink->mutex);
+		return 12007;
+	}
+	value = sink->sessionState[1];
+	if (value != 0) {
+		if (value == 1033) {
+			sink->finalized = 0;
+			sink->sessionState[0] = 0;
+			sink->sessionState[1] = 0;
+		} else if (value == 1019) {
+			sink->content->abort(&sink->uri, (unsigned char)sink->moveState);
+			sink->moveState = -1;
+			sink->content->operation(&sink->uri, &sink->result);
+			sink->result = 0;
+			SwMwCoreNotifyLabel(sink->device, sink->sessionState[6], 41);
+			SwMwMoveListRelease(sink->manager, sink->sessionState[5]);
+		}
+		SwMwMoveSinkStreamMutexUnlock(&sink->mutex);
+		return value;
+	}
+	SwMwMoveSinkStreamMutexUnlock(&sink->mutex);
+	if (sink->sessionState[2] == 0) {
+		status = SwMwMoveRecordBegin(sink->manager, sink->sessionState[5], 2);
+		if (status != 0)
+			return status;
+		swMwTrace("sw mw:Send MV_COMPLETE: kxm_label=0x%x contentID=%d\n",
+			  sink->moveState, sink->sessionState[6]);
+		status = sink->content->complete(&sink->uri, (unsigned char)sink->moveState);
+		if (status != 0) {
+			swMwTrace("[SWMW] ERROR in %s:%d\n", SWMW_MOVESTREAM_SOURCE, 1263);
+			return SwMwStatus(status);
+		}
+		sink->sessionState[2] = 1;
+	}
+	SwMwMoveSinkStreamMutexLock(&sink->mutex);
+	if (sink->sessionState[3] == 0) {
+		SwMwMoveSinkStreamMutexUnlock(&sink->mutex);
+		return 12007;
+	}
+	value = sink->sessionState[4];
+	if (value != 0) {
+		if (value == 1033) {
+			sink->sessionState[2] = 0;
+			sink->sessionState[3] = 0;
+			sink->sessionState[4] = 0;
+		}
+		SwMwMoveSinkStreamMutexUnlock(&sink->mutex);
+		return value;
+	}
+	SwMwMoveSinkStreamMutexUnlock(&sink->mutex);
+	sink->content->abort(&sink->uri, (unsigned char)sink->moveState);
+	sink->moveState = -1;
+	status = sink->content->operation(&sink->uri, &sink->result);
+	sink->result = 0;
+	if (status != 0)
+		swMwTrace("[SWMW] ERROR in %s:%d\n", SWMW_MOVESTREAM_SOURCE, 1296);
+	status = SwMwMoveListRelease(sink->manager, sink->sessionState[5]);
+	if (status != 0)
+		return status;
+	sink->sessionState[5] = -1;
+	return 0;
+}
+
+/* wait for the move to close: finalize once, then complete (0x8100b7fc) */
+extern "C" int SwMwMoveSinkStreamWaitClosed(struct SwMwSinkStream *stream)
+{
+	struct SwMwMoveSink *sink = (struct SwMwMoveSink *)stream->sink;
+	struct SwMwMoveMessage message;
+	struct SwMwMoveRecord record;
+	int status;
+	int i;
+
+	SwMwMoveMessageInit(&message);
+	memset(&record, 0, sizeof(record));
+	if (sink->moveState == -1) {
+		SwMwMoveMessageDone(&message);
+		return 12003;
+	}
+	if (sink->moveResult != 0)
+		stream->finished = 1;
+	if (stream->finished != 0) {
+		SwMwMoveMessageDone(&message);
+		return 12015;
+	}
+	status = sink->content->request(&sink->uri, (unsigned char)sink->moveState, &message,
+					sink->moveStatus);
+	if (status != 0) {
+		swMwTrace("[SWMW] ERROR in %s:%d\n", SWMW_MOVESTREAM_SOURCE, 1141);
+		SwMwMoveMessageDone(&message);
+		return SwMwStatus(status);
+	}
+	record.label = message.label;
+	memcpy(record.key, message.key, 8);
+	memcpy(record.first, message.first, 10);
+	memcpy(record.second, message.second, 10);
+	record.kind = 1;
+	record.requested = sink->sessionState[6];
+	record.size = sink->sessionState[7];
+	if (record.size != 0)
+		memcpy(record.payload, sink->session, record.size);
+	status = SwMwMoveRecordAppend(sink->manager, &record);
+	if (status != 0) {
+		SwMwMoveMessageDone(&message);
+		return status;
+	}
+	sink->sessionState[5] = record.id;
+	for (i = 0; i < 2; ++i) {
+		swMwTrace("sw mw:Send MV_FINALIZE: kxm_label=0x%x contentID=%d\n",
+			  record.label, record.requested);
+		status = sink->content->finalize(&sink->uri, &message);
+		if (status == 0) {
+			swMwTrace("[SWMW] ERROR in %s:%d\n", SWMW_MOVESTREAM_SOURCE, 1174);
+			break;
+		}
+	}
+	if (status != 0) {
+		swMwTrace("[SWMW] ERROR in %s:%d\n", SWMW_MOVESTREAM_SOURCE, 1176);
+		SwMwMoveMessageDone(&message);
+		return SwMwStatus(status);
+	}
+	sink->finalized = 1;
+	status = SwMwMoveSinkStreamComplete(stream);
+	SwMwMoveMessageDone(&message);
+	return status;
+}
+
 /* send the move's MV_FINALIZE for the labelled session (0x8100bd10) */
 extern "C" int SwMwMoveSinkStreamFinalize(struct SwMwSinkStream *stream, int value)
 {
