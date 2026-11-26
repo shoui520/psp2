@@ -146,7 +146,7 @@ typedef struct {
     /* The SHA-1 hash. */
     u8 sha1Hash[SHA1_HASH_SIZE]; //300
     /* Key data. */
-    u8 keyData4[KEY_DATA_SIZE]; //320
+    u8 keyDataHash[KEY_DATA_SIZE]; //320
 } PspHeader; //size == 336
 
 

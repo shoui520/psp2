@@ -53,9 +53,9 @@ SCE_MODULE_REBOOT_PHASE("ModuleMgrRebootPhase");
 SCE_SDK_VERSION(SDK_VERSION);
 
 SceModuleManagerCB g_ModuleManager; // 0x00009A20
-s32 ModuleMgrForKernel_var_99BFFDB8;
-s32 ModuleMgrForKernel_var_57F4B35E;
-s32 ModuleMgrForKernel_var_DB08B7FF;
+s32 g_workerPriorityBoost;
+s32 g_pathOverrideMode;
+s32 g_discEmuPatchEnabled;
 
 /* local functions */
 static s32 _ModuleReleaseLibraries(SceModule *pMod);
@@ -67,21 +67,21 @@ static s32 _StopModule(SceModuleMgrParam *pModParams, SceModule *pMod, s32 start
 static s32 _LoadModule(SceModuleMgrParam *pModParams);
 static s32 _RelocateModule(SceModuleMgrParam *pModParams);
 
-static s32 _CheckSkipPbpHeader(SceModuleMgrParam *pModParams, SceUID fd, void *pBlock, u32 *pOffset, s32 apiType);
-static void _FreeMemoryResources(SceUID fd, SceUID partitionId, SceModuleMgrParam *pModParams,
+static s32 _CheckSkipPbpHeader(SceModuleMgrParam *pModParams, SceUID fileFd, void *pBlock, u32 *pOffset, s32 apiType);
+static inline __attribute__((always_inline)) void _FreeMemoryResources(SceUID fileFd, SceUID partitionId, SceModuleMgrParam *pModParams,
     SceLoadCoreExecFileInfo *pExecInfo);
-static s32 _GivenBlockInfoFromBlock(SceUID blockId, SceModuleMgrParam *pModParams);
-static s32 _CheckKernelOnlyModulePartition(SceUID memoryPartitionId);
+static inline __attribute__((always_inline)) s32 _GivenBlockInfoFromBlock(SceUID blockId, SceModuleMgrParam *pModParams);
+static inline __attribute__((always_inline)) s32 _CheckKernelOnlyModulePartition(SceUID memoryPartitionId);
 static s32 _PartitionCheck(SceModuleMgrParam *pModParams, SceLoadCoreExecFileInfo *pExecInfo);
 
-static void _CleanupMemory(SceUID gzipMemId, SceLoadCoreExecFileInfo *pExecInfo);
+static inline __attribute__((always_inline)) void _CleanupMemory(SceUID gzipMemId, SceLoadCoreExecFileInfo *pExecInfo);
 static s32 allocate_module_block(SceModuleMgrParam *pModParams);
 static s32 _ProcessModuleExportEnt(SceModule *pMod, SceResidentLibraryEntryTable *pLib);
 static s32 ModuleRegisterLibraries(SceModule *pMod);
 
-static SceBool canOverflowOccur(u32 s1, u32 s2)
+static inline __attribute__((always_inline)) SceBool canOverflowOccur(u32 lhs, u32 rhs)
 {
-    return ((s1 + s2) < s2);
+    return ((lhs + rhs) < rhs);
 }
 
 /*
@@ -184,7 +184,7 @@ static s32 exe_thread(SceSize args, void *argp)
         /* Load the specified module into memory. */
         status = _LoadModule(pModParams); //0x000001E4
 
-        sceKernelChangeThreadPriority(SCE_KERNEL_THREAD_ID_SELF, ModuleMgrForKernel_var_99BFFDB8 ? 31 : SCE_KERNEL_MODULE_INIT_PRIORITY); // 0x000001F4
+        sceKernelChangeThreadPriority(SCE_KERNEL_THREAD_ID_SELF, g_workerPriorityBoost ? 31 : SCE_KERNEL_MODULE_INIT_PRIORITY); // 0x000001F4
 
         if (status < SCE_ERROR_OK) { //0x000001FC
             *(pModParams->pResult) = status; //0x00000480
@@ -312,13 +312,13 @@ static s32 exe_thread(SceSize args, void *argp)
 }
 
 // 0x0000501C
-s32 ModuleMgrRebootPhase(s32 arg0 __attribute__((unused)), void *arg1 __attribute__((unused)), s32 arg2 __attribute__((unused)), s32 arg3 __attribute__((unused)))
+s32 ModuleMgrRebootPhase(s32 phase __attribute__((unused)), void *rebootParam __attribute__((unused)), s32 rebootType __attribute__((unused)), s32 rebootFlags __attribute__((unused)))
 {
     return SCE_ERROR_OK;
 }
 
 // 0x00005024
-s32 ModuleMgrRebootBefore(void *arg0 __attribute__((unused)), s32 arg1 __attribute__((unused)), s32 arg2 __attribute__((unused)), s32 arg3 __attribute__((unused)))
+s32 ModuleMgrRebootBefore(void *rebootParam __attribute__((unused)), s32 rebootType __attribute__((unused)), s32 rebootFlags __attribute__((unused)), s32 rebootMode __attribute__((unused)))
 {
     return sceKernelSuspendThread(g_ModuleManager.threadId); //0x00005034
 }
@@ -371,24 +371,24 @@ SceBool sceKernelCheckTextSegment(void)
 }
 
 // Subroutine ModuleMgrForKernel_A40EC254 - Address 0x00005B6C
-s32 sceKernelSetNpDrmGetModuleKeyFunction(s32(*function)(s32 fd, void *, void *))
+s32 sceKernelSetNpDrmGetModuleKeyFunction(s32(*function)(s32 fileFd, void *, void *))
 {
     g_ModuleManager.npDrmGetModuleKeyFunction = function;
     return SCE_ERROR_OK;
 }
 
 // Subroutine ModuleMgrForKernel_C3DDABEF - Address 0x00005B7C
-s32 sceKernelNpDrmGetModuleKey(SceUID fd, void *arg2, void *arg3)
+s32 sceKernelNpDrmGetModuleKey(SceUID fileFd, void *keyBuf, void *drmHeader)
 {
     s32 status;
 
-    if (arg2 == NULL || arg3 == NULL)
+    if (keyBuf == NULL || drmHeader == NULL)
         return SCE_ERROR_KERNEL_ILLEGAL_ADDR;
 
     if (g_ModuleManager.npDrmGetModuleKeyFunction == NULL)
         return SCE_ERROR_KERNEL_ERROR;
 
-    status = g_ModuleManager.npDrmGetModuleKeyFunction(fd, arg2, arg3); // 0x00005BB0
+    status = g_ModuleManager.npDrmGetModuleKeyFunction(fileFd, keyBuf, drmHeader); // 0x00005BB0
 
     return pspMin(status, SCE_ERROR_OK); // 0x00005BBC
 }
@@ -419,7 +419,7 @@ static s32 _LoadModule(SceModuleMgrParam *pModParams)
     pspClearMemory32(pExecInfo, sizeof(SceLoadCoreExecFileInfo));
     pExecInfo->apiType = pModParams->apiType;
 
-    pos = sceIoLseek(pModParams->fd, 0, SCE_SEEK_CUR); //0x00005CE8
+    pos = sceIoLseek(pModParams->fileFd, 0, SCE_SEEK_CUR); //0x00005CE8
 
     SceUID tmpModuleFileBlockId = sceKernelAllocPartitionMemory(SCE_KERNEL_PRIMARY_KERNEL_PARTITION, "SceModmgrLMTmp",
         SCE_KERNEL_SMEM_High, 512, 0); // 0x00005D0C
@@ -427,16 +427,16 @@ static s32 _LoadModule(SceModuleMgrParam *pModParams)
         return tmpModuleFileBlockId;
 
     SceUID newFd = 0; // 0x00005C84
-    SceUID fd = pModParams->fd;
+    SceUID fileFd = pModParams->fileFd;
     void *pBlock = sceKernelGetBlockHeadAddr(tmpModuleFileBlockId); // 0x00005D20
 
     do {
-        status = sceIoRead(fd, pBlock, 512); // 0x00005D34
+        status = sceIoRead(fileFd, pBlock, 512); // 0x00005D34
         if (status <= 0) { // 0x00005D3C
             ClearFreePartitionMemory(tmpModuleFileBlockId); // 0x000067BC - 0x000067F0
             return (status < 0) ? status : (s32)SCE_ERROR_KERNEL_FILE_READ_ERROR; // 0x00006728
         }
-        sceIoLseek(fd, pos, SCE_SEEK_SET); // 0x00005D50
+        sceIoLseek(fileFd, pos, SCE_SEEK_SET); // 0x00005D50
 
         if (newFd != 0 || pModParams->isBufferLoad != 0) // 0x00005D5C & 0x00005D68
             break;
@@ -448,13 +448,13 @@ static s32 _LoadModule(SceModuleMgrParam *pModParams)
         if (newFd < 0) // 0x00005D84
             while (1) {} // 0x00005D98
 
-        fd = newFd;
+        fileFd = newFd;
         pModParams->isBufferLoad = 1; // 0x00005D90
     } while (1); // 0x00005D90
 
     /* The first 512 bytes of the file of the module to be loaded have been read into pBlock. */
     u32 execCodeOffset;
-    status = _CheckSkipPbpHeader(pModParams, fd, pBlock, &execCodeOffset, pModParams->apiType); // 0x00005DB0
+    status = _CheckSkipPbpHeader(pModParams, fileFd, pBlock, &execCodeOffset, pModParams->apiType); // 0x00005DB0
     if (status < 0) { // 0x00005DB8
         ClearFreePartitionMemory(tmpModuleFileBlockId); // 0x0000674C - 0x00006780
         if (newFd != 0) // 0x0000678C
@@ -464,9 +464,9 @@ static s32 _LoadModule(SceModuleMgrParam *pModParams)
     }
     if (status > 0) { // 0x00005DC0
         /* The module contains a PBP header and we skip the PBP header for the module loading. */
-        pos = sceIoLseek(fd, 0, SCE_SEEK_CUR); // 0x00005DD0
+        pos = sceIoLseek(fileFd, 0, SCE_SEEK_CUR); // 0x00005DD0
 
-        status = sceIoRead(fd, pBlock, 512); // 0x00005DE8
+        status = sceIoRead(fileFd, pBlock, 512); // 0x00005DE8
         if (status <= 0) { // 0x00005DF0
             ClearFreePartitionMemory(tmpModuleFileBlockId); // 0x000066C0 - 0x00006708
             if (newFd != 0) // 0x0000678C
@@ -474,7 +474,7 @@ static s32 _LoadModule(SceModuleMgrParam *pModParams)
 
             return (status < 0) ? status : (s32)SCE_ERROR_KERNEL_FILE_READ_ERROR; // 0x00006724
         }
-        sceIoLseek(fd, pos, SCE_SEEK_SET); // 0x00005E04
+        sceIoLseek(fileFd, pos, SCE_SEEK_SET); // 0x00005E04
     }
     pExecInfo->modeAttribute = SCE_EXEC_FILE_NO_HEADER_COMPRESSION; // 0x00005E10
     if (pModParams->isBufferLoad & 0x1) // 0x00005E1C
@@ -484,7 +484,6 @@ static s32 _LoadModule(SceModuleMgrParam *pModParams)
     char *secInstallId = pModParams->secureInstallId; // 0x00005E38
 
     status = sceKernelCheckExecFile(pBlock, pExecInfo); // 0x00005E34
-    // TODO: starting here, pBlock contains status (in $s5)!
     if (status < SCE_ERROR_OK) { // 0x00005E3C
         _FreeMemoryResources(newFd, tmpModuleFileBlockId, pModParams, pExecInfo);
         return status;
@@ -492,9 +491,9 @@ static s32 _LoadModule(SceModuleMgrParam *pModParams)
 
     /* Calculate size of executable. */
     if (pExecInfo->execSize == 0) { // 0x00005E48
-        pos = sceIoLseek(fd, 0, SCE_SEEK_CUR); // 0x00006678
-        u32 endPos = (u32)sceIoLseek(fd, 0, SCE_SEEK_END); // 0x00006694
-        sceIoLseek(fd, pos, SCE_SEEK_SET); // 0x000066AC
+        pos = sceIoLseek(fileFd, 0, SCE_SEEK_CUR); // 0x00006678
+        u32 endPos = (u32)sceIoLseek(fileFd, 0, SCE_SEEK_END); // 0x00006694
+        sceIoLseek(fileFd, pos, SCE_SEEK_SET); // 0x000066AC
 
         pExecInfo->execSize = endPos - (u32)pos; // 0x000066BC
     }
@@ -561,7 +560,6 @@ static s32 _LoadModule(SceModuleMgrParam *pModParams)
         }
     } else {
         status = _PartitionCheck(pModParams, pExecInfo); // 0x0000651C
-        //pBlock = status; // 0x00006528 -- continue at loc_00005ECC
         if (status != SCE_ERROR_OK) { // 0x00006524
             _FreeMemoryResources(newFd, tmpModuleFileBlockId, pModParams, pExecInfo);
             return status;
@@ -584,9 +582,9 @@ static s32 _LoadModule(SceModuleMgrParam *pModParams)
          *  • (lowOffset + pExecInfo->maxAllocSize) cannot overflow
          *  • (lowOffset + pExecInfo->maxAllocSize) cannot be greater than the memory block size
          */
-        s32 highOffset = (s32)(pModParams->memBlockOffset >> 32); // 0x00005F18 -- $a3
-        u32 lowOffset = (u32)pModParams->memBlockOffset; // 0x00005F14 -- $a2
-        u8 overFlow = canOverflowOccur(lowOffset, pExecInfo->maxAllocSize); // 0x00005F2C -- overFlow == $t3
+        s32 highOffset = (s32)(pModParams->memBlockOffset >> 32); // 0x00005F18
+        u32 lowOffset = (u32)pModParams->memBlockOffset; // 0x00005F14
+        u8 overFlow = canOverflowOccur(lowOffset, pExecInfo->maxAllocSize); // 0x00005F2C
 
         if (highOffset > 0 || (highOffset == 0 && overFlow) // 0x00005F3C
                 || ((highOffset + overFlow) == 0 // 0x00005F44
@@ -703,14 +701,14 @@ static s32 _LoadModule(SceModuleMgrParam *pModParams)
             gzipBuf = sceKernelGetBlockHeadAddr(tmpModuleFileBlockId); // 0x0000630C
             size = pExecInfo->execSize; // 
         }
-        SceOff curPos = sceIoLseek(fd, 0, SCE_SEEK_CUR); // 0x000060A8
+        SceOff curPos = sceIoLseek(fileFd, 0, SCE_SEEK_CUR); // 0x000060A8
 
         /* Read rest of the content (segments,...) of the module to load. */
-        status = sceIoRead(fd, gzipBuf, size); // 0x000060C0
+        status = sceIoRead(fileFd, gzipBuf, size); // 0x000060C0
         if (status >= SCE_ERROR_OK) // 0x000060C8
             status = ((SceSize)status == size) ? SCE_ERROR_OK : SCE_ERROR_KERNEL_ERROR;
 
-        sceIoLseek(fd, curPos, SCE_SEEK_SET); // 0x000060F0
+        sceIoLseek(fileFd, curPos, SCE_SEEK_SET); // 0x000060F0
         if (status < SCE_ERROR_OK) { // 0x000060F8
             _FreeMemoryResources(newFd, tmpModuleFileBlockId, pModParams, pExecInfo);
             return status;
@@ -734,14 +732,14 @@ static s32 _LoadModule(SceModuleMgrParam *pModParams)
         if (tmpModuleFileBlockId > 0) // 0x0000613C
             ClearFreePartitionMemory(tmpModuleFileBlockId);
     } else if (pExecInfo->isCompressed) { // 0x00006384
-        SceOff curPos = sceIoLseek(fd, 0, SCE_SEEK_CUR); // 0x000063BC
+        SceOff curPos = sceIoLseek(fileFd, 0, SCE_SEEK_CUR); // 0x000063BC
 
         /* Read module file into module buffer. */
-        status = sceIoRead(fd, pExecInfo->fileBase, pExecInfo->execSize); // 0x000063D4
+        status = sceIoRead(fileFd, pExecInfo->fileBase, pExecInfo->execSize); // 0x000063D4
         if (status >= SCE_ERROR_OK) // 0x000063DC
             status = ((SceSize)status == pExecInfo->execSize) ? SCE_ERROR_OK : SCE_ERROR_KERNEL_ERROR;
 
-        sceIoLseek(fd, curPos, SCE_SEEK_SET); // 0x00006404
+        sceIoLseek(fileFd, curPos, SCE_SEEK_SET); // 0x00006404
         if (status < SCE_ERROR_OK) {
             _FreeMemoryResources(newFd, tmpModuleFileBlockId, pModParams, pExecInfo);
             return status;
@@ -766,7 +764,7 @@ static s32 _LoadModule(SceModuleMgrParam *pModParams)
  * Obtain the partition type and the memory size of the memory block
  * specified by <blockId>.
  */
-static s32 _GivenBlockInfoFromBlock(SceUID blockId, SceModuleMgrParam *pModParams) 
+static inline __attribute__((always_inline)) s32 _GivenBlockInfoFromBlock(SceUID blockId, SceModuleMgrParam *pModParams) 
 {
     s32 status;
     SceUID partId;
@@ -792,11 +790,11 @@ static s32 _GivenBlockInfoFromBlock(SceUID blockId, SceModuleMgrParam *pModParam
  * module into.
  * Call this function to handle cleanup in an error case.
  */
-static void _FreeMemoryResources(SceUID fd, SceUID blockId, SceModuleMgrParam *pModParams,
+static inline __attribute__((always_inline)) void _FreeMemoryResources(SceUID fileFd, SceUID blockId, SceModuleMgrParam *pModParams,
     SceLoadCoreExecFileInfo *pExecInfo)
 {
-    if (fd > 0) // 0x00006204
-        sceIoClose(fd); // 0x000062D8
+    if (fileFd > 0) // 0x00006204
+        sceIoClose(fileFd); // 0x000062D8
 
     ClearFreePartitionMemory(blockId); // 0x0000620C - 0x00006258
     if (pModParams->externMemBlockIdUser != 0 || pModParams->externMemBlockIdKernel != 0 ||
@@ -807,47 +805,9 @@ static void _FreeMemoryResources(SceUID fd, SceUID blockId, SceModuleMgrParam *p
 }
 
 /*
- * Reset and free the specified memory block.
+ * Check if specified memory partition is a KERNEL only partition.
  */
-s32 ClearFreePartitionMemory(SceUID blockId)
-{
-    s32 status;
-
-    if (blockId <= 0)
-        return SCE_ERROR_OK;
-
-    SceSysmemMemoryBlockInfo blkInfo;
-    blkInfo.size = sizeof(SceSysmemMemoryBlockInfo);
-    status = sceKernelQueryMemoryBlockInfo(blockId, &blkInfo); // 0x000066D0
-    if (status < SCE_ERROR_OK)
-        return status;
-
-    sceKernelMemset((void *)blkInfo.addr, 0, blkInfo.memSize); // 0x00006778
-    status = sceKernelFreePartitionMemory(blockId); // 0x00006780
-
-    return status;
-}
-
-/*
- * Check if specified memory partition is a USER partition.
-*/
-s32 _CheckUserModulePartition(SceUID memoryPartitionId)
-{
-    s32 status;
-    SceSysmemPartitionInfo partitionInfo;
-
-    partitionInfo.size = sizeof(SceSysmemPartitionInfo);
-    status = sceKernelQueryMemoryPartitionInfo(memoryPartitionId, &partitionInfo);
-    if (status < SCE_ERROR_OK || !(partitionInfo.attr & 3))
-        return SCE_ERROR_KERNEL_PARTITION_MISMATCH;
-
-    return SCE_ERROR_OK;
-}
-
-/*
-* Check if specified memory partition is a KERNEL only partition.
-*/
-static s32 _CheckKernelOnlyModulePartition(SceUID memoryPartitionId)
+static inline __attribute__((always_inline)) s32 _CheckKernelOnlyModulePartition(SceUID memoryPartitionId)
 {
     s32 status;
     SceSysmemPartitionInfo partitionInfo;
@@ -1111,12 +1071,11 @@ static s32 _RelocateModule(SceModuleMgrParam *pModParams)
     return status;
 }
 
-//loc_00006CCC
 /*
  * Performs cleanup of module resources used for the relocation process.
  * Call this function in an error case for _RelocateModule().
  */
-static void _CleanupMemory(SceUID gzipMemId, SceLoadCoreExecFileInfo *pExecInfo)
+static inline __attribute__((always_inline)) void _CleanupMemory(SceUID gzipMemId, SceLoadCoreExecFileInfo *pExecInfo)
 {
     ClearFreePartitionMemory(gzipMemId);
 
@@ -1167,7 +1126,7 @@ static s32 _StartModule(SceModuleMgrParam *pModParams, SceModule *pMod, SceSize 
     status = _PrologueModule(pModParams, pMod); // 0x00007048
     if (status < SCE_ERROR_OK) {
         SET_MCB_STATUS(pMod->status, MCB_STATUS_RELOCATED); //0x00007138
-        return SCE_ERROR_KERNEL_ERROR;
+        return status;
     }
 
     /*
@@ -1309,7 +1268,7 @@ static s32 _StopModule(SceModuleMgrParam *pModParams, SceModule *pMod, s32 start
             sceKernelDeleteThread(pMod->userModThid); // 0x000073A8
             pMod->userModThid = SCE_KERNEL_VALUE_UNITIALIZED;
 
-            sceKernelChangeThreadPriority(SCE_KERNEL_THREAD_ID_SELF, ModuleMgrForKernel_var_99BFFDB8 ? 31 : SCE_KERNEL_MODULE_INIT_PRIORITY); // 0x000073B8
+            sceKernelChangeThreadPriority(SCE_KERNEL_THREAD_ID_SELF, g_workerPriorityBoost ? 31 : SCE_KERNEL_MODULE_INIT_PRIORITY); // 0x000073B8
 
             if (pStatus != NULL) // 0x000073C0
                 *pStatus = stopResult;
@@ -1402,7 +1361,7 @@ s32 _start_exe_thread(SceModuleMgrParam *pModParams)
         /* UOFW: 'status' should be returned here to return the correct error code. 'result' might be undefined. */
         return result;
     }
-    if (ModuleMgrForKernel_var_99BFFDB8 != 0)
+    if (g_workerPriorityBoost != 0)
         sceKernelChangeThreadPriority(g_ModuleManager.threadId, 31);
     /* Wait for the module {load, start, stop, unload}-operation to finish. */
     sceKernelWaitEventFlag(g_ModuleManager.eventId, 1, SCE_KERNEL_EW_CLEAR_ALL | SCE_KERNEL_EW_OR, NULL, NULL);
@@ -1563,7 +1522,7 @@ static s32 allocate_module_block(SceModuleMgrParam *pModParams)
     }
 }
 
-static s32 _CheckSkipPbpHeader(SceModuleMgrParam *pModParams, SceUID fd, void *pBlock, u32 *pOffset, s32 apiType)
+static s32 _CheckSkipPbpHeader(SceModuleMgrParam *pModParams, SceUID fileFd, void *pBlock, u32 *pOffset, s32 apiType)
 {
     PBPHeader *pPbpHdr;
 
@@ -1594,7 +1553,7 @@ static s32 _CheckSkipPbpHeader(SceModuleMgrParam *pModParams, SceUID fd, void *p
         if (pOffset != NULL)
             *pOffset = pPbpHdr->dataPSAROff - pPbpHdr->dataPSPOff;
 
-        sceIoLseek(fd, pPbpHdr->dataPSPOff, SCE_SEEK_CUR); // 0x00007F6C
+        sceIoLseek(fileFd, pPbpHdr->dataPSPOff, SCE_SEEK_CUR); // 0x00007F6C
         return pPbpHdr->dataPSPOff;
     default:
         // 0x00007F8C
@@ -1616,32 +1575,37 @@ static s32 _CheckSkipPbpHeader(SceModuleMgrParam *pModParams, SceUID fd, void *p
 static s32 _PartitionCheck(SceModuleMgrParam *pModParams, SceLoadCoreExecFileInfo *pExecInfo)
 {
     s32 status;
+    SceUID partitionId;
 
     if (pExecInfo->isKernelMod) { // 0x00007FE8
-        pExecInfo->partitionId = SCE_KERNEL_PRIMARY_KERNEL_PARTITION; // 0x000080A8
+        partitionId = SCE_KERNEL_PRIMARY_KERNEL_PARTITION; // 0x000080A8
 
         if (pModParams->mpIdText != SCE_KERNEL_UNKNOWN_PARTITION) {
             status = _CheckKernelOnlyModulePartition(pModParams->mpIdText);
             if (status < SCE_ERROR_OK)
                 return status;
 
-            pExecInfo->partitionId = pModParams->mpIdText; // 0x00008120
+            partitionId = pModParams->mpIdText; // 0x00008120
         }
+        pExecInfo->partitionId = partitionId;
+
         if (pModParams->mpIdData != SCE_KERNEL_UNKNOWN_PARTITION) { // 0x000080B0
             status = _CheckKernelOnlyModulePartition(pModParams->mpIdData);
             if (status < SCE_ERROR_OK)
                 return status;
         }
     } else {
-        pExecInfo->partitionId = SCE_KERNEL_PRIMARY_USER_PARTITION;
+        partitionId = SCE_KERNEL_PRIMARY_USER_PARTITION;
 
         if (pModParams->mpIdText != SCE_KERNEL_UNKNOWN_PARTITION) {
             status = _CheckUserModulePartition(pModParams->mpIdText);
             if (status < SCE_ERROR_OK)
                 return status;
 
-            pExecInfo->partitionId = pModParams->mpIdText; // 0x00008098
+            partitionId = pModParams->mpIdText; // 0x00008098
         }
+        pExecInfo->partitionId = partitionId;
+
         if (pModParams->mpIdData != SCE_KERNEL_UNKNOWN_PARTITION) { // 0x00008004
             status = _CheckUserModulePartition(pModParams->mpIdData);
             if (status < SCE_ERROR_OK)

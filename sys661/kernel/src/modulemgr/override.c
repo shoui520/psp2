@@ -250,7 +250,7 @@ SceBool _CheckOverride(s32 apiType, void *modBuf, SceUID *pFd) // 0x00008568
         for (j = 0; j < pCurRule->numHashes; j++) {
             u32 *pCurHash = (u32 *)&((u32(*)[4])pCurRule->pHashList)[j];
 
-            s32 res = memcmp(pPspHeader->keyData4, pCurHash, sizeof pPspHeader->keyData4); // 0x0000865C
+            s32 res = memcmp(pPspHeader->keyDataHash, pCurHash, sizeof pPspHeader->keyDataHash); // 0x0000865C
             if (res == 0) {
                 /* We found a matching hash, load module provided by the PSP kernel. */
                 *pFd = sceIoOpen(pCurRule->overridePath, SCE_O_ENCRYPTED | SCE_O_RDONLY, 0);

@@ -104,9 +104,9 @@ exports:
       - sceKernelLoadModuleBootInitConfig: 0xf7c7febc
       - sceKernelLoadModuleForLoadExecVSHMs1: 0xfe61f16d
     variables:
-      - ModuleMgrForKernel_var_57F4B35E: 0x57f4b35e
-      - ModuleMgrForKernel_var_99BFFDB8: 0x99bffdb8
-      - ModuleMgrForKernel_var_DB08B7FF: 0xdb08b7ff
+      - g_pathOverrideMode: 0x57f4b35e
+      - g_workerPriorityBoost: 0x99bffdb8
+      - g_discEmuPatchEnabled: 0xdb08b7ff
   - name: InitForKernel
     version: [0, 17]
     attributes: 0x0009

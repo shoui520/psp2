@@ -12,6 +12,11 @@
 #include "loadModuleChecks_inline.h"
 #include "modulemgr_int.h"
 
+typedef struct {
+    u32 size;
+    u32 words[3];
+} SceRebootBeforeArgs;
+
 // Subroutine ModuleMgrForKernel_CC873DFA - Address 0x000046E4
 s32 sceKernelRebootBeforeForUser(void *arg)
 {
@@ -20,13 +25,13 @@ s32 sceKernelRebootBeforeForUser(void *arg)
     s32 status;
     SceUID uidBlkId;
     SceUID *pUidList;
-    char threadArgs[16];
+    SceRebootBeforeArgs threadArgs;
 
     oldGp = pspGetGp();
     sceKernelLockMutex(g_ModuleManager.mutexId, 1, NULL); //0x00004724
 
-    memcpy(threadArgs, arg, sizeof threadArgs); //0x00004734
-    ((u32 *)threadArgs)[0] = sizeof threadArgs;
+    memcpy(&threadArgs, arg, sizeof threadArgs); //0x00004734
+    threadArgs.size = sizeof threadArgs;
 
     uidBlkId = sceKernelGetModuleListWithAlloc(&modCount); //0x00004744
     if (uidBlkId < SCE_ERROR_OK)
@@ -84,16 +89,12 @@ s32 sceKernelRebootBeforeForUser(void *arg)
             threadParams.stackMpid = SCE_KERNEL_PRIMARY_USER_PARTITION;
 
         pspSetGp(pMod->gpValue); //0x00004900
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wcast-function-type"
-        pMod->userModThid = sceKernelCreateThread("SceModmgrRebootBefore", (SceKernelThreadEntry)pMod->moduleRebootBefore, priority,
+        pMod->userModThid = sceKernelCreateThread("SceModmgrRebootBefore", (SceKernelThreadEntry)(void *)pMod->moduleRebootBefore, priority,
             stackSize, threadMode | attr, &threadParams); //0x0000491C
-#pragma GCC diagnostic pop
 
         pspSetGp(oldGp);
 
-        // TODO: Add proper structure for threadArgs
-        status = sceKernelStartThread(pMod->userModThid, sizeof threadArgs, threadArgs); //0x00004934
+        status = sceKernelStartThread(pMod->userModThid, sizeof threadArgs, &threadArgs); //0x00004934
         if (status == SCE_ERROR_OK)
             sceKernelWaitThreadEnd(pMod->userModThid, NULL); //0x000049AC
 
@@ -125,7 +126,7 @@ s32 sceKernelRebootBeforeForUser(void *arg)
 }
 
 // Subroutine ModuleMgrForKernel_9B7102E2 - Address 0x000049BC
-s32 sceKernelRebootPhaseForKernel(s32 arg1, void *argp, s32 arg3, s32 arg4)
+s32 sceKernelRebootPhaseForKernel(s32 phase, void *rebootParam, s32 rebootType, s32 rebootFlags)
 {
     SceUID uidBlkId;
     SceUID *pUidList;
@@ -148,7 +149,7 @@ s32 sceKernelRebootPhaseForKernel(s32 arg1, void *argp, s32 arg3, s32 arg4)
         if (GET_MCB_STATUS(pMod->status) != MCB_STATUS_STARTED || (pMod->status & SCE_MODULE_USER_MODULE)) //0x00004A58 - 0x00004B04
             continue;
 
-        pMod->moduleRebootPhase(arg1, argp, arg3, arg4); //0x00004B0C
+        pMod->moduleRebootPhase(phase, rebootParam, rebootType, rebootFlags); //0x00004B0C
 
         if (!sceKernelIsToolMode()) //0x00004B1C
             continue;
@@ -174,7 +175,7 @@ s32 sceKernelRebootPhaseForKernel(s32 arg1, void *argp, s32 arg3, s32 arg4)
 }
 
 // ModuleMgrForKernel_5FC3B3DA - Address 0x00004B6C
-s32 sceKernelRebootBeforeForKernel(void *argp, s32 arg2, s32 arg3, s32 arg4)
+s32 sceKernelRebootBeforeForKernel(void *rebootParam, s32 rebootType, s32 rebootFlags, s32 rebootMode)
 {
     SceUID uidBlkId;
     SceUID *pUidList;
@@ -197,7 +198,7 @@ s32 sceKernelRebootBeforeForKernel(void *argp, s32 arg2, s32 arg3, s32 arg4)
         if (GET_MCB_STATUS(pMod->status) != MCB_STATUS_STARTED || (pMod->status & SCE_MODULE_USER_MODULE)) //0x00004C08,  0x00004CB0
             continue;
 
-        pMod->moduleRebootBefore(argp, arg2, arg3, arg4); //0x00004CB8
+        pMod->moduleRebootBefore(rebootParam, rebootType, rebootFlags, rebootMode); //0x00004CB8
     }
 
     status = ClearFreePartitionMemory(uidBlkId); // 0x00004C24 - 0x00004C60

@@ -59,7 +59,7 @@ static inline s32 _checkLMOptionConditions(const SceKernelLMOption *pOption)
     return SCE_ERROR_OK;
 }
 
-static inline s32 _checkSMOptionConditions(const SceKernelSMOption *pOption)
+static inline __attribute__((always_inline)) s32 _checkSMOptionConditions(const SceKernelSMOption *pOption)
 {
     s32 sdkVersion;
 
@@ -79,7 +79,7 @@ static inline s32 _checkSMOptionConditions(const SceKernelSMOption *pOption)
     return SCE_ERROR_OK;
 }
 
-static inline s32 _checkMemoryBlockInfoConditions(const SceSysmemMemoryBlockInfo *pBlkInfo, u64 offset)
+static inline __attribute__((always_inline)) s32 _checkMemoryBlockInfoConditions(const SceSysmemMemoryBlockInfo *pBlkInfo, u64 offset)
 {
     u32 offsetLow;
     u32 offsetHigh;

@@ -43,7 +43,7 @@ SceUID sceKernelLoadModuleForLoadExecForUser(s32 apiType, const char *file, s32 
     s32 oldK1;
     s32 status;
     s32 ioctlCmd;
-    SceUID fd;
+    SceUID fileFd;
     SceModuleMgrParam modParams;
 
     (void)flag;
@@ -62,10 +62,10 @@ SceUID sceKernelLoadModuleForLoadExecForUser(s32 apiType, const char *file, s32 
         return status;
     }
 
-    fd = sceIoOpen(file, SCE_O_ENCRYPTED | SCE_O_RDONLY, SCE_STM_RWXUGO); //0x00000528
-    if (fd < 0) { //0x00000534
+    fileFd = sceIoOpen(file, SCE_O_ENCRYPTED | SCE_O_RDONLY, SCE_STM_RWXUGO); //0x00000528
+    if (fileFd < 0) { //0x00000534
         pspSetK1(oldK1);
-        return fd;
+        return fileFd;
     }
 
     switch (apiType) { //0x00000568
@@ -78,9 +78,9 @@ SceUID sceKernelLoadModuleForLoadExecForUser(s32 apiType, const char *file, s32 
         ioctlCmd = 0x208011; //0x00000630 & 0x00000638
         break;
     }
-    status = sceIoIoctl(fd, ioctlCmd, NULL, 0, NULL, 0); //0x00000580
+    status = sceIoIoctl(fileFd, ioctlCmd, NULL, 0, NULL, 0); //0x00000580
     if (status < SCE_ERROR_OK) { //0x0000058C
-        sceIoClose(fd); //0x00000600
+        sceIoClose(fileFd); //0x00000600
         pspSetK1(oldK1);
         return SCE_ERROR_KERNEL_PROHIBIT_LOADMODULE_DEVICE;
     }
@@ -91,16 +91,16 @@ SceUID sceKernelLoadModuleForLoadExecForUser(s32 apiType, const char *file, s32 
     modParams.modeFinish = CMD_RELOCATE_MODULE; // 0x000005B4
     modParams.modeStart = CMD_LOAD_MODULE; // 0x000005C0
     modParams.fileBase = NULL; // 0x000005CC
-    modParams.fd = fd; // 0x000005D8
+    modParams.fileFd = fileFd; // 0x000005D8
     modParams.isBufferLoad = 0; // 0x000005E0
 
-    status = sceIoIoctl(fd, 0x208081, NULL, 0, NULL, 0); //0x000005DC
+    status = sceIoIoctl(fileFd, 0x208081, NULL, 0, NULL, 0); //0x000005DC
     if (status >= SCE_ERROR_OK) //0x000005E4
         modParams.loadFlags = 0x10; // 0x000005EC
 
     status = _loadModuleByBufferID(&modParams, pOption); //0x000005F4
 
-    sceIoClose(fd); //0x00000600
+    sceIoClose(fileFd); //0x00000600
     pspSetK1(oldK1);
     return status;
 }
@@ -126,7 +126,7 @@ SceUID sceKernelLoadModule(const char *path, s32 flag, const SceKernelLMOption *
 {
     s32 oldK1;
     s32 status;
-    SceUID fd;
+    SceUID fileFd;
     SceModuleMgrParam modParams;
 
     (void)flag;
@@ -147,18 +147,18 @@ SceUID sceKernelLoadModule(const char *path, s32 flag, const SceKernelLMOption *
     }
 
     s32 replaced = 0;
-    if (ModuleMgrForKernel_var_57F4B35E != 0)
-        path = _CheckPathOverride(ModuleMgrForKernel_var_57F4B35E, path, &replaced);
+    if (g_pathOverrideMode != 0)
+        path = _CheckPathOverride(g_pathOverrideMode, path, &replaced);
 
-    fd = sceIoOpen(path, SCE_O_ENCRYPTED | SCE_O_RDONLY, SCE_STM_RWXUGO); // 0x00000734
-    if (fd < 0) { // 0x00000740
+    fileFd = sceIoOpen(path, SCE_O_ENCRYPTED | SCE_O_RDONLY, SCE_STM_RWXUGO); // 0x00000734
+    if (fileFd < 0) { // 0x00000740
         pspSetK1(oldK1);
-        return fd;
+        return fileFd;
     }
 
-    status = sceIoIoctl(fd, 0x208001, NULL, 0, NULL, 0); // 0x00000760
+    status = sceIoIoctl(fileFd, 0x208001, NULL, 0, NULL, 0); // 0x00000760
     if (status < 0 && replaced == 0) { // 0x0000076C
-        sceIoClose(fd); // 0x000007E0
+        sceIoClose(fileFd); // 0x000007E0
         pspSetK1(oldK1);
         return SCE_ERROR_KERNEL_PROHIBIT_LOADMODULE_DEVICE;
     }
@@ -169,16 +169,16 @@ SceUID sceKernelLoadModule(const char *path, s32 flag, const SceKernelLMOption *
     modParams.apiType = SCE_EXEC_FILE_APITYPE_MODULE_USER; // 0x0000079C
     modParams.modeStart = CMD_LOAD_MODULE; // 0x000007A8
     modParams.fileBase = NULL; // 0x000007B4
-    modParams.fd = fd; // 0x000007BC
+    modParams.fileFd = fileFd; // 0x000007BC
     modParams.isBufferLoad = 0; // 0x000007C4
 
-    status = sceIoIoctl(fd, 0x208081, NULL, 0, NULL, 0); // 0x000007C0
+    status = sceIoIoctl(fileFd, 0x208081, NULL, 0, NULL, 0); // 0x000007C0
     if (status >= 0) // 0x000007C8
         modParams.loadFlags = 0x10; // 0x000007CC
 
     status = _loadModuleByBufferID(&modParams, pOption); // 0x000007D4
 
-    sceIoClose(fd); // 0x000007E0
+    sceIoClose(fileFd); // 0x000007E0
     pspSetK1(oldK1);
     return status;
 }
@@ -238,7 +238,7 @@ SceUID sceKernelLoadModuleByID(SceUID inputId, s32 flag, const SceKernelLMOption
     modParams.modeFinish = CMD_RELOCATE_MODULE; // 0x000009C4
     modParams.modeStart = CMD_LOAD_MODULE; // 0x000009CC
     modParams.fileBase = NULL; // 0x000005CC
-    modParams.fd = inputId; // 0x000005D8
+    modParams.fileFd = inputId; // 0x000005D8
     modParams.isBufferLoad = 0; // 0x000009DC
 
     status = sceIoIoctl(inputId, 0x208081, NULL, 0, NULL, 0); //0x000009D8
@@ -273,7 +273,7 @@ SceUID sceKernelLoadModuleWithBlockOffset(const char *path, SceUID blockId, SceO
 {
     s32 oldK1;
     s32 status;
-    SceUID fd;
+    SceUID fileFd;
     SceSysmemMemoryBlockInfo blkInfo;
     SceModuleMgrParam modParams;
 
@@ -303,14 +303,14 @@ SceUID sceKernelLoadModuleWithBlockOffset(const char *path, SceUID blockId, SceO
         return status;
     }
 
-    fd = sceIoOpen(path, SCE_O_ENCRYPTED | SCE_O_RDONLY, SCE_STM_RWXUGO); //0x00000B5C
-    if (fd < 0) { //0x00000B68
+    fileFd = sceIoOpen(path, SCE_O_ENCRYPTED | SCE_O_RDONLY, SCE_STM_RWXUGO); //0x00000B5C
+    if (fileFd < 0) { //0x00000B68
         pspSetK1(oldK1);
-        return fd;
+        return fileFd;
     }
-    status = sceIoIoctl(fd, 0x208001, NULL, 0, NULL, 0); // 0x00000B88
+    status = sceIoIoctl(fileFd, 0x208001, NULL, 0, NULL, 0); // 0x00000B88
     if (status < SCE_ERROR_OK) { // 0x00000B94
-        sceIoClose(fd);
+        sceIoClose(fileFd);
         pspSetK1(oldK1);
         return SCE_ERROR_KERNEL_PROHIBIT_LOADMODULE_DEVICE;
     }
@@ -321,10 +321,10 @@ SceUID sceKernelLoadModuleWithBlockOffset(const char *path, SceUID blockId, SceO
     modParams.modeFinish = CMD_RELOCATE_MODULE; // 0x00000BB8
     modParams.modeStart = CMD_LOAD_MODULE; // 0x00000BD0
     modParams.fileBase = NULL; // 0x00000BDC
-    modParams.fd = fd; // 0x00000BE4
+    modParams.fileFd = fileFd; // 0x00000BE4
     modParams.isBufferLoad = 0; // 0x00000BEC
 
-    status = sceIoIoctl(fd, 0x208081, NULL, 0, NULL, 0); //0x00000BE8
+    status = sceIoIoctl(fileFd, 0x208081, NULL, 0, NULL, 0); //0x00000BE8
     if (status >= SCE_ERROR_OK) //0x00000BF0
         modParams.loadFlags = 0x10; // 0x00000BF4
 
@@ -334,7 +334,7 @@ SceUID sceKernelLoadModuleWithBlockOffset(const char *path, SceUID blockId, SceO
 
     status = _loadModuleByBufferID(&modParams, NULL); //0x00000C08
 
-    sceIoClose(fd); //0x00000C14
+    sceIoClose(fileFd); //0x00000C14
     pspSetK1(oldK1);
     return status;
 }
@@ -405,7 +405,7 @@ SceUID sceKernelLoadModuleByIDWithBlockOffset(SceUID inputId, SceUID blockId, Sc
     modParams.modeFinish = CMD_RELOCATE_MODULE; // 0x00000DA8
     modParams.modeStart = CMD_LOAD_MODULE; // 0x00000DC0
     modParams.fileBase = NULL; // 0x00000DCC
-    modParams.fd = inputId; // 0x00000DD4
+    modParams.fileFd = inputId; // 0x00000DD4
     modParams.isBufferLoad = 0; // 0x00000DDC
 
     status = sceIoIoctl(inputId, 0x208081, NULL, 0, NULL, 0); //0x00000DD8
@@ -447,7 +447,7 @@ SceUID sceKernelLoadModuleDNAS(const char *path, const char *secureInstallId, s3
 {
     s32 oldK1;
     s32 status;
-    SceUID fd;
+    SceUID fileFd;
     SceModuleMgrParam modParams;
 
     (void)flag;
@@ -468,22 +468,22 @@ SceUID sceKernelLoadModuleDNAS(const char *path, const char *secureInstallId, s3
         return status;
     }
 
-    fd = sceIoOpen(path, SCE_O_FGAMEDATA | SCE_O_ENCRYPTED | SCE_O_RDONLY, SCE_STM_RWXUGO); // 0x00000EB8
-    if (fd < 0) { // 0x00000EC4
+    fileFd = sceIoOpen(path, SCE_O_FGAMEDATA | SCE_O_ENCRYPTED | SCE_O_RDONLY, SCE_STM_RWXUGO); // 0x00000EB8
+    if (fileFd < 0) { // 0x00000EC4
         pspSetK1(oldK1);
-        return fd;
+        return fileFd;
     }
 
-    status = sceIoIoctl(fd, SCE_GAMEDATA_SET_SECURE_INSTALL_ID, (void *)secureInstallId, SCE_SECURE_INSTALL_ID_LEN, NULL, 0); // 0x00000EE4
+    status = sceIoIoctl(fileFd, SCE_GAMEDATA_SET_SECURE_INSTALL_ID, (void *)secureInstallId, SCE_SECURE_INSTALL_ID_LEN, NULL, 0); // 0x00000EE4
     if (status < SCE_ERROR_OK) { // 0x00000EEC
-        sceIoClose(fd); // 0x00000FDC
+        sceIoClose(fileFd); // 0x00000FDC
         pspSetK1(oldK1);
         return status;
     }
 
-    status = sceIoIoctl(fd, 0x208002, NULL, 0, NULL, 0); // 0x00000F14
+    status = sceIoIoctl(fileFd, 0x208002, NULL, 0, NULL, 0); // 0x00000F14
     if (status < SCE_ERROR_OK) { // 0x00000F20
-        sceIoClose(fd); //0x00000FA8
+        sceIoClose(fileFd); //0x00000FA8
         pspSetK1(oldK1);
         return SCE_ERROR_KERNEL_PROHIBIT_LOADMODULE_DEVICE;
     }
@@ -494,10 +494,10 @@ SceUID sceKernelLoadModuleDNAS(const char *path, const char *secureInstallId, s3
     modParams.modeFinish = CMD_RELOCATE_MODULE; // 0x00000F50
     modParams.modeStart = CMD_LOAD_MODULE; // 0x00000F5C
     modParams.fileBase = NULL; // 0x00000F68
-    modParams.fd = fd; // 0x00000F70
+    modParams.fileFd = fileFd; // 0x00000F70
     modParams.isBufferLoad = 0; // 0x00000F78
 
-    status = sceIoIoctl(fd, 0x208081, NULL, 0, NULL, 0); //0x00000F74
+    status = sceIoIoctl(fileFd, 0x208081, NULL, 0, NULL, 0); //0x00000F74
     if (status >= SCE_ERROR_OK) //0x00000F7C
         modParams.loadFlags = 0x10; // 0x00000DE4
 
@@ -505,7 +505,7 @@ SceUID sceKernelLoadModuleDNAS(const char *path, const char *secureInstallId, s3
 
     status = _loadModuleByBufferID(&modParams, pOption); // 0x00000F9C
 
-    sceIoClose(fd); // 0x00000FA8
+    sceIoClose(fileFd); // 0x00000FA8
     pspSetK1(oldK1);
     return status;
 }
@@ -534,7 +534,7 @@ SceUID sceKernelLoadModuleDNAS(const char *path, const char *secureInstallId, s3
 SceUID sceKernelLoadModuleNpDrm(const char *path, s32 flag, const SceKernelLMOption *pOption)
 {
     s32 oldK1;
-    SceUID fd;
+    SceUID fileFd;
     s32 status;
     char secureInstallId[SCE_NPDRM_LICENSEE_KEY_LEN];
     SceNpDrm npDrmData;
@@ -557,29 +557,29 @@ SceUID sceKernelLoadModuleNpDrm(const char *path, s32 flag, const SceKernelLMOpt
         return status;
     }
 
-    fd = sceIoOpen(path, SCE_O_ENCRYPTED | SCE_O_RDONLY, SCE_STM_RWXUGO); // 0x000010DC
-    if (fd < 0) { // 0x000010E8
+    fileFd = sceIoOpen(path, SCE_O_ENCRYPTED | SCE_O_RDONLY, SCE_STM_RWXUGO); // 0x000010DC
+    if (fileFd < 0) { // 0x000010E8
         pspSetK1(oldK1);
-        return fd;
+        return fileFd;
     }
 
     if (g_ModuleManager.npDrmGetModuleKeyFunction == NULL) { //0x000010FC
-        sceIoClose(fd);
+        sceIoClose(fileFd);
         pspSetK1(oldK1);
         return SCE_ERROR_KERNEL_ERROR;
     }
-    status = g_ModuleManager.npDrmGetModuleKeyFunction(fd, &secureInstallId, &npDrmData); // 0x00001110
+    status = g_ModuleManager.npDrmGetModuleKeyFunction(fileFd, &secureInstallId, &npDrmData); // 0x00001110
     if (status < 0) { // 0x00001118
-        sceIoClose(fd);
+        sceIoClose(fileFd);
         pspSetK1(oldK1);
         return status;
     }
 
-    sceIoLseek(fd, npDrmData.fileOffset, SCE_SEEK_SET); // 0x0000112C
+    sceIoLseek(fileFd, npDrmData.fileOffset, SCE_SEEK_SET); // 0x0000112C
 
-    status = sceIoIoctl(fd, 0x208002, NULL, 0, NULL, 0); // 0x0000114C
+    status = sceIoIoctl(fileFd, 0x208002, NULL, 0, NULL, 0); // 0x0000114C
     if (status < SCE_ERROR_OK) { // 0x00001158
-        sceIoClose(fd);
+        sceIoClose(fileFd);
         pspSetK1(oldK1);
         return SCE_ERROR_KERNEL_PROHIBIT_LOADMODULE_DEVICE;
     }
@@ -590,10 +590,10 @@ SceUID sceKernelLoadModuleNpDrm(const char *path, s32 flag, const SceKernelLMOpt
     modParams.modeFinish = CMD_RELOCATE_MODULE; // 0x00001188
     modParams.modeStart = CMD_LOAD_MODULE; // 0x00001194
     modParams.fileBase = NULL; // 0x000011A0
-    modParams.fd = fd; // 0x000011A8
+    modParams.fileFd = fileFd; // 0x000011A8
     modParams.isBufferLoad = 0;
 
-    status = sceIoIoctl(fd, 0x208081, NULL, 0, NULL, 0); // 0x000011AC
+    status = sceIoIoctl(fileFd, 0x208081, NULL, 0, NULL, 0); // 0x000011AC
     if (status >= SCE_ERROR_OK) // 0x000011B4
         modParams.loadFlags = 0x10; // 0x000011C0
 
@@ -601,7 +601,7 @@ SceUID sceKernelLoadModuleNpDrm(const char *path, s32 flag, const SceKernelLMOpt
 
     status = _loadModuleByBufferID(&modParams, pOption); // 0x000011D4
 
-    sceIoClose(fd);
+    sceIoClose(fileFd);
     pspSetK1(oldK1);
     return status;
 }
@@ -621,7 +621,7 @@ SceUID sceKernelLoadModuleNpDrm(const char *path, s32 flag, const SceKernelLMOpt
 SceUID sceKernelLoadModuleMs(const char *path, s32 flag, const SceKernelLMOption *pOption)
 {
     s32 oldK1;
-    SceUID fd;
+    SceUID fileFd;
     s32 status;
     SceModuleMgrParam modParams;
 
@@ -653,15 +653,15 @@ SceUID sceKernelLoadModuleMs(const char *path, s32 flag, const SceKernelLMOption
         return status;
     }
 
-    fd = sceIoOpen(path, SCE_O_ENCRYPTED | SCE_O_RDONLY, SCE_STM_RWXUGO); // 0x0000133C
-    if (fd < 0) { // 0x00001348
+    fileFd = sceIoOpen(path, SCE_O_ENCRYPTED | SCE_O_RDONLY, SCE_STM_RWXUGO); // 0x0000133C
+    if (fileFd < 0) { // 0x00001348
         pspSetK1(oldK1);
-        return fd;
+        return fileFd;
     }
 
-    status = sceIoIoctl(fd, 0x208002, NULL, 0, NULL, 0); // 0x00001368
+    status = sceIoIoctl(fileFd, 0x208002, NULL, 0, NULL, 0); // 0x00001368
     if (status < SCE_ERROR_OK) { // 0x00001374
-        sceIoClose(fd);
+        sceIoClose(fileFd);
         pspSetK1(oldK1);
         return SCE_ERROR_KERNEL_PROHIBIT_LOADMODULE_DEVICE;
     }
@@ -672,16 +672,16 @@ SceUID sceKernelLoadModuleMs(const char *path, s32 flag, const SceKernelLMOption
     modParams.modeStart = CMD_LOAD_MODULE; // 0x000013B0
     modParams.modeFinish = CMD_RELOCATE_MODULE; // 0x000013A4
     modParams.fileBase = NULL; // 0x000013BC
-    modParams.fd = fd; // 0x000013C4
+    modParams.fileFd = fileFd; // 0x000013C4
     modParams.isBufferLoad = 0;
 
-    status = sceIoIoctl(fd, 0x208081, NULL, 0, NULL, 0); // 0x000013C8
+    status = sceIoIoctl(fileFd, 0x208081, NULL, 0, NULL, 0); // 0x000013C8
     if (status >= SCE_ERROR_OK) // 0x000013D0
         modParams.loadFlags = 0x10; // 0x000013D8
 
     status = _loadModuleByBufferID(&modParams, pOption); // 0x000013E0
 
-    sceIoClose(fd);
+    sceIoClose(fileFd);
     pspSetK1(oldK1);
     return status;
 }
@@ -711,7 +711,7 @@ SceUID sceKernelLoadModuleBufferUsbWlan(SceSize size, void *base, s32 flag, cons
 {
     s32 oldK1;
     s32 status;
-    SceUID fd;
+    SceUID fileFd;
     SceModuleMgrParam modParams;
 
     (void)flag;
@@ -745,7 +745,7 @@ SceUID sceKernelLoadModuleBufferUsbWlan(SceSize size, void *base, s32 flag, cons
         return status;
     }
 
-    if (_CheckOverride(SCE_EXEC_FILE_APITYPE_MODULE_BUFFER_USBWLAN, base, &fd) == SCE_FALSE) {
+    if (_CheckOverride(SCE_EXEC_FILE_APITYPE_MODULE_BUFFER_USBWLAN, base, &fileFd) == SCE_FALSE) {
         // 0x00001608 - 0x00001640
         _setupForLoadModuleBuffer(&modParams, SCE_EXEC_FILE_APITYPE_MODULE_BUFFER_USBWLAN, base, size, 0);
 
@@ -755,7 +755,7 @@ SceUID sceKernelLoadModuleBufferUsbWlan(SceSize size, void *base, s32 flag, cons
         return status;
     }
 
-    if (fd < 0) {
+    if (fileFd < 0) {
         // Congrats Sony, that sure is the best way to deal with errors!
         while (1) {}
     }
@@ -766,16 +766,16 @@ SceUID sceKernelLoadModuleBufferUsbWlan(SceSize size, void *base, s32 flag, cons
     modParams.modeFinish = CMD_RELOCATE_MODULE;
     modParams.modeStart = CMD_LOAD_MODULE;
     modParams.fileBase = NULL;
-    modParams.fd = fd;
+    modParams.fileFd = fileFd;
     modParams.isBufferLoad = 0;
 
-    status = sceIoIoctl(fd, 0x208081, NULL, 0, NULL, 0); // 0x000015C4
+    status = sceIoIoctl(fileFd, 0x208081, NULL, 0, NULL, 0); // 0x000015C4
     if (status >= SCE_ERROR_OK) // 0x000015CC
         modParams.loadFlags = 0x10;
 
     status = _loadModuleByBufferID(&modParams, pOption); // 0x000015E4
 
-    sceIoClose(fd); // 0x000015F0
+    sceIoClose(fileFd); // 0x000015F0
     pspSetK1(oldK1);
     return status;
 }
@@ -784,7 +784,7 @@ SceUID sceKernelLoadModuleBufferUsbWlan(SceSize size, void *base, s32 flag, cons
 SceUID sceKernelLoadModuleForLoadExecVSHDisc(const char *path, s32 flag, const SceKernelLMOption *pOption)
 {
     s32 oldK1;
-    SceUID fd;
+    SceUID fileFd;
     s32 status;
     SceModuleMgrParam modParams;
 
@@ -809,15 +809,15 @@ SceUID sceKernelLoadModuleForLoadExecVSHDisc(const char *path, s32 flag, const S
         return status;
     }
 
-    fd = sceIoOpen(path, SCE_O_ENCRYPTED | SCE_O_RDONLY, SCE_STM_RWXUGO); // 0x00001700
-    if (fd < 0) { // 0x0000170C
+    fileFd = sceIoOpen(path, SCE_O_ENCRYPTED | SCE_O_RDONLY, SCE_STM_RWXUGO); // 0x00001700
+    if (fileFd < 0) { // 0x0000170C
         pspSetK1(oldK1);
-        return fd;
+        return fileFd;
     }
 
-    status = sceIoIoctl(fd, 0x208011, NULL, 0, NULL, 0); // 0x0000172C
+    status = sceIoIoctl(fileFd, 0x208011, NULL, 0, NULL, 0); // 0x0000172C
     if (status < SCE_ERROR_OK) { // 0x00001738
-        sceIoClose(fd);
+        sceIoClose(fileFd);
         pspSetK1(oldK1);
         return SCE_ERROR_KERNEL_PROHIBIT_LOADMODULE_DEVICE;
     }
@@ -828,16 +828,16 @@ SceUID sceKernelLoadModuleForLoadExecVSHDisc(const char *path, s32 flag, const S
     modParams.modeStart = CMD_LOAD_MODULE; // 0x00001774
     modParams.modeFinish = CMD_RELOCATE_MODULE; // 0x00001768
     modParams.fileBase = NULL; // 0x00001780
-    modParams.fd = fd;
+    modParams.fileFd = fileFd;
     modParams.isBufferLoad = 0;
 
-    status = sceIoIoctl(fd, 0x208081, NULL, 0, NULL, 0); // 0x0000178C
+    status = sceIoIoctl(fileFd, 0x208081, NULL, 0, NULL, 0); // 0x0000178C
     if (status >= SCE_ERROR_OK) // 0x00001794
         modParams.loadFlags = 0x10; // 0x0000179C
 
     status = _loadModuleByBufferID(&modParams, pOption); // 0x000017A4
 
-    sceIoClose(fd);
+    sceIoClose(fileFd);
     pspSetK1(oldK1);
     return status;
 }
@@ -846,7 +846,7 @@ SceUID sceKernelLoadModuleForLoadExecVSHDisc(const char *path, s32 flag, const S
 SceUID sceKernelLoadModuleForLoadExecVSHDiscUpdater(const char *path, s32 flag, const SceKernelLMOption *pOption)
 {
     s32 oldK1;
-    SceUID fd;
+    SceUID fileFd;
     s32 status;
     SceModuleMgrParam modParams;
 
@@ -871,15 +871,15 @@ SceUID sceKernelLoadModuleForLoadExecVSHDiscUpdater(const char *path, s32 flag, 
         return status;
     }
 
-    fd = sceIoOpen(path, SCE_O_ENCRYPTED | SCE_O_RDONLY, SCE_STM_RWXUGO); // 0x000018D0
-    if (fd < 0) { // 0x000018DC
+    fileFd = sceIoOpen(path, SCE_O_ENCRYPTED | SCE_O_RDONLY, SCE_STM_RWXUGO); // 0x000018D0
+    if (fileFd < 0) { // 0x000018DC
         pspSetK1(oldK1);
-        return fd;
+        return fileFd;
     }
 
-    status = sceIoIoctl(fd, 0x208011, NULL, 0, NULL, 0); // 0x000018FC
+    status = sceIoIoctl(fileFd, 0x208011, NULL, 0, NULL, 0); // 0x000018FC
     if (status < SCE_ERROR_OK) { // 0x00001908
-        sceIoClose(fd);
+        sceIoClose(fileFd);
         pspSetK1(oldK1);
         return SCE_ERROR_KERNEL_PROHIBIT_LOADMODULE_DEVICE;
     }
@@ -890,16 +890,16 @@ SceUID sceKernelLoadModuleForLoadExecVSHDiscUpdater(const char *path, s32 flag, 
     modParams.modeStart = CMD_LOAD_MODULE; // 0x00001944
     modParams.modeFinish = CMD_RELOCATE_MODULE; // 0x00001938
     modParams.fileBase = NULL; // 0x00001950
-    modParams.fd = fd;
+    modParams.fileFd = fileFd;
     modParams.isBufferLoad = 0;
 
-    status = sceIoIoctl(fd, 0x208081, NULL, 0, NULL, 0); // 0x0000195C
+    status = sceIoIoctl(fileFd, 0x208081, NULL, 0, NULL, 0); // 0x0000195C
     if (status >= SCE_ERROR_OK) // 0x00001964
         modParams.loadFlags = 0x10; // 0x0000196C
 
     status = _loadModuleByBufferID(&modParams, pOption); // 0x00001980
 
-    sceIoClose(fd);
+    sceIoClose(fileFd);
     pspSetK1(oldK1);
     return status;
 }
@@ -908,7 +908,7 @@ SceUID sceKernelLoadModuleForLoadExecVSHDiscUpdater(const char *path, s32 flag, 
 SceUID sceKernelLoadModuleForLoadExecVSHDiscDebug(const char *path, s32 flag, const SceKernelLMOption *pOption)
 {
     s32 oldK1;
-    SceUID fd;
+    SceUID fileFd;
     s32 status;
     SceModuleMgrParam modParams;
 
@@ -933,15 +933,15 @@ SceUID sceKernelLoadModuleForLoadExecVSHDiscDebug(const char *path, s32 flag, co
         return status;
     }
 
-    fd = sceIoOpen(path, SCE_O_ENCRYPTED | SCE_O_RDONLY, SCE_STM_RWXUGO); // 0x00001AA0
-    if (fd < 0) { // 0x00001AAC
+    fileFd = sceIoOpen(path, SCE_O_ENCRYPTED | SCE_O_RDONLY, SCE_STM_RWXUGO); // 0x00001AA0
+    if (fileFd < 0) { // 0x00001AAC
         pspSetK1(oldK1);
-        return fd;
+        return fileFd;
     }
 
-    status = sceIoIoctl(fd, 0x208011, NULL, 0, NULL, 0); // 0x00001ACC
+    status = sceIoIoctl(fileFd, 0x208011, NULL, 0, NULL, 0); // 0x00001ACC
     if (status < SCE_ERROR_OK) { // 0x00001AD8
-        sceIoClose(fd);
+        sceIoClose(fileFd);
         pspSetK1(oldK1);
         return SCE_ERROR_KERNEL_PROHIBIT_LOADMODULE_DEVICE;
     }
@@ -952,16 +952,16 @@ SceUID sceKernelLoadModuleForLoadExecVSHDiscDebug(const char *path, s32 flag, co
     modParams.modeStart = CMD_LOAD_MODULE; // 0x00001B14
     modParams.modeFinish = CMD_RELOCATE_MODULE; // 0x00001B08
     modParams.fileBase = NULL; // 0x00001B20
-    modParams.fd = fd; //0x00001B28
+    modParams.fileFd = fileFd; //0x00001B28
     modParams.isBufferLoad = 0;
 
-    status = sceIoIoctl(fd, 0x208081, NULL, 0, NULL, 0); // 0x00001B2C
+    status = sceIoIoctl(fileFd, 0x208081, NULL, 0, NULL, 0); // 0x00001B2C
     if (status >= SCE_ERROR_OK) // 0x00001B34
         modParams.loadFlags = 0x10; // 0x00001B3C
 
     status = _loadModuleByBufferID(&modParams, pOption); // 0x00001B44
 
-    sceIoClose(fd);
+    sceIoClose(fileFd);
     pspSetK1(oldK1);
     return status;
 }
@@ -971,7 +971,7 @@ SceUID sceKernelLoadModuleForLoadExecVSHDiscEmu(s32 apiType, const char *path, s
     const SceKernelLMOption *pOption)
 {
     s32 oldK1;
-    SceUID fd;
+    SceUID fileFd;
     s32 status;
     SceModuleMgrParam modParams;
 
@@ -996,15 +996,15 @@ SceUID sceKernelLoadModuleForLoadExecVSHDiscEmu(s32 apiType, const char *path, s
         return status;
     }
 
-    fd = sceIoOpen(path, SCE_O_ENCRYPTED | SCE_O_RDONLY, SCE_STM_RWXUGO); // 0x00001C78
-    if (fd < 0) { // 0x00001C84
+    fileFd = sceIoOpen(path, SCE_O_ENCRYPTED | SCE_O_RDONLY, SCE_STM_RWXUGO); // 0x00001C78
+    if (fileFd < 0) { // 0x00001C84
         pspSetK1(oldK1);
-        return fd;
+        return fileFd;
     }
 
-    status = sceIoIoctl(fd, 0x208010, NULL, 0, NULL, 0); // 0x00001CA4
+    status = sceIoIoctl(fileFd, 0x208010, NULL, 0, NULL, 0); // 0x00001CA4
     if (status < SCE_ERROR_OK) { // 0x00001CB0
-        sceIoClose(fd);
+        sceIoClose(fileFd);
         pspSetK1(oldK1);
         return SCE_ERROR_KERNEL_PROHIBIT_LOADMODULE_DEVICE;
     }
@@ -1015,37 +1015,39 @@ SceUID sceKernelLoadModuleForLoadExecVSHDiscEmu(s32 apiType, const char *path, s
     modParams.modeStart = CMD_LOAD_MODULE; // 0x00001CE4
     modParams.modeFinish = CMD_RELOCATE_MODULE; // 0x00001CD8
     modParams.fileBase = NULL; // 0x00001CF0
-    modParams.fd = fd; //0x00001CFC
+    modParams.fileFd = fileFd; //0x00001CFC
     modParams.isBufferLoad = 0;
 
-    status = sceIoIoctl(fd, 0x208081, NULL, 0, NULL, 0); // 0x00001D00
+    status = sceIoIoctl(fileFd, 0x208081, NULL, 0, NULL, 0); // 0x00001D00
     if (status >= SCE_ERROR_OK) // 0x00001D08
         modParams.loadFlags = 0x10;
 
     status = _loadModuleByBufferID(&modParams, pOption); // 0x00001D18
-    if (status > 0 && ModuleMgrForKernel_var_DB08B7FF != 0 && memcmp(path, "disc0:/PSP_GAME/SYSDIR/EBOOT.BIN", 33) == 0) {
-        static const u32 patchTable[6][2] = {
-            { 0x08835814, 0x0E219165 },
-            { 0x08833CF0, 0x0E219165 },
-            { 0x08833AEC, 0x0E219165 },
-            { 0x08835CAC, 0x0E219167 },
-            { 0x08833DF0, 0x0E219167 },
-            { 0x08833BE4, 0x0E219167 },
+    if (status > 0 && g_discEmuPatchEnabled != 0 && memcmp(path, "disc0:/PSP_GAME/SYSDIR/EBOOT.BIN", 33) == 0) {
+        typedef struct {
+            u32 *addr;
+            u32 expected;
+        } SceDiscEmuPatch;
+        SceDiscEmuPatch localTable[6] = {
+            { (u32 *)0x48835814, 0x0E219165 },
+            { (u32 *)0x48833CF0, 0x0E219165 },
+            { (u32 *)0x48833AEC, 0x0E219165 },
+            { (u32 *)0x48835CAC, 0x0E219167 },
+            { (u32 *)0x48833DF0, 0x0E219167 },
+            { (u32 *)0x48833BE4, 0x0E219167 },
         };
-        u32 localTable[6][2];
-        memcpy(localTable, patchTable, sizeof(localTable));
         s32 i;
         for (i = 0; i < 6; i++) {
-            if (*(u32 *)(localTable[i][0] | 0x40000000) != localTable[i][1])
+            if (*localTable[i].addr != localTable[i].expected)
                 break;
         }
         if (i == 6) {
             for (i = 5; i >= 0; i--)
-                *(u32 *)(localTable[i][0] | 0x40000000) = 0x24020000;
+                *localTable[i].addr = 0x24020000;
         }
     }
 
-    sceIoClose(fd);
+    sceIoClose(fileFd);
     pspSetK1(oldK1);
     return status;
 }
@@ -1055,7 +1057,7 @@ SceUID ModuleMgrForKernel_C2A5E6CA(s32 apiType, const char *path, s32 flag,
     const SceKernelLMOption *pOption)
 {
     s32 oldK1;
-    SceUID fd;
+    SceUID fileFd;
     s32 status;
     char installId[SCE_SECURE_INSTALL_ID_LEN];
     SceModuleMgrParam modParams;
@@ -1081,15 +1083,15 @@ SceUID ModuleMgrForKernel_C2A5E6CA(s32 apiType, const char *path, s32 flag,
         return status;
     }
 
-    fd = sceIoOpen(path, SCE_O_ENCRYPTED | SCE_O_RDONLY, SCE_STM_RWXUGO); // 0x00001E54
-    if (fd < 0) { // 0x00001E60
+    fileFd = sceIoOpen(path, SCE_O_ENCRYPTED | SCE_O_RDONLY, SCE_STM_RWXUGO); // 0x00001E54
+    if (fileFd < 0) { // 0x00001E60
         pspSetK1(oldK1);
-        return fd;
+        return fileFd;
     }
 
-    status = sceIoIoctl(fd, 0x208013, NULL, 0, NULL, 0); // 0x00001E7C
+    status = sceIoIoctl(fileFd, 0x208013, NULL, 0, NULL, 0); // 0x00001E7C
     if (status < SCE_ERROR_OK) { // 0x00001E8C
-        sceIoClose(fd);
+        sceIoClose(fileFd);
         pspSetK1(oldK1);
         return SCE_ERROR_KERNEL_PROHIBIT_LOADMODULE_DEVICE;
     }
@@ -1101,10 +1103,10 @@ SceUID ModuleMgrForKernel_C2A5E6CA(s32 apiType, const char *path, s32 flag,
     modParams.modeStart = CMD_LOAD_MODULE; // 0x00001ED4
     modParams.modeFinish = CMD_RELOCATE_MODULE; // 0x00001EC8
     modParams.fileBase = NULL; // 0x00001EE0
-    modParams.fd = fd; //0x00001EEC
+    modParams.fileFd = fileFd; //0x00001EEC
     modParams.isBufferLoad = 0; //0x00001EF4
 
-    status = sceIoIoctl(fd, 0x208081, NULL, 0, NULL, 0); // 0x00001EF0
+    status = sceIoIoctl(fileFd, 0x208081, NULL, 0, NULL, 0); // 0x00001EF0
     if (status >= SCE_ERROR_OK) // 0x00001EF8
         modParams.loadFlags = 0x10;
 
@@ -1112,7 +1114,7 @@ SceUID ModuleMgrForKernel_C2A5E6CA(s32 apiType, const char *path, s32 flag,
 
     status = _loadModuleByBufferID(&modParams, pOption); // 0x00001F1C
 
-    sceIoClose(fd);
+    sceIoClose(fileFd);
     pspSetK1(oldK1);
     return status;
 }
@@ -1122,7 +1124,7 @@ SceUID sceKernelLoadModuleForLoadExecVSHMs1(s32 apiType, const char *path, s32 f
     const SceKernelLMOption *pOption)
 {
     s32 oldK1;
-    SceUID fd;
+    SceUID fileFd;
     s32 status;
     SceModuleMgrParam modParams;
 
@@ -1147,15 +1149,15 @@ SceUID sceKernelLoadModuleForLoadExecVSHMs1(s32 apiType, const char *path, s32 f
         return status;
     }
 
-    fd = sceIoOpen(path, SCE_O_ENCRYPTED | SCE_O_RDONLY, SCE_STM_RWXUGO); // 0x00002058
-    if (fd < 0) { // 0x00002064
+    fileFd = sceIoOpen(path, SCE_O_ENCRYPTED | SCE_O_RDONLY, SCE_STM_RWXUGO); // 0x00002058
+    if (fileFd < 0) { // 0x00002064
         pspSetK1(oldK1);
-        return fd;
+        return fileFd;
     }
 
-    status = sceIoIoctl(fd, 0x208013, NULL, 0, NULL, 0); // 0x00002084
+    status = sceIoIoctl(fileFd, 0x208013, NULL, 0, NULL, 0); // 0x00002084
     if (status < SCE_ERROR_OK) { // 0x00002090
-        sceIoClose(fd);
+        sceIoClose(fileFd);
         pspSetK1(oldK1);
         return SCE_ERROR_KERNEL_PROHIBIT_LOADMODULE_DEVICE;
     }
@@ -1166,16 +1168,16 @@ SceUID sceKernelLoadModuleForLoadExecVSHMs1(s32 apiType, const char *path, s32 f
     modParams.modeStart = CMD_LOAD_MODULE; // 0x000020C4
     modParams.modeFinish = CMD_RELOCATE_MODULE; // 0x000020B8
     modParams.fileBase = NULL; // 0x000020D0
-    modParams.fd = fd; //0x000020DC
+    modParams.fileFd = fileFd; //0x000020DC
     modParams.isBufferLoad = 0;
 
-    status = sceIoIoctl(fd, 0x208081, NULL, 0, NULL, 0); // 0x000020E0
+    status = sceIoIoctl(fileFd, 0x208081, NULL, 0, NULL, 0); // 0x000020E0
     if (status >= SCE_ERROR_OK) // 0x000020E8
         modParams.loadFlags = 0x10;
 
     status = _loadModuleByBufferID(&modParams, pOption); // 0x000020F8
 
-    sceIoClose(fd);
+    sceIoClose(fileFd);
     pspSetK1(oldK1);
     return status;
 }
@@ -1185,7 +1187,7 @@ SceUID sceKernelLoadModuleForLoadExecVSHMs2(s32 apiType, const char *path, s32 f
     const SceKernelLMOption *pOption)
 {
     s32 oldK1;
-    SceUID fd;
+    SceUID fileFd;
     s32 status;
     SceModuleMgrParam modParams;
 
@@ -1210,15 +1212,15 @@ SceUID sceKernelLoadModuleForLoadExecVSHMs2(s32 apiType, const char *path, s32 f
         return status;
     }
 
-    fd = sceIoOpen(path, SCE_O_ENCRYPTED | SCE_O_RDONLY, SCE_STM_RWXUGO); // 0x00002230
-    if (fd < 0) { // 0x0000223C
+    fileFd = sceIoOpen(path, SCE_O_ENCRYPTED | SCE_O_RDONLY, SCE_STM_RWXUGO); // 0x00002230
+    if (fileFd < 0) { // 0x0000223C
         pspSetK1(oldK1);
-        return fd;
+        return fileFd;
     }
 
-    status = sceIoIoctl(fd, 0x208013, NULL, 0, NULL, 0); // 0x0000225C
+    status = sceIoIoctl(fileFd, 0x208013, NULL, 0, NULL, 0); // 0x0000225C
     if (status < SCE_ERROR_OK) { // 0x00002268
-        sceIoClose(fd);
+        sceIoClose(fileFd);
         pspSetK1(oldK1);
         return SCE_ERROR_KERNEL_PROHIBIT_LOADMODULE_DEVICE;
     }
@@ -1229,16 +1231,16 @@ SceUID sceKernelLoadModuleForLoadExecVSHMs2(s32 apiType, const char *path, s32 f
     modParams.modeStart = CMD_LOAD_MODULE; // 0x0000229C
     modParams.modeFinish = CMD_RELOCATE_MODULE; // 0x00002290
     modParams.fileBase = NULL; // 0x000022A8
-    modParams.fd = fd; //0x000022B4
+    modParams.fileFd = fileFd; //0x000022B4
     modParams.isBufferLoad = 0;
 
-    status = sceIoIoctl(fd, 0x208081, NULL, 0, NULL, 0); // 0x000022D0
+    status = sceIoIoctl(fileFd, 0x208081, NULL, 0, NULL, 0); // 0x000022D0
     if (status >= SCE_ERROR_OK) // 0x000022C0
         modParams.loadFlags = 0x10;
 
     status = _loadModuleByBufferID(&modParams, pOption); // 0x000022D0
 
-    sceIoClose(fd);
+    sceIoClose(fileFd);
     pspSetK1(oldK1);
     return status;
 }
@@ -1248,7 +1250,7 @@ SceUID sceKernelLoadModuleForLoadExecVSHMs3(s32 apiType, const char *path, s32 f
     const SceKernelLMOption *pOption)
 {
     s32 oldK1;
-    SceUID fd;
+    SceUID fileFd;
     s32 status;
     char installId[SCE_SECURE_INSTALL_ID_LEN];
     SceModuleMgrParam modParams;
@@ -1274,15 +1276,15 @@ SceUID sceKernelLoadModuleForLoadExecVSHMs3(s32 apiType, const char *path, s32 f
         return status;
     }
 
-    fd = sceIoOpen(path, SCE_O_ENCRYPTED | SCE_O_RDONLY, SCE_STM_RWXUGO); // 0x0000240C
-    if (fd < 0) { // 0x00002418
+    fileFd = sceIoOpen(path, SCE_O_ENCRYPTED | SCE_O_RDONLY, SCE_STM_RWXUGO); // 0x0000240C
+    if (fileFd < 0) { // 0x00002418
         pspSetK1(oldK1);
-        return fd;
+        return fileFd;
     }
 
-    status = sceIoIoctl(fd, 0x208013, NULL, 0, NULL, 0); // 0x00002438
+    status = sceIoIoctl(fileFd, 0x208013, NULL, 0, NULL, 0); // 0x00002438
     if (status < SCE_ERROR_OK) { // 0x00002444
-        sceIoClose(fd);
+        sceIoClose(fileFd);
         pspSetK1(oldK1);
         return SCE_ERROR_KERNEL_PROHIBIT_LOADMODULE_DEVICE;
     }
@@ -1294,10 +1296,10 @@ SceUID sceKernelLoadModuleForLoadExecVSHMs3(s32 apiType, const char *path, s32 f
     modParams.modeStart = CMD_LOAD_MODULE; // 0x0000248C
     modParams.modeFinish = CMD_RELOCATE_MODULE; // 0x00002480
     modParams.fileBase = NULL; // 0x00002498
-    modParams.fd = fd; //0x000024A4
+    modParams.fileFd = fileFd; //0x000024A4
     modParams.isBufferLoad = 0;
 
-    status = sceIoIoctl(fd, 0x208081, NULL, 0, NULL, 0); // 0x000024A8
+    status = sceIoIoctl(fileFd, 0x208081, NULL, 0, NULL, 0); // 0x000024A8
     if (status >= SCE_ERROR_OK) // 0x000024B0
         modParams.loadFlags = 0x10;
 
@@ -1305,7 +1307,7 @@ SceUID sceKernelLoadModuleForLoadExecVSHMs3(s32 apiType, const char *path, s32 f
 
     status = _loadModuleByBufferID(&modParams, pOption); // 0x000024D4
 
-    sceIoClose(fd);
+    sceIoClose(fileFd);
     pspSetK1(oldK1);
     return status;
 }
@@ -1315,7 +1317,7 @@ SceUID sceKernelLoadModuleForLoadExecVSHMs4(s32 apiType, const char *path, s32 f
     const SceKernelLMOption *pOption)
 {
     s32 oldK1;
-    SceUID fd;
+    SceUID fileFd;
     s32 status;
     SceModuleMgrParam modParams;
 
@@ -1340,15 +1342,15 @@ SceUID sceKernelLoadModuleForLoadExecVSHMs4(s32 apiType, const char *path, s32 f
         return status;
     }
 
-    fd = sceIoOpen(path, SCE_O_ENCRYPTED | SCE_O_RDONLY, SCE_STM_RWXUGO); // 0x00002610
-    if (fd < 0) {
+    fileFd = sceIoOpen(path, SCE_O_ENCRYPTED | SCE_O_RDONLY, SCE_STM_RWXUGO); // 0x00002610
+    if (fileFd < 0) {
         pspSetK1(oldK1);
-        return fd;
+        return fileFd;
     }
 
-    status = sceIoIoctl(fd, 0x208013, NULL, 0, NULL, 0); // 0x0000263C
+    status = sceIoIoctl(fileFd, 0x208013, NULL, 0, NULL, 0); // 0x0000263C
     if (status < SCE_ERROR_OK) {
-        sceIoClose(fd);
+        sceIoClose(fileFd);
         pspSetK1(oldK1);
         return SCE_ERROR_KERNEL_PROHIBIT_LOADMODULE_DEVICE;
     }
@@ -1359,16 +1361,16 @@ SceUID sceKernelLoadModuleForLoadExecVSHMs4(s32 apiType, const char *path, s32 f
     modParams.modeStart = CMD_LOAD_MODULE; // 0x0000267C
     modParams.modeFinish = CMD_RELOCATE_MODULE; // 0x00002670
     modParams.fileBase = NULL; // 0x00002688
-    modParams.fd = fd; //0x00002694
+    modParams.fileFd = fileFd; //0x00002694
     modParams.isBufferLoad = 0;
 
-    status = sceIoIoctl(fd, 0x208081, NULL, 0, NULL, 0); // 0x00002698
+    status = sceIoIoctl(fileFd, 0x208081, NULL, 0, NULL, 0); // 0x00002698
     if (status >= SCE_ERROR_OK)
         modParams.loadFlags = 0x10;
 
     status = _loadModuleByBufferID(&modParams, pOption); // 0x000026B0
 
-    sceIoClose(fd);
+    sceIoClose(fileFd);
     pspSetK1(oldK1);
     return status;
 }
@@ -1378,7 +1380,7 @@ SceUID sceKernelLoadModuleForLoadExecVSHMs5(s32 apiType, const char *path, s32 f
     const SceKernelLMOption *pOption)
 {
     s32 oldK1;
-    SceUID fd;
+    SceUID fileFd;
     s32 status;
     char installId[SCE_SECURE_INSTALL_ID_LEN];
     SceModuleMgrParam modParams;
@@ -1404,22 +1406,22 @@ SceUID sceKernelLoadModuleForLoadExecVSHMs5(s32 apiType, const char *path, s32 f
         return status;
     }
 
-    fd = sceIoOpen(path, SCE_O_ENCRYPTED | SCE_O_RDONLY, SCE_STM_RWXUGO); // 0x000027F0
-    if (fd < 0) {
+    fileFd = sceIoOpen(path, SCE_O_ENCRYPTED | SCE_O_RDONLY, SCE_STM_RWXUGO); // 0x000027F0
+    if (fileFd < 0) {
         pspSetK1(oldK1);
-        return fd;
+        return fileFd;
     }
 
-    status = sceIoIoctl(fd, 0x208013, NULL, 0, NULL, 0); // 0x00002820
+    status = sceIoIoctl(fileFd, 0x208013, NULL, 0, NULL, 0); // 0x00002820
     if (status < SCE_ERROR_OK) { // 0x00002828
-        sceIoClose(fd);
+        sceIoClose(fileFd);
         pspSetK1(oldK1);
         return SCE_ERROR_KERNEL_PROHIBIT_LOADMODULE_DEVICE;
     }
 
     status = sceKernelGetId(path, installId); //0x00002838
     if (status < SCE_ERROR_OK) {
-        sceIoClose(fd);
+        sceIoClose(fileFd);
         pspSetK1(oldK1);
         return status;
     }
@@ -1430,10 +1432,10 @@ SceUID sceKernelLoadModuleForLoadExecVSHMs5(s32 apiType, const char *path, s32 f
     modParams.modeStart = CMD_LOAD_MODULE; // 0x00002878
     modParams.modeFinish = CMD_RELOCATE_MODULE; // 0x0000286C
     modParams.fileBase = NULL; // 0x00002884
-    modParams.fd = fd; //0x0000288C
+    modParams.fileFd = fileFd; //0x0000288C
     modParams.isBufferLoad = 0;
 
-    status = sceIoIoctl(fd, 0x208081, NULL, 0, NULL, 0); // 0x00002890
+    status = sceIoIoctl(fileFd, 0x208081, NULL, 0, NULL, 0); // 0x00002890
     if (status >= SCE_ERROR_OK) // 0x00002898
         modParams.loadFlags = 0x10;
 
@@ -1441,7 +1443,7 @@ SceUID sceKernelLoadModuleForLoadExecVSHMs5(s32 apiType, const char *path, s32 f
 
     status = _loadModuleByBufferID(&modParams, pOption); // 0x000028B8
 
-    sceIoClose(fd);
+    sceIoClose(fileFd);
     pspSetK1(oldK1);
     return status;
 }
@@ -1451,7 +1453,7 @@ SceUID sceKernelLoadModuleForLoadExecVSHMs6(s32 apiType, const char *path, s32 f
     const SceKernelLMOption *pOption)
 {
     s32 oldK1;
-    SceUID fd;
+    SceUID fileFd;
     s32 status;
     char installId[SCE_SECURE_INSTALL_ID_LEN];
     SceModuleMgrParam modParams;
@@ -1477,22 +1479,22 @@ SceUID sceKernelLoadModuleForLoadExecVSHMs6(s32 apiType, const char *path, s32 f
         return status;
     }
 
-    fd = sceIoOpen(path, SCE_O_ENCRYPTED | SCE_O_RDONLY, SCE_STM_RWXUGO); // 0x00002A00
-    if (fd < 0) {
+    fileFd = sceIoOpen(path, SCE_O_ENCRYPTED | SCE_O_RDONLY, SCE_STM_RWXUGO); // 0x00002A00
+    if (fileFd < 0) {
         pspSetK1(oldK1);
-        return fd;
+        return fileFd;
     }
 
-    status = sceIoIoctl(fd, 0x208013, NULL, 0, NULL, 0); // 0x00002A30
+    status = sceIoIoctl(fileFd, 0x208013, NULL, 0, NULL, 0); // 0x00002A30
     if (status < SCE_ERROR_OK) { // 0x00002A38
-        sceIoClose(fd);
+        sceIoClose(fileFd);
         pspSetK1(oldK1);
         return SCE_ERROR_KERNEL_PROHIBIT_LOADMODULE_DEVICE;
     }
 
     status = sceKernelGetId(path, installId); //0x00002A48
     if (status < SCE_ERROR_OK) {
-        sceIoClose(fd);
+        sceIoClose(fileFd);
         pspSetK1(oldK1);
         return status;
     }
@@ -1503,10 +1505,10 @@ SceUID sceKernelLoadModuleForLoadExecVSHMs6(s32 apiType, const char *path, s32 f
     modParams.modeStart = CMD_LOAD_MODULE; // 0x00002A88
     modParams.modeFinish = CMD_RELOCATE_MODULE; // 0x00002A7C
     modParams.fileBase = NULL; // 0x00002A94
-    modParams.fd = fd; //0x00002AA4
+    modParams.fileFd = fileFd; //0x00002AA4
     modParams.isBufferLoad = 0;
 
-    status = sceIoIoctl(fd, 0x208081, NULL, 0, NULL, 0); // 0x00002AA0
+    status = sceIoIoctl(fileFd, 0x208081, NULL, 0, NULL, 0); // 0x00002AA0
     if (status >= SCE_ERROR_OK) // 0x00002AA8
         modParams.loadFlags = 0x10;
 
@@ -1514,7 +1516,7 @@ SceUID sceKernelLoadModuleForLoadExecVSHMs6(s32 apiType, const char *path, s32 f
 
     status = _loadModuleByBufferID(&modParams, pOption); // 0x00002AC8
 
-    sceIoClose(fd);
+    sceIoClose(fileFd);
     pspSetK1(oldK1);
     return status;
 }
@@ -1524,7 +1526,7 @@ SceUID ModuleMgrForKernel_8DD336D4(s32 apiType, const char *path, s32 flag,
     const SceKernelLMOption *pOption)
 {
     s32 oldK1;
-    SceUID fd;
+    SceUID fileFd;
     s32 status;
     char installId[SCE_SECURE_INSTALL_ID_LEN];
     SceModuleMgrParam modParams;
@@ -1550,15 +1552,15 @@ SceUID ModuleMgrForKernel_8DD336D4(s32 apiType, const char *path, s32 flag,
         return status;
     }
 
-    fd = sceIoOpen(path, SCE_O_ENCRYPTED | SCE_O_RDONLY, SCE_STM_RWXUGO); // 0x00002C0C
-    if (fd < 0) {
+    fileFd = sceIoOpen(path, SCE_O_ENCRYPTED | SCE_O_RDONLY, SCE_STM_RWXUGO); // 0x00002C0C
+    if (fileFd < 0) {
         pspSetK1(oldK1);
-        return fd;
+        return fileFd;
     }
 
-    status = sceIoIoctl(fd, 0x208013, NULL, 0, NULL, 0); // 0x00002C38
+    status = sceIoIoctl(fileFd, 0x208013, NULL, 0, NULL, 0); // 0x00002C38
     if (status < SCE_ERROR_OK) { // 0x00002C44
-        sceIoClose(fd);
+        sceIoClose(fileFd);
         pspSetK1(oldK1);
         return SCE_ERROR_KERNEL_PROHIBIT_LOADMODULE_DEVICE;
     }
@@ -1570,10 +1572,10 @@ SceUID ModuleMgrForKernel_8DD336D4(s32 apiType, const char *path, s32 flag,
     modParams.modeStart = CMD_LOAD_MODULE; // 0x00002C8C
     modParams.modeFinish = CMD_RELOCATE_MODULE; // 0x00002C80
     modParams.fileBase = NULL; // 0x00002C98
-    modParams.fd = fd; //0x00002CA4
+    modParams.fileFd = fileFd; //0x00002CA4
     modParams.isBufferLoad = 0;
 
-    status = sceIoIoctl(fd, 0x208081, NULL, 0, NULL, 0); // 0x00002CA8
+    status = sceIoIoctl(fileFd, 0x208081, NULL, 0, NULL, 0); // 0x00002CA8
     if (status >= SCE_ERROR_OK) // 0x00002CB0
         modParams.loadFlags = 0x10;
 
@@ -1581,7 +1583,7 @@ SceUID ModuleMgrForKernel_8DD336D4(s32 apiType, const char *path, s32 flag,
 
     status = _loadModuleByBufferID(&modParams, pOption); // 0x00002CD4
 
-    sceIoClose(fd);
+    sceIoClose(fileFd);
     pspSetK1(oldK1);
     return status;
 }
@@ -1591,7 +1593,7 @@ SceUID sceKernelLoadModuleForLoadExecNpDrm(s32 apiType, const char *path, SceOff
     const char *secureInstallId, s32 flag, const SceKernelLMOption *pOption)
 {
     s32 oldK1;
-    SceUID fd;
+    SceUID fileFd;
     s32 status;
     SceModuleMgrParam modParams;
 
@@ -1621,17 +1623,17 @@ SceUID sceKernelLoadModuleForLoadExecNpDrm(s32 apiType, const char *path, SceOff
         return SCE_ERROR_KERNEL_ILLEGAL_ADDR;
     }
 
-    fd = sceIoOpen(path, SCE_O_ENCRYPTED | SCE_O_RDONLY, SCE_STM_RWXUGO); // 0x00002E40
-    if (fd < 0) {
+    fileFd = sceIoOpen(path, SCE_O_ENCRYPTED | SCE_O_RDONLY, SCE_STM_RWXUGO); // 0x00002E40
+    if (fileFd < 0) {
         pspSetK1(oldK1);
-        return fd;
+        return fileFd;
     }
 
-    sceIoLseek(fd, fileOffset, SCE_SEEK_SET); //0x00002E64
+    sceIoLseek(fileFd, fileOffset, SCE_SEEK_SET); //0x00002E64
 
-    status = sceIoIoctl(fd, 0x208013, NULL, 0, NULL, 0); // 0x00002E84
+    status = sceIoIoctl(fileFd, 0x208013, NULL, 0, NULL, 0); // 0x00002E84
     if (status < SCE_ERROR_OK) { // 0x00002E8C
-        sceIoClose(fd);
+        sceIoClose(fileFd);
         pspSetK1(oldK1);
         return SCE_ERROR_KERNEL_PROHIBIT_LOADMODULE_DEVICE;
     }
@@ -1642,10 +1644,10 @@ SceUID sceKernelLoadModuleForLoadExecNpDrm(s32 apiType, const char *path, SceOff
     modParams.modeStart = CMD_LOAD_MODULE; // 0x00002EC0
     modParams.modeFinish = CMD_RELOCATE_MODULE; // 0x00002EB4
     modParams.fileBase = NULL; // 0x00002ECC
-    modParams.fd = fd; //0x00002ED8
+    modParams.fileFd = fileFd; //0x00002ED8
     modParams.isBufferLoad = 0;
 
-    status = sceIoIoctl(fd, 0x208081, NULL, 0, NULL, 0); // 0x00002EDC
+    status = sceIoIoctl(fileFd, 0x208081, NULL, 0, NULL, 0); // 0x00002EDC
     if (status >= SCE_ERROR_OK) // 0x00002EE4
         modParams.loadFlags = 0x10;
 
@@ -1653,7 +1655,7 @@ SceUID sceKernelLoadModuleForLoadExecNpDrm(s32 apiType, const char *path, SceOff
 
     status = _loadModuleByBufferID(&modParams, pOption); // 0x00002F04
 
-    sceIoClose(fd);
+    sceIoClose(fileFd);
     pspSetK1(oldK1);
     return status;
 }
@@ -1662,7 +1664,7 @@ SceUID sceKernelLoadModuleForLoadExecNpDrm(s32 apiType, const char *path, SceOff
 SceUID sceKernelLoadModuleVSH(const char *path, s32 flag, const SceKernelLMOption *pOption)
 {
     s32 oldK1;
-    SceUID fd;
+    SceUID fileFd;
     s32 status;
     SceModuleMgrParam modParams;
 
@@ -1693,15 +1695,15 @@ SceUID sceKernelLoadModuleVSH(const char *path, s32 flag, const SceKernelLMOptio
         return status;
     }
 
-    fd = sceIoOpen(path, SCE_O_ENCRYPTED | SCE_O_RDONLY, SCE_STM_RWXUGO); // 0x00003078
-    if (fd < 0) { // 0x00003084
+    fileFd = sceIoOpen(path, SCE_O_ENCRYPTED | SCE_O_RDONLY, SCE_STM_RWXUGO); // 0x00003078
+    if (fileFd < 0) { // 0x00003084
         pspSetK1(oldK1);
-        return fd;
+        return fileFd;
     }
 
-    status = sceIoIoctl(fd, 0x208003, NULL, 0, NULL, 0); // 0x000030A4
+    status = sceIoIoctl(fileFd, 0x208003, NULL, 0, NULL, 0); // 0x000030A4
     if (status < SCE_ERROR_OK) { // 0x000030B0
-        sceIoClose(fd);
+        sceIoClose(fileFd);
         pspSetK1(oldK1);
         return SCE_ERROR_KERNEL_PROHIBIT_LOADMODULE_DEVICE;
     }
@@ -1712,20 +1714,20 @@ SceUID sceKernelLoadModuleVSH(const char *path, s32 flag, const SceKernelLMOptio
     modParams.modeStart = CMD_LOAD_MODULE; // 0x000030EC
     modParams.modeFinish = CMD_RELOCATE_MODULE; // 0x000030E0
     modParams.fileBase = NULL; // 0x000030F8
-    modParams.fd = fd; // 0x00003100
+    modParams.fileFd = fileFd; // 0x00003100
     modParams.isBufferLoad = 0;
 
-    status = sceIoIoctl(fd, 0x208081, NULL, 0, NULL, 0); // 0x00003104
+    status = sceIoIoctl(fileFd, 0x208081, NULL, 0, NULL, 0); // 0x00003104
     if (status >= SCE_ERROR_OK) // 0x0000310C
         modParams.loadFlags = 0x10;
 
-    status = sceIoIoctl(fd, 0x208082, NULL, 0, NULL, 0); // 0x00003130
+    status = sceIoIoctl(fileFd, 0x208082, NULL, 0, NULL, 0); // 0x00003130
     if (status < SCE_ERROR_OK) // 0x00003138
         modParams.isBufferLoad = 1; //0x00003164
 
     status = _loadModuleByBufferID(&modParams, pOption); // 0x00003144
 
-    sceIoClose(fd);
+    sceIoClose(fileFd);
     pspSetK1(oldK1);
     return status;
 }
@@ -1782,7 +1784,7 @@ SceUID sceKernelLoadModuleVSHByID(SceUID inputId, s32 flag, const SceKernelLMOpt
     modParams.modeStart = CMD_LOAD_MODULE; // 0x00003324
     modParams.modeFinish = CMD_RELOCATE_MODULE; // 0x00003318
     modParams.fileBase = NULL; // 0x00003330
-    modParams.fd = inputId; // 0x00003338
+    modParams.fileFd = inputId; // 0x00003338
     modParams.isBufferLoad = 0;
 
     status = sceIoIoctl(inputId, 0x208081, NULL, 0, NULL, 0); // 0x0000333C
@@ -1803,7 +1805,7 @@ SceUID sceKernelLoadModuleVSHByID(SceUID inputId, s32 flag, const SceKernelLMOpt
 SceUID sceKernelLoadModuleForKernel(const char *path, s32 flag, const SceKernelLMOption *pOption)
 {
     s32 oldK1;
-    SceUID fd;
+    SceUID fileFd;
     s32 status;
     SceModuleMgrParam modParams;
 
@@ -1824,15 +1826,15 @@ SceUID sceKernelLoadModuleForKernel(const char *path, s32 flag, const SceKernelL
         return status;
     }
 
-    fd = sceIoOpen(path, SCE_O_ENCRYPTED | SCE_O_RDONLY, SCE_STM_RWXUGO); // 0x0000340C
-    if (fd < 0) { // 0x00000740
+    fileFd = sceIoOpen(path, SCE_O_ENCRYPTED | SCE_O_RDONLY, SCE_STM_RWXUGO); // 0x0000340C
+    if (fileFd < 0) { // 0x00000740
         pspSetK1(oldK1);
-        return fd;
+        return fileFd;
     }
 
-    status = sceIoIoctl(fd, 0x208006, NULL, 0, NULL, 0); // 0x00003438
+    status = sceIoIoctl(fileFd, 0x208006, NULL, 0, NULL, 0); // 0x00003438
     if (status < SCE_ERROR_OK) { // 0x00003444
-        sceIoClose(fd);
+        sceIoClose(fileFd);
         pspSetK1(oldK1);
         return SCE_ERROR_KERNEL_PROHIBIT_LOADMODULE_DEVICE;
     }
@@ -1843,20 +1845,20 @@ SceUID sceKernelLoadModuleForKernel(const char *path, s32 flag, const SceKernelL
     modParams.modeStart = CMD_LOAD_MODULE; // 0x0000347C
     modParams.modeFinish = CMD_RELOCATE_MODULE; // 0x00003464
     modParams.fileBase = NULL; // 0x00003488
-    modParams.fd = fd; // 0x00003490
+    modParams.fileFd = fileFd; // 0x00003490
     modParams.isBufferLoad = 0;
 
-    status = sceIoIoctl(fd, 0x208081, NULL, 0, NULL, 0); // 0x00003494
+    status = sceIoIoctl(fileFd, 0x208081, NULL, 0, NULL, 0); // 0x00003494
     if (status >= SCE_ERROR_OK) // 0x0000349C
         modParams.loadFlags = 0x10; // 0x000034A4
 
-    status = sceIoIoctl(fd, 0x208082, NULL, 0, NULL, 0); // 0x000034C0
+    status = sceIoIoctl(fileFd, 0x208082, NULL, 0, NULL, 0); // 0x000034C0
     if (status < SCE_ERROR_OK) // 0x000034C8
         modParams.isBufferLoad = 1; //0x00003510
 
     status = _loadModuleByBufferID(&modParams, pOption); // 0x000034D4
 
-    sceIoClose(fd); // 0x000034E0
+    sceIoClose(fileFd); // 0x000034E0
     pspSetK1(oldK1);
     return status;
 }
@@ -1901,7 +1903,7 @@ SceUID sceKernelLoadModuleByIDForKernel(SceUID inputId, s32 flag, const SceKerne
     modParams.modeFinish = CMD_RELOCATE_MODULE; // 0x000036A0
     modParams.modeStart = CMD_LOAD_MODULE; // 0x000036B8
     modParams.fileBase = NULL; // 0x000036C4
-    modParams.fd = inputId; // 0x000036CC
+    modParams.fileFd = inputId; // 0x000036CC
     modParams.isBufferLoad = 0;
 
     status = sceIoIoctl(inputId, 0x208081, NULL, 0, NULL, 0); //0x000036D0
@@ -1924,7 +1926,7 @@ SceUID sceKernelLoadModuleToBlock(const char *path, SceUID blockId, SceUID *pNew
 {
     s32 oldK1;
     s32 status;
-    SceUID fd;
+    SceUID fileFd;
     SceModuleMgrParam modParams;
 
     (void)flag;
@@ -1963,15 +1965,15 @@ SceUID sceKernelLoadModuleToBlock(const char *path, SceUID blockId, SceUID *pNew
     }
 
     // 0x000037F8
-    fd = sceIoOpen(path, SCE_O_ENCRYPTED | SCE_O_RDONLY, SCE_STM_RWXUGO);
-    if (fd < 0) { // 0x00003804
+    fileFd = sceIoOpen(path, SCE_O_ENCRYPTED | SCE_O_RDONLY, SCE_STM_RWXUGO);
+    if (fileFd < 0) { // 0x00003804
         pspSetK1(oldK1);
-        return fd;
+        return fileFd;
     }
 
-    status = sceIoIoctl(fd, 0x208007, NULL, 0, NULL, 0); // 0x00003824
+    status = sceIoIoctl(fileFd, 0x208007, NULL, 0, NULL, 0); // 0x00003824
     if (status < SCE_ERROR_OK) { // 0x00003830
-        sceIoClose(fd);
+        sceIoClose(fileFd);
         pspSetK1(oldK1);
         return SCE_ERROR_KERNEL_PROHIBIT_LOADMODULE_DEVICE;
     }
@@ -1982,10 +1984,10 @@ SceUID sceKernelLoadModuleToBlock(const char *path, SceUID blockId, SceUID *pNew
     modParams.modeFinish = CMD_RELOCATE_MODULE; // 0x00003860
     modParams.modeStart = CMD_LOAD_MODULE; // 0x0000386C
     modParams.fileBase = NULL; // 0x00003878
-    modParams.fd = fd; // 0x00003880
+    modParams.fileFd = fileFd; // 0x00003880
     modParams.isBufferLoad = 0;
 
-    status = sceIoIoctl(fd, 0x208081, NULL, 0, NULL, 0); //0x00003884
+    status = sceIoIoctl(fileFd, 0x208081, NULL, 0, NULL, 0); //0x00003884
     if (status >= SCE_ERROR_OK) //0x0000388C
         modParams.loadFlags = 0x10; // 0x000036E0
 
@@ -1993,7 +1995,7 @@ SceUID sceKernelLoadModuleToBlock(const char *path, SceUID blockId, SceUID *pNew
     modParams.externMemBlockIdKernel = blockId; // 0x0000389C
     modParams.pNewBlockId = &nBlockId; //0x000038C0
 
-    status = sceIoIoctl(fd, 0x208082, NULL, 0, NULL, 0); // 0x000038BC
+    status = sceIoIoctl(fileFd, 0x208082, NULL, 0, NULL, 0); // 0x000038BC
     if (status < SCE_ERROR_OK) // 0x000038C4
         modParams.isBufferLoad = 1; //0x00003924
 
@@ -2001,7 +2003,7 @@ SceUID sceKernelLoadModuleToBlock(const char *path, SceUID blockId, SceUID *pNew
     if (status >= SCE_ERROR_OK)
         *pNewBlockId = nBlockId; // 0x000038E4
 
-    sceIoClose(fd);
+    sceIoClose(fileFd);
     pspSetK1(oldK1);
     return status;
 }
@@ -2011,7 +2013,7 @@ SceUID sceKernelLoadModuleBootInitConfig(const char *path, s32 flag, const SceKe
 {
     s32 oldK1;
     s32 status;
-    SceUID fd;
+    SceUID fileFd;
     SceModuleMgrParam modParams;
 
     (void)flag;
@@ -2029,20 +2031,21 @@ SceUID sceKernelLoadModuleBootInitConfig(const char *path, s32 flag, const SceKe
     }
 
     //0x00003A24 - 0x00003A5C
-    if ((status = _checkCallConditionKernel()) < 0 || (status = _checkLMOptionConditions(pOption)) < 0) {
+    if ((status = _checkCallConditionKernel()) < 0 || (status = _checkPathConditions(path)) < 0
+            || (status = _checkLMOptionConditions(pOption)) < 0) {
         pspSetK1(oldK1);
         return status;
     }
 
-    fd = sceIoOpen(path, SCE_O_ENCRYPTED | SCE_O_RDONLY, SCE_STM_RWXUGO); // 0x00003A70
-    if (fd < 0) { // 0x00003A7C
+    fileFd = sceIoOpen(path, SCE_O_ENCRYPTED | SCE_O_RDONLY, SCE_STM_RWXUGO); // 0x00003A70
+    if (fileFd < 0) { // 0x00003A7C
         pspSetK1(oldK1);
-        return fd;
+        return fileFd;
     }
 
-    status = sceIoIoctl(fd, 0x208009, NULL, 0, NULL, 0); // 0x00003A9C
+    status = sceIoIoctl(fileFd, 0x208009, NULL, 0, NULL, 0); // 0x00003A9C
     if (status < SCE_ERROR_OK) { // 0x00003AA8
-        sceIoClose(fd);
+        sceIoClose(fileFd);
         pspSetK1(oldK1);
         return SCE_ERROR_KERNEL_PROHIBIT_LOADMODULE_DEVICE;
     }
@@ -2053,16 +2056,16 @@ SceUID sceKernelLoadModuleBootInitConfig(const char *path, s32 flag, const SceKe
     modParams.modeFinish = CMD_RELOCATE_MODULE; // 0x00003AD8
     modParams.modeStart = CMD_LOAD_MODULE; // 0x00003AE4
     modParams.fileBase = NULL; // 0x00003AF0
-    modParams.fd = fd; // 0x00003AF8
+    modParams.fileFd = fileFd; // 0x00003AF8
     modParams.isBufferLoad = 0;
 
-    status = sceIoIoctl(fd, 0x208081, NULL, 0, NULL, 0); //0x00003AFC
+    status = sceIoIoctl(fileFd, 0x208081, NULL, 0, NULL, 0); //0x00003AFC
     if (status >= SCE_ERROR_OK) //0x00003B04
         modParams.loadFlags = 0x10;
 
     status = _loadModuleByBufferID(&modParams, pOption); //0x00003B14
 
-    sceIoClose(fd);
+    sceIoClose(fileFd);
     pspSetK1(oldK1);
     return status;
 }
@@ -2072,7 +2075,7 @@ SceUID sceKernelLoadModuleDeci(const char *path, s32 flag, const SceKernelLMOpti
 {
     s32 oldK1;
     s32 status;
-    SceUID fd;
+    SceUID fileFd;
     SceModuleMgrParam modParams;
 
     (void)flag;
@@ -2090,20 +2093,21 @@ SceUID sceKernelLoadModuleDeci(const char *path, s32 flag, const SceKernelLMOpti
     }
 
     //0x00003C10 - 0x00003C48
-    if ((status = _checkCallConditionKernel()) < 0 || (status = _checkLMOptionConditions(pOption)) < 0) {
+    if ((status = _checkCallConditionKernel()) < 0 || (status = _checkPathConditions(path)) < 0
+            || (status = _checkLMOptionConditions(pOption)) < 0) {
         pspSetK1(oldK1);
         return status;
     }
 
-    fd = sceIoOpen(path, SCE_O_ENCRYPTED | SCE_O_RDONLY, SCE_STM_RWXUGO); // 0x00003C5C
-    if (fd < 0) { // 0x00003C68
+    fileFd = sceIoOpen(path, SCE_O_ENCRYPTED | SCE_O_RDONLY, SCE_STM_RWXUGO); // 0x00003C5C
+    if (fileFd < 0) { // 0x00003C68
         pspSetK1(oldK1);
-        return fd;
+        return fileFd;
     }
 
-    status = sceIoIoctl(fd, 0x20800C, NULL, 0, NULL, 0); // 0x00003C88
+    status = sceIoIoctl(fileFd, 0x20800C, NULL, 0, NULL, 0); // 0x00003C88
     if (status < SCE_ERROR_OK) { // 0x00003C94
-        sceIoClose(fd);
+        sceIoClose(fileFd);
         pspSetK1(oldK1);
         return SCE_ERROR_KERNEL_PROHIBIT_LOADMODULE_DEVICE;
     }
@@ -2114,16 +2118,16 @@ SceUID sceKernelLoadModuleDeci(const char *path, s32 flag, const SceKernelLMOpti
     modParams.modeFinish = CMD_RELOCATE_MODULE; // 0x00003CC4
     modParams.modeStart = CMD_LOAD_MODULE; // 0x00003CD0
     modParams.fileBase = NULL; // 0x00003CDC
-    modParams.fd = fd; // 0x00003CE4
+    modParams.fileFd = fileFd; // 0x00003CE4
     modParams.isBufferLoad = 0;
 
-    status = sceIoIoctl(fd, 0x208081, NULL, 0, NULL, 0); //0x00003CE8
+    status = sceIoIoctl(fileFd, 0x208081, NULL, 0, NULL, 0); //0x00003CE8
     if (status >= SCE_ERROR_OK) //0x00003CF0
         modParams.loadFlags = 0x10;
 
     status = _loadModuleByBufferID(&modParams, pOption); //0x00003D00
 
-    sceIoClose(fd);
+    sceIoClose(fileFd);
     pspSetK1(oldK1);
     return status;
 }
@@ -2645,9 +2649,9 @@ static SceUID _loadModuleByBufferID(SceModuleMgrParam *pModParams, const SceKern
     }
 
     // 0x000075E4
-    pModParams->reserved76 = 0;
-    pModParams->reserved80 = 0;
-    pModParams->reserved96 = 0;
+    pModParams->unusedBeforeStatus[0] = 0;
+    pModParams->unusedBeforeStatus[1] = 0;
+    pModParams->unusedBeforeFlags = 0;
     pModParams->pExecInfo = NULL;
 
     return _start_exe_thread(pModParams); // 0x000075F4
@@ -2667,6 +2671,6 @@ static void _setupForLoadModuleBuffer(SceModuleMgrParam *pModParams, u32 apiType
     pModParams->modeStart = CMD_RELOCATE_MODULE; // 0x000076C0
     pModParams->modeFinish = CMD_RELOCATE_MODULE; // 0x000076B4
     pModParams->modSize = modSize; // 0x000076B8
-    pModParams->fd = (SceUID)base; // 0x000076BC
+    pModParams->fileFd = (SceUID)base; // 0x000076BC
     pModParams->fileBase = base; // 0x000076C8
 }
