@@ -22,6 +22,16 @@ struct mallinfo {
 	size_t keepcost;
 };
 
+#ifdef PAF_STATIC_BUILD
+mspace create_mspace_with_base(void *base, size_t capacity, int locked);
+size_t destroy_mspace(mspace heap);
+struct mallinfo mspace_mallinfo(mspace heap);
+void *mspace_malloc(mspace heap, size_t bytes, unsigned int tag);
+void mspace_free(mspace heap, void *mem);
+void *mspace_realloc(mspace heap, void *mem, size_t bytes, unsigned int tag);
+void *mspace_memalign(mspace heap, size_t alignment, size_t bytes,
+			unsigned int tag);
+#else
 mspace create_mspace_with_base(void *base, size_t capacity, int locked,
 			       size_t alignment);
 size_t destroy_mspace(mspace heap);
@@ -31,6 +41,7 @@ void mspace_free(mspace heap, void *mem, unsigned int tag);
 void *mspace_realloc(mspace heap, void *mem, size_t bytes, unsigned int tag);
 void *mspace_memalign(mspace heap, size_t alignment, size_t bytes,
 			unsigned int tag);
+#endif
 int mspace_trim(mspace heap, size_t pad);
 size_t mspace_usable_size(const void *mem);
 unsigned int mspace_report_free_blocks(mspace heap,

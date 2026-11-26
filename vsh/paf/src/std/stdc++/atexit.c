@@ -112,3 +112,12 @@ int __cxa_finalize(void *dso)
 		return PafCrtManagerUnlock(PafCrtManagerGet(), 1);
 	return 0;
 }
+
+#ifdef PAF_STATIC_BUILD
+int PafAtexitFinalizeAll(void)
+{
+	extern void *__dso_handle;
+
+	return __cxa_finalize(__dso_handle);
+}
+#endif

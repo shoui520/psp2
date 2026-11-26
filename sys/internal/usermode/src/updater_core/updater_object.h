@@ -5,9 +5,16 @@
 #ifndef UPDATER_CORE_UPDATER_OBJECT_H
 #define UPDATER_CORE_UPDATER_OBJECT_H
 
+#include <stddef.h>
+
 class UpdaterObject {
 public:
 	virtual ~UpdaterObject() {}
+
+	static void *operator new(size_t size);
+	static void *operator new[](size_t size);
+	static void operator delete(void *ptr);
+	static void operator delete[](void *ptr);
 };
 
 #endif

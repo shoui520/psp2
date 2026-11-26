@@ -4,4 +4,4 @@ SceCuiSetUpper:
     major: 1
     minor: 1
   main:
-    start: module_start
+    start: _start

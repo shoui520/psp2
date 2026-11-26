@@ -6,7 +6,7 @@
  * go to __udivsi3 / __divsi3.
  *
  * GCC uses __aeabi_uldivmod / __aeabi_ldivmod instead (aeabi_ldivmod.S),
- * which return the remainder in r2:r3 and so are written in assembly.
+ * which return the remainder in the second register pair and so are written in assembly.
  */
 
 #ifdef __SNC__
@@ -28,7 +28,21 @@ typedef union {
 long long __ashldi3(long long value, long long count)
 {
 	u64parts a, r;
+#ifdef LIBSNC_0996
+	unsigned int shift = (unsigned int)count & 0x3fu;
 
+	if (shift == 0)
+		return value;
+	a.v = value;
+	if (shift < 32) {
+		r.w.hi = a.w.hi << shift | a.w.lo >> (32 - shift);
+		r.w.lo = a.w.lo << shift;
+	} else {
+		r.w.hi = a.w.lo << (shift - 32);
+		r.w.lo = 0;
+	}
+	return r.v;
+#else
 	if ((unsigned long long)count > 63)
 		return 0;
 	if (count == 0)
@@ -42,12 +56,27 @@ long long __ashldi3(long long value, long long count)
 		r.w.lo = 0;
 	}
 	return r.v;
+#endif
 }
 
 unsigned long long __lshrdi3(unsigned long long value, long long count)
 {
 	u64parts a, r;
+#ifdef LIBSNC_0996
+	unsigned int shift = (unsigned int)count & 0x3fu;
 
+	if (shift == 0)
+		return value;
+	a.v = value;
+	if (shift < 32) {
+		r.w.lo = a.w.lo >> shift | a.w.hi << (32 - shift);
+		r.w.hi = a.w.hi >> shift;
+	} else {
+		r.w.hi = 0;
+		r.w.lo = a.w.hi >> (shift - 32);
+	}
+	return r.v;
+#else
 	if ((unsigned long long)count > 63)
 		return 0;
 	if (count == 0)
@@ -61,6 +90,7 @@ unsigned long long __lshrdi3(unsigned long long value, long long count)
 		r.w.lo = a.w.hi >> (count - 32);
 	}
 	return r.v;
+#endif
 }
 
 unsigned long long __u64_shift_right_1bit(unsigned long long value)

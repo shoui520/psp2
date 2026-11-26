@@ -12,6 +12,7 @@
 #include <updater_core/updater_core.h>
 #include "updater_log.h"
 #include "updater_memory.h"
+#include "updater_object.h"
 #include "updater_progress.h"
 #include "parallel_copy_file.h"
 #include "partition_manager.h"
@@ -50,7 +51,7 @@ enum {
 #define UPDATER_POWER_UNLOCK	4
 #define UPDATER_POWER_FLAGS	2
 
-static SpkgGroupManager *s_spkgGroupManager = NULL;
+SpkgGroupManager *g_spkgGroupManager = NULL;
 static int s_state = UPDATER_STATE_NONE;
 static int s_powerLocked = 0;
 static int s_logState = UPDATER_OPEN_NONE;
@@ -101,7 +102,7 @@ int sceUpdaterInitialize(const SceUpdaterMemoryInfo *memoryInfo)
 		return SCE_UPDATER_ERROR_INVALID_ARGUMENT;
 	}
 	g_updaterMemoryInfo = *memoryInfo;
-	s_spkgGroupManager = new SpkgGroupManager(0);
+	g_spkgGroupManager = new SpkgGroupManager(0);
 	s_state = UPDATER_STATE_INITIALIZED;
 	return 0;
 }
@@ -115,16 +116,16 @@ int sceUpdaterFinalize(int reboot)
 		UPDATER_ERROR_FMT(147, "%d", s_state);
 		return SCE_UPDATER_ERROR_INVALID_STATE;
 	}
-	result = s_spkgGroupManager->GetResult();
-	s_spkgGroupManager->Terminate();
-	delete s_spkgGroupManager;
+	result = g_spkgGroupManager->GetResult();
+	g_spkgGroupManager->Terminate();
+	delete g_spkgGroupManager;
 	s_state = UPDATER_STATE_FINALIZED;
 	return utility.PowerControl(reboot, result);
 }
 
-int sceUpdaterGetProgressRate(void)
+int sceUpdaterIsDiffUpdate(void)
 {
-	return s_spkgGroupManager->GetProgressRate();
+	return g_spkgGroupManager->IsDiffUpdate();
 }
 
 int sceUpdaterUpdateAllSpackage(const char *fileName)
@@ -142,7 +143,7 @@ int sceUpdaterUpdateAllSpackage(const char *fileName)
 		return SCE_UPDATER_ERROR_INVALID_ARGUMENT;
 	}
 	s_state = UPDATER_STATE_UPDATING;
-	ret = s_spkgGroupManager->UpdateAllSpkg(fileName);
+	ret = g_spkgGroupManager->UpdateAllSpkg(fileName);
 	s_state = UPDATER_STATE_UPDATED;
 	return ret;
 }
@@ -161,19 +162,19 @@ int sceUpdaterInspectAllSpackage(const char *fileName)
 		return SCE_UPDATER_ERROR_INVALID_ARGUMENT;
 	}
 	s_state = UPDATER_STATE_INSPECTING;
-	ret = s_spkgGroupManager->InspectAllSpackage(fileName);
+	ret = g_spkgGroupManager->InspectAllSpackage(fileName);
 	s_state = UPDATER_STATE_INSPECTED;
 	return ret;
 }
 
-int sceUpdaterGetSpackageHeader(void *header, int type)
+int sceUpdaterGetSpackageHeader(int type, SceUpdaterSpkgHeader *header)
 {
 	if (s_state == UPDATER_STATE_NONE || s_state == UPDATER_STATE_FINALIZED ||
 	    s_state == UPDATER_STATE_UPDATING || s_state == UPDATER_STATE_INSPECTING) {
 		UPDATER_ERROR_FMT(269, "%d", s_state);
 		return SCE_UPDATER_ERROR_INVALID_STATE;
 	}
-	return s_spkgGroupManager->GetSpackageHeader(header, type);
+	return g_spkgGroupManager->GetSpackageHeader(type, header);
 }
 
 int sceUpdaterGetProgress(SceUpdaterProgress *progress)
@@ -188,16 +189,16 @@ int sceUpdaterGetProgress(SceUpdaterProgress *progress)
 		UPDATER_ERROR(298);
 		return SCE_UPDATER_ERROR_INVALID_ARGUMENT;
 	}
-	return s_spkgGroupManager->GetProgress(progress);
+	return g_spkgGroupManager->GetProgress(progress);
 }
 
-int sceUpdaterGetEstimateProcessTime(const char *fileName, int *time)
+int sceUpdaterGetEstimateProcessTime(const char *fileName, SceUpdaterEstimateTime *estimateTime)
 {
-	if (time == NULL) {
+	if (estimateTime == NULL) {
 		UPDATER_ERROR(320);
 		return SCE_UPDATER_ERROR_INVALID_ARGUMENT;
 	}
-	return s_spkgGroupManager->GetEstimateProcessTime(fileName, time);
+	return g_spkgGroupManager->GetEstimateProcessTime(fileName, estimateTime);
 }
 
 int sceUpdaterVerifyPup(const char *fileName)
@@ -303,7 +304,7 @@ int sceUpdaterCheckAcceptableSpkgType(const char *fileName, const int *types, in
 		UPDATER_ERROR(518);
 		return SCE_UPDATER_ERROR_INVALID_ARGUMENT;
 	}
-	return s_spkgGroupManager->CheckAcceptableSpkgType(fileName, types, count, result);
+	return g_spkgGroupManager->CheckAcceptableSpkgType(fileName, types, count, result);
 }
 
 int sceUpdaterGetPupInformation(const char *fileName, SceUpdaterPupInformation *information)
@@ -571,22 +572,22 @@ int sceUpdaterCopyFile(SceUpdaterCopyFileTarget *src, SceUpdaterCopyFileTarget *
 
 }
 
-void *operator new(size_t size)
+void *UpdaterObject::operator new(size_t size)
 {
 	return g_updaterMemoryInfo.updaterCoreAlloc(size);
 }
 
-void *operator new[](size_t size)
+void *UpdaterObject::operator new[](size_t size)
 {
 	return g_updaterMemoryInfo.updaterCoreAlloc(size);
 }
 
-void operator delete(void *ptr)
+void UpdaterObject::operator delete(void *ptr)
 {
 	g_updaterMemoryInfo.updaterCoreFree(ptr);
 }
 
-void operator delete[](void *ptr)
+void UpdaterObject::operator delete[](void *ptr)
 {
 	g_updaterMemoryInfo.updaterCoreFree(ptr);
 }

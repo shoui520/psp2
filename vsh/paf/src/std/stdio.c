@@ -6,9 +6,12 @@
 #include "../thread/mutex.h"
 #include <iofilemgr/iofilemgr.h>
 
+#ifndef PAF_STATIC_BUILD
 static Mutex stdioMutex;
+#endif
 static sce_paf_FILE streamTable[20];
 
+#ifndef PAF_STATIC_BUILD
 int StdioInitialize(void)
 {
 	extern void *__dso_handle;
@@ -17,6 +20,7 @@ int StdioInitialize(void)
 	return __aeabi_atexit(&stdioMutex,
 				(void (*)(void *))MutexDestroy, &__dso_handle);
 }
+#endif
 
 void *_stdinit_stdio(void)
 {
@@ -59,18 +63,24 @@ static __attribute__((always_inline)) sce_paf_FILE *AllocateStream(const char *m
 	sce_paf_FILE *stream;
 	int i, type;
 
+#ifndef PAF_STATIC_BUILD
 	MutexLock(&stdioMutex);
+#endif
 	for (i = 0; i < 20; i++) {
 		if (!(uint8_t)streamTable[i].type)
 			break;
 	}
 	if (i == 20 || (type = ParseStreamMode(mode)) < 0) {
+#ifndef PAF_STATIC_BUILD
 		MutexUnlock(&stdioMutex);
+#endif
 		return NULL;
 	}
 	stream = &streamTable[i];
 	stream->type = type | 1;
+#ifndef PAF_STATIC_BUILD
 	MutexUnlock(&stdioMutex);
+#endif
 	return stream;
 }
 
@@ -97,13 +107,17 @@ sce_paf_FILE *sce_paf_fopen(const char *filename, const char *mode)
 
 	if (!filename || !mode)
 		return NULL;
+#ifndef PAF_STATIC_BUILD
 	MutexLock(&stdioMutex);
+#endif
 	for (i = 0; i < 20; i++) {
 		if (!(uint8_t)streamTable[i].type)
 			break;
 	}
 	if (i == 20 || !mode || !*mode) {
+#ifndef PAF_STATIC_BUILD
 		MutexUnlock(&stdioMutex);
+#endif
 		return NULL;
 	}
 	ch = *mode;
@@ -126,7 +140,9 @@ sce_paf_FILE *sce_paf_fopen(const char *filename, const char *mode)
 		type = 0x6000;
 		break;
 	default:
+#ifndef PAF_STATIC_BUILD
 		MutexUnlock(&stdioMutex);
+#endif
 		return NULL;
 	}
 	ch = *++mode;
@@ -139,7 +155,9 @@ sce_paf_FILE *sce_paf_fopen(const char *filename, const char *mode)
 	flags |= access;
 	stream = &streamTable[i];
 	stream->type = type | 1;
+#ifndef PAF_STATIC_BUILD
 	MutexUnlock(&stdioMutex);
+#endif
 	stream->status = 0;
 	fd = sceIoOpen(filename, flags, 0606);
 	type = stream->type;

@@ -5,13 +5,23 @@
 #include <stddef.h>
 #include <paf_build.h>
 
+#ifdef PAF_STATIC_BUILD
+extern int SceLibKernel_A7819967(SceKernelLwMutexWork *work, int count, unsigned int *timeout);
+extern int SceLibKernel_499EA781(SceKernelLwMutexWork *work, int count);
+#endif
+
 static PafCrtManager *crtManager;
 static PafCrtManager crtManagerStorage;
 
 static const char crtAssertion[] =
 	"[PAF C/C++ Runtime Mgr] %s:%u: INTERNAL ASSERION FAILURE\n";
 
+#ifdef PAF_STATIC_BUILD
+static const char crtSourceFile[] =
+	"w:/Build/J00906243/vsh/paf/src/std/stdc++/paf_crt_mgr.cpp";
+#else
 static const char crtSourceFile[] = PAF_BUILD_ROOT "src\\std\\stdc++\\paf_crt_mgr.cpp";
+#endif
 
 PafCrtManager *PafCrtManagerGet(void)
 {
@@ -53,6 +63,43 @@ PafCrtManager *PafCrtManagerDestruct(PafCrtManager *self)
 	return self;
 }
 
+#ifdef PAF_STATIC_BUILD
+PafCrtManager *PafCrtManagerConstructBase(PafCrtManager *self)
+{
+	char name[16];
+
+	if (crtManager) {
+		sceClibPrintf(crtAssertion, crtSourceFile, 36);
+		__breakpoint(0);
+	}
+	memcpy(name, "ScePafCrtMutex0", sizeof(name));
+	for (unsigned int i = 0; i < 2; i++) {
+		if (sceKernelCreateLwMutex(&self->mutex[i], name,
+					 SCE_KERNEL_LW_MUTEX_ATTR_TH_PRIO |
+					 SCE_KERNEL_LW_MUTEX_ATTR_RECURSIVE, 0, NULL)) {
+			sceClibPrintf(crtAssertion, crtSourceFile, 48);
+			__breakpoint(0);
+		}
+		name[14]++;
+	}
+	crtManager = self;
+	return self;
+}
+
+PafCrtManager *PafCrtManagerDestructBase(PafCrtManager *self)
+{
+	crtManager = NULL;
+	for (unsigned int i = 0; i < 2; i++) {
+		if (sceKernelDeleteLwMutex(&self->mutex[i])) {
+			sceClibPrintf(crtAssertion, crtSourceFile, 65);
+			__breakpoint(0);
+		}
+	}
+	crtManager = NULL;
+	return self;
+}
+#endif
+
 int PafCrtManagerLock(PafCrtManager *self, unsigned int index)
 {
 	int result;
@@ -61,7 +108,11 @@ int PafCrtManagerLock(PafCrtManager *self, unsigned int index)
 		sceClibPrintf(crtAssertion, crtSourceFile, 75);
 		__breakpoint(0);
 	}
+#ifdef PAF_STATIC_BUILD
+	result = SceLibKernel_A7819967(&self->mutex[index], 1, NULL);
+#else
 	result = sceKernelLockLwMutex(&self->mutex[index], 1, NULL);
+#endif
 	if (result) {
 		result = sceClibPrintf(crtAssertion, crtSourceFile, 78);
 		__breakpoint(0);
@@ -77,7 +128,11 @@ int PafCrtManagerUnlock(PafCrtManager *self, unsigned int index)
 		sceClibPrintf(crtAssertion, crtSourceFile, 85);
 		__breakpoint(0);
 	}
+#ifdef PAF_STATIC_BUILD
+	result = SceLibKernel_499EA781(&self->mutex[index], 1);
+#else
 	result = sceKernelUnlockLwMutex(&self->mutex[index], 1);
+#endif
 	if (result) {
 		result = sceClibPrintf(crtAssertion, crtSourceFile, 88);
 		__breakpoint(0);

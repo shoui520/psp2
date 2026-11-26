@@ -4,7 +4,7 @@
  * SceSblSsUpdateMgr. cui_setupper, psp2swu and safemode link it.
  *
  * The functions are Sony's sceUpdater* API (their names from the 0.990 and 0.995 builds'
- * error messages; sceUpdaterGetProgressRate, GetEstimateProcessTime, GetSegmentAnalysisSize,
+ * error messages; sceUpdaterIsDiffUpdate, GetEstimateProcessTime, GetSegmentAnalysisSize,
  * GetUpdateModeState, UpdateModeSetLastError, PowerLock, PowerUnlock and SetProgressCallback
  * are ours, as are the error codes' names).
  */
@@ -27,6 +27,7 @@ typedef struct SceUpdaterMemoryInfo {
 /* error codes (the names ours) */
 #define SCE_UPDATER_ERROR_NO_MEMORY		0x80180001
 #define SCE_UPDATER_ERROR_INVALID_STATE		0x80180002
+#define SCE_UPDATER_ERROR_NOT_FOUND		0x80180004
 #define SCE_UPDATER_ERROR_INVALID_ARGUMENT	0x80180006
 #define SCE_UPDATER_ERROR_SEGMENT_NOT_FOUND	0x80180007
 #define SCE_UPDATER_ERROR_ABORTED		0x80180008
@@ -37,17 +38,50 @@ typedef struct SceUpdaterMemoryInfo {
 #define SCE_UPDATER_ERROR_LOG_OPEN		0x80180011
 #define SCE_UPDATER_ERROR_PUP_OPEN		0x80180012
 #define SCE_UPDATER_ERROR_RESULT_OPEN		0x80180013
+#define SCE_UPDATER_ERROR_SPKG_OPEN		0x80180018
+#define SCE_UPDATER_ERROR_BLOCK_OPEN		0x8018001b
+#define SCE_UPDATER_ERROR_MEMFS_OPEN		0x8018001c
 #define SCE_UPDATER_ERROR_LOG_CLOSE		0x80180021
 #define SCE_UPDATER_ERROR_PUP_CLOSE		0x80180022
 #define SCE_UPDATER_ERROR_RESULT_CLOSE		0x80180023
+#define SCE_UPDATER_ERROR_SPKG_CLOSE		0x80180028
+#define SCE_UPDATER_ERROR_BLOCK_CLOSE		0x8018002b
+#define SCE_UPDATER_ERROR_MEMFS_CLOSE		0x8018002c
 #define SCE_UPDATER_ERROR_PUP_READ		0x80180032
 #define SCE_UPDATER_ERROR_RESULT_READ		0x80180033
+#define SCE_UPDATER_ERROR_SPKG_READ		0x80180038
+#define SCE_UPDATER_ERROR_SPKG_PREAD		0x80180039
+#define SCE_UPDATER_ERROR_MEMFS_READ		0x8018003c
 #define SCE_UPDATER_ERROR_LOG_WRITE		0x80180041
 #define SCE_UPDATER_ERROR_RESULT_WRITE		0x80180043
+#define SCE_UPDATER_ERROR_BLOCK_WRITE		0x8018004b
 #define SCE_UPDATER_ERROR_PUP_SEEK		0x80180052
+#define SCE_UPDATER_ERROR_SPKG_SEEK		0x80180058
+#define SCE_UPDATER_ERROR_DIFF_MOUNT		0x801800eb
 #define SCE_UPDATER_ERROR_PUP_NOT_FOUND		0x8018010a
 #define SCE_UPDATER_ERROR_PUP_AUTH		0x8018010d
 #define SCE_UPDATER_ERROR_PUP_NO_FILE		0x8018010f
+#define SCE_UPDATER_ERROR_ALLOC_BUF_INVALID_ARG	0x801804d1
+#define SCE_UPDATER_ERROR_ALLOC_BUF_NO_MEMORY	0x801804d2
+#define SCE_UPDATER_ERROR_ALLOC_BUF_NOT_PERMIT	0x801804d3
+#define SCE_UPDATER_ERROR_FREE_BUF_INVALID_ARG	0x801804d5
+#define SCE_UPDATER_ERROR_FREE_BUF_NOT_PERMIT	0x801804d6
+#define SCE_UPDATER_ERROR_MEMBLOCK_ALLOC	0x80180760
+#define SCE_UPDATER_ERROR_MEMBLOCK_FREE		0x80180761
+#define SCE_UPDATER_ERROR_MEMBLOCK_BASE		0x80180762
+#define SCE_UPDATER_ERROR_TAR_NOT_FOUND		0x80180767
+#define SCE_UPDATER_ERROR_DIFF_MANIFEST_HEADER	0x80180768
+#define SCE_UPDATER_ERROR_DIFF_TAR_EXHAUSTED	0x80180769
+#define SCE_UPDATER_ERROR_FAT_FORMAT		0x80180770
+#define SCE_UPDATER_ERROR_FAT_NO_SPACE		0x80180771
+#define SCE_UPDATER_ERROR_FAT_RANGE		0x80180772
+#define SCE_UPDATER_ERROR_FAT_DIR_ATTR		0x80180773
+#define SCE_UPDATER_ERROR_FAT_FILE_ATTR		0x80180774
+#define SCE_UPDATER_ERROR_FAT_ENTRY_TYPE	0x80180775
+#define SCE_UPDATER_ERROR_FAT_NAME_LONG		0x80180776
+#define SCE_UPDATER_ERROR_FAT_NAME_CHAR		0x80180777
+#define SCE_UPDATER_ERROR_FAT_NAME_EMPTY	0x80180778
+#define SCE_UPDATER_ERROR_UNSUPPORTED_SYSTEM	0x80182804
 
 /* the PUP segment that holds the updater (psp2swu.self) */
 #define SCE_UPDATER_SEGMENT_ID_UPDATER	0x200
@@ -122,18 +156,42 @@ typedef struct SceUpdaterDeviceInfo {
 	SceUInt32 m_target;		/* SCE_UPDATER_DEVICE_TYPE_* */
 } SceUpdaterDeviceInfo;
 
+/* version and build number of a system package group (sceUpdaterGetSpackageHeader) */
+typedef struct SceUpdaterSpkgHeader {
+	SceUInt32 version;
+	SceUInt32 buildNo;
+} SceUpdaterSpkgHeader;
+
+/* estimated inspection and update times in milliseconds (sceUpdaterGetEstimateProcessTime) */
+typedef struct SceUpdaterEstimateTime {
+	SceUInt64 inspectMs;
+	SceUInt64 updateMs;
+} SceUpdaterEstimateTime;
+
 /* the update's progress (0x40 bytes), which sceUpdaterSetProgressCallback's callback gets */
-typedef struct SceUpdaterProgress SceUpdaterProgress;
+typedef struct SceUpdaterProgress {
+	SceInt32 rate;
+	SceUInt32 padding;
+	SceUInt64 reservedHeader;
+	SceUInt64 inspectElapsedMs;
+	SceUInt64 updateElapsedMs;
+	SceUInt64 inspectRemainingMs;
+	SceUInt64 updateRemainingMs;
+	float inspectRate;
+	float updateRate;
+	float totalRate;
+	SceUInt32 reserved;
+} SceUpdaterProgress;
 typedef void (*SceUpdaterProgressCallback)(int type, int reserved, SceUpdaterProgress progress);
 
 int sceUpdaterInitialize(const SceUpdaterMemoryInfo *memoryInfo);
 int sceUpdaterFinalize(int reboot);
-int sceUpdaterGetProgressRate(void);
+int sceUpdaterIsDiffUpdate(void);
 int sceUpdaterUpdateAllSpackage(const char *fileName);
 int sceUpdaterInspectAllSpackage(const char *fileName);
-int sceUpdaterGetSpackageHeader(void *header, int type);
+int sceUpdaterGetSpackageHeader(int type, SceUpdaterSpkgHeader *header);
 int sceUpdaterGetProgress(SceUpdaterProgress *progress);
-int sceUpdaterGetEstimateProcessTime(const char *fileName, int *time);
+int sceUpdaterGetEstimateProcessTime(const char *fileName, SceUpdaterEstimateTime *estimateTime);
 int sceUpdaterVerifyPup(const char *fileName);
 int sceUpdaterVerifyPupSegment(const char *fileName, SceUInt64 segmentId);
 int sceUpdaterParse(const char *fileName, SceUInt64 segmentId, void *pData, SceUInt64 size,

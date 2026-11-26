@@ -34,8 +34,8 @@
 
 /* the PAF heap this program runs on */
 SceUInt32 sce_paf_global_heap_size = 0x1c00000;
-SceInt32 sce_paf_global_heap_reserved0 = 60000;
-SceInt32 sce_paf_global_heap_reserved1 = 0x40000;
+SceInt32 sce_paf_global_heap_entry_max = 60000;
+SceInt32 sce_paf_global_heap_warning_size = 0x40000;
 
 /* the process and its main thread (crt0's sceProcessParam): no preloaded module but libdbg */
 extern "C" const unsigned int sce_process_preload_disabled = 0x01fb0000;
@@ -169,7 +169,8 @@ int main(int argc, char *argv[])
 	ret = sceUpdaterInitialize(&memoryInfo);
 	if (ret != 0) {
 		CuiInformUpdateFinished(ret, "initialize failed.", 18);
-		goto out;
+		sceKernelPowerUnlock(SCE_KERNEL_POWER_TICK_DEFAULT);
+		return ret;
 	}
 	CuiInformUpdateOngoing(0, 0, 50, "initialize done.", -1);
 
@@ -177,7 +178,8 @@ int main(int argc, char *argv[])
 	ret = sceUpdaterGetUpdateMode(&mode);
 	if (ret != 0) {
 		CuiInformUpdateFinished(ret, "get update mode failed.", 23);
-		goto out;
+		sceKernelPowerUnlock(SCE_KERNEL_POWER_TICK_DEFAULT);
+		return ret;
 	}
 	if (mode != SCE_UPDATER_UPDATE_MODE_NONE) {
 		CuiInformUpdateFinished(CUI_SETUPPER_ERROR_ALREADY_UPDATE_MODE,
@@ -197,13 +199,6 @@ int main(int argc, char *argv[])
 		return ret;
 	}
 	CuiInformUpdateOngoing(0, 0, 100, "check update mode done.", -1);
-	goto run;
-out:
-	if (ret != 0) {
-		sceKernelPowerUnlock(SCE_KERNEL_POWER_TICK_DEFAULT);
-		return ret;
-	}
-run:
 	{
 		CuiSetUpper setupper;
 
@@ -344,7 +339,7 @@ int CuiSetUpper::CopyPup(void)
 	SceUpdaterCopyFileTarget dst;
 	int ret;
 
-	if (sce_paf_strncmp(m_pupPath, m_pupDst, m_pupDstLen) == 0)
+	if (sce_paf_memcmp(m_pupPath, m_pupDst, m_pupDstLen) == 0)
 		return 0;
 	sce_paf_memset(&src, 0, sizeof(src));
 	sce_paf_memset(&dst, 0, sizeof(dst));

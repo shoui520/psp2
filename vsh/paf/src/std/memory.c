@@ -2,13 +2,23 @@
 #include "string.h"
 #include <libkernel/libkernel.h>
 
+#ifdef PAF_STATIC_BUILD
+extern void *sce_paf_memcpy_neon(void *dst, const void *src, size_t count);
+extern void *sce_paf_memmove_neon(void *dst, const void *src, size_t count);
+extern void *sce_paf_memset_neon(void *dst, int ch, size_t count);
+#endif
+
 /* Keep the checked-copy caller boundary separate from its string users. */
 /* The native wmemcpy wrapper also calls this function out of line. */
 __attribute__((noinline))
 void *sce_paf_memcpy(void *dst, const void *src, size_t count)
 {
 	if (dst != src)
+#ifdef PAF_STATIC_BUILD
+		sce_paf_memcpy_neon(dst, src, count);
+#else
 		sceClibMemcpy_safe(dst, src, count);
+#endif
 	return dst;
 }
 
@@ -17,26 +27,42 @@ __attribute__((noinline))
 void *sce_paf_memmove(void *dst, const void *src, size_t count)
 {
 	if (dst != src)
+#ifdef PAF_STATIC_BUILD
+		sce_paf_memmove_neon(dst, src, count);
+#else
 		sceClibMemmove(dst, src, count);
+#endif
 	return dst;
 }
 
 void *sce_paf_memset(void *dst, int ch, size_t count)
 {
+#ifdef PAF_STATIC_BUILD
+	sce_paf_memset_neon(dst, ch, count);
+#else
 	sceClibMemset(dst, ch, count);
+#endif
 	return dst;
 }
 
 void *sce_paf_bcopy(const void *src, void *dst, size_t count)
 {
 	if (dst != src)
+#ifdef PAF_STATIC_BUILD
+		return sce_paf_memmove_neon(dst, src, count);
+#else
 		return sceClibMemmove(dst, src, count);
+#endif
 	return dst;
 }
 
 void *sce_paf_bzero(void *dst, size_t count)
 {
+#ifdef PAF_STATIC_BUILD
+	return sce_paf_memset_neon(dst, 0, count);
+#else
 	return sceClibMemset(dst, 0, count);
+#endif
 }
 
 void *sce_paf_wmemcpy(void *destination, const void *source, size_t count)

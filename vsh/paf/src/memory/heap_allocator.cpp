@@ -57,8 +57,10 @@ int HeapAllocator::CheckMemoryBounds(void *ptr)
 
 void *HeapAllocator::sce_paf_malloc(size_t size)
 {
+#ifndef PAF_STATIC_BUILD
 	if (size > 0x1fffffff)
 		ScePafStdc_D608246A();
+#endif
 	m_mutex.Lock();
 
 	void *ptr = mspace_malloc(m_heap_id, size, (unsigned int)this);
@@ -79,7 +81,11 @@ void HeapAllocator::sce_paf_free(void *ptr)
 	m_mutex.Lock();
 	if (mspace_check_memorybounds(m_heap_id, ptr, (unsigned int)this) != 0)
 		sce_paf_printf_dummy();
+#ifdef PAF_STATIC_BUILD
+	mspace_free(m_heap_id, ptr);
+#else
 	mspace_free(m_heap_id, ptr, (unsigned int)this);
+#endif
 	m_mutex.Unlock();
 }
 
@@ -90,8 +96,10 @@ void HeapAllocator::sce_paf_free_d(void *ptr, const char *filename, int lineno, 
 
 void *HeapAllocator::sce_paf_realloc(void *ptr, size_t size)
 {
+#ifndef PAF_STATIC_BUILD
 	if (size > 0x1fffffff)
 		ScePafStdc_D608246A();
+#endif
 	m_mutex.Lock();
 	if (mspace_check_memorybounds(m_heap_id, ptr, (unsigned int)this) != 0)
 		sce_paf_printf_dummy();
@@ -114,8 +122,10 @@ void *HeapAllocator::sce_paf_calloc(size_t nitems, size_t size)
 {
 	size_t total = nitems * size;
 
+#ifndef PAF_STATIC_BUILD
 	if (total > 0x1fffffff)
 		ScePafStdc_D608246A();
+#endif
 	m_mutex.Lock();
 
 	void *ptr = mspace_malloc(m_heap_id, total, (unsigned int)this);
@@ -136,8 +146,10 @@ void *HeapAllocator::sce_paf_calloc_d(size_t nitems, size_t size, const char *fi
 
 void *HeapAllocator::sce_paf_memalign(size_t alignment, size_t size)
 {
+#ifndef PAF_STATIC_BUILD
 	if (size > 0x1fffffff)
 		ScePafStdc_D608246A();
+#endif
 	m_mutex.Lock();
 
 	void *ptr = mspace_memalign(m_heap_id, alignment, size, (unsigned int)this);
@@ -213,8 +225,14 @@ int HeapAllocator::sce_paf_check_memoryleaks(void *start, void *end)
 
 HeapAllocator::HeapAllocator(void *membase, size_t size, const char *name, const Option *option)
 	: m_heap_addr(membase), m_heap_size(size), m_memory_attached(false),
-	  m_heap_disable_dbgprint(false), m_heap_disable_assert_on_alloc_failure(true),
+	  m_heap_disable_dbgprint(false),
+#ifdef PAF_STATIC_BUILD
+	  m_heap_disable_assert_on_alloc_failure(false),
+	  m_mutex("ScePafHeapAllocatorMutex", 0)
+#else
+	  m_heap_disable_assert_on_alloc_failure(true),
 	  m_mutex(name, 0)
+#endif
 {
 	SceKernelMemBlockType type;
 
@@ -235,8 +253,13 @@ HeapAllocator::HeapAllocator(void *membase, size_t size, const char *name, const
 	if (option != NULL) {
 		if (option->disable_dbgprint)
 			m_heap_disable_dbgprint = true;
+#ifdef PAF_STATIC_BUILD
+		if (option->disable_assert_on_alloc_failure)
+			m_heap_disable_assert_on_alloc_failure = true;
+#else
 		if (!option->disable_assert_on_alloc_failure)
 			m_heap_disable_assert_on_alloc_failure = false;
+#endif
 	}
 	sce_paf_strncpy(m_heap_name, name, sizeof(m_heap_name) - 1);
 	m_heap_name[sizeof(m_heap_name) - 1] = '\0';
@@ -248,22 +271,37 @@ HeapAllocator::HeapAllocator(void *membase, size_t size, const char *name, const
 		if (m_heap_size & 4095)
 			padding = 4096 - (m_heap_size & 4095);
 		m_memblk_id = sceKernelAllocMemBlock(m_heap_name, type, m_heap_size + padding, NULL);
+#ifdef PAF_STATIC_BUILD
+		{
+			void *base = NULL;
+
+			sceKernelGetMemBlockBase(m_memblk_id, &base);
+			m_heap_addr = base;
+		}
+#else
 		if (m_memblk_id >= 0) {
 			void *base = NULL;
 
 			sceKernelGetMemBlockBase(m_memblk_id, &base);
 			m_heap_addr = base;
 		}
+#endif
 		m_memory_attached = false;
 	}
+#ifndef PAF_STATIC_BUILD
 	if (m_heap_addr == NULL) {
 		sce_paf_printf_dummy();
 		ScePafStdc_D608246A();
 	}
+#endif
 	if (m_heap_size & 15)
 		m_heap_size -= m_heap_size & 15;
+#ifdef PAF_STATIC_BUILD
+	m_heap_id = create_mspace_with_base(m_heap_addr, m_heap_size, 0);
+#else
 	m_heap_id = create_mspace_with_base(m_heap_addr, m_heap_size, 0,
 					    option != NULL ? option->alignment : 0);
+#endif
 }
 
 HeapAllocator::~HeapAllocator()

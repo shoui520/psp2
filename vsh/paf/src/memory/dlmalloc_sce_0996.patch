@@ -1,0 +1,633 @@
+--- malloc.c
++++ malloc.c
+@@ -480,6 +480,39 @@
+   improvement at the expense of carrying around more memory.
+ */
+ 
++/* SCE: 0.996 PAF static dlmalloc configuration: mspaces over caller memory, tagged footers */
++#include <stddef.h>
++#include <stdint.h>
++#include "src/compiler.h"
++#include <kernel/processmgr.h>
++#include <std/stdlib.h>
++#include "src/std/string.h"
++#define ONLY_MSPACES 1
++#define USE_LOCKS 0
++#define HAVE_MMAP 0
++#define HAVE_MORECORE 0
++#define MALLOC_ALIGNMENT ((size_t)16U)
++#define FOOTERS 1
++#define MAX_RELEASE_CHECK_RATE MAX_SIZE_T
++#define ABORT
++#define MALLOC_FAILURE_ACTION
++#define USAGE_ERROR_ACTION(m, p)
++#define CORRUPTION_ERROR_ACTION(m)
++#define LACKS_UNISTD_H
++#define LACKS_SYS_PARAM_H
++#define LACKS_SYS_MMAN_H
++#define LACKS_STRINGS_H
++#define LACKS_SYS_TYPES_H
++#define LACKS_ERRNO_H
++#define LACKS_STDLIB_H
++#define LACKS_STRING_H
++#define malloc_getpagesize ((size_t)4096U)
++#define memset sce_paf_memset
++#define memcpy sce_paf_memcpy
++#define time(t) sceKernelGetProcessTimeLow()
++#define stderr 0
++#define fprintf(stream, ...) sce_paf_printf_dummy()
++
+ /* Version identifier to allow people to support multiple versions */
+ #ifndef DLMALLOC_VERSION
+ #define DLMALLOC_VERSION 20804
+@@ -1167,7 +1200,7 @@
+   mspace_malloc behaves as malloc, but operates within
+   the given space.
+ */
+-void* mspace_malloc(mspace msp, size_t bytes);
++void* mspace_malloc(mspace msp, size_t bytes, unsigned int tag); /* SCE: tag */
+ 
+ /*
+   mspace_free behaves as free, but operates within
+@@ -1188,19 +1221,19 @@
+   realloced chunks from any space are handled by their originating
+   spaces.
+ */
+-void* mspace_realloc(mspace msp, void* mem, size_t newsize);
++void* mspace_realloc(mspace msp, void* mem, size_t newsize, unsigned int tag); /* SCE: tag */
+ 
+ /*
+   mspace_calloc behaves as calloc, but operates within
+   the given space.
+ */
+-void* mspace_calloc(mspace msp, size_t n_elements, size_t elem_size);
++void* mspace_calloc(mspace msp, size_t n_elements, size_t elem_size, unsigned int tag); /* SCE: tag */
+ 
+ /*
+   mspace_memalign behaves as memalign, but operates within
+   the given space.
+ */
+-void* mspace_memalign(mspace msp, size_t alignment, size_t bytes);
++void* mspace_memalign(mspace msp, size_t alignment, size_t bytes, unsigned int tag); /* SCE: tag */
+ 
+ /*
+   mspace_independent_calloc behaves as independent_calloc, but
+@@ -1240,7 +1273,7 @@
+ /*
+   malloc_usable_size(void* p) behaves the same as malloc_usable_size;
+ */
+-  size_t mspace_usable_size(void* mem);
++  size_t mspace_usable_size(const void* mem); /* SCE: const */
+ 
+ /*
+   mspace_malloc_stats behaves as malloc_stats, but reports
+@@ -1259,6 +1292,14 @@
+ */
+ int mspace_mallopt(int, int);
+ 
++/* SCE: 0.996 PAF mspace helpers */
++unsigned int mspace_report_free_blocks(mspace msp,
++                                       int (*handler)(void*, size_t, int, void*),
++                                       void* arg);
++int mspace_check_memorybounds(mspace msp, void* mem, unsigned int tag);
++size_t mspace_ptr_get_size(mspace msp, const void* mem);
++unsigned int mspace_ptr_get_tag(const void* mem);
++
+ #endif /* MSPACES */
+ 
+ #ifdef __cplusplus
+@@ -2918,27 +2959,51 @@
+ 
+ #else /* FOOTERS */
+ 
+-/* Set foot of inuse chunk to be xor of mstate and seed */
+-#define mark_inuse_foot(M,p,s)\
+-  (((mchunkptr)((char*)(p) + (s)))->prev_foot = ((size_t)(M) ^ mparams.magic))
+-
+-#define get_mstate_for(p)\
+-  ((mstate)(((mchunkptr)((char*)(p) +\
+-    (chunksize(p))))->prev_foot ^ mparams.magic))
++/*
++  SCE: the foot of an inuse chunk holds its owner's tag, xored with
++  FOOT_MAGIC, and the bytes between the request (B bytes) and the end of
++  the chunk are filled with PADDING_BYTE, the last of them holding the
++  complement of the filled length; FLAG4_BIT marks a padded chunk.
++*/
++#define FOOT_MAGIC              ((size_t)0xDEADBEEFU)
++#define PADDING_BYTE            0xAF
++#define padding_residue(B)      (((B) + CHUNK_OVERHEAD) & CHUNK_ALIGN_MASK)
++#define padding_size(p)\
++  ((size_t)((unsigned char)((char*)(p) + chunksize(p))[-1] ^ 0xFF) + SIZE_T_ONE)
++#define foot_tag(p)\
++  ((unsigned int)(((mchunkptr)((char*)(p) + chunksize(p)))->prev_foot ^ FOOT_MAGIC))
++
++#define mark_padding(p,s,B) {\
++  size_t R = padding_residue(B);\
++  if (R != 0) {\
++    char* E = (char*)(p) + (s);\
++    memset(E - (MALLOC_ALIGNMENT - R), PADDING_BYTE, MALLOC_ALIGNMENT - R - 1);\
++    E[-1] = (char)((MALLOC_ALIGNMENT - R - 1) ^ 0xFF);\
++    (p)->head |= FLAG4_BIT;\
++  }\
++}
+ 
+-#define set_inuse(M,p,s)\
+-  ((p)->head = (((p)->head & PINUSE_BIT)|s|CINUSE_BIT),\
+-  (((mchunkptr)(((char*)(p)) + (s)))->head |= PINUSE_BIT), \
+-  mark_inuse_foot(M,p,s))
++#define mark_inuse_foot(M,p,s,T,B) {\
++  ((mchunkptr)((char*)(p) + (s)))->prev_foot = ((T) ^ FOOT_MAGIC);\
++  mark_padding(p,s,B);\
++}
+ 
+-#define set_inuse_and_pinuse(M,p,s)\
+-  ((p)->head = (s|PINUSE_BIT|CINUSE_BIT),\
+-  (((mchunkptr)(((char*)(p)) + (s)))->head |= PINUSE_BIT),\
+- mark_inuse_foot(M,p,s))
++#define set_inuse(M,p,s,T,B) {\
++  (p)->head = (((p)->head & PINUSE_BIT)|s|CINUSE_BIT);\
++  ((mchunkptr)(((char*)(p)) + (s)))->head |= PINUSE_BIT;\
++  mark_inuse_foot(M,p,s,T,B);\
++}
+ 
+-#define set_size_and_pinuse_of_inuse_chunk(M, p, s)\
+-  ((p)->head = (s|PINUSE_BIT|CINUSE_BIT),\
+-  mark_inuse_foot(M, p, s))
++#define set_inuse_and_pinuse(M,p,s,T,B) {\
++  (p)->head = (s|PINUSE_BIT|CINUSE_BIT);\
++  ((mchunkptr)(((char*)(p)) + (s)))->head |= PINUSE_BIT;\
++  mark_inuse_foot(M,p,s,T,B);\
++}
++
++#define set_size_and_pinuse_of_inuse_chunk(M, p, s, T, B) {\
++  (p)->head = (s|PINUSE_BIT|CINUSE_BIT);\
++  mark_inuse_foot(M, p, s, T, B);\
++}
+ 
+ #endif /* !FOOTERS */
+ 
+@@ -3633,8 +3698,8 @@
+ /* Relays to internal calls to malloc/free from realloc, memalign etc */
+ 
+ #if ONLY_MSPACES
+-#define internal_malloc(m, b) mspace_malloc(m, b)
+-#define internal_free(m, mem) mspace_free(m,mem);
++#define internal_malloc(m, b) mspace_malloc(m, b, tag) /* SCE: tag */
++#define internal_free(m, mem) mspace_free(m, mem);
+ #else /* ONLY_MSPACES */
+ #if MSPACES
+ #define internal_malloc(m, b)\
+@@ -3668,7 +3733,7 @@
+       mchunkptr p = (mchunkptr)(mm + offset);
+       p->prev_foot = offset;
+       p->head = psize;
+-      mark_inuse_foot(m, p, psize);
++      mark_inuse_foot(m, p, psize, 0, psize - CHUNK_OVERHEAD);
+       chunk_plus_offset(p, psize)->head = FENCEPOST_HEAD;
+       chunk_plus_offset(p, psize+SIZE_T_SIZE)->head = 0;
+ 
+@@ -3703,7 +3768,7 @@
+       mchunkptr newp = (mchunkptr)(cp + offset);
+       size_t psize = newmmsize - offset - MMAP_FOOT_PAD;
+       newp->head = psize;
+-      mark_inuse_foot(m, newp, psize);
++      mark_inuse_foot(m, newp, psize, 0, psize - CHUNK_OVERHEAD);
+       chunk_plus_offset(newp, psize)->head = FENCEPOST_HEAD;
+       chunk_plus_offset(newp, psize+SIZE_T_SIZE)->head = 0;
+ 
+@@ -3772,7 +3837,7 @@
+   size_t psize = (char*)oldfirst - (char*)p;
+   mchunkptr q = chunk_plus_offset(p, nb);
+   size_t qsize = psize - nb;
+-  set_size_and_pinuse_of_inuse_chunk(m, p, nb);
++  set_size_and_pinuse_of_inuse_chunk(m, p, nb, 0, nb - CHUNK_OVERHEAD);
+ 
+   assert((char*)oldfirst > (char*)q);
+   assert(pinuse(oldfirst));
+@@ -3828,7 +3893,7 @@
+ 
+   /* Set up segment record */
+   assert(is_aligned(ss));
+-  set_size_and_pinuse_of_inuse_chunk(m, sp, ssize);
++  set_size_and_pinuse_of_inuse_chunk(m, sp, ssize, 0, ssize - CHUNK_OVERHEAD);
+   *ss = m->seg; /* Push current record */
+   m->seg.base = tbase;
+   m->seg.size = tsize;
+@@ -4051,7 +4116,7 @@
+       mchunkptr p = m->top;
+       mchunkptr r = m->top = chunk_plus_offset(p, nb);
+       r->head = rsize | PINUSE_BIT;
+-      set_size_and_pinuse_of_inuse_chunk(m, p, nb);
++      set_size_and_pinuse_of_inuse_chunk(m, p, nb, 0, nb - CHUNK_OVERHEAD);
+       check_top_chunk(m, m->top);
+       check_malloced_chunk(m, chunk2mem(p), nb);
+       return chunk2mem(p);
+@@ -4180,7 +4245,7 @@
+ /* ---------------------------- malloc support --------------------------- */
+ 
+ /* allocate a large request from the best fitting chunk in a treebin */
+-static void* tmalloc_large(mstate m, size_t nb) {
++static void* tmalloc_large(mstate m, size_t nb, size_t bytes, unsigned int tag) {
+   tchunkptr v = 0;
+   size_t rsize = -nb; /* Unsigned negation */
+   tchunkptr t;
+@@ -4236,9 +4301,9 @@
+       if (RTCHECK(ok_next(v, r))) {
+         unlink_large_chunk(m, v);
+         if (rsize < MIN_CHUNK_SIZE)
+-          set_inuse_and_pinuse(m, v, (rsize + nb));
++          set_inuse_and_pinuse(m, v, (rsize + nb), tag, bytes)
+         else {
+-          set_size_and_pinuse_of_inuse_chunk(m, v, nb);
++          set_size_and_pinuse_of_inuse_chunk(m, v, nb, tag, bytes);
+           set_size_and_pinuse_of_free_chunk(r, rsize);
+           insert_chunk(m, r, rsize);
+         }
+@@ -4251,7 +4316,7 @@
+ }
+ 
+ /* allocate a small request from the best fitting chunk in a treebin */
+-static void* tmalloc_small(mstate m, size_t nb) {
++static void* tmalloc_small(mstate m, size_t nb, size_t bytes, unsigned int tag) {
+   tchunkptr t, v;
+   size_t rsize;
+   bindex_t i;
+@@ -4274,9 +4339,9 @@
+     if (RTCHECK(ok_next(v, r))) {
+       unlink_large_chunk(m, v);
+       if (rsize < MIN_CHUNK_SIZE)
+-        set_inuse_and_pinuse(m, v, (rsize + nb));
++        set_inuse_and_pinuse(m, v, (rsize + nb), tag, bytes)
+       else {
+-        set_size_and_pinuse_of_inuse_chunk(m, v, nb);
++        set_size_and_pinuse_of_inuse_chunk(m, v, nb, tag, bytes);
+         set_size_and_pinuse_of_free_chunk(r, rsize);
+         replace_dv(m, r, rsize);
+       }
+@@ -4290,7 +4355,7 @@
+ 
+ /* --------------------------- realloc support --------------------------- */
+ 
+-static void* internal_realloc(mstate m, void* oldmem, size_t bytes) {
++static void* internal_realloc(mstate m, void* oldmem, size_t bytes, unsigned int tag) {
+   if (bytes >= MAX_REQUEST) {
+     MALLOC_FAILURE_ACTION;
+     return 0;
+@@ -4314,8 +4379,8 @@
+         newp = oldp;
+         if (rsize >= MIN_CHUNK_SIZE) {
+           mchunkptr remainder = chunk_plus_offset(newp, nb);
+-          set_inuse(m, newp, nb);
+-          set_inuse_and_pinuse(m, remainder, rsize);
++          set_inuse(m, newp, nb, tag, bytes);
++          set_inuse_and_pinuse(m, remainder, rsize, tag, bytes);
+           extra = chunk2mem(remainder);
+         }
+       }
+@@ -4324,7 +4389,7 @@
+         size_t newsize = oldsize + m->topsize;
+         size_t newtopsize = newsize - nb;
+         mchunkptr newtop = chunk_plus_offset(oldp, nb);
+-        set_inuse(m, oldp, nb);
++        set_inuse(m, oldp, nb, tag, bytes);
+         newtop->head = newtopsize |PINUSE_BIT;
+         m->top = newtop;
+         m->topsize = newtopsize;
+@@ -4365,7 +4430,7 @@
+ 
+ /* --------------------------- memalign support -------------------------- */
+ 
+-static void* internal_memalign(mstate m, size_t alignment, size_t bytes) {
++static void* internal_memalign(mstate m, size_t alignment, size_t bytes, unsigned int tag) {
+   if (alignment <= MALLOC_ALIGNMENT)    /* Can just use malloc */
+     return internal_malloc(m, bytes);
+   if (alignment <  MIN_CHUNK_SIZE) /* must be at least a minimum chunk size */
+@@ -4415,8 +4480,8 @@
+           newp->head = newsize;
+         }
+         else { /* Otherwise, give back leader, use the rest */
+-          set_inuse(m, newp, newsize);
+-          set_inuse(m, p, leadsize);
++          set_inuse(m, newp, newsize, tag, bytes);
++          set_inuse(m, p, leadsize, tag, leadsize - CHUNK_OVERHEAD);
+           leader = chunk2mem(p);
+         }
+         p = newp;
+@@ -4428,8 +4493,8 @@
+         if (size > nb + MIN_CHUNK_SIZE) {
+           size_t remainder_size = size - nb;
+           mchunkptr remainder = chunk_plus_offset(p, nb);
+-          set_inuse(m, p, nb);
+-          set_inuse(m, remainder, remainder_size);
++          set_inuse(m, p, nb, tag, bytes);
++          set_inuse(m, remainder, remainder_size, tag, bytes);
+           trailer = chunk2mem(remainder);
+         }
+       }
+@@ -4489,7 +4554,7 @@
+   else {
+     /* if empty req, must still return chunk representing empty array */
+     if (n_elements == 0)
+-      return (void**)internal_malloc(m, 0);
++      return (void**)mspace_malloc(m, 0, 0);
+     marray = 0;
+     array_size = request2size(n_elements * (sizeof(void*)));
+   }
+@@ -4515,7 +4580,7 @@
+   */
+   was_enabled = use_mmap(m);
+   disable_mmap(m);
+-  mem = internal_malloc(m, size - CHUNK_OVERHEAD);
++  mem = mspace_malloc(m, size - CHUNK_OVERHEAD, 0);
+   if (was_enabled)
+     enable_mmap(m);
+   if (mem == 0)
+@@ -4537,7 +4602,7 @@
+     array_chunk = chunk_plus_offset(p, contents_size);
+     array_chunk_size = remainder_size - contents_size;
+     marray = (void**) (chunk2mem(array_chunk));
+-    set_size_and_pinuse_of_inuse_chunk(m, array_chunk, array_chunk_size);
++    set_size_and_pinuse_of_inuse_chunk(m, array_chunk, array_chunk_size, 0, array_chunk_size);
+     remainder_size = contents_size;
+   }
+ 
+@@ -4550,11 +4615,11 @@
+       else
+         size = request2size(sizes[i]);
+       remainder_size -= size;
+-      set_size_and_pinuse_of_inuse_chunk(m, p, size);
++      set_size_and_pinuse_of_inuse_chunk(m, p, size, 0, sizes[i]);
+       p = chunk_plus_offset(p, size);
+     }
+     else { /* the final element absorbs any overallocation slop */
+-      set_size_and_pinuse_of_inuse_chunk(m, p, remainder_size);
++      set_size_and_pinuse_of_inuse_chunk(m, p, remainder_size, 0, remainder_size);
+       break;
+     }
+   }
+@@ -5041,7 +5106,7 @@
+ */
+ 
+ 
+-void* mspace_malloc(mspace msp, size_t bytes) {
++void* mspace_malloc(mspace msp, size_t bytes, unsigned int tag) {
+   mstate ms = (mstate)msp;
+   if (!ok_magic(ms)) {
+     USAGE_ERROR_ACTION(ms,ms);
+@@ -5064,7 +5129,7 @@
+         p = b->fd;
+         assert(chunksize(p) == small_index2size(idx));
+         unlink_first_small_chunk(ms, b, p, idx);
+-        set_inuse_and_pinuse(ms, p, small_index2size(idx));
++        set_inuse_and_pinuse(ms, p, small_index2size(idx), tag, bytes);
+         mem = chunk2mem(p);
+         check_malloced_chunk(ms, mem, nb);
+         goto postaction;
+@@ -5085,9 +5150,9 @@
+           rsize = small_index2size(i) - nb;
+           /* Fit here cannot be remainderless if 4byte sizes */
+           if (SIZE_T_SIZE != 4 && rsize < MIN_CHUNK_SIZE)
+-            set_inuse_and_pinuse(ms, p, small_index2size(i));
++            set_inuse_and_pinuse(ms, p, small_index2size(i), tag, bytes)
+           else {
+-            set_size_and_pinuse_of_inuse_chunk(ms, p, nb);
++            set_size_and_pinuse_of_inuse_chunk(ms, p, nb, tag, bytes);
+             r = chunk_plus_offset(p, nb);
+             set_size_and_pinuse_of_free_chunk(r, rsize);
+             replace_dv(ms, r, rsize);
+@@ -5097,7 +5162,7 @@
+           goto postaction;
+         }
+ 
+-        else if (ms->treemap != 0 && (mem = tmalloc_small(ms, nb)) != 0) {
++        else if (ms->treemap != 0 && (mem = tmalloc_small(ms, nb, bytes, tag)) != 0) {
+           check_malloced_chunk(ms, mem, nb);
+           goto postaction;
+         }
+@@ -5107,7 +5172,7 @@
+       nb = MAX_SIZE_T; /* Too big to allocate. Force failure (in sys alloc) */
+     else {
+       nb = pad_request(bytes);
+-      if (ms->treemap != 0 && (mem = tmalloc_large(ms, nb)) != 0) {
++      if (ms->treemap != 0 && (mem = tmalloc_large(ms, nb, bytes, tag)) != 0) {
+         check_malloced_chunk(ms, mem, nb);
+         goto postaction;
+       }
+@@ -5120,13 +5185,13 @@
+         mchunkptr r = ms->dv = chunk_plus_offset(p, nb);
+         ms->dvsize = rsize;
+         set_size_and_pinuse_of_free_chunk(r, rsize);
+-        set_size_and_pinuse_of_inuse_chunk(ms, p, nb);
++        set_size_and_pinuse_of_inuse_chunk(ms, p, nb, tag, bytes);
+       }
+       else { /* exhaust dv */
+         size_t dvs = ms->dvsize;
+         ms->dvsize = 0;
+         ms->dv = 0;
+-        set_inuse_and_pinuse(ms, p, dvs);
++        set_inuse_and_pinuse(ms, p, dvs, tag, bytes);
+       }
+       mem = chunk2mem(p);
+       check_malloced_chunk(ms, mem, nb);
+@@ -5138,7 +5203,7 @@
+       mchunkptr p = ms->top;
+       mchunkptr r = ms->top = chunk_plus_offset(p, nb);
+       r->head = rsize | PINUSE_BIT;
+-      set_size_and_pinuse_of_inuse_chunk(ms, p, nb);
++      set_size_and_pinuse_of_inuse_chunk(ms, p, nb, tag, bytes);
+       mem = chunk2mem(p);
+       check_top_chunk(ms, ms->top);
+       check_malloced_chunk(ms, mem, nb);
+@@ -5158,16 +5223,7 @@
+ void mspace_free(mspace msp, void* mem) {
+   if (mem != 0) {
+     mchunkptr p  = mem2chunk(mem);
+-#if FOOTERS
+-    mstate fm = get_mstate_for(p);
+-    msp = msp; /* placate people compiling -Wunused */
+-#else /* FOOTERS */
+-    mstate fm = (mstate)msp;
+-#endif /* FOOTERS */
+-    if (!ok_magic(fm)) {
+-      USAGE_ERROR_ACTION(fm, p);
+-      return;
+-    }
++    mstate fm = (mstate)msp; /* SCE: the caller's space; the foot holds a tag */
+     if (!PREACTION(fm)) {
+       check_inuse_chunk(fm, p);
+       if (RTCHECK(ok_address(fm, p) && ok_inuse(p))) {
+@@ -5256,7 +5312,7 @@
+   }
+ }
+ 
+-void* mspace_calloc(mspace msp, size_t n_elements, size_t elem_size) {
++void* mspace_calloc(mspace msp, size_t n_elements, size_t elem_size, unsigned int tag) {
+   void* mem;
+   size_t req = 0;
+   mstate ms = (mstate)msp;
+@@ -5276,9 +5332,9 @@
+   return mem;
+ }
+ 
+-void* mspace_realloc(mspace msp, void* oldmem, size_t bytes) {
++void* mspace_realloc(mspace msp, void* oldmem, size_t bytes, unsigned int tag) {
+   if (oldmem == 0)
+-    return mspace_malloc(msp, bytes);
++    return mspace_malloc(msp, bytes, tag);
+ #ifdef REALLOC_ZERO_BYTES_FREES
+   if (bytes == 0) {
+     mspace_free(msp, oldmem);
+@@ -5286,27 +5342,18 @@
+   }
+ #endif /* REALLOC_ZERO_BYTES_FREES */
+   else {
+-#if FOOTERS
+-    mchunkptr p  = mem2chunk(oldmem);
+-    mstate ms = get_mstate_for(p);
+-#else /* FOOTERS */
+-    mstate ms = (mstate)msp;
+-#endif /* FOOTERS */
+-    if (!ok_magic(ms)) {
+-      USAGE_ERROR_ACTION(ms,ms);
+-      return 0;
+-    }
+-    return internal_realloc(ms, oldmem, bytes);
++    mstate ms = (mstate)msp; /* SCE: the caller's space */
++    return internal_realloc(ms, oldmem, bytes, tag);
+   }
+ }
+ 
+-void* mspace_memalign(mspace msp, size_t alignment, size_t bytes) {
++void* mspace_memalign(mspace msp, size_t alignment, size_t bytes, unsigned int tag) {
+   mstate ms = (mstate)msp;
+   if (!ok_magic(ms)) {
+     USAGE_ERROR_ACTION(ms,ms);
+     return 0;
+   }
+-  return internal_memalign(ms, alignment, bytes);
++  return internal_memalign(ms, alignment, bytes, tag);
+ }
+ 
+ void** mspace_independent_calloc(mspace msp, size_t n_elements,
+@@ -5391,11 +5438,15 @@
+ }
+ #endif /* NO_MALLINFO */
+ 
+-size_t mspace_usable_size(void* mem) {
++size_t mspace_usable_size(const void* mem) {
+   if (mem != 0) {
+     mchunkptr p = mem2chunk(mem);
+-    if (is_inuse(p))
+-      return chunksize(p) - overhead_for(p);
++    if (is_inuse(p)) {
++      size_t padding = 0; /* SCE: the request, without the padding */
++      if (p->head & FLAG4_BIT)
++        padding = padding_size(p);
++      return chunksize(p) - padding - overhead_for(p);
++    }
+   }
+   return 0;
+ }
+@@ -5404,6 +5455,102 @@
+   return change_mparam(param_number, value);
+ }
+ 
++/* SCE: count and sum all chunks in a treebin subtree */
++static void report_tree_free_blocks(mstate ms, bindex_t idx, tchunkptr t,
++                                    unsigned int* count, size_t* total) {
++  tchunkptr u = t;
++  do {
++    if (u->parent != 0) {
++      if (u->child[0] != 0) {
++        ++(*count);
++        *total += chunksize(u->child[0]);
++        report_tree_free_blocks(ms, idx, u->child[0], count, total);
++      }
++      if (u->child[1] != 0) {
++        ++(*count);
++        *total += chunksize(u->child[1]);
++        report_tree_free_blocks(ms, idx, u->child[1], count, total);
++      }
++    }
++    u = u->fd;
++  } while (u != t);
++}
++
++/* SCE: hand every free block to handler(chunk, size, count, arg) */
++unsigned int mspace_report_free_blocks(mspace msp,
++                                       int (*handler)(void*, size_t, int, void*),
++                                       void* arg) {
++  mstate ms = (mstate)msp;
++  unsigned int n = 1;
++  bindex_t i;
++  if (handler(ms->top, chunksize(ms->top), 1, arg) == 0)
++    return n;
++  for (i = 0; i < NTREEBINS; ++i) {
++    tbinptr* h = treebin_at(ms, i);
++    tchunkptr t = *h;
++    if (treemap_is_marked(ms, i)) {
++      size_t total = chunksize(t);
++      unsigned int count = 1;
++      report_tree_free_blocks(ms, i, t, &count, &total);
++      n += count;
++      if (handler(t, total, (int)count, arg) == 0)
++        return n;
++    }
++  }
++  for (i = 0; i < NSMALLBINS; ++i) {
++    sbinptr b = smallbin_at(ms, i);
++    mchunkptr p = b->bk;
++    if (smallmap_is_marked(ms, i)) {
++      while (p != b) {
++        ++n;
++        if (handler(p, chunksize(p), 1, arg) == 0)
++          return n;
++        p = p->bk;
++      }
++    }
++  }
++  return n;
++}
++
++/*
++  SCE: 1 when the padding after the request was overwritten, or mem's foot
++  does not hold tag, or the space is not valid; 0 otherwise.
++*/
++int mspace_check_memorybounds(mspace msp, void* mem, unsigned int tag) {
++  mstate ms = (mstate)msp;
++  mchunkptr p;
++  if (ms == 0 || mem == 0)
++    return 0;
++  p = mem2chunk(mem);
++  if (p->head & FLAG4_BIT) {
++    unsigned char* e;
++    size_t n, i;
++    p->head &= ~FLAG4_BIT;
++    e = (unsigned char*)chunk_plus_offset(p, chunksize(p));
++    n = e[-1] ^ 0xFF;
++    if (n > CHUNK_ALIGN_MASK - 1)
++      return 1;
++    for (i = 1; i <= n; ++i) {
++      if (e[-1 - (int)i] != PADDING_BYTE)
++        return 1;
++    }
++  }
++  if (foot_tag(p) != tag || !ok_magic(ms))
++    return 1;
++  return 0;
++}
++
++/* SCE: chunk size of mem */
++size_t mspace_ptr_get_size(mspace msp, const void* mem) {
++  (void)msp;
++  return chunksize(mem2chunk(mem));
++}
++
++/* SCE: tag held in mem's foot */
++unsigned int mspace_ptr_get_tag(const void* mem) {
++  return foot_tag(mem2chunk(mem));
++}
++
+ #endif /* MSPACES */
+ 
+ 

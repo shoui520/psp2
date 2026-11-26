@@ -866,12 +866,12 @@ size_t sce_paf_strlcpy(char *destination, const char *source, size_t size)
 		if (!ch) {
 			/* Sony rereads the just-copied terminating byte. */
 			cursor = current;
-			goto measure;
+			size = 0;
+			break;
 		}
 	}
 	if (size == 1)
 		*(char *)dest = 0;
-measure:
 	while (*cursor++)
 		;
 	return (size_t)(cursor - begin - 1);
@@ -901,12 +901,12 @@ size_t sce_paf_strlcat(char *destination, const char *source, size_t size)
 		*(char *)dest++ = ch;
 		if (!ch) {
 			cursor = current;
-			goto measure;
+			size = 0;
+			break;
 		}
 	}
 	if (size == 1)
 		*(char *)dest = 0;
-measure:
 	while (*cursor++)
 		;
 	return prefix + (size_t)(cursor - begin - 1);
@@ -985,10 +985,54 @@ size_t sce_paf_wcslen(const uint16_t *str)
 
 size_t sce_paf_strlen(const char *str)
 {
+#ifdef PAF_STATIC_BUILD
+	size_t length = 0;
+
+	if (!str)
+		return 0;
+	while (*str++)
+		length++;
+	return length;
+#else
 	if (!str)
 		sce_paf_printf_dummy();
 	return sceClibStrnlen(str, (size_t)-1);
+#endif
 }
+
+#ifdef PAF_STATIC_BUILD
+char *sce_paf_index(const char *str, int ch)
+{
+	const signed char *cursor = (const signed char *)str;
+
+	if (!cursor)
+		return NULL;
+	for (;;) {
+		if (*cursor == (signed char)ch)
+			return (char *)cursor;
+		if (!*cursor++)
+			return NULL;
+	}
+}
+
+char *sce_paf_rindex(const char *str, int ch)
+{
+	const char *cursor;
+
+	if (!str)
+		return NULL;
+	cursor = str;
+	while (*(const signed char *)cursor)
+		cursor++;
+	for (;;) {
+		if (*(const signed char *)cursor == (signed char)ch)
+			return (char *)cursor;
+		if (cursor == str)
+			return NULL;
+		cursor--;
+	}
+}
+#endif
 
 extern int ScePafStdc_D608246A(void);
 

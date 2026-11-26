@@ -7,6 +7,10 @@
 
 static HeapAllocator s_heap_storage;
 static HeapAllocator *s_heap;
+#ifdef PAF_STATIC_BUILD
+extern SceUInt32 sce_paf_global_heap_size;
+SceInt32 sce_paf_is_common_dialog_mode __attribute__((weak)) = 0;
+#endif
 
 void *sce_paf_malloc(size_t size)
 {
@@ -18,6 +22,7 @@ void *sce_paf_memalign(size_t align, size_t size)
 	return HeapAllocatorMemalign(s_heap, align, size);
 }
 
+#ifndef PAF_STATIC_BUILD
 void *_ZnwjPN3paf6memory13HeapAllocatorE(size_t size, HeapAllocator *allocator)
 {
 	return allocator ? HeapAllocatorMalloc(allocator, size) : NULL;
@@ -67,13 +72,18 @@ void ScePafStdc_F22F2F50(void *ptr, size_t unused1, size_t unused2,
 	if (allocator && ptr)
 		HeapAllocatorFree(allocator, ptr);
 }
+#endif
 
 void *sce_paf_realloc(void *ptr, size_t size)
 {
+#ifdef PAF_STATIC_BUILD
+	return HeapAllocatorRealloc(s_heap, ptr, size);
+#else
 	HeapAllocator *heap = ptr ?
 		(HeapAllocator *)(uintptr_t)mspace_ptr_get_tag(ptr) : s_heap;
 
 	return HeapAllocatorRealloc(heap, ptr, size);
+#endif
 }
 
 void *sce_paf_calloc(size_t nitems, size_t size)
@@ -97,12 +107,16 @@ void sce_paf_mtrim(void)
 
 size_t sce_paf_musable_size(const void *ptr)
 {
+#ifdef PAF_STATIC_BUILD
+	return HeapAllocatorUsableSize(s_heap, ptr);
+#else
 	if (ptr) {
 		HeapAllocator *heap = (HeapAllocator *)(uintptr_t)mspace_ptr_get_tag(ptr);
 
 		return HeapAllocatorUsableSize(heap, ptr);
 	}
 	return 0;
+#endif
 }
 
 void sce_paf_dump_heap_info(int32_t sort_policy)
@@ -135,11 +149,34 @@ int GlobalHeapInitialize(void)
 {
 	extern void *__dso_handle;
 
+#ifdef PAF_STATIC_BUILD
+	if (sce_paf_is_common_dialog_mode != 0) {
+		HeapAllocatorOption option;
+
+		option.entry_max = 0;
+		option.warning_size = 0;
+		option.disable_dbgprint = false;
+		option.disable_assert_on_alloc_failure = false;
+		option.memblk_type = AllocationBlockType_User_Cdlg;
+		option.alignment = 0;
+		s_heap = HeapAllocatorConstruct(&s_heap_storage, NULL,
+						sce_paf_global_heap_size,
+						"ScePafGlobalHeap", &option);
+	} else {
+		s_heap = HeapAllocatorConstruct(&s_heap_storage, NULL,
+						sce_paf_global_heap_size,
+						"ScePafGlobalHeap", NULL);
+	}
+	return __aeabi_atexit(&s_heap_storage,
+			(void (*)(void *))GlobalHeapDestruct, &__dso_handle);
+#else
 	GlobalHeapConstruct(&s_heap_storage);
 	return __aeabi_atexit(&s_heap_storage,
 			(void (*)(void *))GlobalHeapDestruct, &__dso_handle);
+#endif
 }
 
+#ifndef PAF_STATIC_BUILD
 HeapAllocator *GlobalHeapConstruct(HeapAllocator *self)
 {
 	AllocationBlockType type = sce_paf_is_common_dialog_mode ? AllocationBlockType_User_Cdlg :
@@ -162,6 +199,7 @@ HeapAllocator *GlobalHeapConstruct(HeapAllocator *self)
 	s_heap = heap;
 	return self;
 }
+#endif
 
 HeapAllocator *GlobalHeapDestruct(HeapAllocator *self)
 {
