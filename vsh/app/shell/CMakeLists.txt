@@ -459,6 +459,9 @@ psp2_module(vs0_vsh_shell_shell KIND user COMPILER snc PARTIAL SOURCES
 	src/np/community/np_score_ipc_server.cpp
 	src/np/community/np_tus_ipc_server.cpp
 	src/np/community/np_community_ipc_common.cpp
+	src/np/community/np_community_client.cpp
+	src/np/community/np_community_profile.cpp
+	src/np/community/np_community_xml.cpp
 	src/np/auth/np_auth_core.cpp
 	src/np/ipc/np_job_queue.cpp
 	src/np/manager/np_manager_core.cpp

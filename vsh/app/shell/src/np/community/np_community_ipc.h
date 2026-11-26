@@ -312,20 +312,50 @@ struct NpTssDataStatus {
 	SceSize contentLength;			/* +0x0C */
 };
 
-/* Backend community client / transaction header view (0x8132AA32, 0x8132A9BC) */
-struct NpCommunityBackendClient {
-	SceUInt8 prefix[120];			/* +0x00..+0x77 */
-	SceInt32 httpTemplateId;		/* +0x78 */
-	SceUInt32 padAfterTemplate;		/* +0x7C */
-	char envName[16];			/* +0x80 ("np" for product env) */
+/* NP online display name (52 bytes: 48 UTF-8 chars + NUL + 3 alignment bytes) */
+struct SceNpOnlineName {
+	char data[48];
+	char term;
+	char padding[3];
 };
 
+/* Backend community client (168 bytes = 0xA8, SceNpCommunityClient) */
+struct NpCommunityBackendClient {
+	SceInt32 clientId;			/* +0x00 */
+	SceInt32 refCount;			/* +0x04 */
+	SceInt32 markedForRemoval;		/* +0x08 */
+	SceNpOnlineId onlineId;			/* +0x0C (20 bytes) */
+	SceNpId npId;				/* +0x20 (36 bytes) */
+	SceNpOnlineName onlineName;		/* +0x44 (52 bytes) */
+	SceInt32 httpTemplateId;		/* +0x78 */
+	SceUID clientMutexId;			/* +0x7C */
+	char envName[16];			/* +0x80 ("np" for product env) */
+	char countryCode[4];			/* +0x90 (2-letter ISO code + NUL) */
+	SceUInt32 reservedWords[2];		/* +0x94..+0x9B */
+	NpCommunityAllocNode *allocListHead;	/* +0x9C */
+	NpCommunityBackendClient *next;		/* +0xA0 */
+	NpCommunityBackendClient *prev;		/* +0xA4 */
+};
+
+/* Backend community HTTP transaction (84 bytes = 0x54, SceNpCommunityTransaction) */
 struct NpCommunityBackendTx {
 	SceInt32 txId;				/* +0x00 */
 	SceInt32 refCount;			/* +0x04 */
 	SceInt32 markedForRemoval;		/* +0x08 */
-	SceUInt32 txStatePad[6];		/* +0x0C..+0x23 */
+	SceUInt32 reservedState;		/* +0x0C */
+	SceInt32 httpConnId;			/* +0x10 */
+	SceInt32 httpReqId;			/* +0x14 */
+	SceInt32 ownerKind;			/* +0x18 (1 = profile, 2 = community) */
+	SceInt32 aborted;			/* +0x1C */
+	NpCommunityAllocNode *allocListHead;	/* +0x20 */
 	NpCommunityBackendClient *client;	/* +0x24 */
+	NpCommunityBackendTx *next;		/* +0x28 */
+	NpCommunityBackendTx *prev;		/* +0x2C */
+	SceUInt32 reservedFlags;		/* +0x30 */
+	SceInt32 serviceType;			/* +0x34 */
+	void *serviceParam;			/* +0x38 */
+	NpCommunityTimeoutConfig timeoutConfig;	/* +0x3C (20 bytes) */
+	SceUInt32 tailReserved;			/* +0x50 */
 };
 
 /* Shared community IPC manager (np_community_ipc_common.cpp, 0x81323B34..0x8132475B) */
