@@ -629,7 +629,7 @@ psp2_module(vs0_vsh_shell_shell KIND user COMPILER snc PARTIAL SOURCES
 	src/sysupchk_plugin/sysupchk_plugin.cpp
 	src/sysupchk_plugin/sysupchk_np.cpp
 	src/rtc_util/rtc_util.cpp
-	${PSP2_SRC}/sys/internal/usermode/src/libScePhotoExport/photo_export.cpp
+	src/photo_export/photo_export_convert.cpp
 	${PSP2_SRC}/sys/sdk/target/src/sha1/libsha1.c
 	src/dbsetup/dbrecovery_notify.cpp
 	src/livespace_db/addcont_emu_util.cpp
@@ -653,6 +653,8 @@ psp2_module(vs0_vsh_shell_shell KIND user COMPILER snc PARTIAL SOURCES
 	${PSP2_SRC}/sys/sdk/target/src/hmac/sha256.c
 	${PSP2_SRC}/sys/internal/usermode/src/fsutil/fs_util.c
 	${PSP2_SRC}/sys/internal/usermode/src/fsutil/partition.c
+	${PSP2_SRC}/sys/internal/kernel/src/appmgr/fat_format.c
+	${PSP2_SRC}/sys/internal/kernel/src/appmgr/fat_format_storage.c
 	${PSP2_SRC}/sys/sdk/target/src/aes/libaes.c
 	${PSP2_SRC}/sys/sdk/target/src/aes/aes.S
 	src/npdrm_package/npdrm_syscalls.cpp
@@ -691,3 +693,8 @@ set_source_files_properties(${PSP2_SRC}/sys/sdk/target/src/aes/libaes.c
 	COMPILE_OPTIONS "-fno-stack-protector;-fno-toplevel-reorder;-ffunction-sections")
 set_source_files_properties(${PSP2_SRC}/sys/sdk/target/src/aes/aes.S
 	PROPERTIES COMPILE_DEFINITIONS PSP2_COMPILER_GCC48)
+# User-mode build of appmgr FAT/exFAT formatter
+set_source_files_properties(
+	${PSP2_SRC}/sys/internal/kernel/src/appmgr/fat_format.c
+	${PSP2_SRC}/sys/internal/kernel/src/appmgr/fat_format_storage.c
+	PROPERTIES COMPILE_OPTIONS "-include;${CMAKE_CURRENT_SOURCE_DIR}/src/fsutil/fat_format_user_compat.h")
